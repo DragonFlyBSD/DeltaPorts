@@ -1,0 +1,2 @@
+This directory contains bsd.port.*.mk files that are intended to be
+included as part of the base DragonFly system at /usr/share/mk directory.
