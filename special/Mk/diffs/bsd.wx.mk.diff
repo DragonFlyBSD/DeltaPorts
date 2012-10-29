@@ -1,0 +1,41 @@
+--- bsd.wx.mk.orig	2012-10-29 13:37:14.000000000 +0100
++++ bsd.wx.mk	2012-10-29 13:47:19.000000000 +0100
+@@ -234,7 +234,7 @@
+ 
+ .	for __WANT_WX in ${_WANT_WX}
+ .		if defined(_WX_UC_AVAILABLE) && \
+-		   (${_WX_VERS_UC_ALL:M${__WANT_WX}} != "" || ${_WANT_WX:L} == "yes")
++		   (${_WX_VERS_UC_ALL:M${__WANT_WX}} != "" || ${_WANT_WX:tl} == "yes")
+ _WX_WANT_UNICODE=		yes
+ .		endif
+ .	endfor
+@@ -263,7 +263,7 @@
+ .		endif
+ _HAVE_WX=				#
+ # Check for all versions.
+-.		if ${_WANT_WX:L} == "yes"
++.		if ${_WANT_WX:tl} == "yes"
+ .			for comp in ${_WX_COMPS_ALL}
+ .				for ver in ${_WX_VER_FINAL}
+ _WX_COMP=				_WX_FILE_${comp}_${ver}
+@@ -565,7 +565,7 @@
+ RUN_DEPENDS+=			${_WX_FILE_${comp_part}_${_WX_VER}}:${PORTSDIR}/${_WX_PORT_${comp_part}_${_WX_VER}}
+ .			endif
+ .		else
+-${_WX_DEP_TYPE:U}_DEPENDS+=	${_WX_FILE_${comp_part}_${_WX_VER}}:${PORTSDIR}/${_WX_PORT_${comp_part}_${_WX_VER}}
++${_WX_DEP_TYPE:tu}_DEPENDS+=	${_WX_FILE_${comp_part}_${_WX_VER}}:${PORTSDIR}/${_WX_PORT_${comp_part}_${_WX_VER}}
+ .		endif
+ .	endfor
+ .endfor
+@@ -578,9 +578,9 @@
+ CONFIGURE_ENV+=			WX_CONFIG=${WX_CONFIG}
+ 
+ .if defined(WX_CONF_ARGS)
+-.	if ${WX_CONF_ARGS:L} == "absolute"
++.	if ${WX_CONF_ARGS:tl} == "absolute"
+ CONFIGURE_ARGS+=		--with-wx-config=${WX_CONFIG}
+-.	elif ${WX_CONF_ARGS:L} == "relative"
++.	elif ${WX_CONF_ARGS:tl} == "relative"
+ CONFIGURE_ARGS+=		--with-wx=${LOCALBASE} \
+ 						--with-wx-config=${WX_CONFIG:T}
+ .	else
