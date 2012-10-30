@@ -1,14 +1,22 @@
---- bsd.port.subdir.mk.orig	2012-10-29 13:37:14.000000000 +0100
-+++ bsd.port.subdir.mk	2012-10-29 13:46:43.000000000 +0100
-@@ -69,9 +69,9 @@
+--- /home/marino/svnhub/ports/Mk/bsd.port.subdir.mk	2012-10-29 12:33:53.000000000 +0100
++++ bsd.port.subdir.mk	2012-10-30 08:57:06.000000000 +0100
+@@ -68,12 +68,16 @@
+ .endif
  
  .if !defined(OSVERSION)
++OSVERSION=	9999999
++.endif
++
++if !defined(DFLYVERSION)
  .if exists(/usr/include/sys/param.h)
 -OSVERSION!=	${AWK} '/^\#define[[:blank:]]__FreeBSD_version/ {print $$3}' < /usr/include/sys/param.h
-+OSVERSION!=	${AWK} '/^\#define[[:blank:]]__DragonFly_version/ {print $$3}' < /usr/include/sys/param.h
++DFLYVERSION!=	${AWK} '/^\#define[[:blank:]]__DragonFly_version/ {print $$3}' < /usr/include/sys/param.h
  .elif exists(${SRC_BASE}/sys/sys/param.h)
 -OSVERSION!=	${AWK} '/^\#define[[:blank:]]__FreeBSD_version/ {print $$3}' < ${SRC_BASE}/sys/sys/param.h
-+OSVERSION!=	${AWK} '/^\#define[[:blank:]]__DragonFly_version/ {print $$3}' < ${SRC_BASE}/sys/sys/param.h
++DFLYVERSION!=	${AWK} '/^\#define[[:blank:]]__DragonFly_version/ {print $$3}' < ${SRC_BASE}/sys/sys/param.h
  .else
- OSVERSION!=	${SYSCTL} -n kern.osreldate
+-OSVERSION!=	${SYSCTL} -n kern.osreldate
++DFLYVERSION!=	${SYSCTL} -n kern.osreldate
  .endif
+ .endif
+ 
