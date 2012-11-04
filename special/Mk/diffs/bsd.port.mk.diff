@@ -46,7 +46,7 @@
  LINUXBASE?=		/compat/linux
 -DISTDIR?=		${PORTSDIR}/distfiles
 +DISTDIR?=		/usr/dports-distfiles
-+WRKDIRPREFIX?=		/usr/dports-work
++WRKDIRPREFIX?=		/usr/obj/dports
  _DISTDIR?=		${DISTDIR}/${DIST_SUBDIR}
  INDEXDIR?=		${PORTSDIR}
  SRC_BASE?=		/usr/src
