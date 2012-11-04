@@ -1,5 +1,5 @@
 --- bsd.port.mk.orig	2012-10-29 12:33:53.000000000 +0100
-+++ bsd.port.mk	2012-11-04 02:19:50.000000000 +0100
++++ bsd.port.mk	2012-11-04 10:15:33.000000000 +0100
 @@ -43,7 +43,8 @@
  #				  makefile is being used on.  Automatically set to
  #				  "FreeBSD," "NetBSD," or "OpenBSD" as appropriate.
@@ -107,6 +107,15 @@
  
  DOCSDIR?=		${PREFIX}/share/doc/${PORTNAME}
  EXAMPLESDIR?=		${PREFIX}/share/examples/${PORTNAME}
+@@ -1369,7 +1381,7 @@
+ .else
+ EXTRACT_SUFX?=			.tar.gz
+ .endif
+-PACKAGES?=		${PORTSDIR}/packages
++PACKAGES?=		/usr/packages
+ TEMPLATES?=		${PORTSDIR}/Templates
+ 
+ PATCHDIR?=		${MASTERDIR}/files
 @@ -1448,11 +1460,11 @@
  .include "${PORTSDIR}/Mk/bsd.apache.mk"
  .endif
