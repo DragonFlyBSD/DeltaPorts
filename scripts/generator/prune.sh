@@ -7,30 +7,24 @@ if [ ! -f ${CONFFILE} ]; then
    exit 1
 fi
 
+checkdir ()
+{
+   eval "MYDIR=\$$1"
+   if [ ! -d ${MYDIR} ]; then
+     echo "The $1 directory (${MYDIR}) does not exist."
+     exit 1
+  fi
+}
+
 confopts=`grep "=" ${CONFFILE}`
 for opt in ${confopts}; do
    eval $opt
 done
 
-if [ ! -d ${FPORTS} ]; then
-   echo "The FPORTS directory (${FPORTS}) does not exist."
-   exit 1 
-fi
-
-if [ ! -d ${MERGED} ]; then
-   echo "The MERGED directory (${MERGED}) does not exist."
-   exit 1
-fi
-
-if [ ! -d ${DPORTS} ]; then
-   echo "The DPORTS directory (${DPORTS}) does not exist."
-   exit 1
-fi
-
-if [ ! -d ${DELTA} ]; then
-   echo "The DELTA directory (${DELTA}) does not exist."
-   exit 1
-fi
+checkdir DELTA
+checkdir DPORTS
+checkdir FPORTS
+checkdir MERGED
 
 kill_directory ()
 {
