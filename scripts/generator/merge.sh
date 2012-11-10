@@ -31,7 +31,34 @@ TMPFILE=/tmp/tmp.awk
 
 merge()
 {
-   echo "merge path $2 : $1"
+   M1=${MERGED}/$1
+   DP=${DELTA}/ports/$1
+   rm -rf ${M1}
+   mkdir -p ${M1}
+
+   if [ $2 -eq 1 ]; then
+      isDPort=
+   else
+      isDPort=`grep ^DPORT ${DP}/STATUS`
+   fi
+   if [ -n "${isDPORT}" ]; then
+      cp -r ${DP}/newport/* ${M1}/
+   else
+      cp  -r ${FPORTS}/$1/* ${M1}/
+      if [ -f ${DP}/Makefile.DragonFly ]; then
+         cp ${DP}/Makefile.DragonFly ${M1}/
+      fi
+      if [ -d ${DP}/dragonfly ]; then
+         cp -rf ${DP}/dragonfly ${M1}/
+      fi
+      if [ -d ${DP}/diffs ]; then
+         diffs=`find ${DP}/diffs -name \*\.diff`
+         for difffile in ${diffs}; do
+            patch -d ${M1} < ${difffile}
+         done
+         rm ${M1}/*.orig
+      fi
+   fi
 }
 
 
