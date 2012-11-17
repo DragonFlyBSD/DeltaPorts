@@ -1,5 +1,5 @@
 --- src/poudriere.d/jail.sh.orig	2012-10-15 18:18:18.000000000 +0200
-+++ src/poudriere.d/jail.sh	2012-11-17 16:19:35.000000000 +0100
++++ src/poudriere.d/jail.sh	2012-11-17 19:27:20.000000000 +0100
 @@ -68,7 +68,7 @@
  		err 1 "Unable to remove jail ${JAILNAME}: it is running"
  
@@ -38,7 +38,20 @@
  		;;
  	allbsd)
  		err 1 "Upgrade is not supported with allbsd, to upgrade, please delete and recreate the jail"
-@@ -368,7 +368,7 @@
+@@ -258,12 +258,10 @@
+ 	test -z ${VERSION} && usage
+ 
+ 	if [ -z ${JAILMNT} ]; then
+-		[ -z ${BASEFS} ] && err 1 "Please provide a BASEFS variable in your poudriere.conf"
+ 		JAILMNT=${BASEFS}/jails/${JAILNAME}
+ 	fi
+ 
+ 	if [ -z ${JAILFS} ] ; then
+-		[ -z ${ZPOOL} ] && err 1 "Please provide a ZPOOL variable in your poudriere.conf"
+ 		JAILFS=${ZPOOL}${ZROOTFS}/jails/${JAILNAME}
+ 	fi
+ 
+@@ -368,7 +366,7 @@
  
  	jail -U root -c path=${JAILMNT} command=/sbin/ldconfig -m /lib /usr/lib /usr/lib/compat
  

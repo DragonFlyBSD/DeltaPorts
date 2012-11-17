@@ -1,5 +1,5 @@
 --- src/poudriere.d/common.sh.orig	2012-10-15 18:18:18.000000000 +0200
-+++ src/poudriere.d/common.sh	2012-11-17 16:14:52.000000000 +0100
++++ src/poudriere.d/common.sh	2012-11-17 19:23:27.000000000 +0100
 @@ -1,7 +1,5 @@
  #!/bin/sh
  
@@ -288,3 +288,25 @@
  
  	# If this port is IGNORED, skip it
  	# This is checked here instead of when building the queue
+@@ -1381,20 +1223,13 @@
+ test -f ${SCRIPTPREFIX}/../../etc/poudriere.conf || err 1 "Unable to find ${SCRIPTPREFIX}/../../etc/poudriere.conf"
+ . ${SCRIPTPREFIX}/../../etc/poudriere.conf
+ 
+-[ -z ${ZPOOL} ] && err 1 "ZPOOL variable is not set"
+ [ -z ${BASEFS} ] && err 1 "Please provide a BASEFS variable in your poudriere.conf"
+ 
+ trap sig_handler SIGINT SIGTERM SIGKILL
+ trap exit_handler EXIT
+ trap siginfo_handler SIGINFO
+ 
+-# Test if spool exists
+-zpool list ${ZPOOL} >/dev/null 2>&1 || err 1 "No such zpool: ${ZPOOL}"
+-ZVERSION=$(zpool list -H -oversion ${ZPOOL})
+-# Pool version has now
+-if [ "${ZVERSION}" = "-" ]; then
+-	ZVERSION=29
+-fi
++post_conf_check
+ 
+ : ${SVN_HOST="svn.FreeBSD.org"}
+ : ${GIT_URL="git://github.com/freebsd/freebsd-ports.git"}
