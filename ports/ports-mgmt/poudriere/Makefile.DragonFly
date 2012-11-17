@@ -1,0 +1,6 @@
+# Usually you would see the post-patch target used to remove patch .orig
+# files, but these need to stay around longer to make it easier to modify
+# the patches in the future.
+
+pre-install:
+	rm ${WRKSRC}/src/poudriere.d/*.orig
