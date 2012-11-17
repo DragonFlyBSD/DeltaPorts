@@ -3,4 +3,6 @@
 # the patches in the future.
 
 pre-install:
-	rm ${WRKSRC}/src/poudriere.d/*.orig
+	rm -f ${WRKSRC}/src/poudriere.d/*.orig
+
+PLIST_FILES+=	share/poudriere/common.sh.zfs
