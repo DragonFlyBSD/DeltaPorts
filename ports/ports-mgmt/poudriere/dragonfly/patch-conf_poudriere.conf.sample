@@ -1,6 +1,6 @@
 --- conf/poudriere.conf.sample.orig	2012-10-15 18:18:18.000000000 +0200
-+++ conf/poudriere.conf.sample	2012-11-18 16:37:04.000000000 +0100
-@@ -115,3 +115,10 @@
++++ conf/poudriere.conf.sample	2012-11-18 18:51:16.000000000 +0100
+@@ -115,3 +115,14 @@
  # If you are using a proxy define it here:
  # export HTTP_PROXY=bla
  # export FTP_PROXY=bla
@@ -11,3 +11,7 @@
 +
 +# Set the host for the git update method
 +GIT_HOST=git://koan.bondconsult.net
++
++# Define ports directory (DragonFly doesn't use /usr/ports to avoid confusion)
++# The default is /usr/ports
++# PORTSRC=/usr/dports

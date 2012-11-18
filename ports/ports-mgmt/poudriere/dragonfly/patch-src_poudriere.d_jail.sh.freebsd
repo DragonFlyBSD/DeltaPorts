@@ -1,5 +1,5 @@
 --- /dev/null	2012-11-18 03:01:18.555344164 +0100
-+++ src/poudriere.d/jail.sh.freebsd	2012-11-18 16:16:27.000000000 +0100
++++ src/poudriere.d/jail.sh.freebsd	2012-11-18 19:09:40.000000000 +0100
 @@ -0,0 +1,292 @@
 +#!/bin/sh
 +#
@@ -282,7 +282,7 @@
 +WRKDIRPREFIX=/wrkdirs
 +EOF
 +
-+	mkdir -p ${JAILMNT}/usr/ports
++	mkdir -p ${JAILMNT}/${PORTSRC}
 +	mkdir -p ${JAILMNT}/wrkdirs
 +	mkdir -p ${POUDRIERE_DATA}/logs
 +

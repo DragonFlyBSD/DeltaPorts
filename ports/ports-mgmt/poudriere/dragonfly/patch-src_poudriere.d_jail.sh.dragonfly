@@ -1,5 +1,5 @@
 --- /dev/null	2012-11-18 03:01:18.555344164 +0100
-+++ src/poudriere.d/jail.sh.dragonfly	2012-11-18 18:27:35.000000000 +0100
++++ src/poudriere.d/jail.sh.dragonfly	2012-11-18 19:10:25.000000000 +0100
 @@ -0,0 +1,158 @@
 +#!/bin/sh
 +#
@@ -148,7 +148,7 @@
 +WRKDIRPREFIX=/wrkdirs
 +EOF
 +
-+	mkdir -p ${JAILMNT}/usr/dports
++	mkdir -p ${JAILMNT}/${PORTSRC}
 +	mkdir -p ${JAILMNT}/wrkdirs
 +	mkdir -p ${POUDRIERE_DATA}/logs
 +
