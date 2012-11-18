@@ -1,6 +1,6 @@
 --- /dev/null	2012-11-18 03:01:18.555344164 +0100
-+++ src/poudriere.d/common.sh.hammer	2012-11-18 11:33:29.000000000 +0100
-@@ -0,0 +1,275 @@
++++ src/poudriere.d/common.sh.hammer	2012-11-18 15:46:50.000000000 +0100
+@@ -0,0 +1,340 @@
 +#!/bin/sh
 +
 +zget() {
@@ -37,33 +37,93 @@
 +	[ -d ${confdir} ] && echo "$2" > ${confdir}/${1}
 +}
 +
++snapname () {
++	[ $# -ne 1 ] && eargs filesystem@snapname
++	echo ${1} | sed -e "s|${ZROOTFS}\/||" -e "s|\/|__|g"
++}
++
++snapdirectory () {
++	[ $# -ne 1 ] && eargs filesystem@snapname
++	echo ${1} | sed -e "s|${ZROOTFS}\/||" -e 's|@.*||'
++}
++
++onlysnap () {
++	[ $# -ne 1 ] && eargs filesystem@snapname
++	local testat=`grep @ ${1}`
++	if [ -n "${testat}" ]; then
++	   return 1
++	fi
++	return 0
++}
++
 +zsnap() {
-+#	[ $# -ne 1 ] && eargs filesystem@snapname
-+#	zfs snapshot ${1}
++	[ $# -ne 1 ] && eargs filesystem@snapname
++	local snap=$(snapname ${1})
++	hammer snapshot ${ZROOTFS} ${HAMMER_SNAPDIR}/${snap}
 +}
 +
 +zkill() {
-+#	[ $# -ne 1 ] && eargs filesystem@snapname
-+#	zfs destroy -r ${1}
++	[ $# -ne 1 ] && eargs filesystem@snapname
++	if [ onlysnap ${1} ]; then
++		local snap=$(snapname ${1})
++		hammer snaprm ${ZROOTFS} ${HAMMER_SNAPDIR}/${snap}
++	else
++		rm -rf ${1}
++	fi
 +}
 +
 +zrollback () {
-+#	[ $# -ne 1 ] && eargs filesystem@snapname
-+#	zfs rollback -R ${1}
++	[ $# -ne 1 ] && eargs filesystem@snapname
++	if [ ! onlysnap ${1} ]; then
++		err 1 "Must specify snapshot in rollback"
++	fi
++	local snap=$(snapname ${1})
++	local sdir=$(snapdirectory ${1})
++	rsync -vaq --delete \
++	  ${HAMMER_SNAPDIR}/${snap}/${sdir}/ \
++	  ${ZROOTFS}/${sdir}/
 +}
 +
-+zdiff () {
-+#	[ $# -ne 2 ] && eargs filesystem@snapname filesystem
-+#	zfs diff -FH ${1} ${2}
++zxdiff () {
++	[ $# -ne 2 ] && eargs filesystem@snapname filesystem
++	# very basic zfs diff emulations: [M+-] (no R, no / type)
++	if [ ! onlysnap ${1} ]; then
++		err 1 "Must specify snapshot in rollback"
++	fi
++	local snap=$(snapname ${1})
++	local sdir=$(snapdirectory ${1})
++	local LEFTS=${HAMMER_SNAPDIR}/${snap}/${sdir}
++	local RIGHT=${ZROOTFS}/${sdir}
++	local AWKCMD='{ \
++ if ($1 == "Files") \
++ { \
++   len = index ($0, " and ") - 7; \
++   print "M * " substr ($0, 7, len); \
++ } \
++ if ($1 == "Only") \
++ { \
++   ndx = index ($0, ":"); \
++   lslen = length (leftside); \
++   if (leftside == substr($0, 9, lslen)) { \
++     sym = "- * "; \
++   } \
++   else { \
++     sym = "+ * "; \
++   } \
++   ufile  = substr ($0, ndx + 2); \
++   print sym leftside "/" ufile; \
++ } \
++}'
++	diff -qr ${LEFTS} ${RIGHT} | awk -v leftside=${LEFTS} "${AWKCMD}"
 +}
 +
 +jail_exists() {
 +	[ $# -ne 1 ] && eargs jailname
 +	if [ -d ${BASEFS}/jails/${1} ] && \
 +	   [ -d ${POUDRIERE_DATA}/nozfs/jails/${1} ]; then
-+	    return 0;
++	    return 1
 +	fi
-+	return 1
++	return 0
 +}
 +
 +jail_get_base() {
@@ -212,8 +272,13 @@
 +}
 +
 +post_conf_check () {
++	[ -z ${HAMMER_SNAPDIR} ] && err 1 "HAMMER_SNAPDIR variable is not set"
++
 +	# NoZFS starts with ZROOTFS value, set ZPOOL to null
 +	ZPOOL=
++
++	# Try to minimize ZVERSION checks issues
++	ZVERSION=9999
 +}
 +
 +print_ports_table () {
@@ -276,4 +341,3 @@
 +	echo "Packages queued: ${1}"
 +	echo "Packages to be built: ${2}"
 +}
-\ No newline at end of file

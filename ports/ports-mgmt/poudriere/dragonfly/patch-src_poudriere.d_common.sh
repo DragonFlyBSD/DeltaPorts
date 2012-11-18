@@ -1,5 +1,5 @@
 --- src/poudriere.d/common.sh.orig	2012-10-15 18:18:18.000000000 +0200
-+++ src/poudriere.d/common.sh	2012-11-18 11:35:25.000000000 +0100
++++ src/poudriere.d/common.sh	2012-11-18 13:41:31.000000000 +0100
 @@ -1,7 +1,5 @@
  #!/bin/sh
  
@@ -209,7 +209,7 @@
  				local mod1=$(mktemp ${jailbase}/tmp/mod1.XXXXXX)
  				local die=0
 -				zfs diff -FH ${JAILFS}@preinst ${JAILFS} | \
-+				zdiff ${JAILFS}@preinst ${JAILFS} | \
++				zxdiff ${JAILFS}@preinst ${JAILFS} | \
  					while read mod type path; do
  					local ppath
  					ppath=`echo "$path" | sed -e "s,^${JAILMNT},," -e "s,^${PREFIX}/,," -e "s,^share/${portname},%%DATADIR%%," -e "s,^etc/${portname},%%ETCDIR%%,"`

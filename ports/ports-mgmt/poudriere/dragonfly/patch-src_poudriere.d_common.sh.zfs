@@ -1,5 +1,5 @@
 --- /dev/null	2012-11-18 03:01:18.555344164 +0100
-+++ src/poudriere.d/common.sh.zfs	2012-11-18 00:53:16.000000000 +0100
++++ src/poudriere.d/common.sh.zfs	2012-11-18 13:35:37.000000000 +0100
 @@ -0,0 +1,230 @@
 +#!/bin/sh
 +
@@ -41,7 +41,7 @@
 +	zfs rollback -R ${1}
 +}
 +
-+zdiff () {
++zxdiff () {
 +	[ $# -ne 2 ] && eargs filesystem@snapname filesystem
 +	zfs diff -FH ${1} ${2}
 +}
