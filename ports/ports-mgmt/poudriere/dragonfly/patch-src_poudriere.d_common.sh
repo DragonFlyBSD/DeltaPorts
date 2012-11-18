@@ -1,5 +1,5 @@
 --- src/poudriere.d/common.sh.orig	2012-10-15 18:18:18.000000000 +0200
-+++ src/poudriere.d/common.sh	2012-11-17 19:23:27.000000000 +0100
++++ src/poudriere.d/common.sh	2012-11-18 11:35:25.000000000 +0100
 @@ -1,7 +1,5 @@
  #!/bin/sh
  
@@ -8,20 +8,22 @@
  IPS="$(sysctl -n kern.features.inet 2>/dev/null || (sysctl -n net.inet 1>/dev/null 2>&1 && echo 1) || echo 0)$(sysctl -n kern.features.inet6 2>/dev/null || (sysctl -n net.inet6 1>/dev/null 2>&1 && echo 1) || echo 0)"
  
  err() {
-@@ -34,6 +32,12 @@
+@@ -34,6 +32,14 @@
  	esac
  }
  
 +if [ -z /sbin/zfs ]; then
 +. ${0}.zfs
++elif [ -z /sbin/hammer ]; then
++. ${0}.hammer
 +else
-+. ${0}.nozfs
++err 1 "Unsupported filesystem"
 +fi
 +
  log_start() {
  	local logfile=$1
  
-@@ -88,26 +92,6 @@
+@@ -88,26 +94,6 @@
  	fi
  }
  
@@ -48,7 +50,7 @@
  sig_handler() {
  	trap - SIGTERM SIGKILL
  	# Ignore SIGINT while cleaning up
-@@ -163,94 +147,17 @@
+@@ -163,94 +149,17 @@
  	fi
  }
  
@@ -143,7 +145,7 @@
  jrun() {
  	[ $# -ne 1 ] && eargs network
  	local network=$1
-@@ -371,8 +278,8 @@
+@@ -371,8 +280,8 @@
  	jail_exists ${JAILNAME} || err 1 "No such jail: ${JAILNAME}"
  	jail_runs && err 1 "jail already running: ${JAILNAME}"
  	zset status "start:"
@@ -154,7 +156,7 @@
  
  	msg "Mounting system devices for ${JAILNAME}"
  	do_jail_mounts 1
-@@ -419,24 +326,11 @@
+@@ -419,24 +328,11 @@
  			mdconfig -d -u $dev
  		fi
  	fi
@@ -180,7 +182,7 @@
  cleanup() {
  	[ -n "${CLEANED_UP}" ] && return 0
  	msg "Cleaning up"
-@@ -464,9 +358,9 @@
+@@ -464,9 +360,9 @@
  		wait
  	fi
  
@@ -193,7 +195,7 @@
  	jail_stop
  	export CLEANED_UP=1
  }
-@@ -509,7 +403,7 @@
+@@ -509,7 +405,7 @@
  			jail -r ${JAILNAME} >/dev/null
  			jrun 1
  		fi
@@ -202,7 +204,7 @@
  		if [ "${phase}" = "deinstall" ]; then
  			msg "Checking shared library dependencies"
  			if [ ${PKGNG} -eq 0 ]; then
-@@ -554,7 +448,7 @@
+@@ -554,7 +450,7 @@
  				local mod=$(mktemp ${jailbase}/tmp/mod.XXXXXX)
  				local mod1=$(mktemp ${jailbase}/tmp/mod1.XXXXXX)
  				local die=0
@@ -211,7 +213,7 @@
  					while read mod type path; do
  					local ppath
  					ppath=`echo "$path" | sed -e "s,^${JAILMNT},," -e "s,^${PREFIX}/,," -e "s,^share/${portname},%%DATADIR%%," -e "s,^etc/${portname},%%ETCDIR%%,"`
-@@ -613,7 +507,7 @@
+@@ -613,7 +509,7 @@
  	jail -r ${JAILNAME} >/dev/null
  	jrun 0
  	zset status "idle:"
@@ -220,7 +222,7 @@
  	return 0
  }
  
-@@ -639,58 +533,6 @@
+@@ -639,58 +535,6 @@
  	job_msg "Saved ${port} wrkdir to: ${tarname}"
  }
  
@@ -279,7 +281,7 @@
  build_stats_list() {
  	[ $# -ne 3 ] && eargs html_path type display_name
  	local html_path="$1"
-@@ -927,7 +769,7 @@
+@@ -927,7 +771,7 @@
  
  	job_msg "Starting build of ${port}"
  	zset status "starting:${port}"
@@ -288,7 +290,7 @@
  
  	# If this port is IGNORED, skip it
  	# This is checked here instead of when building the queue
-@@ -1381,20 +1223,13 @@
+@@ -1381,20 +1225,13 @@
  test -f ${SCRIPTPREFIX}/../../etc/poudriere.conf || err 1 "Unable to find ${SCRIPTPREFIX}/../../etc/poudriere.conf"
  . ${SCRIPTPREFIX}/../../etc/poudriere.conf
  
