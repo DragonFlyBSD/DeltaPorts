@@ -1,5 +1,5 @@
 --- src/poudriere.d/jail.sh.orig	2012-10-15 18:18:18.000000000 +0200
-+++ src/poudriere.d/jail.sh	2012-11-18 16:48:51.000000000 +0100
++++ src/poudriere.d/jail.sh	2012-11-18 19:40:33.000000000 +0100
 @@ -15,16 +15,14 @@
  Options:
      -q            -- quiet (remove the header in list)
@@ -359,11 +359,7 @@
  ARCH=`uname -m`
  REALARCH=${ARCH}
  START=0
-@@ -384,9 +75,11 @@
- INFO=0
- UPDATE=0
- 
-+BSDPLATFORM=`uname -s | tr '[:upper:]' '[:lower:]'`
+@@ -387,6 +78,7 @@
  SCRIPTPATH=`realpath $0`
  SCRIPTPREFIX=`dirname ${SCRIPTPATH}`
  . ${SCRIPTPREFIX}/common.sh
@@ -371,7 +367,7 @@
  
  while getopts "j:v:a:z:m:n:f:M:sdklqciut:" FLAG; do
  	case "${FLAG}" in
-@@ -397,10 +90,7 @@
+@@ -397,10 +89,7 @@
  			VERSION=${OPTARG}
  			;;
  		a)
