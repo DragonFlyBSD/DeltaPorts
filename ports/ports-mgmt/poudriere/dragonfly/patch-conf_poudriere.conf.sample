@@ -1,6 +1,6 @@
 --- conf/poudriere.conf.sample.orig	2012-10-15 18:18:18.000000000 +0200
-+++ conf/poudriere.conf.sample	2012-11-18 11:31:02.000000000 +0100
-@@ -115,3 +115,7 @@
++++ conf/poudriere.conf.sample	2012-11-18 16:37:04.000000000 +0100
+@@ -115,3 +115,10 @@
  # If you are using a proxy define it here:
  # export HTTP_PROXY=bla
  # export FTP_PROXY=bla
@@ -8,3 +8,6 @@
 +# If you are using HAMMER instead of ZFS, define the dedicated snapshot
 +# directory
 +HAMMER_SNAPDIR=${BASEFS}/snapshots
++
++# Set the host for the git update method
++GIT_HOST=git://koan.bondconsult.net
