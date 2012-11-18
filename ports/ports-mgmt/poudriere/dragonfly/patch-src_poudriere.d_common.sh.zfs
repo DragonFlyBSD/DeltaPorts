@@ -1,6 +1,6 @@
---- /dev/null	2012-11-17 16:53:46.208246697 +0100
-+++ src/poudriere.d/common.sh.zfs	2012-11-17 19:22:40.000000000 +0100
-@@ -0,0 +1,199 @@
+--- /dev/null	2012-11-18 03:01:18.555344164 +0100
++++ src/poudriere.d/common.sh.zfs	2012-11-18 00:53:16.000000000 +0100
+@@ -0,0 +1,230 @@
 +#!/bin/sh
 +
 +# zfs namespace
@@ -200,3 +200,35 @@
 +		ZVERSION=29
 +	fi
 +}
++
++print_ports_table () {
++	printf '%-20s %-10s\n' "PORTSTREE" "METHOD"
++	zfs list -t filesystem -H -o ${NS}:type,${NS}:name,${NS}:method | \
++		awk '$1 == "ports" {printf("%-20s %-10s\n",$2,$3) }'
++}
++
++print_jails_table () {
++	printf '%-20s %-20s %-7s %-7s %-7s %-7s %-7s %-7s %-7s %s\n' "JAILNAME" "VERSION" "ARCH" "METHOD" "SUCCESS" "FAILED" "IGNORED" "SKIPPED" "QUEUED" "STATUS"
++	zfs list -rt filesystem -H \
++		-o ${NS}:type,${NS}:name,${NS}:version,${NS}:arch,${NS}:method,${NS}:stats_built,${NS}:stats_failed,${NS}:stats_ignored,${NS}:stats_skipped,${NS}:stats_queued,${NS}:status ${ZPOOL}${ZROOTFS} | \
++		awk '$1 == "rootfs" { printf("%-20s %-20s %-7s %-7s %-7s %-7s %-7s %-7s %-7s %s\n",$2, $3, $4, $5, $6, $7, $8, $9, $10, $11) }'
++}
++
++list_jail_info () {
++	[ $# -ne 2 ] && eargs num_queued num_to_build
++	zfs list -H -o ${NS}:type,${NS}:name,${NS}:version,${NS}:arch,${NS}:stats_built,${NS}:stats_failed,${NS}:stats_ignored,${NS}:stats_skipped,${NS}:status,${NS}:method ${JAILFS}| \
++		awk -v q="${1}" -v tb="${2}" '/^rootfs/  {
++			print "Jailname: " $2;
++			print "FreeBSD version: " $3;
++			print "FreeBSD arch: "$4;
++			print "install/update method: "$10;
++			print "Status: "$9;
++			print "Packages built: "$5;
++			print "Packages failed: "$6;
++			print "Packages ignored: "$7;
++			print "Packages skipped: "$8;
++			print "Packages queued: "q;
++			print "Packages to be built: "tb;
++		}'
++}
+\ No newline at end of file

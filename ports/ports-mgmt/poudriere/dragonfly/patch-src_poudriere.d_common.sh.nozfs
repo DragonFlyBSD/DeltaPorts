@@ -1,13 +1,16 @@
---- /dev/null	2012-11-17 16:53:46.208246697 +0100
-+++ src/poudriere.d/common.sh.nozfs	2012-11-17 20:59:39.000000000 +0100
-@@ -0,0 +1,218 @@
+--- /dev/null	2012-11-18 03:01:18.555344164 +0100
++++ src/poudriere.d/common.sh.nozfs	2012-11-18 10:03:43.000000000 +0100
+@@ -0,0 +1,275 @@
 +#!/bin/sh
 +
 +zget() {
 +	[ $# -ne 1 ] && eargs property
 +	local name=`basename ${JAILFS}`
 +	local confloc=${POUDRIERE_DATA}/nozfs/jails/${name}/${1}
-+	[ -f ${confloc} ] && cat ${confloc}
++	if [ -f ${confloc} ]; then
++	   cat ${confloc}
++	else
++	   echo "-"
 +}
 +
 +zset() {
@@ -21,7 +24,10 @@
 +	[ $# -ne 1 ] && eargs property
 +	local name=`basename ${PTFS}`
 +	local confloc=${POUDRIERE_DATA}/nozfs/ports/${name}/${1}
-+	[ -f ${confloc} ] && cat ${confloc}
++	if [ -f ${confloc} ]; then
++	   cat ${confloc}
++	else
++	   echo "-"
 +}
 +
 +pzset() {
@@ -63,25 +69,19 @@
 +jail_get_base() {
 +	[ $# -ne 1 ] && eargs jailname
 +	local confloc=${POUDRIERE_DATA}/nozfs/jails/${1}/mountpoint
-+	if [ -f ${confloc} ]; then
-+		cat ${confloc}
-+	fi
++	[ -f ${confloc} ] && cat ${confloc}
 +}
 +
 +jail_get_version() {
 +	[ $# -ne 1 ] && eargs jailname
 +	local confloc=${POUDRIERE_DATA}/nozfs/jails/${1}/version
-+	if [ -f ${confloc} ]; then
-+		cat ${confloc}
-+	fi
++	[ -f ${confloc} ] && cat ${confloc}
 +}
 +
 +jail_get_fs() {
 +	[ $# -ne 1 ] && eargs jailname
 +	local confloc=${POUDRIERE_DATA}/nozfs/jails/${1}/filesys
-+	if [ -f ${confloc} ]; then
-+		cat ${confloc}
-+	fi
++	[ -f ${confloc} ] && cat ${confloc}
 +}
 +
 +port_exists() {
@@ -96,17 +96,13 @@
 +port_get_base() {
 +	[ $# -ne 1 ] && eargs portstree_name
 +	local confloc=${POUDRIERE_DATA}/nozfs/ports/${1}/mountpoint
-+	if [ -f ${confloc} ]; then
-+		cat ${confloc}
-+	fi
++	[ -f ${confloc} ] && cat ${confloc}
 +}
 +
 +port_get_fs() {
 +	[ $# -ne 1 ] && eargs portstree_name
 +	local confloc=${POUDRIERE_DATA}/nozfs/ports/${1}/filesys
-+	if [ -f ${confloc} ]; then
-+		cat ${confloc}
-+	fi
++	[ -f ${confloc} ] && cat ${confloc}
 +}
 +
 +get_data_dir() {
@@ -219,3 +215,65 @@
 +	# NoZFS starts with ZROOTFS value, set ZPOOL to null
 +	ZPOOL=
 +}
++
++print_ports_table () {
++	TABFORM="'%-20s %-10s\n'"
++	printf ${TABFORM} "PORTSTREE" "METHOD"
++	local METHOD
++	local confdir=${POUDRIERE_DATA}/nozfs/ports
++	if [ -d ${confdir} ] && [ -n $(ls -A ${confdir}) ]; then
++	  cd ${confloc}
++	  PORTLIST=`find -s * -type d`
++	  for port in ${PORTLIST}; do
++	    if [ -f ${confdir}/${port}/method ];
++	      METHOD=`cat ${confdir}/${port}/method`
++	    else
++	      METHOD=-
++	    fi
++	    print ${TABFORM} "${port}" "${METHOD}"
++	  done
++	fi
++}
++
++print_jails_table () {
++	local confdir=${POUDRIERE_DATA}/nozfs/jails
++	TABFORM="'%-20s %-20s %-7s %-7s %-7s %-7s %-7s %-7s %-7s %s\n'"
++	printf ${TABFORM} "JAILNAME" "VERSION" "ARCH" "METHOD" "SUCCESS" \
++	                  "FAILED" "IGNORED" "SKIPPED" "QUEUED" "STATUS"
++	PARAMS=name version arch method stats_built stats_failed \
++	       stats_ignored stats_skipped stats_queued status
++	if [ -d ${confdir} ] && [ -n $(ls -A ${confdir}) ]; then
++	  cd ${confdir}
++	  JAILLIST=`find -s * -type d`
++	  for jail in ${JAILLIST}; do
++	    COLCNT=0
++	    for param in PARAMS; do
++	      if [ -f ${confdir}/${jail}/${param} ]
++	        eval "val_${COLCNT}=`cat ${confdir}/${jail}/${param}`"
++	      else
++	        eval "val_${COLCNT}=-"
++	      fi
++	      COLCNT=`expr ${COLCNT} + 1`
++	    done
++	    printf ${TABFORM} "${val_0}" "${val_1}" "${val_2}" "${val_3}" \
++			      "${val_4}" "${val_5}" "${val_6}" "${val_7}" \
++			      "${val_8}" "${val_9}"
++	  done
++	fi
++}
++
++list_jail_info () {
++	[ $# -ne 2 ] && eargs num_queued num_to_build
++	echo "Jailname: $(zget name)"
++	echo "BSD version: $(zget version)"
++	echo "BSD arch: $(zget arch)"
++	echo "Install/update method: $(zget method)"
++	echo "Status: $(zget status)"
++	echo "Packages built: $(zget stats_built)"
++	echo "Packages failed: $(zget stats_failed)"
++	echo "Packages ignored: $(zget stats_ignored)"
++	echo "Packages skipped: $(zget stats_skipped)"
++	echo "Packages queued: ${1}"
++	echo "Packages to be built: ${2}"
++}
+\ No newline at end of file
