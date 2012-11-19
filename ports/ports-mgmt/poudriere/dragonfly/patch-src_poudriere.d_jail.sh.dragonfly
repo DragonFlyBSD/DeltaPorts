@@ -1,6 +1,6 @@
 --- /dev/null	2012-11-19 07:55:21.370360877 +0100
-+++ src/poudriere.d/jail.sh.dragonfly	2012-11-19 18:10:10.000000000 +0100
-@@ -0,0 +1,211 @@
++++ src/poudriere.d/jail.sh.dragonfly	2012-11-19 19:11:44.000000000 +0100
+@@ -0,0 +1,215 @@
 +#!/bin/sh
 +#
 +# DragonFly specific
@@ -26,6 +26,7 @@
 +	case ${METHOD} in
 +	git)
 +		install_from_git
++		umount ${JAILMNT}
 +		zkill ${JAILFS}@clean
 +		zsnap ${JAILFS}@clean
 +		;;
@@ -64,6 +65,9 @@
 +	msg "${JAILNAME}: making world upgrade"
 +	cd ${JAILMNT}/usr/src && make upgrade > \
 +	  ${JLOGBASE}/upgrade.log 2>&1 || err 1 "Fail to make world upgrade"
++
++	# get out of JAILMNT so we can unmount it if necessary
++	cd ${POUDRIERE_DATA}
 +}
 +
 +convert_property_version () {
@@ -124,7 +128,6 @@
 +		echo " done"
 +	fi
 +	build_and_install_world
-+	umount ${JAILMNT}
 +}
 +
 +create_jail() {
@@ -180,6 +183,7 @@
 +	zsnap ${JAILFS}@clean
 +	unset CLEANUP_HOOK
 +	msg "Jail ${JAILNAME} ${VERSION} ${ARCH} is ready to be used"
++	umount ${JAILMNT}
 +}
 +
 +set_sysctl() {

@@ -1,6 +1,6 @@
 --- /dev/null	2012-11-19 07:55:21.370360877 +0100
-+++ src/poudriere.d/common.sh.hammer	2012-11-19 17:26:10.000000000 +0100
-@@ -0,0 +1,360 @@
++++ src/poudriere.d/common.sh.hammer	2012-11-19 19:15:02.000000000 +0100
+@@ -0,0 +1,359 @@
 +#!/bin/sh
 +
 +zget() {
@@ -77,8 +77,7 @@
 +		local snap=$(snapname ${1})
 +		hammer snaprm ${ZROOTFS} ${HAMMER_SNAPDIR}/${snap}
 +	else
-+		local mounted=$(check_mount ${1})
-+		[ -n ${mounted} ] && umount ${mounted}
++		# Delete directly from FS (not MNT)
 +		rm -rf ${1}
 +	fi
 +}
