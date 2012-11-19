@@ -1,5 +1,5 @@
 --- /dev/null	2012-11-18 03:01:18.555344164 +0100
-+++ src/poudriere.d/common.sh.zfs	2012-11-18 13:35:37.000000000 +0100
++++ src/poudriere.d/common.sh.zfs	2012-11-18 23:08:31.000000000 +0100
 @@ -0,0 +1,230 @@
 +#!/bin/sh
 +
@@ -159,7 +159,7 @@
 +		# Jail might be lingering from previous build. Already recursively
 +		# destroyed all the builder datasets, so just try stopping the jail
 +		# and ignore any errors
-+		jail -r ${name} >/dev/null 2>&1 || :
++		jail_soft_stop ${name} 2>&1 || :
 +		MASTERMNT=${JAILMNT} JAILNAME=${name} JAILMNT=${mnt} JAILFS=${fs} do_jail_mounts 0
 +		MASTERMNT=${JAILMNT} JAILNAME=${name} JAILMNT=${mnt} JAILFS=${fs} do_portbuild_mounts 0
 +		MASTERMNT=${JAILMNT} JAILNAME=${name} JAILMNT=${mnt} JAILFS=${fs} jrun 0
@@ -176,7 +176,7 @@
 +	msg "Stopping ${PARALLEL_JOBS} builders"
 +
 +	for j in ${JOBS}; do
-+		jail -r ${JAILNAME}-job-${j} >/dev/null 2>&1 || :
++		jail_soft_stop ${JAILNAME}-job-${j} || :
 +	done
 +
 +	mnt=`realpath ${JAILMNT}`

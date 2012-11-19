@@ -1,5 +1,5 @@
 --- src/poudriere.d/jail.sh.orig	2012-10-15 18:18:18.000000000 +0200
-+++ src/poudriere.d/jail.sh	2012-11-18 19:40:33.000000000 +0100
++++ src/poudriere.d/jail.sh	2012-11-18 22:09:02.000000000 +0100
 @@ -15,16 +15,14 @@
  Options:
      -q            -- quiet (remove the header in list)
@@ -379,3 +379,12 @@
  			;;
  		m)
  			METHOD=${OPTARG}
+@@ -469,7 +158,7 @@
+ 		export SET_STATUS_ON_START=0
+ 		test -z ${JAILNAME} && usage
+ 		jail_start
+-		jail -r ${JAILNAME} >/dev/null
++		jail_soft_stop ${JAILNAME}
+ 		jrun 1
+ 		;;
+ 	0000100)

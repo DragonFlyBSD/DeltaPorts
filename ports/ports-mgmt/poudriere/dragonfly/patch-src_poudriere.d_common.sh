@@ -1,15 +1,16 @@
 --- src/poudriere.d/common.sh.orig	2012-10-15 18:18:18.000000000 +0200
-+++ src/poudriere.d/common.sh	2012-11-18 19:46:09.000000000 +0100
-@@ -1,7 +1,6 @@
++++ src/poudriere.d/common.sh	2012-11-18 23:57:42.000000000 +0100
+@@ -1,8 +1,6 @@
  #!/bin/sh
  
 -# zfs namespace
 -NS="poudriere"
+-IPS="$(sysctl -n kern.features.inet 2>/dev/null || (sysctl -n net.inet 1>/dev/null 2>&1 && echo 1) || echo 0)$(sysctl -n kern.features.inet6 2>/dev/null || (sysctl -n net.inet6 1>/dev/null 2>&1 && echo 1) || echo 0)"
 +BSDPLATFORM=`uname -s | tr '[:upper:]' '[:lower:]'`
- IPS="$(sysctl -n kern.features.inet 2>/dev/null || (sysctl -n net.inet 1>/dev/null 2>&1 && echo 1) || echo 0)$(sysctl -n kern.features.inet6 2>/dev/null || (sysctl -n net.inet6 1>/dev/null 2>&1 && echo 1) || echo 0)"
  
  err() {
-@@ -34,6 +33,14 @@
+ 	if [ $# -ne 2 ]; then
+@@ -34,6 +32,14 @@
  	esac
  }
  
@@ -24,7 +25,7 @@
  log_start() {
  	local logfile=$1
  
-@@ -88,26 +95,6 @@
+@@ -88,26 +94,6 @@
  	fi
  }
  
@@ -51,7 +52,7 @@
  sig_handler() {
  	trap - SIGTERM SIGKILL
  	# Ignore SIGINT while cleaning up
-@@ -163,94 +150,17 @@
+@@ -163,116 +149,11 @@
  	fi
  }
  
@@ -62,12 +63,12 @@
 -	return 1
 -}
 -
- jail_runs() {
- 	[ $# -ne 0 ] && eargs
- 	jls -qj ${JAILNAME} name > /dev/null 2>&1 && return 0
- 	return 1
- }
- 
+-jail_runs() {
+-	[ $# -ne 0 ] && eargs
+-	jls -qj ${JAILNAME} name > /dev/null 2>&1 && return 0
+-	return 1
+-}
+-
 -jail_get_base() {
 -	[ $# -ne 1 ] && eargs jailname
 -	zfs list -rt filesystem -s name -H -o ${NS}:type,${NS}:name,mountpoint ${ZPOOL}${ZROOTFS} | \
@@ -143,10 +144,32 @@
 -		-o mountpoint=${mnt} ${fs} || err 1 " Fail" && echo " done"
 -}
 -
- jrun() {
- 	[ $# -ne 1 ] && eargs network
- 	local network=$1
-@@ -313,9 +223,9 @@
+-jrun() {
+-	[ $# -ne 1 ] && eargs network
+-	local network=$1
+-	local ipargs
+-	if [ ${network} -eq 0 ]; then
+-		case $IPS in
+-		01) ipargs="ip6.addr=::1" ;;
+-		10) ipargs="ip4.addr=127.0.0.1" ;;
+-		11) ipargs="ip4.addr=127.0.0.1 ip6.addr=::1" ;;
+-		esac
+-	else
+-		case $IPS in
+-		01) ipargs="ip6=inherit" ;;
+-		10) ipargs="ip4=inherit" ;;
+-		11) ipargs="ip4=inherit ip6=inherit" ;;
+-		esac
+-	fi
+-	jail -c persist name=${JAILNAME} ${ipargs} path=${JAILMNT} \
+-		host.hostname=${JAILNAME} allow.sysvipc allow.mount \
+-		allow.socket_af allow.raw_sockets allow.chflags
+-}
+-
+ do_jail_mounts() {
+ 	[ $# -ne 1 ] && eargs should_mkdir
+ 	local should_mkdir=$1
+@@ -313,9 +194,9 @@
  
  	# Only do this when starting the master jail, clones will already have the dirs
  	if [ ${should_mkdir} -eq 1 ]; then
@@ -158,7 +181,7 @@
  		if [ -d "${CCACHE_DIR:-/nonexistent}" ]; then
  			mkdir -p ${JAILMNT}${CCACHE_DIR} || err 1 "Failed to create ccache directory "
  			msg "Mounting ccache from: ${CCACHE_DIR}"
-@@ -328,11 +238,11 @@
+@@ -328,11 +209,11 @@
  		msg "Mounting packages from: ${PKGDIR}"
  	fi
  
@@ -173,7 +196,7 @@
  	fi
  	[ -n "${MFSSIZE}" ] && mdmfs -M -S -o async -s ${MFSSIZE} md ${JAILMNT}/wrkdirs
  	[ -n "${USE_TMPFS}" ] && mount -t tmpfs tmpfs ${JAILMNT}/wrkdirs
-@@ -371,8 +281,8 @@
+@@ -371,8 +252,8 @@
  	jail_exists ${JAILNAME} || err 1 "No such jail: ${JAILNAME}"
  	jail_runs && err 1 "jail already running: ${JAILNAME}"
  	zset status "start:"
@@ -184,7 +207,45 @@
  
  	msg "Mounting system devices for ${JAILNAME}"
  	do_jail_mounts 1
-@@ -419,24 +329,11 @@
+@@ -385,18 +266,35 @@
+ 	[ ${SET_STATUS_ON_START-1} -eq 1 ] && export STATUS=1
+ }
+ 
++jail_soft_stop() {
++	case ${BSDPLATFORM} in
++	  dragonfly)
++		local AWKCMD='{ if($2 == host) print $1 }'
++		local JAIL_ID=`jls | awk -v host="${1}" "${AWKCMD}"`
++		#local SHUTDWN="/bin/sh /etc/rc.shutdown"
++		#eval env -i /usr/sbin/jexec ${JAIL_ID} ${SHUTDWN} 2>&1
++		killall -j ${JAIL_ID} -TERM > /dev/null 2>&1
++		sleep 1
++		killall -j ${JAIL_ID} -KILL > /dev/null 2>&1
++		;;
++	  freebsd)
++		jail -r ${1} > /dev/null
++		;;
++	esac
++}
++
+ jail_stop() {
+ 	[ $# -ne 0 ] && eargs
+ 	local mnt
+ 	jail_runs || err 1 "No such jail running: ${JAILNAME%-job-*}"
+ 	zset status "stop:"
+ 
+-	jail -r ${JAILNAME%-job-*} >/dev/null
++	jail_soft_stop ${JAILNAME%-job-*}
+ 	# Shutdown all builders
+ 	if [ ${PARALLEL_JOBS} -ne 0 ]; then
+ 		# - here to only check for unset, {start,stop}_builders will set this to blank if already stopped
+ 		for j in ${JOBS-$(jot -w %02d ${PARALLEL_JOBS})}; do
+-			jail -r ${JAILNAME%-job-*}-job-${j} >/dev/null 2>&1 || :
++			jail_soft_stop ${JAILNAME%-job-*}-job-${j} 2>&1 || :
+ 		done
+ 	fi
+ 	msg "Umounting file systems"
+@@ -419,24 +317,11 @@
  			mdconfig -d -u $dev
  		fi
  	fi
@@ -210,7 +271,7 @@
  cleanup() {
  	[ -n "${CLEANED_UP}" ] && return 0
  	msg "Cleaning up"
-@@ -464,9 +361,9 @@
+@@ -464,9 +349,9 @@
  		wait
  	fi
  
@@ -223,7 +284,7 @@
  	jail_stop
  	export CLEANED_UP=1
  }
-@@ -500,7 +397,7 @@
+@@ -500,16 +385,16 @@
  build_port() {
  	[ $# -ne 1 ] && eargs portdir
  	local portdir=$1
@@ -232,8 +293,10 @@
  	local targets="check-config fetch checksum extract patch configure build run-depends install package ${PORTTESTING:+deinstall}"
  
  	for phase in ${targets}; do
-@@ -509,7 +406,7 @@
- 			jail -r ${JAILNAME} >/dev/null
+ 		zset status "${phase}:${port}"
+ 		if [ "${phase}" = "fetch" ]; then
+-			jail -r ${JAILNAME} >/dev/null
++			jail_soft_stop ${JAILNAME}
  			jrun 1
  		fi
 -		[ "${phase}" = "install" -a $ZVERSION -ge 28 ] && zfs snapshot ${JAILFS}@preinst
@@ -241,7 +304,16 @@
  		if [ "${phase}" = "deinstall" ]; then
  			msg "Checking shared library dependencies"
  			if [ ${PKGNG} -eq 0 ]; then
-@@ -554,7 +451,7 @@
+@@ -532,7 +417,7 @@
+ 		echo "==================================================================="
+ 
+ 		if [ "${phase}" = "checksum" ]; then
+-			jail -r ${JAILNAME} >/dev/null
++			jail_soft_stop ${JAILNAME}
+ 			jrun 0
+ 		fi
+ 		if [ "${phase}" = "deinstall" ]; then
+@@ -554,7 +439,7 @@
  				local mod=$(mktemp ${jailbase}/tmp/mod.XXXXXX)
  				local mod1=$(mktemp ${jailbase}/tmp/mod1.XXXXXX)
  				local die=0
@@ -250,8 +322,12 @@
  					while read mod type path; do
  					local ppath
  					ppath=`echo "$path" | sed -e "s,^${JAILMNT},," -e "s,^${PREFIX}/,," -e "s,^share/${portname},%%DATADIR%%," -e "s,^etc/${portname},%%ETCDIR%%,"`
-@@ -613,14 +510,14 @@
- 	jail -r ${JAILNAME} >/dev/null
+@@ -610,17 +495,17 @@
+ 			fi
+ 		fi
+ 	done
+-	jail -r ${JAILNAME} >/dev/null
++	jail_soft_stop ${JAILNAME}
  	jrun 0
  	zset status "idle:"
 -	zfs destroy -r ${JAILFS}@preinst || :
@@ -267,7 +343,7 @@
  	local tardir=${POUDRIERE_DATA}/wrkdirs/${JAILNAME%-job-*}/${PTNAME}
  	local tarname=${tardir}/${PKGNAME}.${WRKDIR_ARCHIVE_FORMAT}
  	local mnted_portdir=${JAILMNT}/wrkdirs/${portdir}
-@@ -639,58 +536,6 @@
+@@ -639,58 +524,6 @@
  	job_msg "Saved ${port} wrkdir to: ${tarname}"
  }
  
@@ -326,7 +402,7 @@
  build_stats_list() {
  	[ $# -ne 3 ] && eargs html_path type display_name
  	local html_path="$1"
-@@ -923,11 +768,11 @@
+@@ -923,11 +756,11 @@
  
  	PKGNAME="${pkgname}" # set ASAP so cleanup() can use it
  	port=$(cache_get_origin ${pkgname})
@@ -340,7 +416,7 @@
  
  	# If this port is IGNORED, skip it
  	# This is checked here instead of when building the queue
-@@ -998,10 +843,10 @@
+@@ -998,10 +831,10 @@
  	[ $# -ne 1 ] && eargs directory
  	local dir=$1
  	local makeargs="-VPKG_DEPENDS -VBUILD_DEPENDS -VEXTRACT_DEPENDS -VLIB_DEPENDS -VPATCH_DEPENDS -VFETCH_DEPENDS -VRUN_DEPENDS"
@@ -353,7 +429,7 @@
  }
  
  deps_file() {
-@@ -1149,7 +994,7 @@
+@@ -1149,7 +982,7 @@
  		o=$(pkg_get_origin ${pkg})
  		v=${pkg##*-}
  		v=${v%.*}
@@ -362,7 +438,7 @@
  			msg "${o} does not exist anymore. Deleting stale ${pkg##*/}"
  			delete_pkg ${pkg}
  			continue
-@@ -1164,7 +1009,7 @@
+@@ -1164,7 +997,7 @@
  
  		# Check if the compiled options match the current options from make.conf and /var/db/options
  		if [ "${CHECK_CHANGED_OPTIONS:-no}" != "no" ]; then
@@ -371,7 +447,7 @@
  			compiled_options=$(pkg_get_options ${pkg})
  
  			if [ "${compiled_options}" != "${current_options}" ]; then
-@@ -1199,7 +1044,7 @@
+@@ -1199,7 +1032,7 @@
  
  	# Add to cache if not found.
  	if [ -z "${pkgname}" ]; then
@@ -380,7 +456,7 @@
  		# Make sure this origin did not already exist
  		existing_origin=$(cache_get_origin "${pkgname}")
  		[ -n "${existing_origin}" ] &&  err 1 "Duplicated origin for ${pkgname}: ${origin} AND ${existing_origin}. Rerun with -D to see which ports are depending on these."
-@@ -1357,9 +1202,9 @@
+@@ -1357,9 +1190,9 @@
  
  	msg "Populating LOCALBASE"
  	mkdir -p ${JAILMNT}/${MYBASE:-/usr/local}
@@ -392,7 +468,7 @@
  	if [ -n "${WITH_PKGNG}" ]; then
  		export PKGNG=1
  		export PKG_EXT="txz"
-@@ -1381,26 +1226,35 @@
+@@ -1381,26 +1214,35 @@
  test -f ${SCRIPTPREFIX}/../../etc/poudriere.conf || err 1 "Unable to find ${SCRIPTPREFIX}/../../etc/poudriere.conf"
  . ${SCRIPTPREFIX}/../../etc/poudriere.conf
  

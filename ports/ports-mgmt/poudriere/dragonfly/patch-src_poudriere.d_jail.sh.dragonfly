@@ -1,9 +1,17 @@
 --- /dev/null	2012-11-18 03:01:18.555344164 +0100
-+++ src/poudriere.d/jail.sh.dragonfly	2012-11-18 19:10:25.000000000 +0100
-@@ -0,0 +1,158 @@
++++ src/poudriere.d/jail.sh.dragonfly	2012-11-19 01:11:58.000000000 +0100
+@@ -0,0 +1,197 @@
 +#!/bin/sh
 +#
 +# DragonFly specific
++
++jail_runs() {
++	[ $# -ne 0 ] && eargs
++	local AWKCMD='{ if($2 == host) print $1 }'
++	jls | awk -v host="${JAILNAME}" "${AWKCMD}" > \
++	  /dev/null 2>&1 && return 0
++	return 1
++}
 +
 +update_jail() {
 +	jail_exists ${JAILNAME} || err 1 "No such jail: ${JAILNAME}"
@@ -158,4 +166,35 @@
 +	zsnap ${JAILFS}@clean
 +	unset CLEANUP_HOOK
 +	msg "Jail ${JAILNAME} ${VERSION} ${ARCH} is ready to be used"
++}
++
++set_sysctl() {
++	[ $# -ne 2 ] && knob value
++	local KNOB=${1}
++	local WANTVAL=${2}
++	CURVAL=`sysctl -n ${KNOB} 2>/dev/null`
++	if [ ${WANTVAL} -ne ${CURVAL} ]; then
++		sysctl ${KNOB}=${WANTVAL}
++	fi
++}
++
++jrun() {
++	[ $# -ne 1 ] && eargs network
++	local AWKCMD='{ if ($2 != "127.0.0.1") print $2 }'
++	local network=$1
++	local ipargs
++	if [ ${network} -eq 0 ]; then
++		ipargs="127.0.0.1"
++	else
++		local inherited=`grep 'inet [0-9]' | awk "${AWKCMD}"`
++		ipargs="127.0.0.1,${inherited}"
++	fi
++
++	set_sysctl jail.allow_raw_sockets 1
++	set_sysctl jail.chflags_allowed 1
++	set_sysctl jail.sysvipc_allowed 1
++	sys_sysctl jail.socket_unixiproute_only 1
++	sys_sysctl jail.set_hostname_allowed 0
++
++	jail ${JAILMNT} ${jAILNAME} ${ipargs} /bin/sh
 +}
