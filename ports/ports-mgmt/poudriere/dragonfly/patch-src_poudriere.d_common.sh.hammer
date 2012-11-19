@@ -1,6 +1,6 @@
 --- /dev/null	2012-11-19 07:55:21.370360877 +0100
-+++ src/poudriere.d/common.sh.hammer	2012-11-19 19:15:02.000000000 +0100
-@@ -0,0 +1,359 @@
++++ src/poudriere.d/common.sh.hammer	2012-11-19 19:55:19.000000000 +0100
+@@ -0,0 +1,364 @@
 +#!/bin/sh
 +
 +zget() {
@@ -51,7 +51,7 @@
 +
 +onlysnap () {
 +	[ $# -ne 1 ] && eargs filesystem@snapname
-+	local testat=`grep @ ${1}`
++	local testat=$(echo ${1} | grep @)
 +	if [ -n "${testat}" ]; then
 +	   return 1
 +	fi
@@ -68,14 +68,19 @@
 +	[ $# -ne 1 ] && eargs filesystem@snapname
 +	local snap=$(snapname ${1})
 +	mkdir -p ${HAMMER_SNAPDIR}
-+	hammer snapshot ${ZROOTFS} ${HAMMER_SNAPDIR}/${snap}
++	if [ -f ${HAMMER_SNAPDIR}/${snap} ]; then
++		err 1 "Cannot snapshot, ${snap} already exists"
++	else
++		hammer snapshot ${ZROOTFS} ${HAMMER_SNAPDIR}/${snap}
++	fi
 +}
 +
 +zkill() {
 +	[ $# -ne 1 ] && eargs filesystem@snapname
 +	if [ $(onlysnap ${1}) ]; then
 +		local snap=$(snapname ${1})
-+		hammer snaprm ${ZROOTFS} ${HAMMER_SNAPDIR}/${snap}
++		[ -f ${HAMMER_SNAPDIR}/${snap} ] && \
++		  hammer snaprm ${ZROOTFS} ${HAMMER_SNAPDIR}/${snap}
 +	else
 +		# Delete directly from FS (not MNT)
 +		rm -rf ${1}
