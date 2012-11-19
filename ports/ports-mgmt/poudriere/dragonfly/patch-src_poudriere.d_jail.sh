@@ -1,5 +1,5 @@
 --- src/poudriere.d/jail.sh.orig	2012-10-15 18:18:18.000000000 +0200
-+++ src/poudriere.d/jail.sh	2012-11-19 11:19:39.000000000 +0100
++++ src/poudriere.d/jail.sh	2012-11-19 14:44:44.000000000 +0100
 @@ -15,16 +15,14 @@
  Options:
      -q            -- quiet (remove the header in list)
@@ -360,7 +360,7 @@
  ARCH=`uname -m`
  REALARCH=${ARCH}
  START=0
-@@ -383,10 +74,12 @@
+@@ -383,24 +74,23 @@
  QUIET=0
  INFO=0
  UPDATE=0
@@ -373,7 +373,11 @@
  
  while getopts "j:v:a:z:m:n:f:M:sdklqciut:" FLAG; do
  	case "${FLAG}" in
-@@ -397,10 +90,7 @@
+ 		j)
+-			JAILNAME=${OPTARG}
++			JAILNAME=$(echo ${OPTARG} | sed -e 's| |_|g')
+ 			;;
+ 		v)
  			VERSION=${OPTARG}
  			;;
  		a)

@@ -1,6 +1,6 @@
 --- /dev/null	2012-11-19 07:55:21.370360877 +0100
-+++ src/poudriere.d/common.sh.hammer	2012-11-19 14:02:04.000000000 +0100
-@@ -0,0 +1,359 @@
++++ src/poudriere.d/common.sh.hammer	2012-11-19 15:10:29.000000000 +0100
+@@ -0,0 +1,361 @@
 +#!/bin/sh
 +
 +zget() {
@@ -314,7 +314,9 @@
 +print_jails_table () {
 +	[ $# -ne 1 ] && eargs quiet
 +	local confdir=${POUDRIERE_DATA}/hammer/jails
-+	TABFORM='%-20s %-20s %-7s %-7s %-7s %-7s %-7s %-7s %-7s %s\n'
++	local TABFORM='%-20s %-20s %-7s %-7s %-7s %-7s %-7s %-7s %-7s %s\n'
++	local COLCNT
++	local PARAMS
 +	[ ${1} -eq 0 ] && printf "${TABFORM}" \
 +		"JAILNAME" "VERSION" "ARCH" "METHOD" "SUCCESS" \
 +		"FAILED" "IGNORED" "SKIPPED" "QUEUED" "STATUS"
@@ -322,10 +324,10 @@
 +	        stats_ignored stats_skipped stats_queued status"
 +	if [ -d ${confdir} ] && [ -n $(ls -A ${confdir}) ]; then
 +	  cd ${confdir}
-+	  JAILLIST=`find -s * -type d`
++	  local JAILLIST=`find -s * -type d`
 +	  for jail in ${JAILLIST}; do
 +	    COLCNT=0
-+	    for param in PARAMS; do
++	    for param in ${PARAMS}; do
 +	      if [ -f ${confdir}/${jail}/${param} ]; then
 +	        eval "val_${COLCNT}=`cat ${confdir}/${jail}/${param}`"
 +	      else

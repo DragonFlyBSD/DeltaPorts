@@ -1,6 +1,6 @@
 --- /dev/null	2012-11-19 07:55:21.370360877 +0100
-+++ src/poudriere.d/jail.sh.dragonfly	2012-11-19 13:46:29.000000000 +0100
-@@ -0,0 +1,197 @@
++++ src/poudriere.d/jail.sh.dragonfly	2012-11-19 15:17:05.000000000 +0100
+@@ -0,0 +1,199 @@
 +#!/bin/sh
 +#
 +# DragonFly specific
@@ -37,33 +37,34 @@
 +}
 +
 +build_and_install_world() {
-+	ncpus=$(/sbin/sysctl hw.ncpu | awk '{print $2}')
-+	factor=`expr ${ncpus} \* 2 - 1`
-+	options="-DNO_GCC47 -DNO_GAMES -DNOPROFILE"
++	local JLOGBASE=${POUDRIERE_DATA}/logs/jailbuild
++	local ncpus=$(/sbin/sysctl hw.ncpu | awk '{print $2}')
++	local factor=`expr ${ncpus} \* 2 - 1`
++	local options="-DNO_GCC47 -DNO_GAMES -DNOPROFILE -DNO_BINUTILS221"
++	mkdir -p ${JLOGBASE}
 +
 +	export TARGET_ARCH=${ARCH}
-+	export MAKEOBJDIRPREFIX=/usr/obj/poudriere
 +	export __MAKE_CONF=/dev/null
 +	export DESTDIR=${JAILMNT}
 +
 +	msg "${JAILNAME}: making buildworld"
 +	cd ${JAILMNT}/usr/src && \
-+	  make -j${factor} ${options} buildworld || \
-+	  err 1 "Fail to build world"
++	  make -j${factor} ${options} buildworld > \
++	  ${JLOGBASE}/build.log 2>&1 || err 1 "Fail to build world"
 +
 +	msg "${JAILNAME}: making installworld"
-+	cd ${JAILMNT}/usr/src && make ${options} installworld || \
-+	  err 1 "Fail to install world"
++	cd ${JAILMNT}/usr/src && make ${options} installworld > \
++	  ${JLOGBASE}/install.log 2>&1 || err 1 "Fail to install world"
 +
 +	msg "${JAILNAME}: making distribution"
 +	cd ${JAILMNT}/usr/src && \
-+	  make -m ${JAILMNT}/usr/share/mk distribution || \
-+	  err 1 "Fail to make distribution"
++	  make -m ${JAILMNT}/usr/share/mk distribution > \
++	  ${JLOGBASE}/distrib.log 2>&1 || err 1 "Fail to make distribution"
 +
 +	# make upgrade required to link device drives (e.g. </dev/video/...)
 +	msg "${JAILNAME}: making world upgrade"
-+	cd ${JAILMNT}/usr/src && make upgrade || \
-+	  err 1 "Fail to make world upgrade"
++	cd ${JAILMNT}/usr/src && make upgrade > \
++	  ${JLOGBASE}/upgrade.log 2>&1 || err 1 "Fail to make world upgrade"
 +}
 +
 +convert_version () {
@@ -81,6 +82,7 @@
 +	local UPDATE=0
 +	local proto
 +	local mounted=$(check_mount "${JAILFS}")
++
 +	[ -z ${mounted} ] && ${NULLMOUNT} "${JAILFS}" "${JAILMNT}"
 +	[ -d ${JAILMNT}/usr/src ] && UPDATE=1
 +	mkdir -p ${JAILMNT}/usr/src
@@ -137,6 +139,7 @@
 +	esac
 +
 +	jail_create_zfs ${JAILNAME} ${VERSION} ${ARCH} ${JAILMNT} ${JAILFS}
++	mkdir -p ${POUDRIERE_DATA}/logs
 +	# Wrap the jail creation in a special cleanup hook that will remove
 +	# the jail if any error is encountered
 +	CLEANUP_HOOK=cleanup_new_jail
@@ -161,7 +164,6 @@
 +
 +	mkdir -p ${JAILMNT}/${PORTSRC}
 +	mkdir -p ${JAILMNT}/wrkdirs
-+	mkdir -p ${POUDRIERE_DATA}/logs
 +
 +	zsnap ${JAILFS}@clean
 +	unset CLEANUP_HOOK
