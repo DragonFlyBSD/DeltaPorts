@@ -1,6 +1,6 @@
 --- /dev/null	2012-11-19 07:55:21.370360877 +0100
-+++ src/poudriere.d/jail.sh.dragonfly	2012-11-19 16:40:08.000000000 +0100
-@@ -0,0 +1,212 @@
++++ src/poudriere.d/jail.sh.dragonfly	2012-11-19 18:10:10.000000000 +0100
+@@ -0,0 +1,211 @@
 +#!/bin/sh
 +#
 +# DragonFly specific
@@ -57,8 +57,7 @@
 +	  ${JLOGBASE}/install.log 2>&1 || err 1 "Fail to install world"
 +
 +	msg "${JAILNAME}: making distribution"
-+	cd ${JAILMNT}/usr/src/etc && \
-+	  make -m ${JAILMNT}/usr/share/mk distribution > \
++	cd ${JAILMNT}/usr/src/etc && make distribution > \
 +	  ${JLOGBASE}/distrib.log 2>&1 || err 1 "Fail to make distribution"
 +
 +	# make upgrade required to link device drives (e.g. </dev/video/...)
