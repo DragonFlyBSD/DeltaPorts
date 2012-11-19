@@ -1,5 +1,5 @@
 --- /dev/null	2012-11-19 07:55:21.370360877 +0100
-+++ src/poudriere.d/jail.sh.dragonfly	2012-11-19 19:58:08.000000000 +0100
++++ src/poudriere.d/jail.sh.dragonfly	2012-11-19 22:15:23.000000000 +0100
 @@ -0,0 +1,215 @@
 +#!/bin/sh
 +#
@@ -98,7 +98,7 @@
 +	local bverz
 +	local mounted=$(check_mount "${JAILFS}")
 +
-+	[ -z ${mounted} ] && ${NULLMOUNT} "${JAILFS}" "${JAILMNT}"
++	[ -z "${mounted}" ] && ${NULLMOUNT} "${JAILFS}" "${JAILMNT}"
 +	[ -d ${JAILMNT}/usr/src ] && UPDATE=1
 +	mkdir -p ${JAILMNT}/usr/src
 +	cd ${JAILMNT}/usr/src

@@ -1,5 +1,5 @@
 --- src/poudriere.d/ports.sh.orig	2012-10-15 18:18:18.000000000 +0200
-+++ src/poudriere.d/ports.sh	2012-11-19 21:13:16.000000000 +0100
++++ src/poudriere.d/ports.sh	2012-11-20 00:05:22.000000000 +0100
 @@ -21,11 +21,11 @@
                       them.
      -p name       -- specifies the name of the portstree we workon . If not
@@ -24,7 +24,16 @@
  while getopts "cFudlp:qf:M:m:" FLAG; do
  	case "${FLAG}" in
  		c)
-@@ -76,26 +78,8 @@
+@@ -48,7 +50,7 @@
+ 			UPDATE=1
+ 			;;
+ 		p)
+-			PTNAME=${OPTARG}
++			PTNAME=$(echo ${OPTARG} | sed -e 's| |_|g')
+ 			;;
+ 		d)
+ 			DELETE=1
+@@ -76,29 +78,16 @@
  
  [ $(( CREATE + UPDATE + DELETE + LIST )) -lt 1 ] && usage
  
@@ -52,7 +61,15 @@
  else
  	test -z "${PTNAME}" && usage
  fi
-@@ -107,49 +91,21 @@
++
++if [ "${METHOD}" = "rsync" ] && [ -z "${DPORTS_RSYNC_LOC}" ]; then
++	err 2 "Define RSYNC_DPORTS_LOC in poudriere.conf first!"
++fi
++
+ if [ ${CREATE} -eq 1 ]; then
+ 	# test if it already exists
+ 	port_exists ${PTNAME} && err 2 "The ports tree ${PTNAME} already exists"
+@@ -107,49 +96,20 @@
  	port_create_zfs ${PTNAME} ${PTMNT} ${PTFS}
  	if [ $FAKE -eq 0 ]; then
  		case ${METHOD} in
@@ -92,11 +109,9 @@
 -				${PTMNT} || {
 -				zfs destroy ${PTFS}
 +		rsync)
-+			if [ -z "${RSYNC_DPORTS_LOC}" ]; then
-+				err 1 "Define RSYNC_DPORTS_LOC in poudriere.conf first!"
-+			fi
 +			msg "Cloning the ports tree via rsync"
-+			rsync -vaq ${RSYNC_DPORTS_LOC} ${PTMNT} || {
++			rsync -vaq ${RSYNC_DPORTS_LOC}/ ${PTFS}/ || {
++				kill_port_metadata ${PTNAME}
 +				zkill ${PTFS}
  				err 1 " Fail"
  			}
@@ -106,32 +121,39 @@
  			msg "Cloning the ports tree"
 -			git clone ${GIT_URL} ${PTMNT} || {
 -				zfs destroy ${PTFS}
-+			git clone --depth 1 ${DPORTS_URL} ${PTMNT} || {
++			git clone --depth 1 ${DPORTS_URL} ${PTFS} || {
++				kill_port_metadata ${PTNAME}
 +				zkill ${PTFS}
  				err 1 " Fail"
  			}
  			echo " done"
-@@ -163,50 +119,37 @@
+@@ -162,52 +122,37 @@
+ if [ ${DELETE} -eq 1 ]; then
  	port_exists ${PTNAME} || err 2 "No such ports tree ${PTNAME}"
  	PTMNT=$(port_get_base ${PTNAME})
++	PTFS=$(port_get_fs ${PTNAME})
  	[ -d "${PTMNT}/ports" ] && PORTSMNT="${PTMNT}/ports"
 -	/sbin/mount -t nullfs | /usr/bin/grep -q "${PORTSMNT:-${PTMNT}} on" \
-+	${NULLMOUNT} | /usr/bin/grep -q "${PORTSMNT:-${PTMNT}} on" \
- 		&& err 1 "Ports tree \"${PTNAME}\" is currently mounted and being used."
+-		&& err 1 "Ports tree \"${PTNAME}\" is currently mounted and being used."
++	[ -n "$(check_mount ${PTFS})" ] && \
++		err 1 "Ports tree \"${PTNAME}\" is currently mounted and being used."
  	msg "Deleting portstree \"${PTNAME}\""
- 	PTFS=$(port_get_fs ${PTNAME})
+-	PTFS=$(port_get_fs ${PTNAME})
 -	zfs destroy -r ${PTFS}
++	kill_port_metadata ${PTNAME}
 +	zkill ${PTFS}
  fi
  
  if [ ${UPDATE} -eq 1 ]; then
  	port_exists ${PTNAME} || err 2 "No such ports tree ${PTNAME}"
  	PTMNT=$(port_get_base ${PTNAME})
- 	[ -d "${PTMNT}/ports" ] && PORTSMNT="${PTMNT}/ports"
+-	[ -d "${PTMNT}/ports" ] && PORTSMNT="${PTMNT}/ports"
 -	/sbin/mount -t nullfs | /usr/bin/grep -q "${PORTSMNT:-${PTMNT}} on" \
-+	${NULLMOUNT} | /usr/bin/grep -q "${PORTSMNT:-${PTMNT}} on" \
- 		&& err 1 "Ports tree \"${PTNAME}\" is currently mounted and being used."
+-		&& err 1 "Ports tree \"${PTNAME}\" is currently mounted and being used."
  	PTFS=$(port_get_fs ${PTNAME})
++	[ -d "${PTMNT}/ports" ] && PORTSMNT="${PTMNT}/ports"
++	[ -n "$(check_mount ${PTFS})" ] && \
++		err 1 "Ports tree \"${PTNAME}\" is currently mounted and being used."
  	msg "Updating portstree \"${PTNAME}\""
  	METHOD=$(pzget method)
  	if [ ${METHOD} = "-" ]; then
@@ -160,16 +182,15 @@
 -		msg_n "Updating the ports tree..."
 -		svn -q update ${PORTSMNT:-${PTMNT}}
 +	rsync)
-+		if [ -z "${RSYNC_DPORTS_LOC}" ]; then
-+			err 1 "Define RSYNC_DPORTS_LOC in poudriere.conf first!"
-+		fi
 +		msg "Updating the ports tree via rsync"
-+		rsync -vaq --delete ${RSYNC_DPORTS_LOC} ${PORTSMNT:-${PTMNT}}
++		rsync -vaq --delete ${RSYNC_DPORTS_LOC}/ ${PTFS}/
  		echo " done"
  		;;
  	git)
 -		msg "Pulling from ${GIT_URL}"
+-		cd ${PORTSMNT:-${PTMNT}} && git pull
 +		msg "Pulling from ${DPORTS_URL}"
- 		cd ${PORTSMNT:-${PTMNT}} && git pull
++		cd ${PTFS} && git pull
  		echo " done"
  		;;
+ 	*)

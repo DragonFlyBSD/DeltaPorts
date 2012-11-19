@@ -1,6 +1,6 @@
 --- /dev/null	2012-11-19 07:55:21.370360877 +0100
-+++ src/poudriere.d/common.sh.zfs	2012-11-19 14:02:21.000000000 +0100
-@@ -0,0 +1,236 @@
++++ src/poudriere.d/common.sh.zfs	2012-11-19 22:48:09.000000000 +0100
+@@ -0,0 +1,246 @@
 +#!/bin/sh
 +
 +# zfs namespace
@@ -235,5 +235,15 @@
 +
 +do_jail_premount () {
 +	[ $# -ne 2 ] && eargs filesystem mountpoint
++	# no-op for ZFS
++}
++
++kill_port_metadata () {
++	[ $# -ne 1 ] && eargs portname
++	# no-op for ZFS
++}
++
++kill_jail_metadata () {
++	[ $# -ne 1 ] && eargs jailname
 +	# no-op for ZFS
 +}

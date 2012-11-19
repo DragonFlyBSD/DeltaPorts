@@ -1,6 +1,6 @@
 --- /dev/null	2012-11-19 07:55:21.370360877 +0100
-+++ src/poudriere.d/common.sh.hammer	2012-11-19 20:40:00.000000000 +0100
-@@ -0,0 +1,364 @@
++++ src/poudriere.d/common.sh.hammer	2012-11-19 23:56:10.000000000 +0100
+@@ -0,0 +1,377 @@
 +#!/bin/sh
 +
 +zget() {
@@ -68,7 +68,7 @@
 +	[ $# -ne 1 ] && eargs filesystem@snapname
 +	local snap=$(snapname "${1}")
 +	mkdir -p ${HAMMER_SNAPDIR}
-+	if [ -f ${HAMMER_SNAPDIR}/${snap} ]; then
++	if [ -L ${HAMMER_SNAPDIR}/${snap} ]; then
 +		err 1 "Cannot snapshot, ${snap} already exists"
 +	else
 +		hammer snapshot ${ZROOTFS} ${HAMMER_SNAPDIR}/${snap}
@@ -79,7 +79,7 @@
 +	[ $# -ne 1 ] && eargs filesystem@snapname
 +	if [ $(onlysnap "${1}") ]; then
 +		local snap=$(snapname ${1})
-+		[ -f ${HAMMER_SNAPDIR}/${snap} ] && \
++		[ -L ${HAMMER_SNAPDIR}/${snap} ] && \
 +		  hammer snaprm ${ZROOTFS} ${HAMMER_SNAPDIR}/${snap}
 +	else
 +		# Delete directly from FS (not MNT)
@@ -162,7 +162,8 @@
 +
 +port_exists() {
 +	[ $# -ne 1 ] && eargs portstree_name
-+	if [ -d ${BASEFS}/ports/${1} ] && \
++	if [ -d ${BASEFS}/ports/${1} ] || \
++	   [ -d ${ZROOTFS}/ports/${1} ] || \
 +	   [ -d ${POUDRIERE_DATA}/hammer/ports/${1} ]; then
 +	    return 0;
 +	fi
@@ -300,16 +301,16 @@
 +	[ ${1} -eq 0 ] && printf "${TABFORM}" "PORTSTREE" "METHOD"
 +	local METHOD
 +	local confdir=${POUDRIERE_DATA}/hammer/ports
-+	if [ -d ${confdir} ] && [ -n $(ls -A ${confdir}) ]; then
-+	  cd ${confloc}
-+	  PORTLIST=`find -s * -type d`
++	if [ -d ${confdir} ] && [ -n "$(ls -A ${confdir})" ]; then
++	  cd ${confdir}
++	  PORTLIST=$(find -s * -type d)
 +	  for port in ${PORTLIST}; do
 +	    if [ -f ${confdir}/${port}/method ]; then
-+	      METHOD=`cat ${confdir}/${port}/method`
++	      METHOD=$(cat ${confdir}/${port}/method)
 +	    else
 +	      METHOD=-
 +	    fi
-+	    print "${TABFORM}" "${port}" "${METHOD}"
++	    printf "${TABFORM}" "${port}" "${METHOD}"
 +	  done
 +	fi
 +}
@@ -325,7 +326,7 @@
 +		"FAILED" "IGNORED" "SKIPPED" "QUEUED" "STATUS"
 +	PARAMS="name version arch method stats_built stats_failed \
 +	        stats_ignored stats_skipped stats_queued status"
-+	if [ -d ${confdir} ] && [ -n $(ls -A ${confdir}) ]; then
++	if [ -d ${confdir} ] && [ -n "$(ls -A ${confdir})" ]; then
 +	  cd ${confdir}
 +	  local JAILLIST=`find -s * -type d`
 +	  for jail in ${JAILLIST}; do
@@ -347,21 +348,33 @@
 +
 +list_jail_info () {
 +	[ $# -ne 2 ] && eargs num_queued num_to_build
-+	echo "Jailname: $(zget name)"
-+	echo "BSD version: $(zget version)"
-+	echo "BSD arch: $(zget arch)"
++	echo "Jailname:              $(zget name)"
++	echo "BSD version:           $(zget version)"
++	echo "BSD arch:              $(zget arch)"
 +	echo "Install/update method: $(zget method)"
-+	echo "Status: $(zget status)"
-+	echo "Packages built: $(zget stats_built)"
-+	echo "Packages failed: $(zget stats_failed)"
-+	echo "Packages ignored: $(zget stats_ignored)"
-+	echo "Packages skipped: $(zget stats_skipped)"
-+	echo "Packages queued: ${1}"
-+	echo "Packages to be built: ${2}"
++	echo "Status:                $(zget status)"
++	echo "Packages built:        $(zget stats_built)"
++	echo "Packages failed:       $(zget stats_failed)"
++	echo "Packages ignored:      $(zget stats_ignored)"
++	echo "Packages skipped:      $(zget stats_skipped)"
++	echo "Packages queued:       ${1}"
++	echo "Packages to be built:  ${2}"
 +}
 +
 +do_jail_premount () {
 +	[ $# -ne 2 ] && eargs filesystem mountpoint
 +	local mounted=$(check_mount ${1})
-+	[ -z ${mounted} ] && ${NULLMOUNT} ${1} ${2}
++	[ -z "${mounted}" ] && ${NULLMOUNT} ${1} ${2}
++}
++
++kill_port_metadata () {
++	[ $# -ne 1 ] && eargs portname
++	rm -rf ${POUDRIERE_DATA}/hammer/ports/${1}
++	rmdir ${BASEFS}/ports/${1}
++}
++
++kill_jail_metadata () {
++	[ $# -ne 1 ] && eargs jailname
++	rm -rf ${POUDRIERE_DATA}/hammer/jails/${1}
++	rmdir ${BASEFS}/jails/${1}
 +}

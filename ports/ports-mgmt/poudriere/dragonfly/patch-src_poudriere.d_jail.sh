@@ -1,6 +1,6 @@
 --- src/poudriere.d/jail.sh.orig	2012-10-15 18:18:18.000000000 +0200
-+++ src/poudriere.d/jail.sh	2012-11-19 14:44:44.000000000 +0100
-@@ -15,16 +15,14 @@
++++ src/poudriere.d/jail.sh	2012-11-19 22:49:21.000000000 +0100
+@@ -15,50 +15,31 @@
  Options:
      -q            -- quiet (remove the header in list)
      -j jailname   -- Specifies the jailname
@@ -23,9 +23,19 @@
      -t version    -- version to upgrade to"
  	exit 1
  }
-@@ -37,28 +35,11 @@
- 	nbs=$(zget stats_skipped|sed -e 's/ //g')
- 	nbq=$(zget stats_queued|sed -e 's/ //g')
+ 
+ info_jail() {
+ 	jail_exists ${JAILNAME} || err 1 "No such jail: ${JAILNAME}"
+-	nbb=$(zget stats_built|sed -e 's/ //g')
+-	nbf=$(zget stats_failed|sed -e 's/ //g')
+-	nbi=$(zget stats_ignored|sed -e 's/ //g')
+-	nbs=$(zget stats_skipped|sed -e 's/ //g')
+-	nbq=$(zget stats_queued|sed -e 's/ //g')
++	nbb=$(zget stats_built|sed -e 's|-|0|g')
++	nbf=$(zget stats_failed|sed -e 's|-|0|g')
++	nbi=$(zget stats_ignored|sed -e 's|-|0|g')
++	nbs=$(zget stats_skipped|sed -e 's|-|0|g')
++	nbq=$(zget stats_queued|sed -e 's|-|0|g')
  	tobuild=$((nbq - nbb - nbf - nbi - nbs))
 -	zfs list -H -o ${NS}:type,${NS}:name,${NS}:version,${NS}:arch,${NS}:stats_built,${NS}:stats_failed,${NS}:stats_ignored,${NS}:stats_skipped,${NS}:status,${NS}:method ${JAILFS}| \
 -		awk -v q="$nbq" -v tb="$tobuild" '/^rootfs/  {
@@ -54,16 +64,25 @@
  }
  
  delete_jail() {
-@@ -68,7 +49,7 @@
+@@ -68,14 +49,15 @@
  		err 1 "Unable to remove jail ${JAILNAME}: it is running"
  
  	msg_n "Removing ${JAILNAME} jail..."
 -	zfs destroy -r ${JAILFS}
++	kill_jail_metadata ${JAILNAME}
 +	zkill ${JAILFS}
  	rmdir ${JAILMNT}
  	rm -rf ${POUDRIERE_DATA}/packages/${JAILNAME}
  	rm -rf ${POUDRIERE_DATA}/cache/${JAILNAME}
-@@ -83,296 +64,6 @@
+ 	rm -f ${POUDRIERE_DATA}/logs/*-${JAILNAME}.*.log
+ 	rm -f ${POUDRIERE_DATA}/logs/bulk-${JAILNAME}.log
+ 	rm -rf ${POUDRIERE_DATA}/logs/*/${JAILNAME}
+-	echo done
++	echo "done"
+ }
+ 
+ cleanup_new_jail() {
+@@ -83,296 +65,6 @@
  	delete_jail
  }
  
@@ -360,7 +379,7 @@
  ARCH=`uname -m`
  REALARCH=${ARCH}
  START=0
-@@ -383,24 +74,23 @@
+@@ -383,24 +75,23 @@
  QUIET=0
  INFO=0
  UPDATE=0
@@ -389,7 +408,7 @@
  			;;
  		m)
  			METHOD=${OPTARG}
-@@ -444,7 +134,6 @@
+@@ -444,7 +135,6 @@
  	esac
  done
  
@@ -397,7 +416,7 @@
  if [ -n "${JAILNAME}" ] && [ ${CREATE} -eq 0 ]; then
  	JAILFS=`jail_get_fs ${JAILNAME}`
  	JAILMNT=`jail_get_base ${JAILNAME}`
-@@ -469,7 +158,7 @@
+@@ -469,7 +159,7 @@
  		export SET_STATUS_ON_START=0
  		test -z ${JAILNAME} && usage
  		jail_start
