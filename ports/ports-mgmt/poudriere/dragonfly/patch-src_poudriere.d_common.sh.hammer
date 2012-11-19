@@ -1,5 +1,5 @@
 --- /dev/null	2012-11-19 07:55:21.370360877 +0100
-+++ src/poudriere.d/common.sh.hammer	2012-11-19 19:55:19.000000000 +0100
++++ src/poudriere.d/common.sh.hammer	2012-11-19 20:40:00.000000000 +0100
 @@ -0,0 +1,364 @@
 +#!/bin/sh
 +
@@ -41,17 +41,17 @@
 +
 +snapname () {
 +	[ $# -ne 1 ] && eargs filesystem@snapname
-+	echo ${1} | sed -e "s|${ZROOTFS}\/||" -e "s|\/|__|g"
++	echo "${1}" | sed -e "s|${ZROOTFS}\/||" -e "s|\/|__|g"
 +}
 +
 +snapdirectory () {
 +	[ $# -ne 1 ] && eargs filesystem@snapname
-+	echo ${1} | sed -e "s|${ZROOTFS}\/||" -e 's|@.*||'
++	echo "${1}" | sed -e "s|${ZROOTFS}\/||" -e 's|@.*||'
 +}
 +
 +onlysnap () {
 +	[ $# -ne 1 ] && eargs filesystem@snapname
-+	local testat=$(echo ${1} | grep @)
++	local testat=$(echo "${1}" | grep @)
 +	if [ -n "${testat}" ]; then
 +	   return 1
 +	fi
@@ -66,7 +66,7 @@
 +
 +zsnap() {
 +	[ $# -ne 1 ] && eargs filesystem@snapname
-+	local snap=$(snapname ${1})
++	local snap=$(snapname "${1}")
 +	mkdir -p ${HAMMER_SNAPDIR}
 +	if [ -f ${HAMMER_SNAPDIR}/${snap} ]; then
 +		err 1 "Cannot snapshot, ${snap} already exists"
@@ -77,7 +77,7 @@
 +
 +zkill() {
 +	[ $# -ne 1 ] && eargs filesystem@snapname
-+	if [ $(onlysnap ${1}) ]; then
++	if [ $(onlysnap "${1}") ]; then
 +		local snap=$(snapname ${1})
 +		[ -f ${HAMMER_SNAPDIR}/${snap} ] && \
 +		  hammer snaprm ${ZROOTFS} ${HAMMER_SNAPDIR}/${snap}
@@ -89,7 +89,7 @@
 +
 +zrollback () {
 +	[ $# -ne 1 ] && eargs filesystem@snapname
-+	if [ ! $(onlysnap ${1}) ]; then
++	if [ ! $(onlysnap "${1}") ]; then
 +		err 1 "Must specify snapshot in rollback"
 +	fi
 +	local snap=$(snapname ${1})
@@ -102,11 +102,11 @@
 +zxdiff () {
 +	[ $# -ne 2 ] && eargs filesystem@snapname filesystem
 +	# very basic zfs diff emulations: [M+-] (no R, no / type)
-+	if [ ! $(onlysnap ${1}) ]; then
++	if [ ! $(onlysnap "${1}") ]; then
 +		err 1 "Must specify snapshot in rollback"
 +	fi
-+	local snap=$(snapname ${1})
-+	local sdir=$(snapdirectory ${1})
++	local snap=$(snapname "${1}")
++	local sdir=$(snapdirectory "${1}")
 +	local LEFTS=${HAMMER_SNAPDIR}/${snap}/${sdir}
 +	local RIGHT=${ZROOTFS}/${sdir}
 +	local AWKCMD='{ \
@@ -317,7 +317,7 @@
 +print_jails_table () {
 +	[ $# -ne 1 ] && eargs quiet
 +	local confdir=${POUDRIERE_DATA}/hammer/jails
-+	local TABFORM='%-20s %-20s %-7s %-7s %-7s %-7s %-7s %-7s %-7s %s\n'
++	local TABFORM='%-20s %-12s %-7s %-7s %-7s %-7s %-7s %-7s %-7s %s\n'
 +	local COLCNT
 +	local PARAMS
 +	[ ${1} -eq 0 ] && printf "${TABFORM}" \

@@ -1,6 +1,6 @@
 --- src/poudriere.d/ports.sh.orig	2012-10-15 18:18:18.000000000 +0200
-+++ src/poudriere.d/ports.sh	2012-11-19 13:19:50.000000000 +0100
-@@ -21,7 +21,7 @@
++++ src/poudriere.d/ports.sh	2012-11-19 21:13:16.000000000 +0100
+@@ -21,11 +21,11 @@
                       them.
      -p name       -- specifies the name of the portstree we workon . If not
                       specified, work on a portstree called \"default\".
@@ -8,10 +8,41 @@
 +    -f fs         -- FS name (/poudriere/jails/thejail)
      -M mountpoint -- mountpoint
      -m method     -- when used with -c, specify the method used to update the
-                      tree by default it is portsnap, possible usage are
-@@ -92,10 +92,7 @@
- esac
+-                     tree by default it is portsnap, possible usage are
+-                     \"csup\", \"portsnap\", \"svn\", \"svn+http\", \"svn+ssh\""
++                     tree.  The default is git, possible usage are \"git\",
++                     \"rsync\""
  
+ 	exit 1
+ }
+@@ -36,6 +36,8 @@
+ DELETE=0
+ LIST=0
+ QUIET=0
++METHOD=git
++PTNAME=default
+ while getopts "cFudlp:qf:M:m:" FLAG; do
+ 	case "${FLAG}" in
+ 		c)
+@@ -76,26 +78,8 @@
+ 
+ [ $(( CREATE + UPDATE + DELETE + LIST )) -lt 1 ] && usage
+ 
+-METHOD=${METHOD:-portsnap}
+-PTNAME=${PTNAME:-default}
+-
+-case ${METHOD} in
+-csup)
+-	[ -z ${CSUP_HOST} ] && err 2 "CSUP_HOST has to be defined in the configuration to use csup"
+-	;;
+-portsnap);;
+-svn+http);;
+-svn+ssh);;
+-svn);;
+-git);;
+-*) usage;;
+-esac
+-
  if [ ${LIST} -eq 1 ]; then
 -	[ $QUIET -eq 0 ] && \
 -		printf '%-20s %-10s\n' "PORTSTREE" "METHOD"
@@ -21,48 +52,66 @@
  else
  	test -z "${PTNAME}" && usage
  fi
-@@ -116,7 +113,7 @@
- *default delete use-rel-suffix
- ports-all" > ${PTMNT}/csup
- 			csup -z -h ${CSUP_HOST} ${PTMNT}/csup || {
+@@ -107,49 +91,21 @@
+ 	port_create_zfs ${PTNAME} ${PTMNT} ${PTFS}
+ 	if [ $FAKE -eq 0 ]; then
+ 		case ${METHOD} in
+-		csup)
+-			echo "/!\ WARNING /!\ csup is deprecated and will soon be dropped"
+-			mkdir ${PTMNT}/db
+-			echo "*default prefix=${PTMNT}
+-*default base=${PTMNT}/db
+-*default release=cvs tag=.
+-*default delete use-rel-suffix
+-ports-all" > ${PTMNT}/csup
+-			csup -z -h ${CSUP_HOST} ${PTMNT}/csup || {
 -				zfs destroy ${PTFS}
-+				zkill ${PTFS}
- 				err 1 " Fail"
- 			}
- 			;;
-@@ -124,10 +121,10 @@
- 			mkdir ${PTMNT}/snap
- 			msg "Extracting portstree \"${PTNAME}\"..."
- 			mkdir ${PTMNT}/ports
+-				err 1 " Fail"
+-			}
+-			;;
+-		portsnap)
+-			mkdir ${PTMNT}/snap
+-			msg "Extracting portstree \"${PTNAME}\"..."
+-			mkdir ${PTMNT}/ports
 -			/usr/sbin/portsnap -d ${PTMNT}/snap -p ${PTMNT}/ports fetch extract || \
 -			/usr/sbin/portsnap -d ${PTMNT}/snap -p ${PTMNT}/ports fetch extract || \
-+			portsnap -d ${PTMNT}/snap -p ${PTMNT}/ports fetch extract || \
-+			portsnap -d ${PTMNT}/snap -p ${PTMNT}/ports fetch extract || \
- 			{
+-			{
 -				zfs destroy ${PTFS}
-+				zkill ${PTFS}
- 				err 1 " Fail"
- 			}
- 			;;
-@@ -141,7 +138,7 @@
- 			msg_n "Checking out the ports tree..."
- 			svn -q co ${proto}://${SVN_HOST}/ports/head \
- 				${PTMNT} || {
+-				err 1 " Fail"
+-			}
+-			;;
+-		svn*)
+-			case ${METHOD} in
+-			svn+http) proto="http" ;;
+-			svn+ssh) proto="svn+ssh" ;;
+-			svn) proto="svn" ;;
+-			esac
+-
+-			msg_n "Checking out the ports tree..."
+-			svn -q co ${proto}://${SVN_HOST}/ports/head \
+-				${PTMNT} || {
 -				zfs destroy ${PTFS}
++		rsync)
++			if [ -z "${RSYNC_DPORTS_LOC}" ]; then
++				err 1 "Define RSYNC_DPORTS_LOC in poudriere.conf first!"
++			fi
++			msg "Cloning the ports tree via rsync"
++			rsync -vaq ${RSYNC_DPORTS_LOC} ${PTMNT} || {
 +				zkill ${PTFS}
  				err 1 " Fail"
  			}
  			echo " done"
-@@ -149,7 +146,7 @@
+ 			;;
  		git)
  			msg "Cloning the ports tree"
- 			git clone ${GIT_URL} ${PTMNT} || {
+-			git clone ${GIT_URL} ${PTMNT} || {
 -				zfs destroy ${PTFS}
++			git clone --depth 1 ${DPORTS_URL} ${PTMNT} || {
 +				zkill ${PTFS}
  				err 1 " Fail"
  			}
  			echo " done"
-@@ -163,18 +160,18 @@
+@@ -163,50 +119,37 @@
  	port_exists ${PTNAME} || err 2 "No such ports tree ${PTNAME}"
  	PTMNT=$(port_get_base ${PTNAME})
  	[ -d "${PTMNT}/ports" ] && PORTSMNT="${PTMNT}/ports"
@@ -84,3 +133,43 @@
  		&& err 1 "Ports tree \"${PTNAME}\" is currently mounted and being used."
  	PTFS=$(port_get_fs ${PTNAME})
  	msg "Updating portstree \"${PTNAME}\""
+ 	METHOD=$(pzget method)
+ 	if [ ${METHOD} = "-" ]; then
+-		METHOD=portsnap
++		METHOD=git
+ 		pzset method ${METHOD}
+ 	fi
+ 	case ${METHOD} in
+-	csup)
+-		echo "/!\ WARNING /!\ csup is deprecated and will soon be dropped"
+-		[ -z ${CSUP_HOST} ] && err 2 "CSUP_HOST has to be defined in the configuration to use csup"
+-		mkdir -p ${PTMNT}/db
+-		echo "*default prefix=${PTMNT}
+-*default base=${PTMNT}/db
+-*default release=cvs tag=.
+-*default delete use-rel-suffix
+-ports-all" > ${PTMNT}/csup
+-		csup -z -h ${CSUP_HOST} ${PTMNT}/csup
+-		;;
+-	portsnap|"")
+-		PSCOMMAND=fetch
+-		[ -t 0 ] || PSCOMMAND=cron
+-		/usr/sbin/portsnap -d ${PTMNT}/snap -p ${PORTSMNT} ${PSCOMMAND} update
+-		;;
+-	svn*)
+-		msg_n "Updating the ports tree..."
+-		svn -q update ${PORTSMNT:-${PTMNT}}
++	rsync)
++		if [ -z "${RSYNC_DPORTS_LOC}" ]; then
++			err 1 "Define RSYNC_DPORTS_LOC in poudriere.conf first!"
++		fi
++		msg "Updating the ports tree via rsync"
++		rsync -vaq --delete ${RSYNC_DPORTS_LOC} ${PORTSMNT:-${PTMNT}}
+ 		echo " done"
+ 		;;
+ 	git)
+-		msg "Pulling from ${GIT_URL}"
++		msg "Pulling from ${DPORTS_URL}"
+ 		cd ${PORTSMNT:-${PTMNT}} && git pull
+ 		echo " done"
+ 		;;
