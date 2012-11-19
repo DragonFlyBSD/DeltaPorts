@@ -5,6 +5,9 @@
 pre-install:
 	rm -f ${WRKSRC}/src/poudriere.d/*.orig
 
-PLIST_FILES+=	share/poudriere/common.sh.zfs
+PLIST_FILES+=	share/poudriere/common.sh.hammer \
+		share/poudriere/common.sh.zfs \
+		share/poudriere/jail.sh.dragonfly \
+		share/poudriere/jail.sh.freebsd
 
 RUN_DEPENDS+=	rsync:${PORTSDIR}/net/rsync

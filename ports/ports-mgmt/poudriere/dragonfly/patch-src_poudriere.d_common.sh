@@ -1,5 +1,5 @@
 --- src/poudriere.d/common.sh.orig	2012-10-15 18:18:18.000000000 +0200
-+++ src/poudriere.d/common.sh	2012-11-18 23:57:42.000000000 +0100
++++ src/poudriere.d/common.sh	2012-11-19 08:04:47.000000000 +0100
 @@ -1,8 +1,6 @@
  #!/bin/sh
  
@@ -14,10 +14,10 @@
  	esac
  }
  
-+if [ -z /sbin/zfs ]; then
-+. ${0}.zfs
-+elif [ -z /sbin/hammer ]; then
-+. ${0}.hammer
++if [ -f /sbin/zfs ]; then
++. $(dirname ${0})/common.sh.zfs
++elif [ -f /sbin/hammer ]; then
++. $(dirname ${0})/common.sh.hammer
 +else
 +err 1 "Unsupported filesystem"
 +fi

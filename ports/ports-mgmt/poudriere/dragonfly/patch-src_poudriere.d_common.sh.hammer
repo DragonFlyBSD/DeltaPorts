@@ -1,6 +1,6 @@
---- /dev/null	2012-11-18 03:01:18.555344164 +0100
-+++ src/poudriere.d/common.sh.hammer	2012-11-18 22:32:18.000000000 +0100
-@@ -0,0 +1,340 @@
+--- /dev/null	2012-11-19 07:55:21.370360877 +0100
++++ src/poudriere.d/common.sh.hammer	2012-11-19 08:07:23.000000000 +0100
+@@ -0,0 +1,342 @@
 +#!/bin/sh
 +
 +zget() {
@@ -11,6 +11,7 @@
 +	   cat ${confloc}
 +	else
 +	   echo "-"
++	fi
 +}
 +
 +zset() {
@@ -28,6 +29,7 @@
 +	   cat ${confloc}
 +	else
 +	   echo "-"
++	fi
 +}
 +
 +pzset() {
@@ -290,7 +292,7 @@
 +	  cd ${confloc}
 +	  PORTLIST=`find -s * -type d`
 +	  for port in ${PORTLIST}; do
-+	    if [ -f ${confdir}/${port}/method ];
++	    if [ -f ${confdir}/${port}/method ]; then
 +	      METHOD=`cat ${confdir}/${port}/method`
 +	    else
 +	      METHOD=-
@@ -313,7 +315,7 @@
 +	  for jail in ${JAILLIST}; do
 +	    COLCNT=0
 +	    for param in PARAMS; do
-+	      if [ -f ${confdir}/${jail}/${param} ]
++	      if [ -f ${confdir}/${jail}/${param} ]; then
 +	        eval "val_${COLCNT}=`cat ${confdir}/${jail}/${param}`"
 +	      else
 +	        eval "val_${COLCNT}=-"
