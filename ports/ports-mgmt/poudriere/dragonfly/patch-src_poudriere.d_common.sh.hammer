@@ -1,6 +1,6 @@
 --- /dev/null	2012-11-19 07:55:21.370360877 +0100
-+++ src/poudriere.d/common.sh.hammer	2012-11-19 11:30:19.000000000 +0100
-@@ -0,0 +1,343 @@
++++ src/poudriere.d/common.sh.hammer	2012-11-19 14:02:04.000000000 +0100
+@@ -0,0 +1,359 @@
 +#!/bin/sh
 +
 +zget() {
@@ -58,6 +58,12 @@
 +	return 0
 +}
 +
++check_mount () {
++	[ $# -ne 1 ] && eargs filesystem
++	local AWKCMD='{ if ($1 == mnt) print $3 }'
++	mount | awk -v mnt="${1}" "${AWKCMD}"
++}
++
 +zsnap() {
 +	[ $# -ne 1 ] && eargs filesystem@snapname
 +	local snap=$(snapname ${1})
@@ -70,6 +76,8 @@
 +		local snap=$(snapname ${1})
 +		hammer snaprm ${ZROOTFS} ${HAMMER_SNAPDIR}/${snap}
 +	else
++		local mounted=$(check_mount ${1})
++		[ -n ${mounted} ] && umount ${mounted}
 +		rm -rf ${1}
 +	fi
 +}
@@ -121,7 +129,8 @@
 +
 +jail_exists() {
 +	[ $# -ne 1 ] && eargs jailname
-+	if [ -d ${BASEFS}/jails/${1} ] && \
++	if [ -d ${BASEFS}/jails/${1} ] || \
++	   [ -d ${ZROOTFS}/jails/${1} ] || \
 +	   [ -d ${POUDRIERE_DATA}/hammer/jails/${1} ]; then
 +	    return 0
 +	fi
@@ -186,6 +195,7 @@
 +	msg_n "Creating ${name} fs..."
 +
 +	mkdir -p ${fs}
++	mkdir -p ${mnt}
 +	mkdir -p ${confdir}
 +
 +	echo "rootfs"     > ${confdir}/type
@@ -343,4 +353,10 @@
 +	echo "Packages skipped: $(zget stats_skipped)"
 +	echo "Packages queued: ${1}"
 +	echo "Packages to be built: ${2}"
++}
++
++do_jail_premount () {
++	[ $# -ne 2 ] && eargs filesystem mountpoint
++	local mounted=$(check_mount ${1})
++	[ -z ${mounted} ] && ${NULLMOUNT} ${1} ${2}
 +}

@@ -1,5 +1,5 @@
 --- /dev/null	2012-11-19 07:55:21.370360877 +0100
-+++ src/poudriere.d/jail.sh.dragonfly	2012-11-19 11:34:35.000000000 +0100
++++ src/poudriere.d/jail.sh.dragonfly	2012-11-19 13:46:29.000000000 +0100
 @@ -0,0 +1,197 @@
 +#!/bin/sh
 +#
@@ -80,6 +80,8 @@
 +install_from_git() {
 +	local UPDATE=0
 +	local proto
++	local mounted=$(check_mount "${JAILFS}")
++	[ -z ${mounted} ] && ${NULLMOUNT} "${JAILFS}" "${JAILMNT}"
 +	[ -d ${JAILMNT}/usr/src ] && UPDATE=1
 +	mkdir -p ${JAILMNT}/usr/src
 +	cd ${JAILMNT}/usr/src
@@ -107,6 +109,7 @@
 +		echo " done"
 +	fi
 +	build_and_install_world
++	umount ${JAILMNT}
 +}
 +
 +create_jail() {
@@ -159,9 +162,6 @@
 +	mkdir -p ${JAILMNT}/${PORTSRC}
 +	mkdir -p ${JAILMNT}/wrkdirs
 +	mkdir -p ${POUDRIERE_DATA}/logs
-+
-+	jail -U root -c path=${JAILMNT} \
-+	  command="/sbin/ldconfig -m /lib /usr/lib /usr/lib/compat"
 +
 +	zsnap ${JAILFS}@clean
 +	unset CLEANUP_HOOK

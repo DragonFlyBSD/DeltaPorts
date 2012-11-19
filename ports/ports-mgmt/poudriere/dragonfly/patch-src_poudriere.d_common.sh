@@ -1,5 +1,5 @@
 --- src/poudriere.d/common.sh.orig	2012-10-15 18:18:18.000000000 +0200
-+++ src/poudriere.d/common.sh	2012-11-19 08:04:47.000000000 +0100
++++ src/poudriere.d/common.sh	2012-11-19 14:03:58.000000000 +0100
 @@ -1,8 +1,6 @@
  #!/bin/sh
  
@@ -52,7 +52,7 @@
  sig_handler() {
  	trap - SIGTERM SIGKILL
  	# Ignore SIGINT while cleaning up
-@@ -163,116 +149,11 @@
+@@ -163,121 +149,18 @@
  	fi
  }
  
@@ -169,7 +169,23 @@
  do_jail_mounts() {
  	[ $# -ne 1 ] && eargs should_mkdir
  	local should_mkdir=$1
-@@ -313,9 +194,9 @@
+ 	local arch=$(zget arch)
+ 
++	do_jail_premount ${JAILFS} ${JAILMNT}
++
+ 	# Only do this when starting the master jail, clones will already have the dirs
+ 	if [ ${should_mkdir} -eq 1 ]; then
+ 		mkdir -p ${JAILMNT}/proc
+@@ -304,7 +187,7 @@
+ 	local verbose="$2"
+ 
+ 	[ ${verbose} -eq 1 ] && msg "Mounting /var/db/ports from: ${optionsdir}"
+-	mount -t nullfs ${optionsdir} ${JAILMNT}/var/db/ports || err 1 "Failed to mount OPTIONS directory"
++	${NULLMOUNT} ${optionsdir} ${JAILMNT}/var/db/ports || err 1 "Failed to mount OPTIONS directory"
+ }
+ 
+ do_portbuild_mounts() {
+@@ -313,9 +196,9 @@
  
  	# Only do this when starting the master jail, clones will already have the dirs
  	if [ ${should_mkdir} -eq 1 ]; then
@@ -181,22 +197,31 @@
  		if [ -d "${CCACHE_DIR:-/nonexistent}" ]; then
  			mkdir -p ${JAILMNT}${CCACHE_DIR} || err 1 "Failed to create ccache directory "
  			msg "Mounting ccache from: ${CCACHE_DIR}"
-@@ -328,11 +209,11 @@
+@@ -328,11 +211,11 @@
  		msg "Mounting packages from: ${PKGDIR}"
  	fi
  
 -	mount -t nullfs ${PORTSDIR} ${JAILMNT}/usr/ports || err 1 "Failed to mount the ports directory "
 -	mount -t nullfs ${PKGDIR} ${JAILMNT}/usr/ports/packages || err 1 "Failed to mount the packages directory "
-+	mount -t nullfs ${PORTSDIR} ${JAILMNT}/${PORTSRC} || err 1 "Failed to mount the ports directory "
-+	mount -t nullfs ${PKGDIR} ${JAILMNT}/${STD_PACKAGES} || err 1 "Failed to mount the packages directory "
++	${NULLMOUNT} ${PORTSDIR} ${JAILMNT}/${PORTSRC} || err 1 "Failed to mount the ports directory "
++	${NULLMOUNT} ${PKGDIR} ${JAILMNT}/${STD_PACKAGES} || err 1 "Failed to mount the packages directory "
  
  	if [ -d "${DISTFILES_CACHE:-/nonexistent}" ]; then
 -		mount -t nullfs ${DISTFILES_CACHE} ${JAILMNT}/usr/ports/distfiles || err 1 "Failed to mount the distfile directory"
-+		mount -t nullfs ${DISTFILES_CACHE} ${JAILMNT}/${STD_DISTFILES} || err 1 "Failed to mount the distfile directory"
++		${NULLMOUNT} ${DISTFILES_CACHE} ${JAILMNT}/${STD_DISTFILES} || err 1 "Failed to mount the distfile directory"
  	fi
  	[ -n "${MFSSIZE}" ] && mdmfs -M -S -o async -s ${MFSSIZE} md ${JAILMNT}/wrkdirs
  	[ -n "${USE_TMPFS}" ] && mount -t tmpfs tmpfs ${JAILMNT}/wrkdirs
-@@ -371,8 +252,8 @@
+@@ -350,7 +233,7 @@
+ 
+ 	if [ -d "${CCACHE_DIR:-/nonexistent}" ]; then
+ 		# Mount user supplied CCACHE_DIR into /var/cache/ccache
+-		mount -t nullfs ${CCACHE_DIR} ${JAILMNT}${CCACHE_DIR} || err 1 "Failed to mount the ccache directory "
++		${NULLMOUNT} ${CCACHE_DIR} ${JAILMNT}${CCACHE_DIR} || err 1 "Failed to mount the ccache directory "
+ 	fi
+ }
+ 
+@@ -371,8 +254,8 @@
  	jail_exists ${JAILNAME} || err 1 "No such jail: ${JAILNAME}"
  	jail_runs && err 1 "jail already running: ${JAILNAME}"
  	zset status "start:"
@@ -207,7 +232,7 @@
  
  	msg "Mounting system devices for ${JAILNAME}"
  	do_jail_mounts 1
-@@ -385,18 +266,35 @@
+@@ -385,18 +268,35 @@
  	[ ${SET_STATUS_ON_START-1} -eq 1 ] && export STATUS=1
  }
  
@@ -245,7 +270,7 @@
  		done
  	fi
  	msg "Umounting file systems"
-@@ -419,24 +317,11 @@
+@@ -419,24 +319,11 @@
  			mdconfig -d -u $dev
  		fi
  	fi
@@ -271,7 +296,7 @@
  cleanup() {
  	[ -n "${CLEANED_UP}" ] && return 0
  	msg "Cleaning up"
-@@ -464,9 +349,9 @@
+@@ -464,9 +351,9 @@
  		wait
  	fi
  
@@ -284,7 +309,7 @@
  	jail_stop
  	export CLEANED_UP=1
  }
-@@ -500,16 +385,16 @@
+@@ -500,16 +387,16 @@
  build_port() {
  	[ $# -ne 1 ] && eargs portdir
  	local portdir=$1
@@ -304,7 +329,7 @@
  		if [ "${phase}" = "deinstall" ]; then
  			msg "Checking shared library dependencies"
  			if [ ${PKGNG} -eq 0 ]; then
-@@ -532,7 +417,7 @@
+@@ -532,7 +419,7 @@
  		echo "==================================================================="
  
  		if [ "${phase}" = "checksum" ]; then
@@ -313,7 +338,7 @@
  			jrun 0
  		fi
  		if [ "${phase}" = "deinstall" ]; then
-@@ -554,7 +439,7 @@
+@@ -554,7 +441,7 @@
  				local mod=$(mktemp ${jailbase}/tmp/mod.XXXXXX)
  				local mod1=$(mktemp ${jailbase}/tmp/mod1.XXXXXX)
  				local die=0
@@ -322,7 +347,7 @@
  					while read mod type path; do
  					local ppath
  					ppath=`echo "$path" | sed -e "s,^${JAILMNT},," -e "s,^${PREFIX}/,," -e "s,^share/${portname},%%DATADIR%%," -e "s,^etc/${portname},%%ETCDIR%%,"`
-@@ -610,17 +495,17 @@
+@@ -610,17 +497,17 @@
  			fi
  		fi
  	done
@@ -343,7 +368,7 @@
  	local tardir=${POUDRIERE_DATA}/wrkdirs/${JAILNAME%-job-*}/${PTNAME}
  	local tarname=${tardir}/${PKGNAME}.${WRKDIR_ARCHIVE_FORMAT}
  	local mnted_portdir=${JAILMNT}/wrkdirs/${portdir}
-@@ -639,58 +524,6 @@
+@@ -639,58 +526,6 @@
  	job_msg "Saved ${port} wrkdir to: ${tarname}"
  }
  
@@ -402,7 +427,7 @@
  build_stats_list() {
  	[ $# -ne 3 ] && eargs html_path type display_name
  	local html_path="$1"
-@@ -923,11 +756,11 @@
+@@ -923,11 +758,11 @@
  
  	PKGNAME="${pkgname}" # set ASAP so cleanup() can use it
  	port=$(cache_get_origin ${pkgname})
@@ -416,7 +441,7 @@
  
  	# If this port is IGNORED, skip it
  	# This is checked here instead of when building the queue
-@@ -998,10 +831,10 @@
+@@ -998,10 +833,10 @@
  	[ $# -ne 1 ] && eargs directory
  	local dir=$1
  	local makeargs="-VPKG_DEPENDS -VBUILD_DEPENDS -VEXTRACT_DEPENDS -VLIB_DEPENDS -VPATCH_DEPENDS -VFETCH_DEPENDS -VRUN_DEPENDS"
@@ -429,7 +454,7 @@
  }
  
  deps_file() {
-@@ -1149,7 +982,7 @@
+@@ -1149,7 +984,7 @@
  		o=$(pkg_get_origin ${pkg})
  		v=${pkg##*-}
  		v=${v%.*}
@@ -438,7 +463,7 @@
  			msg "${o} does not exist anymore. Deleting stale ${pkg##*/}"
  			delete_pkg ${pkg}
  			continue
-@@ -1164,7 +997,7 @@
+@@ -1164,7 +999,7 @@
  
  		# Check if the compiled options match the current options from make.conf and /var/db/options
  		if [ "${CHECK_CHANGED_OPTIONS:-no}" != "no" ]; then
@@ -447,7 +472,7 @@
  			compiled_options=$(pkg_get_options ${pkg})
  
  			if [ "${compiled_options}" != "${current_options}" ]; then
-@@ -1199,7 +1032,7 @@
+@@ -1199,7 +1034,7 @@
  
  	# Add to cache if not found.
  	if [ -z "${pkgname}" ]; then
@@ -456,7 +481,7 @@
  		# Make sure this origin did not already exist
  		existing_origin=$(cache_get_origin "${pkgname}")
  		[ -n "${existing_origin}" ] &&  err 1 "Duplicated origin for ${pkgname}: ${origin} AND ${existing_origin}. Rerun with -D to see which ports are depending on these."
-@@ -1357,9 +1190,9 @@
+@@ -1357,9 +1192,9 @@
  
  	msg "Populating LOCALBASE"
  	mkdir -p ${JAILMNT}/${MYBASE:-/usr/local}
@@ -468,7 +493,7 @@
  	if [ -n "${WITH_PKGNG}" ]; then
  		export PKGNG=1
  		export PKG_EXT="txz"
-@@ -1381,26 +1214,35 @@
+@@ -1381,26 +1216,37 @@
  test -f ${SCRIPTPREFIX}/../../etc/poudriere.conf || err 1 "Unable to find ${SCRIPTPREFIX}/../../etc/poudriere.conf"
  . ${SCRIPTPREFIX}/../../etc/poudriere.conf
  
@@ -498,11 +523,13 @@
 +		PORTSRC=/usr/dports
 +		STD_DISTFILES=/usr/distfiles
 +		STD_PACKAGES=/usr/packages
++		NULLMOUNT="/sbin/mount_null"
 +		;;
 +	freebsd)
 +		PORTSRC=/usr/ports
 +		STD_DISTFILES=${PORTSRC}/distfiles
 +		STD_PACKAGES=${PORTSRC}/packages
++		NULLMOUNT="/sbin/mount -t nullfs"
 +		;;
 +	*)
 +		err 1 "Unsupported platform"

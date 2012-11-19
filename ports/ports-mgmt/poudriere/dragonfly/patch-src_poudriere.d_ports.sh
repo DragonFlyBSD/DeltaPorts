@@ -1,5 +1,5 @@
 --- src/poudriere.d/ports.sh.orig	2012-10-15 18:18:18.000000000 +0200
-+++ src/poudriere.d/ports.sh	2012-11-19 11:09:57.000000000 +0100
++++ src/poudriere.d/ports.sh	2012-11-19 13:19:50.000000000 +0100
 @@ -21,7 +21,7 @@
                       them.
      -p name       -- specifies the name of the portstree we workon . If not
@@ -62,7 +62,12 @@
  				err 1 " Fail"
  			}
  			echo " done"
-@@ -167,7 +164,7 @@
+@@ -163,18 +160,18 @@
+ 	port_exists ${PTNAME} || err 2 "No such ports tree ${PTNAME}"
+ 	PTMNT=$(port_get_base ${PTNAME})
+ 	[ -d "${PTMNT}/ports" ] && PORTSMNT="${PTMNT}/ports"
+-	/sbin/mount -t nullfs | /usr/bin/grep -q "${PORTSMNT:-${PTMNT}} on" \
++	${NULLMOUNT} | /usr/bin/grep -q "${PORTSMNT:-${PTMNT}} on" \
  		&& err 1 "Ports tree \"${PTNAME}\" is currently mounted and being used."
  	msg "Deleting portstree \"${PTNAME}\""
  	PTFS=$(port_get_fs ${PTNAME})
@@ -71,3 +76,11 @@
  fi
  
  if [ ${UPDATE} -eq 1 ]; then
+ 	port_exists ${PTNAME} || err 2 "No such ports tree ${PTNAME}"
+ 	PTMNT=$(port_get_base ${PTNAME})
+ 	[ -d "${PTMNT}/ports" ] && PORTSMNT="${PTMNT}/ports"
+-	/sbin/mount -t nullfs | /usr/bin/grep -q "${PORTSMNT:-${PTMNT}} on" \
++	${NULLMOUNT} | /usr/bin/grep -q "${PORTSMNT:-${PTMNT}} on" \
+ 		&& err 1 "Ports tree \"${PTNAME}\" is currently mounted and being used."
+ 	PTFS=$(port_get_fs ${PTNAME})
+ 	msg "Updating portstree \"${PTNAME}\""

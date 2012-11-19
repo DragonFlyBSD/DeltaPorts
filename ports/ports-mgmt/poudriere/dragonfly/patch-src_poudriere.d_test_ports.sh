@@ -1,5 +1,5 @@
 --- src/poudriere.d/test_ports.sh.orig	2012-10-15 18:18:18.000000000 +0200
-+++ src/poudriere.d/test_ports.sh	2012-11-18 18:57:24.000000000 +0100
++++ src/poudriere.d/test_ports.sh	2012-11-19 13:20:08.000000000 +0100
 @@ -75,7 +75,7 @@
  	PORTDIRECTORY=`basename ${HOST_PORTDIRECTORY}`
  else
@@ -9,7 +9,14 @@
  fi
  
  test -z "${JAILNAME}" && err 1 "Don't know on which jail to run please specify -j"
-@@ -99,13 +99,13 @@
+@@ -93,19 +93,19 @@
+ 
+ if [ -z ${ORIGIN} ]; then
+ 	mkdir -p ${JAILMNT}/${PORTDIRECTORY}
+-	mount -t nullfs ${HOST_PORTDIRECTORY} ${JAILMNT}/${PORTDIRECTORY}
++	${NULLMOUNT} ${HOST_PORTDIRECTORY} ${JAILMNT}/${PORTDIRECTORY}
+ fi
+ 
  LISTPORTS=$(list_deps ${PORTDIRECTORY} )
  prepare_ports
  

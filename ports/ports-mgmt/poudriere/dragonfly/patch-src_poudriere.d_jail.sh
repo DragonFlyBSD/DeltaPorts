@@ -1,5 +1,5 @@
 --- src/poudriere.d/jail.sh.orig	2012-10-15 18:18:18.000000000 +0200
-+++ src/poudriere.d/jail.sh	2012-11-18 22:09:02.000000000 +0100
++++ src/poudriere.d/jail.sh	2012-11-19 11:19:39.000000000 +0100
 @@ -15,16 +15,14 @@
  Options:
      -q            -- quiet (remove the header in list)
@@ -7,10 +7,11 @@
 -    -v version    -- Specifies which version of FreeBSD we want in jail
 -    -a arch       -- Indicates architecture of the jail: i386 or amd64
 -                     (Default: same as host)
+-    -f fs         -- FS name (tank/jails/myjail)
 +    -v version    -- Specifies which version of DragonFly we want in jail
-+    		     e.g. \"3.0\", \"3.2\", or \"master\"
++    		     e.g. \"3.4\", \"3.6\", or \"master\"
 +    -a arch       -- Does nothing - set to be same as host
-     -f fs         -- FS name (tank/jails/myjail)
++    -f fs         -- FS name (/poudriere/jails/thejail)
      -M mountpoint -- mountpoint
      -m method     -- when used with -c forces the method to use by default
 -                     \"ftp\", could also be \"svn\", \"svn+http\", \"svn+ssh\",
@@ -49,7 +50,7 @@
 -	zfs list -rt filesystem -H \
 -		-o ${NS}:type,${NS}:name,${NS}:version,${NS}:arch,${NS}:method,${NS}:stats_built,${NS}:stats_failed,${NS}:stats_ignored,${NS}:stats_skipped,${NS}:stats_queued,${NS}:status ${ZPOOL}${ZROOTFS} | \
 -		awk '$1 == "rootfs" { printf("%-20s %-20s %-7s %-7s %-7s %-7s %-7s %-7s %-7s %s\n",$2, $3, $4, $5, $6, $7, $8, $9, $10, $11) }'
-+	[ ${QUIET} -eq 0 ] && print_jails_table
++	print_jails_table ${QUIET}
  }
  
  delete_jail() {
@@ -359,7 +360,12 @@
  ARCH=`uname -m`
  REALARCH=${ARCH}
  START=0
-@@ -387,6 +78,7 @@
+@@ -383,10 +74,12 @@
+ QUIET=0
+ INFO=0
+ UPDATE=0
++METHOD=git
+ 
  SCRIPTPATH=`realpath $0`
  SCRIPTPREFIX=`dirname ${SCRIPTPATH}`
  . ${SCRIPTPREFIX}/common.sh
@@ -367,7 +373,7 @@
  
  while getopts "j:v:a:z:m:n:f:M:sdklqciut:" FLAG; do
  	case "${FLAG}" in
-@@ -397,10 +89,7 @@
+@@ -397,10 +90,7 @@
  			VERSION=${OPTARG}
  			;;
  		a)
@@ -379,6 +385,14 @@
  			;;
  		m)
  			METHOD=${OPTARG}
+@@ -444,7 +134,6 @@
+ 	esac
+ done
+ 
+-METHOD=${METHOD:-ftp}
+ if [ -n "${JAILNAME}" ] && [ ${CREATE} -eq 0 ]; then
+ 	JAILFS=`jail_get_fs ${JAILNAME}`
+ 	JAILMNT=`jail_get_base ${JAILNAME}`
 @@ -469,7 +158,7 @@
  		export SET_STATUS_ON_START=0
  		test -z ${JAILNAME} && usage
