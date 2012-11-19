@@ -1,6 +1,6 @@
 --- /dev/null	2012-11-19 07:55:21.370360877 +0100
-+++ src/poudriere.d/common.sh.hammer	2012-11-19 15:10:29.000000000 +0100
-@@ -0,0 +1,361 @@
++++ src/poudriere.d/common.sh.hammer	2012-11-19 17:26:10.000000000 +0100
+@@ -0,0 +1,360 @@
 +#!/bin/sh
 +
 +zget() {
@@ -67,12 +67,13 @@
 +zsnap() {
 +	[ $# -ne 1 ] && eargs filesystem@snapname
 +	local snap=$(snapname ${1})
++	mkdir -p ${HAMMER_SNAPDIR}
 +	hammer snapshot ${ZROOTFS} ${HAMMER_SNAPDIR}/${snap}
 +}
 +
 +zkill() {
 +	[ $# -ne 1 ] && eargs filesystem@snapname
-+	if [ onlysnap ${1} ]; then
++	if [ $(onlysnap ${1}) ]; then
 +		local snap=$(snapname ${1})
 +		hammer snaprm ${ZROOTFS} ${HAMMER_SNAPDIR}/${snap}
 +	else
@@ -84,7 +85,7 @@
 +
 +zrollback () {
 +	[ $# -ne 1 ] && eargs filesystem@snapname
-+	if [ ! onlysnap ${1} ]; then
++	if [ ! $(onlysnap ${1}) ]; then
 +		err 1 "Must specify snapshot in rollback"
 +	fi
 +	local snap=$(snapname ${1})
@@ -97,7 +98,7 @@
 +zxdiff () {
 +	[ $# -ne 2 ] && eargs filesystem@snapname filesystem
 +	# very basic zfs diff emulations: [M+-] (no R, no / type)
-+	if [ ! onlysnap ${1} ]; then
++	if [ ! $(onlysnap ${1}) ]; then
 +		err 1 "Must specify snapshot in rollback"
 +	fi
 +	local snap=$(snapname ${1})
@@ -195,7 +196,6 @@
 +	msg_n "Creating ${name} fs..."
 +
 +	mkdir -p ${fs}
-+	mkdir -p ${mnt}
 +	mkdir -p ${confdir}
 +
 +	echo "rootfs"     > ${confdir}/type
@@ -216,10 +216,9 @@
 +	local confdir="${POUDRIERE_DATA}/hammer/ports/${name}"
 +	msg_n "Creating ${name} fs..."
 +
-+	if [ -d ${fs} ] || mkdir -p ${fs} || mkdir -p ${confdir}; then
-+	   err 1 " Fail"
-+	   return
-+	fi
++	mkdir -p ${fs}
++	mkdir -p ${mnt}
++	mkdir -p ${confdir}
 +
 +	echo "ports"	> ${confdir}/type
 +	echo "${name}"	> ${confdir}/name
