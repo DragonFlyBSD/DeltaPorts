@@ -1,6 +1,6 @@
---- /dev/null	2012-11-18 03:01:18.555344164 +0100
-+++ src/poudriere.d/common.sh.zfs	2012-11-18 23:08:31.000000000 +0100
-@@ -0,0 +1,230 @@
+--- /dev/null	2012-11-19 07:55:21.370360877 +0100
++++ src/poudriere.d/common.sh.zfs	2012-11-19 11:00:45.000000000 +0100
+@@ -0,0 +1,231 @@
 +#!/bin/sh
 +
 +# zfs namespace
@@ -208,7 +208,8 @@
 +}
 +
 +print_jails_table () {
-+	printf '%-20s %-20s %-7s %-7s %-7s %-7s %-7s %-7s %-7s %s\n' "JAILNAME" "VERSION" "ARCH" "METHOD" "SUCCESS" "FAILED" "IGNORED" "SKIPPED" "QUEUED" "STATUS"
++	[ $# -ne 1 ] && eargs quiet
++	[ ${1} -eq 0] && printf '%-20s %-20s %-7s %-7s %-7s %-7s %-7s %-7s %-7s %s\n' "JAILNAME" "VERSION" "ARCH" "METHOD" "SUCCESS" "FAILED" "IGNORED" "SKIPPED" "QUEUED" "STATUS"
 +	zfs list -rt filesystem -H \
 +		-o ${NS}:type,${NS}:name,${NS}:version,${NS}:arch,${NS}:method,${NS}:stats_built,${NS}:stats_failed,${NS}:stats_ignored,${NS}:stats_skipped,${NS}:stats_queued,${NS}:status ${ZPOOL}${ZROOTFS} | \
 +		awk '$1 == "rootfs" { printf("%-20s %-20s %-7s %-7s %-7s %-7s %-7s %-7s %-7s %s\n",$2, $3, $4, $5, $6, $7, $8, $9, $10, $11) }'

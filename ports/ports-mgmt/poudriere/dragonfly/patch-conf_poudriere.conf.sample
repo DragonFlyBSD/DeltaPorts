@@ -10,4 +10,4 @@
 +HAMMER_SNAPDIR=${BASEFS}/snapshots
 +
 +# Set the host for the git update method
-+GIT_HOST=git://koan.bondconsult.net
++GIT_HOST=koan.bondconsult.net

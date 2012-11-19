@@ -1,5 +1,5 @@
---- /dev/null	2012-11-18 03:01:18.555344164 +0100
-+++ src/poudriere.d/jail.sh.dragonfly	2012-11-19 01:11:58.000000000 +0100
+--- /dev/null	2012-11-19 07:55:21.370360877 +0100
++++ src/poudriere.d/jail.sh.dragonfly	2012-11-19 11:34:35.000000000 +0100
 @@ -0,0 +1,197 @@
 +#!/bin/sh
 +#
@@ -84,7 +84,7 @@
 +	mkdir -p ${JAILMNT}/usr/src
 +	cd ${JAILMNT}/usr/src
 +	if [ ${UPDATE} -eq 0 ]; then
-+		msg_n "Checking out the sources via git..."
++		msg "Checking out the sources via git..."
 +		bver=$(convert_version ${VERSION})
 +		git init
 +		git remote add origin git://${GIT_HOST}/dragonfly.git
@@ -94,7 +94,7 @@
 +		git pull || err 1 "Fail "
 +		echo " done"
 +	else
-+		msg_n "Updating the sources via git..."
++		msg "Updating the sources via git..."
 +		if [ -n "${TORELEASE}" ]; then
 +			bver=$(convert_version "${TORELEASE}")	
 +			BAE=`git branch -l | grep ${bver}`

@@ -1,12 +1,12 @@
 --- /dev/null	2012-11-19 07:55:21.370360877 +0100
-+++ src/poudriere.d/common.sh.hammer	2012-11-19 08:07:23.000000000 +0100
-@@ -0,0 +1,342 @@
++++ src/poudriere.d/common.sh.hammer	2012-11-19 11:30:19.000000000 +0100
+@@ -0,0 +1,343 @@
 +#!/bin/sh
 +
 +zget() {
 +	[ $# -ne 1 ] && eargs property
 +	local name=`basename ${JAILFS}`
-+	local confloc=${POUDRIERE_DATA}/nozfs/jails/${name}/${1}
++	local confloc=${POUDRIERE_DATA}/hammer/jails/${name}/${1}
 +	if [ -f ${confloc} ]; then
 +	   cat ${confloc}
 +	else
@@ -17,14 +17,14 @@
 +zset() {
 +	[ $# -ne 2 ] && eargs property value
 +	local name=`basename ${JAILFS}`
-+	local confdir=${POUDRIERE_DATA}/nozfs/jails/${name}
++	local confdir=${POUDRIERE_DATA}/hammer/jails/${name}
 +	[ -d ${confdir} ] && echo "$2" > ${confdir}/${1}
 +}
 +
 +pzget() {
 +	[ $# -ne 1 ] && eargs property
 +	local name=`basename ${PTFS}`
-+	local confloc=${POUDRIERE_DATA}/nozfs/ports/${name}/${1}
++	local confloc=${POUDRIERE_DATA}/hammer/ports/${name}/${1}
 +	if [ -f ${confloc} ]; then
 +	   cat ${confloc}
 +	else
@@ -35,7 +35,7 @@
 +pzset() {
 +	[ $# -ne 2 ] && eargs property value
 +	local name=`basename ${PTFS}`
-+	local confdir=${POUDRIERE_DATA}/nozfs/ports/${name}
++	local confdir=${POUDRIERE_DATA}/hammer/ports/${name}
 +	[ -d ${confdir} ] && echo "$2" > ${confdir}/${1}
 +}
 +
@@ -122,34 +122,34 @@
 +jail_exists() {
 +	[ $# -ne 1 ] && eargs jailname
 +	if [ -d ${BASEFS}/jails/${1} ] && \
-+	   [ -d ${POUDRIERE_DATA}/nozfs/jails/${1} ]; then
-+	    return 1
++	   [ -d ${POUDRIERE_DATA}/hammer/jails/${1} ]; then
++	    return 0
 +	fi
-+	return 0
++	return 1
 +}
 +
 +jail_get_base() {
 +	[ $# -ne 1 ] && eargs jailname
-+	local confloc=${POUDRIERE_DATA}/nozfs/jails/${1}/mountpoint
++	local confloc=${POUDRIERE_DATA}/hammer/jails/${1}/mountpoint
 +	[ -f ${confloc} ] && cat ${confloc}
 +}
 +
 +jail_get_version() {
 +	[ $# -ne 1 ] && eargs jailname
-+	local confloc=${POUDRIERE_DATA}/nozfs/jails/${1}/version
++	local confloc=${POUDRIERE_DATA}/hammer/jails/${1}/version
 +	[ -f ${confloc} ] && cat ${confloc}
 +}
 +
 +jail_get_fs() {
 +	[ $# -ne 1 ] && eargs jailname
-+	local confloc=${POUDRIERE_DATA}/nozfs/jails/${1}/filesys
++	local confloc=${POUDRIERE_DATA}/hammer/jails/${1}/filesys
 +	[ -f ${confloc} ] && cat ${confloc}
 +}
 +
 +port_exists() {
 +	[ $# -ne 1 ] && eargs portstree_name
 +	if [ -d ${BASEFS}/ports/${1} ] && \
-+	   [ -d ${POUDRIERE_DATA}/nozfs/ports/${1} ]; then
++	   [ -d ${POUDRIERE_DATA}/hammer/ports/${1} ]; then
 +	    return 0;
 +	fi
 +	return 1
@@ -157,13 +157,13 @@
 +
 +port_get_base() {
 +	[ $# -ne 1 ] && eargs portstree_name
-+	local confloc=${POUDRIERE_DATA}/nozfs/ports/${1}/mountpoint
++	local confloc=${POUDRIERE_DATA}/hammer/ports/${1}/mountpoint
 +	[ -f ${confloc} ] && cat ${confloc}
 +}
 +
 +port_get_fs() {
 +	[ $# -ne 1 ] && eargs portstree_name
-+	local confloc=${POUDRIERE_DATA}/nozfs/ports/${1}/filesys
++	local confloc=${POUDRIERE_DATA}/hammer/ports/${1}/filesys
 +	[ -f ${confloc} ] && cat ${confloc}
 +}
 +
@@ -182,13 +182,11 @@
 +	local arch=$3
 +	local mnt=$( echo $4 | sed -e "s,//,/,g")
 +	local fs=$5
-+	local confdir="${POUDRIERE_DATA}/nozfs/jails/${name}"
++	local confdir="${POUDRIERE_DATA}/hammer/jails/${name}"
 +	msg_n "Creating ${name} fs..."
 +
-+	if [ -d ${fs} ] || mkdir -p ${fs} || mkdir -p ${confdir}; then
-+	   err 1 " Fail"
-+	   return
-+	fi
++	mkdir -p ${fs}
++	mkdir -p ${confdir}
 +
 +	echo "rootfs"     > ${confdir}/type
 +	echo "${name}"    > ${confdir}/name
@@ -205,7 +203,7 @@
 +	local name=$1
 +	local mnt=$( echo $2 | sed -e 's,//,/,g')
 +	local fs=$3
-+	local confdir="${POUDRIERE_DATA}/nozfs/ports/${name}"
++	local confdir="${POUDRIERE_DATA}/hammer/ports/${name}"
 +	msg_n "Creating ${name} fs..."
 +
 +	if [ -d ${fs} ] || mkdir -p ${fs} || mkdir -p ${confdir}; then
@@ -284,10 +282,11 @@
 +}
 +
 +print_ports_table () {
-+	TABFORM="'%-20s %-10s\n'"
-+	printf ${TABFORM} "PORTSTREE" "METHOD"
++	[ $# -ne 1 ] && eargs quiet
++	TABFORM='%-20s %-10s\n'
++	[ ${1} -eq 0 ] && printf "${TABFORM}" "PORTSTREE" "METHOD"
 +	local METHOD
-+	local confdir=${POUDRIERE_DATA}/nozfs/ports
++	local confdir=${POUDRIERE_DATA}/hammer/ports
 +	if [ -d ${confdir} ] && [ -n $(ls -A ${confdir}) ]; then
 +	  cd ${confloc}
 +	  PORTLIST=`find -s * -type d`
@@ -297,18 +296,20 @@
 +	    else
 +	      METHOD=-
 +	    fi
-+	    print ${TABFORM} "${port}" "${METHOD}"
++	    print "${TABFORM}" "${port}" "${METHOD}"
 +	  done
 +	fi
 +}
 +
 +print_jails_table () {
-+	local confdir=${POUDRIERE_DATA}/nozfs/jails
-+	TABFORM="'%-20s %-20s %-7s %-7s %-7s %-7s %-7s %-7s %-7s %s\n'"
-+	printf ${TABFORM} "JAILNAME" "VERSION" "ARCH" "METHOD" "SUCCESS" \
-+	                  "FAILED" "IGNORED" "SKIPPED" "QUEUED" "STATUS"
-+	PARAMS=name version arch method stats_built stats_failed \
-+	       stats_ignored stats_skipped stats_queued status
++	[ $# -ne 1 ] && eargs quiet
++	local confdir=${POUDRIERE_DATA}/hammer/jails
++	TABFORM='%-20s %-20s %-7s %-7s %-7s %-7s %-7s %-7s %-7s %s\n'
++	[ ${1} -eq 0 ] && printf "${TABFORM}" \
++		"JAILNAME" "VERSION" "ARCH" "METHOD" "SUCCESS" \
++		"FAILED" "IGNORED" "SKIPPED" "QUEUED" "STATUS"
++	PARAMS="name version arch method stats_built stats_failed \
++	        stats_ignored stats_skipped stats_queued status"
 +	if [ -d ${confdir} ] && [ -n $(ls -A ${confdir}) ]; then
 +	  cd ${confdir}
 +	  JAILLIST=`find -s * -type d`
@@ -322,9 +323,9 @@
 +	      fi
 +	      COLCNT=`expr ${COLCNT} + 1`
 +	    done
-+	    printf ${TABFORM} "${val_0}" "${val_1}" "${val_2}" "${val_3}" \
-+			      "${val_4}" "${val_5}" "${val_6}" "${val_7}" \
-+			      "${val_8}" "${val_9}"
++	    printf "${TABFORM}" "${val_0}" "${val_1}" "${val_2}" "${val_3}" \
++			        "${val_4}" "${val_5}" "${val_6}" "${val_7}" \
++			        "${val_8}" "${val_9}"
 +	  done
 +	fi
 +}

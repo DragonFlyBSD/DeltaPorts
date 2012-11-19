@@ -1,5 +1,14 @@
 --- src/poudriere.d/ports.sh.orig	2012-10-15 18:18:18.000000000 +0200
-+++ src/poudriere.d/ports.sh	2012-11-18 02:20:57.000000000 +0100
++++ src/poudriere.d/ports.sh	2012-11-19 11:09:57.000000000 +0100
+@@ -21,7 +21,7 @@
+                      them.
+     -p name       -- specifies the name of the portstree we workon . If not
+                      specified, work on a portstree called \"default\".
+-    -f fs         -- FS name (tank/jails/myjail)
++    -f fs         -- FS name (/poudriere/jails/thejail)
+     -M mountpoint -- mountpoint
+     -m method     -- when used with -c, specify the method used to update the
+                      tree by default it is portsnap, possible usage are
 @@ -92,10 +92,7 @@
  esac
  
@@ -8,7 +17,7 @@
 -		printf '%-20s %-10s\n' "PORTSTREE" "METHOD"
 -	zfs list -t filesystem -H -o ${NS}:type,${NS}:name,${NS}:method | \
 -		awk '$1 == "ports" {printf("%-20s %-10s\n",$2,$3) }'
-+	[ ${QUIET} -eq 0 ] && print_ports_table
++	print_ports_table ${QUIET}
  else
  	test -z "${PTNAME}" && usage
  fi
