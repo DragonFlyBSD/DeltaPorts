@@ -1,6 +1,6 @@
 --- /dev/null	2012-11-19 07:55:21.370360877 +0100
-+++ src/poudriere.d/jail.sh.dragonfly	2012-11-19 15:17:05.000000000 +0100
-@@ -0,0 +1,199 @@
++++ src/poudriere.d/jail.sh.dragonfly	2012-11-19 16:40:08.000000000 +0100
+@@ -0,0 +1,212 @@
 +#!/bin/sh
 +#
 +# DragonFly specific
@@ -9,8 +9,8 @@
 +	[ $# -ne 0 ] && eargs
 +	local AWKCMD='{ if($2 == host) print $1 }'
 +	jls | awk -v host="${JAILNAME}" "${AWKCMD}" > \
-+	  /dev/null 2>&1 && return 0
-+	return 1
++	  /dev/null 2>&1 && return 1
++	return 0
 +}
 +
 +update_jail() {
@@ -37,7 +37,7 @@
 +}
 +
 +build_and_install_world() {
-+	local JLOGBASE=${POUDRIERE_DATA}/logs/jailbuild
++	local JLOGBASE=${POUDRIERE_DATA}/jailbuild/${JAILNAME}
 +	local ncpus=$(/sbin/sysctl hw.ncpu | awk '{print $2}')
 +	local factor=`expr ${ncpus} \* 2 - 1`
 +	local options="-DNO_GCC47 -DNO_GAMES -DNOPROFILE -DNO_BINUTILS221"
@@ -57,7 +57,7 @@
 +	  ${JLOGBASE}/install.log 2>&1 || err 1 "Fail to install world"
 +
 +	msg "${JAILNAME}: making distribution"
-+	cd ${JAILMNT}/usr/src && \
++	cd ${JAILMNT}/usr/src/etc && \
 +	  make -m ${JAILMNT}/usr/share/mk distribution > \
 +	  ${JLOGBASE}/distrib.log 2>&1 || err 1 "Fail to make distribution"
 +
@@ -65,6 +65,16 @@
 +	msg "${JAILNAME}: making world upgrade"
 +	cd ${JAILMNT}/usr/src && make upgrade > \
 +	  ${JLOGBASE}/upgrade.log 2>&1 || err 1 "Fail to make world upgrade"
++}
++
++convert_property_version () {
++	local GREPPAT='^[0-9]\.[0-9]+$'
++	local FILTER=`echo "${1}" | grep -E "${GREPPAT}"`
++	if [ -n "${FILTER}" ]; then
++	   echo RELEASE-${1}
++	else
++	   echo master
++	fi
 +}
 +
 +convert_version () {
@@ -81,6 +91,8 @@
 +install_from_git() {
 +	local UPDATE=0
 +	local proto
++	local bver
++	local bverz
 +	local mounted=$(check_mount "${JAILFS}")
 +
 +	[ -z ${mounted} ] && ${NULLMOUNT} "${JAILFS}" "${JAILMNT}"
@@ -100,12 +112,14 @@
 +	else
 +		msg "Updating the sources via git..."
 +		if [ -n "${TORELEASE}" ]; then
-+			bver=$(convert_version "${TORELEASE}")	
++			bver=$(convert_version "${TORELEASE}")
++			bverz=$(convert_property_version "${TORELEASE}")
 +			BAE=`git branch -l | grep ${bver}`
 +			if [ -z "${BAE}" ]; then
 +				git branch ${bver} origin/${bver}
 +			fi
 +			git checkout ${bver}
++			zset version ${bverz}
 +		fi
 +		git pull || err 1 "Fail "
 +		echo " done"
@@ -138,7 +152,8 @@
 +		;;
 +	esac
 +
-+	jail_create_zfs ${JAILNAME} ${VERSION} ${ARCH} ${JAILMNT} ${JAILFS}
++	local bverz=$(convert_property_version "${VERSION}")
++	jail_create_zfs ${JAILNAME} ${bverz} ${ARCH} ${JAILMNT} ${JAILFS}
 +	mkdir -p ${POUDRIERE_DATA}/logs
 +	# Wrap the jail creation in a special cleanup hook that will remove
 +	# the jail if any error is encountered
@@ -147,8 +162,6 @@
 +	${FCT}
 +	eval `grep "^[RB][A-Z]*=" ${JAILMNT}/usr/src/sys/conf/newvers.sh `
 +	RELEASE=${REVISION}-${BRANCH}
-+	zset version "${RELEASE}"
-+
 +	OSVERSION=`awk '/\#define __DragonFly_version/ { print $3 }' ${JAILMNT}/usr/include/sys/param.h`
 +	LOGIN_ENV=",UNAME_r=${RELEASE},UNAME_v=DragonFly ${RELEASE},OSVERSION=${OSVERSION}"
 +
