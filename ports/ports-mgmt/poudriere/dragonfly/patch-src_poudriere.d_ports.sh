@@ -1,5 +1,5 @@
 --- src/poudriere.d/ports.sh.orig	2012-10-15 18:18:18.000000000 +0200
-+++ src/poudriere.d/ports.sh	2012-11-20 16:56:37.000000000 +0100
++++ src/poudriere.d/ports.sh	2012-11-20 20:06:41.000000000 +0100
 @@ -21,11 +21,11 @@
                       them.
      -p name       -- specifies the name of the portstree we workon . If not
@@ -33,7 +33,7 @@
  			;;
  		d)
  			DELETE=1
-@@ -76,142 +78,86 @@
+@@ -76,142 +78,85 @@
  
  [ $(( CREATE + UPDATE + DELETE + LIST )) -lt 1 ] && usage
  
@@ -69,12 +69,13 @@
  if [ ${CREATE} -eq 1 ]; then
  	# test if it already exists
  	port_exists ${PTNAME} && err 2 "The ports tree ${PTNAME} already exists"
- 	: ${PTMNT="${BASEFS:=/usr/local${ZROOTFS}}/ports/${PTNAME}"}
- 	: ${PTFS="${ZPOOL}${ZROOTFS}/ports/${PTNAME}"}
+-	: ${PTMNT="${BASEFS:=/usr/local${ZROOTFS}}/ports/${PTNAME}"}
+-	: ${PTFS="${ZPOOL}${ZROOTFS}/ports/${PTNAME}"}
++	PTFS=$(pfs_path "${ZROOTFS}/ports/${PTNAME}")
++	PTMNT="${BASEFS}/ports/${PTNAME}"
  	port_create_zfs ${PTNAME} ${PTMNT} ${PTFS}
-+	pfs=$(pfs_path ${PTFS})
  	if [ $FAKE -eq 0 ]; then
-+		mount_jailport ${pfs} ${PTMNT}
++		mount_jailport ${PTFS} ${PTMNT}
  		case ${METHOD} in
 -		csup)
 -			echo "/!\ WARNING /!\ csup is deprecated and will soon be dropped"

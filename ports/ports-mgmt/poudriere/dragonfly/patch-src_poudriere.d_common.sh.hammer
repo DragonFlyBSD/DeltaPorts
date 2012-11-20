@@ -1,6 +1,6 @@
 --- /dev/null	2012-11-20 03:01:24.170929943 +0100
-+++ src/poudriere.d/common.sh.hammer	2012-11-20 19:39:37.000000000 +0100
-@@ -0,0 +1,388 @@
++++ src/poudriere.d/common.sh.hammer	2012-11-20 20:00:01.000000000 +0100
+@@ -0,0 +1,389 @@
 +#!/bin/sh
 +
 +zget() {
@@ -387,5 +387,6 @@
 +mount_jailport() {
 +	[ $# -ne 2 ] && eargs pfs-filesystem mountpoint
 +	local mounted=$(check_mount ${1})
-+	[ -z "${mounted}" ] && ${NULLMOUNT} ${1} ${2}
++	[ -z "${mounted}" ] && ${NULLMOUNT} ${1} ${2} || \
++  	  err 1 "Failed to null-mount ${1} to ${2}"
 +}
