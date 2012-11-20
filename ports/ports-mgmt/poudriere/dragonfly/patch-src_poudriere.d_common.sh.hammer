@@ -1,11 +1,11 @@
 --- /dev/null	2012-11-20 03:01:24.170929943 +0100
-+++ src/poudriere.d/common.sh.hammer	2012-11-20 20:00:01.000000000 +0100
++++ src/poudriere.d/common.sh.hammer	2012-11-20 20:31:52.000000000 +0100
 @@ -0,0 +1,389 @@
 +#!/bin/sh
 +
 +zget() {
 +	[ $# -ne 1 ] && eargs property
-+	local name=`basename ${JAILFS}`
++	local name=`basename ${JAILMNT}`
 +	local confloc=${POUDRIERE_DATA}/hammer/jails/${name}/${1}
 +	if [ -f ${confloc} ]; then
 +	   cat ${confloc}
@@ -16,14 +16,14 @@
 +
 +zset() {
 +	[ $# -ne 2 ] && eargs property value
-+	local name=`basename ${JAILFS}`
++	local name=`basename ${JAILMNT}`
 +	local confdir=${POUDRIERE_DATA}/hammer/jails/${name}
 +	[ -d ${confdir} ] && echo "$2" > ${confdir}/${1}
 +}
 +
 +pzget() {
 +	[ $# -ne 1 ] && eargs property
-+	local name=`basename ${PTFS}`
++	local name=`basename ${PTMNT}`
 +	local confloc=${POUDRIERE_DATA}/hammer/ports/${name}/${1}
 +	if [ -f ${confloc} ]; then
 +	   cat ${confloc}
@@ -34,7 +34,7 @@
 +
 +pzset() {
 +	[ $# -ne 2 ] && eargs property value
-+	local name=`basename ${PTFS}`
++	local name=`basename ${PTMNT}`
 +	local confdir=${POUDRIERE_DATA}/hammer/ports/${name}
 +	[ -d ${confdir} ] && echo "$2" > ${confdir}/${1}
 +}
