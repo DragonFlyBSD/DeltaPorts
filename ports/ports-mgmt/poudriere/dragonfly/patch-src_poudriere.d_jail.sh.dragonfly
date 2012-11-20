@@ -1,6 +1,6 @@
 --- /dev/null	2012-11-20 03:01:24.170929943 +0100
-+++ src/poudriere.d/jail.sh.dragonfly	2012-11-20 19:30:34.000000000 +0100
-@@ -0,0 +1,220 @@
++++ src/poudriere.d/jail.sh.dragonfly	2012-11-20 20:53:14.000000000 +0100
+@@ -0,0 +1,207 @@
 +#!/bin/sh
 +#
 +# DragonFly specific
@@ -191,33 +191,20 @@
 +	umount ${JAILMNT}
 +}
 +
-+set_sysctl() {
-+	[ $# -ne 2 ] && eargs knob value
-+	local KNOB=${1}
-+	local WANTVAL=${2}
-+	CURVAL=`sysctl -n ${KNOB} 2>/dev/null`
-+	if [ ${WANTVAL} -ne ${CURVAL} ]; then
-+		sysctl ${KNOB}=${WANTVAL}
-+	fi
-+}
++delete_jail() {
++	test -z ${JAILNAME} && usage
++	jail_exists ${JAILNAME} || err 1 "No such jail: ${JAILNAME}"
++	jail_runs && \
++		err 1 "Unable to remove jail ${JAILNAME}: it is running"
 +
-+jrun() {
-+	[ $# -ne 1 ] && eargs network
-+	local AWKCMD='{ if ($2 != "127.0.0.1") print $2 }'
-+	local network=$1
-+	local ipargs
-+	if [ ${network} -eq 0 ]; then
-+		ipargs="127.0.0.1"
-+	else
-+		local inherited=`grep 'inet [0-9]' | awk "${AWKCMD}"`
-+		ipargs="127.0.0.1,${inherited}"
-+	fi
-+
-+	set_sysctl jail.allow_raw_sockets 1
-+	set_sysctl jail.chflags_allowed 1
-+	set_sysctl jail.sysvipc_allowed 1
-+	sys_sysctl jail.socket_unixiproute_only 1
-+	sys_sysctl jail.set_hostname_allowed 0
-+
-+	jail ${JAILMNT} ${jAILNAME} ${ipargs} /bin/sh
++	msg_n "Removing ${JAILNAME} jail..."
++	zkillfs ${JAILFS} jails/${JAILNAME}
++	rmdir ${JAILMNT}
++	rm -rf ${POUDRIERE_DATA}/packages/${JAILNAME}
++	rm -rf ${POUDRIERE_DATA}/cache/${JAILNAME}
++	rm -f ${POUDRIERE_DATA}/logs/*-${JAILNAME}.*.log
++	rm -f ${POUDRIERE_DATA}/logs/bulk-${JAILNAME}.log
++	rm -rf ${POUDRIERE_DATA}/logs/*/${JAILNAME}
++	rm -rf ${POUDRIERE_DATA}/jailbuild/${JAILNAME}
++	echo "done"
 +}

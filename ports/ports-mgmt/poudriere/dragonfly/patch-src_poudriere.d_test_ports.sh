@@ -1,5 +1,5 @@
 --- src/poudriere.d/test_ports.sh.orig	2012-10-15 18:18:18.000000000 +0200
-+++ src/poudriere.d/test_ports.sh	2012-11-19 13:20:08.000000000 +0100
++++ src/poudriere.d/test_ports.sh	2012-11-20 20:44:00.000000000 +0100
 @@ -75,7 +75,7 @@
  	PORTDIRECTORY=`basename ${HOST_PORTDIRECTORY}`
  else
@@ -9,12 +9,13 @@
  fi
  
  test -z "${JAILNAME}" && err 1 "Don't know on which jail to run please specify -j"
-@@ -93,19 +93,19 @@
+@@ -93,19 +93,20 @@
  
  if [ -z ${ORIGIN} ]; then
  	mkdir -p ${JAILMNT}/${PORTDIRECTORY}
 -	mount -t nullfs ${HOST_PORTDIRECTORY} ${JAILMNT}/${PORTDIRECTORY}
-+	${NULLMOUNT} ${HOST_PORTDIRECTORY} ${JAILMNT}/${PORTDIRECTORY}
++	${NULLMOUNT} ${HOST_PORTDIRECTORY} ${JAILMNT}/${PORTDIRECTORY} || \
++	  err 1 "Failed to null-mount ${HOST_PORTDIRECTORY} to jail"
  fi
  
  LISTPORTS=$(list_deps ${PORTDIRECTORY} )
@@ -32,7 +33,7 @@
  
  injail make -C ${PORTDIRECTORY} pkg-depends extract-depends \
  	fetch-depends patch-depends build-depends lib-depends
-@@ -136,7 +136,7 @@
+@@ -136,7 +137,7 @@
  
  msg "Populating PREFIX"
  mkdir -p ${JAILMNT}${PREFIX}

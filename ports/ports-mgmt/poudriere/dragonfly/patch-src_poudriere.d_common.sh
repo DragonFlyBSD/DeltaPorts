@@ -1,5 +1,5 @@
 --- src/poudriere.d/common.sh.orig	2012-10-15 18:18:18.000000000 +0200
-+++ src/poudriere.d/common.sh	2012-11-20 15:39:11.000000000 +0100
++++ src/poudriere.d/common.sh	2012-11-20 21:03:32.000000000 +0100
 @@ -1,8 +1,6 @@
  #!/bin/sh
  
@@ -10,7 +10,7 @@
  
  err() {
  	if [ $# -ne 2 ]; then
-@@ -34,6 +32,14 @@
+@@ -34,6 +32,16 @@
  	esac
  }
  
@@ -22,10 +22,12 @@
 +err 1 "Unsupported filesystem"
 +fi
 +
++. $(dirname ${0})/common.sh.${BSDPLATFORM}
++
  log_start() {
  	local logfile=$1
  
-@@ -88,26 +94,6 @@
+@@ -88,26 +96,6 @@
  	fi
  }
  
@@ -52,7 +54,7 @@
  sig_handler() {
  	trap - SIGTERM SIGKILL
  	# Ignore SIGINT while cleaning up
-@@ -163,121 +149,18 @@
+@@ -163,121 +151,18 @@
  	fi
  }
  
@@ -176,7 +178,7 @@
  	# Only do this when starting the master jail, clones will already have the dirs
  	if [ ${should_mkdir} -eq 1 ]; then
  		mkdir -p ${JAILMNT}/proc
-@@ -304,7 +187,7 @@
+@@ -304,7 +189,7 @@
  	local verbose="$2"
  
  	[ ${verbose} -eq 1 ] && msg "Mounting /var/db/ports from: ${optionsdir}"
@@ -185,7 +187,7 @@
  }
  
  do_portbuild_mounts() {
-@@ -313,9 +196,9 @@
+@@ -313,9 +198,9 @@
  
  	# Only do this when starting the master jail, clones will already have the dirs
  	if [ ${should_mkdir} -eq 1 ]; then
@@ -197,7 +199,7 @@
  		if [ -d "${CCACHE_DIR:-/nonexistent}" ]; then
  			mkdir -p ${JAILMNT}${CCACHE_DIR} || err 1 "Failed to create ccache directory "
  			msg "Mounting ccache from: ${CCACHE_DIR}"
-@@ -328,11 +211,11 @@
+@@ -328,11 +213,11 @@
  		msg "Mounting packages from: ${PKGDIR}"
  	fi
  
@@ -212,7 +214,7 @@
  	fi
  	[ -n "${MFSSIZE}" ] && mdmfs -M -S -o async -s ${MFSSIZE} md ${JAILMNT}/wrkdirs
  	[ -n "${USE_TMPFS}" ] && mount -t tmpfs tmpfs ${JAILMNT}/wrkdirs
-@@ -350,14 +233,14 @@
+@@ -350,14 +235,14 @@
  
  	if [ -d "${CCACHE_DIR:-/nonexistent}" ]; then
  		# Mount user supplied CCACHE_DIR into /var/cache/ccache
@@ -229,7 +231,7 @@
  	if [ -z "${NOLINUX}" ]; then
  		if [ "${arch}" = "i386" -o "${arch}" = "amd64" ]; then
  			NEEDFS="${NEEDFS} linprocfs linsysfs"
-@@ -371,8 +254,8 @@
+@@ -371,8 +256,8 @@
  	jail_exists ${JAILNAME} || err 1 "No such jail: ${JAILNAME}"
  	jail_runs && err 1 "jail already running: ${JAILNAME}"
  	zset status "start:"
@@ -240,30 +242,7 @@
  
  	msg "Mounting system devices for ${JAILNAME}"
  	do_jail_mounts 1
-@@ -385,18 +268,35 @@
- 	[ ${SET_STATUS_ON_START-1} -eq 1 ] && export STATUS=1
- }
- 
-+jail_soft_stop() {
-+	case ${BSDPLATFORM} in
-+	  dragonfly)
-+		local AWKCMD='{ if($2 == host) print $1 }'
-+		local JAIL_ID=`jls | awk -v host="${1}" "${AWKCMD}"`
-+		#local SHUTDWN="/bin/sh /etc/rc.shutdown"
-+		#eval env -i /usr/sbin/jexec ${JAIL_ID} ${SHUTDWN} 2>&1
-+		killall -j ${JAIL_ID} -TERM > /dev/null 2>&1
-+		sleep 1
-+		killall -j ${JAIL_ID} -KILL > /dev/null 2>&1
-+		;;
-+	  freebsd)
-+		jail -r ${1} > /dev/null
-+		;;
-+	esac
-+}
-+
- jail_stop() {
- 	[ $# -ne 0 ] && eargs
- 	local mnt
+@@ -391,12 +276,12 @@
  	jail_runs || err 1 "No such jail running: ${JAILNAME%-job-*}"
  	zset status "stop:"
  
@@ -278,7 +257,7 @@
  		done
  	fi
  	msg "Umounting file systems"
-@@ -419,24 +319,11 @@
+@@ -419,24 +304,11 @@
  			mdconfig -d -u $dev
  		fi
  	fi
@@ -304,7 +283,7 @@
  cleanup() {
  	[ -n "${CLEANED_UP}" ] && return 0
  	msg "Cleaning up"
-@@ -464,15 +351,40 @@
+@@ -464,17 +336,13 @@
  		wait
  	fi
  
@@ -318,38 +297,14 @@
  	export CLEANED_UP=1
  }
  
- injail() {
+-injail() {
 -	jexec -U root ${JAILNAME} $@
-+	case ${BSDPLATFORM} in
-+	  dragonfly)
-+		local AWKCMD='{ if($2 == host) print $1 }'
-+		local JAIL_ID=`jls | awk -v host="${JAILNAME}" "${AWKCMD}"`
-+		jexec ${JAIL_ID} $@
-+		;;
-+	  freebsd)
-+		jexec -U root ${JAILNAME} $@
-+		;;
-+	esac
-+}
-+
-+jail_runs() {
-+	[ $# -ne 0 ] && eargs
-+	case ${BSDPLATFORM} in
-+	  dragonfly)
-+		local AWKCMD='{ if($2 == host) print $1 }'
-+		jls | awk -v host="${JAILNAME}" "${AWKCMD}" > \
-+		  /dev/null 2>&1 && return 1
-+		return 0
-+		;;
-+	  freebsd)
-+		jls -qj ${JAILNAME} name > /dev/null 2>&1 && return 0
-+		return 1
-+		;;
-+	esac 
- }
- 
+-}
+-
  sanity_check_pkgs() {
-@@ -500,16 +412,16 @@
+ 	local ret=0
+ 	local depfile
+@@ -500,16 +368,16 @@
  build_port() {
  	[ $# -ne 1 ] && eargs portdir
  	local portdir=$1
@@ -369,7 +324,7 @@
  		if [ "${phase}" = "deinstall" ]; then
  			msg "Checking shared library dependencies"
  			if [ ${PKGNG} -eq 0 ]; then
-@@ -532,7 +444,7 @@
+@@ -532,7 +400,7 @@
  		echo "==================================================================="
  
  		if [ "${phase}" = "checksum" ]; then
@@ -378,7 +333,7 @@
  			jrun 0
  		fi
  		if [ "${phase}" = "deinstall" ]; then
-@@ -554,7 +466,7 @@
+@@ -554,7 +422,7 @@
  				local mod=$(mktemp ${jailbase}/tmp/mod.XXXXXX)
  				local mod1=$(mktemp ${jailbase}/tmp/mod1.XXXXXX)
  				local die=0
@@ -387,7 +342,7 @@
  					while read mod type path; do
  					local ppath
  					ppath=`echo "$path" | sed -e "s,^${JAILMNT},," -e "s,^${PREFIX}/,," -e "s,^share/${portname},%%DATADIR%%," -e "s,^etc/${portname},%%ETCDIR%%,"`
-@@ -610,17 +522,17 @@
+@@ -610,17 +478,17 @@
  			fi
  		fi
  	done
@@ -408,7 +363,7 @@
  	local tardir=${POUDRIERE_DATA}/wrkdirs/${JAILNAME%-job-*}/${PTNAME}
  	local tarname=${tardir}/${PKGNAME}.${WRKDIR_ARCHIVE_FORMAT}
  	local mnted_portdir=${JAILMNT}/wrkdirs/${portdir}
-@@ -639,58 +551,6 @@
+@@ -639,58 +507,6 @@
  	job_msg "Saved ${port} wrkdir to: ${tarname}"
  }
  
@@ -467,7 +422,7 @@
  build_stats_list() {
  	[ $# -ne 3 ] && eargs html_path type display_name
  	local html_path="$1"
-@@ -923,11 +783,11 @@
+@@ -923,11 +739,11 @@
  
  	PKGNAME="${pkgname}" # set ASAP so cleanup() can use it
  	port=$(cache_get_origin ${pkgname})
@@ -481,7 +436,7 @@
  
  	# If this port is IGNORED, skip it
  	# This is checked here instead of when building the queue
-@@ -998,10 +858,10 @@
+@@ -998,10 +814,10 @@
  	[ $# -ne 1 ] && eargs directory
  	local dir=$1
  	local makeargs="-VPKG_DEPENDS -VBUILD_DEPENDS -VEXTRACT_DEPENDS -VLIB_DEPENDS -VPATCH_DEPENDS -VFETCH_DEPENDS -VRUN_DEPENDS"
@@ -494,7 +449,7 @@
  }
  
  deps_file() {
-@@ -1149,7 +1009,7 @@
+@@ -1149,7 +965,7 @@
  		o=$(pkg_get_origin ${pkg})
  		v=${pkg##*-}
  		v=${v%.*}
@@ -503,7 +458,7 @@
  			msg "${o} does not exist anymore. Deleting stale ${pkg##*/}"
  			delete_pkg ${pkg}
  			continue
-@@ -1164,7 +1024,7 @@
+@@ -1164,7 +980,7 @@
  
  		# Check if the compiled options match the current options from make.conf and /var/db/options
  		if [ "${CHECK_CHANGED_OPTIONS:-no}" != "no" ]; then
@@ -512,7 +467,7 @@
  			compiled_options=$(pkg_get_options ${pkg})
  
  			if [ "${compiled_options}" != "${current_options}" ]; then
-@@ -1199,7 +1059,7 @@
+@@ -1199,7 +1015,7 @@
  
  	# Add to cache if not found.
  	if [ -z "${pkgname}" ]; then
@@ -521,7 +476,7 @@
  		# Make sure this origin did not already exist
  		existing_origin=$(cache_get_origin "${pkgname}")
  		[ -n "${existing_origin}" ] &&  err 1 "Duplicated origin for ${pkgname}: ${origin} AND ${existing_origin}. Rerun with -D to see which ports are depending on these."
-@@ -1357,9 +1217,9 @@
+@@ -1357,9 +1173,9 @@
  
  	msg "Populating LOCALBASE"
  	mkdir -p ${JAILMNT}/${MYBASE:-/usr/local}
@@ -533,7 +488,7 @@
  	if [ -n "${WITH_PKGNG}" ]; then
  		export PKGNG=1
  		export PKG_EXT="txz"
-@@ -1381,26 +1241,39 @@
+@@ -1381,26 +1197,40 @@
  test -f ${SCRIPTPREFIX}/../../etc/poudriere.conf || err 1 "Unable to find ${SCRIPTPREFIX}/../../etc/poudriere.conf"
  . ${SCRIPTPREFIX}/../../etc/poudriere.conf
  
@@ -558,6 +513,7 @@
  : ${FREEBSD_HOST="ftp://${FTP_HOST:-ftp.FreeBSD.org}"}
  : ${ZROOTFS="/poudriere"}
  
++# this could be put in common.sh.${BSDPLATFORM} ...
 +case ${BSDPLATFORM} in
 +	dragonfly)
 +		PORTSRC=/usr/dports

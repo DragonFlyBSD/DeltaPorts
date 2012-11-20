@@ -1,5 +1,5 @@
 --- /dev/null	2012-11-20 03:01:24.170929943 +0100
-+++ src/poudriere.d/common.sh.hammer	2012-11-20 20:31:52.000000000 +0100
++++ src/poudriere.d/common.sh.hammer	2012-11-20 20:47:26.000000000 +0100
 @@ -0,0 +1,389 @@
 +#!/bin/sh
 +
@@ -113,12 +113,12 @@
 +}
 +
 +zrollback () {
-+	[ $# -ne 1 ] && eargs filesystem@snapname
++	[ $# -ne 1 ] && eargs pfs-filesystem@snapname
 +	if [ $(onlysnap "${1}") -eq 0 ]; then
 +		err 1 "Must specify snapshot in rollback"
 +	fi
 +	local snap=$(snapname "${1}")
-+	local pfs=$(extract_pfs ${sdir})
++	local pfs=$(extract_pfs ${1})
 +	cpdup -i0 ${HAMMER_SNAPDIR}/${snap} ${pfs}
 +}
 +

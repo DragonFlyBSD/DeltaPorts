@@ -1,11 +1,9 @@
 --- /dev/null	2012-11-20 03:01:24.170929943 +0100
-+++ src/poudriere.d/jail.sh.freebsd	2012-11-20 11:23:57.000000000 +0100
-@@ -0,0 +1,315 @@
++++ src/poudriere.d/jail.sh.freebsd	2012-11-20 20:54:33.000000000 +0100
+@@ -0,0 +1,308 @@
 +#!/bin/sh
 +#
 +# FreeBSD specific
-+
-+IPS="$(sysctl -n kern.features.inet 2>/dev/null || (sysctl -n net.inet 1>/dev/null 2>&1 && echo 1) || echo 0)$(sysctl -n kern.features.inet6 2>/dev/null || (sysctl -n net.inet6 1>/dev/null 2>&1 && echo 1) || echo 0)"
 +
 +update_jail() {
 +	jail_exists ${JAILNAME} || err 1 "No such jail: ${JAILNAME}"
@@ -295,24 +293,19 @@
 +	msg "Jail ${JAILNAME} ${VERSION} ${ARCH} is ready to be used"
 +}
 +
-+jrun() {
-+	[ $# -ne 1 ] && eargs network
-+	local network=$1
-+	local ipargs
-+	if [ ${network} -eq 0 ]; then
-+		case $IPS in
-+		01) ipargs="ip6.addr=::1" ;;
-+		10) ipargs="ip4.addr=127.0.0.1" ;;
-+		11) ipargs="ip4.addr=127.0.0.1 ip6.addr=::1" ;;
-+		esac
-+	else
-+		case $IPS in
-+		01) ipargs="ip6=inherit" ;;
-+		10) ipargs="ip4=inherit" ;;
-+		11) ipargs="ip4=inherit ip6=inherit" ;;
-+		esac
-+	fi
-+	jail -c persist name=${JAILNAME} ${ipargs} path=${JAILMNT} \
-+		host.hostname=${JAILNAME} allow.sysvipc allow.mount \
-+		allow.socket_af allow.raw_sockets allow.chflags
++delete_jail() {
++	test -z ${JAILNAME} && usage
++	jail_exists ${JAILNAME} || err 1 "No such jail: ${JAILNAME}"
++	jail_runs && \
++		err 1 "Unable to remove jail ${JAILNAME}: it is running"
++
++	msg_n "Removing ${JAILNAME} jail..."
++	zkillfs ${JAILFS} jails/${JAILNAME}
++	rmdir ${JAILMNT}
++	rm -rf ${POUDRIERE_DATA}/packages/${JAILNAME}
++	rm -rf ${POUDRIERE_DATA}/cache/${JAILNAME}
++	rm -f ${POUDRIERE_DATA}/logs/*-${JAILNAME}.*.log
++	rm -f ${POUDRIERE_DATA}/logs/bulk-${JAILNAME}.log
++	rm -rf ${POUDRIERE_DATA}/logs/*/${JAILNAME}
++	echo "done"
 +}
