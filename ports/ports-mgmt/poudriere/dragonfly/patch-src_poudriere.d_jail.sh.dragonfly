@@ -1,6 +1,6 @@
 --- /dev/null	2012-11-20 03:01:24.170929943 +0100
-+++ src/poudriere.d/jail.sh.dragonfly	2012-11-20 08:20:41.000000000 +0100
-@@ -0,0 +1,216 @@
++++ src/poudriere.d/jail.sh.dragonfly	2012-11-20 09:53:13.000000000 +0100
+@@ -0,0 +1,225 @@
 +#!/bin/sh
 +#
 +# DragonFly specific
@@ -14,6 +14,7 @@
 +}
 +
 +update_jail() {
++	[ $# -ne 1 ] && eargs quick
 +	jail_exists ${JAILNAME} || err 1 "No such jail: ${JAILNAME}"
 +	jail_runs && \
 +		err 1 "Unable to remove jail ${JAILNAME}: it is running"
@@ -25,7 +26,7 @@
 +	fi
 +	case ${METHOD} in
 +	git)
-+		install_from_git
++		install_from_git ${1}
 +		umount ${JAILMNT}
 +		zkill ${JAILFS}@clean
 +		zsnap ${JAILFS}@clean
@@ -38,20 +39,27 @@
 +}
 +
 +build_and_install_world() {
++	[ $# -ne 1 ] && eargs quick
 +	local JLOGBASE=${POUDRIERE_DATA}/jailbuild/${JAILNAME}
 +	local ncpus=$(/sbin/sysctl hw.ncpu | awk '{print $2}')
 +	local factor=`expr ${ncpus} \* 2 - 1`
 +	local options="-DNO_GCC47 -DNO_GAMES -DNOPROFILE -DNO_BINUTILS221"
++	local directive
 +	mkdir -p ${JLOGBASE}
 +
 +	export TARGET_ARCH=${ARCH}
 +	export __MAKE_CONF=/dev/null
 +	export DESTDIR=${JAILMNT}
 +
-+	msg "${JAILNAME}: making buildworld"
++	if [ ${1} -eq 1 ]; then
++	   directive=quickworld
++	else
++	   directive=buildworld
++	fi
++	msg "${JAILNAME}: making ${directive}"
 +	cd ${JAILMNT}/usr/src && \
-+	  make -j${factor} ${options} buildworld > \
-+	  ${JLOGBASE}/build.log 2>&1 || err 1 "Fail to build world"
++	  make -j${factor} ${options} ${directive} > \
++	  ${JLOGBASE}/build.log 2>&1 || err 1 "Fail to ${directive}"
 +
 +	msg "${JAILNAME}: making installworld"
 +	cd ${JAILMNT}/usr/src && make ${options} installworld > \
@@ -92,6 +100,7 @@
 +}
 +
 +install_from_git() {
++	[ $# -ne 1 ] && eargs quick
 +	local UPDATE=0
 +	local proto
 +	local bver
@@ -127,7 +136,7 @@
 +		git pull || err 1 "Fail "
 +		echo " done"
 +	fi
-+	build_and_install_world
++	build_and_install_world ${1}
 +}
 +
 +create_jail() {
@@ -147,7 +156,7 @@
 +	git)
 +		GIT=`which git`
 +		test -z ${GIT} && err 1 "You need git on your host to use this method"
-+		FCT=install_from_git
++		FCT="install_from_git 0"
 +		;;
 +	*)
 +		err 2 "Unknown method to create the jail"
@@ -188,7 +197,7 @@
 +}
 +
 +set_sysctl() {
-+	[ $# -ne 2 ] && knob value
++	[ $# -ne 2 ] && eargs knob value
 +	local KNOB=${1}
 +	local WANTVAL=${2}
 +	CURVAL=`sysctl -n ${KNOB} 2>/dev/null`

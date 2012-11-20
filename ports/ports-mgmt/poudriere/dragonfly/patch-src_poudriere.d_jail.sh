@@ -1,6 +1,6 @@
 --- src/poudriere.d/jail.sh.orig	2012-10-15 18:18:18.000000000 +0200
-+++ src/poudriere.d/jail.sh	2012-11-19 22:49:21.000000000 +0100
-@@ -15,50 +15,31 @@
++++ src/poudriere.d/jail.sh	2012-11-20 09:42:35.000000000 +0100
+@@ -15,50 +15,32 @@
  Options:
      -q            -- quiet (remove the header in list)
      -j jailname   -- Specifies the jailname
@@ -13,6 +13,7 @@
 +    -a arch       -- Does nothing - set to be same as host
 +    -f fs         -- FS name (/poudriere/jails/thejail)
      -M mountpoint -- mountpoint
++    -Q quickworld -- when used with -u jail is incrementally updated
      -m method     -- when used with -c forces the method to use by default
 -                     \"ftp\", could also be \"svn\", \"svn+http\", \"svn+ssh\",
 -		     \"csup\" please note that with svn and csup the world
@@ -64,7 +65,7 @@
  }
  
  delete_jail() {
-@@ -68,14 +49,15 @@
+@@ -68,14 +50,15 @@
  		err 1 "Unable to remove jail ${JAILNAME}: it is running"
  
  	msg_n "Removing ${JAILNAME} jail..."
@@ -82,7 +83,7 @@
  }
  
  cleanup_new_jail() {
-@@ -83,296 +65,6 @@
+@@ -83,296 +66,6 @@
  	delete_jail
  }
  
@@ -379,10 +380,11 @@
  ARCH=`uname -m`
  REALARCH=${ARCH}
  START=0
-@@ -383,24 +75,23 @@
+@@ -383,24 +76,24 @@
  QUIET=0
  INFO=0
  UPDATE=0
++QUICK=0
 +METHOD=git
  
  SCRIPTPATH=`realpath $0`
@@ -390,7 +392,8 @@
  . ${SCRIPTPREFIX}/common.sh
 +. ${SCRIPTPREFIX}/jail.sh.${BSDPLATFORM}
  
- while getopts "j:v:a:z:m:n:f:M:sdklqciut:" FLAG; do
+-while getopts "j:v:a:z:m:n:f:M:sdklqciut:" FLAG; do
++while getopts "j:v:a:z:m:n:f:M:Q:sdklqciut:" FLAG; do
  	case "${FLAG}" in
  		j)
 -			JAILNAME=${OPTARG}
@@ -408,7 +411,17 @@
  			;;
  		m)
  			METHOD=${OPTARG}
-@@ -444,7 +135,6 @@
+@@ -411,6 +104,9 @@
+ 		M)
+ 			JAILMNT=${OPTARG}
+ 			;;
++		Q)
++			QUICK=1
++			;;
+ 		s)
+ 			START=1
+ 			;;
+@@ -444,7 +140,6 @@
  	esac
  done
  
@@ -416,7 +429,7 @@
  if [ -n "${JAILNAME}" ] && [ ${CREATE} -eq 0 ]; then
  	JAILFS=`jail_get_fs ${JAILNAME}`
  	JAILMNT=`jail_get_base ${JAILNAME}`
-@@ -469,7 +159,7 @@
+@@ -469,7 +164,7 @@
  		export SET_STATUS_ON_START=0
  		test -z ${JAILNAME} && usage
  		jail_start
@@ -425,3 +438,11 @@
  		jrun 1
  		;;
  	0000100)
+@@ -482,6 +177,6 @@
+ 		;;
+ 	0000001)
+ 		test -z ${JAILNAME} && usage
+-		update_jail
++		update_jail ${QUICK}
+ 		;;
+ esac
