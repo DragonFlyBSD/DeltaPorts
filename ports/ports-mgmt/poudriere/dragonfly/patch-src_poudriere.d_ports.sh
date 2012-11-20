@@ -1,5 +1,5 @@
 --- src/poudriere.d/ports.sh.orig	2012-10-15 18:18:18.000000000 +0200
-+++ src/poudriere.d/ports.sh	2012-11-20 20:06:41.000000000 +0100
++++ src/poudriere.d/ports.sh	2012-11-20 20:22:39.000000000 +0100
 @@ -21,11 +21,11 @@
                       them.
      -p name       -- specifies the name of the portstree we workon . If not
@@ -33,7 +33,7 @@
  			;;
  		d)
  			DELETE=1
-@@ -76,142 +78,85 @@
+@@ -76,142 +78,86 @@
  
  [ $(( CREATE + UPDATE + DELETE + LIST )) -lt 1 ] && usage
  
@@ -75,6 +75,7 @@
 +	PTMNT="${BASEFS}/ports/${PTNAME}"
  	port_create_zfs ${PTNAME} ${PTMNT} ${PTFS}
  	if [ $FAKE -eq 0 ]; then
++		pzset method ${METHOD}
 +		mount_jailport ${PTFS} ${PTMNT}
  		case ${METHOD} in
 -		csup)
@@ -120,16 +121,17 @@
  			echo " done"
  			;;
  		git)
- 			msg "Cloning the ports tree"
+-			msg "Cloning the ports tree"
 -			git clone ${GIT_URL} ${PTMNT} || {
 -				zfs destroy ${PTFS}
++			msg "Retrieving the ports tree via git"
 +			git clone --depth 1 ${DPORTS_URL} ${PTMNT} || {
  				err 1 " Fail"
  			}
  			echo " done"
  			;;
  		esac
- 		pzset method ${METHOD}
+-		pzset method ${METHOD}
 +		umount ${PTMNT}
  	fi
  fi
@@ -198,6 +200,7 @@
 -		cd ${PORTSMNT:-${PTMNT}} && git pull
 +		msg "Pulling from ${DPORTS_URL}"
 +		cd ${PTMNT} && git pull
++		cd ${POUDRIERE_DATA}
  		echo " done"
  		;;
  	*)
