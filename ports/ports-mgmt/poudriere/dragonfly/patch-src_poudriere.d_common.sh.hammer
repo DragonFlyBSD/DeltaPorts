@@ -1,6 +1,6 @@
---- /dev/null	2012-11-19 07:55:21.370360877 +0100
-+++ src/poudriere.d/common.sh.hammer	2012-11-19 23:56:10.000000000 +0100
-@@ -0,0 +1,377 @@
+--- /dev/null	2012-11-20 03:01:24.170929943 +0100
++++ src/poudriere.d/common.sh.hammer	2012-11-20 09:37:11.000000000 +0100
+@@ -0,0 +1,379 @@
 +#!/bin/sh
 +
 +zget() {
@@ -53,9 +53,10 @@
 +	[ $# -ne 1 ] && eargs filesystem@snapname
 +	local testat=$(echo "${1}" | grep @)
 +	if [ -n "${testat}" ]; then
-+	   return 1
++	   echo 1
++	else
++	   echo 0
 +	fi
-+	return 0
 +}
 +
 +check_mount () {
@@ -71,16 +72,17 @@
 +	if [ -L ${HAMMER_SNAPDIR}/${snap} ]; then
 +		err 1 "Cannot snapshot, ${snap} already exists"
 +	else
-+		hammer snapshot ${ZROOTFS} ${HAMMER_SNAPDIR}/${snap}
++		hammer snapshot ${ZROOTFS} ${HAMMER_SNAPDIR}/${snap} > \
++		  /dev/null
 +	fi
 +}
 +
 +zkill() {
 +	[ $# -ne 1 ] && eargs filesystem@snapname
-+	if [ $(onlysnap "${1}") ]; then
-+		local snap=$(snapname ${1})
++	if [ $(onlysnap "${1}") -eq 1 ]; then
++		local snap=$(snapname "${1}")
 +		[ -L ${HAMMER_SNAPDIR}/${snap} ] && \
-+		  hammer snaprm ${ZROOTFS} ${HAMMER_SNAPDIR}/${snap}
++		  hammer snaprm ${HAMMER_SNAPDIR}/${snap}
 +	else
 +		# Delete directly from FS (not MNT)
 +		rm -rf ${1}
@@ -89,11 +91,11 @@
 +
 +zrollback () {
 +	[ $# -ne 1 ] && eargs filesystem@snapname
-+	if [ ! $(onlysnap "${1}") ]; then
++	if [ $(onlysnap "${1}") -eq 0 ]; then
 +		err 1 "Must specify snapshot in rollback"
 +	fi
-+	local snap=$(snapname ${1})
-+	local sdir=$(snapdirectory ${1})
++	local snap=$(snapname "${1}")
++	local sdir=$(snapdirectory "${1}")
 +	rsync -vaq --delete \
 +	  ${HAMMER_SNAPDIR}/${snap}/${sdir}/ \
 +	  ${ZROOTFS}/${sdir}/
@@ -102,7 +104,7 @@
 +zxdiff () {
 +	[ $# -ne 2 ] && eargs filesystem@snapname filesystem
 +	# very basic zfs diff emulations: [M+-] (no R, no / type)
-+	if [ ! $(onlysnap "${1}") ]; then
++	if [ $(onlysnap "${1}") -eq 0 ]; then
 +		err 1 "Must specify snapshot in rollback"
 +	fi
 +	local snap=$(snapname "${1}")
