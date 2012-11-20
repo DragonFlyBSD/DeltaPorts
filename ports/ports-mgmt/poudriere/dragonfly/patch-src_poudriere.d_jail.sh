@@ -1,5 +1,5 @@
 --- src/poudriere.d/jail.sh.orig	2012-10-15 18:18:18.000000000 +0200
-+++ src/poudriere.d/jail.sh	2012-11-20 10:10:40.000000000 +0100
++++ src/poudriere.d/jail.sh	2012-11-20 16:33:10.000000000 +0100
 @@ -15,50 +15,32 @@
  Options:
      -q            -- quiet (remove the header in list)
@@ -65,13 +65,12 @@
  }
  
  delete_jail() {
-@@ -68,14 +50,15 @@
+@@ -68,14 +50,14 @@
  		err 1 "Unable to remove jail ${JAILNAME}: it is running"
  
  	msg_n "Removing ${JAILNAME} jail..."
 -	zfs destroy -r ${JAILFS}
-+	kill_jail_metadata ${JAILNAME}
-+	zkill ${JAILFS}
++	zkillfs ${JAILFS} jails/${JAILNAME}
  	rmdir ${JAILMNT}
  	rm -rf ${POUDRIERE_DATA}/packages/${JAILNAME}
  	rm -rf ${POUDRIERE_DATA}/cache/${JAILNAME}
@@ -83,7 +82,7 @@
  }
  
  cleanup_new_jail() {
-@@ -83,296 +66,6 @@
+@@ -83,296 +65,6 @@
  	delete_jail
  }
  
@@ -380,7 +379,7 @@
  ARCH=`uname -m`
  REALARCH=${ARCH}
  START=0
-@@ -383,24 +76,24 @@
+@@ -383,24 +75,24 @@
  QUIET=0
  INFO=0
  UPDATE=0
@@ -411,7 +410,7 @@
  			;;
  		m)
  			METHOD=${OPTARG}
-@@ -411,6 +104,9 @@
+@@ -411,6 +103,9 @@
  		M)
  			JAILMNT=${OPTARG}
  			;;
@@ -421,7 +420,7 @@
  		s)
  			START=1
  			;;
-@@ -444,7 +140,6 @@
+@@ -444,7 +139,6 @@
  	esac
  done
  
@@ -429,7 +428,7 @@
  if [ -n "${JAILNAME}" ] && [ ${CREATE} -eq 0 ]; then
  	JAILFS=`jail_get_fs ${JAILNAME}`
  	JAILMNT=`jail_get_base ${JAILNAME}`
-@@ -469,7 +164,7 @@
+@@ -469,7 +163,7 @@
  		export SET_STATUS_ON_START=0
  		test -z ${JAILNAME} && usage
  		jail_start
@@ -438,7 +437,7 @@
  		jrun 1
  		;;
  	0000100)
-@@ -482,6 +177,6 @@
+@@ -482,6 +176,6 @@
  		;;
  	0000001)
  		test -z ${JAILNAME} && usage

@@ -1,5 +1,5 @@
 --- src/poudriere.d/ports.sh.orig	2012-10-15 18:18:18.000000000 +0200
-+++ src/poudriere.d/ports.sh	2012-11-20 01:04:38.000000000 +0100
++++ src/poudriere.d/ports.sh	2012-11-20 16:56:37.000000000 +0100
 @@ -21,11 +21,11 @@
                       them.
      -p name       -- specifies the name of the portstree we workon . If not
@@ -33,7 +33,7 @@
  			;;
  		d)
  			DELETE=1
-@@ -76,29 +78,16 @@
+@@ -76,142 +78,86 @@
  
  [ $(( CREATE + UPDATE + DELETE + LIST )) -lt 1 ] && usage
  
@@ -69,9 +69,12 @@
  if [ ${CREATE} -eq 1 ]; then
  	# test if it already exists
  	port_exists ${PTNAME} && err 2 "The ports tree ${PTNAME} already exists"
-@@ -107,49 +96,20 @@
+ 	: ${PTMNT="${BASEFS:=/usr/local${ZROOTFS}}/ports/${PTNAME}"}
+ 	: ${PTFS="${ZPOOL}${ZROOTFS}/ports/${PTNAME}"}
  	port_create_zfs ${PTNAME} ${PTMNT} ${PTFS}
++	pfs=$(pfs_path ${PTFS})
  	if [ $FAKE -eq 0 ]; then
++		mount_jailport ${pfs} ${PTMNT}
  		case ${METHOD} in
 -		csup)
 -			echo "/!\ WARNING /!\ csup is deprecated and will soon be dropped"
@@ -110,9 +113,7 @@
 -				zfs destroy ${PTFS}
 +		rsync)
 +			msg "Cloning the ports tree via rsync"
-+			rsync -vaq ${DPORTS_RSYNC_LOC}/ ${PTFS}/ || {
-+				kill_port_metadata ${PTNAME}
-+				zkill ${PTFS}
++			rsync -vaq ${DPORTS_RSYNC_LOC}/ ${PTMNT}/ || {
  				err 1 " Fail"
  			}
  			echo " done"
@@ -121,13 +122,17 @@
  			msg "Cloning the ports tree"
 -			git clone ${GIT_URL} ${PTMNT} || {
 -				zfs destroy ${PTFS}
-+			git clone --depth 1 ${DPORTS_URL} ${PTFS} || {
-+				kill_port_metadata ${PTNAME}
-+				zkill ${PTFS}
++			git clone --depth 1 ${DPORTS_URL} ${PTMNT} || {
  				err 1 " Fail"
  			}
  			echo " done"
-@@ -162,52 +122,37 @@
+ 			;;
+ 		esac
+ 		pzset method ${METHOD}
++		umount ${PTMNT}
+ 	fi
+ fi
+ 
  if [ ${DELETE} -eq 1 ]; then
  	port_exists ${PTNAME} || err 2 "No such ports tree ${PTNAME}"
  	PTMNT=$(port_get_base ${PTNAME})
@@ -140,8 +145,8 @@
  	msg "Deleting portstree \"${PTNAME}\""
 -	PTFS=$(port_get_fs ${PTNAME})
 -	zfs destroy -r ${PTFS}
-+	kill_port_metadata ${PTNAME}
-+	zkill ${PTFS}
++	zkillfs ${PTFS} ports/${PTNAME}
++	rmdir ${PTMNT}
  fi
  
  if [ ${UPDATE} -eq 1 ]; then
@@ -155,6 +160,7 @@
 +	[ -n "$(check_mount ${PTFS})" ] && \
 +		err 1 "Ports tree \"${PTNAME}\" is currently mounted and being used."
  	msg "Updating portstree \"${PTNAME}\""
++	mount_jailport ${PTFS} ${PTMNT}
  	METHOD=$(pzget method)
  	if [ ${METHOD} = "-" ]; then
 -		METHOD=portsnap
@@ -183,14 +189,19 @@
 -		svn -q update ${PORTSMNT:-${PTMNT}}
 +	rsync)
 +		msg "Updating the ports tree via rsync"
-+		rsync -vaq --delete ${DPORTS_RSYNC_LOC}/ ${PTFS}/
++		rsync -vaq --delete ${DPORTS_RSYNC_LOC}/ ${PTMNT}/
  		echo " done"
  		;;
  	git)
 -		msg "Pulling from ${GIT_URL}"
 -		cd ${PORTSMNT:-${PTMNT}} && git pull
 +		msg "Pulling from ${DPORTS_URL}"
-+		cd ${PTFS} && git pull
++		cd ${PTMNT} && git pull
  		echo " done"
  		;;
  	*)
+ 		err 1 "Undefined upgrade method"
+ 		;;
+ 	esac
++	umount ${PTMNT}
+ fi

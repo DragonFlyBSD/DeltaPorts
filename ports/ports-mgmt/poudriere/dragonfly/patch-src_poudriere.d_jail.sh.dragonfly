@@ -1,17 +1,9 @@
 --- /dev/null	2012-11-20 03:01:24.170929943 +0100
-+++ src/poudriere.d/jail.sh.dragonfly	2012-11-20 09:53:13.000000000 +0100
-@@ -0,0 +1,225 @@
++++ src/poudriere.d/jail.sh.dragonfly	2012-11-20 14:45:52.000000000 +0100
+@@ -0,0 +1,217 @@
 +#!/bin/sh
 +#
 +# DragonFly specific
-+
-+jail_runs() {
-+	[ $# -ne 0 ] && eargs
-+	local AWKCMD='{ if($2 == host) print $1 }'
-+	jls | awk -v host="${JAILNAME}" "${AWKCMD}" > \
-+	  /dev/null 2>&1 && return 1
-+	return 0
-+}
 +
 +update_jail() {
 +	[ $# -ne 1 ] && eargs quick
@@ -107,7 +99,7 @@
 +	local bverz
 +	local mounted=$(check_mount "${JAILFS}")
 +
-+	[ -z "${mounted}" ] && ${NULLMOUNT} "${JAILFS}" "${JAILMNT}"
++	[ -z "${mounted}" ] && ${NULLMOUNT} $(pfs_path ${JAILFS}) "${JAILMNT}"
 +	[ -d ${JAILMNT}/usr/src ] && UPDATE=1
 +	mkdir -p ${JAILMNT}/usr/src
 +	cd ${JAILMNT}/usr/src

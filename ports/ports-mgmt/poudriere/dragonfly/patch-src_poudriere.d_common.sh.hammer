@@ -1,6 +1,6 @@
 --- /dev/null	2012-11-20 03:01:24.170929943 +0100
-+++ src/poudriere.d/common.sh.hammer	2012-11-20 09:37:11.000000000 +0100
-@@ -0,0 +1,379 @@
++++ src/poudriere.d/common.sh.hammer	2012-11-20 16:53:34.000000000 +0100
+@@ -0,0 +1,391 @@
 +#!/bin/sh
 +
 +zget() {
@@ -49,6 +49,12 @@
 +	echo "${1}" | sed -e "s|${ZROOTFS}\/||" -e 's|@.*||'
 +}
 +
++pfs_path () {
++	[ $# -ne 1 ] && eargs filesystem
++	local part2=$(echo "${1}" | sed -e "s|${ZROOTFS}\/||" -e "s|\/|\.|g")
++	echo "/pfs/poudriere.${part2}"
++}
++
 +onlysnap () {
 +	[ $# -ne 1 ] && eargs filesystem@snapname
 +	local testat=$(echo "${1}" | grep @)
@@ -61,20 +67,26 @@
 +
 +check_mount () {
 +	[ $# -ne 1 ] && eargs filesystem
++	local REAL=$(realpath ${1})
 +	local AWKCMD='{ if ($1 == mnt) print $3 }'
-+	mount | awk -v mnt="${1}" "${AWKCMD}"
++	mount | awk -v mnt="${REAL}" "${AWKCMD}"
 +}
 +
 +zsnap() {
 +	[ $# -ne 1 ] && eargs filesystem@snapname
 +	local snap=$(snapname "${1}")
++	local pfs=$(pfs_path ${1})
 +	mkdir -p ${HAMMER_SNAPDIR}
 +	if [ -L ${HAMMER_SNAPDIR}/${snap} ]; then
 +		err 1 "Cannot snapshot, ${snap} already exists"
 +	else
-+		hammer snapshot ${ZROOTFS} ${HAMMER_SNAPDIR}/${snap} > \
-+		  /dev/null
++		hammer snapshot ${pfs} ${HAMMER_SNAPDIR}/${snap} > /dev/null
 +	fi
++}
++
++kill_metadata () {
++	[ $# -ne 1 ] && eargs jailport_name
++	rm -rf ${POUDRIERE_DATA}/hammer/${1}
 +}
 +
 +zkill() {
@@ -83,10 +95,22 @@
 +		local snap=$(snapname "${1}")
 +		[ -L ${HAMMER_SNAPDIR}/${snap} ] && \
 +		  hammer snaprm ${HAMMER_SNAPDIR}/${snap}
-+	else
-+		# Delete directly from FS (not MNT)
-+		rm -rf ${1}
 +	fi
++}
++
++zdelete() {
++	[ $# -ne 2 ] && eargs filesystem subdirectory
++	local pfs=$(pfs_path ${1})
++	rm -rf ${pfs}/${2}
++}
++
++zkillfs () {
++	[ $# -ne 2 ] && eargs pfs-filesystem jailport
++	local mounted=$(check_mount ${1})
++	[ -n "${mounted}" ] && \
++	  err 1 "Must unmount filesystem ${1} before destroying it"
++	kill_metadata ${2}
++	hammer pfs-destroy ${1}
 +}
 +
 +zrollback () {
@@ -96,9 +120,8 @@
 +	fi
 +	local snap=$(snapname "${1}")
 +	local sdir=$(snapdirectory "${1}")
-+	rsync -vaq --delete \
-+	  ${HAMMER_SNAPDIR}/${snap}/${sdir}/ \
-+	  ${ZROOTFS}/${sdir}/
++	local pfs=$(pfs_path ${sdir})
++	cpdup -i0 ${HAMMER_SNAPDIR}/${snap}/${sdir} ${pfs}
 +}
 +
 +zxdiff () {
@@ -110,7 +133,7 @@
 +	local snap=$(snapname "${1}")
 +	local sdir=$(snapdirectory "${1}")
 +	local LEFTS=${HAMMER_SNAPDIR}/${snap}/${sdir}
-+	local RIGHT=${ZROOTFS}/${sdir}
++	local RIGHT=$(pfs_path ${sdir})
 +	local AWKCMD='{ \
 + if ($1 == "Files") \
 + { \
@@ -136,8 +159,8 @@
 +
 +jail_exists() {
 +	[ $# -ne 1 ] && eargs jailname
-+	if [ -d ${BASEFS}/jails/${1} ] || \
-+	   [ -d ${ZROOTFS}/jails/${1} ] || \
++	local pfs=$(pfs_path "${ZROOTFS}/jails/${1}")
++	if [ -d ${pfs} ] || \
 +	   [ -d ${POUDRIERE_DATA}/hammer/jails/${1} ]; then
 +	    return 0
 +	fi
@@ -164,8 +187,8 @@
 +
 +port_exists() {
 +	[ $# -ne 1 ] && eargs portstree_name
-+	if [ -d ${BASEFS}/ports/${1} ] || \
-+	   [ -d ${ZROOTFS}/ports/${1} ] || \
++	local pfs=$(pfs_path "${ZROOTFS}/ports/${1}")
++	if [ -d ${pfs} ] || \
 +	   [ -d ${POUDRIERE_DATA}/hammer/ports/${1} ]; then
 +	    return 0;
 +	fi
@@ -198,19 +221,20 @@
 +	local version=$2
 +	local arch=$3
 +	local mnt=$( echo $4 | sed -e "s,//,/,g")
-+	local fs=$5
++	local pfs=$(pfs_path $5)
 +	local confdir="${POUDRIERE_DATA}/hammer/jails/${name}"
 +	msg_n "Creating ${name} fs..."
 +
-+	mkdir -p ${fs}
++	mkdir -p ${mnt}
 +	mkdir -p ${confdir}
++	hammer pfs-master $pfs
 +
 +	echo "rootfs"     > ${confdir}/type
 +	echo "${name}"    > ${confdir}/name
 +	echo "${version}" > ${confdir}/version
 +	echo "${arch}"    > ${confdir}/arch
 +	echo "${mnt}"     > ${confdir}/mountpoint
-+	echo "${fs}"      > ${confdir}/filesys
++	echo "${pfs}"     > ${confdir}/filesys
 +
 +	echo " done"
 +}
@@ -219,18 +243,18 @@
 +	[ $# -ne 3 ] && eargs name mountpoint fs
 +	local name=$1
 +	local mnt=$( echo $2 | sed -e 's,//,/,g')
-+	local fs=$3
++	local pfs=$(pfs_path $3)
 +	local confdir="${POUDRIERE_DATA}/hammer/ports/${name}"
 +	msg_n "Creating ${name} fs..."
 +
-+	mkdir -p ${fs}
 +	mkdir -p ${mnt}
 +	mkdir -p ${confdir}
++	hammer pfs-master $pfs
 +
 +	echo "ports"	> ${confdir}/type
 +	echo "${name}"	> ${confdir}/name
 +	echo "${mnt}"	> ${confdir}/mountpoint
-+	echo "${fs}"	> ${confdir}/filesys
++	echo "${pfs}"	> ${confdir}/filesys
 +
 +	echo " done"
 +}
@@ -281,7 +305,7 @@
 +	mnt=`realpath ${JAILMNT}`
 +	mount | awk -v mnt="${mnt}/build/" 'BEGIN{ gsub(/\//, "\\\/", mnt); } { if ($3 ~ mnt && $1 !~ /\/dev\/md/ ) { print $3 }}' |  sort -r | xargs umount -f 2>/dev/null || :
 +
-+	zkill ${JAILFS}/build 2>/dev/null || :
++	zdelete ${JAILFS} build 2>/dev/null || :
 +
 +	# No builders running, unset JOBS
 +	JOBS=""
@@ -290,7 +314,7 @@
 +post_conf_check () {
 +	[ -z ${HAMMER_SNAPDIR} ] && err 1 "HAMMER_SNAPDIR variable is not set"
 +
-+	# NoZFS starts with ZROOTFS value, set ZPOOL to null
++	# Hammer starts with ZROOTFS value, set ZPOOL to null
 +	ZPOOL=
 +
 +	# Try to minimize ZVERSION checks issues
@@ -363,20 +387,8 @@
 +	echo "Packages to be built:  ${2}"
 +}
 +
-+do_jail_premount () {
-+	[ $# -ne 2 ] && eargs filesystem mountpoint
++mount_jailport() {
++	[ $# -ne 2 ] && eargs pfs-filesystem mountpoint
 +	local mounted=$(check_mount ${1})
 +	[ -z "${mounted}" ] && ${NULLMOUNT} ${1} ${2}
-+}
-+
-+kill_port_metadata () {
-+	[ $# -ne 1 ] && eargs portname
-+	rm -rf ${POUDRIERE_DATA}/hammer/ports/${1}
-+	rmdir ${BASEFS}/ports/${1}
-+}
-+
-+kill_jail_metadata () {
-+	[ $# -ne 1 ] && eargs jailname
-+	rm -rf ${POUDRIERE_DATA}/hammer/jails/${1}
-+	rmdir ${BASEFS}/jails/${1}
 +}
