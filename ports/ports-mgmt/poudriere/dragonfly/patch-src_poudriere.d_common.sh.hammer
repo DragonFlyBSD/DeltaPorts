@@ -1,6 +1,6 @@
 --- /dev/null	2012-11-20 03:01:24.170929943 +0100
-+++ src/poudriere.d/common.sh.hammer	2012-11-20 16:53:34.000000000 +0100
-@@ -0,0 +1,391 @@
++++ src/poudriere.d/common.sh.hammer	2012-11-20 19:39:37.000000000 +0100
+@@ -0,0 +1,388 @@
 +#!/bin/sh
 +
 +zget() {
@@ -40,13 +40,13 @@
 +}
 +
 +snapname () {
-+	[ $# -ne 1 ] && eargs filesystem@snapname
-+	echo "${1}" | sed -e "s|${ZROOTFS}\/||" -e "s|\/|__|g"
++	[ $# -ne 1 ] && eargs pfs-filesystem@snapname
++	echo "${1}" | sed -e "s|\/pfs\/poudriere\.||"
 +}
 +
-+snapdirectory () {
-+	[ $# -ne 1 ] && eargs filesystem@snapname
-+	echo "${1}" | sed -e "s|${ZROOTFS}\/||" -e 's|@.*||'
++extract_pfs () {
++	[ $# -ne 1 ] && eargs pfs-filesystem@snapname
++	echo "${1}" | sed -e 's|@.*||'
 +}
 +
 +pfs_path () {
@@ -73,9 +73,9 @@
 +}
 +
 +zsnap() {
-+	[ $# -ne 1 ] && eargs filesystem@snapname
++	[ $# -ne 1 ] && eargs pfs-filesystem@snapname
 +	local snap=$(snapname "${1}")
-+	local pfs=$(pfs_path ${1})
++	local pfs=$(extract_pfs ${1})
 +	mkdir -p ${HAMMER_SNAPDIR}
 +	if [ -L ${HAMMER_SNAPDIR}/${snap} ]; then
 +		err 1 "Cannot snapshot, ${snap} already exists"
@@ -90,7 +90,7 @@
 +}
 +
 +zkill() {
-+	[ $# -ne 1 ] && eargs filesystem@snapname
++	[ $# -ne 1 ] && eargs pfs-filesystem@snapname
 +	if [ $(onlysnap "${1}") -eq 1 ]; then
 +		local snap=$(snapname "${1}")
 +		[ -L ${HAMMER_SNAPDIR}/${snap} ] && \
@@ -99,9 +99,8 @@
 +}
 +
 +zdelete() {
-+	[ $# -ne 2 ] && eargs filesystem subdirectory
-+	local pfs=$(pfs_path ${1})
-+	rm -rf ${pfs}/${2}
++	[ $# -ne 2 ] && eargs pfs-filesystem subdirectory
++	rm -rf ${1}/${2}
 +}
 +
 +zkillfs () {
@@ -119,9 +118,8 @@
 +		err 1 "Must specify snapshot in rollback"
 +	fi
 +	local snap=$(snapname "${1}")
-+	local sdir=$(snapdirectory "${1}")
-+	local pfs=$(pfs_path ${sdir})
-+	cpdup -i0 ${HAMMER_SNAPDIR}/${snap}/${sdir} ${pfs}
++	local pfs=$(extract_pfs ${sdir})
++	cpdup -i0 ${HAMMER_SNAPDIR}/${snap} ${pfs}
 +}
 +
 +zxdiff () {
@@ -131,9 +129,8 @@
 +		err 1 "Must specify snapshot in rollback"
 +	fi
 +	local snap=$(snapname "${1}")
-+	local sdir=$(snapdirectory "${1}")
-+	local LEFTS=${HAMMER_SNAPDIR}/${snap}/${sdir}
-+	local RIGHT=$(pfs_path ${sdir})
++	local RIGHT=$(extract_pfs ${1})
++	local LEFTS=${HAMMER_SNAPDIR}/${snap}
 +	local AWKCMD='{ \
 + if ($1 == "Files") \
 + { \
@@ -216,12 +213,12 @@
 +}
 +
 +jail_create_zfs() {
-+	[ $# -ne 5 ] && eargs name version arch mountpoint fs
++	[ $# -ne 5 ] && eargs name version arch mountpoint pfs
 +	local name=$1
 +	local version=$2
 +	local arch=$3
 +	local mnt=$( echo $4 | sed -e "s,//,/,g")
-+	local pfs=$(pfs_path $5)
++	local pfs=$5
 +	local confdir="${POUDRIERE_DATA}/hammer/jails/${name}"
 +	msg_n "Creating ${name} fs..."
 +
@@ -240,10 +237,10 @@
 +}
 +
 +port_create_zfs() {
-+	[ $# -ne 3 ] && eargs name mountpoint fs
++	[ $# -ne 3 ] && eargs name mountpoint pfs
 +	local name=$1
 +	local mnt=$( echo $2 | sed -e 's,//,/,g')
-+	local pfs=$(pfs_path $3)
++	local pfs=$3
 +	local confdir="${POUDRIERE_DATA}/hammer/ports/${name}"
 +	msg_n "Creating ${name} fs..."
 +
@@ -354,7 +351,7 @@
 +	        stats_ignored stats_skipped stats_queued status"
 +	if [ -d ${confdir} ] && [ -n "$(ls -A ${confdir})" ]; then
 +	  cd ${confdir}
-+	  local JAILLIST=`find -s * -type d`
++	  local JAILLIST="`find -s * -type d`"
 +	  for jail in ${JAILLIST}; do
 +	    COLCNT=0
 +	    for param in ${PARAMS}; do

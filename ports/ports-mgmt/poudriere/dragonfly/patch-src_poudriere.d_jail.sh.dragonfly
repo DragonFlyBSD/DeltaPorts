@@ -1,6 +1,6 @@
 --- /dev/null	2012-11-20 03:01:24.170929943 +0100
-+++ src/poudriere.d/jail.sh.dragonfly	2012-11-20 14:45:52.000000000 +0100
-@@ -0,0 +1,217 @@
++++ src/poudriere.d/jail.sh.dragonfly	2012-11-20 19:30:34.000000000 +0100
+@@ -0,0 +1,220 @@
 +#!/bin/sh
 +#
 +# DragonFly specific
@@ -99,7 +99,10 @@
 +	local bverz
 +	local mounted=$(check_mount "${JAILFS}")
 +
-+	[ -z "${mounted}" ] && ${NULLMOUNT} $(pfs_path ${JAILFS}) "${JAILMNT}"
++	if [ -z "${mounted}" ]; then
++		${NULLMOUNT} ${JAILFS} "${JAILMNT}" || \
++		  err 1 "Failed to mount the PFS"
++	fi
 +	[ -d ${JAILMNT}/usr/src ] && UPDATE=1
 +	mkdir -p ${JAILMNT}/usr/src
 +	cd ${JAILMNT}/usr/src
@@ -141,7 +144,7 @@
 +	fi
 +
 +	if [ -z ${JAILFS} ] ; then
-+		JAILFS=${ZROOTFS}/jails/${JAILNAME}
++		JAILFS=$(pfs_path "${ZROOTFS}/jails/${JAILNAME}")
 +	fi
 +
 +	case ${METHOD} in
