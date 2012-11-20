@@ -1,5 +1,5 @@
 --- src/poudriere.d/ports.sh.orig	2012-10-15 18:18:18.000000000 +0200
-+++ src/poudriere.d/ports.sh	2012-11-20 00:05:22.000000000 +0100
++++ src/poudriere.d/ports.sh	2012-11-20 01:04:38.000000000 +0100
 @@ -21,11 +21,11 @@
                       them.
      -p name       -- specifies the name of the portstree we workon . If not
@@ -63,7 +63,7 @@
  fi
 +
 +if [ "${METHOD}" = "rsync" ] && [ -z "${DPORTS_RSYNC_LOC}" ]; then
-+	err 2 "Define RSYNC_DPORTS_LOC in poudriere.conf first!"
++	err 2 "Define DPORTS_RSYNC_LOC in poudriere.conf first!"
 +fi
 +
  if [ ${CREATE} -eq 1 ]; then
@@ -110,7 +110,7 @@
 -				zfs destroy ${PTFS}
 +		rsync)
 +			msg "Cloning the ports tree via rsync"
-+			rsync -vaq ${RSYNC_DPORTS_LOC}/ ${PTFS}/ || {
++			rsync -vaq ${DPORTS_RSYNC_LOC}/ ${PTFS}/ || {
 +				kill_port_metadata ${PTNAME}
 +				zkill ${PTFS}
  				err 1 " Fail"
@@ -183,7 +183,7 @@
 -		svn -q update ${PORTSMNT:-${PTMNT}}
 +	rsync)
 +		msg "Updating the ports tree via rsync"
-+		rsync -vaq --delete ${RSYNC_DPORTS_LOC}/ ${PTFS}/
++		rsync -vaq --delete ${DPORTS_RSYNC_LOC}/ ${PTFS}/
  		echo " done"
  		;;
  	git)
