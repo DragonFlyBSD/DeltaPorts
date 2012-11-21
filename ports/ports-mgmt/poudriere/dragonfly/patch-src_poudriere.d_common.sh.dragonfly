@@ -1,6 +1,6 @@
 --- /dev/null	2012-11-20 03:01:24.170929943 +0100
-+++ src/poudriere.d/common.sh.dragonfly	2012-11-20 20:58:03.000000000 +0100
-@@ -0,0 +1,58 @@
++++ src/poudriere.d/common.sh.dragonfly	2012-11-21 00:15:29.000000000 +0100
+@@ -0,0 +1,62 @@
 +#!/bin/sh
 +#
 +# DragonFly-specific
@@ -30,10 +30,10 @@
 +	set_sysctl jail.allow_raw_sockets 1
 +	set_sysctl jail.chflags_allowed 1
 +	set_sysctl jail.sysvipc_allowed 1
-+	sys_sysctl jail.socket_unixiproute_only 1
-+	sys_sysctl jail.set_hostname_allowed 0
++	set_sysctl jail.socket_unixiproute_only 1
++	set_sysctl jail.set_hostname_allowed 0
 +
-+	jail ${JAILMNT} ${jAILNAME} ${ipargs} /bin/sh
++	jail -U root ${JAILMNT} ${JAILNAME} ${ipargs} /bin/sh /etc/rc
 +}
 +
 +jail_soft_stop() {
@@ -49,7 +49,11 @@
 +injail() {
 +	local AWKCMD='{ if($2 == host) print $1 }'
 +	local JAIL_ID=`jls | awk -v host="${JAILNAME}" "${AWKCMD}"`
-+	jexec ${JAIL_ID} $@
++	if [ -z "${JAIL_ID}" ]; then
++	   err 1 "Jail not running; won't execute injail command"
++	else
++	   jexec ${JAIL_ID} $@
++	fi
 +}
 +
 +jail_runs() {

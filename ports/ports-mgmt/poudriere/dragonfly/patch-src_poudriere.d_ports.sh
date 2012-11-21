@@ -1,5 +1,5 @@
 --- src/poudriere.d/ports.sh.orig	2012-10-15 18:18:18.000000000 +0200
-+++ src/poudriere.d/ports.sh	2012-11-20 20:22:39.000000000 +0100
++++ src/poudriere.d/ports.sh	2012-11-21 00:05:19.000000000 +0100
 @@ -21,11 +21,11 @@
                       them.
      -p name       -- specifies the name of the portstree we workon . If not
@@ -33,7 +33,7 @@
  			;;
  		d)
  			DELETE=1
-@@ -76,142 +78,86 @@
+@@ -76,138 +78,76 @@
  
  [ $(( CREATE + UPDATE + DELETE + LIST )) -lt 1 ] && usage
  
@@ -76,7 +76,6 @@
  	port_create_zfs ${PTNAME} ${PTMNT} ${PTFS}
  	if [ $FAKE -eq 0 ]; then
 +		pzset method ${METHOD}
-+		mount_jailport ${PTFS} ${PTMNT}
  		case ${METHOD} in
 -		csup)
 -			echo "/!\ WARNING /!\ csup is deprecated and will soon be dropped"
@@ -115,7 +114,7 @@
 -				zfs destroy ${PTFS}
 +		rsync)
 +			msg "Cloning the ports tree via rsync"
-+			rsync -vaq ${DPORTS_RSYNC_LOC}/ ${PTMNT}/ || {
++			rsync -vaq ${DPORTS_RSYNC_LOC}/ ${PTFS}/ || {
  				err 1 " Fail"
  			}
  			echo " done"
@@ -125,29 +124,28 @@
 -			git clone ${GIT_URL} ${PTMNT} || {
 -				zfs destroy ${PTFS}
 +			msg "Retrieving the ports tree via git"
-+			git clone --depth 1 ${DPORTS_URL} ${PTMNT} || {
++			git clone --depth 1 ${DPORTS_URL} ${PTFS} || {
  				err 1 " Fail"
  			}
  			echo " done"
  			;;
  		esac
 -		pzset method ${METHOD}
-+		umount ${PTMNT}
  	fi
  fi
  
  if [ ${DELETE} -eq 1 ]; then
  	port_exists ${PTNAME} || err 2 "No such ports tree ${PTNAME}"
  	PTMNT=$(port_get_base ${PTNAME})
-+	PTFS=$(port_get_fs ${PTNAME})
- 	[ -d "${PTMNT}/ports" ] && PORTSMNT="${PTMNT}/ports"
+-	[ -d "${PTMNT}/ports" ] && PORTSMNT="${PTMNT}/ports"
 -	/sbin/mount -t nullfs | /usr/bin/grep -q "${PORTSMNT:-${PTMNT}} on" \
 -		&& err 1 "Ports tree \"${PTNAME}\" is currently mounted and being used."
+-	msg "Deleting portstree \"${PTNAME}\""
+ 	PTFS=$(port_get_fs ${PTNAME})
+-	zfs destroy -r ${PTFS}
 +	[ -n "$(check_mount ${PTFS})" ] && \
 +		err 1 "Ports tree \"${PTNAME}\" is currently mounted and being used."
- 	msg "Deleting portstree \"${PTNAME}\""
--	PTFS=$(port_get_fs ${PTNAME})
--	zfs destroy -r ${PTFS}
++	msg "Deleting portstree \"${PTNAME}\""
 +	zkillfs ${PTFS} ports/${PTNAME}
 +	rmdir ${PTMNT}
  fi
@@ -159,11 +157,9 @@
 -	/sbin/mount -t nullfs | /usr/bin/grep -q "${PORTSMNT:-${PTMNT}} on" \
 -		&& err 1 "Ports tree \"${PTNAME}\" is currently mounted and being used."
  	PTFS=$(port_get_fs ${PTNAME})
-+	[ -d "${PTMNT}/ports" ] && PORTSMNT="${PTMNT}/ports"
 +	[ -n "$(check_mount ${PTFS})" ] && \
 +		err 1 "Ports tree \"${PTNAME}\" is currently mounted and being used."
  	msg "Updating portstree \"${PTNAME}\""
-+	mount_jailport ${PTFS} ${PTMNT}
  	METHOD=$(pzget method)
  	if [ ${METHOD} = "-" ]; then
 -		METHOD=portsnap
@@ -192,20 +188,15 @@
 -		svn -q update ${PORTSMNT:-${PTMNT}}
 +	rsync)
 +		msg "Updating the ports tree via rsync"
-+		rsync -vaq --delete ${DPORTS_RSYNC_LOC}/ ${PTMNT}/
++		rsync -vaq --delete ${DPORTS_RSYNC_LOC}/ ${PTFS}/
  		echo " done"
  		;;
  	git)
 -		msg "Pulling from ${GIT_URL}"
 -		cd ${PORTSMNT:-${PTMNT}} && git pull
 +		msg "Pulling from ${DPORTS_URL}"
-+		cd ${PTMNT} && git pull
++		cd ${PTFS} && git pull
 +		cd ${POUDRIERE_DATA}
  		echo " done"
  		;;
  	*)
- 		err 1 "Undefined upgrade method"
- 		;;
- 	esac
-+	umount ${PTMNT}
- fi

@@ -1,5 +1,5 @@
 --- src/poudriere.d/common.sh.orig	2012-10-15 18:18:18.000000000 +0200
-+++ src/poudriere.d/common.sh	2012-11-20 21:03:32.000000000 +0100
++++ src/poudriere.d/common.sh	2012-11-21 00:18:51.000000000 +0100
 @@ -1,8 +1,6 @@
  #!/bin/sh
  
@@ -476,7 +476,27 @@
  		# Make sure this origin did not already exist
  		existing_origin=$(cache_get_origin "${pkgname}")
  		[ -n "${existing_origin}" ] &&  err 1 "Duplicated origin for ${pkgname}: ${origin} AND ${existing_origin}. Rerun with -D to see which ports are depending on these."
-@@ -1357,9 +1173,9 @@
+@@ -1236,8 +1052,7 @@
+ 
+ listed_ports() {
+ 	if [ ${ALL:-0} -eq 1 ]; then
+-		PORTSDIR=`port_get_base ${PTNAME}`
+-		[ -d "${PORTSDIR}/ports" ] && PORTSDIR="${PORTSDIR}/ports"
++		PORTSDIR=$(get_portsdir ${PTNAME})
+ 		for cat in $(awk '$1 == "SUBDIR" { print $3}' ${PORTSDIR}/Makefile); do
+ 			awk -v cat=${cat}  '$1 == "SUBDIR" { print cat"/"$3}' ${PORTSDIR}/${cat}/Makefile
+ 		done
+@@ -1332,8 +1147,7 @@
+ 	export FORCE_PACKAGE=yes
+ 	export USER=root
+ 	export HOME=/root
+-	PORTSDIR=`port_get_base ${PTNAME}`
+-	[ -d "${PORTSDIR}/ports" ] && PORTSDIR="${PORTSDIR}/ports"
++	PORTSDIR=$(get_portsdir ${PTNAME})
+ 	POUDRIERED=${SCRIPTPREFIX}/../../etc/poudriere.d
+ 	[ -z "${JAILMNT}" ] && err 1 "No path of the base of the jail defined"
+ 	[ -z "${PORTSDIR}" ] && err 1 "No ports directory defined"
+@@ -1357,9 +1171,9 @@
  
  	msg "Populating LOCALBASE"
  	mkdir -p ${JAILMNT}/${MYBASE:-/usr/local}
@@ -488,7 +508,7 @@
  	if [ -n "${WITH_PKGNG}" ]; then
  		export PKGNG=1
  		export PKG_EXT="txz"
-@@ -1381,26 +1197,40 @@
+@@ -1381,26 +1195,40 @@
  test -f ${SCRIPTPREFIX}/../../etc/poudriere.conf || err 1 "Unable to find ${SCRIPTPREFIX}/../../etc/poudriere.conf"
  . ${SCRIPTPREFIX}/../../etc/poudriere.conf
  

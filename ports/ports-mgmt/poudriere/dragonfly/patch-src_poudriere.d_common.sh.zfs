@@ -1,6 +1,6 @@
 --- /dev/null	2012-11-20 03:01:24.170929943 +0100
-+++ src/poudriere.d/common.sh.zfs	2012-11-20 16:30:08.000000000 +0100
-@@ -0,0 +1,247 @@
++++ src/poudriere.d/common.sh.zfs	2012-11-21 00:14:58.000000000 +0100
+@@ -0,0 +1,253 @@
 +#!/bin/sh
 +
 +# zfs namespace
@@ -248,3 +248,9 @@
 +	# no-op for ZFS
 +}
 +
++get_portsdir()
++	[ $# -ne 1 ] && eargs porttree
++	local PD=`port_get_base ${PTNAME}`
++	[ -d "${PD}/ports" ] && PD="${PD}/ports"
++	echo ${PD}
++}

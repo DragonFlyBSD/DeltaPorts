@@ -1,6 +1,6 @@
 --- /dev/null	2012-11-20 03:01:24.170929943 +0100
-+++ src/poudriere.d/jail.sh.dragonfly	2012-11-20 20:53:14.000000000 +0100
-@@ -0,0 +1,207 @@
++++ src/poudriere.d/jail.sh.dragonfly	2012-11-21 01:04:35.000000000 +0100
+@@ -0,0 +1,218 @@
 +#!/bin/sh
 +#
 +# DragonFly specific
@@ -68,6 +68,11 @@
 +
 +	# get out of JAILMNT so we can unmount it if necessary
 +	cd ${POUDRIERE_DATA}
++
++	############# DELETE WHEN DRAGONFLY HAS THESE IN BASE ############
++	cp /home/gituser/DeltaPorts/scripts/share-mk/bsd.port.*.mk \
++	   ${JAILMNT}/usr/share/mk/
++	##################################################################
 +}
 +
 +convert_property_version () {
@@ -180,8 +185,14 @@
 +BATCH=yes
 +WRKDIRPREFIX=/wrkdirs
 +EOF
++	echo "sendmail_enable=NONE" >> ${JAILMNT}/etc/rc.conf
++	echo "cron_enable=NO"       >> ${JAILMNT}/etc/rc.conf
++	echo "update_motd=NO"       >> ${JAILMNT}/etc/rc.conf
++	echo "# dummy"              >> ${JAILMNT}/etc/fstab
 +
 +	mkdir -p ${JAILMNT}/${PORTSRC}
++	mkdir -p ${JAILMNT}/${STD_PACKAGES}
++	mkdir -p ${JAILMNT}/${STD_DISTFILES}
 +	mkdir -p ${JAILMNT}/wrkdirs
 +
 +	zkill ${JAILFS}@clean

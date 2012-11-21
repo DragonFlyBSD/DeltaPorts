@@ -1,10 +1,12 @@
 --- src/poudriere.d/test_ports.sh.orig	2012-10-15 18:18:18.000000000 +0200
-+++ src/poudriere.d/test_ports.sh	2012-11-20 20:44:00.000000000 +0100
-@@ -75,7 +75,7 @@
++++ src/poudriere.d/test_ports.sh	2012-11-21 00:41:34.000000000 +0100
+@@ -74,8 +74,8 @@
+ if [ -z ${ORIGIN} ]; then
  	PORTDIRECTORY=`basename ${HOST_PORTDIRECTORY}`
  else
- 	HOST_PORTDIRECTORY=`port_get_base ${PTNAME}`/ports/${ORIGIN}
+-	HOST_PORTDIRECTORY=`port_get_base ${PTNAME}`/ports/${ORIGIN}
 -	PORTDIRECTORY="/usr/ports/${ORIGIN}"
++	HOST_PORTDIRECTORY=$(get_portsdir ${PTNAME})/${ORIGIN}
 +	PORTDIRECTORY="${PORTSRC}/${ORIGIN}"
  fi
  

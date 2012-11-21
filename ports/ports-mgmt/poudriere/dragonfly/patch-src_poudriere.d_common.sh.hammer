@@ -1,6 +1,6 @@
 --- /dev/null	2012-11-20 03:01:24.170929943 +0100
-+++ src/poudriere.d/common.sh.hammer	2012-11-20 20:47:26.000000000 +0100
-@@ -0,0 +1,389 @@
++++ src/poudriere.d/common.sh.hammer	2012-11-21 00:17:14.000000000 +0100
+@@ -0,0 +1,394 @@
 +#!/bin/sh
 +
 +zget() {
@@ -119,7 +119,7 @@
 +	fi
 +	local snap=$(snapname "${1}")
 +	local pfs=$(extract_pfs ${1})
-+	cpdup -i0 ${HAMMER_SNAPDIR}/${snap} ${pfs}
++	cpdup -i0 ${HAMMER_SNAPDIR}/${snap}/ ${pfs}/
 +}
 +
 +zxdiff () {
@@ -389,4 +389,9 @@
 +	local mounted=$(check_mount ${1})
 +	[ -z "${mounted}" ] && ${NULLMOUNT} ${1} ${2} || \
 +  	  err 1 "Failed to null-mount ${1} to ${2}"
++}
++
++get_portsdir()
++	[ $# -ne 1 ] && eargs portstree_name
++	echo port_get_fs ${1}
 +}
