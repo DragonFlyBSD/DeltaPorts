@@ -1,5 +1,5 @@
---- /dev/null	2012-11-20 03:01:24.170929943 +0100
-+++ src/poudriere.d/jail.sh.dragonfly	2012-11-21 01:04:35.000000000 +0100
+--- /dev/null	2012-11-21 01:08:01.647586334 +0100
++++ src/poudriere.d/jail.sh.dragonfly	2012-11-21 01:37:42.000000000 +0100
 @@ -0,0 +1,218 @@
 +#!/bin/sh
 +#
@@ -70,7 +70,7 @@
 +	cd ${POUDRIERE_DATA}
 +
 +	############# DELETE WHEN DRAGONFLY HAS THESE IN BASE ############
-+	cp /home/gituser/DeltaPorts/scripts/share-mk/bsd.port.*.mk \
++	cp /home/gituser/DeltaPorts/scripts/share-mk/bsd.port.* \
 +	   ${JAILMNT}/usr/share/mk/
 +	##################################################################
 +}
