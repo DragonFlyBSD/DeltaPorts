@@ -1,6 +1,6 @@
---- /dev/null	2012-11-21 01:08:01.647586334 +0100
-+++ src/poudriere.d/jail.sh.dragonfly	2012-11-21 01:37:42.000000000 +0100
-@@ -0,0 +1,218 @@
+--- /dev/null	2012-11-24 04:15:22.498925541 +0100
++++ src/poudriere.d/jail.sh.dragonfly	2012-11-24 11:59:29.000000000 +0100
+@@ -0,0 +1,252 @@
 +#!/bin/sh
 +#
 +# DragonFly specific
@@ -10,6 +10,9 @@
 +	jail_exists ${JAILNAME} || err 1 "No such jail: ${JAILNAME}"
 +	jail_runs && \
 +		err 1 "Unable to remove jail ${JAILNAME}: it is running"
++
++	# In case a jail run modified some files, roll back to last snapshot
++	zrollback ${JAILFS}@clean
 +
 +	METHOD=`zget method`
 +	if [ "${METHOD}" = "-" ]; then
@@ -28,12 +31,21 @@
 +		;;
 +	esac
 +
++	local numjobs=$(zget slaves)
++	local JOBX="$(jot -w %02d ${numjobs})"
++	for j in ${JOBX}; do
++		if [ -d ${JAILFS}.job-${j} ]; then
++			msg_n "${JAILNAME}: Syncing slave ${j}..."
++			cpdup -x -i0 ${JAILFS}/ ${JAILFS}.job-${j}/
++			echo "done"
++		fi
++	done
 +}
 +
 +build_and_install_world() {
 +	[ $# -ne 1 ] && eargs quick
 +	local JLOGBASE=${POUDRIERE_DATA}/jailbuild/${JAILNAME}
-+	local ncpus=$(/sbin/sysctl hw.ncpu | awk '{print $2}')
++	local ncpus=$(zget slaves)
 +	local factor=`expr ${ncpus} \* 2 - 1`
 +	local options="-DNO_GCC47 -DNO_GAMES -DNOPROFILE -DNO_BINUTILS221"
 +	local directive
@@ -180,15 +192,18 @@
 +	cap_mkdb ${JAILMNT}/etc/login.conf
 +	pwd_mkdb -d ${JAILMNT}/etc/ -p ${JAILMNT}/etc/master.passwd
 +
-+	cat >> ${JAILMNT}/etc/make.conf << EOF
++	cat > ${JAILMNT}/etc/make.conf << EOF
 +USE_PACKAGE_DEPENDS=yes
 +BATCH=yes
 +WRKDIRPREFIX=/wrkdirs
 +EOF
-+	echo "sendmail_enable=NONE" >> ${JAILMNT}/etc/rc.conf
-+	echo "cron_enable=NO"       >> ${JAILMNT}/etc/rc.conf
-+	echo "update_motd=NO"       >> ${JAILMNT}/etc/rc.conf
-+	echo "# dummy"              >> ${JAILMNT}/etc/fstab
++	cat > ${JAILMNT}/etc/rc.conf << EOF
++sendmail_enable=NONE
++cron_enable=NO
++update_motd=NO
++EOF
++	echo "# dummy" 	            >> ${JAILMNT}/etc/fstab
++	echo "src"                  >> ${JAILMNT}/usr/.cpignore
 +
 +	mkdir -p ${JAILMNT}/${PORTSRC}
 +	mkdir -p ${JAILMNT}/${STD_PACKAGES}
@@ -198,6 +213,17 @@
 +	zkill ${JAILFS}@clean
 +	zsnap ${JAILFS}@clean
 +	unset CLEANUP_HOOK
++
++	local numjobs=$(zget slaves)
++	local JOBX="$(jot -w %02d ${numjobs})"
++	for j in ${JOBX}; do
++		if [ -d ${JAILFS}.job-${j} ]; then
++			msg_n "${JAILNAME}: Syncing slave ${j}..."
++			cpdup -x -i0 ${JAILFS}/ ${JAILFS}.job-${j}/
++			echo "done"
++		fi
++	done
++
 +	msg "Jail ${JAILNAME} ${VERSION} ${ARCH} is ready to be used"
 +	umount ${JAILMNT}
 +}
@@ -208,8 +234,16 @@
 +	jail_runs && \
 +		err 1 "Unable to remove jail ${JAILNAME}: it is running"
 +
++	local numcpu=$(zget slaves)
++	local JOBX="$(jot -w %02d ${numcpu})"
++
 +	msg_n "Removing ${JAILNAME} jail..."
 +	zkillfs ${JAILFS} jails/${JAILNAME}
++	for j in ${JOBX}; do
++		jpfs="${JAILFS}.job-${j}"
++		jname="${name}-job-${j}"
++		zkillfs ${jpfs} ${jname}
++	done
 +	rmdir ${JAILMNT}
 +	rm -rf ${POUDRIERE_DATA}/packages/${JAILNAME}
 +	rm -rf ${POUDRIERE_DATA}/cache/${JAILNAME}

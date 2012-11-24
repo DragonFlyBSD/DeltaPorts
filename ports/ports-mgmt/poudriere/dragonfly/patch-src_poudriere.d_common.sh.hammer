@@ -1,6 +1,6 @@
---- /dev/null	2012-11-21 03:01:24.017297010 +0100
-+++ src/poudriere.d/common.sh.hammer	2012-11-21 07:39:37.000000000 +0100
-@@ -0,0 +1,394 @@
+--- /dev/null	2012-11-24 04:15:22.498925541 +0100
++++ src/poudriere.d/common.sh.hammer	2012-11-24 11:39:56.000000000 +0100
+@@ -0,0 +1,414 @@
 +#!/bin/sh
 +
 +zget() {
@@ -220,6 +220,8 @@
 +	local mnt=$( echo $4 | sed -e "s,//,/,g")
 +	local pfs=$5
 +	local confdir="${POUDRIERE_DATA}/hammer/jails/${name}"
++	local numcpu=$(sysctl -n hw.ncpu)
++	local JOBX="$(jot -w %02d ${numcpu})"
 +	msg_n "Creating ${name} fs..."
 +
 +	mkdir -p ${mnt}
@@ -232,6 +234,24 @@
 +	echo "${arch}"    > ${confdir}/arch
 +	echo "${mnt}"     > ${confdir}/mountpoint
 +	echo "${pfs}"     > ${confdir}/filesys
++	echo "${numcpu}"  > ${confdir}/slaves
++
++	for j in ${JOBX}; do
++		jmnt="${mnt}/build/${j}"
++		jpfs="${pfs}.job-${j}"
++		jname="${name}-job-${j}"
++		jconfdir=${confdir}-job-${j}
++
++		mkdir -p ${jconfdir}
++		hammer pfs-master $jpfs
++
++		echo "rootfs"     > ${jconfdir}/type
++		echo "${jname}"   > ${jconfdir}/name
++		echo "${version}" > ${jconfdir}/version
++		echo "${arch}"    > ${jconfdir}/arch
++		echo "${jmnt}"    > ${jconfdir}/mountpoint
++		echo "${jpfs}"    > ${jconfdir}/filesys
++	done
 +
 +	echo " done"
 +}
