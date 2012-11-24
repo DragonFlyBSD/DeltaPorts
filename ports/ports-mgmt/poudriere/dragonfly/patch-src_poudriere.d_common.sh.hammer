@@ -1,6 +1,6 @@
 --- /dev/null	2012-11-24 04:15:22.498925541 +0100
-+++ src/poudriere.d/common.sh.hammer	2012-11-24 13:52:46.000000000 +0100
-@@ -0,0 +1,455 @@
++++ src/poudriere.d/common.sh.hammer	2012-11-24 15:14:12.000000000 +0100
+@@ -0,0 +1,498 @@
 +#!/bin/sh
 +
 +zget() {
@@ -101,7 +101,7 @@
 +
 +zdelete() {
 +	[ $# -ne 2 ] && eargs pfs-filesystem subdirectory
-+	rm -rf ${1}/${2}
++	# Hammer doesn't use this, no-op
 +}
 +
 +zkillfs () {
@@ -291,7 +291,9 @@
 +		mkdir -p "${mnt}"
 +
 +		# sync slave with master snapshot
++		msg_n "Syncing slave ${j}..."
 +		cpdup -x -i0 ${HAMMER_SNAPDIR}/${snap}/ ${pfs}/
++		echo "done"
 +
 +		# take a snapshot of slave
 +		zkill ${pfs}@prepkg
@@ -455,4 +457,45 @@
 +		# Sleep briefly if still waiting on builds, to save CPU
 +		[ $activity -eq 0 ] && sleep 0.1
 +	done
++}
++
++cleanup() {
++	[ -n "${CLEANED_UP}" ] && return 0
++	msg "Cleaning up"
++	# If this is a builder, don't cleanup, the master will handle that.
++	if [ -n "${MY_JOBID}" ]; then
++		[ -n "${PKGNAME}" ] && clean_pool ${PKGNAME} 1 || :
++		return 0
++
++	fi
++	# Prevent recursive cleanup on error
++	if [ -n "${CLEANING_UP}" ]; then
++		echo "Failure cleaning up. Giving up." >&2
++		return
++	fi
++	export CLEANING_UP=1
++	local BASEJNAME=${JAILNAME%-job-*}
++	[ -z "${BASEJNAME}" ] && err 2 "Fail: Missing JAILNAME"
++	log_stop
++
++	if [ -d ${MASTERMNT:-${JAILMNT}}/poudriere/var/run ]; then
++		for pid in ${MASTERMNT:-${JAILMNT}}/poudriere/var/run/*.pid; do
++			# Ensure there is a pidfile to read or break
++			[ "${pid}" = "${MASTERMNT:-${JAILMNT}}/poudriere/var/run/*.pid" ] && break
++			pkill -15 -F ${pid} >/dev/null 2>&1 || :
++		done
++		wait
++	fi
++
++	local numjobs JOBX BASEJFS
++	BASEJFS=${JAILFS%.job-*}
++	JAILNAME="${BASEJNAME}" numjobs=$(zget slaves)
++	local JOBX="$(jot -w %02d ${numjobs})"
++
++	for j in ${JOBX}; do
++		zkill ${BASEJFS}.job-${j}@prepkg 2>/dev/null || :
++		zkill ${BASEJFS}.job-${j}@@preinst 2>/dev/null || :
++	done
++	jail_stop
++	export CLEANED_UP=1
 +}

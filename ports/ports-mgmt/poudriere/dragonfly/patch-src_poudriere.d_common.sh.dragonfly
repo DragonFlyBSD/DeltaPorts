@@ -1,5 +1,5 @@
 --- /dev/null	2012-11-24 04:15:22.498925541 +0100
-+++ src/poudriere.d/common.sh.dragonfly	2012-11-24 13:23:58.000000000 +0100
++++ src/poudriere.d/common.sh.dragonfly	2012-11-24 14:25:27.000000000 +0100
 @@ -0,0 +1,62 @@
 +#!/bin/sh
 +#
@@ -59,7 +59,7 @@
 +jail_runs() {
 +	[ $# -ne 0 ] && eargs
 +	local AWKCMD='{ if($2 == host) print $1 }'
-+	jls | awk -v host="${JAILNAME}" "${AWKCMD}" > /dev/null 2>&1 \
-+		&& return 1
-+	return 0
++	local check=$(jls | awk -v host="${JAILNAME}" "${AWKCMD}" > /dev/null 2>&1)
++	[ -n "${check}" ] && return 0
++	return 1
 +}

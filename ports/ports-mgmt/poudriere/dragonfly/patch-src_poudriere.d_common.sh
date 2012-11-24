@@ -1,5 +1,5 @@
 --- src/poudriere.d/common.sh.orig	2012-10-15 18:18:18.000000000 +0200
-+++ src/poudriere.d/common.sh	2012-11-24 13:31:58.000000000 +0100
++++ src/poudriere.d/common.sh	2012-11-24 15:03:38.000000000 +0100
 @@ -1,8 +1,6 @@
  #!/bin/sh
  
@@ -242,8 +242,13 @@
  
  	msg "Mounting system devices for ${JAILNAME}"
  	do_jail_mounts 1
-@@ -391,12 +276,12 @@
- 	jail_runs || err 1 "No such jail running: ${JAILNAME%-job-*}"
+@@ -388,15 +273,16 @@
+ jail_stop() {
+ 	[ $# -ne 0 ] && eargs
+ 	local mnt
+-	jail_runs || err 1 "No such jail running: ${JAILNAME%-job-*}"
++	JAILNAME=${JAILNAME%-job-*} jail_runs || \
++	   err 1 "No such jail running: ${JAILNAME%-job-*}"
  	zset status "stop:"
  
 -	jail -r ${JAILNAME%-job-*} >/dev/null
@@ -257,12 +262,11 @@
  		done
  	fi
  	msg "Umounting file systems"
-@@ -419,24 +304,11 @@
+@@ -419,24 +305,10 @@
  			mdconfig -d -u $dev
  		fi
  	fi
 -	zfs rollback -R ${JAILFS%/build/*}@clean
-+	zrollback ${JAILFS%/build/*}@clean
  	zset status "idle:"
  	export STATUS=0
  }
