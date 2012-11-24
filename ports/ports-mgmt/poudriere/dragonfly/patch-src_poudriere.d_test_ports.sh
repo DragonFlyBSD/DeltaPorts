@@ -1,6 +1,13 @@
 --- src/poudriere.d/test_ports.sh.orig	2012-10-15 18:18:18.000000000 +0200
-+++ src/poudriere.d/test_ports.sh	2012-11-21 00:41:34.000000000 +0100
-@@ -74,8 +74,8 @@
++++ src/poudriere.d/test_ports.sh	2012-11-24 12:20:24.000000000 +0100
+@@ -69,13 +69,15 @@
+ 
+ test -z ${HOST_PORTDIRECTORY} && test -z ${ORIGIN} && usage
+ 
++check_jobs
++
+ export SKIPSANITY
+ 
  if [ -z ${ORIGIN} ]; then
  	PORTDIRECTORY=`basename ${HOST_PORTDIRECTORY}`
  else
@@ -11,7 +18,7 @@
  fi
  
  test -z "${JAILNAME}" && err 1 "Don't know on which jail to run please specify -j"
-@@ -93,19 +93,20 @@
+@@ -93,19 +95,20 @@
  
  if [ -z ${ORIGIN} ]; then
  	mkdir -p ${JAILMNT}/${PORTDIRECTORY}
@@ -35,7 +42,7 @@
  
  injail make -C ${PORTDIRECTORY} pkg-depends extract-depends \
  	fetch-depends patch-depends build-depends lib-depends
-@@ -136,7 +137,7 @@
+@@ -136,7 +139,7 @@
  
  msg "Populating PREFIX"
  mkdir -p ${JAILMNT}${PREFIX}

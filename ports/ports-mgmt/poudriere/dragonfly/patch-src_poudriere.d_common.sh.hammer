@@ -1,11 +1,11 @@
 --- /dev/null	2012-11-24 04:15:22.498925541 +0100
-+++ src/poudriere.d/common.sh.hammer	2012-11-24 11:39:56.000000000 +0100
-@@ -0,0 +1,414 @@
++++ src/poudriere.d/common.sh.hammer	2012-11-24 13:52:46.000000000 +0100
+@@ -0,0 +1,455 @@
 +#!/bin/sh
 +
 +zget() {
 +	[ $# -ne 1 ] && eargs property
-+	local name=`basename ${JAILMNT}`
++	local name="${JAILNAME}"
 +	local confloc=${POUDRIERE_DATA}/hammer/jails/${name}/${1}
 +	if [ -f ${confloc} ]; then
 +	   cat ${confloc}
@@ -16,14 +16,14 @@
 +
 +zset() {
 +	[ $# -ne 2 ] && eargs property value
-+	local name=`basename ${JAILMNT}`
++	local name="${JAILNAME}"
 +	local confdir=${POUDRIERE_DATA}/hammer/jails/${name}
 +	[ -d ${confdir} ] && echo "$2" > ${confdir}/${1}
 +}
 +
 +pzget() {
 +	[ $# -ne 1 ] && eargs property
-+	local name=`basename ${PTMNT}`
++	local name="${PTNAME}"
 +	local confloc=${POUDRIERE_DATA}/hammer/ports/${name}/${1}
 +	if [ -f ${confloc} ]; then
 +	   cat ${confloc}
@@ -34,7 +34,7 @@
 +
 +pzset() {
 +	[ $# -ne 2 ] && eargs property value
-+	local name=`basename ${PTMNT}`
++	local name="${PTNAME}"
 +	local confdir=${POUDRIERE_DATA}/hammer/ports/${name}
 +	[ -d ${confdir} ] && echo "$2" > ${confdir}/${1}
 +}
@@ -83,6 +83,7 @@
 +		hammer snapshot ${pfs} ${HAMMER_SNAPDIR}/${snap} > /dev/null
 +	fi
 +}
++
 +
 +kill_metadata () {
 +	[ $# -ne 1 ] && eargs jailport_name
@@ -279,31 +280,30 @@
 +start_builders() {
 +	local arch=$(zget arch)
 +	local version=$(zget version)
-+	local j mnt fs name
-+
-+	zfs create -o canmount=off ${JAILFS}/build
++	local snap=$(snapname "${JAILFS}@prepkg")
++	local j mnt pfs name
 +
 +	for j in ${JOBS}; do
 +		mnt="${JAILMNT}/build/${j}"
-+		fs="${JAILFS}/build/${j}"
++		pfs="${JAILFS}.job-${j}"
 +		name="${JAILNAME}-job-${j}"
 +		zset status "starting_jobs:${j}"
 +		mkdir -p "${mnt}"
-+		zfs clone -o mountpoint=${mnt} \
-+			-o ${NS}:name=${name} \
-+			-o ${NS}:type=rootfs \
-+			-o ${NS}:arch=${arch} \
-+			-o ${NS}:version=${version} \
-+			${JAILFS}@prepkg ${fs}
-+		zsnap ${fs}@prepkg
-+		# Jail might be lingering from previous build. Already recursively
-+		# destroyed all the builder datasets, so just try stopping the jail
-+		# and ignore any errors
-+		jail_soft_stop ${name} || :
-+		MASTERMNT=${JAILMNT} JAILNAME=${name} JAILMNT=${mnt} JAILFS=${fs} do_jail_mounts 0
-+		MASTERMNT=${JAILMNT} JAILNAME=${name} JAILMNT=${mnt} JAILFS=${fs} do_portbuild_mounts 0
-+		MASTERMNT=${JAILMNT} JAILNAME=${name} JAILMNT=${mnt} JAILFS=${fs} jrun 0
-+		JAILFS=${fs} zset status "idle:"
++
++		# sync slave with master snapshot
++		cpdup -x -i0 ${HAMMER_SNAPDIR}/${snap}/ ${pfs}/
++
++		# take a snapshot of slave
++		zkill ${pfs}@prepkg
++		zsnap ${pfs}@prepkg
++
++		# mount slave to master
++		mount_jailport ${pfs} ${mnt}
++
++		MASTERMNT=${JAILMNT} JAILNAME=${name} JAILMNT=${mnt} JAILFS=${pfs} do_jail_mounts 0
++		MASTERMNT=${JAILMNT} JAILNAME=${name} JAILMNT=${mnt} JAILFS=${pfs} do_portbuild_mounts 0
++		MASTERMNT=${JAILMNT} JAILNAME=${name} JAILMNT=${mnt} JAILFS=${pfs} jrun 0
++		JAILNAME=${name} zset status "idle:"
 +	done
 +}
 +
@@ -321,8 +321,6 @@
 +
 +	mnt=`realpath ${JAILMNT}`
 +	mount | awk -v mnt="${mnt}/build/" 'BEGIN{ gsub(/\//, "\\\/", mnt); } { if ($3 ~ mnt && $1 !~ /\/dev\/md/ ) { print $3 }}' |  sort -r | xargs umount -f 2>/dev/null || :
-+
-+	zdelete ${JAILFS} build 2>/dev/null || :
 +
 +	# No builders running, unset JOBS
 +	JOBS=""
@@ -414,4 +412,47 @@
 +get_portsdir() {
 +	[ $# -ne 1 ] && eargs portstree_name
 +	echo $(port_get_fs ${1})
++}
++
++check_jobs() {
++	case ${PARALLEL_JOBS} in
++	''|*[!0-9]*)
++		PARALLEL_JOBS=$(zget slaves)
++		;;
++	esac
++}
++
++build_queue() {
++
++	local activity j cnt mnt pfs name pkgname
++
++	while :; do
++		activity=0
++		for j in ${JOBS}; do
++			mnt="${JAILMNT}/build/${j}"
++			name="${JAILNAME}-job-${j}"
++			pfs="${JAILFS}.job-${j}"
++			if [ -f  "${JAILMNT}/poudriere/var/run/${j}.pid" ]; then
++				if pgrep -F "${JAILMNT}/poudriere/var/run/${j}.pid" >/dev/null 2>&1; then
++					continue
++				fi
++				build_stats
++				rm -f "${JAILMNT}/poudriere/var/run/${j}.pid"
++				JAILNAME="${name}" zset status "idle:"
++			fi
++			pkgname=$(next_in_queue)
++			if [ -z "${pkgname}" ]; then
++				# pool empty ?
++				[ $(stat -f '%z' ${JAILMNT}/poudriere/pool) -eq 2 ] && return
++				break
++			fi
++			activity=1
++			MASTERMNT=${JAILMNT} JAILNAME="${name}" JAILMNT="${mnt}" JAILFS="${pfs}" \
++				MY_JOBID="${j}" \
++				build_pkg "${pkgname}" >/dev/null 2>&1 &
++			echo "$!" > ${JAILMNT}/poudriere/var/run/${j}.pid
++		done
++		# Sleep briefly if still waiting on builds, to save CPU
++		[ $activity -eq 0 ] && sleep 0.1
++	done
 +}

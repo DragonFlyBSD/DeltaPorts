@@ -1,6 +1,23 @@
 --- src/poudriere.d/bulk.sh.orig	2012-10-15 18:18:18.000000000 +0200
-+++ src/poudriere.d/bulk.sh	2012-11-18 19:49:23.000000000 +0100
-@@ -128,7 +128,7 @@
++++ src/poudriere.d/bulk.sh	2012-11-24 12:25:03.000000000 +0100
+@@ -31,6 +31,7 @@
+ CLEAN=0
+ CLEAN_LISTED=0
+ ALL=0
++PARALLEL_JOBS=
+ . ${SCRIPTPREFIX}/common.sh
+ 
+ [ $# -eq 0 ] && usage
+@@ -93,6 +94,8 @@
+ 	LISTPORTS="$@"
+ fi
+ 
++check_jobs
++
+ export SKIPSANITY
+ 
+ STATUS=0 # out of jail #
+@@ -128,7 +131,7 @@
  
  test -z ${PORTTESTING} && echo "DISABLE_MAKE_JOBS=yes" >> ${JAILMNT}/etc/make.conf
  
@@ -9,7 +26,7 @@
  
  parallel_build
  
-@@ -158,14 +158,14 @@
+@@ -158,14 +161,14 @@
  elif [ $PKGNG -eq 1 ]; then
  	msg "Creating pkgng repository"
  	zset status "pkgrepo:"
@@ -28,7 +45,7 @@
  	fi
  else
  	msg "Preparing INDEX"
-@@ -177,7 +177,7 @@
+@@ -177,7 +180,7 @@
  		[ "${pkg}" = "${PKGDIR}/All/*.tbz" ] && break
  		msg_n "Extracting description from ${pkg_file##*/}..."
  		ORIGIN=$(pkg_get_origin ${pkg_file})

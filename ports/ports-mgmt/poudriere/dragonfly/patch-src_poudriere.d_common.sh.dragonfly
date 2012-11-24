@@ -1,5 +1,5 @@
---- /dev/null	2012-11-20 03:01:24.170929943 +0100
-+++ src/poudriere.d/common.sh.dragonfly	2012-11-21 00:15:29.000000000 +0100
+--- /dev/null	2012-11-24 04:15:22.498925541 +0100
++++ src/poudriere.d/common.sh.dragonfly	2012-11-24 13:23:58.000000000 +0100
 @@ -0,0 +1,62 @@
 +#!/bin/sh
 +#
@@ -39,8 +39,8 @@
 +jail_soft_stop() {
 +	local AWKCMD='{ if($2 == host) print $1 }'
 +	local JAIL_ID=`jls | awk -v host="${1}" "${AWKCMD}"`
-+	#local SHUTDWN="/bin/sh /etc/rc.shutdown"
-+	#eval env -i /usr/sbin/jexec ${JAIL_ID} ${SHUTDWN} 2>&1
++	local SHUTDWN="/bin/sh /etc/rc.shutdown"
++	eval env -i /usr/sbin/jexec ${JAIL_ID} ${SHUTDWN} 2>&1
 +	killall -j ${JAIL_ID} -TERM > /dev/null 2>&1
 +	sleep 1
 +	killall -j ${JAIL_ID} -KILL > /dev/null 2>&1

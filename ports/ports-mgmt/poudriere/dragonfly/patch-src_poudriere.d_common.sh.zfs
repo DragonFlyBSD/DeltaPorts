@@ -1,6 +1,6 @@
---- /dev/null	2012-11-20 03:01:24.170929943 +0100
-+++ src/poudriere.d/common.sh.zfs	2012-11-21 00:14:58.000000000 +0100
-@@ -0,0 +1,253 @@
+--- /dev/null	2012-11-24 04:15:22.498925541 +0100
++++ src/poudriere.d/common.sh.zfs	2012-11-24 13:32:15.000000000 +0100
+@@ -0,0 +1,296 @@
 +#!/bin/sh
 +
 +# zfs namespace
@@ -248,9 +248,52 @@
 +	# no-op for ZFS
 +}
 +
-+get_portsdir()
++get_portsdir() {
 +	[ $# -ne 1 ] && eargs porttree
 +	local PD=`port_get_base ${PTNAME}`
 +	[ -d "${PD}/ports" ] && PD="${PD}/ports"
 +	echo ${PD}
++}
++
++check_jobs() {
++	case ${PARALLEL_JOBS} in
++	''|*[!0-9]*)
++		PARALLEL_JOBS=$(sysctl -n hw.ncpu)
++		;;
++	esac
++}
++
++build_queue() {
++
++	local activity j cnt mnt fs name pkgname
++
++	while :; do
++		activity=0
++		for j in ${JOBS}; do
++			mnt="${JAILMNT}/build/${j}"
++			fs="${JAILFS}/build/${j}"
++			name="${JAILNAME}-job-${j}"
++			if [ -f  "${JAILMNT}/poudriere/var/run/${j}.pid" ]; then
++				if pgrep -F "${JAILMNT}/poudriere/var/run/${j}.pid" >/dev/null 2>&1; then
++					continue
++				fi
++				build_stats
++				rm -f "${JAILMNT}/poudriere/var/run/${j}.pid"
++				JAILFS="${fs}" zset status "idle:"
++			fi
++			pkgname=$(next_in_queue)
++			if [ -z "${pkgname}" ]; then
++				# pool empty ?
++				[ $(stat -f '%z' ${JAILMNT}/poudriere/pool) -eq 2 ] && return
++				break
++			fi
++			activity=1
++			MASTERMNT=${JAILMNT} JAILNAME="${name}" JAILMNT="${mnt}" JAILFS="${fs}" \
++				MY_JOBID="${j}" \
++				build_pkg "${pkgname}" >/dev/null 2>&1 &
++			echo "$!" > ${JAILMNT}/poudriere/var/run/${j}.pid
++		done
++		# Sleep briefly if still waiting on builds, to save CPU
++		[ $activity -eq 0 ] && sleep 0.1
++	done
 +}
