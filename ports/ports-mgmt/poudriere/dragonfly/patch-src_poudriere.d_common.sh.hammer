@@ -1,6 +1,6 @@
 --- /dev/null	2012-11-24 04:15:22.498925541 +0100
-+++ src/poudriere.d/common.sh.hammer	2012-11-24 15:14:12.000000000 +0100
-@@ -0,0 +1,498 @@
++++ src/poudriere.d/common.sh.hammer	2012-11-24 23:01:33.000000000 +0100
+@@ -0,0 +1,501 @@
 +#!/bin/sh
 +
 +zget() {
@@ -12,6 +12,7 @@
 +	else
 +	   echo "-"
 +	fi
++	return 0
 +}
 +
 +zset() {
@@ -30,6 +31,7 @@
 +	else
 +	   echo "-"
 +	fi
++	return 0
 +}
 +
 +pzset() {
@@ -70,6 +72,7 @@
 +	local REAL=$(realpath ${1})
 +	local AWKCMD='{ if ($1 == mnt) print $3 }'
 +	mount | awk -v mnt="${REAL}" "${AWKCMD}"
++	return 0
 +}
 +
 +zsnap() {
@@ -82,6 +85,7 @@
 +	else
 +		hammer snapshot ${pfs} ${HAMMER_SNAPDIR}/${snap} > /dev/null
 +	fi
++	return 0
 +}
 +
 +
@@ -97,6 +101,7 @@
 +		[ -L ${HAMMER_SNAPDIR}/${snap} ] && \
 +		  hammer snaprm ${HAMMER_SNAPDIR}/${snap}
 +	fi
++	return 0
 +}
 +
 +zdelete() {
@@ -299,9 +304,6 @@
 +		zkill ${pfs}@prepkg
 +		zsnap ${pfs}@prepkg
 +
-+		# mount slave to master
-+		mount_jailport ${pfs} ${mnt}
-+
 +		MASTERMNT=${JAILMNT} JAILNAME=${name} JAILMNT=${mnt} JAILFS=${pfs} do_jail_mounts 0
 +		MASTERMNT=${JAILMNT} JAILNAME=${name} JAILMNT=${mnt} JAILFS=${pfs} do_portbuild_mounts 0
 +		MASTERMNT=${JAILMNT} JAILNAME=${name} JAILMNT=${mnt} JAILFS=${pfs} jrun 0
@@ -493,9 +495,10 @@
 +	local JOBX="$(jot -w %02d ${numjobs})"
 +
 +	for j in ${JOBX}; do
-+		zkill ${BASEJFS}.job-${j}@prepkg 2>/dev/null || :
-+		zkill ${BASEJFS}.job-${j}@@preinst 2>/dev/null || :
++		zkill ${BASEJFS}.job-${j}@prepkg
++		zkill ${BASEJFS}.job-${j}@preinst
 +	done
++	zkill ${BASEJFS}@prepkg
 +	jail_stop
 +	export CLEANED_UP=1
 +}

@@ -1,6 +1,6 @@
 --- /dev/null	2012-11-24 04:15:22.498925541 +0100
-+++ src/poudriere.d/common.sh.dragonfly	2012-11-24 14:25:27.000000000 +0100
-@@ -0,0 +1,62 @@
++++ src/poudriere.d/common.sh.dragonfly	2012-11-24 22:18:11.000000000 +0100
+@@ -0,0 +1,65 @@
 +#!/bin/sh
 +#
 +# DragonFly-specific
@@ -38,17 +38,20 @@
 +
 +jail_soft_stop() {
 +	local AWKCMD='{ if($2 == host) print $1 }'
-+	local JAIL_ID=`jls | awk -v host="${1}" "${AWKCMD}"`
++	local JAIL_ID=$(jls | awk -v host="${1}" "${AWKCMD}")
 +	local SHUTDWN="/bin/sh /etc/rc.shutdown"
-+	eval env -i /usr/sbin/jexec ${JAIL_ID} ${SHUTDWN} 2>&1
-+	killall -j ${JAIL_ID} -TERM > /dev/null 2>&1
-+	sleep 1
-+	killall -j ${JAIL_ID} -KILL > /dev/null 2>&1
++	if [ -n "${JAIL_ID}" ]; then
++		#eval env -i /usr/sbin/jexec ${JAIL_ID} ${SHUTDWN} 2>&1
++		killall -j ${JAIL_ID} -TERM > /dev/null 2>&1
++		sleep 1
++		#killall -j ${JAIL_ID} -KILL > /dev/null 2>&1
++	fi
++	return 0
 +}
 +
 +injail() {
 +	local AWKCMD='{ if($2 == host) print $1 }'
-+	local JAIL_ID=`jls | awk -v host="${JAILNAME}" "${AWKCMD}"`
++	local JAIL_ID=$(jls | awk -v host="${JAILNAME}" "${AWKCMD}")
 +	if [ -z "${JAIL_ID}" ]; then
 +	   err 1 "Jail not running; won't execute injail command"
 +	else
@@ -59,7 +62,7 @@
 +jail_runs() {
 +	[ $# -ne 0 ] && eargs
 +	local AWKCMD='{ if($2 == host) print $1 }'
-+	local check=$(jls | awk -v host="${JAILNAME}" "${AWKCMD}" > /dev/null 2>&1)
++	local check=$(jls | awk -v host="${JAILNAME}" "${AWKCMD}")
 +	[ -n "${check}" ] && return 0
 +	return 1
 +}

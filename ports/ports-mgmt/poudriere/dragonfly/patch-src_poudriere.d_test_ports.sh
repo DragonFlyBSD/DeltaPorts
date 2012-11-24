@@ -1,6 +1,14 @@
 --- src/poudriere.d/test_ports.sh.orig	2012-10-15 18:18:18.000000000 +0200
-+++ src/poudriere.d/test_ports.sh	2012-11-24 12:20:24.000000000 +0100
-@@ -69,13 +69,15 @@
++++ src/poudriere.d/test_ports.sh	2012-11-24 16:25:03.000000000 +0100
+@@ -26,6 +26,7 @@
+ SETNAME=""
+ SKIPSANITY=0
+ PTNAME="default"
++check_jobs
+ 
+ while getopts "Dd:o:cnj:J:p:sz:" FLAG; do
+ 	case "${FLAG}" in
+@@ -69,13 +70,15 @@
  
  test -z ${HOST_PORTDIRECTORY} && test -z ${ORIGIN} && usage
  
@@ -18,7 +26,7 @@
  fi
  
  test -z "${JAILNAME}" && err 1 "Don't know on which jail to run please specify -j"
-@@ -93,19 +95,20 @@
+@@ -93,19 +96,21 @@
  
  if [ -z ${ORIGIN} ]; then
  	mkdir -p ${JAILMNT}/${PORTDIRECTORY}
@@ -31,6 +39,7 @@
  prepare_ports
  
 -zfs snapshot ${JAILFS}@prepkg
++zkill ${JAILFS}@prepkg
 +zsnap ${JAILFS}@prepkg
  
  POUDRIERE_BUILD_TYPE=bulk parallel_build
@@ -42,7 +51,7 @@
  
  injail make -C ${PORTDIRECTORY} pkg-depends extract-depends \
  	fetch-depends patch-depends build-depends lib-depends
-@@ -136,7 +139,7 @@
+@@ -136,7 +141,7 @@
  
  msg "Populating PREFIX"
  mkdir -p ${JAILMNT}${PREFIX}

@@ -1,6 +1,6 @@
 --- /dev/null	2012-11-24 04:15:22.498925541 +0100
-+++ src/poudriere.d/jail.sh.dragonfly	2012-11-24 11:59:29.000000000 +0100
-@@ -0,0 +1,252 @@
++++ src/poudriere.d/jail.sh.dragonfly	2012-11-24 21:25:17.000000000 +0100
+@@ -0,0 +1,255 @@
 +#!/bin/sh
 +#
 +# DragonFly specific
@@ -197,9 +197,11 @@
 +BATCH=yes
 +WRKDIRPREFIX=/wrkdirs
 +EOF
++	# At least one daemon has to run otherwise jail will exits immediately
++	# Let cron run over syslogd (remove "cron_enable=NO")
 +	cat > ${JAILMNT}/etc/rc.conf << EOF
 +sendmail_enable=NONE
-+cron_enable=NO
++syslogd_enable=NO
 +update_motd=NO
 +EOF
 +	echo "# dummy" 	            >> ${JAILMNT}/etc/fstab
@@ -209,6 +211,7 @@
 +	mkdir -p ${JAILMNT}/${STD_PACKAGES}
 +	mkdir -p ${JAILMNT}/${STD_DISTFILES}
 +	mkdir -p ${JAILMNT}/wrkdirs
++	mkdir -p ${JAILMNT}/var/db/pkg
 +
 +	zkill ${JAILFS}@clean
 +	zsnap ${JAILFS}@clean

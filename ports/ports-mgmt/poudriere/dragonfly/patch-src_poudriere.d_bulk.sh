@@ -1,13 +1,13 @@
 --- src/poudriere.d/bulk.sh.orig	2012-10-15 18:18:18.000000000 +0200
-+++ src/poudriere.d/bulk.sh	2012-11-24 12:25:03.000000000 +0100
-@@ -31,6 +31,7 @@
- CLEAN=0
++++ src/poudriere.d/bulk.sh	2012-11-24 16:25:33.000000000 +0100
+@@ -32,6 +32,7 @@
  CLEAN_LISTED=0
  ALL=0
-+PARALLEL_JOBS=
  . ${SCRIPTPREFIX}/common.sh
++check_jobs
  
  [ $# -eq 0 ] && usage
+ 
 @@ -93,6 +94,8 @@
  	LISTPORTS="$@"
  fi
