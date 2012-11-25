@@ -1,6 +1,6 @@
---- /dev/null	2012-11-24 23:36:10.517360845 +0100
-+++ src/poudriere.d/jail.sh.dragonfly	2012-11-25 02:06:15.000000000 +0100
-@@ -0,0 +1,266 @@
+--- /dev/null	2012-11-25 03:01:18.885857679 +0100
++++ src/poudriere.d/jail.sh.dragonfly	2012-11-25 13:42:30.000000000 +0100
+@@ -0,0 +1,267 @@
 +#!/bin/sh
 +#
 +# DragonFly specific
@@ -206,6 +206,7 @@
 +EOF
 +	echo "# dummy" 	            >> ${JAILMNT}/etc/fstab
 +	echo "src"                  >> ${JAILMNT}/usr/.cpignore
++	echo "sys"                  >> ${JAILMNT}/.cpignore
 +
 +	mkdir -p ${JAILMNT}/${PORTSRC}
 +	mkdir -p ${JAILMNT}/${STD_PACKAGES}

@@ -1,6 +1,6 @@
 --- /dev/null	2012-11-25 03:01:18.885857679 +0100
-+++ src/poudriere.d/common.sh.hammer	2012-11-25 11:49:20.000000000 +0100
-@@ -0,0 +1,515 @@
++++ src/poudriere.d/common.sh.hammer	2012-11-25 16:31:02.000000000 +0100
+@@ -0,0 +1,521 @@
 +#!/bin/sh
 +
 +zget() {
@@ -132,38 +132,43 @@
 +	cpdup -i0 ${HAMMER_SNAPDIR}/${snap}/etc       ${pfs}/etc
 +	cpdup -i0 ${HAMMER_SNAPDIR}/${snap}/usr/bin   ${pfs}/usr/bin
 +	cpdup -i0 ${HAMMER_SNAPDIR}/${snap}/usr/local ${pfs}/usr/local
++	rm -rf ${pfs}/poudriere
 +}
 +
 +zxdiff () {
-+	[ $# -ne 2 ] && eargs filesystem@snapname filesystem
++	[ $# -ne 2 ] && eargs pfs-filesystem@snapname pfs-filesystem
 +	# very basic zfs diff emulations: [M+-] (no R, no / type)
 +	if [ $(onlysnap "${1}") -eq 0 ]; then
 +		err 1 "Must specify snapshot in rollback"
 +	fi
 +	local snap=$(snapname "${1}")
-+	local RIGHT=$(extract_pfs ${1})
++	local RIGHT="${2}"
 +	local LEFTS=${HAMMER_SNAPDIR}/${snap}
 +	local AWKCMD='{ \
++ lslen = length (leftside); \
++ rslen = length (rightside); \
 + if ($1 == "Files") \
 + { \
 +   len = index ($0, " and ") - 7; \
-+   print "M * " substr ($0, 7, len); \
++   print "M * " substr ($0, 7 + lslen, len - lslen); \
 + } \
 + if ($1 == "Only") \
 + { \
 +   ndx = index ($0, ":"); \
-+   lslen = length (leftside); \
-+   if (leftside == substr($0, 9, lslen)) { \
++   if (leftside == substr ($0, 9, lslen)) { \
 +     sym = "- * "; \
++     stem = substr ($0, 9 + lslen, ndx - 9 - lslen); \
 +   } \
 +   else { \
 +     sym = "+ * "; \
++     stem = substr ($0, 9 + rslen, ndx - 9 - rslen); \
 +   } \
-+   ufile  = substr ($0, ndx + 2); \
-+   print sym leftside "/" ufile; \
++   ufile = substr ($0, ndx + 2); \
++   print sym stem "/" ufile; \
 + } \
 +}'
-+	diff -qr ${LEFTS} ${RIGHT} | awk -v leftside=${LEFTS} "${AWKCMD}"
++	diff -qr --exclude=src ${LEFTS} ${RIGHT} 2> /dev/null | \
++	   awk -v leftside=${LEFTS} -v rightside=${RIGHT} "${AWKCMD}"
 +}
 +
 +jail_exists() {
@@ -333,6 +338,7 @@
 +
 +	for j in ${JOBS}; do
 +		jail_soft_stop ${JAILNAME}-job-${j} || :
++		JAILNAME=${JAILNAME}-job-${j} zset status "available"
 +	done
 +
 +	mnt=`realpath ${JAILMNT}`
@@ -363,7 +369,7 @@
 +			pkgname=$(next_in_queue)
 +			if [ -z "${pkgname}" ]; then
 +				# pool empty ?
-+				[ $(stat -f '%z' ${JAILMNT}/poudriere/pool) -eq 2 ] && return
++				[ -n "$(dir_empty ${JAILMNT}/poudriere/pool)" ] && return
 +				break
 +			fi
 +			activity=1
