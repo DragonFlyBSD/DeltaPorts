@@ -1,0 +1,14 @@
+124a125,137
+> 
+> # If you are using HAMMER instead of ZFS, define the dedicated snapshot
+> # directory
+> HAMMER_SNAPDIR=${BASEFS}/snapshots
+> 
+> # Set the host for the git update method
+> GIT_HOST=koan.bondconsult.net
+> 
+> # Set the URL for the dports git repository
+> DPORTS_URL=git://github.com/jrmarino/DPorts.git
+> 
+> # Set the localhost path for rsync (cpdup) to update dports repository
+> # DPORTS_RSYNC_LOC=/home/generic/dports-merged
