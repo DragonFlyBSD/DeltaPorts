@@ -1,6 +1,6 @@
 --- src/poudriere.d/jail.sh.orig	2012-11-14 19:10:09.000000000 +0100
-+++ src/poudriere.d/jail.sh	2012-11-25 02:02:41.000000000 +0100
-@@ -16,50 +16,32 @@
++++ src/poudriere.d/jail.sh	2012-11-25 09:37:29.000000000 +0100
+@@ -16,67 +16,32 @@
      -q            -- quiet (remove the header in list)
      -J n          -- Run buildworld in parallell with n jobs.
      -j jailname   -- Specifies the jailname
@@ -61,11 +61,28 @@
 -	zfs list -rt filesystem -H \
 -		-o ${NS}:type,${NS}:name,${NS}:version,${NS}:arch,${NS}:method,${NS}:stats_built,${NS}:stats_failed,${NS}:stats_ignored,${NS}:stats_skipped,${NS}:stats_queued,${NS}:status ${ZPOOL}${ZROOTFS} | \
 -		awk '$1 == "rootfs" { printf("%-20s %-20s %-7s %-7s %-7s %-7s %-7s %-7s %-7s %s\n",$2, $3, $4, $5, $6, $7, $8, $9, $10, $11) }'
+-}
+-
+-delete_jail() {
+-	test -z ${JAILNAME} && usage
+-	jail_exists ${JAILNAME} || err 1 "No such jail: ${JAILNAME}"
+-	jail_runs && \
+-		err 1 "Unable to remove jail ${JAILNAME}: it is running"
+-
+-	msg_n "Removing ${JAILNAME} jail..."
+-	zfs destroy -r ${JAILFS}
+-	rmdir ${JAILMNT}
+-	rm -rf ${POUDRIERE_DATA}/packages/${JAILNAME}
+-	rm -rf ${POUDRIERE_DATA}/cache/${JAILNAME}
+-	rm -f ${POUDRIERE_DATA}/logs/*-${JAILNAME}.*.log
+-	rm -f ${POUDRIERE_DATA}/logs/bulk-${JAILNAME}.log
+-	rm -rf ${POUDRIERE_DATA}/logs/*/${JAILNAME}
+-	echo done
 +	print_jails_table ${QUIET}
  }
  
- delete_jail() {
-@@ -84,319 +66,6 @@
+ cleanup_new_jail() {
+@@ -84,319 +49,6 @@
  	delete_jail
  }
  
@@ -385,7 +402,7 @@
  ARCH=`uname -m`
  REALARCH=${ARCH}
  START=0
-@@ -407,12 +76,15 @@
+@@ -407,12 +59,15 @@
  QUIET=0
  INFO=0
  UPDATE=0
@@ -402,7 +419,7 @@
  	case "${FLAG}" in
  		j)
  			JAILNAME=${OPTARG}
-@@ -424,10 +96,7 @@
+@@ -424,10 +79,7 @@
  			VERSION=${OPTARG}
  			;;
  		a)
@@ -414,7 +431,7 @@
  			;;
  		m)
  			METHOD=${OPTARG}
-@@ -438,6 +107,9 @@
+@@ -438,6 +90,9 @@
  		M)
  			JAILMNT=${OPTARG}
  			;;
@@ -424,7 +441,7 @@
  		s)
  			START=1
  			;;
-@@ -471,7 +143,6 @@
+@@ -471,7 +126,6 @@
  	esac
  done
  
@@ -432,7 +449,7 @@
  if [ -n "${JAILNAME}" ] && [ ${CREATE} -eq 0 ]; then
  	JAILFS=`jail_get_fs ${JAILNAME}`
  	JAILMNT=`jail_get_base ${JAILNAME}`
-@@ -496,7 +167,7 @@
+@@ -496,7 +150,7 @@
  		export SET_STATUS_ON_START=0
  		test -z ${JAILNAME} && usage
  		jail_start
@@ -441,7 +458,7 @@
  		jrun 1
  		;;
  	0000100)
-@@ -509,6 +180,6 @@
+@@ -509,6 +163,6 @@
  		;;
  	0000001)
  		test -z ${JAILNAME} && usage

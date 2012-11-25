@@ -1,5 +1,5 @@
 --- /dev/null	2012-11-25 03:01:18.885857679 +0100
-+++ src/poudriere.d/common.sh.dragonfly	2012-11-25 03:26:05.000000000 +0100
++++ src/poudriere.d/common.sh.dragonfly	2012-11-25 11:33:19.000000000 +0100
 @@ -0,0 +1,135 @@
 +#!/bin/sh
 +#
@@ -72,7 +72,7 @@
 +	local arch=$(zget arch)
 +	local NEEDFS="${NULLFSREF} procfs"
 +	if [ -z "${NOLINUX}" ]; then
-+		if [ "${arch}" = "i386" -o "${arch}" = "amd64" ]; then
++		if [ "${arch}" = "i386" ]; then
 +			NEEDFS="${NEEDFS} linprocfs linsysfs"
 +			sysctl -n compat.linux.osrelease >/dev/null 2>&1 || kldload linux
 +		fi

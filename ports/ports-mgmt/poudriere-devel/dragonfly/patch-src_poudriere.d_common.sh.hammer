@@ -1,6 +1,6 @@
 --- /dev/null	2012-11-25 03:01:18.885857679 +0100
-+++ src/poudriere.d/common.sh.hammer	2012-11-25 02:45:29.000000000 +0100
-@@ -0,0 +1,508 @@
++++ src/poudriere.d/common.sh.hammer	2012-11-25 11:49:20.000000000 +0100
+@@ -0,0 +1,515 @@
 +#!/bin/sh
 +
 +zget() {
@@ -124,7 +124,14 @@
 +	fi
 +	local snap=$(snapname "${1}")
 +	local pfs=$(extract_pfs ${1})
-+	cpdup -i0 ${HAMMER_SNAPDIR}/${snap}/ ${pfs}/
++	# rollback only used for jails
++	# Don't transverse the entire tree, just do the minimum
++
++	cpdup -i0 ${HAMMER_SNAPDIR}/${snap}/etc       ${pfs}/etc
++	cpdup -i0 ${HAMMER_SNAPDIR}/${snap}/var       ${pfs}/var
++	cpdup -i0 ${HAMMER_SNAPDIR}/${snap}/etc       ${pfs}/etc
++	cpdup -i0 ${HAMMER_SNAPDIR}/${snap}/usr/bin   ${pfs}/usr/bin
++	cpdup -i0 ${HAMMER_SNAPDIR}/${snap}/usr/local ${pfs}/usr/local
 +}
 +
 +zxdiff () {

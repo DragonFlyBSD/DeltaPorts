@@ -1,5 +1,5 @@
 --- src/poudriere.d/test_ports.sh.orig	2012-11-14 19:10:09.000000000 +0100
-+++ src/poudriere.d/test_ports.sh	2012-11-25 01:39:38.000000000 +0100
++++ src/poudriere.d/test_ports.sh	2012-11-25 11:35:45.000000000 +0100
 @@ -27,6 +27,7 @@
  SETNAME=""
  SKIPSANITY=0
@@ -26,7 +26,7 @@
  fi
  
  test -z "${JAILNAME}" && err 1 "Don't know on which jail to run please specify -j"
-@@ -94,13 +97,15 @@
+@@ -94,14 +97,16 @@
  
  if [ -z ${ORIGIN} ]; then
  	mkdir -p ${JAILMNT}/${PORTDIRECTORY}
@@ -35,25 +35,28 @@
 +	  err 1 "Failed to null-mount ${HOST_PORTDIRECTORY} to jail"
  fi
  
++zkill ${JAILFS}@prepkg
++zsnap ${JAILFS}@prepkg
++
  LISTPORTS=$(list_deps ${PORTDIRECTORY} )
  prepare_ports
  
 -zfs snapshot ${JAILFS}@prepkg
-+zkill ${JAILFS}@prepkg
-+zsnap ${JAILFS}@prepkg
- 
+-
  if ! POUDRIERE_BUILD_TYPE=bulk parallel_build; then
  	failed=$(cat ${JAILMNT}/poudriere/ports.failed | awk '{print $1 ":" $2 }' | xargs echo)
-@@ -119,7 +124,7 @@
+ 	skipped=$(cat ${JAILMNT}/poudriere/ports.skipped | awk '{print $1}' | xargs echo)
+@@ -119,7 +124,8 @@
  
  zset status "depends:"
  
 -zfs destroy -r ${JAILFS}@prepkg
-+zkill ${JAILFS}@prepkg
++# This line isn't necessary, it's taken care of in the cleanup
++# zkill ${JAILFS}@prepkg
  
  injail make -C ${PORTDIRECTORY} pkg-depends extract-depends \
  	fetch-depends patch-depends build-depends lib-depends
-@@ -150,7 +155,7 @@
+@@ -150,7 +156,7 @@
  
  msg "Populating PREFIX"
  mkdir -p ${JAILMNT}${PREFIX}

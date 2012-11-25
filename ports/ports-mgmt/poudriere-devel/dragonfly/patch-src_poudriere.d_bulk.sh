@@ -1,5 +1,5 @@
 --- src/poudriere.d/bulk.sh.orig	2012-11-14 19:10:09.000000000 +0100
-+++ src/poudriere.d/bulk.sh	2012-11-25 01:01:25.000000000 +0100
++++ src/poudriere.d/bulk.sh	2012-11-25 11:37:12.000000000 +0100
 @@ -33,6 +33,7 @@
  CLEAN_LISTED=0
  ALL=0
@@ -17,16 +17,24 @@
  export SKIPSANITY
  
  STATUS=0 # out of jail #
-@@ -129,7 +132,7 @@
+@@ -123,13 +126,15 @@
+ 	rm -f ${LOGD}/*.log 2>/dev/null
+ fi
+ 
++zkill ${JAILFS}@prepkg
++zsnap ${JAILFS}@prepkg
++
+ prepare_ports
+ 
+ zset status "building:"
  
  test -z ${PORTTESTING} && echo "DISABLE_MAKE_JOBS=yes" >> ${JAILMNT}/etc/make.conf
  
 -zfs snapshot ${JAILFS}@prepkg
-+zsnap ${JAILFS}@prepkg
  
  parallel_build || : # Ignore errors as they are handled below
  
-@@ -163,14 +166,14 @@
+@@ -163,14 +168,14 @@
  	fi
  	msg "Creating pkgng repository"
  	zset status "pkgrepo:"
