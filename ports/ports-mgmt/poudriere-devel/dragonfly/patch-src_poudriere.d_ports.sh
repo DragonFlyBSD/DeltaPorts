@@ -1,5 +1,5 @@
 --- src/poudriere.d/ports.sh.orig	2012-11-14 19:10:09.000000000 +0100
-+++ src/poudriere.d/ports.sh	2012-11-25 01:35:48.000000000 +0100
++++ src/poudriere.d/ports.sh	2012-11-25 02:44:23.000000000 +0100
 @@ -21,11 +21,11 @@
                       them.
      -p name       -- specifies the name of the portstree we workon . If not
@@ -159,14 +159,12 @@
  	porttree_exists ${PTNAME} || err 2 "No such ports tree ${PTNAME}"
 -	METHOD=$(porttree_get_method ${PTNAME})
 -	[ "${METHOD}" = "manual" ] && err 1 "Ports tree ${PTNAME} is manually managed."
--	PTMNT=$(porttree_get_base ${PTNAME})
+ 	PTMNT=$(porttree_get_base ${PTNAME})
 -	[ -d "${PTMNT}/ports" ] && PORTSMNT="${PTMNT}/ports"
 -	/sbin/mount -t nullfs | /usr/bin/grep -q "${PORTSMNT:-${PTMNT}} on" \
 -		&& err 1 "Ports tree \"${PTNAME}\" is currently mounted and being used."
--	PTFS=$(porttree_get_fs ${PTNAME})
+ 	PTFS=$(porttree_get_fs ${PTNAME})
 -	[ -n "${PTFS}" ] || err 2 "${PTNAME} ZFS dataset unable to be determined."
-+	PTMNT=$(port_get_base ${PTNAME})
-+	PTFS=$(port_get_fs ${PTNAME})
 +	[ -n "$(check_mount ${PTFS})" ] && \
 +		err 1 "Ports tree \"${PTNAME}\" is currently mounted and being used."
  	msg "Updating portstree \"${PTNAME}\""

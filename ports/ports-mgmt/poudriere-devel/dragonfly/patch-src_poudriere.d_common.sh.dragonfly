@@ -1,6 +1,6 @@
---- /dev/null	2012-11-24 23:36:10.517360845 +0100
-+++ src/poudriere.d/common.sh.dragonfly	2012-11-25 00:55:39.000000000 +0100
-@@ -0,0 +1,144 @@
+--- /dev/null	2012-11-25 03:01:18.885857679 +0100
++++ src/poudriere.d/common.sh.dragonfly	2012-11-25 03:26:05.000000000 +0100
+@@ -0,0 +1,135 @@
 +#!/bin/sh
 +#
 +# DragonFly-specific
@@ -67,44 +67,35 @@
 +	return 1
 +}
 +
-+jail_stop() {
++jail_start() {
 +	[ $# -ne 0 ] && eargs
-+	local mnt
-+	jail_runs || err 1 "No such jail running: ${JAILNAME}"
-+	zset status "stop:"
-+
-+	jail_soft_stop ${JAILNAME%-job-*}
-+	# Shutdown all builders
-+	if [ ${PARALLEL_JOBS} -ne 0 ]; then
-+		# - here to only check for unset, {start,stop}_builders will set this to blank if already stopped
-+		for j in ${JOBS-$(jot -w %02d ${PARALLEL_JOBS})}; do
-+			jail_soft_stop ${JAILNAME%-job-*}-job-${j} 2>&1 || :
-+		done
-+	fi
-+	msg "Umounting file systems"
-+	mnt=`realpath ${MASTERMNT:-${JAILMNT}}`
-+	mount | awk -v mnt="${mnt}/" 'BEGIN{ gsub(/\//, "\\\/", mnt); } { if ($3 ~ mnt && $1 !~ /\/dev\/md/ ) { print $3 }}' |  sort -r | xargs umount -f || :
-+	umount ${mnt} || :
-+
-+	if [ -n "${MFSSIZE}" ]; then
-+		# umount the ${JAILMNT}/build/$jobno/wrkdirs
-+		mount | grep "/dev/md.*${mnt}/build" | while read mntpt; do
-+			local dev=`echo $mntpt | awk '{print $1}'`
-+			if [ -n "$dev" ]; then
-+				umount $dev
-+				mdconfig -d -u $dev
-+			fi
-+		done
-+		# umount the $JAILMNT/wrkdirs
-+		local dev=`mount | grep "/dev/md.*${mnt}" | awk '{print $1}'`
-+		if [ -n "$dev" ]; then
-+			umount $dev
-+			mdconfig -d -u $dev
++	local arch=$(zget arch)
++	local NEEDFS="${NULLFSREF} procfs"
++	if [ -z "${NOLINUX}" ]; then
++		if [ "${arch}" = "i386" -o "${arch}" = "amd64" ]; then
++			NEEDFS="${NEEDFS} linprocfs linsysfs"
++			sysctl -n compat.linux.osrelease >/dev/null 2>&1 || kldload linux
 +		fi
 +	fi
-+	zfs rollback -R ${JAILFS%/build/*}@clean
-+	zset status "idle:"
-+	export STATUS=0
++	[ -n "${USE_TMPFS}" ] && NEEDFS="${NEEDFS} tmpfs"
++	for fs in ${NEEDFS}; do
++		lsvfs $fs >/dev/null 2>&1 || kldload $fs
++	done
++	jail_exists ${JAILNAME} || err 1 "No such jail: ${JAILNAME}"
++	jail_runs && err 1 "jail already running: ${JAILNAME}"
++	zset status "start:"
++	zdelete ${JAILFS} build 2>/dev/null || :
++	zrollback ${JAILFS}@clean
++
++	msg "Mounting system devices for ${JAILNAME}"
++	do_jail_mounts 1
++
++	test -n "${RESOLV_CONF}" && cp -v "${RESOLV_CONF}" "${JAILMNT}/etc/"
++	msg "Starting jail ${JAILNAME}"
++	jrun 0
++	# Only set STATUS=1 if not turned off
++	# jail -s should not do this or jail will stop on EXIT
++	[ ${SET_STATUS_ON_START-1} -eq 1 ] && export STATUS=1
 +}
 +
 +jail_stop() {

@@ -1,5 +1,5 @@
---- /dev/null	2012-11-24 23:36:10.517360845 +0100
-+++ src/poudriere.d/common.sh.hammer	2012-11-25 01:30:09.000000000 +0100
+--- /dev/null	2012-11-25 03:01:18.885857679 +0100
++++ src/poudriere.d/common.sh.hammer	2012-11-25 02:45:29.000000000 +0100
 @@ -0,0 +1,508 @@
 +#!/bin/sh
 +
@@ -498,7 +498,7 @@
 +
 +get_portsdir() {
 +	[ $# -ne 1 ] && eargs portstree_name
-+	echo $(port_get_fs ${1})
++	echo $(porttree_get_fs ${1})
 +}
 +
 +check_jobs() {
