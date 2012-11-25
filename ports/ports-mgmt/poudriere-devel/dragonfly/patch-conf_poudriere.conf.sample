@@ -1,14 +1,19 @@
-124a125,137
-> 
-> # If you are using HAMMER instead of ZFS, define the dedicated snapshot
-> # directory
-> HAMMER_SNAPDIR=${BASEFS}/snapshots
-> 
-> # Set the host for the git update method
-> GIT_HOST=koan.bondconsult.net
-> 
-> # Set the URL for the dports git repository
-> DPORTS_URL=git://github.com/jrmarino/DPorts.git
-> 
-> # Set the localhost path for rsync (cpdup) to update dports repository
-> # DPORTS_RSYNC_LOC=/home/generic/dports-merged
+--- conf/poudriere.conf.sample.orig	2012-11-14 19:10:09.000000000 +0100
++++ conf/poudriere.conf.sample	2012-11-24 23:41:51.000000000 +0100
+@@ -122,3 +122,16 @@
+ #
+ # Cleanout the restricted packages
+ # NO_RESTRICTED=yes
++
++# If you are using HAMMER instead of ZFS, define the dedicated snapshot
++# directory
++HAMMER_SNAPDIR=${BASEFS}/snapshots
++
++# Set the host for the git update method
++GIT_HOST=koan.bondconsult.net
++
++# Set the URL for the dports git repository
++DPORTS_URL=git://github.com/jrmarino/DPorts.git
++
++# Set the localhost path for rsync (cpdup) to update dports repository
++# DPORTS_RSYNC_LOC=/home/generic/dports-merged
