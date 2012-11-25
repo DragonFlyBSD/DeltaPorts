@@ -1,6 +1,6 @@
 --- /dev/null	2012-11-25 03:01:18.885857679 +0100
-+++ src/poudriere.d/common.sh.hammer	2012-11-25 16:31:02.000000000 +0100
-@@ -0,0 +1,521 @@
++++ src/poudriere.d/common.sh.hammer	2012-11-25 17:18:37.000000000 +0100
+@@ -0,0 +1,562 @@
 +#!/bin/sh
 +
 +zget() {
@@ -350,38 +350,73 @@
 +
 +build_queue() {
 +
-+	local activity j cnt mnt pfs name pkgname
++	local j cnt mnt pfs name pkgname read_queue builders_active should_build_stats
 +
++	read_queue=1
++	should_build_stats=1 # Always build stats on first pass
 +	while :; do
-+		activity=0
++		builders_active=0
 +		for j in ${JOBS}; do
 +			mnt="${JAILMNT}/build/${j}"
-+			name="${JAILNAME}-job-${j}"
 +			pfs="${JAILFS}.job-${j}"
++			name="${JAILNAME}-job-${j}"
 +			if [ -f  "${JAILMNT}/poudriere/var/run/${j}.pid" ]; then
 +				if pgrep -F "${JAILMNT}/poudriere/var/run/${j}.pid" >/dev/null 2>&1; then
++					builders_active=1
 +					continue
 +				fi
-+				build_stats
++				should_build_stats=1
 +				rm -f "${JAILMNT}/poudriere/var/run/${j}.pid"
 +				JAILNAME="${name}" zset status "idle:"
++
++				# A builder finished, check the queue to see if
++				# it can do some work
++				read_queue=1
 +			fi
++
++			# Don't want to read the queue, so just skip this
++			# builder and check the next, as it may be done
++			[ ${read_queue} -eq 0 ] && continue
++
 +			pkgname=$(next_in_queue)
 +			if [ -z "${pkgname}" ]; then
 +				# pool empty ?
 +				[ -n "$(dir_empty ${JAILMNT}/poudriere/pool)" ] && return
-+				break
-+			fi
-+			activity=1
-+			MASTERMNT=${JAILMNT} JAILNAME="${name}" JAILMNT="${mnt}" JAILFS="${pfs}" \
++
++				# Pool is waiting on dep, wait until a build
++				# is done before checking the queue again
++				read_queue=0
++			else
++				MASTERMNT=${JAILMNT} JAILNAME="${name}" JAILMNT="${mnt}" JAILFS="${pfs}" \
 +				MY_JOBID="${j}" \
 +				build_pkg "${pkgname}" >/dev/null 2>&1 &
 +			echo "$!" > ${JAILMNT}/poudriere/var/run/${j}.pid
++
++				# A new job is spawned, try to read the queue
++				# just to keep things moving
++				read_queue=1
++				builders_active=1
++			fi
 +		done
-+		# Sleep briefly if still waiting on builds, to save CPU
-+		[ $activity -eq 0 ] && sleep 0.1
++		if [ ${read_queue} -eq 0 ]; then
++			# If not wanting to read the queue, sleep to save CPU
++			sleep 1
++		fi
++
++		if [ ${builders_active} -eq 0 ]; then
++			msg "Dependency loop or poudriere bug detected."
++			find ${JAILMNT}/poudriere/pool || echo "pool missing"
++			find ${JAILMNT}/poudriere/deps || echo "deps missing"
++			err 1 "Queue is unprocessable"
++		fi
++
++		if [ ${should_build_stats} -eq 1 ]; then
++			build_stats
++			should_build_stats=0
++		fi
 +	done
 +}
++
 +
 +cleanup() {
 +	[ -n "${CLEANED_UP}" ] && return 0
@@ -402,14 +437,20 @@
 +	[ -z "${BASEJNAME}" ] && err 2 "Fail: Missing JAILNAME"
 +	log_stop
 +
++	# Kill all children - this does NOT recurse, so orphans can still
++	# occur. This is just to avoid requiring pid files for parallel_run
++	for pid in $(jobs -p); do
++		kill ${pid} 2>/dev/null || :
++	done
++
 +	if [ -d ${MASTERMNT:-${JAILMNT}}/poudriere/var/run ]; then
 +		for pid in ${MASTERMNT:-${JAILMNT}}/poudriere/var/run/*.pid; do
 +			# Ensure there is a pidfile to read or break
 +			[ "${pid}" = "${MASTERMNT:-${JAILMNT}}/poudriere/var/run/*.pid" ] && break
 +			pkill -15 -F ${pid} >/dev/null 2>&1 || :
 +		done
-+		wait
 +	fi
++	wait
 +
 +	local numjobs JOBX BASEJFS
 +	BASEJFS=${JAILFS%.job-*}
