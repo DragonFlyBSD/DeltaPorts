@@ -463,7 +463,7 @@
  				fi
  				rm -f ${add} ${add1} ${del} ${del1} ${mod} ${mod1}
 -				[ $die -eq 0 ] || return 1
-+				if [ $die -eq 1 ];
++				if [ $die -eq 1 ]; then
 +				   firehook port_build_failure "${JAILNAME}" \
 +				     "${PTNAME}" "${portdir}" "${phase}"
 +				   return 1
