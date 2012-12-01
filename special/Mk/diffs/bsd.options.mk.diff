@@ -1,0 +1,11 @@
+--- bsd.options.mk.orig	2012-10-29 14:19:30.000000000 +0100
++++ bsd.options.mk	2012-11-30 21:01:51.000000000 +0100
+@@ -100,7 +100,7 @@
+ optdesc:=	${opt}
+ ${optname}_DESC:=	${opt:S|"||g}
+ .    else
+-.      if ${opt:L} == off
++.      if ${opt:tl} == off
+ .        if defined(PORT_OPTIONS) && defined(optname)
+ NO_OPTIONS+=	${optname}
+ NO_OPTIONS:=	${NO_OPTIONS:O:u}

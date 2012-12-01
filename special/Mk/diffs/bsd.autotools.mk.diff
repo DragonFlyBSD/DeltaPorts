@@ -1,0 +1,11 @@
+--- bsd.autotools.mk.orig	2012-10-29 14:19:30.000000000 +0100
++++ bsd.autotools.mk	2012-11-30 21:09:39.000000000 +0100
+@@ -314,7 +314,7 @@
+ 
+ .if defined(AUTOTOOLS_VARS) && !empty(AUTOTOOLS_VARS)
+ . for var in AUTOTOOLS CONFIGURE MAKE SCRIPTS
+-${var:U}_ENV+=		${AUTOTOOLS_VARS}
++${var:tu}_ENV+=		${AUTOTOOLS_VARS}
+ . endfor
+ .endif
+ 

@@ -1,0 +1,11 @@
+--- bsd.java.mk.orig	2012-10-29 14:19:30.000000000 +0100
++++ bsd.java.mk	2012-11-30 21:09:57.000000000 +0100
+@@ -411,7 +411,7 @@
+ 
+ # Then test if a JAVAC has to be set (JAVA_BUILD==jdk)
+ .		if defined(JAVA_BUILD)
+-.			if (${JAVA_BUILD:U} == "JDK") && !defined(JAVAC)
++.			if (${JAVA_BUILD:tu} == "JDK") && !defined(JAVAC)
+ JAVAC?=			${JAVA_HOME}/bin/javac
+ .			endif
+ .		endif
