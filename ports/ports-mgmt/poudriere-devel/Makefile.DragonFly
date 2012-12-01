@@ -4,8 +4,8 @@
 
 PHOOKS= bulk_build_ended \
 	bulk_build_start \
-	build_port_failure \
-	build_port_success \
+	port_build_failure \
+	port_build_success \
 	test_port_ended \
 	test_port_start
 
