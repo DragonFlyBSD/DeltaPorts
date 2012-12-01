@@ -1,6 +1,6 @@
---- /dev/null	2012-11-25 03:01:18.885857679 +0100
-+++ src/poudriere.d/common.sh.hammer	2012-11-25 17:18:37.000000000 +0100
-@@ -0,0 +1,562 @@
+--- /dev/null	2012-11-30 03:01:20.086801538 +0100
++++ src/poudriere.d/common.sh.hammer	2012-11-30 17:25:53.000000000 +0100
+@@ -0,0 +1,566 @@
 +#!/bin/sh
 +
 +zget() {
@@ -351,6 +351,8 @@
 +build_queue() {
 +
 +	local j cnt mnt pfs name pkgname read_queue builders_active should_build_stats
++	local AWKCMD='{ if ($1 != "PID") print $1 }'
++	local pidfile running
 +
 +	read_queue=1
 +	should_build_stats=1 # Always build stats on first pass
@@ -360,13 +362,15 @@
 +			mnt="${JAILMNT}/build/${j}"
 +			pfs="${JAILFS}.job-${j}"
 +			name="${JAILNAME}-job-${j}"
-+			if [ -f  "${JAILMNT}/poudriere/var/run/${j}.pid" ]; then
-+				if pgrep -F "${JAILMNT}/poudriere/var/run/${j}.pid" >/dev/null 2>&1; then
++			pidfile="${JAILMNT}/poudriere/var/run/${j}.pid"
++			if [ -f "${pidfile}" ]; then
++				running=$(ps -p `cat ${pidfile}` | awk "${AWKCMD}")
++				if [ -n "${running}" ]; then
 +					builders_active=1
 +					continue
 +				fi
 +				should_build_stats=1
-+				rm -f "${JAILMNT}/poudriere/var/run/${j}.pid"
++				rm -f ${pidfile}
 +				JAILNAME="${name}" zset status "idle:"
 +
 +				# A builder finished, check the queue to see if
@@ -390,7 +394,7 @@
 +				MASTERMNT=${JAILMNT} JAILNAME="${name}" JAILMNT="${mnt}" JAILFS="${pfs}" \
 +				MY_JOBID="${j}" \
 +				build_pkg "${pkgname}" >/dev/null 2>&1 &
-+			echo "$!" > ${JAILMNT}/poudriere/var/run/${j}.pid
++				echo "$!" > ${pidfile}
 +
 +				# A new job is spawned, try to read the queue
 +				# just to keep things moving

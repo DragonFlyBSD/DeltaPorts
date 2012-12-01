@@ -1,5 +1,5 @@
 --- src/poudriere.d/common.sh.orig	2012-11-14 19:10:09.000000000 +0100
-+++ src/poudriere.d/common.sh	2012-11-29 22:25:35.000000000 +0100
++++ src/poudriere.d/common.sh	2012-11-30 17:40:00.000000000 +0100
 @@ -1,8 +1,6 @@
  #!/bin/sh
  
@@ -663,7 +663,20 @@
  
  	# If this port is IGNORED, skip it
  	# This is checked here instead of when building the queue
-@@ -1130,10 +765,10 @@
+@@ -1112,10 +747,12 @@
+ 			job_msg "Finished build of ${port}: Success"
+ 			# Cache information for next run
+ 			pkg_cache_data "${PKGDIR}/All/${PKGNAME}.${PKG_EXT}" ${port} || :
++			firehook port_build_success "${JAILNAME}" "${PTNAME}" "${portdir}"
+ 		else
+ 			echo "${port} ${failed_phase}" >> "${MASTERMNT:-${JAILMNT}}/poudriere/ports.failed"
+ 			job_msg "Finished build of ${port}: Failed: ${failed_phase}"
+ 			clean_rdepends=1
++			firehook port_build_failure "${JAILNAME}" "${PTNAME}" "${portdir}" "${failed_phase}"
+ 		fi
+ 	fi
+ 
+@@ -1130,10 +767,10 @@
  	[ $# -ne 1 ] && eargs directory
  	local dir=$1
  	local makeargs="-VPKG_DEPENDS -VBUILD_DEPENDS -VEXTRACT_DEPENDS -VLIB_DEPENDS -VPATCH_DEPENDS -VFETCH_DEPENDS -VRUN_DEPENDS"
@@ -676,7 +689,7 @@
  }
  
  deps_file() {
-@@ -1143,7 +778,7 @@
+@@ -1143,7 +780,7 @@
  
  	if [ ! -f "${depfile}" ]; then
  		if [ "${PKG_EXT}" = "tbz" ]; then
@@ -685,7 +698,7 @@
  		else
  			pkg info -qdF "${pkg}" > "${depfile}"
  		fi
-@@ -1161,7 +796,7 @@
+@@ -1161,7 +798,7 @@
  	if [ ! -f "${originfile}" ]; then
  		if [ -z "${origin}" ]; then
  			if [ "${PKG_EXT}" = "tbz" ]; then
@@ -694,7 +707,7 @@
  			else
  				origin=$(pkg query -F "${pkg}" "%o")
  			fi
-@@ -1181,7 +816,7 @@
+@@ -1181,7 +818,7 @@
  
  	if [ ! -f "${optionsfile}" ]; then
  		if [ "${PKG_EXT}" = "tbz" ]; then
@@ -703,7 +716,7 @@
  		else
  			compiled_options=$(pkg query -F "${pkg}" '%Ov %Ok' | awk '$1 == "on" {print $2}' | sort | tr '\n' ' ')
  		fi
-@@ -1277,7 +912,7 @@
+@@ -1277,7 +914,7 @@
  	o=$(pkg_get_origin ${pkg})
  	v=${pkg##*-}
  	v=${v%.*}
@@ -712,7 +725,7 @@
  		msg "${o} does not exist anymore. Deleting stale ${pkg##*/}"
  		delete_pkg ${pkg}
  		return 0
-@@ -1292,7 +927,7 @@
+@@ -1292,7 +929,7 @@
  
  	# Check if the compiled options match the current options from make.conf and /var/db/options
  	if [ "${CHECK_CHANGED_OPTIONS:-no}" != "no" ]; then
@@ -721,7 +734,7 @@
  		compiled_options=$(pkg_get_options ${pkg})
  
  		if [ "${compiled_options}" != "${current_options}" ]; then
-@@ -1358,7 +993,7 @@
+@@ -1358,7 +995,7 @@
  
  	# Add to cache if not found.
  	if [ -z "${pkgname}" ]; then
@@ -730,7 +743,7 @@
  		# Make sure this origin did not already exist
  		existing_origin=$(cache_get_origin "${pkgname}" 2>/dev/null || :)
  		# It may already exist due to race conditions, it is not harmful. Just ignore.
-@@ -1412,8 +1047,7 @@
+@@ -1412,8 +1049,7 @@
  
  listed_ports() {
  	if [ ${ALL:-0} -eq 1 ]; then
@@ -740,7 +753,7 @@
  		for cat in $(awk '$1 == "SUBDIR" { print $3}' ${PORTSDIR}/Makefile); do
  			awk -v cat=${cat}  '$1 == "SUBDIR" { print cat"/"$3}' ${PORTSDIR}/${cat}/Makefile
  		done
-@@ -1589,8 +1223,7 @@
+@@ -1589,8 +1225,7 @@
  	export FORCE_PACKAGE=yes
  	export USER=root
  	export HOME=/root
@@ -750,7 +763,7 @@
  	[ -z "${JAILMNT}" ] && err 1 "No path of the base of the jail defined"
  	[ -z "${PORTSDIR}" ] && err 1 "No ports directory defined"
  	[ -z "${PKGDIR}" ] && err 1 "No package directory defined"
-@@ -1613,9 +1246,9 @@
+@@ -1613,9 +1248,9 @@
  
  	msg "Populating LOCALBASE"
  	mkdir -p ${JAILMNT}/${MYBASE:-/usr/local}
@@ -762,7 +775,7 @@
  	if [ -n "${WITH_PKGNG}" ]; then
  		export PKGNG=1
  		export PKG_EXT="txz"
-@@ -1638,26 +1271,40 @@
+@@ -1638,26 +1273,40 @@
  . ${SCRIPTPREFIX}/../../etc/poudriere.conf
  POUDRIERED=${SCRIPTPREFIX}/../../etc/poudriere.d
  
@@ -811,7 +824,7 @@
  case ${ZROOTFS} in
  	[!/]*)
  		err 1 "ZROOTFS shoud start with a /"
-@@ -1672,8 +1319,3 @@
+@@ -1672,8 +1321,3 @@
  	*) err 1 "invalid format for WRKDIR_ARCHIVE_FORMAT: ${WRKDIR_ARCHIVE_FORMAT}" ;;
  esac
  
