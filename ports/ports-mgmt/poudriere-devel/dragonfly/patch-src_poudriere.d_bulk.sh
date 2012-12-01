@@ -1,5 +1,5 @@
 --- src/poudriere.d/bulk.sh.orig	2012-11-14 19:10:09.000000000 +0100
-+++ src/poudriere.d/bulk.sh	2012-11-25 11:37:12.000000000 +0100
++++ src/poudriere.d/bulk.sh	2012-11-29 22:15:56.000000000 +0100
 @@ -33,6 +33,7 @@
  CLEAN_LISTED=0
  ALL=0
@@ -17,7 +17,7 @@
  export SKIPSANITY
  
  STATUS=0 # out of jail #
-@@ -123,13 +126,15 @@
+@@ -123,13 +126,18 @@
  	rm -f ${LOGD}/*.log 2>/dev/null
  fi
  
@@ -26,6 +26,9 @@
 +
  prepare_ports
  
++firehook bulk_build_start "${JAILNAME}" "${PTNAME}" "${PORTDIRECTORY}" \
++	`zget stats_queued`
++
  zset status "building:"
  
  test -z ${PORTTESTING} && echo "DISABLE_MAKE_JOBS=yes" >> ${JAILMNT}/etc/make.conf
@@ -34,7 +37,7 @@
  
  parallel_build || : # Ignore errors as they are handled below
  
-@@ -163,14 +168,14 @@
+@@ -163,14 +171,14 @@
  	fi
  	msg "Creating pkgng repository"
  	zset status "pkgrepo:"
@@ -53,3 +56,11 @@
  	fi
  else
  	if [ -n "${NO_RESTRICTED}" ]; then
+@@ -317,4 +325,7 @@
+ 
+ set +e
+ 
++firehook bulk_build_ended "${JAILNAME}" "${PTNAME}" "${nbbuilt}" \
++	"${nbfailed}" "${nbignored}" "${nbskipped}"
++
+ exit $((nbfailed + nbskipped))
