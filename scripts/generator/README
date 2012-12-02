@@ -38,7 +38,7 @@ portsnap fetch update
 10. Customize poudriere.conf
 cp /usr/local/etc/poudriere.conf.sample /usr/local/poudriere.conf
 set DISTFILES_CACHE=/usr/distfiles
-set DPORTS_RSYNC_LOC=/home/dports/merged-ports
+set DPORTS_RSYNC_LOC=/usr/gen-dports/merged-ports
 
 11. create jail in poudriere (>= DragonFly 3.3)
 e.g. create jail called "master"
