@@ -1,5 +1,5 @@
 --- src/poudriere.d/common.sh.orig	2012-11-14 19:10:09.000000000 +0100
-+++ src/poudriere.d/common.sh	2012-11-30 17:40:00.000000000 +0100
++++ src/poudriere.d/common.sh	2012-12-01 11:16:06.000000000 +0100
 @@ -1,8 +1,6 @@
  #!/bin/sh
  
@@ -281,10 +281,9 @@
  	if [ -d "${CCACHE_DIR:-/nonexistent}" ]; then
  		# Mount user supplied CCACHE_DIR into /var/cache/ccache
 -		mount -t nullfs ${CCACHE_DIR} ${JAILMNT}${CCACHE_DIR} || err 1 "Failed to mount the ccache directory "
-+		${NULLMOUNT} ${CCACHE_DIR} ${JAILMNT}${CCACHE_DIR} || err 1 "Failed to mount the ccache directory "
- 	fi
- }
- 
+-	fi
+-}
+-
 -jail_start() {
 -	[ $# -ne 0 ] && eargs
 -	local arch=$(zget arch)
@@ -400,7 +399,8 @@
 -			[ "${pid}" = "${MASTERMNT:-${JAILMNT}}/poudriere/var/run/*.pid" ] && break
 -			pkill -15 -F ${pid} >/dev/null 2>&1 || :
 -		done
--	fi
++		${NULLMOUNT} ${CCACHE_DIR} ${JAILMNT}${CCACHE_DIR} || err 1 "Failed to mount the ccache directory "
+ 	fi
 -	wait
 -
 -	zfs destroy -r ${JAILFS%/build/*}/build 2>/dev/null || :
@@ -408,8 +408,8 @@
 -	zfs destroy -r ${JAILFS%/build/*}@preinst 2>/dev/null || :
 -	jail_stop
 -	export CLEANED_UP=1
--}
--
+ }
+ 
 -injail() {
 -	jexec -U root ${JAILNAME} $@
 -}
@@ -458,16 +458,7 @@
  					while read mod type path; do
  					local ppath
  					ppath=`echo "$path" | sed -e "s,^${JAILMNT},," -e "s,^${PREFIX}/,," -e "s,^share/${portname},%%DATADIR%%," -e "s,^etc/${portname},%%ETCDIR%%,"`
-@@ -665,14 +415,19 @@
- 					cat ${mod1}
- 				fi
- 				rm -f ${add} ${add1} ${del} ${del1} ${mod} ${mod1}
--				[ $die -eq 0 ] || return 1
-+				if [ $die -eq 1 ]; then
-+				   firehook port_build_failure "${JAILNAME}" \
-+				     "${PTNAME}" "${portdir}" "${phase}"
-+				   return 1
-+				fi
+@@ -669,10 +419,10 @@
  			fi
  		fi
  	done
@@ -477,11 +468,10 @@
  	zset status "idle:"
 -	zfs destroy -r ${JAILFS}@preinst || :
 +	zkill ${JAILFS}@preinst || :
-+	firehook port_build_success "${JAILNAME}" "${PTNAME}" "${portdir}"
  	return 0
  }
  
-@@ -709,58 +464,6 @@
+@@ -709,58 +459,6 @@
  	fi
  }
  
@@ -540,7 +530,7 @@
  build_stats_list() {
  	[ $# -ne 3 ] && eargs html_path type display_name
  	local html_path="$1"
-@@ -785,12 +488,12 @@
+@@ -785,12 +483,12 @@
      <div id="${type}">
        <h2>${display_name} ports </h2>
        <table>
@@ -557,7 +547,7 @@
  EOF
  	cnt=0
  	while read port extra; do
-@@ -811,12 +514,12 @@
+@@ -811,12 +509,12 @@
  		fi
  
  		cat >> ${html_path} << EOF
@@ -574,7 +564,7 @@
  EOF
  		cnt=$(( cnt + 1 ))
  	done <  ${JAILMNT}/poudriere/ports.${type}
-@@ -909,74 +612,6 @@
+@@ -909,74 +607,6 @@
  	[ "${html_path}" = "/dev/null" ] || mv ${html_path} ${html_path%.tmp}
  }
  
@@ -649,7 +639,7 @@
  
  # Build ports in parallel
  # Returns when all are built.
-@@ -1059,11 +694,11 @@
+@@ -1059,11 +689,11 @@
  
  	PKGNAME="${pkgname}" # set ASAP so cleanup() can use it
  	port=$(cache_get_origin ${pkgname})
@@ -663,7 +653,7 @@
  
  	# If this port is IGNORED, skip it
  	# This is checked here instead of when building the queue
-@@ -1112,10 +747,12 @@
+@@ -1112,10 +742,12 @@
  			job_msg "Finished build of ${port}: Success"
  			# Cache information for next run
  			pkg_cache_data "${PKGDIR}/All/${PKGNAME}.${PKG_EXT}" ${port} || :
@@ -676,7 +666,7 @@
  		fi
  	fi
  
-@@ -1130,10 +767,10 @@
+@@ -1130,10 +762,10 @@
  	[ $# -ne 1 ] && eargs directory
  	local dir=$1
  	local makeargs="-VPKG_DEPENDS -VBUILD_DEPENDS -VEXTRACT_DEPENDS -VLIB_DEPENDS -VPATCH_DEPENDS -VFETCH_DEPENDS -VRUN_DEPENDS"
@@ -689,7 +679,7 @@
  }
  
  deps_file() {
-@@ -1143,7 +780,7 @@
+@@ -1143,7 +775,7 @@
  
  	if [ ! -f "${depfile}" ]; then
  		if [ "${PKG_EXT}" = "tbz" ]; then
@@ -698,7 +688,7 @@
  		else
  			pkg info -qdF "${pkg}" > "${depfile}"
  		fi
-@@ -1161,7 +798,7 @@
+@@ -1161,7 +793,7 @@
  	if [ ! -f "${originfile}" ]; then
  		if [ -z "${origin}" ]; then
  			if [ "${PKG_EXT}" = "tbz" ]; then
@@ -707,7 +697,7 @@
  			else
  				origin=$(pkg query -F "${pkg}" "%o")
  			fi
-@@ -1181,7 +818,7 @@
+@@ -1181,7 +813,7 @@
  
  	if [ ! -f "${optionsfile}" ]; then
  		if [ "${PKG_EXT}" = "tbz" ]; then
@@ -716,7 +706,7 @@
  		else
  			compiled_options=$(pkg query -F "${pkg}" '%Ov %Ok' | awk '$1 == "on" {print $2}' | sort | tr '\n' ' ')
  		fi
-@@ -1277,7 +914,7 @@
+@@ -1277,7 +909,7 @@
  	o=$(pkg_get_origin ${pkg})
  	v=${pkg##*-}
  	v=${v%.*}
@@ -725,7 +715,7 @@
  		msg "${o} does not exist anymore. Deleting stale ${pkg##*/}"
  		delete_pkg ${pkg}
  		return 0
-@@ -1292,7 +929,7 @@
+@@ -1292,7 +924,7 @@
  
  	# Check if the compiled options match the current options from make.conf and /var/db/options
  	if [ "${CHECK_CHANGED_OPTIONS:-no}" != "no" ]; then
@@ -734,7 +724,7 @@
  		compiled_options=$(pkg_get_options ${pkg})
  
  		if [ "${compiled_options}" != "${current_options}" ]; then
-@@ -1358,7 +995,7 @@
+@@ -1358,7 +990,7 @@
  
  	# Add to cache if not found.
  	if [ -z "${pkgname}" ]; then
@@ -743,7 +733,7 @@
  		# Make sure this origin did not already exist
  		existing_origin=$(cache_get_origin "${pkgname}" 2>/dev/null || :)
  		# It may already exist due to race conditions, it is not harmful. Just ignore.
-@@ -1412,8 +1049,7 @@
+@@ -1412,8 +1044,7 @@
  
  listed_ports() {
  	if [ ${ALL:-0} -eq 1 ]; then
@@ -753,7 +743,7 @@
  		for cat in $(awk '$1 == "SUBDIR" { print $3}' ${PORTSDIR}/Makefile); do
  			awk -v cat=${cat}  '$1 == "SUBDIR" { print cat"/"$3}' ${PORTSDIR}/${cat}/Makefile
  		done
-@@ -1589,8 +1225,7 @@
+@@ -1589,8 +1220,7 @@
  	export FORCE_PACKAGE=yes
  	export USER=root
  	export HOME=/root
@@ -763,7 +753,7 @@
  	[ -z "${JAILMNT}" ] && err 1 "No path of the base of the jail defined"
  	[ -z "${PORTSDIR}" ] && err 1 "No ports directory defined"
  	[ -z "${PKGDIR}" ] && err 1 "No package directory defined"
-@@ -1613,9 +1248,9 @@
+@@ -1613,9 +1243,9 @@
  
  	msg "Populating LOCALBASE"
  	mkdir -p ${JAILMNT}/${MYBASE:-/usr/local}
@@ -775,7 +765,7 @@
  	if [ -n "${WITH_PKGNG}" ]; then
  		export PKGNG=1
  		export PKG_EXT="txz"
-@@ -1638,26 +1273,40 @@
+@@ -1638,26 +1268,40 @@
  . ${SCRIPTPREFIX}/../../etc/poudriere.conf
  POUDRIERED=${SCRIPTPREFIX}/../../etc/poudriere.d
  
@@ -824,7 +814,7 @@
  case ${ZROOTFS} in
  	[!/]*)
  		err 1 "ZROOTFS shoud start with a /"
-@@ -1672,8 +1321,3 @@
+@@ -1672,8 +1316,3 @@
  	*) err 1 "invalid format for WRKDIR_ARCHIVE_FORMAT: ${WRKDIR_ARCHIVE_FORMAT}" ;;
  esac
  

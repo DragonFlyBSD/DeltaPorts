@@ -1,5 +1,5 @@
 --- src/poudriere.d/bulk.sh.orig	2012-11-14 19:10:09.000000000 +0100
-+++ src/poudriere.d/bulk.sh	2012-12-01 07:09:50.000000000 +0100
++++ src/poudriere.d/bulk.sh	2012-12-01 11:41:35.000000000 +0100
 @@ -10,7 +10,6 @@
  Options:
      -c          -- Clean the previous built binary packages
@@ -8,15 +8,7 @@
      -t          -- Add some testings to package building
      -s          -- Skip sanity
      -J n        -- Run n jobs in parallel
-@@ -33,6 +32,7 @@
- CLEAN_LISTED=0
- ALL=0
- . ${SCRIPTPREFIX}/common.sh
-+check_jobs
- 
- [ $# -eq 0 ] && usage
- 
-@@ -94,6 +94,8 @@
+@@ -94,6 +93,8 @@
  	LISTPORTS="$@"
  fi
  
@@ -25,7 +17,7 @@
  export SKIPSANITY
  
  STATUS=0 # out of jail #
-@@ -123,13 +125,18 @@
+@@ -123,13 +124,17 @@
  	rm -f ${LOGD}/*.log 2>/dev/null
  fi
  
@@ -34,8 +26,7 @@
 +
  prepare_ports
  
-+firehook bulk_build_start "${JAILNAME}" "${PTNAME}" "${PORTDIRECTORY}" \
-+	`zget stats_queued`
++firehook bulk_build_start "${JAILNAME}" "${PTNAME}" `zget stats_queued`
 +
  zset status "building:"
  
@@ -45,7 +36,7 @@
  
  parallel_build || : # Ignore errors as they are handled below
  
-@@ -163,14 +170,14 @@
+@@ -163,14 +168,14 @@
  	fi
  	msg "Creating pkgng repository"
  	zset status "pkgrepo:"
@@ -64,7 +55,7 @@
  	fi
  else
  	if [ -n "${NO_RESTRICTED}" ]; then
-@@ -317,4 +324,7 @@
+@@ -317,4 +322,7 @@
  
  set +e
  

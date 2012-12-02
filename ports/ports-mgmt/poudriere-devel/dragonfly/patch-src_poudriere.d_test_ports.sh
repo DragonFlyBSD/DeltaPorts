@@ -1,5 +1,5 @@
 --- src/poudriere.d/test_ports.sh.orig	2012-11-14 19:10:09.000000000 +0100
-+++ src/poudriere.d/test_ports.sh	2012-12-01 07:09:41.000000000 +0100
++++ src/poudriere.d/test_ports.sh	2012-12-01 11:15:31.000000000 +0100
 @@ -10,7 +10,6 @@
  
  Options:
@@ -8,15 +8,7 @@
      -J n        -- Run n jobs in parallel for dependencies
      -j name     -- Run only inside the given jail
      -n          -- No custom prefix
-@@ -27,6 +26,7 @@
- SETNAME=""
- SKIPSANITY=0
- PTNAME="default"
-+check_jobs
- 
- while getopts "d:o:cnj:J:p:svz:" FLAG; do
- 	case "${FLAG}" in
-@@ -70,13 +70,15 @@
+@@ -70,13 +69,15 @@
  
  test -z ${HOST_PORTDIRECTORY} && test -z ${ORIGIN} && usage
  
@@ -34,7 +26,7 @@
  fi
  
  test -z "${JAILNAME}" && err 1 "Don't know on which jail to run please specify -j"
-@@ -94,13 +96,18 @@
+@@ -94,13 +95,18 @@
  
  if [ -z ${ORIGIN} ]; then
  	mkdir -p ${JAILMNT}/${PORTDIRECTORY}
@@ -55,7 +47,7 @@
  
  if ! POUDRIERE_BUILD_TYPE=bulk parallel_build; then
  	failed=$(cat ${JAILMNT}/poudriere/ports.failed | awk '{print $1 ":" $2 }' | xargs echo)
-@@ -119,7 +126,8 @@
+@@ -119,7 +125,8 @@
  
  zset status "depends:"
  
@@ -65,7 +57,7 @@
  
  injail make -C ${PORTDIRECTORY} pkg-depends extract-depends \
  	fetch-depends patch-depends build-depends lib-depends
-@@ -150,7 +158,7 @@
+@@ -150,7 +157,7 @@
  
  msg "Populating PREFIX"
  mkdir -p ${JAILMNT}${PREFIX}
@@ -74,7 +66,18 @@
  
  [ $ZVERSION -lt 28 ] && \
  	find ${JAILMNT}${LOCALBASE}/ -type d | sed "s,^${JAILMNT}${LOCALBASE}/,," | sort > ${JAILMNT}${PREFIX}.PLIST_DIRS.before
-@@ -185,4 +193,8 @@
+@@ -166,7 +173,10 @@
+ 	failed_phase=${failed_status%:*}
+ 
+ 	save_wrkdir "${PKGNAME}" "${PORTDIRECTORY}" "${failed_phase}" || :
++	firehook port_build_failure "${JAILNAME}" "${PTNAME}" "${PORTDIRECTORY}" "${failed_phase}"
+ 	exit 1
++else
++	firehook port_build_success "${JAILNAME}" "${PTNAME}" "${PORTDIRECTORY}"
+ fi
+ 
+ msg "Installing from package"
+@@ -185,4 +195,8 @@
  cleanup
  set +e
  

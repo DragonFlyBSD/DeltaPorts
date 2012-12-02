@@ -9,5 +9,5 @@
 SET_port_build_failure=fire_port_build_failure
 
 fire_port_build_failure() {
-  echo "Port ${4} failed in ${9} stage"
+  echo "Port ${4} failed in ${5} stage"
 }
