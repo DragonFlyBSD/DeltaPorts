@@ -1,5 +1,5 @@
---- bsd.port.mk.orig	2012-10-29 12:33:53.000000000 +0100
-+++ bsd.port.mk	2012-11-04 10:15:33.000000000 +0100
+--- bsd.port.mk.orig	2012-11-17 06:54:17.000000000 +0100
++++ bsd.port.mk	2012-12-02 11:17:43.000000000 +0100
 @@ -43,7 +43,8 @@
  #				  makefile is being used on.  Automatically set to
  #				  "FreeBSD," "NetBSD," or "OpenBSD" as appropriate.
@@ -551,7 +551,7 @@
  				ignore="false"; \
  				eval alg_executable=\$$$$alg; \
  				\
-@@ -5001,7 +5036,7 @@
+@@ -5001,14 +5036,14 @@
  
  _INSTALL_DEPENDS=	\
  		if [ X${USE_PACKAGE_DEPENDS} != "X" ]; then \
@@ -560,6 +560,14 @@
  			subpkgname=$${subpkgfile%-*} ; \
  			subpkgname=$${subpkgname\#\#*/} ; \
  			if [ -r "$${subpkgfile}" -a "$$target" = "${DEPENDS_TARGET}" ]; then \
+ 				${ECHO_MSG} "===>   Installing existing package $${subpkgfile}"; \
+ 				if [ -n "${WITH_PKGNG}" -a $${subpkgname} = "pkg" ]; then \
+ 					[ -d ${WRKDIR} ] || ${MKDIR} ${WRKDIR} ; \
+-					${TAR} xf $${subpkgfile} -C ${WRKDIR} -s ",/.*/,,g" "*/pkg-static" ; \
++					${TAR} -xf $${subpkgfile} -C ${WRKDIR} -s ",/.*/,,g" "*/pkg-static" ; \
+ 					${WRKDIR}/pkg-static add $${subpkgfile}; \
+ 					${RM} -f ${WRKDIR}/pkg-static; \
+ 				else \
 @@ -5018,12 +5053,13 @@
  			  (cd $$dir; ${MAKE} -DINSTALLS_DEPENDS $$target $$depends_args) ; \
  			fi; \
