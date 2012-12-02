@@ -1,5 +1,5 @@
 --- src/poudriere.d/common.sh.orig	2012-11-14 19:10:09.000000000 +0100
-+++ src/poudriere.d/common.sh	2012-12-01 11:16:06.000000000 +0100
++++ src/poudriere.d/common.sh	2012-12-01 12:58:36.000000000 +0100
 @@ -1,8 +1,6 @@
  #!/bin/sh
  
@@ -733,17 +733,32 @@
  		# Make sure this origin did not already exist
  		existing_origin=$(cache_get_origin "${pkgname}" 2>/dev/null || :)
  		# It may already exist due to race conditions, it is not harmful. Just ignore.
-@@ -1412,8 +1044,7 @@
+@@ -1410,24 +1042,6 @@
+ 	done
+ }
  
- listed_ports() {
- 	if [ ${ALL:-0} -eq 1 ]; then
+-listed_ports() {
+-	if [ ${ALL:-0} -eq 1 ]; then
 -		PORTSDIR=`porttree_get_base ${PTNAME}`
 -		[ -d "${PORTSDIR}/ports" ] && PORTSDIR="${PORTSDIR}/ports"
-+		PORTSDIR=$(get_portsdir ${PTNAME})
- 		for cat in $(awk '$1 == "SUBDIR" { print $3}' ${PORTSDIR}/Makefile); do
- 			awk -v cat=${cat}  '$1 == "SUBDIR" { print cat"/"$3}' ${PORTSDIR}/${cat}/Makefile
- 		done
-@@ -1589,8 +1220,7 @@
+-		for cat in $(awk '$1 == "SUBDIR" { print $3}' ${PORTSDIR}/Makefile); do
+-			awk -v cat=${cat}  '$1 == "SUBDIR" { print cat"/"$3}' ${PORTSDIR}/${cat}/Makefile
+-		done
+-		return
+-	fi
+-	if [ -z "${LISTPORTS}" ]; then
+-		if [ -n "${LISTPKGS}" ]; then
+-			grep -v -E '(^[[:space:]]*#|^[[:space:]]*$)' ${LISTPKGS}
+-		fi
+-	else
+-		echo ${LISTPORTS} | tr ' ' '\n'
+-	fi
+-}
+-
+ parallel_stop() {
+ 	wait
+ }
+@@ -1589,8 +1203,7 @@
  	export FORCE_PACKAGE=yes
  	export USER=root
  	export HOME=/root
@@ -753,7 +768,7 @@
  	[ -z "${JAILMNT}" ] && err 1 "No path of the base of the jail defined"
  	[ -z "${PORTSDIR}" ] && err 1 "No ports directory defined"
  	[ -z "${PKGDIR}" ] && err 1 "No package directory defined"
-@@ -1613,9 +1243,9 @@
+@@ -1613,9 +1226,9 @@
  
  	msg "Populating LOCALBASE"
  	mkdir -p ${JAILMNT}/${MYBASE:-/usr/local}
@@ -765,7 +780,7 @@
  	if [ -n "${WITH_PKGNG}" ]; then
  		export PKGNG=1
  		export PKG_EXT="txz"
-@@ -1638,26 +1268,40 @@
+@@ -1638,26 +1251,40 @@
  . ${SCRIPTPREFIX}/../../etc/poudriere.conf
  POUDRIERED=${SCRIPTPREFIX}/../../etc/poudriere.d
  
@@ -814,7 +829,7 @@
  case ${ZROOTFS} in
  	[!/]*)
  		err 1 "ZROOTFS shoud start with a /"
-@@ -1672,8 +1316,3 @@
+@@ -1672,8 +1299,3 @@
  	*) err 1 "invalid format for WRKDIR_ARCHIVE_FORMAT: ${WRKDIR_ARCHIVE_FORMAT}" ;;
  esac
  

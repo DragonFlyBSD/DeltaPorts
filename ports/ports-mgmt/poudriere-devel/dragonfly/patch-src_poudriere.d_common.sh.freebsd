@@ -1,6 +1,6 @@
---- /dev/null	2012-11-24 23:36:10.517360845 +0100
-+++ src/poudriere.d/common.sh.freebsd	2012-11-25 00:54:56.000000000 +0100
-@@ -0,0 +1,113 @@
+--- /dev/null	2012-12-01 08:59:54.020291688 +0100
++++ src/poudriere.d/common.sh.freebsd	2012-12-01 12:58:35.000000000 +0100
+@@ -0,0 +1,130 @@
 +#!/bin/sh
 +#
 +# FreeBSD specific
@@ -113,4 +113,21 @@
 +	zfs rollback -R ${JAILFS%/build/*}@clean
 +	zset status "idle:"
 +	export STATUS=0
++}
++
++listed_ports() {
++	if [ ${ALL:-0} -eq 1 ]; then
++		PORTSDIR=$(get_portsdir ${PTNAME})
++		for cat in $(awk '$1 == "SUBDIR" { print $3}' ${PORTSDIR}/Makefile); do
++			awk -v cat=${cat}  '$1 == "SUBDIR" { print cat"/"$3}' ${PORTSDIR}/${cat}/Makefile
++		done
++		return
++	fi
++	if [ -z "${LISTPORTS}" ]; then
++		if [ -n "${LISTPKGS}" ]; then
++			grep -v -E '(^[[:space:]]*#|^[[:space:]]*$)' ${LISTPKGS}
++		fi
++	else
++		echo ${LISTPORTS} | tr ' ' '\n'
++	fi
 +}
