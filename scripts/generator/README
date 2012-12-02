@@ -4,19 +4,21 @@ This is how to set up dport generation:
 
 2. create /usr/local/etc/dports.conf:
 FPORTS=/usr/ports
-MERGED=/home/dports/merged-ports
-DPORTS=/home/dports/github/DPorts
-DELTA=/home/dports/github/DeltaPorts
-INDEX=/home/ports/INDEX-3
+MERGED=/usr/gen-dports/merged-ports
+DPORTS=/usr/gen-dports/github/DPorts
+DELTA=/usr/gen-dports/github/DeltaPorts
+INDEX=/usr/ports/INDEX-3
 
-3. Create a dports user with home directory
+3. (deleted)
 
-4. Replicate github DeltaPorts (ssh key) at ~/dports/github
+4. Replicate github DeltaPorts (ssh key) at /usr/gen-dports/github
 
-5. Replicate github DPorts (ssh key) at ~/dports/github
+5. Replicate github DPorts (ssh key) at /usr/gen-dports/github
 
 6. Put the following files at /usr/local/etc/hooks_poudriere:
 merge.sh
+prune.sh
+cron_dports.sh
 failure_status.sh
 success_status.sh
 transfer_merge.sh
@@ -24,7 +26,7 @@ hook_port_build_failure.sh
 hook_port_build_success.sh
 
 7. build and install portsnap
-cd /home/dports/github/DeltaPorts/scripts/portsnap && make
+cd /usr/gen-dports/github/DeltaPorts/scripts/portsnap && make
 rehash
 
 8. Fetch latest FreeBSD Ports Collection
@@ -46,3 +48,13 @@ poudriere ports -c -p potential -m rsync
 
 13. Kickoff autogeneration
 poudriere bulk -va -j master -p potential
+
+
+Later:
+Set up cron job to push check commits and push if necessary every 15 minutes
+add /usr/local/etc/hooks_poudriere/cron_dports.sh to cron, executed by root
+
+Either manually or automatically:
+portsnap fetch update
+/usr/local/etc/hooks_poudriere/prune.sh
+/usr/local/etc/hooks_poudriere/merge.sh
