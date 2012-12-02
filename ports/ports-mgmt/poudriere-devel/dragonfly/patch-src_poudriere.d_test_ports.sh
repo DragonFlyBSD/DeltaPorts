@@ -1,6 +1,14 @@
 --- src/poudriere.d/test_ports.sh.orig	2012-11-14 19:10:09.000000000 +0100
-+++ src/poudriere.d/test_ports.sh	2012-11-25 11:35:45.000000000 +0100
-@@ -27,6 +27,7 @@
++++ src/poudriere.d/test_ports.sh	2012-12-01 07:09:41.000000000 +0100
+@@ -10,7 +10,6 @@
+ 
+ Options:
+     -c          -- Run make config for the given port
+-    -D          -- Debug mode, dislay more information
+     -J n        -- Run n jobs in parallel for dependencies
+     -j name     -- Run only inside the given jail
+     -n          -- No custom prefix
+@@ -27,6 +26,7 @@
  SETNAME=""
  SKIPSANITY=0
  PTNAME="default"
@@ -8,7 +16,7 @@
  
  while getopts "d:o:cnj:J:p:svz:" FLAG; do
  	case "${FLAG}" in
-@@ -70,13 +71,15 @@
+@@ -70,13 +70,15 @@
  
  test -z ${HOST_PORTDIRECTORY} && test -z ${ORIGIN} && usage
  
@@ -26,7 +34,7 @@
  fi
  
  test -z "${JAILNAME}" && err 1 "Don't know on which jail to run please specify -j"
-@@ -94,14 +97,16 @@
+@@ -94,13 +96,18 @@
  
  if [ -z ${ORIGIN} ]; then
  	mkdir -p ${JAILMNT}/${PORTDIRECTORY}
@@ -42,11 +50,12 @@
  prepare_ports
  
 -zfs snapshot ${JAILFS}@prepkg
--
++firehook test_port_start "${JAILNAME}" "${PTNAME}" "${PORTDIRECTORY}" \
++	`zget stats_queued`
+ 
  if ! POUDRIERE_BUILD_TYPE=bulk parallel_build; then
  	failed=$(cat ${JAILMNT}/poudriere/ports.failed | awk '{print $1 ":" $2 }' | xargs echo)
- 	skipped=$(cat ${JAILMNT}/poudriere/ports.skipped | awk '{print $1}' | xargs echo)
-@@ -119,7 +124,8 @@
+@@ -119,7 +126,8 @@
  
  zset status "depends:"
  
@@ -56,7 +65,7 @@
  
  injail make -C ${PORTDIRECTORY} pkg-depends extract-depends \
  	fetch-depends patch-depends build-depends lib-depends
-@@ -150,7 +156,7 @@
+@@ -150,7 +158,7 @@
  
  msg "Populating PREFIX"
  mkdir -p ${JAILMNT}${PREFIX}
@@ -65,3 +74,12 @@
  
  [ $ZVERSION -lt 28 ] && \
  	find ${JAILMNT}${LOCALBASE}/ -type d | sed "s,^${JAILMNT}${LOCALBASE}/,," | sort > ${JAILMNT}${PREFIX}.PLIST_DIRS.before
+@@ -185,4 +193,8 @@
+ cleanup
+ set +e
+ 
++firehook test_port_ended "${JAILNAME}" "${PTNAME}" "${PORTDIRECTORY}" \
++	`zget stats_built` `zget stats_failed` `zget stats_ignored` \
++	`zget stats_skipped` "${build_result}"
++
+ exit 0
