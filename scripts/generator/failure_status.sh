@@ -21,7 +21,7 @@ checkdir ()
   fi
 }
 
-confopts=`grep "=" ${CONFFILE}`
+confopts=$(grep "=" ${CONFFILE})
 for opt in ${confopts}; do
    eval $opt
 done
@@ -44,8 +44,10 @@ else
    echo "Last success: " >> ${STATUSFILE}
 fi
 
-git add ${STATUSFILE}
-CHECK=`git status -s --untracked-files=no ${STATUSFILE}`
-if [ -n "${CHECK}" ]; then
-   git commit -m "Mark failed build: $1" ${STATUSFILE}
+cd ${DELTA}
+git add ${1}/STATUS
+commitmsg="\"Mark failed build: $1\""
+TASKS=(git status -s --untracked-files=no ${1}/STATUS)
+if [ -n "${TASKS}" ]; then
+   git commit -m ${commitmsg} ${1}/STATUS
 fi

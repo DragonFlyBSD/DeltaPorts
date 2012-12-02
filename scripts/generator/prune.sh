@@ -44,7 +44,7 @@ kill_directory ()
    fi
 }
 
-EXCLUDE="^(Templates/|Tools/)"
+EXCLUDE="^(Templates/|Tools/|Mk/)"
 portdirs=`cd ${MERGED}; find -s * -type d -depth 1 | grep -vE ${EXCLUDE}`
 deltdirs=`cd ${DELTA}/ports; find * -name STATUS -exec grep -lv "^MASK" {} \;`
 

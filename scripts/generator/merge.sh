@@ -76,8 +76,8 @@ while read fileline; do
    
    if [ ! -f ${PORT}/STATUS ]; then
       merge ${val_1} 1
-   elif [ -n "`grep ^MASK ${PORT}/STATUS`" ]; then
-      # masked, do nothing
+   elif [ -n "`grep '^(MASK|LOCK)' ${PORT}/STATUS`" ]; then
+      # masked or locked, do nothing
    elif [ ! -d ${MERGED}/${val_1} ]; then
       merge ${val_1} 2
    else

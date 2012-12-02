@@ -1,0 +1,48 @@
+This is how to set up dport generation:
+
+1. Install poudriere (or poudriere-devel)
+
+2. create /usr/local/etc/dports.conf:
+FPORTS=/usr/ports
+MERGED=/home/dports/merged-ports
+DPORTS=/home/dports/github/DPorts
+DELTA=/home/dports/github/DeltaPorts
+INDEX=/home/ports/INDEX-3
+
+3. Create a dports user with home directory
+
+4. Replicate github DeltaPorts (ssh key) at ~/dports/github
+
+5. Replicate github DPorts (ssh key) at ~/dports/github
+
+6. Put the following files at /usr/local/etc/hooks_poudriere:
+merge.sh
+failure_status.sh
+success_status.sh
+transfer_merge.sh
+hook_port_build_failure.sh
+hook_port_build_success.sh
+
+7. build and install portsnap
+cd /home/dports/github/DeltaPorts/scripts/portsnap && make
+rehash
+
+8. Fetch latest FreeBSD Ports Collection
+portsnap fetch update
+
+9. Create staging area
+/usr/local/etc/hooks_poudriere/merge.sh
+
+10. Customize poudriere.conf
+cp /usr/local/etc/poudriere.conf.sample /usr/local/poudriere.conf
+set DISTFILES_CACHE=/usr/distfiles
+set DPORTS_RSYNC_LOC=/home/dports/merged-ports
+
+11. create jail in poudriere (>= DragonFly 3.3)
+e.g. create jail called "master"
+
+12. create porttree in poudriere
+poudriere ports -c -p potential -m rsync
+
+13. Kickoff autogeneration
+poudriere bulk -va -j master -p potential
