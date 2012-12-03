@@ -1,5 +1,5 @@
 --- src/poudriere.d/test_ports.sh.orig	2012-11-14 19:10:09.000000000 +0100
-+++ src/poudriere.d/test_ports.sh	2012-12-01 11:15:31.000000000 +0100
++++ src/poudriere.d/test_ports.sh	2012-12-02 08:40:43.000000000 +0100
 @@ -10,7 +10,6 @@
  
  Options:
@@ -42,7 +42,7 @@
  prepare_ports
  
 -zfs snapshot ${JAILFS}@prepkg
-+firehook test_port_start "${JAILNAME}" "${PTNAME}" "${PORTDIRECTORY}" \
++firehook test_port_start "${JAILNAME}" "${PTNAME}" "${JAILMNT}/${PORTDIRECTORY}" \
 +	`zget stats_queued`
  
  if ! POUDRIERE_BUILD_TYPE=bulk parallel_build; then
@@ -70,10 +70,10 @@
  	failed_phase=${failed_status%:*}
  
  	save_wrkdir "${PKGNAME}" "${PORTDIRECTORY}" "${failed_phase}" || :
-+	firehook port_build_failure "${JAILNAME}" "${PTNAME}" "${PORTDIRECTORY}" "${failed_phase}"
++	firehook port_build_failure "${JAILNAME}" "${PTNAME}" "${JAILMNT}/${PORTDIRECTORY}" "${failed_phase}"
  	exit 1
 +else
-+	firehook port_build_success "${JAILNAME}" "${PTNAME}" "${PORTDIRECTORY}"
++	firehook port_build_success "${JAILNAME}" "${PTNAME}" "${JAILMNT}/${PORTDIRECTORY}"
  fi
  
  msg "Installing from package"
@@ -81,7 +81,7 @@
  cleanup
  set +e
  
-+firehook test_port_ended "${JAILNAME}" "${PTNAME}" "${PORTDIRECTORY}" \
++firehook test_port_ended "${JAILNAME}" "${PTNAME}" "${JAILMNT}/${PORTDIRECTORY}" \
 +	`zget stats_built` `zget stats_failed` `zget stats_ignored` \
 +	`zget stats_skipped` "${build_result}"
 +

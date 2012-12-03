@@ -1,5 +1,5 @@
 --- src/poudriere.d/common.sh.orig	2012-11-14 19:10:09.000000000 +0100
-+++ src/poudriere.d/common.sh	2012-12-01 12:58:36.000000000 +0100
++++ src/poudriere.d/common.sh	2012-12-02 08:41:08.000000000 +0100
 @@ -1,8 +1,6 @@
  #!/bin/sh
  
@@ -657,12 +657,12 @@
  			job_msg "Finished build of ${port}: Success"
  			# Cache information for next run
  			pkg_cache_data "${PKGDIR}/All/${PKGNAME}.${PKG_EXT}" ${port} || :
-+			firehook port_build_success "${JAILNAME}" "${PTNAME}" "${portdir}"
++			firehook port_build_success "${JAILNAME}" "${PTNAME}" "${JAILMNT}/${portdir}"
  		else
  			echo "${port} ${failed_phase}" >> "${MASTERMNT:-${JAILMNT}}/poudriere/ports.failed"
  			job_msg "Finished build of ${port}: Failed: ${failed_phase}"
  			clean_rdepends=1
-+			firehook port_build_failure "${JAILNAME}" "${PTNAME}" "${portdir}" "${failed_phase}"
++			firehook port_build_failure "${JAILNAME}" "${PTNAME}" "${JAILMNT}/${portdir}" "${failed_phase}"
  		fi
  	fi
  
