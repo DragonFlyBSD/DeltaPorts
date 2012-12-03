@@ -32,9 +32,9 @@ checkdir DPORTS
 HACK=$(date -j "+Y-%m-%d %H:%M")
 
 cd ${DELTA}
-git --rebase pull
+git pull --rebase
 if [ $? -ne 0 ]; then
-  echo "${HACK}:  git --rebase pull on ${DELTA} failed." >> ${LOGFILE}
+  echo "${HACK}:  git pull --rebase on ${DELTA} failed." >> ${LOGFILE}
   exit 0
 fi
 
