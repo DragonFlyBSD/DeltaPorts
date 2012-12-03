@@ -35,7 +35,7 @@ newloc=${DPORTS}/${1}
 if [ -d ${newloc} ]; then
   action="Update"
   reflex="to version ${2}"
-  cd ${MERGED} && git rm -r ${1}
+  cd ${DPORTS} && git rm -qr ${1}
 else
   action="Import"
   reflex "version ${2}"
@@ -45,8 +45,8 @@ cp -r ${oldloc} ${newloc}
 
 cd ${DPORTS}
 git add ${1}
-commitmsg="\"${action} $1 ${reflex}\""
-TASKS=(git status -s --untracked-files=no ${1})
+commitmsg="${action} ${1} ${reflex}"
+TASKS=$(git status -s --untracked-files=no ${1})
 if [ -n "${TASKS}" ]; then
-   git commit -m ${commitmsg} ${1}
+   git commit -q -m "${commitmsg}" ${1}
 fi
