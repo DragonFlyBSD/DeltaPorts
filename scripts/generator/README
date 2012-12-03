@@ -5,8 +5,8 @@ This is how to set up dport generation:
 2. create /usr/local/etc/dports.conf:
 FPORTS=/usr/ports
 MERGED=/usr/gen-dports/merged-ports
-DPORTS=/usr/gen-dports/github/DPorts
-DELTA=/usr/gen-dports/github/DeltaPorts
+DPORTS=/usr/gen-dports/DPorts
+DELTA=/usr/gen-dports/DeltaPorts
 INDEX=/usr/ports/INDEX-3
 
 3. (deleted)
