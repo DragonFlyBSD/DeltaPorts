@@ -44,10 +44,12 @@ else
    echo "Last success: " >> ${STATUSFILE}
 fi
 
-cd ${DELTA}
+cd ${DELTA}/ports
 git add ${1}/STATUS
-commitmsg="\"Mark failed build: $1\""
-TASKS=(git status -s --untracked-files=no ${1}/STATUS)
+commitmsg="Mark failed build: ${1}
+
+Attempted to build version ${2}"
+TASKS=$(git status -s --untracked-files=no ${1}/STATUS)
 if [ -n "${TASKS}" ]; then
-   git commit -m ${commitmsg} ${1}/STATUS
+   git commit -q -m "${commitmsg}" ${1}/STATUS
 fi
