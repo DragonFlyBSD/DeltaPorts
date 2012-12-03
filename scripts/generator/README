@@ -26,7 +26,8 @@ hook_port_build_failure.sh
 hook_port_build_success.sh
 
 7. build and install portsnap
-cd /usr/gen-dports/github/DeltaPorts/scripts/portsnap && make
+mkdir /var/db/portsnap
+cd /usr/gen-dports/github/DeltaPorts/scripts/portsnap && make install
 rehash
 
 8. Fetch latest FreeBSD Ports Collection
