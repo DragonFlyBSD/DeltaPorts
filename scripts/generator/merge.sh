@@ -91,3 +91,21 @@ while read fileline; do
 done < ${TMPFILE}
 
 rm ${TMPFILE}
+
+rm -rf ${MERGED}/Tools ${MERGED}/Templates ${MERGED}/Mk
+
+cp -r ${FPORTS}/Mk        ${MERGED}/
+cp -r ${FPORTS}/Tools     ${MERGED}/
+cp -r ${FPORTS}/Templates ${MERGED}/
+
+diffs=$(find ${DELTA}/special/Mk/diffs -name \*\.diff)
+for difffile in ${diffs}; do
+  patch --quiet -d ${MERGED}/Mk < ${difffile}
+done
+rm ${MERGED}/Mk/*.orig
+
+diffs=$(find ${DELTA}/special/Templates/diffs -name \*\.diff)
+for difffile in ${diffs}; do
+  patch --quiet -d ${MERGED}/Templates < ${difffile}
+done
+rm ${MERGED}/Templates/*.orig
