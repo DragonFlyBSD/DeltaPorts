@@ -9,7 +9,7 @@ DPORTS=/usr/gen-dports/DPorts
 DELTA=/usr/gen-dports/DeltaPorts
 INDEX=/usr/ports/INDEX-3
 
-3. (deleted)
+3. Replicate github DPorts (git readonly) at /usr/dports
 
 4. Replicate github DeltaPorts (ssh key) at /usr/gen-dports/github
 

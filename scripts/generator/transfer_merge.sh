@@ -31,6 +31,7 @@ checkdir MERGED
 
 oldloc=${MERGED}/${1}
 newloc=${DPORTS}/${1}
+newdir=$(dirname ${newloc})
 
 if [ -d ${newloc} ]; then
   action="Update"
@@ -38,9 +39,10 @@ if [ -d ${newloc} ]; then
   cd ${DPORTS} && git rm -qr ${1}
 else
   action="Import"
-  reflex "version ${2}"
+  reflex="version ${2}"
 fi
 
+mkdir -p ${newdir}
 cp -r ${oldloc} ${newloc}
 
 cd ${DPORTS}
