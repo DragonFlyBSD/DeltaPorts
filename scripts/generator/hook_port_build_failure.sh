@@ -11,10 +11,10 @@ SET_port_build_failure=fire_port_build_failure
 fire_port_build_failure() {
   [ "${3}" != "potential" ] && return
 
-  if [ "${5}" == "configure" \
-    -o "${5}" == "build" \
-    -o "${5}" == "install" \
-    -o "${5}" == "package" ]; then
+  if [ "${5}" = "configure" \
+    -o "${5}" = "build" \
+    -o "${5}" = "install" \
+    -o "${5}" = "package" ]; then
 
     cd ${4}
     local ARG2=$(make -VPKGVERSION)
