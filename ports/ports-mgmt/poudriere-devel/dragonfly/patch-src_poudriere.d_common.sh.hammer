@@ -1,5 +1,5 @@
---- /dev/null	2012-11-30 03:01:20.086801538 +0100
-+++ src/poudriere.d/common.sh.hammer	2012-11-30 17:25:53.000000000 +0100
+--- /dev/null	2012-12-05 09:14:49.161043935 +0100
++++ src/poudriere.d/common.sh.hammer	2012-12-02 18:54:44.000000000 +0100
 @@ -0,0 +1,566 @@
 +#!/bin/sh
 +
@@ -451,7 +451,7 @@
 +		for pid in ${MASTERMNT:-${JAILMNT}}/poudriere/var/run/*.pid; do
 +			# Ensure there is a pidfile to read or break
 +			[ "${pid}" = "${MASTERMNT:-${JAILMNT}}/poudriere/var/run/*.pid" ] && break
-+			pkill -15 -F ${pid} >/dev/null 2>&1 || :
++			kill -15 `cat ${pid}` >/dev/null 2>&1 || :
 +		done
 +	fi
 +	wait
