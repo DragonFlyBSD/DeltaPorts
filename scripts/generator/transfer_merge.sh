@@ -51,5 +51,5 @@ git add ${1}
 commitmsg="${action} ${1} ${reflex}"
 TASKS=$(git status -s --untracked-files=no ${1})
 if [ -n "${TASKS}" ]; then
-   git commit -q -m "${commitmsg}" ${1}
+   git commit -q -m "${commitmsg}" --author='Automaton <nobody@home.ok>' ${1}
 fi

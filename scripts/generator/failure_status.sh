@@ -51,5 +51,5 @@ commitmsg="Mark failed build: ${1}
 Attempted to build version ${2}"
 TASKS=$(git status -s --untracked-files=no ${1}/STATUS)
 if [ -n "${TASKS}" ]; then
-   git commit -q -m "${commitmsg}" ${1}/STATUS
+   git commit -q -m "${commitmsg}" --author='Automaton <nobody@home.ok>' ${1}/STATUS
 fi
