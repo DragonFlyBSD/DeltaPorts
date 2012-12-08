@@ -1,5 +1,5 @@
---- /dev/null	2012-12-01 08:59:54.020291688 +0100
-+++ src/poudriere.d/common.sh.dragonfly	2012-12-01 13:41:08.000000000 +0100
+--- /dev/null	2012-12-05 09:14:49.161043935 +0100
++++ src/poudriere.d/common.sh.dragonfly	2012-12-05 09:39:01.000000000 +0100
 @@ -0,0 +1,228 @@
 +#!/bin/sh
 +#
@@ -28,7 +28,7 @@
 +
 +	msg "Umounting file systems"
 +	mnt=`realpath ${MASTERMNT:-${JAILMNT}}`
-+	mount | awk -v mnt="${mnt}/" 'BEGIN{ gsub(/\//, "\\\/", mnt); } { if ($3 ~ mnt && $1 !~ /\/dev\/md/ ) { print $3 }}' |  sort -r | xargs umount -f || :
++	mount | awk -v mnt="${mnt}/" 'BEGIN{ gsub(/\//, "\\\/", mnt); } { if ($3 ~ mnt && $1 !~ /\/dev\/md/ ) { print $3 }}' |  sort -r | xargs umount || :
 +	umount ${mnt} || :
 +
 +	zset status "idle:"
