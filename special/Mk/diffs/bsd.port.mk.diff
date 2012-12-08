@@ -1,5 +1,5 @@
 --- bsd.port.mk.orig	2012-11-17 06:54:17.000000000 +0100
-+++ bsd.port.mk	2012-12-02 11:17:43.000000000 +0100
++++ bsd.port.mk	2012-12-08 23:30:37.715978000 +0100
 @@ -43,7 +43,8 @@
  #				  makefile is being used on.  Automatically set to
  #				  "FreeBSD," "NetBSD," or "OpenBSD" as appropriate.
@@ -377,6 +377,36 @@
 +_MANPAGES+=	${MAN${sect}_EN:S%^%${MAN${sect}PREFIX}/man/man${sect:tl}/%}
  .endif
  .endfor
+ 
+@@ -3142,7 +3151,7 @@
+ 
+ # Check the machine architectures
+ .if defined(ONLY_FOR_ARCHS)
+-.for __ARCH in ${ONLY_FOR_ARCHS}
++.for __ARCH in ${ONLY_FOR_ARCHS:S/amd64/x86_64/}
+ .if ${ARCH:M${__ARCH}} != ""
+ __ARCH_OK?=		1
+ .endif
+@@ -3152,7 +3161,7 @@
+ .endif
+ 
+ .if defined(NOT_FOR_ARCHS)
+-.for __NARCH in ${NOT_FOR_ARCHS}
++.for __NARCH in ${NOT_FOR_ARCHS:S/amd64/x86_64/}
+ .if ${ARCH:M${__NARCH}} != ""
+ .undef __ARCH_OK
+ .endif
+@@ -3161,9 +3170,9 @@
+ 
+ .if !defined(__ARCH_OK)
+ .if defined(ONLY_FOR_ARCHS)
+-IGNORE=		is only for ${ONLY_FOR_ARCHS},
++IGNORE=		is only for ${ONLY_FOR_ARCHS:S/amd64/x86_64/},
+ .else # defined(NOT_FOR_ARCHS)
+-IGNORE=		does not run on ${NOT_FOR_ARCHS},
++IGNORE=		does not run on ${NOT_FOR_ARCHS:S/amd64/x86_64/},
+ .endif
+ IGNORE+=	while you are running ${ARCH}
  
 @@ -3277,12 +3286,11 @@
  	  DISTDIR=${DISTDIR} WRKDIR=${WRKDIR} WRKSRC=${WRKSRC} \
