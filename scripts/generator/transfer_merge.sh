@@ -37,6 +37,7 @@ if [ -d ${newloc} ]; then
   action="Update"
   reflex="to version ${2}"
   cd ${DPORTS} && git rm -qr ${1}
+  rm -rf ${newloc}
 else
   action="Import"
   reflex="version ${2}"
