@@ -1,6 +1,6 @@
 --- /dev/null	2012-12-05 09:14:49.161043935 +0100
-+++ src/poudriere.d/common.sh.dragonfly	2012-12-05 09:39:01.000000000 +0100
-@@ -0,0 +1,228 @@
++++ src/poudriere.d/common.sh.dragonfly	2012-12-05 11:07:22.000000000 +0100
+@@ -0,0 +1,229 @@
 +#!/bin/sh
 +#
 +# DragonFly-specific
@@ -26,6 +26,7 @@
 +	local mnt
 +	zset status "stop:"
 +
++	cd /
 +	msg "Umounting file systems"
 +	mnt=`realpath ${MASTERMNT:-${JAILMNT}}`
 +	mount | awk -v mnt="${mnt}/" 'BEGIN{ gsub(/\//, "\\\/", mnt); } { if ($3 ~ mnt && $1 !~ /\/dev\/md/ ) { print $3 }}' |  sort -r | xargs umount || :
@@ -216,7 +217,7 @@
 +		  if [ "${level}" != "Mk" \
 +		    -a "${level}" != "Tools" \
 +		    -a "${level}" != "Templates" ]; then
-+		    cd ${PORTSDIR} && find ${level}/ -type d -depth 1 -maxdepth 2>/dev/null
++		    cd ${PORTSDIR} && find ${level}/ -type d -depth 1 -maxdepth 1 2>/dev/null
 +		  fi
 +		done
 +		return
