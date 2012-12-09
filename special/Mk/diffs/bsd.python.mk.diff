@@ -1,5 +1,5 @@
---- bsd.python.mk.orig	2012-10-29 14:19:30.000000000 +0100
-+++ bsd.python.mk	2012-11-30 21:08:36.000000000 +0100
+--- bsd.python.mk.orig	2012-11-17 06:54:18.000000000 +0100
++++ bsd.python.mk	2012-12-09 15:12:22.767842000 +0100
 @@ -162,7 +162,7 @@
  #
  # PYEASYINSTALL_OSARCH
@@ -9,7 +9,18 @@
  #							   if PYEASYINSTALL_ARCHDEP is defined.
  #
  # PYEASYINSTALL_CMD - Full file path to easy_install command.
-@@ -422,7 +422,7 @@
+@@ -344,8 +344,10 @@
+ # should point to some other version we have installed, according to the port USE_PYTHON
+ # specification
+ .if !defined(PYTHON_DEFAULT_PORTVERSION) || (${PYTHON_VERSION} != ${PYTHON_DEFAULT_VERSION})
++.if exists(${PYTHON_CMD})
+ _PYTHON_PORTVERSION!=	(${PYTHON_CMD} -c 'import sys; \
+ 							print(sys.version.split()[0].replace("b",".b"))' 2> /dev/null) | ${TAIL} -1
++.endif
+ .if !defined(PYTHON_NO_DEPENDS) && !empty(_PYTHON_PORTVERSION)
+ PYTHON_PORTVERSION=	${_PYTHON_PORTVERSION}
+ .endif
+@@ -422,7 +424,7 @@
  PYTHON_LIBDIR=			${PYTHONBASE}/lib/${PYTHON_VERSION}
  PYTHON_PKGNAMEPREFIX=	py${PYTHON_SUFFIX}-
  PYTHON_PKGNAMESUFFIX=	-py${PYTHON_SUFFIX}
@@ -18,7 +29,7 @@
  PYTHON_SITELIBDIR=		${PYTHON_LIBDIR}/site-packages
  
  PYTHONPREFIX_INCLUDEDIR=	${PYTHON_INCLUDEDIR:S;${PYTHONBASE};${PREFIX};}
-@@ -453,7 +453,7 @@
+@@ -453,7 +455,7 @@
  .if !defined(_OSRELEASE)
  _OSRELEASE!=					${UNAME} -r
  .endif
