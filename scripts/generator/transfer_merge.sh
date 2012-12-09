@@ -6,9 +6,26 @@
 # $2 portversions,portrevision
 
 CONFFILE=/usr/local/etc/dports.conf
+BUSYFILE=/tmp/merge.busy
+
+if [ -f ${BUSYFILE} ]; then
+   ESTABLISHED=$(cat ${BUSYFILE})
+   EXPIRED=0
+   while [ ${EXPIRED} -eq 0 ]; do
+     TIMENOW=$(date "+%s")
+     TIMEDIFF=$(expr ${TIMENOW} - ${ESTABLISHED})
+     if [ ${TIMEDIFF} -gt 299 ]; then
+        EXPIRED=1
+     else
+        sleep 3
+        [ ! -f ${BUSYFILE} ] && EXPIRED=1
+     fi
+   done
+fi
 
 if [ ! -f ${CONFFILE} ]; then
    echo "Configuration file ${CONFFILE} not found"
+
    exit 1
 fi
 
@@ -28,6 +45,8 @@ done
 
 checkdir DPORTS
 checkdir MERGED
+
+date "+%s" > ${BUSYFILE}
 
 oldloc=${MERGED}/${1}
 newloc=${DPORTS}/${1}
@@ -53,3 +72,5 @@ TASKS=$(git status -s --untracked-files=no ${1})
 if [ -n "${TASKS}" ]; then
    git commit -q -m "${commitmsg}" --author='Automaton <nobody@home.ok>' ${1}
 fi
+
+rm ${BUSYFILE}
