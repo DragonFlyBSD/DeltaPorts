@@ -56,7 +56,7 @@ checkdir DPORTS
 
 date "+%s" > ${FBUSY}
 cp ${FBUSY} ${SBUSY}
-cp ${MBUSY} ${MBUSY}
+cp ${FBUSY} ${MBUSY}
 
 HACK=$(date -j "+Y-%m-%d %H:%M")
 
