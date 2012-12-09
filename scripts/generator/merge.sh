@@ -28,11 +28,19 @@ checkdir MERGED
 
 AWKCMD='{ n=split($1,a,"-") }{ print substr($2,12) " " a[n] }'
 TMPFILE=/tmp/tmp.awk
+WORKAREA=/tmp/merge.workarea
+
+rm -rf ${WORKAREA}
+mkdir ${WORKAREA}
+mount -t tmpfs tmpfs ${WORKAREA}
 
 merge()
 {
-   M1=${MERGED}/$1
-   DP=${DELTA}/ports/$1
+   local M1=${MERGED}/$1
+   local DP=${DELTA}/ports/$1
+   local MD=0
+   local DDIFF=0
+   local DDRAG=0
    rm -rf ${M1}
    mkdir -p ${M1}
 
@@ -42,27 +50,32 @@ merge()
       isDPort=`grep ^DPORT ${DP}/STATUS`
    fi
    if [ -n "${isDPORT}" ]; then
-      cp -r ${DP}/newport/* ${M1}/
+      cpdup -i0 ${DP}/newport ${M1}
    else
-      cp  -r ${FPORTS}/$1/* ${M1}/
-      if [ -f ${DP}/Makefile.DragonFly ]; then
-         cp ${DP}/Makefile.DragonFly ${M1}/
-      fi
-      if [ -d ${DP}/dragonfly ]; then
-         cp -rf ${DP}/dragonfly ${M1}/
-      fi
-      if [ -d ${DP}/diffs ]; then
-         diffs=`find ${DP}/diffs -name \*\.diff`
+      [ -f ${DP}/Makefile.DragonFly ] && MD=1
+      [ -d ${DP}/dragonfly ] && DDRAG=1
+      [ -d ${DP}/diffs ] && DDIFF=1
+      if [ ${MD} -eq 0 -a ${DDRAG} -eq 0 -a ${DDIFF} -eq 0 ]; then
+        cpdup -i0 ${FPORTS}/${1} ${M1}
+      else
+        rm -rf ${WORKAREA}/*
+        cp -pr ${FPORTS}/$1/* ${WORKAREA}/
+        [ ${MD} -eq 1 ] && cp -p ${DP}/Makefile.DragonFly ${WORKAREA}/
+        [ ${DDRAG} -eq 1 ] && cp -pr ${DP}/dragonfly ${WORKAREA}/
+        if [ ${DDIFF} -eq 1 ]; then
+         diffs=$(find ${DP}/diffs -name \*\.diff)
          for difffile in ${diffs}; do
-            patch -d ${M1} < ${difffile}
+            patch -d ${WORKAREA} < ${difffile}
          done
-         rm ${M1}/*.orig
+         rm ${WORKAREA}/*.orig
+        fi
+        cpdup -i0 ${WORKAREA} ${M1}
       fi
    fi
 }
 
 
-awk -F \| "${AWKCMD}" ${INDEX} > ${TMPFILE}
+awk -F \| "${AWKCMD}" ${INDEX} | sort > ${TMPFILE}
 while read fileline; do
    counter=0
    for element in ${fileline}; do
@@ -76,36 +89,41 @@ while read fileline; do
    
    if [ ! -f ${PORT}/STATUS ]; then
       merge ${val_1} 1
-   elif [ -n "`grep '^(MASK|LOCK)' ${PORT}/STATUS`" ]; then
-      # masked or locked, do nothing
-   elif [ ! -d ${MERGED}/${val_1} ]; then
-      merge ${val_1} 2
    else
-      # check previous attempts
-      lastatt=`grep "^Last attempt: " ${PORT}/STATUS | cut -c 15-80`
-      if [ "${lastatt}" != "${val_2}" ]; then
-         merge ${val_1} 3
+      ML=$(grep -E '^(MASK|LOCK)' ${PORT}/STATUS)
+      if [ "${ML}" = "LOCK" ]; then
+         # locked, do nothing
+      elif [ "${ML}" = "MASK" ]; then
+         # remove if existed previously
+         rm -rf ${MERGED}/${val_1}
+      elif [ ! -d ${MERGED}/${val_1} ]; then
+         merge ${val_1} 2
+      else
+         # check previous attempts
+         lastatt=`grep "^Last attempt: " ${PORT}/STATUS | cut -c 15-80`
+         if [ "${lastatt}" != "${val_2}" ]; then
+            merge ${val_1} 3
+         fi
       fi
    fi
-   
+
 done < ${TMPFILE}
 
-rm ${TMPFILE}
+rm -f ${TMPFILE}
 
-rm -rf ${MERGED}/Tools ${MERGED}/Templates ${MERGED}/Mk
+cpdup -i0 ${FPORTS}/Tools ${MERGED}/Tools
 
-cp -r ${FPORTS}/Mk        ${MERGED}/
-cp -r ${FPORTS}/Tools     ${MERGED}/
-cp -r ${FPORTS}/Templates ${MERGED}/
+rm -rf ${WORKAREA}/*
 
-diffs=$(find ${DELTA}/special/Mk/diffs -name \*\.diff)
-for difffile in ${diffs}; do
-  patch --quiet -d ${MERGED}/Mk < ${difffile}
+for k in Mk Templates; do
+  cp -pr ${FPORTS}/${k} ${WORKAREA}/
+  diffs=$(find ${DELTA}/special/${k}/diffs -name \*\.diff)
+  for difffile in ${diffs}; do
+    patch --quiet -d ${WORKAREA}/${k} < ${difffile}
+  done
+  rm ${WORKAREA}/${k}/*.orig
+  cpdup -i0 ${WORKAREA}/${k} ${MERGED}/${k}
 done
-rm ${MERGED}/Mk/*.orig
 
-diffs=$(find ${DELTA}/special/Templates/diffs -name \*\.diff)
-for difffile in ${diffs}; do
-  patch --quiet -d ${MERGED}/Templates < ${difffile}
-done
-rm ${MERGED}/Templates/*.orig
+umount ${WORKAREA}
+rm -rf ${WORKAREA}
