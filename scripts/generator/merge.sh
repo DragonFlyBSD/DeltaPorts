@@ -27,6 +27,18 @@ checkdir FPORTS
 checkdir MERGED
 
 AWKCMD='{ n=split($1,a,"-") }{ print substr($2,12) " " a[n] }'
+AWKCMD2='{ \
+if (FNR == 1) { \
+  if ($1 == "MASK") { print $1; exit } \
+  else if ($1 == "LOCK") { print "SKIP"; exit } \
+  else if ($1 == "PORT" || $1 == "DPORT") { hold = $1 } \
+  else exit 1; \
+} \
+if (FNR == 2) \
+  if (latt == $3) { print "SKIP" } \
+  else { print hold } \
+}'
+
 TMPFILE=/tmp/tmp.awk
 WORKAREA=/tmp/merge.workarea
 
@@ -44,12 +56,9 @@ merge()
    rm -rf ${M1}
    mkdir -p ${M1}
 
-   if [ $2 -eq 1 ]; then
-      isDPort=
-   else
-      isDPort=`grep ^DPORT ${DP}/STATUS`
-   fi
-   if [ -n "${isDPORT}" ]; then
+   if [ "${2}" = "FAST" ]; then
+      cpdup -i0 ${FPORTS}/${1} ${M1}
+   elif [ "${2}" = "DPORT" ]; then
       cpdup -i0 ${DP}/newport ${M1}
    else
       [ -f ${DP}/Makefile.DragonFly ] && MD=1
@@ -87,23 +96,22 @@ while read fileline; do
    # val_2 = version,portrevision
    PORT=${DELTA}/ports/${val_1}
    
-   if [ ! -f ${PORT}/STATUS ]; then
-      merge ${val_1} 1
+   if [ ! -d ${PORT} ]; then
+      merge ${val_1} "FAST"
    else
-      ML=$(grep -E '^(MASK|LOCK)' ${PORT}/STATUS)
-      if [ "${ML}" = "LOCK" ]; then
+      ML=$(awk -v latt=${val_2} "${AWKCMD2}" ${PORT}/STATUS 2>/dev/null)
+      if [ -z "${ML}" ]; then
+         # Likely no STATUS FILE exists, consider as PORT
+         merge ${val_1} "PORT"
+      elif [ "${ML}" = "SKIP" ]; then
          # locked, do nothing
       elif [ "${ML}" = "MASK" ]; then
          # remove if existed previously
          rm -rf ${MERGED}/${val_1}
-      elif [ ! -d ${MERGED}/${val_1} ]; then
-         merge ${val_1} 2
       else
-         # check previous attempts
-         lastatt=`grep "^Last attempt: " ${PORT}/STATUS | cut -c 15-80`
-         if [ "${lastatt}" != "${val_2}" ]; then
-            merge ${val_1} 3
-         fi
+         # If previous attempt is same as val_2 then awk sets ML to "SKIP"
+         # Here ML is either PORT or DPORT
+         merge ${val_1} ${ML}
       fi
    fi
 
