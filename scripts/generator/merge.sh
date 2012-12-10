@@ -35,7 +35,7 @@ if (FNR == 1) { \
   else exit 1; \
 } \
 if (FNR == 2) \
-  if (latt == $3) { print "SKIP" } \
+  if (latt == $3 && mex == 1) { print "SKIP" } \
   else { print hold } \
 }'
 
@@ -74,7 +74,7 @@ merge()
         if [ ${DDIFF} -eq 1 ]; then
          diffs=$(find ${DP}/diffs -name \*\.diff)
          for difffile in ${diffs}; do
-            patch -d ${WORKAREA} < ${difffile}
+            patch --quiet -d ${WORKAREA} < ${difffile}
          done
          rm ${WORKAREA}/*.orig
         fi
@@ -99,7 +99,9 @@ while read fileline; do
    if [ ! -d ${PORT} ]; then
       merge ${val_1} "FAST"
    else
-      ML=$(awk -v latt=${val_2} "${AWKCMD2}" ${PORT}/STATUS 2>/dev/null)
+      MEX=0
+      [ -d ${MERGED}/${val_1} ] && MEX=1
+      ML=$(awk -v latt=${val_2} -v mex=${MEX} "${AWKCMD2}" ${PORT}/STATUS 2>/dev/null)
       if [ -z "${ML}" ]; then
          # Likely no STATUS FILE exists, consider as PORT
          merge ${val_1} "PORT"
