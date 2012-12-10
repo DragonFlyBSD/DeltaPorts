@@ -9,6 +9,8 @@ LOGFILE=/var/log/gen-dports
 FBUSY=/tmp/failure.busy
 SBUSY=/tmp/success.busy
 MBUSY=/tmp/merge.busy
+LOCK1=/usr/gen-dports/DeltaPorts/.git/index.lock
+LOCK2=/usr/gen-dports/DPorts/.git/index.lock
 
 # never start as long as busy files are present
 # Eject completely after 5 minutes of waiting
@@ -17,7 +19,7 @@ CLEAR=0
 CHECKPOINT=$(date "+%s")
 
 while [ ${CLEAR} -eq 0 ]; do
-   if [ -f ${FBUSY} -o -f ${SBUSY} -o -f ${MBUSY} ]; then
+   if [ -f ${FBUSY} -o -f ${SBUSY} -o -f ${MBUSY} -o -f ${LOCK1} -o -f ${LOCK2} ]; then
      TIMENOW=$(date "+%s")
      TIMEDIFF=$(expr ${TIMENOW} - ${CHECKPOINT})
      if [ ${TIMEDIFF} -gt 299 ]; then
@@ -31,6 +33,10 @@ while [ ${CLEAR} -eq 0 ]; do
       CLEAR=1
    fi
 done
+
+date "+%s" > ${FBUSY}
+cp ${FBUSY} ${SBUSY}
+cp ${FBUSY} ${MBUSY}
 
 if [ ! -f ${CONFFILE} ]; then
    echo "Configuration file ${CONFFILE} not found"
@@ -53,10 +59,6 @@ done
 
 checkdir DELTA
 checkdir DPORTS
-
-date "+%s" > ${FBUSY}
-cp ${FBUSY} ${SBUSY}
-cp ${FBUSY} ${MBUSY}
 
 HACK=$(date -j "+Y-%m-%d %H:%M")
 

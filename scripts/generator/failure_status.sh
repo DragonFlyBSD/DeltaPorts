@@ -22,9 +22,11 @@ if [ -f ${BUSYFILE} ]; then
      fi
    done
 fi
+date "+%s" > ${BUSYFILE}
 
 if [ ! -f ${CONFFILE} ]; then
    echo "Configuration file ${CONFFILE} not found"
+   rm -f ${BUSYFILE}
    exit 1
 fi
 
@@ -33,6 +35,7 @@ checkdir ()
    eval "MYDIR=\$$1"
    if [ ! -d ${MYDIR} ]; then
      echo "The $1 directory (${MYDIR}) does not exist."
+     rm -f ${BUSYFILE}
      exit 1
   fi
 }
@@ -43,8 +46,6 @@ for opt in ${confopts}; do
 done
 
 checkdir DELTA
-
-date "+%s" > ${BUSYFILE}
 
 mkdir -p ${DELTA}/ports/${1}
 
