@@ -1,6 +1,6 @@
---- /dev/null	2012-12-06 03:01:20.230192667 +0100
-+++ src/poudriere.d/common.sh.hammer	2012-12-06 21:07:05.000000000 +0100
-@@ -0,0 +1,566 @@
+--- /dev/null	2012-12-07 03:01:21.916126215 +0100
++++ src/poudriere.d/common.sh.hammer	2012-12-07 09:12:54.000000000 +0100
+@@ -0,0 +1,569 @@
 +#!/bin/sh
 +
 +zget() {
@@ -478,6 +478,9 @@
 +
 +	# Try to minimize ZVERSION checks issues
 +	ZVERSION=9999
++
++	# use tmpfs for poudriere deps and pool
++	TMPFS_DATA=yes
 +}
 +
 +print_ports_table () {
