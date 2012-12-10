@@ -14,7 +14,7 @@ if [ -f ${BUSYFILE} ]; then
    while [ ${EXPIRED} -eq 0 ]; do
      TIMENOW=$(date "+%s")
      TIMEDIFF=$(expr ${TIMENOW} - ${ESTABLISHED})
-     if [ ${TIMEDIFF} -gt 299 ]; then
+     if [ ${TIMEDIFF} -gt 599 ]; then
         EXPIRED=1
      else
         sleep 3
@@ -52,6 +52,21 @@ oldloc=${MERGED}/${1}
 newloc=${DPORTS}/${1}
 newdir=$(dirname ${newloc})
 
+LOCKFILE=${DPORTS}/.git/index.lock
+if [ -f ${LOCKFILE} ]; then
+   EXPIRED=0
+   ESTABLISHED=$(date "+%s")
+   while [ ${EXPIRED} -eq 0 ]; do
+      sleep 3
+      TIMENOW=$(date "+%s")
+      TIMEDIFF=$(expr ${TIMENOW} - ${ESTABLISHED})
+      [ ! -f ${LOCKFILE} ] && EXPIRED=1
+      if [ ${TIMEDIFF} -gt 119 ]; then
+         exit 1
+      fi
+   done
+fi
+
 if [ -d ${newloc} ]; then
   action="Update"
   reflex="to version ${2}"
@@ -68,9 +83,9 @@ cp -r ${oldloc} ${newloc}
 cd ${DPORTS}
 git add ${1}
 commitmsg="${action} ${1} ${reflex}"
-TASKS=$(git status -s --untracked-files=no ${1})
-if [ -n "${TASKS}" ]; then
+#TASKS=$(git status -s --untracked-files=no ${1})
+#if [ -n "${TASKS}" ]; then
    git commit -q -m "${commitmsg}" --author='Automaton <nobody@home.ok>' ${1}
-fi
+#fi
 
 rm ${BUSYFILE}
