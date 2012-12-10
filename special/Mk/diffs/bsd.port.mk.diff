@@ -1,5 +1,5 @@
---- bsd.port.mk.orig	2012-11-17 06:54:17.000000000 +0100
-+++ bsd.port.mk	2012-12-10 00:18:57.949333000 +0100
+--- bsd.port.mk.orig	2012-12-10 11:20:14.000000000 +0100
++++ bsd.port.mk	2012-12-10 12:50:13.446246000 +0100
 @@ -43,7 +43,8 @@
  #				  makefile is being used on.  Automatically set to
  #				  "FreeBSD," "NetBSD," or "OpenBSD" as appropriate.
@@ -447,16 +447,16 @@
  all: build
  .endif
  
-@@ -3309,7 +3310,7 @@
- #
+@@ -3310,7 +3311,7 @@
  ################################################################
  .if ((!defined(OPTIONS_DEFINE) && !defined(OPTIONS_SINGLE) && !defined(OPTIONS_MULTI)) \
+ 	&& !defined(OPTIONS_GROUP) && !defined(OPTIONS_RADIO) \
 -	|| defined(CONFIG_DONE_${UNIQUENAME:U}) || \
 +	|| defined(CONFIG_DONE_${UNIQUENAME:tu}) || \
  	defined(PACKAGE_BUILDING) || defined(BATCH))
  _OPTIONS_OK=yes
  .endif
-@@ -3597,7 +3598,7 @@
+@@ -3598,7 +3599,7 @@
  .if !target(patch-dos2unix)
  patch-dos2unix:
  .if defined(USE_DOS2UNIX)
@@ -465,7 +465,7 @@
  	@${ECHO_MSG} "===>   Converting DOS text files to UNIX text files"
  	@${FIND} -E ${WRKSRC} -type f -iregex '${DOS2UNIX_REGEX}' -print0 | \
  			${XARGS} -0 ${REINPLACE_CMD} -i '' -e 's/$$//'
-@@ -3649,7 +3650,7 @@
+@@ -3650,7 +3651,7 @@
  .endif
  	@if [ -d ${PATCHDIR} ]; then \
  		if [ "`${ECHO_CMD} ${PATCHDIR}/patch-*`" != "${PATCHDIR}/patch-*" ]; then \
@@ -474,7 +474,7 @@
  			PATCHES_APPLIED="" ; \
  			for i in ${PATCHDIR}/patch-*; do \
  				case $$i in \
-@@ -3674,6 +3675,33 @@
+@@ -3675,6 +3676,33 @@
  			done; \
  		fi; \
  	fi
@@ -508,7 +508,7 @@
  .endif
  
  .if !target(run-autotools-fixup)
-@@ -4352,39 +4380,39 @@
+@@ -4353,39 +4381,39 @@
  .for target in extract patch configure build install package
  
  .if !target(${target}) && defined(_OPTIONS_OK)
@@ -560,7 +560,7 @@
  	@if [ -e ${.TARGET} ]; then \
  		${DO_NADA}; \
  	else \
-@@ -4793,7 +4821,7 @@
+@@ -4794,7 +4822,7 @@
  	@ \
  	${checksum_init} \
  	\
@@ -569,7 +569,7 @@
  		eval alg_executable=\$$$$alg; \
  		if [ -z "$$alg_executable" ]; then \
  			${ECHO_MSG} "Checksum algorithm $$alg: Couldn't find the executable."; \
-@@ -4816,7 +4844,7 @@
+@@ -4817,7 +4845,7 @@
  		${checksum_init} \
  		\
  		for file in ${_CKSUMFILES}; do \
@@ -578,7 +578,7 @@
  				eval alg_executable=\$$$$alg; \
  				\
  				if [ $$alg_executable != "NO" ]; then \
-@@ -4827,7 +4855,7 @@
+@@ -4828,7 +4856,7 @@
  		done \
  	)
  	@for file in ${_IGNOREFILES}; do \
@@ -587,7 +587,7 @@
  			${ECHO_CMD} "$$alg ($$file) = IGNORE" >> ${DISTINFO_FILE}; \
  		done; \
  	done
-@@ -4841,7 +4869,7 @@
+@@ -4842,7 +4870,7 @@
  		for file in ${_CKSUMFILES}; do \
  			ignored="true"; \
  			_file=$${file#${DIST_SUBDIR}/*};	\
@@ -596,7 +596,7 @@
  				ignore="false"; \
  				eval alg_executable=\$$$$alg; \
  				\
-@@ -4895,7 +4923,7 @@
+@@ -4896,7 +4924,7 @@
  			_file=$${file#${DIST_SUBDIR}/*};	\
  			ignored="true"; \
  			alreadymatched="false"; \
@@ -605,7 +605,7 @@
  				ignore="false"; \
  				eval alg_executable=\$$$$alg; \
  				\
-@@ -5001,14 +5029,14 @@
+@@ -5002,14 +5030,14 @@
  
  _INSTALL_DEPENDS=	\
  		if [ X${USE_PACKAGE_DEPENDS} != "X" ]; then \
@@ -622,7 +622,7 @@
  					${WRKDIR}/pkg-static add $${subpkgfile}; \
  					${RM} -f ${WRKDIR}/pkg-static; \
  				else \
-@@ -5018,12 +5046,13 @@
+@@ -5019,12 +5047,13 @@
  			  (cd $$dir; ${MAKE} -DINSTALLS_DEPENDS $$target $$depends_args) ; \
  			fi; \
  		else \
@@ -637,7 +637,7 @@
  .if defined(${deptype}_DEPENDS)
  .if !defined(NO_DEPENDS)
  	@for i in `${ECHO_CMD} "${${deptype}_DEPENDS}"`; do \
-@@ -5189,7 +5218,7 @@
+@@ -5190,7 +5219,7 @@
  				continue;				\
  			fi;						\
  			${ECHO_CMD} $$d;				\
@@ -646,7 +646,7 @@
  				${ECHO_MSG} "${PKGNAME}: \"$$d\" erroneous -- dependency list incomplete" >&2; \
  				continue;				\
  			fi;						\
-@@ -5219,7 +5248,7 @@
+@@ -5220,7 +5249,7 @@
  				${ECHO_MSG} "${PKGNAME}: \"$$d\" non-existent -- dependency list incomplete" >&2; \
  				continue;				\
  			fi;						\
@@ -655,7 +655,7 @@
  				${ECHO_MSG} "${PKGNAME}: \"$$d\" erroneous -- dependency list incomplete" >&2; \
  				continue;				\
  			fi;						\
-@@ -5258,7 +5287,7 @@
+@@ -5259,7 +5288,7 @@
  				${ECHO_MSG} "${PKGNAME}: \"$$d\" non-existent -- dependency list incomplete" >&2; \
  				continue;				\
  			fi;						\
@@ -664,7 +664,7 @@
  				${ECHO_MSG} "${PKGNAME}: \"$$d\" erroneous -- dependency list incomplete" >&2; \
  				continue;				\
  			fi;						\
-@@ -5341,7 +5370,7 @@
+@@ -5342,7 +5371,7 @@
  			else	\
  				continue;	\
  			fi;;	\
@@ -673,7 +673,7 @@
  				continue;	\
  			fi;;	\
  		esac;	\
-@@ -5636,15 +5665,20 @@
+@@ -5637,15 +5666,20 @@
  apply-slist:
  .if defined(SUB_FILES)
  .for file in ${SUB_FILES}
@@ -698,7 +698,7 @@
  .endif
  .endfor
  .endif
-@@ -5691,8 +5725,8 @@
+@@ -5692,8 +5726,8 @@
  .endfor
  
  .for reinplace in ${PLIST_REINPLACE}
@@ -709,7 +709,7 @@
  .endif
  .endfor
  
-@@ -5845,7 +5879,7 @@
+@@ -5846,7 +5880,7 @@
  
  .if !target(install-rc-script)
  install-rc-script:
@@ -718,7 +718,7 @@
  .if defined(USE_RCORDER)
  	@${ECHO_MSG} "===> Installing early rc.d startup script(s)"
  	@${ECHO_CMD} "@cwd /" >> ${TMPPLIST}
-@@ -5855,7 +5889,7 @@
+@@ -5856,7 +5890,7 @@
  	done
  	@${ECHO_CMD} "@cwd ${PREFIX}" >> ${TMPPLIST}
  .endif
@@ -727,7 +727,7 @@
  	@${ECHO_MSG} "===> Installing rc.d startup script(s)"
  	@${ECHO_CMD} "@cwd ${PREFIX}" >> ${TMPPLIST}
  	@for i in ${USE_RC_SUBR}; do \
-@@ -5974,6 +6008,7 @@
+@@ -5975,6 +6009,7 @@
  	OPSYS="${OPSYS:S/"/"'"'"/g:S/\$/\$\$/g:S/\\/\\\\/g}" \
  	OSREL="${OSREL:S/"/"'"'"/g:S/\$/\$\$/g:S/\\/\\\\/g}" \
  	OSVERSION="${OSVERSION:S/"/"'"'"/g:S/\$/\$\$/g:S/\\/\\\\/g}" \
