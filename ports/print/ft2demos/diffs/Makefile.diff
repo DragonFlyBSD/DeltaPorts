@@ -1,0 +1,14 @@
+--- /usr/ports/print/ft2demos/Makefile	2012-11-17 07:00:49.000000000 +0100
++++ Makefile	2012-12-15 18:14:00.263006000 +0100
+@@ -31,7 +31,10 @@
+ 
+ .include <bsd.port.pre.mk>
+ 
+-FREETYPE_WRKSRC!=	cd ${PORTSDIR}/print/freetype2; ${MAKE} -V WRKSRC
++.if exists(../../print/freetype2)
++FREETYPE2VER!=		awk '{ if ($$1 == "PORTVERSION=") print $$2 }' ../../print/freetype2/Makefile ; echo
++.endif
++FREETYPE_WRKSRC=	${WRKDIRPREFIX}/print/freetype2/work/freetype-${FREETYPE2VER}
+ 
+ do-install:
+ 	@(cd ${WRKSRC}/bin/.libs/; ${INSTALL_PROGRAM} ${FT_PROGRAMS} ${PREFIX}/bin)
