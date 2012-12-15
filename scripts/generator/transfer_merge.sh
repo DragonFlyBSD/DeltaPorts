@@ -47,9 +47,11 @@ mkdir -p ${newdir}
 cp -r ${oldloc} ${newloc}
 
 NAME=$(echo ${1} | sed -e 's|/|__|g')
+mkdir -p -m 777 ${COMQUEUE}
 rm -f ${COMQUEUE}/dport.${NAME}
 cat > ${COMQUEUE}/dport.${NAME} << EOF
 ${1}
 ${action}
 ${2}
 EOF
+chmod 777 ${COMQUEUE}/dport.${NAME}
