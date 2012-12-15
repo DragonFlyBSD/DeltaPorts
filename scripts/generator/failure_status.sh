@@ -47,10 +47,11 @@ else
 fi
 
 NAME=$(echo ${1} | sed -e 's|/|__|g')
-mkdir -p ${COMQUEUE}
+mkdir -p -m 777 ${COMQUEUE}
 rm -f ${COMQUEUE}/delta.${NAME}
 cat > ${COMQUEUE}/delta.${NAME} << EOF
 ${1}
 Failure
 ${2}
 EOF
+chmod 777 ${COMQUEUE}/delta.${NAME}
