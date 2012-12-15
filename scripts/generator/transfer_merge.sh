@@ -6,23 +6,6 @@
 # $2 portversions,portrevision
 
 CONFFILE=/usr/local/etc/dports.conf
-BUSYFILE=/tmp/merge.busy
-
-if [ -f ${BUSYFILE} ]; then
-   ESTABLISHED=$(cat ${BUSYFILE})
-   EXPIRED=0
-   while [ ${EXPIRED} -eq 0 ]; do
-     TIMENOW=$(date "+%s")
-     TIMEDIFF=$(expr ${TIMENOW} - ${ESTABLISHED})
-     if [ ${TIMEDIFF} -gt 599 ]; then
-        EXPIRED=1
-     else
-        sleep 3
-        [ ! -f ${BUSYFILE} ] && EXPIRED=1
-     fi
-   done
-fi
-date "+%s" > ${BUSYFILE}
 
 if [ ! -f ${CONFFILE} ]; then
    echo "Configuration file ${CONFFILE} not found"
@@ -52,26 +35,9 @@ oldloc=${MERGED}/${1}
 newloc=${DPORTS}/${1}
 newdir=$(dirname ${newloc})
 
-LOCKFILE=${DPORTS}/.git/index.lock
-if [ -f ${LOCKFILE} ]; then
-   EXPIRED=0
-   ESTABLISHED=$(date "+%s")
-   while [ ${EXPIRED} -eq 0 ]; do
-      sleep 3
-      TIMENOW=$(date "+%s")
-      TIMEDIFF=$(expr ${TIMENOW} - ${ESTABLISHED})
-      [ ! -f ${LOCKFILE} ] && EXPIRED=1
-      if [ ${TIMEDIFF} -gt 119 ]; then
-         exit 1
-      fi
-   done
-fi
-
 if [ -d ${newloc} ]; then
   action="Update"
   reflex="to version ${2}"
-  cd ${DPORTS} && git rm -qr ${1}
-  rm -rf ${newloc}
 else
   action="Import"
   reflex="version ${2}"
@@ -80,12 +46,10 @@ fi
 mkdir -p ${newdir}
 cp -r ${oldloc} ${newloc}
 
-cd ${DPORTS}
-git add ${1}
-commitmsg="${action} ${1} ${reflex}"
-#TASKS=$(git status -s --untracked-files=no ${1})
-#if [ -n "${TASKS}" ]; then
-   git commit -q -m "${commitmsg}" --author='Automaton <nobody@home.ok>' ${1}
-#fi
-
-rm ${BUSYFILE}
+NAME=$(echo ${1} | sed -e 's|/|__|g')
+rm -f ${COMQUEUE}/dport.${NAME}
+cat > ${COMQUEUE}/dport.${NAME} << EOF
+${1}
+${action}
+${2}
+EOF
