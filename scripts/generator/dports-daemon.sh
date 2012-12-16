@@ -52,10 +52,10 @@ while [ 1 ]; do
      split ${oneline}
      commitmsg="${VAL2}: ${VAL1} v${VAL3}"
      ( cd ${DELTA}/ports && git add ${VAL1}/STATUS )
-     if [ $? -ne 0 ]; then
+     if [ $? -eq 0 ]; then
         ( cd ${DELTA}/ports && git commit -q -m "${commitmsg}" ${VAL1}/STATUS )
      fi
-     if [ $? -ne 0 ]; then
+     if [ $? -eq 0 ]; then
         rm ${item}
      fi
    done
@@ -69,10 +69,10 @@ while [ 1 ]; do
      fi
      commitmsg="${VAL2} ${VAL1} ${reflex}"
      ( cd ${DPORTS} && git add ${VAL1} )
-     if [ $? -ne 0 ]; then
+     if [ $? -eq 0 ]; then
         ( cd ${DPORTS} && git commit -q -m "${commitmsg}" ${VAL1} )
      fi
-     if [ $? -ne 0 ]; then
+     if [ $? -eq 0 ]; then
         rm ${item}
      fi
    done
