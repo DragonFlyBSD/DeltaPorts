@@ -1,0 +1,34 @@
+#!/bin/sh
+#
+# PROVIDE: dportd
+# REQUIRE: LOGIN
+#
+
+. /etc/rc.subr
+
+name=dportsd
+rcvar=${name}_enable
+
+load_rc_config ${name}
+
+: ${dportsd_enable="NO"}
+: ${dportsd_pidfile="/home/automaton/dportsd.pid"}
+: ${dportsd_user="automaton"}
+
+pidfile=${dportsd_pidfile}
+command="/usr/local/sbin/dports-daemon.sh"
+command_interpreter="/bin/sh"
+start_cmd="dportsd_startcmd"
+
+dportsd_startcmd()
+{
+   if [ -n "${rc_pid}" ]; then 
+	echo "${name} already running? (pid=$rc_pid)."
+	exit 1
+   fi
+   echo Starting ${name}
+   cmd="/usr/sbin/daemon -p ${dportsd_pidfile} ${command}"
+   eval "su ${dportsd_user} -c '$cmd'"
+}
+
+run_rc_command "$1"

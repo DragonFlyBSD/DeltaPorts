@@ -41,6 +41,7 @@ AWKCMD='{ printf("%s ", $1) }'
 rm -f ${LOGFILE}
 
 COUNTER=0
+ESTABLISHED=$(date "+%s")
 cd ${COMQUEUE}
 while [ 1 ]; do
    COUNTER=$(expr ${COUNTER} + 1)
@@ -67,7 +68,9 @@ while [ 1 ]; do
      ( cd ${DPORTS} && git commit -q -m "${commitmsg}" ${VAL1} )
      rm ${item}      
    done
-   if [ ${COUNTER} -eq 30 ]; then
+   TIMENOW=$(date "+%s")
+   TIMEDIFF=$(expr ${TIMENOW} - ${ESTABLISHED})
+   if [ ${COUNTER} -eq 30 -o ${TIMEDIFF} -gt 1800 ]; then
       HACK=$(date -j "+Y-%m-%d %H:%M")
       ( cd ${DELTA} && git pull --rebase --quiet )
       if [ $? -ne 0 ]; then
@@ -85,6 +88,7 @@ while [ 1 ]; do
          echo "${HACK}:  git push on ${DPORTS} failed." >> ${LOGFILE}
       fi
       COUNTER=0
+      ESTABLISHED=$(date "+%s")
    fi
    sleep 30
 done

@@ -8,6 +8,7 @@ MERGED=/usr/gen-dports/merged-ports
 DPORTS=/usr/gen-dports/DPorts
 DELTA=/usr/gen-dports/DeltaPorts
 INDEX=/usr/ports/INDEX-3
+COMQUERE=/tmp/crondports
 
 3. Replicate github DPorts (git readonly) at /usr/dports
 
@@ -15,15 +16,25 @@ INDEX=/usr/ports/INDEX-3
 
 5. Replicate github DPorts (ssh key) at /usr/gen-dports/github
 
-6. Put the following files at /usr/local/etc/hooks_poudriere:
+6A. Put the following files at /usr/local/etc/hooks_poudriere:
 merge.sh
 prune.sh
-cron_dports.sh
 failure_status.sh
 success_status.sh
 transfer_merge.sh
 hook_port_build_failure.sh
 hook_port_build_success.sh
+
+6B. Put dportsd at /usr/local/etc/rc.d/
+
+6C. Put dports-daemon at /usr/local/sbin/
+
+6D. Activate the git daemon
+    1. Create automation user
+    2. Set up .gitconfig appropriately in /home/automaton
+    3. Change DPorts and DeltaPorts repositories to group automation
+    4. chmod -R g+w on DPorts and DeltaPorts
+    5. echo "dportsd_enable=YES" >> /etc/rc.d
 
 7. build and install portsnap
 mkdir /var/db/portsnap
@@ -47,14 +58,13 @@ e.g. create jail called "master"
 12. create porttree in poudriere
 poudriere ports -c -p potential -m rsync
 
-13. Kickoff autogeneration
+13. Activate daemon if you haven't rebooted yet
+/usr/local/etc/rc.d/dports start
+
+14. Kickoff autogeneration
 poudriere bulk -va -j master -p potential
 
-
 Later:
-Set up cron job to push check commits and push if necessary every 15 minutes
-add /usr/local/etc/hooks_poudriere/cron_dports.sh to cron, executed by root
-
 Either manually or automatically:
 portsnap fetch update
 /usr/local/etc/hooks_poudriere/prune.sh
