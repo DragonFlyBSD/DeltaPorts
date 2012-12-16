@@ -6,7 +6,7 @@
 #
 
 CONFFILE=/usr/local/etc/dports.conf
-LOGFILE=/var/log/gen-dports
+LOGFILE=~/gen-dports.log
 
 if [ ! -f ${CONFFILE} ]; then
    echo "Configuration file ${CONFFILE} not found"
@@ -52,8 +52,12 @@ while [ 1 ]; do
      split ${oneline}
      commitmsg="${VAL2}: ${VAL1} v${VAL3}"
      ( cd ${DELTA}/ports && git add ${VAL1}/STATUS )
-     ( cd ${DELTA}/ports && git commit -q -m "${commitmsg}" ${VAL1}/STATUS )
-     rm ${item}
+     if [ $? -ne 0 ]; then
+        ( cd ${DELTA}/ports && git commit -q -m "${commitmsg}" ${VAL1}/STATUS )
+     fi
+     if [ $? -ne 0 ]; then
+        rm ${item}
+     fi
    done
    for item in ${CANDIDATES2}; do
      oneline=$(awk "${AWKCMD}" ${item})
@@ -65,8 +69,12 @@ while [ 1 ]; do
      fi
      commitmsg="${VAL2} ${VAL1} ${reflex}"
      ( cd ${DPORTS} && git add ${VAL1} )
-     ( cd ${DPORTS} && git commit -q -m "${commitmsg}" ${VAL1} )
-     rm ${item}      
+     if [ $? -ne 0 ]; then
+        ( cd ${DPORTS} && git commit -q -m "${commitmsg}" ${VAL1} )
+     fi
+     if [ $? -ne 0 ]; then
+        rm ${item}
+     fi
    done
    TIMENOW=$(date "+%s")
    TIMEDIFF=$(expr ${TIMENOW} - ${ESTABLISHED})
