@@ -43,8 +43,8 @@ else
   reflex="version ${2}"
 fi
 
-rm -rf ${newdir}
 mkdir -p ${newdir}
+rm -rf ${newloc}
 cp -r ${oldloc} ${newloc}
 
 NAME=$(echo ${1} | sed -e 's|/|__|g')
