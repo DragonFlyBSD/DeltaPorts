@@ -43,6 +43,7 @@ else
   reflex="version ${2}"
 fi
 
+rm -rf ${newdir}
 mkdir -p ${newdir}
 cp -r ${oldloc} ${newloc}
 
