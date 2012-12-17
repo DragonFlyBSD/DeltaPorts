@@ -53,10 +53,15 @@ while [ 1 ]; do
      commitmsg="${VAL2}: ${VAL1} v${VAL3}"
      ( cd ${DELTA}/ports && git add ${VAL1}/STATUS )
      if [ $? -eq 0 ]; then
-        ( cd ${DELTA}/ports && git commit -q -m "${commitmsg}" ${VAL1}/STATUS )
-     fi
-     if [ $? -eq 0 ]; then
-        rm ${item}
+        TASKS=$(cd ${DELTA}/ports && git status -s --untracked-files=no ${VAL1}/STATUS)
+        if [ -z "${TASKS}" ]; then
+           rm ${item}
+        else
+           ( cd ${DELTA}/ports && git commit -q -m "${commitmsg}" ${VAL1}/STATUS )
+           if [ $? -eq 0 ]; then
+              rm ${item}
+           fi
+        fi
      fi
    done
    for item in ${CANDIDATES2}; do
@@ -70,10 +75,15 @@ while [ 1 ]; do
      commitmsg="${VAL2} ${VAL1} ${reflex}"
      ( cd ${DPORTS} && git add ${VAL1} )
      if [ $? -eq 0 ]; then
-        ( cd ${DPORTS} && git commit -q -m "${commitmsg}" ${VAL1} )
-     fi
-     if [ $? -eq 0 ]; then
-        rm ${item}
+        TASKS=$(cd ${DELTA}/ports && git status -s --untracked-files=no ${VAL1})
+        if [ -z "${TASKS}" ]; then
+           rm ${item}
+        else
+           ( cd ${DPORTS} && git commit -q -m "${commitmsg}" ${VAL1} )
+           if [ $? -eq 0 ]; then
+              rm ${item}
+           fi
+        fi
      fi
    done
    TIMENOW=$(date "+%s")
