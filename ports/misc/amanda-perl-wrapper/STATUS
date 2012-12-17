@@ -1,3 +1,6 @@
-PORT
+MASK
+# wants /lib/libthr.so
+# before putting /usr/lib/libpthread.so.x there, need to understand what
+# the purpose of this port is.  pkg-descr is sparse
 Last attempt: 1.01
 Last success: 1.01
