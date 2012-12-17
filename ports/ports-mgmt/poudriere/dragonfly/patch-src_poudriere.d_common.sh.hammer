@@ -1,6 +1,6 @@
 --- /dev/null	2012-12-17 03:01:40.881614136 +0100
-+++ src/poudriere.d/common.sh.hammer	2012-12-17 13:30:38.000000000 +0100
-@@ -0,0 +1,767 @@
++++ src/poudriere.d/common.sh.hammer	2012-12-17 15:42:26.000000000 +0100
+@@ -0,0 +1,771 @@
 +#!/bin/sh
 +
 +zget() {
@@ -349,7 +349,11 @@
 +		msg_n "Creating slave ${j}..."
 +		cpdup -x -i0 ${HAMMER_SNAPDIR}/${snap}/ ${mnt}/
 +		echo "done"
-+ls ${mnt}
++
++		# This is a bug somewhere in tmpfs -- the directories
++		# sometimes aren't available for mount right away.
++		# Wait it out until this is fixed.
++		sleep 5
 +
 +		MASTERMNT=${JAILMNT} JAILNAME=${name} JAILMNT=${mnt} JAILFS=${pfs} do_jail_mounts 0
 +		MASTERMNT=${JAILMNT} JAILNAME=${name} JAILMNT=${mnt} JAILFS=${pfs} do_portbuild_mounts 0
