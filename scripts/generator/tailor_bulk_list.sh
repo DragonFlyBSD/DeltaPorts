@@ -27,18 +27,23 @@ for opt in ${confopts}; do
 done
 
 AWKCMD='{ n=split($1,a,"-") }{ print a[n] }'
+# New logic: We only want to pass through ports that have
+# versions we haven't tested yet.
+# This means versions that don't match last attempt.
 AWKFAIL='{ \
 if (FNR == 2) { \
   latt = $3; \
   if (passver != latt) { print "GOOD"; exit } \
 } \
-if (FNR == 3) { \
-  if (NF == 2) { print "FAIL"; exit } \
-  if ($3 == latt) \
-     print "GOOD"; \
-  else \
-     print "FAIL"; \
-}}'
+if (FNR == 3) { print "FAIL" } \
+}'
+#if (FNR == 3) { \
+#  if (NF == 2) { print "FAIL"; exit } \
+#  if ($3 == latt) \
+#     print "GOOD"; \
+#  else \
+#     print "FAIL"; \
+#}}'
 
 checkdir DELTA
 checkdir FPORTS
