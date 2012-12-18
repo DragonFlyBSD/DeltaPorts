@@ -75,7 +75,7 @@ while [ 1 ]; do
      commitmsg="${VAL2} ${VAL1} ${reflex}"
      ( cd ${DPORTS} && git add ${VAL1} )
      if [ $? -eq 0 ]; then
-        TASKS=$(cd ${DELTA}/ports && git status -s --untracked-files=no ${VAL1})
+        TASKS=$(cd ${DPORTS} && git status -s --untracked-files=no ${VAL1})
         if [ -z "${TASKS}" ]; then
            rm ${item}
         else
