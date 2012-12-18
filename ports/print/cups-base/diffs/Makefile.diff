@@ -1,6 +1,14 @@
 --- Makefile.orig	2012-12-18 14:00:41.222157000 +0100
-+++ Makefile	2012-12-18 14:13:10.407552000 +0100
-@@ -225,7 +225,9 @@
++++ Makefile	2012-12-18 15:24:44.386312000 +0100
+@@ -23,6 +23,7 @@
+ LDFLAGS+=	-L${LOCALBASE}/lib
+ DSOFLAGS=	-Wl,-rpath,${PREFIX}/lib -L${PREFIX}/lib ${LDFLAGS}
+ CONFIGURE_ENV=	DSOFLAGS="${DSOFLAGS}"
++CONFIGURE_ENV+=	ac_cv_search_iconv_open=-liconv
+ CONFIGURE_ARGS+=	--localstatedir=/var			\
+ 			--disable-slp				\
+ 			--disable-gssapi			\
+@@ -225,7 +226,9 @@
  .else
  CONFIGURE_ARGS+=	--disable-libusb
  .endif
