@@ -5,7 +5,7 @@
  #include <errno.h>
  #include <ctype.h>
 -#ifdef __FreeBSD__
-+#if defined(__FreeBSD__) or defined(__DragonFly__)
++#if defined(__FreeBSD__) || defined(__DragonFly__)
  #include <sys/endian.h>
  #else
  #include <byteswap.h>
