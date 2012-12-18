@@ -1,6 +1,6 @@
---- /dev/null	2012-12-17 03:01:40.881614136 +0100
-+++ src/poudriere.d/common.sh.hammer	2012-12-17 15:42:26.000000000 +0100
-@@ -0,0 +1,771 @@
+--- /dev/null	2012-12-18 07:36:50.645068709 +0100
++++ src/poudriere.d/common.sh.hammer	2012-12-18 07:48:21.000000000 +0100
+@@ -0,0 +1,777 @@
 +#!/bin/sh
 +
 +zget() {
@@ -104,8 +104,14 @@
 +
 +differential () {
 +	[ $# -ne 3 ] && eargs master-mountpoint slave-mountpoint job-id
-+	local mtreename=slave-${3}.preinst
-+	local trees=${1}/poudriere/trees
++	local mm="${1}"
++	local jn="${3}"
++	if [ -z "${mm}" ]; then
++	   mm="${2}"
++	   jn="00"
++	fi
++	local mtreename=slave-${jn}.preinst
++	local trees=${mm}/poudriere/trees
 +	local AWKCMD='{ if ($0 != ". changed") { \
 +xx = length ($0); \
 +if ($NF == "changed") {print "M * " substr ($0, 1, xx - 8)} \
