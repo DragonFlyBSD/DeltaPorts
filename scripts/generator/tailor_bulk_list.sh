@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# set bulk list but exclude known failures
+# set bulk list but exclude all ports where current version = last attempt
 
 CONFFILE=/usr/local/etc/dports.conf
 TMPFILE=/tmp/pre-bulk.list
