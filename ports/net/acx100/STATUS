@@ -1,0 +1,2 @@
+MASK
+# NO_PACKAGE=	This port should be recompiled for a particular FreeBSD kernel

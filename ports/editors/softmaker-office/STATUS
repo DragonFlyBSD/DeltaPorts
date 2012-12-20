@@ -1,3 +1,2 @@
 MASK
-# Fair is fair.
-# I masked this 7-year demo crap on pkgsrc too.
+# NO_PACKAGE=	distribution with other products of any kind forbiden

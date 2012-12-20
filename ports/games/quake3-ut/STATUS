@@ -1,0 +1,2 @@
+MASK
+# NO_PACKAGE=	"Distfile is \>256MB\; define FORCE_PACKAGE if you really want this."

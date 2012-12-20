@@ -1,3 +1,2 @@
-PORT
-Last attempt: 2.8.1_2
-Last success: 
+MASK
+# NO_PACKAGE=	License does not allow redistribution of binaries

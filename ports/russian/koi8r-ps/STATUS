@@ -1,3 +1,2 @@
-PORT
-Last attempt: 1.0
-Last success: 1.0
+MASK
+# NO_PACKAGE=	Nothing to build, configurations only

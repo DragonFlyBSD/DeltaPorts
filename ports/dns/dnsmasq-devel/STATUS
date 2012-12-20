@@ -1,3 +1,2 @@
-PORT
-Last attempt: 2.64.r3
-Last success: 
+MASK
+# NO_PACKAGE=	Package stable version instead
