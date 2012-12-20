@@ -90,9 +90,9 @@ while [ 1 ]; do
    TIMEDIFF=$(expr ${TIMENOW} - ${ESTABLISHED})
    if [ ${COUNTER} -eq 30 -o ${TIMEDIFF} -gt 1800 ]; then
       HACK=$(date -j "+Y-%m-%d %H:%M")
-      ( cd ${DELTA} && git pull --rebase --quiet 2>/dev/null )
+      ( cd ${DELTA} && git pull --quiet --no-edit 2>/dev/null )
       if [ $? -ne 0 ]; then
-         echo "${HACK}:  git pull --rebase on ${DELTA} failed." >> ${LOGFILE}
+         echo "${HACK}:  git pull on ${DELTA} failed." >> ${LOGFILE}
       else
          HACK=$(date -j "+Y-%m-%d %H:%M")
          ( cd ${DELTA} && git push --quiet )
