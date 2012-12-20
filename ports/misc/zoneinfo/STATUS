@@ -1,3 +1,2 @@
-PORT
-Last attempt: 2012.j
-Last success: 2012.j
+MASK
+# NO_PACKAGE=	Overwrites files in the base system

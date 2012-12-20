@@ -1,0 +1,2 @@
+MASK
+# NO_PACKAGE=		contains compile time path info, ignores cc cxx

@@ -1,3 +1,2 @@
-PORT
-Last attempt: 0.5.2
-Last success: 0.5.2
+MASK
+# NO_PACKAGE=	There is the string in properties.xml which system-depends

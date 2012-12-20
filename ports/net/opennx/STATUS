@@ -1,0 +1,2 @@
+MASK
+# NO_PACKAGE=	must generate a fresh private key at install time

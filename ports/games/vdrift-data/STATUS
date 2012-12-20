@@ -1,3 +1,2 @@
-PORT
-Last attempt: 20100630
-Last success: 20100630
+MASK
+# NO_PACKAGE=	Package will be 547MB, set FORCE_PACKAGE if you really want it

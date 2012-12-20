@@ -1,3 +1,2 @@
-PORT
-Last attempt: 3.5b
-Last success: 3.5b
+MASK
+# NO_PACKAGE=	"Package will be 138MB, set FORCE_PACKAGE if you really want to build it"

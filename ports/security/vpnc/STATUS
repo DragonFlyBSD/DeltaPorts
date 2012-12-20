@@ -1,3 +1,2 @@
-PORT
-Last attempt: 0.5.3_7
-Last success: 
+MASK
+# NO_PACKAGE=	binary linked against OpenSSL must not be redistributed

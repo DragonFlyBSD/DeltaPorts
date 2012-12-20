@@ -1,2 +1,2 @@
 MASK
-# Well over 1G data file here.
+# NO_PACKAGE=	Package will be 1GB; set FORCE_PACKAGE if you really want it

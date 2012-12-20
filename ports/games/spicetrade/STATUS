@@ -1,3 +1,2 @@
-PORT
-Last attempt: 1.2_3
-Last success: 1.2_3
+MASK
+# NO_PACKAGE=	Package will be 186MB, set FORCE_PACKAGE if you really want to build it
