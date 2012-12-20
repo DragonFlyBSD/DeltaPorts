@@ -29,30 +29,35 @@ checkdir MERGED
 kill_directory ()
 {
    port=$1
-   if [ ! -d ${FPORTS}/${port} ]; then
-      echo "Deleting: $port"
-      rm -rf ${MERGED}/$port
-      if [ -d ${DPORTS}/$port ]; then
-         git rm -rf ${DPORTS}/$port
-
-         commitmsg="\"Pruning: $port removed\""
-         TASKS=`cd ${DPORTS}; git status -s --untracked-files=no $port`
-         if [ -n "${TASKS}" ]; then
-            cd ${DPORTS} && git commit -m ${commitmsg}
-         fi
+   allcases=$2
+   if [ ! -d ${FPORTS}/${port} -o ${allcases} -eq 1 ]; then
+      if [ -d ${MERGED}/${port} ]; then
+         echo "Deleting from merge area: ${port}"
+         rm -rf ${MERGED}/${port}
+      fi
+      if [ -d ${DPORTS}/${port} ]; then
+         cd ${DPORTS} && git rm -rf ${port}
+         commitmsg="Pruning: ${port} removed"
+         echo "Deleting from DeltaPorts: ${port}"
+         cd ${DPORTS} && git commit -m "${commitmsg}" ${port}
       fi
    fi
 }
 
 EXCLUDE="^(Templates/|Tools/|Mk/)"
-portdirs=`cd ${MERGED}; find -s * -type d -depth 1 | grep -vE ${EXCLUDE}`
-deltdirs=`cd ${DELTA}/ports; find * -name STATUS -exec grep -lv "^MASK" {} \;`
+portdirs=$(cd ${MERGED}; find -s * -type d -depth 1 | grep -vE ${EXCLUDE})
+statusdirs=$(cd ${DELTA}/ports; find * -name STATUS -type f)
 
 for port in ${portdirs}; do
-   kill_directory $port
+   kill_directory ${port} 0
 done
 
-for STATUS in ${deltdirs}; do
-   port=`echo ${STATUS} | sed -e 's|\/STATUS$||'`
-   kill_directory $port
+for STATUSFILE in ${statusdirs}; do
+  MASK=$(grep -E ^MASK ${DELTA}/ports/${STATUSFILE})
+  port=`echo ${STATUSFILE} | sed -e 's|\/STATUS$||'`
+  if [ -n "${MASK}" ]; then
+     kill_directory ${port} 1
+  else
+     kill_directory ${port} 0
+  fi
 done
