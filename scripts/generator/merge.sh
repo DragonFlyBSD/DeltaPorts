@@ -1,4 +1,7 @@
 #!/bin/sh
+#
+# Update $MERGED directory (ports + overlay = merged)
+#
 
 CONFFILE=/usr/local/etc/dports.conf
 
@@ -39,11 +42,11 @@ if (FNR == 2) \
   else { print hold } \
 }'
 
-TMPFILE=/tmp/tmp.awk
-WORKAREA=/tmp/merge.workarea
+TMPFILE=~/tmp.awk
+WORKAREA=~/merge.workarea
 
 rm -rf ${WORKAREA}
-mkdir ${WORKAREA}
+mkdir -p ${WORKAREA}
 mount -t tmpfs tmpfs ${WORKAREA}
 
 merge()
@@ -72,25 +75,25 @@ merge()
         [ ${MD} -eq 1 ] && cp -p ${DP}/Makefile.DragonFly ${WORKAREA}/
         [ ${DDRAG} -eq 1 ] && cp -pr ${DP}/dragonfly ${WORKAREA}/
         if [ ${DDIFF} -eq 1 ]; then
-         diffs=$(find ${DP}/diffs -name \*\.diff)
-         for difffile in ${diffs}; do
+          diffs=$(find ${DP}/diffs -name \*\.diff)
+          for difffile in ${diffs}; do
             patch --quiet -d ${WORKAREA} < ${difffile}
-         done
-         rm ${WORKAREA}/*.orig
+          done
+          find ${WORKAREA}/ -name \*\.orig -exec rm {} \;
         fi
         cpdup -i0 ${WORKAREA} ${M1}
       fi
    fi
 }
 
+split () {
+   val_1=${1}
+   val_2=${2}
+}
 
 awk -F \| "${AWKCMD}" ${INDEX} | sort > ${TMPFILE}
 while read fileline; do
-   counter=0
-   for element in ${fileline}; do
-      counter=$(expr ${counter} '+' 1)
-      eval val_${counter}=${element}
-   done
+   split ${fileline}
 
    # val_1 = category/portname
    # val_2 = version,portrevision
@@ -116,7 +119,6 @@ while read fileline; do
          merge ${val_1} ${ML}
       fi
    fi
-
 done < ${TMPFILE}
 
 rm -f ${TMPFILE}
