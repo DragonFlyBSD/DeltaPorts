@@ -5,7 +5,7 @@
  
  #include <unistd.h>
 -#ifdef __FreeBSD__
-+//#if defined(__FreeBSD__) || defined(__DragonFly__)
++#if defined(__FreeBSD__) || defined(__DragonFly__)
  #include <sys/types.h>
  #include <sys/event.h>
  #include <sys/time.h>
