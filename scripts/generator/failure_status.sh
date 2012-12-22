@@ -33,6 +33,7 @@ checkdir DELTA
 mkdir -p ${DELTA}/ports/${1}
 
 STATUSFILE=${DELTA}/ports/${1}/STATUS
+chown automaton:automaton ${DELTA}/ports/${1}/STATUS
 
 if [ -f ${STATUSFILE} ]; then
    TYPE=`grep PORT ${STATUSFILE}`

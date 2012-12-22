@@ -31,6 +31,7 @@ done
 checkdir DELTA
 
 mkdir -p ${DELTA}/ports/${1}
+chown automaton:automaton ${DELTA}/ports/${1}
 
 STATUSFILE=${DELTA}/ports/${1}/STATUS
 

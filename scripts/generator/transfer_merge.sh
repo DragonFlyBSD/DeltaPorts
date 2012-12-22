@@ -46,6 +46,7 @@ fi
 mkdir -p ${newdir}
 rm -rf ${newloc}
 cp -r ${oldloc} ${newloc}
+chown -R automaton:automaton ${newloc}
 
 NAME=$(echo ${1} | sed -e 's|/|__|g')
 mkdir -p -m 777 ${COMQUEUE}

@@ -42,12 +42,32 @@ if (FNR == 2) \
   else { print hold } \
 }'
 
-TMPFILE=~/tmp.awk
-WORKAREA=~/merge.workarea
+TMPFILE=/tmp/tmp.awk
+WORKAREA=/tmp/merge.workarea
 
-rm -rf ${WORKAREA}
-mkdir -p ${WORKAREA}
-mount -t tmpfs tmpfs ${WORKAREA}
+checkfirst=$(mount | grep ${WORKAREA})
+if [ -z "${checkfirst}" ]; then
+   rm -rf ${WORKAREA}
+   mkdir ${WORKAREA}
+   mount -t tmpfs tmpfs ${WORKAREA}
+fi
+
+fast_and_filtered ()
+{
+   ORIG=${1}
+   DEST=${2}
+   LEGACY=$(cd ${ORIG} && grep -lE ':(U|L)}' Makefile*)
+   if [ -z "${LEGACY}" ]; then
+      cpdup -VV -i0 ${ORIG} ${DEST}
+   else
+      rm -rf ${WORKAREA}/*
+      cp -pr ${ORIG}/* ${WORKAREA}/
+      for item in ${LEGACY}; do
+         cat ${ORIG}/${item} | sed -e 's|:L}|:tl}|g' -e 's|:U}|:tu}|g' > ${WORKAREA}/${item}
+      done
+      cpdup -VV -i0 ${WORKAREA} ${DEST}
+   fi
+}
 
 merge()
 {
@@ -60,28 +80,33 @@ merge()
    mkdir -p ${M1}
 
    if [ "${2}" = "FAST" ]; then
-      cpdup -i0 ${FPORTS}/${1} ${M1}
+      fast_and_filtered "${FPORTS}/${1}" "${M1}"
    elif [ "${2}" = "DPORT" ]; then
-      cpdup -i0 ${DP}/newport ${M1}
+      cpdup -VV -i0 ${DP}/newport ${M1}
    else
       [ -f ${DP}/Makefile.DragonFly ] && MD=1
       [ -d ${DP}/dragonfly ] && DDRAG=1
       [ -d ${DP}/diffs ] && DDIFF=1
       if [ ${MD} -eq 0 -a ${DDRAG} -eq 0 -a ${DDIFF} -eq 0 ]; then
-        cpdup -i0 ${FPORTS}/${1} ${M1}
+        fast_and_filtered "${FPORTS}/${1}" "${M1}"
       else
         rm -rf ${WORKAREA}/*
-        cp -pr ${FPORTS}/$1/* ${WORKAREA}/
+        cpdup -VV -i0 ${FPORTS}/${1}/ ${WORKAREA}/
         [ ${MD} -eq 1 ] && cp -p ${DP}/Makefile.DragonFly ${WORKAREA}/
         [ ${DDRAG} -eq 1 ] && cp -pr ${DP}/dragonfly ${WORKAREA}/
         if [ ${DDIFF} -eq 1 ]; then
           diffs=$(find ${DP}/diffs -name \*\.diff)
           for difffile in ${diffs}; do
-            patch --quiet -d ${WORKAREA} < ${difffile}
+            patch --quiet --posix -d ${WORKAREA} < ${difffile}
           done
-          find ${WORKAREA}/ -name \*\.orig -exec rm {} \;
         fi
-        cpdup -i0 ${WORKAREA} ${M1}
+        LEGACY=$(cd ${WORKAREA} && grep -lE ':(U|L)}' Makefile *\.common 2>/dev/null)
+        for item in ${LEGACY}; do
+          cat ${WORKAREA}/${item} | sed -e 's|:L}|:tl}|g' -e 's|:U}|:tu}|g' > ${WORKAREA}/${item}.filtered
+          rm ${WORKAREA}/${item}
+          mv ${WORKAREA}/${item}.filtered ${WORKAREA}/${item}
+        done
+        cpdup -VV -i0 ${WORKAREA} ${M1}
       fi
    fi
 }
@@ -124,6 +149,7 @@ done < ${TMPFILE}
 rm -f ${TMPFILE}
 
 cpdup -i0 ${FPORTS}/Tools ${MERGED}/Tools
+cp ${FPORTS}/GIDs ${FPORTS}/UIDs ${MERGED}/
 
 rm -rf ${WORKAREA}/*
 
