@@ -1,5 +1,5 @@
---- Makefile.orig	2012-12-23 00:48:41.000000000 +0100
-+++ Makefile	2012-12-23 01:10:43.000000000 +0100
+--- Makefile.orig	2012-12-23 23:52:40.825646000 +0100
++++ Makefile	2012-12-23 23:53:14.795693000 +0100
 @@ -38,6 +38,7 @@
  .include <bsd.port.pre.mk>
  .include <bsd.port.options.mk>
@@ -36,3 +36,12 @@
     gnat-bootstrap.i386.freebsd.tar.bz2:boot \
     gnat-bootstrap.x86_64.freebsd.tar.bz2:boot
  .endif
+@@ -279,7 +294,7 @@
+ 
+ do-install:
+ 	cd ${BUILDDIR} && ${SETENV} ${ADA_MAKE_ENV} ${GMAKE} install-strip DESTDIR=${DESTINY}
+-	${CP} -pr ${DESTINY}${PREFIX}/ ${PREFIX}/
++	${CP} -pR ${DESTINY}${PREFIX}/ ${PREFIX}/
+ 
+ post-install:
+ 	${RM} -f ${WRKDIR}/PLIST.all
