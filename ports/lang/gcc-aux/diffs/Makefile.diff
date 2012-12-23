@@ -1,0 +1,38 @@
+--- Makefile.orig	2012-12-23 00:48:41.000000000 +0100
++++ Makefile	2012-12-23 01:10:43.000000000 +0100
+@@ -38,6 +38,7 @@
+ .include <bsd.port.pre.mk>
+ .include <bsd.port.options.mk>
+ 
++.if ${OPSYS} == "FreeBSD"
+ .if ${ARCH} == "amd64"
+ BLD_TARGET=		x86_64-aux-freebsd${OSREL}
+ OS_LABEL4VERS=		[FreeBSD64]
+@@ -49,6 +50,18 @@
+ BOOTSTRAP_TRIPLET=	i386-bootstrap-freebsd8.0/4.6.0
+ BOOTSTRAP_COMPILER=	gnat-bootstrap.i386.freebsd.tar.bz2
+ .endif
++.endif
++.if ${OPSYS} == "DragonFly"
++.if ${ARCH} == "x86_64"
++OS_LABEL4VERS=		[DragonFly64]
++BOOTSTRAP_TRIPLET=	x86_64-bootstrap-dragonfly2.8/4.6.0
++.else
++OS_LABEL4VERS=		[DragonFly]
++BOOTSTRAP_TRIPLET=	i386-bootstrap-dragonfly2.8/4.6.0
++.endif
++BLD_TARGET=		${ARCH}-aux-${OPSYS:tl}${OSREL}
++BOOTSTRAP_COMPILER=	gnat-bootstrap.${ARCH}.dragonfly.tar.bz2
++.endif
+ 
+ WRKSRC=			${WRKDIR}/gcc-${GCC_VERSION}
+ BUILDDIR=		${WRKDIR}/build
+@@ -89,6 +102,8 @@
+ # for port maintenance, invoke "make makesum PLUS_BOOTSTRAPS=1"
+ .if defined(PLUS_BOOTSTRAPS)
+ DISTFILES=gcc-${GCC_VERSION}.tar.bz2 \
++   gnat-bootstrap.i386.dragonfly.tar.bz2:boot \
++   gnat-bootstrap.x86_64.dragonfly.tar.bz2:boot \
+    gnat-bootstrap.i386.freebsd.tar.bz2:boot \
+    gnat-bootstrap.x86_64.freebsd.tar.bz2:boot
+ .endif
