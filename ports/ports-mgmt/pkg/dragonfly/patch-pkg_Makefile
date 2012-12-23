@@ -1,0 +1,18 @@
+--- pkg/Makefile.orig	2012-12-21 12:57:15.000000000 +0100
++++ pkg/Makefile	2012-12-23 19:52:34.415523000 +0100
+@@ -48,6 +48,15 @@
+ 		-lpkg \
+ 		-lutil \
+ 		-lpthread \
++		-larchive \
++		-lsbuf \
++		-lfetch \
++		-lssl \
++		-lcrypto \
++		-lmd \
++		-lz \
++		-lbz2 \
++		-llzma \
+ 		${LDADD_STATIC}
+ 
+ .if !exists(/usr/include/jail.h)
