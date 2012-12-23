@@ -56,14 +56,18 @@ fast_and_filtered ()
 {
    ORIG=${1}
    DEST=${2}
-   LEGACY=$(cd ${ORIG} && grep -lE ':(U|L)}' Makefile*)
+   LEGACY=$(cd ${ORIG} && grep -lE ':(U|L)}|ARCH}.*(amd64|"amd64")' Makefile *\.common 2>/dev/null)
    if [ -z "${LEGACY}" ]; then
       cpdup -VV -i0 ${ORIG} ${DEST}
    else
       rm -rf ${WORKAREA}/*
       cp -pr ${ORIG}/* ${WORKAREA}/
       for item in ${LEGACY}; do
-         cat ${ORIG}/${item} | sed -e 's|:L}|:tl}|g' -e 's|:U}|:tu}|g' > ${WORKAREA}/${item}
+         cat ${ORIG}/${item} | sed -E \
+            -e 's|:L}|:tl}|g' \
+            -e 's|:U}|:tu}|g' \
+            -e '/ARCH}.*(amd64|"amd64")/s|amd64|x86_64|g' \
+            > ${WORKAREA}/${item}
       done
       cpdup -VV -i0 ${WORKAREA} ${DEST}
    fi
@@ -100,9 +104,13 @@ merge()
             patch --quiet --posix -d ${WORKAREA} < ${difffile}
           done
         fi
-        LEGACY=$(cd ${WORKAREA} && grep -lE ':(U|L)}' Makefile *\.common 2>/dev/null)
+	LEGACY=$(cd ${WORKAREA} && grep -lE ':(U|L)}|ARCH}.*(amd64|"amd64")' Makefile *\.common 2>/dev/null)
         for item in ${LEGACY}; do
-          cat ${WORKAREA}/${item} | sed -e 's|:L}|:tl}|g' -e 's|:U}|:tu}|g' > ${WORKAREA}/${item}.filtered
+          cat ${WORKAREA}/${item} | sed -E \
+             -e 's|:L}|:tl}|g' \
+             -e 's|:U}|:tu}|g' \
+             -e '/ARCH}.*(amd64|"amd64")/s|amd64|x86_64|g' \
+             > ${WORKAREA}/${item}.filtered
           rm ${WORKAREA}/${item}
           mv ${WORKAREA}/${item}.filtered ${WORKAREA}/${item}
         done
