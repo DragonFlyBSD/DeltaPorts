@@ -30,14 +30,29 @@ done
 
 checkdir DPORTS
 checkdir MERGED
+checkdir DELTA
 
 oldloc=${MERGED}/${1}
 newloc=${DPORTS}/${1}
 newdir=$(dirname ${newloc})
+STATUSFILE=${DELTA}/ports/${1}/STATUS
 
 if [ -d ${newloc} ]; then
-  action="Update"
-  reflex="to version ${2}"
+  # This means we built it before and a STATUS file should exist
+  # Check to see the version of the previous attempt.
+  if [ -f ${STATUSFILE} ]; then
+     LASTATT=$(grep "Last attempt:" ${STATUSFILE} | cut -c 15-80)
+     if [ "${2}" = "${LASTATT}" ]; then
+        action="Tweak"
+        reflex="version ${2}"
+     else
+        action="Update"
+        reflex="to version ${2}"
+     fi
+  else
+     action="Update"
+     reflex="to version ${2}"
+  fi
 else
   action="Import"
   reflex="version ${2}"
