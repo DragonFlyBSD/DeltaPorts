@@ -17,5 +17,4 @@ fire_port_build_success() {
   local ARG1B=$(basename ${ARG1A})
   local ARG1C=$(basename ${4})
   /usr/local/etc/hooks_poudriere/transfer_merge.sh "${ARG1B}/${ARG1C}" "${ARG2}"
-  /usr/local/etc/hooks_poudriere/success_status.sh "${ARG1B}/${ARG1C}" "${ARG2}"
 }

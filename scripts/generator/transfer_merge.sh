@@ -1,6 +1,7 @@
 #!/bin/sh
 #
-# Copy from merge area to DPorts and commit
+# Copy from merge area to DPorts and indicate with chit
+# Create/overwrite STATUS upon build success
 #
 # $1 <category>/<portname>
 # $2 portversions,portrevision
@@ -35,6 +36,10 @@ checkdir DELTA
 oldloc=${MERGED}/${1}
 newloc=${DPORTS}/${1}
 newdir=$(dirname ${newloc})
+
+mkdir -p ${DELTA}/ports/${1}
+chown automaton:automaton ${DELTA}/ports/${1}
+
 STATUSFILE=${DELTA}/ports/${1}/STATUS
 
 if [ -d ${newloc} ]; then
@@ -72,3 +77,23 @@ ${action}
 ${2}
 EOF
 chmod 777 ${COMQUEUE}/dport.${NAME}
+
+# Now update the STATUSFILE
+if [ -f ${STATUSFILE} ]; then
+   TYPE=$(grep PORT ${STATUSFILE})
+   echo ${TYPE} > ${STATUSFILE}
+else
+   echo "PORT" > ${STATUSFILE}
+fi
+echo "Last attempt: $2" >> ${STATUSFILE}
+echo "Last success: $2" >> ${STATUSFILE}
+
+NAME=$(echo ${1} | sed -e 's|/|__|g')
+mkdir -p -m 777 ${COMQUEUE}
+rm -f ${COMQUEUE}/delta.${NAME}
+cat > ${COMQUEUE}/delta.${NAME} << EOF
+${1}
+Success
+${2}
+EOF
+chmod 777 ${COMQUEUE}/delta.${NAME}

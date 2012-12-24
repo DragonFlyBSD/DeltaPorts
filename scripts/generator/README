@@ -20,7 +20,6 @@ COMQUERE=/tmp/crondports
 merge.sh
 prune.sh
 failure_status.sh
-success_status.sh
 transfer_merge.sh
 hook_port_build_failure.sh
 hook_port_build_success.sh
