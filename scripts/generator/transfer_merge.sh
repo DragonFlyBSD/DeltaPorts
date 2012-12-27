@@ -87,6 +87,7 @@ else
 fi
 echo "Last attempt: $2" >> ${STATUSFILE}
 echo "Last success: $2" >> ${STATUSFILE}
+chown automaton:automaton ${STATUSFILE}
 
 NAME=$(echo ${1} | sed -e 's|/|__|g')
 mkdir -p -m 777 ${COMQUEUE}
