@@ -46,8 +46,8 @@ if [ -d ${newloc} ]; then
   # This means we built it before and a STATUS file should exist
   # Check to see the version of the previous attempt.
   if [ -f ${STATUSFILE} ]; then
-     LASTATT=$(grep "Last attempt:" ${STATUSFILE} | cut -c 15-80)
-     if [ "${2}" = "${LASTATT}" ]; then
+     LASTSUCC=$(grep "Last success:" ${STATUSFILE} | cut -c 15-80)
+     if [ "${2}" = "${LASTSUCC}" ]; then
         action="Tweak"
         reflex="version ${2}"
      else
