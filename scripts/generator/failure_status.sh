@@ -33,7 +33,6 @@ checkdir DELTA
 mkdir -p ${DELTA}/ports/${1}
 
 STATUSFILE=${DELTA}/ports/${1}/STATUS
-chown automaton:automaton ${DELTA}/ports/${1}/STATUS
 
 if [ -f ${STATUSFILE} ]; then
    TYPE=`grep PORT ${STATUSFILE}`
@@ -46,6 +45,8 @@ else
    echo "Last attempt: $2" >> ${STATUSFILE}
    echo "Last success: " >> ${STATUSFILE}
 fi
+
+chown automaton:automaton ${DELTA}/ports/${1}/STATUS
 
 NAME=$(echo ${1} | sed -e 's|/|__|g')
 mkdir -p -m 777 ${COMQUEUE}
