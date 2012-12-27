@@ -1,0 +1,18 @@
+--- bsd.mesalib.mk.orig	2012-12-27 00:05:28.000000000 +0100
++++ bsd.mesalib.mk	2012-12-27 00:34:13.000000000 +0100
+@@ -72,13 +72,14 @@
+ ALL_TARGET=		default
+ 
+ PATCHDIR=		${.CURDIR}/../../graphics/libGL/files
++DFLY_PATCHDIR=		${.CURDIR}/../../graphics/libGL/dragonfly
+ WRKSRC=			${WRKDIR}/Mesa-${MESABASEVERSION}${MESASUBVERSION}
+ 
+ .if !defined(ARCH)
+ ARCH!=			uname -p
+ .endif
+ 
+-COMPONENT=		${PORTNAME:L:C/^lib//:C/mesa-//}
++COMPONENT=		${PORTNAME:tl:C/^lib//:C/mesa-//}
+ 
+ .if ${COMPONENT:Mglu} == ""
+ CONFIGURE_ARGS+=	--disable-glu
