@@ -1,5 +1,5 @@
 --- Makefile.orig	2012-12-10 23:28:27.000000000 +0100
-+++ Makefile	2012-12-28 19:23:56.885454000 +0100
++++ Makefile	2012-12-28 21:22:35.975398000 +0100
 @@ -13,7 +13,7 @@
  MAINTAINER=	ports@FreeBSD.org
  COMMENT=	Audio system for the KDE integrated X11 desktop
@@ -9,3 +9,12 @@
  		audiofile:${PORTSDIR}/audio/libaudiofile \
  		mad:${PORTSDIR}/audio/libmad \
  		ogg:${PORTSDIR}/audio/libogg \
+@@ -44,6 +44,8 @@
+ QTCPPFLAGS+=	-L${LOCALBASE}/lib
+ DO_NOT_COMPILE+=gmcop
+ _NO_KDE_FINAL=	yes
++USE_PERL5_BUILD=yes
++USE_PKGCONFIG=	build
+ 
+ CFLAGS+=	-DHAVE_VASPRINTF
+ CONFIGURE_ENV+=	DO_NOT_COMPILE="${DO_NOT_COMPILE}"
