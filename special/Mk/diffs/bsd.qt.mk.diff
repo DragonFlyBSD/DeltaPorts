@@ -1,11 +1,13 @@
---- bsd.qt.mk.orig	2012-10-29 14:19:30.000000000 +0100
-+++ bsd.qt.mk	2012-11-30 21:09:03.000000000 +0100
-@@ -114,7 +114,7 @@
+--- /usr/ports/Mk/bsd.qt.mk	2012-11-17 06:54:18.000000000 +0100
++++ /home/marino/DPorts/Mk/bsd.qt.mk	2012-12-28 02:23:37.409941000 +0100
+@@ -113,10 +113,7 @@
+ #
  # Translate `c++` to its real name and select the appropriate mkspec.
  #
- QMAKE_BASE_COMPILER!=	cc --version 2> /dev/null | ${AWK} 'NR == 1 { gsub(/[()]/, "", $$2); print $$2 }'
+-QMAKE_BASE_COMPILER!=	cc --version 2> /dev/null | ${AWK} 'NR == 1 { gsub(/[()]/, "", $$2); print $$2 }'
 -.if ${QMAKE_BASE_COMPILER:L} == "gcc"
-+.if ${QMAKE_BASE_COMPILER:tl} == "gcc"
  QMAKE_BASE_COMPILER=	g++
- .endif
+-.endif
  .if ${CXX} == "c++"
+ # Why CXX instead of CXX:T? Because if you're setting the full path of
+ # `c++` you probably want to define QMAKESPEC by hand too.
