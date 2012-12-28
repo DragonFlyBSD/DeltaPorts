@@ -1,0 +1,8 @@
+--- pkg-plist.orig	2012-12-27 16:58:11.000000000 +0100
++++ pkg-plist	2012-12-28 18:31:03.000000000 +0100
+@@ -44,4 +44,5 @@
+ lib/libaudio.a
+ lib/libaudio.so
+ lib/libaudio.so.2
++lib/libaudio.so.2.4
+ @dirrm include/audio
