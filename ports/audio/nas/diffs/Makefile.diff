@@ -1,0 +1,12 @@
+--- Makefile.orig	2012-12-28 18:42:17.771963000 +0100
++++ Makefile	2012-12-28 18:42:45.052001000 +0100
+@@ -25,7 +25,9 @@
+ PKGMESSAGE=	${WRKDIR}/pkg-message
+ SUB_FILES=	pkg-message
+ 
++.if ${OPSYS} != "DragonFly"
+ .include "Makefile.man"
++.endif
+ 
+ .include <bsd.port.pre.mk>
+ post-patch:
