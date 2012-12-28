@@ -1,0 +1,20 @@
+--- Makefile.orig	2012-12-28 19:32:04.000000000 +0100
++++ Makefile	2012-12-28 19:52:29.000000000 +0100
+@@ -53,17 +53,6 @@
+ 
+ .include <bsd.port.pre.mk>
+ 
+-.if !defined(GNUSTEP_WITH_CLANG)
+-.if defined(GNUSTEP_WITH_BASE_GCC)
+-.if ${OSVERSION} < 800000
+-IGNORE=		does not build on FreeBSD 7
+-.endif
+-.if ${OSVERSION} >= 900036
+-IGNORE=		needs an objective C compiler
+-.endif
+-.endif
+-.endif
+-
+ .if defined(GNUSTEP_WITH_LIBOBJC2) || defined(GNUSTEP_WITH_CLANG)
+ LIB_DEPENDS+=	objc:${PORTSDIR}/${PKGCATEGORY}/libobjc2
+ CFLAGS+=	-I${LOCALBASE}/include -DOBJC2RUNTIME=1
