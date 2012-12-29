@@ -31,6 +31,7 @@ done
 checkdir DELTA
 
 mkdir -p ${DELTA}/ports/${1}
+chown automaton:automaton ${DELTA}/ports/${1}
 
 STATUSFILE=${DELTA}/ports/${1}/STATUS
 
@@ -46,7 +47,7 @@ else
    echo "Last success: " >> ${STATUSFILE}
 fi
 
-chown automaton:automaton ${DELTA}/ports/${1}/STATUS
+chown automaton:automaton ${STATUSFILE}
 
 NAME=$(echo ${1} | sed -e 's|/|__|g')
 mkdir -p -m 777 ${COMQUEUE}
