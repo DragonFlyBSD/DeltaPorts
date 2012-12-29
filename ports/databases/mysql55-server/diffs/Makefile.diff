@@ -1,0 +1,19 @@
+--- Makefile.orig	2012-12-29 01:35:07.746562000 +0100
++++ Makefile	2012-12-29 01:47:42.757617000 +0100
+@@ -14,6 +14,7 @@
+ 
+ SLAVEDIRS=	databases/mysql55-client
+ USE_CMAKE=	yes
++USE_READLINE=	yes
+ MAKE_JOBS_SAFE=	yes
+ NO_OPTIONS_SORT=yes
+ 
+@@ -38,7 +39,7 @@
+ 		-DINSTALL_SQLBENCHDIR="share/mysql" \
+ 		-DINSTALL_SUPPORTFILESDIR="share/mysql" \
+ 		-DWITH_LIBEDIT=0 \
+-		-DWITH_LIBWRAP=1
++		-DWITH_READLINE=1
+ 
+ .ifdef USE_MYSQL
+ .error You have `USE_MYSQL' variable defined either in environment or in make(1) arguments. Please undefine and try again.
