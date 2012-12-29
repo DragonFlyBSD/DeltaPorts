@@ -1,0 +1,13 @@
+--- /usr/ports/Mk/bsd.kde.mk	2012-11-17 06:54:17.000000000 +0100
++++ /usr/dports/Mk/bsd.kde.mk	2012-12-29 19:54:34.048706000 +0100
+@@ -31,6 +31,10 @@
+ MASTER_SITE_KDE_kde=	${kmaster:S@%SUBDIR%/@${ksub}/@g}
+ .endif # !defined(MASTER_SITE_SUBDIR)
+ 
++.if defined(KDE_I18N)
++BUILD_DEPENDS+=	mcopidl:${PORTSDIR}/audio/arts
++.endif
++
+ # USE_KDEBASE_VER section
+ .if defined(USE_KDEBASE_VER)
+ .if ${USE_KDEBASE_VER} == CVS
