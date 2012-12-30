@@ -1,6 +1,32 @@
---- bsd.autotools.mk.orig	2012-10-29 14:19:30.000000000 +0100
-+++ bsd.autotools.mk	2012-11-30 21:09:39.000000000 +0100
-@@ -314,7 +314,7 @@
+--- bsd.autotools.mk.orig	2012-12-19 21:36:59.000000000 +0100
++++ bsd.autotools.mk	2012-12-30 23:20:48.936677000 +0100
+@@ -68,7 +68,7 @@
+ _AUTOTOOLS_IGN_autoconf=		autoconf213 autoheader213
+ _AUTOTOOLS_IGN_autoheader=		autoconf213 autoheader213
+ _AUTOTOOLS_IGN_autoconf213=		autoconf autoheader
+-_AUTOTOOLS_IGN_autoheader213=	autoconf autoheader
++_AUTOTOOLS_IGN_autoheader213=		autoconf autoheader
+ _AUTOTOOLS_IGN_automake=		automake14 aclocal14
+ _AUTOTOOLS_IGN_aclocal=			automake14 aclocal14
+ _AUTOTOOLS_IGN_automake14=		automake aclocal
+@@ -237,6 +237,8 @@
+ AUTORECONF=			${LOCALBASE}/bin/autoreconf-${AUTOCONF_VERSION}
+ AUTOSCAN=			${LOCALBASE}/bin/autoscan-${AUTOCONF_VERSION}
+ AUTOUPDATE=			${LOCALBASE}/bin/autoupdate-${AUTOCONF_VERSION}
++AUTOCONFWRAP=			${LOCALBASE}/bin/autoconf
++AUTOCWPORT=			devel/autoconf-wrapper
+ 
+ AUTOCONF_VARS=		AUTOCONF=${AUTOCONF} \
+ 					AUTOCONF_DIR=${AUTOCONF_DIR} \
+@@ -249,6 +251,7 @@
+ 					AUTOCONF_VERSION=${AUTOCONF_VERSION}
+ 
+ AUTOCONF_DEPENDS=	${AUTOCONF}:${PORTSDIR}/${AUTOCONF_PORT}
++AUTOCONF_DEPENDS+=	${AUTOCONFWRAP}:${PORTSDIR}/${AUTOCWPORT}
+ BUILD_DEPENDS+=		${AUTOCONF_DEPENDS}
+ .endif
+ 
+@@ -314,7 +317,7 @@
  
  .if defined(AUTOTOOLS_VARS) && !empty(AUTOTOOLS_VARS)
  . for var in AUTOTOOLS CONFIGURE MAKE SCRIPTS
