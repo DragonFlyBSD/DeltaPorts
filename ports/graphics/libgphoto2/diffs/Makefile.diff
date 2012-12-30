@@ -1,0 +1,29 @@
+--- Makefile.orig	2012-12-30 17:40:24.598148000 +0100
++++ Makefile	2012-12-30 18:07:00.500377000 +0100
+@@ -39,9 +39,24 @@
+ 
+ .include <bsd.port.pre.mk>
+ 
+-.if ${OSVERSION} < 800064
+-LIB_DEPENDS+=	usb-0.1.8:${PORTSDIR}/devel/libusb
++
++.if ${OPSYS} == "DragonFly"
++.  if exists(/usr/include/usb.h)
++USE_OPTION=3
++.  else
++USE_OPTION=1
++.  endif
++.elif ${OSVERSION} < 800064
++USE_OPTION=1
+ .elif ${OSVERSION} < 800069
++USE_OPTION=2
++.else
++USE_OPTION=3
++.endif
++
++.if ${USE_OPTION} == 1
++LIB_DEPENDS+=	usb-0.1.8:${PORTSDIR}/devel/libusb
++.elif ${USE_OPTION} == 2
+ CONFIGURE_ENV+=	LIBUSB_LIBS="-L/usr/lib -lusb20" LIBUSB_CFLAGS="-I/usr/include/dev/usb -I/usr/include"
+ EXTRA_PATCHES=	${PATCHDIR}/extra-patch-usb20
+ .else
