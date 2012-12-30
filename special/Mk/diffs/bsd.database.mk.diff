@@ -1,5 +1,5 @@
 --- bsd.database.mk.orig	2012-11-17 06:54:17.000000000 +0100
-+++ bsd.database.mk	2012-12-30 00:29:18.021731000 +0100
++++ bsd.database.mk	2012-12-30 11:57:27.399405000 +0100
 @@ -57,7 +57,7 @@
  #				  If no version is given (by the maintainer via the port or
  #				  by the user via defined variable), try to find the
@@ -51,6 +51,17 @@
  .endif
  
  # Detect bdb version
+@@ -362,8 +362,8 @@
+ .   endif
+ .  endfor
+ .  if ${_BDB_VER} == "no"
+-# No existing db4 version is detected in system
+-_BDB_VER=	${_MATCHED_DB_VER}
++# No existing db4 version is detected in system, use the default
++_BDB_VER=	48
+ .  endif
+ . endif
+ .endif
 @@ -452,7 +452,7 @@
  .  endif
  . endfor
