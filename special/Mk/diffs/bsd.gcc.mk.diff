@@ -1,5 +1,5 @@
---- /usr/ports/Mk/bsd.gcc.mk	2012-12-23 00:39:19.000000000 +0100
-+++ /home/marino/DPorts/Mk/bsd.gcc.mk	2012-12-23 13:32:55.592772000 +0100
+--- bsd.gcc.mk.orig	2012-12-23 00:39:19.000000000 +0100
++++ bsd.gcc.mk	2012-12-31 18:23:50.962474000 +0100
 @@ -5,28 +5,22 @@
  #
  # Created by: Edwin Groothuis <edwin@freebsd.org>
@@ -86,7 +86,7 @@
  # Extract the fields from GCCVERSION_...
  .for v in ${GCCVERSIONS}
  . for j in ${GCCVERSION_${v}}
-@@ -85,9 +83,11 @@
+@@ -85,9 +83,16 @@
  
  # The default case, with a current lang/gcc port.
  . if ${USE_FORTRAN} == yes
@@ -96,12 +96,17 @@
 +BUILD_DEPENDS+=	${LOCALBASE}/gcc-aux/bin/gfortran:${PORTSDIR}/lang/gcc-aux
 +RUN_DEPENDS+=	${LOCALBASE}/gcc-aux/bin/gfortran:${PORTSDIR}/lang/gcc-aux
 +_USE_GCC:=	${DRAGONFLY_MAX_VERSION}  # dummy to avoid further depends
-+FC:=	${LOCALBASE}/gcc-aux/bin/gfortran
-+F77:=	${LOCALBASE}/gcc-aux/bin/gfortran
++FC:=		${LOCALBASE}/gcc-aux/bin/gfortran
++F77:=		${LOCALBASE}/gcc-aux/bin/gfortran
++CC:=		${LOCALBASE}/gcc-aux/bin/gcc
++CXX:=		${LOCALBASE}/gcc-aux/bin/g++
++CPP:=		${LOCALBASE}/gcc-aux/bin/cpp
++LDFLAGS+=	-L${LOCALBASE}/gcc-aux/lib
++LDFLAGS+=	-Wl,-rpath=${LOCALBASE}/gcc-aux/lib
  
  # Intel Fortran compiler from lang/ifc.
  . elif ${USE_FORTRAN} == ifort
-@@ -111,12 +111,10 @@
+@@ -111,12 +116,10 @@
  
  
  .if defined(USE_GCC) && !defined(FORCE_BASE_CC_FOR_TESTING)
@@ -117,7 +122,7 @@
  _GCC_ORLATER:=	true
  
  . else # ${USE_GCC} == any
-@@ -133,25 +131,44 @@
+@@ -133,25 +136,44 @@
  .for v in ${GCCVERSIONS}
  . for j in ${GCCVERSION_${v}}
  .  if ${_USE_GCC}==${j}
@@ -169,7 +174,7 @@
  . endif
  .endfor
  .if !defined(_GCCVERSION)
-@@ -166,7 +183,7 @@
+@@ -166,7 +188,7 @@
  #
  .if defined(_GCC_ORLATER)
  . for v in ${GCCVERSIONS}
@@ -178,7 +183,7 @@
  _GCC_MIN1:=	true
  .  endif
  .  if defined(_GCC_MIN1) && defined(_GCC_FOUND${v}) && ${_GCC_FOUND${v}}=="base" && !defined(_GCC_FOUND)
-@@ -198,7 +215,9 @@
+@@ -198,7 +220,9 @@
  # dependencies, CC, CXX, CPP, and flags.
  .for v in ${GCCVERSIONS}
  . if ${_USE_GCC} == ${_GCCVERSION_${v}_V}
@@ -189,7 +194,7 @@
  V:=			${_GCCVERSION_${v}_V:S/.//}
  _GCC_PORT_DEPENDS:=	gcc${V}
  .   if ${_USE_GCC} == ${GCC_DEFAULT_VERSION}
-@@ -223,15 +242,13 @@
+@@ -223,15 +247,13 @@
  # ever telling us; to be fixed.
  _GCC_BUILD_DEPENDS:=	${_GCC_PORT_DEPENDS}
  .   endif # ${_USE_GCC} != 3.4
@@ -209,7 +214,7 @@
  . endif # ${_USE_GCC} == ${_GCCVERSION_${v}_V}
  .endfor
  .undef V
-@@ -240,11 +257,6 @@
+@@ -240,11 +262,6 @@
  BUILD_DEPENDS+=	${_GCC_PORT_DEPENDS}:${PORTSDIR}/lang/${_GCC_PORT}
  . if ${_USE_GCC} != 3.4
  RUN_DEPENDS+=	${_GCC_PORT_DEPENDS}:${PORTSDIR}/lang/${_GCC_PORT}
@@ -221,7 +226,7 @@
  . endif
  .endif
  .endif # defined(_USE_GCC) && !defined(FORCE_BASE_CC_FOR_TESTING)
-@@ -272,5 +284,9 @@
+@@ -272,5 +289,9 @@
  	@echo CC=${CC} - CXX=${CXX} - CPP=${CPP} - CFLAGS=\"${CFLAGS}\"
  	@echo F77=${F77} - FC=${FC} - FFLAGS=\"${FFLAGS}\"
  	@echo LDFLAGS=\"${LDFLAGS}\"
