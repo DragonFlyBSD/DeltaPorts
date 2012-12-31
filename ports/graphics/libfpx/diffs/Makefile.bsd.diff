@@ -1,0 +1,8 @@
+--- files/Makefile.bsd.orig	2012-12-31 03:37:45.268211000 +0100
++++ files/Makefile.bsd	2012-12-31 03:43:22.498682000 +0100
+@@ -44,4 +44,4 @@
+ 
+ # Work-around the bug in g++4.2's system header:
+ # /usr/include/c++/4.2/bits/basic_ios.h:156: warning: empty body in an if-statement
+-CXXFLAGS:=	${CXXFLAGS:N-Wsystem-headers}
++CXXFLAGS:=	${CXXFLAGS:N-Wsystem-headers:S/-Werror//}
