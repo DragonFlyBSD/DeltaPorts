@@ -1,0 +1,21 @@
+--- Makefile.orig	2013-01-02 22:18:03.307103000 +0100
++++ Makefile	2013-01-02 22:18:33.187145000 +0100
+@@ -78,8 +78,6 @@
+ 
+ .include <bsd.port.options.mk>
+ 
+-DBUS_PTHREAD_LIBS=	${CC} -dumpspecs | ${GREP} -m 1 pthread: | ${SED} -e 's|^.*%{\!pg: %{pthread:||' -e 's|}.*$$||' || ${TRUE}
+-
+ .if ${PORT_OPTIONS:MCANNA}
+ PATCH_SITES+=	http://distfiles.pirateparty.in/%SUBDIR%/ ${MASTER_SITE_LOCAL}
+ PATCH_SITE_SUBDIR+=	ashish
+@@ -255,9 +253,6 @@
+ 	@${REINPLACE_CMD} -e 's/^Terminal=.*$$/Terminal=true/' ${WRKSRC}/etc/emacs.desktop
+ .endif
+ 
+-post-configure:
+-	@${REINPLACE_CMD} -e "s/^\(DBUS_LIBS.*\)-pthread\(.*\)$$/\1$$(${DBUS_PTHREAD_LIBS})\2/" ${WRKSRC}/src/Makefile
+-
+ add-plist-data:
+ .for i in ${EMACS_DIRS}
+ 	@${FIND} ${i} -type f |${SED} -E -e 's,^${PREFIX}/,,g'  >>${TMPPLIST}

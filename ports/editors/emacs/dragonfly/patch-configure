@@ -1,0 +1,130 @@
+--- configure.intermediate	2013-01-02 23:21:26.932416000 +0100
++++ configure	2013-01-02 23:30:35.673182000 +0100
+@@ -4434,6 +4434,15 @@
+     esac
+   ;;
+ 
++  ## DragonFly dports
++  *-*-dragonfly* )
++    opsys=dragonfly
++    case "${canonical}" in
++      x86_64-*) 	machine=amdx86-64 ;;
++      i[3456]86-*)      machine=intel386 ;;
++    esac
++  ;;
++
+   ## FreeBSD ports
+   *-*-freebsd* )
+     opsys=freebsd
+@@ -7769,7 +7778,7 @@
+ 
+ LD_SWITCH_SYSTEM=
+ case "$opsys" in
+-  freebsd)
++  freebsd|dragonfly)
+    ## Let `ld' find image libs and similar things in /usr/local/lib.
+    ## The system compiler, GCC, has apparently been modified to not
+    ## look there, contrary to what a stock GCC would do.
+@@ -7854,7 +7863,7 @@
+   ## IBM's X11R5 uses -lIM and -liconv in AIX 3.2.2.
+   aix4-2) LIBS_SYSTEM="-lrts -lIM -liconv" ;;
+ 
+-  freebsd) LIBS_SYSTEM="-lutil" ;;
++  freebsd|dragonfly) LIBS_SYSTEM="-lutil" ;;
+ 
+   hpux*) LIBS_SYSTEM="-l:libdld.sl" ;;
+ 
+@@ -8095,6 +8104,11 @@
+     LIB_MATH=
+     START_FILES='pre-crt0.o'
+     ;;
++  dragonfly )
++    # This base version is appended below
++    LIB_STANDARD='-lc $(CRT_DIR)/crtn.o'
++    START_FILES='$(CRT_DIR)/crt1.o $(CRT_DIR)/crti.o'
++    ;;
+   freebsd )
+     LIB_STANDARD='-lgcc -lc -lgcc $(CRT_DIR)/crtend.o $(CRT_DIR)/crtn.o'
+     START_FILES='pre-crt0.o $(CRT_DIR)/crt1.o $(CRT_DIR)/crti.o $(CRT_DIR)/crtbegin.o'
+@@ -8209,6 +8223,51 @@
+ 
+ 
+ case $opsys in
++  dragonfly )
++    if test "x${GCC}" = xyes ; then
++      libgcc_file=`$CC --print-libgcc-file-name 2>/dev/null`
++      case "$libgcc_file" in
++         */*)
++           crt_gcc_subdir=`$as_dirname -- "$libgcc_file" ||
++$as_expr X"$libgcc_file" : 'X\(.*[^/]\)//*[^/][^/]*/*$' \| \
++	 X"$libgcc_file" : 'X\(//\)[^/]' \| \
++	 X"$libgcc_file" : 'X\(//\)$' \| \
++	 X"$libgcc_file" : 'X\(/\)' \| . 2>/dev/null ||
++$as_echo X"$libgcc_file" |
++    sed '/^X\(.*[^/]\)\/\/*[^/][^/]*\/*$/{
++	    s//\1/
++	    q
++	  }
++	  /^X\(\/\/\)[^/].*/{
++	    s//\1/
++	    q
++	  }
++	  /^X\(\/\/\)$/{
++	    s//\1/
++	    q
++	  }
++	  /^X\(\/\).*/{
++	    s//\1/
++	    q
++	  }
++	  s/.*/./; q'`
++           ;;
++         *)
++           as_fn_error $? "Cannot determine CRT $CC subdirectory." "$LINENO" 5
++           ;;
++      esac
++      for f in crtbegin.o crtend.o; do
++        if test ! -f $crt_gcc_subdir/$f; then
++          as_fn_error $? "Required file not found: $f" "$LINENO" 5
++        fi
++      done
++      LIB_STANDARD="$crt_gcc_subdir/crtend.o $LIB_STANDARD"
++      START_FILES="$START_FILES $crt_gcc_subdir/crtbegin.o"
++    else
++      { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Correct CRT file list unknown for ${CC}." >&5
++$as_echo "$as_me: WARNING: Correct CRT file list unknown for ${CC}." >&2;}
++    fi
++    ;;
+   netbsd | openbsd )
+     if test -f $CRT_DIR/crti.o; then
+ 
+@@ -13880,7 +13939,7 @@
+ case "$opsys" in
+   aix4-2) mail_lock="lockf" ;;
+ 
+-  gnu|freebsd|netbsd|openbsd|darwin|irix6-5) mail_lock="flock" ;;
++  gnu|dragonfly|freebsd|netbsd|openbsd|darwin|irix6-5) mail_lock="flock" ;;
+ 
+   ## On GNU/Linux systems, both methods are used by various mail programs.
+   ## I assume most people are using newer mailers that have heard of flock.
+@@ -14228,6 +14287,11 @@
+     fi
+     ;;
+ 
++  dragonfly)
++    TERMINFO=yes
++    LIBS_TERMCAP="-lncurses"
++    ;;
++
+   freebsd)
+     { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether FreeBSD is new enough to use terminfo" >&5
+ $as_echo_n "checking whether FreeBSD is new enough to use terminfo... " >&6; }
+@@ -22235,7 +22299,7 @@
+ if test "x$GCC" = "xyes" && test "x$ORDINARY_LINK" != "xyes"; then
+ 
+   case "$opsys" in
+-    freebsd|netbsd|openbsd) LIB_GCC= ;;
++    freebsd|netbsd|openbsd|dragonfly) LIB_GCC= ;;
+ 
+     gnu-*)
+       ## armin76@gentoo.org reported that the lgcc_s flag is necessary to
