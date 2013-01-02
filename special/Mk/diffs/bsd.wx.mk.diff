@@ -1,6 +1,26 @@
---- bsd.wx.mk.orig	2012-10-29 13:37:14.000000000 +0100
-+++ bsd.wx.mk	2012-10-29 13:47:19.000000000 +0100
-@@ -234,7 +234,7 @@
+--- bsd.wx.mk.orig	2012-11-17 06:54:18.000000000 +0100
++++ bsd.wx.mk	2013-01-02 09:26:56.282476000 +0100
+@@ -149,6 +149,9 @@
+ _WX_PORT_wx_2.6=		x11-toolkits/wxgtk26${_WX_UCL}
+ _WX_LIB_wx_2.6=			wx_base${_WX_UC}-2.6
+ 
++_WX_PORT_common_2.6=	x11-toolkits/wxgtk26-common${_WX_UCL}
++_WX_FILE_common_2.6=	include/wx-2.6/wx/wxprec.h
++
+ _WX_PORT_contrib_2.6=	x11-toolkits/wxgtk26${_WX_UCL}-contrib
+ _WX_LIB_contrib_2.6=	wx_gtk2${_WX_UC}_animate-2.6
+ 
+@@ -159,6 +162,9 @@
+ _WX_PORT_wx_2.8=		x11-toolkits/wxgtk28${_WX_UCL}
+ _WX_LIB_wx_2.8=			wx_base${_WX_UC}-2.8
+ 
++_WX_PORT_common_2.8=	x11-toolkits/wxgtk28-common${_WX_UCL}
++_WX_FILE_common_2.8=	include/wx-2.8/wx/wxprec.h
++
+ _WX_PORT_contrib_2.8=	x11-toolkits/wxgtk28${_WX_UCL}-contrib
+ _WX_LIB_contrib_2.8=	wx_gtk2${_WX_UC}_fl-2.8
+ 
+@@ -234,7 +240,7 @@
  
  .	for __WANT_WX in ${_WANT_WX}
  .		if defined(_WX_UC_AVAILABLE) && \
@@ -9,7 +29,7 @@
  _WX_WANT_UNICODE=		yes
  .		endif
  .	endfor
-@@ -263,7 +263,7 @@
+@@ -263,7 +269,7 @@
  .		endif
  _HAVE_WX=				#
  # Check for all versions.
@@ -18,7 +38,13 @@
  .			for comp in ${_WX_COMPS_ALL}
  .				for ver in ${_WX_VER_FINAL}
  _WX_COMP=				_WX_FILE_${comp}_${ver}
-@@ -565,7 +565,7 @@
+@@ -560,12 +566,13 @@
+ .		if ${_WX_DEP_TYPE} == "lib"
+ .			if defined(_WX_LIB_${_WX_COMP}_${_WX_VER})
+ LIB_DEPENDS+=			${_WX_LIB_${comp_part}_${_WX_VER}}:${PORTSDIR}/${_WX_PORT_${comp_part}_${_WX_VER}}
++BUILD_DEPENDS+=			${_WX_FILE_common_${_WX_VER}}:${PORTSDIR}/${_WX_PORT_common_${_WX_VER}}
+ .			else
+ BUILD_DEPENDS+=			${_WX_FILE_${comp_part}_${_WX_VER}}:${PORTSDIR}/${_WX_PORT_${comp_part}_${_WX_VER}}
  RUN_DEPENDS+=			${_WX_FILE_${comp_part}_${_WX_VER}}:${PORTSDIR}/${_WX_PORT_${comp_part}_${_WX_VER}}
  .			endif
  .		else
@@ -27,7 +53,7 @@
  .		endif
  .	endfor
  .endfor
-@@ -578,9 +578,9 @@
+@@ -578,9 +585,9 @@
  CONFIGURE_ENV+=			WX_CONFIG=${WX_CONFIG}
  
  .if defined(WX_CONF_ARGS)
