@@ -1,0 +1,11 @@
+--- Makefile.orig	2013-01-04 13:08:30.212416000 +0100
++++ Makefile	2013-01-04 13:08:56.402453000 +0100
+@@ -9,6 +9,8 @@
+ 
+ MAINTAINER=	sunpoet@FreeBSD.org
+ 
++PKGNAMEPREFIX=	zh-
++
+ MASTERDIR=	${.CURDIR}/../../archivers/unrar
+ 
+ EXTRA_PATCHES=	${.CURDIR}/files/patch-arcread.cpp \
