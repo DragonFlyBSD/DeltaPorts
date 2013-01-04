@@ -1,0 +1,11 @@
+--- Makefile.orig	2013-01-04 22:55:52.961644000 +0100
++++ Makefile	2013-01-04 22:56:03.411659000 +0100
+@@ -96,7 +96,7 @@
+ 	@${ECHO} "If you want to allow users to restart or shutdown the system,"
+ 	@${ECHO} "do not forget to add the following lines between the <config>"
+ 	@${ECHO} "tags in your PolicyKit.conf file."
+-	@${ECHO} "  ${PREFIX}/etc/PolicyKit/PolicyKit.conf
++	@${ECHO} "  ${PREFIX}/etc/PolicyKit/PolicyKit.conf"
+ 	@${ECHO} ""
+ 	@${ECHO} "<match action=\"org.freedesktop.hal.power-management.shutdown\">"
+ 	@${ECHO} "    <return result=\"yes\"/>"
