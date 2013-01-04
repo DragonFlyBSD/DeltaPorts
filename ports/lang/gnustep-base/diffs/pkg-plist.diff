@@ -1,0 +1,10 @@
+--- pkg-plist.orig	2013-01-04 14:55:51.251413000 +0100
++++ pkg-plist	2013-01-04 14:58:38.061646000 +0100
+@@ -819,7 +819,6 @@
+ GNUstep/System/Library/Libraries/gnustep-base/Versions/%%BASEVERSION%%/Resources/Spanish.lproj/Localizable.strings
+ GNUstep/System/Library/Libraries/gnustep-base/Versions/%%BASEVERSION%%/Resources/TraditionalChinese.lproj/Localizable.strings
+ GNUstep/System/Library/Libraries/libgnustep-base.so
+-GNUstep/System/Library/Libraries/libgnustep-base.so.%%BASEVERSION%%
+ GNUstep/System/Library/Libraries/libgnustep-base.so.%%VERSION%%
+ GNUstep/System/Library/Makefiles/Additional/base.make
+ GNUstep/System/Tools/HTMLLinker

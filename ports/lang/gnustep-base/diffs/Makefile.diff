@@ -1,6 +1,6 @@
---- Makefile.orig	2012-12-28 19:32:04.000000000 +0100
-+++ Makefile	2012-12-28 19:52:29.000000000 +0100
-@@ -53,17 +53,6 @@
+--- Makefile.orig	2012-11-17 06:58:51.000000000 +0100
++++ Makefile	2013-01-04 14:58:49.531662000 +0100
+@@ -53,21 +53,12 @@
  
  .include <bsd.port.pre.mk>
  
@@ -18,3 +18,9 @@
  .if defined(GNUSTEP_WITH_LIBOBJC2) || defined(GNUSTEP_WITH_CLANG)
  LIB_DEPENDS+=	objc:${PORTSDIR}/${PKGCATEGORY}/libobjc2
  CFLAGS+=	-I${LOCALBASE}/include -DOBJC2RUNTIME=1
+ PLIST_SUB+=	WITH_LIB1="@comment "
++.elif ${OPSYS} == "DragonFly"
++PLIST_SUB+=	WITH_LIB1="@comment "
+ .else
+ PLIST_SUB+=	WITH_LIB1=""
+ .endif
