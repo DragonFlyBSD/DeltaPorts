@@ -1,0 +1,10 @@
+--- pkg-plist.orig	2013-01-04 16:31:17.299412000 +0100
++++ pkg-plist	2013-01-04 16:31:33.409434000 +0100
+@@ -778,7 +778,6 @@
+ GNUstep/System/Library/Libraries/gnustep-gui/Versions/%%BASEVERSION%%/Resources/Spanish.lproj/GSToolbarCustomizationPalette.gorm/objects.gorm
+ GNUstep/System/Library/Libraries/gnustep-gui/Versions/%%BASEVERSION%%/Resources/Spanish.lproj/Localizable.strings
+ GNUstep/System/Library/Libraries/libgnustep-gui.so
+-GNUstep/System/Library/Libraries/libgnustep-gui.so.%%BASEVERSION%%
+ GNUstep/System/Library/Libraries/libgnustep-gui.so.%%VERSION%%
+ GNUstep/System/Library/Makefiles/Additional/gui.make
+ GNUstep/System/Library/PostScript/GSProlog.ps
