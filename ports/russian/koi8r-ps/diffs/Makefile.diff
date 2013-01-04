@@ -1,0 +1,32 @@
+--- Makefile.orig	2013-01-04 10:39:03.609892000 +0100
++++ Makefile	2013-01-04 10:54:44.891206000 +0100
+@@ -23,19 +23,16 @@
+ .include <bsd.port.pre.mk>
+ 
+ .if !defined(FONTMAP)
+-FONTMAP!=	if which gs > /dev/null 2>&1 ; then \
+-			d=`gs -h  | awk '/^Search path:$$/ { nl=1; next } \
+-					nl { print $$3; exit }'`; \
+-			if [ -e $$d/Fontmap.GS ] ; then \
+-				${ECHO_CMD} $$d/Fontmap.GS; \
+-			elif [ -e $$d/Fontmap ] ; then \
+-				${ECHO_CMD} $$d/Fontmap \
+-			else \
+-				${ECHO_CMD} /nicht/ ; \
+-			fi; \
+-		else \
+-			${ECHO_CMD} /nicht/ ; \
+-		fi
++FONTMAP1!=	which gs 2> /dev/null; echo
++FONTMAP=	/nicht/
++.if !empty(FONTMAP1)
++d!= gs -h  | awk '/^Search path:$$/ { nl=1; next } nl { print $$3; exit }'; echo
++.  if exists(${d}/Fontmap.GS)
++FONTMAP=	${d}/Fontmap.GS
++.  elif exists(${d}/Fontmap)
++FONTMAP=	${d}/Fontmap
++.  endif
++.endif
+ .endif
+ 
+ NO_PACKAGE=	Nothing to build, configurations only
