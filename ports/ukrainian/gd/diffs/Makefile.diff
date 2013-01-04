@@ -1,0 +1,9 @@
+--- Makefile.orig	2013-01-04 12:11:47.347663000 +0100
++++ Makefile	2013-01-04 12:12:08.857693000 +0100
+@@ -15,4 +15,6 @@
+ GD_FONTS=	${DISTDIR}/x-koi8u.tgz koi6x10.bdf koi6x13.bdf \
+ 		koi10x16b.bdf koi9x15.bdf koi10x20.bdf
+ 
++PKGNAMEPREFIX=	uk-
++
+ .include "${MASTERDIR}/Makefile"
