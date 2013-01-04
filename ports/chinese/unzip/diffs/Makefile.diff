@@ -1,0 +1,9 @@
+--- Makefile.orig	2013-01-04 09:05:09.752022000 +0100
++++ Makefile	2013-01-04 09:05:31.532052000 +0100
+@@ -15,4 +15,6 @@
+ 
+ EXTRA_PATCHES=	${.CURDIR}/files/patch-fileio.c
+ 
++PKGNAMEPREFIX=	zh-
++
+ .include "${MASTERDIR}/Makefile"
