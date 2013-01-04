@@ -1,0 +1,11 @@
+--- Makefile.orig	2013-01-04 12:36:43.309753000 +0100
++++ Makefile	2013-01-04 12:37:06.029784000 +0100
+@@ -6,6 +6,8 @@
+ MAINTAINER=	ports@FreeBSD.org
+ COMMENT=	An X11 program that displays images of various formats with japanization
+ 
++PKGNAMEPREFIX=	jp-
++
+ MASTERDIR=	${.CURDIR}/../../graphics/xv
+ PKGDIR=		${.CURDIR}
+ 
