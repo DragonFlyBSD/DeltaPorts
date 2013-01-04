@@ -1,0 +1,11 @@
+--- Makefile.orig	2013-01-04 12:47:48.570682000 +0100
++++ Makefile	2013-01-04 12:47:59.830698000 +0100
+@@ -10,6 +10,8 @@
+ MAINTAINER=	nobutaka@FreeBSD.org
+ COMMENT=	A pager/text-based WWW browser with Japanese support
+ 
++PKGNAMEPREFIX=	jp-
++
+ MASTERDIR=	${.CURDIR}/../../www/w3m
+ PKGDIR=		${.CURDIR}
+ PLIST=		${MASTERDIR}/pkg-plist
