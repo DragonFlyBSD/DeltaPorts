@@ -1,0 +1,9 @@
+--- Makefile.orig	2013-01-04 12:32:22.739389000 +0100
++++ Makefile	2013-01-04 12:32:37.399409000 +0100
+@@ -14,4 +14,6 @@
+ 
+ CPPFLAGS+=	-DJISX0208
+ 
++PKGNAMEPREFIX=	jp-
++
+ .include "${MASTERDIR}/Makefile"
