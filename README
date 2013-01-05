@@ -57,6 +57,15 @@ Makefile.DragonFly:
 	This Makefile is included after the Port Makefile.  It is used
 	preferentially to Makefile.diff.
 
+REMOVE:
+	A file optionally located inside the <diffs> directory that lists
+	all the files to be remove after copying the port from FreeBSD.  Its
+	purpose is to avoid having to make a .diff file with the sole
+	purpose of removing the to-be-modified file.  Not only is this a big
+	time-saver when a lot of patches need removing, it is more robust
+	because any update FreeBSD guys do to the patch would break the
+	dport generation.
+
 special:
 	Directory that contains subdirectories such as Mk and Templates that
 	are treated the same as <portname> directory.
