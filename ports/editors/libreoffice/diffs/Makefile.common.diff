@@ -1,0 +1,13 @@
+--- /usr/ports/editors/libreoffice/Makefile.common	2012-11-17 06:57:15.000000000 +0100
++++ Makefile.common	2013-01-05 21:03:49.912939000 +0100
+@@ -1,8 +1,8 @@
+ # $FreeBSD: ports/editors/libreoffice/Makefile.common,v 1.6 2012/11/17 05:57:15 svnexp Exp $
+ 
+ PORTNAME=	libreoffice
+-PORTVERSION=	3.5.7
+-RCVER=		2
++PORTVERSION=	3.6.4
++RCVER=		3
+ #PRERELEASE=	yes
+ LOVERSION=	${PORTVERSION}.${RCVER}
+ CATEGORIES?=	editors
