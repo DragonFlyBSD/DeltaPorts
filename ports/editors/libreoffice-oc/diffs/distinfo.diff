@@ -1,0 +1,7 @@
+--- distinfo.orig	2013-01-05 21:50:00.086808000 +0100
++++ distinfo	2013-01-05 21:38:18.655829000 +0100
+@@ -1,2 +1,2 @@
+-SHA256 (libreoffice/i18n/LibO_3.5.7_Linux_x86_langpack-deb_oc.tar.gz) = f43d02f4c0426f15dc44303bc599cebbb5110aff59b976834f07775fefeef202
+-SIZE (libreoffice/i18n/LibO_3.5.7_Linux_x86_langpack-deb_oc.tar.gz) = 1837014
++SHA256 (libreoffice/i18n/LibO_3.6.4_Linux_x86_langpack-deb_oc.tar.gz) = f7dcc215ec530d9eca311d684dbe837072fa425776d796f742a3634d0f530787
++SIZE (libreoffice/i18n/LibO_3.6.4_Linux_x86_langpack-deb_oc.tar.gz) = 1787134
