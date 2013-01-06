@@ -11,3 +11,8 @@
  typedef struct sa_buf sa_buf;
  struct sa_buf {
    unsigned int      size;
+@@ -698,4 +694,3 @@
+ 
+ const char *sa_strerror(int code) { return NULL; }
+ 
+-#endif
