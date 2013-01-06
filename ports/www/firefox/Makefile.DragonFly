@@ -2,4 +2,4 @@
 OPTIONS_SINGLE_AUDIO:=${OPTIONS_SINGLE_AUDIO:S/ALSA//}
 
 BUILD_DEPENDS=		gm4:${PORTSDIR}/devel/m4
-EXTRACT_DEPENDS+=	unzip:${PORTSDIR}/archivers/unzip
+BUILD_DEPENDS+=		unzip:${PORTSDIR}/archivers/unzip
