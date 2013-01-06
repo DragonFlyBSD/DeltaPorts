@@ -1,0 +1,26 @@
+--- Makefile.orig	2013-01-06 15:42:30.086694000 +0100
++++ Makefile	2013-01-06 15:43:52.646809000 +0100
+@@ -49,23 +49,10 @@
+ 
+ .include "${.CURDIR}/../../www/firefox/Makefile.options"
+ 
+-OPTIONS_DEFAULT:=${OPTIONS_DEFAULT:S/OSS/ALSA/}
+-
+ .include <bsd.port.pre.mk>
+ 
+ WRKSRC:=	${WRKDIR}/mozilla-release
+ 
+-.if ${ARCH} == amd64
+-CONFIGURE_TARGET=x86_64-portbld-freebsd${OSREL}
+-.elif ${ARCH} == powerpc64
+-.if ${OSVERSION} < 900033
+-BROKEN=		Needs binutils 2.17.50 to build
+-.else
+-MOZ_EXPORT+=	UNAME_m="powerpc64"
+-CFLAGS+=	-mminimal-toc
+-.endif
+-.endif
+-
+ .if ${PORT_OPTIONS:MPGO}
+ BUILD_DEPENDS+=	${PYTHON_SITELIBDIR}/_sqlite3.so:${PORTSDIR}/databases/py-sqlite3
+ USE_DISPLAY=		yes
