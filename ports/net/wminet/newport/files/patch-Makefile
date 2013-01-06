@@ -1,5 +1,5 @@
 --- Makefile.orig	1998-12-03 16:33:58.000000000 +0100
-+++ Makefile	2013-01-05 17:22:58.000000000 +0100
++++ Makefile	2013-01-06 13:55:45.507748000 +0100
 @@ -12,12 +12,15 @@
  INCDIR = -I${X11BASE}/include
  
@@ -28,8 +28,9 @@
 +	rm -f $(OBJS) wminet
  
 -install.man : wmnet.1
+-	install -c -m 644 -o man -g man wmnet.1 ${MANDIR}/man1
 +install.man : wminet.1
- 	install -c -m 644 -o man -g man wmnet.1 ${MANDIR}/man1
++	install -c -m 644 -o man -g man wminet.1 ${MANDIR}/man1
  
 -install.bin : wmnet
 -	install -s -c -m 2555 -o bin -g kmem wmnet ${BINDIR}
