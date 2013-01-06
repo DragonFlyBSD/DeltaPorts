@@ -1,0 +1,21 @@
+--- Makefile.orig	2013-01-06 01:56:29.387466000 +0100
++++ Makefile	2013-01-06 02:06:24.208297000 +0100
+@@ -25,6 +25,8 @@
+ 		sqlite3.8:${PORTSDIR}/databases/sqlite3 \
+ 		gnome-keyring.0:${PORTSDIR}/security/libgnome-keyring
+ 
++BUILD_DEPENDS+=	gperf:${PORTSDIR}/devel/gperf
++
+ USE_BZIP2=	yes
+ USE_GMAKE=	yes
+ USE_BISON=	build
+@@ -52,7 +54,8 @@
+ 
+ .if !defined(WITHOUT_KERBEROS)
+ CONFIGURE_ARGS+=	--with-krb5=/usr
+-KRB5_LIB=		`/usr/bin/krb5-config gssapi --libs`
++KRB5_LIB=		`${LOCALBASE}/bin/krb5-config gssapi --libs`
++BUILD_DEPENDS+= 	/usr/bin/krb5-config:${PORTSDIR}/security/krb5
+ .endif
+ 
+ #.if defined(WITH_IMAP4) || defined(PACKAGE_BUILDING)
