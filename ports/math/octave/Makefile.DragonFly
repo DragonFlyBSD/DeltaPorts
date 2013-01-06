@@ -1,0 +1,5 @@
+# During build with gfortran77, a tool segfaults and goes 100% CPU forever.
+# A search on the web finds this is a common problem and apparently octave
+# does not build with GCC 4.7.  Wait for the next version I guess
+
+BROKEN= Octave segfaults during build with gfortran 4.7 (infinite loop)
