@@ -1,0 +1,11 @@
+--- Makefile.orig	2013-01-06 15:54:35.177707000 +0100
++++ Makefile	2013-01-06 15:55:14.347761000 +0100
+@@ -53,7 +53,7 @@
+ .include "${.CURDIR}/../../x11/kde3/Makefile.kde"
+ .include <bsd.port.pre.mk>
+ 
+-.if ${OSVERSION} < 800069
++.if ${OPSYS} == "DragonFly" || ${OSVERSION} < 800069
+ LIB_DEPENDS+=	usb-0.1:${PORTSDIR}/devel/libusb
+ .else
+ EXTRA_PATCHES+=	${FILESDIR}/extrapatch-libusb20
