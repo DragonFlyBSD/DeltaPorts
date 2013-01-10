@@ -1,0 +1,9 @@
+--- files/nss.pc.in.orig	2013-01-02 14:53:07.789814000 +0100
++++ files/nss.pc.in	2013-01-06 23:13:04.000000000 +0100
+@@ -7,5 +7,5 @@
+ Description: Mozilla Network Security Services
+ Version: @PORTVERSION@
+ Requires: nspr
+-Libs: -L${libdir} -lnss3 -lsmime3 -lssl3 -lnssutil3
++Libs: -Wl,-R${libdir} -L${libdir} -lnss3 -lsmime3 -lssl3 -lnssutil3
+ Cflags: -I${includedir}/nss -I${includedir}/nss/nss
