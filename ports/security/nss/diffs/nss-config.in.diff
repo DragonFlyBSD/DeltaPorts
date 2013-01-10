@@ -1,0 +1,11 @@
+--- files/nss-config.in.orig	2013-01-02 14:53:07.789814000 +0100
++++ files/nss-config.in	2013-01-10 09:54:43.270289000 +0100
+@@ -127,7 +127,7 @@
+ fi
+ 
+ if test "$echo_libs" = "yes"; then
+-      libdirs="-L$libdir"
++      libdirs="-Wl,-R${libdir} -L$libdir"
+       if test -n "$lib_ssl"; then
+ 	libdirs="$libdirs -lssl${major_version}"
+       fi
