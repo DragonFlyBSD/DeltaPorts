@@ -1,0 +1,38 @@
+--- Makefile.orig	2013-01-11 22:02:16.000000000 +0100
++++ Makefile	2013-01-11 22:14:34.000000000 +0100
+@@ -40,6 +40,7 @@
+ .include <bsd.port.pre.mk>
+ .include <bsd.port.options.mk>
+ 
++.if ${OPSYS} == "FreeBSD"
+ .if ${ARCH} == "amd64"
+ BLD_TARGET=		x86_64-aux-freebsd${OSREL}
+ OS_LABEL4VERS=		[FreeBSD64]
+@@ -51,6 +52,18 @@
+ BOOTSTRAP_TRIPLET=	i386-bootstrap-freebsd8.0/4.6.0
+ BOOTSTRAP_COMPILER=	gnat-bootstrap.i386.freebsd.tar.bz2
+ .endif
++.endif
++.if ${OPSYS} == "DragonFly"
++.if ${ARCH} == "x86_64"
++OS_LABEL4VERS=		[DragonFly64]
++BOOTSTRAP_TRIPLET=	x86_64-bootstrap-dragonfly2.8/4.6.0
++.else
++OS_LABEL4VERS=		[DragonFly]
++BOOTSTRAP_TRIPLET=	i386-bootstrap-dragonfly2.8/4.6.0
++.endif
++BLD_TARGET=		${ARCH}-aux-${OPSYS:tl}${OSREL}
++BOOTSTRAP_COMPILER=	gnat-bootstrap.${ARCH}.dragonfly.tar.bz2
++.endif
+ PLIST_SUB=		GNU_HOST=${BLD_TARGET}
+ PLIST_SUB+=		GCC_VER=${GCC_VERSION}
+ 
+@@ -271,7 +284,7 @@
+ 	${ECHO_CMD} "@unexec ${RMDIR} %D/include/c++               2>/dev/null || true" >> ${WRKDIR}/PLIST.lib
+ 
+ 	cd ${WRKDIR}; ${SED} -i -e "/PLIST.lib/ r PLIST.lib" ${TMPPLIST}
+-.if ${OSVERSION} > 900000
++.if ${OPSYS} == "FreeBSD" && ${OSVERSION} > 900000
+ 	@${ECHO_MSG} "===================================================================="
+ 	@${ECHO_MSG} " NOTICE REGARDING ADA TASKING ON FREEBSD 9.0:"
+ 	@${ECHO_MSG} " Due to a bug in the FreeBSD 9.0 threading library, an exiting task"
