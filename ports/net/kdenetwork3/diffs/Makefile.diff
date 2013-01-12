@@ -1,0 +1,11 @@
+--- Makefile.orig	2013-01-12 18:46:27.866225000 +0100
++++ Makefile	2013-01-12 18:47:12.646288000 +0100
+@@ -51,7 +51,7 @@
+ PLIST_SUB+=	KPPP=""
+ .endif
+ 
+-.if ${OSVERSION} >= 900004
++.if ${OPSYS} == "FreeBSD" && ${OSVERSION} >= 900004
+ EXTRA_PATCHES+=	${FILESDIR}/extrapatch-find_user.cpp
+ .endif
+ 
