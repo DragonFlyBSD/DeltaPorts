@@ -1,18 +1,11 @@
 --- Makefile.orig	2012-11-17 06:57:19.000000000 +0100
-+++ Makefile	2012-12-27 01:59:01.000000000 +0100
-@@ -148,13 +148,13 @@
- .  elif defined(WITH_GTK2)
- USE_GNOME=	gtk20
- MAKE_ARGS+=	CONF_OPT_GUI="--enable-gui=gtk2 --with-gtk-prefix=${LOCALBASE}" ${I18N}
--MAKE_ARGS+=	X_LIBS="$(X_LIBS) -lXt"
-+MAKE_ARGS+=	X_LIBS="$(X_LIBS) -lX11 -lXt"
- USE_XORG+=	xt
- .  elif defined(WITH_GNOME2)
- USE_GNOME=	libgnomeui
- PKGNAMESUFFIX=	-gnome2
- MAKE_ARGS+=	CONF_OPT_GUI="--enable-gui=gnome2" ${I18N}
--MAKE_ARGS+=	X_LIBS="$(X_LIBS) -lXt"
-+MAKE_ARGS+=	X_LIBS="$(X_LIBS) -X11 -lXt"
- USE_XORG+=	xt glproto
- .  elif defined(WITH_MOTIF)
- USE_MOTIF=	yes
++++ Makefile	2013-01-12 22:09:09.363213000 +0100
+@@ -236,7 +236,7 @@
+ 	${ECHO_CMD} "r ${WRKDIR}/PLIST.share-vim"	>> ${WRKDIR}/ex.script
+ 	${ECHO_CMD} "x!"				>> ${WRKDIR}/ex.script
+ 	${CP} -p ${TMPPLIST} ${TMPPLIST}.pre-share-vim
+-	cd ${WRKDIR} ; ex < ex.script
++	cd ${WRKDIR} ; env TERM=cons25 ex < ex.script
+ 	@${ECHO_CMD}
+ 	@${CAT} ${PKGMESSAGE}
+ 	@${ECHO_CMD}
