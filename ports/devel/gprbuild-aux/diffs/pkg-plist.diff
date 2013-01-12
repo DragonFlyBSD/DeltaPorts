@@ -1,0 +1,18 @@
+--- pkg-plist.orig	2013-01-12 01:09:10.857615000 +0100
++++ pkg-plist	2013-01-12 01:09:30.597642000 +0100
+@@ -161,7 +161,6 @@
+ @dirrmtry %%EXAMPLESDIR%%/libraries/obj
+ @dirrmtry %%EXAMPLESDIR%%/libraries/obj1
+ @dirrmtry %%EXAMPLESDIR%%/libraries/obj2
+-@dirrmtry %%EXAMPLESDIR%%/libraries/obj3
+ @dirrmtry %%EXAMPLESDIR%%/libraries
+ @dirrmtry %%EXAMPLESDIR%%/matrix/obj
+ @dirrmtry %%EXAMPLESDIR%%/matrix/src
+@@ -185,7 +184,6 @@
+ @dirrmtry %%EXAMPLESDIR%%/subsystems/util_src
+ @dirrmtry %%EXAMPLESDIR%%/subsystems
+ @dirrmtry %%EXAMPLESDIR%%
+-@dirrmtry share/gprbuild
+ @dirrmtry share/gpr
+ @dirrmtry share/gprconfig
+ @dirrmtry libexec/gprbuild
