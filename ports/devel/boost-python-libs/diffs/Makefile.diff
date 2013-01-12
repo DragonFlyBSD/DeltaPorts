@@ -1,0 +1,16 @@
+--- Makefile.orig	2013-01-12 20:07:10.922990000 +0100
++++ Makefile	2013-01-12 20:26:05.164574000 +0100
+@@ -47,11 +47,10 @@
+ 
+ do-install:
+ # Install libraries
+-	${FIND} ${WRKSRC}/bin.v2/libs/python -type f -name "*.a"\
++	${FIND} ${WRKSRC}/stage/lib/ -type f -name \*\.a \
+  		-exec ${INSTALL_DATA} \{\} ${PREFIX}/lib \;
+ 
+-	${FIND} -E ${WRKSRC}/bin.v2/libs/python -type f \
+- 		-regex '.*so' \
++	${FIND} ${WRKSRC}/stage/lib/ -type l -name \*\.so \
+ 		-exec ${INSTALL_DATA} \{\} ${PREFIX}/lib \;
+ 
+ # Create symlink for shared library
