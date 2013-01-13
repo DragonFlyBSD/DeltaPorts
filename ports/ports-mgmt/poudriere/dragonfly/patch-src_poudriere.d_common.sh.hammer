@@ -1,6 +1,6 @@
---- /dev/null	2013-01-13 04:46:51.754149689 +0100
-+++ src/poudriere.d/common.sh.hammer	2013-01-13 04:46:56.696551000 +0100
-@@ -0,0 +1,802 @@
+--- /dev/null	2013-01-13 11:28:41.706888515 +0100
++++ src/poudriere.d/common.sh.hammer	2013-01-13 11:28:47.752742000 +0100
+@@ -0,0 +1,810 @@
 +#!/bin/sh
 +
 +zget() {
@@ -365,19 +365,24 @@
 +	zset status "dismounting:${j}"	
 +	JAILNAME=${name} zset status "grave:"
 +
++	# make sure cwd is not on mount
++	cd /
++
 +	# porttree dismounts
-+	umount ${mnt}/${PORTSRC}           || :
-+	umount ${mnt}/${STD_PACKAGES}      || : 
-+	umount ${mnt}/${STD_DISTFILES}     || :
-+	[ -d ${ccmnt} ] && umount ${ccmnt} || :
++	umount ${mnt}/${PORTSRC}
++	umount ${mnt}/${STD_PACKAGES} 
++	umount ${mnt}/${STD_DISTFILES}
 +
 +	# slave jail dismounts
-+	umount ${mnt}/proc                 || :
-+	umount ${mnt}/dev                  || :
-+	[ -d ${linux} ] && umount ${linux} || :
++	umount ${mnt}/proc
++	umount ${mnt}/dev
 +	
++	# optional dismounts 
++	[ -d "${linux}" ] && umount ${linux}
++	[ -d "${CCACHE_DIR:-/nonexistent}" ] && umount ${ccmnt}
++
 +	# destroy jail
-+	umount ${mnt} || :
++	umount ${mnt}
 +	
 +	# wipe out hammer info
 +	kill_metadata jails/${name}
@@ -390,6 +395,9 @@
 +	cat ${JAILMNT}/poudriere/var/run/*.pid 2>/dev/null | xargs pwait 2>/dev/null
 +
 +	msg "Stopping ${PARALLEL_JOBS} builders"
++
++	# wait for slaves to finish dismounting
++	sleep 5
 +
 +	for j in ${JOBS}; do
 +		jail_soft_stop ${JAILNAME}-job-${j} || :
