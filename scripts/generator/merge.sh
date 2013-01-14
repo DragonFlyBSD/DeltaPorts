@@ -33,7 +33,8 @@ AWKCMD='{ n=split($1,a,"-") }{ print substr($2,12) " " a[n] }'
 AWKCMD2='{ \
 if (FNR == 1) { \
   if ($1 == "MASK") { print $1; exit } \
-  else if ($1 == "LOCK") { print "SKIP"; exit } \
+  else if ($1 == "LOCK" && mex == 1) { print "SKIP"; exit } \
+  else if ($1 == "LOCK") { print "LOCK"; exit } \
   else if ($1 == "PORT" || $1 == "DPORT") { hold = $1 } \
   else exit 1; \
 } \
@@ -148,7 +149,12 @@ while read fileline; do
          # Likely no STATUS FILE exists, consider as PORT
          merge ${val_1} "PORT"
       elif [ "${ML}" = "SKIP" ]; then
-         # locked, do nothing
+         # Entry already exists and 
+         #  - it's locked -or-
+         #  - last attempt = current version (val_2)
+      elif [ "${ML}" = "LOCK" ]; then
+         # Locked and merged entry doesn't exist.  Copy from DPorts
+         cpdup -VV -i0 ${DPORTS}/${val_1}/ ${MERGED}/${val_1}/
       elif [ "${ML}" = "MASK" ]; then
          # remove if existed previously
          rm -rf ${MERGED}/${val_1}
