@@ -77,6 +77,7 @@ merge()
 {
    local M1=${MERGED}/$1
    local DP=${DELTA}/ports/$1
+   local REMOVE=${DP}/diffs/REMOVE
    local MD=0
    local DDIFF=0
    local DDRAG=0
@@ -99,6 +100,11 @@ merge()
         [ ${MD} -eq 1 ] && cp -p ${DP}/Makefile.DragonFly ${WORKAREA}/
         [ ${DDRAG} -eq 1 ] && cp -pr ${DP}/dragonfly ${WORKAREA}/
         if [ ${DDIFF} -eq 1 ]; then
+          if [ -f ${REMOVE} ]; then
+            while read line; do
+              rm ${WORKAREA}/${line}
+            done < ${REMOVE}
+          fi
           diffs=$(find ${DP}/diffs -name \*\.diff)
           for difffile in ${diffs}; do
             patch --quiet --posix -d ${WORKAREA} < ${difffile}
