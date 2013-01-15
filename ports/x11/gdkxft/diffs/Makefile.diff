@@ -1,0 +1,31 @@
+--- Makefile.orig	2013-01-15 14:03:03.281498000 +0100
++++ Makefile	2013-01-15 14:29:10.183687000 +0100
+@@ -15,12 +15,16 @@
+ COMMENT=	An anti-aliased font support for gtk+
+ 
+ LIB_DEPENDS=	Xft.2:${PORTSDIR}/x11-fonts/libXft
++LIB_DEPENDS+=	fontconfig:${PORTSDIR}/x11-fonts/fontconfig
++LIB_DEPENDS+=	freetype:${PORTSDIR}/print/freetype2
+ 
+ USE_AUTOTOOLS=	libtool
+ USE_GNOME=	gtk12
+ USE_ICONV=	yes
+ GNU_CONFIGURE=	yes
+-LDFLAGS+=	-L${LOCALBASE}/lib -lgnuregex -liconv
++USE_GETTEXT=	yes
++USE_XORG+=	x11 xft
++LDFLAGS+=	-L${LOCALBASE}/lib -liconv
+ CFLAGS+=	`pkg-config xft --cflags`
+ CONFIGURE_ARGS=	--sbindir=${PREFIX}/bin \
+ 		--without-gnome
+@@ -39,8 +43,8 @@
+ 		 s|DESTDIR)\$$(datadir|DESTDIR)\$$(pkgdatadir|g ; \
+ 		 s|la_LDFLAGS =.*$$|la_LDFLAGS = -module -avoid-version|g'
+ .for file in gdkxft_sysinstall.in gdkxft.c generate.pl
+-	@${REINPLACE_CMD} -e 's|<regex.h>|<gnuregex.h>|g ; \
+-		 s|gtk-config |${GTK_CONFIG:T} |g' ${WRKSRC}/src/${file}
++	@${REINPLACE_CMD} -e 's|gtk-config |${GTK_CONFIG:T} |g' \
++	  ${WRKSRC}/src/${file}
+ .endfor
+ 
+ post-install:
