@@ -1,0 +1,21 @@
+--- Makefile.orig	2013-01-15 13:52:40.100628000 +0100
++++ Makefile	2013-01-15 13:53:19.560683000 +0100
+@@ -25,7 +25,7 @@
+ MAN1=		vdk-config-2.1
+ 
+ CPPFLAGS+=	-I${LOCALBASE}/include ${PTHREAD_CFLAGS}
+-LDFLAGS+=	-L${LOCALBASE}/lib -lgnuregex ${PTHREAD_LIBS}
++LDFLAGS+=	-L${LOCALBASE}/lib ${PTHREAD_LIBS}
+ 
+ .include <bsd.port.pre.mk>
+ 
+@@ -35,9 +35,5 @@
+ .for file in vdk-config.in vdk.pc.in
+ 	@${REINPLACE_CMD} -e 's|-lpthread|${LDFLAGS}|g' ${WRKSRC}/${file}
+ .endfor
+-.for file in FileDialog.h gtksourcebuffer.h gtksourcetag.h
+-	@${REINPLACE_CMD} -e \
+-		's|<.*regex\.h>|<gnu/regex.h>|g' ${WRKSRC}/include/vdk/${file}
+-.endfor
+ 
+ .include <bsd.port.post.mk>
