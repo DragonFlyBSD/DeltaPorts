@@ -1,0 +1,21 @@
+--- Makefile.orig	2013-01-15 13:26:39.598448000 +0100
++++ Makefile	2013-01-15 13:27:18.878503000 +0100
+@@ -15,18 +15,11 @@
+ 
+ USE_XORG=	x11
+ GNU_CONFIGURE=	yes
+-CONFIGURE_ENV=	LIBS="-lgnuregex"
+ CONFIGURE_ARGS=	--libdir=${PREFIX}/share
+ MAKE_JOBS_UNSAFE=	yes
+ 
+ PLIST_SUB=	VERSION="${PORTVERSION}"
+ 
+-post-patch:
+-	@${REINPLACE_CMD} -e 's| regex\.c | |g ; \
+-		 s| -g | |g' ${WRKSRC}/Makefile.in
+-	@${REINPLACE_CMD} -e \
+-		's|"regex\.h"|<gnu/regex.h>|g' ${WRKSRC}/bm_search.c
+-
+ do-install:
+ 	${INSTALL_PROGRAM} ${WRKSRC}/xcoral ${PREFIX}/bin
+ 	@${MKDIR} ${DATADIR}
