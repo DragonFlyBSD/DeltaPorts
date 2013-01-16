@@ -1,5 +1,5 @@
---- bsd.mesalib.mk.orig	2012-12-27 00:05:28.000000000 +0100
-+++ bsd.mesalib.mk	2012-12-27 00:34:13.000000000 +0100
+--- bsd.mesalib.mk.orig	2012-11-17 06:58:12.000000000 +0100
++++ bsd.mesalib.mk	2013-01-16 12:05:46.425509000 +0100
 @@ -72,13 +72,14 @@
  ALL_TARGET=		default
  
@@ -16,3 +16,12 @@
  
  .if ${COMPONENT:Mglu} == ""
  CONFIGURE_ARGS+=	--disable-glu
+@@ -101,8 +102,6 @@
+ .endif
+ 
+ post-patch:
+-	@${REINPLACE_CMD} -e 's|-ffast-math|${FAST_MATH}|' -e 's|x86_64|amd64|' \
+-		-e 's|-lpthread|${PTHREAD_LIBS}|g' ${WRKSRC}/configure
+ 	@${REINPLACE_CMD} -e 's|[$$](INSTALL_LIB_DIR)/pkgconfig|${PREFIX}/libdata/pkgconfig|' \
+ 		${WRKSRC}/src/glu/Makefile \
+ 		${WRKSRC}/src/glw/Makefile \
