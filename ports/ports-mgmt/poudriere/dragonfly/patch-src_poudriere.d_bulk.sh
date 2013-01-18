@@ -1,5 +1,5 @@
 --- src/poudriere.d/bulk.sh.orig	2012-12-01 01:15:48.000000000 +0100
-+++ src/poudriere.d/bulk.sh	2013-01-13 11:04:00.620664000 +0100
++++ src/poudriere.d/bulk.sh	2013-01-13 11:58:18.345215000 +0100
 @@ -10,12 +10,12 @@
  Options:
      -c          -- Clean the previous built binary packages
@@ -14,7 +14,7 @@
      -v          -- Be verbose; show more information. Use twice to enable debug output.
      -w          -- Save WRKDIR on failed builds
      -z set      -- Specify which SET to use
-@@ -31,6 +31,7 @@
+@@ -31,12 +31,13 @@
  SETNAME=""
  CLEAN=0
  CLEAN_LISTED=0
@@ -22,6 +22,13 @@
  ALL=0
  . ${SCRIPTPREFIX}/common.sh
  
+ [ $# -eq 0 ] && usage
+ 
+-while getopts "f:j:J:Ccn:p:tsvwz:a" FLAG; do
++while getopts "f:j:J:Ccn:p:tsvwz:ar" FLAG; do
+ 	case "${FLAG}" in
+ 		t)
+ 			export PORTTESTING=1
 @@ -61,6 +62,9 @@
  		p)
  			PTNAME=${OPTARG}
