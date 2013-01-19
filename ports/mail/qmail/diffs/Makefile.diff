@@ -1,0 +1,11 @@
+--- Makefile.orig	2013-01-19 11:31:42.204711000 +0100
++++ Makefile	2013-01-19 11:32:15.064757000 +0100
+@@ -773,7 +773,7 @@
+ 			   s!QUEUE_EXTRALEN 0!QUEUE_EXTRALEN 5!g' \
+ 			   ${WRKSRC}/extra.h
+ .endif
+-.if ( ${ARCH} == "amd64" || ${ARCH} == "ia64" ) && !defined(SLAVE_LDAP)
++.if !defined(SLAVE_LDAP)
+ 	@${PATCH} -d ${WRKSRC} < ${FILESDIR}/extra-patch-amd64
+ .endif
+ 	@${REINPLACE_CMD} -e "s/void *main/int main/g" ${WRKSRC}/*.c
