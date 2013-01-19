@@ -1,0 +1,11 @@
+--- /usr/ports/lang/ghc/bsd.cabal.mk	2012-12-20 03:32:28.000000000 +0100
++++ /home/marino/merged_ports.orig/lang/ghc/bsd.cabal.mk	2012-12-31 11:26:41.857513000 +0100
+@@ -81,7 +81,7 @@
+ .endif
+ 
+ USE_BINUTILS=	yes
+-USE_GCC=	4.6
++USE_GCC=	4.6+
+ 
+ .if ${PORT_OPTIONS:MDYNAMIC}
+ LIB_DEPENDS+=	ffi.5:${PORTSDIR}/devel/libffi
