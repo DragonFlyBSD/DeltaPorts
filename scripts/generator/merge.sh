@@ -108,8 +108,9 @@ merge()
           fi
           diffs=$(find ${DP}/diffs -name \*\.diff)
           for difffile in ${diffs}; do
-            patch --quiet --posix -d ${WORKAREA} < ${difffile}
+            patch --quiet -d ${WORKAREA} < ${difffile}
           done
+          find ${WORKAREA} -type f -name \*\.orig -exec rm {} \;
         fi
 	LEGACY=$(cd ${WORKAREA} && grep -lE ':(U|L)}|ARCH}.*(amd64|"amd64")' Makefile *\.common 2>/dev/null)
         for item in ${LEGACY}; do
@@ -169,7 +170,7 @@ done < ${TMPFILE}
 rm -f ${TMPFILE}
 
 cpdup -i0 ${FPORTS}/Tools ${MERGED}/Tools
-cp ${FPORTS}/GIDs ${FPORTS}/UIDs ${MERGED}/
+cp ${DPORTS}/GIDs ${DPORTS}/UIDs ${MERGED}/
 
 rm -rf ${WORKAREA}/*
 
