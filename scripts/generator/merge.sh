@@ -29,7 +29,7 @@ checkdir DPORTS
 checkdir FPORTS
 checkdir MERGED
 
-AWKCMD='{ n=split($1,a,"-") }{ print substr($2,12) " " a[n] }'
+AWKCMD1='{ n=split($1,a,"-") }{ print substr($2,12) " " a[n] }'
 AWKCMD2='{ \
 if (FNR == 1) { \
   if ($1 == "MASK") { print $1; exit } \
@@ -42,6 +42,7 @@ if (FNR == 2) \
   if (latt == $3 && mex == 1) { print "SKIP" } \
   else { print hold } \
 }'
+AWKCMD3='{ print $1 "/" $2 }'
 
 TMPFILE=/tmp/tmp.awk
 WORKAREA=/tmp/merge.workarea
@@ -132,7 +133,17 @@ split () {
    val_2=${2}
 }
 
-awk -F \| "${AWKCMD}" ${INDEX} | sort > ${TMPFILE}
+awk -F \| "${AWKCMD1}" ${INDEX} | sort > ${TMPFILE}
+
+echo "searching for custom dports..."
+CUSTOM=$(cd ${DELTA}/ports && find * -type f -name STATUS -exec grep -l DPORT {} \;)
+for myport in ${CUSTOM}; do
+   fixed=$(echo ${myport}| awk -F \/ "${AWKCMD3}")
+   fpc=$(grep "${fixed} " ${TMPFILE})
+   [ -z "${fpc}" ] && echo "${fixed} 0" >> ${TMPFILE}
+done
+echo "done"
+
 while read fileline; do
    split ${fileline}
 
