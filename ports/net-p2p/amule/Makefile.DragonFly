@@ -1,2 +1,2 @@
 MAKE_JOBS_SAFE=	yes
-LIB_DEPENDS=    cryptopp:${PORTSDIR}/security/cryptopp
+LIB_DEPENDS=	cryptopp:${PORTSDIR}/security/cryptopp
