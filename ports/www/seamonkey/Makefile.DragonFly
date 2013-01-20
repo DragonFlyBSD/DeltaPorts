@@ -1,0 +1,9 @@
+BUILD_DEPENDS+=		yasm:${PORTSDIR}/devel/yasm
+
+OPTIONS_EXCLUDE+=	WEBRTC ENIGMAIL
+CONFIGURE_ARGS+=	--disable-webrtc
+CONFIGURE_ARGS+=	--disable-enigmail
+
+OPTIONS_DEFAULT:=	${OPTIONS_DEFAULT:S/ALSA/OSS/}
+
+EM_XPI_FILE=		${MOZ_OBJDIR}/mozilla/dist/bin/${EM_DISTNAME}-${OPSYS:tl}-${ARCH:S/amd64/x86_64/}.xpi
