@@ -1,0 +1,7 @@
+BUILD_DEPENDS+=		yasm:${PORTSDIR}/devel/yasm
+BUILD_DEPENDS+=		unzip:${PORTSDIR}/archivers/unzip
+
+OPTIONS_EXCLUDE+=	ENIGMAIL
+CONFIGURE_ARGS+=	--disable-enigmail
+
+EM_XPI_FILE=		${MOZ_OBJDIR}/mozilla/dist/bin/${EM_DISTNAME}-${OPSYS:tl}-${ARCH:S/amd64/x86_64/}.xpi
