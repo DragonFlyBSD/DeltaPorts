@@ -1,0 +1,10 @@
+--- src/SConscript.orig	2012-12-09 04:50:12.000000000 +0100
++++ src/SConscript	2013-01-21 11:29:53.511369000 +0100
+@@ -225,6 +225,7 @@
+     """),
+   'simulator:arm': ['arm/simulator-arm.cc'],
+   'simulator:mips': ['mips/simulator-mips.cc'],
++  'os:dragonfly': ['platform-freebsd.cc', 'platform-posix.cc'],
+   'os:freebsd': ['platform-freebsd.cc', 'platform-posix.cc'],
+   'os:openbsd': ['platform-openbsd.cc', 'platform-posix.cc'],
+   'os:linux':   ['platform-linux.cc', 'platform-posix.cc'],
