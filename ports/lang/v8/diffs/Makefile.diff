@@ -1,17 +1,23 @@
 --- Makefile.orig	2013-01-21 10:53:06.188286000 +0100
-+++ Makefile	2013-01-21 13:35:31.051898000 +0100
-@@ -22,12 +22,8 @@
++++ Makefile	2013-01-21 14:31:10.396562000 +0100
+@@ -18,17 +18,11 @@
+ USE_LDCONFIG=	yes
+ ALL_TARGET=	native
+ 
+-MAKE_ARGS=	library=shared
++MAKE_ENV+=	GYPFLAGS=-DOS=freebsd
++MAKE_ENV+=	library=shared
++USE_GCC=	4.7
  
  .include <bsd.port.pre.mk>
- 
+-
 -.if ${CC:T:Mclang} == "clang" || ${CXX:T:Mclang++} == "clang++" || ${OSVERSION} >= 1000024
 -MAKE_ENV+=	LINK=clang++
 -.else
 -MAKE_ARGS+=	strictaliasing=off
 -USE_GCC=	any
 -.endif
-+MAKE_ARGS+=	GYPFLAGS=-DOS=freebsd
-+USE_GCC=	4.7
- 
+-
  ONLY_FOR_ARCHS=	i386 amd64
  
+ do-install:
