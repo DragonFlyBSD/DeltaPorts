@@ -5,7 +5,7 @@
      # versions of Python, see http://bugs.python.org/issue1082
      return 'win32'
 +  elif id == 'DragonFly':
-+    return 'dragonfly'
++    return 'freebsd'
    elif id == 'FreeBSD':
      return 'freebsd'
    elif id == 'OpenBSD':
