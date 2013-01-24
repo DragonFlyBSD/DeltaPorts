@@ -1,0 +1,10 @@
+--- Makefile.orig	2013-01-24 19:59:50.584007000 +0100
++++ Makefile	2013-01-24 20:00:01.874023000 +0100
+@@ -8,6 +8,7 @@
+ PORTNAME=	BitchX
+ PORTREVISION=	5
+ CATEGORIES=	chinese
++PKGNAMEPREFIX=	zh-
+ 
+ MAINTAINER=	ports@FreeBSD.org
+ COMMENT=	A zh-tw cursor movement friendly, wrapping clean BitchX
