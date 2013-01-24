@@ -1,0 +1,10 @@
+--- Makefile.orig	2013-01-24 17:42:24.084646000 +0100
++++ Makefile	2013-01-24 17:42:41.234670000 +0100
+@@ -6,6 +6,7 @@
+ #
+ 
+ CATEGORIES=	japanese x11
++PKGNAMEPREFIX=	ja-
+ 
+ MAINTAINER=	umeno@rr.iij4u.or.jp
+ 
