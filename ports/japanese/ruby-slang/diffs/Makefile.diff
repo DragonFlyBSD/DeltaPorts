@@ -1,0 +1,10 @@
+--- Makefile.orig	2013-01-24 18:49:40.320284000 +0100
++++ Makefile	2013-01-24 18:49:51.580299000 +0100
+@@ -8,6 +8,7 @@
+ MASTERDIR=	${.CURDIR}/../../devel/ruby-slang
+ 
+ CATEGORIES=	japanese
++PKGNAMEPREFIX=	ja-
+ 
+ MAINTAINER=	ruby@FreeBSD.org
+ COMMENT=	S-Lang-jp extension module for Ruby
