@@ -1,0 +1,10 @@
+--- Makefile.orig	2013-01-24 17:21:00.312853000 +0100
++++ Makefile	2013-01-24 17:21:10.632867000 +0100
+@@ -7,6 +7,7 @@
+ 
+ MASTERDIR=	${.CURDIR}/../../www/webalizer
+ CATEGORIES=	ukrainian
++PKGNAMEPREFIX=	uk-
+ 
+ MAINTAINER=	mikef@LITech.lviv.ua
+ 
