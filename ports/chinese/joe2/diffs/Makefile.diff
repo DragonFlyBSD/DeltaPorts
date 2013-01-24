@@ -1,0 +1,10 @@
+--- Makefile.orig	2013-01-24 19:38:32.362222000 +0100
++++ Makefile	2013-01-24 19:38:46.542242000 +0100
+@@ -6,6 +6,7 @@
+ #
+ 
+ CATEGORIES=	chinese
++PKGNAMEPREFIX=	zh-
+ 
+ PATCH_SITES=	${MASTER_SITE_LOCAL}
+ PATCH_SITE_SUBDIR=	chinsan
