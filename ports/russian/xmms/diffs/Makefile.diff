@@ -1,0 +1,10 @@
+--- Makefile.orig	2013-01-24 17:04:30.251470000 +0100
++++ Makefile	2013-01-24 17:04:48.621495000 +0100
+@@ -7,6 +7,7 @@
+ 
+ PORTNAME=	xmms
+ CATEGORIES=	russian
++PKGNAMEPREFIX=	ru-
+ 
+ MAINTAINER=	ports@FreeBSD.org
+ COMMENT=	RusXMMS - X Multimedia System with Russian encoding patch
