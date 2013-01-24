@@ -1,0 +1,10 @@
+--- Makefile.orig	2013-01-24 19:32:58.661756000 +0100
++++ Makefile	2013-01-24 19:33:08.101769000 +0100
+@@ -7,6 +7,7 @@
+ 
+ PORTREVISION=	0
+ CATEGORIES=	chinese
++PKGNAMEPREFIX=	zh-
+ 
+ MAINTAINER=	vanilla@FreeBSD.org
+ COMMENT=	A zh-tw cursor movement friendly, wrapping clean irssi
