@@ -1,0 +1,10 @@
+--- Makefile.orig	2013-01-26 13:39:35.433510000 +0100
++++ Makefile	2013-01-26 13:39:47.723527000 +0100
+@@ -8,6 +8,7 @@
+ MASTERDIR=	${.CURDIR}/../../palm/jpilot
+ 
+ CATEGORIES=	japanese
++PKGNAMEPREFIX=	ja-
+ 
+ MAINTAINER=	sumikawa@FreeBSD.org
+ COMMENT=	Desktop Organizer Software for the Palm Pilot (Japanized)
