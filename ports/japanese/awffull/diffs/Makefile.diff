@@ -1,0 +1,10 @@
+--- Makefile.orig	2013-01-26 12:04:47.325564000 +0100
++++ Makefile	2013-01-26 12:04:59.355581000 +0100
+@@ -6,6 +6,7 @@
+ #
+ 
+ CATEGORIES=	japanese www
++PKGNAMEPREFIX=	ja-
+ 
+ MAINTAINER=	ports@FreeBSD.org
+ 
