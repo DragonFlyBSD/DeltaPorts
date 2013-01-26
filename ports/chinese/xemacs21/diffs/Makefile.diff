@@ -1,0 +1,10 @@
+--- Makefile.orig	2013-01-26 14:33:47.538052000 +0100
++++ Makefile	2013-01-26 14:33:57.148066000 +0100
+@@ -7,6 +7,7 @@
+ 
+ PORTREVISION=	4
+ CATEGORIES=	chinese
++PKGNAMEPREFIX=	zh-
+ 
+ MAINTAINER=	rafan@FreeBSD.org
+ COMMENT=	XEmacs text editor version 21, with XIM support and Big5 settings
