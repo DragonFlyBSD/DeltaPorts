@@ -1,0 +1,10 @@
+--- Makefile.orig	2013-01-26 11:11:01.081058000 +0100
++++ Makefile	2013-01-26 11:11:12.741074000 +0100
+@@ -8,6 +8,7 @@
+ PORTVERSION=	9.4.2
+ PORTREVISION=	1
+ CATEGORIES=	german print linux
++PKGNAMEPREFIX=	de-
+ 
+ MASTERDIR=	${.CURDIR}/../../print/acroread9
+ DISTINFO_FILE=	${.CURDIR}/distinfo
