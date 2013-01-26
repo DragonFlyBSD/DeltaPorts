@@ -1,0 +1,10 @@
+--- Makefile.orig	2013-01-26 13:07:50.160848000 +0100
++++ Makefile	2013-01-26 13:08:04.070868000 +0100
+@@ -7,6 +7,7 @@
+ 
+ PORTREVISION=	2
+ CATEGORIES=	japanese
++PKGNAMEPREFIX=	ja-
+ 
+ MAINTAINER=	ports@FreeBSD.org
+ COMMENT=	Another gtk-based MP3 frontend with Japanese support
