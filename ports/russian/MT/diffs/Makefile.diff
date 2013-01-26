@@ -1,0 +1,10 @@
+--- Makefile.orig	2013-01-26 11:57:37.934965000 +0100
++++ Makefile	2013-01-26 11:57:55.264989000 +0100
+@@ -8,6 +8,7 @@
+ CATEGORIES=	russian www
+ MASTER_SITES=	http://movable-type.ru/downloads/
+ DISTNAME=	MTOS-${PORTVERSION}-${PKGNAMEPREFIX:S,-,,}
++PKGNAMEPREFIX=	ru-
+ 
+ COMMENT=	Russian localization of the MovableType publishing system
+ 
