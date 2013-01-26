@@ -1,0 +1,10 @@
+--- Makefile.orig	2013-01-26 12:32:13.467864000 +0100
++++ Makefile	2013-01-26 12:32:24.147879000 +0100
+@@ -6,6 +6,7 @@
+ #
+ 
+ CATEGORIES=	japanese
++PKGNAMEPREFIX=	ja-
+ 
+ MAINTAINER=	ports@FreeBSD.org
+ COMMENT=	X11/TK based mail reader front end to MH for Japanese environments
