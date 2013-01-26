@@ -1,0 +1,10 @@
+--- Makefile.orig	2013-01-26 11:39:32.133448000 +0100
++++ Makefile	2013-01-26 11:39:45.793467000 +0100
+@@ -7,6 +7,7 @@
+ 
+ CATEGORIES=	korean
+ PKGNAMESUFFIX=	-server
++PKGNAMEPREFIX=	ko-
+ 
+ COMMENT=	A Japanese/Chinese/Korean input method (Korean server)
+ 
