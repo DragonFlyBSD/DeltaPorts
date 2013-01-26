@@ -1,0 +1,10 @@
+--- Makefile.orig	2013-01-26 11:04:36.130520000 +0100
++++ Makefile	2013-01-26 11:05:02.660557000 +0100
+@@ -6,6 +6,7 @@
+ #
+ 
+ CATEGORIES=	japanese print
++PKGNAMEPREFIX=	ja-
+ 
+ MASTERDIR=	${.CURDIR}/../../print/acroread8
+ DISTINFO_FILE=	${.CURDIR}/distinfo
