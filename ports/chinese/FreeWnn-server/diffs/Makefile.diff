@@ -1,0 +1,10 @@
+--- Makefile.orig	2013-01-26 11:32:37.022868000 +0100
++++ Makefile	2013-01-26 11:32:46.402881000 +0100
+@@ -7,6 +7,7 @@
+ 
+ CATEGORIES=	chinese
+ PKGNAMESUFFIX=	-server
++PKGNAMEPREFIX=	zh-
+ 
+ COMMENT=	A Japanese/Chinese/Korean input method (Chinese server)
+ 
