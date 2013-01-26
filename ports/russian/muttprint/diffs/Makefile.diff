@@ -1,0 +1,10 @@
+--- Makefile.orig	2013-01-26 14:18:25.826765000 +0100
++++ Makefile	2013-01-26 14:18:45.116792000 +0100
+@@ -8,6 +8,7 @@
+ PORTNAME=	muttprint
+ PORTREVISION=	5
+ CATEGORIES=	russian print
++PKGNAMEPREFIX=	ru-
+ 
+ MAINTAINER=	ports@FreeBSD.org
+ COMMENT=	Print in Russian
