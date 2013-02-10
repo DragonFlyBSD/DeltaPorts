@@ -1,0 +1,32 @@
+--- compiled.mk.orig	2013-02-10 02:22:02.181803000 +0100
++++ compiled.mk	2013-02-10 02:24:57.652963000 +0100
+@@ -12,28 +12,12 @@
+ BJAM_ARGS=	--layout=system \
+ 		--prefix=${PREFIX}
+ 
+-.if ${ARCH} == amd64
++.if ${ARCH} == x86_64
+ BJAM_ARGS+=	cxxflags=-fPIC
+ .endif
+ 
+ NO_CCACHE=	yes
+-.if ${CC:T:Mgcc*}
+ BOOST_TOOLSET:=	gcc
+-.elif ${CC:T:Mclang}
+-BOOST_TOOLSET:=	clang
+-.else
+-_COMPILER_VERSION!=	${CC} --version
+-. if ${_COMPILER_VERSION:Mgcc}
+-BOOST_TOOLSET:=	gcc
+-. elif ${_COMPILER_VERSION:M\(GCC\)}
+-BOOST_TOOLSET:=	gcc
+-. elif ${_COMPILER_VERSION:Mclang}
+-BOOST_TOOLSET:=	clang
+-. else
+-.error Unable to determine compiler type for ${CC}
+-. endif
+-. undef _COMPILER_VERSION
+-.endif
+ 
+ BJAM_ARGS+=	--toolset=${BOOST_TOOLSET} \
+ 		${_MAKE_JOBS}
