@@ -1,14 +1,5 @@
 --- Makefile.orig	2012-12-30 20:53:57.814369000 +0100
 +++ Makefile	2012-12-31 11:20:52.537025000 +0100
-@@ -30,7 +30,7 @@
- USE_GMAKE=		yes
- USE_ICONV=		yes
- USE_BINUTILS=		yes
--USE_GCC=		4.6
-+USE_GCC=		4.6+
- 
- LICENSE=	BSD
- LICENSE_FILE=	${WRKSRC}/LICENSE
 @@ -69,6 +69,7 @@
  
  EXTRA_PATCHES=		${PATCHDIR}/nopatch-.._ghc-${BOOT_GHC_VERSION}-boot_rts_package.conf.in

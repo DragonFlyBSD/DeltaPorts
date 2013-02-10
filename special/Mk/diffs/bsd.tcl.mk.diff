@@ -1,19 +1,6 @@
---- bsd.tcl.mk.orig	2012-10-29 14:19:30.000000000 +0100
-+++ bsd.tcl.mk	2012-11-30 21:10:29.000000000 +0100
-@@ -143,10 +143,10 @@
- .endif
- 
- # Set WITH_TCL_THREADS or WITH_TK_THREADS if port-specific define
--. if defined(${UNIQUENAME:U:S,-,_,}_WITH_TCL_THREADS)
-+. if defined(${UNIQUENAME:tu:S,-,_,}_WITH_TCL_THREADS)
- WITH_TCL_THREADS=	yes
- . endif
--. if defined(${UNIQUENAME:U:S,-,_,}_WITH_TK_THREADS)
-+. if defined(${UNIQUENAME:tu:S,-,_,}_WITH_TK_THREADS)
- WITH_TK_THREADS=	yes
- .endif
- 
-@@ -162,11 +162,11 @@
+--- bsd.tcl.mk.orig	2013-02-06 19:11:29.000000000 +0100
++++ bsd.tcl.mk	2013-02-09 01:29:33.695408000 +0100
+@@ -129,11 +129,11 @@
  
  # Override the global WITH_TCL_VER or WITH_TK_VER with the
  # port specific <UNIQUENAME>_WITH_TCL_VER or <UNIQUENAME>_WITH_TK_VER

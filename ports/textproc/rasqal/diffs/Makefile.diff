@@ -1,23 +1,22 @@
---- Makefile.orig	2012-12-10 20:24:05.000000000 +0100
-+++ Makefile	2012-12-29 00:56:17.233307000 +0100
-@@ -16,12 +16,18 @@
- MAINTAINER=	kde@FreeBSD.org
- COMMENT=	A high-level interface for RDF
+--- Makefile.orig	2013-02-09 01:13:13.766290000 +0100
++++ Makefile	2013-02-09 01:16:26.078267000 +0100
+@@ -11,6 +11,11 @@
+ COMMENT=	High-level interface for RDF
  
--LIB_DEPENDS=	raptor2.0:${PORTSDIR}/textproc/raptor2 \
--		pcre.3:${PORTSDIR}/devel/pcre
-+LIB_DEPENDS=	curl.6:${PORTSDIR}/ftp/curl \
+ LIB_DEPENDS=	raptor2:${PORTSDIR}/textproc/raptor2 \
++		curl.6:${PORTSDIR}/ftp/curl \
 +		icuuc.50:${PORTSDIR}/devel/icu \
-+		raptor2.0:${PORTSDIR}/textproc/raptor2 \
-+		pcre.3:${PORTSDIR}/devel/pcre \
 +		xml2.5:${PORTSDIR}/textproc/libxml2 \
 +		xslt.2:${PORTSDIR}/textproc/libxslt \
-+		yajl.2:${PORTSDIR}/devel/yajl
++		yajl.2:${PORTSDIR}/devel/yajl \
+ 		pcre:${PORTSDIR}/devel/pcre
  
- USE_GNOME=	gnomehack lthack pkgconfig
- USE_OPENSSL=	yes
+ USE_GNOME=	gnomehack lthack
+@@ -19,6 +24,7 @@
+ USE_PKGCONFIG=	yes
+ GNU_CONFIGURE=	yes
  USE_GMAKE=	yes
 +USE_ICONV=	yes
- GNU_CONFIGURE=	yes
- 
  USE_LDCONFIG=	yes
+ 
+ MAN1=		rasqal-config.1 roqet.1
