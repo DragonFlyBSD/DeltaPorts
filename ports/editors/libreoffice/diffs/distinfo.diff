@@ -1,14 +1,9 @@
---- /dev/null	2013-02-11 22:47:52.035547064 +0100
-+++ distinfo	2013-02-10 14:10:10.000000000 +0100
-@@ -0,0 +1,18 @@
-+SHA256 (libreoffice/libreoffice-core-3.6.5.2.tar.xz) = e6a97b77dc5a8ba4f57028fd2fab3e5b008e8776ac549f71ba3ec154550606e7
-+SIZE (libreoffice/libreoffice-core-3.6.5.2.tar.xz) = 109108684
-+SHA256 (libreoffice/libreoffice-dictionaries-3.6.5.2.tar.xz) = 62e79064ddacd9f039c71e36f439cd2694d45799c594c1945e04ebb9f3e4a43d
-+SIZE (libreoffice/libreoffice-dictionaries-3.6.5.2.tar.xz) = 35255572
-+SHA256 (libreoffice/libreoffice-help-3.6.5.2.tar.xz) = e7fe01ba83fc33d39f57aed6cc6d383095cb3c669db7d1b56b37b72eac3f4f8c
-+SIZE (libreoffice/libreoffice-help-3.6.5.2.tar.xz) = 1912108
-+SHA256 (libreoffice/48d647fbd8ef8889e5a7f422c1bfda94-clucene-core-2.3.3.4.tar.gz) = ddfdc433dd8ad31b5c5819cc4404a8d2127472a3b720d3e744e8c51d79732eab
-+SIZE (libreoffice/48d647fbd8ef8889e5a7f422c1bfda94-clucene-core-2.3.3.4.tar.gz) = 2241498
+--- distinfo.orig	2013-02-08 09:08:41.000000000 +0100
++++ distinfo	2013-02-16 11:15:49.255333000 +0100
+@@ -52,3 +52,13 @@
+ SIZE (libreoffice/185d60944ea767075d27247c3162b3bc-unowinreg.dll) = 12288
+ SHA256 (libreoffice/bd30e9cf5523cdfc019b94f5e1d7fd19-cppunit-1.12.1.tar.gz) = ac28a04c8e6c9217d910b0ae7122832d28d9917fa668bcc9e0b8b09acb4ea44a
+ SIZE (libreoffice/bd30e9cf5523cdfc019b94f5e1d7fd19-cppunit-1.12.1.tar.gz) = 762803
 +SHA256 (libreoffice/86261f06c097d3e425a2f6d0b0635380-hyphen-2.8.3.tar.gz) = 21c461c558c61a51f24d35a48e2bf3b3bebf27ffc361f99bec45496903938c42
 +SIZE (libreoffice/86261f06c097d3e425a2f6d0b0635380-hyphen-2.8.3.tar.gz) = 614264
 +SHA256 (libreoffice/0d2dcdfbf28d6208751b33057f5361f0-libcmis-0.2.3.tar.gz) = a4ace7c0280e5ee8d4941b33449ee10edf1515437483d55ae387cc4de2c2bea0
