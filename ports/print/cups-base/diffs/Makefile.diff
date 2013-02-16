@@ -1,5 +1,5 @@
---- Makefile.orig	2012-12-09 23:09:14.000000000 +0100
-+++ Makefile	2012-12-21 23:35:10.881658000 +0100
+--- Makefile.orig	2013-02-05 17:54:25.000000000 +0100
++++ Makefile	2013-02-16 11:52:21.741910000 +0100
 @@ -23,6 +23,7 @@
  LDFLAGS+=	-L${LOCALBASE}/lib
  DSOFLAGS=	-Wl,-rpath,${PREFIX}/lib -L${PREFIX}/lib ${LDFLAGS}
@@ -8,18 +8,17 @@
  CONFIGURE_ARGS+=	--localstatedir=/var			\
  			--disable-slp				\
  			--disable-gssapi			\
-@@ -225,7 +226,9 @@
+@@ -225,9 +226,6 @@
  .else
  CONFIGURE_ARGS+=	--disable-libusb
  .endif
 -.if ${OSVERSION} >= 800000
-+
-+DFLY_GCC!=	gcc -dumpversion
-+.if ${DFLY_GCC} != "4.4.7"
- CONFIGURE_ARGS+=	LIBS="-lssp_nonshared"
- .endif
+-CONFIGURE_ARGS+=	LIBS="-lssp_nonshared"
+-.endif
  
-@@ -383,6 +386,7 @@
+ .if defined(CUPS_CLIENT)
+ MAN1=	cups-config.1
+@@ -387,6 +385,7 @@
  	${INSTALL_DATA} ${WRKSRC}/cups/raster.h ${PREFIX}/include/cups/
  .else
  .if  ${PORT_OPTIONS:MGHOSTSCRIPT} || ${PORT_OPTIONS:MXPDF}
