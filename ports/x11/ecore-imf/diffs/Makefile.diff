@@ -1,0 +1,19 @@
+--- Makefile.orig	2013-02-18 18:32:45.896885000 +0100
++++ Makefile	2013-02-18 18:37:11.903632000 +0100
+@@ -28,12 +28,14 @@
+ CONFIGURE_ARGS+=	--enable-ecore-con \
+ 			--enable-ecore-imf
+ 
++LDFLAGS+=		-L${LOCALBASE}/lib -lecore
++
+ post-patch:
+ 	@${REINPLACE_CMD} -E \
+ 		-e 's,\$$\(top_builddir\)/src/lib/ecore/\.libs,${LOCALBASE}/lib,'\
+ 		-e 's,\$$\(top_builddir\)/src/lib/ecore_con/\.libs,${LOCALBASE}/lib,'\
+-		-e 's,\$$\(top_builddir\)/src/lib/ecore/libecore\.la,-lecore,'\
+-		-e 's,\$$\(top_builddir\)/src/lib/ecore_con/libecore_con\.la,-lecore_con,'\
++		-e 's,\$$\(top_builddir\)/src/lib/ecore/libecore\.la,,'\
++		-e 's,\$$\(top_builddir\)/src/lib/ecore_con/libecore_con\.la,,'\
+ 		${BUILD_WRKSRC}/Makefile.in
+ 
+ post-install:
