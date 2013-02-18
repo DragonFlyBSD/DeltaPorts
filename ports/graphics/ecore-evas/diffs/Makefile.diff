@@ -1,0 +1,50 @@
+--- Makefile.orig	2013-02-18 20:05:02.312524000 +0100
++++ Makefile	2013-02-18 20:33:40.277421000 +0100
+@@ -39,6 +39,8 @@
+ 
+ .include <bsd.port.options.mk>
+ 
++LDFLAGS+=	-L${LOCALBASE}/lib
++
+ .if ${PORT_OPTIONS:MBUFFER}
+ CONFIGURE_ARGS+=	--enable-ecore-evas-software-buffer
+ USE_EFL_EVAS_ENGINES+=	buffer
+@@ -58,6 +60,7 @@
+ CONFIGURE_ARGS+=	--enable-ecore-evas-software-sdl --enable-ecore-sdl
+ USE_EFL_EVAS_ENGINES+=	sdl
+ USE_EFL_ECORE+=	sdl
++LDFLAGS+=		-lecore_sdl
+ .else
+ CONFIGURE_ARGS+=	--disable-ecore-evas-software-sdl --disable-ecore-sdl
+ .endif
+@@ -66,10 +69,13 @@
+ CONFIGURE_ARGS+=	--enable-ecore-x
+ USE_EFL_ECORE+=		x11
+ USE_EFL_EVAS_ENGINES+=	x11
++LDFLAGS+=		-lecore_x
+ .else
+ CONFIGURE_ARGS+=	--disable-ecore-x
+ .endif
+ 
++LDFLAGS+=	-lecore -lecore_input -lecore_input_evas
++
+ post-patch:
+ 	@${REINPLACE_CMD} -E \
+ 		-e 's,\$$\(top_builddir\)/src/lib/ecore/\.libs,${LOCALBASE}/lib,'\
+@@ -77,11 +83,11 @@
+ 		-e 's,\$$\(top_builddir\)/src/lib/ecore_sdl/\.libs,${LOCALBASE}/lib,'\
+ 		-e 's,\$$\(top_builddir\)/src/lib/ecore_input/\.libs,${LOCALBASE}/lib,'\
+ 		-e 's,\$$\(top_builddir\)/src/lib/ecore_input_evas/\.libs,${LOCALBASE}/lib,'\
+-		-e 's,\$$\(top_builddir\)/src/lib/ecore/libecore\.la,-lecore,'\
+-		-e 's,\$$\(top_builddir\)/src/lib/ecore_x/libecore_x\.la,-lecore_x,'\
+-		-e 's,\$$\(top_builddir\)/src/lib/ecore_sdl/libecore_sdl\.la,-lecore_sdl,'\
+-		-e 's,\$$\(top_builddir\)/src/lib/ecore_input/libecore_input\.la,-lecore_input,'\
+-		-e 's,\$$\(top_builddir\)/src/lib/ecore_input_evas/libecore_input_evas\.la,-lecore_input_evas,'\
++		-e 's,\$$\(top_builddir\)/src/lib/ecore/libecore\.la,,'\
++		-e 's,\$$\(top_builddir\)/src/lib/ecore_x/libecore_x\.la,,'\
++		-e 's,\$$\(top_builddir\)/src/lib/ecore_sdl/libecore_sdl\.la,,'\
++		-e 's,\$$\(top_builddir\)/src/lib/ecore_input/libecore_input\.la,,'\
++		-e 's,\$$\(top_builddir\)/src/lib/ecore_input_evas/libecore_input_evas\.la,,'\
+ 		${BUILD_WRKSRC}/Makefile.in
+ 
+ post-install:
