@@ -1,0 +1,16 @@
+--- Makefile.orig	2013-02-18 18:45:55.767529000 +0100
++++ Makefile	2013-02-18 18:46:25.396054000 +0100
+@@ -53,10 +53,12 @@
+ CONFIGURE_ARGS+=	--disable-openssl
+ .endif
+ 
++LDFLAGS+=	-L${LOCALBASE}/lib -lecore
++
+ post-patch:
+ 	@${REINPLACE_CMD} -E -e \
+ 		's,\$$\(top_builddir\)/src/lib/ecore/\.libs,${LOCALBASE}/lib,'\
+-		-e 's,\$$\(top_builddir\)/src/lib/ecore/libecore\.la,-lecore,'\
++		-e 's,\$$\(top_builddir\)/src/lib/ecore/libecore\.la,,'\
+ 		${BUILD_WRKSRC}/Makefile.in
+ 
+ post-install:
