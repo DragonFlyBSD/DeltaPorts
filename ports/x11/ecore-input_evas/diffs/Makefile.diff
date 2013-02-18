@@ -1,0 +1,19 @@
+--- Makefile.orig	2013-02-18 19:40:01.528817000 +0100
++++ Makefile	2013-02-18 19:40:40.347086000 +0100
+@@ -29,12 +29,14 @@
+ CONFIGURE_ARGS+=	--enable-ecore-input \
+ 			--enable-ecore-input_evas
+ 
++LDFLAGS+=	-L${LOCALBASE}/lib -lecore
++
+ post-patch:
+ 	@${REINPLACE_CMD} -E \
+ 		-e 's,\$$\(top_builddir\)/src/lib/ecore/\.libs,${LOCALBASE}/lib,'\
+ 		-e 's,\$$\(top_builddir\)/src/lib/ecore_input/\.libs,${LOCALBASE}/lib,'\
+-		-e 's,\$$\(top_builddir\)/src/lib/ecore/libecore\.la,-lecore,'\
+-		-e 's,\$$\(top_builddir\)/src/lib/ecore_input/libecore_input\.la,-lecore_input,'\
++		-e 's,\$$\(top_builddir\)/src/lib/ecore/libecore\.la,,'\
++		-e 's,\$$\(top_builddir\)/src/lib/ecore_input/libecore_input\.la,,'\
+ 		${BUILD_WRKSRC}/Makefile.in
+ 
+ post-install:
