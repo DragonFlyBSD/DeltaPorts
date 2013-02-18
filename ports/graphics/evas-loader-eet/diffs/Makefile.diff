@@ -1,0 +1,16 @@
+--- Makefile.orig	2013-02-18 19:09:27.087562000 +0100
++++ Makefile	2013-02-18 19:09:55.116190000 +0100
+@@ -29,10 +29,12 @@
+ .include "../evas-core/Makefile.inc"
+ CONFIGURE_ARGS+=	--enable-image-loader-eet
+ 
++LDFLAGS+=	-L${LOCALBASE}/lib -levas
++
+ post-patch:
+ 	@${REINPLACE_CMD} -E \
+ 		-e 's,\$$\(top_builddir\)/src/lib/\.libs,${LOCALBASE}/lib,' \
+-		-e 's,\$$\(top_builddir\)/src/lib/libevas\.la,-levas,' \
++		-e 's,\$$\(top_builddir\)/src/lib/libevas\.la,,' \
+ 		${MAKEDIRS:S,$,/Makefile.in,}
+ 
+ do-build:
