@@ -1,19 +1,22 @@
---- Makefile.orig	2013-02-18 19:34:52.632637000 +0100
-+++ Makefile	2013-02-18 19:35:29.720946000 +0100
-@@ -41,12 +41,14 @@
- CONFIGURE_ARGS+=	--enable-ecore-con \
- 			--enable-ecore-ipc
+--- Makefile.orig	2013-02-18 19:36:24.388453000 +0100
++++ Makefile	2013-02-18 20:17:41.559289000 +0100
+@@ -41,15 +41,17 @@
+ CONFIGURE_ARGS+=--disable-curl
+ .endif
  
-+LDFLAGS+=	-L${LOCALBASE}/lib -lecore
++LDFLAGS+=	-L${LOCALBASE}/lib -lecore -lecore_con
 +
  post-patch:
  	@${REINPLACE_CMD} -E \
  		-e 's,\$$\(top_builddir\)/src/lib/ecore/\.libs,${LOCALBASE}/lib,'\
- 		-e 's,\$$\(top_builddir\)/src/lib/ecore_con/\.libs,${LOCALBASE}/lib,'\
 -		-e 's,\$$\(top_builddir\)/src/lib/ecore/libecore\.la,-lecore,'\
--		-e 's,\$$\(top_builddir\)/src/lib/ecore_con/libecore_con\.la,-lecore_con,'\
 +		-e 's,\$$\(top_builddir\)/src/lib/ecore/libecore\.la,,'\
+ 		${BUILD_WRKSRC}/Makefile.in
+ .if !defined(WITHOUT_CURL)
+ 	@${REINPLACE_CMD} -E \
+ 		-e 's,\$$\(top_builddir\)/src/lib/ecore_con/\.libs,${LOCALBASE}/lib,'\
+-		-e 's,\$$\(top_builddir\)/src/lib/ecore_con/libecore_con\.la,-lecore_con,'\
 +		-e 's,\$$\(top_builddir\)/src/lib/ecore_con/libecore_con\.la,,'\
  		${BUILD_WRKSRC}/Makefile.in
+ .endif
  
- post-install:
