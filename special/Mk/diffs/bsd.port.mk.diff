@@ -1,5 +1,5 @@
---- bsd.port.mk.orig	2012-12-14 16:52:27.000000000 +0100
-+++ bsd.port.mk	2013-01-14 09:50:57.000000000 +0100
+--- bsd.port.mk.orig	2013-01-23 16:00:03.000000000 +0100
++++ bsd.port.mk	2013-02-19 00:46:46.922896000 +0100
 @@ -43,7 +43,8 @@
  #				  makefile is being used on.  Automatically set to
  #				  "FreeBSD," "NetBSD," or "OpenBSD" as appropriate.
@@ -32,7 +32,7 @@
  # GNU_CONFIGURE_PREFIX
  #				- The directory passed as prefix to the configure script if
  #				  GNU_CONFIGURE is set.
-@@ -1138,14 +1145,23 @@
+@@ -1146,14 +1153,23 @@
  # These need to be absolute since we don't know how deep in the ports
  # tree we are and thus can't go relative.  They can, of course, be overridden
  # by individual Makefiles or local system make configuration.
@@ -58,7 +58,7 @@
  .include "${PORTSDIR}/Mk/bsd.commands.mk"
  
  #
-@@ -1201,22 +1217,18 @@
+@@ -1209,22 +1225,18 @@
  OSREL!=	${UNAME} -r | ${SED} -e 's/[-(].*//'
  .endif
  
@@ -89,7 +89,7 @@
  .endif
  .endif
  
-@@ -1324,7 +1336,7 @@
+@@ -1332,7 +1344,7 @@
  .endif
  DISTVERSION?=	${PORTVERSION:S/:/::/g}
  .elif defined(DISTVERSION)
@@ -98,7 +98,7 @@
  .endif
  
  PORTREVISION?=	0
-@@ -1341,7 +1353,7 @@
+@@ -1349,7 +1361,7 @@
  PKGNAME=	${PKGNAMEPREFIX}${PORTNAME}${PKGNAMESUFFIX}-${PKGVERSION}
  DISTNAME?=	${PORTNAME}-${DISTVERSIONPREFIX}${DISTVERSION:C/:(.)/\1/g}${DISTVERSIONSUFFIX}
  
@@ -107,7 +107,7 @@
  
  DOCSDIR?=		${PREFIX}/share/doc/${PORTNAME}
  EXAMPLESDIR?=		${PREFIX}/share/examples/${PORTNAME}
-@@ -1372,7 +1384,7 @@
+@@ -1380,7 +1392,7 @@
  .else
  EXTRACT_SUFX?=			.tar.gz
  .endif
@@ -116,7 +116,7 @@
  TEMPLATES?=		${PORTSDIR}/Templates
  
  PATCHDIR?=		${MASTERDIR}/files
-@@ -1451,11 +1463,11 @@
+@@ -1459,11 +1471,11 @@
  .include "${PORTSDIR}/Mk/bsd.apache.mk"
  .endif
  
@@ -130,7 +130,7 @@
  .include "${PORTSDIR}/Mk/bsd.qt.mk"
  .endif
  
-@@ -1536,7 +1548,7 @@
+@@ -1544,7 +1556,7 @@
  
  _POSTMKINCLUDED=	yes
  
@@ -139,7 +139,7 @@
  .if !defined(IGNORE_MASTER_SITE_GITHUB) && defined(USE_GITHUB)
  WRKSRC?=		${WRKDIR}/${GH_ACCOUNT}-${GH_PROJECT}-${GH_COMMIT}
  .endif
-@@ -1663,9 +1675,6 @@
+@@ -1671,9 +1683,6 @@
  .if defined(USE_ZIP)
  EXTRACT_DEPENDS+=	${LOCALBASE}/bin/unzip:${PORTSDIR}/archivers/unzip
  .endif
@@ -149,7 +149,7 @@
  .if defined(USE_MAKESELF)
  EXTRACT_DEPENDS+=	unmakeself:${PORTSDIR}/archivers/unmakeself
  .endif
-@@ -1674,20 +1683,28 @@
+@@ -1682,20 +1691,30 @@
  CONFIGURE_ENV+=	MAKE=${GMAKE}
  .endif
  .if defined(USE_PKGCONFIG)
@@ -171,17 +171,19 @@
  .if defined(USE_GCC) || defined(USE_FORTRAN)
  .include "${PORTSDIR}/Mk/bsd.gcc.mk"
 +.else
-+.  if defined(DRAGONFLY_CCVER)
++.  if !defined(USE_GNUSTEP)
++.    if defined(DRAGONFLY_CCVER)
 +CONFIGURE_ENV+= 	CCVER=${DRAGONFLY_CCVER}
 +MAKE_ENV+=		CCVER=${DRAGONFLY_CCVER}
-+.  else
++.    else
 +CONFIGURE_ENV+= 	CCVER=gcc44
 +MAKE_ENV+=		CCVER=gcc44
++.    endif
 +.  endif
  .endif
  
  .if defined(USE_BINUTILS) && !defined(DISABLE_BINUTILS)
-@@ -1696,7 +1713,7 @@
+@@ -1704,7 +1723,7 @@
  	READELF SIZE STRINGS
  BINUTILS_NO_MAKE_ENV?=
  . for b in ${BINUTILS}
@@ -190,7 +192,7 @@
  .  if defined(GNU_CONFIGURE) || defined(BINUTILS_CONFIGURE)
  CONFIGURE_ENV+=	${b}="${${b}}"
  .  endif
-@@ -1711,13 +1728,11 @@
+@@ -1719,13 +1738,11 @@
  .endif
  
  .if defined(USE_READLINE)
@@ -204,7 +206,7 @@
  
  .if defined(USE_OPENAL)
  _OPENAL_ALL=	al si soft alut
-@@ -1763,7 +1778,7 @@
+@@ -1771,7 +1788,7 @@
  _OPENAL_SYSTEM=	${_DEFAULT_OPENAL}
  .endif # _HAVE_OPENAL
  
@@ -213,7 +215,7 @@
  
  .else # ${_OPENAL_ALL:M${component}} == ""
  
-@@ -1783,7 +1798,7 @@
+@@ -1791,7 +1808,7 @@
  
  .endif # ${_OPENAL_LIBS:M${component}} == ${component}
  
@@ -222,7 +224,7 @@
  
  .endif # ${_OPENAL_ALL:M${component}} == ""
  
-@@ -1829,8 +1844,8 @@
+@@ -1837,8 +1854,8 @@
  .endif
  .endif
  
@@ -233,7 +235,7 @@
  .else
  IGNORE=		cannot be built with unknown FAM system: ${FAM_SYSTEM}
  .endif
-@@ -1843,7 +1858,7 @@
+@@ -1851,7 +1868,7 @@
  .endif
  .endif
  
@@ -242,7 +244,7 @@
  SUB_FILES+=	${USE_RC_SUBR}
  .endif
  
-@@ -1851,10 +1866,10 @@
+@@ -1859,10 +1876,10 @@
  SUB_FILES+=	${USE_RCORDER}
  .endif
  
@@ -255,7 +257,7 @@
  IGNORE=			has USE_LDCONFIG32 set to yes, which is not correct
  .endif
  
-@@ -1863,11 +1878,11 @@
+@@ -1871,11 +1888,11 @@
  .endif
  
  .if defined(USE_GETTEXT)
@@ -270,7 +272,7 @@
  LIB_DEPENDS+=	intl:${PORTSDIR}/devel/gettext
  .	else
  IGNORE=			USE_GETTEXT can be only one of build, run, or yes
-@@ -1895,7 +1910,7 @@
+@@ -1903,7 +1920,7 @@
  
  # Allow the user to specify another linux_base version.
  .	if defined(OVERRIDE_LINUX_BASE_PORT)
@@ -279,7 +281,7 @@
  USE_LINUX=	${OVERRIDE_LINUX_BASE_PORT}
  .		endif
  .	endif
-@@ -1906,8 +1921,8 @@
+@@ -1914,8 +1931,8 @@
  .	if exists(${PORTSDIR}/emulators/linux_base-${USE_LINUX})
  LINUX_BASE_PORT=	${LINUXBASE}/bin/sh:${PORTSDIR}/emulators/linux_base-${USE_LINUX}
  .	else
@@ -290,7 +292,7 @@
  LINUX_BASE_PORT=	${LINUXBASE}/etc/fedora-release:${PORTSDIR}/emulators/linux_base-fc4
  .			else
  LINUX_BASE_PORT=	${LINUXBASE}/etc/fedora-release:${PORTSDIR}/emulators/linux_base-f10
-@@ -1984,7 +1999,7 @@
+@@ -1992,7 +2009,7 @@
  _GL_linux_RUN_DEPENDS=		${LINUXBASE}/usr/X11R6/lib/libGL.so.1:${PORTSDIR}/graphics/linux_dri
  
  .if defined(USE_GL)
@@ -299,7 +301,7 @@
  USE_GL=		glu
  . endif
  . for _component in ${USE_GL}
-@@ -2001,11 +2016,11 @@
+@@ -2009,11 +2026,11 @@
  .if defined(USE_BISON)
  _BISON_DEPENDS=	bison:${PORTSDIR}/devel/bison
  
@@ -314,7 +316,7 @@
  BUILD_DEPENDS+= ${_BISON_DEPENDS}
  RUN_DEPENDS+=	${_BISON_DEPENDS}
  . else
-@@ -2051,7 +2066,7 @@
+@@ -2059,7 +2076,7 @@
  .include "${PORTSDIR}/Mk/bsd.linux-apps.mk"
  .endif
  
@@ -323,7 +325,7 @@
  .include "${PORTSDIR}/Mk/bsd.qt.mk"
  .endif
  
-@@ -2241,7 +2256,7 @@
+@@ -2249,7 +2266,7 @@
  _MAKE_JOBS=		#
  .else
  .if defined(MAKE_JOBS_SAFE) || defined(FORCE_MAKE_JOBS)
@@ -332,7 +334,7 @@
  _MAKE_JOBS?=		-j${MAKE_JOBS_NUMBER}
  .if defined(FORCE_MAKE_JOBS) && !defined(MAKE_JOBS_SAFE)
  BUILD_FAIL_MESSAGE+=	"You have chosen to use multiple make jobs (parallelization) for all ports.  This port was not tested for this setting.  Please remove FORCE_MAKE_JOBS and retry the build before reporting the failure to the maintainer."
-@@ -2844,18 +2859,11 @@
+@@ -2852,18 +2869,11 @@
  
  .if defined(IGNOREFILES)
  .if !defined(CKSUMFILES)
@@ -356,7 +358,7 @@
  .endif
  .else
  CKSUMFILES=		${ALLFILES}
-@@ -2942,7 +2950,7 @@
+@@ -2950,7 +2960,7 @@
  PKGLATESTFILE=		${PKGLATESTREPOSITORY}/${LATEST_LINK}${PKG_SUFX}
  
  CONFIGURE_SCRIPT?=	configure
@@ -365,7 +367,7 @@
  CONFIGURE_TARGET:=	${CONFIGURE_TARGET:S/--build=//}
  CONFIGURE_LOG?=		config.log
  
-@@ -2978,6 +2986,8 @@
+@@ -2986,6 +2996,8 @@
  SCRIPTS_ENV+=	CURDIR=${MASTERDIR} DISTDIR=${DISTDIR} \
  		  WRKDIR=${WRKDIR} WRKSRC=${WRKSRC} PATCHDIR=${PATCHDIR} \
  		  SCRIPTDIR=${SCRIPTDIR} FILESDIR=${FILESDIR} \
@@ -374,7 +376,7 @@
  		  PORTSDIR=${PORTSDIR} PREFIX=${PREFIX} LOCALBASE=${LOCALBASE} 
  
  .if defined(BATCH)
-@@ -3013,7 +3023,7 @@
+@@ -3021,7 +3033,7 @@
  		else \
  			{ print "broken"; exit; } \
  	} \
@@ -383,7 +385,7 @@
  .if ${__pmlinks:Mbroken} == "broken"
  check-makevars::
  	@${ECHO_MSG} "${PKGNAME}: Makefile error: unable to parse MLINKS."
-@@ -3024,7 +3034,7 @@
+@@ -3032,7 +3044,7 @@
  .for lang in ${MANLANG:S%^%man/%:S%^man/""$%man%}
  .for ___pmlinks in ${__pmlinks}
  .for __lang in ${lang}
@@ -392,7 +394,7 @@
  .endfor
  .endfor
  .endfor
-@@ -3045,13 +3055,13 @@
+@@ -3053,13 +3065,13 @@
  # MAN${sect} is for man pages installed for all languages in MANLANG for a given
  # section.
  .if defined(MAN${sect})
@@ -409,7 +411,7 @@
  .endif
  
  .endfor
-@@ -3063,7 +3073,7 @@
+@@ -3071,7 +3083,7 @@
  # of MAN${sect}PREFIX.
  .for sect in 1 2 3 4 5 6 7 8 9 L N
  .if defined(MAN${sect}_EN)
@@ -418,7 +420,7 @@
  .endif
  .endfor
  
-@@ -3152,7 +3162,7 @@
+@@ -3160,7 +3172,7 @@
  
  # Check the machine architectures
  .if defined(ONLY_FOR_ARCHS)
@@ -427,7 +429,7 @@
  .if ${ARCH:M${__ARCH}} != ""
  __ARCH_OK?=		1
  .endif
-@@ -3162,7 +3172,7 @@
+@@ -3170,7 +3182,7 @@
  .endif
  
  .if defined(NOT_FOR_ARCHS)
@@ -436,7 +438,7 @@
  .if ${ARCH:M${__NARCH}} != ""
  .undef __ARCH_OK
  .endif
-@@ -3171,9 +3181,9 @@
+@@ -3179,9 +3191,9 @@
  
  .if !defined(__ARCH_OK)
  .if defined(ONLY_FOR_ARCHS)
@@ -448,7 +450,7 @@
  .endif
  IGNORE+=	while you are running ${ARCH}
  
-@@ -3287,12 +3297,11 @@
+@@ -3295,12 +3307,11 @@
  	  DISTDIR=${DISTDIR} WRKDIR=${WRKDIR} WRKSRC=${WRKSRC} \
  	  PATCHDIR=${PATCHDIR} SCRIPTDIR=${SCRIPTDIR} \
  	  FILESDIR=${FILESDIR} PORTSDIR=${PORTSDIR} PREFIX=${PREFIX} \
@@ -463,7 +465,7 @@
  all: build
  .endif
  
-@@ -3320,7 +3329,7 @@
+@@ -3328,7 +3339,7 @@
  ################################################################
  .if ((!defined(OPTIONS_DEFINE) && !defined(OPTIONS_SINGLE) && !defined(OPTIONS_MULTI)) \
  	&& !defined(OPTIONS_GROUP) && !defined(OPTIONS_RADIO) \
@@ -472,7 +474,7 @@
  	defined(PACKAGE_BUILDING) || defined(BATCH))
  _OPTIONS_OK=yes
  .endif
-@@ -3608,7 +3617,7 @@
+@@ -3616,7 +3627,7 @@
  .if !target(patch-dos2unix)
  patch-dos2unix:
  .if defined(USE_DOS2UNIX)
@@ -481,7 +483,7 @@
  	@${ECHO_MSG} "===>   Converting DOS text files to UNIX text files"
  	@${FIND} -E ${WRKSRC} -type f -iregex '${DOS2UNIX_REGEX}' -print0 | \
  			${XARGS} -0 ${REINPLACE_CMD} -i '' -e 's/$$//'
-@@ -3660,7 +3669,7 @@
+@@ -3668,7 +3679,7 @@
  .endif
  	@if [ -d ${PATCHDIR} ]; then \
  		if [ "`${ECHO_CMD} ${PATCHDIR}/patch-*`" != "${PATCHDIR}/patch-*" ]; then \
@@ -490,7 +492,7 @@
  			PATCHES_APPLIED="" ; \
  			for i in ${PATCHDIR}/patch-*; do \
  				case $$i in \
-@@ -3685,6 +3694,33 @@
+@@ -3693,6 +3704,33 @@
  			done; \
  		fi; \
  	fi
@@ -524,7 +526,7 @@
  .endif
  
  .if !target(run-autotools-fixup)
-@@ -4363,39 +4399,39 @@
+@@ -4371,39 +4409,39 @@
  .for target in extract patch configure build install package
  
  .if !target(${target}) && defined(_OPTIONS_OK)
@@ -576,7 +578,7 @@
  	@if [ -e ${.TARGET} ]; then \
  		${DO_NADA}; \
  	else \
-@@ -4804,7 +4840,7 @@
+@@ -4812,7 +4850,7 @@
  	@ \
  	${checksum_init} \
  	\
@@ -585,7 +587,7 @@
  		eval alg_executable=\$$$$alg; \
  		if [ -z "$$alg_executable" ]; then \
  			${ECHO_MSG} "Checksum algorithm $$alg: Couldn't find the executable."; \
-@@ -4827,7 +4863,7 @@
+@@ -4835,7 +4873,7 @@
  		${checksum_init} \
  		\
  		for file in ${_CKSUMFILES}; do \
@@ -594,7 +596,7 @@
  				eval alg_executable=\$$$$alg; \
  				\
  				if [ $$alg_executable != "NO" ]; then \
-@@ -4838,7 +4874,7 @@
+@@ -4846,7 +4884,7 @@
  		done \
  	)
  	@for file in ${_IGNOREFILES}; do \
@@ -603,7 +605,7 @@
  			${ECHO_CMD} "$$alg ($$file) = IGNORE" >> ${DISTINFO_FILE}; \
  		done; \
  	done
-@@ -4852,7 +4888,7 @@
+@@ -4860,7 +4898,7 @@
  		for file in ${_CKSUMFILES}; do \
  			ignored="true"; \
  			_file=$${file#${DIST_SUBDIR}/*};	\
@@ -612,7 +614,7 @@
  				ignore="false"; \
  				eval alg_executable=\$$$$alg; \
  				\
-@@ -4906,7 +4942,7 @@
+@@ -4914,7 +4952,7 @@
  			_file=$${file#${DIST_SUBDIR}/*};	\
  			ignored="true"; \
  			alreadymatched="false"; \
@@ -621,7 +623,7 @@
  				ignore="false"; \
  				eval alg_executable=\$$$$alg; \
  				\
-@@ -5012,14 +5048,14 @@
+@@ -5020,14 +5058,14 @@
  
  _INSTALL_DEPENDS=	\
  		if [ X${USE_PACKAGE_DEPENDS} != "X" ]; then \
@@ -638,7 +640,7 @@
  					${WRKDIR}/pkg-static add $${subpkgfile}; \
  					${RM} -f ${WRKDIR}/pkg-static; \
  				else \
-@@ -5029,12 +5065,13 @@
+@@ -5037,12 +5075,13 @@
  			  (cd $$dir; ${MAKE} -DINSTALLS_DEPENDS $$target $$depends_args) ; \
  			fi; \
  		else \
@@ -653,7 +655,7 @@
  .if defined(${deptype}_DEPENDS)
  .if !defined(NO_DEPENDS)
  	@for i in `${ECHO_CMD} "${${deptype}_DEPENDS}"`; do \
-@@ -5200,7 +5237,7 @@
+@@ -5208,7 +5247,7 @@
  				continue;				\
  			fi;						\
  			${ECHO_CMD} $$d;				\
@@ -662,7 +664,7 @@
  				${ECHO_MSG} "${PKGNAME}: \"$$d\" erroneous -- dependency list incomplete" >&2; \
  				continue;				\
  			fi;						\
-@@ -5230,7 +5267,7 @@
+@@ -5238,7 +5277,7 @@
  				${ECHO_MSG} "${PKGNAME}: \"$$d\" non-existent -- dependency list incomplete" >&2; \
  				continue;				\
  			fi;						\
@@ -671,7 +673,7 @@
  				${ECHO_MSG} "${PKGNAME}: \"$$d\" erroneous -- dependency list incomplete" >&2; \
  				continue;				\
  			fi;						\
-@@ -5269,7 +5306,7 @@
+@@ -5277,7 +5316,7 @@
  				${ECHO_MSG} "${PKGNAME}: \"$$d\" non-existent -- dependency list incomplete" >&2; \
  				continue;				\
  			fi;						\
@@ -680,7 +682,7 @@
  				${ECHO_MSG} "${PKGNAME}: \"$$d\" erroneous -- dependency list incomplete" >&2; \
  				continue;				\
  			fi;						\
-@@ -5352,7 +5389,7 @@
+@@ -5360,7 +5399,7 @@
  			else	\
  				continue;	\
  			fi;;	\
@@ -689,7 +691,7 @@
  				continue;	\
  			fi;;	\
  		esac;	\
-@@ -5647,15 +5684,20 @@
+@@ -5655,15 +5694,20 @@
  apply-slist:
  .if defined(SUB_FILES)
  .for file in ${SUB_FILES}
@@ -714,7 +716,7 @@
  .endif
  .endfor
  .endif
-@@ -5702,8 +5744,8 @@
+@@ -5710,8 +5754,8 @@
  .endfor
  
  .for reinplace in ${PLIST_REINPLACE}
@@ -725,7 +727,7 @@
  .endif
  .endfor
  
-@@ -5856,7 +5898,7 @@
+@@ -5864,7 +5908,7 @@
  
  .if !target(install-rc-script)
  install-rc-script:
@@ -734,7 +736,7 @@
  .if defined(USE_RCORDER)
  	@${ECHO_MSG} "===> Installing early rc.d startup script(s)"
  	@${ECHO_CMD} "@cwd /" >> ${TMPPLIST}
-@@ -5866,7 +5908,7 @@
+@@ -5874,7 +5918,7 @@
  	done
  	@${ECHO_CMD} "@cwd ${PREFIX}" >> ${TMPPLIST}
  .endif
@@ -743,7 +745,7 @@
  	@${ECHO_MSG} "===> Installing rc.d startup script(s)"
  	@${ECHO_CMD} "@cwd ${PREFIX}" >> ${TMPPLIST}
  	@for i in ${USE_RC_SUBR}; do \
-@@ -5985,6 +6027,7 @@
+@@ -5993,6 +6037,7 @@
  	OPSYS="${OPSYS:S/"/"'"'"/g:S/\$/\$\$/g:S/\\/\\\\/g}" \
  	OSREL="${OSREL:S/"/"'"'"/g:S/\$/\$\$/g:S/\\/\\\\/g}" \
  	OSVERSION="${OSVERSION:S/"/"'"'"/g:S/\$/\$\$/g:S/\\/\\\\/g}" \
