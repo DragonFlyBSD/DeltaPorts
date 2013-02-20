@@ -1,0 +1,2 @@
+# V4L2 not supported on DragonFly yet
+CMAKE_ARGS+= -DDISABLE_VIDEOSUPPORT:BOOL=ON
