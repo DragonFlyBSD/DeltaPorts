@@ -1,0 +1,15 @@
+--- Makefile.orig	2013-02-21 16:41:37.617004000 +0100
++++ Makefile	2013-02-21 16:50:53.847500000 +0100
+@@ -18,9 +18,9 @@
+ USE_XORG=	x11 xextproto xt xext
+ 
+ MAKE_ARGS=	PREFIX="${PREFIX}" INCLUDE="${LOCALBASE}/include" \
+-		INCX11="-I${LOCALBASE}/include" LIBX11="-L${LOCALBASE}/lib" \
+-		CC="${CC} -c" LD="${CC}" LIBIXP="-lixp" STATIC="" \
+-		MAN="${MANPREFIX}/man"
++		INCX11="-I${LOCALBASE}/include" LIBX11="-L${LOCALBASE}/lib -lX11" \
++		CC="${CC} -c" LD="${CC}" LIBIXP="" STATIC="" \
++		MAN="${MANPREFIX}/man" LDFLAGS+="-lixp"
+ 
+ MAN1=		wmii.1 wmiiloop.1 wmiir.1
+ 
