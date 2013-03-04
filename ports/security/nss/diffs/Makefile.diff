@@ -1,0 +1,20 @@
+--- Makefile.orig	2013-02-23 10:48:20.000000000 +0100
++++ Makefile	2013-03-04 21:31:12.905353000 +0100
+@@ -6,7 +6,7 @@
+ #DISTVERSIONSUFFIX=	.with.ckbi.1.93
+ CATEGORIES=	security
+ MASTER_SITES=	${MASTER_SITE_MOZILLA}
+-MASTER_SITE_SUBDIR=	security/nss/releases/${DISTNAME:U:C/[-.]/_/g}_RTM/src
++MASTER_SITE_SUBDIR=	security/nss/releases/${DISTNAME:tu:C/[-.]/_/g}_RTM/src
+ 
+ MAINTAINER=	gecko@FreeBSD.org
+ COMMENT=	Libraries to support development of security-enabled applications
+@@ -80,7 +80,7 @@
+ 
+ post-patch:
+ 	@${REINPLACE_CMD} -e "s|-pthread|${PTHREAD_LIBS}|g" \
+-		${WRKSRC:H:H}/security/coreconf/FreeBSD.mk
++		${WRKSRC:H:H}/security/coreconf/${OPSYS}.mk
+ 	@${REINPLACE_CMD} '/NSS_DEFAULT_SYSTEM/s,/etc,${PREFIX}&,' \
+ 		${WRKSRC}/lib/sysinit/nsssysinit.c
+ 	@cd ${WRKSRC} && \
