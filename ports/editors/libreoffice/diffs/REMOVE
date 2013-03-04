@@ -1,4 +1,0 @@
-files/patch-cppunit__makefile.mk
-files/patch-dbaccess__source__core__api__RowSet.cxx
-files/patch-solenv__gbuild__platform__unxgcc.mk
-files/patch-solenv__inc__unxgcc.mk
