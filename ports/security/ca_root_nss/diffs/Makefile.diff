@@ -1,0 +1,11 @@
+--- Makefile.orig	2013-03-04 15:07:30.408991000 +0100
++++ Makefile	2013-03-04 15:07:42.118210000 +0100
+@@ -5,7 +5,7 @@
+ PORTVERSION=	${VERSION_NSS}
+ CATEGORIES=	security
+ MASTER_SITES=	${MASTER_SITE_MOZILLA}
+-MASTER_SITE_SUBDIR=	security/nss/releases/${DISTNAME:U:C/[-.]/_/g}_RTM/src
++MASTER_SITE_SUBDIR=	security/nss/releases/${DISTNAME:tu:C/[-.]/_/g}_RTM/src
+ DISTNAME=	nss-${VERSION_NSS}${NSS_SUFFIX}
+ 
+ MAINTAINER=	gecko@FreeBSD.org
