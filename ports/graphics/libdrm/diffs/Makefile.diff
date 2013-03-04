@@ -1,6 +1,6 @@
-Makefile.orig
-Makefile
-@@ -58,8 +58,7 @@ PLIST_SUB+=	RADEON_DRIVERS="@comment "
+--- Makefile.orig	2013-03-04 01:13:41.314208000 +0100
++++ Makefile	2013-03-04 01:14:24.151492000 +0100
+@@ -58,8 +58,7 @@
  .endif
  
  pre-patch:

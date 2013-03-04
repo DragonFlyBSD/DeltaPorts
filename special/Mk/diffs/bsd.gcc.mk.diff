@@ -1,5 +1,5 @@
---- bsd.gcc.mk.orig	2012-12-23 00:39:19.000000000 +0100
-+++ bsd.gcc.mk	2013-01-14 09:26:54.000000000 +0100
+--- /usr/ports/Mk/bsd.gcc.mk	2013-03-03 03:21:29.000000000 +0000
++++ /usr/gen-dports/merged-ports/Mk/bsd.gcc.mk
 @@ -5,28 +5,22 @@
  #
  # Created by: Edwin Groothuis <edwin@freebsd.org>
@@ -35,16 +35,7 @@
  #   USE_FORTRAN=	ifort	# use the Intel compiler (lang/ifc)
  #
  # Due to object file incompatiblity between Fortran compilers, we strongly
-@@ -35,7 +29,7 @@
- # If you are wondering what your port exactly does, use "make test-gcc"
- # to see some debugging.
- #
--# $FreeBSD: ports/Mk/bsd.gcc.mk,v 1.74 2012/12/22 23:39:19 svnexp Exp $
-+# $FreeBSD: ports/Mk/bsd.gcc.mk,v 1.72 2012/11/17 05:54:17 svnexp Exp $
- #
- 
- GCC_Include_MAINTAINER=		gerald@FreeBSD.org
-@@ -44,26 +38,30 @@
+@@ -44,26 +38,30 @@ GCC_Include_MAINTAINER=		gerald@FreeBSD.
  # ascending order and in sync with the table below. 
  GCCVERSIONS=	030402 040200 040400 040600 040700 040800
  
@@ -86,7 +77,7 @@
  # Extract the fields from GCCVERSION_...
  .for v in ${GCCVERSIONS}
  . for j in ${GCCVERSION_${v}}
-@@ -85,9 +83,16 @@
+@@ -85,9 +83,16 @@ _GCCVERSION_${v}_V=	${j}
  
  # The default case, with a current lang/gcc port.
  . if ${USE_FORTRAN} == yes
@@ -106,7 +97,7 @@
  
  # Intel Fortran compiler from lang/ifc.
  . elif ${USE_FORTRAN} == ifort
-@@ -111,12 +116,10 @@
+@@ -111,12 +116,10 @@ MAKE_ENV+=		F77="${F77}" FC="${FC}" FFLA
  
  
  .if defined(USE_GCC) && !defined(FORCE_BASE_CC_FOR_TESTING)
@@ -122,7 +113,7 @@
  _GCC_ORLATER:=	true
  
  . else # ${USE_GCC} == any
-@@ -133,25 +136,44 @@
+@@ -133,26 +136,47 @@ _GCC_ORLATER:=	true
  .for v in ${GCCVERSIONS}
  . for j in ${GCCVERSION_${v}}
  .  if ${_USE_GCC}==${j}
@@ -139,13 +130,13 @@
  .endif
  
  #
- # Determine current GCCVERSION
++# Determine current GCCVERSION
 +# DragonFly has two compilers -- check value of CCVER and DRAGONFLY_CCVER
 +# These have to match, otherwise base match is not accomplished.
 +# This gets us back to one base compiler on which the following logic depends
 +# If the requested GCC version is greater than value of 4.4, then 4.7
 +# will automatically be selected.
- #
++#
 +
 +.if ${_USE_GCC:S/.//} > ${DRAGONFLY_MIN_VERSION}
 +_DFLY_CCVER=gcc${DRAGONFLY_MAX_VERSION}
@@ -158,23 +149,27 @@
 +_BASE_VER=${DRAGONFLY_MIN_VERSION}
 +.endif
 +
++#
+ # Initialize _GCC_FOUND${v}.
+ #
  .for v in ${GCCVERSIONS}
 -. if exists(${LOCALBASE}/bin/gcc${_GCCVERSION_${v}_V:S/.//})
 -_GCC_FOUND${v}=	port
 -. endif
 -. if ${OSVERSION} >= ${_GCCVERSION_${v}_L} && ${OSVERSION} < ${_GCCVERSION_${v}_R}
--_GCCVERSION:=		${v}
+-.  if exists(/usr/bin/gcc)
 +. if ${DFLYVERSION} >= ${_GCCVERSION_${v}_L} \
 +  && ${DFLYVERSION} < ${_GCCVERSION_${v}_R} \
 +  && ${_BASE_VER} == ${_GCCVERSION_${v}_V:S/.//}
  _GCC_FOUND${v}:=	base
+-.  endif
 +_GCCVERSION:=		${v}
 +. elif exists(${LOCALBASE}/bin/gcc${_GCCVERSION_${v}_V:S/.//})
 +_GCC_FOUND${v}=	port
  . endif
  .endfor
- .if !defined(_GCCVERSION)
-@@ -166,7 +188,7 @@
+ 
+@@ -164,7 +188,7 @@ _GCC_FOUND${v}:=	base
  #
  .if defined(_GCC_ORLATER)
  . for v in ${GCCVERSIONS}
@@ -183,23 +178,19 @@
  _GCC_MIN1:=	true
  .  endif
  .  if defined(_GCC_MIN1) && defined(_GCC_FOUND${v}) && ${_GCC_FOUND${v}}=="base" && !defined(_GCC_FOUND)
-@@ -198,7 +220,9 @@
+@@ -196,7 +220,9 @@ _USE_GCC:=	${GCC_DEFAULT_VERSION}
  # dependencies, CC, CXX, CPP, and flags.
  .for v in ${GCCVERSIONS}
  . if ${_USE_GCC} == ${_GCCVERSION_${v}_V}
--.  if ${OSVERSION} < ${_GCCVERSION_${v}_L} || ${OSVERSION} > ${_GCCVERSION_${v}_R}
+-.  if ${OSVERSION} < ${_GCCVERSION_${v}_L} || ${OSVERSION} > ${_GCCVERSION_${v}_R} || !exists(/usr/bin/gcc)
 +.  if ${_GCCVERSION_${v}_R} == 0 \
 +   || ${DFLYVERSION} < ${_GCCVERSION_${v}_L} \
 +   || ${DFLYVERSION} > ${_GCCVERSION_${v}_R}
  V:=			${_GCCVERSION_${v}_V:S/.//}
  _GCC_PORT_DEPENDS:=	gcc${V}
  .   if ${_USE_GCC} == ${GCC_DEFAULT_VERSION}
-@@ -223,15 +247,13 @@
- # ever telling us; to be fixed.
- _GCC_BUILD_DEPENDS:=	${_GCC_PORT_DEPENDS}
- .   endif # ${_USE_GCC} != 3.4
--.  else # ${OSVERSION} < ${_GCCVERSION_${v}_L} || ${OSVERSION} > ${_GCCVERSION_${v}_R}
-+.  else # ${DFLYVERSION} < ${_GCCVERSION_${v}_L} || ${DFLYVERSION} > ${_GCCVERSION_${v}_R}
+@@ -224,11 +250,9 @@ _GCC_BUILD_DEPENDS:=	${_GCC_PORT_DEPENDS
+ .  else # Use GCC in base.
  CC:=			gcc
  CXX:=			g++
 -.   if exists(/usr/bin/gcpp)
@@ -207,14 +198,12 @@
 -.   else
  CPP:=			cpp
 -.   endif
--.  endif # ${OSVERSION} < ${_GCCVERSION_${v}_L} || ${OSVERSION} > ${_GCCVERSION_${v}_R}
 +CONFIGURE_ENV+= 	CCVER=${_DFLY_CCVER}
 +MAKE_ENV+=		CCVER=${_DFLY_CCVER}
-+.  endif # ${DFLYVERSION} < ${_GCCVERSION_${v}_L} || ${DFLYVERSION} > ${_GCCVERSION_${v}_R}
+ .  endif # Use GCC in base.
  . endif # ${_USE_GCC} == ${_GCCVERSION_${v}_V}
  .endfor
- .undef V
-@@ -240,11 +262,6 @@
+@@ -238,11 +262,6 @@ CPP:=			cpp
  BUILD_DEPENDS+=	${_GCC_PORT_DEPENDS}:${PORTSDIR}/lang/${_GCC_PORT}
  . if ${_USE_GCC} != 3.4
  RUN_DEPENDS+=	${_GCC_PORT_DEPENDS}:${PORTSDIR}/lang/${_GCC_PORT}
@@ -226,7 +215,7 @@
  . endif
  .endif
  .endif # defined(_USE_GCC) && !defined(FORCE_BASE_CC_FOR_TESTING)
-@@ -272,5 +289,9 @@
+@@ -270,5 +289,9 @@ test-gcc:
  	@echo CC=${CC} - CXX=${CXX} - CPP=${CPP} - CFLAGS=\"${CFLAGS}\"
  	@echo F77=${F77} - FC=${FC} - FFLAGS=\"${FFLAGS}\"
  	@echo LDFLAGS=\"${LDFLAGS}\"

@@ -1,4 +1,4 @@
---- bsd.port.mk.orig	2013-01-23 15:00:03.000000000 +0000
+--- bsd.port.mk.orig	2013-03-03 06:53:34.000000000 +0000
 +++ bsd.port.mk
 @@ -43,7 +43,8 @@ FreeBSD_MAINTAINER=	portmgr@FreeBSD.org
  #				  makefile is being used on.  Automatically set to
@@ -118,18 +118,13 @@
  TEMPLATES?=		${PORTSDIR}/Templates
  
  PATCHDIR?=		${MASTERDIR}/files
-@@ -1459,11 +1472,11 @@ PKGCOMPATDIR?=		${LOCALBASE}/lib/compat/
+@@ -1459,7 +1472,7 @@ PKGCOMPATDIR?=		${LOCALBASE}/lib/compat/
  .include "${PORTSDIR}/Mk/bsd.apache.mk"
  .endif
  
 -.if (defined(USE_QT_VER) && ${USE_QT_VER:L} == 3) || defined(USE_KDELIBS_VER) || defined(USE_KDEBASE_VER)
 +.if (defined(USE_QT_VER) && ${USE_QT_VER:tl} == 3) || defined(USE_KDELIBS_VER) || defined(USE_KDEBASE_VER)
  .include "${PORTSDIR}/Mk/bsd.kde.mk"
- .endif
- 
--.if defined(USE_QT_VER) && ${USE_QT_VER:L} == 4 || defined(USE_QT4)
-+.if defined(USE_QT_VER) && ${USE_QT_VER:tl} == 4 || defined(USE_QT4)
- .include "${PORTSDIR}/Mk/bsd.qt.mk"
  .endif
  
 @@ -1544,7 +1557,7 @@ check-makefile::
@@ -329,15 +324,6 @@
  BUILD_DEPENDS+= ${_BISON_DEPENDS}
  RUN_DEPENDS+=	${_BISON_DEPENDS}
  . else
-@@ -2059,7 +2079,7 @@ IGNORE=	uses unknown USE_BISON construct
- .include "${PORTSDIR}/Mk/bsd.linux-apps.mk"
- .endif
- 
--.if defined(USE_QT_VER) && ${USE_QT_VER:L} == 4 || defined(USE_QT4)
-+.if defined(USE_QT_VER) && ${USE_QT_VER:tl} == 4 || defined(USE_QT4)
- .include "${PORTSDIR}/Mk/bsd.qt.mk"
- .endif
- 
 @@ -2249,7 +2269,7 @@ CFLAGS:=	${CFLAGS:N-std=*} -std=${USE_CS
  _MAKE_JOBS=		#
  .else
