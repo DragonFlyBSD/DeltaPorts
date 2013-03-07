@@ -1,6 +1,6 @@
---- src/poudriere.d/common.sh.hammer.orig	2013-02-22 22:25:46.000000000 +0000
+--- src/poudriere.d/common.sh.hammer.orig	2013-03-07 00:13:03.000000000 +0000
 +++ src/poudriere.d/common.sh.hammer
-@@ -0,0 +1,824 @@
+@@ -0,0 +1,868 @@
 +#!/bin/sh
 +
 +zget() {
@@ -341,6 +341,11 @@
 +	done	
 +}
 +
++dismount() {
++	[ $# -ne 1 ] && eargs mountpoint
++	umount ${1} || :
++}
++
 +create_slave() {
 +	[ $# -ne 2 ] && eargs master-mountpoint job-number
 +	local j="${2}"
@@ -353,8 +358,7 @@
 +	zset status "genesis:"
 +	if [ -f ${mnt}/virgin ]; then
 +	    job_msg "Creating slave jail"
-+	    # Make one-time readonly duplicate of base image
-+	    rm ${mnt}/virgin
++	    # Make one-time readonly duplicate of base image, virgin hidden
 +	    ${NULLMOUNT} -o rdonly ${BASEIMG} ${mnt}
 +	    JAILNAME=${name} MASTERMNT=${1} JAILMNT=${mnt} do_jail_mounts 0
 +	    JAILNAME=${name} MASTERMNT=${1} JAILMNT=${mnt} do_portbuild_mounts 0
@@ -362,13 +366,14 @@
 +	    job_msg "Refreshing slave jail"
 +	fi
 +	# Refresh /usr/local and /etc and /var
-+	mount_tmpfs tmpfs ${mnt}/tmp
++	mount_tmpfs -s 100M tmpfs ${mnt}/tmp
 +	mount_tmpfs tmfps ${mnt}/wrkdirs
-+	[ -n "${USE_TMPFS}" ] && mount_tmpfs tmpfs ${mnt}/var
-+	[ -n "${USE_TMPFS}" ] && mount_tmpfs tmpfs ${mnt}/etc
++	[ -n "${USE_TMPFS}" ] && mount_tmpfs -s 15M tmpfs ${mnt}/etc
++	[ -n "${USE_TMPFS}" ] && mount_tmpfs -s 100M tmpfs ${mnt}/var
 +	[ -n "${USE_TMPFS}" ] && mount_tmpfs tmpfs ${mnt}/usr/local
 +	cp -a ${HAMMER_SNAPDIR}/${snap}/etc/* ${mnt}/etc/
 +	cp -a ${HAMMER_SNAPDIR}/${snap}/var/* ${mnt}/var/
++	[ -n "${RESOLV_CONF}" ] && cp -v "${RESOLV_CONF}" ${mnt}/etc/
 +
 +	JAILMNT=${mnt} injail /usr/sbin/mtree -q -U -f \
 +	   ${PORTSRC}/Templates/BSD.local.dist -d -e -p /usr/local >/dev/null
@@ -385,18 +390,30 @@
 +	# make sure cwd is not on mount
 +	cd /
 +
++	dismount ${mnt}/tmp
++	dismount ${mnt}/wrkdirs
 +	# destroy jail
 +	if [ -n "${USE_TMPFS}" ]; then
-+	    umount ${mnt}/usr/local
-+	    umount ${mnt}/etc
-+	    umount ${mnt}/var
++	    dismount ${mnt}/etc
++	    dismount ${mnt}/var
++	    dismount ${mnt}/usr/local
 +	else
 +	    rm -rf ${mng}/etc/*
 +	    rm -rf ${mnt}/var/*
 +	    rm -rf ${mnt}/usr/local/*
 +	fi
-+	umount ${mnt}/tmp
-+	umount ${mnt}/wrkdirs
++
++	# Repeat dismount attempts in case 1 or more failed
++	sleep 3
++	dismount ${mnt}/tmp
++	dismount ${mnt}/wrkdirs
++	if [ -n "${USE_TMPFS}" ]; then
++	    dismount ${mnt}/etc
++	    dismount ${mnt}/var
++	    dismount ${mnt}/usr/local
++	fi
++
++	zset status "available:"
 +}
 +
 +stop_builders() {
@@ -426,15 +443,18 @@
 +
 +build_queue() {
 +
-+	local j cnt mnt pfs name pkgname read_queue builders_active should_build_stats
++	local j cnt mnt pfs name pkgname read_queue stats_countdown
++	local builders_active new_builders_active
 +	local AWKCMD='{ if ($1 != "PID") print $1 }'
 +	local pidfile running
 +
 +	rm -f $(log_path)/last_run.failed
 +	read_queue=1
-+	should_build_stats=1 # Always build stats on first pass
++	stats_countdown=0 # Always build stats on first pass
++	builders_active=1
++
 +	while :; do
-+		builders_active=0
++		new_builders_active=0
 +		for j in ${JOBS}; do
 +			mnt="${JAILMNT}/build/${j}"
 +			pfs="${JAILFS}.job-${j}"
@@ -443,30 +463,38 @@
 +			if [ -f "${pidfile}" ]; then
 +				running=$(ps -p `cat ${pidfile}` | awk "${AWKCMD}")
 +				if [ -n "${running}" ]; then
-+					builders_active=1
++					new_builders_active=1
 +					continue
 +				fi
-+				should_build_stats=1
++				stats_countdown=$((stats_countdown - 1))
 +				rm -f ${pidfile}
-+
-+				# A builder finished, check the queue to see if
-+				# it can do some work
 +				read_queue=1
 +			fi
 +
-+			# Don't want to read the queue, so just skip this
-+			# builder and check the next, as it may be done
++			# A slot is available for this job.  Leave
++			# current read state intact, loop if
++			# reading the queue here would be fruitless.
++			#
 +			[ ${read_queue} -eq 0 ] && continue
 +
++			# A builder slot is available, either because one just
++			# finished or because one finished previously.
++			#
++			# Check the pool
++			#
 +			pkgname=$(next_in_queue)
 +			if [ -z "${pkgname}" ]; then
-+				# pool empty ?
-+				[ -n "$(dir_empty ${JAILMNT}/poudriere/pool)" ] && return
-+
-+				# Pool is waiting on dep, wait until a build
-+				# is done before checking the queue again
++				# The pool is empty or can't be processed due to
++				# dependencies.
++				#
++				# Wait until a build is done before checking
++				# the queue again.  When a build finishes it may
++				# release dependencies and add to the pool.
++				#
 +				read_queue=0
 +			else
++				# Dispatch next element in pool to available slot
++				#
 +				MASTERMNT=${JAILMNT} JAILNAME="${name}" JAILMNT="${mnt}" JAILFS="${pfs}" \
 +				MASTERFS=${JAILFS} MY_JOBID="${j}" \
 +				build_pkg "${pkgname}" >/dev/null 2>&1 &
@@ -476,23 +504,39 @@
 +				# just to keep things moving
 +				read_queue=1
 +				builders_active=1
++				new_builders_active=1
 +			fi
 +		done
++
++		builders_active=${new_builders_active}
 +		if [ ${read_queue} -eq 0 ]; then
 +			# If not wanting to read the queue, sleep to save CPU
 +			sleep 1
 +		fi
 +
 +		if [ ${builders_active} -eq 0 ]; then
++			[ -n "$(dir_empty ${JAILMNT}/poudriere/pool0)" -a \
++			  -n "$(dir_empty ${JAILMNT}/poudriere/pool1)" -a \
++			  -n "$(dir_empty ${JAILMNT}/poudriere/pool2)" -a \
++			  -n "$(dir_empty ${JAILMNT}/poudriere/pool3)" -a \
++			  -n "$(dir_empty ${JAILMNT}/poudriere/pool4)" -a \
++			  -n "$(dir_empty ${JAILMNT}/poudriere/pool5)" -a \
++			  -n "$(dir_empty ${JAILMNT}/poudriere/pool6)" -a \
++			  -n "$(dir_empty ${JAILMNT}/poudriere/pool7)" -a \
++			  -n "$(dir_empty ${JAILMNT}/poudriere/pool8)" -a \
++			  -n "$(dir_empty ${JAILMNT}/poudriere/pool9)" ] && return
 +			msg "Dependency loop or poudriere bug detected."
-+			find ${JAILMNT}/poudriere/pool || echo "pool missing"
-+			find ${JAILMNT}/poudriere/deps || echo "deps missing"
++			find ${JAILMNT}/poudriere/pool* >/dev/null || echo "pool missing"
++			find ${JAILMNT}/poudriere/deps >/dev/null || echo "deps missing"
 +			err 1 "Queue is unprocessable"
 +		fi
 +
-+		if [ ${should_build_stats} -eq 1 ]; then
++		# rebuild the stats every 200 completions so
++		# we don't eat up too much cpu.
++		#
++		if [ ${stats_countdown} -lt 1 ]; then
 +			build_stats
-+			should_build_stats=0
++			stats_countdown=200
 +		fi
 +	done
 +}
