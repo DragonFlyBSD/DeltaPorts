@@ -53,7 +53,7 @@ kill_directory ()
 
    if [ ${CONFIRM} -eq 1 ]; then
       echo "Pruning from DPorts: ${port}"
-      cd ${DPORTS} && git rm -rf ${port}
+      cd ${DPORTS} && git rm -r --quiet ${port}
       echo "  ${port}" >> ${CMDP}
    else
       echo "Target for pruning: ${port}"
@@ -66,7 +66,7 @@ kill_deltaport ()
    if [ ${CONFIRM} -eq 1 ]; then
       echo "Pruning from DeltaPorts: ${port}"
       commitmsg="Pruning: ${port} removed"
-      cd ${DELTA}/ports && git rm -rf ${port}
+      cd ${DELTA}/ports && git rm -r --quiet ${port}
       echo "  ${port}" >> ${CMDL}
    else
       echo "Delta Target for pruning: ${port}"
@@ -98,8 +98,7 @@ if [ -f ${CMDP} ]; then
     printf "Prune %d obsolete ports\n\n" ${NUMLINES} > ${CMMT}
     echo "FreeBSD Ports maintainers have already deleted the following:" >> ${CMMT}
     cat ${CMDP} >> ${CMMT}
-    cd ${DPORTS} && git commit -f ${CMMT}
-    rm ${CMDP} ${CMMT}
+    cd ${DPORTS} && git commit -F ${CMMT} && rm ${CMDP} ${CMMT}
 fi
 
 # Check if Delta port entry is still current
@@ -125,6 +124,5 @@ if [ -f ${CMDL} ]; then
     printf "Prune %d obsolete ports\n\n" ${NUMLINES} > ${CMMT}
     echo "FreeBSD Ports maintainers have already deleted the following:" >> ${CMMT}
     cat ${CMDL} >> ${CMMT}
-    cd ${DELTA}/ports && git commit -f ${CMMT} .
-    rm ${CMDL} ${CMMT}
+    cd ${DELTA}/ports && git commit -F ${CMMT} . && rm ${CMDL} ${CMMT}
 fi
