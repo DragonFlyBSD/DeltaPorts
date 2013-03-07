@@ -1,3 +1,5 @@
-PORT
+MASK
+# Needs plenty of patches, EOL
+# Not necessary, DragonFly has 4.4 in base
 Last attempt: 4.4.7,1
 Last success: 
