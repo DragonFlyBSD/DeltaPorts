@@ -1,5 +1,5 @@
---- /usr/ports/Mk/bsd.gcc.mk	2013-03-03 03:21:29.000000000 +0000
-+++ /usr/gen-dports/merged-ports/Mk/bsd.gcc.mk
+--- bsd.gcc.mk.orig	2013-03-03 03:21:29.000000000 +0000
++++ bsd.gcc.mk
 @@ -5,28 +5,22 @@
  #
  # Created by: Edwin Groothuis <edwin@freebsd.org>
@@ -101,7 +101,7 @@
  
  
  .if defined(USE_GCC) && !defined(FORCE_BASE_CC_FOR_TESTING)
-+. if empty(USE_GCC) || ${USE_GCC} == any
++. if empty(USE_GCC) || ${USE_GCC} == any || ${USE_GCC:tl} == "yes"
  
 -. if ${USE_GCC} == any
 -
