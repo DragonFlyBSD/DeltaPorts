@@ -4,7 +4,7 @@ PORTNAME=	poudriere-boom
 PORTVERSION=	2.3
 CATEGORIES=	ports-mgmt
 MASTER_SITES=	http://fossil.etoilebsd.net/poudriere/tarball/
-DISTFILES=	${PORTNAME}-${PORTVERSION}${EXTRACT_SUFX}?uuid=${PORTVERSION}
+DISTFILES=	poudriere-${PORTVERSION}${EXTRACT_SUFX}?uuid=${PORTVERSION}
 
 # Also maintained by bdrewery@freeBSD.org
 MAINTAINER=	bapt@FreeBSD.org
@@ -16,6 +16,7 @@ NO_BUILD=	yes
 MANCOMPRESSED=	yes
 MAN8=	poudriere.8
 
+WRKSRC=		${WRKDIR}/poudriere-${PORTVERSION}
 OPTIONS_DEFINE=	ZSH
 ZSH_DESC=	Install zsh completion
 
