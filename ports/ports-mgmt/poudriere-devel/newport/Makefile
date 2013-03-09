@@ -1,6 +1,6 @@
 # $FreeBSD: ports/ports-mgmt/poudriere/Makefile,v 1.25 2012/12/01 16:26:36 svnexp Exp $
 
-PORTNAME=	poudriere
+PORTNAME=	poudriere-boom
 PORTVERSION=	2.3
 CATEGORIES=	ports-mgmt
 MASTER_SITES=	http://fossil.etoilebsd.net/poudriere/tarball/
