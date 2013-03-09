@@ -1,0 +1,11 @@
+--- /usr/ports/Mk/bsd.ruby.mk	2013-02-25 02:46:22.000000000 +0000
++++ /usr/dports/Mk/bsd.ruby.mk
+@@ -132,7 +132,7 @@ Ruby_Include_MAINTAINER=	ruby@FreeBSD.or
+ # RUBY_ELISPDIR		- Installation path for emacs lisp files.
+ #
+ 
+-RUBY_DEFAULT_VER?=	1.8
++RUBY_DEFAULT_VER?=	1.9
+ 
+ RUBY_VER?=		${RUBY_DEFAULT_VER}
+ 
