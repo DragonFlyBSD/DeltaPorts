@@ -1,9 +1,9 @@
---- Makefile.orig	2013-01-21 10:53:06.188286000 +0100
-+++ Makefile	2013-01-21 14:31:10.396562000 +0100
-@@ -18,17 +18,11 @@
+--- Makefile.orig	2013-03-09 22:25:12.399299000 +0000
++++ Makefile
+@@ -17,18 +17,11 @@ USE_XZ=		yes
+ USE_PYTHON=	2.6+
  USE_LDCONFIG=	yes
  ALL_TARGET=	native
- 
 -MAKE_ARGS=	library=shared
 +MAKE_ENV+=	GYPFLAGS=-DOS=freebsd
 +MAKE_ENV+=	library=shared
@@ -13,6 +13,7 @@
 -
 -.if ${CC:T:Mclang} == "clang" || ${CXX:T:Mclang++} == "clang++" || ${OSVERSION} >= 1000024
 -MAKE_ENV+=	LINK=clang++
+-CFLAGS+=	-Wno-unused-private-field
 -.else
 -MAKE_ARGS+=	strictaliasing=off
 -USE_GCC=	any
@@ -20,4 +21,4 @@
 -
  ONLY_FOR_ARCHS=	i386 amd64
  
- do-install:
+ post-patch:
