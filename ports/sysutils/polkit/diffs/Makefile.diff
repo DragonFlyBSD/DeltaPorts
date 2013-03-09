@@ -1,18 +1,18 @@
---- Makefile.orig	2012-11-17 07:01:41.000000000 +0100
-+++ Makefile	2013-01-05 01:01:11.492146000 +0100
-@@ -16,6 +16,7 @@
+--- Makefile.orig	2013-03-09 22:45:05.963085000 +0100
++++ Makefile
+@@ -14,6 +14,7 @@
  
  BUILD_DEPENDS=	${LOCALBASE}/share/gir-1.0/GLib-2.0.gir:${PORTSDIR}/devel/gobject-introspection
- LIB_DEPENDS=	eggdbus-1.0:${PORTSDIR}/devel/eggdbus \
-+		libxml2.5:${PORTSDIR}/textproc/libxml2 \
- 		expat.6:${PORTSDIR}/textproc/expat2
- RUN_DEPENDS=	${LOCALBASE}/share/gir-1.0/GLib-2.0.gir:${PORTSDIR}/devel/gobject-introspection
+ LIB_DEPENDS=	expat:${PORTSDIR}/textproc/expat2
++LIB_DEPENDS+=	libxml2.5:${PORTSDIR}/textproc/libxml2
+ RUN_DEPENDS=	${LOCALBASE}/share/gir-1.0/GLib-2.0.gir:${PORTSDIR}/devel/gobject-introspection \
+ 		dbus-launch:${PORTSDIR}/devel/dbus
  
-@@ -27,7 +28,6 @@
+@@ -26,7 +27,6 @@
  CONFIGURE_ARGS=	--disable-gtk-doc \
  		--with-authfw=pam \
  		--with-pam-include=system \
 -		--with-os-type=freebsd \
+ 		--disable-systemd \
  		--enable-introspection \
  		--localstatedir=/var
- CONFIGURE_ENV=	GTKDOC="false"
