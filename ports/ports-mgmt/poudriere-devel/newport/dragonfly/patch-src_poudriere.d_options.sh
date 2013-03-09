@@ -1,6 +1,6 @@
---- src/poudriere.d/options.sh.orig	2012-11-14 19:10:09.000000000 +0100
-+++ src/poudriere.d/options.sh	2012-11-25 01:15:45.000000000 +0100
-@@ -87,8 +87,7 @@
+--- src/poudriere.d/options.sh.orig	2012-12-01 00:15:48.000000000 +0000
++++ src/poudriere.d/options.sh
+@@ -87,8 +87,7 @@ done
  
  shift $((OPTIND-1))
  

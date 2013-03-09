@@ -1,5 +1,5 @@
---- src/poudriere.d/common.sh.orig	2012-11-14 19:10:09.000000000 +0100
-+++ src/poudriere.d/common.sh	2012-12-02 08:41:08.000000000 +0100
+--- src/poudriere.d/common.sh.orig	2012-12-01 00:15:48.000000000 +0000
++++ src/poudriere.d/common.sh
 @@ -1,8 +1,6 @@
  #!/bin/sh
  
@@ -10,18 +10,10 @@
  
  dir_empty() {
  	find $1 -maxdepth 0 -empty
-@@ -49,6 +47,39 @@
+@@ -49,11 +47,36 @@ eargs() {
  	esac
  }
  
-+if [ -f /sbin/zfs ]; then
-+. $(dirname ${0})/common.sh.zfs
-+elif [ -f /sbin/hammer ]; then
-+. $(dirname ${0})/common.sh.hammer
-+else
-+err 1 "Unsupported filesystem"
-+fi
-+
 +. $(dirname ${0})/common.sh.${BSDPLATFORM}
 +
 +: ${HOOKDIR="/usr/local/etc/hooks_poudriere"}
@@ -50,7 +42,13 @@
  log_start() {
  	local logfile=$1
  
-@@ -103,26 +134,6 @@
+ 	# Make sure directory exists
+-	mkdir -p ${logfile%/*}
++	mkdir -p ${logfile%/*}/success
+ 
+ 	exec 3>&1 4>&2
+ 	[ ! -e ${logfile}.pipe ] && mkfifo ${logfile}.pipe
+@@ -103,26 +126,6 @@ log_stop() {
  	fi
  }
  
@@ -77,9 +75,29 @@
  sig_handler() {
  	trap - SIGTERM SIGKILL
  	# Ignore SIGINT while cleaning up
-@@ -178,160 +189,24 @@
+@@ -161,122 +164,21 @@ siginfo_handler() {
+ 		queue_width=3
  	fi
- }
+ 
+-	printf "[${JAILNAME}] [${status}] [%0${queue_width}d/%0${queue_width}d] Built: %-${queue_width}d Failed: %-${queue_width}d  Ignored: %-${queue_width}d  Skipped: %-${queue_width}d  \n" \
+-	  ${ndone} ${nbq} ${nbb} ${nbf} ${nbi} ${nbs}
+-
+ 	# Skip if stopping or starting jobs
+ 	if [ -n "${JOBS}" -a "${status#starting_jobs:}" = "${status}" -a "${status}" != "stopping_jobs:" ]; then
+ 		for j in ${JOBS}; do
+ 			# Ignore error here as the zfs dataset may not be cloned yet.
+-			status=$(JAILFS=${JAILFS}/build/${j} zget status 2>/dev/null || :)
++			status=$(JAILNAME=${JAILNAME}-job-${j} zget status)
+ 			# Skip builders not started yet
+ 			[ -z "${status}" ] && continue
+ 			# Hide idle workers
+-			[ "${status}" = "idle:" ] && continue
+-			echo -e "\t[${j}]: ${status}"
++			[ "${status}" = "idle:" -o "${status}" = "-" ] && continue
++			echo -e "       [${j}] ${status}"
+ 		done
+ 	fi
+-}
  
 -jail_exists() {
 -	[ $# -ne 1 ] && eargs jailname
@@ -119,18 +137,20 @@
 -		awk '$1 == "ports" { print $2 " " $3 " " $4 }'
 -	if [ -f "${POUDRIERED}/portstrees" ]; then
 -		# Validate proper format
--		format="Format expected: NAME PATH"
+-		format="Format expected: NAME METHOD PATH"
 -		n=0
--		while read name mntpoint; do
+-		while read name method mntpoint; do
 -			n=$((n + 1))
 -			[ -z "${name###*}" ] && continue # Skip comments
 -			[ -n "${name%%/*}" ] || \
 -				err 1 "$(realpath ${POUDRIERED}/portstrees):${n}: Invalid name '${name}'. ${format}"
+-			[ -n "${method}" -a -n "${method%%/*}" ] || \
+-				err 1 "$(realpath ${POUDRIERED}/portstrees):${n}: Missing method for '${name}'. ${format}"
 -			[ -n "${mntpoint}" ] || \
 -				err 1 "$(realpath ${POUDRIERED}/portstrees):${n}: Missing path for '${name}'. ${format}"
 -			[ -z "${mntpoint%%/*}" ] || \
 -				err 1 "$(realpath ${POUDRIERED}/portstrees):${n}: Invalid path '${mntpoint}' for '${name}'. ${format}"
--			echo "${name} manual ${mntpoint}"
+-			echo "${name} ${method} ${mntpoint}"
 -		done < ${POUDRIERED}/portstrees
 -	fi
 -	# Outputs: name method mountpoint
@@ -178,10 +198,12 @@
 -		-o mountpoint=${BASEFS}/data \
 -		${ZPOOL}${ZROOTFS}/data
 -	echo "${BASEFS}/data"
--}
--
++	printf "[${JAILNAME}] [${status}] [%0${queue_width}d/%0${queue_width}d]\nBuilt: %-${queue_width}d Failed: %-${queue_width}d  Ignored: %-${queue_width}d  Skipped: %-${queue_width}d\n" \
++	  ${ndone} ${nbq} ${nbb} ${nbf} ${nbi} ${nbs}
+ }
+ 
  fetch_file() {
- 	[ $# -ne 2 ] && eargs destination source
+@@ -284,258 +186,13 @@ fetch_file() {
  	fetch -p -o $1 $2 || fetch -p -o $1 $2
  }
  
@@ -223,63 +245,84 @@
 -		allow.socket_af allow.raw_sockets allow.chflags
 -}
 -
- do_jail_mounts() {
- 	[ $# -ne 1 ] && eargs should_mkdir
- 	local should_mkdir=$1
- 	local arch=$(zget arch)
- 
-+	mount_jailport ${JAILFS} ${JAILMNT}
-+
- 	# Only do this when starting the master jail, clones will already have the dirs
- 	if [ ${should_mkdir} -eq 1 ]; then
- 		mkdir -p ${JAILMNT}/proc
- 	fi
- 
- 	mount -t devfs devfs ${JAILMNT}/dev
+-do_jail_mounts() {
+-	[ $# -ne 1 ] && eargs should_mkdir
+-	local should_mkdir=$1
+-	local arch=$(zget arch)
+-
+-	# Only do this when starting the master jail, clones will already have the dirs
+-	if [ ${should_mkdir} -eq 1 ]; then
+-		mkdir -p ${JAILMNT}/proc
+-	fi
+-
+-	mount -t devfs devfs ${JAILMNT}/dev
 -	mount -t fdescfs fdesc ${JAILMNT}/dev/fd
- 	mount -t procfs proc ${JAILMNT}/proc
- 
- 	if [ -z "${NOLINUX}" ]; then
-@@ -352,7 +227,7 @@
+-	mount -t procfs proc ${JAILMNT}/proc
+-
+-	if [ -z "${NOLINUX}" ]; then
+-		if [ "${arch}" = "i386" -o "${arch}" = "amd64" ]; then
+-			if [ ${should_mkdir} -eq 1 ]; then
+-				mkdir -p ${JAILMNT}/compat/linux/proc
+-				mkdir -p ${JAILMNT}/compat/linux/sys
+-			fi
+-			mount -t linprocfs linprocfs ${JAILMNT}/compat/linux/proc
+-#			mount -t linsysfs linsysfs ${JAILMNT}/compat/linux/sys
+-		fi
+-	fi
+-}
+-
+ use_options() {
+ 	[ $# -ne 2 ] && eargs optionsdir verbose
+ 	local optionsdir="$(realpath "$1")"
  	local verbose="$2"
  
  	[ ${verbose} -eq 1 ] && msg "Mounting /var/db/ports from: ${optionsdir}"
 -	mount -t nullfs ${optionsdir} ${JAILMNT}/var/db/ports || err 1 "Failed to mount OPTIONS directory"
-+	${NULLMOUNT} ${optionsdir} ${JAILMNT}/var/db/ports || err 1 "Failed to mount OPTIONS directory"
- }
- 
- do_portbuild_mounts() {
-@@ -361,9 +236,9 @@
- 
- 	# Only do this when starting the master jail, clones will already have the dirs
- 	if [ ${should_mkdir} -eq 1 ]; then
+-}
+-
+-do_portbuild_mounts() {
+-	[ $# -ne 1 ] && eargs should_mkdir
+-	local should_mkdir=$1
+-
+-	# Only do this when starting the master jail, clones will already have the dirs
+-	if [ ${should_mkdir} -eq 1 ]; then
 -		mkdir -p ${PORTSDIR}/packages
-+		mkdir -p ${STD_PACKAGES}
- 		mkdir -p ${PKGDIR}/All
+-		mkdir -p ${PKGDIR}/All
 -		mkdir -p ${PORTSDIR}/distfiles
-+		mkdir -p ${STD_DISTFILES}
- 		if [ -d "${CCACHE_DIR:-/nonexistent}" ]; then
- 			mkdir -p ${JAILMNT}${CCACHE_DIR} || err 1 "Failed to create ccache directory "
- 			msg "Mounting ccache from: ${CCACHE_DIR}"
-@@ -376,11 +251,11 @@
- 		msg "Mounting packages from: ${PKGDIR}"
- 	fi
- 
+-		if [ -d "${CCACHE_DIR:-/nonexistent}" ]; then
+-			mkdir -p ${JAILMNT}${CCACHE_DIR} || err 1 "Failed to create ccache directory "
+-			msg "Mounting ccache from: ${CCACHE_DIR}"
+-			export CCACHE_DIR
+-			export WITH_CCACHE_BUILD=yes
+-		fi
+-		# Check for invalid options-JAILNAME created by bad options.sh
+-		[ -d ${POUDRIERED}/options-${JAILNAME%-job-*} ] && err 1 "Please move your options-${JAILNAME%-job-*} to ${JAILNAME%-job-*}-options"
+-
+-		msg "Mounting packages from: ${PKGDIR}"
+-	fi
+-
 -	mount -t nullfs ${PORTSDIR} ${JAILMNT}/usr/ports || err 1 "Failed to mount the ports directory "
 -	mount -t nullfs ${PKGDIR} ${JAILMNT}/usr/ports/packages || err 1 "Failed to mount the packages directory "
-+	${NULLMOUNT} ${PORTSDIR} ${JAILMNT}/${PORTSRC} || err 1 "Failed to mount the ports directory "
-+	${NULLMOUNT} ${PKGDIR} ${JAILMNT}/${STD_PACKAGES} || err 1 "Failed to mount the packages directory "
- 
- 	if [ -d "${DISTFILES_CACHE:-/nonexistent}" ]; then
+-
+-	if [ "$(realpath ${DISTFILES_CACHE:-/nonexistent})" != "$(realpath ${PORTSDIR}/distfiles)" ]; then
 -		mount -t nullfs ${DISTFILES_CACHE} ${JAILMNT}/usr/ports/distfiles || err 1 "Failed to mount the distfile directory"
-+		${NULLMOUNT} ${DISTFILES_CACHE} ${JAILMNT}/${STD_DISTFILES} || err 1 "Failed to mount the distfile directory"
- 	fi
- 	[ -n "${MFSSIZE}" ] && mdmfs -M -S -o async -s ${MFSSIZE} md ${JAILMNT}/wrkdirs
- 	[ -n "${USE_TMPFS}" ] && mount -t tmpfs tmpfs ${JAILMNT}/wrkdirs
-@@ -398,138 +273,10 @@
- 
- 	if [ -d "${CCACHE_DIR:-/nonexistent}" ]; then
- 		# Mount user supplied CCACHE_DIR into /var/cache/ccache
+-	fi
+-	[ -n "${MFSSIZE}" ] && mdmfs -M -S -o async -s ${MFSSIZE} md ${JAILMNT}/wrkdirs
+-	[ -n "${USE_TMPFS}" ] && mount -t tmpfs tmpfs ${JAILMNT}/wrkdirs
+-
+-	# Order is JAILNAME-SETNAME, then SETNAME, then JAILNAME, then default.
+-	if [ -n "${SETNAME}" -a -d ${POUDRIERED}/${JAILNAME%-job-*}${SETNAME}-options ]; then
+-		use_options ${POUDRIERED}/${JAILNAME%-job-*}${SETNAME}-options ${should_mkdir}
+-	elif [ -d ${POUDRIERED}/${SETNAME#-}-options ]; then
+-		use_options ${POUDRIERED}/${SETNAME#-}-options ${should_mkdir}
+-	elif [ -d ${POUDRIERED}/${JAILNAME%-job-*}-options ]; then
+-		use_options ${POUDRIERED}/${JAILNAME%-job-*}-options ${should_mkdir}
+-	elif [ -d ${POUDRIERED}/options ]; then
+-		use_options ${POUDRIERED}/options ${should_mkdir}
+-	fi
+-
+-	if [ -d "${CCACHE_DIR:-/nonexistent}" ]; then
+-		# Mount user supplied CCACHE_DIR into /var/cache/ccache
 -		mount -t nullfs ${CCACHE_DIR} ${JAILMNT}${CCACHE_DIR} || err 1 "Failed to mount the ccache directory "
 -	fi
 -}
@@ -359,14 +402,19 @@
 -	local name=$1
 -	local mnt=$( echo $2 | sed -e 's,//,/,g')
 -	local fs=$3
--	msg_n "Creating ${name} fs..."
--	zfs create -p \
--		-o atime=off \
--		-o compression=off \
--		-o mountpoint=${mnt} \
--		-o ${NS}:type=ports \
--		-o ${NS}:name=${name} \
--		${fs} || err 1 " Fail" && echo " done"
+-	if [ $fs != "none" ]; then
+-		msg_n "Creating ${name} fs..."
+-		zfs create -p \
+-			-o atime=off \
+-			-o compression=off \
+-			-o mountpoint=${mnt} \
+-			-o ${NS}:type=ports \
+-			-o ${NS}:name=${name} \
+-			${fs} || err 1 " Fail" && echo " done"
+-	else
+-		mkdir -p ${mnt}
+-		echo "${name} __METHOD__ ${mnt}" >> ${POUDRIERED}/portstrees
+-	fi
 -}
 -
 -cleanup() {
@@ -399,8 +447,7 @@
 -			[ "${pid}" = "${MASTERMNT:-${JAILMNT}}/poudriere/var/run/*.pid" ] && break
 -			pkill -15 -F ${pid} >/dev/null 2>&1 || :
 -		done
-+		${NULLMOUNT} ${CCACHE_DIR} ${JAILMNT}${CCACHE_DIR} || err 1 "Failed to mount the ccache directory "
- 	fi
+-	fi
 -	wait
 -
 -	zfs destroy -r ${JAILFS%/build/*}/build 2>/dev/null || :
@@ -408,70 +455,153 @@
 -	zfs destroy -r ${JAILFS%/build/*}@preinst 2>/dev/null || :
 -	jail_stop
 -	export CLEANED_UP=1
- }
- 
+-}
+-
 -injail() {
 -	jexec -U root ${JAILNAME} $@
--}
- 
- sanity_check_pkgs() {
- 	local ret=0
-@@ -557,17 +304,20 @@
- build_port() {
- 	[ $# -ne 1 ] && eargs portdir
- 	local portdir=$1
--	local port=${portdir##/usr/ports/}
-+	local port=$(echo ${portdir} | sed -e "s|^${PORTSRC}/||")
- 	local targets="check-config fetch checksum extract patch configure build run-depends install package ${PORTTESTING:+deinstall}"
- 
- 	for phase in ${targets}; do
- 		zset status "${phase}:${port}"
- 		job_msg_verbose "Status for build ${port}: ${phase}"
- 		if [ "${phase}" = "fetch" ]; then
--			jail -r ${JAILNAME} >/dev/null
-+			jail_soft_stop ${JAILNAME}
- 			jrun 1
- 		fi
--		[ "${phase}" = "install" -a $ZVERSION -ge 28 ] && zfs snapshot ${JAILFS}@preinst
-+		if [ "${phase}" = "install" -a $ZVERSION -ge 28 ]; then
-+			zkill ${JAILFS}@preinst
-+			zsnap ${JAILFS}@preinst
-+		fi
- 		if [ "${phase}" = "deinstall" ]; then
- 			msg "Checking shared library dependencies"
- 			if [ ${PKGNG} -eq 0 ]; then
-@@ -590,7 +340,7 @@
- 		print_phase_footer
- 
- 		if [ "${phase}" = "checksum" ]; then
--			jail -r ${JAILNAME} >/dev/null
-+			jail_soft_stop ${JAILNAME}
- 			jrun 0
- 		fi
- 		if [ "${phase}" = "deinstall" ]; then
-@@ -612,7 +362,7 @@
- 				local mod=$(mktemp ${jailbase}/tmp/mod.XXXXXX)
- 				local mod1=$(mktemp ${jailbase}/tmp/mod1.XXXXXX)
- 				local die=0
--				zfs diff -FH ${JAILFS}@preinst ${JAILFS} | \
-+				zxdiff ${JAILFS}@preinst ${JAILFS} | \
- 					while read mod type path; do
- 					local ppath
- 					ppath=`echo "$path" | sed -e "s,^${JAILMNT},," -e "s,^${PREFIX}/,," -e "s,^share/${portname},%%DATADIR%%," -e "s,^etc/${portname},%%ETCDIR%%,"`
-@@ -669,10 +419,10 @@
- 			fi
- 		fi
- 	done
--	jail -r ${JAILNAME} >/dev/null
-+	jail_soft_stop ${JAILNAME}
- 	jrun 0
- 	zset status "idle:"
--	zfs destroy -r ${JAILFS}@preinst || :
-+	zkill ${JAILFS}@preinst || :
- 	return 0
++	${NULLMOUNT} ${optionsdir} ${JAILMNT}/var/db/ports || err 1 "Failed to mount OPTIONS directory"
  }
  
-@@ -709,58 +459,6 @@
+ sanity_check_pkgs() {
+@@ -560,135 +217,13 @@ sanity_check_pkgs() {
+ 	return $ret
+ }
+ 
+-# Build+test port and return on first failure
+-build_port() {
+-	[ $# -ne 1 ] && eargs portdir
+-	local portdir=$1
+-	local port=${portdir##/usr/ports/}
+-	local targets="check-config fetch checksum extract patch configure build run-depends install package ${PORTTESTING:+deinstall}"
+-
+-	for phase in ${targets}; do
+-		zset status "${phase}:${port}"
+-		job_msg_verbose "Status for build ${port}: ${phase}"
+-		if [ "${phase}" = "fetch" ]; then
+-			jail -r ${JAILNAME} >/dev/null
+-			jrun 1
+-		fi
+-		[ "${phase}" = "install" -a $ZVERSION -ge 28 ] && zfs snapshot ${JAILFS}@preinst
+-		if [ "${phase}" = "deinstall" ]; then
+-			msg "Checking shared library dependencies"
+-			if [ ${PKGNG} -eq 0 ]; then
+-				PLIST="/var/db/pkg/${PKGNAME}/+CONTENTS"
+-				grep -v "^@" ${JAILMNT}${PLIST} | \
+-					sed -e "s,^,${PREFIX}/," | \
+-					xargs injail ldd 2>&1 | \
+-					grep -v "not a dynamic executable" | \
+-					awk ' /=>/{ print $3 }' | sort -u
+-			else
+-				injail pkg query "%Fp" ${PKGNAME} | \
+-					xargs injail ldd 2>&1 | \
+-					grep -v "not a dynamic executable" | \
+-					awk '/=>/ { print $3 }' | sort -u
+-			fi
+-		fi
+-
+-		print_phase_header ${phase}
+-		injail env ${PKGENV} ${PORT_FLAGS} make -C ${portdir} ${phase} || return 1
+-		print_phase_footer
+-
+-		if [ "${phase}" = "checksum" ]; then
+-			jail -r ${JAILNAME} >/dev/null
+-			jrun 0
+-		fi
+-		if [ "${phase}" = "deinstall" ]; then
+-			msg "Checking for extra files and directories"
+-			PREFIX=`injail make -C ${portdir} -VPREFIX`
+-			zset status "leftovers:${port}"
+-			if [ $ZVERSION -lt 28 ]; then
+-				find ${jailbase}${PREFIX} ! -type d | \
+-					sed -e "s,^${jailbase}${PREFIX}/,," | sort
+-
+-				find ${jailbase}${PREFIX}/ -type d | sed "s,^${jailbase}${PREFIX}/,," | sort > ${jailbase}${PREFIX}.PLIST_DIRS.after
+-				comm -13 ${jailbase}${PREFIX}.PLIST_DIRS.before ${jailbase}${PREFIX}.PLIST_DIRS.after | sort -r | awk '{ print "@dirrmtry "$1}'
+-			else
+-				local portname=$(injail make -C ${portdir} -VPORTNAME)
+-				local add=$(mktemp ${jailbase}/tmp/add.XXXXXX)
+-				local add1=$(mktemp ${jailbase}/tmp/add1.XXXXXX)
+-				local del=$(mktemp ${jailbase}/tmp/del.XXXXXX)
+-				local del1=$(mktemp ${jailbase}/tmp/del1.XXXXXX)
+-				local mod=$(mktemp ${jailbase}/tmp/mod.XXXXXX)
+-				local mod1=$(mktemp ${jailbase}/tmp/mod1.XXXXXX)
+-				local die=0
+-				zfs diff -FH ${JAILFS}@preinst ${JAILFS} | \
+-					while read mod type path; do
+-					local ppath
+-					ppath=`echo "$path" | sed -e "s,^${JAILMNT},," -e "s,^${PREFIX}/,," -e "s,^share/${portname},%%DATADIR%%," -e "s,^etc/${portname},%%ETCDIR%%,"`
+-					case "$ppath" in
+-					/var/db/pkg/*) continue;;
+-					/var/run/*) continue;;
+-					/wrkdirs/*) continue;;
+-					/tmp/*) continue;;
+-					share/nls/POSIX) continue;;
+-					share/nls/en_US.US-ASCII) continue;;
+-					/var/db/fontconfig/*) continue;;
+-					/var/log/*) continue;;
+-					/var/mail/*) continue;;
+-					${HOME}/*) continue;;
+-					/etc/spwd.db) continue;;
+-					/etc/pwd.db) continue;;
+-					/etc/group) continue;;
+-					/etc/make.conf) continue;;
+-					/etc/passwd) continue;;
+-					/etc/master.passwd) continue;;
+-					/etc/shells) continue;;
+-					/etc/make.conf.bak) continue;;
+-					esac
+-					case $mod$type in
+-					+*) echo "${ppath}" >> ${add};;
+-					-*) echo "${ppath}" >> ${del};;
+-					M/) continue;;
+-					M*) echo "${ppath}" >> ${mod};;
+-					esac
+-				done
+-				sort ${add} > ${add1}
+-				sort ${del} > ${del1}
+-				sort ${mod} > ${mod1}
+-				comm -12 ${add1} ${del1} >> ${mod1}
+-				comm -23 ${add1} ${del1} > ${add}
+-				comm -13 ${add1} ${del1} > ${del}
+-				if [ -s "${add}" ]; then
+-					msg "Files or directories left over:"
+-					die=1
+-					cat ${add}
+-				fi
+-				if [ -s "${del}" ]; then
+-					msg "Files or directories removed:"
+-					die=1
+-					cat ${del}
+-				fi
+-				if [ -s "${mod}" ]; then
+-					msg "Files or directories modified:"
+-					die=1
+-					cat ${mod1}
+-				fi
+-				rm -f ${add} ${add1} ${del} ${del1} ${mod} ${mod1}
+-				[ $die -eq 0 ] || return 1
+-			fi
+-		fi
+-	done
+-	jail -r ${JAILNAME} >/dev/null
+-	jrun 0
+-	zset status "idle:"
+-	zfs destroy -r ${JAILFS}@preinst || :
+-	return 0
+-}
+ 
+ # Save wrkdir and return path to file
+ save_wrkdir() {
+ 	[ $# -ne 3 ] && eargs port portdir phase
+ 	local port="$1"
+-	local phase="$2"
+-	local portdir="$2"
++	local phase="$3"
++	local portdir=$(echo "$2" | sed -e "s|${PORTSRC}/||g")
+ 	local tardir=${POUDRIERE_DATA}/wrkdirs/${JAILNAME%-job-*}/${PTNAME}
+ 	local tarname=${tardir}/${PKGNAME}.${WRKDIR_ARCHIVE_FORMAT}
+ 	local mnted_portdir=${JAILMNT}/wrkdirs/${portdir}
+@@ -716,58 +251,6 @@ save_wrkdir() {
  	fi
  }
  
@@ -530,7 +660,7 @@
  build_stats_list() {
  	[ $# -ne 3 ] && eargs html_path type display_name
  	local html_path="$1"
-@@ -785,12 +483,12 @@
+@@ -792,12 +275,12 @@ cat >> ${html_path} << EOF
      <div id="${type}">
        <h2>${display_name} ports </h2>
        <table>
@@ -547,7 +677,7 @@
  EOF
  	cnt=0
  	while read port extra; do
-@@ -811,12 +509,12 @@
+@@ -818,16 +301,22 @@ EOF
  		fi
  
  		cat >> ${html_path} << EOF
@@ -564,7 +694,18 @@
  EOF
  		cnt=$(( cnt + 1 ))
  	done <  ${JAILMNT}/poudriere/ports.${type}
-@@ -909,74 +607,6 @@
+-	zset stats_${type} $cnt
++
++	if [ "${type}" = "skipped" ]; then
++	  # Skipped lists the skipped origin for every dependency that wanted it
++	  zset stats_skipped $(awk '{print $1}' ${JAILMNT}/poudriere/ports.skipped | sort -u | wc -l)
++	else
++	  zset stats_${type} $cnt
++	fi
+ 
+ cat >> ${html_path} << EOF
+       </table>
+@@ -916,74 +405,6 @@ EOF
  	[ "${html_path}" = "/dev/null" ] || mv ${html_path} ${html_path%.tmp}
  }
  
@@ -639,34 +780,95 @@
  
  # Build ports in parallel
  # Returns when all are built.
-@@ -1059,11 +689,11 @@
+@@ -1040,7 +461,7 @@ clean_pool() {
+ 	lockf -s -k ${MASTERMNT:-${JAILMNT}}/poudriere/.lock.pool sh ${SCRIPTPREFIX}/clean.sh "${MASTERMNT:-${JAILMNT}}" "${pkgname}" ${clean_rdepends} | sort -u | while read skipped_pkgname; do
+ 		skipped_origin=$(cache_get_origin "${skipped_pkgname}")
+ 		echo "${skipped_origin} ${pkgname}" >> ${MASTERMNT:-${JAILMNT}}/poudriere/ports.skipped
+-		job_msg "Skipping build of ${skipped_origin}: Dependent port ${port} failed"
++		job_msg "Skipping ${skipped_origin}: Dependent port ${port} failed"
+ 	done
+ }
+ 
+@@ -1063,14 +484,16 @@ build_pkg() {
+ 	local failed_status failed_phase
+ 	local clean_rdepends=0
+ 	local ignore
++	local zip_log=0
++	local PKGLOG
  
  	PKGNAME="${pkgname}" # set ASAP so cleanup() can use it
++	PKGLOG=$(log_path)/${PKGNAME}.log
  	port=$(cache_get_origin ${pkgname})
 -	portdir="/usr/ports/${port}"
 +	portdir="${PORTSRC}/${port}"
  
- 	job_msg "Starting build of ${port}"
- 	zset status "starting:${port}"
+-	job_msg "Starting build of ${port}"
+-	zset status "starting:${port}"
 -	zfs rollback -r ${JAILFS}@prepkg || err 1 "Unable to rollback ${JAILFS}"
-+	zrollback ${JAILFS}@prepkg || err 1 "Unable to rollback ${JAILFS}"
++	job_msg "Starting ${port}"
++	create_slave ${MASTERMNT} ${MY_JOBID}
  
  	# If this port is IGNORED, skip it
  	# This is checked here instead of when building the queue
-@@ -1112,10 +742,12 @@
- 			job_msg "Finished build of ${port}: Success"
+@@ -1078,21 +501,18 @@ build_pkg() {
+ 	# is a less-common check
+ 	ignore="$(injail make -C ${portdir} -VIGNORE)"
+ 
+-	msg "Cleaning up wrkdir"
+-	rm -rf ${JAILMNT}/wrkdirs/*
+-
+ 	msg "Building ${port}"
+-	log_start $(log_path)/${PKGNAME}.log
++	log_start ${PKGLOG}
+ 	buildlog_start ${portdir}
+ 
+ 	if [ -n "${ignore}" ]; then
+ 		msg "Ignoring ${port}: ${ignore}"
+ 		echo "${port} ${ignore}" >> "${MASTERMNT:-${JAILMNT}}/poudriere/ports.ignored"
+-		job_msg "Finished build of ${port}: Ignored: ${ignore}"
++		job_msg "Finished ${port}: Ignored: ${ignore}"
+ 		clean_rdepends=1
+ 	else
+ 		zset status "depends:${port}"
+-		job_msg_verbose "Status for build ${port}: depends"
++		job_msg_verbose "Status   ${port}: depends"
+ 		print_phase_header "depends"
+ 		if ! injail make -C ${portdir} pkg-depends fetch-depends extract-depends \
+ 			patch-depends build-depends lib-depends; then
+@@ -1116,13 +536,17 @@ build_pkg() {
+ 		if [ ${build_failed} -eq 0 ]; then
+ 			echo "${port}" >> "${MASTERMNT:-${JAILMNT}}/poudriere/ports.built"
+ 
+-			job_msg "Finished build of ${port}: Success"
++			zip_log=1
++			job_msg "Finished ${port}: Success"
  			# Cache information for next run
  			pkg_cache_data "${PKGDIR}/All/${PKGNAME}.${PKG_EXT}" ${port} || :
 +			firehook port_build_success "${JAILNAME}" "${PTNAME}" "${JAILMNT}/${portdir}"
  		else
  			echo "${port} ${failed_phase}" >> "${MASTERMNT:-${JAILMNT}}/poudriere/ports.failed"
- 			job_msg "Finished build of ${port}: Failed: ${failed_phase}"
+-			job_msg "Finished build of ${port}: Failed: ${failed_phase}"
++			echo "${port} ${failed_phase}" >> $(log_path)/last_run.failed
++			job_msg "Finished ${port}: Failed: ${failed_phase}"
  			clean_rdepends=1
 +			firehook port_build_failure "${JAILNAME}" "${PTNAME}" "${JAILMNT}/${portdir}" "${failed_phase}"
  		fi
  	fi
  
-@@ -1130,10 +762,10 @@
+@@ -1130,17 +554,22 @@ build_pkg() {
+ 
+ 	zset status "done:${port}"
+ 	buildlog_stop ${portdir}
+-	log_stop $(log_path)/${PKGNAME}.log
++	log_stop ${PKGLOG}
++	destroy_slave ${MASTERMNT} ${MY_JOBID}
++	if [ ${zip_log} -eq 1 ]; then
++		bzip2 ${PKGLOG}
++		mv ${PKGLOG}.bz2 $(log_path)/success/
++	fi
+ }
+ 
+ list_deps() {
  	[ $# -ne 1 ] && eargs directory
  	local dir=$1
  	local makeargs="-VPKG_DEPENDS -VBUILD_DEPENDS -VEXTRACT_DEPENDS -VLIB_DEPENDS -VPATCH_DEPENDS -VFETCH_DEPENDS -VRUN_DEPENDS"
@@ -679,7 +881,7 @@
  }
  
  deps_file() {
-@@ -1143,7 +775,7 @@
+@@ -1150,7 +579,7 @@ deps_file() {
  
  	if [ ! -f "${depfile}" ]; then
  		if [ "${PKG_EXT}" = "tbz" ]; then
@@ -688,7 +890,7 @@
  		else
  			pkg info -qdF "${pkg}" > "${depfile}"
  		fi
-@@ -1161,7 +793,7 @@
+@@ -1168,7 +597,7 @@ pkg_get_origin() {
  	if [ ! -f "${originfile}" ]; then
  		if [ -z "${origin}" ]; then
  			if [ "${PKG_EXT}" = "tbz" ]; then
@@ -697,7 +899,7 @@
  			else
  				origin=$(pkg query -F "${pkg}" "%o")
  			fi
-@@ -1181,7 +813,7 @@
+@@ -1188,7 +617,7 @@ pkg_get_options() {
  
  	if [ ! -f "${optionsfile}" ]; then
  		if [ "${PKG_EXT}" = "tbz" ]; then
@@ -706,7 +908,7 @@
  		else
  			compiled_options=$(pkg query -F "${pkg}" '%Ov %Ok' | awk '$1 == "on" {print $2}' | sort | tr '\n' ' ')
  		fi
-@@ -1277,7 +909,7 @@
+@@ -1284,7 +713,7 @@ delete_old_pkg() {
  	o=$(pkg_get_origin ${pkg})
  	v=${pkg##*-}
  	v=${v%.*}
@@ -715,7 +917,7 @@
  		msg "${o} does not exist anymore. Deleting stale ${pkg##*/}"
  		delete_pkg ${pkg}
  		return 0
-@@ -1292,7 +924,7 @@
+@@ -1299,7 +728,7 @@ delete_old_pkg() {
  
  	# Check if the compiled options match the current options from make.conf and /var/db/options
  	if [ "${CHECK_CHANGED_OPTIONS:-no}" != "no" ]; then
@@ -724,7 +926,21 @@
  		compiled_options=$(pkg_get_options ${pkg})
  
  		if [ "${compiled_options}" != "${current_options}" ]; then
-@@ -1358,7 +990,7 @@
+@@ -1327,10 +756,10 @@ delete_old_pkgs() {
+ 
+ next_in_queue() {
+ 	local p
+-	[ ! -d ${JAILMNT}/poudriere/pool ] && err 1 "Build pool is missing"
+-	p=$(lockf -k -t 60 ${JAILMNT}/poudriere/.lock.pool find ${JAILMNT}/poudriere/pool -type d -depth 1 -empty -print -quit || :)
++	[ ! -d ${JAILMNT}/poudriere/pool0 ] && err 1 "Build pool is missing"
++	p=$(find ${JAILMNT}/poudriere/pool9 ${JAILMNT}/poudriere/pool8 ${JAILMNT}/poudriere/pool7 ${JAILMNT}/poudriere/pool6 ${JAILMNT}/poudriere/pool5 ${JAILMNT}/poudriere/pool4 ${JAILMNT}/poudriere/pool3 ${JAILMNT}/poudriere/pool2 ${JAILMNT}/poudriere/pool1 ${JAILMNT}/poudriere/pool0 -type d -depth 1 -empty -print -quit || :)
+ 	[ -n "$p" ] || return 0
+-	touch ${p}/.building
++	mv ${p} ${JAILMNT}/poudriere/running
+ 	# pkgname
+ 	echo ${p##*/}
+ }
+@@ -1365,7 +794,7 @@ cache_get_pkgname() {
  
  	# Add to cache if not found.
  	if [ -z "${pkgname}" ]; then
@@ -733,7 +949,7 @@
  		# Make sure this origin did not already exist
  		existing_origin=$(cache_get_origin "${pkgname}" 2>/dev/null || :)
  		# It may already exist due to race conditions, it is not harmful. Just ignore.
-@@ -1410,24 +1042,6 @@
+@@ -1417,24 +846,6 @@ compute_deps() {
  	done
  }
  
@@ -758,7 +974,86 @@
  parallel_stop() {
  	wait
  }
-@@ -1589,8 +1203,7 @@
+@@ -1505,20 +916,58 @@ prepare_ports() {
+ 	[ -n "${TMPFS_DATA}" ] && mount -t tmpfs tmpfs "${JAILMNT}/poudriere"
+ 	rm -rf "${JAILMNT}/poudriere/var/cache/origin-pkgname" \
+ 	       "${JAILMNT}/poudriere/var/cache/pkgname-origin" 2>/dev/null || :
+-	mkdir -p "${JAILMNT}/poudriere/pool" \
++	mkdir -p "${JAILMNT}/poudriere/pool0" \
++		"${JAILMNT}/poudriere/pool1" \
++		"${JAILMNT}/poudriere/pool2" \
++		"${JAILMNT}/poudriere/pool3" \
++		"${JAILMNT}/poudriere/pool4" \
++		"${JAILMNT}/poudriere/pool5" \
++		"${JAILMNT}/poudriere/pool6" \
++		"${JAILMNT}/poudriere/pool7" \
++		"${JAILMNT}/poudriere/pool8" \
++		"${JAILMNT}/poudriere/pool9" \
++		"${JAILMNT}/poudriere/running" \
+ 		"${JAILMNT}/poudriere/deps" \
+ 		"${JAILMNT}/poudriere/rdeps" \
++		"${JAILMNT}/poudriere/trees" \
+ 		"${JAILMNT}/poudriere/var/run" \
+ 		"${JAILMNT}/poudriere/var/cache" \
+ 		"${JAILMNT}/poudriere/var/cache/origin-pkgname" \
+ 		"${JAILMNT}/poudriere/var/cache/pkgname-origin"
+ 
++		cat > ${JAILMNT}/poudriere/trees/mtree.exclude << EOF
++./etc/group
++./etc/make.conf
++./etc/make.conf.bak
++./etc/master.passwd
++./etc/passwd
++./etc/pwd.db
++./etc/shells
++./etc/spwd.db
++./tmp/*
++./usr/local/lib/charset.alias
++./usr/local/share/applications/mimeinfo.cache
++./usr/local/share/nls/POSIX
++./usr/local/share/nls/en_US.US-ASCII
++./var/db/fontconfig/*
++./var/db/pkg/*
++./var/log/*
++./var/mail/*
++./var/run/*
++./wrkdirs/*
++.${HOME}/*
++EOF
++
+ 	zset stats_queued "0"
+ 	:> ${JAILMNT}/poudriere/ports.built
+ 	:> ${JAILMNT}/poudriere/ports.failed
+ 	:> ${JAILMNT}/poudriere/ports.ignored
+ 	:> ${JAILMNT}/poudriere/ports.skipped
+-	build_stats
++	zset stats_built "0"
++	zset stats_failed "0"
++	zset stats_ignored "0"
++	zset stats_skipped "0"
++	rm -f ${logdir}/index.html*
+ 
+ 	zset status "computingdeps:"
+ 	for port in $(listed_ports); do
+@@ -1555,7 +1004,7 @@ prepare_ports() {
+ 
+ 	zset status "cleaning:"
+ 	msg "Cleaning the build queue"
+-	export LOCALBASE=${MYBASE:-/usr/local}
++	export LOCALBASE=/usr/local
+ 	for pn in $(ls ${JAILMNT}/poudriere/deps/); do
+ 		if [ -f "${PKGDIR}/All/${pn}.${PKG_EXT}" ]; then
+ 			# Cleanup rdeps/*/${pn}
+@@ -1578,7 +1027,7 @@ prepare_ports() {
+ 	zset stats_queued "${nbq##* }"
+ 
+ 	# Create a pool of ready-to-build from the deps pool
+-	find "${JAILMNT}/poudriere/deps" -type d -empty|xargs -J % mv % "${JAILMNT}/poudriere/pool"
++	find "${JAILMNT}/poudriere/deps" -type d -empty|xargs -J % mv % "${JAILMNT}/poudriere/pool0"
+ }
+ 
+ append_make() {
+@@ -1596,8 +1045,7 @@ prepare_jail() {
  	export FORCE_PACKAGE=yes
  	export USER=root
  	export HOME=/root
@@ -768,19 +1063,27 @@
  	[ -z "${JAILMNT}" ] && err 1 "No path of the base of the jail defined"
  	[ -z "${PORTSDIR}" ] && err 1 "No ports directory defined"
  	[ -z "${PKGDIR}" ] && err 1 "No package directory defined"
-@@ -1613,9 +1226,9 @@
+@@ -1619,15 +1067,14 @@ prepare_jail() {
+ 	fi
  
  	msg "Populating LOCALBASE"
- 	mkdir -p ${JAILMNT}/${MYBASE:-/usr/local}
+-	mkdir -p ${JAILMNT}/${MYBASE:-/usr/local}
 -	injail /usr/sbin/mtree -q -U -f /usr/ports/Templates/BSD.local.dist -d -e -p ${MYBASE:-/usr/local} >/dev/null
-+	injail /usr/sbin/mtree -q -U -f ${PORTSRC}/Templates/BSD.local.dist -d -e -p ${MYBASE:-/usr/local} >/dev/null
++	injail /usr/sbin/mtree -q -U -f ${PORTSRC}/Templates/BSD.local.dist -d -e -p /usr/local >/dev/null
  
 -	WITH_PKGNG=$(injail make -f /usr/ports/Mk/bsd.port.mk -V WITH_PKGNG)
 +	WITH_PKGNG=$(injail make -f ${PORTSRC}/Mk/bsd.port.mk -V WITH_PKGNG)
  	if [ -n "${WITH_PKGNG}" ]; then
  		export PKGNG=1
  		export PKG_EXT="txz"
-@@ -1638,26 +1251,40 @@
+-		export PKG_ADD="${MYBASE:-/usr/local}/sbin/pkg add"
+-		export PKG_DELETE="${MYBASE:-/usr/local}/sbin/pkg delete -y -f"
++		export PKG_ADD="/usr/local/sbin/pkg add"
++		export PKG_DELETE="/usr/local/sbin/pkg delete -y -f"
+ 	else
+ 		export PKGNG=0
+ 		export PKG_ADD=pkg_add
+@@ -1645,26 +1092,40 @@ test -f ${SCRIPTPREFIX}/../../etc/poudri
  . ${SCRIPTPREFIX}/../../etc/poudriere.conf
  POUDRIERED=${SCRIPTPREFIX}/../../etc/poudriere.d
  
@@ -829,7 +1132,7 @@
  case ${ZROOTFS} in
  	[!/]*)
  		err 1 "ZROOTFS shoud start with a /"
-@@ -1672,8 +1299,3 @@
+@@ -1679,8 +1140,3 @@ case "${WRKDIR_ARCHIVE_FORMAT}" in
  	*) err 1 "invalid format for WRKDIR_ARCHIVE_FORMAT: ${WRKDIR_ARCHIVE_FORMAT}" ;;
  esac
  

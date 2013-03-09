@@ -1,6 +1,12 @@
---- src/poudriere.d/jail.sh.orig	2012-11-14 19:10:09.000000000 +0100
-+++ src/poudriere.d/jail.sh	2012-11-25 09:37:29.000000000 +0100
-@@ -16,67 +16,32 @@
+--- src/poudriere.d/jail.sh.orig	2012-12-01 00:15:48.000000000 +0000
++++ src/poudriere.d/jail.sh
+@@ -11,75 +11,38 @@ Parameters:
+     -k            -- kill (stop) a jail
+     -u            -- update a jail
+     -i            -- show informations
++    -C            -- Cleanup jail mounts (contingency cleanup)
+ 
+ Options:
      -q            -- quiet (remove the header in list)
      -J n          -- Run buildworld in parallell with n jobs.
      -j jailname   -- Specifies the jailname
@@ -11,7 +17,7 @@
 +    -v version    -- Specifies which version of DragonFly we want in jail
 +                     e.g. \"3.4\", \"3.6\", or \"master\"
 +    -a arch       -- Does nothing - set to be same as host
-+    -f fs         -- FS name (/pfs/poudriere.jail.myjail)
++    -f fs         -- FS name (\$BASEFS/worlds/myjail)
      -M mountpoint -- mountpoint
 +    -Q quickworld -- when used with -u jail is incrementally updated
      -m method     -- when used with -c forces the method to use by default
@@ -19,6 +25,9 @@
 -		     \"csup\" please note that with svn and csup the world
 -		     will be built. note that building from sources can use
 -		     src.conf and jail-src.conf from localbase/etc/poudriere.d
+-		     other possible method are: \"allbsd\" retreive snapshot
+-		     from allbsd website or \"gjb\" for snapshot from Glen
+-		     Barber's website.
 +                     \"git\" to build world from source.  There are no other
 +                     method options at this time.
      -t version    -- version to upgrade to"
@@ -82,7 +91,7 @@
  }
  
  cleanup_new_jail() {
-@@ -84,319 +49,6 @@
+@@ -87,325 +50,6 @@ cleanup_new_jail() {
  	delete_jail
  }
  
@@ -143,7 +152,7 @@
 -		zfs destroy -r ${JAILFS}@clean
 -		zfs snapshot ${JAILFS}@clean
 -		;;
--	allbsd)
+-	allbsd|gjb)
 -		err 1 "Upgrade is not supported with allbsd, to upgrade, please delete and recreate the jail"
 -		;;
 -	*)
@@ -266,6 +275,7 @@
 -		case ${METHOD} in
 -		ftp) URL="${FREEBSD_HOST}/pub/FreeBSD/releases/${ARCH}/${ARCH}/${V}" ;;
 -		allbsd) URL="https://pub.allbsd.org/FreeBSD-snapshots/${ARCH}-${ARCH}/${V}-JPSNAP/ftp" ;;
+-		gjb) URL="https://snapshots.glenbarber.us/Latest/ftp/${GJBVERSION}/${ARCH}/${ARCH}/" ;;
 -		esac
 -		DISTS="base.txz src.txz games.txz"
 -		[ ${ARCH} = "amd64" ] && DISTS="${DISTS} lib32.txz"
@@ -300,6 +310,11 @@
 -	case ${METHOD} in
 -	ftp)
 -		FCT=install_from_ftp
+-		;;
+-	gjb)
+-		FCT=install_from_ftp
+-		GJBVERSION=${VERSION}
+-		VERSION=${VERSION%%-*}
 -		;;
 -	allbsd)
 -		FCT=install_from_ftp
@@ -402,12 +417,14 @@
  ARCH=`uname -m`
  REALARCH=${ARCH}
  START=0
-@@ -407,12 +59,15 @@
+@@ -416,27 +60,29 @@ CREATE=0
  QUIET=0
  INFO=0
  UPDATE=0
 +QUICK=0
++DISMOUNT=0
 +METHOD=git
++JOB_OVERRIDE="0"
  
  SCRIPTPATH=`realpath $0`
  SCRIPTPREFIX=`dirname ${SCRIPTPATH}`
@@ -415,11 +432,16 @@
 +. ${SCRIPTPREFIX}/jail.sh.${BSDPLATFORM}
  
 -while getopts "J:j:v:a:z:m:n:f:M:sdklqciut:" FLAG; do
-+while getopts "J:j:v:a:z:m:n:f:M:sdklqciut:Q" FLAG; do
++while getopts "J:j:v:a:z:m:n:f:M:Csdklqciut:Q" FLAG; do
  	case "${FLAG}" in
  		j)
  			JAILNAME=${OPTARG}
-@@ -424,10 +79,7 @@
+ 			;;
+ 		J)
+-			PARALLEL_JOBS=${OPTARG}
++			JOB_OVERRIDE=${OPTARG}
+ 			;;
+ 		v)
  			VERSION=${OPTARG}
  			;;
  		a)
@@ -431,7 +453,13 @@
  			;;
  		m)
  			METHOD=${OPTARG}
-@@ -438,6 +90,9 @@
+@@ -444,9 +90,15 @@ while getopts "J:j:v:a:z:m:n:f:M:sdklqci
+ 		f)
+ 			JAILFS=${OPTARG}
+ 			;;
++		C)
++			DISMOUNT=1
++			;;
  		M)
  			JAILMNT=${OPTARG}
  			;;
@@ -441,7 +469,7 @@
  		s)
  			START=1
  			;;
-@@ -471,7 +126,6 @@
+@@ -480,44 +132,52 @@ while getopts "J:j:v:a:z:m:n:f:M:sdklqci
  	esac
  done
  
@@ -449,7 +477,35 @@
  if [ -n "${JAILNAME}" ] && [ ${CREATE} -eq 0 ]; then
  	JAILFS=`jail_get_fs ${JAILNAME}`
  	JAILMNT=`jail_get_base ${JAILNAME}`
-@@ -496,7 +150,7 @@
+ fi
+ 
++if [ "${JOB_OVERRIDE}" = "0" ]; then
++	PARALLEL_JOBS=$(sysctl -n hw.ncpu)
++else
++	PARALLEL_JOBS=${JOB_OVERRIDE}
++fi
+ 
+-[ $(( CREATE + LIST + STOP + START + DELETE + INFO + UPDATE )) -lt 1 ] && usage
++[ $(( CREATE + LIST + STOP + START + DELETE + INFO + UPDATE + DISMOUNT )) -lt 1 ] && usage
+ 
+-case "${CREATE}${LIST}${STOP}${START}${DELETE}${INFO}${UPDATE}" in
+-	1000000)
++case "${CREATE}${LIST}${STOP}${START}${DELETE}${INFO}${UPDATE}${DISMOUNT}" in
++	10000000)
+ 		test -z ${JAILNAME} && usage
+ 		create_jail
+ 		;;
+-	0100000)
++	01000000)
+ 		list_jail
+ 		;;
+-	0010000)
++	00100000)
+ 		test -z ${JAILNAME} && usage
+ 		jail_stop
+ 		;;
+-	0001000)
++	00010000)
  		export SET_STATUS_ON_START=0
  		test -z ${JAILNAME} && usage
  		jail_start
@@ -457,12 +513,24 @@
 +		jail_soft_stop ${JAILNAME}
  		jrun 1
  		;;
- 	0000100)
-@@ -509,6 +163,6 @@
+-	0000100)
++	00001000)
+ 		test -z ${JAILNAME} && usage
+ 		delete_jail
  		;;
- 	0000001)
+-	0000010)
++	00000100)
+ 		test -z ${JAILNAME} && usage
+ 		info_jail
+ 		;;
+-	0000001)
++	00000010)
++		test -z ${JAILNAME} && usage
++		update_jail ${QUICK}
++		;;
++	00000001)
  		test -z ${JAILNAME} && usage
 -		update_jail
-+		update_jail ${QUICK}
++		jail_dismount
  		;;
  esac

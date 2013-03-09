@@ -1,18 +1,50 @@
---- /dev/null	2012-11-25 03:01:18.885857679 +0100
-+++ src/poudriere.d/jail.sh.dragonfly	2012-11-25 13:42:30.000000000 +0100
+--- src/poudriere.d/jail.sh.dragonfly.orig	2013-03-07 15:24:40.000000000 +0000
++++ src/poudriere.d/jail.sh.dragonfly
 @@ -0,0 +1,267 @@
 +#!/bin/sh
 +#
 +# DragonFly specific
++
++jail_runs() {
++	[ $# -ne 0 ] && eargs
++	local check=$(zget status)
++	[ "${check}" = "idle:" ] && return 0
++	return 1
++}
++
++establish_jail() {
++	[ $# -ne 5 ] && eargs name version arch mountpoint filesys
++	local name=$1
++	local version=$2
++	local arch=$3
++	local mnt=$( echo $4 | sed -e "s,//,/,g")
++	local filesys=$5
++	local confdir="${POUDRIERE_DATA}/meta/jail/${name}"
++	local memdir="${BASEFS}/memory/${name}"
++	local numcpu=$(sysctl -n hw.ncpu)
++	local JOBX="$(jot -w %02d ${numcpu})"
++	msg_n "Creating ${name} fs..."
++
++	mkdir -p ${mnt}
++	mkdir -p ${confdir}
++	mkdir -p ${memdir}
++	mkdir -p ${filesys}
++
++	echo "rootfs"     > ${confdir}/type
++	echo "${name}"    > ${confdir}/name
++	echo "${version}" > ${confdir}/version
++	echo "${arch}"    > ${confdir}/arch
++	echo "${mnt}"     > ${confdir}/mountpoint
++	echo "${filesys}" > ${confdir}/filesys
++	echo "${numcpu}"  > ${confdir}/slaves
++	echo " done"
++}
 +
 +update_jail() {
 +	[ $# -ne 1 ] && eargs quick
 +	jail_exists ${JAILNAME} || err 1 "No such jail: ${JAILNAME}"
 +	jail_runs && \
 +		err 1 "Unable to remove jail ${JAILNAME}: it is running"
-+
-+	# In case a jail run modified some files, roll back to last snapshot
-+	zrollback ${JAILFS}@clean
 +
 +	METHOD=`zget method`
 +	if [ "${METHOD}" = "-" ]; then
@@ -23,32 +55,18 @@
 +	case ${METHOD} in
 +	git)
 +		install_from_git ${1}
-+		umount ${JAILMNT}
-+		zkill ${JAILFS}@clean
-+		zsnap ${JAILFS}@clean
 +		;;
 +	*)
 +		err 1 "Unsupported method"
 +		;;
 +	esac
-+
-+	local numjobs=$(zget slaves)
-+	local JOBX="$(jot -w %02d ${numjobs})"
-+	for j in ${JOBX}; do
-+		if [ -d ${JAILFS}.job-${j} ]; then
-+			msg_n "${JAILNAME}: Syncing slave ${j}..."
-+			cpdup -x -i0 ${JAILFS}/ ${JAILFS}.job-${j}/
-+			echo "done"
-+		fi
-+	done
 +}
 +
 +build_and_install_world() {
 +	[ $# -ne 1 ] && eargs quick
 +	local JLOGBASE=${POUDRIERE_DATA}/jailbuild/${JAILNAME}
-+	local ncpus=$(zget slaves)
-+	local factor=`expr ${ncpus} \* 2 - 1`
-+	local options="-DNO_GCC47 -DNO_GAMES -DNOPROFILE -DNO_BINUTILS221"
++	local factor=${PARALLEL_JOBS}
++	local options="-DNO_GAMES -DNOPROFILE -DNO_BINUTILS221"
 +	local directive
 +	mkdir -p ${JLOGBASE}
 +
@@ -61,31 +79,25 @@
 +	else
 +	   directive=buildworld
 +	fi
-+	msg "${JAILNAME}: making ${directive}"
-+	cd ${JAILMNT}/usr/src && \
-+	  make -j${factor} ${options} ${directive} > \
++	msg "${JAILNAME}: making ${directive} with ${factor} jobs"
++	make -C ${JAILMNT}/usr/src -j${factor} ${options} ${directive} > \
 +	  ${JLOGBASE}/build.log 2>&1 || err 1 "Fail to ${directive}"
 +
 +	msg "${JAILNAME}: making installworld"
-+	cd ${JAILMNT}/usr/src && make ${options} installworld > \
++	make -C ${JAILMNT}/usr/src ${options} installworld > \
 +	  ${JLOGBASE}/install.log 2>&1 || err 1 "Fail to install world"
 +
 +	msg "${JAILNAME}: making distribution"
-+	cd ${JAILMNT}/usr/src/etc && make distribution > \
++	make -C ${JAILMNT}/usr/src/etc distribution > \
 +	  ${JLOGBASE}/distrib.log 2>&1 || err 1 "Fail to make distribution"
 +
 +	# make upgrade required to link device drives (e.g. </dev/video/...)
-+	msg "${JAILNAME}: making world upgrade"
-+	cd ${JAILMNT}/usr/src && make upgrade > \
++     	msg "${JAILNAME}: making world upgrade"
++	make -C ${JAILMNT}/usr/src upgrade > \
 +	  ${JLOGBASE}/upgrade.log 2>&1 || err 1 "Fail to make world upgrade"
 +
-+	# get out of JAILMNT so we can unmount it if necessary
-+	cd ${POUDRIERE_DATA}
-+
-+	############# DELETE WHEN DRAGONFLY HAS THESE IN BASE ############
-+	cp /home/gituser/DeltaPorts/scripts/share-mk/bsd.port.* \
-+	   ${JAILMNT}/usr/share/mk/
-+	##################################################################
++	# make sure world can be dismounted
++	cd /
 +}
 +
 +convert_property_version () {
@@ -115,11 +127,12 @@
 +	local proto
 +	local bver
 +	local bverz
++	local bhack
 +	local mounted=$(check_mount "${JAILFS}")
 +
 +	if [ -z "${mounted}" ]; then
 +		${NULLMOUNT} ${JAILFS} "${JAILMNT}" || \
-+		  err 1 "Failed to mount the PFS"
++		  err 1 "Failed to mount JAILFS"
 +	fi
 +	[ -d ${JAILMNT}/usr/src ] && UPDATE=1
 +	mkdir -p ${JAILMNT}/usr/src
@@ -149,26 +162,26 @@
 +		git pull || err 1 "Fail "
 +		echo " done"
 +	fi
++	mount -t devfs devfs ${JAILMNT}/dev
 +	build_and_install_world ${1}
++	umount ${JAILMNT}/dev
++	umount ${JAILMNT}
++	bhack="$(date '+%Y-%m-%d %H:%M:%S')"
++	zset timestamp "${bhack}"
 +}
 +
 +create_jail() {
 +	jail_exists ${JAILNAME} && err 2 "The jail ${JAILNAME} already exists"
 +
-+	test -z ${VERSION} && usage
-+
-+	if [ -z ${JAILMNT} ]; then
-+		JAILMNT=${BASEFS}/jails/${JAILNAME}
-+	fi
-+
-+	if [ -z ${JAILFS} ] ; then
-+		JAILFS=$(pfs_path "${ZROOTFS}/jails/${JAILNAME}")
-+	fi
++	[ -z ${VERSION} ] && VERSION=master
++	[ -z ${JAILMNT} ] && JAILMNT=${BASEFS}/jails/${JAILNAME}
++	[ -z ${JAILFS} ] && JAILFS=${BASEFS}/worlds/${JAILNAME}
 +
 +	case ${METHOD} in
 +	git)
 +		GIT=`which git`
-+		test -z ${GIT} && err 1 "You need git on your host to use this method"
++		test -z ${GIT} && \
++		  err 1 "You need git on your host to use this method"
 +		FCT="install_from_git 0"
 +		;;
 +	*)
@@ -177,7 +190,7 @@
 +	esac
 +
 +	local bverz=$(convert_property_version "${VERSION}")
-+	jail_create_zfs ${JAILNAME} ${bverz} ${ARCH} ${JAILMNT} ${JAILFS}
++	establish_jail ${JAILNAME} ${bverz} ${ARCH} ${JAILMNT} ${JAILFS}
 +	mkdir -p ${POUDRIERE_DATA}/logs
 +	# Wrap the jail creation in a special cleanup hook that will remove
 +	# the jail if any error is encountered
@@ -185,10 +198,9 @@
 +	zset method "${METHOD}"
 +	${FCT}
 +
-+	eval `grep "^[RB][A-Z]*=" ${JAILMNT}/usr/src/sys/conf/newvers.sh `
-+	RELEASE=${REVISION}-${BRANCH}
-+	zset version "${RELEASE}"
++	eval `grep -E "^(RELEASE|BRANCH|REVISION)=" ${JAILMNT}/usr/src/sys/conf/newvers.sh `
 +	update_version ${RELEASE}
++	zset version ${bverz}
 +
 +	pwd_mkdb -d ${JAILMNT}/etc/ -p ${JAILMNT}/etc/master.passwd
 +
@@ -204,9 +216,12 @@
 +syslogd_enable=NO
 +update_motd=NO
 +EOF
-+	echo "# dummy" 	            >> ${JAILMNT}/etc/fstab
-+	echo "src"                  >> ${JAILMNT}/usr/.cpignore
-+	echo "sys"                  >> ${JAILMNT}/.cpignore
++	echo "# dummy" 	            > ${JAILMNT}/etc/fstab
++	echo "src"                  > ${JAILMNT}/usr/.cpignore
++	echo "local"               >> ${JAILMNT}/usr/.cpignore
++	echo "etc"                  > ${JAILMNT}/.cpignore
++	echo "sys"                 >> ${JAILMNT}/.cpignore
++	echo "var"                 >> ${JAILMNT}/.cpignore
 +
 +	mkdir -p ${JAILMNT}/${PORTSRC}
 +	mkdir -p ${JAILMNT}/${STD_PACKAGES}
@@ -214,21 +229,10 @@
 +	mkdir -p ${JAILMNT}/wrkdirs
 +	mkdir -p ${JAILMNT}/var/db/pkg
 +
-+	zkill ${JAILFS}@clean
-+	zsnap ${JAILFS}@clean
 +	unset CLEANUP_HOOK
 +
-+	local numjobs=$(zget slaves)
-+	local JOBX="$(jot -w %02d ${numjobs})"
-+	for j in ${JOBX}; do
-+		if [ -d ${JAILFS}.job-${j} ]; then
-+			msg_n "${JAILNAME}: Syncing slave ${j}..."
-+			cpdup -x -i0 ${JAILFS}/ ${JAILFS}.job-${j}/
-+			echo "done"
-+		fi
-+	done
-+
 +	msg "Jail ${JAILNAME} ${VERSION} ${ARCH} is ready to be used"
++	umount ${JAILMNT}/dev
 +	umount ${JAILMNT}
 +}
 +
@@ -243,11 +247,7 @@
 +
 +	msg_n "Removing ${JAILNAME} jail..."
 +	zkillfs ${JAILFS} jails/${JAILNAME}
-+	for j in ${JOBX}; do
-+		jpfs="${JAILFS}.job-${j}"
-+		jname="${name}-job-${j}"
-+		zkillfs ${jpfs} ${jname}
-+	done
++
 +	rmdir ${JAILMNT}
 +	rm -rf ${POUDRIERE_DATA}/packages/${JAILNAME}
 +	rm -rf ${POUDRIERE_DATA}/cache/${JAILNAME}

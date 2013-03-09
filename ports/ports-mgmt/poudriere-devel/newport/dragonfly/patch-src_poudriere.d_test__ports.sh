@@ -1,6 +1,6 @@
---- src/poudriere.d/test_ports.sh.orig	2012-11-14 19:10:09.000000000 +0100
-+++ src/poudriere.d/test_ports.sh	2012-12-02 08:40:43.000000000 +0100
-@@ -10,7 +10,6 @@
+--- src/poudriere.d/test_ports.sh.orig	2012-12-01 00:15:48.000000000 +0000
++++ src/poudriere.d/test_ports.sh
+@@ -10,11 +10,11 @@ Parameters:
  
  Options:
      -c          -- Run make config for the given port
@@ -8,14 +8,12 @@
      -J n        -- Run n jobs in parallel for dependencies
      -j name     -- Run only inside the given jail
      -n          -- No custom prefix
-@@ -70,13 +69,15 @@
- 
- test -z ${HOST_PORTDIRECTORY} && test -z ${ORIGIN} && usage
- 
-+check_jobs
-+
- export SKIPSANITY
- 
+     -p tree     -- Specify on which portstree we work
++    -s          -- Skip sanity
+     -v          -- Be verbose; show more information. Use twice to enable debug output."
+ 	exit 1
+ }
+@@ -75,8 +75,8 @@ export SKIPSANITY
  if [ -z ${ORIGIN} ]; then
  	PORTDIRECTORY=`basename ${HOST_PORTDIRECTORY}`
  else
@@ -26,7 +24,16 @@
  fi
  
  test -z "${JAILNAME}" && err 1 "Don't know on which jail to run please specify -j"
-@@ -94,13 +95,18 @@
+@@ -86,6 +86,8 @@ PKGDIR=${POUDRIERE_DATA}/packages/${JAIL
+ JAILFS=`jail_get_fs ${JAILNAME}`
+ JAILMNT=`jail_get_base ${JAILNAME}`
+ 
++check_jobs
++
+ export POUDRIERE_BUILD_TYPE=testport
+ 
+ jail_start
+@@ -94,17 +96,19 @@ prepare_jail
  
  if [ -z ${ORIGIN} ]; then
  	mkdir -p ${JAILMNT}/${PORTDIRECTORY}
@@ -35,9 +42,6 @@
 +	  err 1 "Failed to null-mount ${HOST_PORTDIRECTORY} to jail"
  fi
  
-+zkill ${JAILFS}@prepkg
-+zsnap ${JAILFS}@prepkg
-+
  LISTPORTS=$(list_deps ${PORTDIRECTORY} )
  prepare_ports
  
@@ -47,17 +51,21 @@
  
  if ! POUDRIERE_BUILD_TYPE=bulk parallel_build; then
  	failed=$(cat ${JAILMNT}/poudriere/ports.failed | awk '{print $1 ":" $2 }' | xargs echo)
-@@ -119,7 +125,8 @@
+-	skipped=$(cat ${JAILMNT}/poudriere/ports.skipped | awk '{print $1}' | xargs echo)
++	skipped=$(cat ${JAILMNT}/poudriere/ports.skipped | awk '{print $1}' | sort -u | xargs echo)
+ 	nbfailed=$(zget stats_failed)
+ 	nbskipped=$(zget stats_skipped)
+ 
+@@ -119,8 +123,6 @@ fi
  
  zset status "depends:"
  
 -zfs destroy -r ${JAILFS}@prepkg
-+# This line isn't necessary, it's taken care of in the cleanup
-+# zkill ${JAILFS}@prepkg
- 
+-
  injail make -C ${PORTDIRECTORY} pkg-depends extract-depends \
  	fetch-depends patch-depends build-depends lib-depends
-@@ -150,7 +157,7 @@
+ 
+@@ -150,7 +152,7 @@ fi
  
  msg "Populating PREFIX"
  mkdir -p ${JAILMNT}${PREFIX}
@@ -66,7 +74,7 @@
  
  [ $ZVERSION -lt 28 ] && \
  	find ${JAILMNT}${LOCALBASE}/ -type d | sed "s,^${JAILMNT}${LOCALBASE}/,," | sort > ${JAILMNT}${PREFIX}.PLIST_DIRS.before
-@@ -166,7 +173,10 @@
+@@ -166,7 +168,10 @@ if ! build_port ${PORTDIRECTORY}; then
  	failed_phase=${failed_status%:*}
  
  	save_wrkdir "${PKGNAME}" "${PORTDIRECTORY}" "${failed_phase}" || :
@@ -77,7 +85,7 @@
  fi
  
  msg "Installing from package"
-@@ -185,4 +195,8 @@
+@@ -185,4 +190,8 @@ log_stop $(log_path)/${PKGNAME}.log
  cleanup
  set +e
  

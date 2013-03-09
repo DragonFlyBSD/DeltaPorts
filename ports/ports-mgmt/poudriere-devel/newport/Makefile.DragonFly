@@ -19,8 +19,6 @@ pre-install:
 
 PLIST_FILES+=	share/poudriere/common.sh.dragonfly \
 		share/poudriere/common.sh.freebsd \
-		share/poudriere/common.sh.hammer \
-		share/poudriere/common.sh.zfs \
 		share/poudriere/jail.sh.dragonfly \
 		share/poudriere/jail.sh.freebsd \
 		etc/hooks_poudriere/hook_bulk_build_ended.sh.sample \
@@ -29,3 +27,7 @@ PLIST_FILES+=	share/poudriere/common.sh.dragonfly \
 		etc/hooks_poudriere/hook_port_build_success.sh.sample \
 		etc/hooks_poudriere/hook_test_port_ended.sh.sample \
 		etc/hooks_poudriere/hook_test_port_start.sh.sample
+
+PLIST_DIRS+=	etc/hooks_poudriere
+
+#PORTREVISION=	12
