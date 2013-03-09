@@ -186,7 +186,7 @@ cp ${DPORTS}/GIDs ${DPORTS}/UIDs ${MERGED}/
 rm -rf ${WORKAREA}/*
 
 for k in Mk Templates; do
-  cp -pr ${FPORTS}/${k} ${WORKAREA}/
+  cp -pR ${FPORTS}/${k} ${WORKAREA}/
   diffs=$(find ${DELTA}/special/${k}/diffs -name \*\.diff)
   for difffile in ${diffs}; do
     patch --quiet -d ${WORKAREA}/${k} < ${difffile}
