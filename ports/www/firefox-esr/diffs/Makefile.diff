@@ -1,0 +1,11 @@
+--- Makefile.orig	2013-03-09 11:13:31.458889000 +0100
++++ Makefile	2013-03-09 11:13:38.708463000 +0100
+@@ -50,8 +50,6 @@
+ 
+ .include "${.CURDIR}/../../www/firefox/Makefile.options"
+ 
+-#OPTIONS_DEFAULT:=${OPTIONS_DEFAULT:S/OSS/ALSA/}
+-
+ .include <bsd.port.pre.mk>
+ 
+ WRKSRC:=	${WRKDIR}/mozilla-esr17
