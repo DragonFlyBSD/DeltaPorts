@@ -77,7 +77,7 @@
  # Extract the fields from GCCVERSION_...
  .for v in ${GCCVERSIONS}
  . for j in ${GCCVERSION_${v}}
-@@ -85,9 +83,16 @@ _GCCVERSION_${v}_V=	${j}
+@@ -85,9 +83,17 @@ _GCCVERSION_${v}_V=	${j}
  
  # The default case, with a current lang/gcc port.
  . if ${USE_FORTRAN} == yes
@@ -87,6 +87,7 @@
 +BUILD_DEPENDS+=	${LOCALBASE}/gcc-aux/bin/gfortran:${PORTSDIR}/lang/gcc-aux
 +RUN_DEPENDS+=	${LOCALBASE}/gcc-aux/bin/gfortran:${PORTSDIR}/lang/gcc-aux
 +_USE_GCC:=	${DRAGONFLY_MAX_VERSION}  # dummy to avoid further depends
++_GCC_RUNTIME:=	${LOCALBASE}/gcc-aux/lib
 +FC:=		${LOCALBASE}/gcc-aux/bin/gfortran
 +F77:=		${LOCALBASE}/gcc-aux/bin/gfortran
 +CC:=		${LOCALBASE}/gcc-aux/bin/gcc
@@ -97,7 +98,7 @@
  
  # Intel Fortran compiler from lang/ifc.
  . elif ${USE_FORTRAN} == ifort
-@@ -111,12 +116,10 @@ MAKE_ENV+=		F77="${F77}" FC="${FC}" FFLA
+@@ -111,12 +117,10 @@ MAKE_ENV+=		F77="${F77}" FC="${FC}" FFLA
  
  
  .if defined(USE_GCC) && !defined(FORCE_BASE_CC_FOR_TESTING)
@@ -113,7 +114,7 @@
  _GCC_ORLATER:=	true
  
  . else # ${USE_GCC} == any
-@@ -133,26 +136,47 @@ _GCC_ORLATER:=	true
+@@ -133,26 +137,47 @@ _GCC_ORLATER:=	true
  .for v in ${GCCVERSIONS}
  . for j in ${GCCVERSION_${v}}
  .  if ${_USE_GCC}==${j}
@@ -169,7 +170,7 @@
  . endif
  .endfor
  
-@@ -164,7 +188,7 @@ _GCC_FOUND${v}:=	base
+@@ -164,7 +189,7 @@ _GCC_FOUND${v}:=	base
  #
  .if defined(_GCC_ORLATER)
  . for v in ${GCCVERSIONS}
@@ -178,7 +179,7 @@
  _GCC_MIN1:=	true
  .  endif
  .  if defined(_GCC_MIN1) && defined(_GCC_FOUND${v}) && ${_GCC_FOUND${v}}=="base" && !defined(_GCC_FOUND)
-@@ -196,7 +220,9 @@ _USE_GCC:=	${GCC_DEFAULT_VERSION}
+@@ -196,7 +221,9 @@ _USE_GCC:=	${GCC_DEFAULT_VERSION}
  # dependencies, CC, CXX, CPP, and flags.
  .for v in ${GCCVERSIONS}
  . if ${_USE_GCC} == ${_GCCVERSION_${v}_V}
@@ -189,7 +190,7 @@
  V:=			${_GCCVERSION_${v}_V:S/.//}
  _GCC_PORT_DEPENDS:=	gcc${V}
  .   if ${_USE_GCC} == ${GCC_DEFAULT_VERSION}
-@@ -224,11 +250,9 @@ _GCC_BUILD_DEPENDS:=	${_GCC_PORT_DEPENDS
+@@ -224,11 +251,9 @@ _GCC_BUILD_DEPENDS:=	${_GCC_PORT_DEPENDS
  .  else # Use GCC in base.
  CC:=			gcc
  CXX:=			g++
@@ -203,7 +204,7 @@
  .  endif # Use GCC in base.
  . endif # ${_USE_GCC} == ${_GCCVERSION_${v}_V}
  .endfor
-@@ -238,11 +262,6 @@ CPP:=			cpp
+@@ -238,11 +263,6 @@ CPP:=			cpp
  BUILD_DEPENDS+=	${_GCC_PORT_DEPENDS}:${PORTSDIR}/lang/${_GCC_PORT}
  . if ${_USE_GCC} != 3.4
  RUN_DEPENDS+=	${_GCC_PORT_DEPENDS}:${PORTSDIR}/lang/${_GCC_PORT}
@@ -215,7 +216,7 @@
  . endif
  .endif
  .endif # defined(_USE_GCC) && !defined(FORCE_BASE_CC_FOR_TESTING)
-@@ -270,5 +289,9 @@ test-gcc:
+@@ -270,5 +290,9 @@ test-gcc:
  	@echo CC=${CC} - CXX=${CXX} - CPP=${CPP} - CFLAGS=\"${CFLAGS}\"
  	@echo F77=${F77} - FC=${FC} - FFLAGS=\"${FFLAGS}\"
  	@echo LDFLAGS=\"${LDFLAGS}\"
