@@ -30,10 +30,10 @@ for opt in ${confopts}; do
 done
 
 checkdir DPORTS
-checkdir MERGED
 checkdir DELTA
+checkdir POTENTIAL
 
-oldloc=${MERGED}/${1}
+oldloc=${POTENTIAL}/${1}
 newloc=${DPORTS}/${1}
 newdir=$(dirname ${newloc})
 
