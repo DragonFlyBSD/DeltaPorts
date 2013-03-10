@@ -1,5 +1,5 @@
---- /usr/ports/finance/skrooge/Makefile	2013-02-04 16:02:11.000000000 +0000
-+++ /home/automaton/pp/finance/skrooge/Makefile
+--- Makefile.orig	2013-02-04 16:02:11.000000000 +0000
++++ Makefile
 @@ -1,7 +1,7 @@
  # $FreeBSD: ports/finance/skrooge/Makefile,v 1.13 2013/02/04 16:02:11 svnexp Exp $
  

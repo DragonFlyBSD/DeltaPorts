@@ -1,5 +1,5 @@
---- /usr/ports/finance/skrooge/distinfo	2013-02-04 16:02:11.000000000 +0000
-+++ /home/automaton/pp/finance/skrooge/distinfo
+--- distinfo.orig	2013-02-04 16:02:11.000000000 +0000
++++ distinfo
 @@ -1,2 +1,2 @@
 -SHA256 (skrooge-1.4.0.tar.bz2) = 71df527bea98b7a998deeeed009bdf381ff890a5743a84b93db4f007223974f9
 -SIZE (skrooge-1.4.0.tar.bz2) = 9697141
