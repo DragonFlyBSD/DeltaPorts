@@ -1,5 +1,5 @@
---- /usr/ports/Mk/bsd.ruby.mk	2013-02-25 02:46:22.000000000 +0000
-+++ /usr/dports/Mk/bsd.ruby.mk
+--- bsd.ruby.mk.orig	2013-02-25 02:46:22.000000000 +0000
++++ bsd.ruby.mk
 @@ -132,7 +132,7 @@ Ruby_Include_MAINTAINER=	ruby@FreeBSD.or
  # RUBY_ELISPDIR		- Installation path for emacs lisp files.
  #
@@ -9,3 +9,15 @@
  
  RUBY_VER?=		${RUBY_DEFAULT_VER}
  
+@@ -255,9 +255,9 @@ IGNORE=	Only ruby 1.8, 1.9 and 2.0 are s
+ . endif
+ .endif # defined(RUBY_VER)
+ 
+-CONFIGURE_TARGET?=	${ARCH}-portbld-freebsd${OSREL:C/\..*//}
++CONFIGURE_TARGET?=	${ARCH}-dports-${OPSYS:tl}${OSREL:C/\..*//}
+ 
+-RUBY_ARCH?=		${ARCH}-freebsd${OSREL:C/\..*//}
++RUBY_ARCH?=		${ARCH}-${OPSYS:tl}${OSREL:C/\..*//}
+ RUBY_NAME?=		ruby${RUBY_SUFFIX}
+ 
+ _RUBY_SYSLIBDIR?=	${PREFIX}/lib
