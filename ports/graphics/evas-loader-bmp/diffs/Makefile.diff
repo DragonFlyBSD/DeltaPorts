@@ -4,7 +4,7 @@
  .include "../evas-core/Makefile.inc"
  CONFIGURE_ARGS+=	--enable-image-loader-bmp
  
-+LDFLAGS+=	-l${LOCALBASE}/lib -levas
++LDFLAGS+=	-L${LOCALBASE}/lib -levas
 +
  post-patch:
  	@${REINPLACE_CMD} -E \

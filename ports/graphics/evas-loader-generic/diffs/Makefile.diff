@@ -4,7 +4,7 @@
  . endif
  .endfor
  
-+LDFLAGS+=	-l${LOCALBASE}/lib -levas
++LDFLAGS+=	-L${LOCALBASE}/lib -levas
 +
  post-patch:
  	@${REINPLACE_CMD} -E \
