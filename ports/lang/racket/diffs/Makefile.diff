@@ -1,0 +1,13 @@
+--- Makefile.orig	2013-03-15 23:22:54.005213000 +0000
++++ Makefile
+@@ -36,10 +36,6 @@ CONFIGURE_SCRIPT=../configure
+ IGNORE=		requires X11; use lang/racket-textual instead
+ .endif
+ 
+-.if ${ARCH} == "i386"
+-MANUAL_PACKAGE_BUILD=	i386 requires kern.maxdsiz="640M" to build
+-.endif
+-
+ USE_GNOME=	pango
+ 
+ LIB_DEPENDS+=	ffi:${PORTSDIR}/devel/libffi		\
