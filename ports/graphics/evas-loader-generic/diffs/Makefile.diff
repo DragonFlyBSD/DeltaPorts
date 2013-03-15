@@ -1,0 +1,16 @@
+--- Makefile.orig	2013-01-15 17:46:00.000000000 +0000
++++ Makefile
+@@ -40,10 +40,12 @@ RUN_DEPENDS+=	${LOCALBASE}/lib/evas/util
+ . endif
+ .endfor
+ 
++LDFLAGS+=	-l${LOCALBASE}/lib -levas
++
+ post-patch:
+ 	@${REINPLACE_CMD} -E \
+ 		-e 's,\$$\(top_builddir\)/src/lib/\.libs,${LOCALBASE}/lib,' \
+-		-e 's,\$$\(top_builddir\)/src/lib/libevas\.la,-levas,' \
++		-e 's,\$$\(top_builddir\)/src/lib/libevas\.la,,' \
+ 		${MAKEDIRS:S,$,/Makefile.in,}
+ 
+ do-build:

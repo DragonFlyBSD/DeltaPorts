@@ -1,0 +1,16 @@
+--- Makefile.orig	2013-01-15 17:46:00.000000000 +0000
++++ Makefile
+@@ -29,10 +29,12 @@ INSTALL_WRKSRC=	${BUILD_WRKSRC}
+ .include "../evas-core/Makefile.inc"
+ CONFIGURE_ARGS+=	--enable-software-16-sdl
+ 
++LDFLAGS+=	-l${LOCALBASE}/lib -levas
++
+ post-patch:
+ 	@${REINPLACE_CMD} -E \
+ 		-e 's,\$$\(top_builddir\)/src/lib/\.libs,${LOCALBASE}/lib,' \
+-		-e 's,\$$\(top_builddir\)/src/lib/libevas\.la,-levas,' \
++		-e 's,\$$\(top_builddir\)/src/lib/libevas\.la,,' \
+ 		${BUILD_WRKSRC}/Makefile.in
+ 
+ post-install:
