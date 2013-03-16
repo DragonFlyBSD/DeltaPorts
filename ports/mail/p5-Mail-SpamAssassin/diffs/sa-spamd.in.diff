@@ -1,0 +1,10 @@
+--- files/sa-spamd.in.orig	2013-01-04 22:27:37.511605000 +0000
++++ files/sa-spamd.in
+@@ -31,6 +31,7 @@ load_rc_config $name
+ pidfile=${spamd_pidfile:-"/var/run/spamd/spamd.pid"}
+ command=%%PREFIX%%/bin/spamd
+ command_args="-d -r ${pidfile}"
++command_interpreter=%%PREFIX%%/bin/perl
+ required_dirs=%%PREFIX%%/share/spamassassin
+ 
+ stop_postcmd=stop_postcmd
