@@ -1,0 +1,8 @@
+--- scripts/makeseed.orig	2013-03-17 23:29:24.396738000 +0000
++++ scripts/makeseed
+@@ -1,4 +1,4 @@
+-#!/usr/bin/perl
++#!/usr/local/bin/perl
+ my $file = $ARGV[0];
+ my $seed = '';
+ my $i;
