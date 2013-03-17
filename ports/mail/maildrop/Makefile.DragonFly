@@ -1,0 +1,5 @@
+REPLACE_PERL=	unicode/mklinebreak.pl \
+		unicode/mkwordbreak.pl \
+		unicode/mkeastasianwidth.pl \
+		unicode/mkgraphemebreak.pl \
+		unicode/mkhtmlent.pl
