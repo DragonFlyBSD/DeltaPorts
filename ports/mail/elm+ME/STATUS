@@ -1,3 +1,7 @@
-PORT
+MASK
+# This configure file is a huge mess, interactive Config
+# dozens of "!#$mask that doesn't seem to work.
+# not a quick fix.  Disable until it can be done properly.
+# see pkgsrc for inspiration
 Last attempt: 2.4.126
 Last success: 2.4.126
