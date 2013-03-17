@@ -1,0 +1,13 @@
+--- Makefile.orig	2013-03-17 23:40:35.349711000 +0000
++++ Makefile
+@@ -21,10 +21,6 @@ GNU_CONFIGURE=	yes
+ 
+ .include <bsd.port.pre.mk>
+ 
+-.if ${ARCH} == "i386" || ${ARCH} == "amd64"
+-BUILD_DEPENDS=	yasm:${PORTSDIR}/devel/yasm
+-.endif
+-
+ post-patch:
+ 	@${REINPLACE_CMD} -e 's|-O3||' ${WRKSRC}/configure
+ 	@${REINPLACE_CMD} -e '/nRetVal = 0/s|int|intptr_t|' \
