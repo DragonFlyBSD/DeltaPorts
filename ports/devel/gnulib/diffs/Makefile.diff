@@ -1,0 +1,10 @@
+--- Makefile.orig	2013-03-17 13:00:37.521406000 +0000
++++ Makefile
+@@ -34,7 +34,6 @@ PLIST_FILES+=	%%DOCSDIR%%/${PORTNAME}.ht
+ 
+ post-patch:
+ 	${REINPLACE_CMD} -e 's/date -u.*/stat -f %Sa -t "@set UPDATED %F %T" `ls -t $$^ | sed 1q` > $$@/' \
+-		-e 's: makeinfo$$: ${LOCALBASE}/bin/makeinfo:' \
+ 		${WRKSRC}/doc/Makefile
+ 
+ do-build:
