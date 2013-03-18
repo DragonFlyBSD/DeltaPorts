@@ -1,0 +1,11 @@
+--- Makefile.orig	2013-03-18 10:58:27.894451000 +0000
++++ Makefile
+@@ -21,7 +21,7 @@ USE_GNOME=	gtk20
+ GNU_CONFIGURE=	yes
+ CONFIGURE_ARGS=	--with-mime-update \
+ 		CFLAGS="-I${PREFIX}/include" \
+-		LDFLAGS="-L${PREFIX}/lib"
++		LDFLAGS="-L${PREFIX}/lib -lintl"
+ 
+ LIB_DEPENDS+=	hamlib:${PORTSDIR}/comms/hamlib
+ 
