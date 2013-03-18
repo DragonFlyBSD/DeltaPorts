@@ -1,0 +1,11 @@
+--- Makefile.orig	2013-03-18 09:26:04.660359000 +0000
++++ Makefile
+@@ -27,7 +27,7 @@ post-patch:
+ do-build:
+ 	${CC} ${CFLAGS} -DDATADIR="\"${DATADIR}\"" \
+ 		`${SDL_CONFIG} --cflags --libs` \
+-		-I${LOCALBASE}/include -L${LOCALBASE}/lib -lGL -lGLU \
++		-I${LOCALBASE}/include -L${LOCALBASE}/lib -lGL -lGLU -lm \
+ 		-o ${WRKSRC}/apool ${WRKSRC}/*.c
+ 
+ do-install:
