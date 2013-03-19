@@ -1,0 +1,10 @@
+--- Makefile.orig	2012-11-17 06:03:43.000000000 +0000
++++ Makefile
+@@ -18,6 +18,6 @@ USE_GMAKE=	yes
+ USE_EFL=	imlib2
+ GNU_CONFIGURE=	yes
+ CPPFLAGS+=	-I${LOCALBASE}/include
+-LDFLAGS+=	-L${LOCALBASE}/lib -lm
++LDFLAGS+=	-L${LOCALBASE}/lib -lm -lX11
+ 
+ .include <bsd.port.mk>
