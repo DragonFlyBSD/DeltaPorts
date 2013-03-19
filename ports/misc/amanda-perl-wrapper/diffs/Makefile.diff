@@ -1,0 +1,11 @@
+--- Makefile.orig	2013-03-19 11:42:28.436001000 +0000
++++ Makefile
+@@ -33,7 +33,7 @@ do-install:
+ 
+ .include <bsd.port.pre.mk>
+ 
+-LIBTHR!=	${LS} /lib/libthr.so.* | ${TAIL} -1
++LIBTHR=		/usr/lib/thread/libthread_xu.so.2
+ SUB_LIST+=	LIBTHR=${LIBTHR}
+ 
+ .include <bsd.port.post.mk>
