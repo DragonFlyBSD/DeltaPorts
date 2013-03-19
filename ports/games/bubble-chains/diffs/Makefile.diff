@@ -1,0 +1,11 @@
+--- Makefile.orig	2013-03-19 22:33:57.761327000 +0000
++++ Makefile
+@@ -25,6 +25,8 @@ USE_XORG=	xrandr
+ USE_QT4=	moc_build qmake_build rcc_build uic_build iconengines imageformats \
+ 		corelib svg xml opengl network
+ 
++QMAKEFLAGS+=	QMAKE_LFLAGS="-L${LOCALBASE}/lib -lX11 -lSDL-1.2"
++
+ MAKE_JOBS_SAFE=	yes
+ 
+ OPTIONS_DEFINE=	DOCS
