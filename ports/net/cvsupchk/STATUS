@@ -1,3 +1,5 @@
-PORT
+MASK
+# requires source from cvsup-without-gui which doesn't exist
+# in dports.  Not worth the bother.
 Last attempt: 19990209_2
 Last success: 19990209_2
