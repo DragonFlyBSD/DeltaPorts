@@ -1,0 +1,13 @@
+--- Makefile.orig	2013-03-19 22:06:24.681016000 +0000
++++ Makefile
+@@ -19,8 +19,8 @@ LIB_DEPENDS=	dockapp.2:${PORTSDIR}/x11-w
+ PLIST_FILES=	bin/XScreenSaver.App
+ GNU_CONFIGURE=	yes
+ CPPFLAGS+=	-I${LOCALBASE}/include
+-LDFLAGS+=	-L${LOCALBASE}/lib
++LDFLAGS+=	-L${LOCALBASE}/lib -lX11
+ 
+-MAKE_ARGS=	"LDFLAGS+=-L${LOCALBASE}/lib"
++MAKE_ARGS=	"LDFLAGS+=${LDFLAGS}"
+ 
+ .include <bsd.port.mk>
