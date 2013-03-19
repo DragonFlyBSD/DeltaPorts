@@ -1,0 +1,11 @@
+--- Makefile.orig	2013-03-19 22:43:45.267944000 +0000
++++ Makefile
+@@ -16,7 +16,7 @@ USE_LUA=	yes
+ USE_GNOME=	pkgconfig
+ GNU_CONFIGURE=	yes
+ CXXFLAGS+=	-g -O0 -fPIC
+-LDFLAGS+=	-L${LOCALBASE}/lib -lintl
++LDFLAGS+=	-L${LOCALBASE}/lib -lintl -lX11
+ CONFIGURE_ARGS+=--with-system-lua \
+ 		--with-lua-pkg=lua-${LUA_VER}
+ 
