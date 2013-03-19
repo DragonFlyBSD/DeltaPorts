@@ -1,0 +1,19 @@
+--- Makefile.orig	2013-03-19 12:16:25.865670000 +0000
++++ Makefile
+@@ -6,7 +6,7 @@
+ 
+ PORTNAME=	qt
+ PORTVERSION=	3.18.2
+-PORTREVISION=	2
++PORTREVISION=	3
+ PORTEPOCH=	2
+ CATEGORIES=	x11-toolkits python
+ MASTER_SITES=	http://www.riverbankcomputing.com/static/Downloads/PyQt3/ \
+@@ -22,7 +22,6 @@ RUN_DEPENDS=	${PYTHON_PKGNAMEPREFIX}sip>
+ BUILD_DEPENDS=	${PYTHON_PKGNAMEPREFIX}sip>=${SIP_VERSION}:${PORTSDIR}/devel/py-sip \
+ 		qmake:${PORTSDIR}/devel/qmake
+ 
+-BROKEN=		does not build with latest devel/py-sip
+ DEPRECATED=	Depends on QT3; unmaintained
+ EXPIRATION_DATE=	2013-07-01
+ 
