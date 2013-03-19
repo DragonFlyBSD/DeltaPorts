@@ -1,0 +1,11 @@
+--- Makefile.orig	2013-03-19 01:31:49.704995000 +0000
++++ Makefile
+@@ -18,6 +18,8 @@ QT_NONSTANDARD=	yes
+ USE_QT4=	moc_build qmake_build rcc_build uic_build gui dbus network
+ USE_GNOME=	desktopfileutils
+ 
++QMAKEFLAGS+=	QMAKE_LFLAGS="-lcrypto -L${LOCALBASE}/lib -liconv"
++
+ EXTRA_CONF_ARGS=--disable-cli \
+ 		--disable-daemon \
+ 		--without-gtk \
