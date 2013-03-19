@@ -1,0 +1,18 @@
+--- Makefile.orig	2013-03-19 10:41:52.106321000 +0000
++++ Makefile
+@@ -3,14 +3,13 @@
+ 
+ PORTNAME=	syck
+ PORTVERSION=	0.70
++PORTREVISION=	1
+ CATEGORIES=	textproc devel
+ MASTER_SITES=	http://cloud.github.com/downloads/indeyets/syck/
+ 
+ MAINTAINER=	ports@FreeBSD.org
+ COMMENT=	A library for reading and writing YAML 1.0
+ 
+-BROKEN=		does not build
+-
+ GNU_CONFIGURE=	yes
+ USES=		bison
+ CFLAGS+=	-fPIC
