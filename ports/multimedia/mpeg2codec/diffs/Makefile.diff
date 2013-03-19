@@ -1,0 +1,11 @@
+--- Makefile.orig	2012-11-17 05:59:51.000000000 +0000
++++ Makefile
+@@ -43,7 +43,7 @@ PLIST_DIRS=	%%DATADIR%%
+ USE_XORG=	xext
+ MAKE_ARGS+=	USE_DISP="-DDISPLAY" \
+ 		USE_SHMEM="-DSH_MEM" \
+-		LIBS="$$(pkg-config --libs xext)" \
++		LIBS="$$(pkg-config --libs xext) -lX11" \
+ 		INCLUDEDIR="$$(pkg-config --cflags xext)"
+ .endif
+ 
