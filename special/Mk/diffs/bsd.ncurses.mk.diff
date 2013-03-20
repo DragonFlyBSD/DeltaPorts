@@ -1,0 +1,15 @@
+--- bsd.ncurses.mk.orig	2012-12-10 17:56:13.000000000 +0000
++++ bsd.ncurses.mk
+@@ -102,11 +102,7 @@ NCURSESLIB=		${NCURSESBASE}/lib
+ .if defined(USE_NCURSES_RPATH)
+ CFLAGS+=		-Wl,-rpath,${NCURSESRPATH}
+ .endif
+-NCURSES_LDFLAGS+=	-Wl,-rpath=${NCURSESRPATH}
++NCURSES_LDFLAGS+=	-Wl,-rpath,${NCURSESRPATH}
+ 
+-.if defined(LDFLAGS)
+ LDFLAGS+=${NCURSES_LDFLAGS}
+-.else
+-LDFLAGS+=${NCURSES_LDFLAGS}
+-.endif
+ 
