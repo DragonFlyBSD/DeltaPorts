@@ -1,3 +1,5 @@
-PORT
+MASK
+# This port doesn't make a lot of sense of DragonFly
+# (FreeBSD-specific)
 Last attempt: 1.00
 Last success: 
