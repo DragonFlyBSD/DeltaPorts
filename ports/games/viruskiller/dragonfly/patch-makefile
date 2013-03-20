@@ -1,0 +1,11 @@
+--- makefile.orig	2013-03-20 01:22:38.733620000 +0000
++++ makefile
+@@ -22,7 +22,7 @@ SAFEDIR = /tmp/
+ CFLAGS += `sdl-config --cflags` -DVERSION=$(VERSION) -DRELEASE=$(RELEASE) -DUSEPAK=$(USEPAK)
+ CFLAGS += -DPAKNAME=\"$(PAKNAME)\" -DPAKLOCATION=\"$(DATADIR)\" -DSAFEDIR=\"$(SAFEDIR)\" -DUNIX -DGAMEPLAYMANUAL=\"$(DOCDIR)manual.html\" -Wall
+ CFLAGS += -DMEDAL_SERVER_HOST=\"$(MEDAL_SERVER_HOST)\" -DMEDAL_SERVER_PORT=$(MEDAL_SERVER_PORT)
+-LIBS = `sdl-config --libs` -lSDL_mixer -lSDL_image -lSDL_ttf -lSDL_net
++LIBS = `sdl-config --libs` -lSDL_mixer -lSDL_image -lSDL_ttf -lSDL_net -lz
+ 
+ OBJS += CAudio.o 
+ OBJS += CBase.o
