@@ -1,3 +1,5 @@
-PORT
+MASK
+# 1. FreeBSD-specific (probably)
+# 2. Attempts to install at /usr/share/mk (illegal)
 Last attempt: 20080408
 Last success: 20080408
