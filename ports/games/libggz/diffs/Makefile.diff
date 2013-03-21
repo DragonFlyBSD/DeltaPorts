@@ -1,0 +1,9 @@
+--- Makefile.orig	2013-03-19 13:04:30.000000000 +0000
++++ Makefile
+@@ -36,5 +36,5 @@ CONFIGURE_ARGS+=	--with-tls=OpenSSL
+ .endif
+ 
+ .include <bsd.port.pre.mk>
+-.include "${PORTSDIR}/games/libggz/bsd.ggz.mk"
++.include "../..//games/libggz/bsd.ggz.mk"
+ .include <bsd.port.post.mk>

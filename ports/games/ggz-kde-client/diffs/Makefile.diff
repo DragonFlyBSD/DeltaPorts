@@ -1,0 +1,9 @@
+--- Makefile.orig	2012-12-30 18:55:58.000000000 +0000
++++ Makefile
+@@ -28,5 +28,5 @@ post-patch:
+ 	@${REINPLACE_CMD} -e 's|%%LOCALBASE%%|${LOCALBASE}| ; s|echo aout|echo elf|' ${WRKSRC}/configure
+ 
+ .include <bsd.port.pre.mk>
+-.include "${PORTSDIR}/games/libggz/bsd.ggz.mk"
++.include "../../games/libggz/bsd.ggz.mk"
+ .include <bsd.port.post.mk>
