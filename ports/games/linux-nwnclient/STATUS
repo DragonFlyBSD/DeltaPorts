@@ -1,3 +1,5 @@
-PORT
+MASK
+# nwndata is masked, so no need for client
+# plus this is linux, right now dports has no linux support
 Last attempt: 1.69_1
 Last success: 1.69_1
