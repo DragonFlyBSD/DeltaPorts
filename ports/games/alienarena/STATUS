@@ -1,3 +1,6 @@
-PORT
+MASK
+# don't build this.  We masked alienarea-data due to huge
+# package size (370M+).  So mask this too, at least unti
+# that policy changes
 Last attempt: 2011.753_2
 Last success: 2011.753_2
