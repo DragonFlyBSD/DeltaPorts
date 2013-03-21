@@ -1,3 +1,4 @@
-PORT
+MASK
+# don't build since games/openarena doesn't build
 Last attempt: 0.8.8
 Last success: 0.8.8
