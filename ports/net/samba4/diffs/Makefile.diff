@@ -1,0 +1,11 @@
+--- Makefile.orig	2013-03-22 22:24:38.000000000 +0000
++++ Makefile
+@@ -91,8 +91,6 @@ LIB_DEPENDS+=		sasl2:${PORTSDIR}/securit
+ # GNUTLS
+ LIB_DEPENDS+=		gcrypt:${PORTSDIR}/security/libgcrypt
+ LIB_DEPENDS+=		gnutls:${PORTSDIR}/security/gnutls
+-# NFS4 ACL glue
+-LIB_DEPENDS+=		sunacl:${PORTSDIR}/sysutils/libsunacl
+ # External Samba dependencies
+ # IDL compiler
+ BUILD_DEPENDS+=		p5-Parse-Pidl>=${SAMBA4_VERSION}:${PORTSDIR}/devel/p5-Parse-Pidl
