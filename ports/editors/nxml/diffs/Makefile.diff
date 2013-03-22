@@ -1,0 +1,10 @@
+--- Makefile.orig	2012-11-17 05:57:17.000000000 +0000
++++ Makefile
+@@ -16,6 +16,7 @@ MAINTAINER=	hrs@FreeBSD.org
+ COMMENT=	A major mode for editing XML documents for ${EMACS_PORT_NAME}
+ 
+ USE_EMACS=	yes
++EMACS_PORT_NAME=emacs21
+ 
+ INFO=		nxml-mode
+ PORTDOCS=	README NEWS VERSION TODO COPYING \
