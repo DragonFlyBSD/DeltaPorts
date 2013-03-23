@@ -1,4 +1,5 @@
 PORT
 Last attempt: 
 make: stopped in /usr/local/poudriere/jails/master/build/01/usr/dports/mail/spmfilter-clamav
-Last success: 0.1.1_1
+Last success: 
+make: stopped in /usr/local/poudriere/jails/master/build/01/usr/dports/mail/spmfilter-clamav
