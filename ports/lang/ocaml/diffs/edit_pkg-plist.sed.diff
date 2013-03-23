@@ -1,0 +1,9 @@
+--- files/edit_pkg-plist.sed.orig	2013-03-23 14:19:09.088505000 +0000
++++ files/edit_pkg-plist.sed
+@@ -0,0 +1,6 @@
++/.p.cmx$/s@^@%%PROF%%@
++/examples_labeltk/{
++  s@share/examples@%%EXAMPLESDIR%%@
++  s@^@%%TK%%@
++}
++/graphics/s@^@%%X11%%@
