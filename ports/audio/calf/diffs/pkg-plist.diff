@@ -1,0 +1,11 @@
+--- pkg-plist.orig	2013-02-01 15:41:53.000000000 +0000
++++ pkg-plist
+@@ -298,6 +298,6 @@ share/icons/hicolor/scalable/apps/calf_p
+ %%PORTDOCS%%@dirrm %%DOCSDIR%%
+ @dirrm %%DATADIR%%
+ @dirrmtry share/applications
+-%%LV2%%@dirrm lib/lv2/calf.lv2
+-%%LV2%%@dirrmtry lib/lv2
++@dirrm lib/lv2/calf.lv2
++@dirrmtry lib/lv2
+ @dirrm lib/calf
