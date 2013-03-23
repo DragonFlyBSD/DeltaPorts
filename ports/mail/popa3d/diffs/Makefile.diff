@@ -1,0 +1,21 @@
+--- Makefile.orig	2013-03-23 07:37:10.243310000 +0000
++++ Makefile
+@@ -87,6 +87,7 @@ do-install:
+ 	    ${WRKSRC}/popa3d ${PREFIX}/libexec/popa3d
+ 	${INSTALL_MAN} ${WRKSRC}/popa3d.8 ${MANPREFIX}/man/man8/
+ .if ${PORT_OPTIONS:MSMTP_AFTER_POP3} && !defined(WITHOUT_POPAUTH_M4)
++	mkdir -p ${CFDIR}/hack
+ 	${INSTALL_DATA} ${FILESDIR}/popauth.m4 ${CFDIR}/hack/
+ .endif
+ 
+@@ -104,10 +105,6 @@ post-install:
+ 	@ ${CAT} ${PKGMESSAGE}
+ .endif
+ 
+-.if exists(${LOCALBASE}/share/sendmail/cf/mailer/uucp.m4)
+ CFDIR=		${LOCALBASE}/share/sendmail/cf
+-.else
+-CFDIR=		/usr/share/sendmail/cf
+-.endif
+ 
+ .include <bsd.port.post.mk>
