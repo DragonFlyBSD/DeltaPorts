@@ -1,0 +1,20 @@
+--- pkg-plist.orig	2012-12-03 13:12:09.000000000 +0000
++++ pkg-plist
+@@ -1,5 +1,4 @@
+ bin/cvs_realclean
+-bin/ocamldep-omake
+ bin/omake
+ bin/osh
+ lib/omake/OMakefile.default
+@@ -20,6 +19,11 @@ lib/omake/configure/readline.om
+ lib/omake/configure/snprintf.om
+ lib/omake/parse/C/Lex.om
+ lib/omake/parse/C/Parse.om
++lib/omake/parse/LaTeX/Lex.om
++lib/omake/parse/LaTeX/Macros.om
++lib/omake/parse/LaTeX/Parse.om
++lib/omake/parse/LaTeX/Spell.om
++lib/omake/web/simple-xml.om
+ %%PORTDOCS%%%%DOCSDIR%%/announce.txt
+ %%PORTDOCS%%%%DOCSDIR%%/changelog.html
+ %%PORTDOCS%%%%DOCSDIR%%/contents_motif.gif
