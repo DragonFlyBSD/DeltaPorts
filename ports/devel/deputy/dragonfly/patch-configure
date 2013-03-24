@@ -1,0 +1,21 @@
+--- configure.intermediate	2013-03-24 00:33:37.285489000 +0000
++++ configure
+@@ -2396,6 +2396,18 @@ echo "${ECHO_T}configuring for $target"
+     ARCHOS=x86_LINUX
+     ;;
+ 
++  # DragonFly
++  *86*dragonfly*)
++    if test x"${ARCH}" = x""; then
++       ARCH=`uname -p`
++    fi
++
++    echo "$as_me:$LINENO: result: configuring for DragonFly/${ARCH}" >&5
++    echo "${ECHO_T}configuring for DragonFly/${ARCH}" >&6
++
++    ARCHOS=${ARCH}_DRAGONFLY
++    ;;
++
+   # FreeBSD
+   *i386*freebsd*|*amd64*freebsd*)
+     if test x"${ARCH}" = x""; then
