@@ -1,3 +1,4 @@
-PORT
+MASK
+# DragonFly has no need for this
 Last attempt: 0.3.0
 Last success: 0.3.0
