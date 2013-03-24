@@ -1,0 +1,5 @@
+files/patch-configure.ac
+files/patch-src_gifwrite.c
+files/patch-src_pngread.c
+files/patch-src_pngwrite.c
+files/patch-src_tiffread.c
