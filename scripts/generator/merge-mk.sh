@@ -45,7 +45,7 @@ for k in Mk Templates; do
   for difffile in ${diffs}; do
     patch --quiet -d ${WORKAREA}/${k} < ${difffile}
   done
-  rm ${WORKAREA}/${k}/*.orig
+  find ${WORKAREA}/${k} -name \*\.orig -exec rm {} \;
   cpdup -i0 ${WORKAREA}/${k} ${MERGED}/${k}
 done
 
