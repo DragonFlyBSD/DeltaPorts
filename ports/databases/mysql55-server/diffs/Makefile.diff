@@ -1,14 +1,14 @@
---- Makefile.orig	2012-12-29 01:35:07.746562000 +0100
-+++ Makefile	2012-12-29 01:47:42.757617000 +0100
-@@ -14,6 +14,7 @@
+--- Makefile.orig	2013-03-25 02:33:52.414740000 +0000
++++ Makefile
+@@ -14,6 +14,7 @@ COMMENT?=	Multithreaded SQL database (se
  
  SLAVEDIRS=	databases/mysql55-client
- USE_CMAKE=	yes
+ USES=		cmake
 +USE_READLINE=	yes
  MAKE_JOBS_SAFE=	yes
  NO_OPTIONS_SORT=yes
  
-@@ -38,7 +39,7 @@
+@@ -38,7 +39,7 @@ CMAKE_ARGS+=	-DINSTALL_DOCDIR="share/doc
  		-DINSTALL_SQLBENCHDIR="share/mysql" \
  		-DINSTALL_SUPPORTFILESDIR="share/mysql" \
  		-DWITH_LIBEDIT=0 \
