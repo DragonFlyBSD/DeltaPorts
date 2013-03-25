@@ -1,0 +1,11 @@
+--- Makefile.orig	2013-03-23 18:04:20.000000000 +0000
++++ Makefile
+@@ -28,8 +28,4 @@ USE_GETTEXT=	yes
+ INSTALLS_ICONS=	yes
+ MAKE_ARGS+=	PREFIX=${PREFIX}
+ 
+-post-patch:
+-	@${REINPLACE_CMD} -e 's,/dev/modem,/dev/cuaU0,g' \
+-		${WRKSRC}/src/modems/hayes.c
+-
+ .include <bsd.port.mk>
