@@ -1,4 +1,4 @@
---- bsd.gcc.mk.orig	2013-03-16 13:01:12.000000000 +0000
+--- bsd.gcc.mk.orig	2013-03-19 18:37:30.000000000 +0000
 +++ bsd.gcc.mk
 @@ -5,28 +5,22 @@
  #
@@ -114,7 +114,7 @@
  _GCC_ORLATER:=	true
  
  . else # ${USE_GCC} == any
-@@ -131,26 +135,49 @@ _GCC_ORLATER:=	true
+@@ -131,25 +135,49 @@ _GCC_ORLATER:=	true
  
  # Check if USE_GCC points to a valid version.
  .for v in ${GCCVERSIONS}
@@ -160,13 +160,12 @@
  .for v in ${GCCVERSIONS}
 -. if exists(${LOCALBASE}/bin/gcc${_GCCVERSION_${v}_V:S/.//})
 -_GCC_FOUND${v}=	port
--. endif
--. if ${OSVERSION} >= ${_GCCVERSION_${v}_L} && ${OSVERSION} < ${_GCCVERSION_${v}_R}
+-. elif ${OSVERSION} >= ${_GCCVERSION_${v}_L} && ${OSVERSION} < ${_GCCVERSION_${v}_R}
 -.  if exists(/usr/bin/gcc)
 +. if ${DFLYVERSION} >= ${_GCCVERSION_${v}_L} \
 +  && ${DFLYVERSION} < ${_GCCVERSION_${v}_R} \
 +  && ${_BASE_VER} == ${_GCCVERSION_${v}_V:S/.//}
- _GCC_FOUND${v}:=	base
+ _GCC_FOUND${v}=	base
 -.  endif
 +_GCCVERSION:=		${v}
 +. elif exists(${LOCALBASE}/bin/gcc${_GCCVERSION_${v}_V:S/.//})
@@ -174,7 +173,7 @@
  . endif
  .endfor
  
-@@ -162,7 +189,7 @@ _GCC_FOUND${v}:=	base
+@@ -160,7 +188,7 @@ _GCC_FOUND${v}=	base
  #
  .if defined(_GCC_ORLATER)
  . for v in ${GCCVERSIONS}
@@ -183,7 +182,7 @@
  _GCC_MIN1:=	true
  .  endif
  .  if defined(_GCC_MIN1) && defined(_GCC_FOUND${v}) && ${_GCC_FOUND${v}}=="base" && !defined(_GCC_FOUND)
-@@ -194,7 +221,9 @@ _USE_GCC:=	${GCC_DEFAULT_VERSION}
+@@ -192,7 +220,9 @@ _USE_GCC:=	${GCC_DEFAULT_VERSION}
  # dependencies, CC, CXX, CPP, and flags.
  .for v in ${GCCVERSIONS}
  . if ${_USE_GCC} == ${_GCCVERSION_${v}_V}
@@ -194,7 +193,7 @@
  V:=			${_GCCVERSION_${v}_V:S/.//}
  _GCC_PORT_DEPENDS:=	gcc${V}
  .   if ${_USE_GCC} == ${GCC_DEFAULT_VERSION}
-@@ -207,12 +236,12 @@ CXX:=			g++${V}
+@@ -205,12 +235,12 @@ CXX:=			g++${V}
  CPP:=			cpp${V}
  .   if ${_USE_GCC} != 3.4
  _GCC_RUNTIME:=		${LOCALBASE}/lib/gcc${V}
@@ -211,7 +210,7 @@
  .    endif
  .    endif
  # The following is for the sakes of some ports which use this without
-@@ -222,11 +251,9 @@ _GCC_BUILD_DEPENDS:=	${_GCC_PORT_DEPENDS
+@@ -220,11 +250,9 @@ _GCC_BUILD_DEPENDS:=	${_GCC_PORT_DEPENDS
  .  else # Use GCC in base.
  CC:=			gcc
  CXX:=			g++
@@ -225,7 +224,7 @@
  .  endif # Use GCC in base.
  . endif # ${_USE_GCC} == ${_GCCVERSION_${v}_V}
  .endfor
-@@ -236,11 +263,6 @@ CPP:=			cpp
+@@ -234,11 +262,6 @@ CPP:=			cpp
  BUILD_DEPENDS+=	${_GCC_PORT_DEPENDS}:${PORTSDIR}/lang/${_GCC_PORT}
  . if ${_USE_GCC} != 3.4
  RUN_DEPENDS+=	${_GCC_PORT_DEPENDS}:${PORTSDIR}/lang/${_GCC_PORT}
@@ -237,7 +236,7 @@
  . endif
  .endif
  .endif # defined(_USE_GCC) && !defined(FORCE_BASE_CC_FOR_TESTING)
-@@ -271,6 +293,8 @@ test-gcc:
+@@ -269,6 +292,8 @@ test-gcc:
  	@echo CC=${CC} - CXX=${CXX} - CPP=${CPP} - CFLAGS=\"${CFLAGS}\"
  	@echo F77=${F77} - FC=${FC} - FFLAGS=\"${FFLAGS}\"
  	@echo LDFLAGS=\"${LDFLAGS}\"
