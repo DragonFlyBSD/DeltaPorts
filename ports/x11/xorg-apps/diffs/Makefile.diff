@@ -1,0 +1,11 @@
+--- Makefile.orig	2013-03-29 21:41:11.000000000 +0000
++++ Makefile
+@@ -40,7 +40,7 @@ ${comp:C/:.*//:C/.*\///:tu}_DESC=	Instal
+ 
+ .for comp in ${COMPONENTS}
+ . if ${PORT_OPTIONS:M${comp:C/:.*//:C/.*\///:U}}
+-.  if ${comp:M:}==""
++.  if ${comp:M*\:*}==""
+ port=${comp}
+ check=${comp:C/.*\///} # doesn't work
+ .  else
