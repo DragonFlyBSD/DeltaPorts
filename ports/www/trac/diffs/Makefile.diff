@@ -1,0 +1,16 @@
+--- Makefile.orig	2013-03-07 16:53:45.000000000 +0000
++++ Makefile
+@@ -35,11 +35,11 @@ SUB_LIST=	PYTHON_CMD=${PYTHON_CMD}
+ 
+ .include <bsd.port.options.mk>
+ 
+-.if ${PORT_OPTIONS:MSILVERCITY)
++.if ${PORT_OPTIONS:MSILVERCITY}
+ RUN_DEPENDS+=	${LOCALBASE}/bin/source2html.py:${PORTSDIR}/textproc/silvercity
+ .endif
+ 
+-.if ${PORT_OPTIONS:MDOCUTILS)
++.if ${PORT_OPTIONS:MDOCUTILS}
+ RUN_DEPENDS+=	${LOCALBASE}/bin/rst2html:${PORTSDIR}/textproc/py-docutils
+ .endif
+ 
