@@ -1,3 +1,5 @@
-PORT
+MASK
+# It builds, but only with makefile from devel/libYGP which doesn't build
+# Mask until such time libYGP also builds
 Last attempt: 0.9.42_2
 Last success: 0.9.42_2
