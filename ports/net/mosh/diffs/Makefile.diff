@@ -1,0 +1,14 @@
+--- Makefile.orig	2013-03-31 10:28:41.000000000 +0000
++++ Makefile
+@@ -31,11 +31,9 @@ MAN1=		mosh-client.1 mosh-server.1 mosh.
+ 
+ .include <bsd.port.pre.mk>
+ 
+-.if ${OSVERSION} < 900004
+ LIB_DEPENDS+=	utempter:${PORTSDIR}/sysutils/libutempter
+ CFLAGS+=	-I${LOCALBASE}/include
+ LDFLAGS+=	-L${LOCALBASE}/lib
+-.endif
+ 
+ post-install:
+ 	@${CAT} ${PKGMESSAGE}
