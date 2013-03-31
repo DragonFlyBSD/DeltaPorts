@@ -1,0 +1,11 @@
+--- /usr/ports/print/cups-base/pkg-plist	2012-12-09 22:37:57.000000000 +0100
++++ pkg-plist	2013-03-31 08:40:17.714992000 +0200
+@@ -97,7 +97,7 @@
+ libexec/cups/daemon/cups-polld
+ libexec/cups/filter/commandtoescpx
+ libexec/cups/filter/commandtopclx
+-%%WITH_PDFTOPS%%libexec/cups/filter/pdftops
++libexec/cups/filter/pdftops
+ libexec/cups/filter/rastertoescpx
+ libexec/cups/filter/rastertopclx
+ libexec/cups/monitor/bcp
