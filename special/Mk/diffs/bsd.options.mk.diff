@@ -1,4 +1,4 @@
---- bsd.options.mk.orig	2012-12-10 10:20:14.000000000 +0000
+--- bsd.options.mk.orig	2013-04-02 11:50:56.926885000 +0000
 +++ bsd.options.mk
 @@ -46,6 +46,9 @@ OPTIONSMKINCLUDED=	bsd.options.mk
  
@@ -23,16 +23,7 @@
  OPTIONS_DEFINE:=	${OPTIONS_DEFINE:N${opt}}
  OPTIONS_DEFAULT:=	${OPTIONS_DEFAULT:N${opt}}
  .endfor
-@@ -81,7 +90,7 @@ OPTIONS_DEFINE+=	${opt}
- 
- # Add per arch defaults
- .for opt in ${OPTIONS_DEFAULT_${ARCH}}
--.if empty(OPTIONS_DEFAULT:M${opt}}
-+.if empty(OPTIONS_DEFAULT:M${opt})
- OPTIONS_DEFAULT+=	${opt}
- .endif
- .endfor
-@@ -108,14 +117,16 @@ opt:=	${O}
+@@ -108,7 +117,9 @@ opt:=	${O}
  optname:=	${O}
  ALL_OPTIONS+=	${O}
  .if !defined(OPTIONS_DEFINE) || empty(OPTIONS_DEFINE:M${O})
@@ -42,14 +33,6 @@
  .endif
  PORT_OPTIONS+=	${O}
  .    elif !defined(optdesc)
- optdesc:=	${opt}
- ${optname}_DESC:=	${opt:S|"||g}
- .    else
--.      if ${opt:L} == off
-+.      if ${opt:tl} == off
- .        if defined(PORT_OPTIONS) && defined(optname)
- NO_OPTIONS+=	${optname}
- NO_OPTIONS:=	${NO_OPTIONS:O:u}
 @@ -137,6 +148,22 @@ PORT_OPTIONS:=	 ${PORT_OPTIONS:N${O}}
  
  ALL_OPTIONS:=	${ALL_OPTIONS:O:u}

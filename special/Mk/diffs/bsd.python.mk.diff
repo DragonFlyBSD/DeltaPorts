@@ -1,15 +1,6 @@
---- bsd.python.mk.orig	2012-11-17 06:54:18.000000000 +0100
-+++ bsd.python.mk	2012-12-09 15:12:22.767842000 +0100
-@@ -162,7 +162,7 @@
- #
- # PYEASYINSTALL_OSARCH
- #					- Platform identifier for easy_install.
--#					  default: -${OPSYS:L}-${_OSRELEASE}-${ARCH}
-+#					  default: -${OPSYS:tl}-${_OSRELEASE}-${ARCH}
- #							   if PYEASYINSTALL_ARCHDEP is defined.
- #
- # PYEASYINSTALL_CMD - Full file path to easy_install command.
-@@ -344,8 +344,10 @@
+--- bsd.python.mk.orig	2013-04-02 11:46:32.572082000 +0000
++++ bsd.python.mk
+@@ -359,8 +359,10 @@ DEPENDS_ARGS+=		PYTHON_VERSION=${PYTHON_
  # should point to some other version we have installed, according to the port USE_PYTHON
  # specification
  .if !defined(PYTHON_DEFAULT_PORTVERSION) || (${PYTHON_VERSION} != ${PYTHON_DEFAULT_VERSION})
@@ -20,21 +11,3 @@
  .if !defined(PYTHON_NO_DEPENDS) && !empty(_PYTHON_PORTVERSION)
  PYTHON_PORTVERSION=	${_PYTHON_PORTVERSION}
  .endif
-@@ -422,7 +424,7 @@
- PYTHON_LIBDIR=			${PYTHONBASE}/lib/${PYTHON_VERSION}
- PYTHON_PKGNAMEPREFIX=	py${PYTHON_SUFFIX}-
- PYTHON_PKGNAMESUFFIX=	-py${PYTHON_SUFFIX}
--PYTHON_PLATFORM=		${OPSYS:L}${OSREL:C/\.[0-9.]*//}
-+PYTHON_PLATFORM=		${OPSYS:tl}${OSREL:C/\.[0-9.]*//}
- PYTHON_SITELIBDIR=		${PYTHON_LIBDIR}/site-packages
- 
- PYTHONPREFIX_INCLUDEDIR=	${PYTHON_INCLUDEDIR:S;${PYTHONBASE};${PREFIX};}
-@@ -453,7 +455,7 @@
- .if !defined(_OSRELEASE)
- _OSRELEASE!=					${UNAME} -r
- .endif
--PYEASYINSTALL_OSARCH?=			-${OPSYS:L}-${_OSRELEASE}-${ARCH}
-+PYEASYINSTALL_OSARCH?=			-${OPSYS:tl}-${_OSRELEASE}-${ARCH}
- .endif
- PYEASYINSTALL_EGG?=				${PYDISTUTILS_PKGNAME:C/[^A-Za-z0-9.]+/_/g}-${PYDISTUTILS_PKGVERSION:C/[^A-Za-z0-9.]+/_/g}-py${PYTHON_VER}${PYEASYINSTALL_OSARCH}.egg
- PYEASYINSTALL_CMD?=				${LOCALBASE}/bin/easy_install-${PYTHON_VER}

@@ -118,6 +118,8 @@ merge()
           cat ${WORKAREA}/${item} | sed -E \
              -e 's|:L}|:tl}|g' \
              -e 's|:U}|:tu}|g' \
+             -e 's|:U:(.*)}|:tu:\1}|g' \
+             -e 's|:L:(.*)}|:tl:\1}|g' \
              -e '/ARCH}.*(amd64|"amd64")/s|amd64|x86_64|g' \
              > ${WORKAREA}/${item}.filtered
           rm ${WORKAREA}/${item}
@@ -185,8 +187,19 @@ cp ${DPORTS}/GIDs ${DPORTS}/UIDs ${MERGED}/
 
 rm -rf ${WORKAREA}/*
 
+cp -a ${FPORTS}/Templates ${WORKAREA}
+mkdir -p ${WORKAREA}/Mk/Uses
+all=$(cd ${FPORTS} && find Mk -type f)
+for item in ${all}; do
+   cat ${FPORTS}/${item} | sed -E \
+      -e 's|:L}|:tl}|g' \
+      -e 's|:U}|:tu}|g' \
+      -e 's|:U:(.*)}|:tu:\1}|g' \
+      -e 's|:L:(.*)}|:tl:\1}|g' \
+      > ${WORKAREA}/${item}
+done
+
 for k in Mk Templates; do
-  cp -pR ${FPORTS}/${k} ${WORKAREA}/
   diffs=$(find ${DELTA}/special/${k}/diffs -name \*\.diff)
   for difffile in ${diffs}; do
     patch --quiet -d ${WORKAREA}/${k} < ${difffile}
