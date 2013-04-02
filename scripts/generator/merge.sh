@@ -68,6 +68,8 @@ fast_and_filtered ()
          cat ${ORIG}/${item} | sed -E \
             -e 's|:L}|:tl}|g' \
             -e 's|:U}|:tu}|g' \
+            -e 's|:U:(.*)}|:tu:\1}|g' \
+            -e 's|:L:(.*)}|:tl:\1}|g' \
             -e '/ARCH}.*(amd64|"amd64")/s|amd64|x86_64|g' \
             > ${WORKAREA}/${item}
       done
