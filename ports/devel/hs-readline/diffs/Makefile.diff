@@ -1,0 +1,10 @@
+--- Makefile.orig	2013-03-29 22:43:58.000000000 +0000
++++ Makefile
+@@ -12,5 +12,7 @@ LICENSE=	GPLv2
+ 
+ CABAL_SETUP=	Setup.hs
+ 
++LIB_DEPENDS+=	readline:${PORTSDIR}/devel/readline
++
+ .include "${.CURDIR}/../../lang/ghc/bsd.cabal.mk"
+ .include <bsd.port.mk>
