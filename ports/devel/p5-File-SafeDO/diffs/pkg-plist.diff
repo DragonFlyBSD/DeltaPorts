@@ -1,0 +1,8 @@
+--- pkg-plist.orig	2012-12-17 00:23:02.383395000 +0000
++++ pkg-plist
+@@ -1,5 +1,4 @@
+ %%SITE_PERL%%/File/SafeDO.pm
+-%%SITE_PERL%%/%%PERL_ARCH%%/auto/File
+ %%SITE_PERL%%/%%PERL_ARCH%%/auto/File/SafeDO/.packlist
+ @dirrmtry %%SITE_PERL%%/%%PERL_ARCH%%/auto/File/SafeDO
+ @dirrmtry %%SITE_PERL%%/%%PERL_ARCH%%/auto/File
