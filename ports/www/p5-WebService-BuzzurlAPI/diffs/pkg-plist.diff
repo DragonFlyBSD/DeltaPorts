@@ -1,0 +1,10 @@
+--- pkg-plist.orig	2013-01-04 22:27:38.571559000 +0000
++++ pkg-plist
+@@ -3,7 +3,6 @@
+ %%SITE_PERL%%/WebService/BuzzurlAPI/Util.pm
+ %%SITE_PERL%%/WebService/BuzzurlAPI/Response.pm
+ %%SITE_PERL%%/WebService/BuzzurlAPI/Request.pm
+-%%SITE_PERL%%/WebService/BuzzurlAPI/Request
+ %%SITE_PERL%%/WebService/BuzzurlAPI/Request/KeywordArticles.pm
+ %%SITE_PERL%%/WebService/BuzzurlAPI/Request/BookmarkCount.pm
+ %%SITE_PERL%%/WebService/BuzzurlAPI/Request/UserArticles.pm
