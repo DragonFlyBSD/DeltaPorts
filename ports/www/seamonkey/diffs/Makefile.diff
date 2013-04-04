@@ -1,24 +1,6 @@
---- Makefile.orig	2013-03-18 10:19:01.323165000 +0000
+--- Makefile.orig	2013-04-04 12:22:06.908290000 +0000
 +++ Makefile
-@@ -72,17 +72,6 @@ MOZSRC:=	${WRKSRC}/mozilla
- 
- XPI_LIBDIR=	${PREFIX}/lib/xpi
- 
--.if ${ARCH} == amd64
--CONFIGURE_TARGET=x86_64-portbld-freebsd${OSREL}
--.elif ${ARCH} == powerpc64
--.if ${OSVERSION} < 900033
--BROKEN=		Needs binutils 2.17.50 to build
--.else
--MOZ_EXPORT+=	UNAME_m="powerpc64"
--CFLAGS+=	-mminimal-toc
--.endif
--.endif
--
- .if ! ${PORT_OPTIONS:MMAILNEWS}
- EXTRA_PATCHES+=	${FILESDIR}/extra-mailnews-patch-bridge-bridge.mk \
- 		${FILESDIR}/extra-patch-configure.in
-@@ -100,7 +89,7 @@ DISTFILES+=	${EM_DISTFILE}:enigmail
+@@ -89,7 +89,7 @@ DISTFILES+=	${EM_DISTFILE}:enigmail
  RUN_DEPENDS+=	gpg:${PORTSDIR}/security/gnupg
  EM_DISTNAME=	enigmail-${EM_VERSION}
  EM_DISTFILE=	${EM_DISTNAME}.tar.gz
@@ -27,7 +9,7 @@
  EM_ORIG_ID=	{847b3a00-7ab1-11d4-8f02-006008948af5}
  EM_ID=		${PORTNAME}@mozilla-enigmail.org
  EM_ID_RFILES=	${XPI_LIBDIR}/${EM_ID}/install.rdf \
-@@ -118,7 +107,7 @@ MOZ_OPTIONS+=	--disable-composer
+@@ -107,7 +107,7 @@ MOZ_OPTIONS+=	--disable-composer
  MOZ_OPTIONS+=	--enable-calendar
  MOZ_MK_OPTIONS+=	MOZ_CO_PROJECT=calendar
  LIGHTNING_DIR=	share/lightning
