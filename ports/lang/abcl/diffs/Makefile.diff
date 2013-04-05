@@ -1,0 +1,11 @@
+--- Makefile.orig	2013-04-05 14:49:28.852702000 +0000
++++ Makefile
+@@ -21,7 +21,7 @@ JAVA_VERSION=	1.6+
+ USE_ANT=	yes
+ 
+ do-install:
+-	@${INSTALL_DATA} -v ${WRKSRC}/dist/abcl.jar ${JAVAJARDIR}
++	@${INSTALL_DATA} ${WRKSRC}/dist/abcl.jar ${JAVAJARDIR}
+ 	@${INSTALL_SCRIPT} ${WRKDIR}/abcl ${PREFIX}/bin/abcl
+ 
+ .include <bsd.port.mk>
