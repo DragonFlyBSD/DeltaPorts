@@ -1,4 +1,0 @@
-OPTIONS_EXCLUDE+= SCTP
-
-TERM=	cons25
-.export TERM
