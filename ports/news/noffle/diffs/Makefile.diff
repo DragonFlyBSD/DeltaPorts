@@ -1,0 +1,18 @@
+--- Makefile.orig	2013-04-05 22:02:52.210286000 +0000
++++ Makefile
+@@ -46,12 +46,12 @@ do-install:
+ 		${PREFIX}/man/man5
+ 	${INSTALL_DATA} ${WRKSRC}/noffle.conf.example \
+ 		${PREFIX}/etc/noffle.conf.sample
+-	@${ECHO} "
++	@${ECHO}
+ 	@${ECHO} "------------------------------------------------------------"
+ 	@${ECHO} "Sample of configuration file placed at"
+ 	@${ECHO} "${PREFIX}/etc/noffle.conf.sample"
+-	@${ECHO} "------------------------------------------------------------
+-	@${ECHO} "
++	@${ECHO} "------------------------------------------------------------"
++	@${ECHO}
+ 	@${MKDIR} ${SPOOL_DIR}
+ 	@${MKDIR} ${SPOOL_DIR}/data
+ 	@${MKDIR} ${SPOOL_DIR}/lock
