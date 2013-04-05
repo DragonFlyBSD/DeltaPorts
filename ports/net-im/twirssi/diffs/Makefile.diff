@@ -1,0 +1,11 @@
+--- Makefile.orig	2013-04-05 23:37:57.400524000 +0000
++++ Makefile
+@@ -44,7 +44,7 @@ post-extract:
+ 
+ do-install:
+ 	@${MKDIR} ${DATADIR}
+-	@${INSTALL_SCRIPT} -v ${WRKSRC}/${PORTNAME}.pl ${DATADIR}
++	@${INSTALL_SCRIPT} ${WRKSRC}/${PORTNAME}.pl ${DATADIR}
+ 	@${CAT} ${PKGMESSAGE}
+ 
+ .include <bsd.port.post.mk>
