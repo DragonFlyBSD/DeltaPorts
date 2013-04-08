@@ -1,3 +1,5 @@
-PORT
+MASK
+# archivers/rar was removed, so this won't build and it uses a
+# makefile from it
 Last attempt: 2.02
 Last success: 2.02
