@@ -1,0 +1,17 @@
+--- Makefile.orig	2013-04-02 07:40:25.837584000 +0000
++++ Makefile
+@@ -46,14 +46,8 @@ MANLANG=	"" fr
+ 
+ .include <bsd.port.pre.mk>
+ 
+-.if ${ARCH} == "i386"
+-LIB_DEPENDS+=		EMF.1:${PORTSDIR}/graphics/libemf
+-CONFIGURE_ARGS+=	--enable-libemf
+-PLIST_SUB+=		WMF=""
+-.else
+ CONFIGURE_ARGS+=	--disable-libemf
+ PLIST_SUB+=		WMF="@comment "
+-.endif
+ 
+ post-patch:
+ 	@${REINPLACE_CMD} -e 's|/usr/local|${LOCALBASE}|g' \
