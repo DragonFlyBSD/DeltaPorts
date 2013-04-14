@@ -1,0 +1,11 @@
+--- Makefile.orig	2013-01-04 22:27:37.381610000 +0000
++++ Makefile
+@@ -31,7 +31,7 @@ PLIST_FILES=	%%JAVAJARDIR%%/${DESTJARFIL
+ 
+ .include <bsd.port.pre.mk>
+ 
+-JDK_API!=	(${FIND} -s ${LOCALBASE}/share/doc/jdk1.? -maxdepth 1 -name api -type d 2>/dev/null || ${TRUE}) | ${TAIL} -n 1
++JDK_API!=	(${FIND} -s ${LOCALBASE}/share/doc/jdk1.? -maxdepth 1 -name api -type d 2>/dev/null || ${TRUE}) | ${TAIL} -n 1 | echo
+ 
+ .if ${JDK_API} != ""
+ MAKE_ARGS+=	-Djdk.javadoc=${JDK_API}
