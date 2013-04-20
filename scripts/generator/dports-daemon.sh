@@ -45,8 +45,8 @@ ESTABLISHED=$(date "+%s")
 cd ${COMQUEUE}
 while [ 1 ]; do
    COUNTER=$(expr ${COUNTER} + 1)
-   CANDIDATES1=$(ls -1 delta.* 2>/dev/null)
-   CANDIDATES2=$(ls -1 dport.* 2>/dev/null)
+   CANDIDATES1=$(find . -name delta\.\* 2>/dev/null)
+   CANDIDATES2=$(find . -name dport\.\* 2>/dev/null)
    for item in ${CANDIDATES1}; do
      oneline=$(awk "${AWKCMD}" ${item})
      split ${oneline}
