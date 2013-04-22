@@ -62,3 +62,15 @@ done
 
 umount ${WORKAREA}
 rm -rf ${WORKAREA}
+
+rm -rf ${MERGED}/Tools
+folders=$(cd ${FPORTS} && find Tools -type d | sort)
+for folder in ${folders}; do
+   mkdir -p ${MERGED}/${folder}
+done
+all=$(cd ${FPORTS}  && find Tools -type f)
+for item in ${all}; do
+   cat ${FPORTS}/${item} | sed -E \
+       -e 's|!/usr/bin/perl|!/usr/local/bin/perl|' \
+       > ${MERGED}/${item}
+done
