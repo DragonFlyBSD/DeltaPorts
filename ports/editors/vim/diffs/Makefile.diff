@@ -18,12 +18,3 @@
  USE_XORG+=	xt glproto
  . endif
  
-@@ -224,7 +224,7 @@ post-install:
- 	${ECHO_CMD} "r ${WRKDIR}/PLIST.share-vim"	>> ${WRKDIR}/ex.script
- 	${ECHO_CMD} "x!"				>> ${WRKDIR}/ex.script
- 	${CP} -p ${TMPPLIST} ${TMPPLIST}.pre-share-vim
--	cd ${WRKDIR} ; ex < ex.script
-+	cd ${WRKDIR} ; env TERM=cons25 ex < ex.script
- 	@${ECHO_CMD}
- 	@${CAT} ${PKGMESSAGE}
- 	@${ECHO_CMD}

@@ -1,4 +1,4 @@
---- Makefile.orig	2013-03-13 17:38:47.000000000 +0000
+--- Makefile.orig	2013-04-16 20:51:47.000000000 +0000
 +++ Makefile
 @@ -18,6 +18,7 @@ BUILD_DEPENDS=	p5-Archive-Zip>=0:${PORTS
  		${LOCALBASE}/bin/gperf:${PORTSDIR}/devel/gperf \
@@ -167,7 +167,7 @@
  MAN1=	libreoffice.1 \
  	lobase.1 \
  	localc.1 \
-@@ -180,197 +148,8 @@ MAN1=	libreoffice.1 \
+@@ -180,198 +148,8 @@ MAN1=	libreoffice.1 \
  
  MANCOMPRESSED=	yes
  
@@ -351,6 +351,7 @@
 -.else
 -# XXX Clang PR13308 (http://llvm.org/bugs/show_bug.cgi?id=13308)
 -BUILD_DEPENDS+=	clang>=3.2:${PORTSDIR}/lang/clang
+-USE_BINUTILS=	yes
 -CC=		${LOCALBASE}/bin/clang
 -CPP=		${CC} -E
 -CXX=		${LOCALBASE}/bin/clang++
@@ -365,7 +366,7 @@
  ACLOCAL_ARGS=	-I "${WRKSRC}/m4"
  CPPFLAGS=	-I${LOCALBASE}/include
  LDFLAGS=	-L${LOCALBASE}/lib
-@@ -382,10 +161,8 @@ MAKE_ENV+=	SED="${LOCALBASE}/bin/gsed" U
+@@ -383,10 +161,8 @@ MAKE_ENV+=	SED="${LOCALBASE}/bin/gsed" U
  
  TMPDIR?=	/tmp
  
@@ -378,7 +379,7 @@
  
  post-configure:
  	@${TOUCH} ${WRKSRC}/src.downloaded
-@@ -420,20 +197,6 @@ post-install:
+@@ -421,20 +197,6 @@ post-install:
  	    \( -type f -o -type l \) -print >> ${PLISTF}
  .endfor
  
@@ -399,7 +400,7 @@
  
  	@${SORT} -u ${PLISTF} >> ${TMPPLIST}
  	@${GREP} '^@exec ' ${PLISTD} | ${SORT} -u >> ${TMPPLIST}
-@@ -446,10 +209,6 @@ post-install:
+@@ -447,10 +209,6 @@ post-install:
  	@${INSTALL_SCRIPT} ${LODESTDIR}/etc/bash_completion.d/libreoffice.sh \
  	    ${PREFIX}/etc/bash_completion.d
  
