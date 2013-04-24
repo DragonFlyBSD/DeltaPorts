@@ -45,7 +45,7 @@ fast_and_filtered ()
 {
    ORIG=${1}
    DEST=${2}
-   LEGACY=$(cd ${ORIG} && grep -lE ':(U|L)}|ARCH}.*(amd64|"amd64")' Makefile *\.common 2>/dev/null)
+   LEGACY=$(cd ${ORIG} && grep -lE ':(U|L)|ARCH}.*(amd64|"amd64")' Makefile *\.common 2>/dev/null)
    if [ -z "${LEGACY}" ]; then
       cpdup -VV -i0 ${ORIG} ${DEST}
    else
@@ -103,7 +103,7 @@ merge()
           done
           find ${WORKAREA} -type f -name \*\.orig -exec rm {} \;
         fi
-	LEGACY=$(cd ${WORKAREA} && grep -lE ':(U|L)}|ARCH}.*(amd64|"amd64")' Makefile *\.common 2>/dev/null)
+	LEGACY=$(cd ${WORKAREA} && grep -lE ':(U|L)|ARCH}.*(amd64|"amd64")' Makefile *\.common 2>/dev/null)
         for item in ${LEGACY}; do
           cat ${WORKAREA}/${item} | sed -E \
              -e 's|:L}|:tl}|g' \
