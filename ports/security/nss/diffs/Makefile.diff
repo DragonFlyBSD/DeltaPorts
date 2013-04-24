@@ -1,0 +1,14 @@
+--- Makefile.orig	2013-04-24 12:47:29.000000000 +0000
++++ Makefile
+@@ -52,11 +52,6 @@ BINS=		${DIST}/${OPSYS}${OSREL}_DBG.OBJ
+ 
+ .include <bsd.port.pre.mk>
+ 
+-.if ${ARCH} == amd64
+-USE_BINUTILS=	# intel-gcm.s
+-CFLAGS+=	-B${LOCALBASE}/bin
+-.endif
+-
+ check regression-test test:
+ 	cd ${WRKSRC}/tests;	\
+ 		${SETENV} PATH="${BINS}/bin:${PATH}" \
