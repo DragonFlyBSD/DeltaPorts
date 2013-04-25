@@ -1,3 +1,5 @@
 PORT
-Last attempt: 4.2.23.0
-Last success: 4.2.23.0
+Last attempt: 
+make: stopped in /usr/local/poudriere/jails/master/build/01/usr/dports/math/geogebra-i18n
+Last success: 
+make: stopped in /usr/local/poudriere/jails/master/build/01/usr/dports/math/geogebra-i18n
