@@ -1,1 +1,2 @@
-REPLACE_PERL=	work/csv2jsonzip.pl
+USES+=		shebangfix
+SHEBANG_FILES=	work/csv2jsonzip.pl

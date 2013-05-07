@@ -1,4 +1,5 @@
-REPLACE_PERL=	bin/dic2iso.pl \
+USES+=		shebangfix
+SHEBANG_FILES=	bin/dic2iso.pl \
 		bin/b4spell \
 		bin/sq.pl \
 		bin/b3spell \

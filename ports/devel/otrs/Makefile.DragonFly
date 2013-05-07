@@ -1,4 +1,5 @@
-REPLACE_PERL=	bin/otrs.CleanUp.pl \
+USES+=		shebangfix
+SHEBANG_FILES=	bin/otrs.CleanUp.pl \
 		bin/otrs.AddQueue2StdResponse.pl \
 		bin/otrs.GenericInterfaceDebugRead.pl \
 		bin/otrs.AddQueue.pl \

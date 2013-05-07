@@ -1,6 +1,7 @@
 OPTIONS_EXCLUDE+= OPENSSL
 
-REPLACE_PERL=	configure \
+USES+=		shebangfix
+SHEBANG_FILES=	configure \
 		inspircd \
 		modulemanager \
 		make/run-cc.pl \

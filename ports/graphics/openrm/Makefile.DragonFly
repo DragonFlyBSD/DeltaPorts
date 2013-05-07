@@ -1,2 +1,3 @@
-REPLACE_PERL=	doc/source2html.pl \
+USES+=		shebangfix
+SHEBANG_FILES=	doc/source2html.pl \
 		doc/sortlist.pl

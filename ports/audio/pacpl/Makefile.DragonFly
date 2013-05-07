@@ -1,1 +1,2 @@
-REPLACE_PERL=	pacpl
+USES+=		shebangfix
+SHEBANG_FILES=	pacpl

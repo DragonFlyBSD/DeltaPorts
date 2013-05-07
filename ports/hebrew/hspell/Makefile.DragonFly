@@ -1,1 +1,2 @@
-REPLACE_PERL=	pmerge
+USES+=		shebangfix
+SHEBANG_FILES=	pmerge

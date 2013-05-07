@@ -1,3 +1,4 @@
-REPLACE_PERL=	bin/th_gen_idx.pl \
+USES+=		shebangfix
+SHEBANG_FILES=	bin/th_gen_idx.pl \
 		bin/verb_reverse.pl \
 		bin/affconv.pl

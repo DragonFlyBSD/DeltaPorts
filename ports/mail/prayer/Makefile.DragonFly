@@ -1,4 +1,5 @@
-REPLACE_PERL=	utils/ucsnews.pl \
+USES+=		shebangfix
+SHEBANG_FILES=	utils/ucsnews.pl \
 		templates/old/make_olist.pl \
 		templates/src/makedeps.pl \
 		templates/src/build_index.pl \

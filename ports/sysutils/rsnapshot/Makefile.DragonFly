@@ -1,1 +1,2 @@
-REPLACE_PERL=	rsnapshot-program.pl
+USES+=		shebangfix
+SHEBANG_FILES=	rsnapshot-program.pl

@@ -1,4 +1,5 @@
-REPLACE_PERL=	createconfig.pl \
+USES+=		shebangfix
+SHEBANG_FILES=	createconfig.pl \
 		setconfdir.pl \
 		bgrotman.pl \
 		bgrandom.pl

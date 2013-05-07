@@ -1,1 +1,2 @@
-REPLACE_PERL=	bin/gcfilms install
+USES+=		shebangfix
+SHEBANG_FILES=	bin/gcfilms install

@@ -1,6 +1,7 @@
 USE_GMAKE=	yes
 
-REPLACE_PERL=	unicode/mklinebreak.pl \
+USES+=		shebangfix
+SHEBANG_FILES=	unicode/mklinebreak.pl \
 		unicode/mkwordbreak.pl \
 		unicode/mkeastasianwidth.pl \
 		unicode/mkgraphemebreak.pl \

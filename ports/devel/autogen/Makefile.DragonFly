@@ -1,5 +1,6 @@
 USE_PERL5=	yes
-REPLACE_PERL=	autoopts/tpl/man2mdoc.pl \
+USES+=		shebangfix
+SHEBANG_FILES=	autoopts/tpl/man2mdoc.pl \
 		autoopts/tpl/mdoc2texi.pl
 
 post-patch:

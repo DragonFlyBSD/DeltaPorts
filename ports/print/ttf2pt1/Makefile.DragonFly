@@ -1,4 +1,5 @@
-REPLACE_PERL=	app/TeX/sfd2map \
+USES+=		shebangfix
+SHEBANG_FILES=	app/TeX/sfd2map \
 		app/TeX/cjk-latex-config \
 		other/showdf \
 		other/lst.pl \

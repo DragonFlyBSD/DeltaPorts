@@ -1,1 +1,2 @@
-REPLACE_PERL=	configure
+USES+=		shebangfix
+SHEBANG_FILES=	configure
