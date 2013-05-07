@@ -16,7 +16,7 @@
  USE_PKGCONFIG=	yes
  GNU_CONFIGURE=	yes
  USE_GMAKE=	yes
-+USE_ICONV=	yes
++USES+=		yes
  USE_LDCONFIG=	yes
  
  MAN1=		rasqal-config.1 roqet.1
