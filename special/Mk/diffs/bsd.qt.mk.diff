@@ -1,10 +1,10 @@
---- /usr/ports/Mk/bsd.qt.mk	2012-11-17 06:54:18.000000000 +0100
-+++ /home/marino/DPorts/Mk/bsd.qt.mk	2012-12-28 02:23:37.409941000 +0100
-@@ -113,10 +113,7 @@
+--- bsd.qt.mk.orig	2013-05-02 14:12:58.000000000 +0000
++++ bsd.qt.mk
+@@ -310,10 +310,7 @@ Qt_Post_Include= bsd.qt.mk
  #
  # Translate `c++` to its real name and select the appropriate mkspec.
  #
--QMAKE_BASE_COMPILER!=	cc --version 2> /dev/null | ${AWK} 'NR == 1 { gsub(/[()]/, "", $$2); print $$2 }'
+-QMAKE_BASE_COMPILER!=	(cc --version 2> /dev/null | ${AWK} 'NR == 1 { gsub(/[()]/, "", $$2); print $$2 }') || ${ECHO_CMD} "gcc"
 -.if ${QMAKE_BASE_COMPILER:tl} == "gcc"
  QMAKE_BASE_COMPILER=	g++
 -.endif

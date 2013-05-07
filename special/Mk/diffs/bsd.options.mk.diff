@@ -1,58 +1,11 @@
---- bsd.options.mk.orig	2013-04-02 11:50:56.926885000 +0000
+--- bsd.options.mk.orig	2013-05-07 10:17:00.863557000 +0000
 +++ bsd.options.mk
-@@ -46,6 +46,9 @@ OPTIONSMKINCLUDED=	bsd.options.mk
+@@ -51,6 +51,8 @@ OPTIONSMKINCLUDED=	bsd.options.mk
  
  OPTIONSFILE?=	${PORT_DBDIR}/${UNIQUENAME}/options
  
-+OPTIONS_EXCLUDE_i386+=		ALSA
-+OPTIONS_EXCLUDE_x86_64+=	ALSA
++OPTIONS_EXCLUDE+=	ALSA
 +
  #ALL_OPTIONS=	DOCS \
  #		NLS
  
-@@ -68,6 +71,12 @@ PORT_OPTIONS+=	IPV6
- 
- # Exclude per arch options
- .for opt in ${OPTIONS_EXCLUDE_${ARCH}}
-+OPTIONS_DEFINE_${ARCH}:=	${OPTIONS_DEFINE_${ARCH}:N${opt}}
-+OPTIONS_DEFAULT_${ARCH}:=	${OPTIONS_DEFAULT_${ARCH}:N${opt}}
-+.endfor
-+
-+# Exclude global options
-+.for opt in ${OPTIONS_EXCLUDE}
- OPTIONS_DEFINE:=	${OPTIONS_DEFINE:N${opt}}
- OPTIONS_DEFAULT:=	${OPTIONS_DEFAULT:N${opt}}
- .endfor
-@@ -108,7 +117,9 @@ opt:=	${O}
- optname:=	${O}
- ALL_OPTIONS+=	${O}
- .if !defined(OPTIONS_DEFINE) || empty(OPTIONS_DEFINE:M${O})
-+.  if empty(OPTIONS_EXCLUDE:M${O}) && empty(OPTIONS_EXCLUDE_${ARCH}:M${O})
- OPTIONS_DEFINE+=	${O}
-+.  endif
- .endif
- PORT_OPTIONS+=	${O}
- .    elif !defined(optdesc)
-@@ -137,6 +148,22 @@ PORT_OPTIONS:=	 ${PORT_OPTIONS:N${O}}
- 
- ALL_OPTIONS:=	${ALL_OPTIONS:O:u}
- 
-+# exclude illegal options
-+.for opt in ${OPTIONS_EXCLUDE_${ARCH}}
-+.  for single in ${OPTIONS_SINGLE}
-+OPTIONS_SINGLE_${single}:= ${OPTIONS_SINGLE_${single}:N${opt}}
-+.  endfor
-+.  for radio in ${OPTIONS_RADIO}
-+OPTIONS_RADIO_${radio}:= ${OPTIONS_RADIO_${radio}:N${opt}}
-+.  endfor
-+.  for multi in ${OPTIONS_MULTI}
-+OPTIONS_MULTI_${multi}:= ${OPTIONS_MULTI_${multi}:N${opt}}
-+.  endfor
-+.  for group in ${OPTIONS_GROUP}
-+OPTIONS_GROUP_${group}:= ${OPTIONS_GROUP_${group}:N${opt}}
-+.  endfor
-+.endfor
-+
- # complete list
- COMPLETE_OPTIONS_LIST=	${ALL_OPTIONS}
- .for single in ${OPTIONS_SINGLE}
