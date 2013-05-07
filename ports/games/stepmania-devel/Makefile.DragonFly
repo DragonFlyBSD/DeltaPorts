@@ -1,6 +1,1 @@
 LDFLAGS+=	-lX11 -lpthread
-
-USES+=		shebangfix
-SHEBANG_FILES=	Utils/CreatePackage.pl \
-		Utils/install-stepmania.pl \
-		extern/zlib/zlib2ansi

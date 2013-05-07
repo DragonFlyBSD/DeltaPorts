@@ -1,5 +1,0 @@
-USES+=		shebangfix
-SHEBANG_FILES=	createconfig.pl \
-		setconfdir.pl \
-		bgrotman.pl \
-		bgrandom.pl

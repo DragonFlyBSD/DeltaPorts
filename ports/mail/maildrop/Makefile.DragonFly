@@ -1,8 +1,0 @@
-USE_GMAKE=	yes
-
-USES+=		shebangfix
-SHEBANG_FILES=	unicode/mklinebreak.pl \
-		unicode/mkwordbreak.pl \
-		unicode/mkeastasianwidth.pl \
-		unicode/mkgraphemebreak.pl \
-		unicode/mkhtmlent.pl

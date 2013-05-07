@@ -1,2 +1,0 @@
-USES+=		shebangfix
-SHEBANG_FILES=	iconv_builtin ccs/iconv_mktbl

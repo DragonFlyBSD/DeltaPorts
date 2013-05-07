@@ -1,4 +1,0 @@
-USES+=		shebangfix
-SHEBANG_FILES=	src/ca65html/ca65html \
-		src/ca65/macpack/cvt-mac.pl \
-		src/ld65/cfg/cvt-cfg.pl

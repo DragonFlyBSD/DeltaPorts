@@ -1,9 +1,1 @@
 OPTIONS_EXCLUDE+= OPENSSL
-
-USES+=		shebangfix
-SHEBANG_FILES=	configure \
-		inspircd \
-		modulemanager \
-		make/run-cc.pl \
-		tools/create_templates.pl \
-		win/rename_installer.pl

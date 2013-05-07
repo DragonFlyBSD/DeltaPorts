@@ -1,3 +1,0 @@
-USES+=		shebangfix
-SHEBANG_FILES=	doc/source2html.pl \
-		doc/sortlist.pl
