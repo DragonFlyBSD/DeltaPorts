@@ -1,4 +1,4 @@
---- Makefile.orig	2013-04-02 20:08:31.941883000 +0000
+--- Makefile.orig	2013-05-07 16:56:30.036742000 +0000
 +++ Makefile
 @@ -25,7 +25,7 @@ RUN_DEPENDS+=	cdrdao:${PORTSDIR}/sysutil
  		pstree:${PORTSDIR}/sysutils/pstree \
@@ -6,6 +6,6 @@
  		vcdimager:${PORTSDIR}/multimedia/vcdimager \
 -		rar:${PORTSDIR}/archivers/rar \
 +		unrar:${PORTSDIR}/archivers/unrar \
- 		${LOCALBASE}/sbin/fping:${PORTSDIR}/net/fping
+ 		${LOCALBASE}/sbin/fping:${PORTSDIR}/net/fping \
+ 		cdrecord:${PORTSDIR}/sysutils/cdrtools
  
- OPTIONS_DEFINE=	VORBIS SUBTITLE

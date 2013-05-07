@@ -1,0 +1,15 @@
+--- Makefile.orig	2013-05-07 19:19:29.968933000 +0000
++++ Makefile
+@@ -25,8 +25,12 @@ PORTDOCS=	AUTHORS ChangeLog NEWS README
+ 
+ .include <bsd.port.options.mk>
+ 
++.if ${OPSYS} == DragonFly
++USES+=	usb
++.else
+ CONFIGURE_ENV+=	LIBUSB_CFLAGS="-I/usr/include" \
+ 		LIBUSB_LIBS="-L/usr/lib -lusb"
++.endif
+ 
+ post-patch:
+ 	@${REINPLACE_CMD} -i '' \

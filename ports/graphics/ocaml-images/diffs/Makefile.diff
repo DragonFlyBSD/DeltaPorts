@@ -1,7 +1,7 @@
---- Makefile.orig	2013-03-24 02:16:53.626479000 +0000
+--- Makefile.orig	2013-05-07 16:31:05.214385000 +0000
 +++ Makefile
 @@ -2,38 +2,39 @@
- # $FreeBSD: ports/graphics/ocaml-images/Makefile,v 1.45 2013/02/05 15:47:07 svnexp Exp $
+ # $FreeBSD: graphics/ocaml-images/Makefile 316614 2013-04-26 13:49:22Z bapt $
  
  PORTNAME=	images
 -PORTVERSION=	3.0.2
@@ -58,64 +58,9 @@
 +
  MAKE_JOBS_UNSAFE=	yes
  
- OPTIONS=	PNG "Enable PNG support" on \
-@@ -49,81 +50,45 @@ OPTIONS=	PNG "Enable PNG support" on \
- 
- .if !defined(WITHOUT_PNG)
- LIB_DEPENDS+=	png15:${PORTSDIR}/graphics/png
--CONFIGURE_ARGS+=	--with-png
--.else
--CONFIGURE_ARGS+=	--without-png
- .endif
- 
- .if !defined(WITHOUT_JPEG)
- LIB_DEPENDS+=	jpeg.11:${PORTSDIR}/graphics/jpeg
--CONFIGURE_ARGS+=	--with-jpeg
--.else
--CONFIGURE_ARGS+=	--without-jpeg
- .endif
- 
- .if !defined(WITHOUT_TIFF)
- LIB_DEPENDS+=	tiff.4:${PORTSDIR}/graphics/tiff
--CONFIGURE_ARGS+=	--with-tiff
--.else
--CONFIGURE_ARGS+=	--without-tiff
- .endif
- 
- .if !defined(WITHOUT_XPM)
- USE_XORG=	xpm
--CONFIGURE_ARGS+=	--with-xpm
--.else
--CONFIGURE_ARGS+=	--without-xpm
- .endif
- 
- .if !defined(WITHOUT_GIF)
- LIB_DEPENDS+=	gif.5:${PORTSDIR}/graphics/giflib
--CONFIGURE_ARGS+=	--with-gif
--.else
--CONFIGURE_ARGS+=	--without-gif
- .endif
- 
- .if !defined(WITHOUT_FREETYPE)
- USE_FREETYPE=	yes
--CONFIGURE_ARGS+=	--with-freetype
--.else
--CONFIGURE_ARGS+=	--without-freetype
- .endif
- 
- .if defined(WITH_GS)
- USE_GHOSTSCRIPT=	yes
--CONFIGURE_ARGS+=	--with-gs
--.else
--CONFIGURE_ARGS+=	--without-gs
- .endif
- 
- .if defined(WITH_GTK2)
--CONFIGURE_ARGS+=	--with-lablgtk2
- BUILD_DEPENDS+=	lablgtk2:${PORTSDIR}/x11-toolkits/ocaml-lablgtk2
- RUN_DEPENDS+=	lablgtk2:${PORTSDIR}/x11-toolkits/ocaml-lablgtk2
--.else
--CONFIGURE_ARGS+=	--without-lablgtk2
+ OPTIONS_DEFINE=	PNG JPEG TIFF XPM GIF FREETYPE GHOSTSCRIPT GTK2 DOCS
+@@ -98,26 +99,14 @@ RUN_DEPENDS+=	lablgtk2:${PORTSDIR}/x11-t
+ CONFIGURE_ARGS+=	--without-lablgtk2
  .endif
  
 -GNU_CONFIGURE=	yes
@@ -123,20 +68,21 @@
 +do-configure:
 +	@(cd ${WRKSRC} && ${REINPLACE_CMD} ${OMAKESUBS} OMakefile)
 +	@(cd ${WRKSRC} && ${OMAKE} configure)
++
++do-build:
++	@(cd ${WRKSRC} && ${OMAKE})
  
 -#the default docsdir gets expanded to ${PREFIX}/share/doc/images
 -#which isn't of much help when you are searching for the package docs
 -DOCSDIR=	${PREFIX}/share/doc/${PKGNAMEPREFIX}${PORTNAME}
 -DOCSFILES=	CHANGES README LICENSE
-+do-build:
-+	@(cd ${WRKSRC} && ${OMAKE})
- 
--.if !defined(NOPORTDOCS)
+-
+-.if ${PORT_OPTIONS:MDOCS}
 -PORTDOCS=	${DOCSFILES} doc
 -.endif
 -
 -post-install:
--.if !defined(NOPORTDOCS)
+-.if ${PORT_OPTIONS:MDOCS}
 -	@${MKDIR} ${DOCSDIR}/doc
 -	@(cd ${WRKSRC} && ${COPYTREE_SHARE} \* ${DOCSDIR}/doc '-name "*.jpg" -o -name "*.html"')
 -	@${INSTALL_DATA} ${DOCSFILES:S,^,${WRKSRC}/,g} ${DOCSDIR}/

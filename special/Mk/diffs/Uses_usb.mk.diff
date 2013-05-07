@@ -1,0 +1,26 @@
+--- Uses/usb.mk.orig	2013-05-07 17:32:05.364319000 +0000
++++ Uses/usb.mk
+@@ -0,0 +1,23 @@
++# $FreeBSD: Mk/Uses/iconv.mk 316636 2013-04-26 20:44:59Z mva $
++#
++# handle dependency on libusb (DragonFly only)
++#
++# MAINTAINER: draco@marino.st
++#
++# Feature:	usb
++# Usage:	USES=usb
++# Valid ARGS:	does not require args
++#
++#
++.if !defined(_INCLUDE_USES_USB_MK)
++_INCLUDE_USES_USB_MK=	yes
++
++.if defined(usb_ARGS)
++IGNORE=	USES=usb does not require args
++.endif
++
++LIB_DEPENDS+=	usb:${PORTSDIR}/devel/libusb
++CFLAGS+=	-I${LOCALBASE}/include
++LDFLAGS+=	-L${LOCALBASE}/lib
++
++.endif

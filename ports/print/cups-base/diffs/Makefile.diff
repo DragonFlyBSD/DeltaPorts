@@ -1,6 +1,6 @@
---- /usr/ports/print/cups-base/Makefile	2013-03-07 04:25:10.000000000 +0100
-+++ Makefile	2013-03-31 08:40:18.004987000 +0200
-@@ -23,6 +23,7 @@
+--- Makefile.orig	2013-05-07 19:23:28.574248000 +0000
++++ Makefile
+@@ -26,6 +26,7 @@ CPPFLAGS+=	-I${LOCALBASE}/include
  LDFLAGS+=	-L${LOCALBASE}/lib
  DSOFLAGS=	-Wl,-rpath,${PREFIX}/lib -L${PREFIX}/lib ${LDFLAGS}
  CONFIGURE_ENV=	DSOFLAGS="${DSOFLAGS}"
@@ -8,74 +8,40 @@
  CONFIGURE_ARGS+=	--localstatedir=/var			\
  			--disable-slp				\
  			--disable-gssapi			\
-@@ -41,7 +42,6 @@
- CUPS_CACHEDIR?=	/var/db/cups
- CUPS_SPOOLDIR=	/var/spool/cups
- CUPS_SOCKET?=	/var/run/cups.sock
--CUPS_PDFTOPS?=	${LOCALBASE}/libexec/xpdf/pdftops
- WRKSRC=		${WRKDIR}/${PORTNAME}-${DISTVERSION}
- 
- # file, dir ownership
-@@ -73,8 +73,6 @@
+@@ -72,6 +73,7 @@ CUPS_SUFFIX=	-base
+ CONFLICTS+=	cupsddk-*
+ OPTIONS_DEFINE=	GNUTLS LIBPAPER PHP PYTHON PAM LDAP DBUS LIBUSB XDG_OPEN GHOSTSCRIPT XPDF AVAHI MDNSRESPONDER
+ OPTIONS_DEFAULT=	LIBPAPER GHOSTSCRIPT
++OPTIONS_EXCLUDE+=	GHOSTSCRIPT XPDF
+ NO_OPTIONS_SORT=	yes
  .endif
  
- LIBUSB_DESC=		USB support
--GHOSTSCRIPT_DESC=	Build pdftops with GHOSTSCRIPT
--XPDF_DESC=		Build pdftops with XPDF
- XDG_OPEN=		Build with XDG_OPEN as browser
- 
- .include <bsd.port.options.mk>
-@@ -95,7 +93,6 @@
+@@ -98,7 +100,8 @@ LIB_DEPENDS+=	cups:${PORTSDIR}/${PKGCATE
  # force build if old cups is installed.
  BUILD_DEPENDS+=	cups-client${PKGNAMESUFFIX2}>=${PORTVERSION}:${PORTSDIR}/${PKGCATEGORY}/cups-client
  COMMENT2=	Library cupsimage
 -CONFIGURE_ARGS+=	--disable-pdftops
++#CONFIGURE_ARGS+=	--disable-pdftops
++PLIST_SUB+=	WITH_PDFTOPS=""
  INSTALL_WRKSRC=	${WRKSRC}/filter
  PLIST=		${MASTERDIR}/pkg-plist.image
  USE_LDCONFIG=	yes
-@@ -144,22 +141,6 @@
- PLIST_SUB+=		PHP="@comment "
+@@ -221,12 +224,11 @@ RUN_DEPENDS+=		xdg-open:${PORTSDIR}/deve
  .endif
  
--.if !defined(CUPS_CLIENT) && !defined(CUPS_IMAGE) && ${PORT_OPTIONS:MGHOSTSCRIPT}
--.if ${PORT_OPTIONS:MXPDF}
--IGNORE=			You must select one and only one option to build pdftops
--.endif
--USE_GHOSTSCRIPT=	yes
--CONFIGURE_ARGS+=	--enable-pdftops --with-pdftops=${LOCALBASE}/bin/gs
--PLIST_SUB+=		WITH_PDFTOPS=""
--.elif !defined(CUPS_CLIENT) && !defined(CUPS_IMAGE) && ${PORT_OPTIONS:MXPDF}
--BUILD_DEPENDS+=		${CUPS_PDFTOPS}:${PORTSDIR}/graphics/xpdf
--RUN_DEPENDS+=		${CUPS_PDFTOPS}:${PORTSDIR}/graphics/xpdf
--CONFIGURE_ARGS+=	--enable-pdftops --with-pdftops=${CUPS_PDFTOPS}
--PLIST_SUB+=		WITH_PDFTOPS=""
--.else
--PLIST_SUB+=		WITH_PDFTOPS="@comment "
--.endif
--
- .if !defined(CUPS_CLIENT) && !defined(CUPS_IMAGE) && ${PORT_OPTIONS:MPYTHON}
- CONFIGURE_ARGS+=	--with-python
- USE_PYTHON=		yes
-@@ -225,9 +206,6 @@
+ .if !defined(CUPS_CLIENT) && !defined(CUPS_IMAGE) && ${PORT_OPTIONS:MLIBUSB}
+-CPPFLAGS+=		-I/usr/include
+-LDFLAGS+=		-L/usr/lib
++USES+=			usb
  .else
  CONFIGURE_ARGS+=	--disable-libusb
  .endif
--.if ${OSVERSION} >= 800000
 -CONFIGURE_ARGS+=	LIBS="-lssp_nonshared"
--.endif
++#CONFIGURE_ARGS+=	LIBS="-lssp_nonshared"
  
  .if defined(CUPS_CLIENT)
  MAN1=	cups-config.1
-@@ -287,7 +265,7 @@
- .endif
- 
- post-patch:
--.if ${ARCH} == "amd64"
-+.if ${ARCH} == "x86_64"
- 	@${REINPLACE_CMD} -e 's|@PIEFLAGS@||' ${WRKSRC}/Makedefs.in
- .endif
- .if ${PORT_OPTIONS:MMDNSRESPONDER}
-@@ -386,9 +364,8 @@
+@@ -385,9 +387,8 @@ post-install:
  .elif defined(CUPS_IMAGE)
  	${INSTALL_DATA} ${WRKSRC}/cups/raster.h ${PREFIX}/include/cups/
  .else

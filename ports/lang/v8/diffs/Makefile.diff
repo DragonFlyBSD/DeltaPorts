@@ -1,6 +1,6 @@
---- Makefile.orig	2013-03-09 22:25:12.399299000 +0000
+--- Makefile.orig	2013-05-05 13:51:08.000000000 +0000
 +++ Makefile
-@@ -17,18 +17,11 @@ USE_XZ=		yes
+@@ -16,21 +16,12 @@ USE_XZ=		yes
  USE_PYTHON=	2.6+
  USE_LDCONFIG=	yes
  ALL_TARGET=	native
@@ -10,15 +10,18 @@
 +USE_GCC=	4.7
  
  .include <bsd.port.pre.mk>
--
+ 
 -.if ${CC:T:Mclang} == "clang" || ${CXX:T:Mclang++} == "clang++" || ${OSVERSION} >= 1000024
+-_CLANG!=	clang --version | ${HEAD} -1 | ${SED} -e 's/.*clang version \([0-9]\)\.\([0-9]\).*/\1\2/'
 -MAKE_ENV+=	LINK=clang++
 -CFLAGS+=	-Wno-unused-private-field
+-.if ${_CLANG} >= 33
+-CFLAGS+=	-Wno-nested-anon-types
+-.endif
 -.else
 -MAKE_ARGS+=	strictaliasing=off
 -USE_GCC=	any
 -.endif
--
+ 
  ONLY_FOR_ARCHS=	i386 amd64
  
- post-patch:

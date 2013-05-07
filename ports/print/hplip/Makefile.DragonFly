@@ -1,0 +1,2 @@
+USES+=		usb
+USB_INCLUDE=	${LOCALBASE}/include
