@@ -11,11 +11,10 @@ LICENSE_COMB=	multi
 LICENSE_FILE=	${WRKSRC}/COPYING
 
 USE_GMAKE=	yes
-USE_AUTORECONF=	yes
 USE_AUTOTOOLS=	aclocal autoheader automake autoconf libtoolize
 ACLOCAL_ARGS=	-I.
 AUTOMAKE_ARGS=	--add-missing
-USE_PKGCONFIG=	build
+USES+=		pkgconfig
 USE_LDCONFIG=	yes
 
 .include <bsd.port.mk>

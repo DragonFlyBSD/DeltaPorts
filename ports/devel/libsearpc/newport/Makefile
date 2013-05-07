@@ -20,7 +20,7 @@ GH_COMMIT=      4f28361
 GNU_CONFIGURE=	yes
 
 USE_GNOME=      glib20
-USE_PKGCONFIG=	yes
+USES+=		pkgconfig
 USE_AUTOTOOLS=	libtool autoconf automake
 USE_PYTHON=	-2.7
 

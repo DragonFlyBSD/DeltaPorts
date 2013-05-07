@@ -1,4 +1,4 @@
---- Makefile.orig	2013-03-25 01:15:44.925821000 +0000
+--- Makefile.orig	2013-05-07 13:30:20.915826000 +0000
 +++ Makefile
 @@ -13,7 +13,7 @@ DIST_SUBDIR=	KDE
  MAINTAINER=	ports@FreeBSD.org
@@ -9,7 +9,7 @@
  		audiofile:${PORTSDIR}/audio/libaudiofile \
  		mad:${PORTSDIR}/audio/libmad \
  		ogg:${PORTSDIR}/audio/libogg \
-@@ -48,6 +48,7 @@ USE_PKGCONFIG=	build
+@@ -46,6 +46,7 @@ USE_LDCONFIG=	yes
  QTCPPFLAGS+=	-L${LOCALBASE}/lib
  DO_NOT_COMPILE+=gmcop
  _NO_KDE_FINAL=	yes

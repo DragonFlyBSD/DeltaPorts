@@ -1,6 +1,6 @@
---- Makefile.orig	2013-02-09 01:13:13.766290000 +0100
-+++ Makefile	2013-02-09 01:16:26.078267000 +0100
-@@ -11,6 +11,11 @@
+--- Makefile.orig	2013-05-07 13:25:55.653812000 +0000
++++ Makefile
+@@ -11,12 +11,18 @@ MAINTAINER=	kde@FreeBSD.org
  COMMENT=	High-level interface for RDF
  
  LIB_DEPENDS=	raptor2:${PORTSDIR}/textproc/raptor2 \
@@ -12,11 +12,10 @@
  		pcre:${PORTSDIR}/devel/pcre
  
  USE_GNOME=	gnomehack lthack
-@@ -19,6 +24,7 @@
- USE_PKGCONFIG=	yes
+ USE_OPENSSL=	yes
+ USE_PERL5_BUILD=yes
+ USES=		pkgconfig
++USES+=		iconv
  GNU_CONFIGURE=	yes
  USE_GMAKE=	yes
-+USES+=		yes
  USE_LDCONFIG=	yes
- 
- MAN1=		rasqal-config.1 roqet.1
