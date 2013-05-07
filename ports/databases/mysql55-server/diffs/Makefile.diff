@@ -4,7 +4,7 @@
  
  SLAVEDIRS=	databases/mysql55-client
  USES=		cmake
-+USE_READLINE=	yes
++USES+=		readline
  MAKE_JOBS_SAFE=	yes
  NO_OPTIONS_SORT=yes
  
