@@ -88,7 +88,8 @@ dtdirs=$(cd ${DELTA}/ports; find * -type d -depth 1 -maxdepth 1 | sort)
 cd ${MERGED}
 find * -type d -depth 1 -maxdepth 1 | grep -vE ${EXCLUDE} | sort > ${PRLIST}
 for portdir in ${portdirs}; do
-    LOOK=$(look -t "\n" "${portdir}" ${PRLIST})
+    LOOK=$(grep -Fx ${portdir} ${PRLIST})
+#   LOOK=$(look -t "\n" "${portdir}" ${PRLIST})
     [ -z "${LOOK}" ] && kill_directory "${portdir}"
 done
 rm ${PRLIST}
@@ -105,7 +106,8 @@ fi
 cd ${FPORTS}
 find * -type d -depth 1 -maxdepth 1 | grep -vE ${EXCLUDE} | sort > ${PDLIST}
 for portdir in ${dtdirs}; do
-    LOOK=$(look -t "\n" "${portdir}" ${PDLIST})
+    LOOK=$(grep -Fx ${portdir} ${PDLIST})
+#   LOOK=$(look -t "\n" "${portdir}" ${PDLIST})
     if [ -z "${LOOK}" ]; then
         SFILE=${DELTA}/ports/${portdir}/STATUS
         # if no SFILE, conservatively skip.  it may be in work
