@@ -1,5 +1,3 @@
 PORT
-Last attempt: 
-make: stopped in /usr/local/poudriere/jails/master/build/01/usr/dports/graphics/dia
-Last success: 
-make: stopped in /usr/local/poudriere/jails/master/build/01/usr/dports/graphics/dia
+Last attempt: 0.97.2_1,1
+Last success: 0.97.2_1,1
