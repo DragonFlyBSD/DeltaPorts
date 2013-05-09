@@ -1,5 +1,5 @@
---- lib/ext2fs/getsize.c.orig	2012-11-30 02:40:18.000000000 +0000
-+++ lib/ext2fs/getsize.c
+--- ./lib/ext2fs/getsize.c.orig	2012-11-30 02:40:18.000000000 +0000
++++ ./lib/ext2fs/getsize.c
 @@ -33,6 +33,9 @@
  #ifdef HAVE_SYS_DISKLABEL_H
  #include <sys/disklabel.h>

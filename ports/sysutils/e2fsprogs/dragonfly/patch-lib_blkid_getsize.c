@@ -1,5 +1,5 @@
---- lib/blkid/getsize.c.orig	2012-11-30 02:40:18.000000000 +0000
-+++ lib/blkid/getsize.c
+--- ./lib/blkid/getsize.c.orig	2012-11-30 02:40:18.000000000 +0000
++++ ./lib/blkid/getsize.c
 @@ -33,6 +33,9 @@
  #ifdef HAVE_SYS_DISKLABEL_H
  #include <sys/disklabel.h>
