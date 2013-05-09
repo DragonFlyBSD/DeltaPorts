@@ -1,0 +1,29 @@
+--- Makefile.orig	2013-05-09 19:20:43.860789000 +0000
++++ Makefile
+@@ -34,6 +34,7 @@ MAN1=		sarg.1
+ .if ${PORT_OPTIONS:MNLS}
+ PLIST_SUB+=	NLS=""
+ USES+=		gettext
++RPL1=		-lintl
+ .else
+ PLIST_SUB+=	NLS="@comment "
+ CONFIGURE_ARGS+=--disable-nls
+@@ -71,6 +72,7 @@ CONFIGURE_ARGS+=--without-ldap
+ .if ${PORT_OPTIONS:MICONV}
+ CONFIGURE_ARGS+=--with-iconv
+ USES+=	iconv
++RPL2=	-liconv
+ .else
+ CONFIGURE_ARGS+=--without-iconv
+ .endif
+@@ -80,8 +82,8 @@ post-extract:
+ 	@${CHMOD} 0755 ${WRKSRC}/configure
+ 
+ post-patch:
+-.if ${PORT_OPTIONS:MNLS}
+-	@${REINPLACE_CMD} -e '/^LIBS/ s/$$/ -lintl/' ${WRKSRC}/Makefile.in
++.if ${PORT_OPTIONS:MNLS} || ${PORT_OPTIONS:MICONV}
++	@${REINPLACE_CMD} -e '/^LIBS/ s/$$/ ${RPL1} ${RPL2}/' ${WRKSRC}/Makefile.in
+ .endif
+ 
+ pre-configure:
