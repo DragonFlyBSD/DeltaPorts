@@ -15,7 +15,7 @@
  	{
  		int part = -1;
 +#ifdef __DragonFly__
-+                struct disklabel32 lib;
++                struct disklabel32 lab;
 +                struct partition32 *pp;
 +#else
  		struct disklabel lab;
