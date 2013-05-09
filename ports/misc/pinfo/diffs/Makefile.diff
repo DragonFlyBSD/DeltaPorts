@@ -1,0 +1,20 @@
+--- Makefile.orig	2013-05-06 15:34:17.000000000 +0000
++++ Makefile
+@@ -16,7 +16,7 @@ OPTIONS_DEFAULT=READLINE
+ READLINE_DESC=	Enable readline support
+ 
+ USE_BZIP2=	yes
+-USES=		gettext ncurses
++USES=		ncurses
+ USE_AUTOTOOLS=	libtoolize aclocal autoheader automake autoconf
+ LIBTOOLIZE_ARGS=--force
+ ACLOCAL_ARGS=	-I macros
+@@ -49,7 +49,7 @@ PLIST_SUB+=	NLS="@comment "
+ 
+ 
+ .if ${PORT_OPTIONS:MREADLINE}
+-USES=		readline
++USES+=		readline
+ .else
+ CONFIGURE_ARGS+=--without-readline
+ .endif
