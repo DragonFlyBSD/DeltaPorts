@@ -1,0 +1,10 @@
+--- Makefile.orig	2013-05-04 20:09:09.000000000 +0000
++++ Makefile
+@@ -45,7 +45,4 @@ do-install:
+ 		@${MKDIR} ${DATADIR}
+ 		@cd ${WRKSRC} && ${PAX} -rw images levels ${DATADIR}
+ 
+-post-install:
+-		@${CAT} ${PKGMESSAGE}
+-
+ .include <bsd.port.mk>
