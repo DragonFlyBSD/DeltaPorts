@@ -1,9 +1,10 @@
 --- Makefile.orig	2013-05-10 09:43:39.567344000 +0000
 +++ Makefile
-@@ -136,9 +136,8 @@ PLIST_SUB+=		QT4="@comment "
+@@ -135,10 +135,8 @@ PLIST_SUB+=		QT4="@comment "
+ .endif
  
  .if !defined(WITH_GCJ) && (${ARCH} == "amd64" || ${ARCH} == "i386")
- BUILD_DEPENDS+=		${LOCALBASE}/bootstrap-openjdk/bin/javac:${PORTSDIR}/java/bootstrap-openjdk
+-BUILD_DEPENDS+=		${LOCALBASE}/bootstrap-openjdk/bin/javac:${PORTSDIR}/java/bootstrap-openjdk
 -JAR?=			${LOCALBASE}/bootstrap-openjdk/bin/jar
 -JAVA?=			${LOCALBASE}/bootstrap-openjdk/bin/java
 -JAVAC?=			${LOCALBASE}/bootstrap-openjdk/bin/javac
