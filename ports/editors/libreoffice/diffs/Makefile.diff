@@ -1,4 +1,4 @@
---- Makefile.orig	2013-05-07 13:31:46.640013000 +0000
+--- Makefile.orig	2013-05-11 22:06:35.940091000 +0000
 +++ Makefile
 @@ -18,6 +18,7 @@ BUILD_DEPENDS=	p5-Archive-Zip>=0:${PORTS
  		${LOCALBASE}/bin/gperf:${PORTSDIR}/devel/gperf \
@@ -24,12 +24,15 @@
  		rdf.0:${PORTSDIR}/textproc/redland
  
  RUN_DEPENDS=	${LOCALBASE}/lib/X11/fonts/dejavu/DejaVuSans.ttf:${PORTSDIR}/x11-fonts/dejavu \
-@@ -60,18 +63,16 @@ RUN_DEPENDS=	${LOCALBASE}/lib/X11/fonts/
+@@ -59,21 +62,20 @@ RUN_DEPENDS=	${LOCALBASE}/lib/X11/fonts/
+ 
  CONFLICTS_INSTALL=	libreoffice-legacy-[0-9]*
  
++
+ _MAKE_JOBS=	#
+ MAKE_JOBS_SAFE=	yes
+ 
  GNU_CONFIGURE=	yes
--MAKE_JOBS_UNSAFE=	yes
-+MAKE_JOBS_SAFE=	yes
  USE_AUTOTOOLS=	autoconf aclocal
 -USE_GL=		gl glu
 +USE_GCC=	4.7
@@ -46,12 +49,13 @@
  
  DISTFILES+=	${PORTNAME}-${LOVERSION}${EXTRACT_SUFX}
  DISTFILES+=	${PORTNAME}-help-${LOVERSION}${EXTRACT_SUFX}
-@@ -89,75 +90,49 @@ CONFIGURE_ENV=		DMAKE=${LOCALBASE}/bin/d
+@@ -91,75 +93,50 @@ CONFIGURE_ENV=		DMAKE=${LOCALBASE}/bin/d
  			PYTHON_CFLAGS="`${PYTHON_VERSION}-config --cflags`" \
  			PYTHON_LIBS="`${PYTHON_VERSION}-config --libs`"
  
 -CONFIGURE_ARGS+=	--disable-dependency-tracking \
-+CONFIGURE_ARGS+=	--disable-epm \
++CONFIGURE_ARGS+=	--disable-cups \
++			--disable-epm \
  			--disable-fetch-external \
 +			--disable-gconf \
 +			--disable-gnome-vfs \
@@ -154,7 +158,7 @@
  
  MAN1=	libreoffice.1 \
  	lobase.1 \
-@@ -173,198 +148,8 @@ MAN1=	libreoffice.1 \
+@@ -175,198 +152,8 @@ MAN1=	libreoffice.1 \
  
  MANCOMPRESSED=	yes
  
@@ -353,7 +357,7 @@
  ACLOCAL_ARGS=	-I "${WRKSRC}/m4"
  CPPFLAGS=	-I${LOCALBASE}/include
  LDFLAGS=	-L${LOCALBASE}/lib
-@@ -376,10 +161,8 @@ MAKE_ENV+=	SED="${LOCALBASE}/bin/gsed" U
+@@ -378,10 +165,8 @@ MAKE_ENV+=	SED="${LOCALBASE}/bin/gsed" U
  
  TMPDIR?=	/tmp
  
@@ -366,7 +370,7 @@
  
  post-configure:
  	@${TOUCH} ${WRKSRC}/src.downloaded
-@@ -414,20 +197,6 @@ post-install:
+@@ -416,20 +201,6 @@ post-install:
  	    \( -type f -o -type l \) -print >> ${PLISTF}
  .endfor
  
@@ -387,7 +391,7 @@
  
  	@${SORT} -u ${PLISTF} >> ${TMPPLIST}
  	@${GREP} '^@exec ' ${PLISTD} | ${SORT} -u >> ${TMPPLIST}
-@@ -440,10 +209,6 @@ post-install:
+@@ -442,10 +213,6 @@ post-install:
  	@${INSTALL_SCRIPT} ${LODESTDIR}/etc/bash_completion.d/libreoffice.sh \
  	    ${PREFIX}/etc/bash_completion.d
  
