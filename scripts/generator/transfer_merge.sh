@@ -80,7 +80,7 @@ chmod 777 ${COMQUEUE}/dport.${NAME}
 
 # Now update the STATUSFILE
 if [ -f ${STATUSFILE} ]; then
-   TYPE=$(grep PORT ${STATUSFILE})
+   TYPE=$(grep -E "^(PORT|DPORT|LOCK)" ${STATUSFILE})
    echo ${TYPE} > ${STATUSFILE}
 else
    echo "PORT" > ${STATUSFILE}
