@@ -1,38 +1,53 @@
---- src/sysdeps/dragonfly.c.orig	2013-05-10 15:27:53.659016000 +0000
+--- src/sysdeps/dragonfly.c.orig	2013-05-12 12:48:12.267284000 +0000
 +++ src/sysdeps/dragonfly.c
-@@ -0,0 +1,1155 @@
+@@ -0,0 +1,1162 @@
 +/* GKrellM
-+|  Copyright (C) 1999-2005 Bill Wilson
++|  Copyright (C) 1999-2010 Bill Wilson
 +|
-+|  Author:  Bill Wilson    bill@gkrellm.net
++|  Author:  Bill Wilson    billw@gkrellm.net
 +|  Latest versions might be found at:  http://gkrellm.net
 +|
-+|  DragonFly code: Joerg Sonnenberger <joerg@bec.de>
-+|  Derived from FreeBSD code: Hajimu UMEMOTO <ume@FreeBSD.org>
++|  freebsd.c code is Copyright (C) Hajimu UMEMOTO <ume@FreeBSD.org>
 +|
-+|  This program is free software which I release under the GNU General Public
-+|  License. You may redistribute and/or modify this program under the terms
-+|  of that license as published by the Free Software Foundation; either
-+|  version 2 of the License, or (at your option) any later version.
 +|
-+|  This program is distributed in the hope that it will be useful,
-+|  but WITHOUT ANY WARRANTY; without even the implied warranty of
-+|  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-+|  GNU General Public License for more details.  Version 2 is in the
-+|  COPYRIGHT file in the top level directory of this distribution.
-+| 
-+|  To get a copy of the GNU General Puplic License, write to the Free Software
-+|  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++|  GKrellM is free software: you can redistribute it and/or modify it
++|  under the terms of the GNU General Public License as published by
++|  the Free Software Foundation, either version 3 of the License, or
++|  (at your option) any later version.
++|
++|  GKrellM is distributed in the hope that it will be useful, but WITHOUT
++|  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
++|  or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public
++|  License for more details.
++|
++|  You should have received a copy of the GNU General Public License
++|  along with this program. If not, see http://www.gnu.org/licenses/
++|
++|
++|  Additional permission under GNU GPL version 3 section 7
++|
++|  If you modify this program, or any covered work, by linking or
++|  combining it with the OpenSSL project's OpenSSL library (or a
++|  modified version of that library), containing parts covered by
++|  the terms of the OpenSSL or SSLeay licenses, you are granted
++|  additional permission to convey the resulting work.
++|  Corresponding Source for a non-source form of such a combination
++|  shall include the source code for the parts of OpenSSL used as well
++|  as that of the covered work.
 +*/
 +
++#include <sys/param.h>
++#include <sys/sysctl.h>
++#include <osreldate.h>
 +#include <kvm.h>
++#include <kinfo.h>
 +
 +kvm_t	*kvmd = NULL;
 +char	errbuf[_POSIX2_LINE_MAX];
 +
 +
 +// extern gboolean force_meminfo_update(void);
-+#if defined(__i386__)
++#if defined(__i386__) || defined(__amd64__)
 +static void scan_for_sensors();
 +#endif
 +
@@ -49,7 +64,7 @@
 +		fprintf(stderr, "Can't drop setgid privileges.");
 +		exit(1);
 +		}
-+#if defined(__i386__)
++#if defined(__i386__) || defined(__amd64__)
 +	scan_for_sensors();
 +#endif
 +	if (setuid(getuid()) != 0)
@@ -63,9 +78,6 @@
 +gkrellm_sys_main_cleanup(void)
 +	{
 +	}
-+
-+#include <sys/param.h>
-+#include <sys/sysctl.h>
 +
 +static int
 +gk_sysctlnametomib(const char *name, int *mibp, size_t *lenp)
@@ -81,9 +93,6 @@
 +
 +/* ===================================================================== */
 +/* CPU monitor interface */
-+
-+#include <kinfo.h>
-+#include <kvm.h>
 +
 +
 +extern	kvm_t	*kvmd;
@@ -111,8 +120,6 @@
 +/* ===================================================================== */
 +/* Proc monitor interface */
 +
-+#include <osreldate.h>
-+#include <sys/sysctl.h>
 +#include <sys/user.h>
 +
 +/*
@@ -782,7 +789,7 @@
 +/* ===================================================================== */
 +/* Sensor monitor interface */
 +
-+#if defined(__i386__)
++#if defined(__i386__) || defined(__amd64__)
 +
 +typedef struct
 +	{
