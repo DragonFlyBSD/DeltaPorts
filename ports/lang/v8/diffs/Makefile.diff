@@ -1,6 +1,6 @@
---- Makefile.orig	2013-05-05 13:51:08.000000000 +0000
+--- Makefile.orig	2013-05-12 10:44:56.539975000 +0000
 +++ Makefile
-@@ -16,21 +16,12 @@ USE_XZ=		yes
+@@ -16,21 +16,13 @@ USE_XZ=		yes
  USE_PYTHON=	2.6+
  USE_LDCONFIG=	yes
  ALL_TARGET=	native
@@ -8,6 +8,7 @@
 +MAKE_ENV+=	GYPFLAGS=-DOS=freebsd
 +MAKE_ENV+=	library=shared
 +USE_GCC=	4.7
++CFLAGS+=	-D__FreeBSD__=1
  
  .include <bsd.port.pre.mk>
  
