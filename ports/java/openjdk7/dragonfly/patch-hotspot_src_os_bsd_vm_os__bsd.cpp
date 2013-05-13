@@ -1,5 +1,5 @@
---- hotspot/src/os/bsd/vm/os_bsd.cpp.orig	2012-12-28 09:28:25.057970000 +0100
-+++ hotspot/src/os/bsd/vm/os_bsd.cpp	2012-12-28 09:31:16.085492000 +0100
+--- hotspot/src/os/bsd/vm/os_bsd.cpp.orig	2013-05-13 10:51:23.798105000 +0000
++++ hotspot/src/os/bsd/vm/os_bsd.cpp
 @@ -131,7 +131,7 @@
  # include <inttypes.h>
  # include <sys/ioctl.h>
@@ -9,16 +9,7 @@
  # include <elf.h>
  #endif
  
-@@ -452,7 +452,7 @@
-  *        7: The default directories, normally /lib and /usr/lib.
-  */
- #ifndef DEFAULT_LIBPATH
--#define DEFAULT_LIBPATH "/lib:/usr/lib"
-+#define DEFAULT_LIBPATH "/lib:/usr/lib:/usr/local/lib"
- #endif
- 
- #define EXTENSIONS_DIR  "/lib/ext"
-@@ -3668,7 +3668,7 @@
+@@ -3668,7 +3668,7 @@ OSReturn os::set_native_priority(Thread*
  #ifdef __OpenBSD__
    // OpenBSD pthread_setprio starves low priority threads
    return OS_OK;
@@ -27,7 +18,7 @@
    int ret = pthread_setprio(thread->osthread()->pthread_id(), newpri);
  #elif defined(__APPLE__) || defined(__NetBSD__)
    struct sched_param sp;
-@@ -3696,7 +3696,7 @@
+@@ -3696,7 +3696,7 @@ OSReturn os::get_native_priority(const T
    }
  
    errno = 0;
