@@ -1,0 +1,18 @@
+--- Makefile.orig	2013-05-12 09:11:15.346607000 +0000
++++ Makefile
+@@ -3,6 +3,7 @@
+ 
+ PORTNAME=	gcc-aux
+ PORTVERSION=	${SNAPSHOT}
++PORTREVISION=	1
+ CATEGORIES=	lang
+ MASTER_SITES=	http://downloads.dragonlace.net/src/:boot \
+ 		${MASTER_SITE_GCC}
+@@ -289,6 +290,7 @@ test-c:
+ 
+ do-install:
+ 	cd ${BUILDDIR} && ${SETENV} ${ADA_MAKE_ENV} ${GMAKE} install-strip DESTDIR=${DESTINY}
++	cd ${DESTINY}${PREFIX}; ${FIND} * -type d -empty -print | xargs rmdir
+ 	${CP} -pR ${DESTINY}${PREFIX}/ ${PREFIX}/
+ 
+ post-install:
