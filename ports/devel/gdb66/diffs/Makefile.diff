@@ -1,0 +1,31 @@
+--- Makefile.orig	2013-05-14 15:24:38.464670000 +0000
++++ Makefile
+@@ -32,7 +32,7 @@ CONFIGURE_ARGS=	--program-suffix=${PORTV
+ 		--enable-tui --with-libiconv-prefix=${LOCALBASE}
+ CFLAGS:=	${CFLAGS:C/ +$//}	# blanks at EOL creep in sometimes
+ CFLAGS+=	-DRL_NO_COMPAT
+-EXCLUDE=	dejagnu expect readline sim texinfo intl
++EXCLUDE=	dejagnu expect sim texinfo intl
+ EXTRACT_AFTER_ARGS=	${EXCLUDE:S/^/--exclude /}
+ VER=	${PORTVERSION:S/.//}
+ PLIST_SUB=	VER=${VER}
+@@ -79,19 +79,6 @@ CONFLICTS+=	gdb-insight*
+ BROKEN=		Does not configure on ia64 or powerpc
+ .endif
+ 
+-.if ${ARCH} == "amd64"
+-CONFIGURE_TARGET=	x86_64-portbld-freebsd${OSREL}
+-.endif
+-
+-post-patch:
+-	@${REINPLACE_CMD} -e 's/$$/ [GDB v${PORTVERSION} for FreeBSD]/' \
+-		${WRKSRC}/gdb/version.in
+-	@${REINPLACE_CMD} -e 's/^READLINE/#READLINE/' \
+-		-e 's/^readline/#readline/' \
+-		-e 's,^LIBICONV =.*,LIBICONV=-L${LOCALBASE}/lib -liconv,' \
+-		${WRKSRC}/gdb/Makefile.in
+-	${ECHO} 'READLINE = -lreadline' >> ${WRKSRC}/gdb/Makefile.in
+-
+ do-install:
+ 	${INSTALL_PROGRAM} ${WRKSRC}/gdb/gdb ${PREFIX}/bin/gdb${VER}
+ 	${LN} ${PREFIX}/bin/gdb${VER} ${PREFIX}/bin/gdbtui${VER}
