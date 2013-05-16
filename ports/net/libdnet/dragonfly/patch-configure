@@ -31,7 +31,7 @@
  
 -freebsd*)
 +dragonfly*|freebsd*)
-   objformat=`test -x /usr/bin/objformat && /usr/bin/objformat || echo elf`
+   objformat=`test -x /usr/bin/objformat && /usr/bin/objformat || echo aout`
    version_type=freebsd-$objformat
    case $version_type in
 @@ -10083,7 +10083,7 @@ if test -z "$aix_libpath"; then aix_libp
@@ -58,7 +58,7 @@
  
 -freebsd*)
 +dragonfly*|freebsd*)
-   objformat=`test -x /usr/bin/objformat && /usr/bin/objformat || echo elf`
+   objformat=`test -x /usr/bin/objformat && /usr/bin/objformat || echo aout`
    version_type=freebsd-$objformat
    case $version_type in
 @@ -13928,7 +13928,7 @@ if test -z "$aix_libpath"; then aix_libp
@@ -76,7 +76,7 @@
  
 -freebsd*)
 +dragonfly*|freebsd*)
-   objformat=`test -x /usr/bin/objformat && /usr/bin/objformat || echo elf`
+   objformat=`test -x /usr/bin/objformat && /usr/bin/objformat || echo aout`
    version_type=freebsd-$objformat
    case $version_type in
 @@ -16226,7 +16226,7 @@ if test -z "$aix_libpath"; then aix_libp
@@ -94,6 +94,6 @@
  
 -freebsd*)
 +dragonfly*|freebsd*)
-   objformat=`test -x /usr/bin/objformat && /usr/bin/objformat || echo elf`
+   objformat=`test -x /usr/bin/objformat && /usr/bin/objformat || echo aout`
    version_type=freebsd-$objformat
    case $version_type in
