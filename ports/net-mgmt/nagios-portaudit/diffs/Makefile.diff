@@ -6,7 +6,7 @@
  
 -OPTIONS=	PORTAUDIT "Enable portaudit check" ON \
 -		PORTUPGRADE "Enable portupgrade check" ON \
-+#OPTIONS=	PORTAUDIT "Enable portaudit check" ON \
++#OPTIONS=	PORTAUDIT "Enable portaudit check" ON
 +OPTIONS=	PORTUPGRADE "Enable portupgrade check" ON \
  		PORTUPGRADE_DEVEL "Use portupgrade-devel" OFF
  
