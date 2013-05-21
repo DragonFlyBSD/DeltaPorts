@@ -1,6 +1,6 @@
---- Makefile.orig	2013-05-07 19:23:28.574248000 +0000
-+++ Makefile
-@@ -26,6 +26,7 @@ CPPFLAGS+=	-I${LOCALBASE}/include
+--- /usr/ports/print/cups-base/Makefile	2013-05-03 18:36:39.000000000 +0200
++++ Makefile	2013-05-20 22:48:36.000000000 +0200
+@@ -26,6 +26,7 @@
  LDFLAGS+=	-L${LOCALBASE}/lib
  DSOFLAGS=	-Wl,-rpath,${PREFIX}/lib -L${PREFIX}/lib ${LDFLAGS}
  CONFIGURE_ENV=	DSOFLAGS="${DSOFLAGS}"
@@ -8,7 +8,15 @@
  CONFIGURE_ARGS+=	--localstatedir=/var			\
  			--disable-slp				\
  			--disable-gssapi			\
-@@ -72,6 +73,7 @@ CUPS_SUFFIX=	-base
+@@ -44,7 +45,6 @@
+ CUPS_CACHEDIR?=	/var/db/cups
+ CUPS_SPOOLDIR=	/var/spool/cups
+ CUPS_SOCKET?=	/var/run/cups.sock
+-CUPS_PDFTOPS?=	${LOCALBASE}/libexec/xpdf/pdftops
+ WRKSRC=		${WRKDIR}/${PORTNAME}-${DISTVERSION}
+ 
+ # file, dir ownership
+@@ -72,6 +72,7 @@
  CONFLICTS+=	cupsddk-*
  OPTIONS_DEFINE=	GNUTLS LIBPAPER PHP PYTHON PAM LDAP DBUS LIBUSB XDG_OPEN GHOSTSCRIPT XPDF AVAHI MDNSRESPONDER
  OPTIONS_DEFAULT=	LIBPAPER GHOSTSCRIPT
@@ -16,7 +24,7 @@
  NO_OPTIONS_SORT=	yes
  .endif
  
-@@ -98,7 +100,8 @@ LIB_DEPENDS+=	cups:${PORTSDIR}/${PKGCATE
+@@ -98,7 +99,8 @@
  # force build if old cups is installed.
  BUILD_DEPENDS+=	cups-client${PKGNAMESUFFIX2}>=${PORTVERSION}:${PORTSDIR}/${PKGCATEGORY}/cups-client
  COMMENT2=	Library cupsimage
@@ -26,7 +34,7 @@
  INSTALL_WRKSRC=	${WRKSRC}/filter
  PLIST=		${MASTERDIR}/pkg-plist.image
  USE_LDCONFIG=	yes
-@@ -221,12 +224,11 @@ RUN_DEPENDS+=		xdg-open:${PORTSDIR}/deve
+@@ -221,12 +223,11 @@
  .endif
  
  .if !defined(CUPS_CLIENT) && !defined(CUPS_IMAGE) && ${PORT_OPTIONS:MLIBUSB}
@@ -41,7 +49,16 @@
  
  .if defined(CUPS_CLIENT)
  MAN1=	cups-config.1
-@@ -385,9 +387,8 @@ post-install:
+@@ -286,7 +287,7 @@
+ .endif
+ 
+ post-patch:
+-.if ${ARCH} == "amd64"
++.if ${ARCH} == "x86_64"
+ 	@${REINPLACE_CMD} -e 's|@PIEFLAGS@||' ${WRKSRC}/Makedefs.in
+ .endif
+ .if ${PORT_OPTIONS:MMDNSRESPONDER}
+@@ -385,9 +386,8 @@
  .elif defined(CUPS_IMAGE)
  	${INSTALL_DATA} ${WRKSRC}/cups/raster.h ${PREFIX}/include/cups/
  .else
