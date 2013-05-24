@@ -1,6 +1,6 @@
---- /usr/ports/print/cups-base/Makefile	2013-05-03 18:36:39.000000000 +0200
-+++ Makefile	2013-05-20 22:48:36.000000000 +0200
-@@ -26,6 +26,7 @@
+--- Makefile.orig	2013-05-24 10:32:10.904360000 +0000
++++ Makefile
+@@ -26,6 +26,7 @@ CPPFLAGS+=	-I${LOCALBASE}/include
  LDFLAGS+=	-L${LOCALBASE}/lib
  DSOFLAGS=	-Wl,-rpath,${PREFIX}/lib -L${PREFIX}/lib ${LDFLAGS}
  CONFIGURE_ENV=	DSOFLAGS="${DSOFLAGS}"
@@ -8,7 +8,7 @@
  CONFIGURE_ARGS+=	--localstatedir=/var			\
  			--disable-slp				\
  			--disable-gssapi			\
-@@ -44,7 +45,6 @@
+@@ -44,7 +45,6 @@ CUPS_ETCDIR=	${PREFIX}/etc/cups
  CUPS_CACHEDIR?=	/var/db/cups
  CUPS_SPOOLDIR=	/var/spool/cups
  CUPS_SOCKET?=	/var/run/cups.sock
@@ -16,7 +16,7 @@
  WRKSRC=		${WRKDIR}/${PORTNAME}-${DISTVERSION}
  
  # file, dir ownership
-@@ -72,6 +72,7 @@
+@@ -72,6 +72,7 @@ CUPS_SUFFIX=	-base
  CONFLICTS+=	cupsddk-*
  OPTIONS_DEFINE=	GNUTLS LIBPAPER PHP PYTHON PAM LDAP DBUS LIBUSB XDG_OPEN GHOSTSCRIPT XPDF AVAHI MDNSRESPONDER
  OPTIONS_DEFAULT=	LIBPAPER GHOSTSCRIPT
@@ -24,7 +24,7 @@
  NO_OPTIONS_SORT=	yes
  .endif
  
-@@ -98,7 +99,8 @@
+@@ -98,7 +99,8 @@ LIB_DEPENDS+=	cups:${PORTSDIR}/${PKGCATE
  # force build if old cups is installed.
  BUILD_DEPENDS+=	cups-client${PKGNAMESUFFIX2}>=${PORTVERSION}:${PORTSDIR}/${PKGCATEGORY}/cups-client
  COMMENT2=	Library cupsimage
@@ -34,7 +34,7 @@
  INSTALL_WRKSRC=	${WRKSRC}/filter
  PLIST=		${MASTERDIR}/pkg-plist.image
  USE_LDCONFIG=	yes
-@@ -221,12 +223,11 @@
+@@ -221,12 +223,11 @@ RUN_DEPENDS+=		xdg-open:${PORTSDIR}/deve
  .endif
  
  .if !defined(CUPS_CLIENT) && !defined(CUPS_IMAGE) && ${PORT_OPTIONS:MLIBUSB}
@@ -49,16 +49,7 @@
  
  .if defined(CUPS_CLIENT)
  MAN1=	cups-config.1
-@@ -286,7 +287,7 @@
- .endif
- 
- post-patch:
--.if ${ARCH} == "amd64"
-+.if ${ARCH} == "x86_64"
- 	@${REINPLACE_CMD} -e 's|@PIEFLAGS@||' ${WRKSRC}/Makedefs.in
- .endif
- .if ${PORT_OPTIONS:MMDNSRESPONDER}
-@@ -385,9 +386,8 @@
+@@ -385,9 +386,8 @@ post-install:
  .elif defined(CUPS_IMAGE)
  	${INSTALL_DATA} ${WRKSRC}/cups/raster.h ${PREFIX}/include/cups/
  .else
