@@ -1,6 +1,15 @@
---- bsd.database.mk.orig	2012-11-17 06:54:17.000000000 +0100
-+++ bsd.database.mk	2012-12-30 11:57:27.399405000 +0100
-@@ -57,7 +57,7 @@
+--- bsd.database.mk.orig	2013-05-29 22:41:08.000000000 +0000
++++ bsd.database.mk
+@@ -43,7 +43,7 @@ Database_Include_MAINTAINER=	ports@FreeB
+ #				  currently installed version.  Fall back to default if
+ #				  necessary (PostgreSQL-9.0 = 90).
+ # DEFAULT_PGSQL_VER
+-#				- PostgreSQL default version, currently 90.
++#				- PostgreSQL default version, currently 92.
+ # WANT_PGSQL_VER
+ #				- Maintainer can set an arbitrary version of PostgreSQL to
+ #				  always build this port with (overrides WITH_PGSQL_VER).
+@@ -57,7 +57,7 @@ Database_Include_MAINTAINER=	ports@FreeB
  #				  If no version is given (by the maintainer via the port or
  #				  by the user via defined variable), try to find the
  #				  currently installed version.  Fall back to default if
@@ -9,7 +18,7 @@
  # INVALID_BDB_VER
  #				- This variable can be defined when the port does not
  #				  support one or more versions of Berkeley DB.
-@@ -73,14 +73,14 @@
+@@ -73,14 +73,14 @@ Database_Include_MAINTAINER=	ports@FreeB
  #				- Use the highest installed version of Berkeley DB.
  # BDB_LIB_NAME
  #				- This variable is automatically set to the name of the
@@ -27,20 +36,28 @@
  # BDB_LIB_DIR
  #				- This variable is automatically set to the location of
  #				  the Berkeley DB library directory.
-@@ -312,9 +312,9 @@
+@@ -196,7 +196,7 @@ IGNORE=		cannot install: unknown MySQL v
+ 
+ .if defined(USE_PGSQL)
+ VALID_PGSQL_VER=	83 84 90 91 92
+-DEFAULT_PGSQL_VER?=	90
++DEFAULT_PGSQL_VER?=	92
+ PGSQL83_LIBVER=		5
+ PGSQL84_LIBVER=		5
+ PGSQL90_LIBVER=		5
+@@ -336,9 +336,9 @@ USE_BDB=	${WITH_BDB_VER}
  .endif
  _WANT_BDB_VER=	${USE_BDB}
  
 -# Assume the default bdb version as 41
--.if ${USE_BDB:tl} == "yes"
--_WANT_BDB_VER=	41+
 +# Assume the default bdb version as 48
-+.if ${USE_BDB:tl} == "yes"
+ .if ${USE_BDB:tl} == "yes"
+-_WANT_BDB_VER=	41+
 +_WANT_BDB_VER=	48
  .endif
  
  # Detect bdb version
-@@ -362,8 +362,8 @@
+@@ -386,8 +386,8 @@ _BDB_VER=	${dbx}
  .   endif
  .  endfor
  .  if ${_BDB_VER} == "no"
