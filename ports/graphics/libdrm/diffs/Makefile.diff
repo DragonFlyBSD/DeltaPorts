@@ -1,11 +1,11 @@
---- Makefile.orig	2013-03-04 01:13:41.314208000 +0100
-+++ Makefile	2013-03-04 01:14:24.151492000 +0100
-@@ -58,8 +58,7 @@
+--- Makefile.orig	2013-06-02 23:03:07.338183000 +0000
++++ Makefile
+@@ -83,8 +83,7 @@ PLIST_SUB+=	RADEON_DRIVERS="@comment "
  .endif
  
  pre-patch:
 -	@${REINPLACE_CMD} 's|{libdir}/pkgconfig|{prefix}/libdata/pkgconfig|g; \
--			   12661s/x86_/amd/g' \
+-			   s,i?86|x86_64),i?86|amd64|x86_64),g' \
 +	@${REINPLACE_CMD} 's|{libdir}/pkgconfig|{prefix}/libdata/pkgconfig|g;' \
  		${WRKSRC}/configure
  
