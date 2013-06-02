@@ -1,14 +1,5 @@
---- bsd.ruby.mk.orig	2013-02-25 02:46:22.000000000 +0000
+--- bsd.ruby.mk.orig	2013-06-02 20:18:58.829994000 +0000
 +++ bsd.ruby.mk
-@@ -132,7 +132,7 @@ Ruby_Include_MAINTAINER=	ruby@FreeBSD.or
- # RUBY_ELISPDIR		- Installation path for emacs lisp files.
- #
- 
--RUBY_DEFAULT_VER?=	1.8
-+RUBY_DEFAULT_VER?=	1.9
- 
- RUBY_VER?=		${RUBY_DEFAULT_VER}
- 
 @@ -204,7 +204,7 @@ RUBY_DISTVERSION?=	${RUBY_RELVERSION}-p$
  
  RUBY_WRKSRC=		${WRKDIR}/ruby-${RUBY_DISTVERSION}
