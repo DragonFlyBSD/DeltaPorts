@@ -1,10 +1,11 @@
---- Makefile.orig	2013-05-12 10:44:56.539975000 +0000
+--- Makefile.orig	2013-06-02 23:15:19.697311000 +0000
 +++ Makefile
-@@ -16,21 +16,13 @@ USE_XZ=		yes
+@@ -16,21 +16,14 @@ USE_XZ=		yes
  USE_PYTHON=	2.6+
  USE_LDCONFIG=	yes
  ALL_TARGET=	native
 -MAKE_ARGS=	library=shared
++MAKE_ARGS=	strictaliasing=off
 +MAKE_ENV+=	GYPFLAGS=-DOS=freebsd
 +MAKE_ENV+=	library=shared
 +USE_GCC=	4.7
@@ -17,7 +18,7 @@
 -MAKE_ENV+=	LINK=clang++
 -CFLAGS+=	-Wno-unused-private-field
 -.if ${_CLANG} >= 33
--CFLAGS+=	-Wno-nested-anon-types
+-CFLAGS+=	-Wno-nested-anon-types -Wno-unused-function
 -.endif
 -.else
 -MAKE_ARGS+=	strictaliasing=off
