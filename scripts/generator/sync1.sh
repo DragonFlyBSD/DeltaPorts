@@ -28,6 +28,7 @@ done
 checkdir DELTA
 checkdir DPORTS
 checkdir FPORTS
+checkdir MERGED
 checkdir POTENTIAL
 
 usage ()
@@ -130,6 +131,7 @@ else
 		merge "${1}" "PORT"
 	elif [ "${ML}" = "LOCK" ]; then
 		# Locked - Copy from DPorts
+		mkdir -p ${POTENTIAL}/${1}
 		cpdup -VV -i0 ${DPORTS}/${1} ${POTENTIAL}/${1}
 	elif [ "${ML}" = "MASK" ]; then
 		# clear any existing data
@@ -141,3 +143,5 @@ else
 		echo "Nothing done"
 	fi
 fi
+
+[ -d ${MERGED}/${1} ] && cpdup -VV -i0 ${POTENTIAL}/${1}/ ${MERGED}/${1}/
