@@ -52,6 +52,7 @@ diffs:
 	Directory that contains "diff" files.  For example, distinfo.diff
 	would modify the ports distinfo file and pkg-plist.diff would modify
 	the pkg-plist file.
+	The file names in this directory have to end with ".diff" .
 
 Makefile.DragonFly:
 	This Makefile is included after the Port Makefile.  It is used
