@@ -1,0 +1,11 @@
+--- Makefile.orig	2013-05-11 17:58:55.000000000 +0000
++++ Makefile
+@@ -36,7 +36,7 @@ MAN1=	coq-tex.1 coq_makefile.1 coqc.1 co
+ .include <bsd.port.options.mk>
+ 
+ .if ${PORT_OPTIONS:MDOCS}
+-USE_TEX=	latex:build
++USE_TEX=	latex:build dvipsk:build
+ BUILD_DEPENDS+=	hevea:${PORTSDIR}/textproc/hevea \
+ 		${LOCALBASE}/share/texmf/tex/latex/ucs/utf8x.def:${PORTSDIR}/print/latex-ucs
+ PORTDOCS=	*
