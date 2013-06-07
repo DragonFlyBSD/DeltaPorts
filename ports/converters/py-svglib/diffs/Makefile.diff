@@ -1,0 +1,19 @@
+--- Makefile.orig	2013-05-03 21:56:56.000000000 +0000
++++ Makefile
+@@ -3,7 +3,7 @@
+ 
+ PORTNAME=	svglib
+ PORTVERSION=	0.6.3
+-PORTREVISION=	1
++PORTREVISION=	2
+ CATEGORIES=	converters python
+ MASTER_SITES=	CHEESESHOP \
+ 		http://www.dinu-gherman.net/tmp/
+@@ -12,7 +12,6 @@ PKGNAMEPREFIX=	${PYTHON_PKGNAMEPREFIX}
+ MAINTAINER=	wen@FreeBSD.org
+ COMMENT=	An Library For Reading And Converting SVG
+ 
+-BROKEN=		Does not fetch
+ 
+ RUN_DEPENDS=	${PYTHON_PKGNAMEPREFIX}reportlab2>0:${PORTSDIR}/print/py-reportlab2
+ 
