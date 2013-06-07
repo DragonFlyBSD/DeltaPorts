@@ -1,0 +1,11 @@
+--- Makefile.orig	2013-05-28 09:27:19.000000000 +0000
++++ Makefile
+@@ -28,7 +28,7 @@ OPTIONS_DEFINE=	DOCS
+ 
+ .include <bsd.port.options.mk>
+ 
+-.if(${OSVERSION} >= 1000024)
++.if ${OPSYS} == FreeBSD && ${OSVERSION} >= 1000024
+ CCISCLANG!=	${CC} --version | ${HEAD} -1 | ${GREP} 'clang'
+ .endif
+ 
