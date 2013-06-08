@@ -1,0 +1,12 @@
+--- Makefile.orig	2013-06-02 21:41:25.000000000 +0000
++++ Makefile
+@@ -21,7 +21,8 @@ LIB_DEPENDS=	freetype:${PORTSDIR}/print/
+ 
+ USE_GMAKE=	yes
+ MAKE_ARGS+=	build=release prefix=${PREFIX} verbose=1 mandir=${PREFIX}/man \
+-		XCFLAGS=-I${LOCALBASE}/include
++		XCFLAGS="-I${LOCALBASE}/include -I${LOCALBASE}/include/freetype2" \
++		XLIBS="-lXext -lX11 -L${LOCALBASE}/lib"
+ USES=		pkgconfig
+ USE_XORG=	x11 xext
+ MAN1=		mupdf.1 mutool.1 mudraw.1
