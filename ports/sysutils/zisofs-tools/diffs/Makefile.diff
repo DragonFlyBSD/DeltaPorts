@@ -1,0 +1,11 @@
+--- Makefile.orig	2013-04-28 20:01:07.000000000 +0000
++++ Makefile
+@@ -13,7 +13,7 @@ COMMENT=	User utilities for zisofs
+ 
+ PORTDOCS=	CHANGES COPYING INSTALL MRULES README
+ 
+-BROKEN=		checksum mismatch
++#BROKEN=		checksum mismatch
+ 
+ USE_AUTOTOOLS=	autoconf
+ USE_BZIP2=	yes
