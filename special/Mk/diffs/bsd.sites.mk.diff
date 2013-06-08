@@ -1,4 +1,4 @@
---- bsd.sites.mk.orig	2013-05-10 12:39:23.221655000 +0000
+--- bsd.sites.mk.orig	2013-06-08 20:54:28.575212000 +0000
 +++ bsd.sites.mk
 @@ -218,18 +218,10 @@ MASTER_SITE_EASYSW+= \
  
@@ -22,3 +22,11 @@
  .endif
  
  .if !defined(IGNORE_MASTER_SITE_EXIM)
+@@ -1457,7 +1449,6 @@ MASTER_SITE_XORG+= \
+ .if !defined(IGNORE_MASTER_SITE_KERNEL_ORG)
+ MASTER_SITE_KERNEL_ORG+= \
+ 	http://kernel.org/pub/%SUBDIR%/ \
+-	http://ftp.ntu.edu.tw/%SUBDIR%/ \
+ 	http://ftp.sunet.se/pub/Linux/kernel.org/%SUBDIR%/ \
+ 	http://ftp.yandex.ru/pub/%SUBDIR%/ \
+ 	http://ftp.heanet.ie/pub/%SUBDIR%/ \
