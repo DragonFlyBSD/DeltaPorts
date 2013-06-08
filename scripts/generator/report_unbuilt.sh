@@ -30,7 +30,7 @@ checkdir DPORTS
 
 usage ()
 {
-   echo "'report_unbuilt <jail-portrees>'"
+   echo "command is 'report_unbuilt <jail-portrees>'"
    exit 1
 }
 
@@ -50,7 +50,7 @@ fi
 portdirs=$(cd ${DPORTS}; find * -type d -depth 1 -maxdepth 1 | sort | grep -vE ${EXCLUDE})
 for portdir in ${portdirs}; do
     cd ${DPORTS}/${portdir}
-    PN=$(make -V PKGNAME).txz
+    PN=$(make PYTHON_DEFAULT_VERSION=2.7 -V PKGNAME).txz
     FULLPATH=${PKGDIR}/${PN}
     if [ ! -f "${FULLPATH}" ]; then
         echo ${portdir}
