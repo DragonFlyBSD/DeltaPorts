@@ -1,4 +1,4 @@
---- Makefile.orig	2013-05-13 09:08:35.885903000 +0000
+--- Makefile.orig	2013-06-09 14:24:14.874781000 +0000
 +++ Makefile
 @@ -15,10 +15,13 @@ MASTER_SITES=	http://download.java.net/o
  		http://icedtea.classpath.org/download/drops/:jaxws \
@@ -50,7 +50,7 @@
  		MAKEFLAGS="" \
  		ALT_BOOTDIR="${BOOTSTRAPJDKDIR}" \
  		ALT_FREETYPE_HEADERS_PATH="${LOCALBASE}/include" \
-@@ -99,10 +104,7 @@ MAKE_ENV+=	LANG="C" \
+@@ -99,13 +104,14 @@ MAKE_ENV+=	LANG="C" \
  		BUILD_NUMBER="b${PORT_BUILD_NUMBER}"
  
  MAKE_ENV+=	HOTSPOT_BUILD_JOBS=${MAKE_JOBS_NUMBER}
@@ -62,7 +62,14 @@
  
  .include <bsd.port.options.mk>
  
-@@ -114,23 +116,7 @@ MAKE_ENV+=	ALT_OBJCOPY="/nonexistent"
++.if ${OPSYS} == DragonFly && ${DFLYVERSION} > 300500
++BUILD_DEPENDS+=	${LOCALBASE}/lib/compat/libc.so.7:${PORTSDIR}/misc/compat34x
++.endif
++
+ .if empty(PORT_OPTIONS:MDEBUG)
+ MAKE_ENV+=	ALT_OBJCOPY="/nonexistent"
+ .endif
+@@ -114,23 +120,7 @@ MAKE_ENV+=	ALT_OBJCOPY="/nonexistent"
  RUN_DEPENDS+=  ${LOCALBASE}/share/java/zi:${PORTSDIR}/java/java-zoneinfo
  .endif
  
@@ -87,7 +94,7 @@
  
  post-patch:
  	@${REINPLACE_CMD} "s|%%LOCALBASE%%|${LOCALBASE}|" \
-@@ -157,8 +143,8 @@ do-install:
+@@ -157,8 +147,8 @@ do-install:
  		${CHOWN} -h -R ${BINOWN}:${BINGRP} $$dir; \
  		${FIND} $$dir -type f -exec ${CHMOD} ${BINMODE} "{}" \; ; \
  	done
