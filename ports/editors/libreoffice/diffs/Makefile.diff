@@ -1,4 +1,4 @@
---- Makefile.orig	2013-06-02 23:25:06.566544000 +0000
+--- Makefile.orig	2013-05-23 15:35:17.000000000 +0000
 +++ Makefile
 @@ -18,6 +18,7 @@ BUILD_DEPENDS=	p5-Archive-Zip>=0:${PORTS
  		${LOCALBASE}/bin/gperf:${PORTSDIR}/devel/gperf \
@@ -16,16 +16,15 @@
  		mspub-0.0:${PORTSDIR}/print/libmspub \
  		nss3.1:${PORTSDIR}/security/nss \
  		clucene-core:${PORTSDIR}/textproc/clucene \
-@@ -50,6 +52,8 @@ LIB_DEPENDS=	icutu:${PORTSDIR}/devel/icu
+@@ -50,6 +52,7 @@ LIB_DEPENDS=	icutu:${PORTSDIR}/devel/icu
  		wpd-0.9.9:${PORTSDIR}/textproc/libwpd \
  		wps-0.2.2:${PORTSDIR}/textproc/libwps \
  		mythes-1.2.0:${PORTSDIR}/textproc/mythes \
-+		odbc.2:${PORTSDIR}/databases/unixODBC \
 +		cups:${PORTSDIR}/print/cups-client \
  		rdf.0:${PORTSDIR}/textproc/redland
  
  RUN_DEPENDS=	${LOCALBASE}/lib/X11/fonts/dejavu/DejaVuSans.ttf:${PORTSDIR}/x11-fonts/dejavu \
-@@ -64,16 +68,16 @@ MAKE_JOBS_SAFE=	yes
+@@ -64,16 +67,16 @@ MAKE_JOBS_SAFE=	yes
  
  GNU_CONFIGURE=	yes
  USE_AUTOTOOLS=	autoconf aclocal
@@ -46,7 +45,7 @@
  
  DISTFILES+=	${PORTNAME}-${LOVERSION}${EXTRACT_SUFX}
  DISTFILES+=	${PORTNAME}-help-${LOVERSION}${EXTRACT_SUFX}
-@@ -91,75 +95,55 @@ CONFIGURE_ENV=		DMAKE=${LOCALBASE}/bin/d
+@@ -91,75 +94,56 @@ CONFIGURE_ENV=		DMAKE=${LOCALBASE}/bin/d
  			PYTHON_CFLAGS="`${PYTHON_VERSION}-config --cflags`" \
  			PYTHON_LIBS="`${PYTHON_VERSION}-config --libs`"
  
@@ -155,6 +154,7 @@
  			--without-myspell-dicts \
 -			--without-system-mozilla
 +			--without-ppds \
++			--without-system-odbc \
 +			--without-system-jars \
 +			--without-system-npapi-headers
  
