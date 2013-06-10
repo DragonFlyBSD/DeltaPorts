@@ -50,7 +50,7 @@
  		MAKEFLAGS="" \
  		ALT_BOOTDIR="${BOOTSTRAPJDKDIR}" \
  		ALT_FREETYPE_HEADERS_PATH="${LOCALBASE}/include" \
-@@ -99,13 +104,14 @@ MAKE_ENV+=	LANG="C" \
+@@ -99,13 +104,18 @@ MAKE_ENV+=	LANG="C" \
  		BUILD_NUMBER="b${PORT_BUILD_NUMBER}"
  
  MAKE_ENV+=	HOTSPOT_BUILD_JOBS=${MAKE_JOBS_NUMBER}
@@ -63,13 +63,17 @@
  .include <bsd.port.options.mk>
  
 +.if ${OPSYS} == DragonFly && ${DFLYVERSION} > 300500
++.  if ${ARCH} == x86_64
++BOOTSTRAP_DISTFILE= bootstrap-openjdk-7.21.11.dfly-3.5-${JDK_ARCH}.tar.xz
++.  else
 +BUILD_DEPENDS+=	${LOCALBASE}/lib/compat/libc.so.7:${PORTSDIR}/misc/compat34x
++.  endif
 +.endif
 +
  .if empty(PORT_OPTIONS:MDEBUG)
  MAKE_ENV+=	ALT_OBJCOPY="/nonexistent"
  .endif
-@@ -114,23 +120,7 @@ MAKE_ENV+=	ALT_OBJCOPY="/nonexistent"
+@@ -114,23 +124,7 @@ MAKE_ENV+=	ALT_OBJCOPY="/nonexistent"
  RUN_DEPENDS+=  ${LOCALBASE}/share/java/zi:${PORTSDIR}/java/java-zoneinfo
  .endif
  
@@ -94,7 +98,7 @@
  
  post-patch:
  	@${REINPLACE_CMD} "s|%%LOCALBASE%%|${LOCALBASE}|" \
-@@ -157,8 +147,8 @@ do-install:
+@@ -157,8 +151,8 @@ do-install:
  		${CHOWN} -h -R ${BINOWN}:${BINGRP} $$dir; \
  		${FIND} $$dir -type f -exec ${CHMOD} ${BINMODE} "{}" \; ; \
  	done
