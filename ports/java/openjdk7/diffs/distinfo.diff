@@ -1,6 +1,6 @@
 --- distinfo.orig	2013-06-10 07:32:13.182393000 +0000
 +++ distinfo
-@@ -2,3 +2,9 @@ SHA256 (openjdk-7u6-fcs-src-b24-09_aug_2
+@@ -2,3 +2,11 @@ SHA256 (openjdk-7u6-fcs-src-b24-09_aug_2
  SIZE (openjdk-7u6-fcs-src-b24-09_aug_2012.zip) = 103796914
  SHA256 (apache-ant-1.8.4-bin.zip) = d49d60bc0468279125e4a0db4d9b6637cab342a4bd736c90c0b71865b26c1479
  SIZE (apache-ant-1.8.4-bin.zip) = 8043520
@@ -10,3 +10,5 @@
 +SIZE (bootstrap-openjdk-7.9.05_2.dfly-3.3-i386.tar.xz) = 21676584
 +SHA256 (bootstrap-openjdk-7.21.11.dfly-3.5-amd64.tar.xz) = f891bab203444745a15ab927eb22ab73ef3d3ffe320acbdaa47fa9fbaf4f1991
 +SIZE (bootstrap-openjdk-7.21.11.dfly-3.5-amd64.tar.xz) = 20011172
++SHA256 (bootstrap-openjdk-7.21.11.dfly-3.5-i386.tar.xz) = 34c2be58609d52da5a4660d49033ab1d16387e253c67a91e2469da8273a74b36
++SIZE (bootstrap-openjdk-7.21.11.dfly-3.5-i386.tar.xz) = 21142004
