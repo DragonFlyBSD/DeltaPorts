@@ -21,7 +21,8 @@ fire_port_build_failure() {
     local ARG1A=$(dirname ${4})
     local ARG1B=$(basename ${ARG1A})
     local ARG1C=$(basename ${4})
-    /usr/local/etc/hooks_poudriere/failure_status.sh "${ARG1B}/${ARG1C}" "${ARG2}"
+    local BASE=/usr/local/poudriere/data/logs/bulk/${2}/${3}
 
+    /usr/local/etc/hooks_poudriere/failure_status.sh "${ARG1B}/${ARG1C}" "${ARG2}" "${BASE}"
   fi
 }
