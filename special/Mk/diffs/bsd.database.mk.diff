@@ -1,4 +1,4 @@
---- bsd.database.mk.orig	2013-06-02 20:50:38.602395000 +0000
+--- bsd.database.mk.orig	2013-06-14 09:06:22.923151000 +0000
 +++ bsd.database.mk
 @@ -43,7 +43,7 @@ Database_Include_MAINTAINER=	ports@FreeB
  #				  currently installed version.  Fall back to default if
@@ -36,16 +36,16 @@
  # BDB_LIB_DIR
  #				- This variable is automatically set to the location of
  #				  the Berkeley DB library directory.
-@@ -191,7 +191,7 @@ IGNORE=		cannot install: unknown MySQL v
+@@ -190,7 +190,7 @@ IGNORE=		cannot install: unknown MySQL v
  
  .if defined(USE_PGSQL)
- VALID_PGSQL_VER=	83 84 90 91 92 93
+ VALID_PGSQL_VER=	84 90 91 92 93
 -DEFAULT_PGSQL_VER?=	90
 +DEFAULT_PGSQL_VER?=	92
  PGSQL83_LIBVER=		5
  PGSQL84_LIBVER=		5
  PGSQL90_LIBVER=		5
-@@ -332,9 +332,9 @@ USE_BDB=	${WITH_BDB_VER}
+@@ -334,9 +334,9 @@ USE_BDB=	${WITH_BDB_VER}
  .endif
  _WANT_BDB_VER=	${USE_BDB}
  
@@ -57,7 +57,7 @@
  .endif
  
  # Detect bdb version
-@@ -382,8 +382,8 @@ _BDB_VER=	${dbx}
+@@ -384,8 +384,8 @@ _BDB_VER=	${dbx}
  .   endif
  .  endfor
  .  if ${_BDB_VER} == "no"
