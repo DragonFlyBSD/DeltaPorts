@@ -29,6 +29,9 @@ for opt in ${confopts}; do
 done
 
 checkdir DELTA
+checkdir DPORTS
+
+[ -d ${DPORTS}/${1} ] && echo "${1}" >> ${3}/PSF.log
 
 mkdir -p ${DELTA}/ports/${1}
 chown automaton:automaton ${DELTA}/ports/${1}
