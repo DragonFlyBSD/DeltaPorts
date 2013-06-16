@@ -171,7 +171,7 @@ while read fileline; do
       elif [ "${ML}" = "LOCK" ]; then
          # Locked and merged entry doesn't exist.  Copy from DPorts
          mkdir -p ${MERGED}/${val_1}
-         cpdup -VV -i0 ${DPORTS}/${val_1}/ ${MERGED}/${val_1}/
+         cpdup -VV -i0 ${DPORTS}/${val_1} ${MERGED}/${val_1}
       elif [ "${ML}" = "MASK" ]; then
          # remove if existed previously
          rm -rf ${MERGED}/${val_1}
