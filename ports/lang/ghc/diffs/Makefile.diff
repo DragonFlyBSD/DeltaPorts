@@ -56,7 +56,7 @@
 +EXTRA_PATCHES=	${DFLY_PATCHDIR}/nopatch-ghc-${BOOT_GHC_VERSION}-boot_rts_package.conf.in
 +
 +.  if ${DFLYVERSION} > 300500
-+LIB_DEPENDS+=	${LOCALBASE}/lib/compat/libm.so.3:${PORTSDIR}/misc/compat34x
++LIB_DEPENDS+=	m.3:${PORTSDIR}/misc/compat34x
 +.  endif
 +
 +.else
