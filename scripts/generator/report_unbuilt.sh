@@ -49,6 +49,13 @@ fi
 
 portdirs=$(cd ${DPORTS}; find * -type d -depth 1 -maxdepth 1 | sort | grep -vE ${EXCLUDE})
 for portdir in ${portdirs}; do
+
+    case ${portdir} in
+	devel/cross-gdb | devel/cross-binutils | x11/gnome2)
+	    continue ;;
+	sysutils/e2fsprogs)
+	    continue ;;
+    esac
     cd ${DPORTS}/${portdir}
     PN=$(make PYTHON_DEFAULT_VERSION=2.7 -V PKGNAME).txz
     FULLPATH=${PKGDIR}/${PN}
