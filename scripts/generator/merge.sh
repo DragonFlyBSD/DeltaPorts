@@ -224,3 +224,10 @@ done
 
 umount ${WORKAREA}
 rm -rf ${WORKAREA}
+
+LANGS=	arabic chinese french german hebrew hungarian japanese korean
+LANGS+=	polish portuguese russian ukrainian vietnamese
+
+for lang in LANGS; do
+  cp ${FPORTS}/${lang}/Makefile.inc ${MERGED}/${lang}/Makefile.inc
+done
