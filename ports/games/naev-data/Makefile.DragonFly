@@ -1,0 +1,1 @@
+IGNORE=	games/naev does not build right now, so skip until it does
