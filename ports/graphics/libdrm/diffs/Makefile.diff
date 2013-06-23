@@ -1,5 +1,14 @@
---- Makefile.orig	2013-06-02 23:03:07.338183000 +0000
+--- Makefile.orig	2013-05-25 18:16:44.000000000 +0000
 +++ Makefile
+@@ -35,7 +35,7 @@ OPTIONS_DEFAULT+=	MANPAGES
+ 
+ .if ${PORT_OPTIONS:MKMS}
+ CONFIGURE_ARGS+=--enable-libkms
+-EXTRA_PATCHES+=	${FILESDIR}/extra-xf86drmMode.c
++EXTRA_PATCHES+=	${DFLY_PATCHDIR}/extra-xf86drmMode.c
+ PLIST_SUB+=	KMS=""
+ .else
+ PLIST_SUB+=	KMS="@comment "
 @@ -83,8 +83,7 @@ PLIST_SUB+=	RADEON_DRIVERS="@comment "
  .endif
  
