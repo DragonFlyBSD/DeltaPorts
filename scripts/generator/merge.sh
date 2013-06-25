@@ -154,16 +154,18 @@ split () {
    val_2=${2}
 }
 
-awk -F \| "${AWKCMD1}" ${INDEX} | sort > ${TMPFILE}
+awk -F \| "${AWKCMD1}" ${INDEX} > ${TMPFILE}
 
 echo "searching for custom dports..."
-CUSTOM=$(cd ${DELTA}/ports && find * -type f -name STATUS -exec grep -l DPORT {} \;)
+CUSTOM=$(cd ${DELTA}/ports && find * -type f -name STATUS -exec grep -lE '(DPORT|LOCK)' {} \;)
 for myport in ${CUSTOM}; do
    fixed=$(echo ${myport}| awk -F \/ "${AWKCMD3}")
    fpc=$(grep "${fixed} " ${TMPFILE})
    [ -z "${fpc}" ] && echo "${fixed} 0" >> ${TMPFILE}
 done
 echo "done"
+
+sort -u ${TMPFILE} > ${TMPFILE}.sorted
 
 while read fileline; do
    split ${fileline}
@@ -198,9 +200,9 @@ while read fileline; do
          merge ${val_1} ${ML}
       fi
    fi
-done < ${TMPFILE}
+done < ${TMPFILE}.sorted
 
-rm -f ${TMPFILE}
+rm -f ${TMPFILE} ${TMPFILE}.sorted
 
 rm -rf ${MERGED}/Tools
 folders=$(cd ${FPORTS} && find Tools -type d | sort)
@@ -242,8 +244,8 @@ done
 umount ${WORKAREA}
 rm -rf ${WORKAREA}
 
-LANGS=	arabic chinese french german hebrew hungarian japanese korean \
-	polish portuguese russian ukrainian vietnamese
+LANGS="arabic chinese french german hebrew hungarian japanese korean \
+	polish portuguese russian ukrainian vietnamese"
 
 for lang in ${LANGS}; do
   cp ${FPORTS}/${lang}/Makefile.inc ${MERGED}/${lang}/Makefile.inc
