@@ -54,25 +54,50 @@ if [ -z "${checkfirst}" ]; then
    mount -t tmpfs tmpfs ${WORKAREA}
 fi
 
+# arg 1 is the original directory
+get_legacy ()
+{
+   local PATT=':(U|L)|amd64|utmpx'
+   local RET=$(cd ${1} && grep -lE ${PATT} Makefile *\.common 2>/dev/null)
+   echo ${RET}
+}
+
+# arg 1 is the worksite directory, replacements are in place
+# arg 2+ are legacy array elements
+transform ()
+{
+   local WORK=${1}
+   local item
+   shift
+
+   while [ $# -gt 0 ]; do
+      item=${1}
+      shift
+      cat ${WORK}/${item} | sed -E \
+         -e 's|:L}|:tl}|g' \
+         -e 's|:U}|:tu}|g' \
+         -e 's|:U:(.*)}|:tu:\1}|g' \
+         -e 's|:L:(.*)}|:tl:\1}|g' \
+	 -e 's|OPTIONS_DEFINE_amd64|OPTIONS_DEFINE_x86_64|g' \
+	 -e '/^BROKEN=.*utmpx/s|BROKEN|#BROKEN|' \
+         -e '/ARCH}.*(amd64|"amd64")/s|amd64|x86_64|g' \
+         > ${WORK}/${item}.filtered
+      mv ${WORK}/${item}.filtered ${WORK}/${item}
+   done
+}
+
 fast_and_filtered ()
 {
-   ORIG=${1}
-   DEST=${2}
-   LEGACY=$(cd ${ORIG} && grep -lE ':(U|L)|ARCH}.*(amd64|"amd64")' Makefile *\.common 2>/dev/null)
+   local ORIG=${1}
+   local DEST=${2}
+   local LEGACY=$(get_legacy ${ORIG})
+
    if [ -z "${LEGACY}" ]; then
       cpdup -VV -i0 ${ORIG} ${DEST}
    else
       rm -rf ${WORKAREA}/*
       cp -pr ${ORIG}/* ${WORKAREA}/
-      for item in ${LEGACY}; do
-         cat ${ORIG}/${item} | sed -E \
-            -e 's|:L}|:tl}|g' \
-            -e 's|:U}|:tu}|g' \
-            -e 's|:U:(.*)}|:tu:\1}|g' \
-            -e 's|:L:(.*)}|:tl:\1}|g' \
-            -e '/ARCH}.*(amd64|"amd64")/s|amd64|x86_64|g' \
-            > ${WORKAREA}/${item}
-      done
+      transform ${WORKAREA} ${LEGACY}
       cpdup -VV -i0 ${WORKAREA} ${DEST}
    fi
 }
@@ -85,6 +110,8 @@ merge()
    local MD=0
    local DDIFF=0
    local DDRAG=0
+   local LEGACY
+
    rm -rf ${M1}
    mkdir -p ${M1}
 
@@ -115,18 +142,8 @@ merge()
           done
           find ${WORKAREA} -type f -name \*\.orig -exec rm {} \;
         fi
-	LEGACY=$(cd ${WORKAREA} && grep -lE ':(U|L)|ARCH}.*(amd64|"amd64")' Makefile *\.common 2>/dev/null)
-        for item in ${LEGACY}; do
-          cat ${WORKAREA}/${item} | sed -E \
-             -e 's|:L}|:tl}|g' \
-             -e 's|:U}|:tu}|g' \
-             -e 's|:U:(.*)}|:tu:\1}|g' \
-             -e 's|:L:(.*)}|:tl:\1}|g' \
-             -e '/ARCH}.*(amd64|"amd64")/s|amd64|x86_64|g' \
-             > ${WORKAREA}/${item}.filtered
-          rm ${WORKAREA}/${item}
-          mv ${WORKAREA}/${item}.filtered ${WORKAREA}/${item}
-        done
+        LEGACY=$(get_legacy ${WORKAREA})
+        transform ${WORKAREA} ${LEGACY}
         cpdup -VV -i0 ${WORKAREA} ${M1}
       fi
    fi
