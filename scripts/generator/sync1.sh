@@ -46,7 +46,7 @@ PORT=${DELTA}/ports/${1}
 get_legacy ()
 {
    local PATT=':(U|L)|amd64|utmpx'
-   local RET=(cd ${1} && grep -lE ${PATT} Makefile *\.common 2>/dev/null)
+   local RET=$(cd ${1} && grep -lE ${PATT} Makefile *\.common 2>/dev/null)
    echo ${RET}
 }
 
@@ -56,10 +56,11 @@ transform ()
 {
    local WORK=${1}
    local item
-   shift 1
+   shift
 
    while [ $# -gt 0 ]; do
       item=${1}
+      shift
       cat ${WORK}/${item} | sed -E \
          -e 's|:L}|:tl}|g' \
          -e 's|:U}|:tu}|g' \
