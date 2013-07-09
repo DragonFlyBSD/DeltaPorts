@@ -1,3 +1,4 @@
 PORT
-Last attempt: 4.9.6
+Last attempt: 
+make: stopped in /usr/local/poudriere/jails/master/build/01/usr/dports/devel/nspr
 Last success: 4.9.6
