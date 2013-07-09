@@ -1,0 +1,28 @@
+--- Makefile.orig	2013-07-09 18:29:03.167357000 +0000
++++ Makefile
+@@ -10,12 +10,13 @@ MAINTAINER=	gecko@FreeBSD.org
+ COMMENT=	A platform-neutral API for system level and libc like functions
+ 
+ WRKSRC=		${WRKDIR}/${DISTNAME}/nspr/build
++CONFIGURE_WRKSRC= ${WRKSRC}/..
+ 
++USE_AUTOTOOLS=	autoconf213
+ USE_LDCONFIG=	yes
+ USE_GMAKE=	yes
+ MAKE_JOBS_SAFE=	yes
+ GNU_CONFIGURE=	yes
+-CONFIGURE_SCRIPT=../configure
+ CONFIGURE_ARGS=	--srcdir=${WRKSRC:H}
+ 
+ MAKE_ENV=	DIST=${WRKSRC}/dist
+@@ -32,6 +33,10 @@ BROKEN=		Does not compile on arm
+ CONFIGURE_ARGS+=--disable-debug
+ .endif
+ 
++do-configure:
++	cd ${WRKSRC} && ${CONFIGURE_ENV} \
++		../${CONFIGURE_SCRIPT} ${CONFIGURE_ARGS}
++
+ do-install:
+ 	${MKDIR} ${PREFIX}/include/nspr
+ 	${TAR} -C ${WRKSRC}/dist/include --dereference -cf - . | \
