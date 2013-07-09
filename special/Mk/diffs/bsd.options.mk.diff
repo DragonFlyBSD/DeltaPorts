@@ -1,11 +1,11 @@
---- bsd.options.mk.orig	2013-06-14 09:09:43.360886000 +0000
+--- bsd.options.mk.orig	2013-07-09 15:09:03.960596000 +0000
 +++ bsd.options.mk
-@@ -49,6 +49,8 @@
+@@ -75,6 +75,8 @@
  .if !defined(OPTIONSMKINCLUDED)
  OPTIONSMKINCLUDED=	bsd.options.mk
  
 +OPTIONS_EXCLUDE+=	ALSA
 +
+ OPTIONS_NAME?=	${PKGORIGIN:S/\//_/}
  OPTIONSFILE?=	${PORT_DBDIR}/${UNIQUENAME}/options
- 
- GLOBAL_OPTIONS=	DOCS NLS EXAMPLES IPV6
+ OPTIONS_FILE?=	${PORT_DBDIR}/${OPTIONS_NAME}/options

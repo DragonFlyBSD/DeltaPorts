@@ -1,4 +1,4 @@
---- bsd.port.mk.orig	2013-06-02 21:19:28.173072000 +0000
+--- bsd.port.mk.orig	2013-07-09 15:23:46.231828000 +0000
 +++ bsd.port.mk
 @@ -43,7 +43,8 @@ FreeBSD_MAINTAINER=	portmgr@FreeBSD.org
  #				  makefile is being used on.  Automatically set to
@@ -10,7 +10,7 @@
  #
  # This is the beginning of the list of all variables that need to be
  # defined in a port, listed in order that they should be included
-@@ -576,6 +577,12 @@ FreeBSD_MAINTAINER=	portmgr@FreeBSD.org
+@@ -573,6 +574,12 @@ FreeBSD_MAINTAINER=	portmgr@FreeBSD.org
  #				  Default: ${MASTERDIR}/scripts
  # FILESDIR		- A directory containing any miscellaneous additional files.
  #				  Default: ${MASTERDIR}/files
@@ -23,7 +23,7 @@
  # PKGDIR		- A directory containing any package creation files.
  #				  Default: ${MASTERDIR}
  # SRC_BASE		- The root of the src tree.  (Some ports require this to get
-@@ -863,7 +870,7 @@ FreeBSD_MAINTAINER=	portmgr@FreeBSD.org
+@@ -860,7 +867,7 @@ FreeBSD_MAINTAINER=	portmgr@FreeBSD.org
  # CONFIGURE_TARGET
  #				- The name of target to call when GNU_CONFIGURE is
  #				  defined.
@@ -32,7 +32,7 @@
  # GNU_CONFIGURE_PREFIX
  #				- The directory passed as prefix to the configure script if
  #				  GNU_CONFIGURE is set.
-@@ -1123,19 +1130,23 @@ FreeBSD_MAINTAINER=	portmgr@FreeBSD.org
+@@ -1120,20 +1127,24 @@ FreeBSD_MAINTAINER=	portmgr@FreeBSD.org
  # These need to be absolute since we don't know how deep in the ports
  # tree we are and thus can't go relative.  They can, of course, be overridden
  # by individual Makefiles or local system make configuration.
@@ -51,6 +51,8 @@
  INDEXDIR?=		${PORTSDIR}
  SRC_BASE?=		/usr/src
  USESDIR?=		${PORTSDIR}/Mk/Uses
+-LIB_DIRS?=		/lib /usr/lib ${LOCALBASE}/lib
++LIB_DIRS?=		/usr/lib ${LOCALBASE}/lib
  
 -# make sure bmake treats -V as expected 
 -.MAKE.EXPAND_VARIABLES= yes
@@ -62,7 +64,7 @@
  
  .include "${PORTSDIR}/Mk/bsd.commands.mk"
  
-@@ -1192,22 +1203,18 @@ OPSYS!=	${UNAME} -s
+@@ -1190,22 +1201,18 @@ OPSYS!=	${UNAME} -s
  OSREL!=	${UNAME} -r | ${SED} -e 's/[-(].*//'
  .endif
  
@@ -93,7 +95,7 @@
  .endif
  .endif
  
-@@ -1332,7 +1339,7 @@ PKGVERSION=	${PORTVERSION:C/[-_,]/./g}${
+@@ -1337,7 +1344,7 @@ PKGVERSION=	${PORTVERSION:C/[-_,]/./g}${
  PKGNAME=	${PKGNAMEPREFIX}${PORTNAME}${PKGNAMESUFFIX}-${PKGVERSION}
  DISTNAME?=	${PORTNAME}-${DISTVERSIONPREFIX}${DISTVERSION:C/:(.)/\1/g}${DISTVERSIONSUFFIX}
  
@@ -102,7 +104,7 @@
  
  DOCSDIR?=		${PREFIX}/share/doc/${PORTNAME}
  EXAMPLESDIR?=		${PREFIX}/share/examples/${PORTNAME}
-@@ -1365,7 +1372,7 @@ EXTRACT_SUFX?=			.run
+@@ -1370,7 +1377,7 @@ EXTRACT_SUFX?=			.run
  .else
  EXTRACT_SUFX?=			.tar.gz
  .endif
@@ -111,7 +113,7 @@
  TEMPLATES?=		${PORTSDIR}/Templates
  
  PATCHDIR?=		${MASTERDIR}/files
-@@ -1534,7 +1541,7 @@ check-makefile::
+@@ -1543,7 +1550,7 @@ check-makefile::
  
  _POSTMKINCLUDED=	yes
  
@@ -120,7 +122,7 @@
  .if !defined(IGNORE_MASTER_SITE_GITHUB) && defined(USE_GITHUB)
  WRKSRC?=		${WRKDIR}/${GH_ACCOUNT}-${GH_PROJECT}-${GH_COMMIT}
  .endif
-@@ -1561,7 +1568,9 @@ PLIST_REINPLACE_STOPDAEMON=s!^@stopdaemo
+@@ -1573,7 +1580,9 @@ PLIST_REINPLACE_STOPDAEMON=s!^@stopdaemo
  
  # kludge to strip trailing whitespace from CFLAGS;
  # sub-configure will not # survive double space
@@ -131,7 +133,7 @@
  
  .if defined(WITHOUT_CPU_CFLAGS)
  .if defined(_CPUCFLAGS)
-@@ -1668,9 +1677,6 @@ EXTRACT_DEPENDS+=	lha:${PORTSDIR}/archiv
+@@ -1683,15 +1692,22 @@ EXTRACT_DEPENDS+=	lha:${PORTSDIR}/archiv
  .if defined(USE_ZIP)
  EXTRACT_DEPENDS+=	${LOCALBASE}/bin/unzip:${PORTSDIR}/archivers/unzip
  .endif
@@ -141,7 +143,6 @@
  .if defined(USE_MAKESELF)
  EXTRACT_DEPENDS+=	unmakeself:${PORTSDIR}/archivers/unmakeself
  .endif
-@@ -1681,6 +1687,16 @@ CONFIGURE_ENV+=	MAKE=${GMAKE}
  
  .if defined(USE_GCC) || defined(USE_FORTRAN)
  .include "${PORTSDIR}/Mk/bsd.gcc.mk"
@@ -158,22 +159,7 @@
  .endif
  
  .if defined(USE_BINUTILS) && !defined(DISABLE_BINUTILS)
-@@ -1902,14 +1918,8 @@ X_FONTS_TYPE1_PORT=	${PORTSDIR}/x11-font
- X_FONTS_ALIAS_PORT=	${PORTSDIR}/x11-fonts/font-alias
- 
- .if defined(USE_IMAKE)
--.if (${OSVERSION} >= 900506 && ${OSVERSION} < 1000000) || \
--	${OSVERSION} >= 1000010
--CONFIGURE_ENV+=		IMAKECPP="gcpp"
--MAKE_ENV+=		IMAKECPP="gcpp"
--.else
- CONFIGURE_ENV+=		IMAKECPP="${CPP}"
- MAKE_ENV+=		IMAKECPP="${CPP}"
--.endif
- MAKE_FLAGS?=		CC="${CC}" CXX="${CXX}"
- BUILD_DEPENDS+=		imake:${X_IMAKE_PORT}
- .endif
-@@ -2171,7 +2181,7 @@ CFLAGS:=	${CFLAGS:N-std=*} -std=${USE_CS
+@@ -2164,7 +2180,7 @@ CFLAGS:=	${CFLAGS:N-std=*} -std=${USE_CS
  _MAKE_JOBS=		#
  .else
  .if defined(MAKE_JOBS_SAFE) || defined(FORCE_MAKE_JOBS)
@@ -181,8 +167,8 @@
 +MAKE_JOBS_NUMBER?=	`${SYSCTL} -n hw.ncpu`
  _MAKE_JOBS?=		-j${MAKE_JOBS_NUMBER}
  .if defined(FORCE_MAKE_JOBS) && !defined(MAKE_JOBS_SAFE)
- BUILD_FAIL_MESSAGE+=	"You have chosen to use multiple make jobs (parallelization) for all ports.  This port was not tested for this setting.  Please remove FORCE_MAKE_JOBS and retry the build before reporting the failure to the maintainer."
-@@ -2880,7 +2890,7 @@ LATEST_LINK?=		${PKGBASE}
+ BUILD_FAIL_MESSAGE+=	You have chosen to use multiple make jobs (parallelization) for all ports.  This port was not tested for this setting.  Please remove FORCE_MAKE_JOBS and retry the build before reporting the failure to the maintainer.
+@@ -2863,7 +2879,7 @@ LATEST_LINK?=		${PKGBASE}
  PKGLATESTFILE=		${PKGLATESTREPOSITORY}/${LATEST_LINK}${PKG_SUFX}
  
  CONFIGURE_SCRIPT?=	configure
@@ -191,7 +177,7 @@
  CONFIGURE_TARGET:=	${CONFIGURE_TARGET:S/--build=//}
  CONFIGURE_LOG?=		config.log
  
-@@ -2916,6 +2926,8 @@ SET_LATE_CONFIGURE_ARGS= \
+@@ -2899,6 +2915,8 @@ SET_LATE_CONFIGURE_ARGS= \
  SCRIPTS_ENV+=	CURDIR=${MASTERDIR} DISTDIR=${DISTDIR} \
  		  WRKDIR=${WRKDIR} WRKSRC=${WRKSRC} PATCHDIR=${PATCHDIR} \
  		  SCRIPTDIR=${SCRIPTDIR} FILESDIR=${FILESDIR} \
@@ -200,7 +186,7 @@
  		  PORTSDIR=${PORTSDIR} PREFIX=${PREFIX} LOCALBASE=${LOCALBASE} 
  
  .if defined(BATCH)
-@@ -2956,7 +2968,7 @@ __pmlinks!=	${ECHO_CMD} '${MLINKS:S/	/ /
+@@ -2939,7 +2957,7 @@ __pmlinks!=	${ECHO_CMD} '${MLINKS:S/	/ /
  		else \
  			{ print "broken"; exit; } \
  	} \
@@ -209,7 +195,7 @@
  .if ${__pmlinks:Mbroken} == "broken"
  check-makevars::
  	@${ECHO_MSG} "${PKGNAME}: Makefile error: unable to parse MLINKS."
-@@ -2967,7 +2979,7 @@ _MLINKS=	${_MLINKS_PREPEND}
+@@ -2950,7 +2968,7 @@ _MLINKS=	${_MLINKS_PREPEND}
  .for lang in ${MANLANG:S%^%man/%:S%^man/""$%man%}
  .for ___pmlinks in ${__pmlinks}
  .for __lang in ${lang}
@@ -218,7 +204,7 @@
  .endfor
  .endfor
  .endfor
-@@ -3096,7 +3108,7 @@ _DESKTOPDIR_REL=
+@@ -3079,7 +3097,7 @@ _DESKTOPDIR_REL=
  
  # Check the machine architectures
  .if defined(ONLY_FOR_ARCHS)
@@ -227,7 +213,7 @@
  .if ${ARCH:M${__ARCH}} != ""
  __ARCH_OK?=		1
  .endif
-@@ -3106,7 +3118,7 @@ __ARCH_OK?=		1
+@@ -3089,7 +3107,7 @@ __ARCH_OK?=		1
  .endif
  
  .if defined(NOT_FOR_ARCHS)
@@ -236,7 +222,7 @@
  .if ${ARCH:M${__NARCH}} != ""
  .undef __ARCH_OK
  .endif
-@@ -3115,9 +3127,9 @@ __ARCH_OK?=		1
+@@ -3098,9 +3116,9 @@ __ARCH_OK?=		1
  
  .if !defined(__ARCH_OK)
  .if defined(ONLY_FOR_ARCHS)
@@ -248,7 +234,7 @@
  .endif
  IGNORE+=	while you are running ${ARCH}
  
-@@ -3231,12 +3243,11 @@ all:
+@@ -3214,12 +3232,11 @@ all:
  	  DISTDIR=${DISTDIR} WRKDIR=${WRKDIR} WRKSRC=${WRKSRC} \
  	  PATCHDIR=${PATCHDIR} SCRIPTDIR=${SCRIPTDIR} \
  	  FILESDIR=${FILESDIR} PORTSDIR=${PORTSDIR} PREFIX=${PREFIX} \
@@ -263,7 +249,7 @@
  all: build
  .endif
  
-@@ -3377,14 +3388,7 @@ check-vulnerable:
+@@ -3360,14 +3377,7 @@ check-vulnerable:
  .if !defined(DISABLE_VULNERABILITIES) && !defined(PACKAGE_BUILDING)
  	@if [ -f "${AUDITFILE}" ]; then \
  		if [ -n "${WITH_PKGNG}" ]; then \
@@ -279,16 +265,16 @@
  		elif [ -x "${LOCALBASE}/sbin/portaudit" ]; then \
  			vlist=`${LOCALBASE}/sbin/portaudit -X 14 "${PKGNAME}" \
  				2>&1 | grep -vE '^[0-9]+ problem\(s\) found.' \
-@@ -3611,7 +3615,7 @@ do-patch:
- .endif
- 	@if [ -d ${PATCHDIR} ]; then \
+@@ -3597,7 +3607,7 @@ do-patch:
+ 	@set -e ;\
+ 	if [ -d ${PATCHDIR} ]; then \
  		if [ "`${ECHO_CMD} ${PATCHDIR}/patch-*`" != "${PATCHDIR}/patch-*" ]; then \
 -			${ECHO_MSG} "===>  Applying ${OPSYS} patches for ${PKGNAME}" ; \
 +			${ECHO_MSG} "===>  Applying ports patches for ${PKGNAME}" ; \
  			PATCHES_APPLIED="" ; \
  			for i in ${PATCHDIR}/patch-*; do \
  				case $$i in \
-@@ -3636,6 +3640,33 @@ do-patch:
+@@ -3622,6 +3632,33 @@ do-patch:
  			done; \
  		fi; \
  	fi
@@ -322,7 +308,7 @@
  .endif
  
  .if !target(run-autotools-fixup)
-@@ -4681,6 +4712,8 @@ fetch-url-list-int:
+@@ -4644,6 +4681,8 @@ fetch-url-list-int:
  				SORTED_MASTER_SITES_CMD_TMP="${SORTED_MASTER_SITES_DEFAULT_CMD}" ; \
  			fi ; \
  			for site in `eval $$SORTED_MASTER_SITES_CMD_TMP ${_RANDOMIZE_SITES}`; do \
@@ -331,7 +317,7 @@
  				case $${file} in \
  				*/*)	args="-o $${file} $${site}$${file}";; \
  				*)		args=$${site}$${file};; \
-@@ -4711,6 +4744,8 @@ fetch-url-list-int:
+@@ -4674,6 +4713,8 @@ fetch-url-list-int:
  				SORTED_PATCH_SITES_CMD_TMP="${SORTED_PATCH_SITES_DEFAULT_CMD}" ; \
  			fi ; \
  			for site in `eval $$SORTED_PATCH_SITES_CMD_TMP ${_RANDOMIZE_SITES}`; do \
@@ -340,7 +326,7 @@
  				case $${file} in \
  				*/*)	args="-o $${file} $${site}$${file}";; \
  				*)		args=$${site}$${file};; \
-@@ -4959,14 +4994,14 @@ _DEPEND_ALWAYS=	0
+@@ -4923,14 +4964,14 @@ _DEPEND_ALWAYS=	0
  
  _INSTALL_DEPENDS=	\
  		if [ X${USE_PACKAGE_DEPENDS} != "X" ]; then \
@@ -357,7 +343,7 @@
  					${WRKDIR}/pkg-static add $${subpkgfile}; \
  					${RM} -f ${WRKDIR}/pkg-static; \
  				else \
-@@ -4976,6 +5011,7 @@ _INSTALL_DEPENDS=	\
+@@ -4940,6 +4981,7 @@ _INSTALL_DEPENDS=	\
  			  (cd $$dir; ${MAKE} -DINSTALLS_DEPENDS $$target $$depends_args) ; \
  			fi; \
  		else \
@@ -365,7 +351,7 @@
  			(cd $$dir; ${MAKE} -DINSTALLS_DEPENDS $$target $$depends_args) ; \
  		fi; \
  		${ECHO_MSG} "===>   Returning to build of ${PKGNAME}";
-@@ -5148,7 +5184,7 @@ ALL-DEPENDS-LIST= \
+@@ -5139,7 +5181,7 @@ ALL-DEPENDS-LIST= \
  				continue;				\
  			fi;						\
  			${ECHO_CMD} $$d;				\
@@ -374,7 +360,7 @@
  				${ECHO_MSG} "${PKGNAME}: \"$$d\" erroneous -- dependency list incomplete" >&2; \
  				continue;				\
  			fi;						\
-@@ -5178,7 +5214,7 @@ CLEAN-DEPENDS-FULL= \
+@@ -5169,7 +5211,7 @@ CLEAN-DEPENDS-FULL= \
  				${ECHO_MSG} "${PKGNAME}: \"$$d\" non-existent -- dependency list incomplete" >&2; \
  				continue;				\
  			fi;						\
@@ -383,7 +369,7 @@
  				${ECHO_MSG} "${PKGNAME}: \"$$d\" erroneous -- dependency list incomplete" >&2; \
  				continue;				\
  			fi;						\
-@@ -5217,7 +5253,7 @@ CLEAN-DEPENDS-LIMITED= \
+@@ -5208,7 +5250,7 @@ CLEAN-DEPENDS-LIMITED= \
  				${ECHO_MSG} "${PKGNAME}: \"$$d\" non-existent -- dependency list incomplete" >&2; \
  				continue;				\
  			fi;						\
@@ -392,7 +378,7 @@
  				${ECHO_MSG} "${PKGNAME}: \"$$d\" erroneous -- dependency list incomplete" >&2; \
  				continue;				\
  			fi;						\
-@@ -5308,7 +5344,7 @@ FETCH_LIST?=	for i in $$deps; do \
+@@ -5299,7 +5341,7 @@ FETCH_LIST?=	for i in $$deps; do \
  			else	\
  				continue;	\
  			fi;;	\
@@ -401,7 +387,7 @@
  				continue;	\
  			fi;;	\
  		esac;	\
-@@ -5603,10 +5639,15 @@ _SUB_LIST_TEMP=	${SUB_LIST:S/$/!g/:S/^/
+@@ -5594,10 +5636,15 @@ _SUB_LIST_TEMP=	${SUB_LIST:S/$/!g/:S/^/
  apply-slist:
  .if defined(SUB_FILES)
  .for file in ${SUB_FILES}
@@ -420,7 +406,7 @@
  .endif
  .endfor
  .for i in pkg-message pkg-install pkg-deinstall pkg-req
-@@ -5783,15 +5824,11 @@ add-plist-info:
+@@ -5774,15 +5821,11 @@ add-plist-info:
  .if defined(INFO)
  .for i in ${INFO}
  	install-info --quiet ${PREFIX}/${INFO_PATH}/$i.info ${PREFIX}/${INFO_PATH}/dir
@@ -436,7 +422,7 @@
  .endfor
  .if defined(INFO_SUBDIR)
  	@${ECHO_CMD} "@unexec ${RMDIR} %D/${INFO_PATH}/${INFO_SUBDIR} 2> /dev/null || true" >> ${TMPPLIST}
-@@ -5947,6 +5984,7 @@ tags:
+@@ -5938,6 +5981,7 @@ tags:
  	OPSYS="${OPSYS:S/"/"'"'"/g:S/\$/\$\$/g:S/\\/\\\\/g}" \
  	OSREL="${OSREL:S/"/"'"'"/g:S/\$/\$\$/g:S/\\/\\\\/g}" \
  	OSVERSION="${OSVERSION:S/"/"'"'"/g:S/\$/\$\$/g:S/\\/\\\\/g}" \
