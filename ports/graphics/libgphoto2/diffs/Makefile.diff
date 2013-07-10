@@ -1,14 +1,24 @@
---- Makefile.orig	2013-05-07 19:00:23.399501000 +0000
+--- Makefile.orig	2013-07-10 12:36:05.000000000 +0000
 +++ Makefile
-@@ -36,7 +36,11 @@ PLIST_SUB+=	NLS="@comment "
- USES+=		iconv
- .endif
+@@ -23,8 +23,6 @@ LIBTOOLFILES=	configure libgphoto2_port/
+ USE_LDCONFIG=	yes
+ CONFIGURE_ENV=	LTDLINCL="-I${LOCALBASE}/include" \
+ 		LIBLTDL="-L${LOCALBASE}/lib -lltdl" \
+-		LIBUSB_CFLAGS="-I/usr/include" \
+-		LIBUSB_LIBS="-lusb"
+ 
+ PLIST_SUB=	VERSION="${PORTVERSION}" VERSION_PORT=0.8.0
+ 
+@@ -32,6 +30,12 @@ MAN3=		libgphoto2.3 libgphoto2_port.3
+ 
+ .include <bsd.port.options.mk>
  
 +.if ${OPSYS} == DragonFly
 +USES+= usb
 +.else
- CONFIGURE_ENV+=	LIBUSB_LIBS="-lusb" LIBUSB_CFLAGS="-I/usr/include"
++CONFIGURE_ENV+=	LIBUSB_LIBS="-lusb" LIBUSB_CFLAGS="-I/usr/include"
 +.endif
- 
- post-patch:
- .for file in configure libgphoto2_port/configure
++
+ .if ${PORT_OPTIONS:MNLS}
+ USES+=		gettext
+ PLIST_SUB+=	NLS=""
