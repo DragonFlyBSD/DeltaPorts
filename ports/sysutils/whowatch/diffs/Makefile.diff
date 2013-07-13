@@ -1,14 +1,10 @@
---- Makefile.orig	2013-05-31 14:53:10.000000000 +0000
+--- Makefile.orig	2013-07-13 07:59:42.140453000 +0000
 +++ Makefile
-@@ -23,11 +23,6 @@ PLIST_FILES=	bin/whowatch
+@@ -30,6 +30,6 @@ EXTRA_PATCHES=	${PATCHDIR}/utmpx-whowatc
  
- .include <bsd.port.pre.mk>
- 
--.if ${OSVERSION} > 900006
--EXTRA_PATCHES=	${PATCHDIR}/utmpx-whowatch.h \
--		${PATCHDIR}/utmpx-whowatch.c
--.endif
--
  pre-patch:
  	@${FIND} ${WRKSRC} -name 'proc????.c' | ${XARGS} ${REINPLACE_CMD} -E \
- 		-e 's/kp_.?proc\.._/ki_/ ; s/pcred\.p_//'
+-		-e 's/kp_.?proc\.._/ki_/ ; s/pcred\.p_//'
++		-e 's/kp_.?proc\.._/kp_/ ; s/pcred\.p_//'
+ 
+ .include <bsd.port.post.mk>
