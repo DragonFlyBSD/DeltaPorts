@@ -1,4 +1,4 @@
---- Makefile.orig	2013-07-09 17:33:32.172704000 +0000
+--- Makefile.orig	2013-07-13 20:43:43.651386000 +0000
 +++ Makefile
 @@ -18,6 +18,7 @@ BUILD_DEPENDS=	p5-Archive-Zip>=0:${PORTS
  		${LOCALBASE}/bin/gperf:${PORTSDIR}/devel/gperf \
@@ -8,15 +8,6 @@
  		ucpp:${PORTSDIR}/devel/ucpp \
  		vigra-config:${PORTSDIR}/graphics/vigra \
  		bash:${PORTSDIR}/shells/bash \
-@@ -25,7 +26,7 @@ BUILD_DEPENDS=	p5-Archive-Zip>=0:${PORTS
- 
- LIB_DEPENDS=	icutu:${PORTSDIR}/devel/icu \
- 		langtag:${PORTSDIR}/devel/liblangtag \
--		orcus-0.6:${PORTSDIR}/devel/liborcus \
-+		orcus-0.4:${PORTSDIR}/devel/liborcus \
- 		curl.6:${PORTSDIR}/ftp/curl \
- 		cairo.2:${PORTSDIR}/graphics/cairo \
- 		graphite2:${PORTSDIR}/graphics/graphite2 \
 @@ -37,6 +38,7 @@ LIB_DEPENDS=	icutu:${PORTSDIR}/devel/icu
  		poppler:${PORTSDIR}/graphics/poppler \
  		lpsolve55:${PORTSDIR}/math/lp_solve \
@@ -54,7 +45,7 @@
  
  DISTFILES+=	${PORTNAME}-${LOVERSION}${EXTRACT_SUFX}
  DISTFILES+=	${PORTNAME}-help-${LOVERSION}${EXTRACT_SUFX}
-@@ -92,76 +95,56 @@ CONFIGURE_ENV=		DMAKE=${LOCALBASE}/bin/d
+@@ -92,75 +95,56 @@ CONFIGURE_ENV=		DMAKE=${LOCALBASE}/bin/d
  			PYTHON_LIBS="`${PYTHON_VERSION}-config --libs`" \
  			TMPDIR=${WRKDIR}
  
@@ -162,15 +153,14 @@
  			--without-fonts \
 +			--without-java \
  			--without-myspell-dicts \
--			--without-system-mozilla
 +			--without-ppds \
 +			--without-system-odbc \
 +			--without-system-jars \
-+			--without-system-npapi-headers
++			--without-system-npapi-headers \
+ 			--without-system-mozilla
  
  MAN1=	libreoffice.1 \
- 	lobase.1 \
-@@ -177,192 +160,8 @@ MAN1=	libreoffice.1 \
+@@ -177,192 +161,8 @@ MAN1=	libreoffice.1 \
  
  MANCOMPRESSED=	yes
  
@@ -363,18 +353,7 @@
  ACLOCAL_ARGS=	-I "${WRKSRC}/m4"
  CPPFLAGS=	-I${LOCALBASE}/include
  LDFLAGS=	-L${LOCALBASE}/lib
-@@ -372,8 +171,8 @@ MAKE_ENV+=	ENVLINKFLAGS="${LDFLAGS}"
- MAKE_ENV+=	LANG=C LC_ALL=C
- MAKE_ENV+=	SED="${LOCALBASE}/bin/gsed" USE_GMAKE=1
- 
--pre-configure:
--	@${TOUCH} ${WRKSRC}/autogen.lastrun
-+do-configure:
-+	cd ${WRKSRC} && ./autogen.sh ${CONFIGURE_ARGS}
- 
- post-configure:
- 	@${TOUCH} ${WRKSRC}/src.downloaded
-@@ -408,15 +207,6 @@ post-install:
+@@ -408,15 +208,6 @@ post-install:
  	    \( -type f -o -type l \) -print >> ${PLISTF}
  .endfor
  
