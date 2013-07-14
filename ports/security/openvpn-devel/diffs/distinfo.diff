@@ -1,7 +1,0 @@
---- distinfo.orig	2013-05-21 23:32:54.000000000 +0000
-+++ distinfo
-@@ -1,2 +1,2 @@
--SHA256 (openvpn-201321.tar.gz) = ba742c571624b319a517cebfae64f1f434ff1fe556b17e7a3f80768f29fe13cf
--SIZE (openvpn-201321.tar.gz) = 1515192
-+SHA256 (openvpn-201321.tar.gz) = 4e8e9e9a1984da5c79f3fffb06fb82cae97022200601d2affced1349b1d46e12
-+SIZE (openvpn-201321.tar.gz) = 1515345
