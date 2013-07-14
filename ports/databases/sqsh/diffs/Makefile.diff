@@ -1,0 +1,11 @@
+--- Makefile.orig	2013-07-10 06:49:35.000000000 +0000
++++ Makefile
+@@ -29,7 +29,7 @@ PLIST_FILES=	bin/sqsh etc/sqshrc.default
+ .include <bsd.port.options.mk>
+ 
+ .if ${PORT_OPTIONS:MX11}
+-USES=		motif
++USES+=		motif
+ CONFIGURE_ARGS+=	--with-motif --with-x
+ .else
+ PKGNAMESUFFIX=	-nox11
