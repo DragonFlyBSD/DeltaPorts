@@ -1,0 +1,20 @@
+--- Makefile.orig	2013-07-22 22:23:24.000000000 +0000
++++ Makefile
+@@ -36,16 +36,6 @@ LIB_DEPENDS+=	gdbm:${PORTSDIR}/databases
+ LIB_DEPENDS+=	gmp:${PORTSDIR}/math/gmp
+ .endif
+ 
+-.if ${OSVERSION} >= 900000
+-# needs libobjc
+-GCCSUFFIX=42
+-CC=		gcc${GCCSUFFIX}
+-CXX=		g++${GCCSUFFIX}
+-OFC_GCC_PORT?=	lang/gcc${GCCSUFFIX}
+-TARGLIB!=	${MAKE} -C ${PORTSDIR}/${OFC_GCC_PORT} -V TARGLIB
+-LDFLAGS+=	-L${TARGLIB}
+-BUILD_DEPENDS+=	${TARGLIB}/libobjc.so:${PORTSDIR}/${OFC_GCC_PORT}
+-RUN_DEPENDS+=	${TARGLIB}/libobjc.so:${PORTSDIR}/${OFC_GCC_PORT}
+-.endif
++USE_GCC=	4.4
+ 
+ .include <bsd.port.mk>
