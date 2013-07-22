@@ -1,7 +1,0 @@
---- distinfo.orig	2013-06-08 21:54:53.820817000 +0000
-+++ distinfo
-@@ -1,2 +1,2 @@
--SHA256 (wrk-2.0.0-0-gd058222.tar.gz) = 229e032801639ba69ddf41ea69b094df08cafff7b18e0b530e54fec3a77d5a5a
--SIZE (wrk-2.0.0-0-gd058222.tar.gz) = 42036
-+SHA256 (wrk-2.0.0-0-g6fd3ee1.tar.gz) = 99253e43c075b00f5d4dd38ae546b982b13d623184816c95d7bb97314a435c5f
-+SIZE (wrk-2.0.0-0-g6fd3ee1.tar.gz) = 42520
