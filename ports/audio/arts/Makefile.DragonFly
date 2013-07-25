@@ -1,2 +1,1 @@
-MAKE_JOBS_SAFE= 	yes
 USE_PERL5_BUILD=	yes
