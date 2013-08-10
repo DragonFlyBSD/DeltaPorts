@@ -1,4 +1,4 @@
---- Makefile.orig	2013-05-24 10:32:10.904360000 +0000
+--- Makefile.orig	2013-08-10 09:44:14.941877000 +0000
 +++ Makefile
 @@ -26,6 +26,7 @@ CPPFLAGS+=	-I${LOCALBASE}/include
  LDFLAGS+=	-L${LOCALBASE}/lib
@@ -16,8 +16,8 @@
  WRKSRC=		${WRKDIR}/${PORTNAME}-${DISTVERSION}
  
  # file, dir ownership
-@@ -72,6 +72,7 @@ CUPS_SUFFIX=	-base
- CONFLICTS+=	cupsddk-*
+@@ -72,6 +72,7 @@ PORTREVISION=	1
+ CUPS_SUFFIX=	-base
  OPTIONS_DEFINE=	GNUTLS LIBPAPER PHP PYTHON PAM LDAP DBUS LIBUSB XDG_OPEN GHOSTSCRIPT XPDF AVAHI MDNSRESPONDER
  OPTIONS_DEFAULT=	LIBPAPER GHOSTSCRIPT
 +OPTIONS_EXCLUDE+=	GHOSTSCRIPT XPDF
@@ -57,6 +57,6 @@
 +	${INSTALL} -d ${PREFIX}/libexec/cups/filter
  	${INSTALL_PROGRAM} ${WRKSRC}/filter/pdftops ${PREFIX}/libexec/cups/filter/
 -.endif
- 	${LN} -s ${PREFIX}/bin/lpr ${PREFIX}/bin/lpr-cups
+ 	${LN} -sf ${PREFIX}/bin/lpr ${PREFIX}/bin/lpr-cups
  	${INSTALL} -d ${CUPS_ETCDIR}/
  	${CP} -p ${WRKSRC}/conf/snmp.conf ${WRKSRC}/conf/snmp.conf.N
