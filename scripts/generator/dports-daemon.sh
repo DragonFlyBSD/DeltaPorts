@@ -101,9 +101,15 @@ while [ 1 ]; do
          fi
       fi
       HACK=$(date -j "+Y-%m-%d %H:%M")
-      ( cd ${DPORTS} && git push --quiet )
+      ( cd ${DPORTS} && git pull --quiet --no-edit 2>/dev/null )
       if [ $? -ne 0 ]; then
-         echo "${HACK}:  git push on ${DPORTS} failed." >> ${LOGFILE}
+         echo "${HACK}:  git pull on ${DPORTS} failed." >> ${LOGFILE}
+      else
+         HACK=$(date -j "+Y-%m-%d %H:%M")
+         ( cd ${DPORTS} && git push --quiet )
+         if [ $? -ne 0 ]; then
+            echo "${HACK}:  git push on ${DPORTS} failed." >> ${LOGFILE}
+         fi
       fi
       COUNTER=0
       ESTABLISHED=$(date "+%s")
