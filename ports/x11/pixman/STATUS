@@ -1,3 +1,5 @@
 PORT
-Last attempt: 0.30.0
-Last success: 0.30.0
+Last attempt: 
+make: stopped in /usr/local/poudriere/jails/Release34/build/03/usr/dports/x11/pixman
+Last success: 
+make: stopped in /usr/local/poudriere/jails/Release34/build/03/usr/dports/x11/pixman
