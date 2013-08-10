@@ -1,4 +1,4 @@
---- Makefile.orig	2013-07-27 08:32:24.000000000 +0000
+--- Makefile.orig	2013-08-10 10:13:33.974635000 +0000
 +++ Makefile
 @@ -18,6 +18,7 @@ LICENSE=	BSD LGPL21 MPL
  LICENSE_COMB=	multi
@@ -35,29 +35,32 @@
  .if ${PORT_OPTIONS:MCODECS}
  GYP_DEFINES+=	ffmpeg_branding=Chrome
  GYP_DEFINES+=	proprietary_codecs=1
-@@ -128,12 +125,11 @@ GYP_DEFINES+=	disable_sse2=1
+@@ -128,15 +125,11 @@ GYP_DEFINES+=	disable_sse2=1
  .endif
  
  .if ${PORT_OPTIONS:MCLANG}
--.if ${OSVERSION} < 900033
- BUILD_DEPENDS+=	clang:${PORTSDIR}/lang/clang
+-.if ${OSVERSION} < 902000
+ BUILD_DEPENDS+=	${LOCALBASE}/bin/clang:${PORTSDIR}/lang/clang
+ CC=		${LOCALBASE}/bin/clang
+ CXX=		${LOCALBASE}/bin/clang++
+-.else
+-CC=		clang
+-CXX=		clang++
 -.endif
- CC=		clang
- CXX=		clang++
  GYP_DEFINES+=	clang=1
 +CXXFLAGS+=	-D__float128=void -D_GLIBCXX_PERMIT_BACKWARD_HASH=1
  .else
  USE_GCC?=	4.6+
  GYP_DEFINES+=	gcc_version=${CXX:S/g++//}
-@@ -149,6 +145,7 @@ GYP_DEFINES+=	buildtype=Official
+@@ -152,6 +145,7 @@ GYP_DEFINES+=	buildtype=Official
  .endif
  
  MAKE_ENV+=	BUILDTYPE=${BUILDTYPE} \
 +		GYPFLAGS=-DOS=freebsd \
  		GPERF=${LOCALBASE}/bin/gperf
- MAKE_JOBS_SAFE=	yes
  
-@@ -166,13 +163,15 @@ pre-everything::
+ .include <bsd.port.pre.mk>
+@@ -168,7 +162,9 @@ pre-everything::
  
  post-patch:
  	@${REINPLACE_CMD} -e "s|/usr/local|${LOCALBASE}|" \
@@ -67,14 +70,16 @@
  		${WRKSRC}/build/common.gypi \
  		${WRKSRC}/third_party/libvpx/libvpx.gyp \
  		${WRKSRC}/crypto/crypto.gyp \
- 		${WRKSRC}/v8/tools/gyp/v8.gyp \
+@@ -176,7 +172,7 @@ post-patch:
  		${WRKSRC}/v8/build/common.gypi
+ 	@${REINPLACE_CMD} -e "s|/usr/bin/gcc|${CC}|" \
+ 		${WRKSRC}/third_party/WebKit/Source/core/core.gypi
 -	@${REINPLACE_CMD} -e "s|linux|freebsd|" \
 +	@${REINPLACE_CMD} -e "s|linux|dragonfly|" \
  		${WRKSRC}/tools/gyp/pylib/gyp/generator/make.py
  	@${REINPLACE_CMD} -e "s|is_linux|(is_linux or is_bsd)|" \
  		${WRKSRC}/chrome/browser/browser_resources.grd \
-@@ -185,6 +184,12 @@ post-patch:
+@@ -189,6 +185,12 @@ post-patch:
  		${WRKSRC}/ui/base/strings/app_locale_settings_ko.xtb \
  		${WRKSRC}/ui/base/strings/app_locale_settings_ml.xtb \
  		${WRKSRC}/ui/base/strings/app_locale_settings_th.xtb
@@ -86,4 +91,4 @@
 +		${XARGS} ${REINPLACE_CMD} -e "s|'freebsd'|'dragonfly'|g"
  
  do-configure:
- 	cd ${WRKSRC} && \
+ 	cd ${WRKSRC} && CC="${CC}" CXX="${CXX}" \
