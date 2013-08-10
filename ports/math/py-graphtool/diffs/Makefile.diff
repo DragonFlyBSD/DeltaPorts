@@ -1,0 +1,11 @@
+--- Makefile.orig	2013-06-06 08:24:55.224141000 +0000
++++ Makefile
+@@ -16,7 +16,7 @@ BUILD_DEPENDS=	${PYNUMPY} \
+ 		${PYTHON_PKGNAMEPREFIX}scipy>=0.8.0:${PORTSDIR}/science/py-scipy
+ LIB_DEPENDS=	boost_python:${PORTSDIR}/devel/boost-python-libs \
+ 		boost_graph:${PORTSDIR}/devel/boost-libs \
+-		CGAL.5:${PORTSDIR}/math/cgal
++		CGAL:${PORTSDIR}/math/cgal
+ 
+ USE_BZIP2=	yes
+ USE_GCC=	4.6+
