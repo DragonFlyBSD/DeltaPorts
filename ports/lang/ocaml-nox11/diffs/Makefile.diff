@@ -1,9 +1,0 @@
---- Makefile.orig	2013-07-23 11:12:02.710329000 +0000
-+++ Makefile
-@@ -13,4 +13,6 @@ CONFLICTS=	metaocaml-[0-9]* ocaml-[0-9]*
- 
- OPTIONS_EXCLUDE=TK X11
- 
-+SFX=		-nox11
-+
- .include "${MASTERDIR}/Makefile"
