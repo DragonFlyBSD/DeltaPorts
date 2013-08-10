@@ -60,6 +60,14 @@ for k in Mk Templates; do
   cpdup -i0 ${WORKAREA}/${k} ${MERGED}/${k}
 done
 
+# port tree root
+cp ${FPORTS}/UIDs ${FPORTS}/GIDs ${MERGED}/
+diffs=$(find ${DELTA}/special/treetop/diffs -name \*\.diff)
+for difffile in ${diffs}; do
+  patch --quiet -d ${MERGED} < ${difffile}
+done
+rm ${MERGED}/*.orig
+
 umount ${WORKAREA}
 rm -rf ${WORKAREA}
 
