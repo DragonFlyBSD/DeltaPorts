@@ -1,7 +1,7 @@
---- Makefile.orig	2013-05-07 16:31:05.214385000 +0000
+--- Makefile.orig	2013-08-10 09:57:20.815909000 +0000
 +++ Makefile
-@@ -2,38 +2,39 @@
- # $FreeBSD: graphics/ocaml-images/Makefile 316614 2013-04-26 13:49:22Z bapt $
+@@ -2,34 +2,39 @@
+ # $FreeBSD: graphics/ocaml-images/Makefile 324318 2013-08-06 15:23:12Z johans $
  
  PORTNAME=	images
 -PORTVERSION=	3.0.2
@@ -27,10 +27,6 @@
  BUILD_DEPENDS=	${LOCALBASE}/share/aclocal/ocaml.m4:${PORTSDIR}/lang/ocaml-autoconf
 +BUILD_DEPENDS+=	omake:${PORTSDIR}/devel/omake
  
--DEPRECATED=	Broken for more than 6 month
--EXPIRATION_DATE=	2013-03-05
--BROKEN=		does not compile
--
 -USE_AUTOTOOLS=	aclocal autoheader automake autoconf
 -ACLOCAL_ARGS=	-I . -I ${LOCALBASE}/share/aclocal
 -AUTOMAKE_ARGS=	--add-missing
@@ -59,7 +55,7 @@
  MAKE_JOBS_UNSAFE=	yes
  
  OPTIONS_DEFINE=	PNG JPEG TIFF XPM GIF FREETYPE GHOSTSCRIPT GTK2 DOCS
-@@ -98,26 +99,14 @@ RUN_DEPENDS+=	lablgtk2:${PORTSDIR}/x11-t
+@@ -94,26 +99,14 @@ RUN_DEPENDS+=	lablgtk2:${PORTSDIR}/x11-t
  CONFIGURE_ARGS+=	--without-lablgtk2
  .endif
  
