@@ -1,0 +1,33 @@
+--- UIDs.orig	2013-08-10 10:45:19.526121000 +0000
++++ UIDs
+@@ -14,14 +14,13 @@ uucp:*:66:66::0:0:UUCP pseudo-user:/var/
+ xten:*:67:67::0:0:X-10 daemon:/usr/local/xten:/nonexistent
+ pop:*:68:6::0:0:Post Office Owner (popper):/nonexistent:/usr/sbin/nologin
+ wnn:*:69:7::0:0:Wnn:/nonexistent:/nonexistent
+-pgsql:*:70:70::0:0:PostgreSQL pseudo-user:/usr/local/pgsql:/bin/sh
+ oracle:*:71:71::0:0:Oracle:/usr/local/oracle7:/usr/sbin/nologin
+ ircd:*:72:72::0:0:IRC daemon:/nonexistent:/nonexistent
+ ircservices:*:73:73::0:0:IRC services:/nonexistent:/nonexistent
+ simscan:*:74:74::0:0:Simscan User:/nonexistent:/usr/sbin/nologin
+ ifmail:*:75:66::0:0:Ifmail user:/nonexistent:/nonexistent
+ hybserv:*:76:76::0:0:HybServ Daemon:/nonexistent:/usr/sbin/nologin
+-auditdistd:*:78:77::0:0:Auditdistd unprivileged user:/var/empty:/usr/sbin/nologin
++auditdistd:*:78:149::0:0:Auditdistd unprivileged user:/var/empty:/usr/sbin/nologin
+ virtuoso:*:79:79::0:0:Virtuoso Universal Server:/usr/local/virtuoso:/bin/sh
+ www:*:80:80::0:0:World Wide Web Owner:/nonexistent:/usr/sbin/nologin
+ alias:*:81:81::0:0:QMail user:/var/qmail/alias:/nonexistent
+@@ -90,7 +89,7 @@ webcamd:*:145:145::0:0:Webcamd user:/var
+ ventrilo:*:146:146::0:0:& server:/usr/local/ventrilo-server:/usr/sbin/nologin
+ kdm:*:147:147::0:0:KDE Display Manager:/nonexistent:/usr/sbin/nologin
+ ipv6mon:*:148:148::0:0:IPv6 Address Monitoring Daemon:/nonexistent:/usr/sbin/nologin
+-avenger:*:149:149::0:0:Mail Avenger:/var/spool/avenger:/usr/sbin/nologin
++pgsql:*:150:150::0:0:PostgreSQL pseudo-user:/usr/local/pgsql:/bin/sh
+ rbldns:*:153:153::0:0:rbldnsd pseudo-user:/nonexistent:/usr/sbin/nologin
+ trircd:*:154:154::0:0:& user:/usr/local/etc/tr-ircd:/usr/sbin/nologin
+ sfs:*:171:171::0:0:Self-Certifying File System:/nonexistent:/usr/sbin/nologin
+@@ -266,4 +265,5 @@ kippo:*:969:969::0:0:kippo user:/nonexis
+ colord:*:970:970::0:0:colord color management daemon:/nonexistent:/usr/sbin/nologin
+ shibd:*:971:971::0:0:Shibboleth SAML daemon:/nonexistent:/usr/sbin/nologin
+ plex:*:972:972::0:0:Plex Media Server:/nonexistent:/usr/sbin/nologin
++avenger:*:60149:60149::0:0:Mail Avenger:/var/spool/avenger:/usr/sbin/nologin
+ nobody:*:65534:65534::0:0:Unprivileged user:/nonexistent:/usr/sbin/nologin

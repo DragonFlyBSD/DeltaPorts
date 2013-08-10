@@ -1,0 +1,34 @@
+The 60000-60999 is reserved to resolve incompatibility from FreeBSD
+
+--- GIDs.orig	2013-08-10 10:33:46.733526000 +0000
++++ GIDs
+@@ -13,12 +13,10 @@ uucp:*:66:
+ xten:*:67:
+ dialer:*:68:
+ network:*:69:
+-pgsql:*:70:
+ ircd:*:72:
+ ircservices:*:73:
+ simscan:*:74:
+ hybserv:*:76:
+-audit:*:77:
+ virtuoso:*:79:
+ www:*:80:
+ qnofiles:*:81:
+@@ -82,7 +80,8 @@ webcamd:*:145:
+ ventrilo:*:146:
+ kdm:*:147:
+ ipv6mon:*:148:
+-avenger:*:149:
++audit:*:149:
++pgsql:*:150:
+ rbldns:*:153:
+ trircd:*:154:
+ sfs:*:171:
+@@ -259,5 +258,6 @@ kippo:*:969:
+ colord:*:970:
+ shibd:*:971:
+ plex:*:972:
++avenger:*:60149:
+ nogroup:*:65533:
+ nobody:*:65534:
