@@ -1,3 +1,5 @@
 PORT
-Last attempt: 1.36
-Last success: 1.36
+Last attempt: 
+make: stopped in /usr/local/poudriere/jails/master/build/03/usr/dports/graphics/p5-Image-Info
+Last success: 
+make: stopped in /usr/local/poudriere/jails/master/build/03/usr/dports/graphics/p5-Image-Info
