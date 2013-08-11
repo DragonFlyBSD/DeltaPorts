@@ -1,3 +1,5 @@
 PORT
-Last attempt: 0.106_5
-Last success: 0.106_5
+Last attempt: 
+make: stopped in /usr/local/poudriere/jails/master/build/01/usr/dports/emulators/xmame
+Last success: 
+make: stopped in /usr/local/poudriere/jails/master/build/01/usr/dports/emulators/xmame
