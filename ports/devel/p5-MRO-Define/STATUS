@@ -1,3 +1,5 @@
 PORT
-Last attempt: 0.01
-Last success: 0.01
+Last attempt: 
+make: stopped in /usr/local/poudriere/jails/master/build/01/usr/dports/devel/p5-MRO-Define
+Last success: 
+make: stopped in /usr/local/poudriere/jails/master/build/01/usr/dports/devel/p5-MRO-Define
