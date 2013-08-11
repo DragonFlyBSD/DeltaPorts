@@ -1,3 +1,5 @@
 PORT
-Last attempt: 0.24
-Last success: 0.24
+Last attempt: 
+make: stopped in /usr/local/poudriere/jails/master/build/02/usr/dports/devel/p5-namespace-clean
+Last success: 
+make: stopped in /usr/local/poudriere/jails/master/build/02/usr/dports/devel/p5-namespace-clean
