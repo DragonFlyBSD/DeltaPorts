@@ -1,3 +1,5 @@
 PORT
-Last attempt: 2.04
-Last success: 2.04
+Last attempt: 
+make: stopped in /usr/local/poudriere/jails/master/build/04/usr/dports/japanese/p5-Text-Kakasi
+Last success: 
+make: stopped in /usr/local/poudriere/jails/master/build/04/usr/dports/japanese/p5-Text-Kakasi
