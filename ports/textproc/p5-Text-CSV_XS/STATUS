@@ -1,3 +1,5 @@
 PORT
-Last attempt: 0.97
-Last success: 0.97
+Last attempt: 
+make: stopped in /usr/local/poudriere/jails/master/build/04/usr/dports/textproc/p5-Text-CSV_XS
+Last success: 
+make: stopped in /usr/local/poudriere/jails/master/build/04/usr/dports/textproc/p5-Text-CSV_XS
