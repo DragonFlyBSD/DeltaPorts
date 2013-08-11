@@ -1,3 +1,5 @@
 PORT
-Last attempt: 2.16_1
-Last success: 2.16_1
+Last attempt: 
+make: stopped in /usr/local/poudriere/jails/master/build/01/usr/dports/www/p5-Furl
+Last success: 
+make: stopped in /usr/local/poudriere/jails/master/build/01/usr/dports/www/p5-Furl
