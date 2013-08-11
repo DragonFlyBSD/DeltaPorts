@@ -1,3 +1,5 @@
 PORT
-Last attempt: 0.40
-Last success: 0.40
+Last attempt: 
+make: stopped in /usr/local/poudriere/jails/master/build/04/usr/dports/databases/p5-DBIx-DBSchema
+Last success: 
+make: stopped in /usr/local/poudriere/jails/master/build/04/usr/dports/databases/p5-DBIx-DBSchema
