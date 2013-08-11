@@ -1,3 +1,5 @@
 PORT
-Last attempt: 0.15
-Last success: 0.15
+Last attempt: 
+make: stopped in /usr/local/poudriere/jails/master/build/02/usr/dports/devel/p5-Test-LongString
+Last success: 
+make: stopped in /usr/local/poudriere/jails/master/build/02/usr/dports/devel/p5-Test-LongString
