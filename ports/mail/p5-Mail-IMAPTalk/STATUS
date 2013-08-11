@@ -1,3 +1,5 @@
 PORT
-Last attempt: 3.01
-Last success: 3.01
+Last attempt: 
+make: stopped in /usr/local/poudriere/jails/master/build/02/usr/dports/mail/p5-Mail-IMAPTalk
+Last success: 
+make: stopped in /usr/local/poudriere/jails/master/build/02/usr/dports/mail/p5-Mail-IMAPTalk
