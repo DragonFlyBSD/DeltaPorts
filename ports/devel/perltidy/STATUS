@@ -1,3 +1,5 @@
 PORT
-Last attempt: 20121207
-Last success: 20121207
+Last attempt: 
+make: stopped in /usr/local/poudriere/jails/master/build/03/usr/dports/devel/perltidy
+Last success: 
+make: stopped in /usr/local/poudriere/jails/master/build/03/usr/dports/devel/perltidy
