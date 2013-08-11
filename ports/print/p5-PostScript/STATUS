@@ -1,3 +1,5 @@
 PORT
-Last attempt: 0.06
-Last success: 0.06
+Last attempt: 
+make: stopped in /usr/local/poudriere/jails/master/build/04/usr/dports/print/p5-PostScript
+Last success: 
+make: stopped in /usr/local/poudriere/jails/master/build/04/usr/dports/print/p5-PostScript
