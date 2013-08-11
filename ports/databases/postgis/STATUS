@@ -1,3 +1,4 @@
 PORT
-Last attempt: 1.5.3_2
+Last attempt: 
+make: stopped in /usr/local/poudriere/jails/master/build/04/usr/dports/databases/postgis
 Last success: 
