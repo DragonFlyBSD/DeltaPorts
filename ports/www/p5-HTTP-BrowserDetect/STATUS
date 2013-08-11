@@ -1,3 +1,5 @@
 PORT
-Last attempt: 1.54
-Last success: 1.54
+Last attempt: 
+make: stopped in /usr/local/poudriere/jails/master/build/01/usr/dports/www/p5-HTTP-BrowserDetect
+Last success: 
+make: stopped in /usr/local/poudriere/jails/master/build/01/usr/dports/www/p5-HTTP-BrowserDetect
