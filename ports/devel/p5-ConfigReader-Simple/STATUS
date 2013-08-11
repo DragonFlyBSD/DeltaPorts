@@ -1,3 +1,5 @@
 PORT
-Last attempt: 1.28
-Last success: 1.28
+Last attempt: 
+make: stopped in /usr/local/poudriere/jails/master/build/02/usr/dports/devel/p5-ConfigReader-Simple
+Last success: 
+make: stopped in /usr/local/poudriere/jails/master/build/02/usr/dports/devel/p5-ConfigReader-Simple
