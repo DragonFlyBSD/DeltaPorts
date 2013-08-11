@@ -1,3 +1,5 @@
 PORT
-Last attempt: 1.004004
-Last success: 1.004004
+Last attempt: 
+make: stopped in /usr/local/poudriere/jails/master/build/04/usr/dports/devel/p5-strictures
+Last success: 
+make: stopped in /usr/local/poudriere/jails/master/build/04/usr/dports/devel/p5-strictures
