@@ -1,3 +1,5 @@
 PORT
-Last attempt: 0.995
-Last success: 0.995
+Last attempt: 
+make: stopped in /usr/local/poudriere/jails/master/build/01/usr/dports/japanese/p5-MeCab
+Last success: 
+make: stopped in /usr/local/poudriere/jails/master/build/01/usr/dports/japanese/p5-MeCab
