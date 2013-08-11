@@ -1,3 +1,5 @@
 PORT
-Last attempt: 0.07
-Last success: 0.07
+Last attempt: 
+make: stopped in /usr/local/poudriere/jails/master/build/01/usr/dports/textproc/p5-Text-Query
+Last success: 
+make: stopped in /usr/local/poudriere/jails/master/build/01/usr/dports/textproc/p5-Text-Query
