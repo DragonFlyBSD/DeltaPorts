@@ -1,3 +1,5 @@
 PORT
-Last attempt: 2.18
-Last success: 2.18
+Last attempt: 
+make: stopped in /usr/local/poudriere/jails/master/build/02/usr/dports/devel/p5-base
+Last success: 
+make: stopped in /usr/local/poudriere/jails/master/build/02/usr/dports/devel/p5-base
