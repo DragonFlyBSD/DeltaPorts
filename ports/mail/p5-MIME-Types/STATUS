@@ -1,3 +1,5 @@
 PORT
-Last attempt: 1.38
-Last success: 1.38
+Last attempt: 
+make: stopped in /usr/local/poudriere/jails/master/build/03/usr/dports/mail/p5-MIME-Types
+Last success: 
+make: stopped in /usr/local/poudriere/jails/master/build/03/usr/dports/mail/p5-MIME-Types
