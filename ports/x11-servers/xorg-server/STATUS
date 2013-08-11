@@ -1,3 +1,5 @@
 PORT
-Last attempt: 1.7.7_8,1
-Last success: 1.7.7_8,1
+Last attempt: 
+make: stopped in /usr/local/poudriere/jails/master/build/01/usr/dports/x11-servers/xorg-server
+Last success: 
+make: stopped in /usr/local/poudriere/jails/master/build/01/usr/dports/x11-servers/xorg-server
