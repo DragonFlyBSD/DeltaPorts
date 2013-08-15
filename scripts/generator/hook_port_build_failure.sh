@@ -12,6 +12,7 @@ fire_port_build_failure() {
   [ "${3}" != "potential" ] && return
 
   if [ "${5}" = "configure" \
+    -o "${5}" = "check-config" \
     -o "${5}" = "depends" \
     -o "${5}" = "patch" \
     -o "${5}" = "build" \
