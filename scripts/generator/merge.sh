@@ -159,7 +159,7 @@ awk -F \| "${AWKCMD1}" ${INDEX} > ${TMPFILE}
 LINUX=$(cd ${FPORTS} && find * -name Makefile -depth 2 -maxdepth 2 -print | \
     xargs grep -l ^USE_LINUX | sed -e 's|/Makefile||' | sort )
 
-rm ${TMPFILE}.linux
+rm -f ${TMPFILE}.linux
 for myport in ${LINUX}; do
    line=$(grep "^${myport} " ${TMPFILE})
    [ -n "${line}" ] && echo ${line} >> ${TMPFILE}.linux
