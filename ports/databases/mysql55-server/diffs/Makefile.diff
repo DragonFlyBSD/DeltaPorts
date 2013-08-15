@@ -1,16 +1,17 @@
---- Makefile.orig	2013-03-25 02:33:52.414740000 +0000
+--- Makefile.orig	2013-08-15 14:17:58.130802000 +0000
 +++ Makefile
-@@ -14,6 +14,7 @@ COMMENT?=	Multithreaded SQL database (se
+@@ -15,7 +15,7 @@ COMMENT?=	Multithreaded SQL database (se
+ LICENSE=	GPLv2
  
  SLAVEDIRS=	databases/mysql55-client
- USES=		cmake
-+USES+=		readline
- MAKE_JOBS_SAFE=	yes
+-USES=		cmake
++USES=		cmake readline
  NO_OPTIONS_SORT=yes
  
-@@ -38,7 +39,7 @@ CMAKE_ARGS+=	-DINSTALL_DOCDIR="share/doc
- 		-DINSTALL_SQLBENCHDIR="share/mysql" \
+ OPTIONS_DEFINE=	SSL FASTMTX
+@@ -40,7 +40,7 @@ CMAKE_ARGS+=	-DINSTALL_DOCDIR="share/doc
  		-DINSTALL_SUPPORTFILESDIR="share/mysql" \
+ 		-DWITH_UNIT_TESTS=0 \
  		-DWITH_LIBEDIT=0 \
 -		-DWITH_LIBWRAP=1
 +		-DWITH_READLINE=1
