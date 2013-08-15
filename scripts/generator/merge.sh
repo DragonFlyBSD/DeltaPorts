@@ -156,6 +156,15 @@ split () {
 
 awk -F \| "${AWKCMD1}" ${INDEX} > ${TMPFILE}
 
+LINUX=$(cd ${FPORTS} && find * -name Makefile -depth 2 -maxdepth 2 -print | \
+    xargs grep -l ^USE_LINUX | sed -e 's|/Makefile||' | sort )
+
+rm ${TMPFILE}.linux
+for myport in ${LINUX}; do
+   line=$(grep "^${myport} " ${TMPFILE})
+   [ -n "${line}" ] && echo ${line} >> ${TMPFILE}.linux
+done
+
 echo "searching for custom dports..."
 CUSTOM=$(cd ${DELTA}/ports && find * -type f -name STATUS -exec grep -lE '(DPORT|LOCK)' {} \;)
 for myport in ${CUSTOM}; do
@@ -166,6 +175,8 @@ done
 echo "done"
 
 sort -u ${TMPFILE} > ${TMPFILE}.sorted
+
+comm -23 ${TMPFILE}.sorted ${TMPFILE}.linux > ${TMPFILE}.final
 
 while read fileline; do
    split ${fileline}
@@ -200,9 +211,9 @@ while read fileline; do
          merge ${val_1} ${ML}
       fi
    fi
-done < ${TMPFILE}.sorted
+done < ${TMPFILE}.final
 
-rm -f ${TMPFILE} ${TMPFILE}.sorted
+rm -f ${TMPFILE}*
 
 rm -rf ${MERGED}/Tools
 folders=$(cd ${FPORTS} && find Tools -type d | sort)
