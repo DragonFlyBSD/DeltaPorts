@@ -161,8 +161,14 @@ LINUX=$(cd ${FPORTS} && find * -name Makefile -depth 2 -maxdepth 2 -print | \
 
 rm -f ${TMPFILE}.linux
 for myport in ${LINUX}; do
-   line=$(grep "^${myport} " ${TMPFILE})
-   [ -n "${line}" ] && echo ${line} >> ${TMPFILE}.linux
+   case ${myport} in
+   net/boinc-client)
+      ;;
+   *)
+      line=$(grep "^${myport} " ${TMPFILE})
+      [ -n "${line}" ] && echo ${line} >> ${TMPFILE}.linux
+      ;;
+   esac
 done
 
 echo "searching for custom dports..."
