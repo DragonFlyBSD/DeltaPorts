@@ -1,0 +1,25 @@
+--- Makefile.orig	2013-07-22 19:16:07.000000000 +0000
++++ Makefile
+@@ -45,17 +45,16 @@ do-configure:
+ 	@cd ${WRKSRC} && ${SETENV} ${CONFIGURE_ENV} \
+ 		${QMAKE} ${QMAKEFLAGS} PREFIX=${PREFIX} F1LT.pro
+ 
+-post-build-script:
+-	@${REINPLACE_CMD} -e 's|-$$(INSTALL_FILE)|${INSTALL} -o ${SHAREOWN} -g ${SHAREGRP} -m 644|g' \
+-		${WRKSRC}/Makefile
+-	@${REINPLACE_CMD} -e 's|-$$(INSTALL_PROGRAM)|${INSTALL} -s -o ${SHAREOWN} -g ${SHAREGRP} -m 755|g' \
+-		${WRKSRC}/Makefile
+-
+ post-install:
+ .if ${PORT_OPTIONS:MDOCS}
+ 	@${MKDIR} ${DOCSDIR}
+ 	${INSTALL_DATA} ${WRKSRC}/CHANGELOG ${DOCSDIR}
+ .endif
++	${STRIP_CMD} ${PREFIX}/bin/F1LT
++	${CHOWN} ${BINOWN}:${BINGRP} ${PREFIX}/bin/F1LT
++	${CHMOD} 755 ${PREFIX}/bin/F1LT
++	${CHOWN} ${SHAREOWN}:${SHAREGRP} ${PREFIX}/share/f1lt/*.dat
++	${CHMOD} 644 ${PREFIX}/share/f1lt/*.dat
+ 	@${LN} -s ${PREFIX}/bin/F1LT ${PREFIX}/bin/${PORTNAME}
+ 
+ .include <bsd.port.mk>
