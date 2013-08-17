@@ -5,7 +5,7 @@
  	filetypes.h
  
 -cssed_LDADD = @PACKAGE_LIBS@  ../scintilla/gtk/libscintilla.a ../libcroco/parser/libcroco.a
-+cssed_LDADD = @PACKAGE_LIBS@ -lintl ../scintilla/gtk/libscintilla.a ../libcroco/parser/libcroco.a
++cssed_LDADD = @PACKAGE_LIBS@ -lgmodule-2.0 -lintl ../scintilla/gtk/libscintilla.a ../libcroco/parser/libcroco.a
  cssed_LINK = g++ -DGTK -o cssed
  all: all-am
  
