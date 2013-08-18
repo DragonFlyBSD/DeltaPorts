@@ -1,0 +1,23 @@
+--- Makefile.orig	2013-07-21 02:41:07.000000000 +0000
++++ Makefile
+@@ -40,6 +40,10 @@ BUILD_DEPENDS=	p5-Date-Pcalc>=0:${PORTSD
+ 		p5-Email-Valid>=0:${PORTSDIR}/mail/p5-Email-Valid
+ RUN_DEPENDS:=	${BUILD_DEPENDS}
+ 
++USES=		shebangfix
++SHEBANG_FILES=	bin/cgi-bin/*.pl bin/fcgi-bin/*.pl bin/*.pl \
++		scripts/auto_build/*.pl scripts/tools/*.pl scripts/*.pl
++
+ OPTIONS_DEFINE=		MYSQL PGSQL REPORTS_MODULES SMTP POP3 IMAP LDAP PDF \
+ 			GNUPG DOCS
+ OPTIONS_DEFAULT=	MYSQL REPORTS_MODULES SMTP POP3 IMAP PDF ASPELL
+@@ -145,6 +149,9 @@ post-patch:
+ 	@${FIND} ${WRKSRC} -name "*.orig" -delete
+ 	@${RM} -rf ${WRKSRC}/Kernel/cpan-lib/ \
+ 		${CLEAN_FILES:S!^!${WRKSRC}/!}
++	#shebang file only gets the first instance of /usr/bin/perl
++	@${REINPLACE_CMD} -e "s|/usr/bin/perl|${LOCALBASE}/bin/perl|g" \
++		${WRKSRC}/bin/otrs.CreateApacheStartupFile.pl
+ 
+ do-build:
+ 	@${FIND} ${WRKSRC}/Kernel -type d | ${XARGS} ${CHMOD} 0755
