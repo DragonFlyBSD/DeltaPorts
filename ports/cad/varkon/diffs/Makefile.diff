@@ -1,0 +1,11 @@
+--- Makefile.orig	2013-01-21 03:35:02.000000000 +0000
++++ Makefile
+@@ -20,7 +20,7 @@ BUILD_WRKSRC=	${WRKSRC}/sources
+ USE_XORG=	xpm
+ USE_GL=		glu
+ USE_GMAKE=	yes
+-MAKE_ENV=	PLATFORM="${OPSYS}"
++MAKE_ENV=	PLATFORM=FreeBSD
+ ALL_TARGET=	# none
+ MAKE_JOBS_UNSAFE=	yes
+ 
