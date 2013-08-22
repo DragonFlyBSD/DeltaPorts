@@ -1,0 +1,6 @@
+MAKE_ENV+=	MK_KERBEROS_SUPPORT=no
+
+post-extract:
+	@${REINPLACE_CMD} -e '/^__FBSDID/d' ${WRKDIR}/call/cvs/src/classify.c
+	@${REINPLACE_CMD} -e 's|-lgnuregex||' \
+		${WRKDIR}/call/cvs-build/cvs/Makefile
