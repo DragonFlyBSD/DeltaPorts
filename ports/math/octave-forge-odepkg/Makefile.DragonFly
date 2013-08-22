@@ -1,1 +1,1 @@
-BROKEN= missed patch in build locks it up.
+MAKE_JOBS_UNSAFE=yes
