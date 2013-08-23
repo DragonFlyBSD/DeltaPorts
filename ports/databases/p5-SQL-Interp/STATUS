@@ -1,5 +1,3 @@
 PORT
-Last attempt: 
-make: stopped in /usr/local/poudriere/jails/master/build/04/usr/dports/databases/p5-SQL-Interp
-Last success: 
-make: stopped in /usr/local/poudriere/jails/master/build/04/usr/dports/databases/p5-SQL-Interp
+Last attempt: 1.22
+Last success: 1.22
