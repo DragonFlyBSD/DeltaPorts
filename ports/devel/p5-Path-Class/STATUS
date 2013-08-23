@@ -1,5 +1,3 @@
 PORT
-Last attempt: 
-make: stopped in /usr/local/poudriere/jails/master/build/03/usr/dports/devel/p5-Path-Class
-Last success: 
-make: stopped in /usr/local/poudriere/jails/master/build/03/usr/dports/devel/p5-Path-Class
+Last attempt: 0.32
+Last success: 0.32
