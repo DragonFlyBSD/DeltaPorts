@@ -1,5 +1,3 @@
 PORT
-Last attempt: 
-make: stopped in /usr/local/poudriere/jails/master/build/04/usr/dports/devel/p5-autodie
-Last success: 
-make: stopped in /usr/local/poudriere/jails/master/build/04/usr/dports/devel/p5-autodie
+Last attempt: 2.20
+Last success: 2.20
