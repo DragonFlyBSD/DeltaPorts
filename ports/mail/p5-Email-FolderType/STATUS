@@ -1,5 +1,3 @@
 PORT
-Last attempt: 
-make: stopped in /usr/local/poudriere/jails/master/build/02/usr/dports/mail/p5-Email-FolderType
-Last success: 
-make: stopped in /usr/local/poudriere/jails/master/build/02/usr/dports/mail/p5-Email-FolderType
+Last attempt: 0.8.13_1
+Last success: 0.8.13_1
