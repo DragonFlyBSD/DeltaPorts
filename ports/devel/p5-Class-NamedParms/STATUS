@@ -1,5 +1,3 @@
 PORT
-Last attempt: 
-make: stopped in /usr/local/poudriere/jails/master/build/03/usr/dports/devel/p5-Class-NamedParms
-Last success: 
-make: stopped in /usr/local/poudriere/jails/master/build/03/usr/dports/devel/p5-Class-NamedParms
+Last attempt: 1.06
+Last success: 1.06
