@@ -1,5 +1,3 @@
 PORT
-Last attempt: 
-make: stopped in /usr/local/poudriere/jails/master/build/02/usr/dports/mail/p5-Mail-RFC822-Address
-Last success: 
-make: stopped in /usr/local/poudriere/jails/master/build/02/usr/dports/mail/p5-Mail-RFC822-Address
+Last attempt: 0.3
+Last success: 0.3
