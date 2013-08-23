@@ -1,5 +1,3 @@
 PORT
-Last attempt: 
-make: stopped in /usr/local/poudriere/jails/master/build/02/usr/dports/devel/p5-Variable-Magic
-Last success: 
-make: stopped in /usr/local/poudriere/jails/master/build/02/usr/dports/devel/p5-Variable-Magic
+Last attempt: 0.52
+Last success: 0.52
