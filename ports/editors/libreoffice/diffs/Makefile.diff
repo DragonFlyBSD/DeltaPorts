@@ -1,6 +1,6 @@
---- Makefile.orig	2013-07-13 20:43:43.651386000 +0000
+--- Makefile.orig	2013-08-23 12:02:18.879974000 +0000
 +++ Makefile
-@@ -18,6 +18,7 @@ BUILD_DEPENDS=	p5-Archive-Zip>=0:${PORTS
+@@ -15,6 +15,7 @@ BUILD_DEPENDS=	p5-Archive-Zip>=0:${PORTS
  		${LOCALBASE}/bin/gperf:${PORTSDIR}/devel/gperf \
  		${LOCALBASE}/include/mdds/global.hpp:${PORTSDIR}/devel/mdds \
  		gpatch:${PORTSDIR}/devel/patch \
@@ -8,15 +8,15 @@
  		ucpp:${PORTSDIR}/devel/ucpp \
  		vigra-config:${PORTSDIR}/graphics/vigra \
  		bash:${PORTSDIR}/shells/bash \
-@@ -37,6 +38,7 @@ LIB_DEPENDS=	icutu:${PORTSDIR}/devel/icu
+@@ -34,6 +35,7 @@ LIB_DEPENDS=	icutu:${PORTSDIR}/devel/icu
  		poppler:${PORTSDIR}/graphics/poppler \
  		lpsolve55:${PORTSDIR}/math/lp_solve \
- 		cmis-0.3:${PORTSDIR}/net/libcmis \
+ 		cmis-0.4:${PORTSDIR}/net/libcmis \
 +		ldap-2.4:${PORTSDIR}/net/openldap24-client \
  		mspub-0.0:${PORTSDIR}/print/libmspub \
  		nss3.1:${PORTSDIR}/security/nss \
  		clucene-core:${PORTSDIR}/textproc/clucene \
-@@ -50,6 +52,7 @@ LIB_DEPENDS=	icutu:${PORTSDIR}/devel/icu
+@@ -47,6 +49,7 @@ LIB_DEPENDS=	icutu:${PORTSDIR}/devel/icu
  		wpd-0.9.9:${PORTSDIR}/textproc/libwpd \
  		wps-0.2.2:${PORTSDIR}/textproc/libwps \
  		mythes-1.2.0:${PORTSDIR}/textproc/mythes \
@@ -24,28 +24,27 @@
  		rdf.0:${PORTSDIR}/textproc/redland
  
  RUN_DEPENDS=	${LOCALBASE}/lib/X11/fonts/dejavu/DejaVuSans.ttf:${PORTSDIR}/x11-fonts/dejavu \
-@@ -64,16 +67,16 @@ MAKE_JOBS_SAFE=	yes
+@@ -60,15 +63,15 @@ _MAKE_JOBS=	#
  
  GNU_CONFIGURE=	yes
  USE_AUTOTOOLS=	autoconf aclocal
 -USE_GL=		gl glu
-+USE_GCC=	4.7
- USE_GMAKE=	yes
 -USE_OPENLDAP=	yes
++USE_GCC=	4.7
  USE_PERL5=	build
--USE_PYTHON=	yes
-+USE_PYTHON=	3.3+
+ USE_PYTHON=	yes
  USE_QT4=	# empty but required
  USE_XORG=	xaw xrandr
  USE_XZ=		yes
- USES=		bison pkgconfig perl5
+-USES=		bison gmake perl5 pkgconfig
 -WANT_GNOME=	yes
++USES= 		bison gmake perl5 pkgconfig
 +USE_GNOME+=	gtk20 desktopfileutils
 +INSTALLS_ICONS= yes
  
  DISTFILES+=	${PORTNAME}-${LOVERSION}${EXTRACT_SUFX}
  DISTFILES+=	${PORTNAME}-help-${LOVERSION}${EXTRACT_SUFX}
-@@ -92,75 +95,56 @@ CONFIGURE_ENV=		DMAKE=${LOCALBASE}/bin/d
+@@ -87,75 +90,56 @@ CONFIGURE_ENV=		DMAKE=${LOCALBASE}/bin/d
  			PYTHON_LIBS="`${PYTHON_VERSION}-config --libs`" \
  			TMPDIR=${WRKDIR}
  
@@ -160,7 +159,7 @@
  			--without-system-mozilla
  
  MAN1=	libreoffice.1 \
-@@ -177,192 +161,8 @@ MAN1=	libreoffice.1 \
+@@ -172,192 +156,8 @@ MAN1=	libreoffice.1 \
  
  MANCOMPRESSED=	yes
  
@@ -327,7 +326,7 @@
  .include <bsd.port.pre.mk>
  
 -.if defined(WITH_GCC)
--USE_GCC=	4.6+
+-USE_GCC=	yes
 -CONFIGURE_ENV+=	CXXCPP="${CPP}"
 -.else
 -.if exists(/usr/bin/clang) && ${OSVERSION} > 901502
@@ -353,7 +352,7 @@
  ACLOCAL_ARGS=	-I "${WRKSRC}/m4"
  CPPFLAGS=	-I${LOCALBASE}/include
  LDFLAGS=	-L${LOCALBASE}/lib
-@@ -408,15 +208,6 @@ post-install:
+@@ -403,15 +203,6 @@ post-install:
  	    \( -type f -o -type l \) -print >> ${PLISTF}
  .endfor
  
