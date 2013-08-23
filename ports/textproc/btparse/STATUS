@@ -1,5 +1,3 @@
 PORT
-Last attempt: 
-make: stopped in /usr/local/poudriere/jails/master/build/03/usr/dports/textproc/btparse
-Last success: 
-make: stopped in /usr/local/poudriere/jails/master/build/03/usr/dports/textproc/btparse
+Last attempt: 0.35
+Last success: 0.35
