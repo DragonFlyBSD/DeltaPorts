@@ -12,7 +12,7 @@ fire_port_build_success() {
   [ "${3}" != "potential" ] && return
 
   cd ${4}
-  local ARG2=$(make -VPKGVERSION)
+  local ARG2=$(make PORTSDIR=/home/automaton/DPorts -VPKGVERSION)
   local ARG1A=$(dirname ${4})
   local ARG1B=$(basename ${ARG1A})
   local ARG1C=$(basename ${4})

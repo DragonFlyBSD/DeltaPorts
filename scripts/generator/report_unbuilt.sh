@@ -57,7 +57,7 @@ for portdir in ${portdirs}; do
 	    continue ;;
     esac
     cd ${DPORTS}/${portdir}
-    PN=$(make PYTHON_DEFAULT_VERSION=2.7 USE_TCL=86 -V PKGNAME).txz
+    PN=$(make LOCALBASE=/usr/dummy PYTHON_DEFAULT_VERSION=2.7 USE_TCL=86 -V PKGNAME).txz
     FULLPATH=${PKGDIR}/${PN}
     if [ ! -f "${FULLPATH}" ]; then
         echo ${portdir}
