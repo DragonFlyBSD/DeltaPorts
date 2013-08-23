@@ -1,5 +1,3 @@
 PORT
-Last attempt: 
-make: stopped in /usr/local/poudriere/jails/master/build/02/usr/dports/devel/p5-Class-Accessor-Installer
-Last success: 
-make: stopped in /usr/local/poudriere/jails/master/build/02/usr/dports/devel/p5-Class-Accessor-Installer
+Last attempt: 1.100880
+Last success: 1.100880
