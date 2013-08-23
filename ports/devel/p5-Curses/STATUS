@@ -1,5 +1,3 @@
 PORT
-Last attempt: 
-make: stopped in /usr/local/poudriere/jails/master/build/02/usr/dports/devel/p5-Curses
-Last success: 
-make: stopped in /usr/local/poudriere/jails/master/build/02/usr/dports/devel/p5-Curses
+Last attempt: 1.28_1
+Last success: 1.28_1
