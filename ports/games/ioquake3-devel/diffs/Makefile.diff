@@ -1,0 +1,10 @@
+--- Makefile.orig	2013-08-31 15:09:52.000000000 +0000
++++ Makefile
+@@ -15,6 +15,7 @@ MASTERDIR=	${.CURDIR}/../ioquake3
+ DESCR?=		${.CURDIR}/../${PORTNAME}/pkg-descr
+ DISTINFO_FILE?=	${.CURDIR}/../${PORTNAME}/distinfo
+ PATCHDIR?=	${.CURDIR}/../${PORTNAME}/files
++DFLY_PATCHDIR?=	${.CURDIR}/../${PORTNAME}/dragonfly
+ PKGMESSAGE?=	${.CURDIR}/../${PORTNAME}/pkg-message
+ 
+ GITREVISION?=	2178
