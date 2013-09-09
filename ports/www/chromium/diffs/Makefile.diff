@@ -1,45 +1,27 @@
---- Makefile.orig	2013-08-26 14:51:40.927619000 +0000
+--- Makefile.orig	2013-09-09 16:35:48.557554000 +0000
 +++ Makefile
-@@ -17,6 +17,8 @@ COMMENT=	Mostly BSD-licensed web browser
- LICENSE=	BSD LGPL21 MPL
- LICENSE_COMB=	multi
+@@ -22,6 +22,8 @@ LICENSE_COMB=	multi
+ WRKSRC=		${WRKDIR}/${PORTNAME}-${DISTVERSION}
+ CFLAGS+=	-fno-stack-protector
  
 +CFLAGS+=	-D__FreeBSD__=9
 +
  BUILD_DEPENDS=	${LOCALBASE}/bin/gperf:${PORTSDIR}/devel/gperf \
  		bash:${PORTSDIR}/shells/bash \
  		yasm:${PORTSDIR}/devel/yasm \
-@@ -37,6 +39,8 @@ LIB_DEPENDS=	execinfo:${PORTSDIR}/devel/
- 		gcrypt:${PORTSDIR}/security/libgcrypt \
- 		pci:${PORTSDIR}/devel/libpci
+@@ -42,6 +44,8 @@ LIB_DEPENDS=	libexecinfo.so:${PORTSDIR}/
+ 		libgcrypt.so:${PORTSDIR}/security/libgcrypt \
+ 		libpci.so:${PORTSDIR}/devel/libpci
  
 +LIB_DEPENDS+=	gssapi_krb5:${PORTSDIR}/security/krb5
 +
  RUN_DEPENDS=	${LOCALBASE}/lib/alsa-lib/libasound_module_pcm_oss.so:${PORTSDIR}/audio/alsa-plugins \
  		${LOCALBASE}/lib/X11/fonts/Droid/fonts.dir:${PORTSDIR}/x11-fonts/droid-fonts-ttf
  
-@@ -92,16 +96,10 @@ OPTIONS_DEFINE=	CODECS GCONF PULSEAUDIO
- CODECS_DESC=	Compile and enable patented codecs like H.264
- CLANG_DESC=	Build Chromium with Clang instead of GCC 4.6+
- 
--OPTIONS_DEFAULT=	CODECS GCONF CLANG
-+OPTIONS_DEFAULT=	CODECS GCONF
- 
- .include <bsd.port.options.mk>
- 
--.if ${OSVERSION} < 900033 || ! ${PORT_OPTIONS:MCLANG}
--BUILD_DEPENDS+=	${LOCALBASE}/bin/as:${PORTSDIR}/devel/binutils
--CONFIGURE_ENV+=	COMPILER_PATH=${LOCALBASE}/bin
--MAKE_ENV+=	COMPILER_PATH=${LOCALBASE}/bin
--.endif
--
- .if ${PORT_OPTIONS:MCODECS}
- GYP_DEFINES+=	ffmpeg_branding=Chrome
- GYP_DEFINES+=	proprietary_codecs=1
-@@ -128,15 +126,11 @@ GYP_DEFINES+=	disable_sse2=1
- .endif
- 
- .if ${PORT_OPTIONS:MCLANG}
+@@ -131,15 +135,11 @@ USE_GCC?=	yes
+ GYP_DEFINES+=	gcc_version=${CXX:S/g++//}
+ EXTRA_PATCHES+=	${FILESDIR}/extra-patch-gcc
+ .else
 -.if ${OSVERSION} < 902000
  BUILD_DEPENDS+=	${LOCALBASE}/bin/clang:${PORTSDIR}/lang/clang
  CC=		${LOCALBASE}/bin/clang
@@ -51,17 +33,17 @@
  GYP_DEFINES+=	clang=1
 +CXXFLAGS+=	-D__float128=void -D_GLIBCXX_PERMIT_BACKWARD_HASH=1
  EXTRA_PATCHES+=	${FILESDIR}/extra-patch-clang
- .else
- USE_GCC?=	yes
-@@ -162,6 +156,7 @@ CONFIGURE_ENV+=	CC=${CC} \
- 		GYP_GENERATORS=ninja \
- 		GYP_DEFINES="${GYP_DEFINES}"
+ .endif
+ 
+@@ -180,6 +180,7 @@ CONFIGURE_ENV+= CFLAGS="${CFLAGS}" \
+ 		CXXFLAGS="${CXXFLAGS}" \
+ 		LDFLAGS="${LDFLAGS}"
  MAKE_ENV+=	BUILDTYPE=${BUILDTYPE} \
 +		GYPFLAGS=-DOS=freebsd \
  		GPERF=${LOCALBASE}/bin/gperf
  
  .include <bsd.port.pre.mk>
-@@ -178,7 +173,9 @@ pre-everything::
+@@ -196,7 +197,9 @@ pre-everything::
  
  post-patch:
  	@${REINPLACE_CMD} -e "s|/usr/local|${LOCALBASE}|" \
@@ -71,7 +53,7 @@
  		${WRKSRC}/build/common.gypi \
  		${WRKSRC}/third_party/libvpx/libvpx.gyp \
  		${WRKSRC}/crypto/crypto.gyp \
-@@ -188,7 +185,7 @@ post-patch:
+@@ -206,7 +209,7 @@ post-patch:
  		${WRKSRC}/third_party/WebKit/Source/core/core.gypi
  	@${REINPLACE_CMD} -e "s|'../courgette/courgette.gyp:courgette_lib',||" \
  		${WRKSRC}/chrome/chrome_tests_unit.gypi
@@ -80,7 +62,7 @@
  		${WRKSRC}/tools/gyp/pylib/gyp/generator/make.py
  	@${REINPLACE_CMD} -e "s|is_linux|(is_linux or is_bsd)|" \
  		${WRKSRC}/chrome/browser/browser_resources.grd \
-@@ -201,6 +198,12 @@ post-patch:
+@@ -219,6 +222,12 @@ post-patch:
  		${WRKSRC}/ui/base/strings/app_locale_settings_ko.xtb \
  		${WRKSRC}/ui/base/strings/app_locale_settings_ml.xtb \
  		${WRKSRC}/ui/base/strings/app_locale_settings_th.xtb
