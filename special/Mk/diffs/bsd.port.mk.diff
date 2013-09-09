@@ -1,4 +1,4 @@
---- bsd.port.mk.orig	2013-07-22 19:37:22.661995000 +0000
+--- bsd.port.mk.orig	2013-09-09 10:37:03.000000000 +0000
 +++ bsd.port.mk
 @@ -43,7 +43,8 @@ FreeBSD_MAINTAINER=	portmgr@FreeBSD.org
  #				  makefile is being used on.  Automatically set to
@@ -10,7 +10,7 @@
  #
  # This is the beginning of the list of all variables that need to be
  # defined in a port, listed in order that they should be included
-@@ -566,6 +567,12 @@ FreeBSD_MAINTAINER=	portmgr@FreeBSD.org
+@@ -558,6 +559,12 @@ FreeBSD_MAINTAINER=	portmgr@FreeBSD.org
  #				  Default: ${MASTERDIR}/scripts
  # FILESDIR		- A directory containing any miscellaneous additional files.
  #				  Default: ${MASTERDIR}/files
@@ -23,7 +23,7 @@
  # PKGDIR		- A directory containing any package creation files.
  #				  Default: ${MASTERDIR}
  # SRC_BASE		- The root of the src tree.  (Some ports require this to get
-@@ -853,7 +860,7 @@ FreeBSD_MAINTAINER=	portmgr@FreeBSD.org
+@@ -845,7 +852,7 @@ FreeBSD_MAINTAINER=	portmgr@FreeBSD.org
  # CONFIGURE_TARGET
  #				- The name of target to call when GNU_CONFIGURE is
  #				  defined.
@@ -32,7 +32,7 @@
  # GNU_CONFIGURE_PREFIX
  #				- The directory passed as prefix to the configure script if
  #				  GNU_CONFIGURE is set.
-@@ -1109,20 +1116,24 @@ FreeBSD_MAINTAINER=	portmgr@FreeBSD.org
+@@ -1104,20 +1111,24 @@ FreeBSD_MAINTAINER=	portmgr@FreeBSD.org
  # These need to be absolute since we don't know how deep in the ports
  # tree we are and thus can't go relative.  They can, of course, be overridden
  # by individual Makefiles or local system make configuration.
@@ -64,7 +64,7 @@
  
  .include "${PORTSDIR}/Mk/bsd.commands.mk"
  
-@@ -1179,22 +1190,18 @@ OPSYS!=	${UNAME} -s
+@@ -1174,22 +1185,18 @@ OPSYS!=	${UNAME} -s
  OSREL!=	${UNAME} -r | ${SED} -e 's/[-(].*//'
  .endif
  
@@ -95,7 +95,7 @@
  .endif
  .endif
  
-@@ -1326,7 +1333,7 @@ PKGVERSION=	${PORTVERSION:C/[-_,]/./g}${
+@@ -1321,7 +1328,7 @@ PKGVERSION=	${PORTVERSION:C/[-_,]/./g}${
  PKGNAME=	${PKGNAMEPREFIX}${PORTNAME}${PKGNAMESUFFIX}-${PKGVERSION}
  DISTNAME?=	${PORTNAME}-${DISTVERSIONPREFIX}${DISTVERSION:C/:(.)/\1/g}${DISTVERSIONSUFFIX}
  
@@ -104,7 +104,7 @@
  
  DOCSDIR?=		${PREFIX}/share/doc/${PORTNAME}
  EXAMPLESDIR?=		${PREFIX}/share/examples/${PORTNAME}
-@@ -1359,7 +1366,7 @@ EXTRACT_SUFX?=			.run
+@@ -1354,7 +1361,7 @@ EXTRACT_SUFX?=			.run
  .else
  EXTRACT_SUFX?=			.tar.gz
  .endif
@@ -113,7 +113,7 @@
  TEMPLATES?=		${PORTSDIR}/Templates
  
  PATCHDIR?=		${MASTERDIR}/files
-@@ -1532,7 +1539,7 @@ check-makefile::
+@@ -1523,7 +1530,7 @@ check-makefile::
  
  _POSTMKINCLUDED=	yes
  
@@ -122,7 +122,7 @@
  .if !defined(IGNORE_MASTER_SITE_GITHUB) && defined(USE_GITHUB)
  WRKSRC?=		${WRKDIR}/${GH_ACCOUNT}-${GH_PROJECT}-${GH_COMMIT}
  .endif
-@@ -1562,7 +1569,9 @@ PLIST_REINPLACE_STOPDAEMON=s!^@stopdaemo
+@@ -1553,7 +1560,9 @@ PLIST_REINPLACE_STOPDAEMON=s!^@stopdaemo
  
  # kludge to strip trailing whitespace from CFLAGS;
  # sub-configure will not # survive double space
@@ -133,7 +133,7 @@
  
  .if defined(WITHOUT_CPU_CFLAGS)
  .if defined(_CPUCFLAGS)
-@@ -1672,15 +1681,22 @@ EXTRACT_DEPENDS+=	lha:${PORTSDIR}/archiv
+@@ -1663,15 +1672,22 @@ EXTRACT_DEPENDS+=	lha:${PORTSDIR}/archiv
  .if defined(USE_ZIP)
  EXTRACT_DEPENDS+=	${LOCALBASE}/bin/unzip:${PORTSDIR}/archivers/unzip
  .endif
@@ -159,7 +159,7 @@
  .endif
  
  .if defined(USE_BINUTILS) && !defined(DISABLE_BINUTILS)
-@@ -2145,7 +2161,7 @@ MAKE_JOBS_NUMBER=	1
+@@ -2141,7 +2157,7 @@ MAKE_JOBS_NUMBER=	1
  .if defined(MAKE_JOBS_NUMBER)
  _MAKE_JOBS_NUMBER:=	${MAKE_JOBS_NUMBER}
  .else
@@ -168,7 +168,7 @@
  .endif
  .if defined(MAKE_JOBS_NUMBER_LIMIT) && ( ${MAKE_JOBS_NUMBER_LIMIT} < ${_MAKE_JOBS_NUMBER} )
  MAKE_JOBS_NUMBER=	${MAKE_JOBS_NUMBER_LIMIT}
-@@ -2841,7 +2857,7 @@ LATEST_LINK?=		${PKGBASE}
+@@ -2838,7 +2854,7 @@ LATEST_LINK?=		${PKGBASE}
  PKGLATESTFILE=		${PKGLATESTREPOSITORY}/${LATEST_LINK}${PKG_SUFX}
  
  CONFIGURE_SCRIPT?=	configure
@@ -177,7 +177,7 @@
  CONFIGURE_TARGET:=	${CONFIGURE_TARGET:S/--build=//}
  CONFIGURE_LOG?=		config.log
  
-@@ -2877,6 +2893,8 @@ SET_LATE_CONFIGURE_ARGS= \
+@@ -2875,6 +2891,8 @@ SET_LATE_CONFIGURE_ARGS= \
  SCRIPTS_ENV+=	CURDIR=${MASTERDIR} DISTDIR=${DISTDIR} \
  		  WRKDIR=${WRKDIR} WRKSRC=${WRKSRC} PATCHDIR=${PATCHDIR} \
  		  SCRIPTDIR=${SCRIPTDIR} FILESDIR=${FILESDIR} \
@@ -186,7 +186,7 @@
  		  PORTSDIR=${PORTSDIR} PREFIX=${PREFIX} LOCALBASE=${LOCALBASE} 
  
  .if defined(BATCH)
-@@ -2917,7 +2935,7 @@ __pmlinks!=	${ECHO_CMD} '${MLINKS:S/	/ /
+@@ -2915,7 +2933,7 @@ __pmlinks!=	${ECHO_CMD} '${MLINKS:S/	/ /
  		else \
  			{ print "broken"; exit; } \
  	} \
@@ -195,7 +195,7 @@
  .if ${__pmlinks:Mbroken} == "broken"
  check-makevars::
  	@${ECHO_MSG} "${PKGNAME}: Makefile error: unable to parse MLINKS."
-@@ -2928,7 +2946,7 @@ _MLINKS=	${_MLINKS_PREPEND}
+@@ -2926,7 +2944,7 @@ _MLINKS=	${_MLINKS_PREPEND}
  .for lang in ${MANLANG:S%^%man/%:S%^man/""$%man%}
  .for ___pmlinks in ${__pmlinks}
  .for __lang in ${lang}
@@ -204,7 +204,7 @@
  .endfor
  .endfor
  .endfor
-@@ -3057,7 +3075,7 @@ _DESKTOPDIR_REL=
+@@ -3055,7 +3073,7 @@ _DESKTOPDIR_REL=
  
  # Check the machine architectures
  .if defined(ONLY_FOR_ARCHS)
@@ -213,7 +213,7 @@
  .if ${ARCH:M${__ARCH}} != ""
  __ARCH_OK?=		1
  .endif
-@@ -3067,7 +3085,7 @@ __ARCH_OK?=		1
+@@ -3065,7 +3083,7 @@ __ARCH_OK?=		1
  .endif
  
  .if defined(NOT_FOR_ARCHS)
@@ -222,7 +222,7 @@
  .if ${ARCH:M${__NARCH}} != ""
  .undef __ARCH_OK
  .endif
-@@ -3076,9 +3094,9 @@ __ARCH_OK?=		1
+@@ -3074,9 +3092,9 @@ __ARCH_OK?=		1
  
  .if !defined(__ARCH_OK)
  .if defined(ONLY_FOR_ARCHS)
@@ -234,7 +234,7 @@
  .endif
  IGNORE+=	while you are running ${ARCH}
  
-@@ -3192,12 +3210,11 @@ all:
+@@ -3190,12 +3208,11 @@ all:
  	  DISTDIR=${DISTDIR} WRKDIR=${WRKDIR} WRKSRC=${WRKSRC} \
  	  PATCHDIR=${PATCHDIR} SCRIPTDIR=${SCRIPTDIR} \
  	  FILESDIR=${FILESDIR} PORTSDIR=${PORTSDIR} PREFIX=${PREFIX} \
@@ -249,7 +249,7 @@
  all: build
  .endif
  
-@@ -3338,14 +3355,7 @@ check-vulnerable:
+@@ -3336,14 +3353,7 @@ check-vulnerable:
  .if !defined(DISABLE_VULNERABILITIES) && !defined(PACKAGE_BUILDING)
  	@if [ -f "${AUDITFILE}" ]; then \
  		if [ -n "${WITH_PKGNG}" ]; then \
@@ -265,7 +265,7 @@
  		elif [ -x "${LOCALBASE}/sbin/portaudit" ]; then \
  			vlist=`${LOCALBASE}/sbin/portaudit -X 14 "${PKGNAME}" \
  				2>&1 | grep -vE '^[0-9]+ problem\(s\) found.' \
-@@ -3575,7 +3585,7 @@ do-patch:
+@@ -3588,7 +3598,7 @@ do-patch:
  	@set -e ;\
  	if [ -d ${PATCHDIR} ]; then \
  		if [ "`${ECHO_CMD} ${PATCHDIR}/patch-*`" != "${PATCHDIR}/patch-*" ]; then \
@@ -274,7 +274,7 @@
  			PATCHES_APPLIED="" ; \
  			for i in ${PATCHDIR}/patch-*; do \
  				case $$i in \
-@@ -3600,6 +3610,33 @@ do-patch:
+@@ -3613,6 +3623,33 @@ do-patch:
  			done; \
  		fi; \
  	fi
@@ -308,7 +308,7 @@
  .endif
  
  .if !target(run-autotools-fixup)
-@@ -4622,6 +4659,8 @@ fetch-url-list-int:
+@@ -4635,6 +4672,8 @@ fetch-url-list-int:
  				SORTED_MASTER_SITES_CMD_TMP="${SORTED_MASTER_SITES_DEFAULT_CMD}" ; \
  			fi ; \
  			for site in `eval $$SORTED_MASTER_SITES_CMD_TMP ${_RANDOMIZE_SITES}`; do \
@@ -317,7 +317,7 @@
  				case $${file} in \
  				*/*)	args="-o $${file} $${site}$${file}";; \
  				*)		args=$${site}$${file};; \
-@@ -4652,6 +4691,8 @@ fetch-url-list-int:
+@@ -4665,6 +4704,8 @@ fetch-url-list-int:
  				SORTED_PATCH_SITES_CMD_TMP="${SORTED_PATCH_SITES_DEFAULT_CMD}" ; \
  			fi ; \
  			for site in `eval $$SORTED_PATCH_SITES_CMD_TMP ${_RANDOMIZE_SITES}`; do \
@@ -326,10 +326,10 @@
  				case $${file} in \
  				*/*)	args="-o $${file} $${site}$${file}";; \
  				*)		args=$${site}$${file};; \
-@@ -4901,14 +4942,14 @@ _DEPEND_ALWAYS=	0
+@@ -4915,14 +4956,14 @@ _DEPEND_ALWAYS=	0
  
  _INSTALL_DEPENDS=	\
- 		if [ X${USE_PACKAGE_DEPENDS} != "X" ]; then \
+ 		if [ -n "${USE_PACKAGE_DEPENDS}" -o -n "${USE_PACKAGE_DEPENDS_ONLY}" ]; then \
 -			subpkgfile=`(cd $$dir; ${MAKE} $$depends_args -V PKGFILE)`; \
 +			subpkgfile=`(cd $$dir; ${MAKE} $$depends_args -V '$${PKGFILE}')`; \
  			subpkgname=$${subpkgfile%-*} ; \
@@ -343,7 +343,7 @@
  					${WRKDIR}/pkg-static add $${subpkgfile}; \
  					${RM} -f ${WRKDIR}/pkg-static; \
  				else \
-@@ -4918,6 +4959,7 @@ _INSTALL_DEPENDS=	\
+@@ -4936,6 +4977,7 @@ _INSTALL_DEPENDS=	\
  			  (cd $$dir; ${MAKE} -DINSTALLS_DEPENDS $$target $$depends_args) ; \
  			fi; \
  		else \
@@ -351,7 +351,7 @@
  			(cd $$dir; ${MAKE} -DINSTALLS_DEPENDS $$target $$depends_args) ; \
  		fi; \
  		${ECHO_MSG} "===>   Returning to build of ${PKGNAME}";
-@@ -5117,7 +5159,7 @@ ALL-DEPENDS-LIST= \
+@@ -5136,7 +5178,7 @@ ALL-DEPENDS-LIST= \
  				continue;				\
  			fi;						\
  			${ECHO_CMD} $$d;				\
@@ -360,7 +360,7 @@
  				${ECHO_MSG} "${PKGNAME}: \"$$d\" erroneous -- dependency list incomplete" >&2; \
  				continue;				\
  			fi;						\
-@@ -5147,7 +5189,7 @@ CLEAN-DEPENDS-FULL= \
+@@ -5166,7 +5208,7 @@ CLEAN-DEPENDS-FULL= \
  				${ECHO_MSG} "${PKGNAME}: \"$$d\" non-existent -- dependency list incomplete" >&2; \
  				continue;				\
  			fi;						\
@@ -369,7 +369,7 @@
  				${ECHO_MSG} "${PKGNAME}: \"$$d\" erroneous -- dependency list incomplete" >&2; \
  				continue;				\
  			fi;						\
-@@ -5186,7 +5228,7 @@ CLEAN-DEPENDS-LIMITED= \
+@@ -5205,7 +5247,7 @@ CLEAN-DEPENDS-LIMITED= \
  				${ECHO_MSG} "${PKGNAME}: \"$$d\" non-existent -- dependency list incomplete" >&2; \
  				continue;				\
  			fi;						\
@@ -378,7 +378,7 @@
  				${ECHO_MSG} "${PKGNAME}: \"$$d\" erroneous -- dependency list incomplete" >&2; \
  				continue;				\
  			fi;						\
-@@ -5277,7 +5319,7 @@ FETCH_LIST?=	for i in $$deps; do \
+@@ -5296,7 +5338,7 @@ FETCH_LIST?=	for i in $$deps; do \
  			else	\
  				continue;	\
  			fi;;	\
@@ -387,7 +387,7 @@
  				continue;	\
  			fi;;	\
  		esac;	\
-@@ -5572,10 +5614,15 @@ _SUB_LIST_TEMP=	${SUB_LIST:S/$/!g/:S/^/
+@@ -5591,10 +5633,15 @@ _SUB_LIST_TEMP=	${SUB_LIST:S/$/!g/:S/^/
  apply-slist:
  .if defined(SUB_FILES)
  .for file in ${SUB_FILES}
@@ -406,7 +406,7 @@
  .endif
  .endfor
  .for i in pkg-message pkg-install pkg-deinstall pkg-req
-@@ -5752,15 +5799,11 @@ add-plist-info:
+@@ -5771,15 +5818,11 @@ add-plist-info:
  .if defined(INFO)
  .for i in ${INFO}
  	install-info --quiet ${PREFIX}/${INFO_PATH}/$i.info ${PREFIX}/${INFO_PATH}/dir
@@ -422,7 +422,7 @@
  .endfor
  .if defined(INFO_SUBDIR)
  	@${ECHO_CMD} "@unexec ${RMDIR} %D/${INFO_PATH}/${INFO_SUBDIR} 2> /dev/null || true" >> ${TMPPLIST}
-@@ -5916,6 +5959,7 @@ tags:
+@@ -5935,6 +5978,7 @@ tags:
  	OPSYS="${OPSYS:S/"/"'"'"/g:S/\$/\$\$/g:S/\\/\\\\/g}" \
  	OSREL="${OSREL:S/"/"'"'"/g:S/\$/\$\$/g:S/\\/\\\\/g}" \
  	OSVERSION="${OSVERSION:S/"/"'"'"/g:S/\$/\$\$/g:S/\\/\\\\/g}" \
