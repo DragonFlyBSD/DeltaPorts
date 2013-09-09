@@ -1,4 +1,0 @@
---- /dev/null	2013-01-04 17:44:53.967971139 +0100
-+++ Makefile.local	2013-01-04 17:30:06.104341000 +0100
-@@ -0,0 +1 @@
-+ADDITIONAL_INCLUDE_DIRS+=	-I${LOCALBASE}/include/cairo
