@@ -1,11 +1,11 @@
---- Makefile.orig	2013-06-09 20:25:41.380112000 +0000
+--- Makefile.orig	2013-09-09 14:42:13.000000000 +0000
 +++ Makefile
-@@ -70,7 +70,7 @@ do-configure:
+@@ -103,7 +103,7 @@ do-configure:
  		${FALSE}; \
  	fi
  	# This step helps non-i386 systems and is harmless on i386
 -	-${LN} -s ix86_FreeBSD.mak ${WRKDIR}/$d/config/systems/${ARCH}_unknown.mak
 +	-${LN} -s ix86_FreeBSD.mak ${WRKDIR}/$d/config/systems/${ARCH:S/i386/ix86/}_unknown.mak
+ .endfor
  	${REINPLACE_CMD} -E -e 's,^(CC|CXX) *=,\1 ?=,' \
- 	    -e 's,^(CFLAGS|CXXFLAGS) *=,\1 +=,'	\
- 	    -e 's,^OPTIMI,#OPTIMI,' \
+ 	    -e 's,^(CFLAGS|CXXFLAGS) *=,\1 +=,' \
