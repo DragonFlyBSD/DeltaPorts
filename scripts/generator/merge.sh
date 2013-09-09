@@ -78,6 +78,7 @@ transform ()
          -e 's|:U}|:tu}|g' \
          -e 's|:U:(.*)}|:tu:\1}|g' \
          -e 's|:L:(.*)}|:tl:\1}|g' \
+	 -e 's|OPTIONS_DEFAULT_amd64|OPTIONS_DEFAULT_x86_64|g' \
 	 -e 's|OPTIONS_DEFINE_amd64|OPTIONS_DEFINE_x86_64|g' \
 	 -e '/^BROKEN=.*utmpx/s|BROKEN|#BROKEN|' \
          -e '/ARCH}.*(amd64|"amd64")/s|amd64|x86_64|g' \
