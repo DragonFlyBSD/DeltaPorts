@@ -5,7 +5,7 @@
  .include <bsd.port.pre.mk>
  
 -.if ${ARCH} == "i386"
--LIB_DEPENDS+=		EMF:${PORTSDIR}/graphics/libemf
+-LIB_DEPENDS+=		libEMF.so:${PORTSDIR}/graphics/libemf
 -CONFIGURE_ARGS+=	--enable-libemf
 -PLIST_SUB+=		WMF=""
 -.else
