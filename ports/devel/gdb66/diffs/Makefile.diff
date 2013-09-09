@@ -1,7 +1,7 @@
---- Makefile.orig	2013-05-14 15:24:38.464670000 +0000
+--- Makefile.orig	2013-09-09 16:05:11.926605000 +0000
 +++ Makefile
-@@ -32,7 +32,7 @@ CONFIGURE_ARGS=	--program-suffix=${PORTV
- 		--enable-tui --with-libiconv-prefix=${LOCALBASE}
+@@ -30,7 +30,7 @@ CONFIGURE_ARGS=	--program-suffix=${PORTV
+ 		--enable-tui ${ICONV_CONFIGURE_ARG}
  CFLAGS:=	${CFLAGS:C/ +$//}	# blanks at EOL creep in sometimes
  CFLAGS+=	-DRL_NO_COMPAT
 -EXCLUDE=	dejagnu expect readline sim texinfo intl
@@ -9,7 +9,7 @@
  EXTRACT_AFTER_ARGS=	${EXCLUDE:S/^/--exclude /}
  VER=	${PORTVERSION:S/.//}
  PLIST_SUB=	VER=${VER}
-@@ -79,19 +79,6 @@ CONFLICTS+=	gdb-insight*
+@@ -78,19 +78,6 @@ CONFLICTS+=	gdb-insight*
  BROKEN=		Does not configure on ia64 or powerpc
  .endif
  
@@ -22,7 +22,7 @@
 -		${WRKSRC}/gdb/version.in
 -	@${REINPLACE_CMD} -e 's/^READLINE/#READLINE/' \
 -		-e 's/^readline/#readline/' \
--		-e 's,^LIBICONV =.*,LIBICONV=-L${LOCALBASE}/lib -liconv,' \
+-		-e 's,^LIBICONV =.*,LIBICONV=-L${LOCALBASE}/lib ${ICONV_LIB},' \
 -		${WRKSRC}/gdb/Makefile.in
 -	${ECHO} 'READLINE = -lreadline' >> ${WRKSRC}/gdb/Makefile.in
 -
