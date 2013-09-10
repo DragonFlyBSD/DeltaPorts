@@ -9,9 +9,9 @@
  
  USE_AUTOTOOLS=	libtool
  USE_GNOME=	gtk12
--USES=		iconv
+-USES=		iconv pkgconfig
 +USE_XORG+=	x11 xft
-+USES=		iconv gettext
++USES=		iconv pkgconfig gettext
  GNU_CONFIGURE=	yes
 -LDFLAGS+=	-L${LOCALBASE}/lib -lgnuregex ${ICONV_LIB}
 +LDFLAGS+=	-L${LOCALBASE}/lib ${ICONV_LIB}
