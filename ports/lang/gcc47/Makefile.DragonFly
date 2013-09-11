@@ -1,2 +1,3 @@
-IGNORE=	Not implemented on DragonFly yet
+OPTIONS_EXCLUDE_x86_64=	JAVA
+OPTIONS_EXCLUDE_i386=	JAVA
 
