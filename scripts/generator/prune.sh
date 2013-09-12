@@ -47,6 +47,13 @@ else
     usage
 fi
 
+IAM=$(id -un)
+
+if [ "${IAM}" != "automaton" ]; then
+    echo "Please run as 'automaton' user"
+    exit 1
+fi
+
 kill_directory ()
 {
    port=${1}
