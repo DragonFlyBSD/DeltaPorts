@@ -4,8 +4,8 @@
  USE_QT4=	moc_build qmake_build rcc_build uic_build gui dbus network
  USE_GNOME=	desktopfileutils
  
-+QMAKEFLAGS+=	QMAKE_LFLAGS="-lcrypto -L${LOCALBASE}/lib -liconv"
-+
++QMAKEFLAGS+=	QMAKE_LFLAGS="-lcrypto -L${LOCALBASE}/lib ${ICONV_LIB}"
++USES+= iconv
  EXTRA_CONF_ARGS=--disable-cli \
  		--disable-daemon \
  		--without-gtk \
