@@ -1,0 +1,32 @@
+--- bsd.gnustep.mk.orig	2013-09-13 07:35:30.916836000 +0000
++++ bsd.gnustep.mk
+@@ -173,17 +173,15 @@ _CLANG=	0
+ .endif
+ 
+ .if ${_CLANG} < 33
+-BUILD_DEPENDS+=	${LOCALBASE}/bin/clang33:${PORTSDIR}/lang/clang33
+-CPP=	${LOCALBASE}/bin/clang-cpp33
+-CC=	${LOCALBASE}/bin/clang33
+-CXX=	${LOCALBASE}/bin/clang++33
++CONFIGURE_ENV+= CCVER=gcc47
++MAKE_ENV+=      CCVER=gcc47
+ .else
+ CPP=	/usr/bin/clang-cpp
+ CC=	/usr/bin/clang
+ CXX=	/usr/bin/clang++
+-.endif
+-
++LIB_DEPENDS+=	objc.4:${PORTSDIR}/lang/libobjc2
+ MAKE_ENV+=	"CC=${CC} CXX=${CXX}"
++.endif
+ 
+ 
+ 
+@@ -192,7 +190,6 @@ MAKE_ENV+=	"CC=${CC} CXX=${CXX}"
+ #
+ .if defined(USE_GNUSTEP_BASE)
+ BUILD_DEPENDS+=	${GNUSTEP_SYSTEM_LIBRARIES}/libgnustep-base.so:${PORTSDIR}/${GNUSTEP_BASE_PORT}
+-LIB_DEPENDS+=	objc.4:${PORTSDIR}/lang/libobjc2
+ RUN_DEPENDS+=	${GNUSTEP_SYSTEM_LIBRARIES}/libgnustep-base.so:${PORTSDIR}/${GNUSTEP_BASE_PORT}
+ .endif
+ 
