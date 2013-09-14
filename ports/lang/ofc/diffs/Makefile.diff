@@ -15,6 +15,6 @@
 -BUILD_DEPENDS+=	${TARGLIB}/libobjc.so:${PORTSDIR}/${OFC_GCC_PORT}
 -RUN_DEPENDS+=	${TARGLIB}/libobjc.so:${PORTSDIR}/${OFC_GCC_PORT}
 -.endif
-+USE_GCC=	4.4
++USE_GCC=	any
  
  .include <bsd.port.mk>
