@@ -1,4 +1,4 @@
---- UIDs.orig	2013-08-26 14:10:39.761669000 +0000
+--- UIDs.orig	2013-09-14 12:22:55.657440000 +0000
 +++ UIDs
 @@ -14,14 +14,13 @@ uucp:*:66:66::0:0:UUCP pseudo-user:/var/
  xten:*:67:67::0:0:X-10 daemon:/usr/local/xten:/nonexistent
@@ -25,9 +25,9 @@
  rbldns:*:153:153::0:0:rbldnsd pseudo-user:/nonexistent:/usr/sbin/nologin
  trircd:*:154:154::0:0:& user:/usr/local/etc/tr-ircd:/usr/sbin/nologin
  sfs:*:171:171::0:0:Self-Certifying File System:/nonexistent:/usr/sbin/nologin
-@@ -267,4 +266,5 @@ colord:*:970:970::0:0:colord color manag
- shibd:*:971:971::0:0:Shibboleth SAML daemon:/nonexistent:/usr/sbin/nologin
+@@ -269,4 +268,5 @@ shibd:*:971:971::0:0:Shibboleth SAML dae
  plex:*:972:972::0:0:Plex Media Server:/nonexistent:/usr/sbin/nologin
  boinc:*:973:973::0:0:BOINC user:/var/db/boinc:/usr/sbin/nologin
+ radicale:*:974:974::0:0:Radicale daemon:/nonexistent:/usr/sbin/nologin
 +avenger:*:60149:60149::0:0:Mail Avenger:/var/spool/avenger:/usr/sbin/nologin
  nobody:*:65534:65534::0:0:Unprivileged user:/nonexistent:/usr/sbin/nologin
