@@ -1,4 +1,3 @@
 LOCK
-# Versions 0.9 breaks Libreoffice 4.0.5
-Last attempt: 0.9.0
-Last success: 0.9.0
+Last attempt: 0.8.1_1
+Last success: 0.8.1_1
