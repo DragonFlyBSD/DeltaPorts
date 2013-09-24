@@ -1,12 +1,11 @@
---- Uses/iconv.mk.orig	2013-09-09 23:21:02.682255000 +0000
+--- Uses/iconv.mk.orig	2013-09-24 11:11:17.609905000 +0000
 +++ Uses/iconv.mk
-@@ -16,7 +16,8 @@ _INCLUDE_USES_ICONV_MK=	yes
+@@ -16,7 +16,7 @@ _INCLUDE_USES_ICONV_MK=	yes
  iconv_ARGS=     lib
  .endif
  
 -.if !exists(/usr/include/iconv.h) && ${OSVERSION} < 1000043
-+# Change DF 5.0 to really number when iconv fixed
-+.if ${DFLYVERSION} < 500000
++.if ${DFLYVERSION} < 300503
  
  ICONV_CMD=	${LOCALBASE}/bin/iconv
  ICONV_LIB=	-liconv
