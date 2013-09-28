@@ -1,4 +1,4 @@
---- Makefile.orig	2013-08-28 07:43:45.623270000 +0000
+--- Makefile.orig	2013-09-28 21:31:00.347888000 +0000
 +++ Makefile
 @@ -11,10 +11,13 @@ MASTER_SITES=	http://download.java.net/o
  		http://icedtea.classpath.org/download/drops/:jaxws \
@@ -69,18 +69,22 @@
  
  SECURITY_ICONS= security-icon-bw16.png \
  		security-icon-bw24.png \
-@@ -118,6 +121,10 @@ SECURITY_ICONS= security-icon-bw16.png \
+@@ -118,6 +121,14 @@ SECURITY_ICONS= security-icon-bw16.png \
  
  .include <bsd.port.options.mk>
  
 +.if ${OPSYS} == DragonFly && ${DFLYVERSION} > 300500
++.  if ${DFLYVERSION} < 300503
 +BOOTSTRAP_DISTFILE= bootstrap-openjdk-7.21.11.dfly-3.5-${JDK_ARCH}.tar.xz
++.  else
++BOOTSTRAP_DISTFILE= bootstrap-openjdk-7.25.15.dfly-3.5-${JDK_ARCH}.tar.xz
++.  endif
 +.endif
 +
  .if empty(PORT_OPTIONS:MDEBUG)
  MAKE_ENV+=	ALT_OBJCOPY="/nonexistent"
  .endif
-@@ -126,23 +133,7 @@ MAKE_ENV+=	ALT_OBJCOPY="/nonexistent"
+@@ -126,23 +137,7 @@ MAKE_ENV+=	ALT_OBJCOPY="/nonexistent"
  RUN_DEPENDS+=  ${LOCALBASE}/share/java/zi:${PORTSDIR}/java/java-zoneinfo
  .endif
  
@@ -105,8 +109,8 @@
  
  post-extract:
  	# Move icons to their new home.
-@@ -160,6 +151,11 @@ post-patch:
- 		${WRKSRC}/jdk/make/javax/crypto/Makefile
+@@ -167,6 +162,11 @@ post-patch:
+ 		${WRKSRC}/jdk/make/java/instrument/Makefile
  .endif
  
 +# override do-build to filter out _MAKE_JOBS to enable parallel build
@@ -117,7 +121,7 @@
  .if ${PORT_OPTIONS:MTZUPDATE}
  pre-install:
  	@# Update time zones
-@@ -177,8 +173,8 @@ do-install:
+@@ -184,8 +184,8 @@ do-install:
  		${CHOWN} -h -R ${BINOWN}:${BINGRP} $$dir; \
  		${FIND} $$dir -type f -exec ${CHMOD} ${BINMODE} "{}" \; ; \
  	done
