@@ -1,10 +1,14 @@
---- distinfo.orig	2013-06-19 11:15:13.677287000 +0000
+--- distinfo.orig	2013-09-28 23:54:38.116816000 +0000
 +++ distinfo
-@@ -10,3 +10,7 @@ SHA256 (ghc-7.4.1-i386-freebsd9-boot.tar
- SIZE (ghc-7.4.1-i386-freebsd9-boot.tar.bz2) = 46254818
- SHA256 (ghc-7.4.1-amd64-freebsd9-boot.tar.bz2) = 8dc43c1ed2f026837947d938736ee6084f151fa5617998fca55420418f4ea28f
- SIZE (ghc-7.4.1-amd64-freebsd9-boot.tar.bz2) = 46427727
+@@ -14,3 +14,11 @@ SHA256 (ghc-7.6.3-i386-freebsd10-boot.ta
+ SIZE (ghc-7.6.3-i386-freebsd10-boot.tar.bz2) = 55512004
+ SHA256 (ghc-7.6.3-amd64-freebsd10-boot.tar.bz2) = 8ce856cbd5b9fa230d17bc3d28b96206d84dce4aa3c1c9c7016262ff132271ad
+ SIZE (ghc-7.6.3-amd64-freebsd10-boot.tar.bz2) = 55418435
 +SHA256 (ghc-7.4.2-i386-dragonfly-boot.tar.bz2) = 278526b6069b52693548b378943dc31e34fca59f9dc9821ccb84490d594290a6
 +SIZE (ghc-7.4.2-i386-dragonfly-boot.tar.bz2) = 45981743
 +SHA256 (ghc-7.4.2-x86_64-dragonfly-boot.tar.bz2) = f2ccfc7f40ea5dc8b74f824c6aac4a6bae23e9ef0163f533255246f833adef73
 +SIZE (ghc-7.4.2-x86_64-dragonfly-boot.tar.bz2) = 46005079
++SHA256 (ghc-7.6.3-i386-dragonfly-boot.tar.bz2) = 68ab4cb5c238cb0249203b1fb70fd87b4065eec8c3e2ffea984b3ad5d32f51be
++SIZE (ghc-7.6.3-i386-dragonfly-boot.tar.bz2) = 108821571
++SHA256 (ghc-7.6.3-x86_64-dragonfly-boot.tar.bz2) = ab6c6d899eb388f852ecc31ab6e5e1f993d5140dccbd820e70b615403132b7c5
++SIZE (ghc-7.6.3-x86_64-dragonfly-boot.tar.bz2) = 63406815
