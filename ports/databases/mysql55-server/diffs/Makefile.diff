@@ -1,22 +1,20 @@
---- Makefile.orig	2013-09-13 22:16:54.719284000 +0000
+--- Makefile.orig	2013-10-06 11:26:39.977544000 +0000
 +++ Makefile
 @@ -15,7 +15,7 @@ COMMENT?=	Multithreaded SQL database (se
  LICENSE=	GPLv2
  
  SLAVEDIRS=	databases/mysql55-client
--USES=		cmake
+-USES=		cmake shebangfix
 +USES=		cmake shebangfix readline
  NO_OPTIONS_SORT=yes
  
  OPTIONS_DEFINE=	SSL FASTMTX
-@@ -40,7 +40,9 @@ CMAKE_ARGS+=	-DINSTALL_DOCDIR="share/doc
+@@ -40,7 +40,7 @@ CMAKE_ARGS+=	-DINSTALL_DOCDIR="share/doc
  		-DINSTALL_SUPPORTFILESDIR="share/mysql" \
  		-DWITH_UNIT_TESTS=0 \
  		-DWITH_LIBEDIT=0 \
 -		-DWITH_LIBWRAP=1
 +		-DWITH_READLINE=1
-+
-+SHEBANG_FILES=	scripts/*.pl* scripts/*.sh
  
- .ifdef USE_MYSQL
- .error You have `USE_MYSQL' variable defined either in environment or in make(1) arguments. Please undefine and try again.
+ SHEBANG_FILES=	scripts/*.pl* scripts/*.sh
+ 
