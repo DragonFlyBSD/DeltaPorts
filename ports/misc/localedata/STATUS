@@ -1,3 +1,5 @@
-PORT
+MASK
+This is a FreeBSD-specific port, required by compat4x and compat5x
+which are also masked
 Last attempt: 5.4
 Last success: 5.4
