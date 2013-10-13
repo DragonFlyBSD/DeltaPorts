@@ -1,15 +1,15 @@
---- Makefile.orig	2013-10-06 22:46:51.377913000 +0000
+--- Makefile.orig	2013-10-13 18:24:25.972007000 +0000
 +++ Makefile
-@@ -19,6 +19,8 @@ SRC=		${.CURDIR}/src
+@@ -20,6 +20,8 @@ SRC=		${.CURDIR}/src
  
- MAN1=		portlint.1
- PLIST_FILES=	bin/portlint
+ PLIST_FILES=	bin/portlint \
+ 		man/man1/portlint.1.gz
 +USES+=		shebangfix
 +SHEBANG_FILES=	*.pl
  
- .if !defined(NOPORTEXAMPLES)
- PLIST_FILES+=	%%EXAMPLESDIR%%/portlintgrep
-@@ -29,13 +31,12 @@ NO_STAGE=	yes
+ .include <bsd.port.options.mk>
+ 
+@@ -31,18 +33,17 @@ PLIST_DIRS=	%%EXAMPLESDIR%%
  do-fetch:
  	@${DO_NADA}
  
@@ -26,4 +26,10 @@
 +	@${REINPLACE_CMD} -e 's|/usr/ports|/usr/dports|g' ${WRKSRC}/portlint*
  
  do-install:
- 	${INSTALL_SCRIPT} ${WRKSRC}/portlint.pl ${PREFIX}/bin/portlint
+ 	${INSTALL_SCRIPT} ${WRKSRC}/portlint.pl \
+ 	    ${STAGEDIR}${PREFIX}/bin/portlint
+-	${INSTALL_MAN} ${WRKSRC}/portlint.1 \
++
+ 	    ${STAGEDIR}${MAN1PREFIX}/man/man1
+ .if ${PORT_OPTIONS:MEXAMPLES}
+ 	${INSTALL} -o ${SHAREOWN} -g ${SHAREGRP} -m ${BINMODE} -d \
