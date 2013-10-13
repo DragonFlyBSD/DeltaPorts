@@ -1,55 +1,33 @@
---- bsd.mesalib.mk.orig	2013-06-04 19:31:29.000000000 +0000
+--- bsd.mesalib.mk.orig	2013-10-13 19:08:58.863618000 +0000
 +++ bsd.mesalib.mk
-@@ -15,7 +15,6 @@
+@@ -11,7 +11,6 @@
  #
- # $FreeBSD: graphics/libGL/bsd.mesalib.mk 319899 2013-06-04 19:31:29Z zeising $
+ # $FreeBSD: graphics/libGL/bsd.mesalib.mk 328711 2013-09-29 17:01:41Z zeising $
  
 -.MAKE.FreeBSD_UL=	yes
  
  MESAVERSION=	${MESABASEVERSION}${MESASUBVERSION:C/^(.)/.\1/}
  MESADISTVERSION=${MESABASEVERSION}${MESASUBVERSION:C/^(.)/-\1/}
-@@ -58,6 +57,8 @@ EXTRA_PATCHES+=	${PATCHDIR}/extra-config
- 		${PATCHDIR}/extra-src__mesa__drivers__dri__nouveau__nouveau_array.c \
- 		${PATCHDIR}/extra-src__mesa__drivers__dri__nouveau__nouveau_render_t.c \
- 		${PATCHDIR}/extra-src_glx_XF86dri.c
-+EXTRA_PATCHES+=	${DFLY_PATCHDIR}/extra-newxorg-bin_mklib
-+EXTRA_PATCHES+=	${DFLY_PATCHDIR}/extra-newxorg-src_gallium_include_pipe_p__config.h
+@@ -82,11 +81,12 @@ PATCHDIR=		${MASTERDIR}/files
  .else
- EXTRA_PATCHES+=	${PATCHDIR}/extra-configure-old \
- 		${PATCHDIR}/extra-mach64_context.h-old \
-@@ -66,6 +67,9 @@ EXTRA_PATCHES+=	${PATCHDIR}/extra-config
- 		${PATCHDIR}/extra-src__mesa__x86__glapi_x86.S \
- 		${PATCHDIR}/extra-src__mesa__x86__read_rgba_span_x86.S \
- 		${PATCHDIR}/extra-src_glx_x11_XF86dri.c
-+EXTRA_PATCHES+=	${DFLY_PATCHDIR}/extra-oldxorg-bin_mklib
-+EXTRA_PATCHES+=	${DFLY_PATCHDIR}/extra-oldxorg-src_gallium_include_pipe_p__config.h
-+EXTRA_PATCHES+=	${DFLY_PATCHDIR}/extra-oldxorg-src_mesa_drivers_dri_mach64_mach64__context.h
- CONFIGURE_ARGS+=--disable-glut --disable-glw
+ PATCHDIR=		${MASTERDIR}/files-old
  .endif
- 
-@@ -73,6 +77,7 @@ ALL_TARGET=		default
- 
- MASTERDIR=		${.CURDIR}/../../graphics/libGL
- PATCHDIR=		${MASTERDIR}/files
 +DFLY_PATCHDIR=		${MASTERDIR}/dragonfly
  DESCR=			${.CURDIR}/pkg-descr
  PLIST=			${.CURDIR}/pkg-plist
  WRKSRC=			${WRKDIR}/Mesa-${MESADISTVERSION}
-@@ -81,7 +86,7 @@ WRKSRC=			${WRKDIR}/Mesa-${MESADISTVERSI
- ARCH!=			uname -p
- .endif
  
 -COMPONENT=		${PORTNAME:L:C/^lib//:C/mesa-//}
 +COMPONENT=		${PORTNAME:tl:C/^lib//:C/mesa-//}
  
- .if ${COMPONENT:Mglu} == ""
- CONFIGURE_ARGS+=	--disable-glu
-@@ -102,8 +107,6 @@ CONFIGURE_ARGS+=	--enable-xcb
+ .if ${COMPONENT:Mglesv2} == ""
+ CONFIGURE_ARGS+=	--disable-gles2
+@@ -116,8 +116,6 @@ CONFIGURE_ARGS+=	--enable-xcb
  .endif
  
  post-patch:
 -	@${REINPLACE_CMD} -e 's|-ffast-math|${FAST_MATH}|' -e 's|x86_64|amd64|' \
 -		${WRKSRC}/configure
- 	@${REINPLACE_CMD} -e 's|[$$](INSTALL_LIB_DIR)/pkgconfig|${PREFIX}/libdata/pkgconfig|' \
- 		${WRKSRC}/src/glu/Makefile \
- 		${WRKSRC}/src/mesa/Makefile \
+ 	@${REINPLACE_CMD} -e 's|/etc/|${PREFIX}/etc/|g' \
+ 		${WRKSRC}/src/mesa/drivers/dri/common/xmlconfig.c
+ .if !defined(WITH_NEW_XORG)
