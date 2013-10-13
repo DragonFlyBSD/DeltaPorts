@@ -237,7 +237,7 @@ done
 rm -rf ${WORKAREA}/*
 
 cp -a ${FPORTS}/Templates ${WORKAREA}
-mkdir -p ${WORKAREA}/Mk/Uses
+mkdir -p ${WORKAREA}/Mk/Uses ${WORKAREA}/Mk/Scripts
 all=$(cd ${FPORTS} && find Mk -type f)
 for item in ${all}; do
    cat ${FPORTS}/${item} | sed -E \
