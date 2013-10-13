@@ -1,30 +1,30 @@
---- Makefile.orig	2013-08-23 12:02:18.879974000 +0000
+--- Makefile.orig	2013-10-13 19:50:40.548580000 +0000
 +++ Makefile
-@@ -15,6 +15,7 @@ BUILD_DEPENDS=	p5-Archive-Zip>=0:${PORTS
+@@ -16,6 +16,7 @@ BUILD_DEPENDS=	p5-Archive-Zip>=0:${PORTS
  		${LOCALBASE}/bin/gperf:${PORTSDIR}/devel/gperf \
- 		${LOCALBASE}/include/mdds/global.hpp:${PORTSDIR}/devel/mdds \
+ 		mdds>=0.9.0:${PORTSDIR}/devel/mdds \
  		gpatch:${PORTSDIR}/devel/patch \
 +		sane-backends>=1.0.23:${PORTSDIR}/graphics/sane-backends \
  		ucpp:${PORTSDIR}/devel/ucpp \
  		vigra-config:${PORTSDIR}/graphics/vigra \
  		bash:${PORTSDIR}/shells/bash \
-@@ -34,6 +35,7 @@ LIB_DEPENDS=	icutu:${PORTSDIR}/devel/icu
- 		poppler:${PORTSDIR}/graphics/poppler \
- 		lpsolve55:${PORTSDIR}/math/lp_solve \
- 		cmis-0.4:${PORTSDIR}/net/libcmis \
-+		ldap-2.4:${PORTSDIR}/net/openldap24-client \
- 		mspub-0.0:${PORTSDIR}/print/libmspub \
- 		nss3.1:${PORTSDIR}/security/nss \
- 		clucene-core:${PORTSDIR}/textproc/clucene \
-@@ -47,6 +49,7 @@ LIB_DEPENDS=	icutu:${PORTSDIR}/devel/icu
- 		wpd-0.9.9:${PORTSDIR}/textproc/libwpd \
- 		wps-0.2.2:${PORTSDIR}/textproc/libwps \
- 		mythes-1.2.0:${PORTSDIR}/textproc/mythes \
-+		cups:${PORTSDIR}/print/cups-client \
- 		rdf.0:${PORTSDIR}/textproc/redland
+@@ -35,6 +36,7 @@ LIB_DEPENDS=	libicutu.so:${PORTSDIR}/dev
+ 		libpoppler.so:${PORTSDIR}/graphics/poppler \
+ 		liblpsolve55.so:${PORTSDIR}/math/lp_solve \
+ 		libcmis-0.4.so:${PORTSDIR}/net/libcmis \
++		ldap-2.4.so:${PORTSDIR}/net/openldap24-client \
+ 		libmspub-0.0.so:${PORTSDIR}/print/libmspub \
+ 		libnss3.so:${PORTSDIR}/security/nss \
+ 		libclucene-core.so:${PORTSDIR}/textproc/clucene \
+@@ -48,6 +50,7 @@ LIB_DEPENDS=	libicutu.so:${PORTSDIR}/dev
+ 		libwpd-0.9.so:${PORTSDIR}/textproc/libwpd \
+ 		libwps-0.2.so:${PORTSDIR}/textproc/libwps \
+ 		libmythes-1.2.so:${PORTSDIR}/textproc/mythes \
++		cups.so:${PORTSDIR}/print/cups-client \
+ 		librdf.so:${PORTSDIR}/textproc/redland
  
  RUN_DEPENDS=	${LOCALBASE}/lib/X11/fonts/dejavu/DejaVuSans.ttf:${PORTSDIR}/x11-fonts/dejavu \
-@@ -60,15 +63,15 @@ _MAKE_JOBS=	#
+@@ -61,15 +64,15 @@ _MAKE_JOBS=	#
  
  GNU_CONFIGURE=	yes
  USE_AUTOTOOLS=	autoconf aclocal
@@ -44,7 +44,7 @@
  
  DISTFILES+=	${PORTNAME}-${LOVERSION}${EXTRACT_SUFX}
  DISTFILES+=	${PORTNAME}-help-${LOVERSION}${EXTRACT_SUFX}
-@@ -87,75 +90,56 @@ CONFIGURE_ENV=		DMAKE=${LOCALBASE}/bin/d
+@@ -88,75 +91,56 @@ CONFIGURE_ENV=		DMAKE=${LOCALBASE}/bin/d
  			PYTHON_LIBS="`${PYTHON_VERSION}-config --libs`" \
  			TMPDIR=${WRKDIR}
  
@@ -159,7 +159,7 @@
  			--without-system-mozilla
  
  MAN1=	libreoffice.1 \
-@@ -172,192 +156,8 @@ MAN1=	libreoffice.1 \
+@@ -173,195 +157,8 @@ MAN1=	libreoffice.1 \
  
  MANCOMPRESSED=	yes
  
@@ -178,7 +178,7 @@
 -.include <bsd.port.options.mk>
 -
 -.if ${PORT_OPTIONS:MCUPS}
--LIB_DEPENDS+=		cups:${PORTSDIR}/print/cups-client
+-LIB_DEPENDS+=		libcups.so:${PORTSDIR}/print/cups-client
 -CONFIGURE_ARGS+=	--enable-cups --without-ppds
 -.else
 -CONFIGURE_ARGS+=	--disable-cups
@@ -195,7 +195,7 @@
 -.endif
 -
 -.if ${PORT_OPTIONS:MGNOME}
--LIB_DEPENDS+=		dbus-glib-1:${PORTSDIR}/devel/dbus-glib
+-LIB_DEPENDS+=		libdbus-glib-1.so:${PORTSDIR}/devel/dbus-glib
 -USE_GNOME+=		gconf2
 -CONFIGURE_ARGS+=	--enable-dbus --enable-gconf --enable-gio \
 -			--enable-lockdown
@@ -318,7 +318,7 @@
 -
 -.if ${PORT_OPTIONS:MWEBDAV}
 -CONFIGURE_ARGS+=	--enable-neon --with-system-neon
--LIB_DEPENDS+=	neon.27:${PORTSDIR}/www/neon29
+-LIB_DEPENDS+=	libneon.so:${PORTSDIR}/www/neon29
 -.else
 -CONFIGURE_ARGS+=	--disable-neon
 -.endif
@@ -334,6 +334,9 @@
 -CPP=		/usr/bin/clang-cpp
 -CXX=		/usr/bin/clang++
 -CONFIGURE_ENV+=	CXXCPP="${CPP}"
+-.if ${OSVERSION} > 100054
+-EXTRA_PATCHES+=	${FILESDIR}/extra-patch-libc++
+-.endif
 -.else
 -# XXX Clang PR13308 (http://llvm.org/bugs/show_bug.cgi?id=13308)
 -BUILD_DEPENDS+=	clang>=3.2_4:${PORTSDIR}/lang/clang
@@ -352,7 +355,7 @@
  ACLOCAL_ARGS=	-I "${WRKSRC}/m4"
  CPPFLAGS=	-I${LOCALBASE}/include
  LDFLAGS=	-L${LOCALBASE}/lib
-@@ -403,15 +203,6 @@ post-install:
+@@ -407,15 +204,6 @@ post-install:
  	    \( -type f -o -type l \) -print >> ${PLISTF}
  .endfor
  
