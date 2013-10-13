@@ -1,36 +1,7 @@
---- Makefile.orig	2013-02-11 14:04:34.194512000 +0100
-+++ Makefile	2013-02-11 14:04:31.184640000 +0100
-@@ -38,10 +38,9 @@
- HAS_CONFIGURE=	yes
- MAKE_JOBS_SAFE=	yes
- 
--OPTIONS_DEFINE=	ASM DEBUG PGO GCC44 GPAC X11_OUTPUT
-+OPTIONS_DEFINE=	ASM DEBUG PGO GPAC X11_OUTPUT
- OPTIONS_DEFAULT=	ASM PGO GPAC
--ASM_DESC=		Assembly optimizations (devel/binutils)
--GCC44_DESC=		Use current GCC (implies WITH_ASM)
-+ASM_DESC=		Assembly optimizations
- GPAC_DESC=		Enable MPEG-4 Output
- X11_OUTPUT_DESC=	Enable X11 Output
- 
-@@ -52,28 +51,12 @@
- PLIST_SUB+=	X264_BUILD=${X264_BUILD}
- 
- .include <bsd.port.options.mk>
--
--.if ${PORT_OPTIONS:MGCC44}
--USE_GCC?=	yes
--.endif
--
- .include <bsd.port.pre.mk>
- 
--.if ${PORT_OPTIONS:MASM} || ${PORT_OPTIONS:MGCC44}
--BUILD_DEPENDS+=		${LOCALBASE}/bin/as:${PORTSDIR}/devel/binutils
--CONFIGURE_ENV+=		COMPILER_PATH=${LOCALBASE}/bin
--MAKE_ENV+=		COMPILER_PATH=${LOCALBASE}/bin
--.else
-+.if ${PORT_OPTIONS:MASM} == ""
- CONFIGURE_ARGS+=		--disable-asm
+--- Makefile.orig	2013-10-13 18:45:05.248414000 +0000
++++ Makefile
+@@ -61,13 +61,6 @@ CONFIGURE_ARGS+=	--disable-asm
+ CONFIGURE_ARGS+=	--enable-debug
  .endif
  
 -# Around the time GCC stack protection (aka Propolice) for userland
@@ -40,18 +11,6 @@
 -LDFLAGS+=	-fstack-protector
 -.endif
 -
- CONFIGURE_ENV+=	ARCH= \
- 		TARGET_ARCH=
- MAKE_ENV+=	ARCH= \
-@@ -123,11 +106,6 @@
- 	@${REINPLACE_CMD} -e 's|$$(libdir)/pkgconfig|${PREFIX}/libdata/pkgconfig|; \
- 		s|$${libdir}/pkgconfig|${PREFIX}/libdata/pkgconfig|' \
- 		${WRKSRC}/Makefile
--.if ${PORT_OPTIONS:MGCC44}
--	@${REINPLACE_CMD} -e 's|$$(CC) -shared -o|COMPILER_PATH= $$(CC) -shared -o|g' \
--		-e 's|$$(CC) -o|COMPILER_PATH= $$(CC) -o|g' \
--		${WRKSRC}/Makefile
--.endif
- 
- .if ${SLAVE_PORT:tl}=="no"
- .if 0 # BROKEN
+ .if ${PORT_OPTIONS:MPGO}
+ # y4m sample video
+ Y4M_VIDEO=example.y4m
