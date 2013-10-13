@@ -5,36 +5,19 @@
 # After 30 wake-ups, it tries to sync with github
 #
 
-CONFFILE=/usr/local/etc/dports.conf
+. /usr/local/etc/dports.conf
 LOGFILE=~/gen-dports.log
 
-if [ ! -f ${CONFFILE} ]; then
-   echo "Configuration file ${CONFFILE} not found"
-   exit 1
-fi
+# In a hacky attempt to make this daemon work after a reboot,
+# Wait 2 minutes after it is invoked to run.
 
-checkdir () {
-   eval "MYDIR=\$$1"
-   if [ ! -d ${MYDIR} ]; then
-     echo "The $1 directory (${MYDIR}) does not exist."
-     exit 1
-  fi
-}
+sleep 120
 
 split () {
    VAL1=${1}
    VAL2=${2}
    VAL3=${3}
 }
-
-confopts=$(grep "=" ${CONFFILE})
-for opt in ${confopts}; do
-   eval $opt
-done
-
-checkdir COMQUEUE
-checkdir DPORTS
-checkdir DELTA
 
 AWKCMD='{ printf("%s ", $1) }'
 
