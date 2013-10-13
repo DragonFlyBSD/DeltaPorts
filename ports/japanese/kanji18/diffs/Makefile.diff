@@ -1,6 +1,6 @@
---- Makefile.orig	2013-06-02 22:39:49.621220000 +0000
+--- Makefile.orig	2013-10-13 18:55:22.251870000 +0000
 +++ Makefile
-@@ -9,47 +9,35 @@ PORTNAME=	kanji
+@@ -5,48 +5,36 @@ PORTNAME=	kanji
  PORTVERSION?=	1.0
  PORTREVISION?=	4
  CATEGORIES=	japanese x11-fonts
@@ -26,6 +26,7 @@
  FONTSDIR=	lib/X11/fonts/local
  NO_WRKSUBDIR=	yes
  
+ NO_STAGE=	yes
  .include <bsd.port.pre.mk>
  
 -EXTRACT_CMD=		${GZCAT}
