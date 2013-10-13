@@ -1,6 +1,6 @@
---- Makefile.orig	2013-01-04 12:53:20.961146000 +0100
-+++ Makefile	2013-01-04 12:57:39.521507000 +0100
-@@ -28,26 +28,8 @@
+--- Makefile.orig	2013-10-13 18:52:13.403056000 +0000
++++ Makefile
+@@ -23,26 +23,9 @@ BUILD_DEPENDS+=	${RUBY_SITEARCHLIBDIR}/g
  		p5-XML-Parser>=0:${PORTSDIR}/textproc/p5-XML-Parser
  RUN_DEPENDS+=	${RUBY_SITEARCHLIBDIR}/glib2.so:${PORTSDIR}/devel/ruby-glib2
  
@@ -18,16 +18,16 @@
 -OSVERSION!=	${SYSCTL} -n kern.osreldate
 -.endif
 -.endif
--
+ 
  OPTIONS_DEFINE=		DICT_RUBY EST MYSQL PYTHON UNIHAN
  OPTIONS_DEFAULT=	PYTHON
 -.if ${ARCH} != "sparc64" && ${OSVERSION} < 700042
 -OPTIONS_DEFAULT+=	UNIHAN
 -.endif
+ OPTIONS_SUB=		yes
  DICT_RUBY_DESC=		Enable Ruby based dictionary module
- EST_DESC=		Enable Hyper Estraier dictionary module
- MYSQL_DESC=		Enable MySQL dictionary module
-@@ -92,9 +74,6 @@
+ DICT_RUBY_CONFIGURE_ENABLE=	dict-ruby
+@@ -71,9 +54,6 @@ USE_GNOME+=	pygtk2
  .if ${OSVERSION} >= 700042
  BROKEN=		Broken with Unihan with gcc 4.2
  .endif
@@ -36,4 +36,4 @@
 -.endif
  MASTER_SITES+=	ftp://ftp.unicode.org/Public/UNIDATA/:unihan
  DISTFILES+=	Unihan.zip:unihan
- EXTRACT_DEPENDS+=	unzip:${PORTSDIR}/archivers/unzip
+ EXTRACT_DEPENDS+=	${UNZIP_CMD}:${PORTSDIR}/archivers/unzip
