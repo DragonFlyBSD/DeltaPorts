@@ -1,6 +1,6 @@
---- Makefile.orig	2013-01-15 13:26:39.598448000 +0100
-+++ Makefile	2013-01-15 13:27:18.878503000 +0100
-@@ -15,18 +15,11 @@
+--- Makefile.orig	2013-10-13 18:03:12.790641000 +0000
++++ Makefile
+@@ -11,19 +11,12 @@ COMMENT=	A multiwindow mouse-based text
  
  USE_XORG=	x11
  GNU_CONFIGURE=	yes
@@ -10,6 +10,7 @@
  
  PLIST_SUB=	VERSION="${PORTVERSION}"
  
+ NO_STAGE=	yes
 -post-patch:
 -	@${REINPLACE_CMD} -e 's| regex\.c | |g ; \
 -		 s| -g | |g' ${WRKSRC}/Makefile.in
