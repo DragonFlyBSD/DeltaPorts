@@ -54,6 +54,7 @@ done
 for k in Mk Templates; do
   diffs=$(find ${DELTA}/special/${k}/diffs -name \*\.diff)
   for difffile in ${diffs}; do
+    @echo "Apply patch ${difffile}" 
     patch --quiet -d ${WORKAREA}/${k} < ${difffile}
   done
   find ${WORKAREA}/${k} -name \*\.orig -exec rm {} \;
