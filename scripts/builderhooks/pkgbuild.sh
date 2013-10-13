@@ -13,9 +13,37 @@ DELTAORIGIN=${DELTA}/ports/${ORIGIN}
 STATUSFILE=${DELTAORIGIN}/STATUS
 PKGV=$(echo ${PKGNAME} | awk "${AWKPKGV}")
 
-if [ "${PTNAME}" -eq "potential" ]; then
+write_delta ()
+{
+    local result=${1}
+    NAME=$(echo ${ORIGIN} | sed -e 's|/|__|g')
+    mkdir -p -m 777 ${COMQUEUE}
+    rm -f ${COMQUEUE}/delta.${NAME}
+    cat > ${COMQUEUE}/delta.${NAME} << EOF
+${ORIGIN}
+${result}
+${PKGV}
+EOF
+    chmod 777 ${COMQUEUE}/delta.${NAME}
+}
 
-    if [ "${RESULT}" -eq "failed" ]; then
+write_status ()
+{
+    echo ${1} > ${STATUSFILE}
+    echo "Last attempt: ${2}" >> ${STATUSFILE}
+    echo "Last success: ${3}" >> ${STATUSFILE}
+    chown automaton:automaton ${STATUSFILE}
+}
+
+ensure_deltaorigin ()
+{
+    mkdir -p ${DELTAORIGIN}
+    chown automaton:automaton ${DELTAORIGIN}
+}
+
+if [ "${PTNAME}" = "potential" ]; then
+
+    if [ "${RESULT}" = "failed" ]; then
 	[ -d ${DPORTS}/${ORIGIN} ] && echo "${ORIGIN}" >> ${LOGBASE}/PSF.log    
 
 	ensure_deltaorigin
@@ -29,7 +57,7 @@ if [ "${PTNAME}" -eq "potential" ]; then
 	write_delta Failure
     fi
 
-    if [ "${RESULT}" -eq "success" ]; then
+    if [ "${RESULT}" = "success" ]; then
 	oldloc=${POTENTIAL}/${ORIGIN}
 	newloc=${DPORTS}/${ORIGIN}
 	newdir=$(dirname $newloc)
@@ -82,30 +110,3 @@ EOF
     fi
 fi
 
-write_delta ()
-{
-    local result=${1}
-    NAME=$(echo ${ORIGIN} | sed -e 's|/|__|g')
-    mkdir -p -m 777 ${COMQUEUE}
-    rm -f ${COMQUEUE}/delta.${NAME}
-    cat > ${COMQUEUE}/delta.${NAME} << EOF
-${ORIGIN}
-${result}
-${PKGV}
-EOF
-    chmod 777 ${COMQUEUE}/delta.${NAME}
-}
-
-write_status ()
-{
-    echo ${1} > ${STATUSFILE}
-    echo "Last attempt: ${2}" >> ${STATUSFILE}
-    echo "Last success: ${3}" >> ${STATUSFILE}
-    chown automaton:automaton ${STATUSFILE}
-}
-
-ensure_deltaorigin ()
-{
-    mkdir -p ${DELTAORIGIN}
-    chown automaton:automaton ${DELTAORIGIN}
-}
