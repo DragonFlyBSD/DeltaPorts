@@ -1,10 +1,10 @@
---- src/fixrtf.l.orig	2013-01-26 19:07:33.550997000 +0100
-+++ src/fixrtf.l	2013-01-26 19:07:46.021014000 +0100
+--- src/fixrtf.l.orig	2013-10-13 18:34:09.897231000 +0000
++++ src/fixrtf.l
 @@ -32,7 +32,6 @@
   */
  
  #include <sys/cdefs.h>
--__FBSDID("$FreeBSD: ports/textproc/fixrtf/src/fixrtf.l,v 1.2 2012/11/17 06:01:56 svnexp Exp $");
+-__FBSDID("$FreeBSD: /tmp/pcvs/ports/textproc/fixrtf/src/fixrtf.l,v 1.1 2006-03-16 07:50:15 delphij Exp $");
  
  #include <err.h>
  #include <assert.h>
