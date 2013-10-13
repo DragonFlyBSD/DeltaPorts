@@ -1,9 +1,9 @@
---- Makefile.orig	2013-09-16 11:58:02.720324000 +0000
+--- Makefile.orig	2013-10-13 18:39:10.659417000 +0000
 +++ Makefile
-@@ -87,7 +87,11 @@ OPTIONS_SINGLE=	DB ODBC
- OPTIONS_SINGLE_DB=	MYSQL PGSQL SQLITE
+@@ -88,7 +88,11 @@ OPTIONS_SINGLE_DB=	MYSQL PGSQL SQLITE
  OPTIONS_SINGLE_ODBC=	IODBC UNIXODBC
  
+ NO_STAGE=	yes
 -.include <bsd.port.options.mk>
 +.include <bsd.port.pre.mk>
 +
@@ -13,7 +13,7 @@
  
  .if ${PORT_OPTIONS:MMYSQL}
  ZABBIX_REQUIRE=	" mysql"
-@@ -194,4 +198,4 @@ post-install:
+@@ -195,4 +199,4 @@ post-install:
  .endif
  .endif # if ${ZABBIX_BUILD} != "frontend"
  
