@@ -1,15 +1,15 @@
---- Makefile.orig	2013-05-25 18:16:44.000000000 +0000
+--- Makefile.orig	2013-10-13 18:14:51.597481000 +0000
 +++ Makefile
-@@ -35,7 +35,7 @@ OPTIONS_DEFAULT+=	MANPAGES
- 
- .if ${PORT_OPTIONS:MKMS}
+@@ -34,7 +34,7 @@ USES+=		gmake
+ # KMS support in the kernel is only build on these archs, disable others
+ .if ${ARCH} == "amd64" || ${ARCH} == "i386"
  CONFIGURE_ARGS+=--enable-libkms
 -EXTRA_PATCHES+=	${FILESDIR}/extra-xf86drmMode.c
-+EXTRA_PATCHES+=	${DFLY_PATCHDIR}/extra-xf86drmMode.c
- PLIST_SUB+=	KMS=""
++EXTRA_PATCHES+=	${DFLY_FILESDIR}/extra-xf86drmMode.c
+ PLIST_SUB+=	KMS="" NOUVEAU=""
  .else
- PLIST_SUB+=	KMS="@comment "
-@@ -83,8 +83,7 @@ PLIST_SUB+=	RADEON_DRIVERS="@comment "
+ CONFIGURE_ARGS+=--disable-libkms
+@@ -81,8 +81,7 @@ PLIST_SUB+=	RADEON_DRIVERS="@comment "
  .endif
  
  pre-patch:
@@ -18,4 +18,4 @@
 +	@${REINPLACE_CMD} 's|{libdir}/pkgconfig|{prefix}/libdata/pkgconfig|g;' \
  		${WRKSRC}/configure
  
- .include <bsd.port.post.mk>
+ .include <bsd.port.mk>
