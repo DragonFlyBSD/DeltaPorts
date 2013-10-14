@@ -48,7 +48,7 @@ if [ "${PTNAME}" = "potential" ]; then
 
 	ensure_deltaorigin
 	if [ -f ${STATUSFILE} ]; then
-	    TYPE=$(grep PORT ${STATUSFILE})
+	    TYPE=$(grep -E "^(PORT|DPORT|LOCK)" ${STATUSFILE})
 	    LASTSUCC=$(grep "Last success:" ${STATUSFILE} | cut -c 15-80)
 	    write_status "${TYPE}" "${PKGV}" "${LASTSUCC}"
 	else
