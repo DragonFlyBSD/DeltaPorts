@@ -3,31 +3,7 @@
 # Update $MERGED directory (ports + overlay = merged)
 #
 
-CONFFILE=/usr/local/etc/dports.conf
-
-if [ ! -f ${CONFFILE} ]; then
-   echo "Configuration file ${CONFFILE} not found"
-   exit 1
-fi
-
-checkdir ()
-{
-   eval "MYDIR=\$$1"
-   if [ ! -d ${MYDIR} ]; then
-     echo "The $1 directory (${MYDIR}) does not exist."
-     exit 1
-  fi
-}
-
-confopts=`grep "=" ${CONFFILE}`
-for opt in ${confopts}; do
-   eval $opt
-done
-
-checkdir DELTA
-checkdir DPORTS
-checkdir FPORTS
-checkdir MERGED
+. /usr/local/etc/dports.conf
 
 AWKCMD1='{ n=split($1,a,"-") }{ print substr($2,12) " " a[n] }'
 AWKCMD2='{ \
@@ -273,4 +249,20 @@ LANGS="arabic chinese french german hebrew hungarian japanese korean \
 
 for lang in ${LANGS}; do
   cp ${FPORTS}/${lang}/Makefile.inc ${MERGED}/${lang}/Makefile.inc
+done
+
+CATEGORIES=$(cd ${MERGED} && find -s * -type d -depth 0 -maxdepth 0 -not \( -name Mk -o -name Tools -o -name Templates \) )
+
+rm -f ${MERGED}/Makefile
+for CAT in ${CATEGORIES}; do
+echo "SUBDIR += ${CAT}" >> ${MERGED}/Makefile
+done
+
+
+for CAT in ${CATEGORIES}; do
+   rm -f ${MERGED}/${CAT}/Makefile
+   PORTS=$(cd ${MERGED}/${CAT} && find -s * -type d -depth 0 -maxdepth 0)
+   for port in ${PORTS}; do
+      echo "SUBDIR += ${port}" >> ${MERGED}/${CAT}/Makefile
+   done
 done
