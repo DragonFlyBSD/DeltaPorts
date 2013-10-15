@@ -34,7 +34,7 @@ while [ 1 ]; do
      oneline=$(awk "${AWKCMD}" ${item})
      split ${oneline}
      commitmsg="${VAL2}: ${VAL1} v${VAL3}"
-     ( cd ${DELTA}/ports && git add ${VAL1}/STATUS )
+     ( cd ${DELTA}/ports && git add --all ${VAL1}/STATUS )
      if [ $? -eq 0 ]; then
         TASKS=$(cd ${DELTA}/ports && git status -s --untracked-files=no ${VAL1}/STATUS)
         if [ -z "${TASKS}" ]; then
@@ -56,7 +56,7 @@ while [ 1 ]; do
        reflex="version ${VAL3}"
      fi
      commitmsg="${VAL2} ${VAL1} ${reflex}"
-     ( cd ${DPORTS} && git add ${VAL1} )
+     ( cd ${DPORTS} && git add --all ${VAL1} )
      if [ $? -eq 0 ]; then
         TASKS=$(cd ${DPORTS} && git status -s --untracked-files=no ${VAL1})
         if [ -z "${TASKS}" ]; then
