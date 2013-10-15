@@ -1,2 +1,0 @@
-post-extract:
-	${CP} /usr/include/FlexLexer.h ${WRKSRC}/include/ModFlexLexer.h
