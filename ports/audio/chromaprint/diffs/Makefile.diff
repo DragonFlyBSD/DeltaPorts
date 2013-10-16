@@ -1,0 +1,13 @@
+--- Makefile.orig	2013-10-16 12:19:26.080519000 +0000
++++ Makefile
+@@ -27,8 +27,10 @@ post-patch:
+ 
+ .include <bsd.port.pre.mk>
+ 
++.if ${OPSYS} == FreeBSD
+ .if (${CXX:T} == "clang++" && ${OSVERSION} > 902000) || ${OSVERSION} > 1000054
+ CXXFLAGS+=	-stdlib=libc++ -std=c++11
+ .endif
++.endif
+ 
+ .include <bsd.port.post.mk>
