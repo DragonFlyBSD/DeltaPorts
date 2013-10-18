@@ -1,0 +1,11 @@
+--- Makefile.orig	2013-10-18 13:00:49.237551000 +0000
++++ Makefile
+@@ -45,7 +45,7 @@ CONFLICTS?=	freebsd-uucp-pam-1.*
+ MAKE_ENV+=	WITH_ENCRYPTED_PASSWORDS=1
+ .endif
+ 
+-.if ${OSVERSION} > 1000000
++.if ${OPSYS} == FreeBSD && ${OSVERSION} > 1000000
+ BUILD_DEPENDS=	cvs:${PORTSDIR}/devel/cvs
+ .endif
+ 
