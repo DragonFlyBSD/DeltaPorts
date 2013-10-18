@@ -5,7 +5,7 @@
  	char inbuf[ICONV_BUF_SIZE];
  	char outbuf[ICONV_BUF_SIZE];
 -#if defined(__FreeBSD__) || defined(__CYGWIN__) ||  defined(__NetBSD__)
-+#if defined(__FreeBSD__) || defined(__FreeBSD__) ||  defined(__NetBSD__)
++#if defined(__FreeBSD__) || defined(__DragonFly__) ||  defined(__NetBSD__)
  	const char *inptr = inbuf;
  #else
  	char *inptr = inbuf;
