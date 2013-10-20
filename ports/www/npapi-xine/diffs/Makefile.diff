@@ -1,9 +1,9 @@
---- Makefile.orig	2013-01-20 16:08:09.078169000 +0000
+--- Makefile.orig	2013-10-20 19:51:30.987212000 +0000
 +++ Makefile
-@@ -25,5 +25,5 @@ NPAPI_ID=	${PORTNAME}
- NPAPI_WRKSRC=	${WRKSRC}/src/.libs
+@@ -23,5 +23,5 @@ NPAPI_WRKSRC=	${WRKSRC}/src/.libs
  NPAPI_FILES=	xineplugin.so
  
+ NO_STAGE=	yes
 -.include "${.CURDIR}/../linux-mplayer-plugin/Makefile.npapi"
 +.include "${.CURDIR}/../../Mk/bsd.npapi.mk"
  .include <bsd.port.mk>
