@@ -1,0 +1,10 @@
+--- pkg-plist.orig	2013-10-20 11:22:43.322591000 +0000
++++ pkg-plist
+@@ -29,7 +29,6 @@ GNUstep/Local/Library/Documentation/SQLC
+ GNUstep/Local/Library/Documentation/SQLClient/dependencies
+ GNUstep/Local/Library/Headers/SQLClient/SQLClient.h
+ GNUstep/Local/Library/Libraries/libSQLClient.so
+-GNUstep/Local/Library/Libraries/libSQLClient.so.1.7
+ GNUstep/Local/Library/Libraries/libSQLClient.so.1.7.0
+ libdata/ldconfig/sqlclient
+ @dirrmtry GNUstep/Local/Library/Headers/SQLClient
