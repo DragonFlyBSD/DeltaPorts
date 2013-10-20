@@ -1,17 +1,13 @@
---- Makefile.orig	2013-10-13 18:24:25.972007000 +0000
+--- Makefile.orig	2013-10-20 18:02:08.340779000 +0000
 +++ Makefile
-@@ -20,6 +20,8 @@ SRC=		${.CURDIR}/src
+@@ -21,16 +21,17 @@ SRC=		${.CURDIR}/src
  
  PLIST_FILES=	bin/portlint \
  		man/man1/portlint.1.gz
 +USES+=		shebangfix
 +SHEBANG_FILES=	*.pl
  
- .include <bsd.port.options.mk>
- 
-@@ -31,13 +33,12 @@ PLIST_DIRS=	%%EXAMPLESDIR%%
- do-fetch:
- 	@${DO_NADA}
+ PORTEXAMPLES=	portlintgrep
  
 -pre-patch:
 -	@${CP} -R ${SRC} ${WRKDIR}
@@ -20,8 +16,8 @@
 +	@${CP} ${SRC}/* ${WRKSRC}/
  
  post-patch:
--	@${REINPLACE_CMD} -e 's|/usr/bin/perl|${PERL}|' ${WRKSRC}/portlint.pl
 -	@${REINPLACE_CMD} -e 's|/usr/bin/perl|${PERL}|' \
+-		${WRKSRC}/portlint.pl \
 -		${WRKSRC}/portlintgrep.pl
 +	@${REINPLACE_CMD} -e 's|/usr/ports|/usr/dports|g' ${WRKSRC}/portlint*
  
