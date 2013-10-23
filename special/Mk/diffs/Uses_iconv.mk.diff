@@ -4,7 +4,7 @@
  iconv_ARGS=     lib
  .endif
  
--.if !exists(/usr/include/iconv.h) && ${OSVERSION} < 1000043
+-.if !exists(/usr/include/iconv.h)
 +.if ${DFLYVERSION} < 300503
  
  ICONV_CMD=	${LOCALBASE}/bin/iconv
