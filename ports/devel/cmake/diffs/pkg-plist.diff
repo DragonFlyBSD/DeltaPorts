@@ -1,0 +1,22 @@
+--- pkg-plist.orig	2013-10-26 22:26:05.102956000 +0000
++++ pkg-plist
+@@ -43,9 +43,7 @@ share/aclocal/cmake.m4
+ %%DOCSDIR%%/cmcompress/Copyright.txt
+ %%DOCSDIR%%/cmcurl/COPYING
+ %%DOCSDIR%%/cmexpat/COPYING
+-%%DOCSDIR%%/cmlibarchive/COPYING
+ %%DOCSDIR%%/cmsys/Copyright.txt
+-%%DOCSDIR%%/cmzlib/Copyright.txt
+ %%DOCSDIR%%/cpack.docbook
+ %%DOCSDIR%%/cpack.html
+ %%DOCSDIR%%/cpack.txt
+@@ -53,9 +51,7 @@ share/aclocal/cmake.m4
+ %%DOCSDIR%%/ctest.html
+ %%DOCSDIR%%/ctest.txt
+ share/emacs/site-lisp/cmake-mode.el
+-@dirrm %%DOCSDIR%%/cmzlib
+ @dirrm %%DOCSDIR%%/cmsys
+-@dirrm %%DOCSDIR%%/cmlibarchive
+ @dirrm %%DOCSDIR%%/cmexpat
+ @dirrm %%DOCSDIR%%/cmcurl
+ @dirrm %%DOCSDIR%%/cmcompress
