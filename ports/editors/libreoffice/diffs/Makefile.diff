@@ -1,6 +1,6 @@
---- Makefile.orig	2013-10-13 19:50:40.548580000 +0000
+--- Makefile.orig	2013-10-26 23:20:16.487254000 +0000
 +++ Makefile
-@@ -16,6 +16,7 @@ BUILD_DEPENDS=	p5-Archive-Zip>=0:${PORTS
+@@ -15,6 +15,7 @@ BUILD_DEPENDS=	p5-Archive-Zip>=0:${PORTS
  		${LOCALBASE}/bin/gperf:${PORTSDIR}/devel/gperf \
  		mdds>=0.9.0:${PORTSDIR}/devel/mdds \
  		gpatch:${PORTSDIR}/devel/patch \
@@ -8,7 +8,7 @@
  		ucpp:${PORTSDIR}/devel/ucpp \
  		vigra-config:${PORTSDIR}/graphics/vigra \
  		bash:${PORTSDIR}/shells/bash \
-@@ -35,6 +36,7 @@ LIB_DEPENDS=	libicutu.so:${PORTSDIR}/dev
+@@ -34,6 +35,7 @@ LIB_DEPENDS=	libicutu.so:${PORTSDIR}/dev
  		libpoppler.so:${PORTSDIR}/graphics/poppler \
  		liblpsolve55.so:${PORTSDIR}/math/lp_solve \
  		libcmis-0.4.so:${PORTSDIR}/net/libcmis \
@@ -16,7 +16,7 @@
  		libmspub-0.0.so:${PORTSDIR}/print/libmspub \
  		libnss3.so:${PORTSDIR}/security/nss \
  		libclucene-core.so:${PORTSDIR}/textproc/clucene \
-@@ -48,6 +50,7 @@ LIB_DEPENDS=	libicutu.so:${PORTSDIR}/dev
+@@ -47,6 +49,7 @@ LIB_DEPENDS=	libicutu.so:${PORTSDIR}/dev
  		libwpd-0.9.so:${PORTSDIR}/textproc/libwpd \
  		libwps-0.2.so:${PORTSDIR}/textproc/libwps \
  		libmythes-1.2.so:${PORTSDIR}/textproc/mythes \
@@ -24,7 +24,7 @@
  		librdf.so:${PORTSDIR}/textproc/redland
  
  RUN_DEPENDS=	${LOCALBASE}/lib/X11/fonts/dejavu/DejaVuSans.ttf:${PORTSDIR}/x11-fonts/dejavu \
-@@ -61,15 +64,15 @@ _MAKE_JOBS=	#
+@@ -60,15 +63,15 @@ _MAKE_JOBS=	#
  
  GNU_CONFIGURE=	yes
  USE_AUTOTOOLS=	autoconf aclocal
@@ -44,7 +44,7 @@
  
  DISTFILES+=	${PORTNAME}-${LOVERSION}${EXTRACT_SUFX}
  DISTFILES+=	${PORTNAME}-help-${LOVERSION}${EXTRACT_SUFX}
-@@ -88,75 +91,56 @@ CONFIGURE_ENV=		DMAKE=${LOCALBASE}/bin/d
+@@ -87,266 +90,60 @@ CONFIGURE_ENV=		DMAKE=${LOCALBASE}/bin/d
  			PYTHON_LIBS="`${PYTHON_VERSION}-config --libs`" \
  			TMPDIR=${WRKDIR}
  
@@ -157,11 +157,6 @@
 +			--without-system-jars \
 +			--without-system-npapi-headers \
  			--without-system-mozilla
- 
- MAN1=	libreoffice.1 \
-@@ -173,195 +157,8 @@ MAN1=	libreoffice.1 \
- 
- MANCOMPRESSED=	yes
  
 -OPTIONS_DEFINE=	CUPS DEBUG GNOME GTK2 GTK3 JAVA KDE4 MMEDIA PGSQL SDK \
 -		SYSTRAY TEST WEBDAV
@@ -355,19 +350,20 @@
  ACLOCAL_ARGS=	-I "${WRKSRC}/m4"
  CPPFLAGS=	-I${LOCALBASE}/include
  LDFLAGS=	-L${LOCALBASE}/lib
-@@ -407,15 +204,6 @@ post-install:
+@@ -394,16 +191,6 @@ do-install:
  	    \( -type f -o -type l \) -print >> ${PLISTF}
  .endfor
  
 -.if ${PORT_OPTIONS:MSDK}
 -.for subdir in include share share/doc share/idl
--	@cd ${LODESTDIR}/${PREFIX} && ${FIND} -H -s ${subdir}/libreoffice \
+-	@cd ${LODESTDIR}${PREFIX} && ${FIND} -H -s ${subdir}/libreoffice \
 -	    \( -type f -o -type l \) -print >> ${PLISTF}
--	@cd ${LODESTDIR}/${PREFIX} && ${FIND} -d ${subdir}/libreoffice \
+-	@cd ${LODESTDIR}${PREFIX} && ${FIND} -d ${subdir}/libreoffice \
 -	    -type d -exec echo "@dirrm {}" \; >> ${PLISTD}
 -.endfor
 -	@${ECHO_CMD} "@dirrmtry share/idl" >> ${PLISTD}
 -.endif
- 
+-
  	@${SORT} -u ${PLISTF} >> ${TMPPLIST}
  	@${GREP} '^@exec ' ${PLISTD} | ${SORT} -u >> ${TMPPLIST}
+ 	@${GREP} '^@dirrm ' ${PLISTD} | ${SORT} -ru >> ${TMPPLIST}
