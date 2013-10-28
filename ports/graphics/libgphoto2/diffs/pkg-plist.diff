@@ -1,0 +1,15 @@
+--- pkg-plist.orig	2013-10-27 08:32:33.720233000 +0000
++++ pkg-plist
+@@ -218,9 +218,9 @@ lib/libgphoto2_port/%%VERSION_PORT%%/ptp
+ lib/libgphoto2_port/%%VERSION_PORT%%/serial.a
+ lib/libgphoto2_port/%%VERSION_PORT%%/serial.la
+ lib/libgphoto2_port/%%VERSION_PORT%%/serial.so
+-lib/libgphoto2_port/%%VERSION_PORT%%/usb1.a
+-lib/libgphoto2_port/%%VERSION_PORT%%/usb1.la
+-lib/libgphoto2_port/%%VERSION_PORT%%/usb1.so
++lib/libgphoto2_port/%%VERSION_PORT%%/usb.a
++lib/libgphoto2_port/%%VERSION_PORT%%/usb.la
++lib/libgphoto2_port/%%VERSION_PORT%%/usb.so
+ lib/libgphoto2_port/%%VERSION_PORT%%/usbdiskdirect.a
+ lib/libgphoto2_port/%%VERSION_PORT%%/usbdiskdirect.la
+ lib/libgphoto2_port/%%VERSION_PORT%%/usbdiskdirect.so
