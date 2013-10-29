@@ -1,0 +1,11 @@
+--- Makefile.orig	2013-10-29 14:53:36.017513000 +0000
++++ Makefile
+@@ -47,7 +47,7 @@ VORBIS_LIB_DEPENDS=		libvorbis.so:${PORT
+ VORBIS_CONFIGURE_ENABLE=	music-ogg
+ 
+ post-patch:
+-	@${REINPLACE_CMD} -e 's|$(prefix)/libdata/pkgconfig|$(DESTDIR)$(prefix)/libdata/pkgconfig|' \
++	@${REINPLACE_CMD} -e 's|(prefix)/libdata/pkgconfig|(DESTDIR)$$(prefix)/libdata/pkgconfig|' \
+ 		${WRKSRC}/Makefile.in
+ 
+ .include <bsd.port.mk>
