@@ -1,11 +1,10 @@
---- Makefile.orig	2013-01-24 21:07:33.000000000 +0000
+--- Makefile.orig	2013-10-31 15:18:22.702032000 +0000
 +++ Makefile
-@@ -27,6 +27,8 @@ OPTIONS_DEFINE=		DOCS NLS
+@@ -27,6 +27,7 @@ MAKE_ARGS+=	LDFLAGS='${LDFLAGS} -L${LOCA
+ OPTIONS_DEFINE=		DOCS NLS
  OPTIONS_DEFAULT=	NLS
  OPTIONS_EXCLUDE+=	EXAMPLES
++IGNORE=			Will not build on DragonFly
  
-+IGNORE=		Will not build on DragonFly
-+
- MAN1=		chattr.1 lsattr.1
- MAN5=		e2fsck.conf.5 mke2fs.conf.5
- MAN8=		badblocks.8 debugfs.8 dumpe2fs.8 e2fsck.8 e2image.8 e2label.8 \
+ PORTDOCS=	COPYING RELEASE-NOTES
+ 
