@@ -1,4 +1,4 @@
---- Makefile.orig	2013-10-26 23:20:16.487254000 +0000
+--- Makefile.orig	2013-10-31 15:26:53.214144000 +0000
 +++ Makefile
 @@ -15,6 +15,7 @@ BUILD_DEPENDS=	p5-Archive-Zip>=0:${PORTS
  		${LOCALBASE}/bin/gperf:${PORTSDIR}/devel/gperf \
@@ -24,27 +24,27 @@
  		librdf.so:${PORTSDIR}/textproc/redland
  
  RUN_DEPENDS=	${LOCALBASE}/lib/X11/fonts/dejavu/DejaVuSans.ttf:${PORTSDIR}/x11-fonts/dejavu \
-@@ -60,15 +63,15 @@ _MAKE_JOBS=	#
+@@ -60,15 +63,16 @@ _MAKE_JOBS=	#
  
  GNU_CONFIGURE=	yes
  USE_AUTOTOOLS=	autoconf aclocal
 -USE_GL=		gl glu
 -USE_OPENLDAP=	yes
-+USE_GCC=	4.7
++USE_GCC=	yes
  USE_PERL5=	build
  USE_PYTHON=	yes
  USE_QT4=	# empty but required
  USE_XORG=	xaw xrandr
  USE_XZ=		yes
--USES=		bison gmake perl5 pkgconfig
+ USES=		bison compiler:c++11-lang gmake perl5 pkgconfig
 -WANT_GNOME=	yes
-+USES= 		bison gmake perl5 pkgconfig
-+USE_GNOME+=	gtk20 desktopfileutils
++USES+=		desktop-file-utils
++USE_GNOME+=	gtk20
 +INSTALLS_ICONS= yes
  
  DISTFILES+=	${PORTNAME}-${LOVERSION}${EXTRACT_SUFX}
  DISTFILES+=	${PORTNAME}-help-${LOVERSION}${EXTRACT_SUFX}
-@@ -87,266 +90,60 @@ CONFIGURE_ENV=		DMAKE=${LOCALBASE}/bin/d
+@@ -87,258 +91,60 @@ CONFIGURE_ENV=		DMAKE=${LOCALBASE}/bin/d
  			PYTHON_LIBS="`${PYTHON_VERSION}-config --libs`" \
  			TMPDIR=${WRKDIR}
  
@@ -159,7 +159,7 @@
  			--without-system-mozilla
  
 -OPTIONS_DEFINE=	CUPS DEBUG GNOME GTK2 GTK3 JAVA KDE4 MMEDIA PGSQL SDK \
--		SYSTRAY TEST WEBDAV
+-		SYSTRAY TEST VERBOSE WEBDAV
 -OPTIONS_DEFAULT=CUPS GTK2
 -
 -JAVA_DESC=	Add java support (XML Filters, macros)
@@ -168,6 +168,7 @@
 -SDK_DESC=	Build with SDK
 -SYSTRAY_DESC=	Enable systemtray quickstarter
 -TEST_DESC=	Run all regression tests
+-VERBOSE_DESC=	Increase build verbosity
 -WEBDAV_DESC=	Enable webdav protocol
 -
 -.include <bsd.port.options.mk>
@@ -183,10 +184,15 @@
 -IGNORE=			known as broken
 -CONFIGURE_ARGS+=	--enable-debug \
 -			--enable-dbgutil \
--			--enable-verbose \
 -			--enable-crashdump
 -.else
 -CONFIGURE_ARGS+=	--enable-release-build
+-.endif
+-
+-.if ${PORT_OPTIONS:MDEBUG} || ${PORT_OPTIONS:MVERBOSE}
+-CONFIGURE_ARGS+=	--enable-verbose
+-.else
+-CONFIGURE_ARGS+=	--disable-verbose
 -.endif
 -
 -.if ${PORT_OPTIONS:MGNOME}
@@ -320,27 +326,13 @@
 -
  .include <bsd.port.pre.mk>
  
--.if defined(WITH_GCC)
--USE_GCC=	yes
--CONFIGURE_ENV+=	CXXCPP="${CPP}"
--.else
--.if exists(/usr/bin/clang) && ${OSVERSION} > 901502
--CC=		/usr/bin/clang
--CPP=		/usr/bin/clang-cpp
--CXX=		/usr/bin/clang++
--CONFIGURE_ENV+=	CXXCPP="${CPP}"
--.if ${OSVERSION} > 100054
--EXTRA_PATCHES+=	${FILESDIR}/extra-patch-libc++
--.endif
--.else
--# XXX Clang PR13308 (http://llvm.org/bugs/show_bug.cgi?id=13308)
--BUILD_DEPENDS+=	clang>=3.2_4:${PORTSDIR}/lang/clang
+-.if ${CXX:M${LOCALBASE}/bin/clang++*}
 -USE_BINUTILS=	yes
--CC=		${LOCALBASE}/bin/clang
--CPP=		${CC} -E
--CXX=		${LOCALBASE}/bin/clang++
--CONFIGURE_ENV+=	CXXCPP="${CXX} -E"
+-LDFLAGS=	-B${LOCALBASE}/bin
 -.endif
+-
+-.if ${COMPILER_FEATURES:Mlibc++}
+-EXTRA_PATCHES+=	${FILESDIR}/extra-patch-libc++
 -.endif
 -
 -.if ${OSVERSION} < 900506
@@ -349,8 +341,8 @@
 -
  ACLOCAL_ARGS=	-I "${WRKSRC}/m4"
  CPPFLAGS=	-I${LOCALBASE}/include
- LDFLAGS=	-L${LOCALBASE}/lib
-@@ -394,16 +191,6 @@ do-install:
+ LDFLAGS+=	-L${LOCALBASE}/lib
+@@ -386,16 +192,6 @@ do-install:
  	    \( -type f -o -type l \) -print >> ${PLISTF}
  .endfor
  
