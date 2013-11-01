@@ -1,0 +1,11 @@
+--- Makefile.orig	2013-11-01 08:52:56.553057000 +0000
++++ Makefile
+@@ -25,7 +25,7 @@ MAN1=		ksh.1
+ NO_STAGE=	yes
+ .include <bsd.port.options.mk>
+ 
+-.if ${OSVERSION} >= 1000039
++.if ${OPSYS} == FreeBSD && ${OSVERSION} >= 1000039
+ BROKEN=	hangs on 10.0: http://www.freebsd.org/cgi/query-pr.cgi?pr=181438
+ .endif
+ 
