@@ -1,0 +1,11 @@
+--- Makefile.orig	2013-11-02 08:59:25.155290000 +0000
++++ Makefile
+@@ -30,7 +30,7 @@ OPTIONS_DEFINE=	DOCS
+ NO_STAGE=	yes
+ .include <bsd.port.options.mk>
+ 
+-.if ${OSVERSION} > 1000000
++.if ${OPSYS} == FreeBSD && ${OSVERSION} > 1000000
+ BUILD_DEPENDS=	cvs:${PORTSDIR}/devel/cvs
+ RUN_DEPENDS=	cvs:${PORTSDIR}/devel/cvs
+ .endif
