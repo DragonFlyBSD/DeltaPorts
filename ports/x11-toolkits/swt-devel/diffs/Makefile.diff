@@ -1,0 +1,11 @@
+--- Makefile.orig	2013-11-05 10:07:45.110114000 +0000
++++ Makefile
+@@ -84,7 +84,7 @@ DIST_EXT=	gtk-linux-x86
+ .include <bsd.port.pre.mk>
+ 
+ post-extract:
+-.if ${OSVERSION} > 900044
++.if ${OPSYS} == FreeBSD && ${OSVERSION} > 900044
+ 	@(cd ${WRKSRC} && /usr/bin/unzip -qo *.zip)
+ .else
+ 	@(cd ${WRKSRC} && ${UNZIP_CMD} -qo *.zip)
