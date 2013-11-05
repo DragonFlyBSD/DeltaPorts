@@ -1,4 +1,7 @@
 OPTIONS_DEFAULT+= PULSEAUDIO
+.if ${ARCH} == i386
+WITHOUT_DEBUG=yes
+.endif
 
 post-extract:
 	@${REINPLACE_CMD} -e 's|_SAFE|_MUTABLE|g' \
