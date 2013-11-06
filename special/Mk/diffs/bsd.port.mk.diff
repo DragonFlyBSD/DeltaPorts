@@ -1,4 +1,4 @@
---- bsd.port.mk.orig	2013-10-13 13:46:34.231348000 +0000
+--- bsd.port.mk.orig	2013-11-06 21:02:59.368269000 +0000
 +++ bsd.port.mk
 @@ -43,7 +43,8 @@ FreeBSD_MAINTAINER=	portmgr@FreeBSD.org
  #				  makefile is being used on.  Automatically set to
@@ -100,7 +100,33 @@
  .endif
  .endif
  
-@@ -1340,7 +1347,7 @@ PKGVERSION=	${PORTVERSION:C/[-_,]/./g}${
+@@ -1310,6 +1317,25 @@ STRIP=	#none
+ 
+ .include "${PORTSDIR}/Mk/bsd.options.mk"
+ 
++# Multiple make jobs support
++.if defined(DISABLE_MAKE_JOBS) || defined(MAKE_JOBS_UNSAFE)
++_MAKE_JOBS=		#
++MAKE_JOBS_NUMBER=	1
++.else
++.if defined(MAKE_JOBS_NUMBER)
++_MAKE_JOBS_NUMBER:=	${MAKE_JOBS_NUMBER}
++.else
++_MAKE_JOBS_NUMBER!=	${SYSCTL} -n hw.ncpu
++.endif
++.if defined(MAKE_JOBS_NUMBER_LIMIT) && ( ${MAKE_JOBS_NUMBER_LIMIT} < ${_MAKE_JOBS_NUMBER} )
++MAKE_JOBS_NUMBER=	${MAKE_JOBS_NUMBER_LIMIT}
++.else
++MAKE_JOBS_NUMBER=	${_MAKE_JOBS_NUMBER}
++.endif
++_MAKE_JOBS?=		-j${MAKE_JOBS_NUMBER}
++BUILD_FAIL_MESSAGE+=	Try to set MAKE_JOBS_UNSAFE=yes and rebuild before reporting the failure to the maintainer.
++.endif
++
+ # Start of pre-makefile section.
+ .if !defined(AFTERPORTMK) && !defined(INOPTIONSMK)
+ 
+@@ -1340,7 +1366,7 @@ PKGVERSION=	${PORTVERSION:C/[-_,]/./g}${
  PKGNAME=	${PKGNAMEPREFIX}${PORTNAME}${PKGNAMESUFFIX}-${PKGVERSION}
  DISTNAME?=	${PORTNAME}-${DISTVERSIONPREFIX}${DISTVERSION:C/:(.)/\1/g}${DISTVERSIONSUFFIX}
  
@@ -109,7 +135,7 @@
  
  DOCSDIR?=		${PREFIX}/share/doc/${PORTNAME}
  EXAMPLESDIR?=		${PREFIX}/share/examples/${PORTNAME}
-@@ -1373,7 +1380,7 @@ EXTRACT_SUFX?=			.run
+@@ -1373,7 +1399,7 @@ EXTRACT_SUFX?=			.run
  .else
  EXTRACT_SUFX?=			.tar.gz
  .endif
@@ -118,7 +144,7 @@
  TEMPLATES?=		${PORTSDIR}/Templates
  
  PATCHDIR?=		${MASTERDIR}/files
-@@ -1544,7 +1551,7 @@ check-makefile::
+@@ -1544,7 +1570,7 @@ check-makefile::
  
  _POSTMKINCLUDED=	yes
  
@@ -127,7 +153,7 @@
  .if !defined(IGNORE_MASTER_SITE_GITHUB) && defined(USE_GITHUB)
  WRKSRC?=		${WRKDIR}/${GH_ACCOUNT}-${GH_PROJECT}-${GH_COMMIT}
  .endif
-@@ -1574,7 +1581,9 @@ PLIST_REINPLACE_STOPDAEMON=s!^@stopdaemo
+@@ -1574,7 +1600,9 @@ PLIST_REINPLACE_STOPDAEMON=s!^@stopdaemo
  
  # kludge to strip trailing whitespace from CFLAGS;
  # sub-configure will not # survive double space
@@ -138,7 +164,7 @@
  
  .if defined(WITHOUT_CPU_CFLAGS)
  .if defined(_CPUCFLAGS)
-@@ -1684,15 +1693,17 @@ EXTRACT_DEPENDS+=	lha:${PORTSDIR}/archiv
+@@ -1684,15 +1712,17 @@ EXTRACT_DEPENDS+=	lha:${PORTSDIR}/archiv
  .if defined(USE_ZIP)
  EXTRACT_DEPENDS+=	${LOCALBASE}/bin/unzip:${PORTSDIR}/archivers/unzip
  .endif
@@ -159,15 +185,32 @@
  .endif
  
  .if defined(USE_BINUTILS) && !defined(DISABLE_BINUTILS)
-@@ -2168,7 +2179,7 @@ MAKE_JOBS_NUMBER=	1
- .if defined(MAKE_JOBS_NUMBER)
- _MAKE_JOBS_NUMBER:=	${MAKE_JOBS_NUMBER}
- .else
--_MAKE_JOBS_NUMBER!=	${SYSCTL} -n kern.smp.cpus
-+_MAKE_JOBS_NUMBER!=	${SYSCTL} -n hw.ncpu
+@@ -2160,25 +2190,6 @@ CFLAGS:=	${CFLAGS:N-std=*} -std=${USE_CS
+ CXXFLAGS:=	${CXXFLAGS:N-std=*} -std=${USE_CXXSTD}
  .endif
- .if defined(MAKE_JOBS_NUMBER_LIMIT) && ( ${MAKE_JOBS_NUMBER_LIMIT} < ${_MAKE_JOBS_NUMBER} )
- MAKE_JOBS_NUMBER=	${MAKE_JOBS_NUMBER_LIMIT}
+ 
+-# Multiple make jobs support
+-.if defined(DISABLE_MAKE_JOBS) || defined(MAKE_JOBS_UNSAFE)
+-_MAKE_JOBS=		#
+-MAKE_JOBS_NUMBER=	1
+-.else
+-.if defined(MAKE_JOBS_NUMBER)
+-_MAKE_JOBS_NUMBER:=	${MAKE_JOBS_NUMBER}
+-.else
+-_MAKE_JOBS_NUMBER!=	${SYSCTL} -n kern.smp.cpus
+-.endif
+-.if defined(MAKE_JOBS_NUMBER_LIMIT) && ( ${MAKE_JOBS_NUMBER_LIMIT} < ${_MAKE_JOBS_NUMBER} )
+-MAKE_JOBS_NUMBER=	${MAKE_JOBS_NUMBER_LIMIT}
+-.else
+-MAKE_JOBS_NUMBER=	${_MAKE_JOBS_NUMBER}
+-.endif
+-_MAKE_JOBS?=		-j${MAKE_JOBS_NUMBER}
+-BUILD_FAIL_MESSAGE+=	Try to set MAKE_JOBS_UNSAFE=yes and rebuild before reporting the failure to the maintainer.
+-.endif
+-
+ # ccache support
+ # Support NO_CCACHE for common setups, require WITH_CCACHE_BUILD, and
+ # don't use if ccache already set in CC
 @@ -2874,7 +2885,7 @@ LATEST_LINK?=		${PKGBASE}
  PKGLATESTFILE=		${PKGLATESTREPOSITORY}/${LATEST_LINK}${PKG_SUFX}
  
@@ -265,7 +308,7 @@
  		elif [ -x "${LOCALBASE}/sbin/portaudit" ]; then \
  			vlist=`${LOCALBASE}/sbin/portaudit -X 14 "${PKGNAME}" \
  				2>&1 | grep -vE '^[0-9]+ problem\(s\) found.' \
-@@ -3639,7 +3644,7 @@ do-patch:
+@@ -3654,7 +3659,7 @@ do-patch:
  	@set -e ;\
  	if [ -d ${PATCHDIR} ]; then \
  		if [ "`${ECHO_CMD} ${PATCHDIR}/patch-*`" != "${PATCHDIR}/patch-*" ]; then \
@@ -274,7 +317,7 @@
  			PATCHES_APPLIED="" ; \
  			for i in ${PATCHDIR}/patch-*; do \
  				case $$i in \
-@@ -3664,6 +3669,33 @@ do-patch:
+@@ -3679,6 +3684,33 @@ do-patch:
  			done; \
  		fi; \
  	fi
@@ -308,7 +351,7 @@
  .endif
  
  .if !target(run-autotools-fixup)
-@@ -5081,14 +5113,14 @@ _DEPEND_ALWAYS=	0
+@@ -5130,14 +5162,14 @@ _DEPEND_ALWAYS=	0
  
  _INSTALL_DEPENDS=	\
  		if [ -n "${USE_PACKAGE_DEPENDS}" -o -n "${USE_PACKAGE_DEPENDS_ONLY}" ]; then \
@@ -325,7 +368,7 @@
  					${WRKDIR}/pkg-static add $${subpkgfile}; \
  					${RM} -f ${WRKDIR}/pkg-static; \
  				else \
-@@ -5302,7 +5334,7 @@ ALL-DEPENDS-LIST= \
+@@ -5351,7 +5383,7 @@ ALL-DEPENDS-LIST= \
  				continue;				\
  			fi;						\
  			${ECHO_CMD} $$d;				\
@@ -334,7 +377,7 @@
  				${ECHO_MSG} "${PKGNAME}: \"$$d\" erroneous -- dependency list incomplete" >&2; \
  				continue;				\
  			fi;						\
-@@ -5332,7 +5364,7 @@ CLEAN-DEPENDS-FULL= \
+@@ -5381,7 +5413,7 @@ CLEAN-DEPENDS-FULL= \
  				${ECHO_MSG} "${PKGNAME}: \"$$d\" non-existent -- dependency list incomplete" >&2; \
  				continue;				\
  			fi;						\
@@ -343,7 +386,7 @@
  				${ECHO_MSG} "${PKGNAME}: \"$$d\" erroneous -- dependency list incomplete" >&2; \
  				continue;				\
  			fi;						\
-@@ -5371,7 +5403,7 @@ CLEAN-DEPENDS-LIMITED= \
+@@ -5420,7 +5452,7 @@ CLEAN-DEPENDS-LIMITED= \
  				${ECHO_MSG} "${PKGNAME}: \"$$d\" non-existent -- dependency list incomplete" >&2; \
  				continue;				\
  			fi;						\
@@ -352,7 +395,7 @@
  				${ECHO_MSG} "${PKGNAME}: \"$$d\" erroneous -- dependency list incomplete" >&2; \
  				continue;				\
  			fi;						\
-@@ -5462,7 +5494,7 @@ FETCH_LIST?=	for i in $$deps; do \
+@@ -5511,7 +5543,7 @@ FETCH_LIST?=	for i in $$deps; do \
  			else	\
  				continue;	\
  			fi;;	\
@@ -361,7 +404,7 @@
  				continue;	\
  			fi;;	\
  		esac;	\
-@@ -5757,10 +5789,15 @@ _SUB_LIST_TEMP=	${SUB_LIST:S/$/!g/:S/^/
+@@ -5806,10 +5838,15 @@ _SUB_LIST_TEMP=	${SUB_LIST:S/$/!g/:S/^/
  apply-slist:
  .if defined(SUB_FILES)
  .for file in ${SUB_FILES}
@@ -380,7 +423,7 @@
  .endif
  .endfor
  .for i in pkg-message pkg-install pkg-deinstall pkg-req
-@@ -6109,6 +6146,7 @@ tags:
+@@ -6158,6 +6195,7 @@ tags:
  	OPSYS="${OPSYS:S/"/"'"'"/g:S/\$/\$\$/g:S/\\/\\\\/g}" \
  	OSREL="${OSREL:S/"/"'"'"/g:S/\$/\$\$/g:S/\\/\\\\/g}" \
  	OSVERSION="${OSVERSION:S/"/"'"'"/g:S/\$/\$\$/g:S/\\/\\\\/g}" \
