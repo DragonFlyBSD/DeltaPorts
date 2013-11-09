@@ -1,0 +1,10 @@
+--- Makefile.orig	2013-11-09 09:38:26.230635000 +0000
++++ Makefile
+@@ -44,6 +44,7 @@ regression-test regression test check:	b
+ post-patch:
+ 	@${REINPLACE_CMD} -e 's|Iex/libIex.la|Iex/libIex.la $(PTHREAD_LIBS)|' \
+ 		${WRKSRC}/IlmThread/Makefile.am
++	@${REINPLACE_CMD} -e 's|== x|= x|g' ${WRKSRC}/configure
+ 
+ post-install:
+ .for e in ${BIN}
