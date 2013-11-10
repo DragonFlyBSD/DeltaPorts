@@ -1,0 +1,10 @@
+--- Makefile.orig	2013-11-10 09:12:12.558551000 +0000
++++ Makefile
+@@ -47,6 +47,7 @@ LARGE_STACK_CONFIGURE_ENABLE=	large-stac
+ PLIST_SUB=	MAJORVER=2_0
+ 
+ post-patch:
++	@${REINPLACE_CMD} -e 's|== x|= x|g' ${WRKSRC}/configure
+ 	@${REINPLACE_CMD} -e 's|$$(datadir)/doc/OpenEXR-@OPENEXR_VERSION@/examples|$$(prefix)/share/examples/${PORTNAME}|' \
+ 		${WRKSRC}/IlmImfExamples/Makefile.in
+ 	@${REINPLACE_CMD} -e 's|$$(datadir)/doc/OpenEXR-@OPENEXR_VERSION@||' \
