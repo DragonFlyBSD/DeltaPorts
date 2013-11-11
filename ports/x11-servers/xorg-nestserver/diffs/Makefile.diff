@@ -1,0 +1,10 @@
+--- Makefile.orig	2013-11-11 07:55:37.877171000 +0000
++++ Makefile
+@@ -24,7 +24,6 @@ PLIST_FILES=	bin/Xnest
+ MAN1=		Xnest.1
+ 
+ NO_STAGE=	yes
+-.include <bsd.port.options.mk>
+ 
+ do-install:
+ 	${INSTALL_PROGRAM} ${WRKSRC}/hw/xnest/Xnest ${PREFIX}/bin/
