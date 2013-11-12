@@ -5,7 +5,7 @@
  .include <bsd.port.pre.mk>
  
 -.if ${OSVERSION} < 900004
- LIB_DEPENDS+=	utempter:${PORTSDIR}/sysutils/libutempter
+ LIB_DEPENDS+=	libutempter.so:${PORTSDIR}/sysutils/libutempter
  CFLAGS+=	-I${LOCALBASE}/include
  LDFLAGS+=	-L${LOCALBASE}/lib
 -.endif
