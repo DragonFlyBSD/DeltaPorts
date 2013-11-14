@@ -1,0 +1,12 @@
+--- Makefile.orig	2013-11-14 18:50:16.085513000 +0000
++++ Makefile
+@@ -18,6 +18,9 @@ WRKSRC=		${WRKDIR}/MultiMarkdown-4
+ 
+ ALL_TARGET=	ALL
+ 
++USES=		shebangfix
++SHEBANG_FILES=	enumsToPerl.pl
++
+ OPTIONS_DEFINE=	CHEAT_SHEET EXTRAS HELPERS
+ CHEAT_SHEET_DESC=	HTML-based cheat sheat
+ EXTRAS_DESC=	Extra scripts and XSLT support
