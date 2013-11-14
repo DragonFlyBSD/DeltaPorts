@@ -1,0 +1,18 @@
+--- Makefile.orig	2013-11-14 09:05:05.250350000 +0000
++++ Makefile
+@@ -42,6 +42,7 @@ ONLY_FOR_ARCHS=	i386 amd64 powerpc
+ 
+ .include <bsd.port.pre.mk>
+ 
++.if ${OPSYS} == FreeBSD
+ .if ${OSVERSION} >= 900014 && exists(/usr/bin/clang)
+ CC=	/usr/bin/clang
+ CXX=	/usr/bin/clang++
+@@ -52,6 +53,7 @@ CC=	clang33
+ CXX=	clang33
+ CPP=	clang-cpp33
+ .endif
++.endif
+ 
+ pre-everything::
+ 	@${CAT} ${PKGMESSAGE}
