@@ -1,0 +1,17 @@
+--- Makefile.orig	2013-11-15 21:59:28.559545000 +0000
++++ Makefile
+@@ -257,13 +257,13 @@ LDFLAGS+=	${PTHREAD_LIBS} -lc
+ CONFIGURE_ARGS+=	--enable-vlc \
+ 			--enable-avcodec \
+ 			--enable-avformat \
+-			--enable-oss \
+ 			--enable-postproc \
+ 			--enable-sftp \
+ 			--enable-libgcrypt \
+ 			--disable-alsa \
+ 			--disable-dc1394 \
+ 			--disable-directfb \
++			--disable-oss \
+ 			--disable-projectm \
+ 			--disable-telx \
+ 			--disable-tremor \
