@@ -1,0 +1,75 @@
+--- Makefile.orig	2013-11-14 22:57:05.234305000 +0000
++++ Makefile
+@@ -85,21 +85,12 @@ NOPRECIOUSMAKEVARS=	yes
+ 
+ ONLY_FOR_ARCHS=	amd64 i386
+ 
+-BOOTSTRAP_JDKS=	${LOCALBASE}/openjdk6 \
+-		${LOCALBASE}/bootstrap-openjdk
+-
+-# do we have valid native jdk installed?
+-.for CJDK in ${BOOTSTRAP_JDKS}
+-.  if !defined(BOOTSTRAPJDKDIR) && exists(${CJDK}/bin/javac)
+-BOOTSTRAPJDKDIR=	${CJDK}
+-.  endif
+-.endfor
+-
+-# if no valid jdk found, set dependency
+-.if !defined(BOOTSTRAPJDKDIR)
+-BOOTSTRAPJDKDIR?=	${LOCALBASE}/bootstrap-openjdk
+-BUILD_DEPENDS+=		${BOOTSTRAPJDKDIR}/bin/javac:${PORTSDIR}/java/bootstrap-openjdk
+-.endif
++JDK_ARCH=		${ARCH:S/x86_64/amd64/}
++MASTER_SITES+=		http://leaf.dragonflybsd.org:~/marino/dports-src/:bootstrap
++BOOTSTRAP_DISTFILE=	bootstrap-openjdk-b28_5.dfly-3.7-${JDK_ARCH}.tar.xz
++DISTFILES+=		${BOOTSTRAP_DISTFILE}:bootstrap
++EXTRACT_ONLY+=		${BOOTSTRAP_DISTFILE}
++BOOTSTRAPJDKDIR?=	${WRKDIR}/bootstrap
+ 
+ FETCH_ARGS=	-Fpr
+ MAKE_ENV=	LANG=C LC_ALL=C OS= \
+@@ -126,9 +117,9 @@ MAKE_ENV+=	ALT_PARALLEL_COMPILE_JOBS=${M
+ 
+ .if ${PORT_OPTIONS:MDEBUG}
+ ALL_TARGET=	debug_build
+-OPENJDK_OSARCH=	bsd-${ARCH:S/i386/i586/}-debug
++OPENJDK_OSARCH=	bsd-${ARCH:S/i386/i586/:S/x86_64/amd64/}-debug
+ .else
+-OPENJDK_OSARCH=	bsd-${ARCH:S/i386/i586/}
++OPENJDK_OSARCH=	bsd-${ARCH:S/i386/i586/:S/x86_64/amd64/}
+ .endif
+ 
+ # disable FASTDEBUG_BUILD by default to improve compile time.
+@@ -289,8 +280,8 @@ do-install:
+ 	@cd ${WRKSRC}/build/${OPENJDK_OSARCH}/j2re-image && \
+ 	    ${COPYTREE_BIN} bin ${STAGEDIR}${PREFIX}/openjdk6-jre
+ 	@cd ${WRKSRC}/build/${OPENJDK_OSARCH}/j2re-image && \
+-	    ${INSTALL_PROGRAM} lib/${ARCH}/jexec \
+-	    ${STAGEDIR}${PREFIX}/openjdk6-jre/lib/${ARCH}
++	    ${INSTALL_PROGRAM} lib/${JDK_ARCH}/jexec \
++	    ${STAGEDIR}${PREFIX}/openjdk6-jre/lib/${JDK_ARCH}
+ .else
+ 	@cd ${WRKSRC}/build/${OPENJDK_OSARCH}/j2sdk-image && \
+ 	    ${COPYTREE_SHARE} . ${STAGEDIR}${PREFIX}/openjdk6 \
+@@ -298,8 +289,8 @@ do-install:
+ 	@cd ${WRKSRC}/build/${OPENJDK_OSARCH}/j2sdk-image && \
+ 	    ${COPYTREE_BIN} "bin jre/bin" ${STAGEDIR}${PREFIX}/openjdk6
+ 	@cd ${WRKSRC}/build/${OPENJDK_OSARCH}/j2sdk-image && \
+-	    ${INSTALL_PROGRAM} jre/lib/${ARCH}/jexec \
+-	    ${STAGEDIR}${PREFIX}/openjdk6/jre/lib/${ARCH}
++	    ${INSTALL_PROGRAM} jre/lib/${JDK_ARCH}/jexec \
++	    ${STAGEDIR}${PREFIX}/openjdk6/jre/lib/${JDK_ARCH}
+ 	@cd ${WRKSRC}/build/${OPENJDK_OSARCH}/btjars && \
+ 	    ${INSTALL_DATA} compilefontconfig.jar javazic.jar \
+ 	    ${STAGEDIR}${PREFIX}/openjdk6/jre/lib
+@@ -311,8 +302,8 @@ do-install:
+ 	    ${COPYTREE_BIN} "bin jre/bin" \
+ 	    ${STAGEDIR}${PREFIX}/openjdk6-fastdebug
+ 	@cd ${WRKSRC}/build/${OPENJDK_OSARCH}-fastdebug/j2sdk-image && \
+-	    ${INSTALL_PROGRAM} jre/lib/${ARCH}/jexec \
+-	    ${STAGEDIR}${PREFIX}/openjdk6-fastdebug/jre/lib/${ARCH}
++	    ${INSTALL_PROGRAM} jre/lib/${JDK_ARCH}/jexec \
++	    ${STAGEDIR}${PREFIX}/openjdk6-fastdebug/jre/lib/${JDK_ARCH}
+ .endif
+ .endif
+ 	@${ECHO_CMD} "#!/bin/sh" > ${PKGDEINSTALL}
