@@ -1,4 +1,4 @@
---- Makefile.orig	2013-11-14 22:57:05.234305000 +0000
+--- Makefile.orig	2013-11-17 19:19:25.644074000 +0000
 +++ Makefile
 @@ -85,21 +85,12 @@ NOPRECIOUSMAKEVARS=	yes
  
@@ -51,7 +51,7 @@
  .else
  	@cd ${WRKSRC}/build/${OPENJDK_OSARCH}/j2sdk-image && \
  	    ${COPYTREE_SHARE} . ${STAGEDIR}${PREFIX}/openjdk6 \
-@@ -298,8 +289,8 @@ do-install:
+@@ -298,11 +289,13 @@ do-install:
  	@cd ${WRKSRC}/build/${OPENJDK_OSARCH}/j2sdk-image && \
  	    ${COPYTREE_BIN} "bin jre/bin" ${STAGEDIR}${PREFIX}/openjdk6
  	@cd ${WRKSRC}/build/${OPENJDK_OSARCH}/j2sdk-image && \
@@ -62,7 +62,12 @@
  	@cd ${WRKSRC}/build/${OPENJDK_OSARCH}/btjars && \
  	    ${INSTALL_DATA} compilefontconfig.jar javazic.jar \
  	    ${STAGEDIR}${PREFIX}/openjdk6/jre/lib
-@@ -311,8 +302,8 @@ do-install:
++	@cd ${STAGEDIR}${PREFIX}/openjdk6/include && \
++	    ln -s dragonfly freebsd
+ .if ${PORT_OPTIONS:MFASTDEBUG}
+ 	@cd ${WRKSRC}/build/${OPENJDK_OSARCH}-fastdebug/j2sdk-image && \
+ 	    ${COPYTREE_SHARE} . ${STAGEDIR}${PREFIX}/openjdk6-fastdebug \
+@@ -311,8 +304,8 @@ do-install:
  	    ${COPYTREE_BIN} "bin jre/bin" \
  	    ${STAGEDIR}${PREFIX}/openjdk6-fastdebug
  	@cd ${WRKSRC}/build/${OPENJDK_OSARCH}-fastdebug/j2sdk-image && \
