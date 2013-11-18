@@ -1,18 +1,9 @@
---- compiled.mk.orig	2013-06-02 23:06:49.152775000 +0000
+--- compiled.mk.orig	2013-11-18 00:32:22.398871000 +0000
 +++ compiled.mk
-@@ -12,7 +12,7 @@ PKG_MESSAGE_FILE_PYTHON=	${PORTSDIR}/dev
- BJAM_ARGS=	--layout=system \
- 		--prefix=${PREFIX}
- 
--.if ${ARCH} == amd64
-+.if ${ARCH} == x86_64
- BJAM_ARGS+=	cxxflags=-fPIC
- .endif
- 
-@@ -22,23 +22,7 @@ BJAM_ARGS+=	cxxflags=-fPIC
+@@ -20,23 +20,7 @@ BJAM_ARGS+=	cxxflags=-fPIC
+ # of gcc/g++):
  BJAM_ARGS+=    cxxflags="${CXXFLAGS:N-O*}" cflags="${CFLAGS:N-O*}"
  
- NO_CCACHE=	yes
 -.if ${CC:T:Mgcc*}
  BOOST_TOOLSET:=	gcc
 -.elif ${CC:T:Mclang}
