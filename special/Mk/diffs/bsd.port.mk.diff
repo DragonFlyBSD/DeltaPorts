@@ -321,7 +321,7 @@
  			done; \
  		fi; \
  	fi
-+	@if [ -d ${DFLY_PATCHDIR} ]; then \
++	@set -e ; if [ -d ${DFLY_PATCHDIR} ]; then \
 +		if [ "`${ECHO_CMD} ${DFLY_PATCHDIR}/patch-*`" != "${DFLY_PATCHDIR}/patch-*" ]; then \
 +			${ECHO_MSG} "===>  Applying ${OPSYS} patches for ${PKGNAME}" ; \
 +			PATCHES_APPLIED="" ; \
