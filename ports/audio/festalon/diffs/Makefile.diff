@@ -1,0 +1,11 @@
+--- Makefile.orig	2013-11-21 14:15:27.505067000 +0000
++++ Makefile
+@@ -28,7 +28,7 @@ OPTIONS_DEFINE=	DOCS
+ 
+ .include <bsd.port.options.mk>
+ 
+-.if ${OSVERSION} >= 1000000
++.if ${OPSYS} == FreeBSD && ${OSVERSION} >= 1000000
+ BROKEN=		does not build on FreeBSD 10.x and later
+ .endif
+ 
