@@ -40,7 +40,7 @@ fi
 
 
 EXCLUDE="^(Templates/|Tools/|Mk/)"
-PKGDIR=/usr/local/poudriere/data/packages/${1}/All
+PKGDIR=/build/boomdata/data/packages/${1}/All
 
 if [ ! -d ${PKGDIR} ]; then
     echo "The package directory does not exist"
