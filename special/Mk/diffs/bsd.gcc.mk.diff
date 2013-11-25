@@ -1,6 +1,6 @@
---- bsd.gcc.mk.orig	2013-10-14 09:54:34.640187000 +0000
+--- bsd.gcc.mk.orig	2013-11-25 14:21:21.909584000 +0000
 +++ bsd.gcc.mk
-@@ -25,7 +25,7 @@
+@@ -31,7 +31,7 @@
  # If your port needs a Fortran compiler, please specify that with the
  # USE_FORTRAN= knob.  Here is the list of options for that knob:
  #
@@ -9,7 +9,7 @@
  #   USE_FORTRAN=	g77		# use g77-34 (lang/gcc34)
  #   USE_FORTRAN=	ifort	# use the Intel compiler (lang/ifc)
  #
-@@ -44,25 +44,29 @@ GCC_Include_MAINTAINER=		gerald@FreeBSD.
+@@ -50,25 +50,29 @@ GCC_Include_MAINTAINER=		gerald@FreeBSD.
  # ascending order and in sync with the table below. 
  GCCVERSIONS=	030402 040200 040400 040600 040700 040800 040900
  
@@ -47,7 +47,7 @@
  .endif
  
  # Extract the fields from GCCVERSION_...
-@@ -86,9 +90,16 @@ _GCCVERSION_${v}_V=	${j}
+@@ -92,9 +96,16 @@ _GCCVERSION_${v}_V=	${j}
  
  # The default case, with a current lang/gcc port.
  . if ${USE_FORTRAN} == yes
@@ -67,7 +67,7 @@
  
  # Intel Fortran compiler from lang/ifc.
  . elif ${USE_FORTRAN} == ifort
-@@ -113,12 +124,12 @@ MAKE_ENV+=		F77="${F77}" FC="${FC}" FFLA
+@@ -119,12 +130,12 @@ MAKE_ENV+=		F77="${F77}" FC="${FC}" FFLA
  
  .if defined(USE_GCC) && !defined(FORCE_BASE_CC_FOR_TESTING)
  
@@ -83,7 +83,7 @@
  
  . else # ${USE_GCC} == any
  
-@@ -132,13 +143,14 @@ _GCC_ORLATER:=	true
+@@ -138,13 +149,14 @@ _GCC_ORLATER:=	true
  
  # Initialize _GCC_FOUND${v}.  In parallel, check if USE_GCC points to a
  # valid version to begin with.
@@ -103,7 +103,7 @@
  . endif
  . if ${_USE_GCC}==${_GCCVERSION_${v}_V}
  _GCCVERSION_OKAY=	true
-@@ -188,7 +200,7 @@ _USE_GCC:=	${GCC_DEFAULT_VERSION}
+@@ -194,7 +206,7 @@ _USE_GCC:=	${GCC_DEFAULT_VERSION}
  # dependencies, CC, CXX, CPP, and flags.
  .for v in ${GCCVERSIONS}
  . if ${_USE_GCC} == ${_GCCVERSION_${v}_V}
@@ -112,7 +112,7 @@
  V:=			${_GCCVERSION_${v}_V:S/.//}
  _GCC_PORT_DEPENDS:=	gcc${V}
  .   if ${_USE_GCC} == ${GCC_DEFAULT_VERSION}
-@@ -216,11 +228,9 @@ _GCC_BUILD_DEPENDS:=	${_GCC_PORT_DEPENDS
+@@ -222,11 +234,9 @@ _GCC_BUILD_DEPENDS:=	${_GCC_PORT_DEPENDS
  .  else # Use GCC in base.
  CC:=			gcc
  CXX:=			g++
@@ -126,16 +126,19 @@
  .  endif # Use GCC in base.
  . endif # ${_USE_GCC} == ${_GCCVERSION_${v}_V}
  .endfor
-@@ -230,7 +240,7 @@ CPP:=			cpp
+@@ -236,9 +246,11 @@ CPP:=			cpp
  BUILD_DEPENDS+=	${_GCC_PORT_DEPENDS}:${PORTSDIR}/lang/${_GCC_PORT}
  . if ${_USE_GCC} != 3.4
  RUN_DEPENDS+=	${_GCC_PORT_DEPENDS}:${PORTSDIR}/lang/${_GCC_PORT}
--.  if ${_USE_GCC} != 4.2
 +.  if ${_USE_GCC:S/.//} > ${GCC_DEFAULT_VERSION}
  # Later GCC ports already depend on binutils; make sure whatever we
  # build leverages this as well.
  USE_BINUTILS=	yes
-@@ -265,6 +275,8 @@ test-gcc:
++.  endif
+ . endif
+ .endif
+ .endif # defined(_USE_GCC) && !defined(FORCE_BASE_CC_FOR_TESTING)
+@@ -269,6 +281,8 @@ test-gcc:
  	@echo CC=${CC} - CXX=${CXX} - CPP=${CPP} - CFLAGS=\"${CFLAGS}\"
  	@echo F77=${F77} - FC=${FC} - FFLAGS=\"${FFLAGS}\"
  	@echo LDFLAGS=\"${LDFLAGS}\"
