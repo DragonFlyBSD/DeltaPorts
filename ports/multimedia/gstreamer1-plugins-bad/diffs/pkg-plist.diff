@@ -1,0 +1,11 @@
+--- pkg-plist.orig	2013-11-27 06:52:35.221243000 +0000
++++ pkg-plist
+@@ -78,8 +78,6 @@ lib/gstreamer-%%VERSION%%/libgstjpegform
+ lib/gstreamer-%%VERSION%%/libgstjpegformat.so
+ lib/gstreamer-%%VERSION%%/libgstliveadder.la
+ lib/gstreamer-%%VERSION%%/libgstliveadder.so
+-lib/gstreamer-%%VERSION%%/libgstmfc.la
+-lib/gstreamer-%%VERSION%%/libgstmfc.so
+ lib/gstreamer-%%VERSION%%/libgstmidi.la
+ lib/gstreamer-%%VERSION%%/libgstmidi.so
+ lib/gstreamer-%%VERSION%%/libgstmpegpsdemux.la
