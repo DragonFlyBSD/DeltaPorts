@@ -1,24 +1,6 @@
---- pkg/pkg.conf.sample.orig	2013-11-19 18:52:23.000000000 +0000
+--- pkg/pkg.conf.sample.orig	2013-11-26 14:19:33.000000000 +0000
 +++ pkg/pkg.conf.sample
-@@ -2,10 +2,25 @@
- # For more information on the file format and
- # options please refer to the pkg.conf(5) man page
- 
-+# DragonFly (odd) development versions have a default ABI value set to the
-+# next future stable (even) version.
-+# The ABI directive allows to force the use of packages built for a different
-+# DragonFly version such as DragonFly 3.6 packages on DragonFly 3.7.
-+#ABI: dragonfly:3.6:x86:64
-+#ABI: dragonfly:3.6:x86:32
-+
-+# Default Dports package server (California)
-+PACKAGESITE: http://mirror-master.dragonflybsd.org/dports/${ABI}/LATEST
-+
-+# European mirrors
-+#PACKAGESITE: http://mirrors.ircam.fr/pub/DragonFlyBSD-dports/${ABI}/LATEST
-+#PACKAGESITE: http://pkg.wolfpond.org/${ABI}/LATEST
-+#PACKAGESITE: http://dfly.schlundtech.de/dports/${ABI}/LATEST
-+
+@@ -5,7 +5,7 @@
  # Configuration options
  #PKG_DBDIR	    : /var/db/pkg
  #PKG_CACHEDIR	    : /var/cache/pkg
