@@ -1,38 +1,13 @@
---- Makefile	(revision 334713)
-+++ Makefile	(working copy)
-@@ -169,7 +169,7 @@
- .endif
+--- Makefile.orig	2013-12-08 21:55:15.509954000 +0000
++++ Makefile
+@@ -164,7 +164,9 @@ CONFIGURE_ARGS+=	--disable-threads
  
- .if ${PORT_OPTIONS:MREPLACE_BASE}
--.if ${OSVERSION} >= 1000500
-+.if ${OPSYS} == FreeBSD && ${OSVERSION} >= 1000500
- IGNORE=		REPLACE_BASE option is not supported on this release
+ .if ${PORT_OPTIONS:MGSSAPI}
+ CONFIGURE_ARGS+=	--with-gssapi
+-LDFLAGS+=		-L${LIBDIR} -lgssapi_krb5
++LIB_DEPENDS+=		libgssapi_krb5.so:${PORTSDIR}/security/krb5
++LDFLAGS+=		-L${LOCALBASE}/lib -lgssapi_krb5 -lkrb5 -lk5crypto \
++			-lkrb5support -lcom_err
+ .else
+ CONFIGURE_ARGS+=        --without-gssapi
  .endif
- PKGNAMESUFFIX=	-base
-@@ -176,7 +176,7 @@
- PREFIX=		/usr
- BIND_DESTETC=	/etc/namedb
- .else
--.if ${OSVERSION} >= 1000500
-+.if ${OPSYS} == FreeBSD && ${OSVERSION} >= 1000500
- BIND_DESTETC=	${PREFIX}/etc/namedb
- .else
- BIND_DESTETC=	${PREFIX}/etc
-@@ -187,7 +187,7 @@
- 			--sysconfdir=${BIND_DESTETC}
- PLIST_SUB+=	BIND_DESTETC="${BIND_DESTETC}"
- 
--.if ${OSVERSION} >= 1000500
-+.if ${OPSYS} == FreeBSD && ${OSVERSION} >= 1000500
- PLIST_SUB+=	NOBASE=""
- .else
- PLIST_SUB+=	NOBASE="@comment "
-@@ -268,7 +268,7 @@
- 	${CP} ${WRKSRC}/CHANGES ${WRKSRC}/COPYRIGHT ${WRKSRC}/FAQ \
- 		${WRKSRC}/HISTORY ${WRKSRC}/README ${DOCSDIR}/
- .endif
--.if ${OSVERSION} >= 1000500
-+.if ${OPSYS} == FreeBSD && ${OSVERSION} >= 1000500
- .for FILE in named named.conf
- 	${SED} -e 's#%%PREFIX%%#${PREFIX}#g' \
- 		-e 's#%%BIND_DESTETC%%#${BIND_DESTETC}#g' \
