@@ -1,13 +1,11 @@
 --- Makefile.orig	2013-12-08 21:20:40.486128000 +0000
 +++ Makefile
-@@ -157,7 +157,9 @@ CONFIGURE_ARGS+=	--disable-threads
+@@ -157,7 +157,7 @@ CONFIGURE_ARGS+=	--disable-threads
  
  .if ${PORT_OPTIONS:MGSSAPI}
  CONFIGURE_ARGS+=	--with-gssapi
 -LDFLAGS+=		-L${LIBDIR} -lgssapi_krb5
 +LIB_DEPENDS+=		libgssapi_krb5.so:${PORTSDIR}/security/krb5
-+LDFLAGS+=		-L${LOCALBASE}/lib -lgssapi_krb5 -lkrb5 -lk5crypto \
-+			-lkrb5support -lcom_err
  .else
  CONFIGURE_ARGS+=	--without-gssapi
  .endif
