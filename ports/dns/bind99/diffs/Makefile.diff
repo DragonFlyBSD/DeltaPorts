@@ -1,10 +1,14 @@
---- Makefile.orig	2013-12-08 21:55:15.509954000 +0000
+--- Makefile.orig	2013-12-17 15:20:06.000000000 +0000
 +++ Makefile
-@@ -164,7 +164,7 @@ CONFIGURE_ARGS+=	--disable-threads
+@@ -164,11 +164,7 @@ CONFIGURE_ARGS+=	--disable-threads
  
  .if ${PORT_OPTIONS:MGSSAPI}
  CONFIGURE_ARGS+=	--with-gssapi
+-.if defined(HEIMDAL_HOME)
+-LDFLAGS+=		-L${LIBDIR} -lgssapi -lkrb5
+-.else
 -LDFLAGS+=		-L${LIBDIR} -lgssapi_krb5
+-.endif
 +LIB_DEPENDS+=		libgssapi_krb5.so:${PORTSDIR}/security/krb5
  .else
  CONFIGURE_ARGS+=        --without-gssapi

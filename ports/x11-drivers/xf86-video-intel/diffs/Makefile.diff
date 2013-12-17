@@ -1,6 +1,6 @@
---- Makefile.orig	2013-11-11 12:45:58.801281000 +0000
+--- Makefile.orig	2013-12-17 16:00:05.512261000 +0000
 +++ Makefile
-@@ -29,6 +29,19 @@ NO_STAGE=	yes
+@@ -26,6 +26,19 @@ USE_XORG=	glproto \
  .include <bsd.port.options.mk>
  
  .if defined(WITH_NEW_XORG)
@@ -18,13 +18,13 @@
 +LIB_DEPENDS+=	xcb-util:${PORTSDIR}/x11/xcb-util
 +.  else
  INTEL_VERSION=	2.21.15
- INTEL_REVISION=	0
+ INTEL_REVISION=	1
  CONFIGURE_ENV+=	xorg_cv_cc_flag__Wno_maybe_uninitialized=no
-@@ -40,6 +53,7 @@ EXTRA_PATCHES+=	${PATCHDIR}/extra-src__s
+@@ -37,6 +50,7 @@ EXTRA_PATCHES+=	${PATCHDIR}/extra-src__s
  		${PATCHDIR}/extra-clang \
  		${PATCHDIR}/extra-i915kms
- LIB_DEPENDS+=	xcb-util:${PORTSDIR}/x11/xcb-util
+ LIB_DEPENDS+=	libxcb-util.so:${PORTSDIR}/x11/xcb-util
 +.  endif
  .else
  INTEL_VERSION=	2.7.1
- INTEL_REVISION=	5
+ INTEL_REVISION=	6
