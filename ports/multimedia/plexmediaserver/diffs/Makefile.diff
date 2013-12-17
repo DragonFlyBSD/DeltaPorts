@@ -1,0 +1,11 @@
+--- Makefile.orig	2013-12-17 15:23:30.000000000 +0000
++++ Makefile
+@@ -33,7 +33,7 @@ ONLY_FOR_ARCHS=	amd64
+ IGNORE= supplied binaries compiled for FreeBSD 9
+ .endif
+ 
+-.if ${OSVERSION} >= 1000054
++.if ${OPSYS} == FreeBSD && ${OSVERSION} >= 1000054
+ RUN_DEPENDS+=	${LOCALBASE}/lib/compat/libstdc++.so.6:${PORTSDIR}/misc/compat9x
+ .endif
+ 
