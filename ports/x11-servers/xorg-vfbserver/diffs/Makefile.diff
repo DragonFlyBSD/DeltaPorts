@@ -1,0 +1,10 @@
+--- Makefile.orig	2013-12-19 18:56:15.452168000 +0000
++++ Makefile
+@@ -22,7 +22,6 @@ CONFIGURE_ARGS=	--disable-dmx --disable-
+ SLAVE_PORT=	yes
+ PLIST_FILES=	bin/Xvfb man/man1/Xvfb.1.gz
+ 
+-.include <bsd.port.options.mk>
+ 
+ do-install:
+ 	${INSTALL_PROGRAM} ${WRKSRC}/hw/vfb/Xvfb ${STAGEDIR}${PREFIX}/bin/
