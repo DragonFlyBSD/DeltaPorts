@@ -1,0 +1,17 @@
+--- Makefile.orig	2013-12-24 20:33:58.114073000 +0000
++++ Makefile
+@@ -88,8 +88,6 @@ PLIST_SUB+=	VIGRA=""
+ PLIST_SUB+=	VIGRA="@comment "
+ .endif
+ 
+-.include <bsd.port.pre.mk>
+-
+ post-extract:
+ 	@${REINPLACE_CMD} -e's|wx-config |${WX_CONFIG} |g' \
+ 		${WRKSRC}/configure.in \
+@@ -127,4 +125,4 @@ post-install:
+ 	@${RM} ${PREFIX}/lib/saga/*.a
+ 	@${CAT} ${PKGMESSAGE}
+ 
+-.include <bsd.port.post.mk>
++.include <bsd.port.mk>
