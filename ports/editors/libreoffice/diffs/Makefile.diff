@@ -1,4 +1,4 @@
---- Makefile.orig	2013-10-31 15:26:53.214144000 +0000
+--- Makefile.orig	2013-10-30 22:33:22.000000000 +0000
 +++ Makefile
 @@ -15,6 +15,7 @@ BUILD_DEPENDS=	p5-Archive-Zip>=0:${PORTS
  		${LOCALBASE}/bin/gperf:${PORTSDIR}/devel/gperf \
@@ -44,7 +44,7 @@
  
  DISTFILES+=	${PORTNAME}-${LOVERSION}${EXTRACT_SUFX}
  DISTFILES+=	${PORTNAME}-help-${LOVERSION}${EXTRACT_SUFX}
-@@ -87,258 +91,60 @@ CONFIGURE_ENV=		DMAKE=${LOCALBASE}/bin/d
+@@ -87,258 +91,61 @@ CONFIGURE_ENV=		DMAKE=${LOCALBASE}/bin/d
  			PYTHON_LIBS="`${PYTHON_VERSION}-config --libs`" \
  			TMPDIR=${WRKDIR}
  
@@ -324,6 +324,7 @@
 -CONFIGURE_ARGS+=	--disable-neon
 -.endif
 -
++.undef WITH_DEBUG
  .include <bsd.port.pre.mk>
  
 -.if ${CXX:M${LOCALBASE}/bin/clang++*}
@@ -342,7 +343,7 @@
  ACLOCAL_ARGS=	-I "${WRKSRC}/m4"
  CPPFLAGS=	-I${LOCALBASE}/include
  LDFLAGS+=	-L${LOCALBASE}/lib
-@@ -386,16 +192,6 @@ do-install:
+@@ -386,16 +193,6 @@ do-install:
  	    \( -type f -o -type l \) -print >> ${PLISTF}
  .endfor
  
