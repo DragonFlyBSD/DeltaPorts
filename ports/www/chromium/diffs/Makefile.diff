@@ -1,4 +1,4 @@
---- Makefile.orig	2013-10-20 18:52:22.898846000 +0000
+--- Makefile.orig	2013-12-25 01:11:47.016046000 +0000
 +++ Makefile
 @@ -22,6 +22,8 @@ LICENSE_COMB=	multi
  WRKSRC=		${WRKDIR}/${PORTNAME}-${DISTVERSION}
@@ -18,34 +18,20 @@
  RUN_DEPENDS=	${LOCALBASE}/lib/alsa-lib/libasound_module_pcm_oss.so:${PORTSDIR}/audio/alsa-plugins \
  		${LOCALBASE}/lib/X11/fonts/Droid/fonts.dir:${PORTSDIR}/x11-fonts/droid-fonts-ttf
  
-@@ -130,25 +134,16 @@ USE_GCC?=	yes
- GYP_DEFINES+=	gcc_version=${CXX:S/g++//}
- EXTRA_PATCHES+=	${FILESDIR}/extra-patch-gcc
- .else
--.if ${OSVERSION} < 902000
- BUILD_DEPENDS+=	${LOCALBASE}/bin/clang32:${PORTSDIR}/lang/clang32
- CC=		${LOCALBASE}/bin/clang32
- CXX=		${LOCALBASE}/bin/clang++32
--.else
--CC=		clang
--CXX=		clang++
--.endif
- GYP_DEFINES+=	clang=1
-+CXXFLAGS+=	-D__float128=void -D_GLIBCXX_PERMIT_BACKWARD_HASH=1
- EXTRA_PATCHES+=	${FILESDIR}/extra-patch-clang
- CONFIGURE_ENV+=	AR=/usr/bin/ar
+@@ -123,10 +127,10 @@ GYP_DEFINES+=	use_pulseaudio=0
+ GYP_DEFINES+=	disable_sse2=1
  .endif
  
 -.if ${OSVERSION} >= 1000052 && !exists(${LOCALBASE}/include/execinfo.h)
--EXTRA_PATCHES+=	${FILESDIR}/extra-patch-fixup-execinfo
--.endif
++.if ${OPSYS} == FreeBSD && ${OSVERSION} >= 1000052 && !exists(${LOCALBASE}/include/execinfo.h)
+ EXTRA_PATCHES+=	${FILESDIR}/extra-patch-fixup-execinfo
+ .endif
 -.if ${OSVERSION} < 1000052
++.if ${OPSYS} == DragonFly || (${OPSYS} == FreeBSD && ${OSVERSION} < 1000052)
  LIB_DEPENDS+=	libexecinfo.so:${PORTSDIR}/devel/libexecinfo
--.endif
+ .endif
  
- .if ${PORT_OPTIONS:MTEST}
- TEST_TARGETS=	base_unittests \
-@@ -187,6 +182,7 @@ CONFIGURE_ENV+= CFLAGS="${CFLAGS}" \
+@@ -166,6 +170,7 @@ CONFIGURE_ENV+=	CFLAGS="${CFLAGS}" \
  		CXXFLAGS="${CXXFLAGS}" \
  		LDFLAGS="${LDFLAGS}"
  MAKE_ENV+=	BUILDTYPE=${BUILDTYPE} \
@@ -53,7 +39,15 @@
  		GPERF=${LOCALBASE}/bin/gperf
  
  .include <bsd.port.pre.mk>
-@@ -203,7 +199,9 @@ pre-everything::
+@@ -175,6 +180,7 @@ GYP_DEFINES+=	gcc_version=${CXX:S/g++//}
+ EXTRA_PATCHES+=	${FILESDIR}/extra-patch-gcc
+ .else
+ GYP_DEFINES+=	clang=1
++CXXFLAGS+=	-D__float128=void -D_GLIBCXX_PERMIT_BACKWARD_HASH=1
+ EXTRA_PATCHES+=	${FILESDIR}/extra-patch-clang
+ CONFIGURE_ENV+=	AR=/usr/bin/ar
+ .endif
+@@ -191,7 +197,9 @@ pre-everything::
  
  post-patch:
  	@${REINPLACE_CMD} -e "s|/usr/local|${LOCALBASE}|" \
@@ -61,9 +55,9 @@
  		${WRKSRC}/base/base.gypi \
 +		${WRKSRC}/base/process_util_freebsd.cc \
  		${WRKSRC}/build/common.gypi \
- 		${WRKSRC}/third_party/libvpx/libvpx.gyp \
  		${WRKSRC}/crypto/crypto.gyp \
-@@ -213,7 +211,7 @@ post-patch:
+ 		${WRKSRC}/third_party/libvpx/libvpx.gyp \
+@@ -204,7 +212,7 @@ post-patch:
  		${WRKSRC}/third_party/WebKit/Source/core/core.gypi
  	@${REINPLACE_CMD} -e "s|'../courgette/courgette.gyp:courgette_lib',||" \
  		${WRKSRC}/chrome/chrome_tests_unit.gypi
@@ -72,7 +66,7 @@
  		${WRKSRC}/tools/gyp/pylib/gyp/generator/make.py
  	@${REINPLACE_CMD} -e "s|is_linux|(is_linux or is_bsd)|" \
  		${WRKSRC}/chrome/browser/browser_resources.grd \
-@@ -226,6 +224,12 @@ post-patch:
+@@ -217,6 +225,12 @@ post-patch:
  		${WRKSRC}/ui/base/strings/app_locale_settings_ko.xtb \
  		${WRKSRC}/ui/base/strings/app_locale_settings_ml.xtb \
  		${WRKSRC}/ui/base/strings/app_locale_settings_th.xtb
