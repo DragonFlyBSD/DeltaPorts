@@ -18,3 +18,12 @@
  #    include <sys/soundcard.h>
  #  else
      /*
+@@ -75,7 +75,7 @@
+ #endif
+ 
+ #ifdef UL_BSD
+-#ifndef __FreeBSD__
++#if !defined(__FreeBSD__) && !defined(__DragonFly__)
+ #  include <sys/audioio.h>
+ #endif
+ #endif
