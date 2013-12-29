@@ -1,0 +1,11 @@
+--- Makefile.orig	2013-11-04 10:40:33.000000000 +0000
++++ Makefile
+@@ -16,7 +16,7 @@ LIB_DEPENDS=	libevent_openssl.so:${PORTS
+ 
+ CONFIGURE_ARGS=	--enable-examples
+ CONFIGURE_ENV=	OPENSSL_CFLAGS="-I${OPENSSLINC}" \
+-		OPENSSL_LIBS="-L${OPENSSLLIB} -lssl" \
++		OPENSSL_LIBS="-L${OPENSSLLIB} -lssl -lcrypto" \
+ 		ZLIB_CFLAGS="-I${INCLUDEDIR}" \
+ 		ZLIB_LIBS="-L${LIBDIR} -lz"
+ GNU_CONFIGURE=	yes
