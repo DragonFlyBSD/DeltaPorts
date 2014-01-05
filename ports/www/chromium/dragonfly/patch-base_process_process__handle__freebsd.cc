@@ -4,7 +4,7 @@
  }
  
  FilePath GetProcessExecutablePath(ProcessHandle process) {
-+#ifdef __DragonFly
++#ifdef __DragonFly__
 +  return FilePath("/usr/local/bin/chrome");
 +#else
    char pathname[PATH_MAX];
