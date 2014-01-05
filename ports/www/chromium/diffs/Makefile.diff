@@ -53,7 +53,7 @@
  	@${REINPLACE_CMD} -e "s|/usr/local|${LOCALBASE}|" \
 +		${WRKSRC}/base/base_paths_posix.cc \
  		${WRKSRC}/base/base.gypi \
-+		${WRKSRC}/base/process_util_freebsd.cc \
++		${WRKSRC}/base/process/process_handle_freebsd.cc \
  		${WRKSRC}/build/common.gypi \
  		${WRKSRC}/crypto/crypto.gyp \
  		${WRKSRC}/third_party/libvpx/libvpx.gyp \
