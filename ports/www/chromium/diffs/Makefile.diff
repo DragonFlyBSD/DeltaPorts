@@ -1,4 +1,4 @@
---- Makefile.orig	2014-01-05 12:40:40.339259000 +0000
+--- Makefile.orig	2014-01-05 16:41:28.481953000 +0000
 +++ Makefile
 @@ -21,7 +21,8 @@ LICENSE=	BSD3CLAUSE LGPL21 MPL
  LICENSE_COMB=	multi
@@ -71,11 +71,11 @@
  		${WRKSRC}/ui/base/strings/app_locale_settings_ko.xtb \
  		${WRKSRC}/ui/base/strings/app_locale_settings_ml.xtb \
  		${WRKSRC}/ui/base/strings/app_locale_settings_th.xtb
-+	@${FIND} ${WRKSRC} -type f -name \*\.gyp\* | grep -v /v8/ | \
-+		${XARGS} grep -l '"freebsd"' | \
++	@${FIND} ${WRKSRC} -type f -name \*\.gyp\* | \
++		${GREP} -vE "/v8/|libusb" | ${XARGS} ${GREP} -l '"freebsd"' | \
 +		${XARGS} ${REINPLACE_CMD} -e 's|"freebsd"|"dragonfly"|g'
-+	@${FIND} ${WRKSRC} -type f -name \*\.py | grep -v /v8/ | \
-+		${XARGS} grep -l "'freebsd'" | \
++	@${FIND} ${WRKSRC} -type f -name \*\.py | ${GREP} -v /v8/ | \
++		${XARGS} ${GREP} -l "'freebsd'" | \
 +		${XARGS} ${REINPLACE_CMD} -e "s|'freebsd'|'dragonfly'|g"
 +	@${REINPLACE_CMD} -e 's|"freebsd"|"dragonfly"|g' \
 +		${WRKSRC}/v8/build/standalone.gypi \
