@@ -5,7 +5,7 @@
  .include <bsd.port.pre.mk>
  
 -.if ${OSVERSION} < 1000051 || !defined(WITH_NEW_XORG)
-+.if ${DFLYVERSION} < 300701 || !defined(WITH_NEW_XORG)
++.if ${DFLYVERSION} < 300751 || !defined(WITH_NEW_XORG)
  ATI_VERSION=	6.14.6
  CONFIGURE_ARGS+=--disable-kms
  PLIST_SUB+=	OLD=""
