@@ -1,6 +1,6 @@
 --- src/sysdeps/dragonfly.c.orig	2013-05-12 12:48:12.267284000 +0000
 +++ src/sysdeps/dragonfly.c
-@@ -0,0 +1,1162 @@
+@@ -0,0 +1,1164 @@
 +/* GKrellM
 +|  Copyright (C) 1999-2010 Bill Wilson
 +|
@@ -821,8 +821,10 @@
 +#include <machine/cpufunc.h>
 +#if (__DragonFly_version < 200700)
 +#include <machine/smb.h>
-+#else
++#elif (__DragonFly_version < 300701)
 +#include <bus/smbus/smb.h>
++#else
++#include <dev/smbus/smb/smb.h>
 +#endif
 +
 +/* Interface types */
