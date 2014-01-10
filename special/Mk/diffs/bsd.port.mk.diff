@@ -1,4 +1,4 @@
---- bsd.port.mk.orig	2014-01-10 02:50:36.036468000 +0000
+--- bsd.port.mk.orig	2014-01-10 04:12:06.985262000 +0000
 +++ bsd.port.mk
 @@ -43,7 +43,8 @@ FreeBSD_MAINTAINER=	portmgr@FreeBSD.org
  #				  makefile is being used on.  Automatically set to
@@ -70,7 +70,7 @@
  
  .include "${PORTSDIR}/Mk/bsd.commands.mk"
  
-@@ -1187,22 +1198,18 @@ OPSYS!=	${UNAME} -s
+@@ -1187,28 +1198,24 @@ OPSYS!=	${UNAME} -s
  OSREL!=	${UNAME} -r | ${SED} -e 's/[-(].*//'
  .endif
  
@@ -101,6 +101,13 @@
  .endif
  .endif
  
+ # Enable new xorg for FreeBSD versions after Radeon KMS was imported unless
+ # WITHOUT_NEW_XORG is set.
+-.if ${OSVERSION} >= 1100000
++.if ${OPSYS} == FreeBSD && ${OSVERSION} >= 1100000
+ . if !defined(WITHOUT_NEW_XORG)
+ WITH_NEW_XORG?=	yes
+ . else
 @@ -1314,6 +1321,25 @@ STRIP=	#none
  
  .include "${PORTSDIR}/Mk/bsd.options.mk"
