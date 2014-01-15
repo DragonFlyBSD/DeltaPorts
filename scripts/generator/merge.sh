@@ -19,6 +19,13 @@ if (FNR == 2) \
   else { print hold } \
 }'
 AWKCMD3='{ print $1 "/" $2 }'
+AWKMOVED='{  FS = "[| ]"; \
+if ($1 == "#") \
+  print $0; \
+else { \
+    split($3,a,"-"); \
+    if (a[1] > 2012+0) print $0; \
+}}'
 
 TMPFILE=/tmp/tmp.awk
 WORKAREA=/tmp/merge.workarea
@@ -241,6 +248,7 @@ for difffile in ${diffs}; do
   patch --quiet -d ${MERGED} < ${difffile}
 done
 rm ${MERGED}/*.orig
+awk "${AWKMOVED}" ${FPORTS}/MOVED > ${MERGED}/MOVED
 
 umount ${WORKAREA}
 rm -rf ${WORKAREA}

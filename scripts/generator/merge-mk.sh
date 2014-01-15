@@ -3,32 +3,16 @@
 # Update $MERGED directory (ports + overlay = merged)
 #
 
-CONFFILE=/usr/local/etc/dports.conf
-
-if [ ! -f ${CONFFILE} ]; then
-   echo "Configuration file ${CONFFILE} not found"
-   exit 1
-fi
-
-checkdir ()
-{
-   eval "MYDIR=\$$1"
-   if [ ! -d ${MYDIR} ]; then
-     echo "The $1 directory (${MYDIR}) does not exist."
-     exit 1
-  fi
-}
-
-confopts=`grep "=" ${CONFFILE}`
-for opt in ${confopts}; do
-   eval $opt
-done
-
-checkdir DELTA
-checkdir FPORTS
-checkdir MERGED
+. /usr/local/etc/dports.conf
 
 WORKAREA=/tmp/merge.workarea
+AWKMOVED='{  FS = "[| ]"; \
+if ($1 == "#") \
+  print $0; \
+else { \
+    split($3,a,"-"); \
+    if (a[1] > 2012+0) print $0; \
+}}'
 
 checkfirst=$(mount | grep ${WORKAREA})
 if [ -z "${checkfirst}" ]; then
@@ -68,6 +52,7 @@ for difffile in ${diffs}; do
   patch --quiet -d ${MERGED} < ${difffile}
 done
 rm ${MERGED}/*.orig
+awk "${AWKMOVED}" ${FPORTS}/MOVED > ${MERGED}/MOVED
 
 umount ${WORKAREA}
 rm -rf ${WORKAREA}
