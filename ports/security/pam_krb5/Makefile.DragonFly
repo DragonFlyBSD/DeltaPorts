@@ -1,4 +1,0 @@
-# Make DragonFly default to heimdal
-# Source builder can override in make.conf or command line
-
-KRB5_IMPL?= heimdal
