@@ -1,0 +1,22 @@
+--- pkg-plist.orig	2014-01-14 23:29:25.000000000 +0000
++++ pkg-plist
+@@ -2258,6 +2258,10 @@ libdata/pkgconfig/python-3.2.pc
+ %%PYTHON_LIBDIR%%/pickletools.py
+ %%PYTHON_LIBDIR%%/pipes.py
+ %%PYTHON_LIBDIR%%/pkgutil.py
++%%PYTHON_LIBDIR%%/plat-dragonfly3/IN.py
++%%PYTHON_LIBDIR%%/plat-dragonfly3/__pycache__/IN.cpython-32.pyc
++%%PYTHON_LIBDIR%%/plat-dragonfly3/__pycache__/IN.cpython-32.pyo
++%%PYTHON_LIBDIR%%/plat-dragonfly3/regen
+ %%PYTHON_LIBDIR%%/plat-freebsd4/IN.py
+ %%PYTHON_LIBDIR%%/plat-freebsd4/__pycache__/IN.cpython-32.pyc
+ %%PYTHON_LIBDIR%%/plat-freebsd4/__pycache__/IN.cpython-32.pyo
+@@ -4363,6 +4367,8 @@ libdata/pkgconfig/python-3.2.pc
+ @dirrm %%PYTHON_LIBDIR%%/plat-freebsd10
+ @dirrm %%PYTHON_LIBDIR%%/plat-freebsd11/__pycache__
+ @dirrm %%PYTHON_LIBDIR%%/plat-freebsd11
++@dirrm %%PYTHON_LIBDIR%%/plat-dragonfly3/__pycache__
++@dirrm %%PYTHON_LIBDIR%%/plat-dragonfly3
+ @dirrm %%PYTHON_LIBDIR%%/pydoc_data/__pycache__
+ @dirrm %%PYTHON_LIBDIR%%/pydoc_data
+ @dirrm %%PYTHON_LIBDIR%%/site-packages
