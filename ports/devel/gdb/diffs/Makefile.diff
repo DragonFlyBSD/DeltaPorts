@@ -1,7 +1,7 @@
---- Makefile.orig	2013-05-17 18:43:10.964353000 +0000
+--- Makefile.orig	2014-01-26 19:14:55.321019000 +0000
 +++ Makefile
-@@ -98,12 +98,8 @@ CONFIGURE_ARGS+=	--with-expat=yes
- CONFIGURE_ARGS+=	--without-expat
+@@ -74,12 +74,8 @@ EXTRA_PATCHES=	${FILESDIR}/extrapatch-gd
+ 		${FILESDIR}/extrapatch-gdb-Makefile.in
  .endif
  
 -.if ${ARCH} == "amd64"
@@ -9,8 +9,8 @@
 -.endif
 -
  post-patch:
--	@${REINPLACE_CMD} -e 's/$$/ [GDB v${PORTVERSION} for FreeBSD]/' \
-+	@${REINPLACE_CMD} -e 's/$$/ [GDB v${PORTVERSION} for ${OPSYS}]/' \
+-	@${REINPLACE_CMD} -e 's|$$| [GDB v${PORTVERSION} for FreeBSD]|' \
++	@${REINPLACE_CMD} -e 's|$$| [GDB v${PORTVERSION} for ${OPSYS}]|' \
  		${WRKSRC}/gdb/version.in
+ 
  .if ${PORT_OPTIONS:MTHREADS}
- 	@${CP} ${FILESDIR}/fbsd-threads.c ${WRKSRC}/gdb/

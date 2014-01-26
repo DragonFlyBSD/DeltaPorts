@@ -1,6 +1,6 @@
---- Makefile.orig
+--- Makefile.orig	2014-01-26 19:33:19.323155000 +0000
 +++ Makefile
-@@ -336,27 +336,11 @@ PLIST_SUB+=		BACK_BDB="@comment " \
+@@ -339,27 +339,11 @@ PLIST_SUB+=		BACK_BDB="@comment " \
  			BACK_HDB="@comment "
  .else
  
@@ -9,7 +9,7 @@
 -USE_BDB=		yes
 -
 -# XXX Can BDB 5.x use XY instead of X as version?
--.if ${WITH_BDB_VER} >= 43 || ${WITH_BDB_VER} == 5
+-.if ${WITH_BDB_VER} >= 43 || ${WITH_BDB_VER} == 5 || ${WITH_BDB_VER} == 6
 -CONFIGURE_ARGS+=	--enable-bdb=${BACKEND_ENABLE} \
 -			--enable-hdb=${BACKEND_ENABLE}
 -PLIST_SUB+=		BACK_BDB=${BACKEND_PLIST} \
