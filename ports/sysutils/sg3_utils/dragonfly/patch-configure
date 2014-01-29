@@ -14,7 +14,7 @@
  
  # Define platform-specific symbol.
 - if echo $host_os | grep 'freebsd' > /dev/null; then
-+ if echo $host_os | grep '(freebsd|dragonfly)' > /dev/null; then
++ if echo $host_os | grep -E '(freebsd|dragonfly)' > /dev/null; then
    OS_FREEBSD_TRUE=
    OS_FREEBSD_FALSE='#'
  else
