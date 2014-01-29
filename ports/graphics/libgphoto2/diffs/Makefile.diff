@@ -1,8 +1,10 @@
---- Makefile.orig	2013-10-26 23:08:01.759853000 +0000
+--- Makefile.orig	2014-01-29 08:48:47.326341000 +0000
 +++ Makefile
-@@ -29,8 +29,10 @@ PLIST_SUB=	VERSION="${PORTVERSION}" VERS
+@@ -48,10 +48,11 @@ XML_LDFLAGS=		$$(pkg-config --libs-only-
+ XML_CONFIGURE_WITH=	libxml2
  
  .include <bsd.port.options.mk>
+-.include <bsd.port.pre.mk>
  
 -.if ${OSVERSION} < 1000040
 +.if ${OPSYS} == FreeBSD && ${OSVERSION} < 1000040
@@ -11,4 +13,10 @@
 +USES+=		usb
  .endif
  
- .if ${PORT_OPTIONS:MNLS}
+ post-patch:
+@@ -72,4 +73,4 @@ post-patch:
+ 		'/^SUBDIRS/s|linux-hotplug||' \
+ 		${WRKSRC}/packaging/Makefile.in
+ 
+-.include <bsd.port.post.mk>
++.include <bsd.port.mk>
