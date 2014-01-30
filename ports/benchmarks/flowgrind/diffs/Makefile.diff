@@ -1,0 +1,11 @@
+--- Makefile.orig	2014-01-30 12:36:27.204016000 +0000
++++ Makefile
+@@ -12,7 +12,7 @@ COMMENT=	Measure throughput and other me
+ 
+ LIB_DEPENDS=	libxmlrpc++.so:${PORTSDIR}/net/xmlrpc-c \
+ 		libgsl.so:${PORTSDIR}/math/gsl \
+-		libpcap.so:${PORTSDIR}/net/libpcap
++		${LOCALBASE}/lib/libpcap.so:${PORTSDIR}/net/libpcap
+ 
+ USE_BZIP2=	yes
+ GNU_CONFIGURE=	yes
