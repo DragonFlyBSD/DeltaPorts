@@ -1,6 +1,22 @@
---- pkg-plist.orig	2014-01-14 23:29:25.000000000 +0000
+--- pkg-plist.orig	2014-01-30 18:20:44.974982000 +0000
 +++ pkg-plist
-@@ -2258,6 +2258,10 @@ libdata/pkgconfig/python-3.2.pc
+@@ -459,7 +459,6 @@ man/man1/python3.2.1.gz
+ %%PYTHON_LIBDIR%%/concurrent/futures/_base.py
+ %%PYTHON_LIBDIR%%/concurrent/futures/process.py
+ %%PYTHON_LIBDIR%%/concurrent/futures/thread.py
+-%%PYTHON_LIBDIR%%/config
+ %%PYTHON_LIBDIR%%/config-%%PYVER%%%%PYABIVER%%/Makefile
+ %%PYTHON_LIBDIR%%/config-%%PYVER%%%%PYABIVER%%/Setup
+ %%PYTHON_LIBDIR%%/config-%%PYVER%%%%PYABIVER%%/Setup.config
+@@ -468,6 +467,7 @@ man/man1/python3.2.1.gz
+ %%PYTHON_LIBDIR%%/config-%%PYVER%%%%PYABIVER%%/config.c.in
+ %%PYTHON_LIBDIR%%/config-%%PYVER%%%%PYABIVER%%/install-sh
+ %%PYTHON_LIBDIR%%/config-%%PYVER%%%%PYABIVER%%/lib%%PYTHON_VERSION%%%%PYABIVER%%.a
++%%PYTHON_LIBDIR%%/config-%%PYVER%%%%PYABIVER%%/lib%%PYTHON_VERSION%%%%PYABIVER%%.so
+ %%PYTHON_LIBDIR%%/config-%%PYVER%%%%PYABIVER%%/makesetup
+ %%PYTHON_LIBDIR%%/config-%%PYVER%%%%PYABIVER%%/python.o
+ %%PYTHON_LIBDIR%%/configparser.py
+@@ -2259,6 +2259,10 @@ man/man1/python3.2.1.gz
  %%PYTHON_LIBDIR%%/pickletools.py
  %%PYTHON_LIBDIR%%/pipes.py
  %%PYTHON_LIBDIR%%/pkgutil.py
@@ -11,7 +27,7 @@
  %%PYTHON_LIBDIR%%/plat-freebsd4/IN.py
  %%PYTHON_LIBDIR%%/plat-freebsd4/__pycache__/IN.cpython-32.pyc
  %%PYTHON_LIBDIR%%/plat-freebsd4/__pycache__/IN.cpython-32.pyo
-@@ -4363,6 +4367,8 @@ libdata/pkgconfig/python-3.2.pc
+@@ -4364,6 +4368,8 @@ man/man1/python3.2.1.gz
  @dirrm %%PYTHON_LIBDIR%%/plat-freebsd10
  @dirrm %%PYTHON_LIBDIR%%/plat-freebsd11/__pycache__
  @dirrm %%PYTHON_LIBDIR%%/plat-freebsd11
