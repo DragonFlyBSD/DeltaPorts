@@ -1,10 +1,10 @@
---- Uses/iconv.mk.orig	2013-09-24 11:11:17.609905000 +0000
+--- Uses/iconv.mk.orig	2014-02-02 23:31:56.231184000 +0000
 +++ Uses/iconv.mk
-@@ -16,7 +16,7 @@ _INCLUDE_USES_ICONV_MK=	yes
- iconv_ARGS=     lib
- .endif
+@@ -15,7 +15,7 @@ _INCLUDE_USES_ICONV_MK=	yes
  
--.if !exists(/usr/include/iconv.h)
+ iconv_ARGS:=	${iconv_ARGS:S/,/ /g}
+ 
+-.if !exists(/usr/include/iconv.h) || ${iconv_ARGS:Mwchar_t} || ${iconv_ARGS:Mtranslit}
 +.if ${DFLYVERSION} < 300503
  
  ICONV_CMD=	${LOCALBASE}/bin/iconv
