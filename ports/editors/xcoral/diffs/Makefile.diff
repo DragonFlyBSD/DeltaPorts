@@ -1,6 +1,6 @@
---- Makefile.orig	2013-10-13 18:03:12.790641000 +0000
+--- Makefile.orig	2014-02-10 09:16:47.961637000 +0000
 +++ Makefile
-@@ -11,19 +11,12 @@ COMMENT=	A multiwindow mouse-based text
+@@ -11,17 +11,11 @@ COMMENT=	A multiwindow mouse-based text
  
  USE_XORG=	x11
  GNU_CONFIGURE=	yes
@@ -10,13 +10,11 @@
  
  PLIST_SUB=	VERSION="${PORTVERSION}"
  
- NO_STAGE=	yes
 -post-patch:
 -	@${REINPLACE_CMD} -e 's| regex\.c | |g ; \
 -		 s| -g | |g' ${WRKSRC}/Makefile.in
 -	@${REINPLACE_CMD} -e \
 -		's|"regex\.h"|<gnu/regex.h>|g' ${WRKSRC}/bm_search.c
--
+ 
  do-install:
- 	${INSTALL_PROGRAM} ${WRKSRC}/xcoral ${PREFIX}/bin
- 	@${MKDIR} ${DATADIR}
+ 	${INSTALL_PROGRAM} ${WRKSRC}/xcoral ${STAGEDIR}${PREFIX}/bin

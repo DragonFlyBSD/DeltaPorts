@@ -1,29 +1,14 @@
---- Makefile.orig	2013-06-02 23:15:19.697311000 +0000
+--- Makefile.orig	2014-02-10 09:19:05.839611000 +0000
 +++ Makefile
-@@ -16,21 +16,14 @@ USE_XZ=		yes
- USE_PYTHON=	2.6+
+@@ -21,8 +21,10 @@ USE_XZ=		yes
+ USE_PYTHON=	2
  USE_LDCONFIG=	yes
  ALL_TARGET=	native
 -MAKE_ARGS=	library=shared
-+MAKE_ARGS=	strictaliasing=off
 +MAKE_ENV+=	GYPFLAGS=-DOS=freebsd
 +MAKE_ENV+=	library=shared
-+USE_GCC=	4.7
+ MAKE_ENV+=	CC.host=${CC} CXX.host=${CXX} LINK.host=${CXX} LINK.target=${CXX}
 +CFLAGS+=	-D__FreeBSD__=1
  
  .include <bsd.port.pre.mk>
- 
--.if ${CC:T:Mclang} == "clang" || ${CXX:T:Mclang++} == "clang++" || ${OSVERSION} >= 1000024
--_CLANG!=	clang --version | ${HEAD} -1 | ${SED} -e 's/.*clang version \([0-9]\)\.\([0-9]\).*/\1\2/'
--MAKE_ENV+=	LINK=clang++
--CFLAGS+=	-Wno-unused-private-field
--.if ${_CLANG} >= 33
--CFLAGS+=	-Wno-nested-anon-types -Wno-unused-function
--.endif
--.else
--MAKE_ARGS+=	strictaliasing=off
--USE_GCC=	any
--.endif
- 
- ONLY_FOR_ARCHS=	i386 amd64
  
