@@ -1,4 +1,4 @@
---- Makefile.orig	2014-01-05 16:41:28.481953000 +0000
+--- Makefile.orig	2014-02-17 15:37:44.848701000 +0000
 +++ Makefile
 @@ -21,7 +21,8 @@ LICENSE=	BSD3CLAUSE LGPL21 MPL
  LICENSE_COMB=	multi
@@ -10,7 +10,7 @@
  
  BUILD_DEPENDS=	${LOCALBASE}/bin/gperf:${PORTSDIR}/devel/gperf \
  		bash:${PORTSDIR}/shells/bash \
-@@ -42,6 +43,8 @@ LIB_DEPENDS=	libcairo.so:${PORTSDIR}/gra
+@@ -41,6 +42,8 @@ LIB_DEPENDS=	libcairo.so:${PORTSDIR}/gra
  		libgcrypt.so:${PORTSDIR}/security/libgcrypt \
  		libpci.so:${PORTSDIR}/devel/libpci
  
@@ -19,7 +19,7 @@
  RUN_DEPENDS=	${LOCALBASE}/lib/alsa-lib/libasound_module_pcm_oss.so:${PORTSDIR}/audio/alsa-plugins \
  		${LOCALBASE}/lib/X11/fonts/Droid/fonts.dir:${PORTSDIR}/x11-fonts/droid-fonts-ttf
  
-@@ -124,10 +127,10 @@ GYP_DEFINES+=	use_pulseaudio=0
+@@ -123,10 +126,10 @@ GYP_DEFINES+=	use_pulseaudio=0
  GYP_DEFINES+=	disable_sse2=1
  .endif
  
@@ -32,15 +32,15 @@
  LIB_DEPENDS+=	libexecinfo.so:${PORTSDIR}/devel/libexecinfo
  .endif
  
-@@ -167,6 +170,7 @@ CONFIGURE_ENV+=	CFLAGS="${CFLAGS}" \
+@@ -156,6 +159,7 @@ CONFIGURE_ENV+=	CFLAGS="${CFLAGS}" \
  		CXXFLAGS="${CXXFLAGS}" \
  		LDFLAGS="${LDFLAGS}"
  MAKE_ENV+=	BUILDTYPE=${BUILDTYPE} \
 +		GYPFLAGS=-DOS=freebsd \
  		GPERF=${LOCALBASE}/bin/gperf
+ MAKE_ARGS+=	-C out/${BUILDTYPE}
  
- .include <bsd.port.pre.mk>
-@@ -176,6 +180,7 @@ GYP_DEFINES+=	gcc_version=${CXX:S/g++//}
+@@ -166,6 +170,7 @@ GYP_DEFINES+=	gcc_version=${CXX:S/g++//}
  EXTRA_PATCHES+=	${FILESDIR}/extra-patch-gcc
  .else
  GYP_DEFINES+=	clang=1
@@ -48,7 +48,7 @@
  EXTRA_PATCHES+=	${FILESDIR}/extra-patch-clang
  CONFIGURE_ENV+=	AR=/usr/bin/ar
  .endif
-@@ -192,7 +197,9 @@ pre-everything::
+@@ -182,7 +187,9 @@ pre-everything::
  
  post-patch:
  	@${REINPLACE_CMD} -e "s|/usr/local|${LOCALBASE}|" \
@@ -58,16 +58,7 @@
  		${WRKSRC}/build/common.gypi \
  		${WRKSRC}/crypto/crypto.gyp \
  		${WRKSRC}/third_party/libvpx/libvpx.gyp \
-@@ -205,7 +212,7 @@ post-patch:
- 		${WRKSRC}/third_party/WebKit/Source/core/core.gypi
- 	@${REINPLACE_CMD} -e "s|'../courgette/courgette.gyp:courgette_lib',||" \
- 		${WRKSRC}/chrome/chrome_tests_unit.gypi
--	@${REINPLACE_CMD} -e "s|linux|freebsd|" \
-+	@${REINPLACE_CMD} -e "s|linux|dragonfly|" \
- 		${WRKSRC}/tools/gyp/pylib/gyp/generator/make.py
- 	@${REINPLACE_CMD} -e "s|is_linux|(is_linux or is_bsd)|" \
- 		${WRKSRC}/chrome/browser/browser_resources.grd \
-@@ -218,6 +225,17 @@ post-patch:
+@@ -207,6 +214,17 @@ post-patch:
  		${WRKSRC}/ui/base/strings/app_locale_settings_ko.xtb \
  		${WRKSRC}/ui/base/strings/app_locale_settings_ml.xtb \
  		${WRKSRC}/ui/base/strings/app_locale_settings_th.xtb

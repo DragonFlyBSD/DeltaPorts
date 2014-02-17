@@ -1,8 +1,8 @@
---- Makefile.orig	2013-10-13 18:55:22.251870000 +0000
+--- Makefile.orig	2014-02-17 15:27:09.369358000 +0000
 +++ Makefile
-@@ -5,48 +5,36 @@ PORTNAME=	kanji
+@@ -5,16 +5,15 @@ PORTNAME=	kanji
  PORTVERSION?=	1.0
- PORTREVISION?=	4
+ PORTREVISION?=	5
  CATEGORIES=	japanese x11-fonts
 -MASTER_SITES=   ${MASTER_SITE_PORTS_JP}
 -MASTER_SITE_SUBDIR=	${DISTNAME}
@@ -18,16 +18,11 @@
  
 -EXTRACT_DEPENDS=	gunshar:${PORTSDIR}/archivers/sharutils
  BUILD_DEPENDS=	mkbold:${PORTSDIR}/x11-fonts/mkbold-mkitalic \
+ 		bdftopcf:${PORTSDIR}/x11-fonts/bdftopcf \
  		mkfontdir:${PORTSDIR}/x11-fonts/mkfontdir \
- 		mkfontscale:${PORTSDIR}/x11-fonts/mkfontscale
-+BUILD_DEPENDS+= bdftopcf:${PORTSDIR}/x11-fonts/bdftopcf
- 
--DIST_SUBDIR=	${DISTNAME}
+@@ -25,29 +24,18 @@ DIST_SUBDIR=	${DISTNAME}
  FONTSDIR=	lib/X11/fonts/local
  NO_WRKSUBDIR=	yes
- 
- NO_STAGE=	yes
- .include <bsd.port.pre.mk>
  
 -EXTRACT_CMD=		${GZCAT}
 -EXTRACT_BEFORE_ARGS=
@@ -40,6 +35,8 @@
 -README_FILE?=	573.z
  RESIZESED_FILE?=	18to16.sed
  RESIZED_ALIAS_FILE?=	kanji16.alias
+ 
+ OPTIONS_DEFINE=	DOCS
  
  post-extract:
 -	@(cd $(WRKSRC); ${CAT} ${DISTNAME}.?? | uudecode)
