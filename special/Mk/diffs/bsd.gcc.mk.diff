@@ -1,15 +1,6 @@
---- bsd.gcc.mk.orig	2014-01-26 18:14:06.160091000 +0000
+--- bsd.gcc.mk.orig	2014-02-17 13:17:44.933676000 +0000
 +++ bsd.gcc.mk
-@@ -31,7 +31,7 @@
- # If your port needs a Fortran compiler, please specify that with the
- # USE_FORTRAN= knob.  Here is the list of options for that knob:
- #
--#   USE_FORTRAN=	yes		# use gfortran46 (lang/gcc46)
-+#   USE_FORTRAN=	yes		# use gfortran47 (lang/gcc-aux)
- #   USE_FORTRAN=	ifort	# use the Intel compiler (lang/ifc)
- #
- # Due to object file incompatiblity between Fortran compilers, we strongly
-@@ -52,20 +52,21 @@ GCCVERSIONS=	040200 040600 040700 040800
+@@ -39,20 +39,21 @@ GCCVERSIONS=	040200 040600 040700 040800
  # The first field if the OSVERSION in which it appeared in the base.
  # The second field is the OSVERSION in which it disappeared from the base.
  # The third field is the version as USE_GCC would use.
@@ -35,27 +26,7 @@
  .endif
  
  # Extract the fields from GCCVERSION_...
-@@ -89,9 +90,16 @@ _GCCVERSION_${v}_V=	${j}
- 
- # The default case, with a current lang/gcc port.
- . if ${USE_FORTRAN} == yes
--_USE_GCC:=	${GCC_DEFAULT_VERSION}
--FC:=	gfortran${GCC_DEFAULT_V}
--F77:=	gfortran${GCC_DEFAULT_V}
-+BUILD_DEPENDS+= ${LOCALBASE}/gcc-aux/bin/gfortran:${PORTSDIR}/lang/gcc-aux
-+RUN_DEPENDS+=	${LOCALBASE}/gcc-aux/bin/gfortran:${PORTSDIR}/lang/gcc-aux
-+_USE_GCC:=	${GCC_DEFAULT_VERSION}  # dummy to avoid further depends
-+_GCC_RUNTIME:=	${LOCALBASE}/gcc-aux/lib
-+FC:=		${LOCALBASE}/gcc-aux/bin/gfortran
-+F77:=		${LOCALBASE}/gcc-aux/bin/gfortran
-+CC:=		${LOCALBASE}/gcc-aux/bin/gcc
-+CXX:=		${LOCALBASE}/gcc-aux/bin/g++
-+CPP:=		${LOCALBASE}/gcc-aux/bin/cpp
-+LDFLAGS+=	-L${LOCALBASE}/gcc-aux/lib -Wl,-rpath,${LOCALBASE}/gcc-aux/lib
- 
- # Intel Fortran compiler from lang/ifc.
- . elif ${USE_FORTRAN} == ifort
-@@ -111,12 +119,12 @@ MAKE_ENV+=		F77="${F77}" FC="${FC}" FFLA
+@@ -70,12 +71,12 @@ _GCCVERSION_${v}_V=	${j}
  
  .if defined(USE_GCC) && !defined(FORCE_BASE_CC_FOR_TESTING)
  
@@ -71,7 +42,7 @@
  
  . else # ${USE_GCC} == any
  
-@@ -130,13 +138,14 @@ _GCC_ORLATER:=	true
+@@ -89,13 +90,14 @@ _GCC_ORLATER:=	true
  
  # Initialize _GCC_FOUND${v}.  In parallel, check if USE_GCC points to a
  # valid version to begin with.
@@ -91,7 +62,7 @@
  . endif
  . if ${_USE_GCC}==${_GCCVERSION_${v}_V}
  _GCCVERSION_OKAY=	true
-@@ -186,7 +195,7 @@ _USE_GCC:=	${GCC_DEFAULT_VERSION}
+@@ -145,7 +147,7 @@ _USE_GCC:=	${GCC_DEFAULT_VERSION}
  # dependencies, CC, CXX, CPP, and flags.
  .for v in ${GCCVERSIONS}
  . if ${_USE_GCC} == ${_GCCVERSION_${v}_V}
@@ -100,7 +71,7 @@
  V:=			${_GCCVERSION_${v}_V:S/.//}
  _GCC_PORT_DEPENDS:=	gcc${V}
  .   if ${_USE_GCC} == ${GCC_DEFAULT_VERSION}
-@@ -212,11 +221,9 @@ _GCC_BUILD_DEPENDS:=	${_GCC_PORT_DEPENDS
+@@ -166,11 +168,9 @@ _GCC_BUILD_DEPENDS:=	${_GCC_PORT_DEPENDS
  .  else # Use GCC in base.
  CC:=			gcc
  CXX:=			g++
@@ -114,7 +85,7 @@
  .  endif # Use GCC in base.
  . endif # ${_USE_GCC} == ${_GCCVERSION_${v}_V}
  .endfor
-@@ -225,9 +232,11 @@ CPP:=			cpp
+@@ -179,9 +179,11 @@ CPP:=			cpp
  .if defined(_GCC_PORT_DEPENDS)
  BUILD_DEPENDS+=	${_GCC_PORT_DEPENDS}:${PORTSDIR}/lang/${_GCC_PORT}
  RUN_DEPENDS+=	${_GCC_PORT_DEPENDS}:${PORTSDIR}/lang/${_GCC_PORT}
@@ -126,9 +97,9 @@
  .endif
  .endif # defined(_USE_GCC) && !defined(FORCE_BASE_CC_FOR_TESTING)
  
-@@ -257,6 +266,8 @@ test-gcc:
+@@ -209,6 +211,8 @@ test-gcc:
+ .endif
  	@echo CC=${CC} - CXX=${CXX} - CPP=${CPP} - CFLAGS=\"${CFLAGS}\"
- 	@echo F77=${F77} - FC=${FC} - FFLAGS=\"${FFLAGS}\"
  	@echo LDFLAGS=\"${LDFLAGS}\"
 +	@echo CONFIGURE_ENV=${CONFIGURE_ENV}
 +	@echo MAKE_ENV=${MAKE_ENV}

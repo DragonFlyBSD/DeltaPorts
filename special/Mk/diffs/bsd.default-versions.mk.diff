@@ -1,0 +1,11 @@
+--- bsd.default-versions.mk.orig	2014-02-17 13:00:22.000000000 +0000
++++ bsd.default-versions.mk
+@@ -22,7 +22,7 @@ FPC_DEFAULT?=		2.6.2
+ LUA_DEFAULT?=		5.2
+ MYSQL_DEFAULT?=		5.5
+ PERL5_DEFAULT?=		5.16
+-PGSQL_DEFAULT?=		9.0
++PGSQL_DEFAULT?=		9.2
+ PHP_DEFAULT?=		5.4
+ PYTHON_DEFAULT?=	2.7
+ PYTHON2_DEFAULT?=	2.7
