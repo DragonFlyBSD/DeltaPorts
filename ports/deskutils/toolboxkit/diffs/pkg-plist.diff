@@ -1,9 +1,0 @@
---- pkg-plist.orig	2014-02-05 12:31:23.321852000 +0000
-+++ pkg-plist
-@@ -2,6 +2,5 @@ GNUstep/Local/Library/Headers/Toolbox/Bu
- GNUstep/Local/Library/Headers/Toolbox/ToolboxBundleProtocol.h
- GNUstep/Local/Library/Headers/Toolbox/Utilities.h
- GNUstep/Local/Library/Libraries/libToolbox.so
--GNUstep/Local/Library/Libraries/libToolbox.so.%%MAJORLIBVERSION%%
- GNUstep/Local/Library/Libraries/libToolbox.so.%%LIBVERSION%%
- @dirrm GNUstep/Local/Library/Headers/Toolbox
