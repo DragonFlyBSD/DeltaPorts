@@ -1,0 +1,18 @@
+--- pkg-plist.orig	2014-02-28 22:35:09.046912000 +0000
++++ pkg-plist
+@@ -190,7 +190,6 @@ lib/kde4/kded_kephal.so
+ lib/kde4/kded_keyboard.so
+ lib/kde4/kded_khotkeys.so
+ lib/kde4/kded_ktouchpadenabler.so
+-lib/kde4/kded_kwrited.so
+ lib/kde4/kded_powerdevil.so
+ lib/kde4/kded_randrmonitor.so
+ lib/kde4/kded_statusnotifierwatcher.so
+@@ -1812,7 +1811,6 @@ share/kde4/services/kded/kephal.desktop
+ share/kde4/services/kded/keyboard.desktop
+ share/kde4/services/kded/khotkeys.desktop
+ share/kde4/services/kded/ktouchpadenabler.desktop
+-share/kde4/services/kded/kwrited.desktop
+ share/kde4/services/kded/powerdevil.desktop
+ share/kde4/services/kded/randrmonitor.desktop
+ share/kde4/services/kded/statusnotifierwatcher.desktop
