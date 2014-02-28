@@ -1,0 +1,18 @@
+--- pkg-plist.orig	2014-02-28 21:30:38.890579000 +0000
++++ pkg-plist
+@@ -3,7 +3,6 @@ bin/safe_camlp4
+ etc/findlib.conf
+ lib/ocaml/site-lib/bigarray/META
+ lib/ocaml/site-lib/camlp4/META
+-lib/ocaml/site-lib/dbm/META
+ lib/ocaml/site-lib/dynlink/META
+ lib/ocaml/site-lib/findlib/META
+ lib/ocaml/site-lib/findlib/Makefile.config
+@@ -139,7 +138,6 @@ man/man5/site-lib.5.gz
+ @dirrm lib/ocaml/site-lib/graphics
+ @dirrm lib/ocaml/site-lib/findlib
+ @dirrm lib/ocaml/site-lib/dynlink
+-@dirrm lib/ocaml/site-lib/dbm
+ @dirrm lib/ocaml/site-lib/camlp4
+ @dirrm lib/ocaml/site-lib/bigarray
+ @dirrmtry lib/ocaml/site-lib/labltk
