@@ -1,0 +1,11 @@
+--- Makefile.orig	2014-03-01 23:36:19.769947000 +0000
++++ Makefile
+@@ -31,7 +31,7 @@ CNEWSWRK?=	${WRKDIRPREFIX}${.CURDIR}/../
+ NEWSBIN?=	${PREFIX}/libexec/cnews
+ 
+ post-patch:
+-	${REINPLACE_CMD} -e 's|@newsbin@|${STAGEDIR}@newsbin@|' \
++	${REINPLACE_CMD} -e 's|@newsbin@|${STAGEDIR}${NEWSBIN}|' \
+ 		${WRKSRC}/Makefile.in
+ 
+ pre-install:
