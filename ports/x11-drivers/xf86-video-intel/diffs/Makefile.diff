@@ -1,6 +1,6 @@
 --- Makefile.orig	2014-01-22 17:00:46.000000000 +0000
 +++ Makefile
-@@ -26,10 +26,23 @@ USE_XORG=	glproto \
+@@ -26,17 +26,32 @@ USE_XORG=	glproto \
  .include <bsd.port.options.mk>
  
  .if defined(WITH_NEW_XORG)
@@ -25,9 +25,11 @@
  MAKE_JOBS_UNSAFE=yes
  PLIST_SUB+=	OLD="@comment "
  EXTRA_PATCHES+=	${PATCHDIR}/extra-src__sna__sna_threads.c \
-@@ -37,6 +50,7 @@ EXTRA_PATCHES+=	${PATCHDIR}/extra-src__s
+ 		${PATCHDIR}/extra-src_sna_kgem.c \
  		${PATCHDIR}/extra-clang \
- 		${PATCHDIR}/extra-i915kms
+-		${PATCHDIR}/extra-i915kms
++		${PATCHDIR}/extra-i915kms \
++		${DFLY_PATCHDIR}/extra-src_sna_sna__display.c
  LIB_DEPENDS+=	libxcb-util.so:${PORTSDIR}/x11/xcb-util
 +.  endif
  .else
