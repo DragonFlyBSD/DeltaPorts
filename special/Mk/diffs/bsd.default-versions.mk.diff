@@ -1,11 +1,6 @@
---- bsd.default-versions.mk.orig	2014-02-25 18:22:00.076955000 +0000
+--- bsd.default-versions.mk.orig	2014-03-14 21:40:57.564690000 +0000
 +++ bsd.default-versions.mk
-@@ -20,11 +20,11 @@ ${_l:tu}_DEFAULT=	${lang:C/.*=//g}
- 
- APACHE_DEFAULT?=	2.2
- FPC_DEFAULT?=		2.6.2
--GCC_DEFAULT?=		4.6
-+GCC_DEFAULT?=		4.7
+@@ -24,7 +24,7 @@ GCC_DEFAULT?=		4.7
  LUA_DEFAULT?=		5.2
  MYSQL_DEFAULT?=		5.5
  PERL5_DEFAULT?=		5.16
