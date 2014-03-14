@@ -1,6 +1,6 @@
---- pkg-plist.orig	2012-10-15 08:58:10.000000000 +0000
+--- pkg-plist.orig	2014-03-14 22:17:35.774229000 +0000
 +++ pkg-plist
-@@ -1,10 +1,3 @@
+@@ -1,20 +1,6 @@
 -libexec/xpdf/pdffonts
 -libexec/xpdf/pdfimages
 -libexec/xpdf/pdfinfo
@@ -11,3 +11,23 @@
  %%X11%%libexec/xpdf/xpdf
  %%X11%%bin/xpdf
  etc/xpdfrc
+-%%DATADIR%%/man/man1/pdfdetach.1.gz
+-%%DATADIR%%/man/man1/pdffonts.1.gz
+-%%DATADIR%%/man/man1/pdfimages.1.gz
+-%%DATADIR%%/man/man1/pdfinfo.1.gz
+-%%DATADIR%%/man/man1/pdftoppm.1.gz
+-%%DATADIR%%/man/man1/pdftops.1.gz
+-%%DATADIR%%/man/man1/pdftotext.1.gz
+ %%X11%%%%DATADIR%%/man/man1/xpdf.1.gz
+ %%DATADIR%%/man/man5/xpdfrc.5.gz
+ %%PORTDOCS%%%%DOCSDIR%%/ANNOUNCE
+@@ -23,7 +9,7 @@ etc/xpdfrc
+ %%PORTDOCS%%%%DOCSDIR%%/hello.pdf
+ %%PORTDOCS%%@dirrm %%DOCSDIR%%
+ @dirrm share/xpdf/man/man5
+-@dirrm share/xpdf/man/man1
++%%X11%%@dirrm share/xpdf/man/man1
+ @dirrm share/xpdf/man
+ @dirrm share/xpdf
+-@dirrm libexec/xpdf
++%%X11%%@dirrm libexec/xpdf
