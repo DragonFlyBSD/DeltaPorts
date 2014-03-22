@@ -30,7 +30,7 @@ checkdir DPORTS
 
 usage ()
 {
-   echo "command is 'report_unbuilt <jail-portrees>'"
+   echo "command is 'report_unbuilt <jail-porttree>'"
    exit 1
 }
 
@@ -53,11 +53,9 @@ for portdir in ${portdirs}; do
     case ${portdir} in
 	devel/cross-gdb | devel/cross-binutils | x11/gnome2)
 	    continue ;;
-	sysutils/e2fsprogs)
-	    continue ;;
     esac
     cd ${DPORTS}/${portdir}
-    PN=$(make LOCALBASE=/usr/dummy PYTHON_DEFAULT_VERSION=2.7 USE_TCL=86 -V PKGNAME).txz
+    PN=$(make PORTSDIR=${DPORTS} LOCALBASE=/usr/dummy PYTHON_DEFAULT_VERSION=2.7 USE_TCL=86 -V PKGNAME).txz
     FULLPATH=${PKGDIR}/${PN}
     if [ ! -f "${FULLPATH}" ]; then
         echo ${portdir}
