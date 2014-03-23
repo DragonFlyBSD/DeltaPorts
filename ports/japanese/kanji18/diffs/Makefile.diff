@@ -1,6 +1,6 @@
---- Makefile.orig	2014-02-17 15:27:09.369358000 +0000
+--- Makefile.orig	2014-03-23 08:06:28.420532000 +0000
 +++ Makefile
-@@ -5,16 +5,15 @@ PORTNAME=	kanji
+@@ -5,49 +5,37 @@ PORTNAME=	kanji
  PORTVERSION?=	1.0
  PORTREVISION?=	5
  CATEGORIES=	japanese x11-fonts
@@ -20,7 +20,10 @@
  BUILD_DEPENDS=	mkbold:${PORTSDIR}/x11-fonts/mkbold-mkitalic \
  		bdftopcf:${PORTSDIR}/x11-fonts/bdftopcf \
  		mkfontdir:${PORTSDIR}/x11-fonts/mkfontdir \
-@@ -25,29 +24,18 @@ DIST_SUBDIR=	${DISTNAME}
+ 		mkfontscale:${PORTSDIR}/x11-fonts/mkfontscale
+ RUN_DEPENDS=	mkfontdir:${PORTSDIR}/x11-fonts/mkfontdir
+ 
+-DIST_SUBDIR=	${DISTNAME}
  FONTSDIR=	lib/X11/fonts/local
  NO_WRKSUBDIR=	yes
  
@@ -40,14 +43,14 @@
  
  post-extract:
 -	@(cd $(WRKSRC); ${CAT} ${DISTNAME}.?? | uudecode)
--	@${CP} -p ${FILESDIR}/Makefile.in ${WRKDIR}/Makefile
++	@(cd ${WRKSRC}; ${CAT} kanji${PKGNAMESUFFIX}.a? | uudecode)
+ 	@${CP} -p ${FILESDIR}/Makefile.in ${WRKDIR}/Makefile
 -	@${GUNZIP_CMD} ${WRKDIR}/*.Z
 -
 -post-patch:
 -	@(${GZCAT} ${DISTDIR}/${DIST_SUBDIR}/${README_FILE} \
 -		| ${AWK} '/^#! \/bin\/sh/{i=1} i==0{print}' \
 -		> ${WRKSRC}/README.${DISTNAME})
-+	@(cd ${WRKSRC}; ${CAT} kanji${PKGNAMESUFFIX}.a? | uudecode)
 +	@${GUNZIP_CMD} ${WRKSRC}/kanji${PKGNAMESUFFIX}.bdf.Z
  
  pre-install:
