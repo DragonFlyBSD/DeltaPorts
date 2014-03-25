@@ -1,6 +1,6 @@
---- Makefile.intermediate	2014-03-14 23:32:12.055767000 +0000
+--- Makefile.orig	2014-03-25 22:17:31.466740000 +0000
 +++ Makefile
-@@ -44,12 +44,18 @@ NLS_CONFIGURE_ENABLE=	nls
+@@ -44,12 +44,21 @@ NLS_CONFIGURE_ENABLE=	nls
  XML_USE=		GNOME=libxml2
  XML_CONFIGURE_WITH=	libxml2
  
@@ -9,12 +9,14 @@
 +
  .include <bsd.port.options.mk>
  
--.if ${OPSYS} == FreeBSD && ${OSVERSION} < 1000040
-+.if (${OPSYS} == FreeBSD && ${OSVERSION} < 1000040) || (${OPSYS} == DragonFly && ${DFLYVERSION} < 300703)
+ .if ${OPSYS} == FreeBSD && ${OSVERSION} < 1000040
  CONFIGURE_ENV+=	LIBUSB1_CFLAGS=" " LIBUSB1_LIBS="-lusb"
-+USBVER= usb
  .endif
  
++.if ${OPSYS} == DragonFly && ${DFLYVERSION} < 300703
++USBVER= usb
++.endif
++
 +PLIST_SUB+= USB=${USBVER}
 +
  post-patch:
