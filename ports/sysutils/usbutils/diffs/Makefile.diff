@@ -1,12 +1,11 @@
---- Makefile.orig	2013-05-07 19:19:29.968933000 +0000
+--- Makefile.orig	2014-03-29 20:19:46.656457000 +0000
 +++ Makefile
-@@ -25,8 +25,12 @@ PORTDOCS=	AUTHORS ChangeLog NEWS README
+@@ -28,8 +28,11 @@ OPTIONS_DEFINE=	DOCS
  
  .include <bsd.port.options.mk>
  
-+.if ${OPSYS} == DragonFly
 +USES+=	usb
-+.else
++.if ${OPSYS} == DragonFly && ${DFLYVERSION} > 300702
  CONFIGURE_ENV+=	LIBUSB_CFLAGS="-I/usr/include" \
  		LIBUSB_LIBS="-L/usr/lib -lusb"
 +.endif
