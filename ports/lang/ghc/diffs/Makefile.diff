@@ -1,14 +1,14 @@
---- Makefile.orig	2014-01-10 03:22:36.494094000 +0000
+--- Makefile.orig	2014-03-31 10:03:21.080523000 +0000
 +++ Makefile
 @@ -6,6 +6,7 @@ PORTVERSION=	7.6.3
- PORTREVISION=	2
+ PORTREVISION=	4
  CATEGORIES=	lang haskell
  MASTER_SITES=	http://www.haskell.org/ghc/dist/${PORTVERSION}/:source \
 +		http://leaf.dragonflybsd.org/~marino/dports-src/:dflyboot \
  		${MASTER_SITE_LOCAL:S/$/:boot/}
  MASTER_SITE_SUBDIR=	pgj/:boot
  DISTFILES=	ghc-${PORTVERSION}-src${EXTRACT_SUFX}:source
-@@ -63,7 +64,7 @@ OPTIONS_DEFINE+=	BOOT
+@@ -66,7 +67,7 @@ OPTIONS_DEFINE+=	BOOT
  OPTIONS_DEFINE+=	BOOTH
  .endif
  
@@ -17,17 +17,15 @@
  
  .if ${PORT_OPTIONS:MDYNAMIC}
  LIB_DEPENDS+=	ffi.6:${PORTSDIR}/devel/libffi
-@@ -71,7 +72,8 @@ LIB_DEPENDS+=	ffi.6:${PORTSDIR}/devel/li
+@@ -74,6 +75,7 @@ LIB_DEPENDS+=	ffi.6:${PORTSDIR}/devel/li
  
  .if empty(PORT_OPTIONS:MBOOT)
  
--.if ${OSVERSION} >= 1000043
 +.if ${OPSYS} == "FreeBSD"
-+.if empty(ICONV_LIB)
  BOOT_GHC_VERSION=	7.6.3
- .else
- BOOT_GHC_VERSION=	7.4.1
-@@ -91,7 +93,7 @@ DISTFILES+=	ghc-${BOOT_GHC_VERSION}-i386
+ 
+ EXTRA_PATCHES=		${PATCHDIR}/nopatch-.._ghc-${BOOT_GHC_VERSION}-boot_rts_package.conf.in
+@@ -90,7 +92,7 @@ DISTFILES+=	ghc-${BOOT_GHC_VERSION}-i386
  IGNORE=		unsupported
  .endif
  
@@ -36,7 +34,7 @@
  
  .if ${OSVERSION} >= 1000043
  DISTFILES+=	ghc-${BOOT_GHC_VERSION}-amd64-freebsd10-boot${EXTRACT_SUFX}:boot
-@@ -103,6 +105,26 @@ DISTFILES+=	ghc-${BOOT_GHC_VERSION}-amd6
+@@ -102,6 +104,26 @@ DISTFILES+=	ghc-${BOOT_GHC_VERSION}-amd6
  IGNORE=		unsupported
  .endif
  
@@ -63,7 +61,7 @@
  .endif
  
  .endif # MBOOT
-@@ -120,7 +142,7 @@ CONFIGURE_ARGS=		--with-gcc=${CC} \
+@@ -119,7 +141,7 @@ CONFIGURE_ARGS=		--with-gcc=${CC} \
  			--with-gmp-includes=${LOCALBASE}/include \
  			--with-gmp-libraries=${LOCALBASE}/lib
  
