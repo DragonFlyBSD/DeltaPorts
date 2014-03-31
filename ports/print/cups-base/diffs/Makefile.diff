@@ -1,11 +1,12 @@
---- Makefile.orig	2013-11-08 18:33:43.478970000 +0000
+--- Makefile.orig	2014-03-31 09:35:29.106533000 +0000
 +++ Makefile
-@@ -19,11 +19,11 @@ CONFLICTS=	LPRng-[0-9]*
+@@ -19,12 +19,12 @@ CONFLICTS=	LPRng-[0-9]*
+ 
  UNIQUENAME=	${PORTNAME}${PKGNAMESUFFIX}
  
- USE_BZIP2=	yes
--USES+=		gmake
-+USES+=		gmake iconv
+-USES+=		gmake pkgconfig tar:bzip2
++USES+=		gmake pkgconfig iconv tar:bzip2
+ DESTDIRNAME=	DSTROOT
  GNU_CONFIGURE=	yes
  CFLAGS+=	${PTHREAD_CFLAGS}
  CPPFLAGS+=	-I${LOCALBASE}/include
@@ -14,24 +15,16 @@
  DSOFLAGS=	-Wl,-rpath,${PREFIX}/lib -L${PREFIX}/lib ${LDFLAGS}
  CONFIGURE_ENV=	DSOFLAGS="${DSOFLAGS}"
  CONFIGURE_ARGS+=	--localstatedir=/var			\
-@@ -44,7 +44,6 @@ CUPS_ETCDIR=	${PREFIX}/etc/cups
+@@ -44,7 +44,6 @@ CONFIGURE_ARGS+=	--localstatedir=/var
  CUPS_CACHEDIR?=	/var/db/cups
  CUPS_SPOOLDIR=	/var/spool/cups
  CUPS_SOCKET?=	/var/run/cups.sock
 -CUPS_PDFTOPS?=	${LOCALBASE}/libexec/xpdf/pdftops
  WRKSRC=		${WRKDIR}/${PORTNAME}-${DISTVERSION}
  
- # file, dir ownership
-@@ -72,6 +71,7 @@ PORTREVISION=	1
- CUPS_SUFFIX=	-base
- OPTIONS_DEFINE=	GNUTLS LIBPAPER PHP PYTHON PAM LDAP DBUS LIBUSB XDG_OPEN GHOSTSCRIPT XPDF AVAHI MDNSRESPONDER
- OPTIONS_DEFAULT=	LIBPAPER GHOSTSCRIPT
-+OPTIONS_EXCLUDE+=	GHOSTSCRIPT XPDF
- NO_OPTIONS_SORT=	yes
- .endif
+ CUPSSYSGRP=	wheel
+@@ -77,12 +76,14 @@ XDG_OPEN_DESC=		Build with XDG_OPEN as b
  
-@@ -83,12 +83,14 @@ XDG_OPEN_DESC=		Build with XDG_OPEN as b
- NO_STAGE=	yes
  .include <bsd.port.options.mk>
  
 +.if !empty(ICONV_LIB)
@@ -47,39 +40,25 @@
  USE_LDCONFIG=	yes
  PKGMESSAGE=	${NONEXISTENT}
  DESCR=		${MASTERDIR}/pkg-descr.client
-@@ -100,7 +102,8 @@ LIB_DEPENDS+=	cups:${PORTSDIR}/${PKGCATE
- # force build if old cups is installed.
- BUILD_DEPENDS+=	cups-client${PKGNAMESUFFIX2}>=${PORTVERSION}:${PORTSDIR}/${PKGCATEGORY}/cups-client
- COMMENT2=	Library cupsimage
--CONFIGURE_ARGS+=	--disable-pdftops
-+#CONFIGURE_ARGS+=	--disable-pdftops
-+PLIST_SUB+=	WITH_PDFTOPS=""
- INSTALL_WRKSRC=	${WRKSRC}/filter
- PLIST=		${MASTERDIR}/pkg-plist.image
- USE_LDCONFIG=	yes
-@@ -223,12 +226,11 @@ RUN_DEPENDS+=		xdg-open:${PORTSDIR}/deve
- .endif
- 
+@@ -194,11 +195,12 @@ RUN_DEPENDS+=		xdg-open:${PORTSDIR}/deve
  .if !defined(CUPS_CLIENT) && !defined(CUPS_IMAGE) && ${PORT_OPTIONS:MLIBUSB}
--CPPFLAGS+=		-I/usr/include
--LDFLAGS+=		-L/usr/lib
+ CPPFLAGS+=		-I/usr/include
+ LDFLAGS+=		-L/usr/lib
 +USES+=			usb
+ CONFIGURE_ARGS+=	--enable-libusb
  .else
  CONFIGURE_ARGS+=	--disable-libusb
  .endif
 -CONFIGURE_ARGS+=	LIBS="-lssp_nonshared"
 +#CONFIGURE_ARGS+=	LIBS="-lssp_nonshared"
  
- .if defined(CUPS_CLIENT)
- MAN1=	cups-config.1
-@@ -387,9 +389,8 @@ post-install:
- .elif defined(CUPS_IMAGE)
- 	${INSTALL_DATA} ${WRKSRC}/cups/raster.h ${PREFIX}/include/cups/
+ .if ! defined(CUPS_CLIENT) && ! defined(CUPS_IMAGE)
+ SUB_FILES+=	ulpt-cupsd.conf ulpt-cupsd.sh
+@@ -285,6 +287,7 @@ post-install:
+ 	${INSTALL_DATA} ${WRKSRC}/cups/raster.h ${STAGEDIR}${PREFIX}/include/cups
  .else
--.if  ${PORT_OPTIONS:MGHOSTSCRIPT} || ${PORT_OPTIONS:MXPDF}
+ .if  ${PORT_OPTIONS:MGHOSTSCRIPT} || ${PORT_OPTIONS:MXPDF}
 +	${INSTALL} -d ${PREFIX}/libexec/cups/filter
- 	${INSTALL_PROGRAM} ${WRKSRC}/filter/pdftops ${PREFIX}/libexec/cups/filter/
--.endif
- 	${LN} -sf ${PREFIX}/bin/lpr ${PREFIX}/bin/lpr-cups
- 	${INSTALL} -d ${CUPS_ETCDIR}/
- 	${CP} -p ${WRKSRC}/conf/snmp.conf ${WRKSRC}/conf/snmp.conf.N
+ 	${INSTALL_PROGRAM} ${WRKSRC}/filter/pdftops  ${STAGEDIR}${PREFIX}/libexec/cups/filter/
+ .endif
+ 	${LN} -sf lpr ${STAGEDIR}${PREFIX}/bin/lpr-cups
