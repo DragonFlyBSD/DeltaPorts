@@ -1,3 +1,0 @@
-LOCK
-# cross-gdb by itself doesn't build
-# It will have to be updated manually, poudriere can't do it.

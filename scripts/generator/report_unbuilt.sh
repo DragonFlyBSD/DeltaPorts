@@ -51,7 +51,7 @@ portdirs=$(cd ${DPORTS}; find * -type d -depth 1 -maxdepth 1 | sort | grep -vE $
 for portdir in ${portdirs}; do
 
     case ${portdir} in
-	devel/cross-gdb | devel/cross-binutils | x11/gnome2)
+	x11/gnome2)
 	    continue ;;
     esac
     cd ${DPORTS}/${portdir}

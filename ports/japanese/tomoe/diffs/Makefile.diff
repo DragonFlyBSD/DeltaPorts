@@ -1,8 +1,8 @@
---- Makefile.orig	2013-10-13 18:52:13.403056000 +0000
+--- Makefile.orig	2014-03-31 09:24:19.827551000 +0000
 +++ Makefile
-@@ -23,26 +23,9 @@ BUILD_DEPENDS+=	${RUBY_SITEARCHLIBDIR}/g
- 		p5-XML-Parser>=0:${PORTSDIR}/textproc/p5-XML-Parser
- RUN_DEPENDS+=	${RUBY_SITEARCHLIBDIR}/glib2.so:${PORTSDIR}/devel/ruby-glib2
+@@ -21,26 +21,9 @@ USE_PERL5=	build
+ 
+ BUILD_DEPENDS=	p5-XML-Parser>=0:${PORTSDIR}/textproc/p5-XML-Parser
  
 -# We cannot use ${ARCH} nor ${UNAME} which are defined in bsd.port.mk, here.
 -UNAME?=		/usr/bin/uname
@@ -19,7 +19,7 @@
 -.endif
 -.endif
  
- OPTIONS_DEFINE=		DICT_RUBY EST MYSQL PYTHON UNIHAN
+ OPTIONS_DEFINE=		DICT_RUBY EST MYSQL PYTHON RUBY UNIHAN
  OPTIONS_DEFAULT=	PYTHON
 -.if ${ARCH} != "sparc64" && ${OSVERSION} < 700042
 -OPTIONS_DEFAULT+=	UNIHAN
@@ -27,7 +27,7 @@
  OPTIONS_SUB=		yes
  DICT_RUBY_DESC=		Enable Ruby based dictionary module
  DICT_RUBY_CONFIGURE_ENABLE=	dict-ruby
-@@ -71,9 +54,6 @@ USE_GNOME+=	pygtk2
+@@ -72,9 +55,6 @@ BROKEN=		Broken with gem version of glib
  .if ${OSVERSION} >= 700042
  BROKEN=		Broken with Unihan with gcc 4.2
  .endif
