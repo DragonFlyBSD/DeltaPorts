@@ -1,9 +1,0 @@
---- Makefile.orig	2013-06-30 07:19:14.905051000 +0000
-+++ Makefile
-@@ -7,4 +7,6 @@ MASTERDIR=	${.CURDIR}/../../lang/php55
- 
- PKGNAMESUFFIX=	-readline
- 
-+USES+=		readline
-+
- .include "${MASTERDIR}/Makefile"
