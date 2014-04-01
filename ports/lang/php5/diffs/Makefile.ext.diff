@@ -1,0 +1,10 @@
+--- Makefile.ext.orig	2014-04-01 18:51:30.709138000 +0000
++++ Makefile.ext
+@@ -313,6 +313,7 @@ USE_PHP_BUILD=	yes
+ .endif
+ 
+ .if ${PHP_MODNAME} == "readline"
++USES+=		readline
+ CONFIGURE_ARGS+=--with-readline=/usr
+ .endif
+ 
