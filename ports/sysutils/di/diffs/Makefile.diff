@@ -1,0 +1,17 @@
+--- Makefile.orig	2014-04-04 07:13:20.060098000 +0000
++++ Makefile
+@@ -12,12 +12,8 @@ MAINTAINER=	cyberbotx@cyberbotx.com
+ COMMENT=	Disk Information Utility
+ 
+ MAKE_ENV+=	prefix="${PREFIX}"
+-
+-OPTIONS_DEFINE=	NLS
+-OPTIONS_SUB=	yes
+-
+-NLS_USES=	gettext
+-NLS_MAKE_ENV_OFF=	DI_NO_NLS=T
++MAKE_ENV+=	DI_NO_NLS=T
++PLIST_SUB+=	NLS="@comment "
+ 
+ post-patch:
+ 	@${REINPLACE_CMD} -e "s|zoneid_t|zoneId_t|g" ${WRKSRC}/C/di.c
