@@ -1,0 +1,12 @@
+--- Makefile.orig	2014-04-13 16:46:23.741803000 +0000
++++ Makefile
+@@ -44,8 +44,7 @@ RUN_DEPENDS=	xdg-open:${PORTSDIR}/devel/
+ 		${PYTHON_PKGNAMEPREFIX}netifaces>=0:${PORTSDIR}/net/py-netifaces \
+ 		${PYTHON_PKGNAMEPREFIX}cssselect>=0:${PORTSDIR}/www/py-cssselect \
+ 		${PYTHON_PKGNAMEPREFIX}apsw>=0:${PORTSDIR}/databases/py-apsw \
+-		pdftohtml:${PORTSDIR}/graphics/poppler-utils \
+-		lshal:${PORTSDIR}/sysutils/hal
++		pdftohtml:${PORTSDIR}/graphics/poppler-utils
+ 
+ USE_RC_SUBR=	calibre
+ EXTRACT_BEFORE_ARGS=	-x -s '/^calibre/~-src/' -f
