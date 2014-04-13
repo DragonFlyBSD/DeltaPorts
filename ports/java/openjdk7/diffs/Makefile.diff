@@ -1,4 +1,4 @@
---- Makefile.orig	2014-03-29 22:36:12.939466000 +0000
+--- Makefile.orig	2014-04-13 15:04:46.663689000 +0000
 +++ Makefile
 @@ -13,10 +13,13 @@ MASTER_SITES=	http://download.java.net/o
  		http://icedtea.classpath.org/download/drops/:jaxws \
@@ -14,16 +14,9 @@
  		${ANT_DISTFILE}${EXTRACT_SUFX}
  
  MAINTAINER=	glewis@FreeBSD.org
-@@ -56,15 +59,19 @@ LIB_DEPENDS+=	freetype:${PORTSDIR}/print
- 		asound:${PORTSDIR}/audio/alsa-lib
- BUILD_DEPENDS+=	zip:${PORTSDIR}/archivers/zip \
- 		${UNZIP_CMD}:${PORTSDIR}/archivers/unzip \
-+		javavm:${PORTSDIR}/java/javavmwrapper \
- 		${LOCALBASE}/include/cups/cups.h:${PORTSDIR}/print/cups-client
- RUN_DEPENDS+=	javavm:${PORTSDIR}/java/javavmwrapper \
- 		${LOCALBASE}/lib/X11/fonts/dejavu:${PORTSDIR}/x11-fonts/dejavu
+@@ -62,9 +65,12 @@ RUN_DEPENDS+=	javavm:${PORTSDIR}/java/ja
  
- USE_DOS2UNIX=	jdk/src/share/classes/com/sun/org/apache/xml/internal/security/resource/xmlsecurity_en.properties
+ DOS2UNIX_FILES=	jdk/src/share/classes/com/sun/org/apache/xml/internal/security/resource/xmlsecurity_en.properties
  
 -OPENJDK_OSARCH=	bsd-${ARCH:S/i386/i586/}
 +JDK_ARCH=	${ARCH:S/x86_64/amd64/}
@@ -35,7 +28,7 @@
  NOPRECIOUSMAKEVARS=	yes
  
  ONLY_FOR_ARCHS=	i386 amd64
-@@ -73,7 +80,7 @@ MAKE_ENV+=	LANG="C" \
+@@ -73,7 +79,7 @@ MAKE_ENV+=	LANG="C" \
  		LC_ALL="C" \
  		JAVA_HOME="" \
  		CLASSPATH="" \
@@ -44,7 +37,7 @@
  		MAKEFLAGS="" \
  		ALT_BOOTDIR="${BOOTSTRAPJDKDIR}" \
  		ALT_FREETYPE_HEADERS_PATH="${LOCALBASE}/include" \
-@@ -98,15 +105,20 @@ MAKE_ENV+=	LANG="C" \
+@@ -98,10 +104,7 @@ MAKE_ENV+=	LANG="C" \
  		BUILD_NUMBER="b${PORT_BUILD_NUMBER}"
  
  MAKE_ENV+=	HOTSPOT_BUILD_JOBS=${MAKE_JOBS_NUMBER}
@@ -54,47 +47,36 @@
 -		${LOCALBASE}/bootstrap-openjdk
 +MAKE_ENV+=	ALT_PARALLEL_COMPILE_JOBS=${MAKE_JOBS_NUMBER}
  
- NO_STAGE=	yes
+ DEBUG_MAKE_ENV=	ALT_OBJCOPY="/nonexistent"
+ POLICY_MAKE_ENV=	UNLIMITED_CRYPTO=1
+@@ -109,19 +112,16 @@ TZUPDATE_RUN_DEPENDS=  ${LOCALBASE}/shar
  
  .include <bsd.port.options.mk>
- 
-+.if ${OPSYS} == DragonFly && ${DFLYVERSION} > 300500
-+.  if ${DFLYVERSION} < 300503
-+BOOTSTRAP_DISTFILE= bootstrap-openjdk-7.21.11.dfly-3.5-${JDK_ARCH}.tar.xz
-+.  else
-+BOOTSTRAP_DISTFILE= bootstrap-openjdk-7.25.15.dfly-3.5-${JDK_ARCH}.tar.xz
-+.  endif
-+.endif
-+
- .if empty(PORT_OPTIONS:MDEBUG)
- MAKE_ENV+=	ALT_OBJCOPY="/nonexistent"
- .endif
-@@ -119,23 +131,7 @@ MAKE_ENV+=	UNLIMITED_CRYPTO=1
- RUN_DEPENDS+=  ${LOCALBASE}/share/java/zi:${PORTSDIR}/java/java-zoneinfo
- .endif
  
 -# do we have valid native jdk installed?
 -.for BJDK in ${BOOTSTRAP_JDKS}
 -.  if !defined(BOOTSTRAPJDKDIR) && exists(${BJDK}/bin/javac)
 -BOOTSTRAPJDKDIR=	${BJDK}
--.  endif
++.if ${OPSYS} == DragonFly && ${DFLYVERSION} > 300500
++.  if ${DFLYVERSION} < 300503
++BOOTSTRAP_DISTFILE= bootstrap-openjdk-7.21.11.dfly-3.5-${JDK_ARCH}.tar.xz
++.  else
++BOOTSTRAP_DISTFILE= bootstrap-openjdk-7.25.15.dfly-3.5-${JDK_ARCH}.tar.xz
+ .  endif
 -.endfor
 -
 -# if no valid jdk found, set dependency
 -.if !defined(BOOTSTRAPJDKDIR)
 -BOOTSTRAPJDKDIR?=	${LOCALBASE}/bootstrap-openjdk
 -BUILD_DEPENDS+=		${BOOTSTRAPJDKDIR}/bin/javac:${PORTSDIR}/java/bootstrap-openjdk
--.endif
--
--.if ${OSVERSION} < 800000
--PATCH_DEPENDS+=	gpatch:${PORTSDIR}/devel/patch
--PATCH=		gpatch
--.endif
-+BOOTSTRAPJDKDIR=	${WRKDIR}/bootstrap
+ .endif
  
++BOOTSTRAPJDKDIR=	${WRKDIR}/bootstrap
++
  .include <bsd.port.pre.mk>
  
-@@ -154,6 +150,11 @@ post-patch:
+ .if empty(ICONV_LIB)
+@@ -139,6 +139,11 @@ post-patch:
  		${WRKSRC}/jdk/make/java/instrument/Makefile
  .endif
  
@@ -106,15 +88,3 @@
  .if ${PORT_OPTIONS:MTZUPDATE}
  pre-install:
  	@# Update time zones
-@@ -171,8 +172,9 @@ do-install:
- 		${CHOWN} -h -R ${BINOWN}:${BINGRP} $$dir; \
- 		${FIND} $$dir -type f -exec ${CHMOD} ${BINMODE} "{}" \; ; \
- 	done
--	@${CHOWN} ${BINOWN}:${BINGRP} ${INSTALLDIR}/jre/lib/${ARCH}/jexec
--	@${CHMOD} ${BINMODE} ${INSTALLDIR}/jre/lib/${ARCH}/jexec
-+	@cd ${INSTALLDIR}/include && ln -s dragonfly freebsd
-+	@${CHOWN} ${BINOWN}:${BINGRP} ${INSTALLDIR}/jre/lib/${JDK_ARCH}/jexec
-+	@${CHMOD} ${BINMODE} ${INSTALLDIR}/jre/lib/${JDK_ARCH}/jexec
- 	@${INSTALL_DATA} ${FILESDIR}/cacerts ${INSTALLDIR}/jre/lib/security/cacerts
- 	@${ECHO} "@unexec ${LOCALBASE}/bin/unregistervm ${INSTALLDIR}/bin/java" >> ${TMPPLIST}
- 	@${FIND} -s ${INSTALLDIR} -not -type d | ${SORT} | \
