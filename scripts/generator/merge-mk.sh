@@ -39,7 +39,7 @@ for k in Mk Templates; do
   diffs=$(find ${DELTA}/special/${k}/diffs -name \*\.diff)
   for difffile in ${diffs}; do
     echo "Apply patch ${difffile}" 
-    patch --quiet -d ${WORKAREA}/${k} < ${difffile}
+    patch --quiet -d ${WORKAREA}/${k} -i ${difffile} || echo ${difffile}
   done
   find ${WORKAREA}/${k} -name \*\.orig -exec rm {} \;
   cpdup -i0 ${WORKAREA}/${k} ${MERGED}/${k}

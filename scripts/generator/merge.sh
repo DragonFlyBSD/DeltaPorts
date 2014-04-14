@@ -123,7 +123,7 @@ merge()
           fi
           diffs=$(find ${DP}/diffs -name \*\.diff)
           for difffile in ${diffs}; do
-            patch --quiet -d ${WORKAREA} < ${difffile}
+            patch --quiet -d ${WORKAREA} -i ${difffile} || echo $1
           done
           find ${WORKAREA} -type f -name \*\.orig -exec rm {} \;
         fi
@@ -235,7 +235,7 @@ done
 for k in Mk Templates; do
   diffs=$(find ${DELTA}/special/${k}/diffs -name \*\.diff)
   for difffile in ${diffs}; do
-    patch --quiet -d ${WORKAREA}/${k} < ${difffile}
+    patch --quiet -d ${WORKAREA}/${k} -i ${difffile} || echo ${difffile}
   done
   find ${WORKAREA}/${k} -name \*\.orig -exec rm {} \;
   cpdup -i0 ${WORKAREA}/${k} ${MERGED}/${k}
