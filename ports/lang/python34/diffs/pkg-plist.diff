@@ -1,0 +1,37 @@
+--- pkg-plist.orig	2014-04-17 11:54:04.892112000 +0000
++++ pkg-plist
+@@ -1903,7 +1903,7 @@ libdata/pkgconfig/python-%%VER%%.pc
+ %%PYTHON_LIBDIR%%/lib-dynload/_lzma.so
+ %%PYTHON_LIBDIR%%/lib-dynload/_md5.so
+ %%PYTHON_LIBDIR%%/lib-dynload/_multibytecodec.so
+-%%PYTHON_LIBDIR%%/lib-dynload/_multiprocessing.so
++@comment semaphore busted on dragonfly %%PYTHON_LIBDIR%%/lib-dynload/_multiprocessing.so
+ %%PYTHON_LIBDIR%%/lib-dynload/_opcode.so
+ %%PYTHON_LIBDIR%%/lib-dynload/_pickle.so
+ %%PYTHON_LIBDIR%%/lib-dynload/_posixsubprocess.so
+@@ -2310,10 +2310,10 @@ libdata/pkgconfig/python-%%VER%%.pc
+ %%PYTHON_LIBDIR%%/pickletools.py
+ %%PYTHON_LIBDIR%%/pipes.py
+ %%PYTHON_LIBDIR%%/pkgutil.py
+-%%PYTHON_LIBDIR%%/plat-freebsd%%OSMAJOR%%/IN.py
+-%%PYTHON_LIBDIR%%/plat-freebsd%%OSMAJOR%%/__pycache__/IN.cpython-%%XY%%.pyc
+-%%PYTHON_LIBDIR%%/plat-freebsd%%OSMAJOR%%/__pycache__/IN.cpython-%%XY%%.pyo
+-%%PYTHON_LIBDIR%%/plat-freebsd%%OSMAJOR%%/regen
++%%PYTHON_LIBDIR%%/plat-dragonfly%%OSMAJOR%%/IN.py
++%%PYTHON_LIBDIR%%/plat-dragonfly%%OSMAJOR%%/__pycache__/IN.cpython-%%XY%%.pyc
++%%PYTHON_LIBDIR%%/plat-dragonfly%%OSMAJOR%%/__pycache__/IN.cpython-%%XY%%.pyo
++%%PYTHON_LIBDIR%%/plat-dragonfly%%OSMAJOR%%/regen
+ %%PYTHON_LIBDIR%%/platform.py
+ %%PYTHON_LIBDIR%%/plistlib.py
+ %%PYTHON_LIBDIR%%/poplib.py
+@@ -4940,8 +4940,8 @@ man/man1/python%%VER%%.1.gz
+ @dirrmtry %%PYTHON_LIBDIR%%/site-packages
+ @dirrmtry %%PYTHON_LIBDIR%%/pydoc_data/__pycache__
+ @dirrmtry %%PYTHON_LIBDIR%%/pydoc_data
+-@dirrmtry %%PYTHON_LIBDIR%%/plat-freebsd%%OSMAJOR%%/__pycache__
+-@dirrmtry %%PYTHON_LIBDIR%%/plat-freebsd%%OSMAJOR%%
++@dirrmtry %%PYTHON_LIBDIR%%/plat-dragonfly%%OSMAJOR%%/__pycache__
++@dirrmtry %%PYTHON_LIBDIR%%/plat-dragonfly%%OSMAJOR%%
+ @dirrmtry %%PYTHON_LIBDIR%%/multiprocessing/dummy/__pycache__
+ @dirrmtry %%PYTHON_LIBDIR%%/multiprocessing/dummy
+ @dirrmtry %%PYTHON_LIBDIR%%/multiprocessing/__pycache__
