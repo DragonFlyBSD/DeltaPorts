@@ -57,7 +57,7 @@ awk "${AWKMOVED}" ${FPORTS}/MOVED > ${MERGED}/MOVED
 umount ${WORKAREA}
 rm -rf ${WORKAREA}
 
-rm -rf ${MERGED}/Tools
+rm -rf ${MERGED}/Tools ${MERGED}/Keywords
 folders=$(cd ${FPORTS} && find Tools -type d | sort)
 for folder in ${folders}; do
    mkdir -p ${MERGED}/${folder}
@@ -68,3 +68,4 @@ for item in ${all}; do
        -e 's|!/usr/bin/perl|!/usr/local/bin/perl|' \
        > ${MERGED}/${item}
 done
+cp -r ${FPORTS}/Keywords ${MERGED}/
