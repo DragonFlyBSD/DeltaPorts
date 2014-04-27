@@ -57,7 +57,7 @@
    unsigned short & product_id, unsigned short & version)
  {
 -#if (FREEBSDVER >= 800000) // libusb2 interface
-+#if (FREEBSDVER >= 800000) || defineed(DFU4B) // libusb2 interface
++#if (FREEBSDVER >= 800000) || defined(DFU4B) // libusb2 interface
    struct libusb20_device *pdev = NULL;
    struct libusb20_backend *pbe;
    uint32_t matches = 0;
