@@ -119,7 +119,7 @@ merge()
           fi
           diffs=$(find ${DP}/diffs -name \*\.diff)
           for difffile in ${diffs}; do
-            output=$(patch --quiet -d ${WORKAREA} -i ${difffile})
+            output=$(patch --force --quiet -d ${WORKAREA} -i ${difffile})
             if [ $? -ne 0 -o -n "${output}" ]; then
                echo $1: ${output}
             fi

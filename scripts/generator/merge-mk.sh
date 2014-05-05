@@ -40,7 +40,7 @@ done
 cp ${FPORTS}/UIDs ${FPORTS}/GIDs ${MERGED}/
 diffs=$(find ${DELTA}/special/treetop/diffs -name \*\.diff)
 for difffile in ${diffs}; do
-  patch --quiet -d ${MERGED} < ${difffile}
+  patch --force --quiet -d ${MERGED} < ${difffile}
 done
 rm ${MERGED}/*.orig
 awk "${AWKMOVED}" ${FPORTS}/MOVED > ${MERGED}/MOVED

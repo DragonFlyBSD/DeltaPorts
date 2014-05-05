@@ -123,7 +123,7 @@ merge()
           fi
           diffs=$(find ${DP}/diffs -name \*\.diff)
           for difffile in ${diffs}; do
-            patch --quiet -d ${WORKAREA} -i ${difffile} || echo $1
+            patch --force --quiet -d ${WORKAREA} -i ${difffile} || echo $1
           done
           find ${WORKAREA} -type f -name \*\.orig -exec rm {} \;
         fi
