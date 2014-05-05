@@ -96,7 +96,6 @@ merge()
 
    rm -rf ${M1}
    mkdir -p ${M1}
-   touch -r ${FPORTS}/${1} ${M1}
 
    if [ "${2}" = "FAST" ]; then
       fast_and_filtered "${FPORTS}/${1}" "${M1}"
@@ -197,7 +196,6 @@ while read fileline; do
       elif [ "${ML}" = "LOCK" ]; then
          # Locked and merged entry doesn't exist.  Copy from DPorts
          mkdir -p ${MERGED}/${val_1}
-         touch -r ${DPORTS}/${val_1} ${MERGED}/${val_1}
          cpdup -VV -i0 ${DPORTS}/${val_1} ${MERGED}/${val_1}
       elif [ "${ML}" = "MASK" ]; then
          # remove if existed previously
