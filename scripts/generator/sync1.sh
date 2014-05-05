@@ -45,7 +45,7 @@ PORT=${DELTA}/ports/${1}
 # arg 1 is the original directory
 get_legacy ()
 {
-   local PATT=':(U|L)|amd64|utmpx'
+   local PATT='amd64|utmpx'
    local RET=$(cd ${1} && grep -lE ${PATT} Makefile *\.common 2>/dev/null)
    echo ${RET}
 }
@@ -62,10 +62,6 @@ transform ()
       item=${1}
       shift
       cat ${WORK}/${item} | sed -E \
-         -e 's|:L}|:tl}|g' \
-         -e 's|:U}|:tu}|g' \
-         -e 's|:U:(.*)}|:tu:\1}|g' \
-         -e 's|:L:(.*)}|:tl:\1}|g' \
 	 -e 's|OPTIONS_DEFINE_amd64|OPTIONS_DEFINE_x86_64|g' \
 	 -e 's|CFLAGS_amd64|CFLAGS_x86_64|g' \
 	 -e '/^BROKEN=.*utmpx/s|BROKEN|#BROKEN|' \
