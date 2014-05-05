@@ -63,6 +63,7 @@ transform ()
 	 -e '/^BROKEN=.*utmpx/s|BROKEN|#BROKEN|' \
          -e '/ARCH}.*(amd64|"amd64")/s|amd64|x86_64|g' \
          > ${WORK}/${item}.filtered
+      touch -r ${WORK}/${item} ${WORK}/${item}.filtered
       mv ${WORK}/${item}.filtered ${WORK}/${item}
    done
 }
@@ -95,6 +96,7 @@ merge()
 
    rm -rf ${M1}
    mkdir -p ${M1}
+   touch -r ${FPORTS}/${1} ${M1}
 
    if [ "${2}" = "FAST" ]; then
       fast_and_filtered "${FPORTS}/${1}" "${M1}"
@@ -124,7 +126,11 @@ merge()
                echo $1: ${output}
             fi
           done
-          find ${WORKAREA} -type f -name \*\.orig -exec rm {} \;
+          frags=$(find ${WORKAREA} -type f -name \*\.orig -print)
+          for frag in ${frags}; do
+            touch -r ${frag} ${frag%%.orig}
+            rm ${frag}
+          done
         fi
         LEGACY=$(get_legacy ${WORKAREA})
         transform ${WORKAREA} ${LEGACY}
@@ -191,6 +197,7 @@ while read fileline; do
       elif [ "${ML}" = "LOCK" ]; then
          # Locked and merged entry doesn't exist.  Copy from DPorts
          mkdir -p ${MERGED}/${val_1}
+         touch -r ${DPORTS}/${val_1} ${MERGED}/${val_1}
          cpdup -VV -i0 ${DPORTS}/${val_1} ${MERGED}/${val_1}
       elif [ "${ML}" = "MASK" ]; then
          # remove if existed previously
@@ -209,12 +216,14 @@ rm -rf ${MERGED}/Tools ${MERGED}/Keywords
 folders=$(cd ${FPORTS} && find Tools -type d | sort)
 for folder in ${folders}; do
    mkdir -p ${MERGED}/${folder}
+   touch -r ${FPORTS}/${folder} ${MERGED}/${folder}
 done
 all=$(cd ${FPORTS}  && find Tools -type f)
 for item in ${all}; do
    cat ${FPORTS}/${item} | sed -E \
        -e 's|!/usr/bin/perl|!/usr/local/bin/perl|' \
        > ${MERGED}/${item}
+   touch -r ${FPORTS}/${item} ${MERGED}/${item}
 done
 cp -r ${FPORTS}/Keywords ${MERGED}/
 
@@ -228,7 +237,11 @@ for k in Mk Templates; do
   for difffile in ${diffs}; do
     patch --quiet -d ${WORKAREA}/${k} -i ${difffile} || echo ${difffile}
   done
-  find ${WORKAREA}/${k} -name \*\.orig -exec rm {} \;
+  frags=$(find ${WORKAREA}/${k} -type f -name \*\.orig -print)
+  for frag in ${frags}; do
+    touch -r ${frag} ${frag%%.orig}
+    rm ${frag}
+  done
   cpdup -i0 ${WORKAREA}/${k} ${MERGED}/${k}
 done
 
@@ -240,6 +253,7 @@ for difffile in ${diffs}; do
 done
 rm ${MERGED}/*.orig
 awk "${AWKMOVED}" ${FPORTS}/MOVED > ${MERGED}/MOVED
+touch -r ${FPORTS}/MOVED ${MERGED}/MOVED
 
 umount ${WORKAREA}
 rm -rf ${WORKAREA}
@@ -248,6 +262,6 @@ LANGS="arabic chinese french german hebrew hungarian japanese korean \
 	polish portuguese russian ukrainian vietnamese"
 
 for lang in ${LANGS}; do
-  cp ${FPORTS}/${lang}/Makefile.inc ${MERGED}/${lang}/Makefile.inc
+  cp -p ${FPORTS}/${lang}/Makefile.inc ${MERGED}/${lang}/Makefile.inc
 done
 
