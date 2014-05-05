@@ -1,21 +1,20 @@
---- Makefile.orig	2013-01-06 01:56:29.387466000 +0100
+--- Makefile.orig	2014-05-05 11:40:19.851323000 +0000
 +++ Makefile
-@@ -25,6 +25,8 @@
- 		sqlite3.8:${PORTSDIR}/databases/sqlite3 \
- 		gnome-keyring.0:${PORTSDIR}/security/libgnome-keyring
+@@ -12,6 +12,7 @@ DIST_SUBDIR=	gnome2
+ MAINTAINER=	gnome@FreeBSD.org
+ COMMENT=	The data backends for the Evolution integrated mail/PIM suite
  
-+BUILD_DEPENDS+=	gperf:${PORTSDIR}/devel/gperf
-+
- USE_BZIP2=	yes
- USE_GMAKE=	yes
- USE_BISON=	build
-@@ -52,7 +54,8 @@
++BUILD_DEPENDS=	gperf:${PORTSDIR}/devel/gperf
+ LIB_DEPENDS=	libsoup-2.4.so:${PORTSDIR}/devel/libsoup \
+ 		libgdata.so:${PORTSDIR}/devel/libgdata \
+ 		libdbus-glib-1.so:${PORTSDIR}/devel/dbus-glib \
+@@ -50,7 +51,8 @@ KERBEROS_CONFIGURE_OFF=	--without-krb5
+ .include <bsd.port.options.mk>
  
- .if !defined(WITHOUT_KERBEROS)
- CONFIGURE_ARGS+=	--with-krb5=/usr
--KRB5_LIB=		`/usr/bin/krb5-config gssapi --libs`
-+KRB5_LIB=		`${LOCALBASE}/bin/krb5-config gssapi --libs`
-+BUILD_DEPENDS+= 	krb5-config:${PORTSDIR}/security/krb5
+ .if ${PORT_OPTIONS:MKERBEROS}
+-KRB5_LIB=	`/usr/bin/krb5-config gssapi --libs`
++KRB5_LIB=	`${LOCALBASE}/bin/krb5-config gssapi --libs`
++BUILD_DEPENDS+= krb5-config:${PORTSDIR}/security/krb5
  .endif
  
- #.if defined(WITH_IMAP4) || defined(PACKAGE_BUILDING)
+ EDS_BDB_MSG=	"!!!WARNING!!!: Berkeley Database version is ${BDB_VER}.  If this is an upgrade, you may experience problems if you or any other Evolution-data-server users were previously using BDB_VER 41."
