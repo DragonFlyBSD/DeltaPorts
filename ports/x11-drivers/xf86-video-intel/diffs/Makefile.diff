@@ -1,4 +1,4 @@
---- Makefile.orig	2014-01-22 17:00:46.000000000 +0000
+--- Makefile.orig	2014-05-05 14:21:28.490120000 +0000
 +++ Makefile
 @@ -26,17 +26,32 @@ USE_XORG=	glproto \
  .include <bsd.port.options.mk>
@@ -18,11 +18,11 @@
 +LIB_DEPENDS+=	xcb-util:${PORTSDIR}/x11/xcb-util
 +.  else
  INTEL_VERSION=	2.21.15
- INTEL_REVISION=	1
+ INTEL_REVISION=	3
  CONFIGURE_ENV+=	xorg_cv_cc_flag__Wno_maybe_uninitialized=no
 -CONFIGURE_ARGS+=	--enable-sna
 +CONFIGURE_ARGS+=	--enable-sna --with-default-accel=sna
- MAKE_JOBS_UNSAFE=yes
+ CONFIGURE_ARGS+=	--disable-glamor
  PLIST_SUB+=	OLD="@comment "
  EXTRA_PATCHES+=	${PATCHDIR}/extra-src__sna__sna_threads.c \
  		${PATCHDIR}/extra-src_sna_kgem.c \
@@ -34,4 +34,4 @@
 +.  endif
  .else
  INTEL_VERSION=	2.7.1
- INTEL_REVISION=	6
+ INTEL_REVISION=	8

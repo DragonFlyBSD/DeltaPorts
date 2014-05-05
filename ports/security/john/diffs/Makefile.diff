@@ -4,7 +4,7 @@
  #
  PORTSCOUT=	limit:.*-jumbo
  
--OSNAME=		${OPSYS:L}
+-OSNAME=		${OPSYS:tl}
 +OSNAME=		freebsd
  CFLAGS+=	-DJOHN_SYSTEMWIDE=1 \
  		-DJOHN_SYSTEMWIDE_HOME=\\"${DATADIR}\\" \

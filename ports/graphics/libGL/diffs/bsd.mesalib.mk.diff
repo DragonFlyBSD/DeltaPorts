@@ -1,14 +1,6 @@
---- bsd.mesalib.mk.orig	2013-11-06 23:06:17.952977000 +0000
+--- bsd.mesalib.mk.orig	2014-05-05 13:44:50.585941000 +0000
 +++ bsd.mesalib.mk
-@@ -11,7 +11,6 @@
- #
- # $FreeBSD: graphics/libGL/bsd.mesalib.mk 328711 2013-09-29 17:01:41Z zeising $
- 
--.MAKE.FreeBSD_UL=	yes
- 
- MESAVERSION=	${MESABASEVERSION}${MESASUBVERSION:C/^(.)/.\1/}
- MESADISTVERSION=${MESABASEVERSION}${MESASUBVERSION:C/^(.)/-\1/}
-@@ -70,8 +69,12 @@ SHEBANG_FILES=	src/gallium/*/*/*.py src/
+@@ -68,8 +68,12 @@ SHEBANG_FILES=	src/gallium/*/*/*.py src/
  		src/gallium/drivers/svga/svgadump/svga_dump.py \
  		src/glsl/tests/compare_ir src/mapi/glapi/gen/*.py \
  		src/mapi/mapi/mapi_abi.py
@@ -21,7 +13,7 @@
  
  ALL_TARGET=		default
  .endif
-@@ -82,11 +85,12 @@ PATCHDIR=		${MASTERDIR}/files
+@@ -80,6 +84,7 @@ PATCHDIR=		${MASTERDIR}/files
  .else
  PATCHDIR=		${MASTERDIR}/files-old
  .endif
@@ -29,13 +21,7 @@
  DESCR=			${.CURDIR}/pkg-descr
  PLIST=			${.CURDIR}/pkg-plist
  WRKSRC=			${WRKDIR}/Mesa-${MESADISTVERSION}
- 
--COMPONENT=		${PORTNAME:L:C/^lib//:C/mesa-//}
-+COMPONENT=		${PORTNAME:tl:C/^lib//:C/mesa-//}
- 
- .if ${COMPONENT:Mglesv2} == ""
- CONFIGURE_ARGS+=	--disable-gles2
-@@ -116,8 +120,6 @@ CONFIGURE_ARGS+=	--enable-xcb
+@@ -114,8 +119,6 @@ CONFIGURE_ARGS+=	--enable-xcb
  .endif
  
  post-patch:
