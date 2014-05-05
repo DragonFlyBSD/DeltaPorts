@@ -40,7 +40,7 @@ fi
 # arg 1 is the original directory
 get_legacy ()
 {
-   local PATT=':(U|L)|amd64|utmpx'
+   local PATT='amd64|utmpx'
    local RET=$(cd ${1} && grep -lE ${PATT} Makefile *\.common 2>/dev/null)
    echo ${RET}
 }
@@ -57,10 +57,6 @@ transform ()
       item=${1}
       shift
       cat ${WORK}/${item} | sed -E \
-         -e 's|:L}|:tl}|g' \
-         -e 's|:U}|:tu}|g' \
-         -e 's|:U:(.*)}|:tu:\1}|g' \
-         -e 's|:L:(.*)}|:tl:\1}|g' \
 	 -e 's|OPTIONS_DEFAULT_amd64|OPTIONS_DEFAULT_x86_64|g' \
 	 -e 's|OPTIONS_DEFINE_amd64|OPTIONS_DEFINE_x86_64|g' \
 	 -e 's|CFLAGS_amd64|CFLAGS_x86_64|g' \
@@ -225,16 +221,7 @@ cp -r ${FPORTS}/Keywords ${MERGED}/
 rm -rf ${WORKAREA}/*
 
 cp -a ${FPORTS}/Templates ${WORKAREA}
-mkdir -p ${WORKAREA}/Mk/Uses ${WORKAREA}/Mk/Scripts
-all=$(cd ${FPORTS} && find Mk -type f)
-for item in ${all}; do
-   cat ${FPORTS}/${item} | sed -E \
-      -e 's|:L}|:tl}|g' \
-      -e 's|:U}|:tu}|g' \
-      -e 's|:U:(.*)}|:tu:\1}|g' \
-      -e 's|:L:(.*)}|:tl:\1}|g' \
-      > ${WORKAREA}/${item}
-done
+cp -a ${FPORTS}/Mk ${WORKAREA}
 
 for k in Mk Templates; do
   diffs=$(find ${DELTA}/special/${k}/diffs -name \*\.diff)

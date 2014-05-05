@@ -24,16 +24,7 @@ fi
 rm -rf ${WORKAREA}/*
 
 cp -a ${FPORTS}/Templates ${WORKAREA}
-mkdir -p ${WORKAREA}/Mk/Uses ${WORKAREA}/Mk/Scripts
-all=$(cd ${FPORTS} && find Mk -type f)
-for item in ${all}; do
-   cat ${FPORTS}/${item} | sed -E \
-      -e 's|:L}|:tl}|g' \
-      -e 's|:U}|:tu}|g' \
-      -e 's|:U:(.*)}|:tu:\1}|g' \
-      -e 's|:L:(.*)}|:tl:\1}|g' \
-      > ${WORKAREA}/${item}
-done
+cp -a ${FPORTS}/Mk ${WORKAREA}
 
 for k in Mk Templates; do
   diffs=$(find ${DELTA}/special/${k}/diffs -name \*\.diff)
