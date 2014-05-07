@@ -1,6 +1,6 @@
---- Makefile.orig	2013-12-28 14:59:13.865383000 +0000
+--- Makefile.orig	2014-05-07 23:53:09.547547000 +0000
 +++ Makefile
-@@ -89,8 +89,6 @@ LIB_DEPENDS+=		libsasl2.so:${PORTSDIR}/s
+@@ -86,8 +86,6 @@ LIB_DEPENDS+=		libsasl2.so:${PORTSDIR}/s
  # GNUTLS
  LIB_DEPENDS+=		libgcrypt.so:${PORTSDIR}/security/libgcrypt
  LIB_DEPENDS+=		libgnutls.so:${PORTSDIR}/security/gnutls
@@ -9,7 +9,7 @@
  # External Samba dependencies
  # IDL compiler
  BUILD_DEPENDS+=		p5-Parse-Pidl>=4.0.0:${PORTSDIR}/devel/p5-Parse-Pidl
-@@ -236,14 +234,18 @@ WANT_EXP_MODULES=	idmap_ad vfs_cacheprim
+@@ -225,14 +223,18 @@ WANT_EXP_MODULES=	idmap_ad vfs_cacheprim
  .endif
  
  .if ${PORT_OPTIONS:MACL_SUPPORT}
