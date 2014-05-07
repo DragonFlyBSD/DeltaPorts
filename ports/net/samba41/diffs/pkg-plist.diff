@@ -1,0 +1,19 @@
+--- pkg-plist.orig	2013-12-28 15:28:45.864802000 +0000
++++ pkg-plist
+@@ -209,8 +209,6 @@ lib/libtorture.so.0
+ lib/libwbclient.so
+ lib/libwbclient.so.0
+ lib/mit_samba.so
+-lib/nss_winbind.so.1
+-lib/nss_wins.so.1
+ %%SMBPASS%%lib/pam_smbpass.so
+ lib/pam_winbind.so
+ lib/winbind_krb5_locator.so
+@@ -418,7 +416,6 @@ lib/shared-modules/vfs/streams_xattr.so
+ lib/shared-modules/vfs/syncops.so
+ lib/shared-modules/vfs/time_audit.so
+ lib/shared-modules/vfs/xattr_tdb.so
+-lib/shared-modules/vfs/zfsacl.so
+ @comment auth_samba4 lib/shared-modules/auth/samba4.so
+ @comment auth_unix lib/shared-modules/auth/unix.so
+ @comment auth_wbc lib/shared-modules/auth/wbc.so
