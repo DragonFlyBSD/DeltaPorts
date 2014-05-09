@@ -1,11 +1,13 @@
---- Makefile.orig	2014-02-04 17:14:32.954564000 +0000
+--- Makefile.orig	2014-05-09 08:53:16.099437000 +0000
 +++ Makefile
-@@ -18,7 +18,7 @@ NO_BUILD=	yes
+@@ -16,8 +16,8 @@ NO_BUILD=	yes
  NO_INSTALL=	yes
  NO_MTREE=	yes
  
 -LANG_ALL_HTML=	ca da de el en en_GB es fr it ja ko nl nn \
+-		pt_BR ru sl sv zh_CN
 +LANG_ALL_HTML=	ca da de en en_GB es fr it ja ko nl nn \
- 		pt_BR ru sl sv zh_CN
++		pt_BR ru sv zh_CN
  
  de_PORT=	german/gimp-help
+ fr_PORT=	french/gimp-help
