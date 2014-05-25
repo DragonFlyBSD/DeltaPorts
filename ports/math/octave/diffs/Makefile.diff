@@ -9,14 +9,3 @@
  PLIST_SUB=	OCTAVE_VERSION=${OCTAVE_VERSION} GNU_HOST=${GNU_HOST}
  INCLUDES=	-I${LOCALBASE}/include
  LDFLAGS+=	-L${LOCALBASE}/lib ${PTHREAD_LIBS}
-@@ -98,10 +98,6 @@ CONFIGURE_ARGS=	--host=${GNU_HOST} \
- 		--enable-shared \
- 		--disable-jit
- 
--.if (${OSVERSION} <= 700000)
--WITH_PTMALLOC=yes
--.endif
--
- .if defined(WITH_PTMALLOC)
- LIB_DEPENDS+=	ptmalloc:${PORTSDIR}/devel/ptmalloc
- CONFIGURE_ENV+=	LIBS="-L${LOCALBASE}/lib -lptmalloc"
