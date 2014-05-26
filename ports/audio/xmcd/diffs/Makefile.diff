@@ -1,16 +1,16 @@
---- Makefile.orig	2013-12-11 17:56:07.269686000 +0000
+--- Makefile.orig	2014-05-26 13:34:47.954503000 +0000
 +++ Makefile
-@@ -19,11 +19,11 @@ NO_STAGE=	yes
+@@ -16,11 +16,11 @@ RUN_DEPENDS+=	lame:${PORTSDIR}/audio/lam
+ 
+ USES=		imake motif
  USE_XORG=	x11 xext xaw xmu xp xpm xt sm ice
- MAN1=		cda.1 xmcd.1
- MANCOMPRESSED=	no
 -PLIST_SUB+=	RELEASE=${OSREL:R:R} ARCH=${ARCH}
 +PLIST_SUB+=	RELEASE=${OSREL:R} ARCH=${ARCH}
  SUB_FILES=	pkg-message
  PKGMESSAGE=	${WRKDIR}/pkg-message
  
--LIBBINDIR=	${PREFIX}/lib/X11/xmcd/bin-FreeBSD_${OSREL:R:R}-${ARCH}
-+LIBBINDIR=	${PREFIX}/lib/X11/xmcd/bin-${OPSYS}_${OSREL:R}-${ARCH}
+-LIBBINDIR=	${STAGEDIR}${PREFIX}/lib/X11/xmcd/bin-FreeBSD_${OSREL:R:R}-${ARCH}
++LIBBINDIR=	${STAGEDIR}${PREFIX}/lib/X11/xmcd/bin-${OPSYS}_${OSREL:R}-${ARCH}
  
  post-extract:
  	@${CHMOD} -R u+w ${WRKSRC}
