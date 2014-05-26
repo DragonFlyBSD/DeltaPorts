@@ -1,12 +1,15 @@
---- Uses/zip.mk.orig	2014-05-25 22:24:04.289514000 +0000
+--- Uses/zip.mk.orig	2014-05-26 20:03:26.385260000 +0000
 +++ Uses/zip.mk
-@@ -21,7 +21,8 @@ EXTRACT_AFTER_ARGS?=	-d ${WRKDIR}
+@@ -21,7 +21,12 @@ EXTRACT_AFTER_ARGS?=	-d ${WRKDIR}
  EXTRACT_DEPENDS+=	${UNZIP_CMD}:${PORTSDIR}/archivers/unzip
  EXTRACT_CMD?=		${UNZIP_CMD}
  .elif ${zip_ARGS} == none
--EXTRACT_CMD?=		${UNZIP_NATIVE_CMD}
++.  if ${OPSYS} == FreeBSD
+ EXTRACT_CMD?=		${UNZIP_NATIVE_CMD}
++.  else
 +EXTRACT_DEPENDS+=	${UNZIP_CMD}:${PORTSDIR}/archivers/unzip
 +EXTRACT_CMD?=		${UNZIP_CMD}
++.  endif
  .else
  IGNORE=	Incorrect 'USES+=zip:${zip_ARGS}' expecting 'USES+=zip[:infozip]'
  .endif
