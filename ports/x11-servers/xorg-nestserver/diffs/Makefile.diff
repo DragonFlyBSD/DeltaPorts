@@ -1,0 +1,11 @@
+--- Makefile.orig	2014-05-27 18:27:18.259410000 +0000
++++ Makefile
+@@ -22,8 +22,6 @@ CONFIGURE_ARGS=	--disable-dmx --disable-
+ SLAVE_PORT=	yes
+ PLIST_FILES=	bin/Xnest man/man1/Xnest.1.gz
+ 
+-.include <bsd.port.options.mk>
+-
+ do-install:
+ 	${INSTALL_PROGRAM} ${WRKSRC}/hw/xnest/Xnest ${STAGEDIR}${PREFIX}/bin/
+ .if defined(WITH_NEW_XORG)
