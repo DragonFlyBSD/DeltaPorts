@@ -1,12 +1,16 @@
---- Makefile.orig	2013-06-02 21:41:25.000000000 +0000
+--- Makefile.orig	2014-05-29 20:08:44.462304000 +0000
 +++ Makefile
-@@ -21,7 +21,8 @@ LIB_DEPENDS=	freetype:${PORTSDIR}/print/
+@@ -18,10 +18,11 @@ LICENSE=	AGPLv3
+ LIB_DEPENDS=	libfreetype.so:${PORTSDIR}/print/freetype2 \
+ 		libjpeg.so:${PORTSDIR}/graphics/jpeg \
+ 		libjbig2dec.so:${PORTSDIR}/graphics/jbig2dec \
+-		libopenjpeg.so:${PORTSDIR}/graphics/openjpeg15
++		libopenjpeg.so:${PORTSDIR}/graphics/openjpeg
  
- USE_GMAKE=	yes
  MAKE_ARGS+=	build=release prefix=${PREFIX} verbose=1 mandir=${PREFIX}/man \
 -		XCFLAGS=-I${LOCALBASE}/include
 +		XCFLAGS="-I${LOCALBASE}/include -I${LOCALBASE}/include/freetype2" \
 +		XLIBS="-lXext -lX11 -L${LOCALBASE}/lib"
- USES=		pkgconfig
+ USES=		pkgconfig gmake
  USE_XORG=	x11 xext
- MAN1=		mupdf.1 mutool.1 mudraw.1
+ 
