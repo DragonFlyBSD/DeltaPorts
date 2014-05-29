@@ -216,14 +216,12 @@
  # ccache support
  
  # Try to set a default CCACHE_DIR to workaround HOME=/dev/null and
-@@ -2190,14 +2191,38 @@ PATCH_DIST_ARGS+=	--suffix .orig
+@@ -2190,14 +2191,42 @@ PATCH_DIST_ARGS+=	--suffix .orig
  TAR?=	/usr/bin/tar
  
  # EXTRACT_SUFX is defined in .pre.mk section
 -EXTRACT_CMD?=	${TAR}
 -EXTRACT_BEFORE_ARGS?=	-xf
-+ZIP_BEFORE_ARGS?=	-qo
-+ZIP_AFTER_ARGS?=	-d ${WRKDIR}
 +
 +LHA_BEFORE_ARGS?=	xfpw=${WRKDIR}
 +LHA_AFTER_ARGS?=
@@ -245,6 +243,12 @@
 +.  endif
 +.endif
 +
++# ZIP_* variables are always defined by zip.mk, so ?= only kicks in USES+=zip
++# when does not exist.  In this case, assume $TAR is desired for zip archives
++ZIP_BEFORE_ARGS?=	${TAR_BEFORE_ARGS_DEFAULT}
++ZIP_AFTER_ARGS?=	${TAR_AFTER_ARGS_DEFAULT}
++ZIP_EXTRACT_CMD?=	${TAR}
++
 +.if !defined(TAR_AFTER_ARGS)
 +.  if defined(EXTRACT_AFTER_ARGS)
 +TAR_AFTER_ARGS=		${EXTRACT_AFTER_ARGS}
@@ -259,7 +263,7 @@
  # Figure out where the local mtree file is
  .if !defined(MTREE_FILE) && !defined(NO_MTREE)
  .if ${PREFIX} == /usr
-@@ -2774,7 +2799,7 @@ LATEST_LINK?=		${PKGBASE}
+@@ -2774,7 +2803,7 @@ LATEST_LINK?=		${PKGBASE}
  PKGLATESTFILE=		${PKGLATESTREPOSITORY}/${LATEST_LINK}${PKG_SUFX}
  
  CONFIGURE_SCRIPT?=	configure
@@ -268,7 +272,7 @@
  CONFIGURE_TARGET:=	${CONFIGURE_TARGET:S/--build=//}
  CONFIGURE_LOG?=		config.log
  
-@@ -2815,6 +2840,8 @@ SET_LATE_CONFIGURE_ARGS= \
+@@ -2815,6 +2844,8 @@ SET_LATE_CONFIGURE_ARGS= \
  SCRIPTS_ENV+=	CURDIR=${MASTERDIR} DISTDIR=${DISTDIR} \
  		  WRKDIR=${WRKDIR} WRKSRC=${WRKSRC} PATCHDIR=${PATCHDIR} \
  		  SCRIPTDIR=${SCRIPTDIR} FILESDIR=${FILESDIR} \
@@ -277,7 +281,7 @@
  		  PORTSDIR=${PORTSDIR} PREFIX=${PREFIX} LOCALBASE=${LOCALBASE}
  
  .if defined(BATCH)
-@@ -2856,7 +2883,7 @@ __pmlinks!=	${ECHO_CMD} '${MLINKS:S/	/ /
+@@ -2856,7 +2887,7 @@ __pmlinks!=	${ECHO_CMD} '${MLINKS:S/	/ /
  		else \
  			{ print "broken"; exit; } \
  	} \
@@ -286,7 +290,7 @@
  .if ${__pmlinks:Mbroken} == "broken"
  check-makevars::
  	@${ECHO_MSG} "${PKGNAME}: Makefile error: unable to parse MLINKS."
-@@ -2867,7 +2894,7 @@ _MLINKS=	${_MLINKS_PREPEND}
+@@ -2867,7 +2898,7 @@ _MLINKS=	${_MLINKS_PREPEND}
  .for lang in ${MANLANG:S%^%man/%:S%^man/""$%man%}
  .for ___pmlinks in ${__pmlinks}
  .for __lang in ${lang}
@@ -295,7 +299,7 @@
  .endfor
  .endfor
  .endfor
-@@ -2996,7 +3023,7 @@ _DESKTOPDIR_REL=
+@@ -2996,7 +3027,7 @@ _DESKTOPDIR_REL=
  
  # Check the machine architectures
  .if defined(ONLY_FOR_ARCHS)
@@ -304,7 +308,7 @@
  .if ${ARCH:M${__ARCH}} != ""
  __ARCH_OK?=		1
  .endif
-@@ -3006,7 +3033,7 @@ __ARCH_OK?=		1
+@@ -3006,7 +3037,7 @@ __ARCH_OK?=		1
  .endif
  
  .if defined(NOT_FOR_ARCHS)
@@ -313,7 +317,7 @@
  .if ${ARCH:M${__NARCH}} != ""
  .undef __ARCH_OK
  .endif
-@@ -3015,9 +3042,9 @@ __ARCH_OK?=		1
+@@ -3015,9 +3046,9 @@ __ARCH_OK?=		1
  
  .if !defined(__ARCH_OK)
  .if defined(ONLY_FOR_ARCHS)
@@ -325,7 +329,7 @@
  .endif
  IGNORE+=	while you are running ${ARCH}
  
-@@ -3150,6 +3177,7 @@ all:
+@@ -3150,6 +3181,7 @@ all:
  	  DISTDIR=${DISTDIR} WRKDIR=${WRKDIR} WRKSRC=${WRKSRC} \
  	  PATCHDIR=${PATCHDIR} SCRIPTDIR=${SCRIPTDIR} \
  	  FILESDIR=${FILESDIR} PORTSDIR=${PORTSDIR} PREFIX=${PREFIX} \
@@ -333,7 +337,7 @@
  	  BUILD_DEPENDS="${BUILD_DEPENDS}" RUN_DEPENDS="${RUN_DEPENDS}" \
  	  CONFLICTS="${CONFLICTS}" \
  	${ALL_HOOK}
-@@ -3505,9 +3533,31 @@ do-extract:
+@@ -3505,9 +3537,31 @@ do-extract:
  	@${RM} -rf ${WRKDIR}
  	@${MKDIR} ${WRKDIR}
  	@for file in ${EXTRACT_ONLY}; do \
@@ -354,7 +358,7 @@
 +			*.lzh)	_EXTRACT_CMD=${LHA_CMD} ; \
 +					_EXTRACT_BEFORE_ARGS="${LHA_BEFORE_ARGS}" ; \
 +					_EXTRACT_AFTER_ARGS="${LHA_AFTER_ARGS}" ;; \
-+			*.zip|*.ZIP)	_EXTRACT_CMD=${UNZIP_CMD} ; \
++			*.zip|*.ZIP)	_EXTRACT_CMD=${ZIP_EXTRACT_CMD} ; \
 +					_EXTRACT_BEFORE_ARGS="${ZIP_BEFORE_ARGS}" ; \
 +					_EXTRACT_AFTER_ARGS="${ZIP_AFTER_ARGS}" ;; \
 +			*)	_EXTRACT_CMD=${TAR} ; \
@@ -368,7 +372,7 @@
  		fi; \
  	done
  .if !defined(EXTRACT_PRESERVE_OWNERSHIP)
-@@ -3562,7 +3612,7 @@ do-patch:
+@@ -3562,7 +3616,7 @@ do-patch:
  	@set -e ;\
  	if [ -d ${PATCHDIR} ]; then \
  		if [ "`${ECHO_CMD} ${PATCHDIR}/patch-*`" != "${PATCHDIR}/patch-*" ]; then \
@@ -377,7 +381,7 @@
  			PATCHES_APPLIED="" ; \
  			for i in ${PATCHDIR}/patch-*; do \
  				case $$i in \
-@@ -3587,6 +3637,33 @@ do-patch:
+@@ -3587,6 +3641,33 @@ do-patch:
  			done; \
  		fi; \
  	fi
@@ -411,7 +415,7 @@
  .endif
  
  .if !target(run-autotools-fixup)
-@@ -4866,14 +4943,14 @@ _DEPEND_ALWAYS=	0
+@@ -4866,14 +4947,14 @@ _DEPEND_ALWAYS=	0
  
  _INSTALL_DEPENDS=	\
  		if [ -n "${USE_PACKAGE_DEPENDS}" -o -n "${USE_PACKAGE_DEPENDS_ONLY}" ]; then \
@@ -428,7 +432,7 @@
  					${WRKDIR}/pkg-static add $${subpkgfile}; \
  					${RM} -f ${WRKDIR}/pkg-static; \
  				else \
-@@ -5091,7 +5168,7 @@ ALL-DEPENDS-LIST= \
+@@ -5091,7 +5172,7 @@ ALL-DEPENDS-LIST= \
  				continue;				\
  			fi;						\
  			${ECHO_CMD} $$d;				\
@@ -437,7 +441,7 @@
  				${ECHO_MSG} "${PKGNAME}: \"$$d\" erroneous -- dependency list incomplete" >&2; \
  				continue;				\
  			fi;						\
-@@ -5121,7 +5198,7 @@ CLEAN-DEPENDS-FULL= \
+@@ -5121,7 +5202,7 @@ CLEAN-DEPENDS-FULL= \
  				${ECHO_MSG} "${PKGNAME}: \"$$d\" non-existent -- dependency list incomplete" >&2; \
  				continue;				\
  			fi;						\
@@ -446,7 +450,7 @@
  				${ECHO_MSG} "${PKGNAME}: \"$$d\" erroneous -- dependency list incomplete" >&2; \
  				continue;				\
  			fi;						\
-@@ -5160,7 +5237,7 @@ CLEAN-DEPENDS-LIMITED= \
+@@ -5160,7 +5241,7 @@ CLEAN-DEPENDS-LIMITED= \
  				${ECHO_MSG} "${PKGNAME}: \"$$d\" non-existent -- dependency list incomplete" >&2; \
  				continue;				\
  			fi;						\
@@ -455,7 +459,7 @@
  				${ECHO_MSG} "${PKGNAME}: \"$$d\" erroneous -- dependency list incomplete" >&2; \
  				continue;				\
  			fi;						\
-@@ -5251,7 +5328,7 @@ FETCH_LIST?=	for i in $$deps; do \
+@@ -5251,7 +5332,7 @@ FETCH_LIST?=	for i in $$deps; do \
  			else	\
  				continue;	\
  			fi;;	\
@@ -464,7 +468,7 @@
  				continue;	\
  			fi;;	\
  		esac;	\
-@@ -5546,10 +5623,15 @@ _SUB_LIST_TEMP=	${SUB_LIST:S/$/!g/:S/^/
+@@ -5546,10 +5627,15 @@ _SUB_LIST_TEMP=	${SUB_LIST:S/$/!g/:S/^/
  apply-slist:
  .if defined(SUB_FILES)
  .for file in ${SUB_FILES}
@@ -483,7 +487,7 @@
  .endif
  .endfor
  .for i in pkg-message pkg-install pkg-deinstall pkg-req
-@@ -5893,6 +5975,7 @@ tags:
+@@ -5893,6 +5979,7 @@ tags:
  	OPSYS="${OPSYS:S/"/"'"'"/g:S/\$/\$\$/g:S/\\/\\\\/g}" \
  	OSREL="${OSREL:S/"/"'"'"/g:S/\$/\$\$/g:S/\\/\\\\/g}" \
  	OSVERSION="${OSVERSION:S/"/"'"'"/g:S/\$/\$\$/g:S/\\/\\\\/g}" \
