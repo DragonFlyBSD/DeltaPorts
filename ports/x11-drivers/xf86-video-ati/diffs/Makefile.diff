@@ -1,10 +1,11 @@
---- Makefile.orig	2014-02-10 11:22:12.595188000 +0000
+--- Makefile.orig	2014-05-30 12:27:26.470951000 +0000
 +++ Makefile
-@@ -14,8 +14,8 @@ USE_XORG=	xf86driproto xineramaproto xf8
+@@ -14,8 +14,7 @@ USE_XORG=	xf86driproto xineramaproto xf8
  
  .include <bsd.port.options.mk>
  
--.if ${OSVERSION} < 1000051 || !defined(WITH_NEW_XORG)
+-.if ${OSVERSION} < 1000051 || !defined(WITH_NEW_XORG) || \
+-	(${ARCH} != i386 && ${ARCH} != amd64)
 +.if ${DFLYVERSION} < 300751 || !defined(WITH_NEW_XORG)
  ATI_VERSION=	6.14.6
  ATI_REVISION=	3

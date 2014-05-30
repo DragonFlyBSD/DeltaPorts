@@ -3,7 +3,7 @@
 @@ -28,7 +28,7 @@ ACLOCAL_ARGS=	--force -I m4
  AUTOMAKE_ARGS=	--gnu --add-missing --copy
  USE_GMAKE=	yes
- CXXFLAGS+=	-fPIC
+ CXXFLAGS+=	-fPIC -Wno-invalid-source-encoding -Wno-format
 -LDFLAGS+=	-L${LOCALBASE}/lib -lintl
 +LDFLAGS+=	-L${LOCALBASE}/lib -lintl -lX11
  CONFIGURE_ARGS+=--with-system-lua \
