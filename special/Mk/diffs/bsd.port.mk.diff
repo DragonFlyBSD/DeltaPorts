@@ -1,4 +1,4 @@
---- bsd.port.mk.orig	2014-05-30 13:21:55.188245000 +0000
+--- bsd.port.mk.orig	2014-05-30 16:23:08.445738000 +0000
 +++ bsd.port.mk
 @@ -43,7 +43,8 @@ FreeBSD_MAINTAINER=	portmgr@FreeBSD.org
  #				  makefile is being used on.  Automatically set to
@@ -337,7 +337,7 @@
  	  BUILD_DEPENDS="${BUILD_DEPENDS}" RUN_DEPENDS="${RUN_DEPENDS}" \
  	  CONFLICTS="${CONFLICTS}" \
  	${ALL_HOOK}
-@@ -3501,9 +3533,32 @@ do-extract:
+@@ -3501,9 +3533,26 @@ do-extract:
  	@${RM} -rf ${WRKDIR}
  	@${MKDIR} ${WRKDIR}
  	@for file in ${EXTRACT_ONLY}; do \
@@ -352,28 +352,22 @@
 +		else \
 +			case $${file} in \
 +			*.tar|*.tbz|*.tgz|*.txz|*.tar.bz2|*.tar.gz|*.tar.lzma|*.tar.xz|*.tar.Z) \
-+				_EXTRACT_CMD=${TAR} ; \
-+					_EXTRACT_BEFORE_ARGS="${TAR_BEFORE_ARGS}" ; \
-+					_EXTRACT_AFTER_ARGS="${TAR_AFTER_ARGS}" ;; \
-+			*.lzh)	_EXTRACT_CMD=${LHA_CMD} ; \
-+					_EXTRACT_BEFORE_ARGS="${LHA_BEFORE_ARGS}" ; \
-+					_EXTRACT_AFTER_ARGS="${LHA_AFTER_ARGS}" ;; \
++				if ! (cd ${WRKDIR} && ${TAR} ${TAR_BEFORE_ARGS} ${_DISTDIR}/$$file ${TAR_AFTER_ARGS}); \
++				then exit 1; fi; ;; \
++			*.lzh) \
++				if ! (cd ${WRKDIR} && ${LHA_CMD} ${LHA_BEFORE_ARGS} ${_DISTDIR}/$$file ${LHA_AFTER_ARGS}); \
++				then exit 1; fi; ;; \
 +			*.zip|*.ZIP|*.xpi) \
-+				_EXTRACT_CMD=${ZIP_EXTRACT_CMD} ; \
-+					_EXTRACT_BEFORE_ARGS="${ZIP_BEFORE_ARGS}" ; \
-+					_EXTRACT_AFTER_ARGS="${ZIP_AFTER_ARGS}" ;; \
-+			*)	_EXTRACT_CMD=${TAR} ; \
-+					_EXTRACT_BEFORE_ARGS="${EXTRACT_BEFORE_ARGS}" ; \
-+					_EXTRACT_AFTER_ARGS="${EXTRACT_AFTER_ARGS}" ;; \
++				if ! (cd ${WRKDIR} && ${ZIP_EXTRACT_CMD} ${ZIP_BEFORE_ARGS} ${_DISTDIR}/$$file ${ZIP_AFTER_ARGS}); \
++				then exit 1; fi; ;; \
++			*) \
++				if ! (cd ${WRKDIR} && ${TAR} ${EXTRACT_BEFORE_ARGS} ${_DISTDIR}/$$file ${EXTRA_AFTER_ARGS}); \
++				then exit 1; fi; ;; \
 +			esac ; \
-+			if ! (cd ${WRKDIR} && $${_EXTRACT_CMD} $${_EXTRACT_BEFORE_ARGS} ${_DISTDIR}/$$file $${_EXTRACT_AFTER_ARGS});\
-+			then \
-+				exit 1; \
-+			fi; \
  		fi; \
  	done
  .if !defined(EXTRACT_PRESERVE_OWNERSHIP)
-@@ -3558,7 +3613,7 @@ do-patch:
+@@ -3558,7 +3607,7 @@ do-patch:
  	@set -e ;\
  	if [ -d ${PATCHDIR} ]; then \
  		if [ "`${ECHO_CMD} ${PATCHDIR}/patch-*`" != "${PATCHDIR}/patch-*" ]; then \
@@ -382,7 +376,7 @@
  			PATCHES_APPLIED="" ; \
  			for i in ${PATCHDIR}/patch-*; do \
  				case $$i in \
-@@ -3583,6 +3638,33 @@ do-patch:
+@@ -3583,6 +3632,33 @@ do-patch:
  			done; \
  		fi; \
  	fi
@@ -416,7 +410,7 @@
  .endif
  
  .if !target(run-autotools-fixup)
-@@ -4862,14 +4944,14 @@ _DEPEND_ALWAYS=	0
+@@ -4862,14 +4938,14 @@ _DEPEND_ALWAYS=	0
  
  _INSTALL_DEPENDS=	\
  		if [ -n "${USE_PACKAGE_DEPENDS}" -o -n "${USE_PACKAGE_DEPENDS_ONLY}" ]; then \
@@ -433,7 +427,7 @@
  					${WRKDIR}/pkg-static add $${subpkgfile}; \
  					${RM} -f ${WRKDIR}/pkg-static; \
  				else \
-@@ -5087,7 +5169,7 @@ ALL-DEPENDS-LIST= \
+@@ -5087,7 +5163,7 @@ ALL-DEPENDS-LIST= \
  				continue;				\
  			fi;						\
  			${ECHO_CMD} $$d;				\
@@ -442,7 +436,7 @@
  				${ECHO_MSG} "${PKGNAME}: \"$$d\" erroneous -- dependency list incomplete" >&2; \
  				continue;				\
  			fi;						\
-@@ -5117,7 +5199,7 @@ CLEAN-DEPENDS-FULL= \
+@@ -5117,7 +5193,7 @@ CLEAN-DEPENDS-FULL= \
  				${ECHO_MSG} "${PKGNAME}: \"$$d\" non-existent -- dependency list incomplete" >&2; \
  				continue;				\
  			fi;						\
@@ -451,7 +445,7 @@
  				${ECHO_MSG} "${PKGNAME}: \"$$d\" erroneous -- dependency list incomplete" >&2; \
  				continue;				\
  			fi;						\
-@@ -5156,7 +5238,7 @@ CLEAN-DEPENDS-LIMITED= \
+@@ -5156,7 +5232,7 @@ CLEAN-DEPENDS-LIMITED= \
  				${ECHO_MSG} "${PKGNAME}: \"$$d\" non-existent -- dependency list incomplete" >&2; \
  				continue;				\
  			fi;						\
@@ -460,7 +454,7 @@
  				${ECHO_MSG} "${PKGNAME}: \"$$d\" erroneous -- dependency list incomplete" >&2; \
  				continue;				\
  			fi;						\
-@@ -5247,7 +5329,7 @@ FETCH_LIST?=	for i in $$deps; do \
+@@ -5247,7 +5323,7 @@ FETCH_LIST?=	for i in $$deps; do \
  			else	\
  				continue;	\
  			fi;;	\
@@ -469,7 +463,7 @@
  				continue;	\
  			fi;;	\
  		esac;	\
-@@ -5542,10 +5624,15 @@ _SUB_LIST_TEMP=	${SUB_LIST:S/$/!g/:S/^/
+@@ -5542,10 +5618,15 @@ _SUB_LIST_TEMP=	${SUB_LIST:S/$/!g/:S/^/
  apply-slist:
  .if defined(SUB_FILES)
  .for file in ${SUB_FILES}
@@ -488,7 +482,7 @@
  .endif
  .endfor
  .for i in pkg-message pkg-install pkg-deinstall pkg-req
-@@ -5889,6 +5976,7 @@ tags:
+@@ -5889,6 +5970,7 @@ tags:
  	OPSYS="${OPSYS:S/"/"'"'"/g:S/\$/\$\$/g:S/\\/\\\\/g}" \
  	OSREL="${OSREL:S/"/"'"'"/g:S/\$/\$\$/g:S/\\/\\\\/g}" \
  	OSVERSION="${OSVERSION:S/"/"'"'"/g:S/\$/\$\$/g:S/\\/\\\\/g}" \
