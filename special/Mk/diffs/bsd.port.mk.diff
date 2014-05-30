@@ -1,4 +1,4 @@
---- bsd.port.mk.orig	2014-05-29 00:44:24.540787000 +0000
+--- bsd.port.mk.orig	2014-05-30 13:21:55.188245000 +0000
 +++ bsd.port.mk
 @@ -43,7 +43,8 @@ FreeBSD_MAINTAINER=	portmgr@FreeBSD.org
  #				  makefile is being used on.  Automatically set to
@@ -158,7 +158,7 @@
  TEMPLATES?=		${PORTSDIR}/Templates
  KEYWORDS?=		${PORTSDIR}/Keywords
  
-@@ -1568,7 +1581,7 @@ DEV_ERROR+=	"${PKGNAME}: Makefile error:
+@@ -1564,7 +1577,7 @@ DEV_ERROR+=	"${PKGNAME}: Makefile error:
  
  _POSTMKINCLUDED=	yes
  
@@ -167,7 +167,7 @@
  .if !defined(IGNORE_MASTER_SITE_GITHUB) && defined(USE_GITHUB)
  WRKSRC?=		${WRKDIR}/${GH_ACCOUNT}-${GH_PROJECT}-${GH_COMMIT}
  .endif
-@@ -1607,7 +1620,9 @@ PLIST_REINPLACE_STOPDAEMON=s!^@stopdaemo
+@@ -1603,7 +1616,9 @@ PLIST_REINPLACE_STOPDAEMON=s!^@stopdaemo
  
  # kludge to strip trailing whitespace from CFLAGS;
  # sub-configure will not # survive double space
@@ -178,7 +178,7 @@
  
  .if defined(WITHOUT_CPU_CFLAGS)
  .if defined(_CPUCFLAGS)
-@@ -1721,6 +1736,11 @@ PKG_DEPENDS+=		${LOCALBASE}/sbin/pkg:${P
+@@ -1717,6 +1732,11 @@ PKG_DEPENDS+=		${LOCALBASE}/sbin/pkg:${P
  
  .if defined(USE_GCC)
  .include "${PORTSDIR}/Mk/bsd.gcc.mk"
@@ -190,7 +190,7 @@
  .endif
  
  .if defined(USE_BINUTILS) && !defined(DISABLE_BINUTILS)
-@@ -2070,25 +2090,6 @@ CXXFLAGS:=	${CXXFLAGS:N-std=*} -std=${US
+@@ -2066,25 +2086,6 @@ CXXFLAGS:=	${CXXFLAGS:N-std=*} -std=${US
  CXXFLAGS+=	${CXXFLAGS_${ARCH}}
  .endif
  
@@ -216,7 +216,7 @@
  # ccache support
  
  # Try to set a default CCACHE_DIR to workaround HOME=/dev/null and
-@@ -2190,14 +2191,42 @@ PATCH_DIST_ARGS+=	--suffix .orig
+@@ -2186,14 +2187,42 @@ PATCH_DIST_ARGS+=	--suffix .orig
  TAR?=	/usr/bin/tar
  
  # EXTRACT_SUFX is defined in .pre.mk section
@@ -263,7 +263,7 @@
  # Figure out where the local mtree file is
  .if !defined(MTREE_FILE) && !defined(NO_MTREE)
  .if ${PREFIX} == /usr
-@@ -2774,7 +2803,7 @@ LATEST_LINK?=		${PKGBASE}
+@@ -2770,7 +2799,7 @@ LATEST_LINK?=		${PKGBASE}
  PKGLATESTFILE=		${PKGLATESTREPOSITORY}/${LATEST_LINK}${PKG_SUFX}
  
  CONFIGURE_SCRIPT?=	configure
@@ -272,7 +272,7 @@
  CONFIGURE_TARGET:=	${CONFIGURE_TARGET:S/--build=//}
  CONFIGURE_LOG?=		config.log
  
-@@ -2815,6 +2844,8 @@ SET_LATE_CONFIGURE_ARGS= \
+@@ -2811,6 +2840,8 @@ SET_LATE_CONFIGURE_ARGS= \
  SCRIPTS_ENV+=	CURDIR=${MASTERDIR} DISTDIR=${DISTDIR} \
  		  WRKDIR=${WRKDIR} WRKSRC=${WRKSRC} PATCHDIR=${PATCHDIR} \
  		  SCRIPTDIR=${SCRIPTDIR} FILESDIR=${FILESDIR} \
@@ -281,7 +281,7 @@
  		  PORTSDIR=${PORTSDIR} PREFIX=${PREFIX} LOCALBASE=${LOCALBASE}
  
  .if defined(BATCH)
-@@ -2856,7 +2887,7 @@ __pmlinks!=	${ECHO_CMD} '${MLINKS:S/	/ /
+@@ -2852,7 +2883,7 @@ __pmlinks!=	${ECHO_CMD} '${MLINKS:S/	/ /
  		else \
  			{ print "broken"; exit; } \
  	} \
@@ -290,7 +290,7 @@
  .if ${__pmlinks:Mbroken} == "broken"
  check-makevars::
  	@${ECHO_MSG} "${PKGNAME}: Makefile error: unable to parse MLINKS."
-@@ -2867,7 +2898,7 @@ _MLINKS=	${_MLINKS_PREPEND}
+@@ -2863,7 +2894,7 @@ _MLINKS=	${_MLINKS_PREPEND}
  .for lang in ${MANLANG:S%^%man/%:S%^man/""$%man%}
  .for ___pmlinks in ${__pmlinks}
  .for __lang in ${lang}
@@ -299,7 +299,7 @@
  .endfor
  .endfor
  .endfor
-@@ -2996,7 +3027,7 @@ _DESKTOPDIR_REL=
+@@ -2992,7 +3023,7 @@ _DESKTOPDIR_REL=
  
  # Check the machine architectures
  .if defined(ONLY_FOR_ARCHS)
@@ -308,7 +308,7 @@
  .if ${ARCH:M${__ARCH}} != ""
  __ARCH_OK?=		1
  .endif
-@@ -3006,7 +3037,7 @@ __ARCH_OK?=		1
+@@ -3002,7 +3033,7 @@ __ARCH_OK?=		1
  .endif
  
  .if defined(NOT_FOR_ARCHS)
@@ -317,7 +317,7 @@
  .if ${ARCH:M${__NARCH}} != ""
  .undef __ARCH_OK
  .endif
-@@ -3015,9 +3046,9 @@ __ARCH_OK?=		1
+@@ -3011,9 +3042,9 @@ __ARCH_OK?=		1
  
  .if !defined(__ARCH_OK)
  .if defined(ONLY_FOR_ARCHS)
@@ -329,7 +329,7 @@
  .endif
  IGNORE+=	while you are running ${ARCH}
  
-@@ -3150,6 +3181,7 @@ all:
+@@ -3146,6 +3177,7 @@ all:
  	  DISTDIR=${DISTDIR} WRKDIR=${WRKDIR} WRKSRC=${WRKSRC} \
  	  PATCHDIR=${PATCHDIR} SCRIPTDIR=${SCRIPTDIR} \
  	  FILESDIR=${FILESDIR} PORTSDIR=${PORTSDIR} PREFIX=${PREFIX} \
@@ -337,7 +337,7 @@
  	  BUILD_DEPENDS="${BUILD_DEPENDS}" RUN_DEPENDS="${RUN_DEPENDS}" \
  	  CONFLICTS="${CONFLICTS}" \
  	${ALL_HOOK}
-@@ -3505,9 +3537,31 @@ do-extract:
+@@ -3501,9 +3533,32 @@ do-extract:
  	@${RM} -rf ${WRKDIR}
  	@${MKDIR} ${WRKDIR}
  	@for file in ${EXTRACT_ONLY}; do \
@@ -358,7 +358,8 @@
 +			*.lzh)	_EXTRACT_CMD=${LHA_CMD} ; \
 +					_EXTRACT_BEFORE_ARGS="${LHA_BEFORE_ARGS}" ; \
 +					_EXTRACT_AFTER_ARGS="${LHA_AFTER_ARGS}" ;; \
-+			*.zip|*.ZIP|*.xpi)	_EXTRACT_CMD=${ZIP_EXTRACT_CMD} ; \
++			*.zip|*.ZIP|*.xpi) \
++				_EXTRACT_CMD=${ZIP_EXTRACT_CMD} ; \
 +					_EXTRACT_BEFORE_ARGS="${ZIP_BEFORE_ARGS}" ; \
 +					_EXTRACT_AFTER_ARGS="${ZIP_AFTER_ARGS}" ;; \
 +			*)	_EXTRACT_CMD=${TAR} ; \
@@ -372,7 +373,7 @@
  		fi; \
  	done
  .if !defined(EXTRACT_PRESERVE_OWNERSHIP)
-@@ -3562,7 +3616,7 @@ do-patch:
+@@ -3558,7 +3613,7 @@ do-patch:
  	@set -e ;\
  	if [ -d ${PATCHDIR} ]; then \
  		if [ "`${ECHO_CMD} ${PATCHDIR}/patch-*`" != "${PATCHDIR}/patch-*" ]; then \
@@ -381,7 +382,7 @@
  			PATCHES_APPLIED="" ; \
  			for i in ${PATCHDIR}/patch-*; do \
  				case $$i in \
-@@ -3587,6 +3641,33 @@ do-patch:
+@@ -3583,6 +3638,33 @@ do-patch:
  			done; \
  		fi; \
  	fi
@@ -415,7 +416,7 @@
  .endif
  
  .if !target(run-autotools-fixup)
-@@ -4866,14 +4947,14 @@ _DEPEND_ALWAYS=	0
+@@ -4862,14 +4944,14 @@ _DEPEND_ALWAYS=	0
  
  _INSTALL_DEPENDS=	\
  		if [ -n "${USE_PACKAGE_DEPENDS}" -o -n "${USE_PACKAGE_DEPENDS_ONLY}" ]; then \
@@ -432,7 +433,7 @@
  					${WRKDIR}/pkg-static add $${subpkgfile}; \
  					${RM} -f ${WRKDIR}/pkg-static; \
  				else \
-@@ -5091,7 +5172,7 @@ ALL-DEPENDS-LIST= \
+@@ -5087,7 +5169,7 @@ ALL-DEPENDS-LIST= \
  				continue;				\
  			fi;						\
  			${ECHO_CMD} $$d;				\
@@ -441,7 +442,7 @@
  				${ECHO_MSG} "${PKGNAME}: \"$$d\" erroneous -- dependency list incomplete" >&2; \
  				continue;				\
  			fi;						\
-@@ -5121,7 +5202,7 @@ CLEAN-DEPENDS-FULL= \
+@@ -5117,7 +5199,7 @@ CLEAN-DEPENDS-FULL= \
  				${ECHO_MSG} "${PKGNAME}: \"$$d\" non-existent -- dependency list incomplete" >&2; \
  				continue;				\
  			fi;						\
@@ -450,7 +451,7 @@
  				${ECHO_MSG} "${PKGNAME}: \"$$d\" erroneous -- dependency list incomplete" >&2; \
  				continue;				\
  			fi;						\
-@@ -5160,7 +5241,7 @@ CLEAN-DEPENDS-LIMITED= \
+@@ -5156,7 +5238,7 @@ CLEAN-DEPENDS-LIMITED= \
  				${ECHO_MSG} "${PKGNAME}: \"$$d\" non-existent -- dependency list incomplete" >&2; \
  				continue;				\
  			fi;						\
@@ -459,7 +460,7 @@
  				${ECHO_MSG} "${PKGNAME}: \"$$d\" erroneous -- dependency list incomplete" >&2; \
  				continue;				\
  			fi;						\
-@@ -5251,7 +5332,7 @@ FETCH_LIST?=	for i in $$deps; do \
+@@ -5247,7 +5329,7 @@ FETCH_LIST?=	for i in $$deps; do \
  			else	\
  				continue;	\
  			fi;;	\
@@ -468,7 +469,7 @@
  				continue;	\
  			fi;;	\
  		esac;	\
-@@ -5546,10 +5627,15 @@ _SUB_LIST_TEMP=	${SUB_LIST:S/$/!g/:S/^/
+@@ -5542,10 +5624,15 @@ _SUB_LIST_TEMP=	${SUB_LIST:S/$/!g/:S/^/
  apply-slist:
  .if defined(SUB_FILES)
  .for file in ${SUB_FILES}
@@ -487,7 +488,7 @@
  .endif
  .endfor
  .for i in pkg-message pkg-install pkg-deinstall pkg-req
-@@ -5893,6 +5979,7 @@ tags:
+@@ -5889,6 +5976,7 @@ tags:
  	OPSYS="${OPSYS:S/"/"'"'"/g:S/\$/\$\$/g:S/\\/\\\\/g}" \
  	OSREL="${OSREL:S/"/"'"'"/g:S/\$/\$\$/g:S/\\/\\\\/g}" \
  	OSVERSION="${OSVERSION:S/"/"'"'"/g:S/\$/\$\$/g:S/\\/\\\\/g}" \
