@@ -1,0 +1,2 @@
+post-configure:
+	${MV} ${WRKSRC}/src/tools/bootstrap ${WRKDIR}
