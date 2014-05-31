@@ -1,0 +1,11 @@
+--- bsd.qt.mk.orig	2014-05-31 08:20:24.725067000 +0000
++++ bsd.qt.mk
+@@ -261,7 +261,7 @@ QMAKESPEC?=		${QT_MKSPECDIR}/freebsd-${Q
+ # better to support custom settings. Dereferencing the detection allows to
+ # avoid forking a shell on each inclusion of this file, and to catch any CXX
+ # customization (via USE_GCC, etc.).
+-QMAKE_COMPILER=	$$(ccver="$$(${CXX} --version)"; case "$$ccver" in *clang*) echo clang ;; *) echo g++ ;; esac)
++QMAKE_COMPILER=	g++
+ 
+ # Import QMAKE_ENV and QMAKE_ARGS definitions.
+ USES+=			qmake:_env
