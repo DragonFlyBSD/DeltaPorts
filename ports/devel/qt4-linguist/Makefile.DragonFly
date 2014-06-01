@@ -1,2 +1,3 @@
 post-configure:
-	${MV} ${WRKSRC}/src/tools/bootstrap ${WRKDIR}
+	# bootstrap has started to appear on some systems but not all
+	${RM} -rf ${WRKSRC}/src/tools/bootstrap
