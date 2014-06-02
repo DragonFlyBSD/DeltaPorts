@@ -1,0 +1,10 @@
+--- pkg-plist.orig	2014-03-14 12:25:08.000000000 +0000
++++ pkg-plist
+@@ -82,7 +82,6 @@ lib/libjogl_awt.so
+ %%PORTDOCS%%%%DATADIR%%/overview-frame.html
+ %%PORTDOCS%%%%DATADIR%%/constant-values.html
+ %%PORTDOCS%%%%DATADIR%%/serialized-form.html
+-%%PORTDOCS%%%%DATADIR%%/resources/inherit.gif
+ %%PORTDOCS%%%%DATADIR%%/overview-tree.html
+ %%PORTDOCS%%%%DATADIR%%/index-all.html
+ %%PORTDOCS%%%%DATADIR%%/deprecated-list.html
