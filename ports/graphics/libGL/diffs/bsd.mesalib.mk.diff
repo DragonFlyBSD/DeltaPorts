@@ -1,19 +1,23 @@
---- bsd.mesalib.mk.orig	2014-05-05 13:44:50.585941000 +0000
+--- bsd.mesalib.mk.orig	2014-06-02 16:37:46.928135000 +0000
 +++ bsd.mesalib.mk
-@@ -68,8 +68,12 @@ SHEBANG_FILES=	src/gallium/*/*/*.py src/
+@@ -56,6 +56,7 @@ SHEBANG_FILES=	src/gallium/*/*/*.py src/
  		src/gallium/drivers/svga/svgadump/svga_dump.py \
  		src/glsl/tests/compare_ir src/mapi/glapi/gen/*.py \
  		src/mapi/mapi/mapi_abi.py
 +EXTRA_PATCHES+= ${DFLY_PATCHDIR}/extra-newxorg-src_gallium_include_pipe_p__config.h
+ 
+ # i386 triggers clang bug 19778. This happens with clang 3.4.1 and older. 
+ . if ${ARCH} == i386
+@@ -63,6 +64,8 @@ USE_GCC=yes
+ . endif
  .else
  CONFIGURE_ARGS+=--disable-glut --disable-glw --disable-glu
 +EXTRA_PATCHES+= ${DFLY_PATCHDIR}/extra-oldxorg-bin_mklib \
 +		${DFLY_PATCHDIR}/extra-oldxorg-src_gallium_include_pipe_p__config.h
-+
  
  ALL_TARGET=		default
  .endif
-@@ -80,6 +84,7 @@ PATCHDIR=		${MASTERDIR}/files
+@@ -73,6 +76,7 @@ PATCHDIR=		${MASTERDIR}/files
  .else
  PATCHDIR=		${MASTERDIR}/files-old
  .endif
@@ -21,7 +25,7 @@
  DESCR=			${.CURDIR}/pkg-descr
  PLIST=			${.CURDIR}/pkg-plist
  WRKSRC=			${WRKDIR}/Mesa-${MESADISTVERSION}
-@@ -114,8 +119,6 @@ CONFIGURE_ARGS+=	--enable-xcb
+@@ -107,8 +111,6 @@ CONFIGURE_ARGS+=	--enable-xcb
  .endif
  
  post-patch:
