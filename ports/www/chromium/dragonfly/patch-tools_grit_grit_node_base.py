@@ -1,14 +1,15 @@
---- tools/grit/grit/node/base.py.intermediate	2014-01-05 13:16:12.322237000 +0000
+--- tools/grit/grit/node/base.py.orig	2014-05-14 19:24:30.000000000 +0000
 +++ tools/grit/grit/node/base.py
-@@ -460,9 +460,10 @@ class Node(object):
-         'is_win': target_platform in ('cygwin', 'win32'),
-         'is_android': target_platform == 'android',
-         'is_ios': target_platform == 'ios',
--        'is_bsd': 'bsd' in target_platform,
-+        'is_bsd': (target_platform.startswith('dragonfly') or 'bsd' in target_platform),
-         'is_posix': (target_platform in ('darwin', 'linux2', 'linux3', 'sunos5',
-                                          'android', 'ios')
-+                    or target_platform.startswith('dragonfly')
-                     or 'bsd' in target_platform),
-         'pp_ifdef' : pp_ifdef,
-         'pp_if' : pp_if,
+@@ -473,10 +473,11 @@ class Node(object):
+       elif name == 'is_ios':
+         value = target_platform == 'ios'
+       elif name == 'is_bsd':
+-        value = 'bsd' in target_platform
++        value = (target_platform.startswith('dragonfly') or 'bsd' in target_platform)
+       elif name == 'is_posix':
+         value = (target_platform in ('darwin', 'linux2', 'linux3', 'sunos5',
+                                      'android', 'ios')
++                 or target_platform.startswith('dragonfly')
+                  or 'bsd' in target_platform)
+ 
+       elif name == 'pp_ifdef':
