@@ -1,3 +1,4 @@
+CONFIGURE_ENV+=	disable_fatal_linker_warnings=1
 CFLAGS+=	-D__FreeBSD__=9
 
 .if ${DFLYVERSION} < 300703
