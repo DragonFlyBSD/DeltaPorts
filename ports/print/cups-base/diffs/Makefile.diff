@@ -1,6 +1,6 @@
---- Makefile.orig	2014-05-06 11:19:19.055511000 +0000
+--- Makefile.orig	2014-06-19 23:22:53.910567000 +0000
 +++ Makefile
-@@ -19,12 +19,12 @@ CONFLICTS=	LPRng-[0-9]*
+@@ -19,11 +19,11 @@ CONFLICTS=	LPRng-[0-9]*
  
  UNIQUENAME=	${PORTNAME}${PKGNAMESUFFIX}
  
@@ -8,14 +8,13 @@
 +USES+=		gmake pkgconfig iconv tar:bzip2
  DESTDIRNAME=	DSTROOT
  GNU_CONFIGURE=	yes
- CFLAGS+=	${PTHREAD_CFLAGS}
  CPPFLAGS+=	-I${LOCALBASE}/include
 -LDFLAGS+=	-L${LOCALBASE}/lib
 +LDFLAGS+=	-L${LOCALBASE}/lib ${ICONV_LIB}
- DSOFLAGS=	-Wl,-rpath,${PREFIX}/lib -L${PREFIX}/lib ${LDFLAGS}
+ DSOFLAGS=	-Wl,-rpath,${PREFIX}/lib ${LDFLAGS} ${LIBS}
  CONFIGURE_ENV=	DSOFLAGS="${DSOFLAGS}"
  CONFIGURE_ARGS+=	--localstatedir=/var			\
-@@ -42,7 +42,6 @@ CONFIGURE_ARGS+=	--localstatedir=/var
+@@ -41,7 +41,6 @@ CONFIGURE_ARGS+=	--localstatedir=/var
  CUPS_CACHEDIR?=	/var/db/cups
  CUPS_SPOOLDIR=	/var/spool/cups
  CUPS_SOCKET?=	/var/run/cups.sock
@@ -23,7 +22,7 @@
  WRKSRC=		${WRKDIR}/${PORTNAME}-${DISTVERSION}
  
  CUPSSYSGRP=	wheel
-@@ -75,12 +74,14 @@ XDG_OPEN_DESC=		Build with XDG_OPEN as b
+@@ -74,12 +73,14 @@ XDG_OPEN_DESC=		Build with XDG_OPEN as b
  
  .include <bsd.port.options.mk>
  
@@ -36,28 +35,19 @@
  INSTALL_WRKSRC=	${WRKSRC}/cups
  PLIST=		${MASTERDIR}/pkg-plist.client
 -USES+=		iconv
--LDFLAGS+=	${ICONV_LIB}
+-LIBS+=		${ICONV_LIB}
  USE_LDCONFIG=	yes
  PKGMESSAGE=	${NONEXISTENT}
  DESCR=		${MASTERDIR}/pkg-descr.client
-@@ -192,6 +193,7 @@ RUN_DEPENDS+=		xdg-open:${PORTSDIR}/deve
+@@ -188,6 +189,7 @@ RUN_DEPENDS+=		xdg-open:${PORTSDIR}/deve
+ .endif
+ 
  .if !defined(CUPS_CLIENT) && !defined(CUPS_IMAGE) && ${PORT_OPTIONS:MLIBUSB}
- CPPFLAGS+=		-I/usr/include
- LDFLAGS+=		-L/usr/lib
 +USES+=			usb
  CONFIGURE_ARGS+=	--enable-libusb
  .else
  CONFIGURE_ARGS+=	--disable-libusb
-@@ -205,7 +207,7 @@ PLIST_SUB+=		WITH_ICONS=""
- PLIST_SUB+=		WITH_ICONS="@comment "
- .endif
- 
--CONFIGURE_ARGS+=	LIBS="-lssp_nonshared"
-+#CONFIGURE_ARGS+=	LIBS="-lssp_nonshared"
- 
- .if ! defined(CUPS_CLIENT) && ! defined(CUPS_IMAGE)
- SUB_FILES+=	ulpt-cupsd.conf ulpt-cupsd.sh
-@@ -216,7 +218,7 @@ post-patch:
+@@ -214,7 +216,7 @@ post-patch:
  	@${REINPLACE_CMD} -e 's|@PIEFLAGS@||' ${WRKSRC}/Makedefs.in
  .endif
  .if ${PORT_OPTIONS:MMDNSRESPONDER}
@@ -66,9 +56,9 @@
  		${WRKSRC}/backend/Makefile
  .endif
  .if  ${PORT_OPTIONS:MXDG_OPEN}
-@@ -292,6 +294,7 @@ post-install:
- 	${INSTALL_DATA} ${WRKSRC}/cups/raster.h ${STAGEDIR}${PREFIX}/include/cups
- .else
+@@ -293,6 +295,7 @@ post-install:
+ 	${STRIP_CMD} ${STAGEDIR}${PREFIX}/lib/libcupsppdc.so.1
+ 	${STRIP_CMD} ${STAGEDIR}${PREFIX}/lib/libcupsmime.so.1
  .if  ${PORT_OPTIONS:MGHOSTSCRIPT} || ${PORT_OPTIONS:MXPDF}
 +	${INSTALL} -d ${PREFIX}/libexec/cups/filter
  	${INSTALL_PROGRAM} ${WRKSRC}/filter/pdftops  ${STAGEDIR}${PREFIX}/libexec/cups/filter/

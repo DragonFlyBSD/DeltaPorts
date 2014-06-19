@@ -1,13 +1,13 @@
---- pkg-plist.orig	2014-05-31 23:44:10.333209000 +0000
+--- pkg-plist.orig	2014-06-19 23:07:55.633606000 +0000
 +++ pkg-plist
 @@ -63,8 +63,8 @@ include/dar/user_interaction.hpp
  include/dar/wrapperlib.hpp
  lib/libdar.a
  lib/libdar.so
 -lib/libdar.so.5000
--lib/libdar.so.5000.5.0
+-lib/libdar.so.5000.6.1
 +lib/libdar.so.0
-+lib/libdar.so.0.5.0
++lib/libdar.so.0.6.1
  libdata/pkgconfig/libdar.pc
  man/man1/dar.1.gz
  man/man1/dar_cp.1.gz

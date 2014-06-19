@@ -1,24 +1,23 @@
---- Makefile.orig	2013-10-13 18:19:09.801534000 +0000
+--- Makefile.orig	2014-06-19 23:10:10.985545000 +0000
 +++ Makefile
-@@ -11,12 +11,15 @@ MAINTAINER=	ports@FreeBSD.org
+@@ -11,11 +11,14 @@ MAINTAINER=	ports@FreeBSD.org
  COMMENT=	Anti-aliased font support for gtk+
  
  LIB_DEPENDS=	libXft.so:${PORTSDIR}/x11-fonts/libXft
 +LIB_DEPENDS+=	fontconfig:${PORTSDIR}/x11-fonts/fontconfig
 +LIB_DEPENDS+=	freetype:${PORTSDIR}/print/freetype2
  
- USE_AUTOTOOLS=	libtool
  USE_GNOME=	gtk12
--USES=		iconv pkgconfig
+-USES=		iconv pkgconfig libtool
++USES=		iconv pkgconfig libtool gettext
 +USE_XORG+=	x11 xft
-+USES=		iconv pkgconfig gettext
  GNU_CONFIGURE=	yes
 -LDFLAGS+=	-L${LOCALBASE}/lib -lgnuregex ${ICONV_LIB}
 +LDFLAGS+=	-L${LOCALBASE}/lib ${ICONV_LIB}
  CFLAGS+=	`pkg-config xft --cflags`
  CONFIGURE_ARGS=	--sbindir=${PREFIX}/bin \
  		--without-gnome
-@@ -38,8 +41,8 @@ post-patch:
+@@ -36,8 +39,8 @@ post-patch:
  		 s|DESTDIR)\$$(datadir|DESTDIR)\$$(pkgdatadir|g ; \
  		 s|la_LDFLAGS =.*$$|la_LDFLAGS = -module -avoid-version|g'
  .for file in gdkxft_sysinstall.in gdkxft.c generate.pl

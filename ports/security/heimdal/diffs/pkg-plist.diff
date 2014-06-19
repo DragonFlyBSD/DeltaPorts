@@ -1,6 +1,6 @@
---- pkg-plist.orig	2013-11-24 09:55:19.519075000 +0000
+--- pkg-plist.orig	2014-06-19 23:05:00.134057000 +0000
 +++ pkg-plist
-@@ -136,6 +136,10 @@ lib/libheimbase.a
+@@ -109,6 +109,10 @@ lib/libheimbase.a
  lib/libheimbase.la
  lib/libheimbase.so
  lib/libheimbase.so.1
@@ -8,6 +8,6 @@
 +lib/libheimedit.la
 +lib/libheimedit.so
 +lib/libheimedit.so.0
- %%SQLITE%%lib/libheimsqlite.a
- %%SQLITE%%lib/libheimsqlite.la
- %%SQLITE%%lib/libheimsqlite.so
+ %%NO_SQLITE%%lib/libheimsqlite.a
+ %%NO_SQLITE%%lib/libheimsqlite.la
+ %%NO_SQLITE%%lib/libheimsqlite.so

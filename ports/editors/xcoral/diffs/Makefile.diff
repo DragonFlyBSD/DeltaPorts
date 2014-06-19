@@ -1,11 +1,10 @@
---- Makefile.orig	2014-02-10 09:16:47.961637000 +0000
+--- Makefile.orig	2014-06-19 22:56:18.745109000 +0000
 +++ Makefile
-@@ -11,17 +11,11 @@ COMMENT=	A multiwindow mouse-based text
- 
+@@ -12,16 +12,10 @@ COMMENT=	Multiwindow mouse-based text ed
  USE_XORG=	x11
  GNU_CONFIGURE=	yes
--CONFIGURE_ENV=	LIBS="-lgnuregex"
  CONFIGURE_ARGS=	--libdir=${PREFIX}/share
+-LIBS+=		-lgnuregex
  MAKE_JOBS_UNSAFE=	yes
  
  PLIST_SUB=	VERSION="${PORTVERSION}"

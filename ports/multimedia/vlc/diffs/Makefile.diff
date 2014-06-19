@@ -1,17 +1,11 @@
---- Makefile.orig	2013-11-15 21:59:28.559545000 +0000
+--- Makefile.orig	2014-06-19 22:59:58.372029000 +0000
 +++ Makefile
-@@ -257,13 +257,13 @@ LDFLAGS+=	${PTHREAD_LIBS} -lc
- CONFIGURE_ARGS+=	--enable-vlc \
- 			--enable-avcodec \
- 			--enable-avformat \
--			--enable-oss \
- 			--enable-postproc \
- 			--enable-sftp \
- 			--enable-libgcrypt \
- 			--disable-alsa \
- 			--disable-dc1394 \
- 			--disable-directfb \
-+			--disable-oss \
- 			--disable-projectm \
- 			--disable-telx \
- 			--disable-tremor \
+@@ -32,7 +32,7 @@ INSTALL_TARGET=	install-strip
+ GNU_CONFIGURE=	yes
+ CONFIGURE_ARGS=	--enable-avcodec --enable-avformat --enable-dvbpsi \
+ 		--enable-fontconfig --enable-freetype --enable-libgcrypt \
+-		--enable-libxml2 --enable-oss --enable-postproc \
++		--enable-libxml2 --disable-oss --enable-postproc \
+ 		--enable-swscale --enable-vlc \
+ 		--disable-alsa --disable-chromaprint --disable-crystalhd \
+ 		--disable-dc1394 --disable-decklink --disable-directfb \
