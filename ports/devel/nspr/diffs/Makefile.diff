@@ -1,11 +1,11 @@
---- Makefile.orig	2013-08-15 14:19:56.113592000 +0000
+--- Makefile.orig	2014-06-20 13:07:30.721318000 +0000
 +++ Makefile
 @@ -14,8 +14,9 @@ WRKSRC=		${WRKDIR}/${DISTNAME}/nspr/buil
+ USES=		gmake
  USE_LDCONFIG=	yes
- USE_GMAKE=	yes
  GNU_CONFIGURE=	yes
 -CONFIGURE_SCRIPT=../configure
-+USE_AUTOTOOLS=	autoconf213
++USE_AUTOTOOLS=	autoconf
  CONFIGURE_ARGS=	--srcdir=${WRKSRC:H}
 +CONFIGURE_WRKSRC= ${WRKSRC}/..
  
@@ -20,5 +20,5 @@
 +		../${CONFIGURE_SCRIPT} ${CONFIGURE_ARGS}
 +
  do-install:
- 	${MKDIR} ${PREFIX}/include/nspr
+ 	${MKDIR} ${STAGEDIR}${PREFIX}/include/nspr
  	${TAR} -C ${WRKSRC}/dist/include --dereference -cf - . | \
