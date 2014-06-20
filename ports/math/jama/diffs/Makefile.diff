@@ -1,0 +1,11 @@
+--- Makefile.orig	2014-06-20 11:50:42.439634000 +0000
++++ Makefile
+@@ -26,7 +26,7 @@ do-install:
+ 	${EXTRACT_CMD} ${EXTRACT_BEFORE_ARGS} ${DISTDIR}/${DIST_SUBDIR}/${DISTNAME}${EXTRACT_SUFX} \
+ 		-d ${STAGEDIR}${PREFIX}/include/tnt
+ 	${MKDIR} ${WRKDIR}/doc ${STAGEDIR}${DOCSDIR}
+-	${EXTRACT_CMD} ${EXTRACT_BEFORE_ARGS} ${DISTDIR}/${DIST_SUBDIR}/jama102doc.zip \
++	${UNZIP_CMD} -o ${DISTDIR}/${DIST_SUBDIR}/jama102doc.zip \
+ 		-d ${WRKDIR}/doc
+ 	(cd ${WRKDIR}/doc/doxygen && ${COPYTREE_SHARE} . ${STAGEDIR}${DOCSDIR})
+ 
