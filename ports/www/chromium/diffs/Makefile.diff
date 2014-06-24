@@ -1,15 +1,15 @@
---- Makefile.orig	2014-06-07 08:15:06.196455000 +0000
+--- Makefile.orig	2014-06-24 17:53:16.873001000 +0000
 +++ Makefile
-@@ -35,6 +35,8 @@ LIB_DEPENDS=	libcairo.so:${PORTSDIR}/gra
- 		libgcrypt.so:${PORTSDIR}/security/libgcrypt \
- 		libpci.so:${PORTSDIR}/devel/libpci
+@@ -37,6 +37,8 @@ LIB_DEPENDS=	libcairo.so:${PORTSDIR}/gra
+ 		libpci.so:${PORTSDIR}/devel/libpci \
+ 		libdrm.so:${PORTSDIR}/graphics/libdrm
  
 +LIB_DEPENDS+=	gssapi_krb5:${PORTSDIR}/security/krb5
 +
  RUN_DEPENDS=	${LOCALBASE}/lib/alsa-lib/libasound_module_pcm_oss.so:${PORTSDIR}/audio/alsa-plugins \
  		${LOCALBASE}/lib/X11/fonts/Droid/fonts.dir:${PORTSDIR}/x11-fonts/droid-fonts-ttf
  
-@@ -63,6 +65,7 @@ GYP_DEFINES+=	use_cups=1 \
+@@ -65,6 +67,7 @@ GYP_DEFINES+=	use_cups=1 \
  		linux_use_heapchecker=0 \
  		test_isolation_mode=noop \
  		clang_use_chrome_plugins=0 \
@@ -17,7 +17,7 @@
  		disable_nacl=1 \
  		enable_webrtc=1 \
  		enable_openmax=1 \
-@@ -118,10 +121,10 @@ GYP_DEFINES+=	use_pulseaudio=0
+@@ -120,10 +123,10 @@ GYP_DEFINES+=	use_pulseaudio=0
  GYP_DEFINES+=	disable_sse2=1
  .endif
  
@@ -30,15 +30,18 @@
  LIB_DEPENDS+=	libexecinfo.so:${PORTSDIR}/devel/libexecinfo
  .endif
  
-@@ -143,6 +146,7 @@ CONFIGURE_ENV+=	CC="${CC}" \
- 		GYP_GENERATORS=ninja \
+@@ -142,8 +145,10 @@ GYP_DEFINES+=	buildtype=Official
+ 
+ CONFIGURE_ENV+=	CC="${CC}" \
+ 		CXX="${CXX}" \
++		GYP_GENERATORS=ninja \
  		GYP_DEFINES="${GYP_DEFINES}"
  MAKE_ENV+=	BUILDTYPE=${BUILDTYPE} \
 +		GYPFLAGS=-DOS=freebsd \
  		GPERF="${LOCALBASE}/bin/gperf"
  MAKE_ARGS+=	-C out/${BUILDTYPE}
  
-@@ -154,6 +158,7 @@ CFLAGS+=	-Wno-unknown-warning
+@@ -155,6 +160,7 @@ CFLAGS+=	-Wno-unknown-warning
  EXTRA_PATCHES+=	${FILESDIR}/extra-patch-gcc
  .else
  GYP_DEFINES+=	clang=1
@@ -46,7 +49,7 @@
  CFLAGS+=	-Wno-unknown-warning-option
  EXTRA_PATCHES+=	${FILESDIR}/extra-patch-clang
  CONFIGURE_ENV+=	AR=/usr/bin/ar
-@@ -178,6 +183,8 @@ pre-everything::
+@@ -179,6 +185,8 @@ pre-everything::
  
  post-patch:
  	@${REINPLACE_CMD} -e "s|/usr/local|${LOCALBASE}|" \
@@ -55,7 +58,7 @@
  		${WRKSRC}/crypto/crypto.gyp \
  		${WRKSRC}/v8/tools/gyp/v8.gyp \
  		${WRKSRC}/v8/build/toolchain.gypi
-@@ -186,6 +193,17 @@ post-patch:
+@@ -187,6 +195,17 @@ post-patch:
  	@${REINPLACE_CMD} -e "s|/usr/bin/gcc|${CC}|" \
  		${WRKSRC}/third_party/WebKit/Source/build/scripts/preprocessor.pm \
  		${WRKSRC}/third_party/WebKit/Source/build/scripts/scripts.gypi
