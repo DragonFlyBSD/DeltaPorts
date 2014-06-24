@@ -6,7 +6,7 @@
  #include <endian.h>
 -#elif defined(__OpenBSD__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
 +#elif defined(__OpenBSD__) || defined(__FreeBSD__) || defined(__NetBSD__) \
-+   || defined(__APPLE__) || define(__DragonFly__)
++   || defined(__APPLE__) || defined(__DragonFly__)
  #if defined(__OpenBSD__)
  #include "asterisk/compat.h"
  #endif
