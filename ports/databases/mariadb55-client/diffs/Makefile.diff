@@ -1,0 +1,10 @@
+--- Makefile.orig	2014-06-25 08:09:26.016413000 +0000
++++ Makefile
+@@ -9,6 +9,7 @@ MASTERDIR=	${.CURDIR}/../mariadb55-serve
+ 
+ FILESDIR=	${.CURDIR}/files
+ PATCHDIR=	${.CURDIR}/files
++DFLY_PATCHDIR=	${.CURDIR}/dragonfly
+ PLIST=		${.CURDIR}/pkg-plist
+ 
+ CONFLICTS_INSTALL=	mysql[0-9][0-9]-client-* mariadb[0-46-9][0-9]-client-* mariadb5.[0-46-9]-client-* percona[0-9][0-9]-client-*
