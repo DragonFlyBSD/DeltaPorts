@@ -1,0 +1,11 @@
+--- Makefile.orig	2014-06-27 18:53:38.078793000 +0000
++++ Makefile
+@@ -13,8 +13,6 @@ PKGNAMEPREFIX=	latex-
+ MAINTAINER=	brix@FreeBSD.org
+ COMMENT=	A LaTeX package for Subversion support
+ 
+-LICENSE=	LPPL10
+-
+ USE_TEX=	latex
+ PLIST_SUB=	MKTEXLSR=${MKTEXLSR} CLASSDIR=${CLASSDIR}
+ 
