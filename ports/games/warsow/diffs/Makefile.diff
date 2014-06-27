@@ -1,0 +1,11 @@
+--- Makefile.orig	2014-06-27 19:55:42.063418000 +0000
++++ Makefile
+@@ -123,7 +123,7 @@ post-patch: .SILENT
+ 		s| -msse2||' \
+ 		${WRKSRC}/Makefile
+ # Adjust architecture names, get rid of ``freebsd_'' prefix
+-	${REINPLACE_CMD} -e 's/x86_64/amd64/ ; s/freebsd_//' \
++	${REINPLACE_CMD} -e 's/freebsd_//' \
+ 		${WRKSRC}/gameshared/q_arch.h
+ # Search directory provided by warsow-data port instead of current (doing
+ # so allows us not to install any wrapper scripts)
