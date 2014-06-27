@@ -1,0 +1,11 @@
+--- Makefile.orig	2014-06-27 21:12:24.752041000 +0000
++++ Makefile
+@@ -13,7 +13,7 @@ COMMENT=	PGP International version - imp
+ 
+ WRKSRC=		${WRKDIR}/pgp263in/src
+ MAKEFILE=	makefile
+-ALL_TARGET=	freebsd-${ARCH} OS_CFLAGS="${CFLAGS}"
++ALL_TARGET=	freebsd-${ARCH:S/x86_64/amd64/} OS_CFLAGS="${CFLAGS}"
+ PGPLIB=		${STAGEDIR}${PREFIX}/lib/pgpin
+ 
+ do-install:
