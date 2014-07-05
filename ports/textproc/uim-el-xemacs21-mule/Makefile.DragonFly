@@ -1,1 +1,0 @@
-IGNORE= requires makefile from editors/emacs21-mule which doesn't build.
