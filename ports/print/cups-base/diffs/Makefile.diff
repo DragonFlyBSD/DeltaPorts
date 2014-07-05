@@ -1,4 +1,4 @@
---- Makefile.orig	2014-06-19 23:22:53.910567000 +0000
+--- Makefile.orig	2014-07-05 08:16:59.284817000 +0000
 +++ Makefile
 @@ -19,11 +19,11 @@ CONFLICTS=	LPRng-[0-9]*
  
@@ -22,7 +22,7 @@
  WRKSRC=		${WRKDIR}/${PORTNAME}-${DISTVERSION}
  
  CUPSSYSGRP=	wheel
-@@ -74,12 +73,14 @@ XDG_OPEN_DESC=		Build with XDG_OPEN as b
+@@ -88,12 +87,14 @@ ZEROCONF_DESC=		Zeroconf support
  
  .include <bsd.port.options.mk>
  
@@ -39,7 +39,7 @@
  USE_LDCONFIG=	yes
  PKGMESSAGE=	${NONEXISTENT}
  DESCR=		${MASTERDIR}/pkg-descr.client
-@@ -188,6 +189,7 @@ RUN_DEPENDS+=		xdg-open:${PORTSDIR}/deve
+@@ -199,6 +200,7 @@ RUN_DEPENDS+=		xdg-open:${PORTSDIR}/deve
  .endif
  
  .if !defined(CUPS_CLIENT) && !defined(CUPS_IMAGE) && ${PORT_OPTIONS:MLIBUSB}
@@ -47,7 +47,7 @@
  CONFIGURE_ARGS+=	--enable-libusb
  .else
  CONFIGURE_ARGS+=	--disable-libusb
-@@ -214,7 +216,7 @@ post-patch:
+@@ -222,7 +224,7 @@ post-patch:
  	@${REINPLACE_CMD} -e 's|@PIEFLAGS@||' ${WRKSRC}/Makedefs.in
  .endif
  .if ${PORT_OPTIONS:MMDNSRESPONDER}
@@ -56,11 +56,3 @@
  		${WRKSRC}/backend/Makefile
  .endif
  .if  ${PORT_OPTIONS:MXDG_OPEN}
-@@ -293,6 +295,7 @@ post-install:
- 	${STRIP_CMD} ${STAGEDIR}${PREFIX}/lib/libcupsppdc.so.1
- 	${STRIP_CMD} ${STAGEDIR}${PREFIX}/lib/libcupsmime.so.1
- .if  ${PORT_OPTIONS:MGHOSTSCRIPT} || ${PORT_OPTIONS:MXPDF}
-+	${INSTALL} -d ${PREFIX}/libexec/cups/filter
- 	${INSTALL_PROGRAM} ${WRKSRC}/filter/pdftops  ${STAGEDIR}${PREFIX}/libexec/cups/filter/
- .endif
- 	${LN} -sf lpr ${STAGEDIR}${PREFIX}/bin/lpr-cups
