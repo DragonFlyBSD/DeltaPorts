@@ -1,0 +1,28 @@
+--- Makefile.orig	2014-07-10 19:42:09.457223000 +0000
++++ Makefile
+@@ -54,6 +54,7 @@ JRE_IMAGEDIR=	${JDK_BUILDDIR}/images/j2s
+ .else
+ JRE_IMAGEDIR=	${JDK_BUILDDIR}/images/j2re-image
+ .endif
++JDK_ARCH=       ${ARCH:S/x86_64/amd64/}
+ JDK_OSARCH=	bsd-${ARCH:S/i386/x86/:S/amd64/x86_64/}
+ INSTALLDIR=	${PREFIX}/${PKGBASE}
+ 
+@@ -229,13 +230,14 @@ do-install:
+ 	@cd ${JDK_IMAGEDIR} && ${COPYTREE_SHARE} . ${STAGEDIR}${INSTALLDIR}
+ 	@cd ${STAGEDIR}${INSTALLDIR} && \
+ 	    ${FIND} bin jre/bin -type f -exec ${CHMOD} ${BINMODE} {} \; && \
+-	    ${CHMOD} ${BINMODE} jre/lib/${ARCH}/jexec \
+-	    jre/lib/${ARCH}/jspawnhelper lib/${ARCH}/jexec
++	    ${CHMOD} ${BINMODE} jre/lib/${JDK_ARCH}/jexec \
++	    jre/lib/${JDK_ARCH}/jspawnhelper lib/${JDK_ARCH}/jexec
++	cd ${STAGEDIR}${INSTALLDIR}/include && ln -s dragonfly freebsd
+ .else
+ 	@cd ${JRE_IMAGEDIR} && ${COPYTREE_SHARE} . ${STAGEDIR}${INSTALLDIR}
+ 	@cd ${STAGEDIR}${INSTALLDIR} && \
+ 	    ${FIND} bin -type f -exec ${CHMOD} ${BINMODE} {} \; && \
+-	    ${CHMOD} ${BINMODE} lib/${ARCH}/jexec lib/${ARCH}/jspawnhelper
++	    ${CHMOD} ${BINMODE} lib/${JDK_ARCH}/jexec lib/${JDK_ARCH}/jspawnhelper
+ .endif
+ 	@${ECHO} "@unexec ${LOCALBASE}/bin/unregistervm ${INSTALLDIR}/bin/java" >> ${TMPPLIST}
+ 	@${FIND} -s ${STAGEDIR}${INSTALLDIR} -not -type d | ${SORT} | \
