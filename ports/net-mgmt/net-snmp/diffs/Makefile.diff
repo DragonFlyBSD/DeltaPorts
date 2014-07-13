@@ -1,0 +1,15 @@
+--- Makefile.orig	2014-07-13 22:34:30.247038000 +0000
++++ Makefile
+@@ -205,11 +205,7 @@ CONFLICTS=	ucd-snmp-4.* net-snmp-5.3.*
+ 
+ .include <bsd.port.pre.mk>
+ 
+-.if defined(WITH_OPENSSL_PORT) || defined(OPENSSL_PORT)
+-LCRYPTO=	-lcrypto
+-.else
+-LCRYPTO=
+-.endif
++LCRYPTO=	-lcrypto -lssl -lwrap
+ 
+ pre-everything::
+ 	@${ECHO_MSG}
