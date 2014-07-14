@@ -1,2 +1,0 @@
-MASK
-# NO_PACKAGE=	binary linked against OpenSSL must not be redistributed
