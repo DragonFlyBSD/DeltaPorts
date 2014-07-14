@@ -1,2 +1,0 @@
-MASK
-# NO_PACKAGE=		$${TET_ROOT} needs to be set at compile time.
