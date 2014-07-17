@@ -1,0 +1,14 @@
+--- Makefile.orig	2014-07-17 08:24:24.443494000 +0000
++++ Makefile
+@@ -23,9 +23,9 @@ GNU_CONFIGURE=	yes
+ WRKSRC=		${WRKDIR}/aurora-1.5
+ 
+ post-extract:
+-	@(cd ${WRKDIR} && ${EXTRACT_CMD} ${EXTRACT_BEFORE_ARGS} \
++	@(cd ${WRKDIR} && ${TAR} ${EXTRACT_BEFORE_ARGS} \
+ 		aurora-gtk-engine-1.5.tar.gz ${EXTRACT_AFTER_ARGS})
+-	@(cd ${WRKDIR} && ${EXTRACT_CMD} ${EXTRACT_BEFORE_ARGS} \
++	@(cd ${WRKDIR} && ${TAR} ${EXTRACT_BEFORE_ARGS} \
+ 		Aurora.tar.bz2 ${EXTRACT_AFTER_ARGS})
+ 	@${RM} ${WRKDIR}/Aurora/metacity-1/metacity-theme-2.xml~
+ 
