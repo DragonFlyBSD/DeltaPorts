@@ -1,6 +1,6 @@
---- Makefile.orig	2014-04-17 12:16:06.570567000 +0000
+--- Makefile.orig	2014-07-20 11:57:08.373642000 +0000
 +++ Makefile
-@@ -32,7 +32,7 @@ MAKE_ARGS+=		INSTALL_SHARED="${INSTALL_L
+@@ -37,7 +37,7 @@ MAKE_ARGS+=		INSTALL_SHARED="${INSTALL_L
  MAKE_ARGS+=		LIBPC="${PREFIX}/libdata/pkgconfig"			# Until pathfix gets support for files other than Makefile.in
  
  PLIST_SUB=		VER=${PYTHON_VER} ABI=${ABIFLAGS} XY=${PYTHON_SUFFIX} \

@@ -1,6 +1,6 @@
---- Makefile.orig	2014-06-19 22:56:18.745109000 +0000
+--- Makefile.orig	2014-07-20 11:55:16.653486000 +0000
 +++ Makefile
-@@ -12,16 +12,10 @@ COMMENT=	Multiwindow mouse-based text ed
+@@ -12,18 +12,12 @@ COMMENT=	Multiwindow mouse-based text ed
  USE_XORG=	x11
  GNU_CONFIGURE=	yes
  CONFIGURE_ARGS=	--libdir=${PREFIX}/share
@@ -8,6 +8,8 @@
  MAKE_JOBS_UNSAFE=	yes
  
  PLIST_SUB=	VERSION="${PORTVERSION}"
+ 
+ OPTIONS_DEFINE=	DOCS
  
 -post-patch:
 -	@${REINPLACE_CMD} -e 's| regex\.c | |g ; \
