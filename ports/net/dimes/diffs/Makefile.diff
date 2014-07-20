@@ -1,0 +1,12 @@
+--- Makefile.orig	2014-07-20 17:46:11.277221000 +0000
++++ Makefile
+@@ -19,7 +19,8 @@ BUILD_WRKSRC=	${WRKSRC}/scripts_linux
+ USE_JAVA=	yes
+ JAVA_VERSION=	1.6+
+ #java-linux required
+-JAVA_OS=	linux
++#JAVA_OS=	linux
++IGNORE=		Only builds with linux-jdk java
+ #all vendors except forbidden: ibm
+ JAVA_VENDOR=	sun
+ DATADIR=	${JAVASHAREDIR}/dimes
