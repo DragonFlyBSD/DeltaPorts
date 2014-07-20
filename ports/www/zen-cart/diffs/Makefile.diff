@@ -1,0 +1,18 @@
+--- Makefile.orig	2014-07-20 08:32:14.702511000 +0000
++++ Makefile
+@@ -8,13 +8,14 @@ CATEGORIES=	www
+ MASTER_SITES=	http://www.akherb.com/FreeBSD/source/ \
+ 		LOCAL/beech
+ DISTNAME=	zen-cart-v1.3.9h-full-fileset-10262010
++EXTRACT_SUFX=	.zip
+ 
+ MAINTAINER=	ports@FreeBSD.org
+ COMMENT=	PHP-based user-friendly, open source shopping cart
+ 
+ LICENSE=	GPLv2
+ LICENSE_FILE=	${WRKSRC}/license.txt
+-USES=		dos2unix zip
++USES=		dos2unix
+ USE_PHP=	yes
+ WANT_PHP_WEB=	yes
+ DOS2UNIX_REGEX=	.*\.php
