@@ -1,14 +1,6 @@
 --- Makefile.orig	2014-07-15 14:39:40.583260000 +0000
 +++ Makefile
-@@ -30,6 +30,7 @@ USE_WX=		3.0
- WX_UNICODE=	yes
- 
- CFLAGS+=	-I${LOCALBASE}/include/libpng15
-+LDFLAGS+=	-L${LOCALBASE}/lib -lssl -lcrypto
- WRKSRC=		${WRKDIR}/${PORTNAME}-3.9.0
- 
- OPTIONS_DEFINE=	EDITOR
-@@ -43,6 +44,13 @@ post-patch:
+@@ -44,6 +44,13 @@ post-patch:
  		s,/usr/local/lib/lua51,${LUA_LIBDIR},g ; \
  		s,lua5.2,lua-${LUA_VER},g' \
  		${WRKSRC}/mk/cmake/Modules/FindLUA.cmake
