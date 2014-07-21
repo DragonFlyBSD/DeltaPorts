@@ -1,15 +1,6 @@
---- Makefile.orig	2013-10-13 18:14:51.597481000 +0000
+--- Makefile.orig	2014-07-21 09:24:44.700652000 +0000
 +++ Makefile
-@@ -34,7 +34,7 @@ USES+=		gmake
- # KMS support in the kernel is only build on these archs, disable others
- .if ${ARCH} == "amd64" || ${ARCH} == "i386"
- CONFIGURE_ARGS+=--enable-libkms
--EXTRA_PATCHES+=	${FILESDIR}/extra-xf86drmMode.c
-+EXTRA_PATCHES+=	${DFLY_FILESDIR}/extra-xf86drmMode.c
- PLIST_SUB+=	KMS="" NOUVEAU=""
- .else
- CONFIGURE_ARGS+=--disable-libkms
-@@ -81,8 +81,7 @@ PLIST_SUB+=	RADEON_DRIVERS="@comment "
+@@ -59,8 +59,7 @@ PLIST_SUB+=	RADEON_DRIVERS="@comment "
  .endif
  
  pre-patch:
