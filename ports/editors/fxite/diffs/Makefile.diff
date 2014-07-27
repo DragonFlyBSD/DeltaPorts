@@ -1,9 +1,9 @@
---- Makefile.orig	2013-04-22 18:04:49.000000000 +0000
+--- Makefile.orig	2014-07-27 19:10:22.859596000 +0000
 +++ Makefile
-@@ -28,7 +28,7 @@ ACLOCAL_ARGS=	--force -I m4
+@@ -27,7 +27,7 @@ USE_AUTOTOOLS=	aclocal autoconf automake
+ ACLOCAL_ARGS=	--force -I m4
  AUTOMAKE_ARGS=	--gnu --add-missing --copy
- USE_GMAKE=	yes
- CXXFLAGS+=	-fPIC -Wno-invalid-source-encoding -Wno-format
+ CXXFLAGS+=	-fPIC
 -LDFLAGS+=	-L${LOCALBASE}/lib -lintl
 +LDFLAGS+=	-L${LOCALBASE}/lib -lintl -lX11
  CONFIGURE_ARGS+=--with-system-lua \
