@@ -1,22 +1,28 @@
---- pkg-plist.orig	2014-01-30 18:49:08.609957000 +0000
+--- pkg-plist.orig	2014-08-02 13:57:09.773801000 +0000
 +++ pkg-plist
-@@ -2135,6 +2135,10 @@ man/man1/python3.3.1.gz
- %%PYTHON_LIBDIR%%/pickletools.py
- %%PYTHON_LIBDIR%%/pipes.py
- %%PYTHON_LIBDIR%%/pkgutil.py
-+%%PYTHON_LIBDIR%%/plat-dragonfly3/IN.py
-+%%PYTHON_LIBDIR%%/plat-dragonfly3/__pycache__/IN.cpython-33.pyc
-+%%PYTHON_LIBDIR%%/plat-dragonfly3/__pycache__/IN.cpython-33.pyo
-+%%PYTHON_LIBDIR%%/plat-dragonfly3/regen
- %%PYTHON_LIBDIR%%/plat-freebsd10/IN.py
- %%PYTHON_LIBDIR%%/plat-freebsd10/__pycache__/IN.cpython-33.pyc
- %%PYTHON_LIBDIR%%/plat-freebsd10/__pycache__/IN.cpython-33.pyo
-@@ -4593,6 +4597,8 @@ man/man1/python3.3.1.gz
- @dirrm %%PYTHON_LIBDIR%%/plat-freebsd10
- @dirrm %%PYTHON_LIBDIR%%/plat-freebsd11/__pycache__
- @dirrm %%PYTHON_LIBDIR%%/plat-freebsd11
-+@dirrm %%PYTHON_LIBDIR%%/plat-dragonfly3/__pycache__
-+@dirrm %%PYTHON_LIBDIR%%/plat-dragonfly3
- @dirrm %%PYTHON_LIBDIR%%/pydoc_data/__pycache__
- @dirrm %%PYTHON_LIBDIR%%/pydoc_data
- @dirrm %%PYTHON_LIBDIR%%/site-packages
+@@ -2180,10 +2180,10 @@ lib/python3.3/pickle.py
+ lib/python3.3/pickletools.py
+ lib/python3.3/pipes.py
+ lib/python3.3/pkgutil.py
+-lib/python3.3/plat-freebsd%%OSMAJOR%%/IN.py
+-lib/python3.3/plat-freebsd%%OSMAJOR%%/__pycache__/IN.cpython-33.pyc
+-lib/python3.3/plat-freebsd%%OSMAJOR%%/__pycache__/IN.cpython-33.pyo
+-lib/python3.3/plat-freebsd%%OSMAJOR%%/regen
++lib/python3.3/plat-dragonfly%%OSMAJOR%%/IN.py
++lib/python3.3/plat-dragonfly%%OSMAJOR%%/__pycache__/IN.cpython-33.pyc
++lib/python3.3/plat-dragonfly%%OSMAJOR%%/__pycache__/IN.cpython-33.pyo
++lib/python3.3/plat-dragonfly%%OSMAJOR%%/regen
+ lib/python3.3/platform.py
+ lib/python3.3/plistlib.py
+ lib/python3.3/poplib.py
+@@ -4624,8 +4624,8 @@ lib/python3.3/zipfile.py
+ @dirrm lib/python3.3/multiprocessing
+ @dirrm lib/python3.3/pydoc_data/__pycache__
+ @dirrm lib/python3.3/pydoc_data
+-@dirrm lib/python3.3/plat-freebsd%%OSMAJOR%%/__pycache__
+-@dirrm lib/python3.3/plat-freebsd%%OSMAJOR%%
++@dirrm lib/python3.3/plat-dragonfly%%OSMAJOR%%/__pycache__
++@dirrm lib/python3.3/plat-dragonfly%%OSMAJOR%%
+ @dirrm lib/python3.3/site-packages
+ @dirrm lib/python3.3/sqlite3/__pycache__
+ @dirrm lib/python3.3/sqlite3/test/__pycache__

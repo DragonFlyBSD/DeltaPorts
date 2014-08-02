@@ -1,6 +1,6 @@
---- Makefile.orig	2014-08-02 14:00:51.740121000 +0000
+--- Makefile.orig	2014-08-02 14:04:12.866788000 +0000
 +++ Makefile
-@@ -33,7 +33,7 @@ MAKE_ARGS+=		INSTALL_SHARED="${INSTALL_L
+@@ -31,7 +31,7 @@ MAKE_ARGS+=		INSTALL_SHARED="${INSTALL_L
  MAKE_ARGS+=		LIBPC="${PREFIX}/libdata/pkgconfig"			# Until pathfix gets support for files other than Makefile.in
  
  PLIST_SUB=		ABI=${ABIFLAGS} \
