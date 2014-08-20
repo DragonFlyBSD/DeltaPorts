@@ -1,0 +1,22 @@
+--- Makefile.orig	2014-08-20 09:55:17.465079000 +0000
++++ Makefile
+@@ -75,8 +75,8 @@ ${a:tu}_DESC=	Install ${a} ${type} drive
+ . endfor
+ .endfor
+ 
+-OPTIONS_DEFINE_i386=	INTEL OPENCHROME
+-OPTIONS_DEFAULT_i386=	INTEL OPENCHROME
++OPTIONS_DEFINE_i386=	INTEL29 OPENCHROME
++OPTIONS_DEFAULT_i386=	INTEL29 OPENCHROME
+ 
+ OPTIONS_DEFINE_x86_64:=	${OPTIONS_DEFINE_i386}
+ OPTIONS_DEFAULT_x86_64:=	${OPTIONS_DEFAULT_i386}
+@@ -98,7 +98,7 @@ QUIRKS=		keyboard:kbd
+ 
+ # Manual add arch specific drivers so they be added to depend lines.
+ .if ${ARCH}==i386 || ${ARCH}==x86_64
+-VIDEO_DRIVERS+=	intel openchrome
++VIDEO_DRIVERS+=	intel29 openchrome
+ .endif
+ 
+ .if ${ARCH}==sparc64
