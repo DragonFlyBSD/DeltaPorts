@@ -1,4 +1,4 @@
---- Makefile.orig	2014-08-20 09:51:14.591444000 +0000
+--- Makefile.orig	2014-08-20 19:06:19.921686000 +0000
 +++ Makefile
 @@ -5,6 +5,7 @@ PORTNAME=	ghc
  PORTVERSION=	7.8.3
@@ -34,7 +34,7 @@
  
  .if ${OSVERSION} >= 1000043
  DISTFILES+=	ghc-${BOOT_GHC_VERSION}-amd64-freebsd10-boot${EXTRACT_SUFX}:boot
-@@ -108,6 +110,26 @@ DISTFILES+=	ghc-${BOOT_GHC_VERSION}-amd6
+@@ -108,6 +110,17 @@ DISTFILES+=	ghc-${BOOT_GHC_VERSION}-amd6
  IGNORE=		unsupported
  .endif
  
@@ -42,17 +42,8 @@
 +
 +.elif ${OPSYS} == "DragonFly"
 +
-+.if empty(ICONV_LIB)
 +BOOT_GHC_VERSION=	7.6.3
-+.else
-+.  if ${DFLYVERSION} > 300500
-+BUILD_DEPENDS+=  ${LOCALBASE}/lib/compat/libm.so.3:${PORTSDIR}/misc/compat34x
-+.  endif
-+BOOT_GHC_VERSION=	7.4.2
-+EXTRA_PATCHES=	${DFLY_PATCHDIR}/nopatch-ghc-${BOOT_GHC_VERSION}-boot_rts_package.conf.in
-+.endif
-+
-+DISTFILES+=	ghc-${BOOT_GHC_VERSION}-${ARCH}-dragonfly-boot${EXTRACT_SUFX}:dflyboot
++DISTFILES+=		ghc-${BOOT_GHC_VERSION}-${ARCH}-dragonfly-boot${EXTRACT_SUFX}:dflyboot
 +CONFIGURE_TARGET=	${ARCH}-portbld-dragonfly
 +CONFIGURE_ENV+=		BOOTDIR=${BOOT_DIR}
 +
