@@ -1,14 +1,14 @@
---- Makefile.orig	2014-02-10 09:19:05.839611000 +0000
+--- Makefile.orig	2014-08-20 09:54:49.173446000 +0000
 +++ Makefile
-@@ -21,8 +21,10 @@ USE_XZ=		yes
- USE_PYTHON=	2
- USE_LDCONFIG=	yes
+@@ -16,8 +16,10 @@ BUILD_DEPENDS=	${LOCALBASE}/bin/python:$
+ CONFLICTS_INSTALL=	v8-devel-[0-9]*
+ 
  ALL_TARGET=	native
 -MAKE_ARGS=	library=shared
+ MAKE_ENV=	CC.host=${CC} CXX.host=${CXX} LINK.host=${CXX} LINK.target=${CXX}
 +MAKE_ENV+=	GYPFLAGS=-DOS=freebsd
 +MAKE_ENV+=	library=shared
- MAKE_ENV+=	CC.host=${CC} CXX.host=${CXX} LINK.host=${CXX} LINK.target=${CXX}
 +CFLAGS+=	-D__FreeBSD__=1
- 
- .include <bsd.port.pre.mk>
+ USE_LDCONFIG=	yes
+ USES=		compiler cpe execinfo gmake python:2 tar:xz
  

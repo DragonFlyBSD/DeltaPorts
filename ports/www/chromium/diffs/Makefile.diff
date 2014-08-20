@@ -1,47 +1,40 @@
---- Makefile.orig	2014-06-24 17:53:16.873001000 +0000
+--- Makefile.orig	2014-08-20 09:58:55.028341000 +0000
 +++ Makefile
-@@ -37,6 +37,8 @@ LIB_DEPENDS=	libcairo.so:${PORTSDIR}/gra
- 		libpci.so:${PORTSDIR}/devel/libpci \
- 		libdrm.so:${PORTSDIR}/graphics/libdrm
+@@ -52,6 +52,8 @@ LIB_DEPENDS=	libcairo.so:${PORTSDIR}/gra
+ 		libxml2.so:${PORTSDIR}/textproc/libxml2 \
+ 		libwebp.so:${PORTSDIR}/graphics/webp
  
 +LIB_DEPENDS+=	gssapi_krb5:${PORTSDIR}/security/krb5
 +
  RUN_DEPENDS=	${LOCALBASE}/lib/alsa-lib/libasound_module_pcm_oss.so:${PORTSDIR}/audio/alsa-plugins \
- 		${LOCALBASE}/lib/X11/fonts/Droid/fonts.dir:${PORTSDIR}/x11-fonts/droid-fonts-ttf
- 
-@@ -65,6 +67,7 @@ GYP_DEFINES+=	use_cups=1 \
+ 		${LOCALBASE}/lib/X11/fonts/Droid/fonts.dir:${PORTSDIR}/x11-fonts/droid-fonts-ttf \
+ 		xdg-open:${PORTSDIR}/devel/xdg-utils
+@@ -76,6 +78,7 @@ GYP_DEFINES+=	\
  		linux_use_heapchecker=0 \
+ 		linux_strip_binary=1 \
  		test_isolation_mode=noop \
- 		clang_use_chrome_plugins=0 \
 +		disable_fatal_linker_warnings=1 \
  		disable_nacl=1 \
- 		enable_webrtc=1 \
+ 		enable_one_click_signin=1 \
  		enable_openmax=1 \
-@@ -120,10 +123,10 @@ GYP_DEFINES+=	use_pulseaudio=0
- GYP_DEFINES+=	disable_sse2=1
+@@ -169,7 +172,7 @@ GYP_DEFINES+=	disable_sse2=1
+ .if !exists(/usr/libdata/pkgconfig/libusb-1.0.pc)
+ EXTRA_PATCHES+=	${FILESDIR}/extra-patch-libusb-pc
  .endif
- 
 -.if ${OSVERSION} >= 1000052 && !exists(${LOCALBASE}/include/execinfo.h)
 +.if ${OPSYS} == FreeBSD && ${OSVERSION} >= 1000052 && !exists(${LOCALBASE}/include/execinfo.h)
  EXTRA_PATCHES+=	${FILESDIR}/extra-patch-fixup-execinfo
  .endif
--.if ${OSVERSION} < 1000052
-+.if ${OPSYS} == DragonFly || (${OPSYS} == FreeBSD && ${OSVERSION} < 1000052)
- LIB_DEPENDS+=	libexecinfo.so:${PORTSDIR}/devel/libexecinfo
- .endif
  
-@@ -142,8 +145,10 @@ GYP_DEFINES+=	buildtype=Official
- 
- CONFIGURE_ENV+=	CC="${CC}" \
- 		CXX="${CXX}" \
-+		GYP_GENERATORS=ninja \
+@@ -190,6 +193,7 @@ CONFIGURE_ENV+=	CC="${CC}" \
+ 		GYP_GENERATORS=ninja \
  		GYP_DEFINES="${GYP_DEFINES}"
  MAKE_ENV+=	BUILDTYPE=${BUILDTYPE} \
 +		GYPFLAGS=-DOS=freebsd \
  		GPERF="${LOCALBASE}/bin/gperf"
- MAKE_ARGS+=	-C out/${BUILDTYPE}
  
-@@ -155,6 +160,7 @@ CFLAGS+=	-Wno-unknown-warning
+ .include <bsd.port.pre.mk>
+@@ -203,6 +207,7 @@ GYP_DEFINES+=	gcc_version=${CXX:S/g++//}
  EXTRA_PATCHES+=	${FILESDIR}/extra-patch-gcc
  .else
  GYP_DEFINES+=	clang=1
@@ -49,7 +42,7 @@
  CFLAGS+=	-Wno-unknown-warning-option
  EXTRA_PATCHES+=	${FILESDIR}/extra-patch-clang
  CONFIGURE_ENV+=	AR=/usr/bin/ar
-@@ -179,6 +185,8 @@ pre-everything::
+@@ -229,6 +234,8 @@ pre-everything::
  
  post-patch:
  	@${REINPLACE_CMD} -e "s|/usr/local|${LOCALBASE}|" \
@@ -58,7 +51,7 @@
  		${WRKSRC}/crypto/crypto.gyp \
  		${WRKSRC}/v8/tools/gyp/v8.gyp \
  		${WRKSRC}/v8/build/toolchain.gypi
-@@ -187,6 +195,17 @@ post-patch:
+@@ -238,6 +245,17 @@ post-patch:
  	@${REINPLACE_CMD} -e "s|/usr/bin/gcc|${CC}|" \
  		${WRKSRC}/third_party/WebKit/Source/build/scripts/preprocessor.pm \
  		${WRKSRC}/third_party/WebKit/Source/build/scripts/scripts.gypi
@@ -73,6 +66,6 @@
 +		${WRKSRC}/v8/build/toolchain.gypi \
 +		${WRKSRC}/v8/src/d8.gyp \
 +		${WRKSRC}/v8/tools/gyp/v8.gyp
+ 	@${REINPLACE_CMD} -e "s|g++|${CXX}|" \
+ 		${WRKSRC}/tools/compile_test/compile_test.py
  
- do-configure:
- 	cd ${WRKSRC} && ${SETENV} ${CONFIGURE_ENV} ${PYTHON_CMD} \

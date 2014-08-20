@@ -1,6 +1,6 @@
---- Makefile.orig	2014-03-30 11:29:42.178769000 +0000
+--- Makefile.orig	2014-08-20 09:44:20.312663000 +0000
 +++ Makefile
-@@ -47,7 +47,7 @@ post-patch:
+@@ -48,7 +48,7 @@ post-patch:
  
  do-configure:
  	@(cd ${WRKSRC} && ${SETENV} MAITCHFLAGS="${MAITCHFLAGS}" \
@@ -9,15 +9,15 @@
  
  do-build:
  	@(cd ${WRKSRC} && ${PYTHON_CMD} mscript.py build)
-@@ -68,11 +68,6 @@ do-install:
+@@ -72,11 +72,6 @@ do-install:
  	(cd ${WRKSRC}/src && ${INSTALL_DATA} roxterm-config.ui \
  		${STAGEDIR}${DATADIR})
  	@(cd ${WRKSRC} && ${COPYTREE_SHARE} Config ${STAGEDIR}${DATADIR})
 -.for i in es fr pt_BR ru uk
 -	@${MKDIR} ${STAGEDIR}${PREFIX}/share/locale/${i}/LC_MESSAGES
--	(cd ${WRKSRC}/build/po && ${INSTALL_DATA} ${i}.mo \
+-	(cd ${WRKSRC}/po && ${INSTALL_DATA} ${i}.mo \
 -		${STAGEDIR}${PREFIX}/share/locale/${i}/LC_MESSAGES/roxterm.mo)
 -.endfor
  	@${MKDIR} ${STAGEDIR}${DOCSDIR}
  .for i in AUTHORS ChangeLog README
- 	@(cd ${WRKSRC} && ${INSTALL_DATA} ${i} ${STAGEDIR}${DOCSDIR})
+ 	(cd ${WRKSRC} && ${INSTALL_DATA} ${i} ${STAGEDIR}${DOCSDIR})
