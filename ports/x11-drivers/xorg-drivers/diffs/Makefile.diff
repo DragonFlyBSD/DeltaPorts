@@ -1,13 +1,13 @@
---- Makefile.orig	2014-08-20 09:55:17.465079000 +0000
+--- Makefile.orig	2014-08-20 20:52:55 UTC
 +++ Makefile
 @@ -78,8 +78,8 @@ ${a:tu}_DESC=	Install ${a} ${type} drive
  OPTIONS_DEFINE_i386=	INTEL OPENCHROME
  OPTIONS_DEFAULT_i386=	INTEL OPENCHROME
  
--OPTIONS_DEFINE_x86_64:=	${OPTIONS_DEFINE_i386}
--OPTIONS_DEFAULT_x86_64:=	${OPTIONS_DEFAULT_i386}
-+OPTIONS_DEFINE_x86_64:=		INTEL29 OPENCHROME
-+OPTIONS_DEFAULT_x86_64:=	INTEL29 OPENCHROME
+-OPTIONS_DEFINE_amd64:=	${OPTIONS_DEFINE_i386}
+-OPTIONS_DEFAULT_amd64:=	${OPTIONS_DEFAULT_i386}
++OPTIONS_DEFINE_amd64:=	INTEL29 OPENCHROME
++OPTIONS_DEFAULT_amd64:=	INTEL29 OPENCHROME
  
  OPTIONS_DEFINE_sparc64=	SUNFFB
  OPTIONS_DEFAULT_sparc64=SUNFFB
@@ -23,7 +23,7 @@
  .include <bsd.port.options.mk>
  
  # Manual add arch specific drivers so they be added to depend lines.
--.if ${ARCH}==i386 || ${ARCH}==x86_64
+-.if ${ARCH}==i386 || ${ARCH}==amd64
 +.if ${ARCH}==i386
  VIDEO_DRIVERS+=	intel openchrome
  .endif
