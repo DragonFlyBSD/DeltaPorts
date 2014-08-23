@@ -1,0 +1,12 @@
+--- Makefile.orig	2014-08-23 08:16:57.752629000 +0000
++++ Makefile
+@@ -26,7 +26,8 @@ PLIST_SUB+=	MAJOR=${PORTVERSION:R:R}
+ GNU_CONFIGURE=	yes
+ USE_LDCONFIG=	yes
+ 
+-CPPFLAGS+=	-I/usr/include/readline -I${LOCALBASE}/include
++USES+=		readline
++CPPFLAGS+=	-I${LOCALBASE}/include/readline -I${LOCALBASE}/include
+ LDFLAGS+=	-L${LOCALBASE}/lib
+ 
+ OPTIONS_DEFINE?=	SQLITE3 MYSQL PGSQL MTX PYTHON NLS OPENSSL
