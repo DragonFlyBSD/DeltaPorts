@@ -1,0 +1,9 @@
+--- Makefile.orig	2014-08-23 08:37:45.711925000 +0000
++++ Makefile
+@@ -12,4 +12,6 @@ MASTERDIR=	${.CURDIR}/../../misc/gimp-he
+ 
+ DOCLANG=	ru
+ 
++IGNORE=		builds sometimes, but not others.  too flaky, just kill
++
+ .include "${MASTERDIR}/Makefile"
