@@ -1,0 +1,2 @@
+files/patch-src_cairo-wideint-type-private.h
+files/patch-src_cairo-xlib-display.c
