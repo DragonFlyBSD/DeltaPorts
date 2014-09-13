@@ -1,4 +1,4 @@
---- Makefile.orig	2014-08-23 01:44:47.272860000 +0000
+--- Makefile.orig	2014-09-13 14:19:33 UTC
 +++ Makefile
 @@ -52,6 +52,8 @@ LIB_DEPENDS=	libcairo.so:${PORTSDIR}/gra
  		libxml2.so:${PORTSDIR}/textproc/libxml2 \
@@ -69,12 +69,3 @@
  	@${REINPLACE_CMD} -e "s|g++|${CXX}|" \
  		${WRKSRC}/tools/compile_test/compile_test.py
  
-@@ -353,7 +371,7 @@ do-install:
- 	@${MKDIR} ${STAGEDIR}${DESKTOPDIR}
- 	${INSTALL_DATA} ${WRKDIR}/chromium-browser.desktop ${STAGEDIR}${DESKTOPDIR}
- 	${INSTALL_SCRIPT} ${WRKDIR}/chrome ${STAGEDIR}${PREFIX}/bin
--	${INSTALL_PROGRAM} ${WRKSRC}/out/${BUILDTYPE}/mksnapshot.${ARCH:S/i386/ia32/:S/amd64/x64/} \
-+	${INSTALL_PROGRAM} ${WRKSRC}/out/${BUILDTYPE}/mksnapshot.${ARCH:S/i386/ia32/:S/x86_64/x64/} \
- 		${STAGEDIR}${DATADIR}/mksnapshot
- 
- .include <bsd.port.post.mk>

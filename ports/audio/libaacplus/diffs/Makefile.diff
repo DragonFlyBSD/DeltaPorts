@@ -1,4 +1,4 @@
---- Makefile.orig	2014-05-29 10:58:54.564974000 +0000
+--- Makefile.orig	2014-09-13 10:20:10 UTC
 +++ Makefile
 @@ -8,7 +8,7 @@ CATEGORIES=	audio
  MASTER_SITES=	http://media.wnet.ua/~tipok/aacplus/:site1\
@@ -13,8 +13,8 @@
  CONFLICTS=	aacplusenc-0*
  
  USE_CSTD=	gnu89
--USES=		pathfix pkgconfig libtool:keepla
-+USES=		pathfix pkgconfig libtool:keepla zip
+-USES=		pathfix pkgconfig libtool
++USES=		pathfix pkgconfig libtool zip
  USE_LDCONFIG=	yes
  USE_AUTOTOOLS=	libtoolize aclocal autoheader automake
  PATHFIX_MAKEFILEIN=	Makefile.am

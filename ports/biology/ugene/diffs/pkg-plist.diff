@@ -1,6 +1,6 @@
---- pkg-plist.orig	2014-01-22 15:16:56.000000000 +0000
+--- pkg-plist.orig	2014-09-13 13:57:50 UTC
 +++ pkg-plist
-@@ -255,10 +255,6 @@ lib/ugene/plugins/libtest_runner.so
+@@ -253,10 +253,6 @@ lib/ugene/plugins/libtest_runner.so
  lib/ugene/plugins/libtest_runner.so.1
  lib/ugene/plugins/libtest_runner.so.1.0
  lib/ugene/plugins/libtest_runner.so.1.0.0
@@ -8,15 +8,15 @@
 -%%NOX64%%lib/ugene/plugins/libumuscle.so.1
 -%%NOX64%%lib/ugene/plugins/libumuscle.so.1.0
 -%%NOX64%%lib/ugene/plugins/libumuscle.so.1.0.0
- lib/ugene/plugins/libweight_matrix.so
- lib/ugene/plugins/libweight_matrix.so.1
- lib/ugene/plugins/libweight_matrix.so.1.0
-@@ -297,8 +293,6 @@ lib/ugene/plugins/snp_effect.license
+ lib/ugene/plugins/libvariants.so
+ lib/ugene/plugins/libvariants.so.1
+ lib/ugene/plugins/libvariants.so.1.0
+@@ -301,8 +297,6 @@ lib/ugene/plugins/snp_effect.license
  lib/ugene/plugins/snp_effect.plugin
  lib/ugene/plugins/test_runner.license
  lib/ugene/plugins/test_runner.plugin
 -%%NOX64%%lib/ugene/plugins/umuscle.license
 -%%NOX64%%lib/ugene/plugins/umuscle.plugin
+ lib/ugene/plugins/variants.license
+ lib/ugene/plugins/variants.plugin
  lib/ugene/plugins/weight_matrix.license
- lib/ugene/plugins/weight_matrix.plugin
- lib/ugene/plugins/workflow_designer.license
