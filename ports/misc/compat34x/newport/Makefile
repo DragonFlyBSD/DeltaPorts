@@ -18,7 +18,7 @@ TARGET_DIR=	${PREFIX}/lib/compat
 USE_LDCONFIG=	${TARGET_DIR}
 
 do-install:
-	@${MKDIR} -m 755 ${TARGET_DIR}
-	cd ${WRKSRC}/lib && ${INSTALL_DATA} *.so.* ${STAGEDIR}${TARGET_DIR}
+	@${MKDIR} ${STAGEDIR}${TARGET_DIR}
+	(cd ${WRKSRC}/lib && ${INSTALL_DATA} *.so.* ${STAGEDIR}${TARGET_DIR})
 
 .include <bsd.port.mk>

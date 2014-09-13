@@ -11,7 +11,9 @@ COMMENT=	Dockable network monitor for WindowMaker
 
 USE_XORG=	x11 xext xpm
 MAKE_ENV+=	X11BASE=${PREFIX}
+MAKE_ARGS+=	BINDIR=${STAGEDIR}${PREFIX}/bin \
+		MANDIR=${STAGEDIR}${MANPREFIX}/man
 
-PLIST_FILES=	bin/wminet wminet.1.gz
+PLIST_FILES=	bin/wminet man/man1/wminet.1.gz
 
 .include <bsd.port.mk>
