@@ -1,12 +1,13 @@
---- Makefile.orig	2014-05-30 12:27:26.470951000 +0000
+--- Makefile.orig	2014-09-13 06:44:42 UTC
 +++ Makefile
-@@ -14,8 +14,7 @@ USE_XORG=	xf86driproto xineramaproto xf8
+@@ -14,9 +14,7 @@ USE_XORG=	xf86driproto xineramaproto xf8
  
  .include <bsd.port.options.mk>
  
--.if ${OSVERSION} < 1000051 || !defined(WITH_NEW_XORG) || \
--	(${ARCH} != i386 && ${ARCH} != amd64)
-+.if ${DFLYVERSION} < 300900 || !defined(WITH_NEW_XORG)
- ATI_VERSION=	6.14.6
- ATI_REVISION=	3
- CONFIGURE_ARGS+=--disable-kms
+-.if (${OSVERSION} >= 902508 && ${OSVERSION} < 1000000) || ${OSVERSION} >= 1000051
+-#  902508: Radeon kernel driver imported in FreeBSD 9.x
+-# 1000051: Radeon kernel driver imported in FreeBSD 10.x
++.if ${DFLYVERSION} >= 300900
+ . if defined(WITH_NEW_XORG)
+ NEW_ATI_DRIVER=	yes
+ . else
