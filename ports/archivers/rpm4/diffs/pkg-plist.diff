@@ -1,6 +1,6 @@
---- pkg-plist.orig	2014-07-17 07:58:18.758110000 +0000
+--- pkg-plist.orig	2014-09-15 07:42:59 UTC
 +++ pkg-plist
-@@ -115,56 +115,56 @@ lib/rpm/find-requires
+@@ -116,57 +116,57 @@ lib/rpm/find-requires
  lib/rpm/mkinstalldirs
  lib/rpm/config.guess
  lib/rpm/config.sub
@@ -54,6 +54,7 @@
 -lib/rpm/platform/sh3-freebsd/macros
 -lib/rpm/platform/sh4-freebsd/macros
 -lib/rpm/platform/sh4a-freebsd/macros
+-lib/rpm/platform/m68k-freebsd/macros
 +lib/rpm/platform/aarch64-dragonfly/macros
 +lib/rpm/platform/noarch-dragonfly/macros
 +lib/rpm/platform/athlon-dragonfly/macros
@@ -104,13 +105,15 @@
 +lib/rpm/platform/sh3-dragonfly/macros
 +lib/rpm/platform/sh4-dragonfly/macros
 +lib/rpm/platform/sh4a-dragonfly/macros
++lib/rpm/platform/m68k-dragonfly/macros
  lib/rpm-plugins/exec.so
  man/fr/man8/rpm.8.gz
  man/ja/man8/rpm.8.gz
-@@ -231,56 +231,56 @@ man/sk/man8/rpm.8.gz
+@@ -233,57 +233,57 @@ man/sk/man8/rpm.8.gz
  libdata/pkgconfig/rpm.pc
  @dirrm lib/rpm/fileattrs
  @dirrm lib/rpm-plugins
+-@dirrm lib/rpm/platform/m68k-freebsd
 -@dirrm lib/rpm/platform/aarch64-freebsd
 -@dirrm lib/rpm/platform/noarch-freebsd
 -@dirrm lib/rpm/platform/athlon-freebsd
@@ -161,6 +164,7 @@
 -@dirrm lib/rpm/platform/sh3-freebsd
 -@dirrm lib/rpm/platform/sh4-freebsd
 -@dirrm lib/rpm/platform/sh4a-freebsd
++@dirrm lib/rpm/platform/m68k-dragonfly
 +@dirrm lib/rpm/platform/aarch64-dragonfly
 +@dirrm lib/rpm/platform/noarch-dragonfly
 +@dirrm lib/rpm/platform/athlon-dragonfly
