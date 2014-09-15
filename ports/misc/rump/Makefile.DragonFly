@@ -1,0 +1,1 @@
+IGNORE=	FreeBSD-specific (runs NetBSD code in userspace)
