@@ -1,0 +1,16 @@
+--- Makefile.orig	2014-09-15 09:20:29 UTC
++++ Makefile
+@@ -46,13 +46,6 @@ LARGE_STACK_CONFIGURE_ENABLE=	large-stac
+ 
+ .include <bsd.port.pre.mk>
+ 
+-# If default compiler is GCC, upgrade it because
+-# g++ 4.2 is too old to auto-upgrade 0xffffffffffffffffl to
+-# a long long integer constant - and has likely more issues.
+-.if ${COMPILER_TYPE} == gcc
+-USE_GCC=	yes
+-.endif
+-
+ MAJORVER=	2_2
+ VER=		22
+ 
