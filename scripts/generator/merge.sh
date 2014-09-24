@@ -60,7 +60,6 @@ transform ()
 	 -e 's|OPTIONS_DEFAULT_amd64|OPTIONS_DEFAULT_x86_64|g' \
 	 -e 's|OPTIONS_DEFINE_amd64|OPTIONS_DEFINE_x86_64|g' \
 	 -e 's|CFLAGS_amd64|CFLAGS_x86_64|g' \
-	 -e '/^BROKEN=.*utmpx/s|BROKEN|#BROKEN|' \
          -e '/ARCH}.*(amd64|"amd64")/s|amd64|x86_64|g' \
          > ${WORK}/${item}.filtered
       touch -r ${WORK}/${item} ${WORK}/${item}.filtered
