@@ -1,6 +1,6 @@
---- GIDs.orig	2014-02-10 08:50:00.915245000 +0000
+--- GIDs.orig	2014-09-25 11:31:18.189747000 +0000
 +++ GIDs
-@@ -14,12 +14,10 @@ uucp:*:66:
+@@ -16,12 +16,10 @@ uucp:*:66:
  xten:*:67:
  dialer:*:68:
  network:*:69:
@@ -13,7 +13,7 @@
  virtuoso:*:79:
  www:*:80:
  qnofiles:*:81:
-@@ -83,8 +81,8 @@ webcamd:*:145:
+@@ -85,8 +83,8 @@ webcamd:*:145:
  ventrilo:*:146:
  kdm:*:147:
  ipv6mon:*:148:
@@ -23,11 +23,11 @@
 +pgsql:*:150:
  rbldns:*:153:
  trircd:*:154:
- sfs:*:171:
-@@ -270,5 +268,7 @@ boinc:*:973:
- radicale:*:974:
- unifi:*:975:
- minetest:*:976:
+ xorp:*:155:
+@@ -297,5 +295,7 @@ syncthing:*:983:
+ tvheadend:*:984:
+ puppetdb:*:985:
+ kamailio:*:986:
 +avenger:*:60149:
 +cbsd:*:60150:
  nogroup:*:65533:

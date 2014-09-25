@@ -1,6 +1,6 @@
---- UIDs.orig	2014-02-10 08:53:01.912587000 +0000
+--- UIDs.orig	2014-09-25 11:46:46.638172000 +0000
 +++ UIDs
-@@ -14,14 +14,13 @@ uucp:*:66:66::0:0:UUCP pseudo-user:/var/
+@@ -15,14 +15,13 @@ uucp:*:66:66::0:0:UUCP pseudo-user:/var/
  xten:*:67:67::0:0:X-10 daemon:/usr/local/xten:/nonexistent
  pop:*:68:6::0:0:Post Office Owner (popper):/nonexistent:/usr/sbin/nologin
  wnn:*:69:7::0:0:Wnn:/nonexistent:/nonexistent
@@ -16,21 +16,20 @@
  virtuoso:*:79:79::0:0:Virtuoso Universal Server:/usr/local/virtuoso:/bin/sh
  www:*:80:80::0:0:World Wide Web Owner:/nonexistent:/usr/sbin/nologin
  alias:*:81:81::0:0:QMail user:/var/qmail/alias:/nonexistent
-@@ -90,8 +89,7 @@ webcamd:*:145:145::0:0:Webcamd user:/var
+@@ -91,8 +90,7 @@ webcamd:*:145:145::0:0:Webcamd user:/var
  ventrilo:*:146:146::0:0:& server:/usr/local/ventrilo-server:/usr/sbin/nologin
  kdm:*:147:147::0:0:KDE Display Manager:/nonexistent:/usr/sbin/nologin
  ipv6mon:*:148:148::0:0:IPv6 Address Monitoring Daemon:/nonexistent:/usr/sbin/nologin
 -avenger:*:149:149::0:0:Mail Avenger:/var/spool/avenger:/usr/sbin/nologin
 -cbsd:*:150:150::0:0:Cbsd user:/nonexistent:/bin/sh
 +pgsql:*:150:150::0:0:PostgreSQL pseudo-user:/usr/local/pgsql:/bin/sh
+ pop3vscan:*:151:6::0:0:POP3VScan Daemon:/var/spool/pop3vscan:/usr/sbin/nologin
  rbldns:*:153:153::0:0:rbldnsd pseudo-user:/nonexistent:/usr/sbin/nologin
  trircd:*:154:154::0:0:& user:/usr/local/etc/tr-ircd:/usr/sbin/nologin
- sfs:*:171:171::0:0:Self-Certifying File System:/nonexistent:/usr/sbin/nologin
-@@ -276,5 +274,7 @@ boinc:*:973:973::0:0:BOINC user:/var/db/
- radicale:*:974:974::0:0:Radicale daemon:/nonexistent:/usr/sbin/nologin
- unifi:*:975:975::0:0:Unifi Wireless Controller:/nonexistent:/usr/sbin/nologin
- minetest:*:976:976::0:0:& server:/nonexistent:/usr/sbin/nologin
+@@ -304,4 +302,6 @@ syncthing:*:983:983::0:0:Syncthing Daemo
+ tvheadend:*:984:984::0:0:TV Headend:/usr/local/etc/tvheadend:/bin/sh
+ puppetdb:*:985:985::0:0:PuppetDB Daemon pseudo-user:/nonexistent:/usr/sbin/nologin
+ kamailio:*:986:986::0:0:kamailio daemon:/nonexistent:/usr/sbin/nologin
 +avenger:*:60149:60149::0:0:Mail Avenger:/var/spool/avenger:/usr/sbin/nologin
 +cbsd:*:60150:150::0:0:Cbsd user:/nonexistent:/bin/sh
- tests:*:977:65534::0:0:Unprivileged user for tests:/nonexistent:/usr/sbin/nologin
  nobody:*:65534:65534::0:0:Unprivileged user:/nonexistent:/usr/sbin/nologin
