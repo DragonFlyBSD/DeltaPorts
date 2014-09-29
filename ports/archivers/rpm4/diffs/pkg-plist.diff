@@ -1,220 +1,198 @@
---- pkg-plist.orig	2014-09-15 07:42:59 UTC
+--- pkg-plist.orig	2014-09-29 21:59:31 UTC
 +++ pkg-plist
-@@ -116,57 +116,57 @@ lib/rpm/find-requires
- lib/rpm/mkinstalldirs
- lib/rpm/config.guess
- lib/rpm/config.sub
+@@ -114,60 +114,60 @@ lib/rpm/perl.prov
+ lib/rpm/perl.req
+ lib/rpm/perldeps.pl
+ lib/rpm/pkgconfigdeps.sh
 -lib/rpm/platform/aarch64-freebsd/macros
--lib/rpm/platform/noarch-freebsd/macros
--lib/rpm/platform/athlon-freebsd/macros
--lib/rpm/platform/geode-freebsd/macros
--lib/rpm/platform/pentium4-freebsd/macros
--lib/rpm/platform/pentium3-freebsd/macros
--lib/rpm/platform/i686-freebsd/macros
--lib/rpm/platform/i586-freebsd/macros
--lib/rpm/platform/i486-freebsd/macros
--lib/rpm/platform/i386-freebsd/macros
--lib/rpm/platform/x86_64-freebsd/macros
--lib/rpm/platform/amd64-freebsd/macros
--lib/rpm/platform/ia32e-freebsd/macros
 -lib/rpm/platform/alpha-freebsd/macros
 -lib/rpm/platform/alphaev5-freebsd/macros
 -lib/rpm/platform/alphaev56-freebsd/macros
--lib/rpm/platform/alphapca56-freebsd/macros
 -lib/rpm/platform/alphaev6-freebsd/macros
 -lib/rpm/platform/alphaev67-freebsd/macros
--lib/rpm/platform/sparc64-freebsd/macros
--lib/rpm/platform/sparc64v-freebsd/macros
--lib/rpm/platform/sparc-freebsd/macros
--lib/rpm/platform/sparcv8-freebsd/macros
--lib/rpm/platform/sparcv9-freebsd/macros
--lib/rpm/platform/sparcv9v-freebsd/macros
--lib/rpm/platform/ppc-freebsd/macros
--lib/rpm/platform/ppc8260-freebsd/macros
--lib/rpm/platform/ppc8560-freebsd/macros
--lib/rpm/platform/ppc32dy4-freebsd/macros
--lib/rpm/platform/ppciseries-freebsd/macros
--lib/rpm/platform/ppcpseries-freebsd/macros
--lib/rpm/platform/ia64-freebsd/macros
+-lib/rpm/platform/alphapca56-freebsd/macros
+-lib/rpm/platform/amd64-freebsd/macros
 -lib/rpm/platform/armv3l-freebsd/macros
 -lib/rpm/platform/armv4b-freebsd/macros
 -lib/rpm/platform/armv4l-freebsd/macros
--lib/rpm/platform/armv5tel-freebsd/macros
 -lib/rpm/platform/armv5tejl-freebsd/macros
+-lib/rpm/platform/armv5tel-freebsd/macros
+-lib/rpm/platform/armv6hl-freebsd/macros
 -lib/rpm/platform/armv6l-freebsd/macros
+-lib/rpm/platform/armv7hl-freebsd/macros
+-lib/rpm/platform/armv7hnl-freebsd/macros
 -lib/rpm/platform/armv7l-freebsd/macros
+-lib/rpm/platform/athlon-freebsd/macros
+-lib/rpm/platform/geode-freebsd/macros
+-lib/rpm/platform/i386-freebsd/macros
+-lib/rpm/platform/i486-freebsd/macros
+-lib/rpm/platform/i586-freebsd/macros
+-lib/rpm/platform/i686-freebsd/macros
+-lib/rpm/platform/ia32e-freebsd/macros
+-lib/rpm/platform/ia64-freebsd/macros
+-lib/rpm/platform/m68k-freebsd/macros
+-lib/rpm/platform/noarch-freebsd/macros
+-lib/rpm/platform/pentium3-freebsd/macros
+-lib/rpm/platform/pentium4-freebsd/macros
+-lib/rpm/platform/ppc-freebsd/macros
+-lib/rpm/platform/ppc32dy4-freebsd/macros
+-lib/rpm/platform/ppc64-freebsd/macros
+-lib/rpm/platform/ppc64iseries-freebsd/macros
+-lib/rpm/platform/ppc64le-freebsd/macros
+-lib/rpm/platform/ppc64p7-freebsd/macros
+-lib/rpm/platform/ppc64pseries-freebsd/macros
+-lib/rpm/platform/ppc8260-freebsd/macros
+-lib/rpm/platform/ppc8560-freebsd/macros
+-lib/rpm/platform/ppciseries-freebsd/macros
+-lib/rpm/platform/ppcpseries-freebsd/macros
 -lib/rpm/platform/s390-freebsd/macros
 -lib/rpm/platform/s390x-freebsd/macros
--lib/rpm/platform/ppc64-freebsd/macros
--lib/rpm/platform/ppc64le-freebsd/macros
--lib/rpm/platform/ppc64pseries-freebsd/macros
--lib/rpm/platform/ppc64iseries-freebsd/macros
--lib/rpm/platform/ppc64p7-freebsd/macros
 -lib/rpm/platform/sh-freebsd/macros
 -lib/rpm/platform/sh3-freebsd/macros
 -lib/rpm/platform/sh4-freebsd/macros
 -lib/rpm/platform/sh4a-freebsd/macros
--lib/rpm/platform/m68k-freebsd/macros
+-lib/rpm/platform/sparc-freebsd/macros
+-lib/rpm/platform/sparc64-freebsd/macros
+-lib/rpm/platform/sparc64v-freebsd/macros
+-lib/rpm/platform/sparcv8-freebsd/macros
+-lib/rpm/platform/sparcv9-freebsd/macros
+-lib/rpm/platform/sparcv9v-freebsd/macros
+-lib/rpm/platform/x86_64-freebsd/macros
 +lib/rpm/platform/aarch64-dragonfly/macros
-+lib/rpm/platform/noarch-dragonfly/macros
-+lib/rpm/platform/athlon-dragonfly/macros
-+lib/rpm/platform/geode-dragonfly/macros
-+lib/rpm/platform/pentium4-dragonfly/macros
-+lib/rpm/platform/pentium3-dragonfly/macros
-+lib/rpm/platform/i686-dragonfly/macros
-+lib/rpm/platform/i586-dragonfly/macros
-+lib/rpm/platform/i486-dragonfly/macros
-+lib/rpm/platform/i386-dragonfly/macros
-+lib/rpm/platform/x86_64-dragonfly/macros
-+lib/rpm/platform/amd64-dragonfly/macros
-+lib/rpm/platform/ia32e-dragonfly/macros
 +lib/rpm/platform/alpha-dragonfly/macros
 +lib/rpm/platform/alphaev5-dragonfly/macros
 +lib/rpm/platform/alphaev56-dragonfly/macros
-+lib/rpm/platform/alphapca56-dragonfly/macros
 +lib/rpm/platform/alphaev6-dragonfly/macros
 +lib/rpm/platform/alphaev67-dragonfly/macros
-+lib/rpm/platform/sparc64-dragonfly/macros
-+lib/rpm/platform/sparc64v-dragonfly/macros
-+lib/rpm/platform/sparc-dragonfly/macros
-+lib/rpm/platform/sparcv8-dragonfly/macros
-+lib/rpm/platform/sparcv9-dragonfly/macros
-+lib/rpm/platform/sparcv9v-dragonfly/macros
-+lib/rpm/platform/ppc-dragonfly/macros
-+lib/rpm/platform/ppc8260-dragonfly/macros
-+lib/rpm/platform/ppc8560-dragonfly/macros
-+lib/rpm/platform/ppc32dy4-dragonfly/macros
-+lib/rpm/platform/ppciseries-dragonfly/macros
-+lib/rpm/platform/ppcpseries-dragonfly/macros
-+lib/rpm/platform/ia64-dragonfly/macros
++lib/rpm/platform/alphapca56-dragonfly/macros
++lib/rpm/platform/amd64-dragonfly/macros
 +lib/rpm/platform/armv3l-dragonfly/macros
 +lib/rpm/platform/armv4b-dragonfly/macros
 +lib/rpm/platform/armv4l-dragonfly/macros
-+lib/rpm/platform/armv5tel-dragonfly/macros
 +lib/rpm/platform/armv5tejl-dragonfly/macros
++lib/rpm/platform/armv5tel-dragonfly/macros
++lib/rpm/platform/armv6hl-dragonfly/macros
 +lib/rpm/platform/armv6l-dragonfly/macros
++lib/rpm/platform/armv7hl-dragonfly/macros
++lib/rpm/platform/armv7hnl-dragonfly/macros
 +lib/rpm/platform/armv7l-dragonfly/macros
++lib/rpm/platform/athlon-dragonfly/macros
++lib/rpm/platform/geode-dragonfly/macros
++lib/rpm/platform/i386-dragonfly/macros
++lib/rpm/platform/i486-dragonfly/macros
++lib/rpm/platform/i586-dragonfly/macros
++lib/rpm/platform/i686-dragonfly/macros
++lib/rpm/platform/ia32e-dragonfly/macros
++lib/rpm/platform/ia64-dragonfly/macros
++lib/rpm/platform/m68k-dragonfly/macros
++lib/rpm/platform/noarch-dragonfly/macros
++lib/rpm/platform/pentium3-dragonfly/macros
++lib/rpm/platform/pentium4-dragonfly/macros
++lib/rpm/platform/ppc-dragonfly/macros
++lib/rpm/platform/ppc32dy4-dragonfly/macros
++lib/rpm/platform/ppc64-dragonfly/macros
++lib/rpm/platform/ppc64iseries-dragonfly/macros
++lib/rpm/platform/ppc64le-dragonfly/macros
++lib/rpm/platform/ppc64p7-dragonfly/macros
++lib/rpm/platform/ppc64pseries-dragonfly/macros
++lib/rpm/platform/ppc8260-dragonfly/macros
++lib/rpm/platform/ppc8560-dragonfly/macros
++lib/rpm/platform/ppciseries-dragonfly/macros
++lib/rpm/platform/ppcpseries-dragonfly/macros
 +lib/rpm/platform/s390-dragonfly/macros
 +lib/rpm/platform/s390x-dragonfly/macros
-+lib/rpm/platform/ppc64-dragonfly/macros
-+lib/rpm/platform/ppc64le-dragonfly/macros
-+lib/rpm/platform/ppc64pseries-dragonfly/macros
-+lib/rpm/platform/ppc64iseries-dragonfly/macros
-+lib/rpm/platform/ppc64p7-dragonfly/macros
 +lib/rpm/platform/sh-dragonfly/macros
 +lib/rpm/platform/sh3-dragonfly/macros
 +lib/rpm/platform/sh4-dragonfly/macros
 +lib/rpm/platform/sh4a-dragonfly/macros
-+lib/rpm/platform/m68k-dragonfly/macros
- lib/rpm-plugins/exec.so
- man/fr/man8/rpm.8.gz
- man/ja/man8/rpm.8.gz
-@@ -233,57 +233,57 @@ man/sk/man8/rpm.8.gz
- libdata/pkgconfig/rpm.pc
- @dirrm lib/rpm/fileattrs
- @dirrm lib/rpm-plugins
--@dirrm lib/rpm/platform/m68k-freebsd
++lib/rpm/platform/sparc-dragonfly/macros
++lib/rpm/platform/sparc64-dragonfly/macros
++lib/rpm/platform/sparc64v-dragonfly/macros
++lib/rpm/platform/sparcv8-dragonfly/macros
++lib/rpm/platform/sparcv9-dragonfly/macros
++lib/rpm/platform/sparcv9v-dragonfly/macros
++lib/rpm/platform/x86_64-dragonfly/macros
+ lib/rpm/pythondeps.sh
+ lib/rpm/rpm.daily
+ lib/rpm/rpm.log
+@@ -241,80 +241,3 @@ man/sk/man8/rpm.8.gz
+ %%NLS%%share/locale/vi/LC_MESSAGES/rpm.mo
+ %%NLS%%share/locale/zh_CN/LC_MESSAGES/rpm.mo
+ %%NLS%%share/locale/zh_TW/LC_MESSAGES/rpm.mo
+-@dirrm include/rpm
+-%%PYTHON%%@dirrm %%PYTHON_SITELIBDIR%%/rpm
+-@dirrm lib/rpm/fileattrs
 -@dirrm lib/rpm/platform/aarch64-freebsd
--@dirrm lib/rpm/platform/noarch-freebsd
--@dirrm lib/rpm/platform/athlon-freebsd
--@dirrm lib/rpm/platform/geode-freebsd
--@dirrm lib/rpm/platform/pentium4-freebsd
--@dirrm lib/rpm/platform/pentium3-freebsd
--@dirrm lib/rpm/platform/i686-freebsd
--@dirrm lib/rpm/platform/i586-freebsd
--@dirrm lib/rpm/platform/i486-freebsd
--@dirrm lib/rpm/platform/i386-freebsd
--@dirrm lib/rpm/platform/x86_64-freebsd
--@dirrm lib/rpm/platform/amd64-freebsd
--@dirrm lib/rpm/platform/ia32e-freebsd
 -@dirrm lib/rpm/platform/alpha-freebsd
 -@dirrm lib/rpm/platform/alphaev5-freebsd
 -@dirrm lib/rpm/platform/alphaev56-freebsd
--@dirrm lib/rpm/platform/alphapca56-freebsd
 -@dirrm lib/rpm/platform/alphaev6-freebsd
 -@dirrm lib/rpm/platform/alphaev67-freebsd
--@dirrm lib/rpm/platform/sparc64-freebsd
--@dirrm lib/rpm/platform/sparc64v-freebsd
--@dirrm lib/rpm/platform/sparc-freebsd
--@dirrm lib/rpm/platform/sparcv8-freebsd
--@dirrm lib/rpm/platform/sparcv9-freebsd
--@dirrm lib/rpm/platform/sparcv9v-freebsd
--@dirrm lib/rpm/platform/ppc-freebsd
--@dirrm lib/rpm/platform/ppc8260-freebsd
--@dirrm lib/rpm/platform/ppc8560-freebsd
--@dirrm lib/rpm/platform/ppc32dy4-freebsd
--@dirrm lib/rpm/platform/ppciseries-freebsd
--@dirrm lib/rpm/platform/ppcpseries-freebsd
--@dirrm lib/rpm/platform/ia64-freebsd
+-@dirrm lib/rpm/platform/alphapca56-freebsd
+-@dirrm lib/rpm/platform/amd64-freebsd
 -@dirrm lib/rpm/platform/armv3l-freebsd
 -@dirrm lib/rpm/platform/armv4b-freebsd
 -@dirrm lib/rpm/platform/armv4l-freebsd
--@dirrm lib/rpm/platform/armv5tel-freebsd
 -@dirrm lib/rpm/platform/armv5tejl-freebsd
+-@dirrm lib/rpm/platform/armv5tel-freebsd
+-@dirrm lib/rpm/platform/armv6hl-freebsd
 -@dirrm lib/rpm/platform/armv6l-freebsd
+-@dirrm lib/rpm/platform/armv7hl-freebsd
+-@dirrm lib/rpm/platform/armv7hnl-freebsd
 -@dirrm lib/rpm/platform/armv7l-freebsd
--@dirrm lib/rpm/platform/s390-freebsd
--@dirrm lib/rpm/platform/s390x-freebsd
+-@dirrm lib/rpm/platform/athlon-freebsd
+-@dirrm lib/rpm/platform/geode-freebsd
+-@dirrm lib/rpm/platform/i386-freebsd
+-@dirrm lib/rpm/platform/i486-freebsd
+-@dirrm lib/rpm/platform/i586-freebsd
+-@dirrm lib/rpm/platform/i686-freebsd
+-@dirrm lib/rpm/platform/ia32e-freebsd
+-@dirrm lib/rpm/platform/ia64-freebsd
+-@dirrm lib/rpm/platform/m68k-freebsd
+-@dirrm lib/rpm/platform/noarch-freebsd
+-@dirrm lib/rpm/platform/pentium3-freebsd
+-@dirrm lib/rpm/platform/pentium4-freebsd
+-@dirrm lib/rpm/platform/ppc-freebsd
+-@dirrm lib/rpm/platform/ppc32dy4-freebsd
 -@dirrm lib/rpm/platform/ppc64-freebsd
--@dirrm lib/rpm/platform/ppc64pseries-freebsd
 -@dirrm lib/rpm/platform/ppc64iseries-freebsd
 -@dirrm lib/rpm/platform/ppc64le-freebsd
 -@dirrm lib/rpm/platform/ppc64p7-freebsd
+-@dirrm lib/rpm/platform/ppc64pseries-freebsd
+-@dirrm lib/rpm/platform/ppc8260-freebsd
+-@dirrm lib/rpm/platform/ppc8560-freebsd
+-@dirrm lib/rpm/platform/ppciseries-freebsd
+-@dirrm lib/rpm/platform/ppcpseries-freebsd
+-@dirrm lib/rpm/platform/s390-freebsd
+-@dirrm lib/rpm/platform/s390x-freebsd
 -@dirrm lib/rpm/platform/sh-freebsd
 -@dirrm lib/rpm/platform/sh3-freebsd
 -@dirrm lib/rpm/platform/sh4-freebsd
 -@dirrm lib/rpm/platform/sh4a-freebsd
-+@dirrm lib/rpm/platform/m68k-dragonfly
-+@dirrm lib/rpm/platform/aarch64-dragonfly
-+@dirrm lib/rpm/platform/noarch-dragonfly
-+@dirrm lib/rpm/platform/athlon-dragonfly
-+@dirrm lib/rpm/platform/geode-dragonfly
-+@dirrm lib/rpm/platform/pentium4-dragonfly
-+@dirrm lib/rpm/platform/pentium3-dragonfly
-+@dirrm lib/rpm/platform/i686-dragonfly
-+@dirrm lib/rpm/platform/i586-dragonfly
-+@dirrm lib/rpm/platform/i486-dragonfly
-+@dirrm lib/rpm/platform/i386-dragonfly
-+@dirrm lib/rpm/platform/x86_64-dragonfly
-+@dirrm lib/rpm/platform/amd64-dragonfly
-+@dirrm lib/rpm/platform/ia32e-dragonfly
-+@dirrm lib/rpm/platform/alpha-dragonfly
-+@dirrm lib/rpm/platform/alphaev5-dragonfly
-+@dirrm lib/rpm/platform/alphaev56-dragonfly
-+@dirrm lib/rpm/platform/alphapca56-dragonfly
-+@dirrm lib/rpm/platform/alphaev6-dragonfly
-+@dirrm lib/rpm/platform/alphaev67-dragonfly
-+@dirrm lib/rpm/platform/sparc64-dragonfly
-+@dirrm lib/rpm/platform/sparc64v-dragonfly
-+@dirrm lib/rpm/platform/sparc-dragonfly
-+@dirrm lib/rpm/platform/sparcv8-dragonfly
-+@dirrm lib/rpm/platform/sparcv9-dragonfly
-+@dirrm lib/rpm/platform/sparcv9v-dragonfly
-+@dirrm lib/rpm/platform/ppc-dragonfly
-+@dirrm lib/rpm/platform/ppc8260-dragonfly
-+@dirrm lib/rpm/platform/ppc8560-dragonfly
-+@dirrm lib/rpm/platform/ppc32dy4-dragonfly
-+@dirrm lib/rpm/platform/ppciseries-dragonfly
-+@dirrm lib/rpm/platform/ppcpseries-dragonfly
-+@dirrm lib/rpm/platform/ia64-dragonfly
-+@dirrm lib/rpm/platform/armv3l-dragonfly
-+@dirrm lib/rpm/platform/armv4b-dragonfly
-+@dirrm lib/rpm/platform/armv4l-dragonfly
-+@dirrm lib/rpm/platform/armv5tel-dragonfly
-+@dirrm lib/rpm/platform/armv5tejl-dragonfly
-+@dirrm lib/rpm/platform/armv6l-dragonfly
-+@dirrm lib/rpm/platform/armv7l-dragonfly
-+@dirrm lib/rpm/platform/s390-dragonfly
-+@dirrm lib/rpm/platform/s390x-dragonfly
-+@dirrm lib/rpm/platform/ppc64-dragonfly
-+@dirrm lib/rpm/platform/ppc64pseries-dragonfly
-+@dirrm lib/rpm/platform/ppc64iseries-dragonfly
-+@dirrm lib/rpm/platform/ppc64le-dragonfly
-+@dirrm lib/rpm/platform/ppc64p7-dragonfly
-+@dirrm lib/rpm/platform/sh-dragonfly
-+@dirrm lib/rpm/platform/sh3-dragonfly
-+@dirrm lib/rpm/platform/sh4-dragonfly
-+@dirrm lib/rpm/platform/sh4a-dragonfly
- @dirrm lib/rpm/platform
- @dirrm lib/rpm
- @dirrm include/rpm
+-@dirrm lib/rpm/platform/sparc-freebsd
+-@dirrm lib/rpm/platform/sparc64-freebsd
+-@dirrm lib/rpm/platform/sparc64v-freebsd
+-@dirrm lib/rpm/platform/sparcv8-freebsd
+-@dirrm lib/rpm/platform/sparcv9-freebsd
+-@dirrm lib/rpm/platform/sparcv9v-freebsd
+-@dirrm lib/rpm/platform/x86_64-freebsd
+-@dirrm lib/rpm/platform
+-@dirrm lib/rpm
+-@dirrm lib/rpm-plugins
+-@dirrm man/fr/man8
+-@dirrm man/fr
+-@dirrm man/ko/man8
+-@dirrm man/ko
+-@dirrm man/pl/man1
+-@dirrm man/pl/man8
+-@dirrm man/pl
+-@dirrm man/ru/man8
+-@dirrm man/ru
+-@dirrm man/sk/man8
+-@dirrm man/sk
+-%%NLS%%@dirrm share/locale/cmn/LC_MESSAGES
+-%%NLS%%@dirrm share/locale/cmn
+-%%NLS%%@dirrm share/locale/sr@latin/LC_MESSAGES
+-%%NLS%%@dirrm share/locale/sr@latin
+-%%NLS%%@dirrm share/locale/te/LC_MESSAGES
+-%%NLS%%@dirrm share/locale/te
