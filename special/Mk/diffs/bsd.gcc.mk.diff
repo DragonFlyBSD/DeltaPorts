@@ -1,6 +1,6 @@
---- bsd.gcc.mk.orig	2014-02-25 18:23:04.935871000 +0000
+--- bsd.gcc.mk.orig	2014-09-29 11:55:56 UTC
 +++ bsd.gcc.mk
-@@ -41,19 +41,20 @@ GCCVERSIONS=	040200 040600 040700 040800
+@@ -40,20 +40,21 @@ GCCVERSIONS=	040200 040600 040700 040800
  # The first field if the OSVERSION in which it appeared in the base.
  # The second field is the OSVERSION in which it disappeared from the base.
  # The third field is the version as USE_GCC would use.
@@ -12,8 +12,9 @@
  GCCVERSION_040800=	     0       0 4.8
  GCCVERSION_040900=	     0       0 4.9
  
+ # Version of lang/gcc
+ GCC_DEFAULT_V=	4.8
 +DFLY_DEFAULT_VERSION=	47
- GCC_DEFAULT_V=	${GCC_DEFAULT:S/.//}
  
  # No configurable parts below this. ####################################
  #
@@ -68,7 +69,7 @@
 +.  if ${DFLYVERSION} < ${_GCCVERSION_${v}_L} || ${DFLYVERSION} > ${_GCCVERSION_${v}_R}
  V:=			${_GCCVERSION_${v}_V:S/.//}
  _GCC_PORT_DEPENDS:=	gcc${V}
- .   if ${_USE_GCC} == ${GCC_DEFAULT}
+ .   if ${_USE_GCC} == ${GCC_DEFAULT_V}
 @@ -164,11 +166,9 @@ LDFLAGS+=		-Wl,-rpath=${_GCC_RUNTIME} -L
  .  else # Use GCC in base.
  CC:=			gcc
