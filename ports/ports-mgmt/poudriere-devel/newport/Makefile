@@ -1,54 +1,35 @@
-# $FreeBSD: ports/ports-mgmt/poudriere/Makefile,v 1.25 2012/12/01 16:26:36 svnexp Exp $
+# $FreeBSD: head/ports-mgmt/poudriere-devel/Makefile 369357 2014-09-27 04:19:10Z bdrewery $
 
-PORTNAME=	poudriere-boom
-PORTVERSION=	2.3
+PORTNAME=	poudriere
+PORTVERSION=	3.1.1.0
 CATEGORIES=	ports-mgmt
-MASTER_SITES=	http://fossil.etoilebsd.net/poudriere/tarball/
-DISTFILES=	poudriere-${PORTVERSION}${EXTRACT_SUFX}?uuid=${PORTVERSION}
+MASTER_SITES=	GH
+PKGNAMESUFFIX=	-devel
+DISTNAME=	${GH_ACCOUNT}-${GH_PROJECT}-${PORTVERSION}-0-g${GH_COMMIT}
 
-# Also maintained by bdrewery@freeBSD.org
-MAINTAINER=	bapt@FreeBSD.org
+MAINTAINER=	marino@FreeBSD.org
 COMMENT=	Port build and test system
 
-LICENSE=	BSD
-
-NO_BUILD=	yes
-MANCOMPRESSED=	yes
-MAN8=	poudriere.8
-
-WRKSRC=		${WRKDIR}/poudriere-${PORTVERSION}
-OPTIONS_DEFINE=	ZSH
-ZSH_DESC=	Install zsh completion
+LICENSE=	BSD2CLAUSE
 
 CONFLICTS_INSTALL=	poudriere-[0-9]*
 
-PLIST_FILES=	etc/poudriere.conf.sample \
-		bin/poudriere \
-		share/poudriere/bulk.sh \
-		share/poudriere/clean.sh \
-		share/poudriere/common.sh \
-		share/poudriere/cron.sh \
-		share/poudriere/distclean.sh \
-		share/poudriere/jail.sh \
-		share/poudriere/options.sh \
-		share/poudriere/ports.sh \
-		share/poudriere/queue.sh \
-		share/poudriere/test_ports.sh
+USE_GITHUB=	yes
+GH_ACCOUNT=	freebsd
+GH_COMMIT=	e3a62be
+GH_TAGNAME=	${GH_COMMIT}
 
-PLIST_DIRS=	share/poudriere
+GNU_CONFIGURE=	yes
+ETCDIR=		${PREFIX}/etc/poudriere.d
+
+OPTIONS_DEFINE=	ZSH
+OPTIONS_SUB=	yes
 
 .include <bsd.port.options.mk>
 
-.if ${PORT_OPTIONS:MZSH}
-PLIST_FILES+=	share/zsh/site-functions/_poudriere
-PLIST_DIRSTRY+=	share/zsh/site-functions
-PLIST_DIRSTRY+=	share/zsh/
-.endif
-
 post-install:
-.if ${PORT_OPTIONS:MZSH}
-	@${MKDIR} ${PREFIX}/share/zsh/site-functions/
-	@${INSTALL_DATA} ${WRKSRC}/zsh-completions ${PREFIX}/share/zsh/site-functions/_poudriere
-.endif
+	@${MKDIR} ${STAGEDIR}${PREFIX}/share/zsh/site-functions/
+	${INSTALL_DATA} ${WRKSRC}/completions/zsh/_poudriere \
+	    ${STAGEDIR}${PREFIX}/share/zsh/site-functions/
 
 .include <bsd.port.mk>
