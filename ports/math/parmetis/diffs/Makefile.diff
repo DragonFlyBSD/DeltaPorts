@@ -1,0 +1,20 @@
+--- Makefile.orig	2014-09-30 15:40:46 UTC
++++ Makefile
+@@ -17,13 +17,15 @@ LICENSE_NAME=	University of Minnesota ME
+ LICENSE_FILE=	${WRKSRC}/LICENSE.txt
+ LICENSE_PERMS=	auto-accept
+ 
+-LIB_DEPENDS=	libc++.so:${PORTSDIR}/devel/libc++
++# libc++.so is a linker script, not symlink.
++# Ignore portlint, DF needs actual library specified
++LIB_DEPENDS=	libc++.so.1:${PORTSDIR}/devel/libc++
+ 
+ OPTIONS_DEFINE=	OPENMPI DOCS
+ OPENMPI_DESC=	Use openmpi instead of mpich2
+ 
+ USES=		cmake gmake
+-LDFLAGS+=	-lc++
++LDFLAGS+=	-L${LOCALBASE}/lib -lc++
+ 
+ PLIST_FILES=	include/parmetis/metis.h \
+ 		include/parmetis/parmetis.h \
