@@ -1,6 +1,6 @@
---- daemon/main.c.orig	2012-04-07 22:50:09.000000000 +0000
-+++ daemon/main.c
-@@ -147,7 +147,7 @@ void set_signal_handlers(void)
+--- src/main.c.orig	2014-09-19 17:02:55 UTC
++++ src/main.c
+@@ -149,7 +149,7 @@ static void set_signal_handlers(void)
  	sigaction(SIGUSR2, &sa, NULL);
  }
  
