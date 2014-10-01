@@ -1,0 +1,15 @@
+--- Makefile.orig	2014-10-01 07:23:25 UTC
++++ Makefile
+@@ -114,8 +114,10 @@ PLIST_SUB+=	GNUTLS="@comment "
+ .endif
+ 
+ .if ${PORT_OPTIONS:MOPENSSL}
+-USE_OPENSSL=yes
+-CONFIGURE_ARGS+=	--enable-openssl
++USES+=			pkgconfig
++USE_OPENSSL=		yes
++WITH_OPENSSL_PORT=	yes
++CONFIGURE_ARGS+=	--enable-freebsd-ports-openssl
+ EXTRAS:=${EXTRAS},m_ssl_openssl.cpp
+ PLIST_SUB+=	OPENSSL=""
+ .else
