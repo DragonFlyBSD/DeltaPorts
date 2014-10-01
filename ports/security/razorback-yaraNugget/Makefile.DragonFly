@@ -1,0 +1,4 @@
+LDFLAGS+=	-L${LOCALBASE}/lib
+CFLAGS+=	-I${LOCALBASE}/include
+CONFIGURE_ENV+=	ac_cv_header_uuid_uuid_h=yes
+MAKE_ENV+=	ac_cv_header_uuid_uuid_h=yes
