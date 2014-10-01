@@ -18,14 +18,19 @@ if [ ! -f "${SYNCFILE}" ]; then
    exit 1
 fi
 
-rm -f ${FINALFILE}
+rm -f ${FINALFILE} ${FINALFILE}.tmp
 
 
 while read line; do
    if [ -n "${line}" ]; then
-      echo processing ${line}
+      echo "=======================================>> processing ${line}"
+      echo ${line} >> ${FINALFILE}.tmp
       ${DELTA}/scripts/generator/ramo_bulk_list.sh ${line}
-      cat ${TMPFILE} >> ${FINALFILE}
+      [ -f ${TMPFILE} ] && cat ${TMPFILE} >> ${FINALFILE}.tmp
+      rm -f ${TMPFILE}
    fi
 done < ${SYNCFILE}
-rm ${TMPFILE}
+
+[ -f ${FINALFILE}.tmp ] && \
+   sort -u ${FINALFILE}.tmp > ${FINALFILE} && \
+   rm ${FINALFILE}.tmp

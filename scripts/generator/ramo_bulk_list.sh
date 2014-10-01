@@ -14,7 +14,7 @@ AWKCMD2='{ print substr($2,12) }'
 
 [ -z "${1}" ] && echo "argument 1 must be port origin" && exit 1
 FULLLINE=$(grep "|/usr/ports/${1}|" ${INDEX} 2>/dev/null)
-[ -z "${FULLLINE}" ] && "origin: ${1} not present in ${INDEX}" && exit 1
+[ -z "${FULLLINE}" ] && echo "origin: ${1} not present in ${INDEX}" && exit 0
 
 PKGNAME=$(echo ${FULLLINE} | awk -F \| "${AWKCMD}")
 
