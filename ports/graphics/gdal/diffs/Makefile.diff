@@ -1,6 +1,6 @@
---- Makefile.orig	2014-08-23 15:52:56 UTC
+--- Makefile.orig	2014-10-01 22:57:25 UTC
 +++ Makefile
-@@ -32,7 +32,7 @@ CFLAGS+=	-fPIC
+@@ -31,7 +31,7 @@ CFLAGS+=	-fPIC
  CONFIGURE_ARGS=	--datadir=${DATADIR} \
  		--enable-static=yes \
  		--with-liblzma=yes --with-libz=/usr --with-threads=yes \
@@ -9,7 +9,7 @@
  GNU_CONFIGURE=	yes
  LDFLAGS+=	-L${LOCALBASE} -pthread
  MAKE_JOBS_UNSAFE=	yes
-@@ -140,7 +140,14 @@ XERCES_CONFIGURE_OFF=	--with-xerces=no
+@@ -139,12 +139,18 @@ XERCES_CONFIGURE_OFF=	--with-xerces=no
  XERCES_CONFIGURE_ON=	--with-xerces=${LOCALBASE}
  XERCES_LIB_DEPENDS=	libxerces-c.so:${PORTSDIR}/textproc/xerces-c3
  
@@ -23,9 +23,6 @@
 +		${WRKSRC}/GDALmake.opt.in
  	@${REINPLACE_CMD} -e 's|$$(INST_LIB)/pkgconfig|${PREFIX}/libdata/pkgconfig|' ${WRKSRC}/GNUmakefile
  	@${REINPLACE_CMD} -e 's|-lpthread|-pthread|g' ${WRKSRC}/configure
- # patch for json-c 0.12
-@@ -154,7 +161,6 @@ post-patch:
- 		${WRKSRC}/ogr/ogrsf_frmts/gme/ogrgmejson.cpp
  
  post-install:
 -	${INSTALL_LIB} ${WRKSRC}/libgdal.a ${STAGEDIR}${PREFIX}/lib/
