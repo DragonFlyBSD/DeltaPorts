@@ -1,4 +1,4 @@
---- Uses/usb.mk.orig	2013-05-07 17:32:05.364319000 +0000
+--- Uses/usb.mk.orig	2014-10-01 17:13:34 UTC
 +++ Uses/usb.mk
 @@ -0,0 +1,28 @@
 +# $FreeBSD$
@@ -15,7 +15,7 @@
 +.if !defined(_INCLUDE_USES_USB_MK)
 +_INCLUDE_USES_USB_MK=	yes
 +
-+.if defined(usb_ARGS)
++.if !empty(usb_ARGS)
 +IGNORE=	USES=usb does not require args
 +.endif
 +
