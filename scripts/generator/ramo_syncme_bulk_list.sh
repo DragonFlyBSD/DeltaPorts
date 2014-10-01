@@ -9,8 +9,6 @@
 SYNCFILE=/tmp/syncme
 TMPFILE=/tmp/ramo.list
 FINALFILE=/tmp/ramosync.list
-FULLPATH=$(pwd)/$0
-HERE=$(dirname ${FULLPATH})
 
 AWKCMD='{ print $1 }'
 AWKCMD2='{ print substr($2,12) }'
@@ -26,7 +24,7 @@ rm -f ${FINALFILE}
 while read line; do
    if [ -n "${line}" ]; then
       echo processing ${line}
-      ${HERE}/ramo_bulk_list.sh ${line}
+      ${DELTA}/scripts/generator/ramo_bulk_list.sh ${line}
       cat ${TMPFILE} >> ${FINALFILE}
    fi
 done < ${SYNCFILE}
