@@ -1,4 +1,4 @@
---- bsd.port.mk.orig	2014-10-01 22:19:11.771190000 +0000
+--- bsd.port.mk.orig	2014-10-02 21:28:03.174342000 +0000
 +++ bsd.port.mk
 @@ -43,7 +43,8 @@ FreeBSD_MAINTAINER=	portmgr@FreeBSD.org
  #				  makefile is being used on.  Automatically set to
@@ -53,7 +53,7 @@
  
  .include "${PORTSDIR}/Mk/bsd.commands.mk"
  
-@@ -1193,36 +1206,17 @@ OSREL?=	${UNAMER:C/-.*//}
+@@ -1193,32 +1206,16 @@ OSREL?=	${UNAMER:C/-.*//}
  
  # Get __FreeBSD_version
  .if !defined(OSVERSION)
@@ -62,14 +62,11 @@
 -.elif exists(${SRC_BASE}/sys/sys/param.h)
 -OSVERSION!=	${AWK} '/^\#define[[:blank:]]__FreeBSD_version/ {print $$3}' < ${SRC_BASE}/sys/sys/param.h
 -.else
--.if 0
 -.error Unable to determine OS version.  Either define OSVERSION, install /usr/include/sys/param.h or define SRC_BASE.
--.else
--OSVERSION!=	${SYSCTL} -n kern.osreldate
 -.endif
--.endif
--.endif
--
++OSVERSION=	9999999
+ .endif
+ 
 -# Convert OSVERSION to major release number
 -_OSVERSION_MAJOR=	${OSVERSION:C/([0-9]?[0-9])([0-9][0-9])[0-9]{3}/\1/}
 -# Sanity checks for chroot/jail building.
@@ -77,9 +74,8 @@
 -.error UNAME_r (${UNAMER}) and OSVERSION (${OSVERSION}) do not agree on major version number.
 -.elif ${_OSVERSION_MAJOR} != ${OSREL:R}
 -.error OSREL (${OSREL}) and OSVERSION (${OSVERSION}) do not agree on major version number.
-+OSVERSION=	9999999
- .endif
- 
+-.endif
+-
 -# Enable new xorg for FreeBSD versions after Radeon KMS was imported unless
 -# WITHOUT_NEW_XORG is set.
 -.if ${OSVERSION} >= 902510
@@ -93,13 +89,12 @@
 +DFLYVERSION!=	${AWK} '/^\#define[[:blank:]]__DragonFly_version/ {print $$3}' < /usr/include/sys/param.h
 +OSREL!=		${ECHO} ${DFLYVERSION} | ${AWK} '{a=int($$1/100000); b=int(($$1-(a*100000))/100); print a "." b}'
 +.  else
-+DFLYVERSION!=	${SYSCTL} -n kern.osreldate
-+OSREL!=		${UNAME} -r | ${SED} -e 's/[-(].*//'
++.error Unable to determine OS version.  Either define OSVERSION, install /usr/include/sys/param.h or define SRC_BASE.
 +.  endif
  .endif
  
  # Only define tools here (for transition period with between pkg tools)
-@@ -1328,6 +1322,25 @@ WITH_DEBUG=	yes
+@@ -1324,6 +1321,25 @@ WITH_DEBUG=	yes
  
  .include "${PORTSDIR}/Mk/bsd.options.mk"
  
@@ -125,7 +120,7 @@
  # Start of pre-makefile section.
  .if !defined(AFTERPORTMK) && !defined(INOPTIONSMK)
  
-@@ -1358,7 +1371,7 @@ PKGVERSION=	${PORTVERSION:C/[-_,]/./g}${
+@@ -1354,7 +1370,7 @@ PKGVERSION=	${PORTVERSION:C/[-_,]/./g}${
  PKGNAME=	${PKGNAMEPREFIX}${PORTNAME}${PKGNAMESUFFIX}-${PKGVERSION}
  DISTNAME?=	${PORTNAME}-${DISTVERSIONPREFIX}${DISTVERSION:C/:(.)/\1/g}${DISTVERSIONSUFFIX}
  
@@ -134,7 +129,7 @@
  
  DOCSDIR?=		${PREFIX}/share/doc/${PORTNAME}
  EXAMPLESDIR?=		${PREFIX}/share/examples/${PORTNAME}
-@@ -1378,7 +1391,7 @@ ETCDIR?=		${PREFIX}/etc/${PORTNAME}
+@@ -1374,7 +1390,7 @@ ETCDIR?=		${PREFIX}/etc/${PORTNAME}
  .include "${PORTSDIR}/Mk/bsd.xorg.mk"
  .endif
  
@@ -143,7 +138,7 @@
  TEMPLATES?=		${PORTSDIR}/Templates
  KEYWORDS?=		${PORTSDIR}/Keywords
  
-@@ -1559,7 +1572,7 @@ DEV_ERROR+=	"${PKGNAME}: Makefile error:
+@@ -1560,7 +1576,7 @@ DEV_ERROR+=	"${PKGNAME}: Makefile error:
  
  _POSTMKINCLUDED=	yes
  
@@ -152,7 +147,7 @@
  .if !defined(IGNORE_MASTER_SITE_GITHUB) && defined(USE_GITHUB)
  WRKSRC?=		${WRKDIR}/${GH_ACCOUNT}-${GH_PROJECT}-${GH_COMMIT}
  .endif
-@@ -1594,7 +1607,9 @@ PLIST_SUB_SED?= ${PLIST_SUB:C/.*=.{1,${P
+@@ -1595,7 +1611,9 @@ PLIST_SUB_SED?= ${PLIST_SUB:C/.*=.{1,${P
  
  # kludge to strip trailing whitespace from CFLAGS;
  # sub-configure will not # survive double space
@@ -163,7 +158,7 @@
  
  .if defined(WITHOUT_CPU_CFLAGS)
  .if defined(_CPUCFLAGS)
-@@ -1690,6 +1705,11 @@ PKG_DEPENDS+=	${LOCALBASE}/sbin/pkg:${PO
+@@ -1691,6 +1709,11 @@ PKG_DEPENDS+=	${LOCALBASE}/sbin/pkg:${PO
  
  .if defined(USE_GCC)
  .include "${PORTSDIR}/Mk/bsd.gcc.mk"
@@ -175,7 +170,7 @@
  .endif
  
  .if defined(USE_BINUTILS) && !defined(DISABLE_BINUTILS)
-@@ -2057,25 +2077,6 @@ ${lang}FLAGS+=	${${lang}FLAGS_${ARCH}}
+@@ -2058,25 +2081,6 @@ ${lang}FLAGS+=	${${lang}FLAGS_${ARCH}}
  .endif
  .endfor
  
@@ -201,7 +196,7 @@
  # ccache support
  
  # Try to set a default CCACHE_DIR to workaround HOME=/dev/null and
-@@ -2177,14 +2178,42 @@ PATCH_DIST_ARGS+=	--suffix .orig
+@@ -2178,14 +2182,42 @@ PATCH_DIST_ARGS+=	--suffix .orig
  TAR?=	/usr/bin/tar
  
  # EXTRACT_SUFX is defined in .pre.mk section
@@ -248,7 +243,7 @@
  # Figure out where the local mtree file is
  .if !defined(MTREE_FILE) && !defined(NO_MTREE)
  .if ${PREFIX} == /usr
-@@ -2770,6 +2799,8 @@ SET_LATE_CONFIGURE_ARGS= \
+@@ -2771,6 +2803,8 @@ SET_LATE_CONFIGURE_ARGS= \
  SCRIPTS_ENV+=	CURDIR=${MASTERDIR} DISTDIR=${DISTDIR} \
  		  WRKDIR=${WRKDIR} WRKSRC=${WRKSRC} PATCHDIR=${PATCHDIR} \
  		  SCRIPTDIR=${SCRIPTDIR} FILESDIR=${FILESDIR} \
@@ -257,7 +252,7 @@
  		  PORTSDIR=${PORTSDIR} PREFIX=${PREFIX} LOCALBASE=${LOCALBASE}
  
  .if defined(BATCH)
-@@ -2858,7 +2889,7 @@ _DESKTOPDIR_REL=
+@@ -2859,7 +2893,7 @@ _DESKTOPDIR_REL=
  
  # Check the machine architectures
  .if defined(ONLY_FOR_ARCHS)
@@ -266,7 +261,7 @@
  .if ${ARCH:M${__ARCH}} != ""
  __ARCH_OK?=		1
  .endif
-@@ -2868,7 +2899,7 @@ __ARCH_OK?=		1
+@@ -2869,7 +2903,7 @@ __ARCH_OK?=		1
  .endif
  
  .if defined(NOT_FOR_ARCHS)
@@ -275,7 +270,7 @@
  .if ${ARCH:M${__NARCH}} != ""
  .undef __ARCH_OK
  .endif
-@@ -2877,9 +2908,9 @@ __ARCH_OK?=		1
+@@ -2878,9 +2912,9 @@ __ARCH_OK?=		1
  
  .if !defined(__ARCH_OK)
  .if defined(ONLY_FOR_ARCHS)
@@ -287,7 +282,7 @@
  .endif
  IGNORE+=	while you are running ${ARCH}
  
-@@ -3013,6 +3044,7 @@ all:
+@@ -3014,6 +3048,7 @@ all:
  	  DISTDIR=${DISTDIR} WRKDIR=${WRKDIR} WRKSRC=${WRKSRC} \
  	  PATCHDIR=${PATCHDIR} SCRIPTDIR=${SCRIPTDIR} \
  	  FILESDIR=${FILESDIR} PORTSDIR=${PORTSDIR} PREFIX=${PREFIX} \
@@ -295,7 +290,7 @@
  	  BUILD_DEPENDS="${BUILD_DEPENDS}" RUN_DEPENDS="${RUN_DEPENDS}" \
  	  CONFLICTS="${CONFLICTS}" \
  	${ALL_HOOK}
-@@ -3344,9 +3376,26 @@ clean-wrkdir:
+@@ -3345,9 +3380,26 @@ clean-wrkdir:
  .if !target(do-extract)
  do-extract:
  	@for file in ${EXTRACT_ONLY}; do \
@@ -325,7 +320,7 @@
  		fi; \
  	done
  .if !defined(EXTRACT_PRESERVE_OWNERSHIP)
-@@ -3401,7 +3450,7 @@ do-patch:
+@@ -3402,7 +3454,7 @@ do-patch:
  	@set -e ;\
  	if [ -d ${PATCHDIR} ]; then \
  		if [ "`${ECHO_CMD} ${PATCHDIR}/patch-*`" != "${PATCHDIR}/patch-*" ]; then \
@@ -334,7 +329,7 @@
  			PATCHES_APPLIED="" ; \
  			for i in ${PATCHDIR}/patch-*; do \
  				case $$i in \
-@@ -3426,6 +3475,33 @@ do-patch:
+@@ -3427,6 +3479,33 @@ do-patch:
  			done; \
  		fi; \
  	fi
@@ -368,7 +363,7 @@
  .endif
  
  .if !target(run-autotools-fixup)
-@@ -4599,7 +4675,7 @@ ALL-DEPENDS-LIST= \
+@@ -4600,7 +4679,7 @@ ALL-DEPENDS-LIST= \
  				continue;				\
  			fi;						\
  			${ECHO_CMD} $$d;				\
@@ -377,7 +372,7 @@
  				${ECHO_MSG} "${PKGNAME}: \"$$d\" erroneous -- dependency list incomplete" >&2; \
  				continue;				\
  			fi;						\
-@@ -4668,7 +4744,7 @@ CLEAN-DEPENDS-LIMITED= \
+@@ -4669,7 +4748,7 @@ CLEAN-DEPENDS-LIMITED= \
  				${ECHO_MSG} "${PKGNAME}: \"$$d\" non-existent -- dependency list incomplete" >&2; \
  				continue;				\
  			fi;						\
@@ -386,7 +381,7 @@
  				${ECHO_MSG} "${PKGNAME}: \"$$d\" erroneous -- dependency list incomplete" >&2; \
  				continue;				\
  			fi;						\
-@@ -4759,7 +4835,7 @@ FETCH_LIST?=	for i in $$deps; do \
+@@ -4760,7 +4839,7 @@ FETCH_LIST?=	for i in $$deps; do \
  			else	\
  				continue;	\
  			fi;;	\
@@ -395,7 +390,7 @@
  				continue;	\
  			fi;;	\
  		esac;	\
-@@ -5097,10 +5173,15 @@ _SUB_LIST_TEMP=	${SUB_LIST:S/$/!g/:S/^/
+@@ -5098,10 +5177,15 @@ _SUB_LIST_TEMP=	${SUB_LIST:S/$/!g/:S/^/
  apply-slist:
  .if defined(SUB_FILES)
  .for file in ${SUB_FILES}
@@ -414,7 +409,7 @@
  .endif
  .endfor
  .for i in pkg-message pkg-install pkg-deinstall pkg-req
-@@ -5382,6 +5463,7 @@ tags:
+@@ -5383,6 +5467,7 @@ tags:
  	OPSYS="${OPSYS:S/"/"'"'"/g:S/\$/\$\$/g:S/\\/\\\\/g}" \
  	OSREL="${OSREL:S/"/"'"'"/g:S/\$/\$\$/g:S/\\/\\\\/g}" \
  	OSVERSION="${OSVERSION:S/"/"'"'"/g:S/\$/\$\$/g:S/\\/\\\\/g}" \

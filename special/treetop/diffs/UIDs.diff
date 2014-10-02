@@ -1,4 +1,4 @@
---- UIDs.orig	2014-09-25 11:46:46.638172000 +0000
+--- UIDs.orig	2014-10-02 21:25:31.076286000 +0000
 +++ UIDs
 @@ -15,14 +15,13 @@ uucp:*:66:66::0:0:UUCP pseudo-user:/var/
  xten:*:67:67::0:0:X-10 daemon:/usr/local/xten:/nonexistent
@@ -24,12 +24,12 @@
 -cbsd:*:150:150::0:0:Cbsd user:/nonexistent:/bin/sh
 +pgsql:*:150:150::0:0:PostgreSQL pseudo-user:/usr/local/pgsql:/bin/sh
  pop3vscan:*:151:6::0:0:POP3VScan Daemon:/var/spool/pop3vscan:/usr/sbin/nologin
+ iog:*:152:80::0:0:iog Monitoring Owner:/usr/local/iog:/usr/sbin/nologin
  rbldns:*:153:153::0:0:rbldnsd pseudo-user:/nonexistent:/usr/sbin/nologin
- trircd:*:154:154::0:0:& user:/usr/local/etc/tr-ircd:/usr/sbin/nologin
-@@ -304,4 +302,6 @@ syncthing:*:983:983::0:0:Syncthing Daemo
- tvheadend:*:984:984::0:0:TV Headend:/usr/local/etc/tvheadend:/bin/sh
+@@ -306,4 +304,6 @@ tvheadend:*:984:984::0:0:TV Headend:/usr
  puppetdb:*:985:985::0:0:PuppetDB Daemon pseudo-user:/nonexistent:/usr/sbin/nologin
  kamailio:*:986:986::0:0:kamailio daemon:/nonexistent:/usr/sbin/nologin
+ spark:*:987:987::0:0:Apache Spark user:/nonexistent:/usr/sbin/nologin
 +avenger:*:60149:60149::0:0:Mail Avenger:/var/spool/avenger:/usr/sbin/nologin
 +cbsd:*:60150:150::0:0:Cbsd user:/nonexistent:/bin/sh
  nobody:*:65534:65534::0:0:Unprivileged user:/nonexistent:/usr/sbin/nologin
