@@ -1,2 +1,2 @@
-BUILD_DEPENDS+= ${LOCALBASE}/bin/gperf:${PORTSDIR}/devel/gperf
+USES+= gperf
 CFLAGS+= -D__FreeBSD__=9

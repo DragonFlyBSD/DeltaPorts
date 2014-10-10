@@ -1,14 +1,6 @@
---- Makefile.orig	2014-05-05 11:40:19.851323000 +0000
+--- Makefile.orig	2014-10-10 16:17:21.277507000 +0000
 +++ Makefile
-@@ -12,6 +12,7 @@ DIST_SUBDIR=	gnome2
- MAINTAINER=	gnome@FreeBSD.org
- COMMENT=	The data backends for the Evolution integrated mail/PIM suite
- 
-+BUILD_DEPENDS=	gperf:${PORTSDIR}/devel/gperf
- LIB_DEPENDS=	libsoup-2.4.so:${PORTSDIR}/devel/libsoup \
- 		libgdata.so:${PORTSDIR}/devel/libgdata \
- 		libdbus-glib-1.so:${PORTSDIR}/devel/dbus-glib \
-@@ -50,7 +51,8 @@ KERBEROS_CONFIGURE_OFF=	--without-krb5
+@@ -50,7 +50,8 @@ KERBEROS_CONFIGURE_OFF=	--without-krb5
  .include <bsd.port.options.mk>
  
  .if ${PORT_OPTIONS:MKERBEROS}
