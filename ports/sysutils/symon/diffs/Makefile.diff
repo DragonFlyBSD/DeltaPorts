@@ -1,0 +1,16 @@
+--- Makefile.orig	2014-10-10 01:01:40.440775000 +0000
++++ Makefile
+@@ -60,9 +60,11 @@ post-extract:
+ 	@${MV} ${WRKDIR}/${PORTNAME} ${WRKSRC}
+ 
+ # We need to teach symon about mbstat changes/removal in r253351 and r253361.
+-.if ${OSVERSION} > 1000000
+ post-patch:
+ 	@${RM} ${WRKSRC}/platform/FreeBSD/sm_mbuf.c
+-.endif
++	@${MKDIR} ${WRKSRC}/platform/DragonFly
++	(cd ${WRKSRC}/platform && \
++		 ${FIND} FreeBSD -type f \! -name sm_smart.c | \
++		 ${XARGS} -n1 -I foo ${CP} foo DragonFly/)
+ 
+ .include <bsd.port.post.mk>
