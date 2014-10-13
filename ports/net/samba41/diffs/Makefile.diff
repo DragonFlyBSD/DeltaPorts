@@ -1,4 +1,4 @@
---- Makefile.orig	2014-05-07 23:53:09.547547000 +0000
+--- Makefile.orig	2014-10-13 08:32:25 UTC
 +++ Makefile
 @@ -86,8 +86,6 @@ LIB_DEPENDS+=		libsasl2.so:${PORTSDIR}/s
  # GNUTLS
@@ -9,7 +9,15 @@
  # External Samba dependencies
  # IDL compiler
  BUILD_DEPENDS+=		p5-Parse-Pidl>=4.0.0:${PORTSDIR}/devel/p5-Parse-Pidl
-@@ -225,14 +223,18 @@ WANT_EXP_MODULES=	idmap_ad vfs_cacheprim
+@@ -153,6 +151,7 @@ OPTIONS_DEFAULT+=	AVAHI
+ .include <bsd.port.options.mk>
+ 
+ CONFIGURE_ARGS+=	\
++			--without-regedit \
+ 			--with-pam \
+ 			--with-iconv \
+ 			--with-winbind \
+@@ -226,14 +225,18 @@ WANT_EXP_MODULES=	idmap_ad vfs_cacheprim
  .endif
  
  .if ${PORT_OPTIONS:MACL_SUPPORT}
