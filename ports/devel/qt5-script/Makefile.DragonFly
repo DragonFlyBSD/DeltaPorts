@@ -1,2 +1,0 @@
-USES+= gperf
-CFLAGS+= -D__FreeBSD__=9
