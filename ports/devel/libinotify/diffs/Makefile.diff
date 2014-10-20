@@ -1,10 +1,11 @@
 --- files/Makefile.orig	2014-03-16 10:23:20.043529000 +0000
 +++ files/Makefile
-@@ -1,6 +1,6 @@
+@@ -1,6 +1,7 @@
  # $FreeBSD$
  
 -SHLIB=		inotify
 +LIB=		inotify
++NOINSTALLLIB=	true
  SHLIB_MAJOR=	0
  
  DPADD=		${LIBPTHREAD}
