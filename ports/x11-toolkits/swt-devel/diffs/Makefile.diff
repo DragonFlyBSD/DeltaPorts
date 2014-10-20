@@ -1,11 +1,11 @@
---- Makefile.orig	2013-11-05 10:07:45.110114000 +0000
+--- Makefile.orig	2014-10-20 15:14:54 UTC
 +++ Makefile
-@@ -84,7 +84,7 @@ DIST_EXT=	gtk-linux-x86
- .include <bsd.port.pre.mk>
+@@ -80,7 +80,7 @@ DIST_EXT=	gtk-linux-x86
+ .endif
  
  post-extract:
--.if ${OSVERSION} > 900044
-+.if ${OPSYS} == FreeBSD && ${OSVERSION} > 900044
- 	@(cd ${WRKSRC} && /usr/bin/unzip -qo *.zip)
- .else
- 	@(cd ${WRKSRC} && ${UNZIP_CMD} -qo *.zip)
+-	@(cd ${WRKSRC} && ${UNZIP_NATIVE_CMD} -qo *.zip)
++	@(cd ${WRKSRC} && ${UNZIP_CMD} -qo *.zip)
+ 	@${RM} -f ${WRKSRC}/*.o ${WRKSRC}/*.so ${WRKSRC}/*.jar
+ 
+ post-patch:

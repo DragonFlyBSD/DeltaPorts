@@ -1,11 +1,11 @@
---- pkg-plist.orig	2014-10-13 08:32:30 UTC
+--- pkg-plist.orig	2014-10-20 15:18:29 UTC
 +++ pkg-plist
 @@ -17,7 +17,6 @@ bin/regpatch
  bin/regshell
  bin/regtree
  bin/rpcclient
 -bin/samba-regedit
- bin/samba-tool
+ %%AD_DC%%bin/samba-tool
  bin/sharesec
  bin/smbcacls
 @@ -181,6 +180,8 @@ lib/libndr.so
@@ -26,31 +26,11 @@
  %%SMBPASS%%lib/pam_smbpass.so
  lib/pam_winbind.so
  lib/winbind_krb5_locator.so
-@@ -389,8 +388,8 @@ lib/shared-modules/service/wrepl.so
- lib/shared-modules/vfs/acl_tdb.so
- lib/shared-modules/vfs/acl_xattr.so
- lib/shared-modules/vfs/aio_fork.so
--@comment vfs_aio_posix lib/shared-modules/vfs/aio_posix.so
--@comment vfs_aio_pthread lib/shared-modules/vfs/aio_pthread.so
-+lib/shared-modules/vfs/aio_posix.so
-+lib/shared-modules/vfs/aio_pthread.so
- lib/shared-modules/vfs/audit.so
- lib/shared-modules/vfs/cap.so
- lib/shared-modules/vfs/catia.so
-@@ -405,7 +404,7 @@ lib/shared-modules/vfs/full_audit.so
- lib/shared-modules/vfs/linux_xfs_sgid.so
- lib/shared-modules/vfs/media_harmony.so
- lib/shared-modules/vfs/netatalk.so
--@comment vfs_notify_fam lib/shared-modules/vfs/notify_fam.so
-+lib/shared-modules/vfs/notify_fam.so
- lib/shared-modules/vfs/posix_eadb.so
- lib/shared-modules/vfs/preopen.so
- lib/shared-modules/vfs/readahead.so
-@@ -421,7 +420,6 @@ lib/shared-modules/vfs/syncops.so
+@@ -422,7 +421,6 @@ lib/shared-modules/vfs/syncops.so
  lib/shared-modules/vfs/time_audit.so
  lib/shared-modules/vfs/xattr_tdb.so
  %%DEVELOPER%%lib/shared-modules/vfs/nfs4acl_xattr.so
 -lib/shared-modules/vfs/zfsacl.so
  %%LDAP%%lib/shared-modules/idmap/rfc2307.so
- @comment auth_samba4 lib/shared-modules/auth/samba4.so
- @comment auth_unix lib/shared-modules/auth/unix.so
+ %%MODULE_AUTH_SAMBA4%%lib/shared-modules/auth/samba4.so
+ %%MODULE_AUTH_UNIX%%lib/shared-modules/auth/unix.so

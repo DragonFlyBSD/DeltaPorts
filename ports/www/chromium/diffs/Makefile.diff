@@ -1,6 +1,6 @@
---- Makefile.orig	2014-09-13 14:19:33 UTC
+--- Makefile.orig	2014-10-20 15:23:15 UTC
 +++ Makefile
-@@ -52,6 +52,8 @@ LIB_DEPENDS=	libcairo.so:${PORTSDIR}/gra
+@@ -51,6 +51,8 @@ LIB_DEPENDS=	libcairo.so:${PORTSDIR}/gra
  		libxml2.so:${PORTSDIR}/textproc/libxml2 \
  		libwebp.so:${PORTSDIR}/graphics/webp
  
@@ -9,32 +9,23 @@
  RUN_DEPENDS=	${LOCALBASE}/lib/alsa-lib/libasound_module_pcm_oss.so:${PORTSDIR}/audio/alsa-plugins \
  		${LOCALBASE}/lib/X11/fonts/Droid/fonts.dir:${PORTSDIR}/x11-fonts/droid-fonts-ttf \
  		xdg-open:${PORTSDIR}/devel/xdg-utils
-@@ -76,6 +78,7 @@ GYP_DEFINES+=	\
+@@ -74,6 +76,7 @@ GYP_DEFINES+=	\
  		linux_use_heapchecker=0 \
  		linux_strip_binary=1 \
  		test_isolation_mode=noop \
 +		disable_fatal_linker_warnings=1 \
  		disable_nacl=1 \
+ 		enable_extensions=1 \
  		enable_one_click_signin=1 \
- 		enable_openmax=1 \
-@@ -169,7 +172,7 @@ GYP_DEFINES+=	disable_sse2=1
- .if !exists(/usr/libdata/pkgconfig/libusb-1.0.pc)
- EXTRA_PATCHES+=	${FILESDIR}/extra-patch-libusb-pc
- .endif
--.if ${OSVERSION} >= 1000052 && !exists(${LOCALBASE}/include/execinfo.h)
-+.if ${OPSYS} == FreeBSD && ${OSVERSION} >= 1000052 && !exists(${LOCALBASE}/include/execinfo.h)
- EXTRA_PATCHES+=	${FILESDIR}/extra-patch-fixup-execinfo
- .endif
- 
-@@ -190,6 +193,7 @@ CONFIGURE_ENV+=	CC="${CC}" \
+@@ -183,6 +186,7 @@ CONFIGURE_ENV+=	CC="${CC}" \
  		GYP_GENERATORS=ninja \
  		GYP_DEFINES="${GYP_DEFINES}"
  MAKE_ENV+=	BUILDTYPE=${BUILDTYPE} \
 +		GYPFLAGS=-DOS=freebsd \
  		GPERF="${LOCALBASE}/bin/gperf"
+ MAKE_ARGS=	-C out/${BUILDTYPE}
  
- .include <bsd.port.pre.mk>
-@@ -203,6 +207,7 @@ GYP_DEFINES+=	gcc_version=${CXX:S/g++//}
+@@ -193,6 +197,7 @@ GYP_DEFINES+=	gcc_version=${CXX:S/g++//}
  EXTRA_PATCHES+=	${FILESDIR}/extra-patch-gcc
  .else
  GYP_DEFINES+=	clang=1
@@ -42,7 +33,7 @@
  CFLAGS+=	-Wno-unknown-warning-option
  EXTRA_PATCHES+=	${FILESDIR}/extra-patch-clang
  CONFIGURE_ENV+=	AR=/usr/bin/ar
-@@ -229,6 +234,8 @@ pre-everything::
+@@ -219,12 +224,25 @@ pre-everything::
  
  post-patch:
  	@${REINPLACE_CMD} -e "s|/usr/local|${LOCALBASE}|" \
@@ -51,10 +42,9 @@
  		${WRKSRC}/crypto/crypto.gyp \
  		${WRKSRC}/v8/tools/gyp/v8.gyp \
  		${WRKSRC}/v8/build/toolchain.gypi
-@@ -238,6 +245,17 @@ post-patch:
- 	@${REINPLACE_CMD} -e "s|/usr/bin/gcc|${CC}|" \
- 		${WRKSRC}/third_party/WebKit/Source/build/scripts/preprocessor.pm \
- 		${WRKSRC}/third_party/WebKit/Source/build/scripts/scripts.gypi
+ 	@${REINPLACE_CMD} -e "s|/usr/local|${PREFIX}|" \
+ 		${WRKSRC}/chrome/common/chrome_paths.cc \
+ 		${WRKSRC}/base/base.gyp
 +	@${FIND} ${WRKSRC} -type f -name \*\.gyp\* | \
 +		${GREP} -vE "/v8/|libusb" | ${XARGS} ${GREP} -l '"freebsd"' | \
 +		${XARGS} ${REINPLACE_CMD} -e 's|"freebsd"|"dragonfly"|g'
@@ -66,6 +56,6 @@
 +		${WRKSRC}/v8/build/toolchain.gypi \
 +		${WRKSRC}/v8/src/d8.gyp \
 +		${WRKSRC}/v8/tools/gyp/v8.gyp
- 	@${REINPLACE_CMD} -e "s|g++|${CXX}|" \
- 		${WRKSRC}/tools/compile_test/compile_test.py
  
+ pre-configure:
+ 	# phajdan-jr: list of things *not* to remove, so maybe the script
