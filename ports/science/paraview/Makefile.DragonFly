@@ -1,2 +1,0 @@
-USES+= execinfo
-CFLAGS+= -D__FreeBSD__=9
