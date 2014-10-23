@@ -1,13 +1,13 @@
---- bsd.mesalib.mk.orig	2014-10-20 15:28:03 UTC
+--- bsd.mesalib.mk.orig	2014-10-23 10:38:15.707161000 +0000
 +++ bsd.mesalib.mk
-@@ -84,6 +84,7 @@ CONFIGURE_ARGS+=	--disable-dri3
- .else
- PATCHDIR=		${MASTERDIR}/files-old
+@@ -21,6 +21,7 @@ WITH_NEW_MESA=1
  .endif
+ 
+ .if ${OPSYS} == DragonFly && ${DFLYVERSION} >= 300901
 +DFLY_PATCHDIR=		${MASTERDIR}/dragonfly
- DESCR=			${.CURDIR}/pkg-descr
- PLIST=			${.CURDIR}/pkg-plist
- WRKSRC=			${WRKDIR}/Mesa-${MESADISTVERSION}
+ WITH_NEW_MESA=1
+ .endif
+ 
 @@ -126,8 +127,6 @@ CONFIGURE_ARGS+=--enable-vdpau
  .endif
  
