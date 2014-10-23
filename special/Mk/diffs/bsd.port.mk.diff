@@ -1,4 +1,4 @@
---- bsd.port.mk.orig	2014-10-20 21:20:14 UTC
+--- bsd.port.mk.orig	2014-10-23 00:35:57.158547000 +0000
 +++ bsd.port.mk
 @@ -43,7 +43,8 @@ FreeBSD_MAINTAINER=	portmgr@FreeBSD.org
  #				  makefile is being used on.  Automatically set to
@@ -152,7 +152,7 @@
  MAKE_FLAGS?=	-f
  MAKEFILE?=		Makefile
  MAKE_CMD?=		/usr/bin/make
-+PLIST_SUB+=		PROFILE="@comment "
++PLIST_SUB:=		${PLIST_SUB:NPROFILE=*} PROFILE="@comment "
  MAKE_ENV+=		PREFIX=${PREFIX} \
  			LOCALBASE=${LOCALBASE} \
  			LIBDIR="${LIBDIR}" \
