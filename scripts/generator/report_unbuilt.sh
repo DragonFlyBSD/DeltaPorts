@@ -27,6 +27,7 @@ for opt in ${confopts}; do
 done
 
 checkdir DPORTS
+checkdir FPORTS
 
 usage ()
 {
@@ -39,7 +40,7 @@ if [ $# -ne 1 ]; then
 fi
 
 
-EXCLUDE="^(Templates/|Tools/|Mk/)"
+EXCLUDE="^(Templates/|Tools/|Mk/|Keywords/)"
 PKGDIR=/build/boomdata/data/packages/${1}/All
 
 if [ ! -d ${PKGDIR} ]; then
@@ -51,13 +52,17 @@ portdirs=$(cd ${DPORTS}; find * -type d -depth 1 -maxdepth 1 | sort | grep -vE $
 for portdir in ${portdirs}; do
 
     case ${portdir} in
-	x11/gnome2)
+	x11/gnome2|french/aster|devel/libusb|mail/sendmail)
 	    continue ;;
     esac
-    cd ${DPORTS}/${portdir}
-    PN=$(make PORTSDIR=${DPORTS} LOCALBASE=/usr/dummy PYTHON_DEFAULT_VERSION=2.7 USE_TCL=86 -V PKGNAME).txz
+    PN=$(make -C ${DPORTS}/${portdir} PORTSDIR=${DPORTS} LOCALBASE=/usr/dummy PYTHON_DEFAULT_VERSION=2.7 USE_TCL=86 -V PKGNAME).txz
     FULLPATH=${PKGDIR}/${PN}
     if [ ! -f "${FULLPATH}" ]; then
-        echo ${portdir}
+	REASON=$(make -C ${MERGED}/${portdir} PORTSDIR=${MERGED} -V IGNORE)
+	if [ -z "${REASON}" ]; then
+	        echo ${portdir}
+	else
+		echo "${portdir}	${REASON}"
+	fi
     fi
 done
