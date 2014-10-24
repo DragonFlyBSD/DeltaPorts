@@ -1,0 +1,12 @@
+--- Makefile.orig	2014-10-24 09:18:18.092049000 +0000
++++ Makefile
+@@ -18,8 +18,6 @@ PLIST_FILES=	lib/libpam_search_list.a \
+ 		lib/pam_search_list.so.0 \
+ 		man/man8/pam_search_list.8.gz
+ 
+-.if !defined(NO_PROFILE)
+-PLIST_FILES+=	lib/libpam_search_list_p.a
+-.endif
++MAKE_ARGS+=	SHLIB=pam_search_list
+ 
+ .include <bsd.port.mk>
