@@ -1,0 +1,6 @@
+# On the surface, this port looks easy to support.  It fails at packaging
+# due to one file with FreeBSD in the name.  However, it's gove some
+# troubling freebsd-specific setup steps and the port itself is not pretty.
+# Just ignore this until somebody really looks at it and confirms it
+# actually works for DragonFly
+IGNORE=	contains troubling FreeBSD-specific steps in targets
