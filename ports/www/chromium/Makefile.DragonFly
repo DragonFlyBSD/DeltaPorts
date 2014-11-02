@@ -1,5 +1,1 @@
 USES+= 	alias
-
-.if ${DFLYVERSION} < 300703
-IGNORE= No hope of build on DF until USB functionality comes in
-.endif
