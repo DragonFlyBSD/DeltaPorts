@@ -15,14 +15,3 @@
  lib/python3.2/platform.py
  lib/python3.2/plistlib.py
  lib/python3.2/poplib.py
-@@ -4319,8 +4319,8 @@ lib/python3.2/zipfile.py
- @dirrm lib/python3.2/multiprocessing/dummy/__pycache__
- @dirrm lib/python3.2/multiprocessing/dummy
- @dirrm lib/python3.2/multiprocessing
--@dirrm lib/python3.2/plat-freebsd%%OSMAJOR%%/__pycache__
--@dirrm lib/python3.2/plat-freebsd%%OSMAJOR%%
-+@dirrm lib/python3.2/plat-dragonfly%%OSMAJOR%%/__pycache__
-+@dirrm lib/python3.2/plat-dragonfly%%OSMAJOR%%
- @dirrm lib/python3.2/pydoc_data/__pycache__
- @dirrm lib/python3.2/pydoc_data
- @dirrm lib/python3.2/site-packages

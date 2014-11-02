@@ -15,14 +15,3 @@
  lib/python3.4/platform.py
  lib/python3.4/plistlib.py
  lib/python3.4/poplib.py
-@@ -4948,8 +4948,8 @@ man/man1/python3.4.1.gz
- @dirrmtry lib/python3.4/site-packages
- @dirrmtry lib/python3.4/pydoc_data/__pycache__
- @dirrmtry lib/python3.4/pydoc_data
--@dirrmtry lib/python3.4/plat-freebsd%%OSMAJOR%%/__pycache__
--@dirrmtry lib/python3.4/plat-freebsd%%OSMAJOR%%
-+@dirrmtry lib/python3.4/plat-dragonfly%%OSMAJOR%%/__pycache__
-+@dirrmtry lib/python3.4/plat-dragonfly%%OSMAJOR%%
- @dirrmtry lib/python3.4/multiprocessing/dummy/__pycache__
- @dirrmtry lib/python3.4/multiprocessing/dummy
- @dirrmtry lib/python3.4/multiprocessing/__pycache__

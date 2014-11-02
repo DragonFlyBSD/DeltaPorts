@@ -15,12 +15,3 @@
  lib/python2.7/platform.py
  lib/python2.7/platform.pyo
  lib/python2.7/platform.pyc
-@@ -4506,7 +4506,7 @@ man/man1/python2.7.1.gz
- @dirrm lib/python2.7/sqlite3
- @dirrm lib/python2.7/site-packages
- @dirrm lib/python2.7/pydoc_data
--@dirrm lib/python2.7/plat-freebsd%%OSMAJOR%%
-+@dirrm lib/python2.7/plat-dragonfly%%OSMAJOR%%
- @dirrm lib/python2.7/multiprocessing/dummy
- @dirrm lib/python2.7/multiprocessing
- @dirrm lib/python2.7/logging

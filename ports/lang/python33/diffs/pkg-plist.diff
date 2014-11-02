@@ -15,14 +15,3 @@
  lib/python3.3/platform.py
  lib/python3.3/plistlib.py
  lib/python3.3/poplib.py
-@@ -4624,8 +4624,8 @@ lib/python3.3/zipfile.py
- @dirrm lib/python3.3/multiprocessing
- @dirrm lib/python3.3/pydoc_data/__pycache__
- @dirrm lib/python3.3/pydoc_data
--@dirrm lib/python3.3/plat-freebsd%%OSMAJOR%%/__pycache__
--@dirrm lib/python3.3/plat-freebsd%%OSMAJOR%%
-+@dirrm lib/python3.3/plat-dragonfly%%OSMAJOR%%/__pycache__
-+@dirrm lib/python3.3/plat-dragonfly%%OSMAJOR%%
- @dirrm lib/python3.3/site-packages
- @dirrm lib/python3.3/sqlite3/__pycache__
- @dirrm lib/python3.3/sqlite3/test/__pycache__
