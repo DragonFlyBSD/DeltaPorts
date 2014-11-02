@@ -1,4 +1,4 @@
---- bsd.port.mk.orig	2014-10-23 00:35:57.158547000 +0000
+--- bsd.port.mk.orig	2014-11-02 12:03:27 UTC
 +++ bsd.port.mk
 @@ -43,7 +43,8 @@ FreeBSD_MAINTAINER=	portmgr@FreeBSD.org
  #				  makefile is being used on.  Automatically set to
@@ -41,7 +41,7 @@
  _DISTDIR?=		${DISTDIR}/${DIST_SUBDIR}
  INDEXDIR?=		${PORTSDIR}
  SRC_BASE?=		/usr/src
-@@ -1194,24 +1206,18 @@ OSREL?=	${UNAMER:C/-.*//}
+@@ -1212,24 +1224,18 @@ OSREL?=	${UNAMER:C/-.*//}
  
  # Get __FreeBSD_version
  .if !defined(OSVERSION)
@@ -72,33 +72,7 @@
  # Enable new xorg for FreeBSD versions after Radeon KMS was imported unless
  # WITHOUT_NEW_XORG is set.
  .if !defined(WITHOUT_NEW_XORG)
-@@ -1323,6 +1329,25 @@ WITH_DEBUG=	yes
- 
- .include "${PORTSDIR}/Mk/bsd.options.mk"
- 
-+# Multiple make jobs support
-+.if defined(DISABLE_MAKE_JOBS) || defined(MAKE_JOBS_UNSAFE)
-+_MAKE_JOBS=		#
-+MAKE_JOBS_NUMBER=	1
-+.else
-+.if defined(MAKE_JOBS_NUMBER)
-+_MAKE_JOBS_NUMBER:=	${MAKE_JOBS_NUMBER}
-+.else
-+_MAKE_JOBS_NUMBER!=	${SYSCTL} -n hw.ncpu
-+.endif
-+.if defined(MAKE_JOBS_NUMBER_LIMIT) && ( ${MAKE_JOBS_NUMBER_LIMIT} < ${_MAKE_JOBS_NUMBER} )
-+MAKE_JOBS_NUMBER=	${MAKE_JOBS_NUMBER_LIMIT}
-+.else
-+MAKE_JOBS_NUMBER=	${_MAKE_JOBS_NUMBER}
-+.endif
-+_MAKE_JOBS?=		-j${MAKE_JOBS_NUMBER}
-+BUILD_FAIL_MESSAGE+=	Try to set MAKE_JOBS_UNSAFE=yes and rebuild before reporting the failure to the maintainer.
-+.endif
-+
- # Start of pre-makefile section.
- .if !defined(AFTERPORTMK) && !defined(INOPTIONSMK)
- 
-@@ -1353,7 +1378,7 @@ PKGVERSION=	${PORTVERSION:C/[-_,]/./g}${
+@@ -1371,7 +1377,7 @@ PKGVERSION=	${PORTVERSION:C/[-_,]/./g}${
  PKGNAME=	${PKGNAMEPREFIX}${PORTNAME}${PKGNAMESUFFIX}-${PKGVERSION}
  DISTNAME?=	${PORTNAME}-${DISTVERSIONPREFIX}${DISTVERSION:C/:(.)/\1/g}${DISTVERSIONSUFFIX}
  
@@ -107,7 +81,7 @@
  
  DOCSDIR?=		${PREFIX}/share/doc/${PORTNAME}
  EXAMPLESDIR?=		${PREFIX}/share/examples/${PORTNAME}
-@@ -1373,7 +1398,7 @@ ETCDIR?=		${PREFIX}/etc/${PORTNAME}
+@@ -1391,7 +1397,7 @@ ETCDIR?=		${PREFIX}/etc/${PORTNAME}
  .include "${PORTSDIR}/Mk/bsd.xorg.mk"
  .endif
  
@@ -116,7 +90,7 @@
  TEMPLATES?=		${PORTSDIR}/Templates
  KEYWORDS?=		${PORTSDIR}/Keywords
  
-@@ -1559,7 +1584,7 @@ DEV_ERROR+=	"${PKGNAME}: Makefile error:
+@@ -1577,7 +1583,7 @@ DEV_ERROR+=	"${PKGNAME}: Makefile error:
  
  _POSTMKINCLUDED=	yes
  
@@ -125,7 +99,7 @@
  .if !defined(IGNORE_MASTER_SITE_GITHUB) && defined(USE_GITHUB)
  WRKSRC?=		${WRKDIR}/${GH_ACCOUNT}-${GH_PROJECT}-${GH_COMMIT}
  .endif
-@@ -1594,7 +1619,9 @@ PLIST_SUB_SED?= ${PLIST_SUB:C/.*=.{1,${P
+@@ -1612,7 +1618,9 @@ PLIST_SUB_SED?= ${PLIST_SUB:C/.*=.{1,${P
  
  # kludge to strip trailing whitespace from CFLAGS;
  # sub-configure will not # survive double space
@@ -136,7 +110,7 @@
  
  .if defined(WITHOUT_CPU_CFLAGS)
  .if defined(_CPUCFLAGS)
-@@ -1690,6 +1717,11 @@ PKG_DEPENDS+=	${LOCALBASE}/sbin/pkg:${PO
+@@ -1708,6 +1716,11 @@ PKG_DEPENDS+=	${LOCALBASE}/sbin/pkg:${PO
  
  .if defined(USE_GCC)
  .include "${PORTSDIR}/Mk/bsd.gcc.mk"
@@ -148,7 +122,7 @@
  .endif
  
  .if defined(USE_BINUTILS) && !defined(DISABLE_BINUTILS)
-@@ -2025,9 +2057,11 @@ DISTINFO_FILE?=		${MASTERDIR}/distinfo
+@@ -2043,9 +2056,11 @@ DISTINFO_FILE?=		${MASTERDIR}/distinfo
  MAKE_FLAGS?=	-f
  MAKEFILE?=		Makefile
  MAKE_CMD?=		/usr/bin/make
@@ -160,33 +134,16 @@
  			CC="${CC}" CFLAGS="${CFLAGS}" \
  			CPP="${CPP}" CPPFLAGS="${CPPFLAGS}" \
  			LDFLAGS="${LDFLAGS}" LIBS="${LIBS}" \
-@@ -2055,25 +2089,6 @@ ${lang}FLAGS+=	${${lang}FLAGS_${ARCH}}
- .endif
- .endfor
- 
--# Multiple make jobs support
--.if defined(DISABLE_MAKE_JOBS) || defined(MAKE_JOBS_UNSAFE)
--_MAKE_JOBS=		#
--MAKE_JOBS_NUMBER=	1
--.else
--.if defined(MAKE_JOBS_NUMBER)
--_MAKE_JOBS_NUMBER:=	${MAKE_JOBS_NUMBER}
--.else
+@@ -2081,7 +2096,7 @@ MAKE_JOBS_NUMBER=	1
+ .if defined(MAKE_JOBS_NUMBER)
+ _MAKE_JOBS_NUMBER:=	${MAKE_JOBS_NUMBER}
+ .else
 -_MAKE_JOBS_NUMBER!=	${SYSCTL} -n kern.smp.cpus
--.endif
--.if defined(MAKE_JOBS_NUMBER_LIMIT) && ( ${MAKE_JOBS_NUMBER_LIMIT} < ${_MAKE_JOBS_NUMBER} )
--MAKE_JOBS_NUMBER=	${MAKE_JOBS_NUMBER_LIMIT}
--.else
--MAKE_JOBS_NUMBER=	${_MAKE_JOBS_NUMBER}
--.endif
--_MAKE_JOBS?=		-j${MAKE_JOBS_NUMBER}
--BUILD_FAIL_MESSAGE+=	Try to set MAKE_JOBS_UNSAFE=yes and rebuild before reporting the failure to the maintainer.
--.endif
--
- # ccache support
- 
- # Try to set a default CCACHE_DIR to workaround HOME=/dev/null and
-@@ -2175,14 +2190,42 @@ PATCH_DIST_ARGS+=	--suffix .orig
++_MAKE_JOBS_NUMBER!=	${SYSCTL} -n hw.ncpu
+ .endif
+ .if defined(MAKE_JOBS_NUMBER_LIMIT) && ( ${MAKE_JOBS_NUMBER_LIMIT} < ${_MAKE_JOBS_NUMBER} )
+ MAKE_JOBS_NUMBER=	${MAKE_JOBS_NUMBER_LIMIT}
+@@ -2154,14 +2169,42 @@ PATCH_DIST_ARGS+=	--suffix .orig
  TAR?=	/usr/bin/tar
  
  # EXTRACT_SUFX is defined in .pre.mk section
@@ -211,8 +168,8 @@
 +.  else
 +TAR_BEFORE_ARGS=	${TAR_BEFORE_ARGS_DEFAULT}
 +.  endif
-+.endif
-+
+ .endif
+ 
 +# ZIP_* variables are always defined by zip.mk, so ?= only kicks in USES+=zip
 +# when does not exist.  In this case, assume $TAR is desired for zip archives
 +ZIP_BEFORE_ARGS?=	${TAR_BEFORE_ARGS_DEFAULT}
@@ -225,15 +182,15 @@
 +.  else
 +TAR_AFTER_ARGS=		${TAR_AFTER_ARGS_DEFAULT}
 +.  endif
- .endif
- 
++.endif
++
 +EXTRACT_BEFORE_ARGS?=	${TAR_BEFORE_ARGS_DEFAULT}
 +EXTRACT_AFTER_ARGS?=	${TAR_AFTER_ARGS_DEFAULT}
 +
  # Figure out where the local mtree file is
  .if !defined(MTREE_FILE) && !defined(NO_MTREE)
  .if ${PREFIX} == /usr
-@@ -2768,6 +2811,8 @@ SET_LATE_CONFIGURE_ARGS= \
+@@ -2747,6 +2790,8 @@ SET_LATE_CONFIGURE_ARGS= \
  SCRIPTS_ENV+=	CURDIR=${MASTERDIR} DISTDIR=${DISTDIR} \
  		  WRKDIR=${WRKDIR} WRKSRC=${WRKSRC} PATCHDIR=${PATCHDIR} \
  		  SCRIPTDIR=${SCRIPTDIR} FILESDIR=${FILESDIR} \
@@ -242,7 +199,7 @@
  		  PORTSDIR=${PORTSDIR} PREFIX=${PREFIX} LOCALBASE=${LOCALBASE}
  
  .if defined(BATCH)
-@@ -2850,7 +2895,7 @@ DESKTOPDIR?=		${PREFIX}/share/applicatio
+@@ -2829,7 +2874,7 @@ DESKTOPDIR?=		${PREFIX}/share/applicatio
  
  # Check the machine architectures
  .if defined(ONLY_FOR_ARCHS)
@@ -251,7 +208,7 @@
  .if ${ARCH:M${__ARCH}} != ""
  __ARCH_OK?=		1
  .endif
-@@ -2860,7 +2905,7 @@ __ARCH_OK?=		1
+@@ -2839,7 +2884,7 @@ __ARCH_OK?=		1
  .endif
  
  .if defined(NOT_FOR_ARCHS)
@@ -260,7 +217,7 @@
  .if ${ARCH:M${__NARCH}} != ""
  .undef __ARCH_OK
  .endif
-@@ -2869,9 +2914,9 @@ __ARCH_OK?=		1
+@@ -2848,9 +2893,9 @@ __ARCH_OK?=		1
  
  .if !defined(__ARCH_OK)
  .if defined(ONLY_FOR_ARCHS)
@@ -272,7 +229,7 @@
  .endif
  IGNORE+=	while you are running ${ARCH}
  
-@@ -3005,6 +3050,7 @@ all:
+@@ -2984,6 +3029,7 @@ all:
  	  DISTDIR=${DISTDIR} WRKDIR=${WRKDIR} WRKSRC=${WRKSRC} \
  	  PATCHDIR=${PATCHDIR} SCRIPTDIR=${SCRIPTDIR} \
  	  FILESDIR=${FILESDIR} PORTSDIR=${PORTSDIR} PREFIX=${PREFIX} \
@@ -280,7 +237,7 @@
  	  BUILD_DEPENDS="${BUILD_DEPENDS}" RUN_DEPENDS="${RUN_DEPENDS}" \
  	  CONFLICTS="${CONFLICTS}" \
  	${ALL_HOOK}
-@@ -3336,9 +3382,26 @@ clean-wrkdir:
+@@ -3315,9 +3361,26 @@ clean-wrkdir:
  .if !target(do-extract)
  do-extract:
  	@for file in ${EXTRACT_ONLY}; do \
@@ -310,7 +267,7 @@
  		fi; \
  	done
  .if !defined(EXTRACT_PRESERVE_OWNERSHIP)
-@@ -3393,7 +3456,7 @@ do-patch:
+@@ -3372,7 +3435,7 @@ do-patch:
  	@set -e ;\
  	if [ -d ${PATCHDIR} ]; then \
  		if [ "`${ECHO_CMD} ${PATCHDIR}/patch-*`" != "${PATCHDIR}/patch-*" ]; then \
@@ -319,7 +276,7 @@
  			PATCHES_APPLIED="" ; \
  			for i in ${PATCHDIR}/patch-*; do \
  				case $$i in \
-@@ -3418,6 +3481,33 @@ do-patch:
+@@ -3397,6 +3460,33 @@ do-patch:
  			done; \
  		fi; \
  	fi
@@ -353,7 +310,7 @@
  .endif
  
  .if !target(run-autotools-fixup)
-@@ -4588,7 +4678,7 @@ ALL-DEPENDS-LIST= \
+@@ -4567,7 +4657,7 @@ ALL-DEPENDS-LIST= \
  				continue;				\
  			fi;						\
  			${ECHO_CMD} $$d;				\
@@ -362,7 +319,7 @@
  				${ECHO_MSG} "${PKGNAME}: \"$$d\" erroneous -- dependency list incomplete" >&2; \
  				continue;				\
  			fi;						\
-@@ -4657,7 +4747,7 @@ CLEAN-DEPENDS-LIMITED= \
+@@ -4636,7 +4726,7 @@ CLEAN-DEPENDS-LIMITED= \
  				${ECHO_MSG} "${PKGNAME}: \"$$d\" non-existent -- dependency list incomplete" >&2; \
  				continue;				\
  			fi;						\
@@ -371,7 +328,7 @@
  				${ECHO_MSG} "${PKGNAME}: \"$$d\" erroneous -- dependency list incomplete" >&2; \
  				continue;				\
  			fi;						\
-@@ -4748,7 +4838,7 @@ FETCH_LIST?=	for i in $$deps; do \
+@@ -4727,7 +4817,7 @@ FETCH_LIST?=	for i in $$deps; do \
  			else	\
  				continue;	\
  			fi;;	\
@@ -380,7 +337,7 @@
  				continue;	\
  			fi;;	\
  		esac;	\
-@@ -5086,10 +5176,15 @@ _SUB_LIST_TEMP=	${SUB_LIST:S/$/!g/:S/^/
+@@ -5065,10 +5155,15 @@ _SUB_LIST_TEMP=	${SUB_LIST:S/$/!g/:S/^/
  apply-slist:
  .if defined(SUB_FILES)
  .for file in ${SUB_FILES}
@@ -399,7 +356,7 @@
  .endif
  .endfor
  .for i in pkg-message pkg-install pkg-deinstall pkg-req
-@@ -5343,6 +5438,7 @@ tags:
+@@ -5322,6 +5417,7 @@ tags:
  	OPSYS="${OPSYS:S/"/"'"'"/g:S/\$/\$\$/g:S/\\/\\\\/g}" \
  	OSREL="${OSREL:S/"/"'"'"/g:S/\$/\$\$/g:S/\\/\\\\/g}" \
  	OSVERSION="${OSVERSION:S/"/"'"'"/g:S/\$/\$\$/g:S/\\/\\\\/g}" \
