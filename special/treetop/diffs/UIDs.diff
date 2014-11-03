@@ -26,10 +26,3 @@
  pop3vscan:*:151:6::0:0:POP3VScan Daemon:/var/spool/pop3vscan:/usr/sbin/nologin
  iog:*:152:80::0:0:iog Monitoring Owner:/usr/local/iog:/usr/sbin/nologin
  rbldns:*:153:153::0:0:rbldnsd pseudo-user:/nonexistent:/usr/sbin/nologin
-@@ -306,4 +304,6 @@ tvheadend:*:984:984::0:0:TV Headend:/usr
- puppetdb:*:985:985::0:0:PuppetDB Daemon pseudo-user:/nonexistent:/usr/sbin/nologin
- kamailio:*:986:986::0:0:kamailio daemon:/nonexistent:/usr/sbin/nologin
- spark:*:987:987::0:0:Apache Spark user:/nonexistent:/usr/sbin/nologin
-+avenger:*:60149:60149::0:0:Mail Avenger:/var/spool/avenger:/usr/sbin/nologin
-+cbsd:*:60150:150::0:0:Cbsd user:/nonexistent:/bin/sh
- nobody:*:65534:65534::0:0:Unprivileged user:/nonexistent:/usr/sbin/nologin
