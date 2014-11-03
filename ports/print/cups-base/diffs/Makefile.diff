@@ -1,4 +1,4 @@
---- Makefile.orig	2014-07-05 08:16:59.284817000 +0000
+--- Makefile.orig	2014-11-03 21:00:07.673107000 +0000
 +++ Makefile
 @@ -19,11 +19,11 @@ CONFLICTS=	LPRng-[0-9]*
  
@@ -22,7 +22,7 @@
  WRKSRC=		${WRKDIR}/${PORTNAME}-${DISTVERSION}
  
  CUPSSYSGRP=	wheel
-@@ -88,12 +87,14 @@ ZEROCONF_DESC=		Zeroconf support
+@@ -89,12 +88,14 @@ ZEROCONF_DESC=		Zeroconf support
  
  .include <bsd.port.options.mk>
  
@@ -39,15 +39,7 @@
  USE_LDCONFIG=	yes
  PKGMESSAGE=	${NONEXISTENT}
  DESCR=		${MASTERDIR}/pkg-descr.client
-@@ -199,6 +200,7 @@ RUN_DEPENDS+=		xdg-open:${PORTSDIR}/deve
- .endif
- 
- .if !defined(CUPS_CLIENT) && !defined(CUPS_IMAGE) && ${PORT_OPTIONS:MLIBUSB}
-+USES+=			usb
- CONFIGURE_ARGS+=	--enable-libusb
- .else
- CONFIGURE_ARGS+=	--disable-libusb
-@@ -222,7 +224,7 @@ post-patch:
+@@ -224,7 +225,7 @@ post-patch:
  	@${REINPLACE_CMD} -e 's|@PIEFLAGS@||' ${WRKSRC}/Makedefs.in
  .endif
  .if ${PORT_OPTIONS:MMDNSRESPONDER}
