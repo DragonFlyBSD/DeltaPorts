@@ -1,20 +1,21 @@
---- Makefile.orig	2014-01-10 03:12:21.784457000 +0000
+--- Makefile.orig	2014-11-09 19:11:02.094096000 +0000
 +++ Makefile
-@@ -165,7 +165,6 @@ XIM_CONFIGURE_WITH=		xim
- USE_GCC=			any
+@@ -201,7 +201,6 @@ FILENOTIFY_USE=		GNOME=glib20
+ USE_GCC=		any
  .endif
  
 -DBUS_PTHREAD_LIBS=	${CC} -dumpspecs | ${GREP} -m 1 pthread: | ${SED} -e 's|^.*%{\!pg: %{pthread:||' -e 's|}.*$$||' || ${TRUE}
  
  .if ${PORT_OPTIONS:MX11}
  
-@@ -218,9 +217,6 @@ post-patch:
+@@ -248,10 +247,6 @@ post-patch:
  	@${REINPLACE_CMD} -e 's/^Terminal=.*$$/Terminal=true/' ${WRKSRC}/etc/emacs.desktop
  .endif
  
 -post-configure:
--	@${REINPLACE_CMD} -e "s/^\(DBUS_LIBS.*\)-pthread\(.*\)$$/\1$$(${DBUS_PTHREAD_LIBS})\2/" ${WRKSRC}/src/Makefile
+-	@${REINPLACE_CMD} -e "s/^\(DBUS_LIBS.*\)-pthread\(.*\)$$/\1$$(${DBUS_PTHREAD_LIBS})\2/" \
+-	 ${WRKSRC}/src/Makefile
 -
- add-plist-data:
- .for i in ${EMACS_DIRS}
- 	@${FIND} ${STAGEDIR}${i} -type f |${SED} -E -e 's,^${STAGEDIR}${PREFIX}/,,g'  >>${TMPPLIST}
+ post-install:
+ 	@${RM} -rf ${STAGEDIR}/var/games/emacs
+ .if ${PORT_OPTIONS:MSOURCES}
