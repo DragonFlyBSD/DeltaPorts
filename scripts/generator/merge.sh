@@ -26,6 +26,14 @@ else { \
     split($3,a,"-"); \
     if (a[1] > 2012+0) print $0; \
 }}'
+AWKGID='/nogroup:/ { \
+  print "avenger:*:60149:"; \
+  print "cbsd:*:60150:"; \
+}1'
+AWKUID='/nobody:/ { \
+  print "avenger:*:60149:60149::0:0:Mail Avenger:/var/spool/avenger:/usr/sbin/nologin"; \
+  print "cbsd:*:60150:150::0:0:Cbsd user:/nonexistent:/bin/sh"; \
+}1'
 
 TMPFILE=/tmp/tmp.awk
 WORKAREA=/tmp/merge.workarea
@@ -243,7 +251,8 @@ for k in Mk Templates; do
 done
 
 # port tree root
-cp ${FPORTS}/UIDs ${FPORTS}/GIDs ${MERGED}/
+awk "${AWKGID}" ${FPORTS}/GIDs > ${MERGED}/GIDs
+awk "${AWKUID}" ${FPORTS}/UIDs > ${MERGED}/UIDs
 diffs=$(find ${DELTA}/special/treetop/diffs -name \*\.diff)
 for difffile in ${diffs}; do
   patch --quiet -d ${MERGED} < ${difffile}
