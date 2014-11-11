@@ -1,0 +1,15 @@
+--- patch-poe.el.old	2014-01-23 02:40:44.000000000 +0900
++++ patch-poe.el	2014-09-03 10:59:19.035730598 +0900
+@@ -1408,3 +1408,12 @@
+  
+  ;; Emacs 19.29-19.34/XEmacs: `format-time-string' neither supports the
+  ;; format string "%z" nor the third argument `universal'.
++@@ -1667,7 +1667,7 @@
++                      )))
++       ;; arglist: (prefix &optional dir-flag suffix)
++       (cond
++-       ((not arglist)
+++       ((or (not arglist) (not (listp arglist)))
++         ;; `make-temp-file' is a built-in; expects 3-args.
++         (put 'make-temp-file 'defun-maybe '3-args))
++        ((> (length arglist) 3)
