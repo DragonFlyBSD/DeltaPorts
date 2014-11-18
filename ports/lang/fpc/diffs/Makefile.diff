@@ -1,0 +1,81 @@
+--- Makefile.orig	2014-11-18 17:33:29 UTC
++++ Makefile
+@@ -11,6 +11,7 @@ MASTER_SITES=	ftp://ftp.freepascal.org/p
+ 		ftp://freepascal.stack.nl/pub/fpc/dist/${PORTVERSION}/source/:source \
+ 		ftp://ftp.no.freepascal.org/pub/fpc/dist/${PORTVERSION}/source/:source \
+ 		ftp://ftp.us.freepascal.org/pub/fpc/dist/${PORTVERSION}/source/:source \
++		http://leaf.dragonflybsd.org/~marino/dports-src/:DragonFlybootstrap \
+ 		SF/freepascal/Source/${PORTVERSION}:source \
+ 		${MASTER_SITE_GOOGLE_CODE}:bootstrap \
+ 		${MASTER_SITE_LOCAL:S|$|acm/freepascal/:bootstrap|} \
+@@ -34,10 +35,6 @@ FPCSRCDIR=	${PORTNAME}-${PORTVERSION}
+ 
+ .include <bsd.port.pre.mk>
+ 
+-.if ${OPSYS} == DragonFly
+-IGNORE=		not supported on DragonFly yet
+-.endif
+-
+ .if ${ARCH} == "i386"
+ PPNAME=		ppc386
+ FPC_ARCH=	i386
+@@ -53,10 +50,10 @@ PLIST_SUB=	FPC_I386="@comment " \
+ .if !defined(PKGNAMESUFFIX)
+ SUB_FILES=	pkg-message
+ 
+-BUILDNAME=	${FPC_ARCH}-freebsd
++BUILDNAME=	${FPC_ARCH}-${OPSYS:tl}
+ PLIST_SUB+=	PORTVERSION=${PORTVERSION} \
+ 		BUILDNAME=${BUILDNAME}
+-DISTFILES+=	${PPNAME}-${PORTVERSION}-${OPSYS:tl}${EXTRACT_SUFX}:bootstrap \
++DISTFILES+=	${PPNAME}-${PORTVERSION}-${OPSYS:tl}${EXTRACT_SUFX}:${OPSYS:MDragonFly}bootstrap \
+ 		${DISTNAME:S/$/.man/}${EXTRACT_SUFX}:man
+ MAKE_ARGS+=	PP=${WRKDIR}/${PPNAME}-${PORTVERSION}-${OPSYS:tl} \
+ 		FPCMAKE=${WRKDIR}/${FPCSRCDIR}/utils/fpcm/fpcmake \
+@@ -85,9 +82,14 @@ post-patch:
+ .if ${ARCH} == "i386"
+ 	@${REINPLACE_CMD} -i "" -e 's|504000|${OSVERSION}|g' ${WRKDIR}/${FPCSRCDIR}/rtl/freebsd/${FPC_ARCH}/cprt0.as
+ .elif ${ARCH} == "amd64"
++.  if ${OPSYS} == FreeBSD
+ 	@${REINPLACE_CMD} -i "" -e 's|700055|${OSVERSION}|g' ${WRKDIR}/${FPCSRCDIR}/rtl/freebsd/${FPC_ARCH}/cprt0.as
+ 	@${REINPLACE_CMD} -i "" -e 's|502110|${OSVERSION}|g' ${WRKDIR}/${FPCSRCDIR}/rtl/freebsd/${FPC_ARCH}/gprt0.as
+ 	@${REINPLACE_CMD} -i "" -e 's|700055|${OSVERSION}|g' ${WRKDIR}/${FPCSRCDIR}/rtl/freebsd/${FPC_ARCH}/prt0.as
++.  else
++	@${REINPLACE_CMD} -i "" -e 's|400000|${DFLYVERSION}|g' \
++		${WRKDIR}/${FPCSRCDIR}/rtl/dragonfly/${FPC_ARCH}/*.as
++.  endif
+ .endif
+ .if empty(ICONV_LIB)
+ 	@${REINPLACE_CMD} -e "s|if (s<>'c') or reorder then|if ((s<>'c') and (s<>'iconv')) or reorder then|" \
+@@ -98,22 +100,22 @@ post-patch:
+ 
+ do-build:
+ # build fpc compiler
+-	@cd ${WRKDIR}/${FPCSRCDIR}/compiler && ${SETENV} ${MAKE_ENV} ${MAKE_CMD} cycle ${MAKE_ARGS}
++	(cd ${WRKDIR}/${FPCSRCDIR}/compiler && ${SETENV} ${MAKE_ENV} ${MAKE_CMD} cycle ${MAKE_ARGS})
+ # build fpcmkcfg
+-	@cd ${WRKDIR}/${FPCSRCDIR}/utils/fpcm && ${SETENV} ${MAKE_ENV} ${MAKE_CMD} ${MAKE_ARGS}
+-	@cd ${WRKDIR}/${FPCSRCDIR}/packages/fcl-base && ${SETENV} ${MAKE_ENV} ${MAKE_CMD} ${MAKE_ARGS}
+-	@cd ${WRKDIR}/${FPCSRCDIR}/packages/fcl-process && ${SETENV} ${MAKE_ENV} ${MAKE_CMD} ${MAKE_ARGS}
+-	@cd ${WRKDIR}/${FPCSRCDIR}/utils/fpcmkcfg && ${SETENV} ${MAKE_ENV} ${MAKE_CMD} ${MAKE_ARGS}
++	(cd ${WRKDIR}/${FPCSRCDIR}/utils/fpcm && ${SETENV} ${MAKE_ENV} ${MAKE_CMD} ${MAKE_ARGS})
++	(cd ${WRKDIR}/${FPCSRCDIR}/packages/fcl-base && ${SETENV} ${MAKE_ENV} ${MAKE_CMD} ${MAKE_ARGS})
++	(cd ${WRKDIR}/${FPCSRCDIR}/packages/fcl-process && ${SETENV} ${MAKE_ENV} ${MAKE_CMD} ${MAKE_ARGS})
++	(cd ${WRKDIR}/${FPCSRCDIR}/utils/fpcmkcfg && ${SETENV} ${MAKE_ENV} ${MAKE_CMD} ${MAKE_ARGS})
+ 
+ do-install:
+ # 	Installing fpc compiler
+-	@cd ${WRKDIR}/${FPCSRCDIR}/rtl && ${SETENV} ${MAKE_ENV} ${MAKE_CMD} install ${MAKE_ARGS}
++	(cd ${WRKDIR}/${FPCSRCDIR}/rtl && ${SETENV} ${MAKE_ENV} ${MAKE_CMD} install ${MAKE_ARGS})
+ # 	Installing fpc runtime
+-	@cd ${WRKDIR}/${FPCSRCDIR}/compiler && ${SETENV} ${MAKE_ENV} ${MAKE_CMD} install ${MAKE_ARGS}
++	(cd ${WRKDIR}/${FPCSRCDIR}/compiler && ${SETENV} ${MAKE_ENV} ${MAKE_CMD} install ${MAKE_ARGS})
+ # 	Installng fpcmkcfg
+-	@cd ${WRKDIR}/${FPCSRCDIR}/utils/fpcmkcfg && ${SETENV} ${MAKE_ENV} ${MAKE_CMD} install ${MAKE_ARGS}
++	(cd ${WRKDIR}/${FPCSRCDIR}/utils/fpcmkcfg && ${SETENV} ${MAKE_ENV} ${MAKE_CMD} install ${MAKE_ARGS})
+ # 	Installng fpcmake
+-	@cd ${WRKDIR}/${FPCSRCDIR}/utils/fpcm && ${SETENV} ${MAKE_ENV} ${MAKE_CMD} install ${MAKE_ARGS}
++	(cd ${WRKDIR}/${FPCSRCDIR}/utils/fpcm && ${SETENV} ${MAKE_ENV} ${MAKE_CMD} install ${MAKE_ARGS})
+ # 	Installing manpages
+ 	${INSTALL_DATA} ${WRKDIR}/man/man1/* ${STAGEDIR}${MAN1PREFIX}/man/man1
+ 	${INSTALL_DATA} ${WRKDIR}/man/man5/* ${STAGEDIR}${MAN1PREFIX}/man/man5

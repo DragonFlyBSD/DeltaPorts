@@ -1,0 +1,19 @@
+--- pkg-plist.orig	2014-11-18 18:38:19 UTC
++++ pkg-plist
+@@ -81,8 +81,6 @@ lib/fpc/%%PORTVERSION%%/units/%%BUILDNAM
+ lib/fpc/%%PORTVERSION%%/units/%%BUILDNAME%%/rtl/fpintres.o
+ lib/fpc/%%PORTVERSION%%/units/%%BUILDNAME%%/rtl/fpintres.ppu
+ lib/fpc/%%PORTVERSION%%/units/%%BUILDNAME%%/rtl/libpfpintres.a
+-lib/fpc/%%PORTVERSION%%/units/%%BUILDNAME%%/rtl/freebsd.o
+-lib/fpc/%%PORTVERSION%%/units/%%BUILDNAME%%/rtl/freebsd.ppu
+ lib/fpc/%%PORTVERSION%%/units/%%BUILDNAME%%/rtl/getopts.o
+ lib/fpc/%%PORTVERSION%%/units/%%BUILDNAME%%/rtl/getopts.ppu
+ lib/fpc/%%PORTVERSION%%/units/%%BUILDNAME%%/rtl/gprt0.o
+@@ -117,7 +115,6 @@ lib/fpc/%%PORTVERSION%%/units/%%BUILDNAM
+ lib/fpc/%%PORTVERSION%%/units/%%BUILDNAME%%/rtl/libpexeinfo.a
+ lib/fpc/%%PORTVERSION%%/units/%%BUILDNAME%%/rtl/libpfgl.a
+ lib/fpc/%%PORTVERSION%%/units/%%BUILDNAME%%/rtl/libpfmtbcd.a
+-lib/fpc/%%PORTVERSION%%/units/%%BUILDNAME%%/rtl/libpfreebsd.a
+ lib/fpc/%%PORTVERSION%%/units/%%BUILDNAME%%/rtl/libpgetopts.a
+ lib/fpc/%%PORTVERSION%%/units/%%BUILDNAME%%/rtl/libpheaptrc.a
+ lib/fpc/%%PORTVERSION%%/units/%%BUILDNAME%%/rtl/libpinitc.a
