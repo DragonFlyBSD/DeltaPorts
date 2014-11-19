@@ -9,11 +9,3 @@
  include/pkg.h
  lib/libpkg.a
  lib/libpkg.so
-@@ -58,5 +60,7 @@ share/zsh/site-functions/_pkg.zsh
- @dirrmtry etc/periodic/security
- @dirrmtry etc/periodic/weekly
- @dirrmtry etc/periodic
-+@dirrmtry etc/pkg/repos
-+@dirrmtry etc/pkg
- @dirrmtry share/zsh/site-functions
- @dirrmtry share/zsh
