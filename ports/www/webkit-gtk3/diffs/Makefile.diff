@@ -1,0 +1,11 @@
+--- Makefile.orig	2014-11-21 16:51:58.483741000 +0000
++++ Makefile
+@@ -85,7 +85,7 @@ DEBUG_CONFIGURE_OFF=	--disable-debug-sym
+ # gtest to use <tr1/tuple,> while libc++ only has <tuple>
+ CPPFLAGS+=	-DGTEST_USE_OWN_TR1_TUPLE
+ # Shutup warning spam
+-CXXFLAGS+=	-Wno-c++11-extensions -Qunused-arguments
++CXXFLAGS+=	-Wno-c++11-extensions
+ 
+ CONFIGURE_ARGS+=--enable-webkit2
+ # We need clang + libc++ or gcc 4.7+. gcc has libstdc++ conflict between
