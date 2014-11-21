@@ -1,0 +1,10 @@
+--- Makefile.orig	2014-11-21 18:57:26.958480000 +0000
++++ Makefile
+@@ -27,7 +27,6 @@ RUN_DEPENDS=	five-or-more:${PORTSDIR}/ga
+ 		iagno:${PORTSDIR}/games/iagno \
+ 		lightsoff:${PORTSDIR}/games/lightsoff \
+ 		quadrapassel:${PORTSDIR}/games/quadrapassel \
+-		sol:${PORTSDIR}/games/aisleriot \
+ 		swell-foop:${PORTSDIR}/games/swell-foop \
+ 		tali:${PORTSDIR}/games/tali
+ 
