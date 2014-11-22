@@ -1,0 +1,34 @@
+--- Makefile.orig	2014-11-21 18:53:09.122764000 +0000
++++ Makefile
+@@ -32,14 +32,16 @@ RUN_DEPENDS?=	dconf-editor:${PORTSDIR}/d
+ 		${LOCALBASE}/share/hal/fdi/information/10freedesktop/10-camera-ptp.fdi:${PORTSDIR}/sysutils/hal-info \
+ 		yelp>=3.0.0:${PORTSDIR}/x11/yelp \
+ 		zenity>=3.0.0:${PORTSDIR}/x11/zenity \
+-		seahorse>=3.0.0:${PORTSDIR}/security/seahorse \
+ 		metacity>=2.34.0:${PORTSDIR}/x11-wm/metacity \
+ 		gnome-control-center>=3.0.0:${PORTSDIR}/sysutils/gnome-control-center \
+ 		${LOCALBASE}/share/gnome-background-properties/gnome-backgrounds.xml:${PORTSDIR}/x11-themes/gnome-backgrounds \
+ 		caribou>=0:${PORTSDIR}/accessibility/caribou \
+ 		${LOCALBASE}/share/help/C/gnome-help/index.page:${PORTSDIR}/misc/gnome-user-docs \
+ 		${LOCALBASE}/share/sounds/freedesktop/index.theme:${PORTSDIR}/audio/freedesktop-sound-theme \
+-		ekiga:${PORTSDIR}/net-im/ekiga
++
++
++#		seahorse>=3.0.0:${PORTSDIR}/security/seahorse \
++#		ekiga:${PORTSDIR}/net-im/ekiga
+ 
+ NO_BUILD=	yes
+ NO_MTREE=	yes
+@@ -74,9 +76,11 @@ RUN_DEPENDS+=	empathy>=3.0.0:${PORTSDIR}
+ 		gconf-editor>=3.0.0:${PORTSDIR}/sysutils/gconf-editor \
+ 		gdm>=3.0.0:${PORTSDIR}/x11/gdm \
+ 		evolution>=3.0.0:${PORTSDIR}/mail/evolution \
+-		cheese>=3.0.0:${PORTSDIR}/multimedia/cheese \
+ 		alacarte>=3.0.0:${PORTSDIR}/deskutils/alacarte
+ 
++#		cheese>=3.0.0:${PORTSDIR}/multimedia/cheese \
++
++
+ .if ${PORT_OPTIONS:MMAPI}
+ RUN_DEPENDS+=	evolution-mapi>=3.0.0:${PORTSDIR}/mail/evolution-mapi
+ .endif
