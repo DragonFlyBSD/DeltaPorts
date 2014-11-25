@@ -1,4 +1,4 @@
---- Makefile.orig	2014-08-02 14:00:51.740121000 +0000
+--- Makefile.orig	2014-11-25 21:31:53.665027000 +0000
 +++ Makefile
 @@ -33,7 +33,7 @@ MAKE_ARGS+=		INSTALL_SHARED="${INSTALL_L
  MAKE_ARGS+=		LIBPC="${PREFIX}/libdata/pkgconfig"			# Until pathfix gets support for files other than Makefile.in
@@ -7,5 +7,15 @@
 -			OSMAJOR=${OSVERSION:C/([0-9]*)[0-9]{5}/\1/}		# For plat-freebsd* in pkg-plist. http://bugs.python.org/issue19554
 +			OSMAJOR=${DFLYVERSION:C/([0-9]*)[0-9]{5}/\1/}		# For plat-freebsd* in pkg-plist. http://bugs.python.org/issue19554
  
- OPTIONS_DEFINE=		DEBUG IPV6 NLS PYMALLOC THREADS TSC
- OPTIONS_DEFAULT=	IPV6 NLS PYMALLOC THREADS
+ OPTIONS_DEFINE=		DEBUG IPV6 NLS PYMALLOC THREADS TSC LIBFFI
+ OPTIONS_DEFAULT=	IPV6 NLS PYMALLOC THREADS LIBFFI
+@@ -108,6 +108,9 @@ DISABLED_EXTENSIONS+=	nis
+ PLIST_SUB+=	NO_NIS=""
+ .endif
+ 
++post-patch:
++	@${REINPLACE_CMD} -e 's|`uname -r`|"${OSREL}"|g' ${WRKSRC}/configure
++
+ post-install:
+ .if ! ${PORT_OPTIONS:MDEBUG}
+ 	${RM} -f ${STAGEDIR}${PREFIX}/lib/libpython3.so						# Upstream Issue: http://bugs.python.org/issue17975
