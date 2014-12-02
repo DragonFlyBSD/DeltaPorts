@@ -1,0 +1,23 @@
+--- Makefile.orig	2014-12-02 17:29:35 UTC
++++ Makefile
+@@ -198,6 +198,9 @@ BSDPAN_FILES=	BSDPAN.pm BSDPAN/Override.
+ BSDPAN_VERSION=	20111107
+ BSDPAN_WRKSRC=	${WRKDIR}/BSDPAN-${BSDPAN_VERSION}
+ 
++post-extract:
++	${LN} -s libperl.so.${PERL_VER} ${WRKSRC}/libperl.so
++
+ post-patch:
+ 	${SED} -i '' -e 's|%%PERL_PKGNAME%%|${PKGNAME}|g; s|%%PERL_VER%%|${PERL_VER}|g;' \
+ 		-e 's!%%BSDPAN_VERSION%%!${BSDPAN_VERSION}!g;' \
+@@ -219,8 +222,8 @@ post-install:
+ 	${MKDIR} ${STAGEDIR}${SITE_ARCH}/auto
+ 	${MKDIR} ${STAGEDIR}${SITE_PERL}/auto
+ 	${LN} ${STAGEDIR}${PREFIX}/bin/perl${PERL_VERSION} ${STAGEDIR}${PREFIX}/bin/perl5
+-	${LN} -s libperl.so.${PERL_VER} ${STAGEDIR}${PREFIX}/lib/perl5/${PERL_VER}/${PERL_ARCH}/CORE/libperl.so
+-	${LN} -s libperl.so.${PERL_VER} ${STAGEDIR}${PREFIX}/lib/perl5/${PERL_VER}/${PERL_ARCH}/CORE/libperl.so.${PERL_VERSION}
++	${LN} -sf libperl.so.${PERL_VER} ${STAGEDIR}${PREFIX}/lib/perl5/${PERL_VER}/${PERL_ARCH}/CORE/libperl.so
++	${LN} -sf libperl.so.${PERL_VER} ${STAGEDIR}${PREFIX}/lib/perl5/${PERL_VER}/${PERL_ARCH}/CORE/libperl.so.${PERL_VERSION}
+ 	${STRIP_CMD} ${STAGEDIR}${PREFIX}/bin/perl${PERL_VERSION}
+ 	${INSTALL_DATA} ${WRKDIR}/perl5_version ${STAGEDIR}${PREFIX}/etc
+ 	${FIND} ${STAGEDIR} -name '*.bs' -size 0 -delete
