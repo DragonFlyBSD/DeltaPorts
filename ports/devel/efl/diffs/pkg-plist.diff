@@ -1,0 +1,222 @@
+--- pkg-plist.orig	2014-12-10 10:35:20 UTC
++++ pkg-plist
+@@ -14,7 +14,6 @@ bin/eina-bench-cmp
+ bin/eldbus-codegen
+ bin/elua
+ bin/embryo_cc
+-bin/eolian_cxx
+ bin/eolian_gen
+ bin/ethumb
+ bin/ethumbd
+@@ -59,14 +58,6 @@ include/ecore-1/ecore_timer.eo.legacy.h
+ %%AUDIO%%include/ecore-audio-1/ecore_audio_out_sndfile.eo.h
+ %%AUDIO%%include/ecore-audio-1/ecore_audio_protected.h
+ %%PULSEAUDIO%%include/ecore-audio-1/ecore_audio_obj_out_pulse.h
+-%%AUDIO%%include/ecore-audio-cxx-1/Ecore_Audio.hh
+-%%AUDIO%%include/ecore-audio-cxx-1/ecore_audio.eo.hh
+-%%AUDIO%%include/ecore-audio-cxx-1/ecore_audio_in.eo.hh
+-%%AUDIO%%include/ecore-audio-cxx-1/ecore_audio_in_sndfile.eo.hh
+-%%AUDIO%%include/ecore-audio-cxx-1/ecore_audio_in_tone.eo.hh
+-%%AUDIO%%include/ecore-audio-cxx-1/ecore_audio_out.eo.hh
+-%%PULSEAUDIO%%include/ecore-audio-cxx-1/ecore_audio_out_pulse.eo.hh
+-%%AUDIO%%include/ecore-audio-cxx-1/ecore_audio_out_sndfile.eo.hh
+ include/ecore-avahi-1/Ecore_Avahi.h
+ include/ecore-con-1/Ecore_Con.h
+ include/ecore-con-1/Ecore_Con_Eet.h
+@@ -82,14 +73,6 @@ include/ecore-con-1/ecore_con_server.eo.
+ include/ecore-con-1/ecore_con_server.eo.legacy.h
+ include/ecore-con-1/ecore_con_url.eo.h
+ include/ecore-con-1/ecore_con_url.eo.legacy.h
+-include/ecore-cxx-1/Ecore.eo.hh
+-include/ecore-cxx-1/Ecore.hh
+-include/ecore-cxx-1/ecore_animator.eo.hh
+-include/ecore-cxx-1/ecore_idle_exiter.eo.hh
+-include/ecore-cxx-1/ecore_idler.eo.hh
+-include/ecore-cxx-1/ecore_job.eo.hh
+-include/ecore-cxx-1/ecore_parent.eo.hh
+-include/ecore-cxx-1/ecore_poller.eo.hh
+ include/ecore-evas-1/Ecore_Evas.h
+ include/ecore-evas-1/Ecore_Evas_Types.h
+ include/ecore-file-1/Ecore_File.h
+@@ -112,14 +95,7 @@ include/edje-1/edje_edit.eo.h
+ include/edje-1/edje_edit.eo.legacy.h
+ include/edje-1/edje_object.eo.h
+ include/edje-1/edje_object.eo.legacy.h
+-include/edje-cxx-1/Edje.hh
+-include/edje-cxx-1/edje_edit.eo.hh
+-include/edje-cxx-1/edje_object.eo.hh
+ include/eet-1/Eet.h
+-include/eet-cxx-1/Eet.hh
+-include/eet-cxx-1/eet-cxx/eet_composite.hh
+-include/eet-cxx-1/eet-cxx/eet_register.hh
+-include/eet-cxx-1/eet-cxx/eet_type.hh
+ include/efl-1/Efl.h
+ include/efl-1/Efl_Config.h
+ include/efl-1/interfaces/efl_control.eo.h
+@@ -128,13 +104,6 @@ include/efl-1/interfaces/efl_image.eo.h
+ include/efl-1/interfaces/efl_player.eo.h
+ include/efl-1/interfaces/efl_text.eo.h
+ include/efl-1/interfaces/efl_text_properties.eo.h
+-include/efl-cxx-1/Efl.hh
+-include/efl-cxx-1/efl_control.eo.hh
+-include/efl-cxx-1/efl_file.eo.hh
+-include/efl-cxx-1/efl_image.eo.hh
+-include/efl-cxx-1/efl_player.eo.hh
+-include/efl-cxx-1/efl_text.eo.hh
+-include/efl-cxx-1/efl_text_properties.eo.hh
+ include/efreet-1/Efreet.h
+ include/efreet-1/Efreet_Mime.h
+ include/efreet-1/Efreet_Trash.h
+@@ -223,32 +192,6 @@ include/eina-1/eina/eina_value.h
+ include/eina-1/eina/eina_value_util.h
+ include/eina-1/eina/eina_xattr.h
+ include/eina-1/eina_config.h
+-include/eina-cxx-1/Eina.hh
+-include/eina-cxx-1/eina-cxx/eina_accessor.hh
+-include/eina-cxx-1/eina-cxx/eina_array.hh
+-include/eina-cxx-1/eina-cxx/eina_clone_allocators.hh
+-include/eina-cxx-1/eina-cxx/eina_eo_base_fwd.hh
+-include/eina-cxx-1/eina-cxx/eina_error.hh
+-include/eina-cxx-1/eina-cxx/eina_fold.hh
+-include/eina-cxx-1/eina-cxx/eina_inarray.hh
+-include/eina-cxx-1/eina-cxx/eina_inlist.hh
+-include/eina-cxx-1/eina-cxx/eina_integer_sequence.hh
+-include/eina-cxx-1/eina-cxx/eina_iterator.hh
+-include/eina-cxx-1/eina-cxx/eina_list.hh
+-include/eina-cxx-1/eina-cxx/eina_lists_auxiliary.hh
+-include/eina-cxx-1/eina-cxx/eina_log.hh
+-include/eina-cxx-1/eina-cxx/eina_optional.hh
+-include/eina-cxx-1/eina-cxx/eina_ptrarray.hh
+-include/eina-cxx-1/eina-cxx/eina_ptrlist.hh
+-include/eina-cxx-1/eina-cxx/eina_range_types.hh
+-include/eina-cxx-1/eina-cxx/eina_ref.hh
+-include/eina-cxx-1/eina-cxx/eina_stringshare.hh
+-include/eina-cxx-1/eina-cxx/eina_thread.hh
+-include/eina-cxx-1/eina-cxx/eina_throw.hh
+-include/eina-cxx-1/eina-cxx/eina_tuple.hh
+-include/eina-cxx-1/eina-cxx/eina_tuple_unwrap.hh
+-include/eina-cxx-1/eina-cxx/eina_type_traits.hh
+-include/eina-cxx-1/eina-cxx/eina_value.hh
+ include/eio-1/Eio.h
+ include/eio-1/eio_inline_helper.x
+ include/eldbus-1/Eldbus.h
+@@ -262,17 +205,6 @@ include/eldbus-1/eldbus_pending.h
+ include/eldbus-1/eldbus_proxy.h
+ include/eldbus-1/eldbus_service.h
+ include/eldbus-1/eldbus_signal_handler.h
+-include/eldbus_cxx-1/Eldbus.hh
+-include/eldbus_cxx-1/eldbus_basic.hh
+-include/eldbus_cxx-1/eldbus_error.hh
+-include/eldbus_cxx-1/eldbus_freedesktop.hh
+-include/eldbus_cxx-1/eldbus_integer_sequence.hh
+-include/eldbus_cxx-1/eldbus_message.hh
+-include/eldbus_cxx-1/eldbus_message_arguments.hh
+-include/eldbus_cxx-1/eldbus_proxy_call.hh
+-include/eldbus_cxx-1/eldbus_raw_tuple.hh
+-include/eldbus_cxx-1/eldbus_service.hh
+-include/eldbus_cxx-1/eldbus_signature_traits.hh
+ include/embryo-1/Embryo.h
+ include/emotion-1/Emotion.h
+ include/emotion-1/Emotion_Eo.h
+@@ -283,31 +215,7 @@ include/emotion-1/emotion_object.eo.lega
+ include/eo-1/Eo.h
+ include/eo-1/eo_abstract_class.eo.h
+ include/eo-1/eo_base.eo.h
+-include/eo-cxx-1/Eo.hh
+-include/eo-cxx-1/eo_base.hh
+-include/eo-cxx-1/eo_cxx_interop.hh
+-include/eo-cxx-1/eo_event.hh
+-include/eo-cxx-1/eo_inherit.hh
+-include/eo-cxx-1/eo_inherit_bindings.hh
+-include/eo-cxx-1/eo_init.hh
+-include/eo-cxx-1/eo_ops.hh
+-include/eo-cxx-1/eo_private.hh
+-include/eo-cxx-1/eo_wref.hh
+ include/eolian-1/Eolian.h
+-include/eolian-cxx-1/Eolian_Cxx.hh
+-include/eolian-cxx-1/eo_generate.hh
+-include/eolian-cxx-1/eo_types.hh
+-include/eolian-cxx-1/eo_validate.hh
+-include/eolian-cxx-1/grammar/comment.hh
+-include/eolian-cxx-1/grammar/eo_class_constructors_generator.hh
+-include/eolian-cxx-1/grammar/eo_class_events_generator.hh
+-include/eolian-cxx-1/grammar/eo_class_functions_generator.hh
+-include/eolian-cxx-1/grammar/eo_class_generator.hh
+-include/eolian-cxx-1/grammar/eo_header_generator.hh
+-include/eolian-cxx-1/grammar/inheritance_base_generator.hh
+-include/eolian-cxx-1/grammar/parameters_generator.hh
+-include/eolian-cxx-1/grammar/tab.hh
+-include/eolian-cxx-1/grammar/type_generator.hh
+ %%PHYSICS%%include/ephysics-1/EPhysics.h
+ include/ethumb-1/Ethumb.h
+ include/ethumb-client-1/Ethumb_Client.h
+@@ -381,37 +289,6 @@ include/evas-1/canvas/evas_textgrid.eo.h
+ include/evas-1/canvas/evas_textgrid.eo.legacy.h
+ include/evas-1/canvas/evas_zoomable_interface.eo.h
+ include/evas-1/canvas/evas_zoomable_interface.eo.legacy.h
+-include/evas-cxx-1/Evas.hh
+-include/evas-cxx-1/canvas/evas_3d_camera.eo.hh
+-include/evas-cxx-1/canvas/evas_3d_light.eo.hh
+-include/evas-cxx-1/canvas/evas_3d_material.eo.hh
+-include/evas-cxx-1/canvas/evas_3d_mesh.eo.hh
+-include/evas-cxx-1/canvas/evas_3d_node.eo.hh
+-include/evas-cxx-1/canvas/evas_3d_object.eo.hh
+-include/evas-cxx-1/canvas/evas_3d_scene.eo.hh
+-include/evas-cxx-1/canvas/evas_3d_texture.eo.hh
+-include/evas-cxx-1/canvas/evas_box.eo.hh
+-include/evas-cxx-1/canvas/evas_canvas.eo.hh
+-include/evas-cxx-1/canvas/evas_clickable_interface.eo.hh
+-include/evas-cxx-1/canvas/evas_common_interface.eo.hh
+-include/evas-cxx-1/canvas/evas_draggable_interface.eo.hh
+-include/evas-cxx-1/canvas/evas_grid.eo.hh
+-include/evas-cxx-1/canvas/evas_image.eo.hh
+-include/evas-cxx-1/canvas/evas_line.eo.hh
+-include/evas-cxx-1/canvas/evas_object.eo.hh
+-include/evas-cxx-1/canvas/evas_object_smart.eo.hh
+-include/evas-cxx-1/canvas/evas_out.eo.hh
+-include/evas-cxx-1/canvas/evas_polygon.eo.hh
+-include/evas-cxx-1/canvas/evas_rectangle.eo.hh
+-include/evas-cxx-1/canvas/evas_scrollable_interface.eo.hh
+-include/evas-cxx-1/canvas/evas_selectable_interface.eo.hh
+-include/evas-cxx-1/canvas/evas_signal_interface.eo.hh
+-include/evas-cxx-1/canvas/evas_smart_clipped.eo.hh
+-include/evas-cxx-1/canvas/evas_table.eo.hh
+-include/evas-cxx-1/canvas/evas_text.eo.hh
+-include/evas-cxx-1/canvas/evas_textblock.eo.hh
+-include/evas-cxx-1/canvas/evas_textgrid.eo.hh
+-include/evas-cxx-1/canvas/evas_zoomable_interface.eo.hh
+ lib/cmake/Ecore/EcoreConfig.cmake
+ lib/cmake/Ecore/EcoreConfigVersion.cmake
+ lib/cmake/EcoreCxx/EcoreCxxConfig.cmake
+@@ -582,31 +459,23 @@ libdata/pkgconfig/ecore-ipc.pc
+ libdata/pkgconfig/ecore-x.pc
+ %%SDL%%libdata/pkgconfig/ecore-sdl.pc
+ libdata/pkgconfig/ecore.pc
+-%%AUDIO%%libdata/pkgconfig/ecore-audio-cxx.pc
+-libdata/pkgconfig/ecore-cxx.pc
+ libdata/pkgconfig/edje.pc
+-libdata/pkgconfig/edje-cxx.pc
+ libdata/pkgconfig/eet.pc
+-libdata/pkgconfig/eet-cxx.pc
+ libdata/pkgconfig/efl.pc
+ libdata/pkgconfig/efl-cxx.pc
+ libdata/pkgconfig/efreet.pc
+ libdata/pkgconfig/efreet-mime.pc
+ libdata/pkgconfig/efreet-trash.pc
+ libdata/pkgconfig/eina.pc
+-libdata/pkgconfig/eina-cxx.pc
+ libdata/pkgconfig/eio.pc
+ libdata/pkgconfig/eldbus.pc
+ libdata/pkgconfig/embryo.pc
+ libdata/pkgconfig/emotion.pc
+ libdata/pkgconfig/eo.pc
+-libdata/pkgconfig/eo-cxx.pc
+ libdata/pkgconfig/eolian.pc
+-libdata/pkgconfig/eolian-cxx.pc
+ %%PHYSICS%%libdata/pkgconfig/ephysics.pc
+ libdata/pkgconfig/ethumb.pc
+ libdata/pkgconfig/ethumb_client.pc
+-libdata/pkgconfig/evas-cxx.pc
+ libdata/pkgconfig/evas-software-buffer.pc
+ libdata/pkgconfig/evas-software-x11.pc
+ %%OPENGL%%libdata/pkgconfig/evas-opengl-x11.pc
