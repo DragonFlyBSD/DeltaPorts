@@ -347,3 +347,19 @@
  go/robots.txt
  go/src/Make.dist
  go/src/all.bash
+@@ -2939,11 +2939,11 @@ go/src/runtime/vlop_arm_test.go
+ go/src/runtime/vlrt.c
+ go/src/runtime/vlrt.go
+ go/src/runtime/zaexperiment.h
+-go/src/runtime/zasm_freebsd_%%ARCH%%.h
++go/src/runtime/zasm_%%OPSYSL%%_%%ARCH%%.h
+ go/src/runtime/zgoarch_%%ARCH%%.go
+-go/src/runtime/zgoos_freebsd.go
+-go/src/runtime/zruntime_defs_freebsd_%%ARCH%%.go
+-go/src/runtime/zsys_freebsd_%%ARCH%%.s
++go/src/runtime/zgoos_%%OPSYSL%%.go
++go/src/runtime/zruntime_defs_%%OPSYSL%%_%%ARCH%%.go
++go/src/runtime/zsys_%%OPSYSL%%_%%ARCH%%.s
+ go/src/runtime/zversion.go
+ go/src/sort/example_interface_test.go
+ go/src/sort/example_keys_test.go
