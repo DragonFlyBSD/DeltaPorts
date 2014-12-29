@@ -1,4 +1,4 @@
---- pkg-plist.orig	2013-12-28 15:28:45.864802000 +0000
+--- pkg-plist.orig	2014-12-29 19:59:52 UTC
 +++ pkg-plist
 @@ -209,8 +209,6 @@ lib/libtorture.so.0
  lib/libwbclient.so
@@ -14,6 +14,6 @@
  lib/shared-modules/vfs/time_audit.so
  lib/shared-modules/vfs/xattr_tdb.so
 -lib/shared-modules/vfs/zfsacl.so
- @comment auth_samba4 lib/shared-modules/auth/samba4.so
- @comment auth_unix lib/shared-modules/auth/unix.so
- @comment auth_wbc lib/shared-modules/auth/wbc.so
+ %%MODULE_AUTH_SAMBA4%%lib/shared-modules/auth/samba4.so
+ %%MODULE_AUTH_UNIX%%lib/shared-modules/auth/unix.so
+ %%MODULE_AUTH_WBC%%lib/shared-modules/auth/wbc.so
