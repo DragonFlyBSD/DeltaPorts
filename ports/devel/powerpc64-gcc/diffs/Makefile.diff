@@ -1,0 +1,43 @@
+--- Makefile.orig	2014-12-29 16:47:19 UTC
++++ Makefile
+@@ -16,7 +16,6 @@ LICENSE_COMB=	multi
+ 
+ USES=	gmake iconv libtool tar:bzip2 makeinfo compiler
+ PLIST_SUB=	TARGETARCH=${PKGNAMEPREFIX:C/-//g} \
+-		OPSYS=${OPSYS:tl} \
+ 		GCC_TARGET=${GCC_TARGET}
+ 
+ LIB_DEPENDS=	libgmp.so:${PORTSDIR}/math/gmp \
+@@ -30,13 +29,15 @@ WRKSRC=	${WRKDIR}/build-gcc
+ 
+ .if empty(GCC_TARGET)
+ # We are building for a FreeBSD target
+-GCC_TARGET?=	${PKGNAMEPREFIX}portbld-${OPSYS:tl}${OSREL}
+-BU_PREFIX?=	${PKGNAMEPREFIX}${OPSYS:tl}
++GCC_TARGET?=	${PKGNAMEPREFIX}portbld-freebsd10
++BU_PREFIX?=	${PKGNAMEPREFIX}freebsd
+ EXTRA_PATCHES+= ${FILESDIR}/freebsd-format-extensions
++PLIST_SUB+=	OPSYS=freebsd OSREL=10
+ .else
+ BU_PREFIX?=	${GCC_TARGET}
+ .if defined(FREEBSD_EXTENSION)
+ EXTRA_PATCHES+= ${FILESDIR}/freebsd-format-extensions
++PLIST_SUB+=	OPSYS=${OPSYS:tl} OSREL=${OSREL}
+ .endif
+ .endif
+ 
+@@ -54,7 +55,7 @@ CONFIGURE_SCRIPT=	../${PORTNAME}-${PORTV
+ ALL_TARGET?=	all-gcc
+ INSTALL_TARGET?=	install-gcc
+ 
+-.include <bsd.port.options.mk>
++.include <bsd.port.pre.mk>
+ 
+ .if ${ARCH} == "amd64"
+ CONFIGURE_TARGET=	x86_64-portbld-${OPSYS:tl}${OSREL}
+@@ -77,4 +78,4 @@ post-stage:
+ 	@${RM} ${STAGEDIR}${PREFIX}/info/*
+ 	@${RM} ${STAGEDIR}${PREFIX}/man/man7/*
+ 
+-.include <bsd.port.mk>
++.include <bsd.port.post.mk>
