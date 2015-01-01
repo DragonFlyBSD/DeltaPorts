@@ -1,4 +1,4 @@
---- configure.ac.intermediate	2014-12-02 18:14:44 UTC
+--- configure.ac.intermediate	2015-01-01 02:47:54 UTC
 +++ configure.ac
 @@ -199,7 +199,7 @@ case "$host_os" in
        have_windows="yes"
@@ -9,3 +9,14 @@
        have_freebsd="yes"
     ;;
     darwin*)
+@@ -1025,9 +1025,7 @@ fi
+ 
+ EFL_CHECK_LIBS([EET], [libjpeg zlib])
+ 
+-EFL_INTERNAL_DEPEND_PKG([EET], [eina])
+-
+-EFL_EVAL_PKGS([EET])
++EFL_INTERNAL_DEPEND_PKG([eina])
+ 
+ ### Checks for header files
+ 
