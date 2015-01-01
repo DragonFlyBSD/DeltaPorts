@@ -1,21 +1,18 @@
---- Makefile.orig	2014-07-20 11:55:16.653486000 +0000
+--- Makefile.orig	2015-01-01 04:37:00 UTC
 +++ Makefile
-@@ -12,18 +12,12 @@ COMMENT=	Multiwindow mouse-based text ed
- USE_XORG=	x11
+@@ -19,15 +19,11 @@ USE_XORG=	x11
+ USES=		bison
  GNU_CONFIGURE=	yes
  CONFIGURE_ARGS=	--libdir=${PREFIX}/share
 -LIBS+=		-lgnuregex
- MAKE_JOBS_UNSAFE=	yes
  
  PLIST_SUB=	VERSION="${PORTVERSION}"
  
  OPTIONS_DEFINE=	DOCS
  
 -post-patch:
--	@${REINPLACE_CMD} -e 's| regex\.c | |g ; \
+-	@${REINPLACE_CMD} -e 's| regex\.[co] | |g ; \
 -		 s| -g | |g' ${WRKSRC}/Makefile.in
--	@${REINPLACE_CMD} -e \
--		's|"regex\.h"|<gnu/regex.h>|g' ${WRKSRC}/bm_search.c
  
  do-install:
  	${INSTALL_PROGRAM} ${WRKSRC}/xcoral ${STAGEDIR}${PREFIX}/bin
