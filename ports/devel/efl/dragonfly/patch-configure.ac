@@ -9,14 +9,3 @@
        have_freebsd="yes"
     ;;
     darwin*)
-@@ -1025,9 +1025,7 @@ fi
- 
- EFL_CHECK_LIBS([EET], [libjpeg zlib])
- 
--EFL_INTERNAL_DEPEND_PKG([EET], [eina])
--
--EFL_EVAL_PKGS([EET])
-+EFL_INTERNAL_DEPEND_PKG([eina])
- 
- ### Checks for header files
- 
