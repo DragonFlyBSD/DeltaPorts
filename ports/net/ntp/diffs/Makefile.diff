@@ -1,0 +1,19 @@
+--- Makefile.orig	2015-01-04 19:51:17 UTC
++++ Makefile
+@@ -19,7 +19,7 @@ OPTIONS_SUB=	yes
+ USES=		pathfix shebangfix libtool
+ LIB_DEPENDS=	libevent.so:${PORTSDIR}/devel/libevent2
+ 
+-NTP_SHEBANG_FILES=	sbin/ntp-wait sbin/ntptrace
++NTP_SHEBANG_FILES=	bin/ntp-wait bin/ntptrace
+ 
+ .include "Makefile.inc"
+ 
+@@ -56,6 +56,7 @@ post-extract:
+ 	@${CHMOD} +x ${WRKSRC}/scripts/build/checkHtmlFileDates
+ 
+ post-install:
++	${RMDIR} ${STAGEDIR}${PREFIX}/include/event2
+ 	@${MKDIR} ${STAGEDIR}${EXAMPLESDIR}
+ 	@${INSTALL_DATA} ${WRKSRC}/conf/* ${STAGEDIR}${EXAMPLESDIR}
+ 	@${MKDIR} ${STAGEDIR}${DOCSDIR}
