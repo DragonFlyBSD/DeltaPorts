@@ -1,21 +1,6 @@
---- Makefile.units.orig	2014-11-18 17:44:31 UTC
+--- Makefile.units.orig	2015-01-17 23:40:32 UTC
 +++ Makefile.units
-@@ -1,4 +1,4 @@
--BUILDNAME=		${FPC_ARCH}-freebsd
-+BUILDNAME=		${FPC_ARCH}-${OPSYS:tl}
- 
- PLIST_SUB+=		PORTVERSION=${PORTVERSION} \
- 			BUILDNAME=${BUILDNAME}
-@@ -6,6 +6,8 @@ PLIST_SUB+=		PORTVERSION=${PORTVERSION}
- PLIST=			${.CURDIR}/pkg-plist
- PATCHDIR=		${.CURDIR}/files
- FILESDIR=		${.CURDIR}/files
-+DFLY_PATCHDIR=		${.CURDIR}/dragonfly
-+DFLY_FILESDIR=		${.CURDIR}/dragonfly
- WRKSRC=			${WRKDIR}/${PORTNAME}-${PORTVERSION}
- BUILD_WRKSRC=		${WRKDIR}/${WRKUNITDIR}
- INSTALL_WRKSRC=		${WRKDIR}/${WRKUNITDIR}
-@@ -39,11 +41,11 @@ post-extract:
+@@ -41,7 +41,7 @@ post-extract:
  
  post-patch:
  .if ${PKGNAMESUFFIX} == "-fpmkunit"
@@ -24,12 +9,7 @@
  		${WRKDIR}/${WRKUNITDIR}/src/${PKGNAMESUFFIX:S/-//}.pp
  .endif
  .if ${PKGNAMESUFFIX} == "-fppkg"
--	@${REINPLACE_CMD} -e 's|packages_freebsd=fcl-net fcl-web|packages_freebsd=fcl-net|g' \
-+	@${REINPLACE_CMD} -e 's|packages_${OPSYS:tl}=fcl-net fcl-web|packages_${OPSYS:tl}=fcl-net|g' \
- 		${WRKDIR}/${WRKUNITDIR}/Makefile.fpc
- .endif
- .if ${PKGNAMESUFFIX} == "-utils"
-@@ -52,3 +54,5 @@ post-patch:
+@@ -54,3 +54,5 @@ post-patch:
  	@${REINPLACE_CMD} -e 's|$$(INSTALL) Package.fpc $$(INSTALL_UNITDIR)||g' \
  		${WRKDIR}/${WRKUNITDIR}/fppkg/Makefile
  .endif
