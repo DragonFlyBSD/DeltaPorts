@@ -1,6 +1,6 @@
---- Makefile.orig	2014-10-13 08:32:25 UTC
+--- Makefile.orig	2015-01-18 11:39:07 UTC
 +++ Makefile
-@@ -86,8 +86,6 @@ LIB_DEPENDS+=		libsasl2.so:${PORTSDIR}/s
+@@ -84,8 +84,6 @@ LIB_DEPENDS+=		libsasl2.so:${PORTSDIR}/s
  # GNUTLS
  LIB_DEPENDS+=		libgcrypt.so:${PORTSDIR}/security/libgcrypt
  LIB_DEPENDS+=		libgnutls.so:${PORTSDIR}/security/gnutls
@@ -9,7 +9,7 @@
  # External Samba dependencies
  # IDL compiler
  BUILD_DEPENDS+=		p5-Parse-Pidl>=4.0.0:${PORTSDIR}/devel/p5-Parse-Pidl
-@@ -153,6 +151,7 @@ OPTIONS_DEFAULT+=	AVAHI
+@@ -154,6 +152,7 @@ NSUPDATE_DESC=		Use samba NSUPDATE utili
  .include <bsd.port.options.mk>
  
  CONFIGURE_ARGS+=	\
@@ -17,7 +17,7 @@
  			--with-pam \
  			--with-iconv \
  			--with-winbind \
-@@ -226,14 +225,18 @@ WANT_EXP_MODULES=	idmap_ad vfs_cacheprim
+@@ -227,14 +226,18 @@ WANT_EXP_MODULES=	idmap_ad vfs_cacheprim
  .endif
  
  .if ${PORT_OPTIONS:MACL_SUPPORT}
@@ -37,4 +37,4 @@
 +.  endif
  .endif
  
- .if ${PORT_OPTIONS:MADS}
+ .if ! ${PORT_OPTIONS:MAD_DC}

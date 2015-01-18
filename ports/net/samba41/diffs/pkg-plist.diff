@@ -1,4 +1,4 @@
---- pkg-plist.orig	2014-10-20 15:18:29 UTC
+--- pkg-plist.orig	2015-01-18 11:38:13 UTC
 +++ pkg-plist
 @@ -17,7 +17,6 @@ bin/regpatch
  bin/regshell
@@ -8,16 +8,7 @@
  %%AD_DC%%bin/samba-tool
  bin/sharesec
  bin/smbcacls
-@@ -181,6 +180,8 @@ lib/libndr.so
- lib/libndr.so.0
- lib/libnetapi.so
- lib/libnetapi.so.0
-+lib/libnss_wins.so
-+lib/libnss_wins.so.2
- lib/libpdb.so
- lib/libpdb.so.0
- lib/libregistry.so
-@@ -210,8 +211,6 @@ lib/libtorture.so.0
+@@ -210,8 +209,6 @@ lib/libtorture.so.0
  lib/libwbclient.so
  lib/libwbclient.so.0
  lib/mit_samba.so
@@ -26,7 +17,7 @@
  %%SMBPASS%%lib/pam_smbpass.so
  lib/pam_winbind.so
  lib/winbind_krb5_locator.so
-@@ -422,7 +421,6 @@ lib/shared-modules/vfs/syncops.so
+@@ -423,7 +420,6 @@ lib/shared-modules/vfs/syncops.so
  lib/shared-modules/vfs/time_audit.so
  lib/shared-modules/vfs/xattr_tdb.so
  %%DEVELOPER%%lib/shared-modules/vfs/nfs4acl_xattr.so
