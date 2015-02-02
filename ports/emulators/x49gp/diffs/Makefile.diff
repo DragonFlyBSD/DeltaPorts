@@ -1,0 +1,11 @@
+--- Makefile.orig	2015-02-02 19:18:58 UTC
++++ Makefile
+@@ -77,7 +77,7 @@ do-configure:
+ 	cd ${WRKSRC}/qemu/qemu-git && ./configure-small --extra-cflags=-DX49GP --cc="${CC}"
+ 
+ do-build:
+-	cd ${WRKSRC} && ${SETENV} -u MAKELEVEL -u MAKEFLAGS ${MAKE_CMD} ${MAKE_ARGS}
++	(cd ${WRKSRC} && ${MAKE_CMD} ${MAKE_ARGS})
+ 
+ do-install:
+ 	@${MKDIR} ${STAGEDIR}${DATADIR}
