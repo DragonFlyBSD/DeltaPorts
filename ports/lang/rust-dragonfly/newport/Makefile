@@ -20,9 +20,6 @@ LICENSE_COMB=	dual
 LICENSE_FILE=	${WRKSRC}/LICENSE-APACHE \
 		${WRKSRC}/LICENSE-MIT
 
-ONLY_FOR_ARCHS=	amd64
-ONLY_FOR_REASON=	requires prebuilt bootstrap compiler
-
 BUILD_DEPENDS=	curl:${PORTSDIR}/ftp/curl
 
 RUST_SOURCE=	rustc-nightly-src.tar.gz
@@ -37,11 +34,26 @@ MAKE_ENV=	SNAPSHOT_FILE=${DISTDIR}/${DIST_SUBDIR}/${RUST_BOOT}
 USE_LDCONFIG=	yes
 USE_PERL5=	build
 
-post-build:
-	@${ECHO_MSG} "Please `make check` to run regression tests"
+.if defined(VERBOSE) || defined(DPORTS_BUILDER)
+MAKE_ARGS+=	VERBOSE=1
+.endif
 
-check: build
-	@(cd ${WRKSRC} && ${SETENV} ${MAKE_ENV} \
+post-build:
+	# Rust install target continues to build, so we need to move the
+	# building portion into the "build" phase and out of the stage phase
+	(cd ${INSTALL_WRKSRC} && \
+		${SETENV} ${MAKE_ENV} ${MAKE_CMD} ${MAKE_FLAGS} \
+		${MAKEFILE} ${_MAKE_JOBS} ${MAKE_ARGS} prepare_install)
+	@${ECHO_MSG} "Please 'make regression-test' to run regression tests"
+
+
+regression-test: build
+	(cd ${WRKSRC} && ${SETENV} ${MAKE_ENV} \
 		${MAKE_CMD} ${_MAKE_JOBS} ${MAKE_ARGS} check)
+
+post-install:
+	# This manifest refers to the build directory (STAGEDIR)
+	# While it could be fixed with sed, remove it as lang/rust does
+	${RM} ${STAGEDIR}${PREFIX}/lib/rustlib/manifest-rustc
 
 .include <bsd.port.mk>
