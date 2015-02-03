@@ -5,7 +5,7 @@
  		antiword:${PORTSDIR}/textproc/antiword			\
  		xdg-open:${PORTSDIR}/devel/xdg-utils			\
 -		${LOCALBASE}/libexec/xpdf/pdftotext:${PORTSDIR}/graphics/xpdf	\
-+		pdftotext${PORTSDIR}/graphics/poppler-utils		\
++		pdftotext:${PORTSDIR}/graphics/poppler-utils		\
  		catppt:${PORTSDIR}/textproc/catdoc			\
  		unzip:${PORTSDIR}/archivers/unzip			\
  		unrtf:${PORTSDIR}/textproc/unrtf			\
