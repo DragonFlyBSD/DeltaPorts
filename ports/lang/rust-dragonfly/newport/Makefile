@@ -23,6 +23,8 @@ LICENSE_FILE=	${WRKSRC}/LICENSE-APACHE \
 ONLY_FOR_ARCHS=	amd64
 ONLY_FOR_REASON=	requires prebuilt bootstrap compiler
 
+BUILD_DEPENDS=	curl:${PORTSDIR}/ftp/curl
+
 RUST_SOURCE=	rustc-nightly-src.tar.gz
 RUST_BOOT=	rust-stage0-${RUST_BOOT_SIG}.tar.bz2
 RUST_BOOT_SIG=	2015-01-20-9006c3c-dragonfly-x86_64-0bb1d3eedbcd0b36ab01e4ac0539fb8a393c348d
