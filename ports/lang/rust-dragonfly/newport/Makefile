@@ -25,6 +25,7 @@ BUILD_DEPENDS=	curl:${PORTSDIR}/ftp/curl
 RUST_SOURCE=	rustc-nightly-src.tar.gz
 RUST_BOOT=	rust-stage0-${RUST_BOOT_SIG}.tar.bz2
 RUST_BOOT_SIG=	2015-01-20-9006c3c-dragonfly-x86_64-0bb1d3eedbcd0b36ab01e4ac0539fb8a393c348d
+PLIST_SUB=	DIGEST=4e7c5e5c
 
 USES=		gmake perl5 python:2
 WRKSRC=		${WRKDIR}/rustc-nightly
