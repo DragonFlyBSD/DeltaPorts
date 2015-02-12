@@ -1,14 +1,14 @@
---- pkg-plist.orig	2014-12-10 10:35:20 UTC
+--- pkg-plist.orig	2015-02-12 00:08:17 UTC
 +++ pkg-plist
-@@ -14,7 +14,6 @@ bin/eina-bench-cmp
+@@ -15,7 +15,6 @@ bin/eina-bench-cmp
  bin/eldbus-codegen
- bin/elua
+ %%ELUA%%bin/elua
  bin/embryo_cc
 -bin/eolian_cxx
  bin/eolian_gen
  bin/ethumb
  bin/ethumbd
-@@ -59,14 +58,6 @@ include/ecore-1/ecore_timer.eo.legacy.h
+@@ -60,14 +59,6 @@ include/ecore-1/ecore_timer.eo.legacy.h
  %%AUDIO%%include/ecore-audio-1/ecore_audio_out_sndfile.eo.h
  %%AUDIO%%include/ecore-audio-1/ecore_audio_protected.h
  %%PULSEAUDIO%%include/ecore-audio-1/ecore_audio_obj_out_pulse.h
@@ -23,7 +23,7 @@
  include/ecore-avahi-1/Ecore_Avahi.h
  include/ecore-con-1/Ecore_Con.h
  include/ecore-con-1/Ecore_Con_Eet.h
-@@ -82,14 +73,6 @@ include/ecore-con-1/ecore_con_server.eo.
+@@ -83,14 +74,6 @@ include/ecore-con-1/ecore_con_server.eo.
  include/ecore-con-1/ecore_con_server.eo.legacy.h
  include/ecore-con-1/ecore_con_url.eo.h
  include/ecore-con-1/ecore_con_url.eo.legacy.h
@@ -38,7 +38,7 @@
  include/ecore-evas-1/Ecore_Evas.h
  include/ecore-evas-1/Ecore_Evas_Types.h
  include/ecore-file-1/Ecore_File.h
-@@ -112,14 +95,7 @@ include/edje-1/edje_edit.eo.h
+@@ -113,14 +96,7 @@ include/edje-1/edje_edit.eo.h
  include/edje-1/edje_edit.eo.legacy.h
  include/edje-1/edje_object.eo.h
  include/edje-1/edje_object.eo.legacy.h
@@ -53,7 +53,7 @@
  include/efl-1/Efl.h
  include/efl-1/Efl_Config.h
  include/efl-1/interfaces/efl_control.eo.h
-@@ -128,13 +104,6 @@ include/efl-1/interfaces/efl_image.eo.h
+@@ -129,13 +105,6 @@ include/efl-1/interfaces/efl_image.eo.h
  include/efl-1/interfaces/efl_player.eo.h
  include/efl-1/interfaces/efl_text.eo.h
  include/efl-1/interfaces/efl_text_properties.eo.h
@@ -67,7 +67,7 @@
  include/efreet-1/Efreet.h
  include/efreet-1/Efreet_Mime.h
  include/efreet-1/Efreet_Trash.h
-@@ -223,32 +192,6 @@ include/eina-1/eina/eina_value.h
+@@ -224,32 +193,6 @@ include/eina-1/eina/eina_value.h
  include/eina-1/eina/eina_value_util.h
  include/eina-1/eina/eina_xattr.h
  include/eina-1/eina_config.h
@@ -75,7 +75,7 @@
 -include/eina-cxx-1/eina-cxx/eina_accessor.hh
 -include/eina-cxx-1/eina-cxx/eina_array.hh
 -include/eina-cxx-1/eina-cxx/eina_clone_allocators.hh
--include/eina-cxx-1/eina-cxx/eina_eo_base_fwd.hh
+-include/eina-cxx-1/eina-cxx/eina_eo_concrete_fwd.hh
 -include/eina-cxx-1/eina-cxx/eina_error.hh
 -include/eina-cxx-1/eina-cxx/eina_fold.hh
 -include/eina-cxx-1/eina-cxx/eina_inarray.hh
@@ -100,7 +100,7 @@
  include/eio-1/Eio.h
  include/eio-1/eio_inline_helper.x
  include/eldbus-1/Eldbus.h
-@@ -262,17 +205,6 @@ include/eldbus-1/eldbus_pending.h
+@@ -263,17 +206,6 @@ include/eldbus-1/eldbus_pending.h
  include/eldbus-1/eldbus_proxy.h
  include/eldbus-1/eldbus_service.h
  include/eldbus-1/eldbus_signal_handler.h
@@ -115,15 +115,17 @@
 -include/eldbus_cxx-1/eldbus_raw_tuple.hh
 -include/eldbus_cxx-1/eldbus_service.hh
 -include/eldbus_cxx-1/eldbus_signature_traits.hh
- include/embryo-1/Embryo.h
- include/emotion-1/Emotion.h
- include/emotion-1/Emotion_Eo.h
-@@ -283,31 +215,7 @@ include/emotion-1/emotion_object.eo.lega
+ include/elocation-1/Elocation.h
+ include/elocation-1/eldbus_geo_clue2_client.h
+ include/elocation-1/eldbus_geo_clue2_location.h
+@@ -291,34 +223,7 @@ include/emotion-1/emotion_object.eo.lega
  include/eo-1/Eo.h
  include/eo-1/eo_abstract_class.eo.h
  include/eo-1/eo_base.eo.h
 -include/eo-cxx-1/Eo.hh
--include/eo-cxx-1/eo_base.hh
+-include/eo-cxx-1/eo_abstract_class.eo.hh
+-include/eo-cxx-1/eo_base.eo.hh
+-include/eo-cxx-1/eo_concrete.hh
 -include/eo-cxx-1/eo_cxx_interop.hh
 -include/eo-cxx-1/eo_event.hh
 -include/eo-cxx-1/eo_inherit.hh
@@ -144,13 +146,14 @@
 -include/eolian-cxx-1/grammar/eo_class_generator.hh
 -include/eolian-cxx-1/grammar/eo_header_generator.hh
 -include/eolian-cxx-1/grammar/inheritance_base_generator.hh
+-include/eolian-cxx-1/grammar/namespace_generator.hh
 -include/eolian-cxx-1/grammar/parameters_generator.hh
 -include/eolian-cxx-1/grammar/tab.hh
 -include/eolian-cxx-1/grammar/type_generator.hh
  %%PHYSICS%%include/ephysics-1/EPhysics.h
  include/ethumb-1/Ethumb.h
  include/ethumb-client-1/Ethumb_Client.h
-@@ -381,37 +289,6 @@ include/evas-1/canvas/evas_textgrid.eo.h
+@@ -392,37 +297,6 @@ include/evas-1/canvas/evas_textgrid.eo.h
  include/evas-1/canvas/evas_textgrid.eo.legacy.h
  include/evas-1/canvas/evas_zoomable_interface.eo.h
  include/evas-1/canvas/evas_zoomable_interface.eo.legacy.h
@@ -188,7 +191,7 @@
  lib/cmake/Ecore/EcoreConfig.cmake
  lib/cmake/Ecore/EcoreConfigVersion.cmake
  lib/cmake/EcoreCxx/EcoreCxxConfig.cmake
-@@ -582,31 +459,23 @@ libdata/pkgconfig/ecore-ipc.pc
+@@ -601,19 +475,13 @@ libdata/pkgconfig/ecore-ipc.pc
  libdata/pkgconfig/ecore-x.pc
  %%SDL%%libdata/pkgconfig/ecore-sdl.pc
  libdata/pkgconfig/ecore.pc
@@ -199,7 +202,7 @@
  libdata/pkgconfig/eet.pc
 -libdata/pkgconfig/eet-cxx.pc
  libdata/pkgconfig/efl.pc
- libdata/pkgconfig/efl-cxx.pc
+-libdata/pkgconfig/efl-cxx.pc
  libdata/pkgconfig/efreet.pc
  libdata/pkgconfig/efreet-mime.pc
  libdata/pkgconfig/efreet-trash.pc
@@ -207,6 +210,8 @@
 -libdata/pkgconfig/eina-cxx.pc
  libdata/pkgconfig/eio.pc
  libdata/pkgconfig/eldbus.pc
+ libdata/pkgconfig/elocation.pc
+@@ -621,13 +489,10 @@ libdata/pkgconfig/elua.pc
  libdata/pkgconfig/embryo.pc
  libdata/pkgconfig/emotion.pc
  libdata/pkgconfig/eo.pc
