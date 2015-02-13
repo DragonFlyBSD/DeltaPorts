@@ -15,7 +15,7 @@
 +GCCVERSION_040800=	     0       0 4.8 48
 +GCCVERSION_040900=	     0       0 4.9 49
 +
-+.if defined(NO_GCC50)
++.if defined(NO_GCC50) || !defined(DPORTS_BUILDER)
 +GCCVERSION_040700=	300400 9999999 4.7 47
 +GCCVERSION_050000=	     0       0 5   50
 +.else
@@ -43,7 +43,7 @@
  . endfor
  .endfor
  
-+.if !defined(NO_GCC50) && ${DFLYVERSION} >= ${_GCCVERSION_050000_L}
++.if defined(DPORTS_BUILDER) && !defined(NO_GCC50) && ${DFLYVERSION} >= ${_GCCVERSION_050000_L}
 +LASTBASE=		5
 +DFLY_DEFAULT_VERSION=	50
 +.else
