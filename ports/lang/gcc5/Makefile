@@ -1,0 +1,4 @@
+# Needed in the case of gcc50 building lang/gcc5 when the world was built
+# by gcc47.  Using the normal c++ flags will break the build.
+
+CXXFLAGS:= ${CXXFLAGS:N-D_GLIBCXX_USE_CXX11_ABI*}
