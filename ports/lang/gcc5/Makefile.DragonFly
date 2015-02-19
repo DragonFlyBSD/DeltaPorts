@@ -2,3 +2,6 @@
 # by gcc47.  Using the normal c++ flags will break the build.
 
 CXXFLAGS:= ${CXXFLAGS:N-D_GLIBCXX_USE_CXX11_ABI*}
+
+# Contents of ports Makefile.DragonFly (oops)
+OPTIONS_EXCLUDE= JAVA
