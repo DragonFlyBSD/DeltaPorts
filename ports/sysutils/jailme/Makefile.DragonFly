@@ -1,0 +1,1 @@
+IGNORE=	Tailored to FreeBSD jails, will not build on DFLY
