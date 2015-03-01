@@ -1,5 +1,14 @@
 --- Makefile.orig
 +++ Makefile
+@@ -42,7 +42,7 @@
+ 		--with-threads=yes \
+ 		--without-libtool
+ GNU_CONFIGURE=	yes
+-LDFLAGS+=	-L${LOCALBASE} -pthread
++LDFLAGS+=	-L${LOCALBASE} -lpthread
+ MAKE_JOBS_UNSAFE=	yes
+ MAKEFILE=	GNUmakefile
+ USE_LDCONFIG=	yes
 @@ -132,7 +132,6 @@
  
  post-patch:
