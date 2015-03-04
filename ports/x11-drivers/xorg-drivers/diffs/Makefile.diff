@@ -1,35 +1,35 @@
---- Makefile.orig	2014-08-20 20:52:55 UTC
+--- Makefile.orig	2015-03-04 00:30:04 UTC
 +++ Makefile
-@@ -78,8 +78,8 @@ ${a:tu}_DESC=	Install ${a} ${type} drive
- OPTIONS_DEFINE_i386=	INTEL OPENCHROME
- OPTIONS_DEFAULT_i386=	INTEL OPENCHROME
+@@ -74,8 +74,8 @@ ${a:tu}_DESC=	Install ${a} ${type} drive
+ OPTIONS_DEFINE_i386=	ATI INTEL OPENCHROME
+ OPTIONS_DEFAULT_i386=	ATI INTEL OPENCHROME
  
 -OPTIONS_DEFINE_amd64:=	${OPTIONS_DEFINE_i386}
 -OPTIONS_DEFAULT_amd64:=	${OPTIONS_DEFAULT_i386}
-+OPTIONS_DEFINE_amd64:=	INTEL29 OPENCHROME
-+OPTIONS_DEFAULT_amd64:=	INTEL29 OPENCHROME
++OPTIONS_DEFINE_amd64:=	ATI INTEL29 OPENCHROME
++OPTIONS_DEFAULT_amd64:=	ATI INTEL29 OPENCHROME
  
  OPTIONS_DEFINE_sparc64=	SUNFFB
  OPTIONS_DEFAULT_sparc64=SUNFFB
-@@ -88,6 +88,7 @@ OPTIONS_DEFINE_ia64=	OPENCHROME
- OPTIONS_DEFAULT_ia64=	OPENCHROME
+@@ -85,6 +85,7 @@ OPTIONS_DEFAULT_ia64=	OPENCHROME
  
+ ATI_DESC=		Install ati video driver
  INTEL_DESC=		Install intel video driver
 +INTEL29_DESC=		Install intel video driver
  OPENCHROME_DESC=	Install openchrome video driver
  SUNFFB_DESC=		Install sunffb video driver
  
-@@ -97,10 +98,14 @@ QUIRKS=		keyboard:kbd
+@@ -94,10 +95,14 @@ QUIRKS=		keyboard:kbd
  .include <bsd.port.options.mk>
  
  # Manual add arch specific drivers so they be added to depend lines.
 -.if ${ARCH}==i386 || ${ARCH}==amd64
 +.if ${ARCH}==i386
- VIDEO_DRIVERS+=	intel openchrome
+ VIDEO_DRIVERS+=	ati intel openchrome
  .endif
  
 +.if ${ARCH}==x86_64
-+VIDEO_DRIVERS+=	intel29 openchrome
++VIDEO_DRIVERS+=	ati intel29 openchrome
 +.endif
 +
  .if ${ARCH}==sparc64
