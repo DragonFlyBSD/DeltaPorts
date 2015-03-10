@@ -1,2 +1,4 @@
-# This locks on on gcc50 hard (and doesn't build on gcc47!)
-USE_GCC=4.7
+# This locks up during build, at least on DragonFly 4.1
+# regardless of gcc47 or gcc50
+
+IGNORE=	locks up during build
