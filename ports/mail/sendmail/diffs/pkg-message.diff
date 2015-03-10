@@ -1,0 +1,16 @@
+--- pkg-message.orig	2015-03-10 12:57:42 UTC
++++ pkg-message
+@@ -0,0 +1,13 @@
++-------------------------------------------------------------------------
++
++These notes assume "%%PREFIX%%" is "/usr/local"
++DF Handbook: http://www.dragonflybsd.com/docs/docs/newhandbook/mta/
++
++To deliver all local mail to your mailhub, edit the last line of 
++/etc/mail/<hostname>.submit.mc:
++FEATURE(`msp','[mailhub.do.main]`)
++
++To update your configuration look at DF handbook and /etc/mail/Makefile 
++To activate sendmail as default mailer, refer to DF handbook
++
++-------------------------------------------------------------------------
