@@ -1,0 +1,2 @@
+# This locks on on gcc50 hard (and doesn't build on gcc47!)
+USE_GCC=4.7
