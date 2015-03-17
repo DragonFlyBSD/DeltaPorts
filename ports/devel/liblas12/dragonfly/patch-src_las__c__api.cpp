@@ -9,3 +9,12 @@
          ((LASHeader*) hHeader)->SetProjectId(id);    
      } catch (std::exception const& e)
      {
+@@ -1542,7 +1542,7 @@ LAS_DLL LASGuidH LASGuid_CreateFromStrin
+     VALIDATE_LAS_POINTER1(string, "LASGuid_CreateFromString", NULL);    
+     liblas::guid id;
+     try {
+-        id = liblas::guid::guid(string);
++        id = liblas::guid(string);
+         return (LASGuidH) new liblas::guid(id);
+     }
+     catch (std::exception const& e) {
