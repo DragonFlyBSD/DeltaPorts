@@ -1,0 +1,12 @@
+--- Makefile.orig	2015-03-21 19:26:16 UTC
++++ Makefile
+@@ -24,7 +24,9 @@ PLIST=		${FILESDIR}/pkg-plist.${PORTNAME
+ DESCR=		${FILESDIR}/pkg-descr.${PORTNAME}
+ LATEST_LINK=	lighttpd-${PORTNAME}
+ 
++.if !defined(DPORTS_BUILDER)
+ MANUAL_PACKAGE_BUILD=	free for non-commercial use only
++.endif
+ 
+ PATCH_SITES+=	${MASTER_SITE_LOCAL}
+ PATCHFILES+=	lighttpd-1.4.26_mod_h264_streaming-2.2.9.patch.gz
