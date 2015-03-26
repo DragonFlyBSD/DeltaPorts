@@ -1,7 +1,0 @@
---- pkg-plist.orig	2015-01-20 00:32:29 UTC
-+++ pkg-plist
-@@ -7,4 +7,3 @@ lib/libnetembryo.so
- lib/libnetembryo.so.9
- lib/libnetembryo.so.9.0.0
- libdata/pkgconfig/libnetembryo.pc
--libdata/pkgconfig/libnetembryo-sctp.pc
