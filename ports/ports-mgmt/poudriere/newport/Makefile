@@ -13,6 +13,8 @@ COMMENT=	Port build and test system
 
 LICENSE=	BSD
 
+IGNORE=		use only ports-mgmt/poudriere-devel
+
 OPTIONS_DEFINE=	ZSH
 
 CONFLICTS_INSTALL=	poudriere-devel
