@@ -1,6 +1,6 @@
---- pkg-plist.orig	2015-04-08 18:34:14 UTC
+--- pkg-plist.orig	2015-04-08 19:24:17 UTC
 +++ pkg-plist
-@@ -1,25 +1,25 @@
+@@ -1,25 +1,28 @@
  man/man5/ntp.conf.5.gz
  man/man5/ntp.keys.5.gz
 -man/man8/ntp-keygen.8.gz
@@ -25,13 +25,15 @@
 -sbin/update-leap
 +man/man1/ntp-keygen.1.gz
 +%%PERL_UTILS%%man/man1/ntp-wait.1.gz
-+man/man8/ntpd.1.gz
-+man/man8/ntpdc.1.gz
-+man/man8/ntpq.1.gz
++man/man1/ntpd.1.gz
++man/man1/ntpdc.1.gz
++man/man1/ntpq.1.gz
 +%%PERL_UTILS%%man/man1/ntptrace.1.gz
 +%%NTPSNMPD%%man/man1/ntpsnmpd.1.gz
 +man/man1/sntp.1.gz
++man/man1/calc_tickadj.1.gz
 +man/man1/update-leap.1.gz
++bin/calc_tickadj
 +%%SSL%%bin/ntp-keygen
 +%%PERL_UTILS%%bin/ntp-wait
 +bin/ntpd
@@ -42,6 +44,7 @@
 +bin/ntptime
 +%%PERL_UTILS%%bin/ntptrace
 +bin/sntp
++bin/tickadj
 +bin/update-leap
  %%PERL_UTILS%%share/ntp/lib/NTP/Util.pm
  %%PORTDOCS%%%%DOCSDIR%%/access.html
