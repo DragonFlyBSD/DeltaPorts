@@ -1,6 +1,6 @@
---- Makefile.orig	2015-01-18 11:39:07 UTC
+--- Makefile.orig	2015-04-08 18:21:34 UTC
 +++ Makefile
-@@ -84,8 +84,6 @@ LIB_DEPENDS+=		libsasl2.so:${PORTSDIR}/s
+@@ -80,8 +80,6 @@ LIB_DEPENDS+=		libsasl2.so:${PORTSDIR}/s
  # GNUTLS
  LIB_DEPENDS+=		libgcrypt.so:${PORTSDIR}/security/libgcrypt
  LIB_DEPENDS+=		libgnutls.so:${PORTSDIR}/security/gnutls
@@ -9,32 +9,12 @@
  # External Samba dependencies
  # IDL compiler
  BUILD_DEPENDS+=		p5-Parse-Pidl>=4.0.0:${PORTSDIR}/devel/p5-Parse-Pidl
-@@ -154,6 +152,7 @@ NSUPDATE_DESC=		Use samba NSUPDATE utili
+@@ -147,6 +145,8 @@ BIND99_DESC=		Use bind99 as AD DC DNS se
+ BIND910_DESC=		Use bind910 as AD DC DNS server frontend
+ NSUPDATE_DESC=		Use samba NSUPDATE utility for AD DC
+ 
++OPTIONS_EXCLUDE_DragonFly=	ACL_SUPPORT
++
  .include <bsd.port.options.mk>
  
  CONFIGURE_ARGS+=	\
-+			--without-regedit \
- 			--with-pam \
- 			--with-iconv \
- 			--with-winbind \
-@@ -227,14 +226,18 @@ WANT_EXP_MODULES=	idmap_ad vfs_cacheprim
- .endif
- 
- .if ${PORT_OPTIONS:MACL_SUPPORT}
-+.  if ${OPSYS} == FreeBSD
- .	if ${OSVERSION} > 800000
- LIB_DEPENDS+=		libsunacl.so:${PORTSDIR}/sysutils/libsunacl
- WANT_EXP_MODULES+=	vfs_zfsacl
- SAMBA4_MODULES+=	vfs_zfsacl
--.	endif
- CONFIGURE_ARGS+=	--with-acl-support
--.else
-+.       else
-+CONFIGURE_ARGS+=	--without-acl-support
-+.       endif
-+.  else
- CONFIGURE_ARGS+=	--without-acl-support
-+.  endif
- .endif
- 
- .if ! ${PORT_OPTIONS:MAD_DC}

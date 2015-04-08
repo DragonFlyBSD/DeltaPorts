@@ -1,6 +1,6 @@
---- Makefile.orig	2013-03-17 23:40:35.349711000 +0000
+--- Makefile.orig	2015-04-08 18:01:49 UTC
 +++ Makefile
-@@ -21,10 +21,6 @@ GNU_CONFIGURE=	yes
+@@ -24,10 +24,6 @@ OPTIONS_DEFINE=	DOCS
  
  .include <bsd.port.pre.mk>
  
@@ -8,6 +8,6 @@
 -BUILD_DEPENDS=	yasm:${PORTSDIR}/devel/yasm
 -.endif
 -
- post-patch:
- 	@${REINPLACE_CMD} -e 's|-O3||' ${WRKSRC}/configure
- 	@${REINPLACE_CMD} -e '/nRetVal = 0/s|int|intptr_t|' \
+ post-install:
+ 	cd ${WRKSRC}/src/MACLib && ${INSTALL_DATA} BitArray.h \
+ 		Prepare.h UnBitArrayBase.h ${STAGEDIR}${PREFIX}/include/mac

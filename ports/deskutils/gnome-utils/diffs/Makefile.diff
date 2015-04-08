@@ -1,6 +1,6 @@
---- Makefile.orig	2014-11-22 15:39:08.282631000 +0000
+--- Makefile.orig	2015-04-08 18:04:26 UTC
 +++ Makefile
-@@ -15,7 +15,6 @@ COMMENT=	GNOME 3 support utilities
+@@ -15,7 +15,6 @@ USES=		metaport
  RUN_DEPENDS=	baobab>=3.0:${PORTSDIR}/deskutils/baobab \
  		gnome-screenshot>=3.0:${PORTSDIR}/deskutils/gnome-screenshot \
  		gnote>=3.0:${PORTSDIR}/deskutils/gnote \
@@ -8,12 +8,3 @@
  		gnome-search-tool>=3.0:${PORTSDIR}/deskutils/gnome-search-tool \
  		gnome-dictionary>=3.0:${PORTSDIR}/deskutils/gnome-dictionary \
  		gnome-system-log>=3.0:${PORTSDIR}/deskutils/gnome-system-log \
-@@ -26,6 +25,8 @@ RUN_DEPENDS=	baobab>=3.0:${PORTSDIR}/des
- 		gnome-maps>=3.0:${PORTSDIR}/deskutils/gnome-maps \
- 		gnome-weather>=3.0:${PORTSDIR}/deskutils/gnome-weather
- 
-+#		gnome-contacts>=3.0:${PORTSDIR}/deskutils/gnome-contacts \
-+
- NO_BUILD=	yes
- NO_INSTALL=	yes
- NO_MTREE=	yes
