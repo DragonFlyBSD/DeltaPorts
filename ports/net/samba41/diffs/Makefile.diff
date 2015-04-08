@@ -1,4 +1,4 @@
---- Makefile.orig	2015-04-08 18:21:34 UTC
+--- Makefile.orig	2015-04-08 19:54:12 UTC
 +++ Makefile
 @@ -80,8 +80,6 @@ LIB_DEPENDS+=		libsasl2.so:${PORTSDIR}/s
  # GNUTLS
@@ -9,7 +9,7 @@
  # External Samba dependencies
  # IDL compiler
  BUILD_DEPENDS+=		p5-Parse-Pidl>=4.0.0:${PORTSDIR}/devel/p5-Parse-Pidl
-@@ -147,6 +145,8 @@ BIND99_DESC=		Use bind99 as AD DC DNS se
+@@ -147,9 +145,12 @@ BIND99_DESC=		Use bind99 as AD DC DNS se
  BIND910_DESC=		Use bind910 as AD DC DNS server frontend
  NSUPDATE_DESC=		Use samba NSUPDATE utility for AD DC
  
@@ -18,3 +18,7 @@
  .include <bsd.port.options.mk>
  
  CONFIGURE_ARGS+=	\
++			--without-regedit \
+ 			--with-pam \
+ 			--with-iconv \
+ 			--with-winbind \
