@@ -1,6 +1,15 @@
---- Makefile.orig	2014-07-13 22:34:30.247038000 +0000
+--- Makefile.orig	2015-04-10 20:04:33 UTC
 +++ Makefile
-@@ -205,11 +205,7 @@ CONFLICTS=	ucd-snmp-4.* net-snmp-5.3.*
+@@ -146,7 +146,7 @@ NET_SNMP_SYS_CONTACT?=	nobody@nowhere.in
+ NET_SNMP_SYS_LOCATION?=	somewhere
+ NET_SNMP_LOGFILE?=	/var/log/snmpd.log
+ NET_SNMP_PERSISTENTDIR?=/var/net-snmp
+-NET_SNMP_WITH_MIB_MODULE_LIST+=	host disman/event-mib mibII/mta_sendmail mibII/tcpTable ucd-snmp/diskio sctp-mib
++NET_SNMP_WITH_MIB_MODULE_LIST+=	host disman/event-mib mibII/mta_sendmail mibII/tcpTable ucd-snmp/diskio
+ 
+ .if ${OSVERSION} >= 1000000 && ${OSVERSION} < 1100062
+ CFLAGS+=	-D_WANT_IFADDR
+@@ -206,11 +206,7 @@ CONFLICTS=	ucd-snmp-4.* net-snmp-5.3.*
  
  .include <bsd.port.pre.mk>
  
