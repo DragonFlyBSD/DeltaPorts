@@ -1,0 +1,15 @@
+--- Makefile.orig	2015-04-11 18:34:48 UTC
++++ Makefile
+@@ -16,11 +16,10 @@ COMMENT=	Network abstraction library
+ LICENSE=	LGPL21
+ 
+ OPTIONS_DEFINE=		OPENSSL SCTP IPV6
+-OPTIONS_DEFAULT=	OPENSSL SCTP
++OPTIONS_DEFAULT=	OPENSSL 
+ OPTIONS_SUB=		yes
+ SCTP_DESC=		Stream Control Transmission Protocol support
+ 
+-OPTIONS_EXCLUDE_DragonFly=	SCTP
+ IPV6_CONFIGURE_ENABLE=		ipv6
+ SCTP_CONFIGURE_ENABLE=		sctp
+ 
