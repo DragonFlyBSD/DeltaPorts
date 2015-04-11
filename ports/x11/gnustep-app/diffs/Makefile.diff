@@ -1,0 +1,18 @@
+--- Makefile.orig	2015-04-11 21:48:41 UTC
++++ Makefile
+@@ -30,7 +30,6 @@ RUN_DEPENDS=	aclock>0:${PORTSDIR}/x11-cl
+ 		easydiff>0:${PORTSDIR}/textproc/easydiff \
+ 		edenmath>0:${PORTSDIR}/math/edenmath \
+ 		expense>0:${PORTSDIR}/finance/expense \
+-		fortunate>0:${PORTSDIR}/games/fortunate \
+ 		fortytwo-bdb>0:${PORTSDIR}/databases/fortytwo-bdb \
+ 		fortytwo-encore>0:${PORTSDIR}/devel/fortytwo-encore \
+ 		fortytwo>0:${PORTSDIR}/graphics/fortytwo \
+@@ -66,7 +65,6 @@ RUN_DEPENDS=	aclock>0:${PORTSDIR}/x11-cl
+ 		lusernet>0:${PORTSDIR}/news/lusernet \
+ 		mpdcon>0:${PORTSDIR}/audio/mpdcon \
+ 		nextgo>0:${PORTSDIR}/games/nextgo \
+-		gnustep-notebook>0:${PORTSDIR}/deskutils/gnustep-notebook \
+ 		paje>0:${PORTSDIR}/science/paje \
+ 		pantomime>0:${PORTSDIR}/mail/pantomime \
+ 		pixen>0:${PORTSDIR}/graphics/pixen \
