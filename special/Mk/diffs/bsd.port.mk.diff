@@ -1,4 +1,4 @@
---- bsd.port.mk.orig	2015-04-18 05:38:26 UTC
+--- bsd.port.mk.orig	2015-04-19 12:26:20 UTC
 +++ bsd.port.mk
 @@ -43,7 +43,8 @@ FreeBSD_MAINTAINER=	portmgr@FreeBSD.org
  #				  makefile is being used on.  Automatically set to
@@ -119,12 +119,12 @@
  .include "${PORTSDIR}/Mk/bsd.gcc.mk"
 +.else
 +.  if !defined(USE_GNUSTEP)
-+.    if !defined(NO_GCC50) && defined(DPORTS_BUILDER) && ${DFLYVERSION} >= 400103
-+CONFIGURE_ENV+= 	CCVER=gcc50
-+MAKE_ENV+=		CCVER=gcc50
-+.    else
++.    if ${DFLYVERSION} < 400103
 +CONFIGURE_ENV+= 	CCVER=gcc47
 +MAKE_ENV+=		CCVER=gcc47
++.    else
++CONFIGURE_ENV+= 	CCVER=gcc50
++MAKE_ENV+=		CCVER=gcc50
 +.    endif
 +.  endif
  .endif

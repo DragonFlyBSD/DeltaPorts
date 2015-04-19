@@ -1,11 +1,11 @@
---- bsd.default-versions.mk.orig	2015-02-12 22:06:36 UTC
+--- bsd.default-versions.mk.orig	2015-04-19 12:25:08 UTC
 +++ bsd.default-versions.mk
 @@ -10,6 +10,13 @@
  #
  #   DEFAULT_VERSIONS=	perl5=5.18 ruby=2.0
  
 +# Use DragonFly base compiler instead of ports gcc 4.8
-+.if defined(NO_GCC50) || ${DFLYVERSION} < 400103 || !defined(DPORTS_BUILDER)
++.if ${DFLYVERSION} < 400103
 +GCC_DEFAULT=	4.7
 +.else
 +GCC_DEFAULT=	5
