@@ -1,9 +1,0 @@
---- Makefile.orig	2015-04-20 08:06:58 UTC
-+++ Makefile
-@@ -6,4 +6,6 @@ COMMENT=	Fast Discrete Fourier Transform
- FFTW3_FLAVOR=	quad
- MASTERDIR=	${.CURDIR}/../../math/fftw3
- 
-+USES+=		fortran	# brings in libquadmath
-+
- .include "${MASTERDIR}/Makefile"
