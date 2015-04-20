@@ -1,0 +1,10 @@
+--- pkg-plist.orig	2015-04-20 07:57:17 UTC
++++ pkg-plist
+@@ -41,6 +41,6 @@ include/efi/x86_64/efibind.h
+ include/efi/x86_64/efilibplat.h
+ include/efi/x86_64/pe.h
+ lib/crt0-efi-x86_64.o
+-lib/elf_x86_64_fbsd_efi.lds
++lib/elf_x86_64_efi.lds
+ lib/libefi.a
+ lib/libgnuefi.a
