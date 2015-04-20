@@ -1,2 +1,8 @@
 # gcc5 can't build stage 1 with -pedantic anymore
 USE_GCC=	4.7
+
+# gcc 4.6 is older than both base compilers.  I can't think of legitimate
+# use case other than contrived narrow cases for individuals.  Let's save
+# the builders and just mask it.
+
+IGNORE=	No ports depend on this "ancient" compiler; use a newer one
