@@ -1,6 +1,12 @@
---- Makefile.orig	2014-11-21 18:57:26.958480000 +0000
+--- Makefile.orig	2015-04-20 06:35:53 UTC
 +++ Makefile
-@@ -27,7 +27,6 @@ RUN_DEPENDS=	five-or-more:${PORTSDIR}/ga
+@@ -20,13 +20,11 @@ RUN_DEPENDS=	five-or-more:${PORTSDIR}/ga
+ 		gnome-mines:${PORTSDIR}/games/gnome-mines \
+ 		gnome-nibbles:${PORTSDIR}/games/gnome-nibbles \
+ 		gnome-robots:${PORTSDIR}/games/gnome-robots \
+-		gnome-sudoku:${PORTSDIR}/games/gnome-sudoku \
+ 		gnome-tetravex:${PORTSDIR}/games/gnome-tetravex \
+ 		hitori:${PORTSDIR}/games/hitori \
  		iagno:${PORTSDIR}/games/iagno \
  		lightsoff:${PORTSDIR}/games/lightsoff \
  		quadrapassel:${PORTSDIR}/games/quadrapassel \
