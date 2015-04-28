@@ -12,6 +12,8 @@ LICENSE=	BSD MIT
 LICENSE_COMB=	multi
 LICENSE_FILE=	${WRKSRC}/COPYING
 
+IGNORE=		libtoolize is not valid tool anymore
+
 USES=		gmake pkgconfig
 USE_AUTOTOOLS=	aclocal autoheader automake autoconf libtoolize
 ACLOCAL_ARGS=	-I.
