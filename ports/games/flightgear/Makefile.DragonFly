@@ -1,2 +1,2 @@
 USES+=		alias
-USE_GCC=	4.8+
+USE_GCC=	DEFAULT_NOT5
