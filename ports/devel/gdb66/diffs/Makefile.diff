@@ -1,22 +1,22 @@
---- Makefile.orig	2014-02-17 15:25:01.201508000 +0000
+--- Makefile.orig	2015-04-29 09:07:57 UTC
 +++ Makefile
 @@ -30,7 +30,7 @@ CONFIGURE_ARGS=	--program-suffix=${PORTV
- 		--enable-tui ${ICONV_CONFIGURE_ARG}
- CFLAGS:=	${CFLAGS:C/ +$//}	# blanks at EOL creep in sometimes
+ # remove consecutive blanks, which causes configure to fail
+ CFLAGS!=	echo ${CFLAGS}|sed -e 's/  / /g'
  CFLAGS+=	-DRL_NO_COMPAT
 -EXCLUDE=	dejagnu expect readline sim texinfo intl
 +EXCLUDE=	dejagnu expect sim texinfo intl
  EXTRACT_AFTER_ARGS=	${EXCLUDE:S/^/--exclude /}
  VER=		${PORTVERSION:S/.//}
  PLIST_SUB=	VER=${VER}
-@@ -75,18 +75,7 @@ CONFLICTS+=	gdb-insight*
+@@ -79,19 +79,6 @@ CONFLICTS+=	gdb-insight*
  BROKEN_${a}=	Does not configure on ia64 or powerpc
  .endfor
  
 -.if ${ARCH} == "amd64"
 -CONFIGURE_TARGET=	x86_64-portbld-freebsd${OSREL}
 -.endif
- 
+-
 -post-patch:
 -	@${REINPLACE_CMD} -e 's/$$/ [GDB v${PORTVERSION} for FreeBSD]/' \
 -		${WRKSRC}/gdb/version.in
@@ -24,7 +24,8 @@
 -		-e 's/^readline/#readline/' \
 -		-e 's,^LIBICONV =.*,LIBICONV=-L${LOCALBASE}/lib ${ICONV_LIB},' \
 -		${WRKSRC}/gdb/Makefile.in
--	${ECHO} 'READLINE = -lreadline_p' >> ${WRKSRC}/gdb/Makefile.in
- 
+-	${ECHO} 'READLINE = -lreadline' >> ${WRKSRC}/gdb/Makefile.in
+-
  do-install:
  	${INSTALL_PROGRAM} ${WRKSRC}/gdb/gdb ${STAGEDIR}${PREFIX}/bin/gdb${VER}
+ 	${LN} -sf gdb${VER} ${STAGEDIR}${PREFIX}/bin/gdbtui${VER}
