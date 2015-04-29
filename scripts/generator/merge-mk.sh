@@ -34,7 +34,7 @@ rm -rf ${WORKAREA}/*
 cp -a ${FPORTS}/Templates ${WORKAREA}
 cp -a ${FPORTS}/Mk ${WORKAREA}
 # we don't use bsd.gcc.mk anymore, so remove it to avoid confusion
-rm ${WORKAREA}/bsd.gcc.mk
+rm ${WORKAREA}/Mk/bsd.gcc.mk
 
 for k in Mk Templates; do
   diffs=$(find ${DELTA}/special/${k}/diffs -name \*\.diff)

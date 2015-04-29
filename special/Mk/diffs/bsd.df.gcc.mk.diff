@@ -1,6 +1,6 @@
---- bsd.df.gcc.mk.orig	2015-04-29 07:59:04 UTC
+--- bsd.df.gcc.mk.orig	2015-04-29 08:54:34 UTC
 +++ bsd.df.gcc.mk
-@@ -0,0 +1,76 @@
+@@ -0,0 +1,78 @@
 +# bsd.gcc.df.mk  - Reaction to USE_GCC on DragonFly
 +#
 +# The primary base compiler is used is possible, otherwise the ports default
@@ -20,6 +20,8 @@
 +PORT_COMPILER=4.8
 +.   elif ${USE_GCC} == 4.9 || ${USE_GCC} == 4.9+
 +PORT_COMPILER=4.9
++.   elif ${USE_GCC} == DEFAULT_NOT5
++PORT_COMPILER=${LANG_GCC_IS}
 +.   else
 +BASE_COMPILER=gcc47
 +.   endif
@@ -27,7 +29,7 @@
 +.   if ${USE_GCC} == 4.8 || ${USE_GCC} == 4.9
 +PORT_COMPILER=${USE_GCC}
 +.   else
-+.      if ${USE_GCC:tu} == NOT5
++.      if ${USE_GCC:tu} == NOT5 || ${USE_GCC:tu} == DEFAULT_NOT5
 +PORT_COMPILER=${LANG_GCC_IS}
 +.      else
 +BASE_COMPILER=gcc50
