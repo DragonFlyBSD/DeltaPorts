@@ -1,4 +1,4 @@
---- Makefile.orig	2014-10-20 15:23:15 UTC
+--- Makefile.orig	2015-04-30 16:04:53 UTC
 +++ Makefile
 @@ -51,6 +51,8 @@ LIB_DEPENDS=	libcairo.so:${PORTSDIR}/gra
  		libxml2.so:${PORTSDIR}/textproc/libxml2 \
@@ -7,9 +7,17 @@
 +LIB_DEPENDS+=	libgssapi_krb5.so:${PORTSDIR}/security/krb5
 +
  RUN_DEPENDS=	${LOCALBASE}/lib/alsa-lib/libasound_module_pcm_oss.so:${PORTSDIR}/audio/alsa-plugins \
- 		${LOCALBASE}/lib/X11/fonts/Droid/fonts.dir:${PORTSDIR}/x11-fonts/droid-fonts-ttf \
+ 		droid-fonts-ttf>0:${PORTSDIR}/x11-fonts/droid-fonts-ttf \
  		xdg-open:${PORTSDIR}/devel/xdg-utils
-@@ -74,6 +76,7 @@ GYP_DEFINES+=	\
+@@ -67,6 +69,7 @@ SHEBANG_FILES=	chrome/tools/build/linux/
+ ALL_TARGET=	chrome
+ INSTALLS_ICONS=	yes
+ 
++USES+=		alias
+ #TODO bz@ : if you do undestand the gyp stuff, third_party/widevine/cdm/widevine_cdm.gyp talks about it (plz install libwidevinecdm.so)
+ # See build/common.gypi for all the available variables.
+ GYP_DEFINES+=	\
+@@ -75,6 +78,7 @@ GYP_DEFINES+=	\
  		linux_use_heapchecker=0 \
  		linux_strip_binary=1 \
  		test_isolation_mode=noop \
@@ -17,7 +25,7 @@
  		disable_nacl=1 \
  		enable_extensions=1 \
  		enable_one_click_signin=1 \
-@@ -183,6 +186,7 @@ CONFIGURE_ENV+=	CC="${CC}" \
+@@ -192,6 +196,7 @@ CONFIGURE_ENV+=	CC="${CC}" \
  		GYP_GENERATORS=ninja \
  		GYP_DEFINES="${GYP_DEFINES}"
  MAKE_ENV+=	BUILDTYPE=${BUILDTYPE} \
@@ -25,15 +33,15 @@
  		GPERF="${LOCALBASE}/bin/gperf"
  MAKE_ARGS=	-C out/${BUILDTYPE}
  
-@@ -193,6 +197,7 @@ GYP_DEFINES+=	gcc_version=${CXX:S/g++//}
- EXTRA_PATCHES+=	${FILESDIR}/extra-patch-gcc
+@@ -203,6 +208,7 @@ EXTRA_PATCHES+=	${FILESDIR}/extra-patch-
+ CFLAGS+=	-fno-stack-protector # gcc 4.8 cannot find __stack_chk_fail_local
  .else
  GYP_DEFINES+=	clang=1
 +CXXFLAGS+=	-D__float128=void -D_GLIBCXX_PERMIT_BACKWARD_HASH=1
  CFLAGS+=	-Wno-unknown-warning-option
  EXTRA_PATCHES+=	${FILESDIR}/extra-patch-clang
  CONFIGURE_ENV+=	AR=/usr/bin/ar
-@@ -219,12 +224,25 @@ pre-everything::
+@@ -233,12 +239,37 @@ pre-everything::
  
  post-patch:
  	@${REINPLACE_CMD} -e "s|/usr/local|${LOCALBASE}|" \
@@ -56,6 +64,18 @@
 +		${WRKSRC}/v8/build/toolchain.gypi \
 +		${WRKSRC}/v8/src/d8.gyp \
 +		${WRKSRC}/v8/tools/gyp/v8.gyp
++	@${REINPLACE_CMD} -e 's|0xFFFFFFFF|0x7FFFFFFF|' \
++		${WRKSRC}/third_party/mesa/src/include/GL/glext.h \
++		${WRKSRC}/third_party/mesa/src/src/mapi/glapi/gen/ARB_uniform_buffer_object.xml \
++		${WRKSRC}/third_party/mesa/src/chromium_gensrc/mesa/enums.c \
++		${WRKSRC}/third_party/khronos/GLES3/gl3.h \
++		${WRKSRC}/third_party/khronos/GLES3/gl31.h \
++		${WRKSRC}/third_party/khronos/noninclude/GL/glext.h \
++		${WRKSRC}/third_party/webgl/src/specs/latest/2.0/webgl2.idl \
++		${WRKSRC}/third_party/WebKit/public/platform/WebGraphicsContext3D.h \
++		${WRKSRC}/third_party/WebKit/Source/core/html/canvas/WebGL2RenderingContextBase.idl \
++		${WRKSRC}/third_party/angle/include/GLES3/gl3.h \
++		${WRKSRC}/third_party/angle/src/libANGLE/renderer/gl/functionsgl_enums.h
  
  pre-configure:
  	# phajdan-jr: list of things *not* to remove, so maybe the script
