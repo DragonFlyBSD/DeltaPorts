@@ -22,7 +22,8 @@ LICENSE_FILE=	${WRKSRC}/LICENSE-APACHE \
 		${WRKSRC}/LICENSE-MIT
 
 BUILD_DEPENDS=	curl:${PORTSDIR}/ftp/curl \
-		gcc47:${PORTSDIR}/lang/gcc47
+		llc36:${PORTSDIR}/devel/llvm36
+RUN_DEPENDS=	llc36:${PORTSDIR}/devel/llvm36
 
 RUST_SOURCE=	rustc-nightly-src.tar.gz
 RUST_BOOT=	rust-stage0-${RUST_BOOT_SIG}.tar.bz2
@@ -32,16 +33,11 @@ PLIST_SUB=	DIGEST=4e7c5e5c
 USES=		gmake perl5 python:2
 WRKSRC=		${WRKDIR}/rustc-nightly
 HAS_CONFIGURE=	yes
-CONFIGURE_ARGS=	--disable-docs --mandir=${MANPREFIX}/man
+CONFIGURE_ARGS=	--disable-docs --mandir=${MANPREFIX}/man \
+		--llvm-root=${LOCALBASE}
 MAKE_ENV=	SNAPSHOT_FILE=${DISTDIR}/${DIST_SUBDIR}/${RUST_BOOT}
 USE_LDCONFIG=	yes
 USE_PERL5=	build
-CC=		gcc47
-CXX=		g++47
-CPP=		cpp47
-CFLAGS+=	-Wl,-rpath=${LOCALBASE}/lib/gcc47
-CXXFLAGS+=	-Wl,-rpath=${LOCALBASE}/lib/gcc47
-LDFLAGS+=	-Wl,-rpath=${LOCALBASE}/lib/gcc47 -L${LOCALBASE}/lib/gcc47
 
 .if defined(VERBOSE) || defined(DPORTS_BUILDER)
 MAKE_ARGS+=	VERBOSE=1
