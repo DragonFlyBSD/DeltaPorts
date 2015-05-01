@@ -1,0 +1,2 @@
+# causes a ICE on gcc 5.1.0 !
+USE_GCC=	NOT5
