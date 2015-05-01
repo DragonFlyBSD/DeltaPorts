@@ -21,7 +21,8 @@ LICENSE_COMB=	dual
 LICENSE_FILE=	${WRKSRC}/LICENSE-APACHE \
 		${WRKSRC}/LICENSE-MIT
 
-BUILD_DEPENDS=	curl:${PORTSDIR}/ftp/curl
+BUILD_DEPENDS=	curl:${PORTSDIR}/ftp/curl \
+		gcc47:${PORTSDIR}/lang/gcc47
 
 RUST_SOURCE=	rustc-nightly-src.tar.gz
 RUST_BOOT=	rust-stage0-${RUST_BOOT_SIG}.tar.bz2
@@ -35,7 +36,12 @@ CONFIGURE_ARGS=	--disable-docs --mandir=${MANPREFIX}/man
 MAKE_ENV=	SNAPSHOT_FILE=${DISTDIR}/${DIST_SUBDIR}/${RUST_BOOT}
 USE_LDCONFIG=	yes
 USE_PERL5=	build
-USE_GCC=	NOT5	# gcc 4.7 specified in README, possibly by bootstrap too
+CC=		gcc47
+CXX=		g++47
+CPP=		cpp47
+CFLAGS+=	-Wl,-rpath=${LOCALBASE}/lib/gcc47
+CXXFLAGS+=	-Wl,-rpath=${LOCALBASE}/lib/gcc47
+LDFLAGS+=	-Wl,-rpath=${LOCALBASE}/lib/gcc47 -L${LOCALBASE}/lib/gcc47
 
 .if defined(VERBOSE) || defined(DPORTS_BUILDER)
 MAKE_ARGS+=	VERBOSE=1
