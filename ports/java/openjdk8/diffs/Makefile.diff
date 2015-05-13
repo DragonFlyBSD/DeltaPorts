@@ -1,6 +1,6 @@
---- Makefile.orig	2015-04-28 18:57:57 UTC
+--- Makefile.orig	2015-05-13 13:10:26 UTC
 +++ Makefile
-@@ -6,10 +6,12 @@ PORTREVISION=	3
+@@ -5,10 +5,12 @@ PORTVERSION=	${JDK_MAJOR_VERSION}.${JDK_
  CATEGORIES=	java devel
  MASTER_SITES=	http://download.java.net/openjdk/jdk${JDK_MAJOR_VERSION}/promoted/b${DIST_BUILD_NUMBER}/:jdk \
  		https://adopt-openjdk.ci.cloudbees.com/job/jtreg/${JTREG_JENKINS_BUILD}/artifact/:jtreg \
