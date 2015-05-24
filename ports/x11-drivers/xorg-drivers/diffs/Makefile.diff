@@ -1,6 +1,6 @@
---- Makefile.orig	2015-03-04 00:30:04 UTC
+--- Makefile.orig	2015-05-24 11:48:30 UTC
 +++ Makefile
-@@ -74,8 +74,8 @@ ${a:tu}_DESC=	Install ${a} ${type} drive
+@@ -71,8 +71,8 @@ ${a:tu}_DESC=	Install ${a} ${type} drive
  OPTIONS_DEFINE_i386=	ATI INTEL OPENCHROME
  OPTIONS_DEFAULT_i386=	ATI INTEL OPENCHROME
  
@@ -11,15 +11,19 @@
  
  OPTIONS_DEFINE_sparc64=	SUNFFB
  OPTIONS_DEFAULT_sparc64=SUNFFB
-@@ -85,6 +85,7 @@ OPTIONS_DEFAULT_ia64=	OPENCHROME
+@@ -81,20 +81,24 @@ OPTIONS_DEFINE_ia64=	OPENCHROME
+ OPTIONS_DEFAULT_ia64=	OPENCHROME
  
  ATI_DESC=		Install ati video driver
- INTEL_DESC=		Install intel video driver
+-INTEL_DESC=		Install intel video driver
 +INTEL29_DESC=		Install intel video driver
  OPENCHROME_DESC=	Install openchrome video driver
  SUNFFB_DESC=		Install sunffb video driver
  
-@@ -94,10 +95,14 @@ QUIRKS=		keyboard:kbd
+ # these drivers have a different module name compared to the plugin they install
+-QUIRKS=		keyboard:kbd
++QUIRKS=		keyboard:kbd intel29:intel
+ 
  .include <bsd.port.options.mk>
  
  # Manual add arch specific drivers so they be added to depend lines.
