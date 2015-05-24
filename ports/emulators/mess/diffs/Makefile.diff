@@ -1,0 +1,10 @@
+--- Makefile.orig	2015-05-24 13:16:06 UTC
++++ Makefile
+@@ -26,6 +26,7 @@ NOT_FOR_ARCHS=	ia64 powerpc sparc64
+ USES=		dos2unix gmake pkgconfig python:2,build shebangfix
+ DOS2UNIX_FILES=	src/lib/lib7z/CpuArch.h \
+ 		src/lib/lua/luaconf.h \
++		src/lib/util/corealloc.h \
+ 		src/osd/eigccx86.h \
+ 		src/osd/eminline.h \
+ 		src/osd/osdcore.c \
