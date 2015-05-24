@@ -21,7 +21,7 @@
  
 -// Forward definitions do not work with libc++
 -#ifdef  _LIBCPP_VERSION
-+#if defined (USE_GLIBCXX_CXX11_ABI)
++#if 1
  #include <string>
  #else
  
