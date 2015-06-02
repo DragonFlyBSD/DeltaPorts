@@ -1,13 +1,13 @@
---- Makefile.orig	2014-08-20 19:06:19.921686000 +0000
+--- Makefile.orig	2015-06-02 11:53:19 UTC
 +++ Makefile
-@@ -5,6 +5,7 @@ PORTNAME=	ghc
- PORTVERSION=	7.8.3
+@@ -6,6 +6,7 @@ PORTVERSION=	7.8.3
+ PORTREVISION=	1
  CATEGORIES=	lang haskell
  MASTER_SITES=	http://www.haskell.org/ghc/dist/${PORTVERSION}/:source \
 +		http://leaf.dragonflybsd.org/~marino/dports-src/:dflyboot \
- 		${MASTER_SITE_LOCAL:S/$/:boot/}
- MASTER_SITE_SUBDIR=	pgj/:boot
+ 		LOCAL/pgj/:boot
  DISTFILES=	ghc-${PORTVERSION}-src${EXTRACT_SUFX}:source
+ 
 @@ -64,7 +65,7 @@ OPTIONS_DEFINE+=	BOOT
  OPTIONS_DEFINE+=	BOOTH
  .endif
@@ -17,7 +17,7 @@
  
  .if ${PORT_OPTIONS:MDYNAMIC}
  # The version number is needed as lang/gcc installs a different version
-@@ -82,6 +83,7 @@ BUILD_DEPENDS+=		chrpath:${PORTSDIR}/dev
+@@ -73,6 +74,7 @@ LIB_DEPENDS+=	libffi.so.6:${PORTSDIR}/de
  
  .if empty(PORT_OPTIONS:MBOOT)
  
@@ -25,8 +25,8 @@
  BOOT_GHC_VERSION=	7.6.3
  
  .if ${ARCH} == "i386"
-@@ -96,7 +98,7 @@ DISTFILES+=	ghc-${BOOT_GHC_VERSION}-i386
- IGNORE=		unsupported
+@@ -85,7 +87,7 @@ DISTFILES+=	ghc-${BOOT_GHC_VERSION}-i386
+ DISTFILES+=	ghc-${BOOT_GHC_VERSION}-i386-freebsd8-boot${EXTRACT_SUFX}:boot
  .endif
  
 -.elif ${ARCH} == "amd64"
@@ -34,8 +34,8 @@
  
  .if ${OSVERSION} >= 1000043
  DISTFILES+=	ghc-${BOOT_GHC_VERSION}-amd64-freebsd10-boot${EXTRACT_SUFX}:boot
-@@ -108,6 +110,17 @@ DISTFILES+=	ghc-${BOOT_GHC_VERSION}-amd6
- IGNORE=		unsupported
+@@ -95,6 +97,17 @@ DISTFILES+=	ghc-${BOOT_GHC_VERSION}-amd6
+ DISTFILES+=	ghc-${BOOT_GHC_VERSION}-amd64-freebsd8-boot${EXTRACT_SUFX}:boot
  .endif
  
 +.endif		# FreeBSD platform list

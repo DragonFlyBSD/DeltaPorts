@@ -1,11 +1,10 @@
---- Makefile.orig	2015-03-26 10:28:16 UTC
+--- Makefile.orig	2015-06-02 12:13:47 UTC
 +++ Makefile
-@@ -5,45 +5,32 @@ PORTNAME=	kanji
+@@ -5,44 +5,32 @@ PORTNAME=	kanji
  PORTVERSION?=	1.0
  PORTREVISION?=	6
  CATEGORIES=	japanese x11-fonts
--MASTER_SITES=   ${MASTER_SITE_PORTS_JP}
--MASTER_SITE_SUBDIR=	${DISTNAME}
+-MASTER_SITES=   PORTS_JP/${DISTNAME}
 +MASTER_SITES=   http://leaf.dragonflybsd.org/~marino/dports-src/
  PKGNAMESUFFIX?=	18
  DISTNAME=	${PORTNAME}${PKGNAMESUFFIX}
