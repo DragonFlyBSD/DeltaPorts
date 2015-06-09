@@ -1,0 +1,1 @@
+IGNORE=	does not build correctly, fails at stage after long time (v2.2.0)
