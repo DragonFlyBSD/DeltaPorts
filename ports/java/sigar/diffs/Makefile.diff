@@ -1,0 +1,15 @@
+--- Makefile.orig	2015-06-09 22:58:07 UTC
++++ Makefile
+@@ -40,10 +40,10 @@ PLATFORM_VER=	9
+ PLATFORM_VER=	8
+ .  endif
+ .else
+-BROKEN=		${OPSYS} platform is not supported
++PLATFORM_VER=	4
+ .endif
+ 
+-LIBNAME=	libsigar-${ARCH:S,i386,x86,}-freebsd-${PLATFORM_VER}.so
++LIBNAME=	libsigar-${ARCH:S,i386,x86,}-${OPSYS:tl}-${PLATFORM_VER}.so
+ 
+ PLIST_FILES=	%%JAVAJARDIR%%/${PORTNAME}.jar \
+ 		%%JAVAJARDIR%%/${LIBNAME}
