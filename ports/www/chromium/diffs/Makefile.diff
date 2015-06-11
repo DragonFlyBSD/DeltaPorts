@@ -1,4 +1,4 @@
---- Makefile.orig	2015-04-30 16:04:53 UTC
+--- Makefile.orig	2015-06-11 06:34:19 UTC
 +++ Makefile
 @@ -51,6 +51,8 @@ LIB_DEPENDS=	libcairo.so:${PORTSDIR}/gra
  		libxml2.so:${PORTSDIR}/textproc/libxml2 \
@@ -9,15 +9,16 @@
  RUN_DEPENDS=	${LOCALBASE}/lib/alsa-lib/libasound_module_pcm_oss.so:${PORTSDIR}/audio/alsa-plugins \
  		droid-fonts-ttf>0:${PORTSDIR}/x11-fonts/droid-fonts-ttf \
  		xdg-open:${PORTSDIR}/devel/xdg-utils
-@@ -67,6 +69,7 @@ SHEBANG_FILES=	chrome/tools/build/linux/
+@@ -67,6 +69,8 @@ SHEBANG_FILES=	chrome/tools/build/linux/
  ALL_TARGET=	chrome
  INSTALLS_ICONS=	yes
  
 +USES+=		alias
++USE_GCC=	4.8+
  #TODO bz@ : if you do undestand the gyp stuff, third_party/widevine/cdm/widevine_cdm.gyp talks about it (plz install libwidevinecdm.so)
  # See build/common.gypi for all the available variables.
  GYP_DEFINES+=	\
-@@ -75,6 +78,7 @@ GYP_DEFINES+=	\
+@@ -75,6 +79,7 @@ GYP_DEFINES+=	\
  		linux_use_heapchecker=0 \
  		linux_strip_binary=1 \
  		test_isolation_mode=noop \
@@ -25,7 +26,7 @@
  		disable_nacl=1 \
  		enable_extensions=1 \
  		enable_one_click_signin=1 \
-@@ -192,6 +196,7 @@ CONFIGURE_ENV+=	CC="${CC}" \
+@@ -192,6 +197,7 @@ CONFIGURE_ENV+=	CC="${CC}" \
  		GYP_GENERATORS=ninja \
  		GYP_DEFINES="${GYP_DEFINES}"
  MAKE_ENV+=	BUILDTYPE=${BUILDTYPE} \
@@ -33,7 +34,7 @@
  		GPERF="${LOCALBASE}/bin/gperf"
  MAKE_ARGS=	-C out/${BUILDTYPE}
  
-@@ -203,6 +208,7 @@ EXTRA_PATCHES+=	${FILESDIR}/extra-patch-
+@@ -203,6 +209,7 @@ EXTRA_PATCHES+=	${FILESDIR}/extra-patch-
  CFLAGS+=	-fno-stack-protector # gcc 4.8 cannot find __stack_chk_fail_local
  .else
  GYP_DEFINES+=	clang=1
@@ -41,7 +42,7 @@
  CFLAGS+=	-Wno-unknown-warning-option
  EXTRA_PATCHES+=	${FILESDIR}/extra-patch-clang
  CONFIGURE_ENV+=	AR=/usr/bin/ar
-@@ -233,12 +239,37 @@ pre-everything::
+@@ -233,12 +240,37 @@ pre-everything::
  
  post-patch:
  	@${REINPLACE_CMD} -e "s|/usr/local|${LOCALBASE}|" \
