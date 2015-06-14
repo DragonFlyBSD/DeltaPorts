@@ -1,21 +1,6 @@
---- Makefile.orig	2015-06-02 12:18:16 UTC
+--- Makefile.orig	2015-06-14 17:05:31 UTC
 +++ Makefile
-@@ -19,12 +19,12 @@ CONFLICTS=	LPRng-[0-9]*
- 
- UNIQUENAME=	${PORTNAME}${PKGNAMESUFFIX}
- 
--USES+=		cpe gmake pkgconfig tar:bzip2
-+USES+=		cpe gmake pkgconfig iconv tar:bzip2
- CPE_VENDOR=	apple
- DESTDIRNAME=	DSTROOT
- GNU_CONFIGURE=	yes
- CPPFLAGS+=	-I${LOCALBASE}/include
--LDFLAGS+=	-L${LOCALBASE}/lib
-+LDFLAGS+=	-L${LOCALBASE}/lib ${ICONV_LIB}
- DSOFLAGS=	-Wl,-rpath,${PREFIX}/lib ${LDFLAGS} ${LIBS}
- CONFIGURE_ENV=	DSOFLAGS="${DSOFLAGS}"
- CONFIGURE_ARGS+=	--localstatedir=/var			\
-@@ -42,7 +42,6 @@ CONFIGURE_ARGS+=	--localstatedir=/var
+@@ -45,7 +45,6 @@ CONFIGURE_ARGS+=	--localstatedir=/var
  CUPS_CACHEDIR?=	/var/db/cups
  CUPS_SPOOLDIR=	/var/spool/cups
  CUPS_SOCKET?=	/var/run/cups.sock
@@ -23,24 +8,7 @@
  WRKSRC=		${WRKDIR}/${PORTNAME}-${DISTVERSION}
  
  CUPSSYSGRP=	wheel
-@@ -86,12 +85,14 @@ ZEROCONF_DESC=		Zeroconf support
- 
- .include <bsd.port.options.mk>
- 
-+.if !empty(ICONV_LIB)
-+CONFIGURE_ENV+=	ac_cv_search_iconv_open=-liconv
-+.endif
-+
- .if defined(CUPS_CLIENT)
- COMMENT2=	Library cups
- INSTALL_WRKSRC=	${WRKSRC}/cups
- PLIST=		${MASTERDIR}/pkg-plist.client
--USES+=		iconv
--LIBS+=		${ICONV_LIB}
- USE_LDCONFIG=	yes
- PKGMESSAGE=	${NONEXISTENT}
- DESCR=		${MASTERDIR}/pkg-descr.client
-@@ -228,7 +229,7 @@ post-patch:
+@@ -224,7 +223,7 @@ post-patch:
  	@${REINPLACE_CMD} -e 's|@PIEFLAGS@||' ${WRKSRC}/Makedefs.in
  .endif
  .if ${PORT_OPTIONS:MMDNSRESPONDER}
