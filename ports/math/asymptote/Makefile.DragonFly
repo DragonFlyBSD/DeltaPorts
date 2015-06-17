@@ -1,0 +1,2 @@
+IGNORE=	unstable - frequent 'Duplicate large block deallocation' error during build
+
