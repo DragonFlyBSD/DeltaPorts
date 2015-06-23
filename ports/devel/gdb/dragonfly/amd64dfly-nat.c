@@ -36,7 +36,7 @@
 #include "amd64-tdep.h"
 #include "amd64-nat.h"
 #include "amd64bsd-nat.h"
-#include "i386-nat.h"
+#include "x86-nat.h"
 
 
 /* Offset in `struct reg' where MEMBER is stored.  */
@@ -76,10 +76,10 @@ static int amd64dfly64_r_reg_offset[] =
 
 /* Mapping between the general-purpose registers in DragonFly/amd64
    `struct reg' format and GDB's register cache layout for
-   DragonFly/i386.
+   DragonFly/x86.
 
    Note that most DragonFly/amd64 registers are 64-bit, while the
-   DragonFly/i386 registers are all 32-bit, but since we're
+   DragonFly/x86 registers are all 32-bit, but since we're
    little-endian we get away with that.  */
 
 /* From <machine/reg.h>.  */
@@ -192,7 +192,7 @@ static void
 amd64dfly_mourn_inferior (struct target_ops *ops)
 {
 #ifdef HAVE_PT_GETDBREGS
-  i386_cleanup_dregs ();
+  x86_cleanup_dregs ();
 #endif
   super_mourn_inferior (ops);
 }
@@ -209,19 +209,19 @@ _initialize_amd64dfly_nat (void)
   amd64_native_gregset32_reg_offset = amd64dfly32_r_reg_offset;
   amd64_native_gregset64_reg_offset = amd64dfly64_r_reg_offset;
 
-  /* Add some extra features to the common *BSD/i386 target.  */
+  /* Add some extra features to the common *BSD/x86 target.  */
   t = amd64bsd_target ();
 
 #ifdef HAVE_PT_GETDBREGS
 
-  i386_use_watchpoints (t);
+  x86_use_watchpoints (t);
 
-  i386_dr_low.set_control = amd64bsd_dr_set_control;
-  i386_dr_low.set_addr = amd64bsd_dr_set_addr;
-  i386_dr_low.get_addr = amd64bsd_dr_get_addr;
-  i386_dr_low.get_status = amd64bsd_dr_get_status;
-  i386_dr_low.get_control = amd64bsd_dr_get_control;
-  i386_set_debug_register_length (8);
+  x86_dr_low.set_control = amd64bsd_dr_set_control;
+  x86_dr_low.set_addr = amd64bsd_dr_set_addr;
+  x86_dr_low.get_addr = amd64bsd_dr_get_addr;
+  x86_dr_low.get_status = amd64bsd_dr_get_status;
+  x86_dr_low.get_control = amd64bsd_dr_get_control;
+  x86_set_debug_register_length (8);
 
 #endif /* HAVE_PT_GETDBREGS */
 
