@@ -1,1 +1,1 @@
-IGNORE=	Requires stlport which will never ever be supported
+USES+=	alias:10
