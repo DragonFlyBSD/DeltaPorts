@@ -1,5 +1,5 @@
 post-patch:
-	${REINPLACE_CMD} -e 's|ac_uname_s=.*|ac_uname_s=FreeBSD|' \
+	${REINPLACE_CMD} -e 's|"FreeBSD"|"DragonFly"|' \
 		${WRKSRC}/apps/fgr/configure \
 		${WRKSRC}/apps/rodent-pkg/configure \
 		${WRKSRC}/apps/rodent-iconmgr/configure \
