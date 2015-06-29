@@ -1,0 +1,13 @@
+--- pkg-plist.orig	2015-06-29 21:37:27 UTC
++++ pkg-plist
+@@ -88,8 +88,10 @@ include/mysql/sslopt-vars.h
+ include/mysql/typelib.h
+ lib/mysql/libmysqlclient.so
+ lib/mysql/libmysqlclient.so.18
++lib/mysql/libmysqlclient.so.18.1.0
+ lib/mysql/libmysqlclient_r.so
+ lib/mysql/libmysqlclient_r.so.18
++lib/mysql/libmysqlclient_r.so.18.1.0
+ lib/mysql/libperconaserverclient.a
+ lib/mysql/libperconaserverclient.so
+ lib/mysql/libperconaserverclient.so.18
