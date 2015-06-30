@@ -1,0 +1,11 @@
+--- Makefile.orig	2015-06-30 11:12:52.000000000 +0300
++++ Makefile
+@@ -95,6 +95,8 @@ do-configure:
+ .for module in ${MODULES}
+ 	@echo "================================="
+ 	@echo "Configuring ${module}"
++	${REINPLACE_CMD} -e 's/FreeBSD-\*/FreeBSD-*|DragonFly-*/g' \
++		${WRKDIR}/${module}${PORTVERSION}/configure
+ 	cd ${WRKDIR}/${module}${PORTVERSION} && ${SETENV} ${CONFIGURE_ENV} ${SH} configure ${CONFIGURE_ARGS}
+ .endfor
+ 
