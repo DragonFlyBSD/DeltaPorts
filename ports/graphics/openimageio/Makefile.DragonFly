@@ -1,0 +1,11 @@
+USE_CXXSTD=	c++11
+#CFLAGS+=	-D__OpenBSD__ -D__GNU__
+
+dfly-patch:
+	${REINPLACE_CMD} -e 's@ft_broken = false@ft_broken = true@g'	\
+		${WRKSRC}/src/libOpenImageIO/imagebufalgo.cpp
+	${REINPLACE_CMD} -e 's@\(#if !defined(_WIN32)\)@\1 \&\& \!defined(_rotl)@g'	\
+		${WRKSRC}/src/libutil/hashes.cpp
+	${REINPLACE_CMD} -e 's@(\(int j = 0;  j < slot->bitmap.rows;\)@(unsigned \1@g'	\
+			 -e 's@(\(int i = 0;  i < slot->bitmap.width;\)@(unsigned \1@g'	\
+		${WRKSRC}/src/libOpenImageIO/imagebufalgo.cpp
