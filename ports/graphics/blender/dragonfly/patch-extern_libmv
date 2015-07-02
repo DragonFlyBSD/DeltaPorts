@@ -1,0 +1,73 @@
+--- extern/libmv/libmv/base/aligned_malloc.cc.orig	2015-03-25 12:56:13.000000000 +0200
++++ extern/libmv/libmv/base/aligned_malloc.cc
+@@ -21,7 +21,7 @@
+ #include "libmv/base/aligned_malloc.h"
+ #include "libmv/logging/logging.h"
+ 
+-#if !defined(__APPLE__) && !defined(__FreeBSD__) && !defined(__NetBSD__)
++#if !defined(__APPLE__) && !defined(__FreeBSD__) && !defined(__NetBSD__) && !defined(__DragonFly__)
+ // Needed for memalign on Linux and _aligned_alloc on Windows.
+ #  ifdef FREE_WINDOWS
+ /* make sure _aligned_malloc is included */
+@@ -49,7 +49,7 @@ void *aligned_malloc(int size, int align
+   // they work natively with SSE types with no further work.
+   CHECK_EQ(alignment, 16);
+   return malloc(size);
+-#elif defined(__FreeBSD__) || defined(__NetBSD__)
++#elif defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__)
+   void *result;
+ 
+   if (posix_memalign(&result, alignment, size)) {
+--- extern/libmv/libmv/numeric/numeric.h.orig	2015-03-25 12:56:13.000000000 +0200
++++ extern/libmv/libmv/numeric/numeric.h
+@@ -35,7 +35,7 @@
+ 
+ #if !defined(__MINGW64__)
+ #  if defined(_WIN32) || defined(__APPLE__) || \
+-      defined(__FreeBSD__) || defined(__NetBSD__)
++      defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__)
+ static void sincos(double x, double *sinx, double *cosx) {
+   *sinx = sin(x);
+   *cosx = cos(x);
+--- extern/libmv/third_party/glog/src/config.h.orig	2015-03-17 09:22:07.000000000 +0200
++++ extern/libmv/third_party/glog/src/config.h
+@@ -4,7 +4,7 @@
+ /* Namespace for Google classes */
+ #if defined(__APPLE__)
+  #include "config_mac.h"
+-#elif defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
++#elif defined(__FreeBSD__) || defined(__FreeBSD_kernel__) || defined(__DragonFly__)
+  #include "config_freebsd.h"
+ #elif defined(__MINGW32__)
+  #include "windows/config.h"
+--- extern/libmv/third_party/glog/src/logging.cc.orig	2015-03-25 13:01:16.000000000 +0200
++++ extern/libmv/third_party/glog/src/logging.cc
+@@ -1986,7 +1986,7 @@ int posix_strerror_r(int err, char *buf,
+       return 0;
+     } else {
+       buf[0] = '\000';
+-#if defined(OS_MACOSX) || defined(OS_FREEBSD) || defined(OS_OPENBSD)
++#if defined(OS_MACOSX) || defined(OS_FREEBSD) || defined(OS_OPENBSD) || defined(OS_DRAGONFLY)
+       if (reinterpret_cast<intptr_t>(rc) < sys_nerr) {
+         // This means an error on MacOSX or FreeBSD.
+         return -1;
+--- extern/libmv/third_party/glog/src/utilities.h.orig	2015-03-25 12:56:13.000000000 +0200
++++ extern/libmv/third_party/glog/src/utilities.h
+@@ -48,6 +48,8 @@
+ # define OS_NETBSD
+ #elif defined(__OpenBSD__)
+ # define OS_OPENBSD
++#elif defined(__DragonFly__)
++# define OS_DRAGONFLY
+ #else
+ // TODO(hamaji): Add other platforms.
+ #endif
+@@ -101,7 +103,7 @@
+ // correctly when GetStackTrace() is called with max_depth == 0.
+ // Some code may do that.
+ 
+-#if defined(__MINGW32__) || defined(__FreeBSD__)
++#if defined(__MINGW32__) || defined(__FreeBSD__) || defined(__DragonFly__)
+ # undef STACKTRACE_H
+ #elif defined(HAVE_LIB_UNWIND)
+ # define STACKTRACE_H "stacktrace_libunwind-inl.h"
