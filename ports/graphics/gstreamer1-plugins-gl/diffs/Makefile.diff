@@ -1,0 +1,12 @@
+--- Makefile.orig	2015-07-03 11:09:06 UTC
++++ Makefile
+@@ -12,6 +12,9 @@ PLIST=		${.CURDIR}/pkg-plist
+ 
+ MASTERDIR=	${.CURDIR}/../../multimedia/gstreamer1-plugins
+ 
++dfly-patch:
++	${REINPLACE_CMD} -e 's/dragonflybsd/dragonfly/g' ${WRKSRC}/configure
++
+ pre-build:
+ 	@cd ${WRKSRC}/gst-libs/gst/gl && ${GMAKE}
+ 
