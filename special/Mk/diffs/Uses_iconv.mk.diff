@@ -1,30 +1,12 @@
---- Uses/iconv.mk.orig	2015-07-05 22:05:26 UTC
+--- Uses/iconv.mk.orig	2015-07-06 14:41:43 UTC
 +++ Uses/iconv.mk
-@@ -16,7 +16,7 @@ _INCLUDE_USES_ICONV_MK=	yes
- .if !exists(/usr/include/iconv.h) || ${iconv_ARGS:Mwchar_t} || ${iconv_ARGS:Mtranslit}
- 
- ICONV_CMD=	${LOCALBASE}/bin/iconv
--ICONV_LIB=	-liconv
-+ICONV_LIB?=	-liconv
- ICONV_PREFIX=	${LOCALBASE}
- ICONV_CONFIGURE_ARG=	--with-libiconv-prefix=${LOCALBASE}
- ICONV_CONFIGURE_BASE=	--with-libiconv=${LOCALBASE}
-@@ -32,14 +32,14 @@ LIB_DEPENDS+=	libiconv.so:${PORTSDIR}/co
- .else
- 
- ICONV_CMD=	/usr/bin/iconv
--ICONV_LIB=
-+ICONV_LIB?=
- ICONV_PREFIX=	/usr
+@@ -37,7 +37,8 @@ ICONV_PREFIX=	/usr
  ICONV_CONFIGURE_ARG=
  ICONV_CONFIGURE_BASE=
  
 -.if ${OPSYS} == DragonFly || (${OPSYS} == FreeBSD && (${OSVERSION} < 1001514 \
-- || (${OSVERSION} >= 1100000 && ${OSVERSION} < 1100069))) \
-- || exists(${LOCALBASE}/include/iconv.h)
 +.if (${OPSYS} == DragonFly && ${DFLYVERSION} < 400301) \
 + || (${OPSYS} == FreeBSD && (${OSVERSION} < 1001514 \
-+ || (${OSVERSION} >= 1100000 && ${OSVERSION} < 1100069)))
+  || (${OSVERSION} >= 1100000 && ${OSVERSION} < 1100069))) \
+  || exists(${LOCALBASE}/include/iconv.h)
  BUILD_DEPENDS+=	libiconv>=1.14_8:${PORTSDIR}/converters/libiconv
- CPPFLAGS+=	-DLIBICONV_PLUG
- CFLAGS+=	-DLIBICONV_PLUG
