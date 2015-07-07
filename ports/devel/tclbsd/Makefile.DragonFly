@@ -1,3 +1,3 @@
-dfly-patch:
-	cd ${WRKSRC} ; autoconf # needed to gen configure first
+# must be invoked after autotools but before configure steo
+run-autotools-fixup:
 	${REINPLACE_CMD} -e 's/FreeBSD-\*/FreeBSD-*|DragonFly-*/g' ${WRKSRC}/configure
