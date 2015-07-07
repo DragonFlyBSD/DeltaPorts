@@ -1,6 +1,6 @@
---- Makefile.orig	2015-04-17 20:12:57 UTC
+--- Makefile.orig	2015-07-07 18:20:53 UTC
 +++ Makefile
-@@ -51,7 +51,7 @@ OPTIONS_DEFINE=	ARP_ACL AUTH_LDAP AUTH_N
+@@ -50,7 +50,7 @@ OPTIONS_DEFINE=	ARP_ACL AUTH_LDAP AUTH_N
  OPTIONS_SINGLE=	GSSAPI
  OPTIONS_SINGLE_GSSAPI=	GSSAPI_NONE GSSAPI_BASE GSSAPI_HEIMDAL GSSAPI_MIT
  
@@ -9,3 +9,11 @@
  		WCCP WCCPV2
  
  ARP_ACL_CONFIGURE_ENABLE=	eui
+@@ -355,7 +355,6 @@ post-install:
+ 	@${MKDIR} ${STAGEDIR}${DOCSDIR}
+ 	(cd ${WRKSRC} && ${INSTALL_DATA} ${MYDOCS} ${STAGEDIR}${DOCSDIR})
+ 	${MKDIR} ${STAGEDIR}/var/squid/logs
+-	${RMDIR} ${STAGEDIR}/var/run/squid
+ 
+ .include <bsd.port.pre.mk>
+ 
