@@ -8,12 +8,3 @@
 +OPTIONS_DEFAULT=GSSAPI_MIT AUTH_NIS FS_AUFS FS_DISKD HTCP IDENT KQUEUE SNMP \
  		WCCP WCCPV2
  
- ARP_ACL_CONFIGURE_ENABLE=	eui
-@@ -355,7 +355,6 @@ post-install:
- 	@${MKDIR} ${STAGEDIR}${DOCSDIR}
- 	(cd ${WRKSRC} && ${INSTALL_DATA} ${MYDOCS} ${STAGEDIR}${DOCSDIR})
- 	${MKDIR} ${STAGEDIR}/var/squid/logs
--	${RMDIR} ${STAGEDIR}/var/run/squid
- 
- .include <bsd.port.pre.mk>
- 
