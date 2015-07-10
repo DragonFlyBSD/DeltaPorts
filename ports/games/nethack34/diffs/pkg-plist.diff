@@ -1,0 +1,12 @@
+--- pkg-plist.orig	2015-07-10 19:20:57.735336000 +0300
++++ pkg-plist	2015-07-10 19:21:20.045527000 +0300
+@@ -115,7 +115,9 @@
+ %%DATADIR%%/oracle.lev
+ %%DATADIR%%/oracles
+ %%DATADIR%%/orcus.lev
++@mode 664
+ %%DATADIR%%/perm
++@mode
+ %%DATADIR%%/pet_mark.xbm
+ %%DATADIR%%/quest.dat
+ @mode 664
