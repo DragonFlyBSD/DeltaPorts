@@ -1,6 +1,6 @@
---- Makefile.orig	2015-06-02 11:59:23 UTC
+--- Makefile.orig	2015-07-12 09:57:27 UTC
 +++ Makefile
-@@ -10,12 +10,15 @@ MASTER_SITES=	http://download.java.net/o
+@@ -11,12 +11,15 @@ MASTER_SITES=	http://download.java.net/o
  		http://icedtea.classpath.org/download/drops/:jaxp \
  		http://download.java.net/glassfish/components/jax-ws/openjdk/jdk7/:jaxws \
  		http://icedtea.classpath.org/download/drops/:jaxws \
@@ -15,22 +15,21 @@
 +		${BOOTSTRAP_DISTFILE} \
  		${ANT_DISTFILE}${EXTRACT_SUFX}
  
- MAINTAINER=	glewis@FreeBSD.org
-@@ -60,9 +63,12 @@ RUN_DEPENDS+=	javavm:${PORTSDIR}/java/ja
+ MAINTAINER?=	glewis@FreeBSD.org
+@@ -71,8 +74,11 @@ RUN_DEPENDS+=	javavm:${PORTSDIR}/java/ja
  
  DOS2UNIX_FILES=	jdk/src/share/classes/com/sun/org/apache/xml/internal/security/resource/xmlsecurity_en.properties
  
 -OPENJDK_OSARCH=	bsd-${ARCH:S/i386/i586/}
 +JDK_ARCH=	${ARCH:S/x86_64/amd64/}
 +OPENJDK_OSARCH=	bsd-${JDK_ARCH:S/i386/i586/}
- INSTALLDIR=	${PREFIX}/${PORTNAME}${JDK_MAJOR_VERSION}
  
 +BOOTSTRAP_DISTFILE=	bootstrap-openjdk-7.9.05_2.dfly-3.3-${JDK_ARCH}.tar.xz
 +BOOTSTRAP_LIBDIRS=	${BOOTSTRAPJDKDIR}/jre/lib/${JDK_ARCH}
  NOPRECIOUSMAKEVARS=	yes
  
  ONLY_FOR_ARCHS=	i386 amd64
-@@ -72,7 +78,7 @@ MAKE_ENV+=	LANG="C" \
+@@ -82,7 +88,7 @@ MAKE_ENV+=	LANG="C" \
  		LC_ALL="C" \
  		JAVA_HOME="" \
  		CLASSPATH="" \
@@ -39,7 +38,7 @@
  		MAKEFLAGS="" \
  		ALT_BOOTDIR="${BOOTSTRAPJDKDIR}" \
  		ALT_FREETYPE_HEADERS_PATH="${LOCALBASE}/include" \
-@@ -98,10 +104,7 @@ MAKE_ENV+=	LANG="C" \
+@@ -108,10 +114,7 @@ MAKE_ENV+=	LANG="C" \
  		BUILD_NUMBER="b${PORT_BUILD_NUMBER}"
  
  MAKE_ENV+=	HOTSPOT_BUILD_JOBS=${MAKE_JOBS_NUMBER}
@@ -51,7 +50,7 @@
  
  DEBUG_MAKE_ENV=	ALT_OBJCOPY=${NONEXISTENT}
  POLICY_MAKE_ENV=	UNLIMITED_CRYPTO=1
-@@ -109,23 +112,20 @@ TZUPDATE_RUN_DEPENDS=	java-zoneinfo>0:${
+@@ -119,23 +122,20 @@ TZUPDATE_RUN_DEPENDS=	java-zoneinfo>0:${
  
  .include <bsd.port.options.mk>
  
@@ -83,7 +82,7 @@
  MAKE_ENV+=	USE_PRECOMPILED_HEADER=0
  .endif
  
-@@ -145,6 +145,11 @@ post-patch:
+@@ -155,6 +155,11 @@ post-patch:
  		${WRKSRC}/jdk/make/java/instrument/Makefile
  .endif
  
@@ -95,11 +94,11 @@
  .if ${PORT_OPTIONS:MTZUPDATE}
  pre-install:
  	@# Update time zones
-@@ -157,6 +162,7 @@ do-install:
- 	@${MKDIR} ${STAGEDIR}${INSTALLDIR}
- 	@cd ${WRKSRC}/build/${OPENJDK_OSARCH}/j2sdk-image && \
- 		${PAX} -rw . ${STAGEDIR}${INSTALLDIR}
+@@ -174,6 +179,7 @@ do-install:
+ .if !defined(BUILD_JRE)
+ 	cd ${WRKSRC}/build/${OPENJDK_OSARCH}/j2sdk-image && \
+ 	    ${PAX} -rw . ${STAGEDIR}${INSTALLDIR}
 +	@cd ${STAGEDIR}${PREFIX}/openjdk7/include && ln -s dragonfly freebsd
- 	@${INSTALL_DATA} ${WRKSRC}/build/${OPENJDK_OSARCH}/btjars/compilefontconfig.jar ${WRKSRC}/build/${OPENJDK_OSARCH}/btjars/javazic.jar ${STAGEDIR}${INSTALLDIR}/jre/lib/
- 	@${INSTALL_DATA} ${FILESDIR}/cacerts ${STAGEDIR}${INSTALLDIR}/jre/lib/security/cacerts
- 	@${ECHO} "@unexec ${LOCALBASE}/bin/unregistervm ${INSTALLDIR}/bin/java" >> ${TMPPLIST}
+ 	${INSTALL_DATA} \
+ 	    ${WRKSRC}/build/${OPENJDK_OSARCH}/btjars/compilefontconfig.jar \
+ 	    ${WRKSRC}/build/${OPENJDK_OSARCH}/btjars/javazic.jar \
