@@ -1,1 +1,1 @@
-MAKE_ARGS+=	--disable-error
+MAKE_ARGS+=	--disable-werror
