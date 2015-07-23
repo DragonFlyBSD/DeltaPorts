@@ -27,6 +27,8 @@ CONFIGURE_ARGS+=	--disable-glamor
 LIB_DEPENDS+=	libxcb-util.so:${PORTSDIR}/x11/xcb-util
 CFLAGS+=	-D_WITH_GETLINE=1
 
+USES=	autoreconf:build libtool
+
 pre-configure:
 	cd ${WRKDIR}/${PORTNAME}-${PORTVERSION} && ./autogen.sh
 
