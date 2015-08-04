@@ -1,13 +1,13 @@
---- Makefile.orig	2014-12-29 16:47:19 UTC
+--- Makefile.orig	2015-08-04 07:39:15 UTC
 +++ Makefile
-@@ -16,7 +16,6 @@ LICENSE_COMB=	multi
+@@ -15,7 +15,6 @@ LICENSE_COMB=	multi
  
  USES=	gmake iconv libtool tar:bzip2 makeinfo compiler
  PLIST_SUB=	TARGETARCH=${PKGNAMEPREFIX:C/-//g} \
 -		OPSYS=${OPSYS:tl} \
- 		GCC_TARGET=${GCC_TARGET}
+ 		GCC_TARGET=${GCC_TARGET} \
+ 		GCC_VERSION=${PORTVERSION}
  
- LIB_DEPENDS=	libgmp.so:${PORTSDIR}/math/gmp \
 @@ -30,13 +29,15 @@ WRKSRC=	${WRKDIR}/build-gcc
  
  .if empty(GCC_TARGET)
@@ -26,18 +26,3 @@
  .endif
  .endif
  
-@@ -54,7 +55,7 @@ CONFIGURE_SCRIPT=	../${PORTNAME}-${PORTV
- ALL_TARGET?=	all-gcc
- INSTALL_TARGET?=	install-gcc
- 
--.include <bsd.port.options.mk>
-+.include <bsd.port.pre.mk>
- 
- .if ${ARCH} == "amd64"
- CONFIGURE_TARGET=	x86_64-portbld-${OPSYS:tl}${OSREL}
-@@ -77,4 +78,4 @@ post-stage:
- 	@${RM} ${STAGEDIR}${PREFIX}/info/*
- 	@${RM} ${STAGEDIR}${PREFIX}/man/man7/*
- 
--.include <bsd.port.mk>
-+.include <bsd.port.post.mk>
