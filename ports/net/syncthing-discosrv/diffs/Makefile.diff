@@ -1,0 +1,11 @@
+--- Makefile.orig	2015-08-05 16:26:45 UTC
++++ Makefile
+@@ -27,7 +27,7 @@ GROUPS=		syncthing
+ STRIP=		# stripping can break go binaries
+ 
+ post-patch:
+-	@${MV} ${WRKSRC_st}/Godeps/_workspace/src/ ${WRKSRC}
++	@${MV} ${WRKSRC_st}/Godeps/_workspace/src ${WRKSRC}
+ 	@${MKDIR} ${WRKSRC}/src/github.com/golang
+ 	@${MV} ${WRKSRC_st} ${WRKSRC}/src/github.com/syncthing/syncthing
+ 	@${MV} ${WRKSRC_gc} \
