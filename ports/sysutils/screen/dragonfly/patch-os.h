@@ -1,11 +1,11 @@
---- os.h.intermediate	2015-07-13 19:17:05 UTC
+--- os.h.orig	2015-08-05 16:00:47 UTC
 +++ os.h
 @@ -250,11 +250,8 @@ extern int errno;
  #endif
  
  #if defined(UTMPOK) || defined(BUGGYGETLOGIN)
 -# if defined(SVR4) && !defined(DGUX) && !defined(__hpux)
-+# if defined(SVR4) && !defined(DGUX) && defined(__DragonFly__)
++# if (defined(SVR4) && !defined(DGUX)) || defined(__DragonFly__)
  #  include <utmpx.h>
 -#  ifdef UTMPX_FILE /* GNU extension */
 -#   define UTMPFILE	UTMPX_FILE
