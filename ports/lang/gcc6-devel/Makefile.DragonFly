@@ -1,1 +1,1 @@
-MAKE_ARGS+=	--disable-werror
+CONFIGURE_ARGS+=	--disable-werror
