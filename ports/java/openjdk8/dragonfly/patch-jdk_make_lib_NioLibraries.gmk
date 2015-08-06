@@ -5,7 +5,7 @@
  
    ifeq (, $(filter $(OPENJDK_TARGET_OS), macosx aix))
 -  ifeq (, $(filter $(OPENJDK_TARGET_OS_VENDOR), netbsd openbsd))
-+  ifeq (, $(filter $(OPENJDK_TARGET_OS_VENDOR), netbsd openbsd dragonfly))
++  ifneq ($(shell uname -s), DragonFly)	# Not for DragonFly
  
      # Suppress unused parameters required by exported JNI functions.
      SCTP_WERROR := -Werror -Wno-error=unused-parameter
