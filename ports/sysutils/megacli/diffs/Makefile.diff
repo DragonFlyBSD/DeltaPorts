@@ -1,6 +1,6 @@
---- Makefile.orig	2013-12-24 23:17:59.110326000 +0000
+--- Makefile.orig	2015-08-06 07:01:59 UTC
 +++ Makefile
-@@ -22,7 +22,7 @@ NO_WRKSUBDIR=	yes
+@@ -21,11 +21,11 @@ NO_WRKSUBDIR=	yes
  
  PLIST_FILES=	sbin/MegaCli
  
@@ -8,4 +8,9 @@
 +MEGACLI_ARCH=	MegaCli${ARCH:S/i386//:S/amd64/64/:S/x86_64/64/}
  
  post-extract:
- 	@${MV} ${WRKSRC}/freebsd/MegaCLI.zip ${WRKSRC}/freebsd/MegaCli.zip
+ 	@${MV} ${WRKSRC}/FreeBSD/MegaCLI.zip ${WRKSRC}/FreeBSD/MegaCli.zip
+-	@${EXTRACT_CMD} ${EXTRACT_BEFORE_ARGS} ${WRKSRC}/FreeBSD/${MEGACLI_ARCH}.zip -d ${WRKSRC}/FreeBSD
++	@${TAR} ${EXTRACT_BEFORE_ARGS} ${WRKSRC}/FreeBSD/${MEGACLI_ARCH}.zip -d ${WRKSRC}/FreeBSD
+ 
+ do-install:
+ 	${INSTALL_SCRIPT} ${WRKSRC}/FreeBSD/${MEGACLI_ARCH} ${STAGEDIR}${PREFIX}/sbin/MegaCli
