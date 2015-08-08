@@ -1,0 +1,11 @@
+--- Makefile.orig	2015-08-08 02:05:07.586978000 +0200
++++ Makefile	2015-08-08 02:06:54.296185000 +0200
+@@ -15,7 +15,7 @@
+ LIB_DEPENDS=	libtoxcore.so:${PORTSDIR}/net-im/tox \
+ 		libopencv_highgui.so:${PORTSDIR}/graphics/opencv \
+ 		libopencv_core.so:${PORTSDIR}/graphics/opencv-core \
+-		libavcodec.so:${PORTSDIR}/multimedia/ffmpeg \
++		libavcodec.so:${PORTSDIR}/multimedia/ffmpeg26 \
+ 		libvpx.so:${PORTSDIR}/multimedia/libvpx \
+ 		libfilteraudio.so:${PORTSDIR}/audio/libfilteraudio \
+ 		libsodium.so:${PORTSDIR}/security/libsodium \
