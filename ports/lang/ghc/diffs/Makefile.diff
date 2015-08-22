@@ -1,4 +1,4 @@
---- Makefile.orig	2015-08-22 10:19:09 UTC
+--- Makefile.orig	2015-08-22 16:49:52 UTC
 +++ Makefile
 @@ -5,6 +5,7 @@ PORTNAME=	ghc
  PORTVERSION=	7.10.2
@@ -8,15 +8,6 @@
  		LOCAL/pgj/:boot
  DISTFILES=	ghc-${PORTVERSION}-src${EXTRACT_SUFX}:source
  
-@@ -70,7 +71,7 @@ OPTIONS_DEFINE+=	BOOT
- OPTIONS_DEFINE+=	BOOTH
- .endif
- 
--.include <bsd.port.options.mk>
-+.include <bsd.port.pre.mk>
- 
- .if ${PORT_OPTIONS:MDYNAMIC}
- # The version number is needed as lang/gcc installs a different version
 @@ -79,10 +80,23 @@ LIB_DEPENDS+=	libffi.so.6:${PORTSDIR}/de
  
  .if empty(PORT_OPTIONS:MBOOT)
