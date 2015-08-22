@@ -1,18 +1,93 @@
---- pkg-plist.orig	2014-12-29 19:44:45 UTC
+--- pkg-plist.orig	2015-08-22 10:08:03 UTC
 +++ pkg-plist
-@@ -384,176 +384,176 @@ go/misc/swig/callback/callback.swigcxx
- go/misc/swig/callback/callback_test.go
- go/misc/swig/stdio/file.swig
- go/misc/swig/stdio/file_test.go
+@@ -373,29 +373,29 @@ go/misc/trace/trace_viewer_lean.html
+ go/pkg/bootstrap/bin/asm
+ go/pkg/bootstrap/bin/compile
+ go/pkg/bootstrap/bin/link
+-go/pkg/bootstrap/pkg/freebsd_%%ARCH%%/bootstrap/asm/internal/arch.a
+-go/pkg/bootstrap/pkg/freebsd_%%ARCH%%/bootstrap/asm/internal/asm.a
+-go/pkg/bootstrap/pkg/freebsd_%%ARCH%%/bootstrap/asm/internal/flags.a
+-go/pkg/bootstrap/pkg/freebsd_%%ARCH%%/bootstrap/asm/internal/lex.a
+-go/pkg/bootstrap/pkg/freebsd_%%ARCH%%/bootstrap/compile/internal/amd64.a
+-go/pkg/bootstrap/pkg/freebsd_%%ARCH%%/bootstrap/compile/internal/arm.a
+-go/pkg/bootstrap/pkg/freebsd_%%ARCH%%/bootstrap/compile/internal/arm64.a
+-go/pkg/bootstrap/pkg/freebsd_%%ARCH%%/bootstrap/compile/internal/big.a
+-go/pkg/bootstrap/pkg/freebsd_%%ARCH%%/bootstrap/compile/internal/gc.a
+-go/pkg/bootstrap/pkg/freebsd_%%ARCH%%/bootstrap/compile/internal/ppc64.a
+-go/pkg/bootstrap/pkg/freebsd_%%ARCH%%/bootstrap/compile/internal/x86.a
+-go/pkg/bootstrap/pkg/freebsd_%%ARCH%%/bootstrap/internal/gcprog.a
+-go/pkg/bootstrap/pkg/freebsd_%%ARCH%%/bootstrap/internal/obj.a
+-go/pkg/bootstrap/pkg/freebsd_%%ARCH%%/bootstrap/internal/obj/arm.a
+-go/pkg/bootstrap/pkg/freebsd_%%ARCH%%/bootstrap/internal/obj/arm64.a
+-go/pkg/bootstrap/pkg/freebsd_%%ARCH%%/bootstrap/internal/obj/ppc64.a
+-go/pkg/bootstrap/pkg/freebsd_%%ARCH%%/bootstrap/internal/obj/x86.a
+-go/pkg/bootstrap/pkg/freebsd_%%ARCH%%/bootstrap/link/internal/amd64.a
+-go/pkg/bootstrap/pkg/freebsd_%%ARCH%%/bootstrap/link/internal/arm.a
+-go/pkg/bootstrap/pkg/freebsd_%%ARCH%%/bootstrap/link/internal/arm64.a
+-go/pkg/bootstrap/pkg/freebsd_%%ARCH%%/bootstrap/link/internal/ld.a
+-go/pkg/bootstrap/pkg/freebsd_%%ARCH%%/bootstrap/link/internal/ppc64.a
+-go/pkg/bootstrap/pkg/freebsd_%%ARCH%%/bootstrap/link/internal/x86.a
++go/pkg/bootstrap/pkg/%%OPSYSL%%_%%ARCH%%/bootstrap/asm/internal/arch.a
++go/pkg/bootstrap/pkg/%%OPSYSL%%_%%ARCH%%/bootstrap/asm/internal/asm.a
++go/pkg/bootstrap/pkg/%%OPSYSL%%_%%ARCH%%/bootstrap/asm/internal/flags.a
++go/pkg/bootstrap/pkg/%%OPSYSL%%_%%ARCH%%/bootstrap/asm/internal/lex.a
++go/pkg/bootstrap/pkg/%%OPSYSL%%_%%ARCH%%/bootstrap/compile/internal/amd64.a
++go/pkg/bootstrap/pkg/%%OPSYSL%%_%%ARCH%%/bootstrap/compile/internal/arm.a
++go/pkg/bootstrap/pkg/%%OPSYSL%%_%%ARCH%%/bootstrap/compile/internal/arm64.a
++go/pkg/bootstrap/pkg/%%OPSYSL%%_%%ARCH%%/bootstrap/compile/internal/big.a
++go/pkg/bootstrap/pkg/%%OPSYSL%%_%%ARCH%%/bootstrap/compile/internal/gc.a
++go/pkg/bootstrap/pkg/%%OPSYSL%%_%%ARCH%%/bootstrap/compile/internal/ppc64.a
++go/pkg/bootstrap/pkg/%%OPSYSL%%_%%ARCH%%/bootstrap/compile/internal/x86.a
++go/pkg/bootstrap/pkg/%%OPSYSL%%_%%ARCH%%/bootstrap/internal/gcprog.a
++go/pkg/bootstrap/pkg/%%OPSYSL%%_%%ARCH%%/bootstrap/internal/obj.a
++go/pkg/bootstrap/pkg/%%OPSYSL%%_%%ARCH%%/bootstrap/internal/obj/arm.a
++go/pkg/bootstrap/pkg/%%OPSYSL%%_%%ARCH%%/bootstrap/internal/obj/arm64.a
++go/pkg/bootstrap/pkg/%%OPSYSL%%_%%ARCH%%/bootstrap/internal/obj/ppc64.a
++go/pkg/bootstrap/pkg/%%OPSYSL%%_%%ARCH%%/bootstrap/internal/obj/x86.a
++go/pkg/bootstrap/pkg/%%OPSYSL%%_%%ARCH%%/bootstrap/link/internal/amd64.a
++go/pkg/bootstrap/pkg/%%OPSYSL%%_%%ARCH%%/bootstrap/link/internal/arm.a
++go/pkg/bootstrap/pkg/%%OPSYSL%%_%%ARCH%%/bootstrap/link/internal/arm64.a
++go/pkg/bootstrap/pkg/%%OPSYSL%%_%%ARCH%%/bootstrap/link/internal/ld.a
++go/pkg/bootstrap/pkg/%%OPSYSL%%_%%ARCH%%/bootstrap/link/internal/ppc64.a
++go/pkg/bootstrap/pkg/%%OPSYSL%%_%%ARCH%%/bootstrap/link/internal/x86.a
+ go/pkg/bootstrap/src/bootstrap/asm/internal/arch/arch.go
+ go/pkg/bootstrap/src/bootstrap/asm/internal/arch/arm.go
+ go/pkg/bootstrap/src/bootstrap/asm/internal/arch/arm64.go
+@@ -614,210 +614,210 @@ go/pkg/bootstrap/src/bootstrap/link/inte
+ go/pkg/bootstrap/src/bootstrap/link/internal/x86/l.go
+ go/pkg/bootstrap/src/bootstrap/link/internal/x86/obj.go
+ go/pkg/bootstrap/src/bootstrap/link/main.go
 -go/pkg/freebsd_%%ARCH%%/archive/tar.a
 -go/pkg/freebsd_%%ARCH%%/archive/zip.a
 -go/pkg/freebsd_%%ARCH%%/bufio.a
 -go/pkg/freebsd_%%ARCH%%/bytes.a
--go/pkg/freebsd_%%ARCH%%/cgocall.h
+-go/pkg/freebsd_%%ARCH%%/cmd/asm/internal/arch.a
+-go/pkg/freebsd_%%ARCH%%/cmd/asm/internal/asm.a
+-go/pkg/freebsd_%%ARCH%%/cmd/asm/internal/flags.a
+-go/pkg/freebsd_%%ARCH%%/cmd/asm/internal/lex.a
+-go/pkg/freebsd_%%ARCH%%/cmd/compile/internal/amd64.a
+-go/pkg/freebsd_%%ARCH%%/cmd/compile/internal/arm.a
+-go/pkg/freebsd_%%ARCH%%/cmd/compile/internal/arm64.a
+-go/pkg/freebsd_%%ARCH%%/cmd/compile/internal/big.a
+-go/pkg/freebsd_%%ARCH%%/cmd/compile/internal/gc.a
+-go/pkg/freebsd_%%ARCH%%/cmd/compile/internal/ppc64.a
+-go/pkg/freebsd_%%ARCH%%/cmd/compile/internal/x86.a
+-go/pkg/freebsd_%%ARCH%%/cmd/internal/gcprog.a
 -go/pkg/freebsd_%%ARCH%%/cmd/internal/goobj.a
+-go/pkg/freebsd_%%ARCH%%/cmd/internal/obj.a
+-go/pkg/freebsd_%%ARCH%%/cmd/internal/obj/arm.a
+-go/pkg/freebsd_%%ARCH%%/cmd/internal/obj/arm64.a
+-go/pkg/freebsd_%%ARCH%%/cmd/internal/obj/ppc64.a
+-go/pkg/freebsd_%%ARCH%%/cmd/internal/obj/x86.a
 -go/pkg/freebsd_%%ARCH%%/cmd/internal/objfile.a
 -go/pkg/freebsd_%%ARCH%%/cmd/internal/rsc.io/arm/armasm.a
 -go/pkg/freebsd_%%ARCH%%/cmd/internal/rsc.io/x86/x86asm.a
+-go/pkg/freebsd_%%ARCH%%/cmd/link/internal/amd64.a
+-go/pkg/freebsd_%%ARCH%%/cmd/link/internal/arm.a
+-go/pkg/freebsd_%%ARCH%%/cmd/link/internal/arm64.a
+-go/pkg/freebsd_%%ARCH%%/cmd/link/internal/ld.a
+-go/pkg/freebsd_%%ARCH%%/cmd/link/internal/ppc64.a
+-go/pkg/freebsd_%%ARCH%%/cmd/link/internal/x86.a
 -go/pkg/freebsd_%%ARCH%%/cmd/pprof/internal/commands.a
 -go/pkg/freebsd_%%ARCH%%/cmd/pprof/internal/driver.a
 -go/pkg/freebsd_%%ARCH%%/cmd/pprof/internal/fetch.a
@@ -23,6 +98,7 @@
 -go/pkg/freebsd_%%ARCH%%/cmd/pprof/internal/symbolizer.a
 -go/pkg/freebsd_%%ARCH%%/cmd/pprof/internal/symbolz.a
 -go/pkg/freebsd_%%ARCH%%/cmd/pprof/internal/tempfile.a
+-go/pkg/freebsd_%%ARCH%%/cmd/vet/whitelist.a
 -go/pkg/freebsd_%%ARCH%%/compress/bzip2.a
 -go/pkg/freebsd_%%ARCH%%/compress/flate.a
 -go/pkg/freebsd_%%ARCH%%/compress/gzip.a
@@ -74,15 +150,19 @@
 -go/pkg/freebsd_%%ARCH%%/expvar.a
 -go/pkg/freebsd_%%ARCH%%/flag.a
 -go/pkg/freebsd_%%ARCH%%/fmt.a
--go/pkg/freebsd_%%ARCH%%/funcdata.h
 -go/pkg/freebsd_%%ARCH%%/go/ast.a
 -go/pkg/freebsd_%%ARCH%%/go/build.a
+-go/pkg/freebsd_%%ARCH%%/go/constant.a
 -go/pkg/freebsd_%%ARCH%%/go/doc.a
 -go/pkg/freebsd_%%ARCH%%/go/format.a
+-go/pkg/freebsd_%%ARCH%%/go/importer.a
+-go/pkg/freebsd_%%ARCH%%/go/internal/gccgoimporter.a
+-go/pkg/freebsd_%%ARCH%%/go/internal/gcimporter.a
 -go/pkg/freebsd_%%ARCH%%/go/parser.a
 -go/pkg/freebsd_%%ARCH%%/go/printer.a
 -go/pkg/freebsd_%%ARCH%%/go/scanner.a
 -go/pkg/freebsd_%%ARCH%%/go/token.a
+-go/pkg/freebsd_%%ARCH%%/go/types.a
 -go/pkg/freebsd_%%ARCH%%/hash.a
 -go/pkg/freebsd_%%ARCH%%/hash/adler32.a
 -go/pkg/freebsd_%%ARCH%%/hash/crc32.a
@@ -95,9 +175,14 @@
 -go/pkg/freebsd_%%ARCH%%/image/color/palette.a
 -go/pkg/freebsd_%%ARCH%%/image/draw.a
 -go/pkg/freebsd_%%ARCH%%/image/gif.a
+-go/pkg/freebsd_%%ARCH%%/image/internal/imageutil.a
 -go/pkg/freebsd_%%ARCH%%/image/jpeg.a
 -go/pkg/freebsd_%%ARCH%%/image/png.a
 -go/pkg/freebsd_%%ARCH%%/index/suffixarray.a
+-go/pkg/freebsd_%%ARCH%%/internal/format.a
+-go/pkg/freebsd_%%ARCH%%/internal/singleflight.a
+-go/pkg/freebsd_%%ARCH%%/internal/testenv.a
+-go/pkg/freebsd_%%ARCH%%/internal/trace.a
 -go/pkg/freebsd_%%ARCH%%/io.a
 -go/pkg/freebsd_%%ARCH%%/io/ioutil.a
 -go/pkg/freebsd_%%ARCH%%/log.a
@@ -108,6 +193,7 @@
 -go/pkg/freebsd_%%ARCH%%/math/rand.a
 -go/pkg/freebsd_%%ARCH%%/mime.a
 -go/pkg/freebsd_%%ARCH%%/mime/multipart.a
+-go/pkg/freebsd_%%ARCH%%/mime/quotedprintable.a
 -go/pkg/freebsd_%%ARCH%%/net.a
 -go/pkg/freebsd_%%ARCH%%/net/http.a
 -go/pkg/freebsd_%%ARCH%%/net/http/cgi.a
@@ -117,6 +203,7 @@
 -go/pkg/freebsd_%%ARCH%%/net/http/httputil.a
 -go/pkg/freebsd_%%ARCH%%/net/http/internal.a
 -go/pkg/freebsd_%%ARCH%%/net/http/pprof.a
+-go/pkg/freebsd_%%ARCH%%/net/internal/socktest.a
 -go/pkg/freebsd_%%ARCH%%/net/mail.a
 -go/pkg/freebsd_%%ARCH%%/net/rpc.a
 -go/pkg/freebsd_%%ARCH%%/net/rpc/jsonrpc.a
@@ -133,11 +220,11 @@
 -go/pkg/freebsd_%%ARCH%%/regexp.a
 -go/pkg/freebsd_%%ARCH%%/regexp/syntax.a
 -go/pkg/freebsd_%%ARCH%%/runtime.a
--go/pkg/freebsd_%%ARCH%%/runtime.h
 -go/pkg/freebsd_%%ARCH%%/runtime/cgo.a
 -go/pkg/freebsd_%%ARCH%%/runtime/debug.a
 -go/pkg/freebsd_%%ARCH%%/runtime/pprof.a
 -go/pkg/freebsd_%%ARCH%%/runtime/race.a
+-go/pkg/freebsd_%%ARCH%%/runtime/trace.a
 -go/pkg/freebsd_%%ARCH%%/sort.a
 -go/pkg/freebsd_%%ARCH%%/strconv.a
 -go/pkg/freebsd_%%ARCH%%/strings.a
@@ -151,38 +238,41 @@
 -go/pkg/freebsd_%%ARCH%%/text/tabwriter.a
 -go/pkg/freebsd_%%ARCH%%/text/template.a
 -go/pkg/freebsd_%%ARCH%%/text/template/parse.a
--go/pkg/freebsd_%%ARCH%%/textflag.h
 -go/pkg/freebsd_%%ARCH%%/time.a
 -go/pkg/freebsd_%%ARCH%%/unicode.a
 -go/pkg/freebsd_%%ARCH%%/unicode/utf16.a
 -go/pkg/freebsd_%%ARCH%%/unicode/utf8.a
--go/pkg/obj/freebsd_%%ARCH%%/lib9.a
--go/pkg/obj/freebsd_%%ARCH%%/libbio.a
--go/pkg/obj/freebsd_%%ARCH%%/libcc.a
--go/pkg/obj/freebsd_%%ARCH%%/libgc.a
--go/pkg/obj/freebsd_%%ARCH%%/liblink.a
--go/pkg/tool/freebsd_%%ARCH%%/%%GOOBJ%%a
--go/pkg/tool/freebsd_%%ARCH%%/%%GOOBJ%%c
--go/pkg/tool/freebsd_%%ARCH%%/%%GOOBJ%%g
--go/pkg/tool/freebsd_%%ARCH%%/%%GOOBJ%%l
--go/pkg/tool/freebsd_%%ARCH%%/addr2line
--go/pkg/tool/freebsd_%%ARCH%%/cgo
--go/pkg/tool/freebsd_%%ARCH%%/dist
--go/pkg/tool/freebsd_%%ARCH%%/fix
--go/pkg/tool/freebsd_%%ARCH%%/nm
--go/pkg/tool/freebsd_%%ARCH%%/objdump
--go/pkg/tool/freebsd_%%ARCH%%/pack
--go/pkg/tool/freebsd_%%ARCH%%/pprof
--go/pkg/tool/freebsd_%%ARCH%%/yacc
 +go/pkg/%%OPSYSL%%_%%ARCH%%/archive/tar.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/archive/zip.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/bufio.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/bytes.a
-+go/pkg/%%OPSYSL%%_%%ARCH%%/cgocall.h
++go/pkg/%%OPSYSL%%_%%ARCH%%/cmd/asm/internal/arch.a
++go/pkg/%%OPSYSL%%_%%ARCH%%/cmd/asm/internal/asm.a
++go/pkg/%%OPSYSL%%_%%ARCH%%/cmd/asm/internal/flags.a
++go/pkg/%%OPSYSL%%_%%ARCH%%/cmd/asm/internal/lex.a
++go/pkg/%%OPSYSL%%_%%ARCH%%/cmd/compile/internal/amd64.a
++go/pkg/%%OPSYSL%%_%%ARCH%%/cmd/compile/internal/arm.a
++go/pkg/%%OPSYSL%%_%%ARCH%%/cmd/compile/internal/arm64.a
++go/pkg/%%OPSYSL%%_%%ARCH%%/cmd/compile/internal/big.a
++go/pkg/%%OPSYSL%%_%%ARCH%%/cmd/compile/internal/gc.a
++go/pkg/%%OPSYSL%%_%%ARCH%%/cmd/compile/internal/ppc64.a
++go/pkg/%%OPSYSL%%_%%ARCH%%/cmd/compile/internal/x86.a
++go/pkg/%%OPSYSL%%_%%ARCH%%/cmd/internal/gcprog.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/cmd/internal/goobj.a
++go/pkg/%%OPSYSL%%_%%ARCH%%/cmd/internal/obj.a
++go/pkg/%%OPSYSL%%_%%ARCH%%/cmd/internal/obj/arm.a
++go/pkg/%%OPSYSL%%_%%ARCH%%/cmd/internal/obj/arm64.a
++go/pkg/%%OPSYSL%%_%%ARCH%%/cmd/internal/obj/ppc64.a
++go/pkg/%%OPSYSL%%_%%ARCH%%/cmd/internal/obj/x86.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/cmd/internal/objfile.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/cmd/internal/rsc.io/arm/armasm.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/cmd/internal/rsc.io/x86/x86asm.a
++go/pkg/%%OPSYSL%%_%%ARCH%%/cmd/link/internal/amd64.a
++go/pkg/%%OPSYSL%%_%%ARCH%%/cmd/link/internal/arm.a
++go/pkg/%%OPSYSL%%_%%ARCH%%/cmd/link/internal/arm64.a
++go/pkg/%%OPSYSL%%_%%ARCH%%/cmd/link/internal/ld.a
++go/pkg/%%OPSYSL%%_%%ARCH%%/cmd/link/internal/ppc64.a
++go/pkg/%%OPSYSL%%_%%ARCH%%/cmd/link/internal/x86.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/cmd/pprof/internal/commands.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/cmd/pprof/internal/driver.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/cmd/pprof/internal/fetch.a
@@ -193,6 +283,7 @@
 +go/pkg/%%OPSYSL%%_%%ARCH%%/cmd/pprof/internal/symbolizer.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/cmd/pprof/internal/symbolz.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/cmd/pprof/internal/tempfile.a
++go/pkg/%%OPSYSL%%_%%ARCH%%/cmd/vet/whitelist.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/compress/bzip2.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/compress/flate.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/compress/gzip.a
@@ -244,15 +335,19 @@
 +go/pkg/%%OPSYSL%%_%%ARCH%%/expvar.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/flag.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/fmt.a
-+go/pkg/%%OPSYSL%%_%%ARCH%%/funcdata.h
 +go/pkg/%%OPSYSL%%_%%ARCH%%/go/ast.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/go/build.a
++go/pkg/%%OPSYSL%%_%%ARCH%%/go/constant.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/go/doc.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/go/format.a
++go/pkg/%%OPSYSL%%_%%ARCH%%/go/importer.a
++go/pkg/%%OPSYSL%%_%%ARCH%%/go/internal/gccgoimporter.a
++go/pkg/%%OPSYSL%%_%%ARCH%%/go/internal/gcimporter.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/go/parser.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/go/printer.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/go/scanner.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/go/token.a
++go/pkg/%%OPSYSL%%_%%ARCH%%/go/types.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/hash.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/hash/adler32.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/hash/crc32.a
@@ -265,9 +360,14 @@
 +go/pkg/%%OPSYSL%%_%%ARCH%%/image/color/palette.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/image/draw.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/image/gif.a
++go/pkg/%%OPSYSL%%_%%ARCH%%/image/internal/imageutil.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/image/jpeg.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/image/png.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/index/suffixarray.a
++go/pkg/%%OPSYSL%%_%%ARCH%%/internal/format.a
++go/pkg/%%OPSYSL%%_%%ARCH%%/internal/singleflight.a
++go/pkg/%%OPSYSL%%_%%ARCH%%/internal/testenv.a
++go/pkg/%%OPSYSL%%_%%ARCH%%/internal/trace.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/io.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/io/ioutil.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/log.a
@@ -278,6 +378,7 @@
 +go/pkg/%%OPSYSL%%_%%ARCH%%/math/rand.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/mime.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/mime/multipart.a
++go/pkg/%%OPSYSL%%_%%ARCH%%/mime/quotedprintable.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/net.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/net/http.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/net/http/cgi.a
@@ -287,6 +388,7 @@
 +go/pkg/%%OPSYSL%%_%%ARCH%%/net/http/httputil.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/net/http/internal.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/net/http/pprof.a
++go/pkg/%%OPSYSL%%_%%ARCH%%/net/internal/socktest.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/net/mail.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/net/rpc.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/net/rpc/jsonrpc.a
@@ -303,11 +405,11 @@
 +go/pkg/%%OPSYSL%%_%%ARCH%%/regexp.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/regexp/syntax.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/runtime.a
-+go/pkg/%%OPSYSL%%_%%ARCH%%/runtime.h
 +go/pkg/%%OPSYSL%%_%%ARCH%%/runtime/cgo.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/runtime/debug.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/runtime/pprof.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/runtime/race.a
++go/pkg/%%OPSYSL%%_%%ARCH%%/runtime/trace.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/sort.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/strconv.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/strings.a
@@ -321,45 +423,54 @@
 +go/pkg/%%OPSYSL%%_%%ARCH%%/text/tabwriter.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/text/template.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/text/template/parse.a
-+go/pkg/%%OPSYSL%%_%%ARCH%%/textflag.h
 +go/pkg/%%OPSYSL%%_%%ARCH%%/time.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/unicode.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/unicode/utf16.a
 +go/pkg/%%OPSYSL%%_%%ARCH%%/unicode/utf8.a
-+go/pkg/obj/%%OPSYSL%%_%%ARCH%%/lib9.a
-+go/pkg/obj/%%OPSYSL%%_%%ARCH%%/libbio.a
-+go/pkg/obj/%%OPSYSL%%_%%ARCH%%/libcc.a
-+go/pkg/obj/%%OPSYSL%%_%%ARCH%%/libgc.a
-+go/pkg/obj/%%OPSYSL%%_%%ARCH%%/liblink.a
-+go/pkg/tool/%%OPSYSL%%_%%ARCH%%/%%GOOBJ%%a
-+go/pkg/tool/%%OPSYSL%%_%%ARCH%%/%%GOOBJ%%c
-+go/pkg/tool/%%OPSYSL%%_%%ARCH%%/%%GOOBJ%%g
-+go/pkg/tool/%%OPSYSL%%_%%ARCH%%/%%GOOBJ%%l
+ go/pkg/include/funcdata.h
+ go/pkg/include/textflag.h
+-go/pkg/tool/freebsd_%%ARCH%%/addr2line
+-go/pkg/tool/freebsd_%%ARCH%%/api
+-go/pkg/tool/freebsd_%%ARCH%%/asm
+-go/pkg/tool/freebsd_%%ARCH%%/cgo
+-go/pkg/tool/freebsd_%%ARCH%%/compile
+-go/pkg/tool/freebsd_%%ARCH%%/cover
+-go/pkg/tool/freebsd_%%ARCH%%/dist
+-go/pkg/tool/freebsd_%%ARCH%%/doc
+-go/pkg/tool/freebsd_%%ARCH%%/fix
+-go/pkg/tool/freebsd_%%ARCH%%/link
+-go/pkg/tool/freebsd_%%ARCH%%/nm
+-go/pkg/tool/freebsd_%%ARCH%%/objdump
+-go/pkg/tool/freebsd_%%ARCH%%/pack
+-go/pkg/tool/freebsd_%%ARCH%%/pprof
+-go/pkg/tool/freebsd_%%ARCH%%/trace
+-go/pkg/tool/freebsd_%%ARCH%%/vet
+-go/pkg/tool/freebsd_%%ARCH%%/yacc
 +go/pkg/tool/%%OPSYSL%%_%%ARCH%%/addr2line
++go/pkg/tool/%%OPSYSL%%_%%ARCH%%/api
++go/pkg/tool/%%OPSYSL%%_%%ARCH%%/asm
 +go/pkg/tool/%%OPSYSL%%_%%ARCH%%/cgo
++go/pkg/tool/%%OPSYSL%%_%%ARCH%%/compile
++go/pkg/tool/%%OPSYSL%%_%%ARCH%%/cover
 +go/pkg/tool/%%OPSYSL%%_%%ARCH%%/dist
++go/pkg/tool/%%OPSYSL%%_%%ARCH%%/doc
 +go/pkg/tool/%%OPSYSL%%_%%ARCH%%/fix
++go/pkg/tool/%%OPSYSL%%_%%ARCH%%/link
 +go/pkg/tool/%%OPSYSL%%_%%ARCH%%/nm
 +go/pkg/tool/%%OPSYSL%%_%%ARCH%%/objdump
 +go/pkg/tool/%%OPSYSL%%_%%ARCH%%/pack
 +go/pkg/tool/%%OPSYSL%%_%%ARCH%%/pprof
++go/pkg/tool/%%OPSYSL%%_%%ARCH%%/trace
++go/pkg/tool/%%OPSYSL%%_%%ARCH%%/vet
 +go/pkg/tool/%%OPSYSL%%_%%ARCH%%/yacc
  go/robots.txt
  go/src/Make.dist
  go/src/all.bash
-@@ -2939,11 +2939,11 @@ go/src/runtime/vlop_arm_test.go
- go/src/runtime/vlrt.c
- go/src/runtime/vlrt.go
- go/src/runtime/zaexperiment.h
--go/src/runtime/zasm_freebsd_%%ARCH%%.h
-+go/src/runtime/zasm_%%OPSYSL%%_%%ARCH%%.h
- go/src/runtime/zgoarch_%%ARCH%%.go
--go/src/runtime/zgoos_freebsd.go
--go/src/runtime/zruntime_defs_freebsd_%%ARCH%%.go
--go/src/runtime/zsys_freebsd_%%ARCH%%.s
-+go/src/runtime/zgoos_%%OPSYSL%%.go
-+go/src/runtime/zruntime_defs_%%OPSYSL%%_%%ARCH%%.go
-+go/src/runtime/zsys_%%OPSYSL%%_%%ARCH%%.s
- go/src/runtime/zversion.go
- go/src/sort/example_interface_test.go
- go/src/sort/example_keys_test.go
+@@ -5326,5 +5326,5 @@ go/test/varerr.go
+ go/test/varinit.go
+ go/test/writebarrier.go
+ go/test/zerodivide.go
+-@dir go/pkg/freebsd_%%ARCH%%/internal/syscall/windows
+-@dir go/pkg/obj/freebsd_%%ARCH%%
++@dir go/pkg/%%OPSYSL%%_%%ARCH%%/internal/syscall/windows
++@dir go/pkg/obj/%%OPSYSL%%_%%ARCH%%
