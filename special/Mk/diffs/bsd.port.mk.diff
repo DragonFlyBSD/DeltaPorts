@@ -1,4 +1,4 @@
---- bsd.port.mk.orig	2015-07-12 10:37:56 UTC
+--- bsd.port.mk.orig	2015-08-22 09:37:30 UTC
 +++ bsd.port.mk
 @@ -43,7 +43,8 @@ FreeBSD_MAINTAINER=	portmgr@FreeBSD.org
  #				  makefile is being used on.  Automatically set to
@@ -10,7 +10,7 @@
  #
  # This is the beginning of the list of all variables that need to be
  # defined in a port, listed in order that they should be included
-@@ -548,6 +549,12 @@ FreeBSD_MAINTAINER=	portmgr@FreeBSD.org
+@@ -525,6 +526,12 @@ FreeBSD_MAINTAINER=	portmgr@FreeBSD.org
  #				  Default: ${MASTERDIR}/scripts
  # FILESDIR		- A directory containing any miscellaneous additional files.
  #				  Default: ${MASTERDIR}/files
@@ -23,7 +23,7 @@
  # PKGDIR		- A directory containing any package creation files.
  #				  Default: ${MASTERDIR}
  # SRC_BASE		- The root of the src tree.  (Some ports require this to get
-@@ -1055,10 +1062,15 @@ FreeBSD_MAINTAINER=	portmgr@FreeBSD.org
+@@ -1031,10 +1038,15 @@ FreeBSD_MAINTAINER=	portmgr@FreeBSD.org
  # These need to be absolute since we don't know how deep in the ports
  # tree we are and thus can't go relative.  They can, of course, be overridden
  # by individual Makefiles or local system make configuration.
@@ -41,7 +41,7 @@
  _DISTDIR?=		${DISTDIR}/${DIST_SUBDIR}
  INDEXDIR?=		${PORTSDIR}
  SRC_BASE?=		/usr/src
-@@ -1173,27 +1185,18 @@ OSREL?=	${UNAMER:C/-.*//}
+@@ -1149,27 +1161,18 @@ OSREL?=	${UNAMER:C/-.*//}
  
  # Get __FreeBSD_version
  .if !defined(OSVERSION)
@@ -75,7 +75,7 @@
  # Only define tools here (for transition period with between pkg tools)
  .include "${PORTSDIR}/Mk/bsd.commands.mk"
  
-@@ -1327,7 +1330,7 @@ _GITHUB_MUST_SET_DISTNAME=		yes
+@@ -1297,7 +1300,7 @@ _GITHUB_MUST_SET_DISTNAME=		yes
  DISTNAME?=	${PORTNAME}-${DISTVERSIONFULL}
  .endif
  
@@ -84,7 +84,7 @@
  
  DOCSDIR?=		${PREFIX}/share/doc/${PORTNAME}
  EXAMPLESDIR?=		${PREFIX}/share/examples/${PORTNAME}
-@@ -1347,7 +1350,7 @@ ETCDIR?=		${PREFIX}/etc/${PORTNAME}
+@@ -1317,7 +1320,7 @@ ETCDIR?=		${PREFIX}/etc/${PORTNAME}
  .include "${PORTSDIR}/Mk/bsd.xorg.mk"
  .endif
  
@@ -93,7 +93,7 @@
  TEMPLATES?=		${PORTSDIR}/Templates
  KEYWORDS?=		${PORTSDIR}/Keywords
  
-@@ -1549,7 +1552,7 @@ MAKE_ENV+=		NM=${NM} \
+@@ -1525,7 +1528,7 @@ MAKE_ENV+=		NM=${NM} \
  CONFIGURE_ENV+=	PKG_CONFIG_SYSROOT_DIR="${X_SYSROOT}"
  .endif
  
@@ -102,7 +102,7 @@
  .if !defined(IGNORE_MASTER_SITE_GITHUB) && defined(USE_GITHUB)
  WRKSRC?=		${WRKDIR}/${GH_PROJECT}-${GH_TAGNAME_EXTRACT}
  .endif
-@@ -1584,7 +1587,9 @@ PLIST_SUB_SED?= ${PLIST_SUB:C/.*=.{1,${P
+@@ -1560,7 +1563,9 @@ PLIST_SUB_SED?= ${PLIST_SUB:C/.*=.{1,${P
  
  # kludge to strip trailing whitespace from CFLAGS;
  # sub-configure will not # survive double space
@@ -113,7 +113,7 @@
  
  .if defined(WITHOUT_CPU_CFLAGS)
  .if defined(_CPUCFLAGS)
-@@ -1677,7 +1682,17 @@ PKG_DEPENDS+=	${LOCALBASE}/sbin/pkg:${PO
+@@ -1653,7 +1658,17 @@ PKG_DEPENDS+=	${LOCALBASE}/sbin/pkg:${PO
  .endif
  
  .if defined(USE_GCC)
@@ -132,7 +132,7 @@
  .endif
  
  .if defined(USE_BINUTILS) && !defined(DISABLE_BINUTILS)
-@@ -2006,9 +2021,11 @@ DISTINFO_FILE?=		${MASTERDIR}/distinfo
+@@ -1947,9 +1962,11 @@ DISTINFO_FILE?=		${MASTERDIR}/distinfo
  MAKE_FLAGS?=	-f
  MAKEFILE?=		Makefile
  MAKE_CMD?=		${BSDMAKE}
@@ -144,7 +144,7 @@
  			CC="${CC}" CFLAGS="${CFLAGS}" \
  			CPP="${CPP}" CPPFLAGS="${CPPFLAGS}" \
  			LDFLAGS="${LDFLAGS}" LIBS="${LIBS}" \
-@@ -2044,7 +2061,7 @@ MAKE_JOBS_NUMBER=	1
+@@ -1985,7 +2002,7 @@ MAKE_JOBS_NUMBER=	1
  .if defined(MAKE_JOBS_NUMBER)
  _MAKE_JOBS_NUMBER:=	${MAKE_JOBS_NUMBER}
  .else
@@ -153,7 +153,7 @@
  .endif
  .if defined(MAKE_JOBS_NUMBER_LIMIT) && ( ${MAKE_JOBS_NUMBER_LIMIT} < ${_MAKE_JOBS_NUMBER} )
  MAKE_JOBS_NUMBER=	${MAKE_JOBS_NUMBER_LIMIT}
-@@ -2114,9 +2131,37 @@ PATCH_DIST_ARGS+=	--suffix .orig
+@@ -2055,9 +2072,37 @@ PATCH_DIST_ARGS+=	--suffix .orig
  TAR?=	/usr/bin/tar
  
  # EXTRACT_SUFX is defined in .pre.mk section
@@ -194,7 +194,7 @@
  
  # Figure out where the local mtree file is
  .if !defined(MTREE_FILE) && !defined(NO_MTREE)
-@@ -2666,6 +2711,8 @@ SET_LATE_CONFIGURE_ARGS= \
+@@ -2606,6 +2651,8 @@ SET_LATE_CONFIGURE_ARGS= \
  SCRIPTS_ENV+=	CURDIR=${MASTERDIR} DISTDIR=${DISTDIR} \
  		  WRKDIR=${WRKDIR} WRKSRC=${WRKSRC} PATCHDIR=${PATCHDIR} \
  		  SCRIPTDIR=${SCRIPTDIR} FILESDIR=${FILESDIR} \
@@ -203,7 +203,7 @@
  		  PORTSDIR=${PORTSDIR} PREFIX=${PREFIX} LOCALBASE=${LOCALBASE}
  
  .if defined(BATCH)
-@@ -2748,7 +2795,7 @@ DESKTOPDIR?=		${PREFIX}/share/applicatio
+@@ -2688,7 +2735,7 @@ DESKTOPDIR?=		${PREFIX}/share/applicatio
  
  # Check the machine architectures
  .if defined(ONLY_FOR_ARCHS)
@@ -212,7 +212,7 @@
  .if ${ARCH:M${__ARCH}} != ""
  __ARCH_OK?=		1
  .endif
-@@ -2758,7 +2805,7 @@ __ARCH_OK?=		1
+@@ -2698,7 +2745,7 @@ __ARCH_OK?=		1
  .endif
  
  .if defined(NOT_FOR_ARCHS)
@@ -221,7 +221,7 @@
  .if ${ARCH:M${__NARCH}} != ""
  .undef __ARCH_OK
  .endif
-@@ -2767,9 +2814,9 @@ __ARCH_OK?=		1
+@@ -2707,9 +2754,9 @@ __ARCH_OK?=		1
  
  .if !defined(__ARCH_OK)
  .if defined(ONLY_FOR_ARCHS)
@@ -233,7 +233,7 @@
  .endif
  IGNORE+=	while you are running ${ARCH}
  
-@@ -2915,6 +2962,7 @@ all:
+@@ -2855,6 +2902,7 @@ all:
  	  DISTDIR=${DISTDIR} WRKDIR=${WRKDIR} WRKSRC=${WRKSRC} \
  	  PATCHDIR=${PATCHDIR} SCRIPTDIR=${SCRIPTDIR} \
  	  FILESDIR=${FILESDIR} PORTSDIR=${PORTSDIR} PREFIX=${PREFIX} \
@@ -241,7 +241,7 @@
  	  BUILD_DEPENDS="${BUILD_DEPENDS}" RUN_DEPENDS="${RUN_DEPENDS}" \
  	  CONFLICTS="${CONFLICTS}" \
  	${ALL_HOOK}
-@@ -3244,9 +3292,26 @@ clean-wrkdir:
+@@ -3184,9 +3232,26 @@ clean-wrkdir:
  .if !target(do-extract)
  do-extract:
  	@for file in ${EXTRACT_ONLY}; do \
@@ -271,7 +271,7 @@
  		fi; \
  	done
  	@if [ ${UID} = 0 ]; then \
-@@ -3301,7 +3366,7 @@ do-patch:
+@@ -3241,7 +3306,7 @@ do-patch:
  	@set -e ;\
  	if [ -d ${PATCHDIR} ]; then \
  		if [ "`${ECHO_CMD} ${PATCHDIR}/patch-*`" != "${PATCHDIR}/patch-*" ]; then \
@@ -280,7 +280,7 @@
  			PATCHES_APPLIED="" ; \
  			for i in ${PATCHDIR}/patch-*; do \
  				case $$i in \
-@@ -3326,6 +3391,33 @@ do-patch:
+@@ -3266,6 +3331,33 @@ do-patch:
  			done; \
  		fi; \
  	fi
@@ -314,7 +314,7 @@
  .endif
  
  .if !target(run-autotools-fixup)
-@@ -4431,7 +4523,7 @@ FETCH_LIST?=	for i in $$deps; do \
+@@ -4371,7 +4463,7 @@ FETCH_LIST?=	for i in $$deps; do \
  			else	\
  				continue;	\
  			fi;;	\
@@ -323,7 +323,7 @@
  				continue;	\
  			fi;;	\
  		esac;	\
-@@ -4769,10 +4861,15 @@ _SUB_LIST_TEMP=	${SUB_LIST:S/$/!g/:S/^/
+@@ -4709,10 +4801,15 @@ _SUB_LIST_TEMP=	${SUB_LIST:S/$/!g/:S/^/
  apply-slist:
  .if defined(SUB_FILES)
  .for file in ${SUB_FILES}
@@ -342,7 +342,7 @@
  .endif
  .endfor
  .for i in pkg-message pkg-install pkg-deinstall pkg-req
-@@ -5016,6 +5113,7 @@ ${_t}:
+@@ -4956,6 +5053,7 @@ ${_t}:
  	OPSYS="${OPSYS:S/"/"'"'"/g:S/\$/\$\$/g:S/\\/\\\\/g}" \
  	OSREL="${OSREL:S/"/"'"'"/g:S/\$/\$\$/g:S/\\/\\\\/g}" \
  	OSVERSION="${OSVERSION:S/"/"'"'"/g:S/\$/\$\$/g:S/\\/\\\\/g}" \
@@ -350,11 +350,11 @@
  	SYSTEMVERSION="${SYSTEMVERSION:S/"/"'"'"/g:S/\$/\$\$/g:S/\\/\\\\/g}"
  .endif
  
-@@ -5619,6 +5717,7 @@ _PATCH_DEP=		extract
- _PATCH_SEQ=		ask-license patch-message patch-depends pathfix dos2unix fix-shebang \
- 				pre-patch ${_OPTIONS_pre_patch} \
- 				pre-patch-script do-patch charsetfix-post-patch post-patch ${_OPTIONS_post_patch} post-patch-script
-+_PATCH_SEQ+=		dfly-patch
+@@ -5569,6 +5667,7 @@ _PATCH_DEP=		extract
+ _PATCH_SEQ=		050:ask-license 100:patch-message 150:patch-depends \
+ 				300:pre-patch 450:pre-patch-script 500:do-patch \
+ 				700:post-patch 850:post-patch-script \
++				880:dfly-patch \
+ 				${_OPTIONS_patch} ${_USES_patch}
  _CONFIGURE_DEP=	patch
- _CONFIGURE_SEQ=	build-depends lib-depends configure-message \
- 				pre-configure ${_OPTIONS_pre_configure} pre-configure-script \
+ _CONFIGURE_SEQ=	150:build-depends 151:lib-depends 200:configure-message \
