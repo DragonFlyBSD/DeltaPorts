@@ -1,4 +1,4 @@
---- Makefile.orig	2015-08-22 16:49:52 UTC
+--- Makefile.orig	2015-08-22 20:46:14 UTC
 +++ Makefile
 @@ -5,6 +5,7 @@ PORTNAME=	ghc
  PORTVERSION=	7.10.2
@@ -8,7 +8,23 @@
  		LOCAL/pgj/:boot
  DISTFILES=	ghc-${PORTVERSION}-src${EXTRACT_SUFX}:source
  
-@@ -79,10 +80,23 @@ LIB_DEPENDS+=	libffi.so.6:${PORTSDIR}/de
+@@ -17,6 +18,7 @@ LICENSE_FILE=	${WRKSRC}/LICENSE
+ ONLY_FOR_ARCHS=	i386 amd64
+ 
+ MAKE_JOBS_NUMBER_LIMIT=		4
++MAKE_JOBS_UNSAFE=		yes
+ 
+ GHC_VERSION=		${PORTVERSION}
+ HSCOLOUR_VERSION=	1.23
+@@ -61,6 +63,7 @@ LLVM_DESC=		Add support for generating c
+ DOCS_DESC=		Install HTML documentation
+ 
+ LOCALBASE?=	/usr/local
++PORTDOCS+=	html
+ 
+ .if exists(${LOCALBASE}/bin/ghc)
+ OPTIONS_DEFINE+=	BOOT
+@@ -79,10 +82,23 @@ LIB_DEPENDS+=	libffi.so.6:${PORTSDIR}/de
  
  .if empty(PORT_OPTIONS:MBOOT)
  
@@ -32,3 +48,11 @@
  .endif # MBOOT
  
  .if ${PORT_OPTIONS:MPCLANG}
+@@ -302,6 +318,7 @@ pre-configure:
+ 
+ post-install:
+ 	@${RM} -f ${STAGEDIR}${PREFIX}/bin/haddock
++	${RM} ${GHC_LIBDIR}/package.conf.d/package.cache
+ .if ${PORT_OPTIONS:MDOCS}
+ 	@${LN} -sf haddock-ghc-${GHC_VERSION} ${STAGEDIR}${PREFIX}/bin/haddock
+ .endif
