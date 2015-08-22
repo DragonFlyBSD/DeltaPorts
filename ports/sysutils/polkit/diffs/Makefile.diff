@@ -1,18 +1,18 @@
---- Makefile.orig	2014-03-14 22:24:28.418124000 +0000
+--- Makefile.orig	2015-08-22 09:58:46 UTC
 +++ Makefile
-@@ -12,6 +12,7 @@ MAINTAINER=	gnome@FreeBSD.org
- COMMENT=	Framework for controlling access to system-wide components
+@@ -14,6 +14,7 @@ LICENSE_FILE=	${WRKSRC}/COPYING
  
- LIB_DEPENDS=	libexpat.so:${PORTSDIR}/textproc/expat2
+ LIB_DEPENDS=	libexpat.so:${PORTSDIR}/textproc/expat2 \
+ 		libmozjs-17.0.so:${PORTSDIR}/lang/spidermonkey170
 +LIB_DEPENDS+=	libxml2.so:${PORTSDIR}/textproc/libxml2
  RUN_DEPENDS=	dbus-launch:${PORTSDIR}/devel/dbus
  
- USE_GNOME=	glib20 intlhack gnomehier introspection
-@@ -21,7 +22,6 @@ USE_LDCONFIG=	yes
- CONFIGURE_ARGS=	--disable-gtk-doc \
+ USERS=	polkitd
+@@ -28,7 +29,6 @@ CONFIGURE_ARGS=	--disable-gtk-doc-html \
+ 		--without-html-dir \
  		--with-authfw=pam \
  		--with-pam-include=system \
 -		--with-os-type=freebsd \
- 		--disable-systemd \
- 		--enable-introspection \
- 		--localstatedir=/var
+ 		--with-polkitd-user=${USERS} \
+ 		--disable-static \
+ 		--disable-examples \
