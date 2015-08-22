@@ -30,7 +30,7 @@
 +.elif ${OPSYS} == "DragonFly"
 +
 +BOOT_GHC_VERSION=	7.6.3
-+DISTFILES+=		ghc-${BOOT_GHC_VERSION}-${ARCH}-dragonfly-boot${EXTRACT_SUFX}:dflyboot
++DISTFILES+=		ghc-${BOOT_GHC_VERSION}-${ARCH}-dragonfly-boot.tar.bz2:dflyboot
 +CONFIGURE_TARGET=	${ARCH}-portbld-dragonfly
 +CONFIGURE_ENV+=		BOOTDIR=${BOOT_DIR}
 +
