@@ -1,4 +1,4 @@
---- Makefile.orig	2015-08-22 21:20:08 UTC
+--- Makefile.orig	2015-08-22 22:04:30 UTC
 +++ Makefile
 @@ -5,6 +5,7 @@ PORTNAME=	ghc
  PORTVERSION=	7.10.2
@@ -40,7 +40,15 @@
  .endif # MBOOT
  
  .if ${PORT_OPTIONS:MPCLANG}
-@@ -302,6 +317,7 @@ pre-configure:
+@@ -198,6 +213,7 @@ CONFIGURE_ENV+=	PATH=${SLAVES_PREFIX}/bi
+ 
+ BUILD_DEPENDS+=	docbook-xsl>0:${PORTSDIR}/textproc/docbook-xsl \
+ 		${LOCALBASE}/bin/xsltproc:${PORTSDIR}/textproc/libxslt
++PLIST_FILES+=	bin/haddock
+ .endif
+ 
+ post-extract:
+@@ -302,6 +318,7 @@ pre-configure:
  
  post-install:
  	@${RM} -f ${STAGEDIR}${PREFIX}/bin/haddock
