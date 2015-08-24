@@ -1,8 +1,8 @@
---- distinfo.orig	2015-08-22 10:26:30 UTC
+--- distinfo.orig	2015-08-23 13:35:43 UTC
 +++ distinfo
 @@ -6,3 +6,5 @@ SHA256 (ghc-7.10.2-boot-i386-freebsd.tar
  SIZE (ghc-7.10.2-boot-i386-freebsd.tar.xz) = 39858716
  SHA256 (ghc-7.10.2-boot-amd64-freebsd.tar.xz) = 4af0ee0795537baa11a96fba23477f8390ccb5f45910cda119d0a16bdebaedc8
  SIZE (ghc-7.10.2-boot-amd64-freebsd.tar.xz) = 49833224
-+SHA256 (ghc-7.6.3-x86_64-dragonfly-boot.tar.bz2) = ab6c6d899eb388f852ecc31ab6e5e1f993d5140dccbd820e70b615403132b7c5
-+SIZE (ghc-7.6.3-x86_64-dragonfly-boot.tar.bz2) = 63406815
++SHA256 (ghc-7.10.2-boot-x86_64-dragonfly.tar.xz) = 7efa557d5439305403cdaf1b98c17d3e4d629bb2afee0a56b4189840e87c5537
++SIZE (ghc-7.10.2-boot-x86_64-dragonfly.tar.xz) = 40796384

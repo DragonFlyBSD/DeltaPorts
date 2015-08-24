@@ -8,15 +8,7 @@
  		LOCAL/pgj/:boot
  DISTFILES=	ghc-${PORTVERSION}-src${EXTRACT_SUFX}:source
  
-@@ -61,6 +62,7 @@ LLVM_DESC=		Add support for generating c
- DOCS_DESC=		Install HTML documentation
- 
- LOCALBASE?=	/usr/local
-+PORTDOCS+=	html
- 
- .if exists(${LOCALBASE}/bin/ghc)
- OPTIONS_DEFINE+=	BOOT
-@@ -79,10 +81,23 @@ LIB_DEPENDS+=	libffi.so.6:${PORTSDIR}/de
+@@ -79,10 +80,23 @@ LIB_DEPENDS+=	libffi.so.6:${PORTSDIR}/de
  
  .if empty(PORT_OPTIONS:MBOOT)
  
@@ -28,10 +20,10 @@
  
 +.elif ${OPSYS} == "DragonFly"
 +
-+BOOT_GHC_VERSION=	7.6.3
-+DISTFILES+=		ghc-${BOOT_GHC_VERSION}-${ARCH}-dragonfly-boot.tar.bz2:dflyboot
++BOOT_GHC_VERSION=	7.10.2
++DISTFILES+=		ghc-${BOOT_GHC_VERSION}-boot-${ARCH}-dragonfly.tar.xz:dflyboot
 +CONFIGURE_TARGET=	${ARCH}-portbld-dragonfly
-+CONFIGURE_ENV+=		BOOTDIR=${BOOT_DIR}
++CONFIGURE_ENV+=		BOOTDIR=${BOOT_DIR} LBASE=${LOCALBASE}
 +
 +.else
 +IGNORE=		unsupported ${OPSYS} Operating System
@@ -40,19 +32,11 @@
  .endif # MBOOT
  
  .if ${PORT_OPTIONS:MPCLANG}
-@@ -198,6 +213,7 @@ CONFIGURE_ENV+=	PATH=${SLAVES_PREFIX}/bi
+@@ -198,6 +212,7 @@ CONFIGURE_ENV+=	PATH=${SLAVES_PREFIX}/bi
  
  BUILD_DEPENDS+=	docbook-xsl>0:${PORTSDIR}/textproc/docbook-xsl \
  		${LOCALBASE}/bin/xsltproc:${PORTSDIR}/textproc/libxslt
-+PLIST_FILES+=	bin/haddock
++PLIST_FILES+=	bin/haddock bin/haddock-ghc-${GHC_VERSION}
  .endif
  
  post-extract:
-@@ -302,6 +318,7 @@ pre-configure:
- 
- post-install:
- 	@${RM} -f ${STAGEDIR}${PREFIX}/bin/haddock
-+	${RM} ${GHC_LIBDIR}/package.conf.d/package.cache
- .if ${PORT_OPTIONS:MDOCS}
- 	@${LN} -sf haddock-ghc-${GHC_VERSION} ${STAGEDIR}${PREFIX}/bin/haddock
- .endif
