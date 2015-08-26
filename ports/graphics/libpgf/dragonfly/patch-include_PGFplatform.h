@@ -1,8 +1,8 @@
 This is required over USES=alias because it is an install header that other
 ports use.
 
---- Codec/include/PGFplatform.h.orig	2015-07-18 06:16:02 UTC
-+++ Codec/include/PGFplatform.h
+--- include/PGFplatform.h.orig	2015-07-18 06:16:02 UTC
++++ include/PGFplatform.h
 @@ -336,7 +336,7 @@ inline OSError SetFPos(HANDLE hFile, int
  //-------------------------------------------------------------------------------
  // *BSD
