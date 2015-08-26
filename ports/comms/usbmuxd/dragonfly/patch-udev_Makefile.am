@@ -1,9 +1,0 @@
---- udev/Makefile.am.orig	2014-09-19 17:02:55 UTC
-+++ udev/Makefile.am
-@@ -1,5 +1,5 @@
- edit = \
--	$(SED) -r \
-+	$(SED) -E \
- 	-e 's|@udev_activation_rule[@]|$(udev_activation_rule)|g' \
- 	-e 's|@sbindir[@]|$(sbindir)|g' \
- 	< $< > $@ || rm $@
