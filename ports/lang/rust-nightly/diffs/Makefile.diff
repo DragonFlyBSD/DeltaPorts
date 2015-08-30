@@ -1,0 +1,47 @@
+--- Makefile.orig	2015-07-15 18:22:01.767670000 +0200
++++ Makefile	2015-08-30 15:51:03.344646000 +0200
+@@ -4,7 +4,7 @@
+ PORTNAME=	rust-nightly
+ PORTVERSION=	1.3.0.20150703
+ CATEGORIES=	lang
+-MASTER_SITES=	http://static.rust-lang.org/stage0-snapshots/:bootstrap
++MASTER_SITES=	http://www.ntecs.de/downloads/rust/:bootstrap
+ DISTFILES=	${RUST_BOOT}:bootstrap
+ EXTRACT_ONLY=	${DISTNAME}${_GITHUB_EXTRACT_SUFX} \
+ 		${DISTFILE_compiler_rt} \
+@@ -34,6 +34,7 @@
+ LICENSE_FILE=	${WRKSRC}/LICENSE-APACHE \
+ 		${WRKSRC}/LICENSE-MIT
+ 
++MAKE_JOBS_UNSAFE=yes
+ ONLY_FOR_ARCHS=	amd64
+ ONLY_FOR_ARCHS_REASON=	requires prebuilt bootstrap compiler
+ 
+@@ -45,7 +46,7 @@
+ CONFLICTS_INSTALL=	rust-nightly
+ 
+ RUST_BOOT=	rust-stage0-${RUST_BOOT_SIG}.tar.bz2
+-RUST_BOOT_SIG=	2015-05-24-ba0e1cd-freebsd-x86_64-370db40613f5c08563ed7e38357826dd42d4e0f8
++RUST_BOOT_SIG=  2015-06-12-50ab23d-dragonfly-x86_64-54171b3357723941a1025da60d090ca84634cdac
+ 
+ # Rust's libraries are named librustc_${component}-${RUST_VSN_HASH}.so.
+ # The hash depends on Rust version and channel. See
+@@ -54,6 +55,7 @@
+ RUST_CHANNEL=	${PORTNAME:S/^rust-//}
+ RUST_VSN_HASH!=	/usr/bin/printf '%s' ${RUST_VSN}-${RUST_CHANNEL} | /sbin/md5 -q | cut -c 1-8
+ PLIST_SUB+=	RUST_VSN_HASH=${RUST_VSN_HASH}
++PLIST_SUB+=	RUST_TARGET=x86_64-unknown-${OPSYS:tl}
+ 
+ USES=		gmake python:2,build
+ HAS_CONFIGURE=	yes
+@@ -81,10 +83,6 @@
+ BROKEN=		Only compiles on FreeBSD 10 and 11
+ .endif
+ 
+-.if ${OPSYS} == DragonFly
+-IGNORE=		please use lang/rust-dragonfly instead
+-.endif
+-
+ post-extract:
+ 	@(${RMDIR} ${WRKSRC}/src/compiler-rt && \
+ 	  ${MV} ${WRKSRC_compiler_rt} ${WRKSRC}/src/compiler-rt)
