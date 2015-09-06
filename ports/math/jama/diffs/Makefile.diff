@@ -1,6 +1,6 @@
---- Makefile.orig	2014-06-21 22:25:52.032886000 +0000
+--- Makefile.orig	2015-09-06 19:51:44 UTC
 +++ Makefile
-@@ -23,10 +23,10 @@ NO_BUILD=	yes
+@@ -25,12 +25,12 @@ DOCS_DISTFILES=	jama102doc.zip
  
  do-install:
  	${MKDIR} ${STAGEDIR}${PREFIX}/include/tnt
@@ -8,6 +8,8 @@
 +	${UNZIP_CMD} -o ${DISTDIR}/${DIST_SUBDIR}/${DISTNAME}${EXTRACT_SUFX} \
  		-d ${STAGEDIR}${PREFIX}/include/tnt
  	${MKDIR} ${WRKDIR}/doc ${STAGEDIR}${DOCSDIR}
+ 
+ do-install-DOCS-on:
 -	${EXTRACT_CMD} ${EXTRACT_BEFORE_ARGS} ${DISTDIR}/${DIST_SUBDIR}/jama102doc.zip \
 +	${UNZIP_CMD} -o ${DISTDIR}/${DIST_SUBDIR}/jama102doc.zip \
  		-d ${WRKDIR}/doc
