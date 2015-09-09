@@ -1,20 +1,21 @@
---- Makefile.orig	2015-05-13 13:10:26 UTC
+--- Makefile.orig	2015-09-09 11:34:30 UTC
 +++ Makefile
-@@ -5,10 +5,12 @@ PORTVERSION=	${JDK_MAJOR_VERSION}.${JDK_
+@@ -5,11 +5,13 @@ PORTVERSION=	${JDK_MAJOR_VERSION}.${JDK_
  CATEGORIES=	java devel
  MASTER_SITES=	http://download.java.net/openjdk/jdk${JDK_MAJOR_VERSION}/promoted/b${DIST_BUILD_NUMBER}/:jdk \
  		https://adopt-openjdk.ci.cloudbees.com/job/jtreg/${JTREG_JENKINS_BUILD}/artifact/:jtreg \
 +		http://dl.wolfpond.org/openjdk8/:bootstrap \
 +		http://leaf.dragonflybsd.org/~marino/dports-src/:bootstrap \
  		LOCAL/jkim:jdk,jtreg
+ PATCH_SITES=	LOCAL/glewis/openjdk8
  PKGNAMESUFFIX?=	${JDK_MAJOR_VERSION}
  DISTNAME=	${PORTNAME}-${JDK_MAJOR_VERSION}-src-b${DIST_BUILD_NUMBER}-03_mar_2014
 -DISTFILES=	${DISTNAME}.zip:jdk
 +DISTFILES=	${DISTNAME}.zip:jdk ${BOOTSTRAP_DISTFILE}
- 
- MAINTAINER=	java@FreeBSD.org
- COMMENT?=	Java Development Kit ${JDK_MAJOR_VERSION}
-@@ -74,7 +76,7 @@ _MAKE_JOBS=	#
+ PATCHFILES=	patch-8u05-b13.xz \
+ 		patch-8u11-b13.xz \
+ 		patch-8u20-b26.xz \
+@@ -178,7 +180,7 @@ _MAKE_JOBS=	#
  CPPFLAGS+=	-I${LOCALBASE}/include
  LDFLAGS+=	-L${LOCALBASE}/lib
  MAKE_ENV=	LANG="C" LC_ALL="C"
@@ -23,7 +24,7 @@
  MAKE_ENV+=	IGNORE_OLD_CONFIG=true
  MAKE_ENV+=	COMPILER_WARNINGS_FATAL="false"
  
-@@ -85,6 +87,7 @@ JRE_IMAGEDIR=	${JDK_BUILDDIR}/images/j2s
+@@ -189,6 +191,7 @@ JRE_IMAGEDIR=	${JDK_BUILDDIR}/images/j2s
  .else
  JRE_IMAGEDIR=	${JDK_BUILDDIR}/images/j2re-image
  .endif
@@ -31,7 +32,7 @@
  JDK_OSARCH=	bsd-${ARCH:S/i386/x86/:S/amd64/x86_64/}
  INSTALLDIR=	${PREFIX}/${PKGBASE}
  
-@@ -178,8 +181,15 @@ BOOTSTRAPJDKDIR=	${BJDK}
+@@ -283,8 +286,15 @@ BOOTSTRAPJDKDIR=	${BJDK}
  
  # if no valid jdk found, set dependency
  .if !defined(BOOTSTRAPJDKDIR)
@@ -46,8 +47,8 @@
 +.  endif
  .endif
  
- .if ${COMPILER_TYPE} == clang
-@@ -261,14 +271,15 @@ do-install:
+ # PR193009: work around the rtld bug
+@@ -377,14 +387,15 @@ do-install:
  	@cd ${JDK_IMAGEDIR} && ${COPYTREE_SHARE} . ${STAGEDIR}${INSTALLDIR}
  	@cd ${STAGEDIR}${INSTALLDIR} && \
  	    ${FIND} bin jre/bin -type f -exec ${CHMOD} ${BINMODE} {} \; && \

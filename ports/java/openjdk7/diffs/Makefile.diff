@@ -1,6 +1,6 @@
---- Makefile.orig	2015-07-12 09:57:27 UTC
+--- Makefile.orig	2015-09-09 11:31:47 UTC
 +++ Makefile
-@@ -11,12 +11,15 @@ MASTER_SITES=	http://download.java.net/o
+@@ -11,13 +11,16 @@ MASTER_SITES=	http://download.java.net/o
  		http://icedtea.classpath.org/download/drops/:jaxp \
  		http://download.java.net/glassfish/components/jax-ws/openjdk/jdk7/:jaxws \
  		http://icedtea.classpath.org/download/drops/:jaxws \
@@ -8,15 +8,16 @@
  		https://java.net/downloads/jax-ws/JDK7/:jaf \
  		http://icedtea.classpath.org/download/drops/:jaf \
  		APACHE/ant/binaries/:ant
+ PATCH_SITES=	LOCAL/glewis/openjdk7
  DISTFILES=	${JDK_SRC_DISTFILE}${EXTRACT_SUFX} \
 +		${BOOTSTRAP_DISTFILE}:bootstrap \
  		${ANT_DISTFILE}${EXTRACT_SUFX}:ant
  EXTRACT_ONLY=	${JDK_SRC_DISTFILE}${EXTRACT_SUFX} \
 +		${BOOTSTRAP_DISTFILE} \
  		${ANT_DISTFILE}${EXTRACT_SUFX}
- 
- MAINTAINER?=	glewis@FreeBSD.org
-@@ -71,8 +74,11 @@ RUN_DEPENDS+=	javavm:${PORTSDIR}/java/ja
+ PATCHFILES=	patch-7u45-b30.xz \
+ 		patch-7u51-b30.xz \
+@@ -78,8 +81,11 @@ RUN_DEPENDS+=	javavm:${PORTSDIR}/java/ja
  
  DOS2UNIX_FILES=	jdk/src/share/classes/com/sun/org/apache/xml/internal/security/resource/xmlsecurity_en.properties
  
@@ -29,7 +30,7 @@
  NOPRECIOUSMAKEVARS=	yes
  
  ONLY_FOR_ARCHS=	i386 amd64
-@@ -82,7 +88,7 @@ MAKE_ENV+=	LANG="C" \
+@@ -89,7 +95,7 @@ MAKE_ENV+=	LANG="C" \
  		LC_ALL="C" \
  		JAVA_HOME="" \
  		CLASSPATH="" \
@@ -38,7 +39,7 @@
  		MAKEFLAGS="" \
  		ALT_BOOTDIR="${BOOTSTRAPJDKDIR}" \
  		ALT_FREETYPE_HEADERS_PATH="${LOCALBASE}/include" \
-@@ -108,10 +114,7 @@ MAKE_ENV+=	LANG="C" \
+@@ -115,10 +121,7 @@ MAKE_ENV+=	LANG="C" \
  		BUILD_NUMBER="b${PORT_BUILD_NUMBER}"
  
  MAKE_ENV+=	HOTSPOT_BUILD_JOBS=${MAKE_JOBS_NUMBER}
@@ -50,7 +51,7 @@
  
  DEBUG_MAKE_ENV=	ALT_OBJCOPY=${NONEXISTENT}
  POLICY_MAKE_ENV=	UNLIMITED_CRYPTO=1
-@@ -119,23 +122,20 @@ TZUPDATE_RUN_DEPENDS=	java-zoneinfo>0:${
+@@ -126,23 +129,20 @@ TZUPDATE_RUN_DEPENDS=	java-zoneinfo>0:${
  
  .include <bsd.port.options.mk>
  
@@ -82,7 +83,7 @@
  MAKE_ENV+=	USE_PRECOMPILED_HEADER=0
  .endif
  
-@@ -155,6 +155,11 @@ post-patch:
+@@ -162,6 +162,11 @@ post-patch:
  		${WRKSRC}/jdk/make/java/instrument/Makefile
  .endif
  
@@ -94,7 +95,7 @@
  .if ${PORT_OPTIONS:MTZUPDATE}
  pre-install:
  	@# Update time zones
-@@ -174,6 +179,7 @@ do-install:
+@@ -181,6 +186,7 @@ do-install:
  .if !defined(BUILD_JRE)
  	cd ${WRKSRC}/build/${OPENJDK_OSARCH}/j2sdk-image && \
  	    ${PAX} -rw . ${STAGEDIR}${INSTALLDIR}
