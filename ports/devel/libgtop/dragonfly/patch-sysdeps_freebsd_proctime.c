@@ -10,7 +10,7 @@
  	buf->flags = _glibtop_sysdeps_proc_time;
  
  	/*
-@@ -101,11 +103,13 @@ glibtop_get_proc_time_p (glibtop *server
+@@ -101,6 +103,7 @@ glibtop_get_proc_time_p (glibtop *server
  	  I have no idea what this PS_INMEM is, but it works perfectly
  	  without this check.
  	 */
@@ -18,9 +18,9 @@
  	buf->utime = tv2sec_freq (pinfo [0].ki_rusage.ru_utime, buf->frequency);
  	buf->stime = tv2sec_freq (pinfo [0].ki_rusage.ru_stime, buf->frequency);
  	buf->cutime = tv2sec_freq (pinfo [0].ki_childtime, buf->frequency);
- #if (__FreeBSD_version >= 600006) || defined(__FreeBSD_kernel__)
- 	buf->cstime = tv2sec_freq (pinfo [0].ki_rusage_ch.ru_stime, buf->frequency);
-+#endif
- #else
- 	   buf->cstime = 0;
+@@ -111,4 +114,5 @@ glibtop_get_proc_time_p (glibtop *server
  #endif
+            buf->start_time = tv2sec (pinfo [0].ki_start);
+            buf->flags |= _glibtop_sysdeps_proc_time_user;
++#endif
+ }
