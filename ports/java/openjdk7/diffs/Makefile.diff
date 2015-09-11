@@ -1,10 +1,11 @@
---- Makefile.orig	2015-09-09 11:31:47 UTC
+--- Makefile.orig	2015-09-10 17:00:18 UTC
 +++ Makefile
-@@ -11,13 +11,16 @@ MASTER_SITES=	http://download.java.net/o
+@@ -11,13 +11,17 @@ MASTER_SITES=	http://download.java.net/o
  		http://icedtea.classpath.org/download/drops/:jaxp \
  		http://download.java.net/glassfish/components/jax-ws/openjdk/jdk7/:jaxws \
  		http://icedtea.classpath.org/download/drops/:jaxws \
 +		http://dl.wolfpond.org/openjdk7/:bootstrap \
++		http://leaf.dragonflybsd.org/~marino/dports-src/:bootstrap \
  		https://java.net/downloads/jax-ws/JDK7/:jaf \
  		http://icedtea.classpath.org/download/drops/:jaf \
  		APACHE/ant/binaries/:ant
@@ -17,7 +18,7 @@
  		${ANT_DISTFILE}${EXTRACT_SUFX}
  PATCHFILES=	patch-7u45-b30.xz \
  		patch-7u51-b30.xz \
-@@ -78,8 +81,11 @@ RUN_DEPENDS+=	javavm:${PORTSDIR}/java/ja
+@@ -78,8 +82,10 @@ RUN_DEPENDS+=	javavm:${PORTSDIR}/java/ja
  
  DOS2UNIX_FILES=	jdk/src/share/classes/com/sun/org/apache/xml/internal/security/resource/xmlsecurity_en.properties
  
@@ -25,7 +26,6 @@
 +JDK_ARCH=	${ARCH:S/x86_64/amd64/}
 +OPENJDK_OSARCH=	bsd-${JDK_ARCH:S/i386/i586/}
  
-+BOOTSTRAP_DISTFILE=	bootstrap-openjdk-7.9.05_2.dfly-3.3-${JDK_ARCH}.tar.xz
 +BOOTSTRAP_LIBDIRS=	${BOOTSTRAPJDKDIR}/jre/lib/${JDK_ARCH}
  NOPRECIOUSMAKEVARS=	yes
  
@@ -51,7 +51,7 @@
  
  DEBUG_MAKE_ENV=	ALT_OBJCOPY=${NONEXISTENT}
  POLICY_MAKE_ENV=	UNLIMITED_CRYPTO=1
-@@ -126,23 +129,20 @@ TZUPDATE_RUN_DEPENDS=	java-zoneinfo>0:${
+@@ -126,23 +129,21 @@ TZUPDATE_RUN_DEPENDS=	java-zoneinfo>0:${
  
  .include <bsd.port.options.mk>
  
@@ -59,11 +59,12 @@
 -.for BJDK in ${BOOTSTRAP_JDKS}
 -.  if !defined(BOOTSTRAPJDKDIR) && exists(${BJDK}/bin/javac)
 -BOOTSTRAPJDKDIR=	${BJDK}
-+.if ${OPSYS} == DragonFly && ${DFLYVERSION} > 300500
-+.  if ${DFLYVERSION} < 300503
-+BOOTSTRAP_DISTFILE= bootstrap-openjdk-7.21.11.dfly-3.5-${JDK_ARCH}.tar.xz
-+.  else
++.if ${OPSYS} == DragonFly
++.  if ${DFLYVERSION} < 400303 # after verification, openjdk6 can be used for all DF versions
 +BOOTSTRAP_DISTFILE= bootstrap-openjdk-7.25.15.dfly-3.5-${JDK_ARCH}.tar.xz
++.  else
++BOOTSTRAP_DISTFILE= bootstrap-openjdk6-6.0.tar.xz
++BUILD_DEPENDS+=	gcc48:${PORTSDIR}/lang/gcc
  .  endif
 -.endfor
 -
@@ -83,7 +84,7 @@
  MAKE_ENV+=	USE_PRECOMPILED_HEADER=0
  .endif
  
-@@ -162,6 +162,11 @@ post-patch:
+@@ -162,6 +163,11 @@ post-patch:
  		${WRKSRC}/jdk/make/java/instrument/Makefile
  .endif
  
@@ -95,7 +96,7 @@
  .if ${PORT_OPTIONS:MTZUPDATE}
  pre-install:
  	@# Update time zones
-@@ -181,6 +186,7 @@ do-install:
+@@ -181,6 +187,7 @@ do-install:
  .if !defined(BUILD_JRE)
  	cd ${WRKSRC}/build/${OPENJDK_OSARCH}/j2sdk-image && \
  	    ${PAX} -rw . ${STAGEDIR}${INSTALLDIR}
