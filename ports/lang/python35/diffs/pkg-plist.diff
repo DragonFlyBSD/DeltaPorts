@@ -1,0 +1,19 @@
+--- pkg-plist.orig	2015-09-11 22:31:55 UTC
++++ pkg-plist
+@@ -3111,11 +3111,11 @@ lib/python%%XYDOT%%/pickle.py
+ lib/python%%XYDOT%%/pickletools.py
+ lib/python%%XYDOT%%/pipes.py
+ lib/python%%XYDOT%%/pkgutil.py
+-lib/python%%XYDOT%%/plat-freebsd%%OSMAJOR%%/IN.py
+-lib/python%%XYDOT%%/plat-freebsd%%OSMAJOR%%/__pycache__/IN.cpython-%%XY%%.opt-1.pyc
+-lib/python%%XYDOT%%/plat-freebsd%%OSMAJOR%%/__pycache__/IN.cpython-%%XY%%.opt-2.pyc
+-lib/python%%XYDOT%%/plat-freebsd%%OSMAJOR%%/__pycache__/IN.cpython-%%XY%%.pyc
+-lib/python%%XYDOT%%/plat-freebsd%%OSMAJOR%%/regen
++lib/python%%XYDOT%%/plat-dragonfly%%OSMAJOR%%/IN.py
++lib/python%%XYDOT%%/plat-dragonfly%%OSMAJOR%%/__pycache__/IN.cpython-%%XY%%.opt-1.pyc
++lib/python%%XYDOT%%/plat-dragonfly%%OSMAJOR%%/__pycache__/IN.cpython-%%XY%%.opt-2.pyc
++lib/python%%XYDOT%%/plat-dragonfly%%OSMAJOR%%/__pycache__/IN.cpython-%%XY%%.pyc
++lib/python%%XYDOT%%/plat-dragonfly%%OSMAJOR%%/regen
+ lib/python%%XYDOT%%/platform.py
+ lib/python%%XYDOT%%/plistlib.py
+ lib/python%%XYDOT%%/poplib.py
