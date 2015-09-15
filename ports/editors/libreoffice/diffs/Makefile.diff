@@ -1,0 +1,16 @@
+--- Makefile.orig	2015-09-15 06:19:16 UTC
++++ Makefile
+@@ -323,7 +323,12 @@ CXXFLAGS_WARN+=	-Wno-inconsistent-missin
+ 		-Wno-unused-local-typedefs
+ .endif
+ .else
+-CXXFLAGS_WARN=	-Wshadow -Woverloaded-virtual
++CXXFLAGS_WARN=	-Wno-deprecated-declarations \
++		-Wno-undef \
++		-Wno-unused-parameter \
++		-Wno-unused-function \
++		-Wno-unused-local-typedefs \
++		-Woverloaded-virtual
+ .endif
+ 
+ pre-configure:
