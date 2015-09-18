@@ -4,7 +4,7 @@
  bin/ksystraycmd
  bin/kwin
  %%GLES%%bin/kwin_gles
-+bin/krited
++bin/kwrited
  bin/oxygen-demo
  bin/oxygen-settings
  bin/oxygen-shadow-demo
