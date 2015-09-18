@@ -1,6 +1,14 @@
---- pkg-plist.orig	2014-02-28 22:35:09.046912000 +0000
+--- pkg-plist.orig	2015-09-18 14:47:59 UTC
 +++ pkg-plist
-@@ -190,7 +190,6 @@ lib/kde4/kded_kephal.so
+@@ -28,6 +28,7 @@ bin/ksysguard
+ bin/ksystraycmd
+ bin/kwin
+ %%GLES%%bin/kwin_gles
++bin/krited
+ bin/oxygen-demo
+ bin/oxygen-settings
+ bin/oxygen-shadow-demo
+@@ -190,7 +191,6 @@ lib/kde4/kded_kephal.so
  lib/kde4/kded_keyboard.so
  lib/kde4/kded_khotkeys.so
  lib/kde4/kded_ktouchpadenabler.so
@@ -8,7 +16,15 @@
  lib/kde4/kded_powerdevil.so
  lib/kde4/kded_randrmonitor.so
  lib/kde4/kded_statusnotifierwatcher.so
-@@ -1812,7 +1811,6 @@ share/kde4/services/kded/kephal.desktop
+@@ -429,6 +429,7 @@ lib/libweather_ion.so
+ lib/libweather_ion.so.6
+ lib/libweather_ion.so.6.0.0
+ lib/strigi/strigita_font.so
++share/autostart/kwrited-autostart.desktop
+ share/applications/kde4/kdesystemsettings.desktop
+ share/applications/kde4/kfontview.desktop
+ share/applications/kde4/kinfocenter.desktop
+@@ -1810,7 +1811,6 @@ share/kde4/services/kded/kephal.desktop
  share/kde4/services/kded/keyboard.desktop
  share/kde4/services/kded/khotkeys.desktop
  share/kde4/services/kded/ktouchpadenabler.desktop
