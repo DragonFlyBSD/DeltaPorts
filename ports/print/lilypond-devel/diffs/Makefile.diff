@@ -1,0 +1,12 @@
+# zrj lets just use upstream c++11 std:: way
+--- Makefile.orig	2015-09-10 08:43:30.000000000 +0300
++++ Makefile
+@@ -81,8 +81,6 @@ PLIST_SUB+=	NLS="@comment "
+ .endif
+ 
+ post-patch:
+-	${FIND} ${WRKSRC} -name "*.cc" | ${XARGS} \
+-	    ${REINPLACE_CMD} -e 's|isinf[ ]*(|::isinf(|g' -e 's|isnan|::isnan|g'
+ 	${REINPLACE_CMD} -e 's|<FlexLexer.h>|"/usr/include/FlexLexer.h"|' \
+ 	    ${WRKSRC}/lily/include/includable-lexer.hh
+ .if !${PORT_OPTIONS:MNLS}
