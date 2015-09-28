@@ -1,0 +1,20 @@
+--- Makefile.common.orig	2015-09-28 22:26:46 UTC
++++ Makefile.common
+@@ -60,6 +60,7 @@ SHEBANG_FILES+=	src/mapi/mapi_abi.py
+ 
+ MASTERDIR=		${.CURDIR}/../../graphics/libGL
+ PATCHDIR=		${MASTERDIR}/files
++DFLY_PATCHDIR=		${MASTERDIR}/dragonfly
+ WRKSRC=			${WRKDIR}/mesa-${MESADISTVERSION}
+ DESCR=			${.CURDIR}/pkg-descr
+ PLIST=			${.CURDIR}/pkg-plist
+@@ -113,8 +114,7 @@ CONFIGURE_ARGS+=--enable-gallium-llvm \
+ CONFIGURE_ARGS+=--disable-gallium-intel
+ .endif
+ 
+-# what to do with this one? Currently disabled in dri.
+-.if ${COMPONENT:Mvdpau} == ""
++.if ${COMPONENT:Mvdpau} == "" && ${COMPONENT:Mdri} == ""
+ CONFIGURE_ARGS+=--disable-vdpau
+ .else
+ CONFIGURE_ARGS+=--enable-vdpau

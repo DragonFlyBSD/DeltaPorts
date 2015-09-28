@@ -1,0 +1,11 @@
+--- Makefile.targets.orig	2015-09-28 22:24:14 UTC
++++ Makefile.targets
+@@ -3,7 +3,7 @@
+ # this file holds common targets
+ 
+ post-patch:
+-	@${REINPLACE_CMD} -e 's|-ffast-math|${FAST_MATH}|' -e 's|x86_64|amd64|' \
++	@${REINPLACE_CMD} -e 's,\*freebsd\*),*freebsd*|*dragonfly*),g' \
+ 		-e 's|python2 python|python2disabled pythondisabled|g' \
+ 		${WRKSRC}/configure
+ 	@${REINPLACE_CMD} -e 's|/etc/|${PREFIX}/etc/|g' \
