@@ -1,6 +1,6 @@
---- pkg-plist.orig	2015-08-22 10:35:35 UTC
+--- pkg-plist.orig	2015-09-28 22:47:12 UTC
 +++ pkg-plist
-@@ -384,176 +384,176 @@ go14/misc/swig/callback/callback.swigcxx
+@@ -361,175 +361,175 @@ go14/misc/swig/callback/callback.swigcxx
  go14/misc/swig/callback/callback_test.go
  go14/misc/swig/stdio/file.swig
  go14/misc/swig/stdio/file_test.go
@@ -134,7 +134,6 @@
 -go14/pkg/freebsd_%%ARCH%%/regexp/syntax.a
 -go14/pkg/freebsd_%%ARCH%%/runtime.a
 -go14/pkg/freebsd_%%ARCH%%/runtime.h
--go14/pkg/freebsd_%%ARCH%%/runtime/cgo.a
 -go14/pkg/freebsd_%%ARCH%%/runtime/debug.a
 -go14/pkg/freebsd_%%ARCH%%/runtime/pprof.a
 -go14/pkg/freebsd_%%ARCH%%/runtime/race.a
@@ -304,7 +303,6 @@
 +go14/pkg/%%OPSYSL%%_%%ARCH%%/regexp/syntax.a
 +go14/pkg/%%OPSYSL%%_%%ARCH%%/runtime.a
 +go14/pkg/%%OPSYSL%%_%%ARCH%%/runtime.h
-+go14/pkg/%%OPSYSL%%_%%ARCH%%/runtime/cgo.a
 +go14/pkg/%%OPSYSL%%_%%ARCH%%/runtime/debug.a
 +go14/pkg/%%OPSYSL%%_%%ARCH%%/runtime/pprof.a
 +go14/pkg/%%OPSYSL%%_%%ARCH%%/runtime/race.a
@@ -347,7 +345,7 @@
  go14/robots.txt
  go14/src/Make.dist
  go14/src/all.bash
-@@ -2939,11 +2939,11 @@ go14/src/runtime/vlop_arm_test.go
+@@ -2915,11 +2915,11 @@ go14/src/runtime/vlop_arm_test.go
  go14/src/runtime/vlrt.c
  go14/src/runtime/vlrt.go
  go14/src/runtime/zaexperiment.h
