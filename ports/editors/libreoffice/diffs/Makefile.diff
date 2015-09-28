@@ -1,7 +1,7 @@
---- Makefile.orig	2015-09-15 07:12:45 UTC
+--- Makefile.orig	2015-09-28 22:44:12 UTC
 +++ Makefile
-@@ -323,7 +323,14 @@ CXXFLAGS_WARN+=	-Wno-inconsistent-missin
- 		-Wno-unused-local-typedefs
+@@ -284,7 +284,14 @@ CXXFLAGS_WARN=	-Woverloaded-virtual -Wno
+ CXXFLAGS_WARN+=	-Wno-unused-local-typedefs
  .endif
  .else
 -CXXFLAGS_WARN=	-Wshadow -Woverloaded-virtual
