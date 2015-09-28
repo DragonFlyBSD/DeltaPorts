@@ -1,4 +1,4 @@
---- pkg-plist.orig	2015-01-31 21:46:19 UTC
+--- pkg-plist.orig	2015-09-28 22:12:47 UTC
 +++ pkg-plist
 @@ -1,24 +1,6 @@
 -libexec/xpdf/pdffonts
@@ -12,7 +12,7 @@
 -libexec/xpdf/pdftotext
  %%X11%%libexec/xpdf/xpdf
  %%X11%%bin/xpdf
- etc/xpdfrc
+ etc/man.d/xpdf.conf
 -%%DATADIR%%/man/man1/pdfdetach.1.gz
 -%%DATADIR%%/man/man1/pdffonts.1.gz
 -%%DATADIR%%/man/man1/pdfimages.1.gz
