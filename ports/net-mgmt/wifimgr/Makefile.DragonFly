@@ -1,0 +1,6 @@
+#zrj: DragonFly install doesn't have -U option, using workaround
+MAKE_ENV+=	INSTALL="install"
+
+dfly-patch:
+	${REINPLACE_CMD} -e 's@\-o root \-g wheel \-m 4511 @-m 511 @g'	\
+		${WRKSRC}/src/Makefile
