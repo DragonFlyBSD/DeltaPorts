@@ -1,6 +1,6 @@
---- Makefile.orig	2015-06-11 06:34:19 UTC
+--- Makefile.orig	2015-10-01 17:11:24 UTC
 +++ Makefile
-@@ -51,6 +51,8 @@ LIB_DEPENDS=	libcairo.so:${PORTSDIR}/gra
+@@ -50,6 +50,8 @@ LIB_DEPENDS=	libcairo.so:${PORTSDIR}/gra
  		libxml2.so:${PORTSDIR}/textproc/libxml2 \
  		libwebp.so:${PORTSDIR}/graphics/webp
  
@@ -18,23 +18,23 @@
  #TODO bz@ : if you do undestand the gyp stuff, third_party/widevine/cdm/widevine_cdm.gyp talks about it (plz install libwidevinecdm.so)
  # See build/common.gypi for all the available variables.
  GYP_DEFINES+=	\
-@@ -75,6 +79,7 @@ GYP_DEFINES+=	\
- 		linux_use_heapchecker=0 \
+@@ -76,6 +80,7 @@ GYP_DEFINES+=	\
  		linux_strip_binary=1 \
+ 		use_aura=1 \
  		test_isolation_mode=noop \
 +		disable_fatal_linker_warnings=1 \
  		disable_nacl=1 \
  		enable_extensions=1 \
  		enable_one_click_signin=1 \
-@@ -192,6 +197,7 @@ CONFIGURE_ENV+=	CC="${CC}" \
+@@ -194,6 +199,7 @@ CONFIGURE_ENV+=	CC="${CC}" \
  		GYP_GENERATORS=ninja \
  		GYP_DEFINES="${GYP_DEFINES}"
  MAKE_ENV+=	BUILDTYPE=${BUILDTYPE} \
 +		GYPFLAGS=-DOS=freebsd \
  		GPERF="${LOCALBASE}/bin/gperf"
- MAKE_ARGS=	-C out/${BUILDTYPE}
  
-@@ -203,6 +209,7 @@ EXTRA_PATCHES+=	${FILESDIR}/extra-patch-
+ .include <bsd.port.pre.mk>
+@@ -204,6 +210,7 @@ EXTRA_PATCHES+=	${FILESDIR}/extra-patch-
  CFLAGS+=	-fno-stack-protector # gcc 4.8 cannot find __stack_chk_fail_local
  .else
  GYP_DEFINES+=	clang=1
@@ -42,7 +42,7 @@
  CFLAGS+=	-Wno-unknown-warning-option
  EXTRA_PATCHES+=	${FILESDIR}/extra-patch-clang
  CONFIGURE_ENV+=	AR=/usr/bin/ar
-@@ -233,12 +240,37 @@ pre-everything::
+@@ -234,12 +241,36 @@ pre-everything::
  
  post-patch:
  	@${REINPLACE_CMD} -e "s|/usr/local|${LOCALBASE}|" \
@@ -74,7 +74,6 @@
 +		${WRKSRC}/third_party/khronos/noninclude/GL/glext.h \
 +		${WRKSRC}/third_party/webgl/src/specs/latest/2.0/webgl2.idl \
 +		${WRKSRC}/third_party/WebKit/public/platform/WebGraphicsContext3D.h \
-+		${WRKSRC}/third_party/WebKit/Source/core/html/canvas/WebGL2RenderingContextBase.idl \
 +		${WRKSRC}/third_party/angle/include/GLES3/gl3.h \
 +		${WRKSRC}/third_party/angle/src/libANGLE/renderer/gl/functionsgl_enums.h
  
