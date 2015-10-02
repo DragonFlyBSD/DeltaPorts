@@ -21,7 +21,7 @@
  objfiles.h common/vec.h disasm.h mips-tdep.h ser-base.h \
  gdb_curses.h bfd-target.h memattr.h inferior.h ax.h dummy-frame.h \
 -inflow.h fbsd-nat.h ia64-libunwind-tdep.h completer.h \
-+inflow.h dflt-nat.h fbsd-nat.h ia64-libunwind-tdep.h completer.h \
++inflow.h dfly-nat.h fbsd-nat.h ia64-libunwind-tdep.h completer.h \
  solib-target.h gdb_vfork.h alpha-tdep.h dwarf2expr.h \
  m2-lang.h stack.h charset.h addrmap.h command.h solist.h source.h \
  target.h target-dcache.h prologue-value.h cp-abi.h tui/tui-hooks.h tui/tui.h \
