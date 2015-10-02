@@ -1,0 +1,13 @@
+--- pkg-plist.orig	2015-10-02 01:00:09 UTC
++++ pkg-plist
+@@ -239,10 +239,6 @@
+ %%MPIDIR%%/lib/libmpi_mpifh.so
+ %%MPIDIR%%/lib/libmpi_mpifh.so.12
+ %%MPIDIR%%/lib/libmpi_mpifh.so.12.0.0
+-%%MPIDIR%%/lib/libmpi_usempi.la
+-%%MPIDIR%%/lib/libmpi_usempi.so
+-%%MPIDIR%%/lib/libmpi_usempi.so.1
+-%%MPIDIR%%/lib/libmpi_usempi.so.1.4.0
+ %%MPIDIR%%/lib/libompitrace.la
+ %%MPIDIR%%/lib/libompitrace.so
+ %%MPIDIR%%/lib/libompitrace.so.0
