@@ -1,7 +1,7 @@
---- Makefile.orig	2014-01-26 19:14:55.321019000 +0000
+--- Makefile.orig	2015-09-19 09:41:10.000000000 +0300
 +++ Makefile
-@@ -74,12 +74,8 @@ EXTRA_PATCHES=	${FILESDIR}/extrapatch-gd
- 		${FILESDIR}/extrapatch-gdb-Makefile.in
+@@ -69,12 +69,8 @@ TUI_CONFIGURE_ENABLE=	tui
+ EXCLUDE+=	readline
  .endif
  
 -.if ${ARCH} == "amd64"
@@ -13,4 +13,4 @@
 +	@${REINPLACE_CMD} -e 's|$$| [GDB v${PORTVERSION} for ${OPSYS}]|' \
  		${WRKSRC}/gdb/version.in
  
- .if ${PORT_OPTIONS:MTHREADS}
+ post-patch-THREADS-on:
