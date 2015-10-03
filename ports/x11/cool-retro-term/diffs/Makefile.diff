@@ -1,0 +1,18 @@
+--- Makefile.orig	2015-10-03 19:06:33.000000000 +0300
++++ Makefile
+@@ -24,6 +24,7 @@ USE_LDCONFIG=	yes
+ 
+ .include <bsd.port.pre.mk>
+ 
++.if ${OPSYS} == "FreeBSD"
+ .if ${OSVERSION} < 900014 || ${ARCH} == powerpc
+ USE_GCC=	yes
+ .else
+@@ -31,6 +32,7 @@ CC=		clang
+ CXX=		clang++
+ CPP=		clang-cpp
+ .endif
++.endif
+ 
+ post-extract:
+ 	@${RMDIR} ${WRKSRC}/qmltermwidget
