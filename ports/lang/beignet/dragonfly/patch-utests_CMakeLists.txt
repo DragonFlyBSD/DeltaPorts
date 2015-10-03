@@ -1,4 +1,4 @@
---- utests/CMakeLists.txt.orig	2015-07-17 09:23:30.000000000 +0300
+--- utests/CMakeLists.txt.bak	2015-07-17 09:23:30.000000000 +0300
 +++ utests/CMakeLists.txt
 @@ -2,7 +2,7 @@ INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOUR
                      ${CMAKE_CURRENT_SOURCE_DIR}/../include)
@@ -8,21 +8,6 @@
 +EXECUTE_PROCESS(COMMAND mkdir -p generated WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
  EXECUTE_PROCESS(COMMAND ${PYTHON_EXECUTABLE} utest_math_gen.py WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} OUTPUT_VARIABLE GEN_MATH_STRING)
  string(REGEX REPLACE " " ";" ADDMATHFUNC ${GEN_MATH_STRING})
- 
-@@ -237,12 +237,12 @@ list (GET GBE_BIN_GENERATER -1 GBE_BIN_F
- if(GEN_PCI_ID)
-   ADD_CUSTOM_COMMAND(
-   OUTPUT ${kernel_bin}.bin
--  COMMAND ${GBE_BIN_GENERATER} ${kernel_bin}.cl -o${kernel_bin}.bin -t${GEN_PCI_ID}
-+  COMMAND ${GBE_BIN_GENERATER} -o${kernel_bin}.bin -t${GEN_PCI_ID} ${kernel_bin}.cl
-   DEPENDS ${GBE_BIN_FILE} ${kernel_bin}.cl)
- else(GEN_PCI_ID)
-   ADD_CUSTOM_COMMAND(
-   OUTPUT ${kernel_bin}.bin
--  COMMAND ${GBE_BIN_GENERATER} ${kernel_bin}.cl -o${kernel_bin}.bin
-+  COMMAND ${GBE_BIN_GENERATER} -o${kernel_bin}.bin ${kernel_bin}.cl
-   DEPENDS ${GBE_BIN_FILE} ${kernel_bin}.cl)
- endif(GEN_PCI_ID)
  
 @@ -250,7 +250,7 @@ ADD_CUSTOM_TARGET(kernel_bin.bin
      DEPENDS ${kernel_bin}.bin)
