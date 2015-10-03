@@ -1,0 +1,11 @@
+--- Makefile.orig	2015-10-03 13:34:34 UTC
++++ Makefile
+@@ -72,7 +72,7 @@ do-install:
+ 	${SETENV} TMPDIR=${WRKDIR}/build \
+ 		${PYTHON_CMD} ${WRKSRC}/pypy/tool/release/package.py --builddir ${WRKDIR}/build --archive-name ${PYPY_DIR} \
+ 		--without-gdbm --without-sqlite3 --without-tk
+-	${EXTRACT_CMD} -C ${STAGEDIR}${PREFIX} -xf ${WRKDIR}/build/${PYPY_DIR}.tar.bz2
++	${TAR} -C ${STAGEDIR}${PREFIX} -xf ${WRKDIR}/build/${PYPY_DIR}.tar.bz2
+ 	${LN} -fs ../${PYPY_DIR}/bin/pypy ${STAGEDIR}${PREFIX}/bin/pypy
+ 
+ regression-test: build
