@@ -1,0 +1,3 @@
+USES+= alias
+
+CXXFLAGS+= -Wno-deprecated-declarations -Wno-write-strings -Wno-unused-local-typedefs
