@@ -1,4 +1,3 @@
-USES+= alias
 
 # zrj: these to work around missing -I option in base soelim for building DOCS
 BUILD_DEPENDS+= ${LOCALBASE}/bin/groff:${PORTSDIR}/textproc/groff
