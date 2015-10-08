@@ -1,4 +1,4 @@
---- Makefile.orig	2015-07-07 19:50:44 UTC
+--- Makefile.orig	2015-10-08 10:09:57 UTC
 +++ Makefile
 @@ -130,7 +130,7 @@ RMMAN7+=	gitcvs-migration.7
  post-extract:
@@ -6,6 +6,6 @@
  	@${MKDIR} ${WRKDIR}/htmldocs
 -	@cd ${WRKDIR}/htmldocs && ${EXTRACT_CMD} ${EXTRACT_BEFORE_ARGS} \
 +	@cd ${WRKDIR}/htmldocs && ${TAR} ${EXTRACT_BEFORE_ARGS} \
- 		${DISTDIR}/${PORTNAME}-htmldocs-${PORTVERSION}${EXTRACT_SUFX} \
+ 		${DISTDIR}/${PORTNAME}-htmldocs-${DISTVERSION}${EXTRACT_SUFX} \
  		${EXTRACT_AFTER_ARGS}
  .endif
