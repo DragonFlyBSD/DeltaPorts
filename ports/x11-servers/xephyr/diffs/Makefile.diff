@@ -1,0 +1,10 @@
+--- Makefile.orig	2015-10-08 17:13:56 UTC
++++ Makefile
+@@ -20,6 +20,7 @@ CONFIGURE_ARGS=	--enable-kdrive --enable
+ 
+ SLAVE_PORT=	yes
+ PLIST_FILES=	bin/Xephyr man/man1/Xephyr.1.gz
++USE_XORG+=	presentproto
+ 
+ do-install:
+ 	${INSTALL_PROGRAM} ${WRKSRC}/hw/kdrive/ephyr/Xephyr ${STAGEDIR}${PREFIX}/bin/
