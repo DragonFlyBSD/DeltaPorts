@@ -1,0 +1,12 @@
+--- gssapi.mk.orig	2015-10-08 09:59:53 UTC
++++ gssapi.mk
+@@ -120,8 +120,7 @@ GSSAPILIBDIR=	${GSSAPIBASEDIR}/lib
+ GSSAPIINCDIR=	${GSSAPIBASEDIR}/include
+ _HEADERS+=	gssapi/gssapi.h gssapi/gssapi_krb5.h krb5.h
+ .if !defined(_KRB_BOOTSTRAP)
+-BUILD_DEPENDS+=	${_MITKRB5_DEPENDS}
+-RUN_DEPENDS+=	${_MITKRB5_DEPENDS}
++LIB_DEPENDS+=	libkrb5support.so:${PORTSDIR}/security/krb5
+ .else
+ PREFIX=		${KRB5_HOME}
+ .endif
