@@ -12,7 +12,7 @@ WRKSRC=		${WRKDIR}/${PORTNAME}-${PORTVERSION}
 CPPFLAGS+=	-I${LOCALBASE}/include
 LDFLAGS+=	-L${LOCALBASE}/lib
 
-USE_XORG=	x11 xcb
+USE_XORG=	x11 xcb xcursor
 USE_GL=		egl gbm
 
 LIB_DEPENDS=	libxkbcommon.so:${PORTSDIR}/x11/libxkbcommon		\
