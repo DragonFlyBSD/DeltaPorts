@@ -7,7 +7,7 @@ COMMENT=	Wayland Display Protocol implementation
 
 LICENSE=	MIT
 
-USES=		tar:xz gmake pkgconfig
+USES=		tar:xz gmake libtool pkgconfig
 WRKSRC=		${WRKDIR}/${PORTNAME}-${PORTVERSION}
 
 LIB_DEPENDS=	libevent.so:${PORTSDIR}/devel/libevent2	\
