@@ -11,6 +11,8 @@ USES=		tar:xz gmake libtool pkgconfig
 WRKSRC=		${WRKDIR}/${PORTNAME}-${PORTVERSION}
 
 LIB_DEPENDS=	libevent.so:${PORTSDIR}/devel/libevent2	\
+		libevent_pthreads.so:${PORTSDIR}/devel/libevent2 \
+		libexpat.so:${PORTSDIR}/textproc/expat2 \
 		libffi.so:${PORTSDIR}/devel/libffi
 
 GNU_CONFIGURE=	YES

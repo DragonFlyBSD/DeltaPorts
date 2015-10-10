@@ -251,7 +251,7 @@
 +{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_event_event_new" >&5
 +$as_echo "$ac_cv_lib_event_event_new" >&6; }
 +if test "x$ac_cv_lib_event_event_new" = xyes; then :
-+  EVENT_LIBS="-levent -levent_pthreads"
++  EVENT_LIBS="-levent"
 +fi
 +
 +
