@@ -1,5 +1,9 @@
 UNZIP_NATIVE_CMD=${UNZIP_CMD}
 
+.if (${ARCH} == "x86_64")
+DIST_EXT=	gtk-linux-x86_64
+.endif
+
 pre-configure:
 	@${SED} -e 's|freebsd|dragonfly|g' ${WRKSRC}/make_freebsd.mak \
 		> ${WRKSRC}/make_dragonfly.mak
