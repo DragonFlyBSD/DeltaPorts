@@ -5,7 +5,7 @@
  #endif
 
 -#if NEED_ULONG || __FreeBSD__
-+#if NEED_ULONG || __FreeBSD__ || __DragonFly__
++#if NEED_ULONG || __FreeBSD__ || defined(__DragonFly__)
  typedef unsigned long ulong;
  #endif
 
