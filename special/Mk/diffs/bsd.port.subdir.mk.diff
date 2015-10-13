@@ -1,7 +1,7 @@
---- bsd.port.subdir.mk.orig	2014-09-13 14:24:03 UTC
+--- bsd.port.subdir.mk.orig	2015-10-13 18:18:55 UTC
 +++ bsd.port.subdir.mk
-@@ -65,13 +65,17 @@ ARCH!=	${UNAME} -p
- .endif
+@@ -66,15 +66,19 @@ ARCH!=	${UNAME} -p
+ _EXPORTED_VARS+=	ARCH
  
  .if !defined(OSVERSION)
 -.if exists(/usr/include/sys/param.h)
@@ -22,9 +22,12 @@
 +DFLYVERSION!=	${SYSCTL} -n kern.osreldate
 +.  endif
  .endif
+-_EXPORTED_VARS+=	OSVERSION
++_EXPORTED_VARS+=	OSVERSION DFLYVERSION
  
  WITH_PKG=	yes
-@@ -124,7 +128,7 @@ UID!=	${ID} -u
+ WITH_PKGNG=	yes
+@@ -136,7 +140,7 @@ _EXPORTED_VARS+=	UID
  .endif
  
  INDEXDIR?=	${PORTSDIR}
@@ -32,12 +35,4 @@
 +INDEXFILE?=	INDEX-${DFLYVERSION:C/([0-9]*)[0-9]{5}/\1/}
  
  # local customization of the ports tree
- .if exists(${.CURDIR}/Makefile.local)
-@@ -345,6 +349,7 @@ README.html:
- 	OPSYS="${OPSYS:S/"/"'"'"/g:S/\$/\$\$/g:S/\\/\\\\/g}" \
- 	OSREL="${OSREL:S/"/"'"'"/g:S/\$/\$\$/g:S/\\/\\\\/g}" \
- 	OSVERSION="${OSVERSION:S/"/"'"'"/g:S/\$/\$\$/g:S/\\/\\\\/g}" \
-+	DFLYVERSION="${DFLYVERSION:Q}" \
- 	UID="${UID:S/"/"'"'"/g:S/\$/\$\$/g:S/\\/\\\\/g}" \
- 	HAVE_COMPAT_IA32_KERN="${HAVE_COMPAT_IA32_KERN}" \
- 	CONFIGURE_MAX_CMD_LEN="${CONFIGURE_MAX_CMD_LEN}" \
+ .sinclude "${.CURDIR}/Makefile.local"
