@@ -1,4 +1,4 @@
---- Makefile.common.orig	2015-09-28 22:26:46 UTC
+--- Makefile.common.orig	2015-10-13 19:54:53 UTC
 +++ Makefile.common
 @@ -60,6 +60,7 @@ SHEBANG_FILES+=	src/mapi/mapi_abi.py
  
@@ -8,8 +8,8 @@
  WRKSRC=			${WRKDIR}/mesa-${MESADISTVERSION}
  DESCR=			${.CURDIR}/pkg-descr
  PLIST=			${.CURDIR}/pkg-plist
-@@ -113,8 +114,7 @@ CONFIGURE_ARGS+=--enable-gallium-llvm \
- CONFIGURE_ARGS+=--disable-gallium-intel
+@@ -134,8 +135,7 @@ CONFIGURE_ARGS+=--disable-vdpau
+ PLIST_SUB+=     VDPAU="@comment "
  .endif
  
 -# what to do with this one? Currently disabled in dri.
