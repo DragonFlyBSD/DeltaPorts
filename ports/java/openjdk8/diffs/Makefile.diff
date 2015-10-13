@@ -28,7 +28,7 @@
  JRE_IMAGEDIR=	${JDK_BUILDDIR}/images/j2re-image
  .endif
 -JDK_JVMDIR=	lib/${ARCH:S/armv6/arm/}
-+JDK_JVMDIR=	lib/${ARCH:S/amd64/x86_64/:S/armv6/arm/}
++JDK_JVMDIR=	lib/${ARCH:S/x86_64/amd64/:S/armv6/arm/}
  JDK_OSARCH=	bsd-${ARCH:S/amd64/x86_64/:S/armv6/arm/:S/i386/x86/}
  INSTALLDIR=	${PREFIX}/${PKGBASE}
  
