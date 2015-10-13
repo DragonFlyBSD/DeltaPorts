@@ -1,11 +1,11 @@
---- Makefile.orig	2015-10-03 19:06:33.000000000 +0300
+--- Makefile.orig	2015-10-13 17:51:10 UTC
 +++ Makefile
 @@ -24,6 +24,7 @@ USE_LDCONFIG=	yes
  
  .include <bsd.port.pre.mk>
  
 +.if ${OPSYS} == "FreeBSD"
- .if ${OSVERSION} < 900014 || ${ARCH} == powerpc
+ .if ${ARCH} == powerpc
  USE_GCC=	yes
  .else
 @@ -31,6 +32,7 @@ CC=		clang
