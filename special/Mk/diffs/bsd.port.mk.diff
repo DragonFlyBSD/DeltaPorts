@@ -155,7 +155,7 @@
  .else
  .if !defined(_SMP_CPUS)
 -_SMP_CPUS!=		${SYSCTL} -n kern.smp.cpus
-+_MAKE_JOBS_NUMBER!=	${SYSCTL} -n hw.ncpu
++_SMP_CPUS!=		${SYSCTL} -n hw.ncpu
  .endif
  _EXPORTED_VARS+=	_SMP_CPUS
  _MAKE_JOBS_NUMBER=	${_SMP_CPUS}
