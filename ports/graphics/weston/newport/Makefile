@@ -25,6 +25,7 @@ LIB_DEPENDS=	libxkbcommon.so:${PORTSDIR}/x11/libxkbcommon		\
 		libwayland-server.so:${PORTSDIR}/graphics/wayland	\
 		libwayland-client.so:${PORTSDIR}/graphics/wayland	\
 		libwayland-cursor.so:${PORTSDIR}/graphics/wayland	\
+		libwayland-egl.so:${PORTSDIR}/graphics/libEGL		\
 		libevent.so:${PORTSDIR}/devel/libevent2			\
 		libdrm.so:${PORTSDIR}/graphics/libdrm			\
 		libpng.so:${PORTSDIR}/graphics/png			\
@@ -40,7 +41,7 @@ RUN_DEPENDS=	${LOCALBASE}/lib/libglapi.so.0:${PORTSDIR}/graphics/libglapi
 GNU_CONFIGURE=	YES
 
 CONFIGURE_ARGS+=	--with-libevent=${PREFIX}
-CONFIGURE_ARGS+=	--disable-egl --enable-weston-launch
+CONFIGURE_ARGS+=	--enable-egl --enable-weston-launch
 CONFIGURE_ARGS+=	--enable-drm-compositor --disable-rpi-compositor
 CONFIGURE_ARGS+=	--disable-fbdev-compositor --disable-vaapi-recorder
 CONFIGURE_ARGS+=	--disable-dbus --enable-setuid-install
