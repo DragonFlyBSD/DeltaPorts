@@ -1,0 +1,27 @@
+--- Makefile.orig	2015-10-05 22:48:07 +0200
++++ Makefile
+@@ -11,7 +11,9 @@
+ LIB_DEPENDS+=	libpthread-stubs.so:${PORTSDIR}/devel/libpthread-stubs \
+ 		libexpat.so:${PORTSDIR}/textproc/expat2 \
+ 		libdevq.so:${PORTSDIR}/devel/libdevq \
+-		libdrm.so:${PORTSDIR}/graphics/libdrm
++		libdrm.so:${PORTSDIR}/graphics/libdrm \
++		libwayland-client.so:${PORTSDIR}/graphics/wayland \
++		libwayland-server.so:${PORTSDIR}/graphics/wayland
+ 
+ USE_GL=		gbm
+ USE_XORG=	x11 xau xcb xdmcp
+@@ -23,8 +25,11 @@
+ .include <bsd.port.options.mk>
+ .include "${.CURDIR}/../../graphics/libGL/Makefile.common"
+ 
+-MESA_BUILD_WRKSRC=	src/mapi src/gbm src/egl/drivers/dri2 src/egl/main
+-MESA_INSTALL_WRKSRC=	src/egl/drivers/dri2 src/egl/main
++MESA_BUILD_WRKSRC=	src/egl/wayland/wayland-drm \
++			src/egl/wayland/wayland-egl \
++			src/mapi src/gbm src/egl/drivers/dri2 src/egl/main
++MESA_INSTALL_WRKSRC=	src/egl/wayland/wayland-egl src/egl/drivers/dri2 \
++			src/egl/main
+ 
+ .include "${.CURDIR}/../../graphics/libGL/Makefile.targets"
+ 

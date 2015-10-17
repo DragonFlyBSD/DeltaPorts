@@ -1,6 +1,6 @@
---- Makefile.common.orig	2015-10-13 19:54:53 UTC
+--- Makefile.common.orig	2015-10-17 16:01:48 +0200
 +++ Makefile.common
-@@ -60,6 +60,7 @@ SHEBANG_FILES+=	src/mapi/mapi_abi.py
+@@ -60,6 +60,7 @@
  
  MASTERDIR=		${.CURDIR}/../../graphics/libGL
  PATCHDIR=		${MASTERDIR}/files
@@ -8,7 +8,17 @@
  WRKSRC=			${WRKDIR}/mesa-${MESADISTVERSION}
  DESCR=			${.CURDIR}/pkg-descr
  PLIST=			${.CURDIR}/pkg-plist
-@@ -129,21 +130,22 @@ IGNORE= VDPAU option requires GALLIUM su
+@@ -75,8 +76,7 @@
+ CONFIGURE_ARGS+=	--enable-gbm
+ 
+ # libEGL, dri and clover need gallium enabled.
+-# the third option in --with-egl-platforms is wayland.
+-CONFIGURE_ARGS+=	--enable-egl --with-egl-platforms=x11,drm
++CONFIGURE_ARGS+=	--enable-egl --with-egl-platforms=x11,drm,wayland
+ 
+ CONFIGURE_ARGS+=	--enable-gles2
+ 
+@@ -129,16 +129,17 @@
  CONFIGURE_ARGS+=--enable-vdpau
  LIB_DEPENDS+=   libvdpau.so:${PORTSDIR}/multimedia/libvdpau
  PLIST_SUB+=     VDPAU=""
