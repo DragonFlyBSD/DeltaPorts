@@ -1,11 +1,12 @@
 --- Makefile.orig	2015-10-18 13:47:05 +0200
 +++ Makefile
-@@ -20,11 +20,19 @@
+@@ -20,11 +20,20 @@
  USE_XORG+=	glproto dri2proto xext xdamage xfixes presentproto \
  		xshmfence
  
 +OPTIONS_DEFINE=		WAYLAND
 +OPTIONS_DEFAULT=	WAYLAND
++OPTIONS_SUB=		yes
 +
  .include <bsd.port.options.mk>
  .include "${.CURDIR}/../../graphics/libGL/Makefile.common"

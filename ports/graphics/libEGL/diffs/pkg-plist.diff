@@ -4,8 +4,8 @@
  lib/.mesa/libEGL.so
  lib/.mesa/libEGL.so.1
  lib/.mesa/libEGL.so.1.0.0
-+lib/libwayland-egl.so
-+lib/libwayland-egl.so.1
-+lib/libwayland-egl.so.1.0.0
++%%WAYLAND%%lib/libwayland-egl.so
++%%WAYLAND%%lib/libwayland-egl.so.1
++%%WAYLAND%%lib/libwayland-egl.so.1.0.0
  libdata/pkgconfig/egl.pc
-+libdata/pkgconfig/wayland-egl.pc
++%%WAYLAND%%libdata/pkgconfig/wayland-egl.pc
