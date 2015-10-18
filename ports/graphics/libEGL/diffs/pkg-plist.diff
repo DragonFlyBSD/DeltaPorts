@@ -1,0 +1,11 @@
+--- pkg-plist.orig	2015-10-05 22:48:07 +0200
++++ pkg-plist
+@@ -7,4 +7,8 @@
+ lib/.mesa/libEGL.so
+ lib/.mesa/libEGL.so.1
+ lib/.mesa/libEGL.so.1.0.0
++%%WAYLAND%%lib/libwayland-egl.so
++%%WAYLAND%%lib/libwayland-egl.so.1
++%%WAYLAND%%lib/libwayland-egl.so.1.0.0
+ libdata/pkgconfig/egl.pc
++%%WAYLAND%%libdata/pkgconfig/wayland-egl.pc

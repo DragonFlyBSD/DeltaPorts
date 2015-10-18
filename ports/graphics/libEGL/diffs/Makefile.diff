@@ -1,0 +1,25 @@
+--- Makefile.orig	2015-10-18 13:47:05 +0200
++++ Makefile
+@@ -20,11 +20,20 @@
+ USE_XORG+=	glproto dri2proto xext xdamage xfixes presentproto \
+ 		xshmfence
+ 
++OPTIONS_DEFINE=		WAYLAND
++OPTIONS_DEFAULT=	WAYLAND
++OPTIONS_SUB=		yes
++
+ .include <bsd.port.options.mk>
+ .include "${.CURDIR}/../../graphics/libGL/Makefile.common"
+ 
+-MESA_BUILD_WRKSRC=	src/mapi src/gbm src/egl/drivers/dri2 src/egl/main
+-MESA_INSTALL_WRKSRC=	src/egl/drivers/dri2 src/egl/main
++.if ${PORT_OPTIONS:MWAYLAND}
++MESA_BUILD_WRKSRC=	src/egl/wayland/wayland-drm \
++			src/egl/wayland/wayland-egl
++MESA_INSTALL_WRKSRC=	src/egl/wayland/wayland-egl
++.endif
++MESA_BUILD_WRKSRC+=	src/mapi src/gbm src/egl/drivers/dri2 src/egl/main
++MESA_INSTALL_WRKSRC+=	src/egl/drivers/dri2 src/egl/main
+ 
+ .include "${.CURDIR}/../../graphics/libGL/Makefile.targets"
+ 
