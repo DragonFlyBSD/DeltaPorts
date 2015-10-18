@@ -1,0 +1,13 @@
+--- Makefile.orig	2015-10-18 12:53:31 +0200
++++ Makefile
+@@ -15,8 +15,8 @@
+ USE_XORG=	glproto x11 xext xxf86vm xdamage xfixes dri2proto \
+ 		presentproto xvmc xshmfence
+ 
+-OPTIONS_DEFINE=	TEXTURE
+-OPTIONS_DEFAULT=TEXTURE
++OPTIONS_DEFINE=	TEXTURE WAYLAND
++OPTIONS_DEFAULT=TEXTURE WAYLAND
+ 
+ TEXTURE_DESC=	Enable texture-float support (patent encumbered)
+ VDPAU_DESC=	VDPAU (GPU video acceleration) support (needs Gallium)

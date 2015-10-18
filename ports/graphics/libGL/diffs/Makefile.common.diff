@@ -1,4 +1,4 @@
---- Makefile.common.orig	2015-10-17 16:01:48 +0200
+--- Makefile.common.orig	2015-10-18 13:38:09 +0200
 +++ Makefile.common
 @@ -60,6 +60,7 @@
  
@@ -8,17 +8,27 @@
  WRKSRC=			${WRKDIR}/mesa-${MESADISTVERSION}
  DESCR=			${.CURDIR}/pkg-descr
  PLIST=			${.CURDIR}/pkg-plist
-@@ -75,8 +76,7 @@
+@@ -75,11 +76,18 @@
  CONFIGURE_ARGS+=	--enable-gbm
  
  # libEGL, dri and clover need gallium enabled.
 -# the third option in --with-egl-platforms is wayland.
--CONFIGURE_ARGS+=	--enable-egl --with-egl-platforms=x11,drm
++.if ${PORT_OPTIONS:MWAYLAND}
 +CONFIGURE_ARGS+=	--enable-egl --with-egl-platforms=x11,drm,wayland
++LIB_DEPENDS+=		libwayland-client.so:${PORTSDIR}/graphics/wayland
++LIB_DEPENDS+=		libwayland-server.so:${PORTSDIR}/graphics/wayland
++.else
+ CONFIGURE_ARGS+=	--enable-egl --with-egl-platforms=x11,drm
++.endif
  
  CONFIGURE_ARGS+=	--enable-gles2
  
-@@ -129,16 +129,17 @@
++WAYLAND_DESC=		Wayland display server support
++
+ # Clover (OpenCL).
+ .if ${OPSYS} == DragonFly || \
+ 	(${OPSYS} == FreeBSD && ${OSVERSION} >= 1000000 && \
+@@ -129,16 +137,17 @@
  CONFIGURE_ARGS+=--enable-vdpau
  LIB_DEPENDS+=   libvdpau.so:${PORTSDIR}/multimedia/libvdpau
  PLIST_SUB+=     VDPAU=""

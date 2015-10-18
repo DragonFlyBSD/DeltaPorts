@@ -1,27 +1,24 @@
---- Makefile.orig	2015-10-05 22:48:07 +0200
+--- Makefile.orig	2015-10-18 13:47:05 +0200
 +++ Makefile
-@@ -11,7 +11,9 @@
- LIB_DEPENDS+=	libpthread-stubs.so:${PORTSDIR}/devel/libpthread-stubs \
- 		libexpat.so:${PORTSDIR}/textproc/expat2 \
- 		libdevq.so:${PORTSDIR}/devel/libdevq \
--		libdrm.so:${PORTSDIR}/graphics/libdrm
-+		libdrm.so:${PORTSDIR}/graphics/libdrm \
-+		libwayland-client.so:${PORTSDIR}/graphics/wayland \
-+		libwayland-server.so:${PORTSDIR}/graphics/wayland
+@@ -20,11 +20,19 @@
+ USE_XORG+=	glproto dri2proto xext xdamage xfixes presentproto \
+ 		xshmfence
  
- USE_GL=		gbm
- USE_XORG=	x11 xau xcb xdmcp
-@@ -23,8 +25,11 @@
++OPTIONS_DEFINE=		WAYLAND
++OPTIONS_DEFAULT=	WAYLAND
++
  .include <bsd.port.options.mk>
  .include "${.CURDIR}/../../graphics/libGL/Makefile.common"
  
 -MESA_BUILD_WRKSRC=	src/mapi src/gbm src/egl/drivers/dri2 src/egl/main
 -MESA_INSTALL_WRKSRC=	src/egl/drivers/dri2 src/egl/main
++.if ${PORT_OPTIONS:MWAYLAND}
 +MESA_BUILD_WRKSRC=	src/egl/wayland/wayland-drm \
-+			src/egl/wayland/wayland-egl \
-+			src/mapi src/gbm src/egl/drivers/dri2 src/egl/main
-+MESA_INSTALL_WRKSRC=	src/egl/wayland/wayland-egl src/egl/drivers/dri2 \
-+			src/egl/main
++			src/egl/wayland/wayland-egl
++MESA_INSTALL_WRKSRC=	src/egl/wayland/wayland-egl
++.endif
++MESA_BUILD_WRKSRC+=	src/mapi src/gbm src/egl/drivers/dri2 src/egl/main
++MESA_INSTALL_WRKSRC+=	src/egl/drivers/dri2 src/egl/main
  
  .include "${.CURDIR}/../../graphics/libGL/Makefile.targets"
  
