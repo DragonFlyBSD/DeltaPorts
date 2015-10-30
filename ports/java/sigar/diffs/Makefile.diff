@@ -9,7 +9,7 @@
  .endif
  
 -LIBNAME=	libsigar-${ARCH:S,i386,x86,}-freebsd-${LATFORM_VER}.so
-+LIBNAME=	libsigar-${ARCH:S,i386,x86,}-${OPSYS:tl}-${LATFORM_VER}.so
++LIBNAME=	libsigar-${ARCH:S,i386,x86,}-${OPSYS:tl}-${PLATFORM_VER}.so
  
  PLIST_FILES=	%%JAVAJARDIR%%/${PORTNAME}.jar \
  		%%JAVAJARDIR%%/${LIBNAME}
