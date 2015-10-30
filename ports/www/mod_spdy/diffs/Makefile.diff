@@ -1,0 +1,21 @@
+--- Makefile.orig	2015-10-30 15:54:16 UTC
++++ Makefile
+@@ -46,17 +46,12 @@ SUB_FILES+=	mod_spdy.conf
+ SUB_LIST+=	APACHEMODDIR=${APACHEMODDIR}
+ 
+ OPTIONS_DEFINE=	GCC DEBUG
++OPTIONS_DEFAULT=	GCC
+ GCC_DESC=	Build mod_spdy with GCC 4.6+
+ 
+ .include <bsd.port.options.mk>
+ 
+ .if ${PORT_OPTIONS:MGCC}
+-BUILD_DEPENDS+=	${LOCALBASE}/bin/as:${PORTSDIR}/devel/binutils
+-CONFIGURE_ENV+=	COMPILER_PATH=${LOCALBASE}/bin
+-MAKE_ENV+=	COMPILER_PATH=${LOCALBASE}/bin
+-.endif
+-
+-.if ${PORT_OPTIONS:MGCC}
+ USE_GCC?=	yes
+ GYP_DEFINES+=	gcc_version=${CXX:S/g++//}
+ .else
