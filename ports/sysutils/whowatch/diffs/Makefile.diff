@@ -1,10 +1,10 @@
---- Makefile.orig	2013-07-13 07:59:42.140453000 +0000
+--- Makefile.orig	2015-10-30 09:36:39 UTC
 +++ Makefile
-@@ -30,6 +30,6 @@ EXTRA_PATCHES=	${PATCHDIR}/utmpx-whowatc
+@@ -20,6 +20,6 @@ PLIST_FILES=	bin/whowatch man/man1/${POR
  
  pre-patch:
  	@${FIND} ${WRKSRC} -name 'proc????.c' | ${XARGS} ${REINPLACE_CMD} -E \
 -		-e 's/kp_.?proc\.._/ki_/ ; s/pcred\.p_//'
 +		-e 's/kp_.?proc\.._/kp_/ ; s/pcred\.p_//'
  
- .include <bsd.port.post.mk>
+ .include <bsd.port.mk>

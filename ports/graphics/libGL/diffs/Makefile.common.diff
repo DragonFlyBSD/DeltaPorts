@@ -1,4 +1,4 @@
---- Makefile.common.orig	2015-10-13 19:54:53 UTC
+--- Makefile.common.orig	2015-10-30 09:58:44 UTC
 +++ Makefile.common
 @@ -60,6 +60,7 @@ SHEBANG_FILES+=	src/mapi/mapi_abi.py
  
@@ -8,7 +8,7 @@
  WRKSRC=			${WRKDIR}/mesa-${MESADISTVERSION}
  DESCR=			${.CURDIR}/pkg-descr
  PLIST=			${.CURDIR}/pkg-plist
-@@ -129,21 +130,22 @@ IGNORE= VDPAU option requires GALLIUM su
+@@ -124,16 +125,17 @@ IGNORE= VDPAU option requires GALLIUM su
  CONFIGURE_ARGS+=--enable-vdpau
  LIB_DEPENDS+=   libvdpau.so:${PORTSDIR}/multimedia/libvdpau
  PLIST_SUB+=     VDPAU=""
@@ -28,4 +28,4 @@
 +PLIST_SUB+=     VDPAU=""
  .endif
  
- ALL_DRI_DRIVERS=I915 I965 R200 RADEON SWRAST
+ # VAAPI support?

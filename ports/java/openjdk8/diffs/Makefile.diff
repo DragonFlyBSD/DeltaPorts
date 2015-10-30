@@ -1,4 +1,4 @@
---- Makefile.orig	2015-10-13 20:19:38 UTC
+--- Makefile.orig	2015-10-30 09:50:57 UTC
 +++ Makefile
 @@ -5,10 +5,12 @@ PORTVERSION=	${JDK_MAJOR_VERSION}.${JDK_
  CATEGORIES=	java devel
@@ -27,9 +27,9 @@
  .else
  JRE_IMAGEDIR=	${JDK_BUILDDIR}/images/j2re-image
  .endif
--JDK_JVMDIR=	lib/${ARCH:S/armv6/arm/}
-+JDK_JVMDIR=	lib/${ARCH:S/x86_64/amd64/:S/armv6/arm/}
- JDK_OSARCH=	bsd-${ARCH:S/amd64/x86_64/:S/armv6/arm/:S/i386/x86/}
+-JDK_JVMDIR=	lib/${ARCH:C/armv6.*/arm/}
++JDK_JVMDIR=	lib/${ARCH:S/x86_64/amd64/:C/armv6.*/arm/}
+ JDK_OSARCH=	bsd-${ARCH:S/amd64/x86_64/:C/armv6.*/arm/:S/i386/x86/}
  INSTALLDIR=	${PREFIX}/${PKGBASE}
  
 @@ -307,8 +309,15 @@ BOOTSTRAPJDKDIR=	${BJDK}
