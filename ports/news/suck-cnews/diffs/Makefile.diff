@@ -1,0 +1,11 @@
+--- Makefile.orig	2015-11-02 00:19:58 UTC
++++ Makefile
+@@ -8,6 +8,8 @@ MASTERDIR=	${.CURDIR}/../suck
+ 
+ OPTIONS_DEFAULT=	SSL CNEWS
+ 
++IGNORE=	requires news/suck which is broken (thus not in dports)
++
+ .if exists(${.CURDIR}/Makefile.local)
+ .include "${.CURDIR}/Makefile.local"
+ .endif
