@@ -1,4 +1,4 @@
---- bsd.port.mk.orig	2015-10-13 18:54:03 UTC
+--- bsd.port.mk.orig	2015-11-04 22:00:01 UTC
 +++ bsd.port.mk
 @@ -43,7 +43,8 @@ FreeBSD_MAINTAINER=	portmgr@FreeBSD.org
  #				  makefile is being used on.  Automatically set to
@@ -320,7 +320,7 @@
  .endif
  
  .if !target(run-autotools-fixup)
-@@ -4463,7 +4547,7 @@ FETCH_LIST?=	for i in $$deps; do \
+@@ -4476,7 +4560,7 @@ FETCH_LIST?=	for i in $$deps; do \
  			else	\
  				continue;	\
  			fi;;	\
@@ -329,7 +329,7 @@
  				continue;	\
  			fi;;	\
  		esac;	\
-@@ -4825,10 +4909,15 @@ _SUB_LIST_TEMP=	${SUB_LIST:S/$/!g/:S/^/
+@@ -4831,10 +4915,15 @@ _SUB_LIST_TEMP=	${SUB_LIST:S/$/!g/:S/^/
  apply-slist:
  .if defined(SUB_FILES)
  .for file in ${SUB_FILES}
@@ -348,7 +348,7 @@
  .endif
  .endfor
  .for i in pkg-message pkg-install pkg-deinstall pkg-req
-@@ -5687,6 +5776,7 @@ _PATCH_DEP=		extract
+@@ -5693,6 +5782,7 @@ _PATCH_DEP=		extract
  _PATCH_SEQ=		050:ask-license 100:patch-message 150:patch-depends \
  				300:pre-patch 450:pre-patch-script 500:do-patch \
  				700:post-patch 850:post-patch-script \
