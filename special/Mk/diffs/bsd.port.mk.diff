@@ -1,4 +1,4 @@
---- bsd.port.mk.orig	2015-11-05 09:16:16 UTC
+--- bsd.port.mk.orig	2015-11-05 09:41:19 UTC
 +++ bsd.port.mk
 @@ -43,7 +43,8 @@ FreeBSD_MAINTAINER=	portmgr@FreeBSD.org
  #				  makefile is being used on.  Automatically set to
@@ -324,7 +324,7 @@
  	@if [ -d ${WRKDIR} ]; then \
  		if [ -w ${WRKDIR} ]; then \
  			${RM} -rf ${WRKDIR}; \
-+			${FIND} ${WRKDIR:H} -type d -empty -delete; \
++			${FIND} ${WRKDIR:H} -type d -maxdepth 1 -empty -delete; \
  		else \
  			${ECHO_MSG} "===>   ${WRKDIR} not writable, skipping"; \
  		fi; \
