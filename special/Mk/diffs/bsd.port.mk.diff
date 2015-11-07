@@ -255,23 +255,23 @@
 -		then \
 -			exit 1; \
 +		if [ -n "${EXTRACT_CMD}" -a -z "${_INCLUDE_USES_ZIP_MK}" -a -z "${_INCLUDE_USES_LHA_MK}" ]; then \
-+			if ! (cd $${EXTRACT_WRKDIR} && ${EXTRACT_CMD} ${EXTRACT_BEFORE_ARGS} ${_DISTDIR}/$$file ${EXTRACT_AFTER_ARGS});\
++			if ! (cd ${EXTRACT_WRKDIR} && ${EXTRACT_CMD} ${EXTRACT_BEFORE_ARGS} ${_DISTDIR}/$$file ${EXTRACT_AFTER_ARGS});\
 +			then \
 +				exit 1; \
 +			fi; \
 +		else \
 +			case $${file} in \
 +			*.tar|*.tbz|*.tgz|*.txz|*.tar.bz2|*.tar.gz|*.tar.lzma|*.tar.xz|*.tar.Z) \
-+				if ! (cd $${EXTRACT_WRKDIR} && ${TAR} ${TAR_BEFORE_ARGS} ${_DISTDIR}/$$file ${TAR_AFTER_ARGS}); \
++				if ! (cd ${EXTRACT_WRKDIR} && ${TAR} ${TAR_BEFORE_ARGS} ${_DISTDIR}/$$file ${TAR_AFTER_ARGS}); \
 +				then exit 1; fi; ;; \
 +			*.lzh) \
-+				if ! (cd $${EXTRACT_WRKDIR} && ${LHA_CMD} ${LHA_BEFORE_ARGS} ${_DISTDIR}/$$file ${LHA_AFTER_ARGS}); \
++				if ! (cd ${EXTRACT_WRKDIR} && ${LHA_CMD} ${LHA_BEFORE_ARGS} ${_DISTDIR}/$$file ${LHA_AFTER_ARGS}); \
 +				then exit 1; fi; ;; \
 +			*.zip|*.ZIP|*.xpi) \
-+				if ! (cd $${EXTRACT_WRKDIR} && ${ZIP_EXTRACT_CMD} ${ZIP_BEFORE_ARGS} ${_DISTDIR}/$$file ${ZIP_AFTER_ARGS}); \
++				if ! (cd ${EXTRACT_WRKDIR} && ${ZIP_EXTRACT_CMD} ${ZIP_BEFORE_ARGS} ${_DISTDIR}/$$file ${ZIP_AFTER_ARGS}); \
 +				then exit 1; fi; ;; \
 +			*) \
-+				if ! (cd $${EXTRACT_WRKDIR} && ${TAR} ${EXTRACT_BEFORE_ARGS} ${_DISTDIR}/$$file ${EXTRA_AFTER_ARGS}); \
++				if ! (cd ${EXTRACT_WRKDIR} && ${TAR} ${EXTRACT_BEFORE_ARGS} ${_DISTDIR}/$$file ${EXTRA_AFTER_ARGS}); \
 +				then exit 1; fi; ;; \
 +			esac ; \
  		fi; \
