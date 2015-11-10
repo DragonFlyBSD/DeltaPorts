@@ -5,7 +5,7 @@
  
  OPTIONS_DEFINE=	GCC DEBUG
 +OPTIONS_DEFAULT=	GCC
- GCC_DESC=	Build mod_spdy with GCC 4.6+
+ GCC_DESC=	Build with current GCC
  
  .include <bsd.port.options.mk>
  
