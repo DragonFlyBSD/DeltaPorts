@@ -5,7 +5,7 @@
  #include <sal/alloca.h>
  #endif
 -#if !(defined(MACOSX) || defined(IOS) || defined(FREEBSD))
-+#if !(defined(MACOSX) || defined(IOS) || defined(FREEBSD) || defined(__DragonFly__)
++#if !(defined(MACOSX) || defined(IOS) || defined(FREEBSD) || defined(__DragonFly__))
  #include <malloc.h>
  #endif
  #include <rtl/alloc.h>
