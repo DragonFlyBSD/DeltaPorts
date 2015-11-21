@@ -1,0 +1,127 @@
+Index: tools/clang/lib/Driver/ToolChains.cpp
+===================================================================
+--- tools/clang/lib/Driver/ToolChains.cpp	(revision 170974)
++++ tools/clang/lib/Driver/ToolChains.cpp	(working copy)
+@@ -2620,9 +2620,7 @@
+   if (getDriver().getInstalledDir() != getDriver().Dir)
+     getProgramPaths().push_back(getDriver().Dir);
+ 
+-  getFilePaths().push_back(getDriver().Dir + "/../lib");
+   getFilePaths().push_back("/usr/lib");
+-  getFilePaths().push_back("/usr/lib/gcc41");
+ }
+ 
+ Tool &DragonFly::SelectTool(const Compilation &C, const JobAction &JA,
+Index: tools/clang/lib/Driver/Tools.cpp
+===================================================================
+--- tools/clang/lib/Driver/Tools.cpp	(revision 170974)
++++ tools/clang/lib/Driver/Tools.cpp	(working copy)
+@@ -5819,6 +5819,9 @@
+     }
+   }
+ 
++  CmdArgs.push_back("--hash-style=gnu");
++  CmdArgs.push_back("--enable-new-dtags");
++
+   // When building 32-bit code on DragonFly/pc64, we have to explicitly
+   // instruct ld in the base system to link 32-bit code.
+   if (getToolChain().getArch() == llvm::Triple::x86) {
+@@ -5860,14 +5863,14 @@
+       !Args.hasArg(options::OPT_nodefaultlibs)) {
+     // FIXME: GCC passes on -lgcc, -lgcc_pic and a whole lot of
+     //         rpaths
+-    CmdArgs.push_back("-L/usr/lib/gcc41");
++    CmdArgs.push_back("-L/usr/lib/gcc50");
+ 
+     if (!Args.hasArg(options::OPT_static)) {
+       CmdArgs.push_back("-rpath");
+-      CmdArgs.push_back("/usr/lib/gcc41");
++      CmdArgs.push_back("/usr/lib/gcc50");
+ 
+       CmdArgs.push_back("-rpath-link");
+-      CmdArgs.push_back("/usr/lib/gcc41");
++      CmdArgs.push_back("/usr/lib/gcc50");
+ 
+       CmdArgs.push_back("-rpath");
+       CmdArgs.push_back("/usr/lib");
+@@ -5881,10 +5884,23 @@
+       CmdArgs.push_back("-lm");
+     }
+ 
+-    if (Args.hasArg(options::OPT_shared)) {
+-      CmdArgs.push_back("-lgcc_pic");
++    if (Args.hasArg(options::OPT_static) ||
++        Args.hasArg(options::OPT_static_libgcc) {
++        CmdArgs.push_back("-lgcc");
++        CmdArgs.push_back("-lgcc_eh");
+     } else {
+-      CmdArgs.push_back("-lgcc");
++      if (D.CCCIsCXX) {
++        if (Args.hasArg(options::OPT_shared)) {
++          CmdArgs.push_back("-lgcc_pic");
++        } else {
++          CmdArgs.push_back("-lgcc");
++        }
++      } else {
++        CmdArgs.push_back("-lgcc");
++        CmdArgs.push_back("--as-needed");
++        CmdArgs.push_back("-lgcc_pic");
++        CmdArgs.push_back("--no-as-needed");
++      }
+     }
+ 
+ 
+@@ -5895,10 +5911,23 @@
+       CmdArgs.push_back("-lc");
+     }
+ 
+-    if (Args.hasArg(options::OPT_shared)) {
+-      CmdArgs.push_back("-lgcc_pic");
++    if (Args.hasArg(options::OPT_static) ||
++        Args.hasArg(options::OPT_static_libgcc) {
++        CmdArgs.push_back("-lgcc");
++        CmdArgs.push_back("-lgcc_eh");
+     } else {
+-      CmdArgs.push_back("-lgcc");
++      if (D.CCCIsCXX) {
++        if (Args.hasArg(options::OPT_shared)) {
++          CmdArgs.push_back("-lgcc_pic");
++        } else {
++          CmdArgs.push_back("-lgcc");
++        }
++      } else {
++        CmdArgs.push_back("-lgcc");
++        CmdArgs.push_back("--as-needed");
++        CmdArgs.push_back("-lgcc_pic");
++        CmdArgs.push_back("--no-as-needed");
++      }
+     }
+   }
+ 
+Index: tools/clang/lib/Frontend/InitHeaderSearch.cpp
+===================================================================
+--- tools/clang/lib/Frontend/InitHeaderSearch.cpp	(revision 170974)
++++ tools/clang/lib/Frontend/InitHeaderSearch.cpp	(working copy)
+@@ -407,7 +407,7 @@
+ #endif
+     break;
+   case llvm::Triple::DragonFly:
+-    AddPath("/usr/include/c++/4.1", CXXSystem, true, false, false);
++    AddPath("/usr/include/c++/5.0", CXXSystem, true, false, false);
+     break;
+   case llvm::Triple::FreeBSD:
+     // FreeBSD 8.0
+Index: tools/clang/test/Driver/dragonfly.c
+===================================================================
+--- tools/clang/test/Driver/dragonfly.c	(revision 170974)
++++ tools/clang/test/Driver/dragonfly.c	(working copy)
+@@ -1,7 +1,7 @@
+-// RUN: %clang -no-canonical-prefixes -target amd64-pc-dragonfly %s -### 2> %t.log
++// RUN: %clang -no-canonical-prefixes -target x86_64-pc-dragonfly %s -### 2> %t.log
+ // RUN: FileCheck -input-file %t.log %s
+ 
+-// CHECK: clang{{.*}}" "-cc1" "-triple" "amd64-pc-dragonfly"
++// CHECK: clang{{.*}}" "-cc1" "-triple" "x86_64-pc-dragonfly"
+ // CHECK: ld{{.*}}" "-dynamic-linker" "{{.*}}ld-elf.{{.*}}" "-o" "a.out" "{{.*}}crt1.o" "{{.*}}crti.o" "{{.*}}crtbegin.o" "{{.*}}.o" "-L{{.*}}/gcc{{.*}}" {{.*}} "-lc" "-lgcc" "{{.*}}crtend.o" "{{.*}}crtn.o"
+ 
+ 
