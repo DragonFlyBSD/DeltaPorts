@@ -14,11 +14,9 @@ Index: tools/clang/lib/Driver/ToolChains.cpp
  }
  
  Tool *DragonFly::buildAssembler() const {
-Index: tools/clang/lib/Driver/Tools.cpp
-===================================================================
---- tools/clang/lib/Driver/Tools.cpp	(revision 253789)
-+++ tools/clang/lib/Driver/Tools.cpp	(working copy)
-@@ -8969,7 +8969,6 @@
+--- tools/clang/lib/Driver/Tools.cpp.orig	2015-11-21 17:52:35 UTC
++++ tools/clang/lib/Driver/Tools.cpp
+@@ -8933,7 +8933,6 @@ void dragonfly::Linker::ConstructJob(Com
                                       const char *LinkingOutput) const {
    const Driver &D = getToolChain().getDriver();
    ArgStringList CmdArgs;
@@ -26,7 +24,7 @@ Index: tools/clang/lib/Driver/Tools.cpp
  
    if (!D.SysRoot.empty())
      CmdArgs.push_back(Args.MakeArgString("--sysroot=" + D.SysRoot));
-@@ -8986,7 +8985,8 @@
+@@ -8950,7 +8949,8 @@ void dragonfly::Linker::ConstructJob(Com
        CmdArgs.push_back("-dynamic-linker");
        CmdArgs.push_back("/usr/libexec/ld-elf.so.2");
      }
@@ -36,10 +34,10 @@ Index: tools/clang/lib/Driver/Tools.cpp
    }
  
    // When building 32-bit code on DragonFly/pc64, we have to explicitly
-@@ -9032,21 +9032,11 @@
-   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs);
+@@ -8998,21 +8998,11 @@ void dragonfly::Linker::ConstructJob(Com
  
-   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
+   if (!Args.hasArg(options::OPT_nostdlib) &&
+       !Args.hasArg(options::OPT_nodefaultlibs)) {
 -    // FIXME: GCC passes on -lgcc, -lgcc_pic and a whole lot of
 -    //         rpaths
 -    if (UseGCC47)
@@ -57,11 +55,11 @@ Index: tools/clang/lib/Driver/Tools.cpp
 -        CmdArgs.push_back("/usr/lib/gcc44");
 -      }
 +      CmdArgs.push_back("-rpath");
-+      CmdArgs.push_back("/usr/lib/gcc50");
++      CmdArgs.push_back("/usr/lib/gcc47");
      }
  
      if (D.CCCIsCXX()) {
-@@ -9054,6 +9044,25 @@
+@@ -9020,6 +9010,25 @@ void dragonfly::Linker::ConstructJob(Com
        CmdArgs.push_back("-lm");
      }
  
@@ -87,7 +85,7 @@ Index: tools/clang/lib/Driver/Tools.cpp
      if (Args.hasArg(options::OPT_pthread))
        CmdArgs.push_back("-lpthread");
  
-@@ -9061,28 +9070,22 @@
+@@ -9027,28 +9036,22 @@ void dragonfly::Linker::ConstructJob(Com
        CmdArgs.push_back("-lc");
      }
  
