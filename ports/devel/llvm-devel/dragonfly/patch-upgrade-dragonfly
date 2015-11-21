@@ -55,16 +55,15 @@ Index: tools/clang/lib/Driver/ToolChains.cpp
 -        CmdArgs.push_back("/usr/lib/gcc44");
 -      }
 +      CmdArgs.push_back("-rpath");
-+      CmdArgs.push_back("/usr/lib/gcc47");
++      CmdArgs.push_back("/usr/lib/gcc50");
      }
  
      if (D.CCCIsCXX()) {
-@@ -9020,6 +9010,25 @@ void dragonfly::Linker::ConstructJob(Com
+@@ -9020,35 +9010,45 @@ void dragonfly::Linker::ConstructJob(Com
        CmdArgs.push_back("-lm");
      }
  
-+    if (Args.hasArg(options::OPT_static) ||
-+        Args.hasArg(options::OPT_static_libgcc) {
++    if (Args.hasArg(options::OPT_static, options::OPT_static_libgcc) {
 +        CmdArgs.push_back("-lgcc");
 +        CmdArgs.push_back("-lgcc_eh");
 +    } else {
@@ -85,15 +84,15 @@ Index: tools/clang/lib/Driver/ToolChains.cpp
      if (Args.hasArg(options::OPT_pthread))
        CmdArgs.push_back("-lpthread");
  
-@@ -9027,28 +9036,22 @@ void dragonfly::Linker::ConstructJob(Com
+-    if (!Args.hasArg(options::OPT_nolibc)) {
++    if (!Args.hasArg(options::OPT_nolibc))
        CmdArgs.push_back("-lc");
-     }
+-    }
  
 -    if (UseGCC47) {
 -      if (Args.hasArg(options::OPT_static) ||
 -          Args.hasArg(options::OPT_static_libgcc)) {
-+    if (Args.hasArg(options::OPT_static) ||
-+        Args.hasArg(options::OPT_static_libgcc) {
++    if (Args.hasArg(options::OPT_static, options::OPT_static_libgcc) {
          CmdArgs.push_back("-lgcc");
          CmdArgs.push_back("-lgcc_eh");
 -      } else {
