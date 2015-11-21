@@ -67,7 +67,7 @@ Index: tools/clang/lib/Driver/ToolChains.cpp
 +        CmdArgs.push_back("-lgcc");
 +        CmdArgs.push_back("-lgcc_eh");
 +    } else {
-+      if (D.CCCIsCXX) {
++      if (D.CCCIsCXX()) {
 +        if (Args.hasArg(options::OPT_shared)) {
 +          CmdArgs.push_back("-lgcc_pic");
 +        } else {
@@ -98,7 +98,7 @@ Index: tools/clang/lib/Driver/ToolChains.cpp
 -      } else {
 -        if (Args.hasArg(options::OPT_shared_libgcc)) {
 +    } else {
-+      if (D.CCCIsCXX) {
++      if (D.CCCIsCXX()) {
 +        if (Args.hasArg(options::OPT_shared)) {
            CmdArgs.push_back("-lgcc_pic");
 -          if (!Args.hasArg(options::OPT_shared))
