@@ -63,7 +63,7 @@ Index: tools/clang/lib/Driver/ToolChains.cpp
        CmdArgs.push_back("-lm");
      }
  
-+    if (Args.hasArg(options::OPT_static, options::OPT_static_libgcc) {
++    if (Args.hasArg(options::OPT_static, options::OPT_static_libgcc)) {
 +        CmdArgs.push_back("-lgcc");
 +        CmdArgs.push_back("-lgcc_eh");
 +    } else {
@@ -92,7 +92,7 @@ Index: tools/clang/lib/Driver/ToolChains.cpp
 -    if (UseGCC47) {
 -      if (Args.hasArg(options::OPT_static) ||
 -          Args.hasArg(options::OPT_static_libgcc)) {
-+    if (Args.hasArg(options::OPT_static, options::OPT_static_libgcc) {
++    if (Args.hasArg(options::OPT_static, options::OPT_static_libgcc)) {
          CmdArgs.push_back("-lgcc");
          CmdArgs.push_back("-lgcc_eh");
 -      } else {
