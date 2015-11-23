@@ -1,0 +1,11 @@
+--- Makefile.orig	2015-11-23 17:55:37 UTC
++++ Makefile
+@@ -52,7 +52,7 @@ USE_GNOME=	libxml2
+ # make sure LOCALBASE is placed at the end of the compiler lookup so the configure
+ # script can find openjpeg2 headers before the openjpeg15 headers
+ CPPFLAGS+=	-isystem${LOCALBASE}/include
+-LDFLAGS+=	-Wl,-Y${LOCALBASE}/lib
++LDFLAGS+=	-Wl,-Y/usr/lib:${LOCALBASE}/lib
+ 
+ SAMPLE_FILES=	coder.xml colors.xml delegates.xml log.xml magic.xml mime.xml \
+ 		policy.xml quantization-table.xml thresholds.xml type-dejavu.xml \
