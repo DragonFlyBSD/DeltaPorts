@@ -1,0 +1,12 @@
+When gold linker is used, it wants libpthread linked in, but since
+cmake is used, it's harder to add in than it is to force ld.bfd use.
+
+--- Makefile.orig       2015-11-25 20:23:24 UTC
++++ Makefile
+@@ -4,5 +4,6 @@ PKGNAMESUFFIX=  -qt4
+
+ COMMENT=       Qt 4 based IRC client
+
++MAKE_ENV+=     LDVER=ld.bfd
+ MASTERDIR=     ${.CURDIR}/../kvirc
+ .include "${MASTERDIR}/Makefile"
