@@ -1,24 +1,10 @@
---- Makefile.orig	2014-06-20 13:07:30.721318000 +0000
+--- Makefile.orig	2015-11-29 01:24:48 UTC
 +++ Makefile
-@@ -14,8 +14,9 @@ WRKSRC=		${WRKDIR}/${DISTNAME}/nspr/buil
- USES=		gmake
- USE_LDCONFIG=	yes
+@@ -15,6 +15,7 @@ CPE_VENDOR=	mozilla
+ CPE_PRODUCT=	netscape_portable_runtime
+ WRKSRC_SUBDIR=	nspr
  GNU_CONFIGURE=	yes
--CONFIGURE_SCRIPT=../configure
 +USE_AUTOTOOLS=	autoconf
- CONFIGURE_ARGS=	--srcdir=${WRKSRC:H}
-+CONFIGURE_WRKSRC= ${WRKSRC}/..
+ USE_LDCONFIG=	yes
  
- MAKE_ENV=	DIST=${WRKSRC}/dist
- 
-@@ -31,6 +32,10 @@ BROKEN=		Does not compile on arm
- CONFIGURE_ARGS+=--disable-debug
- .endif
- 
-+do-configure:
-+	cd ${WRKSRC} && ${CONFIGURE_ENV} \
-+		../${CONFIGURE_SCRIPT} ${CONFIGURE_ARGS}
-+
- do-install:
- 	${MKDIR} ${STAGEDIR}${PREFIX}/include/nspr
- 	${TAR} -C ${WRKSRC}/dist/include --dereference -cf - . | \
+ OPTIONS_DEFINE=	DEBUG TEST
