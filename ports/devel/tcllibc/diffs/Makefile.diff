@@ -1,5 +1,14 @@
---- Makefile.orig	2015-06-30 09:19:12.000000000 +0300
+--- Makefile.orig	2015-11-30 12:26:18 UTC
 +++ Makefile
+@@ -6,7 +6,7 @@ PKGNAMESUFFIX=	c
+ COMMENT=	Compiled implementations of some of the modules of Tcllib
+ 
+ BUILD_DEPENDS=	critcl:${PORTSDIR}/devel/critcl
+-RUN_DEPENDS=	${PREFIX}/lib/tcllib/pkgIndex.tcl:${MASTERDIR}	# PREFIX, not LOCALBASE
++RUN_DEPENDS=	${PREFIX}/lib/tcllib/pkgIndex.tcl:${PORTSDIR}/devel/tcllib
+ 
+ MASTERDIR=	${.CURDIR:H}/tcllib
+ TMPPLIST=		${WRKDIR}/PLIST
 @@ -17,6 +17,9 @@ OPTIONS_DEFINE=
  post-patch:
  	cd ${WRKSRC}/modules/json/c && ${YACC} -b json json.y
