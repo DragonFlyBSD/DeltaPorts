@@ -67,6 +67,7 @@ transform ()
 	 -e 's|_ON_amd64|_ON_x86_64|g' \
 	 -e 's|_OFF_amd64|_OFF_x86_64|g' \
 	 -e 's|CFLAGS_amd64|CFLAGS_x86_64|g' \
+	 -e 's|{ARCH:Mamd64}|{ARCH:Mx86_64}|g' \
          -e '/ARCH}.*(amd64|"amd64")/s|amd64|x86_64|g' \
          > ${WORK}/${item}.filtered
       mv ${WORK}/${item}.filtered ${WORK}/${item}
