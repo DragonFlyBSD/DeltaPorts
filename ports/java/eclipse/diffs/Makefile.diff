@@ -1,17 +1,17 @@
---- Makefile.orig	2015-03-26 10:38:39 UTC
+--- Makefile.orig	2015-12-03 11:26:08 UTC
 +++ Makefile
-@@ -62,8 +62,8 @@ MVN_LOCAL_REPO=	-Dmaven.repo.local=${WRK
- MVN_TEST_FLAG=	-Dmaven.test.skip=true
- MVN_SETTINGS+=	--offline
+@@ -66,8 +66,8 @@ MVN_TEST_FLAG=	-Dmaven.test.skip=true -D
+ #MVN_SETTINGS+=	--offline
+ MVN_OPTS?=	MAVEN_OPTS='-Xms1024m -Xmx1792m'
  ECLIPSE_WS=	gtk
 -ECLIPSE_ARCH=	x86${ARCH:C/^i.86//:C/^amd/_/}
 -E_SHORTARCH=	${ARCH:C/^i.86//:C/^amd//}
 +ECLIPSE_ARCH=	x86${ARCH:C/^i.86//:C/^amd/_/:S/x86_64/_64/}
 +E_SHORTARCH=	${ARCH:C/^i.86//:C/^amd//:S/x86_64/64/}
- ECLIPSE_BUILDID=M20150204-1700
+ ECLIPSE_BUILDID=I20150603-2000
  SCRIPTS_ENV+=	ECLIPSE_ARCH=${ECLIPSE_ARCH} \
  		E_SHORTARCH=${E_SHORTARCH}
-@@ -91,6 +91,8 @@ post-patch:
+@@ -95,6 +95,8 @@ post-patch:
  	  ${ECHO_MSG} "Updating ECLIPSE_ARCH in file $$f"; \
  	  ${REINPLACE_CMD} -e "s|%%ECLIPSE_ARCH%%|${ECLIPSE_ARCH}|g" ${WRKSRC}/$$f; \
  	done)
@@ -19,4 +19,4 @@
 +		${XARGS} -0 ${REINPLACE_CMD} -e 's|`uname -s|`echo FreeBSD|g'
  
  do-build:
- 	@(cd ${WRKSRC}; ${SETENV} JAVA_HOME=${JAVA_HOME} M2_HOME=${LOCALBASE}/share/java/maven31 ${MVN_OPTS} \
+ 	@(cd ${WRKSRC}; ${SETENV} JAVA_HOME=${JAVA_HOME} M2_HOME=${LOCALBASE}/share/java/maven33 ${MVN_OPTS} \
