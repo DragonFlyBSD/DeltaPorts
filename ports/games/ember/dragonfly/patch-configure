@@ -1,0 +1,11 @@
+--- configure.orig	2015-12-02 19:34:58.000000000 +0200
++++ configure
+@@ -20603,7 +20603,7 @@ $as_echo "yes" >&6; }
+ fi
+ 
+ case "x$target_os" in
+-  *bsd* | *linux* )
++  *bsd* | *dragonfly* | *linux* )
+ 
+ pkg_failed=no
+ { $as_echo "$as_me:${as_lineno-$LINENO}: checking for X11" >&5

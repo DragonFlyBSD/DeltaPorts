@@ -1,0 +1,18 @@
+
+CONFIGURE_ARGS+= boost_cv_lib_tag=gcc
+CXXFLAGS+= -Wno-deprecated-declarations
+
+dfly-patch:
+	@${REINPLACE_CMD} -e 's@,Plugin_CgProgramManager@@g'		\
+		-e 's@#plugindir=.*@plugindir="${LOCALBASE}/lib/OGRE"@'	\
+		${WRKSRC}/ember.conf.in
+
+
+BROKEN= assert on singleton at runtime: missing media for ogre config
+# missing these textures for config screen:
+# media/shared/common/themes/ember/gui/compass/outer_ring.png
+# media/shared/common/themes/ember/gui/cegui/EmberLook.png
+# media/shared/common/themes/ember/gui/icons/iconset_standard.png
+# media/shared/common/themes/ember/gui/icons/iconset_mason.png
+# media/shared/common/themes/ember/gui/status/main.png
+
