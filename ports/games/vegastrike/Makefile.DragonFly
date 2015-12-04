@@ -1,5 +1,6 @@
-USE_CXXSTD= c++11
-CXXFLAGS+= -Wno-deprecated-declarations
+USE_CXXSTD=	c++11
+CXXFLAGS+=	-Wno-deprecated-declarations
+DPMSG=		${WRKDIR}/dports-message
 
 .if !defined(DPORTS_BUILDER) && defined(PACKAGE_BUILDING)
 RUN_DEPENDS:=	${RUN_DEPENDS:N*vegastrike-data}
