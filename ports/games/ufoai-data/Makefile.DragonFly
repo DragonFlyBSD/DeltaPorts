@@ -1,5 +1,7 @@
-IGNORE=	games/ufoai is not building so do not bother with the data
-MANUAL_PACKAGE_BUILD= huge
+
+# zrj extraction issue
+.undef NO_WRKSUBDIR
+
 .if defined(DPORTS_BUILDER)
 .undef MANUAL_PACKAGE_BUILD
 .endif
