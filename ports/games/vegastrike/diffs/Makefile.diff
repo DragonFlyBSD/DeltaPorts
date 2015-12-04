@@ -1,0 +1,24 @@
+
+Fix for attempting to INSTALL_PROGRAM licenses
+
+--- Makefile.orig	2015-06-29 09:46:10.000000000 +0300
++++ Makefile
+@@ -38,7 +38,8 @@ CONFIGURE_ARGS=	--disable-cegui --disabl
+ 		--with-boost=system \
+ 		--enable-flags="${CXXFLAGS}"
+ 
+-PLIST_FILES=	bin/vegastrike bin/vssetup bin/vegaserver
++BIN_FILES=	bin/vegastrike bin/vssetup bin/vegaserver
++PLIST_FILES=	${BIN_FILES}
+ PORTDOCS=	README
+ 
+ OPTIONS_DEFINE=	MESHER
+@@ -53,7 +54,7 @@ post-patch:
+ 		${WRKSRC}/configure
+ 
+ do-install:
+-	${INSTALL_PROGRAM} ${PLIST_FILES:S|bin|${WRKSRC}|} \
++	${INSTALL_PROGRAM} ${BIN_FILES:S|bin|${WRKSRC}|} \
+ 		${STAGEDIR}${PREFIX}/bin
+ 	@${MKDIR} ${STAGEDIR}${DOCSDIR}
+ 	${INSTALL_DATA} ${WRKSRC}/README ${STAGEDIR}${DOCSDIR}

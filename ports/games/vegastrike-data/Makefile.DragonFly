@@ -1,4 +1,3 @@
-IGNORE=	games/vegastrike is not building, so do not bother with the data
 .if defined(DPORTS_BUILDER)
 .undef MANUAL_PACKAGE_BUILD
 .endif
