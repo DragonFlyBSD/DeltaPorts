@@ -1,8 +1,19 @@
 USE_CXXSTD= c++11
 CXXFLAGS+= -Wno-deprecated-declarations
 
+.if !defined(DPORTS_BUILDER) && defined(PACKAGE_BUILDING)
+RUN_DEPENDS:=	${RUN_DEPENDS:N*vegastrick-data}
+PKGMESSAGE=	${DPMSG}
+.endif
+
 dfly-patch:
 	${REINPLACE_CMD} -e 's@\(defined (__FreeBSD__)\)@(\1 || defined(__DragonFly__))@g'	\
 		${WRKSRC}/src/vsfilesystem.cpp				\
 		${WRKSRC}/src/endianness.h				\
 		${WRKSRC}/src/posh.h
+.if !defined(DPORTS_BUILDER) && defined(PACKAGE_BUILDING)
+	@${CP} ${.CURDIR}/pkg-message ${DPMSG}
+	@${ECHO} "########################################################" >> ${DPMSG}
+	@${ECHO} "# Build games/vegastrike-data from source to play this #" >> ${DPMSG}
+	@${ECHO} "########################################################" >> ${DPMSG}
+.endif
