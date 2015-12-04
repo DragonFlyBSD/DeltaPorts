@@ -1,0 +1,8 @@
+USE_CXXSTD= c++11
+CXXFLAGS+= -Wno-deprecated-declarations
+
+dfly-patch:
+	${REINPLACE_CMD} -e 's@\(defined (__FreeBSD__)\)@(\1 || defined(__DragonFly__))@g'	\
+		${WRKSRC}/src/vsfilesystem.cpp				\
+		${WRKSRC}/src/endianness.h				\
+		${WRKSRC}/src/posh.h
