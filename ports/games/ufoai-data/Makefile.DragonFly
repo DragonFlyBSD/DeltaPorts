@@ -1,4 +1,7 @@
-IGNORE=	games/ufoai is not building so do not bother with the data
+
+# attempt to fix extract
+WRKSRC?= ${WRKDIR}
+
 MANUAL_PACKAGE_BUILD= huge
 .if defined(DPORTS_BUILDER)
 .undef MANUAL_PACKAGE_BUILD
