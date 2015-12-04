@@ -2,7 +2,7 @@ USE_CXXSTD= c++11
 CXXFLAGS+= -Wno-deprecated-declarations
 
 .if !defined(DPORTS_BUILDER) && defined(PACKAGE_BUILDING)
-RUN_DEPENDS:=	${RUN_DEPENDS:N*vegastrick-data}
+RUN_DEPENDS:=	${RUN_DEPENDS:N*vegastrike-data}
 PKGMESSAGE=	${DPMSG}
 .endif
 
