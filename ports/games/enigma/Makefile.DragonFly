@@ -1,0 +1,9 @@
+USE_CXXSTD= c++11
+CXXFLAGS+= -Wno-deprecated-declarations
+
+BROKEN= segfaults: png images need to be recoded for use with png >= 1.6
+
+dfly-patch:
+	${REINPLACE_CMD} -e 's@\(defined (__FreeBSD__)\)@(\1 || defined(__DragonFly__))@g'	\
+		${WRKSRC}/lib-src/zipios++/src/directory.h		\
+		${WRKSRC}/lib-src/zipios++/src/directory.cpp
