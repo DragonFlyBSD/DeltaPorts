@@ -1,0 +1,8 @@
+USES+= alias
+
+# zrj: in Makefile it does 'unzip -xf file.zip -d DIR',
+# EXTRACT_BEFORE_ARGS is wrong, thus extract before patching (harmless)
+pre-extract:
+	@${MKDIR} ${WRKDIR}
+	${UNZIP_CMD} -u -d ${WRKDIR}/ctf \
+		${DISTDIR}/${DIST_SUBDIR}/${CTF_DATA} -x *.dll *.ico
