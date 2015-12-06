@@ -1,0 +1,13 @@
+
+BROKEN= cannot initialize SDL: SDL not built with joystick support
+
+dfly-patch:
+	${REINPLACE_CMD} -e 's@ifdef \(__FreeBSD__\)@if defined(\1)||defined(__DragonFly__)@g'	\
+		${WRKSRC}/src/zlib/ioapi.h
+	${REINPLACE_CMD} -e 's@\(defined(__FreeBSD__)\)@(\1 || defined(__DragonFly__))@g'	\
+		${WRKSRC}/src/core_lua.c				\
+		${WRKSRC}/src/luajit2/src/lj_alloc.c			\
+		${WRKSRC}/src/luajit2/src/lj_arch.h			\
+		${WRKSRC}/src/luajit2/src/lj_gdbjit.c			\
+		${WRKSRC}/src/music.h					\
+		${WRKSRC}/src/tSDL.h
