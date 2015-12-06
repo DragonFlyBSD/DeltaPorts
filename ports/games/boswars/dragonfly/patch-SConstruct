@@ -1,0 +1,31 @@
+--- SConstruct.bak	2015-12-06 17:58:40.000000000 +0200
++++ SConstruct
+@@ -146,6 +146,10 @@ def CheckOpenGL(env, conf):
+       'LIBS': ['GL'], 
+       'LIBPATH': ['/usr/lib', '/usr/X11R6/lib'],
+       'CPPPATH': ['/usr/include']}
++  opengl['dragonfly'] = { 
++      'LIBS': ['GL'], 
++      'LIBPATH': ['/usr/local/lib'],
++      'CPPPATH': ['/usr/local/include']}
+   opengl['freebsd'] = { 
+       'LIBS': ['GL'], 
+       'LIBPATH': ['/usr/local/lib'],
+@@ -161,6 +165,8 @@ def CheckOpenGL(env, conf):
+   else:
+      if sys.platform[:5] == 'linux':
+         platform = 'linux'
++     if sys.platform[:9] == 'dragonfly':
++        platform = 'dragonfly'
+      if sys.platform[:7] == 'freebsd':
+         platform = 'freebsd'
+      glconfig = opengl.get(platform, {})
+@@ -203,7 +209,7 @@ def AutoConfigure(env):
+   if not conf.CheckLibWithHeader('z', 'zlib.h', 'c'):
+      print 'Did not find the zlib library or headers, exiting!'
+      Exit(1)
+-  if not 'USE_WIN32' in env['CPPDEFINES'] and not sys.platform.startswith('freebsd'):
++  if not 'USE_WIN32' in env['CPPDEFINES'] and not sys.platform.startswith('freebsd') and not sys.platform.startswith('dragonfly'):
+      if not conf.CheckLib('dl'):
+         print 'Did not find dl library or header which is needed on some systems for lua. Exiting!'
+         Exit(1)
