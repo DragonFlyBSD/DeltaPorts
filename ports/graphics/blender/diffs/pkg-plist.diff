@@ -1,0 +1,10 @@
+--- pkg-plist.orig	2015-10-18 16:28:39.000000000 +0300
++++ pkg-plist	2015-12-07 21:14:19.000000000 +0200
+@@ -1,6 +1,6 @@
+ bin/blender
+ bin/blender-thumbnailer.py
+-bin/blenderplayer
++%%PLAYER%%bin/blenderplayer
+ man/man1/blender.1.gz
+ share/applications/blender.desktop
+ %%DATADIR%%/%%VER%%/datafiles/colormanagement/config.ocio
