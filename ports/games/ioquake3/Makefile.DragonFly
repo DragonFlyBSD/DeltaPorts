@@ -10,6 +10,7 @@ PKGMESSAGE=	${DPMSG}
 .if !defined(DPORTS_BUILDER) && defined(PACKAGE_BUILDING) && ${PORTNAME:Mopenarena*}
 RUN_DEPENDS:=	${RUN_DEPENDS:N*openarena-data}
 PKGMESSAGE=	${DPMSG}
+.endif
 
 #allow this one to fail! Makefile is reused in other ports
 dfly-patch:
