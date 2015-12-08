@@ -1,0 +1,6 @@
+
+MANUAL_PACKAGE_BUILD=	huge (655 MiB)
+
+.if defined(DPORTS_BUILDER)
+.undef MANUAL_PACKAGE_BUILD
+.endif
