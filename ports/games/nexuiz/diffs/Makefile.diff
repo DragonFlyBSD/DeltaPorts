@@ -1,0 +1,11 @@
+--- Makefile.orig	2015-10-18 16:28:38.000000000 +0300
++++ Makefile
+@@ -91,7 +91,7 @@ PLIST_FILES+=	bin/${PORTNAME}-dedicated
+ .endif
+ 
+ post-extract:
+-	@${EXTRACT_CMD} -qo \
++	@${UNZIP_CMD} -qo \
+ 		${WRKDIR}/Nexuiz/sources/enginesource20091001.zip \
+ 		-d ${WRKDIR}/Nexuiz/sources
+ 
