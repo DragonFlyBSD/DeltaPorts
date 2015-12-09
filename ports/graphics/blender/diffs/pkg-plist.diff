@@ -3,7 +3,7 @@
 @@ -3 +3 @@
 -bin/blenderplayer
 +%%PLAYER%%bin/blenderplayer
-@@ -6,85 +6,85 @@
+@@ -6,86 +6,86 @@
 -%%DATADIR%%/%%VER%%/datafiles/colormanagement/config.ocio
 -%%DATADIR%%/%%VER%%/datafiles/colormanagement/luts/aces_to_xyz.spimtx
 -%%DATADIR%%/%%VER%%/datafiles/colormanagement/luts/adx_adx10_to_cdd.spimtx
@@ -89,6 +89,7 @@
 -%%DATADIR%%/%%VER%%/datafiles/colormanagement/luts/spi_ocio_srgb_test.spi3d
 -%%DATADIR%%/%%VER%%/datafiles/colormanagement/luts/srgb.spi1d
 -%%DATADIR%%/%%VER%%/datafiles/colormanagement/luts/srgb_to_xyz.spimtx
+-%%NLS%%%%DATADIR%%/%%VER%%/datafiles/colormanagement/luts/vd16.spi1d
 +%%OPENCOLORIO%%%%DATADIR%%/%%VER%%/datafiles/colormanagement/config.ocio
 +%%OPENCOLORIO%%%%DATADIR%%/%%VER%%/datafiles/colormanagement/luts/aces_to_xyz.spimtx
 +%%OPENCOLORIO%%%%DATADIR%%/%%VER%%/datafiles/colormanagement/luts/adx_adx10_to_cdd.spimtx
@@ -174,6 +175,7 @@
 +%%OPENCOLORIO%%%%DATADIR%%/%%VER%%/datafiles/colormanagement/luts/spi_ocio_srgb_test.spi3d
 +%%OPENCOLORIO%%%%DATADIR%%/%%VER%%/datafiles/colormanagement/luts/srgb.spi1d
 +%%OPENCOLORIO%%%%DATADIR%%/%%VER%%/datafiles/colormanagement/luts/srgb_to_xyz.spimtx
++%%OPENCOLORIO%%%%DATADIR%%/%%VER%%/datafiles/colormanagement/luts/vd16.spi1d
 @@ -1121,2 +1121,2 @@
 -%%PORTDOCS%%%%DOCSDIR%%/LICENSE-bmonofont-i18n.ttf.txt
 -%%PORTDOCS%%%%DOCSDIR%%/LICENSE-droidsans.ttf.txt
