@@ -20,6 +20,15 @@ split () {
 }
 
 AWKCMD='{ printf("%s ", $1) }'
+AWKCMD2='/^\+/ {if ($1 != "+++") { \
+  counter++; \
+  if ($1 == "+PORTREVISION=") pv=1; \
+}} END { \
+  if ((counter == 1) && pv) \
+    print "Bump"; \
+  else \
+    print "Update"; \
+}'
 
 rm -f ${LOGFILE}
 
@@ -52,6 +61,7 @@ while [ 1 ]; do
      split ${oneline}
      if [ "${VAL2}" = "Update" ]; then
        reflex="to version ${VAL3}"
+       VAL2=$(cd ${DPORTS} && git diff ${VAL1} | awk "${AWKCMD2}")
      else
        reflex="version ${VAL3}"
      fi
