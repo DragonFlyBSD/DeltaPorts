@@ -1,0 +1,11 @@
+--- configure.in.orig	2015-12-10 17:16:03.547495000 +0100
++++ configure.in	2015-12-10 17:16:23.627568000 +0100
+@@ -87,7 +87,7 @@ linux*)
+   OS=linux
+   AC_DEFINE(LINUX)
+   ;;
+-freebsd*)
++freebsd*|dragonfly*)
+   SETUID_FLAGS="-m 4755 -o root -g wheel"
+   LIBS="$LIBS -pthread"
+   OS=freebsd
