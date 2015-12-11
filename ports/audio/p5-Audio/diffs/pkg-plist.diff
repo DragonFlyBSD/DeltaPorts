@@ -1,0 +1,18 @@
+--- /data/freebsd-ports/audio/p5-Audio/pkg-plist	2015-10-18 16:28:07.000000000 +0300
++++ pkg-plist	2015-12-11 19:47:19.000000000 +0200
+@@ -21,13 +21,13 @@ bin/tkscope
+ %%SITE_ARCH%%/Audio/Data/touchtone.star.au
+ %%SITE_ARCH%%/Audio/Filter.pm
+ %%SITE_ARCH%%/Audio/Play.pm
+-%%SITE_ARCH%%/Audio/Play/freebsd.pm
++%%SITE_ARCH%%/Audio/Play/dragonfly.pm
+ %%SITE_ARCH%%/Audio/typemap
+ %%SITE_ARCH%%/Tk/Scope.pm
+ %%SITE_ARCH%%/auto/Audio/Data/Data.so
+ %%SITE_ARCH%%/auto/Audio/Data/autosplit.ix
+ %%SITE_ARCH%%/auto/Audio/Data/solve_polynomial.al
+ %%SITE_ARCH%%/auto/Audio/Play/autosplit.ix
+-%%SITE_ARCH%%/auto/Audio/Play/freebsd/freebsd.so
++%%SITE_ARCH%%/auto/Audio/Play/dragonfly/dragonfly.so
+ %%PERL5_MAN3%%/Audio::Data.3.gz
+ %%PERL5_MAN3%%/Audio::Play.3.gz
