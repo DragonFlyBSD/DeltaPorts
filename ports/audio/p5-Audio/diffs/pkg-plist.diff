@@ -1,5 +1,5 @@
---- /data/freebsd-ports/audio/p5-Audio/pkg-plist	2015-10-18 16:28:07.000000000 +0300
-+++ pkg-plist	2015-12-11 19:47:19.000000000 +0200
+--- pkg-plist.orig	2015-10-18 16:28:07.000000000 +0300
++++ pkg-plist
 @@ -21,13 +21,13 @@ bin/tkscope
  %%SITE_ARCH%%/Audio/Data/touchtone.star.au
  %%SITE_ARCH%%/Audio/Filter.pm
