@@ -17,7 +17,7 @@
  WRKSRC=			${WRKDIR}/mesa-${MESADISTVERSION}
  DESCR=			${.CURDIR}/pkg-descr
  PLIST=			${.CURDIR}/pkg-plist
-@@ -124,16 +125,17 @@ IGNORE= VDPAU option requires GALLIUM su
+@@ -127,16 +128,17 @@ IGNORE= VDPAU option requires GALLIUM su
  CONFIGURE_ARGS+=--enable-vdpau
  LIB_DEPENDS+=   libvdpau.so:${PORTSDIR}/multimedia/libvdpau
  PLIST_SUB+=     VDPAU=""
