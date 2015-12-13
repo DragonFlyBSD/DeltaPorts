@@ -38,3 +38,14 @@
  .endif
  
  # VAAPI support?
+@@ -184,3 +186,10 @@ PLIST_SUB+=	${_gd}_GDRIVER="@comment "
+ 
+ CONFIGURE_ARGS+=--with-gallium-drivers="${GALLIUM_DRIVERS:tl}"
+ 
++.if ${OPSYS} == DragonFly
++. if ${COMPONENT:Mdri} != "" || ${COMPONENT:Mclover} != "" || \
++	${COMPONENT:Mosmesa} != "" || ${COMPONENT:Mglapi} != ""
++LIB_DEPENDS+= libelf.so:${PORTSDIR}/devel/libelf
++CFLAGS+= -I${LOCALBASE}/include/libelf
++. endif
++.endif
