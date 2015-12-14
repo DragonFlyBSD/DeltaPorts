@@ -81,7 +81,7 @@ while [ 1 ]; do
    done
    TIMENOW=$(date "+%s")
    TIMEDIFF=$(expr ${TIMENOW} - ${ESTABLISHED})
-   if [ ${COUNTER} -eq 30 -o ${TIMEDIFF} -gt 1800 ]; then
+   if [ ${COUNTER} -eq 30 -o ${TIMEDIFF} -gt 900 ]; then
       HACK=$(date -j "+Y-%m-%d %H:%M")
       ( cd ${DELTA} && git pull --quiet --no-edit 2>/dev/null )
       if [ $? -ne 0 ]; then
