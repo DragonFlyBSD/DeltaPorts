@@ -59,14 +59,14 @@ while [ 1 ]; do
    for item in ${CANDIDATES2}; do
      oneline=$(awk "${AWKCMD}" ${item})
      split ${oneline}
+     ( cd ${DPORTS} && git add --all ${VAL1} )
      if [ "${VAL2}" = "Update" ]; then
        reflex="to version ${VAL3}"
-       VAL2=$(cd ${DPORTS} && git diff ${VAL1} | awk "${AWKCMD2}")
+       VAL2=$(cd ${DPORTS} && git diff HEAD ${VAL1} | awk "${AWKCMD2}")
      else
        reflex="version ${VAL3}"
      fi
      commitmsg="${VAL2} ${VAL1} ${reflex}"
-     ( cd ${DPORTS} && git add --all ${VAL1} )
      if [ $? -eq 0 ]; then
         TASKS=$(cd ${DPORTS} && git status -s --untracked-files=no ${VAL1})
         if [ -z "${TASKS}" ]; then
