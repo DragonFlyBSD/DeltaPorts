@@ -23,8 +23,13 @@ AWKCMD='{ printf("%s ", $1) }'
 AWKCMD2='/^\+/ {if ($1 != "+++") { \
   counter++; \
   if ($1 == "+PORTREVISION=") pv=1; \
-}} END { \
-  if ((counter == 1) && pv) \
+}} \
+/^\-/ { if ($1 != "---") { \
+  negcounter++;
+  if ((negcounter > 1) || ($1 != "-PORTREVISION=")) negfail=1; \
+}} \
+END { \
+  if ((counter == 1) && pv && !negfail) \
     print "Bump"; \
   else \
     print "Update"; \
