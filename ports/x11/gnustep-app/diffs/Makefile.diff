@@ -1,6 +1,11 @@
---- Makefile.orig	2015-04-11 21:48:41 UTC
+--- Makefile.orig	2015-12-17 01:12:47 UTC
 +++ Makefile
-@@ -30,7 +30,6 @@ RUN_DEPENDS=	aclock>0:${PORTSDIR}/x11-cl
+@@ -25,12 +25,10 @@ RUN_DEPENDS=	aclock>0:${PORTSDIR}/x11-cl
+ 		cddb-bundle>0:${PORTSDIR}/audio/cddb-bundle \
+ 		gnustep-cdplayer>0:${PORTSDIR}/audio/gnustep-cdplayer \
+ 		cenon>0:${PORTSDIR}/graphics/cenon \
+-		displaycalibrator>0:${PORTSDIR}/deskutils/displaycalibrator \
+ 		duncan>0:${PORTSDIR}/textproc/duncan \
  		easydiff>0:${PORTSDIR}/textproc/easydiff \
  		edenmath>0:${PORTSDIR}/math/edenmath \
  		expense>0:${PORTSDIR}/finance/expense \
@@ -8,7 +13,7 @@
  		fortytwo-bdb>0:${PORTSDIR}/databases/fortytwo-bdb \
  		fortytwo-encore>0:${PORTSDIR}/devel/fortytwo-encore \
  		fortytwo>0:${PORTSDIR}/graphics/fortytwo \
-@@ -66,7 +65,6 @@ RUN_DEPENDS=	aclock>0:${PORTSDIR}/x11-cl
+@@ -66,7 +64,6 @@ RUN_DEPENDS=	aclock>0:${PORTSDIR}/x11-cl
  		lusernet>0:${PORTSDIR}/news/lusernet \
  		mpdcon>0:${PORTSDIR}/audio/mpdcon \
  		nextgo>0:${PORTSDIR}/games/nextgo \
