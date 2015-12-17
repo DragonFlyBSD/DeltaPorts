@@ -1,0 +1,14 @@
+--- Makefile.orig	2015-12-09 09:39:27.000000000 +0200
++++ Makefile
+@@ -30,9 +30,9 @@ GCCRULE=	${WRKSRC}/RULES/cc-gcc.rul
+ pre-build:
+ 	@${CHMOD} +w ${MKLINKS} ${GCCRULE}
+ 	@${REINPLACE_CMD} -e 's|gcc$$|${CC}|' ${GCCRULE}
+-	@${ECHO_CMD} "\$$symlink i386-freebsd-cc.rul ${ARCH}-freebsd-${CC}.rul" >> ${MKLINKS}
++	@${ECHO_CMD} "\$$symlink i386-freebsd-cc.rul ${ARCH}-${OPSYS:tl}-${CC}.rul" >> ${MKLINKS}
+ 
+ pre-install:
+-	${STRIP_CMD} ${WRKSRC}/smake/OBJ/${ARCH}-freebsd-${CC}/smake
++	${STRIP_CMD} ${WRKSRC}/smake/OBJ/${ARCH}-${OPSYS:tl}-${CC}/smake
+ 
+ .include <bsd.port.mk>
