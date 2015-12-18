@@ -1,1 +1,24 @@
-IGNORE=	uses blender 26b instead
+USE_CXXSTD= gnu++11
+DPMSG=		${WRKDIR}/dports-message
+PKGMESSAGE=	${DPMSG}
+
+OPTIONS_DEFAULT+= RAYOPTIMIZATION MOD_OCEANSIM FFMPEG REDCODE CAMERATRACK
+OPTIONS_DEFAULT+= CYCLES
+
+# no libunwind
+CAMERATRACK_LIB_DEPENDS:=
+
+#BUILD_DEPENDS=	${PYTHON_PKGNAMEPREFIX}requests>=0:${PORTSDIR}/www/py-requests
+#RUN_DEPENDS=	${PYTHON_PKGNAMEPREFIX}requests>=0:${PORTSDIR}/www/py-requests
+
+dfly-patch:
+	${REINPLACE_CMD} -e "s@ -liconv@ -L${LOCALBASE}/lib -liconv@g"	\
+		${WRKSRC}/CMakeLists.txt
+	-@${CP} ${.CURDIR}/pkg-message ${DPMSG}
+	@${ECHO} "########################################################" >> ${DPMSG}
+	@${ECHO} "# Currently BLENDER_RENDER engine is borked on dfly.   #" >> ${DPMSG}
+	@${ECHO} "# For the time being use CYCLES engine, that works.    #" >> ${DPMSG}
+	@${ECHO} "########################################################" >> ${DPMSG}
+
+## Tests
+#CMAKE_ARGS+= -DWITH_GTESTS:BOOL=ON -DWITH_TESTS_PERFORMANCE:BOOL=ON -DCMAKE_BUILD_TYPE=Debug
