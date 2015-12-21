@@ -9,3 +9,12 @@
  
      P.Author := 'Sebastian Guenther, Sergei Gorelkin and FPC development team';
      P.License := 'LGPL with modification, ';
+@@ -151,7 +151,7 @@ begin
+           AddUnit('dom');
+           AddUnit('htmldefs');
+         end;
+-    T:=P.Targets.AddUnit('xmliconv.pas',[linux,freebsd,darwin,iphonesim,haiku,beos,aix]);
++    T:=P.Targets.AddUnit('xmliconv.pas',[linux,dragonfly,freebsd,darwin,iphonesim,haiku,beos,aix]);
+       with T.Dependencies do
+         begin
+           AddUnit('xmlread');
