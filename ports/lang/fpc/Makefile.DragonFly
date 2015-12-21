@@ -1,0 +1,4 @@
+
+.if defined(LIBBFD_RUN_DEPENDS)
+LIBBFD_RUN_DEPENDS:= ${LIBBFD_RUN_DEPENDS:S@devel/libbfd$$@devel/binutils@}
+.endif
