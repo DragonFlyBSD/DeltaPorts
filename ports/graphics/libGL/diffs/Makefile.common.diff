@@ -8,10 +8,3 @@
  WRKSRC=			${WRKDIR}/mesa-${MESADISTVERSION}
  DESCR=			${.CURDIR}/pkg-descr
  PLIST=			${.CURDIR}/pkg-plist
-@@ -175,5 +176,6 @@ CONFIGURE_ARGS+=--with-gallium-drivers="
- 
- .if ${OPSYS} == DragonFly
- LIB_DEPENDS+= libelf.so:${PORTSDIR}/devel/libelf
-+CFLAGS+= -I${LOCALBASE}/include/libelf
- .endif
- 
