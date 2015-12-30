@@ -30,6 +30,8 @@ post-extract:
 	@${MKDIR} ${WRKSRC}/external/lib/util.static \
 		${WRKSRC}/external/lib/ini_file_manager \
 		${WRKSRC}/build
+	@${REINPLACE_CMD} -e "s|/usr/local|${LOCALBASE}|" \
+		${WRKSRC}/src/definitions.ads
 
 do-build:
 	(cd ${WRKSRC} && ${SETENV} ${MAKE_ENV} gnatmake -P synthexec)
