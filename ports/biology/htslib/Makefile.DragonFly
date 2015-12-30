@@ -1,0 +1,3 @@
+
+# zrj: no point to add this to headers w/o actual pthread robust-mutexes
+CFLAGS+= -DENOTRECOVERABLE=EIO
