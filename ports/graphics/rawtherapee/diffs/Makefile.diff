@@ -1,0 +1,45 @@
+--- Makefile.orig	2015-10-18 16:28:40.000000000 +0300
++++ Makefile
+@@ -29,15 +29,11 @@ USE_LDCONFIG=	yes
+ CFLAGS+=	-I${LOCALBASE}/include -fPIC
+ CXXFLAGS+=	-I${LOCALBASE}/include -fPIC
+ LDFLAGS+=	-lpthread -L${LOCALBASE}/lib
+-CONFIGURE_ENV=	CFLAGS="${CFLAGS}" \
+-		LDFLAGS="${LDFLAGS:C|-Wl,-rpath=${_GCC_RUNTIME}||:C|-L${_GCC_RUNTIME}||}"
+ CMAKE_ARGS+=	-DDOCDIR="${DOCSDIR}" \
+ 		-DCREDITSDIR="${DOCSDIR}" \
+ 		-DLICENCEDIR="${DOCSDIR}" \
+ 		-DDESKTOPDIR="${DESKTOPDIR}" \
+ 		-DDATADIR="${DATADIR}" \
+-		-DCMAKE_C_FLAGS="${CFLAGS:C|-Wl,-rpath=${_GCC_RUNTIME}||:C|-L${_GCC_RUNTIME}||}" \
+-		-DCMAKE_CXX_FLAGS="${CXXFLAGS:C|-Wl,-rpath=${_GCC_RUNTIME}||:C|-L${_GCC_RUNTIME}||}" \
+ 		-DCACHE_NAME_SUFFIX="4.1"
+ SUB_FILES=	rawtherapee
+ SUB_LIST=	RTDIR="${RTDIR}"
+@@ -52,6 +48,7 @@ OPTIMIZED_CFLAGS_DESC=	Use extra compile
+ 
+ .include <bsd.port.pre.mk>
+ 
++.if ${OPSYS} == FreeBSD
+ # -------------------------------------------------------------------
+ # USE_GCC must be late so the compiler feature checks work to detect
+ # that the base C++ standard library switched to libc++:
+@@ -59,12 +56,18 @@ OPTIMIZED_CFLAGS_DESC=	Use extra compile
+ # wwhen compiling improcfun.cc:
+ USE_GCC=	yes
+ 
++CONFIGURE_ENV=	CFLAGS="${CFLAGS}" \
++		LDFLAGS="${LDFLAGS:C|-Wl,-rpath=${_GCC_RUNTIME}||:C|-L${_GCC_RUNTIME}||}"
++CMAKE_ARGS+=	-DCMAKE_C_FLAGS="${CFLAGS:C|-Wl,-rpath=${_GCC_RUNTIME}||:C|-L${_GCC_RUNTIME}||}" \
++		-DCMAKE_CXX_FLAGS="${CXXFLAGS:C|-Wl,-rpath=${_GCC_RUNTIME}||:C|-L${_GCC_RUNTIME}||}"
++
+ .if ${COMPILER_FEATURES:Mlibc++}
+ LDFLAGS+=	-L/usr/local/lib/c++
+ CXXFLAGS+=	-nostdinc++ -isystem /usr/local/include/c++/v1
+ CFLAGS+=	-isystem /usr/local/include/c++/v1
+ BUILD_DEPENDS+=	${LOCALBASE}/lib/c++/libstdc++.so:${PORTSDIR}/devel/libc++
+ .endif
++.endif
+ 
+ .if ${ARCH} == "amd64" || ${ARCH} == "i386"
+ .if ${PORT_OPTIONS:MOPTIMIZED_CFLAGS}
