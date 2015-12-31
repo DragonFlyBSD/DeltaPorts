@@ -16,22 +16,16 @@ IGNORE=		port is work in progress
 #		${LOCALBASE}/lib/gnat/${IFM}.gpr:${PORTSDIR}/misc/${IFM} \
 #		${LOCALBASE}/lib/gnat/${AC}.gpr:${PORTSDIR}/devel/${AC}
 
-USES=		ada:6
+USES=		ada:6 ncurses:port
 USE_GITHUB=	yes
 GH_ACCOUNT=	jrmarino
 GH_PROJECT=	synth_external:bundle
-GH_TAGNAME=	v1.1:bundle 0b02f28
+GH_TAGNAME=	v1.2:bundle 0b02f28
 
 # When framework is moved to Ada6, the ada-util and ini-file-manager
 # libraries can be used as prebuilt (switch default.gpr url)
-
-.include <bsd.port.pre.mk>
-
-.if ${OPSYS} == FreeBSD && ${OSREL:R} == 11
-USES+=	ncurses:port	# see rant in devel/adacurses/Makefile
-.else
-USES+=	ncurses
-.endif
+# ncurses:port is required for FreeBSD 11 and DragonFly (base ncurses
+# malfunctions in that it won't restore TTY mode correctly)
 
 post-extract:
 	@${MV} ${WRKSRC_bundle}/external ${WRKSRC}
@@ -40,11 +34,8 @@ post-extract:
 		${WRKSRC}/external/lib/adacurses \
 		${WRKSRC}/build
 	@${REINPLACE_CMD} -e "s|/usr/local|${LOCALBASE}|" \
+		${WRKSRC}/external/lib/gnat/adacurses.gpr \
 		${WRKSRC}/src/definitions.ads
-.if ${OPSYS} == FreeBSD && ${OSREL:R} == 11
-	@${REINPLACE_CMD} -e "s|--F11 ||" \
-		${WRKSRC}/external/lib/gnat/adacurses.gpr
-.endif
 
 do-build:
 	(cd ${WRKSRC} && ${SETENV} ${MAKE_ENV} gnatmake -P synthexec)
@@ -58,4 +49,4 @@ do-install:
 	${MKDIR} ${STAGEDIR}/var/log/synth \
 		${STAGEDIR}/var/synth/live_packages
 
-.include <bsd.port.post.mk>
+.include <bsd.port.mk>
