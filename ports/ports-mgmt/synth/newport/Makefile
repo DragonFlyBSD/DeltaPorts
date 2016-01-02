@@ -19,7 +19,7 @@ USES=		ada:6 ncurses:port
 USE_GITHUB=	yes
 GH_ACCOUNT=	jrmarino
 GH_PROJECT=	synth_external:bundle
-GH_TAGNAME=	v1.2:bundle 956bd63
+GH_TAGNAME=	v1.2:bundle 2b54358
 
 # When framework is moved to Ada6, the ada-util and ini-file-manager
 # libraries can be used as prebuilt (switch default.gpr url)
