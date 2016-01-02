@@ -26,6 +26,8 @@ GH_TAGNAME=	v1.2:bundle 35255df
 # ncurses:port is required for FreeBSD 11 and DragonFly (base ncurses
 # malfunctions in that it won't restore TTY mode correctly)
 
+COBJFILES=	ncurses_compat.o c_varargs_to_ada.o c_threaded_variables.o
+
 post-extract:
 	@${MV} ${WRKSRC_bundle}/external ${WRKSRC}
 	@${MKDIR} ${WRKSRC}/external/lib/util.static \
@@ -37,6 +39,11 @@ post-extract:
 		${WRKSRC}/src/definitions.ads
 
 do-build:
+	# To avoid requiring gprbuild as a dependency, compile C manually
+.for csrc in ${COBJFILES:R}
+	(cd ${WRKSRC}/external/include/adacurses && ${SETENV} ${MAKE_ENV} \
+		gcc -I. -c ${csrc}.c -o ../../lib/gnat/${csrc}.o)
+.endfor
 	(cd ${WRKSRC} && ${SETENV} ${MAKE_ENV} gnatmake -P synthexec)
 	(cd ${WRKSRC} && ${SETENV} ${MAKE_ENV} gnatmake -P default)
 
