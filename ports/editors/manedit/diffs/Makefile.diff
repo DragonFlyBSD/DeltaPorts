@@ -1,0 +1,11 @@
+--- Makefile.orig	2016-01-03 09:39:33 UTC
++++ Makefile
+@@ -18,7 +18,7 @@ USE_GNOME=	gtk12
+ 
+ MAKE_ARGS=	STAGEDIR="$(STAGEDIR)"
+ 
+-pre-configure:
++post-extract:
+ 	@${CP} ${FILESDIR}/mntent* ${WRKSRC}
+ 
+ post-patch:
