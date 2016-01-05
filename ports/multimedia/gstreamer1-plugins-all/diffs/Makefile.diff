@@ -29,7 +29,7 @@
 +.for all in ${ALL_PLUGINS}
  ${all:tu}_DESC=	${all} plugin
 -OPTIONS_DEFAULT+=	${all:tu}
-+${all:tu}_USE=	GSTREAMER=${all}
++${all:tu}_USE=	GSTREAMER1=${all}
  .endfor
  
 -.include <bsd.port.options.mk>
