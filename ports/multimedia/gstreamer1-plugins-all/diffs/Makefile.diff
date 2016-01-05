@@ -1,12 +1,5 @@
---- Makefile.orig	2016-01-05 22:32:04 UTC
+--- Makefile.orig	2016-01-05 22:39:04 UTC
 +++ Makefile
-@@ -1,5 +1,5 @@
- # Created by: Michael Johnson <ahze@FreeBSD.org>
--# $FreeBSD: head/multimedia/gstreamer1-plugins-all/Makefile 405242 2016-01-04 14:21:56Z kwm $
-+# $FreeBSD$
- 
- PORTNAME=	gstreamer1-plugins-all
- PORTVERSION=	${GST1_VERSION}
 @@ -7,35 +7,38 @@ PORTREVISION=	2
  CATEGORIES=	multimedia
  
