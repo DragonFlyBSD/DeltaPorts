@@ -1,6 +1,0 @@
-bin/synth
-libexec/synthexec
-man/man1/synth.1.gz
-@dir /var/log/synth
-@dir /var/synth
-@dir /var/synth/live_packages
