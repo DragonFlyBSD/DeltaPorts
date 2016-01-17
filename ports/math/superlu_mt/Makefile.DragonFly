@@ -1,1 +1,1 @@
-IGNORE= Runs away on current DragonFly, Alpha software, just mask it
+IGNORE= Alpha software, just mask it (although it may build now)
