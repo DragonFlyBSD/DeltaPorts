@@ -1,11 +1,15 @@
---- Uses/objc.mk.orig	2015-04-12 09:01:42 UTC
+--- Uses/objc.mk.orig	2016-01-17 10:32:56 UTC
 +++ Uses/objc.mk
-@@ -14,13 +14,7 @@ _INCLUDE_USES_OBJC_MK=	yes
- IGNORE=	USES=objc takes no arguments
+@@ -15,17 +15,7 @@ objc_ARGS?=
+ IGNORE=	USES=objc only accepts no arguments or 'compiler'
  .endif
  
 -_CCVERSION!=	${CC} --version
--COMPILER_VERSION=	${_CCVERSION:M[0-9].[0-9]*:C/([0-9]).([0-9]).*/\1\2/g}
+-.if defined(.PARSEDIR)
+-COMPILER_VERSION=	${_CCVERSION:M[0-9].[0-9]*:tW:C/([0-9]).([0-9]).*/\1\2/g}
+-.else
+-COMPILER_VERSION=	${_CCVERSION:M[0-9].[0-9]*:C/([0-9]).([0-9]).*/\1\2/g:u}
+-.endif
 -.if ${_CCVERSION:Mclang}
 -COMPILER_TYPE=	clang
 -.else
