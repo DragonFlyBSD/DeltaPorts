@@ -1,6 +1,16 @@
 --- bsd.commands.mk.orig	2014-06-19 22:32:52.928650000 +0000
 +++ bsd.commands.mk
-@@ -62,7 +62,7 @@ MOUNT_DEVFS?=		${MOUNT} -t devfs devfs
+@@ -15,6 +15,9 @@ COMMANDS_Include_MAINTAINER=	portmgr@Fre
+ 
+ _COMMANDSMKINCLUDED=	yes
+ 
++.if ${AWK:Mawk}
++.undef AWK
++.endif
+ AWK?=			/usr/bin/awk
+ BASENAME?=		/usr/bin/basename
+ BRANDELF?=		/usr/bin/brandelf
+@@ -63,7 +66,7 @@ MOUNT_DEVFS?=		${MOUNT} -t devfs devfs
  # XXX: this is a work-around for an obscure bug where
  # mount -t nullfs returns zero status on errors within
  # a make target
