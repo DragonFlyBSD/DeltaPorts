@@ -324,17 +324,17 @@
  #ifdef CONFIG_NETMAP
  int net_init_netmap(const NetClientOptions *opts, const char *name,
                      NetClientState *peer, Error **errp);
---- configure.orig	2015-12-20 19:05:56.747347000 +0100
-+++ configure	2015-12-20 19:06:44.058070000 +0100
-@@ -242,6 +242,7 @@
+--- configure.orig	2015-12-16 22:04:48 UTC
++++ configure
+@@ -245,6 +245,7 @@ vnc="yes"
  sparse="no"
  uuid=""
  vde=""
 +vknet=""
- vnc_tls=""
  vnc_sasl=""
  vnc_jpeg=""
-@@ -906,6 +907,10 @@
+ vnc_png=""
+@@ -915,6 +916,10 @@ for opt do
    ;;
    --enable-vde) vde="yes"
    ;;
@@ -345,7 +345,7 @@
    --disable-netmap) netmap="no"
    ;;
    --enable-netmap) netmap="yes"
-@@ -1349,6 +1354,7 @@
+@@ -1365,6 +1370,7 @@ disabled with --disable-FEATURE, default
    rdma            RDMA-based migration support
    uuid            uuid support
    vde             support for vde network
@@ -353,15 +353,15 @@
    netmap          support for netmap network
    linux-aio       Linux AIO support
    cap-ng          libcap-ng support
-@@ -4535,6 +4541,7 @@
- echo "GUEST_BASE        $guest_base"
+@@ -4787,6 +4793,7 @@ echo "bluez  support    $bluez"
+ echo "Documentation     $docs"
  echo "PIE               $pie"
  echo "vde support       $vde"
 +echo "vknet support     $vknet"
  echo "netmap support    $netmap"
  echo "Linux AIO support $linux_aio"
  echo "ATTR/XATTR support $attr"
-@@ -4699,6 +4706,9 @@
+@@ -4954,6 +4961,9 @@ fi
  if test "$vde" = "yes" ; then
    echo "CONFIG_VDE=y" >> $config_host_mak
  fi
