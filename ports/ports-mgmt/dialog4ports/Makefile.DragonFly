@@ -2,6 +2,8 @@
 #LDFLAGS+=	-L${LOCALBASE}/lib
 #
 # temporarily until bundled libdialog can be used
+# -OR- dialog4ports is modified to not need ncurses at all,
+#      our libdialog is good
 
 .if exists(/usr/lib/priv/libprivate_ncursesw.so)
 dfly-patch:
