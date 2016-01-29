@@ -1,2 +1,10 @@
-USES+=		ncurses
-LDFLAGS+=	-L${LOCALBASE}/lib
+#USES+=		ncurses
+#LDFLAGS+=	-L${LOCALBASE}/lib
+#
+# temporarily until bundled libdialog can be used
+
+.if exists(/usr/lib/priv/libprivate_ncursesw.so)
+dfly-patch:
+	${REINPLACE_CMD} -e "s@-lncursesw@-rpath /lib/priv -L/usr/lib/priv -lprivate_ncursesw@g" \
+		${WRKSRC}/Makefile
+.endif
