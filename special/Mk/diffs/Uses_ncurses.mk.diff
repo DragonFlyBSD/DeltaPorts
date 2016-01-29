@@ -1,13 +1,14 @@
---- Uses/ncurses.mk.orig	2016-01-09 11:35:44 UTC
+--- Uses/ncurses.mk.orig	2016-01-29 11:52:10 UTC
 +++ Uses/ncurses.mk
-@@ -73,8 +73,8 @@ NCURSES_SHLIBVER?=	${NCURSES_SHLIBFILE:E
+@@ -71,7 +71,11 @@ NCURSES_SHLIBVER?=	${NCURSES_SHLIBFILE:E
+ .endif
+ 
  NCURSES_PORT?=		devel/ncurses
++.if exists (/usr/lib/priv/libprivate_ncursesw.so)
  NCURSES_SHLIBVER?=	6
++.else
++NCURSES_SHLIBVER?=	6P
++.endif
  
--BUILD_DEPENDS+=		${LOCALBASE}/lib/libncurses.so.${NCURSES_SHLIBVER}:${PORTSDIR}/${NCURSES_PORT}
--RUN_DEPENDS+=		${LOCALBASE}/lib/libncurses.so.${NCURSES_SHLIBVER}:${PORTSDIR}/${NCURSES_PORT}
-+BUILD_DEPENDS+=		${LOCALBASE}/lib/libncurses.so.6P:${PORTSDIR}/${NCURSES_PORT}
-+RUN_DEPENDS+=		${LOCALBASE}/lib/libncurses.so.6P:${PORTSDIR}/${NCURSES_PORT}
- NCURSESRPATH=		${NCURSESBASE}/lib
- 
- .else
+ BUILD_DEPENDS+=		${LOCALBASE}/lib/libncurses.so.${NCURSES_SHLIBVER}:${PORTSDIR}/${NCURSES_PORT}
+ RUN_DEPENDS+=		${LOCALBASE}/lib/libncurses.so.${NCURSES_SHLIBVER}:${PORTSDIR}/${NCURSES_PORT}
