@@ -22,6 +22,6 @@
  CFLAGS+=	-Wl,-rpath,${NCURSESRPATH}
  .endif
 -LDFLAGS+=	-Wl,-rpath=${NCURSESRPATH}
-+LDFLAGS+=	-rpath ${NCURSESRPATH}
++LDFLAGS+=	-rpath=${NCURSESRPATH}
  
  .endif
