@@ -1,6 +1,6 @@
 --- Uses/ncurses.mk.orig	2016-01-29 11:52:10 UTC
 +++ Uses/ncurses.mk
-@@ -71,7 +71,11 @@ NCURSES_SHLIBVER?=	${NCURSES_SHLIBFILE:E
+@@ -71,11 +71,16 @@ NCURSES_SHLIBVER?=	${NCURSES_SHLIBFILE:E
  .endif
  
  NCURSES_PORT?=		devel/ncurses
@@ -12,3 +12,16 @@
  
  BUILD_DEPENDS+=		${LOCALBASE}/lib/libncurses.so.${NCURSES_SHLIBVER}:${PORTSDIR}/${NCURSES_PORT}
  RUN_DEPENDS+=		${LOCALBASE}/lib/libncurses.so.${NCURSES_SHLIBVER}:${PORTSDIR}/${NCURSES_PORT}
+ NCURSESRPATH=		${NCURSESBASE}/lib
++LDFLAGS+=		-L${NCURSESRPATH}
+ 
+ .else
+ .error		USES=ncurses only accept 'port' and 'base' as arguments, got ${ncurses_ARGS}
+@@ -86,6 +91,6 @@ NCURSESLIB=	${NCURSESBASE}/lib
+ .if defined(NCURSES_RPATH)
+ CFLAGS+=	-Wl,-rpath,${NCURSESRPATH}
+ .endif
+-LDFLAGS+=	-Wl,-rpath=${NCURSESRPATH}
++LDFLAGS+=	-rpath ${NCURSESRPATH}
+ 
+ .endif
