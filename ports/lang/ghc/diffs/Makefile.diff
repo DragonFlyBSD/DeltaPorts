@@ -1,4 +1,4 @@
---- Makefile.orig	2015-08-22 22:04:30 UTC
+--- Makefile.orig	2016-01-29 19:48:24 UTC
 +++ Makefile
 @@ -5,6 +5,7 @@ PORTNAME=	ghc
  PORTVERSION=	7.10.2
@@ -8,7 +8,7 @@
  		LOCAL/pgj/:boot
  DISTFILES=	ghc-${PORTVERSION}-src${EXTRACT_SUFX}:source
  
-@@ -79,10 +80,23 @@ LIB_DEPENDS+=	libffi.so.6:${PORTSDIR}/de
+@@ -78,10 +79,27 @@ LIB_DEPENDS+=	libffi.so.6:${PORTSDIR}/de
  
  .if empty(PORT_OPTIONS:MBOOT)
  
@@ -21,7 +21,11 @@
 +.elif ${OPSYS} == "DragonFly"
 +
 +BOOT_GHC_VERSION=	7.10.2
++.if exists (/usr/lib/priv/libprivate_ncursesw.so)
++DISTFILES+=		ghc-${BOOT_GHC_VERSION}-boot-${ARCH}-dragonfly2.tar.xz:dflyboot
++.else
 +DISTFILES+=		ghc-${BOOT_GHC_VERSION}-boot-${ARCH}-dragonfly.tar.xz:dflyboot
++.endif
 +CONFIGURE_TARGET=	${ARCH}-portbld-dragonfly
 +CONFIGURE_ENV+=		BOOTDIR=${BOOT_DIR} LBASE=${LOCALBASE}
 +
@@ -32,7 +36,7 @@
  .endif # MBOOT
  
  .if ${PORT_OPTIONS:MPCLANG}
-@@ -198,6 +212,7 @@ CONFIGURE_ENV+=	PATH=${SLAVES_PREFIX}/bi
+@@ -197,6 +215,7 @@ CONFIGURE_ENV+=	PATH=${SLAVES_PREFIX}/bi
  
  BUILD_DEPENDS+=	docbook-xsl>0:${PORTSDIR}/textproc/docbook-xsl \
  		${LOCALBASE}/bin/xsltproc:${PORTSDIR}/textproc/libxslt
