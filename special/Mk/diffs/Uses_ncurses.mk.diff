@@ -1,6 +1,6 @@
 --- Uses/ncurses.mk.orig	2016-02-04 09:00:08 UTC
 +++ Uses/ncurses.mk
-@@ -64,18 +64,29 @@ NCURSES_INSTALLED!=	${PKG_BIN} ${PKGARGS
+@@ -64,18 +64,28 @@ NCURSES_INSTALLED!=	${PKG_BIN} ${PKGARGS
  .  endif
  NCURSES_INSTALLED?=
  
@@ -22,17 +22,16 @@
  BUILD_DEPENDS+=		${LOCALBASE}/lib/libncurses.so.${NCURSES_SHLIBVER}:${PORTSDIR}/${NCURSES_PORT}
  RUN_DEPENDS+=		${LOCALBASE}/lib/libncurses.so.${NCURSES_SHLIBVER}:${PORTSDIR}/${NCURSES_PORT}
  NCURSESRPATH=		${NCURSESBASE}/lib
-+LDFLAGS+=		-L${NCURSESRPATH}
++LDFLAGS+=		-L${NCURSESRPATH} -Wl,-rpath=${NCURSESRPATH}
 +CFLAGS+=		-I${NCURSESBASE}/include -I${NCURSESINC}
 +
-+.if defined(NCURSES_RPATH)
-+CFLAGS+=	-Wl,-rpath,${NCURSESRPATH}
-+.endif
-+LDFLAGS+=	-Wl,-rpath=${NCURSESRPATH}
++.  if defined(NCURSES_RPATH)
++CFLAGS+=		-Wl,-rpath,${NCURSESRPATH}
++.  endif
  
  .else
  .error		USES=ncurses only accept 'port' and 'base' as arguments, got ${ncurses_ARGS}
-@@ -83,9 +94,4 @@ NCURSESRPATH=		${NCURSESBASE}/lib
+@@ -83,9 +93,4 @@ NCURSESRPATH=		${NCURSESBASE}/lib
  
  NCURSESLIB=	${NCURSESBASE}/lib
  
