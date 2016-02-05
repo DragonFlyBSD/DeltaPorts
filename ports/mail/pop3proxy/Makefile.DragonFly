@@ -1,0 +1,6 @@
+IGNORE= contains FreeBSD binaries
+
+# file ${WRKSRC}/bin/in.pop3proxyd 
+# bin/in.pop3proxyd: ELF 32-bit LSB executable, Intel 80386, version 1 
+#   (FreeBSD), dynamically linked, interpreter /libexec/ld-elf.so.1,
+#   for FreeBSD 5.2
