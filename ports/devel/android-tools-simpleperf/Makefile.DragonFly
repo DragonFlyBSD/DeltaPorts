@@ -1,3 +1,4 @@
+USES+= ncurses
 
 # zrj: to fix TEST option
 dfly-patch:
