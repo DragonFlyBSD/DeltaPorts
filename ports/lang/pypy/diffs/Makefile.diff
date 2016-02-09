@@ -1,7 +1,20 @@
---- Makefile.orig	2015-10-03 13:34:34 UTC
+--- Makefile.orig	2016-02-09 17:58:32 UTC
 +++ Makefile
-@@ -72,7 +72,7 @@ do-install:
- 	${SETENV} TMPDIR=${WRKDIR}/build \
+@@ -34,7 +34,7 @@ ALL_TARGET=	pypy-c
+ BUILD_WRKSRC=	${WRKDIR}/build/usession-release-${DISTVERSION}-0/testing_1
+ MAKE_ENV+=	PYPY_LOCALBASE=${LOCALBASE}
+ USE_LDCONFIG=	${PREFIX}/${PYPY_DIR}/bin
+-USES=		gettext-runtime tar:bzip2
++USES=		gettext-runtime ncurses tar:bzip2
+ WRKSRC=		${WRKDIR}/pypy-pypy-5f8302b8bf9f
+ 
+ .include ".${CURDIR}/bsd.pypy.mk"
+@@ -69,10 +69,10 @@ post-build:
+ 	${CP} ${BUILD_WRKSRC}/pypy-c ${BUILD_WRKSRC}/libpypy-c.so ${WRKSRC}/pypy/goal/
+ 
+ do-install:
+-	${SETENV} TMPDIR=${WRKDIR}/build \
++	${SETENV} ${MAKE_ENV} TMPDIR=${WRKDIR}/build \
  		${PYTHON_CMD} ${WRKSRC}/pypy/tool/release/package.py --builddir ${WRKDIR}/build --archive-name ${PYPY_DIR} \
  		--without-gdbm --without-sqlite3 --without-tk
 -	${EXTRACT_CMD} -C ${STAGEDIR}${PREFIX} -xf ${WRKDIR}/build/${PYPY_DIR}.tar.bz2
