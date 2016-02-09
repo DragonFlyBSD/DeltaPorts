@@ -1,4 +1,4 @@
---- src/libs6/s6-ftrigrd.c	2016-01-07 02:09:24.000000000 +0200
+--- src/libs6/s6-ftrigrd.c.orig	2016-01-07 02:09:24.000000000 +0200
 +++ src/libs6/s6-ftrigrd.c
 @@ -80,7 +80,7 @@ static void answer (char c)
    }
