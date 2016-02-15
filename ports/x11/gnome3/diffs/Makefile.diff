@@ -1,19 +1,20 @@
---- Makefile.orig	2015-08-07 21:59:13 UTC
+--- Makefile.orig	2016-02-15 09:50:38 UTC
 +++ Makefile
 @@ -31,7 +31,7 @@ RUN_DEPENDS?=	dconf-editor:${PORTSDIR}/d
  		${LOCALBASE}/share/gnome-background-properties/gnome-backgrounds.xml:${PORTSDIR}/x11-themes/gnome-backgrounds \
  		caribou>=0:${PORTSDIR}/accessibility/caribou \
  		${LOCALBASE}/share/sounds/freedesktop/index.theme:${PORTSDIR}/audio/freedesktop-sound-theme \
 -		ekiga:${PORTSDIR}/net-im/ekiga
-+#		ekiga:${PORTSDIR}/net-im/ekiga
++
  
  CONFLICTS?=	gnome3-lite-[0-9]*
  
-@@ -72,7 +72,6 @@ RUN_DEPENDS+=	empathy>=3.0.0:${PORTSDIR}
- 		gconf-editor>=3.0.0:${PORTSDIR}/sysutils/gconf-editor \
+@@ -73,7 +73,7 @@ RUN_DEPENDS+=	empathy>=3.0.0:${PORTSDIR}
  		gdm>=3.0.0:${PORTSDIR}/x11/gdm \
+ 		gnome-color-manager>=0:${PORTSDIR}/graphics/gnome-color-manager \
  		evolution>=3.0.0:${PORTSDIR}/mail/evolution \
--		cheese>=3.0.0:${PORTSDIR}/multimedia/cheese \
- 		alacarte>=3.0.0:${PORTSDIR}/deskutils/alacarte
+-		cheese>=3.0.0:${PORTSDIR}/multimedia/cheese
++
  
  .endif # !gnome3-lite section
+ 
