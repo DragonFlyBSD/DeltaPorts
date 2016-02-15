@@ -1,16 +1,18 @@
---- Makefile.orig	2014-04-04 07:13:20.060098000 +0000
+--- Makefile.orig	2016-02-15 09:48:19 UTC
 +++ Makefile
-@@ -12,12 +12,8 @@ MAINTAINER=	cyberbotx@cyberbotx.com
+@@ -10,14 +10,9 @@ MASTER_SITES=	http://www.gentoo.com/di/
+ MAINTAINER=	cyberbotx@cyberbotx.com
  COMMENT=	Disk Information Utility
  
- MAKE_ENV+=	prefix="${PREFIX}"
+-MAKE_ENV=	prefix="${PREFIX}"
++MAKE_ENV=	prefix="${PREFIX}" DI_NO_NLS=T
+ MAKE_ARGS=	-e
 -
 -OPTIONS_DEFINE=	NLS
 -OPTIONS_SUB=	yes
 -
 -NLS_USES=	gettext
 -NLS_MAKE_ENV_OFF=	DI_NO_NLS=T
-+MAKE_ENV+=	DI_NO_NLS=T
 +PLIST_SUB+=	NLS="@comment "
  
  post-patch:
