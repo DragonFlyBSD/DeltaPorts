@@ -1,15 +1,6 @@
---- Makefile.orig	2016-02-15 12:17:19 UTC
-+++ Makefile
-@@ -22,6 +22,8 @@ CPE_VENDOR=	python
- CPE_PRODUCT=	${CPE_VENDOR}
- CPE_VERSION=	${PORTVERSION}
- 
-+MAKE_JOBS_UNSAFE=	yes
-+
- CONFIGURE_ARGS+=	--enable-shared
- CONFIGURE_ENV+=		ac_cv_opt_olimit_ok=no OPT=""				# Null out OPT to respect user CFLAGS and remove optimizations
- 
-@@ -36,24 +38,29 @@ MAKE_JOBS_UNSAFE=	yes							# Parser/pge
+--- Makefile.orig	2016-02-16 12:41:50.000000000 +0100
++++ Makefile	2016-02-16 12:43:19.000000000 +0100
+@@ -36,24 +36,29 @@
  
  PLIST_SUB=		ABI=${ABIFLAGS} \
  			PORTVERSION=${PORTVERSION} \
@@ -40,11 +31,12 @@
  
  # Use CPPFLAGS over CFLAGS due to -I ordering, causing elementtree and pyexpat
  # to break in Python 2.7, or preprocessor complaints in Python >= 3.3
-@@ -123,6 +130,7 @@ post-patch:
+@@ -123,6 +128,8 @@
  	@${REINPLACE_CMD} -e 's/disabled_module_list =[^]]*/&, "nis"/' \
  		${WRKSRC}/setup.py
  .endif
-+	@${REINPLACE_CMD} -e 's|`uname -r`|"${OSREL}"|g' ${WRKSRC}/configure
++	${REINPLACE_CMD} -e 's|`uname -r`|"${_OSRELEASE}"|g' \
++		${WRKSRC}/configure
  
  post-install:
  	for i in ${STAGEDIR}${PREFIX}/lib/python2.7/lib-dynload/*.so; do \
