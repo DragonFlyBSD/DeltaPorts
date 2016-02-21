@@ -1,0 +1,11 @@
+--- pkg-plist.orig	2016-02-21 16:46:49 UTC
++++ pkg-plist
+@@ -2209,7 +2209,7 @@ llvm38/lib/libLTO.so
+ %%LLDB%%llvm38/lib/python2.7/site-packages/lldb/runtime/__init__.py
+ %%LLDB%%llvm38/lib/python2.7/site-packages/lldb/utils/__init__.py
+ %%LLDB%%llvm38/lib/python2.7/site-packages/lldb/utils/symbolication.py
+-llvm38/lib/python2.7/site-packages/six.py
++%%LLDB%%llvm38/lib/python2.7/site-packages/six.py
+ %%CLANG%%llvm38/libexec/c++-analyzer
+ %%CLANG%%llvm38/libexec/ccc-analyzer
+ %%CLANG%%llvm38/share/clang/clang-format-bbedit.applescript
