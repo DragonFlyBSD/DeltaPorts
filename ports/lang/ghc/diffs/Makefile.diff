@@ -1,4 +1,4 @@
---- Makefile.orig	2016-01-29 19:48:24 UTC
+--- Makefile.orig	2016-03-03 11:46:12 UTC
 +++ Makefile
 @@ -5,6 +5,7 @@ PORTNAME=	ghc
  PORTVERSION=	7.10.2
@@ -8,7 +8,7 @@
  		LOCAL/pgj/:boot
  DISTFILES=	ghc-${PORTVERSION}-src${EXTRACT_SUFX}:source
  
-@@ -78,10 +79,27 @@ LIB_DEPENDS+=	libffi.so.6:${PORTSDIR}/de
+@@ -78,9 +79,26 @@ LIB_DEPENDS+=	libffi.so.6:${PORTSDIR}/de
  
  .if empty(PORT_OPTIONS:MBOOT)
  
@@ -16,7 +16,6 @@
 +
  BOOT_GHC_VERSION=	7.10.2
  DISTFILES+=		ghc-${BOOT_GHC_VERSION}-boot-${ARCH}-freebsd${EXTRACT_SUFX}:boot
- LIB_DEPENDS+=		libutil.so.9:${PORTSDIR}/misc/compat9x
  
 +.elif ${OPSYS} == "DragonFly"
 +
@@ -36,7 +35,7 @@
  .endif # MBOOT
  
  .if ${PORT_OPTIONS:MPCLANG}
-@@ -197,6 +215,7 @@ CONFIGURE_ENV+=	PATH=${SLAVES_PREFIX}/bi
+@@ -196,6 +214,7 @@ CONFIGURE_ENV+=	PATH=${SLAVES_PREFIX}/bi
  
  BUILD_DEPENDS+=	docbook-xsl>0:${PORTSDIR}/textproc/docbook-xsl \
  		${LOCALBASE}/bin/xsltproc:${PORTSDIR}/textproc/libxslt

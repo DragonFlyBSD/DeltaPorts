@@ -1,12 +1,12 @@
---- Makefile.orig	2013-04-24 12:47:29.000000000 +0000
+--- Makefile.orig	2016-03-03 11:43:37 UTC
 +++ Makefile
-@@ -52,11 +52,6 @@ BINS=		${DIST}/${OPSYS}${OSREL}_DBG.OBJ
- 
- .include <bsd.port.pre.mk>
+@@ -54,11 +54,6 @@ BINS=		${DIST}/${OPSYS}${OSREL}_OPT.OBJ
+ BINS=		${DIST}/${OPSYS}${OSREL}_DBG.OBJ
+ .endif
  
 -.if ${ARCH} == amd64
 -USE_BINUTILS=	# intel-gcm.s
--CFLAGS+=	-B${LOCALBASE}/bin
+-CC+=	-B${LOCALBASE}/bin
 -.endif
 -
  check regression-test test:

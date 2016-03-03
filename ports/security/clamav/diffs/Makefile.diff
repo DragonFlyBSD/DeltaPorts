@@ -12,12 +12,3 @@
  
  CONFLICTS?=	clamav-milter-[0-9]*
  
-@@ -150,7 +147,7 @@ LDFLAGS+=	-lldap
- . endif
- 
- . if !exists(/usr/lib/libmilter.a) || exists(${LOCALBASE}/lib/libmilter.a)
--BUILD_DEPENDS+=	${LOCALBASE}/lib/libmilter.a:${PORTSDIR}/mail/sendmail
-+.include "${.CURDIR}/../../mail/sendmail/bsd.milter.mk"
- CONFIGURE_ARGS+=--with-sendmail=${LOCALBASE}/sbin/sendmail
- LDFLAGS+=	-L${LOCALBASE}/lib
- . else
