@@ -1,0 +1,10 @@
+--- Makefile.orig	2016-03-05 13:02:12 UTC
++++ Makefile
+@@ -45,7 +45,6 @@ PLIST_FILES=	%%DATADIR%%/en_CA${CA_VARIA
+ 		%%DATADIR%%/en_GB.dic \
+ 		%%DATADIR%%/en_GB.aff \
+ 
+-COPY=	-lh	# Use hardlinks rather than copies under stage/
+ 
+ .include <bsd.port.options.mk>
+ 
