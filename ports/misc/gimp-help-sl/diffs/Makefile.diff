@@ -1,0 +1,10 @@
+--- Makefile.orig	2016-03-06 10:36:30 UTC
++++ Makefile
+@@ -8,6 +8,7 @@ COMMENT=	The GIMP User Manual in Sloveni
+ 
+ LICENSE=	GFDL
+ 
++IGNORE=		almost always breaks build during contention
+ MASTERDIR=	${.CURDIR}/../gimp-help-en
+ 
+ DOCLANG=	sl
