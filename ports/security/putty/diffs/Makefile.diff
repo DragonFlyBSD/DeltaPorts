@@ -1,0 +1,12 @@
+--- Makefile.orig	2016-03-10 21:29:30 UTC
++++ Makefile
+@@ -43,8 +43,7 @@ MAKE_ARGS+=	GTK_CONFIG=:
+ 
+ .if ${PORT_OPTIONS:MGSSAPI}
+ _COMPAT=		-DSTATIC_GSSAPI
+-USES+=		gssapi:base,flags
+-MAKE_ARGS+=	KRB5CONFIG=$(KRB5CONFIG)
++USES+=		gssapi:mit
+ .else
+ _COMPAT=		-DNO_GSSAPI
+ .endif
