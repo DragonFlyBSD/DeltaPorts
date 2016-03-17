@@ -1,15 +1,15 @@
---- Makefile.orig	2015-11-02 01:27:17 UTC
+--- Makefile.orig	2016-03-17 11:51:55 UTC
 +++ Makefile
-@@ -35,7 +35,7 @@ ONLY_FOR_ARCHS=	i386 amd64 powerpc power
+@@ -38,7 +38,7 @@ ONLY_FOR_ARCHS=	i386 amd64 powerpc power
  
- OPTIONS_DEFINE=	DEBUG EXPAT GDB_LINK GUILE KGDB PYTHON THREADS TUI
+ OPTIONS_DEFINE=	DEBUG EXPAT GDB_LINK GUILE KGDB PYTHON TUI
  
--OPTIONS_DEFAULT=	GDB_LINK KGDB THREADS TUI PORT_READLINE
+-OPTIONS_DEFAULT=	GDB_LINK KGDB TUI PORT_READLINE
 +OPTIONS_DEFAULT=	GDB_LINK TUI PORT_READLINE
  
  OPTIONS_SINGLE=	READLINE
  OPTIONS_SINGLE_READLINE=	BASE_READLINE BUNDLED_READLINE PORT_READLINE
-@@ -71,12 +71,8 @@ TUI_CONFIGURE_ENABLE=	tui
+@@ -73,12 +73,8 @@ TUI_CONFIGURE_ENABLE=	tui
  EXCLUDE+=	readline
  .endif
  
@@ -21,16 +21,16 @@
 -	@${REINPLACE_CMD} -e 's|$$| [GDB v${PORTVERSION} for FreeBSD]|' \
 +	@${REINPLACE_CMD} -e 's|$$| [GDB v${PORTVERSION} for ${OPSYS}]|' \
  		${WRKSRC}/gdb/version.in
- .if ${PORT_OPTIONS:MTHREADS}
- 	@${CP} ${FILESDIR}/fbsd-threads.c ${WRKSRC}/gdb/
-@@ -93,6 +89,10 @@ post-patch:
- 	    ${FILESDIR}/extrapatch-kgdb-configure.tgt-plain
- .endif
+ 
+ post-patch-KGDB-on:
+@@ -103,6 +99,10 @@ do-install-GDB_LINK-on:
+ .if ${PORT_OPTIONS:MKGDB}
+ 	${LN} -sf kgdb${VER} ${STAGEDIR}${PREFIX}/bin/kgdb
  .endif
 +	@${CP} ${DFLY_FILESDIR}/dfly64.mh ${WRKSRC}/gdb/config/i386/
 +	@${CP} ${DFLY_FILESDIR}/dfly-nat.* ${WRKSRC}/gdb/
 +	@${CP} ${DFLY_FILESDIR}/i386* ${WRKSRC}/gdb/
 +	@${CP} ${DFLY_FILESDIR}/amd64* ${WRKSRC}/gdb/
  
- do-install:
- 	${INSTALL_PROGRAM} ${WRKSRC}/gdb/gdb \
+ do-install-PYTHON-on:
+ 	(cd ${WRKSRC}/gdb; ${SETENV} ${MAKE_ENV} ${MAKE_CMD} ${MAKE_ARGS} install-python )
