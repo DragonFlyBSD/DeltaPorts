@@ -1,4 +1,4 @@
---- Uses/compiler.mk.orig	2015-11-28 11:24:04 UTC
+--- Uses/compiler.mk.orig	2016-03-23 21:17:21 UTC
 +++ Uses/compiler.mk
 @@ -66,6 +66,11 @@ _COMPILER_ARGS=	#
  _COMPILER_ARGS+=	features
@@ -10,9 +10,9 @@
 +COMPILER_VERSION=	52
 +.else
  _CCVERSION!=	${CC} --version
- COMPILER_VERSION=	${_CCVERSION:M[0-9].[0-9]*:C/([0-9]).([0-9]).*/\1\2/g}
- .if ${_CCVERSION:Mclang}
-@@ -73,6 +78,7 @@ COMPILER_TYPE=	clang
+ .if defined(.PARSEDIR)
+ COMPILER_VERSION=	${_CCVERSION:M[0-9].[0-9]*:tW:C/([0-9]).([0-9]).*/\1\2/g}
+@@ -77,6 +82,7 @@ COMPILER_TYPE=	clang
  .else
  COMPILER_TYPE=	gcc
  .endif
@@ -20,7 +20,7 @@
  
  ALT_COMPILER_VERSION=	0
  ALT_COMPILER_TYPE=	none
-@@ -109,6 +115,12 @@ CHOSEN_COMPILER_TYPE=	gcc
+@@ -117,6 +123,12 @@ CHOSEN_COMPILER_TYPE=	gcc
  .endif
  
  .if ${_COMPILER_ARGS:Mfeatures}
@@ -33,7 +33,7 @@
  _CXXINTERNAL!=	${CXX} -\#\#\# /dev/null 2>&1
  .if ${_CXXINTERNAL:M\"-lc++\"}
  COMPILER_FEATURES=	libc++
-@@ -129,6 +141,7 @@ OUTPUT_${std}!=	echo | ${CC} -std=${std}
+@@ -137,6 +149,7 @@ OUTPUT_${std}!=	echo | ${CC} -std=${std}
  COMPILER_FEATURES+=	${std}
  .endif
  .endfor
@@ -41,3 +41,50 @@
  .endif
  
  .if ${_COMPILER_ARGS:Mc++11-lib}
+@@ -183,10 +196,10 @@ CC=	clang
+ CXX=	clang++
+ CHOSEN_COMPILER_TYPE=	clang
+ .else
+-BUILD_DEPENDS+=	${LOCALBASE}/bin/clang34:${PORTSDIR}/lang/clang34
+-CPP=	${LOCALBASE}/bin/clang-cpp34
+-CC=	${LOCALBASE}/bin/clang34
+-CXX=	${LOCALBASE}/bin/clang++34
++BUILD_DEPENDS+=	${LOCALBASE}/bin/clang38:${PORTSDIR}/lang/clang38
++CPP=	${LOCALBASE}/bin/clang-cpp38
++CC=	${LOCALBASE}/bin/clang38
++CXX=	${LOCALBASE}/bin/clang++38
+ CHOSEN_COMPILER_TYPE=	clang
+ .endif
+ .endif
+@@ -205,11 +218,11 @@ CC=	clang
+ CXX=	clang++
+ CHOSEN_COMPILER_TYPE=	clang
+ .else
+-BUILD_DEPENDS+=	${LOCALBASE}/bin/clang34:${PORTSDIR}/lang/clang34
++BUILD_DEPENDS+=	${LOCALBASE}/bin/clang38:${PORTSDIR}/lang/clang38
+ CHOSEN_COMPILER_TYPE=	clang
+-CPP=	${LOCALBASE}/bin/clang-cpp34
+-CC=	${LOCALBASE}/bin/clang34
+-CXX=	${LOCALBASE}/bin/clang++34
++CPP=	${LOCALBASE}/bin/clang-cpp38
++CC=	${LOCALBASE}/bin/clang38
++CXX=	${LOCALBASE}/bin/clang++38
+ .endif
+ .endif
+ .endif
+@@ -227,11 +240,11 @@ CC=	clang
+ CXX=	clang++
+ CHOSEN_COMPILER_TYPE=	clang
+ .else
+-BUILD_DEPENDS+=	${LOCALBASE}/bin/clang34:${PORTSDIR}/lang/clang34
++BUILD_DEPENDS+=	${LOCALBASE}/bin/clang38:${PORTSDIR}/lang/clang38
+ CHOSEN_COMPILER_TYPE=	clang
+-CPP=	${LOCALBASE}/bin/clang-cpp34
+-CC=	${LOCALBASE}/bin/clang34
+-CXX=	${LOCALBASE}/bin/clang++34
++CPP=	${LOCALBASE}/bin/clang-cpp38
++CC=	${LOCALBASE}/bin/clang38
++CXX=	${LOCALBASE}/bin/clang++38
+ .endif
+ .endif
+ .endif
