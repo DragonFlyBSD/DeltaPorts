@@ -1,4 +1,4 @@
---- bsd.port.mk.orig	2016-01-11 09:10:16 UTC
+--- bsd.port.mk.orig	2016-03-26 18:58:42 UTC
 +++ bsd.port.mk
 @@ -43,7 +43,8 @@ FreeBSD_MAINTAINER=	portmgr@FreeBSD.org
  #				  makefile is being used on.  Automatically set to
@@ -10,7 +10,7 @@
  #
  # This is the beginning of the list of all variables that need to be
  # defined in a port, listed in order that they should be included
-@@ -534,6 +535,12 @@ FreeBSD_MAINTAINER=	portmgr@FreeBSD.org
+@@ -524,6 +525,12 @@ FreeBSD_MAINTAINER=	portmgr@FreeBSD.org
  #				  Default: ${MASTERDIR}/scripts
  # FILESDIR		- A directory containing any miscellaneous additional files.
  #				  Default: ${MASTERDIR}/files
@@ -23,7 +23,7 @@
  # PKGDIR		- A directory containing any package creation files.
  #				  Default: ${MASTERDIR}
  # SRC_BASE		- The root of the src tree.  (Some ports require this to get
-@@ -1061,10 +1068,15 @@ FreeBSD_MAINTAINER=	portmgr@FreeBSD.org
+@@ -1051,10 +1058,15 @@ FreeBSD_MAINTAINER=	portmgr@FreeBSD.org
  # These need to be absolute since we don't know how deep in the ports
  # tree we are and thus can't go relative.  They can, of course, be overridden
  # by individual Makefiles or local system make configuration.
@@ -41,7 +41,7 @@
  _DISTDIR?=		${DISTDIR}/${DIST_SUBDIR}
  INDEXDIR?=		${PORTSDIR}
  SRC_BASE?=		/usr/src
-@@ -1132,48 +1144,40 @@ MAINTAINER?=	ports@FreeBSD.org
+@@ -1122,48 +1134,40 @@ MAINTAINER?=	ports@FreeBSD.org
  
  # Get the architecture
  .if !defined(ARCH)
@@ -107,7 +107,7 @@
  
  # Only define tools here (for transition period with between pkg tools)
  .include "${PORTSDIR}/Mk/bsd.commands.mk"
-@@ -1307,7 +1311,7 @@ _GITHUB_MUST_SET_DISTNAME=		yes
+@@ -1297,7 +1301,7 @@ _GITHUB_MUST_SET_DISTNAME=		yes
  DISTNAME?=	${PORTNAME}-${DISTVERSIONFULL}
  .endif
  
@@ -116,7 +116,7 @@
  
  DOCSDIR?=		${PREFIX}/share/doc/${PORTNAME}
  EXAMPLESDIR?=		${PREFIX}/share/examples/${PORTNAME}
-@@ -1327,7 +1331,7 @@ ETCDIR?=		${PREFIX}/etc/${PORTNAME}
+@@ -1317,7 +1321,7 @@ ETCDIR?=		${PREFIX}/etc/${PORTNAME}
  .include "${PORTSDIR}/Mk/bsd.xorg.mk"
  .endif
  
@@ -125,7 +125,7 @@
  TEMPLATES?=		${PORTSDIR}/Templates
  KEYWORDS?=		${PORTSDIR}/Keywords
  
-@@ -1541,7 +1545,7 @@ MAKE_ENV+=		NM=${NM} \
+@@ -1531,7 +1535,7 @@ MAKE_ENV+=		NM=${NM} \
  CONFIGURE_ENV+=	PKG_CONFIG_SYSROOT_DIR="${X_SYSROOT}"
  .endif
  
@@ -134,7 +134,7 @@
  .if !defined(IGNORE_MASTER_SITE_GITHUB) && defined(USE_GITHUB)
  WRKSRC?=		${WRKDIR}/${GH_PROJECT}-${GH_TAGNAME_EXTRACT}
  .endif
-@@ -1585,7 +1589,9 @@ PLIST_SUB_SED?= ${PLIST_SUB:C/.*=.{1,${P
+@@ -1575,7 +1579,9 @@ PLIST_SUB_SED?= ${PLIST_SUB:C/.*=.{1,${P
  
  # kludge to strip trailing whitespace from CFLAGS;
  # sub-configure will not # survive double space
@@ -145,7 +145,7 @@
  
  .if defined(WITHOUT_CPU_CFLAGS)
  .if defined(_CPUCFLAGS)
-@@ -1643,19 +1649,6 @@ PATCH_DEPENDS+=		${LOCALBASE}/bin/unzip:
+@@ -1634,19 +1640,6 @@ PATCH_DEPENDS+=		${LOCALBASE}/bin/unzip:
  
  # Check the compatibility layer for amd64/ia64
  
@@ -165,7 +165,7 @@
  .if defined(IA32_BINARY_PORT) && ${ARCH} != "i386"
  .if ${ARCH} == "amd64" || ${ARCH} == "ia64"
  .if !defined(HAVE_COMPAT_IA32_KERN)
-@@ -1682,7 +1675,17 @@ PKG_DEPENDS+=	${LOCALBASE}/sbin/pkg:${PO
+@@ -1673,7 +1666,12 @@ PKG_DEPENDS+=	${LOCALBASE}/sbin/pkg:${PO
  .endif
  
  .if defined(USE_GCC)
@@ -173,18 +173,13 @@
 +.include "${PORTSDIR}/Mk/bsd.df.gcc.mk"
 +.else
 +.  if !defined(USE_GNUSTEP)
-+.    if ${DFLYVERSION} < 400105
-+CONFIGURE_ENV+= 	CCVER=gcc47
-+MAKE_ENV+=		CCVER=gcc47
-+.    else
 +CONFIGURE_ENV+= 	CCVER=gcc50
 +MAKE_ENV+=		CCVER=gcc50
-+.    endif
 +.  endif
  .endif
  
  .if defined(USE_BINUTILS) && !defined(DISABLE_BINUTILS)
-@@ -1977,9 +1980,11 @@ DISTINFO_FILE?=		${MASTERDIR}/distinfo
+@@ -1958,9 +1956,11 @@ DISTINFO_FILE?=		${MASTERDIR}/distinfo
  MAKE_FLAGS?=	-f
  MAKEFILE?=		Makefile
  MAKE_CMD?=		${BSDMAKE}
@@ -196,7 +191,7 @@
  			CC="${CC}" CFLAGS="${CFLAGS}" \
  			CPP="${CPP}" CPPFLAGS="${CPPFLAGS}" \
  			LDFLAGS="${LDFLAGS}" LIBS="${LIBS}" \
-@@ -2016,7 +2021,7 @@ MAKE_JOBS_NUMBER=	1
+@@ -1997,7 +1997,7 @@ MAKE_JOBS_NUMBER=	1
  _MAKE_JOBS_NUMBER:=	${MAKE_JOBS_NUMBER}
  .else
  .if !defined(_SMP_CPUS)
@@ -205,7 +200,7 @@
  .endif
  _EXPORTED_VARS+=	_SMP_CPUS
  _MAKE_JOBS_NUMBER=	${_SMP_CPUS}
-@@ -2089,9 +2094,37 @@ PATCH_DIST_ARGS+=	--suffix .orig
+@@ -2070,9 +2070,37 @@ PATCH_DIST_ARGS+=	--suffix .orig
  TAR?=	/usr/bin/tar
  
  # EXTRACT_SUFX is defined in .pre.mk section
@@ -246,7 +241,7 @@
  
  # Figure out where the local mtree file is
  .if !defined(MTREE_FILE) && !defined(NO_MTREE)
-@@ -2604,7 +2637,7 @@ CONFIGURE_FAIL_MESSAGE?=	"Please report
+@@ -2585,7 +2613,7 @@ CONFIGURE_FAIL_MESSAGE?=	"Please report
  .if defined(GNU_CONFIGURE)
  # Maximum command line length
  .if !defined(CONFIGURE_MAX_CMD_LEN)
@@ -255,7 +250,7 @@
  .endif
  _EXPORTED_VARS+=	CONFIGURE_MAX_CMD_LEN
  GNU_CONFIGURE_PREFIX?=	${PREFIX}
-@@ -2640,6 +2673,8 @@ SET_LATE_CONFIGURE_ARGS= \
+@@ -2621,6 +2649,8 @@ SET_LATE_CONFIGURE_ARGS= \
  SCRIPTS_ENV+=	CURDIR=${MASTERDIR} DISTDIR=${DISTDIR} \
  		  WRKDIR=${WRKDIR} WRKSRC=${WRKSRC} PATCHDIR=${PATCHDIR} \
  		  SCRIPTDIR=${SCRIPTDIR} FILESDIR=${FILESDIR} \
@@ -264,7 +259,7 @@
  		  PORTSDIR=${PORTSDIR} PREFIX=${PREFIX} LOCALBASE=${LOCALBASE}
  
  .if defined(BATCH)
-@@ -2722,7 +2757,7 @@ DESKTOPDIR?=		${PREFIX}/share/applicatio
+@@ -2703,7 +2733,7 @@ DESKTOPDIR?=		${PREFIX}/share/applicatio
  
  # Check the machine architectures
  .if defined(ONLY_FOR_ARCHS)
@@ -273,7 +268,7 @@
  .if ${ARCH:M${__ARCH}} != ""
  __ARCH_OK?=		1
  .endif
-@@ -2732,7 +2767,7 @@ __ARCH_OK?=		1
+@@ -2713,7 +2743,7 @@ __ARCH_OK?=		1
  .endif
  
  .if defined(NOT_FOR_ARCHS)
@@ -282,7 +277,7 @@
  .if ${ARCH:M${__NARCH}} != ""
  .undef __ARCH_OK
  .endif
-@@ -2741,9 +2776,9 @@ __ARCH_OK?=		1
+@@ -2722,9 +2752,9 @@ __ARCH_OK?=		1
  
  .if !defined(__ARCH_OK)
  .if defined(ONLY_FOR_ARCHS)
@@ -294,7 +289,7 @@
  .endif
  IGNORE+=	while you are running ${ARCH}
  
-@@ -2889,6 +2924,7 @@ all:
+@@ -2870,6 +2900,7 @@ all:
  	  DISTDIR=${DISTDIR} WRKDIR=${WRKDIR} WRKSRC=${WRKSRC} \
  	  PATCHDIR=${PATCHDIR} SCRIPTDIR=${SCRIPTDIR} \
  	  FILESDIR=${FILESDIR} PORTSDIR=${PORTSDIR} PREFIX=${PREFIX} \
@@ -302,7 +297,7 @@
  	  BUILD_DEPENDS="${BUILD_DEPENDS}" RUN_DEPENDS="${RUN_DEPENDS}" \
  	  CONFLICTS="${CONFLICTS}" \
  	${ALL_HOOK}
-@@ -3223,9 +3259,26 @@ clean-wrkdir:
+@@ -3204,9 +3235,26 @@ clean-wrkdir:
  .if !target(do-extract)
  do-extract:
  	@for file in ${EXTRACT_ONLY}; do \
@@ -332,7 +327,7 @@
  		fi; \
  	done
  	@if [ ${UID} = 0 ]; then \
-@@ -3280,7 +3333,7 @@ do-patch:
+@@ -3261,7 +3309,7 @@ do-patch:
  	@set -e ;\
  	if [ -d ${PATCHDIR} ]; then \
  		if [ "`${ECHO_CMD} ${PATCHDIR}/patch-*`" != "${PATCHDIR}/patch-*" ]; then \
@@ -341,7 +336,7 @@
  			PATCHES_APPLIED="" ; \
  			for i in ${PATCHDIR}/patch-*; do \
  				case $$i in \
-@@ -3305,6 +3358,33 @@ do-patch:
+@@ -3286,6 +3334,33 @@ do-patch:
  			done; \
  		fi; \
  	fi
@@ -375,7 +370,7 @@
  .endif
  
  .if !target(run-autotools-fixup)
-@@ -3930,6 +4010,7 @@ do-clean:
+@@ -3914,6 +3989,7 @@ do-clean:
  	@if [ -d ${WRKDIR} ]; then \
  		if [ -w ${WRKDIR} ]; then \
  			${RM} -rf ${WRKDIR}; \
@@ -383,7 +378,7 @@
  		else \
  			${ECHO_MSG} "===>   ${WRKDIR} not writable, skipping"; \
  		fi; \
-@@ -4454,7 +4535,7 @@ FETCH_LIST?=	for i in $$deps; do \
+@@ -4445,7 +4521,7 @@ FETCH_LIST?=	for i in $$deps; do \
  			else	\
  				continue;	\
  			fi;;	\
@@ -392,7 +387,7 @@
  				continue;	\
  			fi;;	\
  		esac;	\
-@@ -4809,10 +4890,15 @@ _SUB_LIST_TEMP=	${SUB_LIST:S/$/!g/:S/^/
+@@ -4800,10 +4876,15 @@ _SUB_LIST_TEMP=	${SUB_LIST:S/$/!g/:S/^/
  apply-slist:
  .if defined(SUB_FILES)
  .for file in ${SUB_FILES}
@@ -411,7 +406,7 @@
  .endif
  .endfor
  .for i in pkg-message pkg-install pkg-deinstall pkg-req
-@@ -5674,6 +5760,7 @@ _PATCH_DEP=		extract
+@@ -5665,6 +5746,7 @@ _PATCH_DEP=		extract
  _PATCH_SEQ=		050:ask-license 100:patch-message 150:patch-depends \
  				300:pre-patch 450:pre-patch-script 500:do-patch \
  				700:post-patch 850:post-patch-script \
