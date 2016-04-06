@@ -1,18 +1,18 @@
---- Makefile.orig	2016-03-23 16:13:42 UTC
+--- Makefile.orig	2016-04-06 15:57:58 UTC
 +++ Makefile
 @@ -11,18 +11,20 @@ COMMENT=	Advanced shading language for p
  
  LICENSE=	BSD3CLAUSE
  
--BUILD_DEPENDS=	llvm-config34:${PORTSDIR}/devel/llvm34 \
--		clang34>=3.4_1:${PORTSDIR}/lang/clang34
-+BUILD_DEPENDS=	llvm-config35:${PORTSDIR}/devel/llvm35 \
-+		clang35>=3.5:${PORTSDIR}/lang/clang35
- LIB_DEPENDS=	libboost_thread.so:${PORTSDIR}/devel/boost-libs \
- 		libIlmImf.so:${PORTSDIR}/graphics/OpenEXR \
- 		libOpenImageIO.so:${PORTSDIR}/graphics/openimageio
--RUN_DEPENDS=	llvm-config34:${PORTSDIR}/devel/llvm34
-+RUN_DEPENDS=	llvm-config35:${PORTSDIR}/devel/llvm35
+-BUILD_DEPENDS=	llvm-config34:devel/llvm34 \
+-		clang34>=3.4_1:lang/clang34
++BUILD_DEPENDS=	llvm-config35:devel/llvm35 \
++		clang35>=3.5:lang/clang35
+ LIB_DEPENDS=	libboost_thread.so:devel/boost-libs \
+ 		libIlmImf.so:graphics/OpenEXR \
+ 		libOpenImageIO.so:graphics/openimageio
+-RUN_DEPENDS=	llvm-config34:devel/llvm34
++RUN_DEPENDS=	llvm-config35:devel/llvm35
  
  USE_GITHUB=	yes
  GH_ACCOUNT=	imageworks

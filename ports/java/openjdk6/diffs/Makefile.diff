@@ -1,6 +1,6 @@
---- Makefile.orig	2013-11-17 19:19:25.644074000 +0000
+--- Makefile.orig	2016-04-06 16:03:08 UTC
 +++ Makefile
-@@ -85,21 +85,12 @@ NOPRECIOUSMAKEVARS=	yes
+@@ -84,21 +84,12 @@ NOPRECIOUSMAKEVARS=	yes
  
  ONLY_FOR_ARCHS=	amd64 i386
  
@@ -17,7 +17,7 @@
 -# if no valid jdk found, set dependency
 -.if !defined(BOOTSTRAPJDKDIR)
 -BOOTSTRAPJDKDIR?=	${LOCALBASE}/bootstrap-openjdk
--BUILD_DEPENDS+=		${BOOTSTRAPJDKDIR}/bin/javac:${PORTSDIR}/java/bootstrap-openjdk
+-BUILD_DEPENDS+=		${BOOTSTRAPJDKDIR}/bin/javac:java/bootstrap-openjdk
 -.endif
 +JDK_ARCH=		${ARCH:S/x86_64/amd64/}
 +MASTER_SITES+=		http://leaf.dragonflybsd.org/~marino/dports-src/:bootstrap
@@ -26,9 +26,9 @@
 +EXTRACT_ONLY+=		${BOOTSTRAP_DISTFILE}
 +BOOTSTRAPJDKDIR?=	${WRKDIR}/bootstrap
  
- FETCH_ARGS=	-Fpr
  MAKE_ENV=	LANG=C LC_ALL=C OS= \
-@@ -126,9 +117,9 @@ MAKE_ENV+=	ALT_PARALLEL_COMPILE_JOBS=${M
+ 		ALT_JDK_IMPORT_PATH=${BOOTSTRAPJDKDIR} \
+@@ -123,9 +114,9 @@ MAKE_ENV+=	HOTSPOT_BUILD_JOBS=${MAKE_JOB
  
  .if ${PORT_OPTIONS:MDEBUG}
  ALL_TARGET=	debug_build
@@ -40,7 +40,7 @@
  .endif
  
  # disable FASTDEBUG_BUILD by default to improve compile time.
-@@ -289,8 +280,8 @@ do-install:
+@@ -294,8 +285,8 @@ do-install:
  	@cd ${WRKSRC}/build/${OPENJDK_OSARCH}/j2re-image && \
  	    ${COPYTREE_BIN} bin ${STAGEDIR}${PREFIX}/openjdk6-jre
  	@cd ${WRKSRC}/build/${OPENJDK_OSARCH}/j2re-image && \
@@ -51,7 +51,7 @@
  .else
  	@cd ${WRKSRC}/build/${OPENJDK_OSARCH}/j2sdk-image && \
  	    ${COPYTREE_SHARE} . ${STAGEDIR}${PREFIX}/openjdk6 \
-@@ -298,11 +289,13 @@ do-install:
+@@ -303,11 +294,13 @@ do-install:
  	@cd ${WRKSRC}/build/${OPENJDK_OSARCH}/j2sdk-image && \
  	    ${COPYTREE_BIN} "bin jre/bin" ${STAGEDIR}${PREFIX}/openjdk6
  	@cd ${WRKSRC}/build/${OPENJDK_OSARCH}/j2sdk-image && \
@@ -67,7 +67,7 @@
  .if ${PORT_OPTIONS:MFASTDEBUG}
  	@cd ${WRKSRC}/build/${OPENJDK_OSARCH}-fastdebug/j2sdk-image && \
  	    ${COPYTREE_SHARE} . ${STAGEDIR}${PREFIX}/openjdk6-fastdebug \
-@@ -311,8 +304,8 @@ do-install:
+@@ -316,8 +309,8 @@ do-install:
  	    ${COPYTREE_BIN} "bin jre/bin" \
  	    ${STAGEDIR}${PREFIX}/openjdk6-fastdebug
  	@cd ${WRKSRC}/build/${OPENJDK_OSARCH}-fastdebug/j2sdk-image && \

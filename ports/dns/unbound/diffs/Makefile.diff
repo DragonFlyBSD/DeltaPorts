@@ -1,11 +1,11 @@
---- Makefile.orig	2016-01-04 16:23:04 UTC
+--- Makefile.orig	2016-04-06 15:52:17 UTC
 +++ Makefile
-@@ -41,7 +41,7 @@ FILTER_AAAA_DESC=	Build with AAAA filter
+@@ -42,7 +42,7 @@ DNSTAP_DESC=	Enable dnstap logging suppo
  .include <bsd.port.options.mk>
  
- LIB_DEPENDS+=	libexpat.so:${PORTSDIR}/textproc/expat2 \
--		libldns.so:${PORTSDIR}/dns/ldns
-+		libldns.so.1.6.17:${PORTSDIR}/dns/ldns
+ LIB_DEPENDS+=	libexpat.so:textproc/expat2 \
+-		libldns.so:dns/ldns
++		libldns.so.1.6.17:dns/ldns
  
  STRIP_FILES=	.libs/libunbound.so unbound-checkconf unbound \
  		unbound-control .libs/unbound-host .libs/unbound-anchor

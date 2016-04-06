@@ -1,4 +1,4 @@
---- Makefile.orig	2015-10-18 16:28:40.000000000 +0300
+--- Makefile.orig	2016-04-06 16:00:05 UTC
 +++ Makefile
 @@ -29,15 +29,11 @@ USE_LDCONFIG=	yes
  CFLAGS+=	-I${LOCALBASE}/include -fPIC
@@ -37,7 +37,7 @@
  LDFLAGS+=	-L/usr/local/lib/c++
  CXXFLAGS+=	-nostdinc++ -isystem /usr/local/include/c++/v1
  CFLAGS+=	-isystem /usr/local/include/c++/v1
- BUILD_DEPENDS+=	${LOCALBASE}/lib/c++/libstdc++.so:${PORTSDIR}/devel/libc++
+ BUILD_DEPENDS+=	${LOCALBASE}/lib/c++/libstdc++.so:devel/libc++
  .endif
 +.endif
  

@@ -1,4 +1,4 @@
---- Makefile.orig	2015-10-30 09:50:57 UTC
+--- Makefile.orig	2016-04-06 16:05:34 UTC
 +++ Makefile
 @@ -5,10 +5,12 @@ PORTVERSION=	${JDK_MAJOR_VERSION}.${JDK_
  CATEGORIES=	java devel
@@ -14,7 +14,7 @@
  
  PATCH_SITES=	LOCAL/glewis/openjdk8
  PATCHFILES=	patch-8u05-b13.xz \
-@@ -178,7 +180,7 @@ _MAKE_JOBS=	#
+@@ -182,7 +184,7 @@ _MAKE_JOBS=	#
  CPPFLAGS+=	-I${LOCALBASE}/include
  LDFLAGS+=	-L${LOCALBASE}/lib
  MAKE_ENV=	LANG="C" LC_ALL="C"
@@ -23,7 +23,7 @@
  MAKE_ENV+=	IGNORE_OLD_CONFIG=true
  MAKE_ENV+=	COMPILER_WARNINGS_FATAL="false"
  
-@@ -189,7 +191,7 @@ JRE_IMAGEDIR=	${JDK_BUILDDIR}/images/j2s
+@@ -193,7 +195,7 @@ JRE_IMAGEDIR=	${JDK_BUILDDIR}/images/j2s
  .else
  JRE_IMAGEDIR=	${JDK_BUILDDIR}/images/j2re-image
  .endif
@@ -32,13 +32,13 @@
  JDK_OSARCH=	bsd-${ARCH:S/amd64/x86_64/:C/armv6.*/arm/:S/i386/x86/}
  INSTALLDIR=	${PREFIX}/${PKGBASE}
  
-@@ -307,8 +309,15 @@ BOOTSTRAPJDKDIR=	${BJDK}
+@@ -328,8 +330,15 @@ BOOTSTRAPJDKDIR=	${BJDK}
  BOOTSTRAPJDKDIR?=	${LOCALBASE}/bootstrap-openjdk
- BUILD_DEPENDS+=		${BOOTSTRAPJDKDIR}/bin/javac:${PORTSDIR}/java/bootstrap-openjdk
+ BUILD_DEPENDS+=		${BOOTSTRAPJDKDIR}/bin/javac:java/bootstrap-openjdk
  .  else
 +.    if ${OSREL:S/.//} < 41
  BOOTSTRAPJDKDIR?=	${LOCALBASE}/openjdk7
- BUILD_DEPENDS+=		${BOOTSTRAPJDKDIR}/bin/javac:${PORTSDIR}/java/openjdk7
+ BUILD_DEPENDS+=		${BOOTSTRAPJDKDIR}/bin/javac:java/openjdk7
 +MAKE_ENV+=		LD_LIBRARY_PATH=""
 +.    else
 +BOOTSTRAPJDKDIR=	${WRKDIR}/bootstrap
@@ -48,7 +48,7 @@
  .  endif
  .endif
  
-@@ -411,6 +420,7 @@ do-install:
+@@ -432,6 +441,7 @@ do-install:
  	${FIND} bin jre/bin -type f -exec ${CHMOD} ${BINMODE} {} \; && \
  	${CHMOD} ${BINMODE} jre/${JDK_JVMDIR}/jexec \
  	    jre/${JDK_JVMDIR}/jspawnhelper ${JDK_JVMDIR}/jexec

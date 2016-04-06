@@ -1,6 +1,6 @@
---- Makefile.orig	2015-09-10 17:00:18 UTC
+--- Makefile.orig	2016-04-06 16:04:28 UTC
 +++ Makefile
-@@ -11,13 +11,17 @@ MASTER_SITES=	http://download.java.net/o
+@@ -10,13 +10,17 @@ MASTER_SITES=	http://download.java.net/o
  		http://icedtea.classpath.org/download/drops/:jaxp \
  		http://download.java.net/glassfish/components/jax-ws/openjdk/jdk7/:jaxws \
  		http://icedtea.classpath.org/download/drops/:jaxws \
@@ -18,7 +18,7 @@
  		${ANT_DISTFILE}${EXTRACT_SUFX}
  PATCHFILES=	patch-7u45-b30.xz \
  		patch-7u51-b30.xz \
-@@ -78,8 +82,10 @@ RUN_DEPENDS+=	javavm:${PORTSDIR}/java/ja
+@@ -80,8 +84,10 @@ RUN_DEPENDS+=	javavm:java/javavmwrapper
  
  DOS2UNIX_FILES=	jdk/src/share/classes/com/sun/org/apache/xml/internal/security/resource/xmlsecurity_en.properties
  
@@ -30,7 +30,7 @@
  NOPRECIOUSMAKEVARS=	yes
  
  ONLY_FOR_ARCHS=	i386 amd64
-@@ -89,7 +95,7 @@ MAKE_ENV+=	LANG="C" \
+@@ -91,7 +97,7 @@ MAKE_ENV+=	LANG="C" \
  		LC_ALL="C" \
  		JAVA_HOME="" \
  		CLASSPATH="" \
@@ -39,7 +39,7 @@
  		MAKEFLAGS="" \
  		ALT_BOOTDIR="${BOOTSTRAPJDKDIR}" \
  		ALT_FREETYPE_HEADERS_PATH="${LOCALBASE}/include" \
-@@ -115,10 +121,7 @@ MAKE_ENV+=	LANG="C" \
+@@ -117,10 +123,7 @@ MAKE_ENV+=	LANG="C" \
  		BUILD_NUMBER="b${PORT_BUILD_NUMBER}"
  
  MAKE_ENV+=	HOTSPOT_BUILD_JOBS=${MAKE_JOBS_NUMBER}
@@ -51,7 +51,7 @@
  
  DEBUG_MAKE_ENV=	ALT_OBJCOPY=${NONEXISTENT}
  POLICY_MAKE_ENV=	UNLIMITED_CRYPTO=1
-@@ -126,23 +129,21 @@ TZUPDATE_RUN_DEPENDS=	java-zoneinfo>0:${
+@@ -128,23 +131,21 @@ TZUPDATE_RUN_DEPENDS=	java-zoneinfo>0:ja
  
  .include <bsd.port.options.mk>
  
@@ -64,14 +64,14 @@
 +BOOTSTRAP_DISTFILE= bootstrap-openjdk-7.25.15.dfly-3.5-${JDK_ARCH}.tar.xz
 +.  else
 +BOOTSTRAP_DISTFILE= bootstrap-openjdk6-6.0.tar.xz
-+BUILD_DEPENDS+=	gcc48:${PORTSDIR}/lang/gcc
++BUILD_DEPENDS+=	gcc48:lang/gcc
  .  endif
 -.endfor
 -
 -# if no valid jdk found, set dependency
 -.if !defined(BOOTSTRAPJDKDIR)
 -BOOTSTRAPJDKDIR?=	${LOCALBASE}/bootstrap-openjdk
--BUILD_DEPENDS+=		${BOOTSTRAPJDKDIR}/bin/javac:${PORTSDIR}/java/bootstrap-openjdk
+-BUILD_DEPENDS+=		${BOOTSTRAPJDKDIR}/bin/javac:java/bootstrap-openjdk
  .endif
  
 +BOOTSTRAPJDKDIR=	${WRKDIR}/bootstrap
@@ -84,7 +84,7 @@
  MAKE_ENV+=	USE_PRECOMPILED_HEADER=0
  .endif
  
-@@ -162,6 +163,11 @@ post-patch:
+@@ -164,6 +165,11 @@ post-patch:
  		${WRKSRC}/jdk/make/java/instrument/Makefile
  .endif
  
@@ -96,7 +96,7 @@
  .if ${PORT_OPTIONS:MTZUPDATE}
  pre-install:
  	@# Update time zones
-@@ -181,6 +187,7 @@ do-install:
+@@ -183,6 +189,7 @@ do-install:
  .if !defined(BUILD_JRE)
  	cd ${WRKSRC}/build/${OPENJDK_OSARCH}/j2sdk-image && \
  	    ${PAX} -rw . ${STAGEDIR}${INSTALLDIR}

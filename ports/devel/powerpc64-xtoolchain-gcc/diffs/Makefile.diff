@@ -1,4 +1,4 @@
---- Makefile.orig	2015-01-03 04:19:33 UTC
+--- Makefile.orig	2016-04-06 15:48:09 UTC
 +++ Makefile
 @@ -18,16 +18,16 @@ TOOLCHAIN_PREFIX=	x86_64-
  .else
@@ -12,7 +12,7 @@
 +XCPP?=		${TOOLCHAIN_PREFIX}portbld-freebsd10-cpp
  X_COMPILER_TYPE?=	${PKGNAMESUFFIX:C/-//g}
  
- RUN_DEPENDS?=	${XCC}:${PORTSDIR}/devel/${PKGNAMEPREFIX}${X_COMPILER_TYPE}
+ RUN_DEPENDS?=	${XCC}:devel/${PKGNAMEPREFIX}${X_COMPILER_TYPE}
  
  SUB_FILES=	xtoolchain.mk
  SUB_LIST=	TARGETARCH=${TOOLCHAIN_PREFIX:C/-//g} \
