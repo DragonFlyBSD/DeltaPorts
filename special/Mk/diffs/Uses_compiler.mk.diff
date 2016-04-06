@@ -1,4 +1,4 @@
---- Uses/compiler.mk.orig	2016-03-23 21:17:21 UTC
+--- Uses/compiler.mk.orig	2016-04-06 15:01:38 UTC
 +++ Uses/compiler.mk
 @@ -66,6 +66,11 @@ _COMPILER_ARGS=	#
  _COMPILER_ARGS+=	features
@@ -45,11 +45,11 @@
  CXX=	clang++
  CHOSEN_COMPILER_TYPE=	clang
  .else
--BUILD_DEPENDS+=	${LOCALBASE}/bin/clang34:${PORTSDIR}/lang/clang34
+-BUILD_DEPENDS+=	${LOCALBASE}/bin/clang34:lang/clang34
 -CPP=	${LOCALBASE}/bin/clang-cpp34
 -CC=	${LOCALBASE}/bin/clang34
 -CXX=	${LOCALBASE}/bin/clang++34
-+BUILD_DEPENDS+=	${LOCALBASE}/bin/clang38:${PORTSDIR}/lang/clang38
++BUILD_DEPENDS+=	${LOCALBASE}/bin/clang38:lang/clang38
 +CPP=	${LOCALBASE}/bin/clang-cpp38
 +CC=	${LOCALBASE}/bin/clang38
 +CXX=	${LOCALBASE}/bin/clang++38
@@ -60,8 +60,8 @@
  CXX=	clang++
  CHOSEN_COMPILER_TYPE=	clang
  .else
--BUILD_DEPENDS+=	${LOCALBASE}/bin/clang34:${PORTSDIR}/lang/clang34
-+BUILD_DEPENDS+=	${LOCALBASE}/bin/clang38:${PORTSDIR}/lang/clang38
+-BUILD_DEPENDS+=	${LOCALBASE}/bin/clang34:lang/clang34
++BUILD_DEPENDS+=	${LOCALBASE}/bin/clang38:lang/clang38
  CHOSEN_COMPILER_TYPE=	clang
 -CPP=	${LOCALBASE}/bin/clang-cpp34
 -CC=	${LOCALBASE}/bin/clang34
@@ -76,8 +76,8 @@
  CXX=	clang++
  CHOSEN_COMPILER_TYPE=	clang
  .else
--BUILD_DEPENDS+=	${LOCALBASE}/bin/clang34:${PORTSDIR}/lang/clang34
-+BUILD_DEPENDS+=	${LOCALBASE}/bin/clang38:${PORTSDIR}/lang/clang38
+-BUILD_DEPENDS+=	${LOCALBASE}/bin/clang34:lang/clang34
++BUILD_DEPENDS+=	${LOCALBASE}/bin/clang38:lang/clang38
  CHOSEN_COMPILER_TYPE=	clang
 -CPP=	${LOCALBASE}/bin/clang-cpp34
 -CC=	${LOCALBASE}/bin/clang34

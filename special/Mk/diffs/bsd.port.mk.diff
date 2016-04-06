@@ -1,4 +1,4 @@
---- bsd.port.mk.orig	2016-03-26 18:58:42 UTC
+--- bsd.port.mk.orig	2016-04-06 15:03:48 UTC
 +++ bsd.port.mk
 @@ -43,7 +43,8 @@ FreeBSD_MAINTAINER=	portmgr@FreeBSD.org
  #				  makefile is being used on.  Automatically set to
@@ -165,7 +165,7 @@
  .if defined(IA32_BINARY_PORT) && ${ARCH} != "i386"
  .if ${ARCH} == "amd64" || ${ARCH} == "ia64"
  .if !defined(HAVE_COMPAT_IA32_KERN)
-@@ -1673,7 +1666,12 @@ PKG_DEPENDS+=	${LOCALBASE}/sbin/pkg:${PO
+@@ -1673,7 +1666,12 @@ PKG_DEPENDS+=	${LOCALBASE}/sbin/pkg:${PK
  .endif
  
  .if defined(USE_GCC)
@@ -200,48 +200,7 @@
  .endif
  _EXPORTED_VARS+=	_SMP_CPUS
  _MAKE_JOBS_NUMBER=	${_SMP_CPUS}
-@@ -2070,9 +2070,37 @@ PATCH_DIST_ARGS+=	--suffix .orig
- TAR?=	/usr/bin/tar
- 
- # EXTRACT_SUFX is defined in .pre.mk section
--EXTRACT_CMD?=	${TAR}
--EXTRACT_BEFORE_ARGS?=	-xf
--EXTRACT_AFTER_ARGS?=	--no-same-owner --no-same-permissions
-+
-+LHA_BEFORE_ARGS?=	xfpw=${WRKDIR}
-+LHA_AFTER_ARGS?=
-+
-+TAR_AFTER_ARGS_DEFAULT=	--no-same-owner --no-same-permissions
-+TAR_BEFORE_ARGS_DEFAULT= -xf
-+
-+.if !defined(TAR_BEFORE_ARGS)
-+.  if defined(EXTRACT_BEFORE_ARGS)
-+TAR_BEFORE_ARGS=	${EXTRACT_BEFORE_ARGS}
-+.  else
-+TAR_BEFORE_ARGS=	${TAR_BEFORE_ARGS_DEFAULT}
-+.  endif
-+.endif
-+
-+# ZIP_* variables are always defined by zip.mk, so ?= only kicks in USES+=zip
-+# when does not exist.  In this case, assume $TAR is desired for zip archives
-+ZIP_BEFORE_ARGS?=	${TAR_BEFORE_ARGS_DEFAULT}
-+ZIP_AFTER_ARGS?=	${TAR_AFTER_ARGS_DEFAULT}
-+ZIP_EXTRACT_CMD?=	${TAR}
-+
-+.if !defined(TAR_AFTER_ARGS)
-+.  if defined(EXTRACT_AFTER_ARGS)
-+TAR_AFTER_ARGS=		${EXTRACT_AFTER_ARGS}
-+.  else
-+TAR_AFTER_ARGS=		${TAR_AFTER_ARGS_DEFAULT}
-+.  endif
-+.endif
-+
-+EXTRACT_BEFORE_ARGS?=	${TAR_BEFORE_ARGS_DEFAULT}
-+EXTRACT_AFTER_ARGS?=	${TAR_AFTER_ARGS_DEFAULT}
- 
- # Figure out where the local mtree file is
- .if !defined(MTREE_FILE) && !defined(NO_MTREE)
-@@ -2585,7 +2613,7 @@ CONFIGURE_FAIL_MESSAGE?=	"Please report
+@@ -2585,7 +2585,7 @@ CONFIGURE_FAIL_MESSAGE?=	"Please report
  .if defined(GNU_CONFIGURE)
  # Maximum command line length
  .if !defined(CONFIGURE_MAX_CMD_LEN)
@@ -250,7 +209,7 @@
  .endif
  _EXPORTED_VARS+=	CONFIGURE_MAX_CMD_LEN
  GNU_CONFIGURE_PREFIX?=	${PREFIX}
-@@ -2621,6 +2649,8 @@ SET_LATE_CONFIGURE_ARGS= \
+@@ -2621,6 +2621,8 @@ SET_LATE_CONFIGURE_ARGS= \
  SCRIPTS_ENV+=	CURDIR=${MASTERDIR} DISTDIR=${DISTDIR} \
  		  WRKDIR=${WRKDIR} WRKSRC=${WRKSRC} PATCHDIR=${PATCHDIR} \
  		  SCRIPTDIR=${SCRIPTDIR} FILESDIR=${FILESDIR} \
@@ -259,7 +218,7 @@
  		  PORTSDIR=${PORTSDIR} PREFIX=${PREFIX} LOCALBASE=${LOCALBASE}
  
  .if defined(BATCH)
-@@ -2703,7 +2733,7 @@ DESKTOPDIR?=		${PREFIX}/share/applicatio
+@@ -2703,7 +2705,7 @@ DESKTOPDIR?=		${PREFIX}/share/applicatio
  
  # Check the machine architectures
  .if defined(ONLY_FOR_ARCHS)
@@ -268,7 +227,7 @@
  .if ${ARCH:M${__ARCH}} != ""
  __ARCH_OK?=		1
  .endif
-@@ -2713,7 +2743,7 @@ __ARCH_OK?=		1
+@@ -2713,7 +2715,7 @@ __ARCH_OK?=		1
  .endif
  
  .if defined(NOT_FOR_ARCHS)
@@ -277,7 +236,7 @@
  .if ${ARCH:M${__NARCH}} != ""
  .undef __ARCH_OK
  .endif
-@@ -2722,9 +2752,9 @@ __ARCH_OK?=		1
+@@ -2722,9 +2724,9 @@ __ARCH_OK?=		1
  
  .if !defined(__ARCH_OK)
  .if defined(ONLY_FOR_ARCHS)
@@ -289,7 +248,7 @@
  .endif
  IGNORE+=	while you are running ${ARCH}
  
-@@ -2870,6 +2900,7 @@ all:
+@@ -2870,6 +2872,7 @@ all:
  	  DISTDIR=${DISTDIR} WRKDIR=${WRKDIR} WRKSRC=${WRKSRC} \
  	  PATCHDIR=${PATCHDIR} SCRIPTDIR=${SCRIPTDIR} \
  	  FILESDIR=${FILESDIR} PORTSDIR=${PORTSDIR} PREFIX=${PREFIX} \
@@ -297,37 +256,7 @@
  	  BUILD_DEPENDS="${BUILD_DEPENDS}" RUN_DEPENDS="${RUN_DEPENDS}" \
  	  CONFLICTS="${CONFLICTS}" \
  	${ALL_HOOK}
-@@ -3204,9 +3235,26 @@ clean-wrkdir:
- .if !target(do-extract)
- do-extract:
- 	@for file in ${EXTRACT_ONLY}; do \
--		if ! (cd ${EXTRACT_WRKDIR} && ${EXTRACT_CMD} ${EXTRACT_BEFORE_ARGS} ${_DISTDIR}/$$file ${EXTRACT_AFTER_ARGS});\
--		then \
--			exit 1; \
-+		if [ -n "${EXTRACT_CMD}" -a -z "${_INCLUDE_USES_ZIP_MK}" -a -z "${_INCLUDE_USES_LHA_MK}" ]; then \
-+			if ! (cd ${EXTRACT_WRKDIR} && ${EXTRACT_CMD} ${EXTRACT_BEFORE_ARGS} ${_DISTDIR}/$$file ${EXTRACT_AFTER_ARGS});\
-+			then \
-+				exit 1; \
-+			fi; \
-+		else \
-+			case $${file} in \
-+			*.tar|*.tbz|*.tgz|*.txz|*.tar.bz2|*.tar.gz|*.tar.lzma|*.tar.xz|*.tar.Z) \
-+				if ! (cd ${EXTRACT_WRKDIR} && ${TAR} ${TAR_BEFORE_ARGS} ${_DISTDIR}/$$file ${TAR_AFTER_ARGS}); \
-+				then exit 1; fi; ;; \
-+			*.lzh) \
-+				if ! (cd ${EXTRACT_WRKDIR} && ${LHA_CMD} ${LHA_BEFORE_ARGS} ${_DISTDIR}/$$file ${LHA_AFTER_ARGS}); \
-+				then exit 1; fi; ;; \
-+			*.zip|*.ZIP|*.xpi) \
-+				if ! (cd ${EXTRACT_WRKDIR} && ${ZIP_EXTRACT_CMD} ${ZIP_BEFORE_ARGS} ${_DISTDIR}/$$file ${ZIP_AFTER_ARGS}); \
-+				then exit 1; fi; ;; \
-+			*) \
-+				if ! (cd ${EXTRACT_WRKDIR} && ${TAR} ${EXTRACT_BEFORE_ARGS} ${_DISTDIR}/$$file ${EXTRA_AFTER_ARGS}); \
-+				then exit 1; fi; ;; \
-+			esac ; \
- 		fi; \
- 	done
- 	@if [ ${UID} = 0 ]; then \
-@@ -3261,7 +3309,7 @@ do-patch:
+@@ -3261,7 +3264,7 @@ do-patch:
  	@set -e ;\
  	if [ -d ${PATCHDIR} ]; then \
  		if [ "`${ECHO_CMD} ${PATCHDIR}/patch-*`" != "${PATCHDIR}/patch-*" ]; then \
@@ -336,7 +265,7 @@
  			PATCHES_APPLIED="" ; \
  			for i in ${PATCHDIR}/patch-*; do \
  				case $$i in \
-@@ -3286,6 +3334,33 @@ do-patch:
+@@ -3286,6 +3289,33 @@ do-patch:
  			done; \
  		fi; \
  	fi
@@ -370,7 +299,7 @@
  .endif
  
  .if !target(run-autotools-fixup)
-@@ -3914,6 +3989,7 @@ do-clean:
+@@ -3914,6 +3944,7 @@ do-clean:
  	@if [ -d ${WRKDIR} ]; then \
  		if [ -w ${WRKDIR} ]; then \
  			${RM} -rf ${WRKDIR}; \
@@ -378,7 +307,7 @@
  		else \
  			${ECHO_MSG} "===>   ${WRKDIR} not writable, skipping"; \
  		fi; \
-@@ -4445,7 +4521,7 @@ FETCH_LIST?=	for i in $$deps; do \
+@@ -4445,7 +4476,7 @@ FETCH_LIST?=	for i in $$deps; do \
  			else	\
  				continue;	\
  			fi;;	\
@@ -387,7 +316,7 @@
  				continue;	\
  			fi;;	\
  		esac;	\
-@@ -4800,10 +4876,15 @@ _SUB_LIST_TEMP=	${SUB_LIST:S/$/!g/:S/^/
+@@ -4800,10 +4831,15 @@ _SUB_LIST_TEMP=	${SUB_LIST:S/$/!g/:S/^/
  apply-slist:
  .if defined(SUB_FILES)
  .for file in ${SUB_FILES}
@@ -406,7 +335,7 @@
  .endif
  .endfor
  .for i in pkg-message pkg-install pkg-deinstall pkg-req
-@@ -5665,6 +5746,7 @@ _PATCH_DEP=		extract
+@@ -5665,6 +5701,7 @@ _PATCH_DEP=		extract
  _PATCH_SEQ=		050:ask-license 100:patch-message 150:patch-depends \
  				300:pre-patch 450:pre-patch-script 500:do-patch \
  				700:post-patch 850:post-patch-script \

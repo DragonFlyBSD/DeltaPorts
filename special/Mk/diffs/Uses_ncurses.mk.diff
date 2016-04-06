@@ -1,4 +1,4 @@
---- Uses/ncurses.mk.orig	2016-02-04 09:00:08 UTC
+--- Uses/ncurses.mk.orig	2016-04-06 14:52:46 UTC
 +++ Uses/ncurses.mk
 @@ -64,18 +64,28 @@ NCURSES_INSTALLED!=	${PKG_BIN} ${PKGARGS
  .  endif
@@ -19,8 +19,8 @@
 +NCURSES_SHLIBVER?=	6P
 +.  endif
  
- BUILD_DEPENDS+=		${LOCALBASE}/lib/libncurses.so.${NCURSES_SHLIBVER}:${PORTSDIR}/${NCURSES_PORT}
- RUN_DEPENDS+=		${LOCALBASE}/lib/libncurses.so.${NCURSES_SHLIBVER}:${PORTSDIR}/${NCURSES_PORT}
+ BUILD_DEPENDS+=		${LOCALBASE}/lib/libncurses.so.${NCURSES_SHLIBVER}:${NCURSES_PORT}
+ RUN_DEPENDS+=		${LOCALBASE}/lib/libncurses.so.${NCURSES_SHLIBVER}:${NCURSES_PORT}
  NCURSESRPATH=		${NCURSESBASE}/lib
 +LDFLAGS+=		-L${NCURSESRPATH} -Wl,-rpath=${NCURSESRPATH}
 +CFLAGS+=		-I${NCURSESBASE}/include -I${NCURSESINC}
