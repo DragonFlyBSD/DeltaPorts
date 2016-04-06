@@ -1,11 +1,11 @@
---- Makefile.orig	2014-09-15 18:49:28 UTC
+--- Makefile.orig	2016-04-06 16:43:35 UTC
 +++ Makefile
-@@ -11,11 +11,15 @@ MAINTAINER=	ports@FreeBSD.org
- COMMENT=	Anti-aliased font support for gtk+
+@@ -14,11 +14,15 @@ LICENSE=	GPLv2+
+ LICENSE_FILE=	${WRKSRC}/COPYING
  
- LIB_DEPENDS=	libXft.so:${PORTSDIR}/x11-fonts/libXft
-+LIB_DEPENDS+=	libfontconfig.so:${PORTSDIR}/x11-fonts/fontconfig \
-+		libfreetype.so:${PORTSDIR}/print/freetype2
+ LIB_DEPENDS=	libXft.so:x11-fonts/libXft
++LIB_DEPENDS+=	libfontconfig.so:x11-fonts/fontconfig \
++		libfreetype.so:print/freetype2
  
  USE_GNOME=	gtk12
  USES=		iconv pkgconfig libtool
@@ -17,11 +17,11 @@
  CFLAGS+=	`pkg-config xft --cflags`
  CONFIGURE_ARGS=	--sbindir=${PREFIX}/bin \
  		--without-gnome
-@@ -29,7 +33,6 @@ post-patch:
+@@ -32,7 +36,6 @@ post-patch:
  		's|src capplet|src @BUILD_CAPPLET_TRUE@capplet|g ; \
  		 s|DESTDIR)\$$(datadir|DESTDIR)\$$(pkgdatadir|g ; \
  		 s|la_LDFLAGS =.*$$|la_LDFLAGS = -module -avoid-version|g'
 -	@${REINPLACE_CMD} 's/<regex\.h>/<gnuregex.h>/' ${WRKSRC}/src/gdkxft.c
  
  post-install:
- 	@${MKDIR} ${STAGEDIR}${DOCSDIR}
+ 	@${STRIP_CMD} ${STAGEDIR}${PREFIX}/lib/libgdkxft.so

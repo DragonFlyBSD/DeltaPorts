@@ -1,6 +1,6 @@
---- Makefile.orig	2016-02-16 12:41:50.000000000 +0100
-+++ Makefile	2016-02-16 12:43:19.000000000 +0100
-@@ -36,24 +36,29 @@
+--- Makefile.orig	2016-04-06 16:09:35 UTC
++++ Makefile
+@@ -36,24 +36,29 @@ MAKE_JOBS_UNSAFE=	yes							# Parser/pge
  
  PLIST_SUB=		ABI=${ABIFLAGS} \
  			PORTVERSION=${PORTVERSION} \
@@ -26,12 +26,12 @@
  DEBUG_CONFIGURE_WITH=	pydebug
  IPV6_CONFIGURE_ENABLE=	ipv6
  LIBFFI_CONFIGURE_ON=	--with-system-ffi
- LIBFFI_LIB_DEPENDS=	libffi.so:${PORTSDIR}/devel/libffi
-+EXPAT_LIB_DEPENDS=	libexpat.so:${PORTSDIR}/textproc/expat2
+ LIBFFI_LIB_DEPENDS=	libffi.so:devel/libffi
++EXPAT_LIB_DEPENDS=	libexpat.so:textproc/expat2
  
  # Use CPPFLAGS over CFLAGS due to -I ordering, causing elementtree and pyexpat
  # to break in Python 2.7, or preprocessor complaints in Python >= 3.3
-@@ -123,6 +128,8 @@
+@@ -123,6 +128,8 @@ post-patch:
  	@${REINPLACE_CMD} -e 's/disabled_module_list =[^]]*/&, "nis"/' \
  		${WRKSRC}/setup.py
  .endif

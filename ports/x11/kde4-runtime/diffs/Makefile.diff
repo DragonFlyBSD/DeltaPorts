@@ -1,18 +1,18 @@
---- Makefile.orig	2016-01-05 08:25:56 UTC
+--- Makefile.orig	2016-04-06 16:47:47 UTC
 +++ Makefile
-@@ -14,12 +14,12 @@ LIB_DEPENDS=	libIlmImf.so:${PORTSDIR}/gr
- 		libwebp.so:${PORTSDIR}/graphics/webp \
- 		libslp.so:${PORTSDIR}/net/openslp \
- 		libsmbclient.so:${PORTSDIR}/net/samba-libsmbclient \
--		libssh.so:${PORTSDIR}/security/libssh \
- 		libqzeitgeist.so:${PORTSDIR}/sysutils/qzeitgeist
+@@ -15,12 +15,12 @@ LIB_DEPENDS=	libIlmImf.so:graphics/OpenE
+ 		libwebp.so:graphics/webp \
+ 		libslp.so:net/openslp \
+ 		libsmbclient.so:net/samba-libsmbclient \
+-		libssh.so:security/libssh \
+ 		libqzeitgeist.so:sysutils/qzeitgeist
  # Explicitly depend on libssh to avoid interference with ssh.4 from
  # compat7x.
--BUILD_DEPENDS=	${LOCALBASE}/lib/libssh.so:${PORTSDIR}/security/libssh
--RUN_DEPENDS=	cagibid:${PORTSDIR}/net/cagibi
-+BUILD_DEPENDS=	libssh>0.7:${PORTSDIR}/security/libssh
-+RUN_DEPENDS=	libssh>0.7:${PORTSDIR}/security/libssh \
-+		cagibid:${PORTSDIR}/net/cagibi
+-BUILD_DEPENDS=	${LOCALBASE}/lib/libssh.so:security/libssh
+-RUN_DEPENDS=	cagibid:net/cagibi
++BUILD_DEPENDS=	libssh>0.7:security/libssh
++RUN_DEPENDS=	libssh>0.7:security/libssh \
++		cagibid:net/cagibi
  
  USE_KDE4=	kactivities kdelibs kdeprefix oxygen \
  		attica automoc4 pimlibs strigi nepomuk-core

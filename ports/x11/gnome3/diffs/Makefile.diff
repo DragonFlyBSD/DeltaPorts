@@ -1,20 +1,18 @@
---- Makefile.orig	2016-02-15 09:50:38 UTC
+--- Makefile.orig	2016-04-06 16:44:33 UTC
 +++ Makefile
-@@ -31,7 +31,7 @@ RUN_DEPENDS?=	dconf-editor:${PORTSDIR}/d
- 		${LOCALBASE}/share/gnome-background-properties/gnome-backgrounds.xml:${PORTSDIR}/x11-themes/gnome-backgrounds \
- 		caribou>=0:${PORTSDIR}/accessibility/caribou \
- 		${LOCALBASE}/share/sounds/freedesktop/index.theme:${PORTSDIR}/audio/freedesktop-sound-theme \
--		ekiga:${PORTSDIR}/net-im/ekiga
-+
+@@ -31,7 +31,6 @@ RUN_DEPENDS?=	dconf-editor:devel/dconf-e
+ 		${LOCALBASE}/share/gnome-background-properties/gnome-backgrounds.xml:x11-themes/gnome-backgrounds \
+ 		caribou>=0:accessibility/caribou \
+ 		${LOCALBASE}/share/sounds/freedesktop/index.theme:audio/freedesktop-sound-theme \
+-		ekiga:net-im/ekiga
  
  CONFLICTS?=	gnome3-lite-[0-9]*
  
-@@ -73,7 +73,7 @@ RUN_DEPENDS+=	empathy>=3.0.0:${PORTSDIR}
- 		gdm>=3.0.0:${PORTSDIR}/x11/gdm \
- 		gnome-color-manager>=0:${PORTSDIR}/graphics/gnome-color-manager \
- 		evolution>=3.0.0:${PORTSDIR}/mail/evolution \
--		cheese>=3.0.0:${PORTSDIR}/multimedia/cheese
-+
+@@ -73,7 +72,6 @@ RUN_DEPENDS+=	empathy>=3.0.0:net-im/empa
+ 		gdm>=3.0.0:x11/gdm \
+ 		gnome-color-manager>=0:graphics/gnome-color-manager \
+ 		evolution>=3.0.0:mail/evolution \
+-		cheese>=3.0.0:multimedia/cheese
  
  .endif # !gnome3-lite section
  
