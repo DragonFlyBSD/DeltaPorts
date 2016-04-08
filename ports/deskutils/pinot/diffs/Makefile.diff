@@ -1,0 +1,22 @@
+--- Makefile.orig	2016-04-08 13:24:21 UTC
++++ Makefile
+@@ -31,7 +31,7 @@ LIB_DEPENDS=	libxapian.so:databases/xapi
+ RUN_DEPENDS=	update-mime-database:misc/shared-mime-info	\
+ 		antiword:textproc/antiword			\
+ 		xdg-open:devel/xdg-utils			\
+-		${LOCALBASE}/libexec/xpdf/pdftotext:graphics/xpdf	\
++		pdftotext:graphics/poppler-utils	\
+ 		catppt:textproc/catdoc			\
+ 		unzip:archivers/unzip			\
+ 		unrtf:textproc/unrtf			\
+@@ -75,10 +75,6 @@ post-extract:
+ # remove pre-generated messages catalogs
+ 	${FIND} ${WRKSRC}/po -name "*.gmo" -delete
+ 
+-post-patch:
+-	${REINPLACE_CMD} -e \
+-		'/<command>/s|pdftotext|${LOCALBASE}/libexec/xpdf/pdftotext|' \
+-		${WRKSRC}/Tokenize/filters/external-filters.xml
+ 
+ pre-configure:
+ 	${REINPLACE_CMD} -e 's|/usr/share|${LOCALBASE}/share|'	\
