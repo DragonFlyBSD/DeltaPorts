@@ -1,0 +1,15 @@
+--- Makefile.orig	2016-04-08 07:50:16 UTC
++++ Makefile
+@@ -9,9 +9,12 @@ DISTFILES=	#
+ MAINTAINER=	dumbbell@FreeBSD.org
+ 
+ ONLY_FOR_ARCHS=	amd64
++RUST_BOOT_SIG_x86_64=   2016-02-17-4d3eebf-dragonfly-x86_64-765bb5820ad406e966ec0ac51c8070b656459b02
++BROKEN_DragonFly=	core dumps with stage2 rustc
+ 
+ MASTERDIR=	${.CURDIR}/../rust
+ PATCHDIR=	${.CURDIR}/files
++DFLY_PATCHDIR=	${.CURDIR}/dragonfly
+ DISTINFO_FILE=	${.CURDIR}/distinfo
+ PLIST=		${.CURDIR}/pkg-plist
+ 
