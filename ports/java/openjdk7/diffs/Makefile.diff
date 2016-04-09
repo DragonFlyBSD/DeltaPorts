@@ -1,4 +1,4 @@
---- Makefile.orig	2016-04-09 10:06:02 UTC
+--- Makefile.orig	2016-04-09 10:20:05 UTC
 +++ Makefile
 @@ -10,14 +10,18 @@ MASTER_SITES=	http://download.java.net/o
  		http://icedtea.classpath.org/download/drops/:jaxp \
@@ -32,13 +32,11 @@
  USE_XORG+=	x11 xext xi xrender xt xtst
  MAKE_ARGS=	CC=${CC:Q} CXX=${CXX:Q} HOST_CC=${CC:Q}
  
-@@ -72,16 +76,18 @@ ANT_DISTFILE=		apache-ant-${ANT_VERSION}
- LIB_DEPENDS+=	libasound.so:audio/alsa-lib \
+@@ -73,15 +77,17 @@ LIB_DEPENDS+=	libasound.so:audio/alsa-li
  		libfontconfig.so:x11-fonts/fontconfig \
  		libfreetype.so:print/freetype2
--BUILD_DEPENDS+=	zip:archivers/zip \
+ BUILD_DEPENDS+=	zip:archivers/zip \
 -		${UNZIP_CMD}:archivers/unzip \
-+BUILD_DEPENDS+=	${UNZIP_CMD}:archivers/unzip \
  		${LOCALBASE}/include/cups/cups.h:print/cups
  RUN_DEPENDS+=	javavm:java/javavmwrapper \
  		dejavu>0:x11-fonts/dejavu
