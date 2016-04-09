@@ -1,6 +1,6 @@
---- ./Imakefile.orig2	2016-04-07 11:22:29.653232000 +0200
-+++ ./Imakefile	2016-04-07 11:22:40.648742000 +0200
-@@ -10,7 +10,7 @@
+--- Imakefile.orig2	2016-04-09 09:46:51 UTC
++++ Imakefile
+@@ -10,7 +10,7 @@ XCOMM
  XCOMM The gnuregex library is needed for the Motif file selection box widget.
  XCOMM
  XCOMM 
