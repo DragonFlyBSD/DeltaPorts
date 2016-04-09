@@ -1,11 +1,6 @@
---- Makefile.orig	2016-04-08 07:50:16 UTC
+--- Makefile.orig	2016-04-09 10:04:01 UTC
 +++ Makefile
-@@ -9,9 +9,12 @@ DISTFILES=	#
- MAINTAINER=	dumbbell@FreeBSD.org
- 
- ONLY_FOR_ARCHS=	amd64
-+RUST_BOOT_SIG_x86_64=   2016-02-17-4d3eebf-dragonfly-x86_64-765bb5820ad406e966ec0ac51c8070b656459b02
-+BROKEN_DragonFly=	core dumps with stage2 rustc
+@@ -12,6 +12,7 @@ ONLY_FOR_ARCHS=	amd64
  
  MASTERDIR=	${.CURDIR}/../rust
  PATCHDIR=	${.CURDIR}/files
@@ -13,3 +8,21 @@
  DISTINFO_FILE=	${.CURDIR}/distinfo
  PLIST=		${.CURDIR}/pkg-plist
  
+@@ -34,6 +35,7 @@ CONFLICTS_BUILD=	rust # see FIXME in lan
+ CONFLICTS_INSTALL=	rust
+ 
+ RUST_BOOT_SIG_amd64=	2016-02-17-4d3eebf-freebsd-x86_64-f38991fbb81c1cd8d0bbda396f98f13a55b42804
++RUST_BOOT_SIG_x86_64=	2016-02-17-4d3eebf-dragonfly-x86_64-765bb5820ad406e966ec0ac51c8070b656459b02
+ 
+ PORT_LLVM_EXTRACT_ONLY_OFF=	${DISTFILE_llvm}
+ PORT_LLVM_GH_PROJECT_OFF=	llvm:llvm
+@@ -58,3 +60,9 @@ post-extract-PORT_LLVM-off:
+ 	  ${MV} ${WRKSRC_llvm} ${WRKSRC}/src/llvm)
+ 
+ .include "${MASTERDIR}/Makefile"
++
++RUST_TARGET=           ${RUST_ARCH_x86_64}-unknown-dragonfly
++
++CONFIGURE_ARGS=        --disable-valgrind --disable-docs \
++               --mandir=${MANPREFIX}/man \
++               --release-channel=${RUST_CHANNEL}
