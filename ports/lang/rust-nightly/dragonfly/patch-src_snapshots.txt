@@ -1,8 +1,0 @@
---- src/snapshots.txt.orig	2016-03-18 13:54:58 UTC
-+++ src/snapshots.txt
-@@ -1,4 +1,5 @@
- S 2016-02-17 4d3eebf
-+  dragonfly-x86_64 765bb5820ad406e966ec0ac51c8070b656459b02
-   linux-i386 5f194aa7628c0703f0fd48adc4ec7f3cc64b98c7
-   linux-x86_64 d29b7607d13d64078b6324aec82926fb493f59ba
-   macos-i386 4c8e42dd649e247f3576bf9dfa273327b4907f9c
