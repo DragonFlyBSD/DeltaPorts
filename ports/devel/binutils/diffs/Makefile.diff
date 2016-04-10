@@ -1,19 +1,20 @@
 --- Makefile.orig	2016-04-10 14:42:40 UTC
 +++ Makefile
-@@ -28,6 +28,12 @@ USES=		bison gmake libtool tar:bzip2 com
+@@ -28,6 +28,13 @@ USES=		bison gmake libtool tar:bzip2 com
  GNU_CONFIGURE=	yes
  
  .if defined(PKGNAMEPREFIX)
-+.if !defined(BUTARGET)
++.  if !defined(BUTARGET)
 +IGNORE=		target ${PKGNAMEPREFIX}${OPSYS:tl} will never build
-+.endif
-+.if defined(BUTARGET) && ${BUTARGET:M*-dragonfly}
++.  else
++.    if ${BUTARGET:M*-${OPSYS}}
 +IGNORE=		target ${BUTARGET} will never build
-+.endif
++.    endif
++.  endif
  BUTARGET?=	${PKGNAMEPREFIX}${OPSYS:tl}
  OPTIONS_EXCLUDE=	NLS
  INFO_PATH=	${PKGNAMEPREFIX:S/-$//}/info
-@@ -47,6 +53,7 @@ INFO=		as \
+@@ -47,6 +54,7 @@ INFO=		as \
  .endif
  
  CONFIGURE_ARGS+=	--disable-werror \
@@ -21,7 +22,7 @@
  			--with-sysroot=/
  
  MAKE_ENV+=	ac_cv_func_sbrk=0
-@@ -65,12 +72,6 @@ PLIST_SUB+=	GOLD=""
+@@ -65,12 +73,6 @@ PLIST_SUB+=	GOLD=""
  PLIST_SUB+=	GOLD="@comment "
  .endif
  
