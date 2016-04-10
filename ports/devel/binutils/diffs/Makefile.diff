@@ -1,7 +1,25 @@
---- Makefile.orig	2014-04-14 19:07:41.063480000 +0000
+--- Makefile.orig	2016-04-10 14:30:40 UTC
 +++ Makefile
-@@ -62,12 +62,6 @@ CONFIGURE_ARGS+=	--disable-nls
- PLIST_SUB+=	NLS="@comment "
+@@ -28,6 +28,9 @@ USES=		bison gmake libtool tar:bzip2 com
+ GNU_CONFIGURE=	yes
+ 
+ .if defined(PKGNAMEPREFIX)
++.if !defined(BUTARGET)
++IGNORE=		target ${PKGNAMEPREFIX}${OPSYS:tl} will never build
++.endif
+ BUTARGET?=	${PKGNAMEPREFIX}${OPSYS:tl}
+ OPTIONS_EXCLUDE=	NLS
+ INFO_PATH=	${PKGNAMEPREFIX:S/-$//}/info
+@@ -47,6 +50,7 @@ INFO=		as \
+ .endif
+ 
+ CONFIGURE_ARGS+=	--disable-werror \
++			--with-lib-path=/lib:/usr/lib \
+ 			--with-sysroot=/
+ 
+ MAKE_ENV+=	ac_cv_func_sbrk=0
+@@ -65,12 +69,6 @@ PLIST_SUB+=	GOLD=""
+ PLIST_SUB+=	GOLD="@comment "
  .endif
  
 -.if ${ARCH} == "amd64"
@@ -11,5 +29,5 @@
 -.endif
 -
  post-install:
- .if ${OSVERSION} >= 900044
+ .if !defined(PKGNAMEPREFIX)
  	${INSTALL_DATA} ${WRKSRC}/include/plugin-api.h ${STAGEDIR}${PREFIX}/include/
