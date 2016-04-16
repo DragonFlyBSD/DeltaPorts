@@ -1,0 +1,11 @@
+--- pkg-install.orig	2016-04-16 06:56:43 UTC
++++ pkg-install
+@@ -1,7 +1,7 @@
+ #!/bin/sh
+ 
+ MAKE_CONF=/etc/make.conf
+-PORTS_DIR=`/bin/realpath /usr/ports`
++PORTS_DIR=`/bin/realpath /usr/dports`
+ 
+ if [ "$2" = "POST-INSTALL" ]; then
+ echo -n "Spamming ${MAKE_CONF}..."
