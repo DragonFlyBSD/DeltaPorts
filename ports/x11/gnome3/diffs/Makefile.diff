@@ -1,14 +1,6 @@
---- Makefile.orig	2016-04-06 16:44:33 UTC
+--- Makefile.orig	2016-04-19 15:57:32 UTC
 +++ Makefile
-@@ -31,7 +31,6 @@ RUN_DEPENDS?=	dconf-editor:devel/dconf-e
- 		${LOCALBASE}/share/gnome-background-properties/gnome-backgrounds.xml:x11-themes/gnome-backgrounds \
- 		caribou>=0:accessibility/caribou \
- 		${LOCALBASE}/share/sounds/freedesktop/index.theme:audio/freedesktop-sound-theme \
--		ekiga:net-im/ekiga
- 
- CONFLICTS?=	gnome3-lite-[0-9]*
- 
-@@ -73,7 +72,6 @@ RUN_DEPENDS+=	empathy>=3.0.0:net-im/empa
+@@ -73,7 +73,6 @@ RUN_DEPENDS+=	empathy>=3.0.0:net-im/empa
  		gdm>=3.0.0:x11/gdm \
  		gnome-color-manager>=0:graphics/gnome-color-manager \
  		evolution>=3.0.0:mail/evolution \
