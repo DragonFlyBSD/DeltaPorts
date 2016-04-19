@@ -1,1 +1,2 @@
-CXXFLAGS+=	-Wno-deprecated-declarations
+# boost stuff: dep auto_ptr and __float128 literals ext
+CXXFLAGS+=	-Wno-deprecated-declarations -fext-numeric-literals
