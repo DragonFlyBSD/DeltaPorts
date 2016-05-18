@@ -1,4 +1,4 @@
---- Makefile.orig	2016-04-06 16:46:09 UTC
+--- Makefile.orig	2016-05-18 15:52:25 UTC
 +++ Makefile
 @@ -24,13 +24,10 @@ RUN_DEPENDS=	aclock>0:x11-clocks/aclock
  		cartotheque>0:deskutils/cartotheque \
@@ -14,11 +14,3 @@
  		fortytwo-bdb>0:databases/fortytwo-bdb \
  		fortytwo-encore>0:devel/fortytwo-encore \
  		fortytwo>0:graphics/fortytwo \
-@@ -66,7 +63,6 @@ RUN_DEPENDS=	aclock>0:x11-clocks/aclock
- 		lusernet>0:news/lusernet \
- 		mpdcon>0:audio/mpdcon \
- 		nextgo>0:games/nextgo \
--		gnustep-notebook>0:deskutils/gnustep-notebook \
- 		paje>0:science/paje \
- 		pantomime>0:mail/pantomime \
- 		pixen>0:graphics/pixen \
