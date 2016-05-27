@@ -52,7 +52,7 @@ portdirs=$(cd ${DPORTS}; find * -type d -depth 1 -maxdepth 1 | sort | grep -vE $
 for portdir in ${portdirs}; do
 
     case ${portdir} in
-	french/aster)
+	french/aster | games/crafty-tablebase*)
 	    continue ;;
     esac
     PN=$(make -C ${DPORTS}/${portdir} PORTSDIR=${DPORTS} LOCALBASE=/usr/dummy PYTHON_DEFAULT_VERSION=2.7 USE_TCL=86 -V PKGNAME).txz
