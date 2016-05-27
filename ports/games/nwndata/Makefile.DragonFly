@@ -1,6 +1,5 @@
 IGNORE= data for game that only runs on linux emulator
 
-MANUAL_PACKAGE_BUILD= huge
-.if defined(DPORTS_BUILDER)
-.undef MANUAL_PACKAGE_BUILD
+.if !defined(DPORTS_BUILDER)
+MANUAL_PACKAGE_BUILD=	"huge" package (too big for mirrors)
 .endif
