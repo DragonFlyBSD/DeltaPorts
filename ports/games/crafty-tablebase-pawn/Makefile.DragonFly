@@ -1,3 +1,6 @@
+# Note verion has not been updated since 2007
+MANUAL_PACKAGE_BUILD=	5.3G package - skip until someone complains \
+			it does not build
 .if !defined(DPORTS_BUILDER)
-MANUAL_PACKAGE_BUILD=	X.XX package (too big for mirrors)
+MANUAL_PACKAGE_BUILD=	5.3G package (too big for mirrors)
 .endif
