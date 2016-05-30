@@ -1,19 +1,19 @@
---- Makefile.orig	2016-05-05 18:10:57 UTC
+--- Makefile.orig	2016-05-30 14:17:29 UTC
 +++ Makefile
-@@ -21,12 +21,11 @@ RUN_DEPENDS=	llvm-config37:devel/llvm37
+@@ -21,12 +21,11 @@ RUN_DEPENDS=	llvm-config38:devel/llvm38
  
  GNU_CONFIGURE=	yes
  CONFIGURE_FLAGS=	--with-llvm=${LOCALBASE}
--CONFIGURE_ENV=	LLVM_CONFIG=${LOCALBASE}/bin/llvm-config37 \
--		CC=${LOCALBASE}/bin/clang37 \
--		CXX=${LOCALBASE}/bin/clang++37 \
--		CPP=${LOCALBASE}/bin/clang-cpp37
+-CONFIGURE_ENV=	LLVM_CONFIG=${LOCALBASE}/bin/llvm-config38 \
+-		CC=${LOCALBASE}/bin/clang38 \
+-		CXX=${LOCALBASE}/bin/clang++38 \
+-		CPP=${LOCALBASE}/bin/clang-cpp38
  
 -USES=	autoreconf gmake libtool perl5
 +USES=	gmake perl5
 +
 +dfly-patch:
-+	${REINPLACE_CMD} 's,llvm-config,llvm-config37,g' ${WRKSRC}/configure
++	${REINPLACE_CMD} 's,llvm-config,llvm-config38,g' ${WRKSRC}/configure
  
  .include <bsd.port.pre.mk>
  
