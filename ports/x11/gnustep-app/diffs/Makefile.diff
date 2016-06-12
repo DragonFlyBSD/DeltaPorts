@@ -1,11 +1,10 @@
---- Makefile.orig	2016-05-18 15:52:25 UTC
+--- Makefile.orig	2016-06-12 10:26:09 UTC
 +++ Makefile
-@@ -24,13 +24,10 @@ RUN_DEPENDS=	aclock>0:x11-clocks/aclock
+@@ -24,12 +24,10 @@ RUN_DEPENDS=	aclock>0:x11-clocks/aclock
  		cartotheque>0:deskutils/cartotheque \
  		cddb-bundle>0:audio/cddb-bundle \
  		gnustep-cdplayer>0:audio/gnustep-cdplayer \
 -		cenon>0:graphics/cenon \
--		displaycalibrator>0:deskutils/displaycalibrator \
  		duncan>0:textproc/duncan \
  		easydiff>0:textproc/easydiff \
  		edenmath>0:math/edenmath \
