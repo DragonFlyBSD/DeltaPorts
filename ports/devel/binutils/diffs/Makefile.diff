@@ -1,4 +1,4 @@
---- Makefile.orig	2016-04-10 14:42:40 UTC
+--- Makefile.orig	2016-06-12 10:20:06 UTC
 +++ Makefile
 @@ -28,6 +28,13 @@ USES=		bison gmake libtool tar:bzip2 com
  GNU_CONFIGURE=	yes
@@ -19,10 +19,10 @@
  
  CONFIGURE_ARGS+=	--disable-werror \
 +			--with-lib-path=/lib:/usr/lib \
+ 			--enable-deterministic-archives \
  			--with-sysroot=/
  
- MAKE_ENV+=	ac_cv_func_sbrk=0
-@@ -65,12 +73,6 @@ PLIST_SUB+=	GOLD=""
+@@ -66,12 +74,6 @@ PLIST_SUB+=	GOLD=""
  PLIST_SUB+=	GOLD="@comment "
  .endif
  
