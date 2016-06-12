@@ -1,24 +1,24 @@
---- Makefile.orig	2016-04-06 16:35:49 UTC
+--- Makefile.orig	2016-06-12 10:23:43 UTC
 +++ Makefile
-@@ -52,6 +52,8 @@ LIB_DEPENDS=	libcairo.so:graphics/cairo
- 		libxml2.so:textproc/libxml2 \
- 		libwebp.so:graphics/webp
+@@ -54,6 +54,8 @@ LIB_DEPENDS=	libasound.so:audio/alsa-lib
+ 		libwebp.so:graphics/webp \
+ 		libxml2.so:textproc/libxml2
  
 +LIB_DEPENDS+=	libgssapi_krb5.so:security/krb5
 +
  RUN_DEPENDS=	${LOCALBASE}/lib/alsa-lib/libasound_module_pcm_oss.so:audio/alsa-plugins \
+ 		alsa-lib>=1.1.1_1:audio/alsa-lib \
  		droid-fonts-ttf>0:x11-fonts/droid-fonts-ttf \
- 		xdg-open:devel/xdg-utils
-@@ -69,6 +71,8 @@ SHEBANG_FILES=	chrome/tools/build/linux/
+@@ -84,6 +86,8 @@ SHEBANG_FILES=	chrome/tools/build/linux/
  ALL_TARGET=	chrome
  INSTALLS_ICONS=	yes
  
 +USES+=		alias
 +USE_GCC=	4.8+
- #TODO bz@ : if you do undestand the gyp stuff, third_party/widevine/cdm/widevine_cdm.gyp talks about it (plz install libwidevinecdm.so)
+ #TODO bz@ : install libwidevinecdm.so (see
+ #   third_party/widevine/cdm/widevine_cdm.gyp)
  # See build/common.gypi for all the available variables.
- GYP_DEFINES+=	\
-@@ -78,6 +82,7 @@ GYP_DEFINES+=	\
+@@ -94,6 +98,7 @@ GYP_DEFINES+=	\
  		linux_strip_binary=1 \
  		use_aura=1 \
  		test_isolation_mode=noop \
@@ -26,7 +26,7 @@
  		disable_nacl=1 \
  		enable_extensions=1 \
  		enable_one_click_signin=1 \
-@@ -196,6 +201,7 @@ CONFIGURE_ENV+=	CC="${CC}" \
+@@ -213,6 +218,7 @@ CONFIGURE_ENV+=	CC="${CC}" \
  		GYP_GENERATORS=ninja \
  		GYP_DEFINES="${GYP_DEFINES}"
  MAKE_ENV+=	BUILDTYPE=${BUILDTYPE} \
@@ -34,7 +34,7 @@
  		GPERF="${LOCALBASE}/bin/gperf"
  
  .include <bsd.port.pre.mk>
-@@ -206,6 +212,7 @@ EXTRA_PATCHES+=	${FILESDIR}/extra-patch-
+@@ -223,6 +229,7 @@ EXTRA_PATCHES+=	${FILESDIR}/extra-patch-
  CFLAGS+=	-fno-stack-protector # gcc 4.8 cannot find __stack_chk_fail_local
  .else
  GYP_DEFINES+=	clang=1
@@ -42,7 +42,7 @@
  CFLAGS+=	-Wno-unknown-warning-option \
  			-D_LIBCPP_TRIVIAL_PAIR_COPY_CTOR=1 # work around base r261801
  EXTRA_PATCHES+=	${FILESDIR}/extra-patch-clang
-@@ -237,12 +244,36 @@ pre-everything::
+@@ -254,12 +261,36 @@ pre-everything::
  
  post-patch:
  	@${REINPLACE_CMD} -e "s|/usr/local|${LOCALBASE}|" \
