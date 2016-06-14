@@ -1,0 +1,28 @@
+--- Makefile.orig	2016-06-14 20:52:06 UTC
++++ Makefile
+@@ -78,8 +78,6 @@ LIB_DEPENDS+=		libpopt.so:devel/popt
+ LIB_DEPENDS+=		libinotify.so:devel/libinotify
+ # GNUTLS
+ LIB_DEPENDS+=		libgnutls.so:security/gnutls
+-# NFS4 ACL glue
+-LIB_DEPENDS+=		libsunacl.so:sysutils/libsunacl
+ # Libarchive
+ BUILD_DEPENDS+=		libarchive>=3.1.2:archivers/libarchive
+ RUN_DEPENDS+=		libarchive>=3.1.2:archivers/libarchive
+@@ -114,7 +112,7 @@ OPTIONS_DEFINE=		ACL_SUPPORT AD_DC ADS C
+ 			DNSUPDATE DOCS FAM LDAP  \
+ 			PTHREADPOOL QUOTAS SYSLOG UTMP
+ 
+-OPTIONS_DEFAULT:=	ACL_SUPPORT AD_DC ADS DEBUG \
++OPTIONS_DEFAULT:=	AD_DC ADS DEBUG \
+ 			DNSUPDATE DOCS FAM LDAP \
+ 			PTHREADPOOL QUOTAS SYSLOG UTMP
+ 
+@@ -147,6 +145,7 @@ NSUPDATE_DESC=		Use samba NSUPDATE utili
+ .include <bsd.port.options.mk>
+ 
+ CONFIGURE_ARGS+=	\
++			--without-regedit \
+ 			--with-pam \
+ 			--with-iconv \
+ 			--with-winbind \

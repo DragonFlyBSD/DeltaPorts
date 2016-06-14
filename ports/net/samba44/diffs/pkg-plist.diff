@@ -1,0 +1,27 @@
+--- pkg-plist.orig	2016-06-14 20:53:20 UTC
++++ pkg-plist
+@@ -16,7 +16,6 @@ bin/regpatch
+ bin/regshell
+ bin/regtree
+ bin/rpcclient
+-bin/samba-regedit
+ %%AD_DC%%bin/samba-tool
+ bin/sharesec
+ bin/smbcacls
+@@ -171,8 +170,6 @@ lib/samba4/libtevent-util.so.0
+ lib/samba4/libwbclient.so
+ lib/samba4/libwbclient.so.0
+ lib/samba4/winbind_krb5_locator.so
+-lib/nss_winbind.so.1
+-lib/nss_wins.so.1
+ lib/pam_winbind.so
+ %%CUPS%%libexec/samba/smbspool_krb5_wrapper
+ %%AD_DC%%lib/samba4/private/libdlz-bind9-for-torture-samba4.so
+@@ -421,7 +418,6 @@ lib/shared-modules/vfs/time_audit.so
+ lib/shared-modules/vfs/unityed_media.so
+ lib/shared-modules/vfs/worm.so
+ lib/shared-modules/vfs/xattr_tdb.so
+-lib/shared-modules/vfs/zfsacl.so
+ @dir lib/shared-modules/vfs
+ %%AD_DC%%@dir lib/shared-modules/service
+ %%AD_DC%%@dir lib/shared-modules/process_model
