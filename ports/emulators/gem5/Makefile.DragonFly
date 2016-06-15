@@ -1,0 +1,3 @@
+USES+= alias
+
+IGNORE= Very slow build, prune to failures
