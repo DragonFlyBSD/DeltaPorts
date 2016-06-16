@@ -1,0 +1,5 @@
+
+# zrj: configure script fails if CC=cc ... hmmm lots of "eval: ${5....}: Bad substitution"
+CONFIGURE_ENV+= CC=gcc
+
+BROKEN= missing pthread_setname_np()
