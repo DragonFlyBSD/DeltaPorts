@@ -1,0 +1,1 @@
+IGNORE= rc scripts rely on /sbin/mdconfig
