@@ -9,7 +9,7 @@ MASTER_SITES=	http://dl.wolfpond.org/distfiles/
 MAINTAINER=	ftigeot@wolfpond.org
 COMMENT=	Driver for Intel integrated graphics chipsets
 
-LIB_DEPENDS=	libxcb-util.so:${PORTSDIR}/x11/xcb-util
+LIB_DEPENDS=	libxcb-util.so:x11/xcb-util
 # Needed to build tests
 LIB_DEPENDS+=	libpng.so:${PORTSDIR}/graphics/png
 
