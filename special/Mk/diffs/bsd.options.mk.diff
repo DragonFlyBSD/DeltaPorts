@@ -1,0 +1,13 @@
+--- bsd.options.mk.orig	2016-06-21 05:38:50 UTC
++++ bsd.options.mk
+@@ -197,10 +197,6 @@ WITHOUT+=			EXAMPLES
+ OPTIONS_WARNINGS_UNSET+=	EXAMPLES
+ .endif
+ 
+-.if defined(DEVELOPER)
+-PORT_OPTIONS+=	TEST
+-.endif
+-
+ PORT_OPTIONS+=	IPV6
+ 
+ # Add per arch options
