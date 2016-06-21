@@ -1,6 +1,6 @@
---- Makefile.orig	2016-04-06 16:05:34 UTC
+--- Makefile.orig	2016-06-21 05:53:02 UTC
 +++ Makefile
-@@ -5,10 +5,12 @@ PORTVERSION=	${JDK_MAJOR_VERSION}.${JDK_
+@@ -6,10 +6,12 @@ PORTREVISION=	3
  CATEGORIES=	java devel
  MASTER_SITES=	http://download.java.net/openjdk/jdk${JDK_MAJOR_VERSION}/promoted/b${DIST_BUILD_NUMBER}/:jdk \
  		https://adopt-openjdk.ci.cloudbees.com/job/jtreg/${JTREG_JENKINS_BUILD}/artifact/:jtreg \
@@ -14,7 +14,7 @@
  
  PATCH_SITES=	LOCAL/glewis/openjdk8
  PATCHFILES=	patch-8u05-b13.xz \
-@@ -182,7 +184,7 @@ _MAKE_JOBS=	#
+@@ -184,7 +186,7 @@ _MAKE_JOBS=	#
  CPPFLAGS+=	-I${LOCALBASE}/include
  LDFLAGS+=	-L${LOCALBASE}/lib
  MAKE_ENV=	LANG="C" LC_ALL="C"
@@ -23,16 +23,16 @@
  MAKE_ENV+=	IGNORE_OLD_CONFIG=true
  MAKE_ENV+=	COMPILER_WARNINGS_FATAL="false"
  
-@@ -193,7 +195,7 @@ JRE_IMAGEDIR=	${JDK_BUILDDIR}/images/j2s
+@@ -195,7 +197,7 @@ JRE_IMAGEDIR=	${JDK_BUILDDIR}/images/j2s
  .else
  JRE_IMAGEDIR=	${JDK_BUILDDIR}/images/j2re-image
  .endif
--JDK_JVMDIR=	lib/${ARCH:C/armv6.*/arm/}
-+JDK_JVMDIR=	lib/${ARCH:S/x86_64/amd64/:C/armv6.*/arm/}
- JDK_OSARCH=	bsd-${ARCH:S/amd64/x86_64/:C/armv6.*/arm/:S/i386/x86/}
+-JDK_JVMDIR=	lib/${ARCH:S/armv6/arm/}
++JDK_JVMDIR=	lib/${ARCH:S/x86_64/amd64/:C/armv6/arm/}
+ JDK_OSARCH=	bsd-${ARCH:S/amd64/x86_64/:S/armv6/arm/:S/i386/x86/}
  INSTALLDIR=	${PREFIX}/${PKGBASE}
  
-@@ -328,8 +330,15 @@ BOOTSTRAPJDKDIR=	${BJDK}
+@@ -330,8 +332,15 @@ BOOTSTRAPJDKDIR=	${BJDK}
  BOOTSTRAPJDKDIR?=	${LOCALBASE}/bootstrap-openjdk
  BUILD_DEPENDS+=		${BOOTSTRAPJDKDIR}/bin/javac:java/bootstrap-openjdk
  .  else
@@ -48,7 +48,7 @@
  .  endif
  .endif
  
-@@ -432,6 +441,7 @@ do-install:
+@@ -434,6 +443,7 @@ do-install:
  	${FIND} bin jre/bin -type f -exec ${CHMOD} ${BINMODE} {} \; && \
  	${CHMOD} ${BINMODE} jre/${JDK_JVMDIR}/jexec \
  	    jre/${JDK_JVMDIR}/jspawnhelper ${JDK_JVMDIR}/jexec
