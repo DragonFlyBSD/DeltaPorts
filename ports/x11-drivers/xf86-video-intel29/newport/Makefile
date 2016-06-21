@@ -2,7 +2,6 @@
 
 PORTNAME=	xf86-video-intel
 PORTVERSION=	2.99.2016.06.01
-PORTREVISION=	2
 PORTEPOCH=	2
 CATEGORIES=	x11-drivers
 MASTER_SITES=	http://dl.wolfpond.org/distfiles/
