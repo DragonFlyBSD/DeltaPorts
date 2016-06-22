@@ -1,0 +1,7 @@
+
+# zrj: conflicting types for regcomp_l from regex.h
+BROKEN= conflicting regex implementations
+
+dfly-patch:
+	${REINPLACE_CMD} -e 's@freebsd:@dragonfly freebsd:@g'	\
+		${WRKSRC}/makefile
