@@ -1,0 +1,3 @@
+USES+= guessfix
+
+BROKEN= creates corrupted archives
