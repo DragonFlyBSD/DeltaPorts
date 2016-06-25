@@ -4,7 +4,7 @@
  #include <sys/syslimits.h>
  #   if defined(Q_OS_FREEBSD)
  #   include <libutil.h>
-+#   if !defined(HAVE_OS_DRAGONFLYBSD)
++#   if !defined(__DragonFly__)
  #   include <sys/param.h>
  #   include <sys/queue.h>
  #   include <libprocstat.h>
@@ -17,7 +17,7 @@
  
      virtual bool readEnvironment(int aPid) {
  
-+#if defined(HAVE_OS_DRAGONFLYBSD)
++#if defined(__DragonFly__)
 +        Q_UNUSED(aPid);
 +        // Not supported in DragonFly BSD?
 +        return false;
