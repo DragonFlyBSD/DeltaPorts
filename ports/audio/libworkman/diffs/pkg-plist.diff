@@ -1,0 +1,9 @@
+--- pkg-plist.orig	2015-06-29 09:45:17 UTC
++++ pkg-plist
+@@ -1,5 +1,6 @@
+ lib/libworkman.so
+ lib/libworkman.so.1
++lib/libworkman.so.1.4
+ include/workman/wm_cdda.h
+ include/workman/wm_cddb.h
+ include/workman/wm_cdinfo.h
