@@ -1,4 +1,4 @@
---- hotspot/make/bsd/makefiles/defs.make.intermediate	2016-06-23 14:16:05 UTC
+--- hotspot/make/bsd/makefiles/defs.make.orig	2016-06-24 23:43:40 UTC
 +++ hotspot/make/bsd/makefiles/defs.make
 @@ -32,6 +32,9 @@ SLASH_JAVA ?= /java
  # ARCH can be set explicitly in spec.gmk
