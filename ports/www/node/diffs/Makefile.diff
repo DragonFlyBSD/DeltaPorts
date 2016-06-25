@@ -1,0 +1,11 @@
+--- Makefile.orig	2016-06-25 00:16:05 UTC
++++ Makefile
+@@ -16,6 +16,8 @@ LICENSE_FILE=	${WRKSRC}/LICENSE
+ OPTIONS_DEFINE=	BUNDLED_SSL DOCS
+ OPTIONS_SUB=	yes
+ 
++OPTIONS_DEFAULT=	BUNDLED_SSL
++
+ BUNDLED_SSL_DESC=	Use node.js's bundled OpenSSL implementation
+ BUNDLED_SSL_USE_OFF=	OPENSSL=yes
+ 
