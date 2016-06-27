@@ -1,0 +1,20 @@
+--- Makefile.orig	2016-06-27 07:31:40 UTC
++++ Makefile
+@@ -11,7 +11,7 @@ COMMENT=	Tiny/turbo/throttling HTTP serv
+ 
+ LICENSE=	BSD2CLAUSE
+ 
+-USES=		cpe gmake	# parallel builds (-jX) are broken with BSD make(1)
++USES=		cpe
+ GNU_CONFIGURE=	yes
+ MAKE_ARGS=	WEBDIR=${WWWDIR}
+ USE_RC_SUBR=	${PORTNAME}
+@@ -19,8 +19,6 @@ SUB_FILES=	pkg-message thttpd.conf.sampl
+ SUB_LIST=	WWWOWN=${WWWOWN} WWWGRP=${WWWGRP}
+ CPE_VENDOR=	acme
+ 
+-MAKE_JOBS_UNSAFE=	yes
+-
+ OPTIONS_DEFINE=	SENDFILE IPREAL INDEXES HTACCESS
+ OPTIONS_DEFAULT=	SENDFILE IPREAL
+ 
