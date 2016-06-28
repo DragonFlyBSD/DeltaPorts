@@ -1,0 +1,1 @@
+BROKEN= missing cpu_set_t pthread_setaffinity_np()
