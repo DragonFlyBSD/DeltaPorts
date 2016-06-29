@@ -1,0 +1,11 @@
+--- Makefile.orig	2015-06-29 09:46:49 UTC
++++ Makefile
+@@ -32,7 +32,7 @@ OPTIONS_DEFINE=	DOCS EXAMPLES
+ 
+ .include <bsd.port.options.mk>
+ 
+-.if ${OSVERSION} >= 1000044
++.if ${OPSYS} == FreeBSD && ${OSVERSION} >= 1000044
+ CONFIGURE_ARGS+=	--with-libc=libc.so.7
+ .endif
+ 
