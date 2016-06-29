@@ -1,11 +1,14 @@
---- configure.orig	2015-01-28 03:23:08 UTC
+--- configure.orig	2016-05-31 01:50:08.000000000 +0300
 +++ configure
-@@ -13645,7 +13645,7 @@ done
+@@ -12064,6 +12064,11 @@ $as_echo "#define YYSTYPE_IS_DECLARED /*
+ 		$as_echo "#define SPT_TYPE SPT_REUSEARGV" >>confdefs.h
  
- for ac_header in sys/sensors.h
- do :
--  ac_fn_c_check_header_mongrel "$LINENO" "sys/sensors.h" "ac_cv_header_sys_sensors_h" "$ac_includes_default"
-+  ac_fn_c_check_header_mongrel "$LINENO" "sys/sensors.h.nope" "ac_cv_header_sys_sensors_h" "$ac_includes_default"
- if test "x$ac_cv_header_sys_sensors_h" = xyes; then :
-   cat >>confdefs.h <<_ACEOF
- #define HAVE_SYS_SENSORS_H 1
+ 		;;
++	*dragonfly*)
++		HOST_OS=freebsd
++		HOST_ABI=elf
++
++		;;
+ 	*freebsd*)
+ 		HOST_OS=freebsd
+ 		HOST_ABI=elf
