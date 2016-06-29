@@ -1,0 +1,5 @@
+
+# zrj: check for bspatch availability
+.if !exists(/usr/bin/bspatch)
+IGNORE= missing bspatch(1)
+.endif
