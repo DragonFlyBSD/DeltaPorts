@@ -1,0 +1,10 @@
+--- pkg-plist.orig	2016-06-14 08:27:21 UTC
++++ pkg-plist
+@@ -11,6 +11,7 @@ share/gir-1.0/MediaArt-2.0.gir
+ share/gtk-doc/html/libmediaart/annotation-glossary.html
+ share/gtk-doc/html/libmediaart/ch02.html
+ share/gtk-doc/html/libmediaart/home.png
++share/gtk-doc/html/libmediaart/index.sgml
+ share/gtk-doc/html/libmediaart/index.html
+ share/gtk-doc/html/libmediaart/left-insensitive.png
+ share/gtk-doc/html/libmediaart/left.png
