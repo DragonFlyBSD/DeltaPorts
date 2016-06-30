@@ -1,0 +1,4 @@
+
+# zrj: fix synth test, do not install such files!
+dfly-patch:
+	-${RM} -f ${WRKSRC}/svn-commit.tmp
