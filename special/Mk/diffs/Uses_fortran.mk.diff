@@ -1,6 +1,6 @@
---- Uses/fortran.mk.orig	2016-04-06 14:58:53 UTC
+--- Uses/fortran.mk.orig	2016-07-03 11:25:43 UTC
 +++ Uses/fortran.mk
-@@ -16,15 +16,9 @@ fortran_ARGS=	gcc
+@@ -16,15 +16,14 @@ fortran_ARGS=	gcc
  .endif
  
  .if ${fortran_ARGS} == gcc
@@ -11,6 +11,11 @@
 -RUN_DEPENDS+=	gfortran${_GCC_VER}:lang/gcc
 -.else
 +_GCC_VER=	5
++. if defined(USE_GCC)
++.  if ${USE_GCC} == 4.8 || ${USE_GCC} == 4.9 || ${USE_GCC} == 6
++_GCC_VER=	${USE_GCC:S/.//}
++.  endif
++. endif
  BUILD_DEPENDS+=	gfortran${_GCC_VER}:lang/gcc${_GCC_VER}
  RUN_DEPENDS+=	gfortran${_GCC_VER}:lang/gcc${_GCC_VER}
 -.endif
