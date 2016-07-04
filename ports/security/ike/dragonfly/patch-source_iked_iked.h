@@ -1,6 +1,6 @@
 --- source/iked/iked.h.orig	2013-05-16 03:31:50.000000000 +0300
 +++ source/iked/iked.h
-@@ -73,12 +73,16 @@
+@@ -73,14 +73,18 @@
  #  include <sys/param.h>
  #  include <sys/socket.h>
  #  include <net/if.h>
