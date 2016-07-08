@@ -1,0 +1,10 @@
+--- Makefile.orig	2016-05-24 10:00:36.000000000 +0300
++++ Makefile
+@@ -70,6 +70,6 @@ post-patch:
+ 
+ post-install:
+ 	@${STRIP_CMD} ${STAGEDIR}${PREFIX}/bin/xpce-client \
+-		${STAGEDIR}${PREFIX}/lib/${SWIPLDIR}/lib/${ARCH}-freebsd/pl2xpce.so
++		${STAGEDIR}${PREFIX}/lib/${SWIPLDIR}/lib/${ARCH}-${OPSYS:tl}/pl2xpce.so
+ 
+ .include <bsd.port.post.mk>
