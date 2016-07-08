@@ -1,0 +1,8 @@
+--- pkg-plist.orig	2015-06-29 09:45:37.000000000 +0300
++++ pkg-plist
+@@ -1,4 +1,4 @@
+ bin/RSA_SecurID_getpasswd
+-lib/pcsc/drivers/ifd-ccid.bundle/Contents/FreeBSD/libccid.so
++lib/pcsc/drivers/ifd-ccid.bundle/Contents/%%OPSYS%%/libccid.so
+ lib/pcsc/drivers/ifd-ccid.bundle/Contents/Info.plist
+ man/man1/RSA_SecurID_getpasswd.1.gz

@@ -1,0 +1,11 @@
+--- ncurses.cabal.orig	2016-01-18 01:12:08.000000000 +0200
++++ ncurses.cabal
+@@ -101,7 +101,7 @@ library
+     --
+     -- Explicitly linking against libpthread.so fixes a build problem on
+     -- platforms where the linker doesn't automatically follow dependencies.
+-    if os(darwin) || os(freebsd) || flag(force-narrow-library)
++    if os(darwin) || os(freebsd) || os(dragonfly) || flag(force-narrow-library)
+       cc-options: -DHSNCURSES_NARROW_HEADER
+     if os(darwin) || flag(force-narrow-library)
+       extra-libraries: panel ncurses pthread

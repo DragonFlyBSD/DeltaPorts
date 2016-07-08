@@ -1,0 +1,11 @@
+--- Makefile.orig	2016-04-07 08:08:04.000000000 +0300
++++ Makefile
+@@ -12,7 +12,7 @@ LICENSE=	ISCL
+ LICENSE_FILE=	${WRKSRC}/licence.txt
+ 
+ LIB_DEPENDS=	libpcsclite.so:devel/pcsc-lite
+-RUN_DEPENDS=	${LOCALBASE}/lib/pcsc/drivers/ifd-ccid.bundle/Contents/FreeBSD/libccid.so:devel/libccid
++RUN_DEPENDS=	${LOCALBASE}/lib/pcsc/drivers/ifd-ccid.bundle/Contents/${OPSYS}/libccid.so:devel/libccid
+ 
+ USES=		uidfix
+ USE_LDCONFIG=	yes
