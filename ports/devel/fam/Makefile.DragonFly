@@ -1,0 +1,8 @@
+USES+= alias
+
+BROKEN= missing timer_delete timer_create
+
+# zrj: file is copied in pre-configure target..
+post-configure:
+	${REINPLACE_CMD} -e '/MNT_UNION/d'	\
+		${WRKSRC}/fam/mntent_compat.c++
