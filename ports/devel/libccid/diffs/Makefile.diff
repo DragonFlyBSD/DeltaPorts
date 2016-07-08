@@ -1,0 +1,11 @@
+--- Makefile.orig	2016-05-31 11:55:33.000000000 +0300
++++ Makefile
+@@ -23,7 +23,7 @@ CONFIGURE_ENV=	LIBUSB_CFLAGS="-I${LOCALB
+ 		LIBUSB_LIBS="-L${LOCALBASE}/lib -lusb"
+ CPPFLAGS+=	-I${LOCALBASE}/include
+ 
+-PLIST_SUB=	VER=${PORTVERSION}
++PLIST_SUB=	VER=${PORTVERSION} OPSYS=${OPSYS}
+ INSTALL_TARGET=	install-strip
+ 
+ .include <bsd.port.pre.mk>
