@@ -1,0 +1,70 @@
+--- Makefile.orig	2016-07-08 19:58:14.000000000 +0300
++++ Makefile
+@@ -68,17 +68,17 @@ post-configure:
+ archives: configure
+ 	@${PRINTF} "\n\n%s\n\n\n" "Building libtaucs archives:"
+ 	(cd ${WRKSRC} && ${SETENV} ${MAKE_ENV} \
+-		${MAKE} ${_MAKE_JOBS} ${MAKE_ARGS} lib/FreeBSD/libtaucs.a)
++		${MAKE} ${_MAKE_JOBS} ${MAKE_ARGS} lib/${OPSYS}/libtaucs.a)
+ 	(cd ${WRKSRC}_SHARED && ${SETENV} ${MAKE_ENV} PICFLAG="${PICFLAG}" \
+-		${MAKE} ${_MAKE_JOBS} ${MAKE_ARGS} lib/FreeBSD/libtaucs.a)
++		${MAKE} ${_MAKE_JOBS} ${MAKE_ARGS} lib/${OPSYS}/libtaucs.a)
+ 
+ lib: archives
+ 	@${PRINTF} "\n\n%s\n\n\n" "Building shared library:"
+-	(cd ${WRKSRC}_SHARED/lib/FreeBSD && \
++	(cd ${WRKSRC}_SHARED/lib/${OPSYS} && \
+ 		${FC} ${FFLAGS} ${PICFLAG} ${LDFLAGS} -shared \
+ 		-o libtaucs.so.1 -Wl,-x -Wl,-soname,libtaucs.so.1 \
+ 		-Wl,--whole-archive libtaucs.a -Wl,--no-whole-archive)
+-	${STRIP_CMD} ${WRKSRC}_SHARED/lib/FreeBSD/libtaucs.so.1
++	${STRIP_CMD} ${WRKSRC}_SHARED/lib/${OPSYS}/libtaucs.so.1
+ 
+ bins: lib
+ 	@${PRINTF} "\n\n%s\n\n\n" "Building (dynamically-linked) executables:"
+@@ -87,20 +87,20 @@ bins: lib
+ #for example, the description of .OBJDIR in make(1)):
+ 	(cd ${WRKSRC}_SHARED && \
+ 		${SETENV} ${MAKE_ENV} MAKEOBJDIR="${NONEXISTENT}" \
+-		${MAKE} ${_MAKE_JOBS} ${MAKE_ARGS} ${BINS:S|^|bin/FreeBSD/|})
++		${MAKE} ${_MAKE_JOBS} ${MAKE_ARGS} ${BINS:S|^|bin/${OPSYS}/|})
+ 
+ do-build: bins
+ 
+ do-install:
+-	${INSTALL_DATA} ${WRKSRC}/lib/FreeBSD/libtaucs.a \
++	${INSTALL_DATA} ${WRKSRC}/lib/${OPSYS}/libtaucs.a \
+ 		${STAGEDIR}${PREFIX}/lib
+-	${INSTALL_DATA} ${WRKSRC}_SHARED/lib/FreeBSD/libtaucs.so.1 \
++	${INSTALL_DATA} ${WRKSRC}_SHARED/lib/${OPSYS}/libtaucs.so.1 \
+ 		${STAGEDIR}${PREFIX}/lib
+ 	(cd ${STAGEDIR}${PREFIX}/lib && ${LN} -s libtaucs.so.1 libtaucs.so)
+-	${INSTALL_DATA} ${WRKSRC}/build/FreeBSD/*.h \
++	${INSTALL_DATA} ${WRKSRC}/build/${OPSYS}/*.h \
+ 		${STAGEDIR}${PREFIX}/include
+ 	${INSTALL_DATA} ${WRKSRC}/src/*.h ${STAGEDIR}${PREFIX}/include
+-	(cd ${WRKSRC}_SHARED/bin/FreeBSD && \
++	(cd ${WRKSRC}_SHARED/bin/${OPSYS} && \
+ 		${INSTALL_PROGRAM} ${BINS} ${STAGEDIR}${PREFIX}/bin)
+ .if ${PORT_OPTIONS:MDOCS}
+ 	@${MKDIR} ${STAGEDIR}${DOCSDIR}
+@@ -110,15 +110,15 @@ do-install:
+ check test: build
+ .for t in ${TESTS}
+ 	@${PRINTF} "\n%s\n" "Building test_${t}"
+-	@cd ${WRKSRC}_SHARED ; ${FC} ${FFLAGS} -Llib/FreeBSD -L./ \
+-	${LDFLAGS} -o bin/FreeBSD/test_${t} \
++	@cd ${WRKSRC}_SHARED ; ${FC} ${FFLAGS} -Llib/${OPSYS} -L./ \
++	${LDFLAGS} -o bin/${OPSYS}/test_${t} \
+ 	`${SETENV} ${MAKE_ENV} ${MAKE} ${MAKE_ARGS} -V STDDEFS` \
+ 	`${SETENV} ${MAKE_ENV} ${MAKE} ${MAKE_ARGS} -V STDINCS` \
+ 	progs/test_${t}.c -ltaucs ${LAPACK} ${BLAS} ${LIBMETIS}
+ 	@${PRINTF} "\n%s\n\n\n" "Running test_${t}:"
+ 	-@cd ${WRKSRC}_SHARED ; \
+-	${SETENV} LD_LIBRARY_PATH="lib/FreeBSD:/lib:/usr/lib:${LOCALBASE}/lib" \
+-	bin/FreeBSD/test_${t}
++	${SETENV} LD_LIBRARY_PATH="lib/${OPSYS}:/lib:/usr/lib:${LOCALBASE}/lib" \
++	bin/${OPSYS}/test_${t}
+ .endfor
+ 
+ #be conservative, and expose a regression test target for amd64 builds only, because
