@@ -1,0 +1,10 @@
+USES=		autoreconf gmake libtool pathfix pkgconfig tar:xz
+dfly-patch:
+	${REINPLACE_CMD} \
+		-e 's@[(]libdir[)]/pkgconfig@(prefix)/libdata/pkgconfig@g' \
+		${WRKSRC}/lib/Makefile.am
+	${REINPLACE_CMD} \
+		-e 's@MAKE-make@MAKE-gmake@g' \
+		-e 's@\*bsd\*)@*bsd*|dragonfly*)@g' \
+		${WRKSRC}/configure.ac
+	
