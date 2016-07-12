@@ -1,0 +1,16 @@
+USES+= alias
+
+BUILD_DEPENDS+= ${LOCALBASE}/bin/netcat:net/netcat
+RUN_DEPENDS+= ${LOCALBASE}/bin/netcat:net/netcat
+
+BROKEN= starts nc during build takes forever
+
+dfly-patch:
+	${REINPLACE_CMD} -e 's@\(\*-freebsd\*\))@\1|*-dragonfly*)@g'	\
+		${WRKSRC}/configure
+	${REINPLACE_CMD} -e 's@if (nc@if (netcat@g'		\
+		${WRKSRC}/binsrc/samples/demo/mkdemo.sh		\
+		${WRKSRC}/binsrc/samples/demo/mkdoc.sh		\
+		${WRKSRC}/binsrc/samples/xquery/files2dav.sh	\
+		${WRKSRC}/binsrc/samples/xpath/files2dav.sh	\
+		${WRKSRC}/binsrc/yacutia/mkvad.sh
