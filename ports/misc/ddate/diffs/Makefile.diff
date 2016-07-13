@@ -1,0 +1,11 @@
+--- Makefile.orig	2015-06-29 09:46:38.000000000 +0300
++++ Makefile
+@@ -51,7 +51,7 @@ CFLAGS+=	-DKILL_BOB=\"13013\"
+ .endif
+ 
+ do-build:
+-	${CC} ${WRKSRC}/misc-utils/ddate.c ${CFLAGS} \
++	${CC} ${WRKSRC}/misc-utils/ddate.c ${CFLAGS} ${LDFLAGS} \
+ 		-o ${WRKSRC}/misc-utils/${PORTNAME}
+ 
+ do-install:
