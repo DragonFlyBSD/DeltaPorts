@@ -1,0 +1,10 @@
+#USES+= guessfix
+
+BROKEN= missing Text_latex.inc
+
+# zrj: cannot USE+=guessfix port plays w/ WRKSRC, thus need to use WRKDIR
+pre-patch:
+	@cd ${WRKDIR}; ${FIND} * -type f -name config.sub -exec \
+		${CP} ${PORTSDIR}/Templates/config.sub {} \;
+	@cd ${WRKDIR}; ${FIND} * -type f -name config.guess -exec \
+		${CP} ${PORTSDIR}/Templates/config.guess {} \;
