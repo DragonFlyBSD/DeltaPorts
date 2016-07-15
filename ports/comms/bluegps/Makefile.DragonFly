@@ -1,0 +1,3 @@
+USES+= alias
+
+BROKEN= missing sockaddr_rfcomm bluetooth.h
