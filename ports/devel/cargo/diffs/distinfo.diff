@@ -1,0 +1,8 @@
+--- distinfo.orig	2016-07-16 13:41:45 UTC
++++ distinfo
+@@ -6,3 +6,5 @@ SHA256 (rust-lang-cargo-0.11.0_GH0.tar.g
+ SIZE (rust-lang-cargo-0.11.0_GH0.tar.gz) = 566557
+ SHA256 (rust-lang-rust-installer-4915c75_GH0.tar.gz) = 022116173684c97d61e014940aada20f3830d2d3e1670887bf1861997133c234
+ SIZE (rust-lang-rust-installer-4915c75_GH0.tar.gz) = 19234
++SHA256 (cargo-nightly-x86_64-unknown-dragonfly.tar.gz) = 684814663bcd6fe3e1235b2c3a1d4a345d7e3dd33af5d7d628f2d6c234dcd21f
++SIZE (cargo-nightly-x86_64-unknown-dragonfly.tar.gz) = 3001301
