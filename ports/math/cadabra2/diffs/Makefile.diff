@@ -1,0 +1,13 @@
+--- Makefile.orig	2016-07-17 01:37:38 UTC
++++ Makefile
+@@ -39,8 +39,8 @@ GUI_INSTALLS_ICONS=	yes
+ 
+ BUILD_DEPENDS+=	clang36:lang/clang36
+ RUN_DEPENDS+=	clang36:lang/clang36
+-CC=		clang36
+-CXX=		clang++36
++CC=		${LOCALBASE}/bin/clang36
++CXX=		${LOCALBASE}/bin/clang++36
+ 
+ CMAKE_ARGS+=	-DBOOST_ROOT=${LOCALBASE}
+ CMAKE_ARGS+=	-DUSE_PYTHON_3:BOOL=OFF

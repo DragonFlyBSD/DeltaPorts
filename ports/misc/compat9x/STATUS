@@ -1,5 +1,1 @@
-MASK
-# compat ports don't YET make sense for DragonFly
-# We don't distribute old libraries at this time
-# In any case, the 4,5,6 refers to FreeBSD major releases so that
-# is wrong as well
+PORT
