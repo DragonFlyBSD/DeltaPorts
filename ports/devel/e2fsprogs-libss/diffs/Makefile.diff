@@ -1,0 +1,10 @@
+--- Makefile.orig	2016-04-23 10:33:23.000000000 +0300
++++ Makefile
+@@ -32,4 +32,7 @@ post-build:
+ 	@(cd ${WRKSRC}/lib/ss && ${SETENV} ${MAKE_ENV} ${MAKE_CMD} ${MAKE_FLAGS} ${MAKEFILE} \
+ 	${_MAKE_JOBS} ${MAKE_ARGS} all)
+ 
++LIB_DEPENDS+= libcom_err.so:security/krb5
++LDFLAGS+= -L${LOCALBASE}/lib
++
+ .include "${MASTERDIR}/Makefile"
