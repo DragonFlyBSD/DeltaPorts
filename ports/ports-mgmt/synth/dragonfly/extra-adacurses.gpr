@@ -1,0 +1,12 @@
+--- default.gpr.orig	2016-06-20 19:36:03.000000000 +0300
++++ default.gpr
+@@ -15,5 +15,9 @@ project Default is
+       for Default_Switches ("ada") use ("-g", "-O2", "-gnat12", "-gnatyaAbBcdefhiklnOprsSxt", "-fstack-check");
+    end Compiler;
+ 
++   package Linker is
++      for Linker_Options use ("-static", "-lncursesw", "-ltinfow");
++   end Linker;
++
+ end Default;
+ 
