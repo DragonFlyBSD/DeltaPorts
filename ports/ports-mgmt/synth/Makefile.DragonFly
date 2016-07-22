@@ -1,0 +1,10 @@
+
+.if defined(SSTATIC)
+PKGNAMESUFFIX+=	-static
+CONFLICTS_INSTALL+=	synth-[0-9].*
+EXTRA_PATCHES+=	${DFLY_FILESDIR}/extra-adacurses.gpr
+LIB_DEPENDS:=
+RUN_DEPENDS:=
+.else
+CONFLICTS_INSTALL+=	synth-static-[0-9].*
+.endif
