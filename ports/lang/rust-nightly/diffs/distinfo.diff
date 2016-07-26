@@ -1,8 +1,0 @@
---- distinfo.orig	2016-04-07 18:40:12 UTC
-+++ distinfo
-@@ -1,3 +1,5 @@
-+SHA256 (rust-stage0-2016-02-17-4d3eebf-dragonfly-x86_64-765bb5820ad406e966ec0ac51c8070b656459b02.tar.bz2) = 4e4155a410042ffa149ac26e94c1c5cd9f24aae7e647deed54e694f88cf33d5c
-+SIZE (rust-stage0-2016-02-17-4d3eebf-dragonfly-x86_64-765bb5820ad406e966ec0ac51c8070b656459b02.tar.bz2) = 18130945
- SHA256 (rust-stage0-2016-02-17-4d3eebf-freebsd-x86_64-f38991fbb81c1cd8d0bbda396f98f13a55b42804.tar.bz2) = 6123aa870918555835623548e7edbf79480cd754c649fda844dc3c14e4e142f2
- SIZE (rust-stage0-2016-02-17-4d3eebf-freebsd-x86_64-f38991fbb81c1cd8d0bbda396f98f13a55b42804.tar.bz2) = 15922558
- SHA256 (rust-lang-rust-1.9.0.20160318-235d77457d_GH0.tar.gz) = 6833cab6dc2c34a23cdabd565cb950b4e22f2606337c1d9f36c1a9e038eb4192
