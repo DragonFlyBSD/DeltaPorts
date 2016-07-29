@@ -2,7 +2,7 @@
 Cleanup pkg-plist a bit to get correct package w/ different options
 except for FREESTYLE to reduce hunk count
 
---- pkg-plist.orig	2016-03-10 17:02:28.000000000 +0200
+--- pkg-plist.orig	2016-07-29 16:42:07.000000000 +0300
 +++ pkg-plist
 @@ -88,7 +88,7 @@ share/applications/blender.desktop
  %%OPENCOLORIO%%%%DATADIR%%/%%VER%%/datafiles/colormanagement/luts/spi_ocio_srgb_test.spi3d
@@ -13,7 +13,7 @@ except for FREESTYLE to reduce hunk count
  %%NLS%%%%DATADIR%%/%%VER%%/datafiles/fonts/bmonofont-i18n.ttf.gz
  %%NLS%%%%DATADIR%%/%%VER%%/datafiles/fonts/droidsans.ttf.gz
  %%NLS%%%%DATADIR%%/%%VER%%/datafiles/locale/ar/LC_MESSAGES/blender.mo
-@@ -160,162 +160,162 @@ share/applications/blender.desktop
+@@ -161,160 +161,160 @@ share/applications/blender.desktop
  %%DATADIR%%/%%VER%%/scripts/addons/animation_animall.py
  %%DATADIR%%/%%VER%%/scripts/addons/bone_selection_groups.py
  %%DATADIR%%/%%VER%%/scripts/addons/curve_simplify.py
@@ -58,7 +58,6 @@ except for FREESTYLE to reduce hunk count
 -%%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_triangle.h
 -%%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_triangle_intersect.h
 -%%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_volume.h
--%%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/kernel.h
 -%%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/kernel_accumulate.h
 -%%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/kernel_bake.h
 -%%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/kernel_camera.h
@@ -85,7 +84,6 @@ except for FREESTYLE to reduce hunk count
 -%%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/kernel_queues.h
 -%%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/kernel_random.h
 -%%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/kernel_shader.h
--%%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/kernel_shaderdata_vars.h
 -%%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/kernel_shadow.h
 -%%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/kernel_subsurface.h
 -%%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/kernel_textures.h
@@ -214,7 +212,6 @@ except for FREESTYLE to reduce hunk count
 +%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_triangle.h
 +%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_triangle_intersect.h
 +%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_volume.h
-+%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/kernel.h
 +%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/kernel_accumulate.h
 +%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/kernel_bake.h
 +%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/kernel_camera.h
@@ -241,7 +238,6 @@ except for FREESTYLE to reduce hunk count
 +%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/kernel_queues.h
 +%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/kernel_random.h
 +%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/kernel_shader.h
-+%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/kernel_shaderdata_vars.h
 +%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/kernel_shadow.h
 +%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/kernel_subsurface.h
 +%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/kernel_textures.h
@@ -332,7 +328,7 @@ except for FREESTYLE to reduce hunk count
  %%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/shader/node_absorption_volume.oso
  %%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/shader/node_add_closure.oso
  %%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/shader/node_ambient_occlusion.oso
-@@ -400,8 +400,8 @@ share/applications/blender.desktop
+@@ -399,8 +399,8 @@ share/applications/blender.desktop
  %%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/shader/node_wireframe.oso
  %%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/shader/oslutil.h
  %%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/shader/stdosl.h
@@ -343,12 +339,12 @@ except for FREESTYLE to reduce hunk count
  %%DATADIR%%/%%VER%%/scripts/addons/development_api_navigator.py
  %%DATADIR%%/%%VER%%/scripts/addons/development_icon_get.py
  %%DATADIR%%/%%VER%%/scripts/addons/game_engine_publishing.py
-@@ -1113,7 +1113,7 @@ share/applications/blender.desktop
- %%DATADIR%%/%%VER%%/scripts/templates_py/ui_previews_custom_icon.py
+@@ -1133,7 +1133,7 @@ share/applications/blender.desktop
  %%DATADIR%%/%%VER%%/scripts/templates_py/ui_previews_dynamic_enum.py
  %%PORTDOCS%%%%DOCSDIR%%/GPL-license.txt
+ %%PORTDOCS%%%%DOCSDIR%%/GPL3-license.txt
 -%%NLS%%%%PORTDOCS%%%%DOCSDIR%%/LICENSE-bfont.ttf.txt
 +%%PORTDOCS%%%%DOCSDIR%%/LICENSE-bfont.ttf.txt
  %%NLS%%%%PORTDOCS%%%%DOCSDIR%%/LICENSE-bmonofont-i18n.ttf.txt
  %%NLS%%%%PORTDOCS%%%%DOCSDIR%%/LICENSE-droidsans.ttf.txt
- %%PORTDOCS%%%%DOCSDIR%%/Python-license.txt
+ %%PORTDOCS%%%%DOCSDIR%%/jemalloc-license.txt
