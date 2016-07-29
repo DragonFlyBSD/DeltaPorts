@@ -1,0 +1,6 @@
+dfly-patch:
+	${REINPLACE_CMD} -e 's|detectCores\(\)|detectCores(FALSE)|' \
+		${WRKSRC}/R/options.R \
+		${WRKSRC}/R/parallel.R \
+		${WRKSRC}/R/nmf.R \
+		${WRKSRC}/inst/tests/runit.parallel.r
