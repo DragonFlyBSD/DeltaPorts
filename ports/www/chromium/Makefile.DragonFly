@@ -6,6 +6,9 @@ CFLAGS+=	-D__STDC_LIMIT_MACROS
 KERBEROS_LIB_DEPENDS+=	libgssapi_krb5.so:security/krb5
 USES+=		alias
 
+# zrj: sigh.. until we grow timer_create und friends..
+BUILD_DEPENDS:= ${BUILD_DEPENDS:Nflock*} flock:sysutils/flock-dfly
+
 GYP_DEFINES+=	target_arch=x64 OS=dragonfly disable_fatal_linker_warnings=1
 
 dfly-patch:

@@ -1,0 +1,3 @@
+
+# zrj: sigh.. until we grow timer_create und friends..
+RUN_DEPENDS:= ${RUN_DEPENDS:Nflock*} flock:sysutils/flock-dfly
