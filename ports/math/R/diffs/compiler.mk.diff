@@ -1,0 +1,6 @@
+--- compiler.mk.orig	2016-08-04 02:30:19 UTC
++++ compiler.mk
+@@ -1,2 +1,2 @@
+ # Compiler settings required for R and the R-cran ports.
+-USE_GCC=	yes
++USE_GCC=	6
