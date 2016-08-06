@@ -1,6 +1,6 @@
---- bsd.df.gcc.mk.orig	2015-12-01 11:59:55 UTC
+--- bsd.df.gcc.mk.orig	2016-08-06 15:10:33 UTC
 +++ bsd.df.gcc.mk
-@@ -0,0 +1,76 @@
+@@ -0,0 +1,81 @@
 +# bsd.gcc.df.mk  - Reaction to USE_GCC on DragonFly
 +#
 +# The primary base compiler is used is possible, otherwise the ports default
@@ -9,6 +9,9 @@
 +# For DragonFly 4.1+, the primary base compiler is gcc50 and for earlier
 +# releases, the primary base compiler is gcc47.  The avoidance of the use of
 +# the alternate compiler is intentional.
++
++.if !defined(_INCLUDE_BSD_DF_GCC_MK)
++_INCLUDE_BSD_DF_GCC_MK=	yes
 +
 +.include "${PORTSDIR}/Mk/bsd.default-versions.mk"
 +
@@ -76,4 +79,6 @@
 +	@echo MAKE_ENV=${MAKE_ENV}
 +	@echo "BUILD_DEPENDS=${BUILD_DEPENDS}"
 +	@echo "RUN_DEPENDS=${RUN_DEPENDS}"
++.endif
++
 +.endif

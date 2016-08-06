@@ -1,10 +1,9 @@
---- Uses/fortran.mk.orig	2016-07-03 11:25:43 UTC
+--- Uses/fortran.mk.orig	2016-08-06 15:13:07 UTC
 +++ Uses/fortran.mk
-@@ -16,15 +16,14 @@ fortran_ARGS=	gcc
+@@ -16,14 +16,14 @@ fortran_ARGS=	gcc
  .endif
  
  .if ${fortran_ARGS} == gcc
--.include "${PORTSDIR}/Mk/bsd.default-versions.mk"
 -_GCC_VER=	${GCC_DEFAULT:S/.//}
 -.if ${GCC_DEFAULT} == ${LANG_GCC_IS}
 -BUILD_DEPENDS+=	gfortran${_GCC_VER}:lang/gcc
