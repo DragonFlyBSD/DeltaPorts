@@ -1,2 +1,0 @@
-# zrj: installs headers w/ __FreeBSD__
-USES:= ${USES:Nalias}
