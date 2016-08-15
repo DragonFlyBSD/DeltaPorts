@@ -1,8 +1,8 @@
---- GIDs.orig	2014-10-02 21:23:41.647685000 +0000
+--- GIDs.orig	2016-08-15 16:52:26 UTC
 +++ GIDs
-@@ -16,12 +16,10 @@ uucp:*:66:
+@@ -19,12 +19,10 @@ uucp:*:66:
  xten:*:67:
- dialer:*:68:
+ dialer:*:68:aprsd
  network:*:69:
 -pgsql:*:70:
  ircd:*:72:
@@ -13,7 +13,7 @@
  virtuoso:*:79:
  www:*:80:
  qnofiles:*:81:
-@@ -85,8 +83,8 @@ webcamd:*:145:
+@@ -90,8 +88,8 @@ webcamd:*:145:
  ventrilo:*:146:
  kdm:*:147:
  ipv6mon:*:148:
@@ -21,6 +21,6 @@
 -cbsd:*:150:
 +audit:*:149:
 +pgsql:*:150:
+ # free: 151
+ # free: 152
  rbldns:*:153:
- trircd:*:154:
- xorp:*:155:
