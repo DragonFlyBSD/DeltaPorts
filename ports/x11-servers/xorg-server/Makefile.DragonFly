@@ -1,2 +1,5 @@
 # Disable HAL as a default option, use UDEV instead
 OPTIONS_DEFAULT:= ${OPTIONS_DEFAULT:NHAL} UDEV
+
+# Recommended by M.Dillon for sane security defaults
+CONFIGURE_ARGS+=	--enable-xcsecurity
