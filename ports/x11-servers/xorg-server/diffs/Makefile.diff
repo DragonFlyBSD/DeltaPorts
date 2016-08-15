@@ -1,0 +1,12 @@
+--- Makefile.orig	2016-08-15 16:35:18 UTC
++++ Makefile
+@@ -54,6 +54,9 @@ CONFIGURE_ARGS?=--disable-dmx --disable-
+ 		--enable-glamor
+ INSTALL_TARGET=	install-strip
+ 
++# Recommended by M.Dillon for sane security defaults
++CONFIGURE_ARGS+=	--enable-xcsecurity
++
+ .if ${SLAVE_PORT} == "no"
+ SUB_FILES=	pkg-install pkg-deinstall
+ .else
