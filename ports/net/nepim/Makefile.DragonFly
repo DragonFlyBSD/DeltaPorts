@@ -1,0 +1,3 @@
+CFLAGS+= -UHAVE_IP_MREQN
+
+BROKEN= missing struct group_source_req in <netinet/in.h>
