@@ -1,5 +1,14 @@
---- Makefile.orig	2016-04-19 15:57:32 UTC
+--- Makefile.orig	2016-08-19 08:10:55 UTC
 +++ Makefile
+@@ -48,7 +48,7 @@ MAPI_RUN_DEPENDS=	evolution-mapi>=3.0.0:
+ .include <bsd.port.options.mk>
+ 
+ .if ${.CURDIR:T}!="gnome3-lite"
+-RUN_DEPENDS+=	empathy>=3.0.0:net-im/empathy \
++RUN_DEPENDS+=	\
+ 		epiphany>=3.0.0:www/epiphany \
+ 		gucharmap>=3.0.0:deskutils/gucharmap \
+ 		gnome-characters>=3.0.0:deskutils/gnome-characters \
 @@ -73,7 +73,6 @@ RUN_DEPENDS+=	empathy>=3.0.0:net-im/empa
  		gdm>=3.0.0:x11/gdm \
  		gnome-color-manager>=0:graphics/gnome-color-manager \
