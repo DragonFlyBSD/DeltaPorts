@@ -64,6 +64,7 @@ transform ()
       cat ${WORK}/${item} | sed -E \
 	 -e 's|OPTIONS_DEFAULT_amd64|OPTIONS_DEFAULT_x86_64|g' \
 	 -e 's|OPTIONS_DEFINE_amd64|OPTIONS_DEFINE_x86_64|g' \
+	 -e 's|BROKEN_amd64|BROKEN_x86_64|g' \
 	 -e 's|_ON_amd64|_ON_x86_64|g' \
 	 -e 's|_OFF_amd64|_OFF_x86_64|g' \
 	 -e 's|CFLAGS_amd64|CFLAGS_x86_64|g' \
