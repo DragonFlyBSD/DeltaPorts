@@ -1,4 +1,4 @@
-USES+= ncurses
+US-BROKEN-ES+= ncurses
 
 dfly-patch:
 	${REINPLACE_CMD} -e 's@ltermcap@lncurses@g'	\
