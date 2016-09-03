@@ -1,0 +1,2 @@
+# qt5-docs are highly unstable and currently don't build, remove this option
+OPTIONS_EXCLUDE=DOCS
