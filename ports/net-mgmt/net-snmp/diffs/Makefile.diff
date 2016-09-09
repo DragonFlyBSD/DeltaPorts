@@ -1,4 +1,4 @@
---- Makefile.orig	2016-06-21 05:50:05 UTC
+--- Makefile.orig	2016-09-08 20:41:16 UTC
 +++ Makefile
 @@ -155,7 +155,7 @@ NET_SNMP_SYS_CONTACT?=	nobody@nowhere.in
  NET_SNMP_SYS_LOCATION?=	somewhere
@@ -9,16 +9,15 @@
  
  .if ${OSVERSION} >= 1000000 && ${OSVERSION} < 1100062
  CFLAGS+=	-D_WANT_IFADDR
-@@ -215,11 +215,7 @@ CONFLICTS=	ucd-snmp-4.* net-snmp-5.3.*
- 
+@@ -216,9 +216,9 @@ CONFLICTS=	ucd-snmp-4.* net-snmp-5.3.*
  .include <bsd.port.pre.mk>
  
--.if ${SSL_DEFAULT} != base
+ .if ${SSL_DEFAULT} != base
 -LCRYPTO=	-lcrypto
--.else
--LCRYPTO=
--.endif
 +LCRYPTO=	-lcrypto -lssl -lwrap
+ .else
+-LCRYPTO=
++LCRYPTO=	-L/usr/lib/priv -lprivate_crypto -lprivate_ssl -lwrap
+ .endif
  
  pre-everything::
- 	@${ECHO_MSG}
