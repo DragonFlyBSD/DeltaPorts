@@ -1,6 +1,4 @@
 # Note verion has not been updated since 2007
-MANUAL_PACKAGE_BUILD=	5.3G package - skip until someone complains \
-			it does not build
-.if !defined(DPORTS_BUILDER)
+.if !(defined(DPORTS_BUILDER) && defined(CRAFTY_SIZE))
 MANUAL_PACKAGE_BUILD=	5.3G package (too big for mirrors)
 .endif
