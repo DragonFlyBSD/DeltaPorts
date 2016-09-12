@@ -1,1 +1,3 @@
+IGNORE=	Expired in FreeBSD ports in April 2016, it should be dead now
+
 OPTIONS_EXCLUDE+= DAHDI

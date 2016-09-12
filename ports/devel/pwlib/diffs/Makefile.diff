@@ -1,0 +1,13 @@
+--- Makefile.orig	2016-09-12 15:26:57 UTC
++++ Makefile
+@@ -98,10 +98,6 @@ PLIST_SUB+=	DC1394="@comment "
+ CFLAGS+=	-fPIC
+ .endif
+ 
+-.if (${ARCH} == "amd64") || (${ARCH} == "i386") || (${ARCH} == "ia64") || (${ARCH} == "powerpc") || (${ARCH} == "sparc64")
+-PLIST_SUB+=	BSDVIDEO=""
+-.else
+ PLIST_SUB+=	BSDVIDEO="@comment "
+-.endif
+ 
+ .include <bsd.port.post.mk>
