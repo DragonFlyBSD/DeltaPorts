@@ -1,5 +1,5 @@
---- cmake.mk.orig	2016-09-15 18:11:02 UTC
-+++ cmake.mk
+--- Uses/cmake.mk.orig	2016-09-15 18:11:02 UTC
++++ Uses/cmake.mk
 @@ -79,6 +79,7 @@ CMAKE_ARGS+=		-DCMAKE_C_COMPILER:STRING=
  			-DCMAKE_BUILD_TYPE:STRING="${CMAKE_BUILD_TYPE}" \
  			-DTHREADS_HAVE_PTHREAD_ARG:BOOL=YES \
