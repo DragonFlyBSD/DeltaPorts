@@ -1,0 +1,10 @@
+--- configure.ac.orig	2016-01-14 21:20:22.000000000 +0200
++++ configure.ac
+@@ -16,6 +16,7 @@ case $target_os in
+      *linux*)	arch=linux;;
+      *netbsd*)  arch=netbsd;;
+      *bsd*)	arch=bsd;;
++     *dragonfly*) arch=bsd;;
+      *)		arch=unknown;;
+ esac
+ 
