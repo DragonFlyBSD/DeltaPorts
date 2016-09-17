@@ -156,21 +156,6 @@ split () {
 
 awk -F \| "${AWKCMD1}" ${INDEX} > ${TMPFILE}
 
-LINUX=$(cd ${FPORTS} && find * -name Makefile -depth 2 -maxdepth 2 -print | \
-    xargs grep -l ^USE_LINUX | sed -e 's|/Makefile||' | sort )
-
-rm -f ${TMPFILE}.linux
-for myport in ${LINUX}; do
-   case ${myport} in
-   net/boinc-client)
-      ;;
-   *)
-      line=$(grep "^${myport} " ${TMPFILE})
-      [ -n "${line}" ] && echo ${line} >> ${TMPFILE}.linux
-      ;;
-   esac
-done
-
 echo "searching for custom dports..."
 CUSTOM=$(cd ${DELTA}/ports && find * -type f -name STATUS -exec grep -lE '(DPORT|LOCK)' {} \;)
 for myport in ${CUSTOM}; do
@@ -180,9 +165,7 @@ for myport in ${CUSTOM}; do
 done
 echo "done"
 
-sort -u ${TMPFILE} > ${TMPFILE}.sorted
-
-comm -23 ${TMPFILE}.sorted ${TMPFILE}.linux > ${TMPFILE}.final
+sort -u ${TMPFILE} > ${TMPFILE}.final
 
 while read fileline; do
    split ${fileline}
