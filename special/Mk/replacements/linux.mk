@@ -11,5 +11,6 @@ IGNORE=	Linux emulation is not supported on DragonFly
 
 LINUX_ARCH=	x86_64
 PKGNAMEPREFIX?=	linux-${linux_ARGS}-
+BUILD_DEPENDS+=	linux_base-${linux_ARGS}>0:emulators/linux_base-${linux_ARGS}
 
 .endif
