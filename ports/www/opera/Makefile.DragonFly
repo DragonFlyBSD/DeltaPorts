@@ -1,2 +1,0 @@
-IGNORE= Opera is not supported on DragonFly
-OPTIONS_DEFAULT:= ${OPTIONS_DEFAULT:NCOMPAT9}
