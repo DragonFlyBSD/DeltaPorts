@@ -256,6 +256,9 @@ for k in Mk Templates; do
   cpdup -i0 ${WORKAREA}/${k} ${MERGED}/${k}
 done
 
+# replace linux.mk
+cp -a ${DELTA}/special/Mk/replacements/linux.mk ${MERGED}/Mk/Uses
+
 # port tree root
 awk "${AWKGID}" ${FPORTS}/GIDs > ${MERGED}/GIDs
 awk "${AWKUID}" ${FPORTS}/UIDs > ${MERGED}/UIDs
