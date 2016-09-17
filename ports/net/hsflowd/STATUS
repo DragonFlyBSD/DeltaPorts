@@ -1,3 +1,0 @@
-MASK
-# build tries unsuccessfully to cd into src/DragonFly and then calls itself
-# infinite recursion, forking runs out of processes.  Nasty

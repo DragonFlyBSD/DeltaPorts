@@ -1,5 +1,0 @@
-MASK
-# virtualbox doesn't build, so don't build accessories
-# This one references vbox makefiles
-Last attempt: 0.5_1
-Last success: 0.5_1
