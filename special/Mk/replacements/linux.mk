@@ -5,4 +5,6 @@ _INCLUDE_USES_LINUX_MK=	yes
 
 IGNORE=	Linux emulation is not supported on DragonFly
 
+LINUX_ARCH=	x86_64
+
 .endif
