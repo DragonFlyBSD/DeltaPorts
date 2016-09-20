@@ -1,4 +1,4 @@
-patch-dfly:
+dfly-patch:
 	${REINPLACE_CMD} -e 's|FreeBSD|DragonFly|' \
 		${WRKSRC}/lm4flash/Makefile \
 		${WRKSRC}/lmicdiusb/Makefile
