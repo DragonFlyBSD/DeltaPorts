@@ -5,7 +5,7 @@
                          case OP_TAN:
                              val = tan(val);
 -                            if (isinf(val)) {
-+                            if (std:isinf(val)) {
++                            if (std::isinf(val)) {
                                  errornum = ERROR_INFINITY;
                                  stack.pushint(0);
                              } else {
@@ -14,7 +14,7 @@
                          case OP_EXP:
                              val = exp(val);
 -                            if (isinf(val)) {
-+                            if (std:isinf(val)) {
++                            if (std::isinf(val)) {
                                  errornum = ERROR_INFINITY;
                                  stack.pushint(0);
                              } else {
@@ -23,7 +23,7 @@
                      double twoval = stack.popfloat();
                      double ans = twoval + oneval;
 -                    if (isinf(ans)) {
-+                    if (std:isinf(ans)) {
++                    if (std::isinf(ans)) {
                          errornum = ERROR_INFINITY;
                          stack.pushint(0);
                      } else {
@@ -32,7 +32,7 @@
                      double twoval = stack.popfloat();
                      double ans = twoval - oneval;
 -                    if (isinf(ans)) {
-+                    if (std:isinf(ans)) {
++                    if (std::isinf(ans)) {
                          errornum = ERROR_INFINITY;
                          stack.pushint(0);
                      } else {
@@ -41,7 +41,7 @@
                      double twoval = stack.popfloat();
                      double ans = twoval * oneval;
 -                    if (isinf(ans)) {
-+                    if (std:isinf(ans)) {
++                    if (std::isinf(ans)) {
                          errornum = ERROR_INFINITY;
                          stack.pushint(0);
                      } else {
@@ -50,7 +50,7 @@
                      } else {
                          double ans = fmod(twoval, oneval);
 -                        if (isinf(ans)) {
-+                        if (std:isinf(ans)) {
++                        if (std::isinf(ans)) {
                              errornum = ERROR_INFINITY;
                              stack.pushint(0);
                          } else {
@@ -59,7 +59,7 @@
                      } else {
                          double ans = twoval / oneval;
 -                        if (isinf(ans)) {
-+                        if (std:isinf(ans)) {
++                        if (std::isinf(ans)) {
                              errornum = ERROR_INFINITY;
                              stack.pushint(0);
                          } else {
@@ -68,7 +68,7 @@
                          double intpart;
                          modf(twoval /oneval, &intpart);
 -                        if (isinf(intpart)) {
-+                        if (std:isinf(intpart)) {
++                        if (std::isinf(intpart)) {
                              errornum = ERROR_INFINITY;
                              stack.pushint(0);
                          } else {
@@ -77,7 +77,7 @@
                          stack.pushint(0);
                      } else {
 -                        if (isinf(ans)) {
-+                        if (std:isinf(ans)) {
++                        if (std::isinf(ans)) {
                              errornum = ERROR_INFINITY;
                              stack.pushint(0);
                          } else {
