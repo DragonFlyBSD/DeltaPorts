@@ -1,11 +1,11 @@
---- Makefile.orig	2016-08-18 05:09:59 UTC
+--- Makefile.orig	2016-09-24 19:11:03 UTC
 +++ Makefile
-@@ -8,7 +8,7 @@ CATEGORIES=	devel
+@@ -7,7 +7,7 @@ CATEGORIES=	devel
  MAINTAINER=	kde@FreeBSD.org
  COMMENT=	Cross-platform application and UI framework (metaport)
  
 -USE_QT5=	${_USE_QT_ALL:Nphonon4:S/$/_run/} # phonon4 is not part of Qt itself.
-+USE_QT5=	${_USE_QT_ALL:Nphonon4:Ndoc:S/$/_run/} # phonon4 is not part of Qt itself.
++USE_QT5=	${_USE_QT_ALL:Nphonon4:Ndoc:Nexamples:S/$/_run/} # phonon4 is not part of Qt itself.
  USES=		metaport
  
  .include <bsd.port.mk>
