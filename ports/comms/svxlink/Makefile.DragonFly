@@ -1,0 +1,1 @@
+IGNORE=	doesn't build with gcc (ambiguous / invalid use of non-static member)
