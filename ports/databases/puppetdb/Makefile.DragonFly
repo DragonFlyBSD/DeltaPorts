@@ -1,0 +1,1 @@
+IGNORE=	not supported on DF, use puppetdb3 or puppetdb4 instead
