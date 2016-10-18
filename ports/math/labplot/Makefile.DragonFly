@@ -1,0 +1,1 @@
+IGNORE=	won't build in synth, v2.0.1 can't be updated to 2.3.0 due to EMC is QT5
