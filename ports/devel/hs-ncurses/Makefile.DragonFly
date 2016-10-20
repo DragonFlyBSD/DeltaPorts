@@ -1,0 +1,5 @@
+dfly-patch:
+	@${REINPLACE_CMD} -e 's|\t|    |' \
+		${WRKSRC}/lib/UI/NCurses/Compat.hs \
+		${WRKSRC}/lib/UI/NCurses/Enums.chs \
+		${WRKSRC}/lib/UI/NCurses/Types.hs
