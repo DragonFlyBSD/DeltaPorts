@@ -1,0 +1,16 @@
+IGNORE=	bundled jpeg-turbo-lib doesn't have dragonfly support in configure script
+# strangely, a much new version is a LIB depends, why is it getting built?
+# The bundled is unzipped during the build so there's no way to patch it, it
+# just sucks.
+
+CFLAGS+=	-Wno-deprecated-declarations \
+		-Wno-unused-but-set-variable \
+		-Wno-enum-compare \
+		-Wno-switch
+		
+dfly-patch:
+	${REINPLACE_CMD} \
+		-e "s|amd64-freebsd|x86_64-dragonfly|g" \
+		-e "s|FreeBSD|DragonFly|" \
+		-e "s| --cc=clang||" \
+		${WRKSRC_vendor}/CPAN/buildme.sh
