@@ -1,14 +1,5 @@
 --- Makefile.orig	2016-01-29 09:28:40 UTC
 +++ Makefile
-@@ -3,7 +3,7 @@
- 
- PORTNAME=	ncurses
- PORTVERSION=	6.0
--PORTREVISION=	2
-+PORTREVISION=	5
- CATEGORIES=	devel
- MASTER_SITES=	http://invisible-mirror.net/archives/${PORTNAME}/ \
- 		ftp://invisible-island.net/${PORTNAME}/
 @@ -35,7 +35,14 @@ CONFIGURE_ARGS=	--datadir=${PREFIX}/shar
  		--with-pkg-config-libdir=${PREFIX}/libdata/pkgconfig
  MAKE_JOBS_UNSAFE=	yes
