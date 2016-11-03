@@ -1,15 +1,15 @@
---- Makefile.orig	2016-04-06 16:29:17 UTC
+--- Makefile.orig	2016-11-03 02:50:10 UTC
 +++ Makefile
-@@ -80,8 +80,6 @@ LIB_DEPENDS+=		libsasl2.so:security/cyru
+@@ -77,8 +77,6 @@ LIB_DEPENDS+=		libpopt.so:devel/popt
+ LIB_DEPENDS+=		libinotify.so:devel/libinotify
  # GNUTLS
- LIB_DEPENDS+=		libgcrypt.so:security/libgcrypt
  LIB_DEPENDS+=		libgnutls.so:security/gnutls
 -# NFS4 ACL glue
 -LIB_DEPENDS+=		libsunacl.so:sysutils/libsunacl
  # Libarchive
  BUILD_DEPENDS+=		libarchive>=3.1.2:archivers/libarchive
  RUN_DEPENDS+=		libarchive>=3.1.2:archivers/libarchive
-@@ -116,7 +114,7 @@ OPTIONS_DEFINE=		ACL_SUPPORT AD_DC ADS A
+@@ -117,7 +115,7 @@ OPTIONS_DEFINE=		ACL_SUPPORT AD_DC ADS A
  			DNSUPDATE DOCS FAM LDAP PAM_SMBPASS \
  			PTHREADPOOL QUOTAS SYSLOG UTMP
  
