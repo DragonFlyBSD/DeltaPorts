@@ -1,10 +1,11 @@
---- main.cpp.orig	2013-03-20 08:14:38.565285000 +0000
+--- main.cpp.orig	2016-09-12 23:52:56.000000000 +0300
 +++ main.cpp
-@@ -23,6 +23,7 @@
- #include <vector>
- #include <list>
- #include <math.h>
-+#include <unistd.h>
- #include <fstream>
- #include <iostream>
- #include <sstream>
+@@ -34,7 +34,7 @@
+     typedef unsigned int uint;
+     #include <windows.h>
+     #include <GL/glext.h>
+-#elif defined(__FreeBSD__)
++#elif defined(__FreeBSD__) || defined(__DragonFly__)
+     #include <sys/endian.h>
+ #else
+     #include <endian.h>
