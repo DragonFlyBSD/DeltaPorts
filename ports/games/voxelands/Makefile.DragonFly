@@ -1,0 +1,6 @@
+# this segfaults on base gcc and even gcc6 from dports
+IGNORE= segfaults 98% complete with build
+
+# dragonfly patches can be replaced with USES+=alias
+# but not when USES_GCC=6 is set.
+
