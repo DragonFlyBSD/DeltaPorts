@@ -1,0 +1,2 @@
+IGNORE=	uses former and insecure libmd SHA1_File function which no longer exists in DragonFly base
+ 
