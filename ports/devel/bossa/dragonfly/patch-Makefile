@@ -4,7 +4,7 @@
  
  endif
  
-+ifeq (${OS},DragonFly)
++ifeq (${OS},DragonF)
 +COMMON_SRCS+=PosixSerialPort.cpp BSDPortFactory.cpp
 +endif
 +
