@@ -1,2 +1,3 @@
-IGNORE=	uses former and insecure libmd SHA1_File function which no longer exists in DragonFly base
- 
+
+dfly-patch:
+	${CP} ${DFLY_FILESDIR}/sha1hl_compat.h ${WRKSRC}/spamd
