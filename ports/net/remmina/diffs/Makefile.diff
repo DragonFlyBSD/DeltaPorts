@@ -1,0 +1,13 @@
+--- Makefile.orig	2016-11-16 16:07:44 UTC
++++ Makefile
+@@ -41,8 +41,9 @@ AVAHI_CMAKE_BOOL=	WITH_AVAHI
+ GCRYPT_LIB_DEPENDS=	libgcrypt.so:security/libgcrypt
+ GCRYPT_CMAKE_BOOL=	WITH_GCRYPT
+ 
+-NLS_USES=		gettext localbase
++NLS_USES=		gettext localbase:ldflags
+ NLS_CMAKE_BOOL=		WITH_GETTEXT
++NLS_LDFLAGS=		-lintl
+ 
+ SSH_LIB_DEPENDS=	libssh_threads.so:security/libssh
+ SSH_LDFLAGS=		-fstack-protector
