@@ -78,9 +78,12 @@ dfly-patch:
 		echo "${F} was not altered" || /usr/bin/true
 .endfor
 # these test core!  Something is really wrong
-#	${REINPLACE_CMD} \
-#		-e '/CppunitTest_sc_bugfix_test/d' \
-#		-e '/CppunitTest_sc_filters_test/d ' \
-#		-e '/CppunitTest_sc_condformats/d' \
-#		-e '/CppunitTest_sc_/d' \
-#		${WRKSRC}/sc/Module_sc.mk
+	${REINPLACE_CMD} \
+		-e '/CppunitTest_sc_bugfix_test/d' \
+		-e '/CppunitTest_sc_filters_test/d ' \
+		-e '/CppunitTest_sc_condformats/d' \
+		-e '/CppunitTest_sc_subsequent_export_test/d' \
+		-e '/CppunitTest_sc_html_export_test/d' \
+		-e '/CppunitTest_sc_copypaste/d' \
+		-e '/CppunitTest_sc_functions_test/d' \
+		${WRKSRC}/sc/Module_sc.mk
