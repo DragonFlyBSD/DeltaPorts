@@ -1,11 +1,11 @@
---- Makefile.orig	2015-10-18 16:29:03.000000000 +0300
+--- Makefile.orig	2016-11-19 19:14:39 UTC
 +++ Makefile
 @@ -49,7 +49,7 @@ DIALOGNAME=	dialog-1.1-20120706
  MAKE_ENV+=	DIALOGSOURCES=${WRKDIR}/${DIALOGNAME}
  
  do-configure:
 -	@cd ${WRKDIR}/${DIALOGNAME}; ./configure
-+	@cd ${WRKDIR}/${DIALOGNAME}; ./configure LDFLAGS="${LDFLAGS}"
++	@cd ${WRKDIR}/${DIALOGNAME}; ${SETENV} ${CONFIGURE_ENV} ./configure LDFLAGS="${LDFLAGS}"
  
  .endif
  
