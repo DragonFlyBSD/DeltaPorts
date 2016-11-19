@@ -1,0 +1,13 @@
+Local fix for linking bugs in a quality release of llvm v3.9 yay!
+
+--- tools/llvm-shlib/CMakeLists.txt.orig	2016-05-26 07:35:35.000000000 +0300
++++ tools/llvm-shlib/CMakeLists.txt
+@@ -39,7 +39,7 @@ endif()
+ add_llvm_library(LLVM SHARED DISABLE_LLVM_LINK_LLVM_DYLIB SONAME ${SOURCES})
+ 
+ list(REMOVE_DUPLICATES LIB_NAMES)
+-if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux") # FIXME: It should be "GNU ld for elf"
++if("${CMAKE_SYSTEM_NAME}" MATCHES "Linux|DragonFly") # FIXME: It should be "GNU ld for elf"
+   # GNU ld doesn't resolve symbols in the version script.
+   set(LIB_NAMES -Wl,--whole-archive ${LIB_NAMES} -Wl,--no-whole-archive)
+ elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "Darwin")
