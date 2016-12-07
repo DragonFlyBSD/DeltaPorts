@@ -1,0 +1,24 @@
+It's not immediately clear why the long double versions of these
+boost-libs aren't building on DF.
+
+--- pkg-plist.orig	2016-12-07 16:53:28 UTC
++++ pkg-plist
+@@ -12299,18 +12299,12 @@ lib/libboost_math_c99.so.%%BOOST_SHARED_
+ lib/libboost_math_c99f.a
+ lib/libboost_math_c99f.so
+ lib/libboost_math_c99f.so.%%BOOST_SHARED_LIB_VER%%
+-lib/libboost_math_c99l.a
+-lib/libboost_math_c99l.so
+-lib/libboost_math_c99l.so.%%BOOST_SHARED_LIB_VER%%
+ lib/libboost_math_tr1.a
+ lib/libboost_math_tr1.so
+ lib/libboost_math_tr1.so.%%BOOST_SHARED_LIB_VER%%
+ lib/libboost_math_tr1f.a
+ lib/libboost_math_tr1f.so
+ lib/libboost_math_tr1f.so.%%BOOST_SHARED_LIB_VER%%
+-lib/libboost_math_tr1l.a
+-lib/libboost_math_tr1l.so
+-lib/libboost_math_tr1l.so.%%BOOST_SHARED_LIB_VER%%
+ lib/libboost_prg_exec_monitor.a
+ lib/libboost_prg_exec_monitor.so
+ lib/libboost_prg_exec_monitor.so.%%BOOST_SHARED_LIB_VER%%
