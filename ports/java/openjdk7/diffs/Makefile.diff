@@ -90,7 +90,7 @@
 -BUILD_DEPENDS+=		${BOOTSTRAPJDKDIR}/bin/javac:java/bootstrap-openjdk
 +.if ${OPSYS} == DragonFly
 +BOOTSTRAP_DISTFILE= bootstrap-openjdk6-6.0.tar.xz
-+BUILD_DEPENDS+=	gcc48:lang/gcc
++BUILD_DEPENDS+=	gcc48:lang/gcc48
  .endif
  
 +BOOTSTRAPJDKDIR=	${WRKDIR}/bootstrap
