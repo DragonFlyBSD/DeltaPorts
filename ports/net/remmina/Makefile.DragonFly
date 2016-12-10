@@ -1,0 +1,5 @@
+# hack until the cause is found
+
+post-install:
+	${MV} ${DESTDIR}${PREFIX}/share/man/man1/remmina.1 \
+		${DESTDIR}${PREFIX}/man/man1/remmina.1
