@@ -1,6 +1,6 @@
---- Makefile.orig	2015-08-04 07:39:15 UTC
+--- Makefile.orig	2016-12-11 20:16:08 UTC
 +++ Makefile
-@@ -15,7 +15,6 @@ LICENSE_COMB=	multi
+@@ -16,7 +16,6 @@ CONFIGURE_ENV=	gcc_gxx_include_dir="/usr
  
  USES=	gmake iconv libtool tar:bzip2 makeinfo compiler
  PLIST_SUB=	TARGETARCH=${PKGNAMEPREFIX:C/-//g} \
@@ -8,13 +8,13 @@
  		GCC_TARGET=${GCC_TARGET} \
  		GCC_VERSION=${PORTVERSION}
  
-@@ -30,13 +29,15 @@ WRKSRC=	${WRKDIR}/build-gcc
+@@ -28,13 +27,15 @@ RUN_DEPENDS=	${BU_PREFIX}-as:devel/${PKG
  
  .if empty(GCC_TARGET)
  # We are building for a FreeBSD target
--GCC_TARGET?=	${PKGNAMEPREFIX}portbld-${OPSYS:tl}${OSREL}
+-GCC_TARGET?=	${PKGNAMEPREFIX}unknown-${OPSYS:tl}${OSREL}
 -BU_PREFIX?=	${PKGNAMEPREFIX}${OPSYS:tl}
-+GCC_TARGET?=	${PKGNAMEPREFIX}portbld-freebsd10
++GCC_TARGET?=	${PKGNAMEPREFIX}unknown-freebsd10
 +BU_PREFIX?=	${PKGNAMEPREFIX}freebsd
  EXTRA_PATCHES+= ${FILESDIR}/freebsd-format-extensions
 +PLIST_SUB+=	OPSYS=freebsd OSREL=10
