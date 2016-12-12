@@ -1,0 +1,13 @@
+Must use base gcc, -fopenmp, libstdc++ version matching etc.
+
+--- Makefile.orig	2016-12-12 09:16:04.000000000 +0200
++++ Makefile
+@@ -211,7 +211,7 @@ BROKEN=	REDCODE requires OPENJPEG and FF
+ 
+ .include <bsd.port.pre.mk>
+ 
+-.if ${COMPILER_TYPE} == gcc
++.if ${OPSYS} == FreeBSD && ${COMPILER_TYPE} == gcc
+ # gcc 4.2 does not support -msse4.1, which is needed for blender 2.70+
+ .if ${ARCH} == amd64
+ # gcc 4.9 fails to link on amd64
