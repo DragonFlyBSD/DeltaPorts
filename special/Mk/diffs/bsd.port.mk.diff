@@ -113,7 +113,7 @@
  .endif
  
 -INDEXFILE?=		INDEX-${OSVERSION:C/([0-9]*)[0-9]{5}/\1/}
-+INDEXFILE?=		INDEX-${DFLYVERSION:C/([0-9]*)[0-9]{5}/\1/}
++INDEXFILE?=		INDEX
  
  .if defined(USE_XORG) || defined(XORG_CAT)
  .include "${PORTSDIR}/Mk/bsd.xorg.mk"
