@@ -1,9 +1,18 @@
-It's not immediately clear why the long double versions of these
-boost-libs aren't building on DF.
+Do not compile in long double support but provide fiber one.
 
 --- pkg-plist.orig	2016-12-07 16:53:28 UTC
 +++ pkg-plist
-@@ -12299,18 +12299,12 @@ lib/libboost_math_c99.so.%%BOOST_SHARED_
+@@ -12275,6 +12275,9 @@ lib/libboost_date_time.a
+ lib/libboost_date_time.so
+ lib/libboost_date_time.so.%%BOOST_SHARED_LIB_VER%%
+ lib/libboost_exception.a
++lib/libboost_fiber.a
++lib/libboost_fiber.so
++lib/libboost_fiber.so.%%BOOST_SHARED_LIB_VER%%
+ lib/libboost_filesystem.a
+ lib/libboost_filesystem.so
+ lib/libboost_filesystem.so.%%BOOST_SHARED_LIB_VER%%
+@@ -12299,18 +12302,12 @@ lib/libboost_math_c99.so.%%BOOST_SHARED_
  lib/libboost_math_c99f.a
  lib/libboost_math_c99f.so
  lib/libboost_math_c99f.so.%%BOOST_SHARED_LIB_VER%%
