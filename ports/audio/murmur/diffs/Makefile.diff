@@ -1,0 +1,11 @@
+--- Makefile.orig	2016-12-15 14:28:06.000000000 +0200
++++ Makefile
+@@ -62,7 +62,7 @@ CONFIG+=	no-bonjour
+ CONFIG+=	no-pch
+ .endif
+ 
+-.if ${OSVERSION} < 1000510
++.if ${OPSYS} == FreeBSD && ${OSVERSION} < 1000510
+ EXTRA_PATCHES=	${FILESDIR}/FreeBSD9-patch-src_SSL.cpp
+ .endif
+ 
