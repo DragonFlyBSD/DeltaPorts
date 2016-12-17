@@ -1,0 +1,2 @@
+# zrj: unbreak package
+GEM_NAME?=	${DISTNAME}
