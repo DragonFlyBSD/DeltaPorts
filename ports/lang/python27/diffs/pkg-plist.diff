@@ -1,17 +1,17 @@
---- pkg-plist.orig	2014-08-03 08:18:41.657550000 +0000
+--- pkg-plist.orig	2016-12-27 15:41:53 UTC
 +++ pkg-plist
-@@ -2437,10 +2437,10 @@ lib/python2.7/pipes.pyc
+@@ -2465,10 +2465,10 @@ lib/python2.7/pipes.pyo
  lib/python2.7/pkgutil.py
- lib/python2.7/pkgutil.pyo
  lib/python2.7/pkgutil.pyc
+ lib/python2.7/pkgutil.pyo
 -lib/python2.7/plat-freebsd%%OSMAJOR%%/IN.py
--lib/python2.7/plat-freebsd%%OSMAJOR%%/IN.pyo
 -lib/python2.7/plat-freebsd%%OSMAJOR%%/IN.pyc
+-lib/python2.7/plat-freebsd%%OSMAJOR%%/IN.pyo
 -lib/python2.7/plat-freebsd%%OSMAJOR%%/regen
 +lib/python2.7/plat-dragonfly%%OSMAJOR%%/IN.py
-+lib/python2.7/plat-dragonfly%%OSMAJOR%%/IN.pyo
 +lib/python2.7/plat-dragonfly%%OSMAJOR%%/IN.pyc
++lib/python2.7/plat-dragonfly%%OSMAJOR%%/IN.pyo
 +lib/python2.7/plat-dragonfly%%OSMAJOR%%/regen
  lib/python2.7/platform.py
- lib/python2.7/platform.pyo
  lib/python2.7/platform.pyc
+ lib/python2.7/platform.pyo
