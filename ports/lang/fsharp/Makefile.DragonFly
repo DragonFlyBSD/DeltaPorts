@@ -1,2 +1,0 @@
-MAKE_JOBS_UNSAFE=yes
-IGNORE=	no longer builds under poudriere (downloads during build)
