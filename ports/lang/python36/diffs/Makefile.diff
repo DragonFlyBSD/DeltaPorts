@@ -1,0 +1,49 @@
+--- Makefile.orig	2016-12-31 16:24:44 UTC
++++ Makefile
+@@ -45,13 +45,15 @@ SUB_LIST=		PYTHON_SUFFIX=${PYTHON_SUFFIX
+ 
+ PLIST_SUB=		XYDOT=${PYTHON_VER} XY=${PYTHON_SUFFIX} \
+ 			XYZDOT=${PYTHON_PORTVERSION} ABI=${ABIFLAGS} \
+-			OSMAJOR=${OSVERSION:C/([0-9]*)[0-9]{5}/\1/}		# For plat-freebsd* in pkg-plist. http://bugs.python.org/issue19554
++			OSMAJOR=${DFLYVERSION:C/([0-9]*)[0-9]{5}/\1/}		# For plat-freebsd* in pkg-plist. http://bugs.python.org/issue19554
+ 
+ OPTIONS_DEFINE=		DEBUG IPV6 LIBFFI NLS PYMALLOC THREADS
+ OPTIONS_DEFAULT=	LIBFFI PYMALLOC THREADS
+ OPTIONS_RADIO=		HASH
+ OPTIONS_RADIO_HASH=	FNV SIPHASH
+ OPTIONS_SUB=		yes
++OPTIONS_DEFINE+=	EXPAT
++OPTIONS_DEFAULT+=	EXPAT
+ 
+ LIBFFI_DESC=		Use libffi from ports instead of bundled version
+ NLS_DESC=		Enable gettext support for the locale module
+@@ -60,7 +62,9 @@ PYMALLOC_DESC=		Enable specialized mallo
+ HASH_DESC=		Hash Algorithm (PEP-456)
+ FNV_DESC=		Modified Fowler-Noll-Vo Algorithm
+ SIPHASH_DESC=		SipHash24 Algorithm
+-
++EXPAT_DESC=		Use expat from ports instead of bundled version
++ 
++EXPAT_CONFIGURE_ON=	--with-system-expat
+ FNV_CONFIGURE_ON=	--with-hash-algorithm=fnv
+ SIPHASH_CONFIGURE_ON=	--with-hash-algorithm=siphash24
+ 
+@@ -69,6 +73,7 @@ IPV6_CONFIGURE_ENABLE=	ipv6
+ 
+ LIBFFI_CONFIGURE_ON=	--with-system-ffi
+ LIBFFI_LIB_DEPENDS=	libffi.so:devel/libffi
++EXPAT_LIB_DEPENDS=	libexpat.so:textproc/expat2
+ 
+ # Use CPPFLAGS over CFLAGS due to -I ordering, causing elementtree and pyexpat
+ # to break in Python 2.7, or preprocessor complaints in Python >= 3.3
+@@ -119,6 +124,10 @@ DISABLED_EXTENSIONS+=	nis
+ PLIST_SUB+=	NO_NIS=""
+ .endif
+ 
++post-patch:
++	${REINPLACE_CMD} -e 's|`uname -r`|"${_OSRELEASE}"|g' \
++		${WRKSRC}/configure
++
+ post-install:
+ .if ! ${PORT_OPTIONS:MDEBUG}
+ 	${RM} ${STAGEDIR}${PREFIX}/lib/libpython3.so						# Upstream Issue: http://bugs.python.org/issue17975
