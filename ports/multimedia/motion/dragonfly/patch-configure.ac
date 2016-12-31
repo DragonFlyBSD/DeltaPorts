@@ -1,0 +1,11 @@
+--- configure.ac.intermediate	2016-12-31 16:40:49 UTC
++++ configure.ac
+@@ -37,7 +37,7 @@ if test "${Darwin}" = ""; then
+ 	AC_MSG_RESULT(no)
+ 	AC_MSG_CHECKING(for *BSD)
+ 
+-	FreeBSD=`uname -a | grep "FreeBSD"`
++	FreeBSD=`uname -a | grep "BSD|DragonFly"`
+ 	if test "${FreeBSD}" = ""; then
+ 		AC_MSG_RESULT(no)
+ 		VIDEO="video.o video2.o video_common.o"
