@@ -1,14 +1,14 @@
---- gdb/osabi.c.orig	2015-02-19 11:58:07 UTC
+--- gdb/osabi.c.orig	2016-08-01 15:50:20 UTC
 +++ gdb/osabi.c
 @@ -69,6 +69,7 @@ static const struct osabi_names gdb_osab
-   { "NetBSD a.out", NULL },
-   { "NetBSD ELF", NULL },
-   { "OpenBSD ELF", NULL },
+   { "NetBSD/a.out", NULL },
+   { "NetBSD/ELF", NULL },
+   { "OpenBSD/ELF", NULL },
 +  { "DragonFly", NULL },
-   { "Windows CE", NULL },
+   { "WindowsCE", NULL },
    { "DJGPP", NULL },
    { "Irix", NULL },
-@@ -501,6 +502,15 @@ generic_elf_osabi_sniff_abi_tag_sections
+@@ -497,6 +498,15 @@ generic_elf_osabi_sniff_abi_tag_sections
  	  return;
  	}
  
