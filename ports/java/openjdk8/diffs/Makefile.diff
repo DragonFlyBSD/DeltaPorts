@@ -1,6 +1,6 @@
---- Makefile.orig	2016-12-10 14:55:50 UTC
+--- Makefile.orig	2017-01-03 16:10:16 UTC
 +++ Makefile
-@@ -6,10 +6,12 @@ PORTREVISION=	1
+@@ -6,10 +6,12 @@ PORTREVISION=	2
  CATEGORIES=	java devel
  MASTER_SITES=	http://download.java.net/openjdk/jdk${JDK_MAJOR_VERSION}/promoted/b${DIST_BUILD_NUMBER}/:jdk \
  		https://adopt-openjdk.ci.cloudbees.com/job/jtreg/${JTREG_JENKINS_BUILD}/artifact/:jtreg \
@@ -27,9 +27,9 @@
  .else
  JRE_IMAGEDIR=	${JDK_BUILDDIR}/images/j2re-image
  .endif
--JDK_JVMDIR=	lib/${ARCH:S/armv6/arm/}
-+JDK_JVMDIR=	lib/${ARCH:S/x86_64/amd64/:C/armv6/arm/}
- JDK_OSARCH=	bsd-${ARCH:S/amd64/x86_64/:S/armv6/arm/:S/i386/x86/}
+-JDK_JVMDIR=	lib/${ARCH:C/armv6.*/arm/:S/powerpc64/ppc64/}
++JDK_JVMDIR=	lib/${ARCH:S/x86_64/amd64/:C/armv6.*/arm/:S/powerpc64/ppc64/}
+ JDK_OSARCH=	bsd-${ARCH:S/amd64/x86_64/:C/armv6.*/arm/:S/i386/x86/:S/powerpc64/ppc64/}
  INSTALLDIR=	${PREFIX}/${PKGBASE}
  
 @@ -346,8 +348,15 @@ BOOTSTRAPJDKDIR=	${BJDK}
@@ -48,7 +48,7 @@
  .  endif
  .endif
  
-@@ -450,6 +459,7 @@ do-install:
+@@ -454,6 +463,7 @@ do-install:
  	${FIND} bin jre/bin -type f -exec ${CHMOD} ${BINMODE} {} \; && \
  	${CHMOD} ${BINMODE} jre/${JDK_JVMDIR}/jexec \
  	    jre/${JDK_JVMDIR}/jspawnhelper ${JDK_JVMDIR}/jexec
