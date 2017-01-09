@@ -1,1 +1,7 @@
+# issue with heimdal
+.if 1
 OPTIONS_DEFAULT= GSSAPI_HEIMDAL
+CONFIGURE_ENV+= LDVER=ld.bfd
+.else
+OPTIONS_DEFAULT= GSSAPI_MIT
+.endif
