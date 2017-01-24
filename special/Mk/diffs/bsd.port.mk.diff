@@ -1,4 +1,4 @@
---- bsd.port.mk.orig	2016-10-24 15:23:33 UTC
+--- bsd.port.mk.orig	2017-01-24 00:19:41 UTC
 +++ bsd.port.mk
 @@ -43,7 +43,8 @@ FreeBSD_MAINTAINER=	portmgr@FreeBSD.org
  #				  makefile is being used on.  Automatically set to
@@ -10,7 +10,7 @@
  #
  # This is the beginning of the list of all variables that need to be
  # defined in a port, listed in order that they should be included
-@@ -504,6 +505,12 @@ FreeBSD_MAINTAINER=	portmgr@FreeBSD.org
+@@ -507,6 +508,12 @@ FreeBSD_MAINTAINER=	portmgr@FreeBSD.org
  #				  Default: ${MASTERDIR}/scripts
  # FILESDIR		- A directory containing any miscellaneous additional files.
  #				  Default: ${MASTERDIR}/files
@@ -23,7 +23,7 @@
  # PKGDIR		- A directory containing any package creation files.
  #				  Default: ${MASTERDIR}
  # SRC_BASE		- The root of the src tree.  (Some ports require this to get
-@@ -1033,10 +1040,16 @@ FreeBSD_MAINTAINER=	portmgr@FreeBSD.org
+@@ -1047,10 +1054,16 @@ LC_ALL=		C
  # These need to be absolute since we don't know how deep in the ports
  # tree we are and thus can't go relative.  They can, of course, be overridden
  # by individual Makefiles or local system make configuration.
@@ -42,7 +42,7 @@
  _DISTDIR?=		${DISTDIR}/${DIST_SUBDIR}
  INDEXDIR?=		${PORTSDIR}
  SRC_BASE?=		/usr/src
-@@ -1108,48 +1121,40 @@ MAINTAINER?=	ports@FreeBSD.org
+@@ -1122,36 +1135,41 @@ MAINTAINER?=	ports@FreeBSD.org
  
  # Get the architecture
  .if !defined(ARCH)
@@ -79,19 +79,6 @@
 -OSVERSION!=	${AWK} '/^\#define[[:blank:]]__FreeBSD_version/ {print $$3}' < ${SRC_BASE}/sys/sys/param.h
 -.else
 -.error Unable to determine OS version.  Either define OSVERSION, install /usr/include/sys/param.h or define SRC_BASE.
--.endif
--.endif
--_EXPORTED_VARS+=	OSVERSION
--
--# Convert OSVERSION to major release number
--_OSVERSION_MAJOR=	${OSVERSION:C/([0-9]?[0-9])([0-9][0-9])[0-9]{3}/\1/}
--# Sanity checks for chroot/jail building.
--# Skip if OSVERSION specified on cmdline for testing. Only works for bmake.
--.if !defined(.MAKEOVERRIDES) || !${.MAKEOVERRIDES:MOSVERSION}
--.if ${_OSVERSION_MAJOR} != ${_OSRELEASE:R}
--.error UNAME_r (${_OSRELEASE}) and OSVERSION (${OSVERSION}) do not agree on major version number.
--.elif ${_OSVERSION_MAJOR} != ${OSREL:R}
--.error OSREL (${OSREL}) and OSVERSION (${OSVERSION}) do not agree on major version number.
 +OSVERSION=	9999999
  .endif
 +
@@ -104,11 +91,32 @@
 +OSREL!=		${ECHO} ${DFLYVERSION} | ${AWK} '{a=int($$1/100000); b=int(($$1-(a*100000))/100); print a "." b}'
 +. endif
  .endif
+-_EXPORTED_VARS+=	OSVERSION
 +_EXPORTED_VARS+=	OSVERSION DFLYVERSION OSREL
++
  
+ .if (${OPSYS} == FreeBSD && (${OSVERSION} < 1003000 || (${OSVERSION} >= 1100000 && ${OSVERSION} < 1100122))) || \
+     (${OPSYS} == DragonFly && ${DFLYVERSION} < 400400)
+@@ -1171,18 +1189,6 @@ show-unsupported-system-error:
+ . endif
+ .endif
+ 
+-# Convert OSVERSION to major release number
+-_OSVERSION_MAJOR=	${OSVERSION:C/([0-9]?[0-9])([0-9][0-9])[0-9]{3}/\1/}
+-# Sanity checks for chroot/jail building.
+-# Skip if OSVERSION specified on cmdline for testing. Only works for bmake.
+-.if !defined(.MAKEOVERRIDES) || !${.MAKEOVERRIDES:MOSVERSION}
+-.if ${_OSVERSION_MAJOR} != ${_OSRELEASE:R}
+-.error UNAME_r (${_OSRELEASE}) and OSVERSION (${OSVERSION}) do not agree on major version number.
+-.elif ${_OSVERSION_MAJOR} != ${OSREL:R}
+-.error OSREL (${OSREL}) and OSVERSION (${OSVERSION}) do not agree on major version number.
+-.endif
+-.endif
+-
  # Only define tools here (for transition period with between pkg tools)
  .include "${PORTSDIR}/Mk/bsd.commands.mk"
-@@ -1289,13 +1294,13 @@ _GITHUB_MUST_SET_DISTNAME=		yes
+ 
+@@ -1324,13 +1330,13 @@ _GITHUB_MUST_SET_DISTNAME=		yes
  DISTNAME?=	${PORTNAME}-${DISTVERSIONFULL}
  .endif
  
@@ -124,7 +132,7 @@
  TEMPLATES?=		${PORTSDIR}/Templates
  KEYWORDS?=		${PORTSDIR}/Keywords
  
-@@ -1529,7 +1534,7 @@ MAKE_ENV+=		NM=${NM} \
+@@ -1575,7 +1581,7 @@ MAKE_ENV+=		NM=${NM} \
  CONFIGURE_ENV+=	PKG_CONFIG_SYSROOT_DIR="${CROSS_SYSROOT}"
  .endif
  
@@ -133,7 +141,7 @@
  .if !defined(IGNORE_MASTER_SITE_GITHUB) && defined(USE_GITHUB)
  WRKSRC?=		${WRKDIR}/${GH_PROJECT}-${GH_TAGNAME_EXTRACT}
  .endif
-@@ -1586,7 +1591,12 @@ PLIST_SUB_SED?= ${PLIST_SUB_SED_tmp3:C/(
+@@ -1632,7 +1638,12 @@ PLIST_SUB_SED?= ${PLIST_SUB_SED_tmp3:C/(
  
  # kludge to strip trailing whitespace from CFLAGS;
  # sub-configure will not # survive double space
@@ -147,7 +155,7 @@
  
  .if defined(WITHOUT_CPU_CFLAGS)
  .if defined(_CPUCFLAGS)
-@@ -1655,19 +1665,6 @@ PATCH_DEPENDS+=		${LOCALBASE}/bin/unzip:
+@@ -1699,19 +1710,6 @@ PATCH_DEPENDS+=		${LOCALBASE}/bin/unzip:
  
  # Check the compatibility layer for amd64/ia64
  
@@ -167,7 +175,7 @@
  .if defined(IA32_BINARY_PORT) && ${ARCH} != "i386"
  .if ${ARCH} == "amd64" || ${ARCH} == "ia64"
  .if !defined(HAVE_COMPAT_IA32_KERN)
-@@ -1694,7 +1691,12 @@ PKG_DEPENDS+=	${LOCALBASE}/sbin/pkg:${PK
+@@ -1738,7 +1736,12 @@ PKG_DEPENDS+=	${LOCALBASE}/sbin/pkg:${PK
  .endif
  
  .if defined(USE_GCC)
@@ -181,7 +189,7 @@
  .endif
  
  .if defined(USE_BINUTILS) && !defined(DISABLE_BINUTILS)
-@@ -1903,9 +1905,11 @@ DISTINFO_FILE?=		${MASTERDIR}/distinfo
+@@ -1952,9 +1955,11 @@ DISTINFO_FILE?=		${MASTERDIR}/distinfo
  MAKE_FLAGS?=	-f
  MAKEFILE?=		Makefile
  MAKE_CMD?=		${BSDMAKE}
@@ -193,7 +201,7 @@
  			CC="${CC}" CFLAGS="${CFLAGS}" \
  			CPP="${CPP}" CPPFLAGS="${CPPFLAGS}" \
  			LDFLAGS="${LDFLAGS}" LIBS="${LIBS}" \
-@@ -1942,7 +1946,7 @@ MAKE_JOBS_NUMBER=	1
+@@ -1991,7 +1996,7 @@ MAKE_JOBS_NUMBER=	1
  _MAKE_JOBS_NUMBER:=	${MAKE_JOBS_NUMBER}
  .else
  .if !defined(_SMP_CPUS)
@@ -202,7 +210,7 @@
  .endif
  _EXPORTED_VARS+=	_SMP_CPUS
  _MAKE_JOBS_NUMBER=	${_SMP_CPUS}
-@@ -2484,7 +2488,7 @@ CONFIGURE_FAIL_MESSAGE?=	"Please report
+@@ -2536,7 +2541,7 @@ CONFIGURE_FAIL_MESSAGE?=	"Please report
  .if defined(GNU_CONFIGURE)
  # Maximum command line length
  .if !defined(CONFIGURE_MAX_CMD_LEN)
@@ -211,7 +219,7 @@
  .endif
  _EXPORTED_VARS+=	CONFIGURE_MAX_CMD_LEN
  GNU_CONFIGURE_PREFIX?=	${PREFIX}
-@@ -2524,6 +2528,8 @@ SET_LATE_CONFIGURE_ARGS= \
+@@ -2576,6 +2581,8 @@ SET_LATE_CONFIGURE_ARGS= \
  SCRIPTS_ENV+=	CURDIR=${MASTERDIR} DISTDIR=${DISTDIR} \
  		  WRKDIR=${WRKDIR} WRKSRC=${WRKSRC} PATCHDIR=${PATCHDIR} \
  		  SCRIPTDIR=${SCRIPTDIR} FILESDIR=${FILESDIR} \
@@ -220,7 +228,7 @@
  		  PORTSDIR=${PORTSDIR} PREFIX=${PREFIX} LOCALBASE=${LOCALBASE}
  
  .if defined(BATCH)
-@@ -2606,7 +2612,7 @@ DESKTOPDIR?=		${PREFIX}/share/applicatio
+@@ -2658,7 +2665,7 @@ DESKTOPDIR?=		${PREFIX}/share/applicatio
  
  # Check the machine architectures
  .if defined(ONLY_FOR_ARCHS)
@@ -229,7 +237,7 @@
  .if ${ARCH:M${__ARCH}} != ""
  __ARCH_OK?=		1
  .endif
-@@ -2616,7 +2622,7 @@ __ARCH_OK?=		1
+@@ -2668,7 +2675,7 @@ __ARCH_OK?=		1
  .endif
  
  .if defined(NOT_FOR_ARCHS)
@@ -238,7 +246,7 @@
  .if ${ARCH:M${__NARCH}} != ""
  .undef __ARCH_OK
  .endif
-@@ -2625,9 +2631,9 @@ __ARCH_OK?=		1
+@@ -2677,9 +2684,9 @@ __ARCH_OK?=		1
  
  .if !defined(__ARCH_OK)
  .if defined(ONLY_FOR_ARCHS)
@@ -250,7 +258,7 @@
  .endif
  IGNORE+=	while you are running ${ARCH}
  
-@@ -2781,6 +2787,7 @@ all:
+@@ -2833,6 +2840,7 @@ all:
  	  DISTDIR=${DISTDIR} WRKDIR=${WRKDIR} WRKSRC=${WRKSRC} \
  	  PATCHDIR=${PATCHDIR} SCRIPTDIR=${SCRIPTDIR} \
  	  FILESDIR=${FILESDIR} PORTSDIR=${PORTSDIR} PREFIX=${PREFIX} \
@@ -258,50 +266,15 @@
  	  BUILD_DEPENDS="${BUILD_DEPENDS}" RUN_DEPENDS="${RUN_DEPENDS}" \
  	  CONFLICTS="${CONFLICTS}" \
  	${ALL_HOOK}
-@@ -3105,7 +3112,7 @@ do-patch:
- 	@set -e ;\
- 	if [ -d ${PATCHDIR} ]; then \
- 		if [ "`${ECHO_CMD} ${PATCHDIR}/patch-*`" != "${PATCHDIR}/patch-*" ]; then \
--			${ECHO_MSG} "===>  Applying ${OPSYS} patches for ${PKGNAME}" ; \
-+			${ECHO_MSG} "===>  Applying ports patches for ${PKGNAME}" ; \
- 			PATCHES_APPLIED="" ; \
- 			for i in ${PATCHDIR}/patch-*; do \
- 				case $$i in \
-@@ -3130,6 +3137,33 @@ do-patch:
- 			done; \
- 		fi; \
- 	fi
-+	@set -e ; if [ -d ${DFLY_PATCHDIR} ]; then \
-+		if [ "`${ECHO_CMD} ${DFLY_PATCHDIR}/patch-*`" != "${DFLY_PATCHDIR}/patch-*" ]; then \
-+			${ECHO_MSG} "===>  Applying ${OPSYS} patches for ${PKGNAME}" ; \
-+			PATCHES_APPLIED="" ; \
-+			for i in ${DFLY_PATCHDIR}/patch-*; do \
-+				case $$i in \
-+					*.orig|*.rej|*~|*,v) \
-+						${ECHO_MSG} "===>   Ignoring patchfile $$i" ; \
-+						;; \
-+					*) \
-+						if [ ${PATCH_DEBUG_TMP} = yes ]; then \
-+							${ECHO_MSG} "===>   Applying ${OPSYS} patch $$i" ; \
-+						fi; \
-+						if ${PATCH} ${PATCH_ARGS} < $$i ; then \
-+							PATCHES_APPLIED="$$PATCHES_APPLIED $$i" ; \
-+						else \
-+							${ECHO_MSG} `${ECHO_CMD} "=> Patch $$i failed to apply cleanly." | ${SED} "s|${DFLY_PATCHDIR}/||"` ; \
-+							if [ x"$$PATCHES_APPLIED" != x"" ]; then \
-+								${ECHO_MSG} `${ECHO_CMD} "=> Patch(es) $$PATCHES_APPLIED applied cleanly." | ${SED} "s|${DFLY_PATCHDIR}/||g"` ; \
-+							fi; \
-+							${FALSE} ; \
-+						fi; \
-+						;; \
-+				esac; \
-+			done; \
-+		fi; \
-+	fi
- .endif
- 
- .if !target(run-autotools-fixup)
-@@ -3691,6 +3725,7 @@ do-clean:
+@@ -3126,6 +3134,7 @@ do-patch:
+ 			dp_OPSYS="${OPSYS}" \
+ 			dp_PATCH="${PATCH}" \
+ 			dp_PATCHDIR="${PATCHDIR}" \
++			dp_DFLY_PATCHDIR="${DFLY_PATCHDIR}" \
+ 			dp_PATCHFILES="${_PATCHFILES2}" \
+ 			dp_PATCH_ARGS=${PATCH_ARGS:Q} \
+ 			dp_PATCH_DEBUG_TMP="${PATCH_DEBUG_TMP}" \
+@@ -3699,6 +3708,7 @@ do-clean:
  	@if [ -d ${WRKDIR} ]; then \
  		if [ -w ${WRKDIR} ]; then \
  			${RM} -r ${WRKDIR}; \
@@ -309,7 +282,7 @@
  		else \
  			${ECHO_MSG} "===>   ${WRKDIR} not writable, skipping"; \
  		fi; \
-@@ -4004,7 +4039,7 @@ FETCH_LIST?=	for i in $$deps; do \
+@@ -4023,7 +4033,7 @@ FETCH_LIST?=	for i in $$deps; do \
  			else	\
  				continue;	\
  			fi;;	\
@@ -318,7 +291,7 @@
  				continue;	\
  			fi;;	\
  		esac;	\
-@@ -4339,10 +4374,15 @@ _SUB_LIST_TEMP=	${SUB_LIST:S/$/!g/:S/^/
+@@ -4358,10 +4368,15 @@ _SUB_LIST_TEMP=	${SUB_LIST:S/$/!g/:S/^/
  apply-slist:
  .if defined(SUB_FILES)
  .for file in ${SUB_FILES}
@@ -337,7 +310,7 @@
  .endif
  .endfor
  .for i in pkg-message pkg-install pkg-deinstall pkg-req
-@@ -5206,6 +5246,7 @@ _PATCH_DEP=		extract
+@@ -5231,6 +5246,7 @@ _PATCH_DEP=		extract
  _PATCH_SEQ=		050:ask-license 100:patch-message 150:patch-depends \
  				300:pre-patch 450:pre-patch-script 500:do-patch \
  				700:post-patch 850:post-patch-script \
