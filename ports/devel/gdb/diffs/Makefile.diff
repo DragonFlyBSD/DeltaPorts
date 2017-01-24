@@ -1,4 +1,4 @@
---- Makefile.orig	2017-01-24 06:05:59 UTC
+--- Makefile.orig	2017-01-24 18:38:25 UTC
 +++ Makefile
 @@ -42,7 +42,7 @@ ONLY_FOR_ARCHS=	i386 amd64 powerpc power
  
@@ -17,9 +17,12 @@
 -CONFIGURE_TARGET=	x86_64-portbld-freebsd${OSREL}
 -.endif
 -
- .if ${ARCH} != "mips"
- CFLAGS+=	-Wno-extended-offsetof
- .endif
+-.if ${ARCH} != "mips"
+-CFLAGS+=	-Wno-extended-offsetof
+-.endif
++# Wow c++ smth.c too on gdb, gcc wasn't enough? throw helpers for c-- and try to kill it
++CFLAGS+=	-D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS
++CONFIGURE_ARGS+=	--disable-build-with-cxx
  
  post-patch:
 -	@${REINPLACE_CMD} -e 's|$$| [GDB v${PORTVERSION} for FreeBSD]|' \
