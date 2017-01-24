@@ -1,6 +1,6 @@
---- Makefile.orig	2017-01-03 16:28:22.000000000 +0200
+--- Makefile.orig	2017-01-24 05:54:53 UTC
 +++ Makefile
-@@ -13,7 +13,7 @@ COMMENT=	Julia Language: A fresh approac
+@@ -14,7 +14,7 @@ COMMENT=	Julia Language: A fresh approac
  LICENSE=	MIT
  LICENSE_FILE=	${WRKSRC}/LICENSE.md
  
@@ -9,7 +9,7 @@
  		libutf8proc.so:textproc/utf8proc \
  		libopenblas.so:math/openblas \
  		libgit2.so:devel/libgit2 \
-@@ -34,11 +34,13 @@ ALL_TARGET=	default
+@@ -36,11 +36,13 @@ ALL_TARGET=	default
  INSTALL_TARGET=	install
  TEST_TARGET=	test
  
@@ -21,11 +21,11 @@
  
 +MAKE_ARGS+= VERBOSE=1 # show what are you doing instead of hiding it
 +
- OPTIONS_DEFINE=	EXAMPLES DEBUG DOCS GPL_LIBS DESKTOP
+ OPTIONS_DEFINE=	EXAMPLES DEBUG DOCS GPL_LIBS DESKTOP NATIVE
  OPTIONS_SUB=	yes
  
-@@ -62,7 +64,7 @@ DESKTOP_VARS=	INSTALL_TARGET+=install-de
- 		INSTALLS_ICONS=yes
+@@ -83,7 +85,7 @@ EXTRA_PATCHES+=	${PATCHDIR}/extra-patch-
+ .endif
  
  post-configure:
 -	${CC} ${CFLAGS} -lopenblas ${LDFLAGS} -o ${WRKSRC}/check_openblas \

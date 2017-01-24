@@ -1,6 +1,6 @@
---- Makefile.orig	2015-11-29 01:18:57 UTC
+--- Makefile.orig	2017-01-24 05:45:11 UTC
 +++ Makefile
-@@ -26,37 +26,35 @@ INPUT_DRIVERS=		mouse \
+@@ -26,36 +26,35 @@ INPUT_DRIVERS=		mouse \
  			void \
  			wacom
  
@@ -13,7 +13,6 @@
  			ark \
 -			chips \
  			dummy \
- 			fbdev \
  			glint \
  			i128 \
  			i740 \
@@ -26,6 +25,7 @@
 +
 +VIDEO_DRIVERS_REMOVED=	mach64 \
 +			r128 \
++			chips \
  			neomagic \
  			rendition \
 -			s3 \
@@ -47,7 +47,7 @@
  			VESA
  
  .for type in input video
-@@ -69,8 +67,8 @@ ${a:tu}_DESC=	Install ${a} ${type} drive
+@@ -68,8 +67,8 @@ ${a:tu}_DESC=	Install ${a} ${type} drive
  OPTIONS_DEFINE_i386=	ATI INTEL OPENCHROME
  OPTIONS_DEFAULT_i386=	ATI INTEL OPENCHROME
  
@@ -58,7 +58,7 @@
  
  OPTIONS_DEFINE_sparc64=	SUNFFB
  OPTIONS_DEFAULT_sparc64=SUNFFB
-@@ -79,20 +77,24 @@ OPTIONS_DEFINE_ia64=	OPENCHROME
+@@ -78,20 +77,24 @@ OPTIONS_DEFINE_ia64=	OPENCHROME
  OPTIONS_DEFAULT_ia64=	OPENCHROME
  
  ATI_DESC=		Install ati video driver

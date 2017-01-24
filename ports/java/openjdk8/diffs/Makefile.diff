@@ -1,6 +1,6 @@
---- Makefile.orig	2017-01-03 16:10:16 UTC
+--- Makefile.orig	2017-01-24 05:57:17 UTC
 +++ Makefile
-@@ -6,10 +6,12 @@ PORTREVISION=	2
+@@ -6,10 +6,12 @@ PORTREVISION=	3
  CATEGORIES=	java devel
  MASTER_SITES=	http://download.java.net/openjdk/jdk${JDK_MAJOR_VERSION}/promoted/b${DIST_BUILD_NUMBER}/:jdk \
  		https://adopt-openjdk.ci.cloudbees.com/job/jtreg/${JTREG_JENKINS_BUILD}/artifact/:jtreg \
@@ -14,16 +14,16 @@
  
  PATCH_SITES=	LOCAL/glewis/openjdk8
  PATCHFILES=	patch-8u05-b13.xz \
-@@ -198,7 +200,7 @@ _MAKE_JOBS=	#
+@@ -197,7 +199,7 @@ SHEBANG_FILES=	configure
+ _MAKE_JOBS=	#
  CPPFLAGS+=	-I${LOCALBASE}/include
  LDFLAGS+=	-L${LOCALBASE}/lib
- MAKE_ENV=	LANG="C" LC_ALL="C"
--MAKE_ENV+=	CLASSPATH="" JAVA_HOME="" LD_LIBRARY_PATH=""
-+MAKE_ENV+=	CLASSPATH="" JAVA_HOME=""
+-MAKE_ENV=	CLASSPATH="" JAVA_HOME="" LD_LIBRARY_PATH=""
++MAKE_ENV=	CLASSPATH="" JAVA_HOME=""
  MAKE_ENV+=	IGNORE_OLD_CONFIG=true
  MAKE_ENV+=	COMPILER_WARNINGS_FATAL="false"
  # openjdk8 normally sets X_CFLAGS in the ./configure script, but it won't do
-@@ -214,7 +216,7 @@ JRE_IMAGEDIR=	${JDK_BUILDDIR}/images/j2s
+@@ -213,7 +215,7 @@ JRE_IMAGEDIR=	${JDK_BUILDDIR}/images/j2s
  .else
  JRE_IMAGEDIR=	${JDK_BUILDDIR}/images/j2re-image
  .endif
@@ -32,7 +32,7 @@
  JDK_OSARCH=	bsd-${ARCH:S/amd64/x86_64/:C/armv6.*/arm/:S/i386/x86/:S/powerpc64/ppc64/}
  INSTALLDIR=	${PREFIX}/${PKGBASE}
  
-@@ -346,8 +348,15 @@ BOOTSTRAPJDKDIR=	${BJDK}
+@@ -345,8 +347,15 @@ BOOTSTRAPJDKDIR=	${BJDK}
  BOOTSTRAPJDKDIR?=	${LOCALBASE}/bootstrap-openjdk
  BUILD_DEPENDS+=		${BOOTSTRAPJDKDIR}/bin/javac:java/bootstrap-openjdk
  .  else
@@ -48,7 +48,7 @@
  .  endif
  .endif
  
-@@ -454,6 +463,7 @@ do-install:
+@@ -448,6 +457,7 @@ do-install:
  	${FIND} bin jre/bin -type f -exec ${CHMOD} ${BINMODE} {} \; && \
  	${CHMOD} ${BINMODE} jre/${JDK_JVMDIR}/jexec \
  	    jre/${JDK_JVMDIR}/jspawnhelper ${JDK_JVMDIR}/jexec

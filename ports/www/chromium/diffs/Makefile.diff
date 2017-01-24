@@ -1,6 +1,14 @@
---- Makefile.orig	2016-12-02 16:38:00.000000000 +0200
+--- Makefile.orig	2017-01-24 06:21:28 UTC
 +++ Makefile
-@@ -29,13 +29,10 @@ BUILD_DEPENDS=	${LOCALBASE}/bin/gperf:de
+@@ -14,7 +14,6 @@ LICENSE=	BSD3CLAUSE LGPL21 MPL
+ LICENSE_COMB=	multi
+ 
+ BUILD_DEPENDS=	bash:shells/bash \
+-		clang39:devel/llvm39 \
+ 		python:lang/python \
+ 		flock:sysutils/flock \
+ 		gperf:devel/gperf \
+@@ -27,13 +26,10 @@ BUILD_DEPENDS=	bash:shells/bash \
  
  LIB_DEPENDS=	libcairo.so:graphics/cairo \
  		libcups.so:print/cups \
@@ -14,16 +22,25 @@
  		libharfbuzz.so:print/harfbuzz \
  		libexif.so:graphics/libexif \
  		libfontconfig.so:x11-fonts/fontconfig \
-@@ -65,7 +62,7 @@ CPE_PRODUCT=	chrome
+@@ -63,7 +59,7 @@ CPE_PRODUCT=	chrome
  USE_PERL5=	build
- USE_XORG=	scrnsaverproto x11 xcomposite xcursor xext xdamage xfixes xi \
+ USE_XORG=	scrnsaverproto x11 xcb xcomposite xcursor xext xdamage xfixes xi \
  		xproto xrandr xrender xscrnsaver xtst
 -USE_GNOME=	atk glib20 gtk20 dconf libxslt libxml2
 +USE_GNOME=	atk glib20 gtk20 libxslt libxml2
  MAKE_ARGS=	-C out/${BUILDTYPE}
  SHEBANG_FILES=	chrome/tools/build/linux/chrome-wrapper
  ALL_TARGET=	chrome
-@@ -95,6 +92,7 @@ GN_ARGS+=	\
+@@ -75,7 +71,7 @@ INSTALLS_ICONS=	yes
+ # Some parts don't have use_system_* flag, and can be turned on/off by using
+ # replace_gn_files.py script, some parts just turned on/off for target host
+ # OS "target_os == is_bsd", like libusb, libpci.
+-GN_ARGS+=	is_clang=true \
++GN_ARGS+=	\
+ 		clang_use_chrome_plugins=false \
+ 		enable_media_router=true \
+ 		enable_nacl=false \
+@@ -92,6 +88,7 @@ GN_ARGS+=	is_clang=true \
  # use_system_icu use_system_harfbuzz use_system_minigbm
  GN_BOOTSTRAP_FLAGS=	--no-clean --no-rebuild
  
@@ -31,23 +48,35 @@
  # FreeBSD Chromium Api Key
  # Set up Google API keys, see http://www.chromium.org/developers/how-tos/api-keys .
  # Note: these are for FreeBSD use ONLY. For your own distribution,
-@@ -106,11 +104,12 @@ GN_ARGS+=	google_api_key="AIzaSyBsp9n41J
+@@ -103,14 +100,15 @@ GN_ARGS+=	google_api_key="AIzaSyBsp9n41J
  SUB_FILES=	chromium-browser.desktop chrome
  SUB_LIST+=	COMMENT="${COMMENT}"
  
--OPTIONS_DEFINE=	ALSA CODECS GCONF PULSEAUDIO TEST KERBEROS DEBUG DRIVER
-+OPTIONS_DEFINE=	ALSA CODECS DBUS GCONF PULSEAUDIO TEST KERBEROS DEBUG DRIVER
+-OPTIONS_DEFINE=	CODECS GCONF KERBEROS DRIVER
++OPTIONS_DEFINE=	CODECS GCONF KERBEROS DRIVER DBUS
  CODECS_DESC=	Compile and enable patented codecs like H.264
 +DBUS_DESC=	Hooks for sniffers (gnome dependencies)
  DRIVER_DESC=	Install chromedriver
+ OPTIONS_GROUP=		AUDIO TESTS
+ OPTIONS_GROUP_AUDIO=	ALSA PULSEAUDIO
+ OPTIONS_GROUP_TESTS=	DEBUG TEST
  
--OPTIONS_DEFAULT=	ALSA CODECS GCONF KERBEROS
-+OPTIONS_DEFAULT=	ALSA CODECS DBUS GCONF KERBEROS
- OPTIONS_SUB=	yes
+-OPTIONS_DEFAULT=	CODECS GCONF KERBEROS ALSA PULSEAUDIO
++OPTIONS_DEFAULT=	CODECS GCONF KERBEROS ALSA DBUS
+ OPTIONS_SUB=		yes
  
  GCONF_USE=	GNOME=gconf2
-@@ -137,6 +136,17 @@ GN_ARGS+=	ffmpeg_branding="Chromium"
- GN_ARGS+=	proprietary_codecs=false
+@@ -147,7 +145,7 @@ GN_BOOTSTRAP_FLAGS+=	--debug
+ #GN_ARGS+=	is_component_build=true
+ .else
+ BUILDTYPE=	Release
+-.if ${ARCH} == amd64
++.if ${OPSYS} == FreeBSD && ${ARCH} == amd64
+ GN_ARGS+=	use_lld=true # harder, better, faster, stronger
+ .endif
+ GN_ARGS+=	is_debug=false
+@@ -155,6 +153,17 @@ GN_ARGS+=	symbol_level=0
+ GN_ARGS+=	remove_webcore_debug_symbols=true
  .endif
  
 +.if ${PORT_OPTIONS:MDBUS}
@@ -64,43 +93,19 @@
  .if ${PORT_OPTIONS:MGCONF}
  GN_ARGS+=	use_gconf=true
  .else
-@@ -162,8 +172,8 @@ GN_BOOTSTRAP_FLAGS+=	--debug
- #GN_ARGS+=	is_component_build = true
- .else
- BUILDTYPE=	Release
--.if ${ARCH} == amd64
--GN_ARGS+=	use_lld=true # harder, better, faster, stronger
-+.if ${OPSYS} == FreeBSD && ${ARCH} == amd64
-+GN_ARGS+=	use_lld=true # softer, worser, slower, weaker
- .endif
- GN_ARGS+=	is_debug=false
- GN_ARGS+=	symbol_level=0
-@@ -175,10 +185,7 @@ MAKE_ENV+=	BUILDTYPE=${BUILDTYPE} \
+@@ -180,6 +189,7 @@ ALL_TARGET+=	${TEST_TARGETS}
  
  .include <bsd.port.pre.mk>
  
--.if ${CHOSEN_COMPILER_TYPE} == gcc
--GN_ARGS+=	gcc_version=${CXX:S/g++//}
--EXTRA_PATCHES+=	${FILESDIR}/extra-patch-gcc
--.else
 +.if ${OPSYS} == FreeBSD
- BUILD_DEPENDS+=	clang39:devel/llvm39
  CC=		clang39
  CXX=		clang++39
-@@ -194,12 +201,14 @@ BUILD_DEPENDS+=	${LOCALBASE}/lib/c++/lib
- CXXFLAGS+=	-stdlib=libc++ -isystem ${LOCALBASE}/include/c++/v1
- .endif
+ #optionally set AR, LD, NM, READELF ?
+@@ -190,6 +200,7 @@ MAKE_ENV+=	C_INCLUDE_PATH=${LOCALBASE}/i
+ 		CPLUS_INCLUDE_PATH=${LOCALBASE}/include
+ # TODO: move this big extra to small ones
+ EXTRA_PATCHES+=	${FILESDIR}/extra-patch-clang
++.endif
  
--.if ${OSVERSION} < 1100000
-+.if ${OPSYS} == FreeBSD && ${OSVERSION} < 1100000
- EXTRA_PATCHES+=	${FILESDIR}/extra-patch-10
- .endif
- 
--.if ! ${PORT_OPTIONS:MKERBEROS}
-+.if ${PORT_OPTIONS:MKERBEROS}
- GN_ARGS+=	use_kerberos=true
-+.else
-+GN_ARGS+=	use_kerberos=false
- .endif
- 
- pre-everything::
+ .if ${OPSYS} == FreeBSD
+ .if ${OSVERSION} < 1100000

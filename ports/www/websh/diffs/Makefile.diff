@@ -1,4 +1,4 @@
---- Makefile.orig	2016-09-20 19:21:27 UTC
+--- Makefile.orig	2017-01-24 05:53:19 UTC
 +++ Makefile
 @@ -52,7 +52,7 @@ post-configure:
  	${REINPLACE_CMD} -e 's,tclstub,tcl,'	\
@@ -6,6 +6,6 @@
  
 -post-build test:
 +test:
- 	${SETENV} LANG=C HOME=${WRKDIR} ${MAKE_CMD} -C ${WRKSRC} test | ${AWK} '\
+ 	${SETENV} HOME=${WRKDIR} ${MAKE_CMD} -C ${WRKSRC} test | ${AWK} '\
  		/Failed/ && $$NF {failed=1}	\
  		END {exit failed}	\
