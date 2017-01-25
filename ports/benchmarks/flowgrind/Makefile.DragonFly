@@ -1,1 +1,1 @@
-BROKEN= missing pthread_getaffinity_np()
+USES+= localbase
