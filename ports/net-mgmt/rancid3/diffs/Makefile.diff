@@ -1,0 +1,10 @@
+--- Makefile.orig	2017-01-27 05:12:36 UTC
++++ Makefile
+@@ -53,7 +53,6 @@ CONFIGURE_ARGS+=	--with-svn
+ BUILD_DEPENDS+=		svn:devel/subversion
+ .else
+ CONFIGURE_ARGS+=	--without-svn
+-RUN_DEPENDS+=		cvs:devel/cvs
+ .endif
+ 
+ pre-everything::
