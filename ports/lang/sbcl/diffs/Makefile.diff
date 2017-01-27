@@ -1,6 +1,8 @@
---- Makefile.orig	2017-01-27 14:18:16 UTC
+--- Makefile.orig	2017-01-27 17:04:10 UTC
 +++ Makefile
-@@ -2,10 +2,13 @@
+@@ -1,11 +1,14 @@
+-# $FreeBSD: head/lang/sbcl/Makefile 431505 2017-01-15 01:34:45Z ler $
++# $FreeBSD$
  
  PORTNAME=	sbcl
  PORTVERSION=	1.3.13
@@ -15,7 +17,7 @@
  
  MAINTAINER=	pavelivolkov@gmail.com
  COMMENT=	Common Lisp development system derived from the CMU CL system
-@@ -22,7 +25,11 @@ USES=		gmake makeinfo tar:bzip2
+@@ -22,7 +25,16 @@ USES=		gmake makeinfo tar:bzip2
  
  ONLY_FOR_ARCHS=	i386 amd64
  
@@ -24,11 +26,16 @@
 +		1.0.31-i386-freebsd8 \
 +		1.2.9-x86_64-dragonfly4
 +
++CONMODULES=	asdf sb-aclrepl sb-bsd-sockets sb-cltl2 sb-concurrency \
++		sb-cover sb-executable sb-gmp sb-grovel sb-introspect \
++		sb-md5 sb-mpfr sb-posix sb-queue sb-rotate-byte sb-rt \
++		sb-simple-streams sb-sprof
++
 +WRKSRC=		${WRKDIR}/${PORTNAME}-${PORTVERSION}
  
  MAKE_SH_ARGS?=	--prefix="${PREFIX}" \
  		--xc-host="${XC_HOST}"
-@@ -35,7 +42,7 @@ MAKE_SH_ARGS+=	--dynamic-space-size=${DY
+@@ -35,7 +47,7 @@ MAKE_SH_ARGS+=	--dynamic-space-size=${DY
  
  # All options explained into file: ${WRKSRC}/base-target-features.lisp-expr
  OPTIONS_DEFINE=	DOCS QSHOW RENAME SAFEPOINT THREADS UNICODE XREF ZLIB
@@ -37,7 +44,7 @@
  
  QSHOW_DESC=	C runtime with low-level debugging output
  RENAME_DESC=	Rename suffix .core to _core
-@@ -51,48 +58,71 @@ CCL_DESC=	Clozure Common Lisp
+@@ -51,48 +63,69 @@ CCL_DESC=	Clozure Common Lisp
  CMUCL_DESC=	Carnegie Mellon University Common Lisp
  SBCL_DESC=	Steel Bank Common Lisp
  
@@ -67,12 +74,12 @@
 +QSHOW_VARS=		MAKE_SH_ARGS+="--with-sb-qshow"
 +QSHOW_VARS_OFF=		MAKE_SH_ARGS+="--without-sb-qshow"
  
- RENAME_PLIST_SUB=	RENAME_DLM="_"
- RENAME_PLIST_SUB_OFF=	RENAME_DLM="."
+-RENAME_PLIST_SUB=	RENAME_DLM="_"
+-RENAME_PLIST_SUB_OFF=	RENAME_DLM="."
 -RENAME_VARS=	RENAME_DLM="_"
 -RENAME_VARS_OFF=RENAME_DLM="."
-+RENAME_VARS=		RENAME_DLM="_"
-+RENAME_VARS_OFF=	RENAME_DLM="."
++RENAME_PLIST_SUB=	CORE_SUFFIX="_core"
++RENAME_PLIST_SUB_OFF=	CORE_SUFFIX=".core"
  
 -SAFEPOINT_VARS=	MAKE_SH_ARGS+="--with-sb-safepoint --with-sb-thruption --with-sb-wtimer"
 +SAFEPOINT_VARS=		MAKE_SH_ARGS+="--with-sb-safepoint --with-sb-thruption --with-sb-wtimer"
@@ -127,3 +134,15 @@
  post-patch-RENAME-on:
  	${GREP} -Frl '.core' ${WRKSRC} | ${XARGS} ${REINPLACE_CMD} -e 's|\.core|_core|g'
  
+@@ -106,6 +139,11 @@ do-install:
+ 	INFO_DIR="${STAGEDIR}${PREFIX}/${INFO_PATH}" \
+ 	DOC_DIR="${STAGEDIR}${DOCSDIR}" \
+ 	${SH} install.sh)
++.for M in ${CONMODULES}
++	${MKDIR} ${STAGEDIR}${PREFIX}/lib/sbcl/${M}
++	${INSTALL_DATA} ${WRKSRC}/contrib/${M}/*.[la]* \
++		${STAGEDIR}${PREFIX}/lib/sbcl/${M}/
++.endfor
+ 
+ post-build-DOCS-on:
+ 	${DO_MAKE_BUILD} -C ${WRKSRC}/doc/manual info html
