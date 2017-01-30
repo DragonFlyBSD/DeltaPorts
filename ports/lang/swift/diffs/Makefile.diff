@@ -1,0 +1,55 @@
+--- Makefile.orig	2017-01-30 01:32:03 UTC
++++ Makefile
+@@ -15,7 +15,6 @@ BUILD_DEPENDS=	cmake:devel/cmake \
+ 		bash:shells/bash \
+ 		swig:devel/swig13 \
+ 		python:lang/python \
+-		sphinx-build:textproc/py-sphinx \
+ 		binutils>=2.25.1:devel/binutils
+ LIB_DEPENDS=	libicudata.so:devel/icu \
+ 		libuuid.so:misc/e2fsprogs-libuuid
+@@ -39,13 +38,13 @@ USE_LDCONFIG=	yes
+ ONLY_FOR_ARCHS=	amd64
+ CONFLICTS_BUILD=	googletest
+ 
+-OPTIONS_DEFINE=	DOCS
++#OPTIONS_DEFINE=	DOCS
+ 
+ PORTDOCS=	*
+ 
+ .include <bsd.port.pre.mk>
+ 
+-.if ${OPSYS} == FreeBSD && ${OSVERSION} < 1100079
++.if ${OPSYS} == DragonFly || (${OPSYS} == FreeBSD && ${OSVERSION} < 1100079)
+ BUILD_DEPENDS+=	clang38:devel/llvm38
+ EXTRA_FLAGS=	--host-cc=${LOCALBASE}/bin/clang38 --host-cxx=${LOCALBASE}/bin/clang++38
+ .endif
+@@ -57,6 +56,8 @@ post-extract:
+ post-patch:
+ 	@${REINPLACE_CMD} -e 's|%%LOCALBASE%%|${LOCALBASE}|g' \
+ 		${WRKSRC}/swift/cmake/modules/SwiftSharedCMakeConfig.cmake
++	${REINPLACE_CMD} -e '/add_subdirectory(docs)/d' \
++		${WRKSRC}/swift/CMakeLists.txt
+ 
+ do-build:
+ 	@${MKDIR} ${STAGEDIR}${PREFIX}
+@@ -71,7 +72,6 @@ do-build:
+ 		-- \
+ 		${EXTRA_FLAGS} \
+ 		--verbose-build \
+-		--swift-runtime-enable-dtrace \
+ 		--install-swift \
+ 		--install-llbuild \
+ 		--install_prefix=${PREFIX} \
+@@ -96,8 +96,8 @@ do-install:
+ 	${STRIP_CMD} ${STAGEDIR}${PREFIX}/bin/swift-demangle
+ 	${STRIP_CMD} ${STAGEDIR}${PREFIX}/bin/sil-opt
+ 
+-do-install-DOCS-on:
+-	cd ${WRKSRC}/build/Ninja-Release/swift-freebsd-x86_64/docs/html ; \
+-		${COPYTREE_SHARE} . ${STAGEDIR}${DOCSDIR}
++#do-install-DOCS-on:
++#	cd ${WRKSRC}/build/Ninja-Release/swift-freebsd-x86_64/docs/html ; \
++#		${COPYTREE_SHARE} . ${STAGEDIR}${DOCSDIR}
+ 
+ .include <bsd.port.post.mk>

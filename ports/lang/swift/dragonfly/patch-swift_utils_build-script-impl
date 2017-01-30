@@ -1,0 +1,28 @@
+--- swift/utils/build-script-impl.orig	2016-05-03 19:56:30 UTC
++++ swift/utils/build-script-impl
+@@ -767,6 +767,12 @@ case "$(uname -s -m)" in
+         )
+         ;;
+ 
++    DragonFly\ x86_64)
++        NATIVE_TOOLS_DEPLOYMENT_TARGETS=(
++            "freebsd-x86_64"
++        )
++        ;;
++
+     *)
+         echo "Unknown operating system"
+         exit 1
+@@ -841,6 +847,12 @@ case "$(uname -s -m)" in
+         STDLIB_DEPLOYMENT_TARGETS=(
+             "freebsd-x86_64"
+         )
++        ;;
++
++    DragonFly\ x86_64)
++        STDLIB_DEPLOYMENT_TARGETS=(
++            "freebsd-x86_64"
++        )
+         ;;
+ 
+     *)
