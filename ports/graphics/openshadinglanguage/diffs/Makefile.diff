@@ -1,6 +1,6 @@
---- Makefile.orig	2016-04-06 15:57:58 UTC
+--- Makefile.orig	2017-01-30 01:14:24 UTC
 +++ Makefile
-@@ -11,18 +11,20 @@ COMMENT=	Advanced shading language for p
+@@ -11,20 +11,22 @@ COMMENT=	Advanced shading language for p
  
  LICENSE=	BSD3CLAUSE
  
@@ -10,10 +10,12 @@
 +		clang35>=3.5:lang/clang35
  LIB_DEPENDS=	libboost_thread.so:devel/boost-libs \
  		libIlmImf.so:graphics/OpenEXR \
+ 		libImath.so:graphics/ilmbase \
  		libOpenImageIO.so:graphics/openimageio
 -RUN_DEPENDS=	llvm-config34:devel/llvm34
 +RUN_DEPENDS=	llvm-config35:devel/llvm35
  
+ USES=		bison cmake:outsource compiler:c++11-lib ncurses
  USE_GITHUB=	yes
  GH_ACCOUNT=	imageworks
  GH_PROJECT=	OpenShadingLanguage
@@ -24,4 +26,4 @@
 +		-DOSL_BUILD_CPP11=1 \
  		-DENABLERTTI:BOOL=ON
  USE_LDCONFIG=	yes
- USES=		bison cmake:outsource compiler:c11
+ 
