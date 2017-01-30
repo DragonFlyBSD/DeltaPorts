@@ -1,0 +1,1 @@
+IGNORE=	FreeBSD-specific (and requires 32-bit support)
