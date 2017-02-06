@@ -1,17 +1,8 @@
---- Makefile.orig	2017-01-12 06:08:13 UTC
+--- Makefile.orig	2017-02-06 15:56:44 UTC
 +++ Makefile
-@@ -14,7 +14,7 @@ LICENSE=	MIT
- LICENSE_FILE=	${WRKSRC}/LICENSE
+@@ -71,9 +71,8 @@ IGNORE=		cannot build node.js with Libre
  
- OPTIONS_DEFINE=	BUNDLED_SSL DOCS NLS DTRACE
--OPTIONS_DEFAULT=	DTRACE
-+OPTIONS_DEFAULT=	BUNDLED_SSL DTRACE
- OPTIONS_SUB=	yes
- 
- .if !exists(/usr/sbin/dtrace)
-@@ -73,9 +73,8 @@ IGNORE=		cannot build node.js with Libre
- .endif
- .endif
+ .include <bsd.port.pre.mk>
  
 -.if ${ARCH} == "armv6"
 +# something is wrong with configure wrt to DF I think
