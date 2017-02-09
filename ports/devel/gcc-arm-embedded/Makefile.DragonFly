@@ -1,3 +1,4 @@
-# binutils fails to build (-Werror probably) with gcc50
+# I don't understand why this error just started happening
+# There's plenty of space under synth mounts apparently
 
-USE_GCC=	DEFAULT_NOT5
+IGNORE=	fails after 75 minutes with 'no space left on device' error
