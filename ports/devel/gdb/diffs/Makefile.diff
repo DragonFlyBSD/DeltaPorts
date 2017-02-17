@@ -1,6 +1,6 @@
---- Makefile.orig	2017-01-24 18:38:25 UTC
+--- Makefile.orig	2017-02-17 20:47:39 UTC
 +++ Makefile
-@@ -42,7 +42,7 @@ ONLY_FOR_ARCHS=	i386 amd64 powerpc power
+@@ -41,7 +41,7 @@ ONLY_FOR_ARCHS=	i386 amd64 powerpc power
  
  OPTIONS_DEFINE=	DEBUG GDB_LINK GUILE KGDB PYTHON TUI
  
@@ -9,7 +9,7 @@
  
  OPTIONS_SINGLE=	READLINE
  OPTIONS_SINGLE_READLINE=	BUNDLED_READLINE PORT_READLINE
-@@ -72,16 +72,12 @@ TUI_CONFIGURE_ENABLE=	tui
+@@ -71,16 +71,12 @@ TUI_CONFIGURE_ENABLE=	tui
  EXCLUDE+=	readline
  .endif
  
@@ -17,7 +17,7 @@
 -CONFIGURE_TARGET=	x86_64-portbld-freebsd${OSREL}
 -.endif
 -
--.if ${ARCH} != "mips"
+-.if ${COMPILER_TYPE} == "clang"
 -CFLAGS+=	-Wno-extended-offsetof
 -.endif
 +# Wow c++ smth.c too on gdb, gcc wasn't enough? throw helpers for c-- and try to kill it
@@ -30,7 +30,7 @@
  		${WRKSRC}/gdb/version.in
  
  post-patch-KGDB-on:
-@@ -109,6 +105,15 @@ do-install-GDB_LINK-on:
+@@ -108,6 +104,15 @@ do-install-GDB_LINK-on:
  	${LN} -sf kgdb${VER} ${STAGEDIR}${PREFIX}/bin/kgdb
  .endif
  
