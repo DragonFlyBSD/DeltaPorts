@@ -5,7 +5,7 @@
  
  post-extract:
 -	@${MV} ${WRKSRC}/vendor/ ${WRKSRC}/src/
-+	${MV} ${WRKSRC}/vendor ${WRKSRC}/src/
++	${MV} ${WRKSRC}/vendor ${WRKSRC}/src
  
  do-build:
  	@cd ${WRKSRC}/src/github.com/${GH_ACCOUNT}/${PORTNAME}; ${SETENV} GOPATH=${WRKSRC} go build -o bin/${PORTNAME}
