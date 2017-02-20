@@ -1,0 +1,11 @@
+--- Makefile.orig	2017-02-20 20:38:40 UTC
++++ Makefile
+@@ -27,7 +27,7 @@ GROUPS=		consul
+ STRIP=		# stripping can break go binaries
+ 
+ post-extract:
+-	@${MV} ${WRKSRC}/vendor/ ${WRKSRC}/src/
++	${MV} ${WRKSRC}/vendor ${WRKSRC}/src/
+ 
+ do-build:
+ 	@cd ${WRKSRC}/src/github.com/hashicorp/consul; ${SETENV} ${BUILD_ENV} GOPATH=${WRKSRC} go build \
