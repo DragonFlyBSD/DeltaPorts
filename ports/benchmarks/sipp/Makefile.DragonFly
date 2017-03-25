@@ -1,0 +1,5 @@
+
+# zrj: awesome lets add autoreconf and keep patching configure that will get overwritten
+dfly-patch:
+	${REINPLACE_CMD} -e 's|[[:<:]]curses|ncurses|' ${WRKSRC}/configure.ac
+	-${CP} ${WRKSRC}/include/sipp.1 ${WRKSRC}/sipp.1 # just because
