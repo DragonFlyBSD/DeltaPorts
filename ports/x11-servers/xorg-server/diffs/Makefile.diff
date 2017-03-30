@@ -1,9 +1,9 @@
---- Makefile.orig	2017-02-14 11:05:30.000000000 +0200
+--- Makefile.orig	2017-03-29 23:40:44 UTC
 +++ Makefile
-@@ -44,12 +44,18 @@ USE_XORG+=	bigreqsproto compositeproto d
- 		xineramaproto xkbfile xproto xshmfence xtrans
+@@ -45,12 +45,18 @@ USE_XORG+=	bigreqsproto compositeproto d
  CONFIGURE_ARGS+=--without-doxygen --without-xmlto --without-fop \
  		--localstatedir=/var --with-shared-memory-dir=/tmp \
+ 		--disable-config-udev --disable-config-udev-kms \
 -		--without-dtrace --enable-glamor
 +		--without-dtrace --enable-glamor --disable-dri3
  INSTALL_TARGET=	install-strip
@@ -20,7 +20,7 @@
  .else
  BUILD_DEPENDS+=	libepoxy>0:graphics/libepoxy	# only for configure
  .endif
-@@ -86,9 +92,9 @@ CONFIGURE_ARGS+=	--disable-config-hal
+@@ -87,9 +93,9 @@ CONFIGURE_ARGS+=	--disable-config-hal
  # We handle Xorg setuid in the plist. This allows to build xorg-server as a user.
  CONFIGURE_ARGS+=--disable-install-setuid
  
