@@ -1,0 +1,11 @@
+--- Makefile.orig	2017-03-30 19:47:11 UTC
++++ Makefile
+@@ -2,7 +2,7 @@
+ # $FreeBSD$
+ 
+ PORTNAME=	synth
+-PORTVERSION=	1.68
++PORTVERSION=	1.69
+ DISTVERSIONPREFIX=	v
+ CATEGORIES=	ports-mgmt
+ 
