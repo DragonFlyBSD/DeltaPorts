@@ -1,0 +1,33 @@
+--- Makefile.orig	2017-03-30 19:34:02 UTC
++++ Makefile
+@@ -21,7 +21,7 @@ USE_LDCONFIG=	yes
+ CONFIGURE_ARGS+=	--with-ssl=${OPENSSLBASE} --disable-dane-ta-usage
+ 
+ .if ! (defined(BUILD_PYLDNS) || defined(BUILD_P5PERL))
+-OPTIONS_DEFINE=	DOXYGEN EXAMPLES DRILL
++OPTIONS_DEFINE=	DOXYGEN XEXAMPLES DRILL
+ OPTIONS_DEFAULT=	DRILL
+ 
+ DRILL_DESC=	With drill program
+@@ -50,10 +50,10 @@ RRTYPENINFO_CONFIGURE_ENABLE=	rrtype-nin
+ RRTYPERKEY_CONFIGURE_ENABLE=	rrtype-rkey
+ RRTYPETA_CONFIGURE_ENABLE=	rrtype-ta
+ RRTYPEAVC_CONFIGURE_ENABLE=	rrtype-avc
+-EXAMPLES_CONFIGURE_WITH=	examples
++XEXAMPLES_CONFIGURE_WITH=	examples
+ DRILL_CONFIGURE_WITH=		drill
+ DRILL_INSTALL_TARGET=	install-drill
+-EXAMPLES_INSTALL_TARGET=	install-examples
++XEXAMPLES_INSTALL_TARGET=	install-examples
+ 
+ .if defined(BUILD_PYLDNS)
+ USES+=		python
+@@ -123,7 +123,7 @@ post-install:
+ .if ${PORT_OPTIONS:MDRILL}
+ 	${STRIP_CMD} ${STAGEDIR}${PREFIX}/bin/drill
+ .endif
+-.if ${PORT_OPTIONS:MEXAMPLES}
++.if ${PORT_OPTIONS:MXEXAMPLES}
+ 	for p in ldns-chaos ldns-compare-zones ldns-dane ldns-dpa ldns-gen-zone ldns-key2ds \
+ 		ldns-keyfetcher ldns-keygen ldns-mx ldns-notify ldns-nsec3-hash \
+ 		ldns-read-zone ldns-resolver ldns-revoke ldns-rrsig ldns-signzone \
