@@ -6,8 +6,8 @@ No KERN_ARND on DragonFly yet?
  #include "memory/Allocator.h"
  #include "util/Linker.h"
  
--#if defined(freebsd) || !defined(__DragonFly__)
-+#if defined(freebsd)
+-#if defined(freebsd)
++#if defined(freebsd) || !defined(__DragonFly__)
      Linker_require("crypto/random/seed/BsdKernArndSysctlRandomSeed.c");
      struct RandomSeed* BsdKernArndSysctlRandomSeed_new(struct Allocator* alloc);
      RandomSeedProvider_register(BsdKernArndSysctlRandomSeed_new)
