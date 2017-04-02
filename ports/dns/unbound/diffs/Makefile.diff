@@ -5,7 +5,7 @@
  
  LIB_DEPENDS=	libexpat.so:textproc/expat2 \
 -		libldns.so:dns/ldns
-+		libldns.so.1.6.17:dns/ldns
++		libldns.so.2.0.0:dns/ldns
  
  BROKEN_aarch64=	Fails to link: missing sbrk
  
