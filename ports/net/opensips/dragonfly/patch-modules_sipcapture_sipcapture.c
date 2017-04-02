@@ -1,12 +1,12 @@
---- modules/sipcapture/sipcapture.c.orig	2016-07-20 13:18:25.000000000 +0300
+--- modules/sipcapture/sipcapture.c.orig	2017-02-23 11:15:50 UTC
 +++ modules/sipcapture/sipcapture.c
-@@ -705,7 +705,9 @@ int hep_msg_received(int sockfd, struct
-         else if(heph->hp_p == IPPROTO_TCP) ri->proto=PROTO_TCP;
-         else if(heph->hp_p == IPPROTO_IDP) ri->proto=PROTO_TLS;
-                                             /* fake protocol */
+@@ -1895,7 +1895,9 @@ set_generic_hep_chunk(struct hepv3* h3,
+ 				if (LOWER_WORD(data->s[2], data->s[3]) != LOWER_WORD('t', 'p'))
+ 					RETURN_ERROR("invalid proto %.*s\n", data->len, data->s);
+ 
 +#ifndef __DragonFly__
-         else if(heph->hp_p == IPPROTO_SCTP) ri->proto=PROTO_SCTP;
+ 				h3->hg.ip_proto.data = PROTO_SCTP;
 +#endif
-         else if(heph->hp_p == IPPROTO_ESP) ri->proto=PROTO_WS;
-                                             /* fake protocol */
-         else {
+ 				break;
+ 			case LOWER_WORD('w','s'):
+ 				h3->hg.ip_proto.data = PROTO_WS;
