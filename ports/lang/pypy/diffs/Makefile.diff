@@ -1,7 +1,7 @@
---- Makefile.orig	2016-08-06 15:23:47 UTC
+--- Makefile.orig	2017-04-12 22:47:37 UTC
 +++ Makefile
-@@ -44,7 +44,7 @@ BUILD_WRKSRC?=	${WRKDIR}/build/usession-
- MAKE_ENV+=	PYPY_LOCALBASE=${LOCALBASE}
+@@ -46,7 +46,7 @@ BUILD_WRKSRC?=	${WRKDIR}/build/usession-
+ MAKE_ENV+=	PYPY_LOCALBASE=${LOCALBASE} LDSHARED="${CC} -shared"
  PACKAGE_ARGS?=	--without-gdbm --without-sqlite3 --without-tk
  USE_LDCONFIG=	${PREFIX}/${PYPY_DIR}/bin
 -USES=		gettext-runtime gmake ssl tar:bzip2
@@ -9,12 +9,3 @@
  
  .if ${PORTNAME} != pypy
  PYPY_BUILD_DEPENDS=	pypy:lang/pypy
-@@ -82,7 +82,7 @@ post-build:
- 	${CP} ${BUILD_WRKSRC}/pypy-c ${BUILD_WRKSRC}/libpypy-c.so ${WRKSRC}/pypy/goal/
- 
- do-install:
--	${SETENV} TMPDIR=${WRKDIR}/build \
-+	${SETENV} ${MAKE_ENV} TMPDIR=${WRKDIR}/build \
- 		${PYTHON_CMD} ${WRKSRC}/pypy/tool/release/package.py --builddir ${WRKDIR}/build --archive-name ${PYPY_DIR} \
- 			${PACKAGE_ARGS}
- 	${EXTRACT_CMD} -C ${STAGEDIR}${PREFIX} -xf ${WRKDIR}/build/${PYPY_DIR}.tar.bz2
