@@ -1,1 +1,1 @@
-LDFLAGS+= -lm
+LIBS= -lm
