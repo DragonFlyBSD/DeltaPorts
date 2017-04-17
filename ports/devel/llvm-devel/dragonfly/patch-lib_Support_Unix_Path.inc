@@ -1,0 +1,11 @@
+--- lib/Support/Unix/Path.inc.orig	2017-03-29 21:58:52 UTC
++++ lib/Support/Unix/Path.inc
+@@ -74,7 +74,7 @@
+ #define FSTATVFS fstatvfs
+ #define STATVFS_F_FRSIZE(vfs) vfs.f_frsize
+ #else
+-#if defined(__OpenBSD__) || defined(__FreeBSD__)
++#if defined(__OpenBSD__) || defined(__FreeBSD__) || defined(__DragonFly__)
+ #include <sys/param.h>
+ #include <sys/mount.h>
+ #elif defined(__linux__)
