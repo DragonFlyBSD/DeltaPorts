@@ -17,10 +17,10 @@ Discussion: https://postgr.es/m/20047.1492305247@sss.pgh.pa.us
  src/backend/tcop/postgres.c   |  6 +++
  2 files changed, 76 insertions(+), 17 deletions(-)
 
-diff --git a/src/backend/libpq/be-secure.c b/src/backend/libpq/be-secure.c
+diff --git src/backend/libpq/be-secure.c src/backend/libpq/be-secure.c
 index 3c5bab7..f395021 100644
---- a/src/backend/libpq/be-secure.c
-+++ b/src/backend/libpq/be-secure.c
+--- src/backend/libpq/be-secure.c
++++ src/backend/libpq/be-secure.c
 @@ -102,6 +102,9 @@ char	   *ssl_crl_file;
  int			ssl_renegotiation_limit;
  
@@ -145,10 +145,10 @@ index 3c5bab7..f395021 100644
  	}
  	else
  #endif
-diff --git a/src/backend/tcop/postgres.c b/src/backend/tcop/postgres.c
+diff --git src/backend/tcop/postgres.c src/backend/tcop/postgres.c
 index b77b8d9..ad356d5 100644
---- a/src/backend/tcop/postgres.c
-+++ b/src/backend/tcop/postgres.c
+--- src/backend/tcop/postgres.c
++++ src/backend/tcop/postgres.c
 @@ -551,16 +551,22 @@ prepare_for_client_read(void)
  
  /*
