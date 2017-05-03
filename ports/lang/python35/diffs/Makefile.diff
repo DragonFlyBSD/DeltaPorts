@@ -39,7 +39,7 @@
  PLIST_SUB+=	NO_NIS=""
  .endif
  
-+post-patch:
++dfly-patch:
 +	${REINPLACE_CMD} -e 's|`uname -r`|"${_OSRELEASE}"|g' \
 +		${WRKSRC}/configure
 +
