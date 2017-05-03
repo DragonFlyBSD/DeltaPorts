@@ -1,4 +1,4 @@
---- bsd.commands.mk.orig	2014-06-19 22:32:52.928650000 +0000
+--- bsd.commands.mk.orig	2017-05-03 14:49:42 UTC
 +++ bsd.commands.mk
 @@ -15,6 +15,9 @@ COMMANDS_Include_MAINTAINER=	portmgr@Fre
  
@@ -10,7 +10,7 @@
  AWK?=			/usr/bin/awk
  BASENAME?=		/usr/bin/basename
  BRANDELF?=		/usr/bin/brandelf
-@@ -63,7 +66,7 @@ MOUNT_DEVFS?=		${MOUNT} -t devfs devfs
+@@ -64,7 +67,7 @@ MOUNT_DEVFS?=		${MOUNT} -t devfs devfs
  # XXX: this is a work-around for an obscure bug where
  # mount -t nullfs returns zero status on errors within
  # a make target
@@ -19,3 +19,12 @@
  MV?=			/bin/mv
  OBJCOPY?=		/usr/bin/objcopy
  OBJDUMP?=		/usr/bin/objdump
+@@ -75,7 +78,7 @@ PS_CMD?=		/bin/ps
+ PW?=			/usr/sbin/pw
+ READELF?=		/usr/bin/readelf
+ REALPATH?=		/bin/realpath
+-RLN?=			${INSTALL} -l rs
++RLN?=			${SCRIPTSDIR}/relative_link.sh
+ RM?=			/bin/rm -f
+ RMDIR?=			/bin/rmdir
+ SED?=			/usr/bin/sed
