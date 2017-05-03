@@ -281,7 +281,7 @@
  
  ${PKGLATESTFILE}: ${PKGFILE} ${PKGLATESTREPOSITORY}
 -	${INSTALL} -l rs ${PKGFILE} ${PKGLATESTFILE}
-+	${SCRIPTSDIR}/relative_link.sh ${PKGFILE} ${PKGLATESTFILE}
++	${SH} ${SCRIPTSDIR}/relative_link.sh ${PKGFILE} ${PKGLATESTFILE}
  .  endif
  
  .endif
