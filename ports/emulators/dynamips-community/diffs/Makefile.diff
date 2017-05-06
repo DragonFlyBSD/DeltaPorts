@@ -1,0 +1,11 @@
+--- Makefile.orig	2017-05-06 17:09:31 UTC
++++ Makefile
+@@ -12,7 +12,7 @@ COMMENT=	Cisco 1700/2600/3600/3700/7200
+ 
+ LICENSE=	GPLv2
+ 
+-LIB_DEPENDS=	libelf.so:devel/libelf
++LIB_DEPENDS=	libelf.so.0:devel/libelf
+ 
+ CFLAGS+=	-I${PREFIX}/include/libelf
+ 
