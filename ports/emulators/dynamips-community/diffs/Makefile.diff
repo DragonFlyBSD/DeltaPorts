@@ -1,11 +1,14 @@
---- Makefile.orig	2017-05-06 17:09:31 UTC
+--- Makefile.orig	2017-05-06 20:02:57 UTC
 +++ Makefile
-@@ -12,7 +12,7 @@ COMMENT=	Cisco 1700/2600/3600/3700/7200
+@@ -12,9 +12,9 @@ COMMENT=	Cisco 1700/2600/3600/3700/7200
  
  LICENSE=	GPLv2
  
 -LIB_DEPENDS=	libelf.so:devel/libelf
 +LIB_DEPENDS=	libelf.so.0:devel/libelf
  
- CFLAGS+=	-I${PREFIX}/include/libelf
+-CFLAGS+=	-I${PREFIX}/include/libelf
++CFLAGS+=	-I${PREFIX}/include -I${PREFIX}/include/libelf
+ 
+ CONFLICTS=	dynamips-[0-9]* dynamips-devel-[0-9]*
  
