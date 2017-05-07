@@ -6,7 +6,9 @@ CONFIGURE_ENV+=	CFG_DISABLE_LIBCPP=1
 
 PKGAREA?=	/build/boomdata/data/packages/bleeding-edge-potential/All
 LASTBUILT=	${PKGAREA}/${PKGNAME}.txz
-STRAPNAME=	rustc-${PKGVERSION}-${ARCH}-unknown-${OPSYS:tl}
+RTARGET=	${ARCH}-unknown-${OPSYS:tl}
+STRAPNAME=	rustc-${PKGVERSION}-${RTARGET}
+STDRNAME=	rust-std-${PKGVERSION}-${PKGVERSION}-${RTARGET}
 XRC=		/tmp/explode/usr/local
 
 dfly-bootstrap:
@@ -22,3 +24,11 @@ dfly-bootstrap:
 	(cd /tmp && ${TAR} -czf ${STRAPNAME}.tar.gz ${STRAPNAME})
 	@${ECHO} The new bootstrap is located at /tmp/${STRAPNAME}.tar.gz
 	@${RM} -r /tmp/${STRAPNAME} /tmp/explode
+
+dfly-std-rust:
+	${RM} -r /tmp/${STDRNAME} /tmp/explode
+	${MKDIR} /tmp/${STDRNAME}/rust-std-${RTARGET}/lib/rustlib/${RTARGET}/lib
+	(cd /tmp/explode && ${TAR} -xf ${LASTBUILT})
+	${MV} ${XRC}/lib/*.so /tmp/${STDRNAME}/rust-std-${RTARGET}/lib/rustlib/${RTARGET}/lib
+	${ECHO} ${PKGNAME} > /tmp/${STDRNAME}/version
+	(cd /tmp && ${TAR} -czf ${STDRNAME}.tar.gz ${STDRNAME})
