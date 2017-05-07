@@ -1,0 +1,10 @@
+--- Makefile.orig	2017-05-07 04:59:39 UTC
++++ Makefile
+@@ -41,7 +41,6 @@ OPTIONS_DEFINE=	DOCS
+ post-patch:
+ 	${REINPLACE_CMD} \
+ 		-e 's|$$\(SSL_HDR_DIR\)|$$\1 $$\1/openssl|g' \
+-		-e 's|$$\(BLOWFISH_HDR_DIR\)|$$\1 $$SSL_HDR_DIR/openssl|g' \
+ 		${WRKSRC}/configure
+ 
+ post-install:
