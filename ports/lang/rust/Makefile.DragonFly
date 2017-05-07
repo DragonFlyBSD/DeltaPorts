@@ -33,3 +33,5 @@ dfly-std-rust:
 	${MV} ${XRC}/lib/*.so /tmp/${STDRNAME}/rust-std-${RTARGET}/lib/rustlib/${RTARGET}/lib
 	${ECHO} ${PKGNAME} > /tmp/${STDRNAME}/version
 	(cd /tmp && ${TAR} -czf ${STDRNAME}.tar.gz ${STDRNAME})
+	@${ECHO} The new rust-std is located at /tmp/${STDRNAME}.tar.gz
+	@${RM} -r /tmp/${STDRNAME} /tmp/explode
