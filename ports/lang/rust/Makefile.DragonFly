@@ -27,6 +27,7 @@ dfly-bootstrap:
 
 dfly-std-rust:
 	${RM} -r /tmp/${STDRNAME} /tmp/explode
+	${MKDIR} /tmp/explode
 	${MKDIR} /tmp/${STDRNAME}/rust-std-${RTARGET}/lib/rustlib/${RTARGET}/lib
 	(cd /tmp/explode && ${TAR} -xf ${LASTBUILT})
 	${MV} ${XRC}/lib/*.so /tmp/${STDRNAME}/rust-std-${RTARGET}/lib/rustlib/${RTARGET}/lib
