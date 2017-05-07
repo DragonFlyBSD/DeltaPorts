@@ -1,3 +1,5 @@
+# pkg-static: Unable to access file /construction/games/libretro-cores/stage/usr/local/libexec/libretro/reicast_libretro.so:No such file or directory
+IGNORE=	fails to package since v0.20161109 introduced
 
 dfly-patch:
 	${REINPLACE_CMD} -e '/pthread_np.h/d'							\
