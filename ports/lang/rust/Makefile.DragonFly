@@ -8,7 +8,7 @@ PKGAREA?=	/build/boomdata/data/packages/bleeding-edge-potential/All
 LASTBUILT=	${PKGAREA}/${PKGNAME}.txz
 RTARGET=	${ARCH}-unknown-${OPSYS:tl}
 STRAPNAME=	rustc-${PKGVERSION}-${RTARGET}
-STDRNAME=	rust-std-${PKGVERSION}-${PKGVERSION}-${RTARGET}
+STDRNAME=	rust-std-${PKGVERSION}-${RTARGET}
 XRC=		/tmp/explode/usr/local
 
 dfly-bootstrap:
