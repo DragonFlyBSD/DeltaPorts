@@ -13,6 +13,7 @@ XRC=		/tmp/explode/usr/local
 dfly-bootstrap:
 	${RM} -r /tmp/${STRAPNAME} /tmp/explode
 	${MKDIR} /tmp/${STRAPNAME}/cargo
+	${MKDIR} /tmp/explode
 	(cd /tmp/explode && ${TAR} -xf ${LASTBUILT})
 	${MV} ${XRC}/bin /tmp/${STRAPNAME}/cargo
 	${ECHO} ${PKGNAME} > /tmp/${STRAPNAME}/version
