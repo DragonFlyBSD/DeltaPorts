@@ -1,19 +1,18 @@
---- Makefile.orig	2016-12-27 15:30:08 UTC
+--- Makefile.orig	2017-06-23 20:04:49 UTC
 +++ Makefile
-@@ -23,12 +23,11 @@ BROKEN_FreeBSD_9=	does not build (config
+@@ -24,11 +24,10 @@ BROKEN_powerpc64=	fails to configure: ca
  
  GNU_CONFIGURE=	yes
  CONFIGURE_FLAGS=	--with-llvm=${LOCALBASE}
--CONFIGURE_ENV=	LLVM_CONFIG=${LOCALBASE}/bin/llvm-config38 \
--		CC=${LOCALBASE}/bin/clang38 \
--		CXX=${LOCALBASE}/bin/clang++38 \
--		CPP=${LOCALBASE}/bin/clang-cpp38
+-CONFIGURE_ENV=	LLVM_CONFIG=${LOCALBASE}/bin/llvm-config40 \
+-		CC=${LOCALBASE}/bin/clang40 \
+-		CXX=${LOCALBASE}/bin/clang++40 \
+-		CPP=${LOCALBASE}/bin/clang-cpp40
  
 -USES=		autoreconf gmake libtool perl5
 +USES=		gmake perl5
 +
 +dfly-patch:
-+	${REINPLACE_CMD} 's,llvm-config,llvm-config38,g' ${WRKSRC}/configure
++	${REINPLACE_CMD} 's,llvm-config,llvm-config40,g' ${WRKSRC}/configure
  
- .include <bsd.port.pre.mk>
- 
+ .include <bsd.port.mk>
