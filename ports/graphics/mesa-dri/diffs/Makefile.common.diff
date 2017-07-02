@@ -1,0 +1,12 @@
+--- Makefile.common.orig	2017-07-02 23:38:54 UTC
++++ Makefile.common
+@@ -37,9 +37,6 @@ LIB_DEPENDS+=	libdrm.so:graphics/libdrm
+ .if ${COMPONENT} != libs
+ LIB_DEPENDS+=	libglapi.so:graphics/mesa-libs
+ .endif
+-.if ${ARCH} == amd64 || ${ARCH} == i386
+-LIB_DEPENDS+=	libunwind.so:devel/libunwind
+-.endif
+ .if ${OPSYS} == DragonFly
+ LIB_DEPENDS+=	libelf.so:devel/libelf
+ .endif
