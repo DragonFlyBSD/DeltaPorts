@@ -1,4 +1,4 @@
---- config.site.orig	2013-09-17 23:06:29.507480000 +0000
+--- config.site.orig	2017-07-03 01:33:07 UTC
 +++ config.site
 @@ -51,8 +51,6 @@
  : ${ac_cv_header_minix_config_h=no}
@@ -25,7 +25,44 @@
  : ${ac_cv_header_sys_cdefs_h=yes}
  : ${ac_cv_header_sys_dir_h=yes}
  : ${ac_cv_header_sys_fcntl_h=yes}
-@@ -245,16 +241,6 @@
+@@ -116,24 +112,6 @@
+ : ${ac_cv_header_random_h=no}
+ : ${ac_cv_header_vfork_h=no}
+ 
+-: ${gl_cv_have_raw_decl_strchrnul=yes}
+-: ${gl_cv_have_raw_decl_memcpy=no}
+-: ${gl_cv_have_raw_decl_memmem=yes}
+-: ${gl_cv_have_raw_decl_memrchr=yes}
+-: ${gl_cv_have_raw_decl_rawmemchr=yes}
+-: ${gl_cv_have_raw_decl_stpcpy=yes}
+-: ${gl_cv_have_raw_decl_stpncpy=yes}
+-: ${gl_cv_have_raw_decl_strcasestr=yes}
+-: ${gl_cv_have_raw_decl_strdup=yes}
+-: ${gl_cv_have_raw_decl_strncat=yes}
+-: ${gl_cv_have_raw_decl_strndup=yes}
+-: ${gl_cv_have_raw_decl_strnlen=yes}
+-: ${gl_cv_have_raw_decl_strpbrk=yes}
+-: ${gl_cv_have_raw_decl_strsep=yes}
+-: ${gl_cv_have_raw_decl_strsignal=yes}
+-: ${gl_cv_have_raw_decl_strtok_r=yes}
+-: ${gl_cv_have_raw_decl_strverscmp=no}
+-
+ # Type
+ : ${ac_cv_c_int16_t=yes}
+ : ${ac_cv_c_int32_t=yes}
+@@ -229,11 +207,6 @@
+ : ${gl_cv_sys_struct_timespec_in_time_h=yes}
+ : ${gl_cv_sys_struct_timeval=yes}
+ 
+-: ${ac_cv_func_waitid=yes}
+-: ${ac_cv_func_strchrnul=yes}
+-: ${ac_cv_func_uselocale=yes}
+-: ${ac_cv_func_newlocale=yes}
+-
+ # Functions
+ : ${ac_cv_func___b64_ntop=yes}
+ : ${ac_cv_func___b64_pton=yes}
+@@ -241,16 +214,6 @@
  : ${ac_cv_func__getshort=yes}
  : ${ac_cv_func__getshort=yes}
  : ${ac_cv_func__stat=yes}
@@ -42,7 +79,7 @@
  : ${ac_cv_func_alarm=yes}
  : ${ac_cv_func_alloca=yes}
  : ${ac_cv_func_arc4random=yes}
-@@ -304,7 +290,6 @@
+@@ -303,7 +266,6 @@
  : ${ac_cv_func_getpeereid=yes}
  : ${ac_cv_func_getpgid=yes}
  : ${ac_cv_func_getpgrp=yes}
@@ -50,8 +87,8 @@
  : ${ac_cv_func_getpid=yes}
  : ${ac_cv_func_getrlimit=yes}
  : ${ac_cv_func_getrusage=yes}
-@@ -343,7 +328,6 @@
- : ${ac_cv_func_mkstemp=yes}
+@@ -343,7 +305,6 @@
+ : ${ac_cv_func_mktemp=yes}
  : ${ac_cv_func_mlock=yes}
  : ${ac_cv_func_mmap=yes}
 -: ${ac_cv_func_mmap_fixed_mapped=yes}
