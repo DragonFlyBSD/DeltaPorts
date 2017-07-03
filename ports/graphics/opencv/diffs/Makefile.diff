@@ -1,0 +1,11 @@
+--- Makefile.orig	2017-07-03 01:54:34 UTC
++++ Makefile
+@@ -14,7 +14,7 @@ LICENSE_FILE=	${WRKSRC}/LICENSE
+ 
+ USE_GITHUB=	yes
+ 
+-USES=		cmake pkgconfig
++USES=		cmake:noninja pkgconfig
+ USE_LDCONFIG=	yes
+ 
+ NOT_FOR_ARCHS=	sparc64
