@@ -1,1 +1,1 @@
-USES:=	${USES:Ncmake*} cmake:outsource:noninja
+USES:=	${USES:Ncmake*} cmake:outsource,noninja
