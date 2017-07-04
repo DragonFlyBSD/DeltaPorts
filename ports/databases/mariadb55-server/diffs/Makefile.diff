@@ -1,0 +1,11 @@
+--- Makefile.orig	2017-07-04 17:07:15 UTC
++++ Makefile
+@@ -24,7 +24,7 @@ SUB_FILES=	pkg-message
+ PKGMESSAGE=	${WRKDIR}/pkg-message
+ 
+ SLAVEDIRS=	databases/mariadb55-client
+-USES=		cmake:noninja execinfo shebangfix ssl
++USES+=		cmake:noninja execinfo shebangfix ssl
+ USE_LDCONFIG=	${PREFIX}/lib/mysql
+ SHEBANG_FILES=	scripts/*.sh sql-bench/[a-km-z]*
+ 
