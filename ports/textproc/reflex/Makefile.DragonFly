@@ -1,1 +1,2 @@
 MAKE_JOBS_UNSAFE=yes
+.undef LICENSE_FILE
