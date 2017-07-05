@@ -65,8 +65,10 @@ PERCENT_BSD_LIST= \
 dfly-patch:
 	${REINPLACE_CMD} -e 's|$$ENV{TMPDIR};|"${WRKDIR}";|' \
 		${WRKSRC}/solenv/bin/ooinstall
-	(cd ${WRKSRC} && \
-		${REINPLACE_CMD} -e 's|FREEBSD|DRAGONFLY|' ${REPLACE_LIST})
+	(cd ${WRKSRC} && ${REINPLACE_CMD} \
+			-e 's|FREEBSD|DRAGONFLY|' \
+			-e 's|%BSD|DRAGONFLY|' \
+		${REPLACE_LIST})
 .for F in ${REPLACE_LIST}
 	@/usr/bin/cmp -s ${WRKSRC:Q}/${F} ${WRKSRC:Q}/${F}.bak && \
 		echo "${F} was not altered" || /usr/bin/true
