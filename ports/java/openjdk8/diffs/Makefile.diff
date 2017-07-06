@@ -1,6 +1,6 @@
---- Makefile.orig	2017-01-24 05:57:17 UTC
+--- Makefile.orig	2017-07-06 14:53:47 UTC
 +++ Makefile
-@@ -6,10 +6,12 @@ PORTREVISION=	3
+@@ -5,10 +5,12 @@ PORTVERSION=	${JDK_MAJOR_VERSION}.${JDK_
  CATEGORIES=	java devel
  MASTER_SITES=	http://download.java.net/openjdk/jdk${JDK_MAJOR_VERSION}/promoted/b${DIST_BUILD_NUMBER}/:jdk \
  		https://adopt-openjdk.ci.cloudbees.com/job/jtreg/${JTREG_JENKINS_BUILD}/artifact/:jtreg \
@@ -32,7 +32,15 @@
  JDK_OSARCH=	bsd-${ARCH:S/amd64/x86_64/:C/armv6.*/arm/:S/i386/x86/:S/powerpc64/ppc64/}
  INSTALLDIR=	${PREFIX}/${PKGBASE}
  
-@@ -345,8 +347,15 @@ BOOTSTRAPJDKDIR=	${BJDK}
+@@ -294,6 +296,7 @@ TEST_DISTFILES=		jtreg${JTREG_VERSION}-$
+ .else
+ ALL_TARGET=		images
+ CONFIGURE_ARGS+=	--disable-debug-symbols
++CONFIGURE_ENV+=		ALSA_NOT_NEEDED=yes
+ JAVAVMS_COMMENT+=	JRE
+ JDK_BUILD_TYPE=		release
+ .endif
+@@ -347,8 +350,15 @@ BOOTSTRAPJDKDIR=	${BJDK}
  BOOTSTRAPJDKDIR?=	${LOCALBASE}/bootstrap-openjdk
  BUILD_DEPENDS+=		${BOOTSTRAPJDKDIR}/bin/javac:java/bootstrap-openjdk
  .  else
@@ -48,7 +56,7 @@
  .  endif
  .endif
  
-@@ -448,6 +457,7 @@ do-install:
+@@ -454,6 +464,7 @@ do-install:
  	${FIND} bin jre/bin -type f -exec ${CHMOD} ${BINMODE} {} \; && \
  	${CHMOD} ${BINMODE} jre/${JDK_JVMDIR}/jexec \
  	    jre/${JDK_JVMDIR}/jspawnhelper ${JDK_JVMDIR}/jexec
