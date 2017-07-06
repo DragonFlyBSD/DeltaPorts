@@ -41,7 +41,7 @@
  OPTIONS_DEFAULT_armv6=	FPUHACK
  FPUHACK_DESC=		Hack denormalized numbers in flush-to-zero mode
  POLICY_DESC=		Install the Unlimited Strength Policy Files
-@@ -267,20 +269,21 @@ TZUPDATE_RUN_DEPENDS=	java-zoneinfo>0:ja
+@@ -267,9 +269,13 @@ TZUPDATE_RUN_DEPENDS=	java-zoneinfo>0:ja
  
  JAVAVMS_COMMENT=	OpenJDK${JDK_MAJOR_VERSION}
  
@@ -56,15 +56,13 @@
  OPTIONS_SINGLE=		BUILD
  OPTIONS_SINGLE_BUILD=	DEBUG DEBUGFAST RELEASE
  BUILD_DESC=		Select OpenJDK build type
- DEBUG_DESC=		Build for debugging (without optimizations)
- DEBUGFAST_DESC=		Build for debugging (with optimizations)
+@@ -278,9 +284,6 @@ DEBUGFAST_DESC=		Build for debugging (wi
  RELEASE_DESC=		Build for release (default)
--TEST_DESC=		Run regression tests
+ TEST_DESC=		Run regression tests
  
 -ALSA_LIB_DEPENDS=	libasound.so:audio/alsa-lib
 -ALSA_CONFIGURE_ON=	--with-alsa=${LOCALBASE}
 -ALSA_CONFIGURE_ENV_OFF=	ALSA_NOT_NEEDED=yes
-+TEST_DESC=		Run regression tests
  DEBUG_VARS=		JDK_BUILD_TYPE=slowdebug
  DEBUGFAST_VARS=		JDK_BUILD_TYPE=fastdebug
  RELEASE_BUILD_DEPENDS_OFF=	${LOCALBASE}/bin/objcopy:devel/binutils
