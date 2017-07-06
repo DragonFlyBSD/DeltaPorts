@@ -1,5 +1,3 @@
-MAKE_ARGS+=	strict_build_flags=0
-
 dfly-patch:
 	(cd ${WRKSRC} && ${GREP} -rl "'freebsd'" * | ${XARGS} \
 		${REINPLACE_CMD} -e "s|'freebsd'|'dragonfly'|")
