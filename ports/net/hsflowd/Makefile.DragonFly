@@ -1,3 +1,5 @@
+IGNORE=	needs df support: readCpuCounters.c:59:14: error: 'struct kinfo_proc' has no member named 'kp_proc'
+
 dfly-patch:
 	${REINPLACE_CMD} \
 		-e '/PLATFORM=/d' \
