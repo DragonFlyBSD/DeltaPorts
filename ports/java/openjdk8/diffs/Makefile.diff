@@ -1,4 +1,4 @@
---- Makefile.orig	2017-07-06 14:53:47 UTC
+--- Makefile.orig	2017-07-06 15:42:12 UTC
 +++ Makefile
 @@ -5,10 +5,12 @@ PORTVERSION=	${JDK_MAJOR_VERSION}.${JDK_
  CATEGORIES=	java devel
@@ -32,14 +32,42 @@
  JDK_OSARCH=	bsd-${ARCH:S/amd64/x86_64/:C/armv6.*/arm/:S/i386/x86/:S/powerpc64/ppc64/}
  INSTALLDIR=	${PREFIX}/${PKGBASE}
  
-@@ -294,6 +296,7 @@ TEST_DISTFILES=		jtreg${JTREG_VERSION}-$
- .else
- ALL_TARGET=		images
- CONFIGURE_ARGS+=	--disable-debug-symbols
-+CONFIGURE_ENV+=		ALSA_NOT_NEEDED=yes
- JAVAVMS_COMMENT+=	JRE
- JDK_BUILD_TYPE=		release
- .endif
+@@ -255,7 +257,7 @@ CONFIGURE_WRKSRC=	${WRKSRC}/common/autoc
+ 
+ OPTIONS_DEFINE=		ALSA POLICY TZUPDATE X11
+ OPTIONS_DEFINE_armv6=	FPUHACK
+-OPTIONS_DEFAULT=	ALSA POLICY TZUPDATE X11
++OPTIONS_DEFAULT=	POLICY TZUPDATE X11
+ OPTIONS_DEFAULT_armv6=	FPUHACK
+ FPUHACK_DESC=		Hack denormalized numbers in flush-to-zero mode
+ POLICY_DESC=		Install the Unlimited Strength Policy Files
+@@ -267,20 +269,21 @@ TZUPDATE_RUN_DEPENDS=	java-zoneinfo>0:ja
+ 
+ JAVAVMS_COMMENT=	OpenJDK${JDK_MAJOR_VERSION}
+ 
++ALSA_LIB_DEPENDS=	libasound.so:audio/alsa-lib
++ALSA_CONFIGURE_ON=	--with-alsa=${LOCALBASE}
++ALSA_CONFIGURE_ENV_OFF=	ALSA_NOT_NEEDED=yes
++
+ .if !defined(BUILD_JRE)
+ OPTIONS_DEFINE+=	TEST
+-OPTIONS_DEFAULT+=	RELEASE
++OPTIONS_DEFAULT+=	RELEASE ALSA
+ OPTIONS_SINGLE=		BUILD
+ OPTIONS_SINGLE_BUILD=	DEBUG DEBUGFAST RELEASE
+ BUILD_DESC=		Select OpenJDK build type
+ DEBUG_DESC=		Build for debugging (without optimizations)
+ DEBUGFAST_DESC=		Build for debugging (with optimizations)
+ RELEASE_DESC=		Build for release (default)
+-TEST_DESC=		Run regression tests
+ 
+-ALSA_LIB_DEPENDS=	libasound.so:audio/alsa-lib
+-ALSA_CONFIGURE_ON=	--with-alsa=${LOCALBASE}
+-ALSA_CONFIGURE_ENV_OFF=	ALSA_NOT_NEEDED=yes
++TEST_DESC=		Run regression tests
+ DEBUG_VARS=		JDK_BUILD_TYPE=slowdebug
+ DEBUGFAST_VARS=		JDK_BUILD_TYPE=fastdebug
+ RELEASE_BUILD_DEPENDS_OFF=	${LOCALBASE}/bin/objcopy:devel/binutils
 @@ -347,8 +350,15 @@ BOOTSTRAPJDKDIR=	${BJDK}
  BOOTSTRAPJDKDIR?=	${LOCALBASE}/bootstrap-openjdk
  BUILD_DEPENDS+=		${BOOTSTRAPJDKDIR}/bin/javac:java/bootstrap-openjdk
