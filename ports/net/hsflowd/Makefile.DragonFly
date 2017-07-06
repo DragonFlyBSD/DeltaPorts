@@ -1,5 +1,5 @@
 dfly-patch:
 	${REINPLACE_CMD} \
 		-e '/PLATFORM=/d' \
-		-e 's|src/*PLATFORM|src/FreeBSD|' \
+		-e 's|src/..PLATFORM|src/FreeBSD|' \
 		${WRKSRC}/Makefile
