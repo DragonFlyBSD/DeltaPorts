@@ -1,6 +1,15 @@
---- Makefile.orig	2015-05-05 06:33:06 UTC
+--- Makefile.orig	2017-07-11 12:41:07 UTC
 +++ Makefile
-@@ -142,7 +142,7 @@ post-extract:
+@@ -1,7 +1,7 @@
+ # $FreeBSD$
+ 
+ PORTNAME=	apache24
+-PORTVERSION=	2.4.26
++PORTVERSION=	2.4.27
+ CATEGORIES=	www ipv6
+ MASTER_SITES=	APACHE_HTTPD
+ DISTNAME=	httpd-${PORTVERSION}
+@@ -165,7 +165,7 @@ post-extract:
  .endfor
  
  post-patch:
