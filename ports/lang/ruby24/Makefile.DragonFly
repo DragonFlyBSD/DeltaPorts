@@ -1,1 +1,1 @@
-LIB_DEPENDS:=	${LIB_DEPENDS:N*/libunwind}
+LIB_DEPENDS:=	${LIB_DEPENDS:N*libunwind}
