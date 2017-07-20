@@ -1,0 +1,11 @@
+--- Makefile.orig	2017-07-20 20:49:29 UTC
++++ Makefile
+@@ -53,7 +53,7 @@ SHEBANG_FILES=	invest-applet/invest/*.py
+ 
+ .include <bsd.port.pre.mk>
+ 
+-.if ${ARCH} != "i386" && ${ARCH} != "amd64"
++.if 1
+ CONFIGURE_ARGS+=--disable-battstat
+ CFLAGS+=	-fPIC
+ PLIST_SUB+=	BATTERY="@comment "
