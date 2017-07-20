@@ -72,6 +72,7 @@ transform ()
 	 -e 's|_OFF_amd64|_OFF_x86_64|g' \
 	 -e 's|CFLAGS_amd64|CFLAGS_x86_64|g' \
 	 -e 's|{ARCH:Mamd64}|{ARCH:Mx86_64}|g' \
+	 -e 's|_amd64=|_x86_64=|g' \
          -e '/ARCH}.*(amd64|"amd64")/s|amd64|x86_64|g' \
          > ${WORK}/${item}.filtered
       touch -r ${WORK}/${item} ${WORK}/${item}.filtered
