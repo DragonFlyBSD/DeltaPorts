@@ -1,6 +1,6 @@
---- Source/kwsys/ProcessUNIX.c.orig	2017-05-31 17:00:09.000000000 +0300
+--- Source/kwsys/ProcessUNIX.c.orig	2017-07-18 18:22:55.000000000 +0300
 +++ Source/kwsys/ProcessUNIX.c
-@@ -2439,7 +2439,8 @@ static pid_t kwsysProcessFork(kwsysProce
+@@ -2464,7 +2464,8 @@ static pid_t kwsysProcessFork(kwsysProce
     corresponding parsing format string.  The parsing format should
     have two integers to store: the pid and then the ppid.  */
  #if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) ||       \

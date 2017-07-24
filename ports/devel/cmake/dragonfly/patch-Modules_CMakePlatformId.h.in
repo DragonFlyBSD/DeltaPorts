@@ -1,4 +1,4 @@
---- Modules/CMakePlatformId.h.in.orig	2017-05-31 17:00:09.000000000 +0300
+--- Modules/CMakePlatformId.h.in.orig	2017-07-18 18:22:54.000000000 +0300
 +++ Modules/CMakePlatformId.h.in
 @@ -17,6 +17,9 @@
  #elif defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
