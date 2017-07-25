@@ -1,6 +1,6 @@
 Must use base gcc, -fopenmp, libstdc++ version matching etc.
 
---- Makefile.orig	2016-12-12 09:16:04.000000000 +0200
+--- Makefile.orig	2017-07-24 14:14:56.000000000 +0300
 +++ Makefile
 @@ -211,7 +211,7 @@ BROKEN=	REDCODE requires OPENJPEG and FF
  
