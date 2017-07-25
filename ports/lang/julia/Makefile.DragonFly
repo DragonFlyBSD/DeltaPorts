@@ -1,3 +1,5 @@
+IGNORE=	needs TLC for newest julia (remove when julia patches updated)
+
 # lots of clang'isms heare:wq
 
 dfly-patch:
