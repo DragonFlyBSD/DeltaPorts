@@ -2,7 +2,7 @@
 Cleanup pkg-plist a bit to get correct package w/ different options
 except for FREESTYLE to reduce hunk count
 
---- pkg-plist.orig	2016-07-29 16:42:07.000000000 +0300
+--- pkg-plist.orig	2017-03-02 08:24:15.000000000 +0200
 +++ pkg-plist
 @@ -88,7 +88,7 @@ share/applications/blender.desktop
  %%OPENCOLORIO%%%%DATADIR%%/%%VER%%/datafiles/colormanagement/luts/spi_ocio_srgb_test.spi3d
@@ -13,10 +13,10 @@ except for FREESTYLE to reduce hunk count
  %%NLS%%%%DATADIR%%/%%VER%%/datafiles/fonts/bmonofont-i18n.ttf.gz
  %%NLS%%%%DATADIR%%/%%VER%%/datafiles/fonts/droidsans.ttf.gz
  %%NLS%%%%DATADIR%%/%%VER%%/datafiles/locale/ar/LC_MESSAGES/blender.mo
-@@ -161,160 +161,160 @@ share/applications/blender.desktop
- %%DATADIR%%/%%VER%%/scripts/addons/animation_animall.py
- %%DATADIR%%/%%VER%%/scripts/addons/bone_selection_groups.py
- %%DATADIR%%/%%VER%%/scripts/addons/curve_simplify.py
+@@ -199,160 +199,188 @@ share/applications/blender.desktop
+ %%DATADIR%%/%%VER%%/scripts/addons/blender_id/communication.py
+ %%DATADIR%%/%%VER%%/scripts/addons/blender_id/profiles.py
+ %%DATADIR%%/%%VER%%/scripts/addons/bone_selection_sets.py
 -%%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/__init__.py
 -%%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/engine.py
 -%%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/closure/bsdf.h
@@ -38,23 +38,69 @@ except for FREESTYLE to reduce hunk count
 -%%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/closure/volume.h
 -%%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom.h
 -%%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_attribute.h
--%%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_bvh.h
--%%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_bvh_shadow.h
--%%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_bvh_subsurface.h
--%%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_bvh_traversal.h
--%%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_bvh_volume.h
--%%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_bvh_volume_all.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/__init__.py
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/bvh/bvh.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/bvh/bvh_nodes.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/bvh/bvh_shadow_all.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/bvh/bvh_subsurface.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/bvh/bvh_traversal.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/bvh/bvh_types.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/bvh/bvh_volume.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/bvh/bvh_volume_all.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/bvh/qbvh_nodes.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/bvh/qbvh_shadow_all.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/bvh/qbvh_subsurface.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/bvh/qbvh_traversal.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/bvh/qbvh_volume.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/bvh/qbvh_volume_all.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/engine.py
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/closure/alloc.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/closure/bsdf.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/closure/bsdf_ashikhmin_shirley.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/closure/bsdf_ashikhmin_velvet.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/closure/bsdf_diffuse.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/closure/bsdf_diffuse_ramp.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/closure/bsdf_hair.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/closure/bsdf_microfacet.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/closure/bsdf_microfacet_multi.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/closure/bsdf_microfacet_multi_impl.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/closure/bsdf_oren_nayar.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/closure/bsdf_phong_ramp.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/closure/bsdf_reflection.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/closure/bsdf_refraction.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/closure/bsdf_toon.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/closure/bsdf_transparent.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/closure/bsdf_util.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/closure/bssrdf.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/closure/emissive.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/closure/volume.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_attribute.h
+ %%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_bvh.h
+ %%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_bvh_shadow.h
+ %%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_bvh_subsurface.h
+ %%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_bvh_traversal.h
+ %%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_bvh_volume.h
+ %%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_bvh_volume_all.h
 -%%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_curve.h
 -%%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_motion_curve.h
 -%%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_motion_triangle.h
 -%%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_object.h
 -%%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_primitive.h
--%%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_qbvh.h
--%%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_qbvh_shadow.h
--%%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_qbvh_subsurface.h
--%%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_qbvh_traversal.h
--%%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_qbvh_volume.h
--%%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_qbvh_volume_all.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_curve.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_motion_curve.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_motion_triangle.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_motion_triangle_intersect.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_motion_triangle_shader.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_object.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_patch.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_primitive.h
+ %%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_qbvh.h
+ %%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_qbvh_shadow.h
+ %%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_qbvh_subsurface.h
+ %%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_qbvh_traversal.h
+ %%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_qbvh_volume.h
+ %%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_qbvh_volume_all.h
 -%%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_triangle.h
 -%%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_triangle_intersect.h
 -%%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_volume.h
@@ -171,44 +217,7 @@ except for FREESTYLE to reduce hunk count
 -%%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/osl.py
 -%%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/presets.py
 -%%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/properties.py
-+%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/__init__.py
-+%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/engine.py
-+%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/closure/bsdf.h
-+%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/closure/bsdf_ashikhmin_shirley.h
-+%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/closure/bsdf_ashikhmin_velvet.h
-+%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/closure/bsdf_diffuse.h
-+%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/closure/bsdf_diffuse_ramp.h
-+%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/closure/bsdf_hair.h
-+%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/closure/bsdf_microfacet.h
-+%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/closure/bsdf_oren_nayar.h
-+%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/closure/bsdf_phong_ramp.h
-+%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/closure/bsdf_reflection.h
-+%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/closure/bsdf_refraction.h
-+%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/closure/bsdf_toon.h
-+%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/closure/bsdf_transparent.h
-+%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/closure/bsdf_util.h
-+%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/closure/bssrdf.h
-+%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/closure/emissive.h
-+%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/closure/volume.h
-+%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom.h
-+%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_attribute.h
-+%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_bvh.h
-+%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_bvh_shadow.h
-+%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_bvh_subsurface.h
-+%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_bvh_traversal.h
-+%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_bvh_volume.h
-+%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_bvh_volume_all.h
-+%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_curve.h
-+%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_motion_curve.h
-+%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_motion_triangle.h
-+%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_object.h
-+%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_primitive.h
-+%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_qbvh.h
-+%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_qbvh_shadow.h
-+%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_qbvh_subsurface.h
-+%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_qbvh_traversal.h
-+%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_qbvh_volume.h
-+%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_qbvh_volume_all.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_subd_triangle.h
 +%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_triangle.h
 +%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_triangle_intersect.h
 +%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/geom/geom_volume.h
@@ -223,6 +232,7 @@ except for FREESTYLE to reduce hunk count
 +%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/kernel_emission.h
 +%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/kernel_film.h
 +%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/kernel_globals.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/kernel_image_opencl.h
 +%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/kernel_jitter.h
 +%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/kernel_light.h
 +%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/kernel_math.h
@@ -273,9 +283,11 @@ except for FREESTYLE to reduce hunk count
 +%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/svm/svm_blackbody.h
 +%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/svm/svm_brick.h
 +%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/svm/svm_brightness.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/svm/svm_bump.h
 +%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/svm/svm_camera.h
 +%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/svm/svm_checker.h
 +%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/svm/svm_closure.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/svm/svm_color_util.h
 +%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/svm/svm_convert.h
 +%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/svm/svm_displace.h
 +%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/svm/svm_fresnel.h
@@ -296,6 +308,7 @@ except for FREESTYLE to reduce hunk count
 +%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/svm/svm_noisetex.h
 +%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/svm/svm_normal.h
 +%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/svm/svm_ramp.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/svm/svm_ramp_util.h
 +%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/svm/svm_sepcomb_hsv.h
 +%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/svm/svm_sepcomb_vector.h
 +%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/svm/svm_sky.h
@@ -312,8 +325,11 @@ except for FREESTYLE to reduce hunk count
 +%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/util_atomic.h
 +%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/util_color.h
 +%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/util_half.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/util_hash.h
 +%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/util_math.h
 +%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/util_math_fast.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/util_static_assert.h
++%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/util_texture.h
 +%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/util_transform.h
 +%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/kernel/util_types.h
 +%%CYCLES%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/license/Apache_2.0.txt
@@ -328,7 +344,7 @@ except for FREESTYLE to reduce hunk count
  %%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/shader/node_absorption_volume.oso
  %%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/shader/node_add_closure.oso
  %%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/shader/node_ambient_occlusion.oso
-@@ -399,8 +399,8 @@ share/applications/blender.desktop
+@@ -437,8 +465,8 @@ share/applications/blender.desktop
  %%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/shader/node_wireframe.oso
  %%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/shader/oslutil.h
  %%CYCLESOSL%%%%DATADIR%%/%%VER%%/scripts/addons/cycles/shader/stdosl.h
@@ -339,7 +355,7 @@ except for FREESTYLE to reduce hunk count
  %%DATADIR%%/%%VER%%/scripts/addons/development_api_navigator.py
  %%DATADIR%%/%%VER%%/scripts/addons/development_icon_get.py
  %%DATADIR%%/%%VER%%/scripts/addons/game_engine_publishing.py
-@@ -1133,7 +1133,7 @@ share/applications/blender.desktop
+@@ -1236,7 +1264,7 @@ share/applications/blender.desktop
  %%DATADIR%%/%%VER%%/scripts/templates_py/ui_previews_dynamic_enum.py
  %%PORTDOCS%%%%DOCSDIR%%/GPL-license.txt
  %%PORTDOCS%%%%DOCSDIR%%/GPL3-license.txt
