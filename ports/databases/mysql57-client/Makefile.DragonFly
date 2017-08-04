@@ -1,0 +1,2 @@
+dfly-patch:
+	${REINPLACE} -e 's/FreeBSD/DragonFly/' ${WRKSRC}/cmake/plugin.cmake
