@@ -37,7 +37,7 @@
 #include "dfly-nat.h"
 #include "amd64-tdep.h"
 #include "amd64-nat.h"
-#include "x86bsd-nat.h"
+#include "x86-bsd-nat.h"
 #include "x86-nat.h"
 
 
