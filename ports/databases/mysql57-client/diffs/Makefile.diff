@@ -5,6 +5,6 @@
  	@${LN} -s libmysqlclient.so.20 ${STAGEDIR}${PREFIX}/lib/mysql/libmysqlclient_r.so.20
  
 +dfly-patch:
-+	${REINPLACE} -e 's/FreeBSD/DragonFly/' ${WRKSRC}/cmake/plugin.cmake
++	${REINPLACE_CMD} -e 's/FreeBSD/DragonFly/' ${WRKSRC}/cmake/plugin.cmake
 +
  .include "${MASTERDIR}/Makefile"
