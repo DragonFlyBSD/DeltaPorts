@@ -318,8 +318,8 @@ Please report this to <bug-gdb@gnu.org>."),
     int mib[3] = { CTL_KERN, KERN_PROC, KERN_PROC_SIGTRAMP };
     if (sysctl (mib, 3, &kst, &len, NULL, 0) == 0)
       {
-        amd64dfly_sigtramp_start_addr = kst.ksigtramp_start;
-        amd64dfly_sigtramp_end_addr   = kst.ksigtramp_end;
+        amd64dfly_sigtramp_start_addr = (uintptr_t) kst.ksigtramp_start;
+        amd64dfly_sigtramp_end_addr   = (uintptr_t) kst.ksigtramp_end;
       }
   }
 #else
