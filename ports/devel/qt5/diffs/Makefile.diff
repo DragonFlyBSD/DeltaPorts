@@ -1,11 +1,11 @@
---- Makefile.orig	2017-06-23 20:18:00 UTC
+--- Makefile.orig	2017-08-12 22:42:24 UTC
 +++ Makefile
-@@ -8,7 +8,7 @@ CATEGORIES=	devel
- MAINTAINER=	kde@FreeBSD.org
- COMMENT=	Cross-platform application and UI framework (metaport)
+@@ -10,7 +10,7 @@ COMMENT=	Cross-platform application and
  
--USE_QT5=	${_USE_QT_ALL:Nphonon4:Ndeclarative:S/$/_run/} # phonon4 is not part of Qt itself.
-+USE_QT5=	${_USE_QT_ALL:Nphonon4:Ndeclarative:Ndoc:Nexamples:S/$/_run/} # phonon4 is not part of Qt itself.
+ # * phonon4 is not part of Qt itself.
+ # * we don't want to pull in wayland just yet.
+-USE_QT5=	${_USE_QT_ALL:Nphonon4:Ndeclarative:Nwayland:S/$/_run/}
++USE_QT5=	${_USE_QT_ALL:Nphonon4:Ndeclarative:Nwayland:Nexamples:S/$/_run/}
  USES=		metaport
  
  .include <bsd.port.mk>
