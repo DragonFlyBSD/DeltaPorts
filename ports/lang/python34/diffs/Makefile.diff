@@ -1,9 +1,9 @@
---- Makefile.orig	2016-04-06 16:11:55 UTC
+--- Makefile.orig	2017-08-12 22:38:49 UTC
 +++ Makefile
-@@ -40,13 +40,15 @@ SUB_FILES=		pkg-message
- SUB_LIST=		PYTHON_SUFFIX=${PORTVERSION:R:S/.//g}
+@@ -40,13 +40,15 @@ SUB_LIST=		PYTHON_SUFFIX=${PORTVERSION:R
  
  PLIST_SUB=		ABI=${ABIFLAGS} \
+ 			XYZDOT=${PYTHON_PORTVERSION} \
 -			OSMAJOR=${OSVERSION:C/([0-9]*)[0-9]{5}/\1/}		# For plat-freebsd* in pkg-plist. http://bugs.python.org/issue19554
 +			OSMAJOR=${DFLYVERSION:C/([0-9]*)[0-9]{5}/\1/}		# For plat-freebsd* in pkg-plist. http://bugs.python.org/issue19554
  
@@ -12,8 +12,8 @@
  OPTIONS_RADIO=		HASH
  OPTIONS_RADIO_HASH=	FNV SIPHASH
  OPTIONS_SUB=		yes
-+OPTIONS_DEFINE+=	EXPAT
-+OPTIONS_DEFAULT+=	EXPAT
++OPTION_DEFINE+=		EXPAT
++OPTION_DEFAULT+=	EXPAT
  
  LIBFFI_DESC=		Use libffi from ports instead of bundled version
  NLS_DESC=		Enable gettext support for the locale module
@@ -35,9 +35,9 @@
  
  # Use CPPFLAGS over CFLAGS due to -I ordering, causing elementtree and pyexpat
  # to break in Python 2.7, or preprocessor complaints in Python >= 3.3
-@@ -117,6 +122,10 @@ DISABLED_EXTENSIONS+=	nis
- PLIST_SUB+=	NO_NIS=""
- .endif
+@@ -127,6 +132,10 @@ post-patch:
+ 	${REINPLACE_CMD} -e 's|/usr/local/bin/python|${python_CMD}|' \
+ 		${WRKSRC}/Lib/cgi.py
  
 +dfly-patch:
 +	${REINPLACE_CMD} -e 's|`uname -r`|"${_OSRELEASE}"|g' \
@@ -45,4 +45,4 @@
 +
  post-install:
  .if ! ${PORT_OPTIONS:MDEBUG}
- 	${RM} -f ${STAGEDIR}${PREFIX}/lib/libpython3.so						# Upstream Issue: http://bugs.python.org/issue17975
+ 	${RM} ${STAGEDIR}${PREFIX}/lib/libpython3.so						# Upstream Issue: http://bugs.python.org/issue17975
