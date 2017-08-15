@@ -1,45 +1,37 @@
---- Makefile.orig	2016-04-06 16:07:41 UTC
+--- Makefile.orig	2017-08-15 18:18:54 UTC
 +++ Makefile
-@@ -5,6 +5,7 @@ PORTNAME=	ghc
- PORTVERSION=	7.10.2
+@@ -6,6 +6,7 @@ PORTVERSION=	${GHC_VERSION}
+ PORTREVISION=	1
  CATEGORIES=	lang haskell
  MASTER_SITES=	http://www.haskell.org/ghc/dist/${PORTVERSION}/:source \
 +		http://leaf.dragonflybsd.org/~marino/dports-src/:dflyboot \
  		LOCAL/pgj/:boot
  DISTFILES=	ghc-${PORTVERSION}-src${EXTRACT_SUFX}:source
  
-@@ -78,9 +79,26 @@ LIB_DEPENDS+=	libffi.so.6:devel/libffi
+@@ -89,8 +90,26 @@ LOCALBASE?=	/usr/local
+ .include <bsd.port.options.mk>
  
  .if empty(PORT_OPTIONS:MBOOT)
- 
-+.if ${OPSYS} == "FreeBSD"
++.  if ${OPSYS} == "FreeBSD"
 +
  BOOT_GHC_VERSION=	7.10.2
  DISTFILES+=		ghc-${BOOT_GHC_VERSION}-boot-${ARCH}-freebsd${EXTRACT_SUFX}:boot
- 
-+.elif ${OPSYS} == "DragonFly"
++
++.  elif ${OPSYS} == "DragonFly"
 +
 +BOOT_GHC_VERSION=	7.10.2
-+.if exists (/usr/lib/priv/libprivate_ncursesw.so)
++.    if exists (/usr/lib/priv/libprivate_ncursesw.so)
 +DISTFILES+=		ghc-${BOOT_GHC_VERSION}-boot-${ARCH}-dragonfly2.tar.xz:dflyboot
-+.else
++.    else
 +DISTFILES+=		ghc-${BOOT_GHC_VERSION}-boot-${ARCH}-dragonfly.tar.xz:dflyboot
-+.endif
++.    endif
 +CONFIGURE_TARGET=	${ARCH}-portbld-dragonfly
 +CONFIGURE_ENV+=		BOOTDIR=${BOOT_DIR} LBASE=${LOCALBASE}
 +
-+.else
++.  else
 +IGNORE=		unsupported ${OPSYS} Operating System
-+.endif
++.  endif
 +
  .endif # MBOOT
  
- .if ${PORT_OPTIONS:MPCLANG}
-@@ -196,6 +214,7 @@ CONFIGURE_ENV+=	PATH=${SLAVES_PREFIX}/bi
- 
- BUILD_DEPENDS+=	docbook-xsl>0:textproc/docbook-xsl \
- 		${LOCALBASE}/bin/xsltproc:textproc/libxslt
-+PLIST_FILES+=	bin/haddock bin/haddock-ghc-${GHC_VERSION}
- .endif
- 
- post-extract:
+ # LLVM is still not properly supported, further it does not make sense to have
