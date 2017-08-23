@@ -1,6 +1,6 @@
---- Uses/objc.mk.orig	2017-05-03 13:38:51 UTC
+--- Uses/objc.mk.orig	2017-08-23 19:43:00 UTC
 +++ Uses/objc.mk
-@@ -15,13 +15,7 @@ objc_ARGS?=
+@@ -17,13 +17,7 @@ objc_ARGS?=
  IGNORE=	USES=objc only accepts no arguments or 'compiler'
  .endif
  
@@ -14,18 +14,3 @@
  
  ALT_COMPILER_VERSION=	0
  ALT_COMPILER_TYPE=	none
-@@ -46,10 +40,10 @@ CC=	/usr/bin/clang
- CPP=	/usr/bin/clang-cpp
- CXX=	/usr/bin/clang++
- .else
--BUILD_DEPENDS+=	${LOCALBASE}/bin/clang34:lang/clang34
--CPP=	${LOCALBASE}/bin/clang-cpp34
--CC=	${LOCALBASE}/bin/clang34
--CXX=	${LOCALBASE}/bin/clang++34
-+BUILD_DEPENDS+=	${LOCALBASE}/bin/clang38:lang/clang38
-+CPP=	${LOCALBASE}/bin/clang-cpp38
-+CC=	${LOCALBASE}/bin/clang38
-+CXX=	${LOCALBASE}/bin/clang++38
- .endif
- .endif
- 
