@@ -1,0 +1,12 @@
+--- Makefile.orig	2017-08-26 15:15:51 UTC
++++ Makefile
+@@ -97,9 +97,6 @@ CMAKE_ARGS+=	-DENABLE_PYTHON3:BOOL=true
+ 		-DPYTHON_LIBRARY:FILEPATH=${LOCALBASE}/lib/libpython${PYTHON_VER}m.so
+ .endif
+ 
+-.if !empty(PORT_OPTIONS:MRUBY) && (${ARCH} == "amd64" || ${ARCH} == "i386")
+-LIB_DEPENDS+=   libunwind.so:devel/libunwind
+-.endif
+ 
+ post-patch:
+ 	@${REINPLACE_CMD} -e 's|$${LIBDIR}/../pkgconfig|$${CMAKE_INSTALL_PREFIX}/libdata/pkgconfig|' \
