@@ -1,0 +1,11 @@
+--- Makefile.orig	2017-08-27 16:54:15 UTC
++++ Makefile
+@@ -101,7 +101,7 @@ PLIST_FILES=		lib/rustlib/components \
+ EXTRA_PATCHES+=        ${PATCHDIR}/extra-patch-ino64
+ .endif
+ 
+-X_PY_ENV =	HOME=${WRKDIR}
++X_PY_ENV +=	HOME=${WRKDIR}
+ X_PY_CMD =	${PYTHON_CMD} ${WRKSRC}/x.py
+ 
+ pre-fetch:
