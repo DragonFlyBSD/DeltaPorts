@@ -1,1 +1,2 @@
+IGNORE=			use lang/gcc6 (release)
 CONFIGURE_ARGS+=	--disable-werror
