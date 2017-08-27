@@ -1,12 +1,12 @@
---- distinfo.orig	2017-07-02 19:01:30 UTC
+--- distinfo.orig	2017-08-27 16:55:23 UTC
 +++ distinfo
-@@ -21,3 +21,9 @@ SHA256 (rust/2017-04-24/cargo-0.18.0-aar
- SIZE (rust/2017-04-24/cargo-0.18.0-aarch64-unknown-freebsd.tar.gz) = 2935624
- SHA256 (rust/rust-registry-1.18.0.tar.xz) = 86c74c61aec5b94c9db9f569e6aa5cfeab2dde2a4ba73ea1da4c7320b31f5b36
- SIZE (rust/rust-registry-1.18.0.tar.xz) = 7714840
-+SHA256 (rust/2017-04-27/rustc-1.17.0-x86_64-unknown-dragonfly.tar.gz) = a7f22cb60b2e440c4bdf4ef3988527b9b27ce95d978e7d792c162218ba70a51e
-+SIZE (rust/2017-04-27/rustc-1.17.0-x86_64-unknown-dragonfly.tar.gz) = 43359305
-+SHA256 (rust/2017-04-27/rust-std-1.17.0-x86_64-unknown-dragonfly.tar.gz) = 70685efdd1181be946919de8173f530f4202c2f2fcae8b71971ec872f8c1e226
-+SIZE = (rust/2017-04-27/rust-std-1.17.0-x86_64-unknown-dragonfly.tar.gz) = 57572645
-+SHA256 (rust/2017-04-27/cargo-0.18.0-x86_64-unknown-dragonfly.tar.gz) = 6a4d85ca24a791c24f8687ae4155551d0a1c9445f661e985d4645b3ae9e595e7
-+SIZE (rust/2017-04-27/cargo-0.18.0-x86_64-unknown-dragonfly.tar.gz) = 4945570
+@@ -21,3 +21,9 @@ SHA256 (rust/2017-06-08/cargo-0.19.0-x86
+ SIZE (rust/2017-06-08/cargo-0.19.0-x86_64-unknown-freebsd.tar.gz) = 5176510
+ SHA256 (rust/rust-registry-1.19.0.tar.xz) = 7f1d5b33ba11bbb05e468317680b54a61557e087e0d0deb0d69c2535f1b61146
+ SIZE (rust/rust-registry-1.19.0.tar.xz) = 28571276
++SHA256 (rust/2017-06-08/rustc-1.18.0-x86_64-unknown-dragonfly.tar.gz) = 96c0eb9f51977a739f7747cc61ead0d17014d53ea9eb9299e73136aa7c6058ba
++SIZE (rust/2017-06-08/rustc-1.18.0-x86_64-unknown-dragonfly.tar.gz) = 43791656
++SHA256 (rust/2017-06-08/rust-std-1.18.0-x86_64-unknown-dragonfly.tar.gz) = bcce68057a9b95608d9b0ad4920b67fc47b6ea501935a2c2ac83ea86a74b4adf
++SIZE (rust/2017-06-08/rust-std-1.18.0-x86_64-unknown-dragonfly.tar.gz) = 63025504
++SHA256 (rust/2017-06-08/cargo-0.19.0-x86_64-unknown-dragonfly.tar.gz) = c37b79a4441580a6ae2bef3fd0e0f699149e8d81425892f68b2160a606424eb8
++SIZE (rust/2017-06-08/cargo-0.19.0-x86_64-unknown-dragonfly.tar.gz) = 4933928
