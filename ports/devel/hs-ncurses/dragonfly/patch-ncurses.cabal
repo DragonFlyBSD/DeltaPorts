@@ -1,5 +1,14 @@
---- ncurses.cabal.orig	2016-01-18 01:12:08.000000000 +0200
+--- ncurses.cabal.orig	2016-08-29 01:09:37 UTC
 +++ ncurses.cabal
+@@ -62,7 +62,7 @@ source-repository this
+ -- Do not use default to using pkg-config to find ncurses libraries, because
+ -- the .pc files are missing or broken in many installations.
+ flag use-pkgconfig
+-  default: False
++  default: True
+   manual: True
+   description:
+     Use pkg-config to set linker and include flags.
 @@ -101,7 +101,7 @@ library
      --
      -- Explicitly linking against libpthread.so fixes a build problem on
