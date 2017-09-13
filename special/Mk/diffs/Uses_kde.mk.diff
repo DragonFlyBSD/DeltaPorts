@@ -1,5 +1,5 @@
---- kde.mk.orig	2017-09-13 12:56:26 UTC
-+++ kde.mk
+--- Uses/kde.mk.orig	2017-09-13 12:56:26 UTC
++++ Uses/kde.mk
 @@ -217,9 +217,10 @@ _USE_KDE4_ALL+=		akonadi attica automoc4
  _USE_FRAMEWORKS_TIER1=	apidox archive attica5 breeze-icons codecs config \
  			coreaddons dbusaddons dnssd i18n idletime itemmodels \
