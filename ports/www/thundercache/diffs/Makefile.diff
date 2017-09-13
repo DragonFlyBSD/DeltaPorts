@@ -1,13 +1,12 @@
---- Makefile.orig	2016-04-06 16:42:24 UTC
+--- Makefile.orig	2017-09-13 13:51:47 UTC
 +++ Makefile
-@@ -59,9 +59,7 @@ USE_PHP+=	pdo_pgsql pgsql
+@@ -59,8 +59,8 @@ USE_PHP+=	pdo_pgsql pgsql
  .  endif
  .endif
  
--LIB_DEPENDS+=	libcurl.so:ftp/curl \
--		libstdc++.so:lang/gcc \
--		libutil.so:misc/compat8x
 +IGNORE=		FreeBSD BLOB that will not work on DragonFly
+ LIB_DEPENDS+=	libcurl.so:ftp/curl \
+-		libutil.so:misc/compat8x
  
  SUB_FILES=	pkg-message log.sh test-deps.sh
  SUB_LIST=	"GREP=${GREP}"

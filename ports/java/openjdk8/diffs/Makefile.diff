@@ -1,4 +1,4 @@
---- Makefile.orig	2017-07-06 15:42:12 UTC
+--- Makefile.orig	2017-09-13 14:02:29 UTC
 +++ Makefile
 @@ -5,10 +5,12 @@ PORTVERSION=	${JDK_MAJOR_VERSION}.${JDK_
  CATEGORIES=	java devel
@@ -14,7 +14,7 @@
  
  PATCH_SITES=	LOCAL/glewis/openjdk8
  PATCHFILES=	patch-8u05-b13.xz \
-@@ -197,7 +199,7 @@ SHEBANG_FILES=	configure
+@@ -198,7 +200,7 @@ SHEBANG_FILES=	configure
  _MAKE_JOBS=	#
  CPPFLAGS+=	-I${LOCALBASE}/include
  LDFLAGS+=	-L${LOCALBASE}/lib
@@ -23,25 +23,25 @@
  MAKE_ENV+=	IGNORE_OLD_CONFIG=true
  MAKE_ENV+=	COMPILER_WARNINGS_FATAL="false"
  # openjdk8 normally sets X_CFLAGS in the ./configure script, but it won't do
-@@ -213,7 +215,7 @@ JRE_IMAGEDIR=	${JDK_BUILDDIR}/images/j2s
+@@ -214,7 +216,7 @@ JRE_IMAGEDIR=	${JDK_BUILDDIR}/images/j2s
  .else
  JRE_IMAGEDIR=	${JDK_BUILDDIR}/images/j2re-image
  .endif
--JDK_JVMDIR=	lib/${ARCH:C/armv6.*/arm/:S/powerpc64/ppc64/}
-+JDK_JVMDIR=	lib/${ARCH:S/x86_64/amd64/:C/armv6.*/arm/:S/powerpc64/ppc64/}
- JDK_OSARCH=	bsd-${ARCH:S/amd64/x86_64/:C/armv6.*/arm/:S/i386/x86/:S/powerpc64/ppc64/}
+-JDK_JVMDIR=	lib/${ARCH:C/armv.*/arm/:S/powerpc64/ppc64/}
++JDK_JVMDIR=	lib/${ARCH:S/x86_64/amd64/}
+ JDK_OSARCH=	bsd-${ARCH:S/amd64/x86_64/:C/armv.*/arm/:S/i386/x86/:S/powerpc64/ppc64/}
  INSTALLDIR=	${PREFIX}/${PKGBASE}
  
-@@ -255,7 +257,7 @@ CONFIGURE_WRKSRC=	${WRKSRC}/common/autoc
- 
+@@ -257,7 +259,7 @@ CONFIGURE_WRKSRC=	${WRKSRC}/common/autoc
  OPTIONS_DEFINE=		ALSA POLICY TZUPDATE X11
  OPTIONS_DEFINE_armv6=	FPUHACK
+ OPTIONS_DEFINE_armv7=	FPUHACK
 -OPTIONS_DEFAULT=	ALSA POLICY TZUPDATE X11
 +OPTIONS_DEFAULT=	POLICY TZUPDATE X11
  OPTIONS_DEFAULT_armv6=	FPUHACK
+ OPTIONS_DEFAULT_armv7=	FPUHACK
  FPUHACK_DESC=		Hack denormalized numbers in flush-to-zero mode
- POLICY_DESC=		Install the Unlimited Strength Policy Files
-@@ -267,9 +269,13 @@ TZUPDATE_RUN_DEPENDS=	java-zoneinfo>0:ja
+@@ -270,9 +272,13 @@ TZUPDATE_RUN_DEPENDS=	java-zoneinfo>0:ja
  
  JAVAVMS_COMMENT=	OpenJDK${JDK_MAJOR_VERSION}
  
@@ -56,7 +56,7 @@
  OPTIONS_SINGLE=		BUILD
  OPTIONS_SINGLE_BUILD=	DEBUG DEBUGFAST RELEASE
  BUILD_DESC=		Select OpenJDK build type
-@@ -278,9 +284,6 @@ DEBUGFAST_DESC=		Build for debugging (wi
+@@ -281,9 +287,6 @@ DEBUGFAST_DESC=		Build for debugging (wi
  RELEASE_DESC=		Build for release (default)
  TEST_DESC=		Run regression tests
  
@@ -66,7 +66,7 @@
  DEBUG_VARS=		JDK_BUILD_TYPE=slowdebug
  DEBUGFAST_VARS=		JDK_BUILD_TYPE=fastdebug
  RELEASE_BUILD_DEPENDS_OFF=	${LOCALBASE}/bin/objcopy:devel/binutils
-@@ -347,8 +350,15 @@ BOOTSTRAPJDKDIR=	${BJDK}
+@@ -350,8 +353,15 @@ BOOTSTRAPJDKDIR=	${BJDK}
  BOOTSTRAPJDKDIR?=	${LOCALBASE}/bootstrap-openjdk
  BUILD_DEPENDS+=		${BOOTSTRAPJDKDIR}/bin/javac:java/bootstrap-openjdk
  .  else
@@ -82,7 +82,7 @@
  .  endif
  .endif
  
-@@ -454,6 +464,7 @@ do-install:
+@@ -457,6 +467,7 @@ do-install:
  	${FIND} bin jre/bin -type f -exec ${CHMOD} ${BINMODE} {} \; && \
  	${CHMOD} ${BINMODE} jre/${JDK_JVMDIR}/jexec \
  	    jre/${JDK_JVMDIR}/jspawnhelper ${JDK_JVMDIR}/jexec
