@@ -1,5 +1,5 @@
 PORTNAME=	wayland
-PORTVERSION=	1.9.0
+PORTVERSION=	1.13.0
 CATEGORIES=	graphics
 MASTER_SITES=	http://wayland.freedesktop.org/releases/
 MAINTAINER=	imre@vdsz.com
