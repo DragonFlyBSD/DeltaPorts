@@ -1,23 +1,13 @@
---- Makefile.orig	2016-04-06 16:03:08 UTC
+--- Makefile.orig	2017-10-02 16:01:44 UTC
 +++ Makefile
-@@ -84,21 +84,12 @@ NOPRECIOUSMAKEVARS=	yes
+@@ -95,11 +95,12 @@ BOOTSTRAPJDKDIR=	${CJDK}
+ .  endif
+ .endfor
  
- ONLY_FOR_ARCHS=	amd64 i386
- 
--BOOTSTRAP_JDKS=	${LOCALBASE}/openjdk6 \
--		${LOCALBASE}/bootstrap-openjdk
--
--# do we have valid native jdk installed?
--.for CJDK in ${BOOTSTRAP_JDKS}
--.  if !defined(BOOTSTRAPJDKDIR) && exists(${CJDK}/bin/javac)
--BOOTSTRAPJDKDIR=	${CJDK}
--.  endif
--.endfor
--
 -# if no valid jdk found, set dependency
 -.if !defined(BOOTSTRAPJDKDIR)
--BOOTSTRAPJDKDIR?=	${LOCALBASE}/bootstrap-openjdk
--BUILD_DEPENDS+=		${BOOTSTRAPJDKDIR}/bin/javac:java/bootstrap-openjdk
+-BOOTSTRAPJDKDIR?=	${LOCALBASE}/bootstrap-openjdk6
+-BUILD_DEPENDS+=		${BOOTSTRAPJDKDIR}/bin/javac:java/bootstrap-openjdk6
 -.endif
 +JDK_ARCH=		${ARCH:S/x86_64/amd64/}
 +MASTER_SITES+=		http://leaf.dragonflybsd.org/~marino/dports-src/:bootstrap
@@ -26,9 +16,9 @@
 +EXTRACT_ONLY+=		${BOOTSTRAP_DISTFILE}
 +BOOTSTRAPJDKDIR?=	${WRKDIR}/bootstrap
  
- MAKE_ENV=	LANG=C LC_ALL=C OS= \
+ MAKE_ENV=	OS= \
  		ALT_JDK_IMPORT_PATH=${BOOTSTRAPJDKDIR} \
-@@ -123,9 +114,9 @@ MAKE_ENV+=	HOTSPOT_BUILD_JOBS=${MAKE_JOB
+@@ -124,9 +125,9 @@ MAKE_ENV+=	HOTSPOT_BUILD_JOBS=${MAKE_JOB
  
  .if ${PORT_OPTIONS:MDEBUG}
  ALL_TARGET=	debug_build
@@ -40,7 +30,7 @@
  .endif
  
  # disable FASTDEBUG_BUILD by default to improve compile time.
-@@ -294,8 +285,8 @@ do-install:
+@@ -295,8 +296,8 @@ do-install:
  	@cd ${WRKSRC}/build/${OPENJDK_OSARCH}/j2re-image && \
  	    ${COPYTREE_BIN} bin ${STAGEDIR}${PREFIX}/openjdk6-jre
  	@cd ${WRKSRC}/build/${OPENJDK_OSARCH}/j2re-image && \
@@ -51,7 +41,7 @@
  .else
  	@cd ${WRKSRC}/build/${OPENJDK_OSARCH}/j2sdk-image && \
  	    ${COPYTREE_SHARE} . ${STAGEDIR}${PREFIX}/openjdk6 \
-@@ -303,11 +294,13 @@ do-install:
+@@ -304,11 +305,13 @@ do-install:
  	@cd ${WRKSRC}/build/${OPENJDK_OSARCH}/j2sdk-image && \
  	    ${COPYTREE_BIN} "bin jre/bin" ${STAGEDIR}${PREFIX}/openjdk6
  	@cd ${WRKSRC}/build/${OPENJDK_OSARCH}/j2sdk-image && \
@@ -67,7 +57,7 @@
  .if ${PORT_OPTIONS:MFASTDEBUG}
  	@cd ${WRKSRC}/build/${OPENJDK_OSARCH}-fastdebug/j2sdk-image && \
  	    ${COPYTREE_SHARE} . ${STAGEDIR}${PREFIX}/openjdk6-fastdebug \
-@@ -316,8 +309,8 @@ do-install:
+@@ -317,8 +320,8 @@ do-install:
  	    ${COPYTREE_BIN} "bin jre/bin" \
  	    ${STAGEDIR}${PREFIX}/openjdk6-fastdebug
  	@cd ${WRKSRC}/build/${OPENJDK_OSARCH}-fastdebug/j2sdk-image && \
@@ -77,4 +67,4 @@
 +	    ${STAGEDIR}${PREFIX}/openjdk6-fastdebug/jre/lib/${JDK_ARCH}
  .endif
  .endif
- 	@${ECHO_CMD} "#!/bin/sh" > ${PKGDEINSTALL}
+ .if defined(BUILD_JRE)

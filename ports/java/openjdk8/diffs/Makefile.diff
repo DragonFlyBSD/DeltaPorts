@@ -1,4 +1,4 @@
---- Makefile.orig	2017-09-13 14:02:29 UTC
+--- Makefile.orig	2017-10-02 16:04:03 UTC
 +++ Makefile
 @@ -5,10 +5,12 @@ PORTVERSION=	${JDK_MAJOR_VERSION}.${JDK_
  CATEGORIES=	java devel
@@ -66,23 +66,19 @@
  DEBUG_VARS=		JDK_BUILD_TYPE=slowdebug
  DEBUGFAST_VARS=		JDK_BUILD_TYPE=fastdebug
  RELEASE_BUILD_DEPENDS_OFF=	${LOCALBASE}/bin/objcopy:devel/binutils
-@@ -350,8 +353,15 @@ BOOTSTRAPJDKDIR=	${BJDK}
- BOOTSTRAPJDKDIR?=	${LOCALBASE}/bootstrap-openjdk
- BUILD_DEPENDS+=		${BOOTSTRAPJDKDIR}/bin/javac:java/bootstrap-openjdk
- .  else
-+.    if ${OSREL:S/.//} < 41
- BOOTSTRAPJDKDIR?=	${LOCALBASE}/openjdk7
- BUILD_DEPENDS+=		${BOOTSTRAPJDKDIR}/bin/javac:java/openjdk7
-+MAKE_ENV+=		LD_LIBRARY_PATH=""
-+.    else
+@@ -328,8 +331,9 @@ BOOTSTRAPJDKDIR=	${BJDK}
+ 
+ # if no valid jdk found, set dependency
+ .if !defined(BOOTSTRAPJDKDIR)
+-BOOTSTRAPJDKDIR?=	${LOCALBASE}/bootstrap-openjdk8
+-BUILD_DEPENDS+=		${BOOTSTRAPJDKDIR}/bin/javac:java/bootstrap-openjdk8
 +BOOTSTRAPJDKDIR=	${WRKDIR}/bootstrap
 +BOOTSTRAP_DISTFILE=	bootstrap-openjdk8-8.40.25.tar.xz:bootstrap
 +MAKE_ENV+=		LD_LIBRARY_PATH="${BOOTSTRAPJDKDIR}/jre/lib/amd64"
-+.    endif
- .  endif
  .endif
  
-@@ -457,6 +467,7 @@ do-install:
+ .include <bsd.port.pre.mk>
+@@ -449,6 +453,7 @@ do-install:
  	${FIND} bin jre/bin -type f -exec ${CHMOD} ${BINMODE} {} \; && \
  	${CHMOD} ${BINMODE} jre/${JDK_JVMDIR}/jexec \
  	    jre/${JDK_JVMDIR}/jspawnhelper ${JDK_JVMDIR}/jexec

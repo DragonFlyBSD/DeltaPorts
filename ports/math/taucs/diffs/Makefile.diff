@@ -1,6 +1,6 @@
---- Makefile.orig	2016-07-08 19:58:14.000000000 +0300
+--- Makefile.orig	2017-10-02 15:42:02 UTC
 +++ Makefile
-@@ -68,17 +68,17 @@ post-configure:
+@@ -53,17 +53,17 @@ post-configure:
  archives: configure
  	@${PRINTF} "\n\n%s\n\n\n" "Building libtaucs archives:"
  	(cd ${WRKSRC} && ${SETENV} ${MAKE_ENV} \
@@ -14,7 +14,7 @@
  	@${PRINTF} "\n\n%s\n\n\n" "Building shared library:"
 -	(cd ${WRKSRC}_SHARED/lib/FreeBSD && \
 +	(cd ${WRKSRC}_SHARED/lib/${OPSYS} && \
- 		${FC} ${FFLAGS} ${PICFLAG} ${LDFLAGS} -shared \
+ 		${FC} ${CFLAGS} ${PICFLAG} ${LDFLAGS} -shared \
  		-o libtaucs.so.1 -Wl,-x -Wl,-soname,libtaucs.so.1 \
  		-Wl,--whole-archive libtaucs.a -Wl,--no-whole-archive)
 -	${STRIP_CMD} ${WRKSRC}_SHARED/lib/FreeBSD/libtaucs.so.1
@@ -22,7 +22,7 @@
  
  bins: lib
  	@${PRINTF} "\n\n%s\n\n\n" "Building (dynamically-linked) executables:"
-@@ -87,20 +87,20 @@ bins: lib
+@@ -72,20 +72,20 @@ bins: lib
  #for example, the description of .OBJDIR in make(1)):
  	(cd ${WRKSRC}_SHARED && \
  		${SETENV} ${MAKE_ENV} MAKEOBJDIR="${NONEXISTENT}" \
@@ -48,7 +48,7 @@
  		${INSTALL_PROGRAM} ${BINS} ${STAGEDIR}${PREFIX}/bin)
  .if ${PORT_OPTIONS:MDOCS}
  	@${MKDIR} ${STAGEDIR}${DOCSDIR}
-@@ -110,15 +110,15 @@ do-install:
+@@ -95,15 +95,15 @@ do-install:
  check test: build
  .for t in ${TESTS}
  	@${PRINTF} "\n%s\n" "Building test_${t}"
@@ -58,7 +58,7 @@
 +	${LDFLAGS} -o bin/${OPSYS}/test_${t} \
  	`${SETENV} ${MAKE_ENV} ${MAKE} ${MAKE_ARGS} -V STDDEFS` \
  	`${SETENV} ${MAKE_ENV} ${MAKE} ${MAKE_ARGS} -V STDINCS` \
- 	progs/test_${t}.c -ltaucs ${LAPACK} ${BLAS} ${LIBMETIS}
+ 	progs/test_${t}.c -ltaucs ${LAPACKLIB} ${BLASLIB} ${LIBMETIS}
  	@${PRINTF} "\n%s\n\n\n" "Running test_${t}:"
  	-@cd ${WRKSRC}_SHARED ; \
 -	${SETENV} LD_LIBRARY_PATH="lib/FreeBSD:/lib:/usr/lib:${LOCALBASE}/lib" \
