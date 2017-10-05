@@ -1,9 +1,9 @@
---- distinfo.orig	2017-08-27 16:55:23 UTC
+--- distinfo.orig	2017-10-05 18:04:13 UTC
 +++ distinfo
-@@ -21,3 +21,9 @@ SHA256 (rust/2017-06-08/cargo-0.19.0-x86
+@@ -19,3 +19,9 @@ SHA256 (rust/2017-06-08/rust-std-1.18.0-
+ SIZE (rust/2017-06-08/rust-std-1.18.0-x86_64-unknown-freebsd.tar.gz) = 66585539
+ SHA256 (rust/2017-06-08/cargo-0.19.0-x86_64-unknown-freebsd.tar.gz) = a8d45ad508ecbe9ec9e19fddabda4476466486f97cfb1b59d0a43a1012acb788
  SIZE (rust/2017-06-08/cargo-0.19.0-x86_64-unknown-freebsd.tar.gz) = 5176510
- SHA256 (rust/rust-registry-1.19.0.tar.xz) = 7f1d5b33ba11bbb05e468317680b54a61557e087e0d0deb0d69c2535f1b61146
- SIZE (rust/rust-registry-1.19.0.tar.xz) = 28571276
 +SHA256 (rust/2017-06-08/rustc-1.18.0-x86_64-unknown-dragonfly.tar.gz) = 96c0eb9f51977a739f7747cc61ead0d17014d53ea9eb9299e73136aa7c6058ba
 +SIZE (rust/2017-06-08/rustc-1.18.0-x86_64-unknown-dragonfly.tar.gz) = 43791656
 +SHA256 (rust/2017-06-08/rust-std-1.18.0-x86_64-unknown-dragonfly.tar.gz) = bcce68057a9b95608d9b0ad4920b67fc47b6ea501935a2c2ac83ea86a74b4adf
