@@ -13,7 +13,10 @@ WRKSRC=		${WRKDIR}/${PORTNAME}-${PORTVERSION}
 LIB_DEPENDS=	libevent.so:devel/libevent	\
 		libevent_pthreads.so:devel/libevent \
 		libexpat.so:textproc/expat2 \
-		libffi.so:devel/libffi
+		libffi.so:devel/libffi \
+		libxml2.so:textproc/libxml2
+
+BUILD_DEPENDS=	${LOCALBASE}/bin/xsltproc:textproc/libxslt
 
 GNU_CONFIGURE=	YES
 
