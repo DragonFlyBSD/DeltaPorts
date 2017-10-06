@@ -30,7 +30,9 @@ LIB_DEPENDS=	libcairo.so:graphics/cairo \
 		libpci.so:devel/libpci \
 		libasound.so:audio/alsa-lib \
 		libdbus-1.so:devel/dbus \
-		libdbus-glib-1.so:devel/dbus-glib
+		libdbus-glib-1.so:devel/dbus-glib \
+		libkrb5.so:security/krb5 \
+		# end
 
 RUN_DEPENDS=	droid-fonts-ttf>0:x11-fonts/droid-fonts-ttf \
 		${LOCALBASE}/lib/alsa-lib/libasound_module_pcm_oss.so:audio/alsa-plugins \
