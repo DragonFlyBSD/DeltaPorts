@@ -1,4 +1,4 @@
---- Makefile.orig	2017-10-02 16:04:03 UTC
+--- Makefile.orig	2017-10-27 16:42:08 UTC
 +++ Makefile
 @@ -5,10 +5,12 @@ PORTVERSION=	${JDK_MAJOR_VERSION}.${JDK_
  CATEGORIES=	java devel
@@ -14,7 +14,7 @@
  
  PATCH_SITES=	LOCAL/glewis/openjdk8
  PATCHFILES=	patch-8u05-b13.xz \
-@@ -198,7 +200,7 @@ SHEBANG_FILES=	configure
+@@ -183,7 +185,7 @@ SHEBANG_FILES=	configure
  _MAKE_JOBS=	#
  CPPFLAGS+=	-I${LOCALBASE}/include
  LDFLAGS+=	-L${LOCALBASE}/lib
@@ -22,8 +22,8 @@
 +MAKE_ENV=	CLASSPATH="" JAVA_HOME=""
  MAKE_ENV+=	IGNORE_OLD_CONFIG=true
  MAKE_ENV+=	COMPILER_WARNINGS_FATAL="false"
- # openjdk8 normally sets X_CFLAGS in the ./configure script, but it won't do
-@@ -214,7 +216,7 @@ JRE_IMAGEDIR=	${JDK_BUILDDIR}/images/j2s
+ 
+@@ -194,7 +196,7 @@ JRE_IMAGEDIR=	${JDK_BUILDDIR}/images/j2s
  .else
  JRE_IMAGEDIR=	${JDK_BUILDDIR}/images/j2re-image
  .endif
@@ -32,7 +32,7 @@
  JDK_OSARCH=	bsd-${ARCH:S/amd64/x86_64/:C/armv.*/arm/:S/i386/x86/:S/powerpc64/ppc64/}
  INSTALLDIR=	${PREFIX}/${PKGBASE}
  
-@@ -257,7 +259,7 @@ CONFIGURE_WRKSRC=	${WRKSRC}/common/autoc
+@@ -233,16 +235,13 @@ CONFIGURE_WRKSRC=	${WRKSRC}/common/autoc
  OPTIONS_DEFINE=		ALSA POLICY TZUPDATE X11
  OPTIONS_DEFINE_armv6=	FPUHACK
  OPTIONS_DEFINE_armv7=	FPUHACK
@@ -41,7 +41,16 @@
  OPTIONS_DEFAULT_armv6=	FPUHACK
  OPTIONS_DEFAULT_armv7=	FPUHACK
  FPUHACK_DESC=		Hack denormalized numbers in flush-to-zero mode
-@@ -270,9 +272,13 @@ TZUPDATE_RUN_DEPENDS=	java-zoneinfo>0:ja
+ POLICY_DESC=		Install the Unlimited Strength Policy Files
+ TZUPDATE_DESC=		Update the time zone data
+ 
+-ALSA_CONFIGURE_ENV_OFF=	ALSA_NOT_NEEDED=yes
+-ALSA_CONFIGURE_ON=	--with-alsa=${LOCALBASE}
+-ALSA_LIB_DEPENDS=	libasound.so:audio/alsa-lib
+ FPUHACK_EXTRA_PATCHES=	${PATCHDIR}/fpuhack.patch
+ POLICY_CONFIGURE_ENABLE=	unlimited-crypto
+ TZUPDATE_RUN_DEPENDS=	java-zoneinfo>0:java/java-zoneinfo
+@@ -263,9 +262,13 @@ X11_USE=		XORG=x11,xext,xi,xrender,xt,xt
  
  JAVAVMS_COMMENT=	OpenJDK${JDK_MAJOR_VERSION}
  
@@ -56,17 +65,7 @@
  OPTIONS_SINGLE=		BUILD
  OPTIONS_SINGLE_BUILD=	DEBUG DEBUGFAST RELEASE
  BUILD_DESC=		Select OpenJDK build type
-@@ -281,9 +287,6 @@ DEBUGFAST_DESC=		Build for debugging (wi
- RELEASE_DESC=		Build for release (default)
- TEST_DESC=		Run regression tests
- 
--ALSA_LIB_DEPENDS=	libasound.so:audio/alsa-lib
--ALSA_CONFIGURE_ON=	--with-alsa=${LOCALBASE}
--ALSA_CONFIGURE_ENV_OFF=	ALSA_NOT_NEEDED=yes
- DEBUG_VARS=		JDK_BUILD_TYPE=slowdebug
- DEBUGFAST_VARS=		JDK_BUILD_TYPE=fastdebug
- RELEASE_BUILD_DEPENDS_OFF=	${LOCALBASE}/bin/objcopy:devel/binutils
-@@ -328,8 +331,9 @@ BOOTSTRAPJDKDIR=	${BJDK}
+@@ -318,8 +321,9 @@ BOOTSTRAPJDKDIR=	${BJDK}
  
  # if no valid jdk found, set dependency
  .if !defined(BOOTSTRAPJDKDIR)
@@ -78,7 +77,7 @@
  .endif
  
  .include <bsd.port.pre.mk>
-@@ -449,6 +453,7 @@ do-install:
+@@ -439,6 +443,7 @@ do-install:
  	${FIND} bin jre/bin -type f -exec ${CHMOD} ${BINMODE} {} \; && \
  	${CHMOD} ${BINMODE} jre/${JDK_JVMDIR}/jexec \
  	    jre/${JDK_JVMDIR}/jspawnhelper ${JDK_JVMDIR}/jexec
