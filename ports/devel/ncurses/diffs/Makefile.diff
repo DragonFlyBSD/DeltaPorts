@@ -1,4 +1,4 @@
---- Makefile.orig	2017-10-30 17:43:50 UTC
+--- Makefile.orig	2017-10-30 18:20:46 UTC
 +++ Makefile
 @@ -57,6 +57,7 @@ INSTALL_WRKSRC=	${NOWIDEC_WRKSRC}
  
@@ -17,14 +17,3 @@
  post-extract:
  	@${MKDIR} ${WIDEC_WRKSRC}
  	@${MKDIR} ${NOWIDEC_WRKSRC}
-@@ -128,8 +127,8 @@ post-install:
- 
- 	${RM} ${STAGEDIR}${PREFIX}/lib/libncurses.so \
- 		${STAGEDIR}${PREFIX}/lib/libncursesw.so
--	${ECHO} "INPUT(libncurses.so.${PORTVERSION:R} AS_NEEDED(-ltinfo))" > ${STAGEDIR}${PREFIX}/lib/libncurses.so
--	${ECHO} "INPUT(libncursesw.so.${PORTVERSION:R} AS_NEEDED(-ltinfow))" > ${STAGEDIR}${PREFIX}/lib/libncursesw.so
-+	${ECHO} "INPUT(libncurses.so.${NCVER} AS_NEEDED(-ltinfo))" > ${STAGEDIR}${PREFIX}/lib/libncurses.so
-+	${ECHO} "INPUT(libncursesw.so.${NCVER} AS_NEEDED(-ltinfow))" > ${STAGEDIR}${PREFIX}/lib/libncursesw.so
- 
- 	${STRIP_CMD} ${STAGEDIR}${PREFIX}/lib/*.so.6.0
- 
