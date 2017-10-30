@@ -1,4 +1,4 @@
---- Makefile.orig	2017-07-20 20:49:29 UTC
+--- Makefile.orig	2017-10-30 17:50:39 UTC
 +++ Makefile
 @@ -53,7 +53,7 @@ SHEBANG_FILES=	invest-applet/invest/*.py
  

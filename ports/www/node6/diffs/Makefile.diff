@@ -1,4 +1,4 @@
---- Makefile.orig	2017-07-04 02:32:27 UTC
+--- Makefile.orig	2017-10-30 17:35:55 UTC
 +++ Makefile
 @@ -18,7 +18,7 @@ OPTIONS_DEFAULT=DTRACE
  OPTIONS_SUB=	yes
@@ -9,11 +9,11 @@
  
  .if !exists(/usr/sbin/dtrace)
  OPTIONS_EXCLUDE+=	DTRACE
-@@ -74,9 +74,8 @@ IGNORE=		cannot build node.js with Libre
+@@ -76,9 +76,8 @@ IGNORE=		cannot build node.js with Libre
  
  .include <bsd.port.pre.mk>
  
--.if ${ARCH} == "armv6"
+-.if ${ARCH} == armv6 || ${ARCH} == armv7
 +# something is wrong with configure wrt to DF I think
  CONFIGURE_ARGS+=--openssl-no-asm
 -.endif
