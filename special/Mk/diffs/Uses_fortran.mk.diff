@@ -1,9 +1,9 @@
---- Uses/fortran.mk.orig	2017-05-03 13:38:41 UTC
+--- Uses/fortran.mk.orig	2017-10-30 17:09:57 UTC
 +++ Uses/fortran.mk
-@@ -16,7 +16,12 @@ fortran_ARGS=	gcc
+@@ -26,7 +26,12 @@ LDFLAGS+=	-L${LOCALBASE}/flang/lib -lfla
+ IGNORE=		USES=fortran: flang argument only available for amd64
  .endif
- 
- .if ${fortran_ARGS} == gcc
+ .elif ${fortran_ARGS} == gcc
 -_GCC_VER=	${GCC_DEFAULT:S/.//}
 +_GCC_VER=	5
 +. if defined(USE_GCC)
@@ -13,4 +13,4 @@
 +. endif
  BUILD_DEPENDS+=	gfortran${_GCC_VER}:lang/gcc${_GCC_VER}
  RUN_DEPENDS+=	gfortran${_GCC_VER}:lang/gcc${_GCC_VER}
- USE_BINUTILS=	yes
+ F77=		gfortran${_GCC_VER}
