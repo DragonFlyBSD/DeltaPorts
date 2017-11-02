@@ -1,0 +1,10 @@
+--- pkg-plist.orig	2017-11-02 16:14:17 UTC
++++ pkg-plist
+@@ -182,7 +182,6 @@ llvm-devel/bin/sanstats
+ %%CLANG%%llvm-devel/bin/scan-view
+ llvm-devel/bin/verify-uselistorder
+ llvm-devel/bin/yaml2obj
+-llvm-devel/cfi_blacklist.txt
+ %%CLANG%%llvm-devel/include/clang-c/BuildSystem.h
+ %%CLANG%%llvm-devel/include/clang-c/CXCompilationDatabase.h
+ %%CLANG%%llvm-devel/include/clang-c/CXErrorCode.h
