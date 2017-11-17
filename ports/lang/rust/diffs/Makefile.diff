@@ -1,6 +1,6 @@
---- Makefile.orig	2017-10-05 17:52:03 UTC
+--- Makefile.orig	2017-11-17 10:25:02 UTC
 +++ Makefile
-@@ -102,7 +102,7 @@ PLIST_FILES=		lib/rustlib/components \
+@@ -100,7 +100,7 @@ PLIST_FILES=		lib/rustlib/components \
  EXTRA_PATCHES+=		${PATCHDIR}/extra-patch-ino64
  .endif
  
@@ -9,3 +9,11 @@
  		OPENSSL_DIR="${OPENSSLBASE}"
  X_PY_CMD=	${PYTHON_CMD} ${WRKSRC}/x.py
  
+@@ -140,7 +140,6 @@ STDF=			${LIBSTD:T:R:S/lib//}.0.o
+ 
+ post-extract:
+ 	@${MKDIR} \
+-		${WRKSRC}/build/cache/${BOOTSTRAPS_DATE_${ARCH}:U${BOOTSTRAPS_DATE}} \
+ 		${WRKSRC}/build/cache/${BOOTSTRAPS_DATE_${ARCH}:U${BOOTSTRAPS_DATE}}
+ 	${LN} -sf ${DISTDIR}/${DIST_SUBDIR}/${RUSTC_BOOTSTRAP} \
+ 		${WRKSRC}/build/cache/${BOOTSTRAPS_DATE_${ARCH}:U${BOOTSTRAPS_DATE}}
