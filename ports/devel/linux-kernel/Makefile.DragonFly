@@ -1,0 +1,6 @@
+
+# undo freebsd'isms, we want 64-bit version, not 32-bit one
+dfly-patch:
+	${REINPLACE_CMD} -e 's@amd64@x86_64@g'	\
+		${WRKSRC}/Makefile \
+		${WRKSRC}/arch/x86/Makefile
