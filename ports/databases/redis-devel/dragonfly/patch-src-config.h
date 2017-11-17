@@ -1,5 +1,5 @@
---- redis-devel/redis-4.0.1/src/config.h	2017-09-22 20:32:36.607128000 +0300
-+++ redis-devel.new/redis-4.0.1/src/config.h	2017-09-22 20:32:14.037121000 +0300
+--- src/config.h	2017-09-22 20:32:36.607128000 +0300
++++ src/config.h
 @@ -62,7 +62,7 @@
  #endif
  
