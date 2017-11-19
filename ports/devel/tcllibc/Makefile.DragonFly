@@ -1,3 +1,0 @@
-dfly-patch:
-	${REINPLACE_CMD} -e 's|typedef unsigned |//|g' \
-		${WRKSRC}/modules/sha1/sha256.h
