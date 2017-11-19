@@ -1,6 +1,15 @@
---- Makefile.orig	2017-05-03 14:05:32 UTC
+--- Makefile.orig	2017-11-19 17:42:00 UTC
 +++ Makefile
-@@ -47,7 +47,7 @@ BUILD_WRKSRC?=	${WRKDIR}/build/usession-
+@@ -16,7 +16,7 @@ LICENSE_FILE_MIT=	${WRKSRC}/LICENSE
+ 
+ LIB_DEPENDS=	libexpat.so:textproc/expat2 \
+ 		libffi.so:devel/libffi \
+-		libunwind.so:devel/libunwind
++
+ TEST_DEPENDS=	${LOCALBASE}/${PYPY_DIR}/lib_pypy/_gdbm_cffi.${PYPY_CFFI_VER}.so:databases/pypy-gdbm \
+ 		${LOCALBASE}/${PYPY_DIR}/lib_pypy/_sqlite3_cffi.${PYPY_CFFI_VER}.so:databases/pypy-sqlite3 \
+ 		${LOCALBASE}/${PYPY_DIR}/lib_pypy/_tkinter/tklib_cffi.${PYPY_CFFI_VER}.so:x11-toolkits/pypy-tkinter
+@@ -50,7 +50,7 @@ BUILD_WRKSRC?=	${WRKDIR}/build/usession-
  MAKE_ENV+=	PYPY_LOCALBASE=${LOCALBASE} LDSHARED="${CC} -shared"
  PACKAGE_ARGS?=	--without-gdbm --without-sqlite3 --without-tk
  USE_LDCONFIG=	${PREFIX}/${PYPY_DIR}/bin
@@ -9,3 +18,13 @@
  SHEBANG_FILES?=	lib-python/2.7/plat-mac/appletrunner.py \
  		lib-python/2.7/plat-mac/bundlebuilder.py \
  		lib-python/2.7/keyword.py \
+@@ -105,9 +105,7 @@ PLIST=		${.CURDIR}/pkg-plist
+ .include "${MASTERDIR}/bsd.pypy.mk"
+ .include <bsd.port.pre.mk>
+ 
+-.if ${OPSYS} == FreeBSD && ${OSVERSION} < 1100000
+ PYPY_ARGS=	--withoutmod-_vmprof
+-.endif
+ 
+ post-extract:
+ 	${FIND} ${WRKSRC} -name '*.swn' -delete
