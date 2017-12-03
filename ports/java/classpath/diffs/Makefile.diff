@@ -1,13 +1,13 @@
---- Makefile.orig	2016-04-06 16:01:22 UTC
+--- Makefile.orig	2017-12-03 03:26:30 UTC
 +++ Makefile
-@@ -118,10 +118,8 @@ PLIST_SUB+=		QT4="@comment "
+@@ -122,10 +122,8 @@ PLIST_SUB+=		QT4="@comment "
  .endif
  
  .if !defined(WITH_GCJ) && (${ARCH} == "amd64" || ${ARCH} == "i386")
--BUILD_DEPENDS+=		${LOCALBASE}/bootstrap-openjdk/bin/javac:java/bootstrap-openjdk
--JAR?=			${LOCALBASE}/bootstrap-openjdk/bin/jar
--JAVA?=			${LOCALBASE}/bootstrap-openjdk/bin/java
--JAVAC?=			${LOCALBASE}/bootstrap-openjdk/bin/javac
+-BUILD_DEPENDS+=		${LOCALBASE}/bootstrap-openjdk6/bin/javac:java/bootstrap-openjdk6
+-JAR?=			${LOCALBASE}/bootstrap-openjdk6/bin/jar
+-JAVA?=			${LOCALBASE}/bootstrap-openjdk6/bin/java
+-JAVAC?=			${LOCALBASE}/bootstrap-openjdk6/bin/javac
 +USE_JAVA=		yes
 +JAVA_VERSION=		1.6+
  .else
