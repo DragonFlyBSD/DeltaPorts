@@ -22,6 +22,8 @@ CONFLICTS_INSTALL=	poudriere-devel
 USES=		uidfix
 MAKE_ENV+=	${OPSYS:tu}=1
 
+IGNORE=		does not support FLAVORS
+
 .include <bsd.port.options.mk>
 
 .if ${PORT_OPTIONS:MZSH}

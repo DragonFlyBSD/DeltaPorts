@@ -22,6 +22,8 @@ ETCDIR=		${PREFIX}/etc/poudriere.d
 OPTIONS_DEFINE=	ZSH
 OPTIONS_SUB=	yes
 
+IGNORE=		does not support FLAVORS
+
 .include <bsd.port.options.mk>
 
 post-install:
