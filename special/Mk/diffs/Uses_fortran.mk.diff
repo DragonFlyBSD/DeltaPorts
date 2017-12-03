@@ -3,7 +3,7 @@
 @@ -26,7 +26,12 @@ LDFLAGS+=	-L${LOCALBASE}/flang/lib -lfla
  IGNORE=		USES=fortran: flang argument only available for amd64
  .endif
- .elif ${fortran_ARGS} == gcc
+ .elif ${fortran_ARGS} == gfortran
 -_GCC_VER=	${GCC_DEFAULT:S/.//}
 +_GCC_VER=	5
 +. if defined(USE_GCC)
