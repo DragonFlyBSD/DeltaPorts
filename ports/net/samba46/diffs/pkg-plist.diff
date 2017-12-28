@@ -1,4 +1,4 @@
---- pkg-plist.orig	2017-12-28 19:11:03 UTC
+--- pkg-plist.orig	2017-12-28 23:27:58 UTC
 +++ pkg-plist
 @@ -19,7 +19,6 @@ bin/regpatch
  bin/regshell
@@ -25,3 +25,11 @@
  @dir lib/shared-modules/vfs
  %%AD_DC%%@dir lib/shared-modules/service
  %%AD_DC%%@dir lib/shared-modules/process_model
+@@ -832,7 +828,6 @@ man/man8/vfs_tsmsm.8.gz
+ man/man8/vfs_unityed_media.8.gz
+ man/man8/vfs_worm.8.gz
+ man/man8/vfs_xattr_tdb.8.gz
+-man/man8/vfs_zfsacl.8.gz
+ man/man8/winbindd.8.gz
+ @dir /var/run/samba4
+ @dir /var/log/samba4
