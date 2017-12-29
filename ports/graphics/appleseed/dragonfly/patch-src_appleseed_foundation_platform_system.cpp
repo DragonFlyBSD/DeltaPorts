@@ -16,7 +16,7 @@
          "  virtual memory                size %s",
 +#ifdef __DragonFly__
          pretty_uint(get_logical_cpu_core_count()).c_str(),
-+#endif
++#else
          pretty_size(get_l1_data_cache_size()).c_str(),
          pretty_size(get_l1_data_cache_line_size()).c_str(),
          pretty_size(get_l2_cache_size()).c_str(),
