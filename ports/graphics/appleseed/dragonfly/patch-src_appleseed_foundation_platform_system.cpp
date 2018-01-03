@@ -1,4 +1,4 @@
---- src/appleseed/foundation/platform/system.cpp.orig	2017-07-27 15:53:21 UTC
+--- src/appleseed/foundation/platform/system.cpp.orig	2017-07-27 18:53:21.000000000 +0300
 +++ src/appleseed/foundation/platform/system.cpp
 @@ -75,7 +75,7 @@
      #include <unistd.h>
@@ -13,8 +13,8 @@
          logger,
          "system information:\n"
          "  logical cores                 %s\n"
-+#if defined __DragonFly
-+        pretty_uint(get_logical_cpu_core_count()).c_str());
++#if defined __DragonFly__
++        , pretty_uint(get_logical_cpu_core_count()).c_str());
 +#else
          "  L1 data cache                 size %s, line size %s\n"
          "  L2 cache                      size %s, line size %s\n"
