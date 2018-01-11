@@ -1,29 +1,22 @@
---- Makefile.orig	2017-11-19 17:42:00 UTC
+--- Makefile.orig	2018-01-11 19:25:13 UTC
 +++ Makefile
-@@ -16,7 +16,7 @@ LICENSE_FILE_MIT=	${WRKSRC}/LICENSE
- 
- LIB_DEPENDS=	libexpat.so:textproc/expat2 \
- 		libffi.so:devel/libffi \
--		libunwind.so:devel/libunwind
-+
- TEST_DEPENDS=	${LOCALBASE}/${PYPY_DIR}/lib_pypy/_gdbm_cffi.${PYPY_CFFI_VER}.so:databases/pypy-gdbm \
- 		${LOCALBASE}/${PYPY_DIR}/lib_pypy/_sqlite3_cffi.${PYPY_CFFI_VER}.so:databases/pypy-sqlite3 \
- 		${LOCALBASE}/${PYPY_DIR}/lib_pypy/_tkinter/tklib_cffi.${PYPY_CFFI_VER}.so:x11-toolkits/pypy-tkinter
-@@ -50,7 +50,7 @@ BUILD_WRKSRC?=	${WRKDIR}/build/usession-
- MAKE_ENV+=	PYPY_LOCALBASE=${LOCALBASE} LDSHARED="${CC} -shared"
+@@ -50,7 +50,7 @@ MAKE_ENV+=	PYPY_LOCALBASE=${LOCALBASE} L
  PACKAGE_ARGS?=	--without-gdbm --without-sqlite3 --without-tk
  USE_LDCONFIG=	${PREFIX}/${PYPY_DIR}/bin
+ LLD_UNSAFE=	yes
 -USES=		gettext-runtime gmake shebangfix ssl tar:bzip2
-+USES=		gettext-runtime gmake ncurses shebangfix ssl tar:bzip2
++USES=		gettext-runtime gmake shebangfix ssl tar:bzip2 ncurses
  SHEBANG_FILES?=	lib-python/2.7/plat-mac/appletrunner.py \
  		lib-python/2.7/plat-mac/bundlebuilder.py \
  		lib-python/2.7/keyword.py \
-@@ -105,9 +105,7 @@ PLIST=		${.CURDIR}/pkg-plist
+@@ -105,11 +105,7 @@ PLIST=		${.CURDIR}/pkg-plist
  .include "${MASTERDIR}/bsd.pypy.mk"
  .include <bsd.port.pre.mk>
  
--.if ${OPSYS} == FreeBSD && ${OSVERSION} < 1100000
+-.if ${OPSYS} == FreeBSD && (${OSVERSION} < 1100000 || (${ARCH} != i386 && ${ARCH} != amd64))
  PYPY_ARGS=	--withoutmod-_vmprof
+-.else
+-LIB_DEPENDS+=	libunwind.so:devel/libunwind
 -.endif
  
  post-extract:
