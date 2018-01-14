@@ -1,4 +1,4 @@
---- Makefile.common.orig	2017-07-03 18:01:59 UTC
+--- Makefile.common.orig	2018-01-14 06:19:02 UTC
 +++ Makefile.common
 @@ -37,9 +37,6 @@ LIB_DEPENDS+=	libdrm.so:graphics/libdrm
  .if ${COMPONENT} != libs
@@ -21,3 +21,9 @@
  
  .if "${MESA_LLVM_VER}" != ""
  BUILD_DEPENDS+=	llvm${MESA_LLVM_VER}>=3.9.0_4:devel/llvm${MESA_LLVM_VER}
+@@ -103,3 +97,5 @@ CONFIGURE_ARGS+=	--disable-glx-tls
+ # we don't care about GLes v1
+ CONFIGURE_ARGS+=	--disable-gles1
+ 
++# avoid unrecognized line command on vulcan drivers
++CONFIGURE_ENV+=		ax_cv_check_cflags___Wno_initializer_overrides=no

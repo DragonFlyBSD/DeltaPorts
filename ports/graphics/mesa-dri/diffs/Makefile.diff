@@ -1,0 +1,11 @@
+--- Makefile.orig	2018-01-14 06:27:53 UTC
++++ Makefile
+@@ -63,6 +63,8 @@ EXTRA_PATCHES+=	${PATCHDIR}/extra-src_ga
+ . endif
+ .endif
+ 
++VULKAN_DRIVERS:=	# nothing, won't build on DF
++
+ .if ${VULKAN_DRIVERS}
+ BUILD_DEPENDS+=		${PYTHON_PKGNAMEPREFIX}mako>0:textproc/py-mako@${PY_FLAVOR}
+ .endif
