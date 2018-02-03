@@ -1,6 +1,6 @@
---- Makefile.orig	2016-06-12 10:20:06 UTC
+--- Makefile.orig	2018-02-03 00:51:55 UTC
 +++ Makefile
-@@ -28,6 +28,13 @@ USES=		bison gmake libtool tar:bzip2 com
+@@ -36,6 +36,13 @@ CPE_VENDOR=	gnu
  GNU_CONFIGURE=	yes
  
  .if defined(PKGNAMEPREFIX)
@@ -14,15 +14,15 @@
  BUTARGET?=	${PKGNAMEPREFIX}${OPSYS:tl}
  OPTIONS_EXCLUDE=	NLS
  INFO_PATH=	${PKGNAMEPREFIX:S/-$//}/info
-@@ -47,6 +54,7 @@ INFO=		as \
+@@ -64,6 +71,7 @@ INFO=		as \
  .endif
  
  CONFIGURE_ARGS+=	--disable-werror \
 +			--with-lib-path=/lib:/usr/lib \
  			--enable-deterministic-archives \
- 			--with-sysroot=/
- 
-@@ -66,12 +74,6 @@ PLIST_SUB+=	GOLD=""
+ 			--with-sysroot=/ \
+ 			--enable-x86-relax-relocations=no
+@@ -89,11 +97,6 @@ PLIST_SUB+=	GOLD=""
  PLIST_SUB+=	GOLD="@comment "
  .endif
  
@@ -31,7 +31,6 @@
 -.else
 -CONFIGURE_TARGET=	${ARCH}-portbld-freebsd${OSREL}
 -.endif
--
- post-install:
- .if !defined(PKGNAMEPREFIX)
- 	${INSTALL_DATA} ${WRKSRC}/include/plugin-api.h ${STAGEDIR}${PREFIX}/include/
+ 
+ post-patch:
+ 	${REINPLACE_CMD} -e "s/-ldl//g" ${WRKSRC}/gold/testsuite/Makefile.in
