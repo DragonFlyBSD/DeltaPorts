@@ -1,5 +1,5 @@
---- packages/fcl-xml/fpmake.pp.orig	2017-09-02 16:48:24 UTC
-+++ packages/fcl-xml/fpmake.pp
+--- fpmake.pp.orig	2017-09-02 16:48:24 UTC
++++ fpmake.pp
 @@ -22,7 +22,7 @@ begin
      P.Options.Add('-S2h');
      D:=P.Dependencies.Add('fcl-base');
