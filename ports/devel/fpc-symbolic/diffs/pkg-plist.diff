@@ -1,8 +1,0 @@
---- pkg-plist.orig	2018-02-05 18:31:22 UTC
-+++ pkg-plist
-@@ -1,5 +1,3 @@
--%%PORTDOCS%%%%DOCSDIR%%-%%PORTVERSION%%/symbolic/optimization.txt
--%%PORTDOCS%%%%DOCSDIR%%-%%PORTVERSION%%/symbolic/symbolic.txt
- lib/fpc/%%PORTVERSION%%/fpmkinst/%%BUILDNAME%%/symbolic.fpm
- lib/fpc/%%PORTVERSION%%/units/%%BUILDNAME%%/symbolic/symbolic.o
- lib/fpc/%%PORTVERSION%%/units/%%BUILDNAME%%/symbolic/symbolic.ppu
