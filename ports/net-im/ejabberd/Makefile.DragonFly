@@ -1,2 +1,3 @@
+IGNORE=	ejabberd port expects priv/kqueue to be built, but it's not
 LDFLAGS+= -L${LOCALBASE}/lib
 CFLAGS+= -I${LOCALBASE}/include
