@@ -1,17 +1,17 @@
 --- pkg-plist.orig	2014-08-02 13:59:22.301604000 +0000
 +++ pkg-plist
-@@ -2313,10 +2313,10 @@ lib/python3.4/pickle.py
- lib/python3.4/pickletools.py
- lib/python3.4/pipes.py
- lib/python3.4/pkgutil.py
--lib/python3.4/plat-freebsd%%OSMAJOR%%/IN.py
--lib/python3.4/plat-freebsd%%OSMAJOR%%/__pycache__/IN.cpython-34.pyc
--lib/python3.4/plat-freebsd%%OSMAJOR%%/__pycache__/IN.cpython-34.pyo
--lib/python3.4/plat-freebsd%%OSMAJOR%%/regen
-+lib/python3.4/plat-dragonfly%%OSMAJOR%%/IN.py
-+lib/python3.4/plat-dragonfly%%OSMAJOR%%/__pycache__/IN.cpython-34.pyc
-+lib/python3.4/plat-dragonfly%%OSMAJOR%%/__pycache__/IN.cpython-34.pyo
-+lib/python3.4/plat-dragonfly%%OSMAJOR%%/regen
- lib/python3.4/platform.py
- lib/python3.4/plistlib.py
- lib/python3.4/poplib.py
+@@ -2313,10 +2313,10 @@ lib/python%%XYDOT%%/pickle.py
+ lib/python%%XYDOT%%/pickletools.py
+ lib/python%%XYDOT%%/pipes.py
+ lib/python%%XYDOT%%/pkgutil.py
+-lib/python%%XYDOT%%/plat-freebsd%%OSMAJOR%%/IN.py
+-lib/python%%XYDOT%%/plat-freebsd%%OSMAJOR%%/__pycache__/IN.cpython-%%XY%%.pyc
+-lib/python%%XYDOT%%/plat-freebsd%%OSMAJOR%%/__pycache__/IN.cpython-%%XY%%.pyo
+-lib/python%%XYDOT%%/plat-freebsd%%OSMAJOR%%/regen
++lib/python%%XYDOT%%/plat-dragonfly%%OSMAJOR%%/IN.py
++lib/python%%XYDOT%%/plat-dragonfly%%OSMAJOR%%/__pycache__/IN.cpython-%%XY%%.pyc
++lib/python%%XYDOT%%/plat-dragonfly%%OSMAJOR%%/__pycache__/IN.cpython-%%XY%%.pyo
++lib/python%%XYDOT%%/plat-dragonfly%%OSMAJOR%%/regen
+ lib/python%%XYDOT%%/platform.py
+ lib/python%%XYDOT%%/plistlib.py
+ lib/python%%XYDOT%%/poplib.py

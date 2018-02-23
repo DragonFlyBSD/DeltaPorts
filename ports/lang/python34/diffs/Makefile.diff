@@ -1,11 +1,11 @@
---- Makefile.orig	2017-08-12 22:38:49 UTC
+--- Makefile.orig	2018-02-23 23:26:55 UTC
 +++ Makefile
-@@ -40,13 +40,15 @@ SUB_LIST=		PYTHON_SUFFIX=${PORTVERSION:R
- 
- PLIST_SUB=		ABI=${ABIFLAGS} \
- 			XYZDOT=${PYTHON_PORTVERSION} \
--			OSMAJOR=${OSVERSION:C/([0-9]*)[0-9]{5}/\1/}		# For plat-freebsd* in pkg-plist. http://bugs.python.org/issue19554
-+			OSMAJOR=${DFLYVERSION:C/([0-9]*)[0-9]{5}/\1/}		# For plat-freebsd* in pkg-plist. http://bugs.python.org/issue19554
+@@ -47,13 +47,15 @@ PLIST_SUB=		ABI=${ABIFLAGS} \
+ 			XY=${PYTHON_SUFFIX} \
+ 			XYDOT=${PYTHON_VER} \
+ 			XYZDOT=${PORTVERSION} \
+-			OSMAJOR=${OSVERSION:C/([0-9]*)[0-9]{5}/\1/}		# For plat-freebsd* in pkg-plist. https://bugs.python.org/issue19554
++			OSMAJOR=${DFLYVERSION:C/([0-9]*)[0-9]{5}/\1/}		# For plat-freebsd* in pkg-plist. https://bugs.python.org/issue19554
  
  OPTIONS_DEFINE=		DEBUG IPV6 LIBFFI NLS PYMALLOC THREADS TSC
  OPTIONS_DEFAULT=	LIBFFI PYMALLOC THREADS
@@ -17,7 +17,7 @@
  
  LIBFFI_DESC=		Use libffi from ports instead of bundled version
  NLS_DESC=		Enable gettext support for the locale module
-@@ -56,7 +58,9 @@ TSC_DESC=		Enable processor timestamp co
+@@ -63,7 +65,9 @@ TSC_DESC=		Enable processor timestamp co
  HASH_DESC=		Hash Algorithm (PEP-456)
  FNV_DESC=		Modified Fowler-Noll-Vo Algorithm
  SIPHASH_DESC=		SipHash24 Algorithm
@@ -27,7 +27,7 @@
  FNV_CONFIGURE_ON=	--with-hash-algorithm=fnv
  SIPHASH_CONFIGURE_ON=	--with-hash-algorithm=siphash24
  
-@@ -65,6 +69,7 @@ IPV6_CONFIGURE_ENABLE=	ipv6
+@@ -72,6 +76,7 @@ IPV6_CONFIGURE_ENABLE=	ipv6
  
  LIBFFI_CONFIGURE_ON=	--with-system-ffi
  LIBFFI_LIB_DEPENDS=	libffi.so:devel/libffi
@@ -35,9 +35,9 @@
  
  # Use CPPFLAGS over CFLAGS due to -I ordering, causing elementtree and pyexpat
  # to break in Python 2.7, or preprocessor complaints in Python >= 3.3
-@@ -127,6 +132,10 @@ post-patch:
- 	${REINPLACE_CMD} -e 's|/usr/local/bin/python|${python_CMD}|' \
- 		${WRKSRC}/Lib/cgi.py
+@@ -132,6 +137,10 @@ post-patch:
+ 		${WRKSRC}/setup.py
+ .endif
  
 +dfly-patch:
 +	${REINPLACE_CMD} -e 's|`uname -r`|"${_OSRELEASE}"|g' \
@@ -45,4 +45,4 @@
 +
  post-install:
  .if ! ${PORT_OPTIONS:MDEBUG}
- 	${RM} ${STAGEDIR}${PREFIX}/lib/libpython3.so						# Upstream Issue: http://bugs.python.org/issue17975
+ 	${RM} ${STAGEDIR}${PREFIX}/lib/libpython3.so						# Upstream Issue: https://bugs.python.org/issue17975
