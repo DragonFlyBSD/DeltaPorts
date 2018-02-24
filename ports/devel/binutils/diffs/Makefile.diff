@@ -1,6 +1,6 @@
---- Makefile.orig	2018-02-03 00:51:55 UTC
+--- Makefile.orig	2018-02-24 02:35:03 UTC
 +++ Makefile
-@@ -36,6 +36,13 @@ CPE_VENDOR=	gnu
+@@ -39,6 +39,13 @@ CPE_VENDOR=	gnu
  GNU_CONFIGURE=	yes
  
  .if defined(PKGNAMEPREFIX)
@@ -11,10 +11,10 @@
 +IGNORE=		target ${BUTARGET} will never build
 +.    endif
 +.  endif
- BUTARGET?=	${PKGNAMEPREFIX}${OPSYS:tl}
- OPTIONS_EXCLUDE=	NLS
- INFO_PATH=	${PKGNAMEPREFIX:S/-$//}/info
-@@ -64,6 +71,7 @@ INFO=		as \
+ .if ${PKGNAMEPREFIX:M*-*-}
+ BUTARGET?=	${PKGNAMEPREFIX}${OPSYS:tl}${OSREL}
+ .else
+@@ -72,6 +79,7 @@ INFO=		as \
  .endif
  
  CONFIGURE_ARGS+=	--disable-werror \
@@ -22,7 +22,7 @@
  			--enable-deterministic-archives \
  			--with-sysroot=/ \
  			--enable-x86-relax-relocations=no
-@@ -89,11 +97,6 @@ PLIST_SUB+=	GOLD=""
+@@ -97,11 +105,6 @@ PLIST_SUB+=	GOLD=""
  PLIST_SUB+=	GOLD="@comment "
  .endif
  
