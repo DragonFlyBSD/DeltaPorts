@@ -1,4 +1,4 @@
---- Makefile.orig	2016-12-17 16:50:21 UTC
+--- Makefile.orig	2018-02-24 03:00:21 UTC
 +++ Makefile
 @@ -18,16 +18,16 @@ TOOLCHAIN_PREFIX=	x86_64-
  .else
@@ -18,6 +18,6 @@
  SUB_LIST=	TARGETARCH=${TOOLCHAIN_PREFIX:C/-//g} \
 -		OPSYS=${OPSYS:tl} \
 +		OPSYS=freebsd \
+ 		OSREL=${OSREL} \
  		XCC=${XCC} \
  		XCXX=${XCXX} \
- 		XCPP=${XCPP} \

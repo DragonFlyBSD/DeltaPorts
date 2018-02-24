@@ -1,6 +1,6 @@
---- Makefile.orig	2016-12-11 20:16:08 UTC
+--- Makefile.orig	2018-02-24 02:56:25 UTC
 +++ Makefile
-@@ -16,7 +16,6 @@ CONFIGURE_ENV=	gcc_gxx_include_dir="/usr
+@@ -22,19 +22,20 @@ CONFIGURE_ENV=	gcc_gxx_include_dir="/usr
  
  USES=	gmake iconv libtool tar:bzip2 makeinfo compiler
  PLIST_SUB=	TARGETARCH=${PKGNAMEPREFIX:C/-//g} \
@@ -8,14 +8,12 @@
  		GCC_TARGET=${GCC_TARGET} \
  		GCC_VERSION=${PORTVERSION}
  
-@@ -28,13 +27,15 @@ RUN_DEPENDS=	${BU_PREFIX}-as:devel/${PKG
- 
  .if empty(GCC_TARGET)
  # We are building for a FreeBSD target
 -GCC_TARGET?=	${PKGNAMEPREFIX}unknown-${OPSYS:tl}${OSREL}
--BU_PREFIX?=	${PKGNAMEPREFIX}${OPSYS:tl}
+-BU_PREFIX?=	${PKGNAMEPREFIX}unknown-${OPSYS:tl}${OSREL}
 +GCC_TARGET?=	${PKGNAMEPREFIX}unknown-freebsd10
-+BU_PREFIX?=	${PKGNAMEPREFIX}freebsd
++BU_PREFIX?=	${PKGNAMEPREFIX}unknown-freebsd10
  EXTRA_PATCHES+= ${FILESDIR}/freebsd-format-extensions
 +PLIST_SUB+=	OPSYS=freebsd OSREL=10
  .else
