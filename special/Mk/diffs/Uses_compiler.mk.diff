@@ -1,18 +1,18 @@
---- Uses/compiler.mk.orig	2018-02-23 21:34:40 UTC
+--- Uses/compiler.mk.orig	2018-03-03 03:40:05 UTC
 +++ Uses/compiler.mk
-@@ -66,6 +66,11 @@ _COMPILER_ARGS=	#
+@@ -69,6 +69,11 @@ _COMPILER_ARGS=	#
  _COMPILER_ARGS+=	features
  .endif
  
 +.if ${CC} == cc 
-+# This is the DragonFly base compiler, we know it's gcc (for now)
++# This is the DragonFly base compiler, we know it's gcc
 +COMPILER_TYPE=		gcc
 +COMPILER_VERSION=	53
 +.else
- _CCVERSION!=	${CC} --version
- COMPILER_VERSION=	${_CCVERSION:M[0-9].[0-9]*:tW:C/([0-9]).([0-9]).*/\1\2/g}
- .if ${_CCVERSION:Mclang}
-@@ -73,6 +78,7 @@ COMPILER_TYPE=	clang
+ .if defined(_CCVERSION_${_CC_hash})
+ _CCVERSION=	${_CCVERSION_${_CC_hash}}
+ .else
+@@ -82,6 +87,7 @@ COMPILER_TYPE=	clang
  .else
  COMPILER_TYPE=	gcc
  .endif
@@ -20,7 +20,7 @@
  
  ALT_COMPILER_VERSION=	0
  ALT_COMPILER_TYPE=	none
-@@ -109,6 +115,12 @@ CHOSEN_COMPILER_TYPE=	gcc
+@@ -124,6 +130,12 @@ CHOSEN_COMPILER_TYPE=	gcc
  .endif
  
  .if ${_COMPILER_ARGS:Mfeatures}
@@ -30,10 +30,10 @@
 +COMPILER_FEATURES=	libstdc++ c89 c99 c11 gnu89 gnu99 gnu11 c++98 \
 +			c++0x c++11 c++14 gnu++98 gnu++11 dragonfly
 +.  else
- _CXXINTERNAL!=	${CXX} -\#\#\# /dev/null 2>&1
- .if ${_CXXINTERNAL:M\"-lc++\"}
- COMPILER_FEATURES=	libc++
-@@ -129,6 +141,7 @@ OUTPUT_${std}!=	echo | ${CC} -std=${std}
+ .if defined(_CXXINTERNAL_${_CXX_hash})
+ _CXXINTERNAL=	${_CXXINTERNAL_${_CXX_hash}}
+ .else
+@@ -156,6 +168,7 @@ PORTS_ENV_VARS+=		OUTPUT_${std:hash}_${_
  COMPILER_FEATURES+=	${std}
  .endif
  .endfor
