@@ -1,4 +1,4 @@
---- Makefile.orig	2018-02-24 02:35:03 UTC
+--- Makefile.orig	2018-03-03 04:47:11 UTC
 +++ Makefile
 @@ -39,6 +39,13 @@ CPE_VENDOR=	gnu
  GNU_CONFIGURE=	yes
@@ -22,15 +22,18 @@
  			--enable-deterministic-archives \
  			--with-sysroot=/ \
  			--enable-x86-relax-relocations=no
-@@ -97,11 +105,6 @@ PLIST_SUB+=	GOLD=""
+@@ -97,14 +105,6 @@ PLIST_SUB+=	GOLD=""
  PLIST_SUB+=	GOLD="@comment "
  .endif
  
 -.if ${ARCH} == "amd64"
 -CONFIGURE_TARGET=	x86_64-portbld-freebsd${OSREL}
+-.elif ${ARCH} == "powerpcspe"
+-CONFIGURE_TARGET=	powerpc-portbld-freebsd${OSREL}
 -.else
 -CONFIGURE_TARGET=	${ARCH}-portbld-freebsd${OSREL}
 -.endif
- 
+-
  post-patch:
  	${REINPLACE_CMD} -e "s/-ldl//g" ${WRKSRC}/gold/testsuite/Makefile.in
+ 
