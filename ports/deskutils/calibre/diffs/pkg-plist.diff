@@ -1,0 +1,11 @@
+--- pkg-plist.orig	2018-03-03 02:43:13 UTC
++++ pkg-plist
+@@ -1182,8 +1182,6 @@ lib/calibre/calibre/plugins/hunspell.so
+ lib/calibre/calibre/plugins/icu.so
+ lib/calibre/calibre/plugins/imageops.so
+ lib/calibre/calibre/plugins/libheadless.so
+-lib/calibre/calibre/plugins/libmtp.so
+-lib/calibre/calibre/plugins/libusb.so
+ lib/calibre/calibre/plugins/lzma_binding.so
+ lib/calibre/calibre/plugins/lzx.so
+ lib/calibre/calibre/plugins/matcher.so
