@@ -1,20 +1,7 @@
---- Makefile.orig	2018-02-24 02:45:15 UTC
+--- Makefile.orig	2018-03-04 18:27:57 UTC
 +++ Makefile
-@@ -16,7 +16,7 @@ LICENSE_FILE=	${WRKSRC}/../COPYING
- 
- BUILD_DEPENDS=	yasm:devel/yasm
- 
--USES=		cmake compiler:c++14-lang pathfix
-+USES=		cmake:noninja compiler:c++14-lang pathfix
- 
- OPTIONS_DEFINE=		DEBUG OPTIMIZED_FLAGS
- OPTIONS_DEFINE_amd64=	HI10P HI12P
-@@ -35,10 +35,9 @@ HI12P_DESC=	Enable HI12P Support (64-bit
- OPTIMIZED_FLAGS_DESC=	Enable O3 optimization
- 
- USE_LDCONFIG=	yes
--CMAKE_ARGS=	-DENABLE_PIC=on -DPLATFORM_LIBS=md -DENABLE_TESTS=on
-+CMAKE_ARGS=	-DENABLE_PIC=on -DPLATFORM_LIBS=md -DENABLE_TESTS=on -DPLATFORM_LIBS=md
+@@ -39,7 +39,6 @@ USE_LDCONFIG=	yes
+ CMAKE_ARGS=	-DENABLE_PIC=on -DPLATFORM_LIBS=md -DENABLE_TESTS=on
  CFLAGS_mips=	-DNO_ATOMICS # cannot use lang/gcc
  CFLAGS_mips64=	-DNO_ATOMICS # cannot use lang/gcc
 -EXTRACT_AFTER_ARGS+=	--exclude "md5*"
