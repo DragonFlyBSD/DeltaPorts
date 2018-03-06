@@ -10,15 +10,6 @@
  
  .if !exists(/usr/sbin/dtrace)
  OPTIONS_EXCLUDE+=	DTRACE
-@@ -41,7 +40,7 @@ NLS_LIB_DEPENDS=	libicui18n.so:devel/icu
- 
- DTRACE_CONFIGURE_ON=	--with-dtrace
- 
--USES=		compiler:c++11-lib gmake python:2.7,build pkgconfig \
-+USES=		compiler:c++11-lib gmake python:2,build pkgconfig \
- 		localbase shebangfix
- 
- HAS_CONFIGURE=	yes
 @@ -79,9 +78,8 @@ IGNORE=		cannot build node.js with Libre
  
  .include <bsd.port.pre.mk>
