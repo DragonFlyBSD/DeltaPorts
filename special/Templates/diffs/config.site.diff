@@ -1,6 +1,6 @@
---- config.site.orig	2017-07-03 01:33:07 UTC
+--- config.site.orig	2018-03-19 16:45:27 UTC
 +++ config.site
-@@ -51,8 +51,6 @@
+@@ -53,8 +53,6 @@
  : ${ac_cv_header_minix_config_h=no}
  : ${ac_cv_header_net_if_h=yes}
  : ${ac_cv_header_net_if_media_h=yes}
@@ -9,7 +9,7 @@
  : ${ac_cv_header_netdb_h=yes}
  : ${ac_cv_header_netinet_in_h=yes}
  : ${ac_cv_header_paths_h=yes}
-@@ -60,7 +58,6 @@
+@@ -63,7 +61,6 @@
  : ${ac_cv_header_pwd_h=yes}
  : ${ac_cv_header_readpassphrase_h=yes}
  : ${ac_cv_header_resolv_h=yes}
@@ -17,7 +17,7 @@
  : ${ac_cv_header_sched_h=yes}
  : ${ac_cv_header_search_h=yes}
  : ${ac_cv_header_security_pam_appl_h=yes}
-@@ -75,7 +72,6 @@
+@@ -78,7 +75,6 @@
  : ${ac_cv_header_stdlib_h=yes}
  : ${ac_cv_header_string_h=yes}
  : ${ac_cv_header_strings_h=yes}
@@ -25,7 +25,7 @@
  : ${ac_cv_header_sys_cdefs_h=yes}
  : ${ac_cv_header_sys_dir_h=yes}
  : ${ac_cv_header_sys_fcntl_h=yes}
-@@ -116,24 +112,6 @@
+@@ -124,24 +120,6 @@
  : ${ac_cv_header_random_h=no}
  : ${ac_cv_header_vfork_h=no}
  
@@ -50,11 +50,10 @@
  # Type
  : ${ac_cv_c_int16_t=yes}
  : ${ac_cv_c_int32_t=yes}
-@@ -229,11 +207,6 @@
+@@ -237,10 +215,6 @@
  : ${gl_cv_sys_struct_timespec_in_time_h=yes}
  : ${gl_cv_sys_struct_timeval=yes}
  
--: ${ac_cv_func_waitid=yes}
 -: ${ac_cv_func_strchrnul=yes}
 -: ${ac_cv_func_uselocale=yes}
 -: ${ac_cv_func_newlocale=yes}
@@ -62,10 +61,10 @@
  # Functions
  : ${ac_cv_func___b64_ntop=yes}
  : ${ac_cv_func___b64_pton=yes}
-@@ -241,16 +214,6 @@
- : ${ac_cv_func__getshort=yes}
- : ${ac_cv_func__getshort=yes}
- : ${ac_cv_func__stat=yes}
+@@ -251,16 +225,6 @@
+ : ${ac_cv_func_abs=yes}
+ : ${ac_cv_func_accept=yes}
+ : ${ac_cv_func_accept4=yes}
 -: ${ac_cv_func_acl_create_entry_np=yes}
 -: ${ac_cv_func_acl_delete_def_file=yes}
 -: ${ac_cv_func_acl_delete_fd_np=yes}
@@ -78,8 +77,8 @@
 -: ${ac_cv_func_acl_set_file=yes}
  : ${ac_cv_func_alarm=yes}
  : ${ac_cv_func_alloca=yes}
- : ${ac_cv_func_arc4random=yes}
-@@ -303,7 +266,6 @@
+ : ${ac_cv_func_alphasort=yes}
+@@ -336,7 +300,6 @@
  : ${ac_cv_func_getpeereid=yes}
  : ${ac_cv_func_getpgid=yes}
  : ${ac_cv_func_getpgrp=yes}
@@ -87,11 +86,19 @@
  : ${ac_cv_func_getpid=yes}
  : ${ac_cv_func_getrlimit=yes}
  : ${ac_cv_func_getrusage=yes}
-@@ -343,7 +305,6 @@
- : ${ac_cv_func_mktemp=yes}
+@@ -391,7 +354,6 @@
+ : ${ac_cv_func_mktemps=yes}
  : ${ac_cv_func_mlock=yes}
  : ${ac_cv_func_mmap=yes}
 -: ${ac_cv_func_mmap_fixed_mapped=yes}
  : ${ac_cv_func_mprotect=yes}
  : ${ac_cv_func_munlock=yes}
  : ${ac_cv_func_munmap=yes}
+@@ -549,7 +511,6 @@
+ : ${ac_cv_func_vsprintf=yes}
+ : ${ac_cv_func_waitpid=yes}
+ : ${ac_cv_func_wait=yes}
+-: ${ac_cv_func_waitid=yes}
+ : ${ac_cv_func_wait2=yes}
+ : ${ac_cv_func_wait3=yes}
+ : ${ac_cv_func_wait3_rusage=yes}
