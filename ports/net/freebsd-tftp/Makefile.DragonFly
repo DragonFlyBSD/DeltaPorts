@@ -1,2 +1,0 @@
-IGNORE=		installs in base (don't override NO_PACKAGE)
-MAKE_ENV+=	NO_WERROR=defined
