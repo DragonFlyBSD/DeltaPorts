@@ -1,0 +1,1 @@
+IGNORE=	requires freebsd-specific devel/p4 makefile
