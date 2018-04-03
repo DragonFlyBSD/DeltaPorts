@@ -25,7 +25,15 @@
  : ${ac_cv_header_sys_cdefs_h=yes}
  : ${ac_cv_header_sys_dir_h=yes}
  : ${ac_cv_header_sys_fcntl_h=yes}
-@@ -124,24 +120,6 @@
+@@ -109,7 +105,6 @@
+ : ${ac_cv_header_unistd_h=yes}
+ : ${ac_cv_header_utime_h=yes}
+ : ${ac_cv_header_utmpx_h=yes}
+-: ${ac_cv_header_utmp_h=no}
+ : ${ac_cv_header_vis_h=yes}
+ : ${ac_cv_header_wchar_h=yes}
+ : ${ac_cv_header_wctype_h=yes}
+@@ -124,24 +119,6 @@
  : ${ac_cv_header_random_h=no}
  : ${ac_cv_header_vfork_h=no}
  
@@ -50,7 +58,7 @@
  # Type
  : ${ac_cv_c_int16_t=yes}
  : ${ac_cv_c_int32_t=yes}
-@@ -237,10 +215,6 @@
+@@ -237,10 +214,6 @@
  : ${gl_cv_sys_struct_timespec_in_time_h=yes}
  : ${gl_cv_sys_struct_timeval=yes}
  
@@ -61,7 +69,7 @@
  # Functions
  : ${ac_cv_func___b64_ntop=yes}
  : ${ac_cv_func___b64_pton=yes}
-@@ -251,16 +225,6 @@
+@@ -251,16 +224,6 @@
  : ${ac_cv_func_abs=yes}
  : ${ac_cv_func_accept=yes}
  : ${ac_cv_func_accept4=yes}
@@ -78,7 +86,7 @@
  : ${ac_cv_func_alarm=yes}
  : ${ac_cv_func_alloca=yes}
  : ${ac_cv_func_alphasort=yes}
-@@ -336,7 +300,6 @@
+@@ -336,7 +299,6 @@
  : ${ac_cv_func_getpeereid=yes}
  : ${ac_cv_func_getpgid=yes}
  : ${ac_cv_func_getpgrp=yes}
@@ -86,7 +94,7 @@
  : ${ac_cv_func_getpid=yes}
  : ${ac_cv_func_getrlimit=yes}
  : ${ac_cv_func_getrusage=yes}
-@@ -391,7 +354,6 @@
+@@ -391,7 +353,6 @@
  : ${ac_cv_func_mktemps=yes}
  : ${ac_cv_func_mlock=yes}
  : ${ac_cv_func_mmap=yes}
@@ -94,11 +102,40 @@
  : ${ac_cv_func_mprotect=yes}
  : ${ac_cv_func_munlock=yes}
  : ${ac_cv_func_munmap=yes}
-@@ -549,7 +511,6 @@
+@@ -547,14 +508,6 @@
+ : ${ac_cv_func_vprintf=yes}
+ : ${ac_cv_func_vsnprintf=yes}
  : ${ac_cv_func_vsprintf=yes}
- : ${ac_cv_func_waitpid=yes}
- : ${ac_cv_func_wait=yes}
+-: ${ac_cv_func_waitpid=yes}
+-: ${ac_cv_func_wait=yes}
 -: ${ac_cv_func_waitid=yes}
- : ${ac_cv_func_wait2=yes}
- : ${ac_cv_func_wait3=yes}
- : ${ac_cv_func_wait3_rusage=yes}
+-: ${ac_cv_func_wait2=yes}
+-: ${ac_cv_func_wait3=yes}
+-: ${ac_cv_func_wait3_rusage=yes}
+-: ${ac_cv_func_wait4=yes}
+-: ${ac_cv_func_wait6=yes}
+ : ${ac_cv_func_warn=yes}
+ : ${ac_cv_func_warnx=yes}
+ : ${ac_cv_func_wcrtomb=yes}
+@@ -569,21 +522,6 @@
+ : ${ac_cv_func_yp_match=yes}
+ 
+ # misc utx
+-: ${ac_cv_func_endutxent=yes}
+-: ${ac_cv_func_getutxent=yes}
+-: ${ac_cv_func_getutxid=yes}
+-: ${ac_cv_func_getutxline=yes}
+-: ${ac_cv_func_getutxuser=yes}
+-: ${ac_cv_func_pututxline=yes}
+-: ${ac_cv_func_setutxdb=yes}
+-: ${ac_cv_func_setutxent=yes}
+-: ${ac_cv_func_endutent=no}
+-: ${ac_cv_func_getutent=no}
+-: ${ac_cv_func_getutid=no}
+-: ${ac_cv_func_getutline=no}
+-: ${ac_cv_func_pututline=no}
+-: ${ac_cv_func_setutent=no}
+-: ${ac_cv_func_utmpname=no}
+ 
+ # non existing functions
+ : ${ac_cv_func_argz_count=no}
