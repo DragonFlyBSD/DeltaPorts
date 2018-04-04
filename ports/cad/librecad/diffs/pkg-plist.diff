@@ -1,6 +1,6 @@
---- pkg-plist.orig	2018-03-03 02:52:38 UTC
+--- pkg-plist.orig	2018-04-04 14:35:46 UTC
 +++ pkg-plist
-@@ -1391,118 +1391,4 @@ share/applications/librecad.desktop
+@@ -1390,121 +1390,5 @@ share/applications/librecad.desktop
  %%DATADIR%%/plugins/libplotequation.so
  %%DATADIR%%/plugins/libsameprop.so
  %%DATADIR%%/plugins/libsample.so
@@ -44,6 +44,7 @@
 -%%DATADIR%%/qm/librecad_ja.qm
 -%%DATADIR%%/qm/librecad_ko.qm
 -%%DATADIR%%/qm/librecad_lv.qm
+-%%DATADIR%%/qm/librecad_mk.qm
 -%%DATADIR%%/qm/librecad_nl.qm
 -%%DATADIR%%/qm/librecad_no.qm
 -%%DATADIR%%/qm/librecad_pa.qm
@@ -101,6 +102,7 @@
 -%%DATADIR%%/qm/plugins_ja.qm
 -%%DATADIR%%/qm/plugins_ko.qm
 -%%DATADIR%%/qm/plugins_lv.qm
+-%%DATADIR%%/qm/plugins_mk.qm
 -%%DATADIR%%/qm/plugins_nl.qm
 -%%DATADIR%%/qm/plugins_no.qm
 -%%DATADIR%%/qm/plugins_pa.qm
@@ -118,4 +120,5 @@
 -%%DATADIR%%/qm/plugins_uk.qm
 -%%DATADIR%%/qm/plugins_zh_cn.qm
 -%%DATADIR%%/qm/plugins_zh_tw.qm
+ share/metainfo/librecad.appdata.xml
  share/pixmaps/librecad.png
