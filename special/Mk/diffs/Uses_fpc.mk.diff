@@ -1,6 +1,6 @@
---- bsd.fpc.mk.orig	2015-07-07 05:55:30 UTC
-+++ bsd.fpc.mk
-@@ -49,11 +49,11 @@ IGNORE=	incompatible fpc ${FPC_CURRENT_V
+--- Uses/fpc.mk.orig	2018-04-23 18:05:39 UTC
++++ Uses/fpc.mk
+@@ -53,11 +53,11 @@ IGNORE=	incompatible fpc ${FPC_CURRENT_V
  
  .if ${ARCH} == "i386"
  PPNAME=			ppc386
