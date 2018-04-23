@@ -1,12 +1,14 @@
---- distinfo.orig	2017-11-17 10:22:46 UTC
+--- distinfo.orig	2018-04-23 13:46:37 UTC
 +++ distinfo
-@@ -19,3 +19,9 @@ SHA256 (rust/2017-08-31/rust-std-1.20.0-
- SIZE (rust/2017-08-31/rust-std-1.20.0-x86_64-unknown-freebsd.tar.gz) = 60215051
- SHA256 (rust/2017-08-31/cargo-0.21.0-x86_64-unknown-freebsd.tar.gz) = 522592cdee824d8d7b7c3472f29ded39d10f1fb3d07f3b3ea0673b8edf6d5b66
- SIZE (rust/2017-08-31/cargo-0.21.0-x86_64-unknown-freebsd.tar.gz) = 5183277
-+SHA256 (rust/2017-08-31/rustc-1.20.0-x86_64-unknown-dragonfly.tar.gz) = ea000bb9947405861aceef37618ecb22e08fbbbe8c790f456366b7aadc2886f3
-+SIZE (rust/2017-08-31/rustc-1.20.0-x86_64-unknown-dragonfly.tar.gz) = 48924184
-+SHA256 (rust/2017-08-31/rust-std-1.20.0-x86_64-unknown-dragonfly.tar.gz) = e05c52e3eb98fe5737a0d29cb5a6a5230af5116451696138f53ba61559d2c5c5
-+SIZE (rust/2017-08-31/rust-std-1.20.0-x86_64-unknown-dragonfly.tar.gz) = 67797251
-+SHA256 (rust/2017-08-31/cargo-0.21.0-x86_64-unknown-dragonfly.tar.gz) = 1821aeeb790adc12401e73933380411201df3c6a5ec42d6cc52ee949b6684a1f
-+SIZE (rust/2017-08-31/cargo-0.21.0-x86_64-unknown-dragonfly.tar.gz) = 6287819
+@@ -18,4 +18,10 @@ SHA256 (rust/2018-02-15/rustc-1.24.0-x86
+ SIZE (rust/2018-02-15/rustc-1.24.0-x86_64-unknown-freebsd.tar.gz) = 62428675
+ SHA256 (rust/rustc-1.25.0-src.tar.xz) = 14fcb82d5959df758aaf422539359300917217fa8420e34bd596e3fb6ed2de87
+ SIZE (rust/rustc-1.25.0-src.tar.xz) = 56108536
+-TIMESTAMP = 1523914189
++SHA256 (rust/2018-02-15/rustc-1.24.0-x86_64-unknown-dragonfly.tar.gz) = 5b80eefd241164fea59d0e997e59960eae1227f31040af556198387172c47abe
++SIZE (rust/2018-02-15/rustc-1.24.0-x86_64-unknown-dragonfly.tar.gz) = 63804732
++SHA256 (rust/2018-02-15/rust-std-1.24.0-x86_64-unknown-dragonfly.tar.gz) = 11810c4c45ec0d832a6a33fa409ff10e9bf39ec84ec4f482aff196f6582125b7
++SIZE (rust/2018-02-15/rust-std-1.24.0-x86_64-unknown-dragonfly.tar.gz) = 81694555
++SHA256 (rust/2018-02-15/cargo-0.25.0-x86_64-unknown-dragonfly.tar.gz) = 95b0134c4de10f3cd7bdfe34421f604fd17afa80f787898054afb46d28cf4159
++SIZE (rust/2018-02-15/cargo-0.25.0-x86_64-unknown-dragonfly.tar.gz) = 5203798
++TIMESTAMP = 1524481855
