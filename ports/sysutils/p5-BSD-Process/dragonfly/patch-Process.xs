@@ -210,7 +210,7 @@
      /* not available in FreeBSD 4.x */
      hv_store(h, "args",   4, newSViv(-1), 0);
  #else
-@@ -271,64 +338,79 @@ HV *_procinfo (struct kinfo_proc *kp, in
+@@ -271,64 +338,81 @@ HV *_procinfo (struct kinfo_proc *kp, in
      }
  
      /* deal with groups array */
@@ -242,7 +242,9 @@
      hv_store(h, "childtime", 9, newSVnv(NO_FREEBSD_4x(TIME_FRAC(kp->ki_childtime))), 0);
 +#endif
  
++#ifndef __DragonFly__
      hv_store(h, "advlock",      7, newSViv(NO_FREEBSD_4x(P_FLAG(P_ADVLOCK))), 0);
++#endif
      hv_store(h, "controlt",     8, newSViv(NO_FREEBSD_4x(P_FLAG(P_CONTROLT))), 0);
 -    hv_store(h, "kthread",      7, newSViv(NO_FREEBSD_4x(P_FLAG(P_KTHREAD))), 0);
 -#if __FreeBSD_version < 802501
@@ -309,7 +311,7 @@
      hv_store(h, "utime",    5, newSVnv(NO_FREEBSD_4x(TIME_FRAC(rp->ru_utime))), 0);
      hv_store(h, "stime",    5, newSVnv(NO_FREEBSD_4x(TIME_FRAC(rp->ru_stime))), 0);
      hv_store(h, "time",     4, newSVnv(NO_FREEBSD_4x(
-@@ -349,11 +431,15 @@ HV *_procinfo (struct kinfo_proc *kp, in
+@@ -349,11 +433,15 @@ HV *_procinfo (struct kinfo_proc *kp, in
      hv_store(h, "nivcsw",   6, newSViv(NO_FREEBSD_4x(rp->ru_nivcsw)), 0);
  
      /* attributes available only in FreeBSD 6.x */
@@ -328,7 +330,7 @@
      hv_store(h, "utime_ch",     8, newSVnv(NO_FREEBSD_5x(TIME_FRAC(rp->ru_utime))), 0);
      hv_store(h, "stime_ch",     8, newSVnv(NO_FREEBSD_5x(TIME_FRAC(rp->ru_stime))), 0);
      hv_store(h, "time_ch",      7, newSVnv(NO_FREEBSD_5x(
-@@ -383,7 +469,9 @@ PROTOTYPES: ENABLE
+@@ -383,7 +471,9 @@ PROTOTYPES: ENABLE
  short
  max_kernel_groups()
      CODE:
