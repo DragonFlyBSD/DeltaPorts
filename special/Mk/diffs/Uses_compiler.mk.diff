@@ -25,7 +25,7 @@
  
  .if ${_COMPILER_ARGS:Mfeatures}
 +.  if ${CC} == cc && ${CXX} == c++
-+   # This is DragonFly's base gcc50 compiler
++   # This is DragonFly's base gcc50/gcc80 compiler
 +   # Use a cache for DF rather than testing each feature.
 +COMPILER_FEATURES=	libstdc++ c89 c99 c11 gnu89 gnu99 gnu11 c++98 \
 +			c++0x c++11 c++14 gnu++98 gnu++11 dragonfly
@@ -33,7 +33,7 @@
  .if defined(_CXXINTERNAL_${_CXX_hash})
  _CXXINTERNAL=	${_CXXINTERNAL_${_CXX_hash}}
  .else
-@@ -156,6 +168,7 @@ PORTS_ENV_VARS+=		OUTPUT_${std:hash}_${_
+@@ -156,6 +168,7 @@ PORTS_ENV_VARS+=			CC_OUTPUT_${_CC_hash}
  COMPILER_FEATURES+=	${std}
  .endif
  .endfor
