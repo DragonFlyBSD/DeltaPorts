@@ -1,21 +1,19 @@
---- Makefile.orig	2018-02-28 15:34:53 UTC
+--- Makefile.orig	2018-05-08 19:49:48 UTC
 +++ Makefile
-@@ -18,8 +18,7 @@ OPTIONS_DEFINE=	BUNDLED_SSL DOCS NLS DTR
- OPTIONS_DEFAULT=DTRACE
- OPTIONS_SUB=	yes
+@@ -15,7 +15,7 @@ LICENSE_FILE=	${WRKSRC}/LICENSE
+ ONLY_FOR_ARCHS=		aarch64 amd64 armv6 armv7 i386 powerpc64
  
--OPTIONS_DEFAULT_FreeBSD_10=	BUNDLED_SSL
--OPTIONS_DEFAULT+=		${OPTIONS_DEFAULT_${OPSYS}_${OSREL:R}}
-+OPTIONS_DEFAULT+=		BUNDLED_SSL
+ OPTIONS_DEFINE=		BUNDLED_SSL DOCS NLS DTRACE
+-OPTIONS_DEFAULT=	BUNDLED_SSL DTRACE
++OPTIONS_DEFAULT=	BUNDLED_SSL
+ OPTIONS_SUB=		yes
  
  .if !exists(/usr/sbin/dtrace)
- OPTIONS_EXCLUDE+=	DTRACE
-@@ -79,9 +78,8 @@ IGNORE=		cannot build node.js with Libre
+@@ -76,9 +76,7 @@ IGNORE=		cannot build node.js with Libre
  
  .include <bsd.port.pre.mk>
  
--.if ${ARCH} == armv6 || ${ARCH} == armv7
-+# something is wrong with configure wrt to DF I think
+-.if ${ARCH} != amd64
  CONFIGURE_ARGS+=--openssl-no-asm
 -.endif
  

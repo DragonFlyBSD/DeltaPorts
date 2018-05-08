@@ -1,4 +1,4 @@
---- Makefile.common.orig	2018-01-14 06:19:02 UTC
+--- Makefile.common.orig	2018-05-08 19:39:36 UTC
 +++ Makefile.common
 @@ -37,9 +37,6 @@ LIB_DEPENDS+=	libdrm.so:graphics/libdrm
  .if ${COMPONENT} != libs
@@ -16,7 +16,7 @@
  # need LLVM for libEGL wherever possible, but mixing GCC and LLVM breaks Gallium
 -.if ${CHOSEN_COMPILER_TYPE} == clang \
 - || (${COMPONENT} == libs && ${ARCH} != sparc64)	# no working LLVM
- MESA_LLVM_VER?=	50
+ MESA_LLVM_VER?=	60
 -.endif
  
  .if "${MESA_LLVM_VER}" != ""
