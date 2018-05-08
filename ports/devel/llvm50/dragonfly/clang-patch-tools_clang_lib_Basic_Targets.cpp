@@ -1,6 +1,9 @@
---- tools/clang/lib/Basic/Targets.cpp.orig	2017-01-10 08:02:12.000000000 +0200
+Do not criple float128 support, allow to use headers like <cmath>.
+While there nuke, some leftover defines.
+
+--- tools/clang/lib/Basic/Targets.cpp.orig	2017-11-27 14:54:45.000000000 +0000
 +++ tools/clang/lib/Basic/Targets.cpp
-@@ -302,11 +302,10 @@ protected:
+@@ -318,11 +318,10 @@ protected:
                      MacroBuilder &Builder) const override {
      // DragonFly defines; list based off of gcc output
      Builder.defineMacro("__DragonFly__");
@@ -14,7 +17,7 @@
    }
  public:
    DragonFlyBSDTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
-@@ -315,6 +314,7 @@ public:
+@@ -331,6 +330,7 @@ public:
      default:
      case llvm::Triple::x86:
      case llvm::Triple::x86_64:
