@@ -1,6 +1,22 @@
---- Scripts/do-fetch.sh.orig	2016-06-21 09:15:07 UTC
+--- Scripts/do-fetch.sh.orig	2018-05-08 14:53:23 UTC
 +++ Scripts/do-fetch.sh
-@@ -131,7 +131,8 @@ for _file in "${@}"; do
+@@ -26,6 +26,15 @@ case ${dp_TARGET} in
+ 		;;
+ esac
+ 
++if [ ! -n "${DO_FETCH_ISLOCKED:=}" ]; then
++	for _file in "${@}"; do
++		file=${_file%%:*}
++		lkfile="`echo "$file" | md5`"
++		DO_FETCH_ISLOCKED=YES lockf -s ${lkfile}.lk sh $0 "${_file}" || exit 1
++	done
++	exit 0
++fi
++
+ for _file in "${@}"; do
+ 	file=${_file%%:*}
+ 
+@@ -141,7 +150,8 @@ for _file in "${@}"; do
  		case ${dp_TARGET} in
  			do-fetch|makesum)
  				${dp_ECHO_MSG} "=> Attempting to fetch ${site}${file}"
