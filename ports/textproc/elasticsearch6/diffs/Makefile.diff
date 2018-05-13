@@ -1,6 +1,23 @@
 --- Makefile.orig	2018-03-19 17:13:19 UTC
 +++ Makefile
-@@ -73,7 +73,7 @@ do-install:
+@@ -23,6 +23,7 @@ CONFLICTS=	elasticsearch-[0-9]* elasticsearch2-[0-9]* elasticsearch5-[0-9]*
+ USES=		cpe shebangfix
+ NO_ARCH=	yes
+ USE_JAVA=	yes
++JAVA_RUN=	yes
+ NO_BUILD=	yes
+ JAVA_VERSION=	1.8+
+ USE_RC_SUBR=	${PORTNAME}
+@@ -49,7 +50,7 @@ SEARCHGROUP?=	${SEARCHUSER}
+ USERS=		${SEARCHUSER}
+ GROUPS=		${SEARCHGROUP}
+ 
+-SUB_LIST=	ETCDIR=${ETCDIR} JAVA=${JAVA}
++SUB_LIST=	ETCDIR=${ETCDIR} JAVA=${JAVA} JAVA_HOME=${JAVA_HOME}
+ SUB_FILES=	pkg-message
+ 
+ post-patch:
+@@ -73,7 +74,7 @@ do-install:
  	(cd ${WRKSRC}/modules && ${COPYTREE_SHARE} . ${STAGEDIR}${PREFIX}/lib/elasticsearch/modules/)
  	${MKDIR} ${STAGEDIR}${PREFIX}/lib/elasticsearch/plugins
  	${MKDIR} ${STAGEDIR}${PREFIX}/libexec/elasticsearch
