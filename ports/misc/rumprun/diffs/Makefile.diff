@@ -1,0 +1,27 @@
+Port's scripts assume ld.bfd
+
+--- Makefile.orig	2018-03-15 17:02:52 UTC
++++ Makefile
+@@ -25,7 +25,7 @@ _BUILDRUMP_PROBE=${WRKSRC}/buildrump.sh/
+ .include <bsd.port.options.mk>
+ 
+ RUMPARCH=	${ARCH:S/amd64/x86_64/:S/i386/i486/}
+-RUMPABI=	${ARCH:S/amd64/netbsd/:S/i386/netbsdelf/}
++RUMPABI=	${ARCH:S/x86_64/netbsd/:S/i386/netbsdelf/}
+ PLIST_SUB=	ARCH=${RUMPARCH} ABI=${RUMPABI}
+ 
+ .if ${RUMPARCH:Mi486}
+@@ -35,11 +35,11 @@ PLIST_SUB+=	I386="@comment "
+ .endif
+ 
+ do-build:
+-	cd ${WRKSRC}; ${SETENV} CC=${CC} ./build-rr.sh -d ${PREFIX} -o objdir hw build
++	cd ${WRKSRC}; ${SETENV} CC=${CC} LDVER=ld.bfd ./build-rr.sh -d ${PREFIX} -o objdir hw build
+ 
+ do-install:
+ 	${SED} -i -e 's/^RRDEST=.*$$/RRDEST=\"${STAGEDIR:S/\//\\\//g}${PREFIX:S/\//\\\//g}\"/' ${WRKSRC}/objdir/config.sh
+-	cd ${WRKSRC}; ${SETENV} CC=${CC} ./build-rr.sh -o objdir hw install
++	cd ${WRKSRC}; ${SETENV} CC=${CC} LDVER=ld.bfd ./build-rr.sh -o objdir hw install
+ .for sec in 3 4 7
+ 	${MV} ${STAGEDIR}${PREFIX}/share/man/man${sec} ${STAGEDIR}${PREFIX}/man
+ .endfor
