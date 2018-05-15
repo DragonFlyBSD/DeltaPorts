@@ -1,7 +1,7 @@
---- Makefile.orig	2017-11-17 10:25:02 UTC
+--- Makefile.orig	2018-04-17 17:01:26 UTC
 +++ Makefile
-@@ -100,7 +100,7 @@ PLIST_FILES=		lib/rustlib/components \
- EXTRA_PATCHES+=		${PATCHDIR}/extra-patch-ino64
+@@ -100,7 +100,7 @@ NEED_ABI_PATCH=		1
+ NEED_ABI_PATCH=		0
  .endif
  
 -X_PY_ENV=	HOME="${WRKDIR}" \
@@ -9,7 +9,7 @@
  		OPENSSL_DIR="${OPENSSLBASE}"
  X_PY_CMD=	${PYTHON_CMD} ${WRKSRC}/x.py
  
-@@ -140,7 +140,6 @@ STDF=			${LIBSTD:T:R:S/lib//}.0.o
+@@ -135,7 +135,6 @@ RUST_STD_DIR=		${RUST_STD_BOOTSTRAP:T:R:
  
  post-extract:
  	@${MKDIR} \
@@ -17,3 +17,12 @@
  		${WRKSRC}/build/cache/${BOOTSTRAPS_DATE_${ARCH}:U${BOOTSTRAPS_DATE}}
  	${LN} -sf ${DISTDIR}/${DIST_SUBDIR}/${RUSTC_BOOTSTRAP} \
  		${WRKSRC}/build/cache/${BOOTSTRAPS_DATE_${ARCH}:U${BOOTSTRAPS_DATE}}
+@@ -177,7 +176,7 @@ post-patch:
+ 		${WRKSRC}/src/stage0.txt
+ # After patching crates, we need to update their corresponding
+ # `.cargo-checksum.json` to reflect the new checksums verified by Cargo.
+-	@for dir in "${WRKSRC}/src/vendor/libc" "${WRKSRC}/src/vendor/openssl" "${WRKSRC}/src/vendor/openssl-sys"; do \
++	@for dir in "${WRKSRC}/src/vendor/libc" "${WRKSRC}/src/vendor/openssl" "${WRKSRC}/src/vendor/openssl-sys" "${WRKSRC}/src/vendor/libgit2-sys"; do \
+ 		if ! test -d "$$dir"; then \
+ 			continue; \
+ 		fi; \
