@@ -1,0 +1,16 @@
+Our base binutils are fine. Avoid confusing the CC.
+
+--- Makefile.orig	2018-05-20 19:20:52 UTC
++++ Makefile
+@@ -95,9 +95,11 @@ CXX=		clang++50
+ # We need ar(1) from ports because the Chromium code uses the @file syntax.
+ # We then need to ensure ld(1) from ports is used because of the archives ar(1)
+ # generated.
++.if ${OPSYS} == FreeBSD
+ USE_BINUTILS=	yes
+ CC+=		"-B${LOCALBASE}/bin"
+ CXX+=		"-B${LOCALBASE}/bin"
++.endif
+ 
+ # The build system reads the environment variable $NINJA_PATH to decide whether
+ # to boostrap ninja or not (and also to invoke it afterwards). CC and CXX are
