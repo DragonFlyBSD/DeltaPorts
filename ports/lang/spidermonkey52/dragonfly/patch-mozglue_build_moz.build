@@ -1,5 +1,5 @@
---- ../../mozglue/build/moz.build.orig	2018-01-11 18:49:46 UTC
-+++ ../../mozglue/build/moz.build
+--- mozglue/build/moz.build.orig	2018-01-11 18:49:46 UTC
++++ mozglue/build/moz.build
 @@ -6,7 +6,7 @@
  
  # Build mozglue as a shared lib on Windows, OSX and Android.

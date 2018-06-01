@@ -1,5 +1,5 @@
---- ../../python/mozbuild/mozbuild/backend/recursivemake.py.orig	2018-01-11 18:49:46 UTC
-+++ ../../python/mozbuild/mozbuild/backend/recursivemake.py
+--- python/mozbuild/mozbuild/backend/recursivemake.py.orig	2018-01-11 18:49:46 UTC
++++ python/mozbuild/mozbuild/backend/recursivemake.py
 @@ -1307,11 +1307,11 @@ class RecursiveMakeBackend(CommonBackend
                                  raise Exception("Wildcards are only supported in the filename part of "
                                                  "srcdir-relative or absolute paths.")

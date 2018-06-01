@@ -1,5 +1,5 @@
---- old-configure.in.orig	2018-01-11 18:49:44 UTC
-+++ old-configure.in
+--- js/src/old-configure.in.orig	2018-01-11 18:49:44 UTC
++++ js/src/old-configure.in
 @@ -1623,16 +1623,21 @@ dnl ====================================
  dnl = Enable jemalloc
  dnl ========================================================

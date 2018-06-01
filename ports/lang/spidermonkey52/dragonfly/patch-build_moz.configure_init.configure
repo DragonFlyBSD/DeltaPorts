@@ -1,5 +1,5 @@
---- ../../build/moz.configure/init.configure.orig	2018-01-11 18:49:42 UTC
-+++ ../../build/moz.configure/init.configure
+--- build/moz.configure/init.configure.orig	2018-01-11 18:49:42 UTC
++++ build/moz.configure/init.configure
 @@ -344,8 +344,8 @@ def split_triplet(triplet):
      if cpu.endswith('86') or (cpu.startswith('i') and '86' in cpu):
          canonical_cpu = 'x86'

@@ -1,5 +1,5 @@
---- ../../config/rules.mk.orig	2018-01-11 18:49:42 UTC
-+++ ../../config/rules.mk
+--- config/rules.mk.orig	2018-01-11 18:49:42 UTC
++++ config/rules.mk
 @@ -418,7 +418,7 @@ endif # AIX
  #
  # Linux: add -Bsymbolic flag for components

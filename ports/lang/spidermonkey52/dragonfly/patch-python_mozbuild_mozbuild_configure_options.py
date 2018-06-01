@@ -1,5 +1,5 @@
---- ../../python/mozbuild/mozbuild/configure/options.py.orig	2018-01-11 18:49:46 UTC
-+++ ../../python/mozbuild/mozbuild/configure/options.py
+--- python/mozbuild/mozbuild/configure/options.py.orig	2018-01-11 18:49:46 UTC
++++ python/mozbuild/mozbuild/configure/options.py
 @@ -402,7 +402,11 @@ class CommandLineHelper(object):
  
      def add(self, arg, origin='command-line', args=None):
