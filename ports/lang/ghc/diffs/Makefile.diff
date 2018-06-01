@@ -1,20 +1,20 @@
---- Makefile.orig	2017-08-15 18:18:54 UTC
+--- Makefile.orig	2018-06-01 16:21:23 UTC
 +++ Makefile
-@@ -6,6 +6,7 @@ PORTVERSION=	${GHC_VERSION}
- PORTREVISION=	1
+@@ -5,6 +5,7 @@ PORTNAME=	ghc
+ PORTVERSION=	${GHC_VERSION}
  CATEGORIES=	lang haskell
  MASTER_SITES=	http://www.haskell.org/ghc/dist/${PORTVERSION}/:source \
 +		http://leaf.dragonflybsd.org/~marino/dports-src/:dflyboot \
- 		LOCAL/pgj/:boot
+ 		LOCAL/arrowd/:boot
  DISTFILES=	ghc-${PORTVERSION}-src${EXTRACT_SUFX}:source
  
-@@ -89,8 +90,26 @@ LOCALBASE?=	/usr/local
+@@ -88,8 +89,26 @@ LOCALBASE?=	/usr/local
  .include <bsd.port.options.mk>
  
  .if empty(PORT_OPTIONS:MBOOT)
 +.  if ${OPSYS} == "FreeBSD"
 +
- BOOT_GHC_VERSION=	7.10.2
+ BOOT_GHC_VERSION=	8.4.2
  DISTFILES+=		ghc-${BOOT_GHC_VERSION}-boot-${ARCH}-freebsd${EXTRACT_SUFX}:boot
 +
 +.  elif ${OPSYS} == "DragonFly"
@@ -34,4 +34,4 @@
 +
  .endif # MBOOT
  
- # LLVM is still not properly supported, further it does not make sense to have
+ .if ${OSVERSION} < 1200000

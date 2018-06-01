@@ -1,14 +1,14 @@
---- Makefile.orig	2016-04-06 16:33:41 UTC
+--- Makefile.orig	2018-06-01 16:16:18 UTC
 +++ Makefile
-@@ -15,6 +15,7 @@ LICENSE_FILE=	${WRKSRC}/COPYING
+@@ -14,6 +14,7 @@ LICENSE_FILE=	${WRKSRC}/COPYING
  
  LIB_DEPENDS=	libexpat.so:textproc/expat2 \
- 		libmozjs-17.0.so:lang/spidermonkey170
+ 		libmozjs-52.so:lang/spidermonkey52
 +LIB_DEPENDS+=	libxml2.so:textproc/libxml2
  RUN_DEPENDS=	dbus-launch:devel/dbus
  
  USERS=		polkitd
-@@ -29,7 +30,6 @@ CONFIGURE_ARGS=	--disable-gtk-doc-html \
+@@ -28,7 +29,6 @@ CONFIGURE_ARGS=	--disable-gtk-doc-html \
  		--without-html-dir \
  		--with-authfw=pam \
  		--with-pam-include=system \
