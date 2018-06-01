@@ -1,14 +1,13 @@
---- Uses/kde.mk.orig	2017-09-13 12:56:26 UTC
+--- Uses/kde.mk.orig	2018-06-01 14:51:32 UTC
 +++ Uses/kde.mk
-@@ -217,9 +217,10 @@ _USE_KDE4_ALL+=		akonadi attica automoc4
- _USE_FRAMEWORKS_TIER1=	apidox archive attica5 breeze-icons codecs config \
- 			coreaddons dbusaddons dnssd i18n idletime itemmodels \
- 			itemviews kirigami2 oxygen-icons5 plotting prison solid \
--			sonnet syntaxhighlighting threadweaver wayland \
-+			sonnet syntaxhighlighting threadweaver \
- 			widgetsaddons windowsystem
+@@ -247,8 +247,9 @@ _USE_FRAMEWORKS_TIER1=	apidox archive at
+ 			coreaddons dbusaddons dnssd holidays i18n idletime itemmodels \
+ 			itemviews kirigami2 oxygen-icons5 plotting prison \
+ 			qqc2-desktop-style solid sonnet syntaxhighlighting \
+-			threadweaver wayland widgetsaddons windowsystem
++			threadweaver widgetsaddons windowsystem
  # NOT LISTED TIER1: modemmanagerqt networkmanagerqt (not applicable)
 +# NOT AVAILABLE DF: wayland
  
- _USE_FRAMEWORKS_TIER2=	auth completion crash doctools filemetadata5 \
- 			kimageformats jobwidgets notifications package \
+ _USE_FRAMEWORKS_TIER2=	auth completion crash doctools \
+ 			filemetadata kimageformats jobwidgets notifications \
