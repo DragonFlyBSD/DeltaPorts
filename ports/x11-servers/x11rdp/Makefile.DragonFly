@@ -1,3 +1,0 @@
-IGNORE=	has never built, but takes 20-plus minutes to fail
-
-USES+= guessfix
