@@ -1,0 +1,13 @@
+--- Makefile.orig	2018-06-01 17:57:18 UTC
++++ Makefile
+@@ -63,10 +63,6 @@ UTF8_CFLAGS=	-DJS_C_STRINGS_ARE_UTF8
+ 
+ .include <bsd.port.pre.mk>
+ 
+-.if ${ARCH} == amd64
+-CONFIGURE_TARGET=x86_64-portbld-freebsd${OSREL}
+-.endif
+-
+ post-patch:
+ # Skip some tests because bundled icu differs from system
+ 	@${RM}  ${WRKSRC}/tests/test262/intl402/ch10/10.2/10.2.3_b.js \
