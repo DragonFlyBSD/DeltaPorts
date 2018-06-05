@@ -1,4 +1,4 @@
---- Makefile.orig	2018-06-01 16:21:23 UTC
+--- Makefile.orig	2018-06-05 01:11:08 UTC
 +++ Makefile
 @@ -5,6 +5,7 @@ PORTNAME=	ghc
  PORTVERSION=	${GHC_VERSION}
@@ -8,7 +8,7 @@
  		LOCAL/arrowd/:boot
  DISTFILES=	ghc-${PORTVERSION}-src${EXTRACT_SUFX}:source
  
-@@ -88,8 +89,26 @@ LOCALBASE?=	/usr/local
+@@ -88,8 +89,22 @@ LOCALBASE?=	/usr/local
  .include <bsd.port.options.mk>
  
  .if empty(PORT_OPTIONS:MBOOT)
@@ -19,12 +19,8 @@
 +
 +.  elif ${OPSYS} == "DragonFly"
 +
-+BOOT_GHC_VERSION=	7.10.2
-+.    if exists (/usr/lib/priv/libprivate_ncursesw.so)
-+DISTFILES+=		ghc-${BOOT_GHC_VERSION}-boot-${ARCH}-dragonfly2.tar.xz:dflyboot
-+.    else
++BOOT_GHC_VERSION=	8.0.2
 +DISTFILES+=		ghc-${BOOT_GHC_VERSION}-boot-${ARCH}-dragonfly.tar.xz:dflyboot
-+.    endif
 +CONFIGURE_TARGET=	${ARCH}-portbld-dragonfly
 +CONFIGURE_ENV+=		BOOTDIR=${BOOT_DIR} LBASE=${LOCALBASE}
 +
@@ -35,3 +31,16 @@
  .endif # MBOOT
  
  .if ${OSVERSION} < 1200000
+@@ -190,12 +205,6 @@ post-patch:
+ 		s|%%AR%%|${AR}|; \
+ 		s|%%LD%%|${LD}|' \
+ 		${WRKSRC}/libraries/Cabal/Cabal/Distribution/Simple/Program/Builtin.hs
+-.if empty(PORT_OPTIONS:MBOOT)
+-	@${REINPLACE_CMD} -e '/^mandir/d' ${BOOT_DIR}/mk/build.mk
+-	@${REINPLACE_CMD} -e '/^infodir/d' ${BOOT_DIR}/mk/build.mk
+-	@${REINPLACE_CMD} -e '/^docdir/d' ${BOOT_DIR}/mk/build.mk
+-	@${REINPLACE_CMD} -e '/^htmldir/d' ${BOOT_DIR}/mk/build.mk
+-.endif
+ 
+ pre-configure: apply-slist
+ 	# Copy the subbed build.mk to the proper position
