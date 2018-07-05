@@ -1,2 +1,0 @@
-# /usr/local/lib/libsqlite3.a(sqlite3.o):function fts5Bm25Function: error: undefined reference to 'log'
-IGNORE=	unneeded, plus libsqlite.a linking error

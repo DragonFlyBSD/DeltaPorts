@@ -1,3 +1,0 @@
-IGNORE=	Legacy version no longer builds 
-# although patches from www/node would go a long way
-# Don't bother with this unless somebody specifically requests it.
