@@ -1,3 +1,4 @@
+IGNORE=		Fails to patch on DFly
 
 # zrj: avoid header conflict w/ kerberos (krb5) in internal "Elektra" redist
 dfly-patch:

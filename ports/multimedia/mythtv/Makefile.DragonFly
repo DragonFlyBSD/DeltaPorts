@@ -1,3 +1,4 @@
+IGNORE=		fails to patch on DFly
 
 # zrj: don't use -lthr and hack SIGRTMIN to 50
 dfly-patch:
