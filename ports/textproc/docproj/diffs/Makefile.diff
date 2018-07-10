@@ -1,0 +1,11 @@
+--- Makefile.orig	2018-07-10 11:46:11 UTC
++++ Makefile
+@@ -21,7 +21,7 @@ RUN_DEPENDS=	links:www/links1 \
+ 		docbook>0:textproc/docbook \
+ 		${LOCALBASE}/share/xml/xmlcharent/catalog:textproc/xmlcharent \
+ 		p5-XML-Parser>=2.41:textproc/p5-XML-Parser \
+-		zip:archivers/zip
++		#zip:archivers/zip
+ 
+ USES=		ghostscript:run metaport perl5
+ USE_PERL5=	run

@@ -1,0 +1,8 @@
+--- pkg-plist.orig	2018-07-10 15:04:28 UTC
++++ pkg-plist
+@@ -2399,5 +2399,3 @@ share/applications/paraview.desktop
+ share/icons/hicolor/22x22/apps/paraview.png
+ share/icons/hicolor/32x32/apps/paraview.png
+ share/icons/hicolor/96x96/apps/paraview.png
+-share/vtkm-1.8/VTKmLICENSE.txt
+-share/vtkm-1.8/VTKmREADME.md

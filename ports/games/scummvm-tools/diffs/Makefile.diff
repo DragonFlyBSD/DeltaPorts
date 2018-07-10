@@ -1,0 +1,13 @@
+--- Makefile.orig	2018-07-10 11:53:30 UTC
++++ Makefile
+@@ -12,7 +12,9 @@ COMMENT=	Tools for use with the SCUMMVM
+ LICENSE=	GPLv2
+ LICENSE_FILE=	${WRKSRC}/COPYING
+ 
+-RUN_DEPENDS:=	${BUILD_DEPENDS}
++RUN_DEPENDS=	lame:audio/lame \
++		flac:audio/flac \
++		oggenc:audio/vorbis-tools
+ BUILD_DEPENDS=	lame:audio/lame \
+ 		flac:audio/flac \
+ 		oggenc:audio/vorbis-tools
