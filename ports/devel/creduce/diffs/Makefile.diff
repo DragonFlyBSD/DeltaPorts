@@ -1,18 +1,15 @@
---- Makefile.orig	2017-06-23 20:04:49 UTC
+--- Makefile.orig	2018-08-22 16:51:12 UTC
 +++ Makefile
-@@ -24,11 +24,10 @@ BROKEN_powerpc64=	fails to configure: ca
+@@ -23,11 +23,7 @@ BROKEN_powerpc64=	fails to configure: ca
  
  GNU_CONFIGURE=	yes
  CONFIGURE_FLAGS=	--with-llvm=${LOCALBASE}
--CONFIGURE_ENV=	LLVM_CONFIG=${LOCALBASE}/bin/llvm-config40 \
--		CC=${LOCALBASE}/bin/clang40 \
--		CXX=${LOCALBASE}/bin/clang++40 \
--		CPP=${LOCALBASE}/bin/clang-cpp40
+-CONFIGURE_ENV=	LLVM_CONFIG=${LOCALBASE}/bin/llvm-config60 \
+-		CC=${LOCALBASE}/bin/clang60 \
+-		CXX=${LOCALBASE}/bin/clang++60 \
+-		CPP=${LOCALBASE}/bin/clang-cpp60
  
 -USES=		autoreconf gmake libtool perl5
 +USES=		gmake perl5
-+
-+dfly-patch:
-+	${REINPLACE_CMD} 's,llvm-config,llvm-config40,g' ${WRKSRC}/configure
  
  .include <bsd.port.mk>

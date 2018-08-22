@@ -1,4 +1,4 @@
---- Makefile.orig	2018-01-11 19:25:13 UTC
+--- Makefile.orig	2018-08-22 16:59:11 UTC
 +++ Makefile
 @@ -50,7 +50,7 @@ MAKE_ENV+=	PYPY_LOCALBASE=${LOCALBASE} L
  PACKAGE_ARGS?=	--without-gdbm --without-sqlite3 --without-tk
@@ -13,7 +13,7 @@
  .include "${MASTERDIR}/bsd.pypy.mk"
  .include <bsd.port.pre.mk>
  
--.if ${OPSYS} == FreeBSD && (${OSVERSION} < 1100000 || (${ARCH} != i386 && ${ARCH} != amd64))
+-.if ${OPSYS} == FreeBSD && ${ARCH} != i386 && ${ARCH} != amd64
  PYPY_ARGS=	--withoutmod-_vmprof
 -.else
 -LIB_DEPENDS+=	libunwind.so:devel/libunwind

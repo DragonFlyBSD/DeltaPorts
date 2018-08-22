@@ -1,18 +1,21 @@
---- Makefile.orig	2018-03-03 01:50:05 UTC
+--- Makefile.orig	2018-08-22 16:46:58 UTC
 +++ Makefile
-@@ -42,15 +42,7 @@ OPENMPI2_CONFIGURE_ENV=	MPI_HOME=${LOCAL
+@@ -45,18 +45,6 @@ OPENMPI2_CONFIGURE_ENV=	MPI_HOME=${LOCAL
  
  .include <bsd.port.options.mk>
  
--.if ${GCC_DEFAULT} >= 7
+-.if ${GCC_DEFAULT} >= 8
+-PLIST_SUB+=	SOVERSION=3
+-.elif ${GCC_DEFAULT} == 7
 -PLIST_SUB+=	SOVERSION=2
 -.elif ${GCC_DEFAULT} == 6
 -PLIST_SUB+=	SOVERSION=1
 -.elif ${GCC_DEFAULT} == 5
- PLIST_SUB+=	SOVERSION=0
+-PLIST_SUB+=	SOVERSION=0
 -.else
 -IGNORE=		requires GCC 5 or higher
 -.endif
- 
+-
  post-patch:
  	@${REINPLACE_CMD} '/mod_dir_tail/s/$${CMAKE_Fortran_COMPILER_VERSION}/${_GCC_VER}/' \
+ 		${WRKSRC}/CMakeLists.txt

@@ -1,14 +1,6 @@
---- Makefile.orig	2017-10-30 18:20:46 UTC
+--- Makefile.orig	2018-08-22 16:52:49 UTC
 +++ Makefile
-@@ -57,6 +57,7 @@ INSTALL_WRKSRC=	${NOWIDEC_WRKSRC}
- 
- PLIST_SUB+=	ABI_VER=6 \
- 		REL_VER=6.0 \
-+		DEBUG="@comment " \
- 		WIDEC_EXAMPLESDIR=${WIDEC_EXAMPLESDIR:S,${PREFIX}/,,} \
- 		NOWIDEC_EXAMPLESDIR=${NOWIDEC_EXAMPLESDIR:S,${PREFIX}/,,}
- 
-@@ -87,8 +88,6 @@ DEBUG_CONFIGURE_WITH=	debug
+@@ -86,8 +86,6 @@ DEBUG_CONFIGURE_WITH=	debug
  
  OPTIONS_SUB=yes
  
