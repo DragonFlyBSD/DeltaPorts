@@ -1,5 +1,0 @@
-# For now, gcc 4.7 is available as the alternative base compiler in
-# DragonFly.  Other than contrived narrow use cases, this ports version
-# of GCC is no longer needed.
-
-IGNORE=	No ports depend on this unmaintained compiler; use a newer one
