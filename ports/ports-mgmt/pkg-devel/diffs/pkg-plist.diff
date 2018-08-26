@@ -1,4 +1,4 @@
---- pkg-plist.orig	2015-04-08 18:43:24 UTC
+--- pkg-plist.orig	2018-08-26 20:24:27 UTC
 +++ pkg-plist
 @@ -5,6 +5,8 @@ etc/periodic/security/410.pkg-audit
  etc/periodic/security/460.pkg-checksum
@@ -9,9 +9,3 @@
  include/pkg.h
  lib/libpkg.a
  lib/libpkg.so
-@@ -52,5 +54,4 @@ man/man8/pkg-which.8.gz
- man/man8/pkg.8.gz
- sbin/pkg
- sbin/pkg-static
--sbin/pkg2ng
- share/zsh/site-functions/_pkg
