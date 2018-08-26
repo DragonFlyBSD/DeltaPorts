@@ -1,0 +1,10 @@
+--- files/Makefile.orig	2018-08-26 20:55:00 UTC
++++ files/Makefile
+@@ -1,6 +1,6 @@
+ # $FreeBSD$
+ 
+-LIB_CXX= 	tinyxml
++LIB= 	tinyxml
+ SRCS=	tinystr.cpp tinyxmlerror.cpp tinyxml.cpp tinyxmlparser.cpp
+ INCS=	tinyxml.h tinystr.h
+ 
