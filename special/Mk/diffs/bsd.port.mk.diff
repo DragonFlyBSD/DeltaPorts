@@ -1,4 +1,4 @@
---- bsd.port.mk.orig	2018-07-05 23:05:12 UTC
+--- bsd.port.mk.orig	2018-08-30 18:34:35 UTC
 +++ bsd.port.mk
 @@ -43,7 +43,8 @@ FreeBSD_MAINTAINER=	portmgr@FreeBSD.org
  #				  makefile is being used on.  Automatically set to
@@ -135,7 +135,7 @@
  TEMPLATES?=		${PORTSDIR}/Templates
  KEYWORDS?=		${PORTSDIR}/Keywords
  
-@@ -1677,7 +1683,7 @@ _WRKDIR=	work
+@@ -1680,7 +1686,7 @@ _WRKDIR=	work
  _WRKDIR=	work-${FLAVOR}
  .endif
  
@@ -144,7 +144,7 @@
  BINARY_LINKDIR=	${WRKDIR}/.bin
  PATH:=			${BINARY_LINKDIR}:${PATH}
  .if !${MAKE_ENV:MPATH=*} && !${CONFIGURE_ENV:MPATH=*}
-@@ -1749,7 +1755,14 @@ PLIST_SUB_SED?= ${PLIST_SUB_SED_tmp3:C/(
+@@ -1752,7 +1758,14 @@ PLIST_SUB_SED?= ${PLIST_SUB_SED_tmp3:C/(
  
  # kludge to strip trailing whitespace from CFLAGS;
  # sub-configure will not # survive double space
@@ -160,7 +160,7 @@
  
  .if defined(WITHOUT_CPU_CFLAGS)
  .if defined(_CPUCFLAGS)
-@@ -1796,19 +1809,6 @@ PATCH_DEPENDS+=		${LOCALBASE}/bin/unzip:
+@@ -1799,19 +1812,6 @@ PATCH_DEPENDS+=		${LOCALBASE}/bin/unzip:
  
  # Check the compatibility layer for amd64/ia64
  
@@ -180,11 +180,13 @@
  .if defined(IA32_BINARY_PORT) && ${ARCH} != "i386"
  .if ${ARCH} == "amd64" || ${ARCH} == "ia64"
  .if !defined(HAVE_COMPAT_IA32_KERN)
-@@ -1835,7 +1835,17 @@ PKG_DEPENDS+=	${LOCALBASE}/sbin/pkg:${PK
+@@ -1837,8 +1837,18 @@ PKG_ORIGIN=		ports-mgmt/pkg-devel
+ PKG_DEPENDS+=	${LOCALBASE}/sbin/pkg:${PKG_ORIGIN}
  .endif
  
- .if defined(USE_GCC)
+-.if defined(USE_GCC)
 -.include "${PORTSDIR}/Mk/bsd.gcc.mk"
++.if defined(USE_GCC) || defined(USE_GCC_VERSION)
 +.include "${PORTSDIR}/Mk/bsd.df.gcc.mk"
 +.else
 +.  if !defined(USE_GNUSTEP)
@@ -199,7 +201,7 @@
  .endif
  
  .if defined(LLD_UNSAFE) && ${/usr/bin/ld:L:tA} == /usr/bin/ld.lld
-@@ -2042,8 +2052,10 @@ DISTINFO_FILE?=		${MASTERDIR}/distinfo
+@@ -2045,8 +2055,10 @@ DISTINFO_FILE?=		${MASTERDIR}/distinfo
  MAKE_FLAGS?=	-f
  MAKEFILE?=		Makefile
  MAKE_CMD?=		${BSDMAKE}
@@ -210,7 +212,7 @@
  			CC="${CC}" CFLAGS="${CFLAGS}" \
  			CPP="${CPP}" CPPFLAGS="${CPPFLAGS}" \
  			LDFLAGS="${LDFLAGS}" LIBS="${LIBS}" \
-@@ -2080,7 +2092,7 @@ MAKE_JOBS_NUMBER=	1
+@@ -2083,7 +2095,7 @@ MAKE_JOBS_NUMBER=	1
  _MAKE_JOBS_NUMBER:=	${MAKE_JOBS_NUMBER}
  .else
  .if !defined(_SMP_CPUS)
@@ -219,7 +221,7 @@
  .endif
  _EXPORTED_VARS+=	_SMP_CPUS
  _MAKE_JOBS_NUMBER=	${_SMP_CPUS}
-@@ -2632,7 +2644,7 @@ CONFIG_SITE?=		${PORTSDIR}/Templates/con
+@@ -2635,7 +2647,7 @@ CONFIG_SITE?=		${PORTSDIR}/Templates/con
  .if defined(GNU_CONFIGURE)
  # Maximum command line length
  .if !defined(CONFIGURE_MAX_CMD_LEN)
@@ -228,7 +230,7 @@
  .endif
  _EXPORTED_VARS+=	CONFIGURE_MAX_CMD_LEN
  GNU_CONFIGURE_PREFIX?=	${PREFIX}
-@@ -2674,6 +2686,8 @@ SET_LATE_CONFIGURE_ARGS= \
+@@ -2677,6 +2689,8 @@ SET_LATE_CONFIGURE_ARGS= \
  SCRIPTS_ENV+=	CURDIR=${MASTERDIR} DISTDIR=${DISTDIR} \
  		  WRKDIR=${WRKDIR} WRKSRC=${WRKSRC} PATCHDIR=${PATCHDIR} \
  		  SCRIPTDIR=${SCRIPTDIR} FILESDIR=${FILESDIR} \
@@ -237,7 +239,7 @@
  		  PORTSDIR=${PORTSDIR} PREFIX=${PREFIX} LOCALBASE=${LOCALBASE}
  
  .if defined(BATCH)
-@@ -2756,7 +2770,7 @@ DESKTOPDIR?=		${PREFIX}/share/applicatio
+@@ -2759,7 +2773,7 @@ DESKTOPDIR?=		${PREFIX}/share/applicatio
  
  # Check the machine architectures
  .if defined(ONLY_FOR_ARCHS)
@@ -246,7 +248,7 @@
  .if ${ARCH:M${__ARCH}} != ""
  __ARCH_OK?=		1
  .endif
-@@ -2766,7 +2780,7 @@ __ARCH_OK?=		1
+@@ -2769,7 +2783,7 @@ __ARCH_OK?=		1
  .endif
  
  .if defined(NOT_FOR_ARCHS)
@@ -255,7 +257,7 @@
  .if ${ARCH:M${__NARCH}} != ""
  .undef __ARCH_OK
  .endif
-@@ -2775,9 +2789,9 @@ __ARCH_OK?=		1
+@@ -2778,9 +2792,9 @@ __ARCH_OK?=		1
  
  .if !defined(__ARCH_OK)
  .if defined(ONLY_FOR_ARCHS)
@@ -267,7 +269,7 @@
  .endif
  IGNORE+=	while you are running ${ARCH}
  
-@@ -2924,6 +2938,7 @@ all:
+@@ -2927,6 +2941,7 @@ all:
  	  DISTDIR=${DISTDIR} WRKDIR=${WRKDIR} WRKSRC=${WRKSRC} \
  	  PATCHDIR=${PATCHDIR} SCRIPTDIR=${SCRIPTDIR} \
  	  FILESDIR=${FILESDIR} PORTSDIR=${PORTSDIR} PREFIX=${PREFIX} \
@@ -275,7 +277,7 @@
  	  BUILD_DEPENDS="${BUILD_DEPENDS}" RUN_DEPENDS="${RUN_DEPENDS}" \
  	  CONFLICTS="${CONFLICTS}" \
  	${ALL_HOOK}
-@@ -3183,6 +3198,7 @@ do-patch:
+@@ -3186,6 +3201,7 @@ do-patch:
  			dp_OPSYS="${OPSYS}" \
  			dp_PATCH="${PATCH}" \
  			dp_PATCHDIR="${PATCHDIR}" \
@@ -283,7 +285,7 @@
  			dp_PATCHFILES="${_PATCHFILES2}" \
  			dp_PATCH_ARGS=${PATCH_ARGS:Q} \
  			dp_PATCH_DEBUG_TMP="${PATCH_DEBUG_TMP}" \
-@@ -3409,7 +3425,7 @@ _PORTS_DIRECTORIES+=	${PKGLATESTREPOSITO
+@@ -3412,7 +3428,7 @@ _PORTS_DIRECTORIES+=	${PKGLATESTREPOSITO
  _EXTRA_PACKAGE_TARGET_DEP+=	${PKGLATESTFILE}
  
  ${PKGLATESTFILE}: ${PKGFILE} ${PKGLATESTREPOSITORY}
@@ -292,7 +294,7 @@
  .  endif
  
  .endif
-@@ -3768,6 +3784,7 @@ do-clean:
+@@ -3771,6 +3787,7 @@ do-clean:
  	@if [ -d ${WRKDIR} ]; then \
  		if [ -w ${WRKDIR} ]; then \
  			${RM} -r ${WRKDIR}; \
@@ -300,7 +302,7 @@
  		else \
  			${ECHO_MSG} "===>   ${WRKDIR} not writable, skipping"; \
  		fi; \
-@@ -4150,7 +4167,7 @@ FETCH_LIST?=	for i in $$deps; do \
+@@ -4153,7 +4170,7 @@ FETCH_LIST?=	for i in $$deps; do \
  			else	\
  				continue;	\
  			fi;;	\
@@ -309,7 +311,7 @@
  				continue;	\
  			fi;;	\
  		esac;	\
-@@ -4474,10 +4491,15 @@ _SUB_LIST_TEMP=	${SUB_LIST:S/$/!g/:S/^/
+@@ -4477,10 +4494,15 @@ _SUB_LIST_TEMP=	${SUB_LIST:S/$/!g/:S/^/
  apply-slist:
  .if defined(SUB_FILES)
  .for file in ${SUB_FILES}
@@ -328,7 +330,7 @@
  .endif
  .endfor
  .for i in pkg-message pkg-install pkg-deinstall pkg-req
-@@ -5251,6 +5273,7 @@ _PATCH_DEP=		extract
+@@ -5254,6 +5276,7 @@ _PATCH_DEP=		extract
  _PATCH_SEQ=		050:ask-license 100:patch-message 150:patch-depends \
  				300:pre-patch 450:pre-patch-script 500:do-patch \
  				700:post-patch 850:post-patch-script \
