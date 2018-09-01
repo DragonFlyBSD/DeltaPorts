@@ -1,15 +1,15 @@
---- Makefile.orig	2018-04-17 17:01:26 UTC
+--- Makefile.orig	2018-09-01 18:30:45 UTC
 +++ Makefile
-@@ -100,7 +100,7 @@ NEED_ABI_PATCH=		1
- NEED_ABI_PATCH=		0
- .endif
+@@ -95,7 +95,7 @@ PLIST_FILES=		lib/rustlib/components \
+ 
+ .include <bsd.port.pre.mk>
  
 -X_PY_ENV=	HOME="${WRKDIR}" \
 +X_PY_ENV+=	HOME="${WRKDIR}" \
  		OPENSSL_DIR="${OPENSSLBASE}"
  X_PY_CMD=	${PYTHON_CMD} ${WRKSRC}/x.py
  
-@@ -135,7 +135,6 @@ RUST_STD_DIR=		${RUST_STD_BOOTSTRAP:T:R:
+@@ -130,7 +130,6 @@ RUST_STD_DIR=		${RUST_STD_BOOTSTRAP:T:R:
  
  post-extract:
  	@${MKDIR} \
@@ -17,12 +17,33 @@
  		${WRKSRC}/build/cache/${BOOTSTRAPS_DATE_${ARCH}:U${BOOTSTRAPS_DATE}}
  	${LN} -sf ${DISTDIR}/${DIST_SUBDIR}/${RUSTC_BOOTSTRAP} \
  		${WRKSRC}/build/cache/${BOOTSTRAPS_DATE_${ARCH}:U${BOOTSTRAPS_DATE}}
-@@ -177,7 +176,7 @@ post-patch:
- 		${WRKSRC}/src/stage0.txt
- # After patching crates, we need to update their corresponding
- # `.cargo-checksum.json` to reflect the new checksums verified by Cargo.
--	@for dir in "${WRKSRC}/src/vendor/libc" "${WRKSRC}/src/vendor/openssl" "${WRKSRC}/src/vendor/openssl-sys"; do \
-+	@for dir in "${WRKSRC}/src/vendor/libc" "${WRKSRC}/src/vendor/openssl" "${WRKSRC}/src/vendor/openssl-sys" "${WRKSRC}/src/vendor/libgit2-sys"; do \
- 		if ! test -d "$$dir"; then \
- 			continue; \
- 		fi; \
+@@ -184,14 +183,6 @@ post-patch:
+ 			${CP} "$$file" "$$file.orig"; \
+ 		done; \
+ 	done
+-
+-.if defined(WITH_CCACHE_BUILD) && !defined(NO_CCACHE)
+-CCACHE_VALUE=	"${CCACHE_WRAPPER_PATH:C,/libexec/ccache$,,}/bin/ccache"
+-.else
+-CCACHE_VALUE=	false
+-.endif
+-
+-do-configure:
+ 	${SED} -E \
+ 		-e 's,%PREFIX%,${PREFIX},' \
+ 		-e 's,%SYSCONFDIR%,${PREFIX}/etc,' \
+@@ -202,6 +193,14 @@ do-configure:
+ 		-e 's,%CCACHE%,${CCACHE_VALUE},' \
+ 		< ${FILESDIR}/config.toml \
+ 		> ${WRKSRC}/config.toml
++
++.if defined(WITH_CCACHE_BUILD) && !defined(NO_CCACHE)
++CCACHE_VALUE=	"${CCACHE_WRAPPER_PATH:C,/libexec/ccache$,,}/bin/ccache"
++.else
++CCACHE_VALUE=	false
++.endif
++
++do-configure:
+ # The FreeBSD 10 autotools fix may modify some files just before
+ # `do-configure`. Like after `extra-path-ino64`, we need to update
+ # `.cargo-checksum.json`.

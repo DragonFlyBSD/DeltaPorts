@@ -1,3 +1,4 @@
+BROKEN=		server broken (and client includes makefile)
 
 # shebang fix
 dfly-patch:

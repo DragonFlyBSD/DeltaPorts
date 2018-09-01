@@ -14,6 +14,13 @@ X_PY_ENV+="LD_LIBRARY_PATH=${WRKSRC}/build/${RUST_TARGET}/stage0/lib"
 EXTRA_PATCHES+=	${DFLY_FILESDIR}/extra-patch-src_libunwind_build.rs
 
 dfly-patch:
-	${REINPLACE_CMD} -e 's|@GCCSPATH@|${_GCC_RUNTIME}|' \
-		${WRKSRC}/src/libunwind/build.rs
+	${ECHO} 'cc = "${CC}"' >> ${WRKSRC}/config.toml
+	${ECHO} 'cxx = "${CXX}"' >> ${WRKSRC}/config.toml
+#	${ECHO} 'linker = "${PREFIX}/bin/${CC}"' >> ${WRKSRC}/config.toml
+	${ECHO} 'linker = "${CC}"' >> ${WRKSRC}/config.toml
+
+.  if defined(PACKAGE_BUILDING)
+pre-configure:
+	(cd ${PREFIX}/lib/gcc6 && ${LN} -s libgcc_s.so libgcc_pic.so)
+.  endif
 .endif
