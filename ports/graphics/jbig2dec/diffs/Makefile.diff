@@ -1,17 +1,17 @@
---- Makefile.orig	2016-11-02 22:16:15 UTC
+--- Makefile.orig	2018-09-05 03:04:18 UTC
 +++ Makefile
-@@ -22,7 +22,10 @@ GNU_CONFIGURE=	yes
+@@ -20,6 +20,10 @@ GNU_CONFIGURE=	yes
  INSTALL_TARGET=	install-strip
  USE_LDCONFIG=	yes
  USES=		autoreconf libtool
 +USES+=		ssl
 +LDFLAGS+=	-L${OPENSSLLIB} -lcrypto
- 
++
 +FILESDIR=	${.CURDIR}/does-not-exist
- SHEBANG_FILES=	test_jbig2dec.py
- python_CMD=	${PYTHON_CMD}
  
-@@ -33,14 +36,7 @@ TESTS_DISTFILES=	jb2streams${EXTRACT_SUF
+ GH_ACCOUNT=	ArtifexSoftware
+ USE_GITHUB=	yes
+@@ -34,13 +38,6 @@ TESTS_DISTFILES=	jb2streams${EXTRACT_SUF
  TESTS_TEST_TARGET=	check-TESTS
  TESTS_USES=		python:build shebangfix
  
@@ -19,10 +19,9 @@
 -	@${RM} ${WRKSRC}/getopt* ${WRKSRC}/sha1.h
 -	@${REINPLACE_CMD} -E 's|SHA1_Final\( *([^,]+), *([^\)]+)\)|SHA1_Final(\2, \1)|' ${WRKSRC}/jbig2dec.c ${WRKSRC}/sha1.c
 -
- post-patch-PNG-on:
- 	@${REINPLACE_CMD} 's|png_check_sig|png_sig_cmp|g' ${WRKSRC}/configure
- 
 -post-patch-TESTS-off:
--	@${REINPLACE_CMD} -e '/^TESTS = / s| test_jbig2dec.py||' ${WRKSRC}/Makefile.in
+-	@${REINPLACE_CMD} -e '/^TESTS = / s| test_jbig2dec.py||' ${WRKSRC}/Makefile.am
 -
- .include <bsd.port.mk>
+ pre-configure:
+ 	@cd ${WRKSRC}/ && ${SH} autogen.sh
+ 

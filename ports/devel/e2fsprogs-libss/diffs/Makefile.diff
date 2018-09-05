@@ -1,7 +1,7 @@
---- Makefile.orig	2017-01-03 16:28:18.000000000 +0200
+--- Makefile.orig	2018-09-05 03:07:11 UTC
 +++ Makefile
-@@ -31,4 +31,7 @@ pre-build:
- 	@(cd ${WRKSRC}/lib/ss && compile_et ss_err.et && \
+@@ -26,4 +26,7 @@ pre-build:
+ 	(cd ${WRKSRC}/lib/ss && compile_et ss_err.et && \
  	${REINPLACE_CMD} -f ${FILESDIR}/fix-ss_err.h.sed ss_err.h)
  
 +LIB_DEPENDS+= libcom_err.so:security/krb5
