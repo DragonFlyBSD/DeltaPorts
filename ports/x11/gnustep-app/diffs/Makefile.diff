@@ -1,4 +1,4 @@
---- Makefile.orig	2017-08-26 20:55:43 UTC
+--- Makefile.orig	2018-10-11 20:17:36 UTC
 +++ Makefile
 @@ -24,12 +24,10 @@ RUN_DEPENDS=	aclock>0:x11-clocks/aclock
  		cartotheque>0:deskutils/cartotheque \
@@ -13,12 +13,3 @@
  		fortytwo-bdb>0:databases/fortytwo-bdb \
  		fortytwo-encore>0:devel/fortytwo-encore \
  		fortytwo>0:graphics/fortytwo \
-@@ -39,8 +37,6 @@ RUN_DEPENDS=	aclock>0:x11-clocks/aclock
- 		gnumail>0:mail/gnumail \
- 		gnustep-ftp>0:ftp/gnustep-ftp \
- 		gnustep-ladder>0:games/gnustep-ladder \
--		gnustep-slideshowkit>0:graphics/gnustep-slideshowkit \
--		gnustep-slideshow>0:graphics/gnustep-slideshow \
- 		gnustep-sudoku>0:games/gnustep-sudoku \
- 		gnustep-wrapper>0:deskutils/gnustep-wrapper \
- 		gorm>0:devel/gorm \
