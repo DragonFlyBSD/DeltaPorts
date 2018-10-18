@@ -1,15 +1,15 @@
---- Makefile.orig	2018-09-19 07:49:49 UTC
+--- Makefile.orig	2018-10-18 14:39:54 UTC
 +++ Makefile
-@@ -96,7 +96,7 @@ PLIST_FILES=		lib/rustlib/components \
+@@ -97,7 +97,7 @@ PLIST_FILES=		lib/rustlib/components \
  
  .include <bsd.port.pre.mk>
  
 -X_PY_ENV=	HOME="${WRKDIR}" \
 +X_PY_ENV+=	HOME="${WRKDIR}" \
+ 		LIBGIT2_SYS_USE_PKG_CONFIG=1 \
+ 		LIBSSH2_SYS_USE_PKG_CONFIG=1 \
  		OPENSSL_DIR="${OPENSSLBASE}"
- X_PY_CMD=	${PYTHON_CMD} ${WRKSRC}/x.py
- 
-@@ -131,7 +131,6 @@ RUST_STD_DIR=		${RUST_STD_BOOTSTRAP:T:R:
+@@ -134,7 +134,6 @@ RUST_STD_DIR=		${RUST_STD_BOOTSTRAP:T:R:
  
  post-extract:
  	@${MKDIR} \
