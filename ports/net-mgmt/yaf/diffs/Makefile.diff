@@ -1,0 +1,10 @@
+--- Makefile.orig	2018-10-25 00:08:57 UTC
++++ Makefile
+@@ -14,7 +14,6 @@ LICENSE_FILE=	${WRKSRC}/COPYING
+ 
+ LIB_DEPENDS=	libfixbuf.so:net/libfixbuf \
+ 		libltdl.so:devel/libltdl \
+-		libpcap.so:net/libpcap \
+ 		libpcre.so:devel/pcre
+ 
+ GNU_CONFIGURE=	yes

@@ -1,0 +1,10 @@
+--- Makefile.orig	2018-10-25 00:05:49 UTC
++++ Makefile
+@@ -14,7 +14,6 @@ COMMENT=	On-the-fly verification system
+ LICENSE=	BSD3CLAUSE
+ LICENSE_FILE=	${WRKSRC}/LICENSE
+ 
+-RUN_DEPENDS=	gcc:lang/gcc
+ 
+ WRKSRC=		${WRKDIR}/Spin/Src${PORTVERSION}
+ MAKEFILE=	makefile
