@@ -1,6 +1,6 @@
---- Makefile.orig	2018-08-22 16:49:11 UTC
+--- Makefile.orig	2018-11-22 13:46:07 UTC
 +++ Makefile
-@@ -57,7 +57,7 @@ PLIST_SUB=	VER=${VER}
+@@ -48,7 +48,7 @@ PLIST_SUB=	VER=${VER}
  
  OPTIONS_DEFINE=	DEBUG GDB_LINK GUILE KGDB PYTHON TUI
  
@@ -9,7 +9,7 @@
  
  OPTIONS_SINGLE=	READLINE ICONV ZLIB
  OPTIONS_SINGLE_READLINE=	BUNDLED_READLINE PORT_READLINE
-@@ -100,16 +100,12 @@ EXCLUDE+=	readline
+@@ -91,16 +91,12 @@ EXCLUDE+=	readline
  EXCLUDE+=	zlib
  .endif
  
@@ -30,7 +30,7 @@
  		${WRKSRC}/gdb/version.in
  
  post-patch-KGDB-on:
-@@ -139,6 +135,15 @@ do-install-GDB_LINK-on:
+@@ -130,6 +126,15 @@ do-install-GDB_LINK-on:
  	${LN} -sf kgdb${VER} ${STAGEDIR}${PREFIX}/bin/kgdb
  .endif
  
