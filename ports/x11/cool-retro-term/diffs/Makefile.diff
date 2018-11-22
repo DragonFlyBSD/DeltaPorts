@@ -1,18 +1,19 @@
---- Makefile.orig	2015-10-13 17:51:10 UTC
+--- Makefile.orig	2018-11-22 03:31:42 UTC
 +++ Makefile
-@@ -24,6 +24,7 @@ USE_LDCONFIG=	yes
+@@ -21,16 +21,6 @@ USES=		desktop-file-utils qmake qt:5
+ USE_QT=		qmake_build buildtools_build core declarative gui widgets \
+ 		graphicaleffects_run quickcontrols_run
  
- .include <bsd.port.pre.mk>
- 
-+.if ${OPSYS} == "FreeBSD"
- .if ${ARCH} == powerpc
- USE_GCC=	yes
- .else
-@@ -31,6 +32,7 @@ CC=		clang
- CXX=		clang++
- CPP=		clang-cpp
- .endif
-+.endif
- 
+-.include <bsd.port.pre.mk>
+-
+-.if ${ARCH:Mmips*} || ${ARCH:Mpowerpc*} || ${ARCH} == sparc64
+-USE_GCC=	yes
+-.else
+-CC=		clang
+-CXX=		clang++
+-CPP=		clang-cpp
+-.endif
+-
  post-extract:
  	@${RMDIR} ${WRKSRC}/qmltermwidget
+ 	@${LN} -s ../qmltermwidget-0.1.0 ${WRKSRC}/qmltermwidget

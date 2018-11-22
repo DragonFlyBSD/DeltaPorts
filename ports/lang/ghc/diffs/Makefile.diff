@@ -1,47 +1,10 @@
---- Makefile.orig	2018-10-11 20:38:16 UTC
+--- Makefile.orig	2018-11-22 03:20:56 UTC
 +++ Makefile
-@@ -6,6 +6,7 @@ PORTVERSION=	${GHC_VERSION}
- PORTREVISION=	1
+@@ -5,6 +5,7 @@ PORTNAME=	ghc
+ PORTVERSION=	${GHC_VERSION}
  CATEGORIES=	lang haskell
  MASTER_SITES=	http://www.haskell.org/ghc/dist/${PORTVERSION}/:source \
 +		http://leaf.dragonflybsd.org/~marino/dports-src/:dflyboot \
  		LOCAL/arrowd/:boot \
  		${HACKAGE_SITE}hscolour-${HSCOLOUR_VERSION}/:docs
  
-@@ -98,8 +99,22 @@ LOCALBASE?=	/usr/local
- .include <bsd.port.options.mk>
- 
- .if empty(PORT_OPTIONS:MBOOT)
-+.  if ${OPSYS} == "FreeBSD"
-+
- BOOT_GHC_VERSION=	8.4.2
- DISTFILES+=		ghc-${BOOT_GHC_VERSION}-boot-${ARCH}-freebsd${EXTRACT_SUFX}:boot
-+
-+.  elif ${OPSYS} == "DragonFly"
-+
-+BOOT_GHC_VERSION=	8.0.2
-+DISTFILES+=		ghc-${BOOT_GHC_VERSION}-boot-${ARCH}-dragonfly.tar.xz:dflyboot
-+CONFIGURE_TARGET=	${ARCH}-portbld-dragonfly
-+CONFIGURE_ENV+=		BOOTDIR=${BOOT_DIR} LBASE=${LOCALBASE}
-+
-+.  else
-+IGNORE=		unsupported ${OPSYS} Operating System
-+.  endif
-+
- .endif # MBOOT
- 
- .if ${ARCH} == aarch64 || ${ARCH} == armv6 || ${ARCH} == armv7
-@@ -212,13 +227,6 @@ post-patch:
- 		${WRKSRC}/aclocal.m4
- .endif
- 
--.if empty(PORT_OPTIONS:MBOOT)
--	@${REINPLACE_CMD} -e '/^mandir/d' ${BOOT_DIR}/mk/build.mk
--	@${REINPLACE_CMD} -e '/^infodir/d' ${BOOT_DIR}/mk/build.mk
--	@${REINPLACE_CMD} -e '/^docdir/d' ${BOOT_DIR}/mk/build.mk
--	@${REINPLACE_CMD} -e '/^htmldir/d' ${BOOT_DIR}/mk/build.mk
--.endif
--
- pre-configure: apply-slist
- 	# Copy the subbed build.mk to the proper position
- 	${CP} ${WRKDIR}/build.mk ${WRKSRC}/mk/build.mk

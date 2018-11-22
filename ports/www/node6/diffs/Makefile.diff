@@ -1,15 +1,6 @@
---- Makefile.orig	2017-10-30 17:35:55 UTC
+--- Makefile.orig	2018-11-22 03:27:21 UTC
 +++ Makefile
-@@ -18,7 +18,7 @@ OPTIONS_DEFAULT=DTRACE
- OPTIONS_SUB=	yes
- 
- OPTIONS_DEFAULT_FreeBSD_10=	BUNDLED_SSL
--OPTIONS_DEFAULT+=		${OPTIONS_DEFAULT_${OPSYS}_${OSREL:R}}
-+OPTIONS_DEFAULT+=		BUNDLED_SSL
- 
- .if !exists(/usr/sbin/dtrace)
- OPTIONS_EXCLUDE+=	DTRACE
-@@ -76,9 +76,8 @@ IGNORE=		cannot build node.js with Libre
+@@ -71,9 +71,8 @@ IGNORE=		cannot build node.js with Libre
  
  .include <bsd.port.pre.mk>
  

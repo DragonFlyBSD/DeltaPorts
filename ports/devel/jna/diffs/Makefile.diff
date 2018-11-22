@@ -1,11 +1,11 @@
---- Makefile.orig	2018-03-08 03:12:01 UTC
+--- Makefile.orig	2018-11-22 03:13:31 UTC
 +++ Makefile
 @@ -35,7 +35,7 @@ TEST_TARGET=	test
  
  OPTIONS_DEFINE=	DOCS
  
--ANT_ARCH=	${ARCH:S/amd64/x86-64/:S/i386/x86/}
-+ANT_ARCH=	${ARCH:S/amd64/x86-64/:S/i386/x86/:S/x86_64/x86-64/}
+-ANT_ARCH=	${ARCH:S/amd64/x86-64/:S/i386/x86/:S/powerpc64/ppc64/}
++ANT_ARCH=	${ARCH:S/amd64/x86-64/:S/i386/x86/:S/x86_64/x86-64/:S/powerpc64/ppc64/}
  
  post-patch:
  	@${REINPLACE_CMD} -e 's|%%LOCALBASE%%|${LOCALBASE}|' \
