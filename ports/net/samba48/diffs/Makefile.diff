@@ -1,0 +1,26 @@
+--- Makefile.orig	2018-11-28 17:25:51 UTC
++++ Makefile
+@@ -143,8 +143,6 @@ LIB_DEPENDS+=			libpopt.so:devel/popt
+ LIB_DEPENDS+=			libinotify.so:devel/libinotify
+ # GNUTLS
+ LIB_DEPENDS+=			libgnutls.so:security/gnutls
+-# NFS4 ACL glue
+-LIB_DEPENDS+=			libsunacl.so:sysutils/libsunacl
+ # Jansson
+ BUILD_DEPENDS+=			jansson>=2.10:devel/jansson
+ RUN_DEPENDS+=			jansson>=2.10:devel/jansson
+@@ -261,12 +259,13 @@ CONFIGURE_ARGS+=		\
+ 				--disable-rpath \
+ 				--without-lttng \
+ 				--without-gettext \
++				--without-acl-support \
++				--without-regedit \
+ 				--enable-pthreadpool \
+ 				--without-fake-kaserver \
+ 				--without-systemd \
+ 				--enable-gnutls \
+ 				--with-libarchive \
+-				--with-acl-support \
+ 				--with-sendfile-support \
+ 				--disable-ctdb-tests \
+ 				${ICONV_CONFIGURE_BASE}

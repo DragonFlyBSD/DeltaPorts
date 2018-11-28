@@ -1,0 +1,19 @@
+--- pkg-plist.orig	2018-11-28 15:14:44 UTC
++++ pkg-plist
+@@ -267,8 +267,6 @@ libexec/qtcreator/sdktool
+ %%PORTDOCS%%%%DOCSDIR%%/qtcreator-dev/debugger-debugger-internal-module.html
+ %%PORTDOCS%%%%DOCSDIR%%/qtcreator-dev/debugger-debugger-internal-moduleshandler.html
+ %%PORTDOCS%%%%DOCSDIR%%/qtcreator-dev/debugger-debugger-internal-outputcollector.html
+-%%PORTDOCS%%%%DOCSDIR%%/qtcreator-dev/debugger-debugger-internal-qmlengine-members.html
+-%%PORTDOCS%%%%DOCSDIR%%/qtcreator-dev/debugger-debugger-internal-qmlengine.html
+ %%PORTDOCS%%%%DOCSDIR%%/qtcreator-dev/debugger-debugger-internal-register-members.html
+ %%PORTDOCS%%%%DOCSDIR%%/qtcreator-dev/debugger-debugger-internal-register.html
+ %%PORTDOCS%%%%DOCSDIR%%/qtcreator-dev/debugger-debugger-internal-registerhandler.html
+@@ -539,7 +537,6 @@ libexec/qtcreator/sdktool
+ %%PORTDOCS%%%%DOCSDIR%%/qtcreator-dev/debugger-qmljs-ast-sourcelocation-members.html
+ %%PORTDOCS%%%%DOCSDIR%%/qtcreator-dev/debugger-qmljs-ast-sourcelocation.html
+ %%PORTDOCS%%%%DOCSDIR%%/qtcreator-dev/debugger-qmljs-ast.html
+-%%PORTDOCS%%%%DOCSDIR%%/qtcreator-dev/debugger-qmljs-internal.html
+ %%PORTDOCS%%%%DOCSDIR%%/qtcreator-dev/debugger-qssh.html
+ %%PORTDOCS%%%%DOCSDIR%%/qtcreator-dev/debugger-std-hash-members.html
+ %%PORTDOCS%%%%DOCSDIR%%/qtcreator-dev/debugger-std-hash.html
