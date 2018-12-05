@@ -9,7 +9,7 @@
  #include <sys/time.h>
  #include <sys/mman.h>
 -#include <linux/input.h>
-+#include <dev/misc/evdev/input.h>
++#include <compat/linux/input.h>
  
  #define BUTTON_BASE (BTN_LEFT - 1) /* Used to translate to 1-indexed buttons */
  
