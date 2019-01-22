@@ -1,5 +1,5 @@
 # ninja once again can't relink properly..
-USES:= ${USES:Ncmake*} cmake:outsource,noninja
+USES:= ${USES:Ncmake*} cmake:noninja
 
 OPTIONS_DEFAULT:= ${OPTIONS_DEFAULT:NLLDB}
 
