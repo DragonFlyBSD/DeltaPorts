@@ -1,10 +1,11 @@
---- pkg-plist.orig	2015-04-20 07:57:17 UTC
+--- pkg-plist.orig	2019-01-22 15:25:34 UTC
 +++ pkg-plist
-@@ -41,6 +41,6 @@ include/efi/x86_64/efibind.h
- include/efi/x86_64/efilibplat.h
- include/efi/x86_64/pe.h
- lib/crt0-efi-x86_64.o
--lib/elf_x86_64_fbsd_efi.lds
-+lib/elf_x86_64_efi.lds
- lib/libefi.a
- lib/libgnuefi.a
+@@ -47,7 +47,7 @@ lib/libgnuefi.a
+ %%ARCH_amd64%%include/efi/x86_64/efisetjmp_arch.h
+ %%ARCH_amd64%%include/efi/x86_64/pe.h
+ %%ARCH_amd64%%lib/crt0-efi-x86_64.o
+-%%ARCH_amd64%%lib/elf_x86_64_fbsd_efi.lds
++%%ARCH_amd64%%lib/elf_x86_64_efi.lds
+ @comment Architecture Specific Packages List, i386
+ %%ARCH_i386%%include/efi/ia32/efibind.h
+ %%ARCH_i386%%include/efi/ia32/efilibplat.h

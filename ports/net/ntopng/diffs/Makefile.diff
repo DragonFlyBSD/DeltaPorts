@@ -1,14 +1,14 @@
---- Makefile.orig	2017-12-30 01:00:40 UTC
+--- Makefile.orig	2019-01-22 15:47:15 UTC
 +++ Makefile
-@@ -48,7 +48,11 @@ USE_RC_SUBR=	ntopng
+@@ -50,7 +50,11 @@ USE_RC_SUBR=	ntopng
  
  post-patch:
  	@${REINPLACE_CMD} -e 's|%%LOCALBASE%%|${LOCALBASE}|' \
 +		-e 's|FreeBSD|DragonFly|g' \
  		${WRKSRC}/configure.seed
-+	@${REINPLACE_CMD} -e 's|%%LOCALBASE%%|${LOCALBASE}|' \
++	${REINPLACE_CMD} -e 's|%%LOCALBASE%%|${LOCALBASE}|' \
 +		-e 's|FreeBSD|DragonFly|g' \
 +		${WRKSRC}/Makefile.in
- 	@${REINPLACE_CMD} -e 's|^\(export PREFIX=\).*|\1 ${PREFIX}|' \
- 		${WRKSRC}/third-party/LuaJIT-2.1.0-beta3/Makefile
  	cd ${WRKSRC} && ${SH} autogen.sh
+ 
+ post-install:

@@ -1,23 +1,23 @@
---- Makefile.orig	2018-11-22 13:46:07 UTC
+--- Makefile.orig	2019-01-22 15:22:41 UTC
 +++ Makefile
-@@ -48,7 +48,7 @@ PLIST_SUB=	VER=${VER}
+@@ -49,7 +49,7 @@ PLIST_SUB=	VER=${VER}
  
- OPTIONS_DEFINE=	DEBUG GDB_LINK GUILE KGDB PYTHON TUI
+ OPTIONS_DEFINE=	DEBUG GDB_LINK GUILE KGDB NLS PYTHON TUI
  
--OPTIONS_DEFAULT=	GDB_LINK KGDB PYTHON TUI PORT_READLINE PORT_ICONV SYSTEM_ZLIB
-+OPTIONS_DEFAULT=	GDB_LINK PYTHON TUI PORT_READLINE PORT_ICONV SYSTEM_ZLIB
+-OPTIONS_DEFAULT=	GDB_LINK KGDB NLS PYTHON TUI PORT_READLINE PORT_ICONV SYSTEM_ZLIB
++OPTIONS_DEFAULT=	GDB_LINK NLS PYTHON TUI PORT_READLINE PORT_ICONV SYSTEM_ZLIB
  
  OPTIONS_SINGLE=	READLINE ICONV ZLIB
  OPTIONS_SINGLE_READLINE=	BUNDLED_READLINE PORT_READLINE
-@@ -91,16 +91,12 @@ EXCLUDE+=	readline
+@@ -99,16 +99,12 @@ EXCLUDE+=	readline
  EXCLUDE+=	zlib
  .endif
  
--.if ${ARCH} == "amd64"
+-.if ${ARCH} == amd64
 -CONFIGURE_TARGET=	x86_64-portbld-freebsd${OSREL}
 -.endif
 -
--.if ${COMPILER_TYPE} == "clang"
+-.if ${CHOSEN_COMPILER_TYPE} == clang
 -CFLAGS+=	-Wno-extended-offsetof
 -.endif
 +# Wow c++ smth.c too on gdb, gcc wasn't enough? throw helpers for c-- and try to kill it
@@ -30,8 +30,8 @@
  		${WRKSRC}/gdb/version.in
  
  post-patch-KGDB-on:
-@@ -130,6 +126,15 @@ do-install-GDB_LINK-on:
- 	${LN} -sf kgdb${VER} ${STAGEDIR}${PREFIX}/bin/kgdb
+@@ -140,6 +136,15 @@ do-install-GDB_LINK-on:
+ 	${LN} -sf kgdb${VER}.1 ${STAGEDIR}${MAN1PREFIX}/man/man1/kgdb.1
  .endif
  
 +dfly-patch:

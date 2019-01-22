@@ -1,11 +1,11 @@
---- Makefile.orig	2017-07-05 15:41:56 UTC
+--- Makefile.orig	2019-01-22 15:48:49 UTC
 +++ Makefile
 @@ -19,7 +19,7 @@ LICENSE_FILE=	${WRKSRC}/LICENSE
- 
+ BUILD_DEPENDS=	daq>=2.0.0:net/daq
  LIB_DEPENDS=	libpcre.so:devel/pcre \
  		libdnet.so:net/libdnet \
 -		libpcap.so:net/libpcap
 +		libpcap.so.1:net/libpcap
- 
- BUILD_DEPENDS=	daq>=2.0.0:net/daq
  RUN_DEPENDS=	daq>=2.0.0:net/daq
+ 
+ USES=			cpe libtool pathfix shebangfix ssl
