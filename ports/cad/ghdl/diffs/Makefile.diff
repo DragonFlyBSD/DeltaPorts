@@ -1,4 +1,4 @@
---- Makefile.orig	2019-01-22 16:07:50 UTC
+--- Makefile.orig	2019-01-22 16:12:23 UTC
 +++ Makefile
 @@ -26,7 +26,7 @@ BROKEN_aarch64=		fails to configure: Con
  
@@ -9,11 +9,12 @@
  BLD_TARGET=	${ARCH:S/amd64/x86_64/}-portbld-${OPSYS:tl}${OSREL:R}
  BUILDDIR=	${WRKDIR}/build
  GCCSRCDIR=	${WRKDIR}/gcc-${GCCVER}
-@@ -105,7 +105,6 @@ IGNORE=		not supported by GCC backend
+@@ -105,7 +105,7 @@ IGNORE=		not supported by GCC backend
  
  .if ${PORT_OPTIONS:MLLVM}
  BUILD_DEPENDS+=	llvm-config${LLVMVER}:devel/llvm${LLVMVER} \
 -		clang++${LLVMVER}:lang/clang${LLVMVER}
++#
  RUN_DEPENDS+=	llc${LLVMVER}:devel/llvm${LLVMVER}
  PLIST=		${.CURDIR}/llvm-plist
  PLIST_SUB+=	GLIB=ghdl/lib/ghdl/
