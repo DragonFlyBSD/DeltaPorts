@@ -32,7 +32,7 @@ LIB_DEPENDS=	libxkbcommon.so:x11/libxkbcommon		\
 
 LIBS+=		-lexecinfo
 
-BUILD_DEPENDS=	${LOCALBASE}/include/linux/input.h:multimedia/v4l_compat
+BUILD_DEPENDS=	${LOCALBASE}/include/linux/input.h:devel/evdev-proto
 
 RUN_DEPENDS=	${LOCALBASE}/lib/libglapi.so:graphics/mesa-libs
 

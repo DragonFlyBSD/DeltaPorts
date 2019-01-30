@@ -1,0 +1,11 @@
+--- pkg-plist.orig	2019-01-29 04:34:21 UTC
++++ pkg-plist
+@@ -245,8 +245,6 @@ libexec/qtcreator/sdktool
+ %%PORTDOCS%%%%DOCSDIR%%/qtcreator-dev/debugger-debugger-internal-module.html
+ %%PORTDOCS%%%%DOCSDIR%%/qtcreator-dev/debugger-debugger-internal-moduleshandler.html
+ %%PORTDOCS%%%%DOCSDIR%%/qtcreator-dev/debugger-debugger-internal-outputcollector.html
+-%%PORTDOCS%%%%DOCSDIR%%/qtcreator-dev/debugger-debugger-internal-qmlengine-members.html
+-%%PORTDOCS%%%%DOCSDIR%%/qtcreator-dev/debugger-debugger-internal-qmlengine.html
+ %%PORTDOCS%%%%DOCSDIR%%/qtcreator-dev/debugger-debugger-internal-register-members.html
+ %%PORTDOCS%%%%DOCSDIR%%/qtcreator-dev/debugger-debugger-internal-register.html
+ %%PORTDOCS%%%%DOCSDIR%%/qtcreator-dev/debugger-debugger-internal-registerhandler.html
