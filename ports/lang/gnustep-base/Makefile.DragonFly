@@ -1,2 +1,5 @@
 LDFLAGS+= -L${LOCALBASE}/lib ${ICONV_LIB}
 
+post-stage:
+	cd ${STAGEDIR}${PREFIX}/GNUstep/System/Library/Libraries/ && ${LN} -s \
+		libgnustep-base.so.1.25.0 libgnustep-base.so.1.25
