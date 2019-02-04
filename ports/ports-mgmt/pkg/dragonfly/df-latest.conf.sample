@@ -58,6 +58,12 @@ JAIST: {
 	enabled		: no
 }
 
+# Taiwan
+TWAREN: {
+	url		: http://ftp.twaren.net/BSD/DragonFlyBSD/dports/${ABI}/LATEST,
+	enabled		: no
+}
+
 # Belarus
 Beltelecom: {
 	url		: https://mirror.datacenter.by/pub/DragonFlyBSD/dports/${ABI}/LATEST,
