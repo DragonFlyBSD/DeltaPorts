@@ -17,6 +17,12 @@ NYCBUG: {
 	enabled		: no
 }
 
+# Canada
+MUUG: {
+	url		: https://muug.ca/mirror/dragonflybsd/dports/${ABI}/LATEST,
+	enabled		: no
+}
+
 # Ecuador
 EPN: {
 	url		: https://mirror.epn.edu.ec/dragonflybsd/dports/${ABI}/LATEST,
