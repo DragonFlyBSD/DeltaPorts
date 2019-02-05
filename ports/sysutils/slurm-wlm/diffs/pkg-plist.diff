@@ -1,0 +1,10 @@
+--- pkg-plist.orig	2019-02-05 16:19:59.944319000 +0000
++++ pkg-plist	2019-02-05 16:20:24.543221000 +0000
+@@ -9,7 +9,6 @@
+ bin/sdiag
+ %%HDF5%%bin/sh5util
+ bin/sinfo
+-bin/smap
+ bin/sprio
+ bin/squeue
+ bin/sreport
