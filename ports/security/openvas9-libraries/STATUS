@@ -1,4 +1,3 @@
-MASK
-# refers to ../openvas8 which is not available (openvas8-libraries build fail)
+PORT
 Last attempt: 9.0.1
 Last success: 9.0.1
