@@ -45,4 +45,6 @@ CONFIGURE_ARGS+=	--disable-fbdev-compositor --disable-vaapi-recorder
 CONFIGURE_ARGS+=	--disable-dbus --enable-setuid-install
 CONFIGURE_ARGS+=	--with-xserver-path=${PREFIX}/bin/Xwayland
 
+INSTALL_TARGET=	install-strip
+
 .include <bsd.port.mk>
