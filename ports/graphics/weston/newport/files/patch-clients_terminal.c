@@ -1,11 +1,12 @@
---- clients/terminal.c.orig	2015-10-02 23:29:10 +0200
-+++ clients/terminal.c
-@@ -32,12 +32,19 @@
+--- clients/terminal.c.orig	2019-02-21 10:38:18.621222000 +0200
++++ clients/terminal.c	2019-02-21 10:42:28.362587000 +0200
+@@ -32,12 +32,20 @@
  #include <unistd.h>
  #include <math.h>
  #include <time.h>
 +#if defined(__FreeBSD__)
 +#include <libutil.h>
++#include <sys/ttycom.h>
 +#else
  #include <pty.h>
 +#endif
@@ -20,7 +21,7 @@
  
  #include <linux/input.h>
  
-@@ -454,6 +461,7 @@
+@@ -454,6 +462,7 @@ struct terminal {
  	int scrolling;
  	int send_cursor_position;
  	int fd, master;
@@ -28,7 +29,7 @@
  	uint32_t modifiers;
  	char escape[MAX_ESCAPE+1];
  	int escape_length;
-@@ -2985,7 +2993,7 @@
+@@ -2985,7 +2994,7 @@ terminal_create(struct display *display)
  static void
  terminal_destroy(struct terminal *terminal)
  {
@@ -37,7 +38,7 @@
  	window_destroy(terminal->window);
  	close(terminal->master);
  	wl_list_remove(&terminal->link);
-@@ -2998,20 +3006,16 @@
+@@ -2998,20 +3007,16 @@ terminal_destroy(struct terminal *termin
  }
  
  static void
@@ -61,7 +62,7 @@
  		terminal_destroy(terminal);
  	else
  		terminal_data(terminal, buffer, len);
-@@ -3028,19 +3032,20 @@
+@@ -3028,19 +3033,20 @@ terminal_run(struct terminal *terminal,
  		setenv("TERM", option_term, 1);
  		setenv("COLORTERM", option_term, 1);
  		if (execl(path, path, NULL)) {
@@ -86,7 +87,7 @@
  
  	if (option_fullscreen)
  		window_set_fullscreen(terminal->window, 1);
-@@ -3093,7 +3098,8 @@
+@@ -3093,7 +3099,8 @@ int main(int argc, char *argv[])
  
  	d = display_create(&argc, argv);
  	if (d == NULL) {
