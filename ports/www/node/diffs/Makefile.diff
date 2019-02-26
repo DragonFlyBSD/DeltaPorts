@@ -1,12 +1,12 @@
---- Makefile.orig	2018-06-01 16:18:33 UTC
+--- Makefile.orig	2019-02-26 19:27:36 UTC
 +++ Makefile
-@@ -77,9 +77,7 @@ IGNORE=		cannot build node.js with Libre
+@@ -72,9 +72,7 @@ LIB_DEPENDS+=	libcares.so:dns/c-ares\
+ BROKEN_SSL+=	base
+ .endif
  
- .include <bsd.port.pre.mk>
- 
--.if ${ARCH} != amd64 && ${ARCH} != i386
+-.if ${PORT_OPTIONS:MBUNDLED_SSL} && ${ARCH} != amd64 && ${ARCH} != i386
  CONFIGURE_ARGS+=--openssl-no-asm
 -.endif
  
- .if ${COMPILER_TYPE} == gcc
- # GCC does not expose std::snprintf() without this define
+ .include <bsd.port.pre.mk>
+ 

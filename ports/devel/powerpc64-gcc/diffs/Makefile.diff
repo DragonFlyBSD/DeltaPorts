@@ -1,4 +1,4 @@
---- Makefile.orig	2019-01-22 15:33:32 UTC
+--- Makefile.orig	2019-02-26 19:14:13 UTC
 +++ Makefile
 @@ -21,7 +21,6 @@ RUN_DEPENDS=	${BU_PREFIX}-as:devel/${PKG
  
@@ -8,13 +8,14 @@
  		GCC_TARGET=${GCC_TARGET} \
  		GCC_VERSION=${PORTVERSION}
  
-@@ -29,9 +28,10 @@ TARGETARCH=	${PKGNAMEPREFIX:C/-//g:S/amd
+@@ -29,10 +28,11 @@ TARGETARCH=	${PKGNAMEPREFIX:C/-//g}
  
  .if empty(GCC_TARGET)
  # We are building for a FreeBSD target
 -GCC_TARGET=	${PKGNAMEPREFIX:S/amd64/x86_64/}unknown-${OPSYS:tl}${OSREL}
 +GCC_TARGET=	${PKGNAMEPREFIX:S/amd64/x86_64/}unknown-freebsd10
- EXTRA_PATCHES+= ${FILESDIR}/freebsd-format-extensions
+ EXTRA_PATCHES+= ${FILESDIR}/freebsd-format-extensions \
+ 		${FILESDIR}/freebsd-libdir
  .endif
 +PLIST_SUB+=	OPSYS=freebsd OSREL=10
  BU_PREFIX?=	${GCC_TARGET}

@@ -1,13 +1,13 @@
---- Makefile.orig	2018-11-22 03:27:21 UTC
+--- Makefile.orig	2019-02-26 19:31:57 UTC
 +++ Makefile
-@@ -71,9 +71,8 @@ IGNORE=		cannot build node.js with Libre
+@@ -71,9 +71,8 @@ LIB_DEPENDS+=	libcares.so:dns/c-ares\
+ BROKEN_SSL+=	base
+ .endif
  
- .include <bsd.port.pre.mk>
- 
--.if ${ARCH} == armv6 || ${ARCH} == armv7
+-.if ${PORT_OPTIONS:MBUNDLED_SSL} && ${ARCH} != amd64 && ${ARCH} != i386
 +# something is wrong with configure wrt to DF I think
  CONFIGURE_ARGS+=--openssl-no-asm
 -.endif
  
- .if ${COMPILER_TYPE} == gcc
- # GCC does not expose std::snprintf() without this define
+ .include <bsd.port.pre.mk>
+ 
