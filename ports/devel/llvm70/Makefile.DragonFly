@@ -1,7 +1,7 @@
 # LLDB needs to be ported to dragonfly
 # OpenMP patches still not in llvm70
-OPTIONS_DEFAULT_x86_64:= ${OPTIONS_DEFAULT:NOPENMP}
 OPTIONS_DEFAULT:=        ${OPTIONS_DEFAULT:NLLDB}
+OPTIONS_DEFAULT_x86_64:= ${OPTIONS_DEFAULT:NOPENMP}
 
 # Allow some non-conforming code to build
 CXXFLAGS+=	-fpermissive
