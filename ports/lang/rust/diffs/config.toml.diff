@@ -1,4 +1,4 @@
---- files/config.toml.orig	2018-09-01 18:36:30 UTC
+--- files/config.toml.orig	2019-03-06 15:44:33 UTC
 +++ files/config.toml
 @@ -27,9 +27,9 @@ channel = "%CHANNEL%"
  [llvm]
