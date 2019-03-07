@@ -1,24 +1,21 @@
---- Uses/gem.mk.orig	2018-01-15 07:25:58 UTC
-+++ Uses/gem.mk
-@@ -73,11 +73,13 @@ GEMFILES=	${DISTNAME}${EXTRACT_SUFX}
+--- Uses/gem.mk.orig	2019-02-26 08:28:26.691721000 -0800
++++ Uses/gem.mk	2019-02-26 09:52:23.133790000 -0800
+@@ -73,11 +73,10 @@
  
  RUBYGEM_ARGS=-l --no-update-sources --install-dir ${STAGEDIR}${PREFIX}/lib/ruby/gems/${RUBY_VER} --ignore-dependencies --bindir=${STAGEDIR}${PREFIX}/bin
  
 -.if ${PORT_OPTIONS:MDOCS}
--RUBYGEM_ARGS+=	--rdoc --ri
+-RUBYGEM_ARGS+=	--document rdoc,ri
 -.else
-+# below condition ALWAYS true (somebody brainfarted here)
-+# Just disable rdoc unconditionally.  it freezes with 100% CPU sometimes
-+# .if ${PORT_OPTIONS:MDOCS}
-+# RUBYGEM_ARGS+=	--rdoc --ri
-+# .else
- RUBYGEM_ARGS+=	--no-rdoc --no-ri
++# Until we figure out why generating the documentation (rdoc, ri)
++# freezes randomly with a 100% CPU usage we'll disable the documentation
++# generation entirely
+ RUBYGEM_ARGS+=	--no-document
 -.endif
-+# .endif
  
  .if !target(do-extract)
  do-extract:
-@@ -111,9 +113,9 @@ do-install:
+@@ -111,9 +110,9 @@
  	${RM} -r ${STAGEDIR}${PREFIX}/${GEM_LIB_DIR}/ext \
  		${STAGEDIR}${PREFIX}/${CACHE_DIR} 2> /dev/null || ${TRUE}
  	${RMDIR} ${STAGEDIR}${PREFIX}/${EXT_DIR} 2> /dev/null || ${TRUE}
