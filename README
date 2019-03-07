@@ -9,6 +9,9 @@ combine these overlays and patches to generate the final product.
 
 Organization:
 
+docs:
+	DeltaPorts related documentation.
+
 scripts:
 	Directory contains shell scripts to generate final DPorts
 	repository as well as a copy of the Tinderbox hooks
