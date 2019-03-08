@@ -1,3 +1,5 @@
+OPTIONS_DEFAULT+=BUNDLED_SSL
+
 dfly-patch:
 	# why is this hack necessary on DF and not FreeBSD?
 .if defined(PACKAGE_BUILDING)
