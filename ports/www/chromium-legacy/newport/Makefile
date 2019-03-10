@@ -1,12 +1,14 @@
 # Created by: Florent Thoumie <flz@FreeBSD.org>
 # $FreeBSD$
 
-PORTNAME=	chromium
+PORTNAME=	chromium-legacy
 PORTVERSION=	68.0.3440.106
 PORTREVISION=	3
 CATEGORIES?=	www
 MASTER_SITES=	https://commondatastorage.googleapis.com/chromium-browser-official/ \
 		LOCAL/cpm/chromium/:fonts
+
+DISTNAME=	chromium-${DISTVERSION}
 DISTFILES=	${DISTNAME}${EXTRACT_SUFX}
 
 MAINTAINER?=	chromium@FreeBSD.org
@@ -209,6 +211,8 @@ BUILD_DEPENDS+=	clang60:devel/llvm60
 CC=             clang60
 CXX=            clang++60
 EXTRA_PATCHES+=	${FILESDIR}/extra-patch-llvm-port
+
+CONFLICTS_INSTALL=      chromium
 
 # TODO: -isystem, would be just as ugly as this approach, but more reliably
 # build would fail without C_INCLUDE_PATH/CPLUS_INCLUDE_PATH env var set.
