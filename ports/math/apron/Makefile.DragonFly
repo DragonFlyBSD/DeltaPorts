@@ -1,0 +1,1 @@
+BROKEN=	performs svn checkout and tar up on fetch, should use ".if defined(BOOTSTRAP)"
