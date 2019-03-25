@@ -1,0 +1,12 @@
+--- Makefile.common.orig	2018-11-22 01:54:36 UTC
++++ Makefile.common
+@@ -84,7 +84,9 @@ CONFIGURE_ARGS+=--with-openssl=${OPENSSL
+ CPPFLAGS+=	-fPIC
+ .endif
+ 
++.if ${PORT_OPTIONS:MDOCS}
+ PORTDOCS=	*
++.endif
+ 
+ .if ${CYRUS_BUILD_TARGET} == "cyrus-sasl"
+ 
