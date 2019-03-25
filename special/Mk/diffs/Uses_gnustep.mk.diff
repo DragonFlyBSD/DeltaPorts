@@ -1,13 +1,32 @@
---- Uses/gnustep.mk.orig	2019-03-07 00:41:25 UTC
+--- Uses/gnustep.mk.orig	2019-02-26 16:28:26 UTC
 +++ Uses/gnustep.mk
-@@ -33,6 +33,10 @@ GNUSTEP_LOCAL_TOOLS=		${GNUSTEP_LOCAL_RO
+@@ -33,6 +33,12 @@ GNUSTEP_LOCAL_TOOLS=		${GNUSTEP_LOCAL_RO
  LIB_DIRS+=	${GNUSTEP_SYSTEM_LIBRARIES} \
  		${GNUSTEP_LOCAL_LIBRARIES}
  
++.if 0
 +# LLD can't search library paths for now, so all GNUStep packages are to be marked
 +# as LLD unsafe
 +LLD_UNSAFE=yes
++.endif
 +
  .for a in CFLAGS CPPFLAGS CXXFLAGS OBJCCFLAGS OBJCFLAGS LDFLAGS
  MAKE_ENV+=	ADDITIONAL_${a}="${ADDITIONAL_${a}} ${${a}}"
  .endfor
+@@ -40,6 +46,8 @@ MAKE_ENV+=	ADDITIONAL_${a}="${ADDITIONAL
+ MAKE_ENV+=	ADDITIONAL_${a}="${ADDITIONAL_${a}}"
+ .endfor
+ MAKE_ARGS+=messages=yes
++# Use ld.gold everywhere, unless there is a good reason like targetting GPU chips.
++.if 0
+ # BFD ld can't link Objective-C programs for some reason.  Most things are fine
+ # with LLD, but the things that don't (e.g. sope) need gold.
+ .if defined(LLD_UNSAFE)
+@@ -48,6 +56,7 @@ BUILD_DEPENDS+=         ${LOCALBASE}/bin
+ .else
+ MAKE_ARGS+=LDFLAGS='-fuse-ld=${OBJC_LLD}'
+ .endif
++.endif
+ 
+ MAKEFILE=	GNUmakefile
+ #MAKE_ENV+=	GNUSTEP_CONFIG_FILE=${PORTSDIR}/devel/gnustep-make/files/GNUstep.conf
