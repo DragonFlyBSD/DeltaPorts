@@ -1,4 +1,4 @@
---- bsd.port.mk.orig	2018-11-22 02:51:29 UTC
+--- bsd.port.mk.orig	2019-02-26 16:28:26 UTC
 +++ bsd.port.mk
 @@ -43,7 +43,8 @@ FreeBSD_MAINTAINER=	portmgr@FreeBSD.org
  #				  makefile is being used on.  Automatically set to
@@ -10,7 +10,7 @@
  #
  # This is the beginning of the list of all variables that need to be
  # defined in a port, listed in order that they should be included
-@@ -496,6 +497,12 @@ FreeBSD_MAINTAINER=	portmgr@FreeBSD.org
+@@ -494,6 +495,12 @@ FreeBSD_MAINTAINER=	portmgr@FreeBSD.org
  #				  Default: ${MASTERDIR}/scripts
  # FILESDIR		- A directory containing any miscellaneous additional files.
  #				  Default: ${MASTERDIR}/files
@@ -23,7 +23,7 @@
  # PKGDIR		- A directory containing any package creation files.
  #				  Default: ${MASTERDIR}
  # SRC_BASE		- The root of the src tree.  (Some ports require this to get
-@@ -1034,10 +1041,16 @@ LC_ALL=		C
+@@ -1032,10 +1039,14 @@ LC_ALL=		C
  # These need to be absolute since we don't know how deep in the ports
  # tree we are and thus can't go relative.  They can, of course, be overridden
  # by individual Makefiles or local system make configuration.
@@ -31,8 +31,6 @@
 +
 +WITH_PKGNG?=		yes
 +WITHOUT_FBSD10_FIX?=	yes
-+DFLY_PATCHDIR?= 	${MASTERDIR}/dragonfly
-+DFLY_FILESDIR?= 	${MASTERDIR}/dragonfly
 +PORTSDIR?=		/usr/dports
  LOCALBASE?=		/usr/local
  LINUXBASE?=		/compat/linux
@@ -42,7 +40,7 @@
  _DISTDIR?=		${DISTDIR}/${DIST_SUBDIR}
  INDEXDIR?=		${PORTSDIR}
  SRC_BASE?=		/usr/src
-@@ -1134,7 +1147,7 @@ MAINTAINER?=	ports@FreeBSD.org
+@@ -1132,7 +1143,7 @@ MAINTAINER?=	ports@FreeBSD.org
  
  # Get the architecture
  .if !defined(ARCH)
@@ -51,7 +49,7 @@
  .endif
  HOSTARCH:=	${ARCH}
  .if defined(CROSS_TOOLCHAIN)
-@@ -1153,31 +1166,36 @@ _OSRELEASE!= ${AWK} -v version=${OSVERSI
+@@ -1151,31 +1162,36 @@ _OSRELEASE!= ${AWK} -v version=${OSVERSI
  
  # Get the operating system type
  .if !defined(OPSYS)
@@ -100,7 +98,7 @@
  .if (${OPSYS} == FreeBSD && ${OSVERSION} < 1102000) || \
      (${OPSYS} == DragonFly && ${DFLYVERSION} < 400400)
  _UNSUPPORTED_SYSTEM_MESSAGE=	Ports Collection support for your ${OPSYS} version has ended, and no ports\
-@@ -1196,18 +1214,6 @@ show-unsupported-system-error:
+@@ -1194,18 +1210,6 @@ show-unsupported-system-error:
  . endif
  .endif
  
@@ -119,7 +117,7 @@
  # Only define tools here (for transition period with between pkg tools)
  .include "${PORTSDIR}/Mk/bsd.commands.mk"
  
-@@ -1353,13 +1359,13 @@ DEV_WARNING+=	"You are using USE_GITHUB
+@@ -1351,13 +1355,15 @@ DEV_WARNING+=	"You are using USE_GITHUB
  DISTNAME?=	${PORTNAME}-${DISTVERSIONFULL}
  .endif
  
@@ -131,11 +129,21 @@
  .endif
  
 -PACKAGES?=		${PORTSDIR}/packages
++DFLY_PATCHDIR?= 	${PATCHDIR:H}/dragonfly
++DFLY_FILESDIR?= 	${FILESDIR:H}/dragonfly
 +PACKAGES?=		/usr/packages
  TEMPLATES?=		${PORTSDIR}/Templates
  KEYWORDS?=		${PORTSDIR}/Keywords
  
-@@ -1682,7 +1688,7 @@ _WRKDIR=	work
+@@ -1653,6 +1659,7 @@ QA_ENV+=		USESSHAREDMIMEINFO=yes
+ .if !empty(USES:Mterminfo)
+ QA_ENV+=		USESTERMINFO=yes
+ .endif
++QA_ENV+=		DFLY_ALLOW_FOREIGN_BINARIES="${DFLY_ALLOW_FOREIGN_BINARIES:Dyes}"
+ 
+ CO_ENV+=		STAGEDIR=${STAGEDIR} \
+ 				PREFIX=${PREFIX} \
+@@ -1680,7 +1687,7 @@ _WRKDIR=	work
  _WRKDIR=	work-${FLAVOR}
  .endif
  
@@ -144,7 +152,7 @@
  BINARY_LINKDIR=	${WRKDIR}/.bin
  PATH:=			${BINARY_LINKDIR}:${PATH}
  .if !${MAKE_ENV:MPATH=*} && !${CONFIGURE_ENV:MPATH=*}
-@@ -1754,7 +1760,14 @@ PLIST_SUB_SED?= ${PLIST_SUB_SED_tmp3:C/(
+@@ -1752,7 +1759,14 @@ PLIST_SUB_SED?= ${PLIST_SUB_SED_tmp3:C/(
  
  # kludge to strip trailing whitespace from CFLAGS;
  # sub-configure will not # survive double space
@@ -160,7 +168,7 @@
  
  .if defined(WITHOUT_CPU_CFLAGS)
  .if defined(_CPUCFLAGS)
-@@ -1801,19 +1814,6 @@ PATCH_DEPENDS+=		${LOCALBASE}/bin/unzip:
+@@ -1799,19 +1813,6 @@ PATCH_DEPENDS+=		${LOCALBASE}/bin/unzip:
  
  # Check the compatibility layer for amd64/ia64
  
@@ -180,7 +188,7 @@
  .if defined(IA32_BINARY_PORT) && ${ARCH} != "i386"
  .if ${ARCH} == "amd64" || ${ARCH} == "ia64"
  .if !defined(HAVE_COMPAT_IA32_KERN)
-@@ -1839,8 +1839,18 @@ PKG_ORIGIN=		ports-mgmt/pkg-devel
+@@ -1837,8 +1838,13 @@ PKG_ORIGIN=		ports-mgmt/pkg-devel
  PKG_DEPENDS+=	${LOCALBASE}/sbin/pkg:${PKG_ORIGIN}
  .endif
  
@@ -190,18 +198,13 @@
 +.include "${PORTSDIR}/Mk/bsd.df.gcc.mk"
 +.else
 +.  if !defined(USE_GNUSTEP)
-+.   if exists (/usr/libexec/gcc80/CC)
 +CONFIGURE_ENV+= 	CCVER=gcc80
 +MAKE_ENV+=		CCVER=gcc80
-+.   else
-+CONFIGURE_ENV+= 	CCVER=gcc50
-+MAKE_ENV+=		CCVER=gcc50
-+.   endif
 +.  endif
  .endif
  
  .if defined(LLD_UNSAFE) && ${/usr/bin/ld:L:tA} == /usr/bin/ld.lld
-@@ -2021,8 +2031,10 @@ DISTINFO_FILE?=		${MASTERDIR}/distinfo
+@@ -2015,8 +2021,10 @@ DISTINFO_FILE?=		${MASTERDIR}/distinfo
  MAKE_FLAGS?=	-f
  MAKEFILE?=		Makefile
  MAKE_CMD?=		${BSDMAKE}
@@ -212,7 +215,7 @@
  			CC="${CC}" CFLAGS="${CFLAGS}" \
  			CPP="${CPP}" CPPFLAGS="${CPPFLAGS}" \
  			LDFLAGS="${LDFLAGS}" LIBS="${LIBS}" \
-@@ -2059,7 +2071,7 @@ MAKE_JOBS_NUMBER=	1
+@@ -2053,7 +2061,7 @@ MAKE_JOBS_NUMBER=	1
  _MAKE_JOBS_NUMBER:=	${MAKE_JOBS_NUMBER}
  .else
  .if !defined(_SMP_CPUS)
@@ -221,7 +224,7 @@
  .endif
  _EXPORTED_VARS+=	_SMP_CPUS
  _MAKE_JOBS_NUMBER=	${_SMP_CPUS}
-@@ -2610,7 +2622,7 @@ CONFIG_SITE?=		${PORTSDIR}/Templates/con
+@@ -2604,7 +2612,7 @@ CONFIG_SITE?=		${PORTSDIR}/Templates/con
  .if defined(GNU_CONFIGURE)
  # Maximum command line length
  .if !defined(CONFIGURE_MAX_CMD_LEN)
@@ -230,7 +233,7 @@
  .endif
  _EXPORTED_VARS+=	CONFIGURE_MAX_CMD_LEN
  GNU_CONFIGURE_PREFIX?=	${PREFIX}
-@@ -2652,6 +2664,8 @@ SET_LATE_CONFIGURE_ARGS= \
+@@ -2646,6 +2654,8 @@ SET_LATE_CONFIGURE_ARGS= \
  SCRIPTS_ENV+=	CURDIR=${MASTERDIR} DISTDIR=${DISTDIR} \
  		  WRKDIR=${WRKDIR} WRKSRC=${WRKSRC} PATCHDIR=${PATCHDIR} \
  		  SCRIPTDIR=${SCRIPTDIR} FILESDIR=${FILESDIR} \
@@ -239,7 +242,7 @@
  		  PORTSDIR=${PORTSDIR} PREFIX=${PREFIX} LOCALBASE=${LOCALBASE}
  
  .if defined(BATCH)
-@@ -2729,7 +2743,7 @@ DESKTOPDIR?=		${PREFIX}/share/applicatio
+@@ -2723,7 +2733,7 @@ DESKTOPDIR?=		${PREFIX}/share/applicatio
  
  # Check the machine architectures
  .if defined(ONLY_FOR_ARCHS)
@@ -248,7 +251,7 @@
  .if ${ARCH:M${__ARCH}} != ""
  __ARCH_OK?=		1
  .endif
-@@ -2739,7 +2753,7 @@ __ARCH_OK?=		1
+@@ -2733,7 +2743,7 @@ __ARCH_OK?=		1
  .endif
  
  .if defined(NOT_FOR_ARCHS)
@@ -257,7 +260,7 @@
  .if ${ARCH:M${__NARCH}} != ""
  .undef __ARCH_OK
  .endif
-@@ -2748,9 +2762,9 @@ __ARCH_OK?=		1
+@@ -2742,9 +2752,9 @@ __ARCH_OK?=		1
  
  .if !defined(__ARCH_OK)
  .if defined(ONLY_FOR_ARCHS)
@@ -269,7 +272,7 @@
  .endif
  IGNORE+=	while you are running ${ARCH}
  
-@@ -2897,6 +2911,7 @@ all:
+@@ -2891,6 +2901,7 @@ all:
  	  DISTDIR=${DISTDIR} WRKDIR=${WRKDIR} WRKSRC=${WRKSRC} \
  	  PATCHDIR=${PATCHDIR} SCRIPTDIR=${SCRIPTDIR} \
  	  FILESDIR=${FILESDIR} PORTSDIR=${PORTSDIR} PREFIX=${PREFIX} \
@@ -277,7 +280,7 @@
  	  BUILD_DEPENDS="${BUILD_DEPENDS}" RUN_DEPENDS="${RUN_DEPENDS}" \
  	  CONFLICTS="${CONFLICTS}" \
  	${ALL_HOOK}
-@@ -3156,6 +3171,7 @@ do-patch:
+@@ -3150,6 +3161,7 @@ do-patch:
  			dp_OPSYS="${OPSYS}" \
  			dp_PATCH="${PATCH}" \
  			dp_PATCHDIR="${PATCHDIR}" \
@@ -285,7 +288,7 @@
  			dp_PATCHFILES="${_PATCHFILES2}" \
  			dp_PATCH_ARGS=${PATCH_ARGS:Q} \
  			dp_PATCH_DEBUG_TMP="${PATCH_DEBUG_TMP}" \
-@@ -3382,7 +3398,7 @@ _PORTS_DIRECTORIES+=	${PKGLATESTREPOSITO
+@@ -3376,7 +3388,7 @@ _PORTS_DIRECTORIES+=	${PKGLATESTREPOSITO
  _EXTRA_PACKAGE_TARGET_DEP+=	${PKGLATESTFILE}
  
  ${PKGLATESTFILE}: ${PKGFILE} ${PKGLATESTREPOSITORY}
@@ -294,7 +297,7 @@
  .  endif
  
  .endif
-@@ -3741,6 +3757,7 @@ do-clean:
+@@ -3735,6 +3747,7 @@ do-clean:
  	@if [ -d ${WRKDIR} ]; then \
  		if [ -w ${WRKDIR} ]; then \
  			${RM} -r ${WRKDIR}; \
@@ -302,7 +305,7 @@
  		else \
  			${ECHO_MSG} "===>   ${WRKDIR} not writable, skipping"; \
  		fi; \
-@@ -4123,7 +4140,7 @@ FETCH_LIST?=	for i in $$deps; do \
+@@ -4117,7 +4130,7 @@ FETCH_LIST?=	for i in $$deps; do \
  			else	\
  				continue;	\
  			fi;;	\
@@ -311,7 +314,7 @@
  				continue;	\
  			fi;;	\
  		esac;	\
-@@ -4447,10 +4464,15 @@ _SUB_LIST_TEMP=	${SUB_LIST:S/$/!g/:S/^/
+@@ -4441,10 +4454,15 @@ _SUB_LIST_TEMP=	${SUB_LIST:S/$/!g/:S/^/
  apply-slist:
  .if defined(SUB_FILES)
  .for file in ${SUB_FILES}
@@ -330,11 +333,65 @@
  .endif
  .endfor
  .for i in pkg-message pkg-install pkg-deinstall pkg-req
-@@ -5226,6 +5248,7 @@ _PATCH_DEP=		extract
+@@ -5200,37 +5218,37 @@ _SANITY_SEQ=	050:post-chroot 100:pre-eve
+ 				350:check-desktop-entries 400:check-depends \
+ 				450:identify-install-conflicts 500:check-deprecated \
+ 				550:check-vulnerable 600:check-license 650:check-config \
+-				700:buildanyway-message 750:options-message ${_USES_sanity}
++				700:buildanyway-message 750:options-message 780:dfly-sanity ${_USES_sanity}
+ 
+ _PKG_DEP=		check-sanity
+ _PKG_SEQ=		500:pkg-depends
+ _FETCH_DEP=		pkg
+ _FETCH_SEQ=		150:fetch-depends 300:pre-fetch 450:pre-fetch-script \
+ 				500:do-fetch 550:fetch-specials 700:post-fetch \
+-				850:post-fetch-script \
++				850:post-fetch-script 880:dfly-fetch \
+ 				${_OPTIONS_fetch} ${_USES_fetch}
+ _EXTRACT_DEP=	fetch
+ _EXTRACT_SEQ=	010:check-build-conflicts 050:extract-message 100:checksum \
+ 				150:extract-depends 190:clean-wrkdir 200:${EXTRACT_WRKDIR} \
+ 				300:pre-extract 450:pre-extract-script 500:do-extract \
+-				700:post-extract 850:post-extract-script \
++				700:post-extract 850:post-extract-script 880:dfly-extract \
+ 				999:extract-fixup-modes \
+ 				${_OPTIONS_extract} ${_USES_extract} ${_SITES_extract}
+ _PATCH_DEP=		extract
  _PATCH_SEQ=		050:ask-license 100:patch-message 150:patch-depends \
  				300:pre-patch 450:pre-patch-script 500:do-patch \
- 				700:post-patch 850:post-patch-script \
-+				880:dfly-patch \
+-				700:post-patch 850:post-patch-script \
++				700:post-patch 850:post-patch-script 880:dfly-patch \
  				${_OPTIONS_patch} ${_USES_patch}
  _CONFIGURE_DEP=	patch
  _CONFIGURE_SEQ=	150:build-depends 151:lib-depends 160:create-binary-alias \
+ 				200:configure-message \
+ 				300:pre-configure 450:pre-configure-script \
+ 				490:run-autotools-fixup 500:do-configure 700:post-configure \
+-				850:post-configure-script \
++				850:post-configure-script 880:dfly-configure \
+ 				${_OPTIONS_configure} ${_USES_configure}
+ _BUILD_DEP=		configure
+ _BUILD_SEQ=		100:build-message 300:pre-build 450:pre-build-script \
+-				500:do-build 700:post-build 850:post-build-script \
++				500:do-build 700:post-build 850:post-build-script 880:dfly-build \
+ 				${_OPTIONS_build} ${_USES_build}
+ _STAGE_DEP=		build
+ # STAGE is special in its numbering as it has install and stage, so install is
+@@ -5239,7 +5257,7 @@ _STAGE_SEQ=		050:stage-message 100:stage
+ 				200:apply-slist 300:pre-install \
+ 				400:generate-plist 450:pre-su-install 475:create-users-groups \
+ 				500:do-install 550:kmod-post-install 600:fixup-lib-pkgconfig 700:post-install \
+-				750:post-install-script 800:post-stage 850:compress-man \
++				750:post-install-script 780:dfly-install 800:post-stage 850:compress-man \
+ 				860:install-rc-script 870:install-ldconfig-file \
+ 				880:install-license 890:install-desktop-entries \
+ 				900:add-plist-info 910:add-plist-docs 920:add-plist-examples \
+@@ -5253,7 +5271,7 @@ stage-qa: stage
+ .endif
+ _TEST_DEP=		stage
+ _TEST_SEQ=		100:test-message 150:test-depends 300:pre-test 500:do-test \
+-				800:post-test \
++				800:post-test 880:dfly-test \
+ 				${_OPTIONS_test} ${_USES_test}
+ _INSTALL_DEP=	stage
+ _INSTALL_SEQ=	100:install-message \
