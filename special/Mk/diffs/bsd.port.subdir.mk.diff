@@ -1,6 +1,6 @@
---- bsd.port.subdir.mk.orig	2015-11-30 12:47:25 UTC
+--- bsd.port.subdir.mk.orig	2018-08-23 15:21:44 UTC
 +++ bsd.port.subdir.mk
-@@ -61,26 +61,38 @@ STRIP?=	-s
+@@ -66,26 +66,38 @@ STRIP?=	-s
  
  .if !defined(NOPRECIOUSMAKEVARS)
  .if !defined(ARCH)
@@ -47,7 +47,7 @@
  .endif
  _EXPORTED_VARS+=	_OSRELEASE
  .if !defined(OSREL)
-@@ -89,25 +101,16 @@ OSREL=	${_OSRELEASE:C/[-(].*//}
+@@ -94,25 +106,16 @@ OSREL=	${_OSRELEASE:C/[-(].*//}
  _EXPORTED_VARS+=	OSREL
  
  .if !defined(OPSYS)
@@ -76,13 +76,13 @@
  .if !defined(_JAVA_VERSION_LIST_REGEXP)
  _JAVA_VERSION_LIST_REGEXP!=	${MAKE} -V _JAVA_VERSION_LIST_REGEXP USE_JAVA=1 -f ${PORTSDIR}/Mk/bsd.port.mk
  .endif
-@@ -127,6 +130,13 @@ _EXPORTED_VARS+=	_JAVA_OS_LIST_REGEXP
+@@ -132,6 +135,13 @@ _EXPORTED_VARS+=	_JAVA_OS_LIST_REGEXP
  _JAVA_PORTS_INSTALLED!=		${MAKE} -V _JAVA_PORTS_INSTALLED USE_JAVA=1 -f ${PORTSDIR}/Mk/bsd.port.mk
  .endif
  _EXPORTED_VARS+=	_JAVA_PORTS_INSTALLED
 +.else
 +# export empty variables
-+_EXPORTED_VARS+=        _JAVA_VERSION_LIST_REGEXP \
++_EXPORTED_VARS+=	_JAVA_VERSION_LIST_REGEXP \
 +			_JAVA_VENDOR_LIST_REGEXP \
 +			_JAVA_OS_LIST_REGEXP \
 +			_JAVA_PORTS_INSTALLED
@@ -90,7 +90,7 @@
  
  .if !defined(UID)
  UID!=	${ID} -u
-@@ -136,7 +146,7 @@ _EXPORTED_VARS+=	UID
+@@ -141,7 +151,7 @@ _EXPORTED_VARS+=	UID
  .endif
  
  INDEXDIR?=	${PORTSDIR}
