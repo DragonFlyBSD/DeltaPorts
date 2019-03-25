@@ -4,4 +4,4 @@
 DFLY_ALLOW_FOREIGN_BINARIES=yes
 .endif
 
-PLIST_SUB+=	OPSYSL=${OPSYS:tl}
+SHEBANG_FILES+=	src/internal/x/fiximports.bash
