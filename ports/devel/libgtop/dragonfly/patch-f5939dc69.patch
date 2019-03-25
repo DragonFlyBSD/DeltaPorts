@@ -1,0 +1,123 @@
+From https://github.com/GNOME/libgtop/commit/f5939dc69
+
+Date: Thu, 31 Aug 2017 17:48:46 +0200
+Subject: [PATCH] Rework code to get rid of $[ assigment. Use directly uc instead of customer toupper.
+--- lib/lib.pl.orig
++++ lib/lib.pl
+@@ -1,21 +1,8 @@
+ #!/usr/bin/perl
+ 
+-$[ = 1;			# set array base to 1
+ $, = ' ';		# set output field separator
+ $\ = "\n";		# set output record separator
+ 
+-sub toupper {
+-    local($_) = @_;
+-    tr/a-z/A-Z/;
+-    return $_;
+-}
+-
+-sub tolower {
+-    local($_) = @_;
+-    tr/A-Z/a-z/;
+-    return $_;
+-}
+-
+ print '/* lib.c */';
+ print "/* This is a generated file.  Please modify `lib.pl' */";
+ print '';
+@@ -86,9 +73,9 @@ sub tolower {
+ sub output {
+     local($line) = @_;
+     @line_fields = split(/\|/, $line, 9999);
+-    $retval = $line_fields[1];
+-    $feature = $line_fields[2];
+-    $param_def = $line_fields[3];
++    $retval = $line_fields[0];
++    $feature = $line_fields[1];
++    $param_def = $line_fields[2];
+ 
+     $orig = $feature;
+     $feature =~ s/^@//;
+@@ -106,16 +93,16 @@ sub output {
+     }
+ 
+     if ($param_def eq 'string') {
+-	$call_param = ', ' . $line_fields[4];
++	$call_param = ', ' . $line_fields[3];
+ 	$param_buf = '';
+ 	$buf_set = '';
+ 	$param_decl = ",\n            " . $space . '    const char *' .
+ 
+-	  $line_fields[4];
+-	$send_ptr = "\n\tconst void *send_ptr = " . $line_fields[4] . ';';
++	  $line_fields[3];
++	$send_ptr = "\n\tconst void *send_ptr = " . $line_fields[3] . ';';
+ 	$send_size = "\n\tconst size_t send_size =\n\t\tstrlen (" .
+ 
+-	  $line_fields[4] . ') + 1;';
++	  $line_fields[3] . ') + 1;';
+     }
+     else {
+ 	$call_param = '';
+@@ -128,7 +115,7 @@ sub output {
+ 	if ($nr_params) {
+ 	    $param_buf = "\t\tstruct {\n";
+ 	}
+-	for ($param = 1; $param <= $nr_params; $param++) {
++	for ($param = 0; $param < $nr_params; $param++) {
+ 	    $list = $params[$param];
+ 	    $type = $params[$param];
+ 	    $type =~ s/\(.*//;
+@@ -137,13 +124,13 @@ sub output {
+ 	    $count = (@fields = split(/,/, $list, 9999));
+ 
+ 	    if ($count > 0) {
+-		for ($field = 1; $field <= $count; $field++) {
++		for ($field = 0; $field < $count; $field++) {
+ 		    $param_buf .= "\t\t\t$convert{$type} buf_$fields[$field];\n";
+ 		    $buf_set .= "\t\tparam_buf.buf_$fields[$field] = $fields[$field];\n";
+ 		}
+ 	    }
+ 
+-	    for ($field = 1; $field <= $count; $field++) {
++	    for ($field = 0; $field < $count; $field++) {
+ 		if ($param_decl eq '') {
+ 		    $param_decl = ",\n            " . $space . '    ';
+ 		}
+@@ -183,7 +170,7 @@ sub output {
+ 
+     print "\tglibtop_init_r (&server, (1 << GLIBTOP_SYSDEPS_" .
+ 
+-      &toupper($feature) . '), 0);';
++      uc($feature) . '), 0);';
+ 
+     print '';
+     print "\t/* If neccessary, we ask the server for the requested";
+@@ -193,7 +180,7 @@ sub output {
+     print "\tif ((server->flags & _GLIBTOP_INIT_STATE_SERVER) &&";
+     print "\t    (server->features & (1 << GLIBTOP_SYSDEPS_" .
+ 
+-      &toupper($feature) . ')))';
++      uc($feature) . ')))';
+     print "\t{";
+ 
+     if ($param_buf) {
+@@ -207,7 +194,7 @@ sub output {
+ 
+     print "\t\t" . $prefix . 'glibtop_call_l (server, GLIBTOP_CMND_' .
+ 
+-      &toupper($feature) . ',';
++      uc($feature) . ',';
+     print "\t\t\t\t" . $prefix_space . 'send_size, send_ptr,';
+     print "\t\t\t\t" . $prefix_space . 'sizeof (glibtop_' . $feature .
+ 
+@@ -216,7 +203,7 @@ sub output {
+     print "\t} else {";
+ 
+     if ($orig !~ /^@/) {
+-	print '#if (!GLIBTOP_SUID_' . &toupper($feature) . ')';
++	print '#if (!GLIBTOP_SUID_' . uc($feature) . ')';
+     }
+     print "\t\t" . $prefix . 'glibtop_get_' . $feature . '_s (server, buf' .
+ 
