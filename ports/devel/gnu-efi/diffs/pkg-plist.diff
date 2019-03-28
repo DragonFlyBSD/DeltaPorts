@@ -1,11 +1,21 @@
 --- pkg-plist.orig	2019-01-22 15:25:34 UTC
 +++ pkg-plist
-@@ -47,7 +47,7 @@ lib/libgnuefi.a
- %%ARCH_amd64%%include/efi/x86_64/efisetjmp_arch.h
- %%ARCH_amd64%%include/efi/x86_64/pe.h
- %%ARCH_amd64%%lib/crt0-efi-x86_64.o
+@@ -42,12 +42,12 @@ include/efi/romload.h
+ lib/libefi.a
+ lib/libgnuefi.a
+ @comment Architecture Specific Packages List, amd64
+-%%ARCH_amd64%%include/efi/x86_64/efibind.h
+-%%ARCH_amd64%%include/efi/x86_64/efilibplat.h
+-%%ARCH_amd64%%include/efi/x86_64/efisetjmp_arch.h
+-%%ARCH_amd64%%include/efi/x86_64/pe.h
+-%%ARCH_amd64%%lib/crt0-efi-x86_64.o
 -%%ARCH_amd64%%lib/elf_x86_64_fbsd_efi.lds
-+%%ARCH_amd64%%lib/elf_x86_64_efi.lds
++%%ARCH_x86_64%%include/efi/x86_64/efibind.h
++%%ARCH_x86_64%%include/efi/x86_64/efilibplat.h
++%%ARCH_x86_64%%include/efi/x86_64/efisetjmp_arch.h
++%%ARCH_x86_64%%include/efi/x86_64/pe.h
++%%ARCH_x86_64%%lib/crt0-efi-x86_64.o
++%%ARCH_x86_64%%lib/elf_x86_64_efi.lds
  @comment Architecture Specific Packages List, i386
  %%ARCH_i386%%include/efi/ia32/efibind.h
  %%ARCH_i386%%include/efi/ia32/efilibplat.h
