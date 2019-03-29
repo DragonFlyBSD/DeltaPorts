@@ -14,8 +14,9 @@ dfly-patch:
 	${REINPLACE_CMD} -e '/MATCHES/s@\(FreeBSD\)"@\1|DragonFly"@g'	\
 		${WRKSRC}/CMakeModules/SetupFGFSLibraries.cmake		\
 		${WRKSRC}/CMakeLists.txt				\
-		${WRKSRC}/CMakeLists.txt.c++20				\
 		${WRKSRC}/src/Main/CMakeLists.txt
+	-${REINPLACE_CMD} -e '/MATCHES/s@\(FreeBSD\)"@\1|DragonFly"@g'	\
+		${WRKSRC}/CMakeLists.txt.c++20
 	${ECHO_MSG} 'target_link_libraries(fgfs "-L/usr/local/lib -lX11")' >> \
 		${WRKSRC}/src/Main/CMakeLists.txt
 .if !defined(DPORTS_BUILDER) && defined(PACKAGE_BUILDING)
