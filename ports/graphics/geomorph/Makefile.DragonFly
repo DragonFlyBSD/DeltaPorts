@@ -1,10 +1,4 @@
 
-# zrj: few missing things
-USE_GNOME+=	atk cairo gdkpixbuf2 glib20 gtk20 pango pangox-compat
-USE_GL+=	gl
-USE_XORG+=	x11
-LIB_DEPENDS+=	libfontconfig.so:x11-fonts/fontconfig
-
 # contains linux binary in examples scenes/colmap (not used)
 .if defined(DEVELOPER)
 .MAKEFLAGS+=	DFLY_ALLOW_FOREIGN_BINARIES=yes
