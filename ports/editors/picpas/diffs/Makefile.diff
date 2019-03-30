@@ -1,0 +1,11 @@
+--- Makefile.orig	2019-03-07 20:17:27 UTC
++++ Makefile
+@@ -46,7 +46,7 @@
+ 	${REINPLACE_CMD} 's|%%DATADIR%%|${DATADIR}|g' ${WRKSRC}/Source/Globales.pas
+ 
+ do-install:
+-	${INSTALL_PROGRAM} ${WRKSRC}/PicPas-freebsd ${STAGEDIR}${PREFIX}/bin/${PORTNAME}
++	${INSTALL_PROGRAM} ${WRKSRC}/PicPas-${OPSYS:tl} ${STAGEDIR}${PREFIX}/bin/${PORTNAME}
+ 	@${MKDIR} ${STAGEDIR}${DATADIR}
+ 	cd ${WRKSRC} && ${COPYTREE_SHARE} "devices10 devices16 devices17 syntax samples temp themes units" ${STAGEDIR}${DATADIR}
+ 
