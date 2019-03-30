@@ -1,3 +1,7 @@
+.if defined(DPORTS_BUILDER)
+.undef FORBIDDEN
+.endif
+
 # zrj: too noisy on gcc80
 # tuxillo: Added -fno-delete-null-pointer-checks (see: https://bugzilla.redhat.com/show_bug.cgi?id=1320240)
 CXXFLAGS+=	-Wno-expansion-to-defined -Wno-class-memaccess

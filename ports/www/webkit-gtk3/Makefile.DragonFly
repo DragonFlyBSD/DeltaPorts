@@ -1,3 +1,7 @@
+.if defined(DPORTS_BUILDER)
+.undef FORBIDDEN
+.endif
+
 # zrj: too noisy on gcc80
 CXXFLAGS+=	-Wno-expansion-to-defined -Wno-class-memaccess
 
