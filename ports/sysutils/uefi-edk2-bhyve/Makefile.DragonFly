@@ -1,3 +1,6 @@
+# port requires gcc48
+BUILD_DEPENDS+=	gcc48:lang/gcc48
+
 # zrj: fix CRLF for dragonfly patches
 USES+=	dos2unix
 DOS2UNIX_FILES+=	BaseTools/Source/C/GenFv/GenFvInternalLib.c
