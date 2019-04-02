@@ -1,6 +1,6 @@
---- bsd.df.gcc.mk.orig	2018-08-30 18:21:53 UTC
+--- bsd.df.gcc.mk.orig	2019-04-02 22:33:20 UTC
 +++ bsd.df.gcc.mk
-@@ -0,0 +1,75 @@
+@@ -0,0 +1,71 @@
 +# bsd.gcc.df.mk  - Reaction to USE_GCC on DragonFly
 +#
 +# The primary base compiler is used is possible, otherwise the ports default
@@ -19,14 +19,10 @@
 +.undef PORT_COMPILER
 +.undef BASE_COMPILER
 +
-+.if exists (/usr/libexec/gcc80/CC)
 +BASE_COMPILER=gcc80
-+.else
-+BASE_COMPILER=gcc50
-+.endif
 +
-+.if defined(USE_GCC_VERSION) && ${USE_GCC_VERSION:M[678]}
-+.   if ${BASE_COMPILER:Mgcc50}  # Ignore USE_GCC_VERSION when gcc80 available
++.if defined(USE_GCC_VERSION) && ${USE_GCC_VERSION:M[679]}
++.   if ${BASE_COMPILER:Mgcc80}
 +PORT_COMPILER=${USE_GCC_VERSION}
 +.   endif
 +.endif
