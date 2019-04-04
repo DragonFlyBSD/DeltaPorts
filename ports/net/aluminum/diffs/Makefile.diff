@@ -1,0 +1,17 @@
+--- Makefile.orig	2019-03-20 15:37:03.000000000 +0200
++++ Makefile	2019-04-04 19:06:02.000000000 +0300
+@@ -20,6 +20,7 @@
+ GH_ACCOUNT=	LLNL
+ USE_LDCONFIG=	yes
+ 
++.if 0 #${OPSYS} == FreeBSD
+ CONFLICTS_BUILD=	openmp # because OpenMP detection is broken in cmake even with port clang, see bug#234050
+ LDFLAGS+=	${LOCALBASE}/llvm${LLVM_DEFAULT}/lib/libomp.so # see above
+ 
+@@ -28,5 +29,6 @@
+ CPP=		clang-cpp${LLVM_DEFAULT}
+ CC=		clang${LLVM_DEFAULT}
+ CXX=		clang++${LLVM_DEFAULT}
++.endif
+ 
+ .include <bsd.port.mk>
