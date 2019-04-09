@@ -48,7 +48,7 @@ fi
 # arg 1 is the original directory
 get_legacy ()
 {
-   local PATT='amd64'
+   local PATT='amd64|libomp'
    local RET=$(cd ${1} && grep -lE ${PATT} Makefile* *\.common 2>/dev/null | sort -u)
    echo ${RET}
 }
