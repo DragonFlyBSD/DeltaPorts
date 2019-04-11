@@ -76,7 +76,6 @@ transform ()
 	 -e '/ARCH}.*(amd64|"amd64")/s|amd64|x86_64|g' \
 	 -e 's|libomp.so:devel/openmp[[:>:]]||g' \
 	 -e 's|libomp.so.0:devel/openmp[[:>:]]||g' \
-	 -e 's|openmp>0:devel/openmp[[:>:]]||g' \
          > ${WORK}/${item}.filtered
       touch -r ${WORK}/${item} ${WORK}/${item}.filtered
       mv ${WORK}/${item}.filtered ${WORK}/${item}
