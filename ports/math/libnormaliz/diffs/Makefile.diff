@@ -1,0 +1,12 @@
+--- Makefile.orig	2019-04-25 07:22:19 UTC
++++ Makefile
+@@ -36,7 +36,9 @@ COCOA_LDFLAGS=		${LOCALBASE}/lib -lcocoa
+ FLINT_BUILD_DEPENDS=	${LOCALBASE}/lib/libflint.so:math/flint2
+ FLINT_CXXFLAGS=		-DNMZ_FLINT
+ FLINT_LDFLAGS=		-L ${LOCALBASE}/lib -lflint -lmpfr
++.if 0 #${OPSYS} == FreeBSD
+ OPENMP_BUILD_DEPENDS=	${LOCALBASE}/lib/libomp.so:devel/openmp
++.endif
+ OPENMP_CXXFLAGS=	-fopenmp
+ 
+ do-install:
