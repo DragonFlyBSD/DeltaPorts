@@ -1,0 +1,12 @@
+--- Makefile.orig	2019-04-24 17:56:56 UTC
++++ Makefile
+@@ -30,7 +30,9 @@ USES=		cpe libtool pathfix pkgconfig
+ USE_LDCONFIG=	yes
+ OPTIONS_SUB=	yes
+ CFLAGS+=	-fpic -DPIC -Wl,-rpath,${PREFIX}/lib -Wl,--as-needed
++.if 0 #${OPSYS} == FreeBSD
+ LDFLAGS+=	-pthread
++.endif
+ 
+ INSTALL_TARGET=	install-strip
+ TEST_TARGET=	check
