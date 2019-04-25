@@ -1,6 +1,6 @@
---- bsd.default-versions.mk.orig	2019-02-26 08:28:26.681721000 -0800
-+++ bsd.default-versions.mk	2019-02-26 09:29:45.451839000 -0800
-@@ -29,6 +29,10 @@
+--- bsd.default-versions.mk.orig	2019-04-25 18:41:30 UTC
++++ bsd.default-versions.mk
+@@ -29,6 +29,10 @@ _l=		${lang:C/=.*//g}
  ${_l:tu}_DEFAULT=	${lang:C/.*=//g}
  .endfor
  
@@ -11,12 +11,3 @@
  # Possible values: 2.4
  APACHE_DEFAULT?=	2.4
  # Possible values: 48, 5, 6
-@@ -57,7 +61,7 @@
- LINUX_DEFAULT?=		c6
- .endif
- # Possible values: 50, 60, 70 (to be used when non-base compiler is required)
--LLVM_DEFAULT?=		70
-+LLVM_DEFAULT?=		60
- # Possible values: 5.1, 5.2, 5.3
- LUA_DEFAULT?=		5.2
- # Possible values: 5.5, 5.6, 5.7, 8.0, 5.5m, 10.0m, 10.1m, 10.2m, 10.3m, 5.5p, 5.6p, 5.7p, 5.6w
