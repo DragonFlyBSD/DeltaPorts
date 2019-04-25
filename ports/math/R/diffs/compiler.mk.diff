@@ -1,0 +1,8 @@
+--- compiler.mk.orig	2017-01-13 12:51:19 UTC
++++ compiler.mk
+@@ -1,4 +1,4 @@
+ # Compiler settings required for R and the R-cran ports.
+ .if ${OPSYS} == DragonFly
+-USE_GCC=	6
++USE_GCC=	8
+ .endif
