@@ -1,9 +1,18 @@
---- bsd.ghc.mk.orig	2019-04-26 22:55:01 UTC
+--- bsd.ghc.mk.orig	2019-04-26 23:23:18 UTC
 +++ bsd.ghc.mk
-@@ -107,6 +107,18 @@ RUN_DEPENDS+=		llc${BOOT_LLVM_VERSION}:d
+@@ -93,6 +93,7 @@ BOOT_GHC_VERSION=	8.4.3
+ .  else
+ BOOT_GHC_VERSION=	8.6.3
+ .  endif
++.endif # MBOOT
+ 
+ # When GHC being compiled and GHC used for bootstrapping support different
+ # LLVM versions, we have to pull in both. Luckily, this is relatively rare.
+@@ -107,7 +108,17 @@ RUN_DEPENDS+=		llc${BOOT_LLVM_VERSION}:d
  .  endif
  
  DISTFILES+=		ghc-${BOOT_GHC_VERSION}-boot-${ARCH}-freebsd${EXTRACT_SUFX}:boot
+-.endif # MBOOT
 +
 +.  elif ${OPSYS} == "DragonFly"
 +
@@ -15,11 +24,10 @@
 +.  else
 +IGNORE=		unsupported ${OPSYS} Operating System
 +.  endif
-+
- .endif # MBOOT
  
  .if ${ARCH} == aarch64 || ${ARCH} == armv6 || ${ARCH} == armv7
-@@ -224,13 +236,6 @@ post-patch:
+ # CONFIGURE_TARGET must to be the same as the llvm triple
+@@ -224,13 +235,6 @@ post-patch:
  	@${REINPLACE_CMD} -e 's/@SettingsLlcCommand@/llc${LLVM_VERSION}/' ${WRKSRC}/settings.in
  	@${REINPLACE_CMD} -e 's/@SettingsOptCommand@/opt${LLVM_VERSION}/' ${WRKSRC}/settings.in
  
