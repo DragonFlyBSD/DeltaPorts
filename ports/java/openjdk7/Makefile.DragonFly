@@ -1,14 +1,1 @@
-MAKE_ENV+=	DONT_ENABLE_IPV6="YES"
-MAKE_ENV+=	USE_PRECOMPILED_HEADER=0
-
-.if exists (/usr/libexec/gcc80/CC)
-# XXX needs libstdc++.so.9 non static bootstrap?
-MAKE_ENV+=	LD_LIBRARY_PATH=/usr/lib/gcc80
-#CFLAGS+=	-O1
-
-# Problematic frame:
-# V  [libjvm.so+0x69ade3]  JVM_FindSignal+0x13a331
-dfly-patch:
-	${REINPLACE_CMD} -e 's/-O3/-O1 -fno-tree-ccp -fno-tree-copy-prop -fno-tree-dominator-opts -fno-tree-fre/g'	\
-		${WRKSRC}/hotspot/make/bsd/makefiles/gcc.make
-.endif
+BROKEN=     requires the new bootstrap packages, requires fixing.
