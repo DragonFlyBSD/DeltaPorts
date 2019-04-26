@@ -1,1 +1,0 @@
-IGNORE=	fails to build with gcc5 and takes forever (ver 1.3.3)

@@ -1,3 +1,0 @@
-USES+= alias
-
-IGNORE= tries to run binary codegen.Linux-x86_64
