@@ -1,14 +1,6 @@
---- Makefile.orig	2019-02-17 01:36:00.777096000 +0100
-+++ Makefile	2019-02-17 01:35:51.766933000 +0100
-@@ -3,6 +3,7 @@
- 
- PORTNAME=	mesa-dri
- PORTVERSION=	${MESAVERSION}
-+PORTREVISION=	1
- CATEGORIES=	graphics
- 
- COMMENT=	OpenGL hardware acceleration drivers for DRI2+
-@@ -66,6 +67,8 @@
+--- Makefile.orig	2019-04-26 19:51:12 UTC
++++ Makefile
+@@ -67,6 +67,8 @@ EXTRA_PATCHES+=	${PATCHDIR}/extra-src_ga
  . endif
  .endif
  
@@ -16,4 +8,4 @@
 +
  .if ${VULKAN_DRIVERS}
  BUILD_DEPENDS+=		${PYTHON_PKGNAMEPREFIX}mako>0:textproc/py-mako@${PY_FLAVOR}
- .endif
+ USE_XORG+=		xcb xrandr

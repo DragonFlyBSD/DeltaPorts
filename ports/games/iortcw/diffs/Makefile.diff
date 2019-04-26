@@ -1,11 +1,11 @@
---- Makefile.orig	2016-12-31 17:03:06 UTC
+--- Makefile.orig	2019-04-26 19:41:18 UTC
 +++ Makefile
-@@ -26,7 +26,7 @@ WOLFDIR=	"libexec/${PORTNAME}"
- MAKE_ARGS=	BINDIR="${STAGEDIR}${PREFIX}/bin" \
- 		COPYDIR="${STAGEDIR}${PREFIX}/${WOLFDIR}"
+@@ -32,7 +32,7 @@ MAKE_ARGS=	BINDIR="${STAGEDIR}${PREFIX}/
+ # cf. PR 226980
+ LLD_UNSAFE=	yes
  
--PLIST_SUB=	ARCH="${ARCH}" WOLFDIR="${WOLFDIR}"
-+PLIST_SUB=	ARCH="${ARCH:S/x86_64/amd64/}" WOLFDIR="${WOLFDIR}"
+-PLIST_SUB=	ARCH="${ARCH}" \
++PLIST_SUB=	ARCH="${ARCH:S/x86_64/amd64/}" \
+ 		WOLFDIR="${WOLFDIR}"
  
- SUB_FILES=	iowolfsp iowolfmp iowolfded pkg-message
- SUB_LIST=	ARCH="${ARCH}" WOLFDIR="${PREFIX}/${WOLFDIR}" \
+ SUB_FILES=	iowolfded iowolfmp iowolfsp pkg-message

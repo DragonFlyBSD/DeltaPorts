@@ -1,10 +1,10 @@
---- Makefile.orig	2017-01-30 01:16:39 UTC
+--- Makefile.orig	2019-04-26 19:44:23 UTC
 +++ Makefile
-@@ -93,8 +93,7 @@ CMAKE_ARGS+=	-DPROC_TARGET_NUMBER="2"
+@@ -90,8 +90,7 @@ CMAKE_ARGS+=	-DPROC_TARGET_NUMBER="2"
  .endif
  
- .if !empty(PORT_OPTIONS:MOPENMP) && ${ARCH} == "amd64"
--LIB_DEPENDS+=	libomp.so.0:devel/openmp
+ .if !empty(PORT_OPTIONS:MOPENMP) && !empty(OPTIONS_DEFINE:MOPENMP)
+-LIB_DEPENDS+=	libomp.so:devel/openmp
 -OPENMP_FLAGS=	-lm -lomp
 +OPENMP_FLAGS=	-lm -lgomp
  LDFLAGS+=	${OPENMP_FLAGS}

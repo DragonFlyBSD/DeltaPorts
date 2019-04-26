@@ -1,12 +1,12 @@
---- Makefile.orig	2017-04-12 22:41:30 UTC
+--- Makefile.orig	2019-04-26 23:03:45 UTC
 +++ Makefile
-@@ -30,6 +30,9 @@ FETCH_ENV=	HTTP_AUTH=basic:*:I\ accept\
- LDFLAGS+=	-lm
- MAKE_ENV=	CCFLAGS="${CFLAGS}"
- NO_WRKSUBDIR=	yes
-+USES=		ssl
-+CFLAGS+=	-I${OPENSSLINC}
-+LDFLAGS+=	-L${OPENSSLLIB}
+@@ -35,6 +35,9 @@ OPTIONS_DEFINE=	EXAMPLES STATIC
  
- INITVERSION=	2013-05-24
- KSHVERSION=	2012-08-01
+ LDFLAGS+=	-lm
+ MAKE_ENV=	CCFLAGS="-Wno-unused-value -Wno-parentheses -Wno-logical-op-parentheses ${CFLAGS}"
++USES=          ssl
++CFLAGS+=       -I${OPENSSLINC}
++LDFLAGS+=      -L${OPENSSLLIB}
+ 
+ KSHVERSION=	2014-12-24
+ 
