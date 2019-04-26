@@ -1,4 +1,4 @@
---- bsd.port.mk.orig	2019-02-26 16:28:26 UTC
+--- bsd.port.mk.orig	2019-04-26 11:08:52 UTC
 +++ bsd.port.mk
 @@ -43,7 +43,8 @@ FreeBSD_MAINTAINER=	portmgr@FreeBSD.org
  #				  makefile is being used on.  Automatically set to
@@ -168,11 +168,24 @@
  
  .if defined(WITHOUT_CPU_CFLAGS)
  .if defined(_CPUCFLAGS)
-@@ -1799,19 +1813,6 @@ PATCH_DEPENDS+=		${LOCALBASE}/bin/unzip:
+@@ -1777,7 +1791,9 @@ INSTALL_TARGET:=	${INSTALL_TARGET:S/^ins
+ .endif
  
- # Check the compatibility layer for amd64/ia64
+ .if !defined(WITHOUT_SSP)
+-.include "${PORTSDIR}/Mk/bsd.ssp.mk"
++# Leave the conditional just in case WITHOUT_SSP becomes
++# something else.
++#.include "${PORTSDIR}/Mk/bsd.ssp.mk"
+ .endif
  
--.if ${ARCH} == "amd64" || ${ARCH} =="ia64"
+ # XXX PIE support to be added here
+@@ -1797,21 +1813,6 @@ MAKE_ENV+=		SHELL=${MAKE_SHELL} NO_LINT=
+ PATCH_DEPENDS+=		${LOCALBASE}/bin/unzip:archivers/unzip
+ .endif
+ 
+-# Check the compatibility layer for amd64
+-
+-.if ${ARCH} == "amd64"
 -.if exists(/usr/lib32)
 -HAVE_COMPAT_IA32_LIBS?=  YES
 -.endif
@@ -186,7 +199,7 @@
 -_EXPORTED_VARS+=	HAVE_COMPAT_IA32_KERN
 -
  .if defined(IA32_BINARY_PORT) && ${ARCH} != "i386"
- .if ${ARCH} == "amd64" || ${ARCH} == "ia64"
+ .if ${ARCH} == "amd64"
  .if !defined(HAVE_COMPAT_IA32_KERN)
 @@ -1837,8 +1838,27 @@ PKG_ORIGIN=		ports-mgmt/pkg-devel
  PKG_DEPENDS+=	${LOCALBASE}/sbin/pkg:${PKG_ORIGIN}

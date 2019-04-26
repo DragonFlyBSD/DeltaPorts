@@ -1,20 +1,11 @@
---- Uses/cargo.mk.orig	2018-11-26 15:10:51 UTC
+--- Uses/cargo.mk.orig	2019-04-26 08:46:16 UTC
 +++ Uses/cargo.mk
-@@ -46,7 +46,7 @@ DISTFILES+=	${CARGO_DIST_SUBDIR}/${_crat
+@@ -43,7 +43,7 @@ DISTFILES+=	${CARGO_DIST_SUBDIR}/${_crat
  
  CARGO_BUILDDEP?=	yes
  .if ${CARGO_BUILDDEP:tl} == "yes"
--BUILD_DEPENDS+=	${RUST_DEFAULT}>=1.32.0:lang/${RUST_DEFAULT}
-+BUILD_DEPENDS+=	${RUST_DEFAULT}>=1.29.1:lang/${RUST_DEFAULT}
+-BUILD_DEPENDS+=	${RUST_DEFAULT}>=1.34.0:lang/${RUST_DEFAULT}
++BUILD_DEPENDS+=	${RUST_DEFAULT}>=1.31.0:lang/${RUST_DEFAULT}
  .endif
  
  # Location of cargo binary (default to lang/rust's Cargo binary)
-@@ -65,7 +65,7 @@ CARGO_ENV+= \
- 	CARGO_TARGET_DIR=${CARGO_TARGET_DIR} \
- 	RUSTC=${LOCALBASE}/bin/rustc \
- 	RUSTDOC=${LOCALBASE}/bin/rustdoc \
--	RUSTFLAGS="${RUSTFLAGS} -C linker=${CC:Q} ${LDFLAGS:S/^/-C link-arg=/}"
-+	RUSTFLAGS="${RUSTFLAGS} -C linker=${CC:Q} ${LDFLAGS:C/.+/-C link-arg=&/}"
- 
- # Adjust -C target-cpu if -march/-mcpu is set by bsd.cpu.mk
- .if ${ARCH} == amd64 || ${ARCH} == i386

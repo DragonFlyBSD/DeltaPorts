@@ -1,4 +1,4 @@
---- bsd.port.subdir.mk.orig	2018-08-23 15:21:44 UTC
+--- bsd.port.subdir.mk.orig	2019-04-26 08:10:53 UTC
 +++ bsd.port.subdir.mk
 @@ -66,26 +66,38 @@ STRIP?=	-s
  
@@ -56,7 +56,7 @@
  .endif
  _EXPORTED_VARS+=	OPSYS
  
--.if ${ARCH} == "amd64" || ${ARCH} =="ia64"
+-.if ${ARCH} == "amd64"
 -.if !defined(HAVE_COMPAT_IA32_KERN)
 -HAVE_COMPAT_IA32_KERN!= if ${SYSCTL} -n compat.ia32.maxvmem >/dev/null 2>&1; then echo YES; fi; echo
 -.if empty(HAVE_COMPAT_IA32_KERN)

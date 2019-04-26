@@ -1,10 +1,10 @@
---- Uses/lazarus.mk.orig	2018-11-29 15:23:25 UTC
+--- Uses/lazarus.mk.orig	2019-04-26 10:05:37 UTC
 +++ Uses/lazarus.mk
-@@ -80,7 +80,7 @@ BUILDNAME=		${LAZARUS_ARCH}-${OPSYS:tl}
+@@ -78,7 +78,7 @@ BUILDNAME=		${LAZARUS_ARCH}-${OPSYS:tl}
  LCL_UNITS_DIR=		${LOCALBASE}/share/lazarus-${LAZARUS_VER}/lcl/units/${BUILDNAME}
  MKINSTDIR=		${LOCALBASE}/lib/fpc/${FPC_VER}/fpmkinst/${BUILDNAME}
  
--LAZARUS_FLAVORS=	gtk2 qt4 qt5
+-LAZARUS_FLAVORS=	gtk2 qt5
 +LAZARUS_FLAVORS=	gtk2
  
  .if ${lazarus_ARGS:Mflavors}

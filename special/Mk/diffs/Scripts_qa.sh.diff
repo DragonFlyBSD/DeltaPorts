@@ -1,4 +1,4 @@
---- Scripts/qa.sh.orig	2019-02-26 16:28:26 UTC
+--- Scripts/qa.sh.orig	2019-04-26 10:17:25 UTC
 +++ Scripts/qa.sh
 @@ -29,7 +29,7 @@ list_stagedir_elfs() {
  }
@@ -29,7 +29,7 @@
  	fi
  
  	return ${rc}
-@@ -623,7 +633,7 @@ proxydeps_suggest_uses() {
+@@ -650,7 +660,7 @@ proxydeps_suggest_uses() {
  }
  
  proxydeps() {
@@ -38,7 +38,7 @@
  
  	rc=0
  
-@@ -632,6 +642,12 @@ proxydeps() {
+@@ -659,6 +669,12 @@ proxydeps() {
  	while read -r file; do
  		# No results presents a blank line from heredoc.
  		[ -z "${file}" ] && continue
@@ -51,7 +51,7 @@
  		while read -r dep_file; do
  			# No results presents a blank line from heredoc.
  			[ -z "${dep_file}" ] && continue
-@@ -677,7 +693,7 @@ proxydeps() {
+@@ -704,7 +720,7 @@ proxydeps() {
  	done <<-EOT
  	$(list_stagedir_elfs | \
  		file -F $'\1' -f - | \
@@ -60,7 +60,7 @@
  		cut -f 1 -d $'\1'| \
  		sed -e 's/^\.//')
  	EOT
-@@ -790,7 +806,7 @@ no_arch() {
+@@ -817,7 +833,7 @@ no_arch() {
  	done <<-EOF
  	$(list_stagedir_elfs  \
  		| file -F $'\1' -f - -N \
@@ -69,8 +69,8 @@
  		| cut -f 1 -d $'\1')
  	EOF
  	return $rc
-@@ -925,10 +941,63 @@ license()
- 	return 0
+@@ -992,10 +1008,62 @@ depends_blacklist()
+ 	return $rc
  }
  
 +foreign_binaries() {
@@ -128,8 +128,8 @@
  checks="shebang symlinks paths stripped desktopfileutils sharedmimeinfo"
  checks="$checks suidfiles libtool libperl prefixvar baselibs terminfo"
  checks="$checks proxydeps sonames perlcore no_arch gemdeps gemfiledeps flavors"
- checks="$checks license"
-+checks="$checks foreign_binaries freebsd_binaries"
+-checks="$checks license depends_blacklist"
++checks="$checks license depends_blacklist foreign_binaries freebsd_binaries"
  
  ret=0
  cd ${STAGEDIR} || exit 1
