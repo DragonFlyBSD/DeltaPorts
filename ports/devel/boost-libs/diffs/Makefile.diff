@@ -1,9 +1,11 @@
---- Makefile.orig	2017-07-03 19:09:19 UTC
+--- Makefile.orig	2019-04-16 10:53:29 UTC
 +++ Makefile
-@@ -51,4 +51,7 @@ post-install:
+@@ -54,4 +54,9 @@ post-install:
  		-e "s|%%PYTHON_LIBDIR%%|${PYTHON_LIBDIR}|g" \
  		-e "s|%%PYTHON_VERSION%%|${PYTHON_VERSION}|g" ${PKGMESSAGE}
  
++	${RM} -r ${STAGEDIR}${PREFIX}/lib/cmake/boost_math_c99l-*
++	${RM} -r ${STAGEDIR}${PREFIX}/lib/cmake/boost_math_tr1l-*
 +	${RM} ${STAGEDIR}${PREFIX}/lib/libboost_math_tr1l.*
 +	${RM} ${STAGEDIR}${PREFIX}/lib/libboost_math_c99l.*
 +

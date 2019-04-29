@@ -1,4 +1,4 @@
---- pkg-plist.orig	2019-04-26 18:59:14 UTC
+--- pkg-plist.orig	2019-04-29 13:18:09 UTC
 +++ pkg-plist
 @@ -13925,10 +13925,6 @@ lib/cmake/boost_math_c99f-%%BOOST_SHARED
  lib/cmake/boost_math_c99f-%%BOOST_SHARED_LIB_VER%%/boost_math_c99f-config.cmake
