@@ -1,14 +1,15 @@
---- Makefile.orig	2019-04-26 19:09:03 UTC
+--- Makefile.orig	2019-05-01 21:18:47 UTC
 +++ Makefile
-@@ -18,13 +18,9 @@ MAKE_ENV+=	STAGEDIR="${STAGEDIR}"
+@@ -18,15 +18,9 @@ MAKE_ENV=	STAGEDIR="${STAGEDIR}"
  
  MAKEFILE=	${FILESDIR}/BSDmakefile
  
-+MAKE_ARGS+=    NO_WERROR=yes
-+
- post-build:
+-post-build:
 -	${SETENV} ${MAKE_ENV} ${MAKE} -C ${WRKSRC} -f \
 -		${FILESDIR}/Makefile.example
++MAKE_ARGS+=    NO_WERROR=yes
+ 
+ pre-install:
  	${MKDIR} ${STAGEDIR}${PREFIX}/include/dht
  
 -post-install:
