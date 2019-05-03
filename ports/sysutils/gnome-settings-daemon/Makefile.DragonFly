@@ -4,16 +4,10 @@
 OPTIONS_DEFAULT:=	${OPTIONS_DEFAULT:NSMARTCARD}
 
 LIB_DEPENDS:=	${LIB_DEPENDS:Nlibpulse*}
-CONFIGURE_ENV+=	MEDIA_KEYS_LIBS=dummy MEDIA_KEYS_CFLAGS=dummy \
-		GVC_LIBS=dummy GVC_CFLAGS=dummy \
-		SOUND_LIBS=dummy SOUND_CFLAGS=dummy
 
 dfly-patch:
-	${REINPLACE_CMD} \
-		-e "/ac_config_files/ s|plugins/media-keys/Makefile||" \
-		-e "/ac_config_files/ s|plugins/media-keys/gvc/Makefile||" \
-		-e "/ac_config_files/ s|plugins/sound/Makefile||" ${WRKSRC}/configure
-	${REINPLACE_CMD} -e "s|media-keys||; s|sound||" \
-		${WRKSRC}/plugins/Makefile.in
-	${RM} -r ${WRKSRC}/plugins/media-keys
-	${RM} -r ${WRKSRC}/plugins/sound
+	${REINPLACE_CMD} -e "/libpulse_mainloop_glib_dep/d"	\
+		${WRKSRC}/meson.build
+	${REINPLACE_CMD} -e "/sound/d" -e "/media-keys/d"	\
+		${WRKSRC}/plugins/meson.build
+	${CHMOD} +x ${WRKSRC}/gnome-settings-daemon/codegen.py
