@@ -1,0 +1,16 @@
+--- Makefile.orig	2019-05-02 15:45:07 UTC
++++ Makefile
+@@ -40,11 +40,13 @@
+ 		--without-systemdsystemunitdir
+ INSTALL_TARGET=	install-strip
+ 
++.if 0 #${OPSYS} == "FreeBSD"
+ post-install:
+ .for script in ck-system-hibernate ck-system-hybridsleep \
+ 	ck-system-restart ck-system-stop ck-system-suspend
+ 	cd ${STAGEDIR}${PREFIX}/lib/ConsoleKit/scripts && \
+ 		${MV} ${script} ${script}.sample
+ .endfor
++.endif
+ 
+ .include <bsd.port.mk>
