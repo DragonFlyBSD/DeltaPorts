@@ -1,0 +1,21 @@
+--- pkg-plist.orig	2019-03-07 20:17:34 UTC
++++ pkg-plist
+@@ -143,7 +143,6 @@ libexec/trafficserver/prefetch.so
+ libexec/trafficserver/regex_remap.so
+ libexec/trafficserver/regex_revalidate.so
+ libexec/trafficserver/remap_purge.so
+-libexec/trafficserver/remap_stats.so
+ libexec/trafficserver/s3_auth.so
+ libexec/trafficserver/server_push_preload.so
+ libexec/trafficserver/ssl_cert_loader.so
+@@ -160,8 +159,8 @@ libexec/trafficserver/tslua.so
+ libexec/trafficserver/tsmemcache.so
+ libexec/trafficserver/url_sig.so
+ libexec/trafficserver/xdebug.so
+-lib/perl5/amd64-freebsd-thread-multi/auto/Apache/TS/.packlist
+-lib/perl5/amd64-freebsd-thread-multi/perllocal.pod
++lib/perl5/x86_64-dragonfly-thread-multi/auto/Apache/TS/.packlist
++lib/perl5/x86_64-dragonfly-thread-multi/perllocal.pod
+ lib/perl5/Apache/TS.pm
+ lib/perl5/Apache/TS/AdminClient.pm
+ lib/perl5/Apache/TS/Config.pm

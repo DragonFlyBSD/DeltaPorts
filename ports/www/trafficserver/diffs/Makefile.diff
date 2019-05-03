@@ -1,0 +1,10 @@
+--- Makefile.orig	2019-05-03 19:34:57 UTC
++++ Makefile
+@@ -101,6 +101,6 @@ post-install:
+ 	${MKDIR} ${STAGEDIR}${ETCDIR}/snapshots
+ 	(cd ${STAGEDIR}${ETCDIR} && for f in *.config *.yaml; do ${MV} $$f $$f.sample; done)
+ 	${SED} -i '' -e 's|^${STAGEDIR}||g' \
+-		${STAGEDIR}${PREFIX}/lib/perl5/amd64-freebsd-thread-multi/auto/Apache/TS/.packlist
++		${STAGEDIR}${PREFIX}/lib/perl5/x86_64-dragonfly-thread-multi/auto/Apache/TS/.packlist
+ 
+ .include <bsd.port.post.mk>
