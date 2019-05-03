@@ -29,7 +29,19 @@
  	fi
  
  	return ${rc}
-@@ -650,7 +660,7 @@ proxydeps_suggest_uses() {
+@@ -197,6 +207,11 @@ paths() {
+ 	$(find ${TMPPLIST} ${STAGEDIR} -type f -exec grep -l "${STAGEDIR}" {} +)
+ 	EOF
+ 
++	if [ -n "$DFLY_ALLOW_FOREIGN_BINARIES" -a $rc -eq 1 ]; then
++		rc=0
++		warn "The referring was allowed by DFLY_ALLOW_FOREIGN_BINARIES."
++	fi
++
+ 	return ${rc}
+ }
+ 
+@@ -650,7 +665,7 @@ proxydeps_suggest_uses() {
  }
  
  proxydeps() {
@@ -38,7 +50,7 @@
  
  	rc=0
  
-@@ -659,6 +669,12 @@ proxydeps() {
+@@ -659,6 +674,12 @@ proxydeps() {
  	while read -r file; do
  		# No results presents a blank line from heredoc.
  		[ -z "${file}" ] && continue
@@ -51,7 +63,7 @@
  		while read -r dep_file; do
  			# No results presents a blank line from heredoc.
  			[ -z "${dep_file}" ] && continue
-@@ -704,7 +720,7 @@ proxydeps() {
+@@ -704,7 +725,7 @@ proxydeps() {
  	done <<-EOT
  	$(list_stagedir_elfs | \
  		file -F $'\1' -f - | \
@@ -60,7 +72,7 @@
  		cut -f 1 -d $'\1'| \
  		sed -e 's/^\.//')
  	EOT
-@@ -817,7 +833,7 @@ no_arch() {
+@@ -817,7 +838,7 @@ no_arch() {
  	done <<-EOF
  	$(list_stagedir_elfs  \
  		| file -F $'\1' -f - -N \
@@ -69,7 +81,7 @@
  		| cut -f 1 -d $'\1')
  	EOF
  	return $rc
-@@ -992,10 +1008,62 @@ depends_blacklist()
+@@ -992,10 +1013,62 @@ depends_blacklist()
  	return $rc
  }
  
