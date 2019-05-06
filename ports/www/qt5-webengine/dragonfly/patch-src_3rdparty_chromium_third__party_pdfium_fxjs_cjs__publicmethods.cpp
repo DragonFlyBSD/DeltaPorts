@@ -1,6 +1,6 @@
---- src/3rdparty/chromium/third_party/pdfium/fpdfsdk/javascript/PublicMethods.cpp.intermediate	2018-05-26 13:48:33.000000000 +0000
-+++ src/3rdparty/chromium/third_party/pdfium/fpdfsdk/javascript/PublicMethods.cpp
-@@ -68,7 +68,7 @@ const FX_WCHAR* const fullmonths[] = {L"
+--- src/3rdparty/chromium/third_party/pdfium/fxjs/cjs_publicmethods.cpp.intermediate	2019-05-06 11:10:02.000000000 +0000
++++ src/3rdparty/chromium/third_party/pdfium/fxjs/cjs_publicmethods.cpp
+@@ -72,7 +72,7 @@ const wchar_t* const kFullMonths[] = {L"
                                        L"July",    L"August",   L"September",
                                        L"October", L"November", L"December"};
  

@@ -1,5 +1,5 @@
---- src/3rdparty/chromium/build/build_config.h.orig	2019-03-07 09:23:57 UTC
-+++ src/3rdparty/chromium/build/build_config.h
+--- src/3rdparty/gn/util/build_config.h.orig	2019-03-07 09:23:57 UTC
++++ src/3rdparty/gn/util/build_config.h
 @@ -53,6 +53,9 @@
  #define OS_FUCHSIA 1
  #elif defined(__FreeBSD__)

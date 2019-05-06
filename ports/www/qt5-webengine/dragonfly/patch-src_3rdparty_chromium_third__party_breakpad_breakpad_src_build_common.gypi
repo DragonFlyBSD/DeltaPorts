@@ -1,5 +1,5 @@
---- src/3rdparty/chromium/breakpad/src/build/common.gypi.orig	2018-04-10 14:05:55.000000000 +0000
-+++ src/3rdparty/chromium/breakpad/src/build/common.gypi
+--- src/3rdparty/chromium/third_party/breakpad/breakpad/src/build/common.gypi.orig	2019-03-07 09:23:57 UTC
++++ src/3rdparty/chromium/third_party/breakpad/breakpad/src/build/common.gypi
 @@ -41,7 +41,7 @@
        'variables': {
          # Compute the architecture that we're building on.
@@ -27,15 +27,16 @@
        'target_defaults': {
          # Enable -Werror by default, but put it in a variable so it can
          # be disabled in ~/.gyp/include.gypi on the valgrind builders.
-@@ -549,6 +549,7 @@
+@@ -549,7 +549,7 @@
            # aliasing issues have been fixed.
            'no_strict_aliasing%': 1,
            'conditions': [['OS=="linux"', {'werror%': '-Werror',}],
-+                         ['OS=="dragonfly"', {'werror%': '',}],
-                          ['OS=="freebsd"', {'werror%': '',}],
+-                         ['OS=="freebsd"', {'werror%': '',}],
++                         ['OS=="freebsd"', {'werror%': '',}], ['OS=="freebsd"', {'werror%': '',}],
                           ['OS=="openbsd"', {'werror%': '',}],
            ],
-@@ -957,7 +958,7 @@
+         },
+@@ -957,7 +957,7 @@
          },
        },
      }],
