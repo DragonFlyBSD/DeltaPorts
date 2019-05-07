@@ -1,0 +1,18 @@
+--- pkg-plist.orig	2019-03-18 10:19:53 UTC
++++ pkg-plist
+@@ -1090,6 +1090,7 @@ include/ace/config-aix-7.h
+ include/ace/config-all.h
+ include/ace/config-android.h
+ include/ace/config-cygwin32.h
++include/ace/config-dragonfly.h
+ include/ace/config-face-conftest.h
+ include/ace/config-face-safety.h
+ include/ace/config-freebsd.h
+@@ -1506,6 +1507,7 @@ libdata/pkgconfig/Kokyu.pc
+ %%DATADIR%%/include/makeinclude/platform_cegcc.GNU
+ %%DATADIR%%/include/makeinclude/platform_clang_common.GNU
+ %%DATADIR%%/include/makeinclude/platform_cygwin32.GNU
++%%DATADIR%%/include/makeinclude/platform_dragonfly.GNU
+ %%DATADIR%%/include/makeinclude/platform_freebsd.GNU
+ %%DATADIR%%/include/makeinclude/platform_g++_common.GNU
+ %%DATADIR%%/include/makeinclude/platform_gnuwin32_common.GNU

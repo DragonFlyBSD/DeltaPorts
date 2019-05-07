@@ -1,4 +1,4 @@
-US-BROKEN-ES+= ncurses
+USES+= ncurses
 CFLAGS+= -D__FreeBSD__=7 -D__FreeBSD_version=700000
 
 dfly-patch:
