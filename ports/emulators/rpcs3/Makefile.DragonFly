@@ -1,9 +1,3 @@
-
+# actually libatomic, but hey, ncurses because of bundled llvm
+USES+=	fortran ncurses
 CXXFLAGS:=	${CXXFLAGS:N*macro-redefined}
-
-# zrj: force use CMPXCHG16B, this excludes several early x86_64 cpus
-CXXFLAGS+=	-mcx16
-
-dfly-patch:
-	${REINPLACE_CMD} -e '/target_link_libraries(rpcs3_emu PUBLIC -latomic)/d' \
-		${WRKSRC}/rpcs3/Emu/CMakeLists.txt
