@@ -1,0 +1,11 @@
+--- Makefile.orig	2019-05-09 11:28:36 UTC
++++ Makefile
+@@ -28,7 +28,7 @@ OPTIONS_DEFINE=	DOCS
+ 
+ .include <bsd.port.pre.mk>
+ 
+-.if ${COMPILER_TYPE:Mgcc}
++.if ${COMPILER_TYPE:Mgcc} && ${OPSYS} == FreeBSD
+ CFLAGS+=	-fnested-functions
+ .endif
+ 
