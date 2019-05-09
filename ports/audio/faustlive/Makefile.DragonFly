@@ -1,0 +1,3 @@
+
+dfly-configure:
+	${MV} ${WRKSRC}/Build/FreeBSD ${WRKSRC}/Build/DragonFly
