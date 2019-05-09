@@ -1,3 +1,1 @@
-.if defined(DPORTS_BUILDER)
-.undef MANUAL_PACKAGE_BUILD
-.endif
+IGNORE= too FreeBSD specific
