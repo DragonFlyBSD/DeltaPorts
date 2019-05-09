@@ -1,4 +1,4 @@
---- Sysctl.xs.orig	2018-07-09 16:59:14 UTC
+--- Sysctl.xs.intermediate	2019-05-08 16:11:18 UTC
 +++ Sysctl.xs
 @@ -8,7 +8,7 @@
  #include "XSUB.h"
@@ -128,16 +128,21 @@
              hv_store(c, "mbufs",          5, newSVpvn("", 0), 0);
              hv_store(c, "mclusts",        7, newSVpvn("", 0), 0);
              hv_store(c, "sfallocwait",   11, newSVpvn("", 0), 0);
-@@ -582,7 +638,7 @@ _mib_lookup(const char *arg)
+@@ -582,6 +638,7 @@ _mib_lookup(const char *arg)
                  hv_store(c, name, strlen(name), newSVpvn(inf->device_name, strlen(inf->device_name)), 0);
                  strcpy(name, "#.unitno"); name[0] = *p;
                  hv_store(c, name, strlen(name), newSViv(inf->unit_number), 0);
--#if __FreeBSD_version < 500000
-+#if (defined(__FreeBSD__) && __FreeBSD_version < 500000) || defined(__DragonFly__)
++#ifdef __FreeBSD__
+ #if __FreeBSD_version < 500000
                  strcpy(name, "#.sequence"); name[0] = *p;
                  hv_store(c, name, strlen(name), newSVpvn("", 0)), 0);
-                 strcpy(name, "#.allocated"); name[0] = *p;
-@@ -646,7 +702,7 @@ _mib_lookup(const char *arg)
+@@ -641,12 +698,13 @@ _mib_lookup(const char *arg)
+                 strcpy(name, "#.operations_free"); name[0] = *p;
+                 hv_store(c, name, strlen(name), newSVuv(inf->operations[DEVSTAT_FREE]), 0);
+ #endif
++#endif
+                 ++p;
+                 ++inf;
              } while (inf < (struct devstat *)(buf + buflen));
              break;
          }
@@ -146,7 +151,7 @@
          case FMT_XVFSCONF: {
              HV *c = (HV *)sv_2mortal((SV *)newHV());
              struct xvfsconf *inf = (struct xvfsconf *)buf;
-@@ -678,7 +734,7 @@ _mib_lookup(const char *arg)
+@@ -678,7 +736,7 @@ _mib_lookup(const char *arg)
              HV *c = (HV *)sv_2mortal((SV *)newHV());
              struct igmpstat *inf = (struct igmpstat *)buf;
              RETVAL = newRV((SV *)c);
@@ -155,7 +160,7 @@
              hv_store(c, "total",       5, newSVuv(inf->igps_rcv_total), 0);
              hv_store(c, "tooshort",    8, newSVuv(inf->igps_rcv_tooshort), 0);
              hv_store(c, "badsum",      6, newSVuv(inf->igps_rcv_badsum), 0);
-@@ -714,7 +770,11 @@ _mib_lookup(const char *arg)
+@@ -714,7 +772,11 @@ _mib_lookup(const char *arg)
          }
          case FMT_TCPSTAT: {
              HV *c = (HV *)sv_2mortal((SV *)newHV());
@@ -167,7 +172,7 @@
              RETVAL = newRV((SV *)c);
              hv_store(c, "connattempt",      11, newSVuv(inf->tcps_connattempt), 0);
              hv_store(c, "accepts",           7, newSVuv(inf->tcps_accepts), 0);
-@@ -793,7 +853,7 @@ _mib_lookup(const char *arg)
+@@ -793,7 +855,7 @@ _mib_lookup(const char *arg)
              hv_store(c, "zonefail",          8, newSVuv(inf->tcps_sc_zonefail), 0);
              hv_store(c, "sendcookie",       10, newSVuv(inf->tcps_sc_sendcookie), 0);
              hv_store(c, "recvcookie",       10, newSVuv(inf->tcps_sc_recvcookie), 0);
@@ -176,7 +181,7 @@
              hv_store(c, "minmssdrops",      11, newSVpvn("", 0), 0);
              hv_store(c, "sendrexmitbad",    13, newSVpvn("", 0), 0);
              hv_store(c, "hostcacheadd",     12, newSVpvn("", 0), 0);
-@@ -804,7 +864,7 @@ _mib_lookup(const char *arg)
+@@ -804,7 +866,7 @@ _mib_lookup(const char *arg)
              hv_store(c, "hostcacheadd",     12, newSVuv(inf->tcps_hc_added), 0);
              hv_store(c, "hostcacheover",    13, newSVuv(inf->tcps_hc_bucketoverflow), 0);
  #endif
@@ -185,7 +190,7 @@
              hv_store(c, "badrst",            6, newSVpvn("", 0), 0);
              hv_store(c, "sackrecover",      11, newSVpvn("", 0), 0);
              hv_store(c, "sackrexmitsegs",   14, newSVpvn("", 0), 0);
-@@ -894,6 +954,23 @@ _mib_lookup(const char *arg)
+@@ -894,6 +956,23 @@ _mib_lookup(const char *arg)
          case FMT_NFSRVSTATS:
          case FMT_NFSSTATS:
          case FMT_XINPCB:
