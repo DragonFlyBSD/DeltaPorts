@@ -1,0 +1,2 @@
+BROKEN= missing posix_fallocate()
+LIB_DEPENDS+= libelf.so:devel/libelf
