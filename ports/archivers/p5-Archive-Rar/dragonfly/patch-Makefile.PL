@@ -1,11 +1,11 @@
 --- Makefile.PL.orig	2008-03-06 10:12:17 UTC
 +++ Makefile.PL
-@@ -1,7 +1,7 @@
- use inc::Module::Install;
+@@ -17,7 +17,7 @@ if ($iswindows) {
+ build_requires 'Test::Simple'     => '0';
+ build_requires 'Test::More'       => '0';
  
- my $iswindows = 0;
--$iswindows = 1 if $^O =~ /win32/i;
-+$iswindows = 1 if $^O =~ /win32|dragonfly/i;
- 
- name           'Archive-Rar';
- all_from       'lib/Archive/Rar.pm';
+-if (not $iswindows) {
++if (not $iswindows and not $^O =~ /dragonfly/i) {
+   requires_external_bin 'rar';
+ } else {
+   warn "We cannot check at this time that there is a 'rar' command when running on Windows. Please make sure that you have RAR or WinRAR installed before proceeding.";
