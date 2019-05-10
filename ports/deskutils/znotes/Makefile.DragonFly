@@ -1,0 +1,6 @@
+USES+=	gmake
+
+# manually install translations
+dfly-install:
+	-${MKDIR} ${DATADIR}/translations
+	-${CP} ${WRKSRC}/translations/znotes_*.qm ${DATADIR}/translations/
