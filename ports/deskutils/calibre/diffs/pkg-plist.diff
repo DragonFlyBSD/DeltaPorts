@@ -1,6 +1,6 @@
---- pkg-plist.orig	2018-03-03 02:43:13 UTC
+--- pkg-plist.orig	2019-04-24 17:56:41 UTC
 +++ pkg-plist
-@@ -1182,8 +1182,6 @@ lib/calibre/calibre/plugins/hunspell.so
+@@ -1153,8 +1153,6 @@ lib/calibre/calibre/plugins/hunspell.so
  lib/calibre/calibre/plugins/icu.so
  lib/calibre/calibre/plugins/imageops.so
  lib/calibre/calibre/plugins/libheadless.so
