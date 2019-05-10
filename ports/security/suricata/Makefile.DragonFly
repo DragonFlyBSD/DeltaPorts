@@ -1,4 +1,4 @@
 
 dfly-patch:
-	${REINPLACE_CMD} -e 's@\(\*freebsd\*\))@\1|*dragonfly*)@g \
+	${REINPLACE_CMD} -e 's@\(\*freebsd\*\))@\1|*dragonfly*)@' \
 		${WRKSRC}/configure.ac
