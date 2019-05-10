@@ -1,0 +1,12 @@
+--- Makefile.orig	2019-04-24 17:56:44 UTC
++++ Makefile
+@@ -11,9 +11,6 @@ COMMENT=	Code_Aster finite element metho
+ 
+ LICENSE=	GPLv2
+ 
+-# Broken since r490369 on math/metis
+-BROKEN_amd64=	does not build (conflicting types for 'WritePermutation' ibc/renum/onmetl.c vs /usr/local/include/programs/proto.h)
+-
+ #-----------------------------------------------------------------------
+ # You may define these options:
+ #
