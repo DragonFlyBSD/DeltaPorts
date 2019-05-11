@@ -1,6 +1,6 @@
 USES+=	gmake
 
-# manually install translations
+# manually install translations, allow to fail if it was fixed in MF
 dfly-install:
-	-${MKDIR} ${DATADIR}/translations
-	-${CP} ${WRKSRC}/translations/znotes_*.qm ${DATADIR}/translations/
+	-${MKDIR} ${STAGEDIR}${DATADIR}/translations
+	-${CP} -v ${WRKSRC}/translations/znotes_*.qm ${STAGEDIR}${DATADIR}/translations/
