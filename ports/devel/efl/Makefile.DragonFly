@@ -5,3 +5,6 @@
 # also frequently fails to link (see above).  Sorry, bye-bye enlightenment
 
 IGNORE=	frequently fails to link, now lua-memory issue (and missing curl)
+
+# no pulse
+OPTIONS_DEFAULT:=       ${OPTIONS_DEFAULT:NPULSEAUDIO}
