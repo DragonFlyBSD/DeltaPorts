@@ -1,0 +1,4 @@
+USES+=	alias
+
+# bad MF
+BUILD_DEPENDS:=	${BUILD_DEPENDS:Npulseaudio*}
