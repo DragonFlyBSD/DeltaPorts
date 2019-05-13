@@ -1,1 +1,2 @@
-CXXFLAGS+=	-Wno-narrowing
+USE_CXXSTD:=	gnu++11
+CXXFLAGS+=	-Wno-deprecated -Wno-narrowing
