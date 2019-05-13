@@ -1,0 +1,10 @@
+--- pkg-plist.orig	2019-05-13 09:33:37 UTC
++++ pkg-plist
+@@ -2,6 +2,7 @@ bin/gen-bout
+ bin/gen-random-bout
+ bin/kleaver
+ bin/klee
++bin/klee-replay
+ bin/klee-stats
+ bin/ktest-tool
+ include/klee/klee.h
