@@ -1,1 +1,1 @@
-CONFIGURE_ARGS+= --disable-tracejit
+IGNORE= too FreeBSD specific
