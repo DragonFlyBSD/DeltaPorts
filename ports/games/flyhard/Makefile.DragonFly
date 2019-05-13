@@ -1,1 +1,2 @@
-USE_CXXSTD=	gnu++98
+USE_CXXSTD:=	gnu++11
+CXXFLAGS+=	-Wno-narrowing
