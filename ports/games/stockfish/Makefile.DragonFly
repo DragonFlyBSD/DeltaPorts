@@ -1,2 +1,7 @@
-# ld.gold: fatal error: -f/--auxiliary may not be used without -shared
-MAKE_ENV+= LDVER=ld.bfd
+
+# undo damage
+LDFLAGS:=	${LDFLAGS:N-fuse-ld*}
+
+dfly-patch:
+	${REINPLACE_CMD} -e 's@CXX=g++.*@CXX=g++@g' \
+		${WRKSRC}/Makefile
