@@ -4,8 +4,8 @@
  #endif
  #endif
  
--#if __FreeBSD__
-+#if __FreeBSD__ || __DragonFly__
+-#if __linux__
++#if __linux__ || __DragonFly__
  #include <sys/time.h>
  inline double GetCurrentTimeInUsec() 
  {
