@@ -1,1 +1,3 @@
-USE_CXXSTD+=	c++98
+USES+=	gmake
+
+CXXFLAGS+=	-Wno-deprecated
