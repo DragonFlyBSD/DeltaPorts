@@ -1,0 +1,13 @@
+--- Makefile.orig	2019-05-15 01:38:26 UTC
++++ Makefile
+@@ -23,10 +23,6 @@ GH_PROJECT=	libfuse
+ 
+ .include <bsd.port.pre.mk>
+ 
+-.if ${OPSYS} == DragonFly
+-IGNORE=	fusefs has not been implemented on DragonFly
+-.endif
+-
+ post-patch:
+ .if ${ARCH:Mmips*} || ${ARCH:Mpowerpc*} || ${ARCH} == sparc64
+ 	${REINPLACE_CMD} -e '/-Wno-unused-result/d' ${WRKSRC}/meson.build
