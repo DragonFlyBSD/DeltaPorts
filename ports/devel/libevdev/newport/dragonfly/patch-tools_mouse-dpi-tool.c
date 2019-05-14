@@ -1,5 +1,5 @@
 --- tools/mouse-dpi-tool.c.orig	2019-05-02 15:11:57.000000000 +0300
-+++ tools/mouse-dpi-tool.c	2019-05-13 14:00:46.760307000 +0300
++++ tools/mouse-dpi-tool.c	2019-05-14 13:33:52.197067000 +0300
 @@ -26,7 +26,13 @@
  #endif
  
@@ -14,7 +14,7 @@
  #include <errno.h>
  #include <fcntl.h>
  #include <limits.h>
-@@ -145,6 +151,75 @@ handle_event(struct measurements *m, con
+@@ -145,6 +151,88 @@ handle_event(struct measurements *m, con
  	return 0;
  }
  
@@ -66,31 +66,44 @@
 +				    strerror(errno));
 +				return (EXIT_FAILURE);
 +			}
-+		} else if ((nev > 0) && (events[1].data >= 1)) {
-+			break;
++		} else if (nev > 0) {
++			for (int i = 0; i < nev; i++) {
++				if ((events[i].filter == EVFILT_SIGNAL) &&
++				    (events[i].data > 0)) {
++				    goto out;
++				}
++			}
 +		}
 +
-+		do {
-+			rc = libevdev_next_event(dev, LIBEVDEV_READ_FLAG_NORMAL, &ev);
-+			if (rc == LIBEVDEV_READ_STATUS_SYNC) {
-+				fprintf(stderr, "Error: cannot keep up\n");
-+				return 1;
-+			} else if (rc != -EAGAIN && rc < 0) {
-+				fprintf(stderr, "Error: %s\n", strerror(-rc));
-+				return 1;
-+			} else if (rc == LIBEVDEV_READ_STATUS_SUCCESS) {
-+				handle_event(dim, &ev);
++		/* now let's find read events */
++		if (nev > 0) {
++			for (int i = 0; i < nev; i++) {
++				if (events[i].filter == EVFILT_READ) {
++					do {
++						rc = libevdev_next_event(dev, LIBEVDEV_READ_FLAG_NORMAL, &ev);
++						if (rc == LIBEVDEV_READ_STATUS_SYNC) {
++							fprintf(stderr, "Error: cannot keep up\n");
++							return 1;
++						} else if (rc != -EAGAIN && rc < 0) {
++							fprintf(stderr, "Error: %s\n", strerror(-rc));
++							return 1;
++						} else if (rc == LIBEVDEV_READ_STATUS_SUCCESS) {
++							handle_event(dim, &ev);
++						}
++					} while (rc != -EAGAIN);
++				}
 +			}
-+		} while (rc != -EAGAIN);
++		}
 +	}
 +
++out:
 +	return 0;
 +}
 +#else  /* Linux */
  static int
  mainloop(struct libevdev *dev, struct measurements *m) {
  	struct pollfd fds[2];
-@@ -183,6 +258,7 @@ mainloop(struct libevdev *dev, struct me
+@@ -183,6 +271,7 @@ mainloop(struct libevdev *dev, struct me
  
  	return 0;
  }
