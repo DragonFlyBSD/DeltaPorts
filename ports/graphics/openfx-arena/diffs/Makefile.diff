@@ -1,0 +1,14 @@
+--- Makefile.orig	2019-05-14 11:34:46 UTC
++++ Makefile
+@@ -60,9 +60,9 @@ post-patch:
+ 		${WRKSRC}/OpenFX/Examples/Makefile.master \
+ 		${WRKSRC}/OpenFX/Support/Plugins/Makefile.master \
+ 		${WRKSRC}/OpenFX/HostSupport/src/ofxhPluginCache.cpp
+-	@${REINPLACE_CMD} -e 's|/Contents/$$(ARCH)|/Contents/FreeBSD-x86-64/|g' \
++	@${REINPLACE_CMD} -e 's|/Contents/$$(ARCH)|/Contents/${OPSYS}-x86-64/|g' \
+ 		${WRKSRC}/OpenFX/Support/Plugins/Makefile.master
+ post-install:
+-	${STRIP_CMD} ${STAGEDIR}${LOCALBASE}/OFX/Plugins/Arena.ofx.bundle/Contents/FreeBSD-x86-64/Arena.ofx
++	${STRIP_CMD} ${STAGEDIR}${LOCALBASE}/OFX/Plugins/Arena.ofx.bundle/Contents/${OPSYS}-x86-64/Arena.ofx
+ 
+ .include <bsd.port.mk>

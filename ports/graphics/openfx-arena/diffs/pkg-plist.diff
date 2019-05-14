@@ -1,0 +1,8 @@
+--- pkg-plist.orig	2018-05-02 12:06:57 UTC
++++ pkg-plist
+@@ -47,4 +47,4 @@ OFX/Plugins/Arena.ofx.bundle/Contents/Re
+ OFX/Plugins/Arena.ofx.bundle/Contents/Resources/net.fxarena.openfx.Tile.svg
+ OFX/Plugins/Arena.ofx.bundle/Contents/Resources/net.fxarena.openfx.Wave.png
+ OFX/Plugins/Arena.ofx.bundle/Contents/Resources/net.fxarena.openfx.Wave.svg
+-OFX/Plugins/Arena.ofx.bundle/Contents/FreeBSD-x86-64/Arena.ofx
++OFX/Plugins/Arena.ofx.bundle/Contents/%%OPSYS%%-x86-64/Arena.ofx
