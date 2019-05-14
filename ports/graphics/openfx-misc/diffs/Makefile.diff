@@ -1,0 +1,20 @@
+--- Makefile.orig	2019-05-14 13:39:34 UTC
++++ Makefile
+@@ -32,12 +32,12 @@ post-patch:
+ 		${WRKSRC}/openfx/Support/Plugins/Makefile.master \
+ 		${WRKSRC}/DebugProxy/DebugProxy.cpp \
+ 		${WRKSRC}/openfx/HostSupport/src/ofxhPluginCache.cpp
+-		@${REINPLACE_CMD} -e 's|/Contents/$$(ARCH)|/Contents/FreeBSD-x86-64/|g' \
+-			${WRKSRC}/openfx/Support/Plugins/Makefile.master
++	@${REINPLACE_CMD} -e 's|/Contents/$$(ARCH)|/Contents/${OPSYS}-x86-64/|g' \
++		${WRKSRC}/openfx/Support/Plugins/Makefile.master
+ 
+ post-install:
+-	${STRIP_CMD} ${STAGEDIR}${LOCALBASE}/OFX/Plugins/CImg.ofx.bundle/Contents/FreeBSD-x86-64/CImg.ofx
+-	${STRIP_CMD} ${STAGEDIR}${LOCALBASE}/OFX/Plugins/Misc.ofx.bundle/Contents/FreeBSD-x86-64/Misc.ofx
+-	${STRIP_CMD} ${STAGEDIR}${LOCALBASE}/OFX/Plugins/Shadertoy.ofx.bundle/Contents/FreeBSD-x86-64/Shadertoy.ofx
++	${STRIP_CMD} ${STAGEDIR}${LOCALBASE}/OFX/Plugins/CImg.ofx.bundle/Contents/${OPSYS}-x86-64/CImg.ofx
++	${STRIP_CMD} ${STAGEDIR}${LOCALBASE}/OFX/Plugins/Misc.ofx.bundle/Contents/${OPSYS}-x86-64/Misc.ofx
++	${STRIP_CMD} ${STAGEDIR}${LOCALBASE}/OFX/Plugins/Shadertoy.ofx.bundle/Contents/${OPSYS}-x86-64/Shadertoy.ofx
+ 
+ .include <bsd.port.mk>

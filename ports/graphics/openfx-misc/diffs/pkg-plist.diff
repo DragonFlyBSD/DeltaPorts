@@ -1,0 +1,42 @@
+--- pkg-plist.orig	2018-05-02 12:06:57 UTC
++++ pkg-plist
+@@ -46,7 +46,7 @@ OFX/Plugins/CImg.ofx.bundle/Contents/Res
+ OFX/Plugins/CImg.ofx.bundle/Contents/Resources/net.sf.cimg.CImgSharpenShock.png
+ OFX/Plugins/CImg.ofx.bundle/Contents/Resources/net.sf.cimg.CImgSmooth.png
+ OFX/Plugins/CImg.ofx.bundle/Contents/Resources/net.sf.cimg.CImgSmooth.svg
+-OFX/Plugins/CImg.ofx.bundle/Contents/FreeBSD-x86-64/CImg.ofx
++OFX/Plugins/CImg.ofx.bundle/Contents/%%OPSYS%%-x86-64/CImg.ofx
+ OFX/Plugins/Misc.ofx.bundle/Contents/Info.plist
+ OFX/Plugins/Misc.ofx.bundle/Contents/Resources/PIKColor.gizmo
+ OFX/Plugins/Misc.ofx.bundle/Contents/Resources/PIKColor.py
+@@ -193,7 +193,7 @@ OFX/Plugins/Misc.ofx.bundle/Contents/Res
+ OFX/Plugins/Misc.ofx.bundle/Contents/Resources/net.sf.openfx.switchPlugin.svg
+ OFX/Plugins/Misc.ofx.bundle/Contents/Resources/net.sf.openfx.timeOffset.png
+ OFX/Plugins/Misc.ofx.bundle/Contents/Resources/net.sf.openfx.timeOffset.svg
+-OFX/Plugins/Misc.ofx.bundle/Contents/FreeBSD-x86-64/Misc.ofx
++OFX/Plugins/Misc.ofx.bundle/Contents/%%OPSYS%%-x86-64/Misc.ofx
+ OFX/Plugins/Shadertoy.ofx.bundle/Contents/Info.plist
+ OFX/Plugins/Shadertoy.ofx.bundle/Contents/Resources/net.sf.openfx.Shadertoy.png
+ OFX/Plugins/Shadertoy.ofx.bundle/Contents/Resources/net.sf.openfx.Shadertoy.svg
+@@ -325,17 +325,17 @@ OFX/Plugins/Shadertoy.ofx.bundle/Content
+ OFX/Plugins/Shadertoy.ofx.bundle/Contents/Resources/presets/default/warptex.frag.glsl
+ OFX/Plugins/Shadertoy.ofx.bundle/Contents/Resources/presets/default/watercaustic.frag.glsl
+ OFX/Plugins/Shadertoy.ofx.bundle/Contents/Resources/presets/default/worleynoisewaters.frag.glsl
+-OFX/Plugins/Shadertoy.ofx.bundle/Contents/FreeBSD-x86-64/Shadertoy.ofx
++OFX/Plugins/Shadertoy.ofx.bundle/Contents/%%OPSYS%%-x86-64/Shadertoy.ofx
+ @dir OFX/Plugins/CImg.ofx.bundle/Contents/Resources
+-@dir OFX/Plugins/CImg.ofx.bundle/Contents/FreeBSD-x86-64
++@dir OFX/Plugins/CImg.ofx.bundle/Contents/%%OPSYS%%-x86-64
+ @dir OFX/Plugins/CImg.ofx.bundle/Contents
+ @dir OFX/Plugins/CImg.ofx.bundle
+ @dir OFX/Plugins/Misc.ofx.bundle/Contents/Resources
+-@dir OFX/Plugins/Misc.ofx.bundle/Contents/FreeBSD-x86-64
++@dir OFX/Plugins/Misc.ofx.bundle/Contents/%%OPSYS%%-x86-64
+ @dir OFX/Plugins/Misc.ofx.bundle/Contents
+ @dir OFX/Plugins/Misc.ofx.bundle
+ @dir OFX/Plugins/Shadertoy.ofx.bundle/Contents/Resources
+-@dir OFX/Plugins/Shadertoy.ofx.bundle/Contents/FreeBSD-x86-64
++@dir OFX/Plugins/Shadertoy.ofx.bundle/Contents/%%OPSYS%%-x86-64
+ @dir OFX/Plugins/Shadertoy.ofx.bundle/Contents
+ @dir OFX/Plugins/Shadertoy.ofx.bundle
+ @dir OFX/Plugins
