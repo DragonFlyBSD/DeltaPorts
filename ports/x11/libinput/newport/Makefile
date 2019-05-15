@@ -10,7 +10,7 @@ COMMENT=	Generic input library (DragonFly BSD version)
 
 LICENSE=	MIT
 
-BUILD_DEPENDS=	v4l_compat>=0:multimedia/v4l_compat
+BUILD_DEPENDS=	${LOCALBASE}/include/linux/input.h:devel/evdev-proto
 LIB_DEPENDS=	libevdev.so:devel/libevdev \
 		libudev.so:devel/libudev-devd \
 		libmtdev.so:devel/libmtdev
