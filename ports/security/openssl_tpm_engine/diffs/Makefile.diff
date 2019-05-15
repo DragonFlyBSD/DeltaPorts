@@ -1,0 +1,23 @@
+--- Makefile.orig	2019-05-15 16:19:06 UTC
++++ Makefile
+@@ -32,19 +32,8 @@ OPTIONS_DEFINE=	EXAMPLES
+ 
+ .include <bsd.port.pre.mk>
+ 
+-.if ${SSL_DEFAULT:Mlibressl*}
+-IGNORE=	Detected LibreSSL (RAND_METHOD structure unsupported)
+-.endif
+-
+ post-patch:
+-	(${CAT} ${OPENSSLINC}/openssl/opensslv.h; \
+-	 ${ECHO_CMD} "#if OPENSSL_VERSION_NUMBER < 0x10100000L"; \
+-	 ${ECHO_CMD} "lib/openssl/engines/libtpm.so"; \
+-	 ${ECHO_CMD} "#else"; \
+-	 ${ECHO_CMD} "lib/openssl/engines/tpm.so"; \
+-	 ${ECHO_CMD} "#endif"; \
+-	) | ${CPP} | ${GREP} -v \# > ${WRKDIR}/.tpmso; \
+-	${REINPLACE_CMD} "s|%%TPMSO%%|${PREFIX}/$$(cat ${WRKDIR}/.tpmso)|g" \
++	${REINPLACE_CMD} "s|%%TPMSO%%|${PREFIX}/lib/openssl/engines/tpm.so|g" \
+ 	    ${WRKSRC}/dist/openssl.cnf.sample
+ 
+ .if defined(INSTALL_AS_USER)
