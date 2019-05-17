@@ -6,9 +6,9 @@
 
 - [x] Remove *LDFLAGS* workaround in some 'lang/rust' dependant ports like 'devel/rust-cbindgen' as the there is an upstream fix for this problem, see: https://svnweb.freebsd.org/ports?view=revision&revision=495724.
 
-## April, 25th 01:36am CEST
+## May 6th 14:35:02 PDT 2019
 
-TBD
+- Completed, further comments to be adjusted.
 
 
 
