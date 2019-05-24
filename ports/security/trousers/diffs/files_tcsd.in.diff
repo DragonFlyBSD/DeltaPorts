@@ -1,0 +1,9 @@
+There are no kerberous in base. Port is stubbed anyway.
+
+--- files/tcsd.in.orig	2019-05-24 15:02:43 UTC
++++ files/tcsd.in
+@@ -6,3 +6,3 @@
+ # REQUIRE: SERVERS tpmd
+-# BEFORE:  named hastd kerberos
++# BEFORE:  named
+ # KEYWORD: shutdown
