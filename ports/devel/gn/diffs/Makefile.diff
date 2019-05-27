@@ -1,0 +1,11 @@
+--- Makefile.orig	2019-05-27 20:06:26 UTC
++++ Makefile
+@@ -21,7 +21,7 @@ CONFLICTS_INSTALL=	chromimum-gn*
+ PLIST_FILES=	bin/gn
+ 
+ do-configure:
+-	cd ${WRKSRC} && GN_VERSION=${PORTVERSION} ${PYTHON_CMD} build/gen.py
++	cd ${WRKSRC} && ${SETENV} ${CONFIGURE_ENV} GN_VERSION=${PORTVERSION} ${PYTHON_CMD} build/gen.py
+ 
+ do-build:
+ 	cd ${WRKSRC} && ninja -C out
