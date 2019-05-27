@@ -1,0 +1,12 @@
+--- files/mntent_compat.c++.orig	2019-02-28 12:43:38 UTC
++++ files/mntent_compat.c++
+@@ -59,7 +59,9 @@ struct {
+ 	{ MNT_NOSUID,		"nosuid"},
+ 	{ MNT_NOSYMFOLLOW,	"nosymfollow"},
+ 	{ MNT_SYNCHRONOUS,	"sync"},
++#ifdef MNT_UNION
+ 	{ MNT_UNION,		"union"},
++#endif
+ 	{ MNT_NOCLUSTERR,	"noclusterr"},
+ 	{ static_cast<int>(MNT_NOCLUSTERW),	"noclusterw"},
+ 	{ MNT_SUIDDIR,		"suiddir"},
