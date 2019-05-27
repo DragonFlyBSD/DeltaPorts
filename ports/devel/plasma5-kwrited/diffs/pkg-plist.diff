@@ -1,3 +1,6 @@
+Our base does not have libutempter, so no KPty_HAVE_UTEMPTER
+Port is build as binary executable.
+
 --- pkg-plist.orig	2018-09-10 20:50:59 UTC
 +++ pkg-plist
 @@ -1,2 +1,3 @@
