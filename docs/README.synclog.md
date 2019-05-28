@@ -14,7 +14,9 @@
 ## May 28 14:43:36 PDT 2019
 
 - [x] Reverted multimedia/libva in `dports/master` before merging `dports/staged`
-
+- [ ] `lang/ghc` introduced a 'boostrap-package' target in the Makefile which collides with the MD one and the synth scan fails.
+- [ ] `devel/electron4` depends on `devel/chromium-gn` which is masked.
+- [ ] `science/py-GPy` was synced but its _BUILD_DEPENDS_ contains _${LOCALBASE}/lib/libomp.so:devel/openmp_ which our sync scripts mangled and only left _${LOCALBASE}/lib_. Needs investigation.
 
 - Completed, further comments to be adjusted.
 
