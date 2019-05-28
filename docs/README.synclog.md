@@ -9,5 +9,12 @@
 ## May 6th 14:35:02 PDT 2019
 
 - [x] Reverted print/texinfo fix to dports/master, it doesn't affect DeltaPorts.
+- [x] Manually fixed multimedia/libva in `dports/master`, needs revert for the next sync.
+
+## May 28 14:43:36 PDT 2019
+
+- [x] Reverted multimedia/libva in `dports/master` before merging `dports/staged`
+
 
 - Completed, further comments to be adjusted.
+
