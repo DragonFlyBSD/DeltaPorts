@@ -1,0 +1,24 @@
+--- Makefile.orig	2019-05-28 15:02:04 UTC
++++ Makefile
+@@ -35,17 +35,17 @@ PLIST_FILES=	bin/dspdfviewer \
+ 
+ # Build fails with LLVM 4.0.  Reported upstream as #191:
+ # https://github.com/dannyedel/dspdfviewer/issues/191
+-CFLAGS+=	-Wno-error=undefined-func-template
++CFLAGS.clang+=	-Wno-error=undefined-func-template
+ 
+ .if ${OPSYS} == FreeBSD && ${OSVERSION} >= 1200039
+-CFLAGS+=	-Wno-error=zero-as-null-pointer-constant
++CFLAGS.clang+=	-Wno-error=zero-as-null-pointer-constant
+ .endif
+ 
+ # Fixes build failure for Clang 8.0.0
+ .if ${OPSYS} == FreeBSD && ${OSVERSION} >= 1300014
+-CFLAGS+=       -Wno-error=extra-semi-stmt
++CFLAGS.clang+=       -Wno-error=extra-semi-stmt
+ .endif
+ 
+-CFLAGS+=	-Wno-error=redundant-parens
++CFLAGS.clang+=	-Wno-error=redundant-parens
+ 
+ .include <bsd.port.post.mk>
