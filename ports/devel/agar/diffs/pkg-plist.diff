@@ -1,0 +1,12 @@
+Base cc does not have objc support compiled in.
+
+--- pkg-plist.orig	2019-02-28 12:44:01 UTC
++++ pkg-plist
+@@ -101,7 +101,6 @@ include/agar/agar/config/have_mysql.h
+ include/agar/agar/config/have_nanosleep.h
+ include/agar/agar/config/have_nonnull_attribute.h
+ include/agar/agar/config/have_noreturn_attribute.h
+-include/agar/agar/config/have_objc_warnings.h
+ include/agar/agar/config/have_opengl.h
+ include/agar/agar/config/have_packed_attribute.h
+ include/agar/agar/config/have_png.h
