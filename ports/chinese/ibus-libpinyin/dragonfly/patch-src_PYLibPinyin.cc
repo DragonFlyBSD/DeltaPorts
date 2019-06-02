@@ -1,11 +1,10 @@
---- src/PYLibPinyin.cc.bak	2016-06-15 14:44:39.000000000 +0300
+--- src/PYLibPinyin.cc.intermediate	2019-05-31 18:59:20.000000000 +0000
 +++ src/PYLibPinyin.cc
-@@ -219,7 +219,7 @@ LibPinyinBackEnd::importPinyinDictionary
-         return FALSE;
+@@ -26,6 +26,7 @@
+ #include <string.h>
+ #include <pinyin.h>
+ #include "PYPConfig.h"
++#include <cstdio> // for std::getline()
  
-     char* linebuf = NULL; size_t size = 0; ssize_t read;
--    while ((read = getline (&linebuf, &size, dictfile)) != -1) {
-+    while ((read = std::getline (&linebuf, &size, dictfile)) != -1) {
-         if (0 == strlen (linebuf))
-             continue;
+ #define LIBPINYIN_SAVE_TIMEOUT   (5 * 60)
  
