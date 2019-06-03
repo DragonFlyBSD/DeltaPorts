@@ -5,7 +5,7 @@
  
      ;;
 -  freebsd*)
-+  dragonfly*|freebsd*)
++  freebsd*|dragonfly*)
      VICEDIR="$PREFIX/lib/vice"
       if true; then
    ALTERNATE_DOCDIR_TRUE=
