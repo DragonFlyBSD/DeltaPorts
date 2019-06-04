@@ -1,0 +1,18 @@
+--- Makefile.orig	2019-05-29 00:47:10 UTC
++++ Makefile
+@@ -22,13 +22,13 @@ BUILD_DEPENDS=	${PYNUMPY} \
+ 		${PYTHON_PKGNAMEPREFIX}phonopy>=1.13.2:science/py-phonopy@${PY_FLAVOR} \
+ 		${PYTHON_PKGNAMEPREFIX}yaml>0:devel/py-yaml@${PY_FLAVOR} \
+ 		${LOCALBASE}/include/lapacke.h:math/lapacke \
+-		openmp>0:devel/openmp
++		
+ RUN_DEPENDS=	${PYNUMPY} \
+ 		${PYTHON_PKGNAMEPREFIX}h5py>0:science/py-h5py@${PY_FLAVOR} \
+ 		${PYTHON_PKGNAMEPREFIX}matplotlib>0:math/py-matplotlib@${PY_FLAVOR} \
+ 		${PYTHON_PKGNAMEPREFIX}phonopy>=1.13.2:science/py-phonopy@${PY_FLAVOR} \
+ 		${PYTHON_PKGNAMEPREFIX}yaml>0:devel/py-yaml@${PY_FLAVOR} \
+-		openmp>0:devel/openmp
++		
+ 
+ USES=		blaslapack:openblas localbase python
+ USE_PYTHON=	distutils cython autoplist
