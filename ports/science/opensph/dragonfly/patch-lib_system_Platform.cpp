@@ -1,6 +1,14 @@
 --- lib/system/Platform.cpp.intermediate	2019-06-02 19:45:38.000000000 +0000
 +++ lib/system/Platform.cpp
-@@ -103,18 +103,18 @@ private:
+@@ -10,6 +10,7 @@
+ #include <sys/times.h>
+ //#include <sys/vtimes.h>
+ #include <unistd.h>
++#include <climits>  // for PATH_MAX
+ 
+ NAMESPACE_SPH_BEGIN
+ 
+@@ -103,18 +104,18 @@ private:
  
  public:
      CpuUsage() {
