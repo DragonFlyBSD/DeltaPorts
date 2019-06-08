@@ -1,1 +1,6 @@
+
+# no pulse
+LIB_DEPENDS:=	${LIB_DEPENDS:Nlibpulse*}
+RUN_DEPENDS:=	${RUN_DEPENDS:N*pulseaudio}
+BUILD_DEPENDS:= ${BUILD_DEPENDS:N*pulseaudio}
 BROKEN= uses pulseaudio
