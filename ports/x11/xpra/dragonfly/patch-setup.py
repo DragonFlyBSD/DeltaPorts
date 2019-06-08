@@ -1,20 +1,29 @@
---- setup.py.orig	2017-11-20 00:56:28 UTC
+--- setup.py.intermediate	2019-06-08 19:08:46.000000000 +0000
 +++ setup.py
-@@ -185,7 +185,7 @@ jpeg_ENABLED            = DEFAULT and pk
- vpx_ENABLED             = DEFAULT and pkg_config_version("1.3", "vpx", fallback=WIN32)
- enc_ffmpeg_ENABLED      = DEFAULT and pkg_config_version("56", "libavcodec")
- webcam_ENABLED          = DEFAULT and not OSX
--v4l2_ENABLED            = DEFAULT and (not WIN32 and not OSX and not sys.platform.startswith("freebsd"))
-+v4l2_ENABLED            = DEFAULT and (not WIN32 and not OSX and not sys.platform.startswith("freebsd") and not sys.platform.startswith("dragonfly"))
- #ffmpeg 2 onwards:
- dec_avcodec2_ENABLED    = DEFAULT and pkg_config_version("56", "libavcodec", fallback=WIN32)
- # some version strings I found:
-@@ -205,7 +205,7 @@ csc_libyuv_ENABLED      = DEFAULT and pk
- #Cython / gcc / packaging build options:
- annotate_ENABLED        = True
- warn_ENABLED            = True
--strict_ENABLED          = True
-+strict_ENABLED          = False
- PIC_ENABLED             = not WIN32     #ming32 moans that it is always enabled already
- debug_ENABLED           = False
- verbose_ENABLED         = False
+@@ -24,7 +24,7 @@ from distutils.command.install_data impo
+ import xpra
+ from xpra.os_util import (
+     get_status_output, getUbuntuVersion,
+-    PYTHON3, BITS, WIN32, OSX, LINUX, POSIX, NETBSD, FREEBSD, OPENBSD,
++    PYTHON3, BITS, WIN32, OSX, LINUX, POSIX, NETBSD, FREEBSD, OPENBSD, DRAGONFLY,
+     is_Ubuntu, is_Debian, is_Raspbian, is_Fedora, is_CentOS,
+     )
+ 
+@@ -196,7 +196,7 @@ enc_ffmpeg_ENABLED      = DEFAULT and pk
+ webcam_ENABLED          = DEFAULT and not OSX and (not WIN32 or BITS==64)
+ notifications_ENABLED   = DEFAULT
+ keyboard_ENABLED        = DEFAULT
+-v4l2_ENABLED            = DEFAULT and (not WIN32 and not OSX and not FREEBSD and not OPENBSD)
++v4l2_ENABLED            = DEFAULT and (not WIN32 and not OSX and not FREEBSD and not OPENBSD and not DRAGONFLY)
+ #ffmpeg 3.1 or later is required
+ dec_avcodec2_ENABLED    = DEFAULT and pkg_config_version("57", "libavcodec")
+ csc_swscale_ENABLED     = DEFAULT and pkg_config_ok("--exists", "libswscale")
+@@ -1551,7 +1551,7 @@ else:
+             add_data_files("%s/xpra/" % libexec, libexec_scripts)
+     if data_ENABLED:
+         man_path = "share/man"
+-        if OPENBSD or FREEBSD:
++        if OPENBSD or FREEBSD or DRAGONFLY:
+             man_path = "man"
+         add_data_files("%s/man1" % man_path,  ["man/xpra.1", "man/xpra_launcher.1"])
+         add_data_files("share/applications",  glob.glob("xdg/*.desktop"))
