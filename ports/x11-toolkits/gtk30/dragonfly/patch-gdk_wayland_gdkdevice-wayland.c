@@ -5,7 +5,7 @@
  #include <linux/input.h>
  #endif
 +#ifdef __DragonFly__
-+#include <dev/misc/evdev/input.h>
++#include <linux/input.h>
 +#endif
  
  #define BUTTON_BASE (BTN_LEFT - 1) /* Used to translate to 1-indexed buttons */

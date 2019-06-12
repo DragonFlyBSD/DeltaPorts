@@ -5,6 +5,8 @@
 BUILD_DEPENDS:=	${BUILD_DEPENDS:Nat-spi2-atk*}
 RUN_DEPENDS:=	${RUN_DEPENDS:Nat-spi2-atk*}
 
+WAYLAND_BUILD_DEPENDS+= ${LOCALBASE}/include/linux/input.h:devel/evdev-proto
+
 OPTIONS_DEFINE+=	DBUS
 OPTIONS_DEFAULT+=	DBUS
 
