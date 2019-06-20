@@ -1,4 +1,4 @@
---- Makefile.orig	2019-06-20 12:40:01 UTC
+--- Makefile.orig	2019-06-20 16:21:57 UTC
 +++ Makefile
 @@ -125,16 +125,12 @@ EXCLUDE+=	readline
  EXCLUDE+=	zlib
@@ -21,3 +21,19 @@
  		${WRKSRC}/gdb/version.in
  
  post-patch-KGDB-on:
+@@ -166,6 +162,15 @@ do-install-GDB_LINK-on:
+ 	${LN} -sf kgdb${VER}.1 ${STAGEDIR}${MAN1PREFIX}/man/man1/kgdb.1
+ .endif
+ 
++dfly-patch:
++	${CP} ${DFLY_FILESDIR}/dfly64.mh ${WRKSRC}/gdb/config/i386/
++	${CP} ${DFLY_FILESDIR}/dfly-nat.* ${WRKSRC}/gdb/
++	${CP} ${DFLY_FILESDIR}/i386* ${WRKSRC}/gdb/
++	${CP} ${DFLY_FILESDIR}/amd64* ${WRKSRC}/gdb/
++.if ${PORT_OPTIONS:MKGDB}
++	${PATCH} ${PATCH_ARGS} < ${DFLY_FILESDIR}/extrapatch-kgdb
++.endif
++
+ do-install-PYTHON-on:
+ 	(cd ${WRKSRC}/gdb; ${SETENV} ${MAKE_ENV} ${MAKE_CMD} ${MAKE_ARGS} install-python )
+ 	(cd ${WRKSRC}/gdb/data-directory ; \
