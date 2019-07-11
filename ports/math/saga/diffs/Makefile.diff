@@ -1,36 +1,36 @@
---- Makefile.orig	2019-02-28 12:45:40 UTC
+--- Makefile.orig	2019-07-11 21:43:05 UTC
 +++ Makefile
 @@ -12,7 +12,7 @@ COMMENT=	System for Automated Geoscienti
  LICENSE=	GPLv2 LGPL21
  LICENSE_COMB=	multi
  
--BUILD_DEPENDS=	clang70:devel/llvm70 \
+-BUILD_DEPENDS=	clang${LLVM_VER}:devel/llvm${LLVM_VER} \
 +BUILD_DEPENDS=	\
  		swig3.0:devel/swig30
  LIB_DEPENDS=	libcurl.so:ftp/curl \
  		libfftw3.so:math/fftw3 \
-@@ -56,8 +56,6 @@ VIGRA_DESC=	Enable 'Vision with Generic
- 
+@@ -57,7 +57,6 @@ VIGRA_DESC=	Enable 'Vision with Generic
  OPENMP_CONFIGURE_ENABLE=	openmp
  OPENMP_LDFLAGS=		-L${LOCALBASE}/lib -lm
--# Use OpenMP from lang/llvm70
--OPENMP_LDFLAGS+=	-L${LOCALBASE}/llvm70/lib -lomp
+ # Use OpenMP from lang/llvm${LLVM_VER}
+-OPENMP_LDFLAGS+=	-L${LOCALBASE}/llvm${LLVM_VER}/lib -lomp
  PGSQL_CONFIGURE_OFF=	--with-postgresql=no
  PGSQL_CONFIGURE_ON=	--with-postgresql=${LOCALBASE}/bin/pg_config
  PGSQL_USES=		pgsql
-@@ -68,11 +66,6 @@ INSTALL_TARGET=	install-strip
+@@ -68,12 +67,6 @@ INSTALL_TARGET=	install-strip
  
  .include <bsd.port.pre.mk>
  
 -# make describe needs them here
--CPP=		clang-cpp70
--CC=		clang70
--CXX=		clang++70
+-LLVM_VER=	80
+-CPP=		clang-cpp${LLVM_VER}
+-CC=		clang${LLVM_VER}
+-CXX=		clang++${LLVM_VER}
 -
  SUB_FILES=	pkg-message
  
  post-extract:
-@@ -102,12 +95,6 @@ post-patch:
+@@ -103,12 +96,6 @@ post-patch:
  	@${REINPLACE_CMD} -e 's|PORTVERSION|${PORTVERSION}|' \
  		${WRKSRC}/src/saga_core/saga_gui/dlg_about.cpp
  
