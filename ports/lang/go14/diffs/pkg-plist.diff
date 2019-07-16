@@ -1,6 +1,6 @@
---- pkg-plist.orig	2015-09-28 22:47:12 UTC
+--- pkg-plist.orig	2019-07-16 13:42:23 UTC
 +++ pkg-plist
-@@ -361,175 +361,175 @@ go14/misc/swig/callback/callback.swigcxx
+@@ -387,175 +387,175 @@ go14/misc/swig/callback/callback.swigcxx
  go14/misc/swig/callback/callback_test.go
  go14/misc/swig/stdio/file.swig
  go14/misc/swig/stdio/file_test.go
@@ -345,7 +345,23 @@
  go14/robots.txt
  go14/src/Make.dist
  go14/src/all.bash
-@@ -2915,11 +2915,11 @@ go14/src/runtime/vlop_arm_test.go
+@@ -1369,7 +1369,6 @@ go14/src/debug/dwarf/const.go
+ go14/src/debug/dwarf/entry.go
+ go14/src/debug/dwarf/open.go
+ go14/src/debug/dwarf/testdata/typedef.c
+-go14/src/debug/dwarf/testdata/typedef.elf
+ go14/src/debug/dwarf/testdata/typedef.elf4
+ go14/src/debug/dwarf/testdata/typedef.macho
+ go14/src/debug/dwarf/type.go
+@@ -1382,7 +1381,6 @@ go14/src/debug/elf/file.go
+ go14/src/debug/elf/file_test.go
+ go14/src/debug/elf/symbols_test.go
+ go14/src/debug/elf/testdata/gcc-386-freebsd-exec
+-go14/src/debug/elf/testdata/gcc-amd64-linux-exec
+ go14/src/debug/elf/testdata/gcc-amd64-openbsd-debug-with-rela.obj
+ go14/src/debug/elf/testdata/go-relocation-test-clang-x86.obj
+ go14/src/debug/elf/testdata/go-relocation-test-gcc424-x86-64.obj
+@@ -2941,11 +2939,11 @@ go14/src/runtime/vlop_arm_test.go
  go14/src/runtime/vlrt.c
  go14/src/runtime/vlrt.go
  go14/src/runtime/zaexperiment.h
