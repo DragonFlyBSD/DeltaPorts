@@ -1,0 +1,11 @@
+--- Makefile.orig	2019-07-16 10:15:41 UTC
++++ Makefile
+@@ -11,8 +11,6 @@ COMMENT=	Cross-platform library for retr
+ LICENSE=	APACHE20
+ LICENSE_FILE=	${WRKSRC}/LICENSE
+ 
+-BROKEN_DragonFly=	DragonFly is not supported upstream
+-
+ LIB_DEPENDS=	libboost_system.so:devel/boost-libs \
+ 		libcurl.so:ftp/curl \
+ 		libleatherman_locale.so:devel/leatherman \
