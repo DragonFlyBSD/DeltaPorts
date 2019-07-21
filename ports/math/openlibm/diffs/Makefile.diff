@@ -1,0 +1,16 @@
+--- Makefile.orig	2019-07-21 16:30:45 UTC
++++ Makefile
+@@ -36,7 +36,12 @@ TEST_TARGET=	check
+ post-patch:
+ 	${REINPLACE_CMD} -e 's/USEGCC =/USEGCC ?=/g' \
+ 		-e 's/USECLANG =/USECLANG ?=/g' \
+-		-e '/TOOLPREFIX)gcc/s/$$/${GCC_DEFAULT}/g' \
+ 		${WRKSRC}/Make.inc
++
++# Do not add GCC_DEFAULT to the prefix to allow building with base gcc
++.       if ${OPSYS} == "FreeBSD"
++	${REINPLACE_CMD} -e '/TOOLPREFIX)gcc/s/$$/${GCC_DEFAULT}/g' \
++		${WRKSRC}/Make.inc
++.       endif
+ 		
+ .include <bsd.port.post.mk>
