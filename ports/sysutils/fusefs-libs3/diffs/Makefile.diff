@@ -1,4 +1,4 @@
---- Makefile.orig	2019-05-15 01:38:26 UTC
+--- Makefile.orig	2019-08-12 11:59:39 UTC
 +++ Makefile
 @@ -23,10 +23,6 @@ GH_PROJECT=	libfuse
  
@@ -8,6 +8,6 @@
 -IGNORE=	fusefs has not been implemented on DragonFly
 -.endif
 -
+ .if ${CHOSEN_COMPILER_TYPE} == gcc
  post-patch:
- .if ${ARCH:Mmips*} || ${ARCH:Mpowerpc*} || ${ARCH} == sparc64
  	${REINPLACE_CMD} -e '/-Wno-unused-result/d' ${WRKSRC}/meson.build
