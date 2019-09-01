@@ -17,6 +17,7 @@ dfly-patch:
 		${WRKSRC}/tools/clang/lib/Driver/ToolChains/DragonFly.cpp \
 		${WRKSRC}/tools/clang/lib/Frontend/InitHeaderSearch.cpp
 
-# attempt to fix pkg-plist
+# attempt to fix pkg-plist (compiler-rt header)
 dfly-install:
+	${MKDIR} ${STAGEDIR}/${PREFIX}/llvm-devel/include/fuzzer
 	${TOUCH} ${STAGEDIR}/${PREFIX}/llvm-devel/include/fuzzer/FuzzedDataProvider.h
