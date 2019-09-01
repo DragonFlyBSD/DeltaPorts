@@ -1,4 +1,4 @@
---- Makefile.orig	2019-08-28 12:21:07 UTC
+--- Makefile.orig	2019-08-20 22:05:52 UTC
 +++ Makefile
 @@ -24,7 +24,7 @@ COMMENT?=	Free Pascal compiler with Turb
  ONLY_FOR_ARCHS=	amd64 i386
@@ -9,3 +9,12 @@
  MANVER=		3.0.4
  
  LDPATH=		"/usr/bin/ld.bfd"
+@@ -125,7 +125,7 @@ do-build:
+ # build fpc compiler
+ 	@${ECHO_MSG} "##### STARTING COMPILER #####"
+ 	(cd ${WRKDIR}/${FPCSRCDIR}/compiler && ${SETENV} ${MAKE_ENV} \
+-		${MAKE_CMD} cycle ${MAKE_ARGS} ${BOOTPPC})
++		LDVER=ld.bfd ${MAKE_CMD} cycle ${MAKE_ARGS} ${BOOTPPC})
+ 	@${ECHO_MSG} "##### COMPLETE COMPILER #####"
+ 
+ # build fpcmkcfg
