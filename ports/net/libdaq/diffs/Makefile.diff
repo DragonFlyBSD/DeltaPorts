@@ -1,0 +1,12 @@
+Prevent constant rebuilding in synth.
+
+--- Makefile.orig	2019-08-14 12:37:24 UTC
++++ Makefile
+@@ -12,7 +12,6 @@ COMMENT=	Data Acquisition abstraction li
+ LICENSE=	GPLv2
+ LICENSE_FILE=	${WRKSRC}/COPYING
+ 
+-LIB_DEPENDS=	libpcap.so:net/libpcap	# avoid base libpcap
+ 
+ USES=		autoreconf compiler:c++11-lang libtool pkgconfig
+ USE_GITHUB=	yes
