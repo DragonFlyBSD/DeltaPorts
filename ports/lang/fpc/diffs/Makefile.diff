@@ -1,6 +1,14 @@
 --- Makefile.orig	2019-08-20 22:05:52 UTC
 +++ Makefile
-@@ -125,7 +125,7 @@ do-build:
+@@ -13,6 +13,7 @@ MASTER_SITES=	ftp://ftp.freepascal.org/p
+ 		ftp://ftp.us.freepascal.org/pub/fpc/dist/${PORTVERSION}/source/:source \
+ 		SF/freepascal/Source/${PORTVERSION}:source \
+ 		http://leaf.dragonflybsd.org/~marino/dports-src/:DragonFlybootstrap \
++		http://avalon.dragonflybsd.org/misc/distfiles/freepascal/:DragonFlybootstrap \
+ 		LOCAL/acm/freepascal/:bootstrap \
+ 		LOCAL/acm/freepascal/:man
+ DISTFILES=	${DISTNAME:S/$/.source/}${EXTRACT_SUFX}:source
+@@ -125,7 +126,7 @@ do-build:
  # build fpc compiler
  	@${ECHO_MSG} "##### STARTING COMPILER #####"
  	(cd ${WRKDIR}/${FPCSRCDIR}/compiler && ${SETENV} ${MAKE_ENV} \

@@ -1,6 +1,4 @@
 
-MASTER_SITES+=	https://avalon.dragonflybsd.org/misc/distfiles/:DragonFlybootstrap
-
 #MAKE_ENV+=	LDVER=ld.bfd
 
 # zrj: fix up path, now can call directly
