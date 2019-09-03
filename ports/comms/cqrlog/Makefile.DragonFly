@@ -1,1 +1,4 @@
-USE_FPC+=	chm
+
+dfly-patch:
+	${REINPLACE_CMD} -e 's@FreeBSD@DragonFly@g' \
+		${WRKSRC}/src/synapse/synaser.pas
