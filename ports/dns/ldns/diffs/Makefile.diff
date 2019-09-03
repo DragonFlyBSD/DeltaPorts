@@ -1,29 +1,20 @@
---- Makefile.orig	2017-03-30 19:34:02 UTC
+--- Makefile.orig	2019-09-03 14:01:53 UTC
 +++ Makefile
-@@ -21,7 +21,7 @@ USE_LDCONFIG=	yes
- CONFIGURE_ARGS+=	--with-ssl=${OPENSSLBASE} --disable-dane-ta-usage
- 
- .if ! (defined(BUILD_PYLDNS) || defined(BUILD_P5PERL))
--OPTIONS_DEFINE=	DOXYGEN EXAMPLES DRILL
-+OPTIONS_DEFINE=	DOXYGEN DRILL
- OPTIONS_DEFAULT=	DRILL
- 
- DRILL_DESC=	With drill program
-@@ -50,10 +50,11 @@ RRTYPENINFO_CONFIGURE_ENABLE=	rrtype-nin
- RRTYPERKEY_CONFIGURE_ENABLE=	rrtype-rkey
- RRTYPETA_CONFIGURE_ENABLE=	rrtype-ta
- RRTYPEAVC_CONFIGURE_ENABLE=	rrtype-avc
--EXAMPLES_CONFIGURE_WITH=	examples
-+#EXAMPLES_CONFIGURE_WITH=	examples
- DRILL_CONFIGURE_WITH=		drill
- DRILL_INSTALL_TARGET=	install-drill
--EXAMPLES_INSTALL_TARGET=	install-examples
-+#EXAMPLES_INSTALL_TARGET=	install-examples
-+PLIST_SUB+=			EXAMPLES="@comment "
+@@ -54,10 +54,11 @@ RRTYPERKEY_CONFIGURE_ENABLE=		rrtype-rke
+ RRTYPETA_CONFIGURE_ENABLE=		rrtype-ta
+ RRTYPEAVC_CONFIGURE_ENABLE=		rrtype-avc
+ RRTYPEAMTRELAY_CONFIGURE_ENABLE=	rrtype-amtrelay
+-EXAMPLES_CONFIGURE_WITH=		examples
++#EXAMPLES_CONFIGURE_WITH=		examples
+ DRILL_CONFIGURE_WITH=			drill
+ DRILL_INSTALL_TARGET=			install-drill
+-EXAMPLES_INSTALL_TARGET=		install-examples
++#EXAMPLES_INSTALL_TARGET=		install-examples
++PLIST_SUB+=                    EXAMPLES="@comment "
  
  .if defined(BUILD_PYLDNS)
  USES+=		python
-@@ -123,7 +124,7 @@ post-install:
+@@ -130,7 +131,7 @@ post-install:
  .if ${PORT_OPTIONS:MDRILL}
  	${STRIP_CMD} ${STAGEDIR}${PREFIX}/bin/drill
  .endif
