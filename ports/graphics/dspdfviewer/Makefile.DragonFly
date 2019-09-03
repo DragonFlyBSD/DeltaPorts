@@ -1,0 +1,2 @@
+CFLAGS:= ${CFLAGS:N-Wno-error=undefined-func-template}
+CFLAGS:= ${CFLAGS:N-Wno-error=redundant-parens}
