@@ -2,14 +2,9 @@ Fix coding error in procedure TLinkerBSD.SetDefaultInfo in new patch.
 Stop adding nested "(((s<>'c') and (s<>'iconv'))" too (lang/fpc/Makefile:post-patch:ICONV_LIB)
 Use systems_dragonfly for consistency.
 
---- files/patch-compiler_systems_t__bsd.pas.orig	2019-08-20 22:05:52 UTC
+--- files/patch-compiler_systems_t__bsd.pas.orig	2019-09-04 12:05:52 UTC
 +++ files/patch-compiler_systems_t__bsd.pas
-@@ -1,31 +1,22 @@
----- compiler/systems/t_bsd.pas	2014-12-07 15:27:02.000000000 -0500
--+++ compiler/systems/t_bsd.pas	2019-08-15 01:12:52.940972000 -0500
-+--- compiler/systems/t_bsd.pas	2014-12-07 20:27:02 UTC
-++++ compiler/systems/t_bsd.pas
- @@ -192,6 +192,8 @@
+@@ -44,28 +44,19 @@
         DynamicLinker:='/usr/libexec/ld.so'
        else if target_info.system in systems_netbsd then
         DynamicLinker:='/usr/libexec/ld.elf_so'
@@ -24,7 +19,7 @@ Use systems_dragonfly for consistency.
 -       begin
 -         S:=SharedLibFiles.GetFirst;
 --        if (s<>'c') or reorder then
--+        if ((((((s<>'c') and (s<>'iconv')) and (s<>'iconv')) and (s<>'iconv')) and (s<>'iconv')) and (s<>'iconv')) or reorder then
+-+        if (((((((s<>'c') and (s<>'iconv')) and (s<>'iconv')) and (s<>'iconv')) and (s<>'iconv')) and (s<>'iconv')) and (s<>'iconv')) or reorder then
 -          begin
 -            i:=Pos(target_info.sharedlibext,S);
 -            if i>0 then
