@@ -1,0 +1,10 @@
+--- Makefile.orig	2019-07-31 15:03:48 UTC
++++ Makefile
+@@ -26,7 +26,6 @@ do-configure: # full CMAKE_ARGS breaks c
+ 			-DCMAKE_BUILD_TYPE:STRING="Release" \
+ 			-DCMAKE_C_FLAGS_RELEASE:STRING="${CFLAGS}" \
+ 			-DCMAKE_CXX_FLAGS_RELEASE:STRING="${CXXFLAGS}" \
+-			-DCMAKE_EXE_LINKER_FLAGS:STRING="${LOCALBASE}/lib/gcc${GCC_DEFAULT}/libgcc_s.so" \
+ 			${CMAKE_SOURCE_PATH}
+ 
+ post-patch:
