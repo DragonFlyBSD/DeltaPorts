@@ -1,3 +1,4 @@
+IGNORE= FreeBSD specific
 MAKE_ENV+=	MK_KERBEROS_SUPPORT=no
 
 post-extract:
