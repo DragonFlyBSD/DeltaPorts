@@ -1,1 +1,2 @@
-CXXFLAGS+=	-Wno-narrowing
+
+USES+=	gmake
