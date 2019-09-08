@@ -1,19 +1,7 @@
---- Makefile.orig	2019-06-20 16:21:57 UTC
+--- Makefile.orig	2019-07-31 15:03:04 UTC
 +++ Makefile
-@@ -125,16 +125,12 @@ EXCLUDE+=	readline
- EXCLUDE+=	zlib
+@@ -135,7 +135,7 @@ CFLAGS+=	-Wno-extended-offsetof
  .endif
- 
--.if ${ARCH} == amd64
--CONFIGURE_TARGET=	x86_64-portbld-freebsd${OSREL}
--.endif
--
--.if ${CHOSEN_COMPILER_TYPE} == clang
--CFLAGS+=	-Wno-extended-offsetof
--.endif
-+# Wow c++ smth.c too on gdb, gcc wasn't enough? throw helpers for c-- and try to kill it
-+CFLAGS+=	-D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS
-+CONFIGURE_ARGS+=	--disable-build-with-cxx
  
  post-patch:
 -	@${REINPLACE_CMD} -e 's|$$| [GDB v${PORTVERSION} for FreeBSD]|' \
@@ -21,19 +9,3 @@
  		${WRKSRC}/gdb/version.in
  
  post-patch-KGDB-on:
-@@ -166,6 +162,15 @@ do-install-GDB_LINK-on:
- 	${LN} -sf kgdb${VER}.1 ${STAGEDIR}${MAN1PREFIX}/man/man1/kgdb.1
- .endif
- 
-+dfly-patch:
-+	${CP} ${DFLY_FILESDIR}/dfly64.mh ${WRKSRC}/gdb/config/i386/
-+	${CP} ${DFLY_FILESDIR}/dfly-nat.* ${WRKSRC}/gdb/
-+	${CP} ${DFLY_FILESDIR}/i386* ${WRKSRC}/gdb/
-+	${CP} ${DFLY_FILESDIR}/amd64* ${WRKSRC}/gdb/
-+.if ${PORT_OPTIONS:MKGDB}
-+	${PATCH} ${PATCH_ARGS} < ${DFLY_FILESDIR}/extrapatch-kgdb
-+.endif
-+
- do-install-PYTHON-on:
- 	(cd ${WRKSRC}/gdb; ${SETENV} ${MAKE_ENV} ${MAKE_CMD} ${MAKE_ARGS} install-python )
- 	(cd ${WRKSRC}/gdb/data-directory ; \
