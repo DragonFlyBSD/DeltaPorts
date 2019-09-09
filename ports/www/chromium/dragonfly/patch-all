@@ -658,7 +658,7 @@ index 95cc08e58c..90e62aeaaa 100644
  };
  
 diff --git base/process/process_metrics_freebsd.cc base/process/process_metrics_freebsd.cc
-index 303d9781c3..0e401f97bc 100644
+index 303d9781c3..a4ca440e38 100644
 --- base/process/process_metrics_freebsd.cc
 +++ base/process/process_metrics_freebsd.cc
 @@ -37,7 +37,19 @@ int GetPageShift() {
@@ -699,13 +699,12 @@ index 303d9781c3..0e401f97bc 100644
    int mib[] = {CTL_KERN, KERN_PROC, KERN_PROC_PID, process_};
    size_t length = sizeof(info);
 +#endif
- 
--  if (sysctl(mib, base::size(mib), &info, &length, NULL, 0) < 0)
++
 +#if defined(__DragonFly__)
 +  if (sysctl(mib, base::size(mib), NULL, &length, NULL, 0) < 0 || length == 0)
-     return 0;
++    return 0;
  
--  return (info.ki_pctcpu / FSCALE) * 100.0;
+-  if (sysctl(mib, base::size(mib), &info, &length, NULL, 0) < 0)
 +  kinfo_procs.resize(length / sizeof(struct kinfo_proc) + 1);
 +  do {
 +    length = kinfo_procs.size() * sizeof(struct kinfo_proc);
@@ -726,8 +725,9 @@ index 303d9781c3..0e401f97bc 100644
 +  return ((double)sum / fscale_) * 100.0;
 +#else
 +  if (sysctl(mib, base::size(mib), &info, &length, NULL, 0) < 0 || length == 0)
-+    return 0;
-+
+     return 0;
+ 
+-  return (info.ki_pctcpu / FSCALE) * 100.0;
 +  return ((double)info.ki_pctcpu / fscale_) * 100.0;
 +#endif
  }
@@ -790,6 +790,34 @@ index 303d9781c3..0e401f97bc 100644
  }
  
  int ProcessMetrics::GetOpenFdSoftLimit() const {
+@@ -185,7 +240,11 @@ size_t ProcessMetrics::GetResidentSetSize() const {
+   size_t rss;
+ 
+   if (nproc > 0) {
++#if defined(__DragonFly__)
++    rss = pp->kp_vm_rssize << GetPageShift();
++#else
+     rss = pp->ki_rssize << GetPageShift();
++#endif
+   } else {
+     rss = 0;
+   }
+@@ -211,9 +270,15 @@ uint64_t ProcessMetrics::GetVmSwapBytes() const {
+   size_t swrss;
+ 
+   if (nproc > 0) {
++#if defined(__DragonFly__)
++    swrss = pp->kp_vm_swrss > pp->kp_vm_rssize
++      ? (pp->kp_vm_swrss - pp->kp_vm_rssize) << GetPageShift()
++      : 0;
++#else
+     swrss = pp->ki_swrss > pp->ki_rssize
+       ? (pp->ki_swrss - pp->ki_rssize) << GetPageShift()
+       : 0;
++#endif
+   } else {
+     swrss = 0;
+   }
 diff --git base/process/process_metrics_posix.cc base/process/process_metrics_posix.cc
 index 1e29c10fc4..6a7b2d314b 100644
 --- base/process/process_metrics_posix.cc
