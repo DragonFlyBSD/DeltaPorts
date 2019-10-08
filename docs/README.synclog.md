@@ -24,7 +24,13 @@ Sync round done.
 - [x] `databases/influxdb` has been locked because the new version (1.7.6) requires further porting. UPDATE: Now unlocked and building.
 
 ## Wed Aug 28 03:20:16 PDT 2019
+
+Sync round done
+
+## Wed Sep  4 03:47:46 PDT 2019
+
 - [ ] `devel/electron4` depends on `devel/chromium-gn` which synth can't build for any reason, fails in the scan phase with (FETCH) error but a `make fetch` in the port directory works.
 - [ ] `science/py-GPy` was synced but its _BUILD_DEPENDS_ contains _${LOCALBASE}/lib/libomp.so:devel/openmp_ which our sync scripts mangled and only left _${LOCALBASE}/lib_. Needs investigation.
-- [ ] `devel/gdb` has been locked because the new version (8.3) requires further porting.
-- [ ] `www/node10` requires review.
+- [X] `devel/gdb` has been unlocked and builds, but not tested well. The new version (8.3) requires further porting.
+- [X] `www/node10` requires review.
+
