@@ -1,5 +1,0 @@
-BROKEN= segfaults at conqoper -C configuration (needs root)
-
-dfly-patch:
-	${REINPLACE_CMD} -e 's@\(FreeBSD\*\))@\1|DragonFly*)@g'		\
-		${WRKSRC}/configure

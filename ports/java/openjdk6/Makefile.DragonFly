@@ -1,3 +1,0 @@
-# Builds fine with gcc50 now, but we don't need openjdk6 anymore
-
-IGNORE=	OpenJDK6 EOL reached 31 DEC 2016
