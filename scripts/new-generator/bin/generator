@@ -1,0 +1,191 @@
+#!/bin/sh
+#
+# generator script - Creates a DPorts tree from the three key trees:
+#                    FreeBSD Ports + DPorts + DeltaPorts
+#
+#
+# XXX PHASES - Each directory in etc/filters is a phase, sorted by the first
+#              two numbers in the directory name. Please use the naming
+#              convention:
+#                           XX.phasename
+#
+
+SCRIPTBASE=$(dirname $0)/..
+verbose=0
+
+# Exported variables (for the filter scripts)
+export SCRIPTBASE=$(readlink -f ${SCRIPTBASE})
+
+. ${SCRIPTBASE}/etc/gen.subr
+. ${SCRIPTBASE}/etc/dports.conf
+
+usage()
+{
+    exitval=${1:-1}
+    echo "Usage: ${0##*/} [-v] <operation...>"
+    exit $exitval
+}
+
+fix_dirs()
+{
+    # Create configuration directories if they don't exist
+    [ ! -d ${GWRKDIR} ] && \
+	{ runcmd mkdir -p ${GWRKDIR} || err 1 "mkdir failed for ${GWRKDIR}"; }
+    [ ! -d ${MERGED} ] && \
+	{ runcmd mkdir -p ${MERGED} || err 1 "mkdir failed for ${MERGED}"; }
+    [ ! -d ${POTENTIAL} ] && \
+	{ runcmd mkdir -p ${POTENTIAL} || \
+	err 1 "mkdir failed for ${POTENTIAL}"; }
+    [ ! -d ${COMQUEUE} ] && \
+	{ runcmd mkdir -p ${COMQUEUE} || err 1 "mkdir failed for ${COMQUEUE}"; }
+
+}
+
+repos_setup()
+{
+    # Clone needed repos if they don't exist
+    clonerepo ${DPORTS_URL} ${DPORTS} || err 1 "Failed to clone dports repo"
+    clonerepo ${DELTA_URL} ${DELTA} || err 1 "Failed to clone DeltaPorts repo"
+
+    # Portsnap fetch/extract FreeBSD ports
+    psnap_init ${FPORTS}
+}
+
+run_filter()
+{
+    local _phase=$1
+    local _script=$2
+    local _ret
+
+
+    if [ ! -x ${_script} ]; then
+	info " -> Filter ${_script##*/} not executable, skipping."
+	_ret=1
+    else
+	info " -> Filter ${_script##*/}"
+	runcmd ${_script}
+	_ret=$?
+    fi
+
+    return ${_ret}
+}
+
+run_phase()
+{
+    local _phase=$1
+    local _fwrkdir
+    local _scriptdir
+
+    [ -z "${_phase}" ] && err 1 "No phase specified"
+
+    _scriptdir="${SCRIPTBASE}/etc/filters/${_phase}"
+
+    # Skip phases already done
+    if [ -f ${GWRKDIR}/.${_phase}_done ]; then
+	info "${_phase}: already done. SKIP"
+	return 0
+    fi
+
+    if ! ls ${_scriptdir}/* >/dev/null 2>&1 ; then
+	info "${_phase}: no filters found. SKIP"
+	return 0
+    fi
+	
+    info "${_phase}: RUNNING"
+
+    # Run all scripts in the current phase
+    _fwrkdir=${GWRKDIR}/${_phase}
+    [ ! -d ${_fwrkdir} ] && runcmd mkdir -p ${_fwrkdir}
+    for _s in ${SCRIPTBASE}/etc/filters/${_phase}/*
+    do
+	# Skip already processed ones
+	[ -f ${_fwrkdir}/.${_s##*/}_done ] && continue
+
+	# This is where the actual real work is done, when the
+	# filter script is run
+	run_filter ${_phase} ${_s}
+
+	# XXX Maybe skip to the next one? Or allow certain
+	# scripts to fail?
+	[ $? -ne 0 ] && err 1 "Failed to run filter: ${_s}"
+
+	# Success
+	touch ${_fwrkdir}/.${_s##*/}_done
+    done
+
+    info "${_phase}: DONE"
+    touch ${GWRKDIR}/.${_phase}_done
+}
+
+do_automode()
+{
+    local _phasename
+    local _phasedir
+    local _phase
+
+    # Create repositories if they don't exist but they won't
+    # be updated
+    repos_setup
+
+    case ${update_repos} in
+	all)
+	    # Update all repos
+	    echo "all TODO"
+	    ;;
+	ports)
+	    # Only update ports via portsnap
+	    echo "ports TODO"
+	    ;;
+	*)
+	    ;;
+    esac
+
+    # Scans the filters directory
+    for _phasedir in ${SCRIPTBASE}/etc/filters/*
+    do
+	# XXX too brittle, might break if no proper dir name is
+	#     in the filters dir
+	_phase=${_phasedir##*/}
+	# _phasename=${_phase##*.}
+
+	run_phase ${_phase}
+    done
+}
+
+
+# ---------------
+
+# Handle general options
+while getopts vl:u: op
+do
+    case ${op} in
+	v)
+	    verbose=1
+	    ;;
+	l)
+	    logfile=${OPTARG}
+	    touch ${logfile}
+	    ;;
+	u)
+	    update_repos=${OPTARG}
+	    ;;
+	*)
+	    usage
+	    ;;
+    esac
+done
+
+# Checks and initialization
+fix_dirs
+
+# Handle operations
+shift $(($OPTIND - 1))
+case ${1} in
+    auto)
+	automode=1
+	do_automode
+	;;
+    *)
+	usage
+	;;
+esac

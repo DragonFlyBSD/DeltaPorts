@@ -1,0 +1,103 @@
+#!/bin/sh
+
+info()
+{
+    local _logf=${logfile}
+
+    # If we don't have a logfile yet, discard output
+    if [ -z "${_logf}" -o ! -f ${_logf} ]; then
+	_logf="/dev/null"
+    fi
+
+    echo "INFO: $*" >> ${_logf}
+
+    # Also output to stdout when verbose is specified
+    [ ${verbose} -eq 1 ] && echo "INFO: $*"
+}
+
+#
+# err exitval message
+#     Display an error and exit
+#
+err()
+{
+    local _exitval=$1
+    local _logf=${logfile}
+
+    shift
+
+    # If we don't have a logfile yet, discard output
+    if [ -z "${_logf}" -o ! -f ${_logf} ]; then
+	_logf="/dev/null"
+    fi
+
+    echo "$0: ERROR: $*" >> ${_logf}
+    echo 1>&2 "$0: ERROR: $*"
+    exit $exitval
+}
+
+#
+# runcmd cmd
+#       Execute a command
+runcmd()
+{
+    local _logf=${logfile}
+    local _cmd=$*
+
+    # If no logfile specified, discard output
+    if [ -z "${_logf}" -o ! -f ${_logf} ]; then
+	_logf="/dev/null"
+    fi
+
+    ${_cmd} >> ${_logf} 2>&1
+
+    return $?
+}
+
+#
+# psnap_init
+#       Initial fetch/extract of FreeBSD ports
+#
+psnap_init()
+{
+    local _dst=$1
+
+    # Sanity checks
+    [ -z "${_dst}" ] && err 1 "No target path specified"
+
+    if [ ! -d ${_dst} ]; then
+       	info "Fetching FreeBSD ports dir to ${_dst}"
+	runcmd mkdir -p ${BASEDIR}/.portsnap
+	runcmd portsnap -d ${BASEDIR}/.portsnap \
+	       -p ${_dst} fetch || err 1 "failed to portsnap fetch"
+	runcmd portsnap -d ${BASEDIR}/.portsnap \
+	       -p ${_dst} extract || err 1 "failed to portsnap extract"
+    else
+	info "Directory ${_dst} not empty, skipping"
+    fi
+
+    return $?
+}
+
+#
+# clonerepo
+#       Clone a git repository in the specified path
+#
+clonerepo()
+{
+    local _url=$1
+    local _dst=$2
+
+    # Sanity checks
+    [ -z "${_url}" -o -z "${_dst}" ] && err 1 "No URL or target path specified"
+
+    if [ ! -d ${_dst} ]; then
+       	info "Cloning ${_url} to ${_dst}"
+	runcmd git clone ${_url} ${_dst}
+	return $?
+    fi
+
+    info "Directory ${_dst} not empty, skipping"
+
+    return 0
+}
