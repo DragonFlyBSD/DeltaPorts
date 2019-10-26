@@ -41,7 +41,7 @@ fi
 
 
 EXCLUDE="^(Templates/|Tools/|Mk/|Keywords/)"
-PKGDIR=/build/boomdata/data/packages/${1}/All
+PKGDIR=/build4/boomdata/data/packages/${1}/All
 
 if [ ! -d ${PKGDIR} ]; then
     echo "The package directory does not exist"
