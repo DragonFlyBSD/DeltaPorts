@@ -1,0 +1,9 @@
+
+# hide _Noreturn in C headers.
+dfly-patch:
+	${REINPLACE_CMD} -e 's@\(\|\| os(freebsd)\)@\1 || os(dragonfly)@g' \
+		${WRKSRC}/cairo-*/cairo.cabal \
+		${WRKSRC}/gio-*/gio.cabal \
+		${WRKSRC}/glib-*/glib.cabal \
+		${WRKSRC}/gtk3-*/gtk3.cabal \
+		${WRKSRC}/pango-*/pango.cabal
