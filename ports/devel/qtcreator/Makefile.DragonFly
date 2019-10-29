@@ -8,3 +8,10 @@ dfly-patch:
 		${WRKSRC}/src/libs/glsl/glsllexer.cpp			\
 		${WRKSRC}/src/libs/glsl/glslparsertable_p.h		\
 		${WRKSRC}/src/plugins/glsleditor/glslhighlighter.cpp
+
+# attempt to fix plist
+PLIST= ${WRKDIR}/qtcreator-plist
+
+# gut it out
+dfly-patch:
+	${CAT} ${.CURDIR}/pkg-plist | ${SED} -e '/utils-internal-asyncjob/d' > ${PLIST}
