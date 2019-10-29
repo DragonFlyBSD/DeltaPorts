@@ -1,1 +1,4 @@
 USES+=ncurses
+
+# library order for libnetmap_plugin.a vs libunified_parser.a
+MAKE_ENV+=	LDVER=ld.bfd
