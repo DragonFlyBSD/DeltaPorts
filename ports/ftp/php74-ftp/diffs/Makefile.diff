@@ -1,0 +1,16 @@
+--- Makefile.orig	2019-10-08 10:40:05 UTC
++++ Makefile
+@@ -8,8 +8,12 @@ PKGNAMESUFFIX=	-ftp
+ 
+ TEST_TARGET=    test
+ 
++USES+=		ssl
++CFLAGS+=	-I${OPENSSLINC}
++LDFLAGS+=	-L${OPENSSLINC}
++
+ post-patch:
+-	@${REINPLACE_CMD} s/HAVE_OPENSSL_EXT/__FreeBSD__/ \
++	@${REINPLACE_CMD} s/HAVE_OPENSSL_EXT/__DragonFly__/ \
+ 		${WRKSRC}/ftp.* ${WRKSRC}/php_ftp.*
+ 
+ .include "${MASTERDIR}/Makefile"
