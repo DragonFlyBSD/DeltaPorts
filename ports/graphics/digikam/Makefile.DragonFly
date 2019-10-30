@@ -1,4 +1,7 @@
 
+# because of files/patch-remove-libxmp
+MAKE_ENV+=	LDVER=ld.bfd
+
 dfly-patch:
 	${REINPLACE_CMD} -e 's@ STREQUAL \(FreeBSD\)@ MATCHES "\1|DragonFly"@g'	\
 		${WRKSRC}/core/CMakeLists.txt					\
