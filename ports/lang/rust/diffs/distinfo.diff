@@ -1,8 +1,8 @@
---- distinfo.orig	2019-10-30 20:21:27 UTC
+--- distinfo.orig	2019-10-30 23:22:07 UTC
 +++ distinfo
-@@ -1,47 +1,17 @@
+@@ -1,47 +1,9 @@
 -TIMESTAMP = 1569482113
-+TIMESTAMP = 1572450559
++TIMESTAMP = 1572477599
  SHA256 (rust/rustc-1.38.0-src.tar.xz) = 3a7991aa4cb44ef941d71636e45a95468b520dc6fc7cf725364925bd3e3d3a34
  SIZE (rust/rustc-1.38.0-src.tar.xz) = 96163304
 -SHA256 (rust/2019-08-15/rustc-1.37.0-aarch64-unknown-freebsd.tar.gz) = ebdd6e51cc8d3b73de59bcf609b6b0fd9f255d6c0b4c982c5d9609775b0269ff
@@ -23,8 +23,8 @@
 -SIZE (rust/2019-08-15/rust-std-1.37.0-armv6-unknown-freebsd.tar.gz) = 70261468
 -SHA256 (rust/2019-08-15/cargo-0.38.0-armv6-unknown-freebsd.tar.gz) = 643497ec41d40168c99f327ee31cbcc0b73ea9bbb6bab523bfef2b915d13d186
 -SIZE (rust/2019-08-15/cargo-0.38.0-armv6-unknown-freebsd.tar.gz) = 5716966
- SHA256 (rust/compiler-rt-9.0.0.src.tar.xz) = 56e4cd96dd1d8c346b07b4d6b255f976570c6f2389697347a6c3dcb9e820d10e
- SIZE (rust/compiler-rt-9.0.0.src.tar.xz) = 1993084
+-SHA256 (rust/compiler-rt-9.0.0.src.tar.xz) = 56e4cd96dd1d8c346b07b4d6b255f976570c6f2389697347a6c3dcb9e820d10e
+-SIZE (rust/compiler-rt-9.0.0.src.tar.xz) = 1993084
 -SHA256 (rust/2019-08-15/rustc-1.37.0-armv7-unknown-freebsd.tar.gz) = b957e13bdb899f42c1c4b3cd91d18f7d4f6ab08b2492f9acf85e447f53640121
 -SIZE (rust/2019-08-15/rustc-1.37.0-armv7-unknown-freebsd.tar.gz) = 58107583
 -SHA256 (rust/2019-08-15/rust-std-1.37.0-armv7-unknown-freebsd.tar.gz) = c380d455923065b5067a43ec796c043dfb4241392e068a187d6d93909f1cbafb
@@ -49,12 +49,6 @@
 -SIZE (rust/2019-08-15/rust-std-1.37.0-powerpc64-unknown-freebsd-elfv2.tar.gz) = 71174548
 -SHA256 (rust/2019-08-15/cargo-0.38.0-powerpc64-unknown-freebsd-elfv2.tar.gz) = db19655601cecbf18b9bca3d2db2545301b9d31fa353c78582eb378af6dc3966
 -SIZE (rust/2019-08-15/cargo-0.38.0-powerpc64-unknown-freebsd-elfv2.tar.gz) = 4983791
-+SHA256 (rust/2019-08-15/rustc-1.37.0-x86_64-unknown-dragonfly.tar.gz) = 276ef37d4255d025366e510a491d7c2b5b4a338ae93aa5eb2b821f1ba3dbc8d4
-+SIZE (rust/2019-08-15/rustc-1.37.0-x86_64-unknown-dragonfly.tar.gz) = 70771688
-+SHA256 (rust/2019-08-15/rust-std-1.37.0-x86_64-unknown-dragonfly.tar.gz) = 61770beca7f679e51db5c2b6d23e64c07d3f4e39b757f66b1fbb2762fc23e8fa
-+SIZE (rust/2019-08-15/rust-std-1.37.0-x86_64-unknown-dragonfly.tar.gz) = 73495377
-+SHA256 (rust/2019-08-15/cargo-0.38.0-x86_64-unknown-dragonfly.tar.gz) = 5d6aa2765fe5332e6b803a9192ed2a9ca2b012409af155fcb11e3447d8552668
-+SIZE (rust/2019-08-15/cargo-0.38.0-x86_64-unknown-dragonfly.tar.gz) = 6034328
 +SHA256 (rust/2019-08-15/rustc-1.37.0-x86_64-unknown-dragonfly.tar.gz) = 276ef37d4255d025366e510a491d7c2b5b4a338ae93aa5eb2b821f1ba3dbc8d4
 +SIZE (rust/2019-08-15/rustc-1.37.0-x86_64-unknown-dragonfly.tar.gz) = 70771688
 +SHA256 (rust/2019-08-15/rust-std-1.37.0-x86_64-unknown-dragonfly.tar.gz) = 61770beca7f679e51db5c2b6d23e64c07d3f4e39b757f66b1fbb2762fc23e8fa
