@@ -1,0 +1,13 @@
+To prevent constant rebuilding in synth.
+
+--- Makefile.orig	2019-10-08 10:40:22 UTC
++++ Makefile
+@@ -13,8 +13,6 @@ COMMENT=	User-mode virtual ethernet infr
+ LICENSE=	BSD3CLAUSE GPLv2 LGPL21
+ LICENSE_COMB=	multi
+ 
+-LIB_DEPENDS=	libpcap.so:net/libpcap
+-
+ USES=		gmake libtool pathfix shebangfix ssl
+ USE_LDCONFIG=	yes
+ 
