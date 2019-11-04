@@ -28,9 +28,10 @@ Sync round done.
 Sync round done
 
 ## Wed Sep  4 03:47:46 PDT 2019
-
-- [ ] `devel/electron4` depends on `devel/chromium-gn` which synth can't build for any reason, fails in the scan phase with (FETCH) error but a `make fetch` in the port directory works.
-- [ ] `science/py-GPy` was synced but its _BUILD_DEPENDS_ contains _${LOCALBASE}/lib/libomp.so:devel/openmp_ which our sync scripts mangled and only left _${LOCALBASE}/lib_. Needs investigation.
 - [X] `devel/gdb` has been unlocked and builds, but not tested well. The new version (8.3) requires further porting.
 - [X] `www/node10` requires review.
 
+## Sat Oct 26 01:19:14 PDT 201
+- [ ] `science/py-GPy` was synced but its _BUILD_DEPENDS_ contains _${LOCALBASE}/lib/libomp.so:devel/openmp_ which our sync scripts mangled and only left _${LOCALBASE}/lib_. Needs investigation.
+- [X] `devel/chromium-gn` build has been fixed.
+- [ ] `devel/openssl` remove additions.
