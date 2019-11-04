@@ -1,0 +1,4 @@
+
+dfly-patch:
+	${REINPLACE_CMD} -e '/-fno-limit-debug-info>/d' \
+		${WRKSRC}/CMakeLists.txt
