@@ -17,4 +17,4 @@ dfly-patch:
 	${REINPLACE_CMD} -e 's@_XOPEN_SOURCE@&___@g' \
 		${WRKSRC}/media/libcubeb/src/cubeb_alsa.c
 	${REINPLACE_CMD} -e 's@_POSIX_SOURCE@&___@g' \
-		${WRKSRC}/media/libcubeb/src/cubeb_jack.c
+		${WRKSRC}/media/libcubeb/src/cubeb_jack.cpp
