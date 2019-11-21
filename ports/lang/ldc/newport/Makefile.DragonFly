@@ -1,0 +1,8 @@
+#CMake Error at CMakeLists.txt:480 (add_executable):
+#  The install of the ldc2 target requires changing an RPATH from the build
+#  tree, but this is not supported with the Ninja generator unless on an
+#  ELF-based platform.  The CMAKE_BUILD_WITH_INSTALL_RPATH variable may be set
+#  to avoid this relinking step.
+
+#CMAKE_ARGS+=            -DCMAKE_INSTALL_RPATH="${LOCALBASE}/llvm70/lib"
+CMAKE_ARGS+=            -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON
