@@ -1,0 +1,17 @@
+--- pkg-plist.orig	2019-02-28 12:44:01 UTC
++++ pkg-plist
+@@ -18,6 +17,0 @@ lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/i
+-lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/include-fixed/netinet/ip_fil.h
+-lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/include-fixed/netinet/ip_lookup.h
+-lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/include-fixed/netinet/ip_nat.h
+-lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/include-fixed/netinet/ip_proxy.h
+-lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/include-fixed/netinet/ip_scan.h
+-lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/include-fixed/netinet/ip_state.h
+@@ -25,4 +18,0 @@ lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/i
+-lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/include-fixed/stddef.h
+-lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/include-fixed/stdio.h
+-lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/include-fixed/stdlib.h
+-lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/include-fixed/sys/types.h
+@@ -30,2 +19,0 @@ lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/i
+-lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/include-fixed/unistd.h
+-lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/include-fixed/wchar.h
