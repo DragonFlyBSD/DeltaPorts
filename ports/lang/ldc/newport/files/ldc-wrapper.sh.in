@@ -1,0 +1,13 @@
+#!/bin/sh
+# $FreeBSD: $
+
+LLVM_PREFIX="%%LLVM_PREFIX%%"
+LDC_PREFIX="%%LDC_PREFIX%%"
+LDC_SUFFIX="%%LDC_SUFFIX%%"
+
+tool=$0
+[ -L "$tool" ] && tool=$(/bin/realpath $tool)
+tool=${tool##*/}
+tool="${LDC_PREFIX}/bin/${tool}${LDC_SUFFIX}"
+LD_LIBRARY_PATH="${LD_LIBRARY_PATH:+${LD_LIBRARY_PATH}:}${LLVM_PREFIX}/lib" \
+    exec "${tool}" "${@}"
