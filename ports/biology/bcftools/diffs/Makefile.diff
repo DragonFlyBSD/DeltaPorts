@@ -1,0 +1,11 @@
+--- Makefile.orig	2019-10-27 17:08:56 UTC
++++ Makefile
+@@ -16,8 +16,6 @@ BUILD_DEPENDS=	htslib>=1.6:biology/htsli
+ LIB_DEPENDS=	libhts.so:biology/htslib
+ TEST_DEPENDS=	bash:shells/bash
+ 
+-CONFLICTS_BUILD=openssl
+-
+ USES=		autoreconf gmake localbase \
+ 		perl5 python:env shebangfix
+ 
