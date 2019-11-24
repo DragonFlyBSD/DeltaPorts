@@ -1,0 +1,17 @@
+Just to passtru to dports/staged
+
+--- Makefile.orig	2019-11-24 12:26:34 UTC
++++ Makefile
+@@ -41,7 +41,12 @@ PATCH_SITES+=	http://patchwork.ozlabs.or
+ # Sanity checks
+ .if !defined(MODEL) && !defined(BOARD_CONFIG) && !defined(FAMILY)
+ MODEL=		NONE
++. if defined(DPORTS_BUILDER)
++BOARD_CONFIG=	Bananapi_defconfig
++FAMILY=		allwinner
++. else
+ IGNORE=		is a metaport; there is nothing to build
++. endif
+ .else
+ .if !defined(MODEL)
+ IGNORE+=	MODEL is not defined
