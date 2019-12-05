@@ -1,9 +1,9 @@
---- Makefile.orig	2016-04-10 10:48:11 UTC
+--- Makefile.orig	2019-12-05 17:21:26 UTC
 +++ Makefile
-@@ -24,7 +24,7 @@ USES=		cpe
+@@ -24,7 +24,7 @@ RUN_DEPENDS=	bash:shells/bash \
+ USES=		cpe
  CPE_VENDOR=	apache
  USE_JAVA=	yes
- JAVA_VERSION=	1.7+
 -MAKE_ENV+=	JAVA_HOME=${JAVA_HOME} MAVEN_OPTS="-XX:MaxPermSize=256m"
 +MAKE_ENV+=	JAVA_HOME=${JAVA_HOME} MAVEN_OPTS="-XX:MaxPermSize=256m -Xmx3000m"
  
