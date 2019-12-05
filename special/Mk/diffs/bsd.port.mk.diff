@@ -95,7 +95,7 @@
 +.endif
 +_EXPORTED_VARS+=	DFLYVERSION OSREL
 +
- .if (${OPSYS} == FreeBSD && ${OSVERSION} < 1102000) || \
+ .if (${OPSYS} == FreeBSD && ${OSVERSION} < 1103000) || \
      (${OPSYS} == DragonFly && ${DFLYVERSION} < 400400)
  _UNSUPPORTED_SYSTEM_MESSAGE=	Ports Collection support for your ${OPSYS} version has ended, and no ports\
 @@ -1180,18 +1196,6 @@ show-unsupported-system-error:
