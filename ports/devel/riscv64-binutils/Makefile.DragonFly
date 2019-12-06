@@ -1,2 +1,0 @@
-# plist needs fixing; hardcoded to freebsd
-IGNORE=	avoid building yet another gcc

@@ -1,2 +1,0 @@
-IGNORE=		use lang/gcc7 (release)
-CONFIGURE_ARGS+= --disable-libcilkrts
