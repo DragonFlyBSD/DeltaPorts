@@ -1,12 +1,12 @@
---- Makefile.orig	2019-02-26 18:07:13 UTC
+--- Makefile.orig	2019-12-06 19:23:15 UTC
 +++ Makefile
-@@ -56,7 +56,9 @@ CONFIGURE_ARGS+=	generic
+@@ -57,7 +57,9 @@ CONFIGURE_ARGS+=	generic
  PLIST_SUB+=	ARCH="generic"
  .endif
  
 +.if ${OPSYS} == FreeBSD
- CC=	${LOCALBASE}/bin/clang60
- CXX=	${LOCALBASE}/bin/clang++60
+ CC=	${LOCALBASE}/bin/clang${LLVM_VER}
+ CXX=	${LOCALBASE}/bin/clang++${LLVM_VER}
 +.endif
  
  .include <bsd.port.mk>
