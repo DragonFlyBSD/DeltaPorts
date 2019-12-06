@@ -1,20 +1,6 @@
---- Makefile.orig	2018-03-03 04:47:11 UTC
+--- Makefile.orig	2019-12-06 18:57:01 UTC
 +++ Makefile
-@@ -39,6 +39,13 @@ CPE_VENDOR=	gnu
- GNU_CONFIGURE=	yes
- 
- .if defined(PKGNAMEPREFIX)
-+.  if !defined(BUTARGET)
-+IGNORE=		target ${PKGNAMEPREFIX}${OPSYS:tl} will never build
-+.  else
-+.    if ${BUTARGET:M*-${OPSYS:tl}}
-+IGNORE=		target ${BUTARGET} will never build
-+.    endif
-+.  endif
- .if ${PKGNAMEPREFIX:M*-*-}
- BUTARGET?=	${PKGNAMEPREFIX}${OPSYS:tl}${OSREL}
- .else
-@@ -72,6 +79,7 @@ INFO=		as \
+@@ -97,6 +97,7 @@ INFO=		as \
  .endif
  
  CONFIGURE_ARGS+=	--disable-werror \
@@ -22,13 +8,13 @@
  			--enable-deterministic-archives \
  			--with-sysroot=/ \
  			--enable-x86-relax-relocations=no
-@@ -97,14 +105,6 @@ PLIST_SUB+=	GOLD=""
+@@ -115,14 +116,6 @@ PLIST_SUB+=	GOLD=""
  PLIST_SUB+=	GOLD="@comment "
  .endif
  
--.if ${ARCH} == "amd64"
+-.if ${ARCH} == amd64
 -CONFIGURE_TARGET=	x86_64-portbld-freebsd${OSREL}
--.elif ${ARCH} == "powerpcspe"
+-.elif ${ARCH} == powerpcspe
 -CONFIGURE_TARGET=	powerpc-portbld-freebsd${OSREL}
 -.else
 -CONFIGURE_TARGET=	${ARCH}-portbld-freebsd${OSREL}
