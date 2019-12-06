@@ -1,11 +1,11 @@
---- Makefile.orig	2019-10-25 15:25:30 UTC
+--- Makefile.orig	2019-12-05 18:20:53 UTC
 +++ Makefile
-@@ -88,8 +88,7 @@ post-install:
+@@ -90,8 +90,7 @@ post-install:
  	  echo "  exit 1"; \
  	  echo "fi"; \
  	  echo ""; \
 -	  echo "# workaround for the problem that RStudio passes /lib with LD_LIBRARY_PATH that causes the /lib/libgcc_s.so.1 conflict with gcc"; \
--	  echo "LD_PRELOAD=${PREFIX}/lib/gcc${GCC_DEFAULT}/libgcc_s.so ${PREFIX}/lib/rstudio/bin/rstudio \"$$@\"" \
+-	  echo "LD_PRELOAD=${PREFIX}/lib/gcc${GCC_DEFAULT}/libgcc_s.so JAVA_HOME=${JAVA_HOME} ${PREFIX}/lib/rstudio/bin/rstudio \"$$@\"" \
 +	  echo "${PREFIX}/lib/rstudio/bin/rstudio \"$$@\"" \
  	) > ${STAGEDIR}${PREFIX}/bin/rstudio
  	@${CHMOD} +x ${STAGEDIR}${PREFIX}/bin/rstudio
