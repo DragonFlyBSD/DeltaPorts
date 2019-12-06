@@ -1,23 +1,23 @@
---- Makefile.orig	2019-07-11 22:49:46 UTC
+--- Makefile.orig	2019-12-06 19:20:08 UTC
 +++ Makefile
 @@ -6,6 +6,7 @@ PORTVERSION=	${GHC_VERSION}
- PORTREVISION=	2
+ PORTREVISION=	3
  CATEGORIES=	lang haskell
  MASTER_SITES=	https://www.haskell.org/ghc/dist/${PORTVERSION}/:source \
 +		http://leaf.dragonflybsd.org/~marino/dports-src/:dflyboot \
  		LOCAL/arrowd/:boot \
  		https://hackage.haskell.org/package/hscolour-${HSCOLOUR_VERSION}/:docs
  DISTFILES=	ghc-${PORTVERSION}-src${EXTRACT_SUFX}:source \
-@@ -138,7 +139,7 @@ _EXECUTABLES+=	${GHC_LIBDIR}/bin/ghc-ise
+@@ -142,7 +143,7 @@ _EXECUTABLES+=	${GHC_LIBDIR}/bin/ghc-ise
  
  .include <bsd.port.options.mk>
  
 -.if empty(PORT_OPTIONS:MBOOT)
 +.if empty(PORT_OPTIONS:MBOOT) && ${OPSYS} == "FreeBSD"
- .  if ${ARCH} == powerpc64 && ${OSVERSION} < 1300040
- ELF_V=		-elfv1
- .  endif
-@@ -192,6 +193,19 @@ SLAVE_ENV=		# empty
+ BOOTSTRAPS_SUFFIX?=		${BOOTSTRAPS_SUFFIX_${ARCH}}
+ BOOTSTRAPS_SUFFIX_powerpc64?=	-${PPC_ABI:tl}
+ DISTFILES+=		ghc-${BOOT_GHC_VERSION}-boot-${ARCH}-freebsd${BOOTSTRAPS_SUFFIX}${EXTRACT_SUFX}:boot
+@@ -195,6 +196,19 @@ SLAVE_ENV=		# empty
  CONFIGURE_ARGS+=	--with-ghc=${LOCALBASE}/bin/ghc
  .endif # MBOOT
  
@@ -37,7 +37,7 @@
  # override TMPDIR because /tmp often doesn't have enough space
  # to build some of the larger libraries.
  #TMPDIR=		${WRKSRC}/tmp
-@@ -240,7 +254,7 @@ post-patch:
+@@ -243,7 +257,7 @@ post-patch:
  	@${REINPLACE_CMD} -e 's/@SettingsLlcCommand@/llc${LLVM_VERSION}/' ${WRKSRC}/settings.in
  	@${REINPLACE_CMD} -e 's/@SettingsOptCommand@/opt${LLVM_VERSION}/' ${WRKSRC}/settings.in
  
