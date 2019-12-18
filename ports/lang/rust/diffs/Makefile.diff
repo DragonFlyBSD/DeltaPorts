@@ -1,6 +1,6 @@
---- Makefile.orig	2019-09-03 00:00:36 UTC
+--- Makefile.orig	2019-12-17 10:22:38 UTC
 +++ Makefile
-@@ -96,7 +96,7 @@ IGNORE=	fails to run due to a bug in rtl
+@@ -97,7 +97,7 @@ IGNORE=	fails to run due to a bug in rtl
  IGNORE=	fails to build with qemu-user-static
  .endif
  
