@@ -1,6 +1,6 @@
---- pkg-plist.orig	2018-10-11 20:31:17 UTC
+--- pkg-plist.orig	2019-02-28 12:46:25 UTC
 +++ pkg-plist
-@@ -20,7 +20,6 @@ share/applications/gnome-region-panel.de
+@@ -20,7 +20,6 @@
  share/applications/gnome-removable-media-panel.desktop
  share/applications/gnome-search-panel.desktop
  share/applications/gnome-sharing-panel.desktop
@@ -8,7 +8,7 @@
  share/applications/gnome-universal-access-panel.desktop
  share/applications/gnome-user-accounts-panel.desktop
  share/bash-completion/completions/gnome-control-center
-@@ -30,47 +29,6 @@ share/gettext/its/gnome-keybindings.its
+@@ -30,47 +29,6 @@
  share/gettext/its/gnome-keybindings.loc
  share/gettext/its/sounds.its
  share/gettext/its/sounds.loc
@@ -56,7 +56,7 @@
  %%DATADIR%%/keybindings/00-multimedia.xml
  %%DATADIR%%/keybindings/01-input-sources.xml
  %%DATADIR%%/keybindings/01-launchers.xml
-@@ -78,27 +36,21 @@ share/gettext/its/sounds.loc
+@@ -78,27 +36,21 @@
  %%DATADIR%%/keybindings/01-system.xml
  %%DATADIR%%/keybindings/50-accessibility.xml
  %%DATADIR%%/pixmaps/noise-texture-light.png
@@ -84,7 +84,7 @@
  share/icons/hicolor/24x24/apps/preferences-color.png
  share/icons/hicolor/24x24/apps/preferences-desktop-display.png
  share/icons/hicolor/256x256/apps/gnome-power-manager.png
-@@ -108,21 +60,17 @@ share/icons/hicolor/256x256/apps/prefere
+@@ -108,30 +60,22 @@
  share/icons/hicolor/32x32/apps/gnome-control-center.png
  share/icons/hicolor/32x32/apps/gnome-power-manager.png
  share/icons/hicolor/32x32/apps/goa-panel.png
@@ -106,3 +106,20 @@
  share/icons/hicolor/scalable/apps/preferences-color.svg
  share/icons/hicolor/scalable/apps/preferences-desktop-display.svg
  share/icons/hicolor/scalable/apps/preferences-system-time.svg
+ share/icons/hicolor/scalable/categories/slideshow-symbolic.svg
+ share/icons/hicolor/scalable/emblems/slideshow-emblem.svg
+-share/icons/hicolor/scalable/status/audio-input-microphone-high-symbolic.svg
+-share/icons/hicolor/scalable/status/audio-input-microphone-low-symbolic.svg
+-share/icons/hicolor/scalable/status/audio-input-microphone-medium-symbolic.svg
+-share/icons/hicolor/scalable/status/audio-input-microphone-muted-symbolic.svg
+ share/locale/af/LC_MESSAGES/gnome-control-center-2.0.mo
+ share/locale/am/LC_MESSAGES/gnome-control-center-2.0-timezones.mo
+ share/locale/am/LC_MESSAGES/gnome-control-center-2.0.mo
+@@ -372,7 +316,3 @@
+ share/polkit-1/actions/org.gnome.controlcenter.remote-login-helper.policy
+ share/polkit-1/actions/org.gnome.controlcenter.user-accounts.policy
+ share/polkit-1/rules.d/gnome-control-center.rules
+-share/sounds/gnome/default/alerts/bark.ogg
+-share/sounds/gnome/default/alerts/drip.ogg
+-share/sounds/gnome/default/alerts/glass.ogg
+-share/sounds/gnome/default/alerts/sonar.ogg
