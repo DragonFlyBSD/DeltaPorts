@@ -1,10 +1,24 @@
---- pkg-plist.orig	2016-08-19 18:15:17 UTC
-+++ pkg-plist
-@@ -2,7 +2,6 @@ bin/gnome-shell
+--- pkg-plist.orig	2019-02-28 12:47:15.000000000 +0200
++++ pkg-plist	2019-12-22 14:55:52.000000000 +0200
+@@ -2,13 +2,11 @@ bin/gnome-shell
  bin/gnome-shell-extension-prefs
  bin/gnome-shell-extension-tool
  bin/gnome-shell-perf-tool
 -lib/gnome-shell/Gvc-1.0.typelib
  lib/gnome-shell/Shell-0.1.typelib
- lib/gnome-shell/ShellJS-0.1.typelib
  lib/gnome-shell/ShellMenu-0.1.typelib
+ lib/gnome-shell/St-1.0.typelib
+ lib/gnome-shell/libgnome-shell-menu.so
+ lib/gnome-shell/libgnome-shell.so
+-lib/gnome-shell/libgvc.so
+ lib/gnome-shell/libst-1.0.so
+ %%WEBPLUGIN_DIR%%libgnome-shell-browser-plugin.so
+ libexec/gnome-shell-calendar-server
+@@ -27,7 +25,6 @@ share/dbus-1/interfaces/org.gnome.ShellS
+ share/dbus-1/services/org.gnome.Shell.CalendarServer.service
+ share/dbus-1/services/org.gnome.Shell.HotplugSniffer.service
+ share/gnome-control-center/keybindings/50-gnome-shell-system.xml
+-%%DATADIR%%/Gvc-1.0.gir
+ %%DATADIR%%/Shell-0.1.gir
+ %%DATADIR%%/ShellMenu-0.1.gir
+ %%DATADIR%%/St-1.0.gir
