@@ -1,15 +1,15 @@
---- Makefile.orig	2019-12-06 19:11:29 UTC
+--- Makefile.orig	2019-12-22 19:53:13 UTC
 +++ Makefile
-@@ -18,7 +18,7 @@ BROKEN=		unfetchable
+@@ -15,7 +15,7 @@ COMMENT=	Improved and extended version o
  
  LICENSE=	GPLv2
  
 -USES=		gl gmake sdl tar:bzip2
 +USES=		gl alias gmake sdl tar:bzip2
- USE_GL=		glu
+ USE_GL=		gl glu
  USE_SDL=	mixer sdl
  
-@@ -48,7 +48,7 @@ post-patch: .SILENT
+@@ -46,7 +46,7 @@ post-patch: .SILENT
  .endif
  
  pre-build:
