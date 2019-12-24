@@ -1,5 +1,5 @@
---- python-package/xgboost/libpath.py.intermediate	2019-12-24 21:55:28.000000000 +0000
-+++ python-package/xgboost/libpath.py
+--- xgboost/libpath.py.intermediate	2019-12-24 21:55:28.000000000 +0000
++++ xgboost/libpath.py
 @@ -33,7 +33,7 @@ def find_lib_path():
              # hack for pip installation when copy all parent source directory here
              dll_path.append(os.path.join(curr_path, './windows/Release/'))
