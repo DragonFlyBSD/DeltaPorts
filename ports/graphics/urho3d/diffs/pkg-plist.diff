@@ -1,0 +1,8 @@
+--- pkg-plist.orig	2019-12-06 00:11:34 UTC
++++ pkg-plist
+@@ -1621,4 +1621,4 @@ share/Urho3D/Scripts/cmake_xcode.sh
+ @dir include/Urho3D/LuaScript/pkgs/Scene
+ @dir include/Urho3D/LuaScript/pkgs/UI
+ @dir include/Urho3D/LuaScript/pkgs/Urho2D
+-@dir include/Urho3D/Precompiled.h.pch
++@dir include/Urho3D/Precompiled.h.gch
