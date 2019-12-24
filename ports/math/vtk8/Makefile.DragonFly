@@ -1,0 +1,4 @@
+
+.if ${DISTVERSION} == "8.1.2"
+BROKEN=	pending update to 8.2
+.endif
