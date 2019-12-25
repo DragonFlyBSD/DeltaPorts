@@ -1,10 +1,10 @@
---- modules/siptrace/siptrace.c.orig	2017-02-23 11:15:50 UTC
+--- modules/siptrace/siptrace.c.orig	2017-11-27 15:44:50 UTC
 +++ modules/siptrace/siptrace.c
-@@ -2359,7 +2359,9 @@ static int pipport2su (str *sproto, str
+@@ -2366,7 +2366,9 @@ static int pipport2su (str *sproto, str
  	else if(strncmp(sproto->s, "tcp",3) == 0) *proto = IPPROTO_TCP;
  	else if(strncmp(sproto->s, "tls",3) == 0) *proto = IPPROTO_IDP;
  												/* fake proto type */
-+#ifndef __DragonFly__
++#ifdef IPPROTO_SCTP
  	else if(strncmp(sproto->s, "sctp",4) == 0) *proto = IPPROTO_SCTP;
 +#endif
  	else if(strncmp(sproto->s, "any",3) == 0) *proto = IPPROTO_UDP;
