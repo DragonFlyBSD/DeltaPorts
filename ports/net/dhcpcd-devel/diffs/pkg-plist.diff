@@ -1,0 +1,10 @@
+--- pkg-plist.orig	2019-12-06 00:11:53.000000000 +0000
++++ pkg-plist
+@@ -2,7 +2,6 @@
+ libexec/dhcpcd-hooks/02-dump
+ libexec/dhcpcd-hooks/20-resolv.conf
+ libexec/dhcpcd-hooks/30-hostname
+-libexec/dhcpcd-hooks/50-ntp.conf
+ libexec/dhcpcd-run-hooks
+ man/man5/dhcpcd.conf.5.gz
+ man/man8/dhcpcd-run-hooks.8.gz
