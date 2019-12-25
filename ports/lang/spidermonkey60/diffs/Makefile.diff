@@ -1,0 +1,13 @@
+--- Makefile.orig	2019-12-06 00:11:39.000000000 +0000
++++ Makefile
+@@ -48,10 +48,6 @@
+ 
+ .include <bsd.port.pre.mk>
+ 
+-.if ${ARCH} == amd64
+-CONFIGURE_TARGET=x86_64-portbld-freebsd${OSREL}
+-.endif
+-
+ post-install:
+ 	${RM} ${STAGEDIR}${PREFIX}/lib/libjs_static.ajs
+ 	${LN} -fs libmozjs-${SP_VER}.so ${STAGEDIR}${PREFIX}/lib/libmozjs-${SP_VER}.so.1
