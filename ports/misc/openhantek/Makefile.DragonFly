@@ -1,0 +1,1 @@
+BROKEN= missing libusb_get_port_number
