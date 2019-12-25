@@ -1,0 +1,11 @@
+
+BROKEN=	beyond repair
+USES+=	alias
+
+dfly-patch:
+	${REINPLACE_CMD} -e 's@_POSIX_C_SOURCE@&___@g' \
+			 -e 's@_XOPEN_SOURCE@&___@g' \
+		${WRKSRC}/CMakeLists.txt \
+		${WRKSRC}/src/other/gdal/ogr/ogrsf_frmts/geojson/libjson/CMakeLists.txt
+	${REINPLACE_CMD} -e 's@"Wl,--no-undefined"@""@g' \
+		${WRKSRC}/src/other/gdal/CMakeLists.txt
