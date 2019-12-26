@@ -1,4 +1,4 @@
 
-dfly-patch:
-	${REINPLACE_CMD} -e 's@\(\*freebsd\*\))@\1|*dragonfly*)@' \
-		${WRKSRC}/configure.ac
+OPTIONS_DEFAULT:=	${OPTIONS_DEFAULT:NNETMAP}
+
+LDFLAGS+=	-lm
