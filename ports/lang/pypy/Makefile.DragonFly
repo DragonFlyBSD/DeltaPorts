@@ -1,3 +1,5 @@
+BROKEN=	needs re-port
+
 dfly-patch:
 	(cd ${WRKSRC} && ${GREP} -rl "'freebsd'" * | ${XARGS} \
 		${REINPLACE_CMD} -e "s|'freebsd'|'dragonfly'|")
