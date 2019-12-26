@@ -1,0 +1,13 @@
+--- Makefile.orig	2019-07-30 19:07:00.000000000 +0000
++++ Makefile
+@@ -56,10 +56,6 @@
+ USES+=		fam
+ .endif
+ 
+-.if exists(${LOCALBASE}/lib/libkrb5.so)
+-LIB_DEPENDS+=	libkrb5.so:security/heimdal
+-.endif
+-
+ .if ${PORT_OPTIONS:MHAL}
+ CONFIGURE_ARGS+=--enable-hal
+ LIB_DEPENDS+=	libhal.so:sysutils/hal
