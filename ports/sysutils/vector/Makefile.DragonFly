@@ -1,1 +1,3 @@
-LDFLAGS+= -L/usr/lib/libgcc80
+
+# zrj: rustc should really invoke c++ when linking like that.
+LDFLAGS+= -L/usr/lib/gcc80 -lstdc++ -Wl,-rpath,/usr/lib/gcc80
