@@ -1,0 +1,8 @@
+--- pkg-plist.orig	2018-05-26 10:18:16.000000000 +0000
++++ pkg-plist
+@@ -1,5 +1,4 @@
+ include/rs232.h
+-lib/librs232_p.a
+ lib/librs232.a
+ lib/librs232.so
+ lib/librs232.so.1
