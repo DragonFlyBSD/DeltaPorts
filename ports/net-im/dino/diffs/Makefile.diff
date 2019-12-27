@@ -1,0 +1,18 @@
+Allow to at least "make patch".
+
+--- Makefile.orig	2019-10-08 10:40:15.000000000 +0000
++++ Makefile
+@@ -50,13 +50,4 @@
+ CMAKE_ARGS+=	-DENABLED_PLUGINS="${ENABLED_PLUGINS:S/ /;/gW}"
+ CMAKE_ARGS+=	-DDISABLED_PLUGINS="${DISABLED_PLUGINS:S/ /;/gW}"
+ 
+-pre-everything::
+-	@if [ -z "${PACKAGE_BUILDING}" ]; then if ! ${PKG_BIN} query \
+-			'%o-%Ok-%Od' databases/sqlite3 | \
+-			${GREP} -F -wq databases/sqlite3-UNICODE61-on; then \
+-		${ECHO_MSG} "/!\ Please make sure databases/sqlite3 is built\
+-			       with UNICODE61 option"; \
+-	exit 1; \
+-	fi; fi
+-
+ .include <bsd.port.mk>
