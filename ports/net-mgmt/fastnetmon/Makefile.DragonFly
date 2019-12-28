@@ -1,4 +1,5 @@
 USES+=ncurses
 
-# library order for libnetmap_plugin.a vs libunified_parser.a
-MAKE_ENV+=	LDVER=ld.bfd
+# during fastnetmon link libunified_parser.a is before libnetmap_plugin.a
+# and gets rejected by ld.gold: undef ref to parse_raw_packet_to_simple_packet()
+CMAKE_ARGS+=	-DENABLE_NETMAP_SUPPORT:BOOL=OFF
