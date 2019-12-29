@@ -1,13 +1,21 @@
 --- ckupty.c.orig	2017-04-26 15:57:10 UTC
 +++ ckupty.c
-@@ -308,6 +308,10 @@ char * ptyver = "PTY support 8.0.016, 22
- #include <tty.h>
- #endif /* HAVE_TTY_H */
+@@ -54,13 +54,17 @@ char *ckptyv = "Pseudoterminal support,
+    . HP-UX 8.00 and earlier (no vhangup or ptsname routines)
+ */
+ 
+-#ifndef __FreeBSD__			/* bs  20151224 */
++#if !defined(__FreeBSD__) && !defined(__DragonFly__) /* bs  20151224 */
+ #define _XOPEN_SOURCE 500		/* mdw 20140223 */
+ #endif /* __FreeBSD__ */		/* bs  20151224 */
+ #include <stdlib.h>			/* mdw 20140223 */
+ #include "ckcsym.h"
+ #include "ckcdeb.h"			/* To pick up NETPTY definition */
  
 +#ifdef __DragonFly__
 +#include <libutil.h>  /* for openpty() */
 +#endif
 +
- /*
-   Because of the way ptyibuf is used with streams messages, we need
-   ptyibuf+1 to be on a full-word boundary.  The following weirdness
+ #ifndef NETPTY				/* Selector for PTY support */
+ 
+ char * ptyver = "No PTY support";
