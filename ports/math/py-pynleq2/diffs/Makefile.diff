@@ -1,0 +1,26 @@
+--- Makefile.orig	2019-07-31 15:03:37.000000000 +0000
++++ Makefile
+@@ -16,13 +16,11 @@
+ 
+ BUILD_DEPENDS=	${PYNUMPY}
+ 
+-USES=		fortran:flang python
++USES=		fortran python
+ USE_PYTHON=	distutils autoplist
+ USE_GITHUB=	nodefault
+ GH_TUPLE=	PySCeS:pysces:0.9.6:fortran
+ 
+-BINARY_ALIAS=	gfortran6=flang # it keeps using gfortran6 regardless of the environment variables and arguments
+-
+ FORTRAN_FILES=	linalg_nleq2.f nleq2.f wnorm.f zibconst.f zibmon.f zibsec.f
+ 
+ post-patch:
+@@ -31,7 +29,7 @@
+ pre-build: # compile fortran files into a static library because distutils fails while doing this
+ 	@${MKDIR} ${WRKDIR}/.fbuild && \
+ 		cd ${WRKDIR}/.fbuild && \
+-		flang -c ${CFLAGS} -fPIC ${FORTRAN_FILES:C,^,${WRKSRC_fortran}/pysces/nleq2/,} && \
++		${FC} -c ${CFLAGS} -fPIC ${FORTRAN_FILES:C,^,${WRKSRC_fortran}/pysces/nleq2/,} && \
+ 		${AR} -qc libff.a ${FORTRAN_FILES:S/.f/.o/}
+ 
+ post-install:
