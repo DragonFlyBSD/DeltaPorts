@@ -1,4 +1,6 @@
-LDFLAGS+=	-L${LOCALBASE}/lib
-CFLAGS+=	-I${LOCALBASE}/include
-CONFIGURE_ENV+=	ac_cv_header_uuid_uuid_h=yes
-MAKE_ENV+=	ac_cv_header_uuid_uuid_h=yes
+
+USES+=	localbase:ldflags ssl
+
+dfly-patch:
+	${REINPLACE_CMD} -e 's@\(\*-\*-freebsd\*\))@\1|*-*-dragonfly*)@g' \
+		${WRKSRC}/common_m4/platform_flags.m4
