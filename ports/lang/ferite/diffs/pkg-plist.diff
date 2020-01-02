@@ -1,0 +1,77 @@
+--- pkg-plist.orig	2015-06-29 09:46:26 UTC
++++ pkg-plist
+@@ -54,40 +54,40 @@
+ lib/ferite/module-descriptions/thread.xml
+ lib/ferite/module-descriptions/unix.xml
+ lib/ferite/module-descriptions/xml.xml
+-lib/ferite/module-native/freebsd%%OSREL%%-%%MACHINE_ARCH%%/array.a
+-lib/ferite/module-native/freebsd%%OSREL%%-%%MACHINE_ARCH%%/array.so
+-lib/ferite/module-native/freebsd%%OSREL%%-%%MACHINE_ARCH%%/date.a
+-lib/ferite/module-native/freebsd%%OSREL%%-%%MACHINE_ARCH%%/date.so
+-lib/ferite/module-native/freebsd%%OSREL%%-%%MACHINE_ARCH%%/filesystem.a
+-lib/ferite/module-native/freebsd%%OSREL%%-%%MACHINE_ARCH%%/filesystem.so
+-lib/ferite/module-native/freebsd%%OSREL%%-%%MACHINE_ARCH%%/ipc.a
+-lib/ferite/module-native/freebsd%%OSREL%%-%%MACHINE_ARCH%%/ipc.so
+-lib/ferite/module-native/freebsd%%OSREL%%-%%MACHINE_ARCH%%/math.a
+-lib/ferite/module-native/freebsd%%OSREL%%-%%MACHINE_ARCH%%/math.so
+-lib/ferite/module-native/freebsd%%OSREL%%-%%MACHINE_ARCH%%/network.a
+-lib/ferite/module-native/freebsd%%OSREL%%-%%MACHINE_ARCH%%/network.so
+-lib/ferite/module-native/freebsd%%OSREL%%-%%MACHINE_ARCH%%/posix.a
+-lib/ferite/module-native/freebsd%%OSREL%%-%%MACHINE_ARCH%%/posix.so
+-lib/ferite/module-native/freebsd%%OSREL%%-%%MACHINE_ARCH%%/reflection.a
+-lib/ferite/module-native/freebsd%%OSREL%%-%%MACHINE_ARCH%%/reflection.so
+-lib/ferite/module-native/freebsd%%OSREL%%-%%MACHINE_ARCH%%/regexp.a
+-lib/ferite/module-native/freebsd%%OSREL%%-%%MACHINE_ARCH%%/regexp.so
+-lib/ferite/module-native/freebsd%%OSREL%%-%%MACHINE_ARCH%%/serialize.a
+-lib/ferite/module-native/freebsd%%OSREL%%-%%MACHINE_ARCH%%/serialize.so
+-lib/ferite/module-native/freebsd%%OSREL%%-%%MACHINE_ARCH%%/stream.a
+-lib/ferite/module-native/freebsd%%OSREL%%-%%MACHINE_ARCH%%/stream.so
+-lib/ferite/module-native/freebsd%%OSREL%%-%%MACHINE_ARCH%%/string.a
+-lib/ferite/module-native/freebsd%%OSREL%%-%%MACHINE_ARCH%%/string.so
+-lib/ferite/module-native/freebsd%%OSREL%%-%%MACHINE_ARCH%%/sys.a
+-lib/ferite/module-native/freebsd%%OSREL%%-%%MACHINE_ARCH%%/sys.so
+-lib/ferite/module-native/freebsd%%OSREL%%-%%MACHINE_ARCH%%/test.a
+-lib/ferite/module-native/freebsd%%OSREL%%-%%MACHINE_ARCH%%/test.so
+-lib/ferite/module-native/freebsd%%OSREL%%-%%MACHINE_ARCH%%/thread.a
+-lib/ferite/module-native/freebsd%%OSREL%%-%%MACHINE_ARCH%%/thread.so
+-lib/ferite/module-native/freebsd%%OSREL%%-%%MACHINE_ARCH%%/unix.a
+-lib/ferite/module-native/freebsd%%OSREL%%-%%MACHINE_ARCH%%/unix.so
+-lib/ferite/module-native/freebsd%%OSREL%%-%%MACHINE_ARCH%%/xml.a
+-lib/ferite/module-native/freebsd%%OSREL%%-%%MACHINE_ARCH%%/xml.so
++lib/ferite/module-native/dragonfly%%OSREL%%-%%MACHINE_ARCH%%/array.a
++lib/ferite/module-native/dragonfly%%OSREL%%-%%MACHINE_ARCH%%/array.so
++lib/ferite/module-native/dragonfly%%OSREL%%-%%MACHINE_ARCH%%/date.a
++lib/ferite/module-native/dragonfly%%OSREL%%-%%MACHINE_ARCH%%/date.so
++lib/ferite/module-native/dragonfly%%OSREL%%-%%MACHINE_ARCH%%/filesystem.a
++lib/ferite/module-native/dragonfly%%OSREL%%-%%MACHINE_ARCH%%/filesystem.so
++lib/ferite/module-native/dragonfly%%OSREL%%-%%MACHINE_ARCH%%/ipc.a
++lib/ferite/module-native/dragonfly%%OSREL%%-%%MACHINE_ARCH%%/ipc.so
++lib/ferite/module-native/dragonfly%%OSREL%%-%%MACHINE_ARCH%%/math.a
++lib/ferite/module-native/dragonfly%%OSREL%%-%%MACHINE_ARCH%%/math.so
++lib/ferite/module-native/dragonfly%%OSREL%%-%%MACHINE_ARCH%%/network.a
++lib/ferite/module-native/dragonfly%%OSREL%%-%%MACHINE_ARCH%%/network.so
++lib/ferite/module-native/dragonfly%%OSREL%%-%%MACHINE_ARCH%%/posix.a
++lib/ferite/module-native/dragonfly%%OSREL%%-%%MACHINE_ARCH%%/posix.so
++lib/ferite/module-native/dragonfly%%OSREL%%-%%MACHINE_ARCH%%/reflection.a
++lib/ferite/module-native/dragonfly%%OSREL%%-%%MACHINE_ARCH%%/reflection.so
++lib/ferite/module-native/dragonfly%%OSREL%%-%%MACHINE_ARCH%%/regexp.a
++lib/ferite/module-native/dragonfly%%OSREL%%-%%MACHINE_ARCH%%/regexp.so
++lib/ferite/module-native/dragonfly%%OSREL%%-%%MACHINE_ARCH%%/serialize.a
++lib/ferite/module-native/dragonfly%%OSREL%%-%%MACHINE_ARCH%%/serialize.so
++lib/ferite/module-native/dragonfly%%OSREL%%-%%MACHINE_ARCH%%/stream.a
++lib/ferite/module-native/dragonfly%%OSREL%%-%%MACHINE_ARCH%%/stream.so
++lib/ferite/module-native/dragonfly%%OSREL%%-%%MACHINE_ARCH%%/string.a
++lib/ferite/module-native/dragonfly%%OSREL%%-%%MACHINE_ARCH%%/string.so
++lib/ferite/module-native/dragonfly%%OSREL%%-%%MACHINE_ARCH%%/sys.a
++lib/ferite/module-native/dragonfly%%OSREL%%-%%MACHINE_ARCH%%/sys.so
++lib/ferite/module-native/dragonfly%%OSREL%%-%%MACHINE_ARCH%%/test.a
++lib/ferite/module-native/dragonfly%%OSREL%%-%%MACHINE_ARCH%%/test.so
++lib/ferite/module-native/dragonfly%%OSREL%%-%%MACHINE_ARCH%%/thread.a
++lib/ferite/module-native/dragonfly%%OSREL%%-%%MACHINE_ARCH%%/thread.so
++lib/ferite/module-native/dragonfly%%OSREL%%-%%MACHINE_ARCH%%/unix.a
++lib/ferite/module-native/dragonfly%%OSREL%%-%%MACHINE_ARCH%%/unix.so
++lib/ferite/module-native/dragonfly%%OSREL%%-%%MACHINE_ARCH%%/xml.a
++lib/ferite/module-native/dragonfly%%OSREL%%-%%MACHINE_ARCH%%/xml.so
+ lib/ferite/module-source/GetOptLong.fe
+ lib/ferite/module-source/array.fec
+ lib/ferite/module-source/cgi/cgi.fe
