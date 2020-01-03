@@ -1,0 +1,18 @@
+--- pkg-plist.orig	2019-02-28 12:44:45 UTC
++++ pkg-plist
+@@ -78,11 +78,11 @@
+ lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/plugin/include/conditions.h
+ lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/plugin/include/config.h
+ lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/plugin/include/config/elfos.h
+-lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/plugin/include/config/freebsd-spec.h
+-lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/plugin/include/config/freebsd-stdint.h
+-lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/plugin/include/config/freebsd.h
++lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/plugin/include/config/dragonfly-spec.h
++lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/plugin/include/config/dragonfly-stdint.h
++lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/plugin/include/config/dragonfly.h
+ lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/plugin/include/config/initfini-array.h
+-lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/plugin/include/config/riscv/freebsd.h
++lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/plugin/include/config/riscv/dragonfly.h
+ lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/plugin/include/config/riscv/riscv-opts.h
+ lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/plugin/include/config/riscv/riscv-protos.h
+ lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/plugin/include/config/riscv/riscv.h
