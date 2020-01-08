@@ -1,1 +1,1 @@
-BUILD_DEPENDS+=             svn:devel/subversion
+MASTER_SITES += https://avalon.dragonflybsd.org/misc/distfiles/
