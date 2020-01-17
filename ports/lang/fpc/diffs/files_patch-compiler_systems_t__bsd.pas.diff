@@ -1,10 +1,6 @@
-Fix coding error in procedure TLinkerBSD.SetDefaultInfo in new patch.
-Stop adding nested "(((s<>'c') and (s<>'iconv'))" too (lang/fpc/Makefile:post-patch:ICONV_LIB)
-Use systems_dragonfly for consistency.
-
---- files/patch-compiler_systems_t__bsd.pas.orig	2019-09-04 12:05:52 UTC
+--- files/patch-compiler_systems_t__bsd.pas.orig	2020-01-17 15:06:45 UTC
 +++ files/patch-compiler_systems_t__bsd.pas
-@@ -44,28 +44,19 @@
+@@ -62,27 +62,18 @@
         DynamicLinker:='/usr/libexec/ld.so'
        else if target_info.system in systems_netbsd then
         DynamicLinker:='/usr/libexec/ld.elf_so'
@@ -14,26 +10,24 @@ Use systems_dragonfly for consistency.
        else
          DynamicLinker:='';
      end;
--@@ -555,7 +557,7 @@
+-@@ -555,7 +561,7 @@
 -      While not SharedLibFiles.Empty do
 -       begin
 -         S:=SharedLibFiles.GetFirst;
 --        if (s<>'c') or reorder then
--+        if (((((((s<>'c') and (s<>'iconv')) and (s<>'iconv')) and (s<>'iconv')) and (s<>'iconv')) and (s<>'iconv')) and (s<>'iconv')) or reorder then
+-+        if (((((((((s<>'c') and (s<>'iconv')) and (s<>'iconv')) and (s<>'iconv')) and (s<>'iconv')) and (s<>'iconv')) and (s<>'iconv')) and (s<>'iconv')) and (s<>'iconv')) or reorder then
 -          begin
 -            i:=Pos(target_info.sharedlibext,S);
 -            if i>0 then
- @@ -718,7 +720,12 @@
+ @@ -718,7 +724,12 @@
     Replace(cmdstr,'$DYNLINK',DynLinkStr);
     if (target_info.system in systems_darwin) then
       Replace(cmdstr,'$PRTOBJ',GetDarwinPrtobjName(false));
  -  BinStr:=FindUtil(utilsprefix+BinStr);
 -+  if target_info.system=system_x86_64_dragonfly then
 -+     BinStr:='/usr/libexec/binutils225/elf/ld.bfd';
--+  if target_info.system in systems_freebsd then
 ++  if target_info.system in systems_dragonfly then
 ++     BinStr:='/usr/bin/ld.bfd'
-++  else if target_info.system in systems_freebsd then
- +     BinStr:='%%LDPATH%%'
+ +  if target_info.system in systems_freebsd then
+ +     BinStr:=LdPath
  +  else
- +     BinStr:=FindUtil(utilsprefix+BinStr);
