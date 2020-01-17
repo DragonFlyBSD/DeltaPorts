@@ -31,7 +31,11 @@ Sync round done
 - [X] `devel/gdb` has been unlocked and builds, but not tested well. The new version (8.3) requires further porting.
 - [X] `www/node10` requires review.
 
-## Sat Oct 26 01:19:14 PDT 201
-- [ ] `science/py-GPy` was synced but its _BUILD_DEPENDS_ contains _${LOCALBASE}/lib/libomp.so:devel/openmp_ which our sync scripts mangled and only left _${LOCALBASE}/lib_. Needs investigation.
+## Sat Oct 26 01:19:14 PDT 2019
 - [X] `devel/chromium-gn` build has been fixed.
-- [ ] `devel/openssl` remove additions.
+- [X] `devel/openssl` remove additions.
+
+## Sun Dec 22 15:31:02 UTC 2019
+- [ ] `science/py-GPy` was synced but its _BUILD_DEPENDS_ contains _${LOCALBASE}/lib/libomp.so:devel/openmp_ which our sync scripts mangled and only left _${LOCALBASE}/lib_. Needs investigation.
+- [X] Fix OpenJDK11 bootstrap
+
