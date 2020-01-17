@@ -1,6 +1,16 @@
---- Makefile.orig	2018-02-23 23:12:47 UTC
+--- Makefile.orig	2020-01-17 18:37:00 UTC
 +++ Makefile
-@@ -41,24 +41,29 @@ MAKE_JOBS_UNSAFE=	yes							# Parser/pge
+@@ -14,9 +14,6 @@ COMMENT=	Interpreted object-oriented pro
+ 
+ LICENSE=	PSFL
+ 
+-DEPRECATED=	EOLed upstream
+-EXPIRATION_DATE=	2020-12-31
+-
+ USES=		cpe ncurses pathfix pkgconfig readline:port shebangfix ssl tar:xz
+ PATHFIX_MAKEFILEIN=	Makefile.pre.in
+ USE_LDCONFIG=	yes
+@@ -41,24 +38,29 @@ MAKE_ARGS+=		INSTALL_SHARED="${INSTALL_L
  
  PLIST_SUB=		ABI=${ABIFLAGS} \
  			PORTVERSION=${PORTVERSION} \
@@ -31,7 +41,7 @@
  
  # Use CPPFLAGS over CFLAGS due to -I ordering, causing elementtree and pyexpat
  # to break in Python 2.7, or preprocessor complaints in Python >= 3.3
-@@ -130,6 +135,8 @@ post-patch:
+@@ -123,6 +125,8 @@ post-patch:
  	@${REINPLACE_CMD} -e 's/disabled_module_list =[^]]*/&, "nis"/' \
  		${WRKSRC}/setup.py
  .endif
