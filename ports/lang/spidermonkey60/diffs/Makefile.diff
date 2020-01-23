@@ -1,6 +1,6 @@
---- Makefile.orig	2019-12-06 00:11:39.000000000 +0000
+--- Makefile.orig	2020-01-23 17:52:13 UTC
 +++ Makefile
-@@ -48,10 +48,6 @@
+@@ -49,10 +49,6 @@ CONFIGURE_ENV=	HOST_CC=${CC} HOST_CXX=${
  
  .include <bsd.port.pre.mk>
  
@@ -8,6 +8,6 @@
 -CONFIGURE_TARGET=x86_64-portbld-freebsd${OSREL}
 -.endif
 -
- post-install:
- 	${RM} ${STAGEDIR}${PREFIX}/lib/libjs_static.ajs
- 	${LN} -fs libmozjs-${SP_VER}.so ${STAGEDIR}${PREFIX}/lib/libmozjs-${SP_VER}.so.1
+ .if ${ARCH} == i386
+ # ld: error: undefined symbol: __atomic_load
+ USE_GCC=	9+
