@@ -1,36 +1,35 @@
---- Makefile.orig	2019-07-11 21:43:05 UTC
+--- Makefile.orig	2020-01-23 17:55:13 UTC
 +++ Makefile
-@@ -12,7 +12,7 @@ COMMENT=	System for Automated Geoscienti
+@@ -13,7 +13,7 @@ COMMENT=	System for Automated Geoscienti
  LICENSE=	GPLv2 LGPL21
  LICENSE_COMB=	multi
  
--BUILD_DEPENDS=	clang${LLVM_VER}:devel/llvm${LLVM_VER} \
+-BUILD_DEPENDS=	clang${LLVM_DEFAULT}:devel/llvm${LLVM_DEFAULT} \
 +BUILD_DEPENDS=	\
  		swig3.0:devel/swig30
  LIB_DEPENDS=	libcurl.so:ftp/curl \
  		libfftw3.so:math/fftw3 \
-@@ -57,7 +57,6 @@ VIGRA_DESC=	Enable 'Vision with Generic
- OPENMP_CONFIGURE_ENABLE=	openmp
+@@ -59,7 +59,6 @@ OPENMP_CONFIGURE_ENABLE=	openmp
+ OPENMP_LIB_DEPENDS=	libomp.so:devel/openmp
  OPENMP_LDFLAGS=		-L${LOCALBASE}/lib -lm
- # Use OpenMP from lang/llvm${LLVM_VER}
--OPENMP_LDFLAGS+=	-L${LOCALBASE}/llvm${LLVM_VER}/lib -lomp
- PGSQL_CONFIGURE_OFF=	--with-postgresql=no
- PGSQL_CONFIGURE_ON=	--with-postgresql=${LOCALBASE}/bin/pg_config
+ # Use OpenMP from lang/llvm${LLVM_DEFAULT}
+-OPENMP_LDFLAGS+=	-L${LOCALBASE}/llvm${LLVM_DEFAULT}/lib -lomp
+ PGSQL_CONFIGURE_WITH=	pg
  PGSQL_USES=		pgsql
-@@ -68,12 +67,6 @@ INSTALL_TARGET=	install-strip
+ VIGRA_BUILD_DEPENDS=	${LOCALBASE}/lib/libvigraimpex.so:graphics/vigra
+@@ -69,11 +68,6 @@ INSTALL_TARGET=	install-strip
  
  .include <bsd.port.pre.mk>
  
 -# make describe needs them here
--LLVM_VER=	80
--CPP=		clang-cpp${LLVM_VER}
--CC=		clang${LLVM_VER}
--CXX=		clang++${LLVM_VER}
+-CPP=		clang-cpp${LLVM_DEFAULT}
+-CC=		clang${LLVM_DEFAULT}
+-CXX=		clang++${LLVM_DEFAULT}
 -
  SUB_FILES=	pkg-message
  
  post-extract:
-@@ -103,12 +96,6 @@ post-patch:
+@@ -103,12 +97,6 @@ post-patch:
  	@${REINPLACE_CMD} -e 's|PORTVERSION|${PORTVERSION}|' \
  		${WRKSRC}/src/saga_core/saga_gui/dlg_about.cpp
  
@@ -41,5 +40,5 @@
 -		${WRKSRC}/src/accessories/templates/template4saga-tools/my_tool_library/Makefile
 -
  post-configure:
- 	@${REINPLACE_CMD} -e 's|cd $$(pkgdatadir);|cd ${STAGEDIR}${DATADIR};|g' \
- 		${WRKSRC}/src/saga_core/saga_gui/Makefile
+ 	@${REINPLACE_CMD} -e 's|^LDFLAGS = .*|& -lopencv_core|' \
+ 		${WRKSRC}/src/tools/imagery/imagery_opencv/Makefile
