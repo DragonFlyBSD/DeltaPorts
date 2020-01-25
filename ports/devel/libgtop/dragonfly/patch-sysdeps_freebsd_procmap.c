@@ -18,7 +18,15 @@
  
  /* Init function. */
  
-@@ -244,7 +248,7 @@ vm_map_reader(void *token, vm_map_entry_
+@@ -235,6 +239,7 @@ _glibtop_init_proc_map_p (glibtop *serve
+         server->sysdeps.proc_map = _glibtop_sysdeps_proc_map;
+ }
+ 
++#ifndef __DragonFly__
+ static int
+ vm_map_reader(void *token, vm_map_entry_t addr, vm_map_entry_t dest)
+ {
+@@ -244,7 +249,7 @@ vm_map_reader(void *token, vm_map_entry_
  	return (kvm_read (kd, (gulong) addr, dest, sizeof(*dest)) == sizeof(*dest));
  }
  
@@ -27,7 +35,15 @@
  typedef int vm_map_entry_reader(void *token, vm_map_entry_t addr,
      vm_map_entry_t dest);
  
-@@ -267,6 +271,10 @@ glibtop_map_entry *
+@@ -260,6 +265,7 @@ vm_map_entry_read_succ(void *token, stru
+ 	return (next);
+ }
+ #endif
++#endif
+ 
+ /* Provides detailed information about a process. */
+ 
+@@ -267,6 +273,10 @@ glibtop_map_entry *
  glibtop_get_proc_map_p (glibtop *server, glibtop_proc_map *buf,
                          pid_t pid)
  {
@@ -38,7 +54,7 @@
          struct kinfo_proc *pinfo;
          struct vm_map_entry entry;
          struct vmspace vmspace;
-@@ -403,4 +411,5 @@ glibtop_get_proc_map_p (glibtop *server,
+@@ -403,4 +413,5 @@ glibtop_get_proc_map_p (glibtop *server,
          buf->total  = (guint64) (buf->number * buf->size);
  
          return (glibtop_map_entry*) g_array_free(maps, FALSE);
