@@ -219,6 +219,8 @@ for item in ${all}; do
        -e 's|!/usr/bin/perl|!/usr/local/bin/perl|' \
        > ${MERGED}/${item}
    touch -r ${FPORTS}/${item} ${MERGED}/${item}
+   # Change permissions to what the source item has
+   chmod $(stat -f %Lp ${FPORTS}/${item}) ${MERGED}/${item}
 done
 cp -r ${FPORTS}/Keywords ${MERGED}/
 
