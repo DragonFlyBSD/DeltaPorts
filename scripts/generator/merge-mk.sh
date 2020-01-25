@@ -72,5 +72,7 @@ for item in ${all}; do
    cat ${FPORTS}/${item} | sed -E \
        -e 's|!/usr/bin/perl|!/usr/local/bin/perl|' \
        > ${MERGED}/${item}
+   # Change permissions to what the source item has
+   chmod $(stat -f %Lp ${FPORTS}/${item}) ${MERGED}/${item}
 done
 cp -r ${FPORTS}/Keywords ${MERGED}/
