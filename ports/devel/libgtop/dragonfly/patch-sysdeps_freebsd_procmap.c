@@ -1,4 +1,4 @@
---- sysdeps/freebsd/procmap.c.intermediate	2019-05-12 09:40:18.000000000 +0000
+--- sysdeps/freebsd/procmap.c.intermediate	2020-01-25 14:54:16.000000000 +0000
 +++ sysdeps/freebsd/procmap.c
 @@ -24,6 +24,7 @@
  #include <glibtop/error.h>
@@ -8,7 +8,7 @@
  #include <glibtop_suid.h>
  
  #include <kvm.h>
-@@ -228,6 +229,9 @@ _glibtop_sysdeps_freebsd_dev_inode (glib
+@@ -226,6 +227,9 @@ _glibtop_sysdeps_freebsd_dev_inode (glib
  	    } /* end-if IS_UFS */
  }
  #endif
@@ -18,7 +18,16 @@
  
  /* Init function. */
  
-@@ -243,6 +247,10 @@ glibtop_map_entry *
+@@ -244,7 +248,7 @@ vm_map_reader(void *token, vm_map_entry_
+ 	return (kvm_read (kd, (gulong) addr, dest, sizeof(*dest)) == sizeof(*dest));
+ }
+ 
+-#if (__FreeBSD_version < 1300062)
++#if (__FreeBSD_version < 1300062) && !defined(__DragonFly__)
+ typedef int vm_map_entry_reader(void *token, vm_map_entry_t addr,
+     vm_map_entry_t dest);
+ 
+@@ -267,6 +271,10 @@ glibtop_map_entry *
  glibtop_get_proc_map_p (glibtop *server, glibtop_proc_map *buf,
                          pid_t pid)
  {
@@ -27,9 +36,9 @@
 +	return NULL;
 +#else
          struct kinfo_proc *pinfo;
-         struct vm_map_entry entry, *first;
+         struct vm_map_entry entry;
          struct vmspace vmspace;
-@@ -394,4 +402,5 @@ glibtop_get_proc_map_p (glibtop *server,
+@@ -403,4 +411,5 @@ glibtop_get_proc_map_p (glibtop *server,
          buf->total  = (guint64) (buf->number * buf->size);
  
          return (glibtop_map_entry*) g_array_free(maps, FALSE);
