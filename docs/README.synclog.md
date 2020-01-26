@@ -36,6 +36,9 @@ Sync round done
 - [X] `devel/openssl` remove additions.
 
 ## Sun Dec 22 15:31:02 UTC 2019
-- [ ] `science/py-GPy` was synced but its _BUILD_DEPENDS_ contains _${LOCALBASE}/lib/libomp.so:devel/openmp_ which our sync scripts mangled and only left _${LOCALBASE}/lib_. Needs investigation.
 - [X] Fix OpenJDK11 bootstrap
 
+## Thu Jan 23 15:40:10 UTC 2020
+- [ ] `science/py-GPy` was synced but its _BUILD_DEPENDS_ contains _${LOCALBASE}/lib/libomp.so:devel/openmp_ which our sync scripts mangled and only left _${LOCALBASE}/lib_. Needs investigation.
+- [ ] security/cargo-audit is LOCK right now. We will try to keep it that way until DragonFly BSD does a new release.
+- [ ] deve/rust-cbindgen is LOCK right now. We will try to keep it that way until DragonFly BSD does a new release.
