@@ -9,3 +9,5 @@ dfly-patch:
 		${WRKSRC}/vendor/go.bug.st/serial.v1/serial_unix.go \
 		${WRKSRC}/vendor/go.bug.st/serial.v1/unixutils/pipe.go \
 		${WRKSRC}/vendor/go.bug.st/serial.v1/unixutils/select.go
+	${REINPLACE_CMD} -e '/B460800/d' -e '/B921600/d' \
+		${WRKSRC}/vendor/go.bug.st/serial.v1/serial_dragonfly.go
