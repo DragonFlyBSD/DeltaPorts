@@ -1,0 +1,11 @@
+--- Makefile.diff	2020-01-17 12:26:06 UTC
++++ Makefile
+@@ -282,7 +282,7 @@
+ 	${ECHO_CMD} "F90='${FC}'"				>> ${WRKSRC}/setup.cfg
+ 	${ECHO_CMD} "MATHLIB='${lib_math} ${LDFLAGS} -lgfortran -lm -lkvm'"		\
+ 		>> ${WRKSRC}/setup.cfg
+-	${ECHO_CMD} "OTHERLIB='-Xlinker -export-dynamic ${MPISEQ} -lc++ -lexecinfo -lutil -lpthread -lz'"	\
++	${ECHO_CMD} "OTHERLIB='-Xlinker -export-dynamic ${MPISEQ} -lexecinfo -lutil -lpthread -lz'"	\
+ 		>> ${WRKSRC}/setup.cfg
+ 	${ECHO_CMD} "SYSLIB='-lpthread -lz'"			>> ${WRKSRC}/setup.cfg
+ .if defined(WITH_MPI)
