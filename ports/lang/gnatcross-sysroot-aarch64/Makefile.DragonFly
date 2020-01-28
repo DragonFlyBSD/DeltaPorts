@@ -1,4 +1,6 @@
 
+BROKEN=	FreeBSD ports broken
+
 .if !defined(DPORTS_BUILDER)
 MANUAL_PACKAGE_BUILD= intended for cross testing only
 .endif
