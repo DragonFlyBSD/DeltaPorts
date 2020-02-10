@@ -245,7 +245,7 @@ for k in Mk Templates; do
 done
 
 # replace linux.mk
-cp -a ${DELTA}/special/Mk/replacements/linux.mk ${MERGED}/Mk/Uses
+cp -a ${DELTA}/special/Mk/replacements/Uses/linux.mk ${MERGED}/Mk/Uses
 
 # port tree root
 awk "${AWKGID}" ${FPORTS}/GIDs > ${MERGED}/GIDs
