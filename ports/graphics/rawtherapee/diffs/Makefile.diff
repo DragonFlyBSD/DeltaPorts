@@ -1,10 +1,13 @@
---- Makefile.orig	2019-04-26 19:44:23 UTC
+--- Makefile.orig	2020-02-14 00:20:40 UTC
 +++ Makefile
-@@ -90,8 +90,7 @@ CMAKE_ARGS+=	-DPROC_TARGET_NUMBER="2"
+@@ -125,10 +125,10 @@ CMAKE_ARGS+=	-DPROC_TARGET_NUMBER="2"
  .endif
  
  .if !empty(PORT_OPTIONS:MOPENMP) && !empty(OPTIONS_DEFINE:MOPENMP)
--LIB_DEPENDS+=	libomp.so:devel/openmp
+-. if ${OSVERSION} < 1102507 || (${OSVERSION} >= 1200000 && ${OSVERSION} < 1200506) || (${OSVERSION} >= 1300000 && ${OSVERSION} < 1300050)
++. if ${OPSYS} == "FreeBSD " && ${OSVERSION} < 1102507 || (${OSVERSION} >= 1200000 && ${OSVERSION} < 1200506) || (${OSVERSION} >= 1300000 && ${OSVERSION} < 1300050)
+ LIB_DEPENDS+=	libomp.so:devel/openmp
+ . endif
 -OPENMP_FLAGS=	-lm -lomp
 +OPENMP_FLAGS=	-lm -lgomp
  LDFLAGS+=	${OPENMP_FLAGS}
