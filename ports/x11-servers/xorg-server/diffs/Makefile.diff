@@ -1,9 +1,9 @@
---- Makefile.orig	2017-03-29 23:40:44 UTC
+--- Makefile.orig	2020-02-14 00:14:45 UTC
 +++ Makefile
-@@ -45,12 +45,18 @@ USE_XORG+=	bigreqsproto compositeproto d
- CONFIGURE_ARGS+=--without-doxygen --without-xmlto --without-fop \
+@@ -54,12 +54,18 @@ CONFIGURE_ARGS+=--without-doxygen --with
+ 		--with-default-font-path="$$(${DEFAULT_FONTPATH_CMD})" \
  		--localstatedir=/var --with-shared-memory-dir=/tmp \
- 		--disable-config-udev --disable-config-udev-kms \
+ 		--disable-config-udev-kms --disable-systemd-logind \
 -		--without-dtrace --enable-glamor
 +		--without-dtrace --enable-glamor --disable-dri3
  INSTALL_TARGET=	install-strip
@@ -20,7 +20,7 @@
  .else
  BUILD_DEPENDS+=	libepoxy>0:graphics/libepoxy	# only for configure
  .endif
-@@ -87,9 +93,9 @@ CONFIGURE_ARGS+=	--disable-config-hal
+@@ -103,9 +109,9 @@ CONFIGURE_ARGS+= --disable-config-udev
  # We handle Xorg setuid in the plist. This allows to build xorg-server as a user.
  CONFIGURE_ARGS+=--disable-install-setuid
  
