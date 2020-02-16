@@ -1,0 +1,20 @@
+--- Makefile.orig	2020-02-14 11:10:06 UTC
++++ Makefile
+@@ -42,7 +42,7 @@
+ 		--with-root-prefix='${PREFIX}' \
+ 		--without-included-gettext \
+ 		LDFLAGS='${LDFLAGS} -L${LOCALBASE}/lib -Wl,--rpath -Wl,${LOCALBASE}/lib/e2fsprogs'
+-CONFIGURE_ENV?=	LIBS='-Wl,--as-needed ${LIBS} -lexecinfo -lelf'
++CONFIGURE_ENV?=	LIBS='-Wl,--as-needed ${LIBS} -lexecinfo'
+ CPPFLAGS+=	-I${WRKSRC}/lib -I${LOCALBASE}/include # -D_EXT2_USE_C_VERSIONS
+ MAKE_ARGS+=	pkgconfigdir='${PREFIX}/libdata/pkgconfig'
+ MAKE_ENV+=	CHECK_CMD=@true
+@@ -252,7 +252,7 @@
+ 	cd ${WRKSRC}/e2fsck && ${RM} -f e2fsck \
+ 		&& ${MAKE_CMD} e2fsck V=1 \
+ 		LIBS="-static-libgcc -lc -Bstatic ../lib/libsupport.a ../lib/libext2fs.a ../lib/libcom_err.a \
+-		${_staticlibs} /usr/lib/libexecinfo.a /usr/lib/libelf.a \
++		${_staticlibs} /usr/lib/libexecinfo.a \
+ 		${LOCALBASE}/lib/libblkid.a ${LOCALBASE}/lib/libuuid.a ${libintl} ../lib/libe2p.a "
+ # Regression check: avoid a port (not upstream!) regression from 1.40.5,
+ # check that e2fsck isn't dynalinked against anything but libc.so:
