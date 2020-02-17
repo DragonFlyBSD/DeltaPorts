@@ -1,15 +1,15 @@
---- distinfo.orig	2020-01-17 14:56:20 UTC
+--- distinfo.orig	2020-02-17 19:27:57 UTC
 +++ distinfo
-@@ -19,6 +19,12 @@ SHA256 (rust/2019-11-07/rust-std-1.39.0-
- SIZE (rust/2019-11-07/rust-std-1.39.0-armv6-unknown-freebsd.tar.xz) = 170165620
- SHA256 (rust/2019-11-07/cargo-0.40.0-armv6-unknown-freebsd.tar.xz) = 4c13fee359a77a73ce96f524c58198cca567971692b17e97e41ecb01fe70dc5c
- SIZE (rust/2019-11-07/cargo-0.40.0-armv6-unknown-freebsd.tar.xz) = 3183372
-+SHA256 (rust/2019-11-07/rustc-1.39.0-x86_64-unknown-dragonfly.tar.xz) = 399d7e508b42047828533091c56971355e9243bb6c209a4b0784cf0a8cad6dfb
-+SIZE (rust/2019-11-07/rustc-1.39.0-x86_64-unknown-dragonfly.tar.xz) = 34536964
-+SHA256 (rust/2019-11-07/rust-std-1.39.0-x86_64-unknown-dragonfly.tar.xz) = 63c9d1c66682b5110eef3131f5cd785d996ff447d3959c83bd8ab7e972e105f7
-+SIZE (rust/2019-11-07/rust-std-1.39.0-x86_64-unknown-dragonfly.tar.xz) = 177139560
-+SHA256 (rust/2019-11-07/cargo-0.40.0-x86_64-unknown-dragonfly.tar.xz) = 581e018ecacf5750b976a852cbf8da2a675de5be29dcbb6ead405ed00cad02f6
-+SIZE (rust/2019-11-07/cargo-0.40.0-x86_64-unknown-dragonfly.tar.xz) = 4385212
- SHA256 (rust/compiler-rt-9.0.0.src.tar.xz) = 56e4cd96dd1d8c346b07b4d6b255f976570c6f2389697347a6c3dcb9e820d10e
- SIZE (rust/compiler-rt-9.0.0.src.tar.xz) = 1993084
- SHA256 (rust/2019-11-07/rustc-1.39.0-armv7-unknown-freebsd.tar.xz) = 5902ceb1aefbced859969a928c4ad15063a58e120d79a18cab37dc4d7384d591
+@@ -19,6 +19,12 @@ SHA256 (rust/2020-01-11/rust-std-1.40.0-
+ SIZE (rust/2020-01-11/rust-std-1.40.0-armv6-unknown-freebsd.tar.xz) = 13924280
+ SHA256 (rust/2020-01-11/cargo-0.41.0-armv6-unknown-freebsd.tar.xz) = d04aba96a043fb798cee1f4b44a63ff83549c1c85ffaadbbda3edc28ebbb01fc
+ SIZE (rust/2020-01-11/cargo-0.41.0-armv6-unknown-freebsd.tar.xz) = 3811020
++SHA256 (rust/2020-01-11/rustc-1.40.0-x86_64-unknown-dragonfly.tar.xz) = cb159091ebe6d709b050bb6495103f8cc04a233c3768bc6de47a8937ec7e1f11
++SIZE (rust/2020-01-11/rustc-1.40.0-x86_64-unknown-dragonfly.tar.xz) = 35221604
++SHA256 (rust/2020-01-11/rust-std-1.40.0-x86_64-unknown-dragonfly.tar.xz) = c7ed9e60314ebe69bbb6da1c4b0d76819decbc1d55ad2f9a2fd2ee4f4c72aeec
++SIZE (rust/2020-01-11/rust-std-1.40.0-x86_64-unknown-dragonfly.tar.xz) = 14524724
++SHA256 (rust/2020-01-11/cargo-0.41.0-x86_64-unknown-dragonfly.tar.xz) = c5f1fdd42aad458461eaaf75e4410cec436f513f23b35f57fc88829d2a9ed349
++SIZE (rust/2020-01-11/cargo-0.41.0-x86_64-unknown-dragonfly.tar.xz) = 4391112
+ SHA256 (rust/2020-01-11/rustc-1.40.0-armv7-unknown-freebsd.tar.xz) = 9d89a89d0f441e1e074e2d0c9d255e07852971c60bd3f4e533e8d1e9fded60e0
+ SIZE (rust/2020-01-11/rustc-1.40.0-armv7-unknown-freebsd.tar.xz) = 27393212
+ SHA256 (rust/2020-01-11/rust-std-1.40.0-armv7-unknown-freebsd.tar.xz) = 5e4ef87f5403f273856ecfcb822d439628fc95dd7c77d2bd21ac7f33b7e4cba6
