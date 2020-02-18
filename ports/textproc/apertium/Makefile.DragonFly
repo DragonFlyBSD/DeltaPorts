@@ -1,3 +1,2 @@
 
 MAKE_ENV+=	LDVER=ld.bfd
-LDFLAGS+= -lcrypto
