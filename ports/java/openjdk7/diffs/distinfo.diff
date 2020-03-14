@@ -1,11 +1,8 @@
---- distinfo.orig	2017-02-09 18:00:32 UTC
+--- distinfo.orig	2020-03-14 00:47:35 UTC
 +++ distinfo
-@@ -1,6 +1,8 @@
- TIMESTAMP = 1472019396
- SHA256 (openjdk-7u40-fcs-src-b43-26_aug_2013.zip) = 00f8ea561876cbcad174ba3ca7a9ae10b50df46a782ac64c2ac57ac357b50596
- SIZE (openjdk-7u40-fcs-src-b43-26_aug_2013.zip) = 104575196
+@@ -3,3 +3,5 @@ SHA256 (apache-ant-1.9.14-bin.tar.gz) =
+ SIZE (apache-ant-1.9.14-bin.tar.gz) = 5837539
+ SHA256 (battleblow-jdk7u-7.251.02.1-jdk7u251-b02.1_GH0.tar.gz) = b709d9e344c4ebbc5bb71646a7e78137ad47f2e17fb61739c7be0420ececc707
+ SIZE (battleblow-jdk7u-7.251.02.1-jdk7u251-b02.1_GH0.tar.gz) = 69828420
 +SHA256 (bootstrap-openjdk6-b41.txz) = b25715684f710544148bf1b246a6e0982d0601755fe9466823c6d8fd1b8bb8a5
 +SIZE (bootstrap-openjdk6-b41.txz) = 26562215
- SHA256 (apache-ant-1.9.7-bin.zip) = b28c5ea0b5ea90bb4ad6bab229b6a56ac4461760a251a12567803a69259cd9de
- SIZE (apache-ant-1.9.7-bin.zip) = 8317465
- SHA256 (patch-7u45-b30.xz) = f0ab28db8819a72b82236d98c6780a0fa063cf4d2f45f26105545559e630a1b3
