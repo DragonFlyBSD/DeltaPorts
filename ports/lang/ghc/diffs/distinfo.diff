@@ -1,4 +1,4 @@
---- distinfo.orig	2020-02-14 00:04:38 UTC
+--- distinfo.orig	2020-03-14 00:49:27 UTC
 +++ distinfo
 @@ -11,6 +11,8 @@ SHA256 (ghc-8.4.4-src.tar.xz) = 11117735
  SIZE (ghc-8.4.4-src.tar.xz) = 11319500
@@ -6,6 +6,6 @@
  SIZE (ghc-8.4.3-src.tar.xz) = 11315068
 +SHA256 (ghc-8.4.4-boot-x86_64-dragonfly.tar.xz) = 7e4182cde56e8a48fd87c7ae315e84670debc9aa6184735b33a19bb54b32f8b9
 +SIZE (ghc-8.4.4-boot-x86_64-dragonfly.tar.xz) = 108352108
- SHA256 (ghc-8.6.5-boot-amd64-freebsd.tar.xz) = 07d4c54a70900128e24b5dd9b22d929ddcf530d911a8be93e694cd9a721f458a
- SIZE (ghc-8.6.5-boot-amd64-freebsd.tar.xz) = 68965716
- SHA256 (ghc-8.6.5-boot-i386-freebsd.tar.xz) = cd208fbb6b2a158ff8c5d6227e0babd8c224867ea301abf970dc446f04c9e95f
+ SHA256 (ghc-8.6.5-boot-amd64-freebsd.tar.xz) = aeaf8c0fee0d83de5088aa7ab92e92ee6999b4830e01e33bf3dd450b115c0208
+ SIZE (ghc-8.6.5-boot-amd64-freebsd.tar.xz) = 70213260
+ SHA256 (ghc-8.6.5-boot-i386-freebsd.tar.xz) = 47cc24cdcfa19601bb81a7f5660d1d72fec1110119e8ffe1daa0cddc7959206f
