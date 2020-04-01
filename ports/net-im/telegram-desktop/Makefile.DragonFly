@@ -1,4 +1,4 @@
-USES+=	alias
+CXXFLAGS +=	-DWITHOUT_PULSE
 
 # bad MF
 BUILD_DEPENDS:=	${BUILD_DEPENDS:Npulseaudio*}
