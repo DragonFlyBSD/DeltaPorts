@@ -1,3 +1,0 @@
-CONFIGURE_ARGS+=	--with-default-accel=sna
-
-IGNORE=		ftigeot says do not build this
