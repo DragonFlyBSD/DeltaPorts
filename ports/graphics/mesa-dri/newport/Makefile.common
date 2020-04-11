@@ -123,6 +123,7 @@ CONFIGURE_ENV+=		ax_cv_check_cflags___Wno_initializer_overrides=no
 
 MESON_ARGS+=	-Ddri-drivers=i965,r100,r200 \
 		-Dgallium-drivers=swrast,r300,r600,radeonsi \
+		-Dprefer-iris=false \
 		-Dgallium-vdpau=true \
 		-Dvulkan-drivers=""
 
