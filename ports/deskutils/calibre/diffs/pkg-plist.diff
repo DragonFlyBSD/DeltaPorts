@@ -1,11 +1,11 @@
---- pkg-plist.orig	2019-04-24 17:56:41 UTC
+--- pkg-plist.orig	2020-04-16 11:48:44 UTC
 +++ pkg-plist
-@@ -1153,8 +1153,6 @@ lib/calibre/calibre/plugins/hunspell.so
- lib/calibre/calibre/plugins/icu.so
- lib/calibre/calibre/plugins/imageops.so
- lib/calibre/calibre/plugins/libheadless.so
--lib/calibre/calibre/plugins/libmtp.so
--lib/calibre/calibre/plugins/libusb.so
- lib/calibre/calibre/plugins/lzma_binding.so
- lib/calibre/calibre/plugins/lzx.so
- lib/calibre/calibre/plugins/matcher.so
+@@ -1151,8 +1151,6 @@ lib/calibre/calibre/plugins/%%SODIR%%hyp
+ lib/calibre/calibre/plugins/%%SODIR%%icu.so
+ lib/calibre/calibre/plugins/%%SODIR%%imageops.so
+ lib/calibre/calibre/plugins/%%SODIR%%libheadless.so
+-lib/calibre/calibre/plugins/%%SODIR%%libmtp.so
+-lib/calibre/calibre/plugins/%%SODIR%%libusb.so
+ lib/calibre/calibre/plugins/%%SODIR%%lzma_binding.so
+ lib/calibre/calibre/plugins/%%SODIR%%lzx.so
+ lib/calibre/calibre/plugins/%%SODIR%%matcher.so
