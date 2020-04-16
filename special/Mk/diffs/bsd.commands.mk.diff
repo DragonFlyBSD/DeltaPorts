@@ -4,7 +4,7 @@
  
  _COMMANDSMKINCLUDED=	yes
  
-+.if ${AWK:Mawk}
++.if defined(AWK) && ${AWK} == "awk"
 +.undef AWK
 +.endif
  AWK?=			/usr/bin/awk
