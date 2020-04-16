@@ -50,4 +50,21 @@ Sync round done
 - [X] `x11-drivers/xf86-video-intel29` newport killed in favor of the port version (we have not found any reason to not use the ports one)
 
 ## Thu Apr 16 08:58:19 2020 +0000
+
+### Merge rejects:
+* deskutils/calibre: 1 out of 1 hunks failed--saving rejects to pkg-plist.rej
+* devel/gcc-msp430-ti-toolchain: 2 out of 2 hunks failed--saving rejects to Makefile.rej
+* lang/pypy: 1 out of 2 hunks failed--saving rejects to Makefile.rej
+* lang/python37: 2 out of 4 hunks failed--saving rejects to Makefile.rej
+* mail/spamd: 1 out of 1 hunks failed--saving rejects to files/pkg-message.in.rej
+* net/ipxe: 1 out of 1 hunks failed--saving rejects to Makefile.rej
+* net/ntopng: 1 out of 1 hunks failed--saving rejects to Makefile.rej
+* sysutils/slurm-wlm: 1 out of 1 hunks failed--saving rejects to pkg-plist.rej
+* www/mod_rivet: 1 out of 1 hunks failed--saving rejects to Makefile.rej
+
+### Tasks
+
 - [ ] `science/py-GPy` was synced but its _BUILD_DEPENDS_ contains _${LOCALBASE}/lib/libomp.so:devel/openmp_ which our sync scripts mangled and only left _${LOCALBASE}/lib_. Needs investigation.
+- [ ] `www/chromium` to be updated (81.0.4044.92)
+- `x11-drivers/xf86-video-ati` newport removal in favor of the ports version
+
