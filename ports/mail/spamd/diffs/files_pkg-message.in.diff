@@ -1,10 +1,10 @@
---- files/pkg-message.in.orig	2015-06-29 09:46:33 UTC
+--- files/pkg-message.in.orig	2020-04-16 14:36:54 UTC
 +++ files/pkg-message.in
-@@ -13,17 +13,7 @@ To enable spamd you need:
+@@ -18,17 +18,7 @@ To enable spamd you need:
     spamd.conf.sample file.  Copy then to spamd.conf file and
     edit to suit your needs.
  
--3) mount fdescfs to /dev/fd with the following line in /etc/fstab
+-4) mount fdescfs to /dev/fd with the following line in /etc/fstab
 -	fdescfs  	/dev/fd  	fdescfs rw 	0 	0
 -
 -   Note for XEN users:
@@ -14,8 +14,8 @@
 -	device	pf
 -	device	pflog
 -
--4) Add following lines to the pf.conf(5)
-+3) Add following lines to the pf.conf(5)
+-5) Add following lines to the pf.conf(5)
++4) Add following lines to the pf.conf(5)
  
    table <spamd-white> persist
    no rdr inet proto tcp from <spamd-white> to any \
