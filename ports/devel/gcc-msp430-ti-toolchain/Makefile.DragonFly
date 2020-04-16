@@ -1,3 +1,5 @@
+CONFIGURE_ARGS_COMMON+=	--disable-werror
+
 .if !defined(DPORTS_BUILDER)
 MANUAL_PACKAGE_BUILD= special use cases only
 .endif
