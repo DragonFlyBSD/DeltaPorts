@@ -47,6 +47,7 @@ Sync round done
 - [X] devel/rust-cbindgen is LOCK right now. We will try to keep it that way until DragonFly BSD does a new release.
 
 ## Fri Mar 13 22:23:52 2020
-- [ ] `science/py-GPy` was synced but its _BUILD_DEPENDS_ contains _${LOCALBASE}/lib/libomp.so:devel/openmp_ which our sync scripts mangled and only left _${LOCALBASE}/lib_. Needs investigation.
-- [ ] `x11-drivers/xf86-video-intel29` newport killed in favor of the port version (we have not found any reason to not use the ports one)
+- [X] `x11-drivers/xf86-video-intel29` newport killed in favor of the port version (we have not found any reason to not use the ports one)
 
+## Thu Apr 16 08:58:19 2020 +0000
+- [ ] `science/py-GPy` was synced but its _BUILD_DEPENDS_ contains _${LOCALBASE}/lib/libomp.so:devel/openmp_ which our sync scripts mangled and only left _${LOCALBASE}/lib_. Needs investigation.
