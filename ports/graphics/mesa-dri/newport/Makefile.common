@@ -28,7 +28,6 @@ MAINTAINER=	ftigeot@wolfpond.org
 COMPONENT=	${PORTNAME:tl:C/^lib//:C/mesa-//}
 
 BUILD_DEPENDS+=	${LOCALBASE}/libdata/pkgconfig/pthread-stubs.pc:devel/libpthread-stubs
-BUILD_DEPENDS+=	${LOCALBASE}/bin/python3:lang/python3
 BUILD_DEPENDS+=	${PYTHON_PKGNAMEPREFIX}mako>=0.8:textproc/py-mako@${PY_FLAVOR}
 BUILD_DEPENDS+=	wayland-protocols>=1.8:graphics/wayland-protocols
 
@@ -47,7 +46,9 @@ LIB_DEPENDS+=	libelf.so:devel/libelf
 .endif
 
 USES+=		bison gettext-tools meson ninja python:build  \
-		localbase pathfix pkgconfig shebangfix tar:xz
+		localbase pathfix pkgconfig shebangfix tar:xz \
+		python:3.6+
+
 USE_LDCONFIG=	yes
 
 # only have one port to check with portscout.
