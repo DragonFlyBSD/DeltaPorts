@@ -56,6 +56,8 @@ USE_LDCONFIG=	yes
 PORTSCOUT=	ignore:1
 .endif
 
+BINARY_ALIAS+=  python3=${PYTHON_CMD:T} python=${PYTHON_CMD:T}
+
 python_OLD_CMD=	/usr/bin/env[[:space:]]python2 /usr/bin/python2 /bin/env[[:space:]]python
 SHEBANG_FILES=	src/gallium/*/*/*.py src/gallium/tools/trace/*.py \
 		src/gallium/drivers/svga/svgadump/svga_dump.py \
