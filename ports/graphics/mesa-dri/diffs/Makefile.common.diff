@@ -1,0 +1,31 @@
+--- Makefile.common.orig	2019-07-11 21:16:01 UTC
++++ Makefile.common
+@@ -37,9 +37,6 @@ LIB_DEPENDS+=	libdrm.so:graphics/libdrm
+ .if ${COMPONENT} != libs
+ LIB_DEPENDS+=	libglapi.so:graphics/mesa-libs
+ .endif
+-.if ${ARCH} == amd64 || ${ARCH} == i386
+-LIB_DEPENDS+=	libunwind.so:devel/libunwind
+-.endif
+ .if ${OPSYS} == DragonFly
+ LIB_DEPENDS+=	libelf.so:devel/libelf
+ .endif
+@@ -77,7 +74,12 @@ INSTALL_TARGET=	install-strip
+ .if ${ARCH} == aarch64 || ${ARCH} == amd64 || ${ARCH:Marm*} || ${ARCH} == i386 || ${ARCH:Mmips*} || ${ARCH:Mpowerpc*}
+ BUILD_DEPENDS+=	llvm${LLVM_DEFAULT}>=3.9.0_4:devel/llvm${LLVM_DEFAULT}
+ .if ${COMPONENT} != libs
++. if defined(STATIC_LLVM)
++# zrj: justdoitTM will avoid installing llvmX0 for all R-cran octave ports.
++CONFIGURE_ARGS+=	--enable-llvm-shared-libs=no
++.else
+ RUN_DEPENDS+=	llvm${LLVM_DEFAULT}>=3.9.0_4:devel/llvm${LLVM_DEFAULT}
++. endif
+ .endif
+ CONFIGURE_ENV+=	LLVM_CONFIG=${LOCALBASE}/bin/llvm-config${LLVM_DEFAULT}
+ LDFLAGS+=	-Wl,-rpath=${LOCALBASE}/llvm${LLVM_DEFAULT}/lib
+@@ -97,3 +99,5 @@ CONFIGURE_ARGS+=	--disable-glx-tls
+ # we don't care about GLes v1
+ CONFIGURE_ARGS+=	--disable-gles1
+ 
++# avoid unrecognized line command on vulcan drivers
++CONFIGURE_ENV+=		ax_cv_check_cflags___Wno_initializer_overrides=no
