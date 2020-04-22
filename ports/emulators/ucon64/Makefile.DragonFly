@@ -1,1 +1,0 @@
-IGNORE= Doesn't honour the cflags, makes too much assumptions on headers.
