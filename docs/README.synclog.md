@@ -66,6 +66,6 @@ Sync round done
 
 - [ ] `science/py-GPy` was synced but its _BUILD_DEPENDS_ contains _${LOCALBASE}/lib/libomp.so:devel/openmp_ which our sync scripts mangled and only left _${LOCALBASE}/lib_. Needs investigation.
 - [X] `www/chromium` to be updated (81.0.4044.92)
-- [X] `x11-drivers/xf86-video-ati` newport removal in favor of the ports version
-- [X ] `lang/zig` should build fine now.
+- [X] `x11-drivers/xf86-video-ati` newport removal in favor of the ports version.
+- [X] `lang/zig` should build fine now.
 - [ ] Mesa update to update to 20.0.4 **NOT YET**
