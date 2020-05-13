@@ -64,8 +64,20 @@ Sync round done
 
 ### Tasks
 
-- [ ] `science/py-GPy` was synced but its _BUILD_DEPENDS_ contains _${LOCALBASE}/lib/libomp.so:devel/openmp_ which our sync scripts mangled and only left _${LOCALBASE}/lib_. Needs investigation.
 - [X] `www/chromium` to be updated (81.0.4044.92)
 - [X] `x11-drivers/xf86-video-ati` newport removal in favor of the ports version.
 - [X] `lang/zig` should build fine now.
-- [ ] Mesa update to update to 20.0.4 **NOT YET**
+
+## Wed May 13 16:21:49 2020 +0000
+
+### Merge rejects:
+
+* devel/elfutils: No such line 56 in input file, ignoring 2 out of 3 hunks failed--saving rejects to pkg-plist.rej
+* lang/rust: 1 out of 1 hunks failed--saving rejects to distinfo.rej
+* math/blis: 1 out of 1 hunks failed--saving rejects to Makefile.rej
+* net/asterisk13: 1 out of 1 hunks failed--saving rejects to Makefile.rej
+* security/doas: 1 out of 1 hunks failed--saving rejects to Makefile.rej
+
+### Tasks
+- [ ] `science/py-GPy` was synced but its _BUILD_DEPENDS_ contains _${LOCALBASE}/lib/libomp.so:devel/openmp_ which our sync scripts mangled and only left _${LOCALBASE}/lib_. Needs investigation.
+- [ ] Mesa update to update to 20.0.4 **1)NOT YET** **2)Mesa-19 already in ports**
