@@ -1,6 +1,6 @@
---- pkg-plist.orig	2019-02-28 12:44:05 UTC
+--- pkg-plist.orig	2020-05-14 00:20:11 UTC
 +++ pkg-plist
-@@ -14,7 +14,7 @@
+@@ -15,7 +15,7 @@ bin/eu-stack
  bin/eu-strings
  bin/eu-strip
  bin/eu-unstrip
@@ -9,52 +9,3 @@
  include/elfutils/elf-knowledge.h
  include/elfutils/known-dwarf.h
  include/elfutils/libasm.h
-@@ -23,9 +23,9 @@
- include/elfutils/libdwfl.h
- include/elfutils/libebl.h
- include/elfutils/version.h
--include/gelf.h
--include/libelf.h
--include/nlist.h
-+include/elfutils/gelf.h
-+include/elfutils/libelf.h
-+include/elfutils/nlist.h
- lib/elfutils/libebl_aarch64-%%VERSION%%.so
- lib/elfutils/libebl_aarch64.so
- lib/elfutils/libebl_alpha-%%VERSION%%.so
-@@ -56,21 +56,21 @@
- lib/elfutils/libebl_tilegx.so
- lib/elfutils/libebl_x86_64-%%VERSION%%.so
- lib/elfutils/libebl_x86_64.so
--lib/libasm-%%VERSION%%.so
--lib/libasm.a
--lib/libasm.so
--lib/libasm.so.1
--lib/libdw-%%VERSION%%.so
--lib/libdw.a
--lib/libdw.so
--lib/libdw.so.1
--lib/libebl.a
--lib/libelf-%%VERSION%%.so
--lib/libelf.a
--lib/libelf.so
--lib/libelf.so.1
-+lib/elfutils/libasm-%%VERSION%%.so
-+lib/elfutils/libasm.a
-+lib/elfutils/libasm.so
-+lib/elfutils/libasm.so.1
-+lib/elfutils/libdw-%%VERSION%%.so
-+lib/elfutils/libdw.a
-+lib/elfutils/libdw.so
-+lib/elfutils/libdw.so.1
-+lib/elfutils/libebl.a
-+lib/elfutils/libelf-%%VERSION%%.so
-+lib/elfutils/libelf.a
-+lib/elfutils/libelf.so
-+lib/elfutils/libelf.so.1
- libdata/pkgconfig/libdw.pc
--libdata/pkgconfig/libelf.pc
-+libdata/pkgconfig/elfutils.pc
- %%NLS%%share/locale/de/LC_MESSAGES/elfutils.mo
- %%NLS%%share/locale/en@boldquot/LC_MESSAGES/elfutils.mo
- %%NLS%%share/locale/en@quot/LC_MESSAGES/elfutils.mo
