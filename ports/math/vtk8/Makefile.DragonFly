@@ -1,4 +1,1 @@
-
-.if ${DISTVERSION} == "8.1.2"
-BROKEN=	pending update to 8.2
-.endif
+BROKEN=	8.2 still broken, fails to link
