@@ -79,5 +79,15 @@ Sync round done
 * security/doas: 1 out of 1 hunks failed--saving rejects to Makefile.rej
 
 ### Tasks
+- [X] `lang/rust` to be updated (1.43.1)
+
+## Sat Jun 13 17:14:49 2020 +0000
+
+## Merge rejects:
+
+### Tasks
+- [ ] `lang/rust` to be updated (1.44.0)
+- [ ] `www/chromium` to be updated (83.0.4103.97)
 - [ ] `science/py-GPy` was synced but its _BUILD_DEPENDS_ contains _${LOCALBASE}/lib/libomp.so:devel/openmp_ which our sync scripts mangled and only left _${LOCALBASE}/lib_. Needs investigation.
 - [ ] Mesa update to update to 20.0.4 **1)NOT YET** **2)Mesa-19 already in ports**
+
