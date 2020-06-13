@@ -1,10 +1,9 @@
---- Makefile.orig	2019-12-06 19:14:45 UTC
+--- Makefile.orig	2020-06-13 20:18:38 UTC
 +++ Makefile
-@@ -34,20 +34,4 @@ PLIST_FILES=	bin/dspdfviewer \
- 		share/applications/dspdfviewer.desktop
+@@ -35,22 +35,7 @@ PLIST_FILES=	bin/dspdfviewer \
  
  .include <bsd.port.pre.mk>
--
+ 
 -# Build fails with LLVM 4.0.  Reported upstream as #191:
 -# https://github.com/dannyedel/dspdfviewer/issues/191
 -CFLAGS+=	-Wno-error=undefined-func-template
@@ -18,6 +17,9 @@
 -CFLAGS+=	-Wno-error=extra-semi-stmt
 -.endif
 -
+ # Prepare for Qt5-5.15
+ CFLAGS+=	-Wno-deprecated
+ 
 -CFLAGS+=	-Wno-error=redundant-parens
 -
  .include <bsd.port.post.mk>
