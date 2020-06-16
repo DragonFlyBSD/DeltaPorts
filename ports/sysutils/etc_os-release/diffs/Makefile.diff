@@ -1,11 +1,7 @@
---- Makefile.orig	2019-12-06 00:12:07 UTC
+--- Makefile.orig	2020-06-16 22:00:22 UTC
 +++ Makefile
-@@ -15,23 +15,24 @@
- 
- PLIST_FILES=	etc/os-release
- 
--VERSION!=	freebsd-version -u
-+VERSION!=	uname -r
+@@ -22,20 +22,21 @@ VERSION!=	uname -r
+ .endif
  VERSION_ID=	${VERSION:C/^([0-9\.]+).*/\1/}
  
 -CONTENTS=	'NAME=FreeBSD\0'$\
