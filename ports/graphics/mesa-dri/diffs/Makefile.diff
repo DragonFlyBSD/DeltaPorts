@@ -1,11 +1,29 @@
---- Makefile.orig	2019-04-26 19:51:12 UTC
+--- Makefile.orig	2020-06-13 21:00:48 UTC
 +++ Makefile
-@@ -67,6 +67,8 @@ EXTRA_PATCHES+=	${PATCHDIR}/extra-src_ga
- . endif
+@@ -46,6 +46,7 @@ ALL_VULKAN_DRIVERS=	INTEL AMD
+ DRI_DRIVERS=	SWRAST	# llvmpipe
  .endif
  
-+VULKAN_DRIVERS:=	# nothing, won't build on DF
++.if ${OPSYS} == FreeBSD
+ .if ${ARCH} == aarch64 || ${ARCH} == amd64 || ${ARCH} == i386 \
+  || ${ARCH} == powerpc || ${ARCH} == powerpc64
+ DRI_DRIVERS+=		R100 R200
+@@ -56,13 +57,17 @@ USE_XORG+=		xv xvmc
+ MESON_ARGS+=		-Dgallium-xvmc=true
+ . endif
+ .endif
++.endif
 +
- .if ${VULKAN_DRIVERS}
- BUILD_DEPENDS+=		${PYTHON_PKGNAMEPREFIX}mako>0:textproc/py-mako@${PY_FLAVOR}
- USE_XORG+=		xcb xrandr
++.if ${OPSYS} == FreeBSD
+ .if ${ARCH} == amd64 || ${ARCH} == i386
+ DRI_DRIVERS+=		I915 I965
+ GALLIUM_DRIVERS+=	SVGA
+ . if ${OPSYS} == FreeBSD
+ EXTRA_PATCHES+=	${PATCHDIR}/extra-src_mesa_drivers_dri_i965_intel__screen.c
+-. endif
+ VULKAN_DRIVERS+=	INTEL
++. endif
++.endif
+ .endif
+ 
+ .if defined(VULKAN_DRIVERS)
