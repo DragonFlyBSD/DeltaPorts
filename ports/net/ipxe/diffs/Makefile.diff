@@ -1,11 +1,11 @@
---- Makefile.orig	2020-04-16 14:53:34 UTC
+--- Makefile.orig	2020-06-16 21:52:42 UTC
 +++ Makefile
-@@ -65,7 +65,7 @@ OPTIONS_DEFAULT=	EFI ISO
- EFI_DESC=	Create EFI image
- ISO_DESC=	Create bootable CD image
+@@ -67,7 +67,7 @@ ISO_DESC=	Create bootable CD image
  
+ EFI_BUILD_DEPENDS=	bash:shells/bash \
+ 			mformat:emulators/mtools
 -_EFI_ARCHS=		${ARCH:Mamd64:S/amd64/x86_64/} i386
-+_EFI_ARCHS=	x86_64
++_EFI_ARCHS=		x86_64
+ _EFI_TARGETS=		ipxe snp snponly
  .for _arch in ${_EFI_ARCHS}
- EFI_PLIST_FILES+=	${DATADIR}/ipxe.efi-${_arch}
- .endfor
+ . for _target in ${_EFI_TARGETS}
