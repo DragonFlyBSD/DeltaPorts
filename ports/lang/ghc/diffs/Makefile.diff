@@ -1,26 +1,26 @@
---- Makefile.orig	2020-05-27 00:40:44 UTC
+--- Makefile.orig	2020-06-16 21:41:22 UTC
 +++ Makefile
-@@ -5,6 +5,7 @@ PORTNAME=	ghc
- PORTVERSION=	${GHC_VERSION}
+@@ -6,6 +6,7 @@ PORTVERSION=	${GHC_VERSION}
+ PORTREVISION=	1
  CATEGORIES=	lang haskell
  MASTER_SITES=	https://www.haskell.org/ghc/dist/${PORTVERSION}/:source \
 +		http://leaf.dragonflybsd.org/~marino/dports-src/:dflyboot \
  		LOCAL/arrowd/:boot \
  		https://hackage.haskell.org/package/hscolour-${HSCOLOUR_VERSION}/:docs
  DISTFILES=	ghc-${PORTVERSION}-src${EXTRACT_SUFX}:source \
-@@ -85,11 +86,6 @@ ONLY_FOR_ARCHS+=	aarch64 armv6 armv7 pow
- 
+@@ -87,9 +88,11 @@ ONLY_FOR_ARCHS+=	aarch64 armv6 armv7 pow
  .include <bsd.port.pre.mk>
  
--# This version of ncurses is needed by bootstrap compiler
--.if ${OSVERSION} > 1300078 && empty(PORT_OPTIONS:MBOOT) && ${ARCH} != powerpc64
--BUILD_DEPENDS+=	${LOCALBASE}/lib/compat/libncursesw.so.8:misc/compat12x
--.endif
--
- .if ${GHC_VERSION_MAJOR} == 8 && ${GHC_VERSION_MINOR} <= 4
+ # This version of ncurses is needed by bootstrap compiler
++.if ${OPSYS} == FreeBSD
+ .if ${OSVERSION} > 1300078 && empty(PORT_OPTIONS:MBOOT) && ${ARCH} != powerpc64
+ BUILD_DEPENDS+=	${LOCALBASE}/lib/compat/libncursesw.so.8:misc/compat12x
+ .endif
++.endif
+ 
+ .if ${GHC_VERSION_MAJOR} == 8 && ${GHC_VERSION_MINOR} == 4
  LLVM_VERSION=		50
- # Turn off for old GHCs, see PR 228727
-@@ -142,7 +138,7 @@ _EXECUTABLES+=	${GHC_LIBDIR}/bin/ghc-ise
+@@ -147,7 +150,7 @@ _EXECUTABLES+=	${GHC_LIBDIR}/bin/ghc-ise
  
  .include <bsd.port.options.mk>
  
@@ -29,7 +29,7 @@
  BOOTSTRAPS_SUFFIX?=		${BOOTSTRAPS_SUFFIX_${ARCH}}
  BOOTSTRAPS_SUFFIX_powerpc64?=	-${PPC_ABI:tl}
  .  if ${OSVERSION} < 1200000 && (${ARCH} == amd64 || ${ARCH} == i386)
-@@ -197,6 +193,19 @@ SLAVE_ENV=		# empty
+@@ -202,6 +205,19 @@ SLAVE_ENV=		# empty
  CONFIGURE_ARGS+=	${WITH_GHC}=${LOCALBASE}/bin/ghc
  .endif # MBOOT
  
@@ -49,7 +49,7 @@
  # override TMPDIR because /tmp often doesn't have enough space
  # to build some of the larger libraries.
  #TMPDIR=		${WRKSRC}/tmp
-@@ -233,7 +242,7 @@ post-patch:
+@@ -238,7 +254,7 @@ post-patch:
  	@${REINPLACE_CMD} -e 's/@SettingsLlcCommand@/llc${LLVM_VERSION}/' ${WRKSRC}/settings.in
  	@${REINPLACE_CMD} -e 's/@SettingsOptCommand@/opt${LLVM_VERSION}/' ${WRKSRC}/settings.in
  
