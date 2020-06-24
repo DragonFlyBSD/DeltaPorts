@@ -1,20 +1,18 @@
---- Makefile.orig	2020-06-13 21:00:48 UTC
+--- Makefile.orig	2020-06-24 17:08:07 UTC
 +++ Makefile
-@@ -46,6 +46,7 @@ ALL_VULKAN_DRIVERS=	INTEL AMD
- DRI_DRIVERS=	SWRAST	# llvmpipe
- .endif
- 
-+.if ${OPSYS} == FreeBSD
- .if ${ARCH} == aarch64 || ${ARCH} == amd64 || ${ARCH} == i386 \
+@@ -50,19 +50,22 @@ DRI_DRIVERS=	SWRAST	# llvmpipe
   || ${ARCH} == powerpc || ${ARCH} == powerpc64
  DRI_DRIVERS+=		R100 R200
-@@ -56,13 +57,17 @@ USE_XORG+=		xv xvmc
+ GALLIUM_DRIVERS+=	R300 R600 RADEONSI
++.if ${OPSYS} == FreeBSD
+ VULKAN_DRIVERS+=	AMD
++.endif
+ . if ${PORT_OPTIONS:MPLATFORM_X11}
+ USE_XORG+=		xv xvmc
  MESON_ARGS+=		-Dgallium-xvmc=true
  . endif
  .endif
-+.endif
 +
-+.if ${OPSYS} == FreeBSD
  .if ${ARCH} == amd64 || ${ARCH} == i386
  DRI_DRIVERS+=		I915 I965
  GALLIUM_DRIVERS+=	SVGA
@@ -23,7 +21,6 @@
 -. endif
  VULKAN_DRIVERS+=	INTEL
 +. endif
-+.endif
  .endif
  
  .if defined(VULKAN_DRIVERS)
