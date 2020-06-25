@@ -1,6 +1,16 @@
---- Makefile.orig	2020-06-24 17:08:07 UTC
+--- Makefile.orig	2020-06-25 01:10:44 UTC
 +++ Makefile
-@@ -50,19 +50,22 @@ DRI_DRIVERS=	SWRAST	# llvmpipe
+@@ -42,27 +42,30 @@ ALL_DRI_DRIVERS=	I915 I965 R100 R200 SWR
+ ALL_GALLIUM_DRIVERS=	R300 R600 RADEONSI SVGA SWRAST
+ ALL_VULKAN_DRIVERS=	INTEL AMD
+ 
+-.if ${ARCH} == aarch64 || ${ARCH} == amd64 || ${ARCH:Marm*} || ${ARCH} == i386 || ${ARCH:Mmips*} || ${ARCH:Mpowerpc*}
++.if ${ARCH} == aarch64 || ${ARCH} == x86_64 || ${ARCH:Marm*} || ${ARCH} == i386 || ${ARCH:Mmips*} || ${ARCH:Mpowerpc*}
+ DRI_DRIVERS=	SWRAST	# llvmpipe
+ .endif
+ 
+-.if ${ARCH} == aarch64 || ${ARCH} == amd64 || ${ARCH} == i386 \
++.if ${ARCH} == aarch64 || ${ARCH} == x86_64 || ${ARCH} == i386 \
   || ${ARCH} == powerpc || ${ARCH} == powerpc64
  DRI_DRIVERS+=		R100 R200
  GALLIUM_DRIVERS+=	R300 R600 RADEONSI
@@ -12,8 +22,9 @@
  MESON_ARGS+=		-Dgallium-xvmc=true
  . endif
  .endif
+-.if ${ARCH} == amd64 || ${ARCH} == i386
 +
- .if ${ARCH} == amd64 || ${ARCH} == i386
++.if ${ARCH} == x86_64 || ${ARCH} == i386
  DRI_DRIVERS+=		I915 I965
  GALLIUM_DRIVERS+=	SVGA
  . if ${OPSYS} == FreeBSD
@@ -24,3 +35,15 @@
  .endif
  
  .if defined(VULKAN_DRIVERS)
+@@ -95,9 +98,9 @@ MESON_ARGS+=	-Ddri-drivers="${DRI_DRIVER
+ # Disable some options
+ MESON_ARGS+=	-Dgallium-xa=false \
+ 		-Dgles1=false \
+-		-Dgles2=false \
++		-Dgles2=true \
+ 		-Dglx=disabled \
+-		-Degl=false \
++		-Degl=true \
+ 		-Dosmesa=none \
+ 		-Dtools=""
+ 
