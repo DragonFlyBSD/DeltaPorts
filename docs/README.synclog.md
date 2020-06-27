@@ -81,7 +81,7 @@ Sync round done
 ### Tasks
 - [X] `lang/rust` to be updated (1.43.1)
 
-## Sat Jun 13 17:14:49 2020 +0000
+## Sat Jun 13 17:14:49 2020 +0000 ([440656f57b29d9](https://github.com/freebsd/freebsd-ports/commit/440656f57b29d9))
 
 ## Merge rejects:
 * graphics/dspdfviewer: 1 out of 1 hunks failed--saving rejects to Makefile.rej
