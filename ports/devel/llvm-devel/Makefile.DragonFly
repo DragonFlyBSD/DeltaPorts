@@ -2,6 +2,8 @@
 MANUAL_PACKAGE_BUILD=   huge (399M packaged)
 .endif
 
+BROKEN=	error: static assertion failed: std::vector must have a non-const, non-volatile value_type
+
 # LLDB needs to be ported to dragonfly
 OPTIONS_DEFAULT:=	${OPTIONS_DEFAULT:NLLDB}
 OPTIONS_DEFAULT_x86_64:= ${OPTIONS_DEFAULT_x86_64:NCOMPILER_RT}
