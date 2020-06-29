@@ -1,9 +1,10 @@
 --- folly/ssl/OpenSSLCertUtils.cpp.orig	2020-06-11 05:04:12 UTC
 +++ folly/ssl/OpenSSLCertUtils.cpp
-@@ -21,6 +21,234 @@
+@@ -21,6 +21,236 @@
  #include <folly/String.h>
  #include <folly/ssl/OpenSSLPtrTypes.h>
  
++#if defined(LIBRESSL_VERSION_NUMBER)
 +/*
 + * https://github.com/proftpd/proftpd/commit/a3d65e868308b28c1add87
 + * We need to provide our own backport of the ASN1_TIME_diff() function.
@@ -231,6 +232,7 @@
 +
 +  return 1;
 +}
++#endif
 +
  namespace folly {
  namespace ssl {
