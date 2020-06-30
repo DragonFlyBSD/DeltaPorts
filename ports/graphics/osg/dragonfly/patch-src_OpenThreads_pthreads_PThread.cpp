@@ -5,7 +5,7 @@
  #elif defined(__linux__)
    return (size_t)::syscall(SYS_gettid);
 -#elif defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
-+#elif defined(__FreeBSD__) || defined(__FreeBSD_kernel__) && \
++#elif (defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) &&	\
 +  !defined(__DragonFly__)
    long  tid;
    syscall(SYS_thr_self, &tid);
