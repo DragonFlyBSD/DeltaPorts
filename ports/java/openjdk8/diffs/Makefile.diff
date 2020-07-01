@@ -1,20 +1,22 @@
---- Makefile.orig	2017-10-27 16:42:08 UTC
+--- Makefile.orig	2020-07-01 09:44:19 UTC
 +++ Makefile
-@@ -5,10 +5,12 @@ PORTVERSION=	${JDK_MAJOR_VERSION}.${JDK_
+@@ -3,9 +3,14 @@
+ PORTNAME=	openjdk
+ PORTVERSION=	${JDK_MAJOR_VERSION}.${JDK_UPDATE_VERSION}.${JDK_BUILD_NUMBER}.${BSD_JDK_VERSION}
  CATEGORIES=	java devel
- MASTER_SITES=	http://download.java.net/openjdk/jdk${JDK_MAJOR_VERSION}/promoted/b${DIST_BUILD_NUMBER}/:jdk \
- 		https://adopt-openjdk.ci.cloudbees.com/job/jtreg/${JTREG_JENKINS_BUILD}/artifact/:jtreg \
-+		http://dl.wolfpond.org/openjdk8/:bootstrap \
+-MASTER_SITES=	LOCAL/jkim:jtreg
++MASTER_SITES=	http://dl.wolfpond.org/openjdk8/:bootstrap \
 +		http://leaf.dragonflybsd.org/~marino/dports-src/:bootstrap \
- 		LOCAL/jkim:jdk,jtreg
++		LOCAL/jkim:jtreg 
++
  PKGNAMESUFFIX?=	${JDK_MAJOR_VERSION}
- DISTNAME=	${PORTNAME}-${JDK_MAJOR_VERSION}-src-b${DIST_BUILD_NUMBER}-03_mar_2014
--DISTFILES=	${DISTNAME}.zip:jdk
-+DISTFILES=	${DISTNAME}.zip:jdk ${BOOTSTRAP_DISTFILE}
  
- PATCH_SITES=	LOCAL/glewis/openjdk8
- PATCHFILES=	patch-8u05-b13.xz \
-@@ -183,7 +185,7 @@ SHEBANG_FILES=	configure
++DISTFILES+=	${BOOTSTRAP_DISTFILE}
++
+ MAINTAINER=	java@FreeBSD.org
+ COMMENT?=	Java Development Kit ${JDK_MAJOR_VERSION}
+ 
+@@ -33,7 +38,7 @@ GH_TAGNAME=	jdk${JDK_MAJOR_VERSION}u${JD
  _MAKE_JOBS=	#
  CPPFLAGS+=	-I${LOCALBASE}/include
  LDFLAGS+=	-L${LOCALBASE}/lib
@@ -23,7 +25,7 @@
  MAKE_ENV+=	IGNORE_OLD_CONFIG=true
  MAKE_ENV+=	COMPILER_WARNINGS_FATAL="false"
  
-@@ -194,7 +196,7 @@ JRE_IMAGEDIR=	${JDK_BUILDDIR}/images/j2s
+@@ -44,7 +49,7 @@ JRE_IMAGEDIR=	${JDK_BUILDDIR}/images/j2s
  .else
  JRE_IMAGEDIR=	${JDK_BUILDDIR}/images/j2re-image
  .endif
@@ -32,8 +34,8 @@
  JDK_OSARCH=	bsd-${ARCH:S/amd64/x86_64/:C/armv.*/arm/:S/i386/x86/:S/powerpc64/ppc64/}
  INSTALLDIR=	${PREFIX}/${PKGBASE}
  
-@@ -233,16 +235,13 @@ CONFIGURE_WRKSRC=	${WRKSRC}/common/autoc
- OPTIONS_DEFINE=		ALSA POLICY TZUPDATE X11
+@@ -84,16 +89,13 @@ CONFIGURE_WRKSRC=	${WRKSRC}/common/autoc
+ OPTIONS_DEFINE=		ALSA POLICY TZUPDATE X11 FONTCONFIG
  OPTIONS_DEFINE_armv6=	FPUHACK
  OPTIONS_DEFINE_armv7=	FPUHACK
 -OPTIONS_DEFAULT=	ALSA POLICY TZUPDATE X11
@@ -50,7 +52,7 @@
  FPUHACK_EXTRA_PATCHES=	${PATCHDIR}/fpuhack.patch
  POLICY_CONFIGURE_ENABLE=	unlimited-crypto
  TZUPDATE_RUN_DEPENDS=	java-zoneinfo>0:java/java-zoneinfo
-@@ -263,9 +262,13 @@ X11_USE=		XORG=x11,xext,xi,xrender,xt,xt
+@@ -115,9 +117,13 @@ FONTCONFIG_IMPLIES=	X11
  
  JAVAVMS_COMMENT=	OpenJDK${JDK_MAJOR_VERSION}
  
@@ -65,7 +67,7 @@
  OPTIONS_SINGLE=		BUILD
  OPTIONS_SINGLE_BUILD=	DEBUG DEBUGFAST RELEASE
  BUILD_DESC=		Select OpenJDK build type
-@@ -318,8 +321,9 @@ BOOTSTRAPJDKDIR=	${BJDK}
+@@ -170,8 +176,9 @@ BOOTSTRAPJDKDIR=	${BJDK}
  
  # if no valid jdk found, set dependency
  .if !defined(BOOTSTRAPJDKDIR)
@@ -76,8 +78,17 @@
 +MAKE_ENV+=		LD_LIBRARY_PATH="${BOOTSTRAPJDKDIR}/jre/lib/amd64"
  .endif
  
- .include <bsd.port.pre.mk>
-@@ -439,6 +443,7 @@ do-install:
+ .if ${ARCH} == armv6 || ${ARCH} == armv7 || ${ARCH} == i386
+@@ -186,7 +193,7 @@ MAKE_ENV+=	JAVADOC_CMD_MEM="-Xmx768m"
+ MAKE_ENV+=	LFLAGS="-Wl,-z,notext"
+ .endif
+ 
+-.if ${ARCH} == amd64 || ${ARCH} == i386 || ${ARCH} == powerpc64
++.if ${ARCH} == x86_64 || ${ARCH} == i386 || ${ARCH} == powerpc64
+ JDK_BUILD_JVM=	server
+ .else
+ JDK_BUILD_JVM=	zero
+@@ -280,6 +287,7 @@ do-install:
  	${FIND} bin jre/bin -type f -exec ${CHMOD} ${BINMODE} {} \; && \
  	${CHMOD} ${BINMODE} jre/${JDK_JVMDIR}/jexec \
  	    jre/${JDK_JVMDIR}/jspawnhelper ${JDK_JVMDIR}/jexec
