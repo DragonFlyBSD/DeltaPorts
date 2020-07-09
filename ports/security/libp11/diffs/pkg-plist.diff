@@ -1,0 +1,13 @@
+--- pkg-plist.orig	2020-07-09 17:27:25.352540000 +0200
++++ pkg-plist	2020-07-09 17:28:08.112676000 +0200
+@@ -4,8 +4,8 @@
+ lib/engines/pkcs11.so
+ lib/libp11.a
+ lib/libp11.so
+-lib/libp11.so.2
+-lib/libp11.so.2.5.2
++lib/libp11.so.3
++lib/libp11.so.3.4.2
+ libdata/pkgconfig/libp11.pc
+ %%PORTEXAMPLES%%%%EXAMPLESDIR%%/Makefile
+ %%PORTEXAMPLES%%%%EXAMPLESDIR%%/README
