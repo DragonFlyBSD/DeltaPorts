@@ -1,0 +1,18 @@
+--- pkg-plist.orig	2020-07-09 16:30:53.902786000 +0200
++++ pkg-plist	2020-07-09 16:31:00.382800000 +0200
+@@ -104,9 +104,9 @@
+ %%LITE%%lib/librocksdb-lite.so.%%SHLIB_VER%%
+ %%LITE%%lib/librocksdb-lite.so.%%PORTVERSION%%
+ %%LITE%%lib/librocksdb-lite_tools.a
+-lib/librocksdb.a
+-lib/librocksdb.so
+-lib/librocksdb.so.6
+-lib/librocksdb.so.%%SHLIB_VER%%
+-lib/librocksdb.so.%%PORTVERSION%%
+-lib/librocksdb_tools.a
++%%NOLITE%%lib/librocksdb.a
++%%NOLITE%%lib/librocksdb.so
++%%NOLITE%%lib/librocksdb.so.6
++%%NOLITE%%lib/librocksdb.so.%%SHLIB_VER%%
++%%NOLITE%%lib/librocksdb.so.%%PORTVERSION%%
++%%NOLITE%%lib/librocksdb_tools.a
