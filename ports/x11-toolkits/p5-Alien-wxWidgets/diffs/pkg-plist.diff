@@ -1,0 +1,8 @@
+--- pkg-plist.orig	2020-07-13 18:48:49.064348000 +0200
++++ pkg-plist	2020-07-13 18:49:11.734411000 +0200
+@@ -1,5 +1,4 @@
+ %%SITE_ARCH%%/Alien/wxWidgets.pm
+-%%SITE_ARCH%%/Alien/wxWidgets/Config/gtk_3_0_5_uni_gcc_3_4.pm
+ %%SITE_ARCH%%/Alien/wxWidgets/Utility.pm
+ %%PERL5_MAN3%%/Alien::wxWidgets.3.gz
+ %%PERL5_MAN3%%/Alien::wxWidgets::Utility.3.gz

@@ -1,0 +1,20 @@
+--- Makefile.orig	2020-07-13 18:48:12.854268000 +0200
++++ Makefile	2020-07-13 18:48:32.514324000 +0200
+@@ -14,7 +14,7 @@
+ LICENSE=	ART10 GPLv1+
+ LICENSE_COMB=	dual
+ 
+-BUILD_DEPENDS=	${RUN_DEPENDS}
++BUILD_DEPENDS=	${RUN_DEPENDS} p5-LWP-Protocol-https>=6.07:www/p5-LWP-Protocol-https
+ RUN_DEPENDS=	p5-Module-Pluggable>=5.1:devel/p5-Module-Pluggable
+ 
+ NO_ARCH=	yes
+@@ -31,7 +31,7 @@
+ 
+ post-install:
+ 	# file name is function of wx version, add it dynamically
+-	@(cd ${STAGEDIR}${PREFIX}; ${FIND} * -type f -name gtk2_\* -print \
++	@(cd ${STAGEDIR}${PREFIX}; ${FIND} * -type f -name gtk_\* -print \
+ 		>> ${TMPPLIST})
+ 
+ .include <bsd.port.mk>
