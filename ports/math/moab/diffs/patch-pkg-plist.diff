@@ -1,0 +1,11 @@
+--- pkg-plist.orig	2020-07-10 15:22:54.381919000 +0200
++++ pkg-plist	2020-07-10 15:22:37.991869000 +0200
+@@ -76,7 +76,7 @@
+ include/moab/NestedRefineTemplates.hpp
+ include/moab/OrientedBox.hpp
+ include/moab/OrientedBoxTreeTool.hpp
+-include/moab/ParCommGraph.hpp
++%%MPI%%include/moab/ParCommGraph.hpp
+ %%MPI%%include/moab/ParallelComm.hpp
+ %%MPI%%include/moab/ParallelData.hpp
+ %%MPI%%include/moab/ParallelMergeMesh.hpp
