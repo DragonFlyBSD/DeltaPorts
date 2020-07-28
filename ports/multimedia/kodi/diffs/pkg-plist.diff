@@ -1,43 +1,21 @@
---- pkg-plist.orig	2019-02-02 19:31:42.853723000 +0100
-+++ pkg-plist	2019-02-02 19:31:37.000000000 +0100
-@@ -54,20 +54,20 @@ lib/kodi/Macros.cmake
- lib/kodi/PrepareEnv.cmake
- lib/kodi/ProjectMacros.cmake
- lib/kodi/Uninstall.cmake
--lib/kodi/addons/library.kodi.adsp/libKODI_adsp-%%ARCH%%-freebsd.so
--lib/kodi/addons/library.kodi.audioengine/libKODI_audioengine-%%ARCH%%-freebsd.so
--lib/kodi/addons/library.kodi.guilib/libKODI_guilib-%%ARCH%%-freebsd.so
--lib/kodi/addons/library.kodi.inputstream/libKODI_inputstream-%%ARCH%%-freebsd.so
--lib/kodi/addons/library.kodi.peripheral/libKODI_peripheral-%%ARCH%%-freebsd.so
--lib/kodi/addons/library.xbmc.addon/libXBMC_addon-%%ARCH%%-freebsd.so
--lib/kodi/addons/library.xbmc.codec/libXBMC_codec-%%ARCH%%-freebsd.so
--lib/kodi/addons/library.xbmc.pvr/libXBMC_pvr-%%ARCH%%-freebsd.so
-+lib/kodi/addons/library.kodi.adsp/libKODI_adsp-%%ARCH%%-dragonfly.so
-+lib/kodi/addons/library.kodi.audioengine/libKODI_audioengine-%%ARCH%%-dragonfly.so
-+lib/kodi/addons/library.kodi.guilib/libKODI_guilib-%%ARCH%%-dragonfly.so
-+lib/kodi/addons/library.kodi.inputstream/libKODI_inputstream-%%ARCH%%-dragonfly.so
-+lib/kodi/addons/library.kodi.peripheral/libKODI_peripheral-%%ARCH%%-dragonfly.so
-+lib/kodi/addons/library.xbmc.addon/libXBMC_addon-%%ARCH%%-dragonfly.so
-+lib/kodi/addons/library.xbmc.codec/libXBMC_codec-%%ARCH%%-dragonfly.so
-+lib/kodi/addons/library.xbmc.pvr/libXBMC_pvr-%%ARCH%%-dragonfly.so
- lib/kodi/kodi.bin
- %%X86%%lib/kodi/kodi-xrandr
--lib/kodi/system/libcpluff-%%ARCH%%-freebsd.so
--lib/kodi/system/libexif-%%ARCH%%-freebsd.so
--lib/kodi/system/players/VideoPlayer/libdvdcss-%%ARCH%%-freebsd.so
+--- pkg-plist.orig	2020-07-28 22:57:53 UTC
++++ pkg-plist
+@@ -70,8 +70,8 @@ include/kodi/xbmc_pvr_types.h
+ %%WAYLAND%%lib/kodi/kodi-wayland
+ %%X11%%lib/kodi/kodi-x11
+ %%X11%%lib/kodi/kodi-xrandr
+-%%SSE4_1%%lib/kodi/system/libsse4-%%ARCH%%-freebsd.so
 -lib/kodi/system/players/VideoPlayer/libdvdnav-%%ARCH%%-freebsd.so
-+lib/kodi/system/libcpluff-%%ARCH%%-dragonfly.so
-+lib/kodi/system/libexif-%%ARCH%%-dragonfly.so
-+lib/kodi/system/players/VideoPlayer/libdvdcss-%%ARCH%%-dragonfly.so
++%%SSE4_1%%lib/kodi/system/libsse4-%%ARCH%%-dragonfly.so
 +lib/kodi/system/players/VideoPlayer/libdvdnav-%%ARCH%%-dragonfly.so
- lib/xbmc
  man/man1/kodi.1.gz
  man/man1/kodi.bin.1.gz
-@@ -2423,6 +2423,7 @@ share/icons/hicolor/64x64/apps/kodi.png
+ share/applications/kodi.desktop
+@@ -1343,6 +1343,7 @@ share/icons/hicolor/64x64/apps/kodi.png
  %%DATADIR%%/system/settings/darwin.xml
  %%DATADIR%%/system/settings/darwin_ios.xml
  %%DATADIR%%/system/settings/darwin_osx.xml
 +%%DATADIR%%/system/settings/dragonfly.xml
  %%DATADIR%%/system/settings/freebsd.xml
- %%DATADIR%%/system/settings/imx6.xml
+ %%DATADIR%%/system/settings/gbm.xml
  %%DATADIR%%/system/settings/linux.xml
