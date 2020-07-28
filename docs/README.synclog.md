@@ -100,10 +100,7 @@ Sync round done
 
 ### Tasks
 - [X] `lang/rust` to be updated (1.44.0)
-- [ ] `java/openjdk8` to be updated (8.252.09)
 - [X] `www/chromium` to be updated (83.0.4103.97)
-- [ ] `science/py-GPy` was synced but its _BUILD_DEPENDS_ contains _${LOCALBASE}/lib/libomp.so:devel/openmp_ which our sync scripts mangled and only left _${LOCALBASE}/lib_. Needs investigation.
-- [ ] Mesa update to update to 20.0.4 **1)NOT YET** **2)Mesa-19 already in ports**
 
 ## Tue Jul 28 19:46:27 2020 +0000 ([bb235a4af795f5](https://github.com/freebsd/freebsd-ports/commit/bb235a4af795f5))
 
