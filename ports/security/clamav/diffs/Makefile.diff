@@ -1,14 +1,13 @@
---- Makefile.orig	2016-02-22 17:23:17 UTC
+--- Makefile.orig	2020-07-28 23:01:28 UTC
 +++ Makefile
-@@ -82,10 +82,7 @@ CONFIGURE_ARGS=	--libdir=${PREFIX}/lib \
- 		--disable-dependency-tracking \
- 		--enable-clamdtop
- CPPFLAGS+=	-I${LOCALBASE}/include
--
+@@ -40,10 +40,6 @@ CONFIGURE_ARGS=	--disable-dependency-tra
+ 
+ CFLAGS_i386=	-march=i486
+ 
 -# This port has a problem with -pthread,
 -# force to use -lthr until it's not fixed.
--LDFLAGS+=	-lthr -L${LOCALBASE}/lib
-+LDFLAGS+=	-L${LOCALBASE}/lib
- 
- CONFLICTS?=	clamav-milter-[0-9]*
- 
+-LDFLAGS+=	-lthr
+-
+ SUB_FILES=	pkg-deinstall
+ SUB_LIST+=	DBDIR=${DBDIR} \
+ 		LOGDIR=${LOGDIR} \
