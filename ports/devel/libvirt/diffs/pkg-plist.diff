@@ -1,4 +1,4 @@
---- pkg-plist.orig	2020-04-11 00:39:16 UTC
+--- pkg-plist.orig	2020-07-28 22:39:56 UTC
 +++ pkg-plist
 @@ -3,19 +3,21 @@ bin/virt-admin
  bin/virt-host-validate
@@ -49,7 +49,7 @@
  %%BHYVE%%share/augeas/lenses/tests/test_libvirtd_bhyve.aug
  %%QEMU%%share/augeas/lenses/tests/test_libvirtd_qemu.aug
  %%XEN%%share/augeas/lenses/libvirtd_libxl.aug
-@@ -326,9 +328,10 @@ share/augeas/lenses/virtvboxd.aug
+@@ -277,9 +279,10 @@ share/augeas/lenses/virtvboxd.aug
  lib/libvirt/connection-driver/libvirt_driver_network.so
  lib/libvirt/connection-driver/libvirt_driver_secret.so
  lib/libvirt/connection-driver/libvirt_driver_storage.so
