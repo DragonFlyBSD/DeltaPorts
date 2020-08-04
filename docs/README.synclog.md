@@ -122,6 +122,8 @@ Sync round done
 * security/clamav: 1 out of 1 hunks failed--saving rejects to Makefile.rej
 
 ### Tasks
+- [ ] `audio/libmysofa` should use base compiler (mpfr, gmp updates to be checked)
+- [ ] `graphics/exiv2` should use base compiler (mpfr, gmp updates to be checked)
 - [ ] `lang/rust` to be updated (1.45.0)
 - [ ] `java/openjdk8` to be updated (8.252.09)
 - [ ] `science/py-GPy` was synced but its _BUILD_DEPENDS_ contains _${LOCALBASE}/lib/libomp.so:devel/openmp_ which our sync scripts mangled and only left _${LOCALBASE}/lib_. Needs investigation.
