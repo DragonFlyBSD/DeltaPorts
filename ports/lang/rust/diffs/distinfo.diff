@@ -1,15 +1,15 @@
---- distinfo.orig	2020-08-07 01:36:42 UTC
+--- distinfo.orig	2020-08-07 11:23:15 UTC
 +++ distinfo
 @@ -21,6 +21,12 @@ SHA256 (rust/2020-06-18/cargo-0.45.1-arm
  SIZE (rust/2020-06-18/cargo-0.45.1-armv6-unknown-freebsd.tar.xz) = 4059848
  SHA256 (rust/2020-06-18/rustc-1.44.1-armv7-unknown-freebsd.tar.xz) = 2f7caecbbb87c9b2c289b86705b335ba7c72b69a49e34b373748949795ba3c96
  SIZE (rust/2020-06-18/rustc-1.44.1-armv7-unknown-freebsd.tar.xz) = 29000984
-+SHA256 (rust/2020-06-18/rustc-1.44.0-x86_64-unknown-dragonfly.tar.xz) = e534c3c7f0312936be07ed9e4f155de3af190a2dc6e4ac4faafa9213e396ec05
-+SIZE (rust/2020-06-18/rustc-1.44.0-x86_64-unknown-dragonfly.tar.xz) = 37103376
-+SHA256 (rust/2020-06-18/rust-std-1.44.0-x86_64-unknown-dragonfly.tar.xz) = 2deb865c53a957b8d1334a9bb4d3c0df3e42d72fb743343fcf854cbbefc5cc38
-+SIZE (rust/2020-06-18/rust-std-1.44.0-x86_64-unknown-dragonfly.tar.xz) = 14460284
-+SHA256 (rust/2020-06-18/cargo-0.45.0-x86_64-unknown-dragonfly.tar.xz) = 1a1a562781f6ce1a8a7444dcd08d2c7b2ea377e6a38fb7a2c394ae06d5e278e4
-+SIZE (rust/2020-06-18/cargo-0.45.0-x86_64-unknown-dragonfly.tar.xz) = 4743752
++SHA256 (rust/2020-06-18/rustc-1.44.1-x86_64-unknown-dragonfly.tar.xz) = e4b6e6fce5700d1ba5bd5edb577ef91a1d8cacfc792d983c37e5152549239e35
++SIZE (rust/2020-06-18/rustc-1.44.1-x86_64-unknown-dragonfly.tar.xz) = 37113704
++SHA256 (rust/2020-06-18/rust-std-1.44.1-x86_64-unknown-dragonfly.tar.xz) = 0ae5b802794f6ebb8e3d2123faf11a221a750c1974605f03d628832700f57c0e
++SIZE (rust/2020-06-18/rust-std-1.44.1-x86_64-unknown-dragonfly.tar.xz) = 14443048
++SHA256 (rust/2020-06-18/cargo-0.45.1-x86_64-unknown-dragonfly.tar.xz) = d0da1887682c6a32aec53b75424aedac32d9cf6e1d520d2b644d134aa0744c49
++SIZE (rust/2020-06-18/cargo-0.45.1-x86_64-unknown-dragonfly.tar.xz) = 4742312
  SHA256 (rust/2020-06-18/rust-std-1.44.1-armv7-unknown-freebsd.tar.xz) = 8d1de65d63e7669c6058d597aefa99077078f3827dc523c82985d11a55d6ef1e
  SIZE (rust/2020-06-18/rust-std-1.44.1-armv7-unknown-freebsd.tar.xz) = 13878980
  SHA256 (rust/2020-06-18/cargo-0.45.1-armv7-unknown-freebsd.tar.xz) = 89af922e6a33432b0f8a1d569528cc482d6e255e5f5a621feda9aea90f727ab2
