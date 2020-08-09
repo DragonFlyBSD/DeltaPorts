@@ -1,0 +1,19 @@
+--- Makefile.orig	2020-08-09 16:06:29.818837000 +0200
++++ Makefile	2020-08-09 16:10:20.619857000 +0200
+@@ -25,7 +25,7 @@
+ INSTALL_TARGET=	install-strip
+ 
+ PLIST_FILES=	bin/RSA_SecurID_getpasswd \
+-		lib/pcsc/drivers/ifd-ccid.bundle/Contents/FreeBSD/libccid.so \
++		lib/pcsc/drivers/ifd-ccid.bundle/Contents/DragonFly/libccid.so \
+ 		lib/pcsc/drivers/ifd-ccid.bundle/Contents/Info.plist \
+ 		man/man1/RSA_SecurID_getpasswd.1.gz
+ 
+@@ -34,6 +34,6 @@
+ 		${STAGEDIR}${PREFIX}/bin
+ 	${INSTALL_MAN} ${WRKSRC}/contrib/RSA_SecurID/RSA_SecurID_getpasswd.1 \
+ 		${STAGEDIR}${MANPREFIX}/man/man1
+-	${STRIP_CMD} ${STAGEDIR}${PREFIX}/lib/pcsc/drivers/ifd-ccid.bundle/Contents/FreeBSD/libccid.so
++	${STRIP_CMD} ${STAGEDIR}${PREFIX}/lib/pcsc/drivers/ifd-ccid.bundle/Contents/DragonFly/libccid.so
+ 
+ .include <bsd.port.mk>
