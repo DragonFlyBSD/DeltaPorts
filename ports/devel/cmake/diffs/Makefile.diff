@@ -1,0 +1,6 @@
+Use internal json to avoid dep on meson too.
+
+--- Makefile.orig	2020-08-13 13:38:15 UTC
++++ Makefile
+@@ -20 +19,0 @@
+-		libjsoncpp.so:devel/jsoncpp \
