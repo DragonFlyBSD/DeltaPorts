@@ -1,0 +1,7 @@
+Change default path (we do not use this .bin tho).
+
+--- pkg-plist.orig	2020-08-13 10:38:53 UTC
++++ pkg-plist
+@@ -192 +192 @@
+-/boot/firmware/intel-ucode.bin
++/boot/modules.local/intel-ucode.bin
