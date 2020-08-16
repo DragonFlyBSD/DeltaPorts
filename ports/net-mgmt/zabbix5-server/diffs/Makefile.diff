@@ -1,0 +1,12 @@
+Also not compatible still with LibreSSL
+
+--- Makefile.orig	2020-08-13 10:38:37 UTC
++++ Makefile
+@@ -14,6 +14,7 @@ COMMENT=	Enterprise-class open source di
+ 
+ LICENSE=	GPLv2+
+ LICENSE_FILE=	${WRKSRC}/COPYING
++BROKEN=		needs porting on dragonfly
+ 
+ LIB_DEPENDS=	libpcre.so:devel/pcre
+ 
