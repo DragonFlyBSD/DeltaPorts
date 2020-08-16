@@ -1,0 +1,7 @@
+Just to prevent few warnings in chroot.
+
+--- Makefile.orig	2020-08-13 10:37:45 UTC
++++ Makefile
+@@ -35 +35 @@ CC_PROGRAMS_PATH!=${CC} -print-search-di
+-CC_DIR!=dirname `which ${CC}`
++CC_DIR!=dirname `which ${CC} || echo "/usr/bin/cc"`
