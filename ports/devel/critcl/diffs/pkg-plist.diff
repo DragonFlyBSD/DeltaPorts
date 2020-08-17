@@ -1,11 +1,8 @@
---- pkg-plist.orig	2017-10-07 00:56:53 UTC
+--- pkg-plist.orig	2020-08-13 10:37:48 UTC
 +++ pkg-plist
-@@ -97,7 +97,7 @@ lib/critcl%%VER%%/critcl_c/tkstubs_nocon
- lib/critcl%%VER%%/license.terms
- lib/critcl%%VER%%/pkgIndex.tcl
- lib/critcl_md5c0.12/critcl-rt.tcl
+@@ -103 +103 @@
+-lib/critcl_callback1/freebsd-%%ARCH%%/callback.so
++lib/critcl_callback1/dragonfly-%%ARCH%%/callback.so
+@@ -108 +108 @@
 -lib/critcl_md5c0.12/freebsd-%%ARCH%%/md5c.so
 +lib/critcl_md5c0.12/dragonfly-%%ARCH%%/md5c.so
- lib/critcl_md5c0.12/license.terms
- lib/critcl_md5c0.12/pkgIndex.tcl
- lib/critcl_md5c0.12/teapot.txt
