@@ -1,0 +1,8 @@
+--- Makefile.orig	2020-08-13 10:38:27.000000000 +0000
++++ Makefile
+@@ -28,3 +28,5 @@
+ 
++.if !defined(DPORTS_BUILDER)
+ MANUAL_PACKAGE_BUILD=	Optimizes for the local machine
++.endif
+ 
