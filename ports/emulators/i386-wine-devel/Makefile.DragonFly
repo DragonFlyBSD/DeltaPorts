@@ -1,0 +1,1 @@
+IGNORE=	has never built on DragonFly, block to avoid wasting CPU cycles
