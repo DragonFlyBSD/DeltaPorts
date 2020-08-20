@@ -1,4 +1,6 @@
 
+# zrj: when making bootstrap compile w/o DINAMIC (libffi) and --with-intree-gmp
+
 # this needs to be updated, but current available bootstrap is good enough.
 .if defined(BOOTSTRAP_GENERATING_DFLY)
 BSPKGLOC?=	undefined
