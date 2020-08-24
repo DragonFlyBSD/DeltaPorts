@@ -1,17 +1,16 @@
---- xbmc/utils/posix/PosixInterfaceForCLog.cpp.orig	2018-08-04 19:33:56.210031000 +0200
-+++ xbmc/utils/posix/PosixInterfaceForCLog.cpp	2018-08-04 19:40:14.508228000 +0200
-@@ -29,7 +29,9 @@
+--- xbmc/platform/posix/utils/PosixInterfaceForCLog.cpp.orig	2020-05-31 13:31:35 UTC
++++ xbmc/platform/posix/utils/PosixInterfaceForCLog.cpp
+@@ -17,7 +17,8 @@
  #include "platform/android/activity/XBMCApp.h"
  #endif // TARGET_ANDROID
  
 -struct FILEWRAP : public FILE
 +typedef struct __FILE_public FILE_MEH;
-+
 +struct FILEWRAP : public FILE_MEH
  {};
  
  
-@@ -40,7 +42,7 @@ CPosixInterfaceForCLog::CPosixInterfaceF
+@@ -28,7 +29,7 @@ CPosixInterfaceForCLog::CPosixInterfaceF
  CPosixInterfaceForCLog::~CPosixInterfaceForCLog()
  {
    if (m_file)
@@ -20,7 +19,7 @@
    m_file = NULL;
  }
  
-@@ -57,7 +59,7 @@ bool CPosixInterfaceForCLog::OpenLogFile
+@@ -45,7 +46,7 @@ bool CPosixInterfaceForCLog::OpenLogFile
      return false; // error, can't open log file
  
    static const unsigned char BOM[3] = { 0xEF, 0xBB, 0xBF };
@@ -29,7 +28,7 @@
  
    return true;
  }
-@@ -66,7 +68,7 @@ void CPosixInterfaceForCLog::CloseLogFil
+@@ -54,7 +55,7 @@ void CPosixInterfaceForCLog::CloseLogFil
  {
    if (m_file)
    {
@@ -38,7 +37,7 @@
      m_file = NULL;
    }
  }
-@@ -76,9 +78,9 @@ bool CPosixInterfaceForCLog::WriteString
+@@ -64,9 +65,9 @@ bool CPosixInterfaceForCLog::WriteString
    if (!m_file)
      return false;
  
