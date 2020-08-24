@@ -1,2 +1,2 @@
 
-BROKEN= assumes VTK is compiled with MPI support
+USES+=	localbase:ldflags
