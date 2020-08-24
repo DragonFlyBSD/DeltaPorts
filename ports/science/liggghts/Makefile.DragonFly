@@ -1,0 +1,2 @@
+
+BROKEN= assumes VTK is compiled with MPI support
