@@ -1,0 +1,28 @@
+Exclude bsd.doc.mk
+
+--- Makefile.orig	2020-08-13 10:38:52 UTC
++++ Makefile
+@@ -16,7 +16,6 @@
+ 
+ USES=		tar:bzip2
+ NO_WRKSUBDIR=	yes
+-PORTDOCS=	paper.ascii.gz
+ 
+ OPTIONS_DEFINE=	DOCS
+ 
+@@ -24,15 +23,9 @@
+ 	cd ${WRKSRC} ; co RCS/*,v; chmod u+w *
+ 	cd ${WRKSRC}/USD.doc ; co RCS/*,v
+ 
+-post-build:
+-	cd ${WRKSRC}/USD.doc ; ${MAKE}
+-
+ do-install:
+ 	${INSTALL_PROGRAM} ${WRKSRC}/csh ${STAGEDIR}${PREFIX}/bin/44bsd-csh
+ 	${INSTALL_MAN} ${WRKSRC}/csh.1 ${STAGEDIR}${PREFIX}/man/man1/44bsd-csh.1
+-	@${MKDIR} ${STAGEDIR}${DOCSDIR}
+-	${INSTALL_DATA} ${WRKSRC}/USD.doc/paper.ascii.gz ${STAGEDIR}${DOCSDIR}
+-
+ tarup:
+ 	cd ${WRKSRC} ; rm * USD.doc/*
+ 	cd ${WRKSRC} ; ${TAR} cvyf /tmp/${PORTNAME}-${PORTVERSION}${EXTRACT_SUFX}
