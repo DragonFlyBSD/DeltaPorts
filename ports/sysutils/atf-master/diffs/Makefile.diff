@@ -1,16 +1,15 @@
-Just to oassthru to dports/staged
+Just to passthru to dports/staged
 
 --- Makefile.orig	2020-08-13 10:38:52 UTC
 +++ Makefile
-@@ -32,6 +32,11 @@ DESCR?=		${.CURDIR}/pkg-descr
- 
- NO_ARCH=	yes
- 
-+.if defined(DPORTS_BUILDER)
-+PLAT?=	rk3328
-+BL31?=	bl31/bl31.elf
-+.endif
-+
+@@ -35,4 +35,10 @@
  .if !defined(PLAT)
++. if defined(DPORTS_BUILDER)
++PKGNAMESUFFIX=-master
++PLAT=	rk3328
++BL31=	bl31/bl31.elf
++. else
  PLAT=		NONE
  IGNORE=		is a metaport; there is nothing to build
++. endif
+ .endif
