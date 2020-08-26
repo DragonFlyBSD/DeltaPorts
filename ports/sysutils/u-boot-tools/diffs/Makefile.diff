@@ -1,0 +1,7 @@
+LibreSSL is fine now.
+
+--- Makefile.orig	2020-08-13 10:38:58 UTC
++++ Makefile
+@@ -16,2 +15,0 @@
+-BROKEN_SSL=	libressl
+-BROKEN_SSL_REASON_libressl=	not supported by the upstream
