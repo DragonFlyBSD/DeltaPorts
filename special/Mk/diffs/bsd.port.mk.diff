@@ -228,6 +228,15 @@
  .endif
  
  .if defined(LLD_UNSAFE) && ${/usr/bin/ld:L:tA} == /usr/bin/ld.lld
+@@ -1871,7 +1890,7 @@ USE_BINUTILS=	yes
+ .endif
+ 
+ .if defined(USE_BINUTILS) && !defined(DISABLE_BINUTILS)
+-BUILD_DEPENDS+=	${LOCALBASE}/bin/as:devel/binutils
++BUILD_DEPENDS+=	${LOCALBASE}/bin/as:devel/binutils@native
+ BINUTILS?=	ADDR2LINE AR AS CPPFILT GPROF LD NM OBJCOPY OBJDUMP RANLIB \
+ 	READELF SIZE STRINGS
+ BINUTILS_NO_MAKE_ENV?=
 @@ -2050,8 +2069,10 @@ DISTINFO_FILE?=		${MASTERDIR}/distinfo
  MAKE_FLAGS?=	-f
  MAKEFILE?=		Makefile
