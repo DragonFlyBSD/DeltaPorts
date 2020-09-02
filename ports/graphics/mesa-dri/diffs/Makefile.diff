@@ -1,42 +1,25 @@
---- Makefile.orig	2020-07-28 22:45:46 UTC
+Avoid conflicts on remerge.
+Only provide mesa-classic drivers here for DragonFly.
+
+--- Makefile.orig	2020-08-13 10:38:14 UTC
 +++ Makefile
-@@ -42,29 +42,31 @@ ALL_DRI_DRIVERS=	I915 I965 R100 R200 SWR
- ALL_GALLIUM_DRIVERS=	R300 R600 RADEONSI SVGA SWRAST
- ALL_VULKAN_DRIVERS=	INTEL AMD
- 
--.if ${ARCH} == aarch64 || ${ARCH} == amd64 || ${ARCH} == i386 || ${ARCH} == powerpc64
-+.if ${ARCH} == aarch64 || ${ARCH} == x86_64 || ${ARCH} == i386 || ${ARCH} == powerpc64
- GALLIUM_DRIVERS+=	SWRAST	# llvmpipe
- .elif ${ARCH:Marm*} || ${ARCH:Mmips*} || ${ARCH:Mpowerpc*}
- DRI_DRIVERS+=		SWRAST # Mesa Classic swrast
+@@ -89,6 +89,15 @@ MESA_PLATFORMS+=	surfaceless
+ MESA_PLATFORMS+=	wayland
  .endif
  
--.if ${ARCH} == aarch64 || ${ARCH} == amd64 || ${ARCH} == i386 \
-+.if ${ARCH} == aarch64 || ${ARCH} == x86_64 || ${ARCH} == i386 \
-  || ${ARCH} == powerpc || ${ARCH} == powerpc64
- DRI_DRIVERS+=		R100 R200
- GALLIUM_DRIVERS+=	R300 R600 RADEONSI
-+.if ${OPSYS} == FreeBSD
- VULKAN_DRIVERS+=	AMD
++# gallium drivers are installed separately in graphics/mesa-gallium port
++.if ${OPSYS} == DragonFly
++OPTIONS_EXCLUDE:=	VAAPI VDPAU
++DRI_DRIVERS:=		R100 R200 I915 I965 SWRAST
++GALLIUM_DRIVERS:=
++VULKAN_DRIVERS:=
++MESON_ARGS+=		-Dgallium-xvmc=false -Dgallium-xa=false -Dgallium-va=false -Dgallium-vdpau=false
 +.endif
- . if ${PORT_OPTIONS:MPLATFORM_X11}
- USE_XORG+=		xv xvmc
- MESON_ARGS+=		-Dgallium-xvmc=true
- . endif
- .endif
--.if ${ARCH} == amd64 || ${ARCH} == i386
-+.if ${ARCH} == x86_64 || ${ARCH} == i386
- DRI_DRIVERS+=		I915 I965
- GALLIUM_DRIVERS+=	SVGA
- . if ${OPSYS} == FreeBSD
- EXTRA_PATCHES+=	${PATCHDIR}/extra-src_mesa_drivers_dri_i965_intel__screen.c
--. endif
- VULKAN_DRIVERS+=	INTEL
-+. endif
- .endif
- 
- .if defined(VULKAN_DRIVERS)
-@@ -97,9 +99,9 @@ MESON_ARGS+=	-Ddri-drivers="${DRI_DRIVER
++
+ MESON_ARGS+=	-Ddri-drivers="${DRI_DRIVERS:ts,:tl}" \
+ 			-Dgallium-drivers="${GALLIUM_DRIVERS:ts,:tl}" \
+ 			-Dvulkan-drivers="${VULKAN_DRIVERS:ts,:tl}" \
+@@ -97,9 +106,9 @@ MESON_ARGS+=	-Ddri-drivers="${DRI_DRIVER
  # Disable some options
  MESON_ARGS+=	-Dgallium-xa=false \
  		-Dgles1=false \
