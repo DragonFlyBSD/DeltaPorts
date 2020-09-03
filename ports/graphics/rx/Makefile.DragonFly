@@ -1,1 +1,1 @@
-USES:= ${USES:S/cargo/cargo:extra/}
+USES:= ${USES:S/cargo/cargo:extra/} gmake
