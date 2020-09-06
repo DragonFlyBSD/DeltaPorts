@@ -1,4 +1,0 @@
---- pkg-plist.orig	2020-08-13 10:38:50 UTC
-+++ pkg-plist
-@@ -1 +0,0 @@
--etc/rc.d/rubywarden-api
