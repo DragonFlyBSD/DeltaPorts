@@ -1,6 +1,6 @@
---- Makefile.orig	2019-10-27 17:09:32 UTC
+--- Makefile.orig	2020-09-06 23:12:43 UTC
 +++ Makefile
-@@ -44,15 +44,18 @@ post-install:
+@@ -45,15 +45,18 @@ post-install:
  CPPFLAGS+=		-I${OPENSSLINC}
  LDFLAGS+=		-L${OPENSSLLIB}
  .else # SSL_DEFAULT
@@ -17,7 +17,7 @@
 -# are owned by root, which creates problems of its own.
 -pre-configure:
 -	@cd `${MAKE} -V STAGEDIR -C ${PORTSDIR}/security/libressl`${PREFIX} \
--	    && ${FIND} -E . ! -name *.so\* | ${CPIO} -dump ${WRKDIR}/libressl >/dev/null 2>&1
+-	    && ${FIND} . ! -name *.so\* | ${CPIO} -dump ${WRKDIR}/libressl >/dev/null 2>&1
 +dfly-patch:
 +	${REINPLACE_CMD} -e '/LIBS=/s@-l$$ac_lib -lssl@-ltls -lssl@g' \
 +			 -e 's@-ltls@${LOCALBASE}/libressl-static/lib/libtls.a@g' \
