@@ -83,7 +83,7 @@ Sync round done
 
 ## Sat Jun 13 17:14:49 2020 +0000 ([440656f57b29d9](https://github.com/freebsd/freebsd-ports/commit/440656f57b29d9))
 
-## Merge rejects:
+### Merge rejects:
 * graphics/dspdfviewer: 1 out of 1 hunks failed--saving rejects to Makefile.rej
 * rm: /tmp/merge.workarea/files/patch-configure: No such file or directory
 * graphics/mesa-dri: 1 out of 1 hunks failed--saving rejects to Makefile.rej
@@ -104,7 +104,7 @@ Sync round done
 
 ## Tue Jul 28 19:46:27 2020 +0000 ([bb235a4af795f5](https://github.com/freebsd/freebsd-ports/commit/bb235a4af795f5))
 
-## Merge rejects:
+### Merge rejects:
 * deskutils/calibre: 1 out of 1 hunks failed--saving rejects to pkg-plist.rej
 * devel/aarch64-none-elf-gcc: 3 out of 3 hunks failed--saving rejects to pkg-plist.rej
 * devel/arm-none-eabi-gcc: 3 out of 3 hunks failed--saving rejects to pkg-plist.rej
@@ -122,9 +122,30 @@ Sync round done
 * security/clamav: 1 out of 1 hunks failed--saving rejects to Makefile.rej
 
 ### Tasks
-- [ ] `audio/libmysofa` should use base compiler (mpfr, gmp updates to be checked)
-- [ ] `graphics/exiv2` should use base compiler (mpfr, gmp updates to be checked)
-- [ ] `lang/rust` to be updated (1.45.0)
+- [X] `audio/libmysofa` fixed by not using gcov libraries.
+- [X] `graphics/exiv2` fixed by removing the -fcf-protection flag.
+- [X] `lang/rust` to be updated (1.45.0)
+
+
+## Sun Sep 6 20:03:11 2020 +0000 ([af6c10df9fd1](https://github.com/freebsd/freebsd-ports/commit/af6c10df9fd1))
+
+### Merge rejects:
+
+* biology/bcftools: 1 out of 1 hunks failed--saving rejects to Makefile.rej
+* devel/libvirt: 1 out of 4 hunks failed--saving rejects to pkg-plist.rej
+* editors/xcoral: 1 out of 1 hunks failed--saving rejects to Makefile.rej
+* games/scummvm-tools: 1 out of 1 hunks failed--saving rejects to Makefile.rej
+* graphics/jbig2dec: 1 out of 2 hunks failed--saving rejects to Makefile.rej
+* irc/ircd-hybrid: 1 out of 1 hunks failed--saving rejects to pkg-plist.rej
+* lang/ghc: 1 out of 1 hunks failed--saving rejects to distinfo.rej
+* lang/ghc: 1 out of 5 hunks failed--saving rejects to Makefile.rej
+* lang/rust: 1 out of 1 hunks failed--saving rejects to distinfo.rej
+* rm: /tmp/merge.workarea/files/patch-CMakeLists.txt: No such file or directory
+* net/openntpd: 1 out of 1 hunks failed--saving rejects to Makefile.rej
+* security/ruby-bitwarden: 1 out of 1 hunks failed--saving rejects to pkg-plist.rej
+
+
+### Tasks
 - [ ] `java/openjdk8` to be updated (8.252.09)
 - [ ] `science/py-GPy` was synced but its _BUILD_DEPENDS_ contains _${LOCALBASE}/lib/libomp.so:devel/openmp_ which our sync scripts mangled and only left _${LOCALBASE}/lib_. Needs investigation.
 - [ ] Mesa update to update to 20.0.4 **1)NOT YET** **2)Mesa-19 already in ports**
