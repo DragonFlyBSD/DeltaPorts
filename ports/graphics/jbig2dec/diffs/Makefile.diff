@@ -1,16 +1,16 @@
---- Makefile.orig	2018-10-11 20:13:07 UTC
+--- Makefile.orig	2020-09-06 22:54:42 UTC
 +++ Makefile
-@@ -20,6 +20,9 @@ GNU_CONFIGURE=	yes
- INSTALL_TARGET=	install-strip
- USE_LDCONFIG=	yes
- USES=		autoreconf:build libtool
+@@ -17,6 +17,9 @@ OPTIONS_DEFAULT=PNG
+ TESTS_DESC=	Download and use test-images for post-build testing
+ 
+ USES=		autoreconf libtool
 +USES+=		ssl
 +LDFLAGS+=	-L${OPENSSLLIB} -lcrypto
 +FILESDIR=	${.CURDIR}/does-not-exist
  
- GH_ACCOUNT=	ArtifexSoftware
- USE_GITHUB=	yes
-@@ -34,13 +37,6 @@ TESTS_DISTFILES=	jb2streams${EXTRACT_SUF
+ CONFIGURE_ENV=	ac_cv_func_getopt_long=yes
+ GNU_CONFIGURE=	yes
+@@ -33,13 +36,6 @@ TESTS_DISTFILES=	jb2streams${EXTRACT_SUF
  TESTS_TEST_TARGET=	check-TESTS
  TESTS_USES=		python:build shebangfix
  
