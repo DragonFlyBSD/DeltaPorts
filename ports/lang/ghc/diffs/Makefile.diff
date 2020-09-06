@@ -1,4 +1,4 @@
---- Makefile.orig	2020-08-13 10:38:21 UTC
+--- Makefile.orig	2020-09-06 22:57:43 UTC
 +++ Makefile
 @@ -5,6 +5,7 @@ PORTNAME=	ghc
  PORTVERSION=	${GHC_VERSION}
@@ -8,7 +8,7 @@
  		LOCAL/arrowd/:boot \
  		https://hackage.haskell.org/package/hscolour-${HSCOLOUR_VERSION}/:docs
  DISTFILES=	ghc-${PORTVERSION}-src${EXTRACT_SUFX}:source \
-@@ -85,9 +86,11 @@ ONLY_FOR_ARCHS+=	aarch64 armv6 armv7 pow
+@@ -83,9 +84,11 @@ BOOT_LLVM_VERSION=	60
  .include <bsd.port.pre.mk>
  
  # This version of ncurses is needed by bootstrap compiler
@@ -18,9 +18,9 @@
  .endif
 +.endif
  
- .if ${GHC_VERSION_MAJOR} == 8 && ${GHC_VERSION_MINOR} == 4
- LLVM_VERSION=		50
-@@ -145,7 +148,7 @@ _EXECUTABLES+=	${GHC_LIBDIR}/bin/ghc-ise
+ .if ${ARCH} == powerpc64
+ CONFIGURE_ARGS+=	--enable-dtrace=0
+@@ -130,7 +133,7 @@ _EXECUTABLES+=	${GHC_LIBDIR}/bin/ghc-ise
  
  .include <bsd.port.options.mk>
  
@@ -29,8 +29,8 @@
  BOOTSTRAPS_SUFFIX?=		${BOOTSTRAPS_SUFFIX_${ARCH}}
  BOOTSTRAPS_SUFFIX_powerpc64?=	-${PPC_ABI:tl}
  .  if ${OSVERSION} < 1200000 && (${ARCH} == amd64 || ${ARCH} == i386)
-@@ -200,6 +203,33 @@ SLAVE_ENV=		# empty
- CONFIGURE_ARGS+=	${WITH_GHC}=${LOCALBASE}/bin/ghc
+@@ -177,6 +180,33 @@ SLAVE_ENV=		# empty
+ CONFIGURE_ARGS+=	GHC=${LOCALBASE}/bin/ghc
  .endif # MBOOT
  
 +.if empty(PORT_OPTIONS:MBOOT) && ${OPSYS} == "DragonFly"
@@ -60,12 +60,12 @@
 +#		${BOOT_DIR}/configure
 +.endif
 +
- # override TMPDIR because /tmp often doesn't have enough space
- # to build some of the larger libraries.
- #TMPDIR=		${WRKSRC}/tmp
-@@ -236,7 +266,7 @@ post-patch:
- 	@${REINPLACE_CMD} -e 's/@SettingsLlcCommand@/llc${LLVM_VERSION}/' ${WRKSRC}/settings.in
- 	@${REINPLACE_CMD} -e 's/@SettingsOptCommand@/opt${LLVM_VERSION}/' ${WRKSRC}/settings.in
+ SLAVES_PREFIX=		${WRKDIR}/slaves_prefix
+ SLAVES_WRKDIRPREFIX=	${WRKDIR}/slaves_wrkdirprefix
+ 
+@@ -186,7 +216,7 @@ post-patch:
+ 		s|%%LD%%|${LD}|' \
+ 		${WRKSRC}/libraries/Cabal/Cabal/Distribution/Simple/Program/Builtin.hs
  
 -.if empty(PORT_OPTIONS:MBOOT)
 +.if empty(PORT_OPTIONS:MBOOT) && ${OPSYS} == "FreeBSD"
