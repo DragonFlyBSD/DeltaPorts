@@ -1,6 +1,6 @@
---- Makefile.orig	2019-12-06 00:11:38 UTC
+--- Makefile.orig	2020-09-21 22:38:39 UTC
 +++ Makefile
-@@ -119,6 +119,7 @@
+@@ -136,6 +136,7 @@ JDK_BUILD_JVM=	server
  MAKE_ENV+=		--with-toolchain-type=${COMPILER_TYPE}
  CONFIGURE_ARGS+=	--with-toolchain-type=${COMPILER_TYPE}
  
@@ -8,7 +8,7 @@
  .if ${COMPILER_TYPE} == gcc
  USE_GCC=	yes
  CONFIGURE_ARGS+=	--with-extra-ldflags="-Wl,-rpath=${LOCALBASE}/lib/gcc${GCC_DEFAULT} -L${LOCALBASE}/lib/gcc${GCC_DEFAULT}" \
-@@ -138,6 +139,7 @@
+@@ -158,6 +159,7 @@ CONFIGURE_ARGS+=	--enable-aot=no
  .if ${ARCH} == powerpc64 && ${OSREL:C/\.[0-9]//} == 12
  EXTRA_PATCHES=		${PATCHDIR}/extra-patch-src_hotspot_cpu_ppc_vm__version__ppc.hpp
  .endif
@@ -16,11 +16,13 @@
  
  .if empty(ICONV_LIB)
  ICONV_CFLAGS=	-DLIBICONV_PLUG
-@@ -160,6 +162,7 @@
+@@ -180,6 +182,9 @@ post-patch:
  
  do-install:
  	@${MKDIR} ${STAGEDIR}${INSTALLDIR}
++.if !defined(BUILD_JRE)
 +	${CP} -rv ${JDK_IMAGEDIR}/include/freebsd ${JDK_IMAGEDIR}/include/dragonfly
++.endif
  	@cd ${JDK_IMAGEDIR} && ${COPYTREE_SHARE} . ${STAGEDIR}${INSTALLDIR}
  	@cd ${STAGEDIR}${INSTALLDIR} && \
  		${FIND} bin -type f -exec ${CHMOD} ${BINMODE} {} \;
