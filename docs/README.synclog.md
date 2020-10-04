@@ -146,6 +146,7 @@ Sync round done
 
 
 ### Tasks
+- [ ] Remove TLS1_3 patch from `devel/qca` when LibreSSL has TLSv1.3 by default.
 - [ ] `java/openjdk8` to be updated (8.252.09)
 - [ ] `science/py-GPy` was synced but its _BUILD_DEPENDS_ contains _${LOCALBASE}/lib/libomp.so:devel/openmp_ which our sync scripts mangled and only left _${LOCALBASE}/lib_. Needs investigation.
 - [ ] Mesa update to update to 20.0.4 **1)NOT YET** **2)Mesa-19 already in ports**
