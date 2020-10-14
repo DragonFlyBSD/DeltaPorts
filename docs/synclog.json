@@ -1,0 +1,104 @@
+[
+    {
+	"id": "2020S07",
+	"timestamp": "Tue Jul 28 19:46:27 2020 +0000",
+	"commit_base": "bb235a4af795",
+	"rejects": [
+	    {
+		"deskutils/calibre": "1 out of 1 hunks failed--saving rejects to pkg-plist.rej",
+		"devel/aarch64-none-elf-gcc": "3 out of 3 hunks failed--saving rejects to pkg-plist.rej",
+		"devel/arm-none-eabi-gcc": "3 out of 3 hunks failed--saving rejects to pkg-plist.rej",
+		"devel/libccid": "No file to patch. Skipping... 1 out of 1 hunks ignored--saving rejects to pkg-plist.rej",
+		"devel/libvirt": "No such line 325 in input file, ignoring",
+		"devel/riscv32-unknown-elf-gcc": "1 out of 1 hunks failed--saving rejects to pkg-plist.rej",
+		"devel/riscv64-none-elf-gcc": "1 out of 1 hunks failed--saving rejects to pkg-plist.rej",
+		"graphics/dspdfviewer": "1 out of 1 hunks failed--saving rejects to Makefile.rej",
+		"graphics/mesa-dri": "1 out of 2 hunks failed--saving rejects to Makefile.rej",
+		"lang/rust": "1 out of 1 hunks failed--saving rejects to distinfo.rej",
+		"math/gh-bc": "1 out of 2 hunks failed--saving rejects to pkg-plist.rej",
+		"math/saga": "1 out of 3 hunks failed--saving rejects to Makefile.rej",
+		"multimedia/kodi": "No such line 2422 in input file, ignoring 1 out of 2 hunks failed--saving rejects to pkg-plist.rej",
+		"print/lilypond-devel": "1 out of 1 hunks failed--saving rejects to Makefile.rej",
+		"security/clamav": "1 out of 1 hunks failed--saving rejects to Makefile.rej"
+	    }
+	],
+	"to-do": [
+	    {
+		"port": "audio/libmysofa",
+		"desc": "fixed by not using gcov libraries.",
+		"status": "resolved"
+	    },
+	    {
+		"port": "graphics/exiv2",
+		"desc": "fixed by removing the -fcf-protection flag.",
+		"status": "resolved"
+	    },
+	    {
+		"port": "lang/rust",
+		"desc": " to be updated (1.45.0)",
+		"status": "resolved"
+	    }
+	],
+	"cherry-picks": [
+	    "5ef15934a6e8",
+	    "c6bea04aaafb",
+	    "ea64483abfc0",
+	    "dcd74d01bb04",
+	    "1dd1bff8f2ca",
+	    "31321ee1a565",
+	    "32953c2931b9",
+	    "e2aeb119154a",
+	    "b31dd678fc1e"
+	]
+    },
+    {
+	"id": "2020S09",
+	"timestamp": "Sun Sep 6 20:03:11 2020 +0000",
+	"commit_base": "af6c10df9fd1",
+	"rejects": [
+	    {
+		"biology/bcftools": "1 out of 1 hunks failed--saving rejects to Makefile.rej",
+		"devel/libvirt": "1 out of 4 hunks failed--saving rejects to pkg-plist.rej",
+		"editors/xcoral": "1 out of 1 hunks failed--saving rejects to Makefile.rej",
+		"games/scummvm-tools": "1 out of 1 hunks failed--saving rejects to Makefile.rej",
+		"graphics/jbig2dec": "1 out of 2 hunks failed--saving rejects to Makefile.rej",
+		"irc/ircd-hybrid": "1 out of 1 hunks failed--saving rejects to pkg-plist.rej",
+		"lang/ghc": "1 out of 1 hunks failed--saving rejects to distinfo.rej",
+		"lang/ghc": "1 out of 5 hunks failed--saving rejects to Makefile.rej",
+		"lang/rust": "1 out of 1 hunks failed--saving rejects to distinfo.rej",
+		"ZZREMOVE": "/tmp/merge.workarea/files/patch-CMakeLists.txt: No such file or directory",
+		"net/openntpd": "1 out of 1 hunks failed--saving rejects to Makefile.rej",
+		"security/ruby-bitwarden": "1 out of 1 hunks failed--saving rejects to pkg-plist.rej"
+	    }
+	],
+	"to-do": [
+	    {
+		"port": "misc/cxx_atomics",
+		"desc": "being rebuilt on every incremental",
+		"status": "pending"
+	    },
+	    {
+		"port": "devel/qca",
+		"desc": "can't use TLSv1.3 by default, remove the relevant patch when it does.",
+		"status": "pending"
+	    },
+	    {
+		"port": "java/openjdk8",
+		"desc": "to be updated (8.252.09)",
+		"status": "pending"
+	    }
+	],
+	"cherry-picks": [
+	    "5ef15934a6e8",
+	    "c6bea04aaafb",
+	    "ea64483abfc0",
+	    "dcd74d01bb04",
+	    "1dd1bff8f2ca",
+	    "31321ee1a565",
+	    "32953c2931b9",
+	    "e2aeb119154a",
+	    "b31dd678fc1e"
+	]
+    }
+]
+
