@@ -83,7 +83,6 @@
 	    ],
 	    "cherry-picks": [
 		"https://github.com/freebsd/freebsd-ports/commit/0c181bfaf46d.patch",
-		"https://github.com/freebsd/freebsd-ports/commit/5ef15934a6e8.patch",
 		"https://github.com/freebsd/freebsd-ports/commit/20af39f0eace.patch",
 		"https://leaf.dragonflybsd.org/~tuxillo/archive/D/2020S09/p/01.diff",
 		"https://github.com/freebsd/freebsd-ports/commit/784976896c6a.patch",
