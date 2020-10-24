@@ -4,7 +4,7 @@
 	{
 	    "id": "2020S07",
 	    "timestamp": "Tue Jul 28 19:46:27 2020 +0000",
-	    "base_commit": "bb235a4af795",
+	    "base_commit": "bb235a4af795f58dd2288eec18e94b1af762c3a0",
 	    "rejects": [
 		{
 		    "deskutils/calibre": "1 out of 1 hunks failed--saving rejects to pkg-plist.rej",
@@ -47,7 +47,7 @@
 	{
 	    "id": "2020S09",
 	    "timestamp": "Sun Sep 6 20:03:11 2020 +0000",
-	    "base_commit": "af6c10df9fd1",
+	    "base_commit": "af6c10df9fd1645bc5e1bec2516dd3051399c76c",
 	    "rejects": [
 		{
 		    "biology/bcftools": "1 out of 1 hunks failed--saving rejects to Makefile.rej",
