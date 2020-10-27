@@ -1,4 +1,4 @@
---- GIDs.orig	2016-08-15 16:52:26 UTC
+--- GIDs.orig	2020-10-27 22:53:37 UTC
 +++ GIDs
 @@ -19,12 +19,10 @@ uucp:*:66:
  xten:*:67:
@@ -21,6 +21,6 @@
 -cbsd:*:150:
 +audit:*:149:
 +pgsql:*:150:
- # free: 151
- # free: 152
+ nixbld:*:151:
+ frrvty:*:152:frr
  rbldns:*:153:
