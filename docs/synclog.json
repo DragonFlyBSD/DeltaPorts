@@ -82,6 +82,32 @@
 	    "timestamp": "Tue Oct 27 21:12:08 2020 +0000",
 	    "base_commit": "4c92f0bcf72439585eb33c0a9b727b25ac7dd78f",
 	    "rejects": [
+		{
+		    "devel/RStudio": "1 out of 1 hunks failed--saving rejects to Makefile.rej",
+		    "devel/jna": "1 out of 2 hunks failed--saving rejects to Makefile.rej",
+		    "graphics/jbig2dec": "1 out of 2 hunks failed--saving rejects to Makefile.rej",
+		    "graphics/mesa-dri": "1 out of 2 hunks failed--saving rejects to Makefile.rej",
+		    "graphics/mesa-dri": "3 out of 4 hunks failed--saving rejects to Makefile.common.rej",
+		    "lang/ruby25": "1 out of 2 hunks failed--saving rejects to Makefile.rej",
+		    "lang/rust": "1 out of 1 hunks failed--saving rejects to distinfo.rej",
+		    "math/palp": "1 out of 1 hunks failed--saving rejects to distinfo.rej",
+		    "math/palp": "1 out of 1 hunks failed--saving rejects to Makefile.rej",
+		    "math/saga": "1 out of 3 hunks failed--saving rejects to Makefile.rej",
+		    "multimedia/x265": "1 out of 1 hunks failed--saving rejects to Makefile.rej",
+		    "ZZREMOVE": "/tmp/merge.workarea/pkg-message: No such file or directory",
+		    "security/pgpin": "1 out of 1 hunks failed--saving rejects to Makefile.rej",
+		    "security/snort3": "1 out of 1 hunks failed--saving rejects to Makefile.rej",
+		    "sysutils/e2fsprogs": "1 out of 2 hunks failed--saving rejects to Makefile.rej",
+		    "sysutils/fusefs-libs": "1 out of 1 hunks failed--saving rejects to Makefile.rej",
+		    "sysutils/gnome-control-center": "No such line 377 in input file, ignoring 3 out of 5 hunks failed--saving rejects to pkg-plist.rej",
+		    "sysutils/gnome-settings-daemon": "4 out of 4 hunks failed--saving rejects to pkg-plist.rej",
+		    "sysutils/polkit": "1 out of 2 hunks failed--saving rejects to Makefile.rej",
+		    "www/trafficserver": "No such line 107 in input file, ignoring 1 out of 1 hunks failed--saving rejects to Makefile.rej",
+		    "ZZREMOVE": "/tmp/merge.workarea/files/patch-cargo-crates_rustls-native-certs-0.1.0_Cargo.toml: No such file or directory",
+		    "ZZREMOVE": "/tmp/merge.workarea/files/patch-cargo-crates_rustls-native-certs-0.1.0_src_lib.rs: No such file or directory",
+		    "x11/gnome-shell": "1 out of 2 hunks failed--saving rejects to pkg-plist.rej",
+		    "x11/gnome3": "1 out of 1 hunks failed--saving rejects to Makefile.rej"
+		}
 	    ],
 	    "to-do": [
 		{
