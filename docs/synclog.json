@@ -65,6 +65,25 @@
 		}
 	    ],
 	    "to-do": [
+	    ],
+	    "cherry-picks": [
+		"https://github.com/freebsd/freebsd-ports/commit/0c181bfaf46d.patch",
+		"https://github.com/freebsd/freebsd-ports/commit/20af39f0eace.patch",
+		"https://leaf.dragonflybsd.org/~tuxillo/archive/D/2020S09/p/01.diff",
+		"https://github.com/freebsd/freebsd-ports/commit/784976896c6a.patch",
+		"https://github.com/freebsd/freebsd-ports/commit/201f650f519b.patch",
+		"https://github.com/freebsd/freebsd-ports/commit/56290ea2d459.patch",
+		"https://github.com/freebsd/freebsd-ports/commit/04e6286edab7.patch",
+		"https://leaf.dragonflybsd.org/~tuxillo/archive/D/2020S09/p/02.diff"
+	    ]
+	},
+	{
+	    "id": "2020S10",
+	    "timestamp": "Tue Oct 27 21:12:08 2020 +0000",
+	    "base_commit": "4c92f0bcf72439585eb33c0a9b727b25ac7dd78f",
+	    "rejects": [
+	    ],
+	    "to-do": [
 		{
 		    "port": "misc/cxx_atomics",
 		    "desc": "being rebuilt on every incremental",
@@ -82,15 +101,8 @@
 		}
 	    ],
 	    "cherry-picks": [
-		"https://github.com/freebsd/freebsd-ports/commit/0c181bfaf46d.patch",
-		"https://github.com/freebsd/freebsd-ports/commit/20af39f0eace.patch",
-		"https://leaf.dragonflybsd.org/~tuxillo/archive/D/2020S09/p/01.diff",
-		"https://github.com/freebsd/freebsd-ports/commit/784976896c6a.patch",
-		"https://github.com/freebsd/freebsd-ports/commit/201f650f519b.patch",
-		"https://github.com/freebsd/freebsd-ports/commit/56290ea2d459.patch",
-		"https://github.com/freebsd/freebsd-ports/commit/04e6286edab7.patch",
-		"https://leaf.dragonflybsd.org/~tuxillo/archive/D/2020S09/p/02.diff"
 	    ]
 	}
+
     ]
 }
