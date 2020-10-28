@@ -1,10 +1,10 @@
---- Makefile.orig	2019-04-26 22:59:27 UTC
+--- Makefile.orig	2020-10-28 15:15:14 UTC
 +++ Makefile
-@@ -48,7 +48,6 @@ CMAKE_ARGS=	-DENABLE_PIC=on -DENABLE_TES
- CFLAGS_mips=	-DNO_ATOMICS # cannot use lang/gcc
- CFLAGS_mips64=	-DNO_ATOMICS # cannot use lang/gcc
+@@ -51,7 +51,6 @@ VMAF_DESC=	Per frame and aggregate VMAF
+ USE_LDCONFIG=	yes
+ CMAKE_ARGS=	-DENABLE_TESTS=on -DENABLE_HDR10_PLUS:BOOL=true
  LDFLAGS_i386=	-Wl,-znotext
--EXTRACT_AFTER_ARGS+=	--exclude compat
+-EXTRACT_AFTER_ARGS+=	--exclude compat --strip-components=1
  PATCH_WRKSRC=	${WRKSRC:H}
- WRKSRC=		${WRKDIR}/${PORTNAME}_${PORTVERSION}/source
+ WRKSRC=		${WRKDIR}/source
  
