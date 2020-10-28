@@ -1,9 +1,6 @@
-Avoid conflicts on remerge.
-Only provide mesa-classic drivers here for DragonFly.
-
---- Makefile.orig	2020-08-13 10:38:14 UTC
+--- Makefile.orig	2020-10-28 10:29:58 UTC
 +++ Makefile
-@@ -89,6 +89,15 @@ MESA_PLATFORMS+=	surfaceless
+@@ -70,6 +70,15 @@ USE_XORG+=		xcb xrandr
  MESA_PLATFORMS+=	wayland
  .endif
  
@@ -19,15 +16,15 @@ Only provide mesa-classic drivers here for DragonFly.
  MESON_ARGS+=	-Ddri-drivers="${DRI_DRIVERS:ts,:tl}" \
  			-Dgallium-drivers="${GALLIUM_DRIVERS:ts,:tl}" \
  			-Dvulkan-drivers="${VULKAN_DRIVERS:ts,:tl}" \
-@@ -97,9 +106,9 @@ MESON_ARGS+=	-Ddri-drivers="${DRI_DRIVER
+@@ -78,9 +87,9 @@ MESON_ARGS+=	-Ddri-drivers="${DRI_DRIVER
  # Disable some options
- MESON_ARGS+=	-Dgallium-xa=false \
- 		-Dgles1=false \
--		-Dgles2=false \
-+		-Dgles2=true \
+ MESON_ARGS+=	-Dgallium-xa=disabled \
+ 		-Dgles1=disabled \
+-		-Dgles2=disabled \
++		-Dgles2=enabled \
  		-Dglx=disabled \
--		-Degl=false \
-+		-Degl=true \
+-		-Degl=disabled \
++		-Degl=enable \
  		-Dosmesa=none \
  		-Dtools=""
  

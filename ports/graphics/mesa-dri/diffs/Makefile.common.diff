@@ -1,35 +1,37 @@
-Move out llvm bits where they really belong.
-Add missing USES gettext-tools.
-The libunwind and libelf used only in *-gallium ports.
-Now llvm is used in clover and *-gallium ports only.
-
---- Makefile.common.orig	2020-08-13 10:38:14 UTC
+--- Makefile.common.orig	2020-10-28 10:36:49 UTC
 +++ Makefile.common
-@@ -43,2 +43,5 @@ LIB_DEPENDS+=	libglapi.so:graphics/mesa-
+@@ -46,11 +46,13 @@ LIB_DEPENDS+=	libdrm.so:graphics/libdrm
+ .if ${COMPONENT} != libs
+ LIB_DEPENDS+=	libglapi.so:graphics/mesa-libs
  .endif
++
 +# all ports whine on WARNING: Gettext not found, all translation targets will be ignored.
 +USES+=		gettext-tools
-+.if ${COMPONENT} != libs && ${COMPONENT} != dri
- .if ${ARCH} == amd64 || ${ARCH} == i386
-@@ -46,4 +49,2 @@ LIB_DEPENDS+=	libunwind.so:devel/libunwi
++
+ .if ${ARCH} == aarch64 || ${ARCH} == amd64 || ${ARCH} == i386 || ${ARCH} == powerpc64 || ${ARCH} == powerpc64le
+ LIB_DEPENDS+=	libunwind.so:devel/libunwind
  .endif
 -.if ${OPSYS} == DragonFly
 -LIB_DEPENDS+=	libelf.so:devel/libelf
  .endif
-@@ -98,2 +99,3 @@ MESON_ARGS+=	-Dllvm=false
- .else
-+. if ${COMPONENT} != libs && ${COMPONENT} != dri && ${COMPONENT} != osmesa
- BUILD_DEPENDS+=	llvm${LLVM_DEFAULT}>=3.9.0_4:devel/llvm${LLVM_DEFAULT}
-@@ -105,2 +107,12 @@ LDFLAGS+=	-Wl,-rpath=${LOCALBASE}/llvm${
- MESON_ARGS+=	-Dllvm=true
-+.if ${OPSYS} == DragonFly
-+LIB_DEPENDS+=	libelf.so:devel/libelf
-+.endif
-+. else
-+.  if defined(DEVELOPER)
+ 
+ USES+=		compiler:c++11-lib bison meson pathfix pkgconfig \
+@@ -111,8 +113,18 @@ BUILD_DEPENDS+=	llvm${LLVM_DEFAULT}>=10.
+ .if ${COMPONENT} != libs
+ RUN_DEPENDS+=	llvm${LLVM_DEFAULT}>=10.0.1_1:devel/llvm${LLVM_DEFAULT}
+ .endif
++. if defined(DEVELOPER)
 +# reduces binary differences somewhat while investigating
 +LDFLAGS+=	-Wl,-rpath=${LOCALBASE}/llvm${LLVM_DEFAULT}/lib
-+.  endif
-+MESON_ARGS+=	-Dllvm=false
 +. endif
  .endif
+ 
++.if ${OPSYS} == DragonFly
++LIB_DEPENDS+=	libelf.so:devel/libelf
++MESON_ARGS+=	-Dllvm=disabled
++.else
+ MESON_ARGS+=	--native-file="${WRKSRC}/llvm.ini"
+ LDFLAGS+=	-Wl,-rpath=${LOCALBASE}/llvm${LLVM_DEFAULT}/lib
+ MESON_ARGS+=	-Dllvm=enabled
++.endif
++
