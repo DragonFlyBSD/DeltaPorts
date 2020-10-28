@@ -1,7 +1,7 @@
---- Makefile.orig	2020-09-06 22:54:42 UTC
+--- Makefile.orig	2020-10-28 10:24:24 UTC
 +++ Makefile
-@@ -17,6 +17,9 @@ OPTIONS_DEFAULT=PNG
- TESTS_DESC=	Download and use test-images for post-build testing
+@@ -12,6 +12,9 @@ LICENSE=	GPLv3
+ LICENSE_FILE=	${WRKSRC}/COPYING
  
  USES=		autoreconf libtool
 +USES+=		ssl
@@ -10,16 +10,13 @@
  
  CONFIGURE_ENV=	ac_cv_func_getopt_long=yes
  GNU_CONFIGURE=	yes
-@@ -33,13 +36,6 @@ TESTS_DISTFILES=	jb2streams${EXTRACT_SUF
- TESTS_TEST_TARGET=	check-TESTS
- TESTS_USES=		python:build shebangfix
+@@ -25,10 +28,6 @@ PNG_CONFIGURE_OFF=	--without-libpng
+ PNG_CONFIGURE_ON=	--with-libpng=${LOCALBASE}
+ PNG_LIB_DEPENDS=	libpng.so:graphics/png
  
 -post-patch:
 -	@${RM} ${WRKSRC}/getopt* ${WRKSRC}/sha1.h
 -	@${REINPLACE_CMD} -E 's|SHA1_Final\( *([^,]+), *([^\)]+)\)|SHA1_Final(\2, \1)|' ${WRKSRC}/jbig2dec.c ${WRKSRC}/sha1.c
--
--post-patch-TESTS-off:
--	@${REINPLACE_CMD} -e '/^TESTS = / s| test_jbig2dec.py||' ${WRKSRC}/Makefile.am
 -
  pre-configure:
  	@cd ${WRKSRC}/ && ${SH} autogen.sh
