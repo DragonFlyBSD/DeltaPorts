@@ -1,15 +1,15 @@
---- Makefile.orig	2018-11-22 03:13:31 UTC
+--- Makefile.orig	2020-10-28 10:17:59 UTC
 +++ Makefile
-@@ -35,7 +35,7 @@ TEST_TARGET=	test
+@@ -36,7 +36,7 @@ TEST_TARGET=	test
  
  OPTIONS_DEFINE=	DOCS
  
--ANT_ARCH=	${ARCH:S/amd64/x86-64/:S/i386/x86/:S/powerpc64/ppc64/}
-+ANT_ARCH=	${ARCH:S/amd64/x86-64/:S/i386/x86/:S/x86_64/x86-64/:S/powerpc64/ppc64/}
+-ANT_ARCH=	${ARCH:S/amd64/x86-64/:S/i386/x86/:C/powerpc64.*/ppc64/}
++ANT_ARCH=	${ARCH:S/amd64/x86-64/:S/i386/x86/:S/x86_64/x86-64/:C/powerpc64.*/ppc64/}
  
  post-patch:
  	@${REINPLACE_CMD} -e 's|%%LOCALBASE%%|${LOCALBASE}|' \
-@@ -45,7 +45,7 @@ post-build-DOCS-on:
+@@ -46,7 +46,7 @@ post-build-DOCS-on:
  	cd ${WRKSRC} && ${SETENV} ${MAKE_ENV} ${ANT} javadoc
  
  do-install:
