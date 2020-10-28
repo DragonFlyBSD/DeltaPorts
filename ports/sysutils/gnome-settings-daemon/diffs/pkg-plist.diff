@@ -1,34 +1,32 @@
---- pkg-plist.orig	2019-05-02 17:56:51 UTC
+--- pkg-plist.orig	2020-10-28 15:45:09 UTC
 +++ pkg-plist
-@@ -4,7 +4,6 @@ etc/xdg/autostart/org.gnome.SettingsDaem
+@@ -4,14 +4,12 @@ etc/xdg/autostart/org.gnome.SettingsDaem
  etc/xdg/autostart/org.gnome.SettingsDaemon.Datetime.desktop
  etc/xdg/autostart/org.gnome.SettingsDaemon.Housekeeping.desktop
  etc/xdg/autostart/org.gnome.SettingsDaemon.Keyboard.desktop
 -etc/xdg/autostart/org.gnome.SettingsDaemon.MediaKeys.desktop
- etc/xdg/autostart/org.gnome.SettingsDaemon.Mouse.desktop
  etc/xdg/autostart/org.gnome.SettingsDaemon.Power.desktop
  etc/xdg/autostart/org.gnome.SettingsDaemon.PrintNotifications.desktop
-@@ -12,7 +11,6 @@ etc/xdg/autostart/org.gnome.SettingsDaem
+ etc/xdg/autostart/org.gnome.SettingsDaemon.Rfkill.desktop
  etc/xdg/autostart/org.gnome.SettingsDaemon.ScreensaverProxy.desktop
  etc/xdg/autostart/org.gnome.SettingsDaemon.Sharing.desktop
  etc/xdg/autostart/org.gnome.SettingsDaemon.Smartcard.desktop
 -etc/xdg/autostart/org.gnome.SettingsDaemon.Sound.desktop
+ etc/xdg/autostart/org.gnome.SettingsDaemon.UsbProtection.desktop
  etc/xdg/autostart/org.gnome.SettingsDaemon.Wacom.desktop
- etc/xdg/autostart/org.gnome.SettingsDaemon.XSettings.desktop
- include/gnome-settings-daemon-3.0/gnome-settings-daemon/gsd-enums.h
-@@ -26,7 +24,6 @@ libexec/gsd-dummy
+ etc/xdg/autostart/org.gnome.SettingsDaemon.Wwan.desktop
+@@ -24,14 +22,12 @@ libexec/gsd-color
+ libexec/gsd-datetime
  libexec/gsd-housekeeping
  libexec/gsd-keyboard
- libexec/gsd-locate-pointer
 -libexec/gsd-media-keys
- libexec/gsd-mouse
  libexec/gsd-power
- %%CUPS%%libexec/gsd-print-notifications
-@@ -34,7 +31,6 @@ libexec/gsd-power
+ libexec/gsd-print-notifications
+ libexec/gsd-printer
  libexec/gsd-screensaver-proxy
  libexec/gsd-sharing
- %%SMARTCARD%%libexec/gsd-smartcard
+ libexec/gsd-smartcard
 -libexec/gsd-sound
- libexec/gsd-test-input-helper
+ libexec/gsd-usb-protection
  libexec/gsd-xsettings
  share/GConf/gsettings/gnome-settings-daemon.convert
