@@ -1,6 +1,6 @@
---- Makefile.common.orig	2020-10-28 10:36:49 UTC
+--- Makefile.common.orig	2020-10-31 09:34:23 UTC
 +++ Makefile.common
-@@ -46,11 +46,13 @@ LIB_DEPENDS+=	libdrm.so:graphics/libdrm
+@@ -46,12 +46,13 @@ LIB_DEPENDS+=	libdrm.so:graphics/libdrm
  .if ${COMPONENT} != libs
  LIB_DEPENDS+=	libglapi.so:graphics/mesa-libs
  .endif
@@ -13,10 +13,11 @@
  .endif
 -.if ${OPSYS} == DragonFly
 -LIB_DEPENDS+=	libelf.so:devel/libelf
- .endif
+-.endif
  
  USES+=		compiler:c++11-lib bison meson pathfix pkgconfig \
-@@ -111,8 +113,18 @@ BUILD_DEPENDS+=	llvm${LLVM_DEFAULT}>=10.
+ 		python:3.6+,build shebangfix tar:xz
+@@ -111,8 +112,18 @@ BUILD_DEPENDS+=	llvm${LLVM_DEFAULT}>=10.
  .if ${COMPONENT} != libs
  RUN_DEPENDS+=	llvm${LLVM_DEFAULT}>=10.0.1_1:devel/llvm${LLVM_DEFAULT}
  .endif
