@@ -1,11 +1,11 @@
---- Makefile.orig	2020-11-02 20:33:55 UTC
+--- Makefile.orig	2020-11-03 10:53:10 UTC
 +++ Makefile
 @@ -61,7 +61,7 @@ PLIST_SUB=	SP_VER=${SP_VER}
  .include <bsd.port.pre.mk>
  
- .if ${ARCH} == x86_64
+ .if ${ARCH} == amd64
 -CONFIGURE_TARGET=	x86_64-portbld-freebsd${OSREL}
-+CONFIGURE_TARGET=	x86_64-portbld-${OPSYS:tl}${OSREL}
++CONFIGURE_TARGET=	x86_64-portbld-${OPSYS}${OSREL}
  .endif
  
  # Require newer Clang than what's in base system unless user opted out
