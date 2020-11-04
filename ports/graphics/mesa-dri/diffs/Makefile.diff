@@ -24,7 +24,7 @@
 +		-Dgles2=enabled \
  		-Dglx=disabled \
 -		-Degl=disabled \
-+		-Degl=enable \
++		-Degl=enabled \
  		-Dosmesa=none \
  		-Dtools=""
  
