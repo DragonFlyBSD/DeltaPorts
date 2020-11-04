@@ -127,6 +127,7 @@
 		}
 	    ],
 	    "cherry-picks": [
+		"https://github.com/freebsd/freebsd-ports/commit/ee72b7e7840ce1.patch"
 	    ]
 	}
 
