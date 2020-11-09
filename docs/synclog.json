@@ -124,6 +124,11 @@
 		    "port": "java/openjdk8",
 		    "desc": "to be updated (8.252.09)",
 		    "status": "pending"
+		},
+		{
+		    "port": "graphics/libosmesa",
+		    "desc": "opengl temporarily disabled, check what freebsd does.",
+		    "status": "pending"
 		}
 	    ],
 	    "cherry-picks": [
