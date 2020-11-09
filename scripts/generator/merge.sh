@@ -5,7 +5,7 @@
 
 . /usr/local/etc/dports.conf
 
-AWKCMD1='{ n=split($1,a,"-") }{ print substr($2,12) " " a[n] }'
+AWKCMD1='{ nver=split($1,ver,"-");  nport=split($2,port,"/"); print port[nport-1]"/"port[nport], ver[nver] }'
 AWKCMD2='{ \
 if (FNR == 1) { \
   if ($1 == "MASK") { print $1; exit } \
