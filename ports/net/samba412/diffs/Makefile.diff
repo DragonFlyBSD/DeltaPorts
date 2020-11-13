@@ -1,0 +1,38 @@
+--- Makefile.orig	2020-11-13 08:33:09 UTC
++++ Makefile
+@@ -149,8 +149,6 @@
+ # GNUTLS
+ LIB_DEPENDS+=			libgnutls.so:security/gnutls
+ LIB_DEPENDS+=			libgcrypt.so:security/libgcrypt
+-# NFSv4 ACL glue
+-LIB_DEPENDS+=			libsunacl.so:sysutils/libsunacl
+ # Jansson
+ BUILD_DEPENDS+=			jansson>=2.10:devel/jansson
+ RUN_DEPENDS+=			jansson>=2.10:devel/jansson
+@@ -265,7 +263,7 @@
+ 				--with-pam \
+ 				--with-iconv \
+ 				--with-winbind \
+-				--with-regedit \
++				--without-regedit \
+ 				--disable-rpath \
+ 				--without-lttng \
+ 				--without-gettext \
+@@ -273,7 +271,7 @@
+ 				--without-fake-kaserver \
+ 				--without-systemd \
+ 				--with-libarchive \
+-				--with-acl-support \
++				--without-acl-support \
+ 				--with-sendfile-support \
+ 				--disable-ctdb-tests
+ #				${ICONV_CONFIGURE_BASE}
+@@ -408,7 +406,7 @@
+ .if ${PORT_OPTIONS:MDEVELOPER}
+ SAMBA4_MODULES+=		auth_skel pdb_test gpext_security gpext_registry gpext_scripts perfcount_test \
+ 				vfs_fake_dfq vfs_skel_opaque vfs_skel_transparent vfs_shadow_copy_test vfs_fake_acls \
+-				vfs_nfs4acl_xattr vfs_error_inject vfs_delay_inject
++				vfs_error_inject vfs_delay_inject
+ .endif
+ # Python bindings
+ .if defined(NO_PYTHON)
