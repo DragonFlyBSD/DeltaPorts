@@ -1,0 +1,24 @@
+--- pkg-plist.orig	2020-11-13 08:33:04 UTC
++++ pkg-plist
+@@ -210,9 +210,9 @@
+ lib/python%%XYDOT%%/__pycache__/_strptime.cpython-%%XY%%.opt-1.pyc
+ lib/python%%XYDOT%%/__pycache__/_strptime.cpython-%%XY%%.opt-2.pyc
+ lib/python%%XYDOT%%/__pycache__/_strptime.cpython-%%XY%%.pyc
+-lib/python%%XYDOT%%/__pycache__/_sysconfigdata_%%ABI%%_freebsd%%OSMAJOR%%_.cpython-%%XY%%.opt-1.pyc
+-lib/python%%XYDOT%%/__pycache__/_sysconfigdata_%%ABI%%_freebsd%%OSMAJOR%%_.cpython-%%XY%%.opt-2.pyc
+-lib/python%%XYDOT%%/__pycache__/_sysconfigdata_%%ABI%%_freebsd%%OSMAJOR%%_.cpython-%%XY%%.pyc
++lib/python%%XYDOT%%/__pycache__/_sysconfigdata_%%ABI%%_dragonfly%%OSMAJOR%%_.cpython-%%XY%%.opt-1.pyc
++lib/python%%XYDOT%%/__pycache__/_sysconfigdata_%%ABI%%_dragonfly%%OSMAJOR%%_.cpython-%%XY%%.opt-2.pyc
++lib/python%%XYDOT%%/__pycache__/_sysconfigdata_%%ABI%%_dragonfly%%OSMAJOR%%_.cpython-%%XY%%.pyc
+ lib/python%%XYDOT%%/__pycache__/_threading_local.cpython-%%XY%%.opt-1.pyc
+ lib/python%%XYDOT%%/__pycache__/_threading_local.cpython-%%XY%%.opt-2.pyc
+ lib/python%%XYDOT%%/__pycache__/_threading_local.cpython-%%XY%%.pyc
+@@ -697,7 +697,7 @@
+ lib/python%%XYDOT%%/_pyio.py
+ lib/python%%XYDOT%%/_sitebuiltins.py
+ lib/python%%XYDOT%%/_strptime.py
+-lib/python%%XYDOT%%/_sysconfigdata_%%ABI%%_freebsd%%OSMAJOR%%_.py
++lib/python%%XYDOT%%/_sysconfigdata_%%ABI%%_dragonfly%%OSMAJOR%%_.py
+ lib/python%%XYDOT%%/_threading_local.py
+ lib/python%%XYDOT%%/_weakrefset.py
+ lib/python%%XYDOT%%/abc.py
