@@ -1,3 +1,0 @@
-
-# missing depend, just to pass stage-qa
-RUN_DEPENDS+=	rubygem-ffi>=1.9.0:devel/rubygem-ffi
