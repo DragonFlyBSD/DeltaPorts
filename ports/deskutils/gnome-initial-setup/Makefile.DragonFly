@@ -1,0 +1,3 @@
+
+# missing dep
+KERBEROS5_USES+=	gssapi:mit
