@@ -1,0 +1,12 @@
+Fixes regressions in 3.2.7 that are seen in cad/alliance
+
+--- Makefile.orig	2020-08-13 10:38:43 UTC
++++ Makefile
+@@ -3,6 +3,7 @@
+ PORTNAME=	fig2dev
+ PORTVERSION=	3.2.7
+ PORTREVISION=	1
++DISTVERSIONSUFFIX= b
+ CATEGORIES=	print
+ MASTER_SITES=	SF/mcj/
+ 
