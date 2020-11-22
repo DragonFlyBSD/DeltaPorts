@@ -1,19 +1,20 @@
---- src/util/virprocess.c.orig	2020-11-02 10:16:52 UTC
+--- src/util/virprocess.c.orig	2020-09-01 07:09:12 UTC
 +++ src/util/virprocess.c
-@@ -446,8 +446,8 @@ int virProcessSetAffinity(pid_t pid, vir
+@@ -446,8 +446,9 @@ int virProcessSetAffinity(pid_t pid, vir
      size_t i;
      int numcpus = 1024;
      size_t masklen;
-+# ifdef CPU_ALLOC
-     cpu_set_t *mask;
--    int rv = -1;
+-    cpu_set_t *mask;
  
++# ifdef CPU_ALLOC
++    /* New method dynamically allocates cpu mask, allowing unlimted cpus */
      VIR_DEBUG("Set process affinity on %lld", (long long)pid);
  
-@@ -492,6 +492,28 @@ int virProcessSetAffinity(pid_t pid, vir
-         }
+     /* Not only may the statically allocated cpu_set_t be too small,
+@@ -484,6 +485,22 @@ int virProcessSetAffinity(pid_t pid, vir
+         return -1;
      }
- 
+     CPU_FREE(mask);
 +# else
 +    /* Legacy method uses a fixed size cpu mask, only allows up to 1024 cpus */
 +    cpu_set_t mask;
@@ -25,21 +26,15 @@
 +    }
 +
 +    if (sched_setaffinity(pid, sizeof(mask), &mask) < 0) {
-+        if (quiet) {
-+            VIR_DEBUG("cannot set CPU affinity on process %d: %s",
-+                      pid, g_strerror(errno));
-+        } else {
-+            virReportSystemError(errno,
-+                                 _("cannot set CPU affinity on process %d"), pid);
-+        }
++        virReportSystemError(errno,
++                             _("cannot set CPU affinity on process %d"), pid);
 +        return -1;
 +    }
 +# endif
-+
+ 
      return 0;
  }
- 
-@@ -499,11 +521,16 @@ virBitmapPtr
+@@ -492,11 +509,16 @@ virBitmapPtr
  virProcessGetAffinity(pid_t pid)
  {
      size_t i;
@@ -56,7 +51,7 @@
      /* 262144 cpus ought to be enough for anyone */
      ncpus = 1024 << 8;
      masklen = CPU_ALLOC_SIZE(ncpus);
-@@ -515,8 +542,17 @@ virProcessGetAffinity(pid_t pid)
+@@ -508,8 +530,17 @@ virProcessGetAffinity(pid_t pid)
      }
  
      CPU_ZERO_S(masklen, mask);
@@ -74,8 +69,8 @@
          virReportSystemError(errno,
                               _("cannot get CPU affinity of process %d"), pid);
          goto cleanup;
-@@ -525,13 +561,20 @@ virProcessGetAffinity(pid_t pid)
-     ret = virBitmapNew(ncpus);
+@@ -519,13 +550,20 @@ virProcessGetAffinity(pid_t pid)
+           goto cleanup;
  
      for (i = 0; i < ncpus; i++) {
 +# ifdef CPU_ALLOC
@@ -95,7 +90,7 @@
  
      return ret;
  }
-@@ -1033,7 +1076,7 @@ int virProcessGetStartTime(pid_t pid,
+@@ -1019,7 +1057,7 @@ int virProcessGetStartTime(pid_t pid,
  
      return 0;
  }
