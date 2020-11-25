@@ -2,6 +2,7 @@
 
 PORTNAME=	meld
 PORTVERSION=	1.8.6
+PORTREVISION=	1
 PKGNAMESUFFIX=	-legacy
 CATEGORIES=	textproc devel python
 MASTER_SITES=	GNOME
@@ -12,36 +13,48 @@ COMMENT=	Minimalistic GNOME 2 visual diff and merge tool
 LICENSE=	GPLv2
 LICENSE_FILE=	${WRKSRC}/COPYING
 
-USES=		desktop-file-utils gmake gnome python:2.7 shared-mime-info shebangfix tar:xz
-USE_GNOME=	intltool #pygtk2 #pygobject
-USE_PYTHON=	noflavors
+USES=		desktop-file-utils gmake shared-mime-info tar:xz
 
-# ports framework broken for py-cairo@py27 --> devel/gobject-introspection, must install first
-# BUILD_DEPENDS=	gobject-introspection>=0.6.8:devel/gobject-introspection
-RUN_DEPENDS=	${PYTHON_SITELIBDIR}/gtk-2.0/gtk/__init__.py:x11-toolkits/py-gtk2@${PY_FLAVOR}
+# not needed, roll manually with resed
+#USES+=		gnome
+#USE_GNOME=	intltool
 
-CONFLICTS_INSTALL=	meld
+BUILD_DEPENDS=	${LOCALBASE}/bin/python-legacy:lang/python-legacy
+RUN_DEPENDS=	${LOCALBASE}/bin/python-legacy:lang/python-legacy
 
-SHEBANG_FILES=	bin/meld
-#INSTALLS_ICONS=	yes
-#INSTALLS_OMF=	yes
+BUILD_DEPENDS+=	pylgobject-codegen-2.0:devel/pyl-gobject
+RUN_DEPENDS+=	pyl-gtk2>=0:x11-toolkits/pyl-gtk2 pyl-gobject>=0:devel/pyl-gobject
 
-SHEBANG_FILES=	bin/meld
 MAKE_ARGS=	prefix=${PREFIX}
 
 OPTIONS_DEFINE=		SYNTAX
 OPTIONS_DEFAULT=	SYNTAX
 SYNTAX_DESC=	Syntax highlight runtime dependencies
 
-SYNTAX_RUN_DEPENDS=	${PYTHON_PKGNAMEPREFIX}gtksourceview>0:x11-toolkits/py-gtksourceview \
+SYNTAX_RUN_DEPENDS=	pyl-gtksourceview>0:x11-toolkits/pyl-gtksourceview \
 			adwaita-icon-theme>=0:x11-themes/adwaita-icon-theme
 
+DATADIR=	${PREFIX}/share/meld-legacy
+
 post-patch:
-	${REINPLACE_CMD} -e '/PYTHON/s@python@python2.7@g' ${WRKSRC}/INSTALL
+	${REINPLACE_CMD} -e "s@/usr/bin/env python@${LOCALBASE}/bin/python-legacy@g" \
+		${WRKSRC}/bin/meld
+	${REINPLACE_CMD} -e 's@[[:<:]]pygtk[[:>:]]@pylgtk@g' \
+		${WRKSRC}/bin/meld
+	${REINPLACE_CMD} -e '/PYTHON/s@python@python-legacy@g' \
+			 -e '/libdir_/s@meld@meld-legacy@g' \
+			 -e '/sharedir_/s@meld@meld-legacy@g' \
+		${WRKSRC}/INSTALL
 	${REINPLACE_CMD} -e '/-C po/d' -e '/-C help/d' \
 			 -e 's@$$(DESTDIR)\$$(helpdir_)@@g' \
 			 -e 's@update_mime_database)@update_mime_database_not)@g' \
 			 -e 's@update_desktop_database)@update_desktop_database_not)@g' \
+			 -e 's@intltool-merge -d po @cp @g' \
 		${WRKSRC}/Makefile
+	${REINPLACE_CMD} -e 's@^_@@g' \
+		${WRKSRC}/data/meld.desktop.in
+
+post-install:
+	${MV} ${STAGEDIR}${LOCALBASE}/bin/meld ${STAGEDIR}${LOCALBASE}/bin/meld-legacy
 
 .include <bsd.port.mk>
