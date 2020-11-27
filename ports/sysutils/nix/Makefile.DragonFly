@@ -1,0 +1,5 @@
+
+USES+= alias
+
+# missing dep
+LIB_DEPENDS=	liblzma.so:archivers/lzmalib
