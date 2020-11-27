@@ -1,0 +1,8 @@
+
+USES+=	alias
+
+BROKEN=	missing clock_nanosleep
+
+dfly-patch:
+	${REINPLACE_CMD} -e 's@STREQUAL "FreeBSD"@MATCHES "FreeBSD|DragonFly"@g' \
+		${WRKSRC}/CMakeLists.txt
