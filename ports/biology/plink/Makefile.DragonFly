@@ -1,2 +1,3 @@
 
+CFLAGS+=	-Wno-stringop-truncation
 LDFLAGS+=	-pthread
