@@ -1,3 +1,4 @@
+IGNORE=	manual build only
 CONFIGURE_ARGS_COMMON+=	--disable-werror
 
 .if !defined(DPORTS_BUILDER)
