@@ -1,0 +1,5 @@
+--- pkg-plist.orig	2020-11-13 08:32:59 UTC
++++ pkg-plist
+@@ -152 +152 @@
+-%%LLD%%llvm%%LLVM_SUFFIX%%/bin/ld
++%%LLD_LINK%%%%LLD%%llvm%%LLVM_SUFFIX%%/bin/ld

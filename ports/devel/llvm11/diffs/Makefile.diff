@@ -1,0 +1,5 @@
+--- Makefile.orig	2020-11-13 08:32:59 UTC
++++ Makefile
+@@ -562 +562 @@
+-post-install-LLD-on:
++post-install-LLD_LINK-on:
