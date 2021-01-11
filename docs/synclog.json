@@ -138,7 +138,9 @@
 		"https://leaf.dragonflybsd.org/~tuxillo/archive/D/2020S10/p/01.diff",
 		"https://github.com/freebsd/freebsd-ports/commit/6c23e6a42b0653.patch",
 		"https://github.com/freebsd/freebsd-ports/commit/f9e4b632445687.patch",
-		"https://github.com/freebsd/freebsd-ports/commit/714b5b98ae5f1b.patch"
+		"https://github.com/freebsd/freebsd-ports/commit/714b5b98ae5f1b.patch",
+		"https://github.com/freebsd/freebsd-ports/commit/79477faff353e8.patch",
+		"https://github.com/freebsd/freebsd-ports/commit/0e0ab6cff978ea.patch"
 	    ]
 	}
 
