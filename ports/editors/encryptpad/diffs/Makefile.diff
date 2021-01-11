@@ -1,0 +1,15 @@
+--- Makefile.orig	2021-01-11 20:21:32.867386000 +0100
++++ Makefile	2021-01-11 20:21:45.467677000 +0100
+@@ -38,12 +38,6 @@
+ 
+ .include <bsd.port.pre.mk>
+ 
+-post-patch:
+-.if ${CHOSEN_COMPILER_TYPE} == gcc
+-	${REINPLACE_CMD} -e 's/freebsd-clang/freebsd-g++/' \
+-		${WRKSRC}/build/Makefile.qt_ui
+-.endif
+-
+ do-configure:
+ 	cd ${WRKSRC} && ${SETENV} ${MAKE_ENV} ./configure.py ${CONFIGURE_ARGS}
+ 
