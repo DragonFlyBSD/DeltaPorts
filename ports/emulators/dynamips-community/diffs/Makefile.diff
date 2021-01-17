@@ -1,14 +1,11 @@
---- Makefile.orig	2017-07-02 23:12:29 UTC
+--- Makefile.orig	2021-01-17 19:45:33 UTC
 +++ Makefile
-@@ -12,12 +12,12 @@ COMMENT=	Cisco 1700/2600/3600/3700/7200
- 
- LICENSE=	GPLv2
+@@ -16,9 +16,9 @@ BROKEN_powerpc=		fails to compile: invok
+ BROKEN_riscv64=		fails to compile: common/dynamips_common.h:71:2: Please define your architecture!
+ BROKEN_sparc64=		fails to compile: invokes x86 assembler
  
 -LIB_DEPENDS=	libelf.so:devel/libelf
 +LIB_DEPENDS=	libelf.so.0:devel/libelf
- 
- BROKEN_powerpc=		fails to compile: invokes x86 assembler
- BROKEN_sparc64=		fails to compile: invokes x86 assembler
  
 -CFLAGS+=	-I${PREFIX}/include/libelf
 +CFLAGS+=	-I${PREFIX}/include -I${PREFIX}/include/libelf
