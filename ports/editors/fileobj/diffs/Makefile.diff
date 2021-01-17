@@ -1,4 +1,4 @@
---- Makefile.orig	2019-04-16 10:53:32 UTC
+--- Makefile.orig	2021-01-17 19:35:47 UTC
 +++ Makefile
 @@ -2,9 +2,9 @@
  # $FreeBSD$
@@ -16,9 +16,9 @@
  GH_ACCOUNT=	kusumi
  USE_GITHUB=	yes
  
--USES=		python
+-USES=		python:3.6+
 -USE_PYTHON=	autoplist distutils concurrent optsuffix
-+USES=		python gettext-runtime
++USES=		python:3.6+ gettext-runtime
 +USE_PYTHON=	autoplist distutils concurrent
  
  PLIST_FILES=	man/man1/fileobj.1.gz
