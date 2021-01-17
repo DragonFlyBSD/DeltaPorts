@@ -1,15 +1,15 @@
---- Makefile.orig	2020-10-28 10:17:59 UTC
+--- Makefile.orig	2021-01-17 19:31:42 UTC
 +++ Makefile
 @@ -36,7 +36,7 @@ TEST_TARGET=	test
  
  OPTIONS_DEFINE=	DOCS
  
--ANT_ARCH=	${ARCH:S/amd64/x86-64/:S/i386/x86/:C/powerpc64.*/ppc64/}
-+ANT_ARCH=	${ARCH:S/amd64/x86-64/:S/i386/x86/:S/x86_64/x86-64/:C/powerpc64.*/ppc64/}
+-ANT_ARCH=	${ARCH:S/amd64/x86-64/:S/i386/x86/:S/powerpc64/ppc64/}
++ANT_ARCH=	${ARCH:S/amd64/x86-64/:S/i386/x86/:S/x86_64/x86-64/:S/powerpc64/ppc64/}
  
- post-patch:
- 	@${REINPLACE_CMD} -e 's|%%LOCALBASE%%|${LOCALBASE}|' \
-@@ -46,7 +46,7 @@ post-build-DOCS-on:
+ .include <bsd.port.options.mk>
+ 
+@@ -52,7 +52,7 @@ post-build-DOCS-on:
  	cd ${WRKSRC} && ${SETENV} ${MAKE_ENV} ${ANT} javadoc
  
  do-install:
