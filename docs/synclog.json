@@ -133,6 +133,29 @@
 	    "timestamp": "Sun Jan 17 17:11:20 2021 +0000",
 	    "base_commit": "7ce3a54b6292359d7b62c3d4561765031aa2ae16",
 	    "rejects": [
+		{
+		    "biology/ugene": "1 out of 2 hunks failed--saving rejects to pkg-plist.rej",
+		    "ZZREMOVE": "/tmp/merge.workarea/files/patch-md5-dot: No such file or directory",
+		    "devel/jna": "1 out of 2 hunks failed--saving rejects to Makefile.rej",
+		    "editors/fileobj": "1 out of 2 hunks failed--saving rejects to Makefile.rej",
+		    "editors/xcoral": "1 out of 1 hunks failed--saving rejects to Makefile.rej",
+		    "emulators/dynamips-community": "1 out of 1 hunks failed--saving rejects to Makefile.rej",
+		    "graphics/bsd-plotutils": "1 out of 1 hunks failed--saving rejects to pkg-plist.rej",
+		    "graphics/mesa-dri": "No such line 117 in input file, ignoring 2 out of 6 hunks failed--saving rejects to Makefile.common.rej",
+		    "lang/rust": "1 out of 1 hunks failed--saving rejects to distinfo.rej",
+		    "lang/v8": "1 out of 1 hunks failed--saving rejects to Makefile.rej",
+		    "math/py-pynleq2": "1 out of 2 hunks failed--saving rejects to Makefile.rej",
+		    "math/saga": "1 out of 3 hunks failed--saving rejects to Makefile.rej",
+		    "multimedia/musikcube": "1 out of 1 hunks failed--saving rejects to Makefile.rej",
+		    "ZZREMOVE": "/tmp/merge.workarea/files/patch-cargo-crates_rustls-native-certs-0.1.0_Cargo.toml: No such file or directory",
+		    "ZZREMOVE": "/tmp/merge.workarea/files/patch-cargo-crates_rustls-native-certs-0.1.0_src_lib.rs: No such file or directory",
+		    "ZZREMOVE": "/tmp/merge.workarea/files/patch-cargo-crates_rlimit-0.4.0_src_lib.rs: No such file or directory",
+		    "sysutils/cinnamon-control-center": "No such line 169 in input file, ignoring 4 out of 4 hunks failed--saving rejects to pkg-plist.rej",
+		    "sysutils/cinnamon-control-center": "2 out of 2 hunks failed--saving rejects to Makefile.rej",
+		    "sysutils/cinnamon-settings-daemon": "3 out of 3 hunks failed--saving rejects to pkg-plist.rej",
+		    "sysutils/e2fsprogs": "1 out of 2 hunks failed--saving rejects to pkg-install.rej",
+		    "x11/cinnamon": "1 out of 1 hunks failed--saving rejects to pkg-plist.rej"
+		}
 	    ],
 	    "to-do": [
 		{
