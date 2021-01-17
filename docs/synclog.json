@@ -113,28 +113,8 @@
 		{
 		    "port": "misc/cxx_atomics",
 		    "desc": "being rebuilt on every incremental",
-		    "status": "resolved"
-		}
-	    ],
-	    "cherry-picks": [
-		"https://github.com/freebsd/freebsd-ports/commit/ee72b7e7840ce1.patch",
-		"https://github.com/freebsd/freebsd-ports/commit/e8fbec272d675f.patch",
-		"https://github.com/freebsd/freebsd-ports/commit/765dba5f83f980.patch",
-		"https://leaf.dragonflybsd.org/~tuxillo/archive/D/2020S10/p/01.diff",
-		"https://github.com/freebsd/freebsd-ports/commit/6c23e6a42b0653.patch",
-		"https://github.com/freebsd/freebsd-ports/commit/f9e4b632445687.patch",
-		"https://github.com/freebsd/freebsd-ports/commit/714b5b98ae5f1b.patch",
-		"https://github.com/freebsd/freebsd-ports/commit/79477faff353e8.patch",
-		"https://github.com/freebsd/freebsd-ports/commit/0e0ab6cff978ea.patch"
-	    ]
-	},
-	{
-	    "id": "2021S01",
-	    "timestamp": "Sun Jan 17 17:11:20 2021 +0000",
-	    "base_commit": "7ce3a54b6292359d7b62c3d4561765031aa2ae16",
-	    "rejects": [
-	    ],
-	    "to-do": [
+		    "status": "pending"
+		},
 		{
 		    "port": "devel/qca",
 		    "desc": "can't use TLSv1.3 by default, remove the relevant patch when it does.",
@@ -152,6 +132,15 @@
 		}
 	    ],
 	    "cherry-picks": [
+		"https://github.com/freebsd/freebsd-ports/commit/ee72b7e7840ce1.patch",
+		"https://github.com/freebsd/freebsd-ports/commit/e8fbec272d675f.patch",
+		"https://github.com/freebsd/freebsd-ports/commit/765dba5f83f980.patch",
+		"https://leaf.dragonflybsd.org/~tuxillo/archive/D/2020S10/p/01.diff",
+		"https://github.com/freebsd/freebsd-ports/commit/6c23e6a42b0653.patch",
+		"https://github.com/freebsd/freebsd-ports/commit/f9e4b632445687.patch",
+		"https://github.com/freebsd/freebsd-ports/commit/714b5b98ae5f1b.patch",
+		"https://github.com/freebsd/freebsd-ports/commit/79477faff353e8.patch",
+		"https://github.com/freebsd/freebsd-ports/commit/0e0ab6cff978ea.patch"
 	    ]
 	}
 
