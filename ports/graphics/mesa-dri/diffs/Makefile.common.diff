@@ -1,17 +1,23 @@
-Generate with diff -u1 to avoid regen
-
---- Makefile.common.orig	2020-11-13 08:33:02 UTC
+--- Makefile.common.orig	2021-01-17 23:20:29 UTC
 +++ Makefile.common
-@@ -42,3 +42,3 @@
+@@ -40,7 +40,7 @@ LIB_DEPENDS+=	libexpat.so:textproc/expat
+ USES+=	xorg
+ .endif
  .endif
 -.if ${COMPONENT} != osmesa
 +.if ${COMPONENT} != osmesa && ${COMPONENT} != osmesa-gallium
  LIB_DEPENDS+=	libdrm.so:graphics/libdrm
-@@ -52,3 +52,2 @@
+ .endif
+ .if ${COMPONENT} != libs
+@@ -50,15 +50,17 @@ LIB_DEPENDS+=	libglapi.so:graphics/mesa-
+ LIB_DEPENDS+=	libunwind.so:devel/libunwind
+ .endif
  .if ${OPSYS} == DragonFly
 -LIB_DEPENDS+=	libelf.so:devel/libelf
  .endif
-@@ -58,5 +57,8 @@
+ 
+ USES+=		compiler:c++11-lib bison meson pathfix pkgconfig \
+ 		python:3.6+,build shebangfix tar:xz
  
 +# all ports whine on WARNING: Gettext not found, all translation targets will be ignored.
 +USES+=		gettext-tools
@@ -21,17 +27,11 @@ Generate with diff -u1 to avoid regen
 -.if ${/usr/bin/ld:L:tA} != /usr/bin/ld.lld
 +.if exists(/usr/bin/ld.lld) && ${/usr/bin/ld:L:tA} != /usr/bin/ld.lld
  # --build-id isn't supported by old GNU ld.bfd in base
-@@ -88,3 +90,3 @@
- 
--.if ${OSVERSION} < 1200000
-+.if exists(/usr/bin/ld.lld) && ${OSVERSION} < 1200000
- EXTRA_PATCHES+= ${PATCHDIR}/extra-src_util_build__id.c
-@@ -101,2 +103,4 @@
- 
-+# Adjust DragonFly to mach this somewhat on sync
-+.if ${OPSYS} == FreeBSD
- .if ${ARCH} == powerpc64
-@@ -118 +122,24 @@
+ # Also ld.bfd have problems that seems related to --as-needed
+ USE_BINUTILS=		yes
+@@ -104,3 +106,26 @@ RUN_DEPENDS+=	llvm${LLVM_DEFAULT}>=10.0.
+ MESON_ARGS+=	--native-file="${WRKSRC}/llvm.ini"
+ LDFLAGS+=	-Wl,-rpath=${LOCALBASE}/llvm${LLVM_DEFAULT}/lib
  MESON_ARGS+=	-Dllvm=enabled
 +.endif
 +
