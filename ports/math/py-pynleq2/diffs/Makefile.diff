@@ -1,11 +1,11 @@
---- Makefile.orig	2019-07-31 15:03:37.000000000 +0000
+--- Makefile.orig	2021-01-17 23:37:28 UTC
 +++ Makefile
-@@ -16,13 +16,11 @@
+@@ -16,13 +16,11 @@ LICENSE_FILE=	${WRKSRC}/LICENSE
  
  BUILD_DEPENDS=	${PYNUMPY}
  
--USES=		fortran:flang python
-+USES=		fortran python
+-USES=		fortran:flang python:3.6+
++USES=		fortran python:3.6+
  USE_PYTHON=	distutils autoplist
  USE_GITHUB=	nodefault
  GH_TUPLE=	PySCeS:pysces:0.9.6:fortran
@@ -15,7 +15,7 @@
  FORTRAN_FILES=	linalg_nleq2.f nleq2.f wnorm.f zibconst.f zibmon.f zibsec.f
  
  post-patch:
-@@ -31,7 +29,7 @@
+@@ -31,7 +29,7 @@ post-patch:
  pre-build: # compile fortran files into a static library because distutils fails while doing this
  	@${MKDIR} ${WRKDIR}/.fbuild && \
  		cd ${WRKDIR}/.fbuild && \
