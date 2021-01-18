@@ -1,5 +1,0 @@
---- Makefile.orig	2020-11-13 08:33:06 UTC
-+++ Makefile
-@@ -27 +27 @@
--USES=		cmake:noninja compiler:c++14-lang ncurses:base pkgconfig ssl
-+USES=		cmake:noninja compiler:c++14-lang ncurses pkgconfig ssl
