@@ -1,4 +1,4 @@
---- Makefile.common.orig	2021-01-17 23:20:29 UTC
+--- Makefile.common.orig	2021-01-18 00:54:02 UTC
 +++ Makefile.common
 @@ -40,7 +40,7 @@ LIB_DEPENDS+=	libexpat.so:textproc/expat
  USES+=	xorg
@@ -29,11 +29,10 @@
  # --build-id isn't supported by old GNU ld.bfd in base
  # Also ld.bfd have problems that seems related to --as-needed
  USE_BINUTILS=		yes
-@@ -104,3 +106,26 @@ RUN_DEPENDS+=	llvm${LLVM_DEFAULT}>=10.0.
+@@ -104,3 +106,25 @@ RUN_DEPENDS+=	llvm${LLVM_DEFAULT}>=10.0.
  MESON_ARGS+=	--native-file="${WRKSRC}/llvm.ini"
  LDFLAGS+=	-Wl,-rpath=${LOCALBASE}/llvm${LLVM_DEFAULT}/lib
  MESON_ARGS+=	-Dllvm=enabled
-+.endif
 +
 +# On DragonFly llvm is only present in mesa-dri-gallium mesa-osmesa-gallium ports
 +# to reduce overhead of having llvm/clang huge dependency for no good reason
