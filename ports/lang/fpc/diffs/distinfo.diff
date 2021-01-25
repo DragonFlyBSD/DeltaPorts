@@ -1,8 +1,8 @@
---- distinfo.orig	2020-01-17 14:52:12 UTC
+--- distinfo.orig	2021-01-24 19:14:12 UTC
 +++ distinfo
 @@ -7,3 +7,5 @@ SHA256 (freepascal/ppcx64-3.0.4-freebsd.
- SIZE (freepascal/ppcx64-3.0.4-freebsd.tar.gz) = 1198609
- SHA256 (freepascal/fpc-3.0.4.man.tar.gz) = bc5357fc6e56d77eeeb5d820023f7f721f5febcc684837f296a598c6c772b26c
- SIZE (freepascal/fpc-3.0.4.man.tar.gz) = 47294
+ SIZE (freepascal/ppcx64-3.0.4-freebsd.tar.gz) = 1198576
+ SHA256 (freepascal/fpc-3.2.0.man.tar.gz) = d510a75642cfb87ed18c3e4d533ffcc3b9c5e7219ca914ebe7cdab47eefb3398
+ SIZE (freepascal/fpc-3.2.0.man.tar.gz) = 47338
 +SHA256 (freepascal/ppcx64-3.0.4-dragonfly.tar.gz) = 2f8425356037366677331021c6643de85425fb956fdab80d1077d4589be3071a
 +SIZE (freepascal/ppcx64-3.0.4-dragonfly.tar.gz) = 1197822
