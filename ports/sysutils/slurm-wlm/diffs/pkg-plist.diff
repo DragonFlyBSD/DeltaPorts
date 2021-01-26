@@ -1,0 +1,14 @@
+--- /usr/dports/sysutils/slurm-wlm/pkg-plist.orig	2021-01-26 10:16:54.690887000 +0100
++++ /usr/dports/sysutils/slurm-wlm/pkg-plist	2021-01-26 10:17:16.970992000 +0100
+@@ -576,3 +576,11 @@
+ %%PORTDOCS%%%%DOCSDIR%%/html/usage_pies.gif
+ %%PORTDOCS%%%%DOCSDIR%%/html/user_permissions.html
+ %%PORTDOCS%%%%DOCSDIR%%/html/wckey.html
++%%LUA_LIBDIR%%/slurm/jobacct_gather_cgroup.a
++%%LUA_LIBDIR%%/slurm/jobacct_gather_cgroup.so
++%%LUA_LIBDIR%%/slurm/proctrack_cgroup.a
++%%LUA_LIBDIR%%/slurm/proctrack_cgroup.so
++%%LUA_LIBDIR%%/slurm/switch_cray_aries.a
++%%LUA_LIBDIR%%/slurm/switch_cray_aries.so
++%%LUA_LIBDIR%%/slurm/task_cgroup.a
++%%LUA_LIBDIR%%/slurm/task_cgroup.so
