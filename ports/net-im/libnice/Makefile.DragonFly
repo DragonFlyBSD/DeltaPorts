@@ -1,0 +1,13 @@
+.if defined(LIBNICE_SLAVE)
+dfly-install:
+	${RM}  ${STAGEDIR}${LOCALBASE}/bin/stund
+	${RM}  ${STAGEDIR}${LOCALBASE}/bin/stunbdc
+	${RM} -r  ${STAGEDIR}${LOCALBASE}/lib/girepository-1.0
+	${RM}  ${STAGEDIR}${LOCALBASE}/lib/libnice.so
+	${RM}  ${STAGEDIR}${LOCALBASE}/lib/libnice.so.10
+	${RM}  ${STAGEDIR}${LOCALBASE}/lib/libnice.so.10.11.0
+	${RM}  ${STAGEDIR}${LOCALBASE}/libdata/pkgconfig/nice.pc
+	${RM} -r ${STAGEDIR}${LOCALBASE}/include/nice
+	${RM} -r ${STAGEDIR}${LOCALBASE}/include/stun
+	${RM} -r ${STAGEDIR}${LOCALBASE}/share/gir-1.0
+.endif
