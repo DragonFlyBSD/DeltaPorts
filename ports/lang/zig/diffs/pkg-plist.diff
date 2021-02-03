@@ -1,0 +1,18 @@
+--- pkg-plist.orig	2021-02-03 23:01:20.352865000 +0100
++++ pkg-plist	2021-02-03 23:01:06.072789000 +0100
+@@ -8609,6 +8609,7 @@
+ lib/zig/std/meta/trait.zig
+ lib/zig/std/mutex.zig
+ lib/zig/std/net.zig
++@dir lib/zig/std/net
+ lib/zig/std/once.zig
+ lib/zig/std/os.zig
+ lib/zig/std/os/bits.zig
+@@ -8816,6 +8817,7 @@
+ lib/zig/std/time.zig
+ lib/zig/std/time/epoch.zig
+ lib/zig/std/unicode.zig
++@dir lib/zig/std/unicode
+ lib/zig/std/valgrind.zig
+ lib/zig/std/valgrind/callgrind.zig
+ lib/zig/std/valgrind/memcheck.zig
