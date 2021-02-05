@@ -1,0 +1,18 @@
+--- pkg-plist.orig	2021-02-05 11:15:40 UTC
++++ pkg-plist
+@@ -1161,6 +1161,7 @@
+ %%QT_INCDIR%%/Qt3DRender/qtexturewrapmode.h
+ %%QT_INCDIR%%/Qt3DRender/qviewport.h
+ %%QT_INCDIR%%/Qt3DRender/qwaitfence.h
++%%QT_CMAKEDIR%%/Qt53DRender/Qt53DRender_AssimpSceneImportPlugin.cmake
+ %%QT_CMAKEDIR%%/Qt53DAnimation/Qt53DAnimationConfig.cmake
+ %%QT_CMAKEDIR%%/Qt53DAnimation/Qt53DAnimationConfigVersion.cmake
+ %%QT_CMAKEDIR%%/Qt53DCore/Qt53DCoreConfig.cmake
+@@ -1297,6 +1298,7 @@
+ %%DEBUG%%%%QT_PLUGINDIR%%/renderers/libopenglrenderer.so.debug
+ %%QT_PLUGINDIR%%/renderplugins/libscene2d.so
+ %%DEBUG%%%%QT_PLUGINDIR%%/renderplugins/libscene2d.so.debug
++%%QT_PLUGINDIR%%/sceneparsers/libassimpsceneimport.so
+ %%QT_PLUGINDIR%%/sceneparsers/libgltfsceneexport.so
+ %%DEBUG%%%%QT_PLUGINDIR%%/sceneparsers/libgltfsceneexport.so.debug
+ %%QT_PLUGINDIR%%/sceneparsers/libgltfsceneimport.so
