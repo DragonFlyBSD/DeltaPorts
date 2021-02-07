@@ -1,13 +1,12 @@
 .if defined(LIBNICE_SLAVE)
-dfly-install:
-	${RM}  ${STAGEDIR}${LOCALBASE}/bin/stund
-	${RM}  ${STAGEDIR}${LOCALBASE}/bin/stunbdc
-	${RM} -r  ${STAGEDIR}${LOCALBASE}/lib/girepository-1.0
-	${RM}  ${STAGEDIR}${LOCALBASE}/lib/libnice.so
-	${RM}  ${STAGEDIR}${LOCALBASE}/lib/libnice.so.10
-	${RM}  ${STAGEDIR}${LOCALBASE}/lib/libnice.so.10.11.0
-	${RM}  ${STAGEDIR}${LOCALBASE}/libdata/pkgconfig/nice.pc
-	${RM} -r ${STAGEDIR}${LOCALBASE}/include/nice
-	${RM} -r ${STAGEDIR}${LOCALBASE}/include/stun
-	${RM} -r ${STAGEDIR}${LOCALBASE}/share/gir-1.0
+post-install:
+	# A bit meh, but does the job and prevents future problems.
+	# But I think the correct solution would be to specify each file
+	# to be removed.
+	${RM} -rf ${STAGEDIR}${PREFIX}/bin
+	${RM} -rf ${STAGEDIR}${PREFIX}/lib/libnice.so*
+	${RM} -rf ${STAGEDIR}${PREFIX}/lib/girepository-1.0
+	${RM} -rf ${STAGEDIR}${PREFIX}/include
+	${RM} -rf ${STAGEDIR}${PREFIX}/libdata
+	${RM} -rf ${STAGEDIR}${PREFIX}/share
 .endif
