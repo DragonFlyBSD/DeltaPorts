@@ -1,4 +1,4 @@
---- bsd.commands.mk.orig	2017-05-03 14:49:42 UTC
+--- bsd.commands.mk.orig	2021-02-08 11:17:58 UTC
 +++ bsd.commands.mk
 @@ -15,6 +15,9 @@ COMMANDS_Include_MAINTAINER=	portmgr@Fre
  
@@ -19,12 +19,3 @@
  MV?=			/bin/mv
  OBJCOPY?=		/usr/bin/objcopy
  OBJDUMP?=		/usr/bin/objdump
-@@ -75,7 +78,7 @@ PS_CMD?=		/bin/ps
- PW?=			/usr/sbin/pw
- READELF?=		/usr/bin/readelf
- REALPATH?=		/bin/realpath
--RLN?=			${INSTALL} -l rs
-+RLN?=			${SH} ${SCRIPTSDIR}/relative_link.sh
- RM?=			/bin/rm -f
- RMDIR?=			/bin/rmdir
- SED?=			/usr/bin/sed

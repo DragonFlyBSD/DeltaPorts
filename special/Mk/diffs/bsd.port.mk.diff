@@ -1,4 +1,4 @@
---- bsd.port.mk.orig	2020-10-28 16:32:21 UTC
+--- bsd.port.mk.orig	2021-02-08 11:25:34 UTC
 +++ bsd.port.mk
 @@ -44,8 +44,9 @@ FreeBSD_MAINTAINER=	portmgr@FreeBSD.org
  #				  "FreeBSD," "NetBSD," or "OpenBSD" as appropriate.
@@ -237,7 +237,7 @@
  BINUTILS?=	ADDR2LINE AR AS CPPFILT GPROF LD NM OBJCOPY OBJDUMP RANLIB \
  	READELF SIZE STRINGS
  BINUTILS_NO_MAKE_ENV?=
-@@ -2052,8 +2071,10 @@ DISTINFO_FILE?=		${MASTERDIR}/distinfo
+@@ -2056,8 +2075,10 @@ DISTINFO_FILE?=		${MASTERDIR}/distinfo
  MAKE_FLAGS?=	-f
  MAKEFILE?=		Makefile
  MAKE_CMD?=		${BSDMAKE}
@@ -248,7 +248,7 @@
  			CC="${CC}" CFLAGS="${CFLAGS}" \
  			CPP="${CPP}" CPPFLAGS="${CPPFLAGS}" \
  			LDFLAGS="${LDFLAGS}" LIBS="${LIBS}" \
-@@ -2090,7 +2111,7 @@ MAKE_JOBS_NUMBER=	1
+@@ -2094,7 +2115,7 @@ MAKE_JOBS_NUMBER=	1
  _MAKE_JOBS_NUMBER:=	${MAKE_JOBS_NUMBER}
  .else
  .if !defined(_SMP_CPUS)
@@ -257,7 +257,7 @@
  .endif
  _EXPORTED_VARS+=	_SMP_CPUS
  _MAKE_JOBS_NUMBER=	${_SMP_CPUS}
-@@ -2639,7 +2660,7 @@ CONFIG_SITE?=		${PORTSDIR}/Templates/con
+@@ -2647,7 +2668,7 @@ CONFIG_SITE?=		${PORTSDIR}/Templates/con
  .if defined(GNU_CONFIGURE)
  # Maximum command line length
  .if !defined(CONFIGURE_MAX_CMD_LEN)
@@ -266,7 +266,7 @@
  .endif
  _EXPORTED_VARS+=	CONFIGURE_MAX_CMD_LEN
  GNU_CONFIGURE_PREFIX?=	${PREFIX}
-@@ -2681,6 +2702,8 @@ SET_LATE_CONFIGURE_ARGS= \
+@@ -2689,6 +2710,8 @@ SET_LATE_CONFIGURE_ARGS= \
  SCRIPTS_ENV+=	CURDIR=${MASTERDIR} DISTDIR=${DISTDIR} \
  		  WRKDIR=${WRKDIR} WRKSRC=${WRKSRC} PATCHDIR=${PATCHDIR} \
  		  SCRIPTDIR=${SCRIPTDIR} FILESDIR=${FILESDIR} \
@@ -275,7 +275,7 @@
  		  PORTSDIR=${PORTSDIR} PREFIX=${PREFIX} LOCALBASE=${LOCALBASE}
  
  .if defined(BATCH)
-@@ -2759,7 +2782,7 @@ DESKTOPDIR?=		${PREFIX}/share/applicatio
+@@ -2767,7 +2790,7 @@ DESKTOPDIR?=		${PREFIX}/share/applicatio
  
  # Check the machine architectures
  .if defined(ONLY_FOR_ARCHS)
@@ -284,7 +284,7 @@
  .if ${ARCH:M${__ARCH}} != ""
  __ARCH_OK?=		1
  .endif
-@@ -2769,7 +2792,7 @@ __ARCH_OK?=		1
+@@ -2777,7 +2800,7 @@ __ARCH_OK?=		1
  .endif
  
  .if defined(NOT_FOR_ARCHS)
@@ -293,7 +293,7 @@
  .if ${ARCH:M${__NARCH}} != ""
  .undef __ARCH_OK
  .endif
-@@ -2778,9 +2801,9 @@ __ARCH_OK?=		1
+@@ -2786,9 +2809,9 @@ __ARCH_OK?=		1
  
  .if !defined(__ARCH_OK)
  .if defined(ONLY_FOR_ARCHS)
@@ -305,7 +305,7 @@
  .endif
  IGNORE+=	while you are running ${ARCH}
  
-@@ -2927,6 +2950,7 @@ all:
+@@ -2935,6 +2958,7 @@ all:
  	  DISTDIR=${DISTDIR} WRKDIR=${WRKDIR} WRKSRC=${WRKSRC} \
  	  PATCHDIR=${PATCHDIR} SCRIPTDIR=${SCRIPTDIR} \
  	  FILESDIR=${FILESDIR} PORTSDIR=${PORTSDIR} PREFIX=${PREFIX} \
@@ -313,7 +313,7 @@
  	  BUILD_DEPENDS="${BUILD_DEPENDS}" RUN_DEPENDS="${RUN_DEPENDS}" \
  	  CONFLICTS="${CONFLICTS}" \
  	${ALL_HOOK}
-@@ -3187,6 +3211,7 @@ do-patch:
+@@ -3195,6 +3219,7 @@ do-patch:
  			dp_OPSYS="${OPSYS}" \
  			dp_PATCH="${PATCH}" \
  			dp_PATCHDIR="${PATCHDIR}" \
@@ -321,7 +321,7 @@
  			dp_PATCHFILES="${_PATCHFILES2}" \
  			dp_PATCH_ARGS=${PATCH_ARGS:Q} \
  			dp_PATCH_DEBUG_TMP="${PATCH_DEBUG_TMP}" \
-@@ -3269,6 +3294,14 @@ do-configure:
+@@ -3277,6 +3302,14 @@ do-configure:
  DO_MAKE_BUILD?=	${SETENV} ${MAKE_ENV} ${MAKE_CMD} ${MAKE_FLAGS} ${MAKEFILE} ${_MAKE_JOBS} ${MAKE_ARGS:N${DESTDIRNAME}=*}
  .if !target(do-build)
  do-build:
@@ -336,16 +336,7 @@
  	@(cd ${BUILD_WRKSRC}; if ! ${DO_MAKE_BUILD} ${ALL_TARGET}; then \
  		if [ -n "${BUILD_FAIL_MESSAGE}" ] ; then \
  			${ECHO_MSG} "===> Compilation failed unexpectedly."; \
-@@ -3413,7 +3446,7 @@ _PORTS_DIRECTORIES+=	${PKGLATESTREPOSITO
- _EXTRA_PACKAGE_TARGET_DEP+=	${PKGLATESTFILE}
- 
- ${PKGLATESTFILE}: ${PKGFILE} ${PKGLATESTREPOSITORY}
--	${INSTALL} -l rs ${PKGFILE} ${PKGLATESTFILE}
-+	${SH} ${SCRIPTSDIR}/relative_link.sh ${PKGFILE} ${PKGLATESTFILE}
- .  endif
- 
- .endif
-@@ -3772,6 +3805,7 @@ do-clean:
+@@ -3780,6 +3813,7 @@ do-clean:
  	@if [ -d ${WRKDIR} ]; then \
  		if [ -w ${WRKDIR} ]; then \
  			${RM} -r ${WRKDIR}; \
@@ -353,7 +344,7 @@
  		else \
  			${ECHO_MSG} "===>   ${WRKDIR} not writable, skipping"; \
  		fi; \
-@@ -4145,7 +4179,7 @@ FETCH_LIST?=	for i in $$deps; do \
+@@ -4153,7 +4187,7 @@ FETCH_LIST?=	for i in $$deps; do \
  			else	\
  				continue;	\
  			fi;;	\
@@ -362,7 +353,7 @@
  				continue;	\
  			fi;;	\
  		esac;	\
-@@ -4475,10 +4509,15 @@ _SUB_LIST_TEMP=	${SUB_LIST:S/$/!g/:S/^/
+@@ -4483,10 +4517,15 @@ _SUB_LIST_TEMP=	${SUB_LIST:S/$/!g/:S/^/
  apply-slist:
  .if defined(SUB_FILES)
  .for file in ${SUB_FILES}
@@ -381,7 +372,7 @@
  .endif
  .endfor
  .for i in pkg-message pkg-install pkg-deinstall pkg-req
-@@ -5232,26 +5271,26 @@ _SANITY_SEQ=	050:post-chroot 100:pre-eve
+@@ -5240,26 +5279,26 @@ _SANITY_SEQ=	050:post-chroot 100:pre-eve
  				350:check-desktop-entries 400:check-depends \
  				450:identify-install-conflicts 500:check-deprecated \
  				550:check-vulnerable 600:check-license 650:check-config \
@@ -412,7 +403,7 @@
  				${_OPTIONS_patch} ${_USES_patch}
  _CONFIGURE_DEP=	patch
  _CONFIGURE_SEQ=	150:build-depends 151:lib-depends 160:create-binary-alias \
-@@ -5259,11 +5298,11 @@ _CONFIGURE_SEQ=	150:build-depends 151:li
+@@ -5267,11 +5306,11 @@ _CONFIGURE_SEQ=	150:build-depends 151:li
  				200:configure-message \
  				300:pre-configure 450:pre-configure-script \
  				490:run-autotools-fixup 500:do-configure 700:post-configure \
@@ -426,7 +417,7 @@
  				${_OPTIONS_build} ${_USES_build}
  _STAGE_DEP=		build
  # STAGE is special in its numbering as it has install and stage, so install is
-@@ -5272,7 +5311,7 @@ _STAGE_SEQ=		050:stage-message 100:stage
+@@ -5280,7 +5319,7 @@ _STAGE_SEQ=		050:stage-message 100:stage
  				200:apply-slist 300:pre-install \
  				400:generate-plist 450:pre-su-install 475:create-users-groups \
  				500:do-install 550:kmod-post-install 600:fixup-lib-pkgconfig 700:post-install \
@@ -435,7 +426,7 @@
  				860:install-rc-script 870:install-ldconfig-file \
  				880:install-license 890:install-desktop-entries \
  				900:add-plist-info 910:add-plist-docs 920:add-plist-examples \
-@@ -5286,7 +5325,7 @@ stage-qa: stage
+@@ -5294,7 +5333,7 @@ stage-qa: stage
  .endif
  _TEST_DEP=		stage
  _TEST_SEQ=		100:test-message 150:test-depends 300:pre-test 500:do-test \
