@@ -160,7 +160,7 @@
 	    "to-do": [
 		{
 		    "port": "devel/qca",
-		    "desc": "can't use TLSv1.3 by default, remove the relevant patch when it does.",
+		    "desc": "can't use TLSv1.3 by default, remove the relevant patch available.",
 		    "status": "pending"
 		},
 		{
@@ -171,6 +171,11 @@
 		{
 		    "port": "graphics/libosmesa",
 		    "desc": "opengl temporarily disabled, check what freebsd does.",
+		    "status": "pending"
+		},
+		{
+		    "port": "devel/folly",
+		    "desc": "can't use TLSv1.3 yet, remove the relevant patch when available.",
 		    "status": "pending"
 		}
 	    ],
