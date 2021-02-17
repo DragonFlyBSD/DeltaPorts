@@ -1,6 +1,6 @@
---- Makefile.common.orig	2021-01-18 00:54:02 UTC
+--- Makefile.common.orig	2021-02-17 00:07:22 UTC
 +++ Makefile.common
-@@ -40,7 +40,7 @@ LIB_DEPENDS+=	libexpat.so:textproc/expat
+@@ -37,7 +37,7 @@ LIB_DEPENDS+=	libexpat.so:textproc/expat
  USES+=	xorg
  .endif
  .endif
@@ -9,7 +9,7 @@
  LIB_DEPENDS+=	libdrm.so:graphics/libdrm
  .endif
  .if ${COMPONENT} != libs
-@@ -50,15 +50,17 @@ LIB_DEPENDS+=	libglapi.so:graphics/mesa-
+@@ -47,15 +47,17 @@ LIB_DEPENDS+=	libglapi.so:graphics/mesa-
  LIB_DEPENDS+=	libunwind.so:devel/libunwind
  .endif
  .if ${OPSYS} == DragonFly
@@ -29,7 +29,7 @@
  # --build-id isn't supported by old GNU ld.bfd in base
  # Also ld.bfd have problems that seems related to --as-needed
  USE_BINUTILS=		yes
-@@ -104,3 +106,25 @@ RUN_DEPENDS+=	llvm${LLVM_DEFAULT}>=10.0.
+@@ -101,3 +103,21 @@ RUN_DEPENDS+=	llvm${LLVM_DEFAULT}>=10.0.
  MESON_ARGS+=	--native-file="${WRKSRC}/llvm.ini"
  LDFLAGS+=	-Wl,-rpath=${LOCALBASE}/llvm${LLVM_DEFAULT}/lib
  MESON_ARGS+=	-Dllvm=enabled
@@ -39,7 +39,6 @@
 +.if ${OPSYS} == DragonFly
 +# XXX disable dri3 until ftigeot figure it out
 +MESON_ARGS+=	-Ddri3=disabled
-+LLVM_DEFAULT=	10
 +. if ${COMPONENT} == libs || ${COMPONENT} == dri || ${COMPONENT} == osmesa
 +MESON_ARGS+=	-Dllvm=disabled
 +.  if defined(DEVELOPER)
@@ -50,8 +49,5 @@
 +LIB_DEPENDS+=	libelf.so:devel/libelf
 +BUILD_DEPENDS+=	llvm${LLVM_DEFAULT}>=0:devel/llvm${LLVM_DEFAULT}
 +RUN_DEPENDS+=	llvm${LLVM_DEFAULT}>=0:devel/llvm${LLVM_DEFAULT}
-+MESON_ARGS+=	--native-file="${WRKSRC}/llvm.ini"
-+LDFLAGS+=	-Wl,-rpath=${LOCALBASE}/llvm${LLVM_DEFAULT}/lib
-+MESON_ARGS+=	-Dllvm=enabled
 +. endif
 +.endif
