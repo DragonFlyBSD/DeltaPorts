@@ -52,6 +52,7 @@ GH_TUPLE=	\
 		ugorji:go:v1.1.7:ugorji_go_codec/vendor/github.com/ugorji/go
 
 PLIST_FILES=	${LOCALBASE}/bin/${PORTNAME} \
+		"@dir %%ETCDIR%%/mirrorselect" \
 		"@sample ${ETCDIR}/${PORTNAME}.toml.sample" \
 		"@sample ${ETCDIR}/mirrors.toml.sample"
 
