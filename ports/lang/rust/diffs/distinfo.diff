@@ -1,12 +1,12 @@
---- distinfo.orig	2021-01-23 18:16:32 UTC
+--- distinfo.orig	2021-02-22 18:24:35 UTC
 +++ distinfo
-@@ -49,3 +49,9 @@ SHA256 (rust/2020-11-19/rust-std-1.48.0-
- SIZE (rust/2020-11-19/rust-std-1.48.0-powerpc64-unknown-freebsd-elfv2.tar.xz) = 16631184
- SHA256 (rust/2020-11-19/cargo-1.48.0-powerpc64-unknown-freebsd-elfv2.tar.xz) = 7f6ab7edf18c87997fb0b6f563ab776a6af22dcbb655acc6d7c81b0a6fe0837c
- SIZE (rust/2020-11-19/cargo-1.48.0-powerpc64-unknown-freebsd-elfv2.tar.xz) = 4412520
-+SHA256 (rust/2020-11-19/rustc-1.48.0-x86_64-unknown-dragonfly.tar.xz) = 85319b8fdca505c8f13c0e2f1b4247089782218189111cb1c92c73a97df67835
-+SIZE (rust/2020-11-19/rustc-1.48.0-x86_64-unknown-dragonfly.tar.xz) = 47290540
-+SHA256 (rust/2020-11-19/rust-std-1.48.0-x86_64-unknown-dragonfly.tar.xz) = 571fde65771c65b5c67a79352588d2f395a755e4ddd2e26b38a18d50f7be4892 
-+SIZE (rust/2020-11-19/rust-std-1.48.0-x86_64-unknown-dragonfly.tar.xz) = 18955312
-+SHA256 (rust/2020-11-19/cargo-1.48.0-x86_64-unknown-dragonfly.tar.xz) = 110d3c72f8545f40b1a81dd2a5ab721dfeaddfde25af74f25ef18644ba5a2abc
-+SIZE (rust/2020-11-19/cargo-1.48.0-x86_64-unknown-dragonfly.tar.xz) = 4927944
+@@ -49,3 +49,9 @@ SHA256 (rust/2020-12-31/rust-std-1.49.0-
+ SIZE (rust/2020-12-31/rust-std-1.49.0-powerpc64-unknown-freebsd-elfv2.tar.xz) = 16795244
+ SHA256 (rust/2020-12-31/cargo-1.49.0-powerpc64-unknown-freebsd-elfv2.tar.xz) = cae1f2f35330bbfd82a5ab1e3f3b82d3981f7b22541becf69659323edb9a6a8c
+ SIZE (rust/2020-12-31/cargo-1.49.0-powerpc64-unknown-freebsd-elfv2.tar.xz) = 4447368
++SHA256 (rust/2020-12-31/rustc-1.49.0-x86_64-unknown-dragonfly.tar.xz) = 6e4b19b96663042bfe94634025565d57c944ad6e1c6c40dd7b1c56f72eaa2808
++SIZE (rust/2020-12-31/rustc-1.49.0-x86_64-unknown-dragonfly.tar.xz) = 39597956
++SHA256 (rust/2020-12-31/rust-std-1.49.0-x86_64-unknown-dragonfly.tar.xz) = 55fabca711092c67bbffb3e3fec886acf6b90094b256c10998e4f77f90281805
++SIZE (rust/2020-12-31/rust-std-1.49.0-x86_64-unknown-dragonfly.tar.xz) = 19435648
++SHA256 (rust/2020-12-31/cargo-1.49.0-x86_64-unknown-dragonfly.tar.xz) = 8af89e8c81beaa3222c2da65a43d8fda5e887552684601ceb35666184ae54294
++SIZE (rust/2020-12-31/cargo-1.49.0-x86_64-unknown-dragonfly.tar.xz) = 4877948
