@@ -184,7 +184,53 @@
 		"https://github.com/freebsd/freebsd-ports/commit/e4678d3c251055.patch",
 		"https://github.com/freebsd/freebsd-ports/commit/07053ffc8ca9dd1.patch"
 	    ]
+	},
+	{
+	    "id": "2021S02",
+	    "timestamp": "Sun Feb 21 16:49:33 2021 +0000",
+	    "base_commit": "6cfa419199314ef9715a4c90b60e9975a3754143",
+	    "rejects": [
+		{
+		    "devel/RStudio": "1 out of 1 hunks failed--saving rejects to Makefile.rej",
+		    "devel/gitlab-runner": "1 out of 1 hunks failed--saving rejects to Makefile.rej",
+		    "devel/gnome-vfs": "1 out of 1 hunks failed--saving rejects to Makefile.rej",
+		    "graphics/jbig2dec": "2 out of 2 hunks failed--saving rejects to Makefile.rej",
+		    "graphics/opencv": "No such line 392 in input file, ignoring 1 out of 1 hunks failed--saving rejects to Makefile.rej",
+		    "lang/rust": "1 out of 1 hunks failed--saving rejects to distinfo.rej",
+		    "math/py-pynleq2": "2 out of 2 hunks failed--saving rejects to Makefile.rej",
+		    "net/openntpd": "1 out of 1 hunks failed--saving rejects to Makefile.rej",
+		    "net/vde2": "1 out of 1 hunks failed--saving rejects to Makefile.rej",
+		    "security/snort3": "1 out of 1 hunks failed--saving rejects to Makefile.rej",
+		    "sysutils/bareos-server": "1 out of 1 hunks failed--saving rejects to Makefile.rej",
+		    "sysutils/di": "1 out of 1 hunks failed--saving rejects to Makefile.rej",
+		    "sysutils/e2fsprogs": "1 out of 3 hunks failed--saving rejects to Makefile.rej",
+		    "x11-servers/xorg-server": "1 out of 2 hunks failed--saving rejects to Makefile.rej"
+		}
+	    ],
+	    "to-do": [
+		{
+		    "port": "devel/qca",
+		    "desc": "can't use TLSv1.3 by default, remove the relevant patch available.",
+		    "status": "pending"
+		},
+		{
+		    "port": "java/openjdk8",
+		    "desc": "to be updated (8.252.09)",
+		    "status": "pending"
+		},
+		{
+		    "port": "graphics/libosmesa",
+		    "desc": "opengl temporarily disabled, check what freebsd does.",
+		    "status": "pending"
+		},
+		{
+		    "port": "devel/folly",
+		    "desc": "can't use TLSv1.3 yet, remove the relevant patch when available.",
+		    "status": "pending"
+		}
+	    ],
+	    "cherry-picks": [
+	    ]
 	}
-
     ]
 }
