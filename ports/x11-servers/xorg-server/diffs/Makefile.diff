@@ -1,6 +1,6 @@
---- Makefile.orig	2020-03-14 01:32:49 UTC
+--- Makefile.orig	2021-02-22 19:06:34 UTC
 +++ Makefile
-@@ -69,6 +69,12 @@ INSTALL_TARGET=	install-strip
+@@ -76,6 +76,12 @@ CPE_VENDOR=	x.org
  .if ${SLAVE_PORT} == "no" || ${PORTNAME} == "xephyr" || ${PORTNAME} == "xwayland"
  LIB_DEPENDS+=	libdrm.so:graphics/libdrm \
  		libepoxy.so:graphics/libepoxy
@@ -13,16 +13,3 @@
  .else
  BUILD_DEPENDS+=	libepoxy>0:graphics/libepoxy	# only for configure
  .endif
-@@ -95,9 +101,9 @@ PLIST=		${.CURDIR}/pkg-plist
- CONFIGURE_ENV=	SHA1_LIB="-L/usr/lib -lcrypto" SHA1_CFLAGS="-I/usr/include"
- .endif
- 
--.if ${ARCH} == "i386" || ${ARCH} == "amd64"
--LIB_DEPENDS+=	libunwind.so:devel/libunwind
--.endif
-+#.if ${ARCH} == "i386" || ${ARCH} == "amd64"
-+#LIB_DEPENDS+=	libunwind.so:devel/libunwind
-+#.endif
- 
- .if ${ARCH} == "sparc64"
- PLIST_SUB+=	SPARC64=""
