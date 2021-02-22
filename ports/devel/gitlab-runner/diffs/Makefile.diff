@@ -1,11 +1,11 @@
---- Makefile.orig	2020-09-30 16:24:03 UTC
+--- Makefile.orig	2021-02-22 18:12:29 UTC
 +++ Makefile
-@@ -155,8 +155,6 @@ post-extract:
+@@ -186,8 +186,6 @@ post-extract:
  	@${RLN} ${WRKSRC_googleapis_google_cloud_go_storage}/storage ${WRKSRC}/vendor/cloud.google.com/go/storage
  	@${RM} -r ${WRKSRC}/vendor/github.com/Azure/go-autorest/autorest
  	@${RLN} ${WRKSRC_azure_go_autorest_autorest}/autorest ${WRKSRC}/vendor/github.com/Azure/go-autorest/autorest
 -	@${RM} -r ${WRKSRC}/vendor/github.com/Azure/go-autorest/autorest/adal
 -	@${RLN} ${WRKSRC_azure_go_autorest_adal}/autorest/adal ${WRKSRC}/vendor/github.com/Azure/go-autorest/autorest/adal
+ 	@${RM} -r ${WRKSRC}/vendor/github.com/Azure/go-autorest/autorest/date
+ 	@${RLN} ${WRKSRC_azure_go_autorest_date}/autorest/date ${WRKSRC}/vendor/github.com/Azure/go-autorest/autorest/date
  	@${RM} -r ${WRKSRC}/vendor/github.com/Azure/go-autorest/logger
- 	@${RLN} ${WRKSRC_azure_go_autorest_logger}/logger ${WRKSRC}/vendor/github.com/Azure/go-autorest/logger
- 	@${RM} -r ${WRKSRC}/vendor/github.com/Azure/go-autorest/tracing
