@@ -1,6 +1,6 @@
---- Makefile.orig	2019-07-30 19:07:00.000000000 +0000
+--- Makefile.orig	2021-02-22 18:14:37 UTC
 +++ Makefile
-@@ -56,10 +56,6 @@
+@@ -53,10 +53,6 @@ MDNS_DESC=	Enable Bonjour/Rendezvous sup
  USES+=		fam
  .endif
  
@@ -8,6 +8,6 @@
 -LIB_DEPENDS+=	libkrb5.so:security/heimdal
 -.endif
 -
- .if ${PORT_OPTIONS:MHAL}
- CONFIGURE_ARGS+=--enable-hal
- LIB_DEPENDS+=	libhal.so:sysutils/hal
+ .if ${PORT_OPTIONS:MSAMBA}
+ CONFIGURE_ARGS+=--with-samba-includes=${SAMBAINCLUDES} --with-samba-libs=${SAMBALIBS}
+ USES+=		samba:lib
