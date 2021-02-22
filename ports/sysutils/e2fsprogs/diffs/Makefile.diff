@@ -1,15 +1,15 @@
---- /data/freebsd-ports/sysutils/e2fsprogs/Makefile	2020-11-13 08:33:11.122181000 +0000
-+++ Makefile	2020-11-17 08:48:13.088100000 +0000
+--- Makefile.orig	2021-02-22 19:05:04 UTC
++++ Makefile
 @@ -40,7 +40,7 @@ CONFIGURE_ARGS?=--disable-fsck \
  		--with-root-prefix='${PREFIX}' \
  		--without-included-gettext \
  		LDFLAGS='${LDFLAGS} -L${LOCALBASE}/lib -Wl,--rpath -Wl,${LOCALBASE}/lib/e2fsprogs'
 -CONFIGURE_ENV?=	LIBS='-Wl,--as-needed ${LIBS} -lexecinfo -lelf'
 +CONFIGURE_ENV?=	LIBS='-Wl,--as-needed ${LIBS} -lexecinfo'
+ # apparently HAVE_PTHREAD_H checks go missing if the FUSEFS option is unset, force it:
  CPPFLAGS+=	-I${WRKSRC}/lib -I${LOCALBASE}/include # -D_EXT2_USE_C_VERSIONS
  MAKE_ARGS+=	pkgconfigdir='${PREFIX}/libdata/pkgconfig'
- MAKE_ENV+=	CHECK_CMD=@true
-@@ -251,7 +251,7 @@ post-build:
+@@ -249,7 +249,7 @@ post-build:
  	cd ${WRKSRC}/e2fsck && ${RM} -f e2fsck \
  		&& ${MAKE_CMD} e2fsck V=1 \
  		LIBS="-static-libgcc -lc -Bstatic ../lib/libsupport.a ../lib/libext2fs.a ../lib/libcom_err.a \
@@ -18,7 +18,7 @@
  		${LOCALBASE}/lib/libblkid.a ${LOCALBASE}/lib/libuuid.a ${libintl} ../lib/libe2p.a " \
  		&& ${STRIP_CMD} e2fsck
  # Regression check: avoid a port (not upstream!) regression from 1.40.5,
-@@ -293,19 +293,7 @@ post-build:
+@@ -291,19 +291,7 @@ post-build:
  .endif
  
  post-install:
