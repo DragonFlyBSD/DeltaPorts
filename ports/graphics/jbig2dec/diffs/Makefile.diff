@@ -1,0 +1,11 @@
+--- Makefile.orig	2021-02-23 17:51:13 UTC
++++ Makefile
+@@ -25,8 +25,4 @@ PNG_CONFIGURE_OFF=	--without-libpng
+ PNG_CONFIGURE_ON=	--with-libpng=${LOCALBASE}
+ PNG_LIB_DEPENDS=	libpng.so:graphics/png
+ 
+-post-patch:
+-	@${RM} ${WRKSRC}/getopt* ${WRKSRC}/sha1.h
+-	@${REINPLACE_CMD} -E 's|SHA1_Final\( *([^,]+), *([^\)]+)\)|SHA1_Final(\2, \1)|' ${WRKSRC}/jbig2dec.c ${WRKSRC}/sha1.c
+-
+ .include <bsd.port.mk>
