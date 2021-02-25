@@ -39,7 +39,6 @@ PERCENT_BSD_LIST= \
 	desktop/CppunitTest_desktop_app.mk \
 	desktop/Library_crashreport.mk\
 	desktop/Library_sofficeapp.mk \
-	emfio/CppunitTest_emfio_wmf_test.mk \
 	libreofficekit/Module_libreofficekit.mk \
 	libreofficekit/Executable_gtktiledviewer.mk \
 	libreofficekit/Library_libreofficekitgtk.mk \
