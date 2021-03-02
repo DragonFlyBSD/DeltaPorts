@@ -1,4 +1,4 @@
---- Makefile.orig	2020-09-06 22:57:43 UTC
+--- Makefile.orig	2021-03-01 14:52:20 UTC
 +++ Makefile
 @@ -5,6 +5,7 @@ PORTNAME=	ghc
  PORTVERSION=	${GHC_VERSION}
@@ -8,7 +8,7 @@
  		LOCAL/arrowd/:boot \
  		https://hackage.haskell.org/package/hscolour-${HSCOLOUR_VERSION}/:docs
  DISTFILES=	ghc-${PORTVERSION}-src${EXTRACT_SUFX}:source \
-@@ -83,9 +84,11 @@ BOOT_LLVM_VERSION=	60
+@@ -86,9 +87,11 @@ PLIST_SUB=		GHC_VERSION=${GHC_VERSION} C
  .include <bsd.port.pre.mk>
  
  # This version of ncurses is needed by bootstrap compiler
@@ -20,20 +20,21 @@
  
  .if ${ARCH} == powerpc64
  CONFIGURE_ARGS+=	--enable-dtrace=0
-@@ -130,7 +133,7 @@ _EXECUTABLES+=	${GHC_LIBDIR}/bin/ghc-ise
- 
- .include <bsd.port.options.mk>
+@@ -131,7 +134,7 @@ _EXECUTABLES+=	${GHC_LIBDIR}/bin/ghc-ise
+ _EXECUTABLES+=	${GHC_LIBDIR}/bin/ghc-iserv-dyn
+ .endif
  
 -.if empty(PORT_OPTIONS:MBOOT)
 +.if empty(PORT_OPTIONS:MBOOT) && ${OPSYS} == "FreeBSD"
  BOOTSTRAPS_SUFFIX?=		${BOOTSTRAPS_SUFFIX_${ARCH}}
  BOOTSTRAPS_SUFFIX_powerpc64?=	-${PPC_ABI:tl}
  .  if ${OSVERSION} < 1200000 && (${ARCH} == amd64 || ${ARCH} == i386)
-@@ -177,6 +180,33 @@ SLAVE_ENV=		# empty
+@@ -185,6 +188,34 @@ SLAVE_ENV=		# empty
  CONFIGURE_ARGS+=	GHC=${LOCALBASE}/bin/ghc
  .endif # MBOOT
  
 +.if empty(PORT_OPTIONS:MBOOT) && ${OPSYS} == "DragonFly"
++BUILD_DEPENDS+=		libtinfow-compat>0:misc/libtinfow-compat
 +BOOT_GHC_VERSION=	8.8.4
 +DISTFILES+=		ghc-${BOOT_GHC_VERSION}-boot-${ARCH}-dragonfly.tar.xz:dflyboot
 +CONFIGURE_TARGET=	${ARCH}-portbld-dragonfly
@@ -63,7 +64,7 @@
  SLAVES_PREFIX=		${WRKDIR}/slaves_prefix
  SLAVES_WRKDIRPREFIX=	${WRKDIR}/slaves_wrkdirprefix
  
-@@ -186,7 +216,7 @@ post-patch:
+@@ -194,7 +225,7 @@ post-patch:
  		s|%%LD%%|${LD}|' \
  		${WRKSRC}/libraries/Cabal/Cabal/Distribution/Simple/Program/Builtin.hs
  
