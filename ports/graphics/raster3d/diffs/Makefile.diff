@@ -1,0 +1,6 @@
+Actually -fallow-invalid-boz should be fix than ignored.
+
+--- Makefile.orig	2020-08-13 10:38:17 UTC
++++ Makefile
+@@ -40 +39,0 @@ IMAGEMAGICK_RUN_DEPENDS=	convert:graphic
+-FFLAGS+=	-fallow-invalid-boz
