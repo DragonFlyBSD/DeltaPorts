@@ -1,0 +1,7 @@
+Actually -fallow-invalid-boz should be fix than ignored.
+
+--- Makefile.orig	2021-03-01 14:52:25 UTC
++++ Makefile
+@@ -49 +49 @@
+-FCFLAGS+=	-fallow-argument-mismatch -fallow-invalid-boz
++FCFLAGS+=	-fallow-argument-mismatch
