@@ -1,0 +1,114 @@
+--- pkg-plist.orig	2021-03-01 14:52:22 UTC
++++ pkg-plist
+@@ -1,10 +1,10 @@
+ bin/adios2-config
+ bin/adios2_deactivate_bp
+-bin/adios2_iotest
++%%MPI%%bin/adios2_iotest
+ bin/adios2_reorganize
+-bin/adios2_reorganize_mpi
++%%MPI%%bin/adios2_reorganize_mpi
+ bin/bp2h5
+-bin/bp2h5_mpi
++%%MPI%%bin/bp2h5_mpi
+ bin/bp4dbg
+ bin/bpls
+ bin/sst_conn_tool
+@@ -35,7 +35,7 @@ include/adios2/fortran/adios2.mod
+ include/adios2/fortran/adios2.smod
+ include/adios2/fortran/adios2_adios_init_mod.mod
+ include/adios2/fortran/adios2_adios_init_mod.smod
+-include/adios2/fortran/adios2_adios_init_mod@adios2_adios_init_mpi_smod.smod
++%%MPI%%include/adios2/fortran/adios2_adios_init_mod@adios2_adios_init_mpi_smod.smod
+ include/adios2/fortran/adios2_adios_init_mod@adios2_adios_init_serial_smod.smod
+ include/adios2/fortran/adios2_adios_mod.mod
+ include/adios2/fortran/adios2_adios_mod.smod
+@@ -53,7 +53,7 @@ include/adios2/fortran/adios2_io_mod.mod
+ include/adios2/fortran/adios2_io_mod.smod
+ include/adios2/fortran/adios2_io_open_mod.mod
+ include/adios2/fortran/adios2_io_open_mod.smod
+-include/adios2/fortran/adios2_io_open_mod@adios2_io_open_mpi_smod.smod
++%%MPI%%include/adios2/fortran/adios2_io_open_mod@adios2_io_open_mpi_smod.smod
+ include/adios2/fortran/adios2_io_open_mod@adios2_io_open_serial_smod.smod
+ include/adios2/fortran/adios2_operator_mod.mod
+ include/adios2/fortran/adios2_parameters_mod.mod
+@@ -140,11 +140,11 @@ lib/libadios2_atl.so.2.2.1
+ lib/libadios2_c.so
+ lib/libadios2_c.so.2
+ lib/libadios2_c.so.2.7.1
+-lib/libadios2_c_mpi.so
+-lib/libadios2_c_mpi.so.2
+-lib/libadios2_c_mpi.so.2.7.1
++%%MPI%%lib/libadios2_c_mpi.so
++%%MPI%%lib/libadios2_c_mpi.so.2
++%%MPI%%lib/libadios2_c_mpi.so.2.7.1
+ lib/libadios2_cmenet.so
+-lib/libadios2_cmfabric.so
++%%MPI%%lib/libadios2_cmfabric.so
+ lib/libadios2_cmmulticast.so
+ lib/libadios2_cmselect.so
+ lib/libadios2_cmsockets.so
+@@ -153,15 +153,15 @@ lib/libadios2_cmzplenet.so
+ lib/libadios2_core.so
+ lib/libadios2_core.so.2
+ lib/libadios2_core.so.2.7.1
+-lib/libadios2_core_mpi.so
+-lib/libadios2_core_mpi.so.2
+-lib/libadios2_core_mpi.so.2.7.1
++%%MPI%%lib/libadios2_core_mpi.so
++%%MPI%%lib/libadios2_core_mpi.so.2
++%%MPI%%lib/libadios2_core_mpi.so.2.7.1
+ lib/libadios2_cxx11.so
+ lib/libadios2_cxx11.so.2
+ lib/libadios2_cxx11.so.2.7.1
+-lib/libadios2_cxx11_mpi.so
+-lib/libadios2_cxx11_mpi.so.2
+-lib/libadios2_cxx11_mpi.so.2.7.1
++%%MPI%%lib/libadios2_cxx11_mpi.so
++%%MPI%%lib/libadios2_cxx11_mpi.so.2
++%%MPI%%lib/libadios2_cxx11_mpi.so.2.7.1
+ lib/libadios2_dill.so
+ lib/libadios2_dill.so.2
+ lib/libadios2_dill.so.2.4.1
+@@ -175,25 +175,25 @@ lib/libadios2_ffs.so.1.6.0
+ lib/libadios2_fortran.so
+ lib/libadios2_fortran.so.2
+ lib/libadios2_fortran.so.2.7.1
+-lib/libadios2_fortran_mpi.so
+-lib/libadios2_fortran_mpi.so.2
+-lib/libadios2_fortran_mpi.so.2.7.1
++%%MPI%%lib/libadios2_fortran_mpi.so
++%%MPI%%lib/libadios2_fortran_mpi.so.2
++%%MPI%%lib/libadios2_fortran_mpi.so.2.7.1
+ lib/libadios2_taustubs.so
+ %%PYTHON_SITELIBDIR%%/adios2/bp4dbg/__init__.py
+ %%PYTHON_SITELIBDIR%%/adios2/bp4dbg/data.py
+ %%PYTHON_SITELIBDIR%%/adios2/bp4dbg/idxtable.py
+ %%PYTHON_SITELIBDIR%%/adios2/bp4dbg/metadata.py
+ %%PYTHON_SITELIBDIR%%/adios2/bp4dbg/utils.py
+-share/iotest-config/coupling2.xml
+-share/iotest-config/coupling2_blocking_01_simple.txt
+-share/iotest-config/coupling2_blocking_02_dump_result.txt
+-share/iotest-config/manyvars.txt
+-share/iotest-config/pipe2.xml
+-share/iotest-config/pipe2_01_simple.txt
+-share/iotest-config/pipe2_02_link.txt
+-share/iotest-config/pipe2_03_conditional.txt
+-share/iotest-config/pipe2_04_nonblocking.txt
+-share/iotest-config/pipe2_05_add_variables.txt
+-share/iotest-config/pipe2_06_busy.txt
+-share/iotest-config/wf_2_to_1.txt
+-share/iotest-config/wf_2_to_1.xml
++%%MPI%%share/iotest-config/coupling2.xml
++%%MPI%%share/iotest-config/coupling2_blocking_01_simple.txt
++%%MPI%%share/iotest-config/coupling2_blocking_02_dump_result.txt
++%%MPI%%share/iotest-config/manyvars.txt
++%%MPI%%share/iotest-config/pipe2.xml
++%%MPI%%share/iotest-config/pipe2_01_simple.txt
++%%MPI%%share/iotest-config/pipe2_02_link.txt
++%%MPI%%share/iotest-config/pipe2_03_conditional.txt
++%%MPI%%share/iotest-config/pipe2_04_nonblocking.txt
++%%MPI%%share/iotest-config/pipe2_05_add_variables.txt
++%%MPI%%share/iotest-config/pipe2_06_busy.txt
++%%MPI%%share/iotest-config/wf_2_to_1.txt
++%%MPI%%share/iotest-config/wf_2_to_1.xml
