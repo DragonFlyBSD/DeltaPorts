@@ -1,11 +1,11 @@
---- ortools/util/fp_utils.h.intermediate	2020-09-24 22:30:12 UTC
-+++ ortools/util/fp_utils.h
-@@ -83,7 +83,7 @@ class ScopedFloatingPointEnv {
+--- ortools/util/fp_utils.h.orig	2021-03-04 09:29:20.471285000 +0100
++++ ortools/util/fp_utils.h	2021-03-04 09:29:35.201156000 +0100
+@@ -84,7 +84,7 @@
      excepts &= FE_ALL_EXCEPT;
- #ifdef __APPLE__
+ #if defined(__APPLE__)
      fenv_.__control &= ~excepts;
 -#elif defined(__FreeBSD__)
 +#elif defined(__FreeBSD__) || defined(__DragonFly__)
-     //fesetexceptflag(&fenv_, excepts);
+     fenv_.__x87.__control &= ~excepts;
  #else  // Linux
      fenv_.__control_word &= ~excepts;
