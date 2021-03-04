@@ -1,1 +1,2 @@
-USES+=	localbase:ldflags
+
+LDFLAGS+=	-L${OPENSSLLIB}
