@@ -1,6 +1,6 @@
 
 # attempt to fix plist (orphans)
-PLSIT_FILES+=	share/desktop-directories/lxqt-settings-lxqt.directory \
+PLIST_FILES+=	share/desktop-directories/lxqt-settings-lxqt.directory \
 		share/desktop-directories/lxqt-settings-system.directory \
 		%%LXQT_TRANSLATIONS%%/lxqt-config-appearance/lxqt-config-appearance_hr.qm \
 		%%LXQT_TRANSLATIONS%%/lxqt-config-brightness/lxqt-config-brightness_hr.qm \
