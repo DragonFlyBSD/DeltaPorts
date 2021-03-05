@@ -1,0 +1,8 @@
+--- pkg-plist.orig	2021-03-04 11:40:11.915967000 +0100
++++ pkg-plist	2021-03-04 11:39:57.715880000 +0100
+@@ -4,4 +4,4 @@
+ @sample %%ETCDIR%%/tray-monitor.d/monitor/bareos-mon.conf.sample
+ @sample %%ETCDIR%%/tray-monitor.d/storage/StorageDaemon-local.conf.sample
+ share/applications/bareos-tray-monitor.desktop
+-share/pixmaps/bareos-tray-monitor.xpm
++share/pixmaps/bareos-tray-monitor.png
