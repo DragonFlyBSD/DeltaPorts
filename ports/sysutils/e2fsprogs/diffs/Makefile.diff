@@ -1,4 +1,4 @@
---- Makefile.orig	2021-02-22 19:05:04 UTC
+--- Makefile.orig	2021-03-01 14:52:28 UTC
 +++ Makefile
 @@ -40,7 +40,7 @@ CONFIGURE_ARGS?=--disable-fsck \
  		--with-root-prefix='${PREFIX}' \
@@ -9,6 +9,15 @@
  # apparently HAVE_PTHREAD_H checks go missing if the FUSEFS option is unset, force it:
  CPPFLAGS+=	-I${WRKSRC}/lib -I${LOCALBASE}/include # -D_EXT2_USE_C_VERSIONS
  MAKE_ARGS+=	pkgconfigdir='${PREFIX}/libdata/pkgconfig'
+@@ -235,7 +235,7 @@ _check_timeout=180
+ .endif
+ 
+ .if ${PORT_OPTIONS:MLIBUNWIND}
+-_staticlibs+=${LOCALBASE}/lib/libunwind.a /usr/lib/liblzma.a /usr/lib/libmd.a
++_staticlibs+=${LOCALBASE}/lib/libunwind.a /usr/lib/liblzma.a
+ .endif
+ 
+ post-build:
 @@ -249,7 +249,7 @@ post-build:
  	cd ${WRKSRC}/e2fsck && ${RM} -f e2fsck \
  		&& ${MAKE_CMD} e2fsck V=1 \
