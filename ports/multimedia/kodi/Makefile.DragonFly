@@ -4,7 +4,7 @@ USES+=	gmake
 # Replace OPSYS
 PLIST_SUB +=	OPSYS=${OPSYS:tl}
 
-OPTIONS_DEFAULT:= ${OPTIONS_DEFAULT:NGBM}
+OPTIONS_DEFAULT:= ${OPTIONS_DEFAULT:NGBM:NWAYLAND}
 
 dfly-patch:
 	${CP} -v ${WRKSRC}/system/settings/freebsd.xml ${WRKSRC}/system/settings/dragonfly.xml
