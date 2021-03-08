@@ -2,4 +2,6 @@
 # no pulse
 OPTIONS_DEFAULT:=	${OPTIONS_DEFAULT:NPULSEAUDIO} ALSA
 
-CXXFLAGS+=	-Wno-pedantic
+dfly-patch:
+	${REINPLACE_CMD} -e 's@-pedantic -pedantic-errors@@g' \
+		${WRKSRC}/BambooTracker/BambooTracker.pro
