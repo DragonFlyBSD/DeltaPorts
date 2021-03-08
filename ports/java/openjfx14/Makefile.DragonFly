@@ -1,0 +1,1 @@
+BROKEN= tries to use static nonpic libdstc++.a for libjfxmedia.so
