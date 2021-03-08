@@ -1,11 +1,11 @@
---- CMakeLists.txt.intermediate	2014-05-30 18:47:12.035431000 +0000
+--- CMakeLists.txt.intermediate	2021-03-08 06:45:44.000000000 +0000
 +++ CMakeLists.txt
-@@ -70,7 +70,7 @@ include(SociDependencies)
- # Installation
+@@ -134,7 +134,7 @@ set_property(DIRECTORY ${CMAKE_CURRENT_S
  ###############################################################################
  
--if(APPLE OR CMAKE_SIZEOF_VOID_P EQUAL 4 OR CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
-+if(APPLE OR CMAKE_SIZEOF_VOID_P EQUAL 4 OR CMAKE_SYSTEM_NAME STREQUAL "FreeBSD" OR CMAKE_SYSTEM_NAME STREQUAL "DragonFly")
-   set(SOCI_LIBDIR "lib")
- else()
-   set(SOCI_LIBDIR "lib64")
+ if(NOT DEFINED SOCI_LIBDIR)
+-  if(APPLE OR CMAKE_SIZEOF_VOID_P EQUAL 4 OR CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
++  if(APPLE OR CMAKE_SIZEOF_VOID_P EQUAL 4 OR CMAKE_SYSTEM_NAME STREQUAL "FreeBSD" OR CMAKE_SYSTEM_NAME STREQUAL "DragonFly")
+     set(SOCI_LIBDIR "lib")
+   else()
+     set(SOCI_LIBDIR "lib64")
