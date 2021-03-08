@@ -1,0 +1,4 @@
+--- Makefile.orig	2021-03-01 14:52:09 UTC
++++ Makefile
+@@ -58 +57,0 @@
+-LDFLAGS+=	-latomic # Only exists in gcc libs
