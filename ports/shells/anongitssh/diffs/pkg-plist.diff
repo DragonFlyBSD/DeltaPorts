@@ -1,0 +1,4 @@
+--- pkg-plist.orig	2021-03-01 14:52:28 UTC
++++ pkg-plist
+@@ -5 +4,0 @@
+-@shell libexec/anongitssh
