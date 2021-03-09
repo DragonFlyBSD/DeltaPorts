@@ -1,0 +1,23 @@
+/!\ bsdrcmds-20171003.01: Makefile errors /!\
+
+The following options helpers are incorrectly set after bsd.port.options.mk
+and are ineffective: IPV6_MAKE_ARGS LIBBLACKLIST_MAKE_ARGS
+LIBBLACKLIST_MAKE_ARGS
+
+--- Makefile.orig	2021-03-01 14:52:23 UTC
++++ Makefile
+@@ -16,14 +16,7 @@
+ USES=		uidfix
+ 
+ MAKE_ARGS+=		BINOWN=${BINOWN} BINMODE=${BINMODE}
+-
+-.include <bsd.port.options.mk>
+-
+-.if ${OPSYS} == FreeBSD && ${OSVERSION} >= 1300134
+-MAKE_ENV+=		MK_WERROR=no
+-.else
+ MAKE_ENV+=		NO_WERROR=1
+-.endif
+ 
+ OPTIONS_DEFINE=		IPV6 LIBBLACKLIST
+ OPTIONS_DEFAULT=	LIBBLACKLIST
