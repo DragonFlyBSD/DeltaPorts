@@ -1,4 +1,4 @@
---- pkg-plist.orig	2020-05-14 00:20:11 UTC
+--- pkg-plist.orig	2020-08-13 10:37:50 UTC
 +++ pkg-plist
 @@ -15,7 +15,7 @@ bin/eu-stack
  bin/eu-strings
@@ -9,3 +9,43 @@
  include/elfutils/elf-knowledge.h
  include/elfutils/known-dwarf.h
  include/elfutils/libasm.h
+@@ -23,23 +23,23 @@ include/elfutils/libdw.h
+ include/elfutils/libdwelf.h
+ include/elfutils/libdwfl.h
+ include/elfutils/version.h
+-include/gelf.h
+-include/libelf.h
+-include/nlist.h
+-lib/libasm-%%VERSION%%.so
+-lib/libasm.a
+-lib/libasm.so
+-lib/libasm.so.1
+-lib/libdw-%%VERSION%%.so
+-lib/libdw.a
+-lib/libdw.so
+-lib/libdw.so.1
+-lib/libelf-%%VERSION%%.so
+-lib/libelf.a
+-lib/libelf.so
+-lib/libelf.so.1
++include/elfutils/gelf.h
++include/elfutils/libelf.h
++include/elfutils/nlist.h
++lib/elfutils/libasm-%%VERSION%%.so
++lib/elfutils/libasm.a
++lib/elfutils/libasm.so
++lib/elfutils/libasm.so.1
++lib/elfutils/libdw-%%VERSION%%.so
++lib/elfutils/libdw.a
++lib/elfutils/libdw.so
++lib/elfutils/libdw.so.1
++lib/elfutils/libelf-%%VERSION%%.so
++lib/elfutils/libelf.a
++lib/elfutils/libelf.so
++lib/elfutils/libelf.so.1
+ libdata/pkgconfig/libdw.pc
+-libdata/pkgconfig/libelf.pc
++libdata/pkgconfig/elfutils.pc
+ %%MANPAGES%%man/man1/eu-elfclassify.1.gz
+ %%MANPAGES%%man/man1/eu-readelf.1.gz
+ %%MANPAGES%%man/man3/elf_begin.3.gz
