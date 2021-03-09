@@ -1,1 +1,4 @@
-BROKEN=	missing clock_nanosleep
+
+# missing dep for X11
+X11_USES+=	gl
+X11_USE+=	GL=gl
