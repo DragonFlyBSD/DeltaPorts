@@ -1,98 +1,19 @@
---- Makefile.orig	2020-07-01 09:44:19 UTC
-+++ Makefile
-@@ -3,9 +3,14 @@
- PORTNAME=	openjdk
- PORTVERSION=	${JDK_MAJOR_VERSION}.${JDK_UPDATE_VERSION}.${JDK_BUILD_NUMBER}.${BSD_JDK_VERSION}
- CATEGORIES=	java devel
--MASTER_SITES=	LOCAL/jkim:jtreg
-+MASTER_SITES=	http://dl.wolfpond.org/openjdk8/:bootstrap \
-+		http://leaf.dragonflybsd.org/~marino/dports-src/:bootstrap \
-+		LOCAL/jkim:jtreg 
-+
- PKGNAMESUFFIX?=	${JDK_MAJOR_VERSION}
- 
-+DISTFILES+=	${BOOTSTRAP_DISTFILE}
-+
- MAINTAINER=	java@FreeBSD.org
- COMMENT?=	Java Development Kit ${JDK_MAJOR_VERSION}
- 
-@@ -33,7 +38,7 @@ GH_TAGNAME=	jdk${JDK_MAJOR_VERSION}u${JD
- _MAKE_JOBS=	#
- CPPFLAGS+=	-I${LOCALBASE}/include
- LDFLAGS+=	-L${LOCALBASE}/lib
--MAKE_ENV=	CLASSPATH="" JAVA_HOME="" LD_LIBRARY_PATH=""
-+MAKE_ENV=	CLASSPATH="" JAVA_HOME=""
- MAKE_ENV+=	IGNORE_OLD_CONFIG=true
- MAKE_ENV+=	COMPILER_WARNINGS_FATAL="false"
- 
-@@ -44,7 +49,7 @@ JRE_IMAGEDIR=	${JDK_BUILDDIR}/images/j2s
+--- /data/freebsd-ports/java/openjdk8/Makefile	2021-03-12 11:12:45.955650000 +0000
++++ Makefile	2021-03-12 12:10:23.635738000 +0000
+@@ -44,7 +44,7 @@ JRE_IMAGEDIR=	${JDK_BUILDDIR}/images/j2s
  .else
  JRE_IMAGEDIR=	${JDK_BUILDDIR}/images/j2re-image
  .endif
 -JDK_JVMDIR=	lib/${ARCH:C/armv.*/arm/:S/powerpc64/ppc64/}
-+JDK_JVMDIR=	lib/${ARCH:S/x86_64/amd64/}
++JDK_JVMDIR=	lib/${ARCH:C/armv.*/arm/:S/powerpc64/ppc64/:S/x86_64/amd64/}
  JDK_OSARCH=	bsd-${ARCH:S/amd64/x86_64/:C/armv.*/arm/:S/i386/x86/:S/powerpc64/ppc64/}
  INSTALLDIR=	${PREFIX}/${PKGBASE}
  
-@@ -84,16 +89,13 @@ CONFIGURE_WRKSRC=	${WRKSRC}/common/autoc
- OPTIONS_DEFINE=		ALSA POLICY TZUPDATE X11 FONTCONFIG
- OPTIONS_DEFINE_armv6=	FPUHACK
- OPTIONS_DEFINE_armv7=	FPUHACK
--OPTIONS_DEFAULT=	ALSA POLICY TZUPDATE X11
-+OPTIONS_DEFAULT=	POLICY TZUPDATE X11
- OPTIONS_DEFAULT_armv6=	FPUHACK
- OPTIONS_DEFAULT_armv7=	FPUHACK
- FPUHACK_DESC=		Hack denormalized numbers in flush-to-zero mode
- POLICY_DESC=		Install the Unlimited Strength Policy Files
- TZUPDATE_DESC=		Update the time zone data
- 
--ALSA_CONFIGURE_ENV_OFF=	ALSA_NOT_NEEDED=yes
--ALSA_CONFIGURE_ON=	--with-alsa=${LOCALBASE}
--ALSA_LIB_DEPENDS=	libasound.so:audio/alsa-lib
- FPUHACK_EXTRA_PATCHES=	${PATCHDIR}/fpuhack.patch
- POLICY_CONFIGURE_ENABLE=	unlimited-crypto
- TZUPDATE_RUN_DEPENDS=	java-zoneinfo>0:java/java-zoneinfo
-@@ -115,9 +117,13 @@ FONTCONFIG_IMPLIES=	X11
- 
- JAVAVMS_COMMENT=	OpenJDK${JDK_MAJOR_VERSION}
- 
-+ALSA_LIB_DEPENDS=	libasound.so:audio/alsa-lib
-+ALSA_CONFIGURE_ON=	--with-alsa=${LOCALBASE}
-+ALSA_CONFIGURE_ENV_OFF=	ALSA_NOT_NEEDED=yes
-+
- .if !defined(BUILD_JRE)
- OPTIONS_DEFINE+=	TEST
--OPTIONS_DEFAULT+=	RELEASE
-+OPTIONS_DEFAULT+=	RELEASE ALSA
- OPTIONS_SINGLE=		BUILD
- OPTIONS_SINGLE_BUILD=	DEBUG DEBUGFAST RELEASE
- BUILD_DESC=		Select OpenJDK build type
-@@ -170,8 +176,9 @@ BOOTSTRAPJDKDIR=	${BJDK}
- 
- # if no valid jdk found, set dependency
- .if !defined(BOOTSTRAPJDKDIR)
--BOOTSTRAPJDKDIR?=	${LOCALBASE}/bootstrap-openjdk8
--BUILD_DEPENDS+=		${BOOTSTRAPJDKDIR}/bin/javac:java/bootstrap-openjdk8
-+BOOTSTRAPJDKDIR=	${WRKDIR}/bootstrap
-+BOOTSTRAP_DISTFILE=	bootstrap-openjdk8-8.40.25.tar.xz:bootstrap
-+MAKE_ENV+=		LD_LIBRARY_PATH="${BOOTSTRAPJDKDIR}/jre/lib/amd64"
- .endif
- 
- .if ${ARCH} == armv6 || ${ARCH} == armv7 || ${ARCH} == i386
-@@ -186,7 +193,7 @@ MAKE_ENV+=	JAVADOC_CMD_MEM="-Xmx768m"
- MAKE_ENV+=	LFLAGS="-Wl,-z,notext"
- .endif
- 
--.if ${ARCH} == amd64 || ${ARCH} == i386 || ${ARCH} == powerpc64
-+.if ${ARCH} == x86_64 || ${ARCH} == i386 || ${ARCH} == powerpc64
- JDK_BUILD_JVM=	server
- .else
- JDK_BUILD_JVM=	zero
-@@ -280,6 +287,7 @@ do-install:
+@@ -294,6 +294,7 @@ do-install:
  	${FIND} bin jre/bin -type f -exec ${CHMOD} ${BINMODE} {} \; && \
  	${CHMOD} ${BINMODE} jre/${JDK_JVMDIR}/jexec \
  	    jre/${JDK_JVMDIR}/jspawnhelper ${JDK_JVMDIR}/jexec
 +	cd ${STAGEDIR}${INSTALLDIR}/include && ln -s dragonfly freebsd
- 	@${ECHO} "@dir ${INSTALLDIR}/jre/lib/applet" >> ${TMPPLIST}
+ 	@${ECHO_CMD} "@dir ${INSTALLDIR}/jre/lib/applet" >> ${TMPPLIST}
  .else
  	@cd ${JRE_IMAGEDIR} && ${COPYTREE_SHARE} . ${STAGEDIR}${INSTALLDIR}
