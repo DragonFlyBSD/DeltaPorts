@@ -1,18 +1,24 @@
-WUT???
+WUT??? DELET ALL!
 
---- Makefile.orig	2020-08-13 10:39:13 UTC
+--- Makefile	2021-03-01 14:52:31 UTC
 +++ Makefile
-@@ -99,13 +99,6 @@ post-patch:
- 	@${REINPLACE_CMD} -e 's|/usr/lib/browser/plugins|${BROWSER_PLUGINS_DIR}|' \
- 		${WRKSRC}/Source/WebKit/Shared/Plugins/unix/PluginSearchPath.cpp
- 
+@@ -18 +17,0 @@
+-BUILD_DEPENDS=	${LOCALBASE}/bin/ar:devel/binutils
+@@ -77,9 +75,0 @@
+-DEBUG_CMAKE_ON=		-DCMAKE_AR=${LOCALBASE}/bin/ar \
+-			-DCMAKE_RANLIB=${LOCALBASE}/bin/ranlib \
+-			-DCMAKE_LINKER=${LOCALBASE}/bin/ld
+-DEBUG_CXXFLAGS=		-B${LOCALBASE}/bin
+-
+-DEBUG_CMAKE_OFF=	-DCMAKE_AR=/usr/bin/ar \
+-			-DCMAKE_RANLIB=/usr/bin/ranlib \
+-			-DCMAKE_LINKER=/usr/bin/ld
+-DEBUG_CXXFLAGS_OFF=	-B/usr/bin
+@@ -100,7 +89,0 @@
+-
 -pre-configure:
 -# .if !exists() evaluates too early before cairo has a chance to be installed
 -	@if ! pkg-config --exists cairo-egl; then \
 -		${ECHO_MSG} "${PKGNAME}: Needs cairo with OPENGL support enabled."; \
 -		${FALSE}; \
 -	fi
--
- post-install:
- 	@${RLN} ${STAGEDIR}${PREFIX}/libexec/webkit2gtk-4.0/jsc \
- 		${STAGEDIR}${PREFIX}/bin/jsc-4
