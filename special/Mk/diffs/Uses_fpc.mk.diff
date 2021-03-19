@@ -1,6 +1,6 @@
---- Uses/fpc.mk.orig	2018-04-23 18:05:39 UTC
+--- Uses/fpc.mk.orig	2021-03-01 14:52:09 UTC
 +++ Uses/fpc.mk
-@@ -53,11 +53,11 @@ IGNORE=	incompatible fpc ${FPC_CURRENT_V
+@@ -53,15 +53,15 @@ IGNORE=	incompatible fpc ${FPC_CURRENT_V
  
  .if ${ARCH} == "i386"
  PPNAME=			ppc386
@@ -14,3 +14,8 @@
  ONLY_FOR_ARCHS_REASON=	not yet ported to anything other than i386 and amd64
  .endif
  
+-BUILD_DEPENDS+=		${LOCALBASE}/bin/as:devel/binutils \
++BUILD_DEPENDS+=		${LOCALBASE}/bin/as:devel/binutils@native \
+ 			${PPNAME}:lang/fpc
+ 
+ BUILDNAME=		${FPC_ARCH}-${OPSYS:tl}
