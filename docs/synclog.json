@@ -230,7 +230,7 @@
 		}
 	    ],
 	    "cherry-picks": [
-		"https://github.com/freebsd/freebsd-ports/commit/dfa2f85529e502.patch"
+		"https://cgit.freebsd.org/ports/patch/?id=64d94165652f40"
 	    ]
 	}
     ]
