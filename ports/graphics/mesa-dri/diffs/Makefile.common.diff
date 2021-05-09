@@ -1,6 +1,6 @@
---- Makefile.common.orig	2021-03-01 14:52:20 UTC
+--- Makefile.common.orig	2021-05-09 13:10:14 UTC
 +++ Makefile.common
-@@ -37,25 +37,27 @@ LIB_DEPENDS+=	libexpat.so:textproc/expat
+@@ -35,25 +35,27 @@ LIB_DEPENDS+=	libexpat.so:textproc/expat
  USES+=	xorg
  .endif
  .endif
@@ -32,14 +32,14 @@
  # --build-id isn't supported by old GNU ld.bfd in base
  # Also ld.bfd have problems that seems related to --as-needed
  USE_BINUTILS=		yes
-@@ -93,11 +95,31 @@ EXTRA_PATCHES+= ${PATCHDIR}/extra-src_ga
+@@ -91,11 +93,31 @@ EXTRA_PATCHES+= ${PATCHDIR}/extra-src_ga
  BINARY_ALIAS+=	python3=${PYTHON_VERSION}
  
  LLVM_DEFAULT=	10
 +.if ${OPSYS} != DragonFly
- BUILD_DEPENDS+=	llvm${LLVM_DEFAULT}>=10.0.1_1:devel/llvm${LLVM_DEFAULT}
+ BUILD_DEPENDS+=	llvm-config${LLVM_DEFAULT}:devel/llvm${LLVM_DEFAULT}
  .if ${COMPONENT} != libs
- RUN_DEPENDS+=	llvm${LLVM_DEFAULT}>=10.0.1_1:devel/llvm${LLVM_DEFAULT}
+ RUN_DEPENDS+=	llvm-config${LLVM_DEFAULT}:devel/llvm${LLVM_DEFAULT}
  .endif
 +.endif
  
