@@ -209,13 +209,39 @@
 	    ],
 	    "to-do": [
 		{
-		    "port": "devel/qca",
-		    "desc": "can't use TLSv1.3 by default, remove the relevant patch available.",
-		    "status": "pending"
-		},
-		{
 		    "port": "java/openjdk8",
 		    "desc": "to be updated (8.252.09)",
+		    "status": "resolved"
+		}
+	    ],
+	    "cherry-picks": [
+		"https://cgit.freebsd.org/ports/patch/?id=a6068203f43e53"
+	    ]
+	},
+	{
+	    "id": "2021Q2",
+	    "timestamp": "Sun May 9 12:42:59 2021 +0200",
+	    "base_commit": "0f72879436e724b5443d439721d78fa0edbd6cdd",
+	    "rejects": [
+		{
+		    "devel/doxygen": "1 out of 1 hunks failed--saving rejects to Makefile.rej",
+		    "devel/qscintilla2-qt5": "1 out of 1 hunks failed--saving rejects to pkg-plist.rej",
+		    "devel/qt5": "1 out of 1 hunks failed--saving rejects to Makefile.rej",
+		    "devel/thrift-cpp": "1 out of 1 hunks failed--saving rejects to Makefile.rej",
+		    "graphics/mesa-dri": "1 out of 2 hunks failed--saving rejects to Makefile.common.rej",
+		    "lang/rust": "1 out of 1 hunks failed--saving rejects to distinfo.rej",
+		    "multimedia/musikcube": "1 out of 1 hunks failed--saving rejects to Makefile.rej",
+		    "net-mgmt/net-snmp": "1 out of 2 hunks failed--saving rejects to Makefile.rej",
+		    "net/bsdrcmds": "1 out of 1 hunks failed--saving rejects to Makefile.rej",
+		    "security/py-ospd-openvas": "1 out of 1 hunks failed--saving rejects to pkg-plist.rej",
+		    "textproc/fixrtf": "1 out of 1 hunks failed--saving rejects to src/fixrtf.l.rej",
+		    "textproc/tinyxml": "1 out of 1 hunks failed--saving rejects to files/Makefile.rej"
+		}
+	    ],
+	    "to-do": [
+		{
+		    "port": "devel/qca",
+		    "desc": "can't use TLSv1.3 by default, remove the relevant patch available.",
 		    "status": "pending"
 		},
 		{
@@ -230,7 +256,6 @@
 		}
 	    ],
 	    "cherry-picks": [
-		"https://cgit.freebsd.org/ports/patch/?id=a6068203f43e53"
 	    ]
 	}
     ]
