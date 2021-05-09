@@ -1,11 +1,11 @@
---- Makefile.orig	2017-07-03 21:51:30 UTC
+--- Makefile.orig	2021-05-09 12:09:33 UTC
 +++ Makefile
-@@ -21,8 +21,6 @@ CMAKE_ARGS+=	-DDOC_INSTALL_DIR:PATH=${DO
+@@ -22,8 +22,6 @@ CMAKE_ARGS+=	-DDOC_INSTALL_DIR:PATH=${DO
  # Parallel jobs breaks when the DOCS option is on
  MAKE_JOBS_UNSAFE=	yes
  
 -EXTRACT_AFTER_ARGS=	--exclude '*/libmd5'
 -
+ DOS2UNIX_FILES=	doc/translator.py
  PLIST_FILES=	bin/doxygen
  
- OPTIONS_DEFINE=	DOCS GRAPHVIZ LATEX SEARCH
