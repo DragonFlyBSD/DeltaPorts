@@ -1,6 +1,0 @@
---- Makefile.orig	2020-08-13 10:38:05 UTC
-+++ Makefile
-@@ -23,3 +22,0 @@
--BROKEN_SSL=	openssl
--BROKEN_SSL_REASON_openssl=	'configure: error: "Error: libcrypto required."'
--
