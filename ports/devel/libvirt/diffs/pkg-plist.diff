@@ -1,6 +1,6 @@
---- pkg-plist.orig	2020-09-06 22:38:45 UTC
-+++ pkg-plist
-@@ -10,7 +10,7 @@ sbin/virtproxyd
+--- pkg-plist.orig	2021-05-31 16:58:48.159259000 +0200
++++ pkg-plist	2021-05-31 16:58:51.969173000 +0200
+@@ -11,7 +11,7 @@
  %%QEMU%%sbin/virtqemud
  sbin/virtsecretd
  sbin/virtstoraged
@@ -9,7 +9,16 @@
  %%XEN%%sbin/virtxend
  man/man1/virsh.1.gz
  man/man1/virt-admin.1.gz
-@@ -44,7 +44,7 @@ man/man8/virtlogd.8.gz
+@@ -38,7 +38,7 @@
+ man/man8/virtproxyd.8.gz
+ man/man8/virtsecretd.8.gz
+ man/man8/virtstoraged.8.gz
+-man/man8/virtvboxd.8.gz
++%%VBOX%%man/man8/virtvboxd.8.gz
+ %%BHYVE%%man/man8/virtbhyved.8.gz
+ %%QEMU%%man/man8/virtqemud.8.gz
+ %%XEN%%man/man8/virtxend.8.gz
+@@ -53,7 +53,7 @@
  %%QEMU%%@sample %%ETCDIR%%/virtqemud.conf.sample
  @sample %%ETCDIR%%/virtsecretd.conf.sample
  @sample %%ETCDIR%%/virtstoraged.conf.sample
@@ -18,7 +27,7 @@
  %%XEN%%@sample %%ETCDIR%%/virtxend.conf.sample
  %%EXAMPLESDIR%%/networks/default.xml
  %%BHYVE%%@sample %%ETCDIR%%/bhyve.conf.sample
-@@ -116,14 +116,14 @@ share/augeas/lenses/tests/test_virtproxy
+@@ -125,14 +125,14 @@
  %%QEMU%%share/augeas/lenses/tests/test_virtqemud.aug
  share/augeas/lenses/tests/test_virtsecretd.aug
  share/augeas/lenses/tests/test_virtstoraged.aug
@@ -35,7 +44,7 @@
  %%BHYVE%%share/augeas/lenses/tests/test_libvirtd_bhyve.aug
  %%QEMU%%share/augeas/lenses/tests/test_libvirtd_qemu.aug
  %%XEN%%share/augeas/lenses/libvirtd_libxl.aug
-@@ -277,9 +277,10 @@ share/augeas/lenses/virtvboxd.aug
+@@ -292,9 +292,10 @@
  lib/libvirt/connection-driver/libvirt_driver_network.so
  lib/libvirt/connection-driver/libvirt_driver_secret.so
  lib/libvirt/connection-driver/libvirt_driver_storage.so
