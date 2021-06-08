@@ -1,0 +1,6 @@
+dfly-patch:
+	${REINPLACE_CMD} -e 's/[[:<:]]isinf[[:>:]]/std::isinf/g' \
+		-e 's/[[:<:]]isfinite[[:>:]]/std::isfinite/g' \
+		-e 's@[[:<:]]isnan[[:>:]]@std::isnan@g' \
+		${WRKSRC}/include/box2d/b2_math.h
+
