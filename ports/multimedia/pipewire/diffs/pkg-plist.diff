@@ -1,0 +1,10 @@
+--- pkg-plist.orig	2021-06-16 11:57:08.339284000 +0200
++++ pkg-plist	2021-06-16 11:57:17.899067000 +0200
+@@ -8,6 +8,7 @@
+ bin/pw-mon
+ bin/pw-profiler
+ bin/pw-reserve
++bin/pw-top
+ bin/spa-inspect
+ bin/spa-json-dump
+ bin/spa-monitor
