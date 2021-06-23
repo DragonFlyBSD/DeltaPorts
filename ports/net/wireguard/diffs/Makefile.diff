@@ -1,0 +1,11 @@
+--- Makefile.orig	2021-06-23 23:18:30 UTC
++++ Makefile
+@@ -13,7 +13,7 @@ USES=	metaport
+ 
+ .include <bsd.port.options.mk>
+ 
+-.if ${OSVERSION} < 1201000
++.if ${OSVERSION} < 1201000 || ${OPSYS} == DragonFly
+ RUN_DEPENDS+=	wireguard-go:net/wireguard-go
+ .else
+ RUN_DEPENDS+=	${KMODDIR}/if_wg.ko:net/wireguard-kmod
