@@ -239,6 +239,39 @@
 		}
 	    ],
 	    "to-do": [
+	    ],
+	    "cherry-picks": [
+	    ]
+	},
+	{
+	    "id": "2021Q3",
+	    "timestamp": "Sat Jul 3 09:48:33 2021 +0000",
+	    "base_commit": "f81d92935764cd957003659ee146e6bd58384c80",
+	    "rejects": [
+		{
+		    "benchmarks/wrk": "1 out of 1 hunks failed--saving rejects to Makefile.rej",
+		    "devel/gdb": "1 out of 2 hunks failed--saving rejects to Makefile.rej",
+		    "devel/smake": "No such line 20 in input file, ignoring 2 out of 2 hunks failed--saving rejects to Makefile.rej",
+		    "ftp/curl": "1 out of 2 hunks failed--saving rejects to Makefile.rej",
+		    "graphics/mesa-dri": "1 out of 2 hunks failed--saving rejects to Makefile.common.rej",
+		    "graphics/pfstools": "1 out of 1 hunks failed--saving rejects to Makefile.rej",
+		    "lang/python27": "2 out of 3 hunks failed--saving rejects to Makefile.rej",
+		    "lang/python36": "1 out of 4 hunks failed--saving rejects to Makefile.rej",
+		    "lang/python37": "2 out of 5 hunks failed--saving rejects to Makefile.rej",
+		    "lang/python38": "2 out of 3 hunks failed--saving rejects to Makefile.rej",
+		    "lang/python39": "2 out of 3 hunks failed--saving rejects to Makefile.rej",
+		    "lang/rust": "1 out of 1 hunks failed--saving rejects to distinfo.rej",
+		    "lang/zig": "2 out of 2 hunks failed--saving rejects to pkg-plist.rej",
+		    "multimedia/pipewire": "1 out of 1 hunks failed--saving rejects to pkg-plist.rej",
+		    "net-mgmt/tcpreplay": "1 out of 1 hunks failed--saving rejects to Makefile.rej",
+		    "print/fig2dev": "1 out of 1 hunks failed--saving rejects to distinfo.rej",
+		    "print/fig2dev": "No such line 70 in input file, ignoring 2 out of 2 hunks failed--saving rejects to pkg-plist.rej",
+		    "print/fig2dev": "1 out of 1 hunks failed--saving rejects to Makefile.rej",
+		    "security/py-ospd-openvas": "1 out of 1 hunks failed--saving rejects to pkg-plist.rej",
+		    "www/trafficserver": "No such line 100 in input file, ignoring"
+		}
+	    ],
+	    "To-do": [
 		{
 		    "port": "devel/qca",
 		    "desc": "can't use TLSv1.3 by default, remove the relevant patch available.",
