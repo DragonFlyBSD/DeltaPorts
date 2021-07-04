@@ -1,4 +1,0 @@
---- pkg-plist.orig	2021-03-01 14:52:26 UTC
-+++ pkg-plist
-@@ -3 +2,0 @@
--etc/rc.d/bitwarden_rs
