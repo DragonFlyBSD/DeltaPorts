@@ -1,6 +1,6 @@
---- Makefile.orig	2019-07-31 15:03:04 UTC
+--- Makefile.orig	2021-07-04 00:37:16 UTC
 +++ Makefile
-@@ -127,7 +127,7 @@ EXCLUDE+=	zlib
+@@ -112,7 +112,7 @@ EXCLUDE+=	zlib
  .endif
  
  .if ${ARCH} == amd64
@@ -9,12 +9,12 @@
  .endif
  
  .if ${CHOSEN_COMPILER_TYPE} == clang
-@@ -135,7 +135,7 @@ CFLAGS+=	-Wno-extended-offsetof
+@@ -120,7 +120,7 @@ CFLAGS+=	-Wno-extended-offsetof
  .endif
  
  post-patch:
--	@${REINPLACE_CMD} -e 's|$$| [GDB v${PORTVERSION} for FreeBSD]|' \
-+	@${REINPLACE_CMD} -e 's|$$| [GDB v${PORTVERSION} for ${OPSYS}]|' \
+-	@${REINPLACE_CMD} -e 's|$$| [GDB v${DISTVERSION} for FreeBSD]|' \
++	@${REINPLACE_CMD} -e 's|$$| [GDB v${DISTVERSION} for ${OPSYS}]|' \
  		${WRKSRC}/gdb/version.in
  
  post-patch-KGDB-on:
