@@ -1,17 +1,17 @@
---- Makefile.orig	2020-04-16 14:10:23 UTC
+--- Makefile.orig	2021-07-04 09:39:40 UTC
 +++ Makefile
-@@ -15,6 +15,7 @@ COMMENT=	Interpreted object-oriented pro
- LICENSE=	PSFL
+@@ -16,6 +16,7 @@ LICENSE=	PSFL
  
- LIB_DEPENDS=	libffi.so:devel/libffi
+ LIB_DEPENDS=	libffi.so:devel/libffi \
+ 		libmpdec.so:math/mpdecimal
 +EXPAT_LIB_DEPENDS=	libexpat.so:textproc/expat2
  
- USES=		cpe ncurses pathfix pkgconfig readline:port shebangfix ssl tar:xz
+ USES=		cpe ncurses pathfix pkgconfig readline shebangfix ssl tar:xz
  PATHFIX_MAKEFILEIN=	Makefile.pre.in
 @@ -47,7 +48,7 @@ PLIST_SUB=		ABI=${ABIFLAGS} \
  			XY=${PYTHON_SUFFIX} \
  			XYDOT=${PYTHON_VER} \
- 			XYZDOT=${PORTVERSION} \
+ 			XYZDOT=${DISTVERSION} \
 -			OSMAJOR=${OSVERSION:C/([0-9]*)[0-9]{5}/\1/}		# For plat-freebsd* in pkg-plist. https://bugs.python.org/issue19554
 +			OSMAJOR=${DFLYVERSION:C/([0-9]*)[0-9]{5}/\1/}		# For plat-freebsd* in pkg-plist. https://bugs.python.org/issue19554
  
