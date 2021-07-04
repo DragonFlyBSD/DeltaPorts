@@ -1,28 +1,26 @@
---- Makefile.orig	2021-06-16 22:35:53 UTC
+--- Makefile.orig	2021-07-04 09:41:08 UTC
 +++ Makefile
-@@ -49,7 +49,7 @@ PLIST_SUB=		ABI=${ABIFLAGS} \
+@@ -49,13 +49,18 @@ PLIST_SUB=		ABI=${ABIFLAGS} \
  			XY=${PYTHON_SUFFIX} \
  			XYDOT=${PYTHON_VER} \
- 			XYZDOT=${PORTVERSION} \
+ 			XYZDOT=${DISTVERSION} \
 -			OSMAJOR=${OSVERSION:C/([0-9]*)[0-9]{5}/\1/}		# For plat-freebsd* in pkg-plist. https://bugs.python.org/issue19554
 +			OSMAJOR=${DFLYVERSION:C/([0-9]*)[0-9]{5}/\1/}		# For plat-freebsd* in pkg-plist. https://bugs.python.org/issue19554
  
- OPTIONS_DEFINE=		DEBUG IPV6 NLS PYMALLOC
- OPTIONS_DEFAULT=	LIBFFI PYMALLOC
-@@ -57,6 +57,12 @@ OPTIONS_RADIO=		HASH
+ OPTIONS_DEFINE=		DEBUG IPV6 LIBMPDEC NLS PYMALLOC
+ OPTIONS_DEFAULT=	LIBMPDEC PYMALLOC
+ OPTIONS_RADIO=		HASH
  OPTIONS_RADIO_HASH=	FNV SIPHASH
  OPTIONS_SUB=		yes
- 
 +OPTIONS_DEFINE+=	EXPAT
 +OPTIONS_DEFAULT+=	EXPAT
 +EXPAT_DESC=		Use expat from ports instead of bundled version
 +EXPAT_LIB_DEPENDS=	libexpat.so:textproc/expat2
 +EXPAT_CONFIGURE_ON=	--with-system-expat
-+
- NLS_DESC=		Enable gettext support for the locale module
- PYMALLOC_DESC=		Enable specialized mallocs
  
-@@ -112,6 +118,10 @@ post-patch:
+ LIBMPDEC_DESC=		Use libmpdec from ports instead of bundled version
+ NLS_DESC=		Enable gettext support for the locale module
+@@ -116,6 +121,10 @@ post-patch:
  	@${REINPLACE_CMD} -e 's|uuid/uuid.h|ignore_&|' ${WRKSRC}/configure
  	@${REINPLACE_CMD} -e '/find_library_file/ s|uuid|ignore_&|' ${WRKSRC}/setup.py
  
