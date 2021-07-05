@@ -1,6 +1,6 @@
---- pkg-plist.orig	2021-07-05 01:00:30 UTC
+--- pkg-plist.orig	2019-12-21 14:18:54 UTC
 +++ pkg-plist
-@@ -185,9 +185,9 @@ lib/python%%XYDOT%%/__pycache__/_sitebui
+@@ -185,9 +185,9 @@
  lib/python%%XYDOT%%/__pycache__/_strptime.cpython-%%XY%%.opt-1.pyc
  lib/python%%XYDOT%%/__pycache__/_strptime.cpython-%%XY%%.opt-2.pyc
  lib/python%%XYDOT%%/__pycache__/_strptime.cpython-%%XY%%.pyc
@@ -13,7 +13,7 @@
  lib/python%%XYDOT%%/__pycache__/_threading_local.cpython-%%XY%%.opt-1.pyc
  lib/python%%XYDOT%%/__pycache__/_threading_local.cpython-%%XY%%.opt-2.pyc
  lib/python%%XYDOT%%/__pycache__/_threading_local.cpython-%%XY%%.pyc
-@@ -671,7 +671,7 @@ lib/python%%XYDOT%%/_pydecimal.py
+@@ -671,7 +671,7 @@
  lib/python%%XYDOT%%/_pyio.py
  lib/python%%XYDOT%%/_sitebuiltins.py
  lib/python%%XYDOT%%/_strptime.py
@@ -22,19 +22,3 @@
  lib/python%%XYDOT%%/_threading_local.py
  lib/python%%XYDOT%%/_weakrefset.py
  lib/python%%XYDOT%%/abc.py
-@@ -2817,6 +2817,7 @@ lib/python%%XYDOT%%/lib-dynload/_datetim
- lib/python%%XYDOT%%/lib-dynload/_dbm.cpython-%%XY%%.so
- lib/python%%XYDOT%%/lib-dynload/_decimal.cpython-%%XY%%.so
- lib/python%%XYDOT%%/lib-dynload/_elementtree.cpython-%%XY%%.so
-+lib/python%%XYDOT%%/lib-dynload/_gdbm.cpython-%%XY%%.so
- lib/python%%XYDOT%%/lib-dynload/_hashlib.cpython-%%XY%%.so
- lib/python%%XYDOT%%/lib-dynload/_heapq.cpython-%%XY%%.so
- lib/python%%XYDOT%%/lib-dynload/_json.cpython-%%XY%%.so
-@@ -2831,6 +2832,7 @@ lib/python%%XYDOT%%/lib-dynload/_posixsh
- lib/python%%XYDOT%%/lib-dynload/_posixsubprocess.cpython-%%XY%%.so
- lib/python%%XYDOT%%/lib-dynload/_queue.cpython-%%XY%%.so
- lib/python%%XYDOT%%/lib-dynload/_random.cpython-%%XY%%.so
-+lib/python%%XYDOT%%/lib-dynload/_sqlite3.cpython-%%XY%%.so
- lib/python%%XYDOT%%/lib-dynload/_sha1.cpython-%%XY%%.so
- lib/python%%XYDOT%%/lib-dynload/_sha256.cpython-%%XY%%.so
- lib/python%%XYDOT%%/lib-dynload/_sha3.cpython-%%XY%%.so
