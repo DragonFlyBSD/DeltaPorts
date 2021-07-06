@@ -1,4 +1,4 @@
---- Makefile.orig	2021-07-04 09:41:08 UTC
+--- Makefile.orig	2021-07-06 15:50:29 UTC
 +++ Makefile
 @@ -49,13 +49,18 @@ PLIST_SUB=		ABI=${ABIFLAGS} \
  			XY=${PYTHON_SUFFIX} \
@@ -20,14 +20,3 @@
  
  LIBMPDEC_DESC=		Use libmpdec from ports instead of bundled version
  NLS_DESC=		Enable gettext support for the locale module
-@@ -116,6 +121,10 @@ post-patch:
- 	@${REINPLACE_CMD} -e 's|uuid/uuid.h|ignore_&|' ${WRKSRC}/configure
- 	@${REINPLACE_CMD} -e '/find_library_file/ s|uuid|ignore_&|' ${WRKSRC}/setup.py
- 
-+dfly-patch:
-+	${REINPLACE_CMD} -e 's|`uname -r`|"${_OSRELEASE}"|g' \
-+		${WRKSRC}/configure
-+
- post-install:
- .if ! ${PORT_OPTIONS:MDEBUG}
- 	${RM} ${STAGEDIR}${PREFIX}/lib/libpython3.so						# Upstream Issue: https://bugs.python.org/issue17975
