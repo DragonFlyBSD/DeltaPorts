@@ -1,0 +1,10 @@
+--- Makefile.orig	2021-07-07 15:21:38.172426000 +0200
++++ Makefile	2021-07-07 15:21:44.482279000 +0200
+@@ -190,7 +190,6 @@
+ # Platform Configuration
+ # -DHAVE_POSIX_FALLOCATE=1 not yet, chunksize.test ZFS failure chunksize-1.2 expected: [32768] got: [2048]
+ CPPFLAGS+=	-DHAVE_FCHOWN=1 \
+-		-DHAVE_FDATASYNC=1 \
+ 		-DHAVE_ISNAN=1 \
+ 		-DHAVE_GMTIME_R=1 \
+ 		-DHAVE_LOCALTIME_R=1 \
