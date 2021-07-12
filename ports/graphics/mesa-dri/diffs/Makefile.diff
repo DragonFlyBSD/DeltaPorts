@@ -1,6 +1,6 @@
---- Makefile.orig	2020-11-13 08:33:02 UTC
+--- Makefile.orig	2021-07-11 23:28:49 UTC
 +++ Makefile
-@@ -70,6 +70,15 @@
+@@ -69,6 +69,15 @@ USE_XORG+=		xcb xrandr
  MESA_PLATFORMS+=	wayland
  .endif
  
@@ -14,17 +14,5 @@
 +.endif
 +
  MESON_ARGS+=	-Ddri-drivers="${DRI_DRIVERS:ts,:tl}" \
- 			-Dgallium-drivers="${GALLIUM_DRIVERS:ts,:tl}" \
- 			-Dvulkan-drivers="${VULKAN_DRIVERS:ts,:tl}" \
-@@ -78,9 +87,9 @@
- # Disable some options
- MESON_ARGS+=	-Dgallium-xa=disabled \
- 		-Dgles1=disabled \
--		-Dgles2=disabled \
-+		-Dgles2=enabled \
- 		-Dglx=disabled \
--		-Degl=disabled \
-+		-Degl=enabled \
- 		-Dosmesa=none \
- 		-Dtools=""
- 
+ 		-Dgallium-drivers="${GALLIUM_DRIVERS:ts,:tl}" \
+ 		-Dvulkan-drivers="${VULKAN_DRIVERS:ts,:tl}" \
