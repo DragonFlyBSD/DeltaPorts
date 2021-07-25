@@ -286,6 +286,11 @@
 		    "port": "devel/folly",
 		    "desc": "can't use TLSv1.3 yet, remove the relevant patch when available.",
 		    "status": "pending"
+		},
+		{
+		    "port": "lang/ghc",
+		    "desc": "Currently locked, fix to unlock (@tuxillo no time right now)",
+		    "status": "pending"
 		}
 	    ],
 	    "cherry-picks": [
