@@ -1,8 +1,0 @@
---- pkg-plist.orig	2021-01-27 23:30:35 UTC
-+++ pkg-plist
-@@ -6,3 +6,5 @@ lib/fpc/%%PORTVERSION%%/units/%%BUILDNAM
- lib/fpc/%%PORTVERSION%%/units/%%BUILDNAME%%/regexpr/regex.rsj
- lib/fpc/%%PORTVERSION%%/units/%%BUILDNAME%%/regexpr/regexpr.o
- lib/fpc/%%PORTVERSION%%/units/%%BUILDNAME%%/regexpr/regexpr.ppu
-+lib/fpc/%%PORTVERSION%%/units/%%BUILDNAME%%/regexpr/uregexpr.o
-+lib/fpc/%%PORTVERSION%%/units/%%BUILDNAME%%/regexpr/uregexpr.ppu
