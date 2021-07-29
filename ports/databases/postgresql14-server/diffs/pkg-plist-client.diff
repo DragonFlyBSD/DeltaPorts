@@ -1,0 +1,24 @@
+--- pkg-plist-client.orig	2021-07-29 23:11:23.372615000 +0200
++++ pkg-plist-client	2021-07-29 23:12:29.461094000 +0200
+@@ -858,17 +858,21 @@
+ lib/libecpg.a
+ lib/libecpg.so
+ lib/libecpg.so.6
++lib/libecpg.so.6.14
+ lib/libecpg_compat.a
+ lib/libecpg_compat.so
+ lib/libecpg_compat.so.3
++lib/libecpg_compat.so.3.14
+ lib/libpgport.a
+ lib/libpgport_shlib.a
+ lib/libpgtypes.a
+ lib/libpgtypes.so
+ lib/libpgtypes.so.3
++lib/libpgtypes.so.3.14
+ lib/libpq.a
+ lib/libpq.so
+ lib/libpq.so.5
++lib/libpq.so.5.14
+ lib/postgresql/pgxs/config/install-sh
+ lib/postgresql/pgxs/config/missing
+ lib/postgresql/pgxs/src/Makefile.global
