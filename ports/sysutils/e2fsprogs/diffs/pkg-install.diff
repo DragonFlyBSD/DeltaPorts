@@ -1,6 +1,6 @@
---- pkg-install.orig	2021-01-18 00:27:22 UTC
+--- pkg-install.orig	2021-08-06 17:25:47 UTC
 +++ pkg-install
-@@ -6,18 +6,9 @@ MODE="$2" # PRE-INSTALL, POST-INSTALL, D
+@@ -6,23 +6,9 @@ MODE="$2" # PRE-INSTALL, POST-INSTALL, D
  
  case "$MODE" in
  POST-INSTALL)
@@ -15,6 +15,11 @@
 -		for i in ext2 ext3 ext4 ; do
 -			ln -fhP ${d2}e2fsck ${d2}fsck.$i
 -		done
+-		echo >&2 "NOTE: replaced e2fsprogs symlinks by hard links, will recalculate checksums with a root at(1) job."
+-		pid=$$
+-		echo /bin/sh -c "\"set -x ; { while sleep 2 </dev/null ; do kill -0 $pid || break ; done ; \
+-			pkg check -r "${PKG_NAME}" ; } </dev/null 2>&1 | logger -t pkg.e2fsprogs.POST-INSTALL \"" \
+-			| at now
 -	fi
 +	# do not try to be cute, copy over and allow RO /sbin
 +	cp -p ${PKG_PREFIX}/sbin/e2fsck /sbin/ || /usr/bin/true
@@ -22,8 +27,8 @@
  	#
  	# install configuration file and update config files from
  	# old "ext4dev" to current "ext4" name.
-@@ -61,6 +52,8 @@ POST-INSTALL)
- 	fi
+@@ -67,6 +53,8 @@ POST-INSTALL)
+ 
  	;;
  DEINSTALL)
 +	rm -f /sbin/e2fsck || /usr/bin/true
