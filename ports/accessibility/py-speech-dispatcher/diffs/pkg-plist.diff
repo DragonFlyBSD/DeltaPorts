@@ -1,0 +1,9 @@
+--- pkg-plist.orig	2021-08-15 15:48:10.587561000 +0200
++++ pkg-plist	2021-08-15 15:48:20.427342000 +0200
+@@ -20,5 +20,6 @@
+ %%PYTHON_SITELIBDIR%%/speechd_config/__pycache__/paths.cpython-%%PYTHON_SUFFIX%%.opt-1.pyc
+ %%PYTHON_SITELIBDIR%%/speechd_config/config.py
+ %%PYTHON_SITELIBDIR%%/speechd_config/paths.py
++man/man1/spd-conf.1.gz
+ share/sounds/speech-dispatcher/test.wav
+ %%DATADIR%%/conf/desktop/speechd.desktop
