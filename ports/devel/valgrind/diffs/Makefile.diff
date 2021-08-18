@@ -1,4 +1,4 @@
---- Makefile.orig	2021-08-16 09:11:02 UTC
+--- Makefile.orig	2021-08-18 15:54:37 UTC
 +++ Makefile
 @@ -1,10 +1,7 @@
  # Created by: Simon Barner <barner@gmx.de>
@@ -12,7 +12,7 @@
  CATEGORIES=	devel
  MASTER_SITES=	https://valgrind.org/
  
-@@ -27,9 +24,9 @@ LIB32_PATH?=	/usr/lib32/libc.so
+@@ -27,19 +24,19 @@ LIB32_PATH?=	/usr/lib32/libc.so
  CONFLICTS=	valgrind-[0-9]*
  
  USE_GITHUB=	yes
@@ -25,17 +25,31 @@
  
  CONFIGURE_ENV+=	ac_cv_path_PERL=${PERL}
  
-@@ -54,6 +51,10 @@ MPI_LIB_DEPENDS=	libmpich.so:net/mpich
+ PORTDOCS=	html
+ 
+ OPTIONS_DEFINE=		DOCS MANPAGES MPI
+-OPTIONS_DEFINE_amd64=	32BIT
++OPTIONS_DEFINE_x86_64=	32BIT
+ OPTIONS_DEFAULT=	MANPAGES
+ .if exists(${LIB32_PATH})
+-OPTIONS_DEFAULT_amd64=	32BIT
++OPTIONS_DEFAULT_x86_64=	32BIT
+ .endif
+ OPTIONS_SUB=	yes
+ 
+@@ -54,7 +51,11 @@ MPI_LIB_DEPENDS=	libmpich.so:net/mpich
  
  .include <bsd.port.options.mk>
  
+-.if ${ARCH} == "amd64"
 +.if ${PORT_OPTIONS:MDOCS}
 +CONFIGURE_ARGS+=	--docdir=${DOCSDIR}
 +.endif
 +
- .if ${ARCH} == "x86_64"
++.if ${ARCH} == "x86_64"
  PLIST_SUB+=	AMD64=""
  . if !${PORT_OPTIONS:M32BIT}
+ CONFIGURE_ARGS+=	--enable-only64bit
 @@ -71,10 +72,15 @@ PLIST_SUB+=	AMD64="@comment "
  PLIST_SUB+=	X86=""
  .endif
