@@ -1,6 +1,9 @@
+# to comply with check-plist
+PLIST_FILES+=	man/man1/alsatplg.1.gz
+PLIST_FILES+=	man/man1/alsaucm.1.gz
 
 # chase devel/ncurses hacks
+# replacing just the suffix should work
 dfly-patch:
-	${REINPLACE_CMD} -e 's@lncursesw@lncurses@g' \
-			 -e 's@NCURSESLIBSUFFIX="w"@NCURSESLIBSUFFIX=""@g' \
-		${WRKSRC}/configure
+	${REINPLACE_CMD} -e 's@NCURSESLIBSUFFIX="w"@NCURSESLIBSUFFIX=""@g' \
+		${WRKSRC}/configure.ac
