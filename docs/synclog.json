@@ -291,6 +291,11 @@
 		    "port": "lang/ghc",
 		    "desc": "Currently locked, fix to unlock (@tuxillo no time right now)",
 		    "status": "pending"
+		},
+		{
+		    "port": "mail/postfix",
+		    "desc": "Currently a dport until 3.6.x can be built with LibreSSL",
+		    "status": "pending"
 		}
 	    ],
 	    "cherry-picks": [
