@@ -1,0 +1,9 @@
+--- pkg-plist.orig	2021-08-23 21:30:07.723614000 +0200
++++ pkg-plist	2021-08-23 21:30:22.833236000 +0200
+@@ -1,5 +1,6 @@
+ bin/ekiga
+ bin/ekiga-config-tool
++%%ETCDIR%%/ekiga.schemas
+ %%DBUS%%bin/ekiga-helper
+ lib/ekiga/%%VERSION%%/libekiga.so
+ man/man1/ekiga.1.gz
