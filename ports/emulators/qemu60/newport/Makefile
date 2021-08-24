@@ -155,4 +155,6 @@ EXTRA_PATCHES=	${DFLY_PATCHDIR}/extra-nvmm01.patch \
 		${DFLY_PATCHDIR}/extra-nvmm04.patch \
 		${DFLY_PATCHDIR}/extra-nvmm05.patch
 
+post-install:
+	${RM} -f ${STAGEDIR}/${DOCSDIR}/.buildinfo
 .include <bsd.port.mk>
