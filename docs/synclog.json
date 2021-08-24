@@ -294,7 +294,7 @@
 		},
 		{
 		    "port": "mail/postfix",
-		    "desc": "Currently a dport until 3.6.x can be built with LibreSSL",
+		    "desc": "Currently a dport until 3.6.x can be built with LibreSSL, mail/postfix35 IGNORED until then",
 		    "status": "pending"
 		}
 	    ],
