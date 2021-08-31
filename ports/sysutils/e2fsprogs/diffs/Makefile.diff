@@ -1,15 +1,15 @@
---- Makefile.orig	2021-03-01 14:52:28 UTC
+--- Makefile.orig	2021-08-31 20:31:12 UTC
 +++ Makefile
-@@ -40,7 +40,7 @@ CONFIGURE_ARGS?=--disable-fsck \
+@@ -38,7 +38,7 @@ CONFIGURE_ARGS?=--disable-fsck \
+ 		--includedir='${PREFIX}/include/e2fsprogs/' \
  		--with-root-prefix='${PREFIX}' \
- 		--without-included-gettext \
  		LDFLAGS='${LDFLAGS} -L${LOCALBASE}/lib -Wl,--rpath -Wl,${LOCALBASE}/lib/e2fsprogs'
 -CONFIGURE_ENV?=	LIBS='-Wl,--as-needed ${LIBS} -lexecinfo -lelf'
 +CONFIGURE_ENV?=	LIBS='-Wl,--as-needed ${LIBS} -lexecinfo'
  # apparently HAVE_PTHREAD_H checks go missing if the FUSEFS option is unset, force it:
  CPPFLAGS+=	-I${WRKSRC}/lib -I${LOCALBASE}/include # -D_EXT2_USE_C_VERSIONS
  MAKE_ARGS+=	pkgconfigdir='${PREFIX}/libdata/pkgconfig'
-@@ -235,7 +235,7 @@ _check_timeout=180
+@@ -233,7 +233,7 @@ _check_timeout=180
  .endif
  
  .if ${PORT_OPTIONS:MLIBUNWIND}
@@ -18,7 +18,7 @@
  .endif
  
  post-build:
-@@ -249,7 +249,7 @@ post-build:
+@@ -247,7 +247,7 @@ post-build:
  	cd ${WRKSRC}/e2fsck && ${RM} -f e2fsck \
  		&& ${MAKE_CMD} e2fsck V=1 \
  		LIBS="-static-libgcc -lc -Bstatic ../lib/libsupport.a ../lib/libext2fs.a ../lib/libcom_err.a \
@@ -27,7 +27,7 @@
  		${LOCALBASE}/lib/libblkid.a ${LOCALBASE}/lib/libuuid.a ${libintl} ../lib/libe2p.a " \
  		&& ${STRIP_CMD} e2fsck
  # Regression check: avoid a port (not upstream!) regression from 1.40.5,
-@@ -291,19 +291,7 @@ post-build:
+@@ -289,19 +289,7 @@ post-build:
  .endif
  
  post-install:
@@ -45,6 +45,6 @@
 -	${LN} -fs /sbin/fsck_ext2fs ${STAGEDIR}${PREFIX}/sbin/
 -	${LN} -fs /sbin/e2fsck      ${STAGEDIR}${PREFIX}/sbin/
 +	${INSTALL_PROGRAM} ${WRKSRC}/fsck_ext2fs ${STAGEDIR}${PREFIX}/sbin/
- 	# these are made hardlinks to symlinks - -P avoids following them to /sbin:
- 	${LN} -fP ${STAGEDIR}${PREFIX}/sbin/e2fsck ${STAGEDIR}${PREFIX}/sbin/fsck.ext2
- 	${LN} -fP ${STAGEDIR}${PREFIX}/sbin/e2fsck ${STAGEDIR}${PREFIX}/sbin/fsck.ext3
+ 	${LN} -fs e2fsck ${STAGEDIR}${PREFIX}/sbin/fsck.ext2
+ 	${LN} -fs e2fsck ${STAGEDIR}${PREFIX}/sbin/fsck.ext3
+ 	${LN} -fs e2fsck ${STAGEDIR}${PREFIX}/sbin/fsck.ext4
