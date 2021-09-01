@@ -5,3 +5,6 @@ BUILD_DEPENDS+=	gsed:textproc/gsed
 dfly-patch:
 	${REINPLACE_CMD} -e 's@[[:<:]]sed[[:>:]]@gsed@g' \
 		${WRKSRC}/doc/man/hu/Makefile.in
+
+# tty-ncurses.c:62:10: fatal error: term.h: No such file or directory
+CFLAGS+= -I/usr/local/include/ncurses
