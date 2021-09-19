@@ -1,12 +1,11 @@
-Also not compatible still with LibreSSL
-
---- Makefile.orig	2020-08-13 10:38:37 UTC
+--- Makefile.orig	2021-09-18 11:14:02 UTC
 +++ Makefile
-@@ -14,6 +14,7 @@ COMMENT=	Enterprise-class open source di
+@@ -127,8 +127,6 @@ LIBXML2_LIB_DEPENDS=	libxml2.so:textproc
  
- LICENSE=	GPLv2+
- LICENSE_FILE=	${WRKSRC}/COPYING
-+BROKEN=		needs porting on dragonfly
+ OPENSSL_CONFIGURE_WITH=	openssl
+ OPENSSL_USES=		ssl
+-OPENSSL_VARS=		BROKEN_SSL="libressl libressl-devel" \
+-			BROKEN_SSL_REASON="PSK is not provided by LibreSSL"
  
- LIB_DEPENDS=	libpcre.so:devel/pcre
- 
+ GNUTLS_CONFIGURE_WITH=	gnutls
+ GNUTLS_LIB_DEPENDS=	libgnutls.so:security/gnutls
