@@ -1,6 +1,14 @@
---- Makefile.orig	2019-04-24 17:56:56 UTC
+--- Makefile.orig	2021-10-09 11:07:19 UTC
 +++ Makefile
-@@ -30,7 +30,9 @@ USES=		cpe libtool pathfix pkgconfig
+@@ -2,6 +2,7 @@
+ 
+ PORTNAME=	libressl
+ PORTVERSION=	3.3.3
++PORTREVISION=	1
+ CATEGORIES=	security devel
+ MASTER_SITES=	OPENBSD/LibreSSL
+ 
+@@ -45,7 +46,9 @@ USES=		cpe libtool pathfix pkgconfig
  USE_LDCONFIG=	yes
  OPTIONS_SUB=	yes
  CFLAGS+=	-fpic -DPIC -Wl,-rpath,${PREFIX}/lib -Wl,--as-needed
