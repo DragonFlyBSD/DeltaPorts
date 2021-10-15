@@ -1,17 +1,6 @@
---- bsd.default-versions.mk.orig	2021-05-09 12:00:52 UTC
+--- bsd.default-versions.mk.orig	2021-10-15 23:43:39 UTC
 +++ bsd.default-versions.mk
-@@ -31,6 +31,10 @@ _l=		${lang:C/=.*//g}
- ${_l:tu}_DEFAULT=	${lang:C/.*=//g}
- .endfor
- 
-+.if exists(/usr/lib/priv/libprivate_ssl.so)
-+SSL_DEFAULT?=  libressl
-+.endif
-+
- # Possible values: 2.4
- APACHE_DEFAULT?=	2.4
- # Possible values: 5, 6, 18
-@@ -73,7 +77,7 @@ LINUX_DEFAULT?=		c7
+@@ -80,7 +80,7 @@ LINUX_DEFAULT?=		c7
  .if ${ARCH} == powerpc
  LLVM_DEFAULT?=		10
  .else
