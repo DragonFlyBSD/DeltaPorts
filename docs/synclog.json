@@ -1,5 +1,5 @@
 {
-    "current": "2021S02",
+    "current": "2021Q3",
     "releases": [
 	{
 	    "id": "2020S07",
@@ -272,6 +272,19 @@
 		}
 	    ],
 	    "To-do": [
+	    ],
+	    "cherry-picks": [
+	    ]
+	},
+	{
+	    "id": "2021Q4",
+	    "timestamp": "Wed Oct 13 13:15:02 2021 +0300",
+	    "base_commit": "82840fd0ace53af7005b4ebf3cb4c4640d6b5394",
+	    "rejects": [
+		{
+		}
+	    ],
+	    "To-do": [
 		{
 		    "port": "devel/qca",
 		    "desc": "can't use TLSv1.3 by default, remove the relevant patch available.",
@@ -296,10 +309,22 @@
 		    "port": "mail/postfix",
 		    "desc": "Currently a dport until 3.6.x can be built with LibreSSL, mail/postfix35 IGNORED until then",
 		    "status": "pending"
+		},
+		{
+		    "port": "sysutils/rubygem-vagrant-libvirt",
+		    "desc": "Newport to be switched to PORT once the PR is merged.",
+		    "status": "pending"
+		},
+		{
+		    "port": "net/rubygem-fog-libvirt:",
+		    "desc": "Newport to be switched to PORT once the PR is merged.",
+		    "status": "pending"
 		}
+
 	    ],
 	    "cherry-picks": [
 	    ]
 	}
+
     ]
 }
