@@ -1,6 +1,6 @@
---- Makefile.orig	2021-01-18 00:12:47 UTC
+--- Makefile.orig	2021-10-16 10:55:12 UTC
 +++ Makefile
-@@ -12,7 +12,7 @@ COMMENT=	System for Automated Geoscienti
+@@ -11,7 +11,7 @@ COMMENT=	System for Automated Geoscienti
  LICENSE=	GPLv2 LGPL21
  LICENSE_COMB=	multi
  
@@ -9,7 +9,7 @@
  		swig:devel/swig
  LIB_DEPENDS=	libcurl.so:ftp/curl \
  		libfftw3.so:math/fftw3 \
-@@ -65,11 +65,6 @@ INSTALL_TARGET=	install-strip
+@@ -65,11 +65,6 @@ VIGRA_RUN_DEPENDS=	${LOCALBASE}/lib/libv
  
  .include <bsd.port.pre.mk>
  
@@ -20,13 +20,13 @@
 -
  SUB_FILES=	pkg-message
  
- post-extract:
-@@ -97,8 +92,6 @@ post-patch:
+ post-patch:
+@@ -79,8 +74,6 @@ post-patch:
  .endif
  	@${REINPLACE_CMD} -e 's|PORTVERSION|${PORTVERSION}|' \
  		${WRKSRC}/src/saga_core/saga_gui/dlg_about.cpp
 -	@${REINPLACE_CMD} -e 's|-lgomp|-lomp|' \
 -		${WRKSRC}/src/accessories/templates/template4saga-tools/my_tool_library/Makefile
+ 	@${REINPLACE_CMD} -e 's|COMMAND python -c|COMMAND python${PYTHON_VER} -c|' \
+ 		${WRKSRC}/src/saga_core/saga_api/saga_api_python/CMakeLists.txt
  
- post-configure:
- 	@${REINPLACE_CMD} -e 's|^LDFLAGS = .*|& -lopencv_core|' \
