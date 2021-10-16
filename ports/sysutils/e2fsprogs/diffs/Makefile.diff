@@ -1,6 +1,6 @@
---- Makefile.orig	2021-08-31 20:31:12 UTC
+--- Makefile.orig	2021-10-16 11:20:41 UTC
 +++ Makefile
-@@ -38,7 +38,7 @@ CONFIGURE_ARGS?=--disable-fsck \
+@@ -50,7 +50,7 @@ CONFIGURE_ARGS?=--disable-fsck \
  		--includedir='${PREFIX}/include/e2fsprogs/' \
  		--with-root-prefix='${PREFIX}' \
  		LDFLAGS='${LDFLAGS} -L${LOCALBASE}/lib -Wl,--rpath -Wl,${LOCALBASE}/lib/e2fsprogs'
@@ -9,7 +9,7 @@
  # apparently HAVE_PTHREAD_H checks go missing if the FUSEFS option is unset, force it:
  CPPFLAGS+=	-I${WRKSRC}/lib -I${LOCALBASE}/include # -D_EXT2_USE_C_VERSIONS
  MAKE_ARGS+=	pkgconfigdir='${PREFIX}/libdata/pkgconfig'
-@@ -233,7 +233,7 @@ _check_timeout=180
+@@ -258,7 +258,7 @@ _check_timeout=180
  .endif
  
  .if ${PORT_OPTIONS:MLIBUNWIND}
@@ -18,7 +18,7 @@
  .endif
  
  post-build:
-@@ -247,7 +247,7 @@ post-build:
+@@ -272,7 +272,7 @@ post-build:
  	cd ${WRKSRC}/e2fsck && ${RM} -f e2fsck \
  		&& ${MAKE_CMD} e2fsck V=1 \
  		LIBS="-static-libgcc -lc -Bstatic ../lib/libsupport.a ../lib/libext2fs.a ../lib/libcom_err.a \
@@ -27,24 +27,3 @@
  		${LOCALBASE}/lib/libblkid.a ${LOCALBASE}/lib/libuuid.a ${libintl} ../lib/libe2p.a " \
  		&& ${STRIP_CMD} e2fsck
  # Regression check: avoid a port (not upstream!) regression from 1.40.5,
-@@ -289,19 +289,7 @@ post-build:
- .endif
- 
- post-install:
--	# pkg workaround time again;
--	# the whole purpose of this dance is to move the necessities for
--	# /etc/fstab fsck'ing into /sbin, and symlink to these guys
--	# in the regular hierarchy, normally $PREFIX/sbin. Hard links may
--	# crash the install if /usr[/local] is a separate file system from /,
--	# and pkg 1.15.4 can't automatically unroll or install relative symlinks.
--	${MKDIR} ${STAGEDIR}/sbin
--	${MV} -f ${STAGEDIR}${PREFIX}/sbin/e2fsck ${STAGEDIR}/sbin/ # from INSTALL_TARGET
--	${INSTALL_PROGRAM} ${WRKSRC}/fsck_ext2fs ${STAGEDIR}/sbin/  # from port
--	# according to TPH 6.1.1 Handling Symbolic Links, these are to be absolute,
--	# yet stage-qa warns about these on 2020-09-16:
--	${LN} -fs /sbin/fsck_ext2fs ${STAGEDIR}${PREFIX}/sbin/
--	${LN} -fs /sbin/e2fsck      ${STAGEDIR}${PREFIX}/sbin/
-+	${INSTALL_PROGRAM} ${WRKSRC}/fsck_ext2fs ${STAGEDIR}${PREFIX}/sbin/
- 	${LN} -fs e2fsck ${STAGEDIR}${PREFIX}/sbin/fsck.ext2
- 	${LN} -fs e2fsck ${STAGEDIR}${PREFIX}/sbin/fsck.ext3
- 	${LN} -fs e2fsck ${STAGEDIR}${PREFIX}/sbin/fsck.ext4
