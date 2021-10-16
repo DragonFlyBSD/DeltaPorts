@@ -1,9 +1,0 @@
---- pkg-plist.orig	2021-09-10 17:06:37 UTC
-+++ pkg-plist
-@@ -1,6 +1,5 @@
- bin/vaultwarden
- @sample etc/rc.conf.d/vaultwarden.sample
--etc/rc.d/vaultwarden
- %%WWWDIR%%/web-vault/.nojekyll
- %%WWWDIR%%/web-vault/404.html
- %%WWWDIR%%/web-vault/404/bootstrap.min.css
