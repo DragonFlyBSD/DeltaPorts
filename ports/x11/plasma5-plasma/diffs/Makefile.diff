@@ -1,12 +1,12 @@
---- Makefile.orig	2019-04-05 13:20:34 UTC
+--- Makefile.orig	2021-10-16 11:28:08 UTC
 +++ Makefile
-@@ -15,7 +15,8 @@ USES=		kde:5 metaport qt:5
- #   * bluedevil as we do have bluez
- #   * plasma-pa don't depend on plamsa-pa by default
- #   * breeze-kde4 don't pull in qt4 bits
--USE_KDE=	${_USE_PLASMA_ALL:Nplasma-pa:Nbreeze-kde4}
+@@ -13,7 +13,8 @@ USES=		kde:5 metaport qt:5
+ # remove:
+ #   * bluedevil we do not have bluez at all
+ #   * plasma-pa no plasma-pa (pulseaudio) by default
+-USE_KDE=	${_USE_PLASMA_ALL:Nplasma-pa}
 +#   * kwrited use is as build/run depends (executable on dragonfly)
-+USE_KDE=	${_USE_PLASMA_ALL:Nplasma-pa:Nbreeze-kde4:Nkwrited:Nkwallet-pam}
++USE_KDE=	${_USE_PLASMA_ALL:Nplasma-pa:Nkwrited:Nkwallet-pam}
  
  OPTIONS_DEFINE=	PHONON PULSEAUDIO
- OPTIONS_DEFAULT=	PHONON
+ OPTIONS_DEFAULT=	${OPTIONS_DEFINE}
