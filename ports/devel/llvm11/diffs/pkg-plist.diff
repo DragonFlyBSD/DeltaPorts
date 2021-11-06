@@ -1,5 +1,11 @@
---- pkg-plist.orig	2020-11-13 08:32:59 UTC
+--- pkg-plist.orig	2021-11-06 15:16:41 UTC
 +++ pkg-plist
-@@ -152 +152 @@
+@@ -149,7 +149,7 @@ llvm%%LLVM_SUFFIX%%/bin/dsymutil
+ %%EXTRAS%%llvm%%LLVM_SUFFIX%%/bin/find-all-symbols
+ %%CLANG%%llvm%%LLVM_SUFFIX%%/bin/git-clang-format
+ %%CLANG%%llvm%%LLVM_SUFFIX%%/bin/hmaptool
 -%%LLD%%llvm%%LLVM_SUFFIX%%/bin/ld
-+%%LLD_LINK%%%%LLD%%llvm%%LLVM_SUFFIX%%/bin/ld
++%%LLD%%%%LLD%%llvm%%LLVM_SUFFIX%%/bin/ld
+ %%LLD%%llvm%%LLVM_SUFFIX%%/bin/ld.lld
+ %%LLD%%llvm%%LLVM_SUFFIX%%/bin/ld64.lld
+ llvm%%LLVM_SUFFIX%%/bin/llc
