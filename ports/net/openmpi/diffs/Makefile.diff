@@ -1,6 +1,6 @@
---- Makefile.orig	2021-02-04 18:49:33 UTC
+--- Makefile.orig	2021-11-07 15:19:49 UTC
 +++ Makefile
-@@ -109,10 +109,6 @@ SLURM_PLIST_FILES=	${MPIDIR}/lib/openmpi
+@@ -104,10 +104,6 @@ SLURM_PLIST_FILES=	${MPIDIR}/lib/openmpi
  
  .include <bsd.port.options.mk>
  
@@ -8,6 +8,6 @@
 -FCFLAGS+=	-fallow-argument-mismatch
 -.endif
 -
- post-patch:
- 	@${REINPLACE_CMD} -e 's|$$(libdir)/pkgconfig|${LOCALBASE}/libdata/pkgconfig|g' \
- 		${WRKSRC}/ompi/tools/wrappers/Makefile.am \
+ .if ${ARCH} != aarch64 && ${ARCH} != amd64 && ${ARCH} != i386 && !${ARCH:Mpowerpc*}
+ PLIST_SUB+=	NO_MCA_PATCHER_OVERWRITE="@comment "
+ .else
