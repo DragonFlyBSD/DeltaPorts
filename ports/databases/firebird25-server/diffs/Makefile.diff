@@ -1,15 +1,16 @@
---- Makefile.orig	2018-07-10 03:37:57 UTC
+--- Makefile.orig	2021-11-07 13:37:47 UTC
 +++ Makefile
-@@ -21,14 +21,13 @@ LICENSE_FILE_IPL=	${WRKSRC}/builds/insta
+@@ -18,15 +18,13 @@ LICENSE_FILE_IPL=	${WRKSRC}/builds/insta
  LICENSE_PERMS_IDPL=	dist-mirror dist-sell pkg-mirror pkg-sell auto-accept
  LICENSE_PERMS_IPL=	dist-mirror dist-sell pkg-mirror pkg-sell auto-accept
  
 -LIB_DEPENDS=	libicuuc.so:devel/icu
- 
+-
  USES=		cpe gmake pkgconfig tar:bzip2
  USE_CXXSTD=	gnu++98
  GNU_CONFIGURE=	yes
  MAKE_JOBS_UNSAFE=	yes
+ CPE_VENDOR=	firebirdsql
  
 -CONFIGURE_ARGS=	--with-system-icu \
 +CONFIGURE_ARGS=	\
