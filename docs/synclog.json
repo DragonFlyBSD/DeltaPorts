@@ -335,6 +335,11 @@
 		    "port": "net/rubygem-fog-libvirt:",
 		    "desc": "Newport to be switched to PORT once the PR is merged.",
 		    "status": "pending"
+		},
+		{
+		    "port": "devel/libvirt:",
+		    "desc": "Unlock and update. Make sure nvmm still works.",
+		    "status": "pending"
 		}
 
 	    ],
