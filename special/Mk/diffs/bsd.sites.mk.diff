@@ -1,0 +1,12 @@
+--- bsd.sites.mk.orig	2021-11-13 17:41:01 UTC
++++ bsd.sites.mk
+@@ -26,7 +26,8 @@ MASTER_SITE_LOCAL+= \
+ 	http://distcache.FreeBSD.org/local-distfiles/%SUBDIR%/ \
+ 	http://distcache.us-east.FreeBSD.org/local-distfiles/%SUBDIR%/ \
+ 	http://distcache.eu.FreeBSD.org/local-distfiles/%SUBDIR%/ \
+-	http://distcache.us-west.FreeBSD.org/local-distfiles/%SUBDIR%/
++	http://distcache.us-west.FreeBSD.org/local-distfiles/%SUBDIR%/ \
++	http://avalon.dragonflybsd.org/misc/distfiles/%SUBDIR%/
+ 
+ MASTER_SITE_PORTS_JP+= \
+ 	ftp://ports.jp.FreeBSD.org/pub/FreeBSD-jp/ports-jp/LOCAL_PORTS/%SUBDIR%/ \
