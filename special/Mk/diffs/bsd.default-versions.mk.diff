@@ -1,6 +1,16 @@
---- bsd.default-versions.mk.orig	2021-10-15 23:43:39 UTC
+--- bsd.default-versions.mk.orig	2021-11-13 19:10:58 UTC
 +++ bsd.default-versions.mk
-@@ -80,7 +80,7 @@ LINUX_DEFAULT?=		c7
+@@ -31,6 +31,9 @@ _l=		${lang:C/=.*//g}
+ ${_l:tu}_DEFAULT=	${lang:C/.*=//g}
+ .endfor
+ 
++# tuxillo: since 2021Q4 we default to openssl again
++SSL_DEFAULT?=  openssl
++
+ # Possible values: 2.4
+ APACHE_DEFAULT?=	2.4
+ # Possible values: 5, 18
+@@ -80,7 +83,7 @@ LINUX_DEFAULT?=		c7
  .if ${ARCH} == powerpc
  LLVM_DEFAULT?=		10
  .else
