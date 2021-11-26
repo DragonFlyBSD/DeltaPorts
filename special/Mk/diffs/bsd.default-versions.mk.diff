@@ -1,4 +1,4 @@
---- bsd.default-versions.mk.orig	2021-11-13 19:10:58 UTC
+--- bsd.default-versions.mk.orig	2021-11-26 23:07:03 UTC
 +++ bsd.default-versions.mk
 @@ -31,6 +31,9 @@ _l=		${lang:C/=.*//g}
  ${_l:tu}_DEFAULT=	${lang:C/.*=//g}
@@ -10,6 +10,15 @@
  # Possible values: 2.4
  APACHE_DEFAULT?=	2.4
  # Possible values: 5, 18
+@@ -67,7 +70,7 @@ LAZARUS_DEFAULT?=       2.0.12
+ LAZARUS_DEFAULT?=       2.3.0
+ .endif
+ # Possible values: rust, legacy
+-.if empty(ARCH:Naarch64:Narmv6:Narmv7:Namd64:Ni386:Npowerpc64:Npowerpc64le:Npowerpc)
++.if empty(ARCH:Naarch64:Narmv6:Narmv7:Nx86_64:Ni386:Npowerpc64:Npowerpc64le:Npowerpc)
+ LIBRSVG2_DEFAULT?=	rust
+ .else
+ LIBRSVG2_DEFAULT?=	legacy
 @@ -80,7 +83,7 @@ LINUX_DEFAULT?=		c7
  .if ${ARCH} == powerpc
  LLVM_DEFAULT?=		10
