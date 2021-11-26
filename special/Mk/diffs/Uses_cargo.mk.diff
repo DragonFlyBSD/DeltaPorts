@@ -1,6 +1,6 @@
---- Uses/cargo.mk.orig	2020-05-28 09:48:27 UTC
+--- Uses/cargo.mk.orig	2021-11-26 23:44:40 UTC
 +++ Uses/cargo.mk
-@@ -5,15 +5,15 @@
+@@ -3,15 +3,15 @@
  #
  # Feature:	cargo
  # Usage:	USES=cargo
@@ -18,4 +18,13 @@
 +.include "${USESDIR}/cargo-extra.mk"
  .endif
  
- # List of static dependencies.  The format is cratename-version.
+ .sinclude "${MASTERDIR}/Makefile.crates"
+@@ -92,7 +92,7 @@ CARGO_ENV+= \
+ 	RUSTFLAGS="${RUSTFLAGS} ${LDFLAGS:C/.+/-C link-arg=&/}"
+ 
+ # Adjust -C target-cpu if -march/-mcpu is set by bsd.cpu.mk
+-.if ${ARCH} == amd64 || ${ARCH} == i386
++.if ${ARCH} == x86_64 || ${ARCH} == i386
+ RUSTFLAGS+=	${CFLAGS:M-march=*:S/-march=/-C target-cpu=/}
+ .elif ${ARCH:Mpowerpc64*}
+ RUSTFLAGS+=	${CFLAGS:M-mcpu=*:S/-mcpu=/-C target-cpu=/:S/power/pwr/}
