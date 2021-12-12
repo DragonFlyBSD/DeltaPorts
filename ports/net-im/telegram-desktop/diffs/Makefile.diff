@@ -1,0 +1,11 @@
+--- Makefile.orig	2021-12-08 16:59:08 UTC
++++ Makefile
+@@ -96,7 +96,7 @@ TELEGRAM_API_ID=	601761
+ 
+ .include <bsd.port.pre.mk>
+ 
+-.if ${COMPILER_VERSION} < 120
++.if ${OPSYS} == FreeBSD && ${COMPILER_VERSION} < 120
+ LLVM_VER=	12
+ BUILD_DEPENDS+=	clang${LLVM_VER}:devel/llvm${LLVM_VER}
+ CC=		${LOCALBASE}/bin/clang${LLVM_VER}
