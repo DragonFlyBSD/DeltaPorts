@@ -1,5 +1,4 @@
 CFLAGS+=	-I${OPENSSLINC}
-
 CXXFLAGS +=	-DWITHOUT_PULSE
 
 # gcc8 not enough and I don't think we should be adapting code to gcc8, we should
@@ -7,7 +6,7 @@ CXXFLAGS +=	-DWITHOUT_PULSE
 USE_GCC_VERSION=       11
 
 # bad MF
-BUILD_DEPENDS:=	${BUILD_DEPENDS:Npulseaudio*}
+BUILD_DEPENDS:=	${BUILD_DEPENDS:Npulseaudio*} autoconf>0:devel/autoconf
 
 dfly-patch:
 	${REINPLACE_CMD} -e '/pkg_check_modules(PULSE/d' \
