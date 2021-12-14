@@ -1,0 +1,10 @@
+--- pkg-plist.orig	2021-12-13 10:52:08 UTC
++++ pkg-plist
+@@ -188,7 +188,6 @@
+ %%CLANG%%llvm%%LLVM_SUFFIX%%/bin/git-clang-format
+ %%CLANG%%llvm%%LLVM_SUFFIX%%/bin/hmaptool
+ llvm%%LLVM_SUFFIX%%/bin/intercept-build
+-%%LLD%%llvm%%LLVM_SUFFIX%%/bin/ld
+ %%LLD%%llvm%%LLVM_SUFFIX%%/bin/ld.lld
+ %%LLD%%llvm%%LLVM_SUFFIX%%/bin/ld64.lld
+ %%LLD%%llvm%%LLVM_SUFFIX%%/bin/ld64.lld.darwinnew
