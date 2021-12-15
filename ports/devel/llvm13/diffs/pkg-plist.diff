@@ -1,6 +1,16 @@
---- pkg-plist.orig	2021-12-13 10:52:08 UTC
+The offloading target support disabled on purpose in MD.
+
+--- pkg-plist.orig	2021-12-14 13:00:53 UTC
 +++ pkg-plist
-@@ -188,7 +188,6 @@
+@@ -121,7 +121,6 @@
+ %%MLIR%%bin/mlir-reduce%%LLVM_SUFFIX%%
+ %%MLIR%%bin/mlir-tblgen%%LLVM_SUFFIX%%
+ %%MLIR%%bin/mlir-translate%%LLVM_SUFFIX%%
+-%%OPENMP%%bin/llvm-omp-device-info%%LLVM_SUFFIX%%
+ %%LIT%%bin/FileCheck%%LLVM_SUFFIX%%
+ %%LIT%%llvm%%LLVM_SUFFIX%%/bin/FileCheck
+ %%LIT%%bin/lit%%LLVM_SUFFIX%%
+@@ -188,7 +187,6 @@
  %%CLANG%%llvm%%LLVM_SUFFIX%%/bin/git-clang-format
  %%CLANG%%llvm%%LLVM_SUFFIX%%/bin/hmaptool
  llvm%%LLVM_SUFFIX%%/bin/intercept-build
@@ -8,3 +18,20 @@
  %%LLD%%llvm%%LLVM_SUFFIX%%/bin/ld.lld
  %%LLD%%llvm%%LLVM_SUFFIX%%/bin/ld64.lld
  %%LLD%%llvm%%LLVM_SUFFIX%%/bin/ld64.lld.darwinnew
+@@ -241,7 +239,6 @@
+ llvm%%LLVM_SUFFIX%%/bin/llvm-nm
+ llvm%%LLVM_SUFFIX%%/bin/llvm-objcopy
+ llvm%%LLVM_SUFFIX%%/bin/llvm-objdump
+-%%OPENMP%%llvm%%LLVM_SUFFIX%%/bin/llvm-omp-device-info
+ llvm%%LLVM_SUFFIX%%/bin/llvm-opt-report
+ llvm%%LLVM_SUFFIX%%/bin/llvm-otool
+ llvm%%LLVM_SUFFIX%%/bin/llvm-pdbutil
+@@ -5022,8 +5019,6 @@
+ %%MLIR%%llvm%%LLVM_SUFFIX%%/lib/libmlir_runner_utils.so
+ %%MLIR%%llvm%%LLVM_SUFFIX%%/lib/libmlir_runner_utils.so.%%LLVM_MAJOR%%
+ %%OPENMP%%llvm%%LLVM_SUFFIX%%/lib/libomp.so
+-%%OPENMP%%llvm%%LLVM_SUFFIX%%/lib/libomptarget.rtl.amdgpu.so
+-%%OPENMP%%llvm%%LLVM_SUFFIX%%/lib/libomptarget.so
+ llvm%%LLVM_SUFFIX%%/lib/libscanbuild/__init__.py
+ llvm%%LLVM_SUFFIX%%/lib/libscanbuild/analyze.py
+ llvm%%LLVM_SUFFIX%%/lib/libscanbuild/arguments.py

@@ -1,5 +1,36 @@
---- pkg-plist.orig	2020-11-13 08:32:59 UTC
+--- pkg-plist.orig	2021-12-13 10:52:08 UTC
 +++ pkg-plist
-@@ -163 +163 @@
+@@ -116,7 +116,6 @@
+ %%MLIR%%bin/mlir-reduce-devel
+ %%MLIR%%bin/mlir-tblgen-devel
+ %%MLIR%%bin/mlir-translate-devel
+-%%OPENMP%%bin/llvm-omp-device-info-devel
+ %%LIT%%bin/FileCheck-devel
+ %%LIT%%llvm-devel/bin/FileCheck
+ %%LIT%%bin/lit-devel
+@@ -177,7 +176,7 @@
+ %%CLANG%%llvm-devel/bin/git-clang-format
+ %%CLANG%%llvm-devel/bin/hmaptool
+ %%CLANG%%llvm-devel/bin/intercept-build
 -%%LLD%%llvm-devel/bin/ld
 +%%LLD_LINK%%%%LLD%%llvm-devel/bin/ld
+ %%LLD%%llvm-devel/bin/ld.lld
+ %%LLD%%llvm-devel/bin/ld64.lld
+ %%LLD%%llvm-devel/bin/ld64.lld.darwinnew
+@@ -230,7 +229,6 @@
+ llvm-devel/bin/llvm-nm
+ llvm-devel/bin/llvm-objcopy
+ llvm-devel/bin/llvm-objdump
+-%%OPENMP%%llvm-devel/bin/llvm-omp-device-info
+ llvm-devel/bin/llvm-opt-report
+ llvm-devel/bin/llvm-otool
+ llvm-devel/bin/llvm-pdbutil
+@@ -5113,8 +5111,6 @@
+ %%MLIR%%llvm-devel/lib/libmlir_runner_utils.so
+ %%MLIR%%llvm-devel/lib/libmlir_runner_utils.so.%%LLVM_MAJOR%%git
+ %%OPENMP%%llvm-devel/lib/libomp.so
+-%%OPENMP%%llvm-devel/lib/libomptarget.rtl.amdgpu.so
+-%%OPENMP%%llvm-devel/lib/libomptarget.so
+ %%CLANG%%llvm-devel/lib/libscanbuild/__init__.py
+ %%CLANG%%llvm-devel/lib/libscanbuild/analyze.py
+ %%CLANG%%llvm-devel/lib/libscanbuild/arguments.py
