@@ -1,0 +1,8 @@
+--- Makefile.orig	2021-12-13 10:52:12 UTC
++++ Makefile
+@@ -13 +13 @@
+-BUILD_DEPENDS?=	${LOCALBASE}/bin/as:devel/binutils \
++BUILD_DEPENDS?=	${LOCALBASE}/bin/as:devel/binutils@native \
+@@ -15 +15 @@
+-RUN_DEPENDS?=	${LOCALBASE}/bin/as:devel/binutils \
++RUN_DEPENDS?=	${LOCALBASE}/bin/as:devel/binutils@native \
