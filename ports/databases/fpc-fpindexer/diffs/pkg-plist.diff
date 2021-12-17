@@ -1,8 +1,0 @@
---- pkg-plist.orig	2020-08-13 10:37:42 UTC
-+++ pkg-plist
-@@ -21,3 +21,5 @@ lib/fpc/%%PORTVERSION%%/units/%%BUILDNAM
- lib/fpc/%%PORTVERSION%%/units/%%BUILDNAME%%/fpindexer/sqldbindexdb.ppu
- lib/fpc/%%PORTVERSION%%/units/%%BUILDNAME%%/fpindexer/sqliteindexdb.o
- lib/fpc/%%PORTVERSION%%/units/%%BUILDNAME%%/fpindexer/sqliteindexdb.ppu
-+lib/fpc/%%PORTVERSION%%/units/%%BUILDNAME%%/fpindexer/pgindexdb.o
-+lib/fpc/%%PORTVERSION%%/units/%%BUILDNAME%%/fpindexer/pgindexdb.ppu
