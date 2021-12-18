@@ -1,8 +1,8 @@
---- Makefile.orig	2015-09-28 22:44:12 UTC
+--- Makefile.orig	2021-12-13 10:52:12 UTC
 +++ Makefile
-@@ -284,7 +284,14 @@ CXXFLAGS_WARN=	-Woverloaded-virtual -Wno
- CXXFLAGS_WARN+=	-Wno-unused-local-typedefs
- .endif
+@@ -312,7 +312,14 @@ LLD_UNSAFE=	yes
+ .if ${CHOSEN_COMPILER_TYPE} == clang
+ CXXFLAGS_WARN=	-Woverloaded-virtual -Wno-unused-parameter -Wno-unused-local-typedefs
  .else
 -CXXFLAGS_WARN=	-Wshadow -Woverloaded-virtual
 +CXXFLAGS_WARN=	-Wno-deprecated-declarations \
@@ -12,7 +12,7 @@
 +		-Wno-unused-local-typedefs \
 +		-Wno-unused-variable \
 +		-Wno-ignored-qualifiers \
-+		-Woverloaded-virtual
++		-Wshadow -Woverloaded-virtual
  .endif
  
- pre-configure:
+ post-patch:
