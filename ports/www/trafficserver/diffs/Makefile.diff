@@ -1,0 +1,10 @@
+--- Makefile.orig	2021-12-13 10:52:31 UTC
++++ Makefile
+@@ -86,6 +86,6 @@ post-install:
+ 	${MKDIR} ${STAGEDIR}${ETCDIR}/snapshots
+ 	(cd ${STAGEDIR}${ETCDIR} && for f in *.config *.yaml; do ${MV} $$f $$f.sample; done)
+ 	${SED} -i '' -e 's|^${STAGEDIR}||g' \
+-		${STAGEDIR}${PREFIX}/lib/perl5/${ARCH:C/powerpc64.*/powerpc/}-freebsd-thread-multi/auto/Apache/TS/.packlist
++		${STAGEDIR}${PREFIX}/lib/perl5/${ARCH:C/powerpc64.*/powerpc/}-${OPSYS:tl}-thread-multi/auto/Apache/TS/.packlist
+ 
+ .include <bsd.port.post.mk>
