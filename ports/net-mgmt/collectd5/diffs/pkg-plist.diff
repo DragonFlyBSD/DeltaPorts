@@ -1,6 +1,6 @@
---- pkg-plist.orig	2019-01-09 12:36:57.082657000 +0100
-+++ pkg-plist	2019-01-09 12:37:11.852923000 +0100
-@@ -30,7 +30,6 @@
+--- pkg-plist.orig	2020-08-13 10:38:34 UTC
++++ pkg-plist
+@@ -30,13 +30,11 @@ lib/collectd/csv.so
  %%CURL_XML%%lib/collectd/curl_xml.so
  %%DBI%%lib/collectd/dbi.so
  lib/collectd/df.so
@@ -8,7 +8,13 @@
  lib/collectd/dns.so
  lib/collectd/email.so
  lib/collectd/exec.so
-@@ -88,7 +87,6 @@
+ lib/collectd/filecount.so
+ lib/collectd/interface.so
+-lib/collectd/ipstats.so
+ %%IPMI%%lib/collectd/ipmi.so
+ %%JAVA%%lib/collectd/java.so
+ lib/collectd/load.so
+@@ -90,7 +88,6 @@ lib/collectd/target_replace.so
  lib/collectd/target_scale.so
  lib/collectd/target_set.so
  lib/collectd/target_v5upgrade.so
@@ -16,7 +22,7 @@
  lib/collectd/teamspeak2.so
  lib/collectd/ted.so
  lib/collectd/threshold.so
-@@ -108,7 +106,6 @@
+@@ -111,7 +108,6 @@ lib/collectd/write_log.so
  %%REDIS%%lib/collectd/write_redis.so
  %%RIEMANN%%lib/collectd/write_riemann.so
  %%TSDB%%lib/collectd/write_tsdb.so
