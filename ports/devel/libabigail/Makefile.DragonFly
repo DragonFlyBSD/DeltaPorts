@@ -1,0 +1,8 @@
+
+BROKEN=	missing Elf64_Lib in elf.h
+
+LIB_DEPENDS:=	${LIB_DEPENDS:N*elfutils}
+BUILD_DEPENDS+=	elfutils>0:devel/elfutils
+RUN_DEPENDS+=	elfutils>0:devel/elfutils
+CFLAGS+=	-I${LOCALBASE}/include/elfutils -I${LOCALBASE}/include
+LDFLAGS+=	-L${LOCALBASE}/lib/elfutils -Wl,-rpath=${LOCALBASE}/lib/elfutils
