@@ -1,0 +1,30 @@
+--- Makefile.orig	2021-12-13 10:52:16 UTC
++++ Makefile
+@@ -31,7 +31,17 @@ _ZIG_BIN=	${STAGEDIR}${PREFIX}/bin/zig
+ post-configure-STATIC-on:
+ 	@${REINPLACE_CMD} 's/-Wl,-Bdynamic//' ${BUILD_WRKSRC}/build.ninja
+ 
+-post-build:
++# speeds up build a lot and avoids peaking 8gb of ram
++OPTIONS_DEFINE+=	DOCGEN
++
++post-install-DOCGEN-off:
++	${MKDIR} ${STAGEDIR}${DOCSDIR}/std
++	${TOUCH} ${STAGEDIR}${DOCSDIR}/langref.html
++.for f in data.js main.js index.html
++	${TOUCH} ${STAGEDIR}${DOCSDIR}/std/${f}
++.endfor
++
++post-build-DOCGEN-on:
+ 	# Produce the experimental std lib documentation.
+ 	${MKDIR}  ${WRKDIR}/cache ${WRKDIR}/doc
+ 	${WRKDIR}/.build/zig test ${WRKSRC}/lib/std/std.zig \
+@@ -42,7 +52,7 @@ post-build:
+ 		-fno-emit-bin
+ 	${RM} ${WRKSRC}/lib/zig/std/zig-cache
+ 
+-post-install:
++post-install-DOCGEN-on:
+ 	${MKDIR} ${STAGEDIR}${DOCSDIR}/std
+ 	# langref cannot be generated until after install target has run
+ 	(cd ${WRKSRC} && ${_ZIG_BIN} run \
