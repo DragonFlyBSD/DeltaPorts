@@ -1,0 +1,1 @@
+XFAIL_DragonFly= go stat_unix.go fromStatT
