@@ -1,2 +1,2 @@
 
-LDFLAGS:=	${LDFLAGS:N-lomp}
+LDFLAGS:=	${LDFLAGS:N-lomp} -fopenmp
