@@ -1,0 +1,5 @@
+--- pkg-plist.orig	2021-12-13 10:52:13 UTC
++++ pkg-plist
+@@ -81 +81 @@
+-%%DATADIR%%/timeseal.FreeBSD
++%%DATADIR%%/timeseal.DragonFly
