@@ -1,1 +1,2 @@
-USES:= ${USES:S/cargo/cargo:extra/}
+
+MAKE_ENV+=	LIBCLANG_PATH=${LOCALBASE}/llvm${LLVM_DEFAULT}/lib
