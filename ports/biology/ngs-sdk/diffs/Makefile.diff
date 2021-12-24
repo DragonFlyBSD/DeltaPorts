@@ -1,0 +1,5 @@
+--- Makefile.orig	2021-12-13 10:52:02 UTC
++++ Makefile
+@@ -37 +37 @@
+-	cd ${WRKSRC}/build/ngs-sdk/FreeBSD/clang/${ARCH}/rel/lib && ${COPYTREE_SHARE} . ${STAGEDIR}${PREFIX}/lib
++	cd ${WRKSRC}/build/ngs-sdk/DragonFly/gcc/${ARCH}/rel/lib && ${COPYTREE_SHARE} . ${STAGEDIR}${PREFIX}/lib
