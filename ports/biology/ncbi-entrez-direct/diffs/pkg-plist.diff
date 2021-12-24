@@ -1,0 +1,11 @@
+--- pkg-plist.orig	2021-12-13 10:52:02 UTC
++++ pkg-plist
+@@ -42 +42 @@
+-bin/rchive.FreeBSD
++bin/rchive.DragonFly
+@@ -53 +53 @@
+-bin/transmute.FreeBSD
++bin/transmute.DragonFly
+@@ -58 +58 @@
+-bin/xtract.FreeBSD
++bin/xtract.DragonFly

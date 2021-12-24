@@ -1,0 +1,5 @@
+--- Makefile.orig	2021-12-13 10:52:02 UTC
++++ Makefile
+@@ -81 +81 @@
+-	${INSTALL_PROGRAM} ${WRKSRC}/cmd/*.FreeBSD ${STAGEDIR}${PREFIX}/bin
++	${INSTALL_PROGRAM} ${WRKSRC}/cmd/*.DragonFly ${STAGEDIR}${PREFIX}/bin
