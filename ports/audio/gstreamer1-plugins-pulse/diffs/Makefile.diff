@@ -1,0 +1,4 @@
+--- Makefile.orig
++++ Makefile
+@@ -0,0 +1 @@
++BROKEN= uses pulseaudio
