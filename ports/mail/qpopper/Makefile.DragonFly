@@ -1,1 +1,2 @@
-BROKEN= needs SSLv2_server_method
+
+CFLAGS+=	-DOPENSSL_NO_SSL2
