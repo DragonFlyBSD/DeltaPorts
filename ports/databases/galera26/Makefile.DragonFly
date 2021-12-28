@@ -1,4 +1,3 @@
-IGNORE= requires tcp_info (linux API)
 
 BUILD_DEPENDS:=	${BUILD_DEPENDS:N*binutils}
 
