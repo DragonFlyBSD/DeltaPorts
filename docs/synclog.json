@@ -302,6 +302,46 @@
 	    ],
 	    "To-do": [
 		{
+		    "port": "lang/ghc",
+		    "desc": "Unlocked",
+		    "status": "done"
+		}
+	    ],
+	    "cherry-picks": [
+	    ]
+	},
+	{
+	    "id": "2022Q1",
+	    "timestamp": "Wed Jan 12 07:51:21 2022 +0000",
+	    "base_commit": "2b0d476ee3e48f7b92fe39babf124e5954e32604",
+	    "rejects": [
+		{
+		    "astro/kosmorro": "1 out of 1 hunks failed--saving rejects to Makefile.rej",
+		    "audio/din": "No such line 36 in input file, ignoring",
+		    "deskutils/pinot": "1 out of 2 hunks failed--saving rejects to Makefile.rej",
+		    "devel/py-os-brick": "1 out of 1 hunks failed--saving rejects to Makefile.rej",
+		    "devel/valgrind": "1 out of 1 hunks failed--saving rejects to distinfo.rej",
+		    "devel/valgrind": "2 out of 4 hunks failed--saving rejects to Makefile.rej",
+		    "dns/ldns": "1 out of 2 hunks failed--saving rejects to Makefile.rej",
+		    "graphics/qt5-3d": "1 out of 2 hunks failed--saving rejects to pkg-plist.rej",
+		    "lang/ghc": "1 out of 1 hunks failed--saving rejects to distinfo.rej",
+		    "lang/ghc": "2 out of 4 hunks failed--saving rejects to Makefile.rej",
+		    "lang/rust": "1 out of 1 hunks failed--saving rejects to distinfo.rej",
+		    "lang/sagittarius-scheme": "1 out of 1 hunks failed--saving rejects to pkg-plist.rej",
+		    "lang/zig-devel": "1 out of 1 hunks failed--saving rejects to Makefile.rej",
+		    "math/librsb": "1 out of 1 hunks failed--saving rejects to Makefile.rej",
+		    "multimedia/pipewire": "1 out of 1 hunks failed--saving rejects to pkg-plist.rej",
+		    "net/freeswitch": "1 out of 1 hunks failed--saving rejects to pkg-plist.rej",
+		    "net/ipxe": "1 out of 1 hunks failed--saving rejects to Makefile.rej",
+		    "security/clamav": "1 out of 1 hunks failed--saving rejects to Makefile.rej",
+		    "sysutils/devcpu-data": "No file to patch. Skipping... 1 out of 1 hunks ignored--saving rejects to pkg-plist.rej",
+		    "sysutils/mtm": "1 out of 1 hunks failed--saving rejects to Makefile.rej",
+		    "www/node": "1 out of 1 hunks failed--saving rejects to pkg-plist.rej",
+		    "www/rubygem-passenger": "1 out of 1 hunks failed--saving rejects to Makefile.rej"
+		}
+	    ],
+	    "To-do": [
+		{
 		    "port": "devel/qca",
 		    "desc": "can't use TLSv1.3 by default, remove the relevant patch available.",
 		    "status": "pending"
@@ -317,11 +357,6 @@
 		    "status": "pending"
 		},
 		{
-		    "port": "lang/ghc",
-		    "desc": "Currently locked, fix to unlock (@tuxillo no time right now)",
-		    "status": "pending"
-		},
-		{
 		    "port": "mail/postfix",
 		    "desc": "Currently a dport until 3.6.x can be built with LibreSSL, mail/postfix35 IGNORED until then",
 		    "status": "pending"
@@ -332,12 +367,12 @@
 		    "status": "pending"
 		},
 		{
-		    "port": "net/rubygem-fog-libvirt:",
+		    "port": "net/rubygem-fog-libvirt",
 		    "desc": "Newport to be switched to PORT once the PR is merged.",
 		    "status": "pending"
 		},
 		{
-		    "port": "devel/libvirt:",
+		    "port": "devel/libvirt",
 		    "desc": "Unlock and update. Make sure nvmm still works.",
 		    "status": "pending"
 		}
@@ -346,6 +381,5 @@
 	    "cherry-picks": [
 	    ]
 	}
-
     ]
 }
