@@ -1,0 +1,13 @@
+--- Makefile.orig	2022-01-20 00:07:08 UTC
++++ Makefile
+@@ -92,10 +92,6 @@ _CARGO_BOOTSTRAP=	${BOOTSTRAPS_DATE_${AR
+ 
+ .include <bsd.port.pre.mk>
+ 
+-.if ${OPSYS} != FreeBSD
+-IGNORE=		is only for FreeBSD
+-.endif
+-
+ .if ${ARCH} == powerpc
+ # bfd to link rustc_driver; lld currently can't
+ BUILD_DEPENDS+=	ld.bfd:devel/binutils
