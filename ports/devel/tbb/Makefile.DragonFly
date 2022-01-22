@@ -22,7 +22,7 @@ dfly-patch:
 	@${REINPLACE_CMD} -e 's|gcc|${CC}|g' -e 's|g++|${CXX}|g' \
 		${WRKSRC}/build/DragonFly.${CC}.inc
 
-pre-install:
+dfly-build:
 	cd ${WRKSRC}/build; \
 		${LN} -sf DragonFly*release FreeBSD_dummy_release;	\
 		${LN} -sf DragonFly*debug FreeBSD_dummy_debug
