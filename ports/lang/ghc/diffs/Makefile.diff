@@ -1,6 +1,6 @@
---- Makefile.orig	2021-10-16 10:45:48 UTC
+--- Makefile.orig	2022-01-13 04:21:05 UTC
 +++ Makefile
-@@ -4,6 +4,7 @@ PORTNAME=	ghc
+@@ -4,6 +4,7 @@
  PORTVERSION=	${GHC_VERSION}
  CATEGORIES=	lang haskell
  MASTER_SITES=	https://www.haskell.org/ghc/dist/${PORTVERSION}/:source \
@@ -8,28 +8,28 @@
  		LOCAL/arrowd/:boot \
  		https://hackage.haskell.org/package/hscolour-${HSCOLOUR_VERSION}/:docs
  DISTFILES=	ghc-${PORTVERSION}-src${EXTRACT_SUFX}:source \
-@@ -87,9 +88,11 @@ PORTDOCS=		*
+@@ -89,9 +90,11 @@
  CONFIGURE_TARGET=	${GHC_ARCH}-portbld-${OPSYS:tl}
  
  # This version of ncurses is needed by bootstrap compiler
 +.if ${OPSYS} == FreeBSD
- .if ${OSVERSION} > 1300078 && empty(PORT_OPTIONS:MBOOT) && ${ARCH} != powerpc64
+ .if ${OSVERSION} > 1300078 && empty(PORT_OPTIONS:MBOOT)
  BUILD_DEPENDS+=	${LOCALBASE}/lib/compat/libncursesw.so.8:misc/compat12x
  .endif
 +.endif
  
- .if ${ARCH} == powerpc64 || ${OSVERSION} >= 1400018
- CONFIGURE_ARGS+=	--enable-dtrace=0
-@@ -129,7 +132,7 @@ _EXECUTABLES+=	${GHC_LIBDIR}/bin/ghc-ise
+ DOCSDIR=		${PREFIX}/share/doc/${DISTNAME}
+ DATADIR=		${PREFIX}/share/ghc-${GHC_VERSION}
+@@ -117,7 +120,7 @@
  _EXECUTABLES+=	${GHC_LIBDIR}/bin/ghc-iserv-dyn
  .endif
  
 -.if empty(PORT_OPTIONS:MBOOT)
 +.if empty(PORT_OPTIONS:MBOOT) && ${OPSYS} == "FreeBSD"
- BOOTSTRAPS_SUFFIX?=		${BOOTSTRAPS_SUFFIX_${ARCH}}
- BOOTSTRAPS_SUFFIX_powerpc64?=	-${PPC_ABI:tl}
- DISTFILES+=		ghc-${BOOT_GHC_VERSION}-boot-${ARCH}-freebsd${BOOTSTRAPS_SUFFIX}${EXTRACT_SUFX}:boot
-@@ -170,11 +173,39 @@ SLAVE_ENV=		# empty
+ DISTFILES+=		ghc-${BOOT_GHC_VERSION}-boot-${ARCH}-freebsd${EXTRACT_SUFX}:boot
+ .endif # MBOOT
+ 
+@@ -150,11 +153,39 @@
  CONFIGURE_ARGS+=	GHC=${LOCALBASE}/bin/ghc
  .endif # MBOOT
  
