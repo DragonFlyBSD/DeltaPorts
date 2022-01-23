@@ -1,0 +1,11 @@
+--- Makefile.orig	2022-01-13 04:20:54 UTC
++++ Makefile
+@@ -31,7 +31,7 @@
+ 
+ OPTIONS_DEFINE=	DOCS
+ 
+-pre-install:
++pre-installz:
+ 	${MV} ${STAGEDIR}/${CONFIGURE_WRKSRC}/stage ${CONFIGURE_WRKSRC}/
+ 	${RM} -r ${STAGEDIR}/wrkdirs
+ 
