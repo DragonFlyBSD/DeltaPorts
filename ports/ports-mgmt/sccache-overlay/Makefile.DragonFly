@@ -1,0 +1,2 @@
+# tries to coppy /libexec/ld-elf.so.1
+IGNORE= too FreeBSD specific
