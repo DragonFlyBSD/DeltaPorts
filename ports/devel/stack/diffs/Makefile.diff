@@ -1,0 +1,5 @@
+--- Makefile.orig	2021-12-13 10:52:12 UTC
++++ Makefile
+@@ -198 +198 @@
+-.if ${OSVERSION} >= 1300078 && ${ARCH} != powerpc64
++.if ${OPSYS} == FreeBSD && ${OSVERSION} >= 1300078 && ${ARCH} != powerpc64
