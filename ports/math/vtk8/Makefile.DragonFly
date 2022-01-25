@@ -1,6 +1,9 @@
 
 USES:=	${USES:Nalias}
 
+# avoid doxygen dep for now
+OPTIONS_EXCLUDE+=	DOCS
+
 # ../../../lib/libvtklibharu-8.2.so.1: error: undefined reference to 'sqrt'
 MAKE_ENV+=	LDVER=ld.bfd
 #MAKE_JOBS_UNSAFE=yes
