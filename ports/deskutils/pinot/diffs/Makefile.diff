@@ -1,6 +1,6 @@
---- Makefile.orig	2016-09-17 15:33:12 UTC
+--- Makefile.orig	2022-01-13 04:20:54 UTC
 +++ Makefile
-@@ -32,7 +32,7 @@ RUN_DEPENDS=	update-mime-database:misc/s
+@@ -33,7 +33,7 @@
  		unrtf:textproc/unrtf				\
  		catdvi:print/catdvi				\
  		bash:shells/bash				\
@@ -9,14 +9,13 @@
  
  USE_GITHUB=	yes
  GH_ACCOUNT=	FabriceColin
-@@ -73,10 +73,6 @@ post-extract:
- # remove pre-generated messages catalogs
- 	${FIND} ${WRKSRC}/po -name "*.gmo" -delete
+@@ -74,9 +74,6 @@
+ UL2FIX=		Utils/xdgmime/xdgmime.c
  
--post-patch:
+ pre-configure:
 -	${REINPLACE_CMD} -e \
 -		'/<command>/s|pdftotext|${LOCALBASE}/libexec/xpdf/pdftotext|' \
 -		${WRKSRC}/Tokenize/filters/external-filters.xml
- 
- pre-configure:
  	${REINPLACE_CMD} -e 's|/usr/share|${LOCALBASE}/share|'	\
+ 		${LM2FIX:S|^|${WRKSRC}/|}
+ 	${REINPLACE_CMD} -e 's|/usr/share|${PREFIX}/share|'	\
