@@ -1,4 +1,0 @@
---- Makefile.orig	2021-12-13 10:52:18 UTC
-+++ Makefile
-@@ -28 +27,0 @@
--MANUAL_PACKAGE_BUILD=	Optimizes for the local machine
