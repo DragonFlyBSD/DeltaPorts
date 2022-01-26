@@ -1,5 +1,0 @@
---- Makefile.orig	2020-11-13 08:33:11 UTC
-+++ Makefile
-@@ -25 +25 @@
--LDFLAGS+=	-L${NCURSESLIB} -ltinfow
-+LDFLAGS+=	-L${NCURSESLIB} -ltinfo
