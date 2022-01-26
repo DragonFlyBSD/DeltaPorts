@@ -1,5 +1,3 @@
 
-dfly-patch:
-	${REINPLACE_CMD} -e 's@-disable-new-dtag@-Wl,&@g' \
-		${WRKSRC}/app/CMakeLists.txt \
-		${WRKSRC}/pysg/CMakeLists.txt
+# -disable-new-dtag
+MAKE_ENV+=	LDVER=ld.bfd
