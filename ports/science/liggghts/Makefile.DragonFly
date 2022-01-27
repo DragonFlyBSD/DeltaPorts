@@ -1,2 +1,5 @@
 
 USES+=	localbase:ldflags
+
+# avoid mpi for now
+LIB_DEPENDS:=	${LIB_DEPENDS:Nlibmpi*}
