@@ -1,5 +1,5 @@
 
-USES+=	perl
+USES+=	perl5
 USE_PERL5+=	run
 
 # add fallback for mainly qt failing transtalions
