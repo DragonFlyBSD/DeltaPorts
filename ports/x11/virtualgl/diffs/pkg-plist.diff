@@ -1,0 +1,4 @@
+--- pkg-plist.orig	2022-01-13 04:21:20 UTC
++++ pkg-plist
+@@ -37 +36,0 @@
+-libdata/ldconfig/virtualgl
