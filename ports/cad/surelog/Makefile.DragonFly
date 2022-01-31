@@ -1,0 +1,19 @@
+
+BROKEN=	compile time hog
+
+CMAKE_ARGS+=	-DNO_TCMALLOC=On
+
+# needs <filesystem>
+BUILD_DEPENDS+=	cxxfs_gcc8>0:misc/cxxfs_gcc8
+CXXFLAGS+=	-isystem ${LOCALBASE}/cxxfs_gcc8
+LDFLAGS+=	-L${LOCALBASE}/cxxfs_gcc8
+
+# bionic no DT_UNKNOWN case for DTTOIF()
+dfly-patch:
+	${REINPLACE_CMD} -e 's@PRIVATE pthread@& stdc++fs@g' \
+		${WRKSRC}/CMakeLists.txt
+	${REINPLACE_CMD} -e 's@DT_UNKNOWN@&__z@g' \
+		${WRKSRC}/third_party/UHDM/third_party/capnproto/c++/ekam-provider/c++header/kj/filesystem-disk-unix.c++
+	${REINPLACE_CMD} -e 's@-O3@-O1@g' \
+		${WRKSRC}/third_party/UHDM/CMakeLists.txt \
+		${WRKSRC}/CMakeLists.txt
