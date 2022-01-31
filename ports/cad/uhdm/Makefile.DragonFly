@@ -1,0 +1,9 @@
+
+BROKEN=	compile time hog
+
+USES+=	python:3.6+,build
+
+# bionic no DT_UNKNOWN case for DTTOIF()
+dfly-patch:
+	${REINPLACE_CMD} -e 's@DT_UNKNOWN@&__z@g' \
+		${WRKSRC}/third_party/capnproto/c++/src/kj/filesystem-disk-unix.c++
