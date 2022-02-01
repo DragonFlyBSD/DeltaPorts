@@ -1,6 +1,6 @@
---- Makefile.orig	2020-08-13 10:38:20 UTC
+--- Makefile.orig	2022-01-13 04:21:05 UTC
 +++ Makefile
-@@ -128,6 +128,7 @@ JDK_BUILD_JVM=	server
+@@ -124,6 +124,7 @@
  MAKE_ENV+=		--with-toolchain-type=${COMPILER_TYPE}
  CONFIGURE_ARGS+=	--with-toolchain-type=${COMPILER_TYPE}
  
@@ -8,19 +8,19 @@
  .if ${COMPILER_TYPE} == gcc
  USE_GCC=	yes
  CONFIGURE_ARGS+=	--with-extra-ldflags="-Wl,-rpath=${LOCALBASE}/lib/gcc${GCC_DEFAULT} -L/usr/local/lib/gcc${GCC_DEFAULT}" \
-@@ -136,6 +137,7 @@ CONFIGURE_ARGS+=	--with-extra-ldflags="-
- .else
- MAKE_ENV+=	USE_CLANG=true
+@@ -135,6 +136,7 @@
+ CONFIGURE_ARGS+=	--with-extra-cflags="-Wno-unused-but-set-parameter"
+ .endif
  .endif
 +.endif
  
- .if ${ARCH} == aarch64 || ${ARCH} == powerpc64
- CONFIGURE_ARGS+=	--disable-warnings-as-errors \
-@@ -173,6 +175,7 @@ post-patch:
+ .if ${ARCH} == aarch64 || ${ARCH:Mpowerpc64*}
+ CONFIGURE_ARGS+=	--disable-warnings-as-errors
+@@ -173,6 +175,7 @@
+ 
  do-install:
  	@${MKDIR} ${STAGEDIR}${INSTALLDIR}
- 	@cd ${JDK_IMAGEDIR} && ${COPYTREE_SHARE} . ${STAGEDIR}${INSTALLDIR}
 +	${CP} -rv ${JDK_IMAGEDIR}/include/freebsd ${JDK_IMAGEDIR}/include/dragonfly
+ 	@cd ${JDK_IMAGEDIR} && ${COPYTREE_SHARE} . ${STAGEDIR}${INSTALLDIR}
  	@cd ${STAGEDIR}${INSTALLDIR} && \
  		${FIND} bin -type f -exec ${CHMOD} ${BINMODE} {} \;
- 	@${CHMOD} ${BINMODE} ${STAGEDIR}${INSTALLDIR}/lib/jspawnhelper
