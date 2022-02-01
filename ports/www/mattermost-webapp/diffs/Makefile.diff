@@ -1,0 +1,11 @@
+--- Makefile.orig	2022-02-01 14:57:18.649027000 +0100
++++ Makefile	2022-02-01 14:57:07.418961000 +0100
+@@ -29,8 +29,4 @@
+ 	cd ${WRKDIR}/mattermost && ${COPYTREE_SHARE} client ${STAGEDIR}${WWWDIR}
+ 	${MKDIR} ${STAGEDIR}${WWWDIR}/client/plugins
+ 
+-post-install:
+-	(cd ${STAGEDIR}${PREFIX} && \
+-		${FIND} -E -s ${WWWDIR_REL}/client -type f -regex '.*[0-9a-f]{20,}.*\.(apng|css|eot|gif|jpg|js|json|map|mp3|png|svg|ttf|txt|woff|woff2)$$' >> ${TMPPLIST})
+-
+ .include <bsd.port.mk>
