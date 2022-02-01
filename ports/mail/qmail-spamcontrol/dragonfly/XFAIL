@@ -1,0 +1,1 @@
+XFAIL_DragonFly= openssl X509_name_entry_st
