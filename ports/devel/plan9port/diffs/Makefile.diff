@@ -1,0 +1,5 @@
+--- Makefile.orig	2021-12-13 10:52:10 UTC
++++ Makefile
+@@ -20 +20 @@
+-BUILD_DEPENDS=	as:devel/binutils
++BUILD_DEPENDS=	as:devel/binutils@native
