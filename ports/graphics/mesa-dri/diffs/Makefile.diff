@@ -1,6 +1,6 @@
---- Makefile.orig	2021-07-11 23:28:49 UTC
+--- Makefile.orig	2022-01-30 11:52:37 UTC
 +++ Makefile
-@@ -69,6 +69,15 @@ USE_XORG+=		xcb xrandr
+@@ -68,6 +68,15 @@ USE_XORG+=		xcb xrandr
  MESA_PLATFORMS+=	wayland
  .endif
  

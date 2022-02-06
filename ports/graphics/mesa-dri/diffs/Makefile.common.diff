@@ -1,26 +1,17 @@
---- Makefile.common.orig	2021-10-16 00:00:22 UTC
+Use diff -u1 for less context
+
+--- Makefile.common.orig	2022-01-30 11:52:37 UTC
 +++ Makefile.common
-@@ -35,25 +35,27 @@ LIB_DEPENDS+=	libexpat.so:textproc/expat
- USES+=	xorg
- .endif
+@@ -40,3 +40,3 @@ USES+=	xorg
  .endif
 -.if ${COMPONENT} != osmesa
 +.if ${COMPONENT} != osmesa && ${COMPONENT} != osmesa-gallium
  LIB_DEPENDS+=	libdrm.so:graphics/libdrm
- .endif
- .if ${COMPONENT} != libs
- LIB_DEPENDS+=	libglapi.so:graphics/mesa-libs
- .endif
--.if ${ARCH} == aarch64 || ${ARCH} == amd64 || ${ARCH} == armv7 || ${ARCH} == i386 || ${ARCH} == powerpc64 || ${ARCH} == powerpc64le
-+.if ${ARCH} == aarch64 || ${ARCH} == x86_64 || ${ARCH} == armv7 || ${ARCH} == i386 || ${ARCH} == powerpc64 || ${ARCH} == powerpc64le
- LIB_DEPENDS+=	libunwind.so:devel/libunwind
- .endif
+@@ -50,3 +50,2 @@ LIB_DEPENDS+=	libunwind.so:devel/libunwi
  .if ${OPSYS} == DragonFly
 -LIB_DEPENDS+=	libelf.so:devel/libelf
  .endif
- 
- USES+=		compiler:c++11-lib bison meson pathfix pkgconfig \
- 		python:3.6+,build shebangfix tar:xz
+@@ -56,5 +55,8 @@ USES+=		compiler:c++11-lib bison meson p
  
 +# all ports whine on WARNING: Gettext not found, all translation targets will be ignored.
 +USES+=		gettext-tools
@@ -30,21 +21,15 @@
 -.if ${/usr/bin/ld:L:tA} != /usr/bin/ld.lld
 +.if exists(/usr/bin/ld.lld) && ${/usr/bin/ld:L:tA} != /usr/bin/ld.lld
  # --build-id isn't supported by old GNU ld.bfd in base
- # Also ld.bfd have problems that seems related to --as-needed
- USE_BINUTILS=		yes
-@@ -86,11 +88,31 @@ PKGDEINSTALL=	${.CURDIR}/pkg-deinstall
- BINARY_ALIAS+=	python3=${PYTHON_VERSION}
- 
- LLVM_DEFAULT=	12
+@@ -91,2 +93,3 @@ BINARY_ALIAS+=	python3=${PYTHON_VERSION}
+ LLVM_DEFAULT=	13
 +.if ${OPSYS} != DragonFly
  BUILD_DEPENDS+=	llvm-config${LLVM_DEFAULT}:devel/llvm${LLVM_DEFAULT}
- .if ${COMPONENT} != libs
- RUN_DEPENDS+=	llvm-config${LLVM_DEFAULT}:devel/llvm${LLVM_DEFAULT}
+@@ -95,2 +98,3 @@ RUN_DEPENDS+=	llvm-config${LLVM_DEFAULT}
  .endif
 +.endif
  
- MESON_ARGS+=	--native-file="${WRKSRC}/llvm.ini"
- LDFLAGS+=	-Wl,-rpath=${LOCALBASE}/llvm${LLVM_DEFAULT}/lib
+@@ -99 +103,19 @@ LDFLAGS+=	-Wl,-rpath=${LOCALBASE}/llvm${
  MESON_ARGS+=	-Dllvm=enabled
 +
 +# On DragonFly llvm is only present in mesa-dri-gallium mesa-osmesa-gallium ports
