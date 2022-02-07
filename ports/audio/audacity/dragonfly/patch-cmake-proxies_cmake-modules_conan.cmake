@@ -1,6 +1,12 @@
 --- cmake-proxies/cmake-modules/conan.cmake.orig	2021-12-22 15:35:36 UTC
 +++ cmake-proxies/cmake-modules/conan.cmake
-@@ -94,7 +94,7 @@ macro(_conan_check_system_name)
+@@ -91,10 +91,13 @@ macro(_conan_check_system_name)
+         if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
+             set(CONAN_SYSTEM_NAME Macos)
+         endif()
++        if(${CMAKE_SYSTEM_NAME} STREQUAL "DragonFly")
++            set(CONAN_SYSTEM_NAME FreeBSD)
++        endif()
          if(${CMAKE_SYSTEM_NAME} STREQUAL "QNX")
              set(CONAN_SYSTEM_NAME Neutrino)
          endif()        
