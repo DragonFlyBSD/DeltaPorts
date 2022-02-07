@@ -1,1 +1,1 @@
-XFAIL_DragonFly= erlang varargs.erl failed
+XFAIL_DragonFly= erlang varargs.erl failure
