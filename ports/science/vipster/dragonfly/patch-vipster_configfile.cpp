@@ -1,6 +1,6 @@
---- vipster/configfile.cpp.orig	2020-05-14 17:27:33 UTC
+--- vipster/configfile.cpp.orig	2020-12-22 10:44:42 UTC
 +++ vipster/configfile.cpp
-@@ -52,7 +52,7 @@ const IO::Plugin* openPlugin(fs::path na
+@@ -52,7 +52,7 @@ const Plugin* openPlugin(fs::path name)
  }
  
  fs::path Vipster::getConfigDir(){
