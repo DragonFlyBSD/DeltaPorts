@@ -1,0 +1,3 @@
+USE_CLANG_FALLBACK=	default
+
+BROKEN=	pending g++11
