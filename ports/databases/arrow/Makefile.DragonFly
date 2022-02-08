@@ -1,2 +1,4 @@
 
-USES+=	gmake
+USES+=	alias
+
+CMAKE_OFF+=	ARROW_JEMALLOC
