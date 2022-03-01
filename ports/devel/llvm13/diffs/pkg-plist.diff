@@ -1,4 +1,4 @@
---- pkg-plist.orig	2022-02-24 00:03:59 UTC
+--- pkg-plist.orig	2022-02-28 05:58:48 UTC
 +++ pkg-plist
 @@ -121,7 +121,6 @@ bin/split-file%%LLVM_SUFFIX%%
  %%MLIR%%bin/mlir-reduce%%LLVM_SUFFIX%%
