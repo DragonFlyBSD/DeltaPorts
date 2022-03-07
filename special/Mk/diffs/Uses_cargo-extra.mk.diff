@@ -1,6 +1,6 @@
---- Uses/cargo-extra.mk.orig	2020-05-28 09:49:07 UTC
+--- Uses/cargo-extra.mk.orig	2022-03-07 23:14:41 UTC
 +++ Uses/cargo-extra.mk
-@@ -0,0 +1,29 @@
+@@ -0,0 +1,30 @@
 +# $FreeBSD$
 +#
 +# This file contains logic to ease patching cargo crates.
@@ -23,7 +23,8 @@
 +
 +# Iterate over CARGO_CRATES and add to EXTRA_PATCHES patches to specific versions
 +# of that specific crate
-+.for _crate in ${CARGO_CRATES}
++_LOCAL_CARGO_CRATES=${CARGO_CRATES:N*@git+*}
++.for _crate in ${_LOCAL_CARGO_CRATES}
 +.if exists(${CARGO_EXTRA_PATCHDIR}/extra-${_crate})
 +EXTRA_PATCHES+= ${CARGO_EXTRA_PATCHDIR}/extra-${_crate}
 +.endif
