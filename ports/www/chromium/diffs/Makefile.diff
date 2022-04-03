@@ -1,6 +1,6 @@
---- Makefile.orig	2021-11-20 01:46:18 UTC
+--- Makefile.orig	2022-04-03 02:59:19 UTC
 +++ Makefile
-@@ -33,7 +33,6 @@ BUILD_DEPENDS=	bash:shells/bash \
+@@ -31,7 +31,6 @@ BUILD_DEPENDS=	bash:shells/bash \
  LIB_DEPENDS=	libatk-bridge-2.0.so:accessibility/at-spi2-atk \
  		libatspi.so:accessibility/at-spi2-core \
  		libspeechd.so:accessibility/speech-dispatcher \
@@ -8,12 +8,22 @@
  		libFLAC.so:audio/flac \
  		libopus.so:audio/opus \
  		libspeex.so:audio/speex \
-@@ -266,7 +265,7 @@ pre-configure:
+@@ -212,9 +211,6 @@ BINARY_ALIAS+=		cpp=${LOCALBASE}/bin/cla
+ 			ar=${LOCALBASE}/bin/llvm-ar${LLVM_DEFAULT} \
+ 			nm=${LOCALBASE}/bin/llvm-nm${LLVM_DEFAULT} \
+ 			ld=${LOCALBASE}/bin/ld.lld${LLVM_DEFAULT}
+-.else
+-BINARY_ALIAS+=		ar=/usr/bin/llvm-ar \
+-			nm=/usr/bin/llvm-nm
+ .endif
+ 
+ # swiftshader/lib/{libEGL.so,libGLESv2.so} is x86 only
+@@ -249,7 +245,7 @@ pre-configure:
  	#./build/linux/unbundle/remove_bundled_libraries.py [list of preserved]
  	cd ${WRKSRC} && ${SETENV} ${CONFIGURE_ENV} ${PYTHON_CMD} \
  		./build/linux/unbundle/replace_gn_files.py --system-libraries \
--		flac fontconfig freetype harfbuzz-ng libdrm libpng libwebp libxml libxslt openh264 opus snappy || ${FALSE}
-+		flac fontconfig freetype harfbuzz-ng libdrm libpng libwebp libxml libxslt openh264 opus || ${FALSE}
+-		flac fontconfig freetype harfbuzz-ng libusb libdrm libpng libwebp libxml libxslt openh264 opus snappy || ${FALSE}
++		flac fontconfig freetype harfbuzz-ng libusb libdrm libpng libwebp libxml libxslt openh264 opus || ${FALSE}
  	# Chromium uses an unreleased version of FFmpeg, so configure it
+ .for brand in Chrome Chromium
  	${CP} -R \
- 		${WRKSRC}/third_party/ffmpeg/chromium/config/Chrome/linux/ \
