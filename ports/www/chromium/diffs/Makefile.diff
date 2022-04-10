@@ -1,4 +1,4 @@
---- Makefile.orig	2022-04-03 02:59:19 UTC
+--- Makefile.orig	2022-04-10 00:26:12 UTC
 +++ Makefile
 @@ -31,7 +31,6 @@ BUILD_DEPENDS=	bash:shells/bash \
  LIB_DEPENDS=	libatk-bridge-2.0.so:accessibility/at-spi2-atk \
@@ -8,17 +8,20 @@
  		libFLAC.so:audio/flac \
  		libopus.so:audio/opus \
  		libspeex.so:audio/speex \
-@@ -212,9 +211,6 @@ BINARY_ALIAS+=		cpp=${LOCALBASE}/bin/cla
+@@ -211,11 +210,7 @@ BINARY_ALIAS+=		cpp=${LOCALBASE}/bin/cla
+ 			cc=${LOCALBASE}/bin/clang${LLVM_DEFAULT} \
+ 			c++=${LOCALBASE}/bin/clang++${LLVM_DEFAULT} \
  			ar=${LOCALBASE}/bin/llvm-ar${LLVM_DEFAULT} \
- 			nm=${LOCALBASE}/bin/llvm-nm${LLVM_DEFAULT} \
- 			ld=${LOCALBASE}/bin/ld.lld${LLVM_DEFAULT}
+-			nm=${LOCALBASE}/bin/llvm-nm${LLVM_DEFAULT} \
+-			ld=${LOCALBASE}/bin/ld.lld${LLVM_DEFAULT}
 -.else
 -BINARY_ALIAS+=		ar=/usr/bin/llvm-ar \
 -			nm=/usr/bin/llvm-nm
++			nm=${LOCALBASE}/bin/llvm-nm${LLVM_DEFAULT}
  .endif
  
  # swiftshader/lib/{libEGL.so,libGLESv2.so} is x86 only
-@@ -249,7 +245,7 @@ pre-configure:
+@@ -250,7 +245,7 @@ pre-configure:
  	#./build/linux/unbundle/remove_bundled_libraries.py [list of preserved]
  	cd ${WRKSRC} && ${SETENV} ${CONFIGURE_ENV} ${PYTHON_CMD} \
  		./build/linux/unbundle/replace_gn_files.py --system-libraries \
