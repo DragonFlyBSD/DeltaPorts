@@ -1,6 +1,6 @@
---- Makefile.orig	2021-07-04 09:39:40 UTC
+--- Makefile.orig	2022-04-14 00:03:28 UTC
 +++ Makefile
-@@ -16,6 +16,7 @@ LICENSE=	PSFL
+@@ -15,6 +15,7 @@ LICENSE=	PSFL
  
  LIB_DEPENDS=	libffi.so:devel/libffi \
  		libmpdec.so:math/mpdecimal
@@ -8,16 +8,19 @@
  
  USES=		cpe ncurses pathfix pkgconfig readline shebangfix ssl tar:xz
  PATHFIX_MAKEFILEIN=	Makefile.pre.in
-@@ -47,7 +48,7 @@ PLIST_SUB=		ABI=${ABIFLAGS} \
+@@ -46,16 +47,19 @@ PLIST_SUB=		ABI=${ABIFLAGS} \
  			XY=${PYTHON_SUFFIX} \
  			XYDOT=${PYTHON_VER} \
  			XYZDOT=${DISTVERSION} \
 -			OSMAJOR=${OSVERSION:C/([0-9]*)[0-9]{5}/\1/}		# For plat-freebsd* in pkg-plist. https://bugs.python.org/issue19554
 +			OSMAJOR=${DFLYVERSION:C/([0-9]*)[0-9]{5}/\1/}		# For plat-freebsd* in pkg-plist. https://bugs.python.org/issue19554
  
- OPTIONS_DEFINE=		DEBUG IPV6 NLS PYMALLOC
- OPTIONS_DEFAULT=	PYMALLOC
-@@ -55,6 +56,9 @@ OPTIONS_RADIO=		HASH
+ OPTIONS_DEFINE=		DEBUG IPV6 LTO NLS PYMALLOC
+-OPTIONS_DEFAULT=	LTO PYMALLOC
++OPTIONS_DEFAULT=	PYMALLOC
+ OPTIONS_EXCLUDE_powerpc64=	LTO
+ OPTIONS_EXCLUDE_riscv64=	LTO
+ OPTIONS_RADIO=		HASH
  OPTIONS_RADIO_HASH=	FNV SIPHASH
  OPTIONS_SUB=		yes
  
@@ -27,7 +30,7 @@
  NLS_DESC=		Enable gettext support for the locale module
  PYMALLOC_DESC=		Enable specialized mallocs
  
-@@ -62,6 +66,9 @@ HASH_DESC=		Hash Algorithm (PEP-456)
+@@ -63,6 +67,9 @@ HASH_DESC=		Hash Algorithm (PEP-456)
  FNV_DESC=		Modified Fowler-Noll-Vo Algorithm
  SIPHASH_DESC=		SipHash24 Algorithm
  
@@ -37,9 +40,9 @@
  FNV_CONFIGURE_ON=	--with-hash-algorithm=fnv
  SIPHASH_CONFIGURE_ON=	--with-hash-algorithm=siphash24
  
-@@ -113,6 +120,10 @@ post-patch:
- 	@${REINPLACE_CMD} -e 's|uuid/uuid.h|ignore_&|' ${WRKSRC}/configure
- 	@${REINPLACE_CMD} -e '/find_library_file/ s|uuid|ignore_&|' ${WRKSRC}/setup.py
+@@ -124,6 +131,10 @@ post-patch:
+ 		@${ECHO_CMD} ${_module} >> ${WRKSRC}/Modules/Setup.local
+ .  endfor
  
 +dfly-patch:
 +	${REINPLACE_CMD} -e 's|`uname -r`|"${_OSRELEASE}"|g' \
