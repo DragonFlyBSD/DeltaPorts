@@ -1,0 +1,35 @@
+--- pkg-plist.orig	2022-02-28 05:58:48 UTC
++++ pkg-plist
+@@ -121,7 +121,6 @@ bin/split-file%%LLVM_SUFFIX%%
+ %%MLIR%%bin/mlir-reduce%%LLVM_SUFFIX%%
+ %%MLIR%%bin/mlir-tblgen%%LLVM_SUFFIX%%
+ %%MLIR%%bin/mlir-translate%%LLVM_SUFFIX%%
+-%%OPENMP%%bin/llvm-omp-device-info%%LLVM_SUFFIX%%
+ %%LIT%%bin/FileCheck%%LLVM_SUFFIX%%
+ %%LIT%%llvm%%LLVM_SUFFIX%%/bin/FileCheck
+ %%LIT%%bin/lit%%LLVM_SUFFIX%%
+@@ -188,7 +187,6 @@ llvm%%LLVM_SUFFIX%%/bin/dsymutil
+ %%CLANG%%llvm%%LLVM_SUFFIX%%/bin/git-clang-format
+ %%CLANG%%llvm%%LLVM_SUFFIX%%/bin/hmaptool
+ %%CLANG%%llvm%%LLVM_SUFFIX%%/bin/intercept-build
+-%%LLD%%llvm%%LLVM_SUFFIX%%/bin/ld
+ %%LLD%%llvm%%LLVM_SUFFIX%%/bin/ld.lld
+ %%LLD%%llvm%%LLVM_SUFFIX%%/bin/ld64.lld
+ %%LLD%%llvm%%LLVM_SUFFIX%%/bin/ld64.lld.darwinnew
+@@ -241,7 +239,6 @@ llvm%%LLVM_SUFFIX%%/bin/llvm-mt
+ llvm%%LLVM_SUFFIX%%/bin/llvm-nm
+ llvm%%LLVM_SUFFIX%%/bin/llvm-objcopy
+ llvm%%LLVM_SUFFIX%%/bin/llvm-objdump
+-%%OPENMP%%llvm%%LLVM_SUFFIX%%/bin/llvm-omp-device-info
+ llvm%%LLVM_SUFFIX%%/bin/llvm-opt-report
+ llvm%%LLVM_SUFFIX%%/bin/llvm-otool
+ llvm%%LLVM_SUFFIX%%/bin/llvm-pdbutil
+@@ -5022,8 +5019,6 @@ llvm%%LLVM_SUFFIX%%/lib/libRemarks.so.%%
+ %%MLIR%%llvm%%LLVM_SUFFIX%%/lib/libmlir_runner_utils.so
+ %%MLIR%%llvm%%LLVM_SUFFIX%%/lib/libmlir_runner_utils.so.%%LLVM_MAJOR%%
+ %%OPENMP%%llvm%%LLVM_SUFFIX%%/lib/libomp.so
+-%%OPENMP%%llvm%%LLVM_SUFFIX%%/lib/libomptarget.rtl.amdgpu.so
+-%%OPENMP%%llvm%%LLVM_SUFFIX%%/lib/libomptarget.so
+ %%CLANG%%llvm%%LLVM_SUFFIX%%/lib/libscanbuild/__init__.py
+ %%CLANG%%llvm%%LLVM_SUFFIX%%/lib/libscanbuild/analyze.py
+ %%CLANG%%llvm%%LLVM_SUFFIX%%/lib/libscanbuild/arguments.py
