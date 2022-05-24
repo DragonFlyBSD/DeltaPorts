@@ -1,6 +1,6 @@
---- pkg-plist.orig	2020-10-28 15:40:52 UTC
+--- pkg-plist.orig	2022-05-24 17:15:00 UTC
 +++ pkg-plist
-@@ -26,7 +26,6 @@ share/applications/gnome-region-panel.de
+@@ -27,7 +27,6 @@ share/applications/gnome-region-panel.de
  share/applications/gnome-removable-media-panel.desktop
  share/applications/gnome-search-panel.desktop
  share/applications/gnome-sharing-panel.desktop
@@ -8,7 +8,15 @@
  share/applications/gnome-universal-access-panel.desktop
  share/applications/gnome-usage-panel.desktop
  share/applications/gnome-user-accounts-panel.desktop
-@@ -323,7 +322,3 @@ share/polkit-1/actions/org.gnome.control
+@@ -72,7 +71,6 @@ share/icons/hicolor/scalable/apps/org.gn
+ share/icons/hicolor/scalable/apps/org.gnome.Settings-screen-lock-symbolic.svg
+ share/icons/hicolor/scalable/apps/org.gnome.Settings-search-symbolic.svg
+ share/icons/hicolor/scalable/apps/org.gnome.Settings-sharing-symbolic.svg
+-share/icons/hicolor/scalable/apps/org.gnome.Settings-sound-symbolic.svg
+ share/icons/hicolor/scalable/apps/org.gnome.Settings-time-symbolic.svg
+ share/icons/hicolor/scalable/apps/org.gnome.Settings-users-symbolic.svg
+ share/icons/hicolor/scalable/apps/org.gnome.Settings.Devel.svg
+@@ -322,7 +320,3 @@ share/polkit-1/actions/org.gnome.control
  share/polkit-1/actions/org.gnome.controlcenter.remote-login-helper.policy
  share/polkit-1/actions/org.gnome.controlcenter.user-accounts.policy
  share/polkit-1/rules.d/gnome-control-center.rules
