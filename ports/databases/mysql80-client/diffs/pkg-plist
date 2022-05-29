@@ -1,0 +1,11 @@
+--- pkg-plist.orig	2022-05-28 20:32:22 UTC
++++ pkg-plist
+@@ -204,8 +204,6 @@ lib/mysql/libmysqlclient_r.a
+ lib/mysql/libmysqlclient_r.so
+ lib/mysql/libmysqlclient_r.so.21
+ %%SASLCLIENT%%lib/mysql/plugin/authentication_ldap_sasl_client.so
+-lib/mysql/plugin/authentication_fido_client.so
+-lib/mysql/plugin/authentication_oci_client.so
+ libdata/pkgconfig/mysqlclient.pc
+ man/man1/comp_err.1.gz
+ man/man1/lz4_decompress.1.gz
