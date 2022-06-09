@@ -1,5 +1,0 @@
---- Makefile.orig	2021-12-13 10:52:11 UTC
-+++ Makefile
-@@ -38 +38 @@
--.if ${ARCH} == amd64 || ${ARCH} == i386
-+.if 0 # ${ARCH} == amd64 || ${ARCH} == i386
