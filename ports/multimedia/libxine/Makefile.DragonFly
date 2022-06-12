@@ -1,1 +1,4 @@
 OPENSSL_CONFIGURE_ENV:= ${OPENSSL_CONFIGURE_ENV:S/-lssl/-lssl -lcrypto/}
+
+# Fix PLIST issues
+PLIST_FILES+=	${PLUGINSDIR}/xineplug_inp_crypto.so
