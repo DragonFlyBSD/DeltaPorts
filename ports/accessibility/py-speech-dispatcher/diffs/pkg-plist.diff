@@ -1,9 +1,0 @@
---- pkg-plist.orig	2022-06-12 11:23:31 UTC
-+++ pkg-plist
-@@ -21,6 +21,5 @@ man/man1/spd-conf.1.gz
- %%PYTHON_SITELIBDIR%%/speechd_config/__pycache__/paths.cpython-%%PYTHON_SUFFIX%%.opt-1.pyc
- %%PYTHON_SITELIBDIR%%/speechd_config/config.py
- %%PYTHON_SITELIBDIR%%/speechd_config/paths.py
--man/man1/spd-conf.1.gz
- share/sounds/speech-dispatcher/test.wav
- %%DATADIR%%/conf/desktop/speechd.desktop
