@@ -1,10 +1,10 @@
---- Makefile.orig	2019-12-22 19:07:28.000000000 +0000
+--- Makefile.orig	2022-06-13 20:57:10 UTC
 +++ Makefile
-@@ -24,7 +24,6 @@
- 		libexpat.so:textproc/expat2 \
+@@ -30,7 +30,6 @@ LIB_DEPENDS=	libboost_system.so:devel/bo
  		libflann_cpp.so:math/flann \
  		libfreetype.so:print/freetype2 \
+ 		liblz4.so:archivers/liblz4 \
 -		libpcap.so:net/libpcap \
  		libtiff.so:graphics/tiff
  
- USES=		cmake compiler eigen:3 jpeg python xorg
+ USES=		cmake:testing compiler:c++14-lang eigen:3 jpeg localbase:ldflags python xorg
