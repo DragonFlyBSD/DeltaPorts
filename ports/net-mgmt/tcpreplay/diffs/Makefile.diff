@@ -1,6 +1,6 @@
---- Makefile.orig	2021-07-04 10:22:43 UTC
+--- Makefile.orig	2022-06-13 21:00:33 UTC
 +++ Makefile
-@@ -23,7 +23,7 @@ CONFIGURE_ARGS=	--program-transform-name
+@@ -26,7 +26,7 @@ CONFIGURE_ARGS=	--program-transform-name
  
  TEST_TARGET=	test
  
@@ -9,12 +9,11 @@
  OPTIONS_SINGLE=		LIBPCAP
  OPTIONS_SINGLE_LIBPCAP=	LIBPCAP_BASE LIBPCAP_PORTS
  
-@@ -35,7 +35,7 @@ LIBPCAP_BASE_DESC=	Build with libpcap fr
+@@ -34,6 +34,6 @@ LIBPCAP_BASE_DESC=	Build with libpcap fr
  LIBPCAP_PORTS_DESC=	Build with net/libpcap
  
  LIBPCAP_BASE_CONFIGURE_ON=	--with-libpcap=/usr/lib
 -LIBPCAP_PORTS_LIB_DEPENDS=	libpcap.so:net/libpcap
 +LIBPCAP_PORTS_LIB_DEPENDS=	libpcap.so.1:net/libpcap
  
- post-patch:
- 	@${REINPLACE_CMD} -e 's|-Wall -O3||' ${WRKSRC}/${CONFIGURE_SCRIPT}.ac
+ .include <bsd.port.mk>
