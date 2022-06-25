@@ -19,7 +19,7 @@ AWKGID='/nogroup:/ { \
 }1'
 AWKUID='/nobody:/ { \
   print "avenger:*:60149:60149::0:0:Mail Avenger:/var/spool/avenger:/usr/sbin/nologin"; \
-  print "cbsd:*:60150:150::0:0:Cbsd user:/nonexistent:/bin/sh"; \
+  print "cbsd:*:60150:60150::0:0:Cbsd user:/nonexistent:/bin/sh"; \
 }1'
 
 checkfirst=$(mount | grep ${WORKAREA})
