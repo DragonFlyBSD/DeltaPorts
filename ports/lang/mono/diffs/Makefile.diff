@@ -1,0 +1,11 @@
+--- Makefile.orig	2022-06-26 17:04:43 UTC
++++ Makefile
+@@ -2,7 +2,7 @@
+ 
+ PORTNAME=	mono
+ PORTVERSION=	5.10.1.57
+-PORTREVISION=	3
++PORTREVISION=	4
+ CATEGORIES=	lang
+ MASTER_SITES=	https://download.mono-project.com/sources/mono/
+ DISTFILES=	${PORTNAME}-${PORTVERSION}${EXTRACT_SUFX}
