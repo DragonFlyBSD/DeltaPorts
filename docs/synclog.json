@@ -375,6 +375,11 @@
 		    "port": "devel/libvirt",
 		    "desc": "Unlock and update. Make sure nvmm still works.",
 		    "status": "pending"
+		},
+		{
+		    "port": "net/freerdp",
+		    "desc": "Unlock and update.",
+		    "status": "pending"
 		}
 
 	    ],
