@@ -152,6 +152,19 @@ index 44b0512359d..6621f0e05d6 100644
    bool CacheMemoryRegions() {
  #if BUILDFLAG(IS_BSD)
      return false;
+diff --git base/files/dir_reader_linux.h base/files/dir_reader_linux.h
+index 18b11193e27..691bed19004 100644
+--- base/files/dir_reader_linux.h
++++ base/files/dir_reader_linux.h
+@@ -62,7 +62,7 @@ class DirReaderLinux {
+   bool Next() {
+     if (size_) {
+       linux_dirent* dirent = reinterpret_cast<linux_dirent*>(&buf_[offset_]);
+-      offset_ += dirent->d_reclen;
++      offset_ += _DIRENT_RECLEN(dirent->d_namlen);
+     }
+ 
+     if (offset_ != size_)
 diff --git base/files/file_path_watcher_kqueue.h base/files/file_path_watcher_kqueue.h
 index 3034764f439..9309632eeb9 100644
 --- base/files/file_path_watcher_kqueue.h
@@ -3066,6 +3079,19 @@ index d4c16fc2f0e..95ecfa2d589 100644
  	static bool checked = false;
  	static bool res = false;
  
+diff --git third_party/swiftshader/src/System/Configurator.cpp third_party/swiftshader/src/System/Configurator.cpp
+index 62a9b7eef36..fb34f5da1bd 100644
+--- third_party/swiftshader/src/System/Configurator.cpp
++++ third_party/swiftshader/src/System/Configurator.cpp
+@@ -38,7 +38,7 @@ namespace sw {
+ 
+ Configurator::Configurator(const std::string &filePath)
+ {
+-#if defined(__OpenBSD__) || defined(__FreeBSD__)
++#if defined(__OpenBSD__) || defined(__FreeBSD__) || defined(__DragonFly__)
+ 	return;
+ #endif
+ 	std::fstream file(filePath, std::ios::in);
 diff --git third_party/swiftshader/third_party/llvm-subzero/build/Linux/include/llvm/Config/config.h third_party/swiftshader/third_party/llvm-subzero/build/Linux/include/llvm/Config/config.h
 index f9a45cee2c7..346f9f7bdf7 100644
 --- third_party/swiftshader/third_party/llvm-subzero/build/Linux/include/llvm/Config/config.h
