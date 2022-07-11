@@ -1,14 +1,14 @@
---- Uses/kmod.mk.orig	2017-02-14 06:57:39 UTC
+--- Uses/kmod.mk.orig	2022-07-11 00:28:10 UTC
 +++ Uses/kmod.mk
-@@ -29,9 +29,9 @@ CATEGORIES+=	kld
+@@ -27,9 +27,9 @@ CATEGORIES+=	kld
  
  SSP_UNSAFE=	kernel module supports SSP natively
  
 -KMODDIR?=	/boot/modules
 +KMODDIR?=	/boot/modules.local
- .if ${KMODDIR} == /boot/kernel
+ .  if ${KMODDIR} == /boot/kernel
 -KMODDIR=	/boot/modules
 +KMODDIR=	/boot/modules.local
- .endif
+ .  endif
  
  _DEBUG_KMOD_SH= \
