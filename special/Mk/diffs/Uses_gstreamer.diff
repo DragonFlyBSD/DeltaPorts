@@ -1,0 +1,21 @@
+--- Uses/gstreamer.mk.orig	2022-07-11 00:19:39 UTC
++++ Uses/gstreamer.mk
+@@ -40,7 +40,7 @@ _GST1_CATEGORIES=	audio comms devel ftp
+ 			sysutils www x11 x11-toolkits
+ _GST1_PLUGINS_audio= 	a52dec amrnb amrwbdec bs2b cdparanoia chromaprint faac \
+ 			faad flac flite gme gsm jack ladspa lame lv2 modplug \
+-			mpg123 musepack ogg openmpt opus pulse shout2 sidplay \
++			mpg123 musepack ogg openmpt opus shout2 sidplay \
+ 			sndfile sndio soundtouch speex taglib twolame vorbis \
+ 			wavpack webrtcdsp
+ _GST1_PLUGINS_comms=	spandsp
+@@ -164,9 +164,6 @@ gst-ogg_IMPL=		#
+ gst-opus_PORT=		audio/gstreamer${_GST_VER}-plugins-opus
+ gst-opus_IMPL=		#
+ 
+-gst-pulse_PORT=		audio/gstreamer${_GST_VER}-plugins-pulse
+-gst-pulse_IMPL=		good
+-
+ gst-shout2_PORT=	audio/gstreamer${_GST_VER}-plugins-shout2
+ gst-shout2_IMPL=	good
+ 
