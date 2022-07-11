@@ -1,13 +1,13 @@
---- Uses/ncurses.mk.orig	2021-10-15 23:38:52 UTC
+--- Uses/ncurses.mk.orig	2022-07-11 00:05:10 UTC
 +++ Uses/ncurses.mk
 @@ -62,23 +62,28 @@ NCURSES_INSTALLED?=
  
- .if ${NCURSES_INSTALLED} != ""
+ .    if ${NCURSES_INSTALLED} != ""
  NCURSES_PORT=	${NCURSES_INSTALLED}
 -NCURSES_SHLIBFILE!=	${PKG_INFO} -ql ${NCURSES_INSTALLED} | grep -m 1 "^`${PKG_QUERY} "%p" ${NCURSES_INSTALLED}`/lib/libncurses.so."
 +NCURSES_SHLIBFILE!=	${PKG_INFO} -ql ${NCURSES_INSTALLED} | grep -m 1 "^`${PKG_BIN} query "%p" ${NCURSES_INSTALLED}`/lib/libncurses.so."
  NCURSES_SHLIBVER?=	${NCURSES_SHLIBFILE:E}
- .endif
+ .    endif
  
  NCURSES_PORT?=		devel/ncurses
 +.if exists (/usr/lib/priv/libprivate_ncursesw.so)
@@ -24,10 +24,10 @@
  TINFO_LIB=		-ltinfo
  NCURSES_LIB=		-lncurses
  
- .if defined(NCURSES_RPATH)
+ .    if defined(NCURSES_RPATH)
  CFLAGS+=	-Wl,-rpath,${NCURSESRPATH}
- .endif
+ .    endif
 -LDFLAGS+=	-Wl,-rpath=${NCURSESRPATH}
  
- .else
+ .  else
  .error		USES=ncurses only accept 'port' and 'base' as arguments, got ${ncurses_ARGS}
