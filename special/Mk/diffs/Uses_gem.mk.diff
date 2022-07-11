@@ -1,29 +1,29 @@
---- Uses/gem.mk.orig	2022-04-11 23:17:29 UTC
+--- Uses/gem.mk.orig	2022-07-11 00:24:10 UTC
 +++ Uses/gem.mk
-@@ -73,11 +73,10 @@ GEMFILES=	${DISTNAME}${EXTRACT_SUFX}
+@@ -72,11 +72,10 @@ GEMFILES=	${DISTNAME}${EXTRACT_SUFX}
  
  RUBYGEM_ARGS=-l --no-update-sources --install-dir ${STAGEDIR}${PREFIX}/lib/ruby/gems/${RUBY_VER} --ignore-dependencies --bindir=${STAGEDIR}${PREFIX}/bin
  
--.if ${PORT_OPTIONS:MDOCS}
+-.  if ${PORT_OPTIONS:MDOCS}
 -RUBYGEM_ARGS+=	--document rdoc,ri
--.else
+-.  else
 +# Until we figure out why generating the documentation (rdoc, ri)
 +# freezes randomly with a 100% CPU usage we'll disable the documentation
 +# generation entirely
  RUBYGEM_ARGS+=	--no-document
--.endif
+-.  endif
  
- .if !target(do-extract)
+ .  if !target(do-extract)
  do-extract:
-@@ -113,9 +112,9 @@ do-install:
+@@ -112,9 +111,9 @@ do-install:
  	${RM} -r ${STAGEDIR}${PREFIX}/${CACHE_DIR} 2> /dev/null || ${TRUE}
  	${RMDIR} ${STAGEDIR}${PREFIX}/${EXT_DIR} 2> /dev/null || ${TRUE}
  	${RMDIR} ${STAGEDIR}${PREFIX}/${PLUGINS_DIR} 2> /dev/null || ${TRUE}
--.if !${PORT_OPTIONS:MDOCS}
-+#.if !${PORT_OPTIONS:MDOCS}
+-.    if !${PORT_OPTIONS:MDOCS}
++#.    if !${PORT_OPTIONS:MDOCS}
  	-@${RMDIR} ${STAGEDIR}${PREFIX}/${DOC_DIR}
--.endif
-+#.endif
- .endif
+-.    endif
++#.    endif
+ .  endif
  
- .if empty(gem_ARGS:Mnoautoplist)
+ .  if empty(gem_ARGS:Mnoautoplist)
