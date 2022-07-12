@@ -1,8 +1,8 @@
---- bsd.default-versions.mk.orig	2021-11-26 23:07:03 UTC
+--- bsd.default-versions.mk.orig	2022-07-12 00:23:58 UTC
 +++ bsd.default-versions.mk
 @@ -31,6 +31,9 @@ _l=		${lang:C/=.*//g}
  ${_l:tu}_DEFAULT=	${lang:C/.*=//g}
- .endfor
+ .  endfor
  
 +# tuxillo: since 2021Q4 we default to openssl again
 +SSL_DEFAULT?=  openssl
@@ -10,21 +10,21 @@
  # Possible values: 2.4
  APACHE_DEFAULT?=	2.4
  # Possible values: 5, 18
-@@ -67,7 +70,7 @@ LAZARUS_DEFAULT?=       2.0.12
+@@ -69,7 +72,7 @@ LAZARUS_DEFAULT?=       2.2.2
  LAZARUS_DEFAULT?=       2.3.0
- .endif
+ .  endif
  # Possible values: rust, legacy
--.if empty(ARCH:Naarch64:Narmv6:Narmv7:Namd64:Ni386:Npowerpc64:Npowerpc64le:Npowerpc)
-+.if empty(ARCH:Naarch64:Narmv6:Narmv7:Nx86_64:Ni386:Npowerpc64:Npowerpc64le:Npowerpc)
+-.  if empty(ARCH:Naarch64:Narmv6:Narmv7:Namd64:Ni386:Npowerpc64:Npowerpc64le:Npowerpc)
++.  if empty(ARCH:Naarch64:Narmv6:Narmv7:Nx86_64:Ni386:Npowerpc64:Npowerpc64le:Npowerpc)
  LIBRSVG2_DEFAULT?=	rust
- .else
+ .  else
  LIBRSVG2_DEFAULT?=	legacy
-@@ -80,7 +83,7 @@ LINUX_DEFAULT?=		c7
- .if ${ARCH} == powerpc
+@@ -82,7 +85,7 @@ LINUX_DEFAULT?=		c7
+ .  if ${ARCH} == powerpc
  LLVM_DEFAULT?=		10
- .else
+ .  else
 -LLVM_DEFAULT?=		90
 +LLVM_DEFAULT?=		10
- .endif
+ .  endif
  # Possible values: 5.1, 5.2, 5.3, 5.4
  LUA_DEFAULT?=		5.2
