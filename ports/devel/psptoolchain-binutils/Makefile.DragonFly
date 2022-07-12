@@ -1,2 +1,0 @@
-CONFIGURE_ARGS+= --build=${CONFIGURE_TARGET}
-IGNORE=	psp-gcc segfaults with gcc48 and higher; skip everything
