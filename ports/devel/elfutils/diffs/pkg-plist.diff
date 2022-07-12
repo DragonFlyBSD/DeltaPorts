@@ -1,15 +1,15 @@
---- pkg-plist.orig	2020-08-13 10:37:50 UTC
+--- pkg-plist.orig	2022-07-12 22:21:11 UTC
 +++ pkg-plist
-@@ -15,7 +15,7 @@ bin/eu-stack
+@@ -16,7 +16,7 @@ bin/eu-stack
  bin/eu-strings
  bin/eu-strip
  bin/eu-unstrip
 -include/dwarf.h
 +include/elfutils/dwarf.h
+ include/elfutils/debuginfod.h
  include/elfutils/elf-knowledge.h
  include/elfutils/known-dwarf.h
- include/elfutils/libasm.h
-@@ -23,23 +23,23 @@ include/elfutils/libdw.h
+@@ -25,27 +25,27 @@ include/elfutils/libdw.h
  include/elfutils/libdwelf.h
  include/elfutils/libdwfl.h
  include/elfutils/version.h
@@ -20,14 +20,6 @@
 -lib/libasm.a
 -lib/libasm.so
 -lib/libasm.so.1
--lib/libdw-%%VERSION%%.so
--lib/libdw.a
--lib/libdw.so
--lib/libdw.so.1
--lib/libelf-%%VERSION%%.so
--lib/libelf.a
--lib/libelf.so
--lib/libelf.so.1
 +include/elfutils/gelf.h
 +include/elfutils/libelf.h
 +include/elfutils/nlist.h
@@ -38,14 +30,26 @@
 +lib/elfutils/libdw-%%VERSION%%.so
 +lib/elfutils/libdw.a
 +lib/elfutils/libdw.so
-+lib/elfutils/libdw.so.1
++lib/elftils/libdw.so.1
 +lib/elfutils/libelf-%%VERSION%%.so
 +lib/elfutils/libelf.a
 +lib/elfutils/libelf.so
 +lib/elfutils/libelf.so.1
+ lib/libdebuginfod-%%VERSION%%.so
+ lib/libdebuginfod.so
+ lib/libdebuginfod.so.1
+-lib/libdw-%%VERSION%%.so
+-lib/libdw.a
+-lib/libdw.so
+-lib/libdw.so.1
+-lib/libelf-%%VERSION%%.so
+-lib/libelf.a
+-lib/libelf.so
+-lib/libelf.so.1
+ libdata/pkgconfig/libdebuginfod.pc
  libdata/pkgconfig/libdw.pc
 -libdata/pkgconfig/libelf.pc
 +libdata/pkgconfig/elfutils.pc
+ %%MANPAGES%%man/man1/debuginfod-find.1.gz
  %%MANPAGES%%man/man1/eu-elfclassify.1.gz
  %%MANPAGES%%man/man1/eu-readelf.1.gz
- %%MANPAGES%%man/man3/elf_begin.3.gz
