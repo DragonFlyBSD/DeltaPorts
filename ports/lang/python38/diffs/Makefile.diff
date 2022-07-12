@@ -1,6 +1,6 @@
---- Makefile.orig	2022-04-14 00:05:57 UTC
+--- Makefile.orig	2022-07-12 22:41:52 UTC
 +++ Makefile
-@@ -49,15 +49,20 @@ PLIST_SUB=		ABI=${ABIFLAGS} \
+@@ -50,7 +50,7 @@ PLIST_SUB=		ABI=${ABIFLAGS} \
  			XY=${PYTHON_SUFFIX} \
  			XYDOT=${PYTHON_VER} \
  			XYZDOT=${DISTVERSION} \
@@ -8,18 +8,17 @@
 +			OSMAJOR=${DFLYVERSION:C/([0-9]*)[0-9]{5}/\1/}		# For plat-freebsd* in pkg-plist. https://bugs.python.org/issue19554
  
  OPTIONS_DEFINE=		DEBUG IPV6 LIBMPDEC LTO NLS PYMALLOC
--OPTIONS_DEFAULT=	LIBMPDEC LTO PYMALLOC
-+OPTIONS_DEFAULT=	LIBMPDEC PYMALLOC
- OPTIONS_EXCLUDE_powerpc64=	LTO
- OPTIONS_EXCLUDE_riscv64=	LTO
- OPTIONS_RADIO=		HASH
+ OPTIONS_DEFAULT=	LIBMPDEC PYMALLOC
+@@ -60,6 +60,12 @@ OPTIONS_RADIO=		HASH
  OPTIONS_RADIO_HASH=	FNV SIPHASH
  OPTIONS_SUB=		yes
+ 
 +OPTIONS_DEFINE+=	EXPAT
 +OPTIONS_DEFAULT+=	EXPAT
 +EXPAT_DESC=		Use expat from ports instead of bundled version
 +EXPAT_LIB_DEPENDS=	libexpat.so:textproc/expat2
 +EXPAT_CONFIGURE_ON=	--with-system-expat
- 
++
  LIBMPDEC_DESC=		Use libmpdec from ports instead of bundled version
  NLS_DESC=		Enable gettext support for the locale module
+ PYMALLOC_DESC=		Enable specialized mallocs
