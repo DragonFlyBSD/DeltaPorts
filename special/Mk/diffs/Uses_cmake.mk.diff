@@ -1,6 +1,6 @@
---- Uses/cmake.mk.orig	2017-07-03 13:28:04 UTC
+--- Uses/cmake.mk.orig	2022-07-12 00:17:40 UTC
 +++ Uses/cmake.mk
-@@ -89,7 +89,8 @@ CMAKE_ARGS+=		-DCMAKE_C_COMPILER:STRING=
+@@ -90,7 +90,8 @@ CMAKE_ARGS+=		-DCMAKE_C_COMPILER:STRING=
  			-DCMAKE_BUILD_TYPE:STRING="${CMAKE_BUILD_TYPE}" \
  			-DTHREADS_HAVE_PTHREAD_ARG:BOOL=YES \
  			-DCMAKE_INSTALL_RPATH_USE_LINK_PATH=YES \
@@ -9,20 +9,27 @@
 +			-DCMAKE_VERBOSE_MAKEFILE:BOOL=ON ${DFLY_CMAKE_ARGS}
  
  # Handle the option-like CMAKE_ON and CMAKE_OFF lists.
- .for _bool_kind in ON OFF
-@@ -126,10 +127,11 @@ TEST_WRKSRC?=		${CONFIGURE_WRKSRC}
+ .  for _bool_kind in ON OFF
+@@ -127,17 +128,18 @@ TEST_WRKSRC?=		${CONFIGURE_WRKSRC}
  #             as the build.ninja file won't be where ninja expects it.
- .if empty(cmake_ARGS:Mnoninja) && empty(cmake_ARGS:Mrun) && empty(USES:Mfortran)
- .  if "${CONFIGURE_WRKSRC}" == "${BUILD_WRKSRC}" && "${CONFIGURE_WRKSRC}" == "${INSTALL_WRKSRC}"
--.    if ! empty(USES:Mgmake)
--BROKEN=		USES=gmake is incompatible with cmake's ninja-generator
--.    endif
--.      include "${USESDIR}/ninja.mk"
+ .  if empty(cmake_ARGS:Mnoninja) && empty(cmake_ARGS:Mrun) && empty(USES:Mfortran)
+ .    if "${CONFIGURE_WRKSRC}" == "${BUILD_WRKSRC}" && "${CONFIGURE_WRKSRC}" == "${INSTALL_WRKSRC}"
 +# disable ninja by default on DPORTS
-+# .    if ! empty(USES:Mgmake)
-+# BROKEN=		USES=gmake is incompatible with cmake's ninja-generator
-+# .    endif
-+# .      include "${USESDIR}/ninja.mk"
+ # USES=gmake sets MAKE_CMD and ninja.mk does too (it also messes with MAKEFILE and MAKE_CMD).
+-.      if ! empty(USES:Mgmake)
+-BROKEN=		USES=gmake is incompatible with cmake's ninja-generator (try cmake:noninja)
+-.      endif
++#.      if ! empty(USES:Mgmake)
++#BROKEN=		USES=gmake is incompatible with cmake's ninja-generator (try cmake:noninja)
++#.      endif
+ # USES=emacs appends EMACS=<path> to MAKE_ARGS, which then get passed to ninja.
+ # Since ninja doesn't support that kind of variable-setting on the command-line,
+ # it errors out.
+ .      if ! empty(USES:Memacs)
+ BROKEN=		USES=emacs is incompatible with cmake's ninja-generator (try cmake:noninja)
+ .      endif
+-.      include "${USESDIR}/ninja.mk"
++#.      include "${USESDIR}/ninja.mk"
+ .    endif
  .  endif
- .endif
  
