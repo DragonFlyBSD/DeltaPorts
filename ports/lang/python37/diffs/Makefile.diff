@@ -1,6 +1,6 @@
---- Makefile.orig	2022-04-14 00:03:28 UTC
+--- Makefile.orig	2022-07-12 22:40:29 UTC
 +++ Makefile
-@@ -15,6 +15,7 @@ LICENSE=	PSFL
+@@ -16,6 +16,7 @@ LICENSE=	PSFL
  
  LIB_DEPENDS=	libffi.so:devel/libffi \
  		libmpdec.so:math/mpdecimal
@@ -8,7 +8,7 @@
  
  USES=		cpe ncurses pathfix pkgconfig readline shebangfix ssl tar:xz
  PATHFIX_MAKEFILEIN=	Makefile.pre.in
-@@ -46,16 +47,19 @@ PLIST_SUB=		ABI=${ABIFLAGS} \
+@@ -47,7 +48,7 @@ PLIST_SUB=		ABI=${ABIFLAGS} \
  			XY=${PYTHON_SUFFIX} \
  			XYDOT=${PYTHON_VER} \
  			XYZDOT=${DISTVERSION} \
@@ -16,11 +16,8 @@
 +			OSMAJOR=${DFLYVERSION:C/([0-9]*)[0-9]{5}/\1/}		# For plat-freebsd* in pkg-plist. https://bugs.python.org/issue19554
  
  OPTIONS_DEFINE=		DEBUG IPV6 LTO NLS PYMALLOC
--OPTIONS_DEFAULT=	LTO PYMALLOC
-+OPTIONS_DEFAULT=	PYMALLOC
- OPTIONS_EXCLUDE_powerpc64=	LTO
- OPTIONS_EXCLUDE_riscv64=	LTO
- OPTIONS_RADIO=		HASH
+ OPTIONS_DEFAULT=	PYMALLOC
+@@ -57,6 +58,9 @@ OPTIONS_RADIO=		HASH
  OPTIONS_RADIO_HASH=	FNV SIPHASH
  OPTIONS_SUB=		yes
  
@@ -30,7 +27,7 @@
  NLS_DESC=		Enable gettext support for the locale module
  PYMALLOC_DESC=		Enable specialized mallocs
  
-@@ -63,6 +67,9 @@ HASH_DESC=		Hash Algorithm (PEP-456)
+@@ -64,6 +68,9 @@ HASH_DESC=		Hash Algorithm (PEP-456)
  FNV_DESC=		Modified Fowler-Noll-Vo Algorithm
  SIPHASH_DESC=		SipHash24 Algorithm
  
@@ -40,7 +37,7 @@
  FNV_CONFIGURE_ON=	--with-hash-algorithm=fnv
  SIPHASH_CONFIGURE_ON=	--with-hash-algorithm=siphash24
  
-@@ -124,6 +131,10 @@ post-patch:
+@@ -125,6 +132,10 @@ post-patch:
  		@${ECHO_CMD} ${_module} >> ${WRKSRC}/Modules/Setup.local
  .  endfor
  
