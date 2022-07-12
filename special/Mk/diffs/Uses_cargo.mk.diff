@@ -1,6 +1,6 @@
---- Uses/cargo.mk.orig	2021-11-26 23:44:40 UTC
+--- Uses/cargo.mk.orig	2022-07-12 00:10:14 UTC
 +++ Uses/cargo.mk
-@@ -3,15 +3,15 @@
+@@ -3,16 +3,16 @@
  #
  # Feature:	cargo
  # Usage:	USES=cargo
@@ -12,19 +12,21 @@
  .if !defined(_INCLUDE_USES_CARGO_MK)
  _INCLUDE_USES_CARGO_MK=	yes
  
--.if !empty(cargo_ARGS)
+-.  if !empty(cargo_ARGS)
 -IGNORE+=	USES=cargo takes no arguments
-+.if ${cargo_ARGS:Mextra}
-+.include "${USESDIR}/cargo-extra.mk"
- .endif
+-.  endif
++. if ${cargo_ARGS:Mextra}
++.  include "${USESDIR}/cargo-extra.mk"
++. endif
  
  .sinclude "${MASTERDIR}/Makefile.crates"
-@@ -92,7 +92,7 @@ CARGO_ENV+= \
- 	RUSTFLAGS="${RUSTFLAGS} ${LDFLAGS:C/.+/-C link-arg=&/}"
+ 
+@@ -138,7 +138,7 @@ CARGO_ENV+=	RUST_BACKTRACE=1
+ .  endif
  
  # Adjust -C target-cpu if -march/-mcpu is set by bsd.cpu.mk
--.if ${ARCH} == amd64 || ${ARCH} == i386
-+.if ${ARCH} == x86_64 || ${ARCH} == i386
+-.  if ${ARCH} == amd64 || ${ARCH} == i386
++.  if ${ARCH} == x86_64 || ${ARCH} == i386
  RUSTFLAGS+=	${CFLAGS:M-march=*:S/-march=/-C target-cpu=/}
- .elif ${ARCH:Mpowerpc64*}
+ .  elif ${ARCH:Mpowerpc*}
  RUSTFLAGS+=	${CFLAGS:M-mcpu=*:S/-mcpu=/-C target-cpu=/:S/power/pwr/}
