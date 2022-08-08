@@ -23,11 +23,12 @@ post-patch:
 	${RM} ${BUILD_WRKSRC}/Makefile
 	${MV} ${BUILD_WRKSRC}/Makefile.gnu ${BUILD_WRKSRC}/Makefile
 
-post-build:
-	${MV} ${WRKSRC}/libopensmtpd.so.0.1.0 ${WRKSRC}/libopensmtpd.so
-
 do-install:
-	${INSTALL_LIB} ${WRKSRC}/libopensmtpd.so ${STAGEDIR}${PREFIX}/lib/
+	${INSTALL_LIB} ${WRKSRC}/libopensmtpd.so.0.1.0 ${STAGEDIR}${PREFIX}/lib/
 	${INSTALL_DATA} ${WRKSRC}/opensmtpd.h ${STAGEDIR}${PREFIX}/include/
+
+post-install:
+	${LN} -s libopensmtpd.so.0.1.0 ${STAGEDIR}${PREFIX}/lib/libopensmtpd.so.0
+	${LN} -s libopensmtpd.so.0.1.0 ${STAGEDIR}${PREFIX}/lib/libopensmtpd.so
 
 .include <bsd.port.mk>
