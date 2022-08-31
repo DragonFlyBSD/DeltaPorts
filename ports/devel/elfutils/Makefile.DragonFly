@@ -1,5 +1,5 @@
 
-.if ${PORTVERSION} != "0.179"
+.if ${DISTVERSION} != "0.179"
 BROKEN= needs recheck on new version
 .endif
 
