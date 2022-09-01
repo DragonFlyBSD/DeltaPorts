@@ -1,0 +1,18 @@
+--- pkg-plist.orig	2022-09-01 18:07:14 UTC
++++ pkg-plist
+@@ -36,15 +36,6 @@ lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/c
+ lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/crtfastmath.o
+ lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/crti.o
+ lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/crtn.o
+-lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/include-fixed/README
+-lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/include-fixed/limits.h
+-lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/include-fixed/stddef.h
+-lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/include-fixed/stdio.h
+-lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/include-fixed/stdlib.h
+-lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/include-fixed/sys/types.h
+-lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/include-fixed/syslimits.h
+-lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/include-fixed/unistd.h
+-lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/include-fixed/wchar.h
+ lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/include/arm_acle.h
+ lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/include/arm_bf16.h
+ lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/include/arm_cde.h
