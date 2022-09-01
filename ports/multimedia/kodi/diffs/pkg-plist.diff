@@ -1,4 +1,4 @@
---- pkg-plist.orig	2021-02-13 16:54:53 UTC
+--- pkg-plist.orig	2022-09-01 17:57:16 UTC
 +++ pkg-plist
 @@ -134,8 +134,8 @@ include/kodi/versions.h
  %%KODIX11%%lib/kodi/kodi-x11
@@ -8,10 +8,10 @@
 -lib/kodi/system/players/VideoPlayer/libdvdnav-%%ARCH%%-freebsd.so
 +%%SSE4_1%%lib/kodi/system/libsse4-%%ARCH%%-%%OPSYS%%.so
 +lib/kodi/system/players/VideoPlayer/libdvdnav-%%ARCH%%-%%OPSYS%%.so
- man/man1/kodi.1.gz
- man/man1/kodi.bin.1.gz
+ share/man/man1/kodi.1.gz
+ share/man/man1/kodi.bin.1.gz
  share/applications/kodi.desktop
-@@ -1698,6 +1698,7 @@ share/icons/hicolor/64x64/apps/kodi.png
+@@ -1872,6 +1872,7 @@ share/icons/hicolor/64x64/apps/kodi.png
  %%DATADIR%%/system/settings/darwin_osx.xml
  %%DATADIR%%/system/settings/darwin_tvos.xml
  %%DATADIR%%/system/settings/freebsd.xml
