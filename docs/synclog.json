@@ -1,5 +1,5 @@
 {
-    "current": "2022Q2",
+    "current": "2022Q3",
     "releases": [
 	{
 	    "id": "2020S07",
@@ -340,6 +340,24 @@
 		    "www/rubygem-passenger": "1 out of 1 hunks failed--saving rejects to Makefile.rej"
 		}
 	    ],
+	    "To-do": [],
+	    "cherry-picks": [
+	    ]
+	},
+	{
+	    "id": "2022Q2",
+	    "timestamp": "Sat Jun 11 17:20:18 2022 +0000",
+	    "base_commit": "294ffa9e571f7489af1b75cc82dba8941772d02c",
+	    "rejects": [],
+	    "To-do": [],
+	    "cherry-picks": [
+	    ]
+	},
+	{
+	    "id": "2022Q3",
+	    "timestamp": "Mon Jul 18 20:35:23 2022 +0800",
+	    "base_commit": "2e00c3edec2e179134ffa22e58fcf54f9ab041c1",
+	    "rejects": [],
 	    "To-do": [
 		{
 		    "port": "devel/qca",
@@ -380,11 +398,17 @@
 		    "port": "net/freerdp",
 		    "desc": "Unlock and update.",
 		    "status": "pending"
+		},
+		{
+		    "port": "devel/elfutils",
+		    "desc": "Needs porting, currently locked.",
+		    "status": "pending"
 		}
 
 	    ],
 	    "cherry-picks": [
 	    ]
 	}
+
     ]
 }
