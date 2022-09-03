@@ -271,7 +271,7 @@
 		    "www/trafficserver": "No such line 100 in input file, ignoring"
 		}
 	    ],
-	    "To-do": [
+	    "to-do": [
 	    ],
 	    "cherry-picks": [
 	    ]
@@ -300,7 +300,7 @@
 		    "x11/plasma5-plasma": "1 out of 1 hunks failed--saving rejects to Makefile.rej"
 		}
 	    ],
-	    "To-do": [
+	    "to-do": [
 		{
 		    "port": "lang/ghc",
 		    "desc": "Unlocked",
@@ -340,7 +340,7 @@
 		    "www/rubygem-passenger": "1 out of 1 hunks failed--saving rejects to Makefile.rej"
 		}
 	    ],
-	    "To-do": [],
+	    "to-do": [],
 	    "cherry-picks": [
 	    ]
 	},
@@ -349,7 +349,7 @@
 	    "timestamp": "Sat Jun 11 17:20:18 2022 +0000",
 	    "base_commit": "294ffa9e571f7489af1b75cc82dba8941772d02c",
 	    "rejects": [],
-	    "To-do": [],
+	    "to-do": [],
 	    "cherry-picks": [
 	    ]
 	},
@@ -358,7 +358,7 @@
 	    "timestamp": "Mon Jul 18 20:35:23 2022 +0800",
 	    "base_commit": "2e00c3edec2e179134ffa22e58fcf54f9ab041c1",
 	    "rejects": [],
-	    "To-do": [
+	    "to-do": [
 		{
 		    "port": "devel/qca",
 		    "desc": "can't use TLSv1.3 by default, remove the relevant patch available.",

@@ -49,7 +49,7 @@ def todolist_show(data):
     d = details[0]
     print(
         tabulate(
-            d['To-do'], headers={ 'port': 'Port',
+            d['to-do'], headers={ 'port': 'Port',
                                   'desc': 'Description',
                                   'status': 'Status'}
         )
