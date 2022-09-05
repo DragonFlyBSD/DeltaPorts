@@ -22,7 +22,7 @@ BUILD_DEPENDS=	nspr>=4.13.1:devel/nspr \
 		sqlite3>=3.17.0:databases/sqlite3 \
 		${PYTHON_PKGNAMEPREFIX}sqlite3>0:databases/py-sqlite3@${PY_FLAVOR} \
 		v4l_compat>0:multimedia/v4l_compat \
-		autoconf-2.13:devel/autoconf213 \
+		autoconf-2.13:devel/autoconf2.13 \
 		yasm:devel/yasm \
 		zip:archivers/zip
 #		soundtouch>=1.9.0:audio/soundtouch \
