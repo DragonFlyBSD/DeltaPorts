@@ -176,8 +176,8 @@ post-patch:
 		${WRKSRC}/dom/indexedDB/ProfilerHelpers.h
 
 pre-configure:
-	(cd ${WRKSRC} && ${LOCALBASE}/bin/autoconf-2.13)
-	(cd ${WRKSRC}/js/src/ && ${LOCALBASE}/bin/autoconf-2.13)
+	(cd ${WRKSRC} && ${LOCALBASE}/bin/autoconf2.13)
+	(cd ${WRKSRC}/js/src/ && ${LOCALBASE}/bin/autoconf2.13)
 
 post-install:
 	${MKDIR} ${STAGEDIR}${PREFIX}/share/pixmaps
