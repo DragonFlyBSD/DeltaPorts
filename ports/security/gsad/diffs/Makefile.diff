@@ -1,0 +1,18 @@
+--- Makefile.orig	2022-09-09 18:13:29 UTC
++++ Makefile
+@@ -16,7 +16,7 @@ LIB_DEPENDS=	libgvm_base.so:security/gvm
+ RUN_DEPENDS=	doxygen>0:devel/doxygen \
+ 		${PYTHON_PKGNAMEPREFIX}polib>=0:devel/py-polib@${PY_FLAVOR}
+ 
+-USES=		cmake gettext-runtime gnome pkgconfig python
++USES=		cmake gettext-runtime gnome pkgconfig python alias
+ USE_GNOME=	glib20 libxml2
+ 
+ USE_GITHUB=	yes
+@@ -47,5 +47,6 @@ post-install:
+ 	@${ECHO_CMD} "sbin/gsad" >> ${TMPPLIST} >> ${TMPPLIST}
+ 	@${ECHO_CMD} "share/man/man8/gsad.8.gz" >> ${TMPPLIST}
+ 	@${ECHO_CMD} "@dir(gvm,gvm,750) /var/run/gsad" >> ${TMPPLIST}
++	@${ECHO_CMD} "@dir(gvm,gvm,750) /var/run/gvm" >> ${TMPPLIST}
+ 
+ .include <bsd.port.mk>
