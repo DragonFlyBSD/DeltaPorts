@@ -1,11 +1,11 @@
---- Makefile.orig	2021-02-22 18:54:31 UTC
+--- Makefile.orig	2022-09-10 14:33:49 UTC
 +++ Makefile
 @@ -15,7 +15,7 @@ LICENSE_FILE=	${WRKSRC}/LICENSE
- 
- LIB_DEPENDS=	libpcre.so:devel/pcre \
+ LIB_DEPENDS=	libdaq.so:net/libdaq \
  		libdnet.so:net/libdnet \
+ 		libhwloc.so:devel/hwloc2 \
 -		libpcap.so:net/libpcap \
 +		libpcap.so.1:net/libpcap \
- 		libhwloc.so:devel/hwloc2 \
- 		libuuid.so:misc/e2fsprogs-libuuid \
- 		libdaq.so:net/libdaq
+ 		libpcre.so:devel/pcre \
+ 		libuuid.so:misc/e2fsprogs-libuuid
+ 
