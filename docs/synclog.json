@@ -397,7 +397,7 @@
 		{
 		    "port": "net/freerdp",
 		    "desc": "Unlock and update.",
-		    "status": "pending"
+		    "status": "resolved"
 		},
 		{
 		    "port": "devel/elfutils",
