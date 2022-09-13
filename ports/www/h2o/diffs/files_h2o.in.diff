@@ -1,0 +1,11 @@
+--- files/h2o.in.orig	2022-09-13 23:02:33 UTC
++++ files/h2o.in
+@@ -37,7 +37,7 @@ command_args="-m daemon -c ${h2o_config}"
+ procname="%%LOCALBASE%%/bin/perl"
+ 
+ h2o_configtest() {
+-	"${command}" -c "${h2o_config}" -t
++	env "${h2o_env}" "${command}" -c "${h2o_config}" -t
+ }
+ 
+ run_rc_command "$1"
