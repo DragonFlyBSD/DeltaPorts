@@ -1,10 +1,7 @@
 #!/bin/sh
 
-if [ -z "$1" ]; then
-    MP=/usr/ports
-else
-    MP=${1}
-fi
+[ -z "${MP}" ] && MP=/usr/ports
+[ -z "${DP}" ] && DP=/home/automaton/DPorts
 
 failed=""
 
@@ -14,7 +11,7 @@ rm -f /tmp/INDEX /tmp/failed.ports
   while read port
   do
       cd ${port}
-      out="$(/usr/bin/make PORTSDIR=/home/automaton/DPorts PORT_DBDIR=/tmp describe)"
+      out="$(/usr/bin/make PORTSDIR=${DP} PORT_DBDIR=/tmp describe)"
       if [ $? -eq 0 ]; then
 	  echo "${out}" >> /tmp/INDEX
       else
