@@ -1,6 +1,11 @@
 #!/bin/sh
 
-MP=/usr/ports
+if [ -z "$1" ]; then
+    MP=/usr/ports
+else
+    MP=${1}
+fi
+
 failed=""
 
 rm -f /tmp/INDEX /tmp/failed.ports
