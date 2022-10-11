@@ -1,7 +1,6 @@
---- Makefile.orig	2022-06-26 17:04:43 UTC
+--- Makefile.orig	2022-10-11 23:24:10 UTC
 +++ Makefile
-@@ -2,7 +2,7 @@
- 
+@@ -1,6 +1,6 @@
  PORTNAME=	mono
  PORTVERSION=	5.10.1.57
 -PORTREVISION=	3
