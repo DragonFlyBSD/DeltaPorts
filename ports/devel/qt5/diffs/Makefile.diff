@@ -1,13 +1,10 @@
---- Makefile.orig	2021-05-09 12:53:01 UTC
+--- Makefile.orig	2022-10-11 22:32:17 UTC
 +++ Makefile
-@@ -9,8 +9,9 @@ COMMENT=	Cross-platform application and
+@@ -9,6 +9,7 @@ WWW=		https://www.qt.io/
  
  # * phonon4 is not part of Qt itself.
  # * we don't want to pull in wayland just yet.
 +# * do not include qdoc to avoid hard dep on devel/llvmXY
  # XXX(rene) exclude webengine
--USE_QT=		${_USE_QT_ALL:Nphonon4:Ndeclarative:Nwayland:Nwebengine:S/$/_run/}
-+USE_QT=		${_USE_QT_ALL:Nphonon4:Ndeclarative:Nwayland:Nqdoc:Nwebengine:Nwebview:S/$/_run/}
+ USE_QT=		${_USE_QT_ALL:Nphonon4:Ndeclarative:Nwayland:Nwebengine:S/$/:run/}
  USES=		metaport qt:5
- 
- .include <bsd.port.mk>
