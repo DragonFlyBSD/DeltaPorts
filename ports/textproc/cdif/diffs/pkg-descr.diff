@@ -1,9 +1,8 @@
---- pkg-descr.orig	2017-07-04 12:58:20 UTC
+--- pkg-descr.orig	2022-10-12 11:09:36 UTC
 +++ pkg-descr
-@@ -6,6 +6,4 @@ cdif reads that file (stdin if no file)
+@@ -5,5 +5,3 @@ option can be used for that purpose.  If
+ cdif reads that file (stdin if no file) as a output from diff command.
  Lines those don't look like diff output are simply ignored and
  printed.
- 
--Note that this requires fdescfs(5) mounted.
 -
- WWW: https://github.com/kaz-utashiro/cdif
+-Note that this requires fdescfs(5) mounted.
