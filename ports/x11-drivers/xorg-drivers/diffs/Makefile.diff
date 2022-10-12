@@ -1,6 +1,6 @@
---- Makefile.orig	2020-04-07 07:24:05 UTC
+--- Makefile.orig	2022-10-12 00:12:15 UTC
 +++ Makefile
-@@ -18,7 +18,6 @@ INPUT_DRIVERS=		egalax \
+@@ -17,7 +17,6 @@ INPUT_DRIVERS=		egalax \
  			evdev \
  			joystick \
  			keyboard \
@@ -8,49 +8,43 @@
  			mouse \
  			synaptics \
  			void \
-@@ -27,29 +26,30 @@ INPUT_DRIVERS=		egalax \
+@@ -26,26 +25,27 @@ INPUT_DRIVERS=		egalax \
  VIDEO_DRIVERS=		apm \
  			ark \
  			ast \
 -			chips \
 -			cirrus \
  			dummy \
- 			glint \
  			i128 \
  			i740 \
 -			mach64 \
  			mga \
-+			s3 \
+-			neomagic \
+ 			nv \
 +			scfb \
 +			tdfx \
-+			trident \
 +			tseng \
-+			vesa \
-+			vmware
++			vesa
 +
-+VIDEO_DRIVERS_REMOVED=	libinput \
-+			mach64 \
++VIDEO_DRIVERS_REMOVED=	mach64 \
 +			chips \
 +			cirrus \
- 			neomagic \
--			nv \
--			openchrome \
++			neomagic \
+ 			openchrome \
  			r128 \
  			rendition \
--			s3 \
  			s3virge \
  			savage \
 -			scfb \
  			siliconmotion \
  			sis \
 -			tdfx \
--			trident \
 -			tseng \
 -			vesa \
  			voodoo
  
  OPTIONS_DEFAULT=	KEYBOARD \
-@@ -64,11 +64,11 @@ ${a:tu}_DESC=		Install ${a} ${type} driv
+@@ -60,11 +60,11 @@ ${a:tu}_DESC=		Install ${a} ${type} driv
  . endfor
  .endfor
  
@@ -66,7 +60,7 @@
  
  OPTIONS_DEFINE_sparc64=	SUNFFB
  OPTIONS_DEFAULT_sparc64=SUNFFB
-@@ -87,7 +87,7 @@ QUIRKS=		keyboard:kbd
+@@ -83,7 +83,7 @@ QUIRKS=		keyboard:kbd
  .include <bsd.port.options.mk>
  
  # Manual add arch specific drivers so they be added to depend lines.
