@@ -1,9 +1,0 @@
---- distinfo.orig	2022-07-30 11:44:47 UTC
-+++ distinfo
-@@ -1,4 +1,6 @@
- TIMESTAMP = 1657714392
-+SHA256 (go-dragonfly-amd64-go1.17.9.tar.xz) = 02416ddcb1154819ef849ba1de1904c660fbc175bc89b6021f14234db450e8da
-+SIZE (go-dragonfly-amd64-go1.17.9.tar.xz) = 41653156
- SHA256 (go1.17.12.src.tar.gz) = 0d51b5b3f280c0f01f534598c0219db5878f337da6137a9ee698777413607209
- SIZE (go1.17.12.src.tar.gz) = 22205674
- SHA256 (go-freebsd-arm64-go1.17.9.tar.xz) = d9e9180bdc5ad0eec1654679a50084ebb31ecbe9bef24f0bd8ba917db8d1830c

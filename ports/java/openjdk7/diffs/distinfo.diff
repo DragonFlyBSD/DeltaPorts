@@ -1,8 +1,0 @@
---- distinfo.orig	2020-06-16 21:39:47 UTC
-+++ distinfo
-@@ -3,3 +3,5 @@ SHA256 (apache-ant-1.9.14-bin.tar.gz) =
- SIZE (apache-ant-1.9.14-bin.tar.gz) = 5837539
- SHA256 (battleblow-jdk7u-7.261.02.1-jdk7u261-b02.1_GH0.tar.gz) = 708579df5083d52c6ca56ac09425082e0fe1e2c9f986e33a0e131efb3b8733dc
- SIZE (battleblow-jdk7u-7.261.02.1-jdk7u261-b02.1_GH0.tar.gz) = 69823650
-+SHA256 (bootstrap-openjdk6-b41.txz) = b25715684f710544148bf1b246a6e0982d0601755fe9466823c6d8fd1b8bb8a5
-+SIZE (bootstrap-openjdk6-b41.txz) = 26562215
