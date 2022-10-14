@@ -1,0 +1,8 @@
+--- distinfo.orig	2022-09-13 23:54:31 UTC
++++ distinfo
+@@ -11,3 +11,5 @@ SHA256 (go-freebsd-arm7-go1.17.9.tar.xz)
+ SIZE (go-freebsd-arm7-go1.17.9.tar.xz) = 38862156
+ SHA256 (go-freebsd-386-go1.17.9.tar.xz) = 74854fd9e7d596c6abb1ecd55707c58a2f4d6ee875376e26bb5519889507291b
+ SIZE (go-freebsd-386-go1.17.9.tar.xz) = 40566908
++SHA256 (go-dragonfly-amd64-go1.17.9.tar.xz) = 02416ddcb1154819ef849ba1de1904c660fbc175bc89b6021f14234db450e8da
++SIZE (go-dragonfly-amd64-go1.17.9.tar.xz) = 41653156
