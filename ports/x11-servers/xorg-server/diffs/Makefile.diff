@@ -1,11 +1,21 @@
---- Makefile.orig	2022-10-12 11:12:47 UTC
-+++ Makefile
-@@ -82,6 +82,12 @@ MESON_ARGS+=	-Dudev=false
+--- Makefile.orig	2022-10-15 16:10:43.598460000 +0200
++++ Makefile	2022-10-15 16:12:16.366351000 +0200
+@@ -69,9 +69,8 @@
+ .endfor
+ 
+ .if ${FLAVOR} == xorg
+-LIB_DEPENDS+=		libudev.so:devel/libudev-devd \
+-			libxcvt.so:x11/libxcvt
+-MESON_ARGS+=	-Dudev=true \
++LIB_DEPENDS+=	libxcvt.so:x11/libxcvt
++MESON_ARGS+=	-Dudev=false \
+ 		-Dlog_dir=/var/log \
+ 		-Dsuid_wrapper=true
+ .else
+@@ -82,6 +81,10 @@
  MESON_ARGS+=	-Ddrm=true
  LIB_DEPENDS+=	libdrm.so:graphics/libdrm \
  		libepoxy.so:graphics/libepoxy
-+# Recommended by M.Dillon for sane security defaults
-+CONFIGURE_ARGS+=	--enable-xcsecurity
 +# zrj: no glamor for xwayland (needs DRI3)
 +. if ${PORTNAME} == "xwayland"
 +CONFIGURE_ARGS+= --disable-dri3 --disable-glamor
@@ -13,3 +23,12 @@
  .endif
  
  .if ${FLAVOR} == xephyr
+@@ -120,7 +123,7 @@
+ MESON_ARGS+=	-Dsha1=libmd
+ .endif
+ 
+-.if ${ARCH} == aarch64 || ${ARCH} == amd64 || ${ARCH} == armv7 || ${ARCH} == i386 || ${ARCH} == powerpc64 || ${ARCH} == powerpc64le
++.if ${ARCH} == aarch64 || ${ARCH} == x86_64 || ${ARCH} == armv7 || ${ARCH} == i386 || ${ARCH} == powerpc64 || ${ARCH} == powerpc64le
+ LIB_DEPENDS+=	libunwind.so:devel/libunwind
+ .endif
+ 
