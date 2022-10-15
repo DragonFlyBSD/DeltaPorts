@@ -1,5 +1,5 @@
 {
-    "current": "2022Q3",
+    "current": "2022Q4",
     "releases": [
 	{
 	    "id": "2020S07",
@@ -360,6 +360,26 @@
 	    "rejects": [],
 	    "to-do": [
 		{
+		    "port": "mail/postfix",
+		    "desc": "Currently a dport until 3.6.x can be built with LibreSSL, mail/postfix35 IGNORED until then",
+		    "status": "resolved"
+		},
+		{
+		    "port": "net/freerdp",
+		    "desc": "Unlock and update.",
+		    "status": "resolved"
+		}
+	    ],
+	    "cherry-picks": [
+	    ]
+	},
+	{
+	    "id": "2022Q4",
+	    "timestamp": "Sat Oct 8 11:44:58 2022 +0200",
+	    "base_commit": "451c8cdfd6ce240e4fc6f4ae6855a410e3900fb7",
+	    "rejects": [],
+	    "to-do": [
+		{
 		    "port": "devel/qca",
 		    "desc": "can't use TLSv1.3 by default, remove the relevant patch available.",
 		    "status": "pending"
@@ -375,11 +395,6 @@
 		    "status": "pending"
 		},
 		{
-		    "port": "mail/postfix",
-		    "desc": "Currently a dport until 3.6.x can be built with LibreSSL, mail/postfix35 IGNORED until then",
-		    "status": "resolved"
-		},
-		{
 		    "port": "sysutils/rubygem-vagrant-libvirt",
 		    "desc": "Newport to be switched to PORT once the PR is merged.",
 		    "status": "pending"
@@ -393,11 +408,6 @@
 		    "port": "devel/libvirt",
 		    "desc": "Unlock and update. Make sure nvmm still works.",
 		    "status": "pending"
-		},
-		{
-		    "port": "net/freerdp",
-		    "desc": "Unlock and update.",
-		    "status": "resolved"
 		},
 		{
 		    "port": "devel/elfutils",
