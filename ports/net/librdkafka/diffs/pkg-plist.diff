@@ -1,0 +1,10 @@
+--- pkg-plist.orig	2022-10-19 10:18:12.362968000 +0200
++++ pkg-plist	2022-10-19 10:18:56.331963000 +0200
+@@ -4,6 +4,7 @@
+ lib/librdkafka++.a
+ lib/librdkafka++.so
+ lib/librdkafka++.so.1
++lib/librdkafka-static.a
+ lib/librdkafka.a
+ lib/librdkafka.so
+ lib/librdkafka.so.1
