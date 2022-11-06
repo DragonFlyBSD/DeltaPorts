@@ -1,1 +1,2 @@
-BROKEN= needs porting
+CFLAGS+=	-DSIGRTMIN=50 -DSIGRTMAX=54
+
