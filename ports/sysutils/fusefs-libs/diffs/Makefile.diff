@@ -1,11 +1,11 @@
---- Makefile.orig	2019-05-15 01:19:02 UTC
+--- Makefile.orig	2022-11-06 17:53:15 UTC
 +++ Makefile
-@@ -13,8 +13,6 @@ COMMENT=	FUSE allows filesystem implemen
+@@ -13,8 +13,6 @@ WWW=		https://github.com/libfuse/libfuse
  LICENSE=	LGPL21
  LICENSE_FILE=	${WRKSRC}/COPYING.LIB
  
 -IGNORE_DragonFly=	fusefs has not been implemented on DragonFly
 -
- PORTSCOUT=	limit:^2\.
+ USES=		autoreconf gettext-tools iconv libtool
+ USE_LDCONFIG=	yes
  
- USE_GITHUB=	yes
