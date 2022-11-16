@@ -1,0 +1,20 @@
+--- pkg-plist.orig	2022-11-16 17:15:53.979028000 +0100
++++ pkg-plist	2022-11-16 17:16:44.337915000 +0100
+@@ -265,9 +265,17 @@
+ libexec/singular/MOD/machinelearning.a
+ libexec/singular/MOD/machinelearning.so
+ libexec/singular/MOD/p_Procs_FieldGeneral.so
++libexec/singular/MOD/p_Procs_FieldGeneral.so.0
++libexec/singular/MOD/p_Procs_FieldGeneral.so.0.0.0
+ libexec/singular/MOD/p_Procs_FieldIndep.so
++libexec/singular/MOD/p_Procs_FieldIndep.so.0
++libexec/singular/MOD/p_Procs_FieldIndep.so.0.0.0
+ libexec/singular/MOD/p_Procs_FieldQ.so
++libexec/singular/MOD/p_Procs_FieldQ.so.0
++libexec/singular/MOD/p_Procs_FieldQ.so.0.0.0
+ libexec/singular/MOD/p_Procs_FieldZp.so
++libexec/singular/MOD/p_Procs_FieldZp.so.0
++libexec/singular/MOD/p_Procs_FieldZp.so.0.0.0
+ libexec/singular/MOD/partialgb.a
+ libexec/singular/MOD/partialgb.so
+ libexec/singular/MOD/pyobject.a
