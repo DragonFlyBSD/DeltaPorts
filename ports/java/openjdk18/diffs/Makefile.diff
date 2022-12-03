@@ -1,0 +1,26 @@
+--- Makefile.orig	2022-12-03 23:18:50 UTC
++++ Makefile
+@@ -142,6 +142,7 @@ JDK_BUILD_JVM=	server
+ MAKE_ENV+=		--with-toolchain-type=${COMPILER_TYPE}
+ CONFIGURE_ARGS+=	--with-toolchain-type=${COMPILER_TYPE}
+ 
++.if ${OPSYS} == "FreeBSD"
+ .if ${COMPILER_TYPE} == gcc
+ USE_GCC=	yes
+ CONFIGURE_ARGS+=	--with-extra-ldflags="-Wl,-rpath=${LOCALBASE}/lib/gcc${GCC_DEFAULT} -L${LOCALBASE}/lib/gcc${GCC_DEFAULT}" \
+@@ -158,6 +159,7 @@ CONFIGURE_ARGS+=	--with-extra-cflags="${
+ CONFIGURE_ARGS+=	--with-extra-cxxflags="${EXTRA_CFLAGS}"
+ .endif
+ .endif
++.endif
+ 
+ .if ${ARCH} == aarch64 || ${ARCH:Mpowerpc64*}
+ CONFIGURE_ARGS+=	--disable-warnings-as-errors
+@@ -190,6 +192,7 @@ post-patch:
+ 
+ do-install:
+ 	@${MKDIR} ${STAGEDIR}${INSTALLDIR}
++	${CP} -rv ${JDK_IMAGEDIR}/include/freebsd ${JDK_IMAGEDIR}/include/dragonfly
+ 	@cd ${JDK_IMAGEDIR} && ${COPYTREE_SHARE} . ${STAGEDIR}${INSTALLDIR}
+ 	@cd ${STAGEDIR}${INSTALLDIR} && \
+ 		${FIND} bin -type f -exec ${CHMOD} ${BINMODE} {} \;
