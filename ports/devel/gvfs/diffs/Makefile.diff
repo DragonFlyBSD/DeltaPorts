@@ -1,0 +1,12 @@
+--- Makefile.orig	2022-12-04 23:25:04.078337000 +0100
++++ Makefile	2022-12-04 23:25:11.348634000 +0100
+@@ -20,8 +20,7 @@
+ 		libgudev-1.0.so:devel/libgudev \
+ 		libudisks2.so:sysutils/libudisks \
+ 		libsecret-1.so:security/libsecret
+-RUN_DEPENDS=	bsdisks>0:sysutils/bsdisks \
+-		lsof:sysutils/lsof
++RUN_DEPENDS=	bsdisks>0:sysutils/bsdisks
+ PORTSCOUT=	limitw:1,even
+ 
+ USES=		cpe gettext gnome libarchive localbase meson \
