@@ -1,0 +1,11 @@
+--- Makefile.orig	2022-12-05 00:20:18 UTC
++++ Makefile
+@@ -19,6 +19,8 @@ USE_QT=		core gui svg widgets xml \
+ 		buildtools:build qmake:build
+ USE_XORG=	x11
+ 
++USE_GCC_VERSION=    11
++
+ # Only enable Qt binding, and disable everything else
+ CMAKE_ON=	MOD_GLAXNIMATE
+ CMAKE_OFF=	MOD_AVFORMAT MOD_DECKLINK MOD_FEEDS MOD_FREI0R MOD_GDK MOD_GTK2 \
