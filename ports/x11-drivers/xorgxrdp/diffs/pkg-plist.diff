@@ -1,0 +1,10 @@
+--- pkg-plist.orig	2023-01-02 19:50:10.243006000 +0100
++++ pkg-plist	2023-01-02 19:50:37.513370000 +0100
+@@ -1,5 +1,5 @@
+-@dir /etc/X11/xrdp
+-/etc/X11/xrdp/xorg.conf
++@dir etc/X11/xrdp
++etc/X11/xrdp/xorg.conf
+ lib/xorg/modules/drivers/xrdpdev_drv.a
+ lib/xorg/modules/drivers/xrdpdev_drv.so
+ lib/xorg/modules/input/xrdpkeyb_drv.a
