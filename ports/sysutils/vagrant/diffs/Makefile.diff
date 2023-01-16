@@ -1,19 +1,19 @@
---- Makefile.orig	2021-08-30 17:02:30 UTC
+--- Makefile.orig	2023-01-16 23:35:24 UTC
 +++ Makefile
-@@ -69,6 +69,7 @@ ZSH_PLIST_FILES=	share/share/zsh/site-fu
+@@ -78,6 +78,7 @@ REMOVE_TARGETS=	.envrc .runner.sh .vimrc
+ 		vagrant.gemspec
  
  post-patch:
- 	@${REINPLACE_CMD} -e 's|@PREFIX@|${PREFIX}|g' ${WRKSRC}/bin/vagrant
 +	@${REINPLACE_CMD} -e 's|@DATADIR@|${DATADIR}|g' ${WRKSRC}/lib/vagrant/plugin/manager.rb
- 
- do-build:
- 	(cd ${WRKSRC}; (${ECHO_CMD} -e "install:\n\techo\n") > Makefile)
-@@ -83,6 +84,8 @@ do-build:
+ 	@${REINPLACE_CMD} -e 's|@PREFIX@|${PREFIX}|g' \
+ 		${WRKSRC}/bin/vagrant \
+ 		${WRKSRC}/plugins/providers/virtualbox/action/network.rb \
+@@ -96,6 +97,8 @@ do-build:
  		${STAGEDIR}${DATADIR}/embedded/rgloader/loader.rb
  
  post-install:
 +	${MKDIR} ${STAGEDIR}${DATADIR}/plugins.d
 +	${ECHO} '{}' > ${STAGEDIR}${DATADIR}/plugins.json
  	${RMDIR} ${STAGEDIR}${PREFIX}/lib/ruby/gems/${RUBY_VER}/doc
- 	${RM} ${STAGEDIR}${PREFIX}/lib/ruby/gems/${RUBY_VER}/gems/${PORTNAME}-${PORTVERSION}/.runner.sh
- 
+ 	${RM} -r ${STAGEDIR}${PREFIX}/lib/ruby/gems/${RUBY_VER}/gems/${PORTNAME}-${PORTVERSION}/nix
+ .for FILE in ${REMOVE_TARGETS}
