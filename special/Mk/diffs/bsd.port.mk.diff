@@ -1,4 +1,4 @@
---- bsd.port.mk.orig	2022-10-11 20:54:04 UTC
+--- bsd.port.mk.orig	2023-01-16 18:33:44 UTC
 +++ bsd.port.mk
 @@ -41,8 +41,9 @@ FreeBSD_MAINTAINER=	portmgr@FreeBSD.org
  #				  "FreeBSD," "NetBSD," or "OpenBSD" as appropriate.
@@ -11,7 +11,7 @@
  #
  # This is the beginning of the list of all variables that need to be
  # defined in a port, listed in order that they should be included
-@@ -466,6 +467,12 @@ FreeBSD_MAINTAINER=	portmgr@FreeBSD.org
+@@ -471,6 +472,12 @@ FreeBSD_MAINTAINER=	portmgr@FreeBSD.org
  #				  Default: ${MASTERDIR}/scripts
  # FILESDIR		- A directory containing any miscellaneous additional files.
  #				  Default: ${MASTERDIR}/files
@@ -24,14 +24,13 @@
  # PKGDIR		- A directory containing any package creation files.
  #				  Default: ${MASTERDIR}
  # SRC_BASE		- The root of the src tree.  (Some ports require this to get
-@@ -1012,12 +1019,18 @@ LC_ALL=		C
+@@ -1017,12 +1024,17 @@ LC_ALL=		C
  # These need to be absolute since we don't know how deep in the ports
  # tree we are and thus can't go relative.  They can, of course, be overridden
  # by individual Makefiles or local system make configuration.
--_LIST_OF_WITH_FEATURES=	debug lto ssp
-+#
+-_LIST_OF_WITH_FEATURES=	debug lto ssp pie relro bind_now
 +# TODO(tuxillo): Find out why ssp needs to be removed from the list.
-+_LIST_OF_WITH_FEATURES=	debug lto
++_LIST_OF_WITH_FEATURES=	debug lto pie relro bind_now
  _DEFAULT_WITH_FEATURES=	ssp
 -PORTSDIR?=		/usr/ports
 +WITH_PKGNG?=		yes
@@ -46,7 +45,7 @@
  _DISTDIR?=		${DISTDIR}/${DIST_SUBDIR}
  INDEXDIR?=		${PORTSDIR}
  SRC_BASE?=		/usr/src
-@@ -1146,6 +1159,10 @@ OSVERSION!=	${AWK} '/^\#define[[:blank:]
+@@ -1151,6 +1163,10 @@ OSVERSION!=	${AWK} '/^\#define[[:blank:]
  _OSRELEASE!= ${AWK} -v version=${OSVERSION} 'END { printf("%d.%d-CROSS", version / 100000, version / 1000 % 100) }' < /dev/null
  .    endif
  
@@ -57,7 +56,7 @@
  # Get the operating system type
  .    if !defined(OPSYS)
  OPSYS!=	${UNAME} -s
-@@ -1153,25 +1170,29 @@ OPSYS!=	${UNAME} -s
+@@ -1158,25 +1174,29 @@ OPSYS!=	${UNAME} -s
  _EXPORTED_VARS+=	OPSYS
  
  .    if !defined(_OSRELEASE)
@@ -101,7 +100,7 @@
  
  .    if ${OPSYS} == FreeBSD && (${OSVERSION} < 1203000 || (${OSVERSION} >= 1300000 && ${OSVERSION} < 1301000))
  _UNSUPPORTED_SYSTEM_MESSAGE=	Ports Collection support for your ${OPSYS} version has ended, and no ports\
-@@ -1190,20 +1211,6 @@ show-unsupported-system-error:
+@@ -1195,20 +1215,6 @@ show-unsupported-system-error:
  .      endif
  .    endif
  
@@ -122,7 +121,7 @@
  # Only define tools here (for transition period with between pkg tools)
  .include "${PORTSDIR}/Mk/bsd.commands.mk"
  
-@@ -1354,9 +1361,11 @@ PKGNAME=	${PKGNAMEPREFIX}${PORTNAME}${PK
+@@ -1359,9 +1365,11 @@ PKGNAME=	${PKGNAMEPREFIX}${PORTNAME}${PK
  DISTVERSIONFULL=	${DISTVERSIONPREFIX}${DISTVERSION:C/:(.)/\1/g}${DISTVERSIONSUFFIX}
  DISTNAME?=	${PORTNAME}-${DISTVERSIONFULL}
  
@@ -136,7 +135,7 @@
  TEMPLATES?=		${PORTSDIR}/Templates
  KEYWORDS?=		${PORTSDIR}/Keywords
  WRAPPERSDIR?=	${PORTSDIR}/Mk/Wrappers/
-@@ -1647,6 +1656,7 @@ QA_ENV+=		USESSHAREDMIMEINFO=yes
+@@ -1652,6 +1660,7 @@ QA_ENV+=		USESSHAREDMIMEINFO=yes
  .    if !empty(USES:Mterminfo)
  QA_ENV+=		USESTERMINFO=yes
  .    endif
@@ -144,7 +143,7 @@
  
  CO_ENV+=		STAGEDIR=${STAGEDIR} \
  				PREFIX=${PREFIX} \
-@@ -1674,7 +1684,7 @@ _WRKDIR=	work
+@@ -1679,7 +1688,7 @@ _WRKDIR=	work
  _WRKDIR=	work-${FLAVOR}
  .    endif
  
@@ -153,7 +152,7 @@
  BINARY_LINKDIR=	${WRKDIR}/.bin
  PATH:=			${BINARY_LINKDIR}:${PATH}
  .    if !${MAKE_ENV:MPATH=*} && !${CONFIGURE_ENV:MPATH=*}
-@@ -1756,7 +1766,14 @@ PLIST_SUB_SED?= ${PLIST_SUB_SED_tmp3:C/(
+@@ -1761,7 +1770,14 @@ PLIST_SUB_SED?= ${PLIST_SUB_SED_tmp3:C/(
  
  # kludge to strip trailing whitespace from CFLAGS;
  # sub-configure will not # survive double space
@@ -169,7 +168,7 @@
  
  .    if defined(WITHOUT_CPU_CFLAGS)
  .      if defined(_CPUCFLAGS)
-@@ -1789,21 +1806,6 @@ MAKE_ENV+=		SHELL=${MAKE_SHELL} NO_LINT=
+@@ -1792,21 +1808,6 @@ MAKE_ENV+=		SHELL=${MAKE_SHELL} NO_LINT=
  PATCH_DEPENDS+=		${LOCALBASE}/bin/unzip:archivers/unzip
  .    endif
  
@@ -191,7 +190,7 @@
  .    if defined(IA32_BINARY_PORT) && ${ARCH} != "i386"
  .      if ${ARCH} == "amd64"
  .        if !defined(HAVE_COMPAT_IA32_KERN)
-@@ -1829,9 +1831,28 @@ PKG_ORIGIN=		ports-mgmt/pkg-devel
+@@ -1832,9 +1833,28 @@ PKG_ORIGIN=		ports-mgmt/pkg-devel
  PKG_DEPENDS+=	${LOCALBASE}/sbin/pkg:${PKG_ORIGIN}
  .    endif
  
@@ -223,7 +222,7 @@
  
  .    if defined(LLD_UNSAFE) && ${/usr/bin/ld:L:tA} == /usr/bin/ld.lld
  LDFLAGS+=	-fuse-ld=bfd
-@@ -1848,7 +1869,7 @@ USE_BINUTILS=	yes
+@@ -1851,7 +1871,7 @@ USE_BINUTILS=	yes
  .    endif
  
  .    if defined(USE_BINUTILS) && !defined(DISABLE_BINUTILS)
@@ -232,7 +231,7 @@
  BINUTILS?=	ADDR2LINE AR AS CPPFILT GPROF LD NM OBJCOPY OBJDUMP RANLIB \
  	READELF SIZE STRINGS
  BINUTILS_NO_MAKE_ENV?=
-@@ -2004,8 +2025,10 @@ DISTINFO_FILE?=		${MASTERDIR}/distinfo
+@@ -2010,8 +2030,10 @@ DISTINFO_FILE?=		${MASTERDIR}/distinfo
  MAKE_FLAGS?=	-f
  MAKEFILE?=		Makefile
  MAKE_CMD?=		${BSDMAKE}
@@ -243,7 +242,7 @@
  			CC="${CC}" CFLAGS="${CFLAGS}" \
  			CPP="${CPP}" CPPFLAGS="${CPPFLAGS}" \
  			LDFLAGS="${LDFLAGS}" LIBS="${LIBS}" \
-@@ -2042,8 +2065,8 @@ MAKE_JOBS_NUMBER=	1
+@@ -2048,8 +2070,8 @@ MAKE_JOBS_NUMBER=	1
  _MAKE_JOBS_NUMBER:=	${MAKE_JOBS_NUMBER}
  .      else
  .        if !defined(_SMP_CPUS)
@@ -254,7 +253,7 @@
  _EXPORTED_VARS+=	_SMP_CPUS
  _MAKE_JOBS_NUMBER=	${_SMP_CPUS}
  .      endif
-@@ -2427,7 +2450,8 @@ PATCH_SITES_TMP=
+@@ -2433,7 +2455,8 @@ PATCH_SITES_TMP=
  
  # The primary backup site.
  MASTER_SITE_BACKUP?=	\
@@ -264,7 +263,7 @@
  MASTER_SITE_BACKUP:=	${MASTER_SITE_BACKUP:S^\${DIST_SUBDIR}/^^}
  
  # If the user has MASTER_SITE_FREEBSD set, go to the FreeBSD repository
-@@ -2663,6 +2687,8 @@ SET_LATE_CONFIGURE_ARGS= \
+@@ -2669,6 +2692,8 @@ SET_LATE_CONFIGURE_ARGS= \
  SCRIPTS_ENV+=	CURDIR=${MASTERDIR} DISTDIR=${DISTDIR} \
  		  WRKDIR=${WRKDIR} WRKSRC=${WRKSRC} PATCHDIR=${PATCHDIR} \
  		  SCRIPTDIR=${SCRIPTDIR} FILESDIR=${FILESDIR} \
@@ -273,7 +272,7 @@
  		  PORTSDIR=${PORTSDIR} PREFIX=${PREFIX} LOCALBASE=${LOCALBASE}
  
  .    if defined(BATCH)
-@@ -2741,7 +2767,7 @@ DESKTOPDIR?=		${PREFIX}/share/applicatio
+@@ -2747,7 +2772,7 @@ DESKTOPDIR?=		${PREFIX}/share/applicatio
  
  # Check the machine architectures
  .    if defined(ONLY_FOR_ARCHS)
@@ -282,7 +281,7 @@
  .        if ${ARCH:M${__ARCH}} != ""
  __ARCH_OK?=		1
  .        endif
-@@ -2751,7 +2777,7 @@ __ARCH_OK?=		1
+@@ -2757,7 +2782,7 @@ __ARCH_OK?=		1
  .    endif
  
  .    if defined(NOT_FOR_ARCHS)
@@ -291,7 +290,7 @@
  .        if ${ARCH:M${__NARCH}} != ""
  .undef __ARCH_OK
  .        endif
-@@ -2760,9 +2786,9 @@ __ARCH_OK?=		1
+@@ -2766,9 +2791,9 @@ __ARCH_OK?=		1
  
  .    if !defined(__ARCH_OK)
  .      if defined(ONLY_FOR_ARCHS)
@@ -303,7 +302,7 @@
  .      endif
  IGNORE+=	while you are running ${ARCH}
  
-@@ -2831,6 +2857,14 @@ IGNORE=		is marked as broken on ${OPSYS}
+@@ -2837,6 +2862,14 @@ IGNORE=		is marked as broken on ${OPSYS}
  IGNORE=		is forbidden: ${FORBIDDEN}
  .      endif
  
@@ -318,7 +317,7 @@
  # Define the text to be output to LEGAL
  .      if defined(LEGAL_TEXT)
  LEGAL= ${LEGAL_TEXT}
-@@ -2916,6 +2950,7 @@ all:
+@@ -2922,6 +2955,7 @@ all:
  	  DISTDIR=${DISTDIR} WRKDIR=${WRKDIR} WRKSRC=${WRKSRC} \
  	  PATCHDIR=${PATCHDIR} SCRIPTDIR=${SCRIPTDIR} \
  	  FILESDIR=${FILESDIR} PORTSDIR=${PORTSDIR} PREFIX=${PREFIX} \
@@ -326,7 +325,7 @@
  	  BUILD_DEPENDS="${BUILD_DEPENDS}" RUN_DEPENDS="${RUN_DEPENDS}" \
  	  CONFLICTS="${CONFLICTS}" \
  	${ALL_HOOK}
-@@ -3176,6 +3211,7 @@ do-patch:
+@@ -3182,6 +3216,7 @@ do-patch:
  			dp_OPSYS="${OPSYS}" \
  			dp_PATCH="${PATCH}" \
  			dp_PATCHDIR="${PATCHDIR}" \
@@ -334,7 +333,7 @@
  			dp_PATCHFILES="${_PATCHFILES2}" \
  			dp_PATCH_ARGS=${PATCH_ARGS:Q} \
  			dp_PATCH_DEBUG_TMP="${PATCH_DEBUG_TMP}" \
-@@ -3258,6 +3294,14 @@ do-configure:
+@@ -3264,6 +3299,14 @@ do-configure:
  DO_MAKE_BUILD?=	${SETENV} ${MAKE_ENV} ${MAKE_CMD} ${MAKE_FLAGS} ${MAKEFILE} ${_MAKE_JOBS} ${MAKE_ARGS:N${DESTDIRNAME}=*}
  .    if !target(do-build)
  do-build:
@@ -349,7 +348,7 @@
  	@(cd ${BUILD_WRKSRC}; if ! ${DO_MAKE_BUILD} ${ALL_TARGET}; then \
  		if [ -n "${BUILD_FAIL_MESSAGE}" ] ; then \
  			${ECHO_MSG} "===> Compilation failed unexpectedly."; \
-@@ -3756,6 +3800,7 @@ do-clean:
+@@ -3762,6 +3805,7 @@ do-clean:
  	@if [ -d ${WRKDIR} ]; then \
  		if [ -w ${WRKDIR} ]; then \
  			${RM} -r ${WRKDIR}; \
@@ -357,7 +356,7 @@
  		else \
  			${ECHO_MSG} "===>   ${WRKDIR} not writable, skipping"; \
  		fi; \
-@@ -4119,7 +4164,7 @@ FETCH_LIST?=	for i in $$deps; do \
+@@ -4126,7 +4170,7 @@ FETCH_LIST?=	for i in $$deps; do \
  			else	\
  				continue;	\
  			fi;;	\
@@ -366,7 +365,7 @@
  				continue;	\
  			fi;;	\
  		esac;	\
-@@ -4429,10 +4474,15 @@ _SUB_LIST_TEMP=	${SUB_LIST:S/$/!g/:S/^/
+@@ -4436,10 +4480,15 @@ _SUB_LIST_TEMP=	${SUB_LIST:S/$/!g/:S/^/
  .    if !target(apply-slist) && defined(SUB_FILES)
  apply-slist:
  .      for file in ${SUB_FILES}
@@ -385,7 +384,7 @@
  .        endif
  .      endfor
  .      for i in pkg-message pkg-install pkg-deinstall pkg-req
-@@ -5210,26 +5260,26 @@ _SANITY_SEQ=	050:post-chroot 100:pre-eve
+@@ -5217,26 +5266,26 @@ _SANITY_SEQ=	050:post-chroot 100:pre-eve
  				350:check-desktop-entries 400:check-depends \
  				500:check-deprecated \
  				550:check-vulnerable 600:check-license 650:check-config \
@@ -416,7 +415,7 @@
  				${_OPTIONS_patch} ${_USES_patch}
  _CONFIGURE_DEP=	patch
  _CONFIGURE_SEQ=	150:build-depends 151:lib-depends 160:create-binary-alias \
-@@ -5237,11 +5287,11 @@ _CONFIGURE_SEQ=	150:build-depends 151:li
+@@ -5244,11 +5293,11 @@ _CONFIGURE_SEQ=	150:build-depends 151:li
  				200:configure-message 210:apply-slist \
  				300:pre-configure 450:pre-configure-script \
  				490:run-autotools-fixup 500:do-configure 700:post-configure \
@@ -430,7 +429,7 @@
  				${_OPTIONS_build} ${_USES_build}
  _STAGE_DEP=		build
  # STAGE is special in its numbering as it has install and stage, so install is
-@@ -5250,7 +5300,7 @@ _STAGE_SEQ=		050:stage-message 100:stage
+@@ -5257,7 +5306,7 @@ _STAGE_SEQ=		050:stage-message 100:stage
  				300:pre-install \
  				400:generate-plist 450:pre-su-install 475:create-users-groups \
  				500:do-install 550:kmod-post-install 600:fixup-lib-pkgconfig 700:post-install \
@@ -439,7 +438,7 @@
  				860:install-rc-script 870:install-ldconfig-file \
  				880:install-license 890:install-desktop-entries \
  				900:add-plist-info 910:add-plist-docs 920:add-plist-examples \
-@@ -5264,7 +5314,7 @@ stage-qa: stage
+@@ -5271,7 +5320,7 @@ stage-qa: stage
  .    endif
  _TEST_DEP=		stage
  _TEST_SEQ=		100:test-message 150:test-depends 300:pre-test 500:do-test \
