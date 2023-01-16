@@ -1,5 +1,0 @@
---- Makefile.diff	2019-12-22 19:07:26 UTC
-+++ Makefile
-@@ -54 +54 @@
--MAKE_JOBS_UNSAFE=	yes
-+#MAKE_JOBS_UNSAFE=	yes
