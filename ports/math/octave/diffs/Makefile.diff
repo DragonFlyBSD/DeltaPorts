@@ -1,11 +1,11 @@
---- Makefile.orig	2014-01-29 19:45:41.975449000 +0000
+--- Makefile.orig	2023-01-16 22:58:01 UTC
 +++ Makefile
-@@ -80,7 +80,7 @@ LAPACK=		-lalapack -lptcblas
- .endif
+@@ -58,7 +58,7 @@ USE_QT=		core gui help network opengl pr
+ USE_XORG=	x11 xcursor xext xfixes xft xinerama xrender
+ USE_GL=		gl glu
  
- OCTAVE_VERSION=	${PORTVERSION}
 -GNU_HOST=	${ARCH}-portbld-freebsd${OSREL}
 +GNU_HOST=	${CONFIGURE_TARGET}
- PLIST_SUB=	OCTAVE_VERSION=${OCTAVE_VERSION} GNU_HOST=${GNU_HOST}
- INCLUDES=	-I${LOCALBASE}/include
- LDFLAGS+=	-L${LOCALBASE}/lib ${PTHREAD_LIBS}
+ PLIST_SUB=	GNU_HOST=${GNU_HOST} \
+ 		OCTAVE_VERSION=${OCTAVE_VERSION}
+ LDFLAGS+=	-L${LOCALBASE}/lib/qt5
