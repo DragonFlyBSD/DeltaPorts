@@ -1,26 +1,26 @@
---- pkg-plist.orig	2022-05-24 17:15:00 UTC
+--- pkg-plist.orig	2023-01-16 23:34:08 UTC
 +++ pkg-plist
-@@ -27,7 +27,6 @@ share/applications/gnome-region-panel.de
- share/applications/gnome-removable-media-panel.desktop
+@@ -28,7 +28,6 @@ share/applications/gnome-removable-media
+ share/applications/gnome-screen-panel.desktop
  share/applications/gnome-search-panel.desktop
  share/applications/gnome-sharing-panel.desktop
 -share/applications/gnome-sound-panel.desktop
  share/applications/gnome-universal-access-panel.desktop
  share/applications/gnome-usage-panel.desktop
  share/applications/gnome-user-accounts-panel.desktop
-@@ -72,7 +71,6 @@ share/icons/hicolor/scalable/apps/org.gn
- share/icons/hicolor/scalable/apps/org.gnome.Settings-screen-lock-symbolic.svg
+@@ -73,7 +72,6 @@ share/icons/hicolor/scalable/apps/org.gn
+ share/icons/hicolor/scalable/apps/org.gnome.Settings-screen-symbolic.svg
  share/icons/hicolor/scalable/apps/org.gnome.Settings-search-symbolic.svg
  share/icons/hicolor/scalable/apps/org.gnome.Settings-sharing-symbolic.svg
 -share/icons/hicolor/scalable/apps/org.gnome.Settings-sound-symbolic.svg
  share/icons/hicolor/scalable/apps/org.gnome.Settings-time-symbolic.svg
  share/icons/hicolor/scalable/apps/org.gnome.Settings-users-symbolic.svg
  share/icons/hicolor/scalable/apps/org.gnome.Settings.Devel.svg
-@@ -322,7 +320,3 @@ share/polkit-1/actions/org.gnome.control
+@@ -324,7 +322,3 @@ share/polkit-1/actions/org.gnome.control
  share/polkit-1/actions/org.gnome.controlcenter.remote-login-helper.policy
  share/polkit-1/actions/org.gnome.controlcenter.user-accounts.policy
  share/polkit-1/rules.d/gnome-control-center.rules
--share/sounds/gnome/default/alerts/bark.ogg
--share/sounds/gnome/default/alerts/drip.ogg
--share/sounds/gnome/default/alerts/glass.ogg
--share/sounds/gnome/default/alerts/sonar.ogg
+-share/sounds/gnome/default/alerts/click.ogg
+-share/sounds/gnome/default/alerts/hum.ogg
+-share/sounds/gnome/default/alerts/string.ogg
+-share/sounds/gnome/default/alerts/swing.ogg
