@@ -1,9 +1,0 @@
---- pkg-plist.orig	2016-03-05 12:05:41 UTC
-+++ pkg-plist
-@@ -1,6 +1,3 @@
--bin/utp_send
--bin/utp_recv
--bin/utp_test
- lib/libutp.so.0
- lib/libutp.so
- lib/libutp.a
