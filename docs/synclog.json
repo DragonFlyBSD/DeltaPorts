@@ -1,5 +1,5 @@
 {
-    "current": "2022Q4",
+    "current": "2023Q1",
     "releases": [
 	{
 	    "id": "2020S07",
@@ -378,6 +378,15 @@
 	    "timestamp": "Sat Oct 8 11:44:58 2022 +0200",
 	    "base_commit": "451c8cdfd6ce240e4fc6f4ae6855a410e3900fb7",
 	    "rejects": [],
+	    "to-do": [],
+	    "cherry-picks": [
+	    ]
+	},
+	{
+	    "id": "2023Q1",
+	    "timestamp": "Mon Jan 16 18:31:10 2023 +0100",
+	    "base_commit": "58494ddd2f6c97f1d97a64e374e7b45c6b60d0cb",
+	    "rejects": [],
 	    "to-do": [
 		{
 		    "port": "devel/qca",
@@ -424,6 +433,5 @@
 	    "cherry-picks": [
 	    ]
 	}
-
     ]
 }
