@@ -1,0 +1,10 @@
+--- Makefile.orig	2023-01-24 21:13:58 UTC
++++ Makefile
+@@ -52,7 +52,6 @@ GOOD_GST_ENABLED_PLUGINS=	alpha \
+ 				shapewipe \
+ 				smpte \
+ 				spectrum \
+-				tests \
+ 				udp \
+ 				videobox \
+ 				videocrop \
