@@ -1,0 +1,5 @@
+# To find libelf, which is a lib depend
+USES+=	localbase:ldargs
+
+# Our base libelf is internalized in libexecinfo
+LIB_DEPENDS+=	libelf.so.0:devel/libelf
