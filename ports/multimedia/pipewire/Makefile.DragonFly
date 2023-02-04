@@ -1,9 +1,6 @@
 
 LDFLAGS+=     -L${LOCALBASE}/lib -ltinfo -lncurses
 
-# Satisfy check-plist
-PLIST_FILES+= lib/pipewire-0.3/libpipewire-module-x11-bell.so
-
 dfly-patch:
 	${REINPLACE_CMD} -e 's@freebsd@dragonfly@g' \
 		${WRKSRC}/subprojects/media-session/meson.build \
