@@ -1,5 +1,5 @@
---- src/tools/v8_context_snapshot/BUILD.gn.orig	2023-02-05 16:55:45 UTC
-+++ src/tools/v8_context_snapshot/BUILD.gn
+--- tools/v8_context_snapshot/BUILD.gn.orig	2023-02-05 16:55:45 UTC
++++ tools/v8_context_snapshot/BUILD.gn
 @@ -114,6 +114,7 @@ if (use_v8_context_snapshot) {
        configs += [
          "//v8:external_startup_data",
