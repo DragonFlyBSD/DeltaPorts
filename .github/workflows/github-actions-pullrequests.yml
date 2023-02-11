@@ -4,18 +4,71 @@ on:
     branches: [ master ]
     types: [ opened, synchronize ]
 jobs:
-  Explore-GitHub-Actions:
-    runs-on: [ self-hosted, dports ]
+  get-changed-files:
+    name: Retrieve changed files
+    runs-on: ubuntu-latest
     steps:
-      - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
-      - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
-      - run: echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
-      - name: Check out repository code
+      - name: Checkout DeltaPorts repository (depth 2)
         uses: actions/checkout@v3
-      - run: echo "💡 The ${{ github.repository }} repository has been cloned to the runner."
-      - run: echo "🖥️ The workflow is now ready to test your code on the runner."
-      - run: echo "🖥️ Workspace directory is ${{ github.workspace }}."
-      - name: List files in the repository
+        with:
+          fetch-depth: 2  # OR "2" -> To retrieve the preceding commit.
+      - name: Get changed files
+        uses: tj-actions/changed-files@v35
+        id: changed-files
+      - name: Save all changed files to a temp file
         run: |
-          ls ${{ github.workspace }}
-      - run: echo "🍏 This job's status is ${{ job.status }}."
+          for file in ${{ steps.changed-files.outputs.all_changed_files }}
+          do
+            echo "$file" >> changed-files.txt
+          done
+      - name: Display changed files
+        run: |
+          cat changed-files.txt
+      - name: Upload changed files
+        uses: actions/upload-artifact@v3
+        with:
+          name: changed-files
+          path: changed-files.txt
+
+  generate-and-build:
+    name: Generate index and build ports
+    runs-on: [ self-hosted, dports ]
+    needs: get-changed-files
+    steps:
+      - name: Retrieve changed files
+        uses: actions/download-artifact@v3
+        with:
+          name: changed-files
+          path: downloads
+      - name: Display changed files
+        run: |
+          cat downloads/changed-files.txt
+      - name: Parse changes
+        id: parsing
+        run: echo "dport=$(/root/bin/parse.sh $GITHUB_WORKSPACE/downloads/changed-files.txt)" >> $GITHUB_OUTPUT
+      - name: Setup chroot
+        run: /root/bin/setup_chroot.sh $GITHUB_WORKSPACE
+      - name: Checkout DeltaPorts repository
+        if: ${{ steps.parsing.outputs.dport  != 'NOPORT' }}
+        uses: actions/checkout@v3
+        with:
+          path: DeltaPorts
+      - name: Checkout DPorts repository
+        if: ${{ steps.parsing.outputs.dport  != 'NOPORT' }}
+        uses: actions/checkout@v3
+        with:
+          repository: DragonFlyBSD/DPorts
+          path: DPorts
+      - name: Checkout freebsd-ports repository
+        if: ${{ steps.parsing.outputs.dport  != 'NOPORT' }}
+        uses: actions/checkout@v3
+        with:
+          ref: 2023Q1
+          repository: freebsd/freebsd-ports
+          path: freebsd-ports
+      - name: Generate INDEX, merge DeltaPorts and build port
+        if: ${{ steps.parsing.outputs.dport  != 'NOPORT' }}
+        run: /root/bin/run.sh "${{ steps.parsing.outputs.dport }}"
+      - name: Cleanup chroot
+        if: success() || failure()
+        run: /root/bin/cleanup_chroot.sh $GITHUB_WORKSPACE
