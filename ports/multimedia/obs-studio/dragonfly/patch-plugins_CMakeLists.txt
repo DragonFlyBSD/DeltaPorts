@@ -1,14 +1,15 @@
---- plugins/CMakeLists.txt.intermediate	2021-03-04 13:28:45.000000000 +0000
+--- plugins/CMakeLists.txt.orig	2023-02-19 11:40:15 UTC
 +++ plugins/CMakeLists.txt
-@@ -43,9 +43,9 @@ elseif("${CMAKE_SYSTEM_NAME}" MATCHES "L
- 	add_subdirectory(decklink/linux)
- 	add_subdirectory(vlc-video)
- 	add_subdirectory(sndio)
--elseif("${CMAKE_SYSTEM_NAME}" MATCHES "FreeBSD")
-+elseif("${CMAKE_SYSTEM_NAME}" MATCHES "FreeBSD|DragonFly")
- 	add_subdirectory(linux-capture)
--	add_subdirectory(linux-pulseaudio)
-+	#add_subdirectory(linux-pulseaudio)
- 	add_subdirectory(linux-v4l2)
- 	add_subdirectory(linux-jack)
- 	#add_subdirectory(linux-alsa)
+@@ -62,10 +62,10 @@ elseif(OS_LINUX)
+   add_subdirectory(obs-vst)
+ 
+   check_obs_browser()
+-elseif(OS_FREEBSD)
++elseif(OS_FREEBSD OR OS_DRAGONFLY)
+   add_subdirectory(linux-capture)
+   add_subdirectory(linux-pipewire)
+-  add_subdirectory(linux-pulseaudio)
++  #add_subdirectory(linux-pulseaudio)
+   add_subdirectory(linux-v4l2)
+   add_subdirectory(linux-jack)
+   #add_subdirectory(linux-alsa)
