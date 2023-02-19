@@ -1,32 +1,24 @@
---- pkg-plist.orig	2020-11-13 08:33:09 UTC
+--- pkg-plist.orig	2023-02-19 21:54:39 UTC
 +++ pkg-plist
-@@ -19,7 +19,6 @@
+@@ -19,7 +19,6 @@ bin/regpatch
  bin/regshell
  bin/regtree
  bin/rpcclient
 -bin/samba-regedit
- %%AD_DC%%bin/samba-tool
  bin/sharesec
  bin/smbcacls
-@@ -180,8 +179,6 @@
- lib/samba4/libtevent-util.so.0
- lib/samba4/libwbclient.so
- lib/samba4/libwbclient.so.0
+ bin/smbclient
+@@ -165,8 +164,6 @@ include/samba4/wbclient.h
+ %%SAMBA4_LIBDIR%%/libtevent-util.so.0
+ %%SAMBA4_LIBDIR%%/libwbclient.so
+ %%SAMBA4_LIBDIR%%/libwbclient.so.0
 -lib/nss_winbind.so.1
 -lib/nss_wins.so.1
  lib/pam_winbind.so
  %%CUPS%%libexec/samba/smbspool_krb5_wrapper
- %%AD_DC%%lib/samba4/private/libdlz-bind9-for-torture-samba4.so
-@@ -406,7 +403,6 @@
- %%SAMBA4_MODULEDIR%%/vfs/virusfilter.so
- %%SAMBA4_MODULEDIR%%/vfs/worm.so
- %%SAMBA4_MODULEDIR%%/vfs/xattr_tdb.so
--%%SAMBA4_MODULEDIR%%/vfs/zfsacl.so
- @dir %%SAMBA4_MODULEDIR%%/vfs
- %%AD_DC%%@dir %%SAMBA4_MODULEDIR%%/service
- %%AD_DC%%@dir %%SAMBA4_MODULEDIR%%/process_model
-@@ -643,7 +639,6 @@
- man/man8/vfs_virusfilter.8.gz
+ %%SAMBA4_LIBDIR%%/private/libCHARSET3-samba4.so
+@@ -391,7 +388,6 @@ man/man8/vfs_virusfilter.8.gz
+ man/man8/vfs_widelinks.8.gz
  man/man8/vfs_worm.8.gz
  man/man8/vfs_xattr_tdb.8.gz
 -man/man8/vfs_zfsacl.8.gz

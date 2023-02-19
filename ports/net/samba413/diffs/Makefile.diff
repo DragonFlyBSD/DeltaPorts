@@ -1,6 +1,6 @@
---- Makefile.orig	2022-08-26 11:52:31 UTC
+--- Makefile.orig	2023-02-19 21:53:15 UTC
 +++ Makefile
-@@ -147,8 +147,6 @@ LIB_DEPENDS+=			libinotify.so:devel/libi
+@@ -152,8 +152,6 @@ LIB_DEPENDS+=			libinotify.so:devel/libi
  # GNUTLS
  LIB_DEPENDS+=			libgnutls.so:security/gnutls
  LIB_DEPENDS+=			libgcrypt.so:security/libgcrypt
@@ -9,7 +9,7 @@
  # Jansson
  BUILD_DEPENDS+=			jansson>=2.10:devel/jansson
  RUN_DEPENDS+=			jansson>=2.10:devel/jansson
-@@ -263,7 +261,7 @@ CONFIGURE_ARGS+=		\
+@@ -268,7 +266,7 @@ CONFIGURE_ARGS+=		\
  				--with-pam \
  				--with-iconv \
  				--with-winbind \
@@ -18,7 +18,7 @@
  				--disable-rpath \
  				--without-lttng \
  				--without-gettext \
-@@ -271,7 +269,7 @@ CONFIGURE_ARGS+=		\
+@@ -276,7 +274,7 @@ CONFIGURE_ARGS+=		\
  				--without-fake-kaserver \
  				--without-systemd \
  				--with-libarchive \
@@ -27,16 +27,16 @@
  				--with-sendfile-support \
  				--disable-ctdb-tests
  #				${ICONV_CONFIGURE_BASE}
-@@ -411,7 +409,7 @@ SAMBA4_MODULES+=		idmap_ad idmap_rfc2307
- .if ${PORT_OPTIONS:MDEVELOPER}
- SAMBA4_MODULES+=		auth_skel pdb_test gpext_security gpext_registry gpext_scripts perfcount_test \
- 				vfs_fake_dfq vfs_skel_opaque vfs_skel_transparent vfs_shadow_copy_test vfs_fake_acls \
--				vfs_nfs4acl_xattr vfs_error_inject vfs_delay_inject
-+				vfs_error_inject vfs_delay_inject
- .endif
- # Python bindings
- .if defined(NO_PYTHON)
-@@ -546,10 +544,54 @@ SUB_FILES=			pkg-message README.FreeBSD
+@@ -414,7 +412,7 @@ SAMBA4_MODULES+=		idmap_ad idmap_rfc2307
+ # This kind of special for this distribution
+ SAMBA4_MODULES+=		vfs_freebsd
+ 
+-SAMBA4_MODULES+=		vfs_acl_tdb vfs_acl_xattr vfs_aio_fork vfs_aio_pthread \
++SAMBA4_MODULES+=		vfs_acl_tdb vfs_aio_fork vfs_aio_pthread \
+ 				vfs_audit vfs_cap vfs_catia vfs_commit vfs_crossrename \
+ 				vfs_default_quota vfs_dirsort vfs_expand_msdfs \
+ 				vfs_extd_audit vfs_fake_perms vfs_full_audit \
+@@ -568,10 +566,54 @@ SUB_FILES=			pkg-message README.FreeBSD
  
  PORTDOCS=			README.FreeBSD
  
