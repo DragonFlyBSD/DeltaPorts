@@ -1,4 +1,4 @@
---- Makefile.orig	2023-02-19 21:53:15 UTC
+--- Makefile.orig	2023-02-19 23:45:57 UTC
 +++ Makefile
 @@ -152,8 +152,6 @@ LIB_DEPENDS+=			libinotify.so:devel/libi
  # GNUTLS
@@ -36,6 +36,15 @@
  				vfs_audit vfs_cap vfs_catia vfs_commit vfs_crossrename \
  				vfs_default_quota vfs_dirsort vfs_expand_msdfs \
  				vfs_extd_audit vfs_fake_perms vfs_full_audit \
+@@ -423,7 +421,7 @@ SAMBA4_MODULES+=		vfs_acl_tdb vfs_acl_xa
+ 				vfs_shadow_copy vfs_shadow_copy2 vfs_shell_snap \
+ 				vfs_streams_depot vfs_streams_xattr vfs_syncops \
+ 				vfs_time_audit vfs_unityed_media vfs_virusfilter \
+-				vfs_widelinks vfs_worm vfs_xattr_tdb vfs_zfsacl
++				vfs_widelinks vfs_worm vfs_xattr_tdb
+ 
+ .if ${PORT_OPTIONS:MDEVELOPER}
+ SAMBA4_MODULES+=		auth_skel pdb_test gpext_security gpext_registry \
 @@ -568,10 +566,54 @@ SUB_FILES=			pkg-message README.FreeBSD
  
  PORTDOCS=			README.FreeBSD
