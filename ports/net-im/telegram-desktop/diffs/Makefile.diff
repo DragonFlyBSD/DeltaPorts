@@ -1,6 +1,24 @@
---- Makefile.orig	2022-07-30 11:49:28 UTC
+--- Makefile.orig	2023-02-24 00:10:31 UTC
 +++ Makefile
-@@ -92,7 +92,7 @@ TELEGRAM_API_ID=	601761
+@@ -27,7 +27,6 @@ BUILD_DEPENDS=	alsa-lib>0:audio/alsa-lib
+ LIB_DEPENDS=	libabsl_base.so:devel/abseil \
+ 		libavformat.so:multimedia/ffmpeg \
+ 		libdbus-1.so:devel/dbus \
+-		libdispatch.so:devel/libdispatch \
+ 		libhunspell-1.7.so:textproc/hunspell \
+ 		libjpeg.so:graphics/jpeg-turbo \
+ 		liblz4.so:archivers/liblz4 \
+@@ -77,9 +76,6 @@ CMAKE_ON=	DESKTOP_APP_USE_PACKAGED DESKT
+ 		DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION
+ CMAKE_OFF=	DESKTOP_APP_USE_PACKAGED_FONTS
+ 
+-# libdispatch components
+-LDFLAGS+=	-lBlocksRuntime
+-
+ # see Bugzilla #245452 for details
+ NO_CCACHE=	yes
+ 
+@@ -101,7 +97,7 @@ TELEGRAM_API_ID=	601761
  
  .include <bsd.port.pre.mk>
  
