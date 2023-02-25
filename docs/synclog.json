@@ -427,7 +427,13 @@
 		    "port": "devel/gdb",
 		    "desc": "Needs porting, currently locked.",
 		    "status": "pending"
+		},
+		{
+		    "port": "ftp/curl",
+		    "desc": "When version > 7.87, remove zabbix-server workarounds.",
+		    "status": "pending"
 		}
+
 
 	    ],
 	    "cherry-picks": [
