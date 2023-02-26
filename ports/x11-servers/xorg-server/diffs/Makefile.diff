@@ -1,6 +1,14 @@
---- Makefile.orig	2022-11-28 21:27:58.401842000 +0100
-+++ Makefile	2022-11-28 21:28:41.162536000 +0100
-@@ -69,8 +69,8 @@
+--- Makefile.orig	2023-02-26 19:21:13 UTC
++++ Makefile
+@@ -1,6 +1,6 @@
+ PORTNAME=	xorg
+ PORTVERSION=	21.1.4
+-PORTREVISION=	1
++PORTREVISION=	2
+ PORTEPOCH=	1
+ CATEGORIES=	x11-servers
+ MASTER_SITES=	XORG/individual/xserver
+@@ -69,8 +69,8 @@ MESON_ARGS+=	-D${f}=false
  .endfor
  
  .if ${FLAVOR} == xorg
@@ -11,7 +19,7 @@
  MESON_ARGS+=	-Dudev=true \
  		-Dlog_dir=/var/log \
  		-Dsuid_wrapper=true
-@@ -82,6 +82,10 @@
+@@ -82,6 +82,10 @@ MESON_ARGS+=	-Dudev=false
  MESON_ARGS+=	-Ddrm=true
  LIB_DEPENDS+=	libdrm.so:graphics/libdrm \
  		libepoxy.so:graphics/libepoxy
@@ -22,7 +30,7 @@
  .endif
  
  .if ${FLAVOR} == xephyr
-@@ -120,7 +124,7 @@
+@@ -120,7 +124,7 @@ USE_XORG+=	pciaccess
  MESON_ARGS+=	-Dsha1=libmd
  .endif
  
