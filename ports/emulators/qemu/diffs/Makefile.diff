@@ -1,0 +1,9 @@
+--- Makefile.orig	2023-03-16 23:50:00 UTC
++++ Makefile
+@@ -1,5 +1,6 @@
+ PORTNAME=	qemu
+ PORTVERSION=	7.2.0
++PORTREVISION=	1
+ CATEGORIES=	emulators
+ MASTER_SITES=	https://download.qemu.org/
+ DIST_SUBDIR=	qemu/${PORTVERSION}
