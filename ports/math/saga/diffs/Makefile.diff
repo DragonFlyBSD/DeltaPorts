@@ -1,29 +1,8 @@
---- Makefile.orig	2022-07-30 11:46:54 UTC
+--- Makefile.orig	2023-04-11 19:15:48 UTC
 +++ Makefile
-@@ -11,7 +11,7 @@ COMMENT=	System for Automated Geoscienti
- LICENSE=	GPLv2 LGPL21
- LICENSE_COMB=	multi
- 
--BUILD_DEPENDS=	clang${LLVM_DEFAULT}:devel/llvm${LLVM_DEFAULT} \
-+BUILD_DEPENDS=	\
- 		swig:devel/swig
- LIB_DEPENDS=	libcurl.so:ftp/curl \
- 		libfftw3.so:math/fftw3 \
-@@ -63,11 +63,6 @@ VIGRA_RUN_DEPENDS=	${LOCALBASE}/lib/libv
- 
- .include <bsd.port.pre.mk>
- 
--# make describe needs them here
--CPP=		clang-cpp${LLVM_DEFAULT}
--CC=		clang${LLVM_DEFAULT}
--CXX=		clang++${LLVM_DEFAULT}
--
- SUB_FILES=	pkg-message
- 
- post-patch:
-@@ -77,8 +72,6 @@ post-patch:
- .endif
- 	@${REINPLACE_CMD} -e 's|PORTVERSION|${PORTVERSION}|' \
+@@ -79,8 +79,6 @@ post-patch:
+ 	@${REINPLACE_CMD} -e 's|GIT_TAGNAME|${GIT_TAGNAME}|g' \
+ 		${WRKSRC}/src/saga_core/saga_gui/CMakeLists.txt \
  		${WRKSRC}/src/saga_core/saga_gui/dlg_about.cpp
 -	@${REINPLACE_CMD} -e 's|-lgomp|-lomp|' \
 -		${WRKSRC}/src/accessories/templates/template4saga-tools/my_tool_library/Makefile
