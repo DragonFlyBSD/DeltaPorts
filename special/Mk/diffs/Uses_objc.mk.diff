@@ -1,14 +1,5 @@
---- Uses/objc.mk.orig	2022-07-12 00:22:03 UTC
+--- Uses/objc.mk.orig	2023-04-11 17:14:29 UTC
 +++ Uses/objc.mk
-@@ -8,7 +8,7 @@
- .if !defined(_INCLUDE_USES_OBJC_MK)
- _INCLUDE_USES_OBJC_MK=	yes
- 
--OBJC_CLANG_VERSION=70
-+OBJC_CLANG_VERSION=80
- 
- objc_ARGS?=
- .  if !empty(objc_ARGS) && ! ${objc_ARGS:Mcompiler}
 @@ -17,19 +17,7 @@ IGNORE=	USES=objc only accepts no argume
  
  _CC_hash:=	${CC:hash}
