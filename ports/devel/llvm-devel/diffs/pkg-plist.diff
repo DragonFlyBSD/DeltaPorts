@@ -1,14 +1,14 @@
---- pkg-plist.orig	2023-01-16 19:34:51 UTC
+--- pkg-plist.orig	2023-04-11 18:57:39 UTC
 +++ pkg-plist
-@@ -129,7 +129,6 @@ bin/sancov-devel
+@@ -130,7 +130,6 @@ bin/sancov-devel
  %%MLIR%%bin/mlir-tblgen-devel
  %%MLIR%%bin/mlir-translate-devel
  %%MLIR%%bin/tblgen-lsp-server-devel
 -%%OPENMP%%bin/llvm-omp-device-info-devel
+ %%OPENMP%%bin/llvm-omp-kernel-replay-devel
  %%LIT%%bin/FileCheck-devel
  %%LIT%%llvm-devel/bin/FileCheck
- %%LIT%%bin/lit-devel
-@@ -197,7 +196,6 @@ llvm-devel/bin/dsymutil
+@@ -199,7 +198,6 @@ llvm-devel/bin/dsymutil
  %%CLANG%%llvm-devel/bin/git-clang-format
  %%CLANG%%llvm-devel/bin/hmaptool
  %%CLANG%%llvm-devel/bin/intercept-build
@@ -16,20 +16,18 @@
  %%LLD%%llvm-devel/bin/ld.lld
  %%LLD%%llvm-devel/bin/ld64.lld
  llvm-devel/bin/llc
-@@ -252,7 +250,6 @@ llvm-devel/bin/llvm-mt
+@@ -254,7 +252,6 @@ llvm-devel/bin/llvm-mt
  llvm-devel/bin/llvm-nm
  llvm-devel/bin/llvm-objcopy
  llvm-devel/bin/llvm-objdump
 -%%OPENMP%%llvm-devel/bin/llvm-omp-device-info
+ %%OPENMP%%llvm-devel/bin/llvm-omp-kernel-replay
  llvm-devel/bin/llvm-opt-report
  llvm-devel/bin/llvm-otool
- llvm-devel/bin/llvm-pdbutil
-@@ -6016,10 +6013,6 @@ llvm-devel/lib/libRemarks.so.%%LLVM_MAJO
+@@ -6063,8 +6060,6 @@ llvm-devel/lib/libRemarks.so.%%LLVM_MAJO
+ %%MLIR%%llvm-devel/lib/libmlir_runner_utils.so
+ %%MLIR%%llvm-devel/lib/libmlir_runner_utils.so.%%LLVM_MAJOR%%git
  %%OPENMP%%llvm-devel/lib/libomp.so
- %%OPENMP%%llvm-devel/lib/libomptarget.rtl.amdgpu.nextgen.so
- %%OPENMP%%llvm-devel/lib/libomptarget.rtl.amdgpu.nextgen.so.%%LLVM_MAJOR%%git
--%%OPENMP%%llvm-devel/lib/libomptarget.rtl.amdgpu.so
--%%OPENMP%%llvm-devel/lib/libomptarget.rtl.amdgpu.so.%%LLVM_MAJOR%%git
 -%%OPENMP%%llvm-devel/lib/libomptarget.so
 -%%OPENMP%%llvm-devel/lib/libomptarget.so.%%LLVM_MAJOR%%git
  %%CLANG%%llvm-devel/lib/libscanbuild/__init__.py
