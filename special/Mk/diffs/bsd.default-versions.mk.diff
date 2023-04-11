@@ -1,6 +1,6 @@
---- bsd.default-versions.mk.orig	2022-07-12 00:23:58 UTC
+--- bsd.default-versions.mk.orig	2023-04-11 17:27:09 UTC
 +++ bsd.default-versions.mk
-@@ -31,6 +31,9 @@ _l=		${lang:C/=.*//g}
+@@ -32,6 +32,9 @@ _l=		${lang:C/=.*//g}
  ${_l:tu}_DEFAULT=	${lang:C/.*=//g}
  .  endfor
  
@@ -10,21 +10,21 @@
  # Possible values: 2.4
  APACHE_DEFAULT?=	2.4
  # Possible values: 5, 18
-@@ -69,7 +72,7 @@ LAZARUS_DEFAULT?=       2.2.2
- LAZARUS_DEFAULT?=       2.3.0
+@@ -70,7 +73,7 @@ LAZARUS_DEFAULT?=	2.2.6
+ LAZARUS_DEFAULT?=	2.3.0
  .  endif
  # Possible values: rust, legacy
--.  if empty(ARCH:Naarch64:Narmv6:Narmv7:Namd64:Ni386:Npowerpc64:Npowerpc64le:Npowerpc)
-+.  if empty(ARCH:Naarch64:Narmv6:Narmv7:Nx86_64:Ni386:Npowerpc64:Npowerpc64le:Npowerpc)
+-.  if empty(ARCH:Naarch64:Narmv7:Namd64:Ni386:Npowerpc64:Npowerpc64le:Npowerpc)
++.  if empty(ARCH:Naarch64:Narmv7:Nx86_64:Ni386:Npowerpc64:Npowerpc64le:Npowerpc)
  LIBRSVG2_DEFAULT?=	rust
  .  else
  LIBRSVG2_DEFAULT?=	legacy
-@@ -82,7 +85,7 @@ LINUX_DEFAULT?=		c7
- .  if ${ARCH} == powerpc
- LLVM_DEFAULT?=		10
- .  else
--LLVM_DEFAULT?=		90
+@@ -78,7 +81,7 @@ LIBRSVG2_DEFAULT?=	legacy
+ # Possible values: c7
+ LINUX_DEFAULT?=		c7
+ # Possible values: 10, 11, 12, 13, 14, 15, -devel (to be used when non-base compiler is required)
+-LLVM_DEFAULT?=		15
 +LLVM_DEFAULT?=		10
- .  endif
  # Possible values: 5.1, 5.2, 5.3, 5.4
- LUA_DEFAULT?=		5.2
+ LUA_DEFAULT?=		5.4
+ # Possible values: luajit, luajit-devel, luajit-openresty
