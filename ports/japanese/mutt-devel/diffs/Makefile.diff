@@ -1,5 +1,0 @@
---- Makefile.orig	2020-08-13 10:38:20 UTC
-+++ Makefile
-@@ -67 +67 @@
--LDFLAGS+=	-L${LOCALBASE}/lib -ltinfow
-+LDFLAGS+=	-L${LOCALBASE}/lib -ltinfo
