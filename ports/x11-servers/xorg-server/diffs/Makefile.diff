@@ -1,13 +1,5 @@
---- Makefile.orig	2023-02-26 19:21:13 UTC
+--- Makefile.orig	2023-04-11 19:28:35 UTC
 +++ Makefile
-@@ -1,6 +1,6 @@
- PORTNAME=	xorg
- PORTVERSION=	21.1.4
--PORTREVISION=	1
-+PORTREVISION=	2
- PORTEPOCH=	1
- CATEGORIES=	x11-servers
- MASTER_SITES=	XORG/individual/xserver
 @@ -69,8 +69,8 @@ MESON_ARGS+=	-D${f}=false
  .endfor
  
