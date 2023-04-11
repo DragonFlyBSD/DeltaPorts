@@ -1,7 +1,6 @@
---- pkg-plist.orig	2022-10-12 00:08:48 UTC
+--- pkg-plist.orig	2023-04-11 19:19:05 UTC
 +++ pkg-plist
-@@ -1,11 +1,11 @@
- bin/adios2-config
+@@ -1,10 +1,10 @@
  bin/adios2_deactivate_bp
 -bin/adios2_iotest
 +%%MPI%%bin/adios2_iotest
@@ -15,7 +14,7 @@
  bin/bp4dbg
  bin/bp5dbg
  bin/bpls
-@@ -79,7 +79,7 @@ include/adios2/fortran/adios2.mod
+@@ -88,7 +88,7 @@ include/adios2/fortran/adios2.mod
  include/adios2/fortran/adios2.smod
  include/adios2/fortran/adios2_adios_init_mod.mod
  include/adios2/fortran/adios2_adios_init_mod.smod
@@ -24,7 +23,7 @@
  include/adios2/fortran/adios2_adios_init_mod@adios2_adios_init_serial_smod.smod
  include/adios2/fortran/adios2_adios_mod.mod
  include/adios2/fortran/adios2_adios_mod.smod
-@@ -97,7 +97,7 @@ include/adios2/fortran/adios2_io_mod.mod
+@@ -106,7 +106,7 @@ include/adios2/fortran/adios2_io_mod.mod
  include/adios2/fortran/adios2_io_mod.smod
  include/adios2/fortran/adios2_io_open_mod.mod
  include/adios2/fortran/adios2_io_open_mod.smod
@@ -33,58 +32,58 @@
  include/adios2/fortran/adios2_io_open_mod@adios2_io_open_serial_smod.smod
  include/adios2/fortran/adios2_operator_mod.mod
  include/adios2/fortran/adios2_parameters_mod.mod
-@@ -285,11 +285,11 @@ lib/libadios2_atl.so.2.2.1
+@@ -296,11 +296,11 @@ lib/libadios2_atl.so.2.2.1
  lib/libadios2_c.so
  lib/libadios2_c.so.2
- lib/libadios2_c.so.2.8.3
+ lib/libadios2_c.so.2.9.0
 -lib/libadios2_c_mpi.so
 -lib/libadios2_c_mpi.so.2
--lib/libadios2_c_mpi.so.2.8.3
+-lib/libadios2_c_mpi.so.2.9.0
 +%%MPI%%lib/libadios2_c_mpi.so
 +%%MPI%%lib/libadios2_c_mpi.so.2
-+%%MPI%%lib/libadios2_c_mpi.so.2.8.3
++%%MPI%%lib/libadios2_c_mpi.so.2.9.0
  lib/libadios2_cmenet.so
 -lib/libadios2_cmfabric.so
 +%%MPI%%lib/libadios2_cmfabric.so
  lib/libadios2_cmmulticast.so
  lib/libadios2_cmselect.so
  lib/libadios2_cmsockets.so
-@@ -298,15 +298,15 @@ lib/libadios2_cmzplenet.so
+@@ -309,15 +309,15 @@ lib/libadios2_cmzplenet.so
  lib/libadios2_core.so
  lib/libadios2_core.so.2
- lib/libadios2_core.so.2.8.3
+ lib/libadios2_core.so.2.9.0
 -lib/libadios2_core_mpi.so
 -lib/libadios2_core_mpi.so.2
--lib/libadios2_core_mpi.so.2.8.3
+-lib/libadios2_core_mpi.so.2.9.0
 +%%MPI%%lib/libadios2_core_mpi.so
 +%%MPI%%lib/libadios2_core_mpi.so.2
-+%%MPI%%lib/libadios2_core_mpi.so.2.8.3
++%%MPI%%lib/libadios2_core_mpi.so.2.9.0
  lib/libadios2_cxx11.so
  lib/libadios2_cxx11.so.2
- lib/libadios2_cxx11.so.2.8.3
+ lib/libadios2_cxx11.so.2.9.0
 -lib/libadios2_cxx11_mpi.so
 -lib/libadios2_cxx11_mpi.so.2
--lib/libadios2_cxx11_mpi.so.2.8.3
+-lib/libadios2_cxx11_mpi.so.2.9.0
 +%%MPI%%lib/libadios2_cxx11_mpi.so
 +%%MPI%%lib/libadios2_cxx11_mpi.so.2
-+%%MPI%%lib/libadios2_cxx11_mpi.so.2.8.3
++%%MPI%%lib/libadios2_cxx11_mpi.so.2.9.0
  lib/libadios2_dill.so
  lib/libadios2_dill.so.2
  lib/libadios2_dill.so.2.4.1
-@@ -320,9 +320,9 @@ lib/libadios2_ffs.so.1.6.0
+@@ -331,9 +331,9 @@ lib/libadios2_ffs.so.2.0.0
  lib/libadios2_fortran.so
  lib/libadios2_fortran.so.2
- lib/libadios2_fortran.so.2.8.3
+ lib/libadios2_fortran.so.2.9.0
 -lib/libadios2_fortran_mpi.so
 -lib/libadios2_fortran_mpi.so.2
--lib/libadios2_fortran_mpi.so.2.8.3
+-lib/libadios2_fortran_mpi.so.2.9.0
 +%%MPI%%lib/libadios2_fortran_mpi.so
 +%%MPI%%lib/libadios2_fortran_mpi.so.2
-+%%MPI%%lib/libadios2_fortran_mpi.so.2.8.3
++%%MPI%%lib/libadios2_fortran_mpi.so.2.9.0
  lib/libadios2_perfstubs.so
  %%PYTHON_SITELIBDIR%%/adios2/__init__.py
  %%PYTHON_SITELIBDIR%%/adios2/adios2%%PYTHON_EXT_SUFFIX%%.so
-@@ -336,18 +336,18 @@ lib/libadios2_perfstubs.so
+@@ -347,16 +347,16 @@ lib/libadios2_perfstubs.so
  %%PYTHON_SITELIBDIR%%/adios2/bp5dbg/idxtable.py
  %%PYTHON_SITELIBDIR%%/adios2/bp5dbg/metadata.py
  %%PYTHON_SITELIBDIR%%/adios2/bp5dbg/utils.py
@@ -114,5 +113,3 @@
 +%%MPI%%share/iotest-config/pipe2_06_busy.txt
 +%%MPI%%share/iotest-config/wf_2_to_1.txt
 +%%MPI%%share/iotest-config/wf_2_to_1.xml
- @dir include/adios2/toolkit/sst/dp
- @dir include/adios2/toolkit/sst/util
