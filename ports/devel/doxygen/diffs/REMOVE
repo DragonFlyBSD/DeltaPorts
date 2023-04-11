@@ -1,9 +1,2 @@
 files/patch-CMakeLists.txt
-files/patch-md5-Doxyfile
-files/patch-md5-dotgraph
-files/patch-md5-definition
-files/patch-md5-dirdef
-files/patch-md5-memberdef
-files/patch-md5-membergroup
-files/patch-md5-util
 files/patch-src_CMakeLists.txt
