@@ -1,0 +1,13 @@
+--- Makefile.orig	2023-04-15 11:20:15 UTC
++++ Makefile
+@@ -101,8 +101,8 @@ SHEBANG_FILES=		compiler/rustc_codegen_c
+ 
+ .include <bsd.port.pre.mk>
+ 
+-.if ${OPSYS} != FreeBSD
+-IGNORE=		is only for FreeBSD
++.if ${OPSYS} != FreeBSD && ${OPSYS} != DragonFly
++IGNORE=		is only for FreeBSD and DragonFly BSD
+ .endif
+ 
+ .if ${ARCH} == powerpc
