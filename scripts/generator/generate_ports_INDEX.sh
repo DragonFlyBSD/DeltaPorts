@@ -5,7 +5,8 @@
 
 failed=""
 
-rm -f /tmp/INDEX /tmp/failed.ports
+rm -f /tmp/INDEX /tmp/failed.ports && \
+    touch /tmp/failed.ports
 
 /usr/bin/find -s ${MP}/[a-z]* -type d -depth 1 -maxdepth 1 | \
   while read port
