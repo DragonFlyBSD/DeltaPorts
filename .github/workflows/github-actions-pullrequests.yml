@@ -59,6 +59,7 @@ jobs:
         with:
           repository: DragonFlyBSD/DPorts
           path: DPorts
+          ref: staged
       - name: Checkout freebsd-ports repository
         if: ${{ steps.parsing.outputs.dport  != 'NOPORT' }}
         uses: actions/checkout@v3
