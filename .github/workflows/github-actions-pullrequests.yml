@@ -67,9 +67,12 @@ jobs:
           ref: 2023Q2
           repository: freebsd/freebsd-ports
           path: freebsd-ports
-      - name: Generate INDEX, merge DeltaPorts and build port
+      - name: Generate INDEX, merge DeltaPorts
+        if: ${{ steps.parsing.outputs.dport  != 'NOPORT' }}
+        run: /root/bin/generate.sh "${{ steps.parsing.outputs.dport }}"
+      - name: Build port
         if: ${{ steps.parsing.outputs.dport  != 'NOPORT' }}
         run: /root/bin/run.sh "${{ steps.parsing.outputs.dport }}"
       - name: Cleanup chroot
-        if: success() || failure()
+        if: always()
         run: /root/bin/cleanup_chroot.sh $GITHUB_WORKSPACE
