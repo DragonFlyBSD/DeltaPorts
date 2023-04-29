@@ -1,9 +1,8 @@
---- distinfo.orig	2023-04-11 19:02:43 UTC
+--- distinfo.orig	2023-04-29 09:31:18 UTC
 +++ distinfo
-@@ -1,4 +1,6 @@
- TIMESTAMP = 1675339575
-+SHA256 (go-dragonfly-amd64-go1.17.9.tar.xz) = 02416ddcb1154819ef849ba1de1904c660fbc175bc89b6021f14234db450e8da
-+SIZE (go-dragonfly-amd64-go1.17.9.tar.xz) = 41653156
- SHA256 (go-freebsd-arm64-go1.20.tar.xz) = 674e0a9bce8b64dcc085b000eb83ae880e96be1ee47dad6ec86c82dbe5550623
- SIZE (go-freebsd-arm64-go1.20.tar.xz) = 32640640
- SHA256 (golang-go-g20230201-de4748c47c67392a57f250714509f590f68ad395_GH0.tar.gz) = 5fcebc8adbe308dda835dfcee83fff555000391b8c9a8594b86a7586789a7d6f
+@@ -13,3 +13,5 @@ SHA256 (go-freebsd-386-go1.20.tar.xz) =
+ SIZE (go-freebsd-386-go1.20.tar.xz) = 35448892
+ SHA256 (go-freebsd-riscv64-go1.20.tar.xz) = 010921013d24124ff31f4b1965456349547acf936572fc6e0bcf95a0542794bd
+ SIZE (go-freebsd-riscv64-go1.20.tar.xz) = 33807544
++SHA256 (go-dragonfly-amd64-go1.20.tar.xz) = 29bd5e6a751d6a1a127d542724e43e6768c5ee276edc0776777f48d3749d6db2
++SIZE (go-dragonfly-amd64-go1.20.tar.xz) = 27773156
