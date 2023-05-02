@@ -10,7 +10,6 @@ COMMENT=	Userspace interface to kernel Direct Rendering Module services
 
 LICENSE=	MIT
 
-BUILD_DEPENDS=	${LOCALBASE}/libdata/pkgconfig/pthread-stubs.pc:devel/libpthread-stubs
 BUILD_DEPENDS+=	${LOCALBASE}/share/xsl/docbook/manpages/docbook.xsl:textproc/docbook-xsl
 LIB_DEPENDS=	libpciaccess.so:devel/libpciaccess
 
