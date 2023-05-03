@@ -33,6 +33,7 @@ jobs:
   generate-and-build:
     name: Generate index and build ports
     runs-on: [ self-hosted, dports ]
+    timeout-minutes: 1200
     needs: get-changed-files
     steps:
       - name: Retrieve changed files
