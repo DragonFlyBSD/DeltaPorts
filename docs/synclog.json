@@ -1,5 +1,5 @@
 {
-    "current": "2023Q1",
+    "current": "2023Q2",
     "releases": [
 	{
 	    "id": "2020S07",
@@ -387,6 +387,15 @@
 	    "timestamp": "Mon Jan 16 18:31:10 2023 +0100",
 	    "base_commit": "58494ddd2f6c97f1d97a64e374e7b45c6b60d0cb",
 	    "rejects": [],
+	    "to-do": [],
+	    "cherry-picks": [
+	    ]
+	},
+	{
+	    "id": "2023Q2",
+	    "timestamp": " Wed May 10 08:12:59 2023 +0000",
+	    "base_commit": "4d18616804232b78d92c9189af848fc04add1c68",
+	    "rejects": [],
 	    "to-do": [
 		{
 		    "port": "devel/qca",
@@ -423,6 +432,12 @@
 		    "desc": "Needs porting, currently locked.",
 		    "status": "pending"
 		},
+		{
+		    "port": "archivers/rpm4",
+		    "desc": "Requires Elf64_Lib in sys headers.",
+		    "status": "pending"
+		},
+
 		{
 		    "port": "devel/gdb",
 		    "desc": "Needs porting, currently locked.",
