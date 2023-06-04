@@ -447,9 +447,17 @@
 		    "port": "ftp/curl",
 		    "desc": "When version > 7.87, remove zabbix-server workarounds.",
 		    "status": "pending"
+		},
+		{
+		    "port": "lang/libhx",
+		    "desc": "Unbreak when we have SO_DOMAIN.",
+		    "status": "pending"
+		},
+		{
+		    "port": "misc/xgboost",
+		    "desc": "Unbreak when we have SO_DOMAIN.",
+		    "status": "pending"
 		}
-
-
 	    ],
 	    "cherry-picks": [
 	    ]
