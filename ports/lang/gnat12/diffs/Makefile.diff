@@ -1,0 +1,12 @@
+--- Makefile.orig	2023-06-22 11:35:25 UTC
++++ Makefile
+@@ -112,6 +112,9 @@ PLIST_SUB+=	ARM="" NOARM="@comment "
+ PLIST_SUB+=	ARM="@comment " NOARM=""
+ .endif
+ 
++# XXX dragonfly
++LIB_DIR_32=	""
++
+ pre-configure:
+ 	${FIND} ${WRKSRC}/gcc/config -name "*freebsd.h" | ${XARGS}	\
+ 		${REINPLACE_CMD} -e 's|!static:[[:blank:]]|!static: --hash-style=gnu -rpath ${PREFIX}/gnat${GCCVER}/lib |'
