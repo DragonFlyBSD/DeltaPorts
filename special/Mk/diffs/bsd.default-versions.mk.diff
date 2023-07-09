@@ -1,4 +1,4 @@
---- bsd.default-versions.mk.orig	2023-04-11 17:27:09 UTC
+--- bsd.default-versions.mk.orig	2023-07-09 09:06:29 UTC
 +++ bsd.default-versions.mk
 @@ -32,6 +32,9 @@ _l=		${lang:C/=.*//g}
  ${_l:tu}_DEFAULT=	${lang:C/.*=//g}
@@ -19,12 +19,3 @@
  LIBRSVG2_DEFAULT?=	rust
  .  else
  LIBRSVG2_DEFAULT?=	legacy
-@@ -78,7 +81,7 @@ LIBRSVG2_DEFAULT?=	legacy
- # Possible values: c7
- LINUX_DEFAULT?=		c7
- # Possible values: 10, 11, 12, 13, 14, 15, -devel (to be used when non-base compiler is required)
--LLVM_DEFAULT?=		15
-+LLVM_DEFAULT?=		10
- # Possible values: 5.1, 5.2, 5.3, 5.4
- LUA_DEFAULT?=		5.4
- # Possible values: luajit, luajit-devel, luajit-openresty
