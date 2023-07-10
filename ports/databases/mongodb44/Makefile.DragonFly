@@ -1,8 +1,8 @@
 USE_CLANG_FALLBACK=	15
-LLVM_DEFAULT=		15
 
-#
+# Don't use llvm-ar
 MAKE_ARGS:=	${MAKE_ARGS:N*AR*}
+
 # No lto for us for now
 OPTIONS_DEFAULT:=	${OPTIONS_DEFAULT:NLTO}
 
