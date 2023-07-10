@@ -9,7 +9,7 @@ OPTIONS_DEFAULT:=	${OPTIONS_DEFAULT:NLTO}
 # XXX - This is a hack to force llvm to use libc++ C++ includes instead of base's gcc
 CXXFLAGS+=      -nostdlib++ -stdlib=libc++ -I${LOCALBASE}/include -I${LOCALBASE}/include/cxxrt
 CXXFLAGS+=      -cxx-isystem ${LOCALBASE}/llvm${LLVM_DEFAULT}/libcxx/include/c++/v1
-LDFLAGS=        -L /usr/lib -L${LOCALBASE}/llvm${LLVM_DEFAULT}/libcxx/lib -L${LOCALBASE}/llvm${LLVM_DEFAULT}/libcxx/lib/c++ -L /lib fuse-ld=gold
+LDFLAGS=        -L /usr/lib -L${LOCALBASE}/llvm${LLVM_DEFAULT}/libcxx/lib -L${LOCALBASE}/llvm${LLVM_DEFAULT}/libcxx/lib/c++ -L /lib -fuse-ld=gold
 
 # Since FreeBSD has libc++ in base we need to rely on DPorts' libcxx
 LIB_DIRS+=      ${PREFIX}/llvm${LLVM_DEFAULT}/libcxx/lib
