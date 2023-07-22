@@ -1,4 +1,4 @@
---- Makefile.orig	2023-07-22 19:57:37 UTC
+--- Makefile.orig	2023-07-22 20:20:39 UTC
 +++ Makefile
 @@ -33,7 +33,6 @@ BUILD_DEPENDS=	bash:shells/bash \
  LIB_DEPENDS=	libatk-bridge-2.0.so:accessibility/at-spi2-core \
@@ -32,7 +32,7 @@
  
  # Allow relocations against read-only segments (override lld default)
  LDFLAGS_i386=	-Wl,-znotext
-@@ -274,7 +269,7 @@ pre-configure:
+@@ -274,10 +269,10 @@ pre-configure:
  	cd ${WRKSRC} && ${SETENV} ${CONFIGURE_ENV} ${PYTHON_CMD} \
  		./build/linux/unbundle/replace_gn_files.py --system-libraries \
  		dav1d flac fontconfig freetype harfbuzz-ng icu libdrm libevent libpng \
@@ -40,4 +40,8 @@
 +		libusb libwebp libxml libxslt openh264 opus || ${FALSE}
  	# Chromium uses an unreleased version of FFmpeg, so configure it
  	cd ${WRKSRC}/third_party/ffmpeg && \
- 		${PYTHON_CMD} chromium/scripts/build_ffmpeg.py freebsd ${FFMPEG_TARGET} \
+-		${PYTHON_CMD} chromium/scripts/build_ffmpeg.py freebsd ${FFMPEG_TARGET} \
++		${PYTHON_CMD} chromium/scripts/build_ffmpeg.py dragonfly ${FFMPEG_TARGET} \
+ 		--config-only --branding=${FFMPEG_BRAND}
+ 	cd ${FFMPEG_BDIR} && ${GMAKE} ffversion.h
+ 	${MKDIR} ${FFMPEG_CDIR}
