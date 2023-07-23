@@ -2842,52 +2842,7 @@ index 30152e4a5a5..b9c679c6536 100644
  typedef __uint8_t __u8;
  typedef __uint32_t __u32;
  typedef __int32_t __s32;
-diff --git third_party/llvm/third-party/benchmark/src/internal_macros.h third_party/llvm/third-party/benchmark/src/internal_macros.h
-index 91f367b894b..0d85af2ba6c 100644
---- third_party/llvm/third-party/benchmark/src/internal_macros.h
-+++ third_party/llvm/third-party/benchmark/src/internal_macros.h
-@@ -56,6 +56,8 @@
-       #define BENCHMARK_OS_IOS 1
-     #endif
-   #endif
-+#elif defined(__DragonFly__)
-+  #define BENCHMARK_OS_DRAGONFLY 1
- #elif defined(__FreeBSD__)
-   #define BENCHMARK_OS_FREEBSD 1
- #elif defined(__NetBSD__)
-diff --git third_party/llvm/third-party/benchmark/src/sysinfo.cc third_party/llvm/third-party/benchmark/src/sysinfo.cc
-index d9bd651f8a4..c18d1845d1a 100644
---- third_party/llvm/third-party/benchmark/src/sysinfo.cc
-+++ third_party/llvm/third-party/benchmark/src/sysinfo.cc
-@@ -623,6 +623,8 @@ double GetCPUCyclesPerSecond(CPUInfo::Scaling scaling) {
-   constexpr auto* FreqStr =
- #if defined(BENCHMARK_OS_FREEBSD) || defined(BENCHMARK_OS_NETBSD)
-       "machdep.tsc_freq";
-+#elif defined BENCHMARK_OS_DRAGONFLY
-+      "hw.tsc_frequency";
- #elif defined BENCHMARK_OS_OPENBSD
-       "hw.cpuspeed";
- #elif defined BENCHMARK_OS_DRAGONFLY
-@@ -695,6 +697,7 @@ std::vector<double> GetLoadAvg() {
-      defined BENCHMARK_OS_MACOSX || defined BENCHMARK_OS_NETBSD ||      \
-      defined BENCHMARK_OS_OPENBSD || defined BENCHMARK_OS_DRAGONFLY) && \
-     !defined(__ANDROID__)
-+fo.cc
-   constexpr int kMaxSamples = 3;
-   std::vector<double> res(kMaxSamples, 0.0);
-   const int nelem = getloadavg(res.data(), kMaxSamples);
-diff --git third_party/llvm/third-party/benchmark/src/timers.cc third_party/llvm/third-party/benchmark/src/timers.cc
-index 21d3db20da9..cfc0c9557b8 100644
---- third_party/llvm/third-party/benchmark/src/timers.cc
-+++ third_party/llvm/third-party/benchmark/src/timers.cc
-@@ -31,6 +31,7 @@
- #include <unistd.h>
- #if defined BENCHMARK_OS_FREEBSD || defined BENCHMARK_OS_DRAGONFLY || \
-     defined BENCHMARK_OS_MACOSX
-+s.cc
- #include <sys/sysctl.h>
- #endif
- #if defined(BENCHMARK_OS_MACOSX)
+
 diff --git third_party/lzma_sdk/C/CpuArch.c third_party/lzma_sdk/C/CpuArch.c
 index d848ac199b7..59aac42a131 100644
 --- third_party/lzma_sdk/C/CpuArch.c
