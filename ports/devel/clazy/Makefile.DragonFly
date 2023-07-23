@@ -1,7 +1,8 @@
 
 # llvm/Support/TrailingObjects.h:253:24: error: 'is_final' is not a member of 'std'
 # incompatible with any llvm > 9.0
-BUILD_DEPENDS:= ${BUILD_DEPENDS:Nllvm*} llvm90>0:devel/llvm90
-RUN_DEPENDS:=	${RUN_DEPENDS:Nllvm*} llvm90>0:devel/llvm90
+# tuxillo: llvm90 is no longer supported so changed to the default version
+BUILD_DEPENDS:= ${BUILD_DEPENDS:Nllvm*} llvm${LLVM_DEFAULT}>0:devel/llvm${LLVM_DEFAULT}
+RUN_DEPENDS:=	${RUN_DEPENDS:Nllvm*} llvm${LLVM_DEFAULT}>0:devel/llvm${LLVM_DEFAULT}
 
-CMAKE_ARGS:=	${CMAKE_ARGS:N-LLVM_ROOT*} -DLLVM_ROOT=${LOCALBASE}/llvm90
+CMAKE_ARGS:=	${CMAKE_ARGS:N-LLVM_ROOT*} -DLLVM_ROOT=${LOCALBASE}/llvm${LLVM_DEFAULT}
