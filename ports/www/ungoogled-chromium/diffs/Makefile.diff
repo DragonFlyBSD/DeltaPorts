@@ -1,4 +1,4 @@
---- Makefile.orig	2023-05-14 15:18:24 UTC
+--- Makefile.orig	2023-07-22 20:20:39 UTC
 +++ Makefile
 @@ -33,7 +33,6 @@ BUILD_DEPENDS=	bash:shells/bash \
  LIB_DEPENDS=	libatk-bridge-2.0.so:accessibility/at-spi2-core \
@@ -8,7 +8,7 @@
  		libFLAC.so:audio/flac \
  		libopus.so:audio/opus \
  		libspeex.so:audio/speex \
-@@ -222,11 +221,7 @@ BINARY_ALIAS+=		cpp=${LOCALBASE}/bin/cla
+@@ -223,11 +222,7 @@ BINARY_ALIAS+=		cpp=${LOCALBASE}/bin/cla
  			cc=${LOCALBASE}/bin/clang${LLVM_DEFAULT} \
  			c++=${LOCALBASE}/bin/clang++${LLVM_DEFAULT} \
  			ar=${LOCALBASE}/bin/llvm-ar${LLVM_DEFAULT} \
@@ -20,13 +20,28 @@
 +			nm=${LOCALBASE}/bin/llvm-nm${LLVM_DEFAULT}
  .endif
  
- # swiftshader/lib/{libEGL.so,libGLESv2.so} is x86 only
-@@ -262,7 +257,7 @@ pre-configure:
+ # - swiftshader/lib/{libEGL.so,libGLESv2.so} is x86 only
+@@ -245,8 +240,8 @@ PLIST_SUB+=	NOT_AARCH64=""
+ FFMPEG_TARGET=	ia32
+ .endif
+ 
+-FFMPEG_BDIR=	${WRKSRC}/third_party/ffmpeg/build.${FFMPEG_TARGET}.freebsd/${FFMPEG_BRAND}
+-FFMPEG_CDIR=	${WRKSRC}/third_party/ffmpeg/chromium/config/${FFMPEG_BRAND}/freebsd/${FFMPEG_TARGET}
++FFMPEG_BDIR=   ${WRKSRC}/third_party/ffmpeg/build.${FFMPEG_TARGET}.${OPSYS:tl}/${FFMPEG_BRAND}
++FFMPEG_CDIR=   ${WRKSRC}/third_party/ffmpeg/chromium/config/${FFMPEG_BRAND}/${OPSYS:tl}/${FFMPEG_TARGET}
+ 
+ # Allow relocations against read-only segments (override lld default)
+ LDFLAGS_i386=	-Wl,-znotext
+@@ -274,10 +269,10 @@ pre-configure:
  	cd ${WRKSRC} && ${SETENV} ${CONFIGURE_ENV} ${PYTHON_CMD} \
  		./build/linux/unbundle/replace_gn_files.py --system-libraries \
  		dav1d flac fontconfig freetype harfbuzz-ng icu libdrm libevent libpng \
 -		libusb libwebp libxml libxslt openh264 opus snappy || ${FALSE}
 +		libusb libwebp libxml libxslt openh264 opus || ${FALSE}
  	# Chromium uses an unreleased version of FFmpeg, so configure it
- .for brand in Chrome Chromium
- 	${CP} -R \
+ 	cd ${WRKSRC}/third_party/ffmpeg && \
+-		${PYTHON_CMD} chromium/scripts/build_ffmpeg.py freebsd ${FFMPEG_TARGET} \
++		${PYTHON_CMD} chromium/scripts/build_ffmpeg.py dragonfly ${FFMPEG_TARGET} \
+ 		--config-only --branding=${FFMPEG_BRAND}
+ 	cd ${FFMPEG_BDIR} && ${GMAKE} ffversion.h
+ 	${MKDIR} ${FFMPEG_CDIR}
