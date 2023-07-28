@@ -2,14 +2,14 @@
 #
 # Simple script to handle synclog
 #
-import importlib
+from importlib.util import find_spec
 import argparse
 import json
 import sys
 
 
 try:
-    importlib.util.find_spec('tabulate')
+    find_spec('tabulate')
     from tabulate import tabulate
 except ImportError:
     print('Please install the tabulate module')
