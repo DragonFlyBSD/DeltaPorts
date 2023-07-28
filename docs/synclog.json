@@ -1,5 +1,5 @@
 {
-    "current": "2023Q2",
+    "current": "2023Q3",
     "releases": [
 	{
 	    "id": "2020S07",
@@ -395,6 +395,14 @@
 	    "id": "2023Q2",
 	    "timestamp": " Wed May 10 08:12:59 2023 +0000",
 	    "base_commit": "4d18616804232b78d92c9189af848fc04add1c68",
+	    "rejects": [],
+	    "to-do": [],
+	    "cherry-picks": []
+	},
+	{
+	    "id": "2023Q3",
+	    "timestamp": "Wed Jul 12 18:32:44 2023 +0300",
+	    "base_commit": "8c806d18045eb2dda1ccd1a1977337dcec6baa83",
 	    "rejects": [],
 	    "to-do": [
 		{
