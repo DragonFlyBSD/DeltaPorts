@@ -1,13 +1,8 @@
---- Makefile.orig	2019-05-15 16:19:06 UTC
+--- Makefile.orig	2023-07-28 19:49:25 UTC
 +++ Makefile
-@@ -32,19 +32,8 @@ OPTIONS_DEFINE=	EXAMPLES
+@@ -37,14 +37,7 @@ PORTEXAMPLES=	openssl.cnf.sample
+ OPTIONS_DEFINE=	EXAMPLES
  
- .include <bsd.port.pre.mk>
- 
--.if ${SSL_DEFAULT:Mlibressl*}
--IGNORE=	Detected LibreSSL (RAND_METHOD structure unsupported)
--.endif
--
  post-patch:
 -	(${CAT} ${OPENSSLINC}/openssl/opensslv.h; \
 -	 ${ECHO_CMD} "#if OPENSSL_VERSION_NUMBER < 0x10100000L"; \
