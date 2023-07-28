@@ -1,6 +1,6 @@
---- Makefile.orig	2023-04-11 19:28:35 UTC
+--- Makefile.orig	2023-07-28 23:30:39 UTC
 +++ Makefile
-@@ -69,8 +69,8 @@ MESON_ARGS+=	-D${f}=false
+@@ -68,8 +68,8 @@ MESON_ARGS+=	-D${f}=false
  .endfor
  
  .if ${FLAVOR} == xorg
@@ -9,9 +9,9 @@
 +LIB_DEPENDS+=	libudev.so:devel/libudev-devd \
 +		libxcvt.so:x11/libxcvt
  MESON_ARGS+=	-Dudev=true \
+ 		-Dudev_kms=true \
  		-Dlog_dir=/var/log \
- 		-Dsuid_wrapper=true
-@@ -82,6 +82,10 @@ MESON_ARGS+=	-Dudev=false
+@@ -83,6 +83,10 @@ MESON_ARGS+=	-Dudev=false \
  MESON_ARGS+=	-Ddrm=true
  LIB_DEPENDS+=	libdrm.so:graphics/libdrm \
  		libepoxy.so:graphics/libepoxy
@@ -22,12 +22,12 @@
  .endif
  
  .if ${FLAVOR} == xephyr
-@@ -120,7 +124,7 @@ USE_XORG+=	pciaccess
+@@ -121,7 +125,7 @@ USE_XORG+=	pciaccess
  MESON_ARGS+=	-Dsha1=libmd
  .endif
  
--.if ${ARCH} == aarch64 || ${ARCH} == amd64 || ${ARCH} == armv7 || ${ARCH} == i386 || ${ARCH} == powerpc64 || ${ARCH} == powerpc64le
-+.if ${ARCH} == aarch64 || ${ARCH} == x86_64 || ${ARCH} == armv7 || ${ARCH} == i386 || ${ARCH} == powerpc64 || ${ARCH} == powerpc64le
+-.if ${ARCH} == aarch64 || ${ARCH} == amd64 || ${ARCH} == armv7 || ${ARCH} == i386 || ${ARCH} == powerpc || ${ARCH} == powerpc64 || ${ARCH} == powerpc64le
++.if ${ARCH} == aarch64 || ${ARCH} == x86_64 || ${ARCH} == armv7 || ${ARCH} == i386 || ${ARCH} == powerpc || ${ARCH} == powerpc64 || ${ARCH} == powerpc64le
  LIB_DEPENDS+=	libunwind.so:devel/libunwind
  .endif
  
