@@ -1,6 +1,6 @@
---- bsd.port.subdir.mk.orig	2022-07-11 23:28:34 UTC
+--- bsd.port.subdir.mk.orig	2023-07-28 16:55:47 UTC
 +++ bsd.port.subdir.mk
-@@ -70,21 +70,34 @@ ARCH!=	${UNAME} -p
+@@ -75,21 +75,34 @@ ARCH!=	${UNAME} -p
  _EXPORTED_VARS+=	ARCH
  
  .  if !defined(OSVERSION)
@@ -42,7 +42,7 @@
  .  endif
  _EXPORTED_VARS+=	_OSRELEASE
  .  if !defined(OSREL)
-@@ -93,44 +106,42 @@ OSREL=	${_OSRELEASE:C/[-(].*//}
+@@ -98,54 +111,50 @@ OSREL=	${_OSRELEASE:C/[-(].*//}
  _EXPORTED_VARS+=	OSREL
  
  .  if !defined(OPSYS)
@@ -104,9 +104,11 @@
  
  .  if !defined(UID)
  UID!=	${ID} -u
-@@ -140,7 +151,7 @@ _EXPORTED_VARS+=	UID
- .endif
+ .  endif
+ _EXPORTED_VARS+=	UID
  
+-.endif
+-
  INDEXDIR?=	${PORTSDIR}
 -INDEXFILE?=	INDEX-${OSVERSION:C/([0-9]*)[0-9]{5}/\1/}
 +INDEXFILE?=	INDEX
