@@ -1,9 +1,9 @@
---- distinfo.orig	2023-04-15 09:16:54 UTC
+--- distinfo.orig	2023-07-28 19:23:43 UTC
 +++ distinfo
-@@ -49,3 +49,9 @@ SHA256 (rust/2023-02-09/rust-std-1.67.1-
- SIZE (rust/2023-02-09/rust-std-1.67.1-riscv64gc-unknown-freebsd.tar.xz) = 23719128
- SHA256 (rust/2023-02-09/cargo-1.67.1-riscv64gc-unknown-freebsd.tar.xz) = c09c2b24f75f4d97e716d0deac26f994c4578307f901fa123443c7b7c1d8a4d5
- SIZE (rust/2023-02-09/cargo-1.67.1-riscv64gc-unknown-freebsd.tar.xz) = 6767524
+@@ -49,3 +49,9 @@ SHA256 (rust/2023-04-20/rust-std-1.69.0-
+ SIZE (rust/2023-04-20/rust-std-1.69.0-riscv64gc-unknown-freebsd.tar.xz) = 23467276
+ SHA256 (rust/2023-04-20/cargo-1.69.0-riscv64gc-unknown-freebsd.tar.xz) = 3c235e811908a9452d5d465f6deddd610f56f40100368f1210ca8e55f966baaa
+ SIZE (rust/2023-04-20/cargo-1.69.0-riscv64gc-unknown-freebsd.tar.xz) = 7059164
 +SHA256 (rust/2023-02-09/rustc-1.67.1-x86_64-unknown-dragonfly.tar.xz) = 1b417e611ec125c492a49280a72fabf7fa74a12fc149f471cf4ad5cc5348f5a2
 +SIZE (rust/2023-02-09/rustc-1.67.1-x86_64-unknown-dragonfly.tar.xz) = 49290576
 +SHA256 (rust/2023-02-09/rust-std-1.67.1-x86_64-unknown-dragonfly.tar.xz) = bf2fcd1148450b4c1a40deae8ad9e5e24dd8f15ea0e2f8b7271993002e3da950
