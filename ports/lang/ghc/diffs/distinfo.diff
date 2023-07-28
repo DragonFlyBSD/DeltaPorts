@@ -1,8 +1,8 @@
---- distinfo.orig	2022-11-04 00:05:56 UTC
+--- distinfo.orig	2023-07-28 18:06:29 UTC
 +++ distinfo
-@@ -17,3 +17,5 @@ SHA256 (ghc-8.10.7-boot-armv7-freebsd.ta
- SIZE (ghc-8.10.7-boot-armv7-freebsd.tar.xz) = 127945844
- SHA256 (ghc-8.10.7-boot-armv6-freebsd.tar.xz) = 84010e11f92e0a9fe106b80cbaf027ba342da055c3ad6d89eab0a389c0523e1b
- SIZE (ghc-8.10.7-boot-armv6-freebsd.tar.xz) = 129190568
+@@ -17,3 +17,5 @@ SHA256 (ghc-8.10.7-boot-i386-freebsd.tar
+ SIZE (ghc-8.10.7-boot-i386-freebsd.tar.xz) = 70040192
+ SHA256 (ghc-8.10.7-boot-aarch64-freebsd.tar.xz) = f1bc49999d0db33fbf7ada6696ebebe1639126924c89deed83539850c435e23c
+ SIZE (ghc-8.10.7-boot-aarch64-freebsd.tar.xz) = 124950584
 +SHA256 (ghc-8.10.7-boot-x86_64-dragonfly.tar.xz) = 3970131a4c129135ffa2e16e2abe773cd63df2540c740278a87e4e943e110169
 +SIZE (ghc-8.10.7-boot-x86_64-dragonfly.tar.xz) = 154596776

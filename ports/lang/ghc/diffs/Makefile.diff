@@ -1,7 +1,7 @@
---- Makefile.orig	2022-11-04 00:06:27 UTC
+--- Makefile.orig	2023-07-28 18:06:25 UTC
 +++ Makefile
-@@ -2,7 +2,8 @@ PORTNAME=	ghc
- PORTVERSION=	${GHC_VERSION}
+@@ -3,7 +3,8 @@ PORTVERSION=	${GHC_VERSION}
+ PORTREVISION?=	0
  CATEGORIES=	lang haskell
  MASTER_SITES=	https://www.haskell.org/ghc/dist/${PORTVERSION}/:source \
 -		LOCAL/arrowd/:boot
@@ -10,8 +10,8 @@
  DISTFILES=	ghc-${PORTVERSION}-src${EXTRACT_SUFX}:source
  
  MAINTAINER=	haskell@FreeBSD.org
-@@ -106,11 +107,13 @@ BOOT_DIR=		${WRKDIR}/ghc-${BOOT_GHC_VERS
- BOOT_GHC=		${BOOT_DIR}/bin/ghc-${BOOT_GHC_VERSION}
+@@ -165,11 +166,13 @@ PLIST=			${.CURDIR}/../ghc92/pkg-plist
+ .endif
  
  # This version of ncurses is needed by bootstrap compiler
 +.if ${OPSYS} == FreeBSD
@@ -23,9 +23,9 @@
 -.if empty(PORT_OPTIONS:MBOOT)
 +.if empty(PORT_OPTIONS:MBOOT) && ${OPSYS} == "FreeBSD"
  DISTFILES+=		ghc-${BOOT_GHC_VERSION}-boot-${ARCH}-freebsd${EXTRACT_SUFX}:boot
- .endif # MBOOT
- 
-@@ -129,6 +132,34 @@ BUILD_DEPENDS+=		llc${BOOT_LLVM_VERSION}
+ .   if !defined(IGNORE_MISSING_HADRIAN) && defined(USE_HADRIAN)
+ DISTFILES+=		hadrian-${GHC_VERSION}-boot.tar.gz:boot
+@@ -191,6 +194,34 @@ BUILD_DEPENDS+=		llc${BOOT_LLVM_VERSION}
  .  endif
  .endif
  
@@ -60,18 +60,3 @@
  post-patch:
  #	Generate the build.mk file
  	${RM} -f ${WRKSRC}/mk/build.mk
-@@ -136,12 +167,14 @@ post-patch:
- 	${ECHO_CMD} ${line} >> ${WRKSRC}/mk/build.mk
- .endfor
- 
-+.if ${OPSYS} == "FreeBSD"
- # TODO: remove this after rerolling all bootstraps
- post-patch-BOOT-off:
- 	@${REINPLACE_CMD} -e '/^mandir/d' ${BOOT_DIR}/mk/build.mk
- 	@${REINPLACE_CMD} -e '/^infodir/d' ${BOOT_DIR}/mk/build.mk
- 	@${REINPLACE_CMD} -e '/^docdir/d' ${BOOT_DIR}/mk/build.mk
- 	@${REINPLACE_CMD} -e '/^htmldir/d' ${BOOT_DIR}/mk/build.mk
-+.endif
- 
- pre-configure:
- 	# Call the bootstrap script
