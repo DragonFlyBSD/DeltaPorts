@@ -68,6 +68,7 @@ jobs:
           ref: 2023Q3
           repository: freebsd/freebsd-ports
           path: freebsd-ports
+          persist-credentials: false
       - name: Generate INDEX, merge DeltaPorts
         if: ${{ steps.parsing.outputs.dport  != 'NOPORT' }}
         run: /root/bin/generate.sh "${{ steps.parsing.outputs.dport }}"
