@@ -65,7 +65,7 @@ jobs:
         if: ${{ steps.parsing.outputs.dport  != 'NOPORT' }}
         uses: actions/checkout@v3
         with:
-          ref: 2023Q2
+          ref: 2023Q3
           repository: freebsd/freebsd-ports
           path: freebsd-ports
       - name: Generate INDEX, merge DeltaPorts
