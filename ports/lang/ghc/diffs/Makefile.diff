@@ -1,4 +1,4 @@
---- Makefile.orig	2023-07-28 18:06:25 UTC
+--- Makefile.orig	2023-09-03 00:50:24 UTC
 +++ Makefile
 @@ -3,7 +3,8 @@ PORTVERSION=	${GHC_VERSION}
  PORTREVISION?=	0
@@ -10,7 +10,7 @@
  DISTFILES=	ghc-${PORTVERSION}-src${EXTRACT_SUFX}:source
  
  MAINTAINER=	haskell@FreeBSD.org
-@@ -165,11 +166,13 @@ PLIST=			${.CURDIR}/../ghc92/pkg-plist
+@@ -167,11 +168,13 @@ PLIST=			${.CURDIR}/../ghc92/pkg-plist
  .endif
  
  # This version of ncurses is needed by bootstrap compiler
@@ -25,7 +25,7 @@
  DISTFILES+=		ghc-${BOOT_GHC_VERSION}-boot-${ARCH}-freebsd${EXTRACT_SUFX}:boot
  .   if !defined(IGNORE_MISSING_HADRIAN) && defined(USE_HADRIAN)
  DISTFILES+=		hadrian-${GHC_VERSION}-boot.tar.gz:boot
-@@ -191,6 +194,34 @@ BUILD_DEPENDS+=		llc${BOOT_LLVM_VERSION}
+@@ -193,6 +196,38 @@ BUILD_DEPENDS+=		llc${BOOT_LLVM_VERSION}
  .  endif
  .endif
  
@@ -35,6 +35,10 @@
 +DISTFILES+=		ghc-${BOOT_GHC_VERSION}-boot-${ARCH}-dragonfly.tar.xz:dflyboot
 +CONFIGURE_TARGET=	${ARCH}-portbld-dragonfly
 +CONFIGURE_ENV+=		BOOTDIR=${BOOT_DIR} LBASE=${LOCALBASE}
++
++.   if !defined(IGNORE_MISSING_HADRIAN) && defined(USE_HADRIAN)
++DISTFILES+=		hadrian-${GHC_VERSION}-${OPSYS:tl}-boot.tar.gz:boot
++.   endif
 +
 +CONFIGURE_ARGS+=	--target=${CONFIGURE_TARGET}
 +LLVM_VERSION:=	${LLVM_DEFAULT}
@@ -60,3 +64,50 @@
  post-patch:
  #	Generate the build.mk file
  	${RM} -f ${WRKSRC}/mk/build.mk
+@@ -203,6 +238,20 @@ post-patch:
+ 	${SED} -e 's|%%DYNAMIC%%|${HADRIAN_SETTING_DYNAMIC}|' \
+ 		-e 's|%%PROFILE%%|${HADRIAN_SETTING_PROFILE}|' \
+ 		${PATCHDIR}/UserSettings.hs > ${WRKSRC}/hadrian/src/UserSettings.hs
++	${MKDIR} ${WRKSRC}/_build
++# WARNING: Most of the OPTS in BUILD_MK should be translated to
++#          hadrian.settings key/value options
++#
++# https://gitlab.haskell.org/ghc/ghc/blob/master/hadrian/doc/user-settings.md
++	${ECHO_CMD} "*.*.ghc.hs.opts += -I${NCURSESINC} -L${NCURSESLIB} -I${LOCALBASE}/include -L${LOCALBASE}/lib" >> \
++		${WRKSRC}/_build/hadrian.settings
++	${ECHO_CMD} "*.*.cc.c.opts += ${CFLAGS}" >> \
++		${WRKSRC}/_build/hadrian.settings
++# This one is not valid for 9.2.8
++#	${ECHO_CMD} "*.*.hsc2hs.run.opts += -I${LOCALBASE}/include --lflag=-L${LOCALBASE}/lib" >> \
++#		${WRKSRC}/_build/hadrian.settings
++	${ECHO_CMD} "*.terminfo.cabal.configure.opts += --configure-option=--with-curses-libraries=${NCURSESLIB}" >> \
++		${WRKSRC}/_build/hadrian.settings
+ .endif
+ 
+ pre-configure:
+@@ -216,7 +265,7 @@ pre-configure:
+ .ifdef USE_HADRIAN
+ # Compile Hadrian
+ 	cd ${WRKSRC}/hadrian/bootstrap && \
+-		./bootstrap.py -w ${BOOT_GHC} -s ${DISTDIR}/hadrian-${GHC_VERSION}-boot.tar.gz
++		./bootstrap.py -w ${BOOT_GHC} -s ${DISTDIR}/hadrian-${GHC_VERSION}-${OPSYS:tl}-boot.tar.gz
+ .endif
+ 
+ .ifdef USE_HADRIAN
+@@ -320,7 +369,7 @@ create-hadrian-bootstrap:
+ # Predefined plans use integer-gmp, while we build bootstraps with integer-simple
+ # Predefined plans aren't pretty-printed, so we can't easily patch them
+ 	cd ${WRKSRC}/hadrian/bootstrap && \
+-		./bootstrap.py -w ${BOOT_GHC} --deps ${HADRIAN_PLAN} fetch -o /tmp/hadrian-${GHC_VERSION}-boot
++		./bootstrap.py -w ${BOOT_GHC} --deps ${HADRIAN_PLAN} fetch -o /tmp/hadrian-${GHC_VERSION}-${OPSYS:tl}-boot
+ 
+ 	@cd /tmp \
+ 		&& sha256 hadrian-${GHC_VERSION}-boot.tar.gz \
+@@ -339,6 +388,6 @@ check-hadrian-bootstrap:
+ 	${MAKE} -C ${.CURDIR} pre-configure
+ # Compile Hadrian
+ 	cd ${WRKSRC}/hadrian/bootstrap && \
+-		./bootstrap.py -w ${BOOT_GHC} -s /tmp/hadrian-${GHC_VERSION}-boot.tar.gz
++		./bootstrap.py -w ${BOOT_GHC} -s /tmp/hadrian-${GHC_VERSION}-${OPSYS:tl}-boot.tar.gz
+ 
+ .include <bsd.port.post.mk>
