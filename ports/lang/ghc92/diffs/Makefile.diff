@@ -1,0 +1,9 @@
+--- Makefile.orig	2023-09-03 00:50:02 UTC
++++ Makefile
+@@ -23,5 +23,6 @@ BOOT_LLVM_VERSION=	10
+ MASTERDIR=	${.CURDIR}/../ghc
+ PATCHDIR=	${.CURDIR}/files
+ # PLIST for this port is set in the master one
++PLIST_SUB=	OPSYS=${OPSYS:tl}
+ 
+ .include	"${MASTERDIR}/Makefile"
