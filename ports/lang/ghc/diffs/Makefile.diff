@@ -1,4 +1,4 @@
---- Makefile.orig	2023-09-03 23:47:39 UTC
+--- Makefile.orig	2023-09-05 16:27:51 UTC
 +++ Makefile
 @@ -3,7 +3,8 @@ PORTVERSION=	${GHC_VERSION}
  PORTREVISION?=	0
@@ -33,13 +33,15 @@
  DISTFILES+=		ghc-${BOOT_GHC_VERSION}-boot-${ARCH}-freebsd${EXTRACT_SUFX}:boot
  .   if !defined(IGNORE_MISSING_HADRIAN) && defined(USE_HADRIAN)
  DISTFILES+=		hadrian-${GHC_VERSION}-boot.tar.gz:boot
-@@ -193,6 +197,38 @@ BUILD_DEPENDS+=		llc${BOOT_LLVM_VERSION}
+@@ -193,6 +197,40 @@ BUILD_DEPENDS+=		llc${BOOT_LLVM_VERSION}
  .  endif
  .endif
  
 +.if empty(PORT_OPTIONS:MBOOT) && ${OPSYS} == "DragonFly"
 +BUILD_DEPENDS+=		libtinfow-compat>0:misc/libtinfow-compat
-+BOOT_GHC_VERSION=	9.2.8
++.if ${SLAVE_PORT} != "yes"
++BOOT_GHC_VERSION=	9.2.7
++.endif
 +DISTFILES+=		ghc-${BOOT_GHC_VERSION}-boot-${ARCH}-dragonfly.tar.xz:dflyboot
 +CONFIGURE_TARGET=	${ARCH}-portbld-dragonfly
 +CONFIGURE_ENV+=		BOOTDIR=${BOOT_DIR} LBASE=${LOCALBASE}
@@ -60,19 +62,19 @@
 +# avoid "sed: RE error: Illegal byte sequence" in bootstrap configure script, smth fishy
 +# upstream configure does not support target x86_64-unknown-dragonfly5.9, resed solaris2
 +BUILD_DEPENDS+=		gsed:textproc/gsed
-+#dfly-patch:
-+#	${REINPLACE_CMD} -e 's@solaris2\*@dragonfly*@g' -e 's@"solaris2"@"dragonfly"@g' \
-+#		${WRKSRC}/configure # this is fragile, but avoid patch-configure diffs...
-+#	${REINPLACE_CMD} -e 's@solaris2\*@dragonfly*@g' -e 's@"solaris2"@"dragonfly"@g' \
-+#		${BOOT_DIR}/configure
-+#	${REINPLACE_CMD} -e 's@[[:<:]]sed[[:>:]]@gsed@g' \
-+#		${BOOT_DIR}/configure
++dfly-patch:
++	${REINPLACE_CMD} -e 's@solaris2\*@dragonfly*@g' -e 's@"solaris2"@"dragonfly"@g' \
++		${WRKSRC}/configure # this is fragile, but avoid patch-configure diffs...
++	${REINPLACE_CMD} -e 's@solaris2\*@dragonfly*@g' -e 's@"solaris2"@"dragonfly"@g' \
++		${BOOT_DIR}/configure
++	${REINPLACE_CMD} -e 's@[[:<:]]sed[[:>:]]@gsed@g' \
++		${BOOT_DIR}/configure
 +.endif
 +
  post-patch:
  #	Generate the build.mk file
  	${RM} -f ${WRKSRC}/mk/build.mk
-@@ -203,6 +239,20 @@ post-patch:
+@@ -203,6 +241,20 @@ post-patch:
  	${SED} -e 's|%%DYNAMIC%%|${HADRIAN_SETTING_DYNAMIC}|' \
  		-e 's|%%PROFILE%%|${HADRIAN_SETTING_PROFILE}|' \
  		${PATCHDIR}/UserSettings.hs > ${WRKSRC}/hadrian/src/UserSettings.hs
@@ -93,7 +95,7 @@
  .endif
  
  pre-configure:
-@@ -216,7 +266,7 @@ pre-configure:
+@@ -216,7 +268,7 @@ pre-configure:
  .ifdef USE_HADRIAN
  # Compile Hadrian
  	cd ${WRKSRC}/hadrian/bootstrap && \
@@ -102,7 +104,7 @@
  .endif
  
  .ifdef USE_HADRIAN
-@@ -273,17 +323,17 @@ create-bootstrap:
+@@ -273,17 +325,17 @@ create-bootstrap:
  		&& ${ECHO_CMD} "BIN_DIST_TAR=ghc-${GHC_VERSION}-boot.tar" >> mk/build.mk \
  		&& ${ECHO_CMD} "HADDOCK_DOCS=NO" >> mk/build.mk \
  		&& ${GMAKE} binary-dist TAR_COMP=xz \
@@ -125,7 +127,7 @@
  
  # Much like create-bootstrap, just different naming and output format
  # Set DYNAMIC, GMP and PROFILE to ON, and DOCS to OFF when generating Stack bindist
-@@ -320,12 +370,12 @@ create-hadrian-bootstrap:
+@@ -320,12 +372,12 @@ create-hadrian-bootstrap:
  # Predefined plans use integer-gmp, while we build bootstraps with integer-simple
  # Predefined plans aren't pretty-printed, so we can't easily patch them
  	cd ${WRKSRC}/hadrian/bootstrap && \
@@ -142,7 +144,7 @@
  	@${ECHO_CMD}
  	@${ECHO_CMD} "Remember to check that hadrian bootstrap builds fine by running \"make check-hadrian-bootstrap\""
  
-@@ -339,6 +389,6 @@ check-hadrian-bootstrap:
+@@ -339,6 +391,6 @@ check-hadrian-bootstrap:
  	${MAKE} -C ${.CURDIR} pre-configure
  # Compile Hadrian
  	cd ${WRKSRC}/hadrian/bootstrap && \
