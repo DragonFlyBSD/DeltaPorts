@@ -1,6 +1,6 @@
---- pkg-plist.hadrian.orig	2023-09-03 23:09:55 UTC
+--- pkg-plist.hadrian.orig	2023-09-09 12:44:27 UTC
 +++ pkg-plist.hadrian
-@@ -153,5012 +153,5012 @@ lib/ghc-%%GHC_VERSION%%/lib/package.conf
+@@ -153,5013 +153,5013 @@ lib/ghc-%%GHC_VERSION%%/lib/package.conf
  lib/ghc-%%GHC_VERSION%%/lib/package.conf.d/xhtml-%%XHTML_VERSION%%.conf.copy
  lib/ghc-%%GHC_VERSION%%/lib/settings
  lib/ghc-%%GHC_VERSION%%/lib/template-hsc.h
@@ -4355,6 +4355,7 @@
 -lib/ghc-%%GHC_VERSION%%/lib/x86_64-freebsd-ghc-%%GHC_VERSION%%/rts-1.0.2/include/rts/Timer.h
 -lib/ghc-%%GHC_VERSION%%/lib/x86_64-freebsd-ghc-%%GHC_VERSION%%/rts-1.0.2/include/rts/Types.h
 -lib/ghc-%%GHC_VERSION%%/lib/x86_64-freebsd-ghc-%%GHC_VERSION%%/rts-1.0.2/include/rts/Utils.h
+-lib/ghc-%%GHC_VERSION%%/lib/x86_64-freebsd-ghc-%%GHC_VERSION%%/rts-1.0.2/include/rts/ghc_ffi.h
 -lib/ghc-%%GHC_VERSION%%/lib/x86_64-freebsd-ghc-%%GHC_VERSION%%/rts-1.0.2/include/rts/prof/CCS.h
 -lib/ghc-%%GHC_VERSION%%/lib/x86_64-freebsd-ghc-%%GHC_VERSION%%/rts-1.0.2/include/rts/prof/Heap.h
 -lib/ghc-%%GHC_VERSION%%/lib/x86_64-freebsd-ghc-%%GHC_VERSION%%/rts-1.0.2/include/rts/prof/LDV.h
@@ -9363,6 +9364,7 @@
 +lib/ghc-%%GHC_VERSION%%/lib/x86_64-%%OPSYS%%-ghc-%%GHC_VERSION%%/rts-1.0.2/include/rts/Timer.h
 +lib/ghc-%%GHC_VERSION%%/lib/x86_64-%%OPSYS%%-ghc-%%GHC_VERSION%%/rts-1.0.2/include/rts/Types.h
 +lib/ghc-%%GHC_VERSION%%/lib/x86_64-%%OPSYS%%-ghc-%%GHC_VERSION%%/rts-1.0.2/include/rts/Utils.h
++lib/ghc-%%GHC_VERSION%%/lib/x86_64-%%OPSYS%%-ghc-%%GHC_VERSION%%/rts-1.0.2/include/rts/ghc_ffi.h
 +lib/ghc-%%GHC_VERSION%%/lib/x86_64-%%OPSYS%%-ghc-%%GHC_VERSION%%/rts-1.0.2/include/rts/prof/CCS.h
 +lib/ghc-%%GHC_VERSION%%/lib/x86_64-%%OPSYS%%-ghc-%%GHC_VERSION%%/rts-1.0.2/include/rts/prof/Heap.h
 +lib/ghc-%%GHC_VERSION%%/lib/x86_64-%%OPSYS%%-ghc-%%GHC_VERSION%%/rts-1.0.2/include/rts/prof/LDV.h
