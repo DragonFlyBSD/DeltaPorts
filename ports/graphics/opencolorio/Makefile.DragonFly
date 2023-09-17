@@ -1,4 +1,4 @@
-BUILD_DEPENDS+=  git>=0:devel/git@lite
+BUILD_DEPENDS+=  git>0:devel/git
 
 dfly-install:
-	${RM} -rfv ${STAGEDIR}/usr/obj
+	${RM} -rfv ${STAGEDIR}/${WRKDIRPREFIX}
