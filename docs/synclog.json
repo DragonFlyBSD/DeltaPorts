@@ -465,6 +465,11 @@
 		    "port": "misc/xgboost",
 		    "desc": "Unbreak when we have SO_DOMAIN.",
 		    "status": "pending"
+		},
+		{
+		    "port": "emulators/qemu",
+		    "desc": "Update elftoolchain so that all targets can be built.",
+		    "status": "pending"
 		}
 	    ],
 	    "cherry-picks": [
