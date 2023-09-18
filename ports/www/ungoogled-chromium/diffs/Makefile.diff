@@ -1,6 +1,6 @@
---- Makefile.orig	2023-07-22 20:20:39 UTC
+--- Makefile.orig	2023-09-18 23:06:22 UTC
 +++ Makefile
-@@ -33,7 +33,6 @@ BUILD_DEPENDS=	bash:shells/bash \
+@@ -37,7 +37,6 @@ BUILD_DEPENDS=	bash:shells/bash \
  LIB_DEPENDS=	libatk-bridge-2.0.so:accessibility/at-spi2-core \
  		libatspi.so:accessibility/at-spi2-core \
  		libspeechd.so:accessibility/speech-dispatcher \
@@ -8,7 +8,7 @@
  		libFLAC.so:audio/flac \
  		libopus.so:audio/opus \
  		libspeex.so:audio/speex \
-@@ -223,11 +222,7 @@ BINARY_ALIAS+=		cpp=${LOCALBASE}/bin/cla
+@@ -237,11 +236,7 @@ BINARY_ALIAS+=		cpp=${LOCALBASE}/bin/cla
  			cc=${LOCALBASE}/bin/clang${LLVM_DEFAULT} \
  			c++=${LOCALBASE}/bin/clang++${LLVM_DEFAULT} \
  			ar=${LOCALBASE}/bin/llvm-ar${LLVM_DEFAULT} \
@@ -21,18 +21,18 @@
  .endif
  
  # - swiftshader/lib/{libEGL.so,libGLESv2.so} is x86 only
-@@ -245,8 +240,8 @@ PLIST_SUB+=	NOT_AARCH64=""
+@@ -259,8 +254,8 @@ PLIST_SUB+=	NOT_AARCH64=""
  FFMPEG_TARGET=	ia32
  .endif
  
--FFMPEG_BDIR=	${WRKSRC}/third_party/ffmpeg/build.${FFMPEG_TARGET}.freebsd/${FFMPEG_BRAND}
+-FFMPEG_BDIR=	${WRKSRC}/build.${FFMPEG_TARGET}.freebsd/${FFMPEG_BRAND}
 -FFMPEG_CDIR=	${WRKSRC}/third_party/ffmpeg/chromium/config/${FFMPEG_BRAND}/freebsd/${FFMPEG_TARGET}
-+FFMPEG_BDIR=   ${WRKSRC}/third_party/ffmpeg/build.${FFMPEG_TARGET}.${OPSYS:tl}/${FFMPEG_BRAND}
-+FFMPEG_CDIR=   ${WRKSRC}/third_party/ffmpeg/chromium/config/${FFMPEG_BRAND}/${OPSYS:tl}/${FFMPEG_TARGET}
++FFMPEG_BDIR=	${WRKSRC}/build.${FFMPEG_TARGET}.${OPSYS:tl}/${FFMPEG_BRAND}
++FFMPEG_CDIR=	${WRKSRC}/third_party/ffmpeg/chromium/config/${FFMPEG_BRAND}/${OPSYS:tl}/${FFMPEG_TARGET}
  
  # Allow relocations against read-only segments (override lld default)
  LDFLAGS_i386=	-Wl,-znotext
-@@ -274,10 +269,10 @@ pre-configure:
+@@ -299,10 +294,10 @@ pre-configure:
  	cd ${WRKSRC} && ${SETENV} ${CONFIGURE_ENV} ${PYTHON_CMD} \
  		./build/linux/unbundle/replace_gn_files.py --system-libraries \
  		dav1d flac fontconfig freetype harfbuzz-ng icu libdrm libevent libpng \
