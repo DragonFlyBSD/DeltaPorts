@@ -1,4 +1,4 @@
---- Makefile.orig	2023-07-22 20:20:39 UTC
+--- Makefile.orig	2023-09-18 22:35:20 UTC
 +++ Makefile
 @@ -33,7 +33,6 @@ BUILD_DEPENDS=	bash:shells/bash \
  LIB_DEPENDS=	libatk-bridge-2.0.so:accessibility/at-spi2-core \
@@ -25,10 +25,10 @@
  FFMPEG_TARGET=	ia32
  .endif
  
--FFMPEG_BDIR=	${WRKSRC}/third_party/ffmpeg/build.${FFMPEG_TARGET}.freebsd/${FFMPEG_BRAND}
+-FFMPEG_BDIR=	${WRKSRC}/build.${FFMPEG_TARGET}.freebsd/${FFMPEG_BRAND}
 -FFMPEG_CDIR=	${WRKSRC}/third_party/ffmpeg/chromium/config/${FFMPEG_BRAND}/freebsd/${FFMPEG_TARGET}
-+FFMPEG_BDIR=   ${WRKSRC}/third_party/ffmpeg/build.${FFMPEG_TARGET}.${OPSYS:tl}/${FFMPEG_BRAND}
-+FFMPEG_CDIR=   ${WRKSRC}/third_party/ffmpeg/chromium/config/${FFMPEG_BRAND}/${OPSYS:tl}/${FFMPEG_TARGET}
++FFMPEG_BDIR=	${WRKSRC}/build.${FFMPEG_TARGET}.${OPSYS:tl}/${FFMPEG_BRAND}
++FFMPEG_CDIR=	${WRKSRC}/third_party/ffmpeg/chromium/config/${FFMPEG_BRAND}/${OPSYS:tl}/${FFMPEG_TARGET}
  
  # Allow relocations against read-only segments (override lld default)
  LDFLAGS_i386=	-Wl,-znotext
