@@ -1,5 +1,5 @@
 # no pulse
-OPTIONS_DEFAULT:=	${OPTIONS_DEFAULT:NPULSEAUDIO}
+OPTIONS_DEFAULT:=	${OPTIONS_DEFAULT:NPULSEAUDIO:NWAYLAND}
 
 .undef PULSEAUDIO_BROKEN_OFF
 
@@ -14,6 +14,4 @@ dfly-patch:
 		${WRKSRC}/deps/obs-scripting/obslua/CMakeLists.txt \
 		${WRKSRC}/deps/obs-scripting/obspython/CMakeLists.txt \
 		${WRKSRC}/UI/CMakeLists.txt \
-		${WRKSRC}/UI/cmake/legacy.cmake \
-		${WRKSRC}/libobs/CMakeLists.txt \
-		${WRKSRC}/UI/cmake/legacy.cmake
+		${WRKSRC}/libobs/CMakeLists.txt
