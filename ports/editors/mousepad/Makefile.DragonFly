@@ -1,1 +1,1 @@
-PLIST_FILES+=	lib/mousepad/plugins/libmousepad-plugin-shortcuts.so
+LIB_DEPENDS+=	libpolkit-gobject-1.so:sysutils/polkit
