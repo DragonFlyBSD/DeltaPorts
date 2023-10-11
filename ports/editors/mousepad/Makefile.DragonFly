@@ -1,0 +1,1 @@
+PLIST_FILES+=	lib/mousepad/plugins/libmousepad-plugin-shortcuts.so
