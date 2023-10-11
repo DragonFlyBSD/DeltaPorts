@@ -7,6 +7,6 @@ COMMENT=	"meta-port" for chromium selection
 
 USES=		metaport
 
-RUN_DEPENDS=	chrome:www/ungoogled-chromium
+RUN_DEPENDS=	ungoogled-chromium:www/ungoogled-chromium
 
 .include <bsd.port.mk>
