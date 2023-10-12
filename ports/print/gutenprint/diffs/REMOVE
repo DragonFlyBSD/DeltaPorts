@@ -1,0 +1,3 @@
+files/patch-src_cups_commandtoepson.c
+files/patch-src_cups_commandtocanon.c
+files/patch-config.h.in
