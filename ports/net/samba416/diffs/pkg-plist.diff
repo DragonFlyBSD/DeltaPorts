@@ -1,0 +1,10 @@
+--- pkg-plist.orig	2023-10-12 09:20:13 UTC
++++ pkg-plist
+@@ -403,7 +403,6 @@ man/man8/vfs_virusfilter.8.gz
+ man/man8/vfs_widelinks.8.gz
+ man/man8/vfs_worm.8.gz
+ man/man8/vfs_xattr_tdb.8.gz
+-man/man8/vfs_zfsacl.8.gz
+ man/man8/winbind_krb5_locator.8.gz
+ man/man8/winbindd.8.gz
+ @dir %%SAMBA4_RUNDIR%%

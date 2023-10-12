@@ -1,0 +1,29 @@
+--- Makefile.orig	2023-10-12 09:20:13 UTC
++++ Makefile
+@@ -172,8 +172,6 @@ LIB_DEPENDS+=			libinotify.so:devel/libi
+ # GNUTLS
+ LIB_DEPENDS+=			libgnutls.so:security/gnutls
+ LIB_DEPENDS+=			libgcrypt.so:security/libgcrypt
+-# NFSv4 ACL glue
+-LIB_DEPENDS+=			libsunacl.so:sysutils/libsunacl
+ # Jansson
+ BUILD_DEPENDS+=			jansson>=2.10:devel/jansson
+ RUN_DEPENDS+=			jansson>=2.10:devel/jansson
+@@ -297,7 +295,7 @@ CONFIGURE_ARGS+=		\
+ 				--without-fake-kaserver \
+ 				--without-systemd \
+ 				--with-libarchive \
+-				--with-acl-support \
++				--without-acl-support \
+ 				--with-sendfile-support \
+ 				--disable-ctdb-tests
+ #				${ICONV_CONFIGURE_BASE}
+@@ -441,7 +439,7 @@ SAMBA4_MODULES+=		vfs_acl_tdb vfs_acl_xa
+ 				vfs_shadow_copy vfs_shadow_copy2 vfs_shell_snap \
+ 				vfs_streams_depot vfs_streams_xattr vfs_syncops \
+ 				vfs_time_audit vfs_unityed_media vfs_virusfilter \
+-				vfs_widelinks vfs_worm vfs_xattr_tdb vfs_zfsacl
++				vfs_widelinks vfs_worm vfs_xattr_tdb
+ 
+ .if ${PORT_OPTIONS:MDEVELOPER}
+ SAMBA4_MODULES+=		auth_skel pdb_test gpext_security gpext_registry \
