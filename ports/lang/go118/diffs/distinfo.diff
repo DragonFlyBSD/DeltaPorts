@@ -1,8 +1,0 @@
---- distinfo.orig	2023-05-29 22:33:59 UTC
-+++ distinfo
-@@ -13,3 +13,5 @@ SHA256 (go-freebsd-386-go1.20.tar.xz) =
- SIZE (go-freebsd-386-go1.20.tar.xz) = 35448892
- SHA256 (go-freebsd-riscv64-go1.20.tar.xz) = 010921013d24124ff31f4b1965456349547acf936572fc6e0bcf95a0542794bd
- SIZE (go-freebsd-riscv64-go1.20.tar.xz) = 33807544
-+SHA256 (go-dragonfly-amd64-go1.20.tar.xz) = 29bd5e6a751d6a1a127d542724e43e6768c5ee276edc0776777f48d3749d6db2
-+SIZE (go-dragonfly-amd64-go1.20.tar.xz) = 27773156

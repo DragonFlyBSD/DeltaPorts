@@ -1,5 +1,0 @@
---- pkg-plist.orig	2022-01-13 04:21:12 UTC
-+++ pkg-plist
-@@ -204 +204 @@
--/boot/firmware/intel-ucode.bin
-+/boot/modules.local/intel-ucode.bin
