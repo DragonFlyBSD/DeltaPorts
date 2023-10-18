@@ -1,4 +1,4 @@
---- Uses/cargo.mk.orig	2023-06-03 13:33:18 UTC
+--- Uses/cargo.mk.orig	2023-10-18 22:55:30 UTC
 +++ Uses/cargo.mk
 @@ -3,16 +3,16 @@
  #
@@ -24,7 +24,7 @@
 @@ -140,12 +140,18 @@ CARGO_ENV+=	RUST_BACKTRACE=1
  .  endif
  
- .  if !defined(LTO_UNSAFE) || (defined(LTO_DISABLE_CHECK) && ${ARCH} == powerpc64) || (defined(LTO_DISABLE_CHECK) && ${ARCH} == riscv64)
+ .  if !defined(LTO_UNSAFE) || (defined(LTO_DISABLE_CHECK) && ${ARCH} == riscv64)
 -_CARGO_MSG=	"===>   Additional optimization to port applied"
 -WITH_LTO=	yes
 +#
