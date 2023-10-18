@@ -1,14 +1,16 @@
---- Uses/vala.mk.orig	2023-08-02 22:32:16 UTC
+--- Uses/vala.mk.orig	2023-10-18 22:52:33 UTC
 +++ Uses/vala.mk
-@@ -23,7 +23,11 @@ BUILD_DEPENDS+=		${_VALA_BINARY}:${_VALA
+@@ -23,9 +23,13 @@ BUILD_DEPENDS+=		${_VALA_BINARY}:${_VALA
  .    endif
  .  endif
  
 +# tuxillo: Only enable this flag for clang
 +_CCVERSION!=    ${CC} --version
-+.  if ${_CCVERSION:Mclang}
++.if ${_CCVERSION:Mclang}
  # remove after https://gitlab.gnome.org/GNOME/vala/-/issues/1408 is fixed
+ .  if ${ARCH} != powerpc
  CFLAGS+=	-Wno-error=incompatible-function-pointer-types
-+.  endif
+ .  endif
++.endif
  
  .endif
