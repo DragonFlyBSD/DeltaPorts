@@ -1,11 +1,18 @@
---- Makefile.orig	2021-02-23 17:51:13 UTC
+--- Makefile.orig	2023-10-24 09:16:20 UTC
 +++ Makefile
-@@ -25,8 +25,4 @@ PNG_CONFIGURE_OFF=	--without-libpng
- PNG_CONFIGURE_ON=	--with-libpng=${LOCALBASE}
+@@ -15,7 +15,6 @@ USES=		cpe libtool pathfix python:env,te
+ CONFIGURE_ENV=	ac_cv_func_getopt_long=yes
+ GNU_CONFIGURE=	yes
+ INSTALL_TARGET=	install-strip
+-LDFLAGS+=	-lmd
+ TEST_TARGET=	check
+ USE_LDCONFIG=	yes
+ 
+@@ -29,7 +28,4 @@ OPTIONS_DEFAULT=PNG
+ PNG_CONFIGURE_WITH=	libpng=${LOCALBASE}
  PNG_LIB_DEPENDS=	libpng.so:graphics/png
  
 -post-patch:
 -	@${RM} ${WRKSRC}/getopt* ${WRKSRC}/sha1.h
--	@${REINPLACE_CMD} -E 's|SHA1_Final\( *([^,]+), *([^\)]+)\)|SHA1_Final(\2, \1)|' ${WRKSRC}/jbig2dec.c ${WRKSRC}/sha1.c
 -
  .include <bsd.port.mk>
