@@ -1,4 +1,4 @@
---- Makefile.orig	2023-07-28 19:41:41 UTC
+--- Makefile.orig	2023-11-17 19:54:39 UTC
 +++ Makefile
 @@ -28,7 +28,6 @@ BUILD_DEPENDS=	boost-libs>0:devel/boost-
  LIB_DEPENDS=	libabsl_base.so:devel/abseil \
@@ -8,7 +8,7 @@
  		libfmt.so:devel/libfmt \
  		libhunspell-1.7.so:textproc/hunspell \
  		liblz4.so:archivers/liblz4 \
-@@ -79,9 +78,6 @@ CMAKE_ON=	DESKTOP_APP_USE_PACKAGED DESKT
+@@ -78,9 +77,6 @@ CMAKE_ON=	DESKTOP_APP_USE_PACKAGED DESKT
  # Since cmake 3.25.0, BSDs are no longer recognised as Linux (in this port).
  CMAKE_ARGS+=	-DLINUX=true
  
@@ -18,12 +18,3 @@
  # Telegram uses OpenAL for its audio, but libtgvoip (for voice calls) can use PulseAudio or ALSA.
  # It dynamically loads PulseAudio, and if this fails, it loads ALSA.
  # If both of them are not installed, then voice calls do not work, but other functionalities still work.
-@@ -105,7 +101,7 @@ TELEGRAM_API_ID=	601761
- 
- .include <bsd.port.options.mk>
- 
--.if ${OSVERSION} > 1400000
-+.if ${OPSYS} == FreeBSD && ${OSVERSION} > 1400000
- USES+=	llvm:build
- CC=	${_LLVM_MK_PREFIX}/bin/clang
- CPP=	${_LLVM_MK_PREFIX}/bin/clang-cpp
