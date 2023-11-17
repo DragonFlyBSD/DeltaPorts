@@ -1,7 +1,0 @@
---- pkg-plist.orig	2022-01-13 04:21:04 UTC
-+++ pkg-plist
-@@ -1703,2 +1703,2 @@
--lib/qgis/plugins/libprovider_grass7.so
--lib/qgis/plugins/libprovider_grassraster7.so
-+%%GRASS%%lib/qgis/plugins/libprovider_grass7.so
-+%%GRASS%%lib/qgis/plugins/libprovider_grassraster7.so
