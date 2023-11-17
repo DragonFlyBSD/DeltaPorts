@@ -1,10 +1,18 @@
---- Makefile.orig	2021-11-07 15:21:05 UTC
+--- Makefile.orig	2023-11-17 19:56:19 UTC
 +++ Makefile
-@@ -10,6 +10,6 @@ RUN_DEPENDS=	wg-quick:net/wireguard-tool
+@@ -8,10 +8,12 @@ COMMENT=	Meta-port for Wireguard
+ WWW=		https://www.wireguard.com
+ 
+ RUN_DEPENDS=	wg-quick:net/wireguard-tools \
+-		${KMODDIR}/if_wg.ko:net/wireguard-kmod
++		wireguard-go:net/wireguard-go
+ 
+-DEPRECATED=	Only useful for FreeBSD 12 which is EoL soon
+-EXPIRATION_DATE=	2023-12-31
++# Change run depends and the below expiration items when
++# we get in kernel wg
++#DEPRECATED=	Only useful for FreeBSD 12 which is EoL soon
++#EXPIRATION_DATE=	2023-12-31
  
  USES=	metaport
  
--RUN_DEPENDS+=	${KMODDIR}/if_wg.ko:net/wireguard-kmod
-+RUN_DEPENDS+=	wireguard-go:net/wireguard-go
- 
- .include <bsd.port.mk>
