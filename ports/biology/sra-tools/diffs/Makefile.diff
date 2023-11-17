@@ -1,5 +1,0 @@
---- Makefile.orig	2021-12-13 10:52:03 UTC
-+++ Makefile
-@@ -99 +99 @@
--	cd ${WRKSRC}/amd64-portbld-freebsd*/sra-tools/bsd/clang/*/rel/bin && \
-+	cd ${WRKSRC}/${ARCH}-*/sra-tools/${OPSYS}/gcc/${ARCH}/rel/bin && \
