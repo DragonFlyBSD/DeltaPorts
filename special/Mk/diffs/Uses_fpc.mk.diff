@@ -1,6 +1,6 @@
---- Uses/fpc.mk.orig	2022-07-11 23:39:10 UTC
+--- Uses/fpc.mk.orig	2023-12-02 12:42:43 UTC
 +++ Uses/fpc.mk
-@@ -50,15 +50,15 @@ IGNORE=	incompatible fpc ${FPC_CURRENT_V
+@@ -42,11 +42,11 @@ IGNORE=	incompatible fpc ${FPC_CURRENT_V
  
  .  if ${ARCH} == "i386"
  PPNAME=			ppc386
@@ -14,8 +14,17 @@
  ONLY_FOR_ARCHS_REASON=	not yet ported to anything other than i386 and amd64
  .  endif
  
+@@ -56,11 +56,11 @@ FPC_DEVELSUFFIX=	#
+ FPC_DEVELSUFFIX=	-devel
+ .  endif
+ 
 -BUILD_DEPENDS+=		${LOCALBASE}/bin/as:devel/binutils \
 +BUILD_DEPENDS+=		${LOCALBASE}/bin/as:devel/binutils@native \
- 			${PPNAME}:lang/fpc
+ 			${LOCALBASE}/lib/fpc/${FPC_VER}/${PPNAME}:lang/fpc${FPC_DEVELSUFFIX}
  
- BUILDNAME=		${FPC_ARCH}-${OPSYS:tl}
+ .  if ${fpc_ARGS:Mrun}
+-RUN_DEPENDS+=		${LOCALBASE}/bin/as:devel/binutils \
++RUN_DEPENDS+=		${LOCALBASE}/bin/as:devel/binutils@native \
+ 			${LOCALBASE}/lib/fpc/${FPC_VER}/${PPNAME}:lang/fpc${FPC_DEVELSUFFIX}
+ .  endif
+ 
