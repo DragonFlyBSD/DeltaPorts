@@ -1,32 +1,32 @@
---- Makefile.orig	2021-03-01 14:52:20 UTC
+--- Makefile.orig	2023-12-02 13:07:07 UTC
 +++ Makefile
-@@ -13,6 +13,7 @@ MASTER_SITES=	ftp://ftp.freepascal.org/p
- 		ftp://ftp.us.freepascal.org/pub/fpc/dist/${PORTVERSION}/source/:source \
- 		SF/freepascal/Source/${PORTVERSION}:source \
+@@ -5,6 +5,7 @@ CATEGORIES=	lang
+ MASTER_SITES=	SF/freepascal/Source/${PORTVERSION}:source \
+ 		https://downloads.freepascal.org/${PORTNAME}/dist/${PORTVERSION}/source/:source \
  		http://leaf.dragonflybsd.org/~marino/dports-src/:DragonFlybootstrap \
 +		http://avalon.dragonflybsd.org/misc/distfiles/freepascal/:DragonFlybootstrap \
  		LOCAL/acm/freepascal/:bootstrap \
  		LOCAL/acm/freepascal/:man
  DISTFILES=	${DISTNAME:S/$/.source/}${EXTRACT_SUFX}:source
-@@ -21,7 +22,7 @@ DIST_SUBDIR=	freepascal
- MAINTAINER?=	acm@FreeBSD.org
- COMMENT?=	Free Pascal compiler with Turbo and Delphi
+@@ -16,7 +17,7 @@ WWW=		https://www.freepascal.org/
  
--RUN_DEPENDS?=	${LOCALBASE}/bin/as:devel/binutils
-+RUN_DEPENDS?=	${LOCALBASE}/bin/as:devel/binutils@native
+ CONFLICTS=	fpc-devel
+ 
+-RUN_DEPENDS=	${LOCALBASE}/bin/as:devel/binutils
++RUN_DEPENDS=	${LOCALBASE}/bin/as:devel/binutils@native
  
  ONLY_FOR_ARCHS=	amd64 i386
  
-@@ -30,7 +31,7 @@ USE_BINUTILS=	yes
- BOOTVER=	3.0.4
+@@ -25,7 +26,7 @@ USE_BINUTILS=	yes
+ BOOTVER=	${PORTVERSION}
  MANVER=		${PORTVERSION}
  
 -FPC_LDPATH?=	"${LOCALBASE}/bin/ld.bfd"
 +FPC_LDPATH?=	"/usr/bin/ld.bfd"
  
- #USE_GITHUB=	yes
- #GH_ACCOUNT=	fpc-svn
-@@ -129,7 +130,7 @@ do-build:
+ FPCSRCDIR=	${PORTNAME}-${PORTVERSION}
+ 
+@@ -149,7 +150,7 @@ do-build:
  # build fpc compiler
  	@${ECHO_MSG} "##### STARTING COMPILER #####"
  	(cd ${WRKDIR}/${FPCSRCDIR}/compiler && ${SETENV} ${MAKE_ENV} \
@@ -34,4 +34,4 @@
 +		LDVER=ld.bfd ${MAKE_CMD} cycle ${MAKE_ARGS} ${BOOTPPC})
  	@${ECHO_MSG} "##### COMPLETE COMPILER #####"
  
- # build fpcmkcfg
+ # build units
