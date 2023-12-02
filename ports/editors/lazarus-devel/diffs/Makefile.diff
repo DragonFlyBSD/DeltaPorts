@@ -1,8 +1,13 @@
---- Makefile.orig	2021-12-13 10:52:12 UTC
+--- Makefile.orig	2023-12-02 13:05:02 UTC
 +++ Makefile
-@@ -13 +13 @@
--BUILD_DEPENDS?=	${LOCALBASE}/bin/as:devel/binutils \
-+BUILD_DEPENDS?=	${LOCALBASE}/bin/as:devel/binutils@native \
-@@ -15 +15 @@
+@@ -11,8 +11,8 @@ WWW=		https://www.lazarus-ide.org/
+ 
+ CONFLICTS?=	lazarus-gtk2 lazarus-qt5 lazarus-qt5-devel lazarus-qt6-devel
+ 
+-BUILD_DEPENDS?=	${LOCALBASE}/bin/as:devel/binutils
 -RUN_DEPENDS?=	${LOCALBASE}/bin/as:devel/binutils \
++BUILD_DEPENDS?=	${LOCALBASE}/bin/as:devel/binutils@native
 +RUN_DEPENDS?=	${LOCALBASE}/bin/as:devel/binutils@native \
+ 		gmake:devel/gmake \
+ 		${LOCALBASE}/share/fpc-source-${FPC_DEFAULT}/Makefile.fpc:lang/fpc-source
+ 
