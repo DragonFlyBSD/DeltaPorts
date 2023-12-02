@@ -1,5 +1,0 @@
---- Makefile.orig	2021-03-19 07:11:11 UTC
-+++ Makefile
-@@ -14 +14 @@
--RUN_DEPENDS=	${LOCALBASE}/lib/libbfd.a:devel/binutils
-+RUN_DEPENDS=	${LOCALBASE}/lib/libbfd.a:devel/binutils@native
