@@ -1,6 +1,6 @@
---- osdep/BSDEthernetTap.cpp.intermediate	2021-03-21 08:15:31.000000000 +0000
+--- osdep/BSDEthernetTap.cpp.orig	2023-09-14 19:09:26 UTC
 +++ osdep/BSDEthernetTap.cpp
-@@ -337,7 +337,7 @@ void BSDEthernetTap::scanMulticastGroups
+@@ -359,7 +359,7 @@ void BSDEthernetTap::scanMulticastGroups
  {
  	std::vector<MulticastGroup> newGroups;
  

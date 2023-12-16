@@ -1,4 +1,4 @@
---- osdep/EthernetTap.cpp.orig	2020-12-01 00:33:39 UTC
+--- osdep/EthernetTap.cpp.orig	2023-09-14 19:09:26 UTC
 +++ osdep/EthernetTap.cpp
 @@ -39,7 +39,7 @@
  #include "WindowsEthernetTap.hpp"
