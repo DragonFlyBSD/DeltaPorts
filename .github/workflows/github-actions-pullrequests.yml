@@ -13,7 +13,7 @@ jobs:
         with:
           fetch-depth: 2  # OR "2" -> To retrieve the preceding commit.
       - name: Get changed files
-        uses: tj-actions/changed-files@v37
+        uses: tj-actions/changed-files@v41
         id: changed-files
       - name: Save all changed files to a temp file
         run: |
