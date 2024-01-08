@@ -5,7 +5,7 @@
  #if defined(__STDCPP_DEFAULT_NEW_ALIGNMENT__)
  static constexpr size_t kAlignment =
 -    std::max(alignof(std::max_align_t), __STDCPP_DEFAULT_NEW_ALIGNMENT__);
-+    std::max(alignof(std::max_align_t), (long unsigned int)__STDCPP_DEFAULT_NEW_ALIGNMENT__);
++    std::max<unsigned>(alignof(std::max_align_t), __STDCPP_DEFAULT_NEW_ALIGNMENT__);
  #else
  static constexpr size_t kAlignment = alignof(std::max_align_t);
  #endif
