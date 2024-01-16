@@ -1,4 +1,4 @@
---- Makefile.orig	2023-11-17 19:54:39 UTC
+--- Makefile.orig	2024-01-16 22:00:30 UTC
 +++ Makefile
 @@ -28,7 +28,6 @@ BUILD_DEPENDS=	boost-libs>0:devel/boost-
  LIB_DEPENDS=	libabsl_base.so:devel/abseil \
@@ -18,3 +18,24 @@
  # Telegram uses OpenAL for its audio, but libtgvoip (for voice calls) can use PulseAudio or ALSA.
  # It dynamically loads PulseAudio, and if this fails, it loads ALSA.
  # If both of them are not installed, then voice calls do not work, but other functionalities still work.
+@@ -115,12 +111,10 @@ post-extract:
+ 	# can be safely removed
+ 	${RM} -rf \
+ 		${WRKSRC}/Telegram/ThirdParty/QR \
+-		${WRKSRC}/Telegram/ThirdParty/dispatch \
+ 		${WRKSRC}/Telegram/ThirdParty/expected \
+ 		${WRKSRC}/Telegram/ThirdParty/fcitx5-qt \
+ 		${WRKSRC}/Telegram/ThirdParty/hime \
+ 		${WRKSRC}/Telegram/ThirdParty/hunspell \
+-		${WRKSRC}/Telegram/ThirdParty/jemalloc \
+ 		${WRKSRC}/Telegram/ThirdParty/lz4 \
+ 		${WRKSRC}/Telegram/ThirdParty/minizip \
+ 		${WRKSRC}/Telegram/ThirdParty/jimf \
+@@ -132,7 +126,6 @@ post-extract:
+ 
+ .if ${FLAVOR} == qt5
+ 	${RM} -rf \
+-		${WRKSRC}/Telegram/ThirdParty/kcoreaddons \
+ 		${WRKSRC}/Telegram/ThirdParty/kimageformats
+ .endif
+ 
