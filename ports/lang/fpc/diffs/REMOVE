@@ -1,4 +1,3 @@
-files/patch-compiler_globals.pas
 files/patch-rtl-bsd_bunxsysc.inc
 files/patch-rtl-unix_bunxh.inc
 files/patch-rtl_bsd_ossysc.inc

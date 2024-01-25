@@ -1,0 +1,11 @@
+--- pkg-plist.orig	2024-01-25 00:17:02 UTC
++++ pkg-plist
+@@ -2366,8 +2366,6 @@ lib/fpc/%%PORTVERSION%%/units/%%BUILDNAM
+ lib/fpc/%%PORTVERSION%%/units/%%BUILDNAME%%/rtl/fpintres.ppu
+ lib/fpc/%%PORTVERSION%%/units/%%BUILDNAME%%/rtl/fpwidestring.o
+ lib/fpc/%%PORTVERSION%%/units/%%BUILDNAME%%/rtl/fpwidestring.ppu
+-lib/fpc/%%PORTVERSION%%/units/%%BUILDNAME%%/rtl/freebsd.o
+-lib/fpc/%%PORTVERSION%%/units/%%BUILDNAME%%/rtl/freebsd.ppu
+ lib/fpc/%%PORTVERSION%%/units/%%BUILDNAME%%/rtl/getopts.o
+ lib/fpc/%%PORTVERSION%%/units/%%BUILDNAME%%/rtl/getopts.ppu
+ lib/fpc/%%PORTVERSION%%/units/%%BUILDNAME%%/rtl/gprt0.o
