@@ -1,8 +1,29 @@
---- Makefile.orig	2021-03-01 14:52:13 UTC
+--- Makefile.orig	2024-01-25 23:49:41 UTC
 +++ Makefile
-@@ -139 +139 @@
+@@ -176,7 +176,7 @@ FLANG_PORTDOCS=		flang
+ FLANG_PLIST_DIRS=	${LLVM_DIR}/include/flang/Config
+ GOLD_DESC=		Build the LLVM Gold plugin for LTO
+ GOLD_CMAKE_ON=		-DLLVM_BINUTILS_INCDIR=${LOCALBASE}/include
 -GOLD_BUILD_DEPENDS=	${LOCALBASE}/bin/ld.gold:devel/binutils
 +GOLD_BUILD_DEPENDS=	${LOCALBASE}/bin/ld.gold:devel/binutils@native
-@@ -472 +472 @@
+ GOLD_PLIST_FILES=	${LLVM_DIR}/lib/LLVMgold.so
+ LIT_DESC=		Install lit and FileCheck test tools
+ LIT_VARS=		_USES_PYTHON=python
+@@ -384,7 +384,7 @@ NATIVE_BACKENDS+=	WebAssembly
+ STANDARD_BACKENDS=	${_FREEBSD_BACKENDS} AMDGPU AVR BPF Hexagon Lanai \
+ 			LoongArch MSP430 NVPTX SystemZ VE WebAssembly XCore
+ _BE_LIBS_COMMON=	CodeGen Desc Info
+-_BE_INCS_AArch64=	arm_bf16.h arm_sme_draft_spec_subject_to_change.h arm_sve.h
++_BE_INCS_AArch64=	arm_bf16.h arm_sme_draft_spec_subject_to_change.h
+ _BE_LIBS_AArch64=	AsmParser Disassembler Utils
+ _BE_LIBS_BACKWARDS_AArch64=Exegesis
+ _BE_LIBS_AMDGPU=	AsmParser Disassembler TargetMCA Utils
+@@ -580,7 +580,7 @@ post-install-LIT-on:
+ 	${LN} -fs ../${LLVM_DIR}/bin/FileCheck \
+ 	    ${STAGEDIR}${PREFIX}/bin/FileCheck${LLVM_SUFFIX}
+ 
 -post-install-LLD-on:
 +post-install-LLD_LINK-on:
+ 	${LN} -s ld.lld ${STAGEDIR}${LLVM_PREFIX}/bin/ld
+ 
+ TEST_CMD=	'(cd ${WRKSRC}/test; ${SETENV} ${MAKE_ENV} LD_LIBRARY_PATH=${WRKSRC}/Release/lib ${MAKE_CMD} check-local-lit)'
