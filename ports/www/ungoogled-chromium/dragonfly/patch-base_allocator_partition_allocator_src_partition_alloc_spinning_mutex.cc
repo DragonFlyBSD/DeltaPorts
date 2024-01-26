@@ -1,7 +1,7 @@
-diff --git base/allocator/partition_allocator/spinning_mutex.cc base/allocator/partition_allocator/spinning_mutex.cc
-index 5a546571187..6c4b4efff11 100644
---- base/allocator/partition_allocator/spinning_mutex.cc
-+++ base/allocator/partition_allocator/spinning_mutex.cc
+diff --git base/allocator/partition_allocator/src/partition_alloc/spinning_mutex.cc base/allocator/partition_allocator/src/partition_alloc/spinning_mutex.cc
+index 38eda0e9336..32dc555db05 100644
+--- base/allocator/partition_allocator/src/partition_alloc/spinning_mutex.cc
++++ base/allocator/partition_allocator/src/partition_alloc/spinning_mutex.cc
 @@ -25,6 +25,8 @@
  #include <sys/types.h>
  #include <sys/thr.h>
