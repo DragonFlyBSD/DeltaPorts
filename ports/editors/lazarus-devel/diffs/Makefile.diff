@@ -1,4 +1,4 @@
---- Makefile.orig	2023-12-02 13:05:02 UTC
+--- Makefile.orig	2024-01-26 00:44:51 UTC
 +++ Makefile
 @@ -11,8 +11,8 @@ WWW=		https://www.lazarus-ide.org/
  
@@ -11,3 +11,12 @@
  		gmake:devel/gmake \
  		${LOCALBASE}/share/fpc-source-${FPC_DEFAULT}/Makefile.fpc:lang/fpc-source
  
+@@ -52,7 +52,7 @@ SUB_LIST+=	PORTSDIR="${PORTSDIR}"
+ RUN_DEPENDS+=	${LOCALBASE}/bin/gdb:devel/gdb
+ .endif
+ 
+-.if ${PKGNAMESUFFIX} == "-gtk2"
++.if ${PKGNAMESUFFIX} == "-gtk2-devel"
+ USES+=		gnome
+ USE_GNOME=	cairo gtk20 gdkpixbuf2
+ .endif
