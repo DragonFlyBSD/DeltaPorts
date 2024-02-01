@@ -1,0 +1,10 @@
+--- Makefile.orig	2024-02-01 18:44:45 UTC
++++ Makefile
+@@ -25,7 +25,6 @@ X11_USE=		xorg=xorgproto,x11,xcb,xdamage
+ .include "${.CURDIR:H:H}/graphics/mesa-dri/Makefile.common"
+ 
+ MESON_ARGS+=	-Ddri-drivers="" \
+-		-Dvideo-codecs="vc1dec,h264dec,h264enc,h265dec,h265enc" \
+ 		-Dgallium-drivers="radeonsi,r600" \
+ 		-Dvulkan-drivers="" \
+ 		-Dgallium-vdpau=disabled \
