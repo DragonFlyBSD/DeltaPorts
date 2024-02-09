@@ -1,27 +1,28 @@
---- Makefile.orig	2023-05-28 15:51:59 UTC
+--- Makefile.orig	2024-02-09 23:41:09 UTC
 +++ Makefile
-@@ -11,16 +11,13 @@ WWW=		https://rpm.org/
+@@ -11,17 +11,14 @@ WWW=		https://rpm.org/
  LICENSE=	GPLv2
  LICENSE_FILE=	${WRKSRC}/COPYING
  
--BUILD_DEPENDS=	gsed:textproc/gsed \
--		${LOCALBASE}/lib/libelf.so:devel/elfutils
+-BUILD_DEPENDS=	${LOCALBASE}/lib/libelf.so:devel/elfutils \
+-		gsed:textproc/gsed
 +BUILD_DEPENDS=	gsed:textproc/gsed
- LIB_DEPENDS=	libpopt.so:devel/popt \
+ LIB_DEPENDS=	libarchive.so:archivers/libarchive \
+ 		libdb-5.3.so:databases/db5 \
+-		libelf.so:devel/elfutils \
+ 		libgcrypt.so:security/libgcrypt \
  		libnss3.so:security/nss \
- 		libzstd.so:archivers/zstd \
--		libgcrypt.so:security/libgcrypt \
--		libelf.so:devel/elfutils
-+		libgcrypt.so:security/libgcrypt
- RUN_DEPENDS=	bash:shells/bash \
- 		gxargs:misc/findutils \
--		${LOCALBASE}/lib/libelf.so:devel/elfutils
+ 		libpopt.so:devel/popt \
+ 		libzstd.so:archivers/zstd
+-RUN_DEPENDS=	${LOCALBASE}/lib/libelf.so:devel/elfutils \
+-		bash:shells/bash \
++RUN_DEPENDS=	bash:shells/bash \
+ 		gxargs:misc/findutils
  
- USES=		alias bdb sqlite cpe gmake iconv libarchive libtool \
- 		lua pathfix pkgconfig shebangfix tar:bzip2
-@@ -38,7 +35,8 @@ CONFIGURE_ARGS=	--enable-sqlite=yes\
+ USES=		alias bdb cpe gmake iconv libarchive libtool lua pathfix \
+@@ -39,7 +36,8 @@ CONFIGURE_ARGS=	--enable-sqlite=yes \
  		--sysconfdir=${PREFIX}/etc \
- 		--localstatedir=/var \
+ 		--with-popt-prefix="${LOCALBASE}" \
  		--without-javaglue \
 -		am_cv_python_version=${PYTHON_VER}${PYTHON_ABIVER}
 +		am_cv_python_version=${PYTHON_VER}${PYTHON_ABIVER} \
