@@ -1,4 +1,4 @@
---- Makefile.orig	2024-01-26 00:44:51 UTC
+--- Makefile.orig	2024-02-09 23:50:46 UTC
 +++ Makefile
 @@ -11,8 +11,8 @@ WWW=		https://www.lazarus-ide.org/
  
@@ -9,14 +9,5 @@
 +BUILD_DEPENDS?=	${LOCALBASE}/bin/as:devel/binutils@native
 +RUN_DEPENDS?=	${LOCALBASE}/bin/as:devel/binutils@native \
  		gmake:devel/gmake \
- 		${LOCALBASE}/share/fpc-source-${FPC_DEFAULT}/Makefile.fpc:lang/fpc-source
+ 		${LOCALBASE}/share/fpc-source-${FPC_DEFAULT}/Makefile.fpc:lang/fpc${FPC_DEVELSUFFIX}-source
  
-@@ -52,7 +52,7 @@ SUB_LIST+=	PORTSDIR="${PORTSDIR}"
- RUN_DEPENDS+=	${LOCALBASE}/bin/gdb:devel/gdb
- .endif
- 
--.if ${PKGNAMESUFFIX} == "-gtk2"
-+.if ${PKGNAMESUFFIX} == "-gtk2-devel"
- USES+=		gnome
- USE_GNOME=	cairo gtk20 gdkpixbuf2
- .endif
