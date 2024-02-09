@@ -1,12 +1,11 @@
---- Uses/lazarus.mk.orig	2020-08-13 10:37:35 UTC
+--- Uses/lazarus.mk.orig	2024-02-09 23:27:31 UTC
 +++ Uses/lazarus.mk
-@@ -74,3 +74,3 @@ ONLY_FOR_ARCHS_REASON=	not yet ported to
+@@ -81,7 +81,7 @@ BUILDNAME=		${LAZARUS_ARCH}-${OPSYS:tl}
+ LCL_UNITS_DIR=		${LOCALBASE}/share/lazarus-${LAZARUS_VER}/lcl/units/${BUILDNAME}
+ MKINSTDIR=		${LOCALBASE}/lib/fpc/${FPC_VER}/fpmkinst/${BUILDNAME}
  
 -BUILD_DEPENDS+=		${LOCALBASE}/bin/as:devel/binutils \
 +BUILD_DEPENDS+=		${LOCALBASE}/bin/as:devel/binutils@native \
- 			fpcres:lang/fpc-utils
-@@ -81,3 +81,3 @@ MKINSTDIR=		${LOCALBASE}/lib/fpc/${FPC_V
+ 			${MKINSTDIR}/utils-lexyacc.fpm:lang/fpc${FPC_DEVELSUFFIX}
  
--LAZARUS_FLAVORS=	gtk2 qt5
-+LAZARUS_FLAVORS=	gtk2
- 
+ LAZARUS_FLAVORS=	gtk2 qt5 qt6
