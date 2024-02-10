@@ -1,24 +1,24 @@
---- pkg-plist.orig	2019-12-21 14:18:54 UTC
+--- pkg-plist.orig	2024-02-10 00:39:56 UTC
 +++ pkg-plist
-@@ -185,9 +185,9 @@
- lib/python%%XYDOT%%/__pycache__/_strptime.cpython-%%XY%%.opt-1.pyc
- lib/python%%XYDOT%%/__pycache__/_strptime.cpython-%%XY%%.opt-2.pyc
- lib/python%%XYDOT%%/__pycache__/_strptime.cpython-%%XY%%.pyc
--lib/python%%XYDOT%%/__pycache__/_sysconfigdata_%%ABI%%_freebsd%%OSMAJOR%%_.cpython-%%XY%%.opt-1.pyc
--lib/python%%XYDOT%%/__pycache__/_sysconfigdata_%%ABI%%_freebsd%%OSMAJOR%%_.cpython-%%XY%%.opt-2.pyc
--lib/python%%XYDOT%%/__pycache__/_sysconfigdata_%%ABI%%_freebsd%%OSMAJOR%%_.cpython-%%XY%%.pyc
-+lib/python%%XYDOT%%/__pycache__/_sysconfigdata_%%ABI%%_dragonfly%%OSMAJOR%%_.cpython-%%XY%%.opt-1.pyc
-+lib/python%%XYDOT%%/__pycache__/_sysconfigdata_%%ABI%%_dragonfly%%OSMAJOR%%_.cpython-%%XY%%.opt-2.pyc
-+lib/python%%XYDOT%%/__pycache__/_sysconfigdata_%%ABI%%_dragonfly%%OSMAJOR%%_.cpython-%%XY%%.pyc
- lib/python%%XYDOT%%/__pycache__/_threading_local.cpython-%%XY%%.opt-1.pyc
- lib/python%%XYDOT%%/__pycache__/_threading_local.cpython-%%XY%%.opt-2.pyc
- lib/python%%XYDOT%%/__pycache__/_threading_local.cpython-%%XY%%.pyc
-@@ -671,7 +671,7 @@
- lib/python%%XYDOT%%/_pyio.py
- lib/python%%XYDOT%%/_sitebuiltins.py
- lib/python%%XYDOT%%/_strptime.py
--lib/python%%XYDOT%%/_sysconfigdata_%%ABI%%_freebsd%%OSMAJOR%%_.py
-+lib/python%%XYDOT%%/_sysconfigdata_%%ABI%%_dragonfly%%OSMAJOR%%_.py
- lib/python%%XYDOT%%/_threading_local.py
- lib/python%%XYDOT%%/_weakrefset.py
- lib/python%%XYDOT%%/abc.py
+@@ -187,9 +187,9 @@ lib/libpython%%PYTHON_VER%%%%ABI%%.so.1.
+ %%PYTHON_LIBDIR%%/__pycache__/_strptime%%PYTHON_EXT_SUFFIX%%.opt-1.pyc
+ %%PYTHON_LIBDIR%%/__pycache__/_strptime%%PYTHON_EXT_SUFFIX%%.opt-2.pyc
+ %%PYTHON_LIBDIR%%/__pycache__/_strptime%%PYTHON_EXT_SUFFIX%%.pyc
+-%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata_%%ABI%%_freebsd%%OSMAJOR%%_%%PYTHON_EXT_SUFFIX%%.opt-1.pyc
+-%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata_%%ABI%%_freebsd%%OSMAJOR%%_%%PYTHON_EXT_SUFFIX%%.opt-2.pyc
+-%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata_%%ABI%%_freebsd%%OSMAJOR%%_%%PYTHON_EXT_SUFFIX%%.pyc
++%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata_%%ABI%%_dragonfly%%OSMAJOR%%_%%PYTHON_EXT_SUFFIX%%.opt-1.pyc
++%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata_%%ABI%%_dragonfly%%OSMAJOR%%_%%PYTHON_EXT_SUFFIX%%.opt-2.pyc
++%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata_%%ABI%%_dragonfly%%OSMAJOR%%_%%PYTHON_EXT_SUFFIX%%.pyc
+ %%PYTHON_LIBDIR%%/__pycache__/_threading_local%%PYTHON_EXT_SUFFIX%%.opt-1.pyc
+ %%PYTHON_LIBDIR%%/__pycache__/_threading_local%%PYTHON_EXT_SUFFIX%%.opt-2.pyc
+ %%PYTHON_LIBDIR%%/__pycache__/_threading_local%%PYTHON_EXT_SUFFIX%%.pyc
+@@ -673,7 +673,7 @@ lib/libpython%%PYTHON_VER%%%%ABI%%.so.1.
+ %%PYTHON_LIBDIR%%/_pyio.py
+ %%PYTHON_LIBDIR%%/_sitebuiltins.py
+ %%PYTHON_LIBDIR%%/_strptime.py
+-%%PYTHON_LIBDIR%%/_sysconfigdata_%%ABI%%_freebsd%%OSMAJOR%%_.py
++%%PYTHON_LIBDIR%%/_sysconfigdata_%%ABI%%_dragonfly%%OSMAJOR%%_.py
+ %%PYTHON_LIBDIR%%/_threading_local.py
+ %%PYTHON_LIBDIR%%/_weakrefset.py
+ %%PYTHON_LIBDIR%%/abc.py
