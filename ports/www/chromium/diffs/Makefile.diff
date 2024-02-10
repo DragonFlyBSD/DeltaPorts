@@ -1,14 +1,6 @@
---- Makefile.orig	2023-09-18 22:35:20 UTC
+--- Makefile.orig	2024-02-10 01:15:31 UTC
 +++ Makefile
-@@ -33,7 +33,6 @@ BUILD_DEPENDS=	bash:shells/bash \
- LIB_DEPENDS=	libatk-bridge-2.0.so:accessibility/at-spi2-core \
- 		libatspi.so:accessibility/at-spi2-core \
- 		libspeechd.so:accessibility/speech-dispatcher \
--		libsnappy.so:archivers/snappy \
- 		libFLAC.so:audio/flac \
- 		libopus.so:audio/opus \
- 		libspeex.so:audio/speex \
-@@ -223,11 +222,7 @@ BINARY_ALIAS+=		cpp=${LOCALBASE}/bin/cla
+@@ -236,11 +236,7 @@ BINARY_ALIAS+=		cpp=${LOCALBASE}/bin/cla
  			cc=${LOCALBASE}/bin/clang${LLVM_DEFAULT} \
  			c++=${LOCALBASE}/bin/clang++${LLVM_DEFAULT} \
  			ar=${LOCALBASE}/bin/llvm-ar${LLVM_DEFAULT} \
@@ -21,7 +13,7 @@
  .endif
  
  # - swiftshader/lib/{libEGL.so,libGLESv2.so} is x86 only
-@@ -245,8 +240,8 @@ PLIST_SUB+=	NOT_AARCH64=""
+@@ -258,8 +254,8 @@ PLIST_SUB+=	NOT_AARCH64=""
  FFMPEG_TARGET=	ia32
  .endif
  
@@ -32,12 +24,8 @@
  
  # Allow relocations against read-only segments (override lld default)
  LDFLAGS_i386=	-Wl,-znotext
-@@ -274,10 +269,10 @@ pre-configure:
- 	cd ${WRKSRC} && ${SETENV} ${CONFIGURE_ENV} ${PYTHON_CMD} \
- 		./build/linux/unbundle/replace_gn_files.py --system-libraries \
- 		dav1d flac fontconfig freetype harfbuzz-ng icu libdrm libevent libpng \
--		libusb libwebp libxml libxslt openh264 opus snappy || ${FALSE}
-+		libusb libwebp libxml libxslt openh264 opus || ${FALSE}
+@@ -290,7 +286,7 @@ pre-configure:
+ 		libusb libwebp libxml libxslt openh264 opus || ${FALSE}
  	# Chromium uses an unreleased version of FFmpeg, so configure it
  	cd ${WRKSRC}/third_party/ffmpeg && \
 -		${PYTHON_CMD} chromium/scripts/build_ffmpeg.py freebsd ${FFMPEG_TARGET} \
