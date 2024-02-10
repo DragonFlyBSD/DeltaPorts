@@ -1,4 +1,4 @@
---- Makefile.orig	2023-09-05 16:27:51 UTC
+--- Makefile.orig	2024-02-10 00:15:22 UTC
 +++ Makefile
 @@ -3,7 +3,8 @@ PORTVERSION=	${GHC_VERSION}
  PORTREVISION?=	0
@@ -10,7 +10,7 @@
  DISTFILES=	ghc-${PORTVERSION}-src${EXTRACT_SUFX}:source
  
  MAINTAINER=	haskell@FreeBSD.org
-@@ -120,6 +121,7 @@ IGNORE_aarch64=	requires Hadrian build w
+@@ -119,6 +120,7 @@ IGNORE_i386=	requires Hadrian build whic
  BOOT_SCRIPT=	./boot
  .endif
  
@@ -18,22 +18,23 @@
  .if ${SLAVE_PORT} != "yes"
  PORTDOCS=		*
  HADRIAN_PLAN=		${PATCHDIR}/plan-bootstrap-${BOOT_GHC_VERSION:C/\./_/g}.json
-@@ -167,11 +169,13 @@ PLIST=			${.CURDIR}/../ghc92/pkg-plist
+@@ -168,11 +170,13 @@ PLIST=			${.CURDIR}/../ghc92/pkg-plist
  .endif
  
  # This version of ncurses is needed by bootstrap compiler
+-.if empty(PORT_OPTIONS:MBOOT)
 +.if ${OPSYS} == FreeBSD
- .if ${OSVERSION} > 1300078 && empty(PORT_OPTIONS:MBOOT)
++. if empty(PORT_OPTIONS:MBOOT)
  BUILD_DEPENDS+=	${LOCALBASE}/lib/compat/libncursesw.so.8:misc/compat12x
++. endif
  .endif
-+.endif
  
 -.if empty(PORT_OPTIONS:MBOOT)
 +.if empty(PORT_OPTIONS:MBOOT) && ${OPSYS} == "FreeBSD"
  DISTFILES+=		ghc-${BOOT_GHC_VERSION}-boot-${ARCH}-freebsd${EXTRACT_SUFX}:boot
  .   if !defined(IGNORE_MISSING_HADRIAN) && defined(USE_HADRIAN)
  DISTFILES+=		hadrian-${GHC_VERSION}-boot.tar.gz:boot
-@@ -193,6 +197,40 @@ BUILD_DEPENDS+=		llc${BOOT_LLVM_VERSION}
+@@ -194,6 +198,40 @@ BUILD_DEPENDS+=		llc${BOOT_LLVM_VERSION}
  .  endif
  .endif
  
@@ -74,7 +75,7 @@
  post-patch:
  #	Generate the build.mk file
  	${RM} -f ${WRKSRC}/mk/build.mk
-@@ -203,6 +241,20 @@ post-patch:
+@@ -204,6 +242,20 @@ post-patch:
  	${SED} -e 's|%%DYNAMIC%%|${HADRIAN_SETTING_DYNAMIC}|' \
  		-e 's|%%PROFILE%%|${HADRIAN_SETTING_PROFILE}|' \
  		${PATCHDIR}/UserSettings.hs > ${WRKSRC}/hadrian/src/UserSettings.hs
@@ -95,7 +96,7 @@
  .endif
  
  pre-configure:
-@@ -216,7 +268,7 @@ pre-configure:
+@@ -217,7 +269,7 @@ pre-configure:
  .ifdef USE_HADRIAN
  # Compile Hadrian
  	cd ${WRKSRC}/hadrian/bootstrap && \
@@ -104,17 +105,17 @@
  .endif
  
  .ifdef USE_HADRIAN
-@@ -273,17 +325,17 @@ create-bootstrap:
+@@ -274,17 +326,17 @@ create-bootstrap:
  		&& ${ECHO_CMD} "BIN_DIST_TAR=ghc-${GHC_VERSION}-boot.tar" >> mk/build.mk \
  		&& ${ECHO_CMD} "HADDOCK_DOCS=NO" >> mk/build.mk \
  		&& ${GMAKE} binary-dist TAR_COMP=xz \
 -		&& ${MV} ${WRKSRC}/ghc-${GHC_VERSION}-boot-${GHC_ARCH}-portbld-freebsd.tar.xz /tmp/ghc-${GHC_VERSION}-boot-${ARCH}-freebsd.tar.xz
-+		&& ${MV} ${WRKSRC}/ghc-${GHC_VERSION}-boot-${GHC_ARCH}-portbld-${OPSYS:tl}.tar.xz /tmp/ghc-${GHC_VERSION}-boot-${ARCH}-${OPSYS:tl}.tar.xz
++		&& ${MV} ${WRKSRC}/ghc-${GHC_VERSION}-boot-${GHC_ARCH}-portbld-${OPSYS:tl}.tar.xz /tmp/ghc-${GHC_VERSION}-boot-${ARCH}-freebsd.tar.xz
  .else
  	cd ${WRKSRC} \
  		&& ${HADRIAN_CMD} binary-dist-xz \
--		&& ${MV} ${WRKSRC}/_build/bindist/ghc-${GHC_VERSION}-${GHC_ARCH}-portbld-freebsd.tar.xz /tmp/ghc-${GHC_VERSION}-boot-${ARCH}-freebsd.tar.xz
-+		&& ${MV} ${WRKSRC}/_build/bindist/ghc-${GHC_VERSION}-${GHC_ARCH}-portbld-${OPSYS:tl}.tar.xz /tmp/ghc-${GHC_VERSION}-boot-${ARCH}-${OPSYS:tl}.tar.xz
+-		&& ${MV} ${WRKSRC}/_build/bindist/ghc-${GHC_VERSION}-${CONFIGURE_TARGET}.tar.xz /tmp/ghc-${GHC_VERSION}-boot-${ARCH}-freebsd.tar.xz
++		&& ${MV} ${WRKSRC}/_build/bindist/ghc-${GHC_VERSION}-${CONFIGURE_TARGET}.tar.xz /tmp/ghc-${GHC_VERSION}-boot-${ARCH}-${OPSYS:tl}.tar.xz
  .endif
  
  	@cd /tmp \
@@ -127,7 +128,36 @@
  
  # Much like create-bootstrap, just different naming and output format
  # Set DYNAMIC, GMP and PROFILE to ON, and DOCS to OFF when generating Stack bindist
-@@ -320,12 +372,12 @@ create-hadrian-bootstrap:
+@@ -293,22 +345,22 @@ create-stack-bindist:
+ .ifndef USE_HADRIAN
+ 	cd ${WRKSRC} \
+ 		&& ${GMAKE} binary-dist TAR_COMP=xz \
+-		&& ${MV} ${WRKSRC}/ghc-${GHC_VERSION}-${GHC_ARCH}-portbld-freebsd.tar.xz /tmp/
++		&& ${MV} ${WRKSRC}/ghc-${GHC_VERSION}-${GHC_ARCH}-portbld-${OPSYS:tl}.tar.xz /tmp/
+ .else
+ 	cd ${WRKSRC} \
+ 		&& ${HADRIAN_CMD} binary-dist-xz \
+-		&& ${MV} ${WRKSRC}/_build/bindist/ghc-${GHC_VERSION}-${GHC_ARCH}-portbld-freebsd.tar.xz /tmp/
++		&& ${MV} ${WRKSRC}/_build/bindist/ghc-${GHC_VERSION}-${GHC_ARCH}-portbld-${OPSYS:tl}.tar.xz /tmp/
+ .endif
+ 
+ 	cd /tmp \
+ 		&& ${ECHO_CMD} "${GHC_VERSION}:" \
+-		&& ${ECHO_CMD} "url: \"http://distcache.FreeBSD.org/local-distfiles/arrowd/stack-bindists/ghc-${GHC_VERSION}-${GHC_ARCH}-portbld-freebsd.tar.xz\"" \
++		&& ${ECHO_CMD} "url: \"http://distcache.FreeBSD.org/local-distfiles/arrowd/stack-bindists/ghc-${GHC_VERSION}-${GHC_ARCH}-portbld-${OPSYS:tl}.tar.xz\"" \
+ 		&& ${ECHO_CMD} -n "content-length: " \
+-		&& ${STAT} -f %z ghc-${GHC_VERSION}-${GHC_ARCH}-portbld-freebsd.tar.xz \
++		&& ${STAT} -f %z ghc-${GHC_VERSION}-${GHC_ARCH}-portbld-${OPSYS:tl}.tar.xz \
+ 		&& ${ECHO_CMD} -n "sha1: " \
+-		&& sha1 -q ghc-${GHC_VERSION}-${GHC_ARCH}-portbld-freebsd.tar.xz \
++		&& sha1 -q ghc-${GHC_VERSION}-${GHC_ARCH}-portbld-${OPSYS:tl}.tar.xz \
+ 		&& ${ECHO_CMD} -n "sha256: " \
+-		&& sha256 -q ghc-${GHC_VERSION}-${GHC_ARCH}-portbld-freebsd.tar.xz
++		&& sha256 -q ghc-${GHC_VERSION}-${GHC_ARCH}-portbld-${OPSYS:tl}.tar.xz
+ 
+ .PHONY: create-hadrian-bootstrap
+ create-hadrian-bootstrap:
+@@ -321,12 +373,12 @@ create-hadrian-bootstrap:
  # Predefined plans use integer-gmp, while we build bootstraps with integer-simple
  # Predefined plans aren't pretty-printed, so we can't easily patch them
  	cd ${WRKSRC}/hadrian/bootstrap && \
@@ -144,7 +174,7 @@
  	@${ECHO_CMD}
  	@${ECHO_CMD} "Remember to check that hadrian bootstrap builds fine by running \"make check-hadrian-bootstrap\""
  
-@@ -339,6 +391,6 @@ check-hadrian-bootstrap:
+@@ -340,6 +392,6 @@ check-hadrian-bootstrap:
  	${MAKE} -C ${.CURDIR} pre-configure
  # Compile Hadrian
  	cd ${WRKSRC}/hadrian/bootstrap && \
