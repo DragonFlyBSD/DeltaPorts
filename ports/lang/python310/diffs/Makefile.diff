@@ -1,11 +1,11 @@
---- Makefile.orig	2022-07-12 22:38:16 UTC
+--- Makefile.orig	2024-02-10 00:53:57 UTC
 +++ Makefile
-@@ -51,7 +51,7 @@ PLIST_SUB=		ABI=${ABIFLAGS} \
- 			XY=${PYTHON_SUFFIX} \
- 			XYDOT=${PYTHON_VER} \
- 			XYZDOT=${DISTVERSION:C/[a-z].*//} \
+@@ -42,7 +42,7 @@ SUB_LIST=		PYTHON_SUFFIX=${PYTHON_SUFFIX
+ 
+ PLIST_SUB=		ABI=${ABIFLAGS} \
+ 			DISTVERSION=${DISTVERSION} \
 -			OSMAJOR=${OSVERSION:C/([0-9]*)[0-9]{5}/\1/}		# For plat-freebsd* in pkg-plist. https://bugs.python.org/issue19554
-+			OSMAJOR=${DFLYVERSION:C/([0-9]*)[0-9]{5}/\1/}
++			OSMAJOR=${DFLYVERSION:C/([0-9]*)[0-9]{5}/\1/}		# For plat-freebsd* in pkg-plist. https://bugs.python.org/issue19554
  
  OPTIONS_DEFINE=		DEBUG IPV6 LIBMPDEC LTO NLS PYMALLOC
  OPTIONS_DEFAULT=	LIBMPDEC PYMALLOC
