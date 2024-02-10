@@ -1,4 +1,4 @@
---- Makefile.orig	2024-01-25 00:16:32 UTC
+--- Makefile.orig	2024-02-10 00:07:31 UTC
 +++ Makefile
 @@ -5,6 +5,7 @@ CATEGORIES=	lang
  MASTER_SITES=	SF/freepascal/Source/${PORTVERSION}:source \
@@ -35,13 +35,16 @@
  PPNAME=		ppcx64
  FPC_ARCH=	x86_64
  #OPT=		"-dFPC_USE_LIBC"
-@@ -108,48 +109,80 @@ post-patch:
+@@ -108,50 +109,82 @@ post-patch:
  		${WRKDIR}/${FPCSRCDIR}/packages/fpmkunit/src/fpmkunit.pp
  
  # enable units
 -	@${REINPLACE_CMD} -i "" -e 's|linux|freebsd,linux|g' \
 +	@${REINPLACE_CMD} -i "" -e 's|linux|freebsd,dragonfly,linux|g' \
  		${WRKSRC}/packages/a52/fpmake.pp
+-	@${REINPLACE_CMD} -i "" -e 's|linux|freebsd,linux|g' \
++	@${REINPLACE_CMD} -i "" -e 's|linux|freebsd,dragonfly,linux|g' \
+ 		${WRKSRC}/packages/dbus/fpmake.pp
 -	@${REINPLACE_CMD} -i "" -e 's|linux|freebsd,linux|g' \
 +	@${REINPLACE_CMD} -i "" -e 's|linux|freebsd,dragonfly,linux|g' \
  		${WRKSRC}/packages/dts/fpmake.pp
@@ -72,8 +75,8 @@
 -	@${REINPLACE_CMD} -i "" -e 's|linux|freebsd,linux|g' \
 +	@${REINPLACE_CMD} -i "" -e 's|linux|freebsd,dragonfly,linux|g' \
  		${WRKSRC}/packages/modplug/fpmake.pp
--	@${REINPLACE_CMD} -i "" -e 's|linux|freebsd,linux|g' \
-+	@${REINPLACE_CMD} -i "" -e 's|linux|freebsd,dragonfly,linux|g' \
+-	@${REINPLACE_CMD} -i "" -e 's|Linux|freebsd,linux|g' \
++	@${REINPLACE_CMD} -i "" -e 's|Linux|freebsd,dragonfly,linux|g' \
  		${WRKSRC}/packages/newt/fpmake.pp
 -	@${REINPLACE_CMD} -i "" -e 's|linux|freebsd,linux|g' \
 +	@${REINPLACE_CMD} -i "" -e 's|linux|freebsd,dragonfly,linux|g' \
@@ -134,14 +137,3 @@
  	@${ECHO_MSG} "##### COMPLETE COMPILER #####"
  
  # build units
-@@ -174,6 +207,9 @@ do-install:
- 		"${STAGEDIR}${PREFIX}/etc"
- 	@${REINPLACE_CMD} -i "" -e 's|${STAGEDIR}||' \
- 		-e 's|^#-Fl/lib;/usr/lib|-Fl${LOCALBASE}/lib;${LOCALBASE}/lib/qt5;${LOCALBASE}/lib/qt6|g' \
--		${STAGEDIR}${PREFIX}/etc/fpc.cfg.sample
-+			${STAGEDIR}${PREFIX}/etc/fpc.cfg.sample \
-+			${STAGEDIR}${PREFIX}/etc/fppkg.cfg.sample \
-+			${STAGEDIR}${PREFIX}/etc/fppkg/default \
-+			${STAGEDIR}${PREFIX}/lib/fpc/${PORTVERSION}/ide/text/fp.cfg
- 
- .include <bsd.port.post.mk>
