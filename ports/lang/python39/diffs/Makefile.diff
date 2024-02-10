@@ -1,15 +1,15 @@
---- Makefile.orig	2022-07-12 22:43:02 UTC
+--- Makefile.orig	2024-02-10 00:50:36 UTC
 +++ Makefile
-@@ -50,7 +50,7 @@ PLIST_SUB=		ABI=${ABIFLAGS} \
- 			XY=${PYTHON_SUFFIX} \
- 			XYDOT=${PYTHON_VER} \
- 			XYZDOT=${DISTVERSION} \
+@@ -42,7 +42,7 @@ SUB_LIST=		PYTHON_SUFFIX=${PYTHON_SUFFIX
+ 
+ PLIST_SUB=		ABI=${ABIFLAGS} \
+ 			DISTVERSION=${DISTVERSION} \
 -			OSMAJOR=${OSVERSION:C/([0-9]*)[0-9]{5}/\1/}		# For plat-freebsd* in pkg-plist. https://bugs.python.org/issue19554
 +			OSMAJOR=${DFLYVERSION:C/([0-9]*)[0-9]{5}/\1/}		# For plat-freebsd* in pkg-plist. https://bugs.python.org/issue19554
  
  OPTIONS_DEFINE=		DEBUG IPV6 LIBMPDEC LTO NLS PYMALLOC
  OPTIONS_DEFAULT=	LIBMPDEC PYMALLOC
-@@ -60,6 +60,12 @@ OPTIONS_RADIO=		HASH
+@@ -51,6 +51,12 @@ OPTIONS_RADIO=		HASH
  OPTIONS_RADIO_HASH=	FNV SIPHASH
  OPTIONS_SUB=		yes
  
@@ -22,7 +22,7 @@
  LIBMPDEC_DESC=		Use libmpdec from ports instead of bundled version
  NLS_DESC=		Enable gettext support for the locale module
  PYMALLOC_DESC=		Enable specialized mallocs
-@@ -129,6 +135,10 @@ post-patch:
+@@ -116,6 +122,10 @@ post-patch:
  		@${ECHO_CMD} ${_module} >> ${WRKSRC}/Modules/Setup.local
  .  endfor
  
