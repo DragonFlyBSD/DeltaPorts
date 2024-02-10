@@ -1,13 +1,12 @@
---- distinfo.orig	2023-10-26 07:11:45 UTC
+--- distinfo.orig	2024-02-10 00:57:25 UTC
 +++ distinfo
-@@ -49,3 +49,9 @@ SHA256 (rust/2023-07-13/rust-std-1.71.0-
- SIZE (rust/2023-07-13/rust-std-1.71.0-riscv64gc-unknown-freebsd.tar.xz) = 24375500
- SHA256 (rust/2023-07-13/cargo-1.71.0-riscv64gc-unknown-freebsd.tar.xz) = b49977e17a42a9175cfa016941a6006f8e188f610f4ed59945f114fcb9f04820
- SIZE (rust/2023-07-13/cargo-1.71.0-riscv64gc-unknown-freebsd.tar.xz) = 10130160
-+SHA256 (rust/2023-07-13/rustc-1.71.1-x86_64-unknown-dragonfly.tar.xz) = 0a585888f710880995a92264809b3bbfb92281cdc2850ff0d84411cbd8db088b
-+SIZE (rust/2023-07-13/rustc-1.71.1-x86_64-unknown-dragonfly.tar.xz) = 53168480
-+SHA256 (rust/2023-07-13/rust-std-1.71.1-x86_64-unknown-dragonfly.tar.xz) = f5555d9aa57cef8d26114bac6847a062158b4f5f96763154f3b1c2769eebc17b
-+SIZE (rust/2023-07-13/rust-std-1.711-x86_64-unknown-dragonfly.tar.xz) = 23137812
-+SHA256 (rust/2023-07-13/cargo-1.71.1-x86_64-unknown-dragonfly.tar.xz) = d2ab1ff7ce00c1d392dd6571fe5fa2bb8b91df6e32e1c683ae3ebfe672f8d5c4
-+SIZE (rust/2023-07-13/cargo-1.71.1-x86_64-unknown-dragonfly.tar.xz) = 6870108
-\ No newline at end of file
+@@ -49,3 +49,9 @@ SHA256 (rust/2023-10-05/rust-std-1.73.0-
+ SIZE (rust/2023-10-05/rust-std-1.73.0-riscv64gc-unknown-freebsd.tar.xz) = 24553484
+ SHA256 (rust/2023-10-05/cargo-1.73.0-riscv64gc-unknown-freebsd.tar.xz) = 5d35edc0a333903844be52075020aedfe5de06ec1af96d35ff327536a25bc6c6
+ SIZE (rust/2023-10-05/cargo-1.73.0-riscv64gc-unknown-freebsd.tar.xz) = 11004428
++SHA256 (rust/2023-10-05/rustc-1.73.0-x86_64-unknown-dragonfly.tar.xz) = 6ef8e221cf0eece69ea96d78d66a405d828329954a517c9eb52a55127b1ed693
++SIZE (rust/2023-10-05/rustc-1.73.0-x86_64-unknown-dragonfly.tar.xz) = 45990144
++SHA256 (rust/2023-10-05/rust-std-1.73.0-x86_64-unknown-dragonfly.tar.xz) = 80c37ead26b67bd1c0cfc0de6de4afb654245bb71dc26563f777a20e341d22b8
++SIZE (rust/2023-10-05/rust-std-1.73.0-x86_64-unknown-dragonfly.tar.xz) = 26683900
++SHA256 (rust/2023-10-05/cargo-1.73.0-x86_64-unknown-dragonfly.tar.xz) = bed55ae43071493fcb54e4b01db28937fe1423044f2f4db3f44b2e1f0ceaddde
++SIZE (rust/2023-10-05/cargo-1.73.0-x86_64-unknown-dragonfly.tar.xz) = 8780376
