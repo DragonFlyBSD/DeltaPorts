@@ -1,6 +1,6 @@
---- Makefile.orig	2023-02-22 09:53:19 UTC
+--- Makefile.orig	2024-02-10 00:59:21 UTC
 +++ Makefile
-@@ -104,10 +104,6 @@ post-install-DOCS-on:
+@@ -101,8 +101,4 @@ post-install-DOCS-on:
  
  .include <bsd.port.pre.mk>
  
@@ -8,6 +8,4 @@
 -CONFIGURE_ARGS+=	--enable-opie
 -.endif
 -
- .if ${OPSYS} == FreeBSD && (${ARCH:Mpowerpc*} && ${OSREL:R} < 13)
- # as of 2019-10-02, powerpc's base compiler does not yield a working fetchmail.
- # https://svnweb.freebsd.org/ports?view=revision&revision=513614 -- pkubaj@
+ .include <bsd.port.post.mk>
