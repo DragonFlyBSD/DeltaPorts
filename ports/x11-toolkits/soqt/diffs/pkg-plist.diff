@@ -1,8 +1,0 @@
---- pkg-plist.orig	2020-01-26 01:26:04 UTC
-+++ pkg-plist
-@@ -486,4 +486,4 @@ libdata/pkgconfig/SoQt.pc
- %%DATADIR%%/materials/winter/winter7.h
- %%DATADIR%%/materials/winter/winter8.h
- %%DATADIR%%/materials/winter/winter9.h
--share/info/SoQt1/build-options.txt
-+info/SoQt1/build-options.txt
