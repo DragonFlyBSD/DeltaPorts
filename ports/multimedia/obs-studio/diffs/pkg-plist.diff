@@ -1,6 +1,6 @@
---- pkg-plist.orig	2023-09-27 19:58:22 UTC
+--- pkg-plist.orig	2024-02-24 12:34:59 UTC
 +++ pkg-plist
-@@ -141,7 +141,6 @@ lib/obs-plugins/linux-capture.so
+@@ -140,7 +140,6 @@ lib/obs-plugins/linux-capture.so
  %%JACK%%lib/obs-plugins/linux-jack.so
  %%PIPEWIRE%%lib/obs-plugins/linux-pipewire.so
  %%PULSEAUDIO%%lib/obs-plugins/linux-pulseaudio.so
@@ -8,13 +8,15 @@
  lib/obs-plugins/obs-ffmpeg.so
  lib/obs-plugins/obs-filters.so
  lib/obs-plugins/obs-outputs.so
-@@ -533,64 +532,6 @@ share/obs/obs-plugins/linux-capture/loca
+@@ -549,66 +548,6 @@ share/obs/obs-plugins/linux-capture/loca
  %%PULSEAUDIO%%share/obs/obs-plugins/linux-pulseaudio/locale/vi-VN.ini
  %%PULSEAUDIO%%share/obs/obs-plugins/linux-pulseaudio/locale/zh-CN.ini
  %%PULSEAUDIO%%share/obs/obs-plugins/linux-pulseaudio/locale/zh-TW.ini
+-share/obs/obs-plugins/linux-v4l2/locale/af-ZA.ini
 -share/obs/obs-plugins/linux-v4l2/locale/ar-SA.ini
 -share/obs/obs-plugins/linux-v4l2/locale/az-AZ.ini
 -share/obs/obs-plugins/linux-v4l2/locale/ba-RU.ini
+-share/obs/obs-plugins/linux-v4l2/locale/be-BY.ini
 -share/obs/obs-plugins/linux-v4l2/locale/bg-BG.ini
 -share/obs/obs-plugins/linux-v4l2/locale/bn-BD.ini
 -share/obs/obs-plugins/linux-v4l2/locale/ca-ES.ini
@@ -70,6 +72,6 @@
 -share/obs/obs-plugins/linux-v4l2/locale/vi-VN.ini
 -share/obs/obs-plugins/linux-v4l2/locale/zh-CN.ini
 -share/obs/obs-plugins/linux-v4l2/locale/zh-TW.ini
+ share/obs/obs-plugins/obs-ffmpeg/locale/af-ZA.ini
  share/obs/obs-plugins/obs-ffmpeg/locale/ar-SA.ini
  share/obs/obs-plugins/obs-ffmpeg/locale/ba-RU.ini
- share/obs/obs-plugins/obs-ffmpeg/locale/bg-BG.ini
