@@ -1,11 +1,11 @@
---- Makefile.orig	2023-11-17 20:00:28 UTC
+--- Makefile.orig	2024-02-24 12:13:44 UTC
 +++ Makefile
-@@ -82,7 +82,7 @@ CONFIGURE_ARGS=	--sysconfdir=${PREFIX}/e
- 		--with-python=${PYTHON_CMD} \
+@@ -86,7 +86,7 @@ CONFIGURE_ARGS=	--sysconfdir=${PREFIX}/e
  		--without-python2 \
  		--with-python3=${PYTHON_CMD} \
+ 		--without-nut_monitor \
 -		--with-ltdl --with-nut-scanner
 +		--with-libltdl --with-nut-scanner
  
- CFLAGS+=	-I${LOCALBASE}/include -L${LOCALBASE}/lib -lpthread
+ CFLAGS+=	-I${LOCALBASE}/include -L${LOCALBASE}/lib -pthread
  LIB_DEPENDS+=	libltdl.so:devel/libltdl
