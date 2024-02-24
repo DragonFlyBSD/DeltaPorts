@@ -1,8 +1,8 @@
---- Makefile.orig	2013-01-15 13:56:55.530985000 +0100
-+++ Makefile	2013-01-15 13:58:43.581135000 +0100
-@@ -36,21 +36,10 @@
- BROKEN=		Does not compile
- .endif
+--- Makefile.orig	2024-02-24 12:15:50 UTC
++++ Makefile
+@@ -27,21 +27,10 @@ DOCS_INFO=		chpp
+ 
+ .include <bsd.port.pre.mk>
  
 -post-extract:
 -.for i in getopt.h regex.h gc/gc.h
@@ -14,12 +14,12 @@
 -		's| getopt.c getopt.h getopt1.c | | ; \
 -		 s| regex.c regex.h | | ; \
 -		 /LDADD/s| gc/gc.a | -lgc -lgnuregex | ; \
-+		'/LDADD/s| gc/gc.a | -lgc | ; \
++		 '/LDADD/s| gc/gc.a | -lgc -lgnuregex | ; \
  		 s|^YFLAGS|AM_YFLAGS|' ${WRKSRC}/Makefile.am
--.for i in arrayops.c builtins.c stringops.c
+-.for i in arrayops.c stringops.c
 -	@${REINPLACE_CMD} -e \
 -		's|"../regex.h"|<gnu/regex.h>|' ${WRKSRC}/builtins/${i}
 -.endfor
  
- post-install:
- .if !defined(NOPORTDOCS)
+ post-patch-DOCS-off:
+ 	@${REINPLACE_CMD} -e \
