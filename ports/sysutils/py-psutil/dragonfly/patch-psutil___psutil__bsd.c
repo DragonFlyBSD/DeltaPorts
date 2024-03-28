@@ -1,5 +1,5 @@
---- psutil/_psutil_bsd.c.orig	2023-04-17 15:01:41 UTC
-+++ psutil/_psutil_bsd.c
+--- psutil/_psutil_bsd.c.orig	2024-03-20 12:50:43.531541000 +0200
++++ psutil/_psutil_bsd.c	2024-03-20 12:52:26.812446000 +0200
 @@ -105,6 +105,17 @@
      #ifndef DTYPE_VNODE
          #define DTYPE_VNODE 1
@@ -137,7 +137,7 @@
  #elif defined(PSUTIL_OPENBSD)
      if ((p)->p_flag & P_SYSTEM) {
  #endif
-@@ -1076,14 +1142,16 @@ static PyMethodDef mod_methods[] = {
+@@ -1076,18 +1142,23 @@ static PyMethodDef mod_methods[] = {
      {"proc_num_fds", psutil_proc_num_fds, METH_VARARGS},
      {"proc_open_files", psutil_proc_open_files, METH_VARARGS},
  #endif
@@ -156,7 +156,14 @@
      {"proc_getrlimit", psutil_proc_getrlimit, METH_VARARGS},
      {"proc_memory_maps", psutil_proc_memory_maps, METH_VARARGS},
      {"proc_setrlimit", psutil_proc_setrlimit, METH_VARARGS},
-@@ -1159,6 +1227,12 @@ static PyMethodDef mod_methods[] = {
+ #endif
++#if defined(PSUTIL_DRAGONFLY)
++    {"cpu_count_cores", psutil_cpu_count_cores, METH_VARARGS},
++#endif
+     {"proc_environ", psutil_proc_environ, METH_VARARGS},
+
+     // --- system-related functions
+@@ -1159,6 +1230,12 @@ static PyMethodDef mod_methods[] = {
      if (PyModule_AddIntConstant(mod, "SZOMB", SZOMB)) INITERR;
      if (PyModule_AddIntConstant(mod, "SWAIT", SWAIT)) INITERR;
      if (PyModule_AddIntConstant(mod, "SLOCK", SLOCK)) INITERR;
