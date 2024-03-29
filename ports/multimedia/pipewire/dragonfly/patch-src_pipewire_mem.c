@@ -15,7 +15,7 @@
  
 -#if defined(__FreeBSD__) || defined(__MidnightBSD__) || defined(__GNU__)
 +#if defined(__FreeBSD__) || defined(__MidnightBSD__) || defined(__GNU__) || \
-+    !defined(__DragonFly__)
++    defined(__DragonFly__)
  #define MAP_LOCKED 0
  #endif
  
