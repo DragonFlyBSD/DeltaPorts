@@ -1,4 +1,4 @@
---- Makefile.orig	2024-02-10 00:15:22 UTC
+--- Makefile.orig	2024-03-30 15:30:41 UTC
 +++ Makefile
 @@ -3,7 +3,8 @@ PORTVERSION=	${GHC_VERSION}
  PORTREVISION?=	0
@@ -41,7 +41,7 @@
 +.if empty(PORT_OPTIONS:MBOOT) && ${OPSYS} == "DragonFly"
 +BUILD_DEPENDS+=		libtinfow-compat>0:misc/libtinfow-compat
 +.if ${SLAVE_PORT} != "yes"
-+BOOT_GHC_VERSION=	9.2.7
++BOOT_GHC_VERSION=	9.2.8
 +.endif
 +DISTFILES+=		ghc-${BOOT_GHC_VERSION}-boot-${ARCH}-dragonfly.tar.xz:dflyboot
 +CONFIGURE_TARGET=	${ARCH}-portbld-dragonfly
