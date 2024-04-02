@@ -487,6 +487,11 @@
 		    "port": "emulators/qemu",
 		    "desc": "Update elftoolchain so that all targets can be built.",
 		    "status": "pending"
+		},
+		{
+		    "port": "sysutils/slurm-wlm",
+		    "desc": "requires posix timers (timer_create, etc)",
+		    "status": "pending"
 		}
 	    ],
 	    "cherry-picks": [
