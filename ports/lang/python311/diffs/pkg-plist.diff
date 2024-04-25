@@ -1,0 +1,46 @@
+--- pkg-plist.orig	2024-04-20 15:25:52 UTC
++++ pkg-plist
+@@ -249,9 +249,6 @@ lib/libpython%%PYTHON_VER%%%%ABI%%.so.1.
+ %%PYTHON_LIBDIR%%/__pycache__/_strptime%%PYTHON_EXT_SUFFIX%%.opt-1.pyc
+ %%PYTHON_LIBDIR%%/__pycache__/_strptime%%PYTHON_EXT_SUFFIX%%.opt-2.pyc
+ %%PYTHON_LIBDIR%%/__pycache__/_strptime%%PYTHON_EXT_SUFFIX%%.pyc
+-%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata_%%ABI%%_freebsd%%OSMAJOR%%_%%PYTHON_EXT_SUFFIX%%.opt-1.pyc
+-%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata_%%ABI%%_freebsd%%OSMAJOR%%_%%PYTHON_EXT_SUFFIX%%.opt-2.pyc
+-%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata_%%ABI%%_freebsd%%OSMAJOR%%_%%PYTHON_EXT_SUFFIX%%.pyc
+ %%PYTHON_LIBDIR%%/__pycache__/_threading_local%%PYTHON_EXT_SUFFIX%%.opt-1.pyc
+ %%PYTHON_LIBDIR%%/__pycache__/_threading_local%%PYTHON_EXT_SUFFIX%%.opt-2.pyc
+ %%PYTHON_LIBDIR%%/__pycache__/_threading_local%%PYTHON_EXT_SUFFIX%%.pyc
+@@ -723,7 +720,6 @@ lib/libpython%%PYTHON_VER%%%%ABI%%.so.1.
+ %%PYTHON_LIBDIR%%/_pyio.py
+ %%PYTHON_LIBDIR%%/_sitebuiltins.py
+ %%PYTHON_LIBDIR%%/_strptime.py
+-%%PYTHON_LIBDIR%%/_sysconfigdata_%%ABI%%_freebsd%%OSMAJOR%%_.py
+ %%PYTHON_LIBDIR%%/_threading_local.py
+ %%PYTHON_LIBDIR%%/_weakrefset.py
+ %%PYTHON_LIBDIR%%/abc.py
+@@ -2933,7 +2929,6 @@ lib/libpython%%PYTHON_VER%%%%ABI%%.so.1.
+ %%PYTHON_LIBDIR%%/lib-dynload/_datetime%%PYTHON_EXT_SUFFIX%%%%ABI%%.so
+ %%PYTHON_LIBDIR%%/lib-dynload/_dbm%%PYTHON_EXT_SUFFIX%%%%ABI%%.so
+ %%PYTHON_LIBDIR%%/lib-dynload/_decimal%%PYTHON_EXT_SUFFIX%%%%ABI%%.so
+-%%PYTHON_LIBDIR%%/lib-dynload/_elementtree%%PYTHON_EXT_SUFFIX%%%%ABI%%.so
+ %%PYTHON_LIBDIR%%/lib-dynload/_hashlib%%PYTHON_EXT_SUFFIX%%%%ABI%%.so
+ %%PYTHON_LIBDIR%%/lib-dynload/_heapq%%PYTHON_EXT_SUFFIX%%%%ABI%%.so
+ %%PYTHON_LIBDIR%%/lib-dynload/_json%%PYTHON_EXT_SUFFIX%%%%ABI%%.so
+@@ -2977,7 +2972,6 @@ lib/libpython%%PYTHON_VER%%%%ABI%%.so.1.
+ %%PYTHON_LIBDIR%%/lib-dynload/mmap%%PYTHON_EXT_SUFFIX%%%%ABI%%.so
+ %%NO_NIS%%%%PYTHON_LIBDIR%%/lib-dynload/nis%%PYTHON_EXT_SUFFIX%%%%ABI%%.so
+ %%PYTHON_LIBDIR%%/lib-dynload/ossaudiodev%%PYTHON_EXT_SUFFIX%%%%ABI%%.so
+-%%PYTHON_LIBDIR%%/lib-dynload/pyexpat%%PYTHON_EXT_SUFFIX%%%%ABI%%.so
+ %%PYTHON_LIBDIR%%/lib-dynload/readline%%PYTHON_EXT_SUFFIX%%%%ABI%%.so
+ %%PYTHON_LIBDIR%%/lib-dynload/resource%%PYTHON_EXT_SUFFIX%%%%ABI%%.so
+ %%PYTHON_LIBDIR%%/lib-dynload/select%%PYTHON_EXT_SUFFIX%%%%ABI%%.so
+@@ -7955,3 +7949,9 @@ lib/libpython%%PYTHON_VER%%%%ABI%%.so.1.
+ libdata/pkgconfig/python-%%PYTHON_VER%%-embed.pc
+ libdata/pkgconfig/python-%%PYTHON_VER%%.pc
+ man/man1/python%%PYTHON_VER%%.1.gz
++%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata__%%PYTHON_PLATFORM%%_%%PYTHON_EXT_SUFFIX%%.opt-1.pyc
++%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata__%%PYTHON_PLATFORM%%_%%PYTHON_EXT_SUFFIX%%.opt-2.pyc
++%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata__%%PYTHON_PLATFORM%%_%%PYTHON_EXT_SUFFIX%%.pyc
++%%PYTHON_LIBDIR%%/_sysconfigdata__%%PYTHON_PLATFORM%%_.py
++%%PYTHON_LIBDIR%%/lib-dynload/_elementtree%%PYTHON_EXT_SUFFIX%%_failed.so
++%%PYTHON_LIBDIR%%/lib-dynload/pyexpat%%PYTHON_EXT_SUFFIX%%_failed.so
