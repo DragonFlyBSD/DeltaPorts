@@ -1,4 +1,4 @@
---- Makefile.orig	2024-02-10 00:07:31 UTC
+--- Makefile.orig	2024-04-25 23:44:39 UTC
 +++ Makefile
 @@ -5,6 +5,7 @@ CATEGORIES=	lang
  MASTER_SITES=	SF/freepascal/Source/${PORTVERSION}:source \
@@ -35,7 +35,7 @@
  PPNAME=		ppcx64
  FPC_ARCH=	x86_64
  #OPT=		"-dFPC_USE_LIBC"
-@@ -108,50 +109,82 @@ post-patch:
+@@ -108,50 +109,84 @@ post-patch:
  		${WRKDIR}/${FPCSRCDIR}/packages/fpmkunit/src/fpmkunit.pp
  
  # enable units
@@ -96,7 +96,9 @@
 -	@${REINPLACE_CMD} -i "" -e 's|linux|freebsd,linux|g' \
 +	@${REINPLACE_CMD} -i "" -e 's|linux|freebsd,dragonfly,linux|g' \
  		${WRKSRC}/packages/zorba/fpmake.pp
- 
++	@${REINPLACE_CMD} -i "" -e 's|linux,freebsd|linux,freebsd,dragonfly|g' \
++		${WRKSRC}/packages/rtl-extra/fpmake.pp
++
 +# dragonfly specifics
 +	@${REINPLACE_CMD} -i "" -e 's|,dragonfly||g' \
 +		${WRKSRC}/packages/fpgtk/fpmake.pp
@@ -127,7 +129,7 @@
 +	@${REINPLACE_CMD} -i ""	-e 's/freebsd,/freebsd,dragonfly,/g' \
 +		-e '/P.OSes/ s/freebsd/freebsd, dragonfly/g' \
 +		${WRKSRC}/packages/libvlc/fpmake.pp
-+
+ 
  do-build:
  # build fpc compiler
  	@${ECHO_MSG} "##### STARTING COMPILER #####"
