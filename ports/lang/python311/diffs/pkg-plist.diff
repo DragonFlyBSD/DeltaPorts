@@ -42,5 +42,5 @@
 +%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata__%%PYTHON_PLATFORM%%_%%PYTHON_EXT_SUFFIX%%.opt-2.pyc
 +%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata__%%PYTHON_PLATFORM%%_%%PYTHON_EXT_SUFFIX%%.pyc
 +%%PYTHON_LIBDIR%%/_sysconfigdata__%%PYTHON_PLATFORM%%_.py
-+%%PYTHON_LIBDIR%%/lib-dynload/_elementtree%%PYTHON_EXT_SUFFIX%%_failed.so
-+%%PYTHON_LIBDIR%%/lib-dynload/pyexpat%%PYTHON_EXT_SUFFIX%%_failed.so
++%%PYTHON_LIBDIR%%/lib-dynload/_elementtree%%PYTHON_EXT_SUFFIX%%.so
++%%PYTHON_LIBDIR%%/lib-dynload/pyexpat%%PYTHON_EXT_SUFFIX%%.so
