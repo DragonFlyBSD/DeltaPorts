@@ -1,6 +1,14 @@
---- pkg-plist.orig	2016-12-27 15:41:53 UTC
+--- pkg-plist.orig	2024-04-28 21:37:32 UTC
 +++ pkg-plist
-@@ -2465,10 +2465,10 @@ lib/python2.7/pipes.pyo
+@@ -1908,7 +1908,6 @@ lib/python2.7/lib-dynload/_curses.so
+ lib/python2.7/lib-dynload/_curses_panel.so
+ lib/python2.7/lib-dynload/_elementtree.so
+ lib/python2.7/lib-dynload/_functools.so
+-lib/python2.7/lib-dynload/_hashlib.so
+ lib/python2.7/lib-dynload/_heapq.so
+ lib/python2.7/lib-dynload/_hotshot.so
+ lib/python2.7/lib-dynload/_io.so
+@@ -2474,10 +2473,10 @@ lib/python2.7/pipes.pyo
  lib/python2.7/pkgutil.py
  lib/python2.7/pkgutil.pyc
  lib/python2.7/pkgutil.pyo
