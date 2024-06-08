@@ -1,0 +1,20 @@
+--- CMakeLists.txt.orig	2024-01-14 08:26:01 UTC
++++ CMakeLists.txt
+@@ -21,7 +21,7 @@ set(QT_MAJOR_VERSION 6 CACHE STRING "Qt
+ 
+ include(GNUInstallDirs)
+ 
+-option(INSTALL_POLKIT_RULES "Install polkit rules" OFF)
++option(INSTALL_POLKIT_RULES "Install polkit rules" ON)
+ option(INSTALL_MAN_PAGES "Install man pages" ON)
+ 
+ set(CMAKE_INCLUDE_CURRENT_DIR ON)
+@@ -63,7 +63,7 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR
+     DESTINATION share/dbus-1/system-services
+ )
+ install(FILES org.freedesktop.UDisks2.conf
+-    DESTINATION share/dbus-1/system.d
++    DESTINATION etc/dbus-1/system.d
+ )
+ 
+ if(INSTALL_POLKIT_RULES)
