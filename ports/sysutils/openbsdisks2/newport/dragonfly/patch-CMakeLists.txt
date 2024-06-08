@@ -1,6 +1,11 @@
 --- CMakeLists.txt.orig	2024-01-14 08:26:01 UTC
 +++ CMakeLists.txt
-@@ -21,7 +21,7 @@ set(QT_MAJOR_VERSION 6 CACHE STRING "Qt
+@@ -17,11 +17,11 @@ if(NOT CMAKE_BUILD_TYPE)
+             FORCE)
+ endif()
+ 
+-set(QT_MAJOR_VERSION 6 CACHE STRING "Qt version to use (5 or 6), defaults to 6")
++set(QT_MAJOR_VERSION 5 CACHE STRING "Qt version to use (5 or 6), defaults to 6")
  
  include(GNUInstallDirs)
  
