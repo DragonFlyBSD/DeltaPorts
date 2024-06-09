@@ -1,4 +1,4 @@
---- configure.cmake.orig	2024-05-26 10:21:41 UTC
+--- configure.cmake.orig	2024-06-09 12:19:17 UTC
 +++ configure.cmake
 @@ -67,7 +67,7 @@ if(Python3_EXECUTABLE)
  endif()
@@ -33,21 +33,3 @@
     MESSAGE "Build can be done only on Linux, Windows, macO, iOS and Android(on non-Windows hosts only)."
  )
  if(LINUX AND CMAKE_CROSSCOMPILING)
-@@ -571,6 +571,8 @@ add_check_for_support(
-    CONDITION MSVC OR
-        (FREEBSD AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU") OR
-        (FREEBSD AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang") OR
-+       (DRAGONFLY AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU") OR
-+       (DRAGONFLY AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang") OR
-        (MACOS AND CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
-    MESSAGE
-        "${CMAKE_CXX_COMPILER_ID} compiler is not supported."
-@@ -581,6 +583,8 @@ add_check_for_support(
-    CONDITION MSVC OR
-        (FREEBSD AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU") OR
-        (FREEBSD AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang") OR
-+       (DRAGONFLY AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU") OR
-+       (DRAGONFLY AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang") OR
-        (APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang") OR
-        (ANDROID AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang") OR
-        (MINGW AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU") OR

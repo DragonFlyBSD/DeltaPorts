@@ -1,4 +1,4 @@
---- src/3rdparty/chromium/third_party/vulkan-deps/vulkan-loader/src/loader/vk_loader_platform.h.orig	2024-05-26 12:00:44 UTC
+--- src/3rdparty/chromium/third_party/vulkan-deps/vulkan-loader/src/loader/vk_loader_platform.h.orig	2024-06-09 12:49:10 UTC
 +++ src/3rdparty/chromium/third_party/vulkan-deps/vulkan-loader/src/loader/vk_loader_platform.h
 @@ -24,7 +24,7 @@
   */
@@ -14,7 +14,7 @@
  
  #if defined(__linux__) || defined(__APPLE__) || defined(__Fuchsia__) || defined(__QNXNTO__) || defined(__FreeBSD__) || \
 -    defined(__OpenBSD__)
-+    defined(__OpenBSD__) ||  defined(__DragonFly__)
++	defined(__OpenBSD__) || defined(__DragonFly__)
  #include <unistd.h>
  // Note: The following file is for dynamic loading:
  #include <dlfcn.h>
@@ -23,7 +23,7 @@
  
  #if defined(__linux__) || defined(__APPLE__) || defined(__Fuchsia__) || defined(__QNXNTO__) || defined(__FreeBSD__) || \
 -    defined(__OpenBSD__)
-+    defined(__OpenBSD__) ||  defined(__DragonFly__)
++	defined(__OpenBSD__) || defined(__DragonFly__)
  /* Linux-specific common code: */
  
  // VK Library Filenames, Paths, etc.:
@@ -32,7 +32,7 @@
  
  #if defined(__linux__) || defined(__APPLE__) || defined(__Fuchsia__) || defined(__QNXNTO__) || defined(__FreeBSD__) || \
 -    defined(__OpenBSD__)
-+    defined(__OpenBSD__) ||  defined(__DragonFly__)
++	defined(__OpenBSD__) || defined(__DragonFly__)
  
  // File IO
  static inline bool loader_platform_file_exists(const char *path) {

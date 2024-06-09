@@ -1,4 +1,4 @@
---- src/3rdparty/chromium/third_party/blink/renderer/platform/wtf/stack_util.cc.orig	2024-05-26 11:28:50 UTC
+--- src/3rdparty/chromium/third_party/blink/renderer/platform/wtf/stack_util.cc.orig	2024-06-09 12:40:08 UTC
 +++ src/3rdparty/chromium/third_party/blink/renderer/platform/wtf/stack_util.cc
 @@ -35,14 +35,15 @@ size_t GetUnderestimatedStackSize() {
  // correctly for the main thread.

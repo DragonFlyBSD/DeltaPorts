@@ -1,4 +1,4 @@
---- src/3rdparty/chromium/tools/licenses/licenses.py.intermediate	2024-05-26 13:36:02 UTC
+--- src/3rdparty/chromium/tools/licenses/licenses.py.intermediate	2024-06-09 12:51:37 UTC
 +++ src/3rdparty/chromium/tools/licenses/licenses.py
 @@ -618,7 +618,7 @@ def _GnBinary():
    exe = 'gn'

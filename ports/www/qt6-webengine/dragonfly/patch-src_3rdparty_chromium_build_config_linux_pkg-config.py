@@ -1,4 +1,4 @@
---- src/3rdparty/chromium/build/config/linux/pkg-config.py.orig	2024-05-26 11:05:07 UTC
+--- src/3rdparty/chromium/build/config/linux/pkg-config.py.orig	2024-06-09 12:28:43 UTC
 +++ src/3rdparty/chromium/build/config/linux/pkg-config.py
 @@ -108,7 +108,7 @@ def main():
    # If this is run on non-Linux platforms, just return nothing and indicate
