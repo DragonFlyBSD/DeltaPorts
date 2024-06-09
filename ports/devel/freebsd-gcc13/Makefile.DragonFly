@@ -1,0 +1,3 @@
+BUILD_DEPENDS:=
+RUN_DEPENDS:=
+IGNORE= FreeBSD specific
