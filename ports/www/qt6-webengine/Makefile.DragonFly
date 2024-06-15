@@ -16,6 +16,10 @@ LDFLAGS=	-L /usr/lib -L${LOCALBASE}/llvm${LLVM_DEFAULT}/libcxx/lib/c++ -L /lib
 LIB_DIRS+=	${PREFIX}/llvm${LLVM_DEFAULT}/libcxx/lib
 LIB_DEPENDS+=  	libc++.so.1:devel/libcxx${LLVM_DEFAULT}
 
+# for qt6-pdf
+LIB_DEPENDS+=	libgbm.so.1:graphics/mesa-libs \
+		libva.so:multimedia/libva
+
 dfly-patch:
 	# Sandbox stuff
 	@${MKDIR} ${WRKSRC}/src/3rdparty/chromium/sandbox/policy/dragonfly
