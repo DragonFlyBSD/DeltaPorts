@@ -1,0 +1,10 @@
+--- Makefile.orig	2024-06-23 17:32:05 UTC
++++ Makefile
+@@ -15,7 +15,6 @@ LIB_DEPENDS=	libao.so:audio/libao \
+ 		libasound.so:audio/alsa-lib \
+ 		libcurl.so:ftp/curl \
+ 		libevdev.so:devel/libevdev \
+-		libpulse.so:audio/pulseaudio \
+ 		libudev.so:devel/libudev-devd
+ 
+ USES=	cmake compiler gl xorg
