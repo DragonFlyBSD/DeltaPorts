@@ -1,1 +1,1 @@
-BROKEN= No SCTP support on DragonFly
+CONFIGURE_ARGS+= --disable-libknet-sctp
