@@ -1,0 +1,12 @@
+diff --git a/devel/tree-sitter/Makefile b/devel/tree-sitter/Makefile
+index c751e4a17e1..a0b51645e27 100644
+--- a/devel/tree-sitter/Makefile
++++ b/devel/tree-sitter/Makefile
+@@ -1,6 +1,6 @@
+ PORTNAME=	tree-sitter
+ DISTVERSIONPREFIX=	v
+-DISTVERSION=	0.20.8
++DISTVERSION=	0.22.6
+ CATEGORIES=	devel
+ 
+ MAINTAINER=	adamw@FreeBSD.org
