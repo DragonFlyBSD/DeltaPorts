@@ -1,0 +1,11 @@
+--- files/patch-extern.h.orig	2024-08-14 23:23:17.837860000 +0200
++++ files/patch-extern.h	1970-01-01 01:00:00.000000000 +0100
+@@ -1,8 +0,0 @@
+---- extern.h.orig	2023-08-15 08:44:47 UTC
+-+++ extern.h
+-@@ -512,3 +512,5 @@
+- /* layout.c */
+- extern void  RemoveLayout __P((struct layout *));
+- extern int   LayoutDumpCanvas __P((struct canvas *, char *));
+-+
+-+extern time_t SessionCreationTime __P((const char *));

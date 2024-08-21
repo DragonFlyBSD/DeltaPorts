@@ -1,0 +1,10 @@
+--- Makefile.orig	2024-08-12 09:37:41.842132000 +0200
++++ Makefile	2024-08-12 09:37:25.761840000 +0200
+@@ -124,6 +124,6 @@ post-patch:
+ 	    	${WRKSRC}/cmake/modules/FindLua.cmake
+ 
+ post-install-DEVELOPMENT-on:
+-	cd ${INSTALL_WRKSRC} && ${SETENV} ${MAKE_ENV} ${FAKEROOT} ${CMAKE_BIN} ${CMAKE_ARGS} -DCOMPONENT=Development -P cmake_install.cmake
++	cd ${INSTALL_WRKSRC} && DESTDIR=/construction/net/wireshark/stage ${SETENV} ${MAKE_ENV} ${FAKEROOT} ${CMAKE_BIN} ${CMAKE_ARGS} -DCOMPONENT=Development -P cmake_install.cmake
+ 
+ .include <bsd.port.mk>
