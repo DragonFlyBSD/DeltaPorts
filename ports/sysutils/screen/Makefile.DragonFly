@@ -1,1 +1,1 @@
-LDFLAGS+= -L${NCURSESLIB} -lkvm
+LDFLAGS+= -lkvm
