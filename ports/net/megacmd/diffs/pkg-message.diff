@@ -1,0 +1,10 @@
+--- pkg-message.orig	1970-01-01 01:00:00.000000000 +0100
++++ pkg-message	2023-12-28 16:30:53.936522000 +0100
+@@ -0,0 +1,7 @@
++[
++{ type: install
++  message: <<EOM
++net/megacmd requires a machine-id to be generated to work properly on DragonFlyBSD, to achieve so, please run `dbus-uuidgen --ensure` as root.
++EOM
++}
++]
