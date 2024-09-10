@@ -1,4 +1,4 @@
---- Uses/cargo.mk.orig	2023-10-18 22:55:30 UTC
+--- Uses/cargo.mk.orig	2024-09-10 23:24:46 UTC
 +++ Uses/cargo.mk
 @@ -3,16 +3,16 @@
  #
@@ -21,20 +21,7 @@
  
  .sinclude "${MASTERDIR}/Makefile.crates"
  
-@@ -140,12 +140,18 @@ CARGO_ENV+=	RUST_BACKTRACE=1
- .  endif
- 
- .  if !defined(LTO_UNSAFE) || (defined(LTO_DISABLE_CHECK) && ${ARCH} == riscv64)
--_CARGO_MSG=	"===>   Additional optimization to port applied"
--WITH_LTO=	yes
-+#
-+# XXX: We cannot enable LTO optimizations here for rust because it ignores
-+#      libraries at link time (possibly due to --as-needed being specified).
-+#      This is likely a bug and we have to sort it out before this can be
-+#      enabled.
-+#
-+_CARGO_MSG=	"===>   Additional optimization to port applied (non-LTO for DragonFly BSD)"
-+#WITH_LTO=
+@@ -144,7 +144,7 @@ _CARGO_MSG=	"===>   Additional optimizat
  .  endif
  
  # Adjust -C target-cpu if -march/-mcpu is set by bsd.cpu.mk
