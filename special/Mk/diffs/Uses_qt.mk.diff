@@ -1,6 +1,6 @@
---- Uses/qt.mk.orig	2022-10-11 20:47:05 UTC
+--- Uses/qt.mk.orig	2024-09-10 23:37:33 UTC
 +++ Uses/qt.mk
-@@ -98,7 +98,7 @@ QMAKESPEC?=		${QT_MKSPECDIR}/${QMAKESPEC
+@@ -108,7 +108,7 @@ QMAKESPEC?=		${QT_MKSPECDIR}/${QMAKESPEC
  # better to support custom settings. Dereferencing the detection allows to
  # avoid forking a shell on each inclusion of this file, and to catch any CXX
  # customization (via USE_GCC, etc.).
@@ -9,12 +9,3 @@
  
  .  for dir in BIN INC LIB ARCH PLUGIN LIBEXEC IMPORT \
  	QML DATA DOC L10N ETC EXAMPLE TEST MKSPEC \
-@@ -144,7 +144,7 @@ _USE_QT5_ONLY=		assistant buildtools con
- 			sql-pgsql sql-sqlite2 sql-sqlite3 sql-tds testlib uiplugin \
- 			uitools webengine webglplugin webkit websockets-qml webview \
- 			widgets x11extras xml xmlpatterns
--.  if ${ARCH} == amd64 || ${ARCH} == i386
-+.  if ${ARCH} == x86_64 || ${ARCH} == i386
- _USE_QT5_ONLY+=		sql-ibase
- .  endif
- 
