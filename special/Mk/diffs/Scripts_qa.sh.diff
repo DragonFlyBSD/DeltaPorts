@@ -1,4 +1,4 @@
---- Scripts/qa.sh.orig	2023-10-18 22:59:17 UTC
+--- Scripts/qa.sh.orig	2024-09-10 23:40:15 UTC
 +++ Scripts/qa.sh
 @@ -30,7 +30,7 @@ list_stagedir_elfs() {
  }
@@ -29,7 +29,7 @@
  	fi
  
  	return ${rc}
-@@ -200,6 +210,11 @@ paths() {
+@@ -204,6 +214,11 @@ paths() {
  	$(find ${TMPPLIST} ${STAGEDIR} -type f -exec grep -l "${STAGEDIR}" {} +)
  	EOF
  
@@ -41,7 +41,7 @@
  	return ${rc}
  }
  
-@@ -649,7 +664,7 @@ proxydeps_suggest_uses() {
+@@ -652,7 +667,7 @@ proxydeps_suggest_uses() {
  }
  
  proxydeps() {
@@ -50,7 +50,7 @@
  
  	rc=0
  
-@@ -658,6 +673,12 @@ proxydeps() {
+@@ -661,6 +676,12 @@ proxydeps() {
  	while read -r file; do
  		# No results presents a blank line from heredoc.
  		[ -z "${file}" ] && continue
@@ -63,7 +63,7 @@
  		while read -r dep_file; do
  			# No results presents a blank line from heredoc.
  			[ -z "${dep_file}" ] && continue
-@@ -709,7 +730,7 @@ proxydeps() {
+@@ -712,7 +733,7 @@ proxydeps() {
  	done <<-EOT
  	$(list_stagedir_elfs | \
  		file -F $'\1' -f - | \
@@ -72,7 +72,7 @@
  		cut -f 1 -d $'\1'| \
  		sed -e 's/^\.//')
  	EOT
-@@ -829,7 +850,7 @@ no_arch() {
+@@ -834,7 +855,7 @@ no_arch() {
  	done <<-EOF
  	$(list_stagedir_elfs  \
  		| file -F $'\1' -f - -N \
@@ -81,8 +81,8 @@
  		| cut -f 1 -d $'\1')
  	EOF
  	return $rc
-@@ -1029,10 +1050,63 @@ reinplace()
- 	fi
+@@ -1042,10 +1063,63 @@ prefixman() {
+ 	return 0
  }
  
 +foreign_binaries() {
@@ -140,7 +140,7 @@
  checks="shebang symlinks paths stripped desktopfileutils sharedmimeinfo"
  checks="$checks suidfiles libtool libperl prefixvar baselibs terminfo"
  checks="$checks proxydeps sonames perlcore no_arch gemdeps gemfiledeps flavors"
- checks="$checks license depends_blacklist pkgmessage reinplace"
+ checks="$checks license depends_blacklist pkgmessage reinplace prefixman"
 +checks="$checks foreign_binaries freebsd_binaries"
  
  ret=0
