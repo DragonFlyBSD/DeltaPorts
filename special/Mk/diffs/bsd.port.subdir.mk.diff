@@ -1,4 +1,4 @@
---- bsd.port.subdir.mk.orig	2023-07-28 16:55:47 UTC
+--- bsd.port.subdir.mk.orig	2024-09-10 23:16:45 UTC
 +++ bsd.port.subdir.mk
 @@ -75,21 +75,34 @@ ARCH!=	${UNAME} -p
  _EXPORTED_VARS+=	ARCH
@@ -42,12 +42,12 @@
  .  endif
  _EXPORTED_VARS+=	_OSRELEASE
  .  if !defined(OSREL)
-@@ -98,54 +111,50 @@ OSREL=	${_OSRELEASE:C/[-(].*//}
+@@ -98,52 +111,48 @@ OSREL=	${_OSRELEASE:C/[-(].*//}
  _EXPORTED_VARS+=	OSREL
  
  .  if !defined(OPSYS)
 -OPSYS!=	${UNAME} -s
-+OPSYS= DragonFly
++OPSYS=	DragonFly
  .  endif
  _EXPORTED_VARS+=	OPSYS
  
@@ -68,31 +68,31 @@
  
 -.  if !defined(_JAVA_VERSION_LIST_REGEXP)
 +.  if defined(USE_JAVA)
-+.   if !defined(_JAVA_VERSION_LIST_REGEXP)
++.    if !defined(_JAVA_VERSION_LIST_REGEXP)
  _JAVA_VERSION_LIST_REGEXP!=	${MAKE} -V _JAVA_VERSION_LIST_REGEXP USE_JAVA=1 -f ${PORTSDIR}/Mk/bsd.port.mk
 -.  endif
-+.   endif
++.    endif
  _EXPORTED_VARS+=	_JAVA_VERSION_LIST_REGEXP
  
 -.  if !defined(_JAVA_VENDOR_LIST_REGEXP)
-+.   if !defined(_JAVA_VENDOR_LIST_REGEXP)
++.    if !defined(_JAVA_VENDOR_LIST_REGEXP)
  _JAVA_VENDOR_LIST_REGEXP!=	${MAKE} -V _JAVA_VENDOR_LIST_REGEXP USE_JAVA=1 -f ${PORTSDIR}/Mk/bsd.port.mk
 -.  endif
-+.   endif
++.    endif
  _EXPORTED_VARS+=	_JAVA_VENDOR_LIST_REGEXP
  
 -.  if !defined(_JAVA_OS_LIST_REGEXP)
-+.   if !defined(_JAVA_OS_LIST_REGEXP)
++.    if !defined(_JAVA_OS_LIST_REGEXP)
  _JAVA_OS_LIST_REGEXP!=		${MAKE} -V _JAVA_OS_LIST_REGEXP USE_JAVA=1 -f ${PORTSDIR}/Mk/bsd.port.mk
 -.  endif
-+.   endif
++.    endif
  _EXPORTED_VARS+=	_JAVA_OS_LIST_REGEXP
  
 -.  if !defined(_JAVA_PORTS_INSTALLED)
-+.   if !defined(_JAVA_PORTS_INSTALLED)
++.    if !defined(_JAVA_PORTS_INSTALLED)
  _JAVA_PORTS_INSTALLED!=		${MAKE} -V _JAVA_PORTS_INSTALLED USE_JAVA=1 -f ${PORTSDIR}/Mk/bsd.port.mk
 -.  endif
-+.   endif
++.    endif
  _EXPORTED_VARS+=	_JAVA_PORTS_INSTALLED
 +.  else
 +# export empty variables
@@ -102,9 +102,7 @@
 +			_JAVA_PORTS_INSTALLED
 +.  endif
  
- .  if !defined(UID)
- UID!=	${ID} -u
- .  endif
+ UID?=	${.MAKE.UID}
  _EXPORTED_VARS+=	UID
  
 -.endif
