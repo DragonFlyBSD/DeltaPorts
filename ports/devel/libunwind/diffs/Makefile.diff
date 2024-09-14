@@ -1,0 +1,11 @@
+--- Makefile.orig	2024-09-14 14:37:56 UTC
++++ Makefile
+@@ -45,6 +45,7 @@ post-install:
+ .if ${OPSYS} == FreeBSD && ${OSVERSION} < 1400052
+ 	${INSTALL_DATA} ${FILESDIR}/unwind.h ${STAGEDIR}${PREFIX}/include
+ .endif
++.  if ${OPTIONS_DEFAULT:MTESTS}
+ 	cd ${STAGEDIR}${PREFIX}/ && ${FIND} libexec/libunwind -type f >> ${TMPPLIST}
+-
++.  endif
+ .include <bsd.port.mk>
