@@ -1,0 +1,10 @@
+--- pkg-plist.orig	2024-09-18 17:29:31 UTC
++++ pkg-plist
+@@ -72,7 +72,6 @@ bin/qmake6
+ %%QT_INCDIR%%/QtCore/%%FULLVER%%/QtCore/private/qfsfileengine_iterator_p.h
+ %%QT_INCDIR%%/QtCore/%%FULLVER%%/QtCore/private/qfsfileengine_p.h
+ %%QT_INCDIR%%/QtCore/%%FULLVER%%/QtCore/private/qfunctions_p.h
+-%%QT_INCDIR%%/QtCore/%%FULLVER%%/QtCore/private/qfutex_freebsd_p.h
+ %%QT_INCDIR%%/QtCore/%%FULLVER%%/QtCore/private/qfutex_p.h
+ %%QT_INCDIR%%/QtCore/%%FULLVER%%/QtCore/private/qfutureinterface_p.h
+ %%QT_INCDIR%%/QtCore/%%FULLVER%%/QtCore/private/qfuturewatcher_p.h
