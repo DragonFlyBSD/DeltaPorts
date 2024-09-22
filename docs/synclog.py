@@ -47,6 +47,7 @@ def todolist_show(data):
     )
 
     d = details[0]
+    print(f"RELEASE: {args.release}\n")
     print(
         tabulate(
             d['to-do'], headers={ 'port': 'Port',

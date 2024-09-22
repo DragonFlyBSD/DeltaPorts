@@ -1,5 +1,5 @@
 {
-    "current": "2024Q1",
+    "current": "2024Q3",
     "releases": [
 	{
 	    "id": "2020S07",
@@ -420,6 +420,14 @@
 	    "id": "2024Q1",
 	    "timestamp": "Thu Jan 25 15:52:01 2024 -0800",
 	    "base_commit": "2aeca567cadbceb890459d7fe35f433c887cae98",
+	    "rejects": [],
+	    "to-do": [],
+	    "cherry-picks": []
+	},
+    {
+	    "id": "2024Q3",
+	    "timestamp": "Tue Sep 10 23:11:19 2024 +0200",
+	    "base_commit": "dfa7ae4ca903964e137326b225da21cb6acfe3d1",
 	    "rejects": [],
 	    "to-do": [
 		{
