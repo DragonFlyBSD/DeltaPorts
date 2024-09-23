@@ -1,35 +1,30 @@
---- Makefile.orig	2024-02-10 01:15:31 UTC
+--- Makefile.orig	2024-09-23 15:04:24 UTC
 +++ Makefile
-@@ -236,11 +236,7 @@ BINARY_ALIAS+=		cpp=${LOCALBASE}/bin/cla
- 			cc=${LOCALBASE}/bin/clang${LLVM_DEFAULT} \
+@@ -236,7 +236,6 @@ BINARY_ALIAS+=		cpp=${LOCALBASE}/bin/cla
  			c++=${LOCALBASE}/bin/clang++${LLVM_DEFAULT} \
  			ar=${LOCALBASE}/bin/llvm-ar${LLVM_DEFAULT} \
--			nm=${LOCALBASE}/bin/llvm-nm${LLVM_DEFAULT} \
+ 			nm=${LOCALBASE}/bin/llvm-nm${LLVM_DEFAULT} \
 -			ld=${LOCALBASE}/bin/ld.lld${LLVM_DEFAULT}
--.else
--BINARY_ALIAS+=		ar=/usr/bin/llvm-ar \
--			nm=/usr/bin/llvm-nm
-+			nm=${LOCALBASE}/bin/llvm-nm${LLVM_DEFAULT}
- .endif
  
  # - swiftshader/lib/{libEGL.so,libGLESv2.so} is x86 only
-@@ -258,8 +254,8 @@ PLIST_SUB+=	NOT_AARCH64=""
+ # - map ffmpeg target to ${ARCH}
+@@ -253,8 +252,8 @@ PLIST_SUB+=	NOT_AARCH64=""
  FFMPEG_TARGET=	ia32
  .endif
  
--FFMPEG_BDIR=	${WRKSRC}/build.${FFMPEG_TARGET}.freebsd/${FFMPEG_BRAND}
+-FFMPEG_BDIR=	${WRKSRC}/third_party/ffmpeg/build.${FFMPEG_TARGET}.freebsd/${FFMPEG_BRAND}
 -FFMPEG_CDIR=	${WRKSRC}/third_party/ffmpeg/chromium/config/${FFMPEG_BRAND}/freebsd/${FFMPEG_TARGET}
-+FFMPEG_BDIR=	${WRKSRC}/build.${FFMPEG_TARGET}.${OPSYS:tl}/${FFMPEG_BRAND}
++FFMPEG_BDIR=	${WRKSRC}/third_party/ffmpeg/build.${FFMPEG_TARGET}.${OPSYS:tl}/${FFMPEG_BRAND}
 +FFMPEG_CDIR=	${WRKSRC}/third_party/ffmpeg/chromium/config/${FFMPEG_BRAND}/${OPSYS:tl}/${FFMPEG_TARGET}
  
  # Allow relocations against read-only segments (override lld default)
  LDFLAGS_i386=	-Wl,-znotext
-@@ -290,7 +286,7 @@ pre-configure:
+@@ -288,7 +287,7 @@ pre-configure:
  		libusb libwebp libxml libxslt openh264 opus || ${FALSE}
  	# Chromium uses an unreleased version of FFmpeg, so configure it
- 	cd ${WRKSRC}/third_party/ffmpeg && \
--		${PYTHON_CMD} chromium/scripts/build_ffmpeg.py freebsd ${FFMPEG_TARGET} \
-+		${PYTHON_CMD} chromium/scripts/build_ffmpeg.py dragonfly ${FFMPEG_TARGET} \
+ 	cd ${WRKSRC}/media/ffmpeg && \
+-		${PYTHON_CMD} scripts/build_ffmpeg.py freebsd ${FFMPEG_TARGET} \
++		${PYTHON_CMD} scripts/build_ffmpeg.py dragonfly ${FFMPEG_TARGET} \
  		--config-only --branding=${FFMPEG_BRAND}
  	cd ${FFMPEG_BDIR} && ${GMAKE} ffversion.h
  	${MKDIR} ${FFMPEG_CDIR}
