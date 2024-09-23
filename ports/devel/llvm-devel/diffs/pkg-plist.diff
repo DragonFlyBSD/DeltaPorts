@@ -1,14 +1,6 @@
---- pkg-plist.orig	2024-02-24 12:08:54 UTC
+--- pkg-plist.orig	2024-09-23 08:05:22 UTC
 +++ pkg-plist
-@@ -134,7 +134,6 @@ bin/sancov-devel
- %%MLIR%%bin/mlir-translate-devel
- %%MLIR%%bin/tblgen-lsp-server-devel
- %%MLIR%%bin/tblgen-to-irdl-devel
--%%OPENMP%%bin/llvm-omp-device-info-devel
- %%OPENMP%%bin/llvm-omp-kernel-replay-devel
- %%LIT%%bin/FileCheck-devel
- %%LIT%%llvm-devel/bin/FileCheck
-@@ -204,7 +203,6 @@ llvm-devel/bin/dsymutil
+@@ -204,7 +204,6 @@ llvm-devel/bin/dsymutil
  %%CLANG%%llvm-devel/bin/git-clang-format
  %%CLANG%%llvm-devel/bin/hmaptool
  %%CLANG%%llvm-devel/bin/intercept-build
@@ -16,20 +8,3 @@
  %%LLD%%llvm-devel/bin/ld.lld
  %%LLD%%llvm-devel/bin/ld64.lld
  llvm-devel/bin/llc
-@@ -259,7 +257,6 @@ llvm-devel/bin/llvm-mt
- llvm-devel/bin/llvm-nm
- llvm-devel/bin/llvm-objcopy
- llvm-devel/bin/llvm-objdump
--%%OPENMP%%llvm-devel/bin/llvm-omp-device-info
- %%OPENMP%%llvm-devel/bin/llvm-omp-kernel-replay
- llvm-devel/bin/llvm-opt-report
- llvm-devel/bin/llvm-otool
-@@ -6785,8 +6782,6 @@ llvm-devel/lib/libRemarks.so.%%LLVM_MAJO
- %%MLIR%%llvm-devel/lib/libmlir_runner_utils.so
- %%MLIR%%llvm-devel/lib/libmlir_runner_utils.so.%%LLVM_MAJOR%%git
- %%OPENMP%%llvm-devel/lib/libomp.so
--%%OPENMP%%llvm-devel/lib/libomptarget.so
--%%OPENMP%%llvm-devel/lib/libomptarget.so.%%LLVM_MAJOR%%git
- %%CLANG%%llvm-devel/lib/libscanbuild/__init__.py
- %%CLANG%%llvm-devel/lib/libscanbuild/analyze.py
- %%CLANG%%llvm-devel/lib/libscanbuild/arguments.py
