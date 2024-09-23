@@ -1,11 +1,11 @@
---- Makefile.orig	2022-09-05 22:18:40 UTC
+--- Makefile.orig	2024-09-23 15:01:20 UTC
 +++ Makefile
-@@ -137,7 +137,7 @@ _IPW2200_FIRMWARE=	iwi/ipw2200-bss \
+@@ -143,7 +143,7 @@ _IPW2200_FIRMWARE=	iwi/ipw2200-bss \
  			iwi/ipw2200-ibss
- _MT76_FIRMWARE=		b6e865e2cc7080c91ec34a9dd3648d25f7ce04c6
+ _MT76_FIRMWARE=		2135e201e7a9339e018d4e2d4a33c73266e674d7
  
 -_LINUX64_KMOD!=		(kldstat -qn linux64 && echo "found") || echo ""
 +_LINUX64_KMOD=
+ _LINUX_EMUL_PATH!=	(sysctl -qn compat.linux.emul_path) || echo ""
+ _LINUX_EP_EXISTS!=	(test -d "${_LINUX_EMUL_PATH}" && echo "found") || echo ""
  
- .if empty(_LINUX64_KMOD)
- IGNORE=	needs the linux64 kernel module to build
