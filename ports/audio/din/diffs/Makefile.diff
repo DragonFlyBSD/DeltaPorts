@@ -1,9 +1,9 @@
---- Makefile.orig	2022-02-24 00:00:39 UTC
+--- Makefile.orig	2024-09-23 07:52:11 UTC
 +++ Makefile
-@@ -30,6 +30,6 @@ ALSA_CXXFLAGS+=	-D__LINUX_ALSA__
+@@ -31,6 +31,6 @@ ALSA_CXXFLAGS+=	-D__LINUX_ALSA__
  JACK_CXXFLAGS+=	-D__UNIX_JACK__
  
- CXXFLAGS+=	-I${LOCALBASE}/include -I${LOCALBASE}/include/tcl${TCL_VER}
+ CXXFLAGS+=	-I${LOCALBASE}/include -I${LOCALBASE}/include/tcl${TCL_VER} -Wno-register
 -LIBS+=		-L${LOCALBASE}/lib -ltcl${TCL_SHLIB_VER} -lthr -ljack
 +LIBS+=		-L${LOCALBASE}/lib -ltcl${TCL_SHLIB_VER} -ljack
  
