@@ -1,12 +1,14 @@
---- pkg-plist.orig	2021-12-13 10:52:12 UTC
+--- pkg-plist.orig	2024-09-23 08:13:56 UTC
 +++ pkg-plist
-@@ -14,9 +14,7 @@
+@@ -14,11 +14,9 @@ lib/pluma/plugins/bracketcompletion.py
  lib/pluma/plugins/codecomment.plugin
  lib/pluma/plugins/codecomment.py
  lib/pluma/plugins/gpdefs.py
 -lib/pluma/plugins/libbookmarks.la
  lib/pluma/plugins/libbookmarks.so
+ lib/pluma/plugins/libquickhighlight.la
+ lib/pluma/plugins/libquickhighlight.so
 -lib/pluma/plugins/libwordcompletion.la
  lib/pluma/plugins/libwordcompletion.so
+ lib/pluma/plugins/quickhighlight.plugin
  lib/pluma/plugins/smartspaces.plugin
- lib/pluma/plugins/smartspaces.py
