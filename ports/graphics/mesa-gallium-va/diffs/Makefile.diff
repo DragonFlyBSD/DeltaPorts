@@ -1,10 +1,10 @@
---- Makefile.orig	2024-02-09 23:55:17 UTC
+--- Makefile.orig	2024-09-23 08:19:23 UTC
 +++ Makefile
-@@ -26,8 +26,7 @@ X11_USE=		xorg=xorgproto,x11,xcb,xdamage
+@@ -25,8 +25,7 @@ X11_USE=		xorg=xorgproto,x11,xcb,xdamage
  .include <bsd.port.options.mk>
  .include "${.CURDIR:H:H}/graphics/mesa-dri/Makefile.common"
  
--MESON_ARGS+=	-Dvideo-codecs="vc1dec,h264dec,h264enc,h265dec,h265enc" \
+-MESON_ARGS+=	-Dvideo-codecs="vc1dec,h264dec,h264enc,h265dec,h265enc,av1dec,av1enc,vp9dec" \
 -		-Dgallium-drivers="radeonsi,r600" \
 +MESON_ARGS+=	-Dgallium-drivers="radeonsi,r600" \
  		-Dvulkan-drivers="" \
