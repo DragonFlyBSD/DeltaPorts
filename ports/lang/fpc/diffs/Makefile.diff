@@ -1,14 +1,14 @@
---- Makefile.orig	2024-04-25 23:44:39 UTC
+--- Makefile.orig	2024-09-23 09:45:16 UTC
 +++ Makefile
-@@ -5,6 +5,7 @@ CATEGORIES=	lang
- MASTER_SITES=	SF/freepascal/Source/${PORTVERSION}:source \
- 		https://downloads.freepascal.org/${PORTNAME}/dist/${PORTVERSION}/source/:source \
- 		http://leaf.dragonflybsd.org/~marino/dports-src/:DragonFlybootstrap \
+@@ -2,6 +2,7 @@ PORTNAME=	fpc
+ PORTVERSION=	3.2.3
+ CATEGORIES=	lang
+ MASTER_SITES=	http://leaf.dragonflybsd.org/~marino/dports-src/:DragonFlybootstrap \
 +		http://avalon.dragonflybsd.org/misc/distfiles/freepascal/:DragonFlybootstrap \
  		LOCAL/acm/freepascal/:bootstrap \
  		LOCAL/acm/freepascal/:man
- DISTFILES=	${DISTNAME:S/$/.source/}${EXTRACT_SUFX}:source
-@@ -16,7 +17,7 @@ WWW=		https://www.freepascal.org/
+ DIST_SUBDIR=	freepascal
+@@ -12,7 +13,7 @@ WWW=		https://www.freepascal.org/
  
  CONFLICTS=	fpc-devel
  
@@ -16,15 +16,6 @@
 +RUN_DEPENDS=	${LOCALBASE}/bin/as:devel/binutils@native
  
  ONLY_FOR_ARCHS=	amd64 i386
- 
-@@ -25,7 +26,7 @@ USE_BINUTILS=	yes
- BOOTVER=	${PORTVERSION}
- MANVER=		${PORTVERSION}
- 
--FPC_LDPATH?=	"${LOCALBASE}/bin/ld.bfd"
-+FPC_LDPATH?=	"/usr/bin/ld.bfd"
- 
- FPCSRCDIR=	${PORTNAME}-${PORTVERSION}
  
 @@ -37,7 +38,7 @@ FPC_ARCH=	i386
  #OPT=		"-dFPC_USE_LIBC"
@@ -35,7 +26,7 @@
  PPNAME=		ppcx64
  FPC_ARCH=	x86_64
  #OPT=		"-dFPC_USE_LIBC"
-@@ -108,50 +109,84 @@ post-patch:
+@@ -111,52 +112,85 @@ post-patch:
  		${WRKDIR}/${FPCSRCDIR}/packages/fpmkunit/src/fpmkunit.pp
  
  # enable units
@@ -48,8 +39,8 @@
 -	@${REINPLACE_CMD} -i "" -e 's|linux|freebsd,linux|g' \
 +	@${REINPLACE_CMD} -i "" -e 's|linux|freebsd,dragonfly,linux|g' \
  		${WRKSRC}/packages/dts/fpmake.pp
- 	@${REINPLACE_CMD} -i "" -e 's|freebsd,||g' \
-+		-e 's|,dragonfly||g' \
+-	@${REINPLACE_CMD} -i "" -e 's|freebsd,||g' \
++	@${REINPLACE_CMD} -i "" -e 's|dragonfly,||g' \
  		${WRKSRC}/packages/fpgtk/fpmake.pp
 -	@${REINPLACE_CMD} -i "" -e 's|iphonesim|freebsd,iphonesim|g' \
 +	@${REINPLACE_CMD} -i "" -e 's|iphonesim|freebsd,dragonfly,iphonesim|g' \
@@ -90,6 +81,9 @@
 -	@${REINPLACE_CMD} -i "" -e 's|linux|freebsd,linux|g' \
 +	@${REINPLACE_CMD} -i "" -e 's|linux|freebsd,dragonfly,linux|g' \
  		${WRKSRC}/packages/proj4/fpmake.pp
+-	@${REINPLACE_CMD} -i "" -e 's|linux|freebsd,linux|g' \
++	@${REINPLACE_CMD} -i "" -e 's|linux|freebsd,dragonfly,linux|g' \
+ 		${WRKSRC}/packages/ptc/fpmake.pp
 -	@${REINPLACE_CMD} -i "" -e 's|os2|freebsd,os2|g' \
 +	@${REINPLACE_CMD} -i "" -e 's|os2|freebsd,dragonfly,os2|g' \
  		${WRKSRC}/packages/rexx/fpmake.pp
