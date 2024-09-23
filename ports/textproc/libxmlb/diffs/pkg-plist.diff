@@ -1,4 +1,4 @@
---- pkg-plist.orig	2024-02-24 12:20:14 UTC
+--- pkg-plist.orig	2024-09-23 15:03:49 UTC
 +++ pkg-plist
 @@ -24,13 +24,6 @@ lib/libxmlb.so
  lib/libxmlb.so.2
@@ -11,7 +11,7 @@
 -libexec/installed-tests/libxmlb/test.xml.xz
 -libexec/installed-tests/libxmlb/test.xml.zstd
 -libexec/installed-tests/libxmlb/xb-self-test
- man/man1/xb-tool.1.gz
+ share/man/man1/xb-tool.1.gz
  share/gir-1.0/Xmlb-2.0.gir
  %%PORTDOCS%%share/gtk-doc/html/libxmlb/annotation-glossary.html
 @@ -65,4 +58,3 @@ share/gir-1.0/Xmlb-2.0.gir
