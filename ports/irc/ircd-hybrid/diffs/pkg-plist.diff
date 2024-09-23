@@ -1,4 +1,0 @@
---- pkg-plist.orig	2021-03-01 14:52:20 UTC
-+++ pkg-plist
-@@ -4 +3,0 @@
--etc/rc.d/ircd-hybrid
