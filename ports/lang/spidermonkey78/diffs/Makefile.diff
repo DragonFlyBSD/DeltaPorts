@@ -1,4 +1,4 @@
---- Makefile.orig	2022-08-20 07:39:02 UTC
+--- Makefile.orig	2024-09-23 14:18:06 UTC
 +++ Makefile
 @@ -55,7 +55,7 @@ PLIST_SUB=	SP_VER=${SP_VER}
  .include <bsd.port.pre.mk>
@@ -6,6 +6,6 @@
  .if ${ARCH} == amd64
 -CONFIGURE_TARGET=	x86_64-portbld-freebsd${OSREL}
 +CONFIGURE_TARGET=	x86_64-portbld-${OPSYS:tl}${OSREL}
- .elif ${ARCH} == powerpc
- EXTRA_PATCHES=	${FILESDIR}/extra-patch-config_makefiles_rust.mk
  .endif
+ 
+ .if ${CHOSEN_COMPILER_TYPE} == gcc
