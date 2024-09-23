@@ -1,4 +1,4 @@
---- pkg-plist.orig	2024-02-24 12:34:59 UTC
+--- pkg-plist.orig	2024-09-23 14:53:24 UTC
 +++ pkg-plist
 @@ -140,7 +140,6 @@ lib/obs-plugins/linux-capture.so
  %%JACK%%lib/obs-plugins/linux-jack.so
@@ -8,7 +8,7 @@
  lib/obs-plugins/obs-ffmpeg.so
  lib/obs-plugins/obs-filters.so
  lib/obs-plugins/obs-outputs.so
-@@ -549,66 +548,6 @@ share/obs/obs-plugins/linux-capture/loca
+@@ -561,68 +560,6 @@ share/obs/obs-plugins/linux-capture/loca
  %%PULSEAUDIO%%share/obs/obs-plugins/linux-pulseaudio/locale/vi-VN.ini
  %%PULSEAUDIO%%share/obs/obs-plugins/linux-pulseaudio/locale/zh-CN.ini
  %%PULSEAUDIO%%share/obs/obs-plugins/linux-pulseaudio/locale/zh-TW.ini
@@ -44,6 +44,7 @@
 -share/obs/obs-plugins/linux-v4l2/locale/it-IT.ini
 -share/obs/obs-plugins/linux-v4l2/locale/ja-JP.ini
 -share/obs/obs-plugins/linux-v4l2/locale/ka-GE.ini
+-share/obs/obs-plugins/linux-v4l2/locale/kaa.ini
 -share/obs/obs-plugins/linux-v4l2/locale/kab-KAB.ini
 -share/obs/obs-plugins/linux-v4l2/locale/kmr-TR.ini
 -share/obs/obs-plugins/linux-v4l2/locale/ko-KR.ini
@@ -67,6 +68,7 @@
 -share/obs/obs-plugins/linux-v4l2/locale/ta-IN.ini
 -share/obs/obs-plugins/linux-v4l2/locale/tl-PH.ini
 -share/obs/obs-plugins/linux-v4l2/locale/tr-TR.ini
+-share/obs/obs-plugins/linux-v4l2/locale/ug-CN.ini
 -share/obs/obs-plugins/linux-v4l2/locale/uk-UA.ini
 -share/obs/obs-plugins/linux-v4l2/locale/ur-PK.ini
 -share/obs/obs-plugins/linux-v4l2/locale/vi-VN.ini
