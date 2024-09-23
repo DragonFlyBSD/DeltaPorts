@@ -1,4 +1,4 @@
---- Makefile.orig	2022-10-12 00:12:15 UTC
+--- Makefile.orig	2024-09-23 15:09:47 UTC
 +++ Makefile
 @@ -17,7 +17,6 @@ INPUT_DRIVERS=		egalax \
  			evdev \
@@ -8,43 +8,7 @@
  			mouse \
  			synaptics \
  			void \
-@@ -26,26 +25,27 @@ INPUT_DRIVERS=		egalax \
- VIDEO_DRIVERS=		apm \
- 			ark \
- 			ast \
--			chips \
--			cirrus \
- 			dummy \
- 			i128 \
- 			i740 \
--			mach64 \
- 			mga \
--			neomagic \
- 			nv \
-+			scfb \
-+			tdfx \
-+			tseng \
-+			vesa
-+
-+VIDEO_DRIVERS_REMOVED=	mach64 \
-+			chips \
-+			cirrus \
-+			neomagic \
- 			openchrome \
- 			r128 \
- 			rendition \
- 			s3virge \
- 			savage \
--			scfb \
- 			siliconmotion \
- 			sis \
--			tdfx \
--			tseng \
--			vesa \
- 			voodoo
- 
- OPTIONS_DEFAULT=	KEYBOARD \
-@@ -60,11 +60,11 @@ ${a:tu}_DESC=		Install ${a} ${type} driv
+@@ -41,11 +40,11 @@ ${a:tu}_DESC=		Install ${a} ${type} driv
  . endfor
  .endfor
  
@@ -58,9 +22,9 @@
 +OPTIONS_DEFINE_i386:=	${OPTIONS_DEFINE_x86_64} GEODE
 +OPTIONS_DEFAULT_i386:=	${OPTIONS_DEFAULT_x86_64}
  
- OPTIONS_DEFINE_sparc64=	SUNFFB
- OPTIONS_DEFAULT_sparc64=SUNFFB
-@@ -83,7 +83,7 @@ QUIRKS=		keyboard:kbd
+ AMDGPU_DESC=		Install amdgpu video driver
+ ATI_DESC=		Install ati (radeon) video driver
+@@ -60,7 +59,7 @@ QUIRKS=		keyboard:kbd
  .include <bsd.port.options.mk>
  
  # Manual add arch specific drivers so they be added to depend lines.
