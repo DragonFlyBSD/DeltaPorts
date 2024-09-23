@@ -1,9 +1,0 @@
---- Makefile.orig	2021-03-01 14:52:09 UTC
-+++ Makefile
-@@ -37,6 +36,0 @@
--LLVM_VER=	10 # workaround for bug#253551
--BUILD_DEPENDS+=	clang${LLVM_VER}:devel/llvm${LLVM_VER}
--CPP=		clang-cpp${LLVM_VER}
--CC=		clang${LLVM_VER}
--CXX=		clang++${LLVM_VER}
--
