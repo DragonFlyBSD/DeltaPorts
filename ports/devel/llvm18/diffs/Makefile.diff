@@ -1,0 +1,8 @@
+--- Makefile.orig	2021-03-01 14:52:13 UTC
++++ Makefile
+@@ -139 +139 @@
+-GOLD_BUILD_DEPENDS=	${LOCALBASE}/bin/ld.gold:devel/binutils
++GOLD_BUILD_DEPENDS=	${LOCALBASE}/bin/ld.gold:devel/binutils@native
+@@ -472 +472 @@
+-post-install-LLD-on:
++post-install-LLD_LINK-on:
