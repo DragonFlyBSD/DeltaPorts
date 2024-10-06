@@ -46,7 +46,7 @@
 +#
 +MAKE= gmake
 +
-+endif	# ($(target),FreeBSD)
++endif	# ($(target),DragonFly)
  
  ##################
  # OpenBSD target #
