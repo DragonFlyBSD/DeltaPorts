@@ -1,20 +1,20 @@
---- Makefile.orig	2021-01-17 19:31:42 UTC
-+++ Makefile
-@@ -36,7 +36,7 @@ TEST_TARGET=	test
+--- Makefile.ori	Sat Feb 22 22:04:43 2025
++++ Makefile	Sat Feb 22 22:05:42 2025
+@@ -37,7 +37,7 @@ PORTDOCS=	javadoc platform-${PORTVERSION}-javadoc.jar
  
  OPTIONS_DEFINE=	DOCS
  
 -ANT_ARCH=	${ARCH:S/amd64/x86-64/:S/i386/x86/:S/powerpc64/ppc64/}
 +ANT_ARCH=	${ARCH:S/amd64/x86-64/:S/i386/x86/:S/x86_64/x86-64/:S/powerpc64/ppc64/}
  
- .include <bsd.port.options.mk>
- 
-@@ -52,7 +52,7 @@ post-build-DOCS-on:
+ post-patch:
+ 	@${REINPLACE_CMD} -e 's|%%LOCALBASE%%|${LOCALBASE}|' \
+@@ -47,7 +47,7 @@ post-build-DOCS-on:
  	cd ${WRKSRC} && ${SETENV} ${MAKE_ENV} ${ANT} javadoc
  
  do-install:
 -	${INSTALL_DATA} ${WRKSRC}/build/freebsd-${ANT_ARCH}.jar \
-+	${INSTALL_DATA} ${WRKSRC}/build/${OPSYS:tl}-${ANT_ARCH}.jar \
++	${INSTALL_DATA} ${WRKSRC}/build/dragonflybsd-${ANT_ARCH}.jar \
  		${STAGEDIR}${JAVAJARDIR}/jna-platform.jar
  	${INSTALL_DATA} ${WRKSRC}/build/jna.jar \
  		${STAGEDIR}${JAVAJARDIR}/jna.jar
