@@ -1,0 +1,133 @@
+gcc/ChangeLog:
+
+2019-04-24  Iain Buclaw  <ibuclaw@gdcproject.org>
+
+        PR d/87818
+        * config.gcc (*-*-freebsd*): Add freebsd-d.o
+        * config/freebsd-d.c: New file.
+        * config/t-freebsd: New file.
+
+libphobos/ChangeLog:
+
+2019-04-24  Iain Buclaw  <ibuclaw@gdcproject.org>
+
+        PR d/87818
+        * configure.tgt: Add x86_64-*-freebsd* and i?86-*-freebsd* as
+        supported targets.
+
+---
+diff --git gcc/config.gcc gcc/config.gcc
+index 14f0a1abbc8..7a286bbaa50 100644
+--- gcc/config.gcc
++++ gcc/config.gcc
+@@ -775,6 +775,9 @@ case ${target} in
+       default_use_cxa_atexit=yes;;
+   esac
+   use_gcc_stdint=wrap
++  d_target_objs="${d_target_objs} freebsd-d.o"
++  tmake_file="${tmake_file} t-freebsd"
++  target_has_targetdm=yes
+   ;;
+ *-*-fuchsia*)
+   native_system_header_dir=/include
+diff --git gcc/config/freebsd-d.c gcc/config/freebsd-d.c
+new file mode 100644
+index 00000000000..cdff544d20c
+--- /dev/null
++++ gcc/config/freebsd-d.c
+@@ -0,0 +1,54 @@
++/* FreeBSD support needed only by D front-end.
++   Copyright (C) 2019 Free Software Foundation, Inc.
++
++GCC is free software; you can redistribute it and/or modify it under
++the terms of the GNU General Public License as published by the Free
++Software Foundation; either version 3, or (at your option) any later
++version.
++
++GCC is distributed in the hope that it will be useful, but WITHOUT ANY
++WARRANTY; without even the implied warranty of MERCHANTABILITY or
++FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
++for more details.
++
++You should have received a copy of the GNU General Public License
++along with GCC; see the file COPYING3.  If not see
++<http://www.gnu.org/licenses/>.  */
++
++#include "config.h"
++#include "system.h"
++#include "coretypes.h"
++#include "tm.h"
++#include "tm_p.h"
++#include "d/d-target.h"
++#include "d/d-target-def.h"
++
++/* Implement TARGET_D_OS_VERSIONS for FreeBSD targets.  */
++
++static void
++freebsd_d_os_builtins (void)
++{
++  char buf[16];
++  snprintf (buf, sizeof (buf), "FreeBSD_%d", FBSD_MAJOR);
++
++  d_add_builtin_version ("FreeBSD");
++  d_add_builtin_version (xstrdup (buf));
++  d_add_builtin_version ("Posix");
++}
++
++/* Implement TARGET_D_CRITSEC_SIZE for FreeBSD targets.  */
++
++static unsigned
++freebsd_d_critsec_size (void)
++{
++  /* This is the sizeof pthread_mutex_t, an opaque pointer.  */
++  return POINTER_SIZE_UNITS;
++}
++
++#undef TARGET_D_OS_VERSIONS
++#define TARGET_D_OS_VERSIONS freebsd_d_os_builtins
++
++#undef TARGET_D_CRITSEC_SIZE
++#define TARGET_D_CRITSEC_SIZE freebsd_d_critsec_size
++
++struct gcc_targetdm targetdm = TARGETDM_INITIALIZER;
+diff --git gcc/config/t-freebsd gcc/config/t-freebsd
+new file mode 100644
+index 00000000000..15fcf226d08
+--- /dev/null
++++ gcc/config/t-freebsd
+@@ -0,0 +1,21 @@
++# Copyright (C) 2019 Free Software Foundation, Inc.
++#
++# This file is part of GCC.
++#
++# GCC is free software; you can redistribute it and/or modify
++# it under the terms of the GNU General Public License as published by
++# the Free Software Foundation; either version 3, or (at your option)
++# any later version.
++#
++# GCC is distributed in the hope that it will be useful,
++# but WITHOUT ANY WARRANTY; without even the implied warranty of
++# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++# GNU General Public License for more details.
++#
++# You should have received a copy of the GNU General Public License
++# along with GCC; see the file COPYING3.  If not see
++# <http://www.gnu.org/licenses/>.
++
++freebsd-d.o: $(srcdir)/config/freebsd-d.c
++	$(COMPILE) $<
++	$(POSTCOMPILE)
+diff --git libphobos/configure.tgt libphobos/configure.tgt
+index f9c881a8418..2dc05e2cc51 100644
+--- libphobos/configure.tgt
++++ libphobos/configure.tgt
+@@ -38,6 +38,9 @@ case "${target}" in
+   s390*-linux*)
+ 	LIBPHOBOS_SUPPORTED=yes
+ 	;;
++  x86_64-*-freebsd* | i?86-*-freebsd*)
++	LIBPHOBOS_SUPPORTED=yes
++	;;
+   x86_64-*-kfreebsd*-gnu | i?86-*-kfreebsd*-gnu)
+ 	LIBPHOBOS_SUPPORTED=yes
+ 	;;
