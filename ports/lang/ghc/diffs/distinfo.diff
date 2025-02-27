@@ -1,6 +1,6 @@
---- distinfo.orig	2024-03-30 16:06:54 UTC
-+++ distinfo
-@@ -19,3 +19,11 @@ SHA256 (ghc-9.2.8-boot-aarch64-freebsd.t
+--- distinfo.orig	Thu Feb 27 17:39:22 2025
++++ distinfo	Thu Feb
+@@ -23,3 +23,11 @@ SHA256 (ghc-9.2.8-boot-aarch64-freebsd.tar.xz) = 23da0
  SIZE (ghc-9.2.8-boot-aarch64-freebsd.tar.xz) = 124830556
  SHA256 (ghc-8.10.7-boot-aarch64-freebsd.tar.xz) = f1bc49999d0db33fbf7ada6696ebebe1639126924c89deed83539850c435e23c
  SIZE (ghc-8.10.7-boot-aarch64-freebsd.tar.xz) = 124950584
@@ -10,5 +10,5 @@
 +SIZE (hadrian-9.2.8-dragonfly-boot.tar.gz) = 1472887
 +SHA256 (ghc-9.2.8-boot-x86_64-dragonfly.tar.xz) = d24c26aa9a4ff5130f5fe62beba84fe5ac2922a1c70412dea8d6d0b402b3e6e2
 +SIZE (ghc-9.2.8-boot-x86_64-dragonfly.tar.xz) = 137990860
-+SHA256 (hadrian-9.4.7-dragonfly-boot.tar.gz) = e1708075c55db29f5787aad6976d4bd99982d7b5342e8f431cc2feaf247642e1
-+SIZE (hadrian-9.4.7-dragonfly-boot.tar.gz) = 1495441
++SHA256 (hadrian-9.6.5-dragonfly-boot.tar.gz) = 19b931f68e075358eccb35e6e4afa04215facc914c40a0dd8fc1f5414d19f8bd
++SIZE (hadrian-9.6.5-dragonfly-boot.tar.gz) = 1495470
