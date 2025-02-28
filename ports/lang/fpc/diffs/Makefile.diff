@@ -1,5 +1,5 @@
---- Makefile.orig	2024-09-23 09:45:16 UTC
-+++ Makefile
+--- Makefile.orig	Fri Feb 28 12:01:40 2025
++++ Makefile	Fri Feb
 @@ -2,6 +2,7 @@ PORTNAME=	fpc
  PORTVERSION=	3.2.3
  CATEGORIES=	lang
@@ -26,11 +26,14 @@
  PPNAME=		ppcx64
  FPC_ARCH=	x86_64
  #OPT=		"-dFPC_USE_LIBC"
-@@ -111,52 +112,85 @@ post-patch:
+@@ -111,52 +112,86 @@ post-patch:
  		${WRKDIR}/${FPCSRCDIR}/packages/fpmkunit/src/fpmkunit.pp
  
  # enable units
 -	@${REINPLACE_CMD} -i "" -e 's|linux|freebsd,linux|g' \
++# NOTE: make sure that the value is NOT repeated in the target subs or
++# you will get:
++# Error: range check error in set constructor or duplicate set element
 +	@${REINPLACE_CMD} -i "" -e 's|linux|freebsd,dragonfly,linux|g' \
  		${WRKSRC}/packages/a52/fpmake.pp
 -	@${REINPLACE_CMD} -i "" -e 's|linux|freebsd,linux|g' \
@@ -92,7 +95,7 @@
  		${WRKSRC}/packages/zorba/fpmake.pp
 +	@${REINPLACE_CMD} -i "" -e 's|linux,freebsd|linux,freebsd,dragonfly|g' \
 +		${WRKSRC}/packages/rtl-extra/fpmake.pp
-+
+ 
 +# dragonfly specifics
 +	@${REINPLACE_CMD} -i "" -e 's|,dragonfly||g' \
 +		${WRKSRC}/packages/fpgtk/fpmake.pp
@@ -109,12 +112,10 @@
 +		${WRKSRC}/packages/libxml/fpmake.pp
 +	@${REINPLACE_CMD} -i "" -e 's|freebsd,|freebsd,dragonfly,|g' \
 +		${WRKSRC}/packages/gmp/fpmake.pp
-+	@${REINPLACE_CMD} -i "" -e '/cnetdb/ s/freebsd,/freebsd,dragonfly,/g' \
-+		${WRKSRC}/packages/fcl-net/fpmake.pp
 +	@${REINPLACE_CMD} -i "" -e 's/freebsd,/freebsd,dragonfly,/g' \
 +		${WRKSRC}/packages/fcl-xml/fpmake.pp
-+	@${REINPLACE_CMD} -i "" -e 's/freebsd,/freebsd,dragonfly,/g' \
-+		-e '/ggigraph/ s/freebsd/freebsd,dragonfly/g' \
++	@${REINPLACE_CMD} -i "" -E -e '/(ptc|fcl-base)/ s|,freebsd|,freebsd,dragonfly|g' \
++		-e '/(ptc|fcl-base)/! s|freebsd,|freebsd,dragonfly,|g' \
 +		${WRKSRC}/packages/graph/fpmake.pp
 +	@${REINPLACE_CMD} -i "" -e 's/freebsd,/freebsd,dragonfly,/g' \
 +		${WRKSRC}/packages/iconvenc/fpmake.pp
@@ -123,7 +124,7 @@
 +	@${REINPLACE_CMD} -i ""	-e 's/freebsd,/freebsd,dragonfly,/g' \
 +		-e '/P.OSes/ s/freebsd/freebsd, dragonfly/g' \
 +		${WRKSRC}/packages/libvlc/fpmake.pp
- 
++
  do-build:
  # build fpc compiler
  	@${ECHO_MSG} "##### STARTING COMPILER #####"
