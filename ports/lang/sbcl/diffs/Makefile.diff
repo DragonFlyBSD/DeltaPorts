@@ -1,0 +1,20 @@
+--- Makefile.orig	Mon Mar  3 16:04:28 2025
++++ Makefile	Mon Mar
+@@ -99,7 +99,7 @@ UNICODE_VARS_OFF=	MAKE_SH_ARGS+="--without-sb-unicode"
+ XREF_VARS=	MAKE_SH_ARGS+="--with-sb-xref-for-internals"
+ XREF_VARS_OFF=	MAKE_SH_ARGS+="--without-sb-xref-for-internals"
+ 
+-BOOTVERSION=	1.2.7
++BOOTVERSION=	1.2.9
+ CONMODULES=	asdf sb-aclrepl sb-bsd-sockets sb-cltl2 sb-concurrency sb-cover \
+ 		sb-executable sb-gmp sb-grovel sb-introspect sb-md5 sb-mpfr \
+ 		sb-posix sb-queue sb-rotate-byte sb-rt sb-simple-streams \
+@@ -115,7 +115,7 @@ SBCL_BOOT_LIST=	${BOOTVERSION}-x86-64-freebsd ${BOOTVE
+ 
+ .include <bsd.port.options.mk>
+ 
+-ARCHOS_PATTERN=	*-${ARCH:S/amd64/x86-64/:S/i386/x86/}-${OPSYS:tl}*
++ARCHOS_PATTERN=	*-${ARCH:S/amd64/x86-64/:S/i386/x86/:S/x86_64/x86-64/}-${OPSYS:tl}*
+ BOOT_WRKSRC=	${WRKDIR}/${PORTNAME}-${SBCL_BOOT_LIST:M${ARCHOS_PATTERN}}
+ 
+ .if ${PORT_OPTIONS:MLINKABLE_RUNTIME}
