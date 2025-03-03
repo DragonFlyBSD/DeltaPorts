@@ -1,5 +1,5 @@
---- pkg-plist.orig	2022-07-12 22:21:11 UTC
-+++ pkg-plist
+--- pkg-plist.orig	Mon Mar  3 18:29:50 2025
++++ pkg-plist	Mon Mar
 @@ -16,7 +16,7 @@ bin/eu-stack
  bin/eu-strings
  bin/eu-strip
@@ -20,24 +20,9 @@
 -lib/libasm.a
 -lib/libasm.so
 -lib/libasm.so.1
-+include/elfutils/gelf.h
-+include/elfutils/libelf.h
-+include/elfutils/nlist.h
-+lib/elfutils/libasm-%%VERSION%%.so
-+lib/elfutils/libasm.a
-+lib/elfutils/libasm.so
-+lib/elfutils/libasm.so.1
-+lib/elfutils/libdw-%%VERSION%%.so
-+lib/elfutils/libdw.a
-+lib/elfutils/libdw.so
-+lib/elftils/libdw.so.1
-+lib/elfutils/libelf-%%VERSION%%.so
-+lib/elfutils/libelf.a
-+lib/elfutils/libelf.so
-+lib/elfutils/libelf.so.1
- lib/libdebuginfod-%%VERSION%%.so
- lib/libdebuginfod.so
- lib/libdebuginfod.so.1
+-lib/libdebuginfod-%%VERSION%%.so
+-lib/libdebuginfod.so
+-lib/libdebuginfod.so.1
 -lib/libdw-%%VERSION%%.so
 -lib/libdw.a
 -lib/libdw.so
@@ -46,10 +31,28 @@
 -lib/libelf.a
 -lib/libelf.so
 -lib/libelf.so.1
++include/elfutils/gelf.h
++include/elfutils/libelf.h
++include/elfutils/nlist.h
++lib/elfutils/libasm-%%VERSION%%.so
++lib/elfutils/libasm.a
++lib/elfutils/libasm.so
++lib/elfutils/libasm.so.1
++lib/elfutils/libdebuginfod-%%VERSION%%.so
++lib/elfutils/libdebuginfod.so
++lib/elfutils/libdebuginfod.so.1
++lib/elfutils/libdw-%%VERSION%%.so
++lib/elfutils/libdw.a
++lib/elfutils/libdw.so
++lib/elfutils/libdw.so.1
++lib/elfutils/libelf-%%VERSION%%.so
++lib/elfutils/libelf.a
++lib/elfutils/libelf.so
++lib/elfutils/libelf.so.1
  libdata/pkgconfig/libdebuginfod.pc
  libdata/pkgconfig/libdw.pc
 -libdata/pkgconfig/libelf.pc
 +libdata/pkgconfig/elfutils.pc
- %%MANPAGES%%man/man1/debuginfod-find.1.gz
- %%MANPAGES%%man/man1/eu-elfclassify.1.gz
- %%MANPAGES%%man/man1/eu-readelf.1.gz
+ %%MANPAGES%%share/man/man1/debuginfod-find.1.gz
+ %%MANPAGES%%share/man/man1/eu-elfclassify.1.gz
+ %%MANPAGES%%share/man/man1/eu-readelf.1.gz
