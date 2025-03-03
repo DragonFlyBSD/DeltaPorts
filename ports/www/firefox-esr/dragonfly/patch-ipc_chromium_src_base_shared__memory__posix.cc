@@ -1,9 +1,9 @@
---- ipc/chromium/src/base/shared_memory_posix.cc.orig	2019-05-07 13:53:03 UTC
-+++ ipc/chromium/src/base/shared_memory_posix.cc
-@@ -83,6 +83,11 @@ bool SharedMemory::AppendPosixShmPrefix(
-     StringAppendF(str, "snap.%s.", kSnap);
+--- ipc/chromium/src/base/shared_memory_posix.cc.ori	Mon Mar  3 15:15:51 2025
++++ ipc/chromium/src/base/shared_memory_posix.cc	Mon Mar  3 15:16:20 2025
+@@ -284,6 +284,11 @@ bool SharedMemory::AppendPosixShmPrefix(std::string* s
+     StringAppendF(str, "snap.%s.", snap);
    }
- #  endif  // OS_LINUX
+ #  endif  // XP_LINUX
 +#ifdef OS_DRAGONFLY
 +  // DragonFly BSD has a userland IPC implementation, we need to prefix the
 +  // path to shm_open(3), preferably with '/tmp'
