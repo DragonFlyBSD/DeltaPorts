@@ -1,3 +1,5 @@
+IGNORE=	unmaintained, please request fixing to users mailing list
+
 # Minimum required compiler
 USE_CLANG_FALLBACK=    default
 
