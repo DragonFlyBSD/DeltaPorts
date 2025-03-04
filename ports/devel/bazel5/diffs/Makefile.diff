@@ -1,0 +1,10 @@
+--- Makefile.orig	Tue Mar  4 15:48:31 2025
++++ Makefile	Tue Mar
+@@ -76,6 +76,7 @@ post-patch:
+ 		${WRKSRC}/src/main/java/com/google/devtools/build/lib/bazel/rules/python/python_stub_template.txt
+ 	@${REINPLACE_CMD} -e 's|%%JAVA_HOME%%|${JAVA_HOME}|' \
+ 		${WRKSRC}/src/main/cpp/blaze_util_bsd.cc
++	@${FIND} ${WRKSRC} -iname "*.orig" -type f -delete
+ 
+ do-build:
+ 	@${MKDIR} ${WRKDIR}/bazel_tmp
