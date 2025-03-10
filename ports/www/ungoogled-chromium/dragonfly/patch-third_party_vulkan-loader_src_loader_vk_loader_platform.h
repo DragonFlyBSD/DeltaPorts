@@ -1,8 +1,8 @@
-diff --git third_party/vulkan-deps/vulkan-loader/src/loader/vk_loader_platform.h third_party/vulkan-deps/vulkan-loader/src/loader/vk_loader_platform.h
-index 7af8d4af54b..8e7d9403e83 100644
---- third_party/vulkan-deps/vulkan-loader/src/loader/vk_loader_platform.h
-+++ third_party/vulkan-deps/vulkan-loader/src/loader/vk_loader_platform.h
-@@ -24,7 +24,7 @@
+diff --git third_party/vulkan-loader/src/loader/vk_loader_platform.h third_party/vulkan-loader/src/loader/vk_loader_platform.h
+index 671a0f2eae44..61ace9139bc1 100644
+--- third_party/vulkan-loader/src/loader/vk_loader_platform.h
++++ third_party/vulkan-loader/src/loader/vk_loader_platform.h
+@@ -26,7 +26,7 @@
   */
  #pragma once
  
@@ -11,7 +11,7 @@ index 7af8d4af54b..8e7d9403e83 100644
  #include <sys/types.h>
  #include <sys/select.h>
  #endif
-@@ -291,7 +291,7 @@ static inline char *loader_platform_executable_path(char *buffer, size_t size) {
+@@ -306,7 +306,7 @@ static inline char *loader_platform_executable_path(char *buffer, size_t size) {
      return buffer;
  }
  #endif

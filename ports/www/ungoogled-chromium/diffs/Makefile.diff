@@ -1,0 +1,73 @@
+--- Makefile.orig	Mon Mar 10 21:48:32 2025
++++ Makefile	Mon Mar
+@@ -113,8 +113,8 @@ GN_ARGS+=	enable_widevine=true \
+ 		toolkit_views=true \
+ 		use_allocator_shim=false \
+ 		use_aura=true \
+-		use_custom_libcxx=true \
+-		use_custom_libunwind=true \
++		use_custom_libcxx=false \
++		use_custom_libunwind=false \
+ 		use_lld=true \
+ 		use_partition_alloc=true \
+ 		use_partition_alloc_as_malloc=false \
+@@ -257,7 +257,7 @@ BINARY_ALIAS+=		cpp=${LOCALBASE}/bin/clang-cpp${LLVM_D
+ .if ${ARCH} == aarch64
+ PLIST_SUB+=	NOT_AARCH64="@comment "
+ FFMPEG_TARGET=	arm64
+-.elif ${ARCH} == amd64
++.elif ${ARCH} == x86_64
+ BUILD_DEPENDS+=	nasm:devel/nasm
+ PLIST_SUB+=	NOT_AARCH64=""
+ FFMPEG_TARGET=	x64
+@@ -267,8 +267,8 @@ PLIST_SUB+=	NOT_AARCH64=""
+ FFMPEG_TARGET=	ia32
+ .endif
+ 
+-FFMPEG_BDIR=	${WRKSRC}/third_party/ffmpeg/build.${FFMPEG_TARGET}.freebsd/${FFMPEG_BRAND}
+-FFMPEG_CDIR=	${WRKSRC}/third_party/ffmpeg/chromium/config/${FFMPEG_BRAND}/freebsd/${FFMPEG_TARGET}
++FFMPEG_BDIR=	${WRKSRC}/third_party/ffmpeg/build.${FFMPEG_TARGET}.${OPSYS:tl}/${FFMPEG_BRAND}
++FFMPEG_CDIR=	${WRKSRC}/third_party/ffmpeg/chromium/config/${FFMPEG_BRAND}/${OPSYS:tl}/${FFMPEG_TARGET}
+ 
+ # Allow relocations against read-only segments (override lld default)
+ LDFLAGS_i386=	-Wl,-znotext
+@@ -313,7 +313,7 @@ pre-configure:
+ 		libusb libwebp libxml libxslt openh264 opus || ${FALSE}
+ 	# Chromium uses an unreleased version of FFmpeg, so configure it
+ 	cd ${WRKSRC}/media/ffmpeg && \
+-		${PYTHON_CMD} scripts/build_ffmpeg.py freebsd ${FFMPEG_TARGET} \
++		${PYTHON_CMD} scripts/build_ffmpeg.py ${OPSYS:tl} ${FFMPEG_TARGET} \
+ 		--config-only --branding=${FFMPEG_BRAND}
+ 	cd ${FFMPEG_BDIR} && ${GMAKE} ffversion.h
+ 	${MKDIR} ${FFMPEG_CDIR}
+@@ -327,20 +327,21 @@ pre-configure:
+ do-configure:
+ 	# GN generator bootstrapping and generating ninja files
+ 	cd ${WRKSRC} && ${SETENV} ${CONFIGURE_ENV} CC=${CC} CXX=${CXX} LD=${CXX} \
+-		READELF=${READELF} AR=${AR} NM=${NM} ${PYTHON_CMD} \
+-		./tools/gn/bootstrap/bootstrap.py ${GN_BOOTSTRAP_FLAGS}
++		READELF=${READELF} AR=${AR} NM=${NM} \
++		CFLAGS="${CFLAGS}" CXXFLAGS="${CXXFLAGS}" LDFLAGS="${LDFLAGS}" \
++		${PYTHON_CMD} ./tools/gn/bootstrap/bootstrap.py ${GN_BOOTSTRAP_FLAGS}
+ 	cd ${WRKSRC} && ${SETENV} ${CONFIGURE_ENV} ./out/${BUILDTYPE}/gn \
+ 		gen --args='${GN_ARGS}' out/${BUILDTYPE}
+ 
+ 	# Setup nodejs dependency
+-	@${MKDIR} ${WRKSRC}/third_party/node/freebsd/node-freebsd/bin
+-	${LN} -sf ${LOCALBASE}/bin/node ${WRKSRC}/third_party/node/freebsd/node-freebsd/bin/node
++	@${MKDIR} ${WRKSRC}/third_party/node/${OPSYS:tl}/node-${OPSYS:tl}/bin
++	${LN} -sf ${LOCALBASE}/bin/node ${WRKSRC}/third_party/node/${OPSYS:tl}/node-${OPSYS:tl}/bin/node
+ 
+-	# Setup buildtools/freebsd
+-	@${MKDIR} ${WRKSRC}/buildtools/freebsd
+-	${LN} -sf ${WRKSRC}/buildtools/linux64/clang-format ${WRKSRC}/buildtools/freebsd
+-	${LN} -sf ${WRKSRC}/out/${BUILDTYPE}/gn ${WRKSRC}/buildtools/freebsd
+-	${LN} -sf /usr/bin/strip ${WRKSRC}/buildtools/freebsd/strip
++	# Setup buildtools/${OPSYS:tl}
++	@${MKDIR} ${WRKSRC}/buildtools/${OPSYS:tl}
++	${LN} -sf ${WRKSRC}/buildtools/linux64/clang-format ${WRKSRC}/buildtools/${OPSYS:tl}
++	${LN} -sf ${WRKSRC}/out/${BUILDTYPE}/gn ${WRKSRC}/buildtools/${OPSYS:tl}
++	${LN} -sf /usr/bin/strip ${WRKSRC}/buildtools/${OPSYS:tl}/strip
+ 
+ do-install:
+ 	@${MKDIR} ${STAGEDIR}${DATADIR}
