@@ -1,14 +1,42 @@
---- Makefile.orig	2024-09-23 15:04:24 UTC
-+++ Makefile
-@@ -236,7 +236,6 @@ BINARY_ALIAS+=		cpp=${LOCALBASE}/bin/cla
+--- Makefile.orig	Mon Mar 10 09:11:39 2025
++++ Makefile	Sun Mar
+@@ -116,8 +116,8 @@ GN_ARGS+=	clang_use_chrome_plugins=false \
+ 		treat_warnings_as_errors=false \
+ 		use_allocator_shim=false \
+ 		use_aura=true \
+-		use_custom_libcxx=true \
+-		use_custom_libunwind=true \
++		use_custom_libcxx=false \
++		use_custom_libunwind=false \
+ 		use_lld=true \
+ 		use_partition_alloc=true \
+ 		use_partition_alloc_as_malloc=false \
+@@ -127,6 +127,7 @@ GN_ARGS+=	clang_use_chrome_plugins=false \
+ 		use_system_libffi=true \
+ 		use_system_libjpeg=true \
+ 		use_udev=false \
++		extra_cflags="${CFLAGS}" \
+ 		extra_cxxflags="${CXXFLAGS} ${PINCLUDES}" \
+ 		extra_ldflags="${LDFLAGS}" \
+ 		ffmpeg_branding="${FFMPEG_BRAND}"
+@@ -236,14 +237,14 @@ BINARY_ALIAS+=		cpp=${LOCALBASE}/bin/clang-cpp${LLVM_D
  			c++=${LOCALBASE}/bin/clang++${LLVM_DEFAULT} \
  			ar=${LOCALBASE}/bin/llvm-ar${LLVM_DEFAULT} \
  			nm=${LOCALBASE}/bin/llvm-nm${LLVM_DEFAULT} \
 -			ld=${LOCALBASE}/bin/ld.lld${LLVM_DEFAULT}
++			clang=${LOCALBASE}/bin/clang${LLVM_DEFAULT}
  
  # - swiftshader/lib/{libEGL.so,libGLESv2.so} is x86 only
  # - map ffmpeg target to ${ARCH}
-@@ -253,8 +252,8 @@ PLIST_SUB+=	NOT_AARCH64=""
+ .if ${ARCH} == aarch64
+ PLIST_SUB+=	NOT_AARCH64="@comment "
+ FFMPEG_TARGET=	arm64
+-.elif ${ARCH} == amd64
++.elif ${ARCH} == x86_64
+ BUILD_DEPENDS+=	nasm:devel/nasm
+ PLIST_SUB+=	NOT_AARCH64=""
+ FFMPEG_TARGET=	x64
+@@ -253,8 +254,8 @@ PLIST_SUB+=	NOT_AARCH64=""
  FFMPEG_TARGET=	ia32
  .endif
  
@@ -19,12 +47,46 @@
  
  # Allow relocations against read-only segments (override lld default)
  LDFLAGS_i386=	-Wl,-znotext
-@@ -288,7 +287,7 @@ pre-configure:
+@@ -288,9 +289,9 @@ pre-configure:
  		libusb libwebp libxml libxslt openh264 opus || ${FALSE}
  	# Chromium uses an unreleased version of FFmpeg, so configure it
  	cd ${WRKSRC}/media/ffmpeg && \
 -		${PYTHON_CMD} scripts/build_ffmpeg.py freebsd ${FFMPEG_TARGET} \
 +		${PYTHON_CMD} scripts/build_ffmpeg.py dragonfly ${FFMPEG_TARGET} \
  		--config-only --branding=${FFMPEG_BRAND}
- 	cd ${FFMPEG_BDIR} && ${GMAKE} ffversion.h
+-	cd ${FFMPEG_BDIR} && ${GMAKE} ffversion.h
++	cd ${FFMPEG_BDIR} && env && ${GMAKE} ffversion.h
  	${MKDIR} ${FFMPEG_CDIR}
+ .for _e in config.h config.asm config_components.h libavcodec libavformat libavutil
+ 	-${CP} -pR ${FFMPEG_BDIR}/${_e} ${FFMPEG_CDIR}
+@@ -302,20 +303,21 @@ pre-configure:
+ do-configure:
+ 	# GN generator bootstrapping and generating ninja files
+ 	cd ${WRKSRC} && ${SETENV} ${CONFIGURE_ENV} CC=${CC} CXX=${CXX} LD=${CXX} \
+-		READELF=${READELF} AR=${AR} NM=${NM} ${PYTHON_CMD} \
+-		./tools/gn/bootstrap/bootstrap.py ${GN_BOOTSTRAP_FLAGS}
++		READELF=${READELF} AR=${AR} NM=${NM} \
++		CFLAGS="${CFLAGS}" CXXFLAGS="${CXXFLAGS}" LDFLAGS="${LDFLAGS}" \
++		${PYTHON_CMD} ./tools/gn/bootstrap/bootstrap.py ${GN_BOOTSTRAP_FLAGS}
+ 	cd ${WRKSRC} && ${SETENV} ${CONFIGURE_ENV} ./out/${BUILDTYPE}/gn \
+ 		gen --args='${GN_ARGS}' out/${BUILDTYPE}
+ 
+ 	# Setup nodejs dependency
+-	@${MKDIR} ${WRKSRC}/third_party/node/freebsd/node-freebsd/bin
+-	${LN} -sf ${LOCALBASE}/bin/node ${WRKSRC}/third_party/node/freebsd/node-freebsd/bin/node
++	@${MKDIR} ${WRKSRC}/third_party/node/${OPSYS:tl}/node-${OPSYS:tl}/bin
++	${LN} -sf ${LOCALBASE}/bin/node ${WRKSRC}/third_party/node/${OPSYS:tl}/node-${OPSYS:tl}/bin/node
+ 
+-	# Setup buildtools/freebsd
+-	@${MKDIR} ${WRKSRC}/buildtools/freebsd
+-	${LN} -sf ${WRKSRC}/buildtools/linux64/clang-format ${WRKSRC}/buildtools/freebsd
+-	${LN} -sf ${WRKSRC}/out/${BUILDTYPE}/gn ${WRKSRC}/buildtools/freebsd
+-	${LN} -sf /usr/bin/strip ${WRKSRC}/buildtools/freebsd/strip
++	# Setup buildtools/dragonfly
++	@${MKDIR} ${WRKSRC}/buildtools/${OPSYS:tl}
++	${LN} -sf ${WRKSRC}/buildtools/linux64/clang-format ${WRKSRC}/buildtools/${OPSYS:tl}
++	${LN} -sf ${WRKSRC}/out/${BUILDTYPE}/gn ${WRKSRC}/buildtools/${OPSYS:tl}
++	${LN} -sf /usr/bin/strip ${WRKSRC}/buildtools/${OPSYS:tl}/strip
+ 
+ do-install:
+ 	@${MKDIR} ${STAGEDIR}${DATADIR}
