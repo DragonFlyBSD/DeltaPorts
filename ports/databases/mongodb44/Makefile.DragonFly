@@ -1,6 +1,6 @@
 USE_CLANG_FALLBACK=	15
 
-IGNORE=	unmaintained, please request fixing to users mailing list
+DFLY_UNMAINTAINED=	yes
 
 # Don't use llvm-ar
 MAKE_ARGS:=	${MAKE_ARGS:N*AR*}
