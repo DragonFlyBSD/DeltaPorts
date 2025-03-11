@@ -1,0 +1,14 @@
+--- pkg-plist.orig	Tue Mar 11 23:05:08 2025
++++ pkg-plist	Tue Mar
+@@ -3011,4 +3011,11 @@ lib/fricas/target/%%HOST_ARCH%%/src/algebra/xpfact.spa
+ lib/fricas/target/%%HOST_ARCH%%/src/algebra/xpoly.spad
+ lib/fricas/target/%%HOST_ARCH%%/src/algebra/ystream.spad
+ lib/fricas/target/%%HOST_ARCH%%/src/algebra/zerodim.spad
++lib/fricas/target/%%HOST_ARCH%%/src/algebra/math_sym.spad
++lib/fricas/target/%%HOST_ARCH%%/src/algebra/rsimp.spad
++lib/fricas/target/%%HOST_ARCH%%/algebra/MATHSYM.fasl
++lib/fricas/target/%%HOST_ARCH%%/algebra/POLVECF.fasl
++lib/fricas/target/%%HOST_ARCH%%/algebra/ROOTUT.fasl
++lib/fricas/target/%%HOST_ARCH%%/algebra/RSIMP.fasl
++lib/fricas/target/%%HOST_ARCH%%/algebra/UFFACT.fasl
+ @dir lib/fricas/target/%%HOST_ARCH%%/share/texmf/tex
