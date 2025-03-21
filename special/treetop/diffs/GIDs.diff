@@ -1,6 +1,8 @@
---- GIDs.orig	2020-10-27 22:53:37 UTC
-+++ GIDs
-@@ -19,12 +19,10 @@ uucp:*:66:
+diff --git a/GIDs b/../DPorts/GIDs
+index 31b9594c7217..7afe0c7ed8c6 100644
+--- a/GIDs
++++ b/../DPorts/GIDs
+@@ -18,12 +18,10 @@ uucp:*:66:
  xten:*:67:
  dialer:*:68:aprsd
  network:*:69:
@@ -13,7 +15,7 @@
  virtuoso:*:79:
  www:*:80:
  qnofiles:*:81:
-@@ -90,8 +88,8 @@ webcamd:*:145:
+@@ -89,8 +87,8 @@ webcamd:*:145:
  ventrilo:*:146:
  kdm:*:147:
  ipv6mon:*:148:
@@ -24,3 +26,163 @@
  nixbld:*:151:
  frrvty:*:152:frr
  rbldns:*:153:
+@@ -269,25 +267,25 @@ dkfilter:*:325:
+ smfs:*:326:
+ _reticulum:*:327:
+ galene:*:328:
+-certspotter:*:329:
++# free: 329
+ orthanc:*:330:
+-svxlink:*:331:
+-keycloak:*:332:
++# free: 331
++# free: 332
++# free: 333
+ honeytrap:*:333:
+-percona:*:334:
+-benthos:*:335:
+-snac:*:336:
++# free: 335
++# free: 336
+ daapd:*:337:
+ murmur:*:338:
+-mumble-server:*:339:
++# free: 339
+ wildfire:*:340:
+ stunnel:*:341:
+ openfire:*:342:
+-gunicorn:*:343:
+-snmpd:*:344:
+-_metronome:*:345:
+-ngircd:*:346:
+-eturnal:*:347:
++# free: 343
++# free: 344
++# free: 345
++# free: 346
++# free: 347
+ # free: 348
+ # free: 349
+ _sabnzbd:*:350:
+@@ -303,9 +301,9 @@ prowlarr:*:359:
+ v2ray:*:360:
+ httptunnel:*:361:
+ readarr:*:362:
+-victoria-logs:*:363:
+-elog:*:364:
+-gotify:*:365:
++# free: 363
++# free: 364
++# free: 365
+ # free: 366
+ # free: 367
+ # free: 368
+@@ -320,8 +318,8 @@ _wsdd:*:370:
+ # free: 377
+ # free: 378
+ # free: 379
+-spoofdpi:*:380:
+-hydroxide:*:381:
++# free: 380
++# free: 381
+ # free: 382
+ # free: 383
+ # free: 384
+@@ -404,7 +402,7 @@ inadyn:*:455:
+ # free: 461
+ # free: 462
+ # free: 463
+-lpjs:*:464:
++# free: 464
+ courier:*:465:
+ condor:*:466:
+ netmon:*:467:
+@@ -421,8 +419,8 @@ fiche:*:477:
+ prometheus:*:478:
+ alertmanager:*:479:
+ datadog:*:480:
+-promxy:*:481:
+-openbao:*:482:
++# free: 481
++# free: 482
+ # free: 483
+ # free: 484
+ # free: 485
+@@ -477,11 +475,11 @@ dkimproxy:*:525:
+ pgbouncer:*:534:
+ redis:*:535:
+ keydb:*:536:
+-valkey:*:537:
++# free: 537
+ # free: 538
+ # free: 539
+ # free: 540
+-ipfixcol2:*:541:
++# free: 541
+ _flowd:*:542:
+ ejabberd:*:543:
+ # free: 544
+@@ -490,7 +488,7 @@ ejabberd:*:543:
+ # free: 547
+ # free: 548
+ # free: 549
+-# free: 550
++cryptpad:*:550:
+ # free: 551
+ kresd:*:552:
+ knot:*:553:
+@@ -589,7 +587,7 @@ monkeysphere:*:641:
+ # free: 645
+ # free: 646
+ # free: 647
+-_xrdp:*:648:
++# free: 648
+ # free: 649
+ # free: 650
+ # free: 651
+@@ -692,7 +690,7 @@ c-lightning:*:735:
+ # free: 748
+ # free: 749
+ # free: 750
+-supysonic:*:751:
++# free: 751
+ # free: 752
+ # free: 753
+ # free: 754
+@@ -807,8 +805,8 @@ plocate:*:860:
+ # free: 863
+ # free: 864
+ # free: 865
+-vglusers:*:866:
+-sqlpage:*:867:
++# free: 866
++# free: 867
+ jellyfin:*:868:
+ keyd:*:869:
+ buildbot:*:870:
+@@ -824,7 +822,7 @@ _encrypted-dns:*:879:
+ pyspf-milter:*:880:
+ ultimaker:*:881:
+ midpoint:*:882:
+-kubo-go:*:883:
++ipfs-go:*:883:
+ telegraf:*:884:
+ tcpdump:*:885:
+ miniflux:*:886:
+@@ -850,7 +848,7 @@ artifactory:*:905:
+ opentsdb:*:906:
+ influxd:*:907:
+ riemann:*:908:
+-proxysql:*:909:
++proxy65:*:909:
+ bacula:*:910:
+ iserv:*:911:
+ _sj3:*:912:
+@@ -942,5 +940,7 @@ bareos:*:997:
+ _rmilter:*:998:
+ ebnetd:*:999:
+ # DO NOT USE: 1000-65532
++avenger:*:60149:
++cbsd:*:60150:
+ nogroup:*:65533:
+ nobody:*:65534:
