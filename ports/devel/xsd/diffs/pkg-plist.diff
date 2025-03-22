@@ -1,0 +1,13 @@
+diff --git a/devel/xsd/pkg-plist b/devel/xsd/pkg-plist
+index c3219741b91..56dc83591e9 100644
+--- a/devel/xsd/pkg-plist
++++ b/devel/xsd/pkg-plist
+@@ -175,7 +175,7 @@ include/xsd/cxx/xml/string.ixx
+ include/xsd/cxx/xml/string.txx
+ include/xsd/cxx/zc-istream.hxx
+ include/xsd/cxx/zc-istream.txx
+-man/man1/xsdcxx.1.gz
++share/man/man1/xsdcxx.1.gz
+ %%PORTEXAMPLES%%%%EXAMPLESDIR%%/build/cxx/compilers.make
+ %%PORTEXAMPLES%%%%EXAMPLESDIR%%/build/cxx/rules.make
+ %%PORTEXAMPLES%%%%EXAMPLESDIR%%/build/xsd/common.make
