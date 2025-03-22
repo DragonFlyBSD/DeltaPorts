@@ -1,0 +1,11 @@
+diff --git a/math/sc-im/pkg-plist b/math/sc-im/pkg-plist
+index b4b174b8874..cfb1ec421e3 100644
+--- a/math/sc-im/pkg-plist
++++ b/math/sc-im/pkg-plist
+@@ -1,5 +1,5 @@
+ bin/sc-im
+-man/man1/sc-im.1.gz
++share/man/man1/sc-im.1.gz
+ share/sc-im/plot_bar
+ share/sc-im/plot_line
+ share/sc-im/plot_pie
