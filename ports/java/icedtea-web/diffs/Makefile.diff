@@ -1,0 +1,13 @@
+--- a/java/icedtea-web/Makefile
++++ b/java/icedtea-web/Makefile
+@@ -103,8 +103,8 @@ post-install:
+        ${INSTALL_DATA} ${WRKSRC}/*.desktop ${STAGEDIR}${DESKTOPDIR}
+ .for lang in cs de en pl
+ .for man in javaws policyeditor
+-       ${MV} ${STAGEDIR}${MANPREFIX}/man/${lang:Nen}/man1/${man}.1 \
+-           ${STAGEDIR}${MANPREFIX}/man/${lang:Nen}/man1/itweb-${man}.1
++       ${MV} ${STAGEDIR}${PREFIX}/share/man/${lang:Nen}/man1/${man}.1 \
++           ${STAGEDIR}${PREFIX}/share/man/${lang:Nen}/man1/itweb-${man}.1
+ .endfor
+ .endfor
+        @${ECHO_MSG}
