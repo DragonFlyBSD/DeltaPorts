@@ -3,4 +3,4 @@ GNU_CONFIGURE_MANPREFIX=       ${PREFIX}/share
 # replacing just the suffix should work
 dfly-patch:
 	${REINPLACE_CMD} -e 's@NCURSESLIBSUFFIX="w"@NCURSESLIBSUFFIX=""@g' \
-		${WRKSRC}/configure.ac
+		${WRKSRC}/configure
