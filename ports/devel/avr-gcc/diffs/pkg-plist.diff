@@ -1,0 +1,10 @@
+--- pkg-plist.orig	Sat Mar 29 00:18:24 2025
++++ pkg-plist	Sat Mar
+@@ -1055,7 +1055,6 @@ lib/gcc/avr/%%VERSION%%/tiny-stack/long-double32/libgc
+ lib/libcc1.so
+ lib/libcc1.so.0
+ lib/libcc1.so.0.0.0
+-libdata/ldconfig/avr-gcc
+ libexec/gcc/avr/%%VERSION%%/cc1
+ libexec/gcc/avr/%%VERSION%%/cc1plus
+ libexec/gcc/avr/%%VERSION%%/collect2
