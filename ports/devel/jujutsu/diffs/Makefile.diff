@@ -1,0 +1,11 @@
+--- Makefile.orig	Sun Mar 30 16:27:42 2025
++++ Makefile	Sun Mar
+@@ -23,7 +23,7 @@ GH_PROJECT=	jj
+ PLIST_FILES=	bin/jj
+ 
+ do-install:
+-		${INSTALL_PROGRAM} ${WRKDIR}/target/*-unknown-freebsd/release/jj \
++		${INSTALL_PROGRAM} ${WRKDIR}/target/*-unknown-${OPSYS:tl}/release/jj \
+ 			${STAGEDIR}${PREFIX}/bin/
+ 
+ .include <bsd.port.mk>
