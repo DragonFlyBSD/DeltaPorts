@@ -1,2 +1,0 @@
-# cookie=dent->d_reclen
-BROKEN= d.d_reclen = ++cookie
