@@ -1,15 +1,15 @@
---- /data/freebsd-ports/java/openjdk8/Makefile	2021-03-12 11:12:45.955650000 +0000
-+++ Makefile	2021-03-12 12:10:23.635738000 +0000
-@@ -44,7 +44,7 @@ JRE_IMAGEDIR=	${JDK_BUILDDIR}/images/j2s
+--- Makefile.orig	Tue Apr  1 22:05:26 2025
++++ Makefile	Tue Apr
+@@ -47,7 +47,7 @@ JRE_IMAGEDIR=	${JDK_BUILDDIR}/images/j2sdk-image/jre
  .else
  JRE_IMAGEDIR=	${JDK_BUILDDIR}/images/j2re-image
  .endif
--JDK_JVMDIR=	lib/${ARCH:C/armv.*/arm/:S/powerpc64/ppc64/}
-+JDK_JVMDIR=	lib/${ARCH:C/armv.*/arm/:S/powerpc64/ppc64/:S/x86_64/amd64/}
- JDK_OSARCH=	bsd-${ARCH:S/amd64/x86_64/:C/armv.*/arm/:S/i386/x86/:S/powerpc64/ppc64/}
+-JDK_JVMDIR=	lib/${ARCH:C/armv.*/arm/:S/powerpc/ppc/}
++JDK_JVMDIR=	lib/${ARCH:C/armv.*/arm/:S/powerpc/ppc/:S/x86_64/amd64/}
+ JDK_OSARCH=	bsd-${ARCH:S/amd64/x86_64/:C/armv.*/arm/:S/i386/x86/:S/powerpc/ppc/}
  INSTALLDIR=	${PREFIX}/${PKGBASE}
  
-@@ -294,6 +294,7 @@ do-install:
+@@ -295,6 +295,7 @@ do-install:
  	${FIND} bin jre/bin -type f -exec ${CHMOD} ${BINMODE} {} \; && \
  	${CHMOD} ${BINMODE} jre/${JDK_JVMDIR}/jexec \
  	    jre/${JDK_JVMDIR}/jspawnhelper ${JDK_JVMDIR}/jexec
