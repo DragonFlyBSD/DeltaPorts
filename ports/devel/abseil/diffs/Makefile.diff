@@ -1,11 +1,11 @@
---- Makefile.orig	2024-03-03 00:22:05 UTC
-+++ Makefile
-@@ -15,8 +15,4 @@ GH_PROJECT=	${PORTNAME}-cpp
- CMAKE_ARGS=	-DBUILD_SHARED_LIBS:BOOL=ON \
+--- Makefile.orig	Tue Apr  1 18:54:06 2025
++++ Makefile	Tue Apr
+@@ -16,8 +16,4 @@ CMAKE_ARGS=	-DBUILD_SHARED_LIBS:BOOL=ON \
  		-DCMAKE_CXX_STANDARD=17 # force the same highest C++ standard because of ABI differences: see https://github.com/abseil/abseil-cpp/issues/819
+ PATHFIX_CMAKELISTSTXT=	AbseilHelpers.cmake
  
--_GET_SOVER=	${GREP} SOVERSION ${WRKSRC}/CMake/AbseilHelpers.cmake 2>/dev/null \
--		| ${CUT} -d\" -f2
+-_GET_SOVER=	${GREP} ABSL_SOVERSION ${WRKSRC}/CMakeLists.txt \
+-		2>/dev/null | ${CUT} -d\" -f2
 -PLIST_SUB+=	LIBSUFX=${_GET_SOVER:sh}
 -
  .include <bsd.port.mk>
