@@ -1,8 +1,0 @@
---- pkg-plist.orig	Fri Mar 14 22:41:16 2025
-+++ pkg-plist	Fri Mar
-@@ -1,5 +1,4 @@
- bin/vaultwarden
- etc/rc.conf.d/vaultwarden.sample
--etc/rc.d/vaultwarden
- @dir %%ETCDIR%%/rc.conf.d
- @dir(www,www,755) %%WWWDIR%%/data
