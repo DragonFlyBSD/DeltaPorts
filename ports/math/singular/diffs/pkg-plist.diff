@@ -1,23 +1,23 @@
---- pkg-plist.orig	2023-04-11 19:17:31 UTC
-+++ pkg-plist
-@@ -267,12 +267,20 @@ libexec/singular/MOD/machinelearning.a
- libexec/singular/MOD/machinelearning.so
- libexec/singular/MOD/p_Procs_FieldGeneral.a
- libexec/singular/MOD/p_Procs_FieldGeneral.so
+--- pkg-plist.orig	Tue Apr  1 22:16:59 2025
++++ pkg-plist	Tue Apr
+@@ -262,12 +262,20 @@ lib/singular/MOD/machinelearning.a
+ lib/singular/MOD/machinelearning.so
+ lib/singular/MOD/p_Procs_FieldGeneral.a
+ lib/singular/MOD/p_Procs_FieldGeneral.so
 +libexec/singular/MOD/p_Procs_FieldGeneral.so.0
 +libexec/singular/MOD/p_Procs_FieldGeneral.so.0.0.0
- libexec/singular/MOD/p_Procs_FieldIndep.a
- libexec/singular/MOD/p_Procs_FieldIndep.so
+ lib/singular/MOD/p_Procs_FieldIndep.a
+ lib/singular/MOD/p_Procs_FieldIndep.so
 +libexec/singular/MOD/p_Procs_FieldIndep.so.0
 +libexec/singular/MOD/p_Procs_FieldIndep.so.0.0.0
- libexec/singular/MOD/p_Procs_FieldQ.a
- libexec/singular/MOD/p_Procs_FieldQ.so
+ lib/singular/MOD/p_Procs_FieldQ.a
+ lib/singular/MOD/p_Procs_FieldQ.so
 +libexec/singular/MOD/p_Procs_FieldQ.so.0
 +libexec/singular/MOD/p_Procs_FieldQ.so.0.0.0
- libexec/singular/MOD/p_Procs_FieldZp.a
- libexec/singular/MOD/p_Procs_FieldZp.so
+ lib/singular/MOD/p_Procs_FieldZp.a
+ lib/singular/MOD/p_Procs_FieldZp.so
 +libexec/singular/MOD/p_Procs_FieldZp.so.0
 +libexec/singular/MOD/p_Procs_FieldZp.so.0.0.0
- libexec/singular/MOD/partialgb.a
- libexec/singular/MOD/partialgb.so
- libexec/singular/MOD/pyobject.a
+ lib/singular/MOD/partialgb.a
+ lib/singular/MOD/partialgb.so
+ lib/singular/MOD/pyobject.a
