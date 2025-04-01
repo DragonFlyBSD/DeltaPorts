@@ -1,6 +1,6 @@
---- libpkg/scripts.c.orig	Fri Mar 28 05:46:30 2025
-+++ libpkg/scripts.c	Tue Apr
-@@ -71,9 +71,14 @@ pkg_script_run(struct pkg * const pkg, pkg_script type
+--- libpkg/lua_scripts.c.orig	Fri Mar 28 05:46:30 2025
++++ libpkg/lua_scripts.c	Tue Apr
+@@ -54,9 +54,15 @@ pkg_lua_script_run(struct pkg * const pkg, pkg_lua_scr
  #ifdef PROC_REAP_KILL
  	bool do_reap;
  	pid_t mypid;
@@ -11,11 +11,12 @@
 +	struct reaper_status info;
 +	struct reaper_kill killemall;	
  #endif
++
 +#endif
- 	struct {
- 		const char * const arg;
- 		const pkg_script b;
-@@ -257,11 +262,21 @@ cleanup:
+ 	int cur_pipe[2];
+ 	char *line = NULL;
+ 
+@@ -168,9 +174,15 @@ cleanup:
  		return (ret);
  
  	procctl(P_PID, mypid, PROC_REAP_STATUS, &info);
@@ -29,11 +30,5 @@
 +		killemall.flags = 0;
 +#endif
  		if (procctl(P_PID, mypid, PROC_REAP_KILL, &killemall) != 0) {
-+#if defined(__FreeBSD__)
- 			if (errno != ESRCH || killemall.rk_killed != 0 ) {
-+#else
-+			if (errno != ESRCH || killemall.killed != 0 ) {
-+#endif
- 				pkg_errno("%s", "Fail to kill all processes");
- 			}
+ 			pkg_errno("%s", "Fail to kill all processes");
  		}
