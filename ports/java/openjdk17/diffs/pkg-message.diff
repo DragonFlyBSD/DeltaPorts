@@ -1,22 +1,22 @@
---- pkg-message.orig	2021-12-13 10:52:16 UTC
-+++ pkg-message
-@@ -1,18 +1,9 @@
+--- pkg-message.orig	Tue Apr  1 22:03:19 2025
++++ pkg-message	Tue Apr
+@@ -1,18 +1,7 @@
  [
  { type: install
    message: <<EOM
--This OpenJDK implementation requires fdescfs(5) mounted on /dev/fd and
--procfs(5) mounted on /proc.
-+This OpenJDK implementation requires procfs(5) mounted on /proc.
- 
+-This OpenJDK implementation may require fdescfs(5) mounted on /dev/fd
+-and procfs(5) mounted on /proc for some applications.
+-
 -If you have not done it yet, please do the following:
 -
 -	mount -t fdescfs fdesc /dev/fd
- 	mount -t procfs proc /proc
+-	mount -t procfs proc /proc
 -
 -To make it permanent, you need the following lines in /etc/fstab:
 -
 -	fdesc	/dev/fd		fdescfs		rw	0	0
 -	proc	/proc		procfs		rw	0	0
++This OpenJDK implementation requires procfs(5) mounted on /proc.
  EOM
  }
  ]
