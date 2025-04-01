@@ -1,11 +1,11 @@
---- Makefile.orig	2024-02-24 12:13:44 UTC
-+++ Makefile
-@@ -86,7 +86,7 @@ CONFIGURE_ARGS=	--sysconfdir=${PREFIX}/e
+--- Makefile.orig	Tue Apr  1 22:28:34 2025
++++ Makefile	Tue Apr
+@@ -87,7 +87,7 @@ CONFIGURE_ARGS=	--sysconfdir=${PREFIX}/etc/nut \
  		--without-python2 \
  		--with-python3=${PYTHON_CMD} \
  		--without-nut_monitor \
--		--with-ltdl --with-nut-scanner
-+		--with-libltdl --with-nut-scanner
+-		--with-ltdl --with-nut-scanner \
++		--with-libltdl --with-nut-scanner \
+ 		--without-augeas-lenses-dir
  
- CFLAGS+=	-I${LOCALBASE}/include -L${LOCALBASE}/lib -pthread
- LIB_DEPENDS+=	libltdl.so:devel/libltdl
+ GNU_CONFIGURE_MANPREFIX=${PREFIX}/share
