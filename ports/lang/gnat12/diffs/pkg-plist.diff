@@ -1,28 +1,28 @@
---- pkg-plist.orig	2024-02-10 00:36:35 UTC
-+++ pkg-plist
-@@ -3245,6 +3245,9 @@ gnat12/include/c++/%%VER%%/%%CONFTRGT%%/
- %%ARM%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/plugin/include/config/aarch64/aarch64.h
- %%ARM%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/plugin/include/config/aarch64/biarchlp64.h
- %%ARM%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/plugin/include/config/arm/aarch-common-protos.h
+--- pkg-plist.orig	Tue Apr  1 22:09:13 2025
++++ pkg-plist	Tue Apr
+@@ -1929,11 +1929,6 @@ gnat12/include/c++/%%VER%%/%%CONFTRGT%%/ext/opt_random
+ %%LIB32%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/32/adainclude/s-memcop.ads
+ %%LIB32%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/32/adainclude/s-memory.adb
+ %%LIB32%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/32/adainclude/s-memory.ads
+-%%LIB32%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/32/adainclude/s-mmap.adb
+-%%LIB32%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/32/adainclude/s-mmap.ads
+-%%LIB32%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/32/adainclude/s-mmauni.ads
+-%%LIB32%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/32/adainclude/s-mmosin.adb
+-%%LIB32%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/32/adainclude/s-mmosin.ads
+ %%LIB32%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/32/adainclude/s-mudido.adb
+ %%LIB32%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/32/adainclude/s-mudido.ads
+ %%LIB32%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/32/adainclude/s-multip.adb
+@@ -3245,6 +3240,9 @@ gnat12/include/c++/%%VER%%/%%CONFTRGT%%/ext/opt_random
+ %%AARCH64%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/plugin/include/config/aarch64/aarch64.h
+ %%AARCH64%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/plugin/include/config/aarch64/biarchlp64.h
+ %%AARCH64%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/plugin/include/config/arm/aarch-common-protos.h
 +gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/plugin/include/config/dragonfly-stdint.h
 +gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/plugin/include/config/dragonfly.h
 +gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/plugin/include/config/i386/dragonfly.h
  gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/ada_target_properties
  gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/adainclude/a-assert.adb
  gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/adainclude/a-assert.ads
-@@ -4319,11 +4322,6 @@ gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/adai
- gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/adainclude/s-memcop.ads
- gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/adainclude/s-memory.adb
- gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/adainclude/s-memory.ads
--gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/adainclude/s-mmap.adb
--gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/adainclude/s-mmap.ads
--%%NOARM%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/adainclude/s-mmauni.ads
--%%NOARM%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/adainclude/s-mmosin.adb
--%%NOARM%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/adainclude/s-mmosin.ads
- gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/adainclude/s-mudido.adb
- gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/adainclude/s-mudido.ads
- gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/adainclude/s-multip.adb
-@@ -4803,6 +4801,8 @@ gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/adai
+@@ -4803,6 +4801,8 @@ gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/adainclude/s-wwden
  gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/adainclude/s-wwdwch.adb
  gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/adainclude/s-wwdwch.ads
  gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/adainclude/sequenio.ads
@@ -31,84 +31,3 @@
  gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/adainclude/standard.ads.h
  gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/adainclude/system.ads
  gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/adainclude/text_io.ads
-@@ -5341,7 +5341,6 @@ gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/adal
- gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/adalib/s-dmotpr.ali
- gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/adalib/s-dourea.ali
- gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/adalib/s-dsaser.ali
--%%NOARM%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/adalib/s-dwalin.ali
- gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/adalib/s-elaall.ali
- gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/adalib/s-excdeb.ali
- gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/adalib/s-except.ali
-@@ -5436,12 +5435,8 @@ gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/adal
- gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/adalib/s-mastop.ali
- gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/adalib/s-memcop.ali
- gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/adalib/s-memory.ali
--%%NOARM%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/adalib/s-mmap.ali
--%%NOARM%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/adalib/s-mmauni.ali
--%%NOARM%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/adalib/s-mmosin.ali
- gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/adalib/s-mudido.ali
- gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/adalib/s-multip.ali
--%%NOARM%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/adalib/s-objrea.ali
- gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/adalib/s-os_lib.ali
- gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/adalib/s-oscons.ali
- gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/adalib/s-osinte.ali
-@@ -5699,13 +5694,7 @@ gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/crte
- gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/crtendS.o
- gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/include-fixed/README
- gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/include-fixed/limits.h
--gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/include-fixed/stddef.h
--gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/include-fixed/stdio.h
--gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/include-fixed/stdlib.h
--gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/include-fixed/sys/types.h
- gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/include-fixed/syslimits.h
--gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/include-fixed/unistd.h
--gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/include-fixed/wchar.h
- %%NOARM%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/include/adxintrin.h
- %%NOARM%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/include/ammintrin.h
- %%NOARM%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/include/amxbf16intrin.h
-@@ -5783,11 +5772,6 @@ gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/incl
- %%NOARM%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/include/prfchwintrin.h
- %%NOARM%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/include/rdseedintrin.h
- %%NOARM%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/include/rtmintrin.h
--%%NOARM%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/include/sanitizer/asan_interface.h
--%%NOARM%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/include/sanitizer/common_interface_defs.h
--%%NOARM%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/include/sanitizer/hwasan_interface.h
--%%NOARM%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/include/sanitizer/lsan_interface.h
--%%NOARM%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/include/sanitizer/tsan_interface.h
- %%NOARM%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/include/serializeintrin.h
- %%NOARM%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/include/sgxintrin.h
- %%NOARM%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/include/shaintrin.h
-@@ -5884,13 +5868,8 @@ gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/plug
- gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/plugin/include/config.h
- gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/plugin/include/config/dbxelf.h
- gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/plugin/include/config/elfos.h
--gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/plugin/include/config/freebsd-spec.h
--gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/plugin/include/config/freebsd-stdint.h
--gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/plugin/include/config/freebsd.h
- %%NOARM%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/plugin/include/config/i386/att.h
- %%64BITS%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/plugin/include/config/i386/biarch64.h
--%%NOARM%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/plugin/include/config/i386/freebsd.h
--%%64BITS%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/plugin/include/config/i386/freebsd64.h
- %%NOARM%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/plugin/include/config/i386/i386-isa.def
- %%NOARM%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/plugin/include/config/i386/i386-opts.h
- %%NOARM%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/plugin/include/config/i386/i386-protos.h
-@@ -6300,11 +6279,6 @@ gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/plug
- gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/plugin/libcp1plugin.so
- gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/plugin/libcp1plugin.so.0
- gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/plugin/libcp1plugin.so.0.0.0
--%%NOARM%%gnat12/lib/libasan.a
--%%NOARM%%gnat12/lib/libasan.so
--%%NOARM%%gnat12/lib/libasan.so.8
--%%NOARM%%gnat12/lib/libasan.so.8.0.0
--%%NOARM%%gnat12/lib/libasan_preinit.o
- gnat12/lib/libatomic.a
- gnat12/lib/libatomic.so
- gnat12/lib/libatomic.so.1
-@@ -6319,7 +6293,6 @@ gnat12/lib/libitm.so
- gnat12/lib/libitm.so.1
- gnat12/lib/libitm.so.1.0.0
- gnat12/lib/libitm.spec
--%%NOARM%%gnat12/lib/libsanitizer.spec
- gnat12/lib/libstdc++.a
- gnat12/lib/libstdc++.so
- gnat12/lib/libstdc++.so.6
