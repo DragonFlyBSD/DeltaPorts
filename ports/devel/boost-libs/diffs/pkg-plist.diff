@@ -1,6 +1,6 @@
---- pkg-plist.orig	2022-07-12 22:20:05 UTC
-+++ pkg-plist
-@@ -15163,10 +15163,6 @@ lib/cmake/boost_math_c99f-%%BOOST_SHARED
+--- pkg-plist.orig	Tue Apr  1 18:56:35 2025
++++ pkg-plist	Tue Apr
+@@ -15960,10 +15960,6 @@ lib/cmake/boost_math_c99f-%%BOOST_SHARED_LIB_VER%%/boo
  lib/cmake/boost_math_c99f-%%BOOST_SHARED_LIB_VER%%/boost_math_c99f-config.cmake
  lib/cmake/boost_math_c99f-%%BOOST_SHARED_LIB_VER%%/libboost_math_c99f-variant-shared.cmake
  lib/cmake/boost_math_c99f-%%BOOST_SHARED_LIB_VER%%/libboost_math_c99f-variant-static.cmake
@@ -11,7 +11,7 @@
  lib/cmake/boost_math_tr1-%%BOOST_SHARED_LIB_VER%%/boost_math_tr1-config-version.cmake
  lib/cmake/boost_math_tr1-%%BOOST_SHARED_LIB_VER%%/boost_math_tr1-config.cmake
  lib/cmake/boost_math_tr1-%%BOOST_SHARED_LIB_VER%%/libboost_math_tr1-variant-shared.cmake
-@@ -15175,10 +15171,6 @@ lib/cmake/boost_math_tr1f-%%BOOST_SHARED
+@@ -15972,10 +15968,6 @@ lib/cmake/boost_math_tr1f-%%BOOST_SHARED_LIB_VER%%/boo
  lib/cmake/boost_math_tr1f-%%BOOST_SHARED_LIB_VER%%/boost_math_tr1f-config.cmake
  lib/cmake/boost_math_tr1f-%%BOOST_SHARED_LIB_VER%%/libboost_math_tr1f-variant-shared.cmake
  lib/cmake/boost_math_tr1f-%%BOOST_SHARED_LIB_VER%%/libboost_math_tr1f-variant-static.cmake
@@ -19,10 +19,10 @@
 -lib/cmake/boost_math_tr1l-%%BOOST_SHARED_LIB_VER%%/boost_math_tr1l-config.cmake
 -lib/cmake/boost_math_tr1l-%%BOOST_SHARED_LIB_VER%%/libboost_math_tr1l-variant-shared.cmake
 -lib/cmake/boost_math_tr1l-%%BOOST_SHARED_LIB_VER%%/libboost_math_tr1l-variant-static.cmake
- lib/cmake/boost_mpi-%%BOOST_SHARED_LIB_VER%%/boost_mpi-config-version.cmake
- lib/cmake/boost_mpi-%%BOOST_SHARED_LIB_VER%%/boost_mpi-config.cmake
+ lib/cmake/boost_math-%%BOOST_SHARED_LIB_VER%%/boost_math-config-version.cmake
+ lib/cmake/boost_math-%%BOOST_SHARED_LIB_VER%%/boost_math-config.cmake
  lib/cmake/boost_nowide-%%BOOST_SHARED_LIB_VER%%/boost_nowide-config-version.cmake
-@@ -15335,11 +15327,6 @@ lib/libboost_math_c99f.so
+@@ -16149,11 +16141,6 @@ lib/libboost_math_c99f.so
  lib/libboost_math_c99f.so.%%BOOST_MAJOR_VER%%
  lib/libboost_math_c99f.so.%%BOOST_MAJOR_VER%%.%%BOOST_MINOR_VER%%
  lib/libboost_math_c99f.so.%%BOOST_SHARED_LIB_VER%%
@@ -34,7 +34,7 @@
  lib/libboost_math_tr1.a
  lib/libboost_math_tr1.so
  lib/libboost_math_tr1.so.%%BOOST_MAJOR_VER%%
-@@ -15350,11 +15337,6 @@ lib/libboost_math_tr1f.so
+@@ -16164,11 +16151,6 @@ lib/libboost_math_tr1f.so
  lib/libboost_math_tr1f.so.%%BOOST_MAJOR_VER%%
  lib/libboost_math_tr1f.so.%%BOOST_MAJOR_VER%%.%%BOOST_MINOR_VER%%
  lib/libboost_math_tr1f.so.%%BOOST_SHARED_LIB_VER%%
