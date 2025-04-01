@@ -1,15 +1,15 @@
---- Makefile.ori	Sat Feb 22 22:04:43 2025
-+++ Makefile	Sat Feb 22 22:05:42 2025
-@@ -37,7 +37,7 @@ PORTDOCS=	javadoc platform-${PORTVERSION}-javadoc.jar
+--- Makefile.orig	Tue Apr  1 21:46:26 2025
++++ Makefile	Tue Apr
+@@ -32,7 +32,7 @@ PORTDOCS=	javadoc platform-${PORTVERSION}-javadoc.jar
  
  OPTIONS_DEFINE=	DOCS
  
--ANT_ARCH=	${ARCH:S/amd64/x86-64/:S/i386/x86/:S/powerpc64/ppc64/}
-+ANT_ARCH=	${ARCH:S/amd64/x86-64/:S/i386/x86/:S/x86_64/x86-64/:S/powerpc64/ppc64/}
+-ANT_ARCH=	${ARCH:S/amd64/x86-64/:S/armv6/arm/:S/armv7/arm/:S/i386/x86/:S/powerpc/ppc/}
++ANT_ARCH=	${ARCH:S/amd64/x86-64/:S/armv6/arm/:S/armv7/arm/:S/i386/x86/:S/x86_64/x86-64/:S/powerpc/ppc/}
  
  post-patch:
  	@${REINPLACE_CMD} -e 's|%%LOCALBASE%%|${LOCALBASE}|' \
-@@ -47,7 +47,7 @@ post-build-DOCS-on:
+@@ -42,7 +42,7 @@ post-build-DOCS-on:
  	cd ${WRKSRC} && ${SETENV} ${MAKE_ENV} ${ANT} javadoc
  
  do-install:
