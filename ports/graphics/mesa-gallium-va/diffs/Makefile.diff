@@ -1,11 +1,10 @@
---- Makefile.orig	2024-09-23 08:19:23 UTC
-+++ Makefile
-@@ -25,8 +25,7 @@ X11_USE=		xorg=xorgproto,x11,xcb,xdamage
+--- Makefile.orig	Tue Apr  1 22:01:21 2025
++++ Makefile	Tue Apr
+@@ -40,7 +40,7 @@ ${_gd}_VARS+=		GALLIUM_DRIVERS+=${_gd}
  .include <bsd.port.options.mk>
  .include "${.CURDIR:H:H}/graphics/mesa-dri/Makefile.common"
  
 -MESON_ARGS+=	-Dvideo-codecs="vc1dec,h264dec,h264enc,h265dec,h265enc,av1dec,av1enc,vp9dec" \
--		-Dgallium-drivers="radeonsi,r600" \
 +MESON_ARGS+=	-Dgallium-drivers="radeonsi,r600" \
  		-Dvulkan-drivers="" \
  		-Dandroid-libbacktrace=disabled \
