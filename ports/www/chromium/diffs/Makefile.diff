@@ -1,6 +1,6 @@
---- Makefile.orig	Mon Mar 10 09:11:39 2025
-+++ Makefile	Sun Mar
-@@ -116,8 +116,8 @@ GN_ARGS+=	clang_use_chrome_plugins=false \
+--- Makefile.orig	Tue Apr  1 22:32:58 2025
++++ Makefile	Tue Apr
+@@ -115,8 +115,8 @@ GN_ARGS+=	clang_use_chrome_plugins=false \
  		treat_warnings_as_errors=false \
  		use_allocator_shim=false \
  		use_aura=true \
@@ -11,15 +11,15 @@
  		use_lld=true \
  		use_partition_alloc=true \
  		use_partition_alloc_as_malloc=false \
-@@ -127,6 +127,7 @@ GN_ARGS+=	clang_use_chrome_plugins=false \
+@@ -126,6 +126,7 @@ GN_ARGS+=	clang_use_chrome_plugins=false \
  		use_system_libffi=true \
  		use_system_libjpeg=true \
  		use_udev=false \
 +		extra_cflags="${CFLAGS}" \
- 		extra_cxxflags="${CXXFLAGS} ${PINCLUDES}" \
+ 		extra_cxxflags="${CXXFLAGS} -I${LOCALBASE}/include/libepoll-shim ${PINCLUDES}" \
  		extra_ldflags="${LDFLAGS}" \
  		ffmpeg_branding="${FFMPEG_BRAND}"
-@@ -236,14 +237,14 @@ BINARY_ALIAS+=		cpp=${LOCALBASE}/bin/clang-cpp${LLVM_D
+@@ -235,14 +236,14 @@ BINARY_ALIAS+=		cpp=${LOCALBASE}/bin/clang-cpp${LLVM_D
  			c++=${LOCALBASE}/bin/clang++${LLVM_DEFAULT} \
  			ar=${LOCALBASE}/bin/llvm-ar${LLVM_DEFAULT} \
  			nm=${LOCALBASE}/bin/llvm-nm${LLVM_DEFAULT} \
@@ -36,7 +36,7 @@
  BUILD_DEPENDS+=	nasm:devel/nasm
  PLIST_SUB+=	NOT_AARCH64=""
  FFMPEG_TARGET=	x64
-@@ -253,8 +254,8 @@ PLIST_SUB+=	NOT_AARCH64=""
+@@ -252,8 +253,8 @@ PLIST_SUB+=	NOT_AARCH64=""
  FFMPEG_TARGET=	ia32
  .endif
  
@@ -47,7 +47,7 @@
  
  # Allow relocations against read-only segments (override lld default)
  LDFLAGS_i386=	-Wl,-znotext
-@@ -288,9 +289,9 @@ pre-configure:
+@@ -287,9 +288,9 @@ pre-configure:
  		libusb libwebp libxml libxslt openh264 opus || ${FALSE}
  	# Chromium uses an unreleased version of FFmpeg, so configure it
  	cd ${WRKSRC}/media/ffmpeg && \
