@@ -1,11 +1,11 @@
---- Uses/qt-dist.mk.orig	2023-02-19 17:50:27 UTC
-+++ Uses/qt-dist.mk
-@@ -182,7 +182,7 @@ CMAKE_ARGS+=		-DCMAKE_INSTALL_PREFIX=${P
+--- Uses/qt-dist.mk.orig	Tue Apr  1 17:33:26 2025
++++ Uses/qt-dist.mk	Tue Apr
+@@ -201,7 +201,7 @@ CMAKE_ARGS+=		-DCMAKE_INSTALL_PREFIX=${PREFIX} \
  			-DINSTALL_MKSPECSDIR=${PREFIX}/${QT_MKSPECDIR_REL} \
  			-DINSTALL_EXAMPLESDIR=${PREFIX}/${QT_EXAMPLEDIR_REL} \
  			-DINSTALL_DESCRIPTIONSDIR=${PREFIX}/${QT_DESCRIPTIONSDIR_REL} \
 -			-DQT_QMAKE_TARGET_MKSPEC:String=freebsd-clang \
 +			-DQT_QMAKE_TARGET_MKSPEC:String=dragonfly-g++ \
+ 			-DQT_SBOM_GENERATE_JSON:BOOL=OFF \
+ 			-DQT_SBOM_VERIFY:BOOL=OFF \
  			--log-level=TRACE
- .  endif
- 
