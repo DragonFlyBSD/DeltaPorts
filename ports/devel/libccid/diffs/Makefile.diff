@@ -1,19 +1,11 @@
---- Makefile.orig	2024-09-23 08:03:46 UTC
-+++ Makefile
-@@ -25,7 +25,7 @@ LDFLAGS=	-pthread
- INSTALL_TARGET=	install-strip
- 
+--- Makefile.orig	Tue Apr  1 21:48:43 2025
++++ Makefile	Tue Apr
+@@ -24,7 +24,7 @@ BUNDLE_DIR=	${USBDROPDIR}/ifd-ccid.bundle
+ PLIST_DIRS=	${USBDROPDIR}
  PLIST_FILES=	bin/RSA_SecurID_getpasswd \
--		lib/pcsc/drivers/ifd-ccid.bundle/Contents/FreeBSD/libccid.so \
-+		lib/pcsc/drivers/ifd-ccid.bundle/Contents/DragonFly/libccid.so \
- 		lib/pcsc/drivers/ifd-ccid.bundle/Contents/Info.plist \
- 		share/man/man1/RSA_SecurID_getpasswd.1.gz
- 
-@@ -34,6 +34,6 @@ post-install:
- 		${STAGEDIR}${PREFIX}/bin
- 	${INSTALL_MAN} ${WRKSRC}/contrib/RSA_SecurID/RSA_SecurID_getpasswd.1 \
- 		${STAGEDIR}${PREFIX}/share/man/man1
--	${STRIP_CMD} ${STAGEDIR}${PREFIX}/lib/pcsc/drivers/ifd-ccid.bundle/Contents/FreeBSD/libccid.so
-+	${STRIP_CMD} ${STAGEDIR}${PREFIX}/lib/pcsc/drivers/ifd-ccid.bundle/Contents/${OPSYS}/libccid.so
- 
- .include <bsd.port.mk>
+ 		bin/Kobil_mIDentity_switch \
+-		${BUNDLE_DIR}/Contents/FreeBSD/libccid.so \
++		${BUNDLE_DIR}/Contents/DragonFly/libccid.so \
+ 		${BUNDLE_DIR}/Contents/Info.plist \
+ 		share/man/man1/RSA_SecurID_getpasswd.1.gz \
+ 		share/man/man8/Kobil_mIDentity_switch.8.gz
