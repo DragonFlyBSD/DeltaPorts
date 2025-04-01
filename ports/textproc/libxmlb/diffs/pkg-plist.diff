@@ -1,21 +1,7 @@
---- pkg-plist.orig	2024-09-23 15:03:49 UTC
-+++ pkg-plist
-@@ -24,13 +24,6 @@ lib/libxmlb.so
- lib/libxmlb.so.2
- lib/libxmlb.so.2.0.0
- libdata/pkgconfig/xmlb.pc
--libexec/installed-tests/libxmlb/test.desktop
--libexec/installed-tests/libxmlb/test.quirk
--libexec/installed-tests/libxmlb/test.xml
--libexec/installed-tests/libxmlb/test.xml.gz.gz.gz
--libexec/installed-tests/libxmlb/test.xml.xz
--libexec/installed-tests/libxmlb/test.xml.zstd
--libexec/installed-tests/libxmlb/xb-self-test
- share/man/man1/xb-tool.1.gz
- share/gir-1.0/Xmlb-2.0.gir
- %%PORTDOCS%%share/gtk-doc/html/libxmlb/annotation-glossary.html
-@@ -65,4 +58,3 @@ share/gir-1.0/Xmlb-2.0.gir
+--- pkg-plist.orig	Tue Apr  1 22:29:40 2025
++++ pkg-plist	Tue Apr
+@@ -58,4 +58,3 @@ share/gir-1.0/Xmlb-2.0.gir
  %%PORTDOCS%%share/gtk-doc/html/libxmlb/style.css
  %%PORTDOCS%%share/gtk-doc/html/libxmlb/up-insensitive.png
  %%PORTDOCS%%share/gtk-doc/html/libxmlb/up.png
--share/installed-tests/libxmlb/libxmlb.test
+-share/man/man1/xb-tool.1.gz
