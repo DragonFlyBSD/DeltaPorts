@@ -1,7 +1,7 @@
---- pkg-plist.orig	2018-04-04 14:35:46 UTC
-+++ pkg-plist
-@@ -1390,121 +1390,5 @@ share/applications/librecad.desktop
- %%DATADIR%%/plugins/libplotequation.so
+--- pkg-plist.orig	Tue Apr  1 18:45:04 2025
++++ pkg-plist	Tue Apr
+@@ -1392,125 +1392,5 @@ share/applications/librecad.desktop
+ %%DATADIR%%/plugins/libpointstocsv.so
  %%DATADIR%%/plugins/libsameprop.so
  %%DATADIR%%/plugins/libsample.so
 -%%DATADIR%%/qm/librecad_ar.qm
@@ -37,11 +37,13 @@
 -%%DATADIR%%/qm/librecad_fi.qm
 -%%DATADIR%%/qm/librecad_fr.qm
 -%%DATADIR%%/qm/librecad_gl.qm
+-%%DATADIR%%/qm/librecad_he.qm
 -%%DATADIR%%/qm/librecad_hi.qm
 -%%DATADIR%%/qm/librecad_hu.qm
 -%%DATADIR%%/qm/librecad_id_ID.qm
 -%%DATADIR%%/qm/librecad_it.qm
 -%%DATADIR%%/qm/librecad_ja.qm
+-%%DATADIR%%/qm/librecad_ka.qm
 -%%DATADIR%%/qm/librecad_ko.qm
 -%%DATADIR%%/qm/librecad_lv.qm
 -%%DATADIR%%/qm/librecad_mk.qm
@@ -56,8 +58,10 @@
 -%%DATADIR%%/qm/librecad_sk.qm
 -%%DATADIR%%/qm/librecad_sl.qm
 -%%DATADIR%%/qm/librecad_sq_al.qm
+-%%DATADIR%%/qm/librecad_sr.qm
 -%%DATADIR%%/qm/librecad_sv.qm
 -%%DATADIR%%/qm/librecad_ta.qm
+-%%DATADIR%%/qm/librecad_th.qm
 -%%DATADIR%%/qm/librecad_tr.qm
 -%%DATADIR%%/qm/librecad_uk.qm
 -%%DATADIR%%/qm/librecad_zh_cn.qm
@@ -120,5 +124,5 @@
 -%%DATADIR%%/qm/plugins_uk.qm
 -%%DATADIR%%/qm/plugins_zh_cn.qm
 -%%DATADIR%%/qm/plugins_zh_tw.qm
- share/metainfo/librecad.appdata.xml
+ share/metainfo/org.librecad.librecad.appdata.xml
  share/pixmaps/librecad.png
