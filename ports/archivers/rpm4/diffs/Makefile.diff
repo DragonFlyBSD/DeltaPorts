@@ -1,31 +1,25 @@
---- Makefile.orig	2024-09-23 07:48:34 UTC
-+++ Makefile
-@@ -12,16 +12,13 @@ WWW=		https://rpm.org/
+--- Makefile.orig	Tue Apr  1 18:33:17 2025
++++ Makefile	Tue Apr
+@@ -12,10 +12,8 @@ WWW=		https://rpm.org/
  LICENSE=	GPLv2
  LICENSE_FILE=	${WRKSRC}/COPYING
  
 -BUILD_DEPENDS=	${LOCALBASE}/lib/libelf.so:devel/elfutils \
 -		gsed:textproc/gsed
+-LIB_DEPENDS=	libelf.so:devel/elfutils \
+-		libgcrypt.so:security/libgcrypt \
 +BUILD_DEPENDS=	gsed:textproc/gsed
- LIB_DEPENDS=	libdb-5.3.so:databases/db5 \
--		libelf.so:devel/elfutils \
- 		libgcrypt.so:security/libgcrypt \
++LIB_DEPENDS=	libgcrypt.so:security/libgcrypt \
  		libnss3.so:security/nss \
  		libpopt.so:devel/popt \
  		libzstd.so:archivers/zstd
--RUN_DEPENDS=	${LOCALBASE}/lib/libelf.so:devel/elfutils \
--		bash:shells/bash \
-+RUN_DEPENDS=	bash:shells/bash \
- 		gxargs:misc/findutils
- 
- USES=		alias bdb cpe gmake iconv libarchive libtool lua pathfix \
-@@ -40,7 +37,8 @@ CONFIGURE_ARGS=	--enable-sqlite=yes \
- 		--sysconfdir=${PREFIX}/etc \
- 		--with-popt-prefix="${LOCALBASE}" \
- 		--without-javaglue \
--		am_cv_python_version=${PYTHON_VER}${PYTHON_ABIVER}
-+		am_cv_python_version=${PYTHON_VER}${PYTHON_ABIVER} \
-+		ac_cv_lib_elf_gelf_getvernaux=no  # otherwise fails to build in presence of devel/elfutils
- CONFIGURE_ENV=	LUA_CFLAGS=-I${LUA_INCDIR} \
- 		LUA_LIBS="-L${LUA_LIBDIR} -llua-${LUA_VER} -lm"
- INSTALL_TARGET=	install-strip
+@@ -45,7 +43,8 @@ CONFIGURE_ARGS=			--enable-bdb-ro \
+ 				--sysconfdir=${PREFIX}/etc \
+ 				--with-popt-prefix="${LOCALBASE}" \
+ 				--without-javaglue \
+-				am_cv_python_version=${PYTHON_VER}${PYTHON_ABIVER}
++				am_cv_python_version=${PYTHON_VER}${PYTHON_ABIVER} \
++				ac_cv_lib_elf_gelf_getvernaux=no  # otherwise fails to build in presence of devel/elfutils
+ .if ${FLAVOR} == noopenmp
+ CONFIGURE_ARGS+=		--disable-openmp
+ .endif
