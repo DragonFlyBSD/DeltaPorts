@@ -1,13 +1,14 @@
---- pkg-message.orig	2020-08-13 10:38:20 UTC
+--- pkg-message.orig	2025-06-08 12:14:25 UTC
 +++ pkg-message
-@@ -1,17 +1,14 @@
+@@ -1,17 +1,15 @@
  [
  { type: install
    message: <<EOM
--This OpenJDK implementation requires fdescfs(5) mounted on /dev/fd and
--procfs(5) mounted on /proc.
-+This OpenJDK implementation requires procfs(5) mounted on /proc.
+-This OpenJDK implementation may require fdescfs(5) mounted on /dev/fd
+-and procfs(5) mounted on /proc for some applications.
  
++This OpenJDK implementation requires procfs(5) mounted on /proc.
++
  If you have not done it yet, please do the following:
  
 -	mount -t fdescfs fdesc /dev/fd
