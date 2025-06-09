@@ -1,3 +1,4 @@
+#USE_CLANG_FALLBACK=	default
 
 .if 1
 # zrj: not tracked SOVER is violation, might as well auto-plist/find, bump on updates
