@@ -1,0 +1,344 @@
+diff --git a/net/rinetd/Makefile b/net/rinetd/Makefile
+index 0da4a420331..0151bc1221c 100644
+--- a/net/rinetd/Makefile
++++ b/net/rinetd/Makefile
+@@ -1,39 +1,41 @@
+ PORTNAME=	rinetd
+-PORTVERSION=	0.62
+-PORTREVISION=	4
++PORTVERSION=	0.73
++PORTREVISION=	2
++DISTVERSIONPREFIX=	v
+ CATEGORIES=	net
+-MASTER_SITES=	http://www.boutell.com/rinetd/http/ \
+-		GENTOO
+-DISTNAME=	rinetd
+ 
+ MAINTAINER=	garga@FreeBSD.org
+ COMMENT=	Simple TCP port redirector
++WWW=		https://github.com/samhocevar/rinetd
+ 
+ LICENSE=	GPLv2
+ 
+-OPTIONS_DEFINE=	DOCS
+-
+-WRKSRC=		${WRKDIR}/rinetd-${PORTVERSION}
++USES=		cpe dos2unix autoreconf
++USE_GITHUB=	yes
++GH_ACCOUNT=	samhocevar
++GH_TAGNAME=	d4e0a60
++USE_RC_SUBR=	rinetd
+ 
+-USES=		cpe dos2unix
++GNU_CONFIGURE=	yes
++GNU_CONFIGURE_MANPREFIX=	${PREFIX}/share
+ 
+ PORTDOCS=	index.html
+-PLIST_FILES=	sbin/rinetd \
+-		man/man8/rinetd.8.gz
+-
+-USE_RC_SUBR=	rinetd
+ 
+-post-extract:
+-	@${MV} ${WRKDIR}/rinetd ${WRKSRC}
++OPTIONS_DEFINE=	DOCS
+ 
+ post-patch:
+-	@${REINPLACE_CMD} -E "s,(/etc/rinetd.conf),${PREFIX}\1," \
+-		${WRKSRC}/rinetd.[8c]
+-	@${REINPLACE_CMD} -E "s,/usr(/sbin/rinetd),${PREFIX}\1," \
++	@${REINPLACE_CMD} -E \
++			-e "s,(/etc/rinetd.conf),${PREFIX}\1," \
++			-e "s,/usr(/sbin/rinetd),${PREFIX}\1," \
+ 		${WRKSRC}/rinetd.8
+-	@${REINPLACE_CMD} -e "s,cc ,${CC} ,g" ${WRKSRC}/Makefile
++	@${REINPLACE_CMD} -E "s,(/etc/rinetd.conf),${PREFIX}\1," \
++		${WRKSRC}/src/rinetd.h
+ 
+ post-install:
++	${MV} ${STAGEDIR}${PREFIX}/etc/rinetd.conf \
++		${STAGEDIR}${PREFIX}/etc/rinetd.conf.sample
++
++post-install-DOCS-on:
+ 	${MKDIR} ${STAGEDIR}${DOCSDIR}
+ .for f in ${PORTDOCS}
+ 	${INSTALL_DATA} ${WRKSRC}/${PORTDOCS} ${STAGEDIR}${DOCSDIR}
+diff --git a/net/rinetd/distinfo b/net/rinetd/distinfo
+index bc61c920ceb..7f43e7e364c 100644
+--- a/net/rinetd/distinfo
++++ b/net/rinetd/distinfo
+@@ -1,2 +1,3 @@
+-SHA256 (rinetd.tar.gz) = 0c68d27c5bd4b16ce4f58a6db514dd6ff37b2604a88b02c1dfcdc00fc1059898
+-SIZE (rinetd.tar.gz) = 115541
++TIMESTAMP = 1696686326
++SHA256 (samhocevar-rinetd-v0.73-d4e0a60_GH0.tar.gz) = 76eef19e0af8459c9434ac8ac0b58edac1bba353f5aaceb1d5f971fb3f6a3016
++SIZE (samhocevar-rinetd-v0.73-d4e0a60_GH0.tar.gz) = 45544
+diff --git a/net/rinetd/dragonfly/patch-rinetd.c b/net/rinetd/dragonfly/patch-rinetd.c
+deleted file mode 100644
+index 8888395a92f..00000000000
+--- a/net/rinetd/dragonfly/patch-rinetd.c
++++ /dev/null
+@@ -1,11 +0,0 @@
+---- rinetd.c.intermediate	2020-11-24 07:32:26.000000000 +0000
+-+++ rinetd.c
+-@@ -10,6 +10,8 @@
+- #include <sys/ioctl.h>
+- #include <netdb.h>
+- #include <netinet/in.h>
+-+#include <arpa/inet.h>
+-+#include <unistd.h>
+- #include <getopt.h>
+- #include <errno.h>
+- #include <poll.h>
+diff --git a/net/rinetd/files/patch-Makefile b/net/rinetd/files/patch-Makefile
+deleted file mode 100644
+index f0e1b68d01b..00000000000
+--- a/net/rinetd/files/patch-Makefile
++++ /dev/null
+@@ -1,22 +0,0 @@
+---- ../rinetd.orig/Makefile	Mon Mar  1 13:41:50 1999
+-+++ Makefile	Sat Jun 12 12:54:48 1999
+-@@ -1,9 +1,14 @@
+--CFLAGS=-DLINUX -g
+-+CFLAGS+=-I. -DLINUX
+- 
+--rinetd: rinetd.o match.o
+--	gcc rinetd.o match.o -o rinetd
+-+all: rinetd
+-+
+-+rinetd: rinetd.o match.o getopt.o
+-+	${CC} ${CFLAGS} rinetd.o match.o getopt.o -o rinetd
+-+
+-+getopt.o:
+-+	${CC} ${CFLAGS} -c getopt.c
+- 
+- install: rinetd
+--	install -m 700 rinetd /usr/sbin
+--	install -m 644 rinetd.8 /usr/man/man8
+-+	install -s -m 755 rinetd ${DESTDIR}${PREFIX}/sbin
+-+	install -m 644 rinetd.8 ${DESTDIR}${PREFIX}/man/man8
+- 
+diff --git a/net/rinetd/files/patch-rinetd.c b/net/rinetd/files/patch-rinetd.c
+deleted file mode 100644
+index 3c32c5bf626..00000000000
+--- a/net/rinetd/files/patch-rinetd.c
++++ /dev/null
+@@ -1,18 +0,0 @@
+---- rinetd.c.orig	Thu Jul 19 22:19:59 2001
+-+++ rinetd.c	Thu Jul 19 22:20:26 2001
+-@@ -243,6 +243,7 @@
+- 			signal(SIGHUP, hup);
+- #endif /* WIN32 */
+- 			signal(SIGTERM, term);
+-+			setsid();
+- 			initArrays();
+- 			readConfiguration();
+- 			RegisterPID();
+-@@ -646,6 +646,7 @@
+- 			}
+- 		}
+- 	}
+-+	fclose(in);
+- 	/* Open the log file */
+- 	if (logFile) {
+- 		fclose(logFile);
+diff --git a/net/rinetd/files/patch-select2poll b/net/rinetd/files/patch-select2poll
+deleted file mode 100644
+index cbcb3d749b4..00000000000
+--- a/net/rinetd/files/patch-select2poll
++++ /dev/null
+@@ -1,194 +0,0 @@
+---- rinetd.c.orig	Mon Apr 14 22:19:23 2003
+-+++ rinetd.c	Tue Oct  4 07:25:42 2005
+-@@ -12,6 +12,7 @@
+- #include <netinet/in.h>
+- #include <getopt.h>
+- #include <errno.h>
+-+#include <poll.h>
+- #define INVALID_SOCKET (-1)
+- #include <sys/time.h>
+- #endif /* WIN32 */
+-@@ -94,6 +95,7 @@
+- #include "match.h"
+- 
+- SOCKET *seFds = 0;
+-+static int first_set = 0;
+- /* In network order, for network purposes */
+- struct in_addr *seLocalAddrs = 0;
+- unsigned short *seLocalPorts = 0;
+-@@ -750,15 +752,82 @@
+- void openLocalFd(int se, int i);
+- int getAddress(char *host, struct in_addr *iaddr);
+- 
+-+inline void poll_init_fds(struct pollfd *pfds, int size) {
+-+	int i;
+-+
+-+	memset(pfds, 0, sizeof(struct pollfd) * size);
+-+	first_set = 1;
+-+	for(i = 0; i < size; i++) 
+-+		pfds[i].fd = -1;
+-+}
+-+
+-+inline int poll_set_fd(struct pollfd *pfds, int size, int count, 
+-+		 int fd, short int ev) {
+-+#ifdef _NEW_POLL_SET_FD
+-+	if(first_set) {
+-+		pfds[count].fd = fd;
+-+		pfds[count].events |= ev;
+-+		first_set = 0;
+-+		return 0;
+-+	}
+-+	if(pfds[count].fd != fd && !first_set) {
+-+		count++;
+-+	}
+-+
+-+	pfds[count].fd = fd;
+-+	pfds[count].events |= ev;
+-+	
+-+	return count;
+-+#else
+-+	int i;
+-+	
+-+	for(i = 0; i < size; i++) {
+-+		if(pfds[i].fd == -1) {
+-+			pfds[i].fd = fd;
+-+			pfds[i].events |= ev;
+-+			count++;
+-+			break;
+-+		}
+-+		if(pfds[i].fd == fd) {
+-+			pfds[i].events |= ev;
+-+			break;
+-+		}
+-+	}
+-+
+-+	return count;
+-+#endif
+-+}
+-+
+-+int poll_fd_isset(struct pollfd *pfds, int nfds, int fd, short event) {
+-+	int i;
+-+
+-+	for(i = 0; i < nfds; i++) {
+-+		if(pfds[i].fd == fd)
+-+			return pfds[i].revents & event;
+-+	}
+-+
+-+	return 0;
+-+}
+-+
+- void selectPass(void) {
+- 	int i;
+--	fd_set readfds, writefds;
+--	FD_ZERO(&readfds);
+--	FD_ZERO(&writefds);
+-+	int nfds = 0;
+-+	int total = 0;
+-+	static struct pollfd *pfds = NULL;
+-+	
+- 	/* Server sockets */
+-+	total = seTotal + (coTotal * 2);
+-+	
+-+	if(!pfds) {
+-+		pfds = malloc(sizeof(struct pollfd) * total);
+-+	}
+-+	
+-+	poll_init_fds(pfds, total);
+-+	
+- 	for (i = 0; (i < seTotal); i++) {
+- 		if (seFds[i] != INVALID_SOCKET) {
+--			FD_SET(seFds[i], &readfds);
+-+			//FD_SET(seFds[i], &readfds)
+-+			nfds = poll_set_fd(pfds, total, nfds, seFds[i], POLLIN);
+- 		}
+- 	}
+- 	/* Connection sockets */
+-@@ -768,35 +837,47 @@
+- 		}
+- 		if (coClosing[i]) {
+- 			if (!reClosed[i]) {
+--				FD_SET(reFds[i], &writefds);
+--			}	
+--			if (!loClosed[i]) {
+--				FD_SET(loFds[i], &writefds);
+-+				//FD_SET(reFds[i], &writefds);
+-+				nfds = poll_set_fd(pfds, total, nfds, 
+-+					    reFds[i], POLLOUT);
+- 			}	
+- 		}
+- 		/* Get more input if we have room for it */
+- 		if ((!reClosed[i]) && (coInputRPos[i] < bufferSpace)) {
+--			FD_SET(reFds[i], &readfds);
+-+			//FD_SET(reFds[i], &readfds);
+-+			nfds = poll_set_fd(pfds, total, nfds, reFds[i], POLLIN);
+- 		}
+- 		/* Send more output if we have any */	
+- 		if ((!reClosed[i]) && (coOutputWPos[i] < coOutputRPos[i])) {
+--			FD_SET(reFds[i], &writefds);
+-+			//FD_SET(reFds[i], &writefds);
+-+			nfds = poll_set_fd(pfds, total, nfds, reFds[i], POLLOUT);
+- 		}	
+-+		if (coClosing[i]) {
+-+			if (!loClosed[i]) {
+-+				//FD_SET(loFds[i], &writefds);
+-+				nfds = poll_set_fd(pfds, total, nfds,
+-+					    loFds[i], POLLOUT);
+-+			}
+-+		}
+- 		/* Accept more output from the local 
+- 			server if there's room */
+- 		if ((!loClosed[i]) && (coOutputRPos[i] < bufferSpace)) {
+--			FD_SET(loFds[i], &readfds);
+-+			//FD_SET(loFds[i], &readfds);
+-+			 nfds = poll_set_fd(pfds, total, nfds, loFds[i], POLLIN);
+- 		}
+- 		/* Send more input to the local server 
+- 			if we have any */
+- 		if ((!loClosed[i]) && (coInputWPos[i] < coInputRPos[i])) {
+--			FD_SET(loFds[i], &writefds);
+-+			//FD_SET(loFds[i], &writefds);
+-+			nfds = poll_set_fd(pfds, total, nfds, loFds[i], POLLOUT);
+- 		}	
+- 	}
+--	select(maxfd + 1, &readfds, &writefds, 0, 0);
+-+	//select(maxfd + 1, &readfds, &writefds, 0, 0);
+-+	poll(pfds, nfds + 1, -1);
+- 	for (i = 0; (i < seTotal); i++) {
+- 		if (seFds[i] != -1) {
+--			if (FD_ISSET(seFds[i], &readfds)) {
+-+			//if (FD_ISSET(seFds[i], &readfds)) {
+-+			if (poll_fd_isset(pfds, nfds, seFds[i], POLLIN)) {
+- 				handleAccept(i);
+- 			}
+- 		}
+-@@ -806,22 +887,26 @@
+- 			continue;
+- 		}
+- 		if (!reClosed[i]) {
+--			if (FD_ISSET(reFds[i], &readfds)) {
+-+			//if (FD_ISSET(reFds[i], &readfds)) {
+-+			if (poll_fd_isset(pfds, nfds, reFds[i], POLLIN)) {
+- 				handleRemoteRead(i);
+- 			}
+- 		}
+- 		if (!reClosed[i]) {
+--			if (FD_ISSET(reFds[i], &writefds)) {
+-+			//if (FD_ISSET(reFds[i], &writefds)) {
+-+			if (poll_fd_isset(pfds, nfds, reFds[i], POLLOUT)) {
+- 				handleRemoteWrite(i);
+- 			}
+- 		}
+- 		if (!loClosed[i]) {
+--			if (FD_ISSET(loFds[i], &readfds)) {
+-+			//if (FD_ISSET(loFds[i], &readfds)) {
+-+			if (poll_fd_isset(pfds, nfds, loFds[i], POLLIN)) {
+- 				handleLocalRead(i);
+- 			}
+- 		}
+- 		if (!loClosed[i]) {
+--			if (FD_ISSET(loFds[i], &writefds)) {
+-+			//if (FD_ISSET(loFds[i], &writefds)) {
+-+			if (poll_fd_isset(pfds, nfds, loFds[i], POLLOUT)) {
+- 				handleLocalWrite(i);
+- 			}
+- 		}
