@@ -14,4 +14,4 @@ dfly-patch:
 		-e 's@[[:<:]]isnan[[:>:]]@std::isnan@g' \
 		${WRKSRC}/source/blender/gpu/intern/gpu_matrix.cc
 
-USE_GCC_VERSION=  11
+USE_GCC_VERSION=	${GCC_DEFAULT}

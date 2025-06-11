@@ -19,5 +19,5 @@ dfly-patch:
 		${WRKSRC}/src/iop/negadoctor.c \
 		${WRKSRC}/src/iop/toneequal.c
 
-USE_GCC_VERSION=	12
+USE_GCC_VERSION=	${GCC_DEFAULT}
 DFLY_UNMAINTAINED= yes

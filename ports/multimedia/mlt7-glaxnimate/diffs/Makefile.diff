@@ -4,7 +4,7 @@
  		buildtools:build qmake:build
  USE_XORG=	x11
  
-+USE_GCC_VERSION=    11
++USE_GCC_VERSION=	${GCC_DEFAULT}
 +
  # Only enable Qt binding, and disable everything else
  CMAKE_ON=	MOD_GLAXNIMATE

@@ -1,5 +1,5 @@
 # g++ v8 does not ship <bit> yet
-USE_GCC_VERSION=	10
+USE_GCC_VERSION=	${GCC_DEFAULT}
 
 # no pulse
 OPTIONS_DEFAULT:=	${OPTIONS_DEFAULT:NPULSEAUDIO:NJACK}
