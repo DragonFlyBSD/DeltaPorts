@@ -1,0 +1,41 @@
+gcc/ChangeLog:
+
+2019-04-24  Iain Buclaw  <ibuclaw@gdcproject.org>
+
+        * config.gcc (*-*-dragonfly*): Add dragonfly-d.o
+        * config/dragonfly-d.c: New file.
+        * config/t-dragonfly: New file.
+
+libphobos/ChangeLog:
+
+2019-04-24  Iain Buclaw  <ibuclaw@gdcproject.org>
+
+        * configure.tgt: Add *-*-dragonfly* as a supported target.
+
+diff --git gcc/config/t-dragonfly gcc/config/t-dragonfly
+new file mode 100644
+index 00000000000..34fc389d965
+--- /dev/null
++++ gcc/config/t-dragonfly
+@@ -0,0 +1,21 @@
++# Copyright (C) 2019 Free Software Foundation, Inc.
++#
++# This file is part of GCC.
++#
++# GCC is free software; you can redistribute it and/or modify
++# it under the terms of the GNU General Public License as published by
++# the Free Software Foundation; either version 3, or (at your option)
++# any later version.
++#
++# GCC is distributed in the hope that it will be useful,
++# but WITHOUT ANY WARRANTY; without even the implied warranty of
++# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++# GNU General Public License for more details.
++#
++# You should have received a copy of the GNU General Public License
++# along with GCC; see the file COPYING3.  If not see
++# <http://www.gnu.org/licenses/>.
++
++dragonfly-d.o: $(srcdir)/config/dragonfly-d.c
++	$(COMPILE) $<
++	$(POSTCOMPILE)

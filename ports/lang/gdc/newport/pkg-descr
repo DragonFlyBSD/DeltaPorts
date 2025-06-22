@@ -1,0 +1,24 @@
+GCC, the GNU Compiler Collection, supports a number of languages.
+This port installs the GDC front ends as gdc9.
+
+GDC is the GCC-based dlang compiler, integrating the open source dmd front end
+with gcc as the backend. The GNU D Compiler (GDC) project was originally
+started by David Friedman in 2004 until early 2007 when he disappeared from the
+D scene, and was no longer able to maintain GDC. Following a revival attempt in
+2008, GDC is now under the lead of Iain Buclaw who has been steering the
+project since 2009 with the assistance of its contributors, without them the
+project would not have been nearly as successful as it has been.
+
+Any bugs or issues found with using GDC should be reported at the GCC bugzilla
+site with the bug component set to `d`. For help with GDC, the D.gnu maillist-
+list is the place to go with questions or problems. There's also a GDC IRC
+channel at #d.gdc on FreeNode. Any questions which are related to
+the D language, but not directly to the GDC compiler, can be asked in
+the https://forum.dlang.org. You can find more information about D, including
+example code, API documentation, tutorials and these forums at
+the https://dlang.org website.
+
+WWW: https://gcc.gnu.org
+
+Ian Buclaw <ibuclaw@gdcproject.org>  : GDC Maintainer
+Diederik de Groot <ddegroot@talon.nl> : Ports Maintainer
