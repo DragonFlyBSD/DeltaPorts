@@ -1,0 +1,11 @@
+--- Makefile.orig	Sat Jul  5 10:00:33 2025
++++ Makefile	Sat Jul
+@@ -26,7 +26,7 @@ CFLAGS+=	-Wno-error
+ 
+ OPTIONS_DEFINE=	DOCS
+ 
+-.if !exists(/usr/include/jail.h)
++.if !exists(/usr/include/sys/jail.h)
+ EXTRA_PATCHES=	${FILESDIR}/extra-patch-docs_pkg.8
+ .endif
+ 
