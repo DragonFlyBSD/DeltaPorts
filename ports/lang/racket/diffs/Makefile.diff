@@ -1,0 +1,11 @@
+--- Makefile.orig	2025-07-16 15:07:47.705790000 +0200
++++ Makefile	2025-07-16 15:08:09.585984000 +0200
+@@ -19,7 +19,7 @@ LICENSE=	APACHE20 MIT
+ LICENSE_COMB=	dual
+ LICENSE_FILE=	${WRKSRC}/LICENSE.txt
+ 
+-BROKEN=		Fails to build, expand-elf: cannot move SHT_PROGBITS section
++#BROKEN=		Fails to build, expand-elf: cannot move SHT_PROGBITS section
+ 
+ NOT_FOR_ARCHS=	riscv64
+ NOT_FOR_ARCHS_REASON=	unsupported platform
