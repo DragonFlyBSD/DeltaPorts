@@ -1,4 +1,4 @@
---- bsd.default-versions.mk.orig	2023-07-28 16:57:50 UTC
+--- bsd.default-versions.mk.orig	2025-08-24 19:23:28 UTC
 +++ bsd.default-versions.mk
 @@ -32,6 +32,9 @@ _l=		${lang:C/=.*//g}
  ${_l:tu}_DEFAULT=	${lang:C/.*=//g}
@@ -10,8 +10,17 @@
  # Possible values: 2.4
  APACHE_DEFAULT?=	2.4
  # Possible values: 5, 18
-@@ -74,7 +77,7 @@ LAZARUS_DEFAULT?=	2.2.6
- LAZARUS_DEFAULT?=	2.3.0
+@@ -58,7 +61,7 @@ FPC_DEFAULT?=		3.2.3
+ .  endif
+ # Possible values: 11, 12, 13, 14, 15
+ # (Any other version is completely unsupported and not meant for general use.)
+-GCC_DEFAULT?=		13
++GCC_DEFAULT?=		11
+ # Possible values: 10
+ GHOSTSCRIPT_DEFAULT?=	10
+ # Possible values: mesa-libs, mesa-devel
+@@ -82,7 +85,7 @@ LAZARUS_DEFAULT?=	4.99
+ LAZARUS_DEFAULT?=	3.8.0
  .  endif
  # Possible values: rust, legacy
 -.  if empty(ARCH:Naarch64:Namd64:Narmv7:Ni386:Npowerpc64:Npowerpc64le:Npowerpc:Nriscv64)
