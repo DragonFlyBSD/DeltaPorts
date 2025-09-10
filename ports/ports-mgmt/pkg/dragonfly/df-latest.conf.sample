@@ -147,13 +147,6 @@ GmbH: {
 }
 
 # Germany
-# RWTH Aachen
-Aachen: {
-	url		: https://ftp.halifax.rwth-aachen.de/dragonflybsd/dports/${ABI}/LATEST,
-	enabled		: no
-}
-
-# Germany
 # Technical University Clausthal
 Clausthal: {
 	url		: http://ftp.tu-clausthal.de/pub/DragonFly/dports/${ABI}/LATEST,
