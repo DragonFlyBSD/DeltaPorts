@@ -119,6 +119,13 @@ Beltelecom: {
 	enabled		: no
 }
 
+# Belgium
+# TeamBelgium
+TeamBelgium: {
+	url		: https://dragonflybsd.mirror-services.net/pub/dports/${ABI}/LATEST,
+	enabled		: no
+}
+
 # Denmark
 # Aalborg University, Aalborg
 Aalborg: {
