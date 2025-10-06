@@ -1,6 +1,6 @@
---- Uses/qt.mk.orig	2024-09-10 23:37:33 UTC
+--- Uses/qt.mk.orig	2025-10-06 20:17:31 UTC
 +++ Uses/qt.mk
-@@ -108,7 +108,7 @@ QMAKESPEC?=		${QT_MKSPECDIR}/${QMAKESPEC
+@@ -109,7 +109,7 @@ QMAKESPEC?=		${QT_MKSPECDIR}/${QMAKESPECNAME}
  # better to support custom settings. Dereferencing the detection allows to
  # avoid forking a shell on each inclusion of this file, and to catch any CXX
  # customization (via USE_GCC, etc.).
@@ -8,4 +8,13 @@
 +QMAKE_COMPILER=	g++
  
  .  for dir in BIN INC LIB ARCH PLUGIN LIBEXEC IMPORT \
- 	QML DATA DOC L10N ETC EXAMPLE TEST MKSPEC \
+ 	QML SBOM DATA DOC L10N ETC EXAMPLE TEST MKSPEC \
+@@ -125,6 +125,8 @@ PLIST_SUB+=		QT_${dir}DIR="${QT_${dir}DIR_REL}"
+ # Suppress warnings from rcc about not using a UTF-8 locale.
+ .  if ${_QT_VER:M6}
+ USE_LOCALE?=		C.UTF-8
++# Avoid having the compiler specified per port
++USE_GCC_VERSION=	${GCC_DEFAULT}
+ .  endif
+ 
+ CONFIGURE_ENV+=		QT_SELECT=${_QT_RELNAME}
