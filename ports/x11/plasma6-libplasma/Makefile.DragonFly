@@ -1,4 +1,3 @@
-USE_GCC_VERSION=	${GCC_DEFAULT}
 USES+=	gmake
 
 dfly-patch:
