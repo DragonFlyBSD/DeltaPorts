@@ -1,0 +1,8 @@
+--- distinfo.orig	Tue Oct 21 09:52:06 2025
++++ distinfo	Tue Oct
+@@ -11,3 +11,5 @@ SHA256 (go1.23.7.freebsd-386.tar.gz) = 4bc9c3583236b13
+ SIZE (go1.23.7.freebsd-386.tar.gz) = 71152629
+ SHA256 (go1.23.7.freebsd-riscv64.tar.gz) = ab00bd1b61491be2d60ff41a88b3e59d812236484eaf6232513985a1287693ba
+ SIZE (go1.23.7.freebsd-riscv64.tar.gz) = 70515235
++SHA256 (go1.23.7.dragonfly-amd64.tar.gz) = 30c626981363513cb925706978a3a8cb3516cdeae619ed9a67d4a3fbed0b21e8
++SIZE (go1.23.7.dragonfly-amd64.tar.gz) = 73220528
