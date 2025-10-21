@@ -1,7 +1,0 @@
---- pkg-plist.orig	Tue Apr  1 22:29:40 2025
-+++ pkg-plist	Tue Apr
-@@ -58,4 +58,3 @@ share/gir-1.0/Xmlb-2.0.gir
- %%PORTDOCS%%share/gtk-doc/html/libxmlb/style.css
- %%PORTDOCS%%share/gtk-doc/html/libxmlb/up-insensitive.png
- %%PORTDOCS%%share/gtk-doc/html/libxmlb/up.png
--share/man/man1/xb-tool.1.gz
