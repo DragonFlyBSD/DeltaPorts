@@ -1,0 +1,11 @@
+--- pkg-plist.orig	Tue Oct 21 22:33:10 2025
++++ pkg-plist	Tue Oct
+@@ -57,8 +57,6 @@ libdata/pkgconfig/pmix.pc
+ %%MPIDIR%%/include/openmpi/mpiext/mpiext_ftmpi_c.h
+ %%MPIDIR%%/include/openmpi/mpiext/mpiext_ftmpi_mpifh.h
+ %%MPIDIR%%/include/openmpi/mpiext/mpiext_rocm_c.h
+-%%SHORTFLOAT%%%%MPIDIR%%/include/openmpi/mpiext/mpiext_shortfloat_c.h
+-%%SHORTFLOAT%%%%MPIDIR%%/include/openmpi/mpiext/mpiext_shortfloat_mpifh.h
+ %%MPIDIR%%/include/pmix.h
+ %%MPIDIR%%/include/pmix/src/class/pmix_bitmap.h
+ %%MPIDIR%%/include/pmix/src/class/pmix_hash_table.h
