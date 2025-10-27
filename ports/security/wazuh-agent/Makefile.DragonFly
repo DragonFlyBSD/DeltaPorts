@@ -1,1 +1,1 @@
-BROKEN= too FreeBSD specific
+OPTIONS_EXCLUDE=	INOTIFY
