@@ -1,5 +1,5 @@
---- pkg-plist.orig	2024-09-15 20:19:17 UTC
-+++ pkg-plist
+--- pkg-plist.orig	Sat Nov  1 09:03:33 2025
++++ pkg-plist	Sat Nov
 @@ -5,7 +5,6 @@ bin/%%GNU_HOST%%-gcc-%%GCC_VERSION%%
  bin/%%GNU_HOST%%-gcc-ar%%SUFFIX%%
  bin/%%GNU_HOST%%-gcc-nm%%SUFFIX%%
@@ -16,7 +16,7 @@
  bin/gfortran%%SUFFIX%%
  bin/lto-dump%%SUFFIX%%
  share/man/man1/cpp%%SUFFIX%%.1.gz
-@@ -26,7 +24,6 @@ share/man/man1/gcc%%SUFFIX%%.1.gz
+@@ -26,13 +24,13 @@ share/man/man1/gcc%%SUFFIX%%.1.gz
  share/man/man1/gcov%%SUFFIX%%.1.gz
  share/man/man1/gcov-dump%%SUFFIX%%.1.gz
  share/man/man1/gcov-tool%%SUFFIX%%.1.gz
@@ -24,3 +24,10 @@
  share/man/man1/gfortran%%SUFFIX%%.1.gz
  share/man/man1/lto-dump%%SUFFIX%%.1.gz
  share/gcc-%%GCC_VERSION%%/python/libstdcxx/__init__.py
+ share/gcc-%%GCC_VERSION%%/python/libstdcxx/v6/__init__.py
+ share/gcc-%%GCC_VERSION%%/python/libstdcxx/v6/printers.py
+ share/gcc-%%GCC_VERSION%%/python/libstdcxx/v6/xmethods.py
++include/gcc%%SUFFIX%%/ISO_Fortran_binding.h
+ @postexec if type ccache-update-links >/dev/null 2>&1; then ccache-update-links -v; fi
+ @postunexec if type ccache-update-links >/dev/null 2>&1; then ccache-update-links -v; fi
+ @comment Insert PLIST.lib here

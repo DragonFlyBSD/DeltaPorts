@@ -1,6 +1,6 @@
---- Makefile.orig	2023-02-03 21:30:46 UTC
-+++ Makefile
-@@ -17,8 +17,8 @@ ONLY_FOR_ARCHS=	aarch64 amd64 arm armv6
+--- Makefile.orig	Sat Nov  1 09:03:26 2025
++++ Makefile	Sat Nov
+@@ -16,8 +16,8 @@ ONLY_FOR_ARCHS=	aarch64 amd64 armv6 armv7 i386 powerpc
  LIB_DEPENDS=	libgmp.so:math/gmp \
  		libmpfr.so:math/mpfr \
  		libmpc.so:math/mpc
@@ -11,7 +11,35 @@
  .if defined(MAINTAINER_MODE)
  BUILD_DEPENDS+=	runtest:misc/dejagnu
  .endif
-@@ -69,7 +69,7 @@ CONFIGURE_TARGET=	x86_64-portbld-${OPSYS
+@@ -38,7 +38,7 @@ CXXFLAGS:=	${CXXFLAGS:N-mretpoline}
+ OPTIONS_DEFINE=		GRAPHITE
+ GRAPHITE_DESC=		Support for Graphite loop optimizations
+ OPTIONS_DEFAULT_aarch64=STANDARD_BOOTSTRAP
+-OPTIONS_DEFAULT_amd64=	STANDARD_BOOTSTRAP
++OPTIONS_DEFAULT_x86_64=	STANDARD_BOOTSTRAP
+ OPTIONS_DEFAULT_i386=	STANDARD_BOOTSTRAP
+ OPTIONS_DEFAULT_powerpc=LTO_BOOTSTRAP
+ OPTIONS_DEFAULT_powerpc64=LTO_BOOTSTRAP
+@@ -49,8 +49,8 @@ LTO_BOOTSTRAP_DESC=	Build using a full LTO bootstrap
+ STANDARD_BOOTSTRAP_DESC=	Build using a full bootstrap without LTO
+ 
+ .if exists(/usr/lib32/libc.so)
+-OPTIONS_DEFINE_amd64+=		MULTILIB
+-OPTIONS_DEFAULT_amd64+=	MULTILIB
++OPTIONS_DEFINE_x86_64+=		MULTILIB
++OPTIONS_DEFAULT_x86_64+=	MULTILIB
+ OPTIONS_DEFINE_powerpc64+=	MULTILIB
+ #OPTIONS_DEFAULT_powerpc64+=	MULTILIB # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105010
+ MULTILIB_DESC=		Build support for 32-bit and 64-bit targets
+@@ -75,14 +75,14 @@ CXXFLAGS:=	${CFLAGS:S/mcpu=g/mcpu=G/}
+ EXTRACT_CMD=    ${SETENV} LC_ALL=en_US.UTF-8 /usr/bin/bsdtar
+ .endif
+ 
+-.if ${ARCH} == amd64
++.if ${ARCH} == x86_64
+ CONFIGURE_TARGET=	x86_64-portbld-${OPSYS:tl}${OSREL}
+ 
+ .elif ${ARCH} == powerpc64
  CONFIGURE_ARGS+=	--with-abi=elfv2
  .endif
  
@@ -20,3 +48,26 @@
  TARGLIB=	${PREFIX}/lib/gcc${SUFFIX}
  TARGLIB32=	${PREFIX}/lib32	# The version information is added later
  LIBEXEC=	${PREFIX}/libexec/gcc${SUFFIX}
+@@ -148,7 +148,7 @@ CONFIGURE_ARGS+=--with-isl=${LOCALBASE}
+ 
+ CONFIGURE_ARGS+=--enable-languages=${LANGUAGES}
+ 
+-.if (${ARCH} == amd64 || ${ARCH} == powerpc64) && ${PORT_OPTIONS:MMULTILIB}
++.if (${ARCH} == x86_64 || ${ARCH} == powerpc64) && ${PORT_OPTIONS:MMULTILIB}
+ USE_LDCONFIG32=	${TARGLIB32}/gcc${SUFFIX}
+ .endif
+ 
+@@ -170,8 +170,12 @@ post-stage:
+ 	${RM} -r ${STAGEDIR}${TARGLIB}/gcc/*/${GCC_VERSION}/include-fixed/
+ 	# Add target libraries and include files to packaging list.
+ 	${RM} ${WRKDIR}/PLIST.lib
++	# Install ISO_Fortran_binding.h in an easily findable directory
++	${MKDIR} ${STAGEDIR}${PREFIX}/include/gcc${SUFFIX}
++	${INSTALL_DATA} ${STAGEDIR}${PREFIX}/lib/gcc${SUFFIX}/gcc/${CONFIGURE_TARGET}/${GCC_VERSION}/include/ISO_Fortran_binding.h      \
++		${STAGEDIR}${PREFIX}/include/gcc${SUFFIX}
+ 
+-.if (${ARCH} == amd64 || ${ARCH} == powerpc64) && ${PORT_OPTIONS:MMULTILIB}
++.if (${ARCH} == x86_64 || ${ARCH} == powerpc64) && ${PORT_OPTIONS:MMULTILIB}
+ 	${MKDIR} ${STAGEDIR}${TARGLIB32}
+ 	${MV} ${STAGEDIR}${PREFIX}/lib/lib32 ${STAGEDIR}${TARGLIB32}/gcc${SUFFIX}
+ .endif
