@@ -1,6 +1,6 @@
---- Makefile.orig	2018-11-28 05:21:50 UTC
-+++ Makefile
-@@ -87,13 +87,6 @@ QMAKE_CONFIGURE_ARGS=	-proprietary-codec
+--- Makefile.orig	Sat Nov  1 10:56:35 2025
++++ Makefile	Sat Nov
+@@ -94,13 +94,6 @@ QMAKE_CONFIGURE_ARGS=	-proprietary-codecs -system-ffmp
  # dependencies correctly in the generated Makefiles, use the right target here.
  ALL_TARGET=	first
  
@@ -14,3 +14,15 @@
  # The build system reads the environment variable $NINJA_PATH to decide whether
  # to boostrap ninja or not (and also to invoke it afterwards). CC and CXX are
  # read by some Chromium code to determine which compiler to invoke when running
+@@ -170,11 +163,5 @@ post-build:
+ 	@${REINPLACE_CMD} -e '/${QT5_VERSION} $${_Qt5${module}_FIND_VERSION_EXACT}/s|${QT5_VERSION}|'"$$(${MAKE} -C ../../devel/qt5-core -VQT5_VERSION)"'|' \
+ 		${BUILD_WRKSRC}/lib/cmake/Qt5${module}/Qt5${module}Config.cmake
+ .endfor
+-
+-post-install:
+-	for lib in ${STAGEDIR}${PREFIX}/${QT_LIBDIR_REL}/*.so.${_QT_VERSION:C/-.*//} ; \
+-	do \
+-		${BRANDELF} -t FreeBSD $$lib ; \
+-	done
+ 
+ .include <bsd.port.post.mk>
