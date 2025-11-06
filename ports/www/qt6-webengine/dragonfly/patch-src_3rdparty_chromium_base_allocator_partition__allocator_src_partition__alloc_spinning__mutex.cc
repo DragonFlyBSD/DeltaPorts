@@ -1,6 +1,6 @@
---- src/3rdparty/chromium/base/allocator/partition_allocator/spinning_mutex.cc.orig	2024-06-09 13:15:10 UTC
-+++ src/3rdparty/chromium/base/allocator/partition_allocator/spinning_mutex.cc
-@@ -25,6 +25,8 @@
+--- src/3rdparty/chromium/base/allocator/partition_allocator/src/partition_alloc/spinning_mutex.cc.intermediate	Thu Nov  6 18:11:31 2025
++++ src/3rdparty/chromium/base/allocator/partition_allocator/src/partition_alloc/spinning_mutex.cc	Thu Nov
+@@ -24,6 +24,8 @@
  #include <sys/types.h>
  #include <sys/thr.h>
  #include <sys/umtx.h>
@@ -9,7 +9,7 @@
  #else
  #include <linux/futex.h>
  #endif
-@@ -122,6 +124,8 @@ void SpinningMutex::FutexWait() {
+@@ -124,6 +126,8 @@ void SpinningMutex::FutexWait() {
  #elif defined(OS_OPENBSD)
    int err = futex(reinterpret_cast<volatile unsigned int *>(&state_), FUTEX_WAIT | FUTEX_PRIVATE_FLAG,
                      kLockedContended, nullptr, nullptr);
@@ -18,7 +18,7 @@
  #else
    int err = syscall(SYS_futex, &state_, FUTEX_WAIT | FUTEX_PRIVATE_FLAG,
                      kLockedContended, nullptr, nullptr, 0);
-@@ -143,6 +147,8 @@ void SpinningMutex::FutexWake() {
+@@ -145,6 +149,8 @@ void SpinningMutex::FutexWake() {
  #elif defined(OS_OPENBSD)
    long retval = futex(reinterpret_cast<volatile unsigned int *>(&state_), FUTEX_WAKE | FUTEX_PRIVATE_FLAG,
                          1 /* wake up a single waiter */, nullptr, nullptr);
