@@ -10,8 +10,11 @@ BINARY_ALIAS+=		cpp=${LOCALBASE}/bin/clang-cpp${LLVM_DEFAULT} \
 # XXX - This is a hack to force llvm to use libc++ C++ includes instead of base's gcc
 CXXFLAGS+=	-nostdlib++ -nostdinc++ -stdlib=libc++ -I${LOCALBASE}/include -I${LOCALBASE}/include/cxxrt
 CXXFLAGS+=	-cxx-isystem ${LOCALBASE}/llvm${LLVM_DEFAULT}/libcxx/include/c++/v1
-CXXFLAGS+=	-Wno-error=unused-command-line-argument
+CXXFLAGS+=	-Wno-error=unused-command-line-argument -Wunused-command-line-argument
 LDFLAGS=	-L /usr/lib -L${LOCALBASE}/llvm${LLVM_DEFAULT}/libcxx/lib/c++ -L /lib
+
+#CFLAGS+=	-Wno-implicit-function-declaration
+CONFIGURE_ENV+=	CXXFLAGS="${CXXFLAGS}" CFLAGS="${CFLAGS}" LDFLAGS="${LDFLAGS}"
 
 # Since FreeBSD has libc++ in base we need to rely on DPorts' libcxx
 LIB_DIRS+=	${PREFIX}/llvm${LLVM_DEFAULT}/libcxx/lib
@@ -31,4 +34,12 @@ dfly-patch:
 	${REINPLACE_CMD} -e "s|FreeBSD|DragonFly|g" \
 		-e "s|freebsd\/sandbox_freebsd.h|dragonfly\/sandbox_dragonfly.h|g" \
 		${WRKSRC}/src/3rdparty/chromium/sandbox/policy/dragonfly/sandbox_dragonfly.h \
-		${WRKSRC}/src/3rdparty/chromium/sandbox/policy/dragonfly/sandbox_dragonfly.cc \
+		${WRKSRC}/src/3rdparty/chromium/sandbox/policy/dragonfly/sandbox_dragonfly.cc
+	${CP} ${WRKSRC}/src/3rdparty/chromium/base/process/process_handle_freebsd.cc \
+		${WRKSRC}/src/3rdparty/chromium/base/process/process_handle_dragonfly.cc
+	${CP} ${WRKSRC}/src/3rdparty/chromium/base/process/process_iterator_freebsd.cc \
+		${WRKSRC}/src/3rdparty/chromium/base/process/process_iterator_dragonfly.cc
+	${CP} ${WRKSRC}/src/3rdparty/chromium/base/process/process_metrics_freebsd.cc \
+		${WRKSRC}/src/3rdparty/chromium/base/process/process_metrics_dragonfly.cc
+	${CP} ${WRKSRC}/src/3rdparty/chromium/base/system/sys_info_freebsd.cc \
+		${WRKSRC}/src/3rdparty/chromium/base/system/sys_info_dragonfly.cc

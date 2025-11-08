@@ -1,4 +1,4 @@
---- src/3rdparty/gn/build/gen.py.orig	Thu Nov  6 19:22:56 2025
+--- src/3rdparty/gn/build/gen.py.orig	Thu Nov  6 22:03:17 2025
 +++ src/3rdparty/gn/build/gen.py	Thu Nov
 @@ -51,6 +51,8 @@ class Platform(object):
        self._platform = 'netbsd'
@@ -39,3 +39,21 @@
        'aix': 'build_aix.ninja.template',
        'openbsd': 'build_linux.ninja.template',
        'haiku': 'build_haiku.ninja.template',
+@@ -435,13 +441,13 @@ def WriteGNNinja(path, platform, host, options, args_l
+ 
+ 
+   # cflags = os.environ.get('CFLAGS', '').split()
+-  # cflags += os.environ.get('CXXFLAGS', '').split()
+-  # ldflags = os.environ.get('LDFLAGS', '').split()
++  cflags = os.environ.get('CXXFLAGS', '').split()
++  ldflags = os.environ.get('LDFLAGS', '').split()
+   # libflags = os.environ.get('LIBFLAGS', '').split()
+ 
+-  cflags = []
++  #cflags = []
+   cflags_cc = []
+-  ldflags = []
++  #ldflags = []
+   libflags = []
+ 
+   cc = options.cc
