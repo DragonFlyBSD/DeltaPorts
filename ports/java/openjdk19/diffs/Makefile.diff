@@ -1,0 +1,26 @@
+--- Makefile.orig	Sun Nov  9 12:12:08 2025
++++ Makefile	Sun Nov
+@@ -133,6 +133,7 @@ MAKE_ENV+=		--with-toolchain-type=${COMPILER_TYPE}
+ CONFIGURE_ARGS+=	--with-toolchain-type=${COMPILER_TYPE}
+ CONFIGURE_ARGS+=	--disable-warnings-as-errors
+ 
++.if ${OPSYS} == "FreeBSD"
+ .if ${COMPILER_TYPE} == gcc
+ USE_GCC=	yes
+ CONFIGURE_ARGS+=	--with-extra-ldflags="-Wl,-rpath=${LOCALBASE}/lib/gcc${GCC_DEFAULT} -L${LOCALBASE}/lib/gcc${GCC_DEFAULT}" \
+@@ -152,6 +153,7 @@ CONFIGURE_ARGS+=	--with-boot-jdk-jvmargs=-XX:-UseCompr
+ MAKE_ENV+=		JAVA_TOOL_OPTIONS="-XX:-UseCompressedClassPointers"
+ EXTRA_PATCHES=		${PATCHDIR}/extra-patch-src_hotspot_share_runtime_arguments.cpp
+ .endif
++.endif
+ 
+ .if empty(ICONV_LIB)
+ ICONV_CFLAGS=	-DLIBICONV_PLUG
+@@ -174,6 +176,7 @@ post-patch:
+ 
+ do-install:
+ 	@${MKDIR} ${STAGEDIR}${INSTALLDIR}
++	${CP} -rv ${JDK_IMAGEDIR}/include/freebsd ${JDK_IMAGEDIR}/include/dragonfly
+ 	@cd ${JDK_IMAGEDIR} && ${COPYTREE_SHARE} . ${STAGEDIR}${INSTALLDIR}
+ 	@cd ${STAGEDIR}${INSTALLDIR} && \
+ 		${FIND} bin -type f -exec ${CHMOD} ${BINMODE} {} \;
