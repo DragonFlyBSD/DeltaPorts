@@ -1,0 +1,11 @@
+--- Makefile.orig	2025-11-16 20:47:10.483493000 +0100
++++ Makefile	2025-11-16 20:47:20.323578000 +0100
+@@ -25,7 +25,7 @@ PLIST_SUB=	VERSION=${PORTVERSION}
+ EXTRA_PATCHES=	${FILESDIR}/extra-patch-test_meson.build
+ .endif
+ .if ${OPSYS} == DragonFly
+-IGNORE=	fusefs has not been implemented on DragonFly
++EXTRA_PATCHES=	${FILESDIR}/extra-patch-test_meson.build
+ .endif
+ 
+ .include <bsd.port.post.mk>
