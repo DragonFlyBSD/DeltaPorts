@@ -1,0 +1,11 @@
+--- Makefile.orig	2025-11-16 20:43:18.501578000 +0100
++++ Makefile	2025-11-16 20:43:24.041617000 +0100
+@@ -13,8 +13,6 @@ WWW=		https://github.com/libfuse/libfuse
+ LICENSE=	LGPL21
+ LICENSE_FILE=	${WRKSRC}/COPYING.LIB
+ 
+-IGNORE_DragonFly=	fusefs has not been implemented on DragonFly
+-
+ USES=		autoreconf gettext-tools iconv libtool
+ USE_LDCONFIG=	yes
+ 
