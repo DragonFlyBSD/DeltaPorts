@@ -1,14 +1,23 @@
---- Makefile.orig	2024-09-23 14:55:30 UTC
-+++ Makefile
-@@ -29,7 +29,6 @@ LIB_DEPENDS=	libabsl_base.so:devel/absei
+--- Makefile.orig	Mon Nov 17 22:43:04 2025
++++ Makefile	Mon Nov
+@@ -31,7 +31,6 @@ LIB_DEPENDS=	libabsl_base.so:devel/abseil \
  		libavformat.so:multimedia/ffmpeg \
  		libcrc32c.so:devel/crc32c \
  		libdbus-1.so:devel/dbus \
 -		libdispatch.so:devel/libdispatch \
  		libfmt.so:devel/libfmt \
- 		libhunspell-1.7.so:textproc/hunspell \
- 		liblz4.so:archivers/liblz4 \
-@@ -84,9 +83,6 @@ CMAKE_ON=	DESKTOP_APP_USE_PACKAGED DESKT
+ 		libgeoclue-2.so:net/geoclue \
+ 		libgeocode-glib-2.so:net/geocode-glib2 \
+@@ -47,7 +46,7 @@ LIB_DEPENDS=	libabsl_base.so:devel/abseil \
+ 		libxxhash.so:devel/xxhash \
+ 		libvpx.so:multimedia/libvpx
+ 
+-USES=		cmake compiler:c++20-lang desktop-file-utils gl gnome jpeg kde:6 localbase \
++USES=		cmake desktop-file-utils gl gnome jpeg kde:6 localbase \
+ 		minizip openal pkgconfig python:build qt:6 ssl
+ 
+ USE_GITHUB=	nodefault
+@@ -69,9 +68,6 @@ CMAKE_ON=	DESKTOP_APP_USE_PACKAGED DESKTOP_APP_DISABLE
  # Since cmake 3.25.0, BSDs are no longer recognised as Linux (in this port).
  CMAKE_ARGS+=	-DLINUX=true
  
@@ -18,9 +27,18 @@
  # Telegram uses OpenAL for its audio, but libtgvoip (for voice calls) can use PulseAudio or ALSA.
  # It dynamically loads PulseAudio, and if this fails, it loads ALSA.
  # If both of them are not installed, then voice calls do not work, but other functionalities still work.
-@@ -128,14 +124,11 @@ post-extract:
+@@ -103,20 +99,20 @@ X11_LIB_DEPENDS=	libxcb-keysyms.so:x11/xcb-util-keysym
+ TELEGRAM_API_HASH=	20a3432aab43f24bb4460fceac5ba38d
+ TELEGRAM_API_ID=	601761
+ 
++.include <bsd.port.pre.mk>
++USE_GCC_VERSION=	13
++
+ post-extract:
+ 	# Some of the third-party components already built, and
  	# can be safely removed
  	${RM} -rf \
+ 		${WRKSRC}/Telegram/ThirdParty/GSL \
  		${WRKSRC}/Telegram/ThirdParty/QR \
 -		${WRKSRC}/Telegram/ThirdParty/dispatch \
  		${WRKSRC}/Telegram/ThirdParty/expected \
@@ -33,3 +51,9 @@
  		${WRKSRC}/Telegram/ThirdParty/kimageformats \
  		${WRKSRC}/Telegram/ThirdParty/lz4 \
  		${WRKSRC}/Telegram/ThirdParty/minizip \
+@@ -133,4 +129,4 @@ post-patch:
+ 	${REINPLACE_CMD} -e /-Wno-maybe-uninitialized/d -e /-fstack-clash-protection/d \
+ 	    ${WRKSRC}/cmake/options_linux.cmake
+ 
+-.include <bsd.port.mk>
++.include <bsd.port.post.mk>
