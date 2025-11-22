@@ -1,6 +1,6 @@
---- os.h.intermediate	2019-10-30 09:38:11 UTC
-+++ os.h
-@@ -250,11 +250,14 @@ extern int errno;
+--- os.h.orig	2025-11-22 20:19:04.142387000 +0100
++++ os.h	2025-11-22 20:19:16.132465000 +0100
+@@ -250,7 +250,7 @@ extern int errno;
  #endif
  
  #if defined(UTMPOK) || defined(BUGGYGETLOGIN)
@@ -9,10 +9,3 @@
  #  include <utmpx.h>
  #  ifdef UTMPX_FILE /* GNU extension */
  #   define UTMPFILE	UTMPX_FILE
- #  endif
-+#  ifndef UTMPFILE
-+#   define UTMPFILE	_PATH_UTMPX
-+#  endif
- #  define utmp		utmpx
- #  define getutent	getutxent
- #  define getutid	getutxid
