@@ -1,6 +1,6 @@
---- src/util/virprocess.c.orig	2021-07-27 15:34:37.463931000 +0200
-+++ src/util/virprocess.c	2021-07-27 15:44:27.630492000 +0200
-@@ -444,11 +444,29 @@
+--- src/util/virprocess.c.orig	2025-12-22 09:47:51 UTC
++++ src/util/virprocess.c
+@@ -506,6 +506,22 @@ virProcessGetAffinity(pid_t pid)
  int virProcessSetAffinity(pid_t pid, virBitmap *map, bool quiet)
  {
      size_t i;
@@ -23,22 +23,7 @@
      int numcpus = 1024;
      size_t masklen;
      cpu_set_t *mask;
-+
-     int rv = -1;
- 
-+	/* New method dynamically allocates cpu mask, allowing unlimted cpus */
-     VIR_DEBUG("Set process affinity on %lld", (long long)pid);
- 
-     /* Not only may the statically allocated cpu_set_t be too small,
-@@ -480,6 +498,7 @@
-             numcpus = numcpus << 2;
-             goto realloc;
-         }
-+
-         if (quiet) {
-             VIR_DEBUG("cannot set CPU affinity on process %d: %s",
-                       pid, g_strerror(errno));
-@@ -489,6 +508,7 @@
+@@ -552,6 +568,7 @@ int virProcessSetAffinity(pid_t pid, virBitmap *map, b
              return -1;
          }
      }
@@ -46,7 +31,7 @@
  
      return 0;
  }
-@@ -497,11 +517,16 @@
+@@ -560,11 +577,16 @@ virBitmap *
  virProcessGetAffinity(pid_t pid)
  {
      size_t i;
@@ -63,11 +48,10 @@
      /* 262144 cpus ought to be enough for anyone */
      ncpus = 1024 << 8;
      masklen = CPU_ALLOC_SIZE(ncpus);
-@@ -511,8 +536,17 @@
-         abort();
+@@ -575,7 +597,17 @@ virProcessGetAffinity(pid_t pid)
  
      CPU_ZERO_S(masklen, mask);
--
+ 
 -    if (sched_getaffinity(pid, masklen, mask) < 0) {
 +#else
 +    ncpus = 256; /* XXX */
@@ -81,9 +65,9 @@
 +    if (sched_getaffinity(pid, masklen, &maskt) < 0) {
 +#endif
          virReportSystemError(errno,
-                              _("cannot get CPU affinity of process %d"), pid);
+                              _("cannot get CPU affinity of process %1$d"), pid);
          goto cleanup;
-@@ -521,12 +555,19 @@
+@@ -584,12 +616,19 @@ virProcessGetAffinity(pid_t pid)
      ret = virBitmapNew(ncpus);
  
      for (i = 0; i < ncpus; i++) {
@@ -103,8 +87,8 @@
  
      return ret;
  }
-@@ -1165,7 +1206,7 @@
- 
+@@ -1173,7 +1212,7 @@ int virProcessGetStartTime(pid_t pid,
+     }
      return 0;
  }
 -#elif defined(__FreeBSD__) || defined(__FreeBSD_kernel__)

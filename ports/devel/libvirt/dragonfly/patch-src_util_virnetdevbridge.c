@@ -1,4 +1,4 @@
---- src/util/virnetdevbridge.c.orig	2023-09-01 10:59:24 UTC
+--- src/util/virnetdevbridge.c.orig	2025-12-17 11:26:27 UTC
 +++ src/util/virnetdevbridge.c
 @@ -44,7 +44,7 @@
  
@@ -9,23 +9,25 @@
  #endif
  
  #define VIR_FROM_THIS VIR_FROM_NONE
-@@ -620,6 +620,12 @@ int virNetDevBridgeAddPort(const char *b
-                            const char *ifname)
+@@ -682,7 +682,13 @@ int virNetDevBridgeAddPort(const char *brname,
+                            const virNetDevVlan *virtVlan)
  {
      struct ifbreq req = { 0 };
 +#if defined(__DragonFly__)
 +    struct ifreq ifr;
 +    int flags, s;
-+
+ 
 +    memset(&ifr, 0, sizeof(ifr));
 +#endif
- 
-     if (virStrcpyStatic(req.ifbr_ifsname, ifname) < 0) {
-         virReportSystemError(ERANGE,
-@@ -628,6 +634,27 @@ int virNetDevBridgeAddPort(const char *b
++
+     if (virtVlan) {
+         virReportSystemError(ENOSYS, "%s", _("Not supported on this platform"));
+         return -1;
+@@ -694,6 +700,27 @@ int virNetDevBridgeAddPort(const char *brname,
+                              ifname);
          return -1;
      }
- 
++
 +#if defined(__DragonFly__)
 +    snprintf(ifr.ifr_name, IF_NAMESIZE, "%s", ifname);
 +
@@ -46,7 +48,6 @@
 +    }
 +    close(s);
 +#endif
-+
+ 
      if (virNetDevBridgeCmd(brname, BRDGADD, &req, sizeof(req)) < 0) {
          virReportSystemError(errno,
-                              _("Unable to add bridge %1$s port %2$s"), brname, ifname);
