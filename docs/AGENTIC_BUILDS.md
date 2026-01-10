@@ -514,6 +514,32 @@ Done when:
 
 - One port can be taken through at least one full iteration with all artifacts captured and visible.
 
+## VM / Builder Access (Phase 1 testing)
+
+This section documents the DragonFlyBSD builder VM used for testing the agentic workflow.
+
+### SSH access
+
+```sh
+ssh -i /home/antonioh/.go-synth/vm/id_ed25519 -p 2222 \
+    -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+    root@localhost
+```
+
+### Key paths on the builder
+
+| Path | Purpose |
+|------|---------|
+| `/build/synth/DeltaPorts` | DeltaPorts overlay checkout (where changes are made) |
+| `/build/synth/DPorts` | Staged DPorts checkout (used by dsynth builds) |
+| `/var/log/agentic-dports` | Evidence root (`Directory_logs` for hooks) |
+| `/etc/dsynth/` or `/usr/local/etc/dsynth/` | dsynth config base (hooks go here) |
+
+### Required tools on the builder
+
+- `rg` (ripgrep) — used by `hook_pkg_failure` for log distillation
+- `gzip` — used to compress full logs
+
 ## Non-goals / explicit avoids
 
 - Feeding full build logs into AI contexts.
