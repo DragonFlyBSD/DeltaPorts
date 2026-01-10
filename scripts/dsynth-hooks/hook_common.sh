@@ -90,6 +90,52 @@ evidence_root() {
 	printf '%s\n' "${DIR_LOGS}/evidence"
 }
 
+queue_root() {
+	printf '%s\n' "$(evidence_root)/queue"
+}
+
+ensure_queue_dirs() {
+	qroot=$(queue_root)
+	mkdir -p "${qroot}/pending"
+	mkdir -p "${qroot}/inflight"
+	mkdir -p "${qroot}/done"
+	mkdir -p "${qroot}/failed"
+}
+
+enqueue_job() {
+	# Args: bundle_dir origin flavor profile run_id ts
+	bundle_dir=$1
+	origin=$2
+	flavor=$3
+	profile=$4
+	run_id=$5
+	ts=$6
+
+	qroot=$(queue_root)
+	origin_s=$(sanitize_component "$origin")
+
+	# Build filename, omit flavor if redundant
+	fname="${ts}-${profile}-${origin_s}"
+	if [ -n "$flavor" ] && [ "$flavor" != "$origin" ] && [ "$flavor" != "${origin%%@*}" ]; then
+		flavor_s=$(sanitize_component "$flavor")
+		fname="${fname}-@${flavor_s}"
+	fi
+	fname="${fname}-$$.job"
+
+	# Write to temp file first
+	tmpfile="${qroot}/pending/.tmp.$$.${ts}"
+	write_kv_file "$tmpfile" \
+		"created_ts_utc=${ts}" \
+		"profile=${profile}" \
+		"origin=${origin}" \
+		"flavor=${flavor}" \
+		"bundle_dir=${bundle_dir}" \
+		"run_id=${run_id}"
+
+	# Atomic move to final location
+	mv "$tmpfile" "${qroot}/pending/${fname}"
+}
+
 write_kv_file() {
 	out=$1
 	shift
