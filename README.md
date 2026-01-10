@@ -26,6 +26,8 @@ For a disposable DragonFly chroot development shell, use
 - **scripts/**  
   Shell scripts to generate the final DPorts repository, as well as a copy of the Tinderbox hooks.
 
+  Also includes `scripts/dsynth-hooks/` which provides dsynth hook scripts to capture a bounded, high-signal “evidence bundle” (distilled errors + port context) when a port fails to build.
+
 - **ports/**  
   Contains subdirectories corresponding to Ports categories (e.g., `audio`, `editors`, `devel`, etc.).
 

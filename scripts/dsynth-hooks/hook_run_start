@@ -1,0 +1,34 @@
+#!/bin/sh
+
+set -eu
+
+. "$(dirname "$0")/hook_common.sh"
+
+root=$(evidence_root)
+ts=$(now_utc)
+run_id="run-$(sanitize_component "${PROFILE}")-${ts}-$$"
+run_dir="${root}/runs/${run_id}"
+
+mkdir -p "${run_dir}"
+
+# Record current run dir for per-port hooks.
+printf '%s\n' "${run_dir}" > "${root}/.current_run"
+
+write_kv_file "${run_dir}/run_start.txt" \
+	"ts_utc=${ts}" \
+	"profile=${PROFILE}" \
+	"ports_queued=${PORTS_QUEUED:-}" \
+	"dir_logs=${DIR_LOGS}" \
+	"dir_ports=${DIR_PORTS}" \
+	"dir_buildbase=${DIR_BUILDBASE}" \
+	"dir_packages=${DIR_PACKAGES}" \
+	"dir_repository=${DIR_REPOSITORY}" \
+	"dir_options=${DIR_OPTIONS}" \
+	"dir_distfiles=${DIR_DISTFILES}"
+
+# Capture dsynth config snapshot best-effort.
+confdir=$(hook_config_dir)
+copy_if_exists "${confdir}/dsynth.ini" "${run_dir}/dsynth.ini"
+copy_if_exists "${confdir}/${PROFILE}-make.conf" "${run_dir}/${PROFILE}-make.conf"
+
+exit 0

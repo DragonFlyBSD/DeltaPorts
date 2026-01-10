@@ -1,0 +1,71 @@
+#!/bin/sh
+
+set -eu
+
+. "$(dirname "$0")/hook_common.sh"
+
+: "${RESULT:=failure}"
+: "${ORIGIN:=}"
+: "${FLAVOR:=}"
+: "${PKGNAME:=}"
+
+run_dir=$(current_run_dir)
+ts=$(now_utc)
+
+origin_base=${ORIGIN%%@*}
+origin_s=$(sanitize_component "$origin_base")
+flavor_s=$(sanitize_component "$FLAVOR")
+
+bundle_dir="${run_dir}/ports/${origin_s}"
+if [ -n "$FLAVOR" ] && [ "$FLAVOR" != "$ORIGIN" ] && [ "$FLAVOR" != "$origin_base" ]; then
+	bundle_dir="${bundle_dir}@${flavor_s}"
+fi
+bundle_dir="${bundle_dir}-${ts}"
+
+mkdir -p "${bundle_dir}"
+
+# Metadata
+write_kv_file "${bundle_dir}/meta.txt" \
+	"ts_utc=${ts}" \
+	"result=${RESULT}" \
+	"origin=${ORIGIN}" \
+	"origin_base=${origin_base}" \
+	"flavor=${FLAVOR}" \
+	"pkgname=${PKGNAME}" \
+	"profile=${PROFILE}" \
+	"dir_logs=${DIR_LOGS}" \
+	"dir_ports=${DIR_PORTS}" \
+	"dir_buildbase=${DIR_BUILDBASE}" \
+	"dir_packages=${DIR_PACKAGES}" \
+	"dir_repository=${DIR_REPOSITORY}" \
+	"dir_options=${DIR_OPTIONS}" \
+	"dir_distfiles=${DIR_DISTFILES}"
+
+# Config snapshot best-effort
+confdir=$(hook_config_dir)
+copy_if_exists "${confdir}/dsynth.ini" "${bundle_dir}/dsynth.ini"
+copy_if_exists "${confdir}/${PROFILE}-make.conf" "${bundle_dir}/${PROFILE}-make.conf"
+
+# Port context snapshot (bounded)
+portdir="${DIR_PORTS}/${origin_base}"
+copy_if_exists "${portdir}/Makefile" "${bundle_dir}/port/Makefile"
+copy_if_exists "${portdir}/Makefile.local" "${bundle_dir}/port/Makefile.local"
+copy_if_exists "${portdir}/distinfo" "${bundle_dir}/port/distinfo"
+copy_if_exists "${portdir}/pkg-plist" "${bundle_dir}/port/pkg-plist"
+copy_if_exists "${portdir}/pkg-descr" "${bundle_dir}/port/pkg-descr"
+copy_if_exists "${portdir}/pkg-message" "${bundle_dir}/port/pkg-message"
+copy_glob_if_exists "${portdir}/files" "patch-*" "${bundle_dir}/port/files"
+
+# Log capture
+logfile=$(logfile_for_origin "$ORIGIN" "$FLAVOR")
+write_kv_file "${bundle_dir}/logfile.txt" "logfile=${logfile}"
+
+# Distill to a bounded error bundle.
+distill_log "$logfile" "${bundle_dir}/logs"
+
+# Keep the full log available but compressed.
+if [ -r "$logfile" ]; then
+	gzip -c -9 "$logfile" > "${bundle_dir}/logs/full.log.gz" || true
+fi
+
+exit 0
