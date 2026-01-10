@@ -366,47 +366,153 @@ Ingestion strategy:
 - Start with a periodic reconcile loop (e.g. poll every 1s) and emit events when new/changed items are detected.
 - Optionally later, allow local push notifications from the runner for lower latency (but keep the observer-only design).
 
-### Implementation plan (next coding steps)
+### Implementation plan (phased)
 
-This section is the concrete checklist for implementing the queue + runner + synchronous agent triage described above.
+This section turns the workflow above into an incremental, testable buildout. Each phase has concrete tasks and a “done when” gate.
 
-1. **Enqueue jobs from dsynth failure hook**
-   - Update `scripts/dsynth-hooks/hook_pkg_failure` to enqueue one job per failure instance after writing the evidence bundle.
-   - Use temp file + `mv` for atomic enqueue into `${Directory_logs}/evidence/queue/pending/`.
+#### Phase 1 — Evidence capture (already implemented)
 
-2. **Add queue helpers to the hook library**
-   - Update `scripts/dsynth-hooks/hook_common.sh` to provide helpers such as:
-     - `queue_root()` → `${Directory_logs}/evidence/queue/`
-     - `ensure_queue_dirs()` → create `pending/`, `inflight/`, `done/`, `failed/`
-     - `enqueue_job(...)` → write a `key=value` job file and atomically enqueue it
+Goal: dsynth failures reliably produce bounded evidence bundles.
 
-3. **Add the single-worker runner script**
-   - Add `scripts/agent-queue-runner` which processes jobs from the central queue.
-   - Interface:
-     - `scripts/agent-queue-runner --queue-root <path>`
-     - Optional modes for testing: `--once` and `--dry-run`
+Tasks:
 
-4. **Send synchronous triage requests to opencode (session-per-job)**
-   - Runner creates one session per job and uses `POST /session/<id>/message` (sync).
-   - Runner configuration via env vars (example):
-     - `OPENCODE_URL=http://<opencode-host>:4096`
-     - `OPENCODE_AGENT=dports-triage`
-     - `OPENCODE_TIMEOUT=60`
+- Install the dsynth hooks from `scripts/dsynth-hooks/` into dsynth’s config base.
+- Verify that failures generate bundles with `meta.txt`, `logs/errors.txt` (capped), `logs/full.log.gz`, and `port/*` context.
 
-5. **Write outputs back into the evidence bundle**
-   - Runner writes results into `bundle_dir/analysis/`:
-     - `analysis/triage.json` (raw response)
-     - `analysis/triage.md` (human-readable extraction)
-     - optionally `analysis/session_id.txt`
+Done when:
 
-6. **Harden the runner**
-   - Locking (single runner instance), retries/backoff on transient HTTP failures, and simple logging.
-   - On permanent failure, move the job to `failed/` and write an error note.
+- A known failing port produces an evidence bundle under `${Directory_logs}/evidence/runs/.../ports/.../` with the expected files.
 
-7. **Manual end-to-end test**
-   - Trigger a known dsynth failure to generate an evidence bundle and confirm a job lands in `pending/`.
-   - Run `scripts/agent-queue-runner --queue-root ... --dry-run` to validate payload selection/caps.
-   - Run against a live `opencode serve` and confirm `analysis/triage.md` + `analysis/triage.json` are written and the job moves to `done/`.
+#### Phase 2 — Central queue enqueue (hook-side)
+
+Goal: every failure instance becomes a queue job; hooks remain non-blocking.
+
+Tasks:
+
+- Update `scripts/dsynth-hooks/hook_common.sh` to add:
+  - `queue_root()` → `${Directory_logs}/evidence/queue/`
+  - `ensure_queue_dirs()` → create `pending/`, `inflight/`, `done/`, `failed/`
+  - `enqueue_job(...)` → write a `key=value` job file and atomically enqueue it (temp + `mv`)
+- Update `scripts/dsynth-hooks/hook_pkg_failure` to enqueue one job per failure instance after writing the evidence bundle.
+
+Done when:
+
+- Each new failure bundle produces exactly one `.job` in `${Directory_logs}/evidence/queue/pending/`.
+
+#### Phase 3 — Worker: triage jobs (runner-side)
+
+Goal: asynchronously triage failures via `opencode serve` and write outputs back into the bundle.
+
+Tasks:
+
+- Add `scripts/agent-queue-runner` (single worker).
+- Runner interface:
+  - `scripts/agent-queue-runner --queue-root <path>`
+  - Optional modes for testing: `--once` and `--dry-run`
+- Implement job lifecycle:
+  - Claim by atomic rename: `pending/` → `inflight/`
+  - On success: `inflight/` → `done/`
+  - On permanent failure: `inflight/` → `failed/` (+ error note)
+- Implement synchronous opencode calls (session-per-job):
+  - `POST /session`
+  - `POST /session/<id>/message`
+  - Config via env vars like `OPENCODE_URL`, `OPENCODE_AGENT`, and `OPENCODE_TIMEOUT`.
+- Write outputs into `bundle_dir/analysis/`:
+  - `analysis/triage.json` (raw response)
+  - `analysis/triage.md` (human-readable extraction)
+  - `analysis/session_id.txt`
+
+Done when:
+
+- A pending job becomes `done/` and the referenced bundle contains `analysis/triage.md` + `analysis/triage.json`.
+
+#### Phase 4 — Patch generation (agent output)
+
+Goal: generate DeltaPorts overlay changes as a patch suitable for review and application.
+
+Tasks:
+
+- Extend the job format to support `type=patch` (initially manual enqueue is fine).
+- Add a patch agent (`dports-patch`) that consumes bounded evidence + triage output.
+- Store outputs into `bundle_dir/analysis/`:
+  - `analysis/patch.diff` (DeltaPorts-style diffs that apply to the DeltaPorts overlay checkout)
+  - optional `analysis/patch.md` (short rationale)
+
+Done when:
+
+- For a known failure, a patch job produces a usable `analysis/patch.diff`.
+
+#### Phase 5 — Apply patch to DeltaPorts overlay, sync to DPorts, rebuild, open PR
+
+Goal: integrate with the existing staged build workflow while ensuring the system never pushes to master.
+
+Assumptions:
+
+- There is a local **DeltaPorts overlay** checkout where changes are made.
+- There is a local **DPorts** checkout used by the staged build.
+- An existing sync script applies overlay changes into the DPorts checkout.
+
+Tasks:
+
+- Add an “apply + PR” helper (separate from the runner) that:
+  - Applies `analysis/patch.diff` to the DeltaPorts overlay checkout on a new branch.
+  - Runs the existing sync script to update the DPorts checkout.
+  - Triggers/resumes the dsynth build for the target port.
+  - Uses `gh` to open a PR in the DeltaPorts overlay repo.
+- Hard rule:
+  - Never push to `master` for DeltaPorts or DPorts.
+  - Always open a PR against the DeltaPorts overlay.
+
+Done when:
+
+- A patch can be applied to the overlay, synced into the staged DPorts checkout, rebuilt, and results are tracked back into the evidence bundle.
+
+#### Phase 6 — Observability/UI (State Server, observe-only)
+
+Goal: provide a single API for a remote UI with live progress and full historical detail.
+
+Tasks:
+
+- Implement a builder-side State Server that:
+  - Observes `${Directory_logs}/evidence/` and `${Directory_logs}/evidence/queue/`.
+  - Persists state/history to SQLite.
+  - Provides a REST API (status/jobs/runs/ports) and SSE (`GET /events`).
+  - Serves artifacts including `logs/full.log.gz`.
+- Keep it observe-only:
+  - It does not drain jobs.
+  - It does not call `opencode serve`.
+  - It does not run builds.
+
+Done when:
+
+- A remote UI can subscribe to `/events` and see queue/job progression live while also querying full history and artifacts.
+
+#### Phase 7 — Snippet extraction escalation (non-AI, bounded)
+
+Goal: allow agents to request more context without uploading huge trees/logs.
+
+Tasks:
+
+- Implement a size-capped snippet extractor that writes extracted slices into the bundle (e.g. `analysis/snippets/`).
+- Add a mechanism to enqueue a follow-up job when snippets are added.
+
+Done when:
+
+- A triage/patch request for additional context can be satisfied automatically in a bounded way.
+
+#### Phase 8 — End-to-end staging test
+
+Goal: validate the full loop on a real failure.
+
+Tasks:
+
+- Trigger one known failure in staging.
+- Verify: evidence bundle → queued triage → triage output → patch output → overlay update → sync → rebuild → PR.
+- Verify State Server/UI reports the full timeline.
+
+Done when:
+
+- One port can be taken through at least one full iteration with all artifacts captured and visible.
 
 ## Non-goals / explicit avoids
 
