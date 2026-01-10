@@ -65,4 +65,8 @@ if [ -r "$logfile" ]; then
 	gzip -c -9 "$logfile" > "${bundle_dir}/logs/full.log.gz" || true
 fi
 
+# Enqueue job for processing.
+run_id=$(basename "$run_dir")
+enqueue_job "$bundle_dir" "$origin_base" "$FLAVOR" "$PROFILE" "$run_id" "$ts"
+
 exit 0

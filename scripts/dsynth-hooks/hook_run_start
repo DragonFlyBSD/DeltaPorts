@@ -11,6 +11,9 @@ run_dir="${root}/runs/${run_id}"
 
 mkdir -p "${run_dir}"
 
+# Ensure queue directories exist for this run.
+ensure_queue_dirs
+
 # Record current run dir for per-port hooks.
 printf '%s\n' "${run_dir}" > "${root}/.current_run"
 

@@ -370,34 +370,78 @@ Ingestion strategy:
 
 This section turns the workflow above into an incremental, testable buildout. Each phase has concrete tasks and a “done when” gate.
 
-#### Phase 1 — Evidence capture (already implemented)
+#### Phase 1 — Evidence capture (DONE)
 
 Goal: dsynth failures reliably produce bounded evidence bundles.
 
 Tasks:
 
-- Install the dsynth hooks from `scripts/dsynth-hooks/` into dsynth’s config base.
-- Verify that failures generate bundles with `meta.txt`, `logs/errors.txt` (capped), `logs/full.log.gz`, and `port/*` context.
+- [x] Install the dsynth hooks from `scripts/dsynth-hooks/` into dsynth's config base.
+- [x] Verify that failures generate bundles with `meta.txt`, `logs/errors.txt` (capped), `logs/full.log.gz`, and `port/*` context.
 
 Done when:
 
-- A known failing port produces an evidence bundle under `${Directory_logs}/evidence/runs/.../ports/.../` with the expected files.
+- [x] A known failing port produces an evidence bundle under `${Directory_logs}/evidence/runs/.../ports/.../` with the expected files.
 
-#### Phase 2 — Central queue enqueue (hook-side)
+Validated 2026-01-10 on DragonFlyBSD VM with `devel/gettext-tools` failure. Bundle structure:
+
+```
+runs/run-LiveSystem-20260110-180454Z-1291/
+├── dsynth.ini
+├── LiveSystem-make.conf
+├── run_start.txt
+├── run_end.txt
+├── 00_last_results.log
+└── ports/
+    └── devel_gettext-tools-20260110-181433Z/
+        ├── meta.txt
+        ├── logfile.txt
+        ├── logs/
+        │   ├── errors.txt
+        │   └── full.log.gz
+        └── port/
+            ├── Makefile
+            ├── pkg-descr
+            └── pkg-plist
+```
+
+#### Phase 2 — Central queue enqueue (DONE)
 
 Goal: every failure instance becomes a queue job; hooks remain non-blocking.
 
 Tasks:
 
-- Update `scripts/dsynth-hooks/hook_common.sh` to add:
+- [x] Update `scripts/dsynth-hooks/hook_common.sh` to add:
   - `queue_root()` → `${Directory_logs}/evidence/queue/`
   - `ensure_queue_dirs()` → create `pending/`, `inflight/`, `done/`, `failed/`
   - `enqueue_job(...)` → write a `key=value` job file and atomically enqueue it (temp + `mv`)
-- Update `scripts/dsynth-hooks/hook_pkg_failure` to enqueue one job per failure instance after writing the evidence bundle.
+- [x] Update `scripts/dsynth-hooks/hook_run_start` to call `ensure_queue_dirs`.
+- [x] Update `scripts/dsynth-hooks/hook_pkg_failure` to enqueue one job per failure instance after writing the evidence bundle.
 
 Done when:
 
-- Each new failure bundle produces exactly one `.job` in `${Directory_logs}/evidence/queue/pending/`.
+- [x] Each new failure bundle produces exactly one `.job` in `${Directory_logs}/evidence/queue/pending/`.
+
+Validated 2026-01-10 on DragonFlyBSD VM. Queue structure after failure:
+
+```
+queue/
+├── pending/
+│   └── 20260110-185415Z-LiveSystem-devel_gettext-tools-88632.job
+├── inflight/
+├── done/
+└── failed/
+```
+
+Job file contents:
+```
+created_ts_utc=20260110-185415Z
+profile=LiveSystem
+origin=devel/gettext-tools
+flavor=devel/gettext-tools
+bundle_dir=/build/synth/logs/evidence/runs/run-LiveSystem-20260110-185412Z-88533/ports/devel_gettext-tools-20260110-185415Z
+run_id=run-LiveSystem-20260110-185412Z-88533
+```
 
 #### Phase 3 — Worker: triage jobs (runner-side)
 
