@@ -1,0 +1,8 @@
+#!/bin/sh
+
+set -eu
+
+. "$(dirname "$0")/hook_common.sh"
+
+# Intentionally minimal.
+exit 0

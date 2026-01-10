@@ -1,0 +1,31 @@
+#!/bin/sh
+
+set -eu
+
+. "$(dirname "$0")/hook_common.sh"
+
+root=$(evidence_root)
+run_dir=$(current_run_dir)
+ts=$(now_utc)
+
+mkdir -p "${run_dir}"
+
+write_kv_file "${run_dir}/run_end.txt" \
+	"ts_utc=${ts}" \
+	"profile=${PROFILE}" \
+	"ports_built=${PORTS_BUILT:-}" \
+	"ports_failed=${PORTS_FAILED:-}" \
+	"ports_ignored=${PORTS_IGNORED:-}" \
+	"ports_skipped=${PORTS_SKIPPED:-}"
+
+# Copy dsynth summary lists if present.
+copy_if_exists "${DIR_LOGS}/failure_list.log" "${run_dir}/failure_list.log"
+copy_if_exists "${DIR_LOGS}/success_list.log" "${run_dir}/success_list.log"
+copy_if_exists "${DIR_LOGS}/ignored_list.log" "${run_dir}/ignored_list.log"
+copy_if_exists "${DIR_LOGS}/skipped_list.log" "${run_dir}/skipped_list.log"
+copy_if_exists "${DIR_LOGS}/00_last_results.log" "${run_dir}/00_last_results.log"
+
+# Clear current run pointer (best effort).
+rm -f "${root}/.current_run"
+
+exit 0
