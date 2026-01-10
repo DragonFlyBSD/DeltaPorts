@@ -282,38 +282,42 @@ Assumptions (current):
      - `${Directory_logs}/evidence/queue/inflight/` — jobs claimed by a runner (atomic rename)
      - `${Directory_logs}/evidence/queue/done/` — successfully processed jobs (optional, for auditing)
      - `${Directory_logs}/evidence/queue/failed/` — jobs that exceeded retry policy (optional)
-   - Job semantics:
-     - **No dedupe by port**: every failure bundle becomes its own job, because later failures can represent progress after partial fixes.
-     - Each job points at exactly one evidence bundle directory (e.g. `${Directory_logs}/evidence/runs/<run-id>/ports/<origin>[@<flavor>]-<timestamp>/`).
-     - The runner writes outputs back into that bundle (e.g. `analysis/triage.md`) and then marks the job done.
-   - Job file format (implementation contract):
-     - One job file per failure bundle, written as plain `key=value` lines (similar to `meta.txt`).
-     - Minimum keys:
-       - `created_ts_utc=...`
-       - `profile=...`
-       - `origin=...`
-       - `flavor=...`
-       - `bundle_dir=/absolute/path/to/.../ports/<origin>...-<timestamp>/`
-       - `run_id=...`
-     - Recommended filename scheme (sortable, unique):
-       - `YYYYmmdd-HHMMSSZ-<profile>-<origin>[@<flavor>]-<pid>.job` (with filename-safe sanitization).
-   - Atomicity / lifecycle:
-     - Enqueue by writing a temp file in the same filesystem and `mv` into `.../queue/pending/`.
-     - Claim by atomic rename: `pending/` → `inflight/`.
-     - On success: `inflight/` → `done/` (or delete if you do not want auditing).
-     - On permanent failure: `inflight/` → `failed/` and write a short error note alongside.
-   - Runner behavior (single-worker):
-     - One runner process drains the queue (cron/daemon/manual).
-      - Session-per-job is acceptable: create session → send bounded evidence → write response to `analysis/triage.md` → mark job done.
-      - Implementation may use `curl` and/or `python3` (assumed available) for HTTP + JSON.
-
+    - Job semantics:
+      - **No dedupe by port**: every failure bundle becomes its own job, because later failures can represent progress after partial fixes.
+      - Each job points at exactly one evidence bundle directory (e.g. `${Directory_logs}/evidence/runs/<run-id>/ports/<origin>[@<flavor>]-<timestamp>/`).
+      - The runner writes outputs back into that bundle (e.g. `analysis/triage.md`) and then marks the job done.
+    - Job file format (implementation contract):
+      - One job file per failure bundle, written as plain `key=value` lines (similar to `meta.txt`).
+      - Minimum keys:
+        - `created_ts_utc=...`
+        - `profile=...`
+        - `origin=...`
+        - `flavor=...`
+        - `bundle_dir=/absolute/path/to/.../ports/<origin>...-<timestamp>/`
+        - `run_id=...`
+      - Recommended filename scheme (sortable, unique):
+        - `YYYYmmdd-HHMMSSZ-<profile>-<origin>[@<flavor>]-<pid>.job` (with filename-safe sanitization).
+    - Atomicity / lifecycle:
+      - Enqueue by writing a temp file in the same filesystem and `mv` into `.../queue/pending/`.
+      - Claim by atomic rename: `pending/` → `inflight/`.
+      - On success: `inflight/` → `done/` (or delete if you do not want auditing).
+      - On permanent failure: `inflight/` → `failed/` and write a short error note alongside.
+    - Runner behavior (single-worker):
+      - One runner process drains the queue (cron/daemon/manual).
+      - Recommended runner script: `scripts/agent-queue-runner --queue-root ${Directory_logs}/evidence/queue`.
+      - Session-per-job is acceptable (sync): create session → send bounded evidence → write `analysis/triage.md` + `analysis/triage.json` → mark job done.
+      - Runner configuration may use env vars like `OPENCODE_URL`, `OPENCODE_AGENT`, and `OPENCODE_TIMEOUT`.
+      - Implementation may use `curl` and `python3` for HTTP + JSON.
 
 6. **Write agent outputs back into the evidence bundle**
+
    - Store artifacts next to the evidence, e.g.:
      - `analysis/triage.md`
+     - `analysis/triage.json` (raw response payload)
      - `analysis/patch.diff`
      - `analysis/review.md`
      - `analysis/snippet_requests.json`
+
 
 7. **Snippet extraction escalation (non-AI, size-capped)**
    - Only if triage requests more context, extract the smallest relevant source/config snippets and append them to a follow-up request.
@@ -321,6 +325,88 @@ Assumptions (current):
 
 8. **Dry-run the full loop on one known failure**
    - dsynth failure → evidence bundle → triage output → (optional snippet extraction) → patch diff output → rebuild.
+
+### Observability / UI (State Server)
+
+To support a remote UI without requiring filesystem access to the builder, add a small **State Server** that acts as the UI’s single source of truth.
+
+Key ideas:
+
+- The State Server runs on the dsynth builder and **observes** `${Directory_logs}/evidence/` and `${Directory_logs}/evidence/queue/`.
+- It is **read/observe-only**: it does not process jobs, does not talk to `opencode serve`, and does not run builds.
+- It normalizes observed state into a durable store (recommended: SQLite) so the UI can show full history.
+- It exposes a UI-friendly HTTP API plus a live event stream for progress updates.
+
+What it can visualize:
+
+- Queue progress: how many jobs are in `pending/`, `inflight/`, `done/`, `failed/`.
+- Per-port iteration: multiple evidence bundles over time for the same `origin[@flavor]`.
+- Agent progress: whether `analysis/triage.md` / `analysis/triage.json` exists yet for a bundle.
+- Build cycle: run start/end + dsynth summaries from `runs/<run-id>/`.
+
+Suggested HTTP interface (example):
+
+- `GET /status` — aggregate counts and current inflight job (if any)
+- `GET /jobs?state=pending|inflight|done|failed` — list jobs
+- `GET /jobs/<job_id>` — job details + linked bundle
+- `GET /runs` and `GET /runs/<run_id>` — build run overview
+- `GET /ports/<origin>[@<flavor>]` — timeline of attempts/bundles
+- `GET /bundles/<bundle_id>/artifacts/<name>` — serve evidence artifacts, including `logs/full.log.gz`
+
+Live progress:
+
+- `GET /events` (SSE) — stream events such as:
+  - `run_started`, `run_ended`
+  - `bundle_created`
+  - `job_enqueued`, `job_claimed`, `job_done`, `job_failed`
+  - `triage_written`
+
+Ingestion strategy:
+
+- Start with a periodic reconcile loop (e.g. poll every 1s) and emit events when new/changed items are detected.
+- Optionally later, allow local push notifications from the runner for lower latency (but keep the observer-only design).
+
+### Implementation plan (next coding steps)
+
+This section is the concrete checklist for implementing the queue + runner + synchronous agent triage described above.
+
+1. **Enqueue jobs from dsynth failure hook**
+   - Update `scripts/dsynth-hooks/hook_pkg_failure` to enqueue one job per failure instance after writing the evidence bundle.
+   - Use temp file + `mv` for atomic enqueue into `${Directory_logs}/evidence/queue/pending/`.
+
+2. **Add queue helpers to the hook library**
+   - Update `scripts/dsynth-hooks/hook_common.sh` to provide helpers such as:
+     - `queue_root()` → `${Directory_logs}/evidence/queue/`
+     - `ensure_queue_dirs()` → create `pending/`, `inflight/`, `done/`, `failed/`
+     - `enqueue_job(...)` → write a `key=value` job file and atomically enqueue it
+
+3. **Add the single-worker runner script**
+   - Add `scripts/agent-queue-runner` which processes jobs from the central queue.
+   - Interface:
+     - `scripts/agent-queue-runner --queue-root <path>`
+     - Optional modes for testing: `--once` and `--dry-run`
+
+4. **Send synchronous triage requests to opencode (session-per-job)**
+   - Runner creates one session per job and uses `POST /session/<id>/message` (sync).
+   - Runner configuration via env vars (example):
+     - `OPENCODE_URL=http://<opencode-host>:4096`
+     - `OPENCODE_AGENT=dports-triage`
+     - `OPENCODE_TIMEOUT=60`
+
+5. **Write outputs back into the evidence bundle**
+   - Runner writes results into `bundle_dir/analysis/`:
+     - `analysis/triage.json` (raw response)
+     - `analysis/triage.md` (human-readable extraction)
+     - optionally `analysis/session_id.txt`
+
+6. **Harden the runner**
+   - Locking (single runner instance), retries/backoff on transient HTTP failures, and simple logging.
+   - On permanent failure, move the job to `failed/` and write an error note.
+
+7. **Manual end-to-end test**
+   - Trigger a known dsynth failure to generate an evidence bundle and confirm a job lands in `pending/`.
+   - Run `scripts/agent-queue-runner --queue-root ... --dry-run` to validate payload selection/caps.
+   - Run against a live `opencode serve` and confirm `analysis/triage.md` + `analysis/triage.json` are written and the job moves to `done/`.
 
 ## Non-goals / explicit avoids
 
