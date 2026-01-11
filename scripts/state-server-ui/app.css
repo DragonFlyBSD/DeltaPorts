@@ -1,0 +1,239 @@
+/* Agentic DeltaPorts UI - Custom Styles */
+
+/* Layout */
+#main-content {
+  min-height: calc(100vh - 120px);
+}
+
+#detail-panel .card {
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+}
+
+/* Sticky filter bar */
+.filter-bar {
+  position: sticky;
+  top: 56px;
+  z-index: 100;
+  background: var(--bs-body-bg);
+}
+
+/* Events timeline */
+.event-row {
+  cursor: pointer;
+  transition: background-color 0.15s ease-in-out;
+}
+
+.event-row:hover {
+  background-color: var(--bs-tertiary-bg);
+}
+
+.event-row.selected {
+  background-color: var(--bs-primary-bg-subtle);
+}
+
+/* Code blocks */
+.code-block {
+  max-height: 500px;
+  overflow: auto;
+  font-size: 0.85rem;
+}
+
+.code-block pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Artifact viewer */
+.artifact-content {
+  max-height: 600px;
+  overflow: auto;
+}
+
+.artifact-content.markdown-body {
+  padding: 1rem;
+}
+
+.artifact-content.markdown-body h1,
+.artifact-content.markdown-body h2,
+.artifact-content.markdown-body h3 {
+  border-bottom: 1px solid var(--bs-border-color);
+  padding-bottom: 0.3em;
+  margin-top: 1.5em;
+}
+
+.artifact-content.markdown-body h1:first-child,
+.artifact-content.markdown-body h2:first-child {
+  margin-top: 0;
+}
+
+.artifact-content.markdown-body code {
+  background: var(--bs-tertiary-bg);
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+}
+
+.artifact-content.markdown-body pre code {
+  background: transparent;
+  padding: 0;
+}
+
+/* Diff styling */
+.diff-view .hljs-addition {
+  background-color: rgba(40, 167, 69, 0.2);
+}
+
+.diff-view .hljs-deletion {
+  background-color: rgba(220, 53, 69, 0.2);
+}
+
+/* Badge sizing */
+.badge-sm {
+  font-size: 0.7rem;
+  padding: 0.2em 0.5em;
+}
+
+/* Tables */
+.table-events {
+  font-size: 0.875rem;
+}
+
+.table-events td {
+  vertical-align: middle;
+}
+
+.table-events .origin-col {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.table-events .id-col {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--bs-font-monospace);
+  font-size: 0.8rem;
+}
+
+/* Timestamp column */
+.ts-col {
+  white-space: nowrap;
+  font-size: 0.8rem;
+  color: var(--bs-secondary-color);
+}
+
+/* Copy button */
+.btn-copy {
+  padding: 0.1rem 0.3rem;
+  font-size: 0.75rem;
+  opacity: 0.6;
+}
+
+.btn-copy:hover {
+  opacity: 1;
+}
+
+/* Status pill animation */
+.sse-connecting .spinner-border {
+  display: inline-block !important;
+}
+
+/* Toast styling */
+.toast-job-failed {
+  border-left: 4px solid var(--bs-danger);
+}
+
+.toast-pr-created {
+  border-left: 4px solid var(--bs-success);
+}
+
+/* Progress bar in overview */
+.queue-progress {
+  height: 8px;
+}
+
+/* List group items */
+.list-group-item-action.active-item {
+  background-color: var(--bs-primary-bg-subtle);
+}
+
+/* Offcanvas width on larger screens */
+@media (min-width: 768px) {
+  .offcanvas-end {
+    width: 500px;
+  }
+}
+
+/* Tab content in bundle view */
+.bundle-tabs .tab-content {
+  border: 1px solid var(--bs-border-color);
+  border-top: none;
+  border-radius: 0 0 var(--bs-border-radius) var(--bs-border-radius);
+  padding: 1rem;
+  background: var(--bs-body-bg);
+}
+
+/* Pinned artifacts buttons */
+.pinned-artifacts {
+  margin-bottom: 1rem;
+}
+
+.pinned-artifacts .btn {
+  margin-right: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--bs-secondary-color);
+}
+
+.empty-state i {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  opacity: 0.5;
+}
+
+/* Filter chips */
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.5rem;
+  margin: 0.25rem;
+  background: var(--bs-primary-bg-subtle);
+  border-radius: var(--bs-border-radius);
+  font-size: 0.8rem;
+}
+
+.filter-chip .btn-close {
+  font-size: 0.6rem;
+  margin-left: 0.25rem;
+}
+
+/* Auto-scroll indicator */
+.auto-scroll-indicator {
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 0.5rem;
+  background: var(--bs-warning-bg-subtle);
+  border-top: 1px solid var(--bs-warning-border-subtle);
+  text-align: center;
+  cursor: pointer;
+}
+
+/* Dark theme adjustments */
+[data-bs-theme="dark"] .code-block {
+  background: var(--bs-dark);
+}
+
+[data-bs-theme="dark"] .artifact-content.markdown-body code {
+  background: rgba(255, 255, 255, 0.1);
+}

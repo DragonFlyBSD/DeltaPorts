@@ -1085,6 +1085,106 @@ Done when:
 
 - One port can be taken through at least one full iteration with all artifacts captured and visible.
 
+#### Phase 9 — Bootstrap UI Dashboard
+
+Goal: a modern, no-build Bootstrap 5 UI served by `scripts/state-server` at `/` that visualizes the agentic workflow in real time.
+
+##### Design Decisions
+
+- **Deployment:** served by `state-server` at same origin (no CORS)
+- **Security:** no auth (trusted LAN / localhost)
+- **Assets:** CDN-first (Bootstrap 5, Bootstrap Icons, marked, highlight.js, DOMPurify)
+- **Implementation:** vanilla JS with hash router, no build step
+
+##### File Layout
+
+```
+scripts/state-server-ui/
+├── index.html      # Bootstrap shell, navbar, route container
+├── app.js          # Router, state store, API client, view renderers
+└── app.css         # Layout polish, code blocks, dark theme tweaks
+```
+
+##### Server Changes
+
+- Serve UI: `GET /` → `index.html`, `GET /assets/*` → static files
+- SSE improvements for reload continuity:
+  - `GET /events?after_id=<n>` — resume from event id
+  - `GET /events?tail=<n>` — start with last N events (default for first load)
+- Include `ts` (server timestamp) in SSE event payloads
+
+##### Routes
+
+| Route | Purpose | Data Source |
+|-------|---------|-------------|
+| `#/overview` | Dashboard with counts + recent activity | `GET /status` + events buffer |
+| `#/events` | Live event timeline with filters | SSE `/events` stream |
+| `#/jobs` | Job queue with state filters | `GET /jobs`, `GET /jobs?state=...` |
+| `#/runs` | Build runs list + bundles per run | `GET /runs`, `GET /runs/<id>` |
+| `#/ports` | Port search | Local autocomplete |
+| `#/ports/<origin>` | Per-port timeline | `GET /ports/<origin>` |
+| `#/bundles/<id>` | Bundle detail + artifact viewer | `GET /bundles/<id>`, artifact fetch |
+
+##### Bootstrap Components
+
+**Global layout:**
+- Navbar: `navbar sticky-top` with nav pills, SSE status badge, last event id, pause toggle
+- Main: `container-fluid` with 2-column layout (list left, detail right); offcanvas on mobile
+
+**Badge color mapping:**
+- Job states: `pending=secondary`, `inflight=primary`, `done=success`, `failed=danger`
+- Event types: `job_failed=danger`, `pr_created=success`, `triage_written=warning`, `patch_written=warning`, `bundle_created=info`
+
+**Reusable components:**
+- Cards: `card shadow-sm`
+- Tables: `table table-sm table-hover align-middle` in `table-responsive`
+- Filters: `card` toolbar with `form-select`, `form-control`, toggle buttons
+- Toasts: `toast-container` for `job_failed` / `pr_created` notifications
+
+**Route-specific:**
+
+| Route | Components |
+|-------|------------|
+| `#/overview` | Summary cards (queue progress bar, runs, bundles, last PR) + recent activity list-group |
+| `#/events` | Sticky filter bar + timeline table + detail accordion/offcanvas |
+| `#/jobs` | State filter btn-group + jobs table + detail card with error alert |
+| `#/runs` | Runs table + detail card with bundles list-group |
+| `#/ports/<origin>` | Side-by-side bundles/jobs cards |
+| `#/bundles/<id>` | Header + nav-tabs (Summary/Artifacts/Triage/Patch/Errors) + pinned artifact buttons |
+
+**Artifact rendering:**
+- Markdown (`triage.md`, `patch.md`): render with `marked` + sanitize with `DOMPurify`
+- Diff/logs (`patch.diff`, `errors.txt`): `pre`+`code` with `highlight.js`
+- Download-only: `full.log.gz` as download button
+
+**Smart defaults:**
+- Bundle page defaults to **Triage** tab if `analysis/triage.md` exists
+- Bundle page defaults to **Patch** tab if `analysis/patch.diff` exists (and no triage)
+- Otherwise defaults to **Summary** tab
+
+##### Tasks
+
+- [x] Confirm deploy/security assumptions (served by state-server, no auth, CDN)
+- [x] Define UI state model and routes
+- [x] Define Bootstrap component spec
+- [ ] Implement Bootstrap layout and navigation (`index.html`)
+- [ ] Implement SSE client with replay/reconnect (`app.js`)
+- [ ] Build Events view with filters/search
+- [ ] Build Jobs/Runs/Ports/Bundles views
+- [ ] Implement artifact viewer (markdown/diff/logs)
+- [ ] Serve UI from state-server (modify Python)
+- [ ] Add `after_id` and `tail` query params to `/events`
+- [ ] Include `ts` in SSE event payloads
+- [ ] Smoke test and document
+
+Done when:
+
+- Visiting `http://<builder>:8787/` loads the Bootstrap UI
+- Events view updates live via SSE
+- Page reload resumes from last event id
+- Drilling into job/bundle/port works
+- Artifact rendering (triage.md, patch.diff, errors.txt) works
+
 ## VM / Builder Access (Phase 1 testing)
 
 This section documents the DragonFlyBSD builder VM used for testing the agentic workflow.
