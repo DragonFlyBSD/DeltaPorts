@@ -924,25 +924,139 @@ VM rebuild output:
            failed: 0
 ```
 
-#### Phase 6 — Observability/UI (State Server, observe-only)
+#### Phase 6 — Observability/UI (State Server, observe-only) (DONE)
 
 Goal: provide a single API for a remote UI with live progress and full historical detail.
 
 Tasks:
 
-- Implement a builder-side State Server that:
+- [x] Implement a builder-side State Server that:
   - Observes `${Directory_logs}/evidence/` and `${Directory_logs}/evidence/queue/`.
   - Persists state/history to SQLite.
   - Provides a REST API (status/jobs/runs/ports) and SSE (`GET /events`).
   - Serves artifacts including `logs/full.log.gz`.
-- Keep it observe-only:
+- [x] Keep it observe-only:
   - It does not drain jobs.
   - It does not call `opencode serve`.
   - It does not run builds.
 
 Done when:
 
-- A remote UI can subscribe to `/events` and see queue/job progression live while also querying full history and artifacts.
+- [x] A remote UI can subscribe to `/events` and see queue/job progression live while also querying full history and artifacts.
+
+##### Implementation: `scripts/state-server`
+
+A Python 3 HTTP server (~700 lines) using only stdlib (http.server, sqlite3, json).
+
+**Requirements:**
+- Python 3.11+ with sqlite3 module
+- On DragonFlyBSD: `pkg install py311-sqlite3`
+
+**CLI:**
+```sh
+scripts/state-server [options]
+
+Options:
+  --logs-root PATH       Evidence root (default: /build/synth/logs if exists)
+  --db-path PATH         SQLite database (default: <logs-root>/evidence/state.db)
+  --bind ADDR            Bind address (default: 127.0.0.1)
+  --port PORT            Port number (default: 8787)
+  --poll-interval SECS   Filesystem poll interval (default: 1.0)
+```
+
+**Example:**
+```sh
+# On the VM:
+/build/synth/DeltaPorts/scripts/state-server --logs-root /build/synth/logs
+
+# Test endpoints:
+curl http://127.0.0.1:8787/health
+curl http://127.0.0.1:8787/status
+curl http://127.0.0.1:8787/runs
+curl http://127.0.0.1:8787/jobs
+curl -N http://127.0.0.1:8787/events  # SSE stream
+```
+
+##### SQLite Schema
+
+| Table | Purpose |
+|-------|---------|
+| `runs` | dsynth build runs (profile, timestamps, path) |
+| `bundles` | Evidence bundles per failed port |
+| `jobs` | Queue jobs with state tracking |
+| `artifacts` | Files within bundles (relpath, kind, size) |
+| `events` | Event log for SSE replay |
+
+##### REST API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/health` | GET | Health check (`{"ok": true}`) |
+| `/status` | GET | Aggregate counts (runs, bundles, jobs by state) |
+| `/runs` | GET | List all runs |
+| `/runs/<run_id>` | GET | Single run with its bundles |
+| `/jobs` | GET | List jobs (optional `?state=pending\|inflight\|done\|failed`) |
+| `/jobs/<job_id>` | GET | Single job details |
+| `/bundles/<bundle_id>` | GET | Bundle metadata with artifact list |
+| `/ports/<origin>` | GET | Timeline of bundles and jobs for a port |
+| `/bundles/<bundle_id>/artifacts/<relpath>` | GET | Serve artifact file (with path traversal protection) |
+
+##### SSE Events (`GET /events`)
+
+Supports `Last-Event-ID` header for replay from a specific event.
+
+| Event Type | Data |
+|------------|------|
+| `run_started` | `{run_id, profile, ts_start}` |
+| `run_ended` | `{run_id, ts_end}` |
+| `bundle_created` | `{bundle_id, run_id, origin, ts_utc}` |
+| `job_enqueued` | `{job_id, state, origin, type}` |
+| `job_claimed` | `{job_id, state, origin, type}` |
+| `job_done` | `{job_id, state, origin, type}` |
+| `job_failed` | `{job_id, state, origin, type}` |
+| `triage_written` | `{bundle_id, artifact}` |
+| `patch_written` | `{bundle_id, artifact}` |
+| `pr_created` | `{bundle_id, pr_url}` |
+
+##### Observer Design
+
+- Reconciler thread polls filesystem every `--poll-interval` seconds
+- Detects new/changed runs, bundles, jobs, artifacts
+- Emits events on state changes
+- All state persisted to SQLite for full history
+- Keepalive comments sent every 15s on SSE connections
+
+##### Design Decisions
+
+- **Bind localhost by default**: Security via network topology, not auth
+- **No authentication**: Intended for trusted LAN/localhost access
+- **No retention/pruning**: History kept forever (SQLite scales well)
+- **No CORS headers**: Add if/when cross-origin UI is needed
+
+Validated 2026-01-11 on DragonFlyBSD VM:
+
+```
+$ curl http://127.0.0.1:8787/status
+{
+    "jobs": {"done": 19},
+    "bundles": 13,
+    "runs": 33,
+    "last_event_id": 80
+}
+
+$ curl http://127.0.0.1:8787/ports/net/bsdrcmds
+{
+    "origin": "net/bsdrcmds",
+    "bundles": [...],
+    "jobs": [...]
+}
+
+$ curl -N -H "Last-Event-ID: 75" http://127.0.0.1:8787/events
+id: 76
+event: job_done
+data: {"job_id": "...", "state": "done", "origin": "net/widentd", "type": "patch"}
+...
+```
 
 #### Phase 7 — Snippet extraction escalation (non-AI, bounded)
 
