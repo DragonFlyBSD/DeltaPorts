@@ -1,2 +1,4 @@
 
 OPTIONS_DEFAULT:=	${OPTIONS_DEFAULT:NLIBBLACKLIST}
+CFLAGS+=	-Wno-misleading-indentation
+CFLAGS+=	-Wno-unused-const-variable
