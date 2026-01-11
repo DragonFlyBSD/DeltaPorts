@@ -1,0 +1,484 @@
+#!/usr/bin/env python3
+"""
+agent-queue-runner: Process dsynth failure jobs via opencode serve.
+
+Usage:
+    agent-queue-runner --queue-root <path> [--once] [--dry-run]
+
+Environment variables:
+    OPENCODE_URL         (required) e.g., http://192.168.1.10:4096
+    OPENCODE_AGENT       (optional) default: dports-triage
+    OPENCODE_PROVIDER    (optional) e.g., opencode (default: not set, uses agent's model)
+    OPENCODE_MODEL       (optional) e.g., gpt-5-nano (default: not set, uses agent's model)
+    OPENCODE_TIMEOUT     (optional) request timeout in seconds, default 120
+    OPENCODE_MAX_RETRIES (optional) retry attempts, default 3
+    OPENCODE_RETRY_DELAY (optional) base delay between retries, default 8
+
+The dports-triage agent must be configured on the opencode server with:
+- DeltaPorts/DPorts context in its system prompt
+- Expected output format (Classification, Platform, Root Cause, etc.)
+- All tools disabled (pure analysis)
+"""
+
+import argparse
+import json
+import os
+import sys
+import time
+import urllib.request
+import urllib.error
+from datetime import datetime, timezone
+from pathlib import Path
+from glob import glob
+
+
+def log(queue_root: Path, level: str, message: str):
+    """Log to both stderr and runner.log."""
+    ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    line = f"{ts} {level:5} {message}"
+    print(line, file=sys.stderr)
+    try:
+        with open(queue_root / "runner.log", "a") as f:
+            f.write(line + "\n")
+    except OSError:
+        pass
+
+
+def parse_job_file(path: Path) -> dict:
+    """Parse key=value job file into dict."""
+    data = {}
+    with open(path) as f:
+        for line in f:
+            line = line.strip()
+            if "=" in line:
+                key, _, value = line.partition("=")
+                data[key] = value
+    return data
+
+
+def read_file_if_exists(path: Path, max_bytes: int = 200_000) -> str | None:
+    """Read file contents if it exists, truncate if too large."""
+    if not path.exists():
+        return None
+    try:
+        content = path.read_text(errors="replace")
+        if len(content) > max_bytes:
+            content = content[:max_bytes] + "\n[...truncated...]\n"
+        return content
+    except OSError:
+        return None
+
+
+def find_kedb_dir() -> Path | None:
+    """Find the KEDB directory relative to this script or in DeltaPorts repo."""
+    # Try relative to script location (scripts/agent-queue-runner -> docs/kedb)
+    script_dir = Path(__file__).resolve().parent
+    kedb_dir = script_dir.parent / "docs" / "kedb"
+    if kedb_dir.exists():
+        return kedb_dir
+    
+    # Try from bundle_dir's DeltaPorts checkout
+    # (bundle may reference /build/synth/DeltaPorts)
+    return None
+
+
+def load_kedb(kedb_dir: Path | None) -> str:
+    """Load all KEDB markdown files into a single context block."""
+    if not kedb_dir or not kedb_dir.exists():
+        return ""
+    
+    kedb_files = sorted(kedb_dir.glob("*.md"))
+    # Skip README.md and TEMPLATE.md
+    skip_files = {"readme.md", "template.md"}
+    kedb_files = [f for f in kedb_files if f.name.lower() not in skip_files]
+    
+    if not kedb_files:
+        return ""
+    
+    parts = ["## Known Error Database (KEDB)", ""]
+    parts.append("The following are known DragonFlyBSD-specific build issues and their fixes:")
+    parts.append("")
+    
+    for kf in kedb_files:
+        content = read_file_if_exists(kf, max_bytes=50_000)
+        if content:
+            parts.append(f"### {kf.stem}")
+            parts.append(content)
+            parts.append("")
+    
+    return "\n".join(parts)
+
+
+def build_payload(bundle_dir: Path, kedb_dir: Path | None = None) -> str:
+    """Build the triage prompt from bundle contents.
+    
+    The payload is kept minimal since the dports-triage agent already has
+    DeltaPorts/DPorts context in its system prompt.
+    """
+    parts = []
+    
+    # Known Error Database (if available)
+    kedb_content = load_kedb(kedb_dir)
+    if kedb_content:
+        parts.append(kedb_content)
+        parts.append("")
+    
+    # Metadata
+    meta = read_file_if_exists(bundle_dir / "meta.txt")
+    if meta:
+        parts.append("## Metadata")
+        parts.append(meta)
+        parts.append("")
+    
+    # Build errors
+    errors = read_file_if_exists(bundle_dir / "logs" / "errors.txt")
+    if errors:
+        parts.append("## Build Errors")
+        parts.append(errors)
+        parts.append("")
+    
+    # Port files
+    parts.append("## Port Files")
+    
+    makefile = read_file_if_exists(bundle_dir / "port" / "Makefile")
+    if makefile:
+        parts.append("### Makefile")
+        parts.append("```makefile")
+        parts.append(makefile)
+        parts.append("```")
+        parts.append("")
+    
+    plist = read_file_if_exists(bundle_dir / "port" / "pkg-plist")
+    if plist:
+        parts.append("### pkg-plist")
+        parts.append("```")
+        parts.append(plist)
+        parts.append("```")
+        parts.append("")
+    
+    distinfo = read_file_if_exists(bundle_dir / "port" / "distinfo")
+    if distinfo:
+        parts.append("### distinfo")
+        parts.append("```")
+        parts.append(distinfo)
+        parts.append("```")
+        parts.append("")
+    
+    # Patches
+    patches_dir = bundle_dir / "port" / "files"
+    if patches_dir.exists():
+        patch_files = sorted(patches_dir.glob("patch-*"))
+        if patch_files:
+            parts.append("### Existing Patches")
+            for pf in patch_files:
+                content = read_file_if_exists(pf)
+                if content:
+                    parts.append(f"#### {pf.name}")
+                    parts.append("```diff")
+                    parts.append(content)
+                    parts.append("```")
+                    parts.append("")
+    
+    # Simple closing instruction (agent knows the expected format)
+    parts.append("---")
+    parts.append("Analyze this build failure and provide your triage report.")
+    
+    return "\n".join(parts)
+
+
+def call_opencode(
+    url: str,
+    payload: str,
+    agent: str | None,
+    provider: str | None,
+    model: str | None,
+    timeout: int
+) -> dict:
+    """
+    Call opencode serve API:
+    1. POST /session to create session
+    2. POST /session/<id>/message to send payload
+    Returns the full response dict.
+    """
+    headers = {"Content-Type": "application/json"}
+    
+    # Create session
+    session_url = f"{url.rstrip('/')}/session"
+    req = urllib.request.Request(
+        session_url,
+        data=json.dumps({}).encode(),
+        headers=headers,
+        method="POST"
+    )
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        session_data = json.loads(resp.read().decode())
+    
+    session_id = session_data.get("id")
+    if not session_id:
+        raise RuntimeError(f"No session ID in response: {session_data}")
+    
+    # Send message
+    message_url = f"{url.rstrip('/')}/session/{session_id}/message"
+    message_body = {
+        "parts": [{"type": "text", "text": payload}]
+    }
+    
+    # Agent must be specified in the message body for subagents
+    if agent:
+        message_body["agent"] = agent
+    
+    # Add model specification if provided
+    if provider and model:
+        message_body["model"] = {"providerID": provider, "modelID": model}
+    elif model:
+        # Just model ID - assume opencode provider
+        message_body["model"] = {"providerID": "opencode", "modelID": model}
+    
+    req = urllib.request.Request(
+        message_url,
+        data=json.dumps(message_body).encode(),
+        headers=headers,
+        method="POST"
+    )
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        response_data = json.loads(resp.read().decode())
+    
+    response_data["_session_id"] = session_id
+    return response_data
+
+
+def extract_response_text(response: dict) -> str:
+    """Extract the assistant's text response from API response."""
+    # Check for error in response
+    info = response.get("info", {})
+    error = info.get("error")
+    if error:
+        error_name = error.get("name", "UnknownError")
+        error_data = error.get("data", {})
+        error_msg = error_data.get("message", str(error_data))
+        return f"# Error: {error_name}\n\n{error_msg}"
+    
+    # Try to find text parts in the response
+    parts = response.get("parts", [])
+    text_parts = []
+    for part in parts:
+        if isinstance(part, dict) and part.get("type") == "text":
+            text_parts.append(part.get("text", ""))
+        elif isinstance(part, str):
+            text_parts.append(part)
+    
+    if text_parts:
+        return "\n".join(text_parts)
+    
+    # Fallback: return JSON representation
+    return json.dumps(response, indent=2)
+
+
+def write_outputs(bundle_dir: Path, response: dict, session_id: str):
+    """Write analysis outputs to bundle."""
+    analysis_dir = bundle_dir / "analysis"
+    analysis_dir.mkdir(exist_ok=True)
+    
+    # Raw response
+    with open(analysis_dir / "triage.json", "w") as f:
+        json.dump(response, f, indent=2)
+    
+    # Session ID
+    with open(analysis_dir / "session_id.txt", "w") as f:
+        f.write(session_id + "\n")
+    
+    # Human-readable response
+    text = extract_response_text(response)
+    with open(analysis_dir / "triage.md", "w") as f:
+        f.write(text + "\n")
+
+
+def move_job(job_path: Path, dest_dir: str):
+    """Move job file to destination directory (done/failed)."""
+    dest = job_path.parent.parent / dest_dir / job_path.name
+    job_path.rename(dest)
+    return dest
+
+
+def write_error_note(job_path: Path, error: str):
+    """Write error note next to failed job."""
+    error_path = job_path.with_suffix(".job.error")
+    with open(error_path, "w") as f:
+        f.write(f"timestamp={datetime.now(timezone.utc).isoformat()}\n")
+        f.write(f"error={error}\n")
+
+
+def claim_next_job(queue_root: Path) -> Path | None:
+    """Claim the oldest pending job by moving to inflight/."""
+    pending_dir = queue_root / "pending"
+    inflight_dir = queue_root / "inflight"
+    
+    # Get jobs sorted by name (which includes timestamp)
+    jobs = sorted(pending_dir.glob("*.job"))
+    
+    for job_path in jobs:
+        try:
+            dest = inflight_dir / job_path.name
+            job_path.rename(dest)
+            return dest
+        except OSError:
+            # Another process claimed it, try next
+            continue
+    
+    return None
+
+
+def process_job(
+    queue_root: Path,
+    job_path: Path,
+    opencode_url: str,
+    opencode_agent: str | None,
+    opencode_provider: str | None,
+    opencode_model: str | None,
+    timeout: int,
+    max_retries: int,
+    retry_delay: int,
+    dry_run: bool,
+    kedb_dir: Path | None
+):
+    """Process a single job."""
+    log(queue_root, "INFO", f"processing job {job_path.name}")
+    
+    # Parse job
+    job = parse_job_file(job_path)
+    bundle_dir = Path(job.get("bundle_dir", ""))
+    
+    if not bundle_dir.exists():
+        log(queue_root, "ERROR", f"bundle_dir does not exist: {bundle_dir}")
+        write_error_note(job_path, f"bundle_dir does not exist: {bundle_dir}")
+        move_job(job_path, "failed")
+        return
+    
+    # Build payload (with KEDB if available)
+    payload = build_payload(bundle_dir, kedb_dir)
+    
+    if dry_run:
+        log(queue_root, "INFO", f"[dry-run] would send payload ({len(payload)} bytes)")
+        print("=" * 60)
+        print("PAYLOAD:")
+        print("=" * 60)
+        print(payload)
+        print("=" * 60)
+        # Move back to pending in dry-run mode
+        move_job(job_path, "pending")
+        return
+    
+    # Call opencode with retries
+    last_error = None
+    model_info = f"{opencode_provider}/{opencode_model}" if opencode_provider and opencode_model else (opencode_model or "agent-default")
+    agent_info = opencode_agent or "none"
+    for attempt in range(max_retries):
+        try:
+            log(queue_root, "INFO", f"calling opencode (attempt {attempt + 1}/{max_retries}, agent={agent_info}, model={model_info})")
+            response = call_opencode(
+                opencode_url, payload, opencode_agent,
+                opencode_provider, opencode_model, timeout
+            )
+            session_id = response.get("_session_id", "unknown")
+            
+            # Write outputs
+            write_outputs(bundle_dir, response, session_id)
+            log(queue_root, "INFO", f"wrote analysis to {bundle_dir}/analysis/")
+            
+            # Success
+            move_job(job_path, "done")
+            log(queue_root, "INFO", f"moved job to done/")
+            return
+            
+        except (urllib.error.URLError, urllib.error.HTTPError, OSError, RuntimeError) as e:
+            last_error = str(e)
+            log(queue_root, "WARN", f"attempt {attempt + 1} failed: {last_error}")
+            
+            if attempt < max_retries - 1:
+                delay = min(retry_delay * (2 ** attempt), 60)
+                log(queue_root, "INFO", f"retrying in {delay}s...")
+                time.sleep(delay)
+    
+    # All retries exhausted
+    log(queue_root, "ERROR", f"all retries exhausted, moving to failed/")
+    write_error_note(job_path, last_error or "unknown error")
+    move_job(job_path, "failed")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Process dsynth failure jobs via opencode serve")
+    parser.add_argument("--queue-root", required=True, help="Path to queue directory")
+    parser.add_argument("--once", action="store_true", help="Process one job and exit")
+    parser.add_argument("--dry-run", action="store_true", help="Print payload without calling opencode")
+    parser.add_argument("--kedb-dir", help="Path to KEDB directory (default: auto-detect from script location)")
+    args = parser.parse_args()
+    
+    queue_root = Path(args.queue_root)
+    
+    # Validate queue structure
+    for subdir in ["pending", "inflight", "done", "failed"]:
+        d = queue_root / subdir
+        if not d.exists():
+            print(f"error: queue directory missing: {d}", file=sys.stderr)
+            sys.exit(1)
+    
+    # Find KEDB directory
+    if args.kedb_dir:
+        kedb_dir = Path(args.kedb_dir)
+        if not kedb_dir.exists():
+            print(f"warning: KEDB directory not found: {kedb_dir}", file=sys.stderr)
+            kedb_dir = None
+    else:
+        kedb_dir = find_kedb_dir()
+    
+    # Get config from environment
+    opencode_url = os.environ.get("OPENCODE_URL")
+    if not opencode_url and not args.dry_run:
+        print("error: OPENCODE_URL environment variable required", file=sys.stderr)
+        sys.exit(1)
+    
+    opencode_agent = os.environ.get("OPENCODE_AGENT", "dports-triage")
+    opencode_provider = os.environ.get("OPENCODE_PROVIDER")
+    opencode_model = os.environ.get("OPENCODE_MODEL")
+    
+    # Default to free model when using dports-triage agent
+    if opencode_agent == "dports-triage" and not opencode_provider and not opencode_model:
+        opencode_provider = "opencode"
+        opencode_model = "gpt-5-nano"
+    
+    timeout = int(os.environ.get("OPENCODE_TIMEOUT", "120"))
+    max_retries = int(os.environ.get("OPENCODE_MAX_RETRIES", "3"))
+    retry_delay = int(os.environ.get("OPENCODE_RETRY_DELAY", "8"))
+    
+    model_info = f"{opencode_provider}/{opencode_model}" if opencode_provider and opencode_model else (opencode_model or "agent-default")
+    kedb_info = str(kedb_dir) if kedb_dir else "none"
+    log(queue_root, "INFO", f"starting runner (once={args.once}, dry_run={args.dry_run}, agent={opencode_agent}, model={model_info}, kedb={kedb_info})")
+    
+    if args.once:
+        job = claim_next_job(queue_root)
+        if job:
+            process_job(
+                queue_root, job, opencode_url, opencode_agent,
+                opencode_provider, opencode_model,
+                timeout, max_retries, retry_delay, args.dry_run,
+                kedb_dir
+            )
+        else:
+            log(queue_root, "INFO", "no jobs in queue")
+    else:
+        # Continuous mode
+        while True:
+            job = claim_next_job(queue_root)
+            if job:
+                process_job(
+                    queue_root, job, opencode_url, opencode_agent,
+                    opencode_provider, opencode_model,
+                    timeout, max_retries, retry_delay, args.dry_run,
+                    kedb_dir
+                )
+            else:
+                time.sleep(5)
+
+
+if __name__ == "__main__":
+    main()
