@@ -130,7 +130,10 @@ enqueue_job() {
 		"origin=${origin}" \
 		"flavor=${flavor}" \
 		"bundle_dir=${bundle_dir}" \
-		"run_id=${run_id}"
+		"run_id=${run_id}" \
+		"type=triage" \
+		"snippet_round=0" \
+		"has_snippets=false"
 
 	# Atomic move to final location
 	mv "$tmpfile" "${qroot}/pending/${fname}"
