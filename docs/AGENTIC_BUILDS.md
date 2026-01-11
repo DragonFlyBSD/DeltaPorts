@@ -739,30 +739,190 @@ Validated 2026-01-11 on DragonFlyBSD VM. Manual patch job processed successfully
 
 Generated patch applied `BROKEN_DragonFly` to the port Makefile with rationale explaining the missing dependency issue.
 
-#### Phase 5 — Apply patch to DeltaPorts overlay, sync to DPorts, rebuild, open PR
+#### Phase 5 — Apply patch to DeltaPorts overlay, sync to DPorts, rebuild, open PR (DONE)
 
 Goal: integrate with the existing staged build workflow while ensuring the system never pushes to master.
 
-Assumptions:
+##### Architecture
 
-- There is a local **DeltaPorts overlay** checkout where changes are made.
-- There is a local **DPorts** checkout used by the staged build.
-- An existing sync script applies overlay changes into the DPorts checkout.
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                         HOST MACHINE                                 │
+│  ┌────────────────────────────────────────────────────────────────┐ │
+│  │  scripts/apply-patch                                           │ │
+│  │  - Reads patch.diff + triage.md from evidence bundle           │ │
+│  │  - Operates on SAFE CLONE only (/home/.../DeltaPorts-ai-fix)   │ │
+│  │  - Hard refuses if pointed at protected checkout               │ │
+│  │  - Creates branch: ai-fix/<cat>-<port>-<bugslug>               │ │
+│  │  - Applies patch, commits (no PR yet)                          │ │
+│  │  - Pushes branch so VM can fetch                               │ │
+│  └────────────────────────────────────────────────────────────────┘ │
+│                              │ SSH                                   │
+│                              ▼                                       │
+│  ┌────────────────────────────────────────────────────────────────┐ │
+│  │  VM (DragonFlyBSD)                                             │ │
+│  │  - Fetches branch into /build/synth/DeltaPorts                 │ │
+│  │  - Runs sync1.sh <cat/port> to update DPorts                   │ │
+│  │  - Runs dsynth just-build <cat/port>                           │ │
+│  │  - Writes results back to evidence bundle                      │ │
+│  └────────────────────────────────────────────────────────────────┘ │
+│                              │                                       │
+│                              ▼                                       │
+│  ┌────────────────────────────────────────────────────────────────┐ │
+│  │  PR Creation (only if rebuild succeeds)                        │ │
+│  │  - gh pr create from safe clone                                │ │
+│  │  - Records PR URL in bundle                                    │ │
+│  └────────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────┘
+```
 
-Tasks:
+##### Safety Rules
 
-- Add an “apply + PR” helper (separate from the runner) that:
-  - Applies `analysis/patch.diff` to the DeltaPorts overlay checkout on a new branch.
-  - Runs the existing sync script to update the DPorts checkout.
-  - Triggers/resumes the dsynth build for the target port.
-  - Uses `gh` to open a PR in the DeltaPorts overlay repo.
-- Hard rule:
-  - Never push to `master` for DeltaPorts or DPorts.
-  - Always open a PR against the DeltaPorts overlay.
+- **Protected checkout**: `/home/antonioh/s/DeltaPorts` is never modified by automation.
+- **Safe clone**: All apply/commit/push operations use `/home/antonioh/s/DeltaPorts-ai-fix`.
+- **Never push to master**: Always create a new branch and open a PR.
+- **Rebuild gate**: PR is only opened after dsynth rebuild succeeds on VM.
+
+##### Patch Output Contract
+
+The `dports-patch` agent must output diffs that modify only DeltaPorts overlay paths (per `README.md`):
+
+| Path Pattern | Purpose |
+|--------------|---------|
+| `ports/<cat>/<port>/STATUS` | Port status (PORT/DPORT/MASK) |
+| `ports/<cat>/<port>/Makefile.DragonFly` | DragonFly-specific Makefile additions (preferred) |
+| `ports/<cat>/<port>/diffs/*.diff` | Patches to FreeBSD port files |
+| `ports/<cat>/<port>/dragonfly/*` | Extra patches/files (applied after `files/`) |
+| `ports/<cat>/<port>/newport/*` | Complete port created from scratch |
+
+Paths like `DeltaPorts/...` or direct edits to FreeBSD ports files are rejected.
+
+##### VM Prerequisites
+
+The VM requires:
+
+1. **FreeBSD ports checkout** at `/build/synth/freebsd-ports` (2025Q2 branch)
+2. **Generator config** at `/usr/local/etc/dports.conf`:
+   ```sh
+   FPORTS=/build/synth/freebsd-ports
+   DELTA=/build/synth/DeltaPorts
+   DPORTS=/build/synth/DPorts
+   MERGED=/build/synth/DPorts
+   POTENTIAL=/build/synth/potential
+   INDEX=/build/synth/freebsd-ports/INDEX-14
+   ```
+3. **Directories**: `MERGED`, `POTENTIAL` must exist
+
+##### Helper Script: `scripts/apply-patch`
+
+Interface:
+```sh
+scripts/apply-patch --bundle <path> [--dry-run] [--no-rebuild] [--no-pr]
+
+# Environment variables:
+BUNDLE_DIR=/path/to/evidence/bundle    # Required if --bundle not given
+SAFE_DELTAPORTS_DIR=...                # Default: /home/antonioh/s/DeltaPorts-ai-fix
+VM_SSH_KEY=...                         # Default: ~/.go-synth/vm/id_ed25519
+VM_SSH_PORT=...                        # Default: 2222
+VM_SSH_HOST=...                        # Default: root@localhost
+```
+
+Workflow:
+1. Validate bundle contains `patch.diff` and `meta.txt`
+2. Parse origin from `meta.txt`, classification/confidence from `triage.md`
+3. Ensure safe clone exists and is up-to-date with origin/master
+4. Create branch `ai-fix/<cat>-<port>-<bugslug>`
+5. Apply `patch.diff` to safe clone
+6. Commit with message including classification and evidence bundle path
+7. Push branch to origin
+8. SSH to VM: fetch branch, run `sync1.sh`, run `dsynth just-build`
+9. If rebuild succeeds: `gh pr create` and record PR URL
+10. Write artifacts to `bundle/analysis/`: `branch.txt`, `commit.txt`, `rebuild_status.txt`, `pr_url.txt`
+
+##### Branch Naming
+
+Format: `ai-fix/<category>-<port>-<bugslug>`
+
+Examples:
+- `ai-fix/devel-gettext-tools-missing-dep`
+- `ai-fix/lang-rust-pthread-link`
+- `ai-fix/www-nginx-configure-dragonfly`
+
+The `<bugslug>` is derived from the triage classification and a sanitized keyword from the root cause.
+
+##### PR Format
+
+Title: `fix(<cat>/<port>): <brief description>`
+
+Body:
+```markdown
+## Summary
+AI-assisted fix for `<origin>` build failure on DragonFlyBSD.
+
+## Triage Analysis
+- **Classification**: <classification>
+- **Confidence**: <confidence>
+- **Root Cause**: <excerpt>
+
+## Changes
+<list of files modified>
+
+## Rebuild Result
+Build succeeded on DragonFlyBSD VM (dsynth just-build).
+
+## Evidence
+Bundle: `<bundle_dir>`
+
+---
+*This PR was generated by the agentic build system.*
+```
+
+##### Tasks
+
+- [x] Document Phase 5 plan
+- [x] Create `scripts/apply-patch` helper
+- [x] Provision VM `/usr/local/etc/dports.conf` and required directories
+- [x] Test sync1 + rebuild gate on VM
+- [x] Test PR creation flow
+- [x] Validate end-to-end with a real failing port
+- [x] Update `hook_pkg_failure` to capture `Makefile.DragonFly`
 
 Done when:
 
-- A patch can be applied to the overlay, synced into the staged DPorts checkout, rebuilt, and results are tracked back into the evidence bundle.
+- [x] A patch can be applied to the safe clone, synced into the staged DPorts checkout on VM, rebuilt successfully, and a PR is opened with results tracked back into the evidence bundle.
+
+Validated 2026-01-11 on DragonFlyBSD VM with `net/bsdrcmds` port:
+
+1. **Failure captured**: Port failed with `-Werror` compiler warnings in `rshd.c`
+2. **Triage**: Agent correctly classified as `compile-error` with `high` confidence
+3. **Patch generated**: Agent created `Makefile.DragonFly` with CFLAGS to suppress warnings:
+   ```makefile
+   OPTIONS_DEFAULT:=	${OPTIONS_DEFAULT:NLIBBLACKLIST}
+   CFLAGS+=	-Wno-misleading-indentation
+   CFLAGS+=	-Wno-unused-const-variable
+   ```
+4. **Apply and sync**: `scripts/apply-patch` applied patch to safe clone, pushed branch
+5. **VM rebuild**: `sync1.sh` merged changes, `dsynth force` built successfully
+6. **PR created**: https://github.com/DragonFlyBSD/DeltaPorts/pull/1518
+
+Example `apply-patch` output:
+```
+2026-01-11T16:46:30Z INFO  Bundle: /tmp/test-bundle
+2026-01-11T16:46:30Z INFO  Origin: net/bsdrcmds
+2026-01-11T16:46:30Z INFO  Classification: compile-error, Confidence: high
+2026-01-11T16:46:30Z INFO  Branch: ai-fix/net-bsdrcmds-compile-error
+2026-01-11T16:46:31Z INFO  Applying patch (231 bytes)
+2026-01-11T16:46:31Z INFO  Patch output: patching file ports/net/bsdrcmds/Makefile.DragonFly
+2026-01-11T16:46:32Z INFO  Commit: dac0d57213b...
+2026-01-11T16:46:34Z INFO  Pushed to origin
+```
+
+VM rebuild output:
+```
+[000] SUCCESS net/bsdrcmds                                             00:00:03
+    packages built: 1
+           failed: 0
+```
 
 #### Phase 6 — Observability/UI (State Server, observe-only)
 

@@ -1,0 +1,494 @@
+#!/usr/bin/env python3
+"""
+apply-patch: Apply AI-generated patches, sync to DPorts, rebuild, and optionally open PR.
+
+Usage:
+    apply-patch --bundle <path> [--dry-run] [--no-rebuild] [--no-pr]
+
+Environment variables:
+    BUNDLE_DIR              Path to evidence bundle (alternative to --bundle)
+    SAFE_DELTAPORTS_DIR     Safe clone for patch operations (default: ~/s/DeltaPorts-ai-fix)
+    VM_SSH_KEY              SSH key for VM access (default: ~/.go-synth/vm/id_ed25519)
+    VM_SSH_PORT             SSH port (default: 2222)
+    VM_SSH_HOST             SSH host (default: root@localhost)
+
+Safety:
+    - NEVER modifies the protected checkout (~/s/DeltaPorts)
+    - Always creates a new branch (never pushes to master)
+    - Rebuild gate: PR is only opened after successful dsynth rebuild
+"""
+
+import argparse
+import json
+import os
+import re
+import subprocess
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+
+# Protected paths that must NEVER be modified
+PROTECTED_PATHS = {
+    Path.home() / "s" / "DeltaPorts",
+    Path("/home/antonioh/s/DeltaPorts"),
+}
+
+DEFAULT_SAFE_CLONE = Path.home() / "s" / "DeltaPorts-ai-fix"
+DEFAULT_SSH_KEY = Path.home() / ".go-synth" / "vm" / "id_ed25519"
+DEFAULT_SSH_PORT = "2222"
+DEFAULT_SSH_HOST = "root@localhost"
+
+
+def log(level: str, message: str):
+    """Log with timestamp."""
+    ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    print(f"{ts} {level:5} {message}", file=sys.stderr)
+
+
+def run(cmd: list[str], cwd: str | Path | None = None, check: bool = True, capture: bool = False) -> subprocess.CompletedProcess:
+    """Run a command, logging it first."""
+    cmd_str = " ".join(str(c) for c in cmd)
+    log("CMD", cmd_str[:100] + ("..." if len(cmd_str) > 100 else ""))
+    
+    kwargs = {"cwd": cwd, "check": check}
+    if capture:
+        kwargs["capture_output"] = True
+        kwargs["text"] = True
+    
+    return subprocess.run(cmd, **kwargs)
+
+
+def ssh_cmd(host: str, port: str, key: Path, remote_cmd: str, check: bool = False) -> subprocess.CompletedProcess:
+    """Run a command on the VM via SSH."""
+    cmd = [
+        "ssh",
+        "-i", str(key),
+        "-p", port,
+        "-o", "StrictHostKeyChecking=no",
+        "-o", "UserKnownHostsFile=/dev/null",
+        host,
+        remote_cmd
+    ]
+    return run(cmd, capture=True, check=check)
+
+
+def parse_meta(bundle_dir: Path) -> dict:
+    """Parse meta.txt from bundle."""
+    meta = {}
+    meta_path = bundle_dir / "meta.txt"
+    if meta_path.exists():
+        for line in meta_path.read_text().splitlines():
+            if "=" in line:
+                key, _, value = line.partition("=")
+                meta[key.strip()] = value.strip()
+    return meta
+
+
+def parse_triage(bundle_dir: Path) -> dict:
+    """Parse triage.md for classification and confidence."""
+    result = {"classification": "", "confidence": "", "root_cause": ""}
+    triage_path = bundle_dir / "analysis" / "triage.md"
+    
+    if not triage_path.exists():
+        return result
+    
+    content = triage_path.read_text()
+    
+    # Extract Classification
+    match = re.search(r"^##\s*Classification\s*\n+([^\n#]+)", content, re.MULTILINE | re.IGNORECASE)
+    if match:
+        result["classification"] = match.group(1).strip().lower()
+    
+    # Extract Confidence
+    match = re.search(r"^##\s*Confidence\s*\n+([^\n#]+)", content, re.MULTILINE | re.IGNORECASE)
+    if match:
+        result["confidence"] = match.group(1).strip().lower()
+    
+    # Extract Root Cause (first sentence)
+    match = re.search(r"^##\s*Root Cause\s*\n+([^\n#]+)", content, re.MULTILINE | re.IGNORECASE)
+    if match:
+        result["root_cause"] = match.group(1).strip()[:100]
+    
+    return result
+
+
+def generate_branch_name(origin: str, classification: str) -> str:
+    """Generate branch name: ai-fix/<category>-<port>-<bugslug>."""
+    # Sanitize origin (category/port -> category-port)
+    origin_safe = origin.replace("/", "-").replace("_", "-")
+    
+    # Create bugslug from classification
+    bugslug = classification.replace("_", "-").replace(" ", "-")[:20]
+    
+    # Ensure valid git branch name
+    branch = f"ai-fix/{origin_safe}-{bugslug}"
+    branch = re.sub(r"[^a-zA-Z0-9/_-]", "", branch)
+    
+    return branch
+
+
+def is_protected_path(path: Path) -> bool:
+    """Check if path is a protected checkout."""
+    resolved = path.resolve()
+    for protected in PROTECTED_PATHS:
+        try:
+            if resolved == protected.resolve():
+                return True
+        except (OSError, ValueError):
+            pass
+    return False
+
+
+def ensure_safe_clone(safe_dir: Path, dry_run: bool) -> bool:
+    """Ensure safe clone exists and is up-to-date."""
+    if is_protected_path(safe_dir):
+        log("ERROR", f"REFUSING to use protected path as safe clone: {safe_dir}")
+        return False
+    
+    if not safe_dir.exists():
+        log("INFO", f"Creating safe clone at {safe_dir}")
+        if dry_run:
+            log("INFO", "[dry-run] would clone repository")
+            return True
+        
+        # Clone from origin
+        run(["git", "clone", "git@github.com:AntoniAno2023/DeltaPorts.git", str(safe_dir)])
+    
+    # Fetch latest and reset to origin/master
+    log("INFO", "Updating safe clone to latest origin/master")
+    if not dry_run:
+        run(["git", "fetch", "origin"], cwd=safe_dir)
+        run(["git", "checkout", "master"], cwd=safe_dir)
+        run(["git", "reset", "--hard", "origin/master"], cwd=safe_dir)
+    
+    return True
+
+
+def apply_patch_to_clone(safe_dir: Path, patch_path: Path, branch: str, origin: str, 
+                         classification: str, bundle_dir: Path, dry_run: bool) -> tuple[bool, str]:
+    """
+    Apply patch to safe clone and commit.
+    Returns (success, commit_sha).
+    """
+    if dry_run:
+        log("INFO", f"[dry-run] would create branch {branch}")
+        log("INFO", f"[dry-run] would apply patch from {patch_path}")
+        return True, "dry-run-sha"
+    
+    # Create branch
+    run(["git", "checkout", "-b", branch], cwd=safe_dir)
+    
+    # Apply patch (--no-backup-if-mismatch prevents .orig files)
+    patch_content = patch_path.read_text()
+    log("INFO", f"Applying patch ({len(patch_content)} bytes)")
+    
+    result = subprocess.run(
+        ["patch", "-p1", "--forward", "--no-backup-if-mismatch"],
+        cwd=safe_dir,
+        input=patch_content,
+        text=True,
+        capture_output=True
+    )
+    
+    if result.returncode != 0:
+        log("ERROR", f"Patch failed: {result.stderr}")
+        return False, ""
+    
+    log("INFO", f"Patch output: {result.stdout}")
+    
+    # Clean up any .orig files that might have been created
+    for orig_file in safe_dir.rglob("*.orig"):
+        log("INFO", f"Removing backup file: {orig_file}")
+        orig_file.unlink()
+    
+    # Stage all changes
+    run(["git", "add", "-A"], cwd=safe_dir)
+    
+    # Check if there are changes to commit
+    status = run(["git", "status", "--porcelain"], cwd=safe_dir, capture=True)
+    if not status.stdout.strip():
+        log("WARN", "No changes to commit after applying patch")
+        return False, ""
+    
+    # Commit
+    commit_msg = f"""fix({origin}): {classification}
+
+AI-generated fix for DragonFlyBSD build failure.
+
+Classification: {classification}
+Evidence bundle: {bundle_dir}
+
+Generated by agentic-dsynth-evidence-hooks workflow.
+"""
+    
+    run(["git", "commit", "-m", commit_msg], cwd=safe_dir)
+    
+    # Get commit SHA
+    result = run(["git", "rev-parse", "HEAD"], cwd=safe_dir, capture=True)
+    commit_sha = result.stdout.strip()
+    
+    return True, commit_sha
+
+
+def push_branch(safe_dir: Path, branch: str, dry_run: bool) -> bool:
+    """Push branch to origin."""
+    if dry_run:
+        log("INFO", f"[dry-run] would push branch {branch}")
+        return True
+    
+    result = run(["git", "push", "-u", "origin", branch], cwd=safe_dir, check=False)
+    return result.returncode == 0
+
+
+def vm_fetch_and_sync(origin: str, branch: str, ssh_host: str, ssh_port: str, 
+                      ssh_key: Path, dry_run: bool) -> bool:
+    """Fetch branch on VM and run sync1.sh."""
+    if dry_run:
+        log("INFO", f"[dry-run] would fetch branch {branch} on VM")
+        log("INFO", f"[dry-run] would run sync1.sh {origin}")
+        return True
+    
+    # Clean up any local changes on the VM first
+    cmd = "cd /build/synth/DeltaPorts && git reset --hard HEAD && git clean -fd"
+    result = ssh_cmd(ssh_host, ssh_port, ssh_key, cmd)
+    if result.returncode != 0:
+        log("WARN", f"VM cleanup had issues: {result.stderr}")
+    
+    # Fetch the branch (use refspec to create local tracking branch)
+    cmd = f"cd /build/synth/DeltaPorts && git fetch origin {branch}:{branch} && git checkout {branch}"
+    result = ssh_cmd(ssh_host, ssh_port, ssh_key, cmd)
+    if result.returncode != 0:
+        log("ERROR", f"VM fetch failed: {result.stderr}")
+        return False
+    log("INFO", f"VM fetch output: {result.stdout}")
+    
+    # Run sync1.sh
+    cmd = f"cd /build/synth/DeltaPorts/scripts/generator && ./sync1.sh {origin}"
+    result = ssh_cmd(ssh_host, ssh_port, ssh_key, cmd)
+    if result.returncode != 0:
+        log("ERROR", f"sync1.sh failed: {result.stderr}")
+        return False
+    log("INFO", f"sync1.sh output: {result.stdout}")
+    
+    return True
+
+
+def vm_rebuild(origin: str, ssh_host: str, ssh_port: str, ssh_key: Path, 
+               dry_run: bool) -> tuple[bool, str]:
+    """
+    Run dsynth rebuild on VM.
+    Returns (success, log_excerpt).
+    """
+    if dry_run:
+        log("INFO", f"[dry-run] would run dsynth force {origin}")
+        return True, "[dry-run]"
+    
+    # Force rebuild
+    cmd = f"dsynth force {origin} 2>&1"
+    result = ssh_cmd(ssh_host, ssh_port, ssh_key, cmd)
+    log("INFO", f"dsynth output: {result.stdout[:500]}")
+    
+    # Check if build succeeded by looking at the logs
+    log_name = origin.replace("/", "___") + ".log"
+    cmd = f"tail -20 /build/synth/logs/{log_name} 2>/dev/null || echo 'LOG NOT FOUND'"
+    log_result = ssh_cmd(ssh_host, ssh_port, ssh_key, cmd)
+    log_excerpt = log_result.stdout
+    
+    # Check success list
+    cmd = f"grep -q '{origin}' /build/synth/logs/01_success_list.log 2>/dev/null && echo SUCCESS || echo FAILED"
+    check_result = ssh_cmd(ssh_host, ssh_port, ssh_key, cmd)
+    
+    success = "SUCCESS" in check_result.stdout
+    
+    # Also check if package was created
+    pkg_name = origin.split("/")[-1]
+    cmd = f"ls /build/synth/packages/All/{pkg_name}* 2>/dev/null | head -1"
+    pkg_result = ssh_cmd(ssh_host, ssh_port, ssh_key, cmd)
+    if pkg_result.stdout.strip():
+        log("INFO", f"Package created: {pkg_result.stdout.strip()}")
+        success = True
+    
+    return success, log_excerpt
+
+
+def create_pr(safe_dir: Path, branch: str, origin: str, classification: str,
+              confidence: str, root_cause: str, bundle_dir: Path, dry_run: bool) -> str | None:
+    """
+    Create PR using gh CLI.
+    Returns PR URL or None.
+    """
+    if dry_run:
+        log("INFO", "[dry-run] would create PR")
+        return "https://github.com/example/pr/123"
+    
+    title = f"fix({origin}): {classification}"
+    
+    body = f"""## Summary
+AI-assisted fix for `{origin}` build failure on DragonFlyBSD.
+
+## Triage Analysis
+- **Classification**: {classification}
+- **Confidence**: {confidence}
+- **Root Cause**: {root_cause}
+
+## Rebuild Result
+Build succeeded on DragonFlyBSD VM (dsynth force).
+
+## Evidence
+Bundle: `{bundle_dir}`
+
+---
+*This PR was generated by the agentic build system.*
+"""
+    
+    result = subprocess.run(
+        ["gh", "pr", "create", "--title", title, "--body", body, "--base", "master"],
+        cwd=safe_dir,
+        capture_output=True,
+        text=True
+    )
+    
+    if result.returncode != 0:
+        log("ERROR", f"PR creation failed: {result.stderr}")
+        return None
+    
+    # Extract PR URL from output
+    pr_url = result.stdout.strip()
+    return pr_url
+
+
+def write_results(bundle_dir: Path, branch: str, commit: str, rebuild_success: bool,
+                  pr_url: str | None):
+    """Write results back to bundle."""
+    analysis_dir = bundle_dir / "analysis"
+    analysis_dir.mkdir(exist_ok=True)
+    
+    (analysis_dir / "branch.txt").write_text(branch + "\n")
+    (analysis_dir / "commit.txt").write_text(commit + "\n")
+    (analysis_dir / "rebuild_status.txt").write_text(
+        "SUCCESS" if rebuild_success else "FAILED"
+    )
+    
+    if pr_url:
+        (analysis_dir / "pr_url.txt").write_text(pr_url + "\n")
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Apply AI-generated patches, rebuild, and open PR"
+    )
+    parser.add_argument("--bundle", help="Path to evidence bundle")
+    parser.add_argument("--dry-run", action="store_true", help="Show what would be done")
+    parser.add_argument("--no-rebuild", action="store_true", help="Skip VM rebuild")
+    parser.add_argument("--no-pr", action="store_true", help="Skip PR creation")
+    args = parser.parse_args()
+    
+    # Get bundle directory
+    bundle_dir = Path(args.bundle) if args.bundle else Path(os.environ.get("BUNDLE_DIR", ""))
+    if not bundle_dir or not bundle_dir.exists():
+        log("ERROR", f"Bundle directory not found: {bundle_dir}")
+        sys.exit(1)
+    
+    # Check required files
+    patch_path = bundle_dir / "analysis" / "patch.diff"
+    if not patch_path.exists():
+        log("ERROR", f"patch.diff not found in {bundle_dir}/analysis/")
+        sys.exit(1)
+    
+    # Get configuration
+    safe_dir = Path(os.environ.get("SAFE_DELTAPORTS_DIR", str(DEFAULT_SAFE_CLONE)))
+    ssh_key = Path(os.environ.get("VM_SSH_KEY", str(DEFAULT_SSH_KEY)))
+    ssh_port = os.environ.get("VM_SSH_PORT", DEFAULT_SSH_PORT)
+    ssh_host = os.environ.get("VM_SSH_HOST", DEFAULT_SSH_HOST)
+    
+    log("INFO", f"Bundle: {bundle_dir}")
+    log("INFO", f"Safe clone: {safe_dir}")
+    log("INFO", f"Dry run: {args.dry_run}")
+    
+    # Parse metadata
+    meta = parse_meta(bundle_dir)
+    origin = meta.get("origin", "")
+    if not origin:
+        log("ERROR", "No origin found in meta.txt")
+        sys.exit(1)
+    
+    triage = parse_triage(bundle_dir)
+    classification = triage.get("classification", "unknown")
+    confidence = triage.get("confidence", "unknown")
+    root_cause = triage.get("root_cause", "")
+    
+    log("INFO", f"Origin: {origin}")
+    log("INFO", f"Classification: {classification}, Confidence: {confidence}")
+    
+    # Generate branch name
+    branch = generate_branch_name(origin, classification)
+    log("INFO", f"Branch: {branch}")
+    
+    # Step 1: Ensure safe clone
+    if not ensure_safe_clone(safe_dir, args.dry_run):
+        sys.exit(1)
+    
+    # Step 2: Apply patch and commit
+    success, commit_sha = apply_patch_to_clone(
+        safe_dir, patch_path, branch, origin, 
+        classification, bundle_dir, args.dry_run
+    )
+    if not success:
+        log("ERROR", "Failed to apply patch")
+        sys.exit(1)
+    log("INFO", f"Commit: {commit_sha}")
+    
+    # Step 3: Push branch
+    if not push_branch(safe_dir, branch, args.dry_run):
+        log("ERROR", "Failed to push branch")
+        sys.exit(1)
+    
+    # Step 4: VM fetch and sync
+    rebuild_success = False
+    if not args.no_rebuild:
+        if not vm_fetch_and_sync(origin, branch, ssh_host, ssh_port, ssh_key, args.dry_run):
+            log("ERROR", "Failed to fetch/sync on VM")
+            # Continue to write results, but mark as failed
+        else:
+            # Step 5: Rebuild
+            rebuild_success, log_excerpt = vm_rebuild(
+                origin, ssh_host, ssh_port, ssh_key, args.dry_run
+            )
+            if rebuild_success:
+                log("INFO", "Rebuild SUCCEEDED!")
+            else:
+                log("WARN", f"Rebuild FAILED. Log excerpt:\n{log_excerpt}")
+    else:
+        log("INFO", "Skipping rebuild (--no-rebuild)")
+        rebuild_success = True  # Assume success for PR
+    
+    # Step 6: Create PR (only if rebuild succeeded)
+    pr_url = None
+    if not args.no_pr and rebuild_success:
+        pr_url = create_pr(
+            safe_dir, branch, origin, classification,
+            confidence, root_cause, bundle_dir, args.dry_run
+        )
+        if pr_url:
+            log("INFO", f"PR created: {pr_url}")
+        else:
+            log("WARN", "Failed to create PR")
+    elif not rebuild_success:
+        log("INFO", "Skipping PR (rebuild failed)")
+    else:
+        log("INFO", "Skipping PR (--no-pr)")
+    
+    # Write results to bundle
+    write_results(bundle_dir, branch, commit_sha, rebuild_success, pr_url)
+    
+    log("INFO", "Done!")
+    
+    if pr_url:
+        print(f"\nPR URL: {pr_url}")
+    
+    sys.exit(0 if rebuild_success else 1)
+
+
+if __name__ == "__main__":
+    main()

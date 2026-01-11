@@ -46,6 +46,7 @@ write_kv_file "${bundle_dir}/meta.txt" \
 # at the run level by hook_run_start, not duplicated per-port.
 portdir="${DIR_PORTS}/${origin_base}"
 copy_if_exists "${portdir}/Makefile" "${bundle_dir}/port/Makefile"
+copy_if_exists "${portdir}/Makefile.DragonFly" "${bundle_dir}/port/Makefile.DragonFly"
 copy_if_exists "${portdir}/Makefile.local" "${bundle_dir}/port/Makefile.local"
 copy_if_exists "${portdir}/distinfo" "${bundle_dir}/port/distinfo"
 copy_if_exists "${portdir}/pkg-plist" "${bundle_dir}/port/pkg-plist"
