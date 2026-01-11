@@ -1059,18 +1059,303 @@ data: {"job_id": "...", "state": "done", "origin": "net/widentd", "type": "patch
 ...
 ```
 
-#### Phase 7 — Snippet extraction escalation (non-AI, bounded)
+#### Phase 7 — Snippet extraction escalation (non-AI, bounded) (DONE)
 
-Goal: allow agents to request more context without uploading huge trees/logs.
+Goal: allow agents to request more context (source files, build system files, log ranges) without uploading huge trees/logs. The snippet extractor runs on the VM (DragonFlyBSD builder) and extracts bounded content from preserved workdirs, distfiles, or logs.
 
-Tasks:
+##### Design Overview
 
-- Implement a size-capped snippet extractor that writes extracted slices into the bundle (e.g. `analysis/snippets/`).
-- Add a mechanism to enqueue a follow-up job when snippets are added.
+- **Snippet extractor runs on VM** where distfiles and workdirs live
+- **Up to 5 snippet rounds** (configurable via `OPENCODE_MAX_SNIPPET_ROUNDS`)
+- **Incremental feedback**: agent sees what was extracted, failures, and budget remaining
+- **Agent configurations** saved in repo as `config/opencode-agents.json`
+- **Dual execution mode**: Runs locally on DragonFlyBSD, or via SSH on Linux dev hosts
+
+##### Snippet Request Format
+
+Agents request snippets by including a `## Snippet Requests` section in their output:
+
+```markdown
+## Snippet Requests
+
+- `source:src/foo.c:142:±20` — 20 lines around line 142 in src/foo.c
+- `source:include/bar.h:all` — entire header file (capped at 50KB)
+- `buildsystem:CMakeLists.txt` — root build file
+- `buildsystem:src/CMakeLists.txt` — subdirectory build file
+- `configure:configure.ac` — autoconf input
+- `log:1200:1400` — lines 1200-1400 from full build log
+```
+
+**Request Grammar:**
+
+| Type | Format | Description |
+|------|--------|-------------|
+| `source` | `source:<path>:<line>:<context>` | Source file from workdir/distfiles |
+| `buildsystem` | `buildsystem:<path>` | CMakeLists.txt, meson.build, Makefile.am, etc. |
+| `configure` | `configure:<path>` | configure.ac, configure.in, etc. |
+| `log` | `log:<start_line>:<end_line>` | Lines from full.log.gz |
+
+**Context specifiers for source:**
+- `±N` — N lines before and after target line (default: `±30`)
+- `all` — Entire file (subject to 50KB per-file cap)
+
+**Size caps:**
+- Per-snippet: 50KB max
+- Total per round: 200KB max
+- If requests exceed cap: extract in order, note truncation in manifest
+
+##### Source Extraction Strategy
+
+The snippet extractor tries multiple sources in priority order:
+
+| Priority | Source | When Available | How to Access |
+|----------|--------|----------------|---------------|
+| 1 | **Preserved workdir** | After `dsynth debug` | Scan `${DIR_BUILDBASE}/SL*/construction/${cat}/${port}/work/` |
+| 2 | **Distfile extraction** | Always (if distfiles exist) | Parse `port/distinfo`, extract from `${DIR_DISTFILES}` |
+| 3 | **Full log mining** | Always | Extract source lines from compiler output in `logs/full.log.gz` |
+
+**Workdir detection:**
+- dsynth doesn't expose `WORKER_SLOT` in hook env, so extractor scans all `SL*` dirs
+- Look for `SL*/construction/<cat>/<port>/work/` matching the origin
+- If found, use directly; else fall back to distfiles
+
+##### Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SNIPPET_DISTFILES_DIR` | From `meta.txt:dir_distfiles` | Distfiles cache location |
+| `SNIPPET_BUILDBASE_DIR` | From `meta.txt:dir_buildbase` | dsynth build base (for workdir scan) |
+| `SNIPPET_MAX_PER_FILE` | `51200` | Max bytes per snippet (50KB) |
+| `SNIPPET_MAX_TOTAL` | `204800` | Max bytes per round (200KB) |
+| `OPENCODE_MAX_SNIPPET_ROUNDS` | `5` | Max snippet request rounds |
+
+##### Execution Mode
+
+The runner automatically selects execution mode based on environment:
+
+| Mode | Condition | Behavior |
+|------|-----------|----------|
+| **Local** | `VM_SSH_HOST` not set | Runs `snippet-extractor` directly (DragonFlyBSD production) |
+| **SSH** | `VM_SSH_HOST` is set | SSHs to VM to run `snippet-extractor` (Linux development) |
+
+Environment variables for SSH mode:
+```sh
+VM_SSH_HOST=root@localhost    # Enables SSH mode when set
+VM_SSH_PORT=2222              # Optional, default 2222
+VM_SSH_KEY=/path/to/key       # Optional, default ~/.go-synth/vm/id_ed25519
+```
+
+##### Snippet Extractor Script
+
+**Location:** `scripts/snippet-extractor`
+
+**Interface:**
+```sh
+scripts/snippet-extractor \
+  --bundle /path/to/evidence/bundle \
+  [--round 1] \
+  [--distfiles-dir /build/synth/distfiles] \
+  [--buildbase-dir /build/synth] \
+  [--max-per-snippet 51200] \
+  [--max-total 204800] \
+  [--prefer-workdir] \
+  [--dry-run]
+
+# Reads requests from bundle/analysis/triage.md or bundle/analysis/patch.md
+# Writes to bundle/analysis/snippets/round_N/
+```
+
+**Exit codes:**
+- `0` - Success, at least some snippets extracted
+- `1` - No requests found
+- `2` - All requests failed (nothing extracted)
+- `3` - Configuration/usage error
+
+##### Output Structure
+
+```
+analysis/snippets/
+├── manifest.json           # Cumulative manifest across all rounds
+├── round_1/
+│   ├── manifest.json       # This round's results
+│   ├── source/
+│   │   └── src_foo.c.txt
+│   ├── buildsystem/
+│   │   └── CMakeLists.txt.txt
+│   └── log/
+│       └── lines_1200-1400.txt
+├── round_2/
+│   └── ...
+└── .workdir/               # Cached extracted distfiles (ephemeral)
+```
+
+##### Manifest Format
+
+```json
+{
+  "rounds": [
+    {
+      "round": 1,
+      "source": "distfiles",
+      "distfile": "example-1.2.3.tar.gz",
+      "requests": [
+        {
+          "raw": "source:src/foo.c:142:±20",
+          "type": "source",
+          "path": "src/foo.c",
+          "line": 142,
+          "context": 20,
+          "status": "ok",
+          "output": "round_1/source/src_foo.c.txt",
+          "bytes": 1234,
+          "actual_lines": [122, 162],
+          "note": null
+        }
+      ],
+      "total_bytes": 5678,
+      "budget_remaining": 198522,
+      "truncated": false
+    }
+  ],
+  "total_rounds": 1,
+  "total_bytes_all_rounds": 5678
+}
+```
+
+##### Follow-up Job Mechanism
+
+**Job format extensions:**
+```
+type=triage|patch
+snippet_round=0
+has_snippets=false
+parent_job=
+```
+
+After snippet extraction:
+```
+type=triage|patch
+snippet_round=1
+has_snippets=true
+parent_job=20260111-020000Z-LiveSystem-devel_foo-12345.job
+```
+
+**Flow:**
+
+1. Triage/patch job runs, agent produces output
+2. Runner parses output for `## Snippet Requests` section
+3. If requests found AND `snippet_round < max`:
+   - Run `snippet-extractor` (locally or via SSH depending on mode)
+   - Enqueue follow-up job with `snippet_round+1`, `has_snippets=true`
+4. If no requests or max rounds reached:
+   - Proceed with normal flow (enqueue patch job or mark done)
+
+##### Agent Payload with Snippets
+
+When `has_snippets=true`, payload includes feedback and content:
+
+```markdown
+## Snippet Extraction Results
+
+**Round 1** | Source: `distfiles` | Budget remaining: 198522 bytes
+
+| Request | Status | Output | Bytes |
+|---------|--------|--------|-------|
+| `source:src/foo.c:142:±20` | ok | source/src_foo.c.txt | 1234 |
+| `source:missing.h:all` | not_found | - | 0 |
+| `log:1200:1400` | ok | log/lines_1200-1400.txt | 4444 |
+
+**Snippet rounds used:** 1/5 (remaining: 4)
+
+## Extracted Snippets
+
+*Source: distfile `example-1.2.3.tar.gz`*
+
+### source/src/foo.c
+```c
+// Lines 122-162 of src/foo.c
+...content...
+```
+
+### log/lines_1200-1400
+```
+...log content...
+```
+```
+
+##### Tasks
+
+- [x] Document Phase 7 plan
+- [x] Create `config/opencode-agents.json` with agent definitions
+- [x] Update agent prompts with snippet request documentation
+- [x] Create `scripts/snippet-extractor` (Python, runs on VM)
+- [x] Implement distfile extraction (tar/zip parsing)
+- [x] Implement workdir detection (scan SL* dirs)
+- [x] Implement log line extraction from full.log.gz
+- [x] Update `scripts/agent-queue-runner`:
+  - [x] Add `parse_snippet_requests()`
+  - [x] Add `load_snippets_content()` (renamed from `add_snippet_content_to_payload`)
+  - [x] Add `build_snippet_feedback()`
+  - [x] Add `run_snippet_extractor()` (local or SSH based on VM_SSH_HOST)
+  - [x] Add `enqueue_followup_job()`
+  - [x] Add `check_and_handle_snippet_requests()`
+  - [x] Update `build_triage_payload()` to include snippets
+  - [x] Update `build_patch_payload()` to include snippets
+  - [x] Update `process_triage_job()` to handle snippet flow
+  - [x] Update `process_patch_job()` to handle snippet flow
+- [x] Update `scripts/dsynth-hooks/hook_common.sh` with `snippet_round=0` in initial jobs
+- [ ] Test end-to-end with real failure on VM
 
 Done when:
 
-- A triage/patch request for additional context can be satisfied automatically in a bounded way.
+- [x] A triage/patch request for additional context can be satisfied automatically in a bounded way, with up to 5 rounds of refinement.
+
+Validated 2026-01-11:
+
+**Snippet extractor (`scripts/snippet-extractor`):**
+- Parses `## Snippet Requests` from triage.md/patch.md
+- Extracts from distfiles (tar.gz, tar.xz, tar.bz2, zip)
+- Scans preserved workdirs in `SL*/construction/`
+- Extracts log ranges from full.log.gz
+- Writes structured output with per-round and cumulative manifests
+
+**Agent queue runner (`scripts/agent-queue-runner`):**
+- Detects snippet requests in agent output
+- Runs snippet-extractor locally (DragonFlyBSD) or via SSH (Linux dev)
+- Enqueues follow-up jobs with incremented `snippet_round`
+- Includes extraction feedback and snippet content in follow-up payloads
+
+Example dry-run with snippets:
+```
+$ scripts/agent-queue-runner --queue-root /tmp/test-queue --once --dry-run
+2026-01-11T22:43:34Z INFO  processing job test-job.job
+2026-01-11T22:43:34Z INFO  [dry-run] type=triage, round=1, would send payload (9181 bytes)
+============================================================
+JOB TYPE: triage (snippet_round=1)
+============================================================
+## Snippet Extraction Results
+
+**Round 1** | Source: `distfiles` | Budget remaining: 203264 bytes
+
+| Request | Status | Output | Bytes |
+|---------|--------|--------|-------|
+| `source:src/main.c:142:±20` | ok | source/src_main.c.txt | 1024 |
+| `source:include/config.h:all` | not_found | - | 0 |
+| `log:500:550` | ok | log/lines_500-550.txt | 512 |
+
+**Snippet rounds used:** 1/5 (remaining: 4)
+
+## Extracted Snippets
+
+*Source: distfile `test-port-1.0.tar.gz`*
+
+### source/src/main.c
+```c
+// Lines 122-162 of src/main.c
+...
+```
+...
+```
 
 #### Phase 8 — End-to-end staging test
 
