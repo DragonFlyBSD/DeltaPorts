@@ -443,32 +443,179 @@ bundle_dir=/build/synth/logs/evidence/runs/run-LiveSystem-20260110-185412Z-88533
 run_id=run-LiveSystem-20260110-185412Z-88533
 ```
 
-#### Phase 3 — Worker: triage jobs (runner-side)
+#### Phase 3 — Worker: triage jobs (runner-side) (DONE)
 
 Goal: asynchronously triage failures via `opencode serve` and write outputs back into the bundle.
 
 Tasks:
 
-- Add `scripts/agent-queue-runner` (single worker).
-- Runner interface:
+- [x] Add `scripts/agent-queue-runner` (Python3, single worker).
+- [x] Runner interface:
   - `scripts/agent-queue-runner --queue-root <path>`
-  - Optional modes for testing: `--once` and `--dry-run`
-- Implement job lifecycle:
+  - Optional flags: `--once` (process one job and exit), `--dry-run` (print payload, don't call opencode)
+- [x] Configuration via env vars:
+  | Var | Required | Default | Description |
+  |-----|----------|---------|-------------|
+  | `OPENCODE_URL` | yes | — | e.g., `http://192.168.1.10:4096` |
+  | `OPENCODE_PROVIDER` | no | `opencode` (when using `dports-triage` agent) | e.g., `opencode` |
+  | `OPENCODE_MODEL` | no | `gpt-5-nano` (when using `dports-triage` agent) | e.g., `gpt-5-nano` |
+  | `OPENCODE_AGENT` | no | `dports-triage` | Custom agent name |
+  | `OPENCODE_TIMEOUT` | no | 120 | Request timeout (seconds) |
+  | `OPENCODE_MAX_RETRIES` | no | 3 | Retry attempts |
+  | `OPENCODE_RETRY_DELAY` | no | 8 | Base delay between retries (seconds) |
+- [x] Implement job lifecycle:
   - Claim by atomic rename: `pending/` → `inflight/`
+  - Validate `bundle_dir` exists, else fail immediately
   - On success: `inflight/` → `done/`
-  - On permanent failure: `inflight/` → `failed/` (+ error note)
-- Implement synchronous opencode calls (session-per-job):
-  - `POST /session`
-  - `POST /session/<id>/message`
-  - Config via env vars like `OPENCODE_URL`, `OPENCODE_AGENT`, and `OPENCODE_TIMEOUT`.
-- Write outputs into `bundle_dir/analysis/`:
-  - `analysis/triage.json` (raw response)
-  - `analysis/triage.md` (human-readable extraction)
+  - On permanent failure: `inflight/` → `failed/` (+ `<job>.error` file)
+- [x] Implement retry logic:
+  - Retry up to `OPENCODE_MAX_RETRIES` times on API errors
+  - Exponential backoff: `delay * 2^attempt` (capped at 60s)
+- [x] Implement synchronous opencode calls (session-per-job):
+  - `POST /session` → get session ID
+  - `POST /session/<id>/message` → send payload with `agent` parameter
+- [x] Write outputs into `bundle_dir/analysis/`:
+  - `analysis/triage.md` (response text)
+  - `analysis/triage.json` (full API response)
   - `analysis/session_id.txt`
+- [x] Logging:
+  - Write to `<queue-root>/runner.log`
+  - Also print to stderr for immediate visibility
+- [x] Behavior:
+  - Normal mode: loop forever, sleep 5s when queue is empty
+  - `--once` mode: process one job (if any) and exit
+- [x] Configure `dports-triage` agent on opencode server (see Agent Configuration below)
 
 Done when:
 
-- A pending job becomes `done/` and the referenced bundle contains `analysis/triage.md` + `analysis/triage.json`.
+- [x] A pending job becomes `done/` and the referenced bundle contains `analysis/triage.md` + `analysis/triage.json`.
+- [x] Triage output follows the structured format (Classification, Platform, Root Cause, Evidence, Suggested Fix, Confidence, Notes).
+
+Validated 2026-01-11 on DragonFlyBSD VM. Runner output:
+
+```
+2026-01-11T00:23:40Z INFO  starting runner (once=True, dry_run=False, agent=dports-triage, model=opencode/gpt-5-nano)
+2026-01-11T00:23:40Z INFO  processing job 20260111-002334Z-LiveSystem-devel_gettext-tools-89907.job
+2026-01-11T00:23:40Z INFO  calling opencode (attempt 1/3, agent=dports-triage, model=opencode/gpt-5-nano)
+2026-01-11T00:23:58Z INFO  wrote analysis to .../analysis/
+2026-01-11T00:23:58Z INFO  moved job to done/
+```
+
+Example triage output (`analysis/triage.md`):
+```markdown
+## Classification
+missing-dep
+
+## Platform
+dragonfly-specific
+
+## Root Cause
+The gettext-tools build cannot proceed because the build environment cannot fetch
+the required prebuilt libtextstyle package (libtextstyle-0.22.5.pkg) from the local
+package repository.
+
+## Evidence
+- "pkg: No packages available to install matching '/packages/All/libtextstyle-0.22.5.pkg'
+  have been found in the repositories"
+
+## Suggested Fix
+- Publish the required libtextstyle package to the DeltaPorts DragonFly package repo...
+
+## Confidence
+medium
+
+## Notes
+- This is a dependency delivery issue rather than a code/config error in gettext-tools itself.
+```
+
+Free models available on `opencode` provider (no billing required):
+- `gpt-5-nano`, `big-pickle`, `grok-code`, `glm-4.7-free`, `minimax-m2.1-free`
+
+Example invocation:
+```sh
+OPENCODE_URL=http://10.0.2.2:4097 \
+/build/synth/DeltaPorts/scripts/agent-queue-runner \
+  --queue-root /build/synth/logs/evidence/queue --once
+```
+
+##### Agent Configuration
+
+The `dports-triage` agent must be configured on the opencode server. Add the following to `opencode.json`:
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "agent": {
+    "dports-triage": {
+      "description": "Triages dsynth build failures for DragonFlyBSD DeltaPorts",
+      "mode": "subagent",
+      "model": "opencode/gpt-5-nano",
+      "tools": {
+        "write": false, "edit": false, "bash": false,
+        "read": false, "glob": false, "grep": false,
+        "webfetch": false, "task": false
+      },
+      "prompt": "<system prompt - see below>"
+    }
+  }
+}
+```
+
+The agent's system prompt includes:
+- DeltaPorts/DPorts context (what they are, how they relate)
+- dsynth build system overview
+- Common DragonFlyBSD-specific issues (missing syscalls, pthread in libc, procfs differences, etc.)
+- DeltaPorts patching style conventions
+- **Required output format** (structured sections)
+
+**Important:** The agent must be passed in the **message body** (not session creation) when calling the opencode API. The runner handles this automatically.
+
+##### Triage Output Format
+
+The agent is instructed to produce output in this exact structure:
+
+| Section | Values | Description |
+|---------|--------|-------------|
+| `## Classification` | `compile-error`, `configure-error`, `missing-dep`, `plist-error`, `fetch-error`, `patch-error`, `unknown` | Type of failure |
+| `## Platform` | `dragonfly-specific`, `freebsd-upstream`, `generic` | Where the issue originates |
+| `## Root Cause` | free text | 1-3 sentences explaining the cause |
+| `## Evidence` | quoted log lines | Direct quotes supporting the diagnosis |
+| `## Suggested Fix` | free text | DeltaPorts-style fix approach |
+| `## Confidence` | `high`, `medium`, `low` | Confidence in the diagnosis |
+| `## Notes` | free text (optional) | Additional context or caveats |
+
+##### Known Error Database (KEDB)
+
+To improve triage accuracy, the agent can be augmented with a database of known issues. Place markdown files in:
+
+```
+docs/kedb/*.md
+```
+
+These files will be included in the agent's context (injected into the payload by the runner). Suggested format:
+
+```markdown
+# Known Issue: pthread linking errors
+
+## Pattern
+- `undefined reference to 'pthread_create'`
+- `undefined reference to 'pthread_mutex_*'`
+
+## Cause
+DragonFlyBSD has pthread integrated into libc, unlike FreeBSD which uses a separate libpthread.
+Ports that explicitly link `-lpthread` or check for `libpthread.so` may fail.
+
+## Fix
+- Remove explicit `-lpthread` from LDFLAGS if present
+- Or add `LDFLAGS+=-lpthread` to satisfy linker (harmless on DragonFly)
+- For configure scripts: patch to skip libpthread checks on DragonFly
+
+## Examples
+- `devel/some-port`: Fixed in commit abc123
+- `net/another-port`: Marked BROKEN_DragonFly
+```
+
+The runner will automatically read `docs/kedb/*.md` and append them to the triage payload.
 
 #### Phase 4 — Patch generation (agent output)
 
