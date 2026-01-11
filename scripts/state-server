@@ -522,9 +522,15 @@ class StateServerHandler(BaseHTTPRequestHandler):
             elif path.startswith("/ports/"):
                 origin = path[7:]
                 self._handle_port(origin)
+            elif path == "/":
+                self._handle_static_ui("index.html", content_type="text/html; charset=utf-8")
+            elif path == "/assets/app.js":
+                self._handle_static_ui("app.js", content_type="application/javascript; charset=utf-8")
+            elif path == "/assets/app.css":
+                self._handle_static_ui("app.css", content_type="text/css; charset=utf-8")
             elif path == "/events":
                 last_event_id = self.headers.get("Last-Event-ID")
-                self._handle_events(last_event_id)
+                self._handle_events(last_event_id, query)
             else:
                 self._send_error_json(404, "Not found")
         except Exception as e:
@@ -737,7 +743,23 @@ class StateServerHandler(BaseHTTPRequestHandler):
                     break
                 self.wfile.write(chunk)
     
-    def _handle_events(self, last_event_id: str | None):
+    def _handle_static_ui(self, filename: str, content_type: str):
+        """Serve files from scripts/state-server-ui."""
+        ui_dir = Path(__file__).resolve().parent / "state-server-ui"
+        file_path = ui_dir / filename
+
+        if not file_path.exists() or not file_path.is_file():
+            self._send_error_json(404, "UI asset not found")
+            return
+
+        body = file_path.read_bytes()
+        self.send_response(200)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _handle_events(self, last_event_id: str | None, query: dict[str, list[str]]):
         """GET /events (SSE)"""
         conn = self._get_conn()
         
@@ -747,23 +769,50 @@ class StateServerHandler(BaseHTTPRequestHandler):
         self.send_header("Connection", "keep-alive")
         self.end_headers()
         
-        # Parse last event ID
+        # Choose replay start
         start_id = 0
-        if last_event_id:
+
+        # 1) Query-param override: after_id (preferred)
+        after_id = query.get("after_id", [None])[0]
+        if after_id is not None:
             try:
-                start_id = int(last_event_id)
+                start_id = int(after_id)
             except ValueError:
-                pass
-        
-        # Replay events since last_event_id
+                start_id = 0
+        else:
+            # 2) Last-Event-ID header
+            if last_event_id:
+                try:
+                    start_id = int(last_event_id)
+                except ValueError:
+                    start_id = 0
+
+            # 3) Optional tail replay (if no after_id)
+            tail_raw = query.get("tail", ["200"])[0]
+            try:
+                tail_n = max(0, int(tail_raw))
+            except ValueError:
+                tail_n = 200
+
+            if start_id == 0:
+                # If no known resume point, replay last N events only
+                if tail_n > 0:
+                    cutoff = conn.execute(
+                        "SELECT id FROM events ORDER BY id DESC LIMIT 1 OFFSET ?",
+                        (max(0, tail_n - 1),),
+                    ).fetchone()
+                    if cutoff:
+                        start_id = cutoff["id"] - 1
+
+        # Replay events after chosen start_id
         rows = conn.execute(
             "SELECT id, ts, type, data_json FROM events WHERE id > ? ORDER BY id",
-            (start_id,)
+            (start_id,),
         ).fetchall()
         
         for row in rows:
-            self._send_sse_event(row["id"], row["type"], row["data_json"])
-        
+            self._send_sse_event(row["id"], row["type"], row["ts"], row["data_json"])
+
         # Keep connection open and stream new events
         last_sent_id = rows[-1]["id"] if rows else start_id
         
@@ -777,7 +826,7 @@ class StateServerHandler(BaseHTTPRequestHandler):
                 ).fetchall()
                 
                 for row in new_rows:
-                    self._send_sse_event(row["id"], row["type"], row["data_json"])
+                    self._send_sse_event(row["id"], row["type"], row["ts"], row["data_json"])
                     last_sent_id = row["id"]
                 
                 # Send keepalive comment
@@ -786,11 +835,18 @@ class StateServerHandler(BaseHTTPRequestHandler):
         except (BrokenPipeError, ConnectionResetError):
             pass
     
-    def _send_sse_event(self, event_id: int, event_type: str, data_json: str):
+    def _send_sse_event(self, event_id: int, event_type: str, ts: str, data_json: str):
         """Send a single SSE event."""
+        try:
+            data = json.loads(data_json)
+        except json.JSONDecodeError:
+            data = {"raw": data_json}
+
+        data["ts"] = ts
+
         self.wfile.write(f"id: {event_id}\n".encode())
         self.wfile.write(f"event: {event_type}\n".encode())
-        self.wfile.write(f"data: {data_json}\n\n".encode())
+        self.wfile.write(f"data: {json.dumps(data)}\n\n".encode())
         self.wfile.flush()
 
 
