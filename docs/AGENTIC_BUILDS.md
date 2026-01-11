@@ -997,6 +997,7 @@ curl -N http://127.0.0.1:8787/events  # SSE stream
 | `/runs/<run_id>` | GET | Single run with its bundles |
 | `/jobs` | GET | List jobs (optional `?state=pending\|inflight\|done\|failed`) |
 | `/jobs/<job_id>` | GET | Single job details |
+| `/bundles` | GET | List recent bundles (up to 100) |
 | `/bundles/<bundle_id>` | GET | Bundle metadata with artifact list |
 | `/ports/<origin>` | GET | Timeline of bundles and jobs for a port |
 | `/bundles/<bundle_id>/artifacts/<relpath>` | GET | Serve artifact file (with path traversal protection) |
@@ -1123,6 +1124,7 @@ scripts/state-server-ui/
 | `#/runs` | Build runs list + bundles per run | `GET /runs`, `GET /runs/<id>` |
 | `#/ports` | Port search | Local autocomplete |
 | `#/ports/<origin>` | Per-port timeline | `GET /ports/<origin>` |
+| `#/bundles` | Recent bundles list | `GET /bundles` |
 | `#/bundles/<id>` | Bundle detail + artifact viewer | `GET /bundles/<id>`, artifact fetch |
 
 ##### Bootstrap Components
@@ -1167,23 +1169,39 @@ scripts/state-server-ui/
 - [x] Confirm deploy/security assumptions (served by state-server, no auth, CDN)
 - [x] Define UI state model and routes
 - [x] Define Bootstrap component spec
-- [ ] Implement Bootstrap layout and navigation (`index.html`)
-- [ ] Implement SSE client with replay/reconnect (`app.js`)
-- [ ] Build Events view with filters/search
-- [ ] Build Jobs/Runs/Ports/Bundles views
-- [ ] Implement artifact viewer (markdown/diff/logs)
-- [ ] Serve UI from state-server (modify Python)
-- [ ] Add `after_id` and `tail` query params to `/events`
-- [ ] Include `ts` in SSE event payloads
-- [ ] Smoke test and document
+- [x] Implement Bootstrap layout and navigation (`index.html`)
+- [x] Implement SSE client with replay/reconnect (`app.js`)
+- [x] Build Events view with filters/search
+- [x] Build Jobs/Runs/Ports/Bundles views
+- [x] Implement artifact viewer (markdown/diff/logs)
+- [x] Serve UI from state-server (modify Python)
+- [x] Add `after_id` and `tail` query params to `/events`
+- [x] Include `ts` in SSE event payloads
+- [x] Smoke test and document
 
 Done when:
 
-- Visiting `http://<builder>:8787/` loads the Bootstrap UI
-- Events view updates live via SSE
-- Page reload resumes from last event id
-- Drilling into job/bundle/port works
-- Artifact rendering (triage.md, patch.diff, errors.txt) works
+- [x] Visiting `http://<builder>:8787/` loads the Bootstrap UI
+- [x] Events view updates live via SSE
+- [x] Page reload resumes from last event id
+- [x] Drilling into job/bundle/port works
+- [x] Artifact rendering (triage.md, patch.diff, errors.txt) works
+
+Validated 2026-01-11 on DragonFlyBSD VM:
+
+- UI served at `http://127.0.0.1:8787/` with all views functional
+- SSE stream with `after_id` and `tail` query params working
+- Event payloads include `ts` field
+- Artifact viewer renders markdown (triage.md), diffs (patch.diff), and logs (errors.txt)
+- Bundle view auto-selects appropriate tab based on available artifacts
+
+Access from host via SSH tunnel:
+```sh
+ssh -i ~/.go-synth/vm/id_ed25519 -p 2222 \
+    -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+    -L 8787:127.0.0.1:8787 root@localhost -N
+# Then open http://127.0.0.1:8787/ in browser
+```
 
 ## VM / Builder Access (Phase 1 testing)
 

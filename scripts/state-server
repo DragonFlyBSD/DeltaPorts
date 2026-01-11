@@ -507,6 +507,8 @@ class StateServerHandler(BaseHTTPRequestHandler):
             elif path.startswith("/jobs/"):
                 job_id = path[6:]
                 self._handle_job(job_id)
+            elif path == "/bundles":
+                self._handle_bundles()
             elif path.startswith("/bundles/") and "/artifacts/" in path:
                 # /bundles/<bundle_id>/artifacts/<relpath>
                 match = re.match(r"^/bundles/([^/]+)/artifacts/(.+)$", path)
@@ -633,6 +635,17 @@ class StateServerHandler(BaseHTTPRequestHandler):
             return
         
         self._send_json({"job": dict(job)})
+    
+    def _handle_bundles(self):
+        """GET /bundles"""
+        conn = self._get_conn()
+        rows = conn.execute(
+            """SELECT bundle_id, run_id, origin, ts_utc, result 
+               FROM bundles ORDER BY ts_utc DESC LIMIT 100"""
+        ).fetchall()
+        
+        bundles = [dict(row) for row in rows]
+        self._send_json({"bundles": bundles})
     
     def _handle_bundle(self, bundle_id: str):
         """GET /bundles/<bundle_id>"""

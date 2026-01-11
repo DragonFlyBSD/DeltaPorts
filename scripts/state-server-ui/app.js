@@ -185,6 +185,7 @@
     if (first === 'ports' && second) {
       return { name: 'portDetail', params: { origin: decodeURIComponent(second + (rest.length ? '/' + rest.join('/') : '')) } };
     }
+    if (first === 'bundles' && !second) return { name: 'bundles', params: {} };
     if (first === 'bundles' && second) return { name: 'bundle', params: { id: decodeURIComponent(second) } };
 
     return { name: 'overview', params: {} };
@@ -201,7 +202,7 @@
 
   async function navigate() {
     const route = parseRoute();
-    setActiveNav(route.name === 'portDetail' ? 'ports' : route.name);
+    setActiveNav(route.name === 'portDetail' ? 'ports' : (route.name === 'bundle' ? 'bundles' : route.name));
 
     if (route.name === 'overview') {
       await renderOverview();
@@ -215,6 +216,8 @@
       await renderPorts();
     } else if (route.name === 'portDetail') {
       await renderPortDetail(route.params.origin);
+    } else if (route.name === 'bundles') {
+      await renderBundles();
     } else if (route.name === 'bundle') {
       await renderBundle(route.params.id);
     } else {
@@ -941,6 +944,74 @@
       } catch (err) {
         toast('Error', `<div>Failed to load run</div><div class="small text-body-secondary">${escapeHtml(String(err))}</div>`, { icon: 'exclamation-triangle' });
       }
+    });
+  }
+
+  async function renderBundles() {
+    let bundles;
+    try {
+      const data = await fetchJSON('/bundles');
+      bundles = data.bundles || [];
+    } catch (e) {
+      setMain(`<div class="alert alert-danger">Failed to load /bundles: ${escapeHtml(String(e))}</div>`);
+      return;
+    }
+
+    bundles.forEach((b) => { state.bundlesById[b.bundle_id] = b; });
+
+    setMain(`
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <h4 class="mb-0">Bundles</h4>
+        <button class="btn btn-sm btn-outline-secondary" data-action="refresh-bundles">${icon('arrow-clockwise')} Refresh</button>
+      </div>
+
+      <div class="card shadow-sm">
+        <div class="card-body p-0">
+          ${bundles.length ? `
+            <div class="table-responsive">
+              <table class="table table-hover mb-0">
+                <thead>
+                  <tr>
+                    <th>Bundle</th>
+                    <th>Origin</th>
+                    <th>Result</th>
+                    <th>Timestamp</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${bundles.map((b) => `
+                    <tr class="event-row" data-bundle-id="${escapeHtml(b.bundle_id)}">
+                      <td class="id-col"><a href="#/bundles/${encodeURIComponent(b.bundle_id)}">${escapeHtml(shortId(b.bundle_id, 32))}</a></td>
+                      <td class="origin-col">${b.origin ? `<a href="#/ports/${encodeURIComponent(b.origin)}">${escapeHtml(b.origin)}</a>` : '-'}</td>
+                      <td>${escapeHtml(b.result || '')}</td>
+                      <td class="ts-col">${escapeHtml(formatTs(b.ts_utc))}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+            <div class="text-body-secondary small p-2 border-top">Showing ${bundles.length} most recent bundles</div>
+          ` : renderEmpty('No bundles', 'No evidence bundles found.')}
+        </div>
+      </div>
+    `);
+
+    const root = $('#main-content');
+    if (!root) return;
+
+    root.addEventListener('click', async (e) => {
+      const btn = e.target.closest('[data-action]');
+      if (btn?.dataset.action === 'refresh-bundles') {
+        scheduleRender();
+        return;
+      }
+
+      const row = e.target.closest('tr[data-bundle-id]');
+      if (!row) return;
+      const id = row.dataset.bundleId;
+
+      // Navigate to bundle detail
+      window.location.hash = `#/bundles/${encodeURIComponent(id)}`;
     });
   }
 
