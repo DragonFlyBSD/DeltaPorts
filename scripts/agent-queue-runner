@@ -7,29 +7,39 @@ Usage:
 
 Environment variables:
     OPENCODE_URL         (required) e.g., http://192.168.1.10:4096
-    OPENCODE_AGENT       (optional) default: dports-triage
-    OPENCODE_PROVIDER    (optional) e.g., opencode (default: not set, uses agent's model)
-    OPENCODE_MODEL       (optional) e.g., gpt-5-nano (default: not set, uses agent's model)
+    OPENCODE_PROVIDER    (optional) e.g., opencode (default: opencode for dports-* agents)
+    OPENCODE_MODEL       (optional) e.g., gpt-5-nano (default: gpt-5-nano for dports-* agents)
     OPENCODE_TIMEOUT     (optional) request timeout in seconds, default 120
     OPENCODE_MAX_RETRIES (optional) retry attempts, default 3
     OPENCODE_RETRY_DELAY (optional) base delay between retries, default 8
 
-The dports-triage agent must be configured on the opencode server with:
-- DeltaPorts/DPorts context in its system prompt
-- Expected output format (Classification, Platform, Root Cause, etc.)
-- All tools disabled (pure analysis)
+Job types:
+    type=triage (default) - Uses dports-triage agent, may auto-enqueue patch job
+    type=patch            - Uses dports-patch agent to generate a diff
 """
 
 import argparse
 import json
 import os
+import re
 import sys
 import time
 import urllib.request
 import urllib.error
 from datetime import datetime, timezone
 from pathlib import Path
-from glob import glob
+
+
+# Classifications that should trigger automatic patch generation
+PATCHABLE_CLASSIFICATIONS = {
+    "compile-error",
+    "configure-error",
+    "patch-error",
+    "plist-error",
+}
+
+# Confidence levels that allow patch generation
+PATCHABLE_CONFIDENCE = {"high", "medium"}
 
 
 def log(queue_root: Path, level: str, message: str):
@@ -71,14 +81,10 @@ def read_file_if_exists(path: Path, max_bytes: int = 200_000) -> str | None:
 
 def find_kedb_dir() -> Path | None:
     """Find the KEDB directory relative to this script or in DeltaPorts repo."""
-    # Try relative to script location (scripts/agent-queue-runner -> docs/kedb)
     script_dir = Path(__file__).resolve().parent
     kedb_dir = script_dir.parent / "docs" / "kedb"
     if kedb_dir.exists():
         return kedb_dir
-    
-    # Try from bundle_dir's DeltaPorts checkout
-    # (bundle may reference /build/synth/DeltaPorts)
     return None
 
 
@@ -88,7 +94,6 @@ def load_kedb(kedb_dir: Path | None) -> str:
         return ""
     
     kedb_files = sorted(kedb_dir.glob("*.md"))
-    # Skip README.md and TEMPLATE.md
     skip_files = {"readme.md", "template.md"}
     kedb_files = [f for f in kedb_files if f.name.lower() not in skip_files]
     
@@ -109,12 +114,126 @@ def load_kedb(kedb_dir: Path | None) -> str:
     return "\n".join(parts)
 
 
-def build_payload(bundle_dir: Path, kedb_dir: Path | None = None) -> str:
-    """Build the triage prompt from bundle contents.
+# -----------------------------------------------------------------------------
+# Triage parsing
+# -----------------------------------------------------------------------------
+
+def parse_triage_output(triage_path: Path) -> dict:
+    """Extract Classification and Confidence from triage.md."""
+    result = {"classification": "", "confidence": "", "raw": ""}
     
-    The payload is kept minimal since the dports-triage agent already has
-    DeltaPorts/DPorts context in its system prompt.
+    content = read_file_if_exists(triage_path)
+    if not content:
+        return result
+    
+    result["raw"] = content
+    
+    # Extract Classification
+    match = re.search(r"^##\s*Classification\s*\n+([^\n#]+)", content, re.MULTILINE | re.IGNORECASE)
+    if match:
+        result["classification"] = match.group(1).strip().lower()
+    
+    # Extract Confidence
+    match = re.search(r"^##\s*Confidence\s*\n+([^\n#]+)", content, re.MULTILINE | re.IGNORECASE)
+    if match:
+        result["confidence"] = match.group(1).strip().lower()
+    
+    return result
+
+
+def should_enqueue_patch(triage: dict) -> bool:
+    """Determine if a patch job should be auto-enqueued based on triage results."""
+    classification = triage.get("classification", "")
+    confidence = triage.get("confidence", "")
+    
+    if classification not in PATCHABLE_CLASSIFICATIONS:
+        return False
+    if confidence not in PATCHABLE_CONFIDENCE:
+        return False
+    return True
+
+
+# -----------------------------------------------------------------------------
+# Diff validation
+# -----------------------------------------------------------------------------
+
+def validate_diff(diff_text: str) -> tuple[bool, str]:
     """
+    Validate unified diff syntax.
+    Returns (is_valid, error_message).
+    """
+    if not diff_text or not diff_text.strip():
+        return False, "Empty diff"
+    
+    lines = diff_text.strip().split("\n")
+    
+    # Must have --- and +++ headers
+    has_old_file = any(line.startswith("---") for line in lines)
+    has_new_file = any(line.startswith("+++") for line in lines)
+    
+    if not has_old_file:
+        return False, "Missing '---' file header"
+    if not has_new_file:
+        return False, "Missing '+++' file header"
+    
+    # Must have at least one hunk header
+    has_hunk = any(line.startswith("@@") for line in lines)
+    if not has_hunk:
+        return False, "Missing '@@ ... @@' hunk header"
+    
+    # Check that lines in hunks have valid prefixes
+    in_hunk = False
+    for line in lines:
+        if line.startswith("@@"):
+            in_hunk = True
+            continue
+        if in_hunk:
+            # End of hunk detection (next file or end)
+            if line.startswith("---") or line.startswith("+++") or line.startswith("diff "):
+                in_hunk = False
+                continue
+            # Valid hunk line prefixes: +, -, space, or empty (for context)
+            if line and not line[0] in ("+", "-", " ", "\\"):
+                # Allow "\ No newline at end of file"
+                if not line.startswith("\\"):
+                    return False, f"Invalid line prefix in hunk: {line[:50]}"
+    
+    return True, ""
+
+
+def extract_diff_from_response(text: str) -> str | None:
+    """Extract the diff block from the agent's response."""
+    # Look for ```diff ... ``` block
+    match = re.search(r"```diff\s*\n(.*?)```", text, re.DOTALL)
+    if match:
+        return match.group(1).strip()
+    
+    # Fallback: look for content starting with "---" or "diff --git"
+    lines = text.split("\n")
+    diff_start = None
+    for i, line in enumerate(lines):
+        if line.startswith("---") or line.startswith("diff --git") or line.startswith("diff -"):
+            diff_start = i
+            break
+    
+    if diff_start is not None:
+        # Take everything from diff start until we hit a markdown header or end
+        diff_lines = []
+        for line in lines[diff_start:]:
+            if line.startswith("## ") and not line.startswith("## Patch"):
+                break
+            diff_lines.append(line)
+        return "\n".join(diff_lines).strip()
+    
+    return None
+
+
+# -----------------------------------------------------------------------------
+# Payload builders
+# -----------------------------------------------------------------------------
+
+def build_triage_payload(bundle_dir: Path, kedb_dir: Path | None = None) -> str:
+    """Build the triage prompt from bundle contents."""
     parts = []
     
     # Known Error Database (if available)
@@ -179,12 +298,94 @@ def build_payload(bundle_dir: Path, kedb_dir: Path | None = None) -> str:
                     parts.append("```")
                     parts.append("")
     
-    # Simple closing instruction (agent knows the expected format)
     parts.append("---")
     parts.append("Analyze this build failure and provide your triage report.")
     
     return "\n".join(parts)
 
+
+def build_patch_payload(bundle_dir: Path, kedb_dir: Path | None = None) -> str:
+    """Build the patch generation prompt including triage output."""
+    parts = []
+    
+    # Triage summary (most important context)
+    triage = read_file_if_exists(bundle_dir / "analysis" / "triage.md")
+    if triage:
+        parts.append("## Triage Summary")
+        parts.append(triage)
+        parts.append("")
+    
+    # Known Error Database (if available)
+    kedb_content = load_kedb(kedb_dir)
+    if kedb_content:
+        parts.append(kedb_content)
+        parts.append("")
+    
+    # Metadata
+    meta = read_file_if_exists(bundle_dir / "meta.txt")
+    if meta:
+        parts.append("## Metadata")
+        parts.append(meta)
+        parts.append("")
+    
+    # Build errors
+    errors = read_file_if_exists(bundle_dir / "logs" / "errors.txt")
+    if errors:
+        parts.append("## Build Errors")
+        parts.append(errors)
+        parts.append("")
+    
+    # Port files
+    parts.append("## Port Files")
+    
+    makefile = read_file_if_exists(bundle_dir / "port" / "Makefile")
+    if makefile:
+        parts.append("### Makefile")
+        parts.append("```makefile")
+        parts.append(makefile)
+        parts.append("```")
+        parts.append("")
+    
+    plist = read_file_if_exists(bundle_dir / "port" / "pkg-plist")
+    if plist:
+        parts.append("### pkg-plist")
+        parts.append("```")
+        parts.append(plist)
+        parts.append("```")
+        parts.append("")
+    
+    distinfo = read_file_if_exists(bundle_dir / "port" / "distinfo")
+    if distinfo:
+        parts.append("### distinfo")
+        parts.append("```")
+        parts.append(distinfo)
+        parts.append("```")
+        parts.append("")
+    
+    # Existing patches
+    patches_dir = bundle_dir / "port" / "files"
+    if patches_dir.exists():
+        patch_files = sorted(patches_dir.glob("patch-*"))
+        if patch_files:
+            parts.append("### Existing Patches")
+            for pf in patch_files:
+                content = read_file_if_exists(pf)
+                if content:
+                    parts.append(f"#### {pf.name}")
+                    parts.append("```diff")
+                    parts.append(content)
+                    parts.append("```")
+                    parts.append("")
+    
+    parts.append("---")
+    parts.append("Generate a patch that fixes this issue. Output a single unified diff that applies to the DeltaPorts overlay root.")
+    
+    return "\n".join(parts)
+
+
+# -----------------------------------------------------------------------------
+# API calls
+# -----------------------------------------------------------------------------
 
 def call_opencode(
     url: str,
@@ -231,7 +432,6 @@ def call_opencode(
     if provider and model:
         message_body["model"] = {"providerID": provider, "modelID": model}
     elif model:
-        # Just model ID - assume opencode provider
         message_body["model"] = {"providerID": "opencode", "modelID": model}
     
     req = urllib.request.Request(
@@ -249,7 +449,6 @@ def call_opencode(
 
 def extract_response_text(response: dict) -> str:
     """Extract the assistant's text response from API response."""
-    # Check for error in response
     info = response.get("info", {})
     error = info.get("error")
     if error:
@@ -258,7 +457,6 @@ def extract_response_text(response: dict) -> str:
         error_msg = error_data.get("message", str(error_data))
         return f"# Error: {error_name}\n\n{error_msg}"
     
-    # Try to find text parts in the response
     parts = response.get("parts", [])
     text_parts = []
     for part in parts:
@@ -270,30 +468,74 @@ def extract_response_text(response: dict) -> str:
     if text_parts:
         return "\n".join(text_parts)
     
-    # Fallback: return JSON representation
     return json.dumps(response, indent=2)
 
 
-def write_outputs(bundle_dir: Path, response: dict, session_id: str):
-    """Write analysis outputs to bundle."""
+# -----------------------------------------------------------------------------
+# Output writers
+# -----------------------------------------------------------------------------
+
+def write_triage_outputs(bundle_dir: Path, response: dict, session_id: str):
+    """Write triage analysis outputs to bundle."""
     analysis_dir = bundle_dir / "analysis"
     analysis_dir.mkdir(exist_ok=True)
     
-    # Raw response
     with open(analysis_dir / "triage.json", "w") as f:
         json.dump(response, f, indent=2)
     
-    # Session ID
     with open(analysis_dir / "session_id.txt", "w") as f:
         f.write(session_id + "\n")
     
-    # Human-readable response
     text = extract_response_text(response)
     with open(analysis_dir / "triage.md", "w") as f:
         f.write(text + "\n")
 
 
-def move_job(job_path: Path, dest_dir: str):
+def write_patch_outputs(bundle_dir: Path, response: dict, session_id: str) -> tuple[bool, str]:
+    """
+    Write patch outputs to bundle.
+    Returns (success, error_message).
+    """
+    analysis_dir = bundle_dir / "analysis"
+    analysis_dir.mkdir(exist_ok=True)
+    
+    # Write raw response
+    with open(analysis_dir / "patch.json", "w") as f:
+        json.dump(response, f, indent=2)
+    
+    # Write session ID
+    with open(analysis_dir / "patch_session_id.txt", "w") as f:
+        f.write(session_id + "\n")
+    
+    # Extract and validate diff
+    text = extract_response_text(response)
+    with open(analysis_dir / "patch.md", "w") as f:
+        f.write(text + "\n")
+    
+    diff = extract_diff_from_response(text)
+    if not diff:
+        return False, "No diff block found in response"
+    
+    is_valid, error = validate_diff(diff)
+    if not is_valid:
+        # Write invalid diff with error note
+        with open(analysis_dir / "patch.diff.invalid", "w") as f:
+            f.write(f"# VALIDATION ERROR: {error}\n\n")
+            f.write(diff)
+        return False, f"Invalid diff: {error}"
+    
+    # Write valid diff
+    with open(analysis_dir / "patch.diff", "w") as f:
+        f.write(diff + "\n")
+    
+    return True, ""
+
+
+# -----------------------------------------------------------------------------
+# Job management
+# -----------------------------------------------------------------------------
+
+def move_job(job_path: Path, dest_dir: str) -> Path:
     """Move job file to destination directory (done/failed)."""
     dest = job_path.parent.parent / dest_dir / job_path.name
     job_path.rename(dest)
@@ -313,7 +555,6 @@ def claim_next_job(queue_root: Path) -> Path | None:
     pending_dir = queue_root / "pending"
     inflight_dir = queue_root / "inflight"
     
-    # Get jobs sorted by name (which includes timestamp)
     jobs = sorted(pending_dir.glob("*.job"))
     
     for job_path in jobs:
@@ -322,73 +563,84 @@ def claim_next_job(queue_root: Path) -> Path | None:
             job_path.rename(dest)
             return dest
         except OSError:
-            # Another process claimed it, try next
             continue
     
     return None
 
 
-def process_job(
+def enqueue_patch_job(queue_root: Path, job: dict):
+    """Enqueue a patch job based on completed triage job."""
+    ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%SZ")
+    origin_safe = job.get("origin", "unknown").replace("/", "_")
+    pid = os.getpid()
+    
+    job_name = f"{ts}-{job.get('profile', 'unknown')}-{origin_safe}-{pid}-patch.job"
+    
+    pending_dir = queue_root / "pending"
+    job_path = pending_dir / job_name
+    
+    content = [
+        f"type=patch",
+        f"created_ts_utc={ts}",
+        f"profile={job.get('profile', '')}",
+        f"origin={job.get('origin', '')}",
+        f"flavor={job.get('flavor', '')}",
+        f"bundle_dir={job.get('bundle_dir', '')}",
+        f"run_id={job.get('run_id', '')}",
+        f"triage_file={job.get('bundle_dir', '')}/analysis/triage.md",
+    ]
+    
+    # Atomic write
+    tmp_path = job_path.with_suffix(".tmp")
+    with open(tmp_path, "w") as f:
+        f.write("\n".join(content) + "\n")
+    tmp_path.rename(job_path)
+    
+    return job_path
+
+
+# -----------------------------------------------------------------------------
+# Job processing
+# -----------------------------------------------------------------------------
+
+def process_triage_job(
     queue_root: Path,
     job_path: Path,
+    job: dict,
+    bundle_dir: Path,
     opencode_url: str,
-    opencode_agent: str | None,
     opencode_provider: str | None,
     opencode_model: str | None,
     timeout: int,
     max_retries: int,
     retry_delay: int,
-    dry_run: bool,
     kedb_dir: Path | None
-):
-    """Process a single job."""
-    log(queue_root, "INFO", f"processing job {job_path.name}")
+) -> bool:
+    """Process a triage job. Returns True if successful."""
+    agent = "dports-triage"
+    payload = build_triage_payload(bundle_dir, kedb_dir)
     
-    # Parse job
-    job = parse_job_file(job_path)
-    bundle_dir = Path(job.get("bundle_dir", ""))
-    
-    if not bundle_dir.exists():
-        log(queue_root, "ERROR", f"bundle_dir does not exist: {bundle_dir}")
-        write_error_note(job_path, f"bundle_dir does not exist: {bundle_dir}")
-        move_job(job_path, "failed")
-        return
-    
-    # Build payload (with KEDB if available)
-    payload = build_payload(bundle_dir, kedb_dir)
-    
-    if dry_run:
-        log(queue_root, "INFO", f"[dry-run] would send payload ({len(payload)} bytes)")
-        print("=" * 60)
-        print("PAYLOAD:")
-        print("=" * 60)
-        print(payload)
-        print("=" * 60)
-        # Move back to pending in dry-run mode
-        move_job(job_path, "pending")
-        return
-    
-    # Call opencode with retries
     last_error = None
-    model_info = f"{opencode_provider}/{opencode_model}" if opencode_provider and opencode_model else (opencode_model or "agent-default")
-    agent_info = opencode_agent or "none"
+    model_info = f"{opencode_provider}/{opencode_model}" if opencode_provider and opencode_model else "agent-default"
+    
     for attempt in range(max_retries):
         try:
-            log(queue_root, "INFO", f"calling opencode (attempt {attempt + 1}/{max_retries}, agent={agent_info}, model={model_info})")
-            response = call_opencode(
-                opencode_url, payload, opencode_agent,
-                opencode_provider, opencode_model, timeout
-            )
+            log(queue_root, "INFO", f"calling opencode (attempt {attempt + 1}/{max_retries}, agent={agent}, model={model_info})")
+            response = call_opencode(opencode_url, payload, agent, opencode_provider, opencode_model, timeout)
             session_id = response.get("_session_id", "unknown")
             
-            # Write outputs
-            write_outputs(bundle_dir, response, session_id)
-            log(queue_root, "INFO", f"wrote analysis to {bundle_dir}/analysis/")
+            write_triage_outputs(bundle_dir, response, session_id)
+            log(queue_root, "INFO", f"wrote triage to {bundle_dir}/analysis/")
             
-            # Success
-            move_job(job_path, "done")
-            log(queue_root, "INFO", f"moved job to done/")
-            return
+            # Check if we should auto-enqueue a patch job
+            triage = parse_triage_output(bundle_dir / "analysis" / "triage.md")
+            if should_enqueue_patch(triage):
+                patch_job_path = enqueue_patch_job(queue_root, job)
+                log(queue_root, "INFO", f"auto-enqueued patch job: {patch_job_path.name} (classification={triage['classification']}, confidence={triage['confidence']})")
+            else:
+                log(queue_root, "INFO", f"no patch job enqueued (classification={triage['classification']}, confidence={triage['confidence']})")
+            
+            return True
             
         except (urllib.error.URLError, urllib.error.HTTPError, OSError, RuntimeError) as e:
             last_error = str(e)
@@ -399,18 +651,130 @@ def process_job(
                 log(queue_root, "INFO", f"retrying in {delay}s...")
                 time.sleep(delay)
     
-    # All retries exhausted
-    log(queue_root, "ERROR", f"all retries exhausted, moving to failed/")
     write_error_note(job_path, last_error or "unknown error")
-    move_job(job_path, "failed")
+    return False
 
+
+def process_patch_job(
+    queue_root: Path,
+    job_path: Path,
+    job: dict,
+    bundle_dir: Path,
+    opencode_url: str,
+    opencode_provider: str | None,
+    opencode_model: str | None,
+    timeout: int,
+    max_retries: int,
+    retry_delay: int,
+    kedb_dir: Path | None
+) -> bool:
+    """Process a patch job. Returns True if successful."""
+    agent = "dports-patch"
+    payload = build_patch_payload(bundle_dir, kedb_dir)
+    
+    last_error = None
+    model_info = f"{opencode_provider}/{opencode_model}" if opencode_provider and opencode_model else "agent-default"
+    
+    for attempt in range(max_retries):
+        try:
+            log(queue_root, "INFO", f"calling opencode (attempt {attempt + 1}/{max_retries}, agent={agent}, model={model_info})")
+            response = call_opencode(opencode_url, payload, agent, opencode_provider, opencode_model, timeout)
+            session_id = response.get("_session_id", "unknown")
+            
+            success, error = write_patch_outputs(bundle_dir, response, session_id)
+            if success:
+                log(queue_root, "INFO", f"wrote patch.diff to {bundle_dir}/analysis/")
+                return True
+            else:
+                log(queue_root, "ERROR", f"patch validation failed: {error}")
+                write_error_note(job_path, error)
+                return False
+            
+        except (urllib.error.URLError, urllib.error.HTTPError, OSError, RuntimeError) as e:
+            last_error = str(e)
+            log(queue_root, "WARN", f"attempt {attempt + 1} failed: {last_error}")
+            
+            if attempt < max_retries - 1:
+                delay = min(retry_delay * (2 ** attempt), 60)
+                log(queue_root, "INFO", f"retrying in {delay}s...")
+                time.sleep(delay)
+    
+    write_error_note(job_path, last_error or "unknown error")
+    return False
+
+
+def process_job(
+    queue_root: Path,
+    job_path: Path,
+    opencode_url: str,
+    opencode_provider: str | None,
+    opencode_model: str | None,
+    timeout: int,
+    max_retries: int,
+    retry_delay: int,
+    dry_run: bool,
+    kedb_dir: Path | None
+):
+    """Process a single job (dispatch based on type)."""
+    log(queue_root, "INFO", f"processing job {job_path.name}")
+    
+    job = parse_job_file(job_path)
+    job_type = job.get("type", "triage")
+    bundle_dir = Path(job.get("bundle_dir", ""))
+    
+    if not bundle_dir.exists():
+        log(queue_root, "ERROR", f"bundle_dir does not exist: {bundle_dir}")
+        write_error_note(job_path, f"bundle_dir does not exist: {bundle_dir}")
+        move_job(job_path, "failed")
+        return
+    
+    if dry_run:
+        if job_type == "patch":
+            payload = build_patch_payload(bundle_dir, kedb_dir)
+        else:
+            payload = build_triage_payload(bundle_dir, kedb_dir)
+        
+        log(queue_root, "INFO", f"[dry-run] type={job_type}, would send payload ({len(payload)} bytes)")
+        print("=" * 60)
+        print(f"JOB TYPE: {job_type}")
+        print("=" * 60)
+        print(payload)
+        print("=" * 60)
+        move_job(job_path, "pending")
+        return
+    
+    # Dispatch based on job type
+    if job_type == "patch":
+        success = process_patch_job(
+            queue_root, job_path, job, bundle_dir,
+            opencode_url, opencode_provider, opencode_model,
+            timeout, max_retries, retry_delay, kedb_dir
+        )
+    else:
+        success = process_triage_job(
+            queue_root, job_path, job, bundle_dir,
+            opencode_url, opencode_provider, opencode_model,
+            timeout, max_retries, retry_delay, kedb_dir
+        )
+    
+    if success:
+        move_job(job_path, "done")
+        log(queue_root, "INFO", "moved job to done/")
+    else:
+        move_job(job_path, "failed")
+        log(queue_root, "ERROR", "moved job to failed/")
+
+
+# -----------------------------------------------------------------------------
+# Main
+# -----------------------------------------------------------------------------
 
 def main():
     parser = argparse.ArgumentParser(description="Process dsynth failure jobs via opencode serve")
     parser.add_argument("--queue-root", required=True, help="Path to queue directory")
     parser.add_argument("--once", action="store_true", help="Process one job and exit")
     parser.add_argument("--dry-run", action="store_true", help="Print payload without calling opencode")
-    parser.add_argument("--kedb-dir", help="Path to KEDB directory (default: auto-detect from script location)")
+    parser.add_argument("--kedb-dir", help="Path to KEDB directory (default: auto-detect)")
     args = parser.parse_args()
     
     queue_root = Path(args.queue_root)
@@ -437,44 +801,36 @@ def main():
         print("error: OPENCODE_URL environment variable required", file=sys.stderr)
         sys.exit(1)
     
-    opencode_agent = os.environ.get("OPENCODE_AGENT", "dports-triage")
-    opencode_provider = os.environ.get("OPENCODE_PROVIDER")
-    opencode_model = os.environ.get("OPENCODE_MODEL")
-    
-    # Default to free model when using dports-triage agent
-    if opencode_agent == "dports-triage" and not opencode_provider and not opencode_model:
-        opencode_provider = "opencode"
-        opencode_model = "gpt-5-nano"
-    
+    opencode_provider = os.environ.get("OPENCODE_PROVIDER", "opencode")
+    opencode_model = os.environ.get("OPENCODE_MODEL", "gpt-5-nano")
     timeout = int(os.environ.get("OPENCODE_TIMEOUT", "120"))
     max_retries = int(os.environ.get("OPENCODE_MAX_RETRIES", "3"))
     retry_delay = int(os.environ.get("OPENCODE_RETRY_DELAY", "8"))
     
-    model_info = f"{opencode_provider}/{opencode_model}" if opencode_provider and opencode_model else (opencode_model or "agent-default")
+    model_info = f"{opencode_provider}/{opencode_model}"
     kedb_info = str(kedb_dir) if kedb_dir else "none"
-    log(queue_root, "INFO", f"starting runner (once={args.once}, dry_run={args.dry_run}, agent={opencode_agent}, model={model_info}, kedb={kedb_info})")
+    log(queue_root, "INFO", f"starting runner (once={args.once}, dry_run={args.dry_run}, model={model_info}, kedb={kedb_info})")
     
     if args.once:
         job = claim_next_job(queue_root)
         if job:
             process_job(
-                queue_root, job, opencode_url, opencode_agent,
+                queue_root, job, opencode_url,
                 opencode_provider, opencode_model,
-                timeout, max_retries, retry_delay, args.dry_run,
-                kedb_dir
+                timeout, max_retries, retry_delay,
+                args.dry_run, kedb_dir
             )
         else:
             log(queue_root, "INFO", "no jobs in queue")
     else:
-        # Continuous mode
         while True:
             job = claim_next_job(queue_root)
             if job:
                 process_job(
-                    queue_root, job, opencode_url, opencode_agent,
+                    queue_root, job, opencode_url,
                     opencode_provider, opencode_model,
-                    timeout, max_retries, retry_delay, args.dry_run,
-                    kedb_dir
+                    timeout, max_retries, retry_delay,
+                    args.dry_run, kedb_dir
                 )
             else:
                 time.sleep(5)
