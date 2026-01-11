@@ -617,21 +617,127 @@ Ports that explicitly link `-lpthread` or check for `libpthread.so` may fail.
 
 The runner will automatically read `docs/kedb/*.md` and append them to the triage payload.
 
-#### Phase 4 — Patch generation (agent output)
+#### Phase 4 — Patch generation (agent output) (DONE)
 
 Goal: generate DeltaPorts overlay changes as a patch suitable for review and application.
 
 Tasks:
 
-- Extend the job format to support `type=patch` (initially manual enqueue is fine).
-- Add a patch agent (`dports-patch`) that consumes bounded evidence + triage output.
-- Store outputs into `bundle_dir/analysis/`:
-  - `analysis/patch.diff` (DeltaPorts-style diffs that apply to the DeltaPorts overlay checkout)
-  - optional `analysis/patch.md` (short rationale)
+- [x] Extend the job format to support `type=patch`.
+- [x] Add a patch agent (`dports-patch`) that consumes bounded evidence + triage output.
+- [x] Implement auto-enqueue: after triage completes, automatically enqueue a patch job for patchable classifications.
+- [x] Store outputs into `bundle_dir/analysis/`:
+  - `analysis/patch.diff` (unified diff that applies to DeltaPorts overlay root)
+  - `analysis/patch.md` (full response including rationale)
+  - `analysis/patch.json` (raw API response)
+- [x] Validate diff output before writing `patch.diff` (write `patch.diff.invalid` on failure).
 
 Done when:
 
-- For a known failure, a patch job produces a usable `analysis/patch.diff`.
+- [x] For a known failure, a patch job produces a usable `analysis/patch.diff`.
+- [x] Auto-enqueue works for patchable classifications with sufficient confidence.
+
+##### Job Types
+
+The runner now supports two job types:
+
+| Type | Agent | Description |
+|------|-------|-------------|
+| `triage` (default) | `dports-triage` | Analyzes failure, produces structured triage report |
+| `patch` | `dports-patch` | Generates unified diff from triage + evidence |
+
+##### Auto-Enqueue Rules
+
+After a triage job completes successfully, the runner automatically enqueues a patch job if:
+
+1. **Classification** is one of:
+   - `compile-error`
+   - `configure-error`
+   - `patch-error`
+   - `plist-error`
+
+2. **Confidence** is `high` or `medium`
+
+Classifications that do NOT auto-enqueue:
+- `missing-dep` (infrastructure issue, not patchable)
+- `fetch-error` (upstream issue)
+- `unknown` (needs investigation)
+
+##### Patch Job File Format
+
+```
+type=patch
+created_ts_utc=20260111-020000Z
+profile=LiveSystem
+origin=devel/gettext-tools
+flavor=devel/gettext-tools
+bundle_dir=/build/synth/logs/evidence/runs/.../ports/devel_gettext-tools-...
+run_id=run-LiveSystem-...
+triage_file=/build/synth/logs/evidence/.../analysis/triage.md
+```
+
+##### Patch Agent Configuration
+
+The `dports-patch` agent must be configured on the opencode server. Key differences from triage agent:
+
+- All tools disabled (relies on payload only)
+- System prompt focuses on generating valid unified diffs
+- Output format: `## Patch` with diff block, `## Rationale`, `## Files Modified`
+
+##### Diff Validation
+
+Before writing `patch.diff`, the runner validates:
+
+1. Has `---` and `+++` file headers
+2. Has at least one `@@ ... @@` hunk header
+3. Lines in hunks have valid prefixes (`+`, `-`, ` `, or `\`)
+
+If validation fails:
+- `patch.diff.invalid` is written (with error note)
+- Job is marked as failed
+- No retry (likely a model output issue)
+
+##### Example Workflow
+
+```
+1. dsynth failure → hook creates evidence bundle + triage job
+2. Runner picks up triage job:
+   - Calls dports-triage agent
+   - Writes analysis/triage.md
+   - Parses Classification=compile-error, Confidence=medium
+   - Auto-enqueues patch job
+3. Runner picks up patch job:
+   - Calls dports-patch agent with triage + evidence
+   - Extracts diff from response
+   - Validates diff syntax
+   - Writes analysis/patch.diff
+4. Patch is ready for review/application
+```
+
+Example runner output:
+```
+2026-01-11T02:00:00Z INFO  processing job 20260111-020000Z-LiveSystem-devel_foo-12345.job
+2026-01-11T02:00:00Z INFO  calling opencode (attempt 1/3, agent=dports-triage, model=opencode/gpt-5-nano)
+2026-01-11T02:00:15Z INFO  wrote triage to .../analysis/
+2026-01-11T02:00:15Z INFO  auto-enqueued patch job: 20260111-020015Z-...-patch.job (classification=compile-error, confidence=medium)
+2026-01-11T02:00:15Z INFO  moved job to done/
+2026-01-11T02:00:15Z INFO  processing job 20260111-020015Z-...-patch.job
+2026-01-11T02:00:15Z INFO  calling opencode (attempt 1/3, agent=dports-patch, model=opencode/gpt-5-nano)
+2026-01-11T02:00:30Z INFO  wrote patch.diff to .../analysis/
+2026-01-11T02:00:30Z INFO  moved job to done/
+```
+
+Validated 2026-01-11 on DragonFlyBSD VM. Manual patch job processed successfully:
+
+```
+2026-01-11T10:56:17Z INFO  starting runner (once=True, dry_run=False, model=opencode/gpt-5-nano, kedb=none)
+2026-01-11T10:56:17Z INFO  processing job test-patch-job.job
+2026-01-11T10:56:17Z INFO  calling opencode (attempt 1/3, agent=dports-patch, model=opencode/gpt-5-nano)
+2026-01-11T10:56:40Z INFO  wrote patch.diff to .../analysis/
+2026-01-11T10:56:40Z INFO  moved job to done/
+```
+
+Generated patch applied `BROKEN_DragonFly` to the port Makefile with rationale explaining the missing dependency issue.
 
 #### Phase 5 — Apply patch to DeltaPorts overlay, sync to DPorts, rebuild, open PR
 
