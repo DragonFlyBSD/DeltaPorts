@@ -1,6 +1,6 @@
---- src/drivers/driver_bsd.c.orig
-+++ src/drivers/driver_bsd.c
-@@ -638,10 +638,14 @@ static int bsd_set_freq(void *priv, struct hostapd_freq_params *freq)
+--- src/drivers/driver_bsd.c.intermediate	2026-01-12 18:40:30.962687000 +0000
++++ src/drivers/driver_bsd.c	2026-01-12 18:42:11.483998000 +0000
+@@ -637,10 +637,13 @@
  	} else if (channel == 14) {
  		mode = IFM_IEEE80211_11B;
  	} else {
@@ -15,3 +15,4 @@
 +		);
  	}
  	if (bsd_set_mediaopt(drv, IFM_MMASK, mode) < 0) {
+ 		wpa_printf(MSG_ERROR, "%s: failed to set modulation mode",
