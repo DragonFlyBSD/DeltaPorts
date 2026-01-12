@@ -35,6 +35,7 @@ Job fields:
 """
 
 import argparse
+import difflib
 import json
 import os
 import re
@@ -542,7 +543,142 @@ def check_and_handle_snippet_requests(
 
 
 # -----------------------------------------------------------------------------
-# Diff validation
+# File content extraction and diff generation
+# -----------------------------------------------------------------------------
+
+def extract_files_from_response(text: str) -> dict[str, str]:
+    """
+    Extract file content blocks from agent response.
+    
+    Expected format:
+    ### FILE: ports/category/port/filename
+    ```<language>
+    <content>
+    ```
+    
+    Returns dict of {filepath: content}.
+    """
+    files = {}
+    
+    # Pattern: ### FILE: <path> followed by code block
+    # This handles multiple files in sequence
+    pattern = r"###\s*FILE:\s*([^\n]+)\n```[^\n]*\n(.*?)```"
+    
+    for match in re.finditer(pattern, text, re.DOTALL):
+        filepath = match.group(1).strip()
+        content = match.group(2)
+        
+        # Normalize path - remove leading slashes or DeltaPorts prefix
+        filepath = filepath.lstrip("/")
+        if filepath.startswith("DeltaPorts/"):
+            filepath = filepath[len("DeltaPorts/"):]
+        
+        # Content should not have trailing newline stripped (preserve exact content)
+        # But remove any leading/trailing whitespace from the match
+        content = content.rstrip("\n")
+        
+        if filepath and content:
+            files[filepath] = content
+    
+    return files
+
+
+def generate_unified_diff(filepath: str, old_content: str | None, new_content: str) -> str:
+    """
+    Generate a unified diff for a file.
+    
+    Args:
+        filepath: Path relative to DeltaPorts root (e.g., ports/net/foo/Makefile.DragonFly)
+        old_content: Original file content (None if new file)
+        new_content: New file content
+    
+    Returns:
+        Unified diff string
+    """
+    import difflib
+    
+    if old_content is None:
+        # New file: use /dev/null as source
+        old_lines = []
+        old_path = "/dev/null"
+        new_path = f"b/{filepath}"
+    else:
+        old_lines = old_content.splitlines(keepends=True)
+        # Ensure last line has newline for proper diff
+        if old_lines and not old_lines[-1].endswith("\n"):
+            old_lines[-1] += "\n"
+        old_path = f"a/{filepath}"
+        new_path = f"b/{filepath}"
+    
+    new_lines = new_content.splitlines(keepends=True)
+    # Ensure last line has newline
+    if new_lines and not new_lines[-1].endswith("\n"):
+        new_lines[-1] += "\n"
+    
+    diff_lines = list(difflib.unified_diff(
+        old_lines,
+        new_lines,
+        fromfile=old_path,
+        tofile=new_path,
+    ))
+    
+    return "".join(diff_lines)
+
+
+def get_existing_file_content(bundle_dir: Path, filepath: str) -> str | None:
+    """
+    Get existing file content from bundle if it exists.
+    
+    Checks bundle_dir/port/Makefile.DragonFly or similar locations.
+    """
+    # Extract the filename from the full path
+    # filepath is like: ports/net/hostapd/Makefile.DragonFly
+    parts = filepath.split("/")
+    
+    if len(parts) >= 4 and parts[0] == "ports":
+        # Extract filename (last part)
+        filename = parts[-1]
+        
+        # Check in bundle_dir/port/
+        candidate = bundle_dir / "port" / filename
+        if candidate.exists():
+            try:
+                return candidate.read_text()
+            except OSError:
+                pass
+    
+    return None
+
+
+def generate_combined_diff(
+    bundle_dir: Path,
+    files: dict[str, str]
+) -> str:
+    """
+    Generate a combined unified diff for all files.
+    
+    Args:
+        bundle_dir: Evidence bundle directory
+        files: Dict of {filepath: new_content}
+    
+    Returns:
+        Combined unified diff string
+    """
+    diffs = []
+    
+    for filepath, new_content in sorted(files.items()):
+        # Check if file exists in bundle
+        old_content = get_existing_file_content(bundle_dir, filepath)
+        
+        diff = generate_unified_diff(filepath, old_content, new_content)
+        if diff:
+            diffs.append(diff)
+    
+    return "\n".join(diffs)
+
+
+# -----------------------------------------------------------------------------
+# Diff validation (for legacy format compatibility)
 # -----------------------------------------------------------------------------
 
 def validate_diff(diff_text: str) -> tuple[bool, str]:
@@ -1010,6 +1146,11 @@ def write_triage_outputs(bundle_dir: Path, response: dict, session_id: str):
 def write_patch_outputs(bundle_dir: Path, response: dict, session_id: str) -> tuple[bool, str]:
     """
     Write patch outputs to bundle.
+    
+    Supports two formats:
+    1. New format: FILE content blocks -> generates diff automatically
+    2. Legacy format: Agent provides diff directly
+    
     Returns (success, error_message).
     """
     analysis_dir = bundle_dir / "analysis"
@@ -1023,14 +1164,48 @@ def write_patch_outputs(bundle_dir: Path, response: dict, session_id: str) -> tu
     with open(analysis_dir / "patch_session_id.txt", "w") as f:
         f.write(session_id + "\n")
     
-    # Extract and validate diff
+    # Extract response text
     text = extract_response_text(response)
     with open(analysis_dir / "patch.md", "w") as f:
         f.write(text + "\n")
     
+    # Try new format first: extract FILE content blocks
+    files = extract_files_from_response(text)
+    
+    if files:
+        # New format: generate diff from file contents
+        diff = generate_combined_diff(bundle_dir, files)
+        
+        if not diff:
+            return False, "No diff generated from file contents (files unchanged?)"
+        
+        # Write files manifest for debugging
+        with open(analysis_dir / "files_manifest.json", "w") as f:
+            json.dump({
+                "format": "file_content_blocks",
+                "files": list(files.keys()),
+                "file_count": len(files),
+            }, f, indent=2)
+        
+        # Write individual file contents for debugging
+        files_dir = analysis_dir / "files"
+        files_dir.mkdir(exist_ok=True)
+        for filepath, content in files.items():
+            # Convert path to safe filename
+            safe_name = filepath.replace("/", "_")
+            with open(files_dir / safe_name, "w") as f:
+                f.write(content)
+        
+        # Write the generated diff
+        with open(analysis_dir / "patch.diff", "w") as f:
+            f.write(diff)
+        
+        return True, ""
+    
+    # Fallback: try legacy diff format
     diff = extract_diff_from_response(text)
     if not diff:
-        return False, "No diff block found in response"
+        return False, "No FILE blocks or diff found in response"
     
     is_valid, error = validate_diff(diff)
     if not is_valid:
