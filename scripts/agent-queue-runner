@@ -605,11 +605,26 @@ def extract_diff_from_response(text: str) -> str | None:
             break
     
     if diff_start is not None:
-        # Take everything from diff start until we hit a markdown header or end
+        # Take everything from diff start until we hit a section marker
+        # Diff ends when we see text that's clearly not part of a diff
         diff_lines = []
+        in_hunk = False
         for line in lines[diff_start:]:
+            # Stop on markdown headers
             if line.startswith("## ") and not line.startswith("## Patch"):
                 break
+            # Stop on common section markers (without ## prefix)
+            if line.strip() in ("Rationale", "Files Modified", "Testing Notes", "Snippet Requests"):
+                break
+            # Stop if line looks like prose after a hunk (starts with capital, no diff prefix)
+            if in_hunk and line and not line[0] in " +-@\\":
+                # Check if it looks like a new file header or prose
+                if not line.startswith("---") and not line.startswith("+++") and not line.startswith("diff"):
+                    # Likely end of diff - prose text
+                    if len(line) > 10 and line[0].isupper() and " " in line[:20]:
+                        break
+            if line.startswith("@@"):
+                in_hunk = True
             diff_lines.append(line)
         return "\n".join(diff_lines).strip()
     
