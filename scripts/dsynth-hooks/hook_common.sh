@@ -102,6 +102,55 @@ ensure_queue_dirs() {
 	mkdir -p "${qroot}/failed"
 }
 
+# Check if this is a rebuild attempt (branch starts with ai-fix/)
+# Returns iteration number (0 if not a rebuild attempt)
+detect_rebuild_iteration() {
+	deltaports_dir="${DIR_PORTS%/DPorts*}/DeltaPorts"
+
+	# Check if DeltaPorts directory exists
+	if [ ! -d "$deltaports_dir" ]; then
+		printf '0\n'
+		return
+	fi
+
+	# Get current branch
+	current_branch=$(cd "$deltaports_dir" && git branch --show-current 2>/dev/null || true)
+
+	# Check if it's an AI fix branch
+	case "$current_branch" in
+	ai-fix/*)
+		# This is a rebuild attempt - check for tracking context
+		evidence=$(evidence_root)
+		ctx_file="${evidence}/runs/.current_apply_context"
+
+		if [ -r "$ctx_file" ]; then
+			# Extract iteration from context file
+			iter=$(grep '^iteration=' "$ctx_file" 2>/dev/null | head -1 | cut -d= -f2)
+			if [ -n "$iter" ]; then
+				# Return next iteration
+				printf '%d\n' $((iter + 1))
+				return
+			fi
+		fi
+		# Default to iteration 2 if we're on ai-fix branch but no context
+		printf '2\n'
+		;;
+	*)
+		printf '0\n'
+		;;
+	esac
+}
+
+# Get previous bundle path from tracking context (for rebuild attempts)
+get_previous_bundle() {
+	evidence=$(evidence_root)
+	ctx_file="${evidence}/runs/.current_apply_context"
+
+	if [ -r "$ctx_file" ]; then
+		grep '^previous_bundle=' "$ctx_file" 2>/dev/null | head -1 | cut -d= -f2
+	fi
+}
+
 enqueue_job() {
 	# Args: bundle_dir origin flavor profile run_id ts
 	bundle_dir=$1
@@ -114,16 +163,28 @@ enqueue_job() {
 	qroot=$(queue_root)
 	origin_s=$(sanitize_component "$origin")
 
+	# Check if this is a rebuild attempt
+	iteration=$(detect_rebuild_iteration)
+	previous_bundle=$(get_previous_bundle)
+
 	# Build filename, omit flavor if redundant
 	fname="${ts}-${profile}-${origin_s}"
 	if [ -n "$flavor" ] && [ "$flavor" != "$origin" ] && [ "$flavor" != "${origin%%@*}" ]; then
 		flavor_s=$(sanitize_component "$flavor")
 		fname="${fname}-@${flavor_s}"
 	fi
+
+	# Add iteration suffix if this is a retry
+	if [ "$iteration" -gt 1 ]; then
+		fname="${fname}-iter${iteration}"
+	fi
+
 	fname="${fname}-$$.job"
 
 	# Write to temp file first
 	tmpfile="${qroot}/pending/.tmp.$$.${ts}"
+
+	# Base job fields
 	write_kv_file "$tmpfile" \
 		"created_ts_utc=${ts}" \
 		"profile=${profile}" \
@@ -134,6 +195,15 @@ enqueue_job() {
 		"type=triage" \
 		"snippet_round=0" \
 		"has_snippets=false"
+
+	# Add iteration tracking if this is a retry
+	if [ "$iteration" -gt 1 ]; then
+		printf 'iteration=%d\n' "$iteration" >>"$tmpfile"
+		printf 'max_iterations=3\n' >>"$tmpfile"
+		if [ -n "$previous_bundle" ]; then
+			printf 'previous_bundle=%s\n' "$previous_bundle" >>"$tmpfile"
+		fi
+	fi
 
 	# Atomic move to final location
 	mv "$tmpfile" "${qroot}/pending/${fname}"
