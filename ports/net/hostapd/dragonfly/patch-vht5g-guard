@@ -1,0 +1,17 @@
+--- src/drivers/driver_bsd.c.orig
++++ src/drivers/driver_bsd.c
+@@ -638,10 +638,14 @@ static int bsd_set_freq(void *priv, struct hostapd_freq_params *freq)
+ 	} else if (channel == 14) {
+ 		mode = IFM_IEEE80211_11B;
+ 	} else {
+-		mode =
++		mode = (
++#if defined(IFM_IEEE80211_VHT5G)
+ 			freq->vht_enabled ? IFM_IEEE80211_VHT5G :
++#endif
+ 			freq->ht_enabled ? IFM_IEEE80211_11NA :
+-			IFM_IEEE80211_11A;
++			IFM_IEEE80211_11A
++		);
+ 	}
+ 	if (bsd_set_mediaopt(drv, IFM_MMASK, mode) < 0) {
