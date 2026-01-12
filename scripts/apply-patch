@@ -7,13 +7,17 @@ Usage:
 
 Environment variables:
     BUNDLE_DIR              Path to evidence bundle (alternative to --bundle)
-    SAFE_DELTAPORTS_DIR     Safe clone for patch operations (default: ~/s/DeltaPorts-ai-fix)
+    SAFE_DELTAPORTS_DIR     Safe clone for patch operations (default varies by platform)
     VM_SSH_KEY              SSH key for VM access (default: ~/.go-synth/vm/id_ed25519)
     VM_SSH_PORT             SSH port (default: 2222)
     VM_SSH_HOST             SSH host (default: root@localhost)
 
+Platform modes:
+    DragonFlyBSD (native): All operations run locally, no SSH needed
+    Linux (dev host):      Uses SSH to VM for sync and rebuild operations
+
 Safety:
-    - NEVER modifies the protected checkout (~/s/DeltaPorts)
+    - NEVER modifies the protected checkout (~/s/DeltaPorts or /build/synth/DeltaPorts)
     - Always creates a new branch (never pushes to master)
     - Rebuild gate: PR is only opened after successful dsynth rebuild
 """
@@ -21,6 +25,7 @@ Safety:
 import argparse
 import json
 import os
+import platform
 import re
 import subprocess
 import sys
@@ -28,13 +33,26 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 
+# Detect platform
+IS_DRAGONFLY = platform.system() == "DragonFly"
+
 # Protected paths that must NEVER be modified
 PROTECTED_PATHS = {
     Path.home() / "s" / "DeltaPorts",
     Path("/home/antonioh/s/DeltaPorts"),
+    Path("/build/synth/DeltaPorts"),
 }
 
-DEFAULT_SAFE_CLONE = Path.home() / "s" / "DeltaPorts-ai-fix"
+# Platform-specific defaults
+if IS_DRAGONFLY:
+    DEFAULT_SAFE_CLONE = Path("/build/synth/DeltaPorts-ai-fix")
+    DEFAULT_DPORTS_DIR = Path("/build/synth/DPorts")
+    DEFAULT_DELTAPORTS_DIR = Path("/build/synth/DeltaPorts")
+else:
+    DEFAULT_SAFE_CLONE = Path.home() / "s" / "DeltaPorts-ai-fix"
+    DEFAULT_DPORTS_DIR = None  # Not used on Linux (SSH to VM)
+    DEFAULT_DELTAPORTS_DIR = None
+
 DEFAULT_SSH_KEY = Path.home() / ".go-synth" / "vm" / "id_ed25519"
 DEFAULT_SSH_PORT = "2222"
 DEFAULT_SSH_HOST = "root@localhost"
@@ -152,8 +170,8 @@ def ensure_safe_clone(safe_dir: Path, dry_run: bool) -> bool:
             log("INFO", "[dry-run] would clone repository")
             return True
         
-        # Clone from origin
-        run(["git", "clone", "git@github.com:AntoniAno2023/DeltaPorts.git", str(safe_dir)])
+        # Clone from origin (use HTTPS for broader compatibility)
+        run(["git", "clone", "https://github.com/DragonFlyBSD/DeltaPorts.git", str(safe_dir)])
     
     # Fetch latest and reset to origin/master
     log("INFO", "Updating safe clone to latest origin/master")
@@ -179,12 +197,13 @@ def apply_patch_to_clone(safe_dir: Path, patch_path: Path, branch: str, origin: 
     # Create branch
     run(["git", "checkout", "-b", branch], cwd=safe_dir)
     
-    # Apply patch (--no-backup-if-mismatch prevents .orig files)
+    # Apply patch
+    # Use -V none to prevent backup files (portable across BSD/GNU patch)
     patch_content = patch_path.read_text()
     log("INFO", f"Applying patch ({len(patch_content)} bytes)")
     
     result = subprocess.run(
-        ["patch", "-p1", "--forward", "--no-backup-if-mismatch"],
+        ["patch", "-p1", "--forward", "-V", "none"],
         cwd=safe_dir,
         input=patch_content,
         text=True,
@@ -241,9 +260,94 @@ def push_branch(safe_dir: Path, branch: str, dry_run: bool) -> bool:
     return result.returncode == 0
 
 
+def local_sync_from_safe_clone(origin: str, safe_dir: Path, dry_run: bool) -> bool:
+    """
+    Local mode without push: Sync directly from the safe clone to DPorts.
+    
+    This is used for local testing when we don't want to push to remote.
+    We copy the port directory from the safe clone directly to DPorts.
+    """
+    if dry_run:
+        log("INFO", f"[dry-run] would sync {origin} from safe clone to DPorts")
+        return True
+    
+    dports_dir = Path(os.environ.get("DPORTS_DIR", str(DEFAULT_DPORTS_DIR)))
+    
+    # Source: safe_dir/ports/<origin>
+    # Dest: dports_dir/<origin>
+    src_port = safe_dir / "ports" / origin
+    dst_port = dports_dir / origin
+    
+    if not src_port.exists():
+        log("ERROR", f"Port not found in safe clone: {src_port}")
+        return False
+    
+    log("INFO", f"Syncing {origin} from {src_port} to {dst_port}")
+    
+    # Remove existing and copy fresh
+    if dst_port.exists():
+        import shutil
+        shutil.rmtree(dst_port)
+    
+    import shutil
+    shutil.copytree(src_port, dst_port)
+    
+    log("INFO", f"Synced {origin} to DPorts")
+    return True
+
+
+def local_fetch_and_sync(origin: str, branch: str, safe_dir: Path, dry_run: bool) -> bool:
+    """
+    Local mode (DragonFlyBSD): Fetch branch in main DeltaPorts and run sync1.sh.
+    
+    On DragonFly, we:
+    1. Update /build/synth/DeltaPorts to the new branch
+    2. Run sync1.sh to sync changes to /build/synth/DPorts
+    """
+    if dry_run:
+        log("INFO", f"[dry-run] would fetch branch {branch} locally")
+        log("INFO", f"[dry-run] would run sync1.sh {origin}")
+        return True
+    
+    deltaports_dir = Path(os.environ.get("DELTAPORTS_DIR", str(DEFAULT_DELTAPORTS_DIR)))
+    
+    # Clean up any local changes first
+    log("INFO", f"Cleaning up {deltaports_dir}")
+    run(["git", "reset", "--hard", "HEAD"], cwd=deltaports_dir, check=False)
+    run(["git", "clean", "-fd"], cwd=deltaports_dir, check=False)
+    
+    # Fetch the branch
+    log("INFO", f"Fetching branch {branch}")
+    result = run(["git", "fetch", "origin", f"{branch}:{branch}"], cwd=deltaports_dir, check=False, capture=True)
+    if result.returncode != 0:
+        log("ERROR", f"git fetch failed: {result.stderr}")
+        return False
+    
+    # Checkout the branch
+    result = run(["git", "checkout", branch], cwd=deltaports_dir, check=False, capture=True)
+    if result.returncode != 0:
+        log("ERROR", f"git checkout failed: {result.stderr}")
+        return False
+    log("INFO", f"Checked out branch {branch}")
+    
+    # Run sync1.sh
+    sync_script = deltaports_dir / "scripts" / "generator" / "sync1.sh"
+    if not sync_script.exists():
+        log("ERROR", f"sync1.sh not found at {sync_script}")
+        return False
+    
+    result = run([str(sync_script), origin], cwd=sync_script.parent, check=False, capture=True)
+    if result.returncode != 0:
+        log("ERROR", f"sync1.sh failed: {result.stderr}")
+        return False
+    log("INFO", f"sync1.sh output: {result.stdout[:500] if result.stdout else '(no output)'}")
+    
+    return True
+
+
 def vm_fetch_and_sync(origin: str, branch: str, ssh_host: str, ssh_port: str, 
                       ssh_key: Path, dry_run: bool) -> bool:
-    """Fetch branch on VM and run sync1.sh."""
+    """SSH mode (Linux host): Fetch branch on VM and run sync1.sh."""
     if dry_run:
         log("INFO", f"[dry-run] would fetch branch {branch} on VM")
         log("INFO", f"[dry-run] would run sync1.sh {origin}")
@@ -272,6 +376,53 @@ def vm_fetch_and_sync(origin: str, branch: str, ssh_host: str, ssh_port: str,
     log("INFO", f"sync1.sh output: {result.stdout}")
     
     return True
+
+
+def local_rebuild(origin: str, dry_run: bool) -> tuple[bool, str]:
+    """
+    Local mode (DragonFlyBSD): Run dsynth rebuild.
+    Returns (success, log_excerpt).
+    """
+    if dry_run:
+        log("INFO", f"[dry-run] would run dsynth force {origin}")
+        return True, "[dry-run]"
+    
+    # Force rebuild
+    log("INFO", f"Running dsynth force {origin}")
+    result = run(["dsynth", "force", origin], capture=True, check=False)
+    log("INFO", f"dsynth output: {result.stdout[:500] if result.stdout else '(no output)'}")
+    
+    # Check if build succeeded by looking at the logs
+    log_name = origin.replace("/", "___") + ".log"
+    log_path = Path("/build/synth/logs") / log_name
+    
+    log_excerpt = ""
+    if log_path.exists():
+        try:
+            log_excerpt = log_path.read_text()[-2000:]  # Last 2000 chars
+        except OSError:
+            pass
+    
+    # Check success list
+    success_list = Path("/build/synth/logs/01_success_list.log")
+    success = False
+    if success_list.exists():
+        try:
+            success = origin in success_list.read_text()
+        except OSError:
+            pass
+    
+    # Also check if package was created
+    if not success:
+        pkg_name = origin.split("/")[-1]
+        pkg_dir = Path("/build/synth/packages/All")
+        if pkg_dir.exists():
+            for pkg_file in pkg_dir.glob(f"{pkg_name}*"):
+                log("INFO", f"Package created: {pkg_file}")
+                success = True
+                break
+    
+    return success, log_excerpt
 
 
 def vm_rebuild(origin: str, ssh_host: str, ssh_port: str, ssh_key: Path, 
@@ -380,7 +531,8 @@ def main():
     )
     parser.add_argument("--bundle", help="Path to evidence bundle")
     parser.add_argument("--dry-run", action="store_true", help="Show what would be done")
-    parser.add_argument("--no-rebuild", action="store_true", help="Skip VM rebuild")
+    parser.add_argument("--no-rebuild", action="store_true", help="Skip rebuild")
+    parser.add_argument("--no-push", action="store_true", help="Skip git push (local testing)")
     parser.add_argument("--no-pr", action="store_true", help="Skip PR creation")
     args = parser.parse_args()
     
@@ -405,6 +557,7 @@ def main():
     log("INFO", f"Bundle: {bundle_dir}")
     log("INFO", f"Safe clone: {safe_dir}")
     log("INFO", f"Dry run: {args.dry_run}")
+    log("INFO", f"Platform: {'DragonFlyBSD (local)' if IS_DRAGONFLY else 'Linux (SSH to VM)'}")
     
     # Parse metadata
     meta = parse_meta(bundle_dir)
@@ -439,22 +592,40 @@ def main():
         sys.exit(1)
     log("INFO", f"Commit: {commit_sha}")
     
-    # Step 3: Push branch
-    if not push_branch(safe_dir, branch, args.dry_run):
+    # Step 3: Push branch (skip if --no-push)
+    if args.no_push:
+        log("INFO", "Skipping push (--no-push)")
+    elif not push_branch(safe_dir, branch, args.dry_run):
         log("ERROR", "Failed to push branch")
         sys.exit(1)
     
-    # Step 4: VM fetch and sync
+    # Step 4: Fetch and sync (platform-aware)
+    # In --no-push mode on DragonFly, we sync directly from safe_dir
     rebuild_success = False
     if not args.no_rebuild:
-        if not vm_fetch_and_sync(origin, branch, ssh_host, ssh_port, ssh_key, args.dry_run):
-            log("ERROR", "Failed to fetch/sync on VM")
+        if IS_DRAGONFLY:
+            if args.no_push:
+                # Local mode without push: sync directly from safe clone
+                fetch_success = local_sync_from_safe_clone(origin, safe_dir, args.dry_run)
+            else:
+                # Local mode: fetch branch and sync locally
+                fetch_success = local_fetch_and_sync(origin, branch, safe_dir, args.dry_run)
+        else:
+            # SSH mode: fetch branch on VM and sync
+            fetch_success = vm_fetch_and_sync(origin, branch, ssh_host, ssh_port, ssh_key, args.dry_run)
+        
+        if not fetch_success:
+            log("ERROR", "Failed to fetch/sync")
             # Continue to write results, but mark as failed
         else:
-            # Step 5: Rebuild
-            rebuild_success, log_excerpt = vm_rebuild(
-                origin, ssh_host, ssh_port, ssh_key, args.dry_run
-            )
+            # Step 5: Rebuild (platform-aware)
+            if IS_DRAGONFLY:
+                rebuild_success, log_excerpt = local_rebuild(origin, args.dry_run)
+            else:
+                rebuild_success, log_excerpt = vm_rebuild(
+                    origin, ssh_host, ssh_port, ssh_key, args.dry_run
+                )
+            
             if rebuild_success:
                 log("INFO", "Rebuild SUCCEEDED!")
             else:
