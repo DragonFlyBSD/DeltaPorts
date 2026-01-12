@@ -194,7 +194,8 @@ def apply_patch_to_clone(safe_dir: Path, patch_path: Path, branch: str, origin: 
         log("INFO", f"[dry-run] would apply patch from {patch_path}")
         return True, "dry-run-sha"
     
-    # Create branch
+    # Create branch (delete if exists from previous attempt)
+    run(["git", "branch", "-D", branch], cwd=safe_dir, check=False)
     run(["git", "checkout", "-b", branch], cwd=safe_dir)
     
     # Apply patch
