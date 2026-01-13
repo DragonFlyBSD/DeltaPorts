@@ -1451,6 +1451,10 @@ def enqueue_patch_job(queue_root: Path, job: dict):
     pending_dir = queue_root / "pending"
     job_path = pending_dir / job_name
     
+    # Inherit iteration from parent job, or start at 1
+    iteration = int(job.get("iteration", "1"))
+    max_iterations = int(job.get("max_iterations", str(DEFAULT_MAX_ITERATIONS)))
+
     content = [
         f"type=patch",
         f"created_ts_utc={ts}",
@@ -1460,7 +1464,14 @@ def enqueue_patch_job(queue_root: Path, job: dict):
         f"bundle_dir={job.get('bundle_dir', '')}",
         f"run_id={job.get('run_id', '')}",
         f"triage_file={job.get('bundle_dir', '')}/analysis/triage.md",
+        f"iteration={iteration}",
+        f"max_iterations={max_iterations}",
     ]
+
+    # Include previous_bundle if this is a retry
+    previous_bundle = job.get("previous_bundle")
+    if previous_bundle:
+        content.append(f"previous_bundle={previous_bundle}")
     
     # Atomic write
     tmp_path = job_path.with_suffix(".tmp")
