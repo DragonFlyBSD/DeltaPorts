@@ -21,6 +21,9 @@ umask 022
 : "${DIR_OPTIONS:=}"
 : "${DIR_DISTFILES:=}"
 
+: "${ARTIFACT_STORE_URL:=http://127.0.0.1:8788}"
+: "${ARTIFACT_STORE_CLIENT:=/build/synth/DeltaPorts/scripts/artifact-store-client}"
+
 hook_config_dir() {
 	# Hooks live in ConfigBase (/etc/dsynth or /usr/local/etc/dsynth).
 	dir=$(dirname "$0")
@@ -70,14 +73,13 @@ logfile_for_origin() {
 	printf '%s\n' "${DIR_LOGS}/${base}.log"
 }
 
-current_run_dir() {
-	# If hook_run_start ran, it writes a file in evidence root.
-	# Fall back to evidence root if not present.
+current_run_id() {
+	# hook_run_start writes a run_id into evidence root.
 	root=$(evidence_root)
 	if [ -r "${root}/.current_run" ]; then
 		sed -n '1p' "${root}/.current_run" || true
 	else
-		printf '%s\n' "${root}/loose"
+		printf '%s\n' "run-${PROFILE}-unknown"
 	fi
 }
 
@@ -102,12 +104,20 @@ ensure_queue_dirs() {
 	mkdir -p "${qroot}/failed"
 }
 
+artifact_store() {
+	"${ARTIFACT_STORE_CLIENT}" --url "${ARTIFACT_STORE_URL}" "$@"
+}
+
+require_artifact_store() {
+	artifact_store health >/dev/null
+}
+
 # Check if this is a rebuild attempt (branch starts with ai-fix/)
 # Returns iteration number (0 if not a rebuild attempt)
 detect_rebuild_iteration() {
 	# If tracking context exists, use it regardless of branch
 	evidence=$(evidence_root)
-	ctx_file="${evidence}/runs/.current_apply_context"
+	ctx_file="${evidence}/.current_apply_context"
 	if [ -r "$ctx_file" ]; then
 		iter=$(grep '^iteration=' "$ctx_file" 2>/dev/null | head -1 | cut -d= -f2)
 		if [ -n "$iter" ]; then
@@ -142,7 +152,7 @@ detect_rebuild_iteration() {
 # Get previous bundle path from tracking context (for rebuild attempts)
 get_previous_bundle() {
 	evidence=$(evidence_root)
-	ctx_file="${evidence}/runs/.current_apply_context"
+	ctx_file="${evidence}/.current_apply_context"
 
 	if [ -r "$ctx_file" ]; then
 		grep '^previous_bundle=' "$ctx_file" 2>/dev/null | head -1 | cut -d= -f2
@@ -150,8 +160,8 @@ get_previous_bundle() {
 }
 
 enqueue_job() {
-	# Args: bundle_dir origin flavor profile run_id ts
-	bundle_dir=$1
+	# Args: bundle_id origin flavor profile run_id ts
+	bundle_id=$1
 	origin=$2
 	flavor=$3
 	profile=$4
@@ -188,7 +198,7 @@ enqueue_job() {
 		"profile=${profile}" \
 		"origin=${origin}" \
 		"flavor=${flavor}" \
-		"bundle_dir=${bundle_dir}" \
+		"bundle_id=${bundle_id}" \
 		"run_id=${run_id}" \
 		"type=triage" \
 		"snippet_round=0" \

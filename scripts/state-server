@@ -183,12 +183,32 @@ CREATE TABLE IF NOT EXISTS user_context_requests (
     PRIMARY KEY (run_id, origin, bundle_id)
 );
 
+CREATE TABLE IF NOT EXISTS blob_objects (
+    sha256 TEXT PRIMARY KEY,
+    size INTEGER NOT NULL,
+    created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS artifact_refs (
+    bundle_id TEXT NOT NULL,
+    relpath TEXT NOT NULL,
+    backend TEXT NOT NULL,
+    sha256 TEXT,
+    fs_path TEXT,
+    kind TEXT,
+    size INTEGER,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (bundle_id, relpath)
+);
+
 CREATE INDEX IF NOT EXISTS idx_bundles_origin ON bundles(origin);
 CREATE INDEX IF NOT EXISTS idx_jobs_state ON jobs(state);
 CREATE INDEX IF NOT EXISTS idx_events_id ON events(id);
 CREATE INDEX IF NOT EXISTS idx_activity_log_ts ON activity_log(ts);
 CREATE INDEX IF NOT EXISTS idx_user_context_updated ON user_context(updated_at);
 CREATE INDEX IF NOT EXISTS idx_user_context_requests_pending ON user_context_requests(status, requested_at);
+CREATE INDEX IF NOT EXISTS idx_artifact_refs_bundle ON artifact_refs(bundle_id);
+CREATE INDEX IF NOT EXISTS idx_artifact_refs_sha ON artifact_refs(sha256);
 """
 
 
@@ -196,6 +216,8 @@ def init_db(db_path: Path) -> sqlite3.Connection:
     """Initialize SQLite database with schema."""
     conn = sqlite3.connect(str(db_path), check_same_thread=False)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout=5000")
     conn.executescript(SCHEMA)
     conn.commit()
     return conn
@@ -225,6 +247,7 @@ class Observer:
         self.queue_root = self.evidence_root / "queue"
         self.conn = conn
         self.lock = threading.Lock()
+        self.db_only = os.environ.get("EVIDENCE_DB_ONLY") == "1"
         # Track last seen activity log id for SSE event emission
         self._last_activity_id = 0
         # Track runner status key (status, job_id, stage) - only emit on meaningful changes
@@ -235,7 +258,8 @@ class Observer:
         now = datetime.now(timezone.utc).isoformat()
         
         with self.lock:
-            self._scan_runs(now)
+            if not self.db_only:
+                self._scan_runs(now)
             self._scan_queue(now)
             self._scan_activity_changes()
             self._scan_runner_status_changes()
@@ -990,7 +1014,8 @@ class StateServerHandler(BaseHTTPRequestHandler):
             return
         
         artifacts = conn.execute(
-            "SELECT relpath, kind, size FROM artifacts WHERE bundle_id = ?",
+            """SELECT relpath, kind, size, backend FROM artifact_refs
+               WHERE bundle_id = ?""",
             (bundle_id,)
         ).fetchall()
         
@@ -1033,28 +1058,24 @@ class StateServerHandler(BaseHTTPRequestHandler):
             self._send_error_json(400, "Invalid path")
             return
         
-        # Get bundle path
-        bundle = conn.execute(
-            "SELECT path FROM bundles WHERE bundle_id = ?", (bundle_id,)
+        artifact = conn.execute(
+            """SELECT backend, sha256, fs_path FROM artifact_refs
+               WHERE bundle_id = ? AND relpath = ?""",
+            (bundle_id, relpath)
         ).fetchone()
         
-        if not bundle:
-            self._send_error_json(404, "Bundle not found")
+        if not artifact:
+            self._send_error_json(404, "Artifact not found")
             return
         
-        bundle_path = Path(bundle["path"])
-        artifact_path = bundle_path / relpath
-        
-        # Security: ensure resolved path is under bundle
-        try:
-            artifact_path = artifact_path.resolve()
-            bundle_path = bundle_path.resolve()
-            if not str(artifact_path).startswith(str(bundle_path)):
-                self._send_error_json(400, "Invalid path")
+        if artifact["backend"] == "blob":
+            sha = artifact["sha256"]
+            if not sha:
+                self._send_error_json(500, "Invalid blob reference")
                 return
-        except (OSError, ValueError):
-            self._send_error_json(400, "Invalid path")
-            return
+            artifact_path = self.server.blob_root / "objects" / "sha256" / sha[0:2] / sha[2:4] / sha
+        else:
+            artifact_path = Path(artifact["fs_path"] or "")
         
         if not artifact_path.exists():
             self._send_error_json(404, "Artifact not found")
@@ -1078,13 +1099,13 @@ class StateServerHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(file_size))
         self.end_headers()
         
-        # Stream in chunks to avoid loading large files into memory
         with open(artifact_path, "rb") as f:
             while True:
-                chunk = f.read(65536)
+                chunk = f.read(8192)
                 if not chunk:
                     break
                 self.wfile.write(chunk)
+
     
     def _handle_static_ui(self, filename: str, content_type: str):
         """Serve files from scripts/state-server-ui."""
@@ -1202,10 +1223,13 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
     
     daemon_threads = True
     
-    def __init__(self, server_address, handler_class, db_conn, observer):
+    def __init__(self, server_address, handler_class, db_conn, observer, logs_root: Path):
         super().__init__(server_address, handler_class)
         self.db_conn = db_conn
         self.observer = observer
+        self.logs_root = logs_root
+        self.evidence_root = logs_root / "evidence"
+        self.blob_root = self.evidence_root / "blobstore"
 
 
 # =============================================================================
@@ -1315,7 +1339,8 @@ def main():
         (args.bind, args.port),
         StateServerHandler,
         conn,
-        observer
+        observer,
+        logs_root
     )
     
     log("INFO", f"Server listening on http://{args.bind}:{args.port}")

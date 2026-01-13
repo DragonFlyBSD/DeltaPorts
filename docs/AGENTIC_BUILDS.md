@@ -1059,7 +1059,58 @@ data: {"job_id": "...", "state": "done", "origin": "net/widentd", "type": "patch
 ...
 ```
 
-#### Phase 7 — Snippet extraction escalation (non-AI, bounded) (DONE)
+#### Phase 7 — DB-only artifact store (daemon + blobstore) (PLANNED)
+
+Goal: eliminate per-bundle filesystem artifacts and store evidence in a local blobstore with a single-writer daemon.
+
+Design summary:
+
+- Bundles/runs are DB-only (no bundle directories).
+- Small artifacts are stored as content-addressed blobs under `${DIR_LOGS}/evidence/blobstore/`.
+- `logs/full.log.gz` stays on disk under `${DIR_LOGS}/evidence/full-logs/<bundle_id>.full.log.gz` and is referenced as an fs-backed artifact.
+- Queue remains file-based (`${DIR_LOGS}/evidence/queue/`).
+
+Key components:
+
+- `scripts/artifact-store` (daemon, localhost:8788)
+  - Single writer to `state.db` and blobstore.
+  - Endpoints:
+    - `POST /v1/bundles/upsert`
+    - `POST /v1/artifacts/put` (blob)
+    - `POST /v1/artifacts/put-fs` (fs ref)
+- `scripts/artifact-store-client` (tiny CLI for hooks)
+  - Commands: `health`, `bundle-upsert`, `put-blob`, `put-fs`
+- `scripts/state-server`
+  - DB/blobstore consumer only (no filesystem scan).
+  - Artifacts served from `artifact_refs` + blobstore/fs paths.
+- `scripts/dsynth-hooks/hook_pkg_failure`
+  - Posts metadata, `errors.txt`, and port snapshots to daemon.
+  - Writes `full.log.gz` to spool path and registers fs ref.
+- `scripts/agent-queue-runner`
+  - Reads artifacts from blobstore, writes outputs via daemon.
+  - Jobs reference `bundle_id` (not `bundle_dir`).
+
+DB schema additions:
+
+- `blob_objects(sha256 PRIMARY KEY, size, created_at)`
+- `artifact_refs(bundle_id, relpath, backend, sha256, fs_path, kind, size, created_at)`
+
+Opencode TODO (artifact-store cutover):
+
+- [ ] Implement `scripts/artifact-store` daemon (8788) with WAL + busy_timeout and auto-created dirs.
+- [ ] Implement `scripts/artifact-store-client` CLI and use it in dsynth hooks.
+- [ ] Update `hook_pkg_failure` to post bundle + artifacts and register `full.log.gz` fs path.
+- [ ] Update runner to use `bundle_id` + blobstore IO for triage/patch outputs.
+- [ ] Update state-server to serve artifacts from DB/blobstore (no scans).
+- [ ] Update job format (`bundle_id=...`) and document it here.
+- [ ] Smoke test end-to-end on VM (failure → triage → patch → apply).
+
+Notes:
+
+- No opencode agent prompt changes required for this phase.
+- Daemon failure should fail hooks/runner (no fallback).
+
+#### Phase 8 — Snippet extraction escalation (non-AI, bounded) (DONE)
 
 Goal: allow agents to request more context (source files, build system files, log ranges) without uploading huge trees/logs. The snippet extractor runs on the VM (DragonFlyBSD builder) and extracts bounded content from preserved workdirs, distfiles, or logs.
 

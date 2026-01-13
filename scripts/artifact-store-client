@@ -1,0 +1,124 @@
+#!/usr/bin/env python3
+"""artifact-store-client: tiny CLI for hooks to post artifacts."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+import urllib.request
+
+DEFAULT_URL = "http://127.0.0.1:8788"
+
+
+def request_json(method: str, url: str, body: dict | None = None, headers: dict | None = None):
+    data = None
+    req_headers = {"Accept": "application/json"}
+    if headers:
+        req_headers.update(headers)
+    if body is not None:
+        payload = json.dumps(body).encode("utf-8")
+        req_headers["Content-Type"] = "application/json"
+        data = payload
+    req = urllib.request.Request(url, data=data, headers=req_headers, method=method)
+    with urllib.request.urlopen(req, timeout=10) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+
+def request_bytes(url: str, data: bytes, headers: dict):
+    req = urllib.request.Request(url, data=data, headers=headers, method="POST")
+    with urllib.request.urlopen(req, timeout=20) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+
+def cmd_health(args):
+    resp = request_json("GET", f"{args.url}/health")
+    print(json.dumps(resp, indent=2))
+
+
+def cmd_bundle_upsert(args):
+    payload = {
+        "run_id": args.run_id,
+        "profile": args.profile,
+        "ts_utc": args.ts_utc,
+        "bundle_id": args.bundle_id,
+        "origin": args.origin,
+        "flavor": args.flavor,
+        "result": args.result,
+    }
+    resp = request_json("POST", f"{args.url}/v1/bundles/upsert", payload)
+    print(json.dumps(resp, indent=2))
+
+
+def cmd_put_blob(args):
+    if args.stdin:
+        data = sys.stdin.buffer.read()
+    else:
+        with open(args.file, "rb") as f:
+            data = f.read()
+    headers = {
+        "Accept": "application/json",
+        "Content-Type": "application/octet-stream",
+        "X-Bundle-Id": args.bundle_id,
+        "X-Relpath": args.relpath,
+    }
+    if args.kind:
+        headers["X-Kind"] = args.kind
+    resp = request_bytes(f"{args.url}/v1/artifacts/put", data, headers)
+    print(json.dumps(resp, indent=2))
+
+
+def cmd_put_fs(args):
+    payload = {
+        "bundle_id": args.bundle_id,
+        "relpath": args.relpath,
+        "fs_path": args.fs_path,
+        "kind": args.kind,
+    }
+    resp = request_json("POST", f"{args.url}/v1/artifacts/put-fs", payload)
+    print(json.dumps(resp, indent=2))
+
+
+def main():
+    parser = argparse.ArgumentParser(description="artifact-store client")
+    parser.add_argument("--url", default=DEFAULT_URL)
+    sub = parser.add_subparsers(dest="cmd", required=True)
+
+    p_health = sub.add_parser("health")
+    p_health.set_defaults(func=cmd_health)
+
+    p_bundle = sub.add_parser("bundle-upsert")
+    p_bundle.add_argument("--run-id", required=True)
+    p_bundle.add_argument("--profile", default="")
+    p_bundle.add_argument("--ts-utc", required=True)
+    p_bundle.add_argument("--bundle-id", required=True)
+    p_bundle.add_argument("--origin", required=True)
+    p_bundle.add_argument("--flavor", default="")
+    p_bundle.add_argument("--result", default="")
+    p_bundle.set_defaults(func=cmd_bundle_upsert)
+
+    p_blob = sub.add_parser("put-blob")
+    p_blob.add_argument("--bundle-id", required=True)
+    p_blob.add_argument("--relpath", required=True)
+    p_blob.add_argument("--file")
+    p_blob.add_argument("--stdin", action="store_true")
+    p_blob.add_argument("--kind", default="")
+    p_blob.set_defaults(func=cmd_put_blob)
+
+    p_fs = sub.add_parser("put-fs")
+    p_fs.add_argument("--bundle-id", required=True)
+    p_fs.add_argument("--relpath", required=True)
+    p_fs.add_argument("--fs-path", required=True)
+    p_fs.add_argument("--kind", default="")
+    p_fs.set_defaults(func=cmd_put_fs)
+
+    args = parser.parse_args()
+    try:
+        args.func(args)
+    except Exception as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

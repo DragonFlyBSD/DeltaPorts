@@ -46,8 +46,11 @@ import subprocess
 import sys
 import threading
 import time
+import tempfile
+import shutil
 import urllib.request
 import urllib.error
+import urllib.parse
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -74,6 +77,8 @@ DEFAULT_VM_SSH_KEY = "/home/antonioh/.go-synth/vm/id_ed25519"
 DEFAULT_VM_SSH_PORT = "2222"
 DEFAULT_VM_SSH_HOST = "root@localhost"
 DEFAULT_SAFE_DELTAPORTS_DIR = "/build/synth/DeltaPorts-ai-fix"
+DEFAULT_ARTIFACT_STORE_URL = "http://127.0.0.1:8788"
+DEFAULT_STATE_SERVER_URL = "http://127.0.0.1:8787"
 
 # Heartbeat interval (seconds)
 HEARTBEAT_INTERVAL = 5
@@ -117,8 +122,107 @@ def init_state_db(queue_root: Path) -> sqlite3.Connection | None:
         return None
 
 
+def _artifact_store_url() -> str:
+    return os.environ.get("ARTIFACT_STORE_URL", DEFAULT_ARTIFACT_STORE_URL)
+
+
+def _state_server_url() -> str:
+    return os.environ.get("STATE_SERVER_URL", DEFAULT_STATE_SERVER_URL)
+
+
+def artifact_store_get(bundle_id: str, relpath: str) -> bytes | None:
+    url = f"{_artifact_store_url()}/v1/artifacts/get?bundle_id={urllib.parse.quote(bundle_id)}&relpath={urllib.parse.quote(relpath)}"
+    try:
+        with urllib.request.urlopen(url, timeout=10) as resp:
+            return resp.read()
+    except Exception:
+        return None
+
+
+def artifact_store_put(bundle_id: str, relpath: str, data: bytes, kind: str | None = None) -> bool:
+    url = f"{_artifact_store_url()}/v1/artifacts/put"
+    headers = {
+        "Accept": "application/json",
+        "Content-Type": "application/octet-stream",
+        "X-Bundle-Id": bundle_id,
+        "X-Relpath": relpath,
+    }
+    if kind:
+        headers["X-Kind"] = kind
+    try:
+        req = urllib.request.Request(url, data=data, headers=headers, method="POST")
+        with urllib.request.urlopen(req, timeout=20):
+            return True
+    except Exception:
+        return False
+
+
+def bundle_artifact_list(bundle_id: str) -> list[str]:
+    url = f"{_state_server_url()}/bundles/{urllib.parse.quote(bundle_id)}"
+    try:
+        with urllib.request.urlopen(url, timeout=10) as resp:
+            data = json.load(resp)
+        return [a.get("relpath") for a in data.get("artifacts", []) if a.get("relpath")]
+    except Exception:
+        return []
+
+
+def read_bundle_text(bundle_dir: Path | None, bundle_id: str | None, relpath: str) -> str | None:
+    if bundle_dir:
+        path = bundle_dir / relpath
+        if path.exists():
+            return read_file_if_exists(path)
+    if bundle_id:
+        data = artifact_store_get(bundle_id, relpath)
+        if data is not None:
+            return data.decode("utf-8", errors="replace")
+    return None
+
+
+def bundle_artifact_exists(bundle_dir: Path | None, bundle_id: str | None, relpath: str) -> bool:
+    if bundle_dir:
+        if (bundle_dir / relpath).exists():
+            return True
+    if bundle_id:
+        return relpath in bundle_artifact_list(bundle_id)
+    return False
+
+
+def materialize_bundle_for_apply(bundle_id: str) -> Path | None:
+    """Create a temp bundle directory with required artifacts for apply-patch."""
+    required = [
+        "meta.txt",
+        "analysis/triage.md",
+        "analysis/patch.diff",
+    ]
+    temp_dir = Path(tempfile.mkdtemp(prefix="bundle-"))
+    try:
+        for rel in required:
+            data = artifact_store_get(bundle_id, rel)
+            if data is None:
+                return None
+            path = temp_dir / rel
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(data)
+        return temp_dir
+    except Exception:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+        return None
+
+
+def upload_analysis_outputs(bundle_dir: Path, bundle_id: str):
+    analysis_dir = bundle_dir / "analysis"
+    if not analysis_dir.exists():
+        return
+    for path in analysis_dir.iterdir():
+        if not path.is_file():
+            continue
+        relpath = f"analysis/{path.name}"
+        artifact_store_put(bundle_id, relpath, path.read_bytes(), "text")
+
+
 def parse_meta_kv(bundle_dir: Path) -> dict:
-    """Parse bundle meta.txt into dict."""
+    """Parse bundle meta.txt into dict (legacy filesystem mode)."""
     data = {}
     meta_path = bundle_dir / "meta.txt"
     if not meta_path.exists():
@@ -131,6 +235,38 @@ def parse_meta_kv(bundle_dir: Path) -> dict:
     except OSError:
         pass
     return data
+
+
+def get_run_profile(run_id: str) -> str:
+    if _state_db_conn is None:
+        return "unknown"
+    try:
+        with _state_db_lock:
+            row = _state_db_conn.execute(
+                "SELECT profile FROM runs WHERE run_id = ?",
+                (run_id,),
+            ).fetchone()
+        if row and row["profile"]:
+            return row["profile"]
+    except Exception:
+        pass
+    return "unknown"
+
+
+def get_bundle_flavor(bundle_id: str) -> str:
+    if _state_db_conn is None:
+        return ""
+    try:
+        with _state_db_lock:
+            row = _state_db_conn.execute(
+                "SELECT flavor FROM bundles WHERE bundle_id = ?",
+                (bundle_id,),
+            ).fetchone()
+        if row and row["flavor"]:
+            return row["flavor"]
+    except Exception:
+        pass
+    return ""
 
 
 def get_user_context(run_id: str | None, origin: str | None) -> tuple[str | None, int]:
@@ -194,23 +330,32 @@ def upsert_user_context_request(
         print(f"Warning: Failed to write user_context_request: {e}", file=sys.stderr)
 
 
-def find_latest_bundle(queue_root: Path, run_id: str, origin: str) -> Path | None:
-    """Find latest bundle directory for run_id+origin."""
-    runs_root = queue_root.parent / "runs" / run_id / "ports"
-    if not runs_root.exists():
+def find_latest_bundle_id(run_id: str, origin: str) -> str | None:
+    """Find latest bundle_id for run_id+origin from state.db."""
+    if _state_db_conn is None:
         return None
-    origin_safe = origin.replace("/", "_")
-    candidates = [p for p in runs_root.iterdir() if p.is_dir() and p.name.startswith(origin_safe)]
-    if not candidates:
+    try:
+        with _state_db_lock:
+            row = _state_db_conn.execute(
+                """SELECT bundle_id FROM bundles
+                   WHERE run_id = ? AND origin = ?
+                   ORDER BY ts_utc DESC LIMIT 1""",
+                (run_id, origin),
+            ).fetchone()
+        if row:
+            return row["bundle_id"]
+    except Exception:
         return None
-    return max(candidates, key=lambda p: p.stat().st_mtime)
+    return None
 
 
 def enqueue_triage_job(
     queue_root: Path,
-    bundle_dir: Path,
+    bundle_id: str,
     run_id: str,
     origin: str,
+    profile: str,
+    flavor: str,
     iteration: int,
     max_iterations: int,
     previous_bundle: str | None,
@@ -220,9 +365,6 @@ def enqueue_triage_job(
     ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%SZ")
     origin_safe = origin.replace("/", "_")
     pid = os.getpid()
-    meta = parse_meta_kv(bundle_dir)
-    profile = meta.get("profile", "unknown")
-    flavor = meta.get("flavor", "")
     job_name = f"{ts}-{profile}-{origin_safe}-{pid}.job"
     pending_dir = queue_root / "pending"
     job_path = pending_dir / job_name
@@ -233,7 +375,7 @@ def enqueue_triage_job(
         f"profile={profile}",
         f"origin={origin}",
         f"flavor={flavor}",
-        f"bundle_dir={bundle_dir}",
+        f"bundle_id={bundle_id}",
         f"run_id={run_id}",
         f"iteration={iteration}",
         f"max_iterations={max_iterations}",
@@ -268,15 +410,17 @@ def process_user_context_updates(queue_root: Path):
             context_text, context_rev = get_user_context(run_id, origin)
             if not context_text or context_rev <= last_handled:
                 continue
-            latest_bundle = find_latest_bundle(queue_root, run_id, origin)
-            if not latest_bundle:
+            latest_bundle_id = find_latest_bundle_id(run_id, origin)
+            if not latest_bundle_id:
                 continue
             iteration = int(row["iteration"] or 1)
             max_iterations = int(row["max_iterations"] or DEFAULT_MAX_ITERATIONS)
             previous_bundle = row["bundle_id"]
+            profile = get_run_profile(run_id)
+            flavor = get_bundle_flavor(latest_bundle_id)
             job_path = enqueue_triage_job(
-                queue_root, latest_bundle, run_id, origin,
-                iteration, max_iterations, previous_bundle, context_rev,
+                queue_root, latest_bundle_id, run_id, origin,
+                profile, flavor, iteration, max_iterations, previous_bundle, context_rev,
             )
             activity_log(queue_root, "retriage_enqueued",
                         f"Re-running triage for {origin} after user context",
@@ -494,11 +638,10 @@ def load_kedb(kedb_dir: Path | None) -> str:
 # Triage parsing
 # -----------------------------------------------------------------------------
 
-def parse_triage_output(triage_path: Path) -> dict:
-    """Extract Classification and Confidence from triage.md."""
+def parse_triage_output(content: str | None) -> dict:
+    """Extract Classification and Confidence from triage.md content."""
     result = {"classification": "", "confidence": "", "raw": ""}
     
-    content = read_file_if_exists(triage_path)
     if not content:
         return result
     
@@ -824,17 +967,16 @@ def enqueue_followup_job(
         f"profile={job.get('profile', '')}",
         f"origin={job.get('origin', '')}",
         f"flavor={job.get('flavor', '')}",
-        f"bundle_dir={job.get('bundle_dir', '')}",
+        f"bundle_id={job.get('bundle_id', '')}",
         f"run_id={job.get('run_id', '')}",
         f"snippet_round={new_round}",
         f"has_snippets=true",
         f"parent_job={parent_job_name}",
     ]
     
-    # Preserve triage_file for patch jobs
+    # Preserve triage relpath for patch jobs
     if job_type == "patch":
-        triage_file = job.get("triage_file", f"{job.get('bundle_dir', '')}/analysis/triage.md")
-        content.append(f"triage_file={triage_file}")
+        content.append("triage_relpath=analysis/triage.md")
     
     # Atomic write
     tmp_path = job_path.with_suffix(".tmp")
@@ -850,7 +992,7 @@ def check_and_handle_snippet_requests(
     job: dict,
     job_type: str,
     job_path: Path,
-    bundle_dir: Path,
+    bundle_dir: Path | None,
     response_text: str
 ) -> tuple[bool, str]:
     """
@@ -871,6 +1013,10 @@ def check_and_handle_snippet_requests(
     
     current_round = int(job.get("snippet_round", "0"))
     max_rounds = int(os.environ.get("OPENCODE_MAX_SNIPPET_ROUNDS", DEFAULT_MAX_SNIPPET_ROUNDS))
+    
+    if bundle_dir is None:
+        log(queue_root, "WARN", "snippet requests found but bundle_dir is unavailable")
+        return True, ""
     
     if current_round >= max_rounds:
         log(queue_root, "WARN", f"snippet requests found but max rounds ({max_rounds}) reached")
@@ -1121,26 +1267,40 @@ def validate_patch_applies(diff_text: str, safe_dir: Path) -> tuple[bool, str]:
     return True, ""
 
 
-def validate_patch_file(bundle_dir: Path, queue_root: Path) -> tuple[bool, str]:
+def validate_patch_file(bundle_dir: Path | None, bundle_id: str | None) -> tuple[bool, str]:
     """Validate patch.diff for syntax and clean apply."""
-    patch_path = bundle_dir / "analysis" / "patch.diff"
-    if not patch_path.exists():
+    diff_text = None
+    if bundle_dir:
+        patch_path = bundle_dir / "analysis" / "patch.diff"
+        if patch_path.exists():
+            diff_text = patch_path.read_text(errors="replace")
+    if diff_text is None and bundle_id:
+        data = artifact_store_get(bundle_id, "analysis/patch.diff")
+        if data is not None:
+            diff_text = data.decode("utf-8", errors="replace")
+
+    if not diff_text:
         return False, "patch.diff not found"
 
-    diff_text = patch_path.read_text(errors="replace")
     is_valid, error = validate_diff(diff_text)
     if not is_valid:
-        with open(bundle_dir / "analysis" / "patch.diff.invalid", "w") as f:
-            f.write(f"# VALIDATION ERROR: {error}\n\n")
-            f.write(diff_text)
+        invalid_body = f"# VALIDATION ERROR: {error}\n\n{diff_text}"
+        if bundle_id:
+            artifact_store_put(bundle_id, "analysis/patch.diff.invalid", invalid_body.encode("utf-8"), "text")
+        elif bundle_dir:
+            with open(bundle_dir / "analysis" / "patch.diff.invalid", "w") as f:
+                f.write(invalid_body)
         return False, f"Invalid diff: {error}"
 
     safe_dir = Path(os.environ.get("SAFE_DELTAPORTS_DIR", DEFAULT_SAFE_DELTAPORTS_DIR))
     applies, apply_error = validate_patch_applies(diff_text, safe_dir)
     if not applies:
-        with open(bundle_dir / "analysis" / "patch.diff.invalid", "w") as f:
-            f.write(f"# APPLY CHECK FAILED: {apply_error}\n\n")
-            f.write(diff_text)
+        invalid_body = f"# APPLY CHECK FAILED: {apply_error}\n\n{diff_text}"
+        if bundle_id:
+            artifact_store_put(bundle_id, "analysis/patch.diff.invalid", invalid_body.encode("utf-8"), "text")
+        elif bundle_dir:
+            with open(bundle_dir / "analysis" / "patch.diff.invalid", "w") as f:
+                f.write(invalid_body)
         return False, f"Patch does not apply cleanly: {apply_error}"
 
     return True, ""
@@ -1192,7 +1352,7 @@ def extract_diff_from_response(text: str) -> str | None:
 # -----------------------------------------------------------------------------
 
 def build_triage_payload(
-    bundle_dir: Path,
+    bundle_dir: Path | None,
     kedb_dir: Path | None = None,
     job: dict | None = None
 ) -> str:
@@ -1203,7 +1363,7 @@ def build_triage_payload(
     snippet_round = int(job.get("snippet_round", "0")) if job else 0
     has_snippets = job.get("has_snippets", "false") == "true" if job else False
     
-    if has_snippets and snippet_round > 0:
+    if bundle_dir is not None and has_snippets and snippet_round > 0:
         # Add feedback about previous extraction
         feedback = build_snippet_feedback(bundle_dir, snippet_round)
         if feedback:
@@ -1231,15 +1391,17 @@ def build_triage_payload(
         parts.append(user_context)
         parts.append("")
     
+    bundle_id = job.get("bundle_id") if job else None
+
     # Metadata
-    meta = read_file_if_exists(bundle_dir / "meta.txt")
+    meta = read_bundle_text(bundle_dir, bundle_id, "meta.txt")
     if meta:
         parts.append("## Metadata")
         parts.append(meta)
         parts.append("")
     
     # Build errors
-    errors = read_file_if_exists(bundle_dir / "logs" / "errors.txt")
+    errors = read_bundle_text(bundle_dir, bundle_id, "logs/errors.txt")
     if errors:
         parts.append("## Build Errors")
         parts.append(errors)
@@ -1248,7 +1410,7 @@ def build_triage_payload(
     # Port files
     parts.append("## Port Files")
     
-    makefile = read_file_if_exists(bundle_dir / "port" / "Makefile")
+    makefile = read_bundle_text(bundle_dir, bundle_id, "port/Makefile")
     if makefile:
         parts.append("### Makefile")
         parts.append("```makefile")
@@ -1256,7 +1418,7 @@ def build_triage_payload(
         parts.append("```")
         parts.append("")
     
-    plist = read_file_if_exists(bundle_dir / "port" / "pkg-plist")
+    plist = read_bundle_text(bundle_dir, bundle_id, "port/pkg-plist")
     if plist:
         parts.append("### pkg-plist")
         parts.append("```")
@@ -1264,7 +1426,7 @@ def build_triage_payload(
         parts.append("```")
         parts.append("")
     
-    distinfo = read_file_if_exists(bundle_dir / "port" / "distinfo")
+    distinfo = read_bundle_text(bundle_dir, bundle_id, "port/distinfo")
     if distinfo:
         parts.append("### distinfo")
         parts.append("```")
@@ -1272,20 +1434,21 @@ def build_triage_payload(
         parts.append("```")
         parts.append("")
     
-    # Patches
-    patches_dir = bundle_dir / "port" / "files"
-    if patches_dir.exists():
-        patch_files = sorted(patches_dir.glob("patch-*"))
-        if patch_files:
-            parts.append("### Existing Patches")
-            for pf in patch_files:
-                content = read_file_if_exists(pf)
-                if content:
-                    parts.append(f"#### {pf.name}")
-                    parts.append("```diff")
-                    parts.append(content)
-                    parts.append("```")
-                    parts.append("")
+    # Existing patches (if stored)
+    if bundle_id:
+        patch_relpaths = [p for p in bundle_artifact_list(bundle_id) if p.startswith("port/files/patch-")]
+    else:
+        patch_relpaths = []
+    if patch_relpaths:
+        parts.append("### Existing Patches")
+        for rel in sorted(patch_relpaths):
+            content = read_bundle_text(bundle_dir, bundle_id, rel)
+            if content:
+                parts.append(f"#### {Path(rel).name}")
+                parts.append("```diff")
+                parts.append(content)
+                parts.append("```")
+                parts.append("")
     
     parts.append("---")
     parts.append("Analyze this build failure and provide your triage report.")
@@ -1294,7 +1457,7 @@ def build_triage_payload(
 
 
 def build_patch_payload(
-    bundle_dir: Path,
+    bundle_dir: Path | None,
     kedb_dir: Path | None = None,
     job: dict | None = None
 ) -> str:
@@ -1305,7 +1468,7 @@ def build_patch_payload(
     snippet_round = int(job.get("snippet_round", "0")) if job else 0
     has_snippets = job.get("has_snippets", "false") == "true" if job else False
     
-    if has_snippets and snippet_round > 0:
+    if bundle_dir is not None and has_snippets and snippet_round > 0:
         # Add feedback about previous extraction
         feedback = build_snippet_feedback(bundle_dir, snippet_round)
         if feedback:
@@ -1318,13 +1481,15 @@ def build_patch_payload(
             parts.append(snippet_content)
             parts.append("")
     
+    bundle_id = job.get("bundle_id") if job else None
+
     # Triage summary (most important context)
-    triage = read_file_if_exists(bundle_dir / "analysis" / "triage.md")
+    triage = read_bundle_text(bundle_dir, bundle_id, "analysis/triage.md")
     if triage:
         parts.append("## Triage Summary")
         parts.append(triage)
         parts.append("")
-
+ 
     # User-provided context (run-scoped)
     run_id = job.get("run_id") if job else None
     origin = job.get("origin") if job else None
@@ -1341,14 +1506,14 @@ def build_patch_payload(
         parts.append("")
     
     # Metadata
-    meta = read_file_if_exists(bundle_dir / "meta.txt")
+    meta = read_bundle_text(bundle_dir, bundle_id, "meta.txt")
     if meta:
         parts.append("## Metadata")
         parts.append(meta)
         parts.append("")
     
     # Build errors
-    errors = read_file_if_exists(bundle_dir / "logs" / "errors.txt")
+    errors = read_bundle_text(bundle_dir, bundle_id, "logs/errors.txt")
     if errors:
         parts.append("## Build Errors")
         parts.append(errors)
@@ -1357,7 +1522,7 @@ def build_patch_payload(
     # Port files
     parts.append("## Port Files")
     
-    makefile = read_file_if_exists(bundle_dir / "port" / "Makefile")
+    makefile = read_bundle_text(bundle_dir, bundle_id, "port/Makefile")
     if makefile:
         parts.append("### Makefile")
         parts.append("```makefile")
@@ -1365,7 +1530,7 @@ def build_patch_payload(
         parts.append("```")
         parts.append("")
     
-    plist = read_file_if_exists(bundle_dir / "port" / "pkg-plist")
+    plist = read_bundle_text(bundle_dir, bundle_id, "port/pkg-plist")
     if plist:
         parts.append("### pkg-plist")
         parts.append("```")
@@ -1373,7 +1538,7 @@ def build_patch_payload(
         parts.append("```")
         parts.append("")
     
-    distinfo = read_file_if_exists(bundle_dir / "port" / "distinfo")
+    distinfo = read_bundle_text(bundle_dir, bundle_id, "port/distinfo")
     if distinfo:
         parts.append("### distinfo")
         parts.append("```")
@@ -1381,35 +1546,37 @@ def build_patch_payload(
         parts.append("```")
         parts.append("")
     
-    # Existing patches
-    patches_dir = bundle_dir / "port" / "files"
-    if patches_dir.exists():
-        patch_files = sorted(patches_dir.glob("patch-*"))
-        if patch_files:
-            parts.append("### Existing Patches")
-            for pf in patch_files:
-                content = read_file_if_exists(pf)
-                if content:
-                    parts.append(f"#### {pf.name}")
-                    parts.append("```diff")
-                    parts.append(content)
-                    parts.append("```")
-                    parts.append("")
+    # Existing patches (if stored)
+    if bundle_id:
+        patch_relpaths = [p for p in bundle_artifact_list(bundle_id) if p.startswith("port/files/patch-")]
+    else:
+        patch_relpaths = []
+    if patch_relpaths:
+        parts.append("### Existing Patches")
+        for rel in sorted(patch_relpaths):
+            content = read_bundle_text(bundle_dir, bundle_id, rel)
+            if content:
+                parts.append(f"#### {Path(rel).name}")
+                parts.append("```diff")
+                parts.append(content)
+                parts.append("```")
+                parts.append("")
     
     # Check if Makefile.DragonFly exists in bundle
-    makefile_dfly = read_file_if_exists(bundle_dir / "port" / "Makefile.DragonFly")
-    has_makefile_dfly = makefile_dfly is not None
+    has_makefile_dfly = bundle_artifact_exists(bundle_dir, bundle_id, "port/Makefile.DragonFly")
+    makefile_dfly = read_bundle_text(bundle_dir, bundle_id, "port/Makefile.DragonFly") if has_makefile_dfly else None
     
     if has_makefile_dfly:
         parts.append("### Makefile.DragonFly (existing - modify this file)")
         parts.append("```makefile")
-        parts.append(makefile_dfly)
+        parts.append(makefile_dfly or "")
         parts.append("```")
         parts.append("")
     else:
         parts.append("### Makefile.DragonFly")
         parts.append("**This file does not exist yet. You must CREATE it.**")
         parts.append("")
+
     
     parts.append("---")
     
@@ -1571,51 +1738,79 @@ def extract_response_text(response: dict) -> str:
 # Output writers
 # -----------------------------------------------------------------------------
 
-def write_triage_outputs(bundle_dir: Path, response: dict, session_id: str):
-    """Write triage analysis outputs to bundle."""
+def write_triage_outputs(bundle_dir: Path | None, response: dict, session_id: str, bundle_id: str | None):
+    """Write triage analysis outputs to bundle or artifact store."""
+    text = extract_response_text(response)
+    json_bytes = json.dumps(response, indent=2).encode("utf-8")
+    md_bytes = (text + "\n").encode("utf-8")
+    session_bytes = (session_id + "\n").encode("utf-8")
+
+    if bundle_id:
+        if not artifact_store_put(bundle_id, "analysis/triage.json", json_bytes, "json"):
+            raise RuntimeError("failed to write triage.json to artifact store")
+        if not artifact_store_put(bundle_id, "analysis/session_id.txt", session_bytes, "text"):
+            raise RuntimeError("failed to write session_id.txt to artifact store")
+        if not artifact_store_put(bundle_id, "analysis/triage.md", md_bytes, "text"):
+            raise RuntimeError("failed to write triage.md to artifact store")
+        return
+
+    if bundle_dir is None:
+        raise RuntimeError("bundle_dir or bundle_id required")
+
     analysis_dir = bundle_dir / "analysis"
     analysis_dir.mkdir(exist_ok=True)
-    
+
     with open(analysis_dir / "triage.json", "w") as f:
-        json.dump(response, f, indent=2)
-    
+        f.write(json_bytes.decode("utf-8"))
+
     with open(analysis_dir / "session_id.txt", "w") as f:
         f.write(session_id + "\n")
-    
-    text = extract_response_text(response)
+
     with open(analysis_dir / "triage.md", "w") as f:
         f.write(text + "\n")
 
 
-def write_patch_outputs(bundle_dir: Path, response: dict, session_id: str) -> tuple[bool, str]:
+def write_patch_outputs(bundle_dir: Path | None, response: dict, session_id: str, bundle_id: str | None) -> tuple[bool, str]:
     """
-    Write patch outputs to bundle.
+    Write patch outputs to bundle or artifact store.
     
     Unified diff only (FILE blocks not supported).
     
     Returns (success, error_message).
     """
-    analysis_dir = bundle_dir / "analysis"
-    analysis_dir.mkdir(exist_ok=True)
-    
-    # Write raw response
-    with open(analysis_dir / "patch.json", "w") as f:
-        json.dump(response, f, indent=2)
-    
-    # Write session ID
-    with open(analysis_dir / "patch_session_id.txt", "w") as f:
-        f.write(session_id + "\n")
-    
-    # Extract response text
     text = extract_response_text(response)
-    with open(analysis_dir / "patch.md", "w") as f:
-        f.write(text + "\n")
+    json_bytes = json.dumps(response, indent=2).encode("utf-8")
+    md_bytes = (text + "\n").encode("utf-8")
+    session_bytes = (session_id + "\n").encode("utf-8")
+
+    if bundle_id:
+        if not artifact_store_put(bundle_id, "analysis/patch.json", json_bytes, "json"):
+            return False, "Failed to write patch.json to artifact store"
+        if not artifact_store_put(bundle_id, "analysis/patch_session_id.txt", session_bytes, "text"):
+            return False, "Failed to write patch_session_id.txt to artifact store"
+        if not artifact_store_put(bundle_id, "analysis/patch.md", md_bytes, "text"):
+            return False, "Failed to write patch.md to artifact store"
+    elif bundle_dir:
+        analysis_dir = bundle_dir / "analysis"
+        analysis_dir.mkdir(exist_ok=True)
+        with open(analysis_dir / "patch.json", "w") as f:
+            f.write(json_bytes.decode("utf-8"))
+        with open(analysis_dir / "patch_session_id.txt", "w") as f:
+            f.write(session_id + "\n")
+        with open(analysis_dir / "patch.md", "w") as f:
+            f.write(text + "\n")
+    else:
+        return False, "bundle_dir or bundle_id required"
     
     # Unified diff only (FILE blocks not supported)
     files = extract_files_from_response(text)
     if files:
-        with open(analysis_dir / "patch.diff.invalid", "w") as f:
-            f.write("# VALIDATION ERROR: FILE blocks not supported; output unified diff only\n")
+        invalid = "# VALIDATION ERROR: FILE blocks not supported; output unified diff only\n"
+        if bundle_id:
+            artifact_store_put(bundle_id, "analysis/patch.diff.invalid", invalid.encode("utf-8"), "text")
+        elif bundle_dir:
+            with open((bundle_dir / "analysis" / "patch.diff.invalid"), "w") as f:
+                f.write(invalid)
         return False, "FILE blocks not supported; output unified diff only"
     
     # Extract unified diff from response
@@ -1625,15 +1820,21 @@ def write_patch_outputs(bundle_dir: Path, response: dict, session_id: str) -> tu
     
     is_valid, error = validate_diff(diff)
     if not is_valid:
-        # Write invalid diff with error note
-        with open(analysis_dir / "patch.diff.invalid", "w") as f:
-            f.write(f"# VALIDATION ERROR: {error}\n\n")
-            f.write(diff)
+        invalid_body = f"# VALIDATION ERROR: {error}\n\n{diff}"
+        if bundle_id:
+            artifact_store_put(bundle_id, "analysis/patch.diff.invalid", invalid_body.encode("utf-8"), "text")
+        elif bundle_dir:
+            with open((bundle_dir / "analysis" / "patch.diff.invalid"), "w") as f:
+                f.write(invalid_body)
         return False, f"Invalid diff: {error}"
     
-    # Write valid diff
-    with open(analysis_dir / "patch.diff", "w") as f:
-        f.write(diff + "\n")
+    diff_bytes = (diff + "\n").encode("utf-8")
+    if bundle_id:
+        if not artifact_store_put(bundle_id, "analysis/patch.diff", diff_bytes, "text"):
+            return False, "Failed to write patch.diff to artifact store"
+    elif bundle_dir:
+        with open((bundle_dir / "analysis" / "patch.diff"), "w") as f:
+            f.write(diff + "\n")
     
     return True, ""
 
@@ -1708,9 +1909,9 @@ def enqueue_patch_job(queue_root: Path, job: dict):
         f"profile={job.get('profile', '')}",
         f"origin={job.get('origin', '')}",
         f"flavor={job.get('flavor', '')}",
-        f"bundle_dir={job.get('bundle_dir', '')}",
+        f"bundle_id={job.get('bundle_id', '')}",
         f"run_id={job.get('run_id', '')}",
-        f"triage_file={job.get('bundle_dir', '')}/analysis/triage.md",
+        f"triage_relpath=analysis/triage.md",
         f"iteration={iteration}",
         f"max_iterations={max_iterations}",
     ]
@@ -1750,7 +1951,7 @@ def enqueue_apply_job(queue_root: Path, job: dict, parent_job_name: str) -> Path
         f"profile={job.get('profile', '')}",
         f"origin={job.get('origin', '')}",
         f"flavor={job.get('flavor', '')}",
-        f"bundle_dir={job.get('bundle_dir', '')}",
+        f"bundle_id={job.get('bundle_id', '')}",
         f"run_id={job.get('run_id', '')}",
         f"iteration={iteration}",
         f"max_iterations={max_iterations}",
@@ -1779,7 +1980,7 @@ def process_triage_job(
     queue_root: Path,
     job_path: Path,
     job: dict,
-    bundle_dir: Path,
+    bundle_dir: Path | None,
     opencode_url: str,
     opencode_provider: str | None,
     opencode_model: str | None,
@@ -1817,7 +2018,8 @@ def process_triage_job(
                         f"Triage response received for {origin}",
                         job_id=job_id, duration_ms=duration_ms)
             
-            write_triage_outputs(bundle_dir, response, session_id)
+            bundle_id = job.get("bundle_id")
+            write_triage_outputs(bundle_dir, response, session_id, bundle_id)
             activity_log(queue_root, "write_output",
                         f"Wrote triage.md for {origin}",
                         job_id=job_id)
@@ -1833,7 +2035,9 @@ def process_triage_job(
                 return True, "snippet_followup"
             
             # Check if we should auto-enqueue a patch job
-            triage = parse_triage_output(bundle_dir / "analysis" / "triage.md")
+            bundle_id = job.get("bundle_id")
+            triage_text = read_bundle_text(bundle_dir, bundle_id, "analysis/triage.md")
+            triage = parse_triage_output(triage_text)
             if needs_user_context(triage):
                 run_id = job.get("run_id", "")
                 iteration = int(job.get("iteration", "1"))
@@ -1842,7 +2046,7 @@ def process_triage_job(
                     queue_root,
                     run_id=run_id,
                     origin=origin,
-                    bundle_id=bundle_dir.name,
+                    bundle_id=bundle_id or (bundle_dir.name if bundle_dir else ""),
                     classification=triage.get("classification", ""),
                     confidence=triage.get("confidence", ""),
                     iteration=iteration,
@@ -1887,7 +2091,7 @@ def process_patch_job(
     queue_root: Path,
     job_path: Path,
     job: dict,
-    bundle_dir: Path,
+    bundle_dir: Path | None,
     opencode_url: str,
     opencode_provider: str | None,
     opencode_model: str | None,
@@ -1926,7 +2130,8 @@ def process_patch_job(
                         job_id=job_id, duration_ms=duration_ms)
             
             # Write outputs first (before checking for snippets)
-            success, error = write_patch_outputs(bundle_dir, response, session_id)
+            bundle_id = job.get("bundle_id")
+            success, error = write_patch_outputs(bundle_dir, response, session_id, bundle_id)
             
             if success:
                 activity_log(queue_root, "write_output",
@@ -1948,7 +2153,7 @@ def process_patch_job(
 
             # Validate patch applies cleanly before proceeding
             if success:
-                valid, validation_error = validate_patch_file(bundle_dir, queue_root)
+                valid, validation_error = validate_patch_file(bundle_dir, bundle_id)
                 if not valid:
                     activity_log(queue_root, "patch_invalid",
                                 f"Patch validation failed for {origin}: {validation_error[:80]}",
@@ -1990,7 +2195,7 @@ def process_apply_job(
     queue_root: Path,
     job_path: Path,
     job: dict,
-    bundle_dir: Path,
+    bundle_dir: Path | None,
 ) -> tuple[bool, str]:
     """
     Process an apply job by calling apply-patch script.
@@ -2003,6 +2208,8 @@ def process_apply_job(
     """
     origin = job.get("origin", "unknown")
     job_id = job_path.name
+    bundle_id = job.get("bundle_id")
+    temp_bundle = None
     
     # Check iteration limits
     iteration = int(job.get("iteration", "1"))
@@ -2027,9 +2234,26 @@ def process_apply_job(
                     f"apply-patch script not found",
                     job_id=job_id)
         return False, "apply-patch script not found"
+
+    # Materialize a bundle directory if needed
+    effective_bundle_dir = bundle_dir
+    if effective_bundle_dir is None and bundle_id:
+        temp_bundle = materialize_bundle_for_apply(bundle_id)
+        if temp_bundle is None:
+            activity_log(queue_root, "apply_error",
+                        f"failed to materialize bundle for {origin}",
+                        job_id=job_id)
+            return False, "failed to materialize bundle"
+        effective_bundle_dir = temp_bundle
+
+    if effective_bundle_dir is None:
+        activity_log(queue_root, "apply_error",
+                    f"bundle directory missing for {origin}",
+                    job_id=job_id)
+        return False, "bundle directory missing"
     
     # Check that patch.diff exists
-    patch_file = bundle_dir / "analysis" / "patch.diff"
+    patch_file = effective_bundle_dir / "analysis" / "patch.diff"
     if not patch_file.exists():
         activity_log(queue_root, "apply_error",
                     f"patch.diff not found for {origin}",
@@ -2041,7 +2265,7 @@ def process_apply_job(
     apply_flags = shlex.split(apply_flags_raw) if apply_flags_raw.strip() else []
     cmd = [
         str(apply_script),
-        "--bundle", str(bundle_dir),
+        "--bundle", str(effective_bundle_dir),
         *apply_flags,
     ]
     
@@ -2075,11 +2299,15 @@ def process_apply_job(
         
         if result.returncode == 0:
             # Success! Check for PR URL
-            pr_url_file = bundle_dir / "analysis" / "pr_url.txt"
+            pr_url_file = effective_bundle_dir / "analysis" / "pr_url.txt"
             pr_url = None
             if pr_url_file.exists():
                 pr_url = pr_url_file.read_text().strip()
-            
+
+            if temp_bundle and bundle_id:
+                upload_analysis_outputs(temp_bundle, bundle_id)
+                shutil.rmtree(temp_bundle, ignore_errors=True)
+
             activity_log(queue_root, "apply_success",
                         f"Apply succeeded for {origin}" + (f" - PR: {pr_url}" if pr_url else ""),
                         job_id=job_id, duration_ms=duration_ms,
@@ -2090,6 +2318,10 @@ def process_apply_job(
             # Rebuild failed - the hook will create a new evidence bundle
             # which will start a new triage cycle (if within iteration limit)
             error_msg = result.stderr[:200] if result.stderr else f"exit code {result.returncode}"
+
+            if temp_bundle and bundle_id:
+                upload_analysis_outputs(temp_bundle, bundle_id)
+                shutil.rmtree(temp_bundle, ignore_errors=True)
             
             activity_log(queue_root, "apply_failed",
                         f"Apply failed for {origin}: {error_msg[:80]}",
@@ -2097,11 +2329,10 @@ def process_apply_job(
                         extra={"iteration": iteration, "returncode": result.returncode})
             
             # Write iteration tracking for the hook to pick up
-            runs_root = queue_root.parent / "runs"
-            tracking_file = runs_root / ".current_apply_context"
+            tracking_file = queue_root.parent / ".current_apply_context"
             try:
                 tracking_content = [
-                    f"previous_bundle={bundle_dir}",
+                    f"previous_bundle={job.get('bundle_id', '')}",
                     f"iteration={iteration}",
                     f"origin={job.get('origin', '')}",
                 ]
@@ -2114,11 +2345,17 @@ def process_apply_job(
             
     except subprocess.TimeoutExpired:
         duration_ms = int((time.time() - start_time) * 1000)
+        if temp_bundle and bundle_id:
+            upload_analysis_outputs(temp_bundle, bundle_id)
+            shutil.rmtree(temp_bundle, ignore_errors=True)
         activity_log(queue_root, "apply_timeout",
                     f"Apply timed out for {origin} after 600s",
                     job_id=job_id, duration_ms=duration_ms)
         return False, "timeout"
     except Exception as e:
+        if temp_bundle and bundle_id:
+            upload_analysis_outputs(temp_bundle, bundle_id)
+            shutil.rmtree(temp_bundle, ignore_errors=True)
         activity_log(queue_root, "apply_error",
                     f"Apply error for {origin}: {str(e)[:80]}",
                     job_id=job_id)
@@ -2140,7 +2377,9 @@ def process_job(
     """Process a single job (dispatch based on type)."""
     job = parse_job_file(job_path)
     job_type = job.get("type", "triage")
-    bundle_dir = Path(job.get("bundle_dir", ""))
+    bundle_dir_value = job.get("bundle_dir")
+    bundle_dir = Path(bundle_dir_value) if bundle_dir_value else None
+    bundle_id = job.get("bundle_id")
     snippet_round = job.get("snippet_round", "0")
     origin = job.get("origin", "unknown")
     job_id = job_path.name
@@ -2151,7 +2390,13 @@ def process_job(
     update_runner_status("processing", job_id=job_id, stage=f"{job_type}_start",
                         extra={"origin": origin, "type": job_type})
     
-    if not bundle_dir.exists():
+    if bundle_dir is None and not bundle_id:
+        log(queue_root, "ERROR", "missing bundle_id/bundle_dir in job")
+        write_error_note(job_path, "missing bundle_id/bundle_dir in job")
+        move_job(job_path, "failed")
+        update_runner_status("idle", job_id=None, stage=None)
+        return
+    if bundle_dir is not None and not bundle_dir.exists():
         log(queue_root, "ERROR", f"bundle_dir does not exist: {bundle_dir}")
         write_error_note(job_path, f"bundle_dir does not exist: {bundle_dir}")
         move_job(job_path, "failed")
@@ -2163,7 +2408,7 @@ def process_job(
             log(queue_root, "INFO", f"[dry-run] type=apply, would run apply-patch --bundle {bundle_dir}")
             print("=" * 60)
             print(f"JOB TYPE: apply (iteration={job.get('iteration', '1')})")
-            print(f"BUNDLE: {bundle_dir}")
+            print(f"BUNDLE: {bundle_dir if bundle_dir is not None else bundle_id}")
             print(f"ORIGIN: {job.get('origin', 'unknown')}")
             print("=" * 60)
             move_job(job_path, "pending")
