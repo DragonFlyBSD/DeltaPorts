@@ -329,7 +329,29 @@
       });
     }
 
-    // Trigger re-render for active route
+    // Update caches for informational events without triggering full re-render
+    // (full re-render breaks stateful UI like tab selection)
+    if (e.type === 'runner_status') {
+      state.caches.runnerStatus = payload;
+      // Only re-render if on overview page
+      if (location.hash === '#/overview' || location.hash === '' || location.hash === '#/') {
+        scheduleRender();
+      }
+      return;
+    }
+    if (e.type === 'activity') {
+      // Prepend to cached activity log (keep last 20)
+      if (!state.caches.activityLog) state.caches.activityLog = [];
+      state.caches.activityLog.unshift(payload);
+      if (state.caches.activityLog.length > 20) state.caches.activityLog.pop();
+      // Only re-render if on overview page
+      if (location.hash === '#/overview' || location.hash === '' || location.hash === '#/') {
+        scheduleRender();
+      }
+      return;
+    }
+
+    // Trigger re-render for data-changing events (jobs, bundles, runs, etc.)
     scheduleRender();
   }
 
@@ -504,6 +526,113 @@
   function renderDetail(kind, data) {
     const pretty = escapeHtml(JSON.stringify(data, null, 2));
     return `
+      <div class="d-flex justify-content-end mb-2">
+        <button class="btn btn-sm btn-outline-secondary" data-action="copy-json">${icon('clipboard')} Copy JSON</button>
+      </div>
+      <div class="code-block">
+        <pre><code class="hljs language-json">${pretty}</code></pre>
+      </div>
+    `;
+  }
+
+  function renderJobDetail(job, activities) {
+    // Show error prominently if job failed
+    let errorSection = '';
+    if (job.state === 'failed') {
+      const errorActivities = activities.filter(a => 
+        a.stage?.includes('error') || a.stage?.includes('failed') || a.stage?.includes('timeout')
+      );
+      
+      if (job.last_error) {
+        errorSection = `
+          <div class="alert alert-danger mb-3">
+            <strong>Error:</strong>
+            <pre class="mb-0 mt-2" style="white-space: pre-wrap;">${escapeHtml(job.last_error)}</pre>
+          </div>
+        `;
+      } else if (errorActivities.length > 0) {
+        const lastError = errorActivities[0];
+        errorSection = `
+          <div class="alert alert-danger mb-3">
+            <strong>Error (from activity log):</strong>
+            <div class="mt-2">${escapeHtml(lastError.message || 'Unknown error')}</div>
+            <div class="small text-body-secondary mt-1">Stage: ${escapeHtml(lastError.stage || '-')}</div>
+          </div>
+        `;
+      } else {
+        errorSection = `
+          <div class="alert alert-warning mb-3">
+            <strong>Job failed</strong> - No error details available
+          </div>
+        `;
+      }
+    }
+
+    // Activity log for this job
+    let activitySection = '';
+    if (activities.length > 0) {
+      const rows = activities.slice(0, 10).map((a) => {
+        const stageColor = getStageColor(a.stage);
+        return `
+          <tr>
+            <td class="ts-col">${escapeHtml(formatTs(a.ts))}</td>
+            <td>${badge(a.stage || '-', stageColor, 'badge-sm')}</td>
+            <td>${escapeHtml(a.message || '')}</td>
+          </tr>
+        `;
+      }).join('');
+      
+      activitySection = `
+        <div class="card mb-3">
+          <div class="card-header">Related Activity (${activities.length})</div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-sm mb-0">
+                <thead>
+                  <tr>
+                    <th>Time</th>
+                    <th>Stage</th>
+                    <th>Message</th>
+                  </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // Job summary
+    const summaryFields = [
+      { label: 'Job ID', value: job.job_id },
+      { label: 'State', value: job.state, badge: JOB_BADGES[job.state] },
+      { label: 'Type', value: job.type },
+      { label: 'Origin', value: job.origin },
+      { label: 'Created', value: formatTs(job.created_ts_utc) },
+      { label: 'Bundle', value: job.bundle_dir },
+    ].filter(f => f.value);
+
+    const summaryHtml = summaryFields.map(f => `
+      <tr>
+        <th class="text-body-secondary" style="width: 100px;">${escapeHtml(f.label)}</th>
+        <td>${f.badge ? badge(f.value, f.badge) : escapeHtml(f.value)}</td>
+      </tr>
+    `).join('');
+
+    const pretty = escapeHtml(JSON.stringify(job, null, 2));
+    
+    return `
+      ${errorSection}
+      <div class="card mb-3">
+        <div class="card-header">Job Summary</div>
+        <div class="card-body p-0">
+          <table class="table table-sm mb-0">
+            <tbody>${summaryHtml}</tbody>
+          </table>
+        </div>
+      </div>
+      ${activitySection}
       <div class="d-flex justify-content-end mb-2">
         <button class="btn btn-sm btn-outline-secondary" data-action="copy-json">${icon('clipboard')} Copy JSON</button>
       </div>
@@ -1027,11 +1156,22 @@
       const id = row.dataset.jobId;
 
       try {
-        const data = await fetchJSON(`/jobs/${encodeURIComponent(id)}`);
-        const job = data.job;
+        // Fetch job and activity log in parallel
+        const [jobData, activityData] = await Promise.all([
+          fetchJSON(`/jobs/${encodeURIComponent(id)}`),
+          fetchJSON('/activity').catch(() => ({ activities: [] })),
+        ]);
+        const job = jobData.job;
         state.jobsById[id] = job;
         state.selected = { kind: 'job', id };
-        setDetail(`Job ${shortId(id, 24)}`, renderDetail('job', job));
+        
+        // Filter activities related to this job
+        const jobPrefix = id.split('.')[0]; // Get timestamp-profile-origin-pid prefix
+        const relatedActivities = (activityData.activities || []).filter(a => 
+          a.job_id === id || a.job_id?.startsWith(jobPrefix)
+        );
+        
+        setDetail(`Job ${shortId(id, 24)}`, renderJobDetail(job, relatedActivities));
         highlightAll($('#detail-content'));
         bindDetailActions(job);
       } catch (err) {
