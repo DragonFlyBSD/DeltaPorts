@@ -73,6 +73,7 @@ DEFAULT_MAX_ITERATIONS = 3
 DEFAULT_VM_SSH_KEY = "/home/antonioh/.go-synth/vm/id_ed25519"
 DEFAULT_VM_SSH_PORT = "2222"
 DEFAULT_VM_SSH_HOST = "root@localhost"
+DEFAULT_SAFE_DELTAPORTS_DIR = "/build/synth/DeltaPorts-ai-fix"
 
 # Heartbeat interval (seconds)
 HEARTBEAT_INTERVAL = 5
@@ -1068,6 +1069,11 @@ def validate_diff(diff_text: str) -> tuple[bool, str]:
             if line.startswith("---") or line.startswith("+++") or line.startswith("diff "):
                 in_hunk = False
                 continue
+            # Reject diff headers appearing inside hunks (nested/malformed diff)
+            if line and line[0] in ("+", "-"):
+                header_candidate = line[1:]
+                if header_candidate.startswith(("--- ", "+++ ", "@@", "diff --git")):
+                    return False, "Diff header appears inside hunk (nested or malformed diff)"
             # Valid hunk line prefixes: +, -, space, or empty (for context)
             if line and not line[0] in ("+", "-", " ", "\\"):
                 # Allow "\ No newline at end of file"
@@ -1076,6 +1082,68 @@ def validate_diff(diff_text: str) -> tuple[bool, str]:
     
     return True, ""
 
+
+def _run_git(cmd: list[str], cwd: Path, input_text: str | None = None) -> subprocess.CompletedProcess:
+    env = os.environ.copy()
+    env["GIT_TERMINAL_PROMPT"] = "0"
+    return subprocess.run(
+        cmd,
+        cwd=cwd,
+        input=input_text,
+        text=True,
+        capture_output=True,
+        env=env,
+    )
+
+
+def validate_patch_applies(diff_text: str, safe_dir: Path) -> tuple[bool, str]:
+    """Validate that diff applies cleanly via git apply --check."""
+    if not safe_dir.exists():
+        return False, f"Safe clone not found: {safe_dir}"
+
+    result = _run_git(["git", "rev-parse", "--is-inside-work-tree"], cwd=safe_dir)
+    if result.returncode != 0:
+        return False, "Safe clone is not a git repository"
+
+    # Reset to a clean base
+    for cmd in (["git", "checkout", "master"],
+                ["git", "reset", "--hard", "origin/master"],
+                ["git", "clean", "-fd"]):
+        res = _run_git(cmd, cwd=safe_dir)
+        if res.returncode != 0:
+            return False, res.stderr.strip() or "Failed to reset safe clone"
+
+    # Validate patch applies cleanly
+    res = _run_git(["git", "apply", "--check", "-p1"], cwd=safe_dir, input_text=diff_text)
+    if res.returncode != 0:
+        return False, res.stderr.strip() or res.stdout.strip() or "git apply --check failed"
+
+    return True, ""
+
+
+def validate_patch_file(bundle_dir: Path, queue_root: Path) -> tuple[bool, str]:
+    """Validate patch.diff for syntax and clean apply."""
+    patch_path = bundle_dir / "analysis" / "patch.diff"
+    if not patch_path.exists():
+        return False, "patch.diff not found"
+
+    diff_text = patch_path.read_text(errors="replace")
+    is_valid, error = validate_diff(diff_text)
+    if not is_valid:
+        with open(bundle_dir / "analysis" / "patch.diff.invalid", "w") as f:
+            f.write(f"# VALIDATION ERROR: {error}\n\n")
+            f.write(diff_text)
+        return False, f"Invalid diff: {error}"
+
+    safe_dir = Path(os.environ.get("SAFE_DELTAPORTS_DIR", DEFAULT_SAFE_DELTAPORTS_DIR))
+    applies, apply_error = validate_patch_applies(diff_text, safe_dir)
+    if not applies:
+        with open(bundle_dir / "analysis" / "patch.diff.invalid", "w") as f:
+            f.write(f"# APPLY CHECK FAILED: {apply_error}\n\n")
+            f.write(diff_text)
+        return False, f"Patch does not apply cleanly: {apply_error}"
+
+    return True, ""
 
 def extract_diff_from_response(text: str) -> str | None:
     """Extract the diff block from the agent's response."""
@@ -1271,15 +1339,6 @@ def build_patch_payload(
     if kedb_content:
         parts.append(kedb_content)
         parts.append("")
-
-    # User-provided context (run-scoped)
-    run_id = job.get("run_id") if job else None
-    origin = job.get("origin") if job else None
-    user_context, _ = get_user_context(run_id, origin)
-    if user_context:
-        parts.append("## User Context (run-scoped)")
-        parts.append(user_context)
-        parts.append("")
     
     # Metadata
     meta = read_file_if_exists(bundle_dir / "meta.txt")
@@ -1377,6 +1436,12 @@ Output a single unified diff in a ```diff code block. The diff must:
 1. Use paths relative to DeltaPorts overlay root: `ports/category/portname/...`
 2. Target `Makefile.DragonFly` for DragonFly-specific fixes (preferred)
 3. Use `diffs/*.diff` only when patching upstream source files
+4. Pass `git apply --check -p1` cleanly (this will be enforced)
+
+CRITICAL formatting rules:
+- Do NOT include diff headers inside hunks (no lines like `+---`, `++++`, `+@@`, or `+diff --git`)
+- Do NOT output multiple diff headers for the same file
+- Do NOT output FILE blocks or any non-diff formats
 
 ### Creating New Files (when Makefile.DragonFly does NOT exist)
 
@@ -1526,9 +1591,7 @@ def write_patch_outputs(bundle_dir: Path, response: dict, session_id: str) -> tu
     """
     Write patch outputs to bundle.
     
-    Supports two formats:
-    1. New format: FILE content blocks -> generates diff automatically
-    2. Legacy format: Agent provides diff directly
+    Unified diff only (FILE blocks not supported).
     
     Returns (success, error_message).
     """
@@ -1548,43 +1611,17 @@ def write_patch_outputs(bundle_dir: Path, response: dict, session_id: str) -> tu
     with open(analysis_dir / "patch.md", "w") as f:
         f.write(text + "\n")
     
-    # Try new format first: extract FILE content blocks
+    # Unified diff only (FILE blocks not supported)
     files = extract_files_from_response(text)
-    
     if files:
-        # New format: generate diff from file contents
-        diff = generate_combined_diff(bundle_dir, files)
-        
-        if not diff:
-            return False, "No diff generated from file contents (files unchanged?)"
-        
-        # Write files manifest for debugging
-        with open(analysis_dir / "files_manifest.json", "w") as f:
-            json.dump({
-                "format": "file_content_blocks",
-                "files": list(files.keys()),
-                "file_count": len(files),
-            }, f, indent=2)
-        
-        # Write individual file contents for debugging
-        files_dir = analysis_dir / "files"
-        files_dir.mkdir(exist_ok=True)
-        for filepath, content in files.items():
-            # Convert path to safe filename
-            safe_name = filepath.replace("/", "_")
-            with open(files_dir / safe_name, "w") as f:
-                f.write(content)
-        
-        # Write the generated diff
-        with open(analysis_dir / "patch.diff", "w") as f:
-            f.write(diff)
-        
-        return True, ""
+        with open(analysis_dir / "patch.diff.invalid", "w") as f:
+            f.write("# VALIDATION ERROR: FILE blocks not supported; output unified diff only\n")
+        return False, "FILE blocks not supported; output unified diff only"
     
-    # Fallback: try legacy diff format
+    # Extract unified diff from response
     diff = extract_diff_from_response(text)
     if not diff:
-        return False, "No FILE blocks or diff found in response"
+        return False, "No unified diff found in response"
     
     is_valid, error = validate_diff(diff)
     if not is_valid:
@@ -1908,6 +1945,16 @@ def process_patch_job(
                             f"Enqueued snippet follow-up for {origin}",
                             job_id=job_id, extra={"round": snippet_round + 1})
                 return True, "snippet_followup"
+
+            # Validate patch applies cleanly before proceeding
+            if success:
+                valid, validation_error = validate_patch_file(bundle_dir, queue_root)
+                if not valid:
+                    activity_log(queue_root, "patch_invalid",
+                                f"Patch validation failed for {origin}: {validation_error[:80]}",
+                                job_id=job_id)
+                    write_error_note(job_path, validation_error)
+                    return False, validation_error
             
             # No snippet requests, check if patch was valid
             if success:
