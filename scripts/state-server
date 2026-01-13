@@ -158,10 +158,37 @@ CREATE TABLE IF NOT EXISTS runner_status (
     extra_json TEXT
 );
 
+-- User-provided context (scoped to run_id + origin)
+CREATE TABLE IF NOT EXISTS user_context (
+    run_id TEXT NOT NULL,
+    origin TEXT NOT NULL,
+    context_text TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    context_rev INTEGER NOT NULL DEFAULT 1,
+    PRIMARY KEY (run_id, origin)
+);
+
+-- Requests for user context when confidence is low/unknown
+CREATE TABLE IF NOT EXISTS user_context_requests (
+    run_id TEXT NOT NULL,
+    origin TEXT NOT NULL,
+    bundle_id TEXT NOT NULL,
+    confidence TEXT,
+    classification TEXT,
+    iteration INTEGER,
+    max_iterations INTEGER,
+    requested_at TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    last_context_rev_handled INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (run_id, origin, bundle_id)
+);
+
 CREATE INDEX IF NOT EXISTS idx_bundles_origin ON bundles(origin);
 CREATE INDEX IF NOT EXISTS idx_jobs_state ON jobs(state);
 CREATE INDEX IF NOT EXISTS idx_events_id ON events(id);
 CREATE INDEX IF NOT EXISTS idx_activity_log_ts ON activity_log(ts);
+CREATE INDEX IF NOT EXISTS idx_user_context_updated ON user_context(updated_at);
+CREATE INDEX IF NOT EXISTS idx_user_context_requests_pending ON user_context_requests(status, requested_at);
 """
 
 
@@ -556,6 +583,22 @@ class StateServerHandler(BaseHTTPRequestHandler):
         """Send JSON error response."""
         self._send_json({"error": message}, status)
     
+    def _read_json_body(self) -> dict[str, Any] | None:
+        """Read JSON body from request, return dict or None."""
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            length = 0
+        if length <= 0:
+            return None
+        raw = self.rfile.read(length)
+        if not raw:
+            return None
+        try:
+            return json.loads(raw.decode("utf-8"))
+        except json.JSONDecodeError:
+            return None
+    
     def _get_conn(self) -> sqlite3.Connection:
         """Get database connection from server."""
         return self.server.db_conn
@@ -579,6 +622,10 @@ class StateServerHandler(BaseHTTPRequestHandler):
                 self._handle_activity()
             elif path == "/runner-status":
                 self._handle_runner_status()
+            elif path == "/user-context":
+                self._handle_user_context_get(query)
+            elif path == "/user-context-request":
+                self._handle_user_context_request(query)
             elif path == "/runs":
                 self._handle_runs()
             elif path.startswith("/runs/"):
@@ -616,6 +663,20 @@ class StateServerHandler(BaseHTTPRequestHandler):
             elif path == "/events":
                 last_event_id = self.headers.get("Last-Event-ID")
                 self._handle_events(last_event_id, query)
+            else:
+                self._send_error_json(404, "Not found")
+        except Exception as e:
+            log("ERROR", f"Request failed: {e}")
+            self._send_error_json(500, str(e))
+
+    def do_POST(self):
+        """Handle POST requests."""
+        parsed = urlparse(self.path)
+        path = parsed.path
+        
+        try:
+            if path == "/user-context":
+                self._handle_user_context_post()
             else:
                 self._send_error_json(404, "Not found")
         except Exception as e:
@@ -735,6 +796,110 @@ class StateServerHandler(BaseHTTPRequestHandler):
             result["stale"] = True
         
         self._send_json(result)
+    
+    def _handle_user_context_get(self, query: dict[str, list[str]]):
+        """GET /user-context?run_id=...&origin=..."""
+        run_id = query.get("run_id", [None])[0]
+        origin = query.get("origin", [None])[0]
+        if not run_id or not origin:
+            self._send_error_json(400, "run_id and origin required")
+            return
+        
+        conn = self._get_conn()
+        row = conn.execute(
+            """SELECT run_id, origin, context_text, updated_at, context_rev
+               FROM user_context WHERE run_id = ? AND origin = ?""",
+            (run_id, origin)
+        ).fetchone()
+        
+        if not row:
+            self._send_json({"context": None})
+            return
+        
+        self._send_json({"context": dict(row)})
+    
+    def _handle_user_context_request(self, query: dict[str, list[str]]):
+        """GET /user-context-request?bundle_id=... or ?run_id=...&origin=..."""
+        bundle_id = query.get("bundle_id", [None])[0]
+        run_id = query.get("run_id", [None])[0]
+        origin = query.get("origin", [None])[0]
+        
+        conn = self._get_conn()
+        if bundle_id:
+            row = conn.execute(
+                """SELECT * FROM user_context_requests
+                   WHERE bundle_id = ? ORDER BY requested_at DESC LIMIT 1""",
+                (bundle_id,)
+            ).fetchone()
+        elif run_id and origin:
+            row = conn.execute(
+                """SELECT * FROM user_context_requests
+                   WHERE run_id = ? AND origin = ?
+                   ORDER BY requested_at DESC LIMIT 1""",
+                (run_id, origin)
+            ).fetchone()
+        else:
+            self._send_error_json(400, "bundle_id or run_id+origin required")
+            return
+        
+        if not row:
+            self._send_json({"request": None})
+            return
+        
+        self._send_json({"request": dict(row)})
+    
+    def _handle_user_context_post(self):
+        """POST /user-context {run_id, origin, context_text}"""
+        body = self._read_json_body()
+        if not body:
+            self._send_error_json(400, "invalid JSON body")
+            return
+        
+        run_id = body.get("run_id")
+        origin = body.get("origin")
+        context_text = body.get("context_text")
+        if not run_id or not origin or context_text is None:
+            self._send_error_json(400, "run_id, origin, context_text required")
+            return
+        
+        context_text = str(context_text).strip()
+        if not context_text:
+            self._send_error_json(400, "context_text cannot be empty")
+            return
+        if len(context_text) > 8000:
+            self._send_error_json(400, "context_text too long")
+            return
+        
+        conn = self._get_conn()
+        row = conn.execute(
+            """SELECT context_rev FROM user_context WHERE run_id = ? AND origin = ?""",
+            (run_id, origin)
+        ).fetchone()
+        now = datetime.now(timezone.utc).isoformat()
+        if row:
+            new_rev = int(row["context_rev"]) + 1
+            conn.execute(
+                """UPDATE user_context SET context_text = ?, updated_at = ?, context_rev = ?
+                   WHERE run_id = ? AND origin = ?""",
+                (context_text, now, new_rev, run_id, origin)
+            )
+        else:
+            new_rev = 1
+            conn.execute(
+                """INSERT INTO user_context (run_id, origin, context_text, updated_at, context_rev)
+                   VALUES (?, ?, ?, ?, ?)""",
+                (run_id, origin, context_text, now, new_rev)
+            )
+        conn.commit()
+        
+        emit_event(conn, "user_context_updated", {
+            "run_id": run_id,
+            "origin": origin,
+            "context_rev": new_rev,
+            "updated_at": now,
+        })
+        
+        self._send_json({"ok": True, "context_rev": new_rev})
     
     def _handle_runs(self):
         """GET /runs"""

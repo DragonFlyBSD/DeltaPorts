@@ -183,6 +183,22 @@
     return res.text();
   }
 
+  async function postJSON(url, body) {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body ?? {}),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new Error(`HTTP ${res.status} ${res.statusText}: ${text}`);
+    }
+    return res.json();
+  }
+
   // =============================================================================
   // Router
   // =============================================================================
@@ -1561,6 +1577,46 @@
       { label: 'pr_url.txt', relpath: 'analysis/pr_url.txt' },
     ].filter((p) => artifacts.some((a) => a.relpath === p.relpath));
 
+    let contextData = null;
+    let requestData = null;
+    if (bundle?.run_id && bundle?.origin) {
+      try {
+        contextData = await fetchJSON(`/user-context?run_id=${encodeURIComponent(bundle.run_id)}&origin=${encodeURIComponent(bundle.origin)}`);
+      } catch (_) {
+        contextData = null;
+      }
+      try {
+        requestData = await fetchJSON(`/user-context-request?bundle_id=${encodeURIComponent(bundleId)}`);
+      } catch (_) {
+        requestData = null;
+      }
+    }
+
+    const request = requestData?.request ?? null;
+    const context = contextData?.context ?? null;
+    const needsContext = request?.status === 'pending';
+    const contextPanel = needsContext ? `
+      <div class="alert alert-warning">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+          <div>
+            <strong>Additional context needed</strong>
+            <div class="small text-body-secondary mt-1">
+              Confidence is ${escapeHtml(request?.confidence || 'unknown')} (${escapeHtml(request?.classification || 'unknown')}).
+              Add any extra clues or direction to help triage.
+            </div>
+          </div>
+          <button class="btn btn-sm btn-outline-secondary" data-action="open-errors">${icon('file-earmark-text')} Open errors.txt</button>
+        </div>
+        <div class="mt-3">
+          <textarea class="form-control" rows="4" data-context-input placeholder="Any extra clues, expected fix direction, or environment notes...">${escapeHtml(context?.context_text || '')}</textarea>
+        </div>
+        <div class="mt-2 d-flex gap-2">
+          <button class="btn btn-sm btn-primary" data-action="submit-user-context" data-run-id="${escapeHtml(bundle.run_id)}" data-origin="${escapeHtml(bundle.origin)}">Save &amp; Re-run triage</button>
+          <div class="small text-body-secondary align-self-center">Scoped to ${escapeHtml(bundle.run_id)} / ${escapeHtml(bundle.origin)}</div>
+        </div>
+      </div>
+    ` : '';
+
     setMain(`
       <div class="d-flex align-items-center justify-content-between mb-3">
         <div>
@@ -1578,6 +1634,8 @@
           ${pinned.map((p) => `<button class="btn btn-sm btn-outline-secondary" data-action="open-artifact" data-relpath="${escapeHtml(p.relpath)}">${escapeHtml(p.label)}</button>`).join('')}
         </div>
       ` : ''}
+
+      ${contextPanel}
 
       <div class="card shadow-sm mb-3">
         <div class="card-body">
@@ -1662,6 +1720,30 @@
 
       if (btn.dataset.action === 'refresh-bundle') {
         scheduleRender();
+        return;
+      }
+
+      if (btn.dataset.action === 'open-errors') {
+        await openArtifact(bundleId, 'logs/errors.txt');
+        return;
+      }
+
+      if (btn.dataset.action === 'submit-user-context') {
+        const runId = btn.dataset.runId;
+        const origin = btn.dataset.origin;
+        const input = root.querySelector('[data-context-input]');
+        const contextText = input ? input.value : '';
+        if (!contextText.trim()) {
+          toast('Missing context', 'Please enter some context before submitting.', { icon: 'exclamation-triangle' });
+          return;
+        }
+        try {
+          await postJSON('/user-context', { run_id: runId, origin, context_text: contextText });
+          toast('Saved', 'Context saved. Re-running triage shortly.', { icon: 'check-circle' });
+          scheduleRender();
+        } catch (err) {
+          toast('Error', `<div>Failed to save context</div><div class="small text-body-secondary">${escapeHtml(String(err))}</div>`, { icon: 'exclamation-triangle' });
+        }
         return;
       }
 
