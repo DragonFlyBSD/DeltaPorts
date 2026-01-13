@@ -1,0 +1,448 @@
+#!/usr/bin/env python3
+"""
+artifact-store: local blobstore + metadata service
+Single writer for evidence artifacts and state.db
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+import sqlite3
+import threading
+from datetime import datetime, timezone
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from pathlib import Path
+from typing import Any
+from urllib.parse import parse_qs, urlparse
+
+DEFAULT_BIND = "127.0.0.1"
+DEFAULT_PORT = 8788
+DEFAULT_LOGS_ROOT = "/build/synth/logs"
+
+SCHEMA = """
+CREATE TABLE IF NOT EXISTS runs (
+    run_id TEXT PRIMARY KEY,
+    profile TEXT,
+    path TEXT,
+    ts_start TEXT,
+    ts_end TEXT,
+    last_seen_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS bundles (
+    bundle_id TEXT PRIMARY KEY,
+    run_id TEXT,
+    origin TEXT,
+    flavor TEXT,
+    ts_utc TEXT,
+    result TEXT,
+    path TEXT,
+    last_seen_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS jobs (
+    job_id TEXT PRIMARY KEY,
+    state TEXT,
+    type TEXT,
+    origin TEXT,
+    flavor TEXT,
+    bundle_dir TEXT,
+    created_ts_utc TEXT,
+    path TEXT,
+    last_error TEXT,
+    last_seen_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS artifacts (
+    bundle_id TEXT,
+    relpath TEXT,
+    kind TEXT,
+    mtime REAL,
+    size INTEGER,
+    PRIMARY KEY (bundle_id, relpath)
+);
+
+CREATE TABLE IF NOT EXISTS events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts TEXT NOT NULL,
+    type TEXT NOT NULL,
+    data_json TEXT
+);
+
+CREATE TABLE IF NOT EXISTS activity_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts TEXT NOT NULL,
+    job_id TEXT,
+    stage TEXT,
+    message TEXT,
+    duration_ms INTEGER,
+    extra_json TEXT
+);
+
+CREATE TABLE IF NOT EXISTS runner_status (
+    id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+    status TEXT NOT NULL DEFAULT 'unknown',
+    job_id TEXT,
+    current_stage TEXT,
+    started_at TEXT,
+    updated_at TEXT,
+    extra_json TEXT
+);
+
+CREATE TABLE IF NOT EXISTS user_context (
+    run_id TEXT NOT NULL,
+    origin TEXT NOT NULL,
+    context_text TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    context_rev INTEGER NOT NULL DEFAULT 1,
+    PRIMARY KEY (run_id, origin)
+);
+
+CREATE TABLE IF NOT EXISTS user_context_requests (
+    run_id TEXT NOT NULL,
+    origin TEXT NOT NULL,
+    bundle_id TEXT NOT NULL,
+    confidence TEXT,
+    classification TEXT,
+    iteration INTEGER,
+    max_iterations INTEGER,
+    requested_at TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    last_context_rev_handled INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (run_id, origin, bundle_id)
+);
+
+CREATE TABLE IF NOT EXISTS blob_objects (
+    sha256 TEXT PRIMARY KEY,
+    size INTEGER NOT NULL,
+    created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS artifact_refs (
+    bundle_id TEXT NOT NULL,
+    relpath TEXT NOT NULL,
+    backend TEXT NOT NULL,
+    sha256 TEXT,
+    fs_path TEXT,
+    kind TEXT,
+    size INTEGER,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (bundle_id, relpath)
+);
+
+CREATE INDEX IF NOT EXISTS idx_events_id ON events(id);
+CREATE INDEX IF NOT EXISTS idx_activity_log_ts ON activity_log(ts);
+CREATE INDEX IF NOT EXISTS idx_user_context_updated ON user_context(updated_at);
+CREATE INDEX IF NOT EXISTS idx_user_context_requests_pending ON user_context_requests(status, requested_at);
+CREATE INDEX IF NOT EXISTS idx_artifact_refs_bundle ON artifact_refs(bundle_id);
+CREATE INDEX IF NOT EXISTS idx_artifact_refs_sha ON artifact_refs(sha256);
+"""
+
+
+def log(level: str, message: str):
+    ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    print(f"{ts} {level:5} {message}")
+
+
+def emit_event(conn: sqlite3.Connection, event_type: str, data: dict[str, Any]):
+    ts = datetime.now(timezone.utc).isoformat()
+    conn.execute(
+        "INSERT INTO events (ts, type, data_json) VALUES (?, ?, ?)",
+        (ts, event_type, json.dumps(data)),
+    )
+
+
+def sha256_bytes(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def blob_path(root: Path, sha: str) -> Path:
+    return root / "objects" / "sha256" / sha[0:2] / sha[2:4] / sha
+
+
+class ArtifactStore:
+    def __init__(self, logs_root: Path):
+        self.logs_root = logs_root
+        self.evidence_root = logs_root / "evidence"
+        self.blob_root = self.evidence_root / "blobstore"
+        self.full_logs_root = self.evidence_root / "full-logs"
+        self.db_path = self.evidence_root / "state.db"
+        self._lock = threading.Lock()
+
+        self._ensure_dirs()
+        self.conn = sqlite3.connect(str(self.db_path), check_same_thread=False)
+        self.conn.row_factory = sqlite3.Row
+        self._init_db()
+
+    def _ensure_dirs(self):
+        self.evidence_root.mkdir(parents=True, exist_ok=True)
+        (self.blob_root / "objects" / "sha256").mkdir(parents=True, exist_ok=True)
+        self.full_logs_root.mkdir(parents=True, exist_ok=True)
+
+    def _init_db(self):
+        self.conn.execute("PRAGMA journal_mode=WAL")
+        self.conn.execute("PRAGMA busy_timeout=5000")
+        self.conn.executescript(SCHEMA)
+        self.conn.commit()
+
+    def upsert_run_bundle(self, payload: dict[str, Any]):
+        run_id = payload.get("run_id")
+        profile = payload.get("profile")
+        bundle_id = payload.get("bundle_id")
+        origin = payload.get("origin")
+        flavor = payload.get("flavor")
+        ts_utc = payload.get("ts_utc")
+        result = payload.get("result")
+        now = datetime.now(timezone.utc).isoformat()
+
+        with self._lock:
+            if run_id:
+                self.conn.execute(
+                    """INSERT INTO runs (run_id, profile, path, ts_start, ts_end, last_seen_at)
+                       VALUES (?, ?, NULL, ?, NULL, ?)
+                       ON CONFLICT(run_id) DO UPDATE SET
+                         profile=excluded.profile,
+                         last_seen_at=excluded.last_seen_at""",
+                    (run_id, profile, ts_utc, now),
+                )
+
+            self.conn.execute(
+                """INSERT INTO bundles (bundle_id, run_id, origin, flavor, ts_utc, result, path, last_seen_at)
+                   VALUES (?, ?, ?, ?, ?, ?, NULL, ?)
+                   ON CONFLICT(bundle_id) DO UPDATE SET
+                     run_id=excluded.run_id,
+                     origin=excluded.origin,
+                     flavor=excluded.flavor,
+                     ts_utc=excluded.ts_utc,
+                     result=excluded.result,
+                     last_seen_at=excluded.last_seen_at""",
+                (bundle_id, run_id, origin, flavor, ts_utc, result, now),
+            )
+            emit_event(self.conn, "bundle_upserted", {
+                "bundle_id": bundle_id,
+                "run_id": run_id,
+                "origin": origin,
+                "result": result,
+            })
+            self.conn.commit()
+
+    def put_blob(self, bundle_id: str, relpath: str, data: bytes, kind: str | None):
+        sha = sha256_bytes(data)
+        obj_path = blob_path(self.blob_root, sha)
+        if not obj_path.exists():
+            obj_path.parent.mkdir(parents=True, exist_ok=True)
+            tmp_path = obj_path.with_suffix(".tmp")
+            tmp_path.write_bytes(data)
+            tmp_path.rename(obj_path)
+
+        now = datetime.now(timezone.utc).isoformat()
+        with self._lock:
+            self.conn.execute(
+                """INSERT INTO blob_objects (sha256, size, created_at)
+                   VALUES (?, ?, ?)
+                   ON CONFLICT(sha256) DO NOTHING""",
+                (sha, len(data), now),
+            )
+            self.conn.execute(
+                """INSERT INTO artifact_refs (bundle_id, relpath, backend, sha256, fs_path, kind, size, created_at)
+                   VALUES (?, ?, 'blob', ?, NULL, ?, ?, ?)
+                   ON CONFLICT(bundle_id, relpath) DO UPDATE SET
+                     backend='blob', sha256=excluded.sha256, fs_path=NULL,
+                     kind=excluded.kind, size=excluded.size, created_at=excluded.created_at""",
+                (bundle_id, relpath, sha, kind, len(data), now),
+            )
+            emit_event(self.conn, "artifact_put", {
+                "bundle_id": bundle_id,
+                "artifact": relpath,
+                "backend": "blob",
+            })
+            self.conn.commit()
+
+        return {"sha256": sha, "size": len(data)}
+
+    def put_fs_ref(self, bundle_id: str, relpath: str, fs_path: str, kind: str | None):
+        path = Path(fs_path)
+        size = path.stat().st_size if path.exists() else None
+        now = datetime.now(timezone.utc).isoformat()
+        with self._lock:
+            self.conn.execute(
+                """INSERT INTO artifact_refs (bundle_id, relpath, backend, sha256, fs_path, kind, size, created_at)
+                   VALUES (?, ?, 'fs', NULL, ?, ?, ?, ?)
+                   ON CONFLICT(bundle_id, relpath) DO UPDATE SET
+                     backend='fs', sha256=NULL, fs_path=excluded.fs_path,
+                     kind=excluded.kind, size=excluded.size, created_at=excluded.created_at""",
+                (bundle_id, relpath, fs_path, kind, size, now),
+            )
+            emit_event(self.conn, "artifact_put", {
+                "bundle_id": bundle_id,
+                "artifact": relpath,
+                "backend": "fs",
+            })
+            self.conn.commit()
+
+        return {"size": size}
+
+    def get_artifact(self, bundle_id: str, relpath: str) -> tuple[str, Path] | None:
+        row = self.conn.execute(
+            """SELECT backend, sha256, fs_path FROM artifact_refs
+               WHERE bundle_id = ? AND relpath = ?""",
+            (bundle_id, relpath),
+        ).fetchone()
+        if not row:
+            return None
+        if row["backend"] == "blob":
+            obj_path = blob_path(self.blob_root, row["sha256"])
+            return "blob", obj_path
+        return "fs", Path(row["fs_path"])
+
+
+class Handler(BaseHTTPRequestHandler):
+    server: "ArtifactStoreServer"
+
+    def log_message(self, format, *args):
+        log("HTTP", f"{self.address_string()} - {format % args}")
+
+    def _send_json(self, data: Any, status: int = 200):
+        body = json.dumps(data, indent=2).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _send_error_json(self, status: int, message: str):
+        self._send_json({"error": message}, status)
+
+    def _read_json_body(self) -> dict[str, Any] | None:
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            length = 0
+        if length <= 0:
+            return None
+        raw = self.rfile.read(length)
+        if not raw:
+            return None
+        try:
+            return json.loads(raw.decode("utf-8"))
+        except json.JSONDecodeError:
+            return None
+
+    def do_GET(self):
+        parsed = urlparse(self.path)
+        path = parsed.path
+        query = parse_qs(parsed.query)
+        store = self.server.store
+
+        if path == "/health":
+            self._send_json({
+                "ok": True,
+                "db_path": str(store.db_path),
+                "blobstore_root": str(store.blob_root),
+                "full_logs_root": str(store.full_logs_root),
+            })
+            return
+
+        if path == "/v1/artifacts/get":
+            bundle_id = query.get("bundle_id", [None])[0]
+            relpath = query.get("relpath", [None])[0]
+            if not bundle_id or not relpath:
+                self._send_error_json(400, "bundle_id and relpath required")
+                return
+            result = store.get_artifact(bundle_id, relpath)
+            if not result:
+                self._send_error_json(404, "artifact not found")
+                return
+            backend, file_path = result
+            if not file_path.exists():
+                self._send_error_json(404, "artifact file missing")
+                return
+            data = file_path.read_bytes()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/octet-stream")
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+            return
+
+        self._send_error_json(404, "Not found")
+
+    def do_POST(self):
+        store = self.server.store
+        parsed = urlparse(self.path)
+        path = parsed.path
+
+        if path == "/v1/bundles/upsert":
+            body = self._read_json_body()
+            if not body:
+                self._send_error_json(400, "invalid JSON body")
+                return
+            bundle_id = body.get("bundle_id")
+            if not bundle_id:
+                self._send_error_json(400, "bundle_id required")
+                return
+            store.upsert_run_bundle(body)
+            self._send_json({"ok": True})
+            return
+
+        if path == "/v1/artifacts/put":
+            bundle_id = self.headers.get("X-Bundle-Id")
+            relpath = self.headers.get("X-Relpath")
+            kind = self.headers.get("X-Kind")
+            if not bundle_id or not relpath:
+                self._send_error_json(400, "X-Bundle-Id and X-Relpath required")
+                return
+            try:
+                length = int(self.headers.get("Content-Length", "0"))
+            except ValueError:
+                length = 0
+            data = self.rfile.read(length) if length > 0 else b""
+            if data is None:
+                data = b""
+            result = store.put_blob(bundle_id, relpath, data, kind)
+            self._send_json({"ok": True, **result})
+            return
+
+        if path == "/v1/artifacts/put-fs":
+            body = self._read_json_body()
+            if not body:
+                self._send_error_json(400, "invalid JSON body")
+                return
+            bundle_id = body.get("bundle_id")
+            relpath = body.get("relpath")
+            fs_path = body.get("fs_path")
+            kind = body.get("kind")
+            if not bundle_id or not relpath or not fs_path:
+                self._send_error_json(400, "bundle_id, relpath, fs_path required")
+                return
+            result = store.put_fs_ref(bundle_id, relpath, fs_path, kind)
+            self._send_json({"ok": True, **result})
+            return
+
+        self._send_error_json(404, "Not found")
+
+
+class ArtifactStoreServer(HTTPServer):
+    def __init__(self, server_address, RequestHandlerClass, store: ArtifactStore):
+        super().__init__(server_address, RequestHandlerClass)
+        self.store = store
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Local artifact store (blobstore + metadata)")
+    parser.add_argument("--bind", default=DEFAULT_BIND)
+    parser.add_argument("--port", type=int, default=DEFAULT_PORT)
+    parser.add_argument("--logs-root", default=DEFAULT_LOGS_ROOT)
+    args = parser.parse_args()
+
+    store = ArtifactStore(Path(args.logs_root))
+    server = ArtifactStoreServer((args.bind, args.port), Handler, store)
+    log("INFO", f"artifact-store listening on http://{args.bind}:{args.port}")
+    server.serve_forever()
+
+
+if __name__ == "__main__":
+    main()

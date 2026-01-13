@@ -9,65 +9,87 @@ set -eu
 : "${FLAVOR:=}"
 : "${PKGNAME:=}"
 
-run_dir=$(current_run_dir)
+require_artifact_store
+ensure_queue_dirs
+
+run_id=$(current_run_id)
 ts=$(now_utc)
 
 origin_base=${ORIGIN%%@*}
 origin_s=$(sanitize_component "$origin_base")
 flavor_s=$(sanitize_component "$FLAVOR")
 
-bundle_dir="${run_dir}/ports/${origin_s}"
+bundle_id="${origin_s}"
 if [ -n "$FLAVOR" ] && [ "$FLAVOR" != "$ORIGIN" ] && [ "$FLAVOR" != "$origin_base" ]; then
-	bundle_dir="${bundle_dir}@${flavor_s}"
+	bundle_id="${bundle_id}@${flavor_s}"
 fi
-bundle_dir="${bundle_dir}-${ts}"
+bundle_id="${bundle_id}-${ts}"
 
-mkdir -p "${bundle_dir}"
+artifact_store bundle-upsert \
+	--run-id "${run_id}" \
+	--profile "${PROFILE}" \
+	--ts-utc "${ts}" \
+	--bundle-id "${bundle_id}" \
+	--origin "${origin_base}" \
+	--flavor "${FLAVOR}" \
+	--result "${RESULT}" >/dev/null
 
-# Metadata
-write_kv_file "${bundle_dir}/meta.txt" \
-	"ts_utc=${ts}" \
-	"result=${RESULT}" \
-	"origin=${ORIGIN}" \
-	"origin_base=${origin_base}" \
-	"flavor=${FLAVOR}" \
-	"pkgname=${PKGNAME}" \
-	"profile=${PROFILE}" \
-	"dir_logs=${DIR_LOGS}" \
-	"dir_ports=${DIR_PORTS}" \
-	"dir_buildbase=${DIR_BUILDBASE}" \
-	"dir_packages=${DIR_PACKAGES}" \
-	"dir_repository=${DIR_REPOSITORY}" \
-	"dir_options=${DIR_OPTIONS}" \
-	"dir_distfiles=${DIR_DISTFILES}"
-
-# Port context snapshot (bounded)
-# Note: dsynth config (dsynth.ini, ${PROFILE}-make.conf) is captured once
-# at the run level by hook_run_start, not duplicated per-port.
-portdir="${DIR_PORTS}/${origin_base}"
-copy_if_exists "${portdir}/Makefile" "${bundle_dir}/port/Makefile"
-copy_if_exists "${portdir}/Makefile.DragonFly" "${bundle_dir}/port/Makefile.DragonFly"
-copy_if_exists "${portdir}/Makefile.local" "${bundle_dir}/port/Makefile.local"
-copy_if_exists "${portdir}/distinfo" "${bundle_dir}/port/distinfo"
-copy_if_exists "${portdir}/pkg-plist" "${bundle_dir}/port/pkg-plist"
-copy_if_exists "${portdir}/pkg-descr" "${bundle_dir}/port/pkg-descr"
-copy_if_exists "${portdir}/pkg-message" "${bundle_dir}/port/pkg-message"
-copy_glob_if_exists "${portdir}/files" "patch-*" "${bundle_dir}/port/files"
+artifact_store put-blob --bundle-id "${bundle_id}" --relpath "meta.txt" --stdin <<EOF >/dev/null
+ ts_utc=${ts}
+ result=${RESULT}
+ origin=${ORIGIN}
+ origin_base=${origin_base}
+ flavor=${FLAVOR}
+ pkgname=${PKGNAME}
+ profile=${PROFILE}
+ dir_logs=${DIR_LOGS}
+ dir_ports=${DIR_PORTS}
+ dir_buildbase=${DIR_BUILDBASE}
+ dir_packages=${DIR_PACKAGES}
+ dir_repository=${DIR_REPOSITORY}
+ dir_options=${DIR_OPTIONS}
+ dir_distfiles=${DIR_DISTFILES}
+EOF
 
 # Log capture
 logfile=$(logfile_for_origin "$ORIGIN" "$FLAVOR")
-write_kv_file "${bundle_dir}/logfile.txt" "logfile=${logfile}"
+artifact_store put-blob --bundle-id "${bundle_id}" --relpath "logfile.txt" --stdin <<EOF >/dev/null
+logfile=${logfile}
+EOF
+
+# Port context snapshot (minimal set)
+portdir="${DIR_PORTS}/${origin_base}"
+[ -r "${portdir}/Makefile" ] && artifact_store put-blob --bundle-id "${bundle_id}" --relpath "port/Makefile" --file "${portdir}/Makefile" >/dev/null
+[ -r "${portdir}/Makefile.DragonFly" ] && artifact_store put-blob --bundle-id "${bundle_id}" --relpath "port/Makefile.DragonFly" --file "${portdir}/Makefile.DragonFly" >/dev/null
+[ -r "${portdir}/distinfo" ] && artifact_store put-blob --bundle-id "${bundle_id}" --relpath "port/distinfo" --file "${portdir}/distinfo" >/dev/null
+[ -r "${portdir}/pkg-plist" ] && artifact_store put-blob --bundle-id "${bundle_id}" --relpath "port/pkg-plist" --file "${portdir}/pkg-plist" >/dev/null
+[ -r "${portdir}/pkg-descr" ] && artifact_store put-blob --bundle-id "${bundle_id}" --relpath "port/pkg-descr" --file "${portdir}/pkg-descr" >/dev/null
+
+if [ -d "${portdir}/files" ]; then
+	for pf in "${portdir}/files"/patch-*; do
+		[ -r "$pf" ] || continue
+		rel="port/files/$(basename "$pf")"
+		artifact_store put-blob --bundle-id "${bundle_id}" --relpath "$rel" --file "$pf" >/dev/null
+	done
+fi
 
 # Distill to a bounded error bundle.
-distill_log "$logfile" "${bundle_dir}/logs"
+tmpdir=$(mktemp -d)
+distill_log "$logfile" "$tmpdir"
+if [ -r "${tmpdir}/errors.txt" ]; then
+	artifact_store put-blob --bundle-id "${bundle_id}" --relpath "logs/errors.txt" --file "${tmpdir}/errors.txt" >/dev/null
+fi
+rm -rf "$tmpdir"
 
-# Keep the full log available but compressed.
+# Keep the full log available but compressed (fs-backed)
+full_log_path="${DIR_LOGS}/evidence/full-logs/${bundle_id}.full.log.gz"
 if [ -r "$logfile" ]; then
-	gzip -c -9 "$logfile" > "${bundle_dir}/logs/full.log.gz" || true
+	mkdir -p "$(dirname "$full_log_path")"
+	gzip -c -9 "$logfile" > "$full_log_path" || true
+	artifact_store put-fs --bundle-id "${bundle_id}" --relpath "logs/full.log.gz" --fs-path "$full_log_path" --kind gzip >/dev/null
 fi
 
 # Enqueue job for processing.
-run_id=$(basename "$run_dir")
-enqueue_job "$bundle_dir" "$origin_base" "$FLAVOR" "$PROFILE" "$run_id" "$ts"
+enqueue_job "$bundle_id" "$origin_base" "$FLAVOR" "$PROFILE" "$run_id" "$ts"
 
 exit 0
