@@ -39,8 +39,10 @@ import difflib
 import json
 import os
 import re
+import sqlite3
 import subprocess
 import sys
+import threading
 import time
 import urllib.request
 import urllib.error
@@ -69,6 +71,171 @@ DEFAULT_MAX_ITERATIONS = 3
 DEFAULT_VM_SSH_KEY = "/home/antonioh/.go-synth/vm/id_ed25519"
 DEFAULT_VM_SSH_PORT = "2222"
 DEFAULT_VM_SSH_HOST = "root@localhost"
+
+# Heartbeat interval (seconds)
+HEARTBEAT_INTERVAL = 5
+
+
+# =============================================================================
+# State DB connection (for activity logging and runner status)
+# =============================================================================
+
+_state_db_conn: sqlite3.Connection | None = None
+_state_db_lock = threading.Lock()
+_heartbeat_stop_event = threading.Event()
+_heartbeat_thread: threading.Thread | None = None
+_current_job_id: str | None = None
+_current_stage: str | None = None
+
+
+def get_state_db_path(queue_root: Path) -> Path:
+    """Get path to state.db (same directory as queue)."""
+    # Queue is at <logs>/evidence/queue/, state.db is at <logs>/evidence/state.db
+    return queue_root.parent / "state.db"
+
+
+def init_state_db(queue_root: Path) -> sqlite3.Connection | None:
+    """Initialize connection to state.db for activity logging."""
+    global _state_db_conn
+    
+    db_path = get_state_db_path(queue_root)
+    
+    if not db_path.exists():
+        # State server hasn't created the DB yet - that's ok
+        return None
+    
+    try:
+        conn = sqlite3.connect(str(db_path), check_same_thread=False)
+        conn.row_factory = sqlite3.Row
+        _state_db_conn = conn
+        return conn
+    except Exception as e:
+        print(f"Warning: Could not connect to state.db: {e}", file=sys.stderr)
+        return None
+
+
+def activity_log(
+    queue_root: Path,
+    stage: str,
+    message: str,
+    job_id: str | None = None,
+    duration_ms: int | None = None,
+    extra: dict | None = None
+):
+    """
+    Log activity to state.db activity_log table.
+    Also updates _current_stage for heartbeat.
+    Keeps only last 10 entries.
+    """
+    global _current_stage
+    _current_stage = stage
+    
+    # Also write to runner.log for backwards compatibility
+    log(queue_root, "INFO", f"[{stage}] {message}")
+    
+    if _state_db_conn is None:
+        return
+    
+    ts = datetime.now(timezone.utc).isoformat()
+    extra_json = json.dumps(extra) if extra else None
+    
+    try:
+        with _state_db_lock:
+            _state_db_conn.execute(
+                """INSERT INTO activity_log (ts, job_id, stage, message, duration_ms, extra_json)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                (ts, job_id, stage, message, duration_ms, extra_json)
+            )
+            
+            # Prune to keep only last 10 entries
+            _state_db_conn.execute(
+                """DELETE FROM activity_log WHERE id NOT IN (
+                     SELECT id FROM activity_log ORDER BY id DESC LIMIT 10
+                   )"""
+            )
+            
+            _state_db_conn.commit()
+    except Exception as e:
+        print(f"Warning: Failed to write activity log: {e}", file=sys.stderr)
+
+
+def update_runner_status(
+    status: str,
+    job_id: str | None = None,
+    stage: str | None = None,
+    extra: dict | None = None
+):
+    """Update runner_status table (singleton row)."""
+    global _current_job_id, _current_stage
+    
+    _current_job_id = job_id
+    if stage is not None:
+        _current_stage = stage
+    
+    if _state_db_conn is None:
+        return
+    
+    ts = datetime.now(timezone.utc).isoformat()
+    extra_json = json.dumps(extra) if extra else None
+    
+    try:
+        with _state_db_lock:
+            # Upsert the singleton row
+            _state_db_conn.execute(
+                """INSERT INTO runner_status (id, status, job_id, current_stage, started_at, updated_at, extra_json)
+                   VALUES (1, ?, ?, ?, ?, ?, ?)
+                   ON CONFLICT(id) DO UPDATE SET
+                     status = excluded.status,
+                     job_id = excluded.job_id,
+                     current_stage = excluded.current_stage,
+                     started_at = CASE WHEN excluded.job_id != runner_status.job_id THEN excluded.started_at ELSE runner_status.started_at END,
+                     updated_at = excluded.updated_at,
+                     extra_json = excluded.extra_json""",
+                (status, job_id, stage or _current_stage, ts, ts, extra_json)
+            )
+            _state_db_conn.commit()
+    except Exception as e:
+        print(f"Warning: Failed to update runner status: {e}", file=sys.stderr)
+
+
+def _heartbeat_loop():
+    """Background thread that updates runner_status.updated_at every 5 seconds."""
+    while not _heartbeat_stop_event.is_set():
+        if _state_db_conn is not None:
+            try:
+                ts = datetime.now(timezone.utc).isoformat()
+                with _state_db_lock:
+                    _state_db_conn.execute(
+                        """UPDATE runner_status SET updated_at = ? WHERE id = 1""",
+                        (ts,)
+                    )
+                    _state_db_conn.commit()
+            except Exception:
+                pass
+        
+        _heartbeat_stop_event.wait(HEARTBEAT_INTERVAL)
+
+
+def start_heartbeat():
+    """Start the heartbeat thread."""
+    global _heartbeat_thread
+    
+    if _heartbeat_thread is not None:
+        return
+    
+    _heartbeat_stop_event.clear()
+    _heartbeat_thread = threading.Thread(target=_heartbeat_loop, daemon=True)
+    _heartbeat_thread.start()
+
+
+def stop_heartbeat():
+    """Stop the heartbeat thread."""
+    global _heartbeat_thread
+    
+    _heartbeat_stop_event.set()
+    if _heartbeat_thread is not None:
+        _heartbeat_thread.join(timeout=2)
+        _heartbeat_thread = None
 
 
 def log(queue_root: Path, level: str, message: str):
@@ -1357,18 +1524,31 @@ def process_triage_job(
     agent = "dports-triage"
     payload = build_triage_payload(bundle_dir, kedb_dir, job)
     snippet_round = int(job.get("snippet_round", "0"))
+    origin = job.get("origin", "unknown")
+    job_id = job_path.name
     
     last_error = None
     model_info = f"{opencode_provider}/{opencode_model}" if opencode_provider and opencode_model else "agent-default"
     
     for attempt in range(max_retries):
         try:
-            log(queue_root, "INFO", f"calling opencode (attempt {attempt + 1}/{max_retries}, agent={agent}, model={model_info}, round={snippet_round})")
+            activity_log(queue_root, "api_call_start", 
+                        f"Calling {agent} for {origin} (attempt {attempt + 1}/{max_retries})",
+                        job_id=job_id, extra={"agent": agent, "model": model_info, "round": snippet_round})
+            
+            start_time = time.time()
             response = call_opencode(opencode_url, payload, agent, opencode_provider, opencode_model, timeout)
+            duration_ms = int((time.time() - start_time) * 1000)
             session_id = response.get("_session_id", "unknown")
             
+            activity_log(queue_root, "api_call_complete",
+                        f"Triage response received for {origin}",
+                        job_id=job_id, duration_ms=duration_ms)
+            
             write_triage_outputs(bundle_dir, response, session_id)
-            log(queue_root, "INFO", f"wrote triage to {bundle_dir}/analysis/")
+            activity_log(queue_root, "write_output",
+                        f"Wrote triage.md for {origin}",
+                        job_id=job_id)
             
             # Check for snippet requests before deciding on patch job
             response_text = extract_response_text(response)
@@ -1384,15 +1564,21 @@ def process_triage_job(
             triage = parse_triage_output(bundle_dir / "analysis" / "triage.md")
             if should_enqueue_patch(triage):
                 patch_job_path = enqueue_patch_job(queue_root, job)
-                log(queue_root, "INFO", f"auto-enqueued patch job: {patch_job_path.name} (classification={triage['classification']}, confidence={triage['confidence']})")
+                activity_log(queue_root, "enqueue_patch",
+                            f"Auto-enqueued patch job for {origin} ({triage['classification']})",
+                            job_id=job_id, extra={"classification": triage['classification'], "confidence": triage['confidence']})
             else:
-                log(queue_root, "INFO", f"no patch job enqueued (classification={triage['classification']}, confidence={triage['confidence']})")
+                activity_log(queue_root, "no_patch",
+                            f"No patch job for {origin} ({triage['classification']})",
+                            job_id=job_id, extra={"classification": triage['classification'], "confidence": triage['confidence']})
             
             return True, "done"
             
         except (urllib.error.URLError, urllib.error.HTTPError, OSError, RuntimeError) as e:
             last_error = str(e)
-            log(queue_root, "WARN", f"attempt {attempt + 1} failed: {last_error}")
+            activity_log(queue_root, "api_error",
+                        f"Attempt {attempt + 1} failed: {last_error[:100]}",
+                        job_id=job_id)
             
             if attempt < max_retries - 1:
                 delay = min(retry_delay * (2 ** attempt), 60)
@@ -1424,18 +1610,34 @@ def process_patch_job(
     agent = "dports-patch"
     payload = build_patch_payload(bundle_dir, kedb_dir, job)
     snippet_round = int(job.get("snippet_round", "0"))
+    origin = job.get("origin", "unknown")
+    job_id = job_path.name
     
     last_error = None
     model_info = f"{opencode_provider}/{opencode_model}" if opencode_provider and opencode_model else "agent-default"
     
     for attempt in range(max_retries):
         try:
-            log(queue_root, "INFO", f"calling opencode (attempt {attempt + 1}/{max_retries}, agent={agent}, model={model_info}, round={snippet_round})")
+            activity_log(queue_root, "api_call_start",
+                        f"Calling {agent} for {origin} (attempt {attempt + 1}/{max_retries})",
+                        job_id=job_id, extra={"agent": agent, "model": model_info, "round": snippet_round})
+            
+            start_time = time.time()
             response = call_opencode(opencode_url, payload, agent, opencode_provider, opencode_model, timeout)
+            duration_ms = int((time.time() - start_time) * 1000)
             session_id = response.get("_session_id", "unknown")
+            
+            activity_log(queue_root, "api_call_complete",
+                        f"Patch response received for {origin}",
+                        job_id=job_id, duration_ms=duration_ms)
             
             # Write outputs first (before checking for snippets)
             success, error = write_patch_outputs(bundle_dir, response, session_id)
+            
+            if success:
+                activity_log(queue_root, "write_output",
+                            f"Wrote patch.diff for {origin}",
+                            job_id=job_id)
             
             # Check for snippet requests
             response_text = extract_response_text(response)
@@ -1445,23 +1647,31 @@ def process_patch_job(
             
             if not should_continue:
                 # Snippet follow-up was enqueued
+                activity_log(queue_root, "snippet_followup",
+                            f"Enqueued snippet follow-up for {origin}",
+                            job_id=job_id, extra={"round": snippet_round + 1})
                 return True, "snippet_followup"
             
             # No snippet requests, check if patch was valid
             if success:
-                log(queue_root, "INFO", f"wrote patch.diff to {bundle_dir}/analysis/")
                 # Auto-enqueue apply job
                 apply_job_path = enqueue_apply_job(queue_root, job, job_path.name)
-                log(queue_root, "INFO", f"auto-enqueued apply job: {apply_job_path.name}")
+                activity_log(queue_root, "enqueue_apply",
+                            f"Auto-enqueued apply job for {origin}",
+                            job_id=job_id, extra={"apply_job": apply_job_path.name})
                 return True, "done"
             else:
-                log(queue_root, "ERROR", f"patch validation failed: {error}")
+                activity_log(queue_root, "patch_invalid",
+                            f"Patch validation failed for {origin}: {error[:80]}",
+                            job_id=job_id)
                 write_error_note(job_path, error)
                 return False, error
             
         except (urllib.error.URLError, urllib.error.HTTPError, OSError, RuntimeError) as e:
             last_error = str(e)
-            log(queue_root, "WARN", f"attempt {attempt + 1} failed: {last_error}")
+            activity_log(queue_root, "api_error",
+                        f"Attempt {attempt + 1} failed: {last_error[:100]}",
+                        job_id=job_id)
             
             if attempt < max_retries - 1:
                 delay = min(retry_delay * (2 ** attempt), 60)
@@ -1487,34 +1697,49 @@ def process_apply_job(
     - Syncing to DPorts and running dsynth rebuild
     - Creating a PR if rebuild succeeds
     """
+    origin = job.get("origin", "unknown")
+    job_id = job_path.name
+    
     # Check iteration limits
     iteration = int(job.get("iteration", "1"))
     max_iterations = int(job.get("max_iterations", str(DEFAULT_MAX_ITERATIONS)))
     
     if iteration > max_iterations:
-        log(queue_root, "WARN", f"max iterations ({max_iterations}) reached for {job.get('origin')}, giving up")
+        activity_log(queue_root, "max_iterations",
+                    f"Max iterations ({max_iterations}) reached for {origin}, giving up",
+                    job_id=job_id, extra={"iteration": iteration, "max_iterations": max_iterations})
         return False, "max_iterations_reached"
     
-    log(queue_root, "INFO", f"apply job iteration {iteration}/{max_iterations} for {job.get('origin')}")
+    activity_log(queue_root, "apply_start",
+                f"Starting apply job for {origin} (iteration {iteration}/{max_iterations})",
+                job_id=job_id, extra={"iteration": iteration, "max_iterations": max_iterations})
     
     # Find apply-patch script (same directory as this script)
     script_dir = Path(__file__).resolve().parent
     apply_script = script_dir / "apply-patch"
     
     if not apply_script.exists():
-        log(queue_root, "ERROR", f"apply-patch script not found at {apply_script}")
+        activity_log(queue_root, "apply_error",
+                    f"apply-patch script not found",
+                    job_id=job_id)
         return False, "apply-patch script not found"
     
     # Check that patch.diff exists
     patch_file = bundle_dir / "analysis" / "patch.diff"
     if not patch_file.exists():
-        log(queue_root, "ERROR", f"patch.diff not found in {bundle_dir}/analysis/")
+        activity_log(queue_root, "apply_error",
+                    f"patch.diff not found for {origin}",
+                    job_id=job_id)
         return False, "patch.diff not found"
     
     # Build command
     cmd = [str(apply_script), "--bundle", str(bundle_dir)]
     
-    log(queue_root, "INFO", f"running: {' '.join(cmd)}")
+    activity_log(queue_root, "apply_running",
+                f"Running apply-patch for {origin}",
+                job_id=job_id)
+    
+    start_time = time.time()
     
     try:
         result = subprocess.run(
@@ -1523,6 +1748,8 @@ def process_apply_job(
             text=True,
             timeout=600  # 10 minute timeout for rebuild
         )
+        
+        duration_ms = int((time.time() - start_time) * 1000)
         
         # Log output
         if result.stdout:
@@ -1535,18 +1762,25 @@ def process_apply_job(
         if result.returncode == 0:
             # Success! Check for PR URL
             pr_url_file = bundle_dir / "analysis" / "pr_url.txt"
+            pr_url = None
             if pr_url_file.exists():
                 pr_url = pr_url_file.read_text().strip()
-                log(queue_root, "INFO", f"PR created: {pr_url}")
-            else:
-                log(queue_root, "INFO", "apply-patch succeeded (no PR URL found)")
+            
+            activity_log(queue_root, "apply_success",
+                        f"Apply succeeded for {origin}" + (f" - PR: {pr_url}" if pr_url else ""),
+                        job_id=job_id, duration_ms=duration_ms,
+                        extra={"pr_url": pr_url} if pr_url else None)
             
             return True, "done"
         else:
             # Rebuild failed - the hook will create a new evidence bundle
             # which will start a new triage cycle (if within iteration limit)
             error_msg = result.stderr[:200] if result.stderr else f"exit code {result.returncode}"
-            log(queue_root, "WARN", f"apply-patch failed: {error_msg}")
+            
+            activity_log(queue_root, "apply_failed",
+                        f"Apply failed for {origin}: {error_msg[:80]}",
+                        job_id=job_id, duration_ms=duration_ms,
+                        extra={"iteration": iteration, "returncode": result.returncode})
             
             # Write iteration tracking for the hook to pick up
             tracking_dir = bundle_dir.parent.parent  # Go up to runs/ level
@@ -1565,10 +1799,15 @@ def process_apply_job(
             return False, error_msg
             
     except subprocess.TimeoutExpired:
-        log(queue_root, "ERROR", "apply-patch timed out after 600s")
+        duration_ms = int((time.time() - start_time) * 1000)
+        activity_log(queue_root, "apply_timeout",
+                    f"Apply timed out for {origin} after 600s",
+                    job_id=job_id, duration_ms=duration_ms)
         return False, "timeout"
     except Exception as e:
-        log(queue_root, "ERROR", f"apply-patch error: {e}")
+        activity_log(queue_root, "apply_error",
+                    f"Apply error for {origin}: {str(e)[:80]}",
+                    job_id=job_id)
         return False, str(e)
 
 
@@ -1585,17 +1824,24 @@ def process_job(
     kedb_dir: Path | None
 ):
     """Process a single job (dispatch based on type)."""
-    log(queue_root, "INFO", f"processing job {job_path.name}")
-    
     job = parse_job_file(job_path)
     job_type = job.get("type", "triage")
     bundle_dir = Path(job.get("bundle_dir", ""))
     snippet_round = job.get("snippet_round", "0")
+    origin = job.get("origin", "unknown")
+    job_id = job_path.name
+    
+    log(queue_root, "INFO", f"processing job {job_path.name}")
+    
+    # Update runner status to show we're working on this job
+    update_runner_status("processing", job_id=job_id, stage=f"{job_type}_start",
+                        extra={"origin": origin, "type": job_type})
     
     if not bundle_dir.exists():
         log(queue_root, "ERROR", f"bundle_dir does not exist: {bundle_dir}")
         write_error_note(job_path, f"bundle_dir does not exist: {bundle_dir}")
         move_job(job_path, "failed")
+        update_runner_status("idle", job_id=None, stage=None)
         return
     
     if dry_run:
@@ -1607,6 +1853,7 @@ def process_job(
             print(f"ORIGIN: {job.get('origin', 'unknown')}")
             print("=" * 60)
             move_job(job_path, "pending")
+            update_runner_status("idle", job_id=None, stage=None)
             return
         elif job_type == "patch":
             payload = build_patch_payload(bundle_dir, kedb_dir, job)
@@ -1620,6 +1867,7 @@ def process_job(
         print(payload)
         print("=" * 60)
         move_job(job_path, "pending")
+        update_runner_status("idle", job_id=None, stage=None)
         return
     
     # Dispatch based on job type
@@ -1649,6 +1897,9 @@ def process_job(
     else:
         move_job(job_path, "failed")
         log(queue_root, "ERROR", f"moved job to failed/ ({status})")
+    
+    # Update runner status back to idle
+    update_runner_status("idle", job_id=None, stage=None)
 
 
 # -----------------------------------------------------------------------------
@@ -1671,6 +1922,12 @@ def main():
         if not d.exists():
             print(f"error: queue directory missing: {d}", file=sys.stderr)
             sys.exit(1)
+    
+    # Initialize state DB for activity logging
+    init_state_db(queue_root)
+    
+    # Start heartbeat thread (updates runner_status.updated_at every 5s)
+    start_heartbeat()
     
     # Find KEDB directory
     if args.kedb_dir:
@@ -1697,19 +1954,12 @@ def main():
     kedb_info = str(kedb_dir) if kedb_dir else "none"
     log(queue_root, "INFO", f"starting runner (once={args.once}, dry_run={args.dry_run}, model={model_info}, kedb={kedb_info})")
     
-    if args.once:
-        job = claim_next_job(queue_root)
-        if job:
-            process_job(
-                queue_root, job, opencode_url,
-                opencode_provider, opencode_model,
-                timeout, max_retries, retry_delay,
-                args.dry_run, kedb_dir
-            )
-        else:
-            log(queue_root, "INFO", "no jobs in queue")
-    else:
-        while True:
+    # Log startup activity
+    activity_log(queue_root, "runner_start", f"Runner started (model={model_info})")
+    update_runner_status("idle", job_id=None, stage=None)
+    
+    try:
+        if args.once:
             job = claim_next_job(queue_root)
             if job:
                 process_job(
@@ -1719,7 +1969,27 @@ def main():
                     args.dry_run, kedb_dir
                 )
             else:
-                time.sleep(5)
+                log(queue_root, "INFO", "no jobs in queue")
+        else:
+            while True:
+                job = claim_next_job(queue_root)
+                if job:
+                    process_job(
+                        queue_root, job, opencode_url,
+                        opencode_provider, opencode_model,
+                        timeout, max_retries, retry_delay,
+                        args.dry_run, kedb_dir
+                    )
+                else:
+                    # Update status to show we're waiting for jobs
+                    update_runner_status("idle", job_id=None, stage="waiting")
+                    time.sleep(5)
+    except KeyboardInterrupt:
+        log(queue_root, "INFO", "shutting down (keyboard interrupt)")
+        activity_log(queue_root, "runner_stop", "Runner stopped (keyboard interrupt)")
+    finally:
+        stop_heartbeat()
+        update_runner_status("stopped", job_id=None, stage=None)
 
 
 if __name__ == "__main__":

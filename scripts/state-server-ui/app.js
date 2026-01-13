@@ -42,7 +42,24 @@
     job_claimed: 'primary',
     job_done: 'success',
     run_started: 'info',
+    activity: 'info',
+    runner_status: 'primary',
   };
+
+  // Runner status display config
+  const RUNNER_STATUS_BADGES = {
+    idle: 'secondary',
+    processing: 'primary',
+    stopped: 'danger',
+    unknown: 'secondary',
+    stale: 'warning',
+  };
+
+  // Files to hide from artifact display (internal/noisy files)
+  const HIDDEN_ARTIFACTS = [
+    'analysis/session_id.txt',
+    'analysis/patch_session_id.txt',
+  ];
 
   // =============================================================================
   // State
@@ -60,6 +77,8 @@
     sse: { es: null, backoffMs: 500, backoffMaxMs: 30000, connectTimer: null },
     caches: {
       portsIndex: null, // { origins: string[], lastBuiltAt: number }
+      activityLog: null, // [{ id, ts, job_id, stage, message, duration_ms, extra_json }]
+      runnerStatus: null, // { status, job_id, current_stage, started_at, updated_at, is_stale }
     },
   };
 
@@ -535,6 +554,24 @@
       return;
     }
 
+    // Fetch activity log and runner status in parallel
+    let activityLog = [];
+    let runnerStatus = null;
+    try {
+      const [activityData, runnerData] = await Promise.all([
+        fetchJSON('/activity').catch(() => ({ activities: [] })),
+        fetchJSON('/runner-status').catch(() => null),
+      ]);
+      activityLog = activityData.activities || [];
+      runnerStatus = runnerData;
+      state.caches.activityLog = activityLog;
+      state.caches.runnerStatus = runnerStatus;
+    } catch (_) {
+      // Use cached values if fetch fails
+      activityLog = state.caches.activityLog || [];
+      runnerStatus = state.caches.runnerStatus;
+    }
+
     const jobs = status.jobs || {};
 
     const pending = jobs.pending || 0;
@@ -566,6 +603,12 @@
         </div>
       `
       : renderEmpty('No events yet', 'Waiting for SSE stream…');
+
+    // Render runner status
+    const runnerStatusHtml = renderRunnerStatus(runnerStatus);
+
+    // Render activity log
+    const activityHtml = renderActivityLog(activityLog);
 
     setMain(`
       <div class="d-flex align-items-center justify-content-between mb-3">
@@ -604,13 +647,27 @@
         <div class="col-md-6">
           <div class="card shadow-sm">
             <div class="card-body">
+              <h6 class="card-title">Runner Status</h6>
+              ${runnerStatusHtml}
+              <hr />
               <h6 class="card-title">Stream</h6>
               <div class="d-flex flex-wrap gap-2">
                 ${badge(`SSE: ${state.connection.status}`, state.connection.status === 'connected' ? 'success' : (state.connection.status === 'error' ? 'danger' : 'secondary'))}
                 ${badge(`Paused: ${state.paused ? 'yes' : 'no'}`, state.paused ? 'warning' : 'secondary')}
                 ${badge(`Buffer: ${state.events.length}`, 'secondary')}
               </div>
-              <div class="text-body-secondary small mt-2">Reload preserves last event id via localStorage.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-12">
+          <div class="card shadow-sm">
+            <div class="card-header d-flex align-items-center justify-content-between">
+              <span>Activity Log</span>
+              <button class="btn btn-sm btn-outline-secondary" data-action="refresh-activity">${icon('arrow-clockwise')} Refresh</button>
+            </div>
+            <div class="card-body p-0">
+              ${activityHtml}
             </div>
           </div>
         </div>
@@ -632,11 +689,122 @@
     attachOverviewHandlers();
   }
 
+  function renderRunnerStatus(runnerStatus) {
+    if (!runnerStatus) {
+      return `
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+          ${badge('unknown', RUNNER_STATUS_BADGES.unknown)}
+          <span class="text-body-secondary small">Runner status not available</span>
+        </div>
+      `;
+    }
+
+    const statusText = runnerStatus.is_stale ? 'stale' : runnerStatus.status;
+    const statusColor = runnerStatus.is_stale ? RUNNER_STATUS_BADGES.stale : (RUNNER_STATUS_BADGES[runnerStatus.status] || 'secondary');
+
+    let details = '';
+    if (runnerStatus.status === 'processing' && runnerStatus.job_id) {
+      details = `<div class="small text-body-secondary mt-1">Job: ${escapeHtml(runnerStatus.job_id)}</div>`;
+      if (runnerStatus.current_stage) {
+        details += `<div class="small text-body-secondary">Stage: ${escapeHtml(runnerStatus.current_stage)}</div>`;
+      }
+    }
+
+    const updatedAgo = runnerStatus.updated_at ? formatTimeAgo(runnerStatus.updated_at) : 'unknown';
+
+    return `
+      <div class="d-flex flex-wrap gap-2 align-items-center">
+        ${badge(statusText, statusColor)}
+        <span class="text-body-secondary small">Updated ${updatedAgo}</span>
+      </div>
+      ${details}
+    `;
+  }
+
+  function renderActivityLog(activities) {
+    if (!activities.length) {
+      return renderEmpty('No activity', 'Runner has not logged any activity yet.');
+    }
+
+    const rows = activities.map((a) => {
+      const stageColor = getStageColor(a.stage);
+      const durationText = a.duration_ms ? `${a.duration_ms}ms` : '';
+      return `
+        <tr>
+          <td class="ts-col">${escapeHtml(formatTs(a.ts))}</td>
+          <td>${badge(a.stage, stageColor, 'badge-sm')}</td>
+          <td>${escapeHtml(a.message)}</td>
+          <td class="text-end text-body-secondary small">${escapeHtml(durationText)}</td>
+        </tr>
+      `;
+    }).join('');
+
+    return `
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Stage</th>
+              <th>Message</th>
+              <th class="text-end">Duration</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  function getStageColor(stage) {
+    if (!stage) return 'secondary';
+    if (stage.includes('error') || stage.includes('failed') || stage.includes('timeout')) return 'danger';
+    if (stage.includes('success') || stage.includes('complete') || stage.includes('done')) return 'success';
+    if (stage.includes('start') || stage.includes('running')) return 'primary';
+    if (stage.includes('api_call')) return 'info';
+    if (stage.includes('enqueue')) return 'warning';
+    return 'secondary';
+  }
+
+  function formatTimeAgo(isoTs) {
+    if (!isoTs) return 'unknown';
+    const d = new Date(isoTs);
+    if (Number.isNaN(d.getTime())) return isoTs;
+    const now = Date.now();
+    const diff = now - d.getTime();
+    const seconds = Math.floor(diff / 1000);
+    if (seconds < 5) return 'just now';
+    if (seconds < 60) return `${seconds}s ago`;
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    return d.toLocaleString();
+  }
+
   function attachOverviewHandlers() {
     // events in table clickable via delegation
     const root = $('#main-content');
     if (!root) return;
-    root.addEventListener('click', (e) => {
+    root.addEventListener('click', async (e) => {
+      const btn = e.target.closest('[data-action]');
+      if (btn?.dataset.action === 'refresh-activity') {
+        try {
+          const [activityData, runnerData] = await Promise.all([
+            fetchJSON('/activity'),
+            fetchJSON('/runner-status').catch(() => null),
+          ]);
+          state.caches.activityLog = activityData.activities || [];
+          state.caches.runnerStatus = runnerData;
+          scheduleRender();
+        } catch (err) {
+          toast('Error', `<div>Failed to refresh activity</div>`, { icon: 'exclamation-triangle' });
+        }
+        return;
+      }
+
       const row = e.target.closest('tr[data-event-id]');
       if (!row) return;
       const id = Number(row.dataset.eventId);
@@ -646,7 +814,7 @@
       setDetail(`Event #${id}`, renderDetail('event', evt));
       highlightAll($('#detail-content'));
       bindDetailActions(evt);
-    }, { once: true });
+    });
   }
 
   function renderEventRowTbody(evt) {
@@ -1372,7 +1540,10 @@
   }
 
   function renderBundleSummary(bundle, artifacts) {
-    const aRows = artifacts
+    // Filter out hidden artifacts
+    const visibleArtifacts = artifacts.filter((a) => !HIDDEN_ARTIFACTS.includes(a.relpath));
+
+    const aRows = visibleArtifacts
       .slice()
       .sort((a, b) => a.relpath.localeCompare(b.relpath))
       .slice(0, 15)
@@ -1393,7 +1564,7 @@
           <div class="card">
             <div class="card-body">
               <h6 class="card-title">Artifacts (sample)</h6>
-              ${artifacts.length ? `<ul class="list-group list-group-flush">${aRows}</ul>` : renderEmpty('No artifacts', 'Bundle has no tracked artifacts.')}
+              ${visibleArtifacts.length ? `<ul class="list-group list-group-flush">${aRows}</ul>` : renderEmpty('No artifacts', 'Bundle has no tracked artifacts.')}
             </div>
           </div>
         </div>
@@ -1402,9 +1573,12 @@
   }
 
   function renderArtifactsList(bundleId, artifacts) {
-    if (!artifacts.length) return renderEmpty('No artifacts', 'No tracked artifacts for this bundle.');
+    // Filter out hidden artifacts
+    const visibleArtifacts = artifacts.filter((a) => !HIDDEN_ARTIFACTS.includes(a.relpath));
 
-    const rows = artifacts
+    if (!visibleArtifacts.length) return renderEmpty('No artifacts', 'No tracked artifacts for this bundle.');
+
+    const rows = visibleArtifacts
       .slice()
       .sort((a, b) => a.relpath.localeCompare(b.relpath))
       .map((a) => {
@@ -1478,7 +1652,10 @@
 
     pane.innerHTML = `
       <div class="d-flex justify-content-between align-items-center mb-2">
-        <div class="font-monospace">${escapeHtml(relpath)}</div>
+        <div class="d-flex align-items-center gap-2">
+          <button class="btn btn-sm btn-outline-secondary" data-action="back-to-artifacts">${icon('arrow-left')} Back</button>
+          <span class="font-monospace">${escapeHtml(relpath)}</span>
+        </div>
         <div class="d-flex gap-2">
           <a class="btn btn-sm btn-outline-secondary" href="${escapeHtml(url)}" target="_blank" rel="noopener">${icon('box-arrow-up-right')} Raw</a>
           <button class="btn btn-sm btn-outline-secondary" data-action="copy-artifact">${icon('clipboard')} Copy</button>
@@ -1490,6 +1667,11 @@
     highlightAll(pane);
 
     pane.querySelector('[data-action="copy-artifact"]')?.addEventListener('click', () => copyToClipboard(text));
+    pane.querySelector('[data-action="back-to-artifacts"]')?.addEventListener('click', () => {
+      // Switch to artifacts tab and re-render the artifacts list
+      const artifactsBtn = root.querySelector('[data-bs-target="#tab-artifacts"]');
+      if (artifactsBtn) bootstrap.Tab.getOrCreateInstance(artifactsBtn).show();
+    });
   }
 
   // =============================================================================
