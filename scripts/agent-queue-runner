@@ -1807,8 +1807,8 @@ def process_apply_job(
                         extra={"iteration": iteration, "returncode": result.returncode})
             
             # Write iteration tracking for the hook to pick up
-            tracking_dir = bundle_dir.parent.parent  # Go up to runs/ level
-            tracking_file = tracking_dir / ".current_apply_context"
+            runs_root = queue_root.parent / "runs"
+            tracking_file = runs_root / ".current_apply_context"
             try:
                 tracking_content = [
                     f"previous_bundle={bundle_dir}",
