@@ -200,7 +200,8 @@ class Observer:
         self.lock = threading.Lock()
         # Track last seen activity log id for SSE event emission
         self._last_activity_id = 0
-        self._last_runner_updated_at = None
+        # Track runner status key (status, job_id, stage) - only emit on meaningful changes
+        self._last_runner_status_key = (None, None, None)
     
     def scan(self):
         """Perform one scan cycle."""
@@ -249,8 +250,9 @@ class Observer:
         if not row:
             return
         
-        updated_at = row["updated_at"]
-        if updated_at and updated_at != self._last_runner_updated_at:
+        # Only emit event when meaningful fields change (not just heartbeat updated_at)
+        key = (row["status"], row["job_id"], row["current_stage"])
+        if key != self._last_runner_status_key:
             emit_event(self.conn, "runner_status", {
                 "status": row["status"],
                 "job_id": row["job_id"],
@@ -258,7 +260,7 @@ class Observer:
                 "started_at": row["started_at"],
                 "updated_at": row["updated_at"],
             })
-            self._last_runner_updated_at = updated_at
+            self._last_runner_status_key = key
     
     def _scan_runs(self, now: str):
         """Scan runs and bundles."""

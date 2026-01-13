@@ -1394,9 +1394,21 @@ def write_patch_outputs(bundle_dir: Path, response: dict, session_id: str) -> tu
 # -----------------------------------------------------------------------------
 
 def move_job(job_path: Path, dest_dir: str) -> Path:
-    """Move job file to destination directory (done/failed)."""
+    """Move job file to destination directory (done/failed).
+    Also moves any associated .job.error file.
+    """
     dest = job_path.parent.parent / dest_dir / job_path.name
     job_path.rename(dest)
+    
+    # Also move error file if it exists
+    error_file = job_path.with_suffix(".job.error")
+    if error_file.exists():
+        error_dest = dest.with_suffix(".job.error")
+        try:
+            error_file.rename(error_dest)
+        except OSError:
+            pass  # Best effort
+    
     return dest
 
 
@@ -1895,6 +1907,15 @@ def process_job(
         else:
             log(queue_root, "INFO", "moved job to done/")
     else:
+        # Write error file for visibility in UI
+        error_file = job_path.with_suffix(".job.error")
+        try:
+            error_msg = status[:500] if status else "Unknown error"
+            error_file.write_text(error_msg)
+            log(queue_root, "DEBUG", f"wrote error file: {error_file}")
+        except OSError as e:
+            log(queue_root, "WARN", f"failed to write error file: {e}")
+        
         move_job(job_path, "failed")
         log(queue_root, "ERROR", f"moved job to failed/ ({status})")
     
