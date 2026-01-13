@@ -135,9 +135,33 @@ CREATE TABLE IF NOT EXISTS events (
     data_json TEXT
 );
 
+-- Activity log: written by agent-queue-runner, read by UI
+-- Keeps last 10 entries globally (pruned by runner)
+CREATE TABLE IF NOT EXISTS activity_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts TEXT NOT NULL,
+    job_id TEXT,
+    stage TEXT NOT NULL,
+    message TEXT NOT NULL,
+    duration_ms INTEGER,
+    extra_json TEXT
+);
+
+-- Runner status: singleton row updated by agent-queue-runner heartbeat
+CREATE TABLE IF NOT EXISTS runner_status (
+    id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+    status TEXT NOT NULL DEFAULT 'unknown',
+    job_id TEXT,
+    current_stage TEXT,
+    started_at TEXT,
+    updated_at TEXT,
+    extra_json TEXT
+);
+
 CREATE INDEX IF NOT EXISTS idx_bundles_origin ON bundles(origin);
 CREATE INDEX IF NOT EXISTS idx_jobs_state ON jobs(state);
 CREATE INDEX IF NOT EXISTS idx_events_id ON events(id);
+CREATE INDEX IF NOT EXISTS idx_activity_log_ts ON activity_log(ts);
 """
 
 
@@ -174,6 +198,9 @@ class Observer:
         self.queue_root = self.evidence_root / "queue"
         self.conn = conn
         self.lock = threading.Lock()
+        # Track last seen activity log id for SSE event emission
+        self._last_activity_id = 0
+        self._last_runner_updated_at = None
     
     def scan(self):
         """Perform one scan cycle."""
@@ -182,6 +209,56 @@ class Observer:
         with self.lock:
             self._scan_runs(now)
             self._scan_queue(now)
+            self._scan_activity_changes()
+            self._scan_runner_status_changes()
+    
+    def _scan_activity_changes(self):
+        """Check for new activity log entries and emit SSE events."""
+        # Get latest activity log id
+        row = self.conn.execute(
+            "SELECT MAX(id) as max_id FROM activity_log"
+        ).fetchone()
+        max_id = row["max_id"] if row and row["max_id"] else 0
+        
+        if max_id > self._last_activity_id:
+            # Fetch new entries
+            rows = self.conn.execute(
+                """SELECT id, ts, job_id, stage, message, duration_ms
+                   FROM activity_log WHERE id > ? ORDER BY id""",
+                (self._last_activity_id,)
+            ).fetchall()
+            
+            for r in rows:
+                emit_event(self.conn, "activity", {
+                    "activity_id": r["id"],
+                    "job_id": r["job_id"],
+                    "stage": r["stage"],
+                    "message": r["message"],
+                    "duration_ms": r["duration_ms"],
+                })
+            
+            self._last_activity_id = max_id
+    
+    def _scan_runner_status_changes(self):
+        """Check for runner status changes and emit SSE events."""
+        row = self.conn.execute(
+            """SELECT status, job_id, current_stage, started_at, updated_at
+               FROM runner_status WHERE id = 1"""
+        ).fetchone()
+        
+        if not row:
+            return
+        
+        updated_at = row["updated_at"]
+        if updated_at and updated_at != self._last_runner_updated_at:
+            emit_event(self.conn, "runner_status", {
+                "status": row["status"],
+                "job_id": row["job_id"],
+                "current_stage": row["current_stage"],
+                "started_at": row["started_at"],
+                "updated_at": row["updated_at"],
+            })
+            self._last_runner_updated_at = updated_at
     
     def _scan_runs(self, now: str):
         """Scan runs and bundles."""
@@ -496,6 +573,10 @@ class StateServerHandler(BaseHTTPRequestHandler):
                 self._handle_health()
             elif path == "/status":
                 self._handle_status()
+            elif path == "/activity":
+                self._handle_activity()
+            elif path == "/runner-status":
+                self._handle_runner_status()
             elif path == "/runs":
                 self._handle_runs()
             elif path.startswith("/runs/"):
@@ -570,6 +651,88 @@ class StateServerHandler(BaseHTTPRequestHandler):
             "runs": run_count,
             "last_event_id": last_event_id,
         })
+    
+    def _handle_activity(self):
+        """GET /activity - Returns last 10 activity log entries"""
+        conn = self._get_conn()
+        
+        rows = conn.execute(
+            """SELECT id, ts, job_id, stage, message, duration_ms, extra_json
+               FROM activity_log ORDER BY id DESC LIMIT 10"""
+        ).fetchall()
+        
+        activities = []
+        for row in rows:
+            entry = {
+                "id": row["id"],
+                "ts": row["ts"],
+                "job_id": row["job_id"],
+                "stage": row["stage"],
+                "message": row["message"],
+                "duration_ms": row["duration_ms"],
+            }
+            # Parse extra_json if present
+            if row["extra_json"]:
+                try:
+                    entry["extra"] = json.loads(row["extra_json"])
+                except json.JSONDecodeError:
+                    pass
+            activities.append(entry)
+        
+        # Return in chronological order (oldest first)
+        activities.reverse()
+        
+        self._send_json({"activities": activities})
+    
+    def _handle_runner_status(self):
+        """GET /runner-status - Returns current runner status"""
+        conn = self._get_conn()
+        
+        row = conn.execute(
+            """SELECT status, job_id, current_stage, started_at, updated_at, extra_json
+               FROM runner_status WHERE id = 1"""
+        ).fetchone()
+        
+        if not row:
+            # No runner status yet
+            self._send_json({
+                "status": "unknown",
+                "job_id": None,
+                "current_stage": None,
+                "started_at": None,
+                "updated_at": None,
+                "stale": True,
+            })
+            return
+        
+        result = {
+            "status": row["status"],
+            "job_id": row["job_id"],
+            "current_stage": row["current_stage"],
+            "started_at": row["started_at"],
+            "updated_at": row["updated_at"],
+        }
+        
+        # Parse extra_json if present
+        if row["extra_json"]:
+            try:
+                result["extra"] = json.loads(row["extra_json"])
+            except json.JSONDecodeError:
+                pass
+        
+        # Check if status is stale (no update in last 15 seconds)
+        if row["updated_at"]:
+            try:
+                updated = datetime.fromisoformat(row["updated_at"].replace("Z", "+00:00"))
+                now = datetime.now(timezone.utc)
+                stale_seconds = 15
+                result["stale"] = (now - updated).total_seconds() > stale_seconds
+            except (ValueError, TypeError):
+                result["stale"] = True
+        else:
+            result["stale"] = True
+        
+        self._send_json(result)
     
     def _handle_runs(self):
         """GET /runs"""
