@@ -105,14 +105,6 @@ ensure_queue_dirs() {
 # Check if this is a rebuild attempt (branch starts with ai-fix/)
 # Returns iteration number (0 if not a rebuild attempt)
 detect_rebuild_iteration() {
-	deltaports_dir="${DIR_PORTS%/DPorts*}/DeltaPorts"
-
-	# Check if DeltaPorts directory exists
-	if [ ! -d "$deltaports_dir" ]; then
-		printf '0\n'
-		return
-	fi
-
 	# If tracking context exists, use it regardless of branch
 	evidence=$(evidence_root)
 	ctx_file="${evidence}/runs/.current_apply_context"
@@ -122,6 +114,14 @@ detect_rebuild_iteration() {
 			printf '%d\n' $((iter + 1))
 			return
 		fi
+	fi
+
+	deltaports_dir="${DIR_PORTS%/DPorts*}/DeltaPorts"
+
+	# Check if DeltaPorts directory exists
+	if [ ! -d "$deltaports_dir" ]; then
+		printf '0\n'
+		return
 	fi
 
 	# Get current branch
