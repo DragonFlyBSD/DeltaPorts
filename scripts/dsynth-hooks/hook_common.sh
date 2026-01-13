@@ -113,25 +113,23 @@ detect_rebuild_iteration() {
 		return
 	fi
 
+	# If tracking context exists, use it regardless of branch
+	evidence=$(evidence_root)
+	ctx_file="${evidence}/runs/.current_apply_context"
+	if [ -r "$ctx_file" ]; then
+		iter=$(grep '^iteration=' "$ctx_file" 2>/dev/null | head -1 | cut -d= -f2)
+		if [ -n "$iter" ]; then
+			printf '%d\n' $((iter + 1))
+			return
+		fi
+	fi
+
 	# Get current branch
 	current_branch=$(cd "$deltaports_dir" && git branch --show-current 2>/dev/null || true)
 
 	# Check if it's an AI fix branch
 	case "$current_branch" in
 	ai-fix/*)
-		# This is a rebuild attempt - check for tracking context
-		evidence=$(evidence_root)
-		ctx_file="${evidence}/runs/.current_apply_context"
-
-		if [ -r "$ctx_file" ]; then
-			# Extract iteration from context file
-			iter=$(grep '^iteration=' "$ctx_file" 2>/dev/null | head -1 | cut -d= -f2)
-			if [ -n "$iter" ]; then
-				# Return next iteration
-				printf '%d\n' $((iter + 1))
-				return
-			fi
-		fi
 		# Default to iteration 2 if we're on ai-fix branch but no context
 		printf '2\n'
 		;;
