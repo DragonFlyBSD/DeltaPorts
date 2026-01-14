@@ -58,7 +58,13 @@ logfile=${logfile}
 EOF
 
 # Port context snapshot (minimal set)
+# Prefer DeltaPorts overlay (patch base) when available, fall back to build ports tree.
+overlay_portdir="/build/synth/DeltaPorts/ports/${origin_base}"
 portdir="${DIR_PORTS}/${origin_base}"
+if [ -d "$overlay_portdir" ]; then
+	portdir="$overlay_portdir"
+fi
+
 [ -r "${portdir}/Makefile" ] && artifact_store put-blob --bundle-id "${bundle_id}" --relpath "port/Makefile" --file "${portdir}/Makefile" >/dev/null
 [ -r "${portdir}/Makefile.DragonFly" ] && artifact_store put-blob --bundle-id "${bundle_id}" --relpath "port/Makefile.DragonFly" --file "${portdir}/Makefile.DragonFly" >/dev/null
 [ -r "${portdir}/distinfo" ] && artifact_store put-blob --bundle-id "${bundle_id}" --relpath "port/distinfo" --file "${portdir}/distinfo" >/dev/null
