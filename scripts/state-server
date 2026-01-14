@@ -633,11 +633,20 @@ class StateServerHandler(BaseHTTPRequestHandler):
     
     def do_GET(self):
         """Handle GET requests."""
-        parsed = urlparse(self.path)
-        path = parsed.path
-        query = parse_qs(parsed.query)
-        
         try:
+            parsed = urlparse(self.path)
+            path = parsed.path
+
+            # Normalize accidental trailing slashes (e.g. /bundles/)
+            if path != "/" and path.endswith("/"):
+                path = path.rstrip("/")
+
+            # Guard against malformed double-slash routes (e.g. /bundles//...)
+            if path.startswith("/bundles//") or path.startswith("/runs//") or path.startswith("/jobs//"):
+                self._send_error_json(400, "Invalid path")
+                return
+
+            query = parse_qs(parsed.query)
             if path == "/health":
                 self._handle_health()
             elif path == "/status":

@@ -65,12 +65,17 @@ The agentic workflow consists of these stages:
 
 2. **dsynth hooks** installed in `/etc/dsynth/` or `/usr/local/etc/dsynth/`
 
-3. **State Server** running (optional, for UI verification):
+3. **artifact-store daemon** running (required):
    ```sh
-   /build/synth/DeltaPorts/scripts/state-server --logs-root /build/synth/logs &
+   /build/synth/DeltaPorts/scripts/artifact-store --logs-root /build/synth/logs &
    ```
 
-4. **Generator config** at `/usr/local/etc/dports.conf` with valid paths
+4. **State Server** running in DB-only mode (optional, for UI verification):
+   ```sh
+   EVIDENCE_DB_ONLY=1 /build/synth/DeltaPorts/scripts/state-server --logs-root /build/synth/logs &
+   ```
+
+5. **Generator config** at `/usr/local/etc/dports.conf` with valid paths
 
 ## Test Execution
 
@@ -83,17 +88,18 @@ dsynth test net/hostapd
 
 **Verify:**
 ```sh
-# Find the latest evidence bundle
-BUNDLE=$(ls -td /build/synth/logs/evidence/runs/*/ports/net_hostapd-* | head -1)
-echo "Bundle: $BUNDLE"
+# Find latest bundle via API
+curl -s http://127.0.0.1:8787/bundles | head -80
 
-# Check bundle contents
-ls -la $BUNDLE/
-ls -la $BUNDLE/logs/
-ls -la $BUNDLE/port/
+# Inspect bundle detail (replace <bundle_id>)
+curl -s http://127.0.0.1:8787/bundles/<bundle_id> | head -80
 
-# Check meta.txt
-cat $BUNDLE/meta.txt
+# Fetch meta.txt + errors.txt
+curl -s http://127.0.0.1:8787/bundles/<bundle_id>/artifacts/meta.txt
+curl -s http://127.0.0.1:8787/bundles/<bundle_id>/artifacts/logs/errors.txt | head -50
+
+# Check full log location (fs-backed)
+ls -la /build/synth/logs/evidence/full-logs/<bundle_id>.full.log.gz
 
 # Check job file
 ls -la /build/synth/logs/evidence/queue/pending/
@@ -101,8 +107,10 @@ cat /build/synth/logs/evidence/queue/pending/*.job | head -20
 ```
 
 **Expected:**
-- Bundle contains `meta.txt`, `logs/errors.txt`, `logs/full.log.gz`, `port/*`
-- Job file contains `type=triage`, `snippet_round=0`, `has_snippets=false`
+- Bundle exists in `/bundles` output with artifacts list
+- Artifacts include `meta.txt`, `logs/errors.txt`, `logs/full.log.gz`, `port/*`
+- Full log is stored at `/build/synth/logs/evidence/full-logs/<bundle_id>.full.log.gz`
+- Job file contains `type=triage`, `snippet_round=0`, `has_snippets=false`, `bundle_id=<id>`
 
 ---
 
@@ -121,10 +129,10 @@ OPENCODE_URL=http://10.0.2.2:4097 \
 ls -la /build/synth/logs/evidence/queue/done/
 
 # Check triage output
-cat $BUNDLE/analysis/triage.md
+curl -s http://127.0.0.1:8787/bundles/<bundle_id>/artifacts/analysis/triage.md | head -80
 
 # Check for snippet requests (determines next step)
-grep -A 20 "## Snippet Requests" $BUNDLE/analysis/triage.md || echo "No snippet requests"
+curl -s http://127.0.0.1:8787/bundles/<bundle_id>/artifacts/analysis/triage.md | grep -A 20 "## Snippet Requests" || echo "No snippet requests"
 ```
 
 **Expected:**
@@ -139,30 +147,8 @@ grep -A 20 "## Snippet Requests" $BUNDLE/analysis/triage.md || echo "No snippet 
 
 ### Stage 2a: Snippet Extraction Flow
 
-If triage requested snippets, the runner will have:
-1. Run `snippet-extractor`
-2. Created `analysis/snippets/round_1/`
-3. Enqueued a follow-up job
-
-**Verify:**
-```sh
-# Check snippets were extracted
-ls -la $BUNDLE/analysis/snippets/
-cat $BUNDLE/analysis/snippets/manifest.json
-
-# Check follow-up job
-ls -la /build/synth/logs/evidence/queue/pending/
-cat /build/synth/logs/evidence/queue/pending/*.job
-```
-
-**Run follow-up:**
-```sh
-OPENCODE_URL=http://10.0.2.2:4097 \
-  /build/synth/DeltaPorts/scripts/agent-queue-runner \
-  --queue-root /build/synth/logs/evidence/queue --once
-```
-
-**Repeat** until no more snippet requests or patch job is enqueued.
+**Note:** In DB-only artifact mode, snippet extraction is disabled unless a filesystem bundle directory exists.
+If you need snippets, run in legacy bundle mode or add an explicit snippet store.
 
 ---
 
@@ -186,11 +172,10 @@ OPENCODE_URL=http://10.0.2.2:4097 \
 **Verify:**
 ```sh
 # Check patch output
-ls -la $BUNDLE/analysis/patch*
-cat $BUNDLE/analysis/patch.diff
+curl -s http://127.0.0.1:8787/bundles/<bundle_id>/artifacts/analysis/patch.diff | head -40
 
 # Validate diff format
-head -20 $BUNDLE/analysis/patch.diff
+curl -s http://127.0.0.1:8787/bundles/<bundle_id>/artifacts/analysis/patch.diff | head -20
 ```
 
 **Expected:**
@@ -203,14 +188,13 @@ head -20 $BUNDLE/analysis/patch.diff
 
 ### Stage 4: Apply Patch to Safe Clone
 
-**On Host:**
-```sh
-export BUNDLE_DIR=<path-from-stage-1>  # Copy from VM or use SSH path
-scripts/apply-patch --bundle $BUNDLE_DIR
-```
+Apply runs automatically via the `apply` job in the runner. The runner materializes a temp bundle directory from blobstore artifacts and calls `apply-patch` with it.
 
 **Verify:**
 ```sh
+# Check apply job exists/ran
+ls -la /build/synth/logs/evidence/queue/done/ | head -5
+
 # Check branch was created
 cd /home/antonioh/s/DeltaPorts-ai-fix
 git branch -a | grep ai-fix/net-hostapd
@@ -223,9 +207,9 @@ git show --stat HEAD
 ```
 
 **Expected:**
-- Branch `ai-fix/net-hostapd-<bugslug>` created
+- Apply job ran and moved to `done/` or `failed/`
+- Branch `ai-fix/net-hostapd-<bugslug>` created on success
 - Commit with descriptive message
-- Branch pushed to origin
 
 ---
 
@@ -244,7 +228,7 @@ git branch -a | grep ai-fix/net-hostapd
 ls -la /build/synth/DPorts/net/hostapd/
 
 # Check rebuild status
-cat $BUNDLE/analysis/rebuild_status.txt
+curl -s http://127.0.0.1:8787/bundles/<bundle_id>/artifacts/analysis/rebuild_status.txt
 ```
 
 **Expected:**
@@ -261,7 +245,7 @@ cat $BUNDLE/analysis/rebuild_status.txt
 **Verify:**
 ```sh
 # Check PR URL was recorded
-cat $BUNDLE/analysis/pr_url.txt
+curl -s http://127.0.0.1:8787/bundles/<bundle_id>/artifacts/analysis/pr_url.txt
 
 # View PR on GitHub
 # (URL from above)
