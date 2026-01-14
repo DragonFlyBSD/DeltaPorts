@@ -312,11 +312,15 @@ Assumptions (current):
 6. **Write agent outputs back into the evidence bundle**
 
    - Store artifacts next to the evidence, e.g.:
-     - `analysis/triage.md`
-     - `analysis/triage.json` (raw response payload)
-     - `analysis/patch.diff`
-     - `analysis/review.md`
-     - `analysis/snippet_requests.json`
+   - `analysis/triage.md`
+   - `analysis/triage.json` (raw response payload)
+   - `analysis/patch_plan.json`
+   - `analysis/patch.log`
+   - `analysis/rebuild_status.txt`
+   - `analysis/rebuild_proof.json`
+   - `analysis/review.md`
+   - `analysis/snippet_requests.json`
+
 
 
 7. **Snippet extraction escalation (non-AI, size-capped)**
@@ -324,7 +328,7 @@ Assumptions (current):
    - Keep strict caps so the patch-author agent stays accurate.
 
 8. **Dry-run the full loop on one known failure**
-   - dsynth failure → evidence bundle → triage output → (optional snippet extraction) → patch diff output → rebuild.
+   - dsynth failure → evidence bundle → triage output → (optional snippet extraction) → workspace patch outputs → rebuild.
 
 ### Observability / UI (State Server)
 
@@ -617,312 +621,183 @@ Ports that explicitly link `-lpthread` or check for `libpthread.so` may fail.
 
 The runner will automatically read `docs/kedb/*.md` and append them to the triage payload.
 
-#### Phase 4 — Patch generation (agent output) (DONE)
+#### Phase 4 — Agentic workspace (single shared tree, custom tools) (PLANNED)
 
-Goal: generate DeltaPorts overlay changes as a patch suitable for review and application.
+Goal: generate DeltaPorts artifacts by operating on a shared DragonFly workspace (FPORTS → DeltaPorts → DPorts), using `dupe` + `genpatch` and per-file diffs. The patch agent edits files through custom tools and commits changes on a per-origin fix branch. Unified diff generation is no longer used.
 
-Tasks:
+##### Workspace layout (DragonFly)
 
-- [x] Extend the job format to support `type=patch`.
-- [x] Add a patch agent (`dports-patch`) that consumes bounded evidence + triage output.
-- [x] Implement auto-enqueue: after triage completes, automatically enqueue a patch job for patchable classifications.
-- [x] Store outputs into `bundle_dir/analysis/`:
-  - `analysis/patch.diff` (unified diff that applies to DeltaPorts overlay root)
-  - `analysis/patch.md` (full response including rationale)
-  - `analysis/patch.json` (raw API response)
-- [x] Validate diff output before writing `patch.diff` (write `patch.diff.invalid` on failure).
+- `/build/synth/agentic-workspace/`
+  - `FPORTS/` (full FreeBSD ports checkout, pinned to a quarterly branch)
+  - `DeltaPorts/` (working repo; branches used per origin)
+  - `DPorts/` (staged/generated tree used by dsynth)
+  - `workspace.json` (pinning + paths)
 
-Done when:
-
-- [x] For a known failure, a patch job produces a usable `analysis/patch.diff`.
-- [x] Auto-enqueue works for patchable classifications with sufficient confidence.
-
-##### Job Types
-
-The runner now supports two job types:
-
-| Type | Agent | Description |
-|------|-------|-------------|
-| `triage` (default) | `dports-triage` | Analyzes failure, produces structured triage report |
-| `patch` | `dports-patch` | Generates unified diff from triage + evidence |
-
-##### Auto-Enqueue Rules
-
-After a triage job completes successfully, the runner automatically enqueues a patch job if:
-
-1. **Classification** is one of:
-   - `compile-error`
-   - `configure-error`
-   - `patch-error`
-   - `plist-error`
-
-2. **Confidence** is `high` or `medium`
-
-Classifications that do NOT auto-enqueue:
-- `missing-dep` (infrastructure issue, not patchable)
-- `fetch-error` (upstream issue)
-- `unknown` (needs investigation)
-
-##### Patch Job File Format
-
-```
-type=patch
-created_ts_utc=20260111-020000Z
-profile=LiveSystem
-origin=devel/gettext-tools
-flavor=devel/gettext-tools
-bundle_dir=/build/synth/logs/evidence/runs/.../ports/devel_gettext-tools-...
-run_id=run-LiveSystem-...
-triage_file=/build/synth/logs/evidence/.../analysis/triage.md
+`workspace.json` (example):
+```json
+{
+  "fports_path": "/build/synth/agentic-workspace/FPORTS",
+  "fports_ref": "2026Q1",
+  "deltaports_path": "/build/synth/agentic-workspace/DeltaPorts",
+  "dports_path": "/build/synth/agentic-workspace/DPorts",
+  "dsynth_profile": "agentic"
+}
 ```
 
-##### Patch Agent Configuration
+##### FPORTS pin policy (verify-only)
 
-The `dports-patch` agent must be configured on the opencode server. Key differences from triage agent:
+- The worker verifies that `FPORTS` is clean and `HEAD == fports_ref`.
+- It will not `git pull` or move the ref automatically (quarterly updates remain manual).
 
-- All tools disabled (relies on payload only)
-- System prompt focuses on generating valid unified diffs
-- Output format: `## Patch` with diff block, `## Rationale`, `## Files Modified`
+##### dsynth profile integration
 
-##### Diff Validation
+- dsynth configuration lives in `/etc/dsynth.ini`.
+- Create a profile (e.g. `agentic`) that points `DPORTS` at `/build/synth/agentic-workspace/DPorts`.
+- Use that profile for `dsynth just-build`.
 
-Before writing `patch.diff`, the runner validates:
+##### Tool deployment
 
-1. Has `---` and `+++` file headers
-2. Has at least one `@@ ... @@` hunk header
-3. Lines in hunks have valid prefixes (`+`, `-`, ` `, or `\`)
+- Repo source of truth: `config/opencode/tool/`
+- Deployed to the opencode runtime user at: `~/.config/opencode/tool/`
+- Restart `opencode serve` after copying tools.
 
-If validation fails:
-- `patch.diff.invalid` is written (with error note)
-- Job is marked as failed
-- No retry (likely a model output issue)
+##### Remote configuration (VM now, production later)
 
-##### Example Workflow
+Tools read SSH + path configuration from env:
 
-```
-1. dsynth failure → hook creates evidence bundle + triage job
-2. Runner picks up triage job:
-   - Calls dports-triage agent
-   - Writes analysis/triage.md
-   - Parses Classification=compile-error, Confidence=medium
-   - Auto-enqueues patch job
-3. Runner picks up patch job:
-   - Calls dports-patch agent with triage + evidence
-   - Extracts diff from response
-   - Validates diff syntax
-   - Writes analysis/patch.diff
-4. Patch is ready for review/application
-```
+- `DP_SSH_HOST`, `DP_SSH_PORT`, `DP_SSH_KEY`
+- `DP_WORKSPACE_BASE=/build/synth/agentic-workspace`
 
-Example runner output:
-```
-2026-01-11T02:00:00Z INFO  processing job 20260111-020000Z-LiveSystem-devel_foo-12345.job
-2026-01-11T02:00:00Z INFO  calling opencode (attempt 1/3, agent=dports-triage, model=opencode/gpt-5-nano)
-2026-01-11T02:00:15Z INFO  wrote triage to .../analysis/
-2026-01-11T02:00:15Z INFO  auto-enqueued patch job: 20260111-020015Z-...-patch.job (classification=compile-error, confidence=medium)
-2026-01-11T02:00:15Z INFO  moved job to done/
-2026-01-11T02:00:15Z INFO  processing job 20260111-020015Z-...-patch.job
-2026-01-11T02:00:15Z INFO  calling opencode (attempt 1/3, agent=dports-patch, model=opencode/gpt-5-nano)
-2026-01-11T02:00:30Z INFO  wrote patch.diff to .../analysis/
-2026-01-11T02:00:30Z INFO  moved job to done/
-```
+##### Branch lifecycle (one origin at a time)
 
-Validated 2026-01-11 on DragonFlyBSD VM. Manual patch job processed successfully:
+- Fix branch name: `ai-work/<origin_sanitized>`
+- At start of a patch job:
+  - checkout `ai-work/<origin_sanitized>` (create from `master` if missing)
+- Each attempt makes a **commit** to that branch.
+- At the end of the job (success or failure): checkout `master` and keep the branch intact.
+- The next attempt continues on the same branch (incremental fixes are preserved).
 
-```
-2026-01-11T10:56:17Z INFO  starting runner (once=True, dry_run=False, model=opencode/gpt-5-nano, kedb=none)
-2026-01-11T10:56:17Z INFO  processing job test-patch-job.job
-2026-01-11T10:56:17Z INFO  calling opencode (attempt 1/3, agent=dports-patch, model=opencode/gpt-5-nano)
-2026-01-11T10:56:40Z INFO  wrote patch.diff to .../analysis/
-2026-01-11T10:56:40Z INFO  moved job to done/
-```
+##### Agentic workflow (per origin)
 
-Generated patch applied `BROKEN_DragonFly` to the port Makefile with rationale explaining the missing dependency issue.
+1. **Verify workspace + checkout branch**
+   - Verify `workspace.json` and FPORTS pin.
+   - Checkout `ai-work/<origin_sanitized>`.
 
-#### Phase 5 — Apply patch to DeltaPorts overlay, sync to DPorts, rebuild, open PR (DONE)
+2. **Materialize closure**
+   - Regenerate `DPorts/<origin>` from `FPORTS` + DeltaPorts overlay.
+   - Resolve `MASTERDIR` closure by querying `make -V MASTERDIR` and regenerating required master ports.
 
-Goal: integrate with the existing staged build workflow while ensuring the system never pushes to master.
+3. **Extract**
+   - `make extract` inside `DPorts/<origin>`.
+   - Record `WRKSRC`/`WRKDIR`.
 
-##### Architecture
+4. **Source patches (WRKSRC → dragonfly/patch-*)**
+   - `dupe <file>` → edits performed by full-file `get`/`put`.
+   - `genpatch <file>` writes `patch-*` in a controlled output dir.
+   - Install into `DeltaPorts/ports/<origin>/dragonfly/`.
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                         HOST MACHINE                                 │
-│  ┌────────────────────────────────────────────────────────────────┐ │
-│  │  scripts/apply-patch                                           │ │
-│  │  - Reads patch.diff + triage.md from evidence bundle           │ │
-│  │  - Operates on SAFE CLONE only (/home/.../DeltaPorts-ai-fix)   │ │
-│  │  - Hard refuses if pointed at protected checkout               │ │
-│  │  - Creates branch: ai-fix/<cat>-<port>-<bugslug>               │ │
-│  │  - Applies patch, commits (no PR yet)                          │ │
-│  │  - Pushes branch so VM can fetch                               │ │
-│  └────────────────────────────────────────────────────────────────┘ │
-│                              │ SSH                                   │
-│                              ▼                                       │
-│  ┌────────────────────────────────────────────────────────────────┐ │
-│  │  VM (DragonFlyBSD)                                             │ │
-│  │  - Fetches branch into /build/synth/DeltaPorts                 │ │
-│  │  - Runs sync1.sh <cat/port> to update DPorts                   │ │
-│  │  - Runs dsynth just-build <cat/port>                           │ │
-│  │  - Writes results back to evidence bundle                      │ │
-│  └────────────────────────────────────────────────────────────────┘ │
-│                              │                                       │
-│                              ▼                                       │
-│  ┌────────────────────────────────────────────────────────────────┐ │
-│  │  PR Creation (only if rebuild succeeds)                        │ │
-│  │  - gh pr create from safe clone                                │ │
-│  │  - Records PR URL in bundle                                    │ │
-│  └────────────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────────┘
-```
+5. **Skeleton diffs (FPORTS base → diffs/*.diff)**
+   - Edit port skeleton files (Makefile/distinfo/pkg-plist/files/*) in staged `DPorts/<origin>`.
+   - Emit one diff per file vs `FPORTS/<origin>/<relpath>` into `DeltaPorts/ports/<origin>/diffs/*.diff`.
+   - Update `diffs/REMOVE` for deletions.
 
-##### Safety Rules
+6. **Overlay-only changes**
+   - Edit `Makefile.DragonFly` or other overlay files directly in `DeltaPorts/ports/<origin>`.
 
-- **Protected checkout**: `/home/antonioh/s/DeltaPorts` is never modified by automation.
-- **Safe clone**: All apply/commit/push operations use `/home/antonioh/s/DeltaPorts-ai-fix`.
-- **Never push to master**: Always create a new branch and open a PR.
-- **Rebuild gate**: PR is only opened after dsynth rebuild succeeds on VM.
+7. **Commit, re-materialize, rebuild**
+   - Commit changes on `ai-work/<origin_sanitized>`.
+   - Re-materialize closure to ensure diffs apply cleanly.
+   - Run `dsynth -p <profile> just-build <origin>`.
 
-##### Patch Output Contract
+8. **Record outputs**
+   - Write `analysis/patch_plan.json`, `analysis/patch.log`, `analysis/rebuild_status.txt`, `analysis/rebuild_proof.json` into the bundle.
+   - Mark patch job done/failed accordingly.
 
-The `dports-patch` agent must output diffs that modify only DeltaPorts overlay paths (per `README.md`):
+9. **Clean slate**
+   - Checkout `master` and ensure working tree is clean.
 
-| Path Pattern | Purpose |
-|--------------|---------|
-| `ports/<cat>/<port>/STATUS` | Port status (PORT/DPORT/MASK) |
-| `ports/<cat>/<port>/Makefile.DragonFly` | DragonFly-specific Makefile additions (preferred) |
-| `ports/<cat>/<port>/diffs/*.diff` | Patches to FreeBSD port files |
-| `ports/<cat>/<port>/dragonfly/*` | Extra patches/files (applied after `files/`) |
-| `ports/<cat>/<port>/newport/*` | Complete port created from scratch |
+##### Incremental knowledge
 
-Paths like `DeltaPorts/...` or direct edits to FreeBSD ports files are rejected.
+- The patch job payload includes the **last 3 attempts** for the same origin:
+  - `analysis/patch_plan.json`
+  - `analysis/patch.log`
+  - `analysis/rebuild_status.txt`
 
-##### VM Prerequisites
+##### Custom tool surface (minimum viable)
 
-The VM requires:
+- `dports_workspace_verify()`
+- `dports_checkout_branch(origin)`
+- `dports_commit(origin, message)`
+- `dports_materialize_closure(origin)`
+- `dports_extract(origin)`
+- `dports_get_file(path)`
+- `dports_put_file(path, content, expected_sha256?)`
+- `dports_dupe(path)`
+- `dports_genpatch(path)`
+- `dports_install_patches(origin, patch_files)`
+- `dports_emit_diff(origin, relpath)`
+- `dports_dsynth_build(origin, profile)`
 
-1. **FreeBSD ports checkout** at `/build/synth/freebsd-ports` (2025Q2 branch)
-2. **Generator config** at `/usr/local/etc/dports.conf`:
-   ```sh
-   FPORTS=/build/synth/freebsd-ports
-   DELTA=/build/synth/DeltaPorts
-   DPORTS=/build/synth/DPorts
-   MERGED=/build/synth/DPorts
-   POTENTIAL=/build/synth/potential
-   INDEX=/build/synth/freebsd-ports/INDEX-14
-   ```
-3. **Directories**: `MERGED`, `POTENTIAL` must exist
+##### Job types and auto-enqueue rules
 
-##### Helper Script: `scripts/apply-patch`
+Job types include `triage`, `patch`, and `pr`.
 
-Interface:
-```sh
-scripts/apply-patch --bundle <path> [--dry-run] [--no-rebuild] [--no-pr]
+- Patch jobs operate through custom tools instead of generating unified diffs.
+- PR jobs are enqueued only after a successful rebuild proof.
 
-# Environment variables:
-BUNDLE_DIR=/path/to/evidence/bundle    # Required if --bundle not given
-SAFE_DELTAPORTS_DIR=...                # Default: /home/antonioh/s/DeltaPorts-ai-fix
-VM_SSH_KEY=...                         # Default: ~/.go-synth/vm/id_ed25519
-VM_SSH_PORT=...                        # Default: 2222
-VM_SSH_HOST=...                        # Default: root@localhost
-```
+Auto-enqueue rules remain:
 
-Workflow:
-1. Validate bundle contains `patch.diff` and `meta.txt`
-2. Parse origin from `meta.txt`, classification/confidence from `triage.md`
-3. Ensure safe clone exists and is up-to-date with origin/master
-4. Create branch `ai-fix/<cat>-<port>-<bugslug>`
-5. Apply `patch.diff` to safe clone
-6. Commit with message including classification and evidence bundle path
-7. Push branch to origin
-8. SSH to VM: fetch branch, run `sync1.sh`, run `dsynth just-build`
-9. If rebuild succeeds: `gh pr create` and record PR URL
-10. Write artifacts to `bundle/analysis/`: `branch.txt`, `commit.txt`, `rebuild_status.txt`, `pr_url.txt`
+- Classification: `compile-error`, `configure-error`, `patch-error`, `plist-error`
+- Confidence: `high` or `medium`
 
-##### Branch Naming
+Classifications that do NOT auto-enqueue: `missing-dep`, `fetch-error`, `unknown`.
 
-Format: `ai-fix/<category>-<port>-<bugslug>`
+##### Notes
 
-Examples:
-- `ai-fix/devel-gettext-tools-missing-dep`
-- `ai-fix/lang-rust-pthread-link`
-- `ai-fix/www-nginx-configure-dragonfly`
+- This phase replaces the earlier `analysis/patch.diff` flow and supersedes `apply-patch` with workspace-driven rebuilds.
+- No jail initially; enforce safety via tool allowlists and path validation.
 
-The `<bugslug>` is derived from the triage classification and a sanitized keyword from the root cause.
+#### Phase 5 — Workspace rebuild + PR jobs (PLANNED)
 
-##### PR Format
+Goal: rebuild using the shared workspace artifacts and optionally open PRs via a queue-driven workflow.
 
-Title: `fix(<cat>/<port>): <brief description>`
+##### Workflow
 
-Body:
-```markdown
-## Summary
-AI-assisted fix for `<origin>` build failure on DragonFlyBSD.
+1. Use the shared DeltaPorts workspace (`/build/synth/agentic-workspace/DeltaPorts`) and staged DPorts (`/build/synth/agentic-workspace/DPorts`).
+2. Re-materialize `DPorts/<origin>` + MASTERDIR closure.
+3. Run `dsynth -p <profile> just-build <origin>`.
+4. Write proof artifacts into the bundle:
+   - `analysis/rebuild_status.txt`
+   - `analysis/rebuild_log.txt`
+   - `analysis/rebuild_proof.json`
+5. UI shows: **Build succeeded — proof available**.
+6. UI button enqueues a PR job if desired.
 
-## Triage Analysis
-- **Classification**: <classification>
-- **Confidence**: <confidence>
-- **Root Cause**: <excerpt>
+##### PR job enqueue endpoint (state-server)
 
-## Changes
-<list of files modified>
+- `POST /enqueue/pr`
+- Body: `{ "bundle_id": "...", "origin": "..." }`
+- The server verifies that `analysis/rebuild_proof.json` exists and reports success.
+- The server writes a `type=pr` job into `${Directory_logs}/evidence/queue/pending/`.
 
-## Rebuild Result
-Build succeeded on DragonFlyBSD VM (dsynth just-build).
+**WARNING:** This endpoint is unauthenticated. Only expose it on trusted localhost/LAN and do not bind it to public interfaces.
 
-## Evidence
-Bundle: `<bundle_dir>`
+##### PR job processing (runner)
 
----
-*This PR was generated by the agentic build system.*
-```
+- Validate `rebuild_ok=true` from `analysis/rebuild_proof.json`.
+- Checkout `ai-work/<origin_sanitized>` at the proven commit hash.
+- Push branch to `origin`.
+- `gh pr create --base master --head <branch>`
+- Write `analysis/pr_url.txt` and `analysis/pr.json` to the bundle.
+- Checkout `master` afterward.
 
-##### Tasks
+##### Notes
 
-- [x] Document Phase 5 plan
-- [x] Create `scripts/apply-patch` helper
-- [x] Provision VM `/usr/local/etc/dports.conf` and required directories
-- [x] Test sync1 + rebuild gate on VM
-- [x] Test PR creation flow
-- [x] Validate end-to-end with a real failing port
-- [x] Update `hook_pkg_failure` to capture `Makefile.DragonFly`
+- PR creation assumes `gh` authentication is already configured on the builder.
+- The PR base branch is `master`.
 
-Done when:
 
-- [x] A patch can be applied to the safe clone, synced into the staged DPorts checkout on VM, rebuilt successfully, and a PR is opened with results tracked back into the evidence bundle.
 
-Validated 2026-01-11 on DragonFlyBSD VM with `net/bsdrcmds` port:
-
-1. **Failure captured**: Port failed with `-Werror` compiler warnings in `rshd.c`
-2. **Triage**: Agent correctly classified as `compile-error` with `high` confidence
-3. **Patch generated**: Agent created `Makefile.DragonFly` with CFLAGS to suppress warnings:
-   ```makefile
-   OPTIONS_DEFAULT:=	${OPTIONS_DEFAULT:NLIBBLACKLIST}
-   CFLAGS+=	-Wno-misleading-indentation
-   CFLAGS+=	-Wno-unused-const-variable
-   ```
-4. **Apply and sync**: `scripts/apply-patch` applied patch to safe clone, pushed branch
-5. **VM rebuild**: `sync1.sh` merged changes, `dsynth force` built successfully
-6. **PR created**: https://github.com/DragonFlyBSD/DeltaPorts/pull/1518
-
-Example `apply-patch` output:
-```
-2026-01-11T16:46:30Z INFO  Bundle: /tmp/test-bundle
-2026-01-11T16:46:30Z INFO  Origin: net/bsdrcmds
-2026-01-11T16:46:30Z INFO  Classification: compile-error, Confidence: high
-2026-01-11T16:46:30Z INFO  Branch: ai-fix/net-bsdrcmds-compile-error
-2026-01-11T16:46:31Z INFO  Applying patch (231 bytes)
-2026-01-11T16:46:31Z INFO  Patch output: patching file ports/net/bsdrcmds/Makefile.DragonFly
-2026-01-11T16:46:32Z INFO  Commit: dac0d57213b...
-2026-01-11T16:46:34Z INFO  Pushed to origin
-```
-
-VM rebuild output:
-```
-[000] SUCCESS net/bsdrcmds                                             00:00:03
-    packages built: 1
-           failed: 0
-```
 
 #### Phase 6 — Observability/UI (State Server, observe-only) (DONE)
 
@@ -1491,14 +1366,20 @@ scripts/state-server-ui/
 | `#/bundles/<id>` | Header + nav-tabs (Summary/Artifacts/Triage/Patch/Errors) + pinned artifact buttons |
 
 **Artifact rendering:**
-- Markdown (`triage.md`, `patch.md`): render with `marked` + sanitize with `DOMPurify`
-- Diff/logs (`patch.diff`, `errors.txt`): `pre`+`code` with `highlight.js`
+- Markdown (`triage.md`, `patch.md`, `patch.log`): render with `marked` + sanitize with `DOMPurify`
+- Logs (`errors.txt`, `rebuild_status.txt`): `pre`+`code` with `highlight.js`
+- JSON (`rebuild_proof.json`, `patch_plan.json`): pretty-print with monospace
 - Download-only: `full.log.gz` as download button
 
 **Smart defaults:**
 - Bundle page defaults to **Triage** tab if `analysis/triage.md` exists
-- Bundle page defaults to **Patch** tab if `analysis/patch.diff` exists (and no triage)
+- Bundle page defaults to **Patch** tab if `analysis/patch.log` or `analysis/patch_plan.json` exists (and no triage)
 - Otherwise defaults to **Summary** tab
+
+**PR action:**
+- If `analysis/rebuild_proof.json` reports success, show a **Create PR** button.
+- Button calls `POST /enqueue/pr` with `bundle_id`.
+- **WARNING:** `/enqueue/pr` is unauthenticated. Only expose it on trusted localhost/LAN.
 
 ##### Tasks
 
@@ -1509,7 +1390,7 @@ scripts/state-server-ui/
 - [x] Implement SSE client with replay/reconnect (`app.js`)
 - [x] Build Events view with filters/search
 - [x] Build Jobs/Runs/Ports/Bundles views
-- [x] Implement artifact viewer (markdown/diff/logs)
+- [x] Implement artifact viewer (markdown/logs/json)
 - [x] Serve UI from state-server (modify Python)
 - [x] Add `after_id` and `tail` query params to `/events`
 - [x] Include `ts` in SSE event payloads
@@ -1521,14 +1402,14 @@ Done when:
 - [x] Events view updates live via SSE
 - [x] Page reload resumes from last event id
 - [x] Drilling into job/bundle/port works
-- [x] Artifact rendering (triage.md, patch.diff, errors.txt) works
+- [x] Artifact rendering (triage.md, patch.log, errors.txt, rebuild_proof.json) works
 
 Validated 2026-01-11 on DragonFlyBSD VM:
 
 - UI served at `http://127.0.0.1:8787/` with all views functional
 - SSE stream with `after_id` and `tail` query params working
 - Event payloads include `ts` field
-- Artifact viewer renders markdown (triage.md), diffs (patch.diff), and logs (errors.txt)
+- Artifact viewer renders markdown (triage.md, patch.log), logs (errors.txt), and JSON (rebuild_proof.json)
 - Bundle view auto-selects appropriate tab based on available artifacts
 
 Access from host via SSH tunnel:
@@ -1555,10 +1436,9 @@ ssh -i /home/antonioh/.go-synth/vm/id_ed25519 -p 2222 \
 
 | Path | Purpose |
 |------|---------|
-| `/build/synth/DeltaPorts` | DeltaPorts overlay checkout (where changes are made) |
-| `/build/synth/DPorts` | Staged DPorts checkout (used by dsynth builds) |
+| `/build/synth/agentic-workspace` | Shared agentic workspace (FPORTS/DeltaPorts/DPorts) |
 | `/var/log/agentic-dports` | Evidence root (`Directory_logs` for hooks) |
-| `/etc/dsynth/` or `/usr/local/etc/dsynth/` | dsynth config base (hooks go here) |
+| `/etc/dsynth/` or `/usr/local/etc/dsynth/` | dsynth config base (hooks + profiles go here) |
 
 ### Required tools on the builder
 

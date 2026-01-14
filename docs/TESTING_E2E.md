@@ -24,20 +24,14 @@ The agentic workflow consists of these stages:
                                     │
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│  3. PATCH GENERATION                                                     │
-│     agent-queue-runner → analysis/patch.diff                             │
+│  3. PATCH + REBUILD (workspace)                                           │
+│     agent tools → DeltaPorts branch → dsynth just-build                  │
 └─────────────────────────────────────────────────────────────────────────┘
                                     │
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│  4. APPLY & REBUILD                                                      │
-│     apply-patch → branch + sync + dsynth just-build                      │
-└─────────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│  5. PR CREATION                                                          │
-│     gh pr create (only if rebuild succeeds)                              │
+│  4. PR JOB (optional)                                                    │
+│     UI → enqueue pr job → gh pr create                                   │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -45,37 +39,98 @@ The agentic workflow consists of these stages:
 
 ### On the Host (Linux)
 
-1. **opencode serve** running:
+1. **opencode serve** running (as user `opencode`):
    ```sh
    opencode serve --hostname 0.0.0.0 --port 4097
    ```
 
-2. **Safe clone** exists at `/home/antonioh/s/DeltaPorts-ai-fix`
+2. **OpenCode custom tools** installed for the `opencode` user (manual step).
 
-3. **SSH access** to VM configured:
+3. **SSH access** to VM configured (for tools):
    ```sh
-   export VM_SSH_HOST=root@localhost
-   export VM_SSH_PORT=2222
-   export VM_SSH_KEY=/home/antonioh/.go-synth/vm/id_ed25519
+   export DP_SSH_HOST=root@localhost
+   export DP_SSH_PORT=2222
+   export DP_SSH_KEY=/home/antonioh/.go-synth/vm/id_ed25519
+   export DP_WORKSPACE_BASE=/build/synth/agentic-workspace
    ```
 
 ### On the VM (DragonFlyBSD)
 
-1. **DeltaPorts scripts** deployed to `/build/synth/DeltaPorts/scripts/`
+1. **VM DeltaPorts repo is up to date** (commit + push locally, then pull on VM):
+   ```sh
+   cd /build/synth/DeltaPorts
+   git pull
+   ```
 
-2. **dsynth hooks** installed in `/etc/dsynth/` or `/usr/local/etc/dsynth/`
+2. **DeltaPorts scripts** deployed to `/build/synth/DeltaPorts/scripts/` (includes `agentic-worker`)
 
-3. **artifact-store daemon** running (required):
+3. **Shared workspace root** exists:
+   ```sh
+   mkdir -p /build/synth/agentic-workspace
+   ```
+
+3. **workspace.json** created (pin FPORTS ref):
+   ```sh
+   cat > /build/synth/agentic-workspace/workspace.json <<'EOF'
+   {
+     "fports_path": "/build/synth/agentic-workspace/FPORTS",
+     "fports_ref": "2026Q1",
+     "deltaports_path": "/build/synth/agentic-workspace/DeltaPorts",
+     "dports_path": "/build/synth/agentic-workspace/DPorts",
+     "dsynth_profile": "agentic"
+   }
+   EOF
+   ```
+
+   Note: this workspace setup is a good candidate for automation later.
+
+4. **FPORTS checkout** at `/build/synth/agentic-workspace/FPORTS` and checked out to the pinned ref:
+   ```sh
+   git -C /build/synth/agentic-workspace/FPORTS checkout 2026Q1
+   ```
+
+5. **DeltaPorts checkout** at `/build/synth/agentic-workspace/DeltaPorts`
+
+6. **DPorts directory** exists:
+   ```sh
+   mkdir -p /build/synth/agentic-workspace/DPorts
+   ```
+
+8. **dsynth hooks** installed in `/etc/dsynth/` or `/usr/local/etc/dsynth/`
+
+9. **dsynth profile** added in `/etc/dsynth/dsynth.ini` (copy `LiveSystem` values and override ports dir):
+   ```ini
+   [agentic]
+   Operating_system= DragonFly
+   Directory_packages= /build/synth/packages
+   Directory_repository= /build/synth/packages/All
+   Directory_portsdir= /build/synth/agentic-workspace/DPorts
+   Directory_options= /build/synth/options
+   Directory_distfiles= /build/synth/distfiles
+   Directory_buildbase= /build/synth
+   Directory_logs= /build/synth/logs
+   Directory_ccache= disabled
+   Directory_system= /
+   Package_suffix= .txz
+   Number_of_builders= 2
+   Max_jobs_per_builder= 3
+   Tmpfs_workdir= true
+   Tmpfs_localbase= true
+   Display_with_ncurses= false
+   leverage_prebuilt= false
+   ```
+
+10. **artifact-store daemon** running (required):
    ```sh
    /build/synth/DeltaPorts/scripts/artifact-store --logs-root /build/synth/logs &
    ```
 
-4. **State Server** running in DB-only mode (optional, for UI verification):
+11. **State Server** running in DB-only mode (optional, for UI verification):
    ```sh
    EVIDENCE_DB_ONLY=1 /build/synth/DeltaPorts/scripts/state-server --logs-root /build/synth/logs &
    ```
 
-5. **Generator config** at `/usr/local/etc/dports.conf` with valid paths
+12. **Generator config** at `/usr/local/etc/dports.conf` with valid paths
 
 ## Test Execution
 
@@ -152,7 +207,7 @@ If you need snippets, run in legacy bundle mode or add an explicit snippet store
 
 ---
 
-### Stage 3: Patch Job Processing
+### Stage 3: Patch + Rebuild Job Processing
 
 **Prerequisite:** Triage completed with patchable classification and sufficient confidence.
 
@@ -169,91 +224,44 @@ OPENCODE_URL=http://10.0.2.2:4097 \
   --queue-root /build/synth/logs/evidence/queue --once
 ```
 
-**Verify:**
+**Verify outputs:**
 ```sh
-# Check patch output
-curl -s http://127.0.0.1:8787/bundles/<bundle_id>/artifacts/analysis/patch.diff | head -40
-
-# Validate diff format
-curl -s http://127.0.0.1:8787/bundles/<bundle_id>/artifacts/analysis/patch.diff | head -20
+curl -s http://127.0.0.1:8787/bundles/<bundle_id>/artifacts/analysis/patch_plan.json | head -40
+curl -s http://127.0.0.1:8787/bundles/<bundle_id>/artifacts/analysis/patch.log | head -40
+curl -s http://127.0.0.1:8787/bundles/<bundle_id>/artifacts/analysis/rebuild_status.txt | head -40
+curl -s http://127.0.0.1:8787/bundles/<bundle_id>/artifacts/analysis/rebuild_proof.json | head -40
 ```
 
 **Expected:**
-- `analysis/patch.diff` with valid unified diff format
-- Diff modifies only `ports/net/hostapd/*` paths
-
-**Error Case:** If `patch.diff.invalid` exists instead, the patch failed validation. Check contents for error details.
-
----
-
-### Stage 4: Apply Patch to Safe Clone
-
-Apply runs automatically via the `apply` job in the runner. The runner materializes a temp bundle directory from blobstore artifacts and calls `apply-patch` with it.
-
-**Verify:**
-```sh
-# Check apply job exists/ran
-ls -la /build/synth/logs/evidence/queue/done/ | head -5
-
-# Check branch was created
-cd /home/antonioh/s/DeltaPorts-ai-fix
-git branch -a | grep ai-fix/net-hostapd
-
-# Check commit
-git log -1 --oneline
-
-# Check files changed
-git show --stat HEAD
-```
-
-**Expected:**
-- Apply job ran and moved to `done/` or `failed/`
-- Branch `ai-fix/net-hostapd-<bugslug>` created on success
-- Commit with descriptive message
+- `analysis/patch_plan.json` describes tool actions and files changed
+- `analysis/patch.log` summarizes edits and rationale
+- `analysis/rebuild_status.txt` reports SUCCESS/FAILURE
+- `analysis/rebuild_proof.json` includes `fports_ref`, commit hashes, and profile
 
 ---
 
-### Stage 5: Sync and Rebuild on VM
-
-This is automated by `apply-patch`, but to verify manually:
-
-**On VM:**
-```sh
-# Check branch was fetched
-cd /build/synth/DeltaPorts
-git fetch origin
-git branch -a | grep ai-fix/net-hostapd
-
-# Check sync result (already done by apply-patch)
-ls -la /build/synth/DPorts/net/hostapd/
-
-# Check rebuild status
-curl -s http://127.0.0.1:8787/bundles/<bundle_id>/artifacts/analysis/rebuild_status.txt
-```
-
-**Expected:**
-- Branch available on VM
-- DPorts updated via `sync1.sh`
-- `rebuild_status.txt` shows SUCCESS or FAILURE
-
----
-
-### Stage 6: PR Creation
+### Stage 4: PR Job (optional)
 
 **Prerequisite:** Rebuild succeeded.
 
+**Enqueue PR job (unauthenticated endpoint):**
+```sh
+curl -X POST http://127.0.0.1:8787/enqueue/pr \
+  -H 'Content-Type: application/json' \
+  -d '{"bundle_id":"<bundle_id>","origin":"net/hostapd"}'
+```
+
+**WARNING:** The PR enqueue endpoint is unauthenticated. Only expose it on trusted localhost/LAN.
+
 **Verify:**
 ```sh
-# Check PR URL was recorded
+ls -la /build/synth/logs/evidence/queue/pending/ | grep pr
 curl -s http://127.0.0.1:8787/bundles/<bundle_id>/artifacts/analysis/pr_url.txt
-
-# View PR on GitHub
-# (URL from above)
 ```
 
 **Expected:**
-- PR created with proper format
-- PR body includes triage analysis, changes list, rebuild confirmation
+- A `type=pr` job is created in the queue
+- `analysis/pr_url.txt` appears after the PR job completes
 
 ---
 
@@ -268,12 +276,11 @@ If triage returns `missing-dep`, `fetch-error`, or `unknown`:
 - Check runner logs for: "not auto-enqueueing patch job"
 - Human intervention required
 
-### Invalid Patch Diff
+### Patch Workspace Failure
 
-If patch agent produces malformed diff:
-- `patch.diff.invalid` created instead of `patch.diff`
+If the patch job fails during workspace operations:
 - Job moves to `failed/`
-- Check `<job>.error` file for details
+- Check `<job>.error` for the tool error (workspace verify, extract, genpatch, rebuild)
 
 ### Rebuild Failure
 
@@ -314,8 +321,9 @@ ssh -i ~/.go-synth/vm/id_ed25519 -p 2222 \
 - [ ] Events timeline shows all stage transitions
 - [ ] Bundle detail page shows all artifacts
 - [ ] Triage.md renders with markdown formatting
-- [ ] Patch.diff renders with syntax highlighting
-- [ ] PR URL appears after Stage 6
+- [ ] Patch.log renders with markdown formatting
+- [ ] Rebuild proof renders (rebuild_proof.json)
+- [ ] PR URL appears after Stage 4
 
 **SSE Continuity:**
 1. Note last event ID in UI
@@ -340,15 +348,13 @@ Tester: <name>
 | 1. Failure Capture | ☐ Pass / ☐ Fail | |
 | 2. Triage | ☐ Pass / ☐ Fail | |
 | 2a. Snippets | ☐ Pass / ☐ Fail / ☐ N/A | Rounds: ___ |
-| 3. Patch Generation | ☐ Pass / ☐ Fail | |
-| 4. Apply Patch | ☐ Pass / ☐ Fail | |
-| 5. Rebuild | ☐ Pass / ☐ Fail | |
-| 6. PR Creation | ☐ Pass / ☐ Fail | PR: ___ |
+| 3. Patch + Rebuild | ☐ Pass / ☐ Fail | |
+| 4. PR Job | ☐ Pass / ☐ Fail | PR: ___ |
 
 ## Error Paths Encountered
 
 - [ ] Unpatchable classification
-- [ ] Invalid patch diff
+- [ ] Patch workspace failure
 - [ ] Rebuild failure
 - [ ] Snippet extraction failure
 - [ ] Max snippet rounds
