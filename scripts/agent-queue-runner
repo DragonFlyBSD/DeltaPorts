@@ -1408,7 +1408,7 @@ def extract_response_text(response: dict) -> str:
 
 
 def extract_section(text: str, heading: str) -> str | None:
-    pattern = rf"^##\s+{re.escape(heading)}\s*$\n(.*?)(?=^##\s+|\Z)"
+    pattern = rf"^##\s+{re.escape(heading)}(?:\s+\(JSON\))?\s*$\n(.*?)(?=^##\s+|\Z)"
     match = re.search(pattern, text, flags=re.M | re.S)
     if not match:
         return None
