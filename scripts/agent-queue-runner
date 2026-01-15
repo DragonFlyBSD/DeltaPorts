@@ -13,7 +13,6 @@ Environment variables:
     OPENCODE_MAX_RETRIES      (optional) retry attempts, default 3
     OPENCODE_RETRY_DELAY      (optional) base delay between retries, default 8
     OPENCODE_MAX_SNIPPET_ROUNDS (optional) max snippet extraction rounds, default 5
-    APPLY_PATCH_FLAGS         (optional) extra flags for apply-patch, default "--no-push --no-pr"
 
     VM_SSH_HOST               (optional) SSH host for remote snippet extraction
                               If set, snippet-extractor runs via SSH (for Linux dev hosts)
@@ -23,31 +22,27 @@ Environment variables:
 
 Job types:
     type=triage (default) - Uses dports-triage agent, may auto-enqueue patch job
-    type=patch            - Uses dports-patch agent to generate a diff
-    type=apply            - Applies patch, rebuilds, creates PR if successful
+    type=patch            - Uses dports-patch agent to edit workspace and rebuild
+    type=pr               - Creates PR for a successful rebuild (optional)
 
 Job fields:
     snippet_round=N       - Current snippet round (0 = initial, no snippets)
     has_snippets=true     - Snippets are available in bundle
     parent_job=...        - Parent job filename (for tracking lineage)
-    iteration=N           - Current fix iteration (1-based, for apply jobs)
+    iteration=N           - Current fix iteration (1-based)
     max_iterations=N      - Maximum iterations before giving up (default: 3)
     previous_bundle=...   - Bundle from previous failed attempt (if iteration > 1)
 """
 
 import argparse
-import difflib
 import json
 import os
 import re
-import shlex
 import sqlite3
 import subprocess
 import sys
 import threading
 import time
-import tempfile
-import shutil
 import urllib.request
 import urllib.error
 import urllib.parse
@@ -76,9 +71,9 @@ DEFAULT_MAX_ITERATIONS = 3
 DEFAULT_VM_SSH_KEY = "/home/antonioh/.go-synth/vm/id_ed25519"
 DEFAULT_VM_SSH_PORT = "2222"
 DEFAULT_VM_SSH_HOST = "root@localhost"
-DEFAULT_SAFE_DELTAPORTS_DIR = "/build/synth/DeltaPorts-ai-fix"
 DEFAULT_ARTIFACT_STORE_URL = "http://127.0.0.1:8788"
 DEFAULT_STATE_SERVER_URL = "http://127.0.0.1:8787"
+DEFAULT_WORKSPACE_CONFIG = "/build/synth/agentic-workspace/workspace.json"
 
 # Heartbeat interval (seconds)
 HEARTBEAT_INTERVAL = 5
@@ -139,6 +134,15 @@ def artifact_store_get(bundle_id: str, relpath: str) -> bytes | None:
         return None
 
 
+def state_server_get(bundle_id: str, relpath: str) -> bytes | None:
+    url = f"{_state_server_url()}/bundles/{urllib.parse.quote(bundle_id)}/artifacts/{urllib.parse.quote(relpath, safe='/')}"
+    try:
+        with urllib.request.urlopen(url, timeout=10) as resp:
+            return resp.read()
+    except Exception:
+        return None
+
+
 def artifact_store_put(bundle_id: str, relpath: str, data: bytes, kind: str | None = None) -> bool:
     url = f"{_artifact_store_url()}/v1/artifacts/put"
     headers = {
@@ -157,12 +161,29 @@ def artifact_store_put(bundle_id: str, relpath: str, data: bytes, kind: str | No
         return False
 
 
+def load_workspace_config() -> dict:
+    path = Path(os.environ.get("DP_WORKSPACE_CONFIG", DEFAULT_WORKSPACE_CONFIG))
+    if not path.exists():
+        raise RuntimeError(f"workspace.json not found at {path}")
+    return json.loads(path.read_text())
+
+
 def bundle_artifact_list(bundle_id: str) -> list[str]:
     url = f"{_state_server_url()}/bundles/{urllib.parse.quote(bundle_id)}"
     try:
         with urllib.request.urlopen(url, timeout=10) as resp:
             data = json.load(resp)
         return [a.get("relpath") for a in data.get("artifacts", []) if a.get("relpath")]
+    except Exception:
+        return []
+
+
+def port_bundle_history(origin: str) -> list[dict]:
+    url = f"{_state_server_url()}/ports/{urllib.parse.quote(origin)}"
+    try:
+        with urllib.request.urlopen(url, timeout=10) as resp:
+            data = json.load(resp)
+        return data.get("bundles", [])
     except Exception:
         return []
 
@@ -174,6 +195,8 @@ def read_bundle_text(bundle_dir: Path | None, bundle_id: str | None, relpath: st
             return read_file_if_exists(path)
     if bundle_id:
         data = artifact_store_get(bundle_id, relpath)
+        if data is None:
+            data = state_server_get(bundle_id, relpath)
         if data is not None:
             return data.decode("utf-8", errors="replace")
     return None
@@ -188,37 +211,23 @@ def bundle_artifact_exists(bundle_dir: Path | None, bundle_id: str | None, relpa
     return False
 
 
-def materialize_bundle_for_apply(bundle_id: str) -> Path | None:
-    """Create a temp bundle directory with required artifacts for apply-patch."""
-    required = [
-        "meta.txt",
-        "analysis/triage.md",
-        "analysis/patch.diff",
-    ]
-    temp_dir = Path(tempfile.mkdtemp(prefix="bundle-"))
-    try:
-        for rel in required:
-            data = artifact_store_get(bundle_id, rel)
-            if data is None:
-                return None
-            path = temp_dir / rel
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_bytes(data)
-        return temp_dir
-    except Exception:
-        shutil.rmtree(temp_dir, ignore_errors=True)
-        return None
+def run_cmd(cmd: list[str], cwd: Path | None = None) -> str:
+    env = os.environ.copy()
+    env["GIT_TERMINAL_PROMPT"] = "0"
+    result = subprocess.run(
+        cmd,
+        cwd=cwd,
+        text=True,
+        capture_output=True,
+        env=env,
+    )
+    if result.returncode != 0:
+        stderr = result.stderr.strip()
+        stdout = result.stdout.strip()
+        detail = stderr or stdout or "unknown error"
+        raise RuntimeError(f"command failed ({result.returncode}): {' '.join(cmd)}: {detail}")
+    return result.stdout
 
-
-def upload_analysis_outputs(bundle_dir: Path, bundle_id: str):
-    analysis_dir = bundle_dir / "analysis"
-    if not analysis_dir.exists():
-        return
-    for path in analysis_dir.iterdir():
-        if not path.is_file():
-            continue
-        relpath = f"analysis/{path.name}"
-        artifact_store_put(bundle_id, relpath, path.read_bytes(), "text")
 
 
 def parse_meta_kv(bundle_dir: Path) -> dict:
@@ -1042,312 +1051,6 @@ def check_and_handle_snippet_requests(
 
 
 # -----------------------------------------------------------------------------
-# File content extraction and diff generation
-# -----------------------------------------------------------------------------
-
-def extract_files_from_response(text: str) -> dict[str, str]:
-    """
-    Extract file content blocks from agent response.
-    
-    Expected format:
-    ### FILE: ports/category/port/filename
-    ```<language>
-    <content>
-    ```
-    
-    Returns dict of {filepath: content}.
-    """
-    files = {}
-    
-    # Pattern: ### FILE: <path> followed by code block
-    # This handles multiple files in sequence
-    pattern = r"###\s*FILE:\s*([^\n]+)\n```[^\n]*\n(.*?)```"
-    
-    for match in re.finditer(pattern, text, re.DOTALL):
-        filepath = match.group(1).strip()
-        content = match.group(2)
-        
-        # Normalize path - remove leading slashes or DeltaPorts prefix
-        filepath = filepath.lstrip("/")
-        if filepath.startswith("DeltaPorts/"):
-            filepath = filepath[len("DeltaPorts/"):]
-        
-        # Content should not have trailing newline stripped (preserve exact content)
-        # But remove any leading/trailing whitespace from the match
-        content = content.rstrip("\n")
-        
-        if filepath and content:
-            files[filepath] = content
-    
-    return files
-
-
-def generate_unified_diff(filepath: str, old_content: str | None, new_content: str) -> str:
-    """
-    Generate a unified diff for a file.
-    
-    Args:
-        filepath: Path relative to DeltaPorts root (e.g., ports/net/foo/Makefile.DragonFly)
-        old_content: Original file content (None if new file)
-        new_content: New file content
-    
-    Returns:
-        Unified diff string
-    """
-    import difflib
-    
-    if old_content is None:
-        # New file: use /dev/null as source
-        old_lines = []
-        old_path = "/dev/null"
-        new_path = f"b/{filepath}"
-    else:
-        old_lines = old_content.splitlines(keepends=True)
-        # Ensure last line has newline for proper diff
-        if old_lines and not old_lines[-1].endswith("\n"):
-            old_lines[-1] += "\n"
-        old_path = f"a/{filepath}"
-        new_path = f"b/{filepath}"
-    
-    new_lines = new_content.splitlines(keepends=True)
-    # Ensure last line has newline
-    if new_lines and not new_lines[-1].endswith("\n"):
-        new_lines[-1] += "\n"
-    
-    diff_lines = list(difflib.unified_diff(
-        old_lines,
-        new_lines,
-        fromfile=old_path,
-        tofile=new_path,
-    ))
-    
-    return "".join(diff_lines)
-
-
-def get_existing_file_content(bundle_dir: Path, filepath: str) -> str | None:
-    """
-    Get existing file content from bundle if it exists.
-    
-    Checks bundle_dir/port/Makefile.DragonFly or similar locations.
-    """
-    # Extract the filename from the full path
-    # filepath is like: ports/net/hostapd/Makefile.DragonFly
-    parts = filepath.split("/")
-    
-    if len(parts) >= 4 and parts[0] == "ports":
-        # Extract filename (last part)
-        filename = parts[-1]
-        
-        # Check in bundle_dir/port/
-        candidate = bundle_dir / "port" / filename
-        if candidate.exists():
-            try:
-                return candidate.read_text()
-            except OSError:
-                pass
-    
-    return None
-
-
-def generate_combined_diff(
-    bundle_dir: Path,
-    files: dict[str, str]
-) -> str:
-    """
-    Generate a combined unified diff for all files.
-    
-    Args:
-        bundle_dir: Evidence bundle directory
-        files: Dict of {filepath: new_content}
-    
-    Returns:
-        Combined unified diff string
-    """
-    diffs = []
-    
-    for filepath, new_content in sorted(files.items()):
-        # Check if file exists in bundle
-        old_content = get_existing_file_content(bundle_dir, filepath)
-        
-        diff = generate_unified_diff(filepath, old_content, new_content)
-        if diff:
-            diffs.append(diff)
-    
-    return "\n".join(diffs)
-
-
-# -----------------------------------------------------------------------------
-# Diff validation (for legacy format compatibility)
-# -----------------------------------------------------------------------------
-
-def validate_diff(diff_text: str) -> tuple[bool, str]:
-    """
-    Validate unified diff syntax.
-    Returns (is_valid, error_message).
-    """
-    if not diff_text or not diff_text.strip():
-        return False, "Empty diff"
-    
-    lines = diff_text.strip().split("\n")
-    
-    # Must have --- and +++ headers
-    has_old_file = any(line.startswith("---") for line in lines)
-    has_new_file = any(line.startswith("+++") for line in lines)
-    
-    if not has_old_file:
-        return False, "Missing '---' file header"
-    if not has_new_file:
-        return False, "Missing '+++' file header"
-    
-    # Must have at least one hunk header
-    has_hunk = any(line.startswith("@@") for line in lines)
-    if not has_hunk:
-        return False, "Missing '@@ ... @@' hunk header"
-    
-    # Check that lines in hunks have valid prefixes
-    in_hunk = False
-    for line in lines:
-        if line.startswith("@@"):
-            in_hunk = True
-            continue
-        if in_hunk:
-            # End of hunk detection (next file or end)
-            if line.startswith("---") or line.startswith("+++") or line.startswith("diff "):
-                in_hunk = False
-                continue
-            # Reject diff headers appearing inside hunks (nested/malformed diff)
-            if line and line[0] in ("+", "-"):
-                header_candidate = line[1:]
-                if header_candidate.startswith(("--- ", "+++ ", "@@", "diff --git")):
-                    return False, "Diff header appears inside hunk (nested or malformed diff)"
-            # Valid hunk line prefixes: +, -, space, or empty (for context)
-            if line and not line[0] in ("+", "-", " ", "\\"):
-                # Allow "\ No newline at end of file"
-                if not line.startswith("\\"):
-                    return False, f"Invalid line prefix in hunk: {line[:50]}"
-    
-    return True, ""
-
-
-def _run_git(cmd: list[str], cwd: Path, input_text: str | None = None) -> subprocess.CompletedProcess:
-    env = os.environ.copy()
-    env["GIT_TERMINAL_PROMPT"] = "0"
-    return subprocess.run(
-        cmd,
-        cwd=cwd,
-        input=input_text,
-        text=True,
-        capture_output=True,
-        env=env,
-    )
-
-
-def validate_patch_applies(diff_text: str, safe_dir: Path) -> tuple[bool, str]:
-    """Validate that diff applies cleanly via git apply --check."""
-    if not safe_dir.exists():
-        return False, f"Safe clone not found: {safe_dir}"
-
-    result = _run_git(["git", "rev-parse", "--is-inside-work-tree"], cwd=safe_dir)
-    if result.returncode != 0:
-        return False, "Safe clone is not a git repository"
-
-    # Reset to a clean base
-    for cmd in (["git", "checkout", "master"],
-                ["git", "reset", "--hard", "origin/master"],
-                ["git", "clean", "-fd"]):
-        res = _run_git(cmd, cwd=safe_dir)
-        if res.returncode != 0:
-            return False, res.stderr.strip() or "Failed to reset safe clone"
-
-    # Validate patch applies cleanly
-    res = _run_git(["git", "apply", "--check", "-p1"], cwd=safe_dir, input_text=diff_text)
-    if res.returncode != 0:
-        return False, res.stderr.strip() or res.stdout.strip() or "git apply --check failed"
-
-    return True, ""
-
-
-def validate_patch_file(bundle_dir: Path | None, bundle_id: str | None) -> tuple[bool, str]:
-    """Validate patch.diff for syntax and clean apply."""
-    diff_text = None
-    if bundle_dir:
-        patch_path = bundle_dir / "analysis" / "patch.diff"
-        if patch_path.exists():
-            diff_text = patch_path.read_text(errors="replace")
-    if diff_text is None and bundle_id:
-        data = artifact_store_get(bundle_id, "analysis/patch.diff")
-        if data is not None:
-            diff_text = data.decode("utf-8", errors="replace")
-
-    if not diff_text:
-        return False, "patch.diff not found"
-
-    is_valid, error = validate_diff(diff_text)
-    if not is_valid:
-        invalid_body = f"# VALIDATION ERROR: {error}\n\n{diff_text}"
-        if bundle_id:
-            artifact_store_put(bundle_id, "analysis/patch.diff.invalid", invalid_body.encode("utf-8"), "text")
-        elif bundle_dir:
-            with open(bundle_dir / "analysis" / "patch.diff.invalid", "w") as f:
-                f.write(invalid_body)
-        return False, f"Invalid diff: {error}"
-
-    safe_dir = Path(os.environ.get("SAFE_DELTAPORTS_DIR", DEFAULT_SAFE_DELTAPORTS_DIR))
-    applies, apply_error = validate_patch_applies(diff_text, safe_dir)
-    if not applies:
-        invalid_body = f"# APPLY CHECK FAILED: {apply_error}\n\n{diff_text}"
-        if bundle_id:
-            artifact_store_put(bundle_id, "analysis/patch.diff.invalid", invalid_body.encode("utf-8"), "text")
-        elif bundle_dir:
-            with open(bundle_dir / "analysis" / "patch.diff.invalid", "w") as f:
-                f.write(invalid_body)
-        return False, f"Patch does not apply cleanly: {apply_error}"
-
-    return True, ""
-
-def extract_diff_from_response(text: str) -> str | None:
-    """Extract the diff block from the agent's response."""
-    # Look for ```diff ... ``` block
-    match = re.search(r"```diff\s*\n(.*?)```", text, re.DOTALL)
-    if match:
-        return match.group(1).strip()
-    
-    # Fallback: look for content starting with "---" or "diff --git"
-    lines = text.split("\n")
-    diff_start = None
-    for i, line in enumerate(lines):
-        if line.startswith("---") or line.startswith("diff --git") or line.startswith("diff -"):
-            diff_start = i
-            break
-    
-    if diff_start is not None:
-        # Take everything from diff start until we hit a section marker
-        # Diff ends when we see text that's clearly not part of a diff
-        diff_lines = []
-        in_hunk = False
-        for line in lines[diff_start:]:
-            # Stop on markdown headers
-            if line.startswith("## ") and not line.startswith("## Patch"):
-                break
-            # Stop on common section markers (without ## prefix)
-            if line.strip() in ("Rationale", "Files Modified", "Testing Notes", "Snippet Requests"):
-                break
-            # Stop if line looks like prose after a hunk (starts with capital, no diff prefix)
-            if in_hunk and line and not line[0] in " +-@\\":
-                # Check if it looks like a new file header or prose
-                if not line.startswith("---") and not line.startswith("+++") and not line.startswith("diff"):
-                    # Likely end of diff - prose text
-                    if len(line) > 10 and line[0].isupper() and " " in line[:20]:
-                        break
-            if line.startswith("@@"):
-                in_hunk = True
-            diff_lines.append(line)
-        return "\n".join(diff_lines).strip()
-    
-    return None
-
-
-# -----------------------------------------------------------------------------
 # Payload builders
 # -----------------------------------------------------------------------------
 
@@ -1398,6 +1101,17 @@ def build_triage_payload(
     if meta:
         parts.append("## Metadata")
         parts.append(meta)
+        parts.append("")
+
+    try:
+        workspace = load_workspace_config()
+    except Exception:
+        workspace = None
+    if workspace:
+        parts.append("## Workspace Config")
+        parts.append("```json")
+        parts.append(json.dumps(workspace, indent=2, sort_keys=True))
+        parts.append("```")
         parts.append("")
     
     # Build errors
@@ -1463,24 +1177,24 @@ def build_patch_payload(
 ) -> str:
     """Build the patch generation prompt including triage output."""
     parts = []
-    
+
     # Include snippet feedback and content if this is a follow-up round
     snippet_round = int(job.get("snippet_round", "0")) if job else 0
     has_snippets = job.get("has_snippets", "false") == "true" if job else False
-    
+
     if bundle_dir is not None and has_snippets and snippet_round > 0:
         # Add feedback about previous extraction
         feedback = build_snippet_feedback(bundle_dir, snippet_round)
         if feedback:
             parts.append(feedback)
             parts.append("")
-        
+
         # Add extracted snippet contents
         snippet_content = load_snippets_content(bundle_dir, snippet_round)
         if snippet_content:
             parts.append(snippet_content)
             parts.append("")
-    
+
     bundle_id = job.get("bundle_id") if job else None
 
     # Triage summary (most important context)
@@ -1489,39 +1203,70 @@ def build_patch_payload(
         parts.append("## Triage Summary")
         parts.append(triage)
         parts.append("")
- 
+
+    # Prior attempts (last 3 bundles for this origin)
+    origin = job.get("origin") if job else None
+    if origin:
+        history = []
+        for entry in port_bundle_history(origin):
+            bundle = entry.get("bundle_id")
+            if not bundle or bundle == bundle_id:
+                continue
+            history.append(bundle)
+            if len(history) >= 3:
+                break
+        if history:
+            parts.append("## Prior Attempts (most recent 3)")
+            for past_bundle in history:
+                parts.append(f"### Bundle {past_bundle}")
+                for relpath, title, code_block in [
+                    ("analysis/patch_plan.json", "Patch Plan", "json"),
+                    ("analysis/patch.log", "Patch Log", None),
+                    ("analysis/rebuild_status.txt", "Rebuild Status", None),
+                ]:
+                    content = read_bundle_text(None, past_bundle, relpath)
+                    if not content:
+                        continue
+                    parts.append(f"#### {title}")
+                    if code_block:
+                        parts.append(f"```{code_block}")
+                        parts.append(content)
+                        parts.append("```")
+                    else:
+                        parts.append(content)
+                    parts.append("")
+
     # User-provided context (run-scoped)
     run_id = job.get("run_id") if job else None
-    origin = job.get("origin") if job else None
     user_context, _ = get_user_context(run_id, origin)
     if user_context:
         parts.append("## User Context (run-scoped)")
         parts.append(user_context)
         parts.append("")
-    
+
     # Known Error Database (if available)
     kedb_content = load_kedb(kedb_dir)
     if kedb_content:
         parts.append(kedb_content)
         parts.append("")
-    
+
     # Metadata
     meta = read_bundle_text(bundle_dir, bundle_id, "meta.txt")
     if meta:
         parts.append("## Metadata")
         parts.append(meta)
         parts.append("")
-    
+
     # Build errors
     errors = read_bundle_text(bundle_dir, bundle_id, "logs/errors.txt")
     if errors:
         parts.append("## Build Errors")
         parts.append(errors)
         parts.append("")
-    
+
     # Port files
     parts.append("## Port Files")
-    
+
     makefile = read_bundle_text(bundle_dir, bundle_id, "port/Makefile")
     if makefile:
         parts.append("### Makefile")
@@ -1529,7 +1274,7 @@ def build_patch_payload(
         parts.append(makefile)
         parts.append("```")
         parts.append("")
-    
+
     plist = read_bundle_text(bundle_dir, bundle_id, "port/pkg-plist")
     if plist:
         parts.append("### pkg-plist")
@@ -1537,7 +1282,7 @@ def build_patch_payload(
         parts.append(plist)
         parts.append("```")
         parts.append("")
-    
+
     distinfo = read_bundle_text(bundle_dir, bundle_id, "port/distinfo")
     if distinfo:
         parts.append("### distinfo")
@@ -1545,7 +1290,7 @@ def build_patch_payload(
         parts.append(distinfo)
         parts.append("```")
         parts.append("")
-    
+
     # Existing patches (if stored)
     if bundle_id:
         patch_relpaths = [p for p in bundle_artifact_list(bundle_id) if p.startswith("port/files/patch-")]
@@ -1561,89 +1306,17 @@ def build_patch_payload(
                 parts.append(content)
                 parts.append("```")
                 parts.append("")
-    
-    # Check if Makefile.DragonFly exists in bundle
-    has_makefile_dfly = bundle_artifact_exists(bundle_dir, bundle_id, "port/Makefile.DragonFly")
-    makefile_dfly = read_bundle_text(bundle_dir, bundle_id, "port/Makefile.DragonFly") if has_makefile_dfly else None
-    
-    if has_makefile_dfly:
-        parts.append("### Makefile.DragonFly (existing - modify this file)")
-        parts.append("```makefile")
-        parts.append(makefile_dfly or "")
-        parts.append("```")
-        parts.append("")
-    else:
-        parts.append("### Makefile.DragonFly")
-        parts.append("**This file does not exist yet. You must CREATE it.**")
-        parts.append("")
 
-    
     parts.append("---")
-    
-    # Build instructions with context about whether file exists
-    if has_makefile_dfly:
-        file_instruction = """
-IMPORTANT: Makefile.DragonFly already exists. Your diff should MODIFY the existing file.
-Use `--- a/ports/...` and `+++ b/ports/...` format with proper context lines."""
-    else:
-        file_instruction = """
-IMPORTANT: Makefile.DragonFly does NOT exist yet. Your diff must CREATE a new file.
-You MUST use `--- /dev/null` (not `--- a/...`) as the source."""
-    
-    parts.append(f"""
-## Instructions
+    parts.append("Use the dports tools to apply fixes in the shared workspace and rebuild the target origin.")
+    parts.append("Return a report with these exact sections:")
+    parts.append("- ## Patch Log")
+    parts.append("- ## Rebuild Status")
+    parts.append("- ## Patch Plan (JSON) with a ```json block")
+    parts.append("- ## Rebuild Proof (JSON) with a ```json block")
 
-Generate a patch that fixes this issue for the DeltaPorts overlay.
-{file_instruction}
-
-### Output Format
-
-Output a single unified diff in a ```diff code block. The diff must:
-
-1. Use paths relative to DeltaPorts overlay root: `ports/category/portname/...`
-2. Target `Makefile.DragonFly` for DragonFly-specific fixes (preferred)
-3. Use `diffs/*.diff` only when patching upstream source files
-4. Pass `git apply --check -p1` cleanly (this will be enforced)
-
-CRITICAL formatting rules:
-- Do NOT include diff headers inside hunks (no lines like `+---`, `++++`, `+@@`, or `+diff --git`)
-- Do NOT output multiple diff headers for the same file
-- Do NOT output FILE blocks or any non-diff formats
-
-### Creating New Files (when Makefile.DragonFly does NOT exist)
-
-```diff
---- /dev/null
-+++ b/ports/net/example/Makefile.DragonFly
-@@ -0,0 +1,1 @@
-+OPTIONS_DEFAULT:=	${{OPTIONS_DEFAULT:NFEATURENAME}}
-```
-
-CRITICAL for new files:
-- First line MUST be `--- /dev/null` (literally /dev/null, not a path)
-- Hunk header MUST be `@@ -0,0 +1,N @@` where N = number of lines
-- ALL content lines MUST start with `+`
-- Do NOT include `-` lines (there's nothing to remove from /dev/null)
-
-### Modifying Existing Files (when Makefile.DragonFly exists)
-
-```diff
---- a/ports/net/example/Makefile.DragonFly
-+++ b/ports/net/example/Makefile.DragonFly
-@@ -1,2 +1,3 @@
- # Existing line
-+NEW_LINE=value
- Another existing line
-```
-
-### Common Fix Patterns
-
-- Disable FreeBSD-only option: `OPTIONS_DEFAULT:= ${{OPTIONS_DEFAULT:NOPTIONNAME}}`
-- Add plist entry: `PLIST_FILES+= path/to/file`
-- Multiple option removals: `OPTIONS_DEFAULT:= ${{OPTIONS_DEFAULT:NOPT1:NOPT2}}`
-""".strip())
-    
     return "\n".join(parts)
+
 
 
 # -----------------------------------------------------------------------------
@@ -1719,7 +1392,7 @@ def extract_response_text(response: dict) -> str:
         error_data = error.get("data", {})
         error_msg = error_data.get("message", str(error_data))
         return f"# Error: {error_name}\n\n{error_msg}"
-    
+
     parts = response.get("parts", [])
     text_parts = []
     for part in parts:
@@ -1727,11 +1400,29 @@ def extract_response_text(response: dict) -> str:
             text_parts.append(part.get("text", ""))
         elif isinstance(part, str):
             text_parts.append(part)
-    
+
     if text_parts:
         return "\n".join(text_parts)
-    
+
     return json.dumps(response, indent=2)
+
+
+def extract_section(text: str, heading: str) -> str | None:
+    pattern = rf"^##\s+{re.escape(heading)}\s*$\n(.*?)(?=^##\s+|\Z)"
+    match = re.search(pattern, text, flags=re.M | re.S)
+    if not match:
+        return None
+    return match.group(1).strip()
+
+
+def extract_json_block(text: str, heading: str) -> str | None:
+    section = extract_section(text, heading)
+    if not section:
+        return None
+    match = re.search(r"```json\s*(.*?)```", section, flags=re.S)
+    if not match:
+        return None
+    return match.group(1).strip()
 
 
 # -----------------------------------------------------------------------------
@@ -1771,17 +1462,38 @@ def write_triage_outputs(bundle_dir: Path | None, response: dict, session_id: st
 
 
 def write_patch_outputs(bundle_dir: Path | None, response: dict, session_id: str, bundle_id: str | None) -> tuple[bool, str]:
-    """
-    Write patch outputs to bundle or artifact store.
-    
-    Unified diff only (FILE blocks not supported).
-    
-    Returns (success, error_message).
-    """
+    """Write patch outputs to bundle or artifact store."""
     text = extract_response_text(response)
     json_bytes = json.dumps(response, indent=2).encode("utf-8")
     md_bytes = (text + "\n").encode("utf-8")
     session_bytes = (session_id + "\n").encode("utf-8")
+
+    patch_log = extract_section(text, "Patch Log") or text
+    rebuild_status = extract_section(text, "Rebuild Status") or "UNKNOWN"
+    patch_plan_json = extract_json_block(text, "Patch Plan")
+    rebuild_proof_json = extract_json_block(text, "Rebuild Proof")
+
+    def write_text(relpath: str, content: str) -> bool:
+        data = (content.rstrip() + "\n").encode("utf-8")
+        if bundle_id:
+            return artifact_store_put(bundle_id, relpath, data, "text")
+        if bundle_dir:
+            path = bundle_dir / relpath
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(data)
+            return True
+        return False
+
+    def write_json(relpath: str, content: str) -> bool:
+        data = (content.rstrip() + "\n").encode("utf-8")
+        if bundle_id:
+            return artifact_store_put(bundle_id, relpath, data, "json")
+        if bundle_dir:
+            path = bundle_dir / relpath
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(data)
+            return True
+        return False
 
     if bundle_id:
         if not artifact_store_put(bundle_id, "analysis/patch.json", json_bytes, "json"):
@@ -1793,50 +1505,26 @@ def write_patch_outputs(bundle_dir: Path | None, response: dict, session_id: str
     elif bundle_dir:
         analysis_dir = bundle_dir / "analysis"
         analysis_dir.mkdir(exist_ok=True)
-        with open(analysis_dir / "patch.json", "w") as f:
-            f.write(json_bytes.decode("utf-8"))
-        with open(analysis_dir / "patch_session_id.txt", "w") as f:
-            f.write(session_id + "\n")
-        with open(analysis_dir / "patch.md", "w") as f:
-            f.write(text + "\n")
+        (analysis_dir / "patch.json").write_bytes(json_bytes)
+        (analysis_dir / "patch_session_id.txt").write_text(session_id + "\n")
+        (analysis_dir / "patch.md").write_bytes(md_bytes)
     else:
         return False, "bundle_dir or bundle_id required"
-    
-    # Unified diff only (FILE blocks not supported)
-    files = extract_files_from_response(text)
-    if files:
-        invalid = "# VALIDATION ERROR: FILE blocks not supported; output unified diff only\n"
-        if bundle_id:
-            artifact_store_put(bundle_id, "analysis/patch.diff.invalid", invalid.encode("utf-8"), "text")
-        elif bundle_dir:
-            with open((bundle_dir / "analysis" / "patch.diff.invalid"), "w") as f:
-                f.write(invalid)
-        return False, "FILE blocks not supported; output unified diff only"
-    
-    # Extract unified diff from response
-    diff = extract_diff_from_response(text)
-    if not diff:
-        return False, "No unified diff found in response"
-    
-    is_valid, error = validate_diff(diff)
-    if not is_valid:
-        invalid_body = f"# VALIDATION ERROR: {error}\n\n{diff}"
-        if bundle_id:
-            artifact_store_put(bundle_id, "analysis/patch.diff.invalid", invalid_body.encode("utf-8"), "text")
-        elif bundle_dir:
-            with open((bundle_dir / "analysis" / "patch.diff.invalid"), "w") as f:
-                f.write(invalid_body)
-        return False, f"Invalid diff: {error}"
-    
-    diff_bytes = (diff + "\n").encode("utf-8")
-    if bundle_id:
-        if not artifact_store_put(bundle_id, "analysis/patch.diff", diff_bytes, "text"):
-            return False, "Failed to write patch.diff to artifact store"
-    elif bundle_dir:
-        with open((bundle_dir / "analysis" / "patch.diff"), "w") as f:
-            f.write(diff + "\n")
-    
+
+    if not write_text("analysis/patch.log", patch_log):
+        return False, "Failed to write patch.log"
+    if not write_text("analysis/rebuild_status.txt", rebuild_status):
+        return False, "Failed to write rebuild_status.txt"
+
+    if patch_plan_json:
+        if not write_json("analysis/patch_plan.json", patch_plan_json):
+            return False, "Failed to write patch_plan.json"
+    if rebuild_proof_json:
+        if not write_json("analysis/rebuild_proof.json", rebuild_proof_json):
+            return False, "Failed to write rebuild_proof.json"
+
     return True, ""
+
 
 
 # -----------------------------------------------------------------------------
@@ -1929,47 +1617,6 @@ def enqueue_patch_job(queue_root: Path, job: dict):
     
     return job_path
 
-
-def enqueue_apply_job(queue_root: Path, job: dict, parent_job_name: str) -> Path:
-    """Enqueue an apply job based on completed patch job."""
-    ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%SZ")
-    origin_safe = job.get("origin", "unknown").replace("/", "_")
-    pid = os.getpid()
-    
-    job_name = f"{ts}-{job.get('profile', 'unknown')}-{origin_safe}-{pid}-apply.job"
-    
-    pending_dir = queue_root / "pending"
-    job_path = pending_dir / job_name
-    
-    # Inherit iteration from parent job, or start at 1
-    iteration = int(job.get("iteration", "1"))
-    max_iterations = int(job.get("max_iterations", str(DEFAULT_MAX_ITERATIONS)))
-    
-    content = [
-        f"type=apply",
-        f"created_ts_utc={ts}",
-        f"profile={job.get('profile', '')}",
-        f"origin={job.get('origin', '')}",
-        f"flavor={job.get('flavor', '')}",
-        f"bundle_id={job.get('bundle_id', '')}",
-        f"run_id={job.get('run_id', '')}",
-        f"iteration={iteration}",
-        f"max_iterations={max_iterations}",
-        f"parent_job={parent_job_name}",
-    ]
-    
-    # Include previous_bundle if this is a retry
-    previous_bundle = job.get("previous_bundle")
-    if previous_bundle:
-        content.append(f"previous_bundle={previous_bundle}")
-    
-    # Atomic write
-    tmp_path = job_path.with_suffix(".tmp")
-    with open(tmp_path, "w") as f:
-        f.write("\n".join(content) + "\n")
-    tmp_path.rename(job_path)
-    
-    return job_path
 
 
 # -----------------------------------------------------------------------------
@@ -2135,15 +1782,15 @@ def process_patch_job(
             
             if success:
                 activity_log(queue_root, "write_output",
-                            f"Wrote patch.diff for {origin}",
+                            f"Wrote patch outputs for {origin}",
                             job_id=job_id)
-            
+
             # Check for snippet requests
             response_text = extract_response_text(response)
             should_continue, snippet_msg = check_and_handle_snippet_requests(
                 queue_root, job, "patch", job_path, bundle_dir, response_text
             )
-            
+
             if not should_continue:
                 # Snippet follow-up was enqueued
                 activity_log(queue_root, "snippet_followup",
@@ -2151,30 +1798,14 @@ def process_patch_job(
                             job_id=job_id, extra={"round": snippet_round + 1})
                 return True, "snippet_followup"
 
-            # Validate patch applies cleanly before proceeding
             if success:
-                valid, validation_error = validate_patch_file(bundle_dir, bundle_id)
-                if not valid:
-                    activity_log(queue_root, "patch_invalid",
-                                f"Patch validation failed for {origin}: {validation_error[:80]}",
-                                job_id=job_id)
-                    write_error_note(job_path, validation_error)
-                    return False, validation_error
-            
-            # No snippet requests, check if patch was valid
-            if success:
-                # Auto-enqueue apply job
-                apply_job_path = enqueue_apply_job(queue_root, job, job_path.name)
-                activity_log(queue_root, "enqueue_apply",
-                            f"Auto-enqueued apply job for {origin}",
-                            job_id=job_id, extra={"apply_job": apply_job_path.name})
                 return True, "done"
-            else:
-                activity_log(queue_root, "patch_invalid",
-                            f"Patch validation failed for {origin}: {error[:80]}",
-                            job_id=job_id)
-                write_error_note(job_path, error)
-                return False, error
+
+            activity_log(queue_root, "patch_invalid",
+                        f"Patch output failed for {origin}: {error[:80]}",
+                        job_id=job_id)
+            write_error_note(job_path, error)
+            return False, error
             
         except (urllib.error.URLError, urllib.error.HTTPError, OSError, RuntimeError) as e:
             last_error = str(e)
@@ -2197,169 +1828,116 @@ def process_apply_job(
     job: dict,
     bundle_dir: Path | None,
 ) -> tuple[bool, str]:
-    """
-    Process an apply job by calling apply-patch script.
-    Returns (success, status_message).
-    
-    The apply-patch script handles:
-    - Applying the patch to a safe clone
-    - Syncing to DPorts and running dsynth rebuild
-    - Creating a PR if rebuild succeeds
-    """
+    """Deprecated apply job handler (workspace flow supersedes apply-patch)."""
     origin = job.get("origin", "unknown")
     job_id = job_path.name
+    activity_log(queue_root, "apply_deprecated",
+                f"apply job deprecated for {origin}", job_id=job_id)
+    return False, "apply job deprecated"
+
+
+def process_pr_job(
+    queue_root: Path,
+    job_path: Path,
+    job: dict,
+    bundle_dir: Path | None,
+) -> tuple[bool, str]:
+    """Process a PR job based on rebuild proof artifacts."""
     bundle_id = job.get("bundle_id")
-    temp_bundle = None
-    
-    # Check iteration limits
-    iteration = int(job.get("iteration", "1"))
-    max_iterations = int(job.get("max_iterations", str(DEFAULT_MAX_ITERATIONS)))
-    
-    if iteration > max_iterations:
-        activity_log(queue_root, "max_iterations",
-                    f"Max iterations ({max_iterations}) reached for {origin}, giving up",
-                    job_id=job_id, extra={"iteration": iteration, "max_iterations": max_iterations})
-        return False, "max_iterations_reached"
-    
-    activity_log(queue_root, "apply_start",
-                f"Starting apply job for {origin} (iteration {iteration}/{max_iterations})",
-                job_id=job_id, extra={"iteration": iteration, "max_iterations": max_iterations})
-    
-    # Find apply-patch script (same directory as this script)
-    script_dir = Path(__file__).resolve().parent
-    apply_script = script_dir / "apply-patch"
-    
-    if not apply_script.exists():
-        activity_log(queue_root, "apply_error",
-                    f"apply-patch script not found",
-                    job_id=job_id)
-        return False, "apply-patch script not found"
+    origin = job.get("origin", "unknown")
+    job_id = job_path.name
 
-    # Materialize a bundle directory if needed
-    effective_bundle_dir = bundle_dir
-    if effective_bundle_dir is None and bundle_id:
-        temp_bundle = materialize_bundle_for_apply(bundle_id)
-        if temp_bundle is None:
-            activity_log(queue_root, "apply_error",
-                        f"failed to materialize bundle for {origin}",
-                        job_id=job_id)
-            return False, "failed to materialize bundle"
-        effective_bundle_dir = temp_bundle
+    activity_log(queue_root, "pr_start",
+                f"Starting PR job for {origin}", job_id=job_id)
 
-    if effective_bundle_dir is None:
-        activity_log(queue_root, "apply_error",
-                    f"bundle directory missing for {origin}",
-                    job_id=job_id)
-        return False, "bundle directory missing"
-    
-    # Check that patch.diff exists
-    patch_file = effective_bundle_dir / "analysis" / "patch.diff"
-    if not patch_file.exists():
-        activity_log(queue_root, "apply_error",
-                    f"patch.diff not found for {origin}",
-                    job_id=job_id)
-        return False, "patch.diff not found"
-    
-    # Build command
-    apply_flags_raw = os.environ.get("APPLY_PATCH_FLAGS", "--no-push --no-pr")
-    apply_flags = shlex.split(apply_flags_raw) if apply_flags_raw.strip() else []
-    cmd = [
-        str(apply_script),
-        "--bundle", str(effective_bundle_dir),
-        *apply_flags,
-    ]
-    
-    flags_display = " ".join(apply_flags) if apply_flags else "(none)"
-    activity_log(queue_root, "apply_running",
-                f"Running apply-patch for {origin} {flags_display}",
-                job_id=job_id)
-    
-    start_time = time.time()
-    
+    proof_text = read_bundle_text(bundle_dir, bundle_id, "analysis/rebuild_proof.json")
+    if not proof_text:
+        return False, "rebuild_proof.json missing"
+
     try:
-        env = os.environ.copy()
-        env["GIT_TERMINAL_PROMPT"] = "0"
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=600,  # 10 minute timeout for rebuild
-            env=env,
-        )
-        
-        duration_ms = int((time.time() - start_time) * 1000)
-        
-        # Log output
-        if result.stdout:
-            for line in result.stdout.strip().split("\n")[-20:]:  # Last 20 lines
-                log(queue_root, "DEBUG", f"apply-patch: {line}")
-        if result.stderr:
-            for line in result.stderr.strip().split("\n")[-20:]:
-                log(queue_root, "DEBUG", f"apply-patch: {line}")
-        
-        if result.returncode == 0:
-            # Success! Check for PR URL
-            pr_url_file = effective_bundle_dir / "analysis" / "pr_url.txt"
-            pr_url = None
-            if pr_url_file.exists():
-                pr_url = pr_url_file.read_text().strip()
+        proof = json.loads(proof_text)
+    except json.JSONDecodeError as exc:
+        return False, f"invalid rebuild_proof.json: {exc}"
 
-            if temp_bundle and bundle_id:
-                upload_analysis_outputs(temp_bundle, bundle_id)
-                shutil.rmtree(temp_bundle, ignore_errors=True)
+    if not proof.get("rebuild_ok"):
+        return False, "rebuild_ok is false"
 
-            activity_log(queue_root, "apply_success",
-                        f"Apply succeeded for {origin}" + (f" - PR: {pr_url}" if pr_url else ""),
-                        job_id=job_id, duration_ms=duration_ms,
-                        extra={"pr_url": pr_url} if pr_url else None)
-            
-            return True, "done"
-        else:
-            # Rebuild failed - the hook will create a new evidence bundle
-            # which will start a new triage cycle (if within iteration limit)
-            error_msg = result.stderr[:200] if result.stderr else f"exit code {result.returncode}"
+    branch = proof.get("deltaports_branch")
+    commit = proof.get("deltaports_head")
+    if not branch or not commit:
+        return False, "missing deltaports branch/commit in rebuild_proof.json"
 
-            if temp_bundle and bundle_id:
-                upload_analysis_outputs(temp_bundle, bundle_id)
-                shutil.rmtree(temp_bundle, ignore_errors=True)
-            
-            activity_log(queue_root, "apply_failed",
-                        f"Apply failed for {origin}: {error_msg[:80]}",
-                        job_id=job_id, duration_ms=duration_ms,
-                        extra={"iteration": iteration, "returncode": result.returncode})
-            
-            # Write iteration tracking for the hook to pick up
-            tracking_file = queue_root.parent / ".current_apply_context"
-            try:
-                tracking_content = [
-                    f"previous_bundle={job.get('bundle_id', '')}",
-                    f"iteration={iteration}",
-                    f"origin={job.get('origin', '')}",
-                ]
-                tracking_file.write_text("\n".join(tracking_content) + "\n")
-                log(queue_root, "DEBUG", f"wrote tracking context to {tracking_file}")
-            except OSError as e:
-                log(queue_root, "WARN", f"failed to write tracking context: {e}")
-            
-            return False, error_msg
-            
-    except subprocess.TimeoutExpired:
-        duration_ms = int((time.time() - start_time) * 1000)
-        if temp_bundle and bundle_id:
-            upload_analysis_outputs(temp_bundle, bundle_id)
-            shutil.rmtree(temp_bundle, ignore_errors=True)
-        activity_log(queue_root, "apply_timeout",
-                    f"Apply timed out for {origin} after 600s",
-                    job_id=job_id, duration_ms=duration_ms)
-        return False, "timeout"
-    except Exception as e:
-        if temp_bundle and bundle_id:
-            upload_analysis_outputs(temp_bundle, bundle_id)
-            shutil.rmtree(temp_bundle, ignore_errors=True)
-        activity_log(queue_root, "apply_error",
-                    f"Apply error for {origin}: {str(e)[:80]}",
-                    job_id=job_id)
-        return False, str(e)
+    try:
+        workspace = load_workspace_config()
+    except Exception as exc:
+        return False, f"workspace config error: {exc}"
+
+    deltaports_path = Path(workspace.get("deltaports_path", "/build/synth/agentic-workspace/DeltaPorts"))
+
+    def write_artifact(relpath: str, content: str, kind: str) -> bool:
+        data = (content.rstrip() + "\n").encode("utf-8")
+        if bundle_id:
+            return artifact_store_put(bundle_id, relpath, data, kind)
+        if bundle_dir:
+            path = bundle_dir / relpath
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(data)
+            return True
+        return False
+
+    try:
+        run_cmd(["git", "-C", str(deltaports_path), "fetch", "origin"])
+        run_cmd(["git", "-C", str(deltaports_path), "branch", "-f", branch, commit])
+        run_cmd(["git", "-C", str(deltaports_path), "checkout", branch])
+        run_cmd(["git", "-C", str(deltaports_path), "push", "-u", "origin", branch])
+
+        title = f"fix({origin}): agentic workspace update"
+        body = "\n".join([
+            "## Summary",
+            f"AI-assisted fix for `{origin}` (agentic workspace).",
+            "",
+            "## Rebuild Result",
+            "Build succeeded on DragonFlyBSD (dsynth just-build).",
+            "",
+            "## Evidence",
+            f"Bundle: `{bundle_id}`" if bundle_id else "Bundle: (unknown)",
+        ])
+
+        pr_output = run_cmd([
+            "gh", "pr", "create",
+            "--base", "master",
+            "--head", branch,
+            "--title", title,
+            "--body", body,
+        ], cwd=deltaports_path)
+
+        pr_url = pr_output.strip().splitlines()[-1] if pr_output else ""
+        pr_payload = {
+            "origin": origin,
+            "branch": branch,
+            "commit": commit,
+            "url": pr_url,
+            "bundle_id": bundle_id,
+            "created_at_utc": datetime.now(timezone.utc).isoformat(),
+        }
+
+        if pr_url:
+            write_artifact("analysis/pr_url.txt", pr_url, "text")
+        write_artifact("analysis/pr.json", json.dumps(pr_payload, indent=2), "json")
+
+        activity_log(queue_root, "pr_created",
+                    f"PR created for {origin}", job_id=job_id,
+                    extra={"pr_url": pr_url} if pr_url else None)
+        return True, "done"
+    except Exception as exc:
+        activity_log(queue_root, "pr_error",
+                    f"PR job failed for {origin}: {str(exc)[:120]}", job_id=job_id)
+        return False, str(exc)
+    finally:
+        try:
+            run_cmd(["git", "-C", str(deltaports_path), "checkout", "master"])
+        except Exception:
+            pass
 
 
 def process_job(
@@ -2404,21 +1982,21 @@ def process_job(
         return
     
     if dry_run:
-        if job_type == "apply":
-            log(queue_root, "INFO", f"[dry-run] type=apply, would run apply-patch --bundle {bundle_dir}")
+        if job_type == "patch":
+            payload = build_patch_payload(bundle_dir, kedb_dir, job)
+        elif job_type == "pr":
+            log(queue_root, "INFO", f"[dry-run] type=pr, would create PR for {origin}")
             print("=" * 60)
-            print(f"JOB TYPE: apply (iteration={job.get('iteration', '1')})")
+            print("JOB TYPE: pr")
             print(f"BUNDLE: {bundle_dir if bundle_dir is not None else bundle_id}")
-            print(f"ORIGIN: {job.get('origin', 'unknown')}")
+            print(f"ORIGIN: {origin}")
             print("=" * 60)
             move_job(job_path, "pending")
             update_runner_status("idle", job_id=None, stage=None)
             return
-        elif job_type == "patch":
-            payload = build_patch_payload(bundle_dir, kedb_dir, job)
         else:
             payload = build_triage_payload(bundle_dir, kedb_dir, job)
-        
+
         log(queue_root, "INFO", f"[dry-run] type={job_type}, round={snippet_round}, would send payload ({len(payload)} bytes)")
         print("=" * 60)
         print(f"JOB TYPE: {job_type} (snippet_round={snippet_round})")
@@ -2428,24 +2006,24 @@ def process_job(
         move_job(job_path, "pending")
         update_runner_status("idle", job_id=None, stage=None)
         return
-    
+
     # Dispatch based on job type
-    if job_type == "apply":
-        success, status = process_apply_job(
-            queue_root, job_path, job, bundle_dir
-        )
+    if job_type == "pr":
+        success, status = process_pr_job(queue_root, job_path, job, bundle_dir)
     elif job_type == "patch":
         success, status = process_patch_job(
             queue_root, job_path, job, bundle_dir,
             opencode_url, opencode_provider, opencode_model,
             timeout, max_retries, retry_delay, kedb_dir
         )
-    else:
+    elif job_type == "triage":
         success, status = process_triage_job(
             queue_root, job_path, job, bundle_dir,
             opencode_url, opencode_provider, opencode_model,
             timeout, max_retries, retry_delay, kedb_dir
         )
+    else:
+        success, status = False, f"unknown job type: {job_type}"
     
     if success:
         move_job(job_path, "done")

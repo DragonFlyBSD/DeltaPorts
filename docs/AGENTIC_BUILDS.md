@@ -651,7 +651,7 @@ Goal: generate DeltaPorts artifacts by operating on a shared DragonFly workspace
 
 ##### dsynth profile integration
 
-- dsynth configuration lives in `/etc/dsynth.ini`.
+- dsynth configuration lives in `/etc/dsynth/dsynth.ini`.
 - Create a profile (e.g. `agentic`) that points `DPORTS` at `/build/synth/agentic-workspace/DPorts`.
 - Use that profile for `dsynth just-build`.
 
@@ -715,6 +715,7 @@ Tools read SSH + path configuration from env:
 
 9. **Clean slate**
    - Checkout `master` and ensure working tree is clean.
+   - Ensure the staged `DPorts` tree is reset for the next origin (no leftover workdirs or patch artifacts).
 
 ##### Incremental knowledge
 
