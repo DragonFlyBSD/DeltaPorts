@@ -133,15 +133,31 @@ export const dports_get_file = tool({
   },
 });
 
+function normalizeContent(content: string) {
+  const compact = content.replace(/\s+/g, "");
+  if (compact.length % 4 === 0 && /^[A-Za-z0-9+/=]+$/.test(compact)) {
+    try {
+      const buf = Buffer.from(compact, "base64");
+      if (buf.toString("base64") === compact) {
+        return compact;
+      }
+    } catch {
+      // fall through to raw encoding
+    }
+  }
+  return Buffer.from(content, "utf8").toString("base64");
+}
+
 export const dports_put_file = tool({
-  description: "Write a file to the workspace (base64)",
+  description: "Write a file to the workspace (raw text or base64)",
   args: {
     path: tool.schema.string().describe("Absolute path inside workspace"),
-    content: tool.schema.string().describe("Base64-encoded content"),
+    content: tool.schema.string().describe("Raw text or base64-encoded content"),
     expectedSha256: tool.schema.string().optional().describe("Optional sha256 for optimistic lock"),
   },
   async execute(args) {
-    const workerArgs = ["put-file", "--path", args.path, "--content", args.content];
+    const encoded = normalizeContent(args.content);
+    const workerArgs = ["put-file", "--path", args.path, "--content", encoded];
     if (args.expectedSha256) {
       workerArgs.push("--expected-sha256", args.expectedSha256);
     }
