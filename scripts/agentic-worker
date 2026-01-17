@@ -448,6 +448,37 @@ def cmd_emit_diff(args):
     return {"diff": None}
 
 
+def cmd_grep(args):
+    paths = resolve_paths()
+    workspace_base = paths["workspace_base"]
+    root = Path(args.path)
+    ensure_within(root, workspace_base)
+
+    cmd = ["rg", "--no-heading", "--line-number", "--color", "never", args.pattern, str(root)]
+    if args.include:
+        cmd.extend(["--glob", args.include])
+
+    result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    if result.returncode not in (0, 1):
+        raise RuntimeError(f"rg failed: {result.stderr.strip()}")
+
+    output = result.stdout
+    truncated = False
+    max_bytes = args.max_bytes
+    if max_bytes and len(output.encode("utf-8")) > max_bytes:
+        truncated = True
+        output = output.encode("utf-8")[:max_bytes].decode("utf-8", errors="replace")
+
+    return {
+        "root": str(root),
+        "pattern": args.pattern,
+        "include": args.include,
+        "matches": output,
+        "truncated": truncated,
+        "max_bytes": max_bytes,
+    }
+
+
 def cmd_dsynth_build(args):
     paths = resolve_paths()
     profile = args.profile or paths["workspace"]["dsynth_profile"]
@@ -502,6 +533,12 @@ def main():
     emit.add_argument("--origin", required=True)
     emit.add_argument("--relpath", required=True)
 
+    grep_cmd = subparsers.add_parser("grep")
+    grep_cmd.add_argument("--pattern", required=True)
+    grep_cmd.add_argument("--path", required=True)
+    grep_cmd.add_argument("--include")
+    grep_cmd.add_argument("--max-bytes", type=int, default=8192)
+
     build = subparsers.add_parser("dsynth-build")
     build.add_argument("--origin", required=True)
     build.add_argument("--profile")
@@ -530,6 +567,8 @@ def main():
             result = cmd_install_patches(args)
         elif args.command == "emit-diff":
             result = cmd_emit_diff(args)
+        elif args.command == "grep":
+            result = cmd_grep(args)
         elif args.command == "dsynth-build":
             result = cmd_dsynth_build(args)
         else:
