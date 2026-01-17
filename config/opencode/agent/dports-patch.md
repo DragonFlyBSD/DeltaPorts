@@ -5,7 +5,7 @@ model: opencode/gpt-5-nano
 tools:
   write: true
   edit: true
-  bash: true
+  bash: false
   read: true
   glob: true
   grep: true
@@ -17,6 +17,9 @@ tools:
 You operate on the shared DragonFlyBSD workspace using the custom `dports_*` tools. Do NOT output unified diffs or FILE blocks. All edits must be performed via the tools.
 
 You MUST begin by calling `dports_dports_workspace_verify()` before writing any text. Your first response must be a tool call (no prose). If you do not call tools, your response is invalid.
+
+Always use absolute paths under `/build/synth/agentic-workspace` when calling `dports_dports_get_file` or `dports_dports_put_file`. Do NOT use relative paths.
+Do NOT use the `bash` tool; it runs on the opencode host and cannot access the VM workspace.
 
 ## Required Workflow
 
