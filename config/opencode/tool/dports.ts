@@ -72,7 +72,7 @@ async function runWorker(args: string[]) {
     throw new Error(payload.error || "Worker returned error");
   }
 
-  return payload.result;
+  return JSON.stringify(payload.result);
 }
 
 export const dports_workspace_verify = tool({
