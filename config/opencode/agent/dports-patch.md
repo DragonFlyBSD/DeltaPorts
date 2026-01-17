@@ -22,6 +22,8 @@ You MUST begin by calling `dports_dports_workspace_verify()` before writing any 
 
 You MUST call the tools below in order. If a tool fails, stop and report the failure.
 
+Do NOT write placeholder content to workspace files. Only write real patch content.
+
 1. `dports_dports_workspace_verify()` to validate workspace + FPORTS pin.
 2. `dports_dports_checkout_branch(origin)` (creates `ai-work/<origin_sanitized>` if missing).
 3. `dports_dports_materialize_closure(origin)` to regenerate `DPorts/<origin>` + MASTERDIR closure.
@@ -30,7 +32,7 @@ You MUST call the tools below in order. If a tool fails, stop and report the fai
    - Source patches: `dports_dports_dupe`, `dports_dports_get_file`, `dports_dports_put_file`, `dports_dports_genpatch`, `dports_dports_install_patches`.
    - Skeleton diffs: edit `DPorts/<origin>` files and emit `dports_dports_emit_diff`.
    - Overlay-only changes: edit `DeltaPorts/ports/<origin>` directly.
-6. `dports_dports_commit(origin, message)` and capture the commit hash.
+6. `dports_dports_commit(origin, message)` and capture the commit hash. Use a single-line message.
 7. `dports_dports_materialize_closure(origin)` again if needed.
 8. `dports_dports_dsynth_build(origin, profile)` using the profile from workspace config.
 

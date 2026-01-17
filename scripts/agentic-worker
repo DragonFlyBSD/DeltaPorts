@@ -214,17 +214,51 @@ def cmd_workspace_verify(args):
     return result
 
 
+def _status_paths(deltaports: Path) -> list[str]:
+    output = run_cmd(["git", "-C", str(deltaports), "status", "--porcelain"]).strip()
+    if not output:
+        return []
+    paths = []
+    for line in output.splitlines():
+        if not line:
+            continue
+        entry = line[3:].strip()
+        if "->" in entry:
+            entry = entry.split("->", 1)[1].strip()
+        if entry:
+            paths.append(entry)
+    return paths
+
+
+def _ensure_origin_only(deltaports: Path, origin: str):
+    allowed_prefix = f"ports/{origin}/"
+    paths = _status_paths(deltaports)
+    if not paths:
+        return
+    bad = [path for path in paths if not path.startswith(allowed_prefix)]
+    if bad:
+        listed = ", ".join(bad[:5])
+        suffix = " ..." if len(bad) > 5 else ""
+        raise RuntimeError(
+            f"DeltaPorts working tree has changes outside {allowed_prefix}: {listed}{suffix}"
+        )
+
+
 def cmd_checkout_branch(args):
     paths = resolve_paths()
     deltaports = paths["deltaports"]
     origin = args.origin
     branch = f"ai-work/{sanitize_origin(origin)}"
 
-    status = run_cmd(["git", "-C", str(deltaports), "status", "--porcelain"]).strip()
-    if status:
-        ts = datetime.utcnow().strftime("%Y%m%d-%H%M%SZ")
-        stash_msg = f"agentic-auto-stash {ts} {origin}"
-        run_cmd(["git", "-C", str(deltaports), "stash", "push", "-u", "-m", stash_msg])
+    status_paths = _status_paths(deltaports)
+    if status_paths:
+        current = run_cmd(["git", "-C", str(deltaports), "branch", "--show-current"]).strip()
+        if current != branch:
+            raise RuntimeError(
+                f"DeltaPorts working tree is dirty on branch {current}; expected {branch}"
+            )
+        _ensure_origin_only(deltaports, origin)
+        return {"branch": branch, "dirty": True}
 
     existing = run_cmd(["git", "-C", str(deltaports), "branch", "--list", branch]).strip()
     if existing:
@@ -232,18 +266,21 @@ def cmd_checkout_branch(args):
     else:
         run_cmd(["git", "-C", str(deltaports), "checkout", "-b", branch, "master"])
 
-    return {"branch": branch}
+    return {"branch": branch, "dirty": False}
 
 
 def cmd_commit(args):
     paths = resolve_paths()
     deltaports = paths["deltaports"]
+    origin = args.origin
+
+    _ensure_origin_only(deltaports, origin)
 
     status = run_cmd(["git", "-C", str(deltaports), "status", "--porcelain"]).strip()
     if not status:
         return {"committed": False, "reason": "no changes"}
 
-    run_cmd(["git", "-C", str(deltaports), "add", "-A"])
+    run_cmd(["git", "-C", str(deltaports), "add", f"ports/{origin}"])
     run_cmd(["git", "-C", str(deltaports), "commit", "-m", args.message])
     head = run_cmd(["git", "-C", str(deltaports), "rev-parse", "HEAD"]).strip()
     return {"committed": True, "head": head}
@@ -434,6 +471,7 @@ def main():
     checkout.add_argument("--origin", required=True)
 
     commit = subparsers.add_parser("commit")
+    commit.add_argument("--origin", required=True)
     commit.add_argument("--message", required=True)
 
     materialize = subparsers.add_parser("materialize-closure")

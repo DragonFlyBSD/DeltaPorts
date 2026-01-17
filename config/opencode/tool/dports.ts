@@ -93,13 +93,19 @@ export const dports_checkout_branch = tool({
   },
 });
 
+function normalizeCommitMessage(message: string) {
+  return message.replace(/[\r\n]+/g, " ").trim();
+}
+
 export const dports_commit = tool({
   description: "Commit current DeltaPorts changes",
   args: {
+    origin: tool.schema.string().describe("Port origin (category/port)"),
     message: tool.schema.string().describe("Commit message"),
   },
   async execute(args) {
-    return await runWorker(["commit", "--message", args.message]);
+    const message = normalizeCommitMessage(args.message);
+    return await runWorker(["commit", "--origin", args.origin, "--message", message]);
   },
 });
 
