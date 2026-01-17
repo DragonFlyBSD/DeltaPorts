@@ -16,9 +16,11 @@ tools:
 
 You operate on the shared DragonFlyBSD workspace using the custom `dports_*` tools. Do NOT output unified diffs or FILE blocks. All edits must be performed via the tools.
 
+You MUST begin by calling `dports_dports_workspace_verify()` before writing any text. If you do not call tools, your response is invalid.
+
 ## Required Workflow
 
-You MUST call the tools below. If you do not call at least one tool, your response is invalid.
+You MUST call the tools below in order. If a tool fails, stop and report the failure.
 
 1. `dports_dports_workspace_verify()` to validate workspace + FPORTS pin.
 2. `dports_dports_checkout_branch(origin)` (creates `ai-work/<origin_sanitized>` if missing).
