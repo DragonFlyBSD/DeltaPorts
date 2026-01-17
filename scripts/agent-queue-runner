@@ -1323,6 +1323,18 @@ def build_patch_payload(
 # API calls
 # -----------------------------------------------------------------------------
 
+def _read_json_response(resp: urllib.response.addinfourl, url: str) -> dict:
+    raw = resp.read()
+    if not raw:
+        raise RuntimeError(f"Empty response from {url}")
+    text = raw.decode(errors="replace").strip()
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError as exc:
+        snippet = text[:200]
+        raise RuntimeError(f"Invalid JSON from {url}: {exc}: {snippet}")
+
+
 def call_opencode(
     url: str,
     payload: str,
@@ -1348,7 +1360,7 @@ def call_opencode(
         method="POST"
     )
     with urllib.request.urlopen(req, timeout=timeout) as resp:
-        session_data = json.loads(resp.read().decode())
+        session_data = _read_json_response(resp, session_url)
     
     session_id = session_data.get("id")
     if not session_id:
@@ -1377,7 +1389,7 @@ def call_opencode(
         method="POST"
     )
     with urllib.request.urlopen(req, timeout=timeout) as resp:
-        response_data = json.loads(resp.read().decode())
+        response_data = _read_json_response(resp, message_url)
     
     response_data["_session_id"] = session_id
     return response_data
