@@ -72,8 +72,18 @@ def resolve_paths():
     }
 
 
-def run_cmd(cmd, cwd=None):
-    result = subprocess.run(cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+def run_cmd(cmd, cwd=None, env=None):
+    merged_env = os.environ.copy()
+    if env:
+        merged_env.update(env)
+    result = subprocess.run(
+        cmd,
+        cwd=cwd,
+        env=merged_env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
     if result.returncode != 0:
         raise RuntimeError(
             f"Command failed: {' '.join(cmd)}\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
@@ -260,9 +270,11 @@ def cmd_materialize_closure(args):
 def cmd_extract(args):
     paths = resolve_paths()
     port_dir = paths["dports"] / args.origin
-    run_cmd(["make", "extract"], cwd=port_dir)
-    wrkdir = run_cmd(["make", "-V", "WRKDIR"], cwd=port_dir).strip()
-    wrksrc = run_cmd(["make", "-V", "WRKSRC"], cwd=port_dir).strip()
+    env = os.environ.copy()
+    env["WRKDIRPREFIX"] = str(paths["workspace_base"] / "work")
+    run_cmd(["make", "extract"], cwd=port_dir, env=env)
+    wrkdir = run_cmd(["make", "-V", "WRKDIR"], cwd=port_dir, env=env).strip()
+    wrksrc = run_cmd(["make", "-V", "WRKSRC"], cwd=port_dir, env=env).strip()
     return {"wrkdir": wrkdir, "wrksrc": wrksrc}
 
 
@@ -304,7 +316,9 @@ def cmd_dupe(args):
     workspace_base = paths["workspace_base"]
     path = Path(args.path)
     ensure_within(path, workspace_base)
-    run_cmd(["dupe", str(path)])
+    env = os.environ.copy()
+    env["WRKDIRPREFIX"] = str(paths["workspace_base"] / "work")
+    run_cmd(["dupe", str(path)], env=env)
     return {"path": str(path)}
 
 
@@ -315,7 +329,9 @@ def cmd_genpatch(args):
     ensure_within(path, workspace_base)
     output_dir = workspace_base / "genpatch-out"
     ensure_dir(output_dir)
-    run_cmd(["genpatch", str(path)], cwd=output_dir)
+    env = os.environ.copy()
+    env["WRKDIRPREFIX"] = str(paths["workspace_base"] / "work")
+    run_cmd(["genpatch", str(path)], cwd=output_dir, env=env)
     patches = sorted([p.name for p in output_dir.glob("patch-*")])
     return {"output_dir": str(output_dir), "patches": patches}
 
