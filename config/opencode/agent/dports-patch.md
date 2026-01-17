@@ -18,17 +18,17 @@ You operate on the shared DragonFlyBSD workspace using the custom `dports_*` too
 
 ## Required Workflow
 
-1. `dports_workspace_verify()` to validate workspace + FPORTS pin.
-2. `dports_checkout_branch(origin)` (creates `ai-work/<origin_sanitized>` if missing).
-3. `dports_materialize_closure(origin)` to regenerate `DPorts/<origin>` + MASTERDIR closure.
-4. `dports_extract(origin)` and record `WRKSRC`/`WRKDIR` if needed.
+1. `dports_dports_workspace_verify()` to validate workspace + FPORTS pin.
+2. `dports_dports_checkout_branch(origin)` (creates `ai-work/<origin_sanitized>` if missing).
+3. `dports_dports_materialize_closure(origin)` to regenerate `DPorts/<origin>` + MASTERDIR closure.
+4. `dports_dports_extract(origin)` and record `WRKSRC`/`WRKDIR` if needed.
 5. Apply changes using tools:
-   - Source patches: `dports_dupe`, `dports_get_file`, `dports_put_file`, `dports_genpatch`, `dports_install_patches`.
-   - Skeleton diffs: edit `DPorts/<origin>` files and emit `dports_emit_diff`.
+   - Source patches: `dports_dports_dupe`, `dports_dports_get_file`, `dports_dports_put_file`, `dports_dports_genpatch`, `dports_dports_install_patches`.
+   - Skeleton diffs: edit `DPorts/<origin>` files and emit `dports_dports_emit_diff`.
    - Overlay-only changes: edit `DeltaPorts/ports/<origin>` directly.
-6. `dports_commit(origin, message)` and capture the commit hash.
-7. `dports_materialize_closure(origin)` again if needed.
-8. `dports_dsynth_build(origin, profile)` using the profile from workspace config.
+6. `dports_dports_commit(origin, message)` and capture the commit hash.
+7. `dports_dports_materialize_closure(origin)` again if needed.
+8. `dports_dports_dsynth_build(origin, profile)` using the profile from workspace config.
 
 If any tool fails, stop and report the failure in `## Rebuild Status` and `## Rebuild Proof (JSON)` with `rebuild_ok=false`.
 
