@@ -31,8 +31,27 @@ function sshArgs() {
   ];
 }
 
+function envArgs() {
+  const envs = [
+    "DP_WORKSPACE_BASE",
+    "DP_WORKSPACE_CONFIG",
+    "DP_FPORTS_DIR",
+    "DP_DELTAPORTS_DIR",
+    "DP_DPORTS_DIR",
+  ];
+  const args: string[] = [];
+  for (const key of envs) {
+    const value = process.env[key];
+    if (!value) {
+      continue;
+    }
+    args.push(`${key}=${value}`);
+  }
+  return args;
+}
+
 async function runWorker(args: string[]) {
-  const cmd = ["ssh", ...sshArgs(), "--", getWorkerPath(), ...args];
+  const cmd = ["ssh", ...sshArgs(), "--", "env", ...envArgs(), getWorkerPath(), ...args];
   const proc = Bun.spawn(cmd, { stdout: "pipe", stderr: "pipe" });
   const stdout = await new Response(proc.stdout).text();
   const stderr = await new Response(proc.stderr).text();
