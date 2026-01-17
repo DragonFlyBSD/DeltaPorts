@@ -228,7 +228,8 @@ export const dports_grep = tool({
     maxBytes: tool.schema.number().optional().describe("Max bytes of output (default 8192)"),
   },
   async execute(args) {
-    const workerArgs = ["grep", "--pattern", args.pattern, "--path", args.path];
+    const encoded = Buffer.from(args.pattern, "utf8").toString("base64");
+    const workerArgs = ["grep", "--pattern-base64", encoded, "--path", args.path];
     if (args.include) {
       workerArgs.push("--include", args.include);
     }

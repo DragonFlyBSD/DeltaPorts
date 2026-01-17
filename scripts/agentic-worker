@@ -454,7 +454,19 @@ def cmd_grep(args):
     root = Path(args.path)
     ensure_within(root, workspace_base)
 
-    cmd = ["rg", "--no-heading", "--line-number", "--color", "never", args.pattern, str(root)]
+    if args.pattern and args.pattern_base64:
+        raise RuntimeError("Provide only one of --pattern or --pattern-base64")
+    if not args.pattern and not args.pattern_base64:
+        raise RuntimeError("Missing pattern for grep")
+
+    pattern = args.pattern
+    if args.pattern_base64:
+        try:
+            pattern = base64.b64decode(args.pattern_base64).decode("utf-8")
+        except Exception as exc:
+            raise RuntimeError(f"invalid base64 pattern: {exc}")
+
+    cmd = ["rg", "--no-heading", "--line-number", "--color", "never", pattern, str(root)]
     if args.include:
         cmd.extend(["--glob", args.include])
 
@@ -471,7 +483,7 @@ def cmd_grep(args):
 
     return {
         "root": str(root),
-        "pattern": args.pattern,
+        "pattern": pattern,
         "include": args.include,
         "matches": output,
         "truncated": truncated,
@@ -534,7 +546,8 @@ def main():
     emit.add_argument("--relpath", required=True)
 
     grep_cmd = subparsers.add_parser("grep")
-    grep_cmd.add_argument("--pattern", required=True)
+    grep_cmd.add_argument("--pattern")
+    grep_cmd.add_argument("--pattern-base64")
     grep_cmd.add_argument("--path", required=True)
     grep_cmd.add_argument("--include")
     grep_cmd.add_argument("--max-bytes", type=int, default=8192)
