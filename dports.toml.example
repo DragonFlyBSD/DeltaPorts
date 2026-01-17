@@ -1,0 +1,38 @@
+# DPorts v2 Configuration File
+# 
+# This file configures the dports tool for managing DragonFly BSD ports overlays.
+# Copy this file to one of the following locations:
+#   - ./dports.toml (current directory)
+#   - ~/.config/dports/dports.toml (user config)
+#   - /etc/dports/dports.toml (system config)
+
+[paths]
+# FreeBSD ports tree (source)
+freebsd_ports = "/usr/fports"
+
+# DeltaPorts repository (contains ports/, special/, etc.)
+delta = "/usr/DeltaPorts"
+
+# Merged output directory (DPorts tree)
+merged_output = "/usr/dports"
+
+# Log directory for merge operations
+logs = "/var/log/dports"
+
+[state]
+# State storage backend: "local", "git-branch", or "external"
+backend = "local"
+
+# Path to state file (relative to delta path, or absolute)
+path = "state/builds.json"
+
+[quarterly]
+# Default quarterly branch (optional - if not set, --target is always required)
+# default = "2025Q1"
+
+[merge]
+# Path to cpdup binary (DragonFly's efficient copy tool)
+cpdup_path = "/bin/cpdup"
+
+# Path to patch binary
+patch_path = "/usr/bin/patch"
