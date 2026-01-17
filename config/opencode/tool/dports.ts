@@ -219,11 +219,31 @@ export const dports_emit_diff = tool({
   },
 });
 
+export const dports_grep = tool({
+  description: "Search files in workspace using ripgrep",
+  args: {
+    pattern: tool.schema.string().describe("Regex pattern to search"),
+    path: tool.schema.string().describe("Absolute path inside workspace"),
+    include: tool.schema.string().optional().describe("Glob pattern, e.g. *.c"),
+    maxBytes: tool.schema.number().optional().describe("Max bytes of output (default 8192)"),
+  },
+  async execute(args) {
+    const workerArgs = ["grep", "--pattern", args.pattern, "--path", args.path];
+    if (args.include) {
+      workerArgs.push("--include", args.include);
+    }
+    if (args.maxBytes !== undefined) {
+      workerArgs.push("--max-bytes", String(args.maxBytes));
+    }
+    return await runWorker(workerArgs);
+  },
+});
+
 export const dports_dsynth_build = tool({
-  description: "Run dsynth just-build using workspace profile",
+  description: "Run dsynth just-build for an origin",
   args: {
     origin: tool.schema.string().describe("Port origin (category/port)"),
-    profile: tool.schema.string().optional().describe("Optional dsynth profile"),
+    profile: tool.schema.string().optional().describe("dsynth profile name"),
   },
   async execute(args) {
     const workerArgs = ["dsynth-build", "--origin", args.origin];
@@ -233,3 +253,4 @@ export const dports_dsynth_build = tool({
     return await runWorker(workerArgs);
   },
 });
+

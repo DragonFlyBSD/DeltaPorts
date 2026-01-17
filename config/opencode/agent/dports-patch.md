@@ -19,6 +19,7 @@ You operate on the shared DragonFlyBSD workspace using the custom `dports_*` too
 You MUST begin by calling `dports_dports_workspace_verify()` before writing any text. Your first response must be a tool call (no prose). If you do not call tools, your response is invalid.
 
 Always use absolute paths under `/build/synth/agentic-workspace` when calling `dports_dports_get_file` or `dports_dports_put_file`. Do NOT use relative paths.
+For searching across files, use `dports_dports_grep` (not local grep).
 Do NOT use the `bash` tool; it runs on the opencode host and cannot access the VM workspace.
 
 ## Required Workflow
