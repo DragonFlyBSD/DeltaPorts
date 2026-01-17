@@ -1,0 +1,4 @@
+target @main
+port category/name
+port category/second
+mk set VAR "value"

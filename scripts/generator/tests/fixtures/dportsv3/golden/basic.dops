@@ -1,0 +1,9 @@
+target @main
+port category/name
+type port
+reason "baseline"
+maintainer "dev@example.com"
+mk set VAR "value"
+mk add USES ssl
+file remove files/patch-foo on-missing warn
+patch apply dragonfly/@main/patch.diff

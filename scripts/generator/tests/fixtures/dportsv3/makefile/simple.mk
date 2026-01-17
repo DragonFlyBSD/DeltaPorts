@@ -1,0 +1,2 @@
+PORTNAME= sample
+USES+= ssl

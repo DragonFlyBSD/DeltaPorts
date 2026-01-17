@@ -1,0 +1,20 @@
+[
+  {
+    "origin": "devel/a",
+    "status": "failed",
+    "parse_ok": false,
+    "check_ok": true,
+    "plan_ok": true,
+    "deterministic_ok": true,
+    "classified": true
+  },
+  {
+    "origin": "devel/b",
+    "status": "blocked",
+    "parse_ok": true,
+    "check_ok": false,
+    "plan_ok": true,
+    "deterministic_ok": false,
+    "classified": false
+  }
+]

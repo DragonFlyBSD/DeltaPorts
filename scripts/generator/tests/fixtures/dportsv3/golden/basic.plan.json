@@ -1,0 +1,35 @@
+{
+  "maintainer": "dev@example.com",
+  "ops": [
+    {
+      "id": "op-0001-mk-var-set",
+      "kind": "mk.var.set",
+      "name": "VAR",
+      "target": "@main",
+      "value": "value"
+    },
+    {
+      "id": "op-0002-mk-var-token_add",
+      "kind": "mk.var.token_add",
+      "name": "USES",
+      "target": "@main",
+      "value": "ssl"
+    },
+    {
+      "id": "op-0003-file-remove",
+      "kind": "file.remove",
+      "on_missing": "warn",
+      "path": "files/patch-foo",
+      "target": "@main"
+    },
+    {
+      "id": "op-0004-patch-apply",
+      "kind": "patch.apply",
+      "path": "dragonfly/@main/patch.diff",
+      "target": "@main"
+    }
+  ],
+  "port": "category/name",
+  "reason": "baseline",
+  "type": "port"
+}
