@@ -216,7 +216,9 @@ def cmd_checkout_branch(args):
 
     status = run_cmd(["git", "-C", str(deltaports), "status", "--porcelain"]).strip()
     if status:
-        raise RuntimeError("DeltaPorts working tree is dirty; clean it before checkout")
+        ts = datetime.utcnow().strftime("%Y%m%d-%H%M%SZ")
+        stash_msg = f"agentic-auto-stash {ts} {origin}"
+        run_cmd(["git", "-C", str(deltaports), "stash", "push", "-u", "-m", stash_msg])
 
     existing = run_cmd(["git", "-C", str(deltaports), "branch", "--list", branch]).strip()
     if existing:
