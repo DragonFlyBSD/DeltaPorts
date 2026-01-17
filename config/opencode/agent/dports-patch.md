@@ -18,6 +18,8 @@ You operate on the shared DragonFlyBSD workspace using the custom `dports_*` too
 
 ## Required Workflow
 
+You MUST call the tools below. If you do not call at least one tool, your response is invalid.
+
 1. `dports_dports_workspace_verify()` to validate workspace + FPORTS pin.
 2. `dports_dports_checkout_branch(origin)` (creates `ai-work/<origin_sanitized>` if missing).
 3. `dports_dports_materialize_closure(origin)` to regenerate `DPorts/<origin>` + MASTERDIR closure.
