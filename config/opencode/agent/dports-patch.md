@@ -3,14 +3,14 @@ description: Applies DeltaPorts workspace fixes and rebuilds
 mode: subagent
 model: opencode/gpt-5-nano
 tools:
-  write: true
-  edit: true
+  write: false
+  edit: false
   bash: false
-  read: true
-  glob: true
-  grep: true
-  webfetch: true
-  task: true
+  read: false
+  glob: false
+  grep: false
+  webfetch: false
+  task: false
 ---
 # DeltaPorts Patch Agent (Workspace Flow)
 
