@@ -21,6 +21,12 @@ if TYPE_CHECKING:
     from dports.config import Config
 
 from dports.utils import DPortsError, cpdup, apply_patch, get_logger
+from dports.transform import (
+    transform_gids_file,
+    transform_uids_file,
+    transform_moved_file,
+    transform_tools_file,
+)
 
 
 class SpecialError(DPortsError):
@@ -183,3 +189,228 @@ def list_special_contents(config: Config) -> dict[str, dict[str, list[str]]]:
         results[dirname] = contents
     
     return results
+
+
+# =============================================================================
+# Infrastructure Merge Functions
+# =============================================================================
+
+def merge_infrastructure(
+    config: Config,
+    quarterly: str,
+    dry_run: bool = False,
+) -> dict[str, bool]:
+    """
+    Merge all infrastructure files (Mk, Templates, Tools, treetop).
+    
+    This handles:
+    - Mk/ and Templates/ - copied from FreeBSD, then patched
+    - Tools/ - copied with perl shebang fix
+    - Keywords/ - straight copy
+    - Treetop files (UIDs, GIDs, MOVED, Makefile) - copied and transformed
+    
+    Args:
+        config: DPorts configuration
+        quarterly: Target quarterly (for FreeBSD path resolution)
+        dry_run: If True, don't make changes
+        
+    Returns:
+        Dict mapping component name to success status
+    """
+    log = get_logger(__name__)
+    results: dict[str, bool] = {}
+    
+    fports = config.get_freebsd_ports_path(quarterly)
+    merged = config.paths.merged_output
+    delta = config.paths.delta
+    
+    # Merge Tools/ with perl shebang fix
+    results["Tools"] = _merge_tools(fports, merged, dry_run, log)
+    
+    # Merge Keywords/ (straight copy)
+    results["Keywords"] = _merge_keywords(fports, merged, dry_run, log)
+    
+    # Merge Mk/ and Templates/ with patches
+    results["Mk"] = _merge_mk_templates(fports, merged, delta, "Mk", dry_run, log)
+    results["Templates"] = _merge_mk_templates(fports, merged, delta, "Templates", dry_run, log)
+    
+    # Merge treetop files (UIDs, GIDs, MOVED, etc.)
+    results["treetop"] = _merge_treetop(fports, merged, delta, dry_run, log)
+    
+    return results
+
+
+def _merge_tools(fports: Path, merged: Path, dry_run: bool, log) -> bool:
+    """Merge Tools/ with perl path fixes."""
+    log.info("Merging Tools/...")
+    
+    if dry_run:
+        return True
+    
+    src = fports / "Tools"
+    dst = merged / "Tools"
+    
+    if not src.exists():
+        log.warning(f"Tools/ not found in {fports}")
+        return False
+    
+    try:
+        if dst.exists():
+            shutil.rmtree(dst)
+        dst.mkdir(parents=True)
+        
+        for f in src.rglob('*'):
+            rel = f.relative_to(src)
+            d = dst / rel
+            
+            if f.is_dir():
+                d.mkdir(parents=True, exist_ok=True)
+            else:
+                try:
+                    content = f.read_text()
+                    content = transform_tools_file(content)
+                    d.parent.mkdir(parents=True, exist_ok=True)
+                    d.write_text(content)
+                    d.chmod(f.stat().st_mode)
+                except UnicodeDecodeError:
+                    # Binary file, just copy
+                    shutil.copy2(f, d)
+        
+        return True
+    except Exception as e:
+        log.error(f"Failed to merge Tools/: {e}")
+        return False
+
+
+def _merge_keywords(fports: Path, merged: Path, dry_run: bool, log) -> bool:
+    """Copy Keywords/ directory."""
+    log.info("Merging Keywords/...")
+    
+    if dry_run:
+        return True
+    
+    src = fports / "Keywords"
+    dst = merged / "Keywords"
+    
+    if not src.exists():
+        log.warning(f"Keywords/ not found in {fports}")
+        return False
+    
+    try:
+        if dst.exists():
+            shutil.rmtree(dst)
+        shutil.copytree(src, dst)
+        return True
+    except Exception as e:
+        log.error(f"Failed to merge Keywords/: {e}")
+        return False
+
+
+def _merge_mk_templates(
+    fports: Path, merged: Path, delta: Path, dirname: str, dry_run: bool, log
+) -> bool:
+    """Merge Mk/ or Templates/ with patches."""
+    log.info(f"Merging {dirname}/...")
+    
+    if dry_run:
+        return True
+    
+    src = fports / dirname
+    dst = merged / dirname
+    
+    if not src.exists():
+        log.warning(f"{dirname}/ not found in {fports}")
+        return False
+    
+    try:
+        # Copy base
+        if dst.exists():
+            shutil.rmtree(dst)
+        shutil.copytree(src, dst)
+        
+        # Remove bsd.gcc.mk from Mk/ (not used on DragonFly)
+        if dirname == "Mk":
+            gcc_mk = dst / "bsd.gcc.mk"
+            if gcc_mk.exists():
+                gcc_mk.unlink()
+        
+        # Apply patches from special/<dirname>/diffs/
+        diffs = delta / "special" / dirname / "diffs"
+        if diffs.exists():
+            for diff_file in sorted(diffs.glob("*.diff")):
+                success = apply_patch(diff_file, dst)
+                if not success:
+                    log.warning(f"Patch failed: {diff_file.name}")
+            
+            # Cleanup .orig files
+            for orig in dst.rglob("*.orig"):
+                patched = orig.with_suffix('')
+                if patched.exists():
+                    import os
+                    os.utime(patched, (orig.stat().st_atime, orig.stat().st_mtime))
+                orig.unlink()
+        
+        # Copy replacements from special/<dirname>/replacements/
+        replacements = delta / "special" / dirname / "replacements"
+        if replacements.exists():
+            for item in replacements.rglob("*"):
+                if item.is_file():
+                    rel = item.relative_to(replacements)
+                    target = dst / rel
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(item, target)
+                    log.debug(f"Replaced {rel}")
+        
+        return True
+    except Exception as e:
+        log.error(f"Failed to merge {dirname}/: {e}")
+        return False
+
+
+def _merge_treetop(fports: Path, merged: Path, delta: Path, dry_run: bool, log) -> bool:
+    """Merge top-level files (UIDs, GIDs, MOVED)."""
+    log.info("Merging top-level files...")
+    
+    if dry_run:
+        return True
+    
+    try:
+        # GIDs - insert extra DragonFly groups
+        gids_src = fports / "GIDs"
+        if gids_src.exists():
+            content = gids_src.read_text()
+            content = transform_gids_file(content)
+            (merged / "GIDs").write_text(content)
+        
+        # UIDs - insert extra DragonFly users
+        uids_src = fports / "UIDs"
+        if uids_src.exists():
+            content = uids_src.read_text()
+            content = transform_uids_file(content)
+            (merged / "UIDs").write_text(content)
+        
+        # MOVED - filter out old entries (pre-2012)
+        moved_src = fports / "MOVED"
+        if moved_src.exists():
+            content = moved_src.read_text()
+            content = transform_moved_file(content)
+            dst = merged / "MOVED"
+            dst.write_text(content)
+            shutil.copystat(moved_src, dst)
+        
+        # Apply treetop patches
+        diffs = delta / "special" / "treetop" / "diffs"
+        if diffs.exists():
+            for diff_file in sorted(diffs.glob("*.diff")):
+                success = apply_patch(diff_file, merged)
+                if not success:
+                    log.warning(f"Treetop patch failed: {diff_file.name}")
+            
+            # Cleanup .orig files
+            for orig in merged.glob("*.orig"):
+                orig.unlink()
+        
+        return True
+    except Exception as e:
+        log.error(f"Failed to merge treetop: {e}")
+        return False

@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
 from dports.models import PortOrigin, MergeResult
 from dports.transform import (
-    needs_transformation,
+    needs_transform,
     transform_file,
     transform_directory,
 )
@@ -145,10 +145,12 @@ class PortMerger:
                         if f.is_file():
                             result.applied_dragonfly_files.append(str(f.relative_to(df_dir)))
 
-            # Step 6: Apply any transformations
-            if not self.dry_run and needs_transformation(dst_port):
-                self.log.info("Applying FreeBSD -> DragonFly transformations")
-                transform_directory(dst_port)
+            # Step 6: Apply any transformations (amd64 -> x86_64, remove libomp)
+            if not self.dry_run:
+                files_to_transform = needs_transform(dst_port)
+                if files_to_transform:
+                    self.log.info("Applying FreeBSD -> DragonFly transformations")
+                    transform_directory(dst_port, files_to_transform)
 
             # Cleanup
             if not self.dry_run:

@@ -2,234 +2,288 @@
 FreeBSD to DragonFly transformation functions.
 
 Handles the automatic transformations needed when converting
-FreeBSD ports to DragonFly BSD, such as:
-- User/group ID mappings
-- Path adjustments
-- Platform-specific conditionals
+FreeBSD ports to DragonFly BSD:
+- Architecture: amd64 -> x86_64
+- Remove libomp dependencies (not needed on DragonFly)
+- Extra UID/GID entries for DragonFly-specific users/groups
 """
 
 from __future__ import annotations
 
+import os
 import re
 from pathlib import Path
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    pass
+from typing import List, Tuple, Callable, Union
 
 from dports.utils import get_logger
 
 
-# User ID mappings: FreeBSD UID -> DragonFly UID
-EXTRA_UIDS = {
-    # Add mappings as needed
-    # "freebsd_user": "dragonfly_user",
-}
+# =============================================================================
+# Architecture Transformations (amd64 -> x86_64)
+# =============================================================================
 
-# Group ID mappings: FreeBSD GID -> DragonFly GID
-EXTRA_GIDS = {
-    # Add mappings as needed
-    # "freebsd_group": "dragonfly_group",
-}
-
-# Directories to exclude from transformation
-EXCLUDE_DIRS = {
-    ".git",
-    ".svn",
-    "__pycache__",
-    "work",
-    "distfiles",
-    "packages",
-}
-
-# File patterns to transform
-TRANSFORM_PATTERNS = [
-    "Makefile",
-    "Makefile.*",
-    "*.mk",
-    "pkg-plist",
-    "pkg-descr",
-    "pkg-message",
+# Compiled regex patterns with their replacements
+# Each tuple is (pattern, replacement) where replacement can be str or callable
+ARCH_TRANSFORMS: List[Tuple[re.Pattern, Union[str, Callable]]] = [
+    (re.compile(r'OPTIONS_DEFAULT_amd64'), 'OPTIONS_DEFAULT_x86_64'),
+    (re.compile(r'OPTIONS_DEFINE_amd64'), 'OPTIONS_DEFINE_x86_64'),
+    (re.compile(r'BROKEN_amd64'), 'BROKEN_x86_64'),
+    (re.compile(r'_ON_amd64'), '_ON_x86_64'),
+    (re.compile(r'_OFF_amd64'), '_OFF_x86_64'),
+    (re.compile(r'CFLAGS_amd64'), 'CFLAGS_x86_64'),
+    (re.compile(r'\{ARCH:Mamd64\}'), '{ARCH:Mx86_64}'),
+    (re.compile(r'_amd64='), '_x86_64='),
+    # Complex pattern for ${ARCH} checks - uses lambda for replacement
+    (re.compile(r'(\$\{ARCH\}[^}]*)(amd64|"amd64")'),
+     lambda m: m.group(1) + m.group(2).replace('amd64', 'x86_64')),
 ]
 
+# =============================================================================
+# OpenMP Removal (libomp not needed on DragonFly)
+# =============================================================================
 
-def needs_transformation(path: Path) -> bool:
+LIBOMP_PATTERNS: List[re.Pattern] = [
+    re.compile(r'libomp\.so:devel/openmp\b\s*'),
+    re.compile(r'libomp\.so\.0:devel/openmp\b\s*'),
+]
+
+# =============================================================================
+# Detection Pattern
+# =============================================================================
+
+# Pattern to quickly check if a file might need transformation
+LEGACY_PATTERN = re.compile(r'amd64|libomp')
+
+# =============================================================================
+# Extra UID/GID Entries for DragonFly
+# =============================================================================
+
+# These get inserted into the GIDs file after 'nogroup:' line
+EXTRA_GIDS: List[str] = [
+    "avenger:*:60149:",
+    "cbsd:*:60150:",
+]
+
+# These get inserted into the UIDs file after 'nobody:' line
+# Format: name:*:uid:gid:class:change:expire:gecos:home:shell
+EXTRA_UIDS: List[str] = [
+    "avenger:*:60149:60149::0:0:Mail Avenger:/var/spool/avenger:/usr/sbin/nologin",
+    "cbsd:*:60150:60150::0:0:Cbsd user:/nonexistent:/bin/sh",
+]
+
+# =============================================================================
+# Directories/Files to Exclude
+# =============================================================================
+
+EXCLUDE_DIRS = frozenset({
+    '.git', '.svn', '__pycache__', 'work', 'distfiles', 'packages'
+})
+
+# =============================================================================
+# Transform Functions
+# =============================================================================
+
+def needs_transform(directory: Path) -> List[str]:
     """
-    Check if a file or directory needs transformation.
+    Check which files in a directory need arch transformation.
+    
+    Scans Makefile* and *.common files for patterns that indicate
+    FreeBSD-specific content (amd64, libomp).
     
     Args:
-        path: Path to check
+        directory: Port directory to scan
         
     Returns:
-        True if transformation is needed
+        List of filenames that need transformation
     """
-    if path.is_dir():
-        # Check if any files in directory need transformation
-        for pattern in TRANSFORM_PATTERNS:
-            if list(path.glob(pattern)):
-                return True
-        return False
+    result = []
+    for pattern in ['Makefile*', '*.common']:
+        for f in directory.glob(pattern):
+            if f.is_file():
+                try:
+                    content = f.read_text()
+                    if LEGACY_PATTERN.search(content):
+                        result.append(f.name)
+                except (OSError, UnicodeDecodeError):
+                    pass
+    return sorted(set(result))
+
+
+def transform_content(content: str) -> str:
+    """
+    Apply all transformations to file content.
     
-    # Check file
-    for pattern in TRANSFORM_PATTERNS:
-        if path.match(pattern):
-            return True
-    return False
-
-
-def transform_file(path: Path) -> bool:
-    """
-    Transform a single file from FreeBSD to DragonFly format.
+    Transforms:
+    - amd64 references to x86_64
+    - Removes libomp dependencies
     
     Args:
-        path: Path to file
+        content: Original file content
         
     Returns:
-        True if file was modified
+        Transformed content
+    """
+    # Apply architecture transforms
+    for pattern, repl in ARCH_TRANSFORMS:
+        if callable(repl):
+            content = pattern.sub(repl, content)
+        else:
+            content = pattern.sub(repl, content)
+    
+    # Remove libomp dependencies
+    for pattern in LIBOMP_PATTERNS:
+        content = pattern.sub('', content)
+    
+    return content
+
+
+def transform_file(filepath: Path, preserve_mtime: bool = True) -> bool:
+    """
+    Transform a file in place.
+    
+    Reads the file, applies transformations, and writes back if changed.
+    Optionally preserves the original modification time.
+    
+    Args:
+        filepath: Path to file to transform
+        preserve_mtime: If True, preserve original mtime after transform
+        
+    Returns:
+        True if file was modified, False otherwise
     """
     log = get_logger(__name__)
-    
-    if not path.exists() or not path.is_file():
-        return False
     
     try:
-        content = path.read_text()
-    except UnicodeDecodeError:
-        log.debug(f"Skipping binary file: {path}")
+        stat_info = filepath.stat() if preserve_mtime else None
+        content = filepath.read_text()
+        transformed = transform_content(content)
+        
+        if content != transformed:
+            filepath.write_text(transformed)
+            if stat_info:
+                os.utime(filepath, (stat_info.st_atime, stat_info.st_mtime))
+            log.debug(f"Transformed: {filepath}")
+            return True
         return False
-    
-    original = content
-    
-    # Apply transformations
-    content = transform_uids(content)
-    content = transform_gids(content)
-    content = transform_platform_conditionals(content)
-    content = transform_paths(content)
-    
-    if content != original:
-        path.write_text(content)
-        log.debug(f"Transformed: {path}")
-        return True
-    
-    return False
+        
+    except (OSError, UnicodeDecodeError) as e:
+        log.debug(f"Could not transform {filepath}: {e}")
+        return False
 
 
-def transform_directory(path: Path) -> int:
+def transform_directory(directory: Path, files: List[str]) -> int:
     """
-    Transform all applicable files in a directory.
+    Transform specified files in a directory.
     
     Args:
-        path: Directory path
+        directory: Directory containing files
+        files: List of filenames to transform
         
     Returns:
-        Number of files transformed
+        Number of files actually modified
     """
-    log = get_logger(__name__)
     count = 0
-    
-    for item in path.rglob("*"):
-        if item.is_dir():
-            if item.name in EXCLUDE_DIRS:
-                continue
-        elif item.is_file():
-            if needs_transformation(item):
-                if transform_file(item):
-                    count += 1
-    
-    if count > 0:
-        log.info(f"Transformed {count} files in {path}")
-    
+    for name in files:
+        f = directory / name
+        if f.exists() and transform_file(f):
+            count += 1
     return count
 
 
-def transform_uids(content: str) -> str:
+# =============================================================================
+# UID/GID File Transformation (for merge_treetop)
+# =============================================================================
+
+def transform_gids_file(content: str) -> str:
     """
-    Transform FreeBSD UIDs to DragonFly UIDs.
+    Transform GIDs file content by inserting DragonFly-specific groups.
+    
+    Inserts EXTRA_GIDS entries after the 'nogroup:' line.
     
     Args:
-        content: File content
+        content: Original GIDs file content
         
     Returns:
-        Transformed content
+        Transformed content with extra groups
     """
-    for fbsd_uid, dfly_uid in EXTRA_UIDS.items():
-        # Transform USERS= assignments
-        content = re.sub(
-            rf'\bUSERS\s*[+=]\s*{re.escape(fbsd_uid)}\b',
-            f'USERS+={dfly_uid}',
-            content
-        )
-        # Transform RUN_AS_USER
-        content = re.sub(
-            rf'\bRUN_AS_USER\s*[?:]?=\s*{re.escape(fbsd_uid)}\b',
-            f'RUN_AS_USER?={dfly_uid}',
-            content
-        )
+    lines = content.splitlines()
+    result = []
     
-    return content
+    for line in lines:
+        result.append(line)
+        if 'nogroup:' in line:
+            result.extend(EXTRA_GIDS)
+    
+    return '\n'.join(result) + '\n'
 
 
-def transform_gids(content: str) -> str:
+def transform_uids_file(content: str) -> str:
     """
-    Transform FreeBSD GIDs to DragonFly GIDs.
+    Transform UIDs file content by inserting DragonFly-specific users.
+    
+    Inserts EXTRA_UIDS entries after the 'nobody:' line.
     
     Args:
-        content: File content
+        content: Original UIDs file content
         
     Returns:
-        Transformed content
+        Transformed content with extra users
     """
-    for fbsd_gid, dfly_gid in EXTRA_GIDS.items():
-        # Transform GROUPS= assignments
-        content = re.sub(
-            rf'\bGROUPS\s*[+=]\s*{re.escape(fbsd_gid)}\b',
-            f'GROUPS+={dfly_gid}',
-            content
-        )
+    lines = content.splitlines()
+    result = []
     
-    return content
+    for line in lines:
+        result.append(line)
+        if 'nobody:' in line:
+            result.extend(EXTRA_UIDS)
+    
+    return '\n'.join(result) + '\n'
 
 
-def transform_platform_conditionals(content: str) -> str:
+def transform_moved_file(content: str, cutoff_year: int = 2012) -> str:
     """
-    Transform platform-specific conditionals.
+    Transform MOVED file by filtering out old entries.
     
-    Handles patterns like:
-    - .if ${OPSYS} == FreeBSD
-    - .ifdef FREEBSD
+    Keeps comment lines and entries from after the cutoff year.
     
     Args:
-        content: File content
+        content: Original MOVED file content
+        cutoff_year: Keep entries after this year (default: 2012)
         
     Returns:
-        Transformed content
+        Filtered content
     """
-    # This is a placeholder - actual transformations depend on
-    # specific patterns found in the ports tree
+    lines = []
     
-    # Example: Add DragonFly to FreeBSD conditionals
-    # .if ${OPSYS} == FreeBSD -> .if ${OPSYS} == FreeBSD || ${OPSYS} == DragonFly
+    for line in content.splitlines():
+        if line.startswith('#'):
+            lines.append(line)
+        else:
+            parts = line.split('|')
+            if len(parts) >= 3:
+                try:
+                    year = int(parts[2].split('-')[0])
+                    if year > cutoff_year:
+                        lines.append(line)
+                except (ValueError, IndexError):
+                    # Keep lines we can't parse
+                    lines.append(line)
+            else:
+                lines.append(line)
     
-    return content
+    return '\n'.join(lines) + '\n'
 
 
-def transform_paths(content: str) -> str:
+def transform_tools_file(content: str) -> str:
     """
-    Transform FreeBSD-specific paths to DragonFly equivalents.
+    Transform Tools/ files by fixing perl shebang.
+    
+    FreeBSD uses /usr/bin/perl, DragonFly uses /usr/local/bin/perl.
     
     Args:
-        content: File content
+        content: Original file content
         
     Returns:
-        Transformed content
+        Content with fixed shebang
     """
-    # Path transformations
-    replacements = {
-        # Example: "/usr/local/etc/rc.d" might need adjustment
-        # Add actual path mappings as needed
-    }
-    
-    for old_path, new_path in replacements.items():
-        content = content.replace(old_path, new_path)
-    
-    return content
+    return content.replace('#!/usr/bin/perl', '#!/usr/local/bin/perl')

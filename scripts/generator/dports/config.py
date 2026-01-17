@@ -161,6 +161,12 @@ class Config:
         # For now, assume single tree at freebsd_ports
         return self.paths.freebsd_ports / origin
 
+    def get_freebsd_ports_path(self, quarterly: str) -> Path:
+        """Get the path to the FreeBSD ports tree for a specific quarterly."""
+        # For multi-quarterly support, this might return different paths
+        # For now, assume single tree at freebsd_ports
+        return self.paths.freebsd_ports
+
     def get_overlay_port_path(self, origin: str) -> Path:
         """Get the path to a port's overlay in DeltaPorts."""
         return self.paths.delta / "ports" / origin

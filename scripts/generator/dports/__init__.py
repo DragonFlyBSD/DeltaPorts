@@ -13,14 +13,23 @@ Key features:
 
 __version__ = "2.0.0-dev"
 __all__ = [
+    # Config
     "Config",
-    "Overlay",
+    # Models
     "PortOrigin",
     "MergeResult",
+    # Overlay
+    "Overlay",
+    # State
     "BuildState",
+    # Transform functions
+    "transform_content",
+    "transform_file",
+    "needs_transform",
 ]
 
 from dports.config import Config
 from dports.models import PortOrigin, MergeResult
 from dports.overlay import Overlay
 from dports.state import BuildState
+from dports.transform import transform_content, transform_file, needs_transform
