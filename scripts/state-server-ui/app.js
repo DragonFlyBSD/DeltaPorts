@@ -38,12 +38,15 @@
     triage_written: 'warning',
     patch_written: 'warning',
     bundle_created: 'info',
+    bundle_upserted: 'info',
+    artifact_put: 'secondary',
     job_enqueued: 'secondary',
     job_claimed: 'primary',
     job_done: 'success',
     run_started: 'info',
     activity: 'info',
     runner_status: 'primary',
+    user_context_updated: 'info',
   };
 
   // Runner status display config
