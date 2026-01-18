@@ -1,0 +1,10 @@
+#!/bin/sh
+
+# Keep success hook lightweight by default.
+# This hook exists so users can extend it later.
+
+set -eu
+
+. "$(dirname "$0")/hook_common.sh"
+
+exit 0

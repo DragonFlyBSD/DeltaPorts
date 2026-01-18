@@ -1,0 +1,17 @@
+#!/bin/sh
+
+set -eu
+
+. "$(dirname "$0")/hook_common.sh"
+
+root=$(evidence_root)
+ts=$(now_utc)
+run_id="run-$(sanitize_component "${PROFILE}")-${ts}-$$"
+
+# Ensure queue directories exist.
+ensure_queue_dirs
+
+# Record current run id for per-port hooks.
+printf '%s\n' "${run_id}" > "${root}/.current_run"
+
+exit 0

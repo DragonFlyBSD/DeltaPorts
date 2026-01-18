@@ -1,0 +1,1369 @@
+#!/usr/bin/env python3
+"""
+state-server: Observe-only server for dsynth evidence bundles and job queue.
+
+Provides a REST API and SSE event stream for remote UIs to monitor build
+failures, triage/patch progress, and artifact access.
+
+Usage:
+    state-server --logs-root <path> [--bind <addr>] [--port <port>]
+
+Environment variables (alternative to flags):
+    LOGS_ROOT           Path to dsynth Directory_logs
+    STATE_SERVER_BIND   Bind address (default: 127.0.0.1)
+    STATE_SERVER_PORT   Port (default: 8787)
+
+This server is READ-ONLY / OBSERVE-ONLY:
+    - It does NOT drain jobs
+    - It does NOT call opencode serve
+    - It does NOT run builds
+    - It does NOT modify any files except its own SQLite database
+"""
+
+import argparse
+import json
+import mimetypes
+import os
+import re
+import sqlite3
+import sys
+import threading
+import time
+from datetime import datetime, timezone
+from http.server import HTTPServer, BaseHTTPRequestHandler
+from pathlib import Path
+from socketserver import ThreadingMixIn
+from typing import Any
+from urllib.parse import parse_qs, urlparse
+
+
+# =============================================================================
+# Configuration
+# =============================================================================
+
+DEFAULT_BIND = "127.0.0.1"
+DEFAULT_PORT = 8787
+DEFAULT_POLL_INTERVAL = 1.0
+
+# Artifact paths we track (relative to bundle dir)
+TRACKED_ARTIFACTS = [
+    "meta.txt",
+    "logfile.txt",
+    "logs/errors.txt",
+    "logs/full.log.gz",
+    "analysis/triage.md",
+    "analysis/triage.json",
+    "analysis/patch.diff",
+    "analysis/patch.diff.invalid",
+    "analysis/patch.md",
+    "analysis/patch.json",
+    "analysis/session_id.txt",
+    "analysis/patch_session_id.txt",
+    "analysis/branch.txt",
+    "analysis/commit.txt",
+    "analysis/rebuild_status.txt",
+    "analysis/pr_url.txt",
+    "port/Makefile",
+    "port/Makefile.DragonFly",
+    "port/distinfo",
+    "port/pkg-plist",
+    "port/pkg-descr",
+]
+
+
+# =============================================================================
+# Logging
+# =============================================================================
+
+def log(level: str, message: str):
+    """Log to stderr with timestamp."""
+    ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    print(f"{ts} {level:5} {message}", file=sys.stderr)
+
+
+# =============================================================================
+# SQLite Schema + Helpers
+# =============================================================================
+
+SCHEMA = """
+CREATE TABLE IF NOT EXISTS runs (
+    run_id TEXT PRIMARY KEY,
+    profile TEXT,
+    path TEXT,
+    ts_start TEXT,
+    ts_end TEXT,
+    last_seen_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS bundles (
+    bundle_id TEXT PRIMARY KEY,
+    run_id TEXT,
+    origin TEXT,
+    flavor TEXT,
+    ts_utc TEXT,
+    result TEXT,
+    path TEXT,
+    last_seen_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS jobs (
+    job_id TEXT PRIMARY KEY,
+    state TEXT,
+    type TEXT,
+    origin TEXT,
+    flavor TEXT,
+    bundle_dir TEXT,
+    created_ts_utc TEXT,
+    path TEXT,
+    last_error TEXT,
+    last_seen_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS artifacts (
+    bundle_id TEXT,
+    relpath TEXT,
+    kind TEXT,
+    mtime REAL,
+    size INTEGER,
+    PRIMARY KEY (bundle_id, relpath)
+);
+
+CREATE TABLE IF NOT EXISTS events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts TEXT,
+    type TEXT,
+    data_json TEXT
+);
+
+-- Activity log: written by agent-queue-runner, read by UI
+-- Keeps last 10 entries globally (pruned by runner)
+CREATE TABLE IF NOT EXISTS activity_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts TEXT NOT NULL,
+    job_id TEXT,
+    stage TEXT NOT NULL,
+    message TEXT NOT NULL,
+    duration_ms INTEGER,
+    extra_json TEXT
+);
+
+-- Runner status: singleton row updated by agent-queue-runner heartbeat
+CREATE TABLE IF NOT EXISTS runner_status (
+    id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+    status TEXT NOT NULL DEFAULT 'unknown',
+    job_id TEXT,
+    current_stage TEXT,
+    started_at TEXT,
+    updated_at TEXT,
+    extra_json TEXT
+);
+
+-- User-provided context (scoped to run_id + origin)
+CREATE TABLE IF NOT EXISTS user_context (
+    run_id TEXT NOT NULL,
+    origin TEXT NOT NULL,
+    context_text TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    context_rev INTEGER NOT NULL DEFAULT 1,
+    PRIMARY KEY (run_id, origin)
+);
+
+-- Requests for user context when confidence is low/unknown
+CREATE TABLE IF NOT EXISTS user_context_requests (
+    run_id TEXT NOT NULL,
+    origin TEXT NOT NULL,
+    bundle_id TEXT NOT NULL,
+    confidence TEXT,
+    classification TEXT,
+    iteration INTEGER,
+    max_iterations INTEGER,
+    requested_at TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    last_context_rev_handled INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (run_id, origin, bundle_id)
+);
+
+CREATE TABLE IF NOT EXISTS blob_objects (
+    sha256 TEXT PRIMARY KEY,
+    size INTEGER NOT NULL,
+    created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS artifact_refs (
+    bundle_id TEXT NOT NULL,
+    relpath TEXT NOT NULL,
+    backend TEXT NOT NULL,
+    sha256 TEXT,
+    fs_path TEXT,
+    kind TEXT,
+    size INTEGER,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (bundle_id, relpath)
+);
+
+CREATE INDEX IF NOT EXISTS idx_bundles_origin ON bundles(origin);
+CREATE INDEX IF NOT EXISTS idx_jobs_state ON jobs(state);
+CREATE INDEX IF NOT EXISTS idx_events_id ON events(id);
+CREATE INDEX IF NOT EXISTS idx_activity_log_ts ON activity_log(ts);
+CREATE INDEX IF NOT EXISTS idx_user_context_updated ON user_context(updated_at);
+CREATE INDEX IF NOT EXISTS idx_user_context_requests_pending ON user_context_requests(status, requested_at);
+CREATE INDEX IF NOT EXISTS idx_artifact_refs_bundle ON artifact_refs(bundle_id);
+CREATE INDEX IF NOT EXISTS idx_artifact_refs_sha ON artifact_refs(sha256);
+"""
+
+
+def init_db(db_path: Path) -> sqlite3.Connection:
+    """Initialize SQLite database with schema."""
+    conn = sqlite3.connect(str(db_path), check_same_thread=False)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout=5000")
+    conn.executescript(SCHEMA)
+    conn.commit()
+    return conn
+
+
+def emit_event(conn: sqlite3.Connection, event_type: str, data: dict):
+    """Insert an event for SSE replay."""
+    ts = datetime.now(timezone.utc).isoformat()
+    conn.execute(
+        "INSERT INTO events (ts, type, data_json) VALUES (?, ?, ?)",
+        (ts, event_type, json.dumps(data))
+    )
+    conn.commit()
+
+
+# =============================================================================
+# Filesystem Scanner / Reconciler
+# =============================================================================
+
+class Observer:
+    """Observes evidence directory and reconciles state into SQLite."""
+    
+    def __init__(self, logs_root: Path, conn: sqlite3.Connection):
+        self.logs_root = logs_root
+        self.evidence_root = logs_root / "evidence"
+        self.runs_root = self.evidence_root / "runs"
+        self.queue_root = self.evidence_root / "queue"
+        self.conn = conn
+        self.lock = threading.Lock()
+        self.db_only = os.environ.get("EVIDENCE_DB_ONLY") == "1"
+        # Track last seen activity log id for SSE event emission
+        self._last_activity_id = 0
+        # Track runner status key (status, job_id, stage) - only emit on meaningful changes
+        self._last_runner_status_key = (None, None, None)
+    
+    def scan(self):
+        """Perform one scan cycle."""
+        now = datetime.now(timezone.utc).isoformat()
+        
+        with self.lock:
+            if not self.db_only:
+                self._scan_runs(now)
+            self._scan_queue(now)
+            self._scan_activity_changes()
+            self._scan_runner_status_changes()
+    
+    def _scan_activity_changes(self):
+        """Check for new activity log entries and emit SSE events."""
+        # Get latest activity log id
+        row = self.conn.execute(
+            "SELECT MAX(id) as max_id FROM activity_log"
+        ).fetchone()
+        max_id = row["max_id"] if row and row["max_id"] else 0
+        
+        if max_id > self._last_activity_id:
+            # Fetch new entries
+            rows = self.conn.execute(
+                """SELECT id, ts, job_id, stage, message, duration_ms
+                   FROM activity_log WHERE id > ? ORDER BY id""",
+                (self._last_activity_id,)
+            ).fetchall()
+            
+            for r in rows:
+                emit_event(self.conn, "activity", {
+                    "activity_id": r["id"],
+                    "job_id": r["job_id"],
+                    "stage": r["stage"],
+                    "message": r["message"],
+                    "duration_ms": r["duration_ms"],
+                })
+            
+            self._last_activity_id = max_id
+    
+    def _scan_runner_status_changes(self):
+        """Check for runner status changes and emit SSE events."""
+        row = self.conn.execute(
+            """SELECT status, job_id, current_stage, started_at, updated_at
+               FROM runner_status WHERE id = 1"""
+        ).fetchone()
+        
+        if not row:
+            return
+        
+        # Only emit event when meaningful fields change (not just heartbeat updated_at)
+        key = (row["status"], row["job_id"], row["current_stage"])
+        if key != self._last_runner_status_key:
+            emit_event(self.conn, "runner_status", {
+                "status": row["status"],
+                "job_id": row["job_id"],
+                "current_stage": row["current_stage"],
+                "started_at": row["started_at"],
+                "updated_at": row["updated_at"],
+            })
+            self._last_runner_status_key = key
+    
+    def _scan_runs(self, now: str):
+        """Scan runs and bundles."""
+        if not self.runs_root.exists():
+            return
+        
+        for run_dir in self.runs_root.iterdir():
+            if not run_dir.is_dir() or not run_dir.name.startswith("run-"):
+                continue
+            
+            run_id = run_dir.name
+            self._upsert_run(run_id, run_dir, now)
+            
+            # Scan bundles under this run
+            ports_dir = run_dir / "ports"
+            if ports_dir.exists():
+                for bundle_dir in ports_dir.iterdir():
+                    if bundle_dir.is_dir():
+                        self._upsert_bundle(bundle_dir, run_id, now)
+    
+    def _upsert_run(self, run_id: str, run_dir: Path, now: str):
+        """Upsert a run record."""
+        existing = self.conn.execute(
+            "SELECT run_id FROM runs WHERE run_id = ?", (run_id,)
+        ).fetchone()
+        
+        # Parse run metadata
+        profile = None
+        ts_start = None
+        ts_end = None
+        
+        # Try to extract from run_id: run-<profile>-<timestamp>-<pid>
+        parts = run_id.split("-")
+        if len(parts) >= 4:
+            profile = parts[1]
+            ts_start = "-".join(parts[2:4])  # timestamp portion
+        
+        # Check for run_start.txt and run_end.txt
+        start_file = run_dir / "run_start.txt"
+        end_file = run_dir / "run_end.txt"
+        
+        if start_file.exists():
+            content = start_file.read_text()
+            for line in content.splitlines():
+                if line.startswith("ts_utc="):
+                    ts_start = line.split("=", 1)[1]
+                elif line.startswith("profile="):
+                    profile = line.split("=", 1)[1]
+        
+        if end_file.exists():
+            content = end_file.read_text()
+            for line in content.splitlines():
+                if line.startswith("ts_utc="):
+                    ts_end = line.split("=", 1)[1]
+        
+        if existing:
+            self.conn.execute(
+                """UPDATE runs SET profile=?, path=?, ts_start=?, ts_end=?, last_seen_at=?
+                   WHERE run_id=?""",
+                (profile, str(run_dir), ts_start, ts_end, now, run_id)
+            )
+        else:
+            self.conn.execute(
+                """INSERT INTO runs (run_id, profile, path, ts_start, ts_end, last_seen_at)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                (run_id, profile, str(run_dir), ts_start, ts_end, now)
+            )
+            emit_event(self.conn, "run_started", {"run_id": run_id, "profile": profile})
+        
+        self.conn.commit()
+    
+    def _upsert_bundle(self, bundle_dir: Path, run_id: str, now: str):
+        """Upsert a bundle record and its artifacts."""
+        bundle_id = bundle_dir.name
+        
+        existing = self.conn.execute(
+            "SELECT bundle_id FROM bundles WHERE bundle_id = ?", (bundle_id,)
+        ).fetchone()
+        
+        # Parse meta.txt
+        origin = None
+        flavor = None
+        ts_utc = None
+        result = None
+        
+        meta_file = bundle_dir / "meta.txt"
+        if meta_file.exists():
+            for line in meta_file.read_text().splitlines():
+                if "=" in line:
+                    key, _, value = line.partition("=")
+                    key = key.strip()
+                    value = value.strip()
+                    if key == "origin":
+                        origin = value
+                    elif key == "flavor":
+                        flavor = value
+                    elif key == "ts_utc":
+                        ts_utc = value
+                    elif key == "result":
+                        result = value
+        
+        if existing:
+            self.conn.execute(
+                """UPDATE bundles SET run_id=?, origin=?, flavor=?, ts_utc=?, result=?, 
+                   path=?, last_seen_at=? WHERE bundle_id=?""",
+                (run_id, origin, flavor, ts_utc, result, str(bundle_dir), now, bundle_id)
+            )
+        else:
+            self.conn.execute(
+                """INSERT INTO bundles (bundle_id, run_id, origin, flavor, ts_utc, result, path, last_seen_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                (bundle_id, run_id, origin, flavor, ts_utc, result, str(bundle_dir), now)
+            )
+            emit_event(self.conn, "bundle_created", {
+                "bundle_id": bundle_id, "run_id": run_id, "origin": origin
+            })
+        
+        self.conn.commit()
+        
+        # Scan artifacts
+        self._scan_artifacts(bundle_id, bundle_dir, now)
+    
+    def _scan_artifacts(self, bundle_id: str, bundle_dir: Path, now: str):
+        """Scan and upsert artifacts for a bundle."""
+        for relpath in TRACKED_ARTIFACTS:
+            artifact_path = bundle_dir / relpath
+            if artifact_path.exists():
+                stat = artifact_path.stat()
+                mtime = stat.st_mtime
+                size = stat.st_size
+                
+                # Determine kind
+                kind = "unknown"
+                if relpath.endswith(".md"):
+                    kind = "markdown"
+                elif relpath.endswith(".json"):
+                    kind = "json"
+                elif relpath.endswith(".txt"):
+                    kind = "text"
+                elif relpath.endswith(".diff"):
+                    kind = "diff"
+                elif relpath.endswith(".gz"):
+                    kind = "gzip"
+                
+                # Check if artifact is new or changed
+                existing = self.conn.execute(
+                    "SELECT mtime FROM artifacts WHERE bundle_id=? AND relpath=?",
+                    (bundle_id, relpath)
+                ).fetchone()
+                
+                if existing:
+                    if existing["mtime"] != mtime:
+                        self.conn.execute(
+                            """UPDATE artifacts SET kind=?, mtime=?, size=? 
+                               WHERE bundle_id=? AND relpath=?""",
+                            (kind, mtime, size, bundle_id, relpath)
+                        )
+                        self._emit_artifact_event(bundle_id, relpath)
+                else:
+                    self.conn.execute(
+                        """INSERT INTO artifacts (bundle_id, relpath, kind, mtime, size)
+                           VALUES (?, ?, ?, ?, ?)""",
+                        (bundle_id, relpath, kind, mtime, size)
+                    )
+                    self._emit_artifact_event(bundle_id, relpath)
+                
+                self.conn.commit()
+    
+    def _emit_artifact_event(self, bundle_id: str, relpath: str):
+        """Emit appropriate event based on artifact type."""
+        event_map = {
+            "analysis/triage.md": "triage_written",
+            "analysis/patch.diff": "patch_written",
+            "analysis/pr_url.txt": "pr_created",
+        }
+        
+        event_type = event_map.get(relpath)
+        if event_type:
+            emit_event(self.conn, event_type, {"bundle_id": bundle_id, "artifact": relpath})
+    
+    def _scan_queue(self, now: str):
+        """Scan job queue directories."""
+        if not self.queue_root.exists():
+            return
+        
+        states = ["pending", "inflight", "done", "failed"]
+        
+        for state in states:
+            state_dir = self.queue_root / state
+            if not state_dir.exists():
+                continue
+            
+            for job_file in state_dir.glob("*.job"):
+                self._upsert_job(job_file, state, now)
+    
+    def _upsert_job(self, job_path: Path, state: str, now: str):
+        """Upsert a job record."""
+        job_id = job_path.name
+        
+        existing = self.conn.execute(
+            "SELECT job_id, state FROM jobs WHERE job_id = ?", (job_id,)
+        ).fetchone()
+        
+        # Parse job file
+        job_type = "triage"
+        origin = None
+        flavor = None
+        bundle_dir = None
+        created_ts_utc = None
+        
+        if job_path.exists():
+            for line in job_path.read_text().splitlines():
+                if "=" in line:
+                    key, _, value = line.partition("=")
+                    key = key.strip()
+                    value = value.strip()
+                    if key == "type":
+                        job_type = value
+                    elif key == "origin":
+                        origin = value
+                    elif key == "flavor":
+                        flavor = value
+                    elif key == "bundle_dir":
+                        bundle_dir = value
+                    elif key == "created_ts_utc":
+                        created_ts_utc = value
+        
+        # Check for error file
+        last_error = None
+        error_file = job_path.with_suffix(".job.error")
+        if error_file.exists():
+            last_error = error_file.read_text()[:500]
+        
+        old_state = existing["state"] if existing else None
+        
+        if existing:
+            self.conn.execute(
+                """UPDATE jobs SET state=?, type=?, origin=?, flavor=?, bundle_dir=?,
+                   created_ts_utc=?, path=?, last_error=?, last_seen_at=?
+                   WHERE job_id=?""",
+                (state, job_type, origin, flavor, bundle_dir, created_ts_utc,
+                 str(job_path), last_error, now, job_id)
+            )
+        else:
+            self.conn.execute(
+                """INSERT INTO jobs (job_id, state, type, origin, flavor, bundle_dir,
+                   created_ts_utc, path, last_error, last_seen_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (job_id, state, job_type, origin, flavor, bundle_dir,
+                 created_ts_utc, str(job_path), last_error, now)
+            )
+        
+        self.conn.commit()
+        
+        # Emit state transition events
+        if old_state != state:
+            event_type = {
+                "pending": "job_enqueued",
+                "inflight": "job_claimed",
+                "done": "job_done",
+                "failed": "job_failed",
+            }.get(state)
+            
+            if event_type:
+                emit_event(self.conn, event_type, {
+                    "job_id": job_id, "state": state, "origin": origin, "type": job_type
+                })
+
+
+# =============================================================================
+# HTTP Request Handler
+# =============================================================================
+
+class StateServerHandler(BaseHTTPRequestHandler):
+    """HTTP request handler for state server."""
+    
+    protocol_version = "HTTP/1.1"
+    
+    def log_message(self, format, *args):
+        """Override to use our logging."""
+        log("HTTP", f"{self.address_string()} - {format % args}")
+    
+    def _send_json(self, data: Any, status: int = 200):
+        """Send JSON response."""
+        body = json.dumps(data, indent=2).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+    
+    def _send_error_json(self, status: int, message: str):
+        """Send JSON error response."""
+        self._send_json({"error": message}, status)
+    
+    def _read_json_body(self) -> dict[str, Any] | None:
+        """Read JSON body from request, return dict or None."""
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            length = 0
+        if length <= 0:
+            return None
+        raw = self.rfile.read(length)
+        if not raw:
+            return None
+        try:
+            return json.loads(raw.decode("utf-8"))
+        except json.JSONDecodeError:
+            return None
+    
+    def _get_conn(self) -> sqlite3.Connection:
+        """Get database connection from server."""
+        return self.server.db_conn
+    
+    def _get_observer(self) -> Observer:
+        """Get observer from server."""
+        return self.server.observer
+    
+    def do_GET(self):
+        """Handle GET requests."""
+        try:
+            parsed = urlparse(self.path)
+            path = parsed.path
+
+            # Normalize accidental trailing slashes (e.g. /bundles/)
+            if path != "/" and path.endswith("/"):
+                path = path.rstrip("/")
+
+            # Guard against malformed double-slash routes (e.g. /bundles//...)
+            if path.startswith("/bundles//") or path.startswith("/runs//") or path.startswith("/jobs//"):
+                self._send_error_json(400, "Invalid path")
+                return
+
+            query = parse_qs(parsed.query)
+            if path == "/health":
+                self._handle_health()
+            elif path == "/status":
+                self._handle_status()
+            elif path == "/activity":
+                self._handle_activity()
+            elif path == "/runner-status":
+                self._handle_runner_status()
+            elif path == "/user-context":
+                self._handle_user_context_get(query)
+            elif path == "/user-context-request":
+                self._handle_user_context_request(query)
+            elif path == "/runs":
+                self._handle_runs()
+            elif path.startswith("/runs/"):
+                run_id = path[6:]
+                self._handle_run(run_id)
+            elif path == "/jobs":
+                state = query.get("state", [None])[0]
+                self._handle_jobs(state)
+            elif path.startswith("/jobs/"):
+                job_id = path[6:]
+                self._handle_job(job_id)
+            elif path == "/bundles":
+                self._handle_bundles()
+            elif path.startswith("/bundles/") and "/artifacts/" in path:
+                # /bundles/<bundle_id>/artifacts/<relpath>
+                match = re.match(r"^/bundles/([^/]+)/artifacts/(.+)$", path)
+                if match:
+                    bundle_id = match.group(1)
+                    relpath = match.group(2)
+                    self._handle_artifact(bundle_id, relpath)
+                else:
+                    self._send_error_json(400, "Invalid artifact path")
+            elif path.startswith("/bundles/"):
+                bundle_id = path[9:]
+                self._handle_bundle(bundle_id)
+            elif path.startswith("/ports/"):
+                origin = path[7:]
+                self._handle_port(origin)
+            elif path == "/":
+                self._handle_static_ui("index.html", content_type="text/html; charset=utf-8")
+            elif path == "/assets/app.js":
+                self._handle_static_ui("app.js", content_type="application/javascript; charset=utf-8")
+            elif path == "/assets/app.css":
+                self._handle_static_ui("app.css", content_type="text/css; charset=utf-8")
+            elif path == "/events":
+                last_event_id = self.headers.get("Last-Event-ID")
+                self._handle_events(last_event_id, query)
+            else:
+                self._send_error_json(404, "Not found")
+        except Exception as e:
+            log("ERROR", f"Request failed: {e}")
+            self._send_error_json(500, str(e))
+
+    def do_POST(self):
+        """Handle POST requests."""
+        parsed = urlparse(self.path)
+        path = parsed.path
+        
+        try:
+            if path == "/user-context":
+                self._handle_user_context_post()
+            else:
+                self._send_error_json(404, "Not found")
+        except Exception as e:
+            log("ERROR", f"Request failed: {e}")
+            self._send_error_json(500, str(e))
+    
+    def _handle_health(self):
+        """GET /health"""
+        self._send_json({"ok": True})
+    
+    def _handle_status(self):
+        """GET /status"""
+        conn = self._get_conn()
+        
+        # Job counts by state
+        job_counts = {}
+        for row in conn.execute(
+            "SELECT state, COUNT(*) as count FROM jobs GROUP BY state"
+        ):
+            job_counts[row["state"]] = row["count"]
+        
+        # Total counts
+        bundle_count = conn.execute("SELECT COUNT(*) FROM bundles").fetchone()[0]
+        run_count = conn.execute("SELECT COUNT(*) FROM runs").fetchone()[0]
+        
+        # Last event ID
+        last_event = conn.execute(
+            "SELECT id FROM events ORDER BY id DESC LIMIT 1"
+        ).fetchone()
+        last_event_id = last_event["id"] if last_event else 0
+        
+        self._send_json({
+            "jobs": job_counts,
+            "bundles": bundle_count,
+            "runs": run_count,
+            "last_event_id": last_event_id,
+        })
+    
+    def _handle_activity(self):
+        """GET /activity - Returns last 10 activity log entries"""
+        conn = self._get_conn()
+        
+        rows = conn.execute(
+            """SELECT id, ts, job_id, stage, message, duration_ms, extra_json
+               FROM activity_log ORDER BY id DESC LIMIT 10"""
+        ).fetchall()
+        
+        activities = []
+        for row in rows:
+            entry = {
+                "id": row["id"],
+                "ts": row["ts"],
+                "job_id": row["job_id"],
+                "stage": row["stage"],
+                "message": row["message"],
+                "duration_ms": row["duration_ms"],
+            }
+            # Parse extra_json if present
+            if row["extra_json"]:
+                try:
+                    entry["extra"] = json.loads(row["extra_json"])
+                except json.JSONDecodeError:
+                    pass
+            activities.append(entry)
+        
+        # Return in chronological order (oldest first)
+        activities.reverse()
+        
+        self._send_json({"activities": activities})
+    
+    def _handle_runner_status(self):
+        """GET /runner-status - Returns current runner status"""
+        conn = self._get_conn()
+        
+        row = conn.execute(
+            """SELECT status, job_id, current_stage, started_at, updated_at, extra_json
+               FROM runner_status WHERE id = 1"""
+        ).fetchone()
+        
+        if not row:
+            # No runner status yet
+            self._send_json({
+                "status": "unknown",
+                "job_id": None,
+                "current_stage": None,
+                "started_at": None,
+                "updated_at": None,
+                "stale": True,
+            })
+            return
+        
+        result = {
+            "status": row["status"],
+            "job_id": row["job_id"],
+            "current_stage": row["current_stage"],
+            "started_at": row["started_at"],
+            "updated_at": row["updated_at"],
+        }
+        
+        # Parse extra_json if present
+        if row["extra_json"]:
+            try:
+                result["extra"] = json.loads(row["extra_json"])
+            except json.JSONDecodeError:
+                pass
+        
+        # Check if status is stale (no update in last 15 seconds)
+        if row["updated_at"]:
+            try:
+                updated = datetime.fromisoformat(row["updated_at"].replace("Z", "+00:00"))
+                now = datetime.now(timezone.utc)
+                stale_seconds = 15
+                result["stale"] = (now - updated).total_seconds() > stale_seconds
+            except (ValueError, TypeError):
+                result["stale"] = True
+        else:
+            result["stale"] = True
+        
+        self._send_json(result)
+    
+    def _handle_user_context_get(self, query: dict[str, list[str]]):
+        """GET /user-context?run_id=...&origin=..."""
+        run_id = query.get("run_id", [None])[0]
+        origin = query.get("origin", [None])[0]
+        if not run_id or not origin:
+            self._send_error_json(400, "run_id and origin required")
+            return
+        
+        conn = self._get_conn()
+        row = conn.execute(
+            """SELECT run_id, origin, context_text, updated_at, context_rev
+               FROM user_context WHERE run_id = ? AND origin = ?""",
+            (run_id, origin)
+        ).fetchone()
+        
+        if not row:
+            self._send_json({"context": None})
+            return
+        
+        self._send_json({"context": dict(row)})
+    
+    def _handle_user_context_request(self, query: dict[str, list[str]]):
+        """GET /user-context-request?bundle_id=... or ?run_id=...&origin=..."""
+        bundle_id = query.get("bundle_id", [None])[0]
+        run_id = query.get("run_id", [None])[0]
+        origin = query.get("origin", [None])[0]
+        
+        conn = self._get_conn()
+        if bundle_id:
+            row = conn.execute(
+                """SELECT * FROM user_context_requests
+                   WHERE bundle_id = ? ORDER BY requested_at DESC LIMIT 1""",
+                (bundle_id,)
+            ).fetchone()
+        elif run_id and origin:
+            row = conn.execute(
+                """SELECT * FROM user_context_requests
+                   WHERE run_id = ? AND origin = ?
+                   ORDER BY requested_at DESC LIMIT 1""",
+                (run_id, origin)
+            ).fetchone()
+        else:
+            self._send_error_json(400, "bundle_id or run_id+origin required")
+            return
+        
+        if not row:
+            self._send_json({"request": None})
+            return
+        
+        self._send_json({"request": dict(row)})
+    
+    def _handle_user_context_post(self):
+        """POST /user-context {run_id, origin, context_text}"""
+        body = self._read_json_body()
+        if not body:
+            self._send_error_json(400, "invalid JSON body")
+            return
+        
+        run_id = body.get("run_id")
+        origin = body.get("origin")
+        context_text = body.get("context_text")
+        if not run_id or not origin or context_text is None:
+            self._send_error_json(400, "run_id, origin, context_text required")
+            return
+        
+        context_text = str(context_text).strip()
+        if not context_text:
+            self._send_error_json(400, "context_text cannot be empty")
+            return
+        if len(context_text) > 8000:
+            self._send_error_json(400, "context_text too long")
+            return
+        
+        conn = self._get_conn()
+        row = conn.execute(
+            """SELECT context_rev FROM user_context WHERE run_id = ? AND origin = ?""",
+            (run_id, origin)
+        ).fetchone()
+        now = datetime.now(timezone.utc).isoformat()
+        if row:
+            new_rev = int(row["context_rev"]) + 1
+            conn.execute(
+                """UPDATE user_context SET context_text = ?, updated_at = ?, context_rev = ?
+                   WHERE run_id = ? AND origin = ?""",
+                (context_text, now, new_rev, run_id, origin)
+            )
+        else:
+            new_rev = 1
+            conn.execute(
+                """INSERT INTO user_context (run_id, origin, context_text, updated_at, context_rev)
+                   VALUES (?, ?, ?, ?, ?)""",
+                (run_id, origin, context_text, now, new_rev)
+            )
+        conn.commit()
+        
+        emit_event(conn, "user_context_updated", {
+            "run_id": run_id,
+            "origin": origin,
+            "context_rev": new_rev,
+            "updated_at": now,
+        })
+        
+        self._send_json({"ok": True, "context_rev": new_rev})
+    
+    def _handle_runs(self):
+        """GET /runs"""
+        conn = self._get_conn()
+        rows = conn.execute(
+            "SELECT run_id, profile, ts_start, ts_end FROM runs ORDER BY ts_start DESC LIMIT 100"
+        ).fetchall()
+        
+        runs = [dict(row) for row in rows]
+        self._send_json({"runs": runs})
+    
+    def _handle_run(self, run_id: str):
+        """GET /runs/<run_id>"""
+        conn = self._get_conn()
+        
+        run = conn.execute(
+            "SELECT * FROM runs WHERE run_id = ?", (run_id,)
+        ).fetchone()
+        
+        if not run:
+            self._send_error_json(404, "Run not found")
+            return
+        
+        bundles = conn.execute(
+            "SELECT bundle_id, origin, ts_utc, result FROM bundles WHERE run_id = ?",
+            (run_id,)
+        ).fetchall()
+        
+        self._send_json({
+            "run": dict(run),
+            "bundles": [dict(b) for b in bundles],
+        })
+    
+    def _handle_jobs(self, state: str | None):
+        """GET /jobs?state=..."""
+        conn = self._get_conn()
+        
+        if state:
+            rows = conn.execute(
+                """SELECT job_id, state, type, origin, created_ts_utc 
+                   FROM jobs WHERE state = ? ORDER BY created_ts_utc DESC LIMIT 100""",
+                (state,)
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                """SELECT job_id, state, type, origin, created_ts_utc 
+                   FROM jobs ORDER BY created_ts_utc DESC LIMIT 100"""
+            ).fetchall()
+        
+        jobs = [dict(row) for row in rows]
+        self._send_json({"jobs": jobs})
+    
+    def _handle_job(self, job_id: str):
+        """GET /jobs/<job_id>"""
+        conn = self._get_conn()
+        
+        job = conn.execute(
+            "SELECT * FROM jobs WHERE job_id = ?", (job_id,)
+        ).fetchone()
+        
+        if not job:
+            self._send_error_json(404, "Job not found")
+            return
+        
+        self._send_json({"job": dict(job)})
+    
+    def _handle_bundles(self):
+        """GET /bundles"""
+        conn = self._get_conn()
+        rows = conn.execute(
+            """SELECT bundle_id, run_id, origin, ts_utc, result 
+               FROM bundles ORDER BY ts_utc DESC LIMIT 100"""
+        ).fetchall()
+        
+        bundles = [dict(row) for row in rows]
+        self._send_json({"bundles": bundles})
+    
+    def _handle_bundle(self, bundle_id: str):
+        """GET /bundles/<bundle_id>"""
+        conn = self._get_conn()
+        
+        bundle = conn.execute(
+            "SELECT * FROM bundles WHERE bundle_id = ?", (bundle_id,)
+        ).fetchone()
+        
+        if not bundle:
+            self._send_error_json(404, "Bundle not found")
+            return
+        
+        artifacts = conn.execute(
+            """SELECT relpath, kind, size, backend FROM artifact_refs
+               WHERE bundle_id = ?""",
+            (bundle_id,)
+        ).fetchall()
+        
+        self._send_json({
+            "bundle": dict(bundle),
+            "artifacts": [dict(a) for a in artifacts],
+        })
+    
+    def _handle_port(self, origin: str):
+        """GET /ports/<origin>[@<flavor>]"""
+        conn = self._get_conn()
+        
+        # Handle URL-encoded slashes
+        origin = origin.replace("%2F", "/")
+        
+        bundles = conn.execute(
+            """SELECT bundle_id, run_id, ts_utc, result 
+               FROM bundles WHERE origin = ? ORDER BY ts_utc DESC LIMIT 50""",
+            (origin,)
+        ).fetchall()
+        
+        jobs = conn.execute(
+            """SELECT job_id, state, type, created_ts_utc 
+               FROM jobs WHERE origin = ? ORDER BY created_ts_utc DESC LIMIT 50""",
+            (origin,)
+        ).fetchall()
+        
+        self._send_json({
+            "origin": origin,
+            "bundles": [dict(b) for b in bundles],
+            "jobs": [dict(j) for j in jobs],
+        })
+    
+    def _handle_artifact(self, bundle_id: str, relpath: str):
+        """GET /bundles/<bundle_id>/artifacts/<relpath>"""
+        conn = self._get_conn()
+        
+        # Security: reject path traversal
+        if ".." in relpath or relpath.startswith("/"):
+            self._send_error_json(400, "Invalid path")
+            return
+        
+        artifact = conn.execute(
+            """SELECT backend, sha256, fs_path FROM artifact_refs
+               WHERE bundle_id = ? AND relpath = ?""",
+            (bundle_id, relpath)
+        ).fetchone()
+        
+        if not artifact:
+            self._send_error_json(404, "Artifact not found")
+            return
+        
+        if artifact["backend"] == "blob":
+            sha = artifact["sha256"]
+            if not sha:
+                self._send_error_json(500, "Invalid blob reference")
+                return
+            artifact_path = self.server.blob_root / "objects" / "sha256" / sha[0:2] / sha[2:4] / sha
+        else:
+            artifact_path = Path(artifact["fs_path"] or "")
+        
+        if not artifact_path.exists():
+            self._send_error_json(404, "Artifact not found")
+            return
+        
+        # Determine content type
+        content_type, _ = mimetypes.guess_type(str(artifact_path))
+        if not content_type:
+            if relpath.endswith(".md"):
+                content_type = "text/markdown"
+            elif relpath.endswith(".diff"):
+                content_type = "text/x-diff"
+            else:
+                content_type = "application/octet-stream"
+        
+        # Stream the file
+        file_size = artifact_path.stat().st_size
+        
+        self.send_response(200)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(file_size))
+        self.end_headers()
+        
+        with open(artifact_path, "rb") as f:
+            while True:
+                chunk = f.read(8192)
+                if not chunk:
+                    break
+                self.wfile.write(chunk)
+
+    
+    def _handle_static_ui(self, filename: str, content_type: str):
+        """Serve files from scripts/state-server-ui."""
+        ui_dir = Path(__file__).resolve().parent / "state-server-ui"
+        file_path = ui_dir / filename
+
+        if not file_path.exists() or not file_path.is_file():
+            self._send_error_json(404, "UI asset not found")
+            return
+
+        body = file_path.read_bytes()
+        self.send_response(200)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _handle_events(self, last_event_id: str | None, query: dict[str, list[str]]):
+        """GET /events (SSE)"""
+        conn = self._get_conn()
+        
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream")
+        self.send_header("Cache-Control", "no-cache")
+        self.send_header("Connection", "keep-alive")
+        self.end_headers()
+        
+        # Choose replay start
+        start_id = 0
+
+        # 1) Query-param override: after_id (preferred)
+        after_id = query.get("after_id", [None])[0]
+        if after_id is not None:
+            try:
+                start_id = int(after_id)
+            except ValueError:
+                start_id = 0
+        else:
+            # 2) Last-Event-ID header
+            if last_event_id:
+                try:
+                    start_id = int(last_event_id)
+                except ValueError:
+                    start_id = 0
+
+            # 3) Optional tail replay (if no after_id)
+            tail_raw = query.get("tail", ["200"])[0]
+            try:
+                tail_n = max(0, int(tail_raw))
+            except ValueError:
+                tail_n = 200
+
+            if start_id == 0:
+                # If no known resume point, replay last N events only
+                if tail_n > 0:
+                    cutoff = conn.execute(
+                        "SELECT id FROM events ORDER BY id DESC LIMIT 1 OFFSET ?",
+                        (max(0, tail_n - 1),),
+                    ).fetchone()
+                    if cutoff:
+                        start_id = cutoff["id"] - 1
+
+        # Replay events after chosen start_id
+        rows = conn.execute(
+            "SELECT id, ts, type, data_json FROM events WHERE id > ? ORDER BY id",
+            (start_id,),
+        ).fetchall()
+        
+        for row in rows:
+            self._send_sse_event(row["id"], row["type"], row["ts"], row["data_json"])
+
+        # Keep connection open and stream new events
+        last_sent_id = rows[-1]["id"] if rows else start_id
+        
+        try:
+            while True:
+                time.sleep(1)
+                
+                new_rows = conn.execute(
+                    "SELECT id, ts, type, data_json FROM events WHERE id > ? ORDER BY id",
+                    (last_sent_id,)
+                ).fetchall()
+                
+                for row in new_rows:
+                    self._send_sse_event(row["id"], row["type"], row["ts"], row["data_json"])
+                    last_sent_id = row["id"]
+                
+                # Send keepalive comment
+                self.wfile.write(b": keepalive\n\n")
+                self.wfile.flush()
+        except (BrokenPipeError, ConnectionResetError):
+            pass
+    
+    def _send_sse_event(self, event_id: int, event_type: str, ts: str, data_json: str):
+        """Send a single SSE event."""
+        try:
+            data = json.loads(data_json)
+        except json.JSONDecodeError:
+            data = {"raw": data_json}
+
+        data["ts"] = ts
+
+        self.wfile.write(f"id: {event_id}\n".encode())
+        self.wfile.write(f"event: {event_type}\n".encode())
+        self.wfile.write(f"data: {json.dumps(data)}\n\n".encode())
+        self.wfile.flush()
+
+
+# =============================================================================
+# Threaded HTTP Server
+# =============================================================================
+
+class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
+    """Threaded HTTP server with shared state."""
+    
+    daemon_threads = True
+    
+    def __init__(self, server_address, handler_class, db_conn, observer, logs_root: Path):
+        super().__init__(server_address, handler_class)
+        self.db_conn = db_conn
+        self.observer = observer
+        self.logs_root = logs_root
+        self.evidence_root = logs_root / "evidence"
+        self.blob_root = self.evidence_root / "blobstore"
+
+
+# =============================================================================
+# Observer Thread
+# =============================================================================
+
+def observer_loop(observer: Observer, poll_interval: float, stop_event: threading.Event):
+    """Background loop that periodically scans the filesystem."""
+    log("INFO", f"Observer started (poll_interval={poll_interval}s)")
+    
+    while not stop_event.is_set():
+        try:
+            observer.scan()
+        except Exception as e:
+            log("ERROR", f"Observer scan failed: {e}")
+        
+        stop_event.wait(poll_interval)
+    
+    log("INFO", "Observer stopped")
+
+
+# =============================================================================
+# Main
+# =============================================================================
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Observe-only server for dsynth evidence bundles and job queue"
+    )
+    parser.add_argument(
+        "--logs-root",
+        default=os.environ.get("LOGS_ROOT"),
+        help="Path to dsynth Directory_logs (default: $LOGS_ROOT or /build/synth/logs)"
+    )
+    parser.add_argument(
+        "--db-path",
+        help="Path to SQLite database (default: <logs-root>/evidence/state.db)"
+    )
+    parser.add_argument(
+        "--bind",
+        default=os.environ.get("STATE_SERVER_BIND", DEFAULT_BIND),
+        help=f"Bind address (default: {DEFAULT_BIND})"
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=int(os.environ.get("STATE_SERVER_PORT", DEFAULT_PORT)),
+        help=f"Port (default: {DEFAULT_PORT})"
+    )
+    parser.add_argument(
+        "--poll-interval",
+        type=float,
+        default=DEFAULT_POLL_INTERVAL,
+        help=f"Filesystem poll interval in seconds (default: {DEFAULT_POLL_INTERVAL})"
+    )
+    args = parser.parse_args()
+    
+    # Determine logs root
+    logs_root = args.logs_root
+    if not logs_root:
+        if Path("/build/synth/logs").exists():
+            logs_root = "/build/synth/logs"
+        else:
+            print("error: --logs-root is required", file=sys.stderr)
+            sys.exit(1)
+    
+    logs_root = Path(logs_root)
+    if not logs_root.exists():
+        print(f"error: logs root does not exist: {logs_root}", file=sys.stderr)
+        sys.exit(1)
+    
+    # Determine database path
+    db_path = args.db_path
+    if not db_path:
+        db_path = logs_root / "evidence" / "state.db"
+    else:
+        db_path = Path(db_path)
+    
+    # Ensure evidence directory exists
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    log("INFO", f"Logs root: {logs_root}")
+    log("INFO", f"Database: {db_path}")
+    log("INFO", f"Bind: {args.bind}:{args.port}")
+    
+    # Initialize database
+    conn = init_db(db_path)
+    
+    # Create observer
+    observer = Observer(logs_root, conn)
+    
+    # Do initial scan
+    log("INFO", "Performing initial scan...")
+    observer.scan()
+    
+    # Start observer thread
+    stop_event = threading.Event()
+    observer_thread = threading.Thread(
+        target=observer_loop,
+        args=(observer, args.poll_interval, stop_event),
+        daemon=True
+    )
+    observer_thread.start()
+    
+    # Start HTTP server
+    server = ThreadedHTTPServer(
+        (args.bind, args.port),
+        StateServerHandler,
+        conn,
+        observer,
+        logs_root
+    )
+    
+    log("INFO", f"Server listening on http://{args.bind}:{args.port}")
+    
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        log("INFO", "Shutting down...")
+        stop_event.set()
+        server.shutdown()
+    
+    conn.close()
+    log("INFO", "Goodbye")
+
+
+if __name__ == "__main__":
+    main()

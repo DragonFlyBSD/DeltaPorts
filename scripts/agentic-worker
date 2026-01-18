@@ -1,0 +1,596 @@
+#!/usr/bin/env python3
+import argparse
+import base64
+import hashlib
+import json
+import os
+import sys
+import json
+import base64
+import shutil
+import argparse
+import subprocess
+from datetime import datetime
+
+import sys
+from pathlib import Path
+
+DEFAULT_WORKSPACE_BASE = Path("/build/synth/agentic-workspace")
+DEFAULT_DPORTS_CONF = [
+    Path("/usr/local/etc/dports.conf"),
+    Path("/etc/dports.conf"),
+]
+
+
+def load_dports_conf():
+    for conf_path in DEFAULT_DPORTS_CONF:
+        if not conf_path.exists():
+            continue
+        config = {}
+        for line in conf_path.read_text().splitlines():
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            config[key.strip()] = value.strip()
+        return config
+    return {}
+
+
+def get_env_path(key, fallback=None):
+    value = os.environ.get(key)
+    if value:
+        return Path(value)
+    if fallback is not None:
+        return Path(fallback)
+    return None
+
+
+def load_workspace_config(workspace_base: Path):
+    config_path = workspace_base / "workspace.json"
+    if not config_path.exists():
+        raise RuntimeError(f"workspace.json not found at {config_path}")
+    data = json.loads(config_path.read_text())
+    return {
+        "fports": Path(data["fports_path"]),
+        "fports_ref": data["fports_ref"],
+        "deltaports": Path(data["deltaports_path"]),
+        "dports": Path(data["dports_path"]),
+        "dsynth_profile": data.get("dsynth_profile"),
+    }
+
+
+def resolve_paths():
+    workspace_base = get_env_path("DP_WORKSPACE_BASE", DEFAULT_WORKSPACE_BASE)
+    workspace = load_workspace_config(workspace_base)
+    conf = load_dports_conf()
+
+    fports = get_env_path("DP_FPORTS_DIR", conf.get("FPORTS")) or workspace["fports"]
+    deltaports = get_env_path("DP_DELTAPORTS_DIR", conf.get("DELTA")) or workspace["deltaports"]
+    dports = get_env_path("DP_DPORTS_DIR", conf.get("DPORTS")) or workspace["dports"]
+
+    return {
+        "workspace_base": workspace_base,
+        "workspace": workspace,
+        "fports": fports,
+        "deltaports": deltaports,
+        "dports": dports,
+    }
+
+
+def run_cmd(cmd, cwd=None, env=None):
+    merged_env = os.environ.copy()
+    if env:
+        merged_env.update(env)
+    result = subprocess.run(
+        cmd,
+        cwd=cwd,
+        env=merged_env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"Command failed: {' '.join(cmd)}\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+    return result.stdout
+
+
+def ensure_dir(path: Path):
+    path.mkdir(parents=True, exist_ok=True)
+
+
+def ensure_within(path: Path, root: Path):
+    path = path.resolve()
+    root = root.resolve()
+    if not str(path).startswith(str(root)):
+        raise RuntimeError(f"Path {path} is outside allowed root {root}")
+
+
+def sha256_bytes(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def apply_diffs(target_dir: Path, diffs_dir: Path):
+    remove_file = diffs_dir / "REMOVE"
+    if remove_file.exists():
+        for line in remove_file.read_text().splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            target = target_dir / line
+            if target.exists():
+                if target.is_dir():
+                    shutil.rmtree(target)
+                else:
+                    target.unlink()
+
+    diff_files = sorted(diffs_dir.glob("*.diff"))
+    for diff_file in diff_files:
+        run_cmd(["patch", "--force", "--quiet", "-d", str(target_dir), "-i", str(diff_file)])
+
+    for orig_file in target_dir.rglob("*.orig"):
+        orig_file.unlink()
+
+
+def materialize_one(origin: str, paths: dict):
+    fports = paths["fports"]
+    deltaports = paths["deltaports"]
+    dports = paths["dports"]
+
+    src = fports / origin
+    if not src.exists():
+        raise RuntimeError(f"FPORTS missing origin: {src}")
+
+    dst = dports / origin
+    if dst.exists():
+        shutil.rmtree(dst)
+    ensure_dir(dports)
+    shutil.copytree(src, dst, symlinks=True)
+
+    dp_port = deltaports / "ports" / origin
+    if not dp_port.exists():
+        return
+
+    makefile_dfly = dp_port / "Makefile.DragonFly"
+    if makefile_dfly.exists():
+        shutil.copy2(makefile_dfly, dst / "Makefile.DragonFly")
+
+    dragonfly_dir = dp_port / "dragonfly"
+    if dragonfly_dir.exists():
+        target = dst / "dragonfly"
+        if target.exists():
+            shutil.rmtree(target)
+        shutil.copytree(dragonfly_dir, target, symlinks=True)
+
+    diffs_dir = dp_port / "diffs"
+    if diffs_dir.exists():
+        apply_diffs(dst, diffs_dir)
+
+
+def get_masterdir(port_dir: Path):
+    output = run_cmd(["make", "-V", ".CURDIR", "-V", "MASTERDIR"], cwd=port_dir)
+    lines = [line.strip() for line in output.splitlines() if line.strip()]
+    if len(lines) < 2:
+        return None, None
+    return lines[0], lines[1]
+
+
+def origin_from_path(path: Path, dports_root: Path):
+    try:
+        rel = path.resolve().relative_to(dports_root.resolve())
+    except ValueError:
+        return None
+    return str(rel)
+
+
+def sanitize_origin(origin: str) -> str:
+    return origin.replace("/", "-")
+
+
+def workspace_verify(paths: dict):
+    fports = paths["fports"]
+    fports_ref = paths["workspace"]["fports_ref"]
+
+    if not fports.exists():
+        raise RuntimeError(f"FPORTS path not found: {fports}")
+
+    status = run_cmd(["git", "-C", str(fports), "status", "--porcelain"]).strip()
+    if status:
+        raise RuntimeError("FPORTS working tree is dirty; update manually")
+
+    head = run_cmd(["git", "-C", str(fports), "rev-parse", "HEAD"]).strip()
+    ref = run_cmd(["git", "-C", str(fports), "rev-parse", fports_ref]).strip()
+    if head != ref:
+        raise RuntimeError(f"FPORTS is not at pinned ref {fports_ref}")
+
+    return {"fports_head": head, "fports_ref": fports_ref}
+
+
+def cmd_workspace_verify(args):
+    paths = resolve_paths()
+    result = workspace_verify(paths)
+    return result
+
+
+def _status_paths(deltaports: Path) -> list[str]:
+    output = run_cmd(["git", "-C", str(deltaports), "status", "--porcelain"]).strip()
+    if not output:
+        return []
+    paths = []
+    for line in output.splitlines():
+        if not line:
+            continue
+        entry = line[3:].strip()
+        if "->" in entry:
+            entry = entry.split("->", 1)[1].strip()
+        if entry:
+            paths.append(entry)
+    return paths
+
+
+def _ensure_origin_only(deltaports: Path, origin: str):
+    allowed_prefix = f"ports/{origin}/"
+    paths = _status_paths(deltaports)
+    if not paths:
+        return
+    bad = [path for path in paths if not path.startswith(allowed_prefix)]
+    if bad:
+        listed = ", ".join(bad[:5])
+        suffix = " ..." if len(bad) > 5 else ""
+        raise RuntimeError(
+            f"DeltaPorts working tree has changes outside {allowed_prefix}: {listed}{suffix}"
+        )
+
+
+def cmd_checkout_branch(args):
+    paths = resolve_paths()
+    deltaports = paths["deltaports"]
+    origin = args.origin
+    branch = f"ai-work/{sanitize_origin(origin)}"
+
+    status_paths = _status_paths(deltaports)
+    if status_paths:
+        current = run_cmd(["git", "-C", str(deltaports), "branch", "--show-current"]).strip()
+        if current != branch:
+            raise RuntimeError(
+                f"DeltaPorts working tree is dirty on branch {current}; expected {branch}"
+            )
+        _ensure_origin_only(deltaports, origin)
+        return {"branch": branch, "dirty": True}
+
+    existing = run_cmd(["git", "-C", str(deltaports), "branch", "--list", branch]).strip()
+    if existing:
+        run_cmd(["git", "-C", str(deltaports), "checkout", branch])
+    else:
+        run_cmd(["git", "-C", str(deltaports), "checkout", "-b", branch, "master"])
+
+    return {"branch": branch, "dirty": False}
+
+
+def cmd_commit(args):
+    paths = resolve_paths()
+    deltaports = paths["deltaports"]
+    origin = args.origin
+
+    _ensure_origin_only(deltaports, origin)
+
+    status = run_cmd(["git", "-C", str(deltaports), "status", "--porcelain"]).strip()
+    if not status:
+        return {"committed": False, "reason": "no changes"}
+
+    run_cmd(["git", "-C", str(deltaports), "add", f"ports/{origin}"])
+    run_cmd(["git", "-C", str(deltaports), "commit", "-m", args.message])
+    head = run_cmd(["git", "-C", str(deltaports), "rev-parse", "HEAD"]).strip()
+    return {"committed": True, "head": head}
+
+
+def cmd_materialize_closure(args):
+    paths = resolve_paths()
+    workspace_verify(paths)
+
+    dports_root = paths["dports"]
+    seen = set()
+    pending = [args.origin]
+
+    while pending:
+        origin = pending.pop(0)
+        if origin in seen:
+            continue
+        seen.add(origin)
+        materialize_one(origin, paths)
+        port_dir = dports_root / origin
+        if not port_dir.exists():
+            continue
+        curdir, masterdir = get_masterdir(port_dir)
+        if masterdir and curdir and masterdir != curdir:
+            master_origin = origin_from_path(Path(masterdir), dports_root)
+            if master_origin and master_origin not in seen:
+                pending.append(master_origin)
+
+    return {"origins": sorted(seen)}
+
+
+def cmd_extract(args):
+    paths = resolve_paths()
+    port_dir = paths["dports"] / args.origin
+    env = os.environ.copy()
+    env["WRKDIRPREFIX"] = str(paths["workspace_base"] / "work")
+    run_cmd(["make", "extract"], cwd=port_dir, env=env)
+    wrkdir = run_cmd(["make", "-V", "WRKDIR"], cwd=port_dir, env=env).strip()
+    wrksrc = run_cmd(["make", "-V", "WRKSRC"], cwd=port_dir, env=env).strip()
+    return {"wrkdir": wrkdir, "wrksrc": wrksrc}
+
+
+def cmd_get_file(args):
+    paths = resolve_paths()
+    workspace_base = paths["workspace_base"]
+    path = Path(args.path)
+    ensure_within(path, workspace_base)
+    data = path.read_bytes()
+    return {
+        "path": str(path),
+        "encoding": "base64",
+        "content": base64.b64encode(data).decode("ascii"),
+        "sha256": sha256_bytes(data),
+        "size": len(data),
+    }
+
+
+def cmd_put_file(args):
+    paths = resolve_paths()
+    workspace_base = paths["workspace_base"]
+    path = Path(args.path)
+    ensure_within(path, workspace_base)
+    data = base64.b64decode(args.content.encode("ascii"))
+    if args.expected_sha256 and path.exists():
+        current = sha256_bytes(path.read_bytes())
+        if current != args.expected_sha256:
+            raise RuntimeError("expected_sha256 mismatch")
+    mode = path.stat().st_mode if path.exists() else None
+    ensure_dir(path.parent)
+    path.write_bytes(data)
+    if mode is not None:
+        os.chmod(path, mode)
+    return {"path": str(path), "sha256": sha256_bytes(data), "size": len(data)}
+
+
+def cmd_dupe(args):
+    paths = resolve_paths()
+    workspace_base = paths["workspace_base"]
+    path = Path(args.path)
+    ensure_within(path, workspace_base)
+    env = os.environ.copy()
+    env["WRKDIRPREFIX"] = str(paths["workspace_base"] / "work")
+    run_cmd(["dupe", str(path)], env=env)
+    return {"path": str(path)}
+
+
+def cmd_genpatch(args):
+    paths = resolve_paths()
+    workspace_base = paths["workspace_base"]
+    path = Path(args.path)
+    ensure_within(path, workspace_base)
+    output_dir = workspace_base / "genpatch-out"
+    ensure_dir(output_dir)
+    env = os.environ.copy()
+    env["WRKDIRPREFIX"] = str(paths["workspace_base"] / "work")
+    run_cmd(["genpatch", str(path)], cwd=output_dir, env=env)
+    patches = sorted([p.name for p in output_dir.glob("patch-*")])
+    return {"output_dir": str(output_dir), "patches": patches}
+
+
+def cmd_install_patches(args):
+    paths = resolve_paths()
+    deltaports = paths["deltaports"]
+    origin = args.origin
+    dest_dir = deltaports / "ports" / origin / "dragonfly"
+    ensure_dir(dest_dir)
+
+    output_dir = paths["workspace_base"] / "genpatch-out"
+    patches = args.patches or []
+    if not patches:
+        patches = [p.name for p in output_dir.glob("patch-*")]
+
+    installed = []
+    for patch in patches:
+        src = output_dir / patch
+        if not src.exists():
+            raise RuntimeError(f"Patch not found: {src}")
+        dst = dest_dir / patch
+        shutil.copy2(src, dst)
+        installed.append(str(dst))
+
+    return {"installed": installed}
+
+
+def cmd_emit_diff(args):
+    paths = resolve_paths()
+    origin = args.origin
+    relpath = Path(args.relpath)
+
+    base = paths["fports"] / origin / relpath
+    target = paths["dports"] / origin / relpath
+
+    diffs_dir = paths["deltaports"] / "ports" / origin / "diffs"
+    ensure_dir(diffs_dir)
+    diff_name = str(relpath).replace("/", "_") + ".diff"
+    diff_path = diffs_dir / diff_name
+
+    if not target.exists():
+        remove_path = diffs_dir / "REMOVE"
+        existing = set(remove_path.read_text().splitlines()) if remove_path.exists() else set()
+        existing.add(str(relpath))
+        remove_path.write_text("\n".join(sorted(existing)) + "\n")
+        if diff_path.exists():
+            diff_path.unlink()
+        return {"remove": str(relpath)}
+
+    if not base.exists():
+        raise RuntimeError(f"Base file missing in FPORTS: {base}")
+
+    output = subprocess.run(
+        ["diff", "-u", str(base), str(target)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    if output.returncode not in (0, 1):
+        raise RuntimeError(f"diff failed: {output.stderr}")
+
+    if output.stdout.strip():
+        diff_path.write_text(output.stdout)
+        return {"diff": str(diff_path)}
+
+    if diff_path.exists():
+        diff_path.unlink()
+    return {"diff": None}
+
+
+def cmd_grep(args):
+    paths = resolve_paths()
+    workspace_base = paths["workspace_base"]
+    root = Path(args.path)
+    ensure_within(root, workspace_base)
+
+    if args.pattern and args.pattern_base64:
+        raise RuntimeError("Provide only one of --pattern or --pattern-base64")
+    if not args.pattern and not args.pattern_base64:
+        raise RuntimeError("Missing pattern for grep")
+
+    pattern = args.pattern
+    if args.pattern_base64:
+        try:
+            pattern = base64.b64decode(args.pattern_base64).decode("utf-8")
+        except Exception as exc:
+            raise RuntimeError(f"invalid base64 pattern: {exc}")
+
+    cmd = ["rg", "--no-heading", "--line-number", "--color", "never", pattern, str(root)]
+    if args.include:
+        cmd.extend(["--glob", args.include])
+
+    result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    if result.returncode not in (0, 1):
+        raise RuntimeError(f"rg failed: {result.stderr.strip()}")
+
+    output = result.stdout
+    truncated = False
+    max_bytes = args.max_bytes
+    if max_bytes and len(output.encode("utf-8")) > max_bytes:
+        truncated = True
+        output = output.encode("utf-8")[:max_bytes].decode("utf-8", errors="replace")
+
+    return {
+        "root": str(root),
+        "pattern": pattern,
+        "include": args.include,
+        "matches": output,
+        "truncated": truncated,
+        "max_bytes": max_bytes,
+    }
+
+
+def cmd_dsynth_build(args):
+    paths = resolve_paths()
+    profile = args.profile or paths["workspace"]["dsynth_profile"]
+    if not profile:
+        raise RuntimeError("dsynth profile not specified")
+    cmd = ["dsynth", "-p", profile, "just-build", args.origin]
+    output = run_cmd(cmd)
+    log_path = paths["workspace_base"] / "logs" / "dsynth-build.log"
+    ensure_dir(log_path.parent)
+    log_path.write_text(output)
+    return {"log": str(log_path)}
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    subparsers.add_parser("workspace-verify")
+
+    checkout = subparsers.add_parser("checkout-branch")
+    checkout.add_argument("--origin", required=True)
+
+    commit = subparsers.add_parser("commit")
+    commit.add_argument("--origin", required=True)
+    commit.add_argument("--message", required=True)
+
+    materialize = subparsers.add_parser("materialize-closure")
+    materialize.add_argument("--origin", required=True)
+
+    extract = subparsers.add_parser("extract")
+    extract.add_argument("--origin", required=True)
+
+    get_file = subparsers.add_parser("get-file")
+    get_file.add_argument("--path", required=True)
+
+    put_file = subparsers.add_parser("put-file")
+    put_file.add_argument("--path", required=True)
+    put_file.add_argument("--content", required=True)
+    put_file.add_argument("--expected-sha256")
+
+    dupe = subparsers.add_parser("dupe")
+    dupe.add_argument("--path", required=True)
+
+    genpatch = subparsers.add_parser("genpatch")
+    genpatch.add_argument("--path", required=True)
+
+    install = subparsers.add_parser("install-patches")
+    install.add_argument("--origin", required=True)
+    install.add_argument("--patch", action="append", dest="patches")
+
+    emit = subparsers.add_parser("emit-diff")
+    emit.add_argument("--origin", required=True)
+    emit.add_argument("--relpath", required=True)
+
+    grep_cmd = subparsers.add_parser("grep")
+    grep_cmd.add_argument("--pattern")
+    grep_cmd.add_argument("--pattern-base64")
+    grep_cmd.add_argument("--path", required=True)
+    grep_cmd.add_argument("--include")
+    grep_cmd.add_argument("--max-bytes", type=int, default=8192)
+
+    build = subparsers.add_parser("dsynth-build")
+    build.add_argument("--origin", required=True)
+    build.add_argument("--profile")
+
+    args = parser.parse_args()
+    try:
+        if args.command == "workspace-verify":
+            result = cmd_workspace_verify(args)
+        elif args.command == "checkout-branch":
+            result = cmd_checkout_branch(args)
+        elif args.command == "commit":
+            result = cmd_commit(args)
+        elif args.command == "materialize-closure":
+            result = cmd_materialize_closure(args)
+        elif args.command == "extract":
+            result = cmd_extract(args)
+        elif args.command == "get-file":
+            result = cmd_get_file(args)
+        elif args.command == "put-file":
+            result = cmd_put_file(args)
+        elif args.command == "dupe":
+            result = cmd_dupe(args)
+        elif args.command == "genpatch":
+            result = cmd_genpatch(args)
+        elif args.command == "install-patches":
+            result = cmd_install_patches(args)
+        elif args.command == "emit-diff":
+            result = cmd_emit_diff(args)
+        elif args.command == "grep":
+            result = cmd_grep(args)
+        elif args.command == "dsynth-build":
+            result = cmd_dsynth_build(args)
+        else:
+            raise RuntimeError("Unknown command")
+        print(json.dumps({"ok": True, "result": result}))
+    except Exception as exc:
+        print(json.dumps({"ok": False, "error": str(exc)}))
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

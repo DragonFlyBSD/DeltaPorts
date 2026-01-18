@@ -1,0 +1,12 @@
+#!/bin/sh
+
+set -eu
+
+. "$(dirname "$0")/hook_common.sh"
+
+root=$(evidence_root)
+
+# Clear current run pointer (best effort).
+rm -f "${root}/.current_run"
+
+exit 0
