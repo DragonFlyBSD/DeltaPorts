@@ -81,6 +81,8 @@ When generating a diff for the DeltaPorts overlay, the path format is:
 
 Note: This creates a NEW file containing the patch content.
 
+**Agent guidance (patch jobs):** Do NOT output diff text or write patch files directly. Use the `dports_*` tools (`dupe`/`genpatch`/`install_patches`) to generate one `patch-*` file per source file under `dragonfly/`.
+
 ## Examples
 - `net/hostapd`: Missing `IFM_IEEE80211_VHT5G` symbol - wrapped in `#if defined()` guard
 - `net/wpa_supplicant`: Similar VHT5G issue on older DragonFly versions
