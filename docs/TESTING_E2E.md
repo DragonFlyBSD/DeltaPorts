@@ -52,6 +52,10 @@ The agentic workflow consists of these stages:
    export DP_SSH_PORT=2222
    export DP_SSH_KEY=/home/antonioh/.go-synth/vm/id_ed25519
    export DP_WORKSPACE_BASE=/build/synth/agentic-workspace
+# optional overrides if dports.conf differs
+export DP_FPORTS_DIR=/build/synth/agentic-workspace/freebsd-ports
+export DP_DELTAPORTS_DIR=/build/synth/agentic-workspace/deltaports
+export DP_DPORTS_DIR=/build/synth/agentic-workspace/dports
    ```
 
 ### On the VM (DragonFlyBSD)
@@ -64,19 +68,19 @@ The agentic workflow consists of these stages:
 
 2. **DeltaPorts scripts** deployed to `/build/synth/DeltaPorts/scripts/` (includes `agentic-worker`)
 
-3. **Shared workspace root** exists:
+  3. **Shared workspace root** exists:
    ```sh
    mkdir -p /build/synth/agentic-workspace
    ```
 
-3. **workspace.json** created (pin FPORTS ref):
+  3. **workspace.json** created (pin FPORTS ref):
    ```sh
    cat > /build/synth/agentic-workspace/workspace.json <<'EOF'
    {
-     "fports_path": "/build/synth/agentic-workspace/FPORTS",
-     "fports_ref": "2026Q1",
-     "deltaports_path": "/build/synth/agentic-workspace/DeltaPorts",
-     "dports_path": "/build/synth/agentic-workspace/DPorts",
+     "fports_path": "/build/synth/agentic-workspace/freebsd-ports",
+     "fports_ref": "2025Q2",
+     "deltaports_path": "/build/synth/agentic-workspace/deltaports",
+     "dports_path": "/build/synth/agentic-workspace/dports",
      "dsynth_profile": "agentic"
    }
    EOF
@@ -84,17 +88,18 @@ The agentic workflow consists of these stages:
 
    Note: this workspace setup is a good candidate for automation later.
 
-4. **FPORTS checkout** at `/build/synth/agentic-workspace/FPORTS` and checked out to the pinned ref:
+  4. **FPORTS checkout** at `/build/synth/agentic-workspace/freebsd-ports` and checked out to the pinned ref:
    ```sh
-   git -C /build/synth/agentic-workspace/FPORTS checkout 2026Q1
+   git -C /build/synth/agentic-workspace/freebsd-ports checkout 2025Q2
    ```
 
-5. **DeltaPorts checkout** at `/build/synth/agentic-workspace/DeltaPorts`
+  5. **DeltaPorts checkout** at `/build/synth/agentic-workspace/deltaports`
 
-6. **DPorts directory** exists:
+  6. **DPorts directory** exists:
    ```sh
-   mkdir -p /build/synth/agentic-workspace/DPorts
+   mkdir -p /build/synth/agentic-workspace/dports
    ```
+
 
 8. **dsynth hooks** installed in `/etc/dsynth/` or `/usr/local/etc/dsynth/`
 
@@ -102,13 +107,14 @@ The agentic workflow consists of these stages:
    ```ini
    [agentic]
    Operating_system= DragonFly
-   Directory_packages= /build/synth/packages
-   Directory_repository= /build/synth/packages/All
-   Directory_portsdir= /build/synth/agentic-workspace/DPorts
-   Directory_options= /build/synth/options
-   Directory_distfiles= /build/synth/distfiles
-   Directory_buildbase= /build/synth
-   Directory_logs= /build/synth/logs
+    Directory_packages= /build/synth/agentic-workspace/packages
+    Directory_repository= /build/synth/agentic-workspace/packages/All
+    Directory_portsdir= /build/synth/agentic-workspace/dports
+    Directory_options= /build/synth/agentic-workspace/options
+    Directory_distfiles= /build/synth/distfiles
+    Directory_buildbase= /build/synth/agentic-workspace
+    Directory_logs= /build/synth/agentic-workspace/logs
+
    Directory_ccache= disabled
    Directory_system= /
    Package_suffix= .txz
@@ -120,15 +126,16 @@ The agentic workflow consists of these stages:
    leverage_prebuilt= false
    ```
 
-10. **artifact-store daemon** running (required):
+ 10. **artifact-store daemon** running (required):
    ```sh
-   /build/synth/DeltaPorts/scripts/artifact-store --logs-root /build/synth/logs &
+   /build/synth/DeltaPorts/scripts/artifact-store --logs-root /build/synth/agentic-workspace/logs &
    ```
 
-11. **State Server** running in DB-only mode (optional, for UI verification):
+ 11. **State Server** running (optional, for UI verification):
    ```sh
-   EVIDENCE_DB_ONLY=1 /build/synth/DeltaPorts/scripts/state-server --logs-root /build/synth/logs &
+   /build/synth/DeltaPorts/scripts/state-server --logs-root /build/synth/agentic-workspace/logs &
    ```
+
 
 12. **Generator config** at `/usr/local/etc/dports.conf` with valid paths
 
@@ -138,7 +145,7 @@ The agentic workflow consists of these stages:
 
 **On VM:**
 ```sh
-dsynth test net/hostapd
+dsynth -p agentic test net/hostapd
 ```
 
 **Verify:**
@@ -154,11 +161,11 @@ curl -s http://127.0.0.1:8787/bundles/<bundle_id>/artifacts/meta.txt
 curl -s http://127.0.0.1:8787/bundles/<bundle_id>/artifacts/logs/errors.txt | head -50
 
 # Check full log location (fs-backed)
-ls -la /build/synth/logs/evidence/full-logs/<bundle_id>.full.log.gz
+ls -la /build/synth/agentic-workspace/logs/evidence/full-logs/<bundle_id>.full.log.gz
 
 # Check job file
-ls -la /build/synth/logs/evidence/queue/pending/
-cat /build/synth/logs/evidence/queue/pending/*.job | head -20
+ls -la /build/synth/agentic-workspace/logs/evidence/queue/pending/
+cat /build/synth/agentic-workspace/logs/evidence/queue/pending/*.job | head -20
 ```
 
 **Expected:**
