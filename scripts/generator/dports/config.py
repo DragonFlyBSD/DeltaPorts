@@ -48,6 +48,8 @@ class PathsConfig:
     merged_output: Path = field(default_factory=lambda: Path("/usr/dports-work"))
     logs: Path = field(default_factory=lambda: Path("/var/log/dports"))
     delta: Path = field(default_factory=lambda: Path("/usr/DeltaPorts"))
+    # Built DPorts tree - used for LOCK ports (copies from here instead of merging)
+    dports_built_tree: Path = field(default_factory=lambda: Path("/usr/dports"))
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> PathsConfig:
@@ -58,6 +60,7 @@ class PathsConfig:
             merged_output=Path(data.get("merged_output", "/usr/dports-work")),
             logs=Path(data.get("logs", "/var/log/dports")),
             delta=Path(data.get("delta", "/usr/DeltaPorts")),
+            dports_built_tree=Path(data.get("dports_built_tree", "/usr/dports")),
         )
 
 
@@ -178,3 +181,7 @@ class Config:
     def get_special_path(self, name: str) -> Path:
         """Get the path to a special directory (Mk, Templates, treetop)."""
         return self.paths.delta / "special" / name
+
+    def get_built_dports_port_path(self, origin: str) -> Path:
+        """Get the path to a port in the built DPorts tree (for LOCK ports)."""
+        return self.paths.dports_built_tree / origin

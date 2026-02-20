@@ -178,6 +178,16 @@ def _register_migrate_parser(subparsers) -> None:
         help="Port origin to migrate, or 'all' for all ports",
     )
     p.add_argument(
+        "--output", "-o",
+        type=Path,
+        help="Output directory for migrated ports (default: migrated_ports/)",
+    )
+    p.add_argument(
+        "--state-output", "-s",
+        type=Path,
+        help="Output path for builds.json (default: state/builds.json)",
+    )
+    p.add_argument(
         "--dry-run", "-n",
         action="store_true",
         help="Show what would be migrated without making changes",

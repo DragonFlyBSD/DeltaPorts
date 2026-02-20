@@ -30,6 +30,15 @@ class BuildStatus(Enum):
     PENDING = "pending"
 
 
+class PortType(Enum):
+    """Type of port from v1 STATUS file."""
+    
+    PORT = "port"      # Standard port - merge FreeBSD + apply customizations
+    MASK = "mask"      # Masked - skip/ignore entirely
+    DPORT = "dport"    # DragonFly-specific port - use newport/ as complete port
+    LOCK = "lock"      # Locked - copy from built DPorts tree, not merged
+
+
 class CustomizationType(Enum):
     """Types of port customizations."""
     
@@ -101,11 +110,15 @@ class OverlayManifest:
     origin: PortOrigin
     description: str = ""
     
+    # Port type (from v1 STATUS file: PORT, MASK, DPORT, LOCK)
+    port_type: PortType = PortType.PORT
+    
     # Customization flags
     has_makefile_dragonfly: bool = False
     has_diffs: bool = False
     has_dragonfly_dir: bool = False
     has_extra_patches: bool = False
+    has_newport: bool = False  # For DPORT type
     
     # Quarterly-specific overrides
     quarterly_overrides: list[str] = field(default_factory=list)
@@ -125,18 +138,33 @@ class OverlayManifest:
     @classmethod
     def from_dict(cls, data: dict[str, Any], origin: PortOrigin) -> OverlayManifest:
         """Create an OverlayManifest from parsed TOML data."""
+        # Parse port type from overlay section or top-level
+        overlay_section = data.get("overlay", {})
+        type_str = overlay_section.get("type", data.get("type", "port"))
+        try:
+            port_type = PortType(type_str.lower())
+        except ValueError:
+            port_type = PortType.PORT
+        
+        # Check for ignore in status section (MASK ports)
+        status_section = data.get("status", {})
+        ignore = status_section.get("ignore") is not None or data.get("ignore", False)
+        ignore_reason = status_section.get("ignore", "") or data.get("ignore_reason", "")
+        
         return cls(
             origin=origin,
-            description=data.get("description", ""),
+            description=overlay_section.get("reason", data.get("description", "")),
+            port_type=port_type,
             has_makefile_dragonfly=data.get("makefile_dragonfly", False),
             has_diffs=data.get("diffs", False),
             has_dragonfly_dir=data.get("dragonfly_dir", False),
             has_extra_patches=data.get("extra_patches", False),
+            has_newport=data.get("newport", False),
             quarterly_overrides=data.get("quarterly_overrides", []),
             broken=data.get("broken", False),
             broken_reason=data.get("broken_reason", ""),
-            ignore=data.get("ignore", False),
-            ignore_reason=data.get("ignore_reason", ""),
+            ignore=ignore,
+            ignore_reason=ignore_reason if isinstance(ignore_reason, str) else "",
             maintainer=data.get("maintainer", ""),
             raw=data,
         )
