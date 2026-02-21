@@ -1,0 +1,48 @@
+# DPorts v2 Configuration File (branch-scoped targets)
+#
+# Copy this file to one of the following locations and edit paths:
+#   1) ./dports.toml
+#   2) ~/.config/dports/dports.toml
+#   3) /etc/dports/dports.toml
+
+[paths]
+# Single FreeBSD ports checkout used by sync/merge/check.
+# dports sync --target <branch> will switch this repo branch in place.
+freebsd_ports = "/usr/ports"
+
+# DeltaPorts repository root (this repo).
+delta = "/usr/src/DeltaPorts"
+
+# Output directory for merged ports tree.
+merged_output = "/usr/dports-work"
+
+# Log directory for dports operations.
+logs = "/var/log/dports"
+
+# Built DPorts tree used by LOCK ports.
+dports_built_tree = "/usr/dports"
+
+# Optional legacy field, kept for compatibility in some code paths.
+dports_overlay = "/usr/dports"
+
+[state]
+# Supported now: local
+# Planned: git-branch, external
+backend = "local"
+
+# Relative paths are resolved from the DeltaPorts repo root.
+path = "state/builds.json"
+
+[target]
+# Optional default target branch.
+# Allowed values: "main" or YYYYQ[1-4] (example: 2025Q2)
+default = "main"
+
+# Backward-compatible alias accepted by the loader.
+[quarterly]
+default = "2025Q2"
+
+[merge]
+# Tool paths on DragonFly.
+cpdup_path = "/bin/cpdup"
+patch_path = "/usr/bin/patch"
