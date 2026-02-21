@@ -700,11 +700,14 @@ def _normalize_overlay_manifest(
     actions: list[str],
 ) -> None:
     overlay_path = port_path / "overlay.toml"
+    status_path = port_path / "STATUS"
     existing_text: str | None = None
 
     reason = f"DragonFly customizations for {origin}"
     port_type = PortType.PORT
     ignore_reason = ""
+
+    status_data = parse_status_file(status_path) if status_path.exists() else None
 
     if overlay_path.exists():
         existing_text = overlay_path.read_text()
@@ -739,6 +742,19 @@ def _normalize_overlay_manifest(
         except Exception as e:
             errors.append(f"Failed to parse existing overlay.toml: {e}")
             return
+
+    # STATUS is explicit source of type/reason when present in source tree.
+    if status_data is not None:
+        port_type = status_data.port_type
+
+        if status_data.port_type == PortType.MASK and status_data.reason:
+            if reason.startswith("DragonFly customizations for "):
+                reason = status_data.reason
+            if not ignore_reason:
+                ignore_reason = status_data.reason
+
+        if status_data.port_type == PortType.DPORT:
+            components["newport"] = True
 
     content = generate_overlay_toml_v2(
         origin=origin,
