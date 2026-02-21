@@ -889,7 +889,7 @@ def migrate_all_layouts_to_target(
     delta_base: Path | None = None,
 ) -> tuple[int, int, list[str]]:
     """Migrate all candidate overlay ports to strict @target layout in-place."""
-    from dports.utils import list_delta_ports
+    from dports.selection import overlay_candidates_from_base
 
     migrated = 0
     unchanged = 0
@@ -897,8 +897,7 @@ def migrate_all_layouts_to_target(
     base = delta_base or config.paths.delta
     ports_base = base / "ports"
 
-    for origin_str in list_delta_ports(ports_base):
-        origin = PortOrigin.parse(origin_str)
+    for origin in overlay_candidates_from_base(ports_base):
         result = migrate_port_layout_to_target(
             config,
             origin,

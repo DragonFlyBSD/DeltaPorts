@@ -21,6 +21,7 @@ from dports.commands.diff import cmd_diff
 from dports.commands.special import cmd_special
 from dports.commands.logs import cmd_logs
 from dports.commands.update import cmd_update
+from dports.commands.compose import cmd_compose
 
 COMMANDS = {
     # Core commands (v2)
@@ -28,13 +29,11 @@ COMMANDS = {
     "sync": cmd_sync,
     "prune": cmd_prune,
     "makefiles": cmd_makefiles,
-    
     # New v2 commands
     "check": cmd_check,
     "migrate": cmd_migrate,
     "state": cmd_state,
     "list": cmd_list,
-    
     # Ported from v1
     "status": cmd_status,
     "verify": cmd_verify,
@@ -44,6 +43,7 @@ COMMANDS = {
     "special": cmd_special,
     "logs": cmd_logs,
     "update": cmd_update,
+    "compose": cmd_compose,
 }
 
 __all__ = ["COMMANDS"]

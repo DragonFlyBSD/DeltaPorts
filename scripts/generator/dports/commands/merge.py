@@ -20,6 +20,7 @@ def cmd_merge(config: Config, args: Namespace) -> int:
 
     target = validate_target(args.target)
     dry_run = getattr(args, "dry_run", False)
+    force = getattr(args, "force", False)
 
     try:
         ensure_git_branch(config.paths.freebsd_ports, target)
@@ -29,7 +30,12 @@ def cmd_merge(config: Config, args: Namespace) -> int:
 
     if args.port == "all" or args.port is None:
         log.info(f"Merging all ports for {target}")
-        results = merge_all_ports(config, target, dry_run=dry_run)
+        results = merge_all_ports(
+            config,
+            target,
+            dry_run=dry_run,
+            skip_validation=force,
+        )
 
         if not results:
             log.warning("No overlay candidates found in ports/ (nothing to merge)")
@@ -50,7 +56,13 @@ def cmd_merge(config: Config, args: Namespace) -> int:
         origin = PortOrigin.parse(args.port)
         log.info(f"Merging {origin} for {target}")
 
-        result = merge_port(config, origin, target, dry_run=dry_run)
+        result = merge_port(
+            config,
+            origin,
+            target,
+            dry_run=dry_run,
+            skip_validation=force,
+        )
 
         if result.success:
             log.info(f"Merge successful: {result.message}")

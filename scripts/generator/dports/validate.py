@@ -13,7 +13,8 @@ if TYPE_CHECKING:
 from dports.models import PortOrigin, ValidationResult
 from dports.overlay import Overlay, OverlayError
 from dports.quarterly import validate_target
-from dports.utils import DPortsError, list_delta_ports
+from dports.selection import overlay_candidates
+from dports.utils import DPortsError
 
 
 class ValidationError(DPortsError):
@@ -122,10 +123,7 @@ def validate_all_ports(
 
     normalized_target = validate_target(target)
     results: dict[str, ValidationResult] = {}
-    ports_base = config.paths.delta / "ports"
-
-    for origin_str in list_delta_ports(ports_base):
-        origin = PortOrigin.parse(origin_str)
+    for origin in overlay_candidates(config):
         result = validate_port(config, origin, normalized_target)
         results[str(origin)] = result
 

@@ -48,6 +48,14 @@ class CustomizationType(Enum):
     EXTRA_PATCH = "extra_patch"
 
 
+class SelectionMode(Enum):
+    """Selection mode for compose overlay application stage."""
+
+    SINGLE = "single"
+    OVERLAY_CANDIDATES = "overlay_candidates"
+    FULL_TREE = "full_tree"
+
+
 @dataclass(frozen=True)
 class PortOrigin:
     """
@@ -238,6 +246,61 @@ class ValidationResult:
     def add_warning(self, msg: str) -> None:
         """Add a warning (doesn't affect validity)."""
         self.warnings.append(msg)
+
+
+@dataclass
+class StageResult:
+    """Result of a compose pipeline stage."""
+
+    name: str
+    success: bool = True
+    changed: int = 0
+    skipped: int = 0
+    warnings: list[str] = field(default_factory=list)
+    errors: list[str] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
+
+    def add_error(self, msg: str) -> None:
+        self.errors.append(msg)
+        self.success = False
+
+    def add_warning(self, msg: str) -> None:
+        self.warnings.append(msg)
+
+    @property
+    def duration(self) -> float | None:
+        if self.started_at and self.finished_at:
+            return (self.finished_at - self.started_at).total_seconds()
+        return None
+
+
+@dataclass
+class ComposeResult:
+    """Aggregate result for a full compose run."""
+
+    target: str
+    output_path: Path
+    success: bool = True
+    stages: list[StageResult] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+    errors: list[str] = field(default_factory=list)
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
+
+    def add_stage(self, stage: StageResult) -> None:
+        self.stages.append(stage)
+        self.warnings.extend(stage.warnings)
+        if not stage.success:
+            self.success = False
+            self.errors.extend(stage.errors)
+
+    @property
+    def duration(self) -> float | None:
+        if self.started_at and self.finished_at:
+            return (self.finished_at - self.started_at).total_seconds()
+        return None
 
 
 @dataclass

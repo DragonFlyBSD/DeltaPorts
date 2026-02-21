@@ -194,6 +194,30 @@ class BuildState:
             if state.status == status:
                 yield state
 
+    def iter_for_target(self, target: str) -> Iterator[PortState]:
+        """Iterate over port states for a specific target."""
+        for state in self.iter_all():
+            if state.target == target:
+                yield state
+
+    def iter_by_status_target(
+        self,
+        status: BuildStatus,
+        target: str | None = None,
+    ) -> Iterator[PortState]:
+        """Iterate states filtered by status and optional target."""
+        for state in self.iter_all():
+            if state.status != status:
+                continue
+            if target is not None and state.target != target:
+                continue
+            yield state
+
+    def list_targets(self) -> list[str]:
+        """List distinct non-empty targets present in state."""
+        targets = {state.target for state in self.iter_all() if state.target}
+        return sorted(targets)
+
     def clear(self) -> None:
         """Clear all state."""
         self._states.clear()

@@ -61,6 +61,7 @@ def create_parser() -> argparse.ArgumentParser:
 
     # Register all command parsers
     _register_merge_parser(subparsers)
+    _register_compose_parser(subparsers)
     _register_sync_parser(subparsers)
     _register_prune_parser(subparsers)
     _register_makefiles_parser(subparsers)
@@ -102,6 +103,53 @@ def _register_merge_parser(subparsers) -> None:
         "-f",
         action="store_true",
         help="Force merge even if validation fails",
+    )
+    p.add_argument(
+        "--dry-run",
+        "-n",
+        action="store_true",
+        help="Show what would be done without making changes",
+    )
+
+
+def _register_compose_parser(subparsers) -> None:
+    """Register the compose command parser."""
+    p = subparsers.add_parser(
+        "compose",
+        help="Build final DPorts tree (FreeBSD target + DeltaPorts target)",
+    )
+    p.add_argument(
+        "--target",
+        "-t",
+        required=True,
+        help="Target FreeBSD ports branch (main or YYYYQ[1-4])",
+    )
+    p.add_argument(
+        "--output",
+        "-o",
+        type=Path,
+        help="Output path (default: configured merged_output)",
+    )
+    p.add_argument(
+        "--selection",
+        choices=["overlay_candidates", "full_tree"],
+        default="overlay_candidates",
+        help="Overlay application selection mode",
+    )
+    p.add_argument(
+        "port",
+        nargs="?",
+        help="Single port origin (overrides --selection)",
+    )
+    p.add_argument(
+        "--replace-output",
+        action="store_true",
+        help="Replace output path if non-empty",
+    )
+    p.add_argument(
+        "--no-validate",
+        action="store_true",
+        help="Skip preflight overlay validation stage",
     )
     p.add_argument(
         "--dry-run",
@@ -366,7 +414,7 @@ def _register_special_parser(subparsers) -> None:
     """Register the special command parser (ported from v1)."""
     p = subparsers.add_parser(
         "special",
-        help="Apply special/ directory patches (Mk, Templates, treetop)",
+        help="Apply infrastructure merge stage (Mk/Templates/treetop/Tools/Keywords)",
     )
     p.add_argument(
         "--target",

@@ -1,4 +1,4 @@
-"""Special command - apply special/ directory patches."""
+"""Special command - apply infrastructure merge stage."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ if TYPE_CHECKING:
     from argparse import Namespace
     from dports.config import Config
 
-from dports.special import apply_special_patches, list_special_contents
+from dports.special import merge_infrastructure
 from dports.quarterly import validate_target
 from dports.utils import get_logger, ensure_git_branch
 
@@ -26,30 +26,17 @@ def cmd_special(config: Config, args: Namespace) -> int:
         log.error(str(e))
         return 1
 
-    if dry_run:
-        log.info("Dry run - showing special/ contents")
-        contents = list_special_contents(config)
+    log.info(f"Applying infrastructure merge for {target}")
 
-        for dirname, items in contents.items():
-            log.info(f"\nspecial/{dirname}/")
-            if items["files"]:
-                log.info(f"  Files: {', '.join(items['files'])}")
-            if items["diffs"]:
-                log.info(f"  Diffs: {', '.join(items['diffs'])}")
+    results = merge_infrastructure(config, target, dry_run=dry_run)
+    ok = [name for name, success in results.items() if success]
+    failed = [name for name, success in results.items() if not success]
 
-        return 0
+    for name in ok:
+        log.info(f"  {name}: ok")
+    for name in failed:
+        log.error(f"  {name}: failed")
 
-    log.info(f"Applying special/ patches for {target}")
-
-    results = apply_special_patches(config, target, dry_run=dry_run)
-
-    total = 0
-    for dirname, applied in results.items():
-        if applied:
-            log.info(f"special/{dirname}/: {len(applied)} items applied")
-            for item in applied:
-                log.debug(f"  {item}")
-            total += len(applied)
-
-    log.info(f"Applied {total} special items")
+    if failed:
+        return 1
     return 0

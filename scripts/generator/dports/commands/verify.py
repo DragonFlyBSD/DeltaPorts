@@ -11,8 +11,9 @@ if TYPE_CHECKING:
 from dports.models import PortOrigin
 from dports.overlay import Overlay
 from dports.quarterly import validate_target
+from dports.selection import overlay_candidates
 from dports.validate import validate_diff_applies
-from dports.utils import get_logger, list_delta_ports
+from dports.utils import get_logger, ensure_git_branch
 
 
 def cmd_verify(config: Config, args: Namespace) -> int:
@@ -21,15 +22,19 @@ def cmd_verify(config: Config, args: Namespace) -> int:
 
     target = validate_target(args.target)
 
+    try:
+        ensure_git_branch(config.paths.freebsd_ports, target)
+    except Exception as e:
+        log.error(str(e))
+        return 1
+
     if args.port == "all" or args.port is None:
         log.info(f"Verifying all port patches for {target}")
 
-        ports_base = config.paths.delta / "ports"
         success = 0
         failed = 0
 
-        for origin_str in list_delta_ports(ports_base):
-            origin = PortOrigin.parse(origin_str)
+        for origin in overlay_candidates(config):
             overlay_path = config.get_overlay_port_path(str(origin))
             overlay = Overlay(overlay_path, origin)
             if not overlay.exists():

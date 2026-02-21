@@ -12,7 +12,8 @@ if TYPE_CHECKING:
 from dports.models import PortOrigin
 from dports.overlay import Overlay
 from dports.quarterly import validate_target
-from dports.utils import get_logger, list_ports, list_delta_ports
+from dports.selection import overlay_candidates
+from dports.utils import get_logger, list_ports
 
 
 def cmd_list(config: Config, args: Namespace) -> int:
@@ -30,9 +31,8 @@ def cmd_list(config: Config, args: Namespace) -> int:
     if customized_only:
         # List only ports with customizations
         ports = []
-        for origin_str in list_delta_ports(ports_base):
-            origin = PortOrigin.parse(origin_str)
-            overlay = Overlay(config.get_overlay_port_path(origin_str), origin)
+        for origin in overlay_candidates(config):
+            overlay = Overlay(config.get_overlay_port_path(str(origin)), origin)
 
             has_makefile = False
             has_diffs = False
@@ -75,7 +75,7 @@ def cmd_list(config: Config, args: Namespace) -> int:
     else:
         # List all ports
         all_ports = list_ports(config.paths.merged_output)
-        customized = set(list_delta_ports(ports_base))
+        customized = {str(origin) for origin in overlay_candidates(config)}
 
         ports = [{"origin": p, "customized": p in customized} for p in all_ports]
 

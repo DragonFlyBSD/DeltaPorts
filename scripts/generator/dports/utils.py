@@ -326,6 +326,29 @@ def list_delta_ports(path: Path) -> list[str]:
     return sorted(ports)
 
 
+def list_overlay_dirs(path: Path) -> list[str]:
+    """
+    List all category/port directories under a DeltaPorts ports tree.
+
+    This is a discovery helper for full-tree scans that should not require
+    Makefile presence or overlay markers.
+    """
+    ports: list[str] = []
+
+    if not path.exists() or not path.is_dir():
+        return ports
+
+    for category_dir in path.iterdir():
+        if not category_dir.is_dir() or category_dir.name.startswith("."):
+            continue
+
+        for port_dir in category_dir.iterdir():
+            if port_dir.is_dir() and not port_dir.name.startswith("."):
+                ports.append(f"{category_dir.name}/{port_dir.name}")
+
+    return sorted(ports)
+
+
 def _run_git(
     repo_path: Path, args: list[str], timeout: int = 60
 ) -> subprocess.CompletedProcess:

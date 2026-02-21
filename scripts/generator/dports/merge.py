@@ -20,17 +20,18 @@ if TYPE_CHECKING:
     from dports.overlay import Overlay
 
 from dports.models import PortOrigin, MergeResult, PortType
+from dports.selection import overlay_candidates
 from dports.transform import (
     needs_transform,
     transform_directory,
 )
+from dports.validate import validate_port
 from dports.utils import (
     DPortsError,
     cpdup,
     apply_patch,
     cleanup_patch_artifacts,
     get_logger,
-    list_delta_ports,
 )
 
 
@@ -69,11 +70,13 @@ class PortMerger:
         origin: PortOrigin,
         target: str,
         dry_run: bool = False,
+        skip_validation: bool = False,
     ):
         self.config = config
         self.origin = origin
         self.target = target
         self.dry_run = dry_run
+        self.skip_validation = skip_validation
         self.log = get_logger(__name__)
 
     def merge(self, overlay: Overlay | None = None) -> MergeResult:
@@ -238,13 +241,13 @@ class PortMerger:
             result.finished_at = datetime.now()
             return result
 
-        # Step 1: Copy base port
-        self.log.info(f"Copying {src_port} -> {dst_port}")
-        if not self.dry_run:
-            self._copy_base_port(src_port, dst_port)
-
-        # Step 2: Check for customizations
+        # Step 1: Check for customizations
         if not overlay_path.exists():
+            # No customizations, straight copy from FreeBSD
+            self.log.info(f"Copying {src_port} -> {dst_port}")
+            if not self.dry_run:
+                self._copy_base_port(src_port, dst_port)
+
             # No customizations, just a straight copy
             result.success = True
             result.message = "Copied without customizations"
@@ -266,15 +269,22 @@ class PortMerger:
 
         manifest = overlay.manifest
 
-        validation = overlay.validate(self.target)
-        if not validation.valid:
-            result.errors.extend(validation.errors)
-            result.warnings.extend(validation.warnings)
-            result.message = "Merge failed: overlay validation errors"
-            result.finished_at = datetime.now()
-            return result
+        # Reuse global validator for strict, consistent checks
+        if not self.skip_validation:
+            validation = validate_port(self.config, self.origin, self.target)
+            if not validation.valid:
+                result.errors.extend(validation.errors)
+                result.warnings.extend(validation.warnings)
+                result.message = "Merge failed: overlay validation errors"
+                result.finished_at = datetime.now()
+                return result
 
-        result.warnings.extend(validation.warnings)
+            result.warnings.extend(validation.warnings)
+
+        # Step 2: Copy base port
+        self.log.info(f"Copying {src_port} -> {dst_port}")
+        if not self.dry_run:
+            self._copy_base_port(src_port, dst_port)
 
         # Step 3: Apply Makefile.DragonFly.@target
         if manifest.has_makefile_dragonfly:
@@ -382,6 +392,7 @@ def merge_port(
     origin: PortOrigin | str,
     target: str,
     dry_run: bool = False,
+    skip_validation: bool = False,
 ) -> MergeResult:
     """
     Convenience function to merge a single port.
@@ -391,6 +402,7 @@ def merge_port(
         origin: Port origin (string or PortOrigin)
         target: Target branch
         dry_run: If True, don't make changes
+        skip_validation: If True, skip strict pre-merge validation
 
     Returns:
         MergeResult
@@ -398,7 +410,13 @@ def merge_port(
     if isinstance(origin, str):
         origin = PortOrigin.parse(origin)
 
-    merger = PortMerger(config, origin, target, dry_run=dry_run)
+    merger = PortMerger(
+        config,
+        origin,
+        target,
+        dry_run=dry_run,
+        skip_validation=skip_validation,
+    )
     return merger.merge()
 
 
@@ -406,6 +424,7 @@ def merge_all_ports(
     config: Config,
     target: str,
     dry_run: bool = False,
+    skip_validation: bool = False,
 ) -> list[MergeResult]:
     """
     Merge all ports with customizations.
@@ -414,16 +433,21 @@ def merge_all_ports(
         config: DPorts configuration
         target: Target branch
         dry_run: If True, don't make changes
+        skip_validation: If True, skip strict pre-merge validation
 
     Returns:
         List of MergeResults for all merged ports
     """
     results = []
-    overlay_base = config.paths.delta / "ports"
 
-    for origin_str in list_delta_ports(overlay_base):
-        origin = PortOrigin.parse(origin_str)
-        merger = PortMerger(config, origin, target, dry_run=dry_run)
+    for origin in overlay_candidates(config):
+        merger = PortMerger(
+            config,
+            origin,
+            target,
+            dry_run=dry_run,
+            skip_validation=skip_validation,
+        )
         result = merger.merge()
         results.append(result)
 

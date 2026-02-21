@@ -33,52 +33,64 @@ The implementation will be delivered in two steps:
 
 Goal: make all required operations available as code-level primitives before any major CLI redesign.
 
-1. Define the Step 1 architecture contract before implementation starts.
+Status: completed on current branch (Step 2 pending).
+
+Delivered artifacts:
+
+- Compose pipeline module: `scripts/generator/dports/compose.py`
+- Compose command wiring (temporary until CLI redesign): `scripts/generator/dports/commands/compose.py`
+- Structured stage/report models: `scripts/generator/dports/models.py`
+- Selection/discovery helpers: `scripts/generator/dports/selection.py`
+- Integration harness module and runner script:
+  - `scripts/generator/dports/integration.py`
+  - `scripts/generator/dports_step1_harness.py`
+
+1. [x] Define the Step 1 architecture contract before implementation starts.
    - Specify pipeline phases, stage inputs/outputs, dry-run guarantees, and error model.
    - Define what each stage may mutate and what it must only report.
    - Primary files: `scripts/generator/dports/models.py`, `scripts/generator/dports/merge.py`, `scripts/generator/dports/special.py`.
 
-2. Introduce a canonical compose pipeline module with explicit stage functions.
+2. [x] Introduce a canonical compose pipeline module with explicit stage functions.
    - Required stage functions: `seed_base_tree`, `apply_infrastructure`, `apply_overlay_ports`, `finalize_tree`.
    - Keep orchestration code independent from CLI command handlers.
    - Primary files: `scripts/generator/dports/compose.py` (new), `scripts/generator/dports/merge.py`, `scripts/generator/dports/special.py`.
 
-3. Add structured stage/result dataclasses and aggregate reporting.
+3. [x] Add structured stage/result dataclasses and aggregate reporting.
    - Return stage-level counts, warnings, errors, durations, and success flags.
    - Ensure results are machine-readable and stable for future CLI/reporting layers.
    - Primary files: `scripts/generator/dports/models.py`, `scripts/generator/dports/compose.py`.
 
-4. Implement full-tree seeding from FreeBSD target into output.
+4. [x] Implement full-tree seeding from FreeBSD target into output.
    - Seed from FreeBSD target branch into `merged_output` with explicit overwrite policy.
    - Enforce branch/target preconditions before mutating output.
    - Primary files: `scripts/generator/dports/merge.py`, `scripts/generator/dports/config.py`, `scripts/generator/dports/utils.py`.
 
-5. Wire infrastructure stage to the canonical infrastructure merge path.
+5. [x] Wire infrastructure stage to the canonical infrastructure merge path.
    - Use `merge_infrastructure` as the primary mechanism for Mk/Templates/treetop/Tools/Keywords.
    - Do not rely on ad-hoc patch-only flows for final composition.
    - Primary files: `scripts/generator/dports/special.py`, `scripts/generator/dports/compose.py`.
 
-6. Refactor overlay application stage to support explicit selectors.
+6. [x] Refactor overlay application stage to support explicit selectors.
    - Supported selectors: single origin, overlay candidates, full-tree selection.
    - Keep selector logic separate from stage execution logic.
    - Primary files: `scripts/generator/dports/merge.py`, `scripts/generator/dports/utils.py`, `scripts/generator/dports/overlay.py`.
 
-7. Unify discovery helpers to remove command-specific drift.
+7. [x] Unify discovery helpers to remove command-specific drift.
    - Provide shared discovery primitives used consistently by check/merge/verify/migrate/compose.
    - Ensure candidate vs full-tree semantics are explicit and non-ambiguous.
    - Primary files: `scripts/generator/dports/utils.py`, `scripts/generator/dports/validate.py`, `scripts/generator/dports/overlay.py`.
 
-8. Make validation fully reusable across all Step 1 stages.
+8. [x] Make validation fully reusable across all Step 1 stages.
    - Reuse one validation policy for target checks, root-path violations, missing `@<target>` content, and diff format checks.
    - Allow stage preflight and independent validation runs to produce consistent outcomes.
    - Primary files: `scripts/generator/dports/validate.py`, `scripts/generator/dports/overlay.py`, `scripts/generator/dports/quarterly.py`.
 
-9. Complete migration phase APIs for output-tree and in-place workflows.
+9. [x] Complete migration phase APIs for output-tree and in-place workflows.
    - Keep phase APIs explicit: `layout`, `state`, `cleanup`.
    - Ensure collision-safe operations and deterministic cleanup behavior.
    - Primary files: `scripts/generator/dports/migrate.py`, `scripts/generator/dports/state.py`.
 
-10. Add integration verification harness for Step 1 completion.
+10. [x] Add integration verification harness for Step 1 completion.
    - Validate end-to-end compose flow for `main` and one quarterly target.
    - Verify dry-run behavior, branch guards, strict target validation, and migration/compose interoperability.
    - Primary files: `scripts/generator/dports/compose.py`, `scripts/generator/dports/commands/*` (temporary wiring), `docs/implementation-plan-v2.md`.
