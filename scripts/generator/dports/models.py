@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
 class BuildStatus(Enum):
     """Build status for a port."""
-    
+
     UNKNOWN = "unknown"
     SUCCESS = "success"
     FAILED = "failed"
@@ -32,16 +32,16 @@ class BuildStatus(Enum):
 
 class PortType(Enum):
     """Type of port from v1 STATUS file."""
-    
-    PORT = "port"      # Standard port - merge FreeBSD + apply customizations
-    MASK = "mask"      # Masked - skip/ignore entirely
-    DPORT = "dport"    # DragonFly-specific port - use newport/ as complete port
-    LOCK = "lock"      # Locked - copy from built DPorts tree, not merged
+
+    PORT = "port"  # Standard port - merge FreeBSD + apply customizations
+    MASK = "mask"  # Masked - skip/ignore entirely
+    DPORT = "dport"  # DragonFly-specific port - use newport/ as complete port
+    LOCK = "lock"  # Locked - copy from built DPorts tree, not merged
 
 
 class CustomizationType(Enum):
     """Types of port customizations."""
-    
+
     MAKEFILE_DRAGONFLY = "makefile_dragonfly"
     DIFFS = "diffs"
     DRAGONFLY_DIR = "dragonfly_dir"
@@ -52,10 +52,10 @@ class CustomizationType(Enum):
 class PortOrigin:
     """
     Represents a port's origin (category/name).
-    
+
     Immutable and hashable for use as dict keys.
     """
-    
+
     category: str
     name: str
 
@@ -69,23 +69,25 @@ class PortOrigin:
     def parse(cls, origin: str) -> PortOrigin:
         """
         Parse a port origin string into a PortOrigin.
-        
+
         Args:
             origin: String in format "category/name"
-            
+
         Raises:
             ValueError: If format is invalid
         """
         parts = origin.strip().split("/")
         if len(parts) != 2 or not parts[0] or not parts[1]:
-            raise ValueError(f"Invalid port origin: {origin!r} (expected 'category/name')")
+            raise ValueError(
+                f"Invalid port origin: {origin!r} (expected 'category/name')"
+            )
         return cls(category=parts[0], name=parts[1])
 
     @classmethod
     def from_path(cls, path: Path, base: Path) -> PortOrigin:
         """
         Create a PortOrigin from a filesystem path.
-        
+
         Args:
             path: Path to the port directory
             base: Base path to calculate relative position
@@ -101,37 +103,34 @@ class PortOrigin:
 class OverlayManifest:
     """
     Parsed overlay.toml manifest for a port.
-    
+
     This is the v2 explicit manifest that replaces implicit detection
     of customization types.
     """
-    
+
     # Required metadata
     origin: PortOrigin
     description: str = ""
-    
+
     # Port type (from v1 STATUS file: PORT, MASK, DPORT, LOCK)
     port_type: PortType = PortType.PORT
-    
+
     # Customization flags
     has_makefile_dragonfly: bool = False
     has_diffs: bool = False
     has_dragonfly_dir: bool = False
     has_extra_patches: bool = False
     has_newport: bool = False  # For DPORT type
-    
-    # Quarterly-specific overrides
-    quarterly_overrides: list[str] = field(default_factory=list)
-    
+
     # Build hints
     broken: bool = False
     broken_reason: str = ""
     ignore: bool = False
     ignore_reason: str = ""
-    
+
     # Maintainer info
     maintainer: str = ""
-    
+
     # Raw TOML data for extensions
     raw: dict[str, Any] = field(default_factory=dict)
 
@@ -140,27 +139,43 @@ class OverlayManifest:
         """Create an OverlayManifest from parsed TOML data."""
         # Parse port type from overlay section or top-level
         overlay_section = data.get("overlay", {})
+        components_section = data.get("components", {})
         type_str = overlay_section.get("type", data.get("type", "port"))
         try:
             port_type = PortType(type_str.lower())
         except ValueError:
             port_type = PortType.PORT
-        
+
         # Check for ignore in status section (MASK ports)
         status_section = data.get("status", {})
         ignore = status_section.get("ignore") is not None or data.get("ignore", False)
-        ignore_reason = status_section.get("ignore", "") or data.get("ignore_reason", "")
-        
+        ignore_reason = status_section.get("ignore", "") or data.get(
+            "ignore_reason", ""
+        )
+
         return cls(
             origin=origin,
             description=overlay_section.get("reason", data.get("description", "")),
             port_type=port_type,
-            has_makefile_dragonfly=data.get("makefile_dragonfly", False),
-            has_diffs=data.get("diffs", False),
-            has_dragonfly_dir=data.get("dragonfly_dir", False),
-            has_extra_patches=data.get("extra_patches", False),
-            has_newport=data.get("newport", False),
-            quarterly_overrides=data.get("quarterly_overrides", []),
+            has_makefile_dragonfly=bool(
+                components_section.get(
+                    "makefile_dragonfly", data.get("makefile_dragonfly", False)
+                )
+            ),
+            has_diffs=bool(components_section.get("diffs", data.get("diffs", False))),
+            has_dragonfly_dir=bool(
+                components_section.get(
+                    "dragonfly_dir", data.get("dragonfly_dir", False)
+                )
+            ),
+            has_extra_patches=bool(
+                components_section.get(
+                    "extra_patches", data.get("extra_patches", False)
+                )
+            ),
+            has_newport=bool(
+                components_section.get("newport", data.get("newport", False))
+            ),
             broken=data.get("broken", False),
             broken_reason=data.get("broken_reason", ""),
             ignore=ignore,
@@ -173,20 +188,20 @@ class OverlayManifest:
 @dataclass
 class MergeResult:
     """Result of a port merge operation."""
-    
+
     origin: PortOrigin
     success: bool
     message: str = ""
-    
+
     # What was applied
     applied_makefile: bool = False
     applied_diffs: list[str] = field(default_factory=list)
     applied_dragonfly_files: list[str] = field(default_factory=list)
-    
+
     # Warnings and errors
     warnings: list[str] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
-    
+
     # Timing
     started_at: datetime | None = None
     finished_at: datetime | None = None
@@ -202,14 +217,14 @@ class MergeResult:
 @dataclass
 class ValidationResult:
     """Result of validating a port overlay."""
-    
+
     origin: PortOrigin
     valid: bool
-    
+
     # Validation details
     errors: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
-    
+
     # What was checked
     checked_manifest: bool = False
     checked_diffs: bool = False
@@ -228,13 +243,13 @@ class ValidationResult:
 @dataclass
 class PortState:
     """Build state for a single port."""
-    
+
     origin: PortOrigin
     status: BuildStatus = BuildStatus.UNKNOWN
     last_build: datetime | None = None
     last_success: datetime | None = None
     version: str = ""
-    quarterly: str = ""
+    target: str = ""
     notes: str = ""
 
     def to_dict(self) -> dict[str, Any]:
@@ -243,9 +258,11 @@ class PortState:
             "origin": str(self.origin),
             "status": self.status.value,
             "last_build": self.last_build.isoformat() if self.last_build else None,
-            "last_success": self.last_success.isoformat() if self.last_success else None,
+            "last_success": self.last_success.isoformat()
+            if self.last_success
+            else None,
             "version": self.version,
-            "quarterly": self.quarterly,
+            "target": self.target,
             "notes": self.notes,
         }
 
@@ -255,9 +272,13 @@ class PortState:
         return cls(
             origin=PortOrigin.parse(data["origin"]),
             status=BuildStatus(data.get("status", "unknown")),
-            last_build=datetime.fromisoformat(data["last_build"]) if data.get("last_build") else None,
-            last_success=datetime.fromisoformat(data["last_success"]) if data.get("last_success") else None,
+            last_build=datetime.fromisoformat(data["last_build"])
+            if data.get("last_build")
+            else None,
+            last_success=datetime.fromisoformat(data["last_success"])
+            if data.get("last_success")
+            else None,
             version=data.get("version", ""),
-            quarterly=data.get("quarterly", ""),
+            target=data.get("target", data.get("quarterly", "")),
             notes=data.get("notes", ""),
         )

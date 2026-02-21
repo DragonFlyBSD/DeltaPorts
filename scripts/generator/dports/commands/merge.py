@@ -10,25 +10,32 @@ if TYPE_CHECKING:
 
 from dports.models import PortOrigin
 from dports.merge import merge_port, merge_all_ports
-from dports.utils import get_logger
+from dports.quarterly import validate_target
+from dports.utils import get_logger, ensure_git_branch
 
 
 def cmd_merge(config: Config, args: Namespace) -> int:
     """Execute the merge command."""
     log = get_logger(__name__)
-    
-    quarterly = args.target
-    dry_run = getattr(args, 'dry_run', False)
-    
+
+    target = validate_target(args.target)
+    dry_run = getattr(args, "dry_run", False)
+
+    try:
+        ensure_git_branch(config.paths.freebsd_ports, target)
+    except Exception as e:
+        log.error(str(e))
+        return 1
+
     if args.port == "all" or args.port is None:
-        log.info(f"Merging all ports for {quarterly}")
-        results = merge_all_ports(config, quarterly, dry_run=dry_run)
-        
+        log.info(f"Merging all ports for {target}")
+        results = merge_all_ports(config, target, dry_run=dry_run)
+
         success = sum(1 for r in results if r.success)
         failed = sum(1 for r in results if not r.success)
-        
+
         log.info(f"Merge complete: {success} succeeded, {failed} failed")
-        
+
         if failed > 0:
             for r in results:
                 if not r.success:
@@ -37,10 +44,10 @@ def cmd_merge(config: Config, args: Namespace) -> int:
         return 0
     else:
         origin = PortOrigin.parse(args.port)
-        log.info(f"Merging {origin} for {quarterly}")
-        
-        result = merge_port(config, origin, quarterly, dry_run=dry_run)
-        
+        log.info(f"Merging {origin} for {target}")
+
+        result = merge_port(config, origin, target, dry_run=dry_run)
+
         if result.success:
             log.info(f"Merge successful: {result.message}")
             if result.applied_diffs:

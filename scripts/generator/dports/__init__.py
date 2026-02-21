@@ -5,7 +5,7 @@ This package provides tools for maintaining patches/overlays to convert
 FreeBSD's Ports Collection into DragonFly BSD's DPorts system.
 
 Key features:
-- Multi-quarterly FreeBSD support via @QUARTER directories
+- Branch-scoped FreeBSD support via @<target> directories
 - Explicit overlay.toml manifests for customized ports
 - Centralized build state management
 - Strong validation before merge operations

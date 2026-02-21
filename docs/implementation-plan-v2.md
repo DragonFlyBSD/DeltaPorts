@@ -1,220 +1,189 @@
-# DeltaPorts v2 Implementation Plan
+# DeltaPorts v2 Implementation Plan (Branch-Scoped Redesign)
 
-## Summary
+## Design Inputs (Locked)
 
-| Aspect | Current State |
-|--------|---------------|
-| Approach | v2 Python package exists under `scripts/generator/dports/` |
-| Structure | Modular package with core modules + command modules |
-| Python | 3.11+ target (`tomllib` with `tomli` fallback) |
-| Migration | Implemented as `dports migrate [port|all]` |
-| Features | Core pieces implemented; strictness and parity items still pending |
-| Commands | 16 wired commands (some are placeholders/partial) |
-| Testing | Manual/real-tree oriented; no full automated suite yet |
-
----
-
-## Package Structure (Current)
-
-```
-scripts/generator/
-├── dports/                    # v2 package
-│   ├── __init__.py
-│   ├── __main__.py
-│   ├── cli.py
-│   ├── config.py
-│   ├── models.py
-│   ├── overlay.py
-│   ├── quarterly.py
-│   ├── merge.py
-│   ├── special.py
-│   ├── state.py
-│   ├── migrate.py
-│   ├── validate.py
-│   ├── transform.py
-│   ├── utils.py
-│   └── commands/
-│       ├── __init__.py
-│       ├── add.py
-│       ├── check.py
-│       ├── diff.py
-│       ├── list.py
-│       ├── logs.py
-│       ├── makefiles.py
-│       ├── merge.py
-│       ├── migrate.py
-│       ├── prune.py
-│       ├── save.py
-│       ├── special.py
-│       ├── state.py
-│       ├── status.py
-│       ├── sync.py
-│       ├── update.py
-│       └── verify.py
-├── dports_v1.py              # v1 retained for reference
-└── dports-default.conf       # legacy reference config
-```
+1. Targets are restricted to:
+   - `main`
+   - `YYYYQ[1-4]`
+2. Overlays are component-local and target-scoped:
+   - `Makefile.DragonFly.@<target>`
+   - `diffs/@<target>/...`
+   - `dragonfly/@<target>/...`
+3. Root component paths are hard errors.
+4. FreeBSD ports source uses one checkout (branch switches in place).
+5. Target switch/sync fails if FreeBSD tree is dirty.
+6. v2 work is independent from v1 migration concerns.
 
 ---
 
-## Implementation Status
+## Scope
+
+This plan refactors existing v2 code to the branch-scoped design.
+
+In scope:
+
+- Target parsing/validation model
+- Branch guard and sync workflow
+- Strict target resolution for all components
+- Validation hardening
+- `special/` parity
+- State target keying
+- Docs and CLI wording alignment
+
+Out of scope:
+
+- Arbitrary branch names
+- Root fallback compatibility mode
+- Migration tooling work as a v2 blocker
+
+---
+
+## Workstreams
 
 Legend:
-- `[x]` implemented
-- `[~]` partially implemented
-- `[ ]` planned
 
-### Phase 0: Preparation
-- [x] Package directory structure created
-- [x] v1 script renamed to `dports_v1.py`
+- `[ ]` pending
+- `[~]` in progress/partial
+- `[x]` completed
 
-### Phase 1: Core Infrastructure
+### WS1: Target Model Foundation
 
-#### 1.1 Configuration System (`config.py`)
-- [x] TOML config loading with search paths
-- [x] Dataclass-based config objects
-- [~] Quarterly config support (basic default only)
-- [ ] Environment variable override system (`DPORTS_*`)
-- [ ] Rich path/policy validation
+- [ ] Replace quarterly-centric parsing with target parser (`main` + `YYYYQ[1-4]`)
+- [ ] Update helper APIs to accept `target` terminology
+- [ ] Add shared target validation utility used by CLI/commands/overlay checks
 
-#### 1.2 Data Models (`models.py`)
-- [x] Core dataclasses (`PortOrigin`, `OverlayManifest`, `MergeResult`, `ValidationResult`, `PortState`)
-- [x] Enums for build state and port type
-- [~] Final model shape alignment with architecture docs
+Primary files:
 
-#### 1.3 Logging & Utils (`utils.py`)
-- [x] Logging setup and logger factory
-- [x] `cpdup` wrapper with shutil fallback
-- [x] `apply_patch` wrapper and patch artifact cleanup
-- [x] Port-list helpers
+- `scripts/generator/dports/quarterly.py`
+- `scripts/generator/dports/config.py`
+- `scripts/generator/dports/cli.py`
 
-### Phase 2: Overlay & Quarterly System
+### WS2: Single Checkout Branch Workflow
 
-#### 2.1 Overlay Parser (`overlay.py`)
-- [x] Parse `overlay.toml` via `tomllib`
-- [x] Manifest loading and lazy access
-- [x] Basic validation checks against declared customization flags
-- [~] Strict schema enforcement and unknown-field policy
+- [ ] Implement repository cleanliness guard before branch switch
+- [ ] Implement `sync --target` branch switch + fast-forward workflow
+- [ ] Add branch-match guard to `merge`, `check`, and `special`
 
-#### 2.2 Quarterly Resolution (`quarterly.py`)
-- [x] Quarterly type/parser (`YYYYQn`)
-- [x] `diffs/@QUARTER` discovery helper support
-- [~] Merge logic uses quarterly resolution for diffs only
-- [ ] Full quarterly parity (`dragonfly/`, `Makefile.DragonFly.@QUARTER`, `special/`)
+Primary files:
 
-#### 2.3 Validation Engine (`validate.py`)
-- [x] `validate_port` and `validate_all_ports`
-- [x] Diff format lint checks and orphan detection
-- [~] Full architecture-level validation matrix
-- [ ] Merge-time hard gate on validation failures
+- `scripts/generator/dports/commands/sync.py`
+- `scripts/generator/dports/commands/merge.py`
+- `scripts/generator/dports/commands/check.py`
+- `scripts/generator/dports/commands/special.py`
+- `scripts/generator/dports/config.py`
 
-### Phase 3: Merge Logic
+### WS3: Strict Component Resolution
 
-#### 3.1 Transform Functions (`transform.py`)
-- [x] Architecture transforms (`amd64 -> x86_64`)
-- [x] libomp dependency stripping
-- [x] UIDs/GIDs/MOVED/Tools transformations
+- [ ] Resolve `Makefile.DragonFly.@<target>` only
+- [ ] Resolve `diffs/@<target>/` only
+- [ ] Resolve `dragonfly/@<target>/` only
+- [ ] Remove all fallback logic from target paths to root paths
 
-#### 3.2 Port Merger (`merge.py`)
-- [x] `PortMerger` class and merge dispatch
-- [x] PORT/MASK/DPORT/LOCK handling
-- [x] Diff apply + dragonfly file overlay + transforms
-- [~] Strict error policy and validation-gated execution
+Primary files:
 
-#### 3.3 Special Handling (`special.py`)
-- [x] Lightweight `special/` apply flow used by command path
-- [~] Extended infrastructure merge helpers exist but are not command-integrated
-- [ ] Full quarterly + replacements parity in command path
+- `scripts/generator/dports/overlay.py`
+- `scripts/generator/dports/merge.py`
 
-### Phase 4: State Management
+### WS4: Validation Hardening
 
-#### 4.1 State System (`state.py`)
-- [x] `BuildState` manager
-- [x] Local JSON load/save backend
-- [x] Import from legacy STATUS files
-- [ ] `git-branch` backend
-- [ ] `external` backend
+- [ ] Root component files become hard errors
+- [ ] Invalid target names in `@...` paths become hard errors
+- [ ] Missing target component path for declared component becomes hard error
+- [ ] Clear error messages with per-component remediation hints
 
-### Phase 5: Commands
+Primary files:
 
-#### 5.1 Core Commands
-- [x] `merge`
-- [~] `sync` (CLI wired, implementation TODO)
-- [x] `prune`
-- [x] `makefiles`
+- `scripts/generator/dports/validate.py`
+- `scripts/generator/dports/overlay.py`
 
-#### 5.2 v2 Management Commands
-- [x] `check`
-- [x] `migrate`
-- [x] `state`
-- [x] `list`
+### WS5: `special/` Target Parity
 
-#### 5.3 Utility / Ported Command Set
-- [x] `status`, `verify`, `add`, `save`, `diff`, `special`, `logs`, `update`
+- [ ] Enforce `special/**/diffs/@<target>/...` policy
+- [ ] Reject root `special/**/diffs/*.diff`
+- [ ] Align `special` command behavior with merge/check target guards
 
-#### 5.4 CLI Entry Point
-- [x] argparse subcommand wiring
-- [x] global flags (`--config`, `--verbose`, `--quiet`, `--version`)
-- [x] command dispatch via registry
+Primary files:
 
-### Phase 6: Migration Tooling
-- [x] Unified migration command (`dports migrate [port|all]`)
-- [x] Dry-run support
-- [x] STATUS parsing and overlay generation
-- [~] Output/state format alignment with runtime state backend
+- `scripts/generator/dports/special.py`
+- `scripts/generator/dports/commands/special.py`
 
-### Phase 7: Repository Config Files
-- [~] Config loader supports repo config file
-- [ ] Create and commit root `dports.toml`
-- [ ] Update `.gitignore` for `state/` and migration outputs
+### WS6: State and Query Alignment
+
+- [ ] Track build state with `target` field semantics
+- [ ] Ensure list/status output reflects target-scoped records
+
+Primary files:
+
+- `scripts/generator/dports/state.py`
+- `scripts/generator/dports/commands/state.py`
+- `scripts/generator/dports/commands/list.py`
+
+### WS7: CLI and Docs Alignment
+
+- [ ] Update CLI help text from "quarterly" to "target branch" where applicable
+- [ ] Keep `--target` flag name stable
+- [ ] Update docs to branch-scoped examples (`@main`, `@2025Q2`)
+
+Primary files:
+
+- `scripts/generator/dports/cli.py`
+- `docs/architecture-v2.md`
+- `docs/implementation-plan-v2.md`
 
 ---
 
-## Known Gaps
+## Execution Order
 
-1. `sync` command is not implemented yet.
-2. State backends `git-branch` and `external` are not implemented.
-3. `merge` does not currently enforce a strict pre-merge `check` gate.
-4. Quarterly behavior is complete for `diffs/` only; parity elsewhere is pending.
-5. Migration-generated state JSON and runtime state JSON should be unified.
-6. `special` command path does not yet use the full infrastructure merge helper flow.
-
----
-
-## Dependency Flow (Current)
-
-```
-Config/Models/Utils
-      |
-      +--> Overlay + Quarterly + Validate
-      |          |
-      |          +--> Merge
-      |
-      +--> State
-      |
-      +--> Special
-      |
-      +--> Commands/* --> CLI
-```
+1. WS1 (target model)
+2. WS2 (branch workflow/guards)
+3. WS3 (component resolution)
+4. WS4 (validation hardening)
+5. WS5 (`special/` parity)
+6. WS6 (state alignment)
+7. WS7 (CLI/docs cleanup)
 
 ---
 
-## Next Execution Order
+## Acceptance Criteria
 
-1. Finish `sync` implementation.
-2. Add validation gate policy to `merge` (with override flag semantics).
-3. Implement quarterly parity for `dragonfly/`, `Makefile.DragonFly`, and `special/`.
-4. Unify state JSON schemas (migration output and runtime backend).
-5. Implement state backends (`git-branch`, `external`).
-6. Add repo-level `dports.toml` and finalize docs/examples around it.
+1. `dports check --target main` and `dports merge --target main` only consume
+   `@main` component paths.
+2. `dports check --target 2025Q2` and `dports merge --target 2025Q2` only consume
+   `@2025Q2` component paths.
+3. Any root component file causes check failure.
+4. Any unknown/invalid `@<target>` naming causes check failure.
+5. `sync --target T` fails on dirty FreeBSD tree.
+6. `merge/check/special --target T` fail if FreeBSD checkout branch is not `T`.
+7. `special/` follows the same strict target policy.
 
 ---
 
-## Risk Mitigation
+## Test Matrix
+
+- `main` target, complete component set
+- `2025Q2` target, complete component set
+- missing `Makefile.DragonFly.@<target>` with component enabled
+- missing `diffs/@<target>/` with component enabled
+- missing `dragonfly/@<target>/` with component enabled
+- root component files present
+- invalid target directories (`@foo`, `@2025Q5`, `@2025q2`)
+- dirty FreeBSD tree during `sync --target`
+- branch mismatch during `merge/check/special`
+
+---
+
+## Risks and Mitigations
 
 | Risk | Mitigation |
 |------|------------|
-| Behavior drift between docs and code | Keep this plan as status-tracked (implemented/partial/planned) |
-| Migration confusion | Preserve dry-run usage and document output paths clearly |
-| Quarterly edge cases | Add explicit quarterly parity checklist before release |
-| State backend complexity | Keep local backend as stable default until alternates are production-ready |
+| Existing overlay trees still use root paths | Add clear `check` errors with exact replacement path examples |
+| Branch mismatch confusion | Add explicit preflight output: current branch vs requested target |
+| Strict mode rollout friction | Provide one-time remediation doc snippet for converting root files to `@main` |
+| Partial code-path drift | Route merge/check/special through shared target resolver utilities |
+
+---
+
+## Immediate Next Step
+
+Implement WS1 and WS2 first, then run `check` in strict mode to identify all
+overlay trees that must be moved to `@main`/`@YYYYQn` layout.

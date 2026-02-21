@@ -6,8 +6,8 @@ Uses argparse with subcommands for each operation.
 
 Example usage:
     dports merge --target 2025Q1 category/port
-    dports sync --target 2025Q1
-    dports check category/port
+    dports sync --target main
+    dports check --target main category/port
     dports state show
     dports list --customized
 """
@@ -33,18 +33,21 @@ def create_parser() -> argparse.ArgumentParser:
         description="DPorts v2 - DragonFly BSD Ports overlay management",
     )
     parser.add_argument(
-        "-c", "--config",
+        "-c",
+        "--config",
         type=Path,
         help="Path to dports.toml config file",
     )
     parser.add_argument(
-        "-v", "--verbose",
+        "-v",
+        "--verbose",
         action="count",
         default=0,
         help="Increase verbosity (can be repeated)",
     )
     parser.add_argument(
-        "-q", "--quiet",
+        "-q",
+        "--quiet",
         action="store_true",
         help="Suppress non-error output",
     )
@@ -55,7 +58,7 @@ def create_parser() -> argparse.ArgumentParser:
     )
 
     subparsers = parser.add_subparsers(dest="command", metavar="COMMAND")
-    
+
     # Register all command parsers
     _register_merge_parser(subparsers)
     _register_sync_parser(subparsers)
@@ -84,9 +87,10 @@ def _register_merge_parser(subparsers) -> None:
         help="Merge FreeBSD port with DragonFly overlay",
     )
     p.add_argument(
-        "--target", "-t",
+        "--target",
+        "-t",
         required=True,
-        help="Target quarterly branch (e.g., 2025Q1)",
+        help="Target FreeBSD ports branch (main or YYYYQ[1-4])",
     )
     p.add_argument(
         "port",
@@ -94,12 +98,14 @@ def _register_merge_parser(subparsers) -> None:
         help="Port origin (category/name) or 'all'",
     )
     p.add_argument(
-        "--force", "-f",
+        "--force",
+        "-f",
         action="store_true",
         help="Force merge even if validation fails",
     )
     p.add_argument(
-        "--dry-run", "-n",
+        "--dry-run",
+        "-n",
         action="store_true",
         help="Show what would be done without making changes",
     )
@@ -109,12 +115,13 @@ def _register_sync_parser(subparsers) -> None:
     """Register the sync command parser."""
     p = subparsers.add_parser(
         "sync",
-        help="Sync FreeBSD ports tree for a quarterly",
+        help="Sync FreeBSD ports tree for a target branch",
     )
     p.add_argument(
-        "--target", "-t",
+        "--target",
+        "-t",
         required=True,
-        help="Target quarterly branch (e.g., 2025Q1)",
+        help="Target FreeBSD ports branch (main or YYYYQ[1-4])",
     )
 
 
@@ -125,12 +132,14 @@ def _register_prune_parser(subparsers) -> None:
         help="Remove ports that no longer exist in FreeBSD",
     )
     p.add_argument(
-        "--target", "-t",
+        "--target",
+        "-t",
         required=True,
-        help="Target quarterly branch (e.g., 2025Q1)",
+        help="Target FreeBSD ports branch (main or YYYYQ[1-4])",
     )
     p.add_argument(
-        "--dry-run", "-n",
+        "--dry-run",
+        "-n",
         action="store_true",
         help="Show what would be pruned without making changes",
     )
@@ -143,9 +152,10 @@ def _register_makefiles_parser(subparsers) -> None:
         help="Regenerate category Makefiles",
     )
     p.add_argument(
-        "--target", "-t",
+        "--target",
+        "-t",
         required=True,
-        help="Target quarterly branch (e.g., 2025Q1)",
+        help="Target FreeBSD ports branch (main or YYYYQ[1-4])",
     )
 
 
@@ -161,8 +171,10 @@ def _register_check_parser(subparsers) -> None:
         help="Port origin to check, or 'all' for all ports",
     )
     p.add_argument(
-        "--target", "-t",
-        help="Target quarterly for validation context",
+        "--target",
+        "-t",
+        required=True,
+        help="Target FreeBSD ports branch (main or YYYYQ[1-4])",
     )
 
 
@@ -178,17 +190,20 @@ def _register_migrate_parser(subparsers) -> None:
         help="Port origin to migrate, or 'all' for all ports",
     )
     p.add_argument(
-        "--output", "-o",
+        "--output",
+        "-o",
         type=Path,
         help="Output directory for migrated ports (default: migrated_ports/)",
     )
     p.add_argument(
-        "--state-output", "-s",
+        "--state-output",
+        "-s",
         type=Path,
         help="Output path for builds.json (default: state/builds.json)",
     )
     p.add_argument(
-        "--dry-run", "-n",
+        "--dry-run",
+        "-n",
         action="store_true",
         help="Show what would be migrated without making changes",
     )
@@ -201,15 +216,15 @@ def _register_state_parser(subparsers) -> None:
         help="Manage build state database",
     )
     state_sub = p.add_subparsers(dest="state_cmd", metavar="ACTION")
-    
+
     state_sub.add_parser("show", help="Show current build state")
     state_sub.add_parser("clear", help="Clear build state")
-    
+
     imp = state_sub.add_parser("import", help="Import from STATUS files")
-    imp.add_argument("--target", "-t", required=True, help="Target quarterly")
-    
+    imp.add_argument("--target", "-t", required=True, help="Target branch")
+
     exp = state_sub.add_parser("export", help="Export to STATUS files")
-    exp.add_argument("--target", "-t", required=True, help="Target quarterly")
+    exp.add_argument("--target", "-t", required=True, help="Target branch")
 
 
 def _register_list_parser(subparsers) -> None:
@@ -224,8 +239,9 @@ def _register_list_parser(subparsers) -> None:
         help="Only show ports with customizations",
     )
     p.add_argument(
-        "--quarterly", "-t",
-        help="Filter by quarterly support",
+        "--target",
+        "-t",
+        help="Filter by target branch support",
     )
     p.add_argument(
         "--format",
@@ -247,8 +263,9 @@ def _register_status_parser(subparsers) -> None:
         help="Port origin to show status for",
     )
     p.add_argument(
-        "--target", "-t",
-        help="Target quarterly",
+        "--target",
+        "-t",
+        help="Target branch",
     )
 
 
@@ -264,9 +281,10 @@ def _register_verify_parser(subparsers) -> None:
         help="Port origin to verify, or 'all'",
     )
     p.add_argument(
-        "--target", "-t",
+        "--target",
+        "-t",
         required=True,
-        help="Target quarterly",
+        help="Target branch",
     )
 
 
@@ -293,8 +311,10 @@ def _register_save_parser(subparsers) -> None:
         help="Port origin to save",
     )
     p.add_argument(
-        "--target", "-t",
-        help="Target quarterly for the diff",
+        "--target",
+        "-t",
+        required=True,
+        help="Target branch for the diff",
     )
 
 
@@ -309,9 +329,10 @@ def _register_diff_parser(subparsers) -> None:
         help="Port origin to diff",
     )
     p.add_argument(
-        "--target", "-t",
+        "--target",
+        "-t",
         required=True,
-        help="Target quarterly",
+        help="Target branch",
     )
 
 
@@ -322,12 +343,14 @@ def _register_special_parser(subparsers) -> None:
         help="Apply special/ directory patches (Mk, Templates, treetop)",
     )
     p.add_argument(
-        "--target", "-t",
+        "--target",
+        "-t",
         required=True,
-        help="Target quarterly",
+        help="Target branch",
     )
     p.add_argument(
-        "--dry-run", "-n",
+        "--dry-run",
+        "-n",
         action="store_true",
         help="Show what would be done",
     )
@@ -358,9 +381,10 @@ def _register_update_parser(subparsers) -> None:
         help="Update UPDATING file",
     )
     p.add_argument(
-        "--target", "-t",
+        "--target",
+        "-t",
         required=True,
-        help="Target quarterly",
+        help="Target branch",
     )
 
 
@@ -376,17 +400,17 @@ def main(argv: list[str] | None = None) -> int:
     try:
         # Setup logging based on verbosity
         setup_logging(verbose=args.verbose, quiet=args.quiet)
-        
+
         # Load configuration
         config = Config.load(args.config)
-        
+
         # Import and run the command
         from dports.commands import COMMANDS
-        
+
         if args.command not in COMMANDS:
             print(f"Unknown command: {args.command}", file=sys.stderr)
             return 1
-        
+
         cmd_func = COMMANDS[args.command]
         return cmd_func(config, args)
 

@@ -9,42 +9,51 @@ if TYPE_CHECKING:
     from argparse import Namespace
     from dports.config import Config
 
+from dports.quarterly import validate_target
 from dports.utils import get_logger
 
 
 def cmd_makefiles(config: Config, args: Namespace) -> int:
     """Execute the makefiles command."""
     log = get_logger(__name__)
-    
-    quarterly = args.target
-    log.info(f"Regenerating category Makefiles for {quarterly}")
-    
+
+    target = validate_target(args.target)
+    log.info(f"Regenerating category Makefiles for {target}")
+
     merged_base = config.paths.merged_output
-    
+
     # Find all categories
-    categories = sorted([
-        d.name for d in merged_base.iterdir()
-        if d.is_dir() and not d.name.startswith(".")
-        and d.name not in {"distfiles", "packages", "Mk", "Templates"}
-    ])
-    
+    categories = sorted(
+        [
+            d.name
+            for d in merged_base.iterdir()
+            if d.is_dir()
+            and not d.name.startswith(".")
+            and d.name not in {"distfiles", "packages", "Mk", "Templates"}
+        ]
+    )
+
     for category in categories:
         cat_dir = merged_base / category
-        
+
         # Find all ports in category
-        ports = sorted([
-            p.name for p in cat_dir.iterdir()
-            if p.is_dir() and not p.name.startswith(".")
-            and (p / "Makefile").exists()
-        ])
-        
+        ports = sorted(
+            [
+                p.name
+                for p in cat_dir.iterdir()
+                if p.is_dir()
+                and not p.name.startswith(".")
+                and (p / "Makefile").exists()
+            ]
+        )
+
         # Generate Makefile
         makefile_path = cat_dir / "Makefile"
         content = generate_category_makefile(category, ports)
-        
+
         log.debug(f"Writing {makefile_path} ({len(ports)} ports)")
         makefile_path.write_text(content)
-    
+
     log.info(f"Regenerated Makefiles for {len(categories)} categories")
     return 0
 

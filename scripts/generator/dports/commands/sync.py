@@ -1,28 +1,30 @@
-"""Sync command - sync FreeBSD ports tree for a quarterly."""
+"""Sync command - sync FreeBSD ports tree for a target branch."""
 
 from __future__ import annotations
 
-import subprocess
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from argparse import Namespace
     from dports.config import Config
 
-from dports.utils import get_logger, DPortsError
+from dports.quarterly import validate_target
+from dports.utils import get_logger, sync_git_branch
 
 
 def cmd_sync(config: Config, args: Namespace) -> int:
     """Execute the sync command."""
     log = get_logger(__name__)
-    
-    quarterly = args.target
-    log.info(f"Syncing FreeBSD ports tree for {quarterly}")
-    
-    # TODO: Implement actual sync logic
-    # This would typically:
-    # 1. Fetch the FreeBSD ports tree for the specified quarterly
-    # 2. Update the local copy at config.paths.freebsd_ports
-    
-    log.warning("Sync command not yet implemented")
+
+    target = validate_target(args.target)
+    repo = config.paths.freebsd_ports
+    log.info(f"Syncing FreeBSD ports tree to target {target}")
+
+    try:
+        sync_git_branch(repo, target)
+    except Exception as e:
+        log.error(str(e))
+        return 1
+
+    log.info(f"FreeBSD ports tree synced: {repo} @ {target}")
     return 0

@@ -10,14 +10,18 @@ Configuration file format (dports.toml):
     dports_overlay = "/usr/dports"      # DPorts overlay (ports/ directory)
     merged_output = "/usr/dports-work"  # Merged output directory
     logs = "/var/log/dports"            # Log directory
-    
+
     [state]
     backend = "local"                   # local, git-branch, or external
     path = "state/builds.json"          # Path to state file
-    
+
+    [target]
+    default = "main"                    # Default target branch (optional)
+
+    # Backward-compatible legacy table:
     [quarterly]
-    default = "2025Q1"                  # Default quarterly (optional)
-    
+    default = "2025Q1"
+
     [merge]
     cpdup_path = "/bin/cpdup"           # Path to cpdup binary
     patch_path = "/usr/bin/patch"       # Path to patch binary
@@ -42,7 +46,7 @@ except ImportError:
 @dataclass
 class PathsConfig:
     """Path configuration for dports directories."""
-    
+
     freebsd_ports: Path = field(default_factory=lambda: Path("/usr/fports"))
     dports_overlay: Path = field(default_factory=lambda: Path("/usr/dports"))
     merged_output: Path = field(default_factory=lambda: Path("/usr/dports-work"))
@@ -67,7 +71,7 @@ class PathsConfig:
 @dataclass
 class StateConfig:
     """Build state storage configuration."""
-    
+
     backend: str = "local"  # local, git-branch, external
     path: Path = field(default_factory=lambda: Path("state/builds.json"))
 
@@ -81,21 +85,21 @@ class StateConfig:
 
 
 @dataclass
-class QuarterlyConfig:
-    """Quarterly branch configuration."""
-    
+class TargetConfig:
+    """Target branch configuration."""
+
     default: str | None = None
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> QuarterlyConfig:
-        """Create QuarterlyConfig from a dictionary."""
+    def from_dict(cls, data: dict[str, Any]) -> TargetConfig:
+        """Create TargetConfig from a dictionary."""
         return cls(default=data.get("default"))
 
 
 @dataclass
 class MergeConfig:
     """Merge operation configuration."""
-    
+
     cpdup_path: Path = field(default_factory=lambda: Path("/bin/cpdup"))
     patch_path: Path = field(default_factory=lambda: Path("/usr/bin/patch"))
 
@@ -111,10 +115,10 @@ class MergeConfig:
 @dataclass
 class Config:
     """Main configuration container for DPorts v2."""
-    
+
     paths: PathsConfig = field(default_factory=PathsConfig)
     state: StateConfig = field(default_factory=StateConfig)
-    quarterly: QuarterlyConfig = field(default_factory=QuarterlyConfig)
+    target: TargetConfig = field(default_factory=TargetConfig)
     merge: MergeConfig = field(default_factory=MergeConfig)
     config_path: Path | None = None
 
@@ -122,7 +126,7 @@ class Config:
     def load(cls, path: Path | None = None) -> Config:
         """
         Load configuration from a TOML file.
-        
+
         Search order:
         1. Explicit path if provided
         2. ./dports.toml
@@ -153,20 +157,27 @@ class Config:
         return cls(
             paths=PathsConfig.from_dict(data.get("paths", {})),
             state=StateConfig.from_dict(data.get("state", {})),
-            quarterly=QuarterlyConfig.from_dict(data.get("quarterly", {})),
+            target=TargetConfig.from_dict(
+                data.get("target", data.get("quarterly", {}))
+            ),
             merge=MergeConfig.from_dict(data.get("merge", {})),
             config_path=path,
         )
 
-    def get_freebsd_port_path(self, origin: str, quarterly: str) -> Path:
-        """Get the path to a FreeBSD port for a specific quarterly."""
-        # For multi-quarterly support, we might have different trees
+    @property
+    def quarterly(self) -> TargetConfig:
+        """Backward-compatible alias for older code paths."""
+        return self.target
+
+    def get_freebsd_port_path(self, origin: str, target: str) -> Path:
+        """Get the path to a FreeBSD port for a specific target branch."""
+        # Single-checkout model, branch selected externally
         # For now, assume single tree at freebsd_ports
         return self.paths.freebsd_ports / origin
 
-    def get_freebsd_ports_path(self, quarterly: str) -> Path:
-        """Get the path to the FreeBSD ports tree for a specific quarterly."""
-        # For multi-quarterly support, this might return different paths
+    def get_freebsd_ports_path(self, target: str) -> Path:
+        """Get the path to the FreeBSD ports tree for a specific target branch."""
+        # Single-checkout model, branch selected externally
         # For now, assume single tree at freebsd_ports
         return self.paths.freebsd_ports
 
