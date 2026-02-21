@@ -9,7 +9,8 @@ if TYPE_CHECKING:
     from argparse import Namespace
     from dports.config import Config
 
-from dports.overlay import discover_overlays
+from dports.models import PortOrigin
+from dports.overlay import Overlay
 from dports.quarterly import validate_target
 from dports.utils import get_logger, list_ports, list_delta_ports
 
@@ -29,8 +30,32 @@ def cmd_list(config: Config, args: Namespace) -> int:
     if customized_only:
         # List only ports with customizations
         ports = []
-        for overlay in discover_overlays(ports_base):
-            manifest = overlay.manifest
+        for origin_str in list_delta_ports(ports_base):
+            origin = PortOrigin.parse(origin_str)
+            overlay = Overlay(config.get_overlay_port_path(origin_str), origin)
+
+            has_makefile = False
+            has_diffs = False
+            has_dragonfly = False
+            available_targets: list[str] = []
+
+            if overlay.exists():
+                try:
+                    manifest = overlay.manifest
+                    has_makefile = manifest.has_makefile_dragonfly
+                    has_diffs = manifest.has_diffs
+                    has_dragonfly = manifest.has_dragonfly_dir
+                except Exception:
+                    pass
+
+            # Fallback inference when manifest is missing/invalid
+            if not (has_makefile or has_diffs or has_dragonfly):
+                has_makefile = (overlay.path / "Makefile.DragonFly").exists() or any(
+                    overlay.path.glob("Makefile.DragonFly.@*")
+                )
+                has_diffs = (overlay.path / "diffs").is_dir()
+                has_dragonfly = (overlay.path / "dragonfly").is_dir()
+
             available_targets = overlay.get_available_targets()
 
             if normalized_target and normalized_target not in available_targets:
@@ -38,11 +63,11 @@ def cmd_list(config: Config, args: Namespace) -> int:
 
             ports.append(
                 {
-                    "origin": str(overlay.origin),
+                    "origin": str(origin),
                     "customizations": {
-                        "makefile_dragonfly": manifest.has_makefile_dragonfly,
-                        "diffs": manifest.has_diffs,
-                        "dragonfly_dir": manifest.has_dragonfly_dir,
+                        "makefile_dragonfly": has_makefile,
+                        "diffs": has_diffs,
+                        "dragonfly_dir": has_dragonfly,
                     },
                     "targets": available_targets,
                 }

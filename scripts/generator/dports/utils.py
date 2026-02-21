@@ -279,29 +279,43 @@ def list_delta_ports(path: Path) -> list[str]:
                 continue
 
             has_manifest = (port_dir / "overlay.toml").exists()
-            has_makefile_targets = any(port_dir.glob("Makefile.DragonFly.@*"))
-            has_diffs_targets = (
-                any(
-                    p.is_dir() and p.name.startswith("@")
-                    for p in (port_dir / "diffs").iterdir()
-                )
-                if (port_dir / "diffs").is_dir()
-                else False
-            )
-            has_dragonfly_targets = (
-                any(
-                    p.is_dir() and p.name.startswith("@")
-                    for p in (port_dir / "dragonfly").iterdir()
-                )
-                if (port_dir / "dragonfly").is_dir()
-                else False
-            )
 
-            # Check for any customization indicator
+            # Makefile indicators
+            has_makefile_root = (port_dir / "Makefile.DragonFly").exists()
+            has_makefile_targets = any(port_dir.glob("Makefile.DragonFly.@*"))
+
+            # diffs/ indicators (target-scoped and legacy root files)
+            has_diffs_root_files = False
+            has_diffs_targets = False
+            diffs_dir = port_dir / "diffs"
+            if diffs_dir.is_dir():
+                for entry in diffs_dir.iterdir():
+                    if entry.is_file() and entry.suffix in {".diff", ".patch"}:
+                        has_diffs_root_files = True
+                    elif entry.is_dir() and entry.name.startswith("@"):
+                        has_diffs_targets = True
+
+            # dragonfly/ indicators (target-scoped and legacy root content)
+            has_dragonfly_root_content = False
+            has_dragonfly_targets = False
+            dragonfly_dir = port_dir / "dragonfly"
+            if dragonfly_dir.is_dir():
+                for entry in dragonfly_dir.iterdir():
+                    if entry.is_dir() and entry.name.startswith("@"):
+                        has_dragonfly_targets = True
+                    elif entry.name.startswith("."):
+                        continue
+                    else:
+                        has_dragonfly_root_content = True
+
+            # Check for any customization indicator (strict v2 + legacy layouts)
             if (
                 has_manifest
+                or has_makefile_root
                 or has_makefile_targets
+                or has_diffs_root_files
                 or has_diffs_targets
+                or has_dragonfly_root_content
                 or has_dragonfly_targets
             ):
                 ports.append(f"{category_dir.name}/{port_dir.name}")

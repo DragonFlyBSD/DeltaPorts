@@ -30,6 +30,7 @@ from dports.utils import (
     apply_patch,
     cleanup_patch_artifacts,
     get_logger,
+    list_delta_ports,
 )
 
 
@@ -417,14 +418,13 @@ def merge_all_ports(
     Returns:
         List of MergeResults for all merged ports
     """
-    from dports.overlay import discover_overlays
-
     results = []
     overlay_base = config.paths.delta / "ports"
 
-    for overlay in discover_overlays(overlay_base):
-        merger = PortMerger(config, overlay.origin, target, dry_run=dry_run)
-        result = merger.merge(overlay)
+    for origin_str in list_delta_ports(overlay_base):
+        origin = PortOrigin.parse(origin_str)
+        merger = PortMerger(config, origin, target, dry_run=dry_run)
+        result = merger.merge()
         results.append(result)
 
     return results

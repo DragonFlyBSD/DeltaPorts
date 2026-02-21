@@ -182,7 +182,7 @@ def _register_migrate_parser(subparsers) -> None:
     """Register the migrate command parser (new in v2)."""
     p = subparsers.add_parser(
         "migrate",
-        help="Migrate v1 port configuration to v2 overlay.toml",
+        help="Migrate overlays to strict branch-scoped @target layout",
     )
     p.add_argument(
         "port",
@@ -190,16 +190,22 @@ def _register_migrate_parser(subparsers) -> None:
         help="Port origin to migrate, or 'all' for all ports",
     )
     p.add_argument(
+        "--target",
+        "-t",
+        required=True,
+        help="Target branch to normalize legacy root files into",
+    )
+    p.add_argument(
         "--output",
         "-o",
         type=Path,
-        help="Output directory for migrated ports (default: migrated_ports/)",
+        help="Deprecated: ignored (migration now runs in-place)",
     )
     p.add_argument(
         "--state-output",
         "-s",
         type=Path,
-        help="Output path for builds.json (default: state/builds.json)",
+        help="Deprecated: ignored (state migration not part of this command)",
     )
     p.add_argument(
         "--dry-run",

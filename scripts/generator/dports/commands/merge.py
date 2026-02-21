@@ -31,6 +31,10 @@ def cmd_merge(config: Config, args: Namespace) -> int:
         log.info(f"Merging all ports for {target}")
         results = merge_all_ports(config, target, dry_run=dry_run)
 
+        if not results:
+            log.warning("No overlay candidates found in ports/ (nothing to merge)")
+            return 0
+
         success = sum(1 for r in results if r.success)
         failed = sum(1 for r in results if not r.success)
 

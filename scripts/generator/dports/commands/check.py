@@ -30,6 +30,10 @@ def cmd_check(config: Config, args: Namespace) -> int:
         log.info("Validating all ports")
         results = validate_all_ports(config, target)
 
+        if not results:
+            log.warning("No overlay candidates found in ports/ (nothing to validate)")
+            return 0
+
         valid = sum(1 for r in results.values() if r.valid)
         invalid = sum(1 for r in results.values() if not r.valid)
 

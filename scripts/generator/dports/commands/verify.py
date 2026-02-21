@@ -9,10 +9,10 @@ if TYPE_CHECKING:
     from dports.config import Config
 
 from dports.models import PortOrigin
-from dports.overlay import Overlay, discover_overlays
+from dports.overlay import Overlay
 from dports.quarterly import validate_target
 from dports.validate import validate_diff_applies
-from dports.utils import get_logger
+from dports.utils import get_logger, list_delta_ports
 
 
 def cmd_verify(config: Config, args: Namespace) -> int:
@@ -28,23 +28,37 @@ def cmd_verify(config: Config, args: Namespace) -> int:
         success = 0
         failed = 0
 
-        for overlay in discover_overlays(ports_base):
-            if overlay.manifest.has_diffs:
-                diffs = overlay.get_diffs_for_target(target)
+        for origin_str in list_delta_ports(ports_base):
+            origin = PortOrigin.parse(origin_str)
+            overlay_path = config.get_overlay_port_path(str(origin))
+            overlay = Overlay(overlay_path, origin)
+            if not overlay.exists():
+                continue
 
-                for diff_file in diffs:
-                    target_dir = config.get_freebsd_port_path(
-                        str(overlay.origin), target
-                    )
+            try:
+                manifest = overlay.manifest
+            except Exception:
+                continue
 
-                    if target_dir.exists():
-                        applies, msg = validate_diff_applies(diff_file, target_dir)
+            if not manifest.has_diffs:
+                continue
 
-                        if applies:
-                            success += 1
-                        else:
-                            failed += 1
-                            log.error(f"{overlay.origin}: {diff_file.name} - {msg}")
+            diffs = overlay.get_diffs_for_target(target)
+
+            for diff_file in diffs:
+                target_dir = config.get_freebsd_port_path(str(origin), target)
+
+                if target_dir.exists():
+                    applies, msg = validate_diff_applies(diff_file, target_dir)
+
+                    if applies:
+                        success += 1
+                    else:
+                        failed += 1
+                        log.error(f"{origin}: {diff_file.name} - {msg}")
+
+        if success == 0 and failed == 0:
+            log.warning("No diff patches found for verification")
 
         log.info(f"Verification complete: {success} passed, {failed} failed")
         return 1 if failed > 0 else 0
