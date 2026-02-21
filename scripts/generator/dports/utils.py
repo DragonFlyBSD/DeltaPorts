@@ -270,6 +270,9 @@ def list_delta_ports(path: Path) -> list[str]:
     """
     ports = []
 
+    if not path.exists() or not path.is_dir():
+        return ports
+
     for category_dir in path.iterdir():
         if not category_dir.is_dir() or category_dir.name.startswith("."):
             continue

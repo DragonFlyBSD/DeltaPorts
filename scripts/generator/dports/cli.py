@@ -199,13 +199,33 @@ def _register_migrate_parser(subparsers) -> None:
         "--output",
         "-o",
         type=Path,
-        help="Deprecated: ignored (migration now runs in-place)",
+        help="Output DeltaPorts tree path (default: sibling migrated tree)",
+    )
+    p.add_argument(
+        "--in-place",
+        action="store_true",
+        help="Modify current DeltaPorts tree in place",
     )
     p.add_argument(
         "--state-output",
         "-s",
         type=Path,
-        help="Deprecated: ignored (state migration not part of this command)",
+        help="State output path (default: <output>/state/builds.json)",
+    )
+    p.add_argument(
+        "--phases",
+        default="layout,state,cleanup",
+        help="Comma-separated phases: layout,state,cleanup",
+    )
+    p.add_argument(
+        "--no-special",
+        action="store_true",
+        help="Skip special/*/diffs migration during layout phase",
+    )
+    p.add_argument(
+        "--cleanup-status-only",
+        action="store_true",
+        help="When in-place, remove overlay dirs that contain only STATUS",
     )
     p.add_argument(
         "--dry-run",

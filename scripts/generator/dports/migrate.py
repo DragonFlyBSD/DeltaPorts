@@ -761,12 +761,14 @@ def migrate_port_layout_to_target(
     origin: PortOrigin,
     target: str,
     dry_run: bool = False,
+    delta_base: Path | None = None,
 ) -> TargetMigrationResult:
     """Migrate one overlay directory from legacy root layout to @target layout."""
     normalized_target = validate_target(target)
     result = TargetMigrationResult(origin=origin)
 
-    port_path = config.get_overlay_port_path(str(origin))
+    base = delta_base or config.paths.delta
+    port_path = base / "ports" / str(origin)
     if not port_path.exists() or not port_path.is_dir():
         result.errors.append(f"Port overlay path not found: {port_path}")
         return result
@@ -842,6 +844,7 @@ def migrate_special_diffs_to_target(
     config: Config,
     target: str,
     dry_run: bool = False,
+    delta_base: Path | None = None,
 ) -> tuple[int, list[str]]:
     """Migrate special/*/diffs root patches to diffs/@target."""
     normalized_target = validate_target(target)
@@ -849,8 +852,10 @@ def migrate_special_diffs_to_target(
     moved = 0
     errors: list[str] = []
 
+    base = delta_base or config.paths.delta
+
     for comp in ("Mk", "Templates", "treetop"):
-        diffs = config.paths.delta / "special" / comp / "diffs"
+        diffs = base / "special" / comp / "diffs"
         if not diffs.is_dir():
             continue
 
@@ -881,6 +886,7 @@ def migrate_all_layouts_to_target(
     config: Config,
     target: str,
     dry_run: bool = False,
+    delta_base: Path | None = None,
 ) -> tuple[int, int, list[str]]:
     """Migrate all candidate overlay ports to strict @target layout in-place."""
     from dports.utils import list_delta_ports
@@ -888,11 +894,18 @@ def migrate_all_layouts_to_target(
     migrated = 0
     unchanged = 0
     errors: list[str] = []
-    ports_base = config.paths.delta / "ports"
+    base = delta_base or config.paths.delta
+    ports_base = base / "ports"
 
     for origin_str in list_delta_ports(ports_base):
         origin = PortOrigin.parse(origin_str)
-        result = migrate_port_layout_to_target(config, origin, target, dry_run=dry_run)
+        result = migrate_port_layout_to_target(
+            config,
+            origin,
+            target,
+            dry_run=dry_run,
+            delta_base=base,
+        )
         if result.errors:
             errors.extend([f"{origin}: {e}" for e in result.errors])
         if result.changed:
@@ -901,3 +914,153 @@ def migrate_all_layouts_to_target(
             unchanged += 1
 
     return migrated, unchanged, errors
+
+
+def default_output_tree_path(delta_base: Path, target: str) -> Path:
+    """Return default destination tree path for out-of-place migration."""
+    normalized = validate_target(target)
+    return delta_base.parent / f"{delta_base.name}-migrated-{normalized}"
+
+
+def prepare_output_tree(
+    source_base: Path,
+    output_base: Path,
+    dry_run: bool = False,
+) -> tuple[bool, str]:
+    """
+    Create an output tree for migration by copying ports/ and special/.
+
+    Returns:
+        (ok, message)
+    """
+    if output_base.resolve() == source_base.resolve():
+        return False, "Output path cannot be the same as source path"
+
+    if output_base.exists() and any(output_base.iterdir()):
+        return False, f"Output directory is not empty: {output_base}"
+
+    if dry_run:
+        return True, f"Would create output tree at {output_base}"
+
+    output_base.mkdir(parents=True, exist_ok=True)
+
+    for name in ("ports", "special"):
+        src = source_base / name
+        if src.exists() and src.is_dir():
+            shutil.copytree(src, output_base / name, dirs_exist_ok=False)
+
+    return True, f"Created output tree at {output_base}"
+
+
+def cleanup_status_only_dirs(
+    delta_base: Path,
+    dry_run: bool = False,
+) -> int:
+    """
+    Remove overlay dirs under ports/ that contain only STATUS.
+
+    Returns:
+        Number of removed port directories.
+    """
+    removed = 0
+    ports_base = delta_base / "ports"
+    if not ports_base.exists() or not ports_base.is_dir():
+        return 0
+
+    for category_dir in sorted(ports_base.iterdir()):
+        if not category_dir.is_dir() or category_dir.name.startswith("."):
+            continue
+
+        for port_dir in sorted(category_dir.iterdir()):
+            if not port_dir.is_dir() or port_dir.name.startswith("."):
+                continue
+
+            entries = [e for e in port_dir.iterdir() if not e.name.startswith(".")]
+            if (
+                len(entries) == 1
+                and entries[0].is_file()
+                and entries[0].name == "STATUS"
+            ):
+                removed += 1
+                if not dry_run:
+                    shutil.rmtree(port_dir)
+
+        if not dry_run:
+            try:
+                if not any(category_dir.iterdir()):
+                    category_dir.rmdir()
+            except OSError:
+                pass
+
+    return removed
+
+
+def generate_builds_json_from_status(
+    delta_base: Path,
+    target: str,
+    output_path: Path,
+    dry_run: bool = False,
+) -> int:
+    """
+    Consolidate STATUS files into BuildState-compatible builds.json format.
+
+    Returns:
+        Number of ports written.
+    """
+    normalized_target = validate_target(target)
+    ports_base = delta_base / "ports"
+    if not ports_base.exists() or not ports_base.is_dir():
+        if dry_run:
+            return 0
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(
+            json.dumps(
+                {"version": 1, "updated": datetime.now().isoformat(), "ports": []},
+                indent=2,
+            )
+        )
+        return 0
+
+    entries: list[dict[str, object]] = []
+
+    for category_dir in sorted(ports_base.iterdir()):
+        if not category_dir.is_dir() or category_dir.name.startswith("."):
+            continue
+        for port_dir in sorted(category_dir.iterdir()):
+            if not port_dir.is_dir() or port_dir.name.startswith("."):
+                continue
+
+            origin = PortOrigin(category=category_dir.name, name=port_dir.name)
+            status = parse_status_file(port_dir / "STATUS")
+
+            if status.port_type == PortType.MASK:
+                build_status = "skipped"
+            else:
+                build_status = status.build_status
+
+            version = status.last_attempt or status.last_success or ""
+
+            entries.append(
+                {
+                    "origin": str(origin),
+                    "status": build_status,
+                    "last_build": None,
+                    "last_success": None,
+                    "version": version,
+                    "target": normalized_target,
+                    "notes": status.reason or "",
+                }
+            )
+
+    data = {
+        "version": 1,
+        "updated": datetime.now().isoformat(),
+        "ports": entries,
+    }
+
+    if not dry_run:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(output_path, "w") as f:
+            json.dump(data, f, indent=2)
+
+    return len(entries)
