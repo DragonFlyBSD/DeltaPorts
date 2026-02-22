@@ -141,22 +141,112 @@ Interpretation:
 
 ---
 
-## Hybrid DSL v0 (Authoring Layer)
+## DSL v0 Reference (Normative Authoring Syntax)
+
+The DSL is the contributor-facing authoring layer. The runtime applies compiled
+ops IR only.
 
 ### DSL goals
 
 - concise for contributors
 - deterministic and compilable
 - explicit target scoping
-- strict error behavior
+- strict error behavior by default
 
-### Example syntax
+### File and scope model
+
+- File name: `overlay.dops`
+- One overlay origin per file (`port <category/name>` required exactly once)
+- Multiple `target @...` blocks in one file are allowed and recommended for
+  shared logic across targets
+- Supported targets: `@main`, `@YYYYQ1`, `@YYYYQ2`, `@YYYYQ3`, `@YYYYQ4`
+
+### Lexical conventions
+
+- `#` starts a comment (outside heredoc bodies)
+- Strings are double-quoted (`"..."`) and support escapes: `\\`, `\"`, `\n`,
+  `\t`
+- Bare identifiers are space-free tokens; use quoted strings for values with
+  spaces
+- Paths are relative to the overlay port root unless absolute
+- Recipe bodies must use heredoc and preserve literal tabs/spaces
+
+### Top-level directives
+
+```text
+target @2025Q2
+port security/dsniff
+type port
+reason "DragonFly-specific adjustments"
+maintainer "delta@dragonflybsd.org"
+```
+
+- `target` sets active target scope for following ops until next `target`
+- `port` declares origin
+- `type` maps to `overlay.type` (`port|mask|dport|lock`)
+- `reason` maps to `overlay.reason`
+- `maintainer` maps to top-level maintainer metadata
+
+### Operation syntax
+
+#### Makefile var ops
+
+```text
+mk set <VAR> "<value>" [on-missing error|warn|noop]
+mk unset <VAR> [on-missing error|warn|noop]
+mk add <VAR> <token> [on-missing error|warn|noop]
+mk remove <VAR> <token> [on-missing error|warn|noop]
+```
+
+#### Makefile conditional/block ops
+
+```text
+mk disable-if condition "<expr>" [contains "<anchor>"] [on-missing ...]
+mk replace-if from "<expr>" to "<expr>" [contains "<anchor>"] [on-missing ...]
+```
+
+#### Makefile target/recipe ops
+
+```text
+mk target set <name> <<'MK'
+	<recipe line 1>
+	<recipe line 2>
+MK
+
+mk target append <name> <<'MK'
+	<recipe lines appended>
+MK
+
+mk target remove <name> [on-missing ...]
+mk target rename <old> -> <new> [on-missing ...]
+```
+
+#### File/text ops
+
+```text
+file copy <src> -> <dst>
+file remove <path> [on-missing ...]
+
+text line-remove file <path> exact "<line>" [on-missing ...]
+text line-insert-after file <path> anchor "<line>" line "<line>" [on-missing ...]
+text replace-once file <path> from "<needle>" to "<replacement>" [on-missing ...]
+```
+
+#### Patch fallback op
+
+```text
+patch apply <path>
+```
+
+### Full example
 
 ```text
 # ports/security/dsniff/overlay.dops
 
 target @2025Q2
 port security/dsniff
+type port
+reason "DragonFly-specific adjustments"
 
 mk remove USES linux on-missing warn
 mk add USES ssl
@@ -166,24 +256,70 @@ mk disable-if condition "${OPSYS} == FreeBSD || ${SSL_DEFAULT} == openssl" \
   contains "Requires LibreSSL for old SSL interface" \
   on-missing warn
 
-file remove files/patch-linux-only.c
-patch apply dragonfly/@2025Q2/patch-src_main.c
-```
-
-### Target/recipe primitive (required for real-world coverage)
-
-```text
 mk target set dfly-patch <<'MK'
 	${REINPLACE_CMD} -e 's/^.*\- name: FreeBSD/&\n    - name: DragonFly/g' \
 	${WRKSRC}/metainfo.yaml
 MK
+
+file remove files/patch-linux-only.c on-missing warn
+patch apply dragonfly/@2025Q2/patch-src_main.c
 ```
 
-Other required target primitives:
+### Makefile.DragonFly target migration pattern
 
-- `mk target append <name> <<'MK' ... MK`
-- `mk target remove <name>`
-- `mk target rename <old> -> <new>` (recommended in v0.1)
+`Makefile.DragonFly` target recipes (for example `dfly-patch:`) are represented
+directly as `mk target ...` ops rather than line patches.
+
+Before (legacy target snippet):
+
+```make
+dfly-patch:
+	${REINPLACE_CMD} -e 's/foo/bar/' ${WRKSRC}/file
+```
+
+After (DSL):
+
+```text
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's/foo/bar/' ${WRKSRC}/file
+MK
+```
+
+This covers the target/recipe-heavy segment observed in samples while keeping
+tab-sensitive recipe formatting deterministic.
+
+### Determinism and failure behavior
+
+- default `on-missing`: `error`
+- ambiguous match: `error`
+- parse failure in targeted file: `error`
+- operations are applied in source order after target scoping is resolved
+- re-applying same op set must be idempotent
+
+`on-missing` override values:
+
+- `error`: fail application
+- `warn`: emit warning and continue
+- `noop`: skip silently (discouraged outside migration)
+
+### Compile mapping to IR
+
+- Each DSL operation compiles to one normalized `[[ops]]` record
+- `target @...` compiles to `ops.target`
+- `mk set` -> `kind = "mk.var.set"`
+- `mk unset` -> `kind = "mk.var.unset"`
+- `mk add` -> `kind = "mk.var.token_add"`
+- `mk remove` -> `kind = "mk.var.token_remove"`
+- `mk disable-if` -> `kind = "mk.block.disable"`
+- `mk replace-if` -> `kind = "mk.block.replace_condition"`
+- `mk target set|append|remove|rename` -> `kind = "mk.target.*"`
+- `file copy|remove` -> `kind = "file.copy"|"file.remove"`
+- `text ...` ops -> `kind = "text.*"`
+- `patch apply` -> `kind = "patch.apply"`
+- Directive metadata compiles to `overlay.toml` fields:
+  - `type` -> `[overlay].type`
+  - `reason` -> `[overlay].reason`
+  - `maintainer` -> top-level `maintainer`
 
 ---
 
