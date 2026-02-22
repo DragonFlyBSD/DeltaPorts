@@ -1,10 +1,10 @@
-# DeltaPorts Architecture v3: Hybrid DSL + Ops IR + CST-Lite
+# DeltaPorts Architecture v3: Hybrid DSL + In-Memory Plan + CST-Lite
 
 ## Status
 
 Design proposal for v3.
 
-This document consolidates the semantic-ops direction, hybrid DSL authoring
+This document consolidates the semantic-op direction, hybrid DSL authoring
 model, CST-lite parser scope for BSDMakefiles, empirical matrix findings, and
 an implementation plan that preserves patch fallback and framework safety.
 
@@ -66,10 +66,11 @@ Resulting output tree is:
 
 v3 uses a **hybrid authoring and execution model**:
 
-- Authoring: compact text DSL (`.dops`)
-- Canonical execution format: normalized ops IR (`[[ops]]` in `overlay.toml`)
+- Authoring source: compact text DSL (`overlay.dops`)
+- Execution form: normalized in-memory plan (ephemeral IR)
 
-The engine executes only ops IR. DSL is compiled to IR.
+The engine executes the normalized plan. DSL compiles to this in-memory plan;
+no persisted transition ops file is required.
 
 ---
 
@@ -144,7 +145,7 @@ Interpretation:
 ## DSL v0 Reference (Normative Authoring Syntax)
 
 The DSL is the contributor-facing authoring layer. The runtime applies compiled
-ops IR only.
+normalized plan operations only.
 
 ### DSL goals
 
@@ -183,9 +184,9 @@ maintainer "delta@dragonflybsd.org"
 
 - `target` sets active target scope for following ops until next `target`
 - `port` declares origin
-- `type` maps to `overlay.type` (`port|mask|dport|lock`)
-- `reason` maps to `overlay.reason`
-- `maintainer` maps to top-level maintainer metadata
+- `type` maps to file-level overlay type metadata (`port|mask|dport|lock`)
+- `reason` maps to file-level reason metadata
+- `maintainer` maps to file-level maintainer metadata
 
 ### Operation syntax
 
@@ -302,10 +303,10 @@ tab-sensitive recipe formatting deterministic.
 - `warn`: emit warning and continue
 - `noop`: skip silently (discouraged outside migration)
 
-### Compile mapping to IR
+### Compile mapping to normalized plan
 
-- Each DSL operation compiles to one normalized `[[ops]]` record
-- `target @...` compiles to `ops.target`
+- Each DSL operation compiles to one normalized in-memory operation record
+- `target @...` compiles to per-op `target`
 - `mk set` -> `kind = "mk.var.set"`
 - `mk unset` -> `kind = "mk.var.unset"`
 - `mk add` -> `kind = "mk.var.token_add"`
@@ -316,45 +317,49 @@ tab-sensitive recipe formatting deterministic.
 - `file copy|remove` -> `kind = "file.copy"|"file.remove"`
 - `text ...` ops -> `kind = "text.*"`
 - `patch apply` -> `kind = "patch.apply"`
-- Directive metadata compiles to `overlay.toml` fields:
-  - `type` -> `[overlay].type`
-  - `reason` -> `[overlay].reason`
-  - `maintainer` -> top-level `maintainer`
+- Directive metadata compiles to plan/header metadata:
+  - `type` -> `plan.type`
+  - `reason` -> `plan.reason`
+  - `maintainer` -> `plan.maintainer`
 
 ---
 
-## Ops IR (Canonical Execution Format)
+## Normalized Plan (Canonical Runtime Form)
 
-DSL compiles to normalized ops in `overlay.toml`.
+DSL compiles to a normalized in-memory plan that the apply engine executes
+directly.
 
-```toml
-[overlay]
-reason = "DragonFly-specific adjustments"
-type = "port" # port | mask | dport | lock
-
-[components]
-dragonfly_dir = true
-
-[[ops]]
-id = "uses-remove-linux"
-target = "@2025Q2"
-kind = "mk.var.token_remove"
-file = "Makefile"
-name = "USES"
-value = "linux"
-on_missing = "warn"
-
-[[ops]]
-id = "dfly-patch-target"
-target = "@2025Q2"
-kind = "mk.target.set"
-file = "Makefile"
-name = "dfly-patch"
-recipe = [
-  "\t${REINPLACE_CMD} -e 's/^.*\\- name: FreeBSD/&\\n    - name: DragonFly/g' \\",
-  "\t${WRKSRC}/metainfo.yaml"
-]
+```json
+{
+  "type": "port",
+  "reason": "DragonFly-specific adjustments",
+  "ops": [
+    {
+      "id": "uses-remove-linux",
+      "target": "@2025Q2",
+      "kind": "mk.var.token_remove",
+      "file": "Makefile",
+      "name": "USES",
+      "value": "linux",
+      "on_missing": "warn"
+    },
+    {
+      "id": "dfly-patch-target",
+      "target": "@2025Q2",
+      "kind": "mk.target.set",
+      "file": "Makefile",
+      "name": "dfly-patch",
+      "recipe": [
+        "\t${REINPLACE_CMD} -e 's/^.*\\- name: FreeBSD/&\\n    - name: DragonFly/g' \\",
+        "\t${WRKSRC}/metainfo.yaml"
+      ]
+    }
+  ]
+}
 ```
+
+Optional debug/export output may serialize this plan, but persisted plan files
+are not part of the steady-state design.
 
 ---
 
@@ -478,16 +483,14 @@ This is intentional to keep implementation bounded and reliable.
 
 ## Stale Overlay Policy
 
-If `overlay.type = "port"` and origin is missing in FreeBSD target branch,
+If file-level `type = "port"` and origin is missing in FreeBSD target branch,
 overlay is stale.
 
 Handling:
 
 - `check`: hard error
 - `compose`: blocked by preflight validation
-- `migrate` (temporary):
-  - out-of-place: auto-prune stale `port` overlays
-  - in-place: stale prune requires explicit flag
+- stale overlays are hard failures in validation/compose
 
 ---
 
@@ -524,8 +527,8 @@ Compose summary aggregates these by stage and target.
 
 ### Phase 0: foundation
 
-- ops IR schema and validator
-- DSL parser and compiler to ops IR
+- normalized plan schema and validator
+- DSL parser and compiler to normalized plan
 - CST-lite parser for Makefile
 
 ### Phase 1: high-confidence ops
@@ -567,7 +570,7 @@ Compose summary aggregates these by stage and target.
 1. Parser edge-case risk in BSD make syntax.
    - Mitigation: CST-lite scope, strict failures, patch fallback.
 2. DSL/compiler drift from execution behavior.
-   - Mitigation: ops IR remains canonical, DSL is one-way authoring layer.
+   - Mitigation: normalized in-memory plan is canonical, DSL is one-way authoring layer.
 3. Recipe/tab corruption in target edits.
    - Mitigation: heredoc recipe literals and tab-preserving tests.
 4. Contributor overhead.
@@ -579,8 +582,7 @@ Compose summary aggregates these by stage and target.
 
 1. Default `on_missing` for non-critical block ops: `warn` vs `error`.
 2. Whether to include `mk.target.rename` in MVP or v0.1.
-3. Whether to separate ops per target file later (`ops/@target.*`) vs single
-   `overlay.toml`.
+3. Whether to support optional debug plan export snapshots in CI/local tooling.
 4. Exact default bmake oracle checks for CI vs local modes.
 
 ---
@@ -590,7 +592,7 @@ Compose summary aggregates these by stage and target.
 v3 adopts a practical hybrid model:
 
 - concise DSL for contributors
-- strict ops IR as canonical execution plan
+- strict normalized in-memory plan as canonical execution path
 - CST-lite structural rewrites for BSDMakefiles
 - patch fallback preserved for complexity and safety
 - `special/` remains patch/replacement-only
