@@ -23,7 +23,7 @@ with deterministic behavior and lower maintenance churn than pure line patching.
 
 ## Why v3 Exists
 
-v2 fixed target scoping and validation, but still relies heavily on raw text
+The previous Python implementation fixed target scoping and validation, but still relies heavily on raw text
 patching for many routine edits. This creates recurring drift and rebasing work
 when upstream files move or reformat.
 

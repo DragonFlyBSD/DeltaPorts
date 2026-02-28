@@ -16,3 +16,4 @@ python -m dportsv3 dsl --help
 - Legacy Python v2 `dports` package/entrypoint has been removed.
 - Legacy shell scripts remain in this directory for operational parity checks.
 - Packaging exports only `dportsv3` from `scripts/generator/pyproject.toml`.
+- Comprehensive usage guide: `docs/dportsv3-user-guide.md`.

@@ -2,7 +2,7 @@
 
 ## DSL Engine Plan (Phase 1 of dportsv3)
 
-- Build a standalone package at `scripts/generator/dportsv3` with zero runtime dependency on `dports` v2 modules.
+- Build a standalone package at `scripts/generator/dportsv3` with zero runtime dependency on legacy `dports` modules.
 - Make `overlay.dops` the only source format; compile to an in-memory normalized plan (no persisted ops file).
 - Deliver parser + semantic validator + planner first; no compose/apply integration yet.
 
@@ -21,7 +21,7 @@
 ### Step 1 Goal
 
 - Stand up an isolated, installable `dportsv3` CLI scaffold with `dsl parse`, `dsl check`, and `dsl plan` command surfaces.
-- No v2 runtime dependency.
+- No legacy runtime dependency.
 - No apply/compose logic yet.
 
 ### Scope (Step 1 only)
@@ -70,7 +70,7 @@
 - CLI help smoke test (`dportsv3 --help`, `dportsv3 dsl --help`).
 - Command routing tests for `parse/check/plan`.
 - Input file validation tests (missing file, unreadable file).
-- "No v2 dependency" guard test: fail if any `dportsv3` module imports `dports.` namespace.
+- "No legacy dependency" guard test: fail if any `dportsv3` module imports `dports.` namespace.
 
 6. **Docs touchpoint for Step 1 completion**
 - Update `docs/implementation-plan-v3.md` with Step 1 status + what was intentionally stubbed.
@@ -80,7 +80,7 @@
 
 - `dportsv3` is installable/runnable via script entrypoint and `python -m dportsv3`.
 - `dsl parse/check/plan` commands exist and behave predictably.
-- `dportsv3` imports do not depend on `dports` v2 modules.
+- `dportsv3` imports do not depend on legacy `dports` modules.
 - Bootstrap tests pass.
 - No `overlay.toml` assumption appears in `dportsv3` code.
 
@@ -90,7 +90,7 @@
 - Added isolated CLI entrypoint `dportsv3` in `scripts/generator/pyproject.toml`.
 - Added stubbed command surfaces: `dsl parse`, `dsl check`, `dsl plan`.
 - Added engine facade contracts and deterministic `E_NOT_IMPLEMENTED` diagnostics.
-- Added bootstrap tests under `scripts/generator/tests` including no-v2-import guard.
+- Added bootstrap tests under `scripts/generator/tests` including no-legacy-import guard.
 - Intentionally left parser/analyzer/planner internals unimplemented for Step 1.
 
 2. **Freeze grammar/spec in docs**
@@ -237,7 +237,7 @@
 - `parse_dsl()` surfaces lexical errors with `E_PARSE_*` and source spans.
 - Heredoc body is preserved byte-for-byte as intended by spec (including leading tabs).
 - Tests for lexer behavior and error cases pass.
-- No dependency introduced on v2 (`dports.*`) modules.
+- No dependency introduced on legacy (`dports.*`) modules.
 
 ### Suggested execution order
 
@@ -338,7 +338,7 @@
 - All directive/op forms in `docs/dsl-v0.md` parse into AST nodes.
 - Heredoc recipe bodies are preserved exactly from lexer to AST.
 - Parser tests and existing v3 tests pass.
-- No dependency introduced on `dports` v2 modules.
+- No dependency introduced on legacy `dports` modules.
 
 ### Suggested execution order
 
@@ -447,7 +447,7 @@
 - Target scoping is resolved for every operation or fails with semantic error.
 - Required cardinality rules (`port` exactly once, singleton directives) are enforced.
 - Semantic tests + existing v3 tests pass.
-- No dependency introduced on v2 `dports.*` modules.
+- No dependency introduced on legacy `dports.*` modules.
 
 ### Suggested execution order
 
@@ -757,7 +757,7 @@
   - Publish cumulative coverage and remaining backlog after each wave.
 
 - **Definition of completion for Step 7**
-  - At least one successful pilot wave completed end-to-end.
+  - At least one successful rollout wave completed end-to-end.
   - Wave playbook proven repeatable.
   - Next waves queued with approved scope and owners.
 
@@ -1281,7 +1281,7 @@
   - `1` usage/input file errors
 
 2. **Compose data model + report contract**
-- Add v3 compose models (stage + run result), separate from v2 result types.
+- Add v3 compose models (stage + run result), separate from legacy result types.
 - Keep stage-level counters and aggregate summary:
   - per-stage: changed/skipped/warnings/errors/duration
   - per-port: total/applied/skipped/warnings/errors/fallback patch count
@@ -1606,118 +1606,20 @@
 - Added/updated tests in `scripts/generator/tests/test_dportsv3_migration_program.py` and validated migration CLI behavior; full v3 matrix passes in venv: `.venv/bin/python -m pytest tests/test_dportsv3_*.py` (107 passed).
 - Operator notes: use artifact `dportsv3-migration-dashboard` from workflow run; `gates.policy_pass` blocks policy regressions, while `gates.progress_pass` is emitted for monitoring and can be made blocking via strict-progress mode.
 
-### Step 16: Real-World Pilot & Rollout
+### Step 16: Rollout Simplification
 
 ### Step 16 Goal
-- Execute a controlled real-world rollout of v3 on small, safe waves first, then expand safely.
-- Validate that composed output and per-port apply behavior match expected deltas before broad rollout.
-- Add operational guardrails so wave execution is reproducible, auditable, and stoppable.
+- Keep rollout workflow focused on compose-first execution and deterministic migration reporting.
+- Remove non-primary rollout surfaces from docs and runtime guidance.
 
 ### Scope
-- In: pilot wave orchestration, rollout runbook/automation, wave metrics + stop/go gates, rollout artifacts.
-- Out: new DSL language features, new op kinds, major compose engine redesign.
+- In: compose-first operator runbook, migration wave reporting, dashboard/policy/progress gates.
+- Out: dedicated pilot lifecycle commands and pilot-specific artifacts.
 
-### Implementation Plan
-
-1. **Pilot orchestration primitives**
-- Add `scripts/generator/dportsv3/migration/pilot.py` with:
-  - wave manifest builder (origin set + target + gate config)
-  - wave executor (batch convert + compose validation + gate evaluation)
-  - deterministic report object (inputs, outputs, verdict).
-- Reuse existing modules where possible:
-  - `migration/waves.py` for selection/reporting
-  - `migration/batch.py` for conversion
-  - `compose.py` for end-to-end tree build checks
-  - `migration/dashboard.py` for policy/progress signal embedding.
-
-2. **CLI actions for pilot lifecycle**
-- Extend `scripts/generator/dportsv3/commands/migrate.py` and parser wiring with:
-  - `migrate pilot-plan` (select 50–150 `auto-safe` candidates, target-scoped)
-  - `migrate pilot-run` (execute selected wave; default dry-run)
-  - `migrate pilot-report` (summarize one or more wave runs).
-- Include explicit write guard:
-  - default safe mode (dry-run)
-  - write mode requires explicit flag (e.g. `--apply-writes`).
-
-3. **Expected-delta comparison stage**
-- Add deterministic comparator stage to pilot run:
-  - compare composed output vs expected baseline using normalized diff summary
-  - classify mismatches into categories (unexpected add/remove/modify).
-- Persist per-wave mismatch summary for triage and regression tracking.
-
-4. **Gate model for stop/go decisions**
-- Add strict wave gates (hard fail) such as:
-  - no parse/check/plan failures
-  - no compose stage errors
-  - no unexpected-delta mismatches above threshold
-  - oracle failure rate <= configured threshold (default 0 for pilot).
-- Add soft gates (warn-only) for monitoring:
-  - warning density
-  - fallback patch usage rate.
-- Gate config should be versioned and saved with each wave artifact.
-
-5. **Wave artifact + ledger**
-- Persist each run to artifacts (JSON):
-  - selected origins
-  - conversion results
-  - compose summary
-  - gate verdicts
-  - top failure signatures.
-- Maintain append-only ledger file (or directory entries) to support:
-  - resume from last successful wave
-  - trend tracking across waves
-  - auditability.
-
-6. **Rollout expansion strategy**
-- Implement policy for expansion from pilot to broader rollout:
-  - Wave 1: 50–150 `auto-safe` single target (`@main`).
-  - Wave 2+: increase size gradually and/or unlock additional categories.
-  - Multi-target expansion only after consecutive clean waves.
-- Encode stop conditions (automatic halt) and rollback instructions.
-
-7. **Operational docs/runbook**
-- Add short rollout runbook doc (e.g. `docs/rollout-v3.md`) with:
-  - exact command sequence
-  - gate interpretation
-  - triage loop for failures
-  - escalation and rollback steps.
-
-### Test Plan
-- Add `scripts/generator/tests/test_dportsv3_pilot.py`:
-  - pilot-plan deterministic selection
-  - pilot-run gate pass/fail behavior
-  - delta comparator classification
-  - ledger append/resume behavior.
-- Extend migration CLI tests for new actions and strict exit semantics.
-- Add fixture-backed pilot wave scenarios under `scripts/generator/tests/fixtures/dportsv3/migration/`.
-- Run full suite:
-  - `.venv/bin/python -m pytest tests/test_dportsv3_*.py`
-
-### Acceptance Criteria
-- Pilot can be planned and executed via CLI with deterministic artifacts.
-- First auto-safe wave (50–150) runs through conversion + compose + gate evaluation.
-- Unexpected delta mismatches are surfaced clearly and block rollout when thresholds are exceeded.
-- Rollout can resume from previous artifacts and supports explicit stop/go decisions.
-- Full v3 test matrix passes with pilot coverage added.
-
-### Suggested Execution Order
-1. Pilot data model + artifact schema  
-2. `pilot-plan` CLI + deterministic wave manifest  
-3. `pilot-run` executor (batch + compose + gates)  
-4. Expected-delta comparator + failure taxonomy  
-5. Ledger/resume support  
-6. `pilot-report` CLI + rollout runbook  
-7. Full matrix + first real pilot wave execution guide
-
-### Step 16 Status (current)
-- Added pilot orchestration module `scripts/generator/dportsv3/migration/pilot.py` with deterministic manifest creation, wave execution, gate evaluation, delta comparison, artifact persistence, and ledger/resume summaries.
-- Added CLI lifecycle actions in `scripts/generator/dportsv3/cli.py` and `scripts/generator/dportsv3/commands/migrate.py`: `migrate pilot-plan`, `migrate pilot-run`, and `migrate pilot-report`.
-- Implemented write guard behavior for pilot execution: dry-run safe mode is default; persistent writes require explicit `--apply-writes` and compose roots.
-- Added expected-delta comparison taxonomy (`unexpected_add/remove/modify`) and integrated hard/soft gate metrics including oracle failure rate and warning/fallback density.
-- Added append-only pilot ledger support and deterministic rollout recommendation logic for stop/go and next-wave sizing.
-- Added rollout runbook `docs/rollout-v3.md` with operator command sequence, gate interpretation, triage loop, and rollback guidance.
-- Added tests in `scripts/generator/tests/test_dportsv3_pilot.py` and extended migration program CLI coverage in `scripts/generator/tests/test_dportsv3_migration_program.py`.
-- Full dportsv3 matrix passes in venv: `.venv/bin/python -m pytest tests/test_dportsv3_*.py` (113 passed).
+### Step 16 Status (implemented)
+- Removed pilot command surfaces from runtime and documentation.
+- Kept migration primitives (`inventory`, `classify`, `convert`, `batch`, `policy-check`, `progress`, `dashboard`, `wave-plan`, `wave-report`) as the only supported rollout utilities.
+- Updated rollout notes to keep quarter bring-up centered on `dportsv3 compose` and deterministic report triage.
 
 ### Step 17: Compose Parity + Target Layering Consolidation
 
@@ -1727,7 +1629,7 @@
 - Introduce target layering that avoids redoing inventory-to-port migration each quarter.
 
 ### Scope
-- In: compose parity with v2 merge behavior, compatibility fallback policy, target layering (`@any` + explicit target overrides), CLI/docs consolidation away from pilot-first guidance.
+- In: compose parity with legacy merge behavior, compatibility fallback policy, target layering (`@any` + explicit target overrides), CLI/docs consolidation toward compose-first guidance.
 - Out: regex/negative target selectors, non-deterministic target resolution.
 
 ### Consolidated Rules (Locked)
@@ -1769,7 +1671,7 @@
   4) dragonfly file copy
   5) transforms + cleanup
 - Reuse current target validation and patch apply behavior so quarter migration behavior does not regress.
-- Add parity fixtures that compare v3 compatibility outputs with known-good v2 outputs.
+- Add parity fixtures that compare v3 compatibility outputs with known-good legacy outputs.
 
 3. **`special/` process parity guardrails**
 - Match current scripts flow for framework copy+patch sequence and error surfacing.
@@ -1828,13 +1730,12 @@
   - strict failure only for ambiguous or invalid cases.
 
 7. **Operational consolidation**
-- Shift docs/CLI guidance from pilot-first to compose-first quarter workflow.
+- Shift docs/CLI guidance to compose-first quarter workflow.
 - Establish canonical operator command sequence:
   1) compose framework (`special/` + patch fixes)
   2) compose ports (mode-dispatch behavior)
   3) review deterministic report and CI gate outputs
   4) rerun into arbitrary output roots as needed
-- Mark pilot commands as non-primary/deprecated in docs and help text, while preserving compatibility during transition window.
 - Update runbook sections (`docs/rollout-v3.md` and implementation notes) to reference compose-first workflow.
 - Add migration-safe transition notes for maintainers converting existing `@main`-only overlays to baseline/explicit target layering.
 
@@ -1860,7 +1761,7 @@
 - **17.4 Target layering in parser/semantic/planner**: Implemented. Extended DSL target handling to accept `@any` and comma-separated selectors in one `target` directive, enabled implicit `@any` scope before first explicit target, and expanded multi-target operations deterministically in semantic/planner output. Updated apply execution ordering to evaluate `@any` operations before requested target-specific operations while preserving deterministic order within each group. Added parser/semantic/planner/apply coverage for `@any`, multi-target expansion, implicit baseline scope, and `@any`/explicit mixed-selector rejection.
 - **17.5 Inventory/classifier/wave alignment**: Implemented. Updated migration inventory records to emit baseline-aware target metadata (`target_mode`, `available_targets`) and switched unscoped legacy overlays to baseline semantics (`@any`) instead of hard `@main` defaults. Extended wave selection to include baseline-capable records for requested quarter targets, emit per-origin selection reasons (`explicit_target_match`/`baseline_match`), and publish visibility counters (`baseline_selected_count`, `explicit_selected_count`, `excluded_by_target_count`). Added migration tests for metadata emission and baseline-inclusive wave selection.
 - **17.6 Compose payload lookup precedence**: Implemented. Added deterministic compat payload layering in compose for `diffs`, `dragonfly`, and compatibility Makefile sources with explicit-target-over-`@any` precedence and stable merged ordering. Implemented `@any` fallback when explicit target payloads are absent and override visibility diagnostics (`I_COMPOSE_COMPAT_LAYER_OVERRIDE`) when both layers provide the same subject. Added compose tests covering baseline fallback and explicit-over-baseline override behavior.
-- **17.7 Operational consolidation**: Implemented. Reworked rollout runbook to a compose-first operational sequence (inventory/classify visibility, compose execution, fix+rerun loop, CI gate pass) and added migration transition notes for moving `@main`-only overlays toward baseline/explicit layering. Updated CLI migrate help text to mark pilot subcommands as deprecated/non-primary while keeping runtime compatibility. Added CLI coverage asserting deprecated pilot labeling in migrate help output.
+- **17.7 Operational consolidation**: Implemented. Reworked rollout runbook to a compose-first operational sequence (inventory/classify visibility, compose execution, fix+rerun loop, CI gate pass) and added migration transition notes for moving `@main`-only overlays toward baseline/explicit layering.
 
 ### Acceptance criteria for v3 executable state
 
@@ -1879,7 +1780,7 @@
 5. Step 13 compose integration  
 6. Step 14 oracle checks  
 7. Step 15 CI policy gates  
-8. Step 16 pilot rollout  
+8. Step 16 rollout simplification  
 9. Step 17 compose parity + target layering
 
 ## Definition of Done (DSL engine)

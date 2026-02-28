@@ -506,59 +506,53 @@ Implemented in:
 
 ---
 
-## Phase 6: Migration Pilot Decomposition
+## Phase 6: Migration Rollout Simplification
 
 Status: completed.
 
 ### Goal
 
-Split pilot rollout logic into cohesive modules and reduce hidden coupling.
+Remove non-primary pilot rollout surfaces and keep migration tooling focused on
+inventory/classification/conversion and wave reporting.
 
 ### Scope
 
 - In:
-  - Separate manifest creation, gate evaluation, persistence, and report summarization.
-  - Keep command behavior and artifact structure stable.
+  - Remove pilot CLI commands and implementation modules.
+  - Keep migration wave and dashboard workflows intact.
 - Out:
-  - Policy rule changes for gates.
+  - Policy/progress gate semantics changes.
 
 ### Deliverables
 
-- Proposed layout:
-  - `scripts/generator/dportsv3/migration/pilot/manifest.py`
-  - `scripts/generator/dportsv3/migration/pilot/gates.py`
-  - `scripts/generator/dportsv3/migration/pilot/compare.py`
-  - `scripts/generator/dportsv3/migration/pilot/artifacts.py`
-  - `scripts/generator/dportsv3/migration/pilot/ledger.py`
-  - `scripts/generator/dportsv3/migration/pilot/report.py`
-  - `scripts/generator/dportsv3/migration/pilot/__init__.py`
+- Removed pilot command handlers from migrate CLI surface.
+- Removed pilot implementation modules and exports.
 
 ### Tasks
 
-1. Extract tree compare logic and failure signature aggregation.
-2. Extract gate computation into pure function module.
-3. Extract JSON artifact write and ledger append/load functions.
-4. Keep existing public pilot function imports as wrappers for compatibility.
+1. Remove `pilot-plan`, `pilot-run`, `pilot-report` from CLI parser and dispatch.
+2. Delete pilot modules and remove migration package exports.
+3. Remove pilot-specific tests and update command/schema tests.
+4. Update docs to reflect compose-first and wave-first workflow only.
 
 ### Tests
 
-- Unit tests per pilot submodule.
-- Existing migrate pilot command tests.
-- Gate regression fixtures for pass/fail edge cases.
+- Migration program CLI tests without pilot subcommands.
+- Schema contract tests for compose/apply/wave payloads.
 
 ### Acceptance Criteria
 
-- `migration/pilot.py` reduced to compatibility wrapper or removed.
-- Pilot artifacts and ledger schema remain stable.
+- No pilot commands or pilot modules remain in `dportsv3`.
+- Migration wave and dashboard flows remain green.
 
 Implemented in:
 
-- `scripts/generator/dportsv3/migration/pilot.py`
-- `scripts/generator/dportsv3/migration/pilot_manifest.py`
-- `scripts/generator/dportsv3/migration/pilot_compare.py`
-- `scripts/generator/dportsv3/migration/pilot_gates.py`
-- `scripts/generator/dportsv3/migration/pilot_artifacts.py`
-- `scripts/generator/dportsv3/migration/pilot_report.py`
+- `scripts/generator/dportsv3/cli.py`
+- `scripts/generator/dportsv3/commands/migrate.py`
+- `scripts/generator/dportsv3/migration/__init__.py`
+- `scripts/generator/tests/test_dportsv3_cli.py`
+- `scripts/generator/tests/test_dportsv3_migration_program.py`
+- `scripts/generator/tests/test_dportsv3_schema_contracts.py`
 
 ---
 
@@ -585,7 +579,7 @@ Formalize output contracts, remove temporary shims, and lock refactor results.
   - compose result
   - compose-report overview
   - apply result
-  - migration batch/wave/pilot artifacts
+  - migration batch/wave artifacts
 - Changelog notes for internal module moves.
 
 ### Tasks
@@ -620,7 +614,7 @@ Implemented in:
 - PR 5: Phase 4B (compose stage extraction)
 - PR 6: Phase 5A (apply shared helpers + file/text executors)
 - PR 7: Phase 5B (mk/patch executors + registry cleanup)
-- PR 8: Phase 6 (pilot modularization)
+- PR 8: Phase 6 (rollout simplification)
 - PR 9: Phase 7 (schema contracts + shim removal + docs)
 
 ## Risk Management
