@@ -37,6 +37,42 @@ If installed from package entrypoints:
 dportsv3 --help
 ```
 
+## Preparation: Required Repositories and Context
+
+`dportsv3` expects distinct sources with explicit roles.
+
+### 1) DeltaPorts repository (overlay source)
+
+This repository provides DragonFly overlay inputs and optional framework deltas.
+
+- Required for all `compose` and `migrate` workflows.
+- Passed as:
+  - `--delta-root` for `compose`
+  - `--root` for `migrate` commands
+
+Minimum expected layout under Delta root:
+
+- `ports/<category>/<port>/...`
+- optional `special/...`
+
+### 2) FreeBSD ports repository (base source)
+
+This is the upstream base tree to compose against.
+
+- Required for `compose`.
+- Passed as `--freebsd-root`.
+- Must be a git checkout.
+- Must already be on the branch matching `--target` (`main` or `YYYYQn`).
+
+Important: `dportsv3` does **not** switch FreeBSD branches for you. It validates
+that current branch and compose target match.
+
+### 3) Optional lock tree (for `type lock` overlays)
+
+- Only needed if overlays use `type lock`.
+- Passed as `--lock-root`.
+- If omitted, compose falls back to `<delta-root>/locked`.
+
 ## Repository Layout Expectations
 
 At minimum:
@@ -54,6 +90,44 @@ Typical compose inputs per origin under `ports/<category>/<port>/`:
   - `diffs/`,
   - `dragonfly/`,
   - optional `newport/`.
+
+## Quarter-to-Quarter Workflow
+
+`compose` is single-target per run. Jumping between quarters means switching the
+FreeBSD checkout branch and rerunning compose with a different target.
+
+### Example: `@2026Q1` -> `@2026Q2`
+
+```bash
+# 1) switch FreeBSD base checkout
+git -C ../freebsd-ports fetch origin
+git -C ../freebsd-ports switch 2026Q1
+
+# 2) compose Q1
+python -m dportsv3 compose \
+  --target @2026Q1 \
+  --delta-root . \
+  --freebsd-root ../freebsd-ports \
+  --output artifacts/compose/@2026Q1 \
+  --replace-output --json > artifacts/compose-2026Q1.json
+
+# 3) switch to next quarter
+git -C ../freebsd-ports switch 2026Q2
+
+# 4) compose Q2
+python -m dportsv3 compose \
+  --target @2026Q2 \
+  --delta-root . \
+  --freebsd-root ../freebsd-ports \
+  --output artifacts/compose/@2026Q2 \
+  --replace-output --json > artifacts/compose-2026Q2.json
+```
+
+Recommended practice:
+
+- keep one output root per target (for easier diff/triage),
+- run `compose-report` per target artifact,
+- keep source overlays branch-independent and let target scoping drive behavior.
 
 ## Targets and Scope
 
@@ -152,6 +226,47 @@ Per-origin mode selection is automatic:
 - `overlay.dops` exists -> semantic (dops) mode.
 - `overlay.dops` missing -> compatibility mode.
 
+## Compatibility Behavior (No `overlay.dops`)
+
+When `overlay.dops` is missing for an origin, compose runs compatibility mode.
+
+### Compat type inference
+
+Inference order:
+
+1. `overlay.toml` type (`overlay.type` or top-level `type`) if valid
+2. `overlay.toml` `status.ignore` -> `mask`
+3. `STATUS` first token (`PORT|MASK|DPORT|LOCK`)
+4. `newport/` exists -> `dport`
+5. default -> `port`
+
+### Compat execution model
+
+- `port`: seed upstream origin then apply compatibility artifacts.
+- `mask`: remove/skip origin in output.
+- `dport`: materialize from `newport/`.
+- `lock`: materialize from `--lock-root` (or `<delta-root>/locked`).
+
+For `port`, compatibility stages run in this order:
+
+1. apply `Makefile.DragonFly*` (if present per precedence)
+2. copy `dragonfly/` payload files
+3. apply `diffs/REMOVE` deletions
+4. apply fallback `diffs/*.diff` patches
+
+### Makefile precedence in compat
+
+Priority order:
+
+1. `Makefile.DragonFly` (legacy root file)
+2. `Makefile.DragonFly.@<target>`
+3. `Makefile.DragonFly.@any`
+
+Notes:
+
+- `diffs/*.patch` files are intentionally ignored in compat fallback selection.
+- Patch failures are reported as compose stage errors (`apply_compat_ops`).
+
 ## Compose Report JSON
 
 `compose --json` emits:
@@ -222,6 +337,65 @@ dportsv3 migrate policy-check artifacts/classified.json --strict --json
 dportsv3 migrate dashboard artifacts/classified.json --results artifacts/results.json --strict --json
 dportsv3 migrate wave-report artifacts/results.json --strict --json
 ```
+
+## Port Transition Guide (Compat -> `overlay.dops`)
+
+Use this flow when transitioning legacy overlays to semantic DSL.
+
+### Step 1: inventory and classify
+
+```bash
+python -m dportsv3 migrate inventory --root . --json > artifacts/inventory.json
+python -m dportsv3 migrate classify artifacts/inventory.json --json > artifacts/classified.json
+```
+
+Buckets indicate migration path:
+
+- `auto-safe`: candidate for automated conversion
+- `review-needed`: manual conversion required
+- `fallback-only`: keep compat/patch flow for now
+- `stale`: overlay no longer matches upstream origin
+
+### Step 2: convert one port (dry-run first)
+
+```bash
+python -m dportsv3 migrate convert artifacts/classified.json category/port --dry-run --json
+```
+
+Then write if acceptable:
+
+```bash
+python -m dportsv3 migrate convert artifacts/classified.json category/port --json
+```
+
+### Step 3: validate generated DSL
+
+```bash
+python -m dportsv3 dsl check ports/category/port/overlay.dops
+python -m dportsv3 dsl plan ports/category/port/overlay.dops --json
+```
+
+Note: current auto-conversion emits `target @main` in generated `overlay.dops`.
+If your operational baseline should be quarter-agnostic, edit target scoping to
+fit your policy (`@any` baseline + explicit quarter overrides where needed).
+
+### Step 4: preview apply on composed tree
+
+```bash
+python -m dportsv3 dsl apply ports/category/port/overlay.dops \
+  --port-root artifacts/compose/@2026Q1/category/port \
+  --target @2026Q1 \
+  --dry-run --diff --oracle-profile local
+```
+
+### Step 5: compose end-to-end and compare outcomes
+
+Run compose for the quarter and inspect per-origin notes and stage diagnostics.
+
+Transition rule of thumb:
+
+- once `overlay.dops` exists, that origin runs semantic mode (compat artifacts for
+  the same origin are not executed in compose).
 
 ## Troubleshooting
 
