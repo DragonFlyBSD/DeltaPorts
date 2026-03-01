@@ -87,7 +87,8 @@ mk_var_op         = "mk" "set" var string [on_missing]
                   | "mk" "remove" var token [on_missing] ;
 
 mk_block_op       = "mk" "disable-if" "condition" string [contains] [on_missing]
-                  | "mk" "replace-if" "from" string "to" string [contains] [on_missing] ;
+                  | "mk" "replace-if" "from" string "to" string [contains] [on_missing]
+                  | "mk" "block" "set" "condition" string [contains] heredoc ;
 
 mk_target_op      = "mk" "target" "set" ident heredoc
                   | "mk" "target" "append" ident heredoc
@@ -147,7 +148,22 @@ mk remove <VAR> <token> [on-missing error|warn|noop]
 ```text
 mk disable-if condition "<expr>" [contains "<anchor>"] [on-missing ...]
 mk replace-if from "<expr>" to "<expr>" [contains "<anchor>"] [on-missing ...]
+
+mk block set condition "<expr>" [contains "<anchor>"] <<'MK'
+	<block line>
+MK
 ```
+
+`mk block set` v1 behavior (normative):
+
+- matches and rewrites only `.if ... .endif` regions whose `.if` condition equals
+  `<expr>` (not `.elif`-only matches)
+- `contains` filters candidate regions by block text substring
+- one match: replace full region body
+- no match: insert new `.if ... .endif` block before `.include <bsd.port.post.mk>`
+  when present, else append at EOF
+- multiple matches: fail with ambiguous-match error
+- `on-missing` is not allowed on `mk block set`
 
 ### Makefile target/recipe ops
 
@@ -222,6 +238,7 @@ Determinism:
   - `mk remove` -> `mk.var.token_remove`
   - `mk disable-if` -> `mk.block.disable`
   - `mk replace-if` -> `mk.block.replace_condition`
+  - `mk block set` -> `mk.block.set`
   - `mk target set|append|remove|rename` -> `mk.target.*`
   - `file copy|remove` -> `file.copy|file.remove`
   - `text ...` -> `text.*`

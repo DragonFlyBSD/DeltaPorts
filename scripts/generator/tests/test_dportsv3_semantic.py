@@ -18,7 +18,14 @@ def _span(line: int, col_start: int = 1, col_end: int = 1) -> SourceSpan:
 
 
 def test_check_valid_document_passes() -> None:
-    text = 'target @main\nport category/name\nmk set VAR "ok"\n'
+    text = (
+        "target @main\n"
+        "port category/name\n"
+        'mk set VAR "ok"\n'
+        "mk block set condition \"defined(LITE)\" <<'BLK'\n"
+        "\tPORT_OPTIONS+= CSCOPE EXUBERANT_CTAGS\n"
+        "BLK\n"
+    )
     result = check_dsl(text)
 
     assert result.ok
@@ -115,6 +122,28 @@ def test_invalid_semantic_operation_state_is_reported() -> None:
                 action="target-rename",
                 old_name="old",
                 new_name=None,
+            ),
+        ],
+    )
+    analyzed = analyze_document(document)
+
+    assert not analyzed.ok
+    assert any(d.code == "E_SEM_INVALID_OPERATION_STATE" for d in analyzed.diagnostics)
+
+
+def test_block_set_on_missing_is_rejected() -> None:
+    document = AstDocument(
+        span=_span(1),
+        statements=[
+            TargetDirective(span=_span(1, 1, 12), target="@main", targets=("@main",)),
+            PortDirective(span=_span(2, 1, 17), origin="category/name"),
+            MkOpNode(
+                span=_span(3, 1, 30),
+                action="block-set",
+                condition="defined(LITE)",
+                heredoc_tag="BLK",
+                recipe="\tPORT_OPTIONS+= CSCOPE EXUBERANT_CTAGS\n",
+                on_missing="warn",
             ),
         ],
     )

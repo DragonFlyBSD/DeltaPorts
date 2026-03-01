@@ -25,6 +25,7 @@ from dportsv3.engine.executors.file_text_patch import (
     exec_text_replace_once,
 )
 from dportsv3.engine.executors.mk_ops import (
+    exec_mk_block_set,
     exec_mk_block_disable,
     exec_mk_block_replace_condition,
     exec_mk_target_append,
@@ -132,6 +133,7 @@ def _known_registry() -> dict[str, Executor]:
         "mk.var.token_remove": exec_mk_var_token_remove,
         "mk.block.disable": exec_mk_block_disable,
         "mk.block.replace_condition": exec_mk_block_replace_condition,
+        "mk.block.set": exec_mk_block_set,
         "mk.target.set": exec_mk_target_set,
         "mk.target.append": exec_mk_target_append,
         "mk.target.remove": exec_mk_target_remove,

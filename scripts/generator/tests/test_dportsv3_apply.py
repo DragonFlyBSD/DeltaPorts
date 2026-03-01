@@ -247,6 +247,261 @@ def test_apply_plan_mk_var_set_applies(tmp_path: Path) -> None:
     assert makefile.read_text() == "PORTNAME= updated\n"
 
 
+def test_apply_plan_mk_block_set_replaces_existing_if_block(tmp_path: Path) -> None:
+    makefile = tmp_path / "Makefile"
+    makefile.write_text(
+        "PORTNAME= sample\n"
+        ".if defined(LITE)\n"
+        "PORT_OPTIONS+= OLD\n"
+        ".endif\n"
+        ".include <bsd.port.post.mk>\n"
+    )
+    plan = Plan(
+        port="category/name",
+        ops=[
+            PlanOp(
+                id="op-1",
+                target="@main",
+                kind="mk.block.set",
+                payload={
+                    "condition": "defined(LITE)",
+                    "recipe": ["PORT_OPTIONS+= CSCOPE EXUBERANT_CTAGS"],
+                },
+            )
+        ],
+    )
+
+    result = apply_plan(
+        plan,
+        port_root=tmp_path,
+        target="@main",
+        dry_run=False,
+        oracle_profile="off",
+    )
+
+    assert result.ok
+    assert makefile.read_text() == (
+        "PORTNAME= sample\n"
+        ".if defined(LITE)\n"
+        "PORT_OPTIONS+= CSCOPE EXUBERANT_CTAGS\n"
+        ".endif\n"
+        ".include <bsd.port.post.mk>\n"
+    )
+
+
+def test_apply_plan_mk_block_set_inserts_before_post_include(tmp_path: Path) -> None:
+    makefile = tmp_path / "Makefile"
+    makefile.write_text("PORTNAME= sample\n.include <bsd.port.post.mk>\n")
+    plan = Plan(
+        port="category/name",
+        ops=[
+            PlanOp(
+                id="op-1",
+                target="@main",
+                kind="mk.block.set",
+                payload={
+                    "condition": "defined(LITE)",
+                    "recipe": ["PORT_OPTIONS+= CSCOPE EXUBERANT_CTAGS"],
+                },
+            )
+        ],
+    )
+
+    result = apply_plan(
+        plan,
+        port_root=tmp_path,
+        target="@main",
+        dry_run=False,
+        oracle_profile="off",
+    )
+
+    assert result.ok
+    assert makefile.read_text() == (
+        "PORTNAME= sample\n"
+        ".if defined(LITE)\n"
+        "PORT_OPTIONS+= CSCOPE EXUBERANT_CTAGS\n"
+        ".endif\n"
+        "\n"
+        ".include <bsd.port.post.mk>\n"
+    )
+
+
+def test_apply_plan_mk_block_set_duplicate_if_is_ambiguous(tmp_path: Path) -> None:
+    makefile = tmp_path / "Makefile"
+    makefile.write_text(
+        "PORTNAME= sample\n"
+        ".if defined(LITE)\n"
+        "PORT_OPTIONS+= OLD1\n"
+        ".endif\n"
+        ".if defined(LITE)\n"
+        "PORT_OPTIONS+= OLD2\n"
+        ".endif\n"
+    )
+    plan = Plan(
+        port="category/name",
+        ops=[
+            PlanOp(
+                id="op-1",
+                target="@main",
+                kind="mk.block.set",
+                payload={
+                    "condition": "defined(LITE)",
+                    "recipe": ["PORT_OPTIONS+= CSCOPE EXUBERANT_CTAGS"],
+                },
+            )
+        ],
+    )
+
+    result = apply_plan(
+        plan,
+        port_root=tmp_path,
+        target="@main",
+        dry_run=False,
+        oracle_profile="off",
+    )
+
+    assert not result.ok
+    assert result.failed_ops == 1
+    assert any(
+        d.code == "E_APPLY_AMBIGUOUS_MATCH" for d in result.op_results[0].diagnostics
+    )
+
+
+def test_apply_plan_mk_block_set_contains_disambiguates(tmp_path: Path) -> None:
+    makefile = tmp_path / "Makefile"
+    makefile.write_text(
+        "PORTNAME= sample\n"
+        ".if defined(LITE)\n"
+        "# lane-a\n"
+        "PORT_OPTIONS+= OLD1\n"
+        ".endif\n"
+        ".if defined(LITE)\n"
+        "# lane-b\n"
+        "PORT_OPTIONS+= OLD2\n"
+        ".endif\n"
+    )
+    plan = Plan(
+        port="category/name",
+        ops=[
+            PlanOp(
+                id="op-1",
+                target="@main",
+                kind="mk.block.set",
+                payload={
+                    "condition": "defined(LITE)",
+                    "contains": "lane-b",
+                    "recipe": ["PORT_OPTIONS+= CSCOPE EXUBERANT_CTAGS"],
+                },
+            )
+        ],
+    )
+
+    result = apply_plan(
+        plan,
+        port_root=tmp_path,
+        target="@main",
+        dry_run=False,
+        oracle_profile="off",
+    )
+
+    assert result.ok
+    assert makefile.read_text() == (
+        "PORTNAME= sample\n"
+        ".if defined(LITE)\n"
+        "# lane-a\n"
+        "PORT_OPTIONS+= OLD1\n"
+        ".endif\n"
+        ".if defined(LITE)\n"
+        "PORT_OPTIONS+= CSCOPE EXUBERANT_CTAGS\n"
+        ".endif\n"
+    )
+
+
+def test_apply_plan_mk_block_set_dry_run_diff_reports_changes(tmp_path: Path) -> None:
+    makefile = tmp_path / "Makefile"
+    makefile.write_text("PORTNAME= sample\n.include <bsd.port.post.mk>\n")
+    plan = Plan(
+        port="category/name",
+        ops=[
+            PlanOp(
+                id="op-1",
+                target="@main",
+                kind="mk.block.set",
+                payload={
+                    "condition": "defined(LITE)",
+                    "recipe": ["PORT_OPTIONS+= CSCOPE EXUBERANT_CTAGS"],
+                },
+            )
+        ],
+    )
+
+    result = apply_plan(
+        plan,
+        port_root=tmp_path,
+        target="@main",
+        dry_run=True,
+        emit_diff=True,
+        oracle_profile="off",
+    )
+
+    assert result.ok
+    assert makefile.read_text() == "PORTNAME= sample\n.include <bsd.port.post.mk>\n"
+    assert len(result.diffs) == 1
+    assert result.diffs[0].path == "Makefile"
+    assert "+.if defined(LITE)" in result.diffs[0].diff
+    assert "+PORT_OPTIONS+= CSCOPE EXUBERANT_CTAGS" in result.diffs[0].diff
+
+
+def test_apply_plan_mk_block_set_matches_if_only_not_elif(tmp_path: Path) -> None:
+    makefile = tmp_path / "Makefile"
+    makefile.write_text(
+        "PORTNAME= sample\n"
+        ".if defined(BASE)\n"
+        "USES+= ncurses\n"
+        ".elif defined(LITE)\n"
+        "PORT_OPTIONS+= OLD\n"
+        ".endif\n"
+        ".include <bsd.port.post.mk>\n"
+    )
+    plan = Plan(
+        port="category/name",
+        ops=[
+            PlanOp(
+                id="op-1",
+                target="@main",
+                kind="mk.block.set",
+                payload={
+                    "condition": "defined(LITE)",
+                    "recipe": ["PORT_OPTIONS+= CSCOPE EXUBERANT_CTAGS"],
+                },
+            )
+        ],
+    )
+
+    result = apply_plan(
+        plan,
+        port_root=tmp_path,
+        target="@main",
+        dry_run=False,
+        oracle_profile="off",
+    )
+
+    assert result.ok
+    assert makefile.read_text() == (
+        "PORTNAME= sample\n"
+        ".if defined(BASE)\n"
+        "USES+= ncurses\n"
+        ".elif defined(LITE)\n"
+        "PORT_OPTIONS+= OLD\n"
+        ".endif\n"
+        ".if defined(LITE)\n"
+        "PORT_OPTIONS+= CSCOPE EXUBERANT_CTAGS\n"
+        ".endif\n"
+        "\n"
+        ".include <bsd.port.post.mk>\n"
+    )
+
+
 def test_apply_plan_on_missing_warn_skips(tmp_path: Path) -> None:
     plan = Plan(
         port="category/name",

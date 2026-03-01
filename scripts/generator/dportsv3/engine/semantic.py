@@ -146,6 +146,16 @@ def _validate_operation(
                         source_path,
                     )
                 )
+        elif op.action == "block-set":
+            if op.condition is None or op.heredoc_tag is None or op.recipe is None:
+                diagnostics.append(
+                    _diag(
+                        "E_SEM_INVALID_OPERATION_STATE",
+                        "mk block-set requires condition, heredoc tag, and recipe",
+                        op.span,
+                        source_path,
+                    )
+                )
         elif op.action in {"target-set", "target-append"}:
             if op.name is None or op.heredoc_tag is None or op.recipe is None:
                 diagnostics.append(
@@ -186,7 +196,11 @@ def _validate_operation(
                 )
             )
 
-        on_missing_allowed = op.action not in {"target-set", "target-append"}
+        on_missing_allowed = op.action not in {
+            "block-set",
+            "target-set",
+            "target-append",
+        }
         diagnostics.extend(
             _validate_on_missing(
                 op.on_missing, on_missing_allowed, op.span, source_path

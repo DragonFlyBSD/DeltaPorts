@@ -152,6 +152,27 @@ def _map_operation(
                 diagnostics,
             )
 
+        if op.action == "block-set":
+            if op.condition is None:
+                diagnostics.append(
+                    _diag(
+                        "E_PLAN_INVALID_OPERATION",
+                        "mk block set requires condition",
+                        op.span,
+                        source_path,
+                    )
+                )
+                return None, {}, diagnostics
+            payload = {
+                "condition": op.condition,
+                "recipe": _recipe_lines(op.recipe),
+            }
+            if op.contains is not None:
+                payload["contains"] = op.contains
+            if op.heredoc_tag is not None:
+                payload["heredoc_tag"] = op.heredoc_tag
+            return "mk.block.set", payload, diagnostics
+
         if op.action in {"target-set", "target-append"}:
             if op.name is None:
                 diagnostics.append(

@@ -17,6 +17,7 @@ from dportsv3.engine.makefile_cst import (
     AssignmentNode,
     DirectiveElifNode,
     DirectiveIfNode,
+    IncludeNode,
     TargetNode,
 )
 from dportsv3.engine.makefile_rewrite import find_condition
@@ -656,3 +657,107 @@ def exec_mk_block_replace_condition(
     )
     txn.stage_write(path, updated)
     return _success_row(op, "mk-condition-replaced")
+
+
+def exec_mk_block_set(
+    op: PlanOp, context: ApplyContext, txn: FileTransaction
+) -> ApplyOpResult:
+    condition = op.payload.get("condition")
+    recipe = op.payload.get("recipe")
+    contains = op.payload.get("contains")
+    if not isinstance(condition, str) or not isinstance(recipe, list):
+        return _failed_row(
+            op,
+            code="E_APPLY_INVALID_OPERATION",
+            message="mk.block.set requires condition and recipe",
+        )
+    if contains is not None and not isinstance(contains, str):
+        return _failed_row(
+            op,
+            code="E_APPLY_INVALID_OPERATION",
+            message="mk.block.set contains must be string",
+        )
+    if not all(isinstance(line, str) for line in recipe):
+        return _failed_row(
+            op,
+            code="E_APPLY_INVALID_OPERATION",
+            message="mk.block.set recipe must be list[str]",
+        )
+
+    try:
+        path = _resolve_path(context.port_root, None, default="Makefile")
+    except ValueError as exc:
+        return _failed_row(
+            op,
+            code="E_APPLY_INVALID_PATH",
+            message=str(exc),
+            source_path=context.port_root,
+        )
+
+    loaded = _load_makefile(txn, path)
+    if loaded is None:
+        return _failed_row(
+            op,
+            code="E_APPLY_MISSING_SUBJECT",
+            message="Makefile does not exist",
+            source_path=path,
+        )
+
+    text, document = loaded
+    lines = text.splitlines(keepends=False)
+
+    matches: list[tuple[int, int]] = []
+    for region_start, region_end in document.directive_regions:
+        start_node = document.nodes[region_start]
+        if not isinstance(start_node, DirectiveIfNode):
+            continue
+        if start_node.condition != condition:
+            continue
+        start_line = start_node.span.line_start
+        end_line = document.nodes[region_end].span.line_end
+        block_text = "\n".join(lines[start_line - 1 : end_line])
+        if contains is not None and contains not in block_text:
+            continue
+        matches.append((start_line, end_line))
+
+    if len(matches) > 1:
+        return _failed_row(
+            op,
+            code="E_APPLY_AMBIGUOUS_MATCH",
+            message=f"multiple .if blocks found: {condition}",
+            source_path=path,
+        )
+
+    block_lines = [f".if {condition}", *recipe, ".endif"]
+    if matches:
+        start_line, end_line = matches[0]
+        updated = _replace_line_range(
+            text,
+            start=start_line,
+            end=end_line,
+            new_lines=block_lines,
+        )
+        txn.stage_write(path, updated)
+        return _success_row(op, "mk-block-replaced")
+
+    insert_before_line: int | None = None
+    for node in document.nodes:
+        if isinstance(node, IncludeNode) and node.include == "<bsd.port.post.mk>":
+            insert_before_line = node.span.line_start
+            break
+
+    if insert_before_line is None:
+        updated = text
+        if updated and not updated.endswith(("\n", "\r\n")):
+            updated += "\n"
+        updated += "\n".join(block_lines) + "\n"
+    else:
+        updated = _replace_line_range(
+            text,
+            start=insert_before_line,
+            end=insert_before_line - 1,
+            new_lines=[*block_lines, ""],
+        )
+
+    txn.stage_write(path, updated)
+    return _success_row(op, "mk-block-inserted")

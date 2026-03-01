@@ -333,16 +333,60 @@ class _Parser:
             return self._parse_mk_var_op(start, action.value)
         if action.value in {"disable-if", "replace-if"}:
             return self._parse_mk_block_op(start, action.value)
+        if action.value == "block":
+            return self._parse_mk_block_set_op(start)
         if action.value == "target":
             return self._parse_mk_target_op(start)
 
         self._error(
             "E_PARSE_UNEXPECTED_TOKEN",
-            "unexpected mk action; expected set|unset|add|remove|disable-if|replace-if|target",
+            "unexpected mk action; expected set|unset|add|remove|disable-if|replace-if|block|target",
             action,
         )
         self._sync_line()
         return None
+
+    def _parse_mk_block_set_op(self, start: Token) -> MkOpNode | None:
+        if self._expect_word_value("set", "after 'mk block'") is None:
+            self._sync_line()
+            return None
+
+        if self._expect_word_value("condition", "after 'mk block set'") is None:
+            self._sync_line()
+            return None
+        condition_tok = self._expect_string("after 'condition'")
+        if condition_tok is None:
+            self._sync_line()
+            return None
+
+        contains, _ = self._parse_contains()
+        heredoc_start = self._expect_kind(
+            "HEREDOC_START",
+            "after block condition (expected <<'TAG')",
+        )
+        if heredoc_start is None:
+            self._sync_line()
+            return None
+        if self._expect_kind("NEWLINE", "after heredoc start") is None:
+            self._sync_line()
+            return None
+        heredoc_body = self._expect_kind("HEREDOC_BODY", "for heredoc body")
+        if heredoc_body is None:
+            self._sync_line()
+            return None
+
+        end_span = heredoc_body.span
+        if self._at("NEWLINE"):
+            end_span = self._advance().span
+
+        return MkOpNode(
+            span=_join_span(start.span, end_span),
+            action="block-set",
+            condition=condition_tok.value,
+            contains=contains,
+            heredoc_tag=heredoc_start.value,
+            recipe=heredoc_body.value,
+        )
 
     def _parse_mk_var_op(self, start: Token, action: str) -> MkOpNode | None:
         var = self._expect_word(f"after 'mk {action}'")
