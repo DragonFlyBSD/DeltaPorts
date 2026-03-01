@@ -470,6 +470,39 @@ python -m dportsv3 dsl apply ports/category/port/overlay.dops --port-root artifa
 python -m dportsv3 dsl apply ports/category/port/overlay.dops --port-root artifacts/compose/@2026Q2/category/port --target @2026Q2 --dry-run --diff
 ```
 
+### Step 3c: conditional Makefile block authoring (`.if ... .endif`)
+
+Use `mk block set` when a port needs conditional blocks (for example
+`defined(LITE)` or `exists(...)`) that are difficult to express with token/line
+ops.
+
+Example:
+
+```text
+target @any
+port editors/vim
+type port
+reason "manual conversion from Makefile.DragonFly"
+
+mk remove OPTIONS_DEFAULT PTYTHON on-missing warn
+
+mk block set condition "defined(LITE)" <<'BLK'
+PORT_OPTIONS+= CSCOPE EXUBERANT_CTAGS
+BLK
+
+mk block set condition "exists(/usr/lib/priv/libprivate_ncursesw.so)" <<'BLK'
+MAKE_ARGS+= EXTRA_DEFS="${CFLAGS:M-I*}"
+BLK
+```
+
+Current v1 scope:
+
+- block matching is `.if ... .endif` only (not `.elif`-only matching),
+- if no matching `.if` block exists, a new block is inserted before
+  `.include <bsd.port.post.mk>` (or appended at EOF if absent),
+- use `contains "..."` only when duplicate `.if` conditions require
+  disambiguation.
+
 ### Step 4: preview apply on composed tree
 
 ```bash

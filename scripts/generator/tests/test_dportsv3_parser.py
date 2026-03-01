@@ -19,6 +19,9 @@ def test_parse_valid_directives_and_operations() -> None:
         "mk remove USES linux\n"
         'mk disable-if condition "A" contains "B" on-missing noop\n'
         'mk replace-if from "A" to "B" contains "C"\n'
+        'mk block set condition "defined(LITE)" contains "LITE" <<\'BLK\'\n'
+        "\tPORT_OPTIONS+= CSCOPE EXUBERANT_CTAGS\n"
+        "BLK\n"
         "mk target set dfly-patch <<'MK'\n"
         "\tcmd\n"
         "MK\n"
@@ -39,7 +42,7 @@ def test_parse_valid_directives_and_operations() -> None:
     assert result.ok
     assert result.diagnostics == []
     assert isinstance(result.ast, AstDocument)
-    assert len(result.ast.statements) == 21
+    assert len(result.ast.statements) == 22
 
 
 def test_parse_heredoc_recipe_preserved() -> None:
@@ -75,6 +78,25 @@ def test_optional_clauses_are_parsed() -> None:
     assert isinstance(second, MkOpNode)
     assert second.action == "target-remove"
     assert second.on_missing == "noop"
+
+
+def test_parse_block_set_recipe_preserved() -> None:
+    text = (
+        'mk block set condition "defined(LITE)" contains "LITE" <<\'BLK\'\n'
+        "\tPORT_OPTIONS+= CSCOPE EXUBERANT_CTAGS\n"
+        "BLK\n"
+    )
+    result = parse_dsl(text)
+
+    assert result.ok
+    assert isinstance(result.ast, AstDocument)
+    node = result.ast.statements[0]
+    assert isinstance(node, MkOpNode)
+    assert node.action == "block-set"
+    assert node.condition == "defined(LITE)"
+    assert node.contains == "LITE"
+    assert node.heredoc_tag == "BLK"
+    assert node.recipe == "\tPORT_OPTIONS+= CSCOPE EXUBERANT_CTAGS\n"
 
 
 def test_parse_error_expected_token_for_reason() -> None:

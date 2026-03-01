@@ -145,6 +145,26 @@ def test_build_plan_preserves_recipe_for_target_ops() -> None:
     assert result.plan.ops[1].payload["recipe"] == ["\tcmd3"]
 
 
+def test_build_plan_maps_block_set_operation() -> None:
+    text = (
+        "target @main\n"
+        "port category/name\n"
+        'mk block set condition "defined(LITE)" contains "LITE" <<\'BLK\'\n'
+        "\tPORT_OPTIONS+= CSCOPE EXUBERANT_CTAGS\n"
+        "BLK\n"
+    )
+    result = build_plan(text)
+
+    assert result.ok
+    assert result.plan is not None
+    assert len(result.plan.ops) == 1
+    op = result.plan.ops[0]
+    assert op.kind == "mk.block.set"
+    assert op.payload["condition"] == "defined(LITE)"
+    assert op.payload["contains"] == "LITE"
+    assert op.payload["recipe"] == ["\tPORT_OPTIONS+= CSCOPE EXUBERANT_CTAGS"]
+
+
 def test_compile_plan_reports_metadata_missing() -> None:
     document = AstDocument(
         span=_span(1),
