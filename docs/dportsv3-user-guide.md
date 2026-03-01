@@ -127,6 +127,8 @@ Recommended practice:
 
 - keep one output root per target (for easier diff/triage),
 - run `compose-report` per target artifact,
+- when using multi-target DSL refs, validate each active target with its own
+  compose/apply run,
 - keep source overlays branch-independent and let target scoping drive behavior.
 
 ## Targets and Scope
@@ -143,6 +145,47 @@ Apply execution order for a requested target `T` is deterministic:
 
 1. `@any` operations,
 2. `T` operations.
+
+### Multiple Target References in DSL
+
+Runtime commands are still single-target (`--target @main` or one
+`@YYYYQx` value per run), but DSL can scope one operation block to multiple
+explicit targets.
+
+Valid examples:
+
+```text
+target @main
+mk set BROKEN "unsupported on main"
+
+target @2026Q1,@2026Q2
+mk add LIB_DEPENDS libepoll-shim.so:devel/libepoll-shim
+
+target @any
+mk add CFLAGS -Wno-error=deprecated-declarations
+```
+
+Invalid example (rejected by semantic checks):
+
+```text
+target @any,@2026Q1
+```
+
+Rules:
+
+- `@any` is baseline scope.
+- `@any` cannot be combined with explicit selectors in the same `target`
+  directive.
+- explicit selectors can be comma-separated (`@main,@2026Q1,...`).
+- operations for non-requested explicit targets are ignored in a run.
+
+Operational behavior for a run targeting `T`:
+
+1. apply all `@any` operations,
+2. apply all `T` operations,
+3. skip other explicit target operations.
+
+For formal grammar/semantics, see `docs/dsl-v0.md`.
 
 ## Exit Codes
 
@@ -267,6 +310,16 @@ Notes:
 - `diffs/*.patch` files are intentionally ignored in compat fallback selection.
 - Patch failures are reported as compose stage errors (`apply_compat_ops`).
 
+### Compat vs Semantic During Transition
+
+Per origin, compose picks exactly one mode:
+
+- `overlay.dops` exists -> semantic mode.
+- `overlay.dops` missing -> compatibility mode.
+
+As soon as `overlay.dops` is present for an origin, compatibility artifacts for
+that same origin are not executed by compose.
+
 ## Compose Report JSON
 
 `compose --json` emits:
@@ -379,6 +432,44 @@ Note: current auto-conversion emits `target @main` in generated `overlay.dops`.
 If your operational baseline should be quarter-agnostic, edit target scoping to
 fit your policy (`@any` baseline + explicit quarter overrides where needed).
 
+### Step 3b: authoring pattern for multi-quarter maintenance
+
+Recommended pattern:
+
+- place shared behavior in `target @any`,
+- add only true divergences in explicit targets (`@main`, `@YYYYQx`),
+- keep quarter-specific overrides minimal and local.
+
+Example:
+
+```text
+target @any
+port net/example
+type port
+reason "DragonFly baseline + quarter override"
+
+mk add CFLAGS -Wno-error=deprecated-declarations
+mk add LIB_DEPENDS libepoll-shim.so:devel/libepoll-shim
+
+target @2026Q2
+mk set BROKEN "upstream API break in 2026Q2"
+```
+
+Validation sequence for multi-target overlays:
+
+```bash
+# structure/semantic check
+python -m dportsv3 dsl check ports/category/port/overlay.dops
+
+# inspect expanded plan
+python -m dportsv3 dsl plan ports/category/port/overlay.dops --json
+
+# preview for each active target
+python -m dportsv3 dsl apply ports/category/port/overlay.dops --port-root artifacts/compose/@main/category/port --target @main --dry-run --diff
+python -m dportsv3 dsl apply ports/category/port/overlay.dops --port-root artifacts/compose/@2026Q1/category/port --target @2026Q1 --dry-run --diff
+python -m dportsv3 dsl apply ports/category/port/overlay.dops --port-root artifacts/compose/@2026Q2/category/port --target @2026Q2 --dry-run --diff
+```
+
 ### Step 4: preview apply on composed tree
 
 ```bash
@@ -427,14 +518,24 @@ Transition rule of thumb:
 - Use `--oracle-profile off` for local exploratory loops.
 - Keep `--oracle-profile ci` for strict CI enforcement.
 
+### Multi-target DSL scope issues
+
+- `target @any,@2026Q1` fails semantic checks by design.
+- If an expected edit did not run, confirm `--target` matches the DSL scope.
+- For quarter drift, compare `dsl apply --dry-run --diff` outputs per target.
+
 ## Recommended Operator Loop
 
 1. Generate inventory/classification visibility artifacts.
 2. Run compose into a clean output root.
 3. Run compose-report for compact triage.
 4. Fix failures in overlay sources.
-5. Rerun compose until clean.
-6. Enforce strict/oracle CI mode for final validation.
+5. For multi-target overlays, validate each active target:
+   - `dsl check` and `dsl plan --json`
+   - `dsl apply --dry-run --diff --target <target>` for each target
+   - `compose` and `compose-report` per target artifact
+6. Rerun until clean.
+7. Enforce strict/oracle CI mode for final validation.
 
 ## Command Help Pointers
 
