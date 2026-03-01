@@ -55,6 +55,43 @@ def exec_file_copy(
     return _success_row(op, "copied")
 
 
+def exec_file_materialize(
+    op: PlanOp, context: ApplyContext, txn: FileTransaction
+) -> ApplyOpResult:
+    src = op.payload.get("src")
+    dst = op.payload.get("dst")
+    if not isinstance(src, str) or not isinstance(dst, str):
+        return _failed_row(
+            op,
+            code="E_APPLY_INVALID_PATH",
+            message="file.materialize requires src and dst",
+        )
+
+    try:
+        src_path = _resolve_path(context.source_root, src)
+        dst_path = _resolve_path(context.port_root, dst)
+    except ValueError as exc:
+        return _failed_row(
+            op,
+            code="E_APPLY_INVALID_PATH",
+            message=str(exc),
+            source_path=context.port_root,
+        )
+
+    try:
+        content = src_path.read_text()
+    except FileNotFoundError:
+        return _failed_row(
+            op,
+            code="E_APPLY_MISSING_SUBJECT",
+            message=f"materialize source does not exist: {src}",
+            source_path=src_path,
+        )
+
+    txn.stage_write(dst_path, content)
+    return _success_row(op, "materialized")
+
+
 def exec_file_remove(
     op: PlanOp, context: ApplyContext, txn: FileTransaction
 ) -> ApplyOpResult:

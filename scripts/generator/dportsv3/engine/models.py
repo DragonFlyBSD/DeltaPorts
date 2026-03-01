@@ -127,6 +127,7 @@ class PlanResult:
 class ApplyContext:
     """Execution context for apply stage."""
 
+    source_root: Path
     port_root: Path
     target: str
     dry_run: bool = False
@@ -259,6 +260,7 @@ class ApplyResult:
         return {
             "ok": self.ok,
             "context": {
+                "source_root": str(self.context.source_root),
                 "port_root": str(self.context.port_root),
                 "target": self.context.target,
                 "dry_run": self.context.dry_run,

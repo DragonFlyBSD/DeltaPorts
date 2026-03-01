@@ -96,6 +96,7 @@ mk_target_op      = "mk" "target" "set" ident heredoc
                   | "mk" "target" "rename" ident "->" ident [on_missing] ;
 
 file_op           = "file" "copy" path "->" path
+                  | "file" "materialize" path "->" path
                   | "file" "remove" path [on_missing] ;
 
 text_op           = "text" "line-remove" "file" path "exact" string [on_missing]
@@ -184,6 +185,7 @@ mk target rename <old> -> <new> [on-missing ...]
 
 ```text
 file copy <src> -> <dst>
+file materialize <src> -> <dst>
 file remove <path> [on-missing ...]
 
 text line-remove file <path> exact "<line>" [on-missing ...]
@@ -197,8 +199,18 @@ text replace-once file <path> from "<needle>" to "<replacement>" [on-missing ...
 patch apply <path>
 ```
 
-All path values in `file`, `text`, and `patch` operations are resolved relative
-to the port root. Absolute paths and paths escaping the port root are invalid.
+Path resolution semantics:
+
+- `file copy`: `<src>` and `<dst>` are resolved relative to the port root
+- `file materialize`: `<src>` is resolved relative to the `overlay.dops`
+  directory (source root), `<dst>` is resolved relative to the port root
+- `file remove`, `text ... file <path>`, and `patch apply <path>` resolve paths
+  relative to the port root
+- absolute paths and paths escaping the active root are invalid
+- `file materialize` does not support wildcard source patterns in v1
+
+`patch apply` applies immediately to the port root tree; it does not register a
+build-time patch asset lane.
 
 ---
 
@@ -240,7 +252,7 @@ Determinism:
   - `mk replace-if` -> `mk.block.replace_condition`
   - `mk block set` -> `mk.block.set`
   - `mk target set|append|remove|rename` -> `mk.target.*`
-  - `file copy|remove` -> `file.copy|file.remove`
+  - `file copy|materialize|remove` -> `file.copy|file.materialize|file.remove`
   - `text ...` -> `text.*`
   - `patch apply` -> `patch.apply`
 - directive mapping:

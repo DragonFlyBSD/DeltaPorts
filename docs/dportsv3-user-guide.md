@@ -366,6 +366,19 @@ Notes:
 - `--diff` requires `--dry-run`.
 - `--strict` fails fast on first operation failure.
 - `--json` gives machine-readable apply report with op results and diffs.
+- Path roots in apply semantics:
+  - `file materialize <src> -> <dst>` reads `<src>` from the overlay source
+    directory (where `overlay.dops` lives) and writes `<dst>` under
+    `--port-root`.
+  - `file copy <src> -> <dst>` reads and writes inside `--port-root`.
+  - `patch apply <path>` is immediate patching of files under `--port-root`
+    (not build-time patch asset registration).
+- `file materialize` v1 accepts explicit file paths only (no wildcard/glob
+  source expansion).
+
+For ports that carry DragonFly-specific build-time patch assets, prefer
+materializing into `dragonfly/` rather than `files/` so the framework can keep
+its layered patch lane behavior (`files/` first, then `dragonfly/`).
 
 ## Migration Commands
 

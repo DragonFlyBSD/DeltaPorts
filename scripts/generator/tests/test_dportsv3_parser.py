@@ -3,7 +3,13 @@ from __future__ import annotations
 from pathlib import Path
 
 from dportsv3.engine.api import parse_dsl
-from dportsv3.engine.ast import AstDocument, MkOpNode, ReasonDirective, TargetDirective
+from dportsv3.engine.ast import (
+    AstDocument,
+    FileOpNode,
+    MkOpNode,
+    ReasonDirective,
+    TargetDirective,
+)
 
 
 def test_parse_valid_directives_and_operations() -> None:
@@ -31,6 +37,7 @@ def test_parse_valid_directives_and_operations() -> None:
         "mk target remove dfly-patch on-missing error\n"
         "mk target rename old -> new on-missing warn\n"
         "file copy a -> b\n"
+        "file materialize dragonfly/patch-a -> dragonfly/patch-a\n"
         "file remove c on-missing noop\n"
         'text line-remove file Makefile exact "x"\n'
         'text line-insert-after file Makefile anchor "a" line "b"\n'
@@ -42,7 +49,7 @@ def test_parse_valid_directives_and_operations() -> None:
     assert result.ok
     assert result.diagnostics == []
     assert isinstance(result.ast, AstDocument)
-    assert len(result.ast.statements) == 22
+    assert len(result.ast.statements) == 23
 
 
 def test_parse_heredoc_recipe_preserved() -> None:
@@ -97,6 +104,19 @@ def test_parse_block_set_recipe_preserved() -> None:
     assert node.contains == "LITE"
     assert node.heredoc_tag == "BLK"
     assert node.recipe == "\tPORT_OPTIONS+= CSCOPE EXUBERANT_CTAGS\n"
+
+
+def test_parse_file_materialize_operation() -> None:
+    text = "file materialize dragonfly/patch-a -> dragonfly/patch-a\n"
+    result = parse_dsl(text)
+
+    assert result.ok
+    assert isinstance(result.ast, AstDocument)
+    node = result.ast.statements[0]
+    assert isinstance(node, FileOpNode)
+    assert node.action == "materialize"
+    assert node.src == "dragonfly/patch-a"
+    assert node.dst == "dragonfly/patch-a"
 
 
 def test_parse_error_expected_token_for_reason() -> None:

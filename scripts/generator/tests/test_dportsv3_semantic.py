@@ -22,6 +22,7 @@ def test_check_valid_document_passes() -> None:
         "target @main\n"
         "port category/name\n"
         'mk set VAR "ok"\n'
+        "file materialize dragonfly/patch-a -> dragonfly/patch-a\n"
         "mk block set condition \"defined(LITE)\" <<'BLK'\n"
         "\tPORT_OPTIONS+= CSCOPE EXUBERANT_CTAGS\n"
         "BLK\n"
@@ -151,6 +152,18 @@ def test_block_set_on_missing_is_rejected() -> None:
 
     assert not analyzed.ok
     assert any(d.code == "E_SEM_INVALID_OPERATION_STATE" for d in analyzed.diagnostics)
+
+
+def test_materialize_wildcards_are_rejected() -> None:
+    text = (
+        "target @main\n"
+        "port category/name\n"
+        "file materialize dragonfly/patch-* -> dragonfly/\n"
+    )
+    result = check_dsl(text)
+
+    assert not result.ok
+    assert any(d.code == "E_SEM_INVALID_OPERATION_STATE" for d in result.diagnostics)
 
 
 def test_semantic_diagnostics_include_source_location(tmp_path: Path) -> None:

@@ -584,8 +584,8 @@ class _Parser:
             self._sync_line()
             return None
 
-        if action.value == "copy":
-            src = self._expect_value("after 'file copy'")
+        if action.value in {"copy", "materialize"}:
+            src = self._expect_value(f"after 'file {action.value}'")
             if src is None:
                 self._sync_line()
                 return None
@@ -599,7 +599,7 @@ class _Parser:
             self._finish_statement()
             return FileOpNode(
                 span=_join_span(start.span, dst.span),
-                action="copy",
+                action=action.value,
                 src=src.value,
                 dst=dst.value,
             )
@@ -621,7 +621,7 @@ class _Parser:
 
         self._error(
             "E_PARSE_UNEXPECTED_TOKEN",
-            "unexpected file action; expected copy|remove",
+            "unexpected file action; expected copy|materialize|remove",
             action,
         )
         self._sync_line()
