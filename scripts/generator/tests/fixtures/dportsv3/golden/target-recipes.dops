@@ -1,0 +1,11 @@
+target @main
+port devel/tool
+mk target set dfly-patch <<'MK'
+	cmd1
+	cmd2
+MK
+target @2025Q1
+mk target append dfly-patch <<'APP'
+	cmd3
+APP
+mk target rename old -> new on-missing warn

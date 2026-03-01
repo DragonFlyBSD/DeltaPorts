@@ -1,0 +1,20 @@
+[
+  {
+    "origin": "devel/a",
+    "status": "converted",
+    "parse_ok": true,
+    "check_ok": true,
+    "plan_ok": true,
+    "deterministic_ok": true,
+    "classified": true
+  },
+  {
+    "origin": "devel/b",
+    "status": "fallback",
+    "parse_ok": true,
+    "check_ok": true,
+    "plan_ok": true,
+    "deterministic_ok": true,
+    "classified": true
+  }
+]

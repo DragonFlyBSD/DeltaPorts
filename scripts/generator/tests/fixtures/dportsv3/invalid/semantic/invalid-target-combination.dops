@@ -1,0 +1,3 @@
+target @any,@main
+port category/name
+mk set VAR "value"

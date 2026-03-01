@@ -1,0 +1,3 @@
+mk target set dfly-patch <<MK
+cmd
+MK

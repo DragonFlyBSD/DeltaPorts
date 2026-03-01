@@ -1,0 +1,37 @@
+{
+  "maintainer": "",
+  "ops": [
+    {
+      "heredoc_tag": "MK",
+      "id": "op-0001-mk-target-set",
+      "kind": "mk.target.set",
+      "name": "dfly-patch",
+      "recipe": [
+        "\tcmd1",
+        "\tcmd2"
+      ],
+      "target": "@main"
+    },
+    {
+      "heredoc_tag": "APP",
+      "id": "op-0002-mk-target-append",
+      "kind": "mk.target.append",
+      "name": "dfly-patch",
+      "recipe": [
+        "\tcmd3"
+      ],
+      "target": "@2025Q1"
+    },
+    {
+      "id": "op-0003-mk-target-rename",
+      "kind": "mk.target.rename",
+      "new": "new",
+      "old": "old",
+      "on_missing": "warn",
+      "target": "@2025Q1"
+    }
+  ],
+  "port": "devel/tool",
+  "reason": "",
+  "type": "port"
+}

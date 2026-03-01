@@ -1,0 +1,6 @@
+target @main
+port category/name
+type port
+reason "baseline"
+maintainer "dev@example.com"
+mk set VAR "value"

@@ -1,70 +1,19 @@
-This is how to set up dport generation:
+# DPorts Generator
 
-1. Install poudriere (or poudriere-devel)
+This directory now uses `dportsv3` as the active Python generator toolchain.
 
-2. create /usr/local/etc/dports.conf:
-FPORTS=/usr/ports
-MERGED=/usr/gen-dports/merged-ports
-DPORTS=/usr/gen-dports/DPorts
-DELTA=/usr/gen-dports/DeltaPorts
-INDEX=/usr/ports/INDEX-3
-COMQUERE=/tmp/crondports
+## Primary CLI
 
-3. Replicate github DPorts (git readonly) at /usr/dports
+```sh
+python -m dportsv3 --help
+python -m dportsv3 compose --help
+python -m dportsv3 migrate --help
+python -m dportsv3 dsl --help
+```
 
-4. Replicate github DeltaPorts (ssh key) at /usr/gen-dports/github
+## Notes
 
-5. Replicate github DPorts (ssh key) at /usr/gen-dports/github
-
-6A. Put the following files at /usr/local/etc/hooks_poudriere:
-merge.sh
-prune.sh
-failure_status.sh
-transfer_merge.sh
-hook_port_build_failure.sh
-hook_port_build_success.sh
-
-6B. Put dportsd at /usr/local/etc/rc.d/
-
-6C. Put dports-daemon at /usr/local/sbin/
-
-6D. Activate the git daemon
-    1. Create automation user
-    2. Set up .gitconfig appropriately in /home/automaton
-    3. Change DPorts and DeltaPorts repositories to group automation
-    4. chmod -R g+w on DPorts and DeltaPorts
-    5. echo "dportsd_enable=YES" >> /etc/rc.d
-
-7. build and install portsnap
-mkdir /var/db/portsnap
-cd /usr/gen-dports/github/DeltaPorts/scripts/portsnap && make install
-rehash
-
-8. Fetch latest FreeBSD Ports Collection
-portsnap fetch update
-
-9. Create staging area
-/usr/local/etc/hooks_poudriere/merge.sh
-
-10. Customize poudriere.conf
-cp /usr/local/etc/poudriere.conf.sample /usr/local/poudriere.conf
-set DISTFILES_CACHE=/usr/distfiles
-set DPORTS_RSYNC_LOC=/usr/gen-dports/merged-ports
-
-11. create jail in poudriere (>= DragonFly 3.3)
-e.g. create jail called "master"
-
-12. create porttree in poudriere
-poudriere ports -c -p potential -m rsync
-
-13. Activate daemon if you haven't rebooted yet
-/usr/local/etc/rc.d/dports start
-
-14. Kickoff autogeneration
-poudriere bulk -va -j master -p potential
-
-Later:
-Either manually or automatically:
-portsnap fetch update
-/usr/local/etc/hooks_poudriere/prune.sh
-/usr/local/etc/hooks_poudriere/merge.sh
+- Legacy Python v2 `dports` package/entrypoint has been removed.
+- Legacy shell scripts remain in this directory for operational parity checks.
+- Packaging exports only `dportsv3` from `scripts/generator/pyproject.toml`.
+- Comprehensive usage guide: `docs/dportsv3-user-guide.md`.

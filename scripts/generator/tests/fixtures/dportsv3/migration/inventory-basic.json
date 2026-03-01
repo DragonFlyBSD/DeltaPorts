@@ -1,0 +1,37 @@
+[
+  {
+    "origin": "devel/a",
+    "bucket": "auto-safe",
+    "target": "@main",
+    "category": "devel",
+    "churn": 90
+  },
+  {
+    "origin": "devel/b",
+    "bucket": "auto-safe",
+    "target": "@main",
+    "category": "devel",
+    "churn": 70
+  },
+  {
+    "origin": "devel/c",
+    "bucket": "review-needed",
+    "target": "@main",
+    "category": "devel",
+    "churn": 100
+  },
+  {
+    "origin": "sysutils/d",
+    "bucket": "auto-safe",
+    "target": "@2025Q1",
+    "category": "sysutils",
+    "churn": 85
+  },
+  {
+    "origin": "www/e",
+    "bucket": "auto-safe",
+    "target": "@main",
+    "category": "www",
+    "churn": 65
+  }
+]
