@@ -6,6 +6,9 @@ Normative language specification for `overlay.dops` in DeltaPorts v3.
 
 This document is the single source of truth for DSL grammar and semantics.
 
+Operator workflows and migration patterns are documented in
+`docs/dportsv3-user-guide.md`; this file defines language semantics.
+
 ---
 
 ## Purpose
@@ -21,12 +24,16 @@ No persisted transition ops file is required.
 
 - File name: `overlay.dops`
 - One origin per file; `port <category/name>` is required exactly once
-- Multiple `target @...` blocks are allowed in one file
+- Directives are file-global; operations inherit the active target scope
+- Multiple `target ...` directives are allowed in one file
 - `type` is file-global (`port|mask|dport|lock`), not target-scoped
-- No implicit target; operations must appear under explicit `target @...`
+- Initial active scope is implicit `@any` before the first explicit `target`
+- `target` accepts one selector or a comma-separated selector list in one token,
+  for example `target @main,@2026Q1` (no spaces)
 
 Supported targets:
 
+- `@any`
 - `@main`
 - `@YYYYQ1`, `@YYYYQ2`, `@YYYYQ3`, `@YYYYQ4`
 
@@ -40,6 +47,8 @@ Supported targets:
 - `\` at end of line is a continuation marker for command forms that allow it
 - Heredoc form for recipes: `<<'TAG'` ... `TAG`
 - Heredoc body is preserved exactly, including leading tabs
+- `target` selector lists are lexed as one word token; write
+  `target @main,@2026Q1` (no spaces after commas)
 
 ---
 
@@ -55,13 +64,14 @@ directive         = target_directive
                   | reason_directive
                   | maintainer_directive ;
 
-target_directive  = "target" target ;
+target_directive  = "target" target_list ;
+target_list       = target { "," target } ;
 port_directive    = "port" origin ;
 type_directive    = "type" port_type ;
 reason_directive  = "reason" string ;
 maintainer_directive = "maintainer" string ;
 
-target            = "@main" | "@" year "Q" quarter ;
+target            = "@any" | "@main" | "@" year "Q" quarter ;
 year              = digit digit digit digit ;
 quarter           = "1" | "2" | "3" | "4" ;
 origin            = ident "/" ident ;
@@ -101,11 +111,23 @@ on_missing        = "on-missing" ("error" | "warn" | "noop") ;
 
 ## Directive Semantics
 
-- `target` sets active target scope for all following operations until the
+- `target` sets active target selectors for all following operations until the
   next `target`
 - `port` declares origin and is mandatory exactly once
 - `type` defaults to `port` if omitted
 - `reason` and `maintainer` are optional metadata fields
+
+### Target scope rules (normative)
+
+- Active scope starts as `@any` before the first explicit `target`
+- `target @a,@b,...` is a selector list; each following operation expands into
+  one scoped operation per selector, in selector order
+- `@any` MUST NOT be combined with explicit selectors in one `target` directive
+  (for example, `target @any,@2026Q1` is invalid)
+- For an apply run targeting `T`, operation evaluation order is:
+  1) all `@any` operations in source order
+  2) all `T` operations in source order
+  3) all other target-scoped operations, marked skipped with target-mismatch
 
 ---
 
@@ -159,6 +181,9 @@ text replace-once file <path> from "<needle>" to "<replacement>" [on-missing ...
 patch apply <path>
 ```
 
+All path values in `file`, `text`, and `patch` operations are resolved relative
+to the port root. Absolute paths and paths escaping the port root are invalid.
+
 ---
 
 ## Determinism and Failure Policy
@@ -178,6 +203,8 @@ Defaults:
 Determinism:
 
 - operations apply in source order after target scoping is resolved
+- multi-selector target directives preserve selector order during scoped-op
+  expansion (for example `@2026Q1,@2026Q2` expands in that order)
 - reapplying the same plan must be idempotent
 
 ---
@@ -185,7 +212,9 @@ Determinism:
 ## Compile Mapping to Normalized In-Memory Plan
 
 - each DSL operation compiles to one normalized operation record
-- `target @...` maps to per-operation `target`
+- operations before first explicit `target` compile with target `@any`
+- `target` selector lists map to per-operation target expansion in selector
+  order
 - mapping of forms to operation kinds:
   - `mk set` -> `mk.var.set`
   - `mk unset` -> `mk.var.unset`
@@ -202,6 +231,21 @@ Determinism:
   - `reason` -> `plan.reason`
   - `maintainer` -> `plan.maintainer`
   - `port` -> `plan.port`
+
+---
+
+## Conformance Anchors (Implementation References)
+
+Normative behavior in this document is implemented and regression-tested in:
+
+- parser: `scripts/generator/dportsv3/engine/parser.py`
+- semantic scope analysis: `scripts/generator/dportsv3/engine/semantic.py`
+- plan compilation: `scripts/generator/dportsv3/engine/planner.py`
+- apply target ordering/skipping: `scripts/generator/dportsv3/engine/apply.py`
+- tests: `scripts/generator/tests/test_dportsv3_parser.py`
+- tests: `scripts/generator/tests/test_dportsv3_semantic.py`
+- tests: `scripts/generator/tests/test_dportsv3_planner.py`
+- tests: `scripts/generator/tests/test_dportsv3_apply.py`
 
 ---
 
@@ -232,13 +276,15 @@ Bootstrap compatibility code:
 ### Valid
 
 ```text
-target @2025Q2
 port security/dsniff
 type port
 reason "DragonFly-specific adjustments"
 
-mk remove USES linux on-missing warn
 mk add USES ssl
+mk set BROKEN_DragonFly "baseline applies to all targets"
+
+target @2025Q2
+mk remove USES linux on-missing warn
 mk set BROKEN_DragonFly "fails with old SSL API"
 
 mk target set dfly-patch <<'MK'
@@ -248,6 +294,14 @@ MK
 patch apply dragonfly/@2025Q2/patch-src_main.c
 ```
 
+### Valid (multi-selector target scope)
+
+```text
+target @2026Q1,@2026Q2
+port category/name
+mk set VAR "shared-quarter-change"
+```
+
 ### Invalid (missing `port`)
 
 ```text
@@ -255,9 +309,10 @@ target @main
 mk set BROKEN "missing origin"
 ```
 
-### Invalid (operation outside target scope)
+### Invalid (mixed `@any` with explicit target)
 
 ```text
+target @any,@2026Q1
 port category/name
 mk add USES ssl
 ```
@@ -266,5 +321,12 @@ mk add USES ssl
 
 ```text
 target @2025Q5
+port category/name
+```
+
+### Invalid (selector list with spaces)
+
+```text
+target @main, @2026Q1
 port category/name
 ```
