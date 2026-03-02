@@ -252,6 +252,18 @@ def _map_operation(
                 )
                 return None, {}, diagnostics
             return "file.copy", {"src": op.src, "dst": op.dst}, diagnostics
+        if op.action == "materialize":
+            if op.src is None or op.dst is None:
+                diagnostics.append(
+                    _diag(
+                        "E_PLAN_INVALID_OPERATION",
+                        "file materialize requires src and dst",
+                        op.span,
+                        source_path,
+                    )
+                )
+                return None, {}, diagnostics
+            return "file.materialize", {"src": op.src, "dst": op.dst}, diagnostics
         if op.action == "remove":
             if op.path is None:
                 diagnostics.append(

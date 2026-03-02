@@ -190,6 +190,135 @@ def test_apply_plan_file_copy_and_remove(tmp_path: Path) -> None:
     assert dest.read_text() == "hello\n"
 
 
+def test_apply_plan_file_materialize_uses_source_root(tmp_path: Path) -> None:
+    source_root = tmp_path / "delta" / "ports" / "category" / "name"
+    source_root.mkdir(parents=True)
+    (source_root / "dragonfly").mkdir(parents=True)
+    (source_root / "dragonfly" / "patch-a").write_text("patch-content\n")
+
+    port_root = tmp_path / "port"
+    port_root.mkdir(parents=True)
+
+    plan = Plan(
+        port="category/name",
+        ops=[
+            PlanOp(
+                id="op-1",
+                target="@main",
+                kind="file.materialize",
+                payload={"src": "dragonfly/patch-a", "dst": "dragonfly/patch-a"},
+            )
+        ],
+    )
+
+    result = apply_plan(
+        plan,
+        source_root=source_root,
+        port_root=port_root,
+        target="@main",
+        dry_run=False,
+        oracle_profile="off",
+    )
+
+    assert result.ok
+    assert (port_root / "dragonfly" / "patch-a").read_text() == "patch-content\n"
+
+
+def test_apply_plan_file_materialize_falls_back_to_port_root_when_source_root_missing(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "source.txt").write_text("hello\n")
+    plan = Plan(
+        port="category/name",
+        ops=[
+            PlanOp(
+                id="op-1",
+                target="@main",
+                kind="file.materialize",
+                payload={"src": "source.txt", "dst": "dst.txt"},
+            )
+        ],
+    )
+
+    result = apply_plan(
+        plan,
+        port_root=tmp_path,
+        target="@main",
+        dry_run=False,
+        oracle_profile="off",
+    )
+
+    assert result.ok
+    assert (tmp_path / "dst.txt").read_text() == "hello\n"
+
+
+def test_apply_plan_file_materialize_missing_source_fails(tmp_path: Path) -> None:
+    source_root = tmp_path / "delta"
+    source_root.mkdir()
+    port_root = tmp_path / "port"
+    port_root.mkdir()
+    plan = Plan(
+        port="category/name",
+        ops=[
+            PlanOp(
+                id="op-1",
+                target="@main",
+                kind="file.materialize",
+                payload={"src": "missing.txt", "dst": "copied.txt"},
+            )
+        ],
+    )
+
+    result = apply_plan(
+        plan,
+        source_root=source_root,
+        port_root=port_root,
+        target="@main",
+        dry_run=False,
+        oracle_profile="off",
+    )
+
+    assert not result.ok
+    assert result.failed_ops == 1
+    assert any(
+        d.code == "E_APPLY_MISSING_SUBJECT" for d in result.op_results[0].diagnostics
+    )
+
+
+def test_apply_plan_file_materialize_rejects_source_root_escape(tmp_path: Path) -> None:
+    source_root = tmp_path / "delta"
+    source_root.mkdir()
+    (tmp_path / "outside.txt").write_text("secret\n")
+    port_root = tmp_path / "port"
+    port_root.mkdir()
+    plan = Plan(
+        port="category/name",
+        ops=[
+            PlanOp(
+                id="op-1",
+                target="@main",
+                kind="file.materialize",
+                payload={"src": "../outside.txt", "dst": "copied.txt"},
+            )
+        ],
+    )
+
+    result = apply_plan(
+        plan,
+        source_root=source_root,
+        port_root=port_root,
+        target="@main",
+        dry_run=False,
+        oracle_profile="off",
+    )
+
+    assert not result.ok
+    assert result.failed_ops == 1
+    assert any(
+        d.code == "E_APPLY_INVALID_PATH" for d in result.op_results[0].diagnostics
+    )
+
+
 def test_apply_plan_text_replace_ambiguous_fails(tmp_path: Path) -> None:
     text_file = tmp_path / "notes.txt"
     text_file.write_text("A\nA\n")
@@ -549,6 +678,34 @@ def test_apply_dsl_pipeline_dry_run_wiring(tmp_path: Path) -> None:
     assert result.applied_ops == 1
     assert result.failed_ops == 0
     assert makefile.read_text() == "VAR= old\n"
+
+
+def test_apply_dsl_materialize_uses_overlay_source_root(tmp_path: Path) -> None:
+    overlay_dir = tmp_path / "delta" / "ports" / "category" / "name"
+    overlay_dir.mkdir(parents=True)
+    (overlay_dir / "dragonfly").mkdir(parents=True)
+    (overlay_dir / "dragonfly" / "patch-a").write_text("patch-content\n")
+
+    port_root = tmp_path / "port"
+    port_root.mkdir()
+    source = (
+        "target @main\n"
+        "port category/name\n"
+        "file materialize dragonfly/patch-a -> dragonfly/patch-a\n"
+    )
+
+    result = apply_dsl(
+        source,
+        source_path=overlay_dir / "overlay.dops",
+        port_root=port_root,
+        target="@main",
+        dry_run=False,
+        strict=False,
+        oracle_profile="off",
+    )
+
+    assert result.ok
+    assert (port_root / "dragonfly" / "patch-a").read_text() == "patch-content\n"
 
 
 def test_apply_plan_dry_run_diff_preserves_files(tmp_path: Path) -> None:

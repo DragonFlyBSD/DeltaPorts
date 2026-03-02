@@ -119,7 +119,9 @@ def apply_dsl(
 ) -> ApplyResult:
     """Parse/check/plan/apply pipeline entrypoint."""
     planned = build_plan(text, source_path)
+    source_root = source_path.parent if source_path is not None else port_root
     context = ApplyContext(
+        source_root=source_root,
         port_root=port_root,
         target=target,
         dry_run=dry_run,
@@ -137,6 +139,7 @@ def apply_dsl(
 
     return apply_plan(
         planned.plan,
+        source_root=source_root,
         port_root=port_root,
         target=target,
         dry_run=dry_run,

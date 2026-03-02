@@ -19,6 +19,7 @@ from dportsv3.engine.apply_common import (
 )
 from dportsv3.engine.executors.file_text_patch import (
     exec_file_copy,
+    exec_file_materialize,
     exec_file_remove,
     exec_text_line_insert_after,
     exec_text_line_remove,
@@ -139,6 +140,7 @@ def _known_registry() -> dict[str, Executor]:
         "mk.target.remove": exec_mk_target_remove,
         "mk.target.rename": exec_mk_target_rename,
         "file.copy": exec_file_copy,
+        "file.materialize": exec_file_materialize,
         "file.remove": exec_file_remove,
         "text.line_remove": exec_text_line_remove,
         "text.line_insert_after": exec_text_line_insert_after,
@@ -150,6 +152,7 @@ def _known_registry() -> dict[str, Executor]:
 def apply_plan(
     plan: Plan,
     *,
+    source_root: Path | None = None,
     port_root: Path,
     target: str,
     dry_run: bool = False,
@@ -162,6 +165,7 @@ def apply_plan(
         normalized_oracle_profile = normalize_oracle_profile(oracle_profile)
     except ValueError as exc:
         fallback_context = ApplyContext(
+            source_root=source_root if source_root is not None else port_root,
             port_root=port_root,
             target=target,
             dry_run=dry_run,
@@ -184,6 +188,7 @@ def apply_plan(
         )
 
     context = ApplyContext(
+        source_root=source_root if source_root is not None else port_root,
         port_root=port_root,
         target=target,
         dry_run=dry_run,

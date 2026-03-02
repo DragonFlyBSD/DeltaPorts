@@ -1348,6 +1348,7 @@ def test_compose_forwards_oracle_profile_and_aggregates_metrics(
         return ApplyResult(
             ok=True,
             context=ApplyContext(
+                source_root=Path(kwargs["source_path"]).parent,
                 port_root=Path(kwargs["port_root"]),
                 target=kwargs["target"],
                 dry_run=kwargs["dry_run"],

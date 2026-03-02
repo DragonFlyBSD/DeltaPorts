@@ -11,7 +11,11 @@ from dportsv3.migration.waves import build_wave_report
 def test_apply_result_schema_contract() -> None:
     result = ApplyResult(
         ok=True,
-        context=ApplyContext(port_root=Path("/tmp/port"), target="@main"),
+        context=ApplyContext(
+            source_root=Path("/tmp/source"),
+            port_root=Path("/tmp/port"),
+            target="@main",
+        ),
     )
 
     payload = result.to_dict()

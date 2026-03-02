@@ -30,6 +30,7 @@ def test_build_plan_valid_document_metadata_and_kinds() -> None:
         'mk set VAR "v"\n'
         "mk remove USES linux\n"
         "file copy a -> b\n"
+        "file materialize dragonfly/patch-a -> dragonfly/patch-a\n"
         'text replace-once file Makefile from "a" to "b"\n'
         "patch apply dragonfly/@main/patch.diff\n"
     )
@@ -45,6 +46,7 @@ def test_build_plan_valid_document_metadata_and_kinds() -> None:
         "mk.var.set",
         "mk.var.token_remove",
         "file.copy",
+        "file.materialize",
         "text.replace_once",
         "patch.apply",
     ]

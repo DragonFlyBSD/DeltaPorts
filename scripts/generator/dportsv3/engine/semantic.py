@@ -90,6 +90,10 @@ def _validate_on_missing(
     return diagnostics
 
 
+def _has_glob_pattern(value: str) -> bool:
+    return any(ch in value for ch in ("*", "?", "[", "]"))
+
+
 def _validate_operation(
     op: OperationNode, source_path: Path | None
 ) -> list[Diagnostic]:
@@ -215,6 +219,28 @@ def _validate_operation(
                     _diag(
                         "E_SEM_INVALID_OPERATION_STATE",
                         "file copy requires src and dst",
+                        op.span,
+                        source_path,
+                    )
+                )
+            diagnostics.extend(
+                _validate_on_missing(op.on_missing, False, op.span, source_path)
+            )
+        elif op.action == "materialize":
+            if op.src is None or op.dst is None:
+                diagnostics.append(
+                    _diag(
+                        "E_SEM_INVALID_OPERATION_STATE",
+                        "file materialize requires src and dst",
+                        op.span,
+                        source_path,
+                    )
+                )
+            elif _has_glob_pattern(op.src):
+                diagnostics.append(
+                    _diag(
+                        "E_SEM_INVALID_OPERATION_STATE",
+                        "file materialize src does not support wildcards in v1",
                         op.span,
                         source_path,
                     )
