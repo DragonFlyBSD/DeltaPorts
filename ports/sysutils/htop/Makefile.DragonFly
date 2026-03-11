@@ -2,3 +2,5 @@
 
 MAINTAINER=	ddegroot@talon.nl
 OPTIONS_DEFAULT:=	${OPTIONS_DEFAULT:NLSOF}
+PLIST_FILES:=	${PLIST_FILES:Nman/man1/htop.1.gz} \
+    share/man/man1/htop.1.gz
