@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% set active_page = "targets" %}
+
+{% block content %}
+<h1 class="h3 mb-1">{{ target }}</h1>
+<p class="text-body-secondary mb-4">{{ total_rows }} ports tracked.</p>
+
+<form method="get" class="row g-2 align-items-end mb-4">
+  <div class="col-auto">
+    <label class="form-label mb-1" for="filter-select">Result</label>
+    <select name="filter" id="filter-select" class="form-select form-select-sm">
+      <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All</option>
+      <option value="failures" {% if status_filter == 'failures' %}selected{% endif %}>Failures</option>
+      <option value="successes" {% if status_filter == 'successes' %}selected{% endif %}>Successes</option>
+    </select>
+  </div>
+  <div class="col-auto">
+    <label class="form-label mb-1" for="search-input">Search</label>
+    <input type="search" name="q" id="search-input" value="{{ query }}" placeholder="category/port" class="form-control form-control-sm">
+  </div>
+  <div class="col-auto">
+    <label class="form-label mb-1" for="page-input">Page</label>
+    <input type="number" min="1" max="{{ page_count }}" name="page" id="page-input" value="{{ page }}" class="form-control form-control-sm" style="width:5rem">
+  </div>
+  <div class="col-auto">
+    <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+  </div>
+</form>
+
+<div class="table-responsive">
+  <table class="table table-sm table-hover">
+    <thead>
+      <tr>
+        <th>Origin</th>
+        <th>Version</th>
+        <th>Result</th>
+        <th>Last Success</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr class="status-row-{{ row.last_attempt_result }}">
+        <td>
+          <a href="{{ request.url_for('dashboard_port_detail', target=target, cat=row.origin.split('/')[0], port=row.origin.split('/')[1]) }}">
+            {{ row.origin }}
+          </a>
+        </td>
+        <td>{{ row.last_attempt_version or '-' }}</td>
+        <td>
+          {% set r = row.last_attempt_result or 'unknown' %}
+          <span class="badge rounded-pill text-bg-{% if r == 'success' %}success{% elif r == 'failure' %}danger{% else %}secondary{% endif %}">{{ r }}</span>
+        </td>
+        <td>{{ row.last_success_version or '-' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<p class="text-body-secondary">Page {{ page }} of {{ page_count }}</p>
+{% endblock %}

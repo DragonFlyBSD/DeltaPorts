@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% set active_page = "builds" %}
+
+{% block content %}
+<h1 class="h3 mb-1">Build Compare</h1>
+<p class="text-body-secondary mb-4">{{ compare.run_a.target }} {{ compare.run_a.build_type }} run {{ compare.run_a.id }} vs {{ compare.run_b.target }} {{ compare.run_b.build_type }} run {{ compare.run_b.id }}</p>
+
+<div class="card shadow-sm mb-4">
+  <div class="table-responsive">
+    <table class="table table-sm mb-0">
+      <thead>
+        <tr>
+          <th>Bucket</th>
+          <th>Count</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for key, value in compare.summary.items() %}
+        <tr>
+          <td>{{ key }}</td>
+          <td>{{ value }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="accordion" id="compareAccordion">
+  {% for section in ['new_failures', 'new_successes', 'still_failing', 'added', 'removed', 'version_changes'] %}
+  <div class="accordion-item">
+    <h2 class="accordion-header">
+      <button class="accordion-button{% if section != 'new_failures' %} collapsed{% endif %}" type="button"
+              data-bs-toggle="collapse" data-bs-target="#section-{{ section }}">
+        {{ section }} ({{ compare[section]|length }})
+      </button>
+    </h2>
+    <div id="section-{{ section }}" class="accordion-collapse collapse{% if section == 'new_failures' %} show{% endif %}"
+         data-bs-parent="#compareAccordion">
+      <div class="accordion-body p-0">
+        <div class="table-responsive">
+          <table class="table table-sm table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Origin</th>
+                <th>Run A</th>
+                <th>Run B</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in compare[section] %}
+              <tr>
+                <td>{{ row.origin }}</td>
+                <td>{{ row.result_a or '-' }} {{ row.version_a or '-' }}</td>
+                <td>{{ row.result_b or '-' }} {{ row.version_b or '-' }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

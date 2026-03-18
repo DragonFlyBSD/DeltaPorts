@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% set active_page = "targets" %}
+
+{% block content %}
+<h1 class="h3 mb-1">Targets</h1>
+<p class="text-body-secondary mb-4">Current per-target status and most recent build activity.</p>
+
+{% if active_builds %}
+<div class="card shadow-sm mb-4">
+  <div class="card-header fw-semibold">Active Builds</div>
+  <div class="table-responsive">
+    <table class="table table-sm table-hover mb-0">
+      <thead>
+        <tr>
+          <th>Target</th>
+          <th>Type</th>
+          <th>Started</th>
+          <th>Progress</th>
+          <th>Building</th>
+          <th>Failures</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ab in active_builds %}
+        <tr>
+          <td><a href="{{ request.url_for('dashboard_build_detail', run_id=ab.id) }}">{{ ab.target }}</a></td>
+          <td>{{ ab.build_type }}</td>
+          <td>{{ ab.started_at }}</td>
+          <td>
+            {% set done = ab.done_count %}
+            {% set total = ab.total_expected or 0 %}
+            <div class="d-flex align-items-center gap-2">
+              <div class="progress flex-grow-1">
+                <div class="progress-bar bg-success" style="width:{{ (done / total * 100) if total else 0 }}%"></div>
+              </div>
+              <small class="text-nowrap">{{ done }} / {{ total or '?' }}</small>
+            </div>
+          </td>
+          <td>{% if ab.building_count %}<span class="badge rounded-pill text-bg-warning">{{ ab.building_count }}</span>{% else %}-{% endif %}</td>
+          <td>{% if ab.failure_count %}<span class="badge rounded-pill text-bg-danger">{{ ab.failure_count }}</span>{% else %}0{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<div class="table-responsive">
+  <table class="table table-striped table-hover">
+    <thead>
+      <tr>
+        <th>Target</th>
+        <th>Total</th>
+        <th>Pass</th>
+        <th>Fail</th>
+        <th>Last Build</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in targets %}
+      <tr>
+        <td><a href="{{ request.url_for('dashboard_target', target=row.target) }}">{{ row.target }}</a></td>
+        <td>{{ row.total_ports }}</td>
+        <td><span class="text-success">{{ row.successes }}</span></td>
+        <td><span class="text-danger">{{ row.failures }}</span></td>
+        <td>
+          {% if row.last_build_id %}
+          <a href="{{ request.url_for('dashboard_build_detail', run_id=row.last_build_id) }}">{{ row.last_build_at }}</a>
+          {% else %}
+          -
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

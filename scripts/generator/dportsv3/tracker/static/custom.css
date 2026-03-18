@@ -1,0 +1,16 @@
+:root {
+  --tracker-failure: #9b2226;
+  --tracker-success: #386641;
+}
+
+.progress {
+  height: 8px;
+}
+
+.status-row-failure td:first-child a {
+  color: var(--tracker-failure);
+}
+
+.status-row-success td:first-child a {
+  color: var(--tracker-success);
+}

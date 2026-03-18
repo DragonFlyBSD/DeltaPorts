@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% set active_page = "diff" %}
+
+{% block content %}
+<h1 class="h3 mb-1">Target Diff</h1>
+<p class="text-body-secondary mb-4">Compare current status across two targets.</p>
+
+<form method="get" class="row g-2 align-items-end mb-4">
+  <div class="col-auto">
+    <label class="form-label mb-1" for="select-a">Target A</label>
+    <select name="a" id="select-a" class="form-select form-select-sm">
+      <option value="">Select</option>
+      {% for row in targets %}
+      <option value="{{ row.target }}" {% if target_a == row.target %}selected{% endif %}>{{ row.target }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
+    <label class="form-label mb-1" for="select-b">Target B</label>
+    <select name="b" id="select-b" class="form-select form-select-sm">
+      <option value="">Select</option>
+      {% for row in targets %}
+      <option value="{{ row.target }}" {% if target_b == row.target %}selected{% endif %}>{{ row.target }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
+    <button type="submit" class="btn btn-primary btn-sm">Compare</button>
+  </div>
+</form>
+
+{% if diff %}
+<h2 class="h5 mb-3">Different</h2>
+<div class="table-responsive">
+  <table class="table table-sm table-hover">
+    <thead>
+      <tr>
+        <th>Origin</th>
+        <th>{{ target_a }}</th>
+        <th>{{ target_b }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in diff.differ %}
+      <tr>
+        <td>{{ row.origin }}</td>
+        <td>
+          <span class="badge rounded-pill text-bg-{% if row.result_a == 'success' %}success{% elif row.result_a == 'failure' %}danger{% else %}secondary{% endif %}">{{ row.result_a }}</span>
+          {{ row.version_a }}
+        </td>
+        <td>
+          <span class="badge rounded-pill text-bg-{% if row.result_b == 'success' %}success{% elif row.result_b == 'failure' %}danger{% else %}secondary{% endif %}">{{ row.result_b }}</span>
+          {{ row.version_b }}
+        </td>
+      </tr>
+      {% endfor %}
+      {% for row in diff.only_a %}
+      <tr>
+        <td>{{ row.origin }}</td>
+        <td>
+          <span class="badge rounded-pill text-bg-{% if row.result == 'success' %}success{% elif row.result == 'failure' %}danger{% else %}secondary{% endif %}">{{ row.result }}</span>
+          {{ row.version }}
+        </td>
+        <td>-</td>
+      </tr>
+      {% endfor %}
+      {% for row in diff.only_b %}
+      <tr>
+        <td>{{ row.origin }}</td>
+        <td>-</td>
+        <td>
+          <span class="badge rounded-pill text-bg-{% if row.result == 'success' %}success{% elif row.result == 'failure' %}danger{% else %}secondary{% endif %}">{{ row.result }}</span>
+          {{ row.version }}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% set active_page = "targets" %}
+
+{% block content %}
+<h1 class="h3 mb-1">{{ origin }}</h1>
+<p class="text-body-secondary mb-4">{{ target }}</p>
+
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <dl class="row mb-0">
+      <dt class="col-sm-3">Current result</dt>
+      <dd class="col-sm-9">
+        {% set r = status.last_attempt_result or 'unknown' %}
+        <span class="badge rounded-pill text-bg-{% if r == 'success' %}success{% elif r == 'failure' %}danger{% else %}secondary{% endif %}">{{ r }}</span>
+      </dd>
+
+      <dt class="col-sm-3">Last attempt</dt>
+      <dd class="col-sm-9">{{ status.last_attempt_version or '-' }} in run {{ status.last_attempt_run_id or '-' }} at {{ status.last_attempt_at or '-' }}</dd>
+
+      <dt class="col-sm-3">Last success</dt>
+      <dd class="col-sm-9">{{ status.last_success_version or '-' }} in run {{ status.last_success_run_id or '-' }} at {{ status.last_success_at or '-' }}</dd>
+    </dl>
+  </div>
+</div>
+
+<h2 class="h5 mb-3">Recent History</h2>
+<div class="table-responsive">
+  <table class="table table-sm table-hover">
+    <thead>
+      <tr>
+        <th>Run</th>
+        <th>Type</th>
+        <th>Version</th>
+        <th>Result</th>
+        <th>Log</th>
+        <th>Recorded</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in history %}
+      <tr class="status-row-{{ row.result }}">
+        <td><a href="{{ request.url_for('dashboard_build_detail', run_id=row.build_run_id) }}">{{ row.build_run_id }}</a></td>
+        <td>{{ row.build_type }}</td>
+        <td>{{ row.version }}</td>
+        <td>
+          <span class="badge rounded-pill text-bg-{% if row.result == 'success' %}success{% elif row.result == 'failure' %}danger{% else %}secondary{% endif %}">{{ row.result }}</span>
+        </td>
+        <td>{% if row.log_url %}<a href="{{ row.log_url }}">View log</a>{% else %}-{% endif %}</td>
+        <td>{{ row.recorded_at }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

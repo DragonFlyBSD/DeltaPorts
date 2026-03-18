@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% set active_page = "builds" %}
+
+{% block content %}
+<h1 class="h3 mb-1">Build {{ build.id }}</h1>
+<p class="text-body-secondary mb-4">{{ build.target }} / {{ build.build_type }}</p>
+
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <dl class="row mb-0">
+      <dt class="col-sm-3">Started</dt>
+      <dd class="col-sm-9">{{ build.started_at }}</dd>
+
+      <dt class="col-sm-3">Finished</dt>
+      <dd class="col-sm-9">{{ build.finished_at or 'running' }}</dd>
+
+      <dt class="col-sm-3">Results</dt>
+      <dd class="col-sm-9">{{ build.success_count }} success, {{ build.failure_count }} failure, {{ build.result_count }} recorded</dd>
+
+      {% if build.commit_sha %}
+      <dt class="col-sm-3">Commit</dt>
+      <dd class="col-sm-9">{{ build.commit_sha }} on {{ build.commit_branch or '-' }}, pushed {{ build.commit_pushed_at or '-' }}</dd>
+      {% endif %}
+    </dl>
+    {% if build.queued_count or build.building_count %}
+    {% set done = build.success_count + build.failure_count + build.skipped_count + build.ignored_count %}
+    {% set total = build.total_expected or build.result_count %}
+    <hr>
+    <div class="d-flex align-items-center gap-2 mb-1">
+      <div class="progress flex-grow-1">
+        <div class="progress-bar bg-success" style="width:{{ (done / total * 100) if total else 0 }}%"></div>
+      </div>
+      <small class="text-nowrap">{{ done }} / {{ total }}</small>
+    </div>
+    <small class="text-body-secondary">{{ build.building_count }} building, {{ build.queued_count }} queued, {{ build.success_count }} success, {{ build.failure_count }} failure</small>
+    {% endif %}
+  </div>
+</div>
+
+<form method="get" class="row g-2 align-items-end mb-4">
+  <div class="col-auto">
+    <label class="form-label mb-1" for="filter-select">Result</label>
+    <select name="filter" id="filter-select" class="form-select form-select-sm">
+      <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All</option>
+      <option value="failures" {% if status_filter == 'failures' %}selected{% endif %}>Failures</option>
+      <option value="successes" {% if status_filter == 'successes' %}selected{% endif %}>Successes</option>
+      <option value="building" {% if status_filter == 'building' %}selected{% endif %}>Building</option>
+      <option value="queued" {% if status_filter == 'queued' %}selected{% endif %}>Queued</option>
+    </select>
+  </div>
+  <div class="col-auto">
+    <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+  </div>
+</form>
+
+<div class="table-responsive">
+  <table class="table table-sm table-hover">
+    <thead>
+      <tr>
+        <th>Origin</th>
+        <th>Version</th>
+        <th>Result</th>
+        <th>Log</th>
+        <th>Recorded</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in results %}
+      <tr class="status-row-{{ row.status if row.status in ('building', 'queued') else row.result }}">
+        <td>{{ row.origin }}</td>
+        <td>{{ row.version }}</td>
+        <td>
+          {% if row.status in ('building', 'queued') %}
+          <span class="badge rounded-pill text-bg-{% if row.status == 'building' %}warning{% else %}secondary{% endif %}">{{ row.status }}</span>
+          {% else %}
+          <span class="badge rounded-pill text-bg-{% if row.result == 'success' %}success{% elif row.result == 'failure' %}danger{% else %}secondary{% endif %}">{{ row.result }}</span>
+          {% endif %}
+        </td>
+        <td>{% if row.log_url %}<a href="{{ row.log_url }}">View log</a>{% else %}-{% endif %}</td>
+        <td>{{ row.recorded_at }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

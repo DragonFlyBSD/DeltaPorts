@@ -35,10 +35,10 @@ common repetitive port-level modifications.
 ## Locked Constraints (Inherited)
 
 1. Targets are restricted to `main` and `YYYYQ[1-4]`.
-2. Inputs are target-scoped (`@target`); no implicit root fallback.
+2. Port overlay inputs are target-scoped (`@target`); `special/` is the exception where unscoped payloads are canonical `main` and non-`main` targets live under `@target` subdirectories.
 3. Single FreeBSD checkout; branch switch in place.
 4. Dirty FreeBSD tree blocks sync/switch.
-5. `special/` changes are sensitive and remain patch/replacement-first.
+5. `special/` changes are sensitive, remain patch/replacement-first, and do not use the DSL lane.
 6. Stale `port` overlays (missing upstream origin in target) are invalid.
 
 ---
@@ -92,6 +92,13 @@ Use raw patches for ambiguous, complex, or parser-unsafe changes.
 
 `special/Mk`, `special/Templates`, `special/treetop`, `Tools`, and `Keywords`
 remain patch/replacement-first. v3 does not force semantic conversion there.
+
+Framework target semantics are distinct from port overlays:
+
+- unscoped `special/*/diffs/...` and `special/*/replacements/...` mean `main`
+- non-`main` targets use complete target-owned trees under `special/*/{diffs,replacements}/@<target>/...`
+- compose never layers unscoped `main` payloads together with `@<target>` payloads in one run
+- if a non-`main` target tree is missing, compose bootstraps it from unscoped `main` on first compose, then subsequent fixes live only in `@<target>`
 
 ---
 
@@ -299,7 +306,7 @@ Handling:
 For target `T`:
 
 1. Seed output tree from FreeBSD `T`.
-2. Apply `special/` infrastructure patches/replacements.
+2. Apply `special/` infrastructure patches/replacements using unscoped `main` payloads for `@main` and target-owned `@<target>` payloads for non-`main` targets.
 3. Validate overlays and op plans.
 4. Apply semantic ops.
 5. Apply fallback patch payloads.
@@ -320,6 +327,67 @@ Per-port report fields:
 - fallback patch count
 
 Compose summary aggregates these by stage and target.
+
+---
+
+## Build Tracker Architecture
+
+v3 also includes a separate build tracker subsystem for recording and browsing
+build outcomes after compose.
+
+This tracker is intentionally outside the compose pipeline itself:
+
+- compose remains stateless tree generation,
+- external build/test automation decides when to start builds,
+- tracker records build runs, per-port outcomes, and commit metadata,
+- dashboard/API expose current state and historical comparisons.
+
+### Workflow position
+
+The intended operational flow is:
+
+1. PR or local fix preparation,
+2. test build for `(target, build_type=test)`,
+3. release build for `(target, build_type=release)`,
+4. repo commit on the appropriate branch,
+5. commit SHA/branch/push time recorded against the build run.
+
+The tracker does not orchestrate these steps; it records them.
+
+### Tracker data model
+
+The tracker stores:
+
+- `build_types`: lookup table (`test`, `release`, extensible later),
+- `build_runs`: one row per build run with target, build_type, timestamps, and
+  optional commit metadata,
+- `build_results`: per-run per-origin results (`success`, `failure`,
+  `skipped`, `ignored`) and optional `log_url`,
+- `port_status`: current per-target per-origin last-attempt and last-success
+  state.
+
+### Concurrency rule
+
+Only one active run is allowed per `(target, build_type)`.
+
+This allows, for example:
+
+- one `@2026Q1` test build,
+- one `@2026Q1` release build,
+
+at the same time, while preventing overlapping duplicate runs in the same lane.
+
+### Presentation layer
+
+The tracker uses:
+
+- FastAPI for HTTP API,
+- SQLite (WAL mode) for storage,
+- server-rendered Jinja2 templates for the dashboard,
+- a simple classless CSS presentation layer (Pico CSS + local overrides).
+
+The dashboard is intentionally lightweight: no SPA, no websocket dependency,
+and active builds refresh via standard HTML meta refresh.
 
 ---
 
@@ -395,7 +463,7 @@ v3 adopts a practical hybrid model:
 - strict normalized in-memory plan as canonical execution path
 - CST-lite structural rewrites for BSDMakefiles
 - patch fallback preserved for complexity and safety
-- `special/` remains patch/replacement-only
+- `special/` remains patch/replacement-only with unscoped=`main` and target-owned `@<target>` framework payloads
 
 This direction captures the observed real-world change patterns while avoiding
 both pure patch fragility and full AST/evaluator complexity.

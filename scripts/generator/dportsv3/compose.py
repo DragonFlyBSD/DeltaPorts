@@ -105,6 +105,7 @@ def run_compose(
         delta_root=delta_root,
         freebsd_root=freebsd_root,
         output_path=output_path,
+        target=target,
         dry_run=dry_run,
         patch_runner=_apply_patch,
     )
@@ -125,7 +126,6 @@ def run_compose(
     stage_prune_stale = prune_stale_overlays_stage(
         contexts=contexts,
         reports=reports,
-        delta_root=delta_root,
         output_path=output_path,
         dry_run=dry_run,
         prune_stale_overlays=prune_stale_overlays,
