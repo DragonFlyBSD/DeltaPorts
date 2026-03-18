@@ -22,6 +22,7 @@ Main command families:
 - `compose-report`: summarize compose JSON artifacts.
 - `dsl`: parse/check/plan/apply one `overlay.dops`.
 - `migrate`: inventory/classification/conversion and wave/dashboard reporting.
+- `tracker`: record and browse build runs/results across targets.
 
 ## Command Entrypoints
 
@@ -232,6 +233,64 @@ Examples:
 
 4) Fix issues and rerun same command until clean.
 
+## Build Tracker
+
+`tracker` is the v3 build result recorder and dashboard server.
+
+It is a separate concern from compose:
+
+- compose produces target trees,
+- external build scripts run test/release builds,
+- tracker records results and serves API/dashboard views.
+
+Typical workflow:
+
+1. contributor submits a fix,
+2. external automation starts a `test` build for a target,
+3. if acceptable, automation starts a `release` build,
+4. after success, commit metadata is recorded back to the tracker.
+
+The tracker enforces one active build per `(target, build_type)`.
+
+### Tracker dependencies
+
+Install the optional tracker extras on machines that run the server:
+
+```bash
+pip install -e ".[tracker]"
+```
+
+The CLI query/record path uses HTTP and does not require FastAPI locally when
+talking to an already-running tracker server.
+
+### Tracker commands
+
+```bash
+dportsv3 tracker serve [--port 8080] [--db PATH]
+dportsv3 tracker start-build --target @2026Q1 --type test --server http://tracker:8080
+dportsv3 tracker finish-build --run 12 --commit-sha <sha> --commit-branch 2026Q1 --server http://tracker:8080
+dportsv3 tracker record-result --run 12 --origin devel/foo --version 1.2 --result success --log-url https://logs.example/devel/foo.log.gz --server http://tracker:8080
+dportsv3 tracker status --target @2026Q1 --server http://tracker:8080
+dportsv3 tracker failures --target @2026Q1 --server http://tracker:8080
+dportsv3 tracker show-build --run 12 --server http://tracker:8080
+dportsv3 tracker compare-builds 10 12 --server http://tracker:8080
+```
+
+### Tracker dashboard pages
+
+Once the server is running, the dashboard provides:
+
+- `/`: target overview,
+- `/target/{target}`: per-target current status,
+- `/target/{target}/{cat}/{port}`: one port's current state and recent history,
+- `/builds`: recent build runs,
+- `/builds/{id}`: one build run detail (auto-refresh while active),
+- `/builds/compare?a=&b=`: build-to-build comparison,
+- `/diff?a=&b=`: cross-target current-state diff.
+
+Current log handling is link-only: results can store `log_url`, and the dashboard
+renders it as a plain link. Log serving/decompression policy is external.
+
 ## Compose Command
 
 Reference:
@@ -334,6 +393,38 @@ that same origin are not executed by compose.
 
 `compose-report` builds compact triage sections (top error codes/origins/patches,
 stale hints, mode counts).
+
+### Checking `special/` in compose JSON
+
+To verify framework (`special/`) handling, inspect the stage whose `name` is
+`apply_special`.
+
+- top-level success still matters first: `ok: true`
+- then find `stages[]` entry where `name == "apply_special"`
+- check `success: true` on that stage
+- check `errors: []` on that stage; patch failures appear there as
+  `E_COMPOSE_SPECIAL_PATCH_FAILED`
+- inspect `metadata.components[]` for per-component rows (`Mk`, `Templates`,
+  `Tools`, `Keywords`, `treetop`)
+
+Useful per-component fields under `apply_special.metadata.components[]`:
+
+- `component`: component name
+- `patched`: number of selected diffs applied successfully
+- `failed_patches`: patch file names that failed
+- `selected_patches`: how many diffs were selected for that target
+- `removed_legacy_files`: legacy files removed during special handling
+- `missing_target_dir`: whether compose had to bootstrap a missing target dir
+- `auto_created_from_main`: whether non-`main` target payloads were created from
+  unscoped `main` during this run
+
+For a clean `special/` run, the usual checks are:
+
+- `apply_special.success == true`
+- `apply_special.errors` is empty
+- each relevant component row has `failed_patches == []`
+- if bootstrapping a new quarter, `auto_created_from_main: true` is expected and
+  appears alongside bootstrap warnings
 
 ## DSL Workflow
 
@@ -593,4 +684,5 @@ dportsv3 compose --help
 dportsv3 compose-report --help
 dportsv3 dsl --help
 dportsv3 migrate --help
+dportsv3 tracker --help
 ```

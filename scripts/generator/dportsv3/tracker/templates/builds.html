@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% set active_page = "builds" %}
+
+{% block content %}
+<h1 class="h3 mb-1">Builds</h1>
+<p class="text-body-secondary mb-4">Recent build runs across targets and build types.</p>
+
+<div class="table-responsive">
+  <table class="table table-sm table-hover">
+    <thead>
+      <tr>
+        <th>Run</th>
+        <th>Target</th>
+        <th>Type</th>
+        <th>Started</th>
+        <th>Finished</th>
+        <th>Pass/Fail</th>
+        <th>Compare</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for run in runs %}
+      <tr>
+        <td class="font-monospace"><a href="{{ request.url_for('dashboard_build_detail', run_id=run.id) }}">{{ run.id }}</a></td>
+        <td>{{ run.target }}</td>
+        <td>{{ run.build_type }}</td>
+        <td>{{ run.started_at }}</td>
+        <td>
+          {% if run.finished_at %}
+            {{ run.finished_at }}
+          {% else %}
+            <span class="badge rounded-pill text-bg-warning">running{% if run.total_expected %} {{ run.success_count + run.failure_count + run.skipped_count + run.ignored_count }}/{{ run.total_expected }}{% endif %}</span>
+          {% endif %}
+        </td>
+        <td>
+          <span class="badge rounded-pill text-bg-success">{{ run.success_count }}</span>
+          <span class="badge rounded-pill text-bg-danger">{{ run.failure_count }}</span>
+        </td>
+        <td>
+          {% if compare_links.get(run.id) %}
+          <a href="{{ request.url_for('dashboard_build_compare') }}?a={{ compare_links[run.id] }}&amp;b={{ run.id }}">vs {{ compare_links[run.id] }}</a>
+          {% else %}
+          -
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

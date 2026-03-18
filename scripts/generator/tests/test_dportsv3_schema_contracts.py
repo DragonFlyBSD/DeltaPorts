@@ -59,6 +59,7 @@ def test_compose_result_and_overview_schema_contract() -> None:
         "top_failed_patches",
         "mode_counts",
         "stale",
+        "special",
         "hints",
     }
 

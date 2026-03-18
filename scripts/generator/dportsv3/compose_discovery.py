@@ -8,6 +8,11 @@ from dportsv3.common.validation import compose_target_branch, is_scoped_target
 from dportsv3.compose_models import ComposePortContext
 from dportsv3.policy import EXCLUDED_TOP_LEVEL
 
+try:
+    import tomllib
+except ModuleNotFoundError:  # pragma: no cover
+    import tomli as tomllib  # type: ignore
+
 
 def normalize_target(target: str) -> str | None:
     """Normalize compose target to branch token (without '@')."""
@@ -26,6 +31,21 @@ def list_port_origins(base: Path) -> set[str]:
             if (port / "Makefile").exists():
                 origins.add(f"{category.name}/{port.name}")
     return origins
+
+
+def read_overlay_removed_in(port_path: Path) -> list[str]:
+    """Return the removed_in target list from overlay.toml, or [] if absent."""
+    manifest = port_path / "overlay.toml"
+    if not manifest.exists():
+        return []
+    try:
+        payload = tomllib.loads(manifest.read_text())
+    except (OSError, tomllib.TOMLDecodeError):
+        return []
+    value = payload.get("removed_in") if isinstance(payload, dict) else None
+    if isinstance(value, list):
+        return [v for v in value if isinstance(v, str)]
+    return []
 
 
 def compat_diff_files_script_parity(port_dir: Path) -> tuple[list[Path], list[str]]:

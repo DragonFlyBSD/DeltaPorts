@@ -166,5 +166,6 @@ class ComposePortContext:
     plan_type: str = "port"
     stale: bool = False
     stale_reason: str | None = None
+    removed_for_target: bool = False
     fallback_patches: list[Path] = field(default_factory=list)
     implicit_payload_files: list[tuple[Path, Path]] = field(default_factory=list)

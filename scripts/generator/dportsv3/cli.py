@@ -11,6 +11,7 @@ from dportsv3.commands.compose import cmd_compose
 from dportsv3.commands.compose_report import cmd_compose_report
 from dportsv3.commands.dsl import cmd_dsl
 from dportsv3.commands.migrate import cmd_migrate
+from dportsv3.commands.tracker import cmd_tracker
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -30,6 +31,7 @@ def create_parser() -> argparse.ArgumentParser:
     _register_compose_report_parser(subparsers)
     _register_dsl_parser(subparsers)
     _register_migrate_parser(subparsers)
+    _register_tracker_parser(subparsers)
     return parser
 
 
@@ -430,6 +432,94 @@ def _register_migrate_parser(subparsers: argparse._SubParsersAction) -> None:
     )
 
 
+def _register_tracker_parser(subparsers: argparse._SubParsersAction) -> None:
+    """Register tracker subcommands."""
+    p = subparsers.add_parser("tracker", help="Build tracker server and queries")
+    tracker_sub = p.add_subparsers(dest="tracker_action", metavar="ACTION")
+
+    serve = tracker_sub.add_parser("serve", help="Run tracker HTTP server")
+    serve.add_argument("--port", type=int, default=8080, help="Listen port")
+    serve.add_argument(
+        "--db",
+        type=Path,
+        default=Path("tracker.db"),
+        help="SQLite database path",
+    )
+
+    start = tracker_sub.add_parser("start-build", help="Create a build run")
+    start.add_argument("--target", type=str, required=True, help="Build target")
+    start.add_argument("--type", type=str, required=True, help="Build type")
+    start.add_argument("--server", type=str, help="Tracker base URL")
+
+    finish = tracker_sub.add_parser("finish-build", help="Finish a build run")
+    finish.add_argument("--run", type=int, required=True, help="Build run ID")
+    finish.add_argument("--server", type=str, help="Tracker base URL")
+    finish.add_argument("--finished-at", type=str, help="Override finished timestamp")
+    finish.add_argument("--commit-sha", type=str, help="Recorded commit SHA")
+    finish.add_argument("--commit-branch", type=str, help="Recorded commit branch")
+    finish.add_argument(
+        "--commit-pushed-at",
+        type=str,
+        help="Commit push timestamp",
+    )
+
+    record = tracker_sub.add_parser("record-result", help="Record one build result")
+    record.add_argument("--run", type=int, required=True, help="Build run ID")
+    record.add_argument("--origin", type=str, required=True, help="Port origin")
+    record.add_argument("--version", type=str, required=True, help="Port version")
+    record.add_argument("--result", type=str, required=True, help="Build result")
+    record.add_argument("--log-url", type=str, help="External build log URL")
+    record.add_argument("--server", type=str, help="Tracker base URL")
+
+    enqueue = tracker_sub.add_parser("enqueue-ports", help="Enqueue ports for a build")
+    enqueue.add_argument("--run", type=int, required=True, help="Build run ID")
+    enqueue.add_argument(
+        "--file", type=Path, required=True, help="JSON file with ports list"
+    )
+    enqueue.add_argument("--total", type=int, help="Total expected port count")
+    enqueue.add_argument("--server", type=str, help="Tracker base URL")
+
+    mark_building = tracker_sub.add_parser(
+        "mark-building", help="Mark a port as building"
+    )
+    mark_building.add_argument("--run", type=int, required=True, help="Build run ID")
+    mark_building.add_argument(
+        "--origin", type=str, required=True, help="Port origin"
+    )
+    mark_building.add_argument("--server", type=str, help="Tracker base URL")
+
+    status = tracker_sub.add_parser("status", help="Query current port status")
+    status.add_argument("--target", type=str, help="Filter by target")
+    status.add_argument("--origin", type=str, help="Filter by origin")
+    status.add_argument("--server", type=str, help="Tracker base URL")
+    status.add_argument("--json", action="store_true", help="Pretty JSON output")
+
+    failures = tracker_sub.add_parser("failures", help="Query current failures")
+    failures.add_argument("--target", type=str, required=True, help="Build target")
+    failures.add_argument("--server", type=str, help="Tracker base URL")
+    failures.add_argument("--json", action="store_true", help="Pretty JSON output")
+
+    diff = tracker_sub.add_parser("diff", help="Compare two targets")
+    diff.add_argument("target_a", type=str, help="First target")
+    diff.add_argument("target_b", type=str, help="Second target")
+    diff.add_argument("--server", type=str, help="Tracker base URL")
+    diff.add_argument("--json", action="store_true", help="Pretty JSON output")
+
+    show = tracker_sub.add_parser("show-build", help="Show one build run")
+    show.add_argument("--run", type=int, required=True, help="Build run ID")
+    show.add_argument("--server", type=str, help="Tracker base URL")
+    show.add_argument("--json", action="store_true", help="Pretty JSON output")
+
+    compare = tracker_sub.add_parser(
+        "compare-builds",
+        help="Compare two build runs",
+    )
+    compare.add_argument("run_a", type=int, help="First build run ID")
+    compare.add_argument("run_b", type=int, help="Second build run ID")
+    compare.add_argument("--server", type=str, help="Tracker base URL")
+    compare.add_argument("--json", action="store_true", help="Pretty JSON output")
+
+
 def main(argv: list[str] | None = None) -> int:
     """CLI entrypoint."""
     parser = create_parser()
@@ -458,6 +548,14 @@ def main(argv: list[str] | None = None) -> int:
             )
             return 1
         return cmd_migrate(args)
+
+    if args.command == "tracker":
+        if not args.tracker_action:
+            print(
+                "Missing tracker action (use: dportsv3 tracker --help)", file=sys.stderr
+            )
+            return 1
+        return cmd_tracker(args)
 
     print(f"Unknown command: {args.command}", file=sys.stderr)
     return 1

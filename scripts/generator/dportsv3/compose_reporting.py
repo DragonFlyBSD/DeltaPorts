@@ -33,6 +33,59 @@ def _patch_name_from_compat_error(message: str) -> str | None:
     return tail.split("):", 1)[0].strip()
 
 
+def _normalize_special_component(component: dict[str, Any]) -> dict[str, Any]:
+    selected = int(component.get("selected_patches", component.get("selected", 0)))
+    patched = int(component.get("patched", 0))
+    copied = int(component.get("copied", 0))
+    failed_patches = [str(item) for item in component.get("failed_patches", [])]
+    return {
+        "component": str(component.get("component", "")),
+        "selected": selected,
+        "patched": patched,
+        "failed": len(failed_patches),
+        "failed_patches": failed_patches,
+        "copied": copied,
+        "bootstrapped": bool(
+            component.get(
+                "auto_created_from_main", component.get("bootstrapped", False)
+            )
+        ),
+        "removed_legacy": [
+            str(item)
+            for item in component.get(
+                "removed_legacy_files", component.get("removed_legacy", [])
+            )
+        ],
+    }
+
+
+def _format_special_component_row(
+    component: dict[str, Any], *, indent: str = ""
+) -> str:
+    normalized = _normalize_special_component(component)
+    parts = [f"{indent}special/{normalized['component']}:"]
+    if normalized["selected"] > 0:
+        parts.append(f"{normalized['patched']}/{normalized['selected']} patched")
+    elif normalized["patched"] > 0:
+        parts.append(f"{normalized['patched']} patched")
+    if normalized["copied"] > 0:
+        parts.append(f"{normalized['copied']} copied")
+    if normalized["failed"] > 0:
+        patch_list = ", ".join(normalized["failed_patches"][:5])
+        parts.append(f"{normalized['failed']} failed [{patch_list}]")
+    if normalized["removed_legacy"]:
+        parts.append(f"removed [{', '.join(normalized['removed_legacy'])}]")
+    if normalized["bootstrapped"]:
+        parts.append("(bootstrapped from @main)")
+    if (
+        normalized["selected"] == 0
+        and normalized["patched"] == 0
+        and normalized["copied"] == 0
+    ):
+        parts.append("(no patches or replacements)")
+    return " ".join(parts)
+
+
 def build_compose_report_overview(
     payload: dict[str, Any], *, top: int = 10
 ) -> dict[str, Any]:
@@ -88,11 +141,37 @@ def build_compose_report_overview(
         output_removed = list(prune_stage.get("metadata", {}).get("output_removed", []))
         pruned = len(set(str(item) for item in delta_removed + output_removed))
 
+    special_stage = next(
+        (stage for stage in stages if str(stage.get("name")) == "apply_special"),
+        None,
+    )
+    special_components: list[dict[str, Any]] = []
+    special_total_selected = 0
+    special_total_patched = 0
+    special_total_failed = 0
+    special_any_bootstrapped = False
+    if isinstance(special_stage, dict):
+        for component in list(special_stage.get("metadata", {}).get("components", [])):
+            row = _normalize_special_component(component)
+            special_components.append(row)
+            special_total_selected += row["selected"]
+            special_total_patched += row["patched"]
+            special_total_failed += row["failed"]
+            if row["bootstrapped"]:
+                special_any_bootstrapped = True
+
     hints: list[str] = []
     if error_codes.get("E_COMPOSE_STALE_OVERLAY", 0) > 0:
         hints.append("rerun with --prune-stale-overlays to auto-remove stale overlays")
     if error_codes.get("E_COMPOSE_COMPAT_FAILED", 0) > 0:
         hints.append("review apply_compat_ops failures by origin and patch name")
+    if error_codes.get("E_COMPOSE_SPECIAL_PATCH_FAILED", 0) > 0:
+        hints.append("fix failed special/ patches and rerun compose")
+    if special_any_bootstrapped:
+        hints.append(
+            "auto-bootstrapped target dirs created from @main"
+            " -- review and customize patches for this target"
+        )
 
     return {
         "ok": bool(payload.get("ok", False)),
@@ -120,11 +199,20 @@ def build_compose_report_overview(
             "origins": sorted(stale_origins)[:top],
             "pruned": pruned,
         },
+        "special": {
+            "components": special_components,
+            "total_selected": special_total_selected,
+            "total_patched": special_total_patched,
+            "total_failed": special_total_failed,
+            "any_bootstrapped": special_any_bootstrapped,
+        },
         "hints": hints,
     }
 
 
-def format_compose_overview(overview: dict[str, Any]) -> list[str]:
+def format_compose_overview(
+    overview: dict[str, Any], *, include_special: bool = True
+) -> list[str]:
     lines: list[str] = []
 
     def _format_pairs(items: list[dict[str, Any]], key: str) -> str:
@@ -165,6 +253,12 @@ def format_compose_overview(overview: dict[str, Any]) -> list[str]:
             + ", ".join(f"{key}={value}" for key, value in mode_counts.items())
         )
 
+    if include_special:
+        special = dict(overview.get("special", {}))
+        special_components = list(special.get("components", []))
+        for component in special_components:
+            lines.append(_format_special_component_row(component))
+
     for hint in list(overview.get("hints", [])):
         lines.append(f"hint: {hint}")
 
@@ -184,6 +278,9 @@ def format_compose_result(result: Any) -> list[str]:
         lines.append(
             f"[{state}] {stage.name}: changed={stage.changed} skipped={stage.skipped} warnings={len(stage.warnings)} errors={len(stage.errors)}"
         )
+        if stage.name == "apply_special":
+            for component in list(stage.metadata.get("components", [])):
+                lines.append(_format_special_component_row(component, indent="  "))
     lines.append(
         (
             "summary: "
@@ -195,5 +292,5 @@ def format_compose_result(result: Any) -> list[str]:
         )
     )
     overview = build_compose_report_overview(result.to_dict(), top=5)
-    lines.extend(format_compose_overview(overview))
+    lines.extend(format_compose_overview(overview, include_special=False))
     return lines

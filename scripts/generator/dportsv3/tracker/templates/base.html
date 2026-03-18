@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title }} - DeltaPorts Tracker</title>
+  {% if refresh_seconds %}
+  <meta http-equiv="refresh" content="{{ refresh_seconds }}">
+  {% endif %}
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="{{ request.url_for('static', path='custom.css') }}">
+  <script>
+    (function(){var t=localStorage.getItem('dp.theme')||'auto';
+    if(t==='auto')t=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';
+    document.documentElement.setAttribute('data-bs-theme',t)})();
+  </script>
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg bg-body-tertiary border-bottom sticky-top">
+    <div class="container">
+      <a class="navbar-brand fw-bold" href="{{ request.url_for('dashboard_index') }}">DeltaPorts Tracker</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMain">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navMain">
+        <ul class="navbar-nav nav-pills me-auto">
+          <li class="nav-item">
+            <a class="nav-link{% if active_page == 'targets' %} active{% endif %}" href="{{ request.url_for('dashboard_index') }}">Targets</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link{% if active_page == 'builds' %} active{% endif %}" href="{{ request.url_for('dashboard_builds') }}">Builds</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link{% if active_page == 'diff' %} active{% endif %}" href="{{ request.url_for('dashboard_diff') }}">Diff</a>
+          </li>
+        </ul>
+        <div class="dropdown">
+          <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-label="Theme">
+            <i class="bi bi-circle-half"></i>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li><button class="dropdown-item" onclick="setTheme('light')"><i class="bi bi-sun me-2"></i>Light</button></li>
+            <li><button class="dropdown-item" onclick="setTheme('dark')"><i class="bi bi-moon-stars me-2"></i>Dark</button></li>
+            <li><button class="dropdown-item" onclick="setTheme('auto')"><i class="bi bi-circle-half me-2"></i>Auto</button></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </nav>
+  <div class="container py-4">
+    {% block content %}{% endblock %}
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+  <script>
+    function setTheme(t){
+      localStorage.setItem('dp.theme',t);
+      var resolved=t;
+      if(t==='auto')resolved=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';
+      document.documentElement.setAttribute('data-bs-theme',resolved);
+    }
+  </script>
+</body>
+</html>

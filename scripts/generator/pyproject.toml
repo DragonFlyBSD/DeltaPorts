@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "dports-dragonfly"
 version = "0.0.1-alpha"
 description = "DragonFly BSD Ports overlay management tool"
-readme = "README"
+readme = {text = "", content-type = "text/plain"}
 requires-python = ">=3.11"
 license = "BSD-2-Clause"
 authors = [
@@ -19,7 +19,7 @@ classifiers = [
     "Intended Audience :: Developers",
     "Intended Audience :: System Administrators",
     "License :: OSI Approved :: BSD License",
-    "Operating System :: POSIX :: BSD :: DragonFly",
+    "Operating System :: POSIX :: BSD",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: System :: Software Distribution",
@@ -30,7 +30,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest", "mypy"]
+tracker = ["fastapi", "uvicorn[standard]", "jinja2"]
+dev = ["pytest", "mypy", "httpx"]
 
 [project.scripts]
 dportsv3 = "dportsv3.cli:main"

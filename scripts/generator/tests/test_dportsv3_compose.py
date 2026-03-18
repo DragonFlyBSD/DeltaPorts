@@ -256,7 +256,7 @@ def test_compose_human_summary_includes_triage_overview(tmp_path, capsys) -> Non
     assert "hint: rerun with --prune-stale-overlays" in out.out
 
 
-def test_compose_prune_stale_overlays_removes_delta_overlay(tmp_path, capsys) -> None:
+def test_compose_prune_stale_overlays_keeps_delta_overlay(tmp_path, capsys) -> None:
     freebsd = tmp_path / "freebsd"
     delta = tmp_path / "delta"
     output = tmp_path / "out"
@@ -292,7 +292,7 @@ def test_compose_prune_stale_overlays_removes_delta_overlay(tmp_path, capsys) ->
     assert code == 0
     payload = json.loads(out.out)
     assert payload["ok"] is True
-    assert not stale.exists()
+    assert stale.exists()  # delta overlay must NOT be deleted
     preflight = next(
         stage for stage in payload["stages"] if stage["name"] == "preflight_validate"
     )
@@ -307,7 +307,58 @@ def test_compose_prune_stale_overlays_removes_delta_overlay(tmp_path, capsys) ->
     assert any(
         "I_COMPOSE_STALE_OVERLAY_PRUNED" in warning for warning in prune["warnings"]
     )
-    assert prune["metadata"]["delta_removed"] == ["devel/missing"]
+
+
+def test_compose_removed_in_skips_port_for_target(tmp_path, capsys) -> None:
+    freebsd = tmp_path / "freebsd"
+    delta = tmp_path / "delta"
+    output = tmp_path / "out"
+
+    (freebsd / "devel" / "a").mkdir(parents=True)
+    (freebsd / "devel" / "a" / "Makefile").write_text("VAR= old\n")
+    # Port exists upstream but is declared removed for @main
+    (freebsd / "devel" / "gone").mkdir(parents=True)
+    (freebsd / "devel" / "gone" / "Makefile").write_text("VAR= old\n")
+    _init_freebsd_repo(freebsd)
+
+    gone = delta / "ports" / "devel" / "gone"
+    gone.mkdir(parents=True)
+    (gone / "Makefile.DragonFly").write_text("LEGACY= yes\n")
+    (gone / "overlay.toml").write_text('removed_in = ["@main"]\n')
+
+    code = main(
+        [
+            "compose",
+            "--target",
+            "@main",
+            "--output",
+            str(output),
+            "--delta-root",
+            str(delta),
+            "--freebsd-root",
+            str(freebsd),
+            "--oracle-profile",
+            "off",
+            "--replace-output",
+            "--json",
+        ]
+    )
+    out = capsys.readouterr()
+
+    assert code == 0
+    payload = json.loads(out.out)
+    assert payload["ok"] is True
+    assert gone.exists()  # delta overlay untouched
+    # Port should not appear in output
+    assert not (output / "devel" / "gone").exists() or not (output / "devel" / "gone" / "Makefile.DragonFly").exists()
+    # No stale error for this port
+    preflight = next(
+        stage for stage in payload["stages"] if stage["name"] == "preflight_validate"
+    )
+    assert all("devel/gone" not in error for error in preflight["errors"])
+    # Check removed-for-target note in port report
+    gone_report = next(p for p in payload["ports"] if p["origin"] == "devel/gone")
+    assert "removed-for-target" in gone_report["notes"]
 
 
 def test_compose_non_dry_run_handles_types_and_dops_suppresses_compat_fallback(
@@ -994,8 +1045,8 @@ def test_compose_special_applies_patches_before_replacements_and_reports(
     (freebsd / "devel" / "a" / "Makefile").write_text("VAR= old\n")
     _init_freebsd_repo(freebsd)
 
-    (delta / "special" / "Mk" / "diffs" / "@main").mkdir(parents=True)
-    (delta / "special" / "Mk" / "diffs" / "@main" / "mk.diff").write_text(
+    (delta / "special" / "Mk" / "diffs").mkdir(parents=True)
+    (delta / "special" / "Mk" / "diffs" / "mk.diff").write_text(
         "--- bsd.port.mk\n+++ bsd.port.mk\n@@ -1 +1 @@\n-BASE= yes\n+PATCHED= yes\n"
     )
     (delta / "special" / "Mk" / "replacements").mkdir(parents=True)
@@ -1089,7 +1140,7 @@ def test_compose_special_applies_root_recursive_diffs(tmp_path, capsys) -> None:
     assert mk_row["selected_patches"] == 1
 
 
-def test_compose_special_applies_nested_recursive_diffs(tmp_path, capsys) -> None:
+def test_compose_special_main_ignores_target_scoped_diffs(tmp_path, capsys) -> None:
     freebsd = tmp_path / "freebsd"
     delta = tmp_path / "delta"
     output = tmp_path / "out"
@@ -1105,8 +1156,8 @@ def test_compose_special_applies_nested_recursive_diffs(tmp_path, capsys) -> Non
     (delta / "special" / "Mk" / "diffs" / "root.diff").write_text(
         "--- bsd.port.mk\n+++ bsd.port.mk\n@@ -1 +1 @@\n-BASE= yes\n+BASE= legacy\n"
     )
-    (delta / "special" / "Mk" / "diffs" / "@main").mkdir(parents=True)
-    (delta / "special" / "Mk" / "diffs" / "@main" / "nested.diff").write_text(
+    (delta / "special" / "Mk" / "diffs" / "@2025Q2").mkdir(parents=True)
+    (delta / "special" / "Mk" / "diffs" / "@2025Q2" / "nested.diff").write_text(
         "--- bsd.sites.mk\n+++ bsd.sites.mk\n@@ -1 +1 @@\n-SITE= yes\n+SITE= target\n"
     )
 
@@ -1132,7 +1183,7 @@ def test_compose_special_applies_nested_recursive_diffs(tmp_path, capsys) -> Non
     assert code == 0
     payload = json.loads(out.out)
     assert (output / "Mk" / "bsd.port.mk").read_text() == "BASE= legacy\n"
-    assert (output / "Mk" / "bsd.sites.mk").read_text() == "SITE= target\n"
+    assert (output / "Mk" / "bsd.sites.mk").read_text() == "SITE= yes\n"
 
     special = next(
         stage for stage in payload["stages"] if stage["name"] == "apply_special"
@@ -1140,7 +1191,8 @@ def test_compose_special_applies_nested_recursive_diffs(tmp_path, capsys) -> Non
     mk_row = next(
         row for row in special["metadata"]["components"] if row["component"] == "Mk"
     )
-    assert mk_row["patched"] == 2
+    assert mk_row["patched"] == 1
+    assert mk_row["selected_patches"] == 1
 
 
 def test_compose_special_treetop_gid_uid_patches_apply_with_identity_injection(
@@ -1204,6 +1256,202 @@ def test_compose_special_treetop_gid_uid_patches_apply_with_identity_injection(
     assert not any(
         "E_COMPOSE_SPECIAL_PATCH_FAILED: treetop/UIDs.diff" in e
         for e in special["errors"]
+    )
+
+
+def test_compose_special_non_main_uses_only_target_scoped_payloads(
+    tmp_path, capsys
+) -> None:
+    freebsd = tmp_path / "freebsd"
+    delta = tmp_path / "delta"
+    output = tmp_path / "out"
+
+    (freebsd / "Mk").mkdir(parents=True)
+    (freebsd / "Mk" / "bsd.port.mk").write_text("BASE= yes\n")
+    (freebsd / "Mk" / "bsd.sites.mk").write_text("SITE= yes\n")
+    (freebsd / "devel" / "a").mkdir(parents=True)
+    (freebsd / "devel" / "a" / "Makefile").write_text("VAR= old\n")
+    _init_freebsd_repo(freebsd)
+    _run(["git", "checkout", "-b", "2025Q2"], freebsd)
+
+    (delta / "special" / "Mk" / "diffs").mkdir(parents=True)
+    (delta / "special" / "Mk" / "diffs" / "main.diff").write_text(
+        "--- bsd.port.mk\n+++ bsd.port.mk\n@@ -1 +1 @@\n-BASE= yes\n+BASE= main\n"
+    )
+    (delta / "special" / "Mk" / "diffs" / "@2025Q2").mkdir(parents=True)
+    (delta / "special" / "Mk" / "diffs" / "@2025Q2" / "quarter.diff").write_text(
+        "--- bsd.sites.mk\n+++ bsd.sites.mk\n@@ -1 +1 @@\n-SITE= yes\n+SITE= quarter\n"
+    )
+    (delta / "special" / "Mk" / "replacements" / "@2025Q2").mkdir(parents=True)
+
+    code = main(
+        [
+            "compose",
+            "--target",
+            "@2025Q2",
+            "--output",
+            str(output),
+            "--delta-root",
+            str(delta),
+            "--freebsd-root",
+            str(freebsd),
+            "--oracle-profile",
+            "off",
+            "--replace-output",
+            "--json",
+        ]
+    )
+    out = capsys.readouterr()
+
+    assert code == 0
+    payload = json.loads(out.out)
+    assert (output / "Mk" / "bsd.port.mk").read_text() == "BASE= yes\n"
+    assert (output / "Mk" / "bsd.sites.mk").read_text() == "SITE= quarter\n"
+
+    special = next(
+        stage for stage in payload["stages"] if stage["name"] == "apply_special"
+    )
+    mk_row = next(
+        row for row in special["metadata"]["components"] if row["component"] == "Mk"
+    )
+    assert mk_row["patched"] == 1
+    assert mk_row["selected_patches"] == 1
+    assert mk_row["auto_created_from_main"] is False
+    assert mk_row["missing_target_dir"] is False
+    assert not any(
+        "I_COMPOSE_SPECIAL_TARGET_BOOTSTRAPPED: Mk/diffs/@2025Q2" in warning
+        for warning in special["warnings"]
+    )
+
+
+def test_compose_special_non_main_bootstraps_diffs_from_main(tmp_path, capsys) -> None:
+    freebsd = tmp_path / "freebsd"
+    delta = tmp_path / "delta"
+    output = tmp_path / "out"
+
+    (freebsd / "Mk").mkdir(parents=True)
+    (freebsd / "Mk" / "bsd.port.mk").write_text("BASE= yes\n")
+    (freebsd / "devel" / "a").mkdir(parents=True)
+    (freebsd / "devel" / "a" / "Makefile").write_text("VAR= old\n")
+    _init_freebsd_repo(freebsd)
+    _run(["git", "checkout", "-b", "2025Q2"], freebsd)
+
+    (delta / "special" / "Mk" / "diffs").mkdir(parents=True)
+    (delta / "special" / "Mk" / "diffs" / "mk.diff").write_text(
+        "--- bsd.port.mk\n+++ bsd.port.mk\n@@ -1 +1 @@\n-BASE= yes\n+PATCHED= yes\n"
+    )
+
+    code = main(
+        [
+            "compose",
+            "--target",
+            "@2025Q2",
+            "--output",
+            str(output),
+            "--delta-root",
+            str(delta),
+            "--freebsd-root",
+            str(freebsd),
+            "--oracle-profile",
+            "off",
+            "--replace-output",
+            "--json",
+        ]
+    )
+    out = capsys.readouterr()
+
+    assert code == 0
+    payload = json.loads(out.out)
+    assert (output / "Mk" / "bsd.port.mk").read_text() == "PATCHED= yes\n"
+    assert (delta / "special" / "Mk" / "diffs" / "@2025Q2" / "mk.diff").read_text() == (
+        delta / "special" / "Mk" / "diffs" / "mk.diff"
+    ).read_text()
+
+    special = next(
+        stage for stage in payload["stages"] if stage["name"] == "apply_special"
+    )
+    mk_row = next(
+        row for row in special["metadata"]["components"] if row["component"] == "Mk"
+    )
+    assert mk_row["patched"] == 1
+    assert mk_row["selected_patches"] == 1
+    assert mk_row["auto_created_from_main"] is True
+    assert mk_row["missing_target_dir"] is True
+    assert any(
+        "I_COMPOSE_SPECIAL_TARGET_BOOTSTRAPPED: Mk/diffs/@2025Q2: created from unscoped main payloads"
+        in warning
+        for warning in special["warnings"]
+    )
+
+
+def test_compose_special_non_main_bootstraps_replacements_from_main(
+    tmp_path, capsys
+) -> None:
+    freebsd = tmp_path / "freebsd"
+    delta = tmp_path / "delta"
+    output = tmp_path / "out"
+
+    (freebsd / "Mk").mkdir(parents=True)
+    (freebsd / "Mk" / "bsd.port.mk").write_text("BASE= yes\n")
+    (freebsd / "devel" / "a").mkdir(parents=True)
+    (freebsd / "devel" / "a" / "Makefile").write_text("VAR= old\n")
+    _init_freebsd_repo(freebsd)
+    _run(["git", "checkout", "-b", "2025Q2"], freebsd)
+
+    (delta / "special" / "Mk" / "replacements" / "Uses").mkdir(parents=True)
+    (delta / "special" / "Mk" / "replacements" / "bsd.port.mk").write_text(
+        "REPLACED= yes\n"
+    )
+    (delta / "special" / "Mk" / "replacements" / "Uses" / "linux.mk").write_text(
+        "LINUX= yes\n"
+    )
+
+    code = main(
+        [
+            "compose",
+            "--target",
+            "@2025Q2",
+            "--output",
+            str(output),
+            "--delta-root",
+            str(delta),
+            "--freebsd-root",
+            str(freebsd),
+            "--oracle-profile",
+            "off",
+            "--replace-output",
+            "--json",
+        ]
+    )
+    out = capsys.readouterr()
+
+    assert code == 0
+    payload = json.loads(out.out)
+    assert (output / "Mk" / "bsd.port.mk").read_text() == "REPLACED= yes\n"
+    assert (output / "Mk" / "Uses" / "linux.mk").read_text() == "LINUX= yes\n"
+    assert (
+        delta / "special" / "Mk" / "replacements" / "@2025Q2" / "bsd.port.mk"
+    ).read_text() == (
+        delta / "special" / "Mk" / "replacements" / "bsd.port.mk"
+    ).read_text()
+    assert (
+        delta / "special" / "Mk" / "replacements" / "@2025Q2" / "Uses" / "linux.mk"
+    ).read_text() == (
+        delta / "special" / "Mk" / "replacements" / "Uses" / "linux.mk"
+    ).read_text()
+
+    special = next(
+        stage for stage in payload["stages"] if stage["name"] == "apply_special"
+    )
+    mk_row = next(
+        row for row in special["metadata"]["components"] if row["component"] == "Mk"
+    )
+    assert mk_row["auto_created_from_main"] is True
+    assert mk_row["missing_target_dir"] is True
+    assert any(
+        "I_COMPOSE_SPECIAL_TARGET_BOOTSTRAPPED: Mk/replacements/@2025Q2: created from unscoped main payloads"
+        in warning
+        for warning in special["warnings"]
     )
 
 

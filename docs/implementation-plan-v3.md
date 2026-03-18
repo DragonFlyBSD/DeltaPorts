@@ -1637,7 +1637,7 @@
   - `overlay.dops` present => `dops` mode only.
   - `overlay.dops` absent => compatibility mode only (default).
 - Compatibility mode must follow existing scripts process for ports (`Makefile.DragonFly`, `diffs`, `dragonfly`, transforms).
-- `special/` framework flow must remain patch-first and quarter-scoped as in current scripts workflow.
+- `special/` framework flow must remain patch-first; unscoped payloads are canonical `main`, and non-`main` targets use target-owned payload directories.
 - Target layering model:
   - allow `@any` baseline scope
   - allow multiple target selectors in one directive (`target @2025Q4,@2026Q1`)
@@ -1675,16 +1675,64 @@
 
 3. **`special/` process parity guardrails**
 - Match current scripts flow for framework copy+patch sequence and error surfacing.
+- `special/` remains patch/replacement-only; do not route framework files through `overlay.dops`.
+- Canonical layout and ownership:
+  - unscoped `special/*/diffs/...` and unscoped `special/*/replacements/...` are canonical `main`
+  - non-`main` targets live in `special/*/diffs/@<target>/...` and `special/*/replacements/@<target>/...`
+  - each non-`main` target directory is a complete, independent payload set for that target
+  - compose must never layer unscoped `main` payloads together with `@<target>` payloads for the same run
+- Runtime changes (exact files):
+  - `scripts/generator/dportsv3/compose.py`: pass `target` into `apply_special_stage`
+  - `scripts/generator/dportsv3/compose_stages.py`: extend `apply_special_stage` signature to accept `target`, add target-aware payload resolution helpers, and emit bootstrap/report metadata
+  - `scripts/generator/dportsv3/compose_patching.py`: no behavior change required; keep existing patch execution contract
+  - `scripts/generator/dportsv3/policy.py`, `scripts/generator/dportsv3/compose_discovery.py`, `scripts/generator/dportsv3/common/validation.py`, and `scripts/generator/dportsv3/cli.py`: no semantic change required for this step
 - Stage order and behavior must stay explicit:
   1) copy framework roots from FreeBSD (`Mk`, `Templates`, `Tools`, `Keywords`, treetop)
-  2) apply target-scoped `special/*/diffs/@<target>` patches
-  3) apply `replacements/` overlays
-- Preserve quarter bring-up ergonomics:
-  - patch failures are reported with file-level context and do not hide failing component
-  - rerun must be deterministic after manual patch fixes
-- Add concise machine-readable stage report payload:
-  - `component`, `copied`, `patched`, `failed_patches`, `missing_target_dir`
-- Document manual fix loop in compose docs as first-class, expected workflow.
+  2) apply the selected target's `diffs` patches
+  3) apply the selected target's `replacements` overlays
+- Target selection rules:
+  - compose for `@main` uses only unscoped payloads
+  - compose for non-`main` target `T` uses only `@T` payloads
+  - for `@main`, patch discovery must use only `special/<component>/diffs/*.diff`; do not recurse into `@*` subdirectories
+  - for `@main`, replacement discovery must use only unscoped files under `special/<component>/replacements/` and must exclude any path under `@*`
+  - for non-`main` target `T`, patch discovery must use only `special/<component>/diffs/@T/**/*.diff`
+  - for non-`main` target `T`, replacement discovery must use only `special/<component>/replacements/@T/**/*`
+- Auto-bootstrap rules for new quarters/targets:
+  - if compose is running for non-`main` target `T` and `special/<component>/diffs/@T/` does not exist, create it automatically from unscoped `main`
+  - bootstrap for `diffs` copies only root-level `.diff` files from `special/<component>/diffs/`; never copy existing `@*` subdirectories into the new target
+  - if compose is running for non-`main` target `T` and `special/<component>/replacements/@T/` does not exist, create it automatically from unscoped `main`
+  - bootstrap for `replacements` copies only unscoped files/directories from `special/<component>/replacements/`; exclude any existing `@*` entries
+  - if the component root does not exist at all, skip it
+  - if the component has no unscoped `main` payloads, bootstrap may create an empty `@T` directory; report that explicitly instead of silently pretending nothing happened
+  - if compose is running in `--dry-run`, resolve payload selection as if bootstrap happened but do not write any new directories into the delta tree
+- `apply_special_stage` refactor details:
+  - add a helper that resolves the effective `diffs` root for one component/target and returns `(path, auto_created_from_main)`
+  - add a parallel helper that resolves the effective `replacements` root for one component/target and returns `(path, auto_created_from_main)`
+  - keep current per-component copy behavior, including `treetop` using the tree root and `Mk` removing `bsd.gcc.mk`
+  - keep current patch application contract: apply selected diffs in deterministic sorted order via the existing `patch_runner`
+  - keep replacement application after patching so replacements overwrite patched files when both target the same path
+- Machine-readable reporting changes:
+  - retain existing per-component rows: `component`, `copied`, `patched`, `failed_patches`, `selected_patches`, `removed_legacy_files`
+  - add `auto_created_from_main` per component when either `diffs/@T` or `replacements/@T` was bootstrapped during compose
+  - add explicit stage info/warn entries for bootstrap events so operators can see which target payload trees were created during the run
+  - preserve file-level patch failure reporting and keep the failing component visible in diagnostics
+- Quarter bring-up workflow:
+  - operator runs `dportsv3 compose --target @<new-quarter>` with no pre-copy command
+  - compose auto-creates missing `special/` target directories from unscoped `main`
+  - patch failures are fixed directly in `special/*/{diffs,replacements}/@<new-quarter>/...`
+  - rerun is deterministic because compose stops reusing unscoped `main` once `@<new-quarter>` exists
+- Tests to update/add in `scripts/generator/tests/test_dportsv3_compose.py`:
+  - update existing `special/` tests so `@main` expectations use unscoped payloads rather than `@main/` subdirectories
+  - replace the current recursive-`@main` test assumption with the new rule that `@main` does not recurse into `@*` directories
+  - add a test that composing `@main` ignores `@<target>` subdirectories completely
+  - add a test that composing a non-`main` target uses only `@<target>` payloads and does not apply unscoped `main` payloads in the same run
+  - add a test that missing `diffs/@<target>` is auto-bootstrapped from unscoped `main` and reported
+  - add a test that missing `replacements/@<target>` is auto-bootstrapped from unscoped `main` and reported
+  - add a test that an already-existing `@<target>` directory is not overwritten by compose bootstrap logic
+- Migration impact:
+  - no on-disk migration is required for current `special/` content because today's flat tree already represents canonical `main`
+  - the only fixture migration is in tests that currently model `@main` as a directory
+- Document compose-first quarter workflow as first-class, expected workflow: first compose bootstraps `@<target>` from unscoped `main`, patch fixes land in `@<target>`, rerun stays deterministic.
 
 4. **Target layering in parser/semantic/planner**
 - Extend target grammar to support:
@@ -1752,12 +1800,13 @@
 - dops-present origins never execute compatibility fallback stages.
 - dops-missing origins execute compatibility mode by default without manual flags.
 - Quarterly compose can reuse baseline overlays through `@any` semantics without full re-migration each quarter.
+- Quarterly compose can bootstrap target-specific `special/` payloads from unscoped `main` without separate setup commands.
 - Full dportsv3 test matrix passes.
 
 ### Step 17 Progress (current)
 - **17.1 Compose mode dispatcher parity**: Implemented. Added explicit per-origin mode dispatch (`dops` vs `compat`) in `scripts/generator/dportsv3/compose.py`, enforced no-mix execution, and added per-origin reporting fields (`mode`, `mode_reason`, `compat_stages_executed`, `dops_ops_executed`). Added compose tests for dops-suppresses-compat and default compat behavior when dops is absent.
 - **17.2 Compatibility executor parity module**: Implemented. Added `scripts/generator/dportsv3/compat.py` with compatibility type inference (`port|mask|dport|lock`), Makefile override resolution, ordered merge execution (base copy -> Makefile -> patches -> payload -> transforms), and dry-run-safe patch validation roots. Integrated compose compatibility mode to call the shared executor through `apply_compat_ops`, derive compat type from `overlay.toml`/`newport`, and report executed compatibility stages per origin. Added compose coverage for compatibility mode across all manifest types.
-- **17.3 `special/` process parity guardrails**: Implemented. Reordered `special/` mutation flow in compose to copy -> patch -> replacements per component (including treetop), added missing target diff directory visibility via `I_COMPOSE_SPECIAL_TARGET_DIR_MISSING`, and emitted machine-readable component rows in stage metadata (`component`, `copied`, `patched`, `failed_patches`, `missing_target_dir`). Added compose test coverage that asserts patch-before-replacement ordering and metadata shape.
+- **17.3 `special/` process parity guardrails**: Partially implemented. Compose now applies `special/` mutations in copy -> patch -> replacements order per component (including treetop) and emits machine-readable component metadata. Target-scoped `special/` selection is still pending: current runtime still recursively discovers all `.diff` files, does not treat unscoped payloads as canonical `main`, and does not yet auto-bootstrap missing `@<target>` payloads from unscoped `main` during compose.
 - **17.4 Target layering in parser/semantic/planner**: Implemented. Extended DSL target handling to accept `@any` and comma-separated selectors in one `target` directive, enabled implicit `@any` scope before first explicit target, and expanded multi-target operations deterministically in semantic/planner output. Updated apply execution ordering to evaluate `@any` operations before requested target-specific operations while preserving deterministic order within each group. Added parser/semantic/planner/apply coverage for `@any`, multi-target expansion, implicit baseline scope, and `@any`/explicit mixed-selector rejection.
 - **17.5 Inventory/classifier/wave alignment**: Implemented. Updated migration inventory records to emit baseline-aware target metadata (`target_mode`, `available_targets`) and switched unscoped legacy overlays to baseline semantics (`@any`) instead of hard `@main` defaults. Extended wave selection to include baseline-capable records for requested quarter targets, emit per-origin selection reasons (`explicit_target_match`/`baseline_match`), and publish visibility counters (`baseline_selected_count`, `explicit_selected_count`, `excluded_by_target_count`). Added migration tests for metadata emission and baseline-inclusive wave selection.
 - **17.6 Compose payload lookup precedence**: Implemented. Added deterministic compat payload layering in compose for `diffs`, `dragonfly`, and compatibility Makefile sources with explicit-target-over-`@any` precedence and stable merged ordering. Implemented `@any` fallback when explicit target payloads are absent and override visibility diagnostics (`I_COMPOSE_COMPAT_LAYER_OVERRIDE`) when both layers provide the same subject. Added compose tests covering baseline fallback and explicit-over-baseline override behavior.

@@ -14,6 +14,7 @@ from dportsv3.compat import infer_compat_port_type, run_compat_merge
 from dportsv3.compose_discovery import (
     discover_overlay_contexts,
     list_port_origins,
+    read_overlay_removed_in,
     validate_target_scoped_payloads,
 )
 from dportsv3.compose_models import (
@@ -90,11 +91,137 @@ def seed_stage(
     return stage
 
 
+def _resolve_special_diff_selection(
+    *,
+    special_root: Path,
+    component: str,
+    target: str,
+    dry_run: bool,
+) -> tuple[list[Path], bool, bool]:
+    """Resolve effective special patch set for one component/target."""
+    component_root = special_root / component
+    if not component_root.exists() or not component_root.is_dir():
+        return [], False, False
+
+    diffs_dir = component_root / "diffs"
+    if target == "@main":
+        if not diffs_dir.exists() or not diffs_dir.is_dir():
+            return [], False, False
+        return (
+            sorted(path for path in diffs_dir.glob("*.diff") if path.is_file()),
+            False,
+            False,
+        )
+
+    target_dir = diffs_dir / target
+    if target_dir.exists() and target_dir.is_dir():
+        return (
+            sorted(path for path in target_dir.rglob("*.diff") if path.is_file()),
+            False,
+            False,
+        )
+
+    main_files: list[Path] = []
+    if diffs_dir.exists() and diffs_dir.is_dir():
+        main_files = sorted(path for path in diffs_dir.glob("*.diff") if path.is_file())
+
+    if not dry_run:
+        target_dir.mkdir(parents=True, exist_ok=True)
+        for src in main_files:
+            shutil.copy2(src, target_dir / src.name)
+        selected = sorted(path for path in target_dir.rglob("*.diff") if path.is_file())
+    else:
+        selected = main_files
+
+    return selected, True, len(main_files) == 0
+
+
+def _resolve_special_replacement_selection(
+    *,
+    special_root: Path,
+    component: str,
+    target: str,
+    dry_run: bool,
+) -> tuple[list[tuple[Path, Path]], bool, bool]:
+    """Resolve effective special replacement set for one component/target."""
+    component_root = special_root / component
+    if not component_root.exists() or not component_root.is_dir():
+        return [], False, False
+
+    replacements_dir = component_root / "replacements"
+    if target == "@main":
+        if not replacements_dir.exists() or not replacements_dir.is_dir():
+            return [], False, False
+        return (
+            [
+                (path, path.relative_to(replacements_dir))
+                for path in sorted(replacements_dir.rglob("*"))
+                if path.is_file()
+                and not any(
+                    part.startswith("@")
+                    for part in path.relative_to(replacements_dir).parts
+                )
+            ],
+            False,
+            False,
+        )
+
+    target_dir = replacements_dir / target
+    if target_dir.exists() and target_dir.is_dir():
+        return (
+            [
+                (path, path.relative_to(target_dir))
+                for path in sorted(target_dir.rglob("*"))
+                if path.is_file()
+            ],
+            False,
+            False,
+        )
+
+    source_entries: list[Path] = []
+    source_files: list[tuple[Path, Path]] = []
+    if replacements_dir.exists() and replacements_dir.is_dir():
+        source_entries = [
+            path
+            for path in sorted(replacements_dir.iterdir())
+            if not path.name.startswith("@")
+        ]
+        source_files = [
+            (path, path.relative_to(replacements_dir))
+            for path in sorted(replacements_dir.rglob("*"))
+            if path.is_file()
+            and not any(
+                part.startswith("@")
+                for part in path.relative_to(replacements_dir).parts
+            )
+        ]
+
+    if not dry_run:
+        target_dir.mkdir(parents=True, exist_ok=True)
+        for src in source_entries:
+            dst = target_dir / src.name
+            if src.is_dir():
+                copy_tree(src, dst)
+            elif src.is_file():
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(src, dst)
+        selected = [
+            (path, path.relative_to(target_dir))
+            for path in sorted(target_dir.rglob("*"))
+            if path.is_file()
+        ]
+    else:
+        selected = source_files
+
+    return selected, True, len(selected) == 0
+
+
 def apply_special_stage(
     *,
     delta_root: Path,
     freebsd_root: Path,
     output_path: Path,
+    target: str,
     dry_run: bool,
     patch_runner: Callable[[Path, Path, bool], tuple[bool, str]],
 ) -> ComposeStageResult:
@@ -121,6 +248,8 @@ def apply_special_stage(
         comp_patched = 0
         failed_patches: list[str] = []
         removed_legacy_files: list[str] = []
+        auto_created_from_main = False
+        missing_target_dir = False
 
         if component == "treetop":
             src = freebsd_root
@@ -141,12 +270,26 @@ def apply_special_stage(
                 if not dry_run:
                     bsd_gcc.unlink(missing_ok=True)
 
-        diffs_dir = special_root / component / "diffs"
-        selected_patches: list[Path] = []
-        if diffs_dir.exists() and diffs_dir.is_dir():
-            selected_patches = sorted(
-                path for path in diffs_dir.rglob("*.diff") if path.is_file()
+        selected_patches, diffs_bootstrapped, diffs_bootstrap_empty = (
+            _resolve_special_diff_selection(
+                special_root=special_root,
+                component=component,
+                target=target,
+                dry_run=dry_run,
             )
+        )
+        if diffs_bootstrapped:
+            auto_created_from_main = True
+            missing_target_dir = True
+            stage.add_warning(
+                "I_COMPOSE_SPECIAL_TARGET_BOOTSTRAPPED",
+                f"{component}/diffs/{target}: created from unscoped main payloads",
+            )
+            if diffs_bootstrap_empty:
+                stage.add_warning(
+                    "I_COMPOSE_SPECIAL_TARGET_BOOTSTRAP_EMPTY",
+                    f"{component}/diffs/{target}: no unscoped main diffs to copy",
+                )
 
         for patch in selected_patches:
             base_dir = dst
@@ -162,17 +305,33 @@ def apply_special_stage(
                     f"{component}/{patch.name}: {detail}",
                 )
 
-        replacements = special_root / component / "replacements"
-        if replacements.exists() and replacements.is_dir():
-            for repl in sorted(
-                path for path in replacements.rglob("*") if path.is_file()
-            ):
-                comp_copied += 1
-                if not dry_run:
-                    rel = repl.relative_to(replacements)
-                    target_file = dst / rel
-                    target_file.parent.mkdir(parents=True, exist_ok=True)
-                    shutil.copy2(repl, target_file)
+        replacements, repl_bootstrapped, repl_bootstrap_empty = (
+            _resolve_special_replacement_selection(
+                special_root=special_root,
+                component=component,
+                target=target,
+                dry_run=dry_run,
+            )
+        )
+        if repl_bootstrapped:
+            auto_created_from_main = True
+            missing_target_dir = True
+            stage.add_warning(
+                "I_COMPOSE_SPECIAL_TARGET_BOOTSTRAPPED",
+                f"{component}/replacements/{target}: created from unscoped main payloads",
+            )
+            if repl_bootstrap_empty:
+                stage.add_warning(
+                    "I_COMPOSE_SPECIAL_TARGET_BOOTSTRAP_EMPTY",
+                    f"{component}/replacements/{target}: no unscoped main replacements to copy",
+                )
+
+        for repl, rel in replacements:
+            comp_copied += 1
+            if not dry_run:
+                target_file = dst / rel
+                target_file.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(repl, target_file)
 
         copied += comp_copied
         patched += comp_patched
@@ -184,6 +343,8 @@ def apply_special_stage(
                 "failed_patches": failed_patches,
                 "selected_patches": len(selected_patches),
                 "removed_legacy_files": removed_legacy_files,
+                "missing_target_dir": missing_target_dir,
+                "auto_created_from_main": auto_created_from_main,
             }
         )
 
@@ -325,6 +486,12 @@ def preflight_stage(
     upstream_origins = list_port_origins(freebsd_root)
     for ctx in contexts:
         report = reports[ctx.origin]
+
+        if target in read_overlay_removed_in(ctx.path):
+            ctx.removed_for_target = True
+            report.notes.append("removed-for-target")
+            continue
+
         _record_preflight_mode_notes(ctx=ctx, report=report, stage=stage)
         _record_target_scope_errors(ctx=ctx, report=report, stage=stage)
 
@@ -378,7 +545,6 @@ def prune_stale_overlays_stage(
     *,
     contexts: list[ComposePortContext],
     reports: dict[str, ComposePortReport],
-    delta_root: Path,
     output_path: Path,
     dry_run: bool,
     prune_stale_overlays: bool,
@@ -387,7 +553,6 @@ def prune_stale_overlays_stage(
     stale_contexts = [ctx for ctx in contexts if is_stale_port_context(ctx)]
     stage.metadata["candidates"] = [ctx.origin for ctx in stale_contexts]
     stage.metadata["candidate_total"] = len(stale_contexts)
-    stage.metadata["delta_removed"] = []
     stage.metadata["output_removed"] = []
 
     if not prune_stale_overlays:
@@ -401,12 +566,6 @@ def prune_stale_overlays_stage(
         if dry_run:
             continue
 
-        delta_overlay = delta_root / "ports" / ctx.origin
-        if delta_overlay.exists() and delta_overlay.is_dir():
-            shutil.rmtree(delta_overlay)
-            stage.changed += 1
-            stage.metadata["delta_removed"].append(ctx.origin)
-
         output_origin = output_path / ctx.origin
         if output_origin.exists() and output_origin.is_dir():
             shutil.rmtree(output_origin)
@@ -415,7 +574,7 @@ def prune_stale_overlays_stage(
 
         stage.add_warning(
             "I_COMPOSE_STALE_OVERLAY_PRUNED",
-            f"{ctx.origin}: removed stale type=port overlay from delta/output",
+            f"{ctx.origin}: removed stale type=port overlay from output",
         )
 
     stage.finished_at = datetime.now()
@@ -438,7 +597,7 @@ def semantic_stage(
     stage = ComposeStageResult(name="apply_semantic_ops", started_at=datetime.now())
     for ctx in contexts:
         report = reports[ctx.origin]
-        if is_stale_port_context(ctx):
+        if is_stale_port_context(ctx) or ctx.removed_for_target:
             stage.skipped += 1
             report.notes.append("stale-skipped")
             continue
@@ -539,7 +698,7 @@ def fallback_stage(
 ) -> ComposeStageResult:
     stage = ComposeStageResult(name="apply_compat_ops", started_at=datetime.now())
     for ctx in contexts:
-        if is_stale_port_context(ctx):
+        if is_stale_port_context(ctx) or ctx.removed_for_target:
             stage.skipped += 1
             reports[ctx.origin].notes.append("stale-skipped")
             continue
