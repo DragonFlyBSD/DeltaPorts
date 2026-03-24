@@ -135,6 +135,7 @@ def build_compose_report_overview(
         (stage for stage in stages if str(stage.get("name")) == "prune_stale_overlays"),
         None,
     )
+    marked_removed = warning_codes.get("I_COMPOSE_STALE_MARKED_REMOVED", 0)
     pruned = 0
     if isinstance(prune_stage, dict):
         delta_removed = list(prune_stage.get("metadata", {}).get("delta_removed", []))
@@ -163,6 +164,10 @@ def build_compose_report_overview(
     hints: list[str] = []
     if error_codes.get("E_COMPOSE_STALE_OVERLAY", 0) > 0:
         hints.append("rerun with --prune-stale-overlays to auto-remove stale overlays")
+    if marked_removed > 0:
+        hints.append(
+            "stale overlays were marked with removed_in; rerun compose to skip persisted entries"
+        )
     if error_codes.get("E_COMPOSE_COMPAT_FAILED", 0) > 0:
         hints.append("review apply_compat_ops failures by origin and patch name")
     if error_codes.get("E_COMPOSE_SPECIAL_PATCH_FAILED", 0) > 0:
@@ -197,6 +202,7 @@ def build_compose_report_overview(
         "stale": {
             "count": len(stale_origins),
             "origins": sorted(stale_origins)[:top],
+            "marked_removed": marked_removed,
             "pruned": pruned,
         },
         "special": {
@@ -243,7 +249,10 @@ def format_compose_overview(
     stale = dict(overview.get("stale", {}))
     if stale.get("count", 0) > 0:
         lines.append(
-            f"stale: count={stale.get('count', 0)} pruned={stale.get('pruned', 0)}"
+            "stale: "
+            f"count={stale.get('count', 0)} "
+            f"marked_removed={stale.get('marked_removed', 0)} "
+            f"pruned={stale.get('pruned', 0)}"
         )
 
     mode_counts = dict(overview.get("mode_counts", {}))

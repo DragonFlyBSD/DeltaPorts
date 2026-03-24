@@ -62,6 +62,12 @@ def test_compose_result_and_overview_schema_contract() -> None:
         "special",
         "hints",
     }
+    assert set(overview["stale"].keys()) == {
+        "count",
+        "origins",
+        "marked_removed",
+        "pruned",
+    }
 
 
 def test_migration_wave_schema_contract() -> None:

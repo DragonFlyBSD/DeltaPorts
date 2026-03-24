@@ -4,14 +4,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from dportsv3.common.io import read_toml_file, write_toml_file
 from dportsv3.common.validation import compose_target_branch, is_scoped_target
 from dportsv3.compose_models import ComposePortContext
 from dportsv3.policy import EXCLUDED_TOP_LEVEL
-
-try:
-    import tomllib
-except ModuleNotFoundError:  # pragma: no cover
-    import tomli as tomllib  # type: ignore
 
 
 def normalize_target(target: str) -> str | None:
@@ -38,14 +34,41 @@ def read_overlay_removed_in(port_path: Path) -> list[str]:
     manifest = port_path / "overlay.toml"
     if not manifest.exists():
         return []
-    try:
-        payload = tomllib.loads(manifest.read_text())
-    except (OSError, tomllib.TOMLDecodeError):
+    payload, error = read_toml_file(manifest)
+    if error is not None or payload is None:
         return []
     value = payload.get("removed_in") if isinstance(payload, dict) else None
     if isinstance(value, list):
         return [v for v in value if isinstance(v, str)]
     return []
+
+
+def write_overlay_removed_in(port_path: Path, target: str) -> tuple[bool, str | None]:
+    """Add one target to overlay.toml removed_in and report whether file changed."""
+    manifest = port_path / "overlay.toml"
+    if manifest.exists():
+        payload, error = read_toml_file(manifest)
+        if error is not None:
+            return False, error
+        if payload is None:
+            payload = {}
+    else:
+        payload = {}
+
+    removed_in = payload.get("removed_in")
+    current = (
+        [value for value in removed_in if isinstance(value, str)]
+        if isinstance(removed_in, list)
+        else []
+    )
+    if target in current:
+        return False, None
+
+    payload["removed_in"] = sorted({*current, target})
+    error = write_toml_file(manifest, payload)
+    if error is not None:
+        return False, error
+    return True, None
 
 
 def compat_diff_files_script_parity(port_dir: Path) -> tuple[list[Path], list[str]]:

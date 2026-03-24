@@ -16,6 +16,7 @@ from dportsv3.compose_discovery import (
     list_port_origins,
     read_overlay_removed_in,
     validate_target_scoped_payloads,
+    write_overlay_removed_in,
 )
 from dportsv3.compose_models import (
     ComposePortContext,
@@ -398,6 +399,8 @@ def _apply_stale_overlay_policy(
     report: ComposePortReport,
     stage: ComposeStageResult,
     reason: str,
+    target: str,
+    dry_run: bool,
     prune_stale_overlays: bool,
 ) -> None:
     ctx.stale = True
@@ -414,6 +417,24 @@ def _apply_stale_overlay_policy(
             f"{ctx.origin}: {ctx.stale_reason}",
         )
         report.errors += 1
+
+    if dry_run:
+        stage.add_warning(
+            "I_COMPOSE_STALE_MARKED_REMOVED",
+            f"{ctx.origin}: would add removed_in target {target} to overlay.toml",
+        )
+        return
+
+    changed, error = write_overlay_removed_in(ctx.path, target)
+    if error is not None:
+        stage.add_error("E_COMPOSE_STALE_MARK_FAILED", f"{ctx.origin}: {error}")
+        report.errors += 1
+        return
+    if changed:
+        stage.add_warning(
+            "I_COMPOSE_STALE_MARKED_REMOVED",
+            f"{ctx.origin}: added removed_in target {target} to overlay.toml",
+        )
 
 
 def _record_preflight_mode_notes(
@@ -468,6 +489,7 @@ def preflight_stage(
     target_branch: str,
     delta_root: Path,
     freebsd_root: Path,
+    dry_run: bool,
     prune_stale_overlays: bool,
     build_plan_fn: Callable[[str, Path | None], Any] = build_plan,
 ) -> tuple[ComposeStageResult, list[ComposePortContext], dict[str, ComposePortReport]]:
@@ -507,6 +529,8 @@ def preflight_stage(
                     report=report,
                     stage=stage,
                     reason="overlay origin missing in upstream target",
+                    target=target,
+                    dry_run=dry_run,
                     prune_stale_overlays=prune_stale_overlays,
                 )
             continue
@@ -527,6 +551,8 @@ def preflight_stage(
                 report=report,
                 stage=stage,
                 reason="type port but upstream origin is missing",
+                target=target,
+                dry_run=dry_run,
                 prune_stale_overlays=prune_stale_overlays,
             )
 

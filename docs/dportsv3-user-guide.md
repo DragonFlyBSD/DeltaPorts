@@ -306,7 +306,8 @@ Key flags:
 - `--dry-run`: evaluate without filesystem writes.
 - `--strict`: stop on first failed stage.
 - `--replace-output`: allow replacing non-empty output root.
-- `--prune-stale-overlays`: remove stale `type=port` overlays from delta/output.
+- `--prune-stale-overlays`: remove stale `type=port` overlays from output after
+  preflight; delta overlays are kept intact.
 - `--oracle-profile {off,local,ci}`:
   - `off`: skip oracle checks.
   - `local`: run oracle checks when possible; missing `bmake` is non-fatal.
@@ -642,8 +643,12 @@ Transition rule of thumb:
 
 ### Stale overlay errors
 
-- If overlay is stale and should be removed, rerun with
-  `--prune-stale-overlays`.
+- On first detection, compose auto-writes `removed_in = ["@<target>"]` into the
+  overlay's `overlay.toml` when writes are allowed.
+- The first run still reports the stale overlay as an error; the next run skips
+  that overlay for the same target via `removed_in`.
+- If you also want the stale port removed from the composed output tree on that
+  same run, rerun with `--prune-stale-overlays`.
 
 ### Patch failures in `apply_special` or compat stage
 

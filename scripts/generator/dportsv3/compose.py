@@ -117,6 +117,7 @@ def run_compose(
         target_branch=target_branch,
         delta_root=delta_root,
         freebsd_root=freebsd_root,
+        dry_run=dry_run,
         prune_stale_overlays=prune_stale_overlays,
         build_plan_fn=build_plan,
     )

@@ -6,6 +6,13 @@ import json
 from pathlib import Path
 from typing import Any
 
+try:
+    import tomllib
+except ModuleNotFoundError:  # pragma: no cover
+    import tomli as tomllib  # type: ignore
+
+import tomli_w
+
 
 def read_text_file(path: Path) -> tuple[str | None, str | None]:
     """Read one text file with standardized user-facing errors."""
@@ -41,6 +48,22 @@ def read_json_file(path: Path) -> tuple[Any | None, str | None]:
         return json.loads(text), None
     except json.JSONDecodeError as exc:
         return None, f"Invalid JSON in input file: {path} ({exc})"
+
+
+def read_toml_file(path: Path) -> tuple[dict[str, Any] | None, str | None]:
+    """Read one TOML file with standardized user-facing errors."""
+    text, error = read_text_file(path)
+    if error is not None:
+        return None, error
+    if text is None:
+        return None, f"Failed to read input file: {path}"
+    try:
+        payload = tomllib.loads(text)
+    except tomllib.TOMLDecodeError as exc:
+        return None, f"Invalid TOML in input file: {path} ({exc})"
+    if not isinstance(payload, dict):
+        return None, f"TOML input must be a table: {path}"
+    return payload, None
 
 
 def read_json_object(
@@ -95,6 +118,17 @@ def write_json_file(path: Path, payload: dict[str, Any]) -> str | None:
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+    except OSError as exc:
+        return f"Failed to write output file: {path} ({exc})"
+    return None
+
+
+def write_toml_file(path: Path, payload: dict[str, Any]) -> str | None:
+    """Write one TOML object file and return error string on failure."""
+    try:
+        text = tomli_w.dumps(payload)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text if text.endswith("\n") else text + "\n")
     except OSError as exc:
         return f"Failed to write output file: {path} ({exc})"
     return None

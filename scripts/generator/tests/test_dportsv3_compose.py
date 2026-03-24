@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import tomllib
 from datetime import date
 from pathlib import Path
 
@@ -170,6 +171,12 @@ def test_compose_preflight_reports_stale_port_and_continues_non_strict(
         stage for stage in payload["stages"] if stage["name"] == "preflight_validate"
     )
     assert any("E_COMPOSE_STALE_OVERLAY" in error for error in preflight["errors"])
+    assert any(
+        "I_COMPOSE_STALE_MARKED_REMOVED" in warning for warning in preflight["warnings"]
+    )
+    assert tomllib.loads(
+        (delta / "ports" / "devel" / "missing" / "overlay.toml").read_text()
+    ) == {"removed_in": ["@main"]}
 
 
 def test_compose_preflight_blocks_stale_port_in_strict_mode(tmp_path, capsys) -> None:
@@ -216,6 +223,12 @@ def test_compose_preflight_blocks_stale_port_in_strict_mode(tmp_path, capsys) ->
         stage for stage in payload["stages"] if stage["name"] == "preflight_validate"
     )
     assert any("E_COMPOSE_STALE_OVERLAY" in error for error in preflight["errors"])
+    assert any(
+        "I_COMPOSE_STALE_MARKED_REMOVED" in warning for warning in preflight["warnings"]
+    )
+    assert tomllib.loads(
+        (delta / "ports" / "devel" / "missing" / "overlay.toml").read_text()
+    ) == {"removed_in": ["@main"]}
 
 
 def test_compose_human_summary_includes_triage_overview(tmp_path, capsys) -> None:
@@ -254,6 +267,7 @@ def test_compose_human_summary_includes_triage_overview(tmp_path, capsys) -> Non
     assert "top_error_codes:" in out.out
     assert "stale:" in out.out
     assert "hint: rerun with --prune-stale-overlays" in out.out
+    assert "hint: stale overlays were marked with removed_in" in out.out
 
 
 def test_compose_prune_stale_overlays_keeps_delta_overlay(tmp_path, capsys) -> None:
@@ -301,12 +315,186 @@ def test_compose_prune_stale_overlays_keeps_delta_overlay(tmp_path, capsys) -> N
         "I_COMPOSE_STALE_OVERLAY_PRUNE_CANDIDATE" in warning
         for warning in preflight["warnings"]
     )
+    assert any(
+        "I_COMPOSE_STALE_MARKED_REMOVED" in warning for warning in preflight["warnings"]
+    )
     prune = next(
         stage for stage in payload["stages"] if stage["name"] == "prune_stale_overlays"
     )
     assert any(
         "I_COMPOSE_STALE_OVERLAY_PRUNED" in warning for warning in prune["warnings"]
     )
+    assert tomllib.loads((stale / "overlay.toml").read_text()) == {
+        "removed_in": ["@main"]
+    }
+
+
+def test_compose_stale_overlay_second_run_skips_after_auto_mark(
+    tmp_path, capsys
+) -> None:
+    freebsd = tmp_path / "freebsd"
+    delta = tmp_path / "delta"
+    output_one = tmp_path / "out-one"
+    output_two = tmp_path / "out-two"
+
+    (freebsd / "devel" / "a").mkdir(parents=True)
+    (freebsd / "devel" / "a" / "Makefile").write_text("VAR= old\n")
+    _init_freebsd_repo(freebsd)
+
+    stale = delta / "ports" / "devel" / "missing"
+    stale.mkdir(parents=True)
+    (stale / "overlay.dops").write_text(
+        'target @main\nport devel/missing\ntype port\nmk set VAR "new"\n'
+    )
+
+    first_code = main(
+        [
+            "compose",
+            "--target",
+            "@main",
+            "--output",
+            str(output_one),
+            "--delta-root",
+            str(delta),
+            "--freebsd-root",
+            str(freebsd),
+            "--oracle-profile",
+            "off",
+            "--json",
+        ]
+    )
+    first_out = capsys.readouterr()
+
+    assert first_code == 2
+    assert tomllib.loads((stale / "overlay.toml").read_text()) == {
+        "removed_in": ["@main"]
+    }
+
+    second_code = main(
+        [
+            "compose",
+            "--target",
+            "@main",
+            "--output",
+            str(output_two),
+            "--delta-root",
+            str(delta),
+            "--freebsd-root",
+            str(freebsd),
+            "--oracle-profile",
+            "off",
+            "--json",
+        ]
+    )
+    second_out = capsys.readouterr()
+
+    assert first_out.out
+    assert second_code == 0
+    payload = json.loads(second_out.out)
+    assert payload["ok"] is True
+    preflight = next(
+        stage for stage in payload["stages"] if stage["name"] == "preflight_validate"
+    )
+    assert all("devel/missing" not in error for error in preflight["errors"])
+    missing_report = next(p for p in payload["ports"] if p["origin"] == "devel/missing")
+    assert "removed-for-target" in missing_report["notes"]
+
+
+def test_compose_stale_overlay_dry_run_does_not_write_overlay_toml(
+    tmp_path, capsys
+) -> None:
+    freebsd = tmp_path / "freebsd"
+    delta = tmp_path / "delta"
+    output = tmp_path / "out"
+
+    (freebsd / "devel" / "a").mkdir(parents=True)
+    (freebsd / "devel" / "a" / "Makefile").write_text("VAR= old\n")
+    _init_freebsd_repo(freebsd)
+
+    stale = delta / "ports" / "devel" / "missing"
+    stale.mkdir(parents=True)
+    (stale / "overlay.dops").write_text(
+        'target @main\nport devel/missing\ntype port\nmk set VAR "new"\n'
+    )
+
+    code = main(
+        [
+            "compose",
+            "--target",
+            "@main",
+            "--output",
+            str(output),
+            "--delta-root",
+            str(delta),
+            "--freebsd-root",
+            str(freebsd),
+            "--oracle-profile",
+            "off",
+            "--dry-run",
+            "--json",
+        ]
+    )
+    out = capsys.readouterr()
+
+    assert code == 2
+    payload = json.loads(out.out)
+    preflight = next(
+        stage for stage in payload["stages"] if stage["name"] == "preflight_validate"
+    )
+    assert any("E_COMPOSE_STALE_OVERLAY" in error for error in preflight["errors"])
+    assert any(
+        "I_COMPOSE_STALE_MARKED_REMOVED" in warning for warning in preflight["warnings"]
+    )
+    assert not (stale / "overlay.toml").exists()
+
+
+def test_compose_stale_overlay_auto_mark_preserves_manifest_fields(
+    tmp_path, capsys
+) -> None:
+    freebsd = tmp_path / "freebsd"
+    delta = tmp_path / "delta"
+    output = tmp_path / "out"
+
+    (freebsd / "devel" / "a").mkdir(parents=True)
+    (freebsd / "devel" / "a" / "Makefile").write_text("VAR= old\n")
+    _init_freebsd_repo(freebsd)
+
+    stale = delta / "ports" / "devel" / "missing"
+    stale.mkdir(parents=True)
+    (stale / "Makefile.DragonFly").write_text("EXTRA= yes\n")
+    (stale / "overlay.toml").write_text('type = "port"\nremoved_in = ["@2025Q4"]\n')
+
+    code = main(
+        [
+            "compose",
+            "--target",
+            "@main",
+            "--output",
+            str(output),
+            "--delta-root",
+            str(delta),
+            "--freebsd-root",
+            str(freebsd),
+            "--oracle-profile",
+            "off",
+            "--replace-output",
+            "--json",
+        ]
+    )
+    out = capsys.readouterr()
+
+    assert code == 2
+    payload = json.loads(out.out)
+    preflight = next(
+        stage for stage in payload["stages"] if stage["name"] == "preflight_validate"
+    )
+    assert any(
+        "I_COMPOSE_STALE_MARKED_REMOVED" in warning for warning in preflight["warnings"]
+    )
+    assert tomllib.loads((stale / "overlay.toml").read_text()) == {
+        "type": "port",
+        "removed_in": ["@2025Q4", "@main"],
+    }
 
 
 def test_compose_removed_in_skips_port_for_target(tmp_path, capsys) -> None:
@@ -350,7 +538,10 @@ def test_compose_removed_in_skips_port_for_target(tmp_path, capsys) -> None:
     assert payload["ok"] is True
     assert gone.exists()  # delta overlay untouched
     # Port should not appear in output
-    assert not (output / "devel" / "gone").exists() or not (output / "devel" / "gone" / "Makefile.DragonFly").exists()
+    assert (
+        not (output / "devel" / "gone").exists()
+        or not (output / "devel" / "gone" / "Makefile.DragonFly").exists()
+    )
     # No stale error for this port
     preflight = next(
         stage for stage in payload["stages"] if stage["name"] == "preflight_validate"

@@ -6,12 +6,8 @@ import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from dportsv3.common.io import read_toml_file
 from dportsv3.plan_types import materialize_plan_type
-
-try:
-    import tomllib
-except ModuleNotFoundError:  # pragma: no cover
-    import tomli as tomllib  # type: ignore
 
 
 @dataclass
@@ -37,9 +33,8 @@ def infer_compat_port_type(overlay_dir: Path) -> tuple[str, str]:
     """Infer compatibility port type from overlay metadata/files."""
     manifest = overlay_dir / "overlay.toml"
     if manifest.exists() and manifest.is_file():
-        try:
-            payload = tomllib.loads(manifest.read_text())
-        except (OSError, tomllib.TOMLDecodeError):
+        payload, error = read_toml_file(manifest)
+        if error is not None or payload is None:
             payload = {}
         overlay = payload.get("overlay") if isinstance(payload, dict) else None
         status = payload.get("status") if isinstance(payload, dict) else None

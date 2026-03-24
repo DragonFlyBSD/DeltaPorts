@@ -27,6 +27,7 @@ classifiers = [
 
 dependencies = [
     "tomli >= 2.0; python_version < '3.11'",
+    "tomli_w >= 1.0",
 ]
 
 [project.optional-dependencies]

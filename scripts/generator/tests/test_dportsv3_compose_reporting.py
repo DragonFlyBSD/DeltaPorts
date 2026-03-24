@@ -157,6 +157,56 @@ def test_build_compose_report_overview_without_apply_special_stage() -> None:
     }
 
 
+def test_build_compose_report_overview_tracks_stale_marked_removed() -> None:
+    payload = {
+        "ok": False,
+        "target": "@main",
+        "output_path": "/tmp/out",
+        "stages": [
+            {
+                "name": "preflight_validate",
+                "success": False,
+                "changed": 1,
+                "skipped": 0,
+                "warnings": [
+                    "I_COMPOSE_STALE_MARKED_REMOVED: devel/missing: added removed_in target @main to overlay.toml"
+                ],
+                "errors": [
+                    "E_COMPOSE_STALE_OVERLAY: devel/missing: overlay origin missing in upstream target"
+                ],
+                "metadata": {},
+            },
+            {
+                "name": "prune_stale_overlays",
+                "success": True,
+                "changed": 0,
+                "skipped": 1,
+                "warnings": [],
+                "errors": [],
+                "metadata": {"output_removed": []},
+            },
+        ],
+        "ports": [{"origin": "devel/missing", "mode": "compat"}],
+    }
+
+    overview = build_compose_report_overview(payload)
+
+    assert overview["stale"] == {
+        "count": 1,
+        "origins": ["devel/missing"],
+        "marked_removed": 1,
+        "pruned": 0,
+    }
+    assert (
+        "stale overlays were marked with removed_in; rerun compose to skip persisted entries"
+        in overview["hints"]
+    )
+    assert "stale: count=1 marked_removed=1 pruned=0" in format_compose_overview(
+        overview,
+        include_special=False,
+    )
+
+
 def test_format_compose_overview_includes_special_section() -> None:
     overview = {
         "top_error_codes": [],
@@ -164,7 +214,7 @@ def test_format_compose_overview_includes_special_section() -> None:
         "top_error_origins": [],
         "top_failed_patches": [],
         "mode_counts": {},
-        "stale": {"count": 0, "origins": [], "pruned": 0},
+        "stale": {"count": 0, "origins": [], "marked_removed": 0, "pruned": 0},
         "special": {
             "components": [
                 {
@@ -245,7 +295,7 @@ def test_format_compose_overview_can_skip_special_section() -> None:
         "top_error_origins": [],
         "top_failed_patches": [],
         "mode_counts": {},
-        "stale": {"count": 0, "origins": [], "pruned": 0},
+        "stale": {"count": 0, "origins": [], "marked_removed": 0, "pruned": 0},
         "special": {
             "components": [
                 {
