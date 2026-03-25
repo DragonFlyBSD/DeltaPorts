@@ -166,6 +166,13 @@ target @any
 mk add CFLAGS -Wno-error=deprecated-declarations
 ```
 
+Notes:
+
+- `mk set` sets an existing Makefile assignment or creates a new top-level
+  `VAR= value` assignment before the first target or `.include` when missing.
+- `mk add` appends one token to an existing assignment; it does not create a
+  missing variable.
+
 Invalid example (rejected by semantic checks):
 
 ```text

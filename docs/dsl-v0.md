@@ -144,6 +144,15 @@ mk add <VAR> <token> [on-missing error|warn|noop]
 mk remove <VAR> <token> [on-missing error|warn|noop]
 ```
 
+`mk set` v1 behavior:
+
+- if `<VAR>` exists exactly once, replace that assignment with `<VAR>= <value>`
+- if `<VAR>` does not exist, create a new top-level `<VAR>= <value>` assignment
+  before the first target or `.include`, whichever appears first
+- if `<VAR>` exists more than once, fail with an ambiguous-match error
+
+`mk add` and `mk remove` still require an existing assignment.
+
 ### Makefile conditional/block ops
 
 ```text

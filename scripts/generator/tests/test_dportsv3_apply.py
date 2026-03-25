@@ -376,6 +376,126 @@ def test_apply_plan_mk_var_set_applies(tmp_path: Path) -> None:
     assert makefile.read_text() == "PORTNAME= updated\n"
 
 
+def test_apply_plan_mk_var_set_creates_before_first_target(tmp_path: Path) -> None:
+    makefile = tmp_path / "Makefile"
+    makefile.write_text("PORTNAME= sample\ndo-build:\n\t@true\n")
+    plan = Plan(
+        port="category/name",
+        ops=[
+            PlanOp(
+                id="op-1",
+                target="@main",
+                kind="mk.var.set",
+                payload={"name": "PROBLEM_FILES", "value": "value"},
+            )
+        ],
+    )
+
+    result = apply_plan(
+        plan,
+        port_root=tmp_path,
+        target="@main",
+        dry_run=False,
+        oracle_profile="off",
+    )
+
+    assert result.ok
+    assert makefile.read_text() == (
+        "PORTNAME= sample\nPROBLEM_FILES= value\ndo-build:\n\t@true\n"
+    )
+
+
+def test_apply_plan_mk_var_set_creates_before_first_include(tmp_path: Path) -> None:
+    makefile = tmp_path / "Makefile"
+    makefile.write_text("PORTNAME= sample\n.include <bsd.port.post.mk>\n")
+    plan = Plan(
+        port="category/name",
+        ops=[
+            PlanOp(
+                id="op-1",
+                target="@main",
+                kind="mk.var.set",
+                payload={"name": "PROBLEM_FILES", "value": "value"},
+            )
+        ],
+    )
+
+    result = apply_plan(
+        plan,
+        port_root=tmp_path,
+        target="@main",
+        dry_run=False,
+        oracle_profile="off",
+    )
+
+    assert result.ok
+    assert makefile.read_text() == (
+        "PORTNAME= sample\nPROBLEM_FILES= value\n.include <bsd.port.post.mk>\n"
+    )
+
+
+def test_apply_plan_mk_var_set_creates_at_eof_when_no_target_or_include(
+    tmp_path: Path,
+) -> None:
+    makefile = tmp_path / "Makefile"
+    makefile.write_text("PORTNAME= sample\n")
+    plan = Plan(
+        port="category/name",
+        ops=[
+            PlanOp(
+                id="op-1",
+                target="@main",
+                kind="mk.var.set",
+                payload={"name": "PROBLEM_FILES", "value": "value"},
+            )
+        ],
+    )
+
+    result = apply_plan(
+        plan,
+        port_root=tmp_path,
+        target="@main",
+        dry_run=False,
+        oracle_profile="off",
+    )
+
+    assert result.ok
+    assert makefile.read_text() == "PORTNAME= sample\nPROBLEM_FILES= value\n"
+
+
+def test_apply_plan_mk_var_set_missing_assignment_dry_run_reports_diff(
+    tmp_path: Path,
+) -> None:
+    makefile = tmp_path / "Makefile"
+    makefile.write_text("PORTNAME= sample\n.include <bsd.port.post.mk>\n")
+    plan = Plan(
+        port="category/name",
+        ops=[
+            PlanOp(
+                id="op-1",
+                target="@main",
+                kind="mk.var.set",
+                payload={"name": "PROBLEM_FILES", "value": "value"},
+            )
+        ],
+    )
+
+    result = apply_plan(
+        plan,
+        port_root=tmp_path,
+        target="@main",
+        dry_run=True,
+        emit_diff=True,
+        oracle_profile="off",
+    )
+
+    assert result.ok
+    assert makefile.read_text() == "PORTNAME= sample\n.include <bsd.port.post.mk>\n"
+    assert len(result.diffs) == 1
+    assert result.diffs[0].path == "Makefile"
+    assert "+PROBLEM_FILES= value" in result.diffs[0].diff
+
+
 def test_apply_plan_mk_block_set_replaces_existing_if_block(tmp_path: Path) -> None:
     makefile = tmp_path / "Makefile"
     makefile.write_text(

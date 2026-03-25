@@ -24,6 +24,13 @@ from dportsv3.engine.makefile_rewrite import find_condition
 from dportsv3.engine.models import ApplyContext, ApplyOpResult, PlanOp
 
 
+def _mk_var_set_insert_line(document) -> int | None:
+    for node in document.nodes:
+        if isinstance(node, (TargetNode, IncludeNode)):
+            return node.span.line_start
+    return None
+
+
 def exec_mk_var_set(
     op: PlanOp, context: ApplyContext, txn: FileTransaction
 ) -> ApplyOpResult:
@@ -59,11 +66,6 @@ def exec_mk_var_set(
         for node in document.nodes
         if isinstance(node, AssignmentNode) and node.name == name
     ]
-    if not matches:
-        return _missing_row(
-            op, policy=policy, message=f"assignment not found: {name}", source_path=path
-        )
-
     if len(matches) > 1:
         return _failed_row(
             op,
@@ -72,14 +74,32 @@ def exec_mk_var_set(
             source_path=path,
         )
 
-    target = matches[0]
     replacement = f"{name}= {value}"
-    updated = _replace_line_range(
-        text,
-        start=target.span.line_start,
-        end=target.span.line_end,
-        new_lines=[replacement],
-    )
+    if matches:
+        target = matches[0]
+        updated = _replace_line_range(
+            text,
+            start=target.span.line_start,
+            end=target.span.line_end,
+            new_lines=[replacement],
+        )
+    else:
+        insert_before = _mk_var_set_insert_line(document)
+        if insert_before is None:
+            line_count = len(text.splitlines(keepends=False))
+            updated = _replace_line_range(
+                text,
+                start=line_count + 1,
+                end=line_count,
+                new_lines=[replacement],
+            )
+        else:
+            updated = _replace_line_range(
+                text,
+                start=insert_before,
+                end=insert_before - 1,
+                new_lines=[replacement],
+            )
     txn.stage_write(path, updated)
     return _success_row(op, "mk-var-set")
 
