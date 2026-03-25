@@ -1,0 +1,50 @@
+target @any
+port ports-mgmt/pkg
+type port
+reason "manual dops conversion from Makefile.DragonFly and diffs"
+# Makefile.DragonFly variable additions
+mk set PROBLEM_FILES "${WRKSRC}/libpkg/pkg_config.c ${WRKSRC}/src/pkg.conf.sample ${WRKSRC}/docs/pkg-create.8 ${WRKSRC}/docs/pkg-set.8 ${WRKSRC}/docs/pkg-repo.8 ${WRKSRC}/docs/pkg.conf.5 ${WRKSRC}/docs/pkg-version.8 ${WRKSRC}/docs/pkg.8"
+mk add CFLAGS -I/usr/include/priv
+mk add LDFLAGS -L/usr/lib/priv
+mk add LDFLAGS -R/lib/priv
+# Makefile.DragonFly target: dfly-patch
+mk target set dfly-patch <<'MK'
+	@if [ -n "${PACKAGE_BUILDING}" ]; then \
+		${REINPLACE_CMD} -e "s|/usr/ports|/usr/dports|g" ${PROBLEM_FILES}; \
+	else \
+		${REINPLACE_CMD} -e "s|/usr/ports|${PORTSDIR}|g" ${PROBLEM_FILES}; \
+	fi
+	@if [ -e /usr/lib/priv/libprivate_ssl.so ]; then \
+		${REINPLACE_CMD} -e 's|lssl|lprivate_ssl|' -e 's|lcrypto|lprivate_crypto|' \
+			${WRKSRC}/libpkg/Makefile.autosetup \
+			${WRKSRC}/src/Makefile.autosetup \
+			${WRKSRC}/tests/Makefile.autosetup; \
+	fi
+MK
+# Makefile.DragonFly target: post-stage
+mk target set post-stage <<'MK'
+	${INSTALL_SCRIPT} ${WRKSRC}/scripts/periodic/411.pkg-backup \
+		${WRKSRC}/scripts/periodic/490.status-pkg-changes \
+		${STAGEDIR}${PREFIX}/etc/periodic/daily/
+	${INSTALL_SCRIPT} ${WRKSRC}/scripts/periodic/460.pkg-checksum \
+		${WRKSRC}/scripts/periodic/410.pkg-audit \
+		${STAGEDIR}${PREFIX}/etc/periodic/security/
+	${INSTALL_SCRIPT} ${WRKSRC}/scripts/periodic/400.status-pkg \
+		${STAGEDIR}${PREFIX}/etc/periodic/weekly/
+	${MKDIR} ${STAGEDIR}${PREFIX}/etc/pkg/repos
+	${INSTALL_DATA} ${DFLY_FILESDIR}/df-latest.conf.sample \
+		${STAGEDIR}${PREFIX}/etc/pkg/repos
+MK
+# diffs/Makefile.diff equivalent
+mk replace-if from "!exists(/usr/include/jail.h)" to "!exists(/usr/include/sys/jail.h)" on-missing warn
+# diffs/pkg-plist.diff equivalent (idempotent shape)
+text line-remove file pkg-plist exact "@sample etc/pkg/repos/df-latest.conf.sample" on-missing noop
+text line-insert-after file pkg-plist anchor "@sample etc/pkg.conf.sample" line "@sample etc/pkg/repos/df-latest.conf.sample" on-missing warn
+# diffs/REMOVE equivalent
+file remove files/patch-src_Makefile.autosetup on-missing noop
+# materialize DragonFly build-time patch lane assets
+file materialize dragonfly/df-latest.conf.sample -> dragonfly/df-latest.conf.sample
+file materialize dragonfly/patch-auto.def.c -> dragonfly/patch-auto.def.c
+file materialize dragonfly/patch-external_libcurl_curl__config.h -> dragonfly/patch-external_libcurl_curl__config.h
+file materialize dragonfly/patch-libpkg_lua__scripts.c -> dragonfly/patch-libpkg_lua__scripts.c
+file materialize dragonfly/patch-libpkg_scripts.c -> dragonfly/patch-libpkg_scripts.c

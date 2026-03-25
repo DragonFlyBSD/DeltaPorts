@@ -1,0 +1,12 @@
+target @any
+port editors/vim
+type port
+reason "manual conversion from Makefile.DragonFly"
+
+mk remove OPTIONS_DEFAULT PYTHON on-missing warn
+mk block set condition "defined(LITE)" <<'BLK'
+PORT_OPTIONS+= CSCOPE EXUBERANT_CTAGS
+BLK
+mk block set condition "exists(/usr/lib/priv/libprivate_ncursesw.so)" <<'BLK'
+MAKE_ARGS+= EXTRA_DEFS="${CFLAGS:M-I*}"
+BLK
