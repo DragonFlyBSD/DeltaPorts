@@ -1,0 +1,20 @@
+--- Scripts/do-patch.sh.orig	2017-01-24 00:14:03 UTC
++++ Scripts/do-patch.sh
+@@ -9,6 +9,7 @@ set -e
+ 
+ validate_env dp_BZCAT dp_CAT dp_DISTDIR dp_ECHO_MSG dp_EXTRA_PATCHES \
+ 	dp_EXTRA_PATCH_TREE dp_GZCAT dp_OPSYS dp_PATCH dp_PATCHDIR \
++	dp_DFLY_PATCHDIR \
+ 	dp_PATCHFILES dp_PATCH_ARGS dp_PATCH_DEBUG_TMP dp_PATCH_DIST_ARGS \
+ 	dp_PATCH_SILENT dp_PATCH_WRKSRC dp_PKGNAME dp_PKGORIGIN \
+ 	dp_UNZIP_NATIVE_CMD dp_XZCAT
+@@ -113,7 +114,8 @@ if [ -n "${dp_EXTRA_PATCHES}" ]; then
+ 	done
+ fi
+ 
+-patch_from_directory "${dp_PATCHDIR}" "${dp_OPSYS}"
++patch_from_directory "${dp_PATCHDIR}" "ports"
++patch_from_directory "${dp_DFLY_PATCHDIR}" "dragonfly"
+ 
+ if [ -n "${dp_EXTRA_PATCH_TREE}" ]; then
+ 	patch_from_directory "${dp_EXTRA_PATCH_TREE}/${dp_PKGORIGIN}" "local"
