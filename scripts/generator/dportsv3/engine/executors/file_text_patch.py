@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import subprocess
 from pathlib import Path
 
 from dportsv3.engine.apply_common import (
@@ -17,7 +16,6 @@ from dportsv3.engine.apply_common import (
 )
 from dportsv3.engine.fsops import FileTransaction
 from dportsv3.engine.models import ApplyContext, ApplyOpResult, PlanOp
-from dportsv3.policy import PATCH_TIMEOUT_SECONDS
 
 
 def exec_file_copy(
@@ -298,75 +296,3 @@ def exec_text_replace_once(
     updated = text.replace(from_text, to_text, 1)
     txn.stage_write(target, updated)
     return _success_row(op, "text-replaced")
-
-
-def exec_patch_apply(
-    op: PlanOp, context: ApplyContext, txn: FileTransaction
-) -> ApplyOpResult:
-    _ = txn
-    rel = op.payload.get("path")
-    if not isinstance(rel, str):
-        return _failed_row(
-            op, code="E_APPLY_INVALID_PATH", message="patch.apply requires path"
-        )
-
-    try:
-        patch_path = _resolve_path(context.port_root, rel)
-    except ValueError as exc:
-        return _failed_row(
-            op,
-            code="E_APPLY_INVALID_PATH",
-            message=str(exc),
-            source_path=context.port_root,
-        )
-
-    if not patch_path.exists():
-        return _failed_row(
-            op,
-            code="E_APPLY_MISSING_SUBJECT",
-            message=f"patch file does not exist: {rel}",
-            source_path=patch_path,
-        )
-
-    command = [
-        "patch",
-        "--batch",
-        "--forward",
-        "-V",
-        "none",
-        "-r",
-        "-",
-        "-p0",
-        "-i",
-        str(patch_path),
-    ]
-    if context.dry_run:
-        command.insert(1, "--dry-run")
-
-    try:
-        proc = subprocess.run(
-            command,
-            cwd=str(context.port_root),
-            stdin=subprocess.DEVNULL,
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=PATCH_TIMEOUT_SECONDS,
-        )
-    except subprocess.TimeoutExpired:
-        return _failed_row(
-            op,
-            code="E_APPLY_PATCH_FAILED",
-            message=f"patch timed out after {PATCH_TIMEOUT_SECONDS}s",
-            source_path=patch_path,
-        )
-    if proc.returncode != 0:
-        detail = proc.stderr.strip() or proc.stdout.strip() or "patch command failed"
-        return _failed_row(
-            op,
-            code="E_APPLY_PATCH_FAILED",
-            message=detail,
-            source_path=patch_path,
-        )
-
-    return _success_row(op, "patch-applied")

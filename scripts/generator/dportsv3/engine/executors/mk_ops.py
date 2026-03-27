@@ -14,13 +14,22 @@ from dportsv3.engine.apply_common import (
 )
 from dportsv3.engine.fsops import FileTransaction
 from dportsv3.engine.makefile_cst import (
-    AssignmentNode,
     DirectiveElifNode,
     DirectiveIfNode,
     IncludeNode,
     TargetNode,
 )
-from dportsv3.engine.makefile_rewrite import find_condition
+from dportsv3.engine.makefile_rewrite import (
+    find_condition,
+    set_var,
+    token_add,
+    token_remove,
+    target_append,
+    target_remove,
+    target_rename,
+    target_set,
+    unset_var,
+)
 from dportsv3.engine.models import ApplyContext, ApplyOpResult, PlanOp
 
 
@@ -69,12 +78,8 @@ def exec_mk_var_set(
         )
 
     text, document = loaded
-    matches = [
-        node
-        for node in document.nodes
-        if isinstance(node, AssignmentNode) and node.name == name
-    ]
-    if len(matches) > 1:
+    intent = set_var(document, name, value)
+    if intent.ambiguous:
         return _failed_row(
             op,
             code="E_APPLY_AMBIGUOUS_MATCH",
@@ -83,12 +88,12 @@ def exec_mk_var_set(
         )
 
     replacement = f"{name}= {value}"
-    if matches:
-        target = matches[0]
+    if intent.node_indices:
+        node = document.nodes[intent.node_indices[0]]
         updated = _replace_line_range(
             text,
-            start=target.span.line_start,
-            end=target.span.line_end,
+            start=node.span.line_start,
+            end=node.span.line_end,
             new_lines=[replacement],
         )
     else:
@@ -139,17 +144,12 @@ def exec_mk_var_unset(
         )
 
     text, document = loaded
-    matches = [
-        node
-        for node in document.nodes
-        if isinstance(node, AssignmentNode) and node.name == name
-    ]
-    if not matches:
+    intent = unset_var(document, name)
+    if not intent.node_indices:
         return _missing_row(
             op, policy=policy, message=f"assignment not found: {name}", source_path=path
         )
-
-    if len(matches) > 1:
+    if intent.ambiguous:
         return _failed_row(
             op,
             code="E_APPLY_AMBIGUOUS_MATCH",
@@ -157,9 +157,9 @@ def exec_mk_var_unset(
             source_path=path,
         )
 
-    target = matches[0]
+    node = document.nodes[intent.node_indices[0]]
     updated = _replace_line_range(
-        text, start=target.span.line_start, end=target.span.line_end, new_lines=[]
+        text, start=node.span.line_start, end=node.span.line_end, new_lines=[]
     )
     txn.stage_write(path, updated)
     return _success_row(op, "mk-var-unset")
@@ -195,17 +195,12 @@ def exec_mk_var_token_add(
         )
 
     text, document = loaded
-    matches = [
-        node
-        for node in document.nodes
-        if isinstance(node, AssignmentNode) and node.name == name
-    ]
-    if not matches:
+    intent = token_add(document, name, value)
+    if not intent.node_indices:
         return _missing_row(
             op, policy=policy, message=f"assignment not found: {name}", source_path=path
         )
-
-    if len(matches) > 1:
+    if intent.ambiguous:
         return _failed_row(
             op,
             code="E_APPLY_AMBIGUOUS_MATCH",
@@ -213,16 +208,16 @@ def exec_mk_var_token_add(
             source_path=path,
         )
 
-    target = matches[0]
-    tokens = [token for token in target.value.split() if token]
+    node = document.nodes[intent.node_indices[0]]
+    tokens = [tok for tok in node.value.split() if tok]
     if value in tokens:
         return _success_row(op, "mk-token-exists")
     tokens.append(value)
     replacement = f"{name}= {' '.join(tokens)}"
     updated = _replace_line_range(
         text,
-        start=target.span.line_start,
-        end=target.span.line_end,
+        start=node.span.line_start,
+        end=node.span.line_end,
         new_lines=[replacement],
     )
     txn.stage_write(path, updated)
@@ -259,17 +254,12 @@ def exec_mk_var_token_remove(
         )
 
     text, document = loaded
-    matches = [
-        node
-        for node in document.nodes
-        if isinstance(node, AssignmentNode) and node.name == name
-    ]
-    if not matches:
+    intent = token_remove(document, name, value)
+    if not intent.node_indices:
         return _missing_row(
             op, policy=policy, message=f"assignment not found: {name}", source_path=path
         )
-
-    if len(matches) > 1:
+    if intent.ambiguous:
         return _failed_row(
             op,
             code="E_APPLY_AMBIGUOUS_MATCH",
@@ -277,19 +267,19 @@ def exec_mk_var_token_remove(
             source_path=path,
         )
 
-    target = matches[0]
-    tokens = [token for token in target.value.split() if token]
+    node = document.nodes[intent.node_indices[0]]
+    tokens = [tok for tok in node.value.split() if tok]
     if value not in tokens:
         return _missing_row(
             op, policy=policy, message=f"token not found: {value}", source_path=path
         )
-    tokens = [token for token in tokens if token != value]
+    tokens = [tok for tok in tokens if tok != value]
     replacement = f"{name}= {' '.join(tokens)}" if tokens else ""
     new_lines = [replacement] if replacement else []
     updated = _replace_line_range(
         text,
-        start=target.span.line_start,
-        end=target.span.line_end,
+        start=node.span.line_start,
+        end=node.span.line_end,
         new_lines=new_lines,
     )
     txn.stage_write(path, updated)
@@ -334,12 +324,8 @@ def exec_mk_target_set(
         )
 
     text, document = loaded
-    matches = [
-        index
-        for index, node in enumerate(document.nodes)
-        if isinstance(node, TargetNode) and node.name == name
-    ]
-    if len(matches) > 1:
+    intent = target_set(document, name, recipe)
+    if intent.ambiguous:
         return _failed_row(
             op,
             code="E_APPLY_AMBIGUOUS_MATCH",
@@ -348,8 +334,8 @@ def exec_mk_target_set(
         )
 
     lines = [f"{name}:", *recipe]
-    if matches:
-        start, end = _target_block_span(document, matches[0])
+    if intent.node_indices:
+        start, end = _target_block_span(document, intent.node_indices[0])
         updated = _replace_line_range(text, start=start, end=end, new_lines=lines)
     else:
         insert_before_line = _insert_before_last_include_line(document)
@@ -408,19 +394,15 @@ def exec_mk_target_append(
         )
 
     text, document = loaded
-    matches = [
-        index
-        for index, node in enumerate(document.nodes)
-        if isinstance(node, TargetNode) and node.name == name
-    ]
-    if not matches:
+    intent = target_append(document, name, recipe)
+    if not intent.node_indices:
         return _failed_row(
             op,
             code="E_APPLY_MISSING_SUBJECT",
             message=f"target not found: {name}",
             source_path=path,
         )
-    if len(matches) > 1:
+    if intent.ambiguous:
         return _failed_row(
             op,
             code="E_APPLY_AMBIGUOUS_MATCH",
@@ -428,7 +410,7 @@ def exec_mk_target_append(
             source_path=path,
         )
 
-    start, end = _target_block_span(document, matches[0])
+    start, end = _target_block_span(document, intent.node_indices[0])
     block_lines = text.splitlines(keepends=False)[start - 1 : end]
     block_lines.extend(recipe)
     updated = _replace_line_range(text, start=start, end=end, new_lines=block_lines)
@@ -465,16 +447,12 @@ def exec_mk_target_remove(
         )
 
     text, document = loaded
-    matches = [
-        index
-        for index, node in enumerate(document.nodes)
-        if isinstance(node, TargetNode) and node.name == name
-    ]
-    if not matches:
+    intent = target_remove(document, name)
+    if not intent.node_indices:
         return _missing_row(
             op, policy=policy, message=f"target not found: {name}", source_path=path
         )
-    if len(matches) > 1:
+    if intent.ambiguous:
         return _failed_row(
             op,
             code="E_APPLY_AMBIGUOUS_MATCH",
@@ -482,7 +460,7 @@ def exec_mk_target_remove(
             source_path=path,
         )
 
-    start, end = _target_block_span(document, matches[0])
+    start, end = _target_block_span(document, intent.node_indices[0])
     updated = _replace_line_range(text, start=start, end=end, new_lines=[])
     txn.stage_write(path, updated)
     return _success_row(op, "mk-target-removed")
@@ -518,16 +496,12 @@ def exec_mk_target_rename(
         )
 
     text, document = loaded
-    matches = [
-        node
-        for node in document.nodes
-        if isinstance(node, TargetNode) and node.name == old
-    ]
-    if not matches:
+    intent = target_rename(document, old, new)
+    if not intent.node_indices:
         return _missing_row(
             op, policy=policy, message=f"target not found: {old}", source_path=path
         )
-    if len(matches) > 1:
+    if intent.ambiguous:
         return _failed_row(
             op,
             code="E_APPLY_AMBIGUOUS_MATCH",
@@ -535,12 +509,12 @@ def exec_mk_target_rename(
             source_path=path,
         )
 
-    target = matches[0]
+    node = document.nodes[intent.node_indices[0]]
     replacement = f"{new}:"
     updated = _replace_line_range(
         text,
-        start=target.span.line_start,
-        end=target.span.line_start,
+        start=node.span.line_start,
+        end=node.span.line_start,
         new_lines=[replacement],
     )
     txn.stage_write(path, updated)
