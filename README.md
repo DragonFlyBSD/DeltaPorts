@@ -4,6 +4,17 @@ This repository contains patches and files that overlay and modify the FreeBSD P
 
 > **Note:** This repository is not intended to be useful by itself. Scripts combine these overlays and patches to generate the final product.
 
+## dportsv3 CLI
+
+From the repository root, use:
+
+```bash
+./dportsv3 --help
+```
+
+The wrapper bootstraps `scripts/generator/.venv` automatically on first run and
+dispatches to the installed `dportsv3` console entrypoint.
+
 ## Organization
 
 - **docs/**  
