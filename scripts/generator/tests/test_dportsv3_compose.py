@@ -696,6 +696,209 @@ def test_compose_compat_mode_runs_when_dops_missing(tmp_path, capsys) -> None:
     assert "implicit_payload" in a_port["compat_stages_executed"]
 
 
+def test_compose_incremental_origin_requires_existing_output(tmp_path, capsys) -> None:
+    freebsd = tmp_path / "freebsd"
+    delta = tmp_path / "delta"
+    output = tmp_path / "out"
+
+    (freebsd / "devel" / "a").mkdir(parents=True)
+    (freebsd / "devel" / "a" / "Makefile").write_text("VAR= old\n")
+    _init_freebsd_repo(freebsd)
+
+    (delta / "ports" / "devel" / "a").mkdir(parents=True)
+    (delta / "ports" / "devel" / "a" / "overlay.dops").write_text(
+        'target @main\nport devel/a\ntype port\nmk set VAR "new"\n'
+    )
+
+    code = main(
+        [
+            "compose",
+            "--target",
+            "@main",
+            "--output",
+            str(output),
+            "--delta-root",
+            str(delta),
+            "--freebsd-root",
+            str(freebsd),
+            "--oracle-profile",
+            "off",
+            "--origin",
+            "devel/a",
+            "--json",
+        ]
+    )
+    out = capsys.readouterr()
+
+    assert code == 2
+    payload = json.loads(out.out)
+    assert [stage["name"] for stage in payload["stages"]] == ["seed_output"]
+    seed = payload["stages"][0]
+    assert any(
+        "E_COMPOSE_INCREMENTAL_OUTPUT_MISSING" in error for error in seed["errors"]
+    )
+
+
+def test_compose_incremental_origin_reapplies_selected_dops_port_in_place(
+    tmp_path, capsys
+) -> None:
+    freebsd = tmp_path / "freebsd"
+    delta = tmp_path / "delta"
+    output = tmp_path / "out"
+
+    (freebsd / "devel" / "a").mkdir(parents=True)
+    (freebsd / "devel" / "a" / "Makefile").write_text("VAR= old\n")
+    (freebsd / "devel" / "b").mkdir(parents=True)
+    (freebsd / "devel" / "b" / "Makefile").write_text("VAR= base\n")
+    _init_freebsd_repo(freebsd)
+
+    (delta / "ports" / "devel" / "a").mkdir(parents=True)
+    dops = delta / "ports" / "devel" / "a" / "overlay.dops"
+    dops.write_text('target @main\nport devel/a\ntype port\nmk set VAR "new"\n')
+
+    first_code = main(
+        [
+            "compose",
+            "--target",
+            "@main",
+            "--output",
+            str(output),
+            "--delta-root",
+            str(delta),
+            "--freebsd-root",
+            str(freebsd),
+            "--replace-output",
+            "--oracle-profile",
+            "off",
+            "--json",
+        ]
+    )
+    first_out = capsys.readouterr()
+    assert first_code == 0
+    assert json.loads(first_out.out)["ok"] is True
+    assert (output / "devel" / "a" / "Makefile").read_text() == "VAR= new\n"
+    assert (output / "devel" / "b" / "Makefile").read_text() == "VAR= base\n"
+
+    dops.write_text('target @main\nport devel/a\ntype port\nmk set VAR "newer"\n')
+
+    second_code = main(
+        [
+            "compose",
+            "--target",
+            "@main",
+            "--output",
+            str(output),
+            "--delta-root",
+            str(delta),
+            "--freebsd-root",
+            str(freebsd),
+            "--oracle-profile",
+            "off",
+            "--origin",
+            "devel/a",
+            "--json",
+        ]
+    )
+    second_out = capsys.readouterr()
+
+    assert second_code == 0
+    payload = json.loads(second_out.out)
+    assert payload["ok"] is True
+    assert [stage["name"] for stage in payload["stages"]] == [
+        "seed_output",
+        "apply_special",
+        "preflight_validate",
+        "prune_stale_overlays",
+        "apply_semantic_ops",
+        "apply_compat_ops",
+        "apply_system_replacements",
+        "finalize_tree",
+    ]
+    assert (output / "devel" / "a" / "Makefile").read_text() == "VAR= newer\n"
+    assert (output / "devel" / "b" / "Makefile").read_text() == "VAR= base\n"
+    assert [port["origin"] for port in payload["ports"]] == ["devel/a"]
+    seed = next(stage for stage in payload["stages"] if stage["name"] == "seed_output")
+    special = next(
+        stage for stage in payload["stages"] if stage["name"] == "apply_special"
+    )
+    assert seed["metadata"]["incremental"] is True
+    assert special["metadata"]["incremental"] is True
+
+
+def test_compose_incremental_origin_reapplies_selected_compat_port_in_place(
+    tmp_path, capsys
+) -> None:
+    freebsd = tmp_path / "freebsd"
+    delta = tmp_path / "delta"
+    output = tmp_path / "out"
+
+    (freebsd / "devel" / "a").mkdir(parents=True)
+    (freebsd / "devel" / "a" / "Makefile").write_text("VAR= old\n")
+    (freebsd / "devel" / "b").mkdir(parents=True)
+    (freebsd / "devel" / "b" / "Makefile").write_text("VAR= base\n")
+    _init_freebsd_repo(freebsd)
+
+    port = delta / "ports" / "devel" / "a"
+    (port / "diffs" / "@main").mkdir(parents=True)
+    patch = port / "diffs" / "@main" / "add.diff"
+    patch.write_text(
+        "--- Makefile\n+++ Makefile\n@@ -1 +1 @@\n-VAR= old\n+VAR= compat1\n"
+    )
+
+    first_code = main(
+        [
+            "compose",
+            "--target",
+            "@main",
+            "--output",
+            str(output),
+            "--delta-root",
+            str(delta),
+            "--freebsd-root",
+            str(freebsd),
+            "--replace-output",
+            "--oracle-profile",
+            "off",
+            "--json",
+        ]
+    )
+    first_out = capsys.readouterr()
+    assert first_code == 0
+    assert json.loads(first_out.out)["ok"] is True
+    assert (output / "devel" / "a" / "Makefile").read_text() == "VAR= compat1\n"
+
+    patch.write_text(
+        "--- Makefile\n+++ Makefile\n@@ -1 +1 @@\n-VAR= old\n+VAR= compat2\n"
+    )
+
+    second_code = main(
+        [
+            "compose",
+            "--target",
+            "@main",
+            "--output",
+            str(output),
+            "--delta-root",
+            str(delta),
+            "--freebsd-root",
+            str(freebsd),
+            "--oracle-profile",
+            "off",
+            "--origin",
+            "devel/a",
+            "--json",
+        ]
+    )
+    second_out = capsys.readouterr()
+
+    assert second_code == 0
+    payload = json.loads(second_out.out)
+    assert payload["ok"] is True
+    assert (output / "devel" / "a" / "Makefile").read_text() == "VAR= compat2\n"
+    assert (output / "devel" / "b" / "Makefile").read_text() == "VAR= base\n"
+    assert [port["origin"] for port in payload["ports"]] == ["devel/a"]
+
+
 def test_compose_failed_patch_does_not_leave_patch_artifacts(tmp_path, capsys) -> None:
     freebsd = tmp_path / "freebsd"
     delta = tmp_path / "delta"

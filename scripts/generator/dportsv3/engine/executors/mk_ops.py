@@ -31,6 +31,14 @@ def _mk_var_set_insert_line(document) -> int | None:
     return None
 
 
+def _insert_before_last_include_line(document) -> int | None:
+    insert_before: int | None = None
+    for node in document.nodes:
+        if isinstance(node, IncludeNode):
+            insert_before = node.span.line_start
+    return insert_before
+
+
 def exec_mk_var_set(
     op: PlanOp, context: ApplyContext, txn: FileTransaction
 ) -> ApplyOpResult:
@@ -344,10 +352,19 @@ def exec_mk_target_set(
         start, end = _target_block_span(document, matches[0])
         updated = _replace_line_range(text, start=start, end=end, new_lines=lines)
     else:
-        updated = text
-        if updated and not updated.endswith(("\n", "\r\n")):
-            updated += "\n"
-        updated += "\n".join(lines) + "\n"
+        insert_before_line = _insert_before_last_include_line(document)
+        if insert_before_line is None:
+            updated = text
+            if updated and not updated.endswith(("\n", "\r\n")):
+                updated += "\n"
+            updated += "\n".join(lines) + "\n"
+        else:
+            updated = _replace_line_range(
+                text,
+                start=insert_before_line,
+                end=insert_before_line - 1,
+                new_lines=[*lines, ""],
+            )
 
     txn.stage_write(path, updated)
     return _success_row(op, "mk-target-set")
@@ -760,11 +777,7 @@ def exec_mk_block_set(
         txn.stage_write(path, updated)
         return _success_row(op, "mk-block-replaced")
 
-    insert_before_line: int | None = None
-    for node in document.nodes:
-        if isinstance(node, IncludeNode) and node.include == "<bsd.port.post.mk>":
-            insert_before_line = node.span.line_start
-            break
+    insert_before_line = _insert_before_last_include_line(document)
 
     if insert_before_line is None:
         updated = text
