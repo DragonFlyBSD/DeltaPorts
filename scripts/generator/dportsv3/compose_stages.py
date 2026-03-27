@@ -53,12 +53,28 @@ def seed_stage(
     output_path: Path,
     dry_run: bool,
     replace_output: bool,
+    incremental: bool = False,
+    selected_origins: list[str] | None = None,
 ) -> ComposeStageResult:
     stage = ComposeStageResult(name="seed_output", started_at=datetime.now())
     if not freebsd_root.exists() or not freebsd_root.is_dir():
         stage.add_error(
             "E_COMPOSE_INVALID_FREEBSD_ROOT", f"missing freebsd root: {freebsd_root}"
         )
+        stage.finished_at = datetime.now()
+        return stage
+
+    if incremental:
+        stage.metadata["incremental"] = True
+        stage.metadata["selected_origins"] = list(selected_origins or [])
+        if not output_path.exists() or not output_path.is_dir():
+            stage.add_error(
+                "E_COMPOSE_INCREMENTAL_OUTPUT_MISSING",
+                f"incremental compose requires existing output path: {output_path}",
+            )
+            stage.finished_at = datetime.now()
+            return stage
+        stage.skipped = len(selected_origins or [])
         stage.finished_at = datetime.now()
         return stage
 
@@ -224,9 +240,18 @@ def apply_special_stage(
     output_path: Path,
     target: str,
     dry_run: bool,
+    incremental: bool = False,
+    selected_origins: list[str] | None = None,
     patch_runner: Callable[[Path, Path, bool], tuple[bool, str]],
 ) -> ComposeStageResult:
     stage = ComposeStageResult(name="apply_special", started_at=datetime.now())
+    if incremental:
+        stage.metadata["incremental"] = True
+        stage.metadata["selected_origins"] = list(selected_origins or [])
+        stage.skipped = len(selected_origins or [])
+        stage.finished_at = datetime.now()
+        return stage
+
     gid_uid_copied = copy_treetop_identity_files(
         output_path,
         freebsd_root,
@@ -489,12 +514,24 @@ def preflight_stage(
     target_branch: str,
     delta_root: Path,
     freebsd_root: Path,
+    selected_origins: list[str] | None,
     dry_run: bool,
     prune_stale_overlays: bool,
     build_plan_fn: Callable[[str, Path | None], Any] = build_plan,
 ) -> tuple[ComposeStageResult, list[ComposePortContext], dict[str, ComposePortReport]]:
     stage = ComposeStageResult(name="preflight_validate", started_at=datetime.now())
     contexts = discover_overlay_contexts(delta_root, target)
+    if selected_origins is not None:
+        requested = set(selected_origins)
+        found = {ctx.origin for ctx in contexts}
+        missing = sorted(requested - found)
+        contexts = [ctx for ctx in contexts if ctx.origin in requested]
+        stage.metadata["selected_origins"] = list(selected_origins)
+        for origin in missing:
+            stage.add_error(
+                "E_COMPOSE_SELECTED_ORIGIN_NOT_FOUND",
+                f"overlay origin not found: {origin}",
+            )
     reports = {ctx.origin: ComposePortReport(origin=ctx.origin) for ctx in contexts}
 
     if not _check_freebsd_git_state(
@@ -616,6 +653,7 @@ def semantic_stage(
     output_path: Path,
     lock_root: Path,
     dry_run: bool,
+    incremental: bool,
     strict: bool,
     oracle_profile: str,
     apply_dsl_fn: Callable[..., Any] = apply_dsl,
@@ -643,7 +681,7 @@ def semantic_stage(
             newport_origin=overlay_newport,
             lock_origin=lock_origin,
             dry_run=dry_run,
-            copy_port_base=False,
+            copy_port_base=incremental,
             missing_dport_error="missing newport source",
             missing_lock_error="missing lock source",
             missing_port_error="missing upstream source",
@@ -764,7 +802,12 @@ def fallback_stage(
     return stage
 
 
-def _write_category_makefiles(output_path: Path) -> int:
+def _write_category_makefiles(
+    output_path: Path,
+    *,
+    categories_to_write: set[str] | None = None,
+    rewrite_root: bool = True,
+) -> int:
     excluded = {"Mk", "Tools", "Templates", "Keywords"}
     categories = [
         path
@@ -774,16 +817,19 @@ def _write_category_makefiles(output_path: Path) -> int:
     category_names = [category.name for category in categories]
     count = 0
 
-    if category_names:
-        root_lines = [f"SUBDIR += {name}" for name in category_names]
-        (output_path / "Makefile").write_text("\n".join(root_lines) + "\n")
-        count += 1
-    else:
-        root_makefile = output_path / "Makefile"
-        if root_makefile.exists():
-            root_makefile.unlink()
+    if rewrite_root:
+        if category_names:
+            root_lines = [f"SUBDIR += {name}" for name in category_names]
+            (output_path / "Makefile").write_text("\n".join(root_lines) + "\n")
+            count += 1
+        else:
+            root_makefile = output_path / "Makefile"
+            if root_makefile.exists():
+                root_makefile.unlink()
 
     for category in categories:
+        if categories_to_write is not None and category.name not in categories_to_write:
+            continue
         ports = [
             port.name
             for port in sorted(category.iterdir())
@@ -862,6 +908,7 @@ def system_replacements_stage(
     *,
     output_path: Path,
     dry_run: bool,
+    selected_origins: list[str] | None = None,
 ) -> ComposeStageResult:
     stage = ComposeStageResult(
         name="apply_system_replacements", started_at=datetime.now()
@@ -871,6 +918,10 @@ def system_replacements_stage(
         return stage
 
     origins = sorted(list_port_origins(output_path))
+    if selected_origins is not None:
+        requested = set(selected_origins)
+        origins = [origin for origin in origins if origin in requested]
+        stage.metadata["selected_origins"] = list(selected_origins)
     stage.metadata["origins"] = len(origins)
     files_scanned = 0
     files_changed = 0
@@ -898,10 +949,46 @@ def finalize_stage(
     freebsd_root: Path,
     output_path: Path,
     dry_run: bool,
+    incremental: bool,
+    selected_origins: list[str] | None,
     patch_artifact_finder: Callable[[Path], list[Path]],
 ) -> ComposeStageResult:
     stage = ComposeStageResult(name="finalize_tree", started_at=datetime.now())
     if not output_path.exists() or not output_path.is_dir():
+        stage.finished_at = datetime.now()
+        return stage
+
+    if incremental:
+        selected = list(selected_origins or [])
+        selected_set = set(selected)
+        stage.metadata["incremental"] = True
+        stage.metadata["selected_origins"] = selected
+
+        if not dry_run:
+            touched_categories = {origin.split("/", 1)[0] for origin in selected_set}
+            regenerated = _write_category_makefiles(
+                output_path,
+                categories_to_write=touched_categories,
+                rewrite_root=True,
+            )
+            stage.metadata["makefiles_regenerated"] = regenerated
+            stage.changed += regenerated
+
+            artifacts: list[Path] = []
+            for origin in selected:
+                origin_root = output_path / origin
+                if origin_root.exists() and origin_root.is_dir():
+                    artifacts.extend(patch_artifact_finder(origin_root))
+            if artifacts:
+                stage.metadata["patch_artifacts"] = [
+                    str(path.relative_to(output_path)) for path in artifacts[:100]
+                ]
+                stage.metadata["patch_artifact_total"] = len(artifacts)
+                stage.add_error(
+                    "E_COMPOSE_PATCH_ARTIFACT_LEAK",
+                    f"unexpected .orig/.rej artifacts in selected output ports: {len(artifacts)}",
+                )
+
         stage.finished_at = datetime.now()
         return stage
 

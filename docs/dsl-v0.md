@@ -144,6 +144,15 @@ mk add <VAR> <token> [on-missing error|warn|noop]
 mk remove <VAR> <token> [on-missing error|warn|noop]
 ```
 
+`mk set` v1 behavior:
+
+- if `<VAR>` exists exactly once, replace that assignment with `<VAR>= <value>`
+- if `<VAR>` does not exist, create a new top-level `<VAR>= <value>` assignment
+  before the first target or `.include`, whichever appears first
+- if `<VAR>` exists more than once, fail with an ambiguous-match error
+
+`mk add` and `mk remove` still require an existing assignment.
+
 ### Makefile conditional/block ops
 
 ```text
@@ -161,7 +170,7 @@ MK
   `<expr>` (not `.elif`-only matches)
 - `contains` filters candidate regions by block text substring
 - one match: replace full region body
-- no match: insert new `.if ... .endif` block before `.include <bsd.port.post.mk>`
+- no match: insert new `.if ... .endif` block before the last `.include` line
   when present, else append at EOF
 - multiple matches: fail with ambiguous-match error
 - `on-missing` is not allowed on `mk block set`
@@ -180,6 +189,13 @@ MK
 mk target remove <name> [on-missing ...]
 mk target rename <old> -> <new> [on-missing ...]
 ```
+
+`mk target set` v1 behavior:
+
+- if `<name>` exists exactly once, replace that target block
+- if `<name>` does not exist, insert a new target block before the last
+  `.include` line when present, else append at EOF
+- if `<name>` exists more than once, fail with an ambiguous-match error
 
 ### File/text ops
 

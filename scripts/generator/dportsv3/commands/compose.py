@@ -20,6 +20,7 @@ def cmd_compose(args: Namespace) -> int:
         delta_root=Path(args.delta_root),
         freebsd_root=Path(args.freebsd_root),
         lock_root=lock_root,
+        selected_origins=[str(origin) for origin in getattr(args, "origin", [])],
         dry_run=bool(getattr(args, "dry_run", False)),
         strict=bool(getattr(args, "strict", False)),
         replace_output=bool(getattr(args, "replace_output", False)),

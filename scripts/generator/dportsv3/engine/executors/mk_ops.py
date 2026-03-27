@@ -24,6 +24,21 @@ from dportsv3.engine.makefile_rewrite import find_condition
 from dportsv3.engine.models import ApplyContext, ApplyOpResult, PlanOp
 
 
+def _mk_var_set_insert_line(document) -> int | None:
+    for node in document.nodes:
+        if isinstance(node, (TargetNode, IncludeNode)):
+            return node.span.line_start
+    return None
+
+
+def _insert_before_last_include_line(document) -> int | None:
+    insert_before: int | None = None
+    for node in document.nodes:
+        if isinstance(node, IncludeNode):
+            insert_before = node.span.line_start
+    return insert_before
+
+
 def exec_mk_var_set(
     op: PlanOp, context: ApplyContext, txn: FileTransaction
 ) -> ApplyOpResult:
@@ -59,11 +74,6 @@ def exec_mk_var_set(
         for node in document.nodes
         if isinstance(node, AssignmentNode) and node.name == name
     ]
-    if not matches:
-        return _missing_row(
-            op, policy=policy, message=f"assignment not found: {name}", source_path=path
-        )
-
     if len(matches) > 1:
         return _failed_row(
             op,
@@ -72,14 +82,32 @@ def exec_mk_var_set(
             source_path=path,
         )
 
-    target = matches[0]
     replacement = f"{name}= {value}"
-    updated = _replace_line_range(
-        text,
-        start=target.span.line_start,
-        end=target.span.line_end,
-        new_lines=[replacement],
-    )
+    if matches:
+        target = matches[0]
+        updated = _replace_line_range(
+            text,
+            start=target.span.line_start,
+            end=target.span.line_end,
+            new_lines=[replacement],
+        )
+    else:
+        insert_before = _mk_var_set_insert_line(document)
+        if insert_before is None:
+            line_count = len(text.splitlines(keepends=False))
+            updated = _replace_line_range(
+                text,
+                start=line_count + 1,
+                end=line_count,
+                new_lines=[replacement],
+            )
+        else:
+            updated = _replace_line_range(
+                text,
+                start=insert_before,
+                end=insert_before - 1,
+                new_lines=[replacement],
+            )
     txn.stage_write(path, updated)
     return _success_row(op, "mk-var-set")
 
@@ -324,10 +352,19 @@ def exec_mk_target_set(
         start, end = _target_block_span(document, matches[0])
         updated = _replace_line_range(text, start=start, end=end, new_lines=lines)
     else:
-        updated = text
-        if updated and not updated.endswith(("\n", "\r\n")):
-            updated += "\n"
-        updated += "\n".join(lines) + "\n"
+        insert_before_line = _insert_before_last_include_line(document)
+        if insert_before_line is None:
+            updated = text
+            if updated and not updated.endswith(("\n", "\r\n")):
+                updated += "\n"
+            updated += "\n".join(lines) + "\n"
+        else:
+            updated = _replace_line_range(
+                text,
+                start=insert_before_line,
+                end=insert_before_line - 1,
+                new_lines=[*lines, ""],
+            )
 
     txn.stage_write(path, updated)
     return _success_row(op, "mk-target-set")
@@ -740,11 +777,7 @@ def exec_mk_block_set(
         txn.stage_write(path, updated)
         return _success_row(op, "mk-block-replaced")
 
-    insert_before_line: int | None = None
-    for node in document.nodes:
-        if isinstance(node, IncludeNode) and node.include == "<bsd.port.post.mk>":
-            insert_before_line = node.span.line_start
-            break
+    insert_before_line = _insert_before_last_include_line(document)
 
     if insert_before_line is None:
         updated = text

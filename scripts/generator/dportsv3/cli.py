@@ -98,6 +98,12 @@ def _register_compose_parser(subparsers: argparse._SubParsersAction) -> None:
         default="local",
         help="Oracle profile for post-rewrite validation",
     )
+    compose.add_argument(
+        "--origin",
+        action="append",
+        default=[],
+        help="Re-compose only the selected origin (repeatable, requires existing output tree)",
+    )
 
 
 def _register_compose_report_parser(subparsers: argparse._SubParsersAction) -> None:
@@ -483,9 +489,7 @@ def _register_tracker_parser(subparsers: argparse._SubParsersAction) -> None:
         "mark-building", help="Mark a port as building"
     )
     mark_building.add_argument("--run", type=int, required=True, help="Build run ID")
-    mark_building.add_argument(
-        "--origin", type=str, required=True, help="Port origin"
-    )
+    mark_building.add_argument("--origin", type=str, required=True, help="Port origin")
     mark_building.add_argument("--server", type=str, help="Tracker base URL")
 
     status = tracker_sub.add_parser("status", help="Query current port status")

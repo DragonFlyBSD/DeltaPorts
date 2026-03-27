@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
+import re
 
 from dportsv3.compose_discovery import normalize_target
 from dportsv3.compose_models import ComposePortReport, ComposeResult, ComposeStageResult
@@ -51,6 +52,7 @@ def run_compose(
     delta_root: Path,
     freebsd_root: Path,
     lock_root: Path | None = None,
+    selected_origins: list[str] | None = None,
     dry_run: bool = False,
     strict: bool = False,
     replace_output: bool = False,
@@ -91,13 +93,40 @@ def run_compose(
         return result
 
     lock_source = lock_root if lock_root is not None else delta_root / "locked"
+    requested_origins = sorted(
+        {origin for origin in (selected_origins or []) if origin}
+    )
+    incremental = bool(requested_origins)
+
+    invalid_origins = [
+        origin
+        for origin in requested_origins
+        if re.fullmatch(r"[^/]+/[^/]+", origin) is None
+    ]
+    if invalid_origins:
+        stage = ComposeStageResult(name="preflight_validate", started_at=datetime.now())
+        for origin in invalid_origins:
+            stage.add_error(
+                "E_COMPOSE_INVALID_ORIGIN",
+                f"invalid origin selector: {origin}",
+            )
+        stage.finished_at = datetime.now()
+        result.add_stage(stage)
+        result.finished_at = datetime.now()
+        return result
 
     stage_seed = seed_stage(
         freebsd_root=freebsd_root,
         output_path=output_path,
         dry_run=dry_run,
         replace_output=replace_output,
+        incremental=incremental,
+        selected_origins=requested_origins,
     )
+    if incremental and not stage_seed.success:
+        result.add_stage(stage_seed)
+        result.finished_at = datetime.now()
+        return result
     if _record_stage(result, stage_seed, strict=strict):
         return result
 
@@ -107,6 +136,8 @@ def run_compose(
         output_path=output_path,
         target=target,
         dry_run=dry_run,
+        incremental=incremental,
+        selected_origins=requested_origins,
         patch_runner=_apply_patch,
     )
     if _record_stage(result, stage_special, strict=strict):
@@ -117,6 +148,7 @@ def run_compose(
         target_branch=target_branch,
         delta_root=delta_root,
         freebsd_root=freebsd_root,
+        selected_origins=requested_origins if incremental else None,
         dry_run=dry_run,
         prune_stale_overlays=prune_stale_overlays,
         build_plan_fn=build_plan,
@@ -141,6 +173,7 @@ def run_compose(
         output_path=output_path,
         lock_root=lock_source,
         dry_run=dry_run,
+        incremental=incremental,
         strict=strict,
         oracle_profile=normalized_oracle_profile,
         apply_dsl_fn=apply_dsl,
@@ -165,6 +198,7 @@ def run_compose(
     stage_system_replacements = system_replacements_stage(
         output_path=output_path,
         dry_run=dry_run,
+        selected_origins=requested_origins if incremental else None,
     )
     if _record_stage(result, stage_system_replacements, strict=strict, reports=reports):
         return result
@@ -175,6 +209,8 @@ def run_compose(
         freebsd_root=freebsd_root,
         output_path=output_path,
         dry_run=dry_run,
+        incremental=incremental,
+        selected_origins=requested_origins if incremental else None,
         patch_artifact_finder=find_patch_artifacts,
     )
     result.add_stage(stage_finalize)

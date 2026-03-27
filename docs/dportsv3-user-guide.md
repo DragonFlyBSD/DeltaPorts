@@ -166,6 +166,13 @@ target @any
 mk add CFLAGS -Wno-error=deprecated-declarations
 ```
 
+Notes:
+
+- `mk set` sets an existing Makefile assignment or creates a new top-level
+  `VAR= value` assignment before the first target or `.include` when missing.
+- `mk add` appends one token to an existing assignment; it does not create a
+  missing variable.
+
 Invalid example (rejected by semantic checks):
 
 ```text
@@ -306,6 +313,8 @@ Key flags:
 - `--dry-run`: evaluate without filesystem writes.
 - `--strict`: stop on first failed stage.
 - `--replace-output`: allow replacing non-empty output root.
+- `--origin <category/port>`: re-compose only selected origins into an existing
+  composed output tree; repeat the flag to select several ports.
 - `--prune-stale-overlays`: remove stale `type=port` overlays from output after
   preflight; delta overlays are kept intact.
 - `--oracle-profile {off,local,ci}`:
@@ -320,6 +329,13 @@ Stage order:
 3. `preflight_validate`
 4. `prune_stale_overlays`
 5. `apply_semantic_ops`
+
+Incremental selected-origin compose:
+
+- When `--origin` is used, compose works against the existing full output tree.
+- `seed_output` and `apply_special` are skipped.
+- Only the selected origins are revalidated and recomposed.
+- If `--output` does not already exist, compose fails.
 6. `apply_compat_ops`
 7. `apply_system_replacements`
 8. `finalize_tree`
@@ -603,8 +619,8 @@ BLK
 Current v1 scope:
 
 - block matching is `.if ... .endif` only (not `.elif`-only matching),
-- if no matching `.if` block exists, a new block is inserted before
-  `.include <bsd.port.post.mk>` (or appended at EOF if absent),
+- if no matching `.if` block exists, a new block is inserted before the final
+  `.include` line (or appended at EOF if absent),
 - use `contains "..."` only when duplicate `.if` conditions require
   disambiguation.
 
