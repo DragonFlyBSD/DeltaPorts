@@ -1,0 +1,77 @@
+#!/bin/sh
+
+set -eu
+
+SELF_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+GENERATOR_DIR="$SELF_DIR/scripts/generator"
+VENV_DIR="$GENERATOR_DIR/.venv"
+STAMP_FILE="$VENV_DIR/.dportsv3-install-stamp"
+PYPROJECT_FILE="$GENERATOR_DIR/pyproject.toml"
+PYTHON_BIN=${PYTHON:-python3}
+
+if [ ! -f "$PYPROJECT_FILE" ]; then
+    printf '%s\n' "dportsv3: missing generator project: $PYPROJECT_FILE" >&2
+    exit 1
+fi
+
+if [ "${DPORTSV3_NO_BOOTSTRAP:-0}" = "1" ]; then
+    AUTO_BOOTSTRAP=0
+else
+    AUTO_BOOTSTRAP=1
+fi
+
+INSTALL_PROFILE=base
+INSTALL_TARGET=$GENERATOR_DIR
+if [ "${1:-}" = "tracker" ] && [ "${2:-}" = "serve" ]; then
+    INSTALL_PROFILE=tracker
+    INSTALL_TARGET="$GENERATOR_DIR[tracker]"
+fi
+
+command -v "$PYTHON_BIN" >/dev/null 2>&1 || {
+    printf '%s\n' "dportsv3: required interpreter not found: $PYTHON_BIN" >&2
+    exit 1
+}
+
+compute_stamp() {
+    "$PYTHON_BIN" - "$PYPROJECT_FILE" "$INSTALL_PROFILE" <<'PY'
+from __future__ import annotations
+
+import hashlib
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+profile = sys.argv[2]
+digest = hashlib.sha256(path.read_bytes()).hexdigest()
+print(f"{profile}:{digest}")
+PY
+}
+
+STAMP_VALUE=$(compute_stamp)
+
+needs_install=0
+if [ ! -x "$VENV_DIR/bin/dportsv3" ]; then
+    needs_install=1
+elif [ ! -f "$STAMP_FILE" ]; then
+    needs_install=1
+elif [ "$(cat "$STAMP_FILE")" != "$STAMP_VALUE" ]; then
+    needs_install=1
+fi
+
+if [ "$needs_install" -eq 1 ]; then
+    if [ "$AUTO_BOOTSTRAP" -ne 1 ]; then
+        printf '%s\n' "dportsv3: bootstrap required but DPORTSV3_NO_BOOTSTRAP=1" >&2
+        exit 1
+    fi
+
+    if [ ! -d "$VENV_DIR" ]; then
+        printf '%s\n' "dportsv3: creating virtual environment at $VENV_DIR" >&2
+        "$PYTHON_BIN" -m venv "$VENV_DIR"
+    fi
+
+    printf '%s\n' "dportsv3: installing generator ($INSTALL_PROFILE)" >&2
+    "$VENV_DIR/bin/python" -m pip install -e "$INSTALL_TARGET"
+    printf '%s\n' "$STAMP_VALUE" > "$STAMP_FILE"
+fi
+
+exec "$VENV_DIR/bin/dportsv3" "$@"
