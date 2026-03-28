@@ -61,6 +61,9 @@ tracker_load_state() {
     fi
     # shellcheck disable=SC1090
     . "$TRACKER_STATE_FILE"
+    if [ "${TRACKING_DISABLED:-0}" = "1" ]; then
+        exit 0
+    fi
     if [ -z "${RUN_ID:-}" ]; then
         tracker_fail_soft "tracker state file missing RUN_ID: $TRACKER_STATE_FILE"
     fi
@@ -82,6 +85,18 @@ tracker_clear_state() {
     rm -f -- "$TRACKER_STATE_FILE"
 }
 
+tracker_disable_state() {
+    reason=$1
+    tmp_file="$TRACKER_STATE_FILE.tmp.$$"
+    umask 077
+    cat > "$tmp_file" <<EOF
+TRACKING_DISABLED=1
+EOF
+    mv -f -- "$tmp_file" "$TRACKER_STATE_FILE"
+    tracker_log "tracking disabled for profile=$PROFILE: $reason"
+    exit 0
+}
+
 tracker_pkg_version() {
     pkgfile=${PKGNAME##*/}
     pkgfile=${pkgfile%.*}
@@ -90,13 +105,14 @@ tracker_pkg_version() {
 
 tracker_run_start() {
     tracker_load_config
+    tracker_clear_state
 
     output=$(
         "$DPORTSV3_BIN" tracker start-build \
             --target "$DPORTSV3_TRACKER_TARGET" \
             --type "$DPORTSV3_TRACKER_BUILD_TYPE" \
             --server "$DPORTSV3_TRACKER_URL" 2>&1
-    ) || tracker_fail_soft "start-build failed: $output"
+    ) || tracker_disable_state "start-build failed: $output"
 
     RUN_ID=$(printf '%s\n' "$output" | awk '{print $4}')
     case "$RUN_ID" in

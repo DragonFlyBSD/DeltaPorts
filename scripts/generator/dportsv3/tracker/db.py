@@ -13,6 +13,17 @@ VALID_BUILD_RESULTS = frozenset({"success", "failure", "skipped", "ignored"})
 DEFAULT_BUILD_TYPES = ("test", "release")
 
 
+def open_db(db_path: str | Path) -> sqlite3.Connection:
+    """Open one configured SQLite connection for tracker operations."""
+    path_text = str(db_path)
+    conn = sqlite3.connect(path_text, check_same_thread=False)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
+    if path_text != ":memory:":
+        conn.execute("PRAGMA journal_mode = WAL")
+    return conn
+
+
 class ActiveBuildError(RuntimeError):
     """Raised when a target/build_type already has an active run."""
 
@@ -31,11 +42,7 @@ class ActiveBuildError(RuntimeError):
 def init_db(db_path: str | Path) -> sqlite3.Connection:
     """Initialize the tracker schema and return one configured connection."""
     path_text = str(db_path)
-    conn = sqlite3.connect(path_text, check_same_thread=False)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON")
-    if path_text != ":memory:":
-        conn.execute("PRAGMA journal_mode = WAL")
+    conn = open_db(path_text)
 
     with conn:
         conn.executescript(

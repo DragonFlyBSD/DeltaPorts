@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib
+from contextlib import contextmanager
 from importlib import util as importlib_util
 from pathlib import Path
 from typing import Any, cast
@@ -23,6 +24,7 @@ from dportsv3.tracker.db import (
     get_target_summary,
     init_db,
     list_build_runs,
+    open_db,
     record_results,
     update_port_status,
 )
@@ -123,7 +125,6 @@ def create_app(db_path: str | Path) -> Any:
 
     app: Any = FastAPI(title="DeltaPorts Build Tracker")
     app.state.db_path = str(db_path)
-    app.state.db_conn = None
     templates_dir = Path(__file__).with_name("templates")
     static_dir = Path(__file__).with_name("static")
     templates: Any = Jinja2Templates(directory=str(templates_dir))
@@ -132,19 +133,20 @@ def create_app(db_path: str | Path) -> Any:
 
     @app.on_event("startup")
     def _startup() -> None:
-        app.state.db_conn = init_db(app.state.db_path)
+        conn = init_db(app.state.db_path)
+        conn.close()
 
     @app.on_event("shutdown")
     def _shutdown() -> None:
-        if app.state.db_conn is not None:
-            app.state.db_conn.close()
-            app.state.db_conn = None
+        return None
 
+    @contextmanager
     def _conn() -> Any:
-        conn = app.state.db_conn
-        if conn is None:
-            raise RuntimeError("Tracker DB connection is not initialized")
-        return conn
+        conn = open_db(app.state.db_path)
+        try:
+            yield conn
+        finally:
+            conn.close()
 
     def _raise_http_error(exc: Exception) -> None:
         if isinstance(exc, ActiveBuildError):
@@ -165,12 +167,13 @@ def create_app(db_path: str | Path) -> Any:
     def start_build(payload: StartBuildRequest) -> dict[str, int]:
         run_id = 0
         try:
-            run_id = create_build_run(
-                _conn(),
-                target=payload.target,
-                build_type=payload.build_type,
-                started_at=payload.started_at,
-            )
+            with _conn() as conn:
+                run_id = create_build_run(
+                    conn,
+                    target=payload.target,
+                    build_type=payload.build_type,
+                    started_at=payload.started_at,
+                )
         except Exception as exc:
             _raise_http_error(exc)
             raise AssertionError("unreachable")
@@ -179,14 +182,15 @@ def create_app(db_path: str | Path) -> Any:
     @app.patch("/api/builds/{run_id}")
     def finish_build(run_id: int, payload: FinishBuildRequest) -> dict[str, bool]:
         try:
-            finish_build_run(
-                _conn(),
-                run_id=run_id,
-                finished_at=payload.finished_at,
-                commit_sha=payload.commit_sha,
-                commit_branch=payload.commit_branch,
-                commit_pushed_at=payload.commit_pushed_at,
-            )
+            with _conn() as conn:
+                finish_build_run(
+                    conn,
+                    run_id=run_id,
+                    finished_at=payload.finished_at,
+                    commit_sha=payload.commit_sha,
+                    commit_branch=payload.commit_branch,
+                    commit_pushed_at=payload.commit_pushed_at,
+                )
         except Exception as exc:
             _raise_http_error(exc)
         return {"ok": True}
@@ -198,13 +202,14 @@ def create_app(db_path: str | Path) -> Any:
     ) -> dict[str, int]:
         recorded = 0
         try:
-            run = get_build_run(_conn(), run_id)
-            recorded = record_results(
-                _conn(),
-                run_id=run_id,
-                target=str(run["target"]),
-                results=[item.model_dump() for item in payload.results],
-            )
+            with _conn() as conn:
+                run = get_build_run(conn, run_id)
+                recorded = record_results(
+                    conn,
+                    run_id=run_id,
+                    target=str(run["target"]),
+                    results=[item.model_dump() for item in payload.results],
+                )
         except Exception as exc:
             _raise_http_error(exc)
             raise AssertionError("unreachable")
@@ -213,12 +218,13 @@ def create_app(db_path: str | Path) -> Any:
     @app.post("/api/builds/{run_id}/queue", response_model=EnqueueResponse)
     def enqueue(run_id: int, payload: EnqueueRequest) -> dict[str, int]:
         try:
-            count = enqueue_ports(
-                _conn(),
-                run_id,
-                [item.model_dump() for item in payload.ports],
-                total_expected=payload.total_expected,
-            )
+            with _conn() as conn:
+                count = enqueue_ports(
+                    conn,
+                    run_id,
+                    [item.model_dump() for item in payload.ports],
+                    total_expected=payload.total_expected,
+                )
         except Exception as exc:
             _raise_http_error(exc)
             raise AssertionError("unreachable")
@@ -231,7 +237,8 @@ def create_app(db_path: str | Path) -> Any:
         payload: UpdatePortStatusRequest,
     ) -> dict[str, bool]:
         try:
-            update_port_status(_conn(), run_id, origin, payload.status)
+            with _conn() as conn:
+                update_port_status(conn, run_id, origin, payload.status)
         except Exception as exc:
             _raise_http_error(exc)
         return {"ok": True}
@@ -242,14 +249,16 @@ def create_app(db_path: str | Path) -> Any:
         build_type: str | None = None,
         limit: int = Query(default=20, ge=1, le=1000),
     ) -> list[dict[str, Any]]:
-        return list_build_runs(
-            _conn(), target=target, build_type=build_type, limit=limit
-        )
+        with _conn() as conn:
+            return list_build_runs(
+                conn, target=target, build_type=build_type, limit=limit
+            )
 
     @app.get("/api/builds/compare", response_model=BuildCompareOut)
     def api_compare_builds(a: int, b: int) -> dict[str, Any]:
         try:
-            return compare_builds(_conn(), a, b)
+            with _conn() as conn:
+                return compare_builds(conn, a, b)
         except Exception as exc:
             _raise_http_error(exc)
             raise AssertionError("unreachable")
@@ -257,10 +266,11 @@ def create_app(db_path: str | Path) -> Any:
     @app.get("/api/builds/{run_id}")
     def api_get_build(run_id: int) -> dict[str, Any]:
         try:
-            return {
-                "build_run": get_build_run(_conn(), run_id),
-                "results": get_build_results(_conn(), run_id),
-            }
+            with _conn() as conn:
+                return {
+                    "build_run": get_build_run(conn, run_id),
+                    "results": get_build_results(conn, run_id),
+                }
         except Exception as exc:
             _raise_http_error(exc)
             raise AssertionError("unreachable")
@@ -270,29 +280,33 @@ def create_app(db_path: str | Path) -> Any:
         target: str | None = None,
         origin: str | None = None,
     ) -> list[dict[str, Any]]:
-        return get_port_status(_conn(), target=target, origin=origin)
+        with _conn() as conn:
+            return get_port_status(conn, target=target, origin=origin)
 
     @app.get("/api/failures", response_model=list[PortStatusOut])
     def api_failures(target: str) -> list[dict[str, Any]]:
-        return get_failures(_conn(), target)
+        with _conn() as conn:
+            return get_failures(conn, target)
 
     @app.get("/api/diff", response_model=DiffOut)
     def api_diff(a: str, b: str) -> dict[str, Any]:
-        return get_diff(_conn(), a, b)
+        with _conn() as conn:
+            return get_diff(conn, a, b)
 
     @app.get("/", response_class=HTMLResponse)
     def dashboard_index(request: RequestType) -> Any:
-        active_builds = get_active_builds_summary(_conn())
-        return templates.TemplateResponse(
-            request,
-            "index.html",
-            {
-                "title": "Targets",
-                "targets": get_target_summary(_conn()),
-                "active_builds": active_builds,
-                "refresh_seconds": 30 if active_builds else None,
-            },
-        )
+        with _conn() as conn:
+            active_builds = get_active_builds_summary(conn)
+            return templates.TemplateResponse(
+                request,
+                "index.html",
+                {
+                    "title": "Targets",
+                    "targets": get_target_summary(conn),
+                    "active_builds": active_builds,
+                    "refresh_seconds": 30 if active_builds else None,
+                },
+            )
 
     @app.get("/target/{target}", response_class=HTMLResponse)
     def dashboard_target(
@@ -302,55 +316,63 @@ def create_app(db_path: str | Path) -> Any:
         q: str = "",
         page: int = Query(default=1, ge=1),
     ) -> Any:
-        rows = get_port_status(_conn(), target=target)
-        query = q.strip().lower()
-        if status_filter == "failures":
-            rows = [row for row in rows if row.get("last_attempt_result") == "failure"]
-        elif status_filter == "successes":
-            rows = [row for row in rows if row.get("last_attempt_result") == "success"]
-        if query:
-            rows = [row for row in rows if query in str(row.get("origin", "")).lower()]
-        page_size = 100
-        start = (page - 1) * page_size
-        page_rows = rows[start : start + page_size]
-        page_count = max(1, (len(rows) + page_size - 1) // page_size)
-        return templates.TemplateResponse(
-            request,
-            "target.html",
-            {
-                "title": target,
-                "target": target,
-                "rows": page_rows,
-                "status_filter": status_filter,
-                "query": q,
-                "page": page,
-                "page_count": page_count,
-                "page_size": page_size,
-                "total_rows": len(rows),
-            },
-        )
+        with _conn() as conn:
+            rows = get_port_status(conn, target=target)
+            query = q.strip().lower()
+            if status_filter == "failures":
+                rows = [
+                    row for row in rows if row.get("last_attempt_result") == "failure"
+                ]
+            elif status_filter == "successes":
+                rows = [
+                    row for row in rows if row.get("last_attempt_result") == "success"
+                ]
+            if query:
+                rows = [
+                    row for row in rows if query in str(row.get("origin", "")).lower()
+                ]
+            page_size = 100
+            start = (page - 1) * page_size
+            page_rows = rows[start : start + page_size]
+            page_count = max(1, (len(rows) + page_size - 1) // page_size)
+            return templates.TemplateResponse(
+                request,
+                "target.html",
+                {
+                    "title": target,
+                    "target": target,
+                    "rows": page_rows,
+                    "status_filter": status_filter,
+                    "query": q,
+                    "page": page,
+                    "page_count": page_count,
+                    "page_size": page_size,
+                    "total_rows": len(rows),
+                },
+            )
 
     @app.get("/target/{target}/{cat}/{port}", response_class=HTMLResponse)
     def dashboard_port_detail(
         request: RequestType, target: str, cat: str, port: str
     ) -> Any:
         origin = f"{cat}/{port}"
-        rows = get_port_status(_conn(), target=target, origin=origin)
-        if not rows:
-            raise HTTPException(
-                status_code=404, detail=f"Unknown port status: {target} {origin}"
+        with _conn() as conn:
+            rows = get_port_status(conn, target=target, origin=origin)
+            if not rows:
+                raise HTTPException(
+                    status_code=404, detail=f"Unknown port status: {target} {origin}"
+                )
+            return templates.TemplateResponse(
+                request,
+                "port_detail.html",
+                {
+                    "title": f"{origin} {target}",
+                    "target": target,
+                    "origin": origin,
+                    "status": rows[0],
+                    "history": get_port_history(conn, target, origin, limit=20),
+                },
             )
-        return templates.TemplateResponse(
-            request,
-            "port_detail.html",
-            {
-                "title": f"{origin} {target}",
-                "target": target,
-                "origin": origin,
-                "status": rows[0],
-                "history": get_port_history(_conn(), target, origin, limit=20),
-            },
-        )
 
     @app.get("/builds", response_class=HTMLResponse)
     def dashboard_builds(
@@ -359,32 +381,34 @@ def create_app(db_path: str | Path) -> Any:
         build_type: str | None = None,
         limit: int = Query(default=50, ge=1, le=500),
     ) -> Any:
-        runs = list_build_runs(
-            _conn(), target=target, build_type=build_type, limit=limit
-        )
-        compare_links = _resolve_compare_links(runs)
-        return templates.TemplateResponse(
-            request,
-            "builds.html",
-            {
-                "title": "Builds",
-                "runs": runs,
-                "compare_links": compare_links,
-                "target": target,
-                "build_type": build_type,
-            },
-        )
+        with _conn() as conn:
+            runs = list_build_runs(
+                conn, target=target, build_type=build_type, limit=limit
+            )
+            compare_links = _resolve_compare_links(runs)
+            return templates.TemplateResponse(
+                request,
+                "builds.html",
+                {
+                    "title": "Builds",
+                    "runs": runs,
+                    "compare_links": compare_links,
+                    "target": target,
+                    "build_type": build_type,
+                },
+            )
 
     @app.get("/builds/compare", response_class=HTMLResponse)
     def dashboard_build_compare(request: RequestType, a: int, b: int) -> Any:
-        return templates.TemplateResponse(
-            request,
-            "build_compare.html",
-            {
-                "title": "Build Compare",
-                "compare": compare_builds(_conn(), a, b),
-            },
-        )
+        with _conn() as conn:
+            return templates.TemplateResponse(
+                request,
+                "build_compare.html",
+                {
+                    "title": "Build Compare",
+                    "compare": compare_builds(conn, a, b),
+                },
+            )
 
     @app.get("/builds/{run_id}", response_class=HTMLResponse)
     def dashboard_build_detail(
@@ -392,31 +416,32 @@ def create_app(db_path: str | Path) -> Any:
         run_id: int,
         status_filter: str = Query(default="all", alias="filter"),
     ) -> Any:
-        payload = {
-            "build_run": get_build_run(_conn(), run_id),
-            "results": get_build_results(_conn(), run_id),
-        }
-        build = payload["build_run"]
-        results = payload["results"]
-        if status_filter == "failures":
-            results = [row for row in results if row.get("result") == "failure"]
-        elif status_filter == "successes":
-            results = [row for row in results if row.get("result") == "success"]
-        elif status_filter == "building":
-            results = [row for row in results if row.get("status") == "building"]
-        elif status_filter == "queued":
-            results = [row for row in results if row.get("status") == "queued"]
-        return templates.TemplateResponse(
-            request,
-            "build_detail.html",
-            {
-                "title": f"Build {run_id}",
-                "build": build,
-                "results": results,
-                "status_filter": status_filter,
-                "refresh_seconds": 10 if build.get("finished_at") is None else None,
-            },
-        )
+        with _conn() as conn:
+            payload = {
+                "build_run": get_build_run(conn, run_id),
+                "results": get_build_results(conn, run_id),
+            }
+            build = payload["build_run"]
+            results = payload["results"]
+            if status_filter == "failures":
+                results = [row for row in results if row.get("result") == "failure"]
+            elif status_filter == "successes":
+                results = [row for row in results if row.get("result") == "success"]
+            elif status_filter == "building":
+                results = [row for row in results if row.get("status") == "building"]
+            elif status_filter == "queued":
+                results = [row for row in results if row.get("status") == "queued"]
+            return templates.TemplateResponse(
+                request,
+                "build_detail.html",
+                {
+                    "title": f"Build {run_id}",
+                    "build": build,
+                    "results": results,
+                    "status_filter": status_filter,
+                    "refresh_seconds": 10 if build.get("finished_at") is None else None,
+                },
+            )
 
     @app.get("/diff", response_class=HTMLResponse)
     def dashboard_diff(
@@ -424,19 +449,20 @@ def create_app(db_path: str | Path) -> Any:
         a: str | None = None,
         b: str | None = None,
     ) -> Any:
-        targets = get_target_summary(_conn())
-        diff_payload = get_diff(_conn(), a, b) if a and b else None
-        return templates.TemplateResponse(
-            request,
-            "diff.html",
-            {
-                "title": "Target Diff",
-                "targets": targets,
-                "target_a": a,
-                "target_b": b,
-                "diff": diff_payload,
-            },
-        )
+        with _conn() as conn:
+            targets = get_target_summary(conn)
+            diff_payload = get_diff(conn, a, b) if a and b else None
+            return templates.TemplateResponse(
+                request,
+                "diff.html",
+                {
+                    "title": "Target Diff",
+                    "targets": targets,
+                    "target_a": a,
+                    "target_b": b,
+                    "diff": diff_payload,
+                },
+            )
 
     return app
 
