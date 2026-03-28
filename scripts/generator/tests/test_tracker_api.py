@@ -8,6 +8,7 @@ fastapi = pytest.importorskip("fastapi")
 from fastapi.testclient import TestClient
 
 from dportsv3.tracker.server import create_app
+import dportsv3.tracker.server as tracker_server
 
 
 @pytest.fixture
@@ -215,3 +216,37 @@ def test_api_status_failures_and_diff_endpoints(client: TestClient) -> None:
     assert [row["origin"] for row in failures.json()] == ["devel/foo"]
     assert diff.status_code == 200
     assert [row["origin"] for row in diff.json()["differ"]] == ["devel/foo"]
+
+
+def test_api_uses_fresh_db_connection_per_request(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    open_count = 0
+    real_open_db = tracker_server.open_db
+
+    def _counting_open_db(db_path: str | Path):
+        nonlocal open_count
+        open_count += 1
+        return real_open_db(db_path)
+
+    monkeypatch.setattr(tracker_server, "open_db", _counting_open_db)
+
+    app = create_app(tmp_path / "tracker.db")
+    with TestClient(app) as test_client:
+        start = test_client.post(
+            "/api/builds",
+            json={"target": "@main", "build_type": "test"},
+        )
+        assert start.status_code == 200
+        run_id = start.json()["id"]
+
+        enqueue = test_client.post(
+            f"/api/builds/{run_id}/queue",
+            json={"ports": [{"origin": "devel/foo", "version": "1.0"}]},
+        )
+        assert enqueue.status_code == 200
+
+        detail = test_client.get(f"/api/builds/{run_id}")
+        assert detail.status_code == 200
+
+    assert open_count >= 3

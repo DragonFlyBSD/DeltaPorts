@@ -36,3 +36,6 @@ Notes:
   dsynth variants
 - per-port start hooks enqueue the port before calling `mark-building`, which
   matches tracker DB expectations
+- if `start-build` fails (for example because an active run already exists for
+  the same target/build type), tracking is disabled for the rest of that dsynth
+  run instead of reusing a stale run id from a previous build
