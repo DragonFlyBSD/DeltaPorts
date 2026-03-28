@@ -1,0 +1,22 @@
+# dsynth tracker hook configuration
+
+# Absolute path to the repo-root wrapper or another installed dportsv3 binary.
+DPORTSV3_BIN=/absolute/path/to/DeltaPorts/dportsv3
+
+# Tracker server base URL.
+DPORTSV3_TRACKER_URL=http://127.0.0.1:8080
+
+# Build target associated with this dsynth profile.
+DPORTSV3_TRACKER_TARGET=@2026Q1
+
+# Tracker build type for this dsynth run.
+DPORTSV3_TRACKER_BUILD_TYPE=test
+
+# Directory used to store per-profile active run state.
+DPORTSV3_TRACKER_STATE_DIR=/var/db/dsynth-tracker
+
+# Hook-local log file. Hook failures are logged here and do not fail dsynth.
+DPORTSV3_TRACKER_HOOK_LOG=/var/log/dsynth-tracker-hooks.log
+
+# Optional external log URL prefix. If set, result hooks append `/ORIGIN`.
+# DPORTSV3_TRACKER_LOG_URL_BASE=https://logs.example/dsynth
