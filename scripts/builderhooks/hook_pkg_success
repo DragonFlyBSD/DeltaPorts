@@ -1,0 +1,4 @@
+#!/bin/sh
+
+. "$(dirname "$0")/tracker_common.sh"
+tracker_record_result
