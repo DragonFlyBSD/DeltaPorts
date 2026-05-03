@@ -215,7 +215,6 @@ ensure_base_extracted() {
         mkdir -p "$tmp_dir"
         info "extracting cached base root from $archive_path"
         tar -xpf "$archive_path" -C "$tmp_dir"
-        clear_immutable_flags "$tmp_dir"
         mv "$tmp_dir" "$extracted"
     else
         info "reusing extracted base root $extracted"
@@ -230,7 +229,6 @@ copy_base_root() {
     mkdir -p "$dst"
     info "copying cached base into $dst"
     tar -C "$src" -cpf - . | tar -C "$dst" -xpf -
-    clear_immutable_flags "$dst"
 }
 
 ensure_freebsd_mirror() {
@@ -362,7 +360,7 @@ EOF
 run_in_chroot() {
     root_dir=$1
     shift
-    chroot "$root_dir" /usr/bin/env -i HOME=/root TERM="${TERM:-xterm}" PATH=/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin /bin/sh -lc "$*"
+    chroot "$root_dir" /usr/bin/env -i HOME=/root TERM="${TERM:-xterm}" PATH=/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin /bin/sh -c "$*"
 }
 
 bootstrap_tools() {
@@ -418,7 +416,7 @@ shell_into_env() {
     mount_if_needed "$FREEBSD_WORKTREE" "$ROOT_DIR/work/freebsd-ports"
     info "entering shell for env=$env_name target=$TARGET origin=${ORIGIN:-<full-tree>}"
     info "compose root will be /work/artifacts/compose/$TARGET"
-    exec chroot "$ROOT_DIR" /usr/bin/env -i HOME=/root TERM="${TERM:-xterm}" PATH=/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin /bin/sh -lc '. /root/.dports-dev-env.sh; exec "$DPORTS_DEV_SHELL" -l'
+    exec chroot "$ROOT_DIR" /usr/bin/env -i HOME=/root TERM="${TERM:-xterm}" PATH=/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin /bin/sh -c '. /root/.dports-dev-env.sh; if [ "$DPORTS_DEV_SHELL" = /bin/sh ]; then exec /bin/sh; else exec "$DPORTS_DEV_SHELL" -l; fi'
 }
 
 destroy_env() {
