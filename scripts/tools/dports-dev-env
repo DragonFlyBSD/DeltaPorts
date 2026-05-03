@@ -160,6 +160,9 @@ load_state() {
     [ -f "$state_file" ] || die "environment not found: $env_name"
     # shellcheck disable=SC1090
     . "$state_file"
+    : "${DELTAPORTS_BRANCH:=$DPORTS_DEV_DELTAPORTS_BRANCH}"
+    : "${DPORTS_BRANCH:=$DPORTS_DEV_DPORTS_BRANCH}"
+    : "${HOST_DISTDIR:=$DPORTS_DEV_HOST_DISTDIR}"
 }
 
 init_partial_env_state() {
