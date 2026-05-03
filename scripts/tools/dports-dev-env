@@ -1,0 +1,502 @@
+#!/bin/sh
+
+set -eu
+
+SELF_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+REPO_ROOT=$(CDPATH= cd -- "$SELF_DIR/../.." && pwd)
+
+DPORTS_DEV_CACHE_ROOT=${DPORTS_DEV_CACHE_ROOT:-${HOME}/.cache/dports-dev}
+DPORTS_DEV_ENVS_DIR=${DPORTS_DEV_ENVS_DIR:-$DPORTS_DEV_CACHE_ROOT/envs}
+DPORTS_DEV_BASE_DIR=${DPORTS_DEV_BASE_DIR:-$DPORTS_DEV_CACHE_ROOT/base-extracted}
+DPORTS_DEV_DOWNLOAD_DIR=${DPORTS_DEV_DOWNLOAD_DIR:-$DPORTS_DEV_CACHE_ROOT/base-downloads}
+DPORTS_DEV_REPOS_DIR=${DPORTS_DEV_REPOS_DIR:-$DPORTS_DEV_CACHE_ROOT/repos}
+DPORTS_DEV_WORKTREES_DIR=${DPORTS_DEV_WORKTREES_DIR:-$DPORTS_DEV_CACHE_ROOT/worktrees}
+DPORTS_DEV_AVALON_RELEASES_URL=${DPORTS_DEV_AVALON_RELEASES_URL:-https://avalon.dragonflybsd.org/snapshots/x86_64/assets/releases/}
+DPORTS_DEV_FREEBSD_PORTS_URL=${DPORTS_DEV_FREEBSD_PORTS_URL:-https://git.FreeBSD.org/ports.git}
+DPORTS_DEV_TOOL_PKGS_REQUIRED=${DPORTS_DEV_TOOL_PKGS_REQUIRED:-bash curl git patch jq}
+DPORTS_DEV_PYTHON_PKGS=${DPORTS_DEV_PYTHON_PKGS:-python313 python312 python311}
+DPORTS_DEV_TOOL_PKGS_OPTIONAL=${DPORTS_DEV_TOOL_PKGS_OPTIONAL:-python311 python312 python313 py311-pip py312-pip py313-pip genpatch}
+
+usage() {
+    cat <<'EOF'
+usage: scripts/tools/dports-dev-env ACTION [options]
+
+Actions:
+  create   Create one throwaway DragonFly chroot dev environment
+  shell    Enter one existing environment via chroot
+  destroy  Unmount and remove one environment
+  list     List known environments
+
+create options:
+  --name NAME          Environment name (default: derived from target/origin)
+  --target TARGET      Compose target, e.g. @2026Q2 (required)
+  --origin ORIGIN      Optional selected origin, e.g. editors/vim
+  --delta-root PATH    Host DeltaPorts checkout (default: this repo)
+  --backend NAME       Backend name (default: chroot)
+  --freebsd-branch BR  Override FreeBSD branch (default: derived from target)
+  --shell              Enter the shell after creation succeeds
+
+shell options:
+  NAME                 Environment name
+
+destroy options:
+  NAME                 Environment name
+
+Environment variables:
+  DPORTS_DEV_CACHE_ROOT
+  DPORTS_DEV_AVALON_RELEASES_URL
+  DPORTS_DEV_FREEBSD_PORTS_URL
+  DPORTS_DEV_TOOL_PKGS_REQUIRED
+  DPORTS_DEV_PYTHON_PKGS
+  DPORTS_DEV_TOOL_PKGS_OPTIONAL
+EOF
+}
+
+die() {
+    printf '%s\n' "dports-dev-env: $*" >&2
+    exit 1
+}
+
+log() {
+    printf '%s\n' "dports-dev-env: $*" >&2
+}
+
+need_cmd() {
+    command -v "$1" >/dev/null 2>&1 || die "required command not found: $1"
+}
+
+require_root() {
+    [ "$(id -u)" -eq 0 ] || die "must run as root"
+}
+
+ensure_dirs() {
+    mkdir -p "$DPORTS_DEV_CACHE_ROOT" "$DPORTS_DEV_ENVS_DIR" "$DPORTS_DEV_BASE_DIR" \
+        "$DPORTS_DEV_DOWNLOAD_DIR" "$DPORTS_DEV_REPOS_DIR" "$DPORTS_DEV_WORKTREES_DIR"
+}
+
+sanitize_name() {
+    printf '%s' "$1" | tr '/:@ ' '____' | tr -cd 'A-Za-z0-9._-'
+}
+
+target_to_branch() {
+    case "$1" in
+        @main) printf '%s\n' main ;;
+        @20[0-9][0-9]Q[1-4]) printf '%s\n' "${1#@}" ;;
+        *) die "unsupported target: $1" ;;
+    esac
+}
+
+default_env_name() {
+    target=$1
+    origin=${2:-}
+    base=$(sanitize_name "${target#@}")
+    if [ -n "$origin" ]; then
+        printf '%s\n' "${base}-$(sanitize_name "$origin")"
+    else
+        printf '%s\n' "$base"
+    fi
+}
+
+state_path() {
+    printf '%s/state.env\n' "$DPORTS_DEV_ENVS_DIR/$1"
+}
+
+root_path() {
+    printf '%s/root\n' "$DPORTS_DEV_ENVS_DIR/$1"
+}
+
+load_state() {
+    env_name=$1
+    state_file=$(state_path "$env_name")
+    [ -f "$state_file" ] || die "environment not found: $env_name"
+    # shellcheck disable=SC1090
+    . "$state_file"
+}
+
+write_state() {
+    env_name=$1
+    env_dir=$DPORTS_DEV_ENVS_DIR/$env_name
+    mkdir -p "$env_dir"
+    state_file=$(state_path "$env_name")
+    tmp_file="$state_file.tmp.$$"
+    umask 077
+    cat > "$tmp_file" <<EOF
+ENV_NAME=$ENV_NAME
+BACKEND=$BACKEND
+TARGET=$TARGET
+ORIGIN=$ORIGIN
+FREEBSD_BRANCH=$FREEBSD_BRANCH
+DELTA_ROOT=$DELTA_ROOT
+FREEBSD_WORKTREE=$FREEBSD_WORKTREE
+BASE_ARCHIVE=$BASE_ARCHIVE
+BASE_CACHE_KEY=$BASE_CACHE_KEY
+BASE_EXTRACTED_ROOT=$BASE_EXTRACTED_ROOT
+ROOT_DIR=$ROOT_DIR
+CREATED_AT=$CREATED_AT
+EOF
+    mv -f "$tmp_file" "$state_file"
+}
+
+fetch_latest_world_asset() {
+    listing=$(curl -fsSL "$DPORTS_DEV_AVALON_RELEASES_URL") || die "failed to fetch Avalon listing"
+    asset=$(printf '%s\n' "$listing" | grep -Eo 'DragonFly-x86_64-[^"<>[:space:]]*\.world\.tar\.gz' | sort -u | sort | tail -n 1)
+    [ -n "$asset" ] || die "could not locate DragonFly x86_64 world asset in Avalon listing"
+    printf '%s\n' "$asset"
+}
+
+ensure_base_archive() {
+    asset=$1
+    archive_path="$DPORTS_DEV_DOWNLOAD_DIR/$asset"
+    if [ ! -f "$archive_path" ]; then
+        log "downloading $asset"
+        curl -fL "$DPORTS_DEV_AVALON_RELEASES_URL/$asset" -o "$archive_path"
+    fi
+    printf '%s\n' "$archive_path"
+}
+
+ensure_base_extracted() {
+    cache_key=$1
+    archive_path=$2
+    extracted="$DPORTS_DEV_BASE_DIR/$cache_key"
+    if [ ! -d "$extracted" ]; then
+        tmp_dir="$extracted.tmp.$$"
+        rm -rf "$tmp_dir"
+        mkdir -p "$tmp_dir"
+        log "extracting $archive_path"
+        tar -xpf "$archive_path" -C "$tmp_dir"
+        mv "$tmp_dir" "$extracted"
+    fi
+    printf '%s\n' "$extracted"
+}
+
+copy_base_root() {
+    src=$1
+    dst=$2
+    [ ! -e "$dst" ] || die "destination already exists: $dst"
+    mkdir -p "$dst"
+    log "copying cached base into $dst"
+    tar -C "$src" -cpf - . | tar -C "$dst" -xpf -
+}
+
+ensure_freebsd_mirror() {
+    mirror="$DPORTS_DEV_REPOS_DIR/freebsd-ports.git"
+    if [ ! -d "$mirror" ]; then
+        log "creating FreeBSD ports mirror"
+        git clone --mirror "$DPORTS_DEV_FREEBSD_PORTS_URL" "$mirror"
+    else
+        log "updating FreeBSD ports mirror"
+        git --git-dir="$mirror" fetch --prune origin
+    fi
+    printf '%s\n' "$mirror"
+}
+
+ensure_freebsd_worktree() {
+    branch=$1
+    mirror=$2
+    worktree="$DPORTS_DEV_WORKTREES_DIR/freebsd-ports/$branch"
+    ref="refs/remotes/origin/$branch"
+    git --git-dir="$mirror" rev-parse --verify "$ref" >/dev/null 2>&1 || die "branch not found in FreeBSD mirror: $branch"
+    mkdir -p "$(dirname "$worktree")"
+    if [ ! -d "$worktree/.git" ]; then
+        log "creating FreeBSD worktree for $branch"
+        git --git-dir="$mirror" worktree add --force --detach "$worktree" "$ref"
+    else
+        log "refreshing FreeBSD worktree for $branch"
+        git -C "$worktree" reset --hard "$ref"
+        git -C "$worktree" clean -fdx
+    fi
+    printf '%s\n' "$worktree"
+}
+
+mount_if_needed() {
+    src=$1
+    dst=$2
+    mkdir -p "$dst"
+    if mount | grep -F " on $dst " >/dev/null 2>&1; then
+        return 0
+    fi
+    mount_null "$src" "$dst"
+}
+
+umount_if_needed() {
+    path=$1
+    if mount | grep -F " on $path " >/dev/null 2>&1; then
+        umount "$path"
+    fi
+}
+
+prepare_root_runtime() {
+    root_dir=$1
+    mkdir -p "$root_dir/dev" "$root_dir/proc" "$root_dir/work"
+    if [ -f /etc/resolv.conf ]; then
+        mkdir -p "$root_dir/etc"
+        cp /etc/resolv.conf "$root_dir/etc/resolv.conf"
+    fi
+    mount_if_needed /dev "$root_dir/dev"
+    if ! mount | grep -F " on $root_dir/proc " >/dev/null 2>&1; then
+        mount_procfs proc "$root_dir/proc"
+    fi
+}
+
+write_shell_rc() {
+    root_dir=$1
+    mkdir -p "$root_dir/root"
+    cat > "$root_dir/root/.dports-dev-env.sh" <<EOF
+export DELTAPORTS_ROOT=/work/DeltaPorts
+export FREEBSD_PORTS_ROOT=/work/freebsd-ports
+export DPORTS_DEV_ENV=$ENV_NAME
+export DPORTS_TARGET=$TARGET
+export DPORTS_ORIGIN=$ORIGIN
+export DPORTS_COMPOSE_ROOT=/work/artifacts/compose/$TARGET
+export PATH=/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin
+
+if [ -n "\$DPORTS_ORIGIN" ] && [ -d "\$DPORTS_COMPOSE_ROOT/\$DPORTS_ORIGIN" ]; then
+    cd "\$DPORTS_COMPOSE_ROOT/\$DPORTS_ORIGIN"
+elif [ -d "\$DPORTS_COMPOSE_ROOT" ]; then
+    cd "\$DPORTS_COMPOSE_ROOT"
+else
+    cd /work/DeltaPorts
+fi
+
+regen() {
+    if [ -n "\$DPORTS_ORIGIN" ]; then
+        /work/DeltaPorts/dportsv3 compose --target "\$DPORTS_TARGET" --delta-root /work/DeltaPorts --freebsd-root /work/freebsd-ports --output "\$DPORTS_COMPOSE_ROOT" --replace-output --oracle-profile off --origin "\$DPORTS_ORIGIN"
+    else
+        /work/DeltaPorts/dportsv3 compose --target "\$DPORTS_TARGET" --delta-root /work/DeltaPorts --freebsd-root /work/freebsd-ports --output "\$DPORTS_COMPOSE_ROOT" --replace-output --oracle-profile off
+    fi
+}
+
+reapply() {
+    if [ -z "\$DPORTS_ORIGIN" ]; then
+        printf '%s\n' 'reapply requires the environment to have been created with --origin' >&2
+        return 1
+    fi
+    /work/DeltaPorts/dportsv3 dsl apply "/work/DeltaPorts/ports/\$DPORTS_ORIGIN/overlay.dops" --port-root "\$DPORTS_COMPOSE_ROOT/\$DPORTS_ORIGIN" --target "\$DPORTS_TARGET" --oracle-profile off
+}
+
+showenv() {
+    env | grep '^DPORTS_' | sort
+}
+
+if command -v bash >/dev/null 2>&1; then
+    export DPORTS_DEV_SHELL=\$(command -v bash)
+else
+    export DPORTS_DEV_SHELL=/bin/sh
+fi
+
+PS1="(dports-dev:$ENV_NAME) \${PS1:-\\u@\\h:\\w\\$ }"
+export PS1
+EOF
+}
+
+run_in_chroot() {
+    root_dir=$1
+    shift
+    chroot "$root_dir" /usr/bin/env -i HOME=/root TERM="${TERM:-xterm}" PATH=/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin /bin/sh -lc "$*"
+}
+
+bootstrap_tools() {
+    root_dir=$1
+    if ! run_in_chroot "$root_dir" 'command -v pkg >/dev/null 2>&1'; then
+        if run_in_chroot "$root_dir" 'command -v python3 >/dev/null 2>&1'; then
+            log "pkg is not present in the extracted world; skipping tool bootstrap"
+            return 0
+        fi
+        die "pkg is not present in the extracted world and python3 is unavailable"
+    fi
+    run_in_chroot "$root_dir" 'ASSUME_ALWAYS_YES=yes pkg bootstrap -yf >/dev/null 2>&1 || true'
+    run_in_chroot "$root_dir" 'ASSUME_ALWAYS_YES=yes pkg update -f >/dev/null 2>&1 || true'
+    for pkg_name in $DPORTS_DEV_TOOL_PKGS_REQUIRED; do
+        run_in_chroot "$root_dir" "ASSUME_ALWAYS_YES=yes pkg install -y $pkg_name >/dev/null" || die "failed to install required package in chroot: $pkg_name"
+    done
+    for pkg_name in $DPORTS_DEV_PYTHON_PKGS; do
+        if run_in_chroot "$root_dir" 'command -v python3 >/dev/null 2>&1'; then
+            break
+        fi
+        run_in_chroot "$root_dir" "ASSUME_ALWAYS_YES=yes pkg install -y $pkg_name >/dev/null" || log "python candidate unavailable or failed: $pkg_name"
+    done
+    run_in_chroot "$root_dir" 'command -v python3 >/dev/null 2>&1' || die "failed to install a python3 runtime inside the chroot"
+    for pkg_name in $DPORTS_DEV_TOOL_PKGS_OPTIONAL; do
+        run_in_chroot "$root_dir" "ASSUME_ALWAYS_YES=yes pkg install -y $pkg_name >/dev/null" || log "optional package unavailable or failed: $pkg_name"
+    done
+}
+
+compose_inside_env() {
+    root_dir=$1
+    mkdir -p "$root_dir/work/artifacts/compose"
+    compose_cmd="/work/DeltaPorts/dportsv3 compose --target $TARGET --delta-root /work/DeltaPorts --freebsd-root /work/freebsd-ports --output /work/artifacts/compose/$TARGET --replace-output --oracle-profile off"
+    run_in_chroot "$root_dir" "$compose_cmd"
+}
+
+shell_into_env() {
+    env_name=$1
+    load_state "$env_name"
+    [ "$BACKEND" = "chroot" ] || die "unsupported backend in environment: $BACKEND"
+    prepare_root_runtime "$ROOT_DIR"
+    mount_if_needed "$DELTA_ROOT" "$ROOT_DIR/work/DeltaPorts"
+    mount_if_needed "$FREEBSD_WORKTREE" "$ROOT_DIR/work/freebsd-ports"
+    exec chroot "$ROOT_DIR" /usr/bin/env -i HOME=/root TERM="${TERM:-xterm}" PATH=/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin /bin/sh -lc '. /root/.dports-dev-env.sh; exec "$DPORTS_DEV_SHELL" -l'
+}
+
+destroy_env() {
+    env_name=$1
+    load_state "$env_name"
+    umount_if_needed "$ROOT_DIR/work/freebsd-ports"
+    umount_if_needed "$ROOT_DIR/work/DeltaPorts"
+    umount_if_needed "$ROOT_DIR/proc"
+    umount_if_needed "$ROOT_DIR/dev"
+    rm -rf "$DPORTS_DEV_ENVS_DIR/$env_name"
+}
+
+list_envs() {
+    if [ ! -d "$DPORTS_DEV_ENVS_DIR" ]; then
+        exit 0
+    fi
+    for state_file in "$DPORTS_DEV_ENVS_DIR"/*/state.env; do
+        [ -f "$state_file" ] || continue
+        env_name=$(basename "$(dirname "$state_file")")
+        # shellcheck disable=SC1090
+        . "$state_file"
+        printf '%s\t%s\t%s\t%s\n' "$env_name" "$BACKEND" "$TARGET" "$ORIGIN"
+    done
+}
+
+create_env() {
+    require_root
+    need_cmd curl
+    need_cmd tar
+    need_cmd git
+    need_cmd chroot
+    need_cmd mount_null
+    need_cmd mount_procfs
+
+    TARGET=
+    ORIGIN=
+    DELTA_ROOT=$REPO_ROOT
+    BACKEND=chroot
+    FREEBSD_BRANCH=
+    ENV_NAME=
+    auto_shell=0
+
+    while [ "$#" -gt 0 ]; do
+        case "$1" in
+            --name)
+                [ "$#" -ge 2 ] || die "--name requires a value"
+                ENV_NAME=$2
+                shift 2
+                ;;
+            --target)
+                [ "$#" -ge 2 ] || die "--target requires a value"
+                TARGET=$2
+                shift 2
+                ;;
+            --origin)
+                [ "$#" -ge 2 ] || die "--origin requires a value"
+                ORIGIN=$2
+                shift 2
+                ;;
+            --delta-root)
+                [ "$#" -ge 2 ] || die "--delta-root requires a value"
+                DELTA_ROOT=$2
+                shift 2
+                ;;
+            --backend)
+                [ "$#" -ge 2 ] || die "--backend requires a value"
+                BACKEND=$2
+                shift 2
+                ;;
+            --freebsd-branch)
+                [ "$#" -ge 2 ] || die "--freebsd-branch requires a value"
+                FREEBSD_BRANCH=$2
+                shift 2
+                ;;
+            --shell)
+                auto_shell=1
+                shift
+                ;;
+            --help|-h)
+                usage
+                exit 0
+                ;;
+            *)
+                die "unknown create option: $1"
+                ;;
+        esac
+    done
+
+    [ -n "$TARGET" ] || die "--target is required"
+    [ "$BACKEND" = "chroot" ] || die "unsupported backend: $BACKEND"
+    [ -d "$DELTA_ROOT" ] || die "Delta root does not exist: $DELTA_ROOT"
+    [ -f "$DELTA_ROOT/dportsv3" ] || die "Delta root does not look like this repo: $DELTA_ROOT"
+
+    if [ -z "$FREEBSD_BRANCH" ]; then
+        FREEBSD_BRANCH=$(target_to_branch "$TARGET")
+    fi
+    if [ -z "$ENV_NAME" ]; then
+        ENV_NAME=$(default_env_name "$TARGET" "$ORIGIN")
+    fi
+
+    env_dir="$DPORTS_DEV_ENVS_DIR/$ENV_NAME"
+    ROOT_DIR=$(root_path "$ENV_NAME")
+    [ ! -e "$env_dir" ] || die "environment already exists: $ENV_NAME"
+
+    asset=$(fetch_latest_world_asset)
+    BASE_ARCHIVE=$(ensure_base_archive "$asset")
+    BASE_CACHE_KEY=${asset%.tar.gz}
+    BASE_EXTRACTED_ROOT=$(ensure_base_extracted "$BASE_CACHE_KEY" "$BASE_ARCHIVE")
+    FREEBSD_MIRROR=$(ensure_freebsd_mirror)
+    FREEBSD_WORKTREE=$(ensure_freebsd_worktree "$FREEBSD_BRANCH" "$FREEBSD_MIRROR")
+
+    copy_base_root "$BASE_EXTRACTED_ROOT" "$ROOT_DIR"
+    prepare_root_runtime "$ROOT_DIR"
+    mount_if_needed "$DELTA_ROOT" "$ROOT_DIR/work/DeltaPorts"
+    mount_if_needed "$FREEBSD_WORKTREE" "$ROOT_DIR/work/freebsd-ports"
+    mkdir -p "$ROOT_DIR/work/artifacts/compose"
+    CREATED_AT=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+    write_shell_rc "$ROOT_DIR"
+    write_state "$ENV_NAME"
+
+    bootstrap_tools "$ROOT_DIR"
+    if ! compose_inside_env "$ROOT_DIR"; then
+        log "compose failed; environment retained for manual investigation"
+        exit 1
+    fi
+
+    if [ "$auto_shell" -eq 1 ]; then
+        shell_into_env "$ENV_NAME"
+    fi
+
+    log "created environment $ENV_NAME"
+}
+
+main() {
+    ensure_dirs
+    action=${1:-}
+    case "$action" in
+        create)
+            shift
+            create_env "$@"
+            ;;
+        shell)
+            require_root
+            [ "$#" -eq 2 ] || die "shell requires an environment name"
+            shell_into_env "$2"
+            ;;
+        destroy)
+            require_root
+            [ "$#" -eq 2 ] || die "destroy requires an environment name"
+            destroy_env "$2"
+            ;;
+        list)
+            list_envs
+            ;;
+        --help|-h|help|'')
+            usage
+            ;;
+        *)
+            die "unknown action: $action"
+            ;;
+    esac
+}
+
+main "$@"
