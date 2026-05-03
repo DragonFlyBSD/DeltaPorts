@@ -380,6 +380,8 @@ export DPORTS_ORIGIN=$ORIGIN
 export DPORTS_COMPOSE_ROOT=/work/artifacts/compose/$TARGET
 export DPORTS_LOCK_ROOT=/work/DPorts
 export DISTDIR=/usr/distfiles
+export DPORTS_DOC_USER_GUIDE=https://github.com/DragonFlyBSD/DeltaPorts/blob/master/docs/dportsv3-user-guide.md
+export DPORTS_DOC_DEV_ENV=https://github.com/DragonFlyBSD/DeltaPorts/blob/master/docs/dev-chroot-environment.md
 export PATH=/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin
 
 if [ -n "\$DPORTS_ORIGIN" ] && [ -d "\$DPORTS_COMPOSE_ROOT/\$DPORTS_ORIGIN" ]; then
@@ -410,6 +412,30 @@ showenv() {
     env | grep '^DPORTS_' | sort
 }
 
+showwelcome() {
+    printf '%s\n' "dports-dev: $DPORTS_DEV_ENV"
+    printf '%s\n' "Target: $DPORTS_TARGET"
+    if [ -n "$DPORTS_ORIGIN" ]; then
+        printf '%s\n' "Origin: $DPORTS_ORIGIN"
+    else
+        printf '%s\n' 'Origin: full tree'
+    fi
+    printf '%s\n' 'Paths:'
+    printf '  DeltaPorts: %s\n' "$DELTAPORTS_ROOT"
+    printf '  FreeBSD ports: %s\n' "$FREEBSD_PORTS_ROOT"
+    printf '  DPorts: %s\n' "$DPORTS_LOCK_ROOT"
+    printf '  Compose: %s\n' "$DPORTS_COMPOSE_ROOT"
+    printf '  Distfiles: %s\n' "$DISTDIR"
+    if [ -n "$DPORTS_ORIGIN" ]; then
+        printf '  Composed origin: %s\n' "$DPORTS_COMPOSE_ROOT/$DPORTS_ORIGIN"
+        printf '  Overlay: %s\n' "$DELTAPORTS_ROOT/ports/$DPORTS_ORIGIN"
+    fi
+    printf '%s\n' 'Docs:'
+    printf '  %s\n' "$DPORTS_DOC_USER_GUIDE"
+    printf '  %s\n' "$DPORTS_DOC_DEV_ENV"
+    printf '%s\n' 'Helpers: regen reapply showenv'
+}
+
 if [ -n "\${BASH_VERSION:-}" ]; then
     _dports_label="\[\033[1;34m\]dports-dev\[\033[0m\]"
     _dports_name="\[\033[1;32m\]\${DPORTS_DEV_ENV}\[\033[0m\]"
@@ -420,6 +446,7 @@ else
     PS1="\${_dports_label}:\${_dports_name} # "
 fi
 export PS1
+showwelcome
 EOF
 }
 
