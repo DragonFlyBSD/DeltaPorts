@@ -371,41 +371,42 @@ prepare_root_runtime() {
 write_shell_rc() {
     root_dir=$1
     mkdir -p "$root_dir/root"
-    cat > "$root_dir/root/.dports-dev-env.sh" <<EOF
-export DELTAPORTS_ROOT=/work/DeltaPorts
-export FREEBSD_PORTS_ROOT=/work/freebsd-ports
-export DPORTS_DEV_ENV=$ENV_NAME
-export DPORTS_TARGET=$TARGET
-export DPORTS_ORIGIN=$ORIGIN
-export DPORTS_COMPOSE_ROOT=/work/artifacts/compose/$TARGET
-export DPORTS_LOCK_ROOT=/work/DPorts
-export DISTDIR=/usr/distfiles
-export DPORTS_DOC_USER_GUIDE=https://github.com/DragonFlyBSD/DeltaPorts/blob/master/docs/dportsv3-user-guide.md
-export DPORTS_DOC_DEV_ENV=https://github.com/DragonFlyBSD/DeltaPorts/blob/master/docs/dev-chroot-environment.md
-export PATH=/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin
+    {
+        printf 'export DELTAPORTS_ROOT=%s\n' '/work/DeltaPorts'
+        printf 'export FREEBSD_PORTS_ROOT=%s\n' '/work/freebsd-ports'
+        printf 'export DPORTS_DEV_ENV=%s\n' "$(shell_quote "$ENV_NAME")"
+        printf 'export DPORTS_TARGET=%s\n' "$(shell_quote "$TARGET")"
+        printf 'export DPORTS_ORIGIN=%s\n' "$(shell_quote "$ORIGIN")"
+        printf 'export DPORTS_COMPOSE_ROOT=%s\n' "$(shell_quote "/work/artifacts/compose/$TARGET")"
+        printf 'export DPORTS_LOCK_ROOT=%s\n' '/work/DPorts'
+        printf 'export DISTDIR=%s\n' '/usr/distfiles'
+        printf 'export DPORTS_DOC_USER_GUIDE=%s\n' 'https://github.com/DragonFlyBSD/DeltaPorts/blob/master/docs/dportsv3-user-guide.md'
+        printf 'export DPORTS_DOC_DEV_ENV=%s\n' 'https://github.com/DragonFlyBSD/DeltaPorts/blob/master/docs/dev-chroot-environment.md'
+        printf 'export PATH=%s\n' '/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin'
+        cat <<'EOF'
 
-if [ -n "\$DPORTS_ORIGIN" ] && [ -d "\$DPORTS_COMPOSE_ROOT/\$DPORTS_ORIGIN" ]; then
-    cd "\$DPORTS_COMPOSE_ROOT/\$DPORTS_ORIGIN"
-elif [ -d "\$DPORTS_COMPOSE_ROOT" ]; then
-    cd "\$DPORTS_COMPOSE_ROOT"
+if [ -n "$DPORTS_ORIGIN" ] && [ -d "$DPORTS_COMPOSE_ROOT/$DPORTS_ORIGIN" ]; then
+    cd "$DPORTS_COMPOSE_ROOT/$DPORTS_ORIGIN"
+elif [ -d "$DPORTS_COMPOSE_ROOT" ]; then
+    cd "$DPORTS_COMPOSE_ROOT"
 else
     cd /work/DeltaPorts
 fi
 
 regen() {
-    if [ -n "\$DPORTS_ORIGIN" ]; then
-        /work/DeltaPorts/dportsv3 compose --target "\$DPORTS_TARGET" --delta-root /work/DeltaPorts --freebsd-root /work/freebsd-ports --lock-root "\$DPORTS_LOCK_ROOT" --output "\$DPORTS_COMPOSE_ROOT" --replace-output --oracle-profile off --origin "\$DPORTS_ORIGIN"
+    if [ -n "$DPORTS_ORIGIN" ]; then
+        /work/DeltaPorts/dportsv3 compose --target "$DPORTS_TARGET" --delta-root /work/DeltaPorts --freebsd-root /work/freebsd-ports --lock-root "$DPORTS_LOCK_ROOT" --output "$DPORTS_COMPOSE_ROOT" --replace-output --oracle-profile off --origin "$DPORTS_ORIGIN"
     else
-        /work/DeltaPorts/dportsv3 compose --target "\$DPORTS_TARGET" --delta-root /work/DeltaPorts --freebsd-root /work/freebsd-ports --lock-root "\$DPORTS_LOCK_ROOT" --output "\$DPORTS_COMPOSE_ROOT" --replace-output --oracle-profile off
+        /work/DeltaPorts/dportsv3 compose --target "$DPORTS_TARGET" --delta-root /work/DeltaPorts --freebsd-root /work/freebsd-ports --lock-root "$DPORTS_LOCK_ROOT" --output "$DPORTS_COMPOSE_ROOT" --replace-output --oracle-profile off
     fi
 }
 
 reapply() {
-    if [ -z "\$DPORTS_ORIGIN" ]; then
+    if [ -z "$DPORTS_ORIGIN" ]; then
         printf '%s\n' 'reapply requires the environment to have been created with --origin' >&2
         return 1
     fi
-    /work/DeltaPorts/dportsv3 dsl apply "/work/DeltaPorts/ports/\$DPORTS_ORIGIN/overlay.dops" --port-root "\$DPORTS_COMPOSE_ROOT/\$DPORTS_ORIGIN" --target "\$DPORTS_TARGET" --oracle-profile off
+    /work/DeltaPorts/dportsv3 dsl apply "/work/DeltaPorts/ports/$DPORTS_ORIGIN/overlay.dops" --port-root "$DPORTS_COMPOSE_ROOT/$DPORTS_ORIGIN" --target "$DPORTS_TARGET" --oracle-profile off
 }
 
 showenv() {
@@ -413,41 +414,42 @@ showenv() {
 }
 
 showwelcome() {
-    printf '%s\n' "dports-dev: \$DPORTS_DEV_ENV"
-    printf '%s\n' "Target: \$DPORTS_TARGET"
-    if [ -n "\$DPORTS_ORIGIN" ]; then
-        printf '%s\n' "Origin: \$DPORTS_ORIGIN"
+    printf '%s\n' "dports-dev: $DPORTS_DEV_ENV"
+    printf '%s\n' "Target: $DPORTS_TARGET"
+    if [ -n "$DPORTS_ORIGIN" ]; then
+        printf '%s\n' "Origin: $DPORTS_ORIGIN"
     else
         printf '%s\n' 'Origin: full tree'
     fi
     printf '%s\n' 'Paths:'
-    printf '  DeltaPorts: %s\n' "\$DELTAPORTS_ROOT"
-    printf '  FreeBSD ports: %s\n' "\$FREEBSD_PORTS_ROOT"
-    printf '  DPorts: %s\n' "\$DPORTS_LOCK_ROOT"
-    printf '  Compose: %s\n' "\$DPORTS_COMPOSE_ROOT"
-    printf '  Distfiles: %s\n' "\$DISTDIR"
-    if [ -n "\$DPORTS_ORIGIN" ]; then
-        printf '  Composed origin: %s\n' "\$DPORTS_COMPOSE_ROOT/\$DPORTS_ORIGIN"
-        printf '  Overlay: %s\n' "\$DELTAPORTS_ROOT/ports/\$DPORTS_ORIGIN"
+    printf '  DeltaPorts: %s\n' "$DELTAPORTS_ROOT"
+    printf '  FreeBSD ports: %s\n' "$FREEBSD_PORTS_ROOT"
+    printf '  DPorts: %s\n' "$DPORTS_LOCK_ROOT"
+    printf '  Compose: %s\n' "$DPORTS_COMPOSE_ROOT"
+    printf '  Distfiles: %s\n' "$DISTDIR"
+    if [ -n "$DPORTS_ORIGIN" ]; then
+        printf '  Composed origin: %s\n' "$DPORTS_COMPOSE_ROOT/$DPORTS_ORIGIN"
+        printf '  Overlay: %s\n' "$DELTAPORTS_ROOT/ports/$DPORTS_ORIGIN"
     fi
     printf '%s\n' 'Docs:'
-    printf '  %s\n' "\$DPORTS_DOC_USER_GUIDE"
-    printf '  %s\n' "\$DPORTS_DOC_DEV_ENV"
+    printf '  %s\n' "$DPORTS_DOC_USER_GUIDE"
+    printf '  %s\n' "$DPORTS_DOC_DEV_ENV"
     printf '%s\n' 'Helpers: regen reapply showenv'
 }
 
-if [ -n "\${BASH_VERSION:-}" ]; then
+if [ -n "${BASH_VERSION:-}" ]; then
     _dports_label="\[\033[1;34m\]dports-dev\[\033[0m\]"
-    _dports_name="\[\033[1;32m\]\${DPORTS_DEV_ENV}\[\033[0m\]"
-    PS1="\${_dports_label}:\${_dports_name} \w\\$ "
+    _dports_name="\[\033[1;32m\]${DPORTS_DEV_ENV}\[\033[0m\]"
+    PS1="${_dports_label}:${_dports_name} \w\\$ "
 else
-    _dports_label=\$(printf '\033[1;34mdports-dev\033[0m')
-    _dports_name=\$(printf '\033[1;32m%s\033[0m' "\$DPORTS_DEV_ENV")
-    PS1="\${_dports_label}:\${_dports_name} # "
+    _dports_label=$(printf '\033[1;34mdports-dev\033[0m')
+    _dports_name=$(printf '\033[1;32m%s\033[0m' "$DPORTS_DEV_ENV")
+    PS1="${_dports_label}:${_dports_name} # "
 fi
 export PS1
 showwelcome
 EOF
+    } > "$root_dir/root/.dports-dev-env.sh"
 }
 
 run_in_chroot() {
@@ -532,7 +534,8 @@ shell_into_env() {
     if run_in_chroot "$ROOT_DIR" 'command -v bash >/dev/null 2>&1'; then
         exec chroot "$ROOT_DIR" /usr/bin/env -i HOME=/root TERM="${TERM:-xterm}" PATH=/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin bash --noprofile --rcfile /root/.dports-dev-env.sh -i
     fi
-    exec chroot "$ROOT_DIR" /usr/bin/env -i HOME=/root TERM="${TERM:-xterm}" PATH=/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin ENV=/root/.dports-dev-env.sh /bin/sh -i
+    warn "bash is unavailable in the environment; falling back to /bin/sh"
+    exec chroot "$ROOT_DIR" /usr/bin/env -i HOME=/root TERM="${TERM:-xterm}" PATH=/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin /bin/sh -c '. /root/.dports-dev-env.sh; exec /bin/sh -i'
 }
 
 destroy_env() {
