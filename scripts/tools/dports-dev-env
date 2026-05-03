@@ -90,6 +90,18 @@ require_root() {
     [ "$(id -u)" -eq 0 ] || die "must run as root"
 }
 
+clear_immutable_flags() {
+    path=$1
+    if [ ! -e "$path" ]; then
+        return 0
+    fi
+    if ! command -v chflags >/dev/null 2>&1; then
+        return 0
+    fi
+    info "clearing immutable flags under $path"
+    chflags -R noschg,nouchg "$path" 2>/dev/null || warn "failed to clear immutable flags under $path"
+}
+
 ensure_dirs() {
     mkdir -p "$DPORTS_DEV_CACHE_ROOT" "$DPORTS_DEV_ENVS_DIR" "$DPORTS_DEV_BASE_DIR" \
         "$DPORTS_DEV_DOWNLOAD_DIR" "$DPORTS_DEV_REPOS_DIR" "$DPORTS_DEV_WORKTREES_DIR"
@@ -203,6 +215,7 @@ ensure_base_extracted() {
         mkdir -p "$tmp_dir"
         info "extracting cached base root from $archive_path"
         tar -xpf "$archive_path" -C "$tmp_dir"
+        clear_immutable_flags "$tmp_dir"
         mv "$tmp_dir" "$extracted"
     else
         info "reusing extracted base root $extracted"
@@ -217,6 +230,7 @@ copy_base_root() {
     mkdir -p "$dst"
     info "copying cached base into $dst"
     tar -C "$src" -cpf - . | tar -C "$dst" -xpf -
+    clear_immutable_flags "$dst"
 }
 
 ensure_freebsd_mirror() {
@@ -416,6 +430,7 @@ destroy_env() {
     umount_if_needed "$ROOT_DIR/work/DeltaPorts"
     umount_if_needed "$ROOT_DIR/proc"
     umount_if_needed "$ROOT_DIR/dev"
+    clear_immutable_flags "$ROOT_DIR"
     rm -rf "$DPORTS_DEV_ENVS_DIR/$env_name"
 }
 

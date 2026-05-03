@@ -75,6 +75,8 @@ The shell defines:
 
 - `compose` failures do not delete the environment; the root is kept for manual
   inspection.
+- The helper clears DragonFly immutable flags (`schg`/`uchg`) inside extracted
+  and throwaway roots so environments can be removed reliably.
 - Tool bootstrapping is best-effort beyond the required package list. The exact
   package name providing `genpatch` may need adjustment for your host package
   repositories.
