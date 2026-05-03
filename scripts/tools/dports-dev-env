@@ -528,6 +528,7 @@ shell_into_env() {
     load_state "$env_name"
     [ "$BACKEND" = "chroot" ] || die "unsupported backend in environment: $BACKEND"
     info "preparing shell entry for environment $env_name"
+    write_shell_rc "$ROOT_DIR"
     prepare_root_runtime "$ROOT_DIR"
     info "entering shell for env=$env_name target=$TARGET origin=${ORIGIN:-<full-tree>}"
     info "compose root will be /work/artifacts/compose/$TARGET"
