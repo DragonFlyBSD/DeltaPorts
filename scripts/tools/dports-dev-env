@@ -14,8 +14,9 @@ DPORTS_DEV_WORKTREES_DIR=${DPORTS_DEV_WORKTREES_DIR:-$DPORTS_DEV_CACHE_ROOT/work
 DPORTS_DEV_AVALON_RELEASES_URL=${DPORTS_DEV_AVALON_RELEASES_URL:-https://avalon.dragonflybsd.org/snapshots/x86_64/assets/releases/}
 DPORTS_DEV_FREEBSD_PORTS_URL=${DPORTS_DEV_FREEBSD_PORTS_URL:-https://git.FreeBSD.org/ports.git}
 DPORTS_DEV_TOOL_PKGS_REQUIRED=${DPORTS_DEV_TOOL_PKGS_REQUIRED:-bash curl git patch jq}
-DPORTS_DEV_PYTHON_PKGS=${DPORTS_DEV_PYTHON_PKGS:-python313 python312 python311}
+DPORTS_DEV_PYTHON_PKGS=${DPORTS_DEV_PYTHON_PKGS:-python3 python313 python312 python311}
 DPORTS_DEV_TOOL_PKGS_OPTIONAL=${DPORTS_DEV_TOOL_PKGS_OPTIONAL:-python311 python312 python313 py311-pip py312-pip py313-pip genpatch}
+DPORTS_DEV_PYTHON_COMMANDS=${DPORTS_DEV_PYTHON_COMMANDS:-python3 python3.13 python3.12 python3.11}
 
 usage() {
     cat <<'EOF'
@@ -48,6 +49,7 @@ Environment variables:
   DPORTS_DEV_FREEBSD_PORTS_URL
   DPORTS_DEV_TOOL_PKGS_REQUIRED
   DPORTS_DEV_PYTHON_PKGS
+  DPORTS_DEV_PYTHON_COMMANDS
   DPORTS_DEV_TOOL_PKGS_OPTIONAL
 EOF
 }
@@ -258,7 +260,6 @@ ensure_freebsd_worktree() {
     git --git-dir="$mirror" worktree prune >&2 || true
     if [ -e "$worktree" ] && [ ! -d "$worktree/.git" ]; then
         warn "removing stale worktree directory $worktree"
-        clear_immutable_flags "$worktree"
         rm -rf "$worktree"
     fi
     if [ ! -d "$worktree/.git" ]; then
@@ -363,6 +364,30 @@ run_in_chroot() {
     chroot "$root_dir" /usr/bin/env -i HOME=/root TERM="${TERM:-xterm}" PATH=/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin /bin/sh -c "$*"
 }
 
+find_python_in_chroot() {
+    root_dir=$1
+    for cmd_name in $DPORTS_DEV_PYTHON_COMMANDS; do
+        if run_in_chroot "$root_dir" "command -v $cmd_name >/dev/null 2>&1"; then
+            printf '%s\n' "$cmd_name"
+            return 0
+        fi
+    done
+    return 1
+}
+
+ensure_python_shim() {
+    root_dir=$1
+    if run_in_chroot "$root_dir" 'command -v python3 >/dev/null 2>&1'; then
+        return 0
+    fi
+    python_cmd=$(find_python_in_chroot "$root_dir") || return 1
+    if [ "$python_cmd" = "python3" ]; then
+        return 0
+    fi
+    info "creating python3 shim for $python_cmd"
+    run_in_chroot "$root_dir" "cmd=\$(command -v $python_cmd) && ln -sf \"\$cmd\" /usr/local/bin/python3"
+}
+
 bootstrap_tools() {
     root_dir=$1
     if ! run_in_chroot "$root_dir" 'command -v pkg >/dev/null 2>&1'; then
@@ -378,13 +403,14 @@ bootstrap_tools() {
         run_in_chroot "$root_dir" "ASSUME_ALWAYS_YES=yes pkg install -y $pkg_name >/dev/null" || die "failed to install required package in chroot: $pkg_name"
     done
     for pkg_name in $DPORTS_DEV_PYTHON_PKGS; do
-        if run_in_chroot "$root_dir" 'command -v python3 >/dev/null 2>&1'; then
+        if find_python_in_chroot "$root_dir" >/dev/null 2>&1; then
             break
         fi
         info "installing python candidate $pkg_name"
         run_in_chroot "$root_dir" "ASSUME_ALWAYS_YES=yes pkg install -y $pkg_name >/dev/null" || warn "python candidate unavailable or failed: $pkg_name"
     done
-    run_in_chroot "$root_dir" 'command -v python3 >/dev/null 2>&1' || die "failed to install a python3 runtime inside the chroot"
+    find_python_in_chroot "$root_dir" >/dev/null 2>&1 || die "failed to install a python3 runtime inside the chroot"
+    ensure_python_shim "$root_dir" || die "failed to create a python3 shim inside the chroot"
     for pkg_name in $DPORTS_DEV_TOOL_PKGS_OPTIONAL; do
         info "installing optional package $pkg_name"
         run_in_chroot "$root_dir" "ASSUME_ALWAYS_YES=yes pkg install -y $pkg_name >/dev/null" || warn "optional package unavailable or failed: $pkg_name"
