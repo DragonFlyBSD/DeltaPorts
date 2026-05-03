@@ -7,14 +7,18 @@ Current scope:
 
 - backend: `chroot` only
 - rootfs source: latest `DragonFly-x86_64-*.world.tar.gz` from Avalon releases
-- DeltaPorts checkout: mounted live from the host
-- FreeBSD ports source: persistent mirror plus branch worktree
+- DeltaPorts source: cached mirror plus env-local writable `master` checkout
+- FreeBSD ports source: persistent mirror, exported into the env for the target
+  branch
+- DPorts source: persistent mirror, exported into the env and used as
+  `--lock-root`
 
 ## Requirements
 
 - run as `root`
 - host commands: `curl`, `tar`, `git`, `chroot`, `mount_null`, `mount_procfs`
-- network access to Avalon and the FreeBSD ports git remote
+- network access to Avalon, the FreeBSD ports git remote, and the DPorts git
+  remote
 
 ## Create One Environment
 
@@ -27,13 +31,14 @@ This will:
 1. discover the latest DragonFly `*world*` asset on Avalon,
 2. cache the downloaded archive,
 3. extract it once into the shared base cache,
-4. create a throwaway env root from that cache,
-5. mount the host DeltaPorts checkout into `/work/DeltaPorts`,
-6. create or refresh a cached FreeBSD ports worktree for the target branch,
-7. mount that worktree into `/work/freebsd-ports`,
-8. run `cd /usr && make pkg-bootstrap` when `pkg` is missing, then bootstrap a few development tools inside the chroot,
-9. run `compose` with `--oracle-profile off`,
-10. drop you into a shell if `--shell` was requested.
+4. refresh cached mirrors for DeltaPorts, FreeBSD ports, and DPorts,
+5. create the throwaway env root from the cached world,
+6. clone env-local DeltaPorts from the cached mirror and export FreeBSD ports
+   and DPorts trees into the env,
+7. run `cd /usr && make pkg-bootstrap` when `pkg` is missing, then bootstrap a
+   few development tools inside the chroot,
+8. run `compose` with `--oracle-profile off` and `--lock-root /work/DPorts`,
+9. drop you into a shell if `--shell` was requested.
 
 ## Enter Later
 
@@ -59,8 +64,9 @@ By default the helper stores state under `~/.cache/dports-dev/`:
 
 - `base-downloads/`: downloaded Avalon archives
 - `base-extracted/`: extracted reusable clean rootfs trees
+- `repos/deltaports.git/`: cached DeltaPorts mirror
 - `repos/freebsd-ports.git/`: persistent git mirror
-- `worktrees/freebsd-ports/<branch>/`: cached worktrees
+- `repos/DPorts.git/`: persistent DPorts mirror
 - `envs/<name>/root/`: throwaway chroot root
 
 ## In-Chroot Helpers

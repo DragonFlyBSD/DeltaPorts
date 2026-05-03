@@ -10,9 +10,11 @@ DPORTS_DEV_ENVS_DIR=${DPORTS_DEV_ENVS_DIR:-$DPORTS_DEV_CACHE_ROOT/envs}
 DPORTS_DEV_BASE_DIR=${DPORTS_DEV_BASE_DIR:-$DPORTS_DEV_CACHE_ROOT/base-extracted}
 DPORTS_DEV_DOWNLOAD_DIR=${DPORTS_DEV_DOWNLOAD_DIR:-$DPORTS_DEV_CACHE_ROOT/base-downloads}
 DPORTS_DEV_REPOS_DIR=${DPORTS_DEV_REPOS_DIR:-$DPORTS_DEV_CACHE_ROOT/repos}
-DPORTS_DEV_WORKTREES_DIR=${DPORTS_DEV_WORKTREES_DIR:-$DPORTS_DEV_CACHE_ROOT/worktrees}
 DPORTS_DEV_AVALON_RELEASES_URL=${DPORTS_DEV_AVALON_RELEASES_URL:-https://avalon.dragonflybsd.org/snapshots/x86_64/assets/releases/}
 DPORTS_DEV_FREEBSD_PORTS_URL=${DPORTS_DEV_FREEBSD_PORTS_URL:-https://git.FreeBSD.org/ports.git}
+DPORTS_DEV_DPORTS_URL=${DPORTS_DEV_DPORTS_URL:-https://github.com/DragonFlyBSD/DPorts.git}
+DPORTS_DEV_DELTAPORTS_BRANCH=${DPORTS_DEV_DELTAPORTS_BRANCH:-master}
+DPORTS_DEV_DPORTS_BRANCH=${DPORTS_DEV_DPORTS_BRANCH:-staged}
 DPORTS_DEV_TOOL_PKGS_REQUIRED=${DPORTS_DEV_TOOL_PKGS_REQUIRED:-bash curl git patch jq}
 DPORTS_DEV_PYTHON_PKGS=${DPORTS_DEV_PYTHON_PKGS:-python3 python313 python312 python311}
 DPORTS_DEV_TOOL_PKGS_OPTIONAL=${DPORTS_DEV_TOOL_PKGS_OPTIONAL:-python311 python312 python313 py311-pip py312-pip py313-pip genpatch}
@@ -32,9 +34,10 @@ create options:
   --name NAME          Environment name (default: derived from target/origin)
   --target TARGET      Compose target, e.g. @2026Q2 (required)
   --origin ORIGIN      Optional selected origin, e.g. editors/vim
-  --delta-root PATH    Host DeltaPorts checkout (default: this repo)
+  --delta-root PATH    Host DeltaPorts checkout used to refresh the cache mirror (default: this repo)
   --backend NAME       Backend name (default: chroot)
   --freebsd-branch BR  Override FreeBSD branch (default: derived from target)
+  --dports-branch BR   Override DPorts branch (default: staged)
   --shell              Enter the shell after creation succeeds
 
 shell options:
@@ -47,6 +50,9 @@ Environment variables:
   DPORTS_DEV_CACHE_ROOT
   DPORTS_DEV_AVALON_RELEASES_URL
   DPORTS_DEV_FREEBSD_PORTS_URL
+  DPORTS_DEV_DPORTS_URL
+  DPORTS_DEV_DELTAPORTS_BRANCH
+  DPORTS_DEV_DPORTS_BRANCH
   DPORTS_DEV_TOOL_PKGS_REQUIRED
   DPORTS_DEV_PYTHON_PKGS
   DPORTS_DEV_PYTHON_COMMANDS
@@ -106,7 +112,7 @@ clear_immutable_flags() {
 
 ensure_dirs() {
     mkdir -p "$DPORTS_DEV_CACHE_ROOT" "$DPORTS_DEV_ENVS_DIR" "$DPORTS_DEV_BASE_DIR" \
-        "$DPORTS_DEV_DOWNLOAD_DIR" "$DPORTS_DEV_REPOS_DIR" "$DPORTS_DEV_WORKTREES_DIR"
+        "$DPORTS_DEV_DOWNLOAD_DIR" "$DPORTS_DEV_REPOS_DIR"
 }
 
 sanitize_name() {
@@ -136,6 +142,12 @@ state_path() {
     printf '%s/state.env\n' "$DPORTS_DEV_ENVS_DIR/$1"
 }
 
+shell_quote() {
+    printf "'"
+    printf '%s' "$1" | sed "s/'/'\\''/g"
+    printf "'"
+}
+
 root_path() {
     printf '%s/root\n' "$DPORTS_DEV_ENVS_DIR/$1"
 }
@@ -154,9 +166,10 @@ init_partial_env_state() {
     BACKEND=chroot
     TARGET=
     ORIGIN=
+    DELTAPORTS_BRANCH=
     FREEBSD_BRANCH=
-    DELTA_ROOT=
-    FREEBSD_WORKTREE=
+    DPORTS_BRANCH=
+    SOURCE_DELTA_ROOT=
     BASE_ARCHIVE=
     BASE_CACHE_KEY=
     BASE_EXTRACTED_ROOT=
@@ -172,18 +185,19 @@ write_state() {
     tmp_file="$state_file.tmp.$$"
     umask 077
     cat > "$tmp_file" <<EOF
-ENV_NAME=$ENV_NAME
-BACKEND=$BACKEND
-TARGET=$TARGET
-ORIGIN=$ORIGIN
-FREEBSD_BRANCH=$FREEBSD_BRANCH
-DELTA_ROOT=$DELTA_ROOT
-FREEBSD_WORKTREE=$FREEBSD_WORKTREE
-BASE_ARCHIVE=$BASE_ARCHIVE
-BASE_CACHE_KEY=$BASE_CACHE_KEY
-BASE_EXTRACTED_ROOT=$BASE_EXTRACTED_ROOT
-ROOT_DIR=$ROOT_DIR
-CREATED_AT=$CREATED_AT
+ENV_NAME=$(shell_quote "$ENV_NAME")
+BACKEND=$(shell_quote "$BACKEND")
+TARGET=$(shell_quote "$TARGET")
+ORIGIN=$(shell_quote "$ORIGIN")
+DELTAPORTS_BRANCH=$(shell_quote "$DELTAPORTS_BRANCH")
+FREEBSD_BRANCH=$(shell_quote "$FREEBSD_BRANCH")
+DPORTS_BRANCH=$(shell_quote "$DPORTS_BRANCH")
+SOURCE_DELTA_ROOT=$(shell_quote "$SOURCE_DELTA_ROOT")
+BASE_ARCHIVE=$(shell_quote "$BASE_ARCHIVE")
+BASE_CACHE_KEY=$(shell_quote "$BASE_CACHE_KEY")
+BASE_EXTRACTED_ROOT=$(shell_quote "$BASE_EXTRACTED_ROOT")
+ROOT_DIR=$(shell_quote "$ROOT_DIR")
+CREATED_AT=$(shell_quote "$CREATED_AT")
 EOF
     mv -f "$tmp_file" "$state_file"
 }
@@ -224,53 +238,82 @@ ensure_base_extracted() {
     printf '%s\n' "$extracted"
 }
 
+copy_tree() {
+    src=$1
+    dst=$2
+    shift 2
+    [ ! -e "$dst" ] || die "destination already exists: $dst"
+    mkdir -p "$dst"
+    tar_args=
+    for pattern in "$@"; do
+        tar_args="$tar_args --exclude=$pattern"
+    done
+    # shellcheck disable=SC2086
+    tar -C "$src" $tar_args -cpf - . | tar -C "$dst" -xpf -
+}
+
 copy_base_root() {
     src=$1
     dst=$2
-    [ ! -e "$dst" ] || die "destination already exists: $dst"
-    mkdir -p "$dst"
     info "copying cached base into $dst"
-    tar -C "$src" -cpf - . | tar -C "$dst" -xpf -
+    copy_tree "$src" "$dst"
 }
 
-ensure_freebsd_mirror() {
-    mirror="$DPORTS_DEV_REPOS_DIR/freebsd-ports.git"
+ensure_remote_git_mirror() {
+    name=$1
+    url=$2
+    mirror="$DPORTS_DEV_REPOS_DIR/$name.git"
     if [ ! -d "$mirror" ]; then
-        info "creating FreeBSD ports mirror at $mirror"
-        git clone --mirror "$DPORTS_DEV_FREEBSD_PORTS_URL" "$mirror"
+        info "creating $name mirror at $mirror"
+        git clone --mirror "$url" "$mirror"
     else
-        info "updating FreeBSD ports mirror $mirror"
+        info "updating $name mirror $mirror"
         git --git-dir="$mirror" fetch --prune origin
     fi
     printf '%s\n' "$mirror"
 }
 
-ensure_freebsd_worktree() {
-    branch=$1
+ensure_local_git_mirror() {
+    name=$1
+    source_repo=$2
+    mirror="$DPORTS_DEV_REPOS_DIR/$name.git"
+    if [ ! -d "$mirror" ]; then
+        info "creating $name mirror from $source_repo"
+        git clone --mirror "$source_repo" "$mirror"
+    else
+        info "updating $name mirror from $source_repo"
+        git --git-dir="$mirror" remote set-url origin "$source_repo"
+        git --git-dir="$mirror" fetch --prune origin '+refs/*:refs/*'
+    fi
+    printf '%s\n' "$mirror"
+}
+
+seed_deltaports_checkout() {
+    mirror=$1
+    branch=$2
+    dest=$3
+    info "cloning DeltaPorts branch $branch into $dest"
+    git clone --branch "$branch" "$mirror" "$dest" >&2
+    if [ -d "$dest/scripts/generator/.venv" ]; then
+        rm -rf "$dest/scripts/generator/.venv"
+    fi
+}
+
+export_git_tree_from_ref() {
+    label=$1
     mirror=$2
-    worktree="$DPORTS_DEV_WORKTREES_DIR/freebsd-ports/$branch"
+    branch=$3
+    dest=$4
     if git --git-dir="$mirror" rev-parse --verify "refs/heads/$branch" >/dev/null 2>&1; then
         ref="refs/heads/$branch"
     elif git --git-dir="$mirror" rev-parse --verify "refs/remotes/origin/$branch" >/dev/null 2>&1; then
         ref="refs/remotes/origin/$branch"
     else
-        die "branch not found in FreeBSD mirror: $branch"
+        die "branch not found in $label mirror: $branch"
     fi
-    mkdir -p "$(dirname "$worktree")"
-    git --git-dir="$mirror" worktree prune >&2 || true
-    if [ -e "$worktree" ] && [ ! -d "$worktree/.git" ]; then
-        warn "removing stale worktree directory $worktree"
-        rm -rf "$worktree"
-    fi
-    if [ ! -d "$worktree/.git" ]; then
-        info "creating FreeBSD worktree for $branch"
-        git --git-dir="$mirror" worktree add --force --detach "$worktree" "$ref" >&2
-    else
-        info "refreshing FreeBSD worktree for $branch"
-        git -C "$worktree" reset --hard "$ref" >&2
-        git -C "$worktree" clean -fdx >&2
-    fi
-    printf '%s\n' "$worktree"
+    info "exporting $label branch $branch into $dest"
+    mkdir -p "$dest"
+    git --git-dir="$mirror" archive "$ref" | tar -C "$dest" -xpf -
 }
 
 mount_if_needed() {
@@ -317,6 +360,7 @@ export DPORTS_DEV_ENV=$ENV_NAME
 export DPORTS_TARGET=$TARGET
 export DPORTS_ORIGIN=$ORIGIN
 export DPORTS_COMPOSE_ROOT=/work/artifacts/compose/$TARGET
+export DPORTS_LOCK_ROOT=/work/DPorts
 export PATH=/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin
 
 if [ -n "\$DPORTS_ORIGIN" ] && [ -d "\$DPORTS_COMPOSE_ROOT/\$DPORTS_ORIGIN" ]; then
@@ -329,9 +373,9 @@ fi
 
 regen() {
     if [ -n "\$DPORTS_ORIGIN" ]; then
-        /work/DeltaPorts/dportsv3 compose --target "\$DPORTS_TARGET" --delta-root /work/DeltaPorts --freebsd-root /work/freebsd-ports --output "\$DPORTS_COMPOSE_ROOT" --replace-output --oracle-profile off --origin "\$DPORTS_ORIGIN"
+        /work/DeltaPorts/dportsv3 compose --target "\$DPORTS_TARGET" --delta-root /work/DeltaPorts --freebsd-root /work/freebsd-ports --lock-root "\$DPORTS_LOCK_ROOT" --output "\$DPORTS_COMPOSE_ROOT" --replace-output --oracle-profile off --origin "\$DPORTS_ORIGIN"
     else
-        /work/DeltaPorts/dportsv3 compose --target "\$DPORTS_TARGET" --delta-root /work/DeltaPorts --freebsd-root /work/freebsd-ports --output "\$DPORTS_COMPOSE_ROOT" --replace-output --oracle-profile off
+        /work/DeltaPorts/dportsv3 compose --target "\$DPORTS_TARGET" --delta-root /work/DeltaPorts --freebsd-root /work/freebsd-ports --lock-root "\$DPORTS_LOCK_ROOT" --output "\$DPORTS_COMPOSE_ROOT" --replace-output --oracle-profile off
     fi
 }
 
@@ -420,7 +464,7 @@ bootstrap_tools() {
 compose_inside_env() {
     root_dir=$1
     mkdir -p "$root_dir/work/artifacts/compose"
-    compose_cmd="/work/DeltaPorts/dportsv3 compose --target $TARGET --delta-root /work/DeltaPorts --freebsd-root /work/freebsd-ports --output /work/artifacts/compose/$TARGET --replace-output --oracle-profile off"
+    compose_cmd="/work/DeltaPorts/dportsv3 compose --target $TARGET --delta-root /work/DeltaPorts --freebsd-root /work/freebsd-ports --lock-root /work/DPorts --output /work/artifacts/compose/$TARGET --replace-output --oracle-profile off"
     if [ -n "$ORIGIN" ]; then
         info "running initial full compose for target $TARGET before origin-focused work on $ORIGIN"
     else
@@ -435,8 +479,6 @@ shell_into_env() {
     [ "$BACKEND" = "chroot" ] || die "unsupported backend in environment: $BACKEND"
     info "preparing shell entry for environment $env_name"
     prepare_root_runtime "$ROOT_DIR"
-    mount_if_needed "$DELTA_ROOT" "$ROOT_DIR/work/DeltaPorts"
-    mount_if_needed "$FREEBSD_WORKTREE" "$ROOT_DIR/work/freebsd-ports"
     info "entering shell for env=$env_name target=$TARGET origin=${ORIGIN:-<full-tree>}"
     info "compose root will be /work/artifacts/compose/$TARGET"
     exec chroot "$ROOT_DIR" /usr/bin/env -i HOME=/root TERM="${TERM:-xterm}" PATH=/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin /bin/sh -c '. /root/.dports-dev-env.sh; if [ "$DPORTS_DEV_SHELL" = /bin/sh ]; then exec /bin/sh; else exec "$DPORTS_DEV_SHELL" -l; fi'
@@ -453,8 +495,6 @@ destroy_env() {
         die "environment not found: $env_name"
     fi
     info "destroying environment $env_name"
-    umount_if_needed "$ROOT_DIR/work/freebsd-ports"
-    umount_if_needed "$ROOT_DIR/work/DeltaPorts"
     umount_if_needed "$ROOT_DIR/proc"
     umount_if_needed "$ROOT_DIR/dev"
     clear_immutable_flags "$ROOT_DIR"
@@ -485,9 +525,11 @@ create_env() {
 
     TARGET=
     ORIGIN=
-    DELTA_ROOT=$REPO_ROOT
+    SOURCE_DELTA_ROOT=$REPO_ROOT
+    DELTAPORTS_BRANCH=$DPORTS_DEV_DELTAPORTS_BRANCH
     BACKEND=chroot
     FREEBSD_BRANCH=
+    DPORTS_BRANCH=$DPORTS_DEV_DPORTS_BRANCH
     ENV_NAME=
     auto_shell=0
 
@@ -510,7 +552,7 @@ create_env() {
                 ;;
             --delta-root)
                 [ "$#" -ge 2 ] || die "--delta-root requires a value"
-                DELTA_ROOT=$2
+                SOURCE_DELTA_ROOT=$2
                 shift 2
                 ;;
             --backend)
@@ -521,6 +563,11 @@ create_env() {
             --freebsd-branch)
                 [ "$#" -ge 2 ] || die "--freebsd-branch requires a value"
                 FREEBSD_BRANCH=$2
+                shift 2
+                ;;
+            --dports-branch)
+                [ "$#" -ge 2 ] || die "--dports-branch requires a value"
+                DPORTS_BRANCH=$2
                 shift 2
                 ;;
             --shell)
@@ -539,8 +586,9 @@ create_env() {
 
     [ -n "$TARGET" ] || die "--target is required"
     [ "$BACKEND" = "chroot" ] || die "unsupported backend: $BACKEND"
-    [ -d "$DELTA_ROOT" ] || die "Delta root does not exist: $DELTA_ROOT"
-    [ -f "$DELTA_ROOT/dportsv3" ] || die "Delta root does not look like this repo: $DELTA_ROOT"
+    [ -d "$SOURCE_DELTA_ROOT" ] || die "Delta root does not exist: $SOURCE_DELTA_ROOT"
+    [ -f "$SOURCE_DELTA_ROOT/dportsv3" ] || die "Delta root does not look like this repo: $SOURCE_DELTA_ROOT"
+    git -C "$SOURCE_DELTA_ROOT" rev-parse --git-dir >/dev/null 2>&1 || die "Delta root is not a git checkout: $SOURCE_DELTA_ROOT"
 
     if [ -z "$FREEBSD_BRANCH" ]; then
         FREEBSD_BRANCH=$(target_to_branch "$TARGET")
@@ -561,19 +609,21 @@ create_env() {
     BASE_CACHE_KEY=${asset%.tar.gz}
     BASE_EXTRACTED_ROOT=$(ensure_base_extracted "$BASE_CACHE_KEY" "$BASE_ARCHIVE")
 
-    step 3 8 "Refreshing FreeBSD ports mirror"
-    FREEBSD_MIRROR=$(ensure_freebsd_mirror)
+    step 3 8 "Refreshing cached repo mirrors"
+    DELTAPORTS_MIRROR=$(ensure_local_git_mirror deltaports "$SOURCE_DELTA_ROOT")
+    FREEBSD_MIRROR=$(ensure_remote_git_mirror freebsd-ports "$DPORTS_DEV_FREEBSD_PORTS_URL")
+    DPORTS_MIRROR=$(ensure_remote_git_mirror DPorts "$DPORTS_DEV_DPORTS_URL")
 
-    step 4 8 "Preparing FreeBSD worktree for $FREEBSD_BRANCH"
-    FREEBSD_WORKTREE=$(ensure_freebsd_worktree "$FREEBSD_BRANCH" "$FREEBSD_MIRROR")
+    step 4 8 "Preparing env source trees"
 
     step 5 8 "Creating throwaway chroot root"
     copy_base_root "$BASE_EXTRACTED_ROOT" "$ROOT_DIR"
 
-    step 6 8 "Mounting live workspaces and writing environment state"
+    step 6 8 "Seeding env-local source trees and writing environment state"
     prepare_root_runtime "$ROOT_DIR"
-    mount_if_needed "$DELTA_ROOT" "$ROOT_DIR/work/DeltaPorts"
-    mount_if_needed "$FREEBSD_WORKTREE" "$ROOT_DIR/work/freebsd-ports"
+    seed_deltaports_checkout "$DELTAPORTS_MIRROR" "$DELTAPORTS_BRANCH" "$ROOT_DIR/work/DeltaPorts"
+    export_git_tree_from_ref freebsd-ports "$FREEBSD_MIRROR" "$FREEBSD_BRANCH" "$ROOT_DIR/work/freebsd-ports"
+    export_git_tree_from_ref DPorts "$DPORTS_MIRROR" "$DPORTS_BRANCH" "$ROOT_DIR/work/DPorts"
     mkdir -p "$ROOT_DIR/work/artifacts/compose"
     CREATED_AT=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
     write_shell_rc "$ROOT_DIR"
