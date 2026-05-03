@@ -229,11 +229,11 @@ ensure_freebsd_worktree() {
     mkdir -p "$(dirname "$worktree")"
     if [ ! -d "$worktree/.git" ]; then
         info "creating FreeBSD worktree for $branch"
-        git --git-dir="$mirror" worktree add --force --detach "$worktree" "$ref"
+        git --git-dir="$mirror" worktree add --force --detach "$worktree" "$ref" >&2
     else
         info "refreshing FreeBSD worktree for $branch"
-        git -C "$worktree" reset --hard "$ref"
-        git -C "$worktree" clean -fdx
+        git -C "$worktree" reset --hard "$ref" >&2
+        git -C "$worktree" clean -fdx >&2
     fi
     printf '%s\n' "$worktree"
 }
