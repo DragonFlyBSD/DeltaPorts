@@ -257,6 +257,12 @@ ensure_freebsd_worktree() {
         die "branch not found in FreeBSD mirror: $branch"
     fi
     mkdir -p "$(dirname "$worktree")"
+    git --git-dir="$mirror" worktree prune >&2 || true
+    if [ -e "$worktree" ] && [ ! -d "$worktree/.git" ]; then
+        warn "removing stale worktree directory $worktree"
+        clear_immutable_flags "$worktree"
+        rm -rf "$worktree"
+    fi
     if [ ! -d "$worktree/.git" ]; then
         info "creating FreeBSD worktree for $branch"
         git --git-dir="$mirror" worktree add --force --detach "$worktree" "$ref" >&2
