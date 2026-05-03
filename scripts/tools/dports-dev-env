@@ -15,6 +15,7 @@ DPORTS_DEV_FREEBSD_PORTS_URL=${DPORTS_DEV_FREEBSD_PORTS_URL:-https://git.FreeBSD
 DPORTS_DEV_DPORTS_URL=${DPORTS_DEV_DPORTS_URL:-https://github.com/DragonFlyBSD/DPorts.git}
 DPORTS_DEV_DELTAPORTS_BRANCH=${DPORTS_DEV_DELTAPORTS_BRANCH:-master}
 DPORTS_DEV_DPORTS_BRANCH=${DPORTS_DEV_DPORTS_BRANCH:-staged}
+DPORTS_DEV_HOST_DISTDIR=${DPORTS_DEV_HOST_DISTDIR:-/usr/distfiles}
 DPORTS_DEV_TOOL_PKGS_REQUIRED=${DPORTS_DEV_TOOL_PKGS_REQUIRED:-bash curl git patch jq}
 DPORTS_DEV_PYTHON_PKGS=${DPORTS_DEV_PYTHON_PKGS:-python3 python313 python312 python311}
 DPORTS_DEV_TOOL_PKGS_OPTIONAL=${DPORTS_DEV_TOOL_PKGS_OPTIONAL:-python311 python312 python313 py311-pip py312-pip py313-pip genpatch}
@@ -53,6 +54,7 @@ Environment variables:
   DPORTS_DEV_DPORTS_URL
   DPORTS_DEV_DELTAPORTS_BRANCH
   DPORTS_DEV_DPORTS_BRANCH
+  DPORTS_DEV_HOST_DISTDIR
   DPORTS_DEV_TOOL_PKGS_REQUIRED
   DPORTS_DEV_PYTHON_PKGS
   DPORTS_DEV_PYTHON_COMMANDS
@@ -169,6 +171,7 @@ init_partial_env_state() {
     DELTAPORTS_BRANCH=
     FREEBSD_BRANCH=
     DPORTS_BRANCH=
+    HOST_DISTDIR=
     SOURCE_DELTA_ROOT=
     BASE_ARCHIVE=
     BASE_CACHE_KEY=
@@ -192,6 +195,7 @@ ORIGIN=$(shell_quote "$ORIGIN")
 DELTAPORTS_BRANCH=$(shell_quote "$DELTAPORTS_BRANCH")
 FREEBSD_BRANCH=$(shell_quote "$FREEBSD_BRANCH")
 DPORTS_BRANCH=$(shell_quote "$DPORTS_BRANCH")
+HOST_DISTDIR=$(shell_quote "$HOST_DISTDIR")
 SOURCE_DELTA_ROOT=$(shell_quote "$SOURCE_DELTA_ROOT")
 BASE_ARCHIVE=$(shell_quote "$BASE_ARCHIVE")
 BASE_CACHE_KEY=$(shell_quote "$BASE_CACHE_KEY")
@@ -293,10 +297,18 @@ seed_deltaports_checkout() {
     branch=$2
     dest=$3
     info "cloning DeltaPorts branch $branch into $dest"
-    git clone --branch "$branch" "$mirror" "$dest" >&2
+    git clone --single-branch --branch "$branch" "$mirror" "$dest" >&2
     if [ -d "$dest/scripts/generator/.venv" ]; then
         rm -rf "$dest/scripts/generator/.venv"
     fi
+}
+
+seed_freebsd_checkout() {
+    mirror=$1
+    branch=$2
+    dest=$3
+    info "cloning freebsd-ports branch $branch into $dest"
+    git clone --single-branch --branch "$branch" "$mirror" "$dest" >&2
 }
 
 export_git_tree_from_ref() {
@@ -348,6 +360,9 @@ prepare_root_runtime() {
         info "mounting procfs at $root_dir/proc"
         mount_procfs proc "$root_dir/proc"
     fi
+    if [ -n "$HOST_DISTDIR" ] && [ -d "$HOST_DISTDIR" ]; then
+        mount_if_needed "$HOST_DISTDIR" "$root_dir/usr/distfiles"
+    fi
 }
 
 write_shell_rc() {
@@ -361,6 +376,7 @@ export DPORTS_TARGET=$TARGET
 export DPORTS_ORIGIN=$ORIGIN
 export DPORTS_COMPOSE_ROOT=/work/artifacts/compose/$TARGET
 export DPORTS_LOCK_ROOT=/work/DPorts
+export DISTDIR=/usr/distfiles
 export PATH=/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin
 
 if [ -n "\$DPORTS_ORIGIN" ] && [ -d "\$DPORTS_COMPOSE_ROOT/\$DPORTS_ORIGIN" ]; then
@@ -391,13 +407,13 @@ showenv() {
     env | grep '^DPORTS_' | sort
 }
 
-if command -v bash >/dev/null 2>&1; then
-    export DPORTS_DEV_SHELL=\$(command -v bash)
+if [ -n "\${BASH_VERSION:-}" ]; then
+    _dports_color_prefix="\[\033[1;35m\](dports-dev:\${DPORTS_DEV_ENV})\[\033[0m\]"
+    PS1="\${_dports_color_prefix} \w\\$ "
 else
-    export DPORTS_DEV_SHELL=/bin/sh
+    _dports_color_prefix=\$(printf '\033[1;35m(dports-dev:%s)\033[0m' "\$DPORTS_DEV_ENV")
+    PS1="\${_dports_color_prefix} # "
 fi
-
-PS1="(dports-dev:$ENV_NAME) \${PS1:-\\u@\\h:\\w\\$ }"
 export PS1
 EOF
 }
@@ -481,7 +497,10 @@ shell_into_env() {
     prepare_root_runtime "$ROOT_DIR"
     info "entering shell for env=$env_name target=$TARGET origin=${ORIGIN:-<full-tree>}"
     info "compose root will be /work/artifacts/compose/$TARGET"
-    exec chroot "$ROOT_DIR" /usr/bin/env -i HOME=/root TERM="${TERM:-xterm}" PATH=/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin /bin/sh -c '. /root/.dports-dev-env.sh; if [ "$DPORTS_DEV_SHELL" = /bin/sh ]; then exec /bin/sh; else exec "$DPORTS_DEV_SHELL" -l; fi'
+    if run_in_chroot "$ROOT_DIR" 'command -v bash >/dev/null 2>&1'; then
+        exec chroot "$ROOT_DIR" /usr/bin/env -i HOME=/root TERM="${TERM:-xterm}" PATH=/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin bash --noprofile --rcfile /root/.dports-dev-env.sh -i
+    fi
+    exec chroot "$ROOT_DIR" /usr/bin/env -i HOME=/root TERM="${TERM:-xterm}" PATH=/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin ENV=/root/.dports-dev-env.sh /bin/sh -i
 }
 
 destroy_env() {
@@ -495,6 +514,9 @@ destroy_env() {
         die "environment not found: $env_name"
     fi
     info "destroying environment $env_name"
+    if [ -n "$HOST_DISTDIR" ] && [ -d "$HOST_DISTDIR" ]; then
+        umount_if_needed "$ROOT_DIR/usr/distfiles"
+    fi
     umount_if_needed "$ROOT_DIR/proc"
     umount_if_needed "$ROOT_DIR/dev"
     clear_immutable_flags "$ROOT_DIR"
@@ -530,6 +552,7 @@ create_env() {
     BACKEND=chroot
     FREEBSD_BRANCH=
     DPORTS_BRANCH=$DPORTS_DEV_DPORTS_BRANCH
+    HOST_DISTDIR=$DPORTS_DEV_HOST_DISTDIR
     ENV_NAME=
     auto_shell=0
 
@@ -622,7 +645,7 @@ create_env() {
     step 6 8 "Seeding env-local source trees and writing environment state"
     prepare_root_runtime "$ROOT_DIR"
     seed_deltaports_checkout "$DELTAPORTS_MIRROR" "$DELTAPORTS_BRANCH" "$ROOT_DIR/work/DeltaPorts"
-    export_git_tree_from_ref freebsd-ports "$FREEBSD_MIRROR" "$FREEBSD_BRANCH" "$ROOT_DIR/work/freebsd-ports"
+    seed_freebsd_checkout "$FREEBSD_MIRROR" "$FREEBSD_BRANCH" "$ROOT_DIR/work/freebsd-ports"
     export_git_tree_from_ref DPorts "$DPORTS_MIRROR" "$DPORTS_BRANCH" "$ROOT_DIR/work/DPorts"
     mkdir -p "$ROOT_DIR/work/artifacts/compose"
     CREATED_AT=$(date -u '+%Y-%m-%dT%H:%M:%SZ')

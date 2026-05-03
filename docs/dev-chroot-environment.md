@@ -8,10 +8,12 @@ Current scope:
 - backend: `chroot` only
 - rootfs source: latest `DragonFly-x86_64-*.world.tar.gz` from Avalon releases
 - DeltaPorts source: cached mirror plus env-local writable `master` checkout
-- FreeBSD ports source: persistent mirror, exported into the env for the target
-  branch
+- FreeBSD ports source: persistent mirror plus env-local git checkout for the
+  target branch
 - DPorts source: persistent mirror, exported into the env and used as
   `--lock-root`
+- Host distfiles: mounted into the env at `/usr/distfiles` by default so
+  repeated runs can share fetched distfiles
 
 ## Requirements
 
@@ -33,8 +35,8 @@ This will:
 3. extract it once into the shared base cache,
 4. refresh cached mirrors for DeltaPorts, FreeBSD ports, and DPorts,
 5. create the throwaway env root from the cached world,
-6. clone env-local DeltaPorts from the cached mirror and export FreeBSD ports
-   and DPorts trees into the env,
+6. clone env-local DeltaPorts and FreeBSD ports from cached mirrors and export
+   the DPorts tree into the env,
 7. run `cd /usr && make pkg-bootstrap` when `pkg` is missing, then bootstrap a
    few development tools inside the chroot,
 8. run `compose` with `--oracle-profile off` and `--lock-root /work/DPorts`,
@@ -68,6 +70,14 @@ By default the helper stores state under `~/.cache/dports-dev/`:
 - `repos/freebsd-ports.git/`: persistent git mirror
 - `repos/DPorts.git/`: persistent DPorts mirror
 - `envs/<name>/root/`: throwaway chroot root
+
+Default shared distfiles mount:
+
+- host: `/usr/distfiles`
+- env: `/usr/distfiles`
+
+Override with `DPORTS_DEV_HOST_DISTDIR` or set it to an empty value to disable
+the mount.
 
 ## In-Chroot Helpers
 
