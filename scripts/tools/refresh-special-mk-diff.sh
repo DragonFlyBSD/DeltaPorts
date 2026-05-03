@@ -62,6 +62,9 @@ newdiff="$5"
 
 [ -f "$olddiff" ] || die "old diff not found: $olddiff"
 
+olddiff_abs="$(cd "$(dirname "$olddiff")" && pwd -P)/$(basename "$olddiff")"
+newdiff_abs="$(cd "$(dirname "$newdiff")" && pwd -P)/$(basename "$newdiff")"
+
 # --- workspace ---
 
 tmp="$(mktemp -d)"
@@ -81,7 +84,7 @@ curl -fsSL "$CGIT_BASE/$file?h=$oldq" -o "$tmp/oldtree/$file"
 cp "$tmp/oldtree/$file" "$tmp/old-base"
 
 echo "==> Applying old DeltaPorts patch"
-if ! patch --batch --forward -V none -r - -d "$tmp/oldtree" -p0 -i "$(realpath "$olddiff")"; then
+if ! patch --batch --forward -V none -r - -d "$tmp/oldtree" -p0 -i "$olddiff_abs"; then
   die "old patch does not apply cleanly against $oldq — wrong old-quarter?"
 fi
 cp "$tmp/oldtree/$file" "$tmp/old-patched"
@@ -104,7 +107,7 @@ if ! gdiff3 -m "$tmp/new-base" "$tmp/old-base" "$tmp/old-patched" > "$tmp/new-pa
   echo
   echo "Then regenerate and validate manually:"
   echo "  diff -u --label '$file' --label '$file' '$tmp/new-base' '$tmp/new-patched' > '$newdiff'"
-  echo "  patch --dry-run --batch --forward -V none -r - -d '$tmp/newtree' -p0 -i '$newdiff'"
+  echo "  patch --dry-run --batch --forward -V none -r - -d '$tmp/newtree' -p0 -i '$newdiff_abs'"
   echo
   # Keep temp dir around for manual resolution
   trap - EXIT
@@ -125,7 +128,7 @@ diff -u --label "$file" --label "$file" \
   "$tmp/new-base" "$tmp/new-patched" > "$newdiff" || true
 
 echo "==> Validating patch against fetched $newq tree"
-patch --dry-run --batch --forward -V none -r - -d "$tmp/newtree" -p0 -i "$(realpath "$newdiff")"
+patch --dry-run --batch --forward -V none -r - -d "$tmp/newtree" -p0 -i "$newdiff_abs"
 
 echo
 echo "OK: $newdiff"
