@@ -413,26 +413,26 @@ showenv() {
 }
 
 showwelcome() {
-    printf '%s\n' "dports-dev: $DPORTS_DEV_ENV"
-    printf '%s\n' "Target: $DPORTS_TARGET"
-    if [ -n "$DPORTS_ORIGIN" ]; then
-        printf '%s\n' "Origin: $DPORTS_ORIGIN"
+    printf '%s\n' "dports-dev: \$DPORTS_DEV_ENV"
+    printf '%s\n' "Target: \$DPORTS_TARGET"
+    if [ -n "\$DPORTS_ORIGIN" ]; then
+        printf '%s\n' "Origin: \$DPORTS_ORIGIN"
     else
         printf '%s\n' 'Origin: full tree'
     fi
     printf '%s\n' 'Paths:'
-    printf '  DeltaPorts: %s\n' "$DELTAPORTS_ROOT"
-    printf '  FreeBSD ports: %s\n' "$FREEBSD_PORTS_ROOT"
-    printf '  DPorts: %s\n' "$DPORTS_LOCK_ROOT"
-    printf '  Compose: %s\n' "$DPORTS_COMPOSE_ROOT"
-    printf '  Distfiles: %s\n' "$DISTDIR"
-    if [ -n "$DPORTS_ORIGIN" ]; then
-        printf '  Composed origin: %s\n' "$DPORTS_COMPOSE_ROOT/$DPORTS_ORIGIN"
-        printf '  Overlay: %s\n' "$DELTAPORTS_ROOT/ports/$DPORTS_ORIGIN"
+    printf '  DeltaPorts: %s\n' "\$DELTAPORTS_ROOT"
+    printf '  FreeBSD ports: %s\n' "\$FREEBSD_PORTS_ROOT"
+    printf '  DPorts: %s\n' "\$DPORTS_LOCK_ROOT"
+    printf '  Compose: %s\n' "\$DPORTS_COMPOSE_ROOT"
+    printf '  Distfiles: %s\n' "\$DISTDIR"
+    if [ -n "\$DPORTS_ORIGIN" ]; then
+        printf '  Composed origin: %s\n' "\$DPORTS_COMPOSE_ROOT/\$DPORTS_ORIGIN"
+        printf '  Overlay: %s\n' "\$DELTAPORTS_ROOT/ports/\$DPORTS_ORIGIN"
     fi
     printf '%s\n' 'Docs:'
-    printf '  %s\n' "$DPORTS_DOC_USER_GUIDE"
-    printf '  %s\n' "$DPORTS_DOC_DEV_ENV"
+    printf '  %s\n' "\$DPORTS_DOC_USER_GUIDE"
+    printf '  %s\n' "\$DPORTS_DOC_DEV_ENV"
     printf '%s\n' 'Helpers: regen reapply showenv'
 }
 
