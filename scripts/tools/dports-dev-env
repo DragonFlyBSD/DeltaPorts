@@ -52,13 +52,34 @@ Environment variables:
 EOF
 }
 
+log_line() {
+    level=$1
+    shift
+    printf '%s: %s\n' "$level" "$*" >&2
+}
+
+info() {
+    log_line INFO "$@"
+}
+
+warn() {
+    log_line WARN "$@"
+}
+
+error() {
+    log_line ERROR "$@"
+}
+
 die() {
-    printf '%s\n' "dports-dev-env: $*" >&2
+    error "$*"
     exit 1
 }
 
-log() {
-    printf '%s\n' "dports-dev-env: $*" >&2
+step() {
+    current=$1
+    total=$2
+    shift 2
+    info "[$current/$total] $*"
 }
 
 need_cmd() {
@@ -148,8 +169,10 @@ ensure_base_archive() {
     asset=$1
     archive_path="$DPORTS_DEV_DOWNLOAD_DIR/$asset"
     if [ ! -f "$archive_path" ]; then
-        log "downloading $asset"
+        info "downloading world archive $asset"
         curl -fL "$DPORTS_DEV_AVALON_RELEASES_URL/$asset" -o "$archive_path"
+    else
+        info "reusing cached world archive $archive_path"
     fi
     printf '%s\n' "$archive_path"
 }
@@ -162,9 +185,11 @@ ensure_base_extracted() {
         tmp_dir="$extracted.tmp.$$"
         rm -rf "$tmp_dir"
         mkdir -p "$tmp_dir"
-        log "extracting $archive_path"
+        info "extracting cached base root from $archive_path"
         tar -xpf "$archive_path" -C "$tmp_dir"
         mv "$tmp_dir" "$extracted"
+    else
+        info "reusing extracted base root $extracted"
     fi
     printf '%s\n' "$extracted"
 }
@@ -174,17 +199,17 @@ copy_base_root() {
     dst=$2
     [ ! -e "$dst" ] || die "destination already exists: $dst"
     mkdir -p "$dst"
-    log "copying cached base into $dst"
+    info "copying cached base into $dst"
     tar -C "$src" -cpf - . | tar -C "$dst" -xpf -
 }
 
 ensure_freebsd_mirror() {
     mirror="$DPORTS_DEV_REPOS_DIR/freebsd-ports.git"
     if [ ! -d "$mirror" ]; then
-        log "creating FreeBSD ports mirror"
+        info "creating FreeBSD ports mirror at $mirror"
         git clone --mirror "$DPORTS_DEV_FREEBSD_PORTS_URL" "$mirror"
     else
-        log "updating FreeBSD ports mirror"
+        info "updating FreeBSD ports mirror $mirror"
         git --git-dir="$mirror" fetch --prune origin
     fi
     printf '%s\n' "$mirror"
@@ -194,14 +219,19 @@ ensure_freebsd_worktree() {
     branch=$1
     mirror=$2
     worktree="$DPORTS_DEV_WORKTREES_DIR/freebsd-ports/$branch"
-    ref="refs/remotes/origin/$branch"
-    git --git-dir="$mirror" rev-parse --verify "$ref" >/dev/null 2>&1 || die "branch not found in FreeBSD mirror: $branch"
+    if git --git-dir="$mirror" rev-parse --verify "refs/heads/$branch" >/dev/null 2>&1; then
+        ref="refs/heads/$branch"
+    elif git --git-dir="$mirror" rev-parse --verify "refs/remotes/origin/$branch" >/dev/null 2>&1; then
+        ref="refs/remotes/origin/$branch"
+    else
+        die "branch not found in FreeBSD mirror: $branch"
+    fi
     mkdir -p "$(dirname "$worktree")"
     if [ ! -d "$worktree/.git" ]; then
-        log "creating FreeBSD worktree for $branch"
+        info "creating FreeBSD worktree for $branch"
         git --git-dir="$mirror" worktree add --force --detach "$worktree" "$ref"
     else
-        log "refreshing FreeBSD worktree for $branch"
+        info "refreshing FreeBSD worktree for $branch"
         git -C "$worktree" reset --hard "$ref"
         git -C "$worktree" clean -fdx
     fi
@@ -213,14 +243,17 @@ mount_if_needed() {
     dst=$2
     mkdir -p "$dst"
     if mount | grep -F " on $dst " >/dev/null 2>&1; then
+        info "mount already present at $dst"
         return 0
     fi
+    info "mounting $src at $dst"
     mount_null "$src" "$dst"
 }
 
 umount_if_needed() {
     path=$1
     if mount | grep -F " on $path " >/dev/null 2>&1; then
+        info "unmounting $path"
         umount "$path"
     fi
 }
@@ -234,6 +267,7 @@ prepare_root_runtime() {
     fi
     mount_if_needed /dev "$root_dir/dev"
     if ! mount | grep -F " on $root_dir/proc " >/dev/null 2>&1; then
+        info "mounting procfs at $root_dir/proc"
         mount_procfs proc "$root_dir/proc"
     fi
 }
@@ -299,25 +333,30 @@ bootstrap_tools() {
     root_dir=$1
     if ! run_in_chroot "$root_dir" 'command -v pkg >/dev/null 2>&1'; then
         if run_in_chroot "$root_dir" 'command -v python3 >/dev/null 2>&1'; then
-            log "pkg is not present in the extracted world; skipping tool bootstrap"
+            warn "pkg is not present in the extracted world; skipping tool bootstrap"
             return 0
         fi
         die "pkg is not present in the extracted world and python3 is unavailable"
     fi
+    info "bootstrapping pkg inside chroot"
     run_in_chroot "$root_dir" 'ASSUME_ALWAYS_YES=yes pkg bootstrap -yf >/dev/null 2>&1 || true'
+    info "updating pkg metadata inside chroot"
     run_in_chroot "$root_dir" 'ASSUME_ALWAYS_YES=yes pkg update -f >/dev/null 2>&1 || true'
     for pkg_name in $DPORTS_DEV_TOOL_PKGS_REQUIRED; do
+        info "installing required package $pkg_name"
         run_in_chroot "$root_dir" "ASSUME_ALWAYS_YES=yes pkg install -y $pkg_name >/dev/null" || die "failed to install required package in chroot: $pkg_name"
     done
     for pkg_name in $DPORTS_DEV_PYTHON_PKGS; do
         if run_in_chroot "$root_dir" 'command -v python3 >/dev/null 2>&1'; then
             break
         fi
-        run_in_chroot "$root_dir" "ASSUME_ALWAYS_YES=yes pkg install -y $pkg_name >/dev/null" || log "python candidate unavailable or failed: $pkg_name"
+        info "installing python candidate $pkg_name"
+        run_in_chroot "$root_dir" "ASSUME_ALWAYS_YES=yes pkg install -y $pkg_name >/dev/null" || warn "python candidate unavailable or failed: $pkg_name"
     done
     run_in_chroot "$root_dir" 'command -v python3 >/dev/null 2>&1' || die "failed to install a python3 runtime inside the chroot"
     for pkg_name in $DPORTS_DEV_TOOL_PKGS_OPTIONAL; do
-        run_in_chroot "$root_dir" "ASSUME_ALWAYS_YES=yes pkg install -y $pkg_name >/dev/null" || log "optional package unavailable or failed: $pkg_name"
+        info "installing optional package $pkg_name"
+        run_in_chroot "$root_dir" "ASSUME_ALWAYS_YES=yes pkg install -y $pkg_name >/dev/null" || warn "optional package unavailable or failed: $pkg_name"
     done
 }
 
@@ -325,6 +364,11 @@ compose_inside_env() {
     root_dir=$1
     mkdir -p "$root_dir/work/artifacts/compose"
     compose_cmd="/work/DeltaPorts/dportsv3 compose --target $TARGET --delta-root /work/DeltaPorts --freebsd-root /work/freebsd-ports --output /work/artifacts/compose/$TARGET --replace-output --oracle-profile off"
+    if [ -n "$ORIGIN" ]; then
+        info "running initial full compose for target $TARGET before origin-focused work on $ORIGIN"
+    else
+        info "running initial full compose for target $TARGET"
+    fi
     run_in_chroot "$root_dir" "$compose_cmd"
 }
 
@@ -332,15 +376,19 @@ shell_into_env() {
     env_name=$1
     load_state "$env_name"
     [ "$BACKEND" = "chroot" ] || die "unsupported backend in environment: $BACKEND"
+    info "preparing shell entry for environment $env_name"
     prepare_root_runtime "$ROOT_DIR"
     mount_if_needed "$DELTA_ROOT" "$ROOT_DIR/work/DeltaPorts"
     mount_if_needed "$FREEBSD_WORKTREE" "$ROOT_DIR/work/freebsd-ports"
+    info "entering shell for env=$env_name target=$TARGET origin=${ORIGIN:-<full-tree>}"
+    info "compose root will be /work/artifacts/compose/$TARGET"
     exec chroot "$ROOT_DIR" /usr/bin/env -i HOME=/root TERM="${TERM:-xterm}" PATH=/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin /bin/sh -lc '. /root/.dports-dev-env.sh; exec "$DPORTS_DEV_SHELL" -l'
 }
 
 destroy_env() {
     env_name=$1
     load_state "$env_name"
+    info "destroying environment $env_name"
     umount_if_needed "$ROOT_DIR/work/freebsd-ports"
     umount_if_needed "$ROOT_DIR/work/DeltaPorts"
     umount_if_needed "$ROOT_DIR/proc"
@@ -440,14 +488,24 @@ create_env() {
     ROOT_DIR=$(root_path "$ENV_NAME")
     [ ! -e "$env_dir" ] || die "environment already exists: $ENV_NAME"
 
+    step 1 8 "Resolving latest DragonFly world asset"
     asset=$(fetch_latest_world_asset)
+
+    step 2 8 "Preparing cached DragonFly base root"
     BASE_ARCHIVE=$(ensure_base_archive "$asset")
     BASE_CACHE_KEY=${asset%.tar.gz}
     BASE_EXTRACTED_ROOT=$(ensure_base_extracted "$BASE_CACHE_KEY" "$BASE_ARCHIVE")
+
+    step 3 8 "Refreshing FreeBSD ports mirror"
     FREEBSD_MIRROR=$(ensure_freebsd_mirror)
+
+    step 4 8 "Preparing FreeBSD worktree for $FREEBSD_BRANCH"
     FREEBSD_WORKTREE=$(ensure_freebsd_worktree "$FREEBSD_BRANCH" "$FREEBSD_MIRROR")
 
+    step 5 8 "Creating throwaway chroot root"
     copy_base_root "$BASE_EXTRACTED_ROOT" "$ROOT_DIR"
+
+    step 6 8 "Mounting live workspaces and writing environment state"
     prepare_root_runtime "$ROOT_DIR"
     mount_if_needed "$DELTA_ROOT" "$ROOT_DIR/work/DeltaPorts"
     mount_if_needed "$FREEBSD_WORKTREE" "$ROOT_DIR/work/freebsd-ports"
@@ -456,9 +514,12 @@ create_env() {
     write_shell_rc "$ROOT_DIR"
     write_state "$ENV_NAME"
 
+    step 7 8 "Bootstrapping developer tools inside chroot"
     bootstrap_tools "$ROOT_DIR"
+
+    step 8 8 "Running initial compose"
     if ! compose_inside_env "$ROOT_DIR"; then
-        log "compose failed; environment retained for manual investigation"
+        warn "compose failed; environment retained for manual investigation"
         exit 1
     fi
 
@@ -466,7 +527,7 @@ create_env() {
         shell_into_env "$ENV_NAME"
     fi
 
-    log "created environment $ENV_NAME"
+    info "environment ready: $ENV_NAME"
 }
 
 main() {
