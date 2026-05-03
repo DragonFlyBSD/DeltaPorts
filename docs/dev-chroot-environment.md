@@ -31,7 +31,7 @@ This will:
 5. mount the host DeltaPorts checkout into `/work/DeltaPorts`,
 6. create or refresh a cached FreeBSD ports worktree for the target branch,
 7. mount that worktree into `/work/freebsd-ports`,
-8. attempt to bootstrap a few development tools inside the chroot,
+8. run `cd /usr && make pkg-bootstrap` when `pkg` is missing, then bootstrap a few development tools inside the chroot,
 9. run `compose` with `--oracle-profile off`,
 10. drop you into a shell if `--shell` was requested.
 

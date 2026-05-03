@@ -366,11 +366,8 @@ run_in_chroot() {
 bootstrap_tools() {
     root_dir=$1
     if ! run_in_chroot "$root_dir" 'command -v pkg >/dev/null 2>&1'; then
-        if run_in_chroot "$root_dir" 'command -v python3 >/dev/null 2>&1'; then
-            warn "pkg is not present in the extracted world; skipping tool bootstrap"
-            return 0
-        fi
-        die "pkg is not present in the extracted world and python3 is unavailable"
+        info "pkg is not present; bootstrapping it from /usr"
+        run_in_chroot "$root_dir" 'cd /usr && make pkg-bootstrap >/dev/null' || die "failed to bootstrap pkg inside the chroot"
     fi
     info "bootstrapping pkg inside chroot"
     run_in_chroot "$root_dir" 'ASSUME_ALWAYS_YES=yes pkg bootstrap -yf >/dev/null 2>&1 || true'
