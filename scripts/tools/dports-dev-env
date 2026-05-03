@@ -134,6 +134,22 @@ load_state() {
     . "$state_file"
 }
 
+init_partial_env_state() {
+    env_name=$1
+    ENV_NAME=$env_name
+    BACKEND=chroot
+    TARGET=
+    ORIGIN=
+    FREEBSD_BRANCH=
+    DELTA_ROOT=
+    FREEBSD_WORKTREE=
+    BASE_ARCHIVE=
+    BASE_CACHE_KEY=
+    BASE_EXTRACTED_ROOT=
+    ROOT_DIR=$(root_path "$env_name")
+    CREATED_AT=
+}
+
 write_state() {
     env_name=$1
     env_dir=$DPORTS_DEV_ENVS_DIR/$env_name
@@ -387,7 +403,14 @@ shell_into_env() {
 
 destroy_env() {
     env_name=$1
-    load_state "$env_name"
+    if [ -f "$(state_path "$env_name")" ]; then
+        load_state "$env_name"
+    elif [ -d "$DPORTS_DEV_ENVS_DIR/$env_name" ]; then
+        init_partial_env_state "$env_name"
+        warn "environment $env_name has no state file; cleaning partial environment"
+    else
+        die "environment not found: $env_name"
+    fi
     info "destroying environment $env_name"
     umount_if_needed "$ROOT_DIR/work/freebsd-ports"
     umount_if_needed "$ROOT_DIR/work/DeltaPorts"
@@ -536,15 +559,33 @@ main() {
     case "$action" in
         create)
             shift
+            case "${1:-}" in
+                --help|-h)
+                    usage
+                    exit 0
+                    ;;
+            esac
             create_env "$@"
             ;;
         shell)
             require_root
+            case "${2:-}" in
+                --help|-h|'')
+                    usage
+                    exit 0
+                    ;;
+            esac
             [ "$#" -eq 2 ] || die "shell requires an environment name"
             shell_into_env "$2"
             ;;
         destroy)
             require_root
+            case "${2:-}" in
+                --help|-h|'')
+                    usage
+                    exit 0
+                    ;;
+            esac
             [ "$#" -eq 2 ] || die "destroy requires an environment name"
             destroy_env "$2"
             ;;
