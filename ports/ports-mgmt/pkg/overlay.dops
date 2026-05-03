@@ -5,7 +5,7 @@ reason "manual dops conversion from Makefile.DragonFly and diffs"
 # Makefile.DragonFly variable additions
 mk set PROBLEM_FILES "${WRKSRC}/libpkg/pkg_config.c ${WRKSRC}/src/pkg.conf.sample ${WRKSRC}/docs/pkg-create.8 ${WRKSRC}/docs/pkg-set.8 ${WRKSRC}/docs/pkg-repo.8 ${WRKSRC}/docs/pkg.conf.5 ${WRKSRC}/docs/pkg-version.8 ${WRKSRC}/docs/pkg.8"
 mk add CFLAGS -I/usr/include/priv
-mk add LDFLAGS -L/usr/lib/priv
+mk set LDFLAGS "-L/usr/lib/priv"
 mk add LDFLAGS -R/lib/priv
 # Makefile.DragonFly target: dfly-patch
 mk target set dfly-patch <<'MK'
