@@ -411,11 +411,13 @@ showenv() {
 }
 
 if [ -n "\${BASH_VERSION:-}" ]; then
-    _dports_color_prefix="\[\033[1;35m\](dports-dev:\${DPORTS_DEV_ENV})\[\033[0m\]"
-    PS1="\${_dports_color_prefix} \w\\$ "
+    _dports_label="\[\033[1;34m\]dports-dev\[\033[0m\]"
+    _dports_name="\[\033[1;32m\]\${DPORTS_DEV_ENV}\[\033[0m\]"
+    PS1="\${_dports_label}:\${_dports_name} \w\\$ "
 else
-    _dports_color_prefix=\$(printf '\033[1;35m(dports-dev:%s)\033[0m' "\$DPORTS_DEV_ENV")
-    PS1="\${_dports_color_prefix} # "
+    _dports_label=\$(printf '\033[1;34mdports-dev\033[0m')
+    _dports_name=\$(printf '\033[1;32m%s\033[0m' "\$DPORTS_DEV_ENV")
+    PS1="\${_dports_label}:\${_dports_name} # "
 fi
 export PS1
 EOF
@@ -659,13 +661,21 @@ create_env() {
     bootstrap_tools "$ROOT_DIR"
 
     step 8 8 "Running initial compose"
+    compose_failed=0
     if ! compose_inside_env "$ROOT_DIR"; then
+        compose_failed=1
         warn "compose failed; environment retained for manual investigation"
-        exit 1
     fi
 
     if [ "$auto_shell" -eq 1 ]; then
+        if [ "$compose_failed" -eq 1 ]; then
+            warn "opening shell despite compose failure because --shell was requested"
+        fi
         shell_into_env "$ENV_NAME"
+    fi
+
+    if [ "$compose_failed" -eq 1 ]; then
+        exit 1
     fi
 
     info "environment ready: $ENV_NAME"
