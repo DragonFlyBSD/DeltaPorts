@@ -130,7 +130,7 @@ tracker_enqueue_one() {
     origin=$1
     version=$2
 
-    tmp_json=$(mktemp "$DPORTSV3_TRACKER_STATE_DIR/enqueue.${PROFILE}.XXXXXX.json") || \
+    tmp_json=$(mktemp "$DPORTSV3_TRACKER_STATE_DIR/enqueue.${PROFILE}.XXXXXX") || \
         tracker_fail_soft "failed to allocate temp json file"
     cat > "$tmp_json" <<EOF
 [{"origin":"$origin","version":"$version"}]
