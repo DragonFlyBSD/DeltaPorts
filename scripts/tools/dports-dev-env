@@ -40,9 +40,14 @@ create options:
   --freebsd-branch BR  Override FreeBSD branch (default: derived from target)
   --dports-branch BR   Override DPorts branch (default: staged)
   --shell              Enter the shell after creation succeeds
+  --allow-dirty        Proceed even if the host DeltaPorts checkout has uncommitted edits
+                       (only committed state propagates into the env)
+  --no-initial-compose Skip the initial compose at create time; run 'regen' inside the shell
+  --oracle-profile P   Oracle profile passed to compose: off|local|ci (default: off)
 
 shell options:
   NAME                 Environment name
+  --refresh            Rewrite rcfile, helper scripts, and resolv.conf from host
 
 destroy options:
   NAME                 Environment name
@@ -117,6 +122,50 @@ ensure_dirs() {
         "$DPORTS_DEV_DOWNLOAD_DIR" "$DPORTS_DEV_REPOS_DIR"
 }
 
+DPORTS_DEV_HELD_LOCKS=
+
+cleanup_held_locks() {
+    [ -z "${DPORTS_DEV_HELD_LOCKS:-}" ] && return 0
+    saved_IFS=$IFS
+    IFS=:
+    for d in $DPORTS_DEV_HELD_LOCKS; do
+        [ -n "$d" ] && rmdir "$d" 2>/dev/null || true
+    done
+    IFS=$saved_IFS
+    DPORTS_DEV_HELD_LOCKS=
+}
+
+trap cleanup_held_locks EXIT INT TERM HUP
+
+acquire_cache_lock() {
+    key=$1
+    timeout=${2:-600}
+    lockdir="$DPORTS_DEV_CACHE_ROOT/.lock.$(sanitize_name "$key")"
+    waited=0
+    while ! mkdir "$lockdir" 2>/dev/null; do
+        if [ "$waited" -ge "$timeout" ]; then
+            die "could not acquire cache lock $lockdir within ${timeout}s; if no other dports-dev-env is running, rmdir it manually"
+        fi
+        if [ "$waited" -eq 0 ]; then
+            info "waiting on cache lock $lockdir"
+        fi
+        sleep 2
+        waited=$((waited + 2))
+    done
+    DPORTS_DEV_HELD_LOCKS="${DPORTS_DEV_HELD_LOCKS:+$DPORTS_DEV_HELD_LOCKS:}$lockdir"
+}
+
+release_cache_lock() {
+    key=$1
+    lockdir="$DPORTS_DEV_CACHE_ROOT/.lock.$(sanitize_name "$key")"
+    rmdir "$lockdir" 2>/dev/null || true
+    case ":$DPORTS_DEV_HELD_LOCKS:" in
+        *":$lockdir:"*)
+            DPORTS_DEV_HELD_LOCKS=$(printf '%s' ":$DPORTS_DEV_HELD_LOCKS:" | sed -e "s|:$lockdir:|:|g" -e 's/^://' -e 's/:$//')
+            ;;
+    esac
+}
+
 sanitize_name() {
     printf '%s' "$1" | tr '/:@ ' '____' | tr -cd 'A-Za-z0-9._-'
 }
@@ -154,15 +203,24 @@ root_path() {
     printf '%s/root\n' "$DPORTS_DEV_ENVS_DIR/$1"
 }
 
+DPORTS_DEV_STATE_VERSION=1
+
 load_state() {
     env_name=$1
     state_file=$(state_path "$env_name")
     [ -f "$state_file" ] || die "environment not found: $env_name"
+    STATE_VERSION=
     # shellcheck disable=SC1090
     . "$state_file"
+    if [ -z "$STATE_VERSION" ]; then
+        warn "state file lacks STATE_VERSION; treating as v$DPORTS_DEV_STATE_VERSION"
+    elif [ "$STATE_VERSION" != "$DPORTS_DEV_STATE_VERSION" ]; then
+        die "state file version $STATE_VERSION incompatible with this tool (expected $DPORTS_DEV_STATE_VERSION); destroy and recreate the env"
+    fi
     : "${DELTAPORTS_BRANCH:=$DPORTS_DEV_DELTAPORTS_BRANCH}"
     : "${DPORTS_BRANCH:=$DPORTS_DEV_DPORTS_BRANCH}"
     : "${HOST_DISTDIR:=$DPORTS_DEV_HOST_DISTDIR}"
+    : "${ORACLE_PROFILE:=off}"
 }
 
 init_partial_env_state() {
@@ -175,6 +233,7 @@ init_partial_env_state() {
     FREEBSD_BRANCH=
     DPORTS_BRANCH=
     HOST_DISTDIR=
+    ORACLE_PROFILE=off
     SOURCE_DELTA_ROOT=
     BASE_ARCHIVE=
     BASE_CACHE_KEY=
@@ -191,6 +250,7 @@ write_state() {
     tmp_file="$state_file.tmp.$$"
     umask 077
     cat > "$tmp_file" <<EOF
+STATE_VERSION=1
 ENV_NAME=$(shell_quote "$ENV_NAME")
 BACKEND=$(shell_quote "$BACKEND")
 TARGET=$(shell_quote "$TARGET")
@@ -199,6 +259,7 @@ DELTAPORTS_BRANCH=$(shell_quote "$DELTAPORTS_BRANCH")
 FREEBSD_BRANCH=$(shell_quote "$FREEBSD_BRANCH")
 DPORTS_BRANCH=$(shell_quote "$DPORTS_BRANCH")
 HOST_DISTDIR=$(shell_quote "$HOST_DISTDIR")
+ORACLE_PROFILE=$(shell_quote "${ORACLE_PROFILE:-off}")
 SOURCE_DELTA_ROOT=$(shell_quote "$SOURCE_DELTA_ROOT")
 BASE_ARCHIVE=$(shell_quote "$BASE_ARCHIVE")
 BASE_CACHE_KEY=$(shell_quote "$BASE_CACHE_KEY")
@@ -255,8 +316,24 @@ copy_tree() {
     for pattern in "$@"; do
         tar_args="$tar_args --exclude=$pattern"
     done
+    status_file="$DPORTS_DEV_CACHE_ROOT/.copy-tree-status.$$"
+    rm -f "$status_file"
+    # POSIX sh has no PIPESTATUS; record the producer's exit status to a side
+    # file and inspect both ends explicitly so a producer-side tar failure
+    # cannot silently leave a half-copied tree.
+    consumer_status=0
     # shellcheck disable=SC2086
-    tar -C "$src" $tar_args -cpf - . | tar -C "$dst" -xpf -
+    if { tar -C "$src" $tar_args -cpf - . ; echo $? > "$status_file"; } \
+        | tar -C "$dst" -xpf -; then
+        consumer_status=0
+    else
+        consumer_status=$?
+    fi
+    producer_status=$(cat "$status_file" 2>/dev/null || printf '%s' 1)
+    rm -f "$status_file"
+    if [ "$producer_status" -ne 0 ] || [ "$consumer_status" -ne 0 ]; then
+        die "copy_tree failed (producer=$producer_status consumer=$consumer_status src=$src dst=$dst)"
+    fi
 }
 
 copy_base_root() {
@@ -345,19 +422,49 @@ mount_if_needed() {
 
 umount_if_needed() {
     path=$1
-    if mount | grep -F " on $path " >/dev/null 2>&1; then
-        info "unmounting $path"
-        umount "$path"
+    if ! mount | grep -F " on $path " >/dev/null 2>&1; then
+        return 0
     fi
+    info "unmounting $path"
+    attempt=1
+    while [ "$attempt" -le 3 ]; do
+        if umount "$path" 2>/dev/null; then
+            return 0
+        fi
+        if [ "$attempt" -lt 3 ]; then
+            warn "umount $path failed (attempt $attempt); retrying"
+            sleep 1
+        fi
+        attempt=$((attempt + 1))
+    done
+    error "umount could not release $path; current holders (if detectable):"
+    if command -v fstat >/dev/null 2>&1; then
+        fstat -f "$path" >&2 2>/dev/null || true
+    elif command -v lsof >/dev/null 2>&1; then
+        lsof "$path" >&2 2>/dev/null || true
+    fi
+    die "stuck mount at $path; release it manually (umount -f) and re-run"
+}
+
+ensure_resolv_conf() {
+    root_dir=$1
+    force=${2:-0}
+    [ -f /etc/resolv.conf ] || return 0
+    target=$root_dir/etc/resolv.conf
+    if [ -f "$target" ] && [ "$force" -ne 1 ]; then
+        return 0
+    fi
+    mkdir -p "$root_dir/etc"
+    if command -v chflags >/dev/null 2>&1 && [ -e "$target" ]; then
+        chflags noschg "$target" 2>/dev/null || true
+    fi
+    cp /etc/resolv.conf "$target"
 }
 
 prepare_root_runtime() {
     root_dir=$1
     mkdir -p "$root_dir/dev" "$root_dir/proc" "$root_dir/work"
-    if [ -f /etc/resolv.conf ]; then
-        mkdir -p "$root_dir/etc"
-        cp /etc/resolv.conf "$root_dir/etc/resolv.conf"
-    fi
+    ensure_resolv_conf "$root_dir" 0
     mount_if_needed /dev "$root_dir/dev"
     if ! mount | grep -F " on $root_dir/proc " >/dev/null 2>&1; then
         info "mounting procfs at $root_dir/proc"
@@ -366,6 +473,60 @@ prepare_root_runtime() {
     if [ -n "$HOST_DISTDIR" ] && [ -d "$HOST_DISTDIR" ]; then
         mount_if_needed "$HOST_DISTDIR" "$root_dir/usr/distfiles"
     fi
+}
+
+write_helper_scripts() {
+    root_dir=$1
+    bin_dir=$root_dir/usr/local/bin
+    mkdir -p "$bin_dir"
+    cat > "$bin_dir/regen" <<'EOF'
+#!/bin/sh
+set -eu
+: "${DPORTS_TARGET:?regen: DPORTS_TARGET is not set; run from a dports-dev shell}"
+: "${DPORTS_COMPOSE_ROOT:?regen: DPORTS_COMPOSE_ROOT is not set}"
+: "${DPORTS_LOCK_ROOT:?regen: DPORTS_LOCK_ROOT is not set}"
+: "${DPORTS_ORACLE_PROFILE:=off}"
+if [ -n "${DPORTS_ORIGIN:-}" ]; then
+    exec /work/DeltaPorts/dportsv3 compose \
+        --target "$DPORTS_TARGET" \
+        --delta-root /work/DeltaPorts \
+        --freebsd-root /work/freebsd-ports \
+        --lock-root "$DPORTS_LOCK_ROOT" \
+        --output "$DPORTS_COMPOSE_ROOT" \
+        --replace-output \
+        --oracle-profile "$DPORTS_ORACLE_PROFILE" \
+        --origin "$DPORTS_ORIGIN"
+fi
+exec /work/DeltaPorts/dportsv3 compose \
+    --target "$DPORTS_TARGET" \
+    --delta-root /work/DeltaPorts \
+    --freebsd-root /work/freebsd-ports \
+    --lock-root "$DPORTS_LOCK_ROOT" \
+    --output "$DPORTS_COMPOSE_ROOT" \
+    --replace-output \
+    --oracle-profile "$DPORTS_ORACLE_PROFILE"
+EOF
+    cat > "$bin_dir/reapply" <<'EOF'
+#!/bin/sh
+set -eu
+: "${DPORTS_TARGET:?reapply: DPORTS_TARGET is not set; run from a dports-dev shell}"
+: "${DPORTS_COMPOSE_ROOT:?reapply: DPORTS_COMPOSE_ROOT is not set}"
+: "${DPORTS_ORACLE_PROFILE:=off}"
+if [ -z "${DPORTS_ORIGIN:-}" ]; then
+    printf '%s\n' 'reapply requires the environment to have been created with --origin' >&2
+    exit 1
+fi
+exec /work/DeltaPorts/dportsv3 dsl apply \
+    "/work/DeltaPorts/ports/$DPORTS_ORIGIN/overlay.dops" \
+    --port-root "$DPORTS_COMPOSE_ROOT/$DPORTS_ORIGIN" \
+    --target "$DPORTS_TARGET" \
+    --oracle-profile "$DPORTS_ORACLE_PROFILE"
+EOF
+    cat > "$bin_dir/showenv" <<'EOF'
+#!/bin/sh
+env | grep '^DPORTS_' | sort
+EOF
+    chmod 0755 "$bin_dir/regen" "$bin_dir/reapply" "$bin_dir/showenv"
 }
 
 write_shell_rc() {
@@ -379,6 +540,7 @@ write_shell_rc() {
         printf 'export DPORTS_ORIGIN=%s\n' "$(shell_quote "$ORIGIN")"
         printf 'export DPORTS_COMPOSE_ROOT=%s\n' "$(shell_quote "/work/artifacts/compose/$TARGET")"
         printf 'export DPORTS_LOCK_ROOT=%s\n' '/work/DPorts'
+        printf 'export DPORTS_ORACLE_PROFILE=%s\n' "$(shell_quote "${ORACLE_PROFILE:-off}")"
         printf 'export DISTDIR=%s\n' '/usr/distfiles'
         printf 'export DPORTS_DOC_USER_GUIDE=%s\n' 'https://github.com/DragonFlyBSD/DeltaPorts/blob/master/docs/dportsv3-user-guide.md'
         printf 'export DPORTS_DOC_DEV_ENV=%s\n' 'https://github.com/DragonFlyBSD/DeltaPorts/blob/master/docs/dev-chroot-environment.md'
@@ -392,26 +554,6 @@ elif [ -d "$DPORTS_COMPOSE_ROOT" ]; then
 else
     cd /work/DeltaPorts
 fi
-
-regen() {
-    if [ -n "$DPORTS_ORIGIN" ]; then
-        /work/DeltaPorts/dportsv3 compose --target "$DPORTS_TARGET" --delta-root /work/DeltaPorts --freebsd-root /work/freebsd-ports --lock-root "$DPORTS_LOCK_ROOT" --output "$DPORTS_COMPOSE_ROOT" --replace-output --oracle-profile off --origin "$DPORTS_ORIGIN"
-    else
-        /work/DeltaPorts/dportsv3 compose --target "$DPORTS_TARGET" --delta-root /work/DeltaPorts --freebsd-root /work/freebsd-ports --lock-root "$DPORTS_LOCK_ROOT" --output "$DPORTS_COMPOSE_ROOT" --replace-output --oracle-profile off
-    fi
-}
-
-reapply() {
-    if [ -z "$DPORTS_ORIGIN" ]; then
-        printf '%s\n' 'reapply requires the environment to have been created with --origin' >&2
-        return 1
-    fi
-    /work/DeltaPorts/dportsv3 dsl apply "/work/DeltaPorts/ports/$DPORTS_ORIGIN/overlay.dops" --port-root "$DPORTS_COMPOSE_ROOT/$DPORTS_ORIGIN" --target "$DPORTS_TARGET" --oracle-profile off
-}
-
-showenv() {
-    env | grep '^DPORTS_' | sort
-}
 
 showwelcome() {
     printf '%s\n' "dports-dev: $DPORTS_DEV_ENV"
@@ -454,14 +596,18 @@ EOF
 
 run_in_chroot() {
     root_dir=$1
-    shift
-    chroot "$root_dir" /usr/bin/env -i HOME=/root TERM="${TERM:-xterm}" PATH=/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin /bin/sh -c "$*"
+    script=$2
+    shift 2
+    # Pass extra args as positional parameters to the chroot's /bin/sh so
+    # callers can reference them via "$1"/"$2" without string-interpolation
+    # injection. The "_" placeholder becomes $0 inside the inner shell.
+    chroot "$root_dir" /usr/bin/env -i HOME=/root TERM="${TERM:-xterm}" PATH=/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin /bin/sh -c "$script" _ "$@"
 }
 
 find_python_in_chroot() {
     root_dir=$1
     for cmd_name in $DPORTS_DEV_PYTHON_COMMANDS; do
-        if run_in_chroot "$root_dir" "command -v $cmd_name >/dev/null 2>&1"; then
+        if run_in_chroot "$root_dir" 'command -v "$1" >/dev/null 2>&1' "$cmd_name"; then
             printf '%s\n' "$cmd_name"
             return 0
         fi
@@ -479,14 +625,17 @@ ensure_python_shim() {
         return 0
     fi
     info "creating python3 shim for $python_cmd"
-    run_in_chroot "$root_dir" "cmd=\$(command -v $python_cmd) && ln -sf \"\$cmd\" /usr/local/bin/python3"
+    run_in_chroot "$root_dir" 'cmd=$(command -v "$1") && ln -sf "$cmd" /usr/local/bin/python3' "$python_cmd"
 }
 
 bootstrap_tools() {
     root_dir=$1
     if ! run_in_chroot "$root_dir" 'command -v pkg >/dev/null 2>&1'; then
         info "pkg is not present; bootstrapping it from /usr"
-        run_in_chroot "$root_dir" 'cd /usr && make pkg-bootstrap >/dev/null' || die "failed to bootstrap pkg inside the chroot"
+        if ! run_in_chroot "$root_dir" 'cd /usr && make pkg-bootstrap >/dev/null'; then
+            error "failed to bootstrap pkg inside the chroot"
+            return 1
+        fi
     fi
     info "bootstrapping pkg inside chroot"
     run_in_chroot "$root_dir" 'ASSUME_ALWAYS_YES=yes pkg bootstrap -yf >/dev/null 2>&1 || true'
@@ -494,41 +643,69 @@ bootstrap_tools() {
     run_in_chroot "$root_dir" 'ASSUME_ALWAYS_YES=yes pkg update -f >/dev/null 2>&1 || true'
     for pkg_name in $DPORTS_DEV_TOOL_PKGS_REQUIRED; do
         info "installing required package $pkg_name"
-        run_in_chroot "$root_dir" "ASSUME_ALWAYS_YES=yes pkg install -y $pkg_name >/dev/null" || die "failed to install required package in chroot: $pkg_name"
+        if ! run_in_chroot "$root_dir" 'ASSUME_ALWAYS_YES=yes pkg install -y "$1" >/dev/null' "$pkg_name"; then
+            error "failed to install required package in chroot: $pkg_name"
+            return 1
+        fi
     done
     for pkg_name in $DPORTS_DEV_PYTHON_PKGS; do
         if find_python_in_chroot "$root_dir" >/dev/null 2>&1; then
             break
         fi
         info "installing python candidate $pkg_name"
-        run_in_chroot "$root_dir" "ASSUME_ALWAYS_YES=yes pkg install -y $pkg_name >/dev/null" || warn "python candidate unavailable or failed: $pkg_name"
+        run_in_chroot "$root_dir" 'ASSUME_ALWAYS_YES=yes pkg install -y "$1" >/dev/null' "$pkg_name" || warn "python candidate unavailable or failed: $pkg_name"
     done
-    find_python_in_chroot "$root_dir" >/dev/null 2>&1 || die "failed to install a python3 runtime inside the chroot"
-    ensure_python_shim "$root_dir" || die "failed to create a python3 shim inside the chroot"
+    if ! find_python_in_chroot "$root_dir" >/dev/null 2>&1; then
+        error "failed to install a python3 runtime inside the chroot"
+        return 1
+    fi
+    if ! ensure_python_shim "$root_dir"; then
+        error "failed to create a python3 shim inside the chroot"
+        return 1
+    fi
     for pkg_name in $DPORTS_DEV_TOOL_PKGS_OPTIONAL; do
         info "installing optional package $pkg_name"
-        run_in_chroot "$root_dir" "ASSUME_ALWAYS_YES=yes pkg install -y $pkg_name >/dev/null" || warn "optional package unavailable or failed: $pkg_name"
+        run_in_chroot "$root_dir" 'ASSUME_ALWAYS_YES=yes pkg install -y "$1" >/dev/null' "$pkg_name" || warn "optional package unavailable or failed: $pkg_name"
     done
 }
 
 compose_inside_env() {
     root_dir=$1
     mkdir -p "$root_dir/work/artifacts/compose"
-    compose_cmd="/work/DeltaPorts/dportsv3 compose --target $TARGET --delta-root /work/DeltaPorts --freebsd-root /work/freebsd-ports --lock-root /work/DPorts --output /work/artifacts/compose/$TARGET --replace-output --oracle-profile off"
     if [ -n "$ORIGIN" ]; then
         info "running initial full compose for target $TARGET before origin-focused work on $ORIGIN"
     else
         info "running initial full compose for target $TARGET"
     fi
-    run_in_chroot "$root_dir" "$compose_cmd"
+    run_in_chroot "$root_dir" '
+        target=$1
+        oracle=$2
+        exec /work/DeltaPorts/dportsv3 compose \
+            --target "$target" \
+            --delta-root /work/DeltaPorts \
+            --freebsd-root /work/freebsd-ports \
+            --lock-root /work/DPorts \
+            --output "/work/artifacts/compose/$target" \
+            --replace-output \
+            --oracle-profile "$oracle"
+    ' "$TARGET" "${ORACLE_PROFILE:-off}"
 }
 
 shell_into_env() {
     env_name=$1
+    refresh=${2:-0}
     load_state "$env_name"
     [ "$BACKEND" = "chroot" ] || die "unsupported backend in environment: $BACKEND"
     info "preparing shell entry for environment $env_name"
-    write_shell_rc "$ROOT_DIR"
+    if [ "$refresh" -eq 1 ] || [ ! -f "$ROOT_DIR/root/.dports-dev-env.sh" ]; then
+        write_shell_rc "$ROOT_DIR"
+    fi
+    if [ "$refresh" -eq 1 ] || [ ! -x "$ROOT_DIR/usr/local/bin/regen" ]; then
+        write_helper_scripts "$ROOT_DIR"
+    fi
+    if [ "$refresh" -eq 1 ]; then
+        ensure_resolv_conf "$ROOT_DIR" 1
+    fi
     prepare_root_runtime "$ROOT_DIR"
     info "entering shell for env=$env_name target=$TARGET origin=${ORIGIN:-<full-tree>}"
     info "compose root will be /work/artifacts/compose/$TARGET"
@@ -550,11 +727,15 @@ destroy_env() {
         die "environment not found: $env_name"
     fi
     info "destroying environment $env_name"
-    if [ -n "$HOST_DISTDIR" ] && [ -d "$HOST_DISTDIR" ]; then
-        umount_if_needed "$ROOT_DIR/usr/distfiles"
-    fi
+    umount_if_needed "$ROOT_DIR/usr/distfiles"
     umount_if_needed "$ROOT_DIR/proc"
     umount_if_needed "$ROOT_DIR/dev"
+    survivors=$(mount | awk -v root="$ROOT_DIR" 'index($0, " on " root) { print }') || survivors=
+    if [ -n "$survivors" ]; then
+        error "refusing to remove $ROOT_DIR; the following mounts are still present:"
+        printf '%s\n' "$survivors" >&2
+        die "unmount the listed paths and re-run destroy"
+    fi
     clear_immutable_flags "$ROOT_DIR"
     rm -rf "$DPORTS_DEV_ENVS_DIR/$env_name"
 }
@@ -566,9 +747,13 @@ list_envs() {
     for state_file in "$DPORTS_DEV_ENVS_DIR"/*/state.env; do
         [ -f "$state_file" ] || continue
         env_name=$(basename "$(dirname "$state_file")")
+        unset STATE_VERSION ENV_NAME BACKEND TARGET ORIGIN DELTAPORTS_BRANCH \
+            FREEBSD_BRANCH DPORTS_BRANCH HOST_DISTDIR ORACLE_PROFILE \
+            SOURCE_DELTA_ROOT BASE_ARCHIVE BASE_CACHE_KEY BASE_EXTRACTED_ROOT \
+            ROOT_DIR CREATED_AT
         # shellcheck disable=SC1090
         . "$state_file"
-        printf '%s\t%s\t%s\t%s\n' "$env_name" "$BACKEND" "$TARGET" "$ORIGIN"
+        printf '%s\t%s\t%s\t%s\n' "$env_name" "${BACKEND:-}" "${TARGET:-}" "${ORIGIN:-}"
     done
 }
 
@@ -589,8 +774,11 @@ create_env() {
     FREEBSD_BRANCH=
     DPORTS_BRANCH=$DPORTS_DEV_DPORTS_BRANCH
     HOST_DISTDIR=$DPORTS_DEV_HOST_DISTDIR
+    ORACLE_PROFILE=off
     ENV_NAME=
     auto_shell=0
+    allow_dirty=0
+    skip_initial_compose=0
 
     while [ "$#" -gt 0 ]; do
         case "$1" in
@@ -633,6 +821,19 @@ create_env() {
                 auto_shell=1
                 shift
                 ;;
+            --allow-dirty)
+                allow_dirty=1
+                shift
+                ;;
+            --no-initial-compose)
+                skip_initial_compose=1
+                shift
+                ;;
+            --oracle-profile)
+                [ "$#" -ge 2 ] || die "--oracle-profile requires a value"
+                ORACLE_PROFILE=$2
+                shift 2
+                ;;
             --help|-h)
                 usage
                 exit 0
@@ -645,9 +846,24 @@ create_env() {
 
     [ -n "$TARGET" ] || die "--target is required"
     [ "$BACKEND" = "chroot" ] || die "unsupported backend: $BACKEND"
+    case "$ORACLE_PROFILE" in
+        off|local|ci) ;;
+        *) die "--oracle-profile must be one of: off, local, ci" ;;
+    esac
     [ -d "$SOURCE_DELTA_ROOT" ] || die "Delta root does not exist: $SOURCE_DELTA_ROOT"
     [ -f "$SOURCE_DELTA_ROOT/dportsv3" ] || die "Delta root does not look like this repo: $SOURCE_DELTA_ROOT"
     git -C "$SOURCE_DELTA_ROOT" rev-parse --git-dir >/dev/null 2>&1 || die "Delta root is not a git checkout: $SOURCE_DELTA_ROOT"
+
+    host_dirty=$(git -C "$SOURCE_DELTA_ROOT" status --porcelain 2>/dev/null || true)
+    if [ -n "$host_dirty" ]; then
+        warn "host DeltaPorts checkout has uncommitted changes; only committed state will appear in the env"
+        if [ "$allow_dirty" -ne 1 ]; then
+            error "refusing to create env from a dirty host checkout (pass --allow-dirty to proceed)"
+            error "summary of dirty paths:"
+            printf '%s\n' "$host_dirty" | head -20 >&2
+            die "commit/stash host edits, or re-run with --allow-dirty"
+        fi
+    fi
 
     if [ -z "$FREEBSD_BRANCH" ]; then
         FREEBSD_BRANCH=$(target_to_branch "$TARGET")
@@ -660,25 +876,31 @@ create_env() {
     ROOT_DIR=$(root_path "$ENV_NAME")
     [ ! -e "$env_dir" ] || die "environment already exists: $ENV_NAME"
 
-    step 1 8 "Resolving latest DragonFly world asset"
+    step 1 7 "Resolving latest DragonFly world asset"
     asset=$(fetch_latest_world_asset)
 
-    step 2 8 "Preparing cached DragonFly base root"
-    BASE_ARCHIVE=$(ensure_base_archive "$asset")
+    step 2 7 "Preparing cached DragonFly base root"
     BASE_CACHE_KEY=${asset%.tar.gz}
+    acquire_cache_lock "world-$BASE_CACHE_KEY"
+    BASE_ARCHIVE=$(ensure_base_archive "$asset")
     BASE_EXTRACTED_ROOT=$(ensure_base_extracted "$BASE_CACHE_KEY" "$BASE_ARCHIVE")
+    release_cache_lock "world-$BASE_CACHE_KEY"
 
-    step 3 8 "Refreshing cached repo mirrors"
+    step 3 7 "Refreshing cached repo mirrors"
+    acquire_cache_lock mirror-deltaports
     DELTAPORTS_MIRROR=$(ensure_local_git_mirror deltaports "$SOURCE_DELTA_ROOT")
+    release_cache_lock mirror-deltaports
+    acquire_cache_lock mirror-freebsd-ports
     FREEBSD_MIRROR=$(ensure_remote_git_mirror freebsd-ports "$DPORTS_DEV_FREEBSD_PORTS_URL")
+    release_cache_lock mirror-freebsd-ports
+    acquire_cache_lock mirror-DPorts
     DPORTS_MIRROR=$(ensure_remote_git_mirror DPorts "$DPORTS_DEV_DPORTS_URL")
+    release_cache_lock mirror-DPorts
 
-    step 4 8 "Preparing env source trees"
-
-    step 5 8 "Creating throwaway chroot root"
+    step 4 7 "Creating throwaway chroot root"
     copy_base_root "$BASE_EXTRACTED_ROOT" "$ROOT_DIR"
 
-    step 6 8 "Seeding env-local source trees and writing environment state"
+    step 5 7 "Seeding env-local source trees and writing environment state"
     prepare_root_runtime "$ROOT_DIR"
     seed_deltaports_checkout "$DELTAPORTS_MIRROR" "$DELTAPORTS_BRANCH" "$ROOT_DIR/work/DeltaPorts"
     seed_freebsd_checkout "$FREEBSD_MIRROR" "$FREEBSD_BRANCH" "$ROOT_DIR/work/freebsd-ports"
@@ -686,26 +908,40 @@ create_env() {
     mkdir -p "$ROOT_DIR/work/artifacts/compose"
     CREATED_AT=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
     write_shell_rc "$ROOT_DIR"
+    write_helper_scripts "$ROOT_DIR"
     write_state "$ENV_NAME"
 
-    step 7 8 "Bootstrapping developer tools inside chroot"
-    bootstrap_tools "$ROOT_DIR"
+    step 6 7 "Bootstrapping developer tools inside chroot"
+    bootstrap_failed=0
+    if ! bootstrap_tools "$ROOT_DIR"; then
+        bootstrap_failed=1
+        warn "bootstrap failed; environment retained for manual investigation"
+    fi
 
-    step 8 8 "Running initial compose"
     compose_failed=0
-    if ! compose_inside_env "$ROOT_DIR"; then
+    if [ "$bootstrap_failed" -eq 1 ]; then
+        step 7 7 "Skipping initial compose because bootstrap failed"
         compose_failed=1
-        warn "compose failed; environment retained for manual investigation"
+    elif [ "$skip_initial_compose" -eq 1 ]; then
+        step 7 7 "Skipping initial compose (--no-initial-compose); run 'regen' inside the shell when ready"
+    else
+        step 7 7 "Running initial compose"
+        if ! compose_inside_env "$ROOT_DIR"; then
+            compose_failed=1
+            warn "compose failed; environment retained for manual investigation"
+        fi
     fi
 
     if [ "$auto_shell" -eq 1 ]; then
-        if [ "$compose_failed" -eq 1 ]; then
+        if [ "$bootstrap_failed" -eq 1 ]; then
+            warn "opening shell despite bootstrap failure because --shell was requested"
+        elif [ "$compose_failed" -eq 1 ]; then
             warn "opening shell despite compose failure because --shell was requested"
         fi
         shell_into_env "$ENV_NAME"
     fi
 
-    if [ "$compose_failed" -eq 1 ]; then
+    if [ "$bootstrap_failed" -eq 1 ] || [ "$compose_failed" -eq 1 ]; then
         exit 1
     fi
 
@@ -727,15 +963,35 @@ main() {
             create_env "$@"
             ;;
         shell)
+            shift
+            shell_refresh=0
+            shell_name=
+            while [ "$#" -gt 0 ]; do
+                case "$1" in
+                    --help|-h)
+                        usage
+                        exit 0
+                        ;;
+                    --refresh)
+                        shell_refresh=1
+                        shift
+                        ;;
+                    --)
+                        shift
+                        ;;
+                    -*)
+                        die "unknown shell option: $1"
+                        ;;
+                    *)
+                        [ -z "$shell_name" ] || die "shell takes a single environment name"
+                        shell_name=$1
+                        shift
+                        ;;
+                esac
+            done
+            [ -n "$shell_name" ] || { usage; exit 0; }
             require_root
-            case "${2:-}" in
-                --help|-h|'')
-                    usage
-                    exit 0
-                    ;;
-            esac
-            [ "$#" -eq 2 ] || die "shell requires an environment name"
-            shell_into_env "$2"
+            shell_into_env "$shell_name" "$shell_refresh"
             ;;
         destroy)
             require_root
