@@ -78,7 +78,13 @@ By default the helper stores state under `~/.cache/dports-dev/`:
 - `repos/deltaports.git/`: cached DeltaPorts mirror
 - `repos/freebsd-ports.git/`: persistent git mirror
 - `repos/DPorts.git/`: persistent DPorts mirror
+- `venvs/dportsv3/`: DragonFly-native cached `dportsv3` virtualenvs
 - `envs/<name>/root/`: throwaway chroot root
+
+The `dportsv3` virtualenv cache is keyed by DragonFly release, Python version,
+install profile, and `scripts/generator/pyproject.toml`. It is restored into
+fresh envs before the initial compose, avoiding repeated `pip install -e` work
+while still letting the editable install use the env-local DeltaPorts sources.
 
 Default shared distfiles mount:
 

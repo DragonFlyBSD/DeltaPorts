@@ -10,6 +10,7 @@ DPORTS_DEV_ENVS_DIR=${DPORTS_DEV_ENVS_DIR:-$DPORTS_DEV_CACHE_ROOT/envs}
 DPORTS_DEV_BASE_DIR=${DPORTS_DEV_BASE_DIR:-$DPORTS_DEV_CACHE_ROOT/base-extracted}
 DPORTS_DEV_DOWNLOAD_DIR=${DPORTS_DEV_DOWNLOAD_DIR:-$DPORTS_DEV_CACHE_ROOT/base-downloads}
 DPORTS_DEV_REPOS_DIR=${DPORTS_DEV_REPOS_DIR:-$DPORTS_DEV_CACHE_ROOT/repos}
+DPORTS_DEV_VENVS_DIR=${DPORTS_DEV_VENVS_DIR:-$DPORTS_DEV_CACHE_ROOT/venvs}
 DPORTS_DEV_AVALON_RELEASES_URL=${DPORTS_DEV_AVALON_RELEASES_URL:-https://avalon.dragonflybsd.org/snapshots/x86_64/assets/releases/}
 DPORTS_DEV_FREEBSD_PORTS_URL=${DPORTS_DEV_FREEBSD_PORTS_URL:-https://git.FreeBSD.org/ports.git}
 DPORTS_DEV_DPORTS_URL=${DPORTS_DEV_DPORTS_URL:-https://github.com/DragonFlyBSD/DPorts.git}
@@ -56,6 +57,7 @@ destroy options:
 
 Environment variables:
   DPORTS_DEV_CACHE_ROOT
+  DPORTS_DEV_VENVS_DIR
   DPORTS_DEV_AVALON_RELEASES_URL
   DPORTS_DEV_FREEBSD_PORTS_URL
   DPORTS_DEV_DPORTS_URL
@@ -123,7 +125,7 @@ clear_immutable_flags() {
 
 ensure_dirs() {
     mkdir -p "$DPORTS_DEV_CACHE_ROOT" "$DPORTS_DEV_ENVS_DIR" "$DPORTS_DEV_BASE_DIR" \
-        "$DPORTS_DEV_DOWNLOAD_DIR" "$DPORTS_DEV_REPOS_DIR"
+        "$DPORTS_DEV_DOWNLOAD_DIR" "$DPORTS_DEV_REPOS_DIR" "$DPORTS_DEV_VENVS_DIR"
 }
 
 DPORTS_DEV_HELD_LOCKS=
@@ -201,6 +203,21 @@ shell_quote() {
     printf "'"
     printf '%s' "$1" | sed "s/'/'\\''/g"
     printf "'"
+}
+
+file_sha256() {
+    path=$1
+    if command -v sha256 >/dev/null 2>&1; then
+        sha256 -q "$path"
+    elif command -v sha256sum >/dev/null 2>&1; then
+        set -- $(sha256sum "$path")
+        printf '%s\n' "$1"
+    elif command -v shasum >/dev/null 2>&1; then
+        set -- $(shasum -a 256 "$path")
+        printf '%s\n' "$1"
+    else
+        die "required command not found: sha256, sha256sum, or shasum"
+    fi
 }
 
 root_path() {
@@ -737,6 +754,58 @@ bootstrap_tools() {
     done
 }
 
+ensure_dportsv3_venv() {
+    root_dir=$1
+    venv_dest=$root_dir/work/DeltaPorts/scripts/generator/.venv
+    pyproject=$root_dir/work/DeltaPorts/scripts/generator/pyproject.toml
+    [ -f "$pyproject" ] || die "missing generator project in env: $pyproject"
+
+    python_cmd=$(find_python_in_chroot "$root_dir") || {
+        error "cannot cache dportsv3 venv without python3 in chroot"
+        return 1
+    }
+    py_version=$(run_in_chroot "$root_dir" '"$1" -c "import sys; print(\"%d.%d.%d\" % sys.version_info[:3])"' "$python_cmd")
+    df_release=$(run_in_chroot "$root_dir" 'uname -r')
+    pyproject_hash=$(file_sha256 "$pyproject")
+    cache_key=$(sanitize_name "base-$df_release-python-$py_version-$pyproject_hash")
+    cache_root=$DPORTS_DEV_VENVS_DIR/dportsv3/$cache_key
+    cache_venv=$cache_root/venv
+
+    acquire_cache_lock "venv-dportsv3-$cache_key"
+    mkdir -p "$DPORTS_DEV_VENVS_DIR/dportsv3"
+    if [ -f "$cache_root/.ready" ]; then
+        info "restoring cached dportsv3 venv for DragonFly $df_release python $py_version"
+        rm -rf "$venv_dest"
+        copy_tree "$cache_venv" "$venv_dest"
+        if run_in_chroot "$root_dir" '/work/DeltaPorts/dportsv3 --help >/dev/null'; then
+            release_cache_lock "venv-dportsv3-$cache_key"
+            return 0
+        fi
+        warn "cached dportsv3 venv failed validation; rebuilding it"
+        rm -rf "$venv_dest" "$cache_root"
+    fi
+
+    info "creating dportsv3 venv inside chroot for cache key $cache_key"
+    if ! run_in_chroot "$root_dir" '/work/DeltaPorts/dportsv3 --help >/dev/null'; then
+        release_cache_lock "venv-dportsv3-$cache_key"
+        error "failed to bootstrap dportsv3 venv inside chroot"
+        return 1
+    fi
+
+    tmp_cache=$cache_root.tmp.$$
+    rm -rf "$tmp_cache"
+    mkdir -p "$tmp_cache"
+    copy_tree "$venv_dest" "$tmp_cache/venv"
+    printf '%s\n' "DragonFly=$df_release" > "$tmp_cache/metadata"
+    printf '%s\n' "Python=$py_version" >> "$tmp_cache/metadata"
+    printf '%s\n' "Pyproject=$pyproject_hash" >> "$tmp_cache/metadata"
+    printf '%s\n' "Profile=base" >> "$tmp_cache/metadata"
+    : > "$tmp_cache/.ready"
+    rm -rf "$cache_root"
+    mv "$tmp_cache" "$cache_root"
+    release_cache_lock "venv-dportsv3-$cache_key"
+}
+
 compose_inside_env() {
     root_dir=$1
     mkdir -p "$root_dir/work/artifacts/compose"
@@ -988,6 +1057,9 @@ create_env() {
     if ! bootstrap_tools "$ROOT_DIR"; then
         bootstrap_failed=1
         warn "bootstrap failed; environment retained for manual investigation"
+    elif ! ensure_dportsv3_venv "$ROOT_DIR"; then
+        bootstrap_failed=1
+        warn "dportsv3 venv bootstrap failed; environment retained for manual investigation"
     fi
 
     compose_failed=0
