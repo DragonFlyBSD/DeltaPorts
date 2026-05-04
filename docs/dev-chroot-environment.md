@@ -14,6 +14,8 @@ Current scope:
   `--lock-root`
 - Host distfiles: mounted into the env at `/usr/distfiles` by default so
   repeated runs can share fetched distfiles
+- dsynth: generated config in the env, using the composed tree as its ports
+  directory and `/work/dsynth/` for build outputs
 
 ## Requirements
 
@@ -28,6 +30,12 @@ Current scope:
 sudo scripts/tools/dports-dev-env create --target @2026Q2 --origin editors/vim --shell
 ```
 
+The repo wrapper also dispatches to the same helper:
+
+```bash
+sudo ./dportsv3 dev-env create --target @2026Q2 --origin editors/vim --shell
+```
+
 This will:
 
 1. discover the latest DragonFly `*world*` asset on Avalon,
@@ -39,8 +47,9 @@ This will:
    the DPorts tree into the env,
 7. run `cd /usr && make pkg-bootstrap` when `pkg` is missing, then bootstrap a
    few development tools inside the chroot,
-8. run `compose` with `--oracle-profile off` and `--lock-root /work/DPorts`,
-9. drop you into a shell if `--shell` was requested.
+8. generate `/etc/dsynth/dsynth.ini` and `/etc/dsynth/DPortsDev-make.conf`,
+9. run `compose` with `--oracle-profile off` and `--lock-root /work/DPorts`,
+10. drop you into a shell if `--shell` was requested.
 
 ## Enter Later
 
@@ -85,7 +94,19 @@ The shell defines:
 
 - `regen`: rerun compose for the environment target
 - `reapply`: rerun `dsl apply` for the selected origin
+- `dbuild`: run `dsynth -p DPortsDev build` for the selected origin, or for
+  origins passed as arguments
 - `showenv`: print `DPORTS_*` environment variables
+
+The generated dsynth profile is `DPortsDev` and uses:
+
+- ports tree: `/work/artifacts/compose/<target>`
+- packages: `/work/dsynth/packages`
+- repository: `/work/dsynth/packages/All`
+- build root: `/work/dsynth/build`
+- logs: `/work/dsynth/logs`
+- options: `/work/dsynth/options`
+- distfiles: `/usr/distfiles`
 
 ## Notes
 

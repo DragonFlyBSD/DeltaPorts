@@ -18,8 +18,10 @@ DPORTS_DEV_DPORTS_BRANCH=${DPORTS_DEV_DPORTS_BRANCH:-staged}
 DPORTS_DEV_HOST_DISTDIR=${DPORTS_DEV_HOST_DISTDIR:-/usr/distfiles}
 DPORTS_DEV_TOOL_PKGS_REQUIRED=${DPORTS_DEV_TOOL_PKGS_REQUIRED:-bash curl git patch jq}
 DPORTS_DEV_PYTHON_PKGS=${DPORTS_DEV_PYTHON_PKGS:-python3 python313 python312 python311}
-DPORTS_DEV_TOOL_PKGS_OPTIONAL=${DPORTS_DEV_TOOL_PKGS_OPTIONAL:-python311 python312 python313 py311-pip py312-pip py313-pip genpatch}
+DPORTS_DEV_TOOL_PKGS_OPTIONAL=${DPORTS_DEV_TOOL_PKGS_OPTIONAL:-dsynth python311 python312 python313 py311-pip py312-pip py313-pip genpatch}
 DPORTS_DEV_PYTHON_COMMANDS=${DPORTS_DEV_PYTHON_COMMANDS:-python3 python3.13 python3.12 python3.11}
+DPORTS_DEV_DSYNTH_BUILDERS=${DPORTS_DEV_DSYNTH_BUILDERS:-2}
+DPORTS_DEV_DSYNTH_JOBS=${DPORTS_DEV_DSYNTH_JOBS:-2}
 
 usage() {
     cat <<'EOF'
@@ -64,6 +66,8 @@ Environment variables:
   DPORTS_DEV_PYTHON_PKGS
   DPORTS_DEV_PYTHON_COMMANDS
   DPORTS_DEV_TOOL_PKGS_OPTIONAL
+  DPORTS_DEV_DSYNTH_BUILDERS
+  DPORTS_DEV_DSYNTH_JOBS
 EOF
 }
 
@@ -475,6 +479,43 @@ prepare_root_runtime() {
     fi
 }
 
+write_dsynth_config() {
+    root_dir=$1
+    config_dir=$root_dir/etc/dsynth
+    dsynth_root=$root_dir/work/dsynth
+    mkdir -p "$config_dir" \
+        "$dsynth_root/packages/All" \
+        "$dsynth_root/options" \
+        "$dsynth_root/build" \
+        "$dsynth_root/logs" \
+        "$root_dir/work/artifacts/compose/$TARGET" \
+        "$root_dir/usr/distfiles"
+    cat > "$config_dir/dsynth.ini" <<EOF
+[Global Configuration]
+profile_selected= DPortsDev
+
+[DPortsDev]
+Operating_system= DragonFly
+Directory_packages= /work/dsynth/packages
+Directory_repository= /work/dsynth/packages/All
+Directory_portsdir= /work/artifacts/compose/$TARGET
+Directory_options= /work/dsynth/options
+Directory_distfiles= /usr/distfiles
+Directory_buildbase= /work/dsynth/build
+Directory_logs= /work/dsynth/logs
+Directory_ccache= disabled
+Directory_system= /
+Package_suffix= .txz
+Number_of_builders= $DPORTS_DEV_DSYNTH_BUILDERS
+Max_jobs_per_builder= $DPORTS_DEV_DSYNTH_JOBS
+Display_with_ncurses= true
+EOF
+    cat > "$config_dir/DPortsDev-make.conf" <<EOF
+DISTDIR=/usr/distfiles
+WRKDIRPREFIX=/construction
+EOF
+}
+
 write_helper_scripts() {
     root_dir=$1
     bin_dir=$root_dir/usr/local/bin
@@ -526,7 +567,30 @@ EOF
 #!/bin/sh
 env | grep '^DPORTS_' | sort
 EOF
-    chmod 0755 "$bin_dir/regen" "$bin_dir/reapply" "$bin_dir/showenv"
+    cat > "$bin_dir/dbuild" <<'EOF'
+#!/bin/sh
+set -eu
+: "${DPORTS_TARGET:?dbuild: DPORTS_TARGET is not set; run from a dports-dev shell}"
+: "${DPORTS_DSYNTH_PROFILE:=DPortsDev}"
+if ! command -v dsynth >/dev/null 2>&1; then
+    printf '%s\n' 'dbuild requires dsynth; install package ports-mgmt/dsynth or rerun shell --refresh after bootstrap installs it' >&2
+    exit 1
+fi
+if [ ! -f /etc/dsynth/dsynth.ini ]; then
+    printf '%s\n' 'dbuild requires /etc/dsynth/dsynth.ini; rerun shell --refresh from the host' >&2
+    exit 1
+fi
+if [ "$#" -eq 0 ]; then
+    if [ -n "${DPORTS_ORIGIN:-}" ]; then
+        set -- "$DPORTS_ORIGIN"
+    else
+        printf '%s\n' 'usage: dbuild ORIGIN... (or create the env with --origin)' >&2
+        exit 1
+    fi
+fi
+exec dsynth -p "$DPORTS_DSYNTH_PROFILE" build "$@"
+EOF
+    chmod 0755 "$bin_dir/regen" "$bin_dir/reapply" "$bin_dir/showenv" "$bin_dir/dbuild"
 }
 
 write_shell_rc() {
@@ -540,6 +604,8 @@ write_shell_rc() {
         printf 'export DPORTS_ORIGIN=%s\n' "$(shell_quote "$ORIGIN")"
         printf 'export DPORTS_COMPOSE_ROOT=%s\n' "$(shell_quote "/work/artifacts/compose/$TARGET")"
         printf 'export DPORTS_LOCK_ROOT=%s\n' '/work/DPorts'
+        printf 'export DPORTS_DSYNTH_ROOT=%s\n' '/work/dsynth'
+        printf 'export DPORTS_DSYNTH_PROFILE=%s\n' 'DPortsDev'
         printf 'export DPORTS_ORACLE_PROFILE=%s\n' "$(shell_quote "${ORACLE_PROFILE:-off}")"
         printf 'export DISTDIR=%s\n' '/usr/distfiles'
         printf 'export DPORTS_DOC_USER_GUIDE=%s\n' 'https://github.com/DragonFlyBSD/DeltaPorts/blob/master/docs/dportsv3-user-guide.md'
@@ -568,6 +634,8 @@ showwelcome() {
     printf '  FreeBSD ports: %s\n' "$FREEBSD_PORTS_ROOT"
     printf '  DPorts: %s\n' "$DPORTS_LOCK_ROOT"
     printf '  Compose: %s\n' "$DPORTS_COMPOSE_ROOT"
+    printf '  dsynth: %s\n' "$DPORTS_DSYNTH_ROOT"
+    printf '  dsynth config: %s\n' '/etc/dsynth/dsynth.ini'
     printf '  Distfiles: %s\n' "$DISTDIR"
     if [ -n "$DPORTS_ORIGIN" ]; then
         printf '  Composed origin: %s\n' "$DPORTS_COMPOSE_ROOT/$DPORTS_ORIGIN"
@@ -576,7 +644,7 @@ showwelcome() {
     printf '%s\n' 'Docs:'
     printf '  %s\n' "$DPORTS_DOC_USER_GUIDE"
     printf '  %s\n' "$DPORTS_DOC_DEV_ENV"
-    printf '%s\n' 'Helpers: regen reapply showenv'
+    printf '%s\n' 'Helpers: regen reapply dbuild showenv'
 }
 
 if [ -n "${BASH_VERSION:-}" ]; then
@@ -697,10 +765,13 @@ shell_into_env() {
     load_state "$env_name"
     [ "$BACKEND" = "chroot" ] || die "unsupported backend in environment: $BACKEND"
     info "preparing shell entry for environment $env_name"
+    if [ "$refresh" -eq 1 ] || [ ! -f "$ROOT_DIR/etc/dsynth/dsynth.ini" ]; then
+        write_dsynth_config "$ROOT_DIR"
+    fi
     if [ "$refresh" -eq 1 ] || [ ! -f "$ROOT_DIR/root/.dports-dev-env.sh" ]; then
         write_shell_rc "$ROOT_DIR"
     fi
-    if [ "$refresh" -eq 1 ] || [ ! -x "$ROOT_DIR/usr/local/bin/regen" ]; then
+    if [ "$refresh" -eq 1 ] || [ ! -x "$ROOT_DIR/usr/local/bin/dbuild" ]; then
         write_helper_scripts "$ROOT_DIR"
     fi
     if [ "$refresh" -eq 1 ]; then
@@ -907,6 +978,7 @@ create_env() {
     export_git_tree_from_ref DPorts "$DPORTS_MIRROR" "$DPORTS_BRANCH" "$ROOT_DIR/work/DPorts"
     mkdir -p "$ROOT_DIR/work/artifacts/compose"
     CREATED_AT=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+    write_dsynth_config "$ROOT_DIR"
     write_shell_rc "$ROOT_DIR"
     write_helper_scripts "$ROOT_DIR"
     write_state "$ENV_NAME"

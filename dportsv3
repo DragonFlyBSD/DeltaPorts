@@ -9,6 +9,11 @@ STAMP_FILE="$VENV_DIR/.dportsv3-install-stamp"
 PYPROJECT_FILE="$GENERATOR_DIR/pyproject.toml"
 PYTHON_BIN=${PYTHON:-python3}
 
+if [ "${1:-}" = "dev-env" ]; then
+    shift
+    exec "$SELF_DIR/scripts/tools/dports-dev-env" "$@"
+fi
+
 if [ ! -f "$PYPROJECT_FILE" ]; then
     printf '%s\n' "dportsv3: missing generator project: $PYPROJECT_FILE" >&2
     exit 1
