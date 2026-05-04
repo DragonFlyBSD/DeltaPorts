@@ -103,6 +103,18 @@ step() {
     info "[$current/$total] $*"
 }
 
+timer_now() {
+    date +%s
+}
+
+log_elapsed() {
+    __dports_timer_started_at=$1
+    shift
+    __dports_timer_finished_at=$(timer_now)
+    __dports_timer_elapsed=$((__dports_timer_finished_at - __dports_timer_started_at))
+    info "timing: $* completed in ${__dports_timer_elapsed}s"
+}
+
 need_cmd() {
     command -v "$1" >/dev/null 2>&1 || die "required command not found: $1"
 }
@@ -361,13 +373,16 @@ copy_base_root() {
     src=$1
     dst=$2
     info "copying cached base into $dst"
+    started_at=$(timer_now)
     copy_tree "$src" "$dst"
+    log_elapsed "$started_at" "copy cached base"
 }
 
 ensure_remote_git_mirror() {
     name=$1
     url=$2
     mirror="$DPORTS_DEV_REPOS_DIR/$name.git"
+    mirror_started_at=$(timer_now)
     if [ ! -d "$mirror" ]; then
         info "creating $name mirror at $mirror"
         git clone --mirror "$url" "$mirror"
@@ -375,6 +390,7 @@ ensure_remote_git_mirror() {
         info "updating $name mirror $mirror"
         git --git-dir="$mirror" fetch --prune origin
     fi
+    log_elapsed "$mirror_started_at" "refresh $name mirror"
     printf '%s\n' "$mirror"
 }
 
@@ -382,6 +398,7 @@ ensure_local_git_mirror() {
     name=$1
     source_repo=$2
     mirror="$DPORTS_DEV_REPOS_DIR/$name.git"
+    mirror_started_at=$(timer_now)
     if [ ! -d "$mirror" ]; then
         info "creating $name mirror from $source_repo"
         git clone --mirror "$source_repo" "$mirror"
@@ -390,6 +407,7 @@ ensure_local_git_mirror() {
         git --git-dir="$mirror" remote set-url origin "$source_repo"
         git --git-dir="$mirror" fetch --prune origin '+refs/*:refs/*'
     fi
+    log_elapsed "$mirror_started_at" "refresh $name mirror"
     printf '%s\n' "$mirror"
 }
 
@@ -398,10 +416,12 @@ seed_deltaports_checkout() {
     branch=$2
     dest=$3
     info "cloning DeltaPorts branch $branch into $dest"
+    started_at=$(timer_now)
     git clone --single-branch --branch "$branch" "$mirror" "$dest" >&2
     if [ -d "$dest/scripts/generator/.venv" ]; then
         rm -rf "$dest/scripts/generator/.venv"
     fi
+    log_elapsed "$started_at" "clone DeltaPorts"
 }
 
 seed_freebsd_checkout() {
@@ -409,7 +429,9 @@ seed_freebsd_checkout() {
     branch=$2
     dest=$3
     info "cloning freebsd-ports branch $branch into $dest"
+    started_at=$(timer_now)
     git clone --single-branch --branch "$branch" "$mirror" "$dest" >&2
+    log_elapsed "$started_at" "clone freebsd-ports"
 }
 
 export_git_tree_from_ref() {
@@ -425,8 +447,10 @@ export_git_tree_from_ref() {
         die "branch not found in $label mirror: $branch"
     fi
     info "exporting $label branch $branch into $dest"
+    started_at=$(timer_now)
     mkdir -p "$dest"
     git --git-dir="$mirror" archive "$ref" | tar -C "$dest" -xpf -
+    log_elapsed "$started_at" "export $label"
 }
 
 mount_if_needed() {
@@ -715,30 +739,41 @@ ensure_python_shim() {
 
 bootstrap_tools() {
     root_dir=$1
+    bootstrap_started_at=$(timer_now)
     if ! run_in_chroot "$root_dir" 'command -v pkg >/dev/null 2>&1'; then
         info "pkg is not present; bootstrapping it from /usr"
+        pkg_make_started_at=$(timer_now)
         if ! run_in_chroot "$root_dir" 'cd /usr && make pkg-bootstrap >/dev/null'; then
             error "failed to bootstrap pkg inside the chroot"
             return 1
         fi
+        log_elapsed "$pkg_make_started_at" "make pkg-bootstrap"
     fi
     info "bootstrapping pkg inside chroot"
+    pkg_bootstrap_started_at=$(timer_now)
     run_in_chroot "$root_dir" 'ASSUME_ALWAYS_YES=yes pkg bootstrap -yf >/dev/null 2>&1 || true'
+    log_elapsed "$pkg_bootstrap_started_at" "pkg bootstrap"
     info "updating pkg metadata inside chroot"
+    pkg_update_started_at=$(timer_now)
     run_in_chroot "$root_dir" 'ASSUME_ALWAYS_YES=yes pkg update -f >/dev/null 2>&1 || true'
+    log_elapsed "$pkg_update_started_at" "pkg update"
     for pkg_name in $DPORTS_DEV_TOOL_PKGS_REQUIRED; do
         info "installing required package $pkg_name"
+        pkg_install_started_at=$(timer_now)
         if ! run_in_chroot "$root_dir" 'ASSUME_ALWAYS_YES=yes pkg install -y "$1" >/dev/null' "$pkg_name"; then
             error "failed to install required package in chroot: $pkg_name"
             return 1
         fi
+        log_elapsed "$pkg_install_started_at" "install required package $pkg_name"
     done
     for pkg_name in $DPORTS_DEV_PYTHON_PKGS; do
         if find_python_in_chroot "$root_dir" >/dev/null 2>&1; then
             break
         fi
         info "installing python candidate $pkg_name"
+        pkg_install_started_at=$(timer_now)
         run_in_chroot "$root_dir" 'ASSUME_ALWAYS_YES=yes pkg install -y "$1" >/dev/null' "$pkg_name" || warn "python candidate unavailable or failed: $pkg_name"
+        log_elapsed "$pkg_install_started_at" "install python candidate $pkg_name"
     done
     if ! find_python_in_chroot "$root_dir" >/dev/null 2>&1; then
         error "failed to install a python3 runtime inside the chroot"
@@ -750,12 +785,16 @@ bootstrap_tools() {
     fi
     for pkg_name in $DPORTS_DEV_TOOL_PKGS_OPTIONAL; do
         info "installing optional package $pkg_name"
+        pkg_install_started_at=$(timer_now)
         run_in_chroot "$root_dir" 'ASSUME_ALWAYS_YES=yes pkg install -y "$1" >/dev/null' "$pkg_name" || warn "optional package unavailable or failed: $pkg_name"
+        log_elapsed "$pkg_install_started_at" "install optional package $pkg_name"
     done
+    log_elapsed "$bootstrap_started_at" "bootstrap developer tools"
 }
 
 ensure_dportsv3_venv() {
     root_dir=$1
+    venv_started_at=$(timer_now)
     venv_dest=$root_dir/work/DeltaPorts/scripts/generator/.venv
     pyproject=$root_dir/work/DeltaPorts/scripts/generator/pyproject.toml
     [ -f "$pyproject" ] || die "missing generator project in env: $pyproject"
@@ -775,26 +814,35 @@ ensure_dportsv3_venv() {
     mkdir -p "$DPORTS_DEV_VENVS_DIR/dportsv3"
     if [ -f "$cache_root/.ready" ]; then
         info "restoring cached dportsv3 venv for DragonFly $df_release python $py_version"
+        venv_restore_started_at=$(timer_now)
         rm -rf "$venv_dest"
         copy_tree "$cache_venv" "$venv_dest"
+        log_elapsed "$venv_restore_started_at" "restore cached dportsv3 venv"
+        venv_validate_started_at=$(timer_now)
         if run_in_chroot "$root_dir" '/work/DeltaPorts/dportsv3 --help >/dev/null'; then
+            log_elapsed "$venv_validate_started_at" "validate cached dportsv3 venv"
+            log_elapsed "$venv_started_at" "prepare dportsv3 venv"
             release_cache_lock "venv-dportsv3-$cache_key"
             return 0
         fi
+        log_elapsed "$venv_validate_started_at" "validate cached dportsv3 venv"
         warn "cached dportsv3 venv failed validation; rebuilding it"
         rm -rf "$venv_dest" "$cache_root"
     fi
 
     info "creating dportsv3 venv inside chroot for cache key $cache_key"
+    venv_bootstrap_started_at=$(timer_now)
     if ! run_in_chroot "$root_dir" '/work/DeltaPorts/dportsv3 --help >/dev/null'; then
         release_cache_lock "venv-dportsv3-$cache_key"
         error "failed to bootstrap dportsv3 venv inside chroot"
         return 1
     fi
+    log_elapsed "$venv_bootstrap_started_at" "bootstrap dportsv3 venv"
 
     tmp_cache=$cache_root.tmp.$$
     rm -rf "$tmp_cache"
     mkdir -p "$tmp_cache"
+    venv_cache_store_started_at=$(timer_now)
     copy_tree "$venv_dest" "$tmp_cache/venv"
     printf '%s\n' "DragonFly=$df_release" > "$tmp_cache/metadata"
     printf '%s\n' "Python=$py_version" >> "$tmp_cache/metadata"
@@ -803,6 +851,8 @@ ensure_dportsv3_venv() {
     : > "$tmp_cache/.ready"
     rm -rf "$cache_root"
     mv "$tmp_cache" "$cache_root"
+    log_elapsed "$venv_cache_store_started_at" "store dportsv3 venv cache"
+    log_elapsed "$venv_started_at" "prepare dportsv3 venv"
     release_cache_lock "venv-dportsv3-$cache_key"
 }
 
@@ -814,7 +864,8 @@ compose_inside_env() {
     else
         info "running initial full compose for target $TARGET"
     fi
-    run_in_chroot "$root_dir" '
+    compose_started_at=$(timer_now)
+    if run_in_chroot "$root_dir" '
         target=$1
         oracle=$2
         exec /work/DeltaPorts/dportsv3 compose \
@@ -825,7 +876,13 @@ compose_inside_env() {
             --output "/work/artifacts/compose/$target" \
             --replace-output \
             --oracle-profile "$oracle"
-    ' "$TARGET" "${ORACLE_PROFILE:-off}"
+    ' "$TARGET" "${ORACLE_PROFILE:-off}"; then
+        compose_status=0
+    else
+        compose_status=$?
+    fi
+    log_elapsed "$compose_started_at" "initial compose"
+    return "$compose_status"
 }
 
 shell_into_env() {
@@ -1015,18 +1072,24 @@ create_env() {
     env_dir="$DPORTS_DEV_ENVS_DIR/$ENV_NAME"
     ROOT_DIR=$(root_path "$ENV_NAME")
     [ ! -e "$env_dir" ] || die "environment already exists: $ENV_NAME"
+    create_started_at=$(timer_now)
 
     step 1 7 "Resolving latest DragonFly world asset"
+    phase_started_at=$(timer_now)
     asset=$(fetch_latest_world_asset)
+    log_elapsed "$phase_started_at" "resolve latest DragonFly world asset"
 
     step 2 7 "Preparing cached DragonFly base root"
+    phase_started_at=$(timer_now)
     BASE_CACHE_KEY=${asset%.tar.gz}
     acquire_cache_lock "world-$BASE_CACHE_KEY"
     BASE_ARCHIVE=$(ensure_base_archive "$asset")
     BASE_EXTRACTED_ROOT=$(ensure_base_extracted "$BASE_CACHE_KEY" "$BASE_ARCHIVE")
     release_cache_lock "world-$BASE_CACHE_KEY"
+    log_elapsed "$phase_started_at" "prepare cached DragonFly base root"
 
     step 3 7 "Refreshing cached repo mirrors"
+    phase_started_at=$(timer_now)
     acquire_cache_lock mirror-deltaports
     DELTAPORTS_MIRROR=$(ensure_local_git_mirror deltaports "$SOURCE_DELTA_ROOT")
     release_cache_lock mirror-deltaports
@@ -1036,11 +1099,15 @@ create_env() {
     acquire_cache_lock mirror-DPorts
     DPORTS_MIRROR=$(ensure_remote_git_mirror DPorts "$DPORTS_DEV_DPORTS_URL")
     release_cache_lock mirror-DPorts
+    log_elapsed "$phase_started_at" "refresh cached repo mirrors"
 
     step 4 7 "Creating throwaway chroot root"
+    phase_started_at=$(timer_now)
     copy_base_root "$BASE_EXTRACTED_ROOT" "$ROOT_DIR"
+    log_elapsed "$phase_started_at" "create throwaway chroot root"
 
     step 5 7 "Seeding env-local source trees and writing environment state"
+    phase_started_at=$(timer_now)
     prepare_root_runtime "$ROOT_DIR"
     seed_deltaports_checkout "$DELTAPORTS_MIRROR" "$DELTAPORTS_BRANCH" "$ROOT_DIR/work/DeltaPorts"
     seed_freebsd_checkout "$FREEBSD_MIRROR" "$FREEBSD_BRANCH" "$ROOT_DIR/work/freebsd-ports"
@@ -1051,8 +1118,10 @@ create_env() {
     write_shell_rc "$ROOT_DIR"
     write_helper_scripts "$ROOT_DIR"
     write_state "$ENV_NAME"
+    log_elapsed "$phase_started_at" "seed env-local source trees and state"
 
     step 6 7 "Bootstrapping developer tools inside chroot"
+    phase_started_at=$(timer_now)
     bootstrap_failed=0
     if ! bootstrap_tools "$ROOT_DIR"; then
         bootstrap_failed=1
@@ -1061,6 +1130,7 @@ create_env() {
         bootstrap_failed=1
         warn "dportsv3 venv bootstrap failed; environment retained for manual investigation"
     fi
+    log_elapsed "$phase_started_at" "bootstrap developer tools and dportsv3 venv"
 
     compose_failed=0
     if [ "$bootstrap_failed" -eq 1 ]; then
@@ -1070,10 +1140,12 @@ create_env() {
         step 7 7 "Skipping initial compose (--no-initial-compose); run 'regen' inside the shell when ready"
     else
         step 7 7 "Running initial compose"
+        phase_started_at=$(timer_now)
         if ! compose_inside_env "$ROOT_DIR"; then
             compose_failed=1
             warn "compose failed; environment retained for manual investigation"
         fi
+        log_elapsed "$phase_started_at" "run initial compose step"
     fi
 
     if [ "$auto_shell" -eq 1 ]; then
@@ -1086,9 +1158,11 @@ create_env() {
     fi
 
     if [ "$bootstrap_failed" -eq 1 ] || [ "$compose_failed" -eq 1 ]; then
+        log_elapsed "$create_started_at" "create environment $ENV_NAME"
         exit 1
     fi
 
+    log_elapsed "$create_started_at" "create environment $ENV_NAME"
     info "environment ready: $ENV_NAME"
 }
 
