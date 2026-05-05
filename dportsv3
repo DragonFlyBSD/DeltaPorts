@@ -8,11 +8,10 @@ VENV_DIR="$GENERATOR_DIR/.venv"
 STAMP_FILE="$VENV_DIR/.dportsv3-install-stamp"
 PYPROJECT_FILE="$GENERATOR_DIR/pyproject.toml"
 PYTHON_BIN=${PYTHON:-python3}
-
-if [ "${1:-}" = "dev-env" ]; then
-    shift
-    exec "$SELF_DIR/scripts/tools/dports-dev-env" "$@"
-fi
+DEV_ENV_DIR="$SELF_DIR/scripts/tools/dev-env"
+DEV_ENV_VENV_DIR="$DEV_ENV_DIR/.venv"
+DEV_ENV_STAMP_FILE="$DEV_ENV_VENV_DIR/.dports-dev-env-install-stamp"
+DEV_ENV_PYPROJECT_FILE="$DEV_ENV_DIR/pyproject.toml"
 
 if [ ! -f "$PYPROJECT_FILE" ]; then
     printf '%s\n' "dportsv3: missing generator project: $PYPROJECT_FILE" >&2
@@ -36,6 +35,56 @@ command -v "$PYTHON_BIN" >/dev/null 2>&1 || {
     printf '%s\n' "dportsv3: required interpreter not found: $PYTHON_BIN" >&2
     exit 1
 }
+
+compute_dev_env_stamp() {
+    "$PYTHON_BIN" - "$DEV_ENV_DIR" <<'PY'
+from __future__ import annotations
+
+import hashlib
+import pathlib
+import sys
+
+root = pathlib.Path(sys.argv[1])
+digest = hashlib.sha256()
+for path in [root / "pyproject.toml", *sorted((root / "dports_dev_env").rglob("*.py"))]:
+    digest.update(str(path.relative_to(root)).encode())
+    digest.update(b"\0")
+    digest.update(path.read_bytes())
+    digest.update(b"\0")
+print(digest.hexdigest())
+PY
+}
+
+if [ "${1:-}" = "dev-env" ]; then
+    shift
+    if [ ! -f "$DEV_ENV_PYPROJECT_FILE" ]; then
+        printf '%s\n' "dportsv3: missing dev-env project: $DEV_ENV_PYPROJECT_FILE" >&2
+        exit 1
+    fi
+    DEV_ENV_STAMP_VALUE=$(compute_dev_env_stamp)
+    dev_env_needs_install=0
+    if [ ! -x "$DEV_ENV_VENV_DIR/bin/dports-dev-env" ]; then
+        dev_env_needs_install=1
+    elif [ ! -f "$DEV_ENV_STAMP_FILE" ]; then
+        dev_env_needs_install=1
+    elif [ "$(cat "$DEV_ENV_STAMP_FILE")" != "$DEV_ENV_STAMP_VALUE" ]; then
+        dev_env_needs_install=1
+    fi
+    if [ "$dev_env_needs_install" -eq 1 ]; then
+        if [ "$AUTO_BOOTSTRAP" -ne 1 ]; then
+            printf '%s\n' "dportsv3: dev-env bootstrap required but DPORTSV3_NO_BOOTSTRAP=1" >&2
+            exit 1
+        fi
+        if [ ! -d "$DEV_ENV_VENV_DIR" ]; then
+            printf '%s\n' "dportsv3: creating dev-env virtual environment at $DEV_ENV_VENV_DIR" >&2
+            "$PYTHON_BIN" -m venv "$DEV_ENV_VENV_DIR"
+        fi
+        printf '%s\n' "dportsv3: installing dev-env tool" >&2
+        "$DEV_ENV_VENV_DIR/bin/python" -m pip install -e "$DEV_ENV_DIR"
+        printf '%s\n' "$DEV_ENV_STAMP_VALUE" > "$DEV_ENV_STAMP_FILE"
+    fi
+    exec "$DEV_ENV_VENV_DIR/bin/dports-dev-env" "$@"
+fi
 
 compute_stamp() {
     "$PYTHON_BIN" - "$PYPROJECT_FILE" "$INSTALL_PROFILE" <<'PY'

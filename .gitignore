@@ -23,6 +23,7 @@ wheels/
 # Virtual environments
 .env
 .venv
+scripts/tools/dev-env/.venv/
 env/
 venv/
 ENV/
