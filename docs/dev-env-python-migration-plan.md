@@ -269,14 +269,19 @@ High-level flow:
 13. Write dsynth config.
 14. Write shell rc.
 15. Prepare generator venv.
-16. Run initial compose unless `--no-initial-compose`.
-17. Mark state `ready`.
-18. If failures occur:
+16. Mark state `ready`.
+17. Run initial compose unless `--no-initial-compose`.
+18. Record initial compose status separately from environment readiness.
+19. If infrastructure failures occur:
    - mark state `failed`
    - record failure reason
    - retain env
    - return non-zero
-   - if `--shell`, enter shell anyway when feasible.
+20. If initial compose fails:
+   - keep state `ready`
+   - record `initial_compose.status=failed`
+   - return non-zero
+   - allow `--shell` because the environment is usable.
 
 **Shell Flow**
 Use `EnvironmentSession`.

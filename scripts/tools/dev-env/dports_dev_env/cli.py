@@ -164,10 +164,15 @@ def cmd_create(args: argparse.Namespace) -> int:
         oracle_profile=args.oracle_profile,
     )
     result = EnvironmentBuilder(config, store, options).create()
-    if args.shell and result.exit_code == 0:
-        EnvironmentSession(config, store).enter(result.env_name)
-    elif args.shell:
-        warn("not entering shell because create did not complete successfully")
+    if args.shell:
+        try:
+            state = store.load(result.env_name)
+        except DevEnvError:
+            state = None
+        if state is not None and state.status == "ready":
+            EnvironmentSession(config, store).enter(result.env_name)
+        else:
+            warn("not entering shell because create did not leave a ready environment")
     return result.exit_code
 
 

@@ -24,6 +24,7 @@ class DevEnvConfig:
     deltaports_branch: str
     dports_branch: str
     host_distdir: Path
+    bootstrap_pkgs: list[str]
     tool_pkgs_required: list[str]
     tool_cmds_required: list[str]
     python_pkgs: list[str]
@@ -53,7 +54,11 @@ def load_config() -> DevEnvConfig:
         deltaports_branch=os.environ.get("DPORTS_DEV_DELTAPORTS_BRANCH", "master"),
         dports_branch=os.environ.get("DPORTS_DEV_DPORTS_BRANCH", "staged"),
         host_distdir=Path(os.environ.get("DPORTS_DEV_HOST_DISTDIR", "/usr/distfiles")),
-        tool_pkgs_required=split_words(os.environ.get("DPORTS_DEV_TOOL_PKGS_REQUIRED", "indexinfo bash curl git patch jq")),
+        bootstrap_pkgs=split_words(os.environ.get("DPORTS_DEV_BOOTSTRAP_PKGS", "indexinfo")),
+        tool_pkgs_required=without_words(
+            split_words(os.environ.get("DPORTS_DEV_TOOL_PKGS_REQUIRED", "bash curl git patch jq")),
+            split_words(os.environ.get("DPORTS_DEV_BOOTSTRAP_PKGS", "indexinfo")),
+        ),
         tool_cmds_required=split_words(os.environ.get("DPORTS_DEV_TOOL_CMDS_REQUIRED", "pkg indexinfo bash curl git patch jq python3")),
         python_pkgs=split_words(os.environ.get("DPORTS_DEV_PYTHON_PKGS", "python3 python313 python312 python311")),
         tool_pkgs_optional=split_words(os.environ.get("DPORTS_DEV_TOOL_PKGS_OPTIONAL", "dsynth python311 python312 python313 py311-pip py312-pip py313-pip genpatch")),
@@ -65,6 +70,11 @@ def load_config() -> DevEnvConfig:
 
 def split_words(value: str) -> list[str]:
     return value.split()
+
+
+def without_words(values: list[str], excluded: list[str]) -> list[str]:
+    excluded_set = set(excluded)
+    return [value for value in values if value not in excluded_set]
 
 
 def parse_positive_int(name: str, value: str) -> int:

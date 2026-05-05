@@ -42,8 +42,13 @@ This will:
 7. run `cd /usr && make pkg-bootstrap` when `pkg` is missing, then bootstrap a
    few development tools inside the chroot,
 8. generate `/etc/dsynth/dsynth.ini` and `/etc/dsynth/DPortsDev-make.conf`,
-9. run `compose` with `--oracle-profile off` and `--lock-root /work/DPorts`,
-10. drop you into a shell if `--shell` was requested.
+9. mark the environment ready,
+10. run `compose` with `--oracle-profile off` and `--lock-root /work/DPorts`,
+11. record the initial compose result separately from environment readiness,
+12. drop you into a shell if `--shell` was requested and the environment is ready.
+
+If initial compose fails, the command returns non-zero but the environment remains
+`ready` for inspection and shell entry.
 
 ## Enter Later
 

@@ -10,6 +10,7 @@ from .errors import StateError
 
 STATE_SCHEMA = 1
 EnvStatus = Literal["creating", "ready", "failed", "destroying"]
+ComposeStatus = Literal["not-run", "running", "ok", "failed", "skipped"]
 
 
 @dataclass(frozen=True)
@@ -36,6 +37,13 @@ class FailureState:
 
 
 @dataclass(frozen=True)
+class InitialComposeState:
+    status: ComposeStatus
+    updated_at: str
+    reason: str = ""
+
+
+@dataclass(frozen=True)
 class EnvironmentState:
     schema: int
     name: str
@@ -51,6 +59,7 @@ class EnvironmentState:
     repos: RepoState
     source: SourceState
     runtime: RuntimeState
+    initial_compose: InitialComposeState | None = None
     failure: FailureState | None = None
 
     @property
@@ -87,6 +96,7 @@ def _require_str(data: dict[str, object], key: str) -> str:
 
 
 _VALID_STATUSES = {"creating", "ready", "failed", "destroying"}
+_VALID_COMPOSE_STATUSES = {"not-run", "running", "ok", "failed", "skipped"}
 
 
 def state_from_json(data: dict[str, object]) -> EnvironmentState:
@@ -102,6 +112,17 @@ def state_from_json(data: dict[str, object]) -> EnvironmentState:
     failure = None
     if isinstance(failure_data, dict):
         failure = FailureState(reason=str(failure_data.get("reason", "")))
+    initial_compose_data = data.get("initial_compose")
+    initial_compose = None
+    if isinstance(initial_compose_data, dict):
+        compose_status = str(initial_compose_data.get("status", ""))
+        if compose_status not in _VALID_COMPOSE_STATUSES:
+            raise StateError(f"state file has invalid initial_compose status: {compose_status!r}")
+        initial_compose = InitialComposeState(
+            status=compose_status,  # type: ignore[arg-type]
+            updated_at=str(initial_compose_data.get("updated_at", "")),
+            reason=str(initial_compose_data.get("reason", "")),
+        )
     status = str(data.get("status", ""))
     if status not in _VALID_STATUSES:
         raise StateError(f"state file has invalid status: {status!r}")
@@ -127,6 +148,7 @@ def state_from_json(data: dict[str, object]) -> EnvironmentState:
             host_distdir=str(runtime.get("host_distdir", "")),
             oracle_profile=str(runtime.get("oracle_profile", "off")),
         ),
+        initial_compose=initial_compose,
         failure=failure,
     )
 

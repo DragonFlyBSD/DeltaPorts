@@ -77,6 +77,7 @@ class BaseProvisioner:
         try:
             prepare_root_runtime(self.config, root)
             self.bootstrap_pkg(root)
+            self.install_bootstrap_packages(root)
             self.install_required_packages(root)
             self.ensure_python(root)
             self.install_optional_packages(root)
@@ -106,6 +107,14 @@ class BaseProvisioner:
                 raise ProvisionError("failed to bootstrap pkg inside the chroot")
         runner.run(["pkg", "bootstrap", "-yf"], env={"ASSUME_ALWAYS_YES": "yes"})
         runner.run(["pkg", "update", "-f"], env={"ASSUME_ALWAYS_YES": "yes"})
+
+    def install_bootstrap_packages(self, root: Path) -> None:
+        if not self.config.bootstrap_pkgs:
+            return
+        info(f"installing bootstrap packages {' '.join(self.config.bootstrap_pkgs)}")
+        result = ChrootRunner(root).run(["pkg", "install", "-y", *self.config.bootstrap_pkgs], env={"ASSUME_ALWAYS_YES": "yes"})
+        if result.returncode != 0:
+            raise ProvisionError("failed to install bootstrap packages in chroot")
 
     def install_required_packages(self, root: Path) -> None:
         if not self.config.tool_pkgs_required:
@@ -191,6 +200,7 @@ class BaseProvisioner:
             "schema": 1,
             "id": base_id,
             "archive": {"asset": archive.asset, "path": str(archive.path), "sha256": archive.sha256},
+            "bootstrap_packages": self.config.bootstrap_pkgs,
             "required_packages": self.config.tool_pkgs_required,
             "required_commands": self.config.tool_cmds_required,
             "python_packages": self.config.python_pkgs,

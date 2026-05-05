@@ -18,7 +18,7 @@ from .names import default_env_name, target_to_branch
 from .provision import BaseProvisioner
 from .repos import RepoCache
 from .runtime import mount_env_root, prepare_root_runtime
-from .state import EnvironmentState, FailureState, RepoState, RuntimeState, SourceState
+from .state import EnvironmentState, FailureState, InitialComposeState, RepoState, RuntimeState, SourceState
 from .store import EnvironmentStore
 from .venv import GeneratorVenvCache
 
@@ -52,6 +52,7 @@ class EnvironmentBuilder:
         self.env_dir = store.env_dir(self.env_name)
         self.root_dir = store.root_dir(self.env_name)
         self.writable_dir = store.writable_dir(self.env_name)
+        self.exit_code = 0
 
     def create(self) -> CreateResult:
         self.validate()
@@ -67,7 +68,7 @@ class EnvironmentBuilder:
                     state = self.build(state)
                 self.store.save(replace(state, status="ready", updated_at=now_utc(), failure=None))
                 info(f"environment ready: {self.env_name}")
-                return CreateResult(self.env_name, 0)
+                return CreateResult(self.env_name, self.exit_code)
             except DevEnvError as exc:
                 warn(f"create failed; environment retained for manual investigation: {exc}")
                 failed = replace(state, status="failed", updated_at=now_utc(), failure=FailureState(str(exc)))
@@ -120,13 +121,29 @@ class EnvironmentBuilder:
         with step_timer("prepare generator venv"):
             GeneratorVenvCache(self.config).prepare(self.root_dir, provisioned_base.id)
 
+        state = replace(state, status="ready", updated_at=now_utc(), failure=None)
+        self.store.save(state)
+
         if self.options.no_initial_compose:
             info("[7/7] Skipping initial compose (--no-initial-compose); run 'regen' inside the shell when ready")
+            state = replace(state, initial_compose=InitialComposeState("skipped", now_utc(), "--no-initial-compose"), updated_at=now_utc())
+            self.store.save(state)
             return state
 
         info("[7/7] Running initial compose")
+        state = replace(state, initial_compose=InitialComposeState("running", now_utc()), updated_at=now_utc())
+        self.store.save(state)
         with step_timer("initial compose"):
-            self.compose_inside_env(state)
+            try:
+                self.compose_inside_env(state)
+            except CommandError as exc:
+                self.exit_code = 1
+                state = replace(state, initial_compose=InitialComposeState("failed", now_utc(), str(exc)), updated_at=now_utc())
+                self.store.save(state)
+                warn(f"initial compose failed; environment remains ready for inspection: {exc}")
+                return state
+        state = replace(state, initial_compose=InitialComposeState("ok", now_utc()), updated_at=now_utc())
+        self.store.save(state)
         return state
 
     def validate(self) -> None:
@@ -168,6 +185,7 @@ class EnvironmentBuilder:
             ),
             source=SourceState(delta_root=str(self.options.delta_root)),
             runtime=RuntimeState(host_distdir=str(self.config.host_distdir), oracle_profile=self.options.oracle_profile),
+            initial_compose=InitialComposeState("not-run", created_at),
         )
 
     def compose_inside_env(self, state: EnvironmentState) -> None:

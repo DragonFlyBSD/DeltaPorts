@@ -72,6 +72,7 @@ def provisioned_base_id(config: DevEnvConfig, archive: BaseArchive) -> str:
         "schema": PROVISION_SCHEMA,
         "asset": archive.asset,
         "archive_sha256": archive.sha256,
+        "bootstrap_packages": config.bootstrap_pkgs,
         "required_packages": config.tool_pkgs_required,
         "required_commands": config.tool_cmds_required,
         "python_packages": config.python_pkgs,
