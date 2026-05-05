@@ -1,0 +1,17 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "dports-dev-env"
+version = "0.1.0"
+description = "DragonFly DeltaPorts development environment manager"
+requires-python = ">=3.11"
+license = "BSD-2-Clause"
+dependencies = []
+
+[project.scripts]
+dports-dev-env = "dports_dev_env.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["dports_dev_env"]
