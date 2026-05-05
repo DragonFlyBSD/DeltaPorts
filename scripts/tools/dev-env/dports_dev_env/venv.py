@@ -5,7 +5,7 @@ import json
 import shutil
 from pathlib import Path
 
-from .chroot import run_in_chroot
+from .chroot import ChrootRunner
 from .config import DevEnvConfig
 from .errors import ProvisionError
 from .fs import copy_tree
@@ -24,7 +24,8 @@ class GeneratorVenvCache:
         pyproject = root_dir / "work/DeltaPorts/scripts/generator/pyproject.toml"
         if not pyproject.is_file():
             raise ProvisionError(f"missing generator project in env: {pyproject}")
-        python_version = self.chroot_output(root_dir, 'python3 -c "import sys; print(\"%d.%d.%d\" % sys.version_info[:3])"')
+        runner = ChrootRunner(root_dir)
+        python_version = self.chroot_output(runner, ["python3", "-c", "import sys; print('%d.%d.%d' % sys.version_info[:3])"])
         pyproject_hash = hashlib.sha256(pyproject.read_bytes()).hexdigest()
         venv_id = self.venv_id(provisioned_base_id, python_version, pyproject_hash)
         cache_root = self.config.generator_venvs_dir / venv_id
@@ -44,7 +45,7 @@ class GeneratorVenvCache:
                 shutil.rmtree(cache_root)
 
             with step_timer("bootstrap generator venv"):
-                result = run_in_chroot(root_dir, "/work/DeltaPorts/dportsv3 --help >/dev/null")
+                result = runner.run(["/work/DeltaPorts/dportsv3", "--help"])
                 if result.returncode != 0:
                     raise ProvisionError("failed to bootstrap dportsv3 generator venv inside chroot")
             tmp_cache = cache_root.with_suffix(".tmp")
@@ -65,7 +66,7 @@ class GeneratorVenvCache:
             tmp_cache.replace(cache_root)
 
     def validate(self, root_dir: Path) -> bool:
-        return run_in_chroot(root_dir, "/work/DeltaPorts/dportsv3 --help >/dev/null").returncode == 0
+        return ChrootRunner(root_dir).run(["/work/DeltaPorts/dportsv3", "--help"]).returncode == 0
 
     def venv_id(self, provisioned_base_id: str, python_version: str, pyproject_hash: str) -> str:
         data = {
@@ -76,8 +77,8 @@ class GeneratorVenvCache:
         }
         return hashlib.sha256(json.dumps(data, sort_keys=True).encode()).hexdigest()[:32]
 
-    def chroot_output(self, root_dir: Path, script: str) -> str:
-        result = run_in_chroot(root_dir, script, capture_output=True)
-        if result.returncode != 0:
-            raise ProvisionError(f"chroot command failed: {script}")
-        return result.stdout.strip()
+    def chroot_output(self, runner: ChrootRunner, argv: list[str]) -> str:
+        try:
+            return runner.output(argv)
+        except Exception as exc:
+            raise ProvisionError(f"chroot command failed: {' '.join(argv)}") from exc

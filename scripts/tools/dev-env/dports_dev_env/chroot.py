@@ -17,19 +17,46 @@ def chroot_env() -> dict[str, str]:
     }
 
 
-def run_in_chroot(
-    root_dir: Path,
-    script: str,
-    *args: str,
-    check: bool = False,
-    capture_output: bool = False,
-) -> subprocess.CompletedProcess[str]:
-    command = ["chroot", str(root_dir), "/usr/bin/env", "-i", *[f"{key}={value}" for key, value in chroot_env().items()], "/bin/sh", "-c", script, "_", *args]
-    return subprocess.run(command, text=True, check=check, capture_output=capture_output)
+class ChrootRunner:
+    def __init__(self, root_dir: Path) -> None:
+        self.root_dir = root_dir
+
+    def command(self, argv: list[str], *, env: dict[str, str] | None = None) -> list[str]:
+        chroot_environment = chroot_env()
+        if env:
+            chroot_environment.update(env)
+        env_args = [f"{key}={value}" for key, value in chroot_environment.items()]
+        return ["chroot", str(self.root_dir), "/usr/bin/env", "-i", *env_args, *argv]
+
+    def run(
+        self,
+        argv: list[str],
+        *,
+        env: dict[str, str] | None = None,
+        check: bool = False,
+        capture_output: bool = False,
+    ) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(self.command(argv, env=env), text=True, check=check, capture_output=capture_output)
+
+    def output(self, argv: list[str], *, env: dict[str, str] | None = None) -> str:
+        result = self.run(argv, env=env, capture_output=True)
+        if result.returncode != 0:
+            raise subprocess.CalledProcessError(result.returncode, self.command(argv, env=env), result.stdout, result.stderr)
+        return result.stdout.strip()
+
+    def run_shell(
+        self,
+        script: str,
+        *args: str,
+        env: dict[str, str] | None = None,
+        check: bool = False,
+        capture_output: bool = False,
+    ) -> subprocess.CompletedProcess[str]:
+        return self.run(["/bin/sh", "-c", script, "_", *args], env=env, check=check, capture_output=capture_output)
 
 
 def command_exists(root_dir: Path, command: str) -> bool:
-    result = run_in_chroot(root_dir, 'command -v "$1" >/dev/null 2>&1', command)
+    result = ChrootRunner(root_dir).run(["/bin/sh", "-c", 'command -v "$1" >/dev/null 2>&1', "_", command])
     return result.returncode == 0
 
 

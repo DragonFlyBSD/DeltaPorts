@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from .base import ensure_base_archive, fetch_latest_world_asset
-from .chroot import run_in_chroot
+from .chroot import ChrootRunner
 from .config import DevEnvConfig, ensure_cache_dirs
 from .dsynth import write_dsynth_config
 from .errors import CommandError, DevEnvError, UsageError
@@ -164,11 +164,24 @@ class EnvironmentBuilder:
         )
 
     def compose_inside_env(self, state: EnvironmentState) -> None:
-        result = run_in_chroot(
-            self.root_dir,
-            'target=$1 oracle=$2; exec /work/DeltaPorts/dportsv3 compose --target "$target" --delta-root /work/DeltaPorts --freebsd-root /work/freebsd-ports --lock-root /work/DPorts --output "/work/artifacts/compose/$target" --replace-output --oracle-profile "$oracle"',
-            state.target,
-            state.oracle_profile,
+        result = ChrootRunner(self.root_dir).run(
+            [
+                "/work/DeltaPorts/dportsv3",
+                "compose",
+                "--target",
+                state.target,
+                "--delta-root",
+                "/work/DeltaPorts",
+                "--freebsd-root",
+                "/work/freebsd-ports",
+                "--lock-root",
+                "/work/DPorts",
+                "--output",
+                f"/work/artifacts/compose/{state.target}",
+                "--replace-output",
+                "--oracle-profile",
+                state.oracle_profile,
+            ]
         )
         if result.returncode != 0:
             raise CommandError("initial compose failed")

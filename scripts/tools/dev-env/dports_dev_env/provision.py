@@ -6,7 +6,7 @@ import subprocess
 from pathlib import Path
 
 from .base import BaseArchive, ProvisionedBase, provisioned_base_id
-from .chroot import command_exists, run_in_chroot
+from .chroot import ChrootRunner, command_exists
 from .config import DevEnvConfig
 from .errors import ProvisionError
 from .helpers import write_helper_scripts
@@ -76,20 +76,22 @@ class BaseProvisioner:
             raise ProvisionError("provisioned base is missing required developer tools")
 
     def bootstrap_pkg(self, root: Path) -> None:
+        runner = ChrootRunner(root)
         if not command_exists(root, "pkg"):
             info("pkg is not present; bootstrapping it from /usr")
-            result = run_in_chroot(root, "cd /usr && make pkg-bootstrap >/dev/null")
+            result = runner.run_shell("cd /usr && make pkg-bootstrap >/dev/null")
             if result.returncode != 0:
                 raise ProvisionError("failed to bootstrap pkg inside the chroot")
-        run_in_chroot(root, "ASSUME_ALWAYS_YES=yes pkg bootstrap -yf >/dev/null 2>&1 || true")
-        run_in_chroot(root, "ASSUME_ALWAYS_YES=yes pkg update -f >/dev/null 2>&1 || true")
+        runner.run(["pkg", "bootstrap", "-yf"], env={"ASSUME_ALWAYS_YES": "yes"})
+        runner.run(["pkg", "update", "-f"], env={"ASSUME_ALWAYS_YES": "yes"})
 
     def install_required_packages(self, root: Path) -> None:
-        for package in self.config.tool_pkgs_required:
-            info(f"installing required package {package}")
-            result = run_in_chroot(root, 'ASSUME_ALWAYS_YES=yes pkg install -y "$1" >/dev/null', package)
-            if result.returncode != 0:
-                raise ProvisionError(f"failed to install required package in chroot: {package}")
+        if not self.config.tool_pkgs_required:
+            return
+        info(f"installing required packages {' '.join(self.config.tool_pkgs_required)}")
+        result = ChrootRunner(root).run(["pkg", "install", "-y", *self.config.tool_pkgs_required], env={"ASSUME_ALWAYS_YES": "yes"})
+        if result.returncode != 0:
+            raise ProvisionError("failed to install required packages in chroot")
 
     def ensure_python(self, root: Path) -> None:
         if self.find_python(root):
@@ -97,7 +99,7 @@ class BaseProvisioner:
             return
         for package in self.config.python_pkgs:
             info(f"installing python candidate {package}")
-            run_in_chroot(root, 'ASSUME_ALWAYS_YES=yes pkg install -y "$1" >/dev/null', package)
+            ChrootRunner(root).run(["pkg", "install", "-y", package], env={"ASSUME_ALWAYS_YES": "yes"})
             if self.find_python(root):
                 self.ensure_python3_shim(root)
                 return
@@ -115,14 +117,14 @@ class BaseProvisioner:
         python = self.find_python(root)
         if not python:
             raise ProvisionError("failed to find python command for python3 shim")
-        result = run_in_chroot(root, 'cmd=$(command -v "$1") && ln -sf "$cmd" /usr/local/bin/python3', python)
+        result = ChrootRunner(root).run_shell('cmd=$(command -v "$1") && ln -sf "$cmd" /usr/local/bin/python3', python)
         if result.returncode != 0:
             raise ProvisionError("failed to create a python3 shim inside the chroot")
 
     def install_optional_packages(self, root: Path) -> None:
         for package in self.config.tool_pkgs_optional:
             info(f"installing optional package {package}")
-            result = run_in_chroot(root, 'ASSUME_ALWAYS_YES=yes pkg install -y "$1" >/dev/null', package)
+            result = ChrootRunner(root).run(["pkg", "install", "-y", package], env={"ASSUME_ALWAYS_YES": "yes"})
             if result.returncode != 0:
                 warn(f"optional package unavailable or failed: {package}")
 
@@ -144,7 +146,7 @@ class BaseProvisioner:
 
     def clean_package_caches(self, root: Path) -> None:
         info("cleaning package caches from provisioned base")
-        run_in_chroot(root, "ASSUME_ALWAYS_YES=yes pkg clean -ay >/dev/null 2>&1 || true")
+        ChrootRunner(root).run(["pkg", "clean", "-ay"], env={"ASSUME_ALWAYS_YES": "yes"})
         for path in [root / "root/.cache", root / "var/cache/pkg"]:
             if path.exists():
                 shutil.rmtree(path)
