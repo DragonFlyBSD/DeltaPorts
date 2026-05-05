@@ -35,6 +35,8 @@ Actions:
   shell    Enter one existing environment via chroot
   destroy  Unmount and remove one environment
   list     List known environments
+  cleanup-mounts
+           Unmount stale dports-dev mounts under the cache root
 
 create options:
   --name NAME          Environment name (default: derived from target/origin)
@@ -141,12 +143,27 @@ clear_immutable_flags() {
 }
 
 ensure_dirs() {
+    validate_cache_root
     mkdir -p "$DPORTS_DEV_CACHE_ROOT" "$DPORTS_DEV_ENVS_DIR" "$DPORTS_DEV_BASE_DIR" \
         "$DPORTS_DEV_PROVISIONED_BASE_DIR" "$DPORTS_DEV_DOWNLOAD_DIR" \
         "$DPORTS_DEV_REPOS_DIR" "$DPORTS_DEV_VENVS_DIR"
 }
 
+validate_cache_root() {
+    case "$DPORTS_DEV_CACHE_ROOT" in
+        '') die "DPORTS_DEV_CACHE_ROOT must not be empty" ;;
+        /*) ;;
+        *) die "DPORTS_DEV_CACHE_ROOT must be absolute: $DPORTS_DEV_CACHE_ROOT" ;;
+    esac
+    case "$DPORTS_DEV_CACHE_ROOT" in
+        /|/root|/home|/usr|/var|/tmp) die "DPORTS_DEV_CACHE_ROOT is too broad for safe cleanup: $DPORTS_DEV_CACHE_ROOT" ;;
+    esac
+}
+
 DPORTS_DEV_HELD_LOCKS=
+DPORTS_DEV_ACTIVE_TMP_ROOT=
+DPORTS_DEV_ACTIVE_TMP_DIR=
+DPORTS_DEV_CLEANING_UP=0
 
 cleanup_held_locks() {
     [ -z "${DPORTS_DEV_HELD_LOCKS:-}" ] && return 0
@@ -159,7 +176,30 @@ cleanup_held_locks() {
     DPORTS_DEV_HELD_LOCKS=
 }
 
-trap cleanup_held_locks EXIT INT TERM HUP
+cleanup_on_exit() {
+    [ "${DPORTS_DEV_CLEANING_UP:-0}" -eq 0 ] || return 0
+    DPORTS_DEV_CLEANING_UP=1
+    if [ -n "${DPORTS_DEV_ACTIVE_TMP_ROOT:-}" ]; then
+        unmount_under "$DPORTS_DEV_ACTIVE_TMP_ROOT" >/dev/null 2>&1 || true
+    fi
+    if [ -n "${DPORTS_DEV_ACTIVE_TMP_DIR:-}" ]; then
+        if [ -z "$(mounts_under "$DPORTS_DEV_ACTIVE_TMP_DIR")" ]; then
+            clear_immutable_flags "$DPORTS_DEV_ACTIVE_TMP_DIR" >/dev/null 2>&1 || true
+            rm -rf "$DPORTS_DEV_ACTIVE_TMP_DIR" 2>/dev/null || true
+        fi
+    fi
+    DPORTS_DEV_ACTIVE_TMP_ROOT=
+    DPORTS_DEV_ACTIVE_TMP_DIR=
+    cleanup_held_locks
+}
+
+cleanup_on_signal() {
+    cleanup_on_exit
+    exit 130
+}
+
+trap cleanup_on_exit EXIT
+trap cleanup_on_signal INT TERM HUP
 
 acquire_cache_lock() {
     key=$1
@@ -265,6 +305,7 @@ load_state() {
     : "${DPORTS_BRANCH:=$DPORTS_DEV_DPORTS_BRANCH}"
     : "${HOST_DISTDIR:=$DPORTS_DEV_HOST_DISTDIR}"
     : "${ORACLE_PROFILE:=off}"
+    : "${ENV_STATUS:=ready}"
 }
 
 init_partial_env_state() {
@@ -284,6 +325,7 @@ init_partial_env_state() {
     BASE_EXTRACTED_ROOT=
     ROOT_DIR=$(root_path "$env_name")
     CREATED_AT=
+    ENV_STATUS=partial
 }
 
 write_state() {
@@ -310,6 +352,7 @@ BASE_CACHE_KEY=$(shell_quote "$BASE_CACHE_KEY")
 BASE_EXTRACTED_ROOT=$(shell_quote "$BASE_EXTRACTED_ROOT")
 ROOT_DIR=$(shell_quote "$ROOT_DIR")
 CREATED_AT=$(shell_quote "$CREATED_AT")
+ENV_STATUS=$(shell_quote "${ENV_STATUS:-ready}")
 EOF
     mv -f "$tmp_file" "$state_file"
 }
@@ -517,6 +560,52 @@ umount_if_needed() {
     return 1
 }
 
+mounts_under() {
+    root=$1
+    mount | while IFS= read -r line; do
+        target=${line#* on }
+        target=${target%% \(*}
+        case "$target" in
+            "$root"|"$root"/*) printf '%s\n' "$target" ;;
+        esac
+    done
+}
+
+unmount_under() {
+    root=$1
+    status=0
+    targets=$(mounts_under "$root" | awk '{ print length($0) " " $0 }' | sort -rn | cut -d ' ' -f 2-) || targets=
+    [ -n "$targets" ] || return 0
+    saved_IFS=$IFS
+    IFS='
+'
+    for target in $targets; do
+        [ -n "$target" ] || continue
+        umount_if_needed "$target" || status=1
+    done
+    IFS=$saved_IFS
+    return "$status"
+}
+
+safe_remove_tree() {
+    path=$1
+    validate_cache_root
+    [ -n "$path" ] || die "safe_remove_tree: empty path"
+    case "$path" in
+        "$DPORTS_DEV_CACHE_ROOT"/*) ;;
+        *) die "safe_remove_tree: refusing to remove outside cache root: $path" ;;
+    esac
+    unmount_under "$path" || true
+    survivors=$(mounts_under "$path") || survivors=
+    if [ -n "$survivors" ]; then
+        error "refusing to remove $path; mounts are still present:"
+        printf '%s\n' "$survivors" >&2
+        die "unmount the listed paths and re-run"
+    fi
+    clear_immutable_flags "$path"
+    rm -rf "$path"
+}
+
 ensure_resolv_conf() {
     root_dir=$1
     force=${2:-0}
@@ -548,9 +637,11 @@ prepare_root_runtime() {
 
 unmount_root_runtime() {
     root_dir=$1
-    umount_if_needed "$root_dir/usr/distfiles"
-    umount_if_needed "$root_dir/proc"
-    umount_if_needed "$root_dir/dev"
+    status=0
+    umount_if_needed "$root_dir/usr/distfiles" || status=1
+    umount_if_needed "$root_dir/proc" || status=1
+    umount_if_needed "$root_dir/dev" || status=1
+    return "$status"
 }
 
 prepare_base_mountpoints() {
@@ -588,12 +679,14 @@ mount_env_writable_dirs() {
 
 unmount_env_writable_dirs() {
     root_dir=$1
-    umount_if_needed "$root_dir/construction"
-    umount_if_needed "$root_dir/etc/dsynth"
-    umount_if_needed "$root_dir/var/tmp"
-    umount_if_needed "$root_dir/tmp"
-    umount_if_needed "$root_dir/root"
-    umount_if_needed "$root_dir/work"
+    status=0
+    umount_if_needed "$root_dir/construction" || status=1
+    umount_if_needed "$root_dir/etc/dsynth" || status=1
+    umount_if_needed "$root_dir/var/tmp" || status=1
+    umount_if_needed "$root_dir/tmp" || status=1
+    umount_if_needed "$root_dir/root" || status=1
+    umount_if_needed "$root_dir/work" || status=1
+    return "$status"
 }
 
 mount_env_root() {
@@ -997,14 +1090,17 @@ ensure_provisioned_base() {
     fi
     if [ -e "$provision_dir" ]; then
         warn "discarding stale provisioned base root $provision_root"
-        clear_immutable_flags "$provision_dir"
-        rm -rf "$provision_dir"
+        safe_remove_tree "$provision_dir"
     fi
 
     tmp_dir=$provision_dir.tmp.$$
     tmp_root=$tmp_dir/root
-    rm -rf "$tmp_dir"
+    if [ -e "$tmp_dir" ]; then
+        safe_remove_tree "$tmp_dir"
+    fi
     mkdir -p "$tmp_dir"
+    DPORTS_DEV_ACTIVE_TMP_DIR=$tmp_dir
+    DPORTS_DEV_ACTIVE_TMP_ROOT=$tmp_root
     info "creating provisioned base root $provision_root"
     copy_base_root "$base_root" "$tmp_root"
     prepare_root_runtime "$tmp_root"
@@ -1031,8 +1127,7 @@ ensure_provisioned_base() {
             release_cache_lock "provisioned-base-$provision_key"
             die "unmount the listed paths and clean $tmp_dir manually"
         fi
-        clear_immutable_flags "$tmp_dir"
-        rm -rf "$tmp_dir"
+        safe_remove_tree "$tmp_dir"
         release_cache_lock "provisioned-base-$provision_key"
         error "failed to provision base root"
         return 1
@@ -1045,6 +1140,8 @@ ensure_provisioned_base() {
     printf '%s\n' "Optional=$DPORTS_DEV_TOOL_PKGS_OPTIONAL" >> "$tmp_dir/metadata"
     : > "$tmp_dir/.ready"
     mv "$tmp_dir" "$provision_dir"
+    DPORTS_DEV_ACTIVE_TMP_DIR=
+    DPORTS_DEV_ACTIVE_TMP_ROOT=
     release_cache_lock "provisioned-base-$provision_key"
     printf '%s\n' "$provision_root"
 }
@@ -1186,34 +1283,61 @@ destroy_env() {
         die "environment not found: $env_name"
     fi
     info "destroying environment $env_name"
-    unmount_root_runtime "$ROOT_DIR"
-    unmount_env_writable_dirs "$ROOT_DIR"
-    umount_if_needed "$ROOT_DIR"
-    survivors=$(mount | awk -v root="$ROOT_DIR" 'index($0, " on " root) { print }') || survivors=
+    unmount_under "$DPORTS_DEV_ENVS_DIR/$env_name" || true
+    survivors=$(mounts_under "$DPORTS_DEV_ENVS_DIR/$env_name") || survivors=
     if [ -n "$survivors" ]; then
-        error "refusing to remove $ROOT_DIR; the following mounts are still present:"
+        error "refusing to remove $DPORTS_DEV_ENVS_DIR/$env_name; the following mounts are still present:"
         printf '%s\n' "$survivors" >&2
         die "unmount the listed paths and re-run destroy"
     fi
-    clear_immutable_flags "$DPORTS_DEV_ENVS_DIR/$env_name"
-    rm -rf "$DPORTS_DEV_ENVS_DIR/$env_name"
+    safe_remove_tree "$DPORTS_DEV_ENVS_DIR/$env_name"
 }
 
 list_envs() {
     if [ ! -d "$DPORTS_DEV_ENVS_DIR" ]; then
+        if [ "$(id -u)" -ne 0 ] && [ "$DPORTS_DEV_CACHE_ROOT" = "${HOME}/.cache/dports-dev" ]; then
+            warn "no env cache at $DPORTS_DEV_ENVS_DIR; root-created envs usually live under /root/.cache/dports-dev"
+        fi
         exit 0
     fi
-    for state_file in "$DPORTS_DEV_ENVS_DIR"/*/state.env; do
-        [ -f "$state_file" ] || continue
-        env_name=$(basename "$(dirname "$state_file")")
+    found=0
+    for env_dir in "$DPORTS_DEV_ENVS_DIR"/*; do
+        [ -d "$env_dir" ] || continue
+        found=1
+        env_name=$(basename "$env_dir")
+        state_file=$env_dir/state.env
         unset STATE_VERSION ENV_NAME BACKEND TARGET ORIGIN DELTAPORTS_BRANCH \
             FREEBSD_BRANCH DPORTS_BRANCH HOST_DISTDIR ORACLE_PROFILE \
             SOURCE_DELTA_ROOT BASE_ARCHIVE BASE_CACHE_KEY BASE_EXTRACTED_ROOT \
-            ROOT_DIR CREATED_AT
-        # shellcheck disable=SC1090
-        . "$state_file"
-        printf '%s\t%s\t%s\t%s\n' "$env_name" "${BACKEND:-}" "${TARGET:-}" "${ORIGIN:-}"
+            ROOT_DIR CREATED_AT ENV_STATUS
+        mount_status=unmounted
+        if [ -n "$(mounts_under "$env_dir/root")" ]; then
+            mount_status=mounted
+        fi
+        if [ -f "$state_file" ]; then
+            # shellcheck disable=SC1090
+            . "$state_file"
+            printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$env_name" "${BACKEND:-}" "${TARGET:-}" "${ORIGIN:-}" "$mount_status" "${ENV_STATUS:-ready}"
+        else
+            printf '%s\tpartial\t\t\t%s\n' "$env_name" "$mount_status"
+        fi
     done
+    if [ "$found" -eq 0 ] && [ "$(id -u)" -ne 0 ] && [ "$DPORTS_DEV_CACHE_ROOT" = "${HOME}/.cache/dports-dev" ]; then
+        warn "no envs under $DPORTS_DEV_ENVS_DIR; root-created envs usually live under /root/.cache/dports-dev"
+    fi
+}
+
+cleanup_mounts() {
+    require_root
+    info "cleaning mounts under $DPORTS_DEV_CACHE_ROOT"
+    unmount_under "$DPORTS_DEV_CACHE_ROOT" || true
+    survivors=$(mounts_under "$DPORTS_DEV_CACHE_ROOT") || survivors=
+    if [ -n "$survivors" ]; then
+        error "some dports-dev mounts remain:"
+        printf '%s\n' "$survivors" >&2
+        die "if these paths no longer exist, reboot may be required to clear orphaned mounts"
+    fi
+    info "no dports-dev mounts remain under $DPORTS_DEV_CACHE_ROOT"
 }
 
 create_env() {
@@ -1235,6 +1359,7 @@ create_env() {
     HOST_DISTDIR=$DPORTS_DEV_HOST_DISTDIR
     ORACLE_PROFILE=off
     ENV_NAME=
+    ENV_STATUS=creating
     auto_shell=0
     allow_dirty=0
     skip_initial_compose=0
@@ -1349,6 +1474,8 @@ create_env() {
     BASE_EXTRACTED_ROOT=$(ensure_base_extracted "$BASE_CACHE_KEY" "$BASE_ARCHIVE")
     release_cache_lock "world-$BASE_CACHE_KEY"
     PROVISIONED_BASE_ROOT=$(ensure_provisioned_base "$BASE_EXTRACTED_ROOT" "$BASE_CACHE_KEY")
+    CREATED_AT=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+    write_state "$ENV_NAME"
     log_elapsed "$phase_started_at" "prepare cached DragonFly base roots"
 
     step 3 7 "Refreshing cached repo mirrors"
@@ -1376,9 +1503,9 @@ create_env() {
     seed_freebsd_checkout "$FREEBSD_MIRROR" "$FREEBSD_BRANCH" "$ROOT_DIR/work/freebsd-ports"
     export_git_tree_from_ref DPorts "$DPORTS_MIRROR" "$DPORTS_BRANCH" "$ROOT_DIR/work/DPorts"
     mkdir -p "$ROOT_DIR/work/artifacts/compose"
-    CREATED_AT=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
     write_dsynth_config "$ROOT_DIR"
     write_shell_rc "$ROOT_DIR"
+    ENV_STATUS=ready
     write_state "$ENV_NAME"
     log_elapsed "$phase_started_at" "seed env-local source trees and state"
 
@@ -1489,6 +1616,9 @@ main() {
             ;;
         list)
             list_envs
+            ;;
+        cleanup-mounts)
+            cleanup_mounts
             ;;
         --help|-h|help|'')
             usage

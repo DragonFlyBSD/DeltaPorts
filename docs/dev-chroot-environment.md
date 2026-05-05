@@ -42,7 +42,7 @@ This will:
 2. cache the downloaded archive,
 3. extract it once into the shared base cache,
 4. refresh cached mirrors for DeltaPorts, FreeBSD ports, and DPorts,
-5. create the throwaway env root from the cached world,
+5. mount the provisioned base read-only and add per-env writable overlays,
 6. clone env-local DeltaPorts and FreeBSD ports from cached mirrors and export
    the DPorts tree into the env,
 7. run `cd /usr && make pkg-bootstrap` when `pkg` is missing, then bootstrap a
@@ -68,6 +68,19 @@ sudo scripts/tools/dports-dev-env destroy 2026Q2-editors_vim
 ```bash
 scripts/tools/dports-dev-env list
 ```
+
+`list` also shows partial or still-creating environments left by interrupted
+creation so they can be destroyed explicitly.
+
+## Cleanup Mounts
+
+```bash
+sudo scripts/tools/dports-dev-env cleanup-mounts
+```
+
+This unmounts stale dports-dev mounts under the cache root. If a mount target
+path was already removed by an interrupted run, DragonFly may require a reboot
+to clear the orphaned mount.
 
 ## Default Layout
 
