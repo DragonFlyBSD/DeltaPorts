@@ -381,7 +381,7 @@ Host-only:
 
 DragonFly/root:
 - `sudo ./dportsv3 dev-env list`
-- `sudo ./dportsv3 dev-env cleanup-mounts`
+- `sudo ./dportsv3 dev-env cleanup-mounts --yes`
 - `sudo ./dportsv3 dev-env create --target @2026Q2 --no-initial-compose`
 - `sudo ./dportsv3 dev-env shell --refresh NAME`
 - `sudo ./dportsv3 dev-env destroy NAME`

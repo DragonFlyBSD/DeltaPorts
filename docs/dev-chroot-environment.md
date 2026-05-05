@@ -69,12 +69,12 @@ creation so they can be destroyed explicitly.
 ## Cleanup Mounts
 
 ```bash
-sudo ./dportsv3 dev-env cleanup-mounts
+sudo ./dportsv3 dev-env cleanup-mounts --yes
 ```
 
-This unmounts stale dports-dev mounts under the cache root. If a mount target
-path was already removed by an interrupted run, DragonFly may require a reboot
-to clear the orphaned mount.
+This previews stale dports-dev mounts under the cache root and requires `--yes`
+before unmounting them. If a mount target path was already removed by an
+interrupted run, DragonFly may require a reboot to clear the orphaned mount.
 
 ## Default Layout
 
