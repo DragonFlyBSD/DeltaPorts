@@ -9,6 +9,7 @@ from .base import BaseArchive, ProvisionedBase, provisioned_base_id
 from .chroot import ChrootRunner, command_exists
 from .config import DevEnvConfig
 from .errors import ProvisionError
+from .fs import safe_remove_tree
 from .helpers import write_helper_scripts
 from .locks import CacheLock
 from .log import info, step_timer, warn
@@ -31,10 +32,12 @@ class BaseProvisioner:
                 return ProvisionedBase(base_id, root, metadata_path)
             if base_dir.exists():
                 warn(f"discarding stale provisioned base {base_dir}")
-                shutil.rmtree(base_dir)
+                # Stale base_dir may have leftover mounts from a prior crash;
+                # unmount and refuse to rmtree if any survivor remains.
+                safe_remove_tree(self.config, base_dir)
             tmp_dir = self.config.provisioned_bases_dir / f"{base_id}.tmp"
             if tmp_dir.exists():
-                shutil.rmtree(tmp_dir)
+                safe_remove_tree(self.config, tmp_dir)
             tmp_root = tmp_dir / "root"
             tmp_root.mkdir(parents=True)
             try:
@@ -45,10 +48,11 @@ class BaseProvisioner:
                 self.write_metadata(tmp_dir, archive, base_id)
                 (tmp_dir / "ready").write_text("")
                 tmp_dir.replace(base_dir)
-            except Exception:
+            except (Exception, KeyboardInterrupt):
                 # Best-effort unmount; if anything is still mounted under
                 # tmp_root, refuse to rmtree -- otherwise rmtree would walk
-                # into the live mount and damage host files.
+                # into the live mount and damage host files. KeyboardInterrupt
+                # is BaseException, not Exception, so list it explicitly.
                 unmount_under(tmp_root)
                 survivors = mounts_under(tmp_root)
                 if survivors:
@@ -81,6 +85,15 @@ class BaseProvisioner:
             self.clean_package_caches(root)
         finally:
             unmount_under(root)
+        # Refuse to publish a provisioned base while any mount is still live
+        # under it. Validating + writing `ready` past surviving mounts would
+        # leave the cached base referencing host filesystems.
+        survivors = mounts_under(root)
+        if survivors:
+            raise ProvisionError(
+                "provisioned base still has live mounts after bootstrap: "
+                + ", ".join(str(mount.target) for mount in survivors)
+            )
         if not self.validate_tools(root):
             raise ProvisionError("provisioned base is missing required developer tools")
 

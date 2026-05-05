@@ -157,4 +157,8 @@ def read_env_info(env_dir: Path) -> EnvInfo:
         state = read_env_state(env_dir)
     except FileNotFoundError:
         return EnvInfo(env_dir.name, "partial", "", "", "partial", False)
+    except StateError:
+        # A malformed state file should render as invalid in `list` and not
+        # break recovery tools like `cleanup-mounts`.
+        return EnvInfo(env_dir.name, "partial", "", "", "invalid", False)
     return EnvInfo(state.name, state.backend, state.target, state.origin, state.status, True)
