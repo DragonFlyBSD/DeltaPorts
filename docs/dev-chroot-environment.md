@@ -81,11 +81,14 @@ By default the helper stores state under `~/.cache/dports-dev/`:
 - `repos/freebsd-ports.git/`: persistent git mirror
 - `repos/DPorts.git/`: persistent DPorts mirror
 - `venvs/dportsv3/`: DragonFly-native cached `dportsv3` virtualenvs
-- `envs/<name>/root/`: throwaway chroot root
+- `envs/<name>/root/`: chroot mount point for the read-only provisioned base
+- `envs/<name>/writable/`: per-env writable trees mounted over `/work`,
+  `/root`, `/tmp`, `/var/tmp`, `/etc/dsynth`, and `/construction`
 
 The provisioned base cache is keyed by the Avalon world asset and configured
-tool package lists. Fresh envs are copied from this provisioned root when
-available, avoiding repeated `pkg-bootstrap` and tool package installs.
+tool package lists. Fresh envs mount this provisioned root read-only and layer
+small writable per-env directories over the paths that need mutation, avoiding
+both repeated `pkg-bootstrap` work and full root copies.
 
 The `dportsv3` virtualenv cache is keyed by DragonFly release, Python version,
 install profile, and `scripts/generator/pyproject.toml`. It is restored into

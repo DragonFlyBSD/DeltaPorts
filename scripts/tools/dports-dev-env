@@ -473,6 +473,20 @@ mount_if_needed() {
     mount_null "$src" "$dst"
 }
 
+mount_ro_if_needed() {
+    src=$1
+    dst=$2
+    mkdir -p "$dst"
+    if mount | grep -F " on $dst " >/dev/null 2>&1; then
+        info "mount already present at $dst"
+        return 0
+    fi
+    info "mounting $src read-only at $dst"
+    if ! mount_null -o ro "$src" "$dst"; then
+        mount -t null -o ro "$src" "$dst"
+    fi
+}
+
 umount_if_needed() {
     path=$1
     if ! mount | grep -F " on $path " >/dev/null 2>&1; then
@@ -533,6 +547,76 @@ unmount_root_runtime() {
     umount_if_needed "$root_dir/usr/distfiles"
     umount_if_needed "$root_dir/proc"
     umount_if_needed "$root_dir/dev"
+}
+
+prepare_base_mountpoints() {
+    root_dir=$1
+    mkdir -p "$root_dir/work" "$root_dir/root" "$root_dir/tmp" \
+        "$root_dir/var/tmp" "$root_dir/etc/dsynth" \
+        "$root_dir/construction" "$root_dir/usr/distfiles"
+    chmod 0700 "$root_dir/root"
+    chmod 1777 "$root_dir/tmp" "$root_dir/var/tmp"
+    chmod 0755 "$root_dir/work" "$root_dir/etc/dsynth" "$root_dir/construction"
+}
+
+prepare_env_writable_dirs() {
+    env_dir=$1
+    writable_dir=$env_dir/writable
+    mkdir -p "$writable_dir/work" "$writable_dir/root" "$writable_dir/tmp" \
+        "$writable_dir/var_tmp" "$writable_dir/etc_dsynth" \
+        "$writable_dir/construction"
+    chmod 0700 "$writable_dir/root"
+    chmod 1777 "$writable_dir/tmp" "$writable_dir/var_tmp"
+    chmod 0755 "$writable_dir/work" "$writable_dir/etc_dsynth" "$writable_dir/construction"
+}
+
+mount_env_writable_dirs() {
+    env_dir=$1
+    root_dir=$2
+    writable_dir=$env_dir/writable
+    mount_if_needed "$writable_dir/work" "$root_dir/work"
+    mount_if_needed "$writable_dir/root" "$root_dir/root"
+    mount_if_needed "$writable_dir/tmp" "$root_dir/tmp"
+    mount_if_needed "$writable_dir/var_tmp" "$root_dir/var/tmp"
+    mount_if_needed "$writable_dir/etc_dsynth" "$root_dir/etc/dsynth"
+    mount_if_needed "$writable_dir/construction" "$root_dir/construction"
+}
+
+unmount_env_writable_dirs() {
+    root_dir=$1
+    umount_if_needed "$root_dir/construction"
+    umount_if_needed "$root_dir/etc/dsynth"
+    umount_if_needed "$root_dir/var/tmp"
+    umount_if_needed "$root_dir/tmp"
+    umount_if_needed "$root_dir/root"
+    umount_if_needed "$root_dir/work"
+}
+
+mount_env_root() {
+    provisioned_root=$1
+    env_dir=$2
+    root_dir=$3
+    mkdir -p "$root_dir"
+    mount_ro_if_needed "$provisioned_root" "$root_dir"
+    prepare_env_writable_dirs "$env_dir"
+    mount_env_writable_dirs "$env_dir" "$root_dir"
+}
+
+ensure_env_root_mounted() {
+    env_name=$1
+    env_dir=$DPORTS_DEV_ENVS_DIR/$env_name
+    if mount | grep -F " on $ROOT_DIR " >/dev/null 2>&1; then
+        prepare_env_writable_dirs "$env_dir"
+        mount_env_writable_dirs "$env_dir" "$ROOT_DIR"
+        return 0
+    fi
+    if [ -x "$ROOT_DIR/bin/sh" ]; then
+        return 0
+    fi
+    [ -n "${BASE_EXTRACTED_ROOT:-}" ] || die "state lacks BASE_EXTRACTED_ROOT; cannot remount env root"
+    [ -n "${BASE_CACHE_KEY:-}" ] || die "state lacks BASE_CACHE_KEY; cannot remount env root"
+    PROVISIONED_BASE_ROOT=$(ensure_provisioned_base "$BASE_EXTRACTED_ROOT" "$BASE_CACHE_KEY")
+    mount_env_root "$PROVISIONED_BASE_ROOT" "$env_dir" "$ROOT_DIR"
 }
 
 write_dsynth_config() {
@@ -818,7 +902,7 @@ validate_bootstrap_tools() {
 
 provisioned_base_key() {
     base_key=$1
-    provision_input="provision-v1
+    provision_input="provision-v3
 base=$base_key
 required=$DPORTS_DEV_TOOL_PKGS_REQUIRED
 python_pkgs=$DPORTS_DEV_PYTHON_PKGS
@@ -826,6 +910,16 @@ python_cmds=$DPORTS_DEV_PYTHON_COMMANDS
 optional=$DPORTS_DEV_TOOL_PKGS_OPTIONAL"
     provision_hash=$(string_cksum "$provision_input")
     sanitize_name "$base_key-provision-$provision_hash"
+}
+
+cleanup_provisioned_base() {
+    root_dir=$1
+    info "cleaning package caches from provisioned base"
+    run_in_chroot "$root_dir" 'ASSUME_ALWAYS_YES=yes pkg clean -ay >/dev/null 2>&1 || true'
+    rm -rf "$root_dir/var/cache/pkg"/* \
+        "$root_dir/root/.cache" \
+        "$root_dir/tmp"/* \
+        "$root_dir/var/tmp"/*
 }
 
 ensure_provisioned_base() {
@@ -857,6 +951,10 @@ ensure_provisioned_base() {
     prepare_root_runtime "$tmp_root"
     provision_failed=0
     bootstrap_tools "$tmp_root" || provision_failed=1
+    if [ "$provision_failed" -eq 0 ]; then
+        prepare_base_mountpoints "$tmp_root"
+        cleanup_provisioned_base "$tmp_root"
+    fi
     unmount_root_runtime "$tmp_root"
     if [ "$provision_failed" -ne 0 ] || ! validate_bootstrap_tools "$tmp_root"; then
         clear_immutable_flags "$tmp_dir"
@@ -976,6 +1074,7 @@ shell_into_env() {
     load_state "$env_name"
     [ "$BACKEND" = "chroot" ] || die "unsupported backend in environment: $BACKEND"
     info "preparing shell entry for environment $env_name"
+    ensure_env_root_mounted "$env_name"
     if [ "$refresh" -eq 1 ] || [ ! -f "$ROOT_DIR/etc/dsynth/dsynth.ini" ]; then
         write_dsynth_config "$ROOT_DIR"
     fi
@@ -986,7 +1085,7 @@ shell_into_env() {
         write_helper_scripts "$ROOT_DIR"
     fi
     if [ "$refresh" -eq 1 ]; then
-        ensure_resolv_conf "$ROOT_DIR" 1
+        ensure_resolv_conf "$ROOT_DIR" 0
     fi
     prepare_root_runtime "$ROOT_DIR"
     info "entering shell for env=$env_name target=$TARGET origin=${ORIGIN:-<full-tree>}"
@@ -1010,13 +1109,15 @@ destroy_env() {
     fi
     info "destroying environment $env_name"
     unmount_root_runtime "$ROOT_DIR"
+    unmount_env_writable_dirs "$ROOT_DIR"
+    umount_if_needed "$ROOT_DIR"
     survivors=$(mount | awk -v root="$ROOT_DIR" 'index($0, " on " root) { print }') || survivors=
     if [ -n "$survivors" ]; then
         error "refusing to remove $ROOT_DIR; the following mounts are still present:"
         printf '%s\n' "$survivors" >&2
         die "unmount the listed paths and re-run destroy"
     fi
-    clear_immutable_flags "$ROOT_DIR"
+    clear_immutable_flags "$DPORTS_DEV_ENVS_DIR/$env_name"
     rm -rf "$DPORTS_DEV_ENVS_DIR/$env_name"
 }
 
@@ -1187,7 +1288,7 @@ create_env() {
 
     step 4 7 "Creating throwaway chroot root"
     phase_started_at=$(timer_now)
-    copy_base_root "$PROVISIONED_BASE_ROOT" "$ROOT_DIR"
+    mount_env_root "$PROVISIONED_BASE_ROOT" "$env_dir" "$ROOT_DIR"
     log_elapsed "$phase_started_at" "create throwaway chroot root"
 
     step 5 7 "Seeding env-local source trees and writing environment state"
