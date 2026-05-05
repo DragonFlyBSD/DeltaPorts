@@ -19,27 +19,49 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="action", metavar="ACTION")
 
     create = subparsers.add_parser("create", help="Create one throwaway DragonFly chroot dev environment")
-    create.add_argument("--name")
-    create.add_argument("--target", required=True)
-    create.add_argument("--origin")
-    create.add_argument("--delta-root")
-    create.add_argument("--backend", default="chroot")
-    create.add_argument("--freebsd-branch")
-    create.add_argument("--dports-branch")
-    create.add_argument("--shell", action="store_true")
-    create.add_argument("--allow-dirty", action="store_true")
-    create.add_argument("--no-initial-compose", action="store_true")
-    create.add_argument("--oracle-profile", choices=["off", "local", "ci"], default="off")
+    create.add_argument("--name", help="Environment name (default: derived from target/origin)")
+    create.add_argument("--target", required=True, help="Compose target, e.g. @2026Q2")
+    create.add_argument("--origin", help="Optional selected origin, e.g. editors/vim")
+    create.add_argument("--delta-root", help="Host DeltaPorts checkout used to refresh the cache mirror (default: this repo)")
+    create.add_argument("--backend", default="chroot", help="Backend name (default: chroot)")
+    create.add_argument("--freebsd-branch", help="Override FreeBSD branch (default: derived from target)")
+    create.add_argument("--dports-branch", help="Override DPorts branch (default: from config)")
+    create.add_argument("--shell", action="store_true", help="Enter the shell after creation succeeds")
+    create.add_argument(
+        "--allow-dirty",
+        action="store_true",
+        help="Proceed even if the host DeltaPorts checkout has uncommitted edits (only committed state propagates)",
+    )
+    create.add_argument(
+        "--no-initial-compose",
+        action="store_true",
+        help="Skip the initial compose at create time; run 'regen' inside the shell",
+    )
+    create.add_argument(
+        "--oracle-profile",
+        choices=["off", "local", "ci"],
+        default="off",
+        help="Oracle profile passed to compose (default: off)",
+    )
 
     shell = subparsers.add_parser("shell", help="Enter one existing environment via chroot")
-    shell.add_argument("--refresh", action="store_true")
-    shell.add_argument("name")
+    shell.add_argument(
+        "--refresh",
+        action="store_true",
+        help="Rewrite rcfile, dsynth.ini, and resolv.conf from host (helpers live in the cached provisioned base)",
+    )
+    shell.add_argument("name", help="Environment name")
 
     destroy = subparsers.add_parser("destroy", help="Unmount and remove one environment")
-    destroy.add_argument("name")
+    destroy.add_argument("name", help="Environment name")
 
     subparsers.add_parser("list", help="List known environments")
-    subparsers.add_parser("cleanup-mounts", help="Unmount stale dports-dev mounts under the cache root")
+    cleanup = subparsers.add_parser("cleanup-mounts", help="Unmount stale dports-dev mounts under the cache root")
+    cleanup.add_argument(
+        "--yes",
+        action="store_true",
+        help="Confirm tear-down of every mount under the cache root (required)",
+    )
     return parser
 
 
@@ -54,20 +76,40 @@ def cmd_list(_args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_cleanup_mounts(_args: argparse.Namespace) -> int:
+def cmd_cleanup_mounts(args: argparse.Namespace) -> int:
     require_root()
     config = load_config()
     validate_cache_root(config.cache_root)
-    info(f"cleaning mounts under {config.cache_root}")
+    store = EnvironmentStore(config)
+
+    targets = mounts_under(config.cache_root)
+    if not targets:
+        info(f"no dports-dev mounts under {config.cache_root}")
+        return 0
+
+    creating = [env_info.name for _, env_info in store.list_infos() if env_info.status == "creating"]
+    if creating:
+        error(f"refusing to clean mounts; create is in progress for: {', '.join(creating)}")
+        error("wait for it to finish or destroy the partial environment first")
+        return 1
+
+    info(f"the following mounts under {config.cache_root} will be unmounted:")
+    for mount in targets:
+        print(str(mount.target), file=sys.stderr)
+
+    if not args.yes:
+        error("re-run with --yes to confirm tearing down the listed mounts")
+        return 1
+
     unmount_under(config.cache_root)
     survivors = mounts_under(config.cache_root)
     if survivors:
         error("some dports-dev mounts remain:")
         for mount in survivors:
             print(str(mount.target), file=sys.stderr)
-        error("if these paths no longer exist, reboot may be required to clear orphaned mounts")
+        error("if these paths no longer exist, a reboot may be required to clear orphaned mounts")
         return 1
-    info(f"no dports-dev mounts remain under {config.cache_root}")
+    info(f"all dports-dev mounts under {config.cache_root} have been released")
     return 0
 
 
@@ -117,14 +159,15 @@ def cmd_create(args: argparse.Namespace) -> int:
         backend=args.backend,
         freebsd_branch=args.freebsd_branch,
         dports_branch=args.dports_branch or config.dports_branch,
-        enter_shell=args.shell,
         allow_dirty=args.allow_dirty,
         no_initial_compose=args.no_initial_compose,
         oracle_profile=args.oracle_profile,
     )
     result = EnvironmentBuilder(config, store, options).create()
-    if args.shell:
+    if args.shell and result.exit_code == 0:
         EnvironmentSession(config, store).enter(result.env_name)
+    elif args.shell:
+        warn("not entering shell because create did not complete successfully")
     return result.exit_code
 
 
@@ -150,3 +193,6 @@ def main(argv: list[str] | None = None) -> None:
     except DevEnvError as exc:
         error(str(exc))
         raise SystemExit(1) from None
+    except KeyboardInterrupt:
+        error("interrupted")
+        raise SystemExit(130) from None

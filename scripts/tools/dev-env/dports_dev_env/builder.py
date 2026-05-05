@@ -32,7 +32,6 @@ class CreateOptions:
     backend: str
     freebsd_branch: str | None
     dports_branch: str
-    enter_shell: bool
     allow_dirty: bool
     no_initial_compose: bool
     oracle_profile: str
@@ -74,6 +73,14 @@ class EnvironmentBuilder:
                 failed = replace(state, status="failed", updated_at=now_utc(), failure=FailureState(str(exc)))
                 self.store.save(failed)
                 return CreateResult(self.env_name, 1)
+            except (Exception, KeyboardInterrupt) as exc:
+                # Unexpected failure (incl. ^C) -- record it before bubbling up
+                # so a re-run of `list` shows the env as failed instead of stuck
+                # in `creating`. We re-raise so cli.main reports the real cause.
+                warn(f"create interrupted; environment retained for manual investigation: {exc!r}")
+                failed = replace(state, status="failed", updated_at=now_utc(), failure=FailureState(repr(exc)))
+                self.store.save(failed)
+                raise
 
     def build(self, state: EnvironmentState) -> EnvironmentState:
         info("[1/7] Resolving latest DragonFly world asset")

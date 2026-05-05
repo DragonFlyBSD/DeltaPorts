@@ -10,7 +10,9 @@ from pathlib import Path
 from .config import DevEnvConfig
 from .errors import ProvisionError, StateError
 from .helpers import helper_signature
+from .locks import CacheLock
 from .log import info
+from .names import sanitize_name
 
 
 WORLD_ASSET_RE = re.compile(r'DragonFly-x86_64-[^"<>\s]*\.world\.tar\.gz')
@@ -51,15 +53,18 @@ def fetch_latest_world_asset(config: DevEnvConfig) -> str:
 def ensure_base_archive(config: DevEnvConfig, asset: str) -> BaseArchive:
     config.archives_dir.mkdir(parents=True, exist_ok=True)
     path = config.archives_dir / asset
-    if not path.exists():
-        info(f"downloading world archive {asset}")
-        url = config.avalon_releases_url.rstrip("/") + "/" + asset
-        tmp_path = path.with_suffix(path.suffix + ".tmp")
-        urllib.request.urlretrieve(url, tmp_path)
-        tmp_path.replace(path)
-    else:
-        info(f"reusing cached world archive {path}")
-    return BaseArchive(asset=asset, path=path, sha256=file_sha256(path))
+    # Serialize concurrent creates that resolve the same world asset; without
+    # this they race on a shared tmp path and produce a corrupt archive.
+    with CacheLock(config.locks_dir, f"archive-{sanitize_name(asset)}", timeout=1800):
+        if not path.exists():
+            info(f"downloading world archive {asset}")
+            url = config.avalon_releases_url.rstrip("/") + "/" + asset
+            tmp_path = path.with_suffix(path.suffix + ".tmp")
+            urllib.request.urlretrieve(url, tmp_path)
+            tmp_path.replace(path)
+        else:
+            info(f"reusing cached world archive {path}")
+        return BaseArchive(asset=asset, path=path, sha256=file_sha256(path))
 
 
 def provisioned_base_id(config: DevEnvConfig, archive: BaseArchive) -> str:

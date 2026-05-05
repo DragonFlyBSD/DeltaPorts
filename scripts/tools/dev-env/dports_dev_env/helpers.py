@@ -40,6 +40,7 @@ exec /work/DeltaPorts/dportsv3 dsl apply "/work/DeltaPorts/ports/$DPORTS_ORIGIN/
 """
     if name == "showenv":
         return """#!/bin/sh
+env | grep '^DPORTS_' | sort
 """
     if name == "dbuild":
         return """#!/bin/sh
@@ -144,8 +145,8 @@ if [ -n "${{BASH_VERSION:-}}" ]; then
     _dports_name="\\[\\033[1;32m\\]${{DPORTS_DEV_ENV}}\\[\\033[0m\\]"
     PS1="${{_dports_label}}:${{_dports_name}} \\w\\$ "
 else
-    _dports_label=$(printf '\033[1;34mdports-dev\033[0m')
-    _dports_name=$(printf '\033[1;32m%s\033[0m' "$DPORTS_DEV_ENV")
+    _dports_label=$(printf '\\033[1;34mdports-dev\\033[0m')
+    _dports_name=$(printf '\\033[1;32m%s\\033[0m' "$DPORTS_DEV_ENV")
     PS1="${{_dports_label}}:${{_dports_name}} # "
 fi
 export PS1

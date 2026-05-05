@@ -12,7 +12,7 @@ from .errors import ProvisionError
 from .helpers import write_helper_scripts
 from .locks import CacheLock
 from .log import info, step_timer, warn
-from .mounts import unmount_under
+from .mounts import mounts_under, unmount_under
 from .runtime import prepare_root_runtime
 
 
@@ -46,8 +46,17 @@ class BaseProvisioner:
                 (tmp_dir / "ready").write_text("")
                 tmp_dir.replace(base_dir)
             except Exception:
+                # Best-effort unmount; if anything is still mounted under
+                # tmp_root, refuse to rmtree -- otherwise rmtree would walk
+                # into the live mount and damage host files.
                 unmount_under(tmp_root)
-                if tmp_dir.exists():
+                survivors = mounts_under(tmp_root)
+                if survivors:
+                    warn(
+                        f"refusing to remove {tmp_dir}; mounts remain under it: "
+                        + ", ".join(str(m.target) for m in survivors)
+                    )
+                elif tmp_dir.exists():
                     shutil.rmtree(tmp_dir)
                 raise
             return ProvisionedBase(base_id, root, metadata_path)
@@ -99,7 +108,9 @@ class BaseProvisioner:
             return
         for package in self.config.python_pkgs:
             info(f"installing python candidate {package}")
-            ChrootRunner(root).run(["pkg", "install", "-y", package], env={"ASSUME_ALWAYS_YES": "yes"})
+            result = ChrootRunner(root).run(["pkg", "install", "-y", package], env={"ASSUME_ALWAYS_YES": "yes"})
+            if result.returncode != 0:
+                warn(f"python candidate unavailable or failed: {package}")
             if self.find_python(root):
                 self.ensure_python3_shim(root)
                 return
@@ -139,24 +150,28 @@ class BaseProvisioner:
             (root / "var/tmp", 0o1777),
             (root / "etc/dsynth", 0o755),
             (root / "construction", 0o755),
-            (root / "usr/distfiles", 0o755),
         ]:
             path.mkdir(parents=True, exist_ok=True)
             path.chmod(mode)
+        # /usr/distfiles is a bind-mount target during prepare_root_runtime;
+        # ensure it exists in the provisioned base so future env shells can
+        # mount onto it, but never chmod -- the bind-mount would forward the
+        # mode change to the host's distdir.
+        (root / "usr/distfiles").mkdir(parents=True, exist_ok=True)
 
     def clean_package_caches(self, root: Path) -> None:
         info("cleaning package caches from provisioned base")
         ChrootRunner(root).run(["pkg", "clean", "-ay"], env={"ASSUME_ALWAYS_YES": "yes"})
-        for path in [root / "root/.cache", root / "var/cache/pkg"]:
-            if path.exists():
-                shutil.rmtree(path)
-        for path in [root / "tmp", root / "var/tmp"]:
-            if path.is_dir():
-                for child in path.iterdir():
-                    if child.is_dir():
-                        shutil.rmtree(child)
-                    else:
-                        child.unlink()
+        # Wipe contents but preserve the directories so pkg/etc. don't have to
+        # recreate them on first use inside an env.
+        for path in [root / "root/.cache", root / "var/cache/pkg", root / "tmp", root / "var/tmp"]:
+            if not path.is_dir():
+                continue
+            for child in path.iterdir():
+                if child.is_symlink() or child.is_file():
+                    child.unlink()
+                elif child.is_dir():
+                    shutil.rmtree(child)
 
     def write_metadata(self, base_dir: Path, archive: BaseArchive, base_id: str) -> None:
         metadata = {

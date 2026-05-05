@@ -79,6 +79,16 @@ def state_to_json(state: EnvironmentState) -> dict[str, object]:
     return data
 
 
+def _require_str(data: dict[str, object], key: str) -> str:
+    value = data.get(key)
+    if not isinstance(value, str) or not value:
+        raise StateError(f"state file is missing required field: {key}")
+    return value
+
+
+_VALID_STATUSES = {"creating", "ready", "failed", "destroying"}
+
+
 def state_from_json(data: dict[str, object]) -> EnvironmentState:
     schema = data.get("schema")
     if schema != STATE_SCHEMA:
@@ -92,17 +102,20 @@ def state_from_json(data: dict[str, object]) -> EnvironmentState:
     failure = None
     if isinstance(failure_data, dict):
         failure = FailureState(reason=str(failure_data.get("reason", "")))
+    status = str(data.get("status", ""))
+    if status not in _VALID_STATUSES:
+        raise StateError(f"state file has invalid status: {status!r}")
     return EnvironmentState(
         schema=STATE_SCHEMA,
-        name=str(data.get("name", "")),
-        backend=str(data.get("backend", "")),
-        target=str(data.get("target", "")),
+        name=_require_str(data, "name"),
+        backend=_require_str(data, "backend"),
+        target=_require_str(data, "target"),
         origin=str(data.get("origin", "")),
-        status=str(data.get("status", "failed")),  # type: ignore[arg-type]
+        status=status,  # type: ignore[arg-type]
         created_at=str(data.get("created_at", "")),
         updated_at=str(data.get("updated_at", "")),
-        root_dir=Path(str(data.get("root_dir", ""))),
-        writable_dir=Path(str(data.get("writable_dir", ""))),
+        root_dir=Path(_require_str(data, "root_dir")),
+        writable_dir=Path(_require_str(data, "writable_dir")),
         provisioned_base_id=str(data.get("provisioned_base_id", "")),
         repos=RepoState(
             deltaports_branch=str(repos.get("deltaports_branch", "")),

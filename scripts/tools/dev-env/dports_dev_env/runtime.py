@@ -33,7 +33,8 @@ def prepare_env_writable_dirs(env_dir: Path) -> None:
     for source_name, _target_name, mode in WRITABLE_DIRS:
         path = writable_dir / source_name
         path.mkdir(parents=True, exist_ok=True)
-        path.chmod(mode)
+        if (path.stat().st_mode & 0o7777) != mode:
+            path.chmod(mode)
 
 
 def mount_env_writable_dirs(env_dir: Path, root_dir: Path) -> None:
@@ -49,10 +50,10 @@ def mount_env_root(provisioned_root: Path, env_dir: Path, root_dir: Path) -> Non
     mount_env_writable_dirs(env_dir, root_dir)
 
 
-def prepare_root_runtime(config: Config, root_dir: Path) -> None:
+def prepare_root_runtime(config: Config, root_dir: Path, *, refresh_resolv_conf: bool = False) -> None:
     for name in ["dev", "proc", "work"]:
         (root_dir / name).mkdir(parents=True, exist_ok=True)
-    ensure_resolv_conf(root_dir)
+    ensure_resolv_conf(root_dir, force=refresh_resolv_conf)
     mount_null(Path("/dev"), root_dir / "dev")
     mount_procfs(root_dir / "proc")
     if str(config.host_distdir) and config.host_distdir.is_dir():

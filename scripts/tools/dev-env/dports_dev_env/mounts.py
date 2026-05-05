@@ -1,8 +1,14 @@
 from __future__ import annotations
 
+import shutil
 import subprocess
+import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
+
+from .errors import MountError
+from .log import error, info, warn
 
 
 @dataclass(frozen=True)
@@ -55,14 +61,27 @@ def mounts_under(root: Path) -> list[Mount]:
 
 
 def unmount(target: Path) -> bool:
-    print(f"INFO: unmounting {target}")
-    for _ in range(3):
+    info(f"unmounting {target}")
+    last_stderr = ""
+    for attempt in range(1, 4):
         result = subprocess.run(["umount", str(target)], text=True, capture_output=True)
         if result.returncode == 0:
             return True
-    print(f"ERROR: umount could not release {target}")
-    if result.stderr:
-        print(result.stderr.rstrip())
+        last_stderr = result.stderr
+        if attempt < 3:
+            warn(f"umount {target} failed (attempt {attempt}); retrying")
+            time.sleep(1)
+    error(f"umount could not release {target}")
+    if last_stderr:
+        print(last_stderr.rstrip(), file=sys.stderr)
+    holder_cmd: list[str] | None = None
+    if shutil.which("fstat"):
+        holder_cmd = ["fstat", "-f", str(target)]
+    elif shutil.which("lsof"):
+        holder_cmd = ["lsof", str(target)]
+    if holder_cmd:
+        info(f"current holders (best-effort via {holder_cmd[0]}):")
+        subprocess.run(holder_cmd, check=False)
     return False
 
 
@@ -78,25 +97,25 @@ def unmount_under(root: Path) -> bool:
 def mount_null(source: Path, target: Path, *, read_only: bool = False) -> None:
     target.mkdir(parents=True, exist_ok=True)
     if is_mounted(target):
-        print(f"INFO: mount already present at {target}")
+        info(f"mount already present at {target}")
         return
     if read_only:
-        print(f"INFO: mounting {source} read-only at {target}")
+        info(f"mounting {source} read-only at {target}")
         result = subprocess.run(["mount_null", "-o", "ro", str(source), str(target)])
         if result.returncode != 0:
             result = subprocess.run(["mount", "-t", "null", "-o", "ro", str(source), str(target)])
     else:
-        print(f"INFO: mounting {source} at {target}")
+        info(f"mounting {source} at {target}")
         result = subprocess.run(["mount_null", str(source), str(target)])
     if result.returncode != 0:
-        raise SystemExit(f"ERROR: failed to mount {source} at {target}")
+        raise MountError(f"failed to mount {source} at {target}")
 
 
 def mount_procfs(target: Path) -> None:
     target.mkdir(parents=True, exist_ok=True)
     if is_mounted(target):
         return
-    print(f"INFO: mounting procfs at {target}")
+    info(f"mounting procfs at {target}")
     result = subprocess.run(["mount_procfs", "proc", str(target)])
     if result.returncode != 0:
-        raise SystemExit(f"ERROR: failed to mount procfs at {target}")
+        raise MountError(f"failed to mount procfs at {target}")

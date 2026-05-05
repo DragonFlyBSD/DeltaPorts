@@ -24,6 +24,13 @@ class EnvironmentSession:
         state = self.store.load(name)
         if state.backend != "chroot":
             raise UsageError(f"unsupported backend in environment: {state.backend}")
+        if state.status in {"creating", "destroying"}:
+            raise UsageError(
+                f"environment {name} is in status '{state.status}'; "
+                "wait for the in-flight operation or destroy the partial env first"
+            )
+        if state.status == "failed":
+            warn(f"environment {name} is marked failed; entering anyway for inspection")
 
         env_dir = self.store.env_dir(name)
         info(f"preparing shell entry for environment {name}")
@@ -34,7 +41,7 @@ class EnvironmentSession:
             write_shell_rc(state)
         if not (state.root_dir / "usr/local/bin/dbuild").exists():
             warn("helper scripts missing in /usr/local/bin; recreate the env to pick up current helpers")
-        prepare_root_runtime(self.config, state.root_dir)
+        prepare_root_runtime(self.config, state.root_dir, refresh_resolv_conf=refresh)
         info(f"entering shell for env={name} target={state.target} origin={state.origin or '<full-tree>'}")
         info(f"compose root will be /work/artifacts/compose/{state.target}")
         if not command_exists(state.root_dir, "bash"):
