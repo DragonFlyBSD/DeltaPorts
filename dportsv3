@@ -12,6 +12,7 @@ DEV_ENV_DIR="$SELF_DIR/scripts/tools/dev-env"
 DEV_ENV_VENV_DIR="$DEV_ENV_DIR/.venv"
 DEV_ENV_STAMP_FILE="$DEV_ENV_VENV_DIR/.dports-dev-env-install-stamp"
 DEV_ENV_PYPROJECT_FILE="$DEV_ENV_DIR/pyproject.toml"
+DEV_ENV_LOCK_DIR="$DEV_ENV_DIR/.venv.lock"
 
 if [ ! -f "$PYPROJECT_FILE" ]; then
     printf '%s\n' "dportsv3: missing generator project: $PYPROJECT_FILE" >&2
@@ -71,6 +72,26 @@ if [ "${1:-}" = "dev-env" ]; then
         dev_env_needs_install=1
     fi
     if [ "$dev_env_needs_install" -eq 1 ]; then
+        waited=0
+        while ! mkdir "$DEV_ENV_LOCK_DIR" 2>/dev/null; do
+            if [ "$waited" -ge 300 ]; then
+                printf '%s\n' "dportsv3: timed out waiting for dev-env bootstrap lock: $DEV_ENV_LOCK_DIR" >&2
+                exit 1
+            fi
+            sleep 1
+            waited=$((waited + 1))
+        done
+        trap 'rmdir "$DEV_ENV_LOCK_DIR" 2>/dev/null || true' EXIT INT TERM HUP
+        dev_env_needs_install=0
+        if [ ! -x "$DEV_ENV_VENV_DIR/bin/dports-dev-env" ]; then
+            dev_env_needs_install=1
+        elif [ ! -f "$DEV_ENV_STAMP_FILE" ]; then
+            dev_env_needs_install=1
+        elif [ "$(cat "$DEV_ENV_STAMP_FILE")" != "$DEV_ENV_STAMP_VALUE" ]; then
+            dev_env_needs_install=1
+        fi
+    fi
+    if [ "$dev_env_needs_install" -eq 1 ]; then
         if [ "$AUTO_BOOTSTRAP" -ne 1 ]; then
             printf '%s\n' "dportsv3: dev-env bootstrap required but DPORTSV3_NO_BOOTSTRAP=1" >&2
             exit 1
@@ -83,6 +104,8 @@ if [ "${1:-}" = "dev-env" ]; then
         "$DEV_ENV_VENV_DIR/bin/python" -m pip install -e "$DEV_ENV_DIR"
         printf '%s\n' "$DEV_ENV_STAMP_VALUE" > "$DEV_ENV_STAMP_FILE"
     fi
+    rmdir "$DEV_ENV_LOCK_DIR" 2>/dev/null || true
+    trap - EXIT INT TERM HUP
     exec "$DEV_ENV_VENV_DIR/bin/dports-dev-env" "$@"
 fi
 
