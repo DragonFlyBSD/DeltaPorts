@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import errno
 import shutil
 from pathlib import Path
 
 from .config import Config
+from .log import warn
 from .mounts import mount_null, mount_procfs
 
 
@@ -25,7 +27,12 @@ def ensure_resolv_conf(root_dir: Path, *, force: bool = False) -> None:
     if target.is_file() and not force:
         return
     target.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(source, target)
+    try:
+        shutil.copyfile(source, target)
+    except OSError as exc:
+        if exc.errno != errno.EROFS:
+            raise
+        warn(f"cannot update {target}: read-only filesystem")
 
 
 def prepare_env_writable_dirs(env_dir: Path) -> None:

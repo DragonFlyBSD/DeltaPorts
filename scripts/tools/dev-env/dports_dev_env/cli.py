@@ -48,7 +48,7 @@ def build_parser() -> argparse.ArgumentParser:
     shell.add_argument(
         "--refresh",
         action="store_true",
-        help="Rewrite rcfile, dsynth.ini, and resolv.conf from host (helpers live in the cached provisioned base)",
+        help="Rewrite rcfile and dsynth.ini; attempt to refresh resolv.conf when writable",
     )
     shell.add_argument("name", help="Environment name")
 
