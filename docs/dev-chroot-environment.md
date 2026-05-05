@@ -1,6 +1,6 @@
 # Dev Chroot Environment
 
-`scripts/tools/dports-dev-env` creates a throwaway DragonFly chroot for port
+`./dportsv3 dev-env` creates a throwaway DragonFly chroot for port
 development while reusing cached inputs.
 
 Current scope:
@@ -20,17 +20,11 @@ Current scope:
 ## Requirements
 
 - run as `root`
-- host commands: `curl`, `tar`, `git`, `chroot`, `mount_null`, `mount_procfs`
+- host commands: `tar`, `git`, `chroot`, `mount_null`, `mount_procfs`
 - network access to Avalon, the FreeBSD ports git remote, and the DPorts git
   remote
 
 ## Create One Environment
-
-```bash
-sudo scripts/tools/dports-dev-env create --target @2026Q2 --origin editors/vim --shell
-```
-
-The repo wrapper also dispatches to the same helper:
 
 ```bash
 sudo ./dportsv3 dev-env create --target @2026Q2 --origin editors/vim --shell
@@ -40,7 +34,7 @@ This will:
 
 1. discover the latest DragonFly `*world*` asset on Avalon,
 2. cache the downloaded archive,
-3. extract it once into the shared base cache,
+3. build or reuse a provisioned base directly from the cached archive,
 4. refresh cached mirrors for DeltaPorts, FreeBSD ports, and DPorts,
 5. mount the provisioned base read-only and add per-env writable overlays,
 6. clone env-local DeltaPorts and FreeBSD ports from cached mirrors and export
@@ -54,19 +48,19 @@ This will:
 ## Enter Later
 
 ```bash
-sudo scripts/tools/dports-dev-env shell 2026Q2-editors_vim
+sudo ./dportsv3 dev-env shell 2026Q2-editors_vim
 ```
 
 ## Destroy
 
 ```bash
-sudo scripts/tools/dports-dev-env destroy 2026Q2-editors_vim
+sudo ./dportsv3 dev-env destroy 2026Q2-editors_vim
 ```
 
 ## List
 
 ```bash
-scripts/tools/dports-dev-env list
+sudo ./dportsv3 dev-env list
 ```
 
 `list` also shows partial or still-creating environments left by interrupted
@@ -75,7 +69,7 @@ creation so they can be destroyed explicitly.
 ## Cleanup Mounts
 
 ```bash
-sudo scripts/tools/dports-dev-env cleanup-mounts
+sudo ./dportsv3 dev-env cleanup-mounts
 ```
 
 This unmounts stale dports-dev mounts under the cache root. If a mount target
@@ -86,14 +80,13 @@ to clear the orphaned mount.
 
 By default the helper stores state under `~/.cache/dports-dev/`:
 
-- `base-downloads/`: downloaded Avalon archives
-- `base-extracted/`: extracted reusable clean rootfs trees
-- `base-provisioned/`: reusable DragonFly roots with `pkg`, tools, Python, and
+- `bases/archives/`: downloaded Avalon archives
+- `bases/provisioned/`: reusable DragonFly roots with `pkg`, tools, Python, and
   optional helper packages already installed
 - `repos/deltaports.git/`: cached DeltaPorts mirror
 - `repos/freebsd-ports.git/`: persistent git mirror
-- `repos/DPorts.git/`: persistent DPorts mirror
-- `venvs/dportsv3/`: DragonFly-native cached `dportsv3` virtualenvs
+- `repos/dports.git/`: persistent DPorts mirror
+- `venvs/generator/`: DragonFly-native cached generator virtualenvs
 - `envs/<name>/root/`: chroot mount point for the read-only provisioned base
 - `envs/<name>/writable/`: per-env writable trees mounted over `/work`,
   `/root`, `/tmp`, `/var/tmp`, `/etc/dsynth`, and `/construction`
@@ -103,8 +96,8 @@ tool package lists. Fresh envs mount this provisioned root read-only and layer
 small writable per-env directories over the paths that need mutation, avoiding
 both repeated `pkg-bootstrap` work and full root copies.
 
-The `dportsv3` virtualenv cache is keyed by DragonFly release, Python version,
-install profile, and `scripts/generator/pyproject.toml`. It is restored into
+The generator virtualenv cache is keyed by provisioned base id, Python version,
+and `scripts/generator/pyproject.toml`. It is restored into
 fresh envs before the initial compose, avoiding repeated `pip install -e` work
 while still letting the editable install use the env-local DeltaPorts sources.
 

@@ -15,8 +15,8 @@ From the repository root, use:
 The wrapper bootstraps `scripts/generator/.venv` automatically on first run and
 dispatches to the installed `dportsv3` console entrypoint.
 
-For a disposable DragonFly chroot development shell, see
-`scripts/tools/dports-dev-env` and `docs/dev-chroot-environment.md`.
+For a disposable DragonFly chroot development shell, use
+`./dportsv3 dev-env` and see `docs/dev-chroot-environment.md`.
 
 ## Organization
 
