@@ -75,11 +75,17 @@ By default the helper stores state under `~/.cache/dports-dev/`:
 
 - `base-downloads/`: downloaded Avalon archives
 - `base-extracted/`: extracted reusable clean rootfs trees
+- `base-provisioned/`: reusable DragonFly roots with `pkg`, tools, Python, and
+  optional helper packages already installed
 - `repos/deltaports.git/`: cached DeltaPorts mirror
 - `repos/freebsd-ports.git/`: persistent git mirror
 - `repos/DPorts.git/`: persistent DPorts mirror
 - `venvs/dportsv3/`: DragonFly-native cached `dportsv3` virtualenvs
 - `envs/<name>/root/`: throwaway chroot root
+
+The provisioned base cache is keyed by the Avalon world asset and configured
+tool package lists. Fresh envs are copied from this provisioned root when
+available, avoiding repeated `pkg-bootstrap` and tool package installs.
 
 The `dportsv3` virtualenv cache is keyed by DragonFly release, Python version,
 install profile, and `scripts/generator/pyproject.toml`. It is restored into

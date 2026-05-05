@@ -8,6 +8,7 @@ REPO_ROOT=$(CDPATH= cd -- "$SELF_DIR/../.." && pwd)
 DPORTS_DEV_CACHE_ROOT=${DPORTS_DEV_CACHE_ROOT:-${HOME}/.cache/dports-dev}
 DPORTS_DEV_ENVS_DIR=${DPORTS_DEV_ENVS_DIR:-$DPORTS_DEV_CACHE_ROOT/envs}
 DPORTS_DEV_BASE_DIR=${DPORTS_DEV_BASE_DIR:-$DPORTS_DEV_CACHE_ROOT/base-extracted}
+DPORTS_DEV_PROVISIONED_BASE_DIR=${DPORTS_DEV_PROVISIONED_BASE_DIR:-$DPORTS_DEV_CACHE_ROOT/base-provisioned}
 DPORTS_DEV_DOWNLOAD_DIR=${DPORTS_DEV_DOWNLOAD_DIR:-$DPORTS_DEV_CACHE_ROOT/base-downloads}
 DPORTS_DEV_REPOS_DIR=${DPORTS_DEV_REPOS_DIR:-$DPORTS_DEV_CACHE_ROOT/repos}
 DPORTS_DEV_VENVS_DIR=${DPORTS_DEV_VENVS_DIR:-$DPORTS_DEV_CACHE_ROOT/venvs}
@@ -17,7 +18,7 @@ DPORTS_DEV_DPORTS_URL=${DPORTS_DEV_DPORTS_URL:-https://github.com/DragonFlyBSD/D
 DPORTS_DEV_DELTAPORTS_BRANCH=${DPORTS_DEV_DELTAPORTS_BRANCH:-master}
 DPORTS_DEV_DPORTS_BRANCH=${DPORTS_DEV_DPORTS_BRANCH:-staged}
 DPORTS_DEV_HOST_DISTDIR=${DPORTS_DEV_HOST_DISTDIR:-/usr/distfiles}
-DPORTS_DEV_TOOL_PKGS_REQUIRED=${DPORTS_DEV_TOOL_PKGS_REQUIRED:-bash curl git patch jq}
+DPORTS_DEV_TOOL_PKGS_REQUIRED=${DPORTS_DEV_TOOL_PKGS_REQUIRED:-indexinfo bash curl git patch jq}
 DPORTS_DEV_PYTHON_PKGS=${DPORTS_DEV_PYTHON_PKGS:-python3 python313 python312 python311}
 DPORTS_DEV_TOOL_PKGS_OPTIONAL=${DPORTS_DEV_TOOL_PKGS_OPTIONAL:-dsynth python311 python312 python313 py311-pip py312-pip py313-pip genpatch}
 DPORTS_DEV_PYTHON_COMMANDS=${DPORTS_DEV_PYTHON_COMMANDS:-python3 python3.13 python3.12 python3.11}
@@ -57,6 +58,7 @@ destroy options:
 
 Environment variables:
   DPORTS_DEV_CACHE_ROOT
+  DPORTS_DEV_PROVISIONED_BASE_DIR
   DPORTS_DEV_VENVS_DIR
   DPORTS_DEV_AVALON_RELEASES_URL
   DPORTS_DEV_FREEBSD_PORTS_URL
@@ -137,7 +139,8 @@ clear_immutable_flags() {
 
 ensure_dirs() {
     mkdir -p "$DPORTS_DEV_CACHE_ROOT" "$DPORTS_DEV_ENVS_DIR" "$DPORTS_DEV_BASE_DIR" \
-        "$DPORTS_DEV_DOWNLOAD_DIR" "$DPORTS_DEV_REPOS_DIR" "$DPORTS_DEV_VENVS_DIR"
+        "$DPORTS_DEV_PROVISIONED_BASE_DIR" "$DPORTS_DEV_DOWNLOAD_DIR" \
+        "$DPORTS_DEV_REPOS_DIR" "$DPORTS_DEV_VENVS_DIR"
 }
 
 DPORTS_DEV_HELD_LOCKS=
@@ -230,6 +233,11 @@ file_sha256() {
     else
         die "required command not found: sha256, sha256sum, or shasum"
     fi
+}
+
+string_cksum() {
+    set -- $(printf '%s' "$1" | cksum)
+    printf '%s_%s\n' "$1" "$2"
 }
 
 root_path() {
@@ -520,6 +528,13 @@ prepare_root_runtime() {
     fi
 }
 
+unmount_root_runtime() {
+    root_dir=$1
+    umount_if_needed "$root_dir/usr/distfiles"
+    umount_if_needed "$root_dir/proc"
+    umount_if_needed "$root_dir/dev"
+}
+
 write_dsynth_config() {
     root_dir=$1
     config_dir=$root_dir/etc/dsynth
@@ -792,6 +807,76 @@ bootstrap_tools() {
     log_elapsed "$bootstrap_started_at" "bootstrap developer tools"
 }
 
+validate_bootstrap_tools() {
+    root_dir=$1
+    run_in_chroot "$root_dir" 'command -v pkg >/dev/null 2>&1' || return 1
+    for cmd_name in indexinfo bash curl git patch jq python3; do
+        run_in_chroot "$root_dir" 'command -v "$1" >/dev/null 2>&1' "$cmd_name" || return 1
+    done
+    return 0
+}
+
+provisioned_base_key() {
+    base_key=$1
+    provision_input="provision-v1
+base=$base_key
+required=$DPORTS_DEV_TOOL_PKGS_REQUIRED
+python_pkgs=$DPORTS_DEV_PYTHON_PKGS
+python_cmds=$DPORTS_DEV_PYTHON_COMMANDS
+optional=$DPORTS_DEV_TOOL_PKGS_OPTIONAL"
+    provision_hash=$(string_cksum "$provision_input")
+    sanitize_name "$base_key-provision-$provision_hash"
+}
+
+ensure_provisioned_base() {
+    base_root=$1
+    base_key=$2
+    provision_key=$(provisioned_base_key "$base_key")
+    provision_dir=$DPORTS_DEV_PROVISIONED_BASE_DIR/$provision_key
+    provision_root=$provision_dir/root
+
+    acquire_cache_lock "provisioned-base-$provision_key"
+    if [ -f "$provision_dir/.ready" ] && validate_bootstrap_tools "$provision_root"; then
+        info "reusing provisioned base root $provision_root"
+        release_cache_lock "provisioned-base-$provision_key"
+        printf '%s\n' "$provision_root"
+        return 0
+    fi
+    if [ -e "$provision_dir" ]; then
+        warn "discarding stale provisioned base root $provision_root"
+        clear_immutable_flags "$provision_dir"
+        rm -rf "$provision_dir"
+    fi
+
+    tmp_dir=$provision_dir.tmp.$$
+    tmp_root=$tmp_dir/root
+    rm -rf "$tmp_dir"
+    mkdir -p "$tmp_dir"
+    info "creating provisioned base root $provision_root"
+    copy_base_root "$base_root" "$tmp_root"
+    prepare_root_runtime "$tmp_root"
+    provision_failed=0
+    bootstrap_tools "$tmp_root" || provision_failed=1
+    unmount_root_runtime "$tmp_root"
+    if [ "$provision_failed" -ne 0 ] || ! validate_bootstrap_tools "$tmp_root"; then
+        clear_immutable_flags "$tmp_dir"
+        rm -rf "$tmp_dir"
+        release_cache_lock "provisioned-base-$provision_key"
+        error "failed to provision base root"
+        return 1
+    fi
+
+    printf '%s\n' "Base=$base_key" > "$tmp_dir/metadata"
+    printf '%s\n' "Required=$DPORTS_DEV_TOOL_PKGS_REQUIRED" >> "$tmp_dir/metadata"
+    printf '%s\n' "PythonPkgs=$DPORTS_DEV_PYTHON_PKGS" >> "$tmp_dir/metadata"
+    printf '%s\n' "PythonCommands=$DPORTS_DEV_PYTHON_COMMANDS" >> "$tmp_dir/metadata"
+    printf '%s\n' "Optional=$DPORTS_DEV_TOOL_PKGS_OPTIONAL" >> "$tmp_dir/metadata"
+    : > "$tmp_dir/.ready"
+    mv "$tmp_dir" "$provision_dir"
+    release_cache_lock "provisioned-base-$provision_key"
+    printf '%s\n' "$provision_root"
+}
+
 ensure_dportsv3_venv() {
     root_dir=$1
     venv_started_at=$(timer_now)
@@ -924,9 +1009,7 @@ destroy_env() {
         die "environment not found: $env_name"
     fi
     info "destroying environment $env_name"
-    umount_if_needed "$ROOT_DIR/usr/distfiles"
-    umount_if_needed "$ROOT_DIR/proc"
-    umount_if_needed "$ROOT_DIR/dev"
+    unmount_root_runtime "$ROOT_DIR"
     survivors=$(mount | awk -v root="$ROOT_DIR" 'index($0, " on " root) { print }') || survivors=
     if [ -n "$survivors" ]; then
         error "refusing to remove $ROOT_DIR; the following mounts are still present:"
@@ -1079,14 +1162,15 @@ create_env() {
     asset=$(fetch_latest_world_asset)
     log_elapsed "$phase_started_at" "resolve latest DragonFly world asset"
 
-    step 2 7 "Preparing cached DragonFly base root"
+    step 2 7 "Preparing cached DragonFly base roots"
     phase_started_at=$(timer_now)
     BASE_CACHE_KEY=${asset%.tar.gz}
     acquire_cache_lock "world-$BASE_CACHE_KEY"
     BASE_ARCHIVE=$(ensure_base_archive "$asset")
     BASE_EXTRACTED_ROOT=$(ensure_base_extracted "$BASE_CACHE_KEY" "$BASE_ARCHIVE")
     release_cache_lock "world-$BASE_CACHE_KEY"
-    log_elapsed "$phase_started_at" "prepare cached DragonFly base root"
+    PROVISIONED_BASE_ROOT=$(ensure_provisioned_base "$BASE_EXTRACTED_ROOT" "$BASE_CACHE_KEY")
+    log_elapsed "$phase_started_at" "prepare cached DragonFly base roots"
 
     step 3 7 "Refreshing cached repo mirrors"
     phase_started_at=$(timer_now)
@@ -1103,7 +1187,7 @@ create_env() {
 
     step 4 7 "Creating throwaway chroot root"
     phase_started_at=$(timer_now)
-    copy_base_root "$BASE_EXTRACTED_ROOT" "$ROOT_DIR"
+    copy_base_root "$PROVISIONED_BASE_ROOT" "$ROOT_DIR"
     log_elapsed "$phase_started_at" "create throwaway chroot root"
 
     step 5 7 "Seeding env-local source trees and writing environment state"
@@ -1123,10 +1207,13 @@ create_env() {
     step 6 7 "Bootstrapping developer tools inside chroot"
     phase_started_at=$(timer_now)
     bootstrap_failed=0
-    if ! bootstrap_tools "$ROOT_DIR"; then
+    if validate_bootstrap_tools "$ROOT_DIR"; then
+        info "developer tools already present from provisioned base"
+    elif ! bootstrap_tools "$ROOT_DIR"; then
         bootstrap_failed=1
         warn "bootstrap failed; environment retained for manual investigation"
-    elif ! ensure_dportsv3_venv "$ROOT_DIR"; then
+    fi
+    if [ "$bootstrap_failed" -eq 0 ] && ! ensure_dportsv3_venv "$ROOT_DIR"; then
         bootstrap_failed=1
         warn "dportsv3 venv bootstrap failed; environment retained for manual investigation"
     fi
