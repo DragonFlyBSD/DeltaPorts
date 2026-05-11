@@ -3,12 +3,18 @@ from __future__ import annotations
 from pathlib import Path
 
 from .config import DevEnvConfig
+from .names import sanitize_name
 from .state import EnvironmentState
+
+
+def dsynth_profile_name(state: EnvironmentState) -> str:
+    return sanitize_name(state.name)
 
 
 def write_dsynth_config(config: DevEnvConfig, state: EnvironmentState) -> None:
     config_dir = state.root_dir / "etc/dsynth"
     dsynth_root = state.root_dir / "work/dsynth"
+    profile_name = dsynth_profile_name(state)
     for path in [
         config_dir,
         dsynth_root / "packages/All",
@@ -22,9 +28,9 @@ def write_dsynth_config(config: DevEnvConfig, state: EnvironmentState) -> None:
 
     (config_dir / "dsynth.ini").write_text(
         f"""[Global Configuration]
-profile_selected= DPortsDev
+profile_selected= {profile_name}
 
-[DPortsDev]
+[{profile_name}]
 Operating_system= DragonFly
 Directory_packages= /work/dsynth/packages
 Directory_repository= /work/dsynth/packages/All
@@ -41,4 +47,4 @@ Max_jobs_per_builder= {config.dsynth_jobs}
 Display_with_ncurses= true
 """
     )
-    (config_dir / "DPortsDev-make.conf").write_text("DISTDIR=/usr/distfiles\nWRKDIRPREFIX=/construction\n")
+    (config_dir / f"{profile_name}-make.conf").write_text("DISTDIR=/usr/distfiles\nWRKDIRPREFIX=/construction\n")

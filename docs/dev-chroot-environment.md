@@ -41,7 +41,7 @@ This will:
    the DPorts tree into the env,
 7. run `cd /usr && make pkg-bootstrap` when `pkg` is missing, then bootstrap a
    few development tools inside the chroot,
-8. generate `/etc/dsynth/dsynth.ini` and `/etc/dsynth/DPortsDev-make.conf`,
+8. generate `/etc/dsynth/dsynth.ini` and the env-specific dsynth make config,
 9. mark the environment ready,
 10. run `compose` with `--oracle-profile off` and `--lock-root /work/DPorts`,
 11. record the initial compose result separately from environment readiness,
@@ -120,11 +120,12 @@ The shell defines:
 
 - `regen`: rerun compose for the environment target
 - `reapply`: rerun `dsl apply` for the selected origin
-- `dbuild`: run `dsynth -p DPortsDev build` for the selected origin, or for
+- `dbuild`: run `dsynth -p "$DPORTS_DSYNTH_PROFILE" build` for the selected origin, or for
   origins passed as arguments
 - `showenv`: print `DPORTS_*` environment variables
 
-The generated dsynth profile is `DPortsDev` and uses:
+The generated dsynth profile is the environment name, exposed as
+`DPORTS_DSYNTH_PROFILE`, and uses:
 
 - ports tree: `/work/artifacts/compose/<target>`
 - packages: `/work/dsynth/packages`

@@ -3,6 +3,7 @@ from __future__ import annotations
 import shlex
 import hashlib
 
+from .dsynth import dsynth_profile_name
 from .state import EnvironmentState
 
 
@@ -46,7 +47,7 @@ env | grep '^DPORTS_' | sort
         return """#!/bin/sh
 set -eu
 : "${DPORTS_TARGET:?dbuild: DPORTS_TARGET is not set; run from a dports-dev shell}"
-: "${DPORTS_DSYNTH_PROFILE:=DPortsDev}"
+: "${DPORTS_DSYNTH_PROFILE:?dbuild: DPORTS_DSYNTH_PROFILE is not set; run from a dports-dev shell}"
 if ! command -v dsynth >/dev/null 2>&1; then
     printf '%s\n' 'dbuild requires dsynth; recreate the env with dsynth available' >&2
     exit 1
@@ -88,6 +89,7 @@ def write_helper_scripts(root_dir) -> None:
 
 
 def write_shell_rc(state: EnvironmentState) -> None:
+    profile_name = dsynth_profile_name(state)
     root_file = state.root_dir / "root/.dports-dev-env.sh"
     root_file.parent.mkdir(parents=True, exist_ok=True)
     root_file.write_text(
@@ -99,7 +101,7 @@ export DPORTS_ORIGIN={quote(state.origin)}
 export DPORTS_COMPOSE_ROOT={quote(f'/work/artifacts/compose/{state.target}')}
 export DPORTS_LOCK_ROOT=/work/DPorts
 export DPORTS_DSYNTH_ROOT=/work/dsynth
-export DPORTS_DSYNTH_PROFILE=DPortsDev
+export DPORTS_DSYNTH_PROFILE={quote(profile_name)}
 export DPORTS_ORACLE_PROFILE={quote(state.oracle_profile)}
 export DISTDIR=/usr/distfiles
 export DPORTS_DOC_USER_GUIDE=https://github.com/DragonFlyBSD/DeltaPorts/blob/master/docs/dportsv3-user-guide.md
@@ -129,6 +131,7 @@ showwelcome() {{
     printf '  Compose: %s\n' "$DPORTS_COMPOSE_ROOT"
     printf '  dsynth: %s\n' "$DPORTS_DSYNTH_ROOT"
     printf '  dsynth config: %s\n' '/etc/dsynth/dsynth.ini'
+    printf '  dsynth profile: %s\n' "$DPORTS_DSYNTH_PROFILE"
     printf '  Distfiles: %s\n' "$DISTDIR"
     if [ -n "$DPORTS_ORIGIN" ]; then
         printf '  Composed origin: %s\n' "$DPORTS_COMPOSE_ROOT/$DPORTS_ORIGIN"
