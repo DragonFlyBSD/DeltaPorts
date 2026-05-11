@@ -45,7 +45,7 @@ class GeneratorVenvCache:
                 shutil.rmtree(cache_root)
 
             with step_timer("bootstrap generator venv"):
-                result = runner.run(["/work/DeltaPorts/dportsv3", "--help"])
+                result = runner.run(["/work/DeltaPorts/dportsv3", "compose", "--help"])
                 if result.returncode != 0:
                     raise ProvisionError("failed to bootstrap dportsv3 generator venv inside chroot")
             tmp_cache = cache_root.with_suffix(".tmp")
@@ -66,7 +66,7 @@ class GeneratorVenvCache:
             tmp_cache.replace(cache_root)
 
     def validate(self, root_dir: Path) -> bool:
-        return ChrootRunner(root_dir).run(["/work/DeltaPorts/dportsv3", "--help"]).returncode == 0
+        return ChrootRunner(root_dir).run(["/work/DeltaPorts/dportsv3", "compose", "--help"]).returncode == 0
 
     def venv_id(self, provisioned_base_id: str, python_version: str, pyproject_hash: str) -> str:
         data = {
