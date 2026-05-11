@@ -9,7 +9,7 @@ from .config import load_config, require_root, validate_cache_root
 from .errors import DevEnvError, UsageError
 from .fs import safe_remove_tree
 from .log import error, info, warn
-from .mounts import mounts_under, unmount_under
+from .mounts import mounts_under, ordered_mounts_under, unmount_under
 from .session import EnvironmentSession
 from .store import EnvironmentStore
 
@@ -82,7 +82,7 @@ def cmd_cleanup_mounts(args: argparse.Namespace) -> int:
     validate_cache_root(config.cache_root)
     store = EnvironmentStore(config)
 
-    targets = mounts_under(config.cache_root)
+    targets = ordered_mounts_under(config.cache_root)
     if not targets:
         info(f"no dports-dev mounts under {config.cache_root}")
         return 0

@@ -60,6 +60,17 @@ def mounts_under(root: Path) -> list[Mount]:
     return [mount for mount in list_mounts() if mount.target == root or is_relative_to(mount.target, root)]
 
 
+def ordered_mounts_under(root: Path) -> list[Mount]:
+    root = root.resolve(strict=False)
+    indexed_mounts = [
+        (index, mount)
+        for index, mount in enumerate(list_mounts())
+        if mount.target == root or is_relative_to(mount.target, root)
+    ]
+    indexed_mounts.sort(key=lambda item: (len(str(item[1].target)), item[0]), reverse=True)
+    return [mount for _index, mount in indexed_mounts]
+
+
 def unmount(target: Path) -> bool:
     info(f"unmounting {target}")
     last_stderr = ""
@@ -86,9 +97,8 @@ def unmount(target: Path) -> bool:
 
 
 def unmount_under(root: Path) -> bool:
-    mounts = sorted(mounts_under(root), key=lambda mount: len(str(mount.target)), reverse=True)
     ok = True
-    for mount in mounts:
+    for mount in ordered_mounts_under(root):
         if not unmount(mount.target):
             ok = False
     return ok
