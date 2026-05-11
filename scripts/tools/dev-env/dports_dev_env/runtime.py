@@ -57,11 +57,19 @@ def mount_env_root(provisioned_root: Path, env_dir: Path, root_dir: Path) -> Non
     mount_env_writable_dirs(env_dir, root_dir)
 
 
-def prepare_root_runtime(config: Config, root_dir: Path, *, refresh_resolv_conf: bool = False) -> None:
+def prepare_root_runtime(config: Config, root_dir: Path, *, refresh_resolv_conf: bool = False) -> list[Path]:
+    mounted_targets: list[Path] = []
     for name in ["dev", "proc", "work"]:
         (root_dir / name).mkdir(parents=True, exist_ok=True)
     ensure_resolv_conf(root_dir, force=refresh_resolv_conf)
-    mount_null(Path("/dev"), root_dir / "dev")
-    mount_procfs(root_dir / "proc")
+    dev_target = root_dir / "dev"
+    if mount_null(Path("/dev"), dev_target):
+        mounted_targets.append(dev_target)
+    proc_target = root_dir / "proc"
+    if mount_procfs(proc_target):
+        mounted_targets.append(proc_target)
     if str(config.host_distdir) and config.host_distdir.is_dir():
-        mount_null(config.host_distdir, root_dir / "usr/distfiles")
+        distfiles_target = root_dir / "usr/distfiles"
+        if mount_null(config.host_distdir, distfiles_target):
+            mounted_targets.append(distfiles_target)
+    return mounted_targets

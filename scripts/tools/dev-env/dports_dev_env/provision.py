@@ -13,7 +13,7 @@ from .fs import safe_remove_tree
 from .helpers import write_helper_scripts
 from .locks import CacheLock
 from .log import info, step_timer, warn
-from .mounts import mounts_under, unmount_under
+from .mounts import mounts_under, unmount_targets, unmount_under
 from .runtime import prepare_root_runtime
 
 
@@ -74,8 +74,9 @@ class BaseProvisioner:
             raise ProvisionError(f"failed to extract world archive: {archive_path}")
 
     def bootstrap(self, root: Path) -> None:
+        mounted_targets: list[Path] = []
         try:
-            prepare_root_runtime(self.config, root)
+            mounted_targets = prepare_root_runtime(self.config, root)
             self.bootstrap_pkg(root)
             self.install_bootstrap_packages(root)
             self.install_required_packages(root)
@@ -85,6 +86,7 @@ class BaseProvisioner:
             self.prepare_mountpoints(root)
             self.clean_package_caches(root)
         finally:
+            unmount_targets(mounted_targets)
             unmount_under(root)
         # Refuse to publish a provisioned base while any mount is still live
         # under it. Validating + writing `ready` past surviving mounts would

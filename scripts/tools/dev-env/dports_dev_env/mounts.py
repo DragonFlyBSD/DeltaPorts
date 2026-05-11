@@ -104,11 +104,24 @@ def unmount_under(root: Path) -> bool:
     return ok
 
 
-def mount_null(source: Path, target: Path, *, read_only: bool = False) -> None:
+def unmount_targets(targets: list[Path]) -> bool:
+    ok = True
+    seen: set[Path] = set()
+    for target in reversed(targets):
+        resolved = target.resolve(strict=False)
+        if resolved in seen:
+            continue
+        seen.add(resolved)
+        if not unmount(target):
+            ok = False
+    return ok
+
+
+def mount_null(source: Path, target: Path, *, read_only: bool = False) -> bool:
     target.mkdir(parents=True, exist_ok=True)
     if is_mounted(target):
         info(f"mount already present at {target}")
-        return
+        return False
     if read_only:
         info(f"mounting {source} read-only at {target}")
         result = subprocess.run(["mount_null", "-o", "ro", str(source), str(target)])
@@ -119,13 +132,15 @@ def mount_null(source: Path, target: Path, *, read_only: bool = False) -> None:
         result = subprocess.run(["mount_null", str(source), str(target)])
     if result.returncode != 0:
         raise MountError(f"failed to mount {source} at {target}")
+    return True
 
 
-def mount_procfs(target: Path) -> None:
+def mount_procfs(target: Path) -> bool:
     target.mkdir(parents=True, exist_ok=True)
     if is_mounted(target):
-        return
+        return False
     info(f"mounting procfs at {target}")
     result = subprocess.run(["mount_procfs", "proc", str(target)])
     if result.returncode != 0:
         raise MountError(f"failed to mount procfs at {target}")
+    return True
