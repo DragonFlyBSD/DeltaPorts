@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ironman.dragonflybsd.org</title>
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --amber:        #c47000;
+      --amber-dim:    #a05800;
+      --amber-border: rgba(180, 100, 0, 0.22);
+      --bg:           #f7f5f0;
+      --bg-card:      #ffffff;
+      --text:         #1c1c1c;
+      --text-dim:     #888070;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: Menlo, Consolas, "Courier New", monospace;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 0;
+      padding: 0;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* subtle grid */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(180,100,0,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(180,100,0,0.04) 1px, transparent 1px);
+      background-size: 44px 44px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .page-wrapper {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 740px;
+      padding: 44px 24px 72px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    .site-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 28px;
+      border-bottom: 1px solid rgba(255,149,0,0.18);
+      margin-bottom: 48px;
+      animation: fadeDown 0.55s ease both;
+    }
+
+    .headerimage {
+      display: block;
+      max-height: 58px;
+      width: auto;
+    }
+
+    /* ── Main card ── */
+    .main-card {
+      background: var(--bg-card);
+      border: 1px solid var(--amber-border);
+      border-radius: 2px;
+      padding: 44px 52px;
+      position: relative;
+      box-shadow:
+        0 2px 24px rgba(0,0,0,0.06),
+        inset 0 1px 0 rgba(255,255,255,0.8);
+      animation: fadeUp 0.65s 0.15s ease both;
+    }
+
+    /* top edge glow line */
+    .main-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent 5%, var(--amber) 40%, var(--amber) 60%, transparent 95%);
+      opacity: 0.55;
+    }
+
+    /* corner brackets */
+    .corner {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      border-color: var(--amber);
+      border-style: solid;
+      opacity: 0.45;
+    }
+    .corner-tl { top: -1px; left: -1px;   border-width: 2px 0 0 2px; }
+    .corner-tr { top: -1px; right: -1px;  border-width: 2px 2px 0 0; }
+    .corner-bl { bottom: -1px; left: -1px;  border-width: 0 0 2px 2px; }
+    .corner-br { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; }
+
+    .hostname {
+      font-size: 12px;
+      letter-spacing: 0.1em;
+      color: var(--amber-dim);
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+    .hostname::before { content: '$ '; opacity: 0.45; }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.02em;
+      margin-bottom: 24px;
+      line-height: 1.2;
+    }
+
+    h1 .accent { color: var(--amber); }
+
+    .cursor {
+      display: inline-block;
+      width: 14px;
+      height: 22px;
+      background: var(--amber);
+      vertical-align: text-bottom;
+      margin-left: 5px;
+      animation: blink 1.15s step-end infinite;
+    }
+
+    .description {
+      font-size: 14px;
+      line-height: 1.85;
+      color: var(--text-dim);
+      margin-bottom: 40px;
+      max-width: 500px;
+      font-family: -apple-system, "Helvetica Neue", Helvetica, sans-serif;
+      letter-spacing: 0.01em;
+    }
+
+    /* ── Resources ── */
+    .resources-label {
+      font-size: 11px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--amber-dim);
+      margin-bottom: 14px;
+    }
+
+    .resource-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .resource-list li:nth-child(1) { animation: fadeLeft 0.45s 0.4s ease both; }
+    .resource-list li:nth-child(2) { animation: fadeLeft 0.45s 0.55s ease both; }
+    .resource-list li:nth-child(3) { animation: fadeLeft 0.45s 0.7s ease both; }
+
+    .resource-link {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      padding: 15px 20px;
+      background: rgba(255,149,0,0.025);
+      border: 1px solid rgba(255,149,0,0.1);
+      border-radius: 2px;
+      text-decoration: none;
+      color: var(--text);
+      transition: border-color 0.2s, color 0.2s, background 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .resource-link::after {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 2px;
+      background: var(--amber);
+      transform: scaleY(0);
+      transition: transform 0.2s ease;
+      transform-origin: bottom;
+    }
+
+    .resource-link:hover {
+      border-color: rgba(180,100,0,0.38);
+      background: rgba(180,100,0,0.04);
+      color: var(--amber);
+    }
+
+    .resource-link:hover::after {
+      transform: scaleY(1);
+    }
+
+    .resource-link:hover .resource-arrow {
+      opacity: 1;
+      transform: translateX(5px);
+    }
+
+    .resource-glyph {
+      font-size: 15px;
+      opacity: 0.5;
+      flex-shrink: 0;
+      width: 18px;
+      text-align: center;
+    }
+
+    .resource-text {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .resource-name {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.025em;
+    }
+
+    .resource-path {
+      display: block;
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 2px;
+    }
+
+    .resource-arrow {
+      opacity: 0.25;
+      transition: opacity 0.2s, transform 0.2s;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    /* ── Footer ── */
+    .page-footer {
+      margin-top: 28px;
+      font-size: 11px;
+      color: var(--text-dim);
+      letter-spacing: 0.09em;
+      text-align: center;
+      animation: fadeUp 0.6s 0.85s ease both;
+    }
+
+    .page-footer a {
+      color: inherit;
+      text-decoration: none;
+    }
+    .page-footer a:hover { color: var(--amber); }
+
+    /* ── Keyframes ── */
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0; }
+    }
+
+    @keyframes fadeDown {
+      from { opacity: 0; transform: translateY(-14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeLeft {
+      from { opacity: 0; transform: translateX(-10px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    @media (max-width: 560px) {
+      .main-card { padding: 30px 24px; }
+      h1 { font-size: 22px; }
+      .site-header { flex-direction: column; gap: 16px; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="page-wrapper">
+
+    <header class="site-header">
+      <a href="http://www.dragonflybsd.org/">
+        <img src="img/topbar-trans.png" class="headerimage" alt="DragonFly BSD">
+      </a>
+    </header>
+
+    <main class="main-card">
+      <div class="corner corner-tl"></div>
+      <div class="corner corner-tr"></div>
+      <div class="corner corner-bl"></div>
+      <div class="corner corner-br"></div>
+
+      <div class="hostname">ironman.dragonflybsd.org</div>
+
+      <h1><span class="accent">ironman</span> home<span class="cursor"></span></h1>
+
+      <p class="description">
+        ironman.dragonflybsd.org is a multi-CPU build server for DragonFly BSD.
+        Its primary role is running staged ports builds via the dports and
+        Ravenports build systems. It also serves as a platform for validating
+        multi-threading behaviour and general development work.
+      </p>
+
+      <div class="resources-label">// available resources</div>
+
+      <ul class="resource-list">
+        <li>
+          <a class="resource-link" href="https://ironman.dragonflybsd.org/dports/logs/Report/">
+            <span class="resource-glyph">◈</span>
+            <span class="resource-text">
+              <span class="resource-name">dports build logs</span>
+              <span class="resource-path">/dports/logs/Report/</span>
+            </span>
+            <span class="resource-arrow">→</span>
+          </a>
+        </li>
+        <li>
+          <a class="resource-link" href="https://ironman.dragonflybsd.org/dports/">
+            <span class="resource-glyph">◉</span>
+            <span class="resource-text">
+              <span class="resource-name">dports raw files</span>
+              <span class="resource-path">/dports/</span>
+            </span>
+            <span class="resource-arrow">→</span>
+          </a>
+        </li>
+        <li>
+          <a class="resource-link" href="https://ironman.dragonflybsd.org/raven/">
+            <span class="resource-glyph">◆</span>
+            <span class="resource-text">
+              <span class="resource-name">Ravenports build system</span>
+              <span class="resource-path">/raven/</span>
+            </span>
+            <span class="resource-arrow">→</span>
+          </a>
+        </li>
+      </ul>
+    </main>
+
+    <footer class="page-footer">
+      <a href="http://www.dragonflybsd.org/">dragonflybsd.org</a>
+    </footer>
+
+  </div>
+
+</body>
+</html>
