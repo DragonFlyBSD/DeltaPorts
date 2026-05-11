@@ -53,6 +53,11 @@ def build_parser() -> argparse.ArgumentParser:
     shell.add_argument("name", help="Environment name")
 
     destroy = subparsers.add_parser("destroy", help="Unmount and remove one environment")
+    destroy.add_argument(
+        "--yes",
+        action="store_true",
+        help="Confirm environment removal without an interactive prompt",
+    )
     destroy.add_argument("name", help="Environment name")
 
     subparsers.add_parser("list", help="List known environments")
@@ -122,11 +127,21 @@ def cmd_destroy(args: argparse.Namespace) -> int:
     if not env_dir.is_dir():
         raise UsageError(f"environment not found: {args.name}")
 
+    env_name = args.name
+
     try:
         state = store.load(args.name)
-        info(f"destroying environment {state.name}")
+        env_name = state.name
     except DevEnvError:
         warn(f"environment {args.name} has no valid env.json; cleaning partial environment")
+
+    if not args.yes:
+        answer = input(f"Destroy environment {env_name}? [y/N] ")
+        if answer.strip().lower() not in {"y", "yes"}:
+            info("destroy cancelled")
+            return 1
+
+    info(f"destroying environment {env_name}")
     unmount_under(env_dir)
     survivors = mounts_under(env_dir)
     if survivors:
@@ -135,6 +150,7 @@ def cmd_destroy(args: argparse.Namespace) -> int:
             print(str(mount.target), file=sys.stderr)
         raise UsageError("unmount the listed paths and re-run destroy")
     safe_remove_tree(config, env_dir)
+    info(f"destroyed environment {env_name}")
     return 0
 
 

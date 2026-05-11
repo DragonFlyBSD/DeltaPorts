@@ -62,6 +62,12 @@ sudo ./dportsv3 dev-env shell 2026Q2-editors_vim
 sudo ./dportsv3 dev-env destroy 2026Q2-editors_vim
 ```
 
+`destroy` prompts for confirmation. Use `--yes` for batch or non-interactive runs:
+
+```bash
+sudo ./dportsv3 dev-env destroy --yes 2026Q2-editors_vim
+```
+
 ## List
 
 ```bash
