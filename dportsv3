@@ -25,6 +25,33 @@ else
     AUTO_BOOTSTRAP=1
 fi
 
+show_help() {
+    cat <<'EOF'
+usage: dportsv3 COMMAND ...
+
+DeltaPorts v3 tooling
+
+wrapper commands:
+  dev-env         Manage disposable DragonFly chroot development environments
+
+generator commands:
+  compose         Compose full target output tree
+  compose-report  Summarize compose JSON report for humans/tools
+  dsl             DSL parse/check/plan commands
+  migrate         Migration utilities (compose-first workflow)
+  tracker         Build tracker server and queries
+
+Use 'dportsv3 COMMAND --help' for command-specific help.
+EOF
+}
+
+case "${1:-}" in
+    ""|-h|--help|help)
+        show_help
+        exit 0
+        ;;
+esac
+
 INSTALL_PROFILE=base
 INSTALL_TARGET=$GENERATOR_DIR
 if [ "${1:-}" = "tracker" ] && [ "${2:-}" = "serve" ]; then
