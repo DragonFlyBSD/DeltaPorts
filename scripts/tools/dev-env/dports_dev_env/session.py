@@ -7,7 +7,7 @@ from .chroot import command_exists, exec_shell
 from .config import DevEnvConfig
 from .dsynth import write_dsynth_config
 from .errors import UsageError
-from .helpers import write_shell_rc
+from .helpers import HELPER_BIN_DIR, write_helper_scripts, write_shell_rc
 from .log import info, warn
 from .mounts import mounts_under
 from .runtime import mount_env_root, mount_env_writable_dirs, prepare_env_writable_dirs, prepare_root_runtime
@@ -39,7 +39,8 @@ class EnvironmentSession:
             write_dsynth_config(self.config, state)
         if refresh or not (state.root_dir / "root/.dports-dev-env.sh").is_file():
             write_shell_rc(state)
-        if not (state.root_dir / "usr/local/bin/dbuild").exists():
+        write_helper_scripts(state.root_dir, bin_dir=HELPER_BIN_DIR)
+        if not (state.root_dir / HELPER_BIN_DIR.lstrip("/") / "dbuild").exists():
             warn("helper scripts missing in /usr/local/bin; recreate the env to pick up current helpers")
         prepare_root_runtime(self.config, state.root_dir, refresh_resolv_conf=refresh)
         info(f"entering shell for env={name} target={state.target} origin={state.origin or '<full-tree>'}")

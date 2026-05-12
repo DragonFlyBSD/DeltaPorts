@@ -13,6 +13,7 @@ def quote(value: str) -> str:
 
 HELPER_NAMES = ["regen", "reapply", "showenv", "dbuild"]
 TOUCHED_ORIGINS_PATH = "/work/.dports-dev-touched-origins"
+HELPER_BIN_DIR = "/root/.dports-dev/bin"
 
 
 def helper_body(name: str) -> str:
@@ -100,8 +101,8 @@ def helper_signature() -> str:
     return digest.hexdigest()
 
 
-def write_helper_scripts(root_dir) -> None:
-    bin_dir = root_dir / "usr/local/bin"
+def write_helper_scripts(root_dir, *, bin_dir: str | None = None) -> None:
+    bin_dir = root_dir / (bin_dir or "usr/local/bin").lstrip("/")
     bin_dir.mkdir(parents=True, exist_ok=True)
     for name in HELPER_NAMES:
         path = bin_dir / name
@@ -124,11 +125,12 @@ export DPORTS_LOCK_ROOT=/work/DPorts
 export DPORTS_DSYNTH_ROOT=/work/dsynth
 export DPORTS_DSYNTH_PROFILE={quote(profile_name)}
 export DPORTS_TOUCHED_ORIGINS_FILE={quote(str(TOUCHED_ORIGINS_PATH))}
+export DPORTS_HELPER_BIN={quote(HELPER_BIN_DIR)}
 export DPORTS_ORACLE_PROFILE={quote(state.oracle_profile)}
 export DISTDIR=/usr/distfiles
 export DPORTS_DOC_USER_GUIDE=https://github.com/DragonFlyBSD/DeltaPorts/blob/master/docs/dportsv3-user-guide.md
 export DPORTS_DOC_DEV_ENV=https://github.com/DragonFlyBSD/DeltaPorts/blob/master/docs/dev-chroot-environment.md
-export PATH=/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin
+export PATH="$DPORTS_HELPER_BIN:/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin"
 
 if [ -n "$DPORTS_ORIGIN" ] && [ -d "$DPORTS_COMPOSE_ROOT/$DPORTS_ORIGIN" ]; then
     cd "$DPORTS_COMPOSE_ROOT/$DPORTS_ORIGIN"
@@ -155,6 +157,7 @@ showwelcome() {{
     printf '  dsynth config: %s\n' '/etc/dsynth/dsynth.ini'
     printf '  dsynth profile: %s\n' "$DPORTS_DSYNTH_PROFILE"
     printf '  touched origins: %s\n' "$DPORTS_TOUCHED_ORIGINS_FILE"
+    printf '  helper bin: %s\n' "$DPORTS_HELPER_BIN"
     printf '  Distfiles: %s\n' "$DISTDIR"
     if [ -n "$DPORTS_ORIGIN" ]; then
         printf '  Composed origin: %s\n' "$DPORTS_COMPOSE_ROOT/$DPORTS_ORIGIN"
