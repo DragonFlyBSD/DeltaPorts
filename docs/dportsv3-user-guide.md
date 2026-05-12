@@ -346,6 +346,14 @@ Incremental selected-origin compose:
 - `seed_output` and `apply_special` are skipped.
 - Only the selected origins are revalidated and recomposed.
 - If `--output` does not already exist, compose fails.
+
+Future selected-origin dependency mode:
+
+- A future compose mode may expand explicitly selected origins to include their
+  transitive dependency closure and compose a smaller tree sufficient to try a
+  targeted build.
+- That feature should remain part of `dportsv3 compose`, not dev-env-specific
+  wrapper behavior.
 6. `apply_compat_ops`
 7. `apply_system_replacements`
 8. `finalize_tree`
