@@ -32,10 +32,10 @@ exec /work/DeltaPorts/dportsv3 compose --target "$DPORTS_TARGET" --delta-root /w
     if name == "reapply":
         return f"""#!/bin/sh
 set -eu
-: "${DPORTS_TARGET:?reapply: DPORTS_TARGET is not set; run from a dports-dev shell}"
-: "${DPORTS_COMPOSE_ROOT:?reapply: DPORTS_COMPOSE_ROOT is not set}"
-: "${DPORTS_LOCK_ROOT:?reapply: DPORTS_LOCK_ROOT is not set}"
-: "${DPORTS_ORACLE_PROFILE:=off}"
+: "${{DPORTS_TARGET:?reapply: DPORTS_TARGET is not set; run from a dports-dev shell}}"
+: "${{DPORTS_COMPOSE_ROOT:?reapply: DPORTS_COMPOSE_ROOT is not set}}"
+: "${{DPORTS_LOCK_ROOT:?reapply: DPORTS_LOCK_ROOT is not set}}"
+: "${{DPORTS_ORACLE_PROFILE:=off}}"
 origins_file="${{DPORTS_TOUCHED_ORIGINS_FILE:-{quote(str(TOUCHED_ORIGINS_PATH))}}}"
 if [ "$#" -eq 0 ]; then
     if [ -s "$origins_file" ]; then
@@ -62,8 +62,8 @@ env | grep '^DPORTS_' | sort
     if name == "dbuild":
         return f"""#!/bin/sh
 set -eu
-: "${DPORTS_TARGET:?dbuild: DPORTS_TARGET is not set; run from a dports-dev shell}"
-: "${DPORTS_DSYNTH_PROFILE:?dbuild: DPORTS_DSYNTH_PROFILE is not set; run from a dports-dev shell}"
+: "${{DPORTS_TARGET:?dbuild: DPORTS_TARGET is not set; run from a dports-dev shell}}"
+: "${{DPORTS_DSYNTH_PROFILE:?dbuild: DPORTS_DSYNTH_PROFILE is not set; run from a dports-dev shell}}"
 if ! command -v dsynth >/dev/null 2>&1; then
     printf '%s\n' 'dbuild requires dsynth; recreate the env with dsynth available' >&2
     exit 1
