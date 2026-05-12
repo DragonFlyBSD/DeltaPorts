@@ -86,7 +86,7 @@ class DirtySyncer:
     def reset_env_repo(self, env_repo: Path, mirror: Path, host_head: str) -> None:
         info(f"resetting env DeltaPorts checkout at {env_repo}")
         self.git_run(env_repo, ["remote", "set-url", "origin", str(mirror)])
-        self.git_run(env_repo, ["fetch", "--prune", "origin", "+refs/*:refs/*"])
+        self.git_run(env_repo, ["fetch", "--prune", "origin"])
         self.git_run(env_repo, ["reset", "--hard", host_head])
         self.git_run(env_repo, ["clean", "-fd", "-e", str(GENERATOR_VENV_RELATIVE)])
 
