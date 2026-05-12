@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import shlex
 import hashlib
+import shlex
 
 from .dsynth import dsynth_profile_name
 from .state import EnvironmentState
@@ -12,6 +12,7 @@ def quote(value: str) -> str:
 
 
 HELPER_NAMES = ["regen", "reapply", "showenv", "dbuild"]
+TOUCHED_ORIGINS_PATH = "/work/.dports-dev-touched-origins"
 
 
 def helper_body(name: str) -> str:
@@ -28,23 +29,37 @@ fi
 exec /work/DeltaPorts/dportsv3 compose --target "$DPORTS_TARGET" --delta-root /work/DeltaPorts --freebsd-root /work/freebsd-ports --lock-root "$DPORTS_LOCK_ROOT" --output "$DPORTS_COMPOSE_ROOT" --replace-output --oracle-profile "$DPORTS_ORACLE_PROFILE"
 """
     if name == "reapply":
-        return """#!/bin/sh
+        return f"""#!/bin/sh
 set -eu
 : "${DPORTS_TARGET:?reapply: DPORTS_TARGET is not set; run from a dports-dev shell}"
 : "${DPORTS_COMPOSE_ROOT:?reapply: DPORTS_COMPOSE_ROOT is not set}"
+: "${DPORTS_LOCK_ROOT:?reapply: DPORTS_LOCK_ROOT is not set}"
 : "${DPORTS_ORACLE_PROFILE:=off}"
-if [ -z "${DPORTS_ORIGIN:-}" ]; then
-    printf '%s\n' 'reapply requires the environment to have been created with --origin' >&2
-    exit 1
+origins_file="${{DPORTS_TOUCHED_ORIGINS_FILE:-{quote(str(TOUCHED_ORIGINS_PATH))}}}"
+if [ "$#" -eq 0 ]; then
+    if [ -s "$origins_file" ]; then
+        set --
+        while IFS= read -r origin; do
+            [ -n "$origin" ] || continue
+            set -- "$@" "$origin"
+        done < "$origins_file"
+    elif [ -n "${{DPORTS_ORIGIN:-}}" ]; then
+        set -- "$DPORTS_ORIGIN"
+    else
+        printf '%s\n' 'usage: reapply ORIGIN... (or run sync-dirty first, or create the env with --origin)' >&2
+        exit 1
+    fi
 fi
-exec /work/DeltaPorts/dportsv3 dsl apply "/work/DeltaPorts/ports/$DPORTS_ORIGIN/overlay.dops" --port-root "$DPORTS_COMPOSE_ROOT/$DPORTS_ORIGIN" --target "$DPORTS_TARGET" --oracle-profile "$DPORTS_ORACLE_PROFILE"
+for origin in "$@"; do
+    /work/DeltaPorts/dportsv3 compose --target "$DPORTS_TARGET" --origin "$origin" --delta-root /work/DeltaPorts --freebsd-root /work/freebsd-ports --lock-root "$DPORTS_LOCK_ROOT" --output "$DPORTS_COMPOSE_ROOT" --oracle-profile "$DPORTS_ORACLE_PROFILE" || exit $?
+done
 """
     if name == "showenv":
         return """#!/bin/sh
 env | grep '^DPORTS_' | sort
 """
     if name == "dbuild":
-        return """#!/bin/sh
+        return f"""#!/bin/sh
 set -eu
 : "${DPORTS_TARGET:?dbuild: DPORTS_TARGET is not set; run from a dports-dev shell}"
 : "${DPORTS_DSYNTH_PROFILE:?dbuild: DPORTS_DSYNTH_PROFILE is not set; run from a dports-dev shell}"
@@ -59,8 +74,14 @@ fi
 if [ "$#" -eq 0 ]; then
     if [ -n "${DPORTS_ORIGIN:-}" ]; then
         set -- "$DPORTS_ORIGIN"
+    elif [ -s "${{DPORTS_TOUCHED_ORIGINS_FILE:-{quote(str(TOUCHED_ORIGINS_PATH))}}}" ]; then
+        set --
+        while IFS= read -r origin; do
+            [ -n "$origin" ] || continue
+            set -- "$@" "$origin"
+        done < "${{DPORTS_TOUCHED_ORIGINS_FILE:-{quote(str(TOUCHED_ORIGINS_PATH))}}}"
     else
-        printf '%s\n' 'usage: dbuild ORIGIN... (or create the env with --origin)' >&2
+        printf '%s\n' 'usage: dbuild ORIGIN... (or run sync-dirty first, or create the env with --origin)' >&2
         exit 1
     fi
 fi
@@ -102,6 +123,7 @@ export DPORTS_COMPOSE_ROOT={quote(f'/work/artifacts/compose/{state.target}')}
 export DPORTS_LOCK_ROOT=/work/DPorts
 export DPORTS_DSYNTH_ROOT=/work/dsynth
 export DPORTS_DSYNTH_PROFILE={quote(profile_name)}
+export DPORTS_TOUCHED_ORIGINS_FILE={quote(str(TOUCHED_ORIGINS_PATH))}
 export DPORTS_ORACLE_PROFILE={quote(state.oracle_profile)}
 export DISTDIR=/usr/distfiles
 export DPORTS_DOC_USER_GUIDE=https://github.com/DragonFlyBSD/DeltaPorts/blob/master/docs/dportsv3-user-guide.md
@@ -132,6 +154,7 @@ showwelcome() {{
     printf '  dsynth: %s\n' "$DPORTS_DSYNTH_ROOT"
     printf '  dsynth config: %s\n' '/etc/dsynth/dsynth.ini'
     printf '  dsynth profile: %s\n' "$DPORTS_DSYNTH_PROFILE"
+    printf '  touched origins: %s\n' "$DPORTS_TOUCHED_ORIGINS_FILE"
     printf '  Distfiles: %s\n' "$DISTDIR"
     if [ -n "$DPORTS_ORIGIN" ]; then
         printf '  Composed origin: %s\n' "$DPORTS_COMPOSE_ROOT/$DPORTS_ORIGIN"

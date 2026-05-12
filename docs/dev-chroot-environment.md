@@ -56,6 +56,20 @@ If initial compose fails, the command returns non-zero but the environment remai
 sudo ./dportsv3 dev-env shell 2026Q2-editors_vim
 ```
 
+## Sync Dirty Host Edits
+
+```bash
+sudo ./dportsv3 dev-env sync-dirty 2026Q2-editors_vim
+```
+
+This refreshes `/work/DeltaPorts` inside the env from the original host checkout,
+then applies the host repo's current unstaged tracked changes and untracked files.
+Touched origins under `ports/<category>/<port>/...` are recorded in:
+
+```text
+/work/.dports-dev-touched-origins
+```
+
 ## Destroy
 
 ```bash
@@ -125,7 +139,8 @@ the mount.
 The shell defines:
 
 - `regen`: rerun compose for the environment target
-- `reapply`: rerun `dsl apply` for the selected origin
+- `reapply`: rerun targeted compose for explicit origins, touched origins from
+  `sync-dirty`, or the selected env origin
 - `dbuild`: run `dsynth -p "$DPORTS_DSYNTH_PROFILE" build` for the selected origin, or for
   origins passed as arguments
 - `showenv`: print `DPORTS_*` environment variables

@@ -12,6 +12,7 @@ from .log import error, info, warn
 from .mounts import mounts_under, ordered_mounts_under, unmount_under
 from .session import EnvironmentSession
 from .store import EnvironmentStore
+from .sync import DirtySyncer
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -59,6 +60,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Confirm environment removal without an interactive prompt",
     )
     destroy.add_argument("name", help="Environment name")
+
+    sync_dirty = subparsers.add_parser(
+        "sync-dirty",
+        help="Sync host unstaged and untracked DeltaPorts changes into one environment",
+    )
+    sync_dirty.add_argument("name", help="Environment name")
 
     subparsers.add_parser("list", help="List known environments")
     cleanup = subparsers.add_parser("cleanup-mounts", help="Unmount stale dports-dev mounts under the cache root")
@@ -154,6 +161,15 @@ def cmd_destroy(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_sync_dirty(args: argparse.Namespace) -> int:
+    require_root()
+    config = load_config()
+    validate_cache_root(config.cache_root)
+    store = EnvironmentStore(config)
+    DirtySyncer(config, store).sync(args.name)
+    return 0
+
+
 def cmd_shell(args: argparse.Namespace) -> int:
     require_root()
     config = load_config()
@@ -200,6 +216,7 @@ def dispatch(args: argparse.Namespace) -> int:
         "create": cmd_create,
         "shell": cmd_shell,
         "destroy": cmd_destroy,
+        "sync-dirty": cmd_sync_dirty,
         "list": cmd_list,
         "cleanup-mounts": cmd_cleanup_mounts,
     }
