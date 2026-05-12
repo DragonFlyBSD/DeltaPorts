@@ -50,7 +50,7 @@ class DirtySyncer:
 
         host_repo = Path(state.source.delta_root)
         env_repo = state.root_dir / "work/DeltaPorts"
-        touched_file = state.root_dir / TOUCHED_ORIGINS_PATH.relative_to("/")
+        touched_file = state.root_dir / Path(TOUCHED_ORIGINS_PATH).relative_to("/")
 
         if not host_repo.is_dir() or not (host_repo / ".git").exists():
             raise UsageError(f"host DeltaPorts checkout is unavailable: {host_repo}")
