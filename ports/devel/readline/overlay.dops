@@ -1,0 +1,14 @@
+target @any
+port devel/readline
+type port
+reason "manual conversion from Makefile.DragonFly and legacy patch lane"
+
+mk add USES ncurses on-missing warn
+mk remove OPTIONS_DEFAULT TERMCAP on-missing noop
+
+mk target set pre-configure-script <<'MK'
+	${REINPLACE_CMD} "s/SHOBJ_LDFLAGS =/SHOBJ_LDFLAGS = -lncurses/" \
+		${WRKSRC}/shlib/Makefile.in
+MK
+
+text replace-once file terminal.c from "  dumbterm = STREQ (term, \"dumb\") || STREQ (term, \"vt52\") || STREQ (term, \"adm3a\");" to "  dumbterm = STREQ (term, \"dumb\") || STREQ (term, \"vt52\") || STREQ (term, \"adm3a\") || STREQ (term, \"cons25\");"
