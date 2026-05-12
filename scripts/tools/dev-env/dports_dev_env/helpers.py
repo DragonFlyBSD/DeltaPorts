@@ -73,7 +73,7 @@ if [ ! -f /etc/dsynth/dsynth.ini ]; then
     exit 1
 fi
 if [ "$#" -eq 0 ]; then
-    if [ -n "${DPORTS_ORIGIN:-}" ]; then
+    if [ -n "${{DPORTS_ORIGIN:-}}" ]; then
         set -- "$DPORTS_ORIGIN"
     elif [ -s "${{DPORTS_TOUCHED_ORIGINS_FILE:-{quote(str(TOUCHED_ORIGINS_PATH))}}}" ]; then
         set --
