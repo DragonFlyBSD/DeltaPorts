@@ -11,4 +11,4 @@ mk target set pre-configure-script <<'MK'
 		${WRKSRC}/shlib/Makefile.in
 MK
 
-text replace-once file terminal.c from "  dumbterm = STREQ (term, \"dumb\") || STREQ (term, \"vt52\") || STREQ (term, \"adm3a\");" to "  dumbterm = STREQ (term, \"dumb\") || STREQ (term, \"vt52\") || STREQ (term, \"adm3a\") || STREQ (term, \"cons25\");"
+file materialize dragonfly/patch-terminal.c -> dragonfly/patch-terminal.c
