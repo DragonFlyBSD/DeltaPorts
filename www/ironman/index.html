@@ -284,10 +284,121 @@
       to   { opacity: 1; transform: translateX(0); }
     }
 
+    /* ── Build status badges ── */
+    .build-status-section {
+      margin-top: 36px;
+      padding-top: 28px;
+      margin-bottom: 36px;
+      border-top: 1px solid var(--amber-border);
+      border-bottom: 1px solid var(--amber-border);
+      padding-bottom: 20px;
+    }
+
+    .build-status-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+
+    .build-status-header .resources-label { margin-bottom: 0; }
+
+    #build-refresh {
+      border: 1px solid var(--amber-border);
+      border-radius: 3px;
+      background: transparent;
+      color: var(--text-dim);
+      font-family: inherit;
+      font-size: 11px;
+      padding: 2px 4px;
+      cursor: pointer;
+      outline: none;
+    }
+    #build-refresh:focus { border-color: var(--amber); }
+
+    .build-badge {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 4px;
+      border-bottom: 1px solid rgba(180,100,0,0.07);
+      font-size: 12px;
+      text-decoration: none;
+      color: inherit;
+      border-radius: 2px;
+      transition: background 0.15s;
+    }
+    .build-badge:last-child { border-bottom: 0; }
+    .build-badge:hover { background: rgba(180,100,0,0.04); }
+
+    .build-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .build-dot.active {
+      background: #2a7a2a;
+      box-shadow: 0 0 0 0 rgba(42,122,42,0.5);
+      animation: pulse 1.8s ease-out infinite;
+    }
+    .build-dot.done { background: var(--text-dim); }
+
+    @keyframes pulse {
+      0%   { box-shadow: 0 0 0 0   rgba(42,122,42,0.5); }
+      70%  { box-shadow: 0 0 0 6px rgba(42,122,42,0);   }
+      100% { box-shadow: 0 0 0 0   rgba(42,122,42,0);   }
+    }
+
+    .build-state {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+    .build-state.active { background: #ecf7ec; color: #2a7a2a; }
+    .build-state.done   { background: var(--c-neutral-bg, #eeebe4); color: var(--text-dim); }
+
+    .build-profile {
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      color: var(--amber);
+      min-width: 60px;
+    }
+
+    .build-stats {
+      color: var(--text-dim);
+      flex: 1;
+    }
+
+    .build-stats .s-built   { color: #2a7a2a; }
+    .build-stats .s-failed  { color: #c03030; }
+    .build-stats .s-remains { color: var(--amber); }
+
+    .build-bar {
+      display: flex;
+      width: 120px;
+      height: 5px;
+      border-radius: 3px;
+      overflow: hidden;
+      background: #eeebe4;
+      flex-shrink: 0;
+    }
+    .bb-seg { height: 100%; }
+    .bb-built   { background: #2a7a2a; }
+    .bb-meta    { background: #6040b0; }
+    .bb-failed  { background: #c03030; }
+    .bb-ignored { background: #7a6000; }
+    .bb-skipped { background: #b36800; }
+
     @media (max-width: 560px) {
       .main-card { padding: 30px 24px; }
       h1 { font-size: 22px; }
       .site-header { flex-direction: column; gap: 16px; align-items: flex-start; }
+      .build-bar { display: none; }
     }
   </style>
 </head>
@@ -318,19 +429,22 @@
         multi-threading behaviour and general development work.
       </p>
 
+      <div id="build-status" class="build-status-section" style="display:none">
+        <div class="build-status-header">
+          <span class="resources-label">// build status</span>
+          <select id="build-refresh" title="Refresh interval">
+            <option value="10">10s</option>
+            <option value="30">30s</option>
+            <option value="60" selected>60s</option>
+            <option value="300">5m</option>
+          </select>
+        </div>
+        <div id="build-badges"></div>
+      </div>
+
       <div class="resources-label">// available resources</div>
 
       <ul class="resource-list">
-        <li>
-          <a class="resource-link" href="https://ironman.dragonflybsd.org/dports/logs/Report/">
-            <span class="resource-glyph">◈</span>
-            <span class="resource-text">
-              <span class="resource-name">dports build logs</span>
-              <span class="resource-path">/dports/logs/Report/</span>
-            </span>
-            <span class="resource-arrow">→</span>
-          </a>
-        </li>
         <li>
           <a class="resource-link" href="https://ironman.dragonflybsd.org/dports/">
             <span class="resource-glyph">◉</span>
@@ -360,5 +474,85 @@
 
   </div>
 
+  <script>
+    var BUILD_PROBES = [
+      { tag: '2026Q2', url: '/dports/logs/2026Q2/Report/summary.json' },
+      { tag: 'main',   url: '/dports/logs/main/Report/summary.json'   }
+    ];
+
+    function renderBadge(data, reportUrl) {
+      var s       = data.stats || {};
+      var active  = parseInt(data.active) !== 0;
+      var profile = data.profile || '—';
+      var q       = s.queued || 1;
+
+      function seg(cls, n) {
+        if (!n) return '';
+        return '<div class="bb-seg ' + cls + '" style="flex-grow:' + (n / q) + '"></div>';
+      }
+
+      var stateClass = active ? 'active' : 'done';
+      var stateLabel = active ? 'running' : 'done';
+
+      return '<a class="build-badge" href="' + reportUrl + '">' +
+        '<span class="build-dot ' + stateClass + '"></span>' +
+        '<span class="build-state ' + stateClass + '">' + stateLabel + '</span>' +
+        '<span class="build-profile">' + profile + '</span>' +
+        '<span class="build-stats">' +
+          '<span class="s-built">'   + (s.built   || 0) + ' ✓</span> · ' +
+          '<span class="s-failed">'  + (s.failed  || 0) + ' ✗</span> · ' +
+          '<span class="s-remains">' + (s.remains || 0) + ' …</span>' +
+        '</span>' +
+        '<div class="build-bar">' +
+          seg('bb-built',   s.built)   +
+          seg('bb-meta',    s.meta)    +
+          seg('bb-failed',  s.failed)  +
+          seg('bb-ignored', s.ignored) +
+          seg('bb-skipped', s.skipped) +
+        '</div>' +
+      '</a>';
+    }
+
+    function loadBuildStatus() {
+      var results = [];
+      var pending = BUILD_PROBES.length;
+
+      BUILD_PROBES.forEach(function(probe) {
+        var reportUrl = probe.url.replace('summary.json', '');
+        fetch(probe.url)
+          .then(function(r) { return r.ok ? r.json() : null; })
+          .catch(function()  { return null; })
+          .then(function(data) {
+            if (data) results.push({ data: data, reportUrl: reportUrl });
+            if (--pending === 0) renderAll();
+          });
+      });
+
+      function renderAll() {
+        var section = document.getElementById('build-status');
+        var badges  = document.getElementById('build-badges');
+        if (!results.length) { section.style.display = 'none'; return; }
+        badges.innerHTML = results.map(function(r) { return renderBadge(r.data, r.reportUrl); }).join('');
+        section.style.display = '';
+      }
+    }
+
+    var refreshTimer = null;
+
+    function scheduleRefresh() {
+      clearInterval(refreshTimer);
+      var secs = parseInt(document.getElementById('build-refresh').value) || 60;
+      refreshTimer = setInterval(loadBuildStatus, secs * 1000);
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      loadBuildStatus();
+      scheduleRefresh();
+      document.getElementById('build-refresh').addEventListener('change', function() {
+        loadBuildStatus();
+        scheduleRefresh();
+      });
+    });
+  </script>
 </body>
 </html>
