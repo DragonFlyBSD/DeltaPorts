@@ -74,6 +74,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Confirm tear-down of every mount under the cache root (required)",
     )
+
+    exec_ = subparsers.add_parser("exec", help="Run a command inside an environment non-interactively")
+    exec_.add_argument("--cwd", default="/work/DeltaPorts", help="Working directory inside the chroot")
+    exec_.add_argument("name", help="Environment name")
+    exec_.add_argument("argv", nargs=argparse.REMAINDER, help="-- CMD [ARGS...] to run inside the env")
     return parser
 
 
@@ -179,6 +184,21 @@ def cmd_shell(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_exec(args: argparse.Namespace) -> int:
+    require_root()
+    config = load_config()
+    validate_cache_root(config.cache_root)
+    store = EnvironmentStore(config)
+    argv = list(args.argv)
+    if argv and argv[0] == "--":
+        argv = argv[1:]
+    if not argv:
+        raise UsageError("dev-env exec requires a command after '--'")
+    session = EnvironmentSession(config, store)
+    state = session.prepare(args.name)
+    return session.exec_command(state, argv, cwd=args.cwd)
+
+
 def cmd_create(args: argparse.Namespace) -> int:
     require_root()
     config = load_config()
@@ -215,6 +235,7 @@ def dispatch(args: argparse.Namespace) -> int:
     commands = {
         "create": cmd_create,
         "shell": cmd_shell,
+        "exec": cmd_exec,
         "destroy": cmd_destroy,
         "sync-dirty": cmd_sync_dirty,
         "list": cmd_list,
