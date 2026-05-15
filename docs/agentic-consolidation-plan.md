@@ -30,34 +30,156 @@ hook target**.
 
 Add a non-interactive subcommand to dev-env. Unblocks Phase 3.
 
-**Files**
-- `scripts/tools/dev-env/dports_dev_env/cli.py` — new `exec` parser + `cmd_exec`
-- `scripts/tools/dev-env/dports_dev_env/session.py` — extract a `gate_for_use(state)`
-  helper from `EnvironmentSession.enter` so exec reuses the same status/mount checks
-- `scripts/tools/dev-env/dports_dev_env/helpers.py` — extract `build_env_dict(state)`
-  returning the dict currently written into `/root/.dports-dev-env.sh` (TARGET,
-  COMPOSE_ROOT, LOCK_ROOT, DSYNTH_PROFILE, ORACLE_PROFILE, ORIGIN, HELPER_BIN,
-  DELTAPORTS_ROOT, FREEBSD_PORTS_ROOT, DISTDIR, PATH)
-- `scripts/tools/dev-env/dports_dev_env/chroot.py` — reuse existing
-  `ChrootRunner.run(argv, env=...)` (chroot.py:31-39); no new path needed
+#### CLI surface (MVP)
 
-**CLI surface**
 ```
-dportsv3 dev-env exec NAME [--cwd DIR] [--quiet] -- CMD [ARGS...]
+dportsv3 dev-env exec NAME [--cwd DIR] -- CMD [ARGS...]
 ```
+
 - gates identically to `shell` (rejects creating/destroying, warns on failed)
-- ensures root mounted via existing `EnvironmentSession.ensure_root_mounted`
-- exports the full `DPORTS_*` env block; PATH includes `$DPORTS_HELPER_BIN`
-- forwards stdout/stderr; returns child's exit code
+- ensures root is mounted (reuses `EnvironmentSession.ensure_root_mounted`)
+- exports the full `DPORTS_*` env block into the child; PATH includes
+  `$DPORTS_HELPER_BIN` so helper scripts resolve
+- forwards stdout/stderr to the caller's terminal (no capture)
+- returns the child's exit code as the process exit code
 
-**Verification**
+#### Step sequence
+
+Split into two commits: a behavior-preserving refactor (S1 + S2), then the new
+feature (S3 + S4 + S5).
+
+**S1. Extract `build_env_dict(state)` in `helpers.py`** *(refactor; no behavior change)*
+
+- Today `write_shell_rc` (helpers.py:113-184) inlines env exports as f-string
+  shell text.
+- Add `build_env_dict(state: EnvironmentState) -> dict[str, str]` returning:
+  `DELTAPORTS_ROOT`, `FREEBSD_PORTS_ROOT`, `DPORTS_DEV_ENV`, `DPORTS_TARGET`,
+  `DPORTS_ORIGIN`, `DPORTS_COMPOSE_ROOT`, `DPORTS_LOCK_ROOT`,
+  `DPORTS_DSYNTH_ROOT`, `DPORTS_DSYNTH_PROFILE`, `DPORTS_TOUCHED_ORIGINS_FILE`,
+  `DPORTS_HELPER_BIN`, `DPORTS_ORACLE_PROFILE`, `DISTDIR`, `PATH`.
+- Rewrite `write_shell_rc` to loop over the dict:
+  `"\n".join(f"export {k}={quote(v)}" for k, v in build_env_dict(state).items())`.
+- PATH stays the same: `"$DPORTS_HELPER_BIN:/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin"`.
+
+**S2. Factor `prepare()` out of `EnvironmentSession.enter()` in `session.py`** *(refactor)*
+
+- `enter()` (session.py:23-50) currently does: status gate → mount → write
+  dsynth.ini / rcfile if missing → write helper scripts → `prepare_root_runtime`
+  → `exec_shell`. Split so the new method does everything except the final
+  `exec_shell`.
+- New: `prepare(name, *, refresh: bool = False) -> EnvironmentState` does all
+  the pre-shell work and returns the loaded state.
+- Rewrite `enter`:
+  ```python
+  def enter(self, name, *, refresh=False):
+      state = self.prepare(name, refresh=refresh)
+      if not command_exists(state.root_dir, "bash"):
+          warn("bash is unavailable; falling back to /bin/sh")
+      exec_shell(state.root_dir)
+  ```
+
+**S3. Add the `exec` subparser in `cli.py`** *(new feature)*
+
+- Add the parser block alongside the others (around cli.py:77):
+  ```python
+  exec_ = subparsers.add_parser("exec", help="Run a command inside an env non-interactively")
+  exec_.add_argument("--cwd", default="/work/DeltaPorts",
+                     help="Working directory inside the chroot")
+  exec_.add_argument("name", help="Environment name")
+  exec_.add_argument("argv", nargs=argparse.REMAINDER,
+                     help="-- CMD [ARGS...] to run inside the env")
+  ```
+- Register in the `commands` dict in `dispatch()` (cli.py:215).
+
+**S4. New `EnvironmentSession.exec_command(state, argv, *, cwd)` in `session.py`** *(new feature)*
+
+- Build env dict by merging `chroot_env()` (chroot.py:12-17) with
+  `build_env_dict(state)` — helper env wins on collisions (so PATH includes
+  `$DPORTS_HELPER_BIN`).
+- Wrap argv with cwd via `/bin/sh -c`:
+  ```python
+  wrapped = ["/bin/sh", "-c", f"cd {shlex.quote(cwd)} && exec \"$@\"", "_", *argv]
+  ```
+  (`/bin/sh -c '... && exec "$@"' _ arg1 arg2 ...` — the `_` is `$0`; remaining
+  args become `$@`.)
+- Call `ChrootRunner(state.root_dir).run(wrapped, env=env_dict)` and return
+  `result.returncode`.
+
+**S5. New `cmd_exec(args)` in `cli.py`** *(new feature)*
+
+- Mirror `cmd_shell` (cli.py:173-179):
+  ```python
+  def cmd_exec(args):
+      require_root()
+      config = load_config()
+      validate_cache_root(config.cache_root)
+      store = EnvironmentStore(config)
+      if not args.argv:
+          raise UsageError("dev-env exec requires a command after '--'")
+      argv = args.argv[1:] if args.argv and args.argv[0] == "--" else args.argv
+      session = EnvironmentSession(config, store)
+      state = session.prepare(args.name)
+      return session.exec_command(state, argv, cwd=args.cwd)
+  ```
+- `cli.main` already wraps the return in `SystemExit` (cli.py:230), so exit
+  codes propagate naturally.
+
+#### Design decisions (locked-in for MVP)
+
+| Question | Choice | Rationale |
+|---|---|---|
+| Argparse separator | `nargs=argparse.REMAINDER` after positional `name`; strip a leading `--` if present | REMAINDER is the standard idiom for "everything after"; leading `--` strip handles the ergonomic form `dev-env exec foo -- regen` |
+| Empty argv | Raise `UsageError` ("dev-env exec requires a command after '--'") | `shell` exists for the interactive use case |
+| Output handling | Stream to caller's terminal; no `--quiet` flag in MVP | SSH callers want live output; capture mode adds complexity without a current need |
+| Status == "failed" | Warn + proceed (same as `enter`) | Symmetry; SSH callers can pre-check via `dev-env list` if they want to refuse |
+| Repeated `exec` calls writing helpers | Accept — `write_helper_scripts` is idempotent and the dsynth.ini/rcfile writes are gated on `refresh or missing` | First exec pays the cost; subsequent ones are no-ops |
+| `cwd` semantics | Path is inside the chroot. Default `/work/DeltaPorts` (matches the rcfile's `cd` logic) | Matches interactive shell behavior |
+
+#### Deferred (out of MVP scope)
+
+**`--script PATH`** — copy a host-side script into the env's writable overlay,
+chmod 0755, execute, unlink on exit (try/finally). Preserves shebangs, args,
+and exit codes. ~30 lines. Add iff Phase 3 (agentic-worker collapse) reveals
+the SSH-quoting-multiline-script case is common enough to warrant it.
+
+In the meantime the same effect is achievable with one extra step:
+
+```sh
+cp build-recipe.sh "$env_dir/writable/tmp/x.sh"
+dportsv3 dev-env exec foo -- /tmp/x.sh arg1 arg2
 ```
-dportsv3 dev-env create --name foo --target @main
-dportsv3 dev-env exec foo -- regen                  # same as running it in shell
-dportsv3 dev-env exec foo -- dbuild devel/readline
-dportsv3 dev-env exec foo -- env | grep ^DPORTS_    # confirm env block
-echo $?                                              # propagated exit code
+
+`--stdin` mode (pipe stdin to `/bin/sh -s`) is even cheaper but loses shebangs;
+not preferred over `--script` if/when we add either.
+
+#### Verification
+
+```sh
+sudo dportsv3 dev-env create --name e2e --target @main
+sudo dportsv3 dev-env exec e2e -- env | grep ^DPORTS_   # S1: env exported
+sudo dportsv3 dev-env exec e2e -- pwd                    # S4: default cwd == /work/DeltaPorts
+sudo dportsv3 dev-env exec e2e --cwd /tmp -- pwd         # S4: cwd override
+sudo dportsv3 dev-env exec e2e -- false; echo $?         # S5: exit code → 1
+sudo dportsv3 dev-env exec e2e -- regen                  # full helper run, parity with shell
+sudo dportsv3 dev-env exec e2e -- dbuild devel/readline  # end-to-end helper invocation
 ```
+
+Plus negative cases:
+```sh
+sudo dportsv3 dev-env exec e2e                           # missing argv → UsageError
+sudo dportsv3 dev-env exec nonexistent -- pwd            # unknown env → StateError
+sudo dportsv3 dev-env destroy --yes e2e
+sudo dportsv3 dev-env exec e2e -- pwd                    # destroyed env → StateError
+```
+
+#### Files touched
+
+| File | Change |
+|---|---|
+| `scripts/tools/dev-env/dports_dev_env/helpers.py` | S1: factor `build_env_dict(state)`; `write_shell_rc` loops over it |
+| `scripts/tools/dev-env/dports_dev_env/session.py` | S2: factor `prepare()` from `enter()`. S4: new `exec_command(state, argv, *, cwd)` |
+| `scripts/tools/dev-env/dports_dev_env/cli.py` | S3: `exec` subparser. S5: `cmd_exec`. Register in `dispatch()`. |
+| `scripts/tools/dev-env/dports_dev_env/chroot.py` | No changes — `ChrootRunner.run` (chroot.py:31-39) already accepts the env dict |
 
 ---
 
