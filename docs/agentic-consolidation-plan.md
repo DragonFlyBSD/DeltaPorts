@@ -573,6 +573,114 @@ var.
 
 ---
 
+### Phase 5 — Tracker UI redesign in the dsynth-progress aesthetic
+
+Phase 4 replaces the state-server SPA with jinja templates inside the
+tracker, but says nothing about how those pages look. This phase pulls
+the visual language from the existing `www/example/` build-progress
+page into the tracker so every tracker view reads as a sibling of
+that page: same palette, same typography, same component vocabulary.
+The reference page itself is left untouched — only its design is
+borrowed.
+
+**Reference (do not modify):** `www/example/{index.html,progress.css,progress.js}`
+- Cream/parchment background (`--bg: #f7f5f0`), card surfaces white
+- Amber accent (`--amber: #c47000`) for links, primary chrome, key data
+- Monospace throughout (Menlo / Consolas / Courier New, 12px base)
+- Status palette: `--c-built` green, `--c-failed` red, `--c-skipped`
+  amber, `--c-ignored` ochre, `--c-meta` purple — each with a matching
+  `*-bg` pastel
+- Sticky two-row header (logo + meta + load/swap/elapsed strip, then
+  stat-card grid)
+- Stat cards: large numeric, monogram icon, clickable as filter
+- Compact tables with hover-row highlight
+- CSS-only segmented progress bar pinned to footer
+
+**Approach: tokens + components, copied (not symlinked) into tracker.**
+
+1. Create `scripts/generator/dportsv3/tracker/static/`:
+   - `tokens.css` — lift the `:root` variable block verbatim from
+     `www/example/progress.css` (palette, font stack, status colors).
+     Tracker pages `@import` this first; future colour tweaks happen
+     here only.
+   - `base.css` — body/typography/link styling, sticky header skeleton,
+     status-pill mixin, table styling, segmented progress bar.
+   - `components.css` — `.stat-card`, `.status-pill`, `.preset-tag`,
+     `.report-controls`, `.builders-table` reusable pieces.
+   - `tracker.css` — page-specific styles (bundle detail, jobs queue,
+     runner status) layered on top.
+   - Assets: `favicon.png` (copy from example), no logo image
+     (tracker is operator-facing, not branded).
+
+2. Touch every existing tracker template + add the new Phase 4 ones:
+   - `index.html` (target picker / dashboard) — apply tokens, replace
+     ad-hoc styles with `base.css` + `components.css` classes.
+   - `target.html`, `builds.html`, `build_detail.html`, `diff.html` —
+     same conversion.
+   - **New Phase 4 templates** (`bundle_detail.html`, `jobs.html`,
+     `runner.html`, `events.html`) — designed natively in the new
+     vocabulary, no legacy styling to peel off.
+
+3. Header pattern: tracker's header gets the two-row treatment from
+   the example — top row carries process info (tracker version, DB
+   path, last refresh, "live" indicator from SSE); the second row is
+   a stat-card grid showing roll-up counts (active builds, failed
+   ports today, jobs pending, jobs failed). Each card filters the
+   page below by clicking.
+
+4. Footer pattern: the segmented progress bar (`.pb-built`, `.pb-meta`,
+   `.pb-failed`, `.pb-ignored`, `.pb-skipped`) becomes the per-build
+   header element on `build_detail.html` — already exactly what the
+   example renders.
+
+5. Tables: keep the example's compact monospace look (12px, tight
+   padding, status pill in the result column). Hover-row highlight
+   stays; status filtering becomes URL-driven (`?result=failed`)
+   rather than the example's pure-JS approach, so it works with
+   tracker's server-rendered jinja + HTMX.
+
+6. JS minimization: `www/example/progress.js` is 459 lines of pure
+   state polling + filtering for a single-page app. Tracker doesn't
+   need most of it — server-rendered pages do the filtering. Keep
+   only:
+   - SSE subscriber for live counters (~30 lines)
+   - HTMX swap helpers if needed (~10 lines)
+   - No client-side sort/filter/pagination logic — tracker passes
+     those as URL params and the server returns rendered HTML.
+
+**Files modified**
+
+| File | Change |
+|---|---|
+| `scripts/generator/dportsv3/tracker/static/tokens.css` | NEW — palette/typography variables |
+| `scripts/generator/dportsv3/tracker/static/base.css` | NEW — body/header/footer/table primitives |
+| `scripts/generator/dportsv3/tracker/static/components.css` | NEW — stat-card, status-pill, preset-tag |
+| `scripts/generator/dportsv3/tracker/static/tracker.css` | NEW — page-specific styles |
+| `scripts/generator/dportsv3/tracker/static/favicon.png` | NEW — copied from www/example |
+| `scripts/generator/dportsv3/tracker/templates/*.html` | UPDATED — adopt new tokens + components |
+| New Phase 4 templates | DESIGNED native in the new style |
+| `scripts/generator/dportsv3/tracker/server.py` | `StaticFiles` mount at `/static/` |
+
+**Untouched**
+- `www/example/` — reference only; not deleted, not edited, not
+  referenced by tracker. It remains a self-contained build-progress
+  page for whatever other purpose it serves today.
+- Provider colour conventions in the rest of the project — this phase
+  is scoped to tracker.
+
+**Verification**
+- Every tracker URL renders with `--bg`, monospace body, amber links —
+  visually indistinguishable in palette/type from `www/example/index.html`.
+- Browser dev-tools "Computed" panel shows the new CSS variables
+  resolving (no fallbacks).
+- Stat cards on the tracker home filter the table below when clicked
+  (URL changes, server re-renders).
+- `www/example/index.html` opens unchanged (cross-check after the work).
+- No CSS variable is defined in more than one of `tokens.css` /
+  `base.css` / `components.css` (single source of truth).
+
+---
+
 ## Critical files reference
 
 | File | Role | Phase |
@@ -585,6 +693,8 @@ var.
 | `docs/AGENTIC_BUILDS.md` | reword line 758 to drop `apply-patch` deprecation language | 2 |
 | New: `scripts/agent_harness/` (or inlined) | `llm.py` / `tools.py` / `loop.py` / `prompts.py` / `triage.py` / `patch.py` — Python + litellm | 3 |
 | (Phase 4 files TBD until A/B/C decision) | tracker server/db/client OR new FastAPI daemon | 4 |
+| `scripts/generator/dportsv3/tracker/static/{tokens,base,components,tracker}.css` | NEW design system lifted from `www/example` | 5 |
+| `scripts/generator/dportsv3/tracker/templates/*.html` | Apply new tokens + components | 5 |
 
 ### Code that goes away (firm)
 
@@ -648,3 +758,8 @@ var.
    `state.db`. New dsynth failures appear in the tracker dashboard
    within one SSE tick. Tracker process has no DB write paths
    (verify via `lsof` / `strace` — only reads on state.db).
+8. **Phase 5:** Every tracker URL renders in the dsynth-progress
+   palette (cream bg, amber accent, monospace) sourced from
+   `scripts/generator/dportsv3/tracker/static/tokens.css`. Stat
+   cards on the home page filter the table below on click.
+   `www/example/index.html` opens unchanged.
