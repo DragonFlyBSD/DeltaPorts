@@ -32,6 +32,7 @@ dependencies = [
 
 [project.optional-dependencies]
 tracker = ["fastapi", "uvicorn[standard]", "jinja2"]
+agent = ["litellm"]
 dev = ["pytest", "mypy", "httpx"]
 
 [project.scripts]
