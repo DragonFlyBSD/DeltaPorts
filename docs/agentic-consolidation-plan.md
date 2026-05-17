@@ -224,12 +224,18 @@ Four phases. Phase 1 has shipped. Phases 2, 3, and 4 are concrete reworks.
 
 Direction in plain terms:
 
-- **Keep `apply-patch`**, but route its sync+rebuild legs through
-  `dportsv3 dev-env exec`. Drops its platform-bifurcation + SSH plumbing.
-- **Replace opencode with a Python litellm harness.** Drops the only
-  TypeScript piece and the only non-Python runtime in the stack.
-  Tools become Python functions that call `dev-env exec`; `agentic-worker`
-  dies; the two markdown agent configs become Python prompt templates.
+- **Retire `apply-patch` entirely.** Its responsibilities split: the
+  iterative apply+rebuild loop is the Phase 3 harness's job; the
+  PR-creation step (out of scope for now) already lives in
+  `process_pr_job` in `agent-queue-runner`. Bundles are internal
+  artifacts; no external "fix from disk" entry-point is needed.
+- **Replace opencode with a Python litellm harness, locally
+  iterating.** Drops the only TypeScript piece and the only non-Python
+  runtime. Tools become Python functions that call `dev-env exec`;
+  `agentic-worker` dies; markdown agent configs become Python prompt
+  templates. The harness owns intra-job iteration with a **trust-tier
+  policy + budget** (max iterations + max tokens). No branching/PR
+  in scope; the loop ends at a local `rebuild_proof.json`.
 - **One database, two processes.** `artifact-store` stays as the single
   writer; `state-server` dies and its UI / read API / SSE move into the
   tracker, which becomes a read-only FastAPI app against the same
@@ -271,69 +277,60 @@ echo $?                                              # propagated exit code
 
 ---
 
-### Phase 2 — `apply-patch` routes sync + rebuild through `dev-env exec`
+### Phase 2 — Retire `apply-patch`
 
-**Revised from the original Phase 2**, which proposed deletion. The
-re-read showed `apply-patch` is alive and is the only one-shot
-"bundle → PR" path; the "deprecated" wording referred to the unused
-runner job-type `apply` (`process_apply_job` in `agent-queue-runner:1837-1848`,
-never dispatched), not the CLI.
+**Pure deletion. No new code.**
 
-Goal: keep `apply-patch`'s behaviour, drop its platform-mode bifurcation
-(DragonFly-local vs Linux-via-SSH) and the SSH plumbing it carries today,
-by routing sync + rebuild through `dportsv3 dev-env exec`.
+`scripts/apply-patch` is a 666-line standalone CLI that bundles seven
+responsibilities into one tool: read a bundle on disk → safe-clone →
+git apply + commit → sync to DPorts → dsynth rebuild → git push →
+`gh pr create` → write artifacts back. The re-read showed that *every
+one of those responsibilities either already lives elsewhere or is out
+of scope for the rebuilt loop*:
 
-**Today** (`scripts/apply-patch:36-58, 300-426`)
-- Detects platform (`IS_DRAGONFLY = platform.system() == "DragonFly"`).
-- Local mode: invokes `scripts/generator/sync1.sh ORIGIN` + `dsynth force ORIGIN` directly.
-- SSH mode: runs the same commands over SSH to a VM via `VM_SSH_KEY` /
-  `VM_SSH_PORT` / `VM_SSH_HOST` env vars.
-- Uses a "safe clone" at `/build/synth/DeltaPorts-ai-fix` (or
-  `~/s/DeltaPorts-ai-fix`) that's explicitly protected against being
-  the real checkout.
+| Responsibility today | Where it lives after Phase 3 |
+|---|---|
+| Apply patch + commit | Phase 3 patch agent's tool surface (`put_file`, `install_patches`, `commit`) — iterative, in the harness |
+| Sync DeltaPorts → DPorts | Already in `dportsv3 compose` (called inside the env via the `reapply` helper at `helpers.py:32-57`) |
+| dsynth rebuild | Phase 3 patch agent's `dsynth_build` tool (uses the `dbuild` helper at `helpers.py:62-90`) |
+| Git push + `gh pr create` | `process_pr_job` in `agent-queue-runner:1851`, dispatched on `type=pr` — keep, unchanged, out of scope |
+| Read bundle from disk as external entry | Out of scope — bundles are internal artifacts; no human-runs-script-against-disk path is needed |
 
-**After this phase**
-- One path: an existing `dev-env` is the workspace.
-- Sync: `dportsv3 dev-env exec ENV -- /work/DeltaPorts/scripts/generator/sync1.sh ORIGIN`.
-- Rebuild: `dportsv3 dev-env exec ENV -- dbuild ORIGIN` (existing helper
-  in `helpers.py:62-90` — calls `dsynth -p $DPORTS_DSYNTH_PROFILE build`).
-- The safe-clone concept goes away — the env's writable overlay at
-  `env_dir/writable/work/DeltaPorts` is already an isolated checkout.
-  apply-patch applies the patch there directly.
-- Platform detection and SSH plumbing both deleted.
-- `process_apply_job` in `agent-queue-runner` deleted (cosmetic — never
-  dispatched, harmless either way, but tidy).
+`process_apply_job` at `agent-queue-runner:1837-1848` is an 11-line
+dead stub (the body literally returns `False, "apply job deprecated"`).
+Never dispatched. Tombstone-only.
 
-**CLI shape**
-```
-apply-patch --bundle PATH [--env NAME] [--dry-run] [--no-push] [--no-rebuild] [--no-pr]
-```
-- `--env NAME` is new. If omitted, apply-patch creates an ephemeral env
-  (`apply-patch-<rand>`) via `dportsv3 dev-env create`, applies, rebuilds,
-  destroys. If supplied, reuses it.
+`grep` confirms zero callers of `apply-patch` anywhere in the repo
+(`scripts/`, hooks, opencode configs, docs prose).
 
-**Files modified**
-- `scripts/apply-patch` — remove `IS_DRAGONFLY`, the `local_*` /
-  `vm_*` helpers, all `ssh_cmd` / `scp_cmd` plumbing, the safe-clone
-  ensure logic. Replace with calls to `dportsv3 dev-env`. Reduces the
-  file from 666 lines to ~250-300.
-- `scripts/agent-queue-runner` — delete `process_apply_job` (lines
-  1837-1848).
-- `docs/AGENTIC_BUILDS.md:758` — reword: "This phase replaces the
-  earlier `analysis/patch.diff` flow with workspace-driven rebuilds."
-  (drop the `apply-patch` mention since it's no longer deprecated.)
+**Deleted**
+- `scripts/apply-patch` (666 LOC)
+- `process_apply_job` in `scripts/agent-queue-runner` (lines 1837-1848, ~12 LOC)
 
-**Untouched**
-- `scripts/generator/sync1.sh` — still called by `quicksync.sh:4`, unrelated to apply-patch's lifecycle. Stays.
+**Updated**
+- `docs/AGENTIC_BUILDS.md:758` — reword the paragraph that mentions
+  `apply-patch` as the deprecated path. The replacement language: the
+  Phase 3 harness's tool loop is the only patch path; PR creation is
+  a separate downstream step (`process_pr_job`) and is intentionally
+  out of scope of the iterative loop.
+
+**Out of scope (explicitly)**
+- Branching, push, PR creation. These remain available via the
+  existing `process_pr_job` path triggered manually (state-server
+  "Enqueue PR" button or curl to `/enqueue/pr`), but the Phase 3
+  loop does **not** drive them. The iterative process ends at a
+  local `rebuild_proof.json` on the bundle.
+- Any "fix from a disk-resident bundle" external tooling. Not built;
+  not replaced.
 
 **Verification**
-- `apply-patch --bundle BUNDLE` produces the same outputs as before
-  (`branch.txt`, `commit.txt`, `rebuild_status.txt`, `pr_url.txt` in
-  the bundle). `--dry-run`, `--no-push`, `--no-rebuild`, `--no-pr`
-  gates still work.
-- No SSH calls happen; tool runs purely through `dportsv3 dev-env exec`.
-- `git grep -E 'IS_DRAGONFLY|VM_SSH_|safe_clone' scripts/apply-patch`
-  returns nothing.
+- `git grep -E 'apply-patch|apply_patch|process_apply_job' -- scripts/ docs/`
+  returns nothing live (historical commit messages don't count).
+- The active loop (hook → triage → patch via harness → `rebuild_proof.json`)
+  continues to function with `apply-patch` removed.
+- `process_pr_job` is still reachable: enqueue a `type=pr` job by hand
+  for a bundle with `rebuild_ok=true`, and the runner still pushes +
+  opens the PR. Untouched.
 
 ---
 
@@ -360,16 +357,86 @@ direct, OpenAI, etc.), Python functions for tools that wrap
   direct works obviously.
 - litellm normalizes tool-use across providers, so we can mix freely
   (cheap free model for triage, stronger tool-use model for patch).
+- litellm responses expose `response.usage.{prompt_tokens,
+  completion_tokens, total_tokens}` for every provider — token-budget
+  enforcement is a per-turn check, not a provider-specific gadget.
 - The agent-queue-runner already does most of the harness work
   (payload assembly, response parsing, retry/log/state writes); we're
   replacing one HTTP call + one tool-dispatch indirection, not
   rebuilding from scratch.
 
+**Loop philosophy: trust-tier + budget, ends locally**
+
+The harness owns iteration *within one patch job*. The runner owns
+orchestration *across jobs* (triage → patch). PR creation (`type=pr`
+→ `process_pr_job`) is out of scope of this iterative loop and is
+not driven by the harness.
+
+1. **Trust tier from classification.** The triage step's
+   `Classification` field maps to a policy tier via a config table:
+
+   ```
+   AUTO    — plist-error, fetch-checksum, pkg-format, simple-missing-file
+   ASSIST  — compile-error, patch-error, link-error, configure-error
+   MANUAL  — runtime-error, dependency-conflict, unknown, low-confidence
+   ```
+
+   Each tier carries a budget (max iterations, max total tokens).
+   The mapping lives in a single JSON file (e.g.
+   `config/agentic-policy.json`) so it's adjustable without code
+   changes. Defaults are conservative; tightening/loosening is an
+   operator dial.
+
+2. **Iteration is intra-job, budget-bounded.** Inside the patch
+   harness, the loop is:
+
+   ```
+   for attempt in range(tier.max_iterations):
+       run tool loop → patch agent emits final response + tool results
+       run dsynth_build → rebuild_proof.json
+       if rebuild_ok:                   break (success)
+       if tokens_spent >= tier.max_tokens: break (over budget)
+       append failure output to context; next attempt
+   write final rebuild_proof.json + audit log to bundle
+   mark job: success | needs-help | budget-exhausted
+   ```
+
+   Each attempt commits the agent's edits to the env's writable
+   overlay (host-side, via `git -C env_dir/writable/work/DeltaPorts`).
+   On failure-then-retry, the agent sees the previous attempt's diff
+   and the new dsynth log as input.
+
+3. **Tier behaviour:**
+   - `AUTO`: harness runs the loop unattended; success or failure is
+     recorded locally; no PR step; the result waits in the tracker
+     for an operator to glance at.
+   - `ASSIST`: same loop, same budget, same local result — but the
+     tracker surfaces it in an "needs review" view rather than a
+     normal-success view. (PR creation still out of scope of the
+     loop; if the operator decides to push it, they fire a `type=pr`
+     job manually.)
+   - `MANUAL`: triage runs, no patch job is auto-enqueued. Operator
+     reads the triage, kicks off the loop by hand (or just fixes
+     manually).
+
+4. **Token + iteration accounting.** Each LLM call's `response.usage`
+   is summed into a per-job `tokens_used` counter; the loop short-
+   circuits when `tokens_used >= tier.max_tokens` or
+   `attempt >= tier.max_iterations`. Counters land in the bundle's
+   audit log alongside `rebuild_proof.json`.
+
+5. **No PR, no push, no branch promotion within the loop.** The loop
+   ends at `rebuild_proof.json` on disk. The existing `process_pr_job`
+   path still works exactly as today, triggered manually, and is
+   untouched.
+
 **New code** (suggested layout: `scripts/agent_harness/` as a module
 beside `agent-queue-runner`, or inlined into the runner — TBD during
 implementation)
 - `llm.py` — `complete(messages, tools=None, model=..., api_base=..., api_key=...)`
-  wrapping `litellm.completion` and returning a normalized response.
+  wrapping `litellm.completion`. Returns a normalized response plus
+  `usage.{prompt_tokens, completion_tokens, total_tokens}` for budget
+  accounting.
 - `tools.py` — tool registry: each `dports_*` tool from `dports.ts`
   becomes a Python function with a JSON schema, calling
   `subprocess.run(["dportsv3", "dev-env", "exec", env, "--", ...])`.
@@ -384,14 +451,51 @@ implementation)
   - `get_file(env, path)` / `put_file(env, path, content)` — operate on
     the env's writable overlay directly from the host (`env_dir/writable/...`),
     no exec needed
-- `loop.py` — multi-turn driver: `while response.tool_calls: dispatch
-  each tool → append tool_result message → re-call LLM → repeat`.
-  ~30 lines.
+- `tool_loop.py` — inner multi-turn driver: `while response.tool_calls:
+  dispatch each tool → append tool_result message → re-call LLM →
+  repeat`. ~30 lines. Returns final response + cumulative usage.
+- `attempt_loop.py` — outer budget-bounded driver: wraps `tool_loop`
+  with the per-tier `max_iterations` and `max_tokens` budget; runs
+  `dsynth_build` between attempts; collects audit log per attempt;
+  short-circuits on `rebuild_ok=true` or budget exhaustion. ~60 lines.
+- `policy.py` — loads `config/agentic-policy.json` and maps
+  triage classification → tier (`AUTO` / `ASSIST` / `MANUAL`) +
+  budget (`max_iterations`, `max_tokens`).
 - `prompts.py` — system prompts for `dports-triage` and `dports-patch`
   agents (lifted from `config/opencode/agent/*.md`).
 - `triage.py` — single-turn triage flow (no tools, uses existing payload
-  builder).
-- `patch.py` — multi-turn patch flow (uses tool loop).
+  builder). Returns classification + confidence; runner consults `policy.py`
+  to decide whether to auto-enqueue the patch job.
+- `patch.py` — multi-turn patch flow that drives `attempt_loop`.
+
+**New config file**
+- `config/agentic-policy.json` — tier definitions + classification mapping.
+  Conservative defaults:
+  ```json
+  {
+    "tiers": {
+      "AUTO":   {"max_iterations": 2, "max_tokens": 30000},
+      "ASSIST": {"max_iterations": 4, "max_tokens": 120000},
+      "MANUAL": {}
+    },
+    "classification_to_tier": {
+      "plist-error": "AUTO",
+      "fetch-checksum": "AUTO",
+      "pkg-format": "AUTO",
+      "compile-error": "ASSIST",
+      "patch-error": "ASSIST",
+      "link-error": "ASSIST",
+      "configure-error": "ASSIST",
+      "runtime-error": "MANUAL",
+      "dependency-conflict": "MANUAL",
+      "unknown": "MANUAL"
+    },
+    "confidence_floor": {"AUTO": "high", "ASSIST": "medium"}
+  }
+  ```
+  `confidence_floor` downgrades a tier if the triage LLM's reported
+  confidence is below the floor (e.g., AUTO classification with `low`
+  confidence drops to ASSIST).
 
 **Config (new env vars)**
 - `DP_HARNESS_TRIAGE_MODEL` (e.g., `openai/gpt-5-nano`)
@@ -433,16 +537,33 @@ implementation)
   1. dsynth fails the port → hook writes bundle
   2. agent-queue-runner picks up triage job → calls litellm with
      `DP_HARNESS_TRIAGE_MODEL`, parses Classification + Confidence
-  3. Auto-enqueues patch job (assuming patchable classification)
-  4. Patch agent runs the tool loop via litellm → each tool function
-     calls `dportsv3 dev-env exec` locally → writes
-     `rebuild_proof.json` with `rebuild_ok=true`
-- No opencode process running; `pgrep opencode` empty
+  3. `policy.py` maps classification → tier; runner auto-enqueues
+     patch job only for tiers `AUTO` and `ASSIST`
+  4. Patch flow's `attempt_loop` runs up to `tier.max_iterations`
+     attempts within `tier.max_tokens`. Each attempt: tool loop →
+     `dsynth_build` → check `rebuild_ok`. Stops on success or
+     budget exhaustion.
+  5. Final `rebuild_proof.json` + per-attempt audit log written to
+     the bundle. Job marked `success` / `needs-help` /
+     `budget-exhausted` accordingly. No PR, no push.
+- Trust-tier behaviour:
+  - Trigger a `plist-error` failure (AUTO tier) — runs to completion
+    automatically; appears in tracker as success.
+  - Trigger a `compile-error` failure (ASSIST tier) — same automation,
+    but tracker surfaces it in the "needs review" view.
+  - Trigger a `runtime-error` failure (MANUAL tier) — only triage
+    runs; no patch job auto-enqueued.
+- Budget enforcement: an artificially unfixable failure exhausts the
+  budget (iterations or tokens) and terminates cleanly with
+  `budget-exhausted` status. `tokens_used` value in audit log matches
+  sum of per-turn `response.usage.total_tokens`.
+- No opencode process running; `pgrep opencode` empty.
 - LiteLLM model can be swapped (`openai/gpt-5-nano` ↔
   `nvidia_nim/meta/llama-3.1-70b-instruct` ↔ `anthropic/claude-sonnet-4`)
-  via env var without code changes
-- Phase 2's apply-patch flow still works because it doesn't depend on
-  the harness — it's a separate human path through `dev-env exec`
+  via env var without code changes.
+- `process_pr_job` still functions when triggered manually with a
+  `type=pr` job — confirms PR path is intentionally out-of-loop, not
+  broken.
 
 ---
 
@@ -688,10 +809,11 @@ borrowed.
 | `scripts/tools/dev-env/dports_dev_env/cli.py` | `exec` subcommand | 1 (shipped) |
 | `scripts/tools/dev-env/dports_dev_env/session.py` | `prepare()` + `exec_command()` | 1 (shipped) |
 | `scripts/tools/dev-env/dports_dev_env/helpers.py` | `build_env_dict()` | 1 (shipped) |
-| `scripts/apply-patch` | strip platform-bifurcation + SSH; route sync+rebuild through `dev-env exec` | 2 |
-| `scripts/agent-queue-runner` | delete dead `process_apply_job`; later replace opencode calls with harness module | 2, 3 |
+| `scripts/apply-patch` | DELETE entirely (responsibilities split: iterative loop → Phase 3 harness; PR → existing `process_pr_job`; "bundle from disk" → out of scope) | 2 |
+| `scripts/agent-queue-runner` | delete dead `process_apply_job` (Phase 2); replace opencode calls with harness module + add trust-tier dispatch (Phase 3) | 2, 3 |
 | `docs/AGENTIC_BUILDS.md` | reword line 758 to drop `apply-patch` deprecation language | 2 |
-| New: `scripts/agent_harness/` (or inlined) | `llm.py` / `tools.py` / `loop.py` / `prompts.py` / `triage.py` / `patch.py` — Python + litellm | 3 |
+| New: `scripts/agent_harness/` (or inlined) | `llm.py` / `tools.py` / `tool_loop.py` / `attempt_loop.py` / `policy.py` / `prompts.py` / `triage.py` / `patch.py` — Python + litellm | 3 |
+| New: `config/agentic-policy.json` | trust-tier table (AUTO/ASSIST/MANUAL) + per-tier budget + classification mapping | 3 |
 | (Phase 4 files TBD until A/B/C decision) | tracker server/db/client OR new FastAPI daemon | 4 |
 | `scripts/generator/dportsv3/tracker/static/{tokens,base,components,tracker}.css` | NEW design system lifted from `www/example` | 5 |
 | `scripts/generator/dportsv3/tracker/templates/*.html` | Apply new tokens + components | 5 |
@@ -701,7 +823,7 @@ borrowed.
 | File | LOC | Phase | Notes |
 |---|---|---|---|
 | `process_apply_job` in `scripts/agent-queue-runner` | 12 | 2 | Dead code, never dispatched |
-| `scripts/apply-patch` SSH + safe-clone helpers | ~150 | 2 | Replaced with `dev-env exec` calls |
+| `scripts/apply-patch` (entire file) | 666 | 2 | Iterative legs → Phase 3 harness; PR legs → existing `process_pr_job`; bundle-on-disk entry → out of scope |
 | `config/opencode/tool/dports.ts` | 256 | 3 | TS plugin retired |
 | `config/opencode/agent/dports-triage.md` | ~50 | 3 | Moves to Python template |
 | `config/opencode/agent/dports-patch.md` | ~80 | 3 | Moves to Python template |
@@ -731,9 +853,10 @@ borrowed.
 
 ### Total LOC reduction
 
-- **Phase 2 + 3:** ~1350 LOC retired + opencode runtime removed
+- **Phase 2:** ~680 LOC retired (apply-patch + process_apply_job stub)
+- **Phase 3:** ~1180 LOC retired (TS plugin + agent configs + agentic-worker + opencode HTTP plumbing) plus opencode runtime gone; +~300 LOC added (harness module + policy config)
 - **Phase 4:** ~4400 → ~1500 (state-server + SPA replaced by jinja in tracker), so ~2900 net
-- **Combined:** ~4250 LOC retired across all three phases, plus the opencode runtime + TypeScript plugin removed entirely
+- **Combined:** ~4760 LOC retired, opencode runtime + TypeScript plugin removed entirely
 
 ---
 
@@ -741,15 +864,21 @@ borrowed.
 
 1. `dportsv3 dev-env create --name e2e --target @main`
 2. `dportsv3 dev-env exec e2e -- regen` (Phase 1 — already passes)
-3. **Phase 2:** `apply-patch --bundle BUNDLE --env e2e` produces
-   `branch.txt`, `commit.txt`, `rebuild_status.txt`, `pr_url.txt` in
-   the bundle without any SSH activity; no IS_DRAGONFLY / VM_SSH_*
-   code paths involved
-4. **Phase 3:** point dsynth at the hooks, fail a known port; the
-   runner picks up the triage job, calls litellm with
-   `DP_HARNESS_TRIAGE_MODEL`, parses Classification + Confidence
-5. Auto-enqueued patch job runs through the Python tool loop;
-   `rebuild_proof.json` with `rebuild_ok=true` lands in the bundle
+3. **Phase 2:** `git grep -E 'apply-patch|apply_patch|process_apply_job' -- scripts/ docs/`
+   returns nothing live; running the agentic loop end-to-end still
+   works (apply-patch removal didn't break the active path).
+4. **Phase 3 trust-tier dispatch:** point dsynth at the hooks, fail a
+   known port. Runner picks up the triage job, calls litellm with
+   `DP_HARNESS_TRIAGE_MODEL`, parses Classification + Confidence.
+   `policy.py` maps to a tier; an AUTO-tier failure auto-enqueues
+   patch, an ASSIST-tier failure also auto-enqueues but lands in the
+   "needs review" tracker view, a MANUAL-tier failure stops at triage.
+5. **Phase 3 budget loop:** auto-enqueued patch job runs
+   `attempt_loop` up to `tier.max_iterations`. On a known-fixable
+   port, `rebuild_proof.json` with `rebuild_ok=true` lands in the
+   bundle within budget; audit log records `tokens_used` and
+   `attempts`. On an unfixable port, terminates with
+   `budget-exhausted` status.
 6. `pgrep opencode` empty; `ls config/opencode/` empty;
    `git grep -E 'agentic-worker|dports\.ts' scripts/` empty
 7. **Phase 4:** Only `artifact-store` and `tracker serve` running.
