@@ -1834,20 +1834,6 @@ def process_patch_job(
     return False, last_error or "unknown error"
 
 
-def process_apply_job(
-    queue_root: Path,
-    job_path: Path,
-    job: dict,
-    bundle_dir: Path | None,
-) -> tuple[bool, str]:
-    """Deprecated apply job handler (workspace flow supersedes apply-patch)."""
-    origin = job.get("origin", "unknown")
-    job_id = job_path.name
-    activity_log(queue_root, "apply_deprecated",
-                f"apply job deprecated for {origin}", job_id=job_id)
-    return False, "apply job deprecated"
-
-
 def process_pr_job(
     queue_root: Path,
     job_path: Path,

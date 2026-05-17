@@ -755,7 +755,7 @@ Classifications that do NOT auto-enqueue: `missing-dep`, `fetch-error`, `unknown
 
 ##### Notes
 
-- This phase replaces the earlier `analysis/patch.diff` flow and supersedes `apply-patch` with workspace-driven rebuilds.
+- This phase replaces the earlier `analysis/patch.diff` flow with workspace-driven rebuilds. PR creation is a separate downstream step (`process_pr_job`) and is intentionally out of scope of the iterative patch loop.
 - No jail initially; enforce safety via tool allowlists and path validation.
 
 #### Phase 5 — Workspace rebuild + PR jobs (PLANNED)
