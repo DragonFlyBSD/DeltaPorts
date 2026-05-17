@@ -49,6 +49,12 @@ import urllib.parse
 from datetime import datetime, timezone
 from pathlib import Path
 
+# Make dportsv3.agent.* importable from the standalone runner script.
+# The package lives in scripts/generator/dportsv3/; this script lives in scripts/.
+_GENERATOR_DIR = Path(__file__).resolve().parent / "generator"
+if _GENERATOR_DIR.is_dir() and str(_GENERATOR_DIR) not in sys.path:
+    sys.path.insert(0, str(_GENERATOR_DIR))
+
 
 # Classifications that should trigger automatic patch generation
 PATCHABLE_CLASSIFICATIONS = {
@@ -1635,6 +1641,153 @@ def enqueue_patch_job(queue_root: Path, job: dict):
 # Job processing
 # -----------------------------------------------------------------------------
 
+def _write_triage_audit_harness(
+    bundle_dir: Path | None,
+    bundle_id: str | None,
+    result,  # dportsv3.agent.triage.TriageResult
+    model: str,
+) -> None:
+    """Write the harness-side audit JSON to the bundle.
+
+    The markdown response is already on disk (triage.run writes
+    analysis/triage.md after each LLM round). This adds an
+    analysis/triage.json with classification, confidence, usage, and
+    provenance.
+    """
+    audit = {
+        "classification": result.classification,
+        "confidence": result.confidence,
+        "snippet_rounds": result.snippet_rounds,
+        "tokens_used": {
+            "prompt": result.usage.prompt_tokens,
+            "completion": result.usage.completion_tokens,
+            "total": result.usage.total_tokens,
+        },
+        "model": model,
+        "via": "dportsv3.agent.triage",
+    }
+    data = (json.dumps(audit, indent=2) + "\n").encode("utf-8")
+    if bundle_id:
+        if not artifact_store_put(bundle_id, "analysis/triage.json", data, "json"):
+            raise RuntimeError("failed to write triage.json to artifact store")
+        return
+    if bundle_dir is None:
+        raise RuntimeError("bundle_dir or bundle_id required")
+    out = bundle_dir / "analysis" / "triage.json"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_bytes(data)
+
+
+def _process_triage_job_harness(
+    queue_root: Path,
+    job_path: Path,
+    job: dict,
+    bundle_dir: Path | None,
+    kedb_dir: Path | None,
+    payload: str,
+    origin: str,
+    job_id: str,
+    model: str,
+) -> tuple[bool, str]:
+    """Triage path that uses dportsv3.agent.triage instead of opencode."""
+    from dportsv3.agent import triage as harness_triage  # type: ignore[import-not-found]
+
+    api_base = os.environ.get("DP_HARNESS_TRIAGE_API_BASE") or None
+    api_key = os.environ.get("DP_HARNESS_TRIAGE_API_KEY") or None
+    timeout = int(os.environ.get("DP_HARNESS_TIMEOUT", "120"))
+    max_snippet_rounds = int(os.environ.get("DP_HARNESS_MAX_SNIPPET_ROUNDS", "5"))
+
+    if bundle_dir is None:
+        return False, "harness triage requires a local bundle_dir"
+
+    activity_log(
+        queue_root, "api_call_start",
+        f"Calling harness triage for {origin}",
+        job_id=job_id, extra={"agent": "dports-triage", "model": model},
+    )
+    start = time.time()
+    try:
+        result = harness_triage.run(
+            payload,
+            bundle_dir=bundle_dir,
+            model=model,
+            api_base=api_base,
+            api_key=api_key,
+            timeout=timeout,
+            max_snippet_rounds=max_snippet_rounds,
+        )
+    except Exception as exc:
+        activity_log(
+            queue_root, "api_error",
+            f"Harness triage failed for {origin}: {str(exc)[:200]}",
+            job_id=job_id,
+        )
+        write_error_note(job_path, str(exc))
+        return False, str(exc)
+    duration_ms = int((time.time() - start) * 1000)
+    activity_log(
+        queue_root, "api_call_complete",
+        f"Harness triage response received for {origin} (rounds={result.snippet_rounds}, tokens={result.usage.total_tokens})",
+        job_id=job_id, duration_ms=duration_ms,
+    )
+
+    bundle_id = job.get("bundle_id")
+    _write_triage_audit_harness(bundle_dir, bundle_id, result, model)
+    activity_log(
+        queue_root, "write_output",
+        f"Wrote harness triage outputs for {origin}",
+        job_id=job_id,
+    )
+
+    triage = {
+        "classification": result.classification,
+        "confidence": result.confidence,
+        "raw": result.text,
+    }
+
+    if needs_user_context(triage):
+        run_id = job.get("run_id", "")
+        iteration = int(job.get("iteration", "1"))
+        max_iterations = int(job.get("max_iterations", str(DEFAULT_MAX_ITERATIONS)))
+        upsert_user_context_request(
+            queue_root,
+            run_id=run_id,
+            origin=origin,
+            bundle_id=bundle_id or (bundle_dir.name if bundle_dir else ""),
+            classification=result.classification,
+            confidence=result.confidence,
+            iteration=iteration,
+            max_iterations=max_iterations,
+        )
+        activity_log(
+            queue_root, "needs_user_context",
+            f"Need user context for {origin} (confidence {result.confidence})",
+            job_id=job_id,
+            extra={"classification": result.classification, "confidence": result.confidence, "run_id": run_id},
+        )
+        update_runner_status("waiting", job_id=job_id, stage="waiting_user_context",
+                             extra={"origin": origin, "type": "triage"})
+        return True, "needs_user_context"
+
+    if should_enqueue_patch(triage):
+        enqueue_patch_job(queue_root, job)
+        activity_log(
+            queue_root, "enqueue_patch",
+            f"Auto-enqueued patch job for {origin} ({result.classification})",
+            job_id=job_id,
+            extra={"classification": result.classification, "confidence": result.confidence},
+        )
+    else:
+        activity_log(
+            queue_root, "no_patch",
+            f"No patch job for {origin} ({result.classification})",
+            job_id=job_id,
+            extra={"classification": result.classification, "confidence": result.confidence},
+        )
+
+    return True, "done"
+
+
 def process_triage_job(
     queue_root: Path,
     job_path: Path,
@@ -1658,7 +1811,17 @@ def process_triage_job(
     snippet_round = int(job.get("snippet_round", "0"))
     origin = job.get("origin", "unknown")
     job_id = job_path.name
-    
+
+    # If DP_HARNESS_TRIAGE_MODEL is set, route triage through the in-process
+    # litellm harness instead of opencode. Snippet rounds fold into the
+    # harness call; the runner no longer re-enqueues for them.
+    harness_model = os.environ.get("DP_HARNESS_TRIAGE_MODEL")
+    if harness_model:
+        return _process_triage_job_harness(
+            queue_root, job_path, job, bundle_dir, kedb_dir,
+            payload, origin, job_id, harness_model,
+        )
+
     last_error = None
     model_info = f"{opencode_provider}/{opencode_model}" if opencode_provider and opencode_model else "agent-default"
     
