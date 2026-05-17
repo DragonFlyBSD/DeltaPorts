@@ -170,7 +170,7 @@ if [ "$needs_install" -eq 1 ]; then
 
     if [ ! -d "$VENV_DIR" ]; then
         printf '%s\n' "dportsv3: creating virtual environment at $VENV_DIR" >&2
-        "$PYTHON_BIN" -m venv "$VENV_DIR"
+        "$PYTHON_BIN" -m venv --system-site-packages "$VENV_DIR"
     fi
 
     printf '%s\n' "dportsv3: installing generator ($INSTALL_PROFILE)" >&2
