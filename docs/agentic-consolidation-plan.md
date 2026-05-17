@@ -200,25 +200,37 @@ operator audit. If the operator wants to promote a successful fix
 into a real PR, they do that manually, outside the loop, using their
 own clone — not via this system.
 
+**Prerequisite: two new dev-env subcommands.**
+
+Step 2 needs a clean way to query env state and resolve paths from
+the harness. Two small additions to `scripts/tools/dev-env/dports_dev_env/cli.py`:
+
+- `dportsv3 dev-env status NAME` — prints a single JSON line, e.g.
+  `{"name": "foo", "target": "@main", "origin": "editors/vim", "status": "ready", "backend": "chroot", "root_mounted": true, "env_dir": "/var/cache/dports-dev/foo"}`. Backed by `EnvironmentStore.load` + `mounts.mounts_under`. ~15 lines including the parser.
+- `dportsv3 dev-env path NAME [--writable]` — prints `env_dir` (default) or `env_dir/writable` (with `--writable`). ~10 lines.
+
+Both are pure reads. Both serve as the harness's interface to dev-env
+state; the harness never re-parses dev-env's internal config or
+filesystem layout.
+
 **Function → primitive mapping**
 
 | Worker function | Implementation |
 |---|---|
-| `env_verify(env)` | Reuse dev-env's existing readiness checks (`EnvironmentSession.prepare` semantics); confirm overlay is mounted and target is what we expect. |
+| `env_verify(env)` | `dportsv3 dev-env status NAME` (parse JSON); fail if status ≠ `ready` or `root_mounted` is false; check the target matches what the bundle expects. |
 | `materialize_dports(env, origin)` | `subprocess.run(["dportsv3", "dev-env", "exec", env, "--", "reapply", origin])` — `reapply` is the existing helper at `scripts/tools/dev-env/dports_dev_env/helpers.py:32-57`, wrapping `dportsv3 compose`. |
 | `extract(env, origin)` | `dev-env exec env -- make -C /work/DPorts/<origin> extract`. |
 | `dsynth_build(env, origin)` | `dev-env exec env -- dbuild <origin>` — `dbuild` helper at `helpers.py:62-90` already does `dsynth -p $DPORTS_DSYNTH_PROFILE build`. |
 | `dupe(env, path)` | `dev-env exec env --cwd <wrksrc> -- dupe <path>`. |
 | `genpatch(env, path)` | `dev-env exec env --cwd <wrksrc> -- genpatch <path>`. |
-| `install_patches(env, origin, patches)` | Host-side file copy from the env's `genpatch-out/` into `env_dir/writable/work/DeltaPorts/ports/<origin>/dragonfly/`. |
-| `get_file(env, path)` | Host-side read from `env_dir/writable/<path>`. Returns content + sha256. |
-| `put_file(env, path, content, expected_sha256=None)` | Host-side write to `env_dir/writable/<path>`. Optimistic-lock check against `expected_sha256` if provided. |
-| `emit_diff(env, origin, relpath)` | Host-side `git -C env_dir/writable/work/DeltaPorts diff -- ports/<origin>/<relpath>`. Pure read, no commits made. |
-| `grep(env, pattern, path, include, max_bytes)` | Host-side `rg` on `env_dir/writable/<path>`. |
+| `install_patches(env, origin, patches)` | Host-side file copy from the env's `genpatch-out/` into `<env_dir/writable>/work/DeltaPorts/ports/<origin>/dragonfly/`. `env_dir` from `dportsv3 dev-env path NAME --writable`. |
+| `get_file(env, path)` | Host-side read from `<env_dir/writable>/<path>`. Returns content + sha256. |
+| `put_file(env, path, content, expected_sha256=None)` | Host-side write to `<env_dir/writable>/<path>`. Optimistic-lock check against `expected_sha256` if provided. |
+| `emit_diff(env, origin, relpath)` | Host-side `git -C <env_dir/writable>/work/DeltaPorts diff -- ports/<origin>/<relpath>`. Pure read, no commits made. |
+| `grep(env, pattern, path, include, max_bytes)` | Host-side `rg` on `<env_dir/writable>/<path>`. |
 
-Resolving `env_dir` from `env` name is a small helper — either shells
-out to `dportsv3 dev-env path NAME` (new subcommand, ~10 lines) or
-reads dev-env's config (`config.cache_root / env`) directly.
+The harness caches the result of `dportsv3 dev-env path NAME --writable`
+once per job to avoid the subprocess hop on every tool call.
 
 **Side effect: `process_pr_job` goes away.**
 
@@ -235,7 +247,12 @@ Line numbers below are current-tree (HEAD).
 
 | Lines | Action |
 |---|---|
-| 1024 | `OPENCODE_MAX_SNIPPET_ROUNDS` → `DP_HARNESS_MAX_SNIPPET_ROUNDS` |
+| 17-21 (docstring `VM_SSH_*` block) | **Delete.** Harness runs natively on dfly; no SSH. |
+| 71-73 (`DEFAULT_VM_SSH_KEY`/`PORT`/`HOST`) | **Delete.** Same. |
+| 76 (`DEFAULT_WORKSPACE_CONFIG`) | **Delete.** Workspace concept retires. |
+| 167 (`workspace.json` loader fn) | **Delete.** Same. |
+| 721-761 (snippet-extractor SSH dispatch) | **Delete.** Snippet rounds fold into `dportsv3.agent.triage` (in-process); the harness calls `scripts/snippet-extractor` locally via `dportsv3.agent.snippets`. |
+| 1024 (`OPENCODE_MAX_SNIPPET_ROUNDS`) | Rename → `DP_HARNESS_MAX_SNIPPET_ROUNDS`. |
 | 999-1050 (`check_and_handle_snippet_requests`) | **Delete.** Snippet rounds fold into `dportsv3.agent.triage`. |
 | 956-997 (`enqueue_followup_job`) | **Keep.** Still used by triage → patch auto-enqueue. |
 | 1057-1170 (`build_triage_payload`) | **Keep.** Same markdown payload, consumed by the new harness. |
@@ -247,7 +264,7 @@ Line numbers below are current-tree (HEAD).
 | 1476-1537 (`write_patch_outputs`) | **Keep.** Same. |
 | 1638-1746 (`process_triage_job`) | Trim: drop the snippet re-enqueue branch. Replace `call_opencode(...)` with `dportsv3.agent.triage.run(payload, env)`. After parsing classification/confidence, call `dportsv3.agent.policy.tier_for(...)` to decide auto-enqueue: AUTO/ASSIST → `enqueue_followup_job(patch, ...)`, MANUAL → stop. |
 | 1749-1834 (`process_patch_job`) | Trim: drop snippet re-enqueue branch. Replace `call_opencode(...)` with `dportsv3.agent.patch.run(payload, tier, env)`. Store `tokens_used`, `attempts`, `status` from the returned audit alongside the existing `rebuild_proof.json`. |
-| 1851-... (`process_pr_job`) | **Delete.** "No PRs, no branches, no push" — the loop is purely local. |
+| 1851-1960 (`process_pr_job`, incl. line 1873 `deltaports_path` workspace ref) | **Delete.** "No PRs, no branches, no push" — the loop is purely local. |
 | dispatch table (`type == "pr"` arm) | **Delete.** `type=pr` becomes "unknown job type" if anything still enqueues one. |
 | 2086-2095 (`OPENCODE_*` env reads) | **Delete.** Replace with `DP_HARNESS_*` reads scoped to the new harness. |
 
@@ -275,6 +292,8 @@ Retired: every `OPENCODE_*` env var in `agent-queue-runner` (lines
 | `config/opencode/agent/dports-triage.md` | ~50 | Prompt body moves to `dportsv3.agent.prompts` |
 | `config/opencode/agent/dports-patch.md` | ~80 | Same |
 | `call_opencode` + `extract_response_text` + `check_and_handle_snippet_requests` + `OPENCODE_*` env reads in `agent-queue-runner` | ~160 | Replaced by harness module |
+| `VM_SSH_*` constants, env reads, SSH snippet dispatch, docstring header lines in `agent-queue-runner` | ~50 | Harness runs natively on dfly; no SSH |
+| `workspace.json` loader + `DEFAULT_WORKSPACE_CONFIG` in `agent-queue-runner` | ~15 | Workspace concept retires |
 | `scripts/agentic-worker` | 596 | Workspace concept retires; functions reimplemented on top of dev-env in `dportsv3.agent.worker` |
 | `process_pr_job` + `type=pr` dispatch arm in `agent-queue-runner` | ~80 | No branching, no PR — the loop is purely local |
 | `/build/synth/agentic-workspace/` (runtime data) | — | Dev-env writable overlays replace it |
@@ -290,28 +309,50 @@ Each step is independently testable; ship them as separate commits.
    a known failing bundle match what opencode produced for the same
    payload.
 
-2. **Worker on top of dev-env.** Write `dportsv3.agent.worker` as 11
-   Python functions that delegate to dev-env primitives: subprocess
-   `dportsv3 dev-env exec ENV -- CMD` for chroot ops, host-side
-   filesystem ops on `env_dir/writable/...` for file/diff/grep. No
-   git operations. Delete `scripts/agentic-worker` (596 LOC),
-   `process_pr_job` + the `type=pr` dispatch arm (~80 LOC), and
-   anything under `/build/synth/agentic-workspace/`. Verify by
-   running each function against a real `dev-env`: `dsynth_build` on
-   a small port produces a buildable output; `materialize_dports`
-   regenerates the origin's DPorts tree; `emit_diff` returns the
-   working-tree diff after a `put_file` edit.
+2. **Worker on top of dev-env.** First add the two prerequisite
+   dev-env subcommands (`dportsv3 dev-env status NAME` JSON output,
+   `dportsv3 dev-env path NAME [--writable]`) — ~25 LOC in
+   `scripts/tools/dev-env/dports_dev_env/cli.py`. Then write
+   `dportsv3.agent.worker` as 11 Python functions that delegate to
+   dev-env primitives: subprocess `dportsv3 dev-env exec ENV -- CMD`
+   for chroot ops, host-side filesystem ops on `env_dir/writable/...`
+   for file/diff/grep. No git operations. Delete
+   `scripts/agentic-worker` (596 LOC), `process_pr_job` + the
+   `type=pr` dispatch arm (~80 LOC), and anything under
+   `/build/synth/agentic-workspace/`. Verify by running each function
+   against a real `dev-env`: `dsynth_build` on a small port produces
+   a buildable output; `materialize_dports` regenerates the origin's
+   DPorts tree; `emit_diff` returns the working-tree diff after a
+   `put_file` edit.
 
 3. **Tools + tool loop.** Add `dportsv3.agent.{tools, tool_loop}`.
    Drive with a synthetic LLM response that calls `env_verify`
    followed by `get_file`; assert the dispatch produces the expected
    `tool` messages.
 
-4. **Attempt loop + patch flow.** Add `dportsv3.agent.{attempt_loop,
-   patch}`. Wire `process_patch_job` to call
-   `dportsv3.agent.patch.run`. End-to-end smoke: trigger a known-
-   fixable port, confirm `rebuild_proof.json` with `rebuild_ok=true`
-   lands in the bundle.
+4. **Attempt loop + patch flow.** Write the `PATCH_SYSTEM` prompt
+   that defines the agent's tool surface (the 11 tools from step 2)
+   and pins the new `rebuild_proof.json` schema:
+
+   ```
+   {
+     "origin":         "category/portname",
+     "rebuild_ok":     true | false,
+     "dsynth_profile": "DragonFly",
+     "build_command":  "dsynth -p ... build category/portname",
+     "timestamp_utc":  "2026-05-18T12:00:00Z"
+   }
+   ```
+
+   No `deltaports_branch`, `deltaports_head`, `fports_ref`, or
+   `fports_head` fields — the loop is purely local and the env's
+   target encodes any "FPORTS pinning" via the dev-env's existing
+   target manifest. Then add `dportsv3.agent.{attempt_loop, patch}`.
+   Wire `process_patch_job` to call `dportsv3.agent.patch.run`.
+   End-to-end smoke: trigger a known-fixable port; confirm
+   `rebuild_proof.json` with `rebuild_ok=true` and
+   `analysis/changes.diff` (from `emit_diff`-style host-side
+   `git diff`) land in the bundle.
 
 5. **Trust-tier dispatch + budget enforcement.** Add
    `config/agentic-policy.json`. `process_triage_job` consults
@@ -320,10 +361,14 @@ Each step is independently testable; ship them as separate commits.
    `budget-exhausted`; `tokens_used` in audit equals sum of
    `response.usage.total_tokens` across attempts.
 
-6. **Retire opencode.** Delete `config/opencode/`, the `call_opencode`
-   family of functions, `OPENCODE_*` env reads. Confirm
-   `pgrep opencode` empty and `git grep -E 'opencode|OPENCODE_' --
-   scripts/ config/` returns nothing live.
+6. **Retire opencode + VM_SSH + workspace cruft.** Delete
+   `config/opencode/`, `call_opencode` family of functions,
+   `OPENCODE_*` env reads, the `VM_SSH_*` constants + env reads + SSH
+   snippet dispatch, the `workspace.json` loader + default constant,
+   and the docstring header lines that mention them. Confirm
+   `pgrep opencode` empty and
+   `git grep -E 'opencode|OPENCODE_|VM_SSH|workspace\.json|agentic-workspace' -- scripts/ config/`
+   returns nothing live.
 
 ## Verification
 
