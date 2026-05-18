@@ -22,10 +22,19 @@ import hashlib
 import json
 import os
 import subprocess
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-DPORTSV3 = os.environ.get("DPORTSV3", "dportsv3")
+# Override via DPORTSV3_CMD env var (whitespace-split). Default: invoke
+# the dportsv3 package as a module with the current interpreter — works
+# regardless of whether the venv's bin/ is on PATH, and skips the
+# wrapper script's bootstrap.
+_DPORTSV3_CMD: list[str] = (
+    os.environ["DPORTSV3_CMD"].split()
+    if os.environ.get("DPORTSV3_CMD")
+    else [sys.executable, "-m", "dportsv3"]
+)
 
 
 # -----------------------------------------------------------------------------
@@ -46,7 +55,7 @@ class EnvPaths:
 
 def _run_dportsv3(*args: str) -> subprocess.CompletedProcess:
     return subprocess.run(
-        [DPORTSV3, *args],
+        [*_DPORTSV3_CMD, *args],
         capture_output=True, text=True, check=False,
     )
 
@@ -69,8 +78,11 @@ def env_paths(env: str) -> EnvPaths:
 def env_verify(env: str) -> dict:
     """Return the env's state dict; raise if not usable.
 
-    Wraps ``dportsv3 dev-env status NAME``. Fails fast on a missing,
-    failed, or unmounted env so the patch agent doesn't waste tool calls.
+    Wraps ``dportsv3 dev-env status NAME``. Fails only when the env is
+    missing or in a non-``ready`` state (``creating``, ``destroying``,
+    ``failed``). A ``root_mounted: false`` env is still usable: host-side
+    tool ops operate on the writable overlay directly, and
+    ``dportsv3 dev-env exec`` auto-mounts on demand for chroot ops.
     """
     p = _run_dportsv3("dev-env", "status", env)
     if p.returncode != 0:
@@ -78,8 +90,6 @@ def env_verify(env: str) -> dict:
     info = json.loads(p.stdout.strip())
     if info.get("status") != "ready":
         raise RuntimeError(f"env {env} not ready: status={info.get('status')}")
-    if not info.get("root_mounted"):
-        raise RuntimeError(f"env {env} root not mounted")
     return info
 
 
