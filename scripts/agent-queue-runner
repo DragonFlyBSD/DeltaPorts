@@ -1594,17 +1594,30 @@ def claim_next_job(queue_root: Path) -> Path | None:
     return None
 
 
-def enqueue_patch_job(queue_root: Path, job: dict):
-    """Enqueue a patch job based on completed triage job."""
+def enqueue_patch_job(
+    queue_root: Path,
+    job: dict,
+    *,
+    tier_name: str | None = None,
+    dev_env: str | None = None,
+):
+    """Enqueue a patch job based on completed triage job.
+
+    ``tier_name`` is the trust tier resolved at triage time (AUTO/ASSIST);
+    propagating it lets the patch worker use the right budget without
+    re-parsing triage.md. ``dev_env`` is the dev-env name the patch
+    flow should operate against; omit to let the patch worker fall
+    back to DP_HARNESS_ENV.
+    """
     ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%SZ")
     origin_safe = job.get("origin", "unknown").replace("/", "_")
     pid = os.getpid()
-    
+
     job_name = f"{ts}-{job.get('profile', 'unknown')}-{origin_safe}-{pid}-patch.job"
-    
+
     pending_dir = queue_root / "pending"
     job_path = pending_dir / job_name
-    
+
     # Inherit iteration from parent job, or start at 1
     iteration = int(job.get("iteration", "1"))
     max_iterations = int(job.get("max_iterations", str(DEFAULT_MAX_ITERATIONS)))
@@ -1621,6 +1634,10 @@ def enqueue_patch_job(queue_root: Path, job: dict):
         f"iteration={iteration}",
         f"max_iterations={max_iterations}",
     ]
+    if tier_name:
+        content.append(f"tier={tier_name}")
+    if dev_env:
+        content.append(f"dev_env={dev_env}")
 
     # Include previous_bundle if this is a retry
     previous_bundle = job.get("previous_bundle")
@@ -1747,7 +1764,29 @@ def _process_triage_job_harness(
         "raw": result.text,
     }
 
-    if needs_user_context(triage):
+    # Resolve trust tier from triage outcome. The policy's
+    # confidence_floor downgrades automatically (AUTO with low
+    # confidence -> ASSIST -> MANUAL), so low confidence is captured
+    # naturally as MANUAL without a separate needs_user_context check.
+    from dportsv3.agent import policy as harness_policy  # type: ignore[import-not-found]
+    policy_path = os.environ.get(
+        "DP_HARNESS_POLICY",
+        str(Path(__file__).resolve().parent.parent / "config" / "agentic-policy.json"),
+    )
+    try:
+        pol = harness_policy.load_policy(policy_path)
+    except Exception as exc:
+        activity_log(
+            queue_root, "policy_error",
+            f"Failed to load harness policy at {policy_path}: {exc}",
+            job_id=job_id,
+        )
+        return False, f"policy load failed: {exc}"
+    tier = harness_policy.tier_for(pol, result.classification, result.confidence)
+
+    if tier.name == "MANUAL":
+        # Surface low-confidence + non-patchable cases to the operator
+        # via the user_context request channel (UI picks them up).
         run_id = job.get("run_id", "")
         iteration = int(job.get("iteration", "1"))
         max_iterations = int(job.get("max_iterations", str(DEFAULT_MAX_ITERATIONS)))
@@ -1762,31 +1801,39 @@ def _process_triage_job_harness(
             max_iterations=max_iterations,
         )
         activity_log(
-            queue_root, "needs_user_context",
-            f"Need user context for {origin} (confidence {result.confidence})",
+            queue_root, "triage_manual",
+            f"Triage tier MANUAL for {origin} (classification={result.classification}, confidence={result.confidence}); no auto-enqueue",
             job_id=job_id,
-            extra={"classification": result.classification, "confidence": result.confidence, "run_id": run_id},
+            extra={
+                "classification": result.classification,
+                "confidence": result.confidence,
+                "tier": tier.name,
+                "run_id": run_id,
+            },
         )
         update_runner_status("waiting", job_id=job_id, stage="waiting_user_context",
-                             extra={"origin": origin, "type": "triage"})
-        return True, "needs_user_context"
+                             extra={"origin": origin, "type": "triage", "tier": tier.name})
+        return True, "manual_tier"
 
-    if should_enqueue_patch(triage):
-        enqueue_patch_job(queue_root, job)
-        activity_log(
-            queue_root, "enqueue_patch",
-            f"Auto-enqueued patch job for {origin} ({result.classification})",
-            job_id=job_id,
-            extra={"classification": result.classification, "confidence": result.confidence},
-        )
-    else:
-        activity_log(
-            queue_root, "no_patch",
-            f"No patch job for {origin} ({result.classification})",
-            job_id=job_id,
-            extra={"classification": result.classification, "confidence": result.confidence},
-        )
-
+    # AUTO or ASSIST: auto-enqueue a patch job, carrying the resolved
+    # tier + dev_env so the patch worker doesn't re-resolve.
+    enqueue_patch_job(
+        queue_root, job,
+        tier_name=tier.name,
+        dev_env=os.environ.get("DP_HARNESS_ENV") or None,
+    )
+    activity_log(
+        queue_root, "enqueue_patch",
+        f"Auto-enqueued patch job for {origin} (tier={tier.name}, classification={result.classification})",
+        job_id=job_id,
+        extra={
+            "classification": result.classification,
+            "confidence": result.confidence,
+            "tier": tier.name,
+            "max_iterations": tier.max_iterations,
+            "max_tokens": tier.max_tokens,
+        },
+    )
     return True, "done"
 
 
@@ -2010,10 +2057,10 @@ def _process_patch_job_harness(
         write_error_note(job_path, msg)
         return False, msg
 
-    # Resolve tier from the bundle's triage.md classification + confidence.
+    # Resolve tier. Prefer the tier the triage step already resolved
+    # (carried via the job's `tier=` field); fall back to re-resolving
+    # from triage.md if missing (legacy / hand-fired patch jobs).
     bundle_id = job.get("bundle_id")
-    triage_text = read_bundle_text(bundle_dir, bundle_id, "analysis/triage.md") or ""
-    triage = parse_triage_output(triage_text)
     policy_path = os.environ.get(
         "DP_HARNESS_POLICY",
         str(Path(__file__).resolve().parent.parent / "config" / "agentic-policy.json"),
@@ -2024,7 +2071,14 @@ def _process_patch_job_harness(
         msg = f"failed to load harness policy at {policy_path}: {exc}"
         write_error_note(job_path, msg)
         return False, msg
-    tier = harness_policy.tier_for(pol, triage.get("classification", ""), triage.get("confidence", ""))
+
+    tier_name = (job.get("tier") or "").strip()
+    if tier_name and tier_name in pol.tiers:
+        tier = pol.tiers[tier_name]
+    else:
+        triage_text = read_bundle_text(bundle_dir, bundle_id, "analysis/triage.md") or ""
+        triage = parse_triage_output(triage_text)
+        tier = harness_policy.tier_for(pol, triage.get("classification", ""), triage.get("confidence", ""))
 
     activity_log(
         queue_root, "api_call_start",

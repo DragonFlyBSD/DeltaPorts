@@ -51,18 +51,31 @@ def _confidence_at_least(value: str, floor: str) -> bool:
 
 
 def tier_for(policy: Policy, classification: str, confidence: str) -> Tier:
-    """Resolve the tier for a triage outcome, applying confidence_floor downgrades.
+    """Resolve the tier for a triage outcome, cascading confidence_floor downgrades.
 
-    AUTO with confidence below its floor → ASSIST.
-    ASSIST with confidence below its floor → MANUAL.
-    Unknown classification → MANUAL.
+    Each tier carries a ``confidence_floor`` that the triage confidence
+    must meet. If confidence is below the floor, the tier is downgraded
+    one step (AUTO → ASSIST → MANUAL) and the new tier's floor is
+    re-evaluated. Cascades until either the floor is met or MANUAL is
+    reached. Unknown classifications start at MANUAL.
+
+    Examples (with floors AUTO=high, ASSIST=medium):
+        plist-error + high   → AUTO
+        plist-error + medium → ASSIST (AUTO floor not met → downgrade)
+        plist-error + low    → MANUAL (cascades AUTO → ASSIST → MANUAL)
+        compile-error + low  → MANUAL (ASSIST floor not met → downgrade)
     """
     tier_name = policy.classification_to_tier.get(classification, "MANUAL")
-
-    floor = policy.confidence_floor.get(tier_name)
-    if floor and not _confidence_at_least(confidence, floor):
-        tier_name = _downgrade(tier_name)
-
+    # Cascade downgrades until the confidence floor is satisfied or we
+    # land at MANUAL (no further downgrade possible).
+    while True:
+        floor = policy.confidence_floor.get(tier_name)
+        if not floor or _confidence_at_least(confidence, floor):
+            break
+        next_name = _downgrade(tier_name)
+        if next_name == tier_name:
+            break
+        tier_name = next_name
     return policy.tiers.get(tier_name) or Tier(name="MANUAL")
 
 
