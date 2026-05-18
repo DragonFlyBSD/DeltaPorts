@@ -1911,6 +1911,170 @@ def process_triage_job(
     return False, last_error or "unknown error"
 
 
+def _write_patch_audit_harness(
+    bundle_dir: Path | None,
+    bundle_id: str | None,
+    result,  # dportsv3.agent.attempt_loop.PatchResult
+    model: str,
+) -> None:
+    """Write harness-side outputs to the bundle: patch.md, rebuild_proof.json,
+    changes.diff (host-side git diff in the env), and patch_audit.json."""
+    text = (result.final_text or "").rstrip() + "\n"
+    md_bytes = text.encode("utf-8")
+    if bundle_id:
+        artifact_store_put(bundle_id, "analysis/patch.md", md_bytes, "text")
+    else:
+        analysis = bundle_dir / "analysis"
+        analysis.mkdir(parents=True, exist_ok=True)
+        (analysis / "patch.md").write_bytes(md_bytes)
+
+    if result.proof is not None:
+        proof_bytes = (json.dumps(result.proof, indent=2) + "\n").encode("utf-8")
+        if bundle_id:
+            artifact_store_put(bundle_id, "analysis/rebuild_proof.json", proof_bytes, "json")
+        else:
+            (bundle_dir / "analysis" / "rebuild_proof.json").write_bytes(proof_bytes)
+
+    audit = {
+        "status": result.status,
+        "model": model,
+        "tokens_used": {
+            "prompt": result.usage.prompt_tokens,
+            "completion": result.usage.completion_tokens,
+            "total": result.usage.total_tokens,
+        },
+        "attempts": [
+            {"attempt": a.attempt, "tokens": a.tokens, "rebuild_ok": a.rebuild_ok}
+            for a in result.attempts
+        ],
+        "via": "dportsv3.agent.patch",
+    }
+    audit_bytes = (json.dumps(audit, indent=2) + "\n").encode("utf-8")
+    if bundle_id:
+        artifact_store_put(bundle_id, "analysis/patch_audit.json", audit_bytes, "json")
+    else:
+        (bundle_dir / "analysis" / "patch_audit.json").write_bytes(audit_bytes)
+
+
+def _write_changes_diff(bundle_dir: Path | None, bundle_id: str | None, env: str, origin: str) -> None:
+    """Capture host-side `git diff` against the env's DeltaPorts overlay HEAD
+    and write to analysis/changes.diff. Best-effort: failures are logged but
+    not fatal — the agent's reasoning is in patch.md regardless."""
+    try:
+        from dportsv3.agent import worker  # type: ignore[import-not-found]
+        paths = worker.env_paths(env)
+        delta = paths.deltaports
+        import subprocess
+        rel = f"ports/{origin}"
+        p = subprocess.run(
+            ["git", "-C", str(delta), "diff", "--", rel],
+            capture_output=True, text=True, check=False,
+        )
+        diff_bytes = p.stdout.encode("utf-8")
+    except Exception as exc:
+        diff_bytes = f"# failed to capture diff: {exc}\n".encode("utf-8")
+
+    if bundle_id:
+        artifact_store_put(bundle_id, "analysis/changes.diff", diff_bytes, "text")
+    elif bundle_dir:
+        out = bundle_dir / "analysis" / "changes.diff"
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_bytes(diff_bytes)
+
+
+def _process_patch_job_harness(
+    queue_root: Path,
+    job_path: Path,
+    job: dict,
+    bundle_dir: Path | None,
+    kedb_dir: Path | None,
+    payload: str,
+    origin: str,
+    job_id: str,
+    model: str,
+) -> tuple[bool, str]:
+    """Patch path that uses dportsv3.agent.patch instead of opencode."""
+    from dportsv3.agent import patch as harness_patch  # type: ignore[import-not-found]
+    from dportsv3.agent import policy as harness_policy  # type: ignore[import-not-found]
+
+    api_base = os.environ.get("DP_HARNESS_PATCH_API_BASE") or None
+    api_key = os.environ.get("DP_HARNESS_PATCH_API_KEY") or None
+    custom_llm_provider = os.environ.get("DP_HARNESS_PATCH_PROVIDER") or None
+    timeout = int(os.environ.get("DP_HARNESS_PATCH_TIMEOUT", "600"))
+
+    # Resolve the dev-env name. Prefer the explicit job field; fall back to
+    # DP_HARNESS_ENV (an operator-set default for the runner).
+    env = job.get("dev_env") or os.environ.get("DP_HARNESS_ENV") or ""
+    if not env:
+        msg = "patch job missing dev_env (set job 'dev_env' field or DP_HARNESS_ENV)"
+        write_error_note(job_path, msg)
+        return False, msg
+
+    # Resolve tier from the bundle's triage.md classification + confidence.
+    bundle_id = job.get("bundle_id")
+    triage_text = read_bundle_text(bundle_dir, bundle_id, "analysis/triage.md") or ""
+    triage = parse_triage_output(triage_text)
+    policy_path = os.environ.get(
+        "DP_HARNESS_POLICY",
+        str(Path(__file__).resolve().parent.parent / "config" / "agentic-policy.json"),
+    )
+    try:
+        pol = harness_policy.load_policy(policy_path)
+    except Exception as exc:
+        msg = f"failed to load harness policy at {policy_path}: {exc}"
+        write_error_note(job_path, msg)
+        return False, msg
+    tier = harness_policy.tier_for(pol, triage.get("classification", ""), triage.get("confidence", ""))
+
+    activity_log(
+        queue_root, "api_call_start",
+        f"Calling harness patch for {origin} (tier={tier.name}, env={env})",
+        job_id=job_id, extra={"agent": "dports-patch", "model": model, "tier": tier.name},
+    )
+
+    start = time.time()
+    try:
+        result = harness_patch.run(
+            payload,
+            tier=tier,
+            env=env,
+            model=model,
+            api_base=api_base,
+            api_key=api_key,
+            custom_llm_provider=custom_llm_provider,
+            timeout=timeout,
+        )
+    except Exception as exc:
+        activity_log(
+            queue_root, "api_error",
+            f"Harness patch failed for {origin}: {str(exc)[:200]}",
+            job_id=job_id,
+        )
+        write_error_note(job_path, str(exc))
+        return False, str(exc)
+    duration_ms = int((time.time() - start) * 1000)
+
+    activity_log(
+        queue_root, "api_call_complete",
+        f"Harness patch finished for {origin} (status={result.status}, "
+        f"attempts={len(result.attempts)}, tokens={result.usage.total_tokens})",
+        job_id=job_id, duration_ms=duration_ms,
+    )
+
+    _write_patch_audit_harness(bundle_dir, bundle_id, result, model)
+    _write_changes_diff(bundle_dir, bundle_id, env, origin)
+
+    activity_log(
+        queue_root, "write_output",
+        f"Wrote harness patch outputs for {origin}",
+        job_id=job_id,
+    )
+
+    if result.status == "success":
+        return True, "done"
+    return True, result.status  # needs-help / budget-exhausted — job recorded, not retried
+
+
 def process_patch_job(
     queue_root: Path,
     job_path: Path,
@@ -1934,7 +2098,16 @@ def process_patch_job(
     snippet_round = int(job.get("snippet_round", "0"))
     origin = job.get("origin", "unknown")
     job_id = job_path.name
-    
+
+    # If DP_HARNESS_PATCH_MODEL is set, route patch through the in-process
+    # litellm harness instead of opencode.
+    harness_model = os.environ.get("DP_HARNESS_PATCH_MODEL")
+    if harness_model:
+        return _process_patch_job_harness(
+            queue_root, job_path, job, bundle_dir, kedb_dir,
+            payload, origin, job_id, harness_model,
+        )
+
     last_error = None
     model_info = f"{opencode_provider}/{opencode_model}" if opencode_provider and opencode_model else "agent-default"
     
