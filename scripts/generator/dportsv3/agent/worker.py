@@ -3,7 +3,7 @@
 Every function takes the dev-env name as its first argument. Filesystem
 operations work host-side on the env's writable overlay
 (``env_dir/writable/...``); commands that must run inside the chroot
-shell out to ``dportsv3 dev-env exec`` (added in step 2c).
+shell out to ``dportsv3 dev-env exec``.
 
 The agent sees chroot-absolute paths like ``/work/DeltaPorts/ports/...``;
 those translate to ``<env_dir/writable>/work/DeltaPorts/ports/...`` on
@@ -13,6 +13,13 @@ business writing to ``/etc`` or anywhere else in the chroot.
 No git operations. The dev-env's writable overlay is the workspace;
 dirty edits stay dirty. ``emit_diff`` runs ``git diff`` for audit but
 never commits.
+
+Design note: we drive dev-env via its public CLI (``python -m dportsv3
+dev-env ...``) rather than importing ``dports_dev_env`` directly. The
+CLI is the contract that's stable across dev-env refactors; the
+``EnvironmentStore`` internals are not. Subprocess overhead is bounded
+(``env_paths`` is cached per-process; ``env_verify`` runs once per
+attempt; chroot-bound ops are unavoidably subprocess anyway).
 """
 
 from __future__ import annotations
@@ -21,9 +28,11 @@ import base64
 import hashlib
 import json
 import os
+import shutil
 import subprocess
 import sys
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 
 # Override via DPORTSV3_CMD env var (whitespace-split). Default: invoke
@@ -60,11 +69,14 @@ def _run_dportsv3(*args: str) -> subprocess.CompletedProcess:
     )
 
 
+@lru_cache(maxsize=32)
 def env_paths(env: str) -> EnvPaths:
-    """Resolve host-side paths for ``env``.
+    """Resolve host-side paths for ``env``. Cached per-process.
 
-    Calls ``dportsv3 dev-env path NAME`` and ``dportsv3 dev-env path NAME
-    --writable`` — adds a few hundred ms; cache the result per job.
+    Each ``dportsv3 dev-env path`` invocation costs a few hundred ms;
+    caching means repeated tool calls during one patch attempt pay it
+    only once. The env_dir for a given name is immutable for the
+    lifetime of that env, so caching is safe.
     """
     p1 = _run_dportsv3("dev-env", "path", env)
     if p1.returncode != 0:
@@ -228,4 +240,149 @@ def grep(
         "matches": output,
         "truncated": truncated,
         "max_bytes": max_bytes,
+    }
+
+
+# -----------------------------------------------------------------------------
+# Chroot-bound tool functions — all shell out via `dportsv3 dev-env exec`
+# -----------------------------------------------------------------------------
+
+
+def _exec(env: str, *argv: str, cwd: str = "/work/DeltaPorts") -> subprocess.CompletedProcess:
+    """Run ``argv`` inside the dev-env chroot, return CompletedProcess.
+
+    ``dev-env exec`` auto-mounts the env root on demand. Stdout/stderr
+    are captured; callers decide how to surface them to the LLM.
+    """
+    return subprocess.run(
+        [*_DPORTSV3_CMD, "dev-env", "exec", "--cwd", cwd, env, "--", *argv],
+        capture_output=True, text=True, check=False,
+    )
+
+
+def materialize_dports(env: str, origin: str) -> dict:
+    """Regenerate the DPorts tree for ``origin`` using the env's ``reapply`` helper.
+
+    ``reapply`` wraps ``dportsv3 compose --origin ORIGIN ...`` inside
+    the chroot; the helper lives at
+    ``scripts/tools/dev-env/dports_dev_env/helpers.py:32-57``.
+    """
+    p = _exec(env, "reapply", origin)
+    if p.returncode != 0:
+        raise RuntimeError(
+            f"materialize_dports({origin}) failed (rc={p.returncode}): "
+            f"{(p.stderr or p.stdout).strip()[:300]}"
+        )
+    return {"origin": origin, "stdout": p.stdout, "stderr": p.stderr}
+
+
+def extract(env: str, origin: str) -> dict:
+    """Run ``make extract`` for ``origin`` in DPorts; return WRKDIR + WRKSRC.
+
+    Issued inside the chroot; the actual extracted source ends up at
+    ``WRKDIR`` (typically under ``WRKDIRPREFIX/usr/dports/<origin>/work``).
+    We query the variables back with ``make -V`` so the LLM can address
+    files inside WRKSRC with subsequent tools.
+    """
+    port_dir = f"/work/DPorts/{origin}"
+    p = _exec(env, "make", "-C", port_dir, "extract", cwd=port_dir)
+    if p.returncode != 0:
+        raise RuntimeError(
+            f"extract({origin}) failed (rc={p.returncode}): "
+            f"{(p.stderr or p.stdout).strip()[:300]}"
+        )
+    q = _exec(env, "make", "-C", port_dir, "-V", "WRKDIR", "-V", "WRKSRC", cwd=port_dir)
+    if q.returncode != 0:
+        raise RuntimeError(f"could not query WRKDIR/WRKSRC: {q.stderr.strip()}")
+    lines = [line.strip() for line in q.stdout.splitlines() if line.strip()]
+    wrkdir = lines[0] if len(lines) > 0 else ""
+    wrksrc = lines[1] if len(lines) > 1 else ""
+    return {"origin": origin, "wrkdir": wrkdir, "wrksrc": wrksrc}
+
+
+def dupe(env: str, path: str) -> dict:
+    """Run ``dupe PATH`` inside the chroot (clone-with-backup of a WRKSRC file).
+
+    ``path`` is an in-chroot absolute path to the source file. ``dupe``
+    creates a ``<file>.orig`` snapshot so a later ``genpatch`` can
+    produce a unified diff against the unmodified original.
+    """
+    p = _exec(env, "dupe", path)
+    if p.returncode != 0:
+        raise RuntimeError(
+            f"dupe({path}) failed (rc={p.returncode}): "
+            f"{(p.stderr or p.stdout).strip()[:300]}"
+        )
+    return {"path": path, "stdout": p.stdout}
+
+
+def genpatch(env: str, path: str) -> dict:
+    """Run ``genpatch PATH`` inside the chroot; return generated patch files.
+
+    ``genpatch`` writes its output under ``/work/genpatch-out/`` (or
+    wherever the in-chroot helper is configured); we list the resulting
+    ``patch-*`` files for ``install_patches`` to pick up.
+    """
+    p = _exec(env, "genpatch", path)
+    if p.returncode != 0:
+        raise RuntimeError(
+            f"genpatch({path}) failed (rc={p.returncode}): "
+            f"{(p.stderr or p.stdout).strip()[:300]}"
+        )
+    paths = env_paths(env)
+    genpatch_out = paths.writable / "work" / "genpatch-out"
+    patches: list[str] = []
+    if genpatch_out.is_dir():
+        for f in sorted(genpatch_out.iterdir()):
+            if f.is_file() and f.name.startswith("patch-"):
+                patches.append(f.name)
+    return {"path": path, "output_dir": str(genpatch_out), "patches": patches}
+
+
+def install_patches(env: str, origin: str, patches: list[str] | None = None) -> dict:
+    """Copy patches from ``/work/genpatch-out/`` into DeltaPorts overlay.
+
+    Destination is
+    ``<env_dir/writable>/work/DeltaPorts/ports/<origin>/dragonfly/``.
+    Host-side file copy; no chroot exec needed since both source and
+    destination are in the writable overlay. If ``patches`` is None,
+    every ``patch-*`` file in ``genpatch-out/`` is installed.
+    """
+    paths = env_paths(env)
+    src = paths.writable / "work" / "genpatch-out"
+    dst = paths.deltaports / "ports" / origin / "dragonfly"
+    if not src.is_dir():
+        raise FileNotFoundError(f"genpatch output dir does not exist: {src}")
+    if patches is None:
+        candidates = [f for f in sorted(src.iterdir()) if f.is_file() and f.name.startswith("patch-")]
+    else:
+        candidates = [src / name for name in patches]
+        missing = [str(p) for p in candidates if not p.is_file()]
+        if missing:
+            raise FileNotFoundError(f"missing patches: {missing}")
+    dst.mkdir(parents=True, exist_ok=True)
+    installed: list[str] = []
+    for f in candidates:
+        target = dst / f.name
+        shutil.copy2(f, target)
+        installed.append(str(target.relative_to(paths.deltaports)))
+    return {"origin": origin, "destination": str(dst), "installed": installed}
+
+
+def dsynth_build(env: str, origin: str) -> dict:
+    """Run ``dbuild ORIGIN`` inside the chroot (dsynth build).
+
+    The ``dbuild`` helper at
+    ``scripts/tools/dev-env/dports_dev_env/helpers.py:62-90`` invokes
+    ``dsynth -p $DPORTS_DSYNTH_PROFILE build <origin>``. Returns the
+    rc + captured stdout/stderr; the caller decides whether
+    ``rebuild_ok`` (typically: rc==0 and no failure markers).
+    """
+    p = _exec(env, "dbuild", origin)
+    return {
+        "origin": origin,
+        "rc": p.returncode,
+        "rebuild_ok": p.returncode == 0,
+        "stdout": p.stdout,
+        "stderr": p.stderr,
     }
