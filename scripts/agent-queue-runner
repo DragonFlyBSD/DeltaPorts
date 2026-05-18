@@ -1997,110 +1997,6 @@ def process_patch_job(
     return False, last_error or "unknown error"
 
 
-def process_pr_job(
-    queue_root: Path,
-    job_path: Path,
-    job: dict,
-    bundle_dir: Path | None,
-) -> tuple[bool, str]:
-    """Process a PR job based on rebuild proof artifacts."""
-    bundle_id = job.get("bundle_id")
-    origin = job.get("origin", "unknown")
-    job_id = job_path.name
-
-    activity_log(queue_root, "pr_start",
-                f"Starting PR job for {origin}", job_id=job_id)
-
-    proof_text = read_bundle_text(bundle_dir, bundle_id, "analysis/rebuild_proof.json")
-    if not proof_text:
-        return False, "rebuild_proof.json missing"
-
-    try:
-        proof = json.loads(proof_text)
-    except json.JSONDecodeError as exc:
-        return False, f"invalid rebuild_proof.json: {exc}"
-
-    if not proof.get("rebuild_ok"):
-        return False, "rebuild_ok is false"
-
-    branch = proof.get("deltaports_branch")
-    commit = proof.get("deltaports_head")
-    if not branch or not commit:
-        return False, "missing deltaports branch/commit in rebuild_proof.json"
-
-    try:
-        workspace = load_workspace_config()
-    except Exception as exc:
-        return False, f"workspace config error: {exc}"
-
-    deltaports_path = Path(workspace.get("deltaports_path", "/build/synth/agentic-workspace/DeltaPorts"))
-
-    def write_artifact(relpath: str, content: str, kind: str) -> bool:
-        data = (content.rstrip() + "\n").encode("utf-8")
-        if bundle_id:
-            return artifact_store_put(bundle_id, relpath, data, kind)
-        if bundle_dir:
-            path = bundle_dir / relpath
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_bytes(data)
-            return True
-        return False
-
-    try:
-        run_cmd(["git", "-C", str(deltaports_path), "fetch", "origin"])
-        run_cmd(["git", "-C", str(deltaports_path), "branch", "-f", branch, commit])
-        run_cmd(["git", "-C", str(deltaports_path), "checkout", branch])
-        run_cmd(["git", "-C", str(deltaports_path), "push", "-u", "origin", branch])
-
-        title = f"fix({origin}): agentic workspace update"
-        body = "\n".join([
-            "## Summary",
-            f"AI-assisted fix for `{origin}` (agentic workspace).",
-            "",
-            "## Rebuild Result",
-            "Build succeeded on DragonFlyBSD (dsynth just-build).",
-            "",
-            "## Evidence",
-            f"Bundle: `{bundle_id}`" if bundle_id else "Bundle: (unknown)",
-        ])
-
-        pr_output = run_cmd([
-            "gh", "pr", "create",
-            "--base", "master",
-            "--head", branch,
-            "--title", title,
-            "--body", body,
-        ], cwd=deltaports_path)
-
-        pr_url = pr_output.strip().splitlines()[-1] if pr_output else ""
-        pr_payload = {
-            "origin": origin,
-            "branch": branch,
-            "commit": commit,
-            "url": pr_url,
-            "bundle_id": bundle_id,
-            "created_at_utc": datetime.now(timezone.utc).isoformat(),
-        }
-
-        if pr_url:
-            write_artifact("analysis/pr_url.txt", pr_url, "text")
-        write_artifact("analysis/pr.json", json.dumps(pr_payload, indent=2), "json")
-
-        activity_log(queue_root, "pr_created",
-                    f"PR created for {origin}", job_id=job_id,
-                    extra={"pr_url": pr_url} if pr_url else None)
-        return True, "done"
-    except Exception as exc:
-        activity_log(queue_root, "pr_error",
-                    f"PR job failed for {origin}: {str(exc)[:120]}", job_id=job_id)
-        return False, str(exc)
-    finally:
-        try:
-            run_cmd(["git", "-C", str(deltaports_path), "checkout", "master"])
-        except Exception:
-            pass
-
-
 def process_job(
     queue_root: Path,
     job_path: Path,
@@ -2145,16 +2041,6 @@ def process_job(
     if dry_run:
         if job_type == "patch":
             payload = build_patch_payload(bundle_dir, kedb_dir, job)
-        elif job_type == "pr":
-            log(queue_root, "INFO", f"[dry-run] type=pr, would create PR for {origin}")
-            print("=" * 60)
-            print("JOB TYPE: pr")
-            print(f"BUNDLE: {bundle_dir if bundle_dir is not None else bundle_id}")
-            print(f"ORIGIN: {origin}")
-            print("=" * 60)
-            move_job(job_path, "pending")
-            update_runner_status("idle", job_id=None, stage=None)
-            return
         else:
             payload = build_triage_payload(bundle_dir, kedb_dir, job)
 
@@ -2169,9 +2055,7 @@ def process_job(
         return
 
     # Dispatch based on job type
-    if job_type == "pr":
-        success, status = process_pr_job(queue_root, job_path, job, bundle_dir)
-    elif job_type == "patch":
+    if job_type == "patch":
         success, status = process_patch_job(
             queue_root, job_path, job, bundle_dir,
             opencode_url, opencode_provider, opencode_model,
