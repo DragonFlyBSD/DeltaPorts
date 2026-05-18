@@ -58,7 +58,8 @@ def run(
     api_key: str | None = None,
     custom_llm_provider: str | None = None,
     timeout: int = 120,
-    max_turns: int = 20,
+    max_turns: int = 12,
+    max_tokens: int = 0,
 ) -> tuple[Response, Usage]:
     """Drive the LLM through tool calls until it returns text-only.
 
@@ -69,15 +70,26 @@ def run(
     Returns the final text-only ``Response`` and the cumulative
     ``Usage`` across all turns.
 
-    Hits ``max_turns`` if the model loops on tool calls without ever
-    returning a text response — the safety cap protects against runaway
-    burns inside a single attempt.
+    Two safety caps:
+    - ``max_turns``: stop after this many LLM round-trips even if the
+      model keeps calling tools. Default 12.
+    - ``max_tokens``: stop when cumulative usage reaches this many
+      tokens. 0 (the default) disables the check — the caller is
+      expected to pass the remaining attempt-level budget when one
+      exists.
     """
     total = Usage()
     tool_schemas = tools.schemas()
     final: Response | None = None
 
     for turn in range(1, max_turns + 1):
+        if max_tokens and total.total_tokens >= max_tokens:
+            log.warning(
+                "tool_loop: token budget exhausted on turn %d (%d >= %d)",
+                turn, total.total_tokens, max_tokens,
+            )
+            return (final if final is not None else Response(text="")), total
+
         response = llm.complete(
             messages,
             model=model,

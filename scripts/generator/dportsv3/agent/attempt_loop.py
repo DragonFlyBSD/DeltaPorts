@@ -94,7 +94,7 @@ def run(
     api_key: str | None = None,
     custom_llm_provider: str | None = None,
     timeout: int = 600,
-    max_tool_turns: int = 30,
+    max_tool_turns: int = 12,
 ) -> PatchResult:
     """Run the patch flow for one bundle, returning a structured PatchResult."""
     base_messages = [
@@ -117,10 +117,22 @@ def run(
         else:
             messages = list(base_messages) + [_failure_context_message(attempt_idx - 1, prev_text)]
 
+        # Remaining tokens this attempt is allowed to consume.
+        remaining = (budget - total_usage.total_tokens) if budget else 0
         log.info(
-            "attempt_loop: starting attempt %d/%d (tokens used so far: %d / %d)",
-            attempt_idx, iterations, total_usage.total_tokens, budget,
+            "attempt_loop: starting attempt %d/%d (tokens used so far: %d / %d, remaining %d)",
+            attempt_idx, iterations, total_usage.total_tokens, budget, remaining,
         )
+
+        if budget and remaining <= 0:
+            log.warning("attempt_loop: budget already exhausted before attempt %d", attempt_idx)
+            return PatchResult(
+                status="budget-exhausted",
+                final_text=final_text,
+                usage=total_usage,
+                attempts=attempts,
+                proof=None,
+            )
 
         response, attempt_usage = tool_loop.run(
             messages,
@@ -131,6 +143,7 @@ def run(
             custom_llm_provider=custom_llm_provider,
             timeout=timeout,
             max_turns=max_tool_turns,
+            max_tokens=remaining,
         )
         total_usage.add(attempt_usage)
         prev_text = response.text or ""
