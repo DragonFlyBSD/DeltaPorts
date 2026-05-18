@@ -79,6 +79,17 @@ def build_parser() -> argparse.ArgumentParser:
     exec_.add_argument("--cwd", default="/work/DeltaPorts", help="Working directory inside the chroot")
     exec_.add_argument("name", help="Environment name")
     exec_.add_argument("argv", nargs=argparse.REMAINDER, help="-- CMD [ARGS...] to run inside the env")
+
+    status = subparsers.add_parser("status", help="Print one environment's state as a single JSON line")
+    status.add_argument("name", help="Environment name")
+
+    path_ = subparsers.add_parser("path", help="Print one environment's host-side path")
+    path_.add_argument(
+        "--writable",
+        action="store_true",
+        help="Print env_dir/writable (the agent's edit overlay) instead of env_dir",
+    )
+    path_.add_argument("name", help="Environment name")
     return parser
 
 
@@ -90,6 +101,40 @@ def cmd_list(_args: argparse.Namespace) -> int:
     for env_dir, env_info in store.list_infos():
         mount_status = "mounted" if mounts_under(env_dir / "root") else "unmounted"
         print(f"{env_info.name}\t{env_info.backend}\t{env_info.target}\t{env_info.origin}\t{mount_status}\t{env_info.status}")
+    return 0
+
+
+def cmd_status(args: argparse.Namespace) -> int:
+    import json
+    require_root()
+    config = load_config()
+    validate_cache_root(config.cache_root)
+    store = EnvironmentStore(config)
+    state = store.load(args.name)
+    env_dir = store.env_dir(args.name)
+    root_mounted = bool(mounts_under(state.root_dir))
+    print(json.dumps({
+        "name": state.name,
+        "target": state.target,
+        "origin": state.origin,
+        "status": state.status,
+        "backend": state.backend,
+        "oracle_profile": state.oracle_profile,
+        "root_mounted": root_mounted,
+        "env_dir": str(env_dir),
+    }))
+    return 0
+
+
+def cmd_path(args: argparse.Namespace) -> int:
+    require_root()
+    config = load_config()
+    validate_cache_root(config.cache_root)
+    store = EnvironmentStore(config)
+    if not store.env_dir(args.name).is_dir():
+        raise UsageError(f"environment not found: {args.name}")
+    target = store.writable_dir(args.name) if args.writable else store.env_dir(args.name)
+    print(str(target))
     return 0
 
 
@@ -240,6 +285,8 @@ def dispatch(args: argparse.Namespace) -> int:
         "sync-dirty": cmd_sync_dirty,
         "list": cmd_list,
         "cleanup-mounts": cmd_cleanup_mounts,
+        "status": cmd_status,
+        "path": cmd_path,
     }
     return commands[args.action](args)
 
