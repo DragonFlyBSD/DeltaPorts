@@ -333,24 +333,40 @@ def materialize_dports(env: str, origin: str) -> dict:
 
 
 PORTSDIR = "/work/DPorts"
+WRKDIRPREFIX = "/work/obj"
+
+
+def _make_vars() -> list[str]:
+    """Common make variable overrides for ports operations inside the env.
+
+    - ``PORTSDIR``: dports tree lives at /work/DPorts, not /usr/dports.
+    - ``WRKDIRPREFIX``: bsd.port.mk defaults to /usr/obj/dports which is
+      read-only in the chroot; point it at writable /work/obj.
+    - ``BATCH=yes``: skip config dialogs (the agent has no terminal).
+    """
+    return [
+        f"PORTSDIR={PORTSDIR}",
+        f"WRKDIRPREFIX={WRKDIRPREFIX}",
+        "BATCH=yes",
+    ]
 
 
 def extract(env: str, origin: str) -> dict:
     """Run ``make extract`` for ``origin`` in DPorts; return WRKDIR + WRKSRC on success.
 
-    Passes ``PORTSDIR=/work/DPorts`` because the dev-env doesn't mount
-    the dports tree at the conventional ``/usr/dports`` location; the
-    bsd.port.mk stub otherwise tries to open ``/usr/dports/Mk/...``.
-    On failure (``ok`` False), ``wrkdir`` and ``wrksrc`` are empty.
+    Sets ``PORTSDIR`` and ``WRKDIRPREFIX`` because the dev-env layout
+    doesn't match the conventional ``/usr/dports`` + ``/usr/obj/dports``
+    paths bsd.port.mk expects. On failure (``ok`` False), ``wrkdir``
+    and ``wrksrc`` are empty.
     """
     port_dir = f"{PORTSDIR}/{origin}"
-    p = _exec(env, "make", "-C", port_dir, f"PORTSDIR={PORTSDIR}", "extract", cwd=port_dir)
+    make_vars = _make_vars()
+    p = _exec(env, "make", "-C", port_dir, *make_vars, "extract", cwd=port_dir)
     if p.returncode != 0:
         return _exec_result(p.returncode, p.stdout, p.stderr,
                             origin=origin, wrkdir="", wrksrc="")
-    q = _exec(env, "make", "-C", port_dir,
-              f"PORTSDIR={PORTSDIR}", "-V", "WRKDIR", "-V", "WRKSRC",
-              cwd=port_dir)
+    q = _exec(env, "make", "-C", port_dir, *make_vars,
+              "-V", "WRKDIR", "-V", "WRKSRC", cwd=port_dir)
     if q.returncode != 0:
         return _exec_result(q.returncode, q.stdout, q.stderr,
                             origin=origin, wrkdir="", wrksrc="",
