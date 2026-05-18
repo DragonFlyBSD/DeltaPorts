@@ -29,8 +29,77 @@ import sys
 import tempfile
 from pathlib import Path
 
-from dportsv3.agent import patch
+from dportsv3.agent import llm, patch, tools, tool_loop
 from dportsv3.agent.policy import Tier
+
+
+def _install_session_dump(trace_path: Path) -> None:
+    """Wrap llm.complete and tools.dispatch so every turn is logged to
+    a JSONL file. Lets us share the full conversation post-mortem."""
+    trace_path.parent.mkdir(parents=True, exist_ok=True)
+    trace_path.write_text("")  # truncate
+
+    real_complete = llm.complete
+    real_dispatch = tools.dispatch
+
+    def _redact(messages: list[dict]) -> list[dict]:
+        # Truncate very long string content for the trace; keep first
+        # 800 chars per field. Adjust if you need more detail.
+        out = []
+        for m in messages:
+            r = dict(m)
+            for k, v in list(r.items()):
+                if isinstance(v, str) and len(v) > 800:
+                    r[k] = v[:800] + f"…[+{len(v) - 800} chars]"
+            out.append(r)
+        return out
+
+    def traced_complete(messages, **kw):
+        resp = real_complete(messages, **kw)
+        rec = {
+            "kind": "llm_call",
+            "model": kw.get("model"),
+            "n_messages": len(messages),
+            "messages_preview": _redact(messages),
+            "response": {
+                "text": (resp.text or "")[:1200],
+                "tool_calls": [
+                    {"id": tc.id, "name": tc.name, "arguments": tc.arguments}
+                    for tc in resp.tool_calls
+                ],
+                "usage": {
+                    "prompt": resp.usage.prompt_tokens,
+                    "completion": resp.usage.completion_tokens,
+                    "total": resp.usage.total_tokens,
+                },
+                "reasoning_content": (resp.reasoning_content or "")[:600],
+            },
+        }
+        with trace_path.open("a") as f:
+            f.write(json.dumps(rec) + "\n")
+        return resp
+
+    def traced_dispatch(name, arguments, *, env):
+        result = real_dispatch(name, arguments, env=env)
+        rec = {
+            "kind": "tool_dispatch",
+            "tool": name,
+            "arguments": arguments,
+            "result_keys": sorted(result.keys()) if isinstance(result, dict) else None,
+            "ok": bool(result.get("ok")) if isinstance(result, dict) else None,
+            # Don't include result content (file bytes etc.) — too big.
+            # Stdout/stderr tails get truncated.
+            "stdout_tail": (result.get("stdout_tail") or "")[:600] if isinstance(result, dict) else None,
+            "stderr_tail": (result.get("stderr_tail") or "")[:600] if isinstance(result, dict) else None,
+        }
+        with trace_path.open("a") as f:
+            f.write(json.dumps(rec) + "\n")
+        return result
+
+    llm.complete = traced_complete
+    tool_loop.llm.complete = traced_complete
+    tools.dispatch = traced_dispatch
+    tool_loop.tools.dispatch = traced_dispatch
 
 
 def main() -> int:
@@ -55,6 +124,10 @@ def main() -> int:
 
     # Fixture a minimal bundle directory.
     bundle_dir = Path(tempfile.mkdtemp(prefix="dp-patch-smoke-"))
+
+    # Install session-dump traces (per-turn LLM call + tool dispatch).
+    trace_path = bundle_dir / "session.jsonl"
+    _install_session_dump(trace_path)
     (bundle_dir / "analysis").mkdir()
     (bundle_dir / "meta.txt").write_text(
         f"origin={origin}\nprofile=DragonFly\nbundle_id=smoke-fixture\n"
@@ -128,6 +201,7 @@ fails, propose minimal DeltaPorts edits and retry.
     print(result.final_text[-600:] if result.final_text else "(empty)")
     print()
     print(f"bundle artifacts preserved at: {bundle_dir}")
+    print(f"session trace (JSONL):         {trace_path}")
     return 0
 
 
