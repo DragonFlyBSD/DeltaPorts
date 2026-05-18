@@ -33,6 +33,10 @@ class Response:
     text: str
     tool_calls: list[ToolCall] = field(default_factory=list)
     usage: Usage = field(default_factory=Usage)
+    # Thinking-mode chain-of-thought (DeepSeek's `reasoning_content`,
+    # OpenAI o-series reasoning summaries via the same field name on
+    # OpenAI-compat backends). None for non-thinking models.
+    reasoning_content: str | None = None
     raw: object = None  # opaque litellm ModelResponse for debugging
 
 
@@ -105,4 +109,16 @@ def complete(
         usage.completion_tokens = getattr(raw_usage, "completion_tokens", 0) or 0
         usage.total_tokens = getattr(raw_usage, "total_tokens", 0) or 0
 
-    return Response(text=text, tool_calls=tool_calls, usage=usage, raw=completion)
+    # Some thinking-mode providers (DeepSeek's v4-* models, certain
+    # OpenAI-compat relays) expose intermediate chain-of-thought as
+    # `reasoning_content` on the message object. The upstream API
+    # requires it to be echoed back on multi-turn requests.
+    reasoning_content = getattr(msg, "reasoning_content", None) or None
+
+    return Response(
+        text=text,
+        tool_calls=tool_calls,
+        usage=usage,
+        reasoning_content=reasoning_content,
+        raw=completion,
+    )

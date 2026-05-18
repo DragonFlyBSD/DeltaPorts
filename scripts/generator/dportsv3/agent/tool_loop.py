@@ -27,6 +27,9 @@ def _assistant_message_from(response: Response) -> dict:
 
     Needed so the next LLM call sees the tool calls the model made on
     the previous turn (otherwise it has amnesia about its own request).
+    Thinking-mode providers (DeepSeek v4-*, some OpenAI-compat relays)
+    additionally require ``reasoning_content`` to be echoed back, or
+    the next request fails with HTTP 400.
     """
     msg: dict = {"role": "assistant", "content": response.text or ""}
     if response.tool_calls:
@@ -41,6 +44,8 @@ def _assistant_message_from(response: Response) -> dict:
             }
             for tc in response.tool_calls
         ]
+    if response.reasoning_content:
+        msg["reasoning_content"] = response.reasoning_content
     return msg
 
 
