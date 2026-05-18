@@ -332,18 +332,25 @@ def materialize_dports(env: str, origin: str) -> dict:
     return _exec_result(p.returncode, p.stdout, p.stderr, origin=origin)
 
 
+PORTSDIR = "/work/DPorts"
+
+
 def extract(env: str, origin: str) -> dict:
     """Run ``make extract`` for ``origin`` in DPorts; return WRKDIR + WRKSRC on success.
 
-    On failure (``ok`` False), ``wrkdir`` and ``wrksrc`` are empty
-    strings and the LLM should inspect the tails.
+    Passes ``PORTSDIR=/work/DPorts`` because the dev-env doesn't mount
+    the dports tree at the conventional ``/usr/dports`` location; the
+    bsd.port.mk stub otherwise tries to open ``/usr/dports/Mk/...``.
+    On failure (``ok`` False), ``wrkdir`` and ``wrksrc`` are empty.
     """
-    port_dir = f"/work/DPorts/{origin}"
-    p = _exec(env, "make", "-C", port_dir, "extract", cwd=port_dir)
+    port_dir = f"{PORTSDIR}/{origin}"
+    p = _exec(env, "make", "-C", port_dir, f"PORTSDIR={PORTSDIR}", "extract", cwd=port_dir)
     if p.returncode != 0:
         return _exec_result(p.returncode, p.stdout, p.stderr,
                             origin=origin, wrkdir="", wrksrc="")
-    q = _exec(env, "make", "-C", port_dir, "-V", "WRKDIR", "-V", "WRKSRC", cwd=port_dir)
+    q = _exec(env, "make", "-C", port_dir,
+              f"PORTSDIR={PORTSDIR}", "-V", "WRKDIR", "-V", "WRKSRC",
+              cwd=port_dir)
     if q.returncode != 0:
         return _exec_result(q.returncode, q.stdout, q.stderr,
                             origin=origin, wrkdir="", wrksrc="",
