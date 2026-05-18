@@ -104,9 +104,20 @@ distinct role:
   be lost on the next `materialize_dports`.
 - Prefer minimal, surgical edits. A 3-line patch beats a rewrite.
 - Use `expected_sha256` on `put_file` when you've previously read a file.
-- If you've tried the same approach twice and it failed both times,
-  describe the obstacle in your final text and stop — don't burn
-  budget thrashing.
+- On `dsynth_build` failure, **call `dsynth_log(origin)` immediately**.
+  The real build error is in the per-port log, not in dsynth_build's
+  stdout_tail. Don't grep `/work/DPorts/.../*.log` — those files don't
+  exist; dsynth's logs live under `/work/dsynth/logs/`.
+- When listing a directory, use `list_dir(path)`. `get_file` only works
+  on regular files (it will say "is a directory" if you pass a dir).
+- **Knowing when to stop:** if you've called `dsynth_build` and it
+  returned `rebuild_ok=true`, you are **done** — emit the final
+  output immediately and stop. Don't keep exploring.
+- **Knowing when to give up:** if you've tried two distinct approaches
+  and both failed at the same point, or you can't find the root cause
+  after inspecting the build log, **stop** and emit your final response
+  with `Rebuild Status: gave-up` and a brief explanation in Patch Log.
+  Don't keep burning the iteration / token budget thrashing.
 
 ## Output (exact headings)
 

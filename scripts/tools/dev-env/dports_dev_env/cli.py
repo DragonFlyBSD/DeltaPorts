@@ -77,6 +77,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     exec_ = subparsers.add_parser("exec", help="Run a command inside an environment non-interactively")
     exec_.add_argument("--cwd", default="/work/DeltaPorts", help="Working directory inside the chroot")
+    exec_.add_argument("--quiet", action="store_true", help="Suppress INFO mount-prep output")
     exec_.add_argument("name", help="Environment name")
     exec_.add_argument("argv", nargs=argparse.REMAINDER, help="-- CMD [ARGS...] to run inside the env")
 
@@ -230,7 +231,10 @@ def cmd_shell(args: argparse.Namespace) -> int:
 
 
 def cmd_exec(args: argparse.Namespace) -> int:
+    import os
     require_root()
+    if args.quiet:
+        os.environ["DPORTS_DEV_ENV_QUIET"] = "1"
     config = load_config()
     validate_cache_root(config.cache_root)
     store = EnvironmentStore(config)

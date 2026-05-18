@@ -29,226 +29,77 @@ from . import worker
 # JSON schemas (OpenAI tool format)
 # -----------------------------------------------------------------------------
 
+_STR = {"type": "string"}
+_INT = {"type": "integer"}
+
+
+def _tool(name: str, desc: str, props: dict | None = None, required: list[str] | None = None) -> dict:
+    return {
+        "type": "function",
+        "function": {
+            "name": name,
+            "description": desc,
+            "parameters": {
+                "type": "object",
+                "properties": props or {},
+                "required": required or [],
+            },
+        },
+    }
+
+
 _TOOLS: list[dict] = [
-    {
-        "type": "function",
-        "function": {
-            "name": "env_verify",
-            "description": (
-                "Verify the dev-env is ready for tool calls. Call this first; "
-                "if it fails, stop and report — no other tool will work."
-            ),
-            "parameters": {"type": "object", "properties": {}, "required": []},
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "get_file",
-            "description": (
-                "Read a file from the env's writable overlay (paths under /work/...). "
-                "Returns the content directly when the file is UTF-8 text "
-                "(encoding='text', the common case for source/Makefiles/patches/docs) "
-                "or base64-encoded when binary (encoding='base64'). sha256 is over the "
-                "raw bytes — pass it to put_file's expected_sha256 to guard against "
-                "stale writes."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "path": {
-                        "type": "string",
-                        "description": "Absolute in-chroot path under /work/ (e.g. /work/DPorts/devel/readline/Makefile).",
-                    },
-                },
-                "required": ["path"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "put_file",
-            "description": (
-                "Write content to a file in the env's writable overlay. "
-                "Use encoding=text for source/Makefiles (UTF-8); encoding=base64 "
-                "for binary. Optional expected_sha256 is an optimistic lock — pass "
-                "the sha256 from a prior get_file to fail if the file changed "
-                "underneath you."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "path": {"type": "string", "description": "In-chroot path under /work/."},
-                    "content": {"type": "string", "description": "File contents."},
-                    "encoding": {
-                        "type": "string",
-                        "enum": ["text", "base64"],
-                        "description": "Default: text.",
-                    },
-                    "expected_sha256": {
-                        "type": "string",
-                        "description": "Optional optimistic-lock check.",
-                    },
-                },
-                "required": ["path", "content"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "emit_diff",
-            "description": (
-                "Return the working-tree diff for ports/<origin>/<relpath> in DeltaPorts. "
-                "Pure read — never commits. Use to inspect what your edits look like "
-                "before calling materialize_dports + dsynth_build."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "origin": {"type": "string", "description": "Port origin like 'devel/readline'."},
-                    "relpath": {"type": "string", "description": "File path relative to ports/<origin>/."},
-                },
-                "required": ["origin", "relpath"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "grep",
-            "description": (
-                "Run ripgrep across files in the env's writable overlay. "
-                "Output is capped at max_bytes (default 8192); set higher for "
-                "wider surveys but expect truncation on busy trees."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "pattern": {"type": "string", "description": "rg pattern (regex)."},
-                    "path": {"type": "string", "description": "In-chroot path under /work/ to search."},
-                    "include": {"type": "string", "description": "Optional rg glob filter."},
-                    "max_bytes": {"type": "integer", "description": "Output cap (bytes). Default 8192."},
-                },
-                "required": ["pattern", "path"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "materialize_dports",
-            "description": (
-                "Propagate DeltaPorts edits into the buildable DPorts tree for one origin. "
-                "Wraps the env's `reapply` helper (= dportsv3 compose --origin). "
-                "Call after put_file / install_patches edits, before extract or dsynth_build."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "origin": {"type": "string", "description": "Port origin like 'devel/readline'."},
-                },
-                "required": ["origin"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "extract",
-            "description": (
-                "Run `make extract` for a port (after materialize_dports). "
-                "Returns wrkdir + wrksrc — the wrksrc is where the extracted "
-                "source lives; dupe/genpatch operate on files inside it."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "origin": {"type": "string", "description": "Port origin."},
-                },
-                "required": ["origin"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "dupe",
-            "description": (
-                "Clone a WRKSRC source file with a .orig backup, so a later genpatch "
-                "can produce a unified diff against the unmodified original. "
-                "Run before editing the file via put_file."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "path": {"type": "string", "description": "Absolute in-chroot path under WRKSRC."},
-                },
-                "required": ["path"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "genpatch",
-            "description": (
-                "Generate a unified diff for a previously-duped file (file vs file.orig). "
-                "Output lands in /work/genpatch-out/patch-* and is returned in the "
-                "result's `patches` field for install_patches to pick up."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "path": {"type": "string", "description": "Same path used with dupe."},
-                },
-                "required": ["path"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "install_patches",
-            "description": (
-                "Copy generated patches from /work/genpatch-out/ into "
-                "DeltaPorts/ports/<origin>/dragonfly/. Without `patches`, installs all "
-                "patch-* files found. After this, call materialize_dports to "
-                "propagate the new patches into DPorts."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "origin": {"type": "string", "description": "Port origin."},
-                    "patches": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "Optional explicit list of patch filenames.",
-                    },
-                },
-                "required": ["origin"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "dsynth_build",
-            "description": (
-                "Build a port with dsynth. Wraps the env's `dbuild` helper. "
-                "rebuild_ok=true (rc==0) means the build succeeded; otherwise inspect "
-                "stderr_tail/stdout_tail for the failure and iterate."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "origin": {"type": "string", "description": "Port origin."},
-                },
-                "required": ["origin"],
-            },
-        },
-    },
+    _tool("env_verify",
+          "Confirm the dev-env is ready. Call first."),
+    _tool("list_dir",
+          "List a directory's entries in the writable overlay.",
+          {"path": _STR, "max_entries": _INT}, ["path"]),
+    _tool("get_file",
+          "Read a file. Returns encoding=text (UTF-8) or encoding=base64 (binary). "
+          "Use sha256 from this result in put_file's expected_sha256 to guard stale writes.",
+          {"path": _STR}, ["path"]),
+    _tool("put_file",
+          "Write a file. encoding='text' (UTF-8, default) or 'base64' (binary). "
+          "expected_sha256 is an optimistic lock — pass the sha256 from a prior get_file.",
+          {"path": _STR, "content": _STR,
+           "encoding": {"type": "string", "enum": ["text", "base64"]},
+           "expected_sha256": _STR},
+          ["path", "content"]),
+    _tool("emit_diff",
+          "Working-tree diff for ports/<origin>/<relpath> in DeltaPorts (read-only).",
+          {"origin": _STR, "relpath": _STR}, ["origin", "relpath"]),
+    _tool("grep",
+          "Recursive POSIX grep -rn over the writable overlay. "
+          "ok=True with empty matches just means 'no matches' (not an error).",
+          {"pattern": _STR, "path": _STR, "include": _STR, "max_bytes": _INT},
+          ["pattern", "path"]),
+    _tool("materialize_dports",
+          "Propagate DeltaPorts edits into the buildable DPorts tree for one origin. "
+          "Call after put_file/install_patches edits and before extract/dsynth_build.",
+          {"origin": _STR}, ["origin"]),
+    _tool("extract",
+          "Run `make extract` for a port (after materialize_dports). Returns wrkdir + wrksrc.",
+          {"origin": _STR}, ["origin"]),
+    _tool("dupe",
+          "Snapshot a WRKSRC file with a .orig backup so genpatch can later diff against it.",
+          {"path": _STR}, ["path"]),
+    _tool("genpatch",
+          "Produce a unified diff for a duped+edited file. Output: /work/genpatch-out/patch-*.",
+          {"path": _STR}, ["path"]),
+    _tool("install_patches",
+          "Copy patches from /work/genpatch-out/ into DeltaPorts/ports/<origin>/dragonfly/. "
+          "Then call materialize_dports.",
+          {"origin": _STR, "patches": {"type": "array", "items": {"type": "string"}}},
+          ["origin"]),
+    _tool("dsynth_build",
+          "Run dsynth -S -y build <origin>. rebuild_ok=true means rc==0. "
+          "On failure, call dsynth_log(origin) — the actual build error is in the per-port log, "
+          "not in this tool's stdout_tail.",
+          {"origin": _STR}, ["origin"]),
+    _tool("dsynth_log",
+          "Read the tail of dsynth's per-port build log "
+          "(/work/dsynth/logs/<origin-with-underscores>.log). Call after dsynth_build failure.",
+          {"origin": _STR, "tail_lines": _INT}, ["origin"]),
 ]
 
 

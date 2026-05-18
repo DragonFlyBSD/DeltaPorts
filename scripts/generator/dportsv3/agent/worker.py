@@ -188,6 +188,52 @@ def _sha256(data: bytes) -> str:
 # -----------------------------------------------------------------------------
 
 
+def list_dir(env: str, path: str, *, max_entries: int = 200) -> dict:
+    """List the contents of a directory in the env's writable overlay.
+
+    Returns up to ``max_entries`` entries, each with ``name``, ``kind``
+    (file/dir/symlink/other), and ``size`` (for files). Useful when
+    you don't know what's inside a directory or you need to find a
+    config.log / patch / dragonfly-overlay file without a recursive
+    grep.
+    """
+    paths = env_paths(env)
+    host = _resolve_chroot_path(paths, path)
+    if not host.exists():
+        return {"ok": False, "error": f"no such path: {path}", "kind": "missing", "path": path}
+    if not host.is_dir():
+        return {"ok": False, "error": f"not a directory: {path}", "kind": "not_a_directory", "path": path}
+    entries: list[dict] = []
+    truncated = False
+    for i, child in enumerate(sorted(host.iterdir())):
+        if i >= max_entries:
+            truncated = True
+            break
+        if child.is_symlink():
+            kind = "symlink"
+            size = 0
+        elif child.is_dir():
+            kind = "dir"
+            size = 0
+        elif child.is_file():
+            kind = "file"
+            try:
+                size = child.stat().st_size
+            except OSError:
+                size = 0
+        else:
+            kind = "other"
+            size = 0
+        entries.append({"name": child.name, "kind": kind, "size": size})
+    return {
+        "ok": True,
+        "path": path,
+        "entries": entries,
+        "truncated": truncated,
+        "total_returned": len(entries),
+    }
+
+
 def get_file(env: str, path: str) -> dict:
     """Read ``path`` from the env's writable overlay.
 
@@ -197,11 +243,33 @@ def get_file(env: str, path: str) -> dict:
     binary content. sha256 is computed over the **bytes**, so the round
     trip via ``put_file(expected_sha256=...)`` works regardless of
     encoding.
+
+    Distinct error envelopes for "doesn't exist" vs "is a directory"
+    vs "read failed" — the agent can react usefully rather than guessing.
     """
     paths = env_paths(env)
     host = _resolve_chroot_path(paths, path)
+    if not host.exists():
+        return {
+            "ok": False,
+            "error": f"no such file: {path}",
+            "kind": "missing",
+            "path": path,
+        }
+    if host.is_dir():
+        return {
+            "ok": False,
+            "error": f"path is a directory; use list_dir or grep instead: {path}",
+            "kind": "is_directory",
+            "path": path,
+        }
     if not host.is_file():
-        raise FileNotFoundError(f"no such file: {path}")
+        return {
+            "ok": False,
+            "error": f"not a regular file: {path}",
+            "kind": "not_a_regular_file",
+            "path": path,
+        }
     data = host.read_bytes()
 
     text: str | None = None
@@ -304,25 +372,61 @@ def grep(
     include: str | None = None,
     max_bytes: int = 8192,
 ) -> dict:
-    """Run ``rg`` over the env's writable overlay; cap output at ``max_bytes``."""
+    """Recursive grep over the env's writable overlay.
+
+    Uses POSIX ``grep -rn`` (always present on dfly) — not ripgrep,
+    which isn't packaged for DragonFly. ``ok=True`` whenever grep
+    ran without error, even when there were zero matches (rc=1 from
+    grep is "no matches", not a failure). ``ok=False`` only when
+    grep itself crashed (rc>=2) or the path is invalid.
+    """
     paths = env_paths(env)
     host = _resolve_chroot_path(paths, path)
     if not host.exists():
-        raise FileNotFoundError(f"no such path: {path}")
-    cmd = ["rg", "--no-heading", "--line-number"]
+        return {
+            "ok": False,
+            "error": f"no such path: {path}",
+            "pattern": pattern,
+            "matches": "",
+            "match_count": 0,
+        }
+    # -E extended regex (closest to rg's default), -r recursive, -n line numbers,
+    # -I skip binary files, --include= glob (gnu/bsd grep both support it).
+    cmd = ["grep", "-rnIE"]
     if include:
-        cmd.extend(["-g", include])
+        cmd.append(f"--include={include}")
     cmd.extend(["--", pattern, str(host)])
-    p = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    try:
+        p = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    except OSError as exc:
+        return {
+            "ok": False,
+            "error": f"grep invocation failed: {exc}",
+            "pattern": pattern,
+            "matches": "",
+            "match_count": 0,
+        }
+    # grep exit codes: 0 = matches, 1 = no matches, ≥2 = error
+    if p.returncode >= 2:
+        return {
+            "ok": False,
+            "error": (p.stderr.strip() or f"grep exited with rc={p.returncode}"),
+            "pattern": pattern,
+            "matches": p.stdout,
+            "match_count": 0,
+        }
     output = p.stdout
+    match_count = output.count("\n") if output else 0
     truncated = False
     if len(output) > max_bytes:
         output = output[:max_bytes]
         truncated = True
     return {
+        "ok": True,
         "root": str(host),
         "pattern": pattern,
         "matches": output,
+        "match_count": match_count,
         "truncated": truncated,
         "max_bytes": max_bytes,
     }
@@ -351,7 +455,7 @@ def _exec(
     than hanging).
     """
     return subprocess.run(
-        [*_dportsv3_cmd(), "dev-env", "exec", "--cwd", cwd, env, "--", *argv],
+        [*_dportsv3_cmd(), "dev-env", "exec", "--quiet", "--cwd", cwd, env, "--", *argv],
         capture_output=True,
         text=True,
         check=False,
@@ -479,25 +583,94 @@ def install_patches(env: str, origin: str, patches: list[str] | None = None) -> 
     return {"origin": origin, "destination": str(dst), "installed": installed}
 
 
-def dsynth_build(env: str, origin: str) -> dict:
-    """Run ``dbuild ORIGIN`` inside the chroot (dsynth build).
+DSYNTH_LOGS_DIR = "/work/dsynth/logs"
 
-    Wraps the ``dbuild`` helper at
-    ``scripts/tools/dev-env/dports_dev_env/helpers.py:62-90`` which
-    invokes ``dsynth -p $DPORTS_DSYNTH_PROFILE build <origin>``.
-    Feeds ``y`` answers on stdin to clear dsynth's interactive
-    prompts (e.g. "Rebuild local repository? [Y/n]"); the agent has
-    no tty and would otherwise hang.
-    Returns a result dict; ``rebuild_ok`` is an alias for ``ok``
-    (rc==0) for clarity at call sites.
+
+def _dsynth_log_path(origin: str) -> str:
+    """Where dsynth writes the per-port build log inside the chroot.
+
+    dsynth replaces '/' in the origin with '___' for its log filenames
+    (per the dsynth source convention).
     """
-    # Feed a generous supply of yes-answers so any dsynth prompts that
-    # appear during repo rebuild / dep resolution don't stall the
-    # subprocess. dsynth typically asks 1-3 times in a build cycle.
-    yes_input = "y\n" * 50
-    p = _exec(env, "dbuild", origin, input_text=yes_input)
+    return f"{DSYNTH_LOGS_DIR}/{origin.replace('/', '___')}.log"
+
+
+def dsynth_build(env: str, origin: str) -> dict:
+    """Run ``dsynth build <origin>`` inside the chroot.
+
+    Invokes dsynth directly (not via the ``dbuild`` helper) with:
+    - ``-S`` to disable the ncurses TUI (otherwise stdout is curses
+      escape codes the LLM can't parse)
+    - ``-y`` to assume-yes on all prompts (no stdin gymnastics)
+
+    The result dict carries ``log_hint``: the in-chroot path to the
+    per-port build log. On failure, the agent should call
+    ``dsynth_log(origin)`` to read it — stdout/stderr_tail here only
+    capture the wrapper output, not the actual build error.
+
+    The ``dbuild`` helper at
+    ``scripts/tools/dev-env/dports_dev_env/helpers.py:62-90`` is
+    intentionally not used: it doesn't pass -S/-y because humans use
+    it interactively.
+    """
+    # Read DPORTS_DSYNTH_PROFILE inside the chroot (set by dev-env's
+    # build_env_dict at helpers.py:113) and invoke dsynth directly.
+    # Using sh -c so we can reference the env var on the chroot side.
+    cmd = (
+        'dsynth -S -y -p "$DPORTS_DSYNTH_PROFILE" build "$1"'
+    )
+    p = _exec(env, "/bin/sh", "-c", cmd, "_", origin)
+    log_hint = _dsynth_log_path(origin)
     return _exec_result(
         p.returncode, p.stdout, p.stderr,
         origin=origin,
         rebuild_ok=p.returncode == 0,
+        log_hint=log_hint,
     )
+
+
+def dsynth_log(env: str, origin: str, tail_lines: int = 200) -> dict:
+    """Read the tail of dsynth's per-port build log.
+
+    Call this when ``dsynth_build`` returned ``rebuild_ok=false``;
+    the actual error message lives here, not in dsynth_build's
+    stdout (which is just wrapper output).
+
+    Returns the last ``tail_lines`` lines from
+    ``/work/dsynth/logs/<origin-with-slashes-as-underscores>.log``.
+    """
+    paths = env_paths(env)
+    log_path = paths.writable / "work" / "dsynth" / "logs" / f"{origin.replace('/', '___')}.log"
+    if not log_path.is_file():
+        return {
+            "ok": False,
+            "error": f"no log at {log_path}",
+            "origin": origin,
+            "log_path": str(log_path),
+            "tail": "",
+        }
+    try:
+        text = log_path.read_text(errors="replace")
+    except OSError as exc:
+        return {
+            "ok": False,
+            "error": f"read failed: {exc}",
+            "origin": origin,
+            "log_path": str(log_path),
+            "tail": "",
+        }
+    lines = text.splitlines()
+    if tail_lines > 0 and len(lines) > tail_lines:
+        truncated = True
+        kept = lines[-tail_lines:]
+    else:
+        truncated = False
+        kept = lines
+    return {
+        "ok": True,
+        "origin": origin,
+        "log_path": str(log_path),
+        "tail": "\n".join(kept),
+        "truncated": truncated,
+        "total_lines": len(lines),
+    }

@@ -49,6 +49,27 @@ def _assistant_message_from(response: Response) -> dict:
     return msg
 
 
+def _strip_old_reasoning(messages: list[dict]) -> None:
+    """Drop reasoning_content from all but the most recent assistant turn.
+
+    Thinking-mode providers require the latest assistant turn's
+    reasoning_content to be echoed back on the next request. Older
+    turns' reasoning bloats the prompt with no protocol benefit —
+    once a tool result has been returned and the model has reasoned
+    about it again, the prior reasoning is dead weight.
+
+    Conservative: keep the most recent assistant message's
+    reasoning_content, strip from all earlier ones.
+    """
+    last_idx = None
+    for i in range(len(messages) - 1, -1, -1):
+        if messages[i].get("role") == "assistant" and "reasoning_content" in messages[i]:
+            if last_idx is None:
+                last_idx = i  # keep this one
+            else:
+                messages[i].pop("reasoning_content", None)
+
+
 def run(
     messages: list[dict],
     *,
@@ -127,6 +148,10 @@ def run(
                 }
             )
         final = response
+
+        # Trim stale reasoning_content from older assistant turns —
+        # the protocol only requires the most recent turn's.
+        _strip_old_reasoning(messages)
 
     log.warning(
         "tool_loop: hit max_turns=%d without a text-only response", max_turns
