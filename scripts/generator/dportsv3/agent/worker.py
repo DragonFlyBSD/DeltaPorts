@@ -333,15 +333,30 @@ def grep(
 # -----------------------------------------------------------------------------
 
 
-def _exec(env: str, *argv: str, cwd: str = "/work/DeltaPorts") -> subprocess.CompletedProcess:
+def _exec(
+    env: str,
+    *argv: str,
+    cwd: str = "/work/DeltaPorts",
+    input_text: str | None = None,
+    timeout: int | None = None,
+) -> subprocess.CompletedProcess:
     """Run ``argv`` inside the dev-env chroot, return CompletedProcess.
 
     ``dev-env exec`` auto-mounts the env root on demand. Stdout/stderr
     are captured; callers decide how to surface them to the LLM.
+
+    ``input_text`` is fed to the subprocess's stdin (useful for tools
+    that prompt — e.g. dsynth's "rebuild local repository? [Y/n]"). If
+    None, stdin is /dev/null (so an unexpected prompt fails fast rather
+    than hanging).
     """
     return subprocess.run(
         [*_dportsv3_cmd(), "dev-env", "exec", "--cwd", cwd, env, "--", *argv],
-        capture_output=True, text=True, check=False,
+        capture_output=True,
+        text=True,
+        check=False,
+        input=input_text if input_text is not None else "",
+        timeout=timeout,
     )
 
 
@@ -470,10 +485,17 @@ def dsynth_build(env: str, origin: str) -> dict:
     Wraps the ``dbuild`` helper at
     ``scripts/tools/dev-env/dports_dev_env/helpers.py:62-90`` which
     invokes ``dsynth -p $DPORTS_DSYNTH_PROFILE build <origin>``.
+    Feeds ``y`` answers on stdin to clear dsynth's interactive
+    prompts (e.g. "Rebuild local repository? [Y/n]"); the agent has
+    no tty and would otherwise hang.
     Returns a result dict; ``rebuild_ok`` is an alias for ``ok``
     (rc==0) for clarity at call sites.
     """
-    p = _exec(env, "dbuild", origin)
+    # Feed a generous supply of yes-answers so any dsynth prompts that
+    # appear during repo rebuild / dep resolution don't stall the
+    # subprocess. dsynth typically asks 1-3 times in a build cycle.
+    yes_input = "y\n" * 50
+    p = _exec(env, "dbuild", origin, input_text=yes_input)
     return _exec_result(
         p.returncode, p.stdout, p.stderr,
         origin=origin,
