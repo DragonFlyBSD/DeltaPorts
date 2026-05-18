@@ -10,8 +10,8 @@ Usage:
     export DP_TEST_API_KEY='YOUR_KEY'
     export DP_TEST_ENV='2026Q2'
     export DP_TEST_ORIGIN='devel/readline'           # default
-    export DP_TEST_TIER_ITERATIONS='2'               # default
-    export DP_TEST_TIER_TOKENS='40000'               # default
+    export DP_TEST_TIER_ITERATIONS='4'               # default (matches ASSIST tier)
+    export DP_TEST_TIER_TOKENS='120000'              # default (matches ASSIST tier)
     ./scripts/generator/.venv/bin/python -m dportsv3.agent._manual_test_patch_flow
 
 Prints per-attempt token counts, final status, and the rebuild_proof
@@ -118,8 +118,8 @@ def main() -> int:
 
     tier = Tier(
         name="MANUAL_TEST",
-        max_iterations=int(os.environ.get("DP_TEST_TIER_ITERATIONS", "2")),
-        max_tokens=int(os.environ.get("DP_TEST_TIER_TOKENS", "40000")),
+        max_iterations=int(os.environ.get("DP_TEST_TIER_ITERATIONS", "4")),
+        max_tokens=int(os.environ.get("DP_TEST_TIER_TOKENS", "120000")),
     )
 
     # Fixture a minimal bundle directory.
