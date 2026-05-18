@@ -189,12 +189,36 @@ def _sha256(data: bytes) -> str:
 
 
 def get_file(env: str, path: str) -> dict:
-    """Read ``path`` from the env's writable overlay. Returns base64."""
+    """Read ``path`` from the env's writable overlay.
+
+    Returns ``encoding='text'`` with raw UTF-8 ``content`` when the file
+    decodes cleanly and contains no NULs (the common case for source,
+    Makefiles, patches, docs). Falls back to ``encoding='base64'`` for
+    binary content. sha256 is computed over the **bytes**, so the round
+    trip via ``put_file(expected_sha256=...)`` works regardless of
+    encoding.
+    """
     paths = env_paths(env)
     host = _resolve_chroot_path(paths, path)
     if not host.is_file():
         raise FileNotFoundError(f"no such file: {path}")
     data = host.read_bytes()
+
+    text: str | None = None
+    if b"\x00" not in data:
+        try:
+            text = data.decode("utf-8")
+        except UnicodeDecodeError:
+            text = None
+
+    if text is not None:
+        return {
+            "path": path,
+            "encoding": "text",
+            "content": text,
+            "sha256": _sha256(data),
+            "size": len(data),
+        }
     return {
         "path": path,
         "encoding": "base64",

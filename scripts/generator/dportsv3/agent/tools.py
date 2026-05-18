@@ -47,15 +47,18 @@ _TOOLS: list[dict] = [
             "name": "get_file",
             "description": (
                 "Read a file from the env's writable overlay (paths under /work/...). "
-                "Returns base64-encoded content with sha256 — use that sha256 with "
-                "put_file's expected_sha256 to guard against stale writes."
+                "Returns the content directly when the file is UTF-8 text "
+                "(encoding='text', the common case for source/Makefiles/patches/docs) "
+                "or base64-encoded when binary (encoding='base64'). sha256 is over the "
+                "raw bytes — pass it to put_file's expected_sha256 to guard against "
+                "stale writes."
             ),
             "parameters": {
                 "type": "object",
                 "properties": {
                     "path": {
                         "type": "string",
-                        "description": "Absolute in-chroot path under /work/ (e.g. /work/DeltaPorts/ports/devel/readline/Makefile).",
+                        "description": "Absolute in-chroot path under /work/ (e.g. /work/DPorts/devel/readline/Makefile).",
                     },
                 },
                 "required": ["path"],
