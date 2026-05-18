@@ -35,15 +35,40 @@ from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 
-# Override via DPORTSV3_CMD env var (whitespace-split). Default: invoke
-# the dportsv3 package as a module with the current interpreter — works
-# regardless of whether the venv's bin/ is on PATH, and skips the
-# wrapper script's bootstrap.
-_DPORTSV3_CMD: list[str] = (
-    os.environ["DPORTSV3_CMD"].split()
-    if os.environ.get("DPORTSV3_CMD")
-    else [sys.executable, "-m", "dportsv3"]
-)
+# How to invoke `dportsv3`. The wrapper script at the repo root is the
+# only entry point that knows how to route the `dev-env` subcommand —
+# it dispatches to a separate venv. Using `python -m dportsv3` would
+# bypass that routing and fail.
+#
+# Resolution order:
+#   1. DPORTSV3_CMD env var (whitespace-split) — for tests / overrides
+#   2. <repo>/dportsv3 sibling lookup relative to this file
+#   3. `dportsv3` on PATH (via shutil.which)
+# Otherwise, raise at first use.
+def _resolve_dportsv3_cmd() -> list[str]:
+    override = os.environ.get("DPORTSV3_CMD")
+    if override:
+        return override.split()
+    sibling = Path(__file__).resolve().parents[4] / "dportsv3"
+    if sibling.is_file():
+        return [str(sibling)]
+    found = shutil.which("dportsv3")
+    if found:
+        return [found]
+    raise RuntimeError(
+        "could not locate dportsv3 wrapper "
+        "(set DPORTSV3_CMD, put dportsv3 on PATH, or run from the repo)"
+    )
+
+
+_DPORTSV3_CMD: list[str] | None = None
+
+
+def _dportsv3_cmd() -> list[str]:
+    global _DPORTSV3_CMD
+    if _DPORTSV3_CMD is None:
+        _DPORTSV3_CMD = _resolve_dportsv3_cmd()
+    return _DPORTSV3_CMD
 
 
 # -----------------------------------------------------------------------------
@@ -64,7 +89,7 @@ class EnvPaths:
 
 def _run_dportsv3(*args: str) -> subprocess.CompletedProcess:
     return subprocess.run(
-        [*_DPORTSV3_CMD, *args],
+        [*_dportsv3_cmd(), *args],
         capture_output=True, text=True, check=False,
     )
 
@@ -255,7 +280,7 @@ def _exec(env: str, *argv: str, cwd: str = "/work/DeltaPorts") -> subprocess.Com
     are captured; callers decide how to surface them to the LLM.
     """
     return subprocess.run(
-        [*_DPORTSV3_CMD, "dev-env", "exec", "--cwd", cwd, env, "--", *argv],
+        [*_dportsv3_cmd(), "dev-env", "exec", "--cwd", cwd, env, "--", *argv],
         capture_output=True, text=True, check=False,
     )
 
