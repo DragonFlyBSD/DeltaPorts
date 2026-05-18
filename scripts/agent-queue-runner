@@ -1,37 +1,34 @@
 #!/usr/bin/env python3
 """
-agent-queue-runner: Process dsynth failure jobs via opencode serve.
+agent-queue-runner: Process dsynth failure jobs via the dportsv3.agent harness.
 
 Usage:
     agent-queue-runner --queue-root <path> [--once] [--dry-run]
 
-Environment variables:
-    OPENCODE_URL              (required) e.g., http://192.168.1.10:4096
-    OPENCODE_PROVIDER         (optional) e.g., opencode (default: opencode for dports-* agents)
-    OPENCODE_MODEL            (optional) e.g., gpt-5-nano (default: gpt-5-nano for dports-* agents)
-    OPENCODE_TIMEOUT          (optional) request timeout in seconds, default 120
-    OPENCODE_MAX_RETRIES      (optional) retry attempts, default 3
-    OPENCODE_RETRY_DELAY      (optional) base delay between retries, default 8
-    OPENCODE_MAX_SNIPPET_ROUNDS (optional) max snippet extraction rounds, default 5
-
-    VM_SSH_HOST               (optional) SSH host for remote snippet extraction
-                              If set, snippet-extractor runs via SSH (for Linux dev hosts)
-                              If not set, snippet-extractor runs locally (DragonFlyBSD native)
-    VM_SSH_KEY                (optional) SSH key for VM access (only used if VM_SSH_HOST set)
-    VM_SSH_PORT               (optional) SSH port (only used if VM_SSH_HOST set), default 2222
+Required env vars (one of triage or patch model must be set for the
+relevant job type):
+    DP_HARNESS_TRIAGE_MODEL   litellm model string for triage
+    DP_HARNESS_PATCH_MODEL    litellm model string for patch
+    DP_HARNESS_*_API_KEY      provider API keys
+    DP_HARNESS_*_API_BASE     optional custom endpoint
+    DP_HARNESS_*_PROVIDER     optional custom_llm_provider override
+    DP_HARNESS_ENV            dev-env name for patch tool dispatch
+    DP_HARNESS_POLICY         optional path to agentic-policy.json
+    DP_HARNESS_TIMEOUT        triage timeout (default 120)
+    DP_HARNESS_PATCH_TIMEOUT  patch timeout (default 600)
+    DP_HARNESS_MAX_SNIPPET_ROUNDS  default 5
 
 Job types:
-    type=triage (default) - Uses dports-triage agent, may auto-enqueue patch job
-    type=patch            - Uses dports-patch agent to edit workspace and rebuild
-    type=pr               - Creates PR for a successful rebuild (optional)
+    type=triage (default) — runs dportsv3.agent.triage; classification +
+                            confidence drive trust-tier dispatch.
+    type=patch            — runs dportsv3.agent.patch with the resolved tier.
 
 Job fields:
-    snippet_round=N       - Current snippet round (0 = initial, no snippets)
-    has_snippets=true     - Snippets are available in bundle
-    parent_job=...        - Parent job filename (for tracking lineage)
-    iteration=N           - Current fix iteration (1-based)
-    max_iterations=N      - Maximum iterations before giving up (default: 3)
-    previous_bundle=...   - Bundle from previous failed attempt (if iteration > 1)
+    iteration=N           — current fix iteration (1-based)
+    max_iterations=N      — max iterations before giving up (default: 3)
+    tier=NAME             — pre-resolved trust tier (set by triage step)
+    dev_env=NAME          — dev-env to use (set by triage step or DP_HARNESS_ENV)
+    previous_bundle=...   — bundle from previous failed attempt
 """
 
 import argparse
@@ -56,30 +53,11 @@ if _GENERATOR_DIR.is_dir() and str(_GENERATOR_DIR) not in sys.path:
     sys.path.insert(0, str(_GENERATOR_DIR))
 
 
-# Classifications that should trigger automatic patch generation
-PATCHABLE_CLASSIFICATIONS = {
-    "compile-error",
-    "configure-error",
-    "patch-error",
-    "plist-error",
-}
-
-# Confidence levels that allow patch generation
-PATCHABLE_CONFIDENCE = {"high", "medium"}
-
-# Max snippet escalation rounds (default, can override with env var)
-DEFAULT_MAX_SNIPPET_ROUNDS = 5
-
 # Max fix iterations before giving up on a port
 DEFAULT_MAX_ITERATIONS = 3
 
-# VM SSH defaults
-DEFAULT_VM_SSH_KEY = "/home/antonioh/.go-synth/vm/id_ed25519"
-DEFAULT_VM_SSH_PORT = "2222"
-DEFAULT_VM_SSH_HOST = "root@localhost"
 DEFAULT_ARTIFACT_STORE_URL = "http://127.0.0.1:8788"
 DEFAULT_STATE_SERVER_URL = "http://127.0.0.1:8787"
-DEFAULT_WORKSPACE_CONFIG = "/build/synth/agentic-workspace/workspace.json"
 
 # Heartbeat interval (seconds)
 HEARTBEAT_INTERVAL = 5
@@ -165,13 +143,6 @@ def artifact_store_put(bundle_id: str, relpath: str, data: bytes, kind: str | No
             return True
     except Exception:
         return False
-
-
-def load_workspace_config() -> dict:
-    path = Path(os.environ.get("DP_WORKSPACE_CONFIG", DEFAULT_WORKSPACE_CONFIG))
-    if not path.exists():
-        raise RuntimeError(f"workspace.json not found at {path}")
-    return json.loads(path.read_text())
 
 
 def bundle_artifact_list(bundle_id: str) -> list[str]:
@@ -675,155 +646,6 @@ def parse_triage_output(content: str | None) -> dict:
     return result
 
 
-def should_enqueue_patch(triage: dict) -> bool:
-    """Determine if a patch job should be auto-enqueued based on triage results."""
-    classification = triage.get("classification", "")
-    confidence = triage.get("confidence", "")
-    
-    if classification not in PATCHABLE_CLASSIFICATIONS:
-        return False
-    if confidence not in PATCHABLE_CONFIDENCE:
-        return False
-    return True
-
-
-def needs_user_context(triage: dict) -> bool:
-    """Return True when confidence is low/unknown and we should ask for input."""
-    confidence = (triage.get("confidence") or "").strip().lower()
-    return confidence in {"", "low", "unknown"}
-
-
-# -----------------------------------------------------------------------------
-# Snippet escalation
-# -----------------------------------------------------------------------------
-
-def parse_snippet_requests(content: str) -> list[str]:
-    """Parse ## Snippet Requests section from markdown, return raw request lines."""
-    match = re.search(
-        r"^##\s*Snippet Requests\s*\n(.*?)(?=^##|\Z)",
-        content,
-        re.MULTILINE | re.DOTALL | re.IGNORECASE
-    )
-    if not match:
-        return []
-    
-    section = match.group(1)
-    requests = []
-    
-    for line in section.split("\n"):
-        line = line.strip()
-        if not line:
-            continue
-        # Parse: - `request:spec` — description
-        m = re.match(r"-\s*`([^`]+)`", line)
-        if m:
-            requests.append(m.group(1))
-    
-    return requests
-
-
-def get_vm_ssh_command() -> list[str]:
-    """Build base SSH command for VM access."""
-    ssh_key = os.environ.get("VM_SSH_KEY", DEFAULT_VM_SSH_KEY)
-    ssh_port = os.environ.get("VM_SSH_PORT", DEFAULT_VM_SSH_PORT)
-    ssh_host = os.environ.get("VM_SSH_HOST", DEFAULT_VM_SSH_HOST)
-    
-    return [
-        "ssh",
-        "-i", ssh_key,
-        "-p", ssh_port,
-        "-o", "StrictHostKeyChecking=no",
-        "-o", "UserKnownHostsFile=/dev/null",
-        "-o", "BatchMode=yes",
-        "-o", "ConnectTimeout=10",
-        ssh_host,
-    ]
-
-
-def run_snippet_extractor(
-    queue_root: Path,
-    bundle_dir: Path,
-    round_num: int,
-    prefer_workdir: bool = True
-) -> tuple[bool, str]:
-    """
-    Run snippet-extractor, either locally or via SSH to VM.
-    
-    Mode selection:
-    - If VM_SSH_HOST is set: SSH to VM and run remotely
-    - Otherwise: Run snippet-extractor directly on local system
-    
-    Returns (success, error_message).
-    """
-    # Build extractor arguments
-    extractor_args = [
-        "--bundle", str(bundle_dir),
-        "--round", str(round_num),
-    ]
-    if prefer_workdir:
-        extractor_args.append("--prefer-workdir")
-    
-    # Determine execution mode based on VM_SSH_HOST presence
-    vm_ssh_host = os.environ.get("VM_SSH_HOST")
-    
-    if vm_ssh_host:
-        # SSH mode: run on remote VM
-        ssh_cmd = get_vm_ssh_command()
-        full_cmd = ssh_cmd + ["/usr/local/bin/snippet-extractor"] + extractor_args
-        mode_desc = f"on VM ({vm_ssh_host})"
-    else:
-        # Local mode: run directly
-        # Try to find snippet-extractor in common locations
-        extractor_path = None
-        candidates = [
-            "/usr/local/bin/snippet-extractor",
-            str(Path(__file__).parent / "snippet-extractor"),
-        ]
-        for candidate in candidates:
-            if Path(candidate).exists():
-                extractor_path = candidate
-                break
-        
-        if not extractor_path:
-            return False, "snippet-extractor not found in expected locations"
-        
-        full_cmd = [extractor_path] + extractor_args
-        mode_desc = "locally"
-    
-    log(queue_root, "INFO", f"running snippet-extractor round {round_num} {mode_desc}")
-    
-    try:
-        result = subprocess.run(
-            full_cmd,
-            capture_output=True,
-            text=True,
-            timeout=120
-        )
-        
-        # Log output
-        if result.stdout:
-            for line in result.stdout.strip().split("\n"):
-                log(queue_root, "DEBUG", f"extractor: {line}")
-        if result.stderr:
-            for line in result.stderr.strip().split("\n"):
-                log(queue_root, "DEBUG", f"extractor: {line}")
-        
-        if result.returncode == 0:
-            log(queue_root, "INFO", f"snippet extraction round {round_num} succeeded")
-            return True, ""
-        elif result.returncode == 1:
-            return False, "No snippet requests found"
-        elif result.returncode == 2:
-            return False, "All snippet requests failed"
-        else:
-            return False, f"Extractor exit code {result.returncode}"
-            
-    except subprocess.TimeoutExpired:
-        return False, "Snippet extraction timed out"
-    except Exception as e:
-        error_type = "SSH/extractor" if vm_ssh_host else "Extractor"
-        return False, f"{error_type} error: {e}"
-
 
 def build_snippet_feedback(bundle_dir: Path, round_num: int) -> str:
     """Generate feedback section from snippet manifest for agent context."""
@@ -885,7 +707,7 @@ def build_snippet_feedback(bundle_dir: Path, round_num: int) -> str:
     
     # Add summary
     total_rounds = manifest.get("total_rounds", 0)
-    max_rounds = int(os.environ.get("OPENCODE_MAX_SNIPPET_ROUNDS", DEFAULT_MAX_SNIPPET_ROUNDS))
+    max_rounds = int(os.environ.get("DP_HARNESS_MAX_SNIPPET_ROUNDS", "5"))
     remaining_rounds = max_rounds - total_rounds
     
     parts.append(f"**Snippet rounds used:** {total_rounds}/{max_rounds} (remaining: {remaining_rounds})")
@@ -959,107 +781,6 @@ def load_snippets_content(bundle_dir: Path, round_num: int, max_bytes: int = 200
     return "\n".join(parts)
 
 
-def enqueue_followup_job(
-    queue_root: Path,
-    job: dict,
-    job_type: str,
-    new_round: int,
-    parent_job_name: str
-) -> Path:
-    """Create a follow-up job with incremented snippet round."""
-    ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%SZ")
-    origin_safe = job.get("origin", "unknown").replace("/", "_")
-    pid = os.getpid()
-    
-    job_name = f"{ts}-{job.get('profile', 'unknown')}-{origin_safe}-{pid}-{job_type}-r{new_round}.job"
-    
-    pending_dir = queue_root / "pending"
-    job_path = pending_dir / job_name
-    
-    content = [
-        f"type={job_type}",
-        f"created_ts_utc={ts}",
-        f"profile={job.get('profile', '')}",
-        f"origin={job.get('origin', '')}",
-        f"flavor={job.get('flavor', '')}",
-        f"bundle_id={job.get('bundle_id', '')}",
-        f"run_id={job.get('run_id', '')}",
-        f"snippet_round={new_round}",
-        f"has_snippets=true",
-        f"parent_job={parent_job_name}",
-    ]
-    
-    # Preserve triage relpath for patch jobs
-    if job_type == "patch":
-        content.append("triage_relpath=analysis/triage.md")
-    
-    # Atomic write
-    tmp_path = job_path.with_suffix(".tmp")
-    with open(tmp_path, "w") as f:
-        f.write("\n".join(content) + "\n")
-    tmp_path.rename(job_path)
-    
-    return job_path
-
-
-def check_and_handle_snippet_requests(
-    queue_root: Path,
-    job: dict,
-    job_type: str,
-    job_path: Path,
-    bundle_dir: Path | None,
-    response_text: str
-) -> tuple[bool, str]:
-    """
-    Check if agent requested snippets and handle extraction.
-    Returns (should_continue_processing, message).
-    
-    If snippets were requested and we haven't hit max rounds:
-    - Run extractor on VM
-    - Enqueue follow-up job
-    - Return (False, "enqueued follow-up")
-    
-    Otherwise return (True, "") to continue normal processing.
-    """
-    # Parse snippet requests from response
-    requests = parse_snippet_requests(response_text)
-    if not requests:
-        return True, ""
-    
-    current_round = int(job.get("snippet_round", "0"))
-    max_rounds = int(os.environ.get("OPENCODE_MAX_SNIPPET_ROUNDS", DEFAULT_MAX_SNIPPET_ROUNDS))
-    
-    if bundle_dir is None:
-        log(queue_root, "WARN", "snippet requests found but bundle_dir is unavailable")
-        return True, ""
-    
-    if current_round >= max_rounds:
-        log(queue_root, "WARN", f"snippet requests found but max rounds ({max_rounds}) reached")
-        return True, ""
-    
-    new_round = current_round + 1
-    log(queue_root, "INFO", f"found {len(requests)} snippet requests, starting round {new_round}")
-    
-    # Run extractor on VM
-    success, error = run_snippet_extractor(queue_root, bundle_dir, new_round)
-    if not success:
-        log(queue_root, "WARN", f"snippet extraction failed: {error}")
-        # Continue processing anyway - agent will work without snippets
-        return True, ""
-    
-    # Enqueue follow-up job
-    followup_path = enqueue_followup_job(
-        queue_root, job, job_type, new_round, job_path.name
-    )
-    log(queue_root, "INFO", f"enqueued follow-up job: {followup_path.name}")
-    
-    return False, f"enqueued snippet round {new_round}"
-
-
-# -----------------------------------------------------------------------------
-# Payload builders
-# -----------------------------------------------------------------------------
-
 def build_triage_payload(
     bundle_dir: Path | None,
     kedb_dir: Path | None = None,
@@ -1109,16 +830,6 @@ def build_triage_payload(
         parts.append(meta)
         parts.append("")
 
-    try:
-        workspace = load_workspace_config()
-    except Exception:
-        workspace = None
-    if workspace:
-        parts.append("## Workspace Config")
-        parts.append("```json")
-        parts.append(json.dumps(workspace, indent=2, sort_keys=True))
-        parts.append("```")
-        parts.append("")
     
     # Build errors
     errors = read_bundle_text(bundle_dir, bundle_id, "logs/errors.txt")
@@ -1325,228 +1036,6 @@ def build_patch_payload(
 
 
 
-# -----------------------------------------------------------------------------
-# API calls
-# -----------------------------------------------------------------------------
-
-def _read_json_response(resp: urllib.response.addinfourl, url: str) -> dict:
-    raw = resp.read()
-    if not raw:
-        raise RuntimeError(f"Empty response from {url}")
-    text = raw.decode(errors="replace").strip()
-    try:
-        return json.loads(text)
-    except json.JSONDecodeError as exc:
-        snippet = text[:200]
-        raise RuntimeError(f"Invalid JSON from {url}: {exc}: {snippet}")
-
-
-def call_opencode(
-    url: str,
-    payload: str,
-    agent: str | None,
-    provider: str | None,
-    model: str | None,
-    timeout: int
-) -> dict:
-    """
-    Call opencode serve API:
-    1. POST /session to create session
-    2. POST /session/<id>/message to send payload
-    Returns the full response dict.
-    """
-    headers = {"Content-Type": "application/json"}
-    
-    # Create session
-    session_url = f"{url.rstrip('/')}/session"
-    req = urllib.request.Request(
-        session_url,
-        data=json.dumps({}).encode(),
-        headers=headers,
-        method="POST"
-    )
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        session_data = _read_json_response(resp, session_url)
-    
-    session_id = session_data.get("id")
-    if not session_id:
-        raise RuntimeError(f"No session ID in response: {session_data}")
-    
-    # Send message
-    message_url = f"{url.rstrip('/')}/session/{session_id}/message"
-    message_body = {
-        "parts": [{"type": "text", "text": payload}]
-    }
-    
-    # Agent must be specified in the message body for subagents
-    if agent:
-        message_body["agent"] = agent
-    
-    # Add model specification if provided
-    if provider and model:
-        message_body["model"] = {"providerID": provider, "modelID": model}
-    elif model:
-        message_body["model"] = {"providerID": "opencode", "modelID": model}
-    
-    req = urllib.request.Request(
-        message_url,
-        data=json.dumps(message_body).encode(),
-        headers=headers,
-        method="POST"
-    )
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        response_data = _read_json_response(resp, message_url)
-    
-    response_data["_session_id"] = session_id
-    return response_data
-
-
-def extract_response_text(response: dict) -> str:
-    """Extract the assistant's text response from API response."""
-    info = response.get("info", {})
-    error = info.get("error")
-    if error:
-        error_name = error.get("name", "UnknownError")
-        error_data = error.get("data", {})
-        error_msg = error_data.get("message", str(error_data))
-        return f"# Error: {error_name}\n\n{error_msg}"
-
-    parts = response.get("parts", [])
-    text_parts = []
-    for part in parts:
-        if isinstance(part, dict) and part.get("type") == "text":
-            text_parts.append(part.get("text", ""))
-        elif isinstance(part, str):
-            text_parts.append(part)
-
-    if text_parts:
-        return "\n".join(text_parts)
-
-    return json.dumps(response, indent=2)
-
-
-def extract_section(text: str, heading: str) -> str | None:
-    pattern = rf"^##\s+{re.escape(heading)}(?:\s+\(JSON\))?\s*$\n(.*?)(?=^##\s+|\Z)"
-    match = re.search(pattern, text, flags=re.M | re.S)
-    if not match:
-        return None
-    return match.group(1).strip()
-
-
-def extract_json_block(text: str, heading: str) -> str | None:
-    section = extract_section(text, heading)
-    if not section:
-        return None
-    match = re.search(r"```json\s*(.*?)```", section, flags=re.S)
-    if not match:
-        return None
-    return match.group(1).strip()
-
-
-# -----------------------------------------------------------------------------
-# Output writers
-# -----------------------------------------------------------------------------
-
-def write_triage_outputs(bundle_dir: Path | None, response: dict, session_id: str, bundle_id: str | None):
-    """Write triage analysis outputs to bundle or artifact store."""
-    text = extract_response_text(response)
-    json_bytes = json.dumps(response, indent=2).encode("utf-8")
-    md_bytes = (text + "\n").encode("utf-8")
-    session_bytes = (session_id + "\n").encode("utf-8")
-
-    if bundle_id:
-        if not artifact_store_put(bundle_id, "analysis/triage.json", json_bytes, "json"):
-            raise RuntimeError("failed to write triage.json to artifact store")
-        if not artifact_store_put(bundle_id, "analysis/session_id.txt", session_bytes, "text"):
-            raise RuntimeError("failed to write session_id.txt to artifact store")
-        if not artifact_store_put(bundle_id, "analysis/triage.md", md_bytes, "text"):
-            raise RuntimeError("failed to write triage.md to artifact store")
-        return
-
-    if bundle_dir is None:
-        raise RuntimeError("bundle_dir or bundle_id required")
-
-    analysis_dir = bundle_dir / "analysis"
-    analysis_dir.mkdir(exist_ok=True)
-
-    with open(analysis_dir / "triage.json", "w") as f:
-        f.write(json_bytes.decode("utf-8"))
-
-    with open(analysis_dir / "session_id.txt", "w") as f:
-        f.write(session_id + "\n")
-
-    with open(analysis_dir / "triage.md", "w") as f:
-        f.write(text + "\n")
-
-
-def write_patch_outputs(bundle_dir: Path | None, response: dict, session_id: str, bundle_id: str | None) -> tuple[bool, str]:
-    """Write patch outputs to bundle or artifact store."""
-    text = extract_response_text(response)
-    json_bytes = json.dumps(response, indent=2).encode("utf-8")
-    md_bytes = (text + "\n").encode("utf-8")
-    session_bytes = (session_id + "\n").encode("utf-8")
-
-    patch_log = extract_section(text, "Patch Log") or text
-    rebuild_status = extract_section(text, "Rebuild Status") or "UNKNOWN"
-    patch_plan_json = extract_json_block(text, "Patch Plan")
-    rebuild_proof_json = extract_json_block(text, "Rebuild Proof")
-
-    def write_text(relpath: str, content: str) -> bool:
-        data = (content.rstrip() + "\n").encode("utf-8")
-        if bundle_id:
-            return artifact_store_put(bundle_id, relpath, data, "text")
-        if bundle_dir:
-            path = bundle_dir / relpath
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_bytes(data)
-            return True
-        return False
-
-    def write_json(relpath: str, content: str) -> bool:
-        data = (content.rstrip() + "\n").encode("utf-8")
-        if bundle_id:
-            return artifact_store_put(bundle_id, relpath, data, "json")
-        if bundle_dir:
-            path = bundle_dir / relpath
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_bytes(data)
-            return True
-        return False
-
-    if bundle_id:
-        if not artifact_store_put(bundle_id, "analysis/patch.json", json_bytes, "json"):
-            return False, "Failed to write patch.json to artifact store"
-        if not artifact_store_put(bundle_id, "analysis/patch_session_id.txt", session_bytes, "text"):
-            return False, "Failed to write patch_session_id.txt to artifact store"
-        if not artifact_store_put(bundle_id, "analysis/patch.md", md_bytes, "text"):
-            return False, "Failed to write patch.md to artifact store"
-    elif bundle_dir:
-        analysis_dir = bundle_dir / "analysis"
-        analysis_dir.mkdir(exist_ok=True)
-        (analysis_dir / "patch.json").write_bytes(json_bytes)
-        (analysis_dir / "patch_session_id.txt").write_text(session_id + "\n")
-        (analysis_dir / "patch.md").write_bytes(md_bytes)
-    else:
-        return False, "bundle_dir or bundle_id required"
-
-    if not write_text("analysis/patch.log", patch_log):
-        return False, "Failed to write patch.log"
-    if not write_text("analysis/rebuild_status.txt", rebuild_status):
-        return False, "Failed to write rebuild_status.txt"
-
-    if patch_plan_json:
-        if not write_json("analysis/patch_plan.json", patch_plan_json):
-            return False, "Failed to write patch_plan.json"
-    if rebuild_proof_json:
-        if not write_json("analysis/rebuild_proof.json", rebuild_proof_json):
-            return False, "Failed to write rebuild_proof.json"
-
-    return True, ""
-
-
-
-# -----------------------------------------------------------------------------
-# Job management
 # -----------------------------------------------------------------------------
 
 def move_job(job_path: Path, dest_dir: str) -> Path:
@@ -1842,122 +1331,21 @@ def process_triage_job(
     job_path: Path,
     job: dict,
     bundle_dir: Path | None,
-    opencode_url: str,
-    opencode_provider: str | None,
-    opencode_model: str | None,
-    timeout: int,
-    max_retries: int,
-    retry_delay: int,
-    kedb_dir: Path | None
+    kedb_dir: Path | None,
 ) -> tuple[bool, str]:
-    """
-    Process a triage job.
-    Returns (success, status_message).
-    Status message can be "done", "snippet_followup", or error text.
-    """
-    agent = "dports-triage"
+    """Process a triage job via the dportsv3.agent harness."""
+    harness_model = os.environ.get("DP_HARNESS_TRIAGE_MODEL")
+    if not harness_model:
+        msg = "DP_HARNESS_TRIAGE_MODEL not set; cannot run triage"
+        write_error_note(job_path, msg)
+        return False, msg
     payload = build_triage_payload(bundle_dir, kedb_dir, job)
-    snippet_round = int(job.get("snippet_round", "0"))
     origin = job.get("origin", "unknown")
     job_id = job_path.name
-
-    # If DP_HARNESS_TRIAGE_MODEL is set, route triage through the in-process
-    # litellm harness instead of opencode. Snippet rounds fold into the
-    # harness call; the runner no longer re-enqueues for them.
-    harness_model = os.environ.get("DP_HARNESS_TRIAGE_MODEL")
-    if harness_model:
-        return _process_triage_job_harness(
-            queue_root, job_path, job, bundle_dir, kedb_dir,
-            payload, origin, job_id, harness_model,
-        )
-
-    last_error = None
-    model_info = f"{opencode_provider}/{opencode_model}" if opencode_provider and opencode_model else "agent-default"
-    
-    for attempt in range(max_retries):
-        try:
-            activity_log(queue_root, "api_call_start", 
-                        f"Calling {agent} for {origin} (attempt {attempt + 1}/{max_retries})",
-                        job_id=job_id, extra={"agent": agent, "model": model_info, "round": snippet_round})
-            
-            start_time = time.time()
-            response = call_opencode(opencode_url, payload, agent, opencode_provider, opencode_model, timeout)
-            duration_ms = int((time.time() - start_time) * 1000)
-            session_id = response.get("_session_id", "unknown")
-            
-            activity_log(queue_root, "api_call_complete",
-                        f"Triage response received for {origin}",
-                        job_id=job_id, duration_ms=duration_ms)
-            
-            bundle_id = job.get("bundle_id")
-            write_triage_outputs(bundle_dir, response, session_id, bundle_id)
-            activity_log(queue_root, "write_output",
-                        f"Wrote triage.md for {origin}",
-                        job_id=job_id)
-            
-            # Check for snippet requests before deciding on patch job
-            response_text = extract_response_text(response)
-            should_continue, snippet_msg = check_and_handle_snippet_requests(
-                queue_root, job, "triage", job_path, bundle_dir, response_text
-            )
-            
-            if not should_continue:
-                # Snippet follow-up was enqueued
-                return True, "snippet_followup"
-            
-            # Check if we should auto-enqueue a patch job
-            bundle_id = job.get("bundle_id")
-            triage_text = read_bundle_text(bundle_dir, bundle_id, "analysis/triage.md")
-            triage = parse_triage_output(triage_text)
-            if needs_user_context(triage):
-                run_id = job.get("run_id", "")
-                iteration = int(job.get("iteration", "1"))
-                max_iterations = int(job.get("max_iterations", str(DEFAULT_MAX_ITERATIONS)))
-                upsert_user_context_request(
-                    queue_root,
-                    run_id=run_id,
-                    origin=origin,
-                    bundle_id=bundle_id or (bundle_dir.name if bundle_dir else ""),
-                    classification=triage.get("classification", ""),
-                    confidence=triage.get("confidence", ""),
-                    iteration=iteration,
-                    max_iterations=max_iterations,
-                )
-                activity_log(queue_root, "needs_user_context",
-                            f"Need user context for {origin} (confidence {triage.get('confidence', 'unknown')})",
-                            job_id=job_id,
-                            extra={"classification": triage.get("classification", ""), "confidence": triage.get("confidence", ""), "run_id": run_id})
-                update_runner_status("waiting", job_id=job_id, stage="waiting_user_context",
-                                    extra={"origin": origin, "type": "triage"})
-                return True, "needs_user_context"
-
-            if should_enqueue_patch(triage):
-                patch_job_path = enqueue_patch_job(queue_root, job)
-                activity_log(queue_root, "enqueue_patch",
-                            f"Auto-enqueued patch job for {origin} ({triage['classification']})",
-                            job_id=job_id, extra={"classification": triage['classification'], "confidence": triage['confidence']})
-            else:
-                activity_log(queue_root, "no_patch",
-                            f"No patch job for {origin} ({triage['classification']})",
-                            job_id=job_id, extra={"classification": triage['classification'], "confidence": triage['confidence']})
-            
-            return True, "done"
-            
-        except (urllib.error.URLError, urllib.error.HTTPError, OSError, RuntimeError) as e:
-            last_error = str(e)
-            activity_log(queue_root, "api_error",
-                        f"Attempt {attempt + 1} failed: {last_error[:100]}",
-                        job_id=job_id)
-            
-            if attempt < max_retries - 1:
-                delay = min(retry_delay * (2 ** attempt), 60)
-                log(queue_root, "INFO", f"retrying in {delay}s...")
-                time.sleep(delay)
-    
-    write_error_note(job_path, last_error or "unknown error")
-    return False, last_error or "unknown error"
-
-
+    return _process_triage_job_harness(
+        queue_root, job_path, job, bundle_dir, kedb_dir,
+        payload, origin, job_id, harness_model,
+    )
 def _write_patch_audit_harness(
     bundle_dir: Path | None,
     bundle_id: str | None,
@@ -2134,109 +1522,26 @@ def process_patch_job(
     job_path: Path,
     job: dict,
     bundle_dir: Path | None,
-    opencode_url: str,
-    opencode_provider: str | None,
-    opencode_model: str | None,
-    timeout: int,
-    max_retries: int,
-    retry_delay: int,
-    kedb_dir: Path | None
+    kedb_dir: Path | None,
 ) -> tuple[bool, str]:
-    """
-    Process a patch job.
-    Returns (success, status_message).
-    Status message can be "done", "snippet_followup", or error text.
-    """
-    agent = "dports-patch"
+    """Process a patch job via the dportsv3.agent harness."""
+    harness_model = os.environ.get("DP_HARNESS_PATCH_MODEL")
+    if not harness_model:
+        msg = "DP_HARNESS_PATCH_MODEL not set; cannot run patch"
+        write_error_note(job_path, msg)
+        return False, msg
     payload = build_patch_payload(bundle_dir, kedb_dir, job)
-    snippet_round = int(job.get("snippet_round", "0"))
     origin = job.get("origin", "unknown")
     job_id = job_path.name
-
-    # If DP_HARNESS_PATCH_MODEL is set, route patch through the in-process
-    # litellm harness instead of opencode.
-    harness_model = os.environ.get("DP_HARNESS_PATCH_MODEL")
-    if harness_model:
-        return _process_patch_job_harness(
-            queue_root, job_path, job, bundle_dir, kedb_dir,
-            payload, origin, job_id, harness_model,
-        )
-
-    last_error = None
-    model_info = f"{opencode_provider}/{opencode_model}" if opencode_provider and opencode_model else "agent-default"
-    
-    for attempt in range(max_retries):
-        try:
-            activity_log(queue_root, "api_call_start",
-                        f"Calling {agent} for {origin} (attempt {attempt + 1}/{max_retries})",
-                        job_id=job_id, extra={"agent": agent, "model": model_info, "round": snippet_round})
-            
-            start_time = time.time()
-            response = call_opencode(opencode_url, payload, agent, opencode_provider, opencode_model, timeout)
-            duration_ms = int((time.time() - start_time) * 1000)
-            session_id = response.get("_session_id", "unknown")
-            
-            activity_log(queue_root, "api_call_complete",
-                        f"Patch response received for {origin}",
-                        job_id=job_id, duration_ms=duration_ms)
-            
-            # Write outputs first (before checking for snippets)
-            bundle_id = job.get("bundle_id")
-            success, error = write_patch_outputs(bundle_dir, response, session_id, bundle_id)
-            
-            if success:
-                activity_log(queue_root, "write_output",
-                            f"Wrote patch outputs for {origin}",
-                            job_id=job_id)
-
-            # Check for snippet requests
-            response_text = extract_response_text(response)
-            should_continue, snippet_msg = check_and_handle_snippet_requests(
-                queue_root, job, "patch", job_path, bundle_dir, response_text
-            )
-
-            if not should_continue:
-                # Snippet follow-up was enqueued
-                activity_log(queue_root, "snippet_followup",
-                            f"Enqueued snippet follow-up for {origin}",
-                            job_id=job_id, extra={"round": snippet_round + 1})
-                return True, "snippet_followup"
-
-            if success:
-                return True, "done"
-
-            activity_log(queue_root, "patch_invalid",
-                        f"Patch output failed for {origin}: {error[:80]}",
-                        job_id=job_id)
-            write_error_note(job_path, error)
-            return False, error
-            
-        except (urllib.error.URLError, urllib.error.HTTPError, OSError, RuntimeError) as e:
-            last_error = str(e)
-            activity_log(queue_root, "api_error",
-                        f"Attempt {attempt + 1} failed: {last_error[:100]}",
-                        job_id=job_id)
-            
-            if attempt < max_retries - 1:
-                delay = min(retry_delay * (2 ** attempt), 60)
-                log(queue_root, "INFO", f"retrying in {delay}s...")
-                time.sleep(delay)
-    
-    write_error_note(job_path, last_error or "unknown error")
-    return False, last_error or "unknown error"
-
-
+    return _process_patch_job_harness(
+        queue_root, job_path, job, bundle_dir, kedb_dir,
+        payload, origin, job_id, harness_model,
+    )
 def process_job(
     queue_root: Path,
     job_path: Path,
-    opencode_url: str,
-    opencode_provider: str | None,
-    opencode_model: str | None,
-    timeout: int,
-    max_retries: int,
-    retry_delay: int,
     dry_run: bool,
-    kedb_dir: Path | None
+    kedb_dir: Path | None,
 ):
     """Process a single job (dispatch based on type)."""
     job = parse_job_file(job_path)
@@ -2244,16 +1549,14 @@ def process_job(
     bundle_dir_value = job.get("bundle_dir")
     bundle_dir = Path(bundle_dir_value) if bundle_dir_value else None
     bundle_id = job.get("bundle_id")
-    snippet_round = job.get("snippet_round", "0")
     origin = job.get("origin", "unknown")
     job_id = job_path.name
-    
+
     log(queue_root, "INFO", f"processing job {job_path.name}")
-    
-    # Update runner status to show we're working on this job
+
     update_runner_status("processing", job_id=job_id, stage=f"{job_type}_start",
                         extra={"origin": origin, "type": job_type})
-    
+
     if bundle_dir is None and not bundle_id:
         log(queue_root, "ERROR", "missing bundle_id/bundle_dir in job")
         write_error_note(job_path, "missing bundle_id/bundle_dir in job")
@@ -2266,16 +1569,16 @@ def process_job(
         move_job(job_path, "failed")
         update_runner_status("idle", job_id=None, stage=None)
         return
-    
+
     if dry_run:
         if job_type == "patch":
             payload = build_patch_payload(bundle_dir, kedb_dir, job)
         else:
             payload = build_triage_payload(bundle_dir, kedb_dir, job)
 
-        log(queue_root, "INFO", f"[dry-run] type={job_type}, round={snippet_round}, would send payload ({len(payload)} bytes)")
+        log(queue_root, "INFO", f"[dry-run] type={job_type}, would send payload ({len(payload)} bytes)")
         print("=" * 60)
-        print(f"JOB TYPE: {job_type} (snippet_round={snippet_round})")
+        print(f"JOB TYPE: {job_type}")
         print("=" * 60)
         print(payload)
         print("=" * 60)
@@ -2283,28 +1586,20 @@ def process_job(
         update_runner_status("idle", job_id=None, stage=None)
         return
 
-    # Dispatch based on job type
     if job_type == "patch":
         success, status = process_patch_job(
-            queue_root, job_path, job, bundle_dir,
-            opencode_url, opencode_provider, opencode_model,
-            timeout, max_retries, retry_delay, kedb_dir
+            queue_root, job_path, job, bundle_dir, kedb_dir,
         )
     elif job_type == "triage":
         success, status = process_triage_job(
-            queue_root, job_path, job, bundle_dir,
-            opencode_url, opencode_provider, opencode_model,
-            timeout, max_retries, retry_delay, kedb_dir
+            queue_root, job_path, job, bundle_dir, kedb_dir,
         )
     else:
         success, status = False, f"unknown job type: {job_type}"
-    
+
     if success:
         move_job(job_path, "done")
-        if status == "snippet_followup":
-            log(queue_root, "INFO", "moved job to done/ (snippet follow-up enqueued)")
-        else:
-            log(queue_root, "INFO", "moved job to done/")
+        log(queue_root, "INFO", "moved job to done/")
     else:
         # Write error file for visibility in UI
         error_file = job_path.with_suffix(".job.error")
@@ -2327,29 +1622,24 @@ def process_job(
 # -----------------------------------------------------------------------------
 
 def main():
-    parser = argparse.ArgumentParser(description="Process dsynth failure jobs via opencode serve")
+    parser = argparse.ArgumentParser(description="Process dsynth failure jobs via the dportsv3.agent harness")
     parser.add_argument("--queue-root", required=True, help="Path to queue directory")
     parser.add_argument("--once", action="store_true", help="Process one job and exit")
-    parser.add_argument("--dry-run", action="store_true", help="Print payload without calling opencode")
+    parser.add_argument("--dry-run", action="store_true", help="Print payload without calling the LLM")
     parser.add_argument("--kedb-dir", help="Path to KEDB directory (default: auto-detect)")
     args = parser.parse_args()
-    
+
     queue_root = Path(args.queue_root)
-    
-    # Validate queue structure
+
     for subdir in ["pending", "inflight", "done", "failed"]:
         d = queue_root / subdir
         if not d.exists():
             print(f"error: queue directory missing: {d}", file=sys.stderr)
             sys.exit(1)
-    
-    # Initialize state DB for activity logging
+
     init_state_db(queue_root)
-    
-    # Start heartbeat thread (updates runner_status.updated_at every 5s)
     start_heartbeat()
-    
-    # Find KEDB directory
+
     if args.kedb_dir:
         kedb_dir = Path(args.kedb_dir)
         if not kedb_dir.exists():
@@ -2357,54 +1647,31 @@ def main():
             kedb_dir = None
     else:
         kedb_dir = find_kedb_dir()
-    
-    # Get config from environment
-    opencode_url = os.environ.get("OPENCODE_URL")
-    if not opencode_url and not args.dry_run:
-        print("error: OPENCODE_URL environment variable required", file=sys.stderr)
-        sys.exit(1)
-    
-    opencode_provider = os.environ.get("OPENCODE_PROVIDER", "opencode")
-    opencode_model = os.environ.get("OPENCODE_MODEL", "gpt-5-nano")
-    timeout = int(os.environ.get("OPENCODE_TIMEOUT", "120"))
-    max_retries = int(os.environ.get("OPENCODE_MAX_RETRIES", "3"))
-    retry_delay = int(os.environ.get("OPENCODE_RETRY_DELAY", "8"))
-    
-    model_info = f"{opencode_provider}/{opencode_model}"
+
+    triage_model = os.environ.get("DP_HARNESS_TRIAGE_MODEL") or "<unset>"
+    patch_model = os.environ.get("DP_HARNESS_PATCH_MODEL") or "<unset>"
     kedb_info = str(kedb_dir) if kedb_dir else "none"
-    log(queue_root, "INFO", f"starting runner (once={args.once}, dry_run={args.dry_run}, model={model_info}, kedb={kedb_info})")
-    
-    # Log startup activity
-    activity_log(queue_root, "runner_start", f"Runner started (model={model_info})")
+    log(queue_root, "INFO",
+        f"starting runner (once={args.once}, dry_run={args.dry_run}, "
+        f"triage_model={triage_model}, patch_model={patch_model}, kedb={kedb_info})")
+    activity_log(queue_root, "runner_start",
+                 f"Runner started (triage={triage_model}, patch={patch_model})")
     update_runner_status("idle", job_id=None, stage=None)
-    
+
     try:
         if args.once:
             job = claim_next_job(queue_root)
             if job:
-                process_job(
-                    queue_root, job, opencode_url,
-                    opencode_provider, opencode_model,
-                    timeout, max_retries, retry_delay,
-                    args.dry_run, kedb_dir
-                )
+                process_job(queue_root, job, args.dry_run, kedb_dir)
             else:
                 log(queue_root, "INFO", "no jobs in queue")
         else:
             while True:
-                # Check for user context updates and enqueue triage retries
                 process_user_context_updates(queue_root)
-
                 job = claim_next_job(queue_root)
                 if job:
-                    process_job(
-                        queue_root, job, opencode_url,
-                        opencode_provider, opencode_model,
-                        timeout, max_retries, retry_delay,
-                        args.dry_run, kedb_dir
-                    )
+                    process_job(queue_root, job, args.dry_run, kedb_dir)
                 else:
-                    # Update status to show we're waiting for jobs
                     update_runner_status("idle", job_id=None, stage="waiting")
                     time.sleep(5)
     except KeyboardInterrupt:
