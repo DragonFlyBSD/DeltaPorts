@@ -1,0 +1,115 @@
+"""Multi-turn LLM-with-tools driver.
+
+One call to ``run(...)`` is a single conversation with the LLM:
+- Send messages + tool schemas
+- If the LLM emitted ``tool_calls``, dispatch each, append the results
+  as ``tool`` messages, and re-call
+- Stop when the LLM returns text-only (no tool calls) or when
+  ``max_turns`` is hit
+
+The caller (``patch.run`` in step 4) handles attempt-level retries
+with fresh failure context; this driver is one inner attempt.
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+
+from . import llm, tools
+from .llm import Response, Usage
+
+log = logging.getLogger(__name__)
+
+
+def _assistant_message_from(response: Response) -> dict:
+    """Reconstruct the assistant message dict that produced ``response``.
+
+    Needed so the next LLM call sees the tool calls the model made on
+    the previous turn (otherwise it has amnesia about its own request).
+    """
+    msg: dict = {"role": "assistant", "content": response.text or ""}
+    if response.tool_calls:
+        msg["tool_calls"] = [
+            {
+                "id": tc.id,
+                "type": "function",
+                "function": {
+                    "name": tc.name,
+                    "arguments": json.dumps(tc.arguments or {}),
+                },
+            }
+            for tc in response.tool_calls
+        ]
+    return msg
+
+
+def run(
+    messages: list[dict],
+    *,
+    model: str,
+    env: str,
+    api_base: str | None = None,
+    api_key: str | None = None,
+    timeout: int = 120,
+    max_turns: int = 20,
+) -> tuple[Response, Usage]:
+    """Drive the LLM through tool calls until it returns text-only.
+
+    ``messages`` is mutated to include each assistant + tool turn for
+    the duration of the loop. ``env`` is the dev-env name; every tool
+    call is bound to it.
+
+    Returns the final text-only ``Response`` and the cumulative
+    ``Usage`` across all turns.
+
+    Hits ``max_turns`` if the model loops on tool calls without ever
+    returning a text response — the safety cap protects against runaway
+    burns inside a single attempt.
+    """
+    total = Usage()
+    tool_schemas = tools.schemas()
+    final: Response | None = None
+
+    for turn in range(1, max_turns + 1):
+        response = llm.complete(
+            messages,
+            model=model,
+            tools=tool_schemas,
+            api_base=api_base,
+            api_key=api_key,
+            timeout=timeout,
+        )
+        total.add(response.usage)
+
+        if not response.tool_calls:
+            log.debug("tool_loop: turn %d returned text-only, stopping", turn)
+            return response, total
+
+        log.debug(
+            "tool_loop: turn %d issued %d tool call(s): %s",
+            turn,
+            len(response.tool_calls),
+            [tc.name for tc in response.tool_calls],
+        )
+
+        # Echo the assistant's tool-call message back into history so
+        # the model has continuity on the next turn.
+        messages.append(_assistant_message_from(response))
+
+        for call in response.tool_calls:
+            result = tools.dispatch(call.name, call.arguments, env=env)
+            messages.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": call.id,
+                    "name": call.name,
+                    "content": json.dumps(result),
+                }
+            )
+        final = response
+
+    log.warning(
+        "tool_loop: hit max_turns=%d without a text-only response", max_turns
+    )
+    return (final if final is not None else Response(text="")), total
