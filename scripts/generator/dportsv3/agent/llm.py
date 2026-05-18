@@ -1,8 +1,55 @@
-"""litellm wrapper with a normalized response shape."""
+"""litellm wrapper with a normalized response shape.
+
+DragonFly's py311-tokenizers package ships a tokenizers.abi3.so with
+missing DT_NEEDED entries (libonig, esaxx); loading it fails at import
+time. litellm imports tokenizers transitively for its local cost
+calculator. We don't need local token counting — usage totals come
+from response.usage.total_tokens — so we pre-empt the import with a
+small no-op stub iff the real tokenizers can't be loaded. The stub
+exposes the surface litellm touches (Tokenizer.from_pretrained,
+.encode); calls on the stub return empty results and we never see them
+because we don't call cost_calculator.
+
+When the platform's tokenizers works (Linux, macOS), the try block
+succeeds and the stub never runs.
+"""
 
 from __future__ import annotations
 
+import sys
+import types
 from dataclasses import dataclass, field
+
+
+def _ensure_tokenizers_importable() -> None:
+    try:
+        import tokenizers  # noqa: F401
+        return
+    except ImportError:
+        pass
+
+    fake = types.ModuleType("tokenizers")
+
+    class _Encoding:
+        ids: list[int] = []
+        tokens: list[str] = []
+
+    class _Tokenizer:
+        @classmethod
+        def from_pretrained(cls, *args, **kwargs) -> "_Tokenizer":
+            return cls()
+        @classmethod
+        def from_file(cls, *args, **kwargs) -> "_Tokenizer":
+            return cls()
+        def encode(self, *args, **kwargs) -> _Encoding:
+            return _Encoding()
+
+    fake.Tokenizer = _Tokenizer
+    fake.Encoding = _Encoding
+    sys.modules["tokenizers"] = fake
+
+
+_ensure_tokenizers_importable()
 
 
 @dataclass
