@@ -94,6 +94,36 @@ def _run_dportsv3(*args: str) -> subprocess.CompletedProcess:
     )
 
 
+# Cap per-stream output the LLM sees. Build errors live at the tail of
+# the log; we preserve the LAST bytes when truncating, not the first.
+_MAX_STREAM_BYTES = 32_768
+
+
+def _tail(s: str, max_bytes: int = _MAX_STREAM_BYTES) -> tuple[str, bool]:
+    if len(s) <= max_bytes:
+        return s, False
+    return "…[truncated]…\n" + s[-max_bytes:], True
+
+
+def _exec_result(rc: int, stdout: str, stderr: str, **extra) -> dict:
+    """Build a uniform tool-result dict from a subprocess outcome.
+
+    LLM-facing tools return this shape so the harness/LLM can inspect
+    the failure rather than recovering from an opaque exception.
+    """
+    out, out_trunc = _tail(stdout)
+    err, err_trunc = _tail(stderr)
+    return {
+        "ok": rc == 0,
+        "rc": rc,
+        "stdout_tail": out,
+        "stderr_tail": err,
+        "stdout_truncated": out_trunc,
+        "stderr_truncated": err_trunc,
+        **extra,
+    }
+
+
 @lru_cache(maxsize=32)
 def env_paths(env: str) -> EnvPaths:
     """Resolve host-side paths for ``env``. Cached per-process.
@@ -222,8 +252,9 @@ def put_file(
 def emit_diff(env: str, origin: str, relpath: str) -> dict:
     """Return the working-tree diff for ``ports/<origin>/<relpath>``.
 
-    Pure read — never commits, never stages. Output is empty when the
-    file hasn't been modified vs HEAD.
+    Pure read — never commits, never stages. ``diff`` is empty when
+    the file hasn't been modified vs HEAD. ``ok`` is False only on
+    git invocation errors (rc >= 128), not on "no changes" (rc=0).
     """
     paths = env_paths(env)
     rel = f"ports/{origin}/{relpath}"
@@ -231,9 +262,14 @@ def emit_diff(env: str, origin: str, relpath: str) -> dict:
         ["git", "-C", str(paths.deltaports), "diff", "--", rel],
         capture_output=True, text=True, check=False,
     )
-    if p.returncode not in (0,):
-        raise RuntimeError(f"git diff failed: {p.stderr.strip()}")
-    return {"origin": origin, "relpath": relpath, "diff": p.stdout}
+    diff_text, diff_trunc = _tail(p.stdout, max_bytes=_MAX_STREAM_BYTES * 2)
+    return _exec_result(
+        p.returncode, "", p.stderr,
+        origin=origin,
+        relpath=relpath,
+        diff=diff_text,
+        diff_truncated=diff_trunc,
+    )
 
 
 def grep(
@@ -286,74 +322,56 @@ def _exec(env: str, *argv: str, cwd: str = "/work/DeltaPorts") -> subprocess.Com
 
 
 def materialize_dports(env: str, origin: str) -> dict:
-    """Regenerate the DPorts tree for ``origin`` using the env's ``reapply`` helper.
+    """Regenerate the DPorts tree for ``origin`` using ``reapply`` inside the env.
 
-    ``reapply`` wraps ``dportsv3 compose --origin ORIGIN ...`` inside
-    the chroot; the helper lives at
-    ``scripts/tools/dev-env/dports_dev_env/helpers.py:32-57``.
+    Returns a result dict (``ok``, ``rc``, ``stdout_tail``,
+    ``stderr_tail``, etc.). The LLM inspects ``ok`` and the tails
+    to decide what to do — no exceptions bubble up for build failures.
     """
     p = _exec(env, "reapply", origin)
-    if p.returncode != 0:
-        raise RuntimeError(
-            f"materialize_dports({origin}) failed (rc={p.returncode}): "
-            f"{(p.stderr or p.stdout).strip()[:300]}"
-        )
-    return {"origin": origin, "stdout": p.stdout, "stderr": p.stderr}
+    return _exec_result(p.returncode, p.stdout, p.stderr, origin=origin)
 
 
 def extract(env: str, origin: str) -> dict:
-    """Run ``make extract`` for ``origin`` in DPorts; return WRKDIR + WRKSRC.
+    """Run ``make extract`` for ``origin`` in DPorts; return WRKDIR + WRKSRC on success.
 
-    Issued inside the chroot; the actual extracted source ends up at
-    ``WRKDIR`` (typically under ``WRKDIRPREFIX/usr/dports/<origin>/work``).
-    We query the variables back with ``make -V`` so the LLM can address
-    files inside WRKSRC with subsequent tools.
+    On failure (``ok`` False), ``wrkdir`` and ``wrksrc`` are empty
+    strings and the LLM should inspect the tails.
     """
     port_dir = f"/work/DPorts/{origin}"
     p = _exec(env, "make", "-C", port_dir, "extract", cwd=port_dir)
     if p.returncode != 0:
-        raise RuntimeError(
-            f"extract({origin}) failed (rc={p.returncode}): "
-            f"{(p.stderr or p.stdout).strip()[:300]}"
-        )
+        return _exec_result(p.returncode, p.stdout, p.stderr,
+                            origin=origin, wrkdir="", wrksrc="")
     q = _exec(env, "make", "-C", port_dir, "-V", "WRKDIR", "-V", "WRKSRC", cwd=port_dir)
     if q.returncode != 0:
-        raise RuntimeError(f"could not query WRKDIR/WRKSRC: {q.stderr.strip()}")
+        return _exec_result(q.returncode, q.stdout, q.stderr,
+                            origin=origin, wrkdir="", wrksrc="",
+                            extract_step="query-wrkdir")
     lines = [line.strip() for line in q.stdout.splitlines() if line.strip()]
     wrkdir = lines[0] if len(lines) > 0 else ""
     wrksrc = lines[1] if len(lines) > 1 else ""
-    return {"origin": origin, "wrkdir": wrkdir, "wrksrc": wrksrc}
+    return _exec_result(0, p.stdout, p.stderr,
+                        origin=origin, wrkdir=wrkdir, wrksrc=wrksrc)
 
 
 def dupe(env: str, path: str) -> dict:
-    """Run ``dupe PATH`` inside the chroot (clone-with-backup of a WRKSRC file).
+    """Run ``dupe PATH`` inside the chroot (clones source file with .orig backup).
 
-    ``path`` is an in-chroot absolute path to the source file. ``dupe``
-    creates a ``<file>.orig`` snapshot so a later ``genpatch`` can
-    produce a unified diff against the unmodified original.
+    Returns a result dict; LLM inspects ``ok``.
     """
     p = _exec(env, "dupe", path)
-    if p.returncode != 0:
-        raise RuntimeError(
-            f"dupe({path}) failed (rc={p.returncode}): "
-            f"{(p.stderr or p.stdout).strip()[:300]}"
-        )
-    return {"path": path, "stdout": p.stdout}
+    return _exec_result(p.returncode, p.stdout, p.stderr, path=path)
 
 
 def genpatch(env: str, path: str) -> dict:
-    """Run ``genpatch PATH`` inside the chroot; return generated patch files.
+    """Run ``genpatch PATH`` inside the chroot; list generated patch files.
 
-    ``genpatch`` writes its output under ``/work/genpatch-out/`` (or
-    wherever the in-chroot helper is configured); we list the resulting
-    ``patch-*`` files for ``install_patches`` to pick up.
+    Always lists ``patch-*`` files from ``/work/genpatch-out/`` regardless
+    of rc (genpatch may produce partial output on failure). LLM inspects
+    ``ok`` to decide whether the patches are trustworthy.
     """
     p = _exec(env, "genpatch", path)
-    if p.returncode != 0:
-        raise RuntimeError(
-            f"genpatch({path}) failed (rc={p.returncode}): "
-            f"{(p.stderr or p.stdout).strip()[:300]}"
-        )
     paths = env_paths(env)
     genpatch_out = paths.writable / "work" / "genpatch-out"
     patches: list[str] = []
@@ -361,7 +379,12 @@ def genpatch(env: str, path: str) -> dict:
         for f in sorted(genpatch_out.iterdir()):
             if f.is_file() and f.name.startswith("patch-"):
                 patches.append(f.name)
-    return {"path": path, "output_dir": str(genpatch_out), "patches": patches}
+    return _exec_result(
+        p.returncode, p.stdout, p.stderr,
+        path=path,
+        output_dir=str(genpatch_out),
+        patches=patches,
+    )
 
 
 def install_patches(env: str, origin: str, patches: list[str] | None = None) -> dict:
@@ -397,17 +420,15 @@ def install_patches(env: str, origin: str, patches: list[str] | None = None) -> 
 def dsynth_build(env: str, origin: str) -> dict:
     """Run ``dbuild ORIGIN`` inside the chroot (dsynth build).
 
-    The ``dbuild`` helper at
-    ``scripts/tools/dev-env/dports_dev_env/helpers.py:62-90`` invokes
-    ``dsynth -p $DPORTS_DSYNTH_PROFILE build <origin>``. Returns the
-    rc + captured stdout/stderr; the caller decides whether
-    ``rebuild_ok`` (typically: rc==0 and no failure markers).
+    Wraps the ``dbuild`` helper at
+    ``scripts/tools/dev-env/dports_dev_env/helpers.py:62-90`` which
+    invokes ``dsynth -p $DPORTS_DSYNTH_PROFILE build <origin>``.
+    Returns a result dict; ``rebuild_ok`` is an alias for ``ok``
+    (rc==0) for clarity at call sites.
     """
     p = _exec(env, "dbuild", origin)
-    return {
-        "origin": origin,
-        "rc": p.returncode,
-        "rebuild_ok": p.returncode == 0,
-        "stdout": p.stdout,
-        "stderr": p.stderr,
-    }
+    return _exec_result(
+        p.returncode, p.stdout, p.stderr,
+        origin=origin,
+        rebuild_ok=p.returncode == 0,
+    )
