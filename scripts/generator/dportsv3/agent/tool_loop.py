@@ -51,6 +51,7 @@ def run(
     env: str,
     api_base: str | None = None,
     api_key: str | None = None,
+    custom_llm_provider: str | None = None,
     timeout: int = 120,
     max_turns: int = 20,
 ) -> tuple[Response, Usage]:
@@ -78,6 +79,7 @@ def run(
             tools=tool_schemas,
             api_base=api_base,
             api_key=api_key,
+            custom_llm_provider=custom_llm_provider,
             timeout=timeout,
         )
         total.add(response.usage)

@@ -1694,6 +1694,7 @@ def _process_triage_job_harness(
 
     api_base = os.environ.get("DP_HARNESS_TRIAGE_API_BASE") or None
     api_key = os.environ.get("DP_HARNESS_TRIAGE_API_KEY") or None
+    custom_llm_provider = os.environ.get("DP_HARNESS_TRIAGE_PROVIDER") or None
     timeout = int(os.environ.get("DP_HARNESS_TIMEOUT", "120"))
     max_snippet_rounds = int(os.environ.get("DP_HARNESS_MAX_SNIPPET_ROUNDS", "5"))
 
@@ -1713,6 +1714,7 @@ def _process_triage_job_harness(
             model=model,
             api_base=api_base,
             api_key=api_key,
+            custom_llm_provider=custom_llm_provider,
             timeout=timeout,
             max_snippet_rounds=max_snippet_rounds,
         )

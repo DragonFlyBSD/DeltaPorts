@@ -43,6 +43,7 @@ def complete(
     tools: list[dict] | None = None,
     api_base: str | None = None,
     api_key: str | None = None,
+    custom_llm_provider: str | None = None,
     timeout: int | None = None,
     temperature: float | None = None,
 ) -> Response:
@@ -50,6 +51,15 @@ def complete(
 
     ``messages`` is the OpenAI-style chat list. ``tools`` is the OpenAI-style
     JSON schema list (litellm converts to the native shape per provider).
+
+    ``custom_llm_provider`` forces litellm onto a specific provider's
+    client code path regardless of what the model name looks like.
+    Important when talking to OpenAI-compatible third-party endpoints
+    (opencode.ai/zen, Groq, Together, …) whose model IDs may contain
+    a native-provider substring (``deepseek-*``, ``claude-*``) that
+    litellm's model→provider heuristic would otherwise mis-route. Pass
+    ``custom_llm_provider="openai"`` together with ``api_base`` to pin
+    the OpenAI-compat code path.
     """
     import litellm
 
@@ -60,6 +70,8 @@ def complete(
         kwargs["api_base"] = api_base
     if api_key:
         kwargs["api_key"] = api_key
+    if custom_llm_provider:
+        kwargs["custom_llm_provider"] = custom_llm_provider
     if timeout is not None:
         kwargs["timeout"] = timeout
     if temperature is not None:

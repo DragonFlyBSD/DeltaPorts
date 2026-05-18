@@ -68,6 +68,7 @@ def run(
     model: str,
     api_base: str | None = None,
     api_key: str | None = None,
+    custom_llm_provider: str | None = None,
     timeout: int = 120,
     max_snippet_rounds: int | None = None,
 ) -> TriageResult:
@@ -97,6 +98,7 @@ def run(
             model=model,
             api_base=api_base,
             api_key=api_key,
+            custom_llm_provider=custom_llm_provider,
             timeout=timeout,
         )
         total_usage.add(response.usage)
