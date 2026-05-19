@@ -39,8 +39,9 @@ generator commands:
   compose-report  Summarize compose JSON report for humans/tools
   dsl             DSL parse/check/plan commands
   migrate         Migration utilities (compose-first workflow)
-  tracker         Build tracker server and queries
-  artifact-store  Run the artifact-store HTTP service
+  tracker            Build tracker server and queries
+  artifact-store     Run the artifact-store HTTP service
+  agent-queue-runner Run the agent queue runner (triage + patch loop)
 
 Use 'dportsv3 COMMAND --help' for command-specific help.
 EOF

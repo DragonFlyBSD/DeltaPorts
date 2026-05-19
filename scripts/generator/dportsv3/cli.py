@@ -33,6 +33,7 @@ def create_parser() -> argparse.ArgumentParser:
     _register_migrate_parser(subparsers)
     _register_tracker_parser(subparsers)
     _register_artifact_store_parser(subparsers)
+    _register_agent_queue_runner_parser(subparsers)
     return parser
 
 
@@ -540,6 +541,22 @@ def _register_artifact_store_parser(subparsers: argparse._SubParsersAction) -> N
     )
 
 
+def _register_agent_queue_runner_parser(
+    subparsers: argparse._SubParsersAction,
+) -> None:
+    """Register agent-queue-runner forwarder.
+
+    The runner lives at ``scripts/agent-queue-runner`` (still a
+    standalone script). Forwarder ``execv``s it so operator
+    invocations match the rest of the dportsv3 surface.
+    """
+    subparsers.add_parser(
+        "agent-queue-runner",
+        help="Run the agent queue runner (forwards to scripts/agent-queue-runner)",
+        add_help=False,
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     """CLI entrypoint."""
     raw = list(argv) if argv is not None else sys.argv[1:]
@@ -551,6 +568,22 @@ def main(argv: list[str] | None = None) -> int:
         from dportsv3.artifact_store import main as artifact_store_main
 
         artifact_store_main(raw[1:])
+        return 0
+
+    # agent-queue-runner lives at scripts/agent-queue-runner; execv to
+    # it so its argparse handles --queue-root / --once / etc directly.
+    if raw and raw[0] == "agent-queue-runner":
+        import os as _os
+        from pathlib import Path as _Path
+
+        # Resolve scripts/agent-queue-runner relative to this package:
+        # parents[0]=dportsv3, parents[1]=generator, parents[2]=scripts.
+        runner = _Path(__file__).resolve().parents[2] / "agent-queue-runner"
+        if not runner.is_file():
+            print(f"agent-queue-runner not found at {runner}", file=sys.stderr)
+            return 1
+        _os.execv(str(runner), [str(runner), *raw[1:]])
+        # execv never returns on success
         return 0
 
     parser = create_parser()

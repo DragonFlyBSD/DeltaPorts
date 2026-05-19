@@ -92,7 +92,7 @@ DP_HARNESS_TRIAGE_MODEL=... \
 DP_HARNESS_PATCH_MODEL=... \
 DP_HARNESS_TRIAGE_API_KEY=... \
 DP_HARNESS_PATCH_API_KEY=... \
-  scripts/agent-queue-runner --queue-root /build/synth/logs/evidence/queue &
+  ./dportsv3 agent-queue-runner --queue-root /build/synth/logs/evidence/queue &
 
 # 4. Trigger a real build (the dsynth profile should source the hooks)
 dsynth -p 2026Q2 -S -y build devel/known-failing-port

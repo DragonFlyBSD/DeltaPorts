@@ -131,7 +131,7 @@ DPORTSV3_ARTIFACT_ROOT=$ARTIFACT_ROOT \
 DPORTSV3_STATE_DB=$STATE_DB \
 DPORTSV3_TRACKER_URL=http://127.0.0.1:8080 \
 ARTIFACT_STORE_URL=http://127.0.0.1:8788 \
-  scripts/agent-queue-runner --queue-root $QUEUE_ROOT
+  ./dportsv3 agent-queue-runner --queue-root $QUEUE_ROOT
 ```
 
 Order doesn't matter; each is idempotent on schema init. Open
