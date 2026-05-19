@@ -12,6 +12,16 @@ export PATH
 
 umask 022
 
+# Source the operator config first so its values win over the defaults
+# below. The path is overridable via DPORTSV3_HOOKS_CONFIG; default is
+# the conf installed next to this script (typically
+# /etc/dsynth/dportsv3-hooks.conf inside the chroot).
+DPORTSV3_HOOKS_CONFIG=${DPORTSV3_HOOKS_CONFIG:-"$(dirname "$0")/dportsv3-hooks.conf"}
+if [ -f "$DPORTSV3_HOOKS_CONFIG" ]; then
+	# shellcheck disable=SC1090
+	. "$DPORTSV3_HOOKS_CONFIG"
+fi
+
 : "${PROFILE:=unknown}"
 : "${DIR_LOGS:=}"
 : "${DIR_PORTS:=}"
@@ -281,8 +291,9 @@ truncate_bytes() {
 #
 # When DPORTSV3_TRACKER_URL is unset (no config or commented out),
 # every tracker_* high-level call short-circuits with no side effects.
-
-DPORTSV3_HOOKS_CONFIG=${DPORTSV3_HOOKS_CONFIG:-"$(dirname "$0")/dportsv3-hooks.conf"}
+# (DPORTSV3_HOOKS_CONFIG was already resolved and sourced near the
+# top of this file so all variables — not just tracker_* ones — get
+# the operator's overrides before any default kicks in.)
 
 tracker_log() {
 	: "${DPORTSV3_TRACKER_HOOK_LOG:=${DIR_LOGS:-/tmp}/dportsv3-hooks.log}"
