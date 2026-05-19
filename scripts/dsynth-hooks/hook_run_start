@@ -11,7 +11,10 @@ run_id="run-$(sanitize_component "${PROFILE}")-${ts}-$$"
 # Ensure queue directories exist.
 ensure_queue_dirs
 
-# Record current run id for per-port hooks.
+# Record current run id for per-port hooks (artifact-store side).
 printf '%s\n' "${run_id}" > "${root}/.current_run"
+
+# Start a tracker build_run (soft no-op if tracker isn't configured).
+tracker_run_start
 
 exit 0

@@ -265,6 +265,274 @@ truncate_bytes() {
 	printf '\n[...truncated to %s bytes...]\n' "$max_bytes" >>"$outfile"
 }
 
+# -----------------------------------------------------------------------------
+# dportsv3 tracker integration (was scripts/builderhooks/tracker_common.sh)
+# -----------------------------------------------------------------------------
+#
+# Tracker integration is optional but default-on. Operator installs
+# `dportsv3-hooks.conf` next to this file (or sets DPORTSV3_HOOKS_CONFIG)
+# with at least DPORTSV3_TRACKER_URL + DPORTSV3_BIN, then every hook
+# records per-port outcomes via `dportsv3 tracker`. Hooks soft-fail on
+# tracker outages so dsynth keeps building.
+#
+# When DPORTSV3_TRACKER_URL is unset (no config or commented out),
+# every tracker_* high-level call short-circuits with no side effects.
+
+DPORTSV3_HOOKS_CONFIG=${DPORTSV3_HOOKS_CONFIG:-"$(dirname "$0")/dportsv3-hooks.conf"}
+
+tracker_log() {
+	: "${DPORTSV3_TRACKER_HOOK_LOG:=${DIR_LOGS:-/tmp}/dportsv3-hooks.log}"
+	mkdir -p -- "$(dirname -- "$DPORTSV3_TRACKER_HOOK_LOG")" 2>/dev/null || true
+	printf '%s %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$*" \
+		>> "$DPORTSV3_TRACKER_HOOK_LOG" 2>/dev/null || true
+}
+
+tracker_fail_soft() {
+	tracker_log "ERROR: $*"
+	exit 0
+}
+
+tracker_should_skip() {
+	# Returns 0 (true) if tracker should be skipped — config missing or
+	# DPORTSV3_TRACKER_URL not set. Callers can guard their work with:
+	#     tracker_should_skip && return 0
+	[ ! -f "$DPORTSV3_HOOKS_CONFIG" ] && return 0
+	# shellcheck disable=SC1090
+	. "$DPORTSV3_HOOKS_CONFIG"
+	[ -z "${DPORTSV3_TRACKER_URL:-}" ] && return 0
+	return 1
+}
+
+tracker_load_config() {
+	# Idempotent: safe to call multiple times. Sets defaults for any
+	# unset values. Soft-fails with a clear message when required values
+	# can't be derived.
+	if [ -f "$DPORTSV3_HOOKS_CONFIG" ]; then
+		# shellcheck disable=SC1090
+		. "$DPORTSV3_HOOKS_CONFIG"
+	fi
+
+	: "${PROFILE:=unknown}"
+
+	if [ -z "${DPORTSV3_BIN:-}" ]; then
+		tracker_fail_soft "DPORTSV3_BIN is not configured"
+	fi
+	if [ ! -x "$DPORTSV3_BIN" ]; then
+		tracker_fail_soft "DPORTSV3_BIN is not executable: $DPORTSV3_BIN"
+	fi
+	if [ -z "${DPORTSV3_TRACKER_URL:-}" ]; then
+		tracker_fail_soft "DPORTSV3_TRACKER_URL is not configured"
+	fi
+
+	# Default target = @${PROFILE} (per the "one profile per target" policy).
+	# If operator already set the value, keep it.
+	if [ -z "${DPORTSV3_TRACKER_TARGET:-}" ]; then
+		case "$PROFILE" in
+		@*) DPORTSV3_TRACKER_TARGET=$PROFILE ;;
+		*)  DPORTSV3_TRACKER_TARGET="@$PROFILE" ;;
+		esac
+	fi
+	: "${DPORTSV3_TRACKER_BUILD_TYPE:=test}"
+
+	# Per-profile state file lives under evidence/.tracker-state by
+	# default so it's colocated with the artifact-store evidence tree.
+	: "${DPORTSV3_TRACKER_STATE_DIR:=$(evidence_root)/.tracker-state}"
+	mkdir -p -- "$DPORTSV3_TRACKER_STATE_DIR" 2>/dev/null || true
+	TRACKER_STATE_FILE="$DPORTSV3_TRACKER_STATE_DIR/${PROFILE}.env"
+}
+
+tracker_load_state() {
+	if [ ! -f "$TRACKER_STATE_FILE" ]; then
+		tracker_fail_soft "missing tracker state file: $TRACKER_STATE_FILE"
+	fi
+	# shellcheck disable=SC1090
+	. "$TRACKER_STATE_FILE"
+	if [ "${TRACKING_DISABLED:-0}" = "1" ]; then
+		exit 0
+	fi
+	if [ -z "${RUN_ID:-}" ]; then
+		tracker_fail_soft "tracker state file missing RUN_ID: $TRACKER_STATE_FILE"
+	fi
+}
+
+tracker_write_state() {
+	tmp_file="$TRACKER_STATE_FILE.tmp.$$"
+	umask 077
+	cat > "$tmp_file" <<EOF
+RUN_ID=${RUN_ID}
+TARGET=${DPORTSV3_TRACKER_TARGET}
+BUILD_TYPE=${DPORTSV3_TRACKER_BUILD_TYPE}
+PORTS_QUEUED=${PORTS_QUEUED:-0}
+EOF
+	mv -f -- "$tmp_file" "$TRACKER_STATE_FILE"
+}
+
+tracker_clear_state() {
+	rm -f -- "$TRACKER_STATE_FILE"
+}
+
+tracker_disable_state() {
+	reason=$1
+	tmp_file="$TRACKER_STATE_FILE.tmp.$$"
+	umask 077
+	cat > "$tmp_file" <<EOF
+TRACKING_DISABLED=1
+EOF
+	mv -f -- "$tmp_file" "$TRACKER_STATE_FILE"
+	tracker_log "tracking disabled for profile=$PROFILE: $reason"
+	exit 0
+}
+
+tracker_pkg_version() {
+	pkgfile=${PKGNAME##*/}
+	pkgfile=${pkgfile%.*}
+	printf '%s\n' "${pkgfile##*-}"
+}
+
+tracker_enqueue_one() {
+	origin=$1
+	version=$2
+
+	tmp_json=$(mktemp "$DPORTSV3_TRACKER_STATE_DIR/enqueue.${PROFILE}.XXXXXX") || \
+		tracker_fail_soft "failed to allocate temp json file"
+	cat > "$tmp_json" <<EOF
+[{"origin":"$origin","version":"$version"}]
+EOF
+
+	if [ -n "${PORTS_QUEUED:-}" ] && [ "$PORTS_QUEUED" -gt 0 ] 2>/dev/null; then
+		output=$(
+			"$DPORTSV3_BIN" tracker enqueue-ports \
+				--run "$RUN_ID" \
+				--file "$tmp_json" \
+				--total "$PORTS_QUEUED" \
+				--server "$DPORTSV3_TRACKER_URL" 2>&1
+		) || {
+			rm -f -- "$tmp_json"
+			tracker_fail_soft "enqueue-ports failed for $origin: $output"
+		}
+	else
+		output=$(
+			"$DPORTSV3_BIN" tracker enqueue-ports \
+				--run "$RUN_ID" \
+				--file "$tmp_json" \
+				--server "$DPORTSV3_TRACKER_URL" 2>&1
+		) || {
+			rm -f -- "$tmp_json"
+			tracker_fail_soft "enqueue-ports failed for $origin: $output"
+		}
+	fi
+
+	rm -f -- "$tmp_json"
+}
+
+tracker_run_start() {
+	tracker_should_skip && return 0
+	tracker_load_config
+	tracker_clear_state
+
+	output=$(
+		"$DPORTSV3_BIN" tracker start-build \
+			--target "$DPORTSV3_TRACKER_TARGET" \
+			--type "$DPORTSV3_TRACKER_BUILD_TYPE" \
+			--server "$DPORTSV3_TRACKER_URL" 2>&1
+	) || tracker_disable_state "start-build failed: $output"
+
+	RUN_ID=$(printf '%s\n' "$output" | awk '{print $4}')
+	case "$RUN_ID" in
+	''|*[!0-9]*)
+		tracker_fail_soft "unable to parse run id from start-build output: $output"
+		;;
+	esac
+
+	tracker_write_state
+	tracker_log "started tracker run $RUN_ID for profile=$PROFILE target=$DPORTSV3_TRACKER_TARGET type=$DPORTSV3_TRACKER_BUILD_TYPE"
+	return 0
+}
+
+tracker_mark_building() {
+	tracker_should_skip && return 0
+	tracker_load_config
+	tracker_load_state
+
+	if [ -z "${ORIGIN:-}" ]; then
+		tracker_fail_soft "missing ORIGIN for pkg start hook"
+	fi
+	if [ -z "${PKGNAME:-}" ]; then
+		tracker_fail_soft "missing PKGNAME for pkg start hook"
+	fi
+
+	version=$(tracker_pkg_version)
+	tracker_enqueue_one "$ORIGIN" "$version"
+
+	output=$(
+		"$DPORTSV3_BIN" tracker mark-building \
+			--run "$RUN_ID" \
+			--origin "$ORIGIN" \
+			--server "$DPORTSV3_TRACKER_URL" 2>&1
+	) || tracker_fail_soft "mark-building failed for $ORIGIN: $output"
+
+	tracker_log "marked building run=$RUN_ID origin=$ORIGIN version=$version"
+	return 0
+}
+
+tracker_record_result() {
+	# Args: result (pass | fail | skipped | ignored)
+	tracker_should_skip && return 0
+	tracker_load_config
+	tracker_load_state
+
+	result_arg=$1
+	if [ -z "${ORIGIN:-}" ]; then
+		tracker_fail_soft "missing ORIGIN for pkg result hook"
+	fi
+	if [ -z "${PKGNAME:-}" ]; then
+		tracker_fail_soft "missing PKGNAME for pkg result hook"
+	fi
+
+	version=$(tracker_pkg_version)
+
+	if [ -n "${DPORTSV3_TRACKER_LOG_URL_BASE:-}" ]; then
+		log_url=${DPORTSV3_TRACKER_LOG_URL_BASE%/}/${ORIGIN}
+		output=$(
+			"$DPORTSV3_BIN" tracker record-result \
+				--run "$RUN_ID" \
+				--origin "$ORIGIN" \
+				--version "$version" \
+				--result "$result_arg" \
+				--log-url "$log_url" \
+				--server "$DPORTSV3_TRACKER_URL" 2>&1
+		) || tracker_fail_soft "record-result failed for $ORIGIN: $output"
+	else
+		output=$(
+			"$DPORTSV3_BIN" tracker record-result \
+				--run "$RUN_ID" \
+				--origin "$ORIGIN" \
+				--version "$version" \
+				--result "$result_arg" \
+				--server "$DPORTSV3_TRACKER_URL" 2>&1
+		) || tracker_fail_soft "record-result failed for $ORIGIN: $output"
+	fi
+
+	tracker_log "recorded result run=$RUN_ID origin=$ORIGIN version=$version result=$result_arg"
+	return 0
+}
+
+tracker_run_end() {
+	tracker_should_skip && return 0
+	tracker_load_config
+	tracker_load_state
+
+	output=$(
+		"$DPORTSV3_BIN" tracker finish-build \
+			--run "$RUN_ID" \
+			--server "$DPORTSV3_TRACKER_URL" 2>&1
+	) || tracker_fail_soft "finish-build failed for run $RUN_ID: $output"
+
+	tracker_log "finished tracker run $RUN_ID for profile=$PROFILE"
+	tracker_clear_state
+	return 0
+}
+
 distill_log() {
 	logfile=$1
 	outdir=$2
