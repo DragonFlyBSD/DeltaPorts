@@ -523,64 +523,6 @@ def _register_tracker_parser(subparsers: argparse._SubParsersAction) -> None:
     compare.add_argument("--server", type=str, help="Tracker base URL")
     compare.add_argument("--json", action="store_true", help="Pretty JSON output")
 
-    # ----- hooks: install/uninstall/status dsynth integration -----
-    hooks_p = subparsers.add_parser(
-        "hooks", help="Install/manage dsynth hooks for the agentic loop"
-    )
-    hooks_sub = hooks_p.add_subparsers(dest="hooks_action", metavar="ACTION")
-
-    h_install = hooks_sub.add_parser(
-        "install", help="Copy dsynth hooks into /etc/dsynth"
-    )
-    h_install.add_argument(
-        "--prefix",
-        type=Path,
-        default=None,
-        help="Target dir (default: /etc/dsynth)",
-    )
-    h_install.add_argument(
-        "--source",
-        type=Path,
-        default=None,
-        help="Override source dir (default: scripts/dsynth-hooks/ in the repo)",
-    )
-    h_install.add_argument(
-        "--force",
-        action="store_true",
-        help="Overwrite existing dportsv3-hooks.conf",
-    )
-
-    h_uninstall = hooks_sub.add_parser(
-        "uninstall", help="Remove dportsv3-installed dsynth hooks"
-    )
-    h_uninstall.add_argument(
-        "--prefix",
-        type=Path,
-        default=None,
-        help="Target dir (default: /etc/dsynth)",
-    )
-    h_uninstall.add_argument(
-        "--purge",
-        action="store_true",
-        help="Also remove dportsv3-hooks.conf",
-    )
-
-    h_status = hooks_sub.add_parser(
-        "status", help="Report whether hooks are installed + whether they're stale"
-    )
-    h_status.add_argument(
-        "--prefix",
-        type=Path,
-        default=None,
-        help="Target dir (default: /etc/dsynth)",
-    )
-    h_status.add_argument(
-        "--source",
-        type=Path,
-        default=None,
-        help="Override source dir for staleness comparison",
-    )
-
 
 def main(argv: list[str] | None = None) -> int:
     """CLI entrypoint."""
@@ -618,16 +560,6 @@ def main(argv: list[str] | None = None) -> int:
             )
             return 1
         return cmd_tracker(args)
-
-    if args.command == "hooks":
-        if not args.hooks_action:
-            print(
-                "Missing hooks action (use: dportsv3 hooks --help)", file=sys.stderr
-            )
-            return 1
-        from dportsv3.commands.hooks import cmd_hooks
-
-        return cmd_hooks(args)
 
     print(f"Unknown command: {args.command}", file=sys.stderr)
     return 1

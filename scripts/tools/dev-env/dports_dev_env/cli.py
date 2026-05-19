@@ -96,6 +96,44 @@ def build_parser() -> argparse.ArgumentParser:
         help="Print env_dir/writable (the agent's edit overlay) instead of env_dir",
     )
     path_.add_argument("name", help="Environment name")
+
+    # ----- hooks: install/uninstall/status the dsynth hooks inside an env -----
+    hi = subparsers.add_parser(
+        "hooks-install",
+        help="Install dsynth hooks into the env's writable etc/dsynth",
+    )
+    hi.add_argument("name", help="Environment name")
+    hi.add_argument(
+        "--source",
+        help="Override source dir (default: scripts/dsynth-hooks/ in the repo)",
+    )
+    hi.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite an existing dportsv3-hooks.conf",
+    )
+
+    hu = subparsers.add_parser(
+        "hooks-uninstall",
+        help="Remove dsynth hooks installed by dports-dev-env",
+    )
+    hu.add_argument("name", help="Environment name")
+    hu.add_argument(
+        "--purge",
+        action="store_true",
+        help="Also remove dportsv3-hooks.conf",
+    )
+
+    hs = subparsers.add_parser(
+        "hooks-status",
+        help="Report whether hooks are installed in the env, and if any are stale",
+    )
+    hs.add_argument("name", help="Environment name")
+    hs.add_argument(
+        "--source",
+        help="Override source dir for staleness comparison",
+    )
+
     return parser
 
 
@@ -316,6 +354,45 @@ def cmd_create(args: argparse.Namespace) -> int:
     return result.exit_code
 
 
+def cmd_hooks_install(args: argparse.Namespace) -> int:
+    from .hooks import cmd_hooks_install as _impl
+
+    require_root()
+    config = load_config()
+    validate_cache_root(config.cache_root)
+    store = EnvironmentStore(config)
+    env_dir = store.env_dir(args.name)
+    if not env_dir.is_dir():
+        raise UsageError(f"environment not found: {args.name}")
+    return _impl(args, env_dir)
+
+
+def cmd_hooks_uninstall(args: argparse.Namespace) -> int:
+    from .hooks import cmd_hooks_uninstall as _impl
+
+    require_root()
+    config = load_config()
+    validate_cache_root(config.cache_root)
+    store = EnvironmentStore(config)
+    env_dir = store.env_dir(args.name)
+    if not env_dir.is_dir():
+        raise UsageError(f"environment not found: {args.name}")
+    return _impl(args, env_dir)
+
+
+def cmd_hooks_status(args: argparse.Namespace) -> int:
+    from .hooks import cmd_hooks_status as _impl
+
+    require_root()
+    config = load_config()
+    validate_cache_root(config.cache_root)
+    store = EnvironmentStore(config)
+    env_dir = store.env_dir(args.name)
+    if not env_dir.is_dir():
+        raise UsageError(f"environment not found: {args.name}")
+    return _impl(args, env_dir)
+
+
 def dispatch(args: argparse.Namespace) -> int:
     if args.action is None:
         build_parser().print_help()
@@ -331,6 +408,9 @@ def dispatch(args: argparse.Namespace) -> int:
         "status": cmd_status,
         "update": cmd_update,
         "path": cmd_path,
+        "hooks-install": cmd_hooks_install,
+        "hooks-uninstall": cmd_hooks_uninstall,
+        "hooks-status": cmd_hooks_status,
     }
     return commands[args.action](args)
 

@@ -58,17 +58,21 @@ dirty edits land.
 For details (mounts, FPORTS pinning, materialization), see
 `docs/dev-chroot-environment.md`.
 
-## 4. Install dsynth hooks
+## 4. Install dsynth hooks into the dev-env
+
+dsynth runs inside the chroot, so its hooks belong in the env's
+writable `/etc/dsynth` overlay rather than on the host:
 
 ```sh
-./dportsv3 hooks install
+./dportsv3 dev-env hooks-install myenv
 ```
 
 This copies the hook scripts + `dportsv3-hooks.conf.example` →
-`dportsv3-hooks.conf` into `/etc/dsynth/`. Existing
+`dportsv3-hooks.conf` into `${env_dir}/writable/etc_dsynth/`, which
+bind-mounts to `/etc/dsynth` inside the chroot. Existing
 `dportsv3-hooks.conf` is preserved (pass `--force` to overwrite).
 
-Edit `/etc/dsynth/dportsv3-hooks.conf` and set:
+Edit the conf and set:
 
 ```sh
 ARTIFACT_STORE_URL=http://127.0.0.1:8788
@@ -80,11 +84,12 @@ DPORTSV3_BIN=/build/synth/DeltaPorts/dportsv3
 Verify with:
 
 ```sh
-./dportsv3 hooks status
+./dportsv3 dev-env hooks-status myenv
 ```
 
-Shows which hooks are present, whether they're executable, and
-whether any are stale vs. the in-repo source.
+Reports which hooks are present, whether they're executable, and
+whether any are stale vs. the in-repo source. Re-run
+`hooks-install` after a `git pull` to refresh them.
 
 ## 5. Configure env for the services
 
@@ -178,7 +183,7 @@ touches your authoritative working tree.
 | Symptom | Fix |
 |---|---|
 | `dportsv3` says "missing DragonFly packages" | install the `pkg install` list from §1 |
-| Hooks don't fire on failure | check `/etc/dsynth/dportsv3-hooks.conf` is sourced by the profile; `./dportsv3 hooks status` for stale/missing |
+| Hooks don't fire on failure | `./dportsv3 dev-env hooks-status myenv` for stale/missing; confirm the env's `/etc/dsynth/dportsv3-hooks.conf` is being sourced by the dsynth profile inside the chroot |
 | Tracker 500s on artifact stream | `DPORTSV3_ARTIFACT_ROOT` doesn't match `--logs-root`/evidence on the artifact-store |
 | Triage 401s | provider key wrong, or `DP_HARNESS_TRIAGE_API_BASE` needs to be set for non-default endpoints |
 | Patch loop stops with `budget-exhausted` | check trust tier classification in `analysis/triage.md`; consider bumping the tier in `config/agentic-policy.json` |
@@ -190,8 +195,8 @@ When you pull new code:
 
 ```sh
 git pull
-./dportsv3 hooks status     # are any hooks stale vs. the new source?
-./dportsv3 hooks install    # re-copy (config preserved)
+./dportsv3 dev-env hooks-status myenv     # are any hooks stale vs. the new source?
+./dportsv3 dev-env hooks-install myenv    # re-copy (config preserved)
 ```
 
 Then restart the tracker (uvicorn doesn't auto-reload templates or
