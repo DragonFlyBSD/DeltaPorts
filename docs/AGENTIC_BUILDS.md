@@ -1,5 +1,29 @@
 # AI-assisted workflow for fixing DeltaPorts (dsynth-based)
 
+> ⚠️ **This document describes the pre-Phase-3 architecture and is out of date.**
+>
+> The agentic pipeline was rebuilt as part of Phase 3
+> (see `docs/agentic-consolidation-plan.md` and commits
+> `985889dd7fe` … `6f6db28a9d6`). The following are no longer present
+> in the codebase:
+> - `opencode` runtime + `config/opencode/{agent,tool}/` (replaced by `dportsv3.agent` package)
+> - `OPENCODE_*` env vars (replaced by `DP_HARNESS_*`)
+> - `VM_SSH_*` env vars and SSH dispatch (harness runs natively on dfly)
+> - `/build/synth/agentic-workspace/` and `workspace.json` (replaced by `dportsv3 dev-env`)
+> - `scripts/agentic-worker` (logic moved to `dportsv3.agent.worker` on top of dev-env)
+> - `process_pr_job`, `process_apply_job` (no branches/PRs in the loop)
+>
+> The new architecture: hook → bundle → `dportsv3.agent.triage` →
+> `policy.tier_for` → if AUTO/ASSIST, `dportsv3.agent.patch` runs an
+> attempt loop with 13 tools against the dev-env's writable overlay,
+> ending at a local `rebuild_proof.json`. No PRs, no push, no SSH.
+>
+> A rewritten version of this document is pending. Until then, treat
+> the sections below as historical context, **not** as current
+> operational guidance.
+
+---
+
 This document describes a practical, low-friction workflow for using AI agents to assist in fixing DragonFlyBSD DeltaPorts ports, without changing the core “build-driven iteration” process.
 
 The key idea is **evidence-first, bounded-context assistance**:

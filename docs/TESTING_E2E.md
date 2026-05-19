@@ -1,5 +1,33 @@
 # End-to-End Testing Guide for Agentic DPorts Workflow
 
+> ⚠️ **This document describes the pre-Phase-3 testing setup and is out of date.**
+>
+> The agentic pipeline was rebuilt as part of Phase 3
+> (see `docs/agentic-consolidation-plan.md`). The instructions below
+> reference retired components: `OPENCODE_URL`, `VM_SSH_*`,
+> `/build/synth/agentic-workspace/`, `workspace.json`, the standalone
+> `agentic-worker` script, and the `apply-patch` → PR pipeline.
+>
+> For current end-to-end testing of the harness, see the manual
+> fixtures under `scripts/generator/dportsv3/agent/`:
+>
+> - `_manual_test_tool_loop.py` — exercises the LLM + tool dispatch
+>   loop against a real dev-env (one-shot inspection task).
+> - `_manual_test_triage_tier.py` — exercises the triage flow + tier
+>   dispatch on fabricated bundles (compile/plist/unknown).
+> - `_manual_test_patch_flow.py` — exercises the patch flow + attempt
+>   loop end-to-end against a real port in a real dev-env.
+>
+> Each takes its config from `DP_TEST_MODEL` + `DP_TEST_API_KEY` +
+> `DP_TEST_ENV` (the dev-env name). The patch fixture produces
+> `rebuild_proof.json` + `changes.diff` + `patch_audit.json` on disk.
+>
+> A rewritten version of this document is pending. Until then, the
+> sections below are historical context, **not** current operational
+> guidance.
+
+---
+
 This document describes the manual testing process for validating the complete agentic workflow from build failure through PR creation.
 
 > **Future Work:** This manual process should be automated into a `scripts/test-e2e` regression test script once the workflow is stable.

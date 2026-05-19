@@ -1,5 +1,24 @@
 # Phase 3 — Replace opencode with a Python harness
 
+> **Status: shipped.** All six steps complete in the
+> `agentic-dsynth-evidence-hooks` branch. Verified end-to-end against
+> real LLMs (Deepseek v4-pro/flash; opencode.ai/zen via OpenAI-compat)
+> and a real dev-env: the harness diagnosed and fixed a malformed
+> `patch-terminal.c` in `devel/readline` in one attempt, and clean-built
+> `archivers/liblz4`. See commits `985889dd7fe` … `6f6db28a9d6` on the
+> branch.
+>
+> What landed:
+> - New Python package `scripts/generator/dportsv3/agent/` (13 tools, attempt loop, tier policy)
+> - `config/agentic-policy.json` (trust-tier dispatch)
+> - Two new dev-env subcommands: `status NAME` (JSON readiness) and `path NAME [--writable]`
+> - `agent-queue-runner` shrunk from ~2300 → ~1685 LOC; opencode/VM_SSH/workspace plumbing all retired
+> - `config/opencode/` deleted; `scripts/agentic-worker` deleted; `process_pr_job`/`process_apply_job` deleted
+> - End-to-end loop is purely local in the dev-env: no commits, no branches, no push, no PR
+>
+> This document is preserved as the plan that drove the work; the
+> branch's commits are the authoritative record of what shipped.
+
 ## Status of adjacent phases
 
 - **Phase 1** (`dportsv3 dev-env exec`) — shipped.
