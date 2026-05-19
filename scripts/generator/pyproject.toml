@@ -37,6 +37,7 @@ dev = ["pytest", "mypy", "httpx"]
 
 [project.scripts]
 dportsv3 = "dportsv3.cli:main"
+artifact-store = "dportsv3.artifact_store:main"
 
 [project.urls]
 Homepage = "https://github.com/DragonFlyBSD/DeltaPorts"
