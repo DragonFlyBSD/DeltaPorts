@@ -180,6 +180,46 @@ class ArtifactStore:
             return "blob", obj_path
         return "fs", Path(row["fs_path"])
 
+    def upsert_user_context(self, run_id: str, origin: str, context_text: str) -> int:
+        """Set or update the operator's hint text for one (run_id, origin).
+
+        Bumps ``context_rev`` by 1 on every write so the runner's
+        ``process_user_context_updates`` loop can detect new input and
+        re-enqueue a triage retry.
+
+        Returns the new ``context_rev``.
+        """
+        now = datetime.now(timezone.utc).isoformat()
+        with self._lock:
+            row = self.conn.execute(
+                "SELECT context_rev FROM user_context WHERE run_id = ? AND origin = ?",
+                (run_id, origin),
+            ).fetchone()
+            if row:
+                new_rev = int(row["context_rev"]) + 1
+                self.conn.execute(
+                    """UPDATE user_context
+                       SET context_text = ?, updated_at = ?, context_rev = ?
+                       WHERE run_id = ? AND origin = ?""",
+                    (context_text, now, new_rev, run_id, origin),
+                )
+            else:
+                new_rev = 1
+                self.conn.execute(
+                    """INSERT INTO user_context
+                       (run_id, origin, context_text, updated_at, context_rev)
+                       VALUES (?, ?, ?, ?, ?)""",
+                    (run_id, origin, context_text, now, new_rev),
+                )
+            emit_event(self.conn, "user_context_updated", {
+                "run_id": run_id,
+                "origin": origin,
+                "context_rev": new_rev,
+                "updated_at": now,
+            })
+            self.conn.commit()
+        return new_rev
+
 
 class Handler(BaseHTTPRequestHandler):
     server: "ArtifactStoreServer"
@@ -302,6 +342,31 @@ class Handler(BaseHTTPRequestHandler):
                 return
             result = store.put_fs_ref(bundle_id, relpath, fs_path, kind)
             self._send_json({"ok": True, **result})
+            return
+
+        if path == "/v1/user-context":
+            # Ported from state-server's POST /user-context. Same body
+            # shape and behaviour; state-server still serves the legacy
+            # path in parallel until step 8 retires it.
+            body = self._read_json_body()
+            if not body:
+                self._send_error_json(400, "invalid JSON body")
+                return
+            run_id = body.get("run_id")
+            origin = body.get("origin")
+            context_text = body.get("context_text")
+            if not run_id or not origin or context_text is None:
+                self._send_error_json(400, "run_id, origin, context_text required")
+                return
+            context_text = str(context_text).strip()
+            if not context_text:
+                self._send_error_json(400, "context_text cannot be empty")
+                return
+            if len(context_text) > 8000:
+                self._send_error_json(400, "context_text too long (max 8000 chars)")
+                return
+            new_rev = store.upsert_user_context(run_id, origin, context_text)
+            self._send_json({"ok": True, "context_rev": new_rev})
             return
 
         self._send_error_json(404, "Not found")

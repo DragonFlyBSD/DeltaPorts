@@ -23,7 +23,7 @@
 
 - **Phase 1** (`dportsv3 dev-env exec`) — shipped.
 - **Phase 2** (retire `apply-patch` + dead `process_apply_job`) — shipped.
-- **Phase 4** (tracker absorbs state-server, one DB) — deferred, not in scope here.
+- **Phase 4** (tracker absorbs state-server, one DB) — in progress on the same branch (steps 1, 1.5, 2 shipped at time of writing).
 - **Phase 5** (tracker UI redesign) — deferred, not in scope here.
 
 ## Context
