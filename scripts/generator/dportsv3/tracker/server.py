@@ -354,8 +354,7 @@ def create_app(db_path: str | Path) -> Any:
             return get_diff(conn, a, b)
 
     # ------------------------------------------------------------------
-    # Phase 4 step 5: agentic-read endpoints (absorbed from state-server).
-    # state-server keeps running in parallel until step 8.
+    # Agentic-read endpoints (absorbed from the retired state-server).
     # ------------------------------------------------------------------
 
     @app.get("/api/health")

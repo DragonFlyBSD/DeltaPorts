@@ -57,7 +57,7 @@ if _GENERATOR_DIR.is_dir() and str(_GENERATOR_DIR) not in sys.path:
 DEFAULT_MAX_ITERATIONS = 3
 
 DEFAULT_ARTIFACT_STORE_URL = "http://127.0.0.1:8788"
-DEFAULT_STATE_SERVER_URL = "http://127.0.0.1:8787"
+DEFAULT_TRACKER_URL = "http://127.0.0.1:8080"
 
 # Heartbeat interval (seconds)
 HEARTBEAT_INTERVAL = 5
@@ -105,8 +105,8 @@ def _artifact_store_url() -> str:
     return os.environ.get("ARTIFACT_STORE_URL", DEFAULT_ARTIFACT_STORE_URL)
 
 
-def _state_server_url() -> str:
-    return os.environ.get("STATE_SERVER_URL", DEFAULT_STATE_SERVER_URL)
+def _tracker_url() -> str:
+    return os.environ.get("DPORTSV3_TRACKER_URL", DEFAULT_TRACKER_URL)
 
 
 def artifact_store_get(bundle_id: str, relpath: str) -> bytes | None:
@@ -118,8 +118,11 @@ def artifact_store_get(bundle_id: str, relpath: str) -> bytes | None:
         return None
 
 
-def state_server_get(bundle_id: str, relpath: str) -> bytes | None:
-    url = f"{_state_server_url()}/bundles/{urllib.parse.quote(bundle_id)}/artifacts/{urllib.parse.quote(relpath, safe='/')}"
+def tracker_artifact_get(bundle_id: str, relpath: str) -> bytes | None:
+    url = (
+        f"{_tracker_url()}/api/bundles/{urllib.parse.quote(bundle_id)}"
+        f"/artifacts/{urllib.parse.quote(relpath, safe='/')}"
+    )
     try:
         with urllib.request.urlopen(url, timeout=10) as resp:
             return resp.read()
@@ -146,7 +149,7 @@ def artifact_store_put(bundle_id: str, relpath: str, data: bytes, kind: str | No
 
 
 def bundle_artifact_list(bundle_id: str) -> list[str]:
-    url = f"{_state_server_url()}/bundles/{urllib.parse.quote(bundle_id)}"
+    url = f"{_tracker_url()}/api/bundles/{urllib.parse.quote(bundle_id)}"
     try:
         with urllib.request.urlopen(url, timeout=10) as resp:
             data = json.load(resp)
@@ -156,11 +159,13 @@ def bundle_artifact_list(bundle_id: str) -> list[str]:
 
 
 def port_bundle_history(origin: str) -> list[dict]:
-    url = f"{_state_server_url()}/ports/{urllib.parse.quote(origin)}"
+    # Tracker /api/ports/<origin> returns a flat list (vs. legacy
+    # state-server's {"origin", "bundles", "jobs"} shape).
+    url = f"{_tracker_url()}/api/ports/{urllib.parse.quote(origin)}"
     try:
         with urllib.request.urlopen(url, timeout=10) as resp:
             data = json.load(resp)
-        return data.get("bundles", [])
+        return data if isinstance(data, list) else data.get("bundles", [])
     except Exception:
         return []
 
@@ -173,7 +178,7 @@ def read_bundle_text(bundle_dir: Path | None, bundle_id: str | None, relpath: st
     if bundle_id:
         data = artifact_store_get(bundle_id, relpath)
         if data is None:
-            data = state_server_get(bundle_id, relpath)
+            data = tracker_artifact_get(bundle_id, relpath)
         if data is not None:
             return data.decode("utf-8", errors="replace")
     return None

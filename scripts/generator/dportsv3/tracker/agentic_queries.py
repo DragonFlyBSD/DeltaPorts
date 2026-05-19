@@ -1,9 +1,8 @@
-"""SQL helpers for the agentic-read endpoints added in Phase 4 step 5.
+"""SQL helpers for the tracker's agentic-read endpoints.
 
-These queries read the state.db tables originally owned by state-server
-(``runs``, ``bundles``, ``jobs``, ``events``, ``activity_log``,
-``runner_status``, ``artifact_refs``). Tracker (step 5) absorbs them so
-state-server can be retired in step 8.
+These queries read the state.db tables originally owned by the
+(now-retired) state-server: ``runs``, ``bundles``, ``jobs``, ``events``,
+``activity_log``, ``runner_status``, ``artifact_refs``.
 
 Target filtering: ``bundles``, ``jobs``, ``runs`` carry a nullable
 ``target`` column added in step 5. Filter is applied as an equality

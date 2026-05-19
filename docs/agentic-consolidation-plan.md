@@ -35,9 +35,14 @@ Phase 4 collapses this into:
 | 3a | `dsynth-hooks/` + `builderhooks/` merged into one hook set | shipped |
 | 4a | `dportsv3 dev-env update` + cache bind-mount inside chroot | shipped |
 | 4 | Tracker reads/writes `state.db`; `tracker.db` retires | shipped (26ac0ae1e03) |
-| 5 | Tracker agentic-read endpoints **+ target column on bundles/jobs/runs** | next |
-| 6 | Tracker HTML views (bundle detail, jobs queue, runner) | pending |
-| 8 | Decommission `state-server` + `state-server-ui` SPA | pending |
+| 5 | Tracker agentic-read endpoints + target column on bundles/jobs/runs | shipped (8797550a6ac) |
+| 6 | Tracker HTML views (bundle detail, jobs queue, runner) | shipped (fdc7528a24f) |
+| 8 | Decommission `state-server` + `state-server-ui` SPA | shipped |
+
+> **Phase 4 complete.** One DB (`state.db`), one serve process
+> (FastAPI tracker), one hook set. Agent queue runner now points
+> exclusively at the tracker for bundle/artifact lookups via
+> `DPORTSV3_TRACKER_URL` (default `http://127.0.0.1:8080`).
 
 (There is no step 7 — slot reserved during planning, folded into 6/8.)
 

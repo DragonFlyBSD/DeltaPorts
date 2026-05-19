@@ -349,9 +349,6 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if path == "/v1/user-context":
-            # Ported from state-server's POST /user-context. Same body
-            # shape and behaviour; state-server still serves the legacy
-            # path in parallel until step 8 retires it.
             body = self._read_json_body()
             if not body:
                 self._send_error_json(400, "invalid JSON body")
