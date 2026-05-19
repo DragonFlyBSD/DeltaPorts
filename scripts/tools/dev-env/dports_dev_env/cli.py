@@ -354,43 +354,32 @@ def cmd_create(args: argparse.Namespace) -> int:
     return result.exit_code
 
 
-def cmd_hooks_install(args: argparse.Namespace) -> int:
-    from .hooks import cmd_hooks_install as _impl
-
+def _hooks_resolve_state(args: argparse.Namespace):
     require_root()
     config = load_config()
     validate_cache_root(config.cache_root)
     store = EnvironmentStore(config)
-    env_dir = store.env_dir(args.name)
-    if not env_dir.is_dir():
+    if not store.env_dir(args.name).is_dir():
         raise UsageError(f"environment not found: {args.name}")
-    return _impl(args, env_dir)
+    return store.load(args.name)
+
+
+def cmd_hooks_install(args: argparse.Namespace) -> int:
+    from .hooks import cmd_hooks_install as _impl
+
+    return _impl(args, _hooks_resolve_state(args))
 
 
 def cmd_hooks_uninstall(args: argparse.Namespace) -> int:
     from .hooks import cmd_hooks_uninstall as _impl
 
-    require_root()
-    config = load_config()
-    validate_cache_root(config.cache_root)
-    store = EnvironmentStore(config)
-    env_dir = store.env_dir(args.name)
-    if not env_dir.is_dir():
-        raise UsageError(f"environment not found: {args.name}")
-    return _impl(args, env_dir)
+    return _impl(args, _hooks_resolve_state(args))
 
 
 def cmd_hooks_status(args: argparse.Namespace) -> int:
     from .hooks import cmd_hooks_status as _impl
 
-    require_root()
-    config = load_config()
-    validate_cache_root(config.cache_root)
-    store = EnvironmentStore(config)
-    env_dir = store.env_dir(args.name)
-    if not env_dir.is_dir():
-        raise UsageError(f"environment not found: {args.name}")
-    return _impl(args, env_dir)
+    return _impl(args, _hooks_resolve_state(args))
 
 
 def dispatch(args: argparse.Namespace) -> int:

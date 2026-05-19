@@ -1,14 +1,14 @@
 """dsynth hook install/uninstall/status for a dev-env.
 
-The dev-env's writable overlay carries ``etc_dsynth`` (see
-``runtime.WRITABLE_DIRS``) which is bind-mounted onto ``/etc/dsynth``
-inside the chroot. Installing hooks into that writable dir persists
-across remounts and is visible to dsynth runs inside the env.
+Shares the same path resolution (``env_dsynth_etc_dir`` in
+``dsynth.py``) as ``write_dsynth_config`` so there's one source of
+truth for "where dsynth configuration lives in an env." That path is
+the mounted view (``state.root_dir/etc/dsynth``), which the bind-mount
+on ``writable/etc_dsynth`` makes writable while the env is mounted.
 
-This module operates on the host-side path
-``${env_dir}/writable/etc_dsynth``. The chroot does not need to be
-mounted to install — files written here will be picked up at next
-mount.
+Hooks-install therefore requires the env to be mounted, matching the
+existing dsynth-config convention. The CLI handler errors with a
+helpful message when the env isn't mounted.
 """
 
 from __future__ import annotations
@@ -17,6 +17,10 @@ import shutil
 import stat
 from argparse import Namespace
 from pathlib import Path
+
+from .dsynth import env_dsynth_etc_dir
+from .mounts import mounts_under
+from .state import EnvironmentState
 
 # Files we ship as executable hook scripts (chmod 0755 on install).
 HOOK_SCRIPTS: tuple[str, ...] = (
@@ -156,16 +160,23 @@ def status_hooks(
 # ---- CLI argparse handlers ----
 
 
-def _env_hooks_dir(env_dir: Path) -> Path:
-    """Resolve the per-env writable etc_dsynth dir.
+def _require_mounted(state: EnvironmentState) -> Path:
+    """Resolve the env's /etc/dsynth dir, refusing if env isn't mounted."""
+    if not mounts_under(state.root_dir):
+        raise RuntimeError(
+            f"env '{state.name}' is not mounted. Run "
+            f"`dportsv3 dev-env shell {state.name}` first to mount it, "
+            f"then re-run."
+        )
+    return env_dsynth_etc_dir(state)
 
-    Matches ``runtime.WRITABLE_DIRS`` source name ``etc_dsynth``.
-    """
-    return env_dir / "writable" / "etc_dsynth"
 
-
-def cmd_hooks_install(args: Namespace, env_dir: Path) -> int:
-    target = _env_hooks_dir(env_dir)
+def cmd_hooks_install(args: Namespace, state: EnvironmentState) -> int:
+    try:
+        target = _require_mounted(state)
+    except RuntimeError as exc:
+        print(str(exc))
+        return 1
     source = Path(args.source) if getattr(args, "source", None) else None
     try:
         written, skipped = install_hooks(
@@ -184,13 +195,16 @@ def cmd_hooks_install(args: Namespace, env_dir: Path) -> int:
     print("Next steps:")
     print(f"  1. Edit {target}/{CONF_TARGET} — set ARTIFACT_STORE_URL,")
     print("     DPORTSV3_TRACKER_URL, DPORTSV3_TRACKER_TARGET.")
-    print("  2. Hooks become visible at /etc/dsynth inside the chroot")
-    print("     once the env is mounted (or on next 'dportsv3 dev-env shell').")
+    print("  2. Hooks are live at /etc/dsynth inside the chroot.")
     return 0
 
 
-def cmd_hooks_uninstall(args: Namespace, env_dir: Path) -> int:
-    target = _env_hooks_dir(env_dir)
+def cmd_hooks_uninstall(args: Namespace, state: EnvironmentState) -> int:
+    try:
+        target = _require_mounted(state)
+    except RuntimeError as exc:
+        print(str(exc))
+        return 1
     if not target.is_dir():
         print(f"Nothing to remove: {target} does not exist")
         return 0
@@ -206,8 +220,12 @@ def cmd_hooks_uninstall(args: Namespace, env_dir: Path) -> int:
     return 0
 
 
-def cmd_hooks_status(args: Namespace, env_dir: Path) -> int:
-    target = _env_hooks_dir(env_dir)
+def cmd_hooks_status(args: Namespace, state: EnvironmentState) -> int:
+    try:
+        target = _require_mounted(state)
+    except RuntimeError as exc:
+        print(str(exc))
+        return 1
     source = Path(args.source) if getattr(args, "source", None) else None
     info = status_hooks(target, source_dir=source)
 
