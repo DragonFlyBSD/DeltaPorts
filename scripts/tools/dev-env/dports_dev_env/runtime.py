@@ -72,4 +72,14 @@ def prepare_root_runtime(config: Config, root_dir: Path, *, refresh_resolv_conf:
         distfiles_target = root_dir / "usr/distfiles"
         if mount_null(config.host_distdir, distfiles_target):
             mounted_targets.append(distfiles_target)
+    # Bind-mount the repo mirror cache so the env's git origin URLs
+    # (recorded at clone time as host paths under config.repos_dir)
+    # resolve from inside the chroot. Read-only — operators inside the
+    # env shouldn't mutate the shared cache; `dportsv3 dev-env update`
+    # is the supported way to refresh it.
+    if config.repos_dir.is_dir():
+        repos_target = root_dir / config.repos_dir.relative_to("/")
+        repos_target.parent.mkdir(parents=True, exist_ok=True)
+        if mount_null(config.repos_dir, repos_target, read_only=True):
+            mounted_targets.append(repos_target)
     return mounted_targets
