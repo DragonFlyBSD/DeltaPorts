@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Runner — DeltaPorts Tracker</title>
+  <link href="{{ request.url_for('static', path='progress.css') }}" type="text/css" rel="stylesheet">
+  <link rel="icon" type="image/png" href="{{ request.url_for('static', path='favicon.png') }}">
+</head>
+<body>
+  {% with nav_crumbs = [{"label": "Agentic", "url": request.url_for('agentic_index')}, {"label": "Runner"}] %}
+    {% include "_tracker_nav.html" %}
+  {% endwith %}
+
+  <div class="tracker-page">
+    <h1>Runner status</h1>
+    <p class="lede">Heartbeat from the agent queue runner.</p>
+
+    <div class="tracker-card">
+      <table style="font-size:12px;">
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Status</th><td>{{ runner.status }}</td></tr>
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Current job</th><td>{% if runner.job_id %}<a href="{{ request.url_for('agentic_job_detail', job_id=runner.job_id) }}">{{ runner.job_id }}</a>{% else %}—{% endif %}</td></tr>
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Stage</th><td>{{ runner.current_stage or '—' }}</td></tr>
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Started at</th><td>{{ runner.started_at or '—' }}</td></tr>
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Updated at</th><td>{{ runner.updated_at or '—' }}</td></tr>
+        {% if runner.extra_json %}
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;vertical-align:top;">Extra</th><td><pre style="margin:0;font-size:11px;">{{ runner.extra_json }}</pre></td></tr>
+        {% endif %}
+      </table>
+    </div>
+  </div>
+</body>
+</html>

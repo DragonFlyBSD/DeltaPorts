@@ -11,8 +11,19 @@ def dsynth_profile_name(state: EnvironmentState) -> str:
     return sanitize_name(state.name)
 
 
+def env_dsynth_etc_dir(state: EnvironmentState) -> Path:
+    """Per-env /etc/dsynth path (mounted view).
+
+    Single source of truth for "where dsynth configuration lives in an
+    env." Used by ``write_dsynth_config`` and by hook install/status.
+    Requires the env to be mounted — when unmounted, this path either
+    doesn't exist or points at the read-only base layer.
+    """
+    return state.root_dir / "etc/dsynth"
+
+
 def write_dsynth_config(config: DevEnvConfig, state: EnvironmentState) -> None:
-    config_dir = state.root_dir / "etc/dsynth"
+    config_dir = env_dsynth_etc_dir(state)
     dsynth_root = state.root_dir / "work/dsynth"
     profile_name = dsynth_profile_name(state)
     for path in [

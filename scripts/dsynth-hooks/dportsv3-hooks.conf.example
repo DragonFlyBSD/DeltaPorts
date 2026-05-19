@@ -1,0 +1,54 @@
+# dsynth hook configuration for DeltaPorts.
+#
+# Install pattern:
+#     install -d /etc/dsynth
+#     install -m 755 scripts/dsynth-hooks/hook_* /etc/dsynth/
+#     install -m 755 scripts/dsynth-hooks/hook_common.sh /etc/dsynth/
+#     install -m 644 scripts/dsynth-hooks/dportsv3-hooks.conf.example \
+#         /etc/dsynth/dportsv3-hooks.conf
+#
+# Then edit /etc/dsynth/dportsv3-hooks.conf for your environment.
+#
+# Anything sourced from this file becomes shell variables visible to all
+# hooks. Tracker integration is OPT-IN: if DPORTSV3_TRACKER_URL is
+# unset (or this file is absent entirely), the tracker_* helpers in
+# hook_common.sh short-circuit and hooks only do artifact-store work.
+
+# -----------------------------------------------------------------------------
+# Artifact-store side
+# -----------------------------------------------------------------------------
+
+# Override only if running artifact-store on a non-default URL/port.
+# ARTIFACT_STORE_URL=http://127.0.0.1:8788
+
+# Override only if the artifact-store client lives elsewhere.
+# ARTIFACT_STORE_CLIENT=/build/synth/DeltaPorts/scripts/artifact-store-client
+
+# -----------------------------------------------------------------------------
+# Tracker side (optional)
+# -----------------------------------------------------------------------------
+
+# Set DPORTSV3_TRACKER_URL to enable tracker integration. Unset/empty
+# disables tracker calls entirely (artifact-store work continues).
+DPORTSV3_TRACKER_URL=http://127.0.0.1:8080
+
+# Absolute path to the dportsv3 wrapper (used to call tracker CLI commands).
+DPORTSV3_BIN=/build/synth/DeltaPorts/dportsv3
+
+# Build target. Defaults to @${PROFILE} if unset (one profile per target).
+# DPORTSV3_TRACKER_TARGET=@2026Q2
+
+# Build type for this dsynth profile (test | release). Defaults to "test".
+# DPORTSV3_TRACKER_BUILD_TYPE=test
+
+# Directory used to store per-profile active run state.
+# Defaults to ${DIR_LOGS}/evidence/.tracker-state (colocated with the
+# artifact-store evidence tree).
+# DPORTSV3_TRACKER_STATE_DIR=/var/db/dsynth-tracker
+
+# Hook-local log file. Tracker failures log here and do not fail dsynth.
+# Defaults to ${DIR_LOGS}/dportsv3-hooks.log.
+# DPORTSV3_TRACKER_HOOK_LOG=/var/log/dsynth-hooks.log
+
+# Optional external log URL prefix. If set, record-result appends /ORIGIN.
+# DPORTSV3_TRACKER_LOG_URL_BASE=https://logs.example/dsynth

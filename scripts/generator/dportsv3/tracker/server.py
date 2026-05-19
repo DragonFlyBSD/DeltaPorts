@@ -3,10 +3,35 @@
 from __future__ import annotations
 
 import importlib
+import os
+from contextlib import contextmanager
 from importlib import util as importlib_util
 from pathlib import Path
 from typing import Any, cast
 
+from dportsv3.tracker.progress_adapter import (
+    run_history_chunk,
+    run_summary,
+    target_history_chunk,
+    target_summary,
+)
+from dportsv3.tracker.agentic_queries import (
+    activity_for_job,
+    agentic_status,
+    bundles_for_run,
+    distinct_targets,
+    events_since,
+    get_artifact_ref,
+    get_bundle,
+    get_job,
+    get_run,
+    list_bundles,
+    list_jobs,
+    list_port_bundles,
+    list_runs,
+    recent_activity,
+    runner_status,
+)
 from dportsv3.tracker.db import (
     ActiveBuildError,
     compare_builds,
@@ -23,6 +48,7 @@ from dportsv3.tracker.db import (
     get_target_summary,
     init_db,
     list_build_runs,
+    open_db,
     record_results,
     update_port_status,
 )
@@ -67,6 +93,8 @@ if (
     HTMLResponseType = _responses.HTMLResponse
     StaticFilesType = _staticfiles.StaticFiles
     Jinja2TemplatesType = _templating.Jinja2Templates
+    FileResponseType = _responses.FileResponse
+    StreamingResponseType = _responses.StreamingResponse
 else:
 
     class _MissingFastAPI:
@@ -100,6 +128,39 @@ else:
     HTMLResponseType = _MissingHTMLResponse
     StaticFilesType = _MissingStaticFiles
     Jinja2TemplatesType = _MissingTemplates
+    FileResponseType = _MissingHTMLResponse
+    StreamingResponseType = _MissingHTMLResponse
+
+
+def _resolve_artifact_path(
+    artifact_root: Path, ref: dict[str, Any]
+) -> Path | None:
+    """Locate the on-disk file for an artifact_refs row.
+
+    Two backends:
+    - 'blob': content-addressed under ``<artifact_root>/objects/sha256/aa/bb/<full>``
+    - 'fs':   absolute ``fs_path`` recorded at upsert time
+    """
+    backend = ref.get("backend")
+    if backend == "blob":
+        sha = ref.get("sha256")
+        if not sha or len(sha) < 4:
+            return None
+        return (
+            artifact_root
+            / "blobstore"
+            / "objects"
+            / "sha256"
+            / sha[0:2]
+            / sha[2:4]
+            / sha
+        )
+    if backend == "fs":
+        fs_path = ref.get("fs_path")
+        if not fs_path:
+            return None
+        return Path(fs_path)
+    return None
 
 
 def create_app(db_path: str | Path) -> Any:
@@ -120,10 +181,16 @@ def create_app(db_path: str | Path) -> Any:
     HTMLResponse = cast(Any, HTMLResponseType)
     StaticFiles = cast(Any, StaticFilesType)
     Jinja2Templates = cast(Any, Jinja2TemplatesType)
+    FileResponse = cast(Any, FileResponseType)
+    StreamingResponse = cast(Any, StreamingResponseType)
 
     app: Any = FastAPI(title="DeltaPorts Build Tracker")
     app.state.db_path = str(db_path)
-    app.state.db_conn = None
+    # Resolves /api/bundles/<id>/artifacts/<relpath> for the 'blob'
+    # backend. Defaults match artifact-store's --logs-root default.
+    app.state.artifact_root = Path(
+        os.environ.get("DPORTSV3_ARTIFACT_ROOT", "/build/synth/logs/evidence")
+    )
     templates_dir = Path(__file__).with_name("templates")
     static_dir = Path(__file__).with_name("static")
     templates: Any = Jinja2Templates(directory=str(templates_dir))
@@ -132,19 +199,20 @@ def create_app(db_path: str | Path) -> Any:
 
     @app.on_event("startup")
     def _startup() -> None:
-        app.state.db_conn = init_db(app.state.db_path)
+        conn = init_db(app.state.db_path)
+        conn.close()
 
     @app.on_event("shutdown")
     def _shutdown() -> None:
-        if app.state.db_conn is not None:
-            app.state.db_conn.close()
-            app.state.db_conn = None
+        return None
 
+    @contextmanager
     def _conn() -> Any:
-        conn = app.state.db_conn
-        if conn is None:
-            raise RuntimeError("Tracker DB connection is not initialized")
-        return conn
+        conn = open_db(app.state.db_path)
+        try:
+            yield conn
+        finally:
+            conn.close()
 
     def _raise_http_error(exc: Exception) -> None:
         if isinstance(exc, ActiveBuildError):
@@ -165,12 +233,13 @@ def create_app(db_path: str | Path) -> Any:
     def start_build(payload: StartBuildRequest) -> dict[str, int]:
         run_id = 0
         try:
-            run_id = create_build_run(
-                _conn(),
-                target=payload.target,
-                build_type=payload.build_type,
-                started_at=payload.started_at,
-            )
+            with _conn() as conn:
+                run_id = create_build_run(
+                    conn,
+                    target=payload.target,
+                    build_type=payload.build_type,
+                    started_at=payload.started_at,
+                )
         except Exception as exc:
             _raise_http_error(exc)
             raise AssertionError("unreachable")
@@ -179,14 +248,15 @@ def create_app(db_path: str | Path) -> Any:
     @app.patch("/api/builds/{run_id}")
     def finish_build(run_id: int, payload: FinishBuildRequest) -> dict[str, bool]:
         try:
-            finish_build_run(
-                _conn(),
-                run_id=run_id,
-                finished_at=payload.finished_at,
-                commit_sha=payload.commit_sha,
-                commit_branch=payload.commit_branch,
-                commit_pushed_at=payload.commit_pushed_at,
-            )
+            with _conn() as conn:
+                finish_build_run(
+                    conn,
+                    run_id=run_id,
+                    finished_at=payload.finished_at,
+                    commit_sha=payload.commit_sha,
+                    commit_branch=payload.commit_branch,
+                    commit_pushed_at=payload.commit_pushed_at,
+                )
         except Exception as exc:
             _raise_http_error(exc)
         return {"ok": True}
@@ -198,13 +268,14 @@ def create_app(db_path: str | Path) -> Any:
     ) -> dict[str, int]:
         recorded = 0
         try:
-            run = get_build_run(_conn(), run_id)
-            recorded = record_results(
-                _conn(),
-                run_id=run_id,
-                target=str(run["target"]),
-                results=[item.model_dump() for item in payload.results],
-            )
+            with _conn() as conn:
+                run = get_build_run(conn, run_id)
+                recorded = record_results(
+                    conn,
+                    run_id=run_id,
+                    target=str(run["target"]),
+                    results=[item.model_dump() for item in payload.results],
+                )
         except Exception as exc:
             _raise_http_error(exc)
             raise AssertionError("unreachable")
@@ -213,12 +284,13 @@ def create_app(db_path: str | Path) -> Any:
     @app.post("/api/builds/{run_id}/queue", response_model=EnqueueResponse)
     def enqueue(run_id: int, payload: EnqueueRequest) -> dict[str, int]:
         try:
-            count = enqueue_ports(
-                _conn(),
-                run_id,
-                [item.model_dump() for item in payload.ports],
-                total_expected=payload.total_expected,
-            )
+            with _conn() as conn:
+                count = enqueue_ports(
+                    conn,
+                    run_id,
+                    [item.model_dump() for item in payload.ports],
+                    total_expected=payload.total_expected,
+                )
         except Exception as exc:
             _raise_http_error(exc)
             raise AssertionError("unreachable")
@@ -231,7 +303,8 @@ def create_app(db_path: str | Path) -> Any:
         payload: UpdatePortStatusRequest,
     ) -> dict[str, bool]:
         try:
-            update_port_status(_conn(), run_id, origin, payload.status)
+            with _conn() as conn:
+                update_port_status(conn, run_id, origin, payload.status)
         except Exception as exc:
             _raise_http_error(exc)
         return {"ok": True}
@@ -242,14 +315,16 @@ def create_app(db_path: str | Path) -> Any:
         build_type: str | None = None,
         limit: int = Query(default=20, ge=1, le=1000),
     ) -> list[dict[str, Any]]:
-        return list_build_runs(
-            _conn(), target=target, build_type=build_type, limit=limit
-        )
+        with _conn() as conn:
+            return list_build_runs(
+                conn, target=target, build_type=build_type, limit=limit
+            )
 
     @app.get("/api/builds/compare", response_model=BuildCompareOut)
     def api_compare_builds(a: int, b: int) -> dict[str, Any]:
         try:
-            return compare_builds(_conn(), a, b)
+            with _conn() as conn:
+                return compare_builds(conn, a, b)
         except Exception as exc:
             _raise_http_error(exc)
             raise AssertionError("unreachable")
@@ -257,10 +332,11 @@ def create_app(db_path: str | Path) -> Any:
     @app.get("/api/builds/{run_id}")
     def api_get_build(run_id: int) -> dict[str, Any]:
         try:
-            return {
-                "build_run": get_build_run(_conn(), run_id),
-                "results": get_build_results(_conn(), run_id),
-            }
+            with _conn() as conn:
+                return {
+                    "build_run": get_build_run(conn, run_id),
+                    "results": get_build_results(conn, run_id),
+                }
         except Exception as exc:
             _raise_http_error(exc)
             raise AssertionError("unreachable")
@@ -270,63 +346,346 @@ def create_app(db_path: str | Path) -> Any:
         target: str | None = None,
         origin: str | None = None,
     ) -> list[dict[str, Any]]:
-        return get_port_status(_conn(), target=target, origin=origin)
+        with _conn() as conn:
+            return get_port_status(conn, target=target, origin=origin)
 
     @app.get("/api/failures", response_model=list[PortStatusOut])
     def api_failures(target: str) -> list[dict[str, Any]]:
-        return get_failures(_conn(), target)
+        with _conn() as conn:
+            return get_failures(conn, target)
 
     @app.get("/api/diff", response_model=DiffOut)
     def api_diff(a: str, b: str) -> dict[str, Any]:
-        return get_diff(_conn(), a, b)
+        with _conn() as conn:
+            return get_diff(conn, a, b)
+
+    # ------------------------------------------------------------------
+    # Agentic-read endpoints (absorbed from the retired state-server).
+    # ------------------------------------------------------------------
+
+    @app.get("/api/health")
+    def api_health() -> dict[str, str]:
+        return {"status": "ok"}
+
+    @app.get("/api/agentic-status")
+    def api_agentic_status() -> dict[str, Any]:
+        with _conn() as conn:
+            return agentic_status(conn)
+
+    @app.get("/api/activity")
+    def api_activity(
+        limit: int = Query(default=10, ge=1, le=500),
+        target: str | None = None,
+    ) -> list[dict[str, Any]]:
+        with _conn() as conn:
+            return recent_activity(conn, limit=limit, target=target)
+
+    @app.get("/api/runner-status")
+    def api_runner_status() -> dict[str, Any]:
+        with _conn() as conn:
+            return runner_status(conn)
+
+    @app.get("/api/runs")
+    def api_runs(
+        target: str | None = None,
+        limit: int = Query(default=50, ge=1, le=500),
+    ) -> list[dict[str, Any]]:
+        with _conn() as conn:
+            return list_runs(conn, target=target, limit=limit)
+
+    @app.get("/api/runs/{run_id}")
+    def api_run_detail(run_id: str) -> dict[str, Any]:
+        with _conn() as conn:
+            row = get_run(conn, run_id)
+        if row is None:
+            raise HTTPException(status_code=404, detail=f"Unknown run: {run_id}")
+        return row
+
+    @app.get("/api/jobs")
+    def api_jobs(
+        state: str | None = None,
+        target: str | None = None,
+        limit: int = Query(default=100, ge=1, le=500),
+    ) -> list[dict[str, Any]]:
+        with _conn() as conn:
+            return list_jobs(conn, state=state, target=target, limit=limit)
+
+    @app.get("/api/jobs/{job_id}")
+    def api_job_detail(job_id: str) -> dict[str, Any]:
+        with _conn() as conn:
+            row = get_job(conn, job_id)
+        if row is None:
+            raise HTTPException(status_code=404, detail=f"Unknown job: {job_id}")
+        return row
+
+    @app.get("/api/bundles")
+    def api_bundles(
+        target: str | None = None,
+        origin: str | None = None,
+        limit: int = Query(default=100, ge=1, le=500),
+    ) -> list[dict[str, Any]]:
+        with _conn() as conn:
+            return list_bundles(conn, target=target, origin=origin, limit=limit)
+
+    @app.get("/api/bundles/{bundle_id}")
+    def api_bundle_detail(bundle_id: str) -> dict[str, Any]:
+        with _conn() as conn:
+            row = get_bundle(conn, bundle_id)
+        if row is None:
+            raise HTTPException(status_code=404, detail=f"Unknown bundle: {bundle_id}")
+        return row
+
+    @app.get("/api/ports/{origin:path}")
+    def api_port_bundles(
+        origin: str,
+        target: str | None = None,
+        limit: int = Query(default=50, ge=1, le=500),
+    ) -> list[dict[str, Any]]:
+        with _conn() as conn:
+            return list_port_bundles(conn, origin=origin, target=target, limit=limit)
+
+    @app.get("/api/bundles/{bundle_id}/artifacts/{relpath:path}")
+    def api_bundle_artifact(bundle_id: str, relpath: str) -> Any:
+        # Resolve via artifact_refs, then stream from disk. Two backends:
+        # 'blob' (content-addressed under blob_root/objects/sha256) or
+        # 'fs' (absolute path in fs_path).
+        with _conn() as conn:
+            ref = get_artifact_ref(conn, bundle_id, relpath)
+        if ref is None:
+            raise HTTPException(status_code=404, detail="Unknown artifact")
+        path = _resolve_artifact_path(app.state.artifact_root, ref)
+        if path is None or not path.exists():
+            raise HTTPException(status_code=404, detail="Artifact file missing")
+        media_type = "application/gzip" if (ref.get("kind") == "gzip") else "application/octet-stream"
+        return FileResponse(str(path), media_type=media_type)
+
+    @app.get("/api/events")
+    def api_events(
+        target: str | None = None,
+        last_id: int = 0,
+    ) -> Any:
+        # Server-sent events: poll the events table on a 1s tick, emit
+        # rows with id > last_id, filter by target (best-effort — see
+        # events_since docstring).
+        import asyncio
+        import json as _json
+
+        async def _gen() -> Any:
+            cursor = int(last_id)
+            try:
+                while True:
+                    with _conn() as conn:
+                        rows = events_since(conn, last_id=cursor, target=target)
+                    for row in rows:
+                        cursor = max(cursor, int(row["id"]))
+                        payload = _json.dumps(row, default=str)
+                        yield f"event: {row['type']}\ndata: {payload}\n\n"
+                    await asyncio.sleep(1.0)
+            except asyncio.CancelledError:
+                return
+
+        return StreamingResponse(_gen(), media_type="text/event-stream")
 
     @app.get("/", response_class=HTMLResponse)
     def dashboard_index(request: RequestType) -> Any:
-        active_builds = get_active_builds_summary(_conn())
+        with _conn() as conn:
+            active_builds = get_active_builds_summary(conn)
+            return templates.TemplateResponse(
+                request,
+                "index.html",
+                {
+                    "title": "Targets",
+                    "targets": get_target_summary(conn),
+                    "active_builds": active_builds,
+                    "refresh_seconds": 30 if active_builds else None,
+                },
+            )
+
+    # ------------------------------------------------------------------
+    # Phase 4 step 6: agentic HTML views.
+    # ------------------------------------------------------------------
+
+    @app.get("/agentic", response_class=HTMLResponse)
+    def agentic_index(request: RequestType) -> Any:
+        with _conn() as conn:
+            return templates.TemplateResponse(
+                request,
+                "agentic_index.html",
+                {
+                    "title": "Agentic",
+                    "status": agentic_status(conn),
+                    "recent_bundles": list_bundles(conn, limit=10),
+                    "recent_jobs": list_jobs(conn, limit=10),
+                },
+            )
+
+    @app.get("/agentic/bundles", response_class=HTMLResponse)
+    def agentic_bundles(
+        request: RequestType,
+        target: str | None = None,
+        origin: str | None = None,
+    ) -> Any:
+        target_value = target or None
+        origin_value = (origin or "").strip() or None
+        with _conn() as conn:
+            return templates.TemplateResponse(
+                request,
+                "agentic_bundles.html",
+                {
+                    "title": "Bundles",
+                    "bundles": list_bundles(
+                        conn, target=target_value, origin=origin_value, limit=200
+                    ),
+                    "target_options": distinct_targets(conn),
+                    "selected_target": target_value,
+                    "selected_origin": origin_value,
+                },
+            )
+
+    @app.get("/agentic/bundles/{bundle_id}", response_class=HTMLResponse)
+    def agentic_bundle_detail(request: RequestType, bundle_id: str) -> Any:
+        with _conn() as conn:
+            bundle = get_bundle(conn, bundle_id)
+        if bundle is None:
+            raise HTTPException(status_code=404, detail=f"Unknown bundle: {bundle_id}")
         return templates.TemplateResponse(
             request,
-            "index.html",
-            {
-                "title": "Targets",
-                "targets": get_target_summary(_conn()),
-                "active_builds": active_builds,
-                "refresh_seconds": 30 if active_builds else None,
-            },
+            "agentic_bundle.html",
+            {"title": bundle_id, "bundle": bundle},
         )
 
-    @app.get("/target/{target}", response_class=HTMLResponse)
-    def dashboard_target(
+    @app.get("/agentic/jobs", response_class=HTMLResponse)
+    def agentic_jobs(
         request: RequestType,
-        target: str,
-        status_filter: str = Query(default="all", alias="filter"),
-        q: str = "",
-        page: int = Query(default=1, ge=1),
+        target: str | None = None,
+        state: str | None = None,
     ) -> Any:
-        rows = get_port_status(_conn(), target=target)
-        query = q.strip().lower()
-        if status_filter == "failures":
-            rows = [row for row in rows if row.get("last_attempt_result") == "failure"]
-        elif status_filter == "successes":
-            rows = [row for row in rows if row.get("last_attempt_result") == "success"]
-        if query:
-            rows = [row for row in rows if query in str(row.get("origin", "")).lower()]
-        page_size = 100
-        start = (page - 1) * page_size
-        page_rows = rows[start : start + page_size]
-        page_count = max(1, (len(rows) + page_size - 1) // page_size)
+        target_value = target or None
+        state_value = state or None
+        with _conn() as conn:
+            return templates.TemplateResponse(
+                request,
+                "agentic_jobs.html",
+                {
+                    "title": "Jobs",
+                    "jobs": list_jobs(
+                        conn, state=state_value, target=target_value, limit=200
+                    ),
+                    "target_options": distinct_targets(conn),
+                    "selected_target": target_value,
+                    "selected_state": state_value,
+                },
+            )
+
+    @app.get("/agentic/jobs/{job_id}", response_class=HTMLResponse)
+    def agentic_job_detail(request: RequestType, job_id: str) -> Any:
+        with _conn() as conn:
+            job = get_job(conn, job_id)
+            activity = activity_for_job(conn, job_id) if job is not None else []
+        if job is None:
+            raise HTTPException(status_code=404, detail=f"Unknown job: {job_id}")
         return templates.TemplateResponse(
             request,
-            "target.html",
+            "agentic_job.html",
+            {"title": job_id, "job": job, "activity": activity},
+        )
+
+    @app.get("/agentic/runs/{run_id}", response_class=HTMLResponse)
+    def agentic_run_detail(request: RequestType, run_id: str) -> Any:
+        with _conn() as conn:
+            run = get_run(conn, run_id)
+            bundles = bundles_for_run(conn, run_id) if run is not None else []
+        if run is None:
+            raise HTTPException(status_code=404, detail=f"Unknown run: {run_id}")
+        return templates.TemplateResponse(
+            request,
+            "agentic_run.html",
+            {"title": run_id, "run": run, "bundles": bundles},
+        )
+
+    @app.get("/agentic/runner", response_class=HTMLResponse)
+    def agentic_runner(request: RequestType) -> Any:
+        with _conn() as conn:
+            return templates.TemplateResponse(
+                request,
+                "agentic_runner.html",
+                {"title": "Runner", "runner": runner_status(conn)},
+            )
+
+    @app.get("/agentic/activity", response_class=HTMLResponse)
+    def agentic_activity(
+        request: RequestType,
+        target: str | None = None,
+    ) -> Any:
+        target_value = target or None
+        with _conn() as conn:
+            return templates.TemplateResponse(
+                request,
+                "agentic_activity.html",
+                {
+                    "title": "Activity",
+                    "activity": recent_activity(conn, limit=200, target=target_value),
+                    "target_options": distinct_targets(conn),
+                    "selected_target": target_value,
+                },
+            )
+
+    # ------------------------------------------------------------------
+    # Phase 5 step 1: dsynth-progress UI adapter. Lifts the
+    # www/example/progress.{html,js,css} UI and feeds it from tracker
+    # data via two JSON endpoints (summary + chunked history). No
+    # change to the existing /target/{target} dashboard yet.
+    # ------------------------------------------------------------------
+
+    # JSON endpoints live under /api/progress/{target}/ to stay clear
+    # of the legacy /target/{target}/{cat}/{port} catch-all. The HTML
+    # page is served at the canonical /target/{target} below.
+
+    @app.get("/api/progress/{target}/summary.json")
+    def progress_summary(target: str) -> dict[str, Any]:
+        with _conn() as conn:
+            return target_summary(conn, target)
+
+    @app.get("/api/progress/{target}/{chunk}_history.json")
+    def progress_history(target: str, chunk: str) -> Any:
+        try:
+            chunk_index = int(chunk)
+        except ValueError:
+            raise HTTPException(status_code=404, detail="Bad chunk index")
+        with _conn() as conn:
+            # Returns [] past the last chunk — kfiles in summary.json
+            # bounds the UI's fetch range so this is rarely hit.
+            return target_history_chunk(conn, target, chunk_index)
+
+    @app.get("/api/progress/build/{run_id}/summary.json")
+    def progress_build_summary(run_id: int) -> dict[str, Any]:
+        with _conn() as conn:
+            summary = run_summary(conn, run_id)
+        if summary is None:
+            raise HTTPException(status_code=404, detail=f"Unknown build run: {run_id}")
+        return summary
+
+    @app.get("/api/progress/build/{run_id}/{chunk}_history.json")
+    def progress_build_history(run_id: int, chunk: str) -> Any:
+        try:
+            chunk_index = int(chunk)
+        except ValueError:
+            raise HTTPException(status_code=404, detail="Bad chunk index")
+        with _conn() as conn:
+            return run_history_chunk(conn, run_id, chunk_index)
+
+    @app.get("/target/{target}", response_class=HTMLResponse)
+    def dashboard_target(request: RequestType, target: str) -> Any:
+        # The page uses progress.{css,js} (lifted from dsynth-progress)
+        # and fetches data from /api/progress/{target}/. The <base> tag
+        # pins those relative URLs to the canonical API root.
+        return templates.TemplateResponse(
+            request,
+            "progress.html",
             {
                 "title": target,
                 "target": target,
-                "rows": page_rows,
-                "status_filter": status_filter,
-                "query": q,
-                "page": page,
-                "page_count": page_count,
-                "page_size": page_size,
-                "total_rows": len(rows),
+                "progress_base": f"/api/progress/{target}/",
             },
         )
 
@@ -335,22 +694,23 @@ def create_app(db_path: str | Path) -> Any:
         request: RequestType, target: str, cat: str, port: str
     ) -> Any:
         origin = f"{cat}/{port}"
-        rows = get_port_status(_conn(), target=target, origin=origin)
-        if not rows:
-            raise HTTPException(
-                status_code=404, detail=f"Unknown port status: {target} {origin}"
+        with _conn() as conn:
+            rows = get_port_status(conn, target=target, origin=origin)
+            if not rows:
+                raise HTTPException(
+                    status_code=404, detail=f"Unknown port status: {target} {origin}"
+                )
+            return templates.TemplateResponse(
+                request,
+                "port_detail.html",
+                {
+                    "title": f"{origin} {target}",
+                    "target": target,
+                    "origin": origin,
+                    "status": rows[0],
+                    "history": get_port_history(conn, target, origin, limit=20),
+                },
             )
-        return templates.TemplateResponse(
-            request,
-            "port_detail.html",
-            {
-                "title": f"{origin} {target}",
-                "target": target,
-                "origin": origin,
-                "status": rows[0],
-                "history": get_port_history(_conn(), target, origin, limit=20),
-            },
-        )
 
     @app.get("/builds", response_class=HTMLResponse)
     def dashboard_builds(
@@ -359,62 +719,52 @@ def create_app(db_path: str | Path) -> Any:
         build_type: str | None = None,
         limit: int = Query(default=50, ge=1, le=500),
     ) -> Any:
-        runs = list_build_runs(
-            _conn(), target=target, build_type=build_type, limit=limit
-        )
-        compare_links = _resolve_compare_links(runs)
-        return templates.TemplateResponse(
-            request,
-            "builds.html",
-            {
-                "title": "Builds",
-                "runs": runs,
-                "compare_links": compare_links,
-                "target": target,
-                "build_type": build_type,
-            },
-        )
+        with _conn() as conn:
+            runs = list_build_runs(
+                conn, target=target, build_type=build_type, limit=limit
+            )
+            compare_links = _resolve_compare_links(runs)
+            return templates.TemplateResponse(
+                request,
+                "builds.html",
+                {
+                    "title": "Builds",
+                    "runs": runs,
+                    "compare_links": compare_links,
+                    "target": target,
+                    "build_type": build_type,
+                },
+            )
 
     @app.get("/builds/compare", response_class=HTMLResponse)
     def dashboard_build_compare(request: RequestType, a: int, b: int) -> Any:
-        return templates.TemplateResponse(
-            request,
-            "build_compare.html",
-            {
-                "title": "Build Compare",
-                "compare": compare_builds(_conn(), a, b),
-            },
-        )
+        with _conn() as conn:
+            return templates.TemplateResponse(
+                request,
+                "build_compare.html",
+                {
+                    "title": "Build Compare",
+                    "compare": compare_builds(conn, a, b),
+                },
+            )
 
     @app.get("/builds/{run_id}", response_class=HTMLResponse)
-    def dashboard_build_detail(
-        request: RequestType,
-        run_id: int,
-        status_filter: str = Query(default="all", alias="filter"),
-    ) -> Any:
-        payload = {
-            "build_run": get_build_run(_conn(), run_id),
-            "results": get_build_results(_conn(), run_id),
-        }
-        build = payload["build_run"]
-        results = payload["results"]
-        if status_filter == "failures":
-            results = [row for row in results if row.get("result") == "failure"]
-        elif status_filter == "successes":
-            results = [row for row in results if row.get("result") == "success"]
-        elif status_filter == "building":
-            results = [row for row in results if row.get("status") == "building"]
-        elif status_filter == "queued":
-            results = [row for row in results if row.get("status") == "queued"]
+    def dashboard_build_detail(request: RequestType, run_id: int) -> Any:
+        # Build detail uses the same dsynth-progress UI as /target/{target},
+        # just scoped to one run_id. Verify the run exists so unknown
+        # IDs 404 here rather than at the JSON fetch.
+        try:
+            with _conn() as conn:
+                build = get_build_run(conn, run_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
         return templates.TemplateResponse(
             request,
-            "build_detail.html",
+            "progress.html",
             {
                 "title": f"Build {run_id}",
-                "build": build,
-                "results": results,
-                "status_filter": status_filter,
-                "refresh_seconds": 10 if build.get("finished_at") is None else None,
+                "target": f"{build['target']} (run {run_id})",
+                "progress_base": f"/api/progress/build/{run_id}/",
             },
         )
 
@@ -424,19 +774,20 @@ def create_app(db_path: str | Path) -> Any:
         a: str | None = None,
         b: str | None = None,
     ) -> Any:
-        targets = get_target_summary(_conn())
-        diff_payload = get_diff(_conn(), a, b) if a and b else None
-        return templates.TemplateResponse(
-            request,
-            "diff.html",
-            {
-                "title": "Target Diff",
-                "targets": targets,
-                "target_a": a,
-                "target_b": b,
-                "diff": diff_payload,
-            },
-        )
+        with _conn() as conn:
+            targets = get_target_summary(conn)
+            diff_payload = get_diff(conn, a, b) if a and b else None
+            return templates.TemplateResponse(
+                request,
+                "diff.html",
+                {
+                    "title": "Target Diff",
+                    "targets": targets,
+                    "target_a": a,
+                    "target_b": b,
+                    "diff": diff_payload,
+                },
+            )
 
     return app
 

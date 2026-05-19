@@ -31,7 +31,7 @@ class _HTTPResponseAdapter:
 
 @pytest.fixture
 def test_client(tmp_path: Path) -> TestClient:
-    app = create_app(tmp_path / "tracker.db")
+    app = create_app(tmp_path / "state.db")
     with TestClient(app) as client:
         yield client
 

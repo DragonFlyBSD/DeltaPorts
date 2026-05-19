@@ -1,0 +1,20 @@
+{# Top nav bar shared by tracker pages. Expects `request` in context. #}
+<div id="tracker-nav">
+  <a href="{{ request.url_for('dashboard_index') }}">Tracker</a>
+  {% if nav_crumbs %}
+    {% for crumb in nav_crumbs %}
+    <span class="nav-sep">/</span>
+    {% if crumb.url %}
+    <a href="{{ crumb.url }}">{{ crumb.label }}</a>
+    {% else %}
+    <span>{{ crumb.label }}</span>
+    {% endif %}
+    {% endfor %}
+  {% endif %}
+  <span class="nav-spacer"></span>
+  <a href="{{ request.url_for('dashboard_builds') }}">Builds</a>
+  <span class="nav-sep">·</span>
+  <a href="{{ request.url_for('dashboard_diff') }}">Diff</a>
+  <span class="nav-sep">·</span>
+  <a href="{{ request.url_for('agentic_index') }}">Agentic</a>
+</div>

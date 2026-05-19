@@ -1,0 +1,14 @@
+#!/bin/sh
+#
+# hook_pkg_start: tracker mark-building.
+# Some dsynth versions fire `hook_pkg_started` instead; both files are
+# provided so either naming variant works. Soft no-op if tracker isn't
+# configured.
+
+set -eu
+
+. "$(dirname "$0")/hook_common.sh"
+
+tracker_mark_building
+
+exit 0

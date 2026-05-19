@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agentic — DeltaPorts Tracker</title>
+  <link href="{{ request.url_for('static', path='progress.css') }}" type="text/css" rel="stylesheet">
+  <link rel="icon" type="image/png" href="{{ request.url_for('static', path='favicon.png') }}">
+</head>
+<body>
+  {% with nav_crumbs = [{"label": "Agentic"}] %}{% include "_tracker_nav.html" %}{% endwith %}
+
+  <div class="tracker-page">
+    <h1>Agentic</h1>
+    <p class="lede">Failure bundles, jobs, and runner state across targets.</p>
+
+    <div class="target-grid">
+      <div class="tracker-card">
+        <div style="color:var(--text-dim);font-size:11px;">Bundles</div>
+        <div style="font-size:22px;font-weight:600;">{{ status.bundles }}</div>
+      </div>
+      <div class="tracker-card">
+        <div style="color:var(--text-dim);font-size:11px;">Runs</div>
+        <div style="font-size:22px;font-weight:600;">{{ status.runs }}</div>
+      </div>
+      <div class="tracker-card">
+        <div style="color:var(--text-dim);font-size:11px;">Jobs pending / inflight</div>
+        <div style="font-size:22px;font-weight:600;">{{ status.jobs.pending }} / {{ status.jobs.inflight }}</div>
+      </div>
+      <div class="tracker-card">
+        <div style="color:var(--text-dim);font-size:11px;">Jobs done / failed</div>
+        <div style="font-size:22px;font-weight:600;">{{ status.jobs.done }} / {{ status.jobs.failed }}</div>
+      </div>
+    </div>
+
+    <h2>Recent bundles</h2>
+    <table class="tracker-table">
+      <thead><tr><th>Bundle</th><th>Origin</th><th>Target</th><th>Result</th></tr></thead>
+      <tbody>
+        {% for b in recent_bundles %}
+        <tr>
+          <td><a href="{{ request.url_for('agentic_bundle_detail', bundle_id=b.bundle_id) }}">{{ b.bundle_id }}</a></td>
+          <td>{{ b.origin }}</td>
+          <td>{{ b.target or '—' }}</td>
+          <td><span class="stat-pill {% if b.result == 'fail' %}failed{% else %}built{% endif %}">{{ b.result }}</span></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" style="color:var(--text-dim);">No bundles yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p style="margin-top:8px;"><a href="{{ request.url_for('agentic_bundles') }}">All bundles &rarr;</a></p>
+
+    <h2>Recent jobs</h2>
+    <table class="tracker-table">
+      <thead><tr><th>Job</th><th>State</th><th>Origin</th><th>Target</th></tr></thead>
+      <tbody>
+        {% for j in recent_jobs %}
+        <tr>
+          <td><a href="{{ request.url_for('agentic_job_detail', job_id=j.job_id) }}">{{ j.job_id }}</a></td>
+          <td>
+            {% set cls = {'pending':'ignored','inflight':'skipped','done':'built','failed':'failed'}.get(j.state,'total') %}
+            <span class="stat-pill {{ cls }}">{{ j.state }}</span>
+          </td>
+          <td>{{ j.origin or '—' }}</td>
+          <td>{{ j.target or '—' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" style="color:var(--text-dim);">No jobs yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p style="margin-top:8px;">
+      <a href="{{ request.url_for('agentic_jobs') }}">All jobs &rarr;</a>
+      &nbsp;·&nbsp;
+      <a href="{{ request.url_for('agentic_runner') }}">Runner status</a>
+      &nbsp;·&nbsp;
+      <a href="{{ request.url_for('agentic_activity') }}">Activity log</a>
+    </p>
+  </div>
+</body>
+</html>

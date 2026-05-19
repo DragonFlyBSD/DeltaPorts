@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ bundle.bundle_id }} — DeltaPorts Tracker</title>
+  <link href="{{ request.url_for('static', path='progress.css') }}" type="text/css" rel="stylesheet">
+  <link rel="icon" type="image/png" href="{{ request.url_for('static', path='favicon.png') }}">
+</head>
+<body>
+  {% with nav_crumbs = [{"label": "Agentic", "url": request.url_for('agentic_index')}, {"label": "Bundles", "url": request.url_for('agentic_bundles')}, {"label": bundle.bundle_id}] %}
+    {% include "_tracker_nav.html" %}
+  {% endwith %}
+
+  <div class="tracker-page">
+    <h1>{{ bundle.bundle_id }}</h1>
+
+    <div class="tracker-card">
+      <table style="font-size:12px;">
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Origin</th><td>{{ bundle.origin }}{% if bundle.flavor %} @ {{ bundle.flavor }}{% endif %}</td></tr>
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Target</th><td>{{ bundle.target or '—' }}</td></tr>
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Result</th><td><span class="stat-pill {% if bundle.result == 'fail' %}failed{% else %}built{% endif %}">{{ bundle.result }}</span></td></tr>
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Timestamp</th><td>{{ bundle.ts_utc }}</td></tr>
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Run</th><td>{% if bundle.run_id %}<a href="{{ request.url_for('agentic_run_detail', run_id=bundle.run_id) }}">{{ bundle.run_id }}</a>{% else %}—{% endif %}</td></tr>
+      </table>
+    </div>
+
+    <h2>Artifacts</h2>
+    {% if bundle.artifacts %}
+    <table class="tracker-table">
+      <thead><tr><th>Path</th><th>Backend</th><th>Kind</th><th>Size</th></tr></thead>
+      <tbody>
+        {% for a in bundle.artifacts %}
+        <tr>
+          <td><a href="/api/bundles/{{ bundle.bundle_id }}/artifacts/{{ a.relpath }}">{{ a.relpath }}</a></td>
+          <td>{{ a.backend }}</td>
+          <td>{{ a.kind or '—' }}</td>
+          <td>{{ a.size if a.size is not none else '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">No artifacts recorded for this bundle.</div>
+    {% endif %}
+  </div>
+</body>
+</html>

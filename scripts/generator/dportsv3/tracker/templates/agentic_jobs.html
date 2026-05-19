@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jobs — DeltaPorts Tracker</title>
+  <link href="{{ request.url_for('static', path='progress.css') }}" type="text/css" rel="stylesheet">
+  <link rel="icon" type="image/png" href="{{ request.url_for('static', path='favicon.png') }}">
+</head>
+<body>
+  {% with nav_crumbs = [{"label": "Agentic", "url": request.url_for('agentic_index')}, {"label": "Jobs"}] %}
+    {% include "_tracker_nav.html" %}
+  {% endwith %}
+
+  <div class="tracker-page">
+    <h1>Jobs</h1>
+    <p class="lede">Triage + patch jobs in the agentic queue.</p>
+
+    {% with show_state = True %}{% include "_target_filter.html" %}{% endwith %}
+
+    <table class="tracker-table">
+      <thead>
+        <tr><th>Job</th><th>State</th><th>Type</th><th>Origin</th><th>Target</th><th>Created</th></tr>
+      </thead>
+      <tbody>
+        {% for j in jobs %}
+        <tr>
+          <td><a href="{{ request.url_for('agentic_job_detail', job_id=j.job_id) }}">{{ j.job_id }}</a></td>
+          <td>
+            {% set cls = {'pending':'ignored','inflight':'skipped','done':'built','failed':'failed'}.get(j.state,'total') %}
+            <span class="stat-pill {{ cls }}">{{ j.state }}</span>
+          </td>
+          <td>{{ j.type or '—' }}</td>
+          <td>{{ j.origin or '—' }}</td>
+          <td>{{ j.target or '—' }}</td>
+          <td>{{ j.created_ts_utc or '—' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" style="color:var(--text-dim);">No jobs match this filter.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>

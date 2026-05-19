@@ -110,27 +110,36 @@ def write_helper_scripts(root_dir, *, bin_dir: str | None = None) -> None:
         path.chmod(0o755)
 
 
-def write_shell_rc(state: EnvironmentState) -> None:
+def build_env_dict(state: EnvironmentState) -> dict[str, str]:
     profile_name = dsynth_profile_name(state)
+    helper_bin = HELPER_BIN_DIR
+    return {
+        "DELTAPORTS_ROOT": "/work/DeltaPorts",
+        "FREEBSD_PORTS_ROOT": "/work/freebsd-ports",
+        "DPORTS_DEV_ENV": state.name,
+        "DPORTS_TARGET": state.target,
+        "DPORTS_ORIGIN": state.origin,
+        "DPORTS_COMPOSE_ROOT": f"/work/artifacts/compose/{state.target}",
+        "DPORTS_LOCK_ROOT": "/work/DPorts",
+        "DPORTS_DSYNTH_ROOT": "/work/dsynth",
+        "DPORTS_DSYNTH_PROFILE": profile_name,
+        "DPORTS_TOUCHED_ORIGINS_FILE": str(TOUCHED_ORIGINS_PATH),
+        "DPORTS_HELPER_BIN": helper_bin,
+        "DPORTS_ORACLE_PROFILE": state.oracle_profile,
+        "DISTDIR": "/usr/distfiles",
+        "DPORTS_DOC_USER_GUIDE": "https://github.com/DragonFlyBSD/DeltaPorts/blob/master/docs/dportsv3-user-guide.md",
+        "DPORTS_DOC_DEV_ENV": "https://github.com/DragonFlyBSD/DeltaPorts/blob/master/docs/dev-chroot-environment.md",
+        "PATH": f"{helper_bin}:/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin",
+    }
+
+
+def write_shell_rc(state: EnvironmentState) -> None:
+    env = build_env_dict(state)
+    exports = "\n".join(f"export {k}={quote(v)}" for k, v in env.items())
     root_file = state.root_dir / "root/.dports-dev-env.sh"
     root_file.parent.mkdir(parents=True, exist_ok=True)
     root_file.write_text(
-        f"""export DELTAPORTS_ROOT=/work/DeltaPorts
-export FREEBSD_PORTS_ROOT=/work/freebsd-ports
-export DPORTS_DEV_ENV={quote(state.name)}
-export DPORTS_TARGET={quote(state.target)}
-export DPORTS_ORIGIN={quote(state.origin)}
-export DPORTS_COMPOSE_ROOT={quote(f'/work/artifacts/compose/{state.target}')}
-export DPORTS_LOCK_ROOT=/work/DPorts
-export DPORTS_DSYNTH_ROOT=/work/dsynth
-export DPORTS_DSYNTH_PROFILE={quote(profile_name)}
-export DPORTS_TOUCHED_ORIGINS_FILE={quote(str(TOUCHED_ORIGINS_PATH))}
-export DPORTS_HELPER_BIN={quote(HELPER_BIN_DIR)}
-export DPORTS_ORACLE_PROFILE={quote(state.oracle_profile)}
-export DISTDIR=/usr/distfiles
-export DPORTS_DOC_USER_GUIDE=https://github.com/DragonFlyBSD/DeltaPorts/blob/master/docs/dportsv3-user-guide.md
-export DPORTS_DOC_DEV_ENV=https://github.com/DragonFlyBSD/DeltaPorts/blob/master/docs/dev-chroot-environment.md
-export PATH="$DPORTS_HELPER_BIN:/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin"
+        f"""{exports}
 
 if [ -n "$DPORTS_ORIGIN" ] && [ -d "$DPORTS_COMPOSE_ROOT/$DPORTS_ORIGIN" ]; then
     cd "$DPORTS_COMPOSE_ROOT/$DPORTS_ORIGIN"

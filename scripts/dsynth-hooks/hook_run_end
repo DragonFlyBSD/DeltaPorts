@@ -1,0 +1,15 @@
+#!/bin/sh
+
+set -eu
+
+. "$(dirname "$0")/hook_common.sh"
+
+root=$(evidence_root)
+
+# Clear current run pointer (artifact-store side, best effort).
+rm -f "${root}/.current_run"
+
+# Finalize the tracker build_run (soft no-op if tracker isn't configured).
+tracker_run_end
+
+exit 0

@@ -74,6 +74,66 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Confirm tear-down of every mount under the cache root (required)",
     )
+
+    exec_ = subparsers.add_parser("exec", help="Run a command inside an environment non-interactively")
+    exec_.add_argument("--cwd", default="/work/DeltaPorts", help="Working directory inside the chroot")
+    exec_.add_argument("--quiet", action="store_true", help="Suppress INFO mount-prep output")
+    exec_.add_argument("name", help="Environment name")
+    exec_.add_argument("argv", nargs=argparse.REMAINDER, help="-- CMD [ARGS...] to run inside the env")
+
+    status = subparsers.add_parser("status", help="Print one environment's state as a single JSON line")
+    status.add_argument("name", help="Environment name")
+
+    update_ = subparsers.add_parser("update", help="Refresh repo mirrors and fast-forward the env's git checkouts")
+    update_.add_argument("--force", action="store_true",
+                         help="Pull even when the env's checkouts have uncommitted changes")
+    update_.add_argument("name", help="Environment name")
+
+    path_ = subparsers.add_parser("path", help="Print one environment's host-side path")
+    path_.add_argument(
+        "--writable",
+        action="store_true",
+        help="Print env_dir/writable (the agent's edit overlay) instead of env_dir",
+    )
+    path_.add_argument("name", help="Environment name")
+
+    # ----- hooks: install/uninstall/status the dsynth hooks inside an env -----
+    hi = subparsers.add_parser(
+        "hooks-install",
+        help="Install dsynth hooks into the env's writable etc/dsynth",
+    )
+    hi.add_argument("name", help="Environment name")
+    hi.add_argument(
+        "--source",
+        help="Override source dir (default: scripts/dsynth-hooks/ in the repo)",
+    )
+    hi.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite an existing dportsv3-hooks.conf",
+    )
+
+    hu = subparsers.add_parser(
+        "hooks-uninstall",
+        help="Remove dsynth hooks installed by dports-dev-env",
+    )
+    hu.add_argument("name", help="Environment name")
+    hu.add_argument(
+        "--purge",
+        action="store_true",
+        help="Also remove dportsv3-hooks.conf",
+    )
+
+    hs = subparsers.add_parser(
+        "hooks-status",
+        help="Report whether hooks are installed in the env, and if any are stale",
+    )
+    hs.add_argument("name", help="Environment name")
+    hs.add_argument(
+        "--source",
+        help="Override source dir for staleness comparison",
+    )
+
     return parser
 
 
@@ -85,6 +145,74 @@ def cmd_list(_args: argparse.Namespace) -> int:
     for env_dir, env_info in store.list_infos():
         mount_status = "mounted" if mounts_under(env_dir / "root") else "unmounted"
         print(f"{env_info.name}\t{env_info.backend}\t{env_info.target}\t{env_info.origin}\t{mount_status}\t{env_info.status}")
+    return 0
+
+
+def cmd_status(args: argparse.Namespace) -> int:
+    import json
+    import subprocess
+    require_root()
+    config = load_config()
+    validate_cache_root(config.cache_root)
+    store = EnvironmentStore(config)
+    state = store.load(args.name)
+    env_dir = store.env_dir(args.name)
+    root_mounted = bool(mounts_under(state.root_dir))
+    writable = store.writable_dir(args.name)
+
+    # Per-repo git status (branch + short HEAD) for repos that live in
+    # the env's writable overlay. Best-effort: missing or broken repos
+    # are reported as null.
+    def _git_info(repo_rel: str) -> dict | None:
+        repo = writable / repo_rel
+        if not (repo / ".git").exists():
+            return None
+        def _run(*args: str) -> str:
+            r = subprocess.run(
+                ["git", "-C", str(repo)] + list(args),
+                text=True, capture_output=True,
+            )
+            return r.stdout.strip() if r.returncode == 0 else ""
+        return {
+            "branch": _run("rev-parse", "--abbrev-ref", "HEAD"),
+            "commit": _run("rev-parse", "--short=12", "HEAD"),
+            "dirty": bool(_run("status", "--porcelain")),
+        }
+
+    print(json.dumps({
+        "name": state.name,
+        "target": state.target,
+        "origin": state.origin,
+        "status": state.status,
+        "backend": state.backend,
+        "oracle_profile": state.oracle_profile,
+        "root_mounted": root_mounted,
+        "env_dir": str(env_dir),
+        "deltaports": _git_info("work/DeltaPorts"),
+        "freebsd_ports": _git_info("work/freebsd-ports"),
+    }))
+    return 0
+
+
+def cmd_update(args: argparse.Namespace) -> int:
+    require_root()
+    config = load_config()
+    validate_cache_root(config.cache_root)
+    store = EnvironmentStore(config)
+    from .update import update_env
+    update_env(config, store, args.name, force=args.force)
+    return 0
+
+
+def cmd_path(args: argparse.Namespace) -> int:
+    require_root()
+    config = load_config()
+    validate_cache_root(config.cache_root)
+    store = EnvironmentStore(config)
+    if not store.env_dir(args.name).is_dir():
+        raise UsageError(f"environment not found: {args.name}")
+    target = store.writable_dir(args.name) if args.writable else store.env_dir(args.name)
+    print(str(target))
     return 0
 
 
@@ -179,6 +307,24 @@ def cmd_shell(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_exec(args: argparse.Namespace) -> int:
+    import os
+    require_root()
+    if args.quiet:
+        os.environ["DPORTS_DEV_ENV_QUIET"] = "1"
+    config = load_config()
+    validate_cache_root(config.cache_root)
+    store = EnvironmentStore(config)
+    argv = list(args.argv)
+    if argv and argv[0] == "--":
+        argv = argv[1:]
+    if not argv:
+        raise UsageError("dev-env exec requires a command after '--'")
+    session = EnvironmentSession(config, store)
+    state = session.prepare(args.name)
+    return session.exec_command(state, argv, cwd=args.cwd)
+
+
 def cmd_create(args: argparse.Namespace) -> int:
     require_root()
     config = load_config()
@@ -208,6 +354,34 @@ def cmd_create(args: argparse.Namespace) -> int:
     return result.exit_code
 
 
+def _hooks_resolve_state(args: argparse.Namespace):
+    require_root()
+    config = load_config()
+    validate_cache_root(config.cache_root)
+    store = EnvironmentStore(config)
+    if not store.env_dir(args.name).is_dir():
+        raise UsageError(f"environment not found: {args.name}")
+    return store.load(args.name)
+
+
+def cmd_hooks_install(args: argparse.Namespace) -> int:
+    from .hooks import cmd_hooks_install as _impl
+
+    return _impl(args, _hooks_resolve_state(args))
+
+
+def cmd_hooks_uninstall(args: argparse.Namespace) -> int:
+    from .hooks import cmd_hooks_uninstall as _impl
+
+    return _impl(args, _hooks_resolve_state(args))
+
+
+def cmd_hooks_status(args: argparse.Namespace) -> int:
+    from .hooks import cmd_hooks_status as _impl
+
+    return _impl(args, _hooks_resolve_state(args))
+
+
 def dispatch(args: argparse.Namespace) -> int:
     if args.action is None:
         build_parser().print_help()
@@ -215,10 +389,17 @@ def dispatch(args: argparse.Namespace) -> int:
     commands = {
         "create": cmd_create,
         "shell": cmd_shell,
+        "exec": cmd_exec,
         "destroy": cmd_destroy,
         "sync-dirty": cmd_sync_dirty,
         "list": cmd_list,
         "cleanup-mounts": cmd_cleanup_mounts,
+        "status": cmd_status,
+        "update": cmd_update,
+        "path": cmd_path,
+        "hooks-install": cmd_hooks_install,
+        "hooks-uninstall": cmd_hooks_uninstall,
+        "hooks-status": cmd_hooks_status,
     }
     return commands[args.action](args)
 

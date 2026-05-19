@@ -39,7 +39,9 @@ generator commands:
   compose-report  Summarize compose JSON report for humans/tools
   dsl             DSL parse/check/plan commands
   migrate         Migration utilities (compose-first workflow)
-  tracker         Build tracker server and queries
+  tracker            Build tracker server and queries
+  artifact-store     Run the artifact-store HTTP service
+  agent-queue-runner Run the agent queue runner (triage + patch loop)
 
 Use 'dportsv3 COMMAND --help' for command-specific help.
 EOF
@@ -168,9 +170,24 @@ if [ "$needs_install" -eq 1 ]; then
         exit 1
     fi
 
+    if [ "$(uname -s)" = "DragonFly" ]; then
+        REQUIRED_DFLY_PKGS="py311-sqlite3 py311-pydantic2 py311-pydantic-core py311-fastapi py311-uvicorn py311-watchfiles py311-uvloop py311-httptools py311-websockets py311-python-dotenv"
+        missing_pkgs=
+        for p in $REQUIRED_DFLY_PKGS; do
+            pkg info -e "$p" >/dev/null 2>&1 || missing_pkgs="$missing_pkgs $p"
+        done
+        if [ -n "$missing_pkgs" ]; then
+            printf '%s\n' "dportsv3: missing DragonFly packages required for the generator/tracker venv:" >&2
+            printf '%s\n' "  pkg install$missing_pkgs" >&2
+            printf '%s\n' "These satisfy pydantic / fastapi / uvicorn[standard] without pulling Rust-built wheels." >&2
+            printf '%s\n' "Re-run dportsv3 after installing." >&2
+            exit 1
+        fi
+    fi
+
     if [ ! -d "$VENV_DIR" ]; then
         printf '%s\n' "dportsv3: creating virtual environment at $VENV_DIR" >&2
-        "$PYTHON_BIN" -m venv "$VENV_DIR"
+        "$PYTHON_BIN" -m venv --system-site-packages "$VENV_DIR"
     fi
 
     printf '%s\n' "dportsv3: installing generator ($INSTALL_PROFILE)" >&2

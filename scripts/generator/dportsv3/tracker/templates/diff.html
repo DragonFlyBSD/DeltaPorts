@@ -1,81 +1,75 @@
-{% extends "base.html" %}
-{% set active_page = "diff" %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Diff — DeltaPorts Tracker</title>
+  <link href="{{ request.url_for('static', path='progress.css') }}" type="text/css" rel="stylesheet">
+  <link rel="icon" type="image/png" href="{{ request.url_for('static', path='favicon.png') }}">
+</head>
+<body>
+  {% with nav_crumbs = [{"label": "Diff"}] %}{% include "_tracker_nav.html" %}{% endwith %}
 
-{% block content %}
-<h1 class="h3 mb-1">Target Diff</h1>
-<p class="text-body-secondary mb-4">Compare current status across two targets.</p>
+  <div class="tracker-page">
+    <h1>Target diff</h1>
+    <p class="lede">Compare current status across two targets.</p>
 
-<form method="get" class="row g-2 align-items-end mb-4">
-  <div class="col-auto">
-    <label class="form-label mb-1" for="select-a">Target A</label>
-    <select name="a" id="select-a" class="form-select form-select-sm">
-      <option value="">Select</option>
-      {% for row in targets %}
-      <option value="{{ row.target }}" {% if target_a == row.target %}selected{% endif %}>{{ row.target }}</option>
-      {% endfor %}
-    </select>
-  </div>
-  <div class="col-auto">
-    <label class="form-label mb-1" for="select-b">Target B</label>
-    <select name="b" id="select-b" class="form-select form-select-sm">
-      <option value="">Select</option>
-      {% for row in targets %}
-      <option value="{{ row.target }}" {% if target_b == row.target %}selected{% endif %}>{{ row.target }}</option>
-      {% endfor %}
-    </select>
-  </div>
-  <div class="col-auto">
-    <button type="submit" class="btn btn-primary btn-sm">Compare</button>
-  </div>
-</form>
+    <form method="get" style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-bottom:16px;padding:12px;background:var(--bg-card);border:1px solid var(--amber-border);border-radius:4px;">
+      <div>
+        <div style="color:var(--text-dim);font-size:11px;margin-bottom:2px;">Target A</div>
+        <select name="a" style="font:inherit;padding:2px 6px;border:1px solid var(--amber-border);background:var(--bg);">
+          <option value="">Select</option>
+          {% for row in targets %}
+          <option value="{{ row.target }}"{% if target_a == row.target %} selected{% endif %}>{{ row.target }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <div style="color:var(--text-dim);font-size:11px;margin-bottom:2px;">Target B</div>
+        <select name="b" style="font:inherit;padding:2px 6px;border:1px solid var(--amber-border);background:var(--bg);">
+          <option value="">Select</option>
+          {% for row in targets %}
+          <option value="{{ row.target }}"{% if target_b == row.target %} selected{% endif %}>{{ row.target }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" style="font:inherit;padding:4px 12px;border:1px solid var(--amber);background:var(--amber);color:#fff;cursor:pointer;border-radius:3px;">Compare</button>
+    </form>
 
-{% if diff %}
-<h2 class="h5 mb-3">Different</h2>
-<div class="table-responsive">
-  <table class="table table-sm table-hover">
-    <thead>
-      <tr>
-        <th>Origin</th>
-        <th>{{ target_a }}</th>
-        <th>{{ target_b }}</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for row in diff.differ %}
-      <tr>
-        <td>{{ row.origin }}</td>
-        <td>
-          <span class="badge rounded-pill text-bg-{% if row.result_a == 'success' %}success{% elif row.result_a == 'failure' %}danger{% else %}secondary{% endif %}">{{ row.result_a }}</span>
-          {{ row.version_a }}
-        </td>
-        <td>
-          <span class="badge rounded-pill text-bg-{% if row.result_b == 'success' %}success{% elif row.result_b == 'failure' %}danger{% else %}secondary{% endif %}">{{ row.result_b }}</span>
-          {{ row.version_b }}
-        </td>
-      </tr>
-      {% endfor %}
-      {% for row in diff.only_a %}
-      <tr>
-        <td>{{ row.origin }}</td>
-        <td>
-          <span class="badge rounded-pill text-bg-{% if row.result == 'success' %}success{% elif row.result == 'failure' %}danger{% else %}secondary{% endif %}">{{ row.result }}</span>
-          {{ row.version }}
-        </td>
-        <td>-</td>
-      </tr>
-      {% endfor %}
-      {% for row in diff.only_b %}
-      <tr>
-        <td>{{ row.origin }}</td>
-        <td>-</td>
-        <td>
-          <span class="badge rounded-pill text-bg-{% if row.result == 'success' %}success{% elif row.result == 'failure' %}danger{% else %}secondary{% endif %}">{{ row.result }}</span>
-          {{ row.version }}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
-{% endif %}
-{% endblock %}
+    {% if diff %}
+    <h2>Different</h2>
+    <table class="tracker-table">
+      <thead>
+        <tr><th>Origin</th><th>{{ target_a }}</th><th>{{ target_b }}</th></tr>
+      </thead>
+      <tbody>
+        {% for row in diff.differ %}
+        <tr>
+          <td>{{ row.origin }}</td>
+          <td><span class="stat-pill {% if row.result_a == 'success' %}built{% elif row.result_a == 'failure' %}failed{% else %}total{% endif %}">{{ row.result_a }}</span> {{ row.version_a }}</td>
+          <td><span class="stat-pill {% if row.result_b == 'success' %}built{% elif row.result_b == 'failure' %}failed{% else %}total{% endif %}">{{ row.result_b }}</span> {{ row.version_b }}</td>
+        </tr>
+        {% endfor %}
+        {% for row in diff.only_a %}
+        <tr>
+          <td>{{ row.origin }}</td>
+          <td><span class="stat-pill {% if row.result == 'success' %}built{% elif row.result == 'failure' %}failed{% else %}total{% endif %}">{{ row.result }}</span> {{ row.version }}</td>
+          <td style="color:var(--text-dim);">—</td>
+        </tr>
+        {% endfor %}
+        {% for row in diff.only_b %}
+        <tr>
+          <td>{{ row.origin }}</td>
+          <td style="color:var(--text-dim);">—</td>
+          <td><span class="stat-pill {% if row.result == 'success' %}built{% elif row.result == 'failure' %}failed{% else %}total{% endif %}">{{ row.result }}</span> {{ row.version }}</td>
+        </tr>
+        {% endfor %}
+        {% if not diff.differ and not diff.only_a and not diff.only_b %}
+        <tr><td colspan="3" style="color:var(--text-dim);">No differences between the selected targets.</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+    {% endif %}
+  </div>
+</body>
+</html>

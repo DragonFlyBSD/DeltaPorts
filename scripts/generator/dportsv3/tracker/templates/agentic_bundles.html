@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bundles — DeltaPorts Tracker</title>
+  <link href="{{ request.url_for('static', path='progress.css') }}" type="text/css" rel="stylesheet">
+  <link rel="icon" type="image/png" href="{{ request.url_for('static', path='favicon.png') }}">
+</head>
+<body>
+  {% with nav_crumbs = [{"label": "Agentic", "url": request.url_for('agentic_index')}, {"label": "Bundles"}] %}
+    {% include "_tracker_nav.html" %}
+  {% endwith %}
+
+  <div class="tracker-page">
+    <h1>Bundles</h1>
+    <p class="lede">Failure-evidence bundles uploaded by dsynth hooks.</p>
+
+    {% with show_origin = True %}{% include "_target_filter.html" %}{% endwith %}
+
+    <table class="tracker-table">
+      <thead>
+        <tr><th>Bundle</th><th>Origin</th><th>Flavor</th><th>Target</th><th>Result</th><th>When</th><th>Run</th></tr>
+      </thead>
+      <tbody>
+        {% for b in bundles %}
+        <tr>
+          <td><a href="{{ request.url_for('agentic_bundle_detail', bundle_id=b.bundle_id) }}">{{ b.bundle_id }}</a></td>
+          <td>{{ b.origin }}</td>
+          <td>{{ b.flavor or '—' }}</td>
+          <td>{{ b.target or '—' }}</td>
+          <td><span class="stat-pill {% if b.result == 'fail' %}failed{% else %}built{% endif %}">{{ b.result }}</span></td>
+          <td>{{ b.ts_utc }}</td>
+          <td>{% if b.run_id %}<a href="{{ request.url_for('agentic_run_detail', run_id=b.run_id) }}">{{ b.run_id }}</a>{% else %}—{% endif %}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" style="color:var(--text-dim);">No bundles match this filter.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>

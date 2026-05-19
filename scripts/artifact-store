@@ -1,0 +1,26 @@
+#!/usr/bin/env python3
+"""Standalone entry point for the artifact-store HTTP service.
+
+All logic lives in ``dportsv3.artifact_store``; this shim only:
+- Bootstraps sys.path so the package is importable when run as a
+  plain script (no need to activate the generator venv).
+- Hands control to ``main()``.
+
+Both invocations are functionally identical:
+    ./scripts/artifact-store --logs-root /path
+    python -m dportsv3.artifact_store --logs-root /path
+"""
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+# Same bootstrap pattern as scripts/agent-queue-runner.
+_GENERATOR_DIR = Path(__file__).resolve().parent / "generator"
+if _GENERATOR_DIR.is_dir() and str(_GENERATOR_DIR) not in sys.path:
+    sys.path.insert(0, str(_GENERATOR_DIR))
+
+from dportsv3.artifact_store import main  # noqa: E402
+
+if __name__ == "__main__":
+    main()

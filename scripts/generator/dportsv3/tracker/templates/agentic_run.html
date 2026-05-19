@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ run.run_id }} — DeltaPorts Tracker</title>
+  <link href="{{ request.url_for('static', path='progress.css') }}" type="text/css" rel="stylesheet">
+  <link rel="icon" type="image/png" href="{{ request.url_for('static', path='favicon.png') }}">
+</head>
+<body>
+  {% with nav_crumbs = [{"label": "Agentic", "url": request.url_for('agentic_index')}, {"label": run.run_id}] %}
+    {% include "_tracker_nav.html" %}
+  {% endwith %}
+
+  <div class="tracker-page">
+    <h1>{{ run.run_id }}</h1>
+
+    <div class="tracker-card">
+      <table style="font-size:12px;">
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Profile</th><td>{{ run.profile or '—' }}</td></tr>
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Target</th><td>{{ run.target or '—' }}</td></tr>
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Started</th><td>{{ run.ts_start or '—' }}</td></tr>
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Ended</th><td>{{ run.ts_end or '—' }}</td></tr>
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Last seen</th><td>{{ run.last_seen_at or '—' }}</td></tr>
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Path</th><td>{{ run.path or '—' }}</td></tr>
+      </table>
+    </div>
+
+    <h2>Bundles in this run</h2>
+    {% if bundles %}
+    <table class="tracker-table">
+      <thead><tr><th>Bundle</th><th>Origin</th><th>Target</th><th>Result</th><th>When</th></tr></thead>
+      <tbody>
+        {% for b in bundles %}
+        <tr>
+          <td><a href="{{ request.url_for('agentic_bundle_detail', bundle_id=b.bundle_id) }}">{{ b.bundle_id }}</a></td>
+          <td>{{ b.origin }}</td>
+          <td>{{ b.target or '—' }}</td>
+          <td><span class="stat-pill {% if b.result == 'fail' %}failed{% else %}built{% endif %}">{{ b.result }}</span></td>
+          <td>{{ b.ts_utc }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">No bundles recorded for this run.</div>
+    {% endif %}
+  </div>
+</body>
+</html>

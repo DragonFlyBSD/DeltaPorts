@@ -1,15 +1,24 @@
-{% extends "base.html" %}
-{% set active_page = "targets" %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DeltaPorts Tracker</title>
+  <link href="{{ request.url_for('static', path='progress.css') }}" type="text/css" rel="stylesheet">
+  <link rel="icon" type="image/png" href="{{ request.url_for('static', path='favicon.png') }}">
+  {% if refresh_seconds %}<meta http-equiv="refresh" content="{{ refresh_seconds }}">{% endif %}
+</head>
+<body>
 
-{% block content %}
-<h1 class="h3 mb-1">Targets</h1>
-<p class="text-body-secondary mb-4">Current per-target status and most recent build activity.</p>
+  {% include "_tracker_nav.html" %}
 
-{% if active_builds %}
-<div class="card shadow-sm mb-4">
-  <div class="card-header fw-semibold">Active Builds</div>
-  <div class="table-responsive">
-    <table class="table table-sm table-hover mb-0">
+  <div class="tracker-page">
+    <h1>Targets</h1>
+    <p class="lede">Per-target build status. Click a target for the live progress view.</p>
+
+    {% if active_builds %}
+    <h2>Active builds</h2>
+    <table class="tracker-table">
       <thead>
         <tr>
           <th>Target</th>
@@ -22,58 +31,54 @@
       </thead>
       <tbody>
         {% for ab in active_builds %}
+        {% set total = ab.total_expected or 0 %}
+        {% set done = ab.done_count %}
+        {% set pct = (done * 100 // total) if total else 0 %}
         <tr>
           <td><a href="{{ request.url_for('dashboard_build_detail', run_id=ab.id) }}">{{ ab.target }}</a></td>
           <td>{{ ab.build_type }}</td>
           <td>{{ ab.started_at }}</td>
           <td>
-            {% set done = ab.done_count %}
-            {% set total = ab.total_expected or 0 %}
-            <div class="d-flex align-items-center gap-2">
-              <div class="progress flex-grow-1">
-                <div class="progress-bar bg-success" style="width:{{ (done / total * 100) if total else 0 }}%"></div>
-              </div>
-              <small class="text-nowrap">{{ done }} / {{ total or '?' }}</small>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div class="progress-mini"><div class="pm-fill" style="width:{{ pct }}%"></div></div>
+              <span style="font-variant-numeric:tabular-nums;color:var(--text-dim);">{{ done }} / {{ total or '?' }}</span>
             </div>
           </td>
-          <td>{% if ab.building_count %}<span class="badge rounded-pill text-bg-warning">{{ ab.building_count }}</span>{% else %}-{% endif %}</td>
-          <td>{% if ab.failure_count %}<span class="badge rounded-pill text-bg-danger">{{ ab.failure_count }}</span>{% else %}0{% endif %}</td>
+          <td>
+            {% if ab.building_count %}<span class="stat-pill skipped">{{ ab.building_count }}</span>{% else %}—{% endif %}
+          </td>
+          <td>
+            {% if ab.failure_count %}<span class="stat-pill failed">{{ ab.failure_count }}</span>{% else %}0{% endif %}
+          </td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
-  </div>
-</div>
-{% endif %}
+    {% endif %}
 
-<div class="table-responsive">
-  <table class="table table-striped table-hover">
-    <thead>
-      <tr>
-        <th>Target</th>
-        <th>Total</th>
-        <th>Pass</th>
-        <th>Fail</th>
-        <th>Last Build</th>
-      </tr>
-    </thead>
-    <tbody>
+    <h2>All targets</h2>
+    {% if targets %}
+    <div class="target-grid">
       {% for row in targets %}
-      <tr>
-        <td><a href="{{ request.url_for('dashboard_target', target=row.target) }}">{{ row.target }}</a></td>
-        <td>{{ row.total_ports }}</td>
-        <td><span class="text-success">{{ row.successes }}</span></td>
-        <td><span class="text-danger">{{ row.failures }}</span></td>
-        <td>
-          {% if row.last_build_id %}
-          <a href="{{ request.url_for('dashboard_build_detail', run_id=row.last_build_id) }}">{{ row.last_build_at }}</a>
-          {% else %}
-          -
-          {% endif %}
-        </td>
-      </tr>
+      <a class="target-card" href="{{ request.url_for('dashboard_target', target=row.target) }}">
+        <div class="target-name">{{ row.target }}</div>
+        <div class="target-meta">
+          {% if row.last_build_at %}last build {{ row.last_build_at }}{% else %}no builds yet{% endif %}
+        </div>
+        <div class="target-stats">
+          <span class="stat-pill total">Σ {{ row.total_ports }}</span>
+          {% if row.successes %}<span class="stat-pill built">✓ {{ row.successes }}</span>{% endif %}
+          {% if row.failures %}<span class="stat-pill failed">✗ {{ row.failures }}</span>{% endif %}
+          {% if row.skipped %}<span class="stat-pill skipped">⇢ {{ row.skipped }}</span>{% endif %}
+          {% if row.ignored %}<span class="stat-pill ignored">⊘ {{ row.ignored }}</span>{% endif %}
+        </div>
+      </a>
       {% endfor %}
-    </tbody>
-  </table>
-</div>
-{% endblock %}
+    </div>
+    {% else %}
+    <div class="empty-state">No targets recorded yet.</div>
+    {% endif %}
+  </div>
+
+</body>
+</html>

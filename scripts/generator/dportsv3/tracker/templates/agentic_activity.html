@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Activity — DeltaPorts Tracker</title>
+  <link href="{{ request.url_for('static', path='progress.css') }}" type="text/css" rel="stylesheet">
+  <link rel="icon" type="image/png" href="{{ request.url_for('static', path='favicon.png') }}">
+</head>
+<body>
+  {% with nav_crumbs = [{"label": "Agentic", "url": request.url_for('agentic_index')}, {"label": "Activity"}] %}
+    {% include "_tracker_nav.html" %}
+  {% endwith %}
+
+  <div class="tracker-page">
+    <h1>Activity log</h1>
+    <p class="lede">Recent agentic stage transitions.</p>
+
+    {% include "_target_filter.html" %}
+
+    <table class="tracker-table">
+      <thead><tr><th>When</th><th>Job</th><th>Stage</th><th>Duration</th><th>Message</th></tr></thead>
+      <tbody>
+        {% for a in activity %}
+        <tr>
+          <td>{{ a.ts }}</td>
+          <td>{% if a.job_id %}<a href="{{ request.url_for('agentic_job_detail', job_id=a.job_id) }}">{{ a.job_id }}</a>{% else %}—{% endif %}</td>
+          <td>{{ a.stage or '—' }}</td>
+          <td>{{ a.duration_ms if a.duration_ms is not none else '—' }}</td>
+          <td>{{ a.message or '—' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" style="color:var(--text-dim);">No activity yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>

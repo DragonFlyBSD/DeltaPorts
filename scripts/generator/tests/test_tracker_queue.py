@@ -29,7 +29,7 @@ def conn(tmp_path: Path):
 
 @pytest.fixture
 def client(tmp_path: Path) -> TestClient:
-    app = create_app(tmp_path / "tracker.db")
+    app = create_app(tmp_path / "state.db")
     with TestClient(app) as tc:
         yield tc
 
