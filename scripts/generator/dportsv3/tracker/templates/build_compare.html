@@ -1,66 +1,59 @@
-{% extends "base.html" %}
-{% set active_page = "builds" %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Build compare — DeltaPorts Tracker</title>
+  <link href="{{ request.url_for('static', path='progress.css') }}" type="text/css" rel="stylesheet">
+  <link rel="icon" type="image/png" href="{{ request.url_for('static', path='favicon.png') }}">
+  <style>
+    details.compare-section { background: var(--bg-card); border: 1px solid var(--amber-border); border-radius: 4px; margin-bottom: 8px; }
+    details.compare-section summary { cursor: pointer; padding: 8px 12px; font-weight: 600; color: var(--text); user-select: none; }
+    details.compare-section summary::marker { color: var(--amber); }
+    details.compare-section summary .count { color: var(--text-dim); font-weight: normal; margin-left: 6px; }
+  </style>
+</head>
+<body>
+  {% with nav_crumbs = [{"label": "Builds", "url": request.url_for('dashboard_builds')}, {"label": "Compare"}] %}
+    {% include "_tracker_nav.html" %}
+  {% endwith %}
 
-{% block content %}
-<h1 class="h3 mb-1">Build Compare</h1>
-<p class="text-body-secondary mb-4">{{ compare.run_a.target }} {{ compare.run_a.build_type }} run {{ compare.run_a.id }} vs {{ compare.run_b.target }} {{ compare.run_b.build_type }} run {{ compare.run_b.id }}</p>
+  <div class="tracker-page">
+    <h1>Build compare</h1>
+    <p class="lede">{{ compare.run_a.target }} {{ compare.run_a.build_type }} run {{ compare.run_a.id }} vs {{ compare.run_b.target }} {{ compare.run_b.build_type }} run {{ compare.run_b.id }}</p>
 
-<div class="card shadow-sm mb-4">
-  <div class="table-responsive">
-    <table class="table table-sm mb-0">
-      <thead>
-        <tr>
-          <th>Bucket</th>
-          <th>Count</th>
-        </tr>
-      </thead>
-      <tbody>
+    <div class="tracker-card">
+      <table style="font-size:12px;">
         {% for key, value in compare.summary.items() %}
         <tr>
-          <td>{{ key }}</td>
-          <td>{{ value }}</td>
+          <th style="text-align:left;color:var(--text-dim);padding-right:16px;">{{ key }}</th>
+          <td style="font-variant-numeric:tabular-nums;">{{ value }}</td>
         </tr>
         {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</div>
-
-<div class="accordion" id="compareAccordion">
-  {% for section in ['new_failures', 'new_successes', 'still_failing', 'added', 'removed', 'version_changes'] %}
-  <div class="accordion-item">
-    <h2 class="accordion-header">
-      <button class="accordion-button{% if section != 'new_failures' %} collapsed{% endif %}" type="button"
-              data-bs-toggle="collapse" data-bs-target="#section-{{ section }}">
-        {{ section }} ({{ compare[section]|length }})
-      </button>
-    </h2>
-    <div id="section-{{ section }}" class="accordion-collapse collapse{% if section == 'new_failures' %} show{% endif %}"
-         data-bs-parent="#compareAccordion">
-      <div class="accordion-body p-0">
-        <div class="table-responsive">
-          <table class="table table-sm table-hover mb-0">
-            <thead>
-              <tr>
-                <th>Origin</th>
-                <th>Run A</th>
-                <th>Run B</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for row in compare[section] %}
-              <tr>
-                <td>{{ row.origin }}</td>
-                <td>{{ row.result_a or '-' }} {{ row.version_a or '-' }}</td>
-                <td>{{ row.result_b or '-' }} {{ row.version_b or '-' }}</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      </table>
     </div>
+
+    {% for section in ['new_failures', 'new_successes', 'still_failing', 'added', 'removed', 'version_changes'] %}
+    <details class="compare-section"{% if section == 'new_failures' %} open{% endif %}>
+      <summary>{{ section }}<span class="count">({{ compare[section]|length }})</span></summary>
+      <table class="tracker-table" style="border-radius:0;">
+        <thead>
+          <tr><th>Origin</th><th>Run A</th><th>Run B</th></tr>
+        </thead>
+        <tbody>
+          {% for row in compare[section] %}
+          <tr>
+            <td>{{ row.origin }}</td>
+            <td>{{ row.result_a or '—' }} {{ row.version_a or '' }}</td>
+            <td>{{ row.result_b or '—' }} {{ row.version_b or '' }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="3" style="color:var(--text-dim);">none</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </details>
+    {% endfor %}
   </div>
-  {% endfor %}
-</div>
-{% endblock %}
+</body>
+</html>

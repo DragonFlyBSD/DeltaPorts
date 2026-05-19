@@ -1,51 +1,62 @@
-{% extends "base.html" %}
-{% set active_page = "builds" %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Builds — DeltaPorts Tracker</title>
+  <link href="{{ request.url_for('static', path='progress.css') }}" type="text/css" rel="stylesheet">
+  <link rel="icon" type="image/png" href="{{ request.url_for('static', path='favicon.png') }}">
+</head>
+<body>
+  {% with nav_crumbs = [{"label": "Builds"}] %}{% include "_tracker_nav.html" %}{% endwith %}
 
-{% block content %}
-<h1 class="h3 mb-1">Builds</h1>
-<p class="text-body-secondary mb-4">Recent build runs across targets and build types.</p>
+  <div class="tracker-page">
+    <h1>Builds</h1>
+    <p class="lede">Recent build runs across targets and build types.</p>
 
-<div class="table-responsive">
-  <table class="table table-sm table-hover">
-    <thead>
-      <tr>
-        <th>Run</th>
-        <th>Target</th>
-        <th>Type</th>
-        <th>Started</th>
-        <th>Finished</th>
-        <th>Pass/Fail</th>
-        <th>Compare</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for run in runs %}
-      <tr>
-        <td class="font-monospace"><a href="{{ request.url_for('dashboard_build_detail', run_id=run.id) }}">{{ run.id }}</a></td>
-        <td>{{ run.target }}</td>
-        <td>{{ run.build_type }}</td>
-        <td>{{ run.started_at }}</td>
-        <td>
-          {% if run.finished_at %}
-            {{ run.finished_at }}
-          {% else %}
-            <span class="badge rounded-pill text-bg-warning">running{% if run.total_expected %} {{ run.success_count + run.failure_count + run.skipped_count + run.ignored_count }}/{{ run.total_expected }}{% endif %}</span>
-          {% endif %}
-        </td>
-        <td>
-          <span class="badge rounded-pill text-bg-success">{{ run.success_count }}</span>
-          <span class="badge rounded-pill text-bg-danger">{{ run.failure_count }}</span>
-        </td>
-        <td>
-          {% if compare_links.get(run.id) %}
-          <a href="{{ request.url_for('dashboard_build_compare') }}?a={{ compare_links[run.id] }}&amp;b={{ run.id }}">vs {{ compare_links[run.id] }}</a>
-          {% else %}
-          -
-          {% endif %}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
-{% endblock %}
+    <table class="tracker-table">
+      <thead>
+        <tr>
+          <th>Run</th>
+          <th>Target</th>
+          <th>Type</th>
+          <th>Started</th>
+          <th>Finished</th>
+          <th>Pass / Fail</th>
+          <th>Compare</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for run in runs %}
+        <tr>
+          <td><a href="{{ request.url_for('dashboard_build_detail', run_id=run.id) }}">{{ run.id }}</a></td>
+          <td>{{ run.target }}</td>
+          <td>{{ run.build_type }}</td>
+          <td>{{ run.started_at }}</td>
+          <td>
+            {% if run.finished_at %}
+              {{ run.finished_at }}
+            {% else %}
+              <span class="stat-pill skipped">running{% if run.total_expected %} {{ run.success_count + run.failure_count + run.skipped_count + run.ignored_count }}/{{ run.total_expected }}{% endif %}</span>
+            {% endif %}
+          </td>
+          <td>
+            <span class="stat-pill built">{{ run.success_count }}</span>
+            <span class="stat-pill failed">{{ run.failure_count }}</span>
+          </td>
+          <td>
+            {% if compare_links.get(run.id) %}
+            <a href="{{ request.url_for('dashboard_build_compare') }}?a={{ compare_links[run.id] }}&amp;b={{ run.id }}">vs {{ compare_links[run.id] }}</a>
+            {% else %}
+            —
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" style="color:var(--text-dim);">No build runs yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>
