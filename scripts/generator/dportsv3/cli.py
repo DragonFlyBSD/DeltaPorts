@@ -528,22 +528,33 @@ def _register_tracker_parser(subparsers: argparse._SubParsersAction) -> None:
 def _register_artifact_store_parser(subparsers: argparse._SubParsersAction) -> None:
     """Register artifact-store command (serves bundles into state.db).
 
-    Remaining args are forwarded verbatim to
-    ``dportsv3.artifact_store.main`` so the flag set stays defined in
-    exactly one place (--bind / --port / --logs-root).
+    The subparser is a marker only; argv past this subcommand is
+    forwarded verbatim to ``dportsv3.artifact_store.main`` by ``main``
+    below (REMAINDER nargs doesn't reliably absorb ``--flag``-style
+    args).
     """
-    p = subparsers.add_parser(
+    subparsers.add_parser(
         "artifact-store",
-        help="Run the artifact-store HTTP service",
+        help="Run the artifact-store HTTP service (forwards --bind/--port/--logs-root)",
         add_help=False,
     )
-    p.add_argument("artifact_store_args", nargs=argparse.REMAINDER)
 
 
 def main(argv: list[str] | None = None) -> int:
     """CLI entrypoint."""
+    raw = list(argv) if argv is not None else sys.argv[1:]
+
+    # artifact-store is a thin forwarder — let its own argparse handle
+    # --bind/--port/--logs-root rather than splitting flag parsing
+    # across two layers. ``argparse.REMAINDER`` is unreliable for this.
+    if raw and raw[0] == "artifact-store":
+        from dportsv3.artifact_store import main as artifact_store_main
+
+        artifact_store_main(raw[1:])
+        return 0
+
     parser = create_parser()
-    args = parser.parse_args(argv)
+    args = parser.parse_args(raw)
 
     if not args.command:
         parser.print_help()
@@ -576,12 +587,6 @@ def main(argv: list[str] | None = None) -> int:
             )
             return 1
         return cmd_tracker(args)
-
-    if args.command == "artifact-store":
-        from dportsv3.artifact_store import main as artifact_store_main
-
-        artifact_store_main(list(args.artifact_store_args))
-        return 0
 
     print(f"Unknown command: {args.command}", file=sys.stderr)
     return 1

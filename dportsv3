@@ -40,6 +40,7 @@ generator commands:
   dsl             DSL parse/check/plan commands
   migrate         Migration utilities (compose-first workflow)
   tracker         Build tracker server and queries
+  artifact-store  Run the artifact-store HTTP service
 
 Use 'dportsv3 COMMAND --help' for command-specific help.
 EOF
