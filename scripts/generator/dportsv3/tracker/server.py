@@ -635,8 +635,13 @@ def create_app(db_path: str | Path) -> Any:
     # change to the existing /target/{target} dashboard yet.
     # ------------------------------------------------------------------
 
-    @app.get("/target/{target}/progress", response_class=HTMLResponse)
-    @app.get("/target/{target}/progress/", response_class=HTMLResponse)
+    # Mounted under /progress/{target} (not /target/{target}/progress)
+    # to avoid colliding with the legacy /target/{target}/{cat}/{port}
+    # port-detail route. Some FastAPI/Starlette versions on dfly route
+    # the more-specific path through the catch-all anyway, so we keep
+    # the prefix unambiguous.
+
+    @app.get("/progress/{target}", response_class=HTMLResponse)
     def dashboard_target_progress(request: RequestType, target: str) -> Any:
         # <base> tag pins relative URLs (summary.json, NN_history.json)
         # to this dir regardless of trailing-slash on the page URL.
@@ -646,16 +651,16 @@ def create_app(db_path: str | Path) -> Any:
             {
                 "title": target,
                 "target": target,
-                "progress_base": f"/target/{target}/progress/",
+                "progress_base": f"/progress/{target}/",
             },
         )
 
-    @app.get("/target/{target}/progress/summary.json")
+    @app.get("/progress/{target}/summary.json")
     def progress_summary(target: str) -> dict[str, Any]:
         with _conn() as conn:
             return target_summary(conn, target)
 
-    @app.get("/target/{target}/progress/{chunk}_history.json")
+    @app.get("/progress/{target}/{chunk}_history.json")
     def progress_history(target: str, chunk: str) -> Any:
         try:
             chunk_index = int(chunk)
