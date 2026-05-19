@@ -90,7 +90,8 @@ def _tracker_writes(db_path: Path, n: int, stop_after_first_error: bool = True) 
 
 def test_two_writers_no_lock_errors(tmp_path: Path) -> None:
     db_path = tmp_path / "state.db"
-    conn = init_state_db(sqlite3.connect(str(db_path)))
+    conn = sqlite3.connect(str(db_path))
+    init_state_db(conn)
     conn.close()
 
     n_per_writer = 60
@@ -141,7 +142,8 @@ def test_fk_enforcement_on_tracker_write(tmp_path: Path) -> None:
     skipped (per-connection pragma), this insert would succeed and the
     bug would only surface much later."""
     db_path = tmp_path / "state.db"
-    conn = init_state_db(sqlite3.connect(str(db_path)))
+    conn = sqlite3.connect(str(db_path))
+    init_state_db(conn)
     conn.close()
 
     conn = sqlite3.connect(str(db_path))
