@@ -561,15 +561,15 @@ distill_log() {
 
 	# High-signal patterns. Keep them fairly conservative to avoid dumping
 	# thousands of harmless "error:" hits.
-	# Note: use multiple -e to avoid regex quoting issues in /bin/sh.
-	RG_ARGS="--no-heading --color never --line-number"
+	# Note: use grep -nE (extended-regex, line-number); rg isn't in
+	# dfly base. \s+ → [[:space:]]+ for POSIX ERE compatibility.
 
 	{
 		echo "== Summary =="
 		echo "logfile: ${logfile}"
 		echo
 		echo "== First error candidates (max 60 matches) =="
-		rg ${RG_ARGS} -m 60 \
+		grep -nE -m 60 \
 			-e 'fatal error:' \
 			-e 'undefined reference' \
 			-e 'ld: error:' \
@@ -584,7 +584,7 @@ distill_log() {
 			"$logfile" || true
 		echo
 		echo "== Error blocks (context +/-2, truncated later) =="
-		rg ${RG_ARGS} -C 2 \
+		grep -nE -C 2 \
 			-e 'fatal error:' \
 			-e 'undefined reference' \
 			-e 'ld: error:' \
@@ -594,7 +594,7 @@ distill_log() {
 			-e 'meson\.build:.*ERROR' \
 			-e '^ninja: build stopped' \
 			-e 'error: failed to run custom build command for' \
-			-e '^===>\s+Stopped\s+in\s+' \
+			-e '^===>[[:space:]]+Stopped[[:space:]]+in[[:space:]]+' \
 			"$logfile" || true
 		echo
 		echo "== Tail (last 200 lines) =="
