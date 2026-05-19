@@ -10,6 +10,8 @@ from pathlib import Path
 from typing import Any, cast
 
 from dportsv3.tracker.progress_adapter import (
+    run_history_chunk,
+    run_summary,
     target_history_chunk,
     target_summary,
 )
@@ -655,6 +657,23 @@ def create_app(db_path: str | Path) -> Any:
             # bounds the UI's fetch range so this is rarely hit.
             return target_history_chunk(conn, target, chunk_index)
 
+    @app.get("/api/progress/build/{run_id}/summary.json")
+    def progress_build_summary(run_id: int) -> dict[str, Any]:
+        with _conn() as conn:
+            summary = run_summary(conn, run_id)
+        if summary is None:
+            raise HTTPException(status_code=404, detail=f"Unknown build run: {run_id}")
+        return summary
+
+    @app.get("/api/progress/build/{run_id}/{chunk}_history.json")
+    def progress_build_history(run_id: int, chunk: str) -> Any:
+        try:
+            chunk_index = int(chunk)
+        except ValueError:
+            raise HTTPException(status_code=404, detail="Bad chunk index")
+        with _conn() as conn:
+            return run_history_chunk(conn, run_id, chunk_index)
+
     @app.get("/target/{target}", response_class=HTMLResponse)
     def dashboard_target(request: RequestType, target: str) -> Any:
         # The page uses progress.{css,js} (lifted from dsynth-progress)
@@ -730,37 +749,24 @@ def create_app(db_path: str | Path) -> Any:
             )
 
     @app.get("/builds/{run_id}", response_class=HTMLResponse)
-    def dashboard_build_detail(
-        request: RequestType,
-        run_id: int,
-        status_filter: str = Query(default="all", alias="filter"),
-    ) -> Any:
-        with _conn() as conn:
-            payload = {
-                "build_run": get_build_run(conn, run_id),
-                "results": get_build_results(conn, run_id),
-            }
-            build = payload["build_run"]
-            results = payload["results"]
-            if status_filter == "failures":
-                results = [row for row in results if row.get("result") == "failure"]
-            elif status_filter == "successes":
-                results = [row for row in results if row.get("result") == "success"]
-            elif status_filter == "building":
-                results = [row for row in results if row.get("status") == "building"]
-            elif status_filter == "queued":
-                results = [row for row in results if row.get("status") == "queued"]
-            return templates.TemplateResponse(
-                request,
-                "build_detail.html",
-                {
-                    "title": f"Build {run_id}",
-                    "build": build,
-                    "results": results,
-                    "status_filter": status_filter,
-                    "refresh_seconds": 10 if build.get("finished_at") is None else None,
-                },
-            )
+    def dashboard_build_detail(request: RequestType, run_id: int) -> Any:
+        # Build detail uses the same dsynth-progress UI as /target/{target},
+        # just scoped to one run_id. Verify the run exists so unknown
+        # IDs 404 here rather than at the JSON fetch.
+        try:
+            with _conn() as conn:
+                build = get_build_run(conn, run_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return templates.TemplateResponse(
+            request,
+            "progress.html",
+            {
+                "title": f"Build {run_id}",
+                "target": f"{build['target']} (run {run_id})",
+                "progress_base": f"/api/progress/build/{run_id}/",
+            },
+        )
 
     @app.get("/diff", response_class=HTMLResponse)
     def dashboard_diff(

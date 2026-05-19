@@ -111,3 +111,44 @@ def test_progress_summary_unknown_target(client: TestClient) -> None:
     assert body["kfiles"] == 0
     assert body["stats"]["built"] == 0
     assert body["builders"] == []
+
+
+def test_build_progress_html_serves(client: TestClient, seeded_state_db: Path) -> None:
+    import sqlite3
+    conn = sqlite3.connect(str(seeded_state_db))
+    run_id = conn.execute("SELECT id FROM build_runs LIMIT 1").fetchone()[0]
+    conn.close()
+
+    resp = client.get(f"/builds/{run_id}")
+    assert resp.status_code == 200
+    body = resp.text
+    assert f'<base href="/api/progress/build/{run_id}/">' in body
+    assert "progress.css" in body
+
+
+def test_build_progress_summary_and_history(
+    client: TestClient, seeded_state_db: Path
+) -> None:
+    import sqlite3
+    conn = sqlite3.connect(str(seeded_state_db))
+    run_id = conn.execute("SELECT id FROM build_runs LIMIT 1").fetchone()[0]
+    conn.close()
+
+    summary = client.get(f"/api/progress/build/{run_id}/summary.json").json()
+    assert summary["stats"]["built"] == 1
+    assert summary["stats"]["failed"] == 1
+    assert summary["stats"]["skipped"] == 1
+    assert summary["stats"]["ignored"] == 1
+    assert len(summary["builders"]) == 1
+
+    history = client.get(f"/api/progress/build/{run_id}/01_history.json").json()
+    assert isinstance(history, list)
+    assert len(history) == 4  # excludes building row
+
+
+def test_build_progress_unknown_run_404(client: TestClient) -> None:
+    assert client.get("/builds/99999").status_code == 404
+    assert client.get("/api/progress/build/99999/summary.json").status_code == 404
+    # History endpoint silently returns [] for unknown run (no run guard).
+    body = client.get("/api/progress/build/99999/01_history.json").json()
+    assert body == []

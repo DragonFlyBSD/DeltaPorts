@@ -48,17 +48,29 @@ def _latest_run_id(conn: sqlite3.Connection, target: str) -> int | None:
 
 
 def target_summary(conn: sqlite3.Connection, target: str) -> dict[str, Any]:
-    """Return the summary.json shape for one target."""
+    """Return the summary.json shape for the latest run on ``target``."""
     run_id = _latest_run_id(conn, target)
     if run_id is None:
         return _empty_summary(target)
+    summary = _run_summary_by_id(conn, run_id)
+    return summary if summary is not None else _empty_summary(target)
 
+
+def run_summary(conn: sqlite3.Connection, run_id: int) -> dict[str, Any] | None:
+    """Return the summary.json shape for a specific build_run, or None."""
+    return _run_summary_by_id(conn, run_id)
+
+
+def _run_summary_by_id(
+    conn: sqlite3.Connection, run_id: int
+) -> dict[str, Any] | None:
     run = conn.execute(
         """SELECT id, target, build_type, started_at, finished_at, total_expected
            FROM build_runs WHERE id = ?""",
         (run_id,),
     ).fetchone()
-    assert run is not None
+    if run is None:
+        return None
 
     counts = conn.execute(
         """SELECT
@@ -115,17 +127,25 @@ def target_history_chunk(
     target: str,
     chunk_index: int,
 ) -> list[dict[str, Any]]:
-    """Return one chunk of build entries for the latest run on ``target``.
+    """Return one chunk of build entries for the latest run on ``target``."""
+    run_id = _latest_run_id(conn, target)
+    if run_id is None:
+        return []
+    return run_history_chunk(conn, run_id, chunk_index)
+
+
+def run_history_chunk(
+    conn: sqlite3.Connection,
+    run_id: int,
+    chunk_index: int,
+) -> list[dict[str, Any]]:
+    """Return one chunk of build entries for a specific build_run.
 
     Chunks are 1-indexed to match dsynth-progress (``01_history.json`` =
     chunk 1). Returns an empty list past the last chunk.
     """
     if chunk_index < 1:
         return []
-    run_id = _latest_run_id(conn, target)
-    if run_id is None:
-        return []
-
     offset = (chunk_index - 1) * CHUNK_SIZE
     # 'building' and 'queued' rows are in-flight — they belong in
     # summary.builders, not in the historical record.
