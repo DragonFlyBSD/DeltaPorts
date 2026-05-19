@@ -1,0 +1,184 @@
+{# Lifted from www/example/index.html; Jinja-ified.
+
+   This template renders the dsynth-progress UI against tracker data
+   for one target. Progress.js fetches summary.json + <NN>_history.json
+   with paths relative to the page; the <base> tag pins those to the
+   /target/{target}/progress/ endpoint so the browser resolves them
+   correctly regardless of trailing slash.
+#}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <base href="{{ progress_base }}">
+  <title>dsynth — {{ target }}</title>
+  <link href="{{ request.url_for('static', path='progress.css') }}" type="text/css" rel="stylesheet">
+  <script src="{{ request.url_for('static', path='progress.js') }}" type="text/javascript" defer></script>
+  <link rel="icon" type="image/png" href="{{ request.url_for('static', path='favicon.png') }}">
+</head>
+<body>
+
+  <div id="header">
+    <div id="header-top">
+      <div class="header-top-inner">
+        <div id="logo">
+          <a href="http://www.dragonflybsd.org/">
+            <img src="{{ request.url_for('static', path='dsynth.png') }}" alt="dsynth">
+          </a>
+        </div>
+        <div id="build_info">
+          <table>
+            <tr><th>Profile:</th><td id="profile"></td></tr>
+            <tr><th>Polling:</th><td id="polling"></td></tr>
+            <tr><th>Kickoff:</th><td id="kickoff"></td></tr>
+          </table>
+        </div>
+        <div class="header-spacer"></div>
+        <div id="stress">
+          <table>
+            <thead>
+              <tr>
+                <th>Load</th>
+                <th>Swap</th>
+                <th>Elapsed</th>
+                <th>Pkg/hr</th>
+                <th id="impulse_label" title="Build rate over last 500 seconds">Impulse</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td id="stats_load"></td>
+                <td id="stats_swapinfo"></td>
+                <td id="stats_elapsed"></td>
+                <td id="stats_pkghour"></td>
+                <td id="stats_impulse"></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="header-stats">
+      <div class="stat-card" data-result="queued"  onclick="filter('')"                title="Show all">
+        <span class="stat-icon">Σ</span>
+        <span class="stat-number" id="stats_queued"></span>
+        <span class="stat-label">Total</span>
+      </div>
+      <div class="stat-card" data-result="built"   onclick="filter('result:built')"   title="Filter built">
+        <span class="stat-icon">✓</span>
+        <span class="stat-number" id="stats_built"></span>
+        <span class="stat-label">Built</span>
+      </div>
+      <div class="stat-card" data-result="meta"    onclick="filter('result:meta')"    title="Filter meta">
+        <span class="stat-icon">◈</span>
+        <span class="stat-number" id="stats_meta"></span>
+        <span class="stat-label">Meta</span>
+      </div>
+      <div class="stat-card" data-result="failed"  onclick="filter('result:failed')"  title="Filter failed">
+        <span class="stat-icon">✗</span>
+        <span class="stat-number" id="stats_failed"></span>
+        <span class="stat-label">Failed</span>
+      </div>
+      <div class="stat-card" data-result="ignored" onclick="filter('result:ignored')" title="Filter ignored">
+        <span class="stat-icon">⊘</span>
+        <span class="stat-number" id="stats_ignored"></span>
+        <span class="stat-label">Ignored</span>
+      </div>
+      <div class="stat-card" data-result="skipped" onclick="filter('result:skipped')" title="Filter skipped">
+        <span class="stat-icon">⇢</span>
+        <span class="stat-number" id="stats_skipped"></span>
+        <span class="stat-label">Skipped</span>
+      </div>
+      <div class="stat-card" data-result="remains">
+        <span class="stat-icon">⋯</span>
+        <span class="stat-number" id="stats_remains"></span>
+        <span class="stat-label">Remaining</span>
+      </div>
+    </div>
+
+  </div><!-- #header -->
+
+  <div id="main">
+
+    <div id="builders_zone_2">
+      <table class="builders_table" id="builders_body">
+        <thead class="builders">
+          <tr>
+            <td>ID</td>
+            <td>Duration</td>
+            <td>Build Phase</td>
+            <td>Origin</td>
+            <td>Lines</td>
+          </tr>
+        </thead>
+        <tbody class="builders"></tbody>
+      </table>
+    </div>
+
+    <div id="report">
+      <div id="loading-state"></div>
+      <div id="presets">
+        <span class="preset-tag" data-filter="result:failed" data-sort="skip"
+              onclick="preset('result:failed','skip')">biggest blockers</span>
+        <span class="preset-tag" data-filter="result:failed phase:fetch"
+              onclick="preset('result:failed phase:fetch','')">fetch errors</span>
+        <span class="preset-tag" data-filter="result:failed phase:patch"
+              onclick="preset('result:failed phase:patch','')">patch errors</span>
+        <span class="preset-tag" data-filter="result:failed phase:build"
+              onclick="preset('result:failed phase:build','')">build errors</span>
+        <span class="preset-tag" data-filter="result:ignored" data-sort="skip"
+              onclick="preset('result:ignored','skip')">ignored</span>
+        <span class="preset-tag" data-filter="result:failed" data-sort="entry"
+              onclick="preset('result:failed','entry')">recent failures</span>
+      </div>
+
+      <div id="report-controls">
+        <input type="search" id="search-input" placeholder="Search… e.g. result:failed origin:lang id:03" oninput="filter(this.value)">
+        <div id="pagination">
+          <select id="per-page" onchange="setPerPage(this.value)">
+            <option value="25">25</option>
+            <option value="50" selected>50</option>
+            <option value="100">100</option>
+            <option value="200">200</option>
+          </select>
+          <button id="page-prev" onclick="prevPage()" disabled>&#8592;</button>
+          <span id="page-info"></span>
+          <button id="page-next" onclick="nextPage()" disabled>&#8594;</button>
+        </div>
+      </div>
+      <table id="report_table">
+        <thead>
+          <tr>
+            <th data-col="entry"    onclick="sortBy('entry')"    title="Sort by entry number">No.</th>
+            <th data-col="elapsed"  onclick="sortBy('elapsed')"  title="Sort by elapsed time">Elapsed</th>
+            <th data-col="ID"       onclick="sortBy('ID')"       title="Sort by builder ID">ID</th>
+            <th data-col="result"   onclick="sortBy('result')"   title="Sort by result">Result</th>
+            <th data-col="origin"   onclick="sortBy('origin')"   title="Sort by origin">Origin</th>
+            <th>Information</th>
+            <th data-col="skip" onclick="sortBy('skip')" title="Sort by skip count">Skip</th>
+            <th data-col="duration" onclick="sortBy('duration')" title="Sort by duration">Duration</th>
+          </tr>
+        </thead>
+        <tbody id="report_body"></tbody>
+      </table>
+    </div>
+
+  </div><!-- #main -->
+
+  <div id="footer">
+    <div id="nav">Progress</div>
+    <div id="progress">
+      <div id="progressbar-css">
+        <div class="pb-seg pb-built"   id="seg_built"></div>
+        <div class="pb-seg pb-meta"    id="seg_meta"></div>
+        <div class="pb-seg pb-failed"  id="seg_failed"></div>
+        <div class="pb-seg pb-ignored" id="seg_ignored"></div>
+        <div class="pb-seg pb-skipped" id="seg_skipped"></div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

@@ -9,6 +9,10 @@ from importlib import util as importlib_util
 from pathlib import Path
 from typing import Any, cast
 
+from dportsv3.tracker.progress_adapter import (
+    target_history_chunk,
+    target_summary,
+)
 from dportsv3.tracker.agentic_queries import (
     activity_for_job,
     agentic_status,
@@ -623,6 +627,44 @@ def create_app(db_path: str | Path) -> Any:
                     "selected_target": target_value,
                 },
             )
+
+    # ------------------------------------------------------------------
+    # Phase 5 step 1: dsynth-progress UI adapter. Lifts the
+    # www/example/progress.{html,js,css} UI and feeds it from tracker
+    # data via two JSON endpoints (summary + chunked history). No
+    # change to the existing /target/{target} dashboard yet.
+    # ------------------------------------------------------------------
+
+    @app.get("/target/{target}/progress", response_class=HTMLResponse)
+    @app.get("/target/{target}/progress/", response_class=HTMLResponse)
+    def dashboard_target_progress(request: RequestType, target: str) -> Any:
+        # <base> tag pins relative URLs (summary.json, NN_history.json)
+        # to this dir regardless of trailing-slash on the page URL.
+        return templates.TemplateResponse(
+            request,
+            "progress.html",
+            {
+                "title": target,
+                "target": target,
+                "progress_base": f"/target/{target}/progress/",
+            },
+        )
+
+    @app.get("/target/{target}/progress/summary.json")
+    def progress_summary(target: str) -> dict[str, Any]:
+        with _conn() as conn:
+            return target_summary(conn, target)
+
+    @app.get("/target/{target}/progress/{chunk}_history.json")
+    def progress_history(target: str, chunk: str) -> Any:
+        try:
+            chunk_index = int(chunk)
+        except ValueError:
+            raise HTTPException(status_code=404, detail="Bad chunk index")
+        with _conn() as conn:
+            # Returns [] past the last chunk — kfiles in summary.json
+            # bounds the UI's fetch range so this is rarely hit.
+            return target_history_chunk(conn, target, chunk_index)
 
     @app.get("/target/{target}", response_class=HTMLResponse)
     def dashboard_target(
