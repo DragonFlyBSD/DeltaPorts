@@ -62,6 +62,9 @@ DEFAULT_TRACKER_URL = "http://127.0.0.1:8080"
 # Heartbeat interval (seconds)
 HEARTBEAT_INTERVAL = 5
 
+# How long to wait between dsynth-lock polls when an env is busy.
+DSYNTH_LOCK_POLL_SECONDS = 30
+
 
 # =============================================================================
 # State DB connection (for activity logging and runner status)
@@ -1070,6 +1073,40 @@ def write_error_note(job_path: Path, error: str):
         f.write(f"error={error}\n")
 
 
+def dsynth_active(env_name: str, queue_root: Path) -> tuple[bool, str]:
+    """Check if a dsynth process is currently running on this host.
+
+    pgrep is the only authority: it tells us if a dsynth process exists
+    right now. Process existence is the only state that actually
+    matters for "would a second dsynth invocation collide". The
+    tracker's ``build_runs.finished_at`` can be stale (operator ^C'd
+    dsynth, hook_run_end never ran, row left at NULL forever) and would
+    deadlock the runner if we treated it as a gate.
+
+    Returns ``(True, reason)`` when at least one dsynth process is
+    seen, ``(False, "")`` otherwise. ``env_name`` is currently unused
+    but kept in the signature for the future case where we'd scope
+    pgrep to processes inside a specific chroot.
+
+    On systems without pgrep (none in scope today — dfly has it in
+    base), this fails open: returns ``(False, "")`` and the runner
+    proceeds without a gate.
+    """
+    # -x matches process basename exactly so we don't false-positive on
+    # cmdlines that merely contain "dsynth" (queue paths, log paths, etc.).
+    try:
+        result = subprocess.run(
+            ["pgrep", "-x", "dsynth"],
+            capture_output=True, text=True, timeout=5,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            pids = result.stdout.strip().splitlines()
+            return True, f"dsynth process(es) on host: {','.join(pids)}"
+    except (subprocess.SubprocessError, OSError, FileNotFoundError):
+        pass
+    return False, ""
+
+
 def claim_next_job(queue_root: Path) -> Path | None:
     """Claim the oldest pending job by moving to inflight/."""
     pending_dir = queue_root / "pending"
@@ -1663,15 +1700,48 @@ def main():
                  f"Runner started (triage={triage_model}, patch={patch_model})")
     update_runner_status("idle", job_id=None, stage=None)
 
+    # Runner-level dev-env. When set, the runner refuses to claim jobs
+    # while dsynth is active in / on that env, to avoid two dsynth
+    # invocations against the same buildbase. Unset = no gate (operator
+    # accepts the risk).
+    runner_env = os.environ.get("DP_HARNESS_ENV") or ""
+    if not runner_env:
+        log(queue_root, "WARN",
+            "DP_HARNESS_ENV is unset; dsynth-busy gating disabled. "
+            "Concurrent dsynth runs in the same env may corrupt buildbase.")
+
+    _last_busy_reason = ""
+
+    def _gate_blocked() -> bool:
+        nonlocal _last_busy_reason
+        if not runner_env:
+            return False
+        busy, reason = dsynth_active(runner_env, queue_root)
+        if busy and reason != _last_busy_reason:
+            log(queue_root, "INFO", f"runner paused: {reason}")
+            update_runner_status("paused", job_id=None, stage=f"waiting: {reason}")
+            _last_busy_reason = reason
+        elif not busy and _last_busy_reason:
+            log(queue_root, "INFO", "runner resumed: dsynth idle")
+            update_runner_status("idle", job_id=None, stage="waiting")
+            _last_busy_reason = ""
+        return busy
+
     try:
         if args.once:
-            job = claim_next_job(queue_root)
-            if job:
-                process_job(queue_root, job, args.dry_run, kedb_dir)
+            if _gate_blocked():
+                log(queue_root, "INFO", "skipping --once: dsynth active")
             else:
-                log(queue_root, "INFO", "no jobs in queue")
+                job = claim_next_job(queue_root)
+                if job:
+                    process_job(queue_root, job, args.dry_run, kedb_dir)
+                else:
+                    log(queue_root, "INFO", "no jobs in queue")
         else:
             while True:
+                if _gate_blocked():
+                    time.sleep(DSYNTH_LOCK_POLL_SECONDS)
+                    continue
                 process_user_context_updates(queue_root)
                 job = claim_next_job(queue_root)
                 if job:
