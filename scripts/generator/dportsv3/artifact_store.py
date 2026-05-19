@@ -379,12 +379,12 @@ class ArtifactStoreServer(HTTPServer):
         self.store = store
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Local artifact store (blobstore + metadata)")
     parser.add_argument("--bind", default=DEFAULT_BIND)
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
     parser.add_argument("--logs-root", default=DEFAULT_LOGS_ROOT)
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     store = ArtifactStore(Path(args.logs_root))
     server = ArtifactStoreServer((args.bind, args.port), Handler, store)

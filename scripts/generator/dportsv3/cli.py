@@ -32,6 +32,7 @@ def create_parser() -> argparse.ArgumentParser:
     _register_dsl_parser(subparsers)
     _register_migrate_parser(subparsers)
     _register_tracker_parser(subparsers)
+    _register_artifact_store_parser(subparsers)
     return parser
 
 
@@ -524,6 +525,21 @@ def _register_tracker_parser(subparsers: argparse._SubParsersAction) -> None:
     compare.add_argument("--json", action="store_true", help="Pretty JSON output")
 
 
+def _register_artifact_store_parser(subparsers: argparse._SubParsersAction) -> None:
+    """Register artifact-store command (serves bundles into state.db).
+
+    Remaining args are forwarded verbatim to
+    ``dportsv3.artifact_store.main`` so the flag set stays defined in
+    exactly one place (--bind / --port / --logs-root).
+    """
+    p = subparsers.add_parser(
+        "artifact-store",
+        help="Run the artifact-store HTTP service",
+        add_help=False,
+    )
+    p.add_argument("artifact_store_args", nargs=argparse.REMAINDER)
+
+
 def main(argv: list[str] | None = None) -> int:
     """CLI entrypoint."""
     parser = create_parser()
@@ -560,6 +576,12 @@ def main(argv: list[str] | None = None) -> int:
             )
             return 1
         return cmd_tracker(args)
+
+    if args.command == "artifact-store":
+        from dportsv3.artifact_store import main as artifact_store_main
+
+        artifact_store_main(list(args.artifact_store_args))
+        return 0
 
     print(f"Unknown command: {args.command}", file=sys.stderr)
     return 1
