@@ -1,47 +1,51 @@
-{% extends "base.html" %}
-{% set active_page = "agentic" %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ job.job_id }} — DeltaPorts Tracker</title>
+  <link href="{{ request.url_for('static', path='progress.css') }}" type="text/css" rel="stylesheet">
+  <link rel="icon" type="image/png" href="{{ request.url_for('static', path='favicon.png') }}">
+</head>
+<body>
+  {% with nav_crumbs = [{"label": "Agentic", "url": request.url_for('agentic_index')}, {"label": "Jobs", "url": request.url_for('agentic_jobs')}, {"label": job.job_id}] %}
+    {% include "_tracker_nav.html" %}
+  {% endwith %}
 
-{% block content %}
-<nav aria-label="breadcrumb" class="mb-3">
-  <ol class="breadcrumb mb-0">
-    <li class="breadcrumb-item"><a href="{{ request.url_for('agentic_index') }}">Agentic</a></li>
-    <li class="breadcrumb-item"><a href="{{ request.url_for('agentic_jobs') }}">Jobs</a></li>
-    <li class="breadcrumb-item active font-monospace">{{ job.job_id }}</li>
-  </ol>
-</nav>
+  <div class="tracker-page">
+    <h1>{{ job.job_id }}</h1>
 
-<h1 class="h4 mb-3 font-monospace">{{ job.job_id }}</h1>
+    <div class="tracker-card">
+      <table style="font-size:12px;">
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">State</th><td>{{ job.state }}</td></tr>
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Type</th><td>{{ job.type or '—' }}</td></tr>
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Origin</th><td>{{ job.origin or '—' }}{% if job.flavor %} @ {{ job.flavor }}{% endif %}</td></tr>
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Target</th><td>{{ job.target or '—' }}</td></tr>
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Created</th><td>{{ job.created_ts_utc or '—' }}</td></tr>
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Bundle dir</th><td>{{ job.bundle_dir or '—' }}</td></tr>
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Path</th><td>{{ job.path or '—' }}</td></tr>
+        {% if job.last_error %}
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;vertical-align:top;">Last error</th><td><pre style="margin:0;padding:8px;background:var(--c-failed-bg);color:var(--c-failed);white-space:pre-wrap;">{{ job.last_error }}</pre></td></tr>
+        {% endif %}
+      </table>
+    </div>
 
-<dl class="row mb-4">
-  <dt class="col-sm-2">State</dt><dd class="col-sm-10">{{ job.state }}</dd>
-  <dt class="col-sm-2">Type</dt><dd class="col-sm-10">{{ job.type or '—' }}</dd>
-  <dt class="col-sm-2">Origin</dt><dd class="col-sm-10">{{ job.origin or '—' }}{% if job.flavor %} @ {{ job.flavor }}{% endif %}</dd>
-  <dt class="col-sm-2">Target</dt><dd class="col-sm-10">{{ job.target or '—' }}</dd>
-  <dt class="col-sm-2">Created</dt><dd class="col-sm-10">{{ job.created_ts_utc or '—' }}</dd>
-  <dt class="col-sm-2">Bundle dir</dt><dd class="col-sm-10 font-monospace">{{ job.bundle_dir or '—' }}</dd>
-  <dt class="col-sm-2">Path</dt><dd class="col-sm-10 font-monospace">{{ job.path or '—' }}</dd>
-  {% if job.last_error %}
-  <dt class="col-sm-2">Last error</dt>
-  <dd class="col-sm-10"><pre class="bg-body-tertiary p-2 mb-0 small">{{ job.last_error }}</pre></dd>
-  {% endif %}
-</dl>
-
-{% if activity %}
-<h2 class="h5">Activity</h2>
-<div class="table-responsive">
-  <table class="table table-sm">
-    <thead><tr><th>When</th><th>Stage</th><th>Duration</th><th>Message</th></tr></thead>
-    <tbody>
-      {% for a in activity %}
-      <tr>
-        <td>{{ a.ts }}</td>
-        <td>{{ a.stage or '—' }}</td>
-        <td>{{ a.duration_ms if a.duration_ms is not none else '—' }}</td>
-        <td>{{ a.message or '—' }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
-{% endif %}
-{% endblock %}
+    {% if activity %}
+    <h2>Activity</h2>
+    <table class="tracker-table">
+      <thead><tr><th>When</th><th>Stage</th><th>Duration</th><th>Message</th></tr></thead>
+      <tbody>
+        {% for a in activity %}
+        <tr>
+          <td>{{ a.ts }}</td>
+          <td>{{ a.stage or '—' }}</td>
+          <td>{{ a.duration_ms if a.duration_ms is not none else '—' }}</td>
+          <td>{{ a.message or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+  </div>
+</body>
+</html>

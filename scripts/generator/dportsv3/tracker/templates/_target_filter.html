@@ -1,32 +1,25 @@
 {# Inline target+origin filter form used by agentic list pages. #}
-<form method="get" class="row row-cols-lg-auto g-2 align-items-center mb-3">
-  <div class="col-12">
-    <label class="form-label mb-0 me-2">Target</label>
-    <select class="form-select form-select-sm" name="target" onchange="this.form.submit()">
-      <option value="">(all)</option>
-      {% for t in target_options %}
-      <option value="{{ t }}"{% if t == selected_target %} selected{% endif %}>{{ t }}</option>
-      {% endfor %}
-    </select>
-  </div>
+<form method="get" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:16px;padding:8px 12px;background:var(--bg-card);border:1px solid var(--amber-border);border-radius:4px;">
+  <label style="color:var(--text-dim);">Target</label>
+  <select name="target" onchange="this.form.submit()" style="font:inherit;padding:2px 6px;border:1px solid var(--amber-border);background:var(--bg);">
+    <option value="">(all)</option>
+    {% for t in target_options %}
+    <option value="{{ t }}"{% if t == selected_target %} selected{% endif %}>{{ t }}</option>
+    {% endfor %}
+  </select>
   {% if show_state %}
-  <div class="col-12">
-    <label class="form-label mb-0 me-2">State</label>
-    <select class="form-select form-select-sm" name="state" onchange="this.form.submit()">
-      <option value="">(all)</option>
-      {% for s in ['pending', 'inflight', 'done', 'failed'] %}
-      <option value="{{ s }}"{% if s == selected_state %} selected{% endif %}>{{ s }}</option>
-      {% endfor %}
-    </select>
-  </div>
+  <label style="color:var(--text-dim);margin-left:12px;">State</label>
+  <select name="state" onchange="this.form.submit()" style="font:inherit;padding:2px 6px;border:1px solid var(--amber-border);background:var(--bg);">
+    <option value="">(all)</option>
+    {% for s in ['pending', 'inflight', 'done', 'failed'] %}
+    <option value="{{ s }}"{% if s == selected_state %} selected{% endif %}>{{ s }}</option>
+    {% endfor %}
+  </select>
   {% endif %}
   {% if show_origin %}
-  <div class="col-12">
-    <label class="form-label mb-0 me-2">Origin</label>
-    <input class="form-control form-control-sm" type="text" name="origin" value="{{ selected_origin or '' }}" placeholder="cat/port">
-  </div>
-  <div class="col-12">
-    <button type="submit" class="btn btn-sm btn-outline-primary">Apply</button>
-  </div>
+  <label style="color:var(--text-dim);margin-left:12px;">Origin</label>
+  <input type="text" name="origin" value="{{ selected_origin or '' }}" placeholder="cat/port"
+         style="font:inherit;padding:2px 6px;border:1px solid var(--amber-border);background:var(--bg);">
+  <button type="submit" style="font:inherit;padding:2px 8px;border:1px solid var(--amber-border);background:var(--bg);color:var(--amber);cursor:pointer;">Apply</button>
   {% endif %}
 </form>
