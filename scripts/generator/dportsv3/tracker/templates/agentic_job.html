@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% set active_page = "agentic" %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb mb-0">
+    <li class="breadcrumb-item"><a href="{{ request.url_for('agentic_index') }}">Agentic</a></li>
+    <li class="breadcrumb-item"><a href="{{ request.url_for('agentic_jobs') }}">Jobs</a></li>
+    <li class="breadcrumb-item active font-monospace">{{ job.job_id }}</li>
+  </ol>
+</nav>
+
+<h1 class="h4 mb-3 font-monospace">{{ job.job_id }}</h1>
+
+<dl class="row mb-4">
+  <dt class="col-sm-2">State</dt><dd class="col-sm-10">{{ job.state }}</dd>
+  <dt class="col-sm-2">Type</dt><dd class="col-sm-10">{{ job.type or '—' }}</dd>
+  <dt class="col-sm-2">Origin</dt><dd class="col-sm-10">{{ job.origin or '—' }}{% if job.flavor %} @ {{ job.flavor }}{% endif %}</dd>
+  <dt class="col-sm-2">Target</dt><dd class="col-sm-10">{{ job.target or '—' }}</dd>
+  <dt class="col-sm-2">Created</dt><dd class="col-sm-10">{{ job.created_ts_utc or '—' }}</dd>
+  <dt class="col-sm-2">Bundle dir</dt><dd class="col-sm-10 font-monospace">{{ job.bundle_dir or '—' }}</dd>
+  <dt class="col-sm-2">Path</dt><dd class="col-sm-10 font-monospace">{{ job.path or '—' }}</dd>
+  {% if job.last_error %}
+  <dt class="col-sm-2">Last error</dt>
+  <dd class="col-sm-10"><pre class="bg-body-tertiary p-2 mb-0 small">{{ job.last_error }}</pre></dd>
+  {% endif %}
+</dl>
+
+{% if activity %}
+<h2 class="h5">Activity</h2>
+<div class="table-responsive">
+  <table class="table table-sm">
+    <thead><tr><th>When</th><th>Stage</th><th>Duration</th><th>Message</th></tr></thead>
+    <tbody>
+      {% for a in activity %}
+      <tr>
+        <td>{{ a.ts }}</td>
+        <td>{{ a.stage or '—' }}</td>
+        <td>{{ a.duration_ms if a.duration_ms is not none else '—' }}</td>
+        <td>{{ a.message or '—' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

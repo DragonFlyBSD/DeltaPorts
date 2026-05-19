@@ -35,6 +35,9 @@
           <li class="nav-item">
             <a class="nav-link{% if active_page == 'diff' %} active{% endif %}" href="{{ request.url_for('dashboard_diff') }}">Diff</a>
           </li>
+          <li class="nav-item">
+            <a class="nav-link{% if active_page == 'agentic' %} active{% endif %}" href="{{ request.url_for('agentic_index') }}">Agentic</a>
+          </li>
         </ul>
         <div class="dropdown">
           <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-label="Theme">

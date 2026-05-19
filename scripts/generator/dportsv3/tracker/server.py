@@ -10,7 +10,10 @@ from pathlib import Path
 from typing import Any, cast
 
 from dportsv3.tracker.agentic_queries import (
+    activity_for_job,
     agentic_status,
+    bundles_for_run,
+    distinct_targets,
     events_since,
     get_artifact_ref,
     get_bundle,
@@ -490,6 +493,135 @@ def create_app(db_path: str | Path) -> Any:
                     "targets": get_target_summary(conn),
                     "active_builds": active_builds,
                     "refresh_seconds": 30 if active_builds else None,
+                },
+            )
+
+    # ------------------------------------------------------------------
+    # Phase 4 step 6: agentic HTML views.
+    # ------------------------------------------------------------------
+
+    @app.get("/agentic", response_class=HTMLResponse)
+    def agentic_index(request: RequestType) -> Any:
+        with _conn() as conn:
+            return templates.TemplateResponse(
+                request,
+                "agentic_index.html",
+                {
+                    "title": "Agentic",
+                    "status": agentic_status(conn),
+                    "recent_bundles": list_bundles(conn, limit=10),
+                    "recent_jobs": list_jobs(conn, limit=10),
+                },
+            )
+
+    @app.get("/agentic/bundles", response_class=HTMLResponse)
+    def agentic_bundles(
+        request: RequestType,
+        target: str | None = None,
+        origin: str | None = None,
+    ) -> Any:
+        target_value = target or None
+        origin_value = (origin or "").strip() or None
+        with _conn() as conn:
+            return templates.TemplateResponse(
+                request,
+                "agentic_bundles.html",
+                {
+                    "title": "Bundles",
+                    "bundles": list_bundles(
+                        conn, target=target_value, origin=origin_value, limit=200
+                    ),
+                    "target_options": distinct_targets(conn),
+                    "selected_target": target_value,
+                    "selected_origin": origin_value,
+                },
+            )
+
+    @app.get("/agentic/bundles/{bundle_id}", response_class=HTMLResponse)
+    def agentic_bundle_detail(request: RequestType, bundle_id: str) -> Any:
+        with _conn() as conn:
+            bundle = get_bundle(conn, bundle_id)
+        if bundle is None:
+            raise HTTPException(status_code=404, detail=f"Unknown bundle: {bundle_id}")
+        return templates.TemplateResponse(
+            request,
+            "agentic_bundle.html",
+            {"title": bundle_id, "bundle": bundle},
+        )
+
+    @app.get("/agentic/jobs", response_class=HTMLResponse)
+    def agentic_jobs(
+        request: RequestType,
+        target: str | None = None,
+        state: str | None = None,
+    ) -> Any:
+        target_value = target or None
+        state_value = state or None
+        with _conn() as conn:
+            return templates.TemplateResponse(
+                request,
+                "agentic_jobs.html",
+                {
+                    "title": "Jobs",
+                    "jobs": list_jobs(
+                        conn, state=state_value, target=target_value, limit=200
+                    ),
+                    "target_options": distinct_targets(conn),
+                    "selected_target": target_value,
+                    "selected_state": state_value,
+                },
+            )
+
+    @app.get("/agentic/jobs/{job_id}", response_class=HTMLResponse)
+    def agentic_job_detail(request: RequestType, job_id: str) -> Any:
+        with _conn() as conn:
+            job = get_job(conn, job_id)
+            activity = activity_for_job(conn, job_id) if job is not None else []
+        if job is None:
+            raise HTTPException(status_code=404, detail=f"Unknown job: {job_id}")
+        return templates.TemplateResponse(
+            request,
+            "agentic_job.html",
+            {"title": job_id, "job": job, "activity": activity},
+        )
+
+    @app.get("/agentic/runs/{run_id}", response_class=HTMLResponse)
+    def agentic_run_detail(request: RequestType, run_id: str) -> Any:
+        with _conn() as conn:
+            run = get_run(conn, run_id)
+            bundles = bundles_for_run(conn, run_id) if run is not None else []
+        if run is None:
+            raise HTTPException(status_code=404, detail=f"Unknown run: {run_id}")
+        return templates.TemplateResponse(
+            request,
+            "agentic_run.html",
+            {"title": run_id, "run": run, "bundles": bundles},
+        )
+
+    @app.get("/agentic/runner", response_class=HTMLResponse)
+    def agentic_runner(request: RequestType) -> Any:
+        with _conn() as conn:
+            return templates.TemplateResponse(
+                request,
+                "agentic_runner.html",
+                {"title": "Runner", "runner": runner_status(conn)},
+            )
+
+    @app.get("/agentic/activity", response_class=HTMLResponse)
+    def agentic_activity(
+        request: RequestType,
+        target: str | None = None,
+    ) -> Any:
+        target_value = target or None
+        with _conn() as conn:
+            return templates.TemplateResponse(
+                request,
+                "agentic_activity.html",
+                {
+                    "title": "Activity",
+                    "activity": recent_activity(conn, limit=200, target=target_value),
+                    "target_options": distinct_targets(conn),
+                    "selected_target": target_value,
                 },
             )
 

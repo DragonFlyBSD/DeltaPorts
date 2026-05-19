@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% set active_page = "agentic" %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb mb-0">
+    <li class="breadcrumb-item"><a href="{{ request.url_for('agentic_index') }}">Agentic</a></li>
+    <li class="breadcrumb-item active font-monospace">{{ run.run_id }}</li>
+  </ol>
+</nav>
+
+<h1 class="h4 mb-3 font-monospace">{{ run.run_id }}</h1>
+
+<dl class="row mb-4">
+  <dt class="col-sm-3">Profile</dt><dd class="col-sm-9">{{ run.profile or '—' }}</dd>
+  <dt class="col-sm-3">Target</dt><dd class="col-sm-9">{{ run.target or '—' }}</dd>
+  <dt class="col-sm-3">Started</dt><dd class="col-sm-9">{{ run.ts_start or '—' }}</dd>
+  <dt class="col-sm-3">Ended</dt><dd class="col-sm-9">{{ run.ts_end or '—' }}</dd>
+  <dt class="col-sm-3">Last seen</dt><dd class="col-sm-9">{{ run.last_seen_at or '—' }}</dd>
+  <dt class="col-sm-3">Path</dt><dd class="col-sm-9 font-monospace">{{ run.path or '—' }}</dd>
+</dl>
+
+<h2 class="h5">Bundles in this run</h2>
+{% if bundles %}
+<div class="table-responsive">
+  <table class="table table-sm table-hover">
+    <thead><tr><th>Bundle</th><th>Origin</th><th>Target</th><th>Result</th><th>When</th></tr></thead>
+    <tbody>
+      {% for b in bundles %}
+      <tr>
+        <td class="font-monospace"><a href="{{ request.url_for('agentic_bundle_detail', bundle_id=b.bundle_id) }}">{{ b.bundle_id }}</a></td>
+        <td>{{ b.origin }}</td>
+        <td>{{ b.target or '—' }}</td>
+        <td>{{ b.result }}</td>
+        <td>{{ b.ts_utc }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p class="text-body-secondary">No bundles recorded for this run.</p>
+{% endif %}
+{% endblock %}

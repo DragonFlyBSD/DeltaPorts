@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% set active_page = "agentic" %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb mb-0">
+    <li class="breadcrumb-item"><a href="{{ request.url_for('agentic_index') }}">Agentic</a></li>
+    <li class="breadcrumb-item"><a href="{{ request.url_for('agentic_bundles') }}">Bundles</a></li>
+    <li class="breadcrumb-item active font-monospace">{{ bundle.bundle_id }}</li>
+  </ol>
+</nav>
+
+<h1 class="h4 mb-3 font-monospace">{{ bundle.bundle_id }}</h1>
+
+<dl class="row mb-4">
+  <dt class="col-sm-2">Origin</dt><dd class="col-sm-10">{{ bundle.origin }}{% if bundle.flavor %} @ {{ bundle.flavor }}{% endif %}</dd>
+  <dt class="col-sm-2">Target</dt><dd class="col-sm-10">{{ bundle.target or '—' }}</dd>
+  <dt class="col-sm-2">Result</dt><dd class="col-sm-10">{{ bundle.result }}</dd>
+  <dt class="col-sm-2">Timestamp</dt><dd class="col-sm-10">{{ bundle.ts_utc }}</dd>
+  <dt class="col-sm-2">Run</dt><dd class="col-sm-10 font-monospace">
+    {% if bundle.run_id %}<a href="{{ request.url_for('agentic_run_detail', run_id=bundle.run_id) }}">{{ bundle.run_id }}</a>{% else %}—{% endif %}
+  </dd>
+</dl>
+
+<h2 class="h5">Artifacts</h2>
+{% if bundle.artifacts %}
+<div class="table-responsive">
+  <table class="table table-sm table-hover">
+    <thead><tr><th>Path</th><th>Backend</th><th>Kind</th><th>Size</th></tr></thead>
+    <tbody>
+      {% for a in bundle.artifacts %}
+      <tr>
+        <td class="font-monospace"><a href="/api/bundles/{{ bundle.bundle_id }}/artifacts/{{ a.relpath }}">{{ a.relpath }}</a></td>
+        <td>{{ a.backend }}</td>
+        <td>{{ a.kind or '—' }}</td>
+        <td>{{ a.size if a.size is not none else '—' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p class="text-body-secondary">No artifacts recorded for this bundle.</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% set active_page = "agentic" %}
+
+{% block content %}
+<h1 class="h3 mb-1">Runner status</h1>
+<p class="text-body-secondary mb-4">Heartbeat from the agent queue runner.</p>
+
+<dl class="row">
+  <dt class="col-sm-3">Status</dt><dd class="col-sm-9">{{ runner.status }}</dd>
+  <dt class="col-sm-3">Current job</dt><dd class="col-sm-9 font-monospace">
+    {% if runner.job_id %}
+      <a href="{{ request.url_for('agentic_job_detail', job_id=runner.job_id) }}">{{ runner.job_id }}</a>
+    {% else %}—{% endif %}
+  </dd>
+  <dt class="col-sm-3">Stage</dt><dd class="col-sm-9">{{ runner.current_stage or '—' }}</dd>
+  <dt class="col-sm-3">Started at</dt><dd class="col-sm-9">{{ runner.started_at or '—' }}</dd>
+  <dt class="col-sm-3">Updated at</dt><dd class="col-sm-9">{{ runner.updated_at or '—' }}</dd>
+  {% if runner.extra_json %}
+  <dt class="col-sm-3">Extra</dt><dd class="col-sm-9"><pre class="small mb-0">{{ runner.extra_json }}</pre></dd>
+  {% endif %}
+</dl>
+{% endblock %}

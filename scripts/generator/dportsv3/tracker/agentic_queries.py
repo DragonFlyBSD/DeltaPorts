@@ -211,6 +211,44 @@ def list_port_bundles(
     return [_row_dict(row) for row in conn.execute(sql, params).fetchall()]
 
 
+def distinct_targets(conn: sqlite3.Connection) -> list[str]:
+    """Sorted list of non-NULL targets seen across bundles/jobs/runs.
+
+    Used to populate target-selector dropdowns on the HTML views.
+    """
+    rows = conn.execute(
+        """SELECT DISTINCT target FROM (
+             SELECT target FROM bundles
+             UNION SELECT target FROM jobs
+             UNION SELECT target FROM runs
+           )
+           WHERE target IS NOT NULL AND target <> ''
+           ORDER BY target ASC"""
+    ).fetchall()
+    return [str(row[0]) for row in rows]
+
+
+def activity_for_job(
+    conn: sqlite3.Connection, job_id: str, limit: int = 50
+) -> list[dict[str, Any]]:
+    """Activity-log rows for one job_id, newest first."""
+    rows = conn.execute(
+        "SELECT * FROM activity_log WHERE job_id = ? ORDER BY id DESC LIMIT ?",
+        (job_id, max(1, int(limit))),
+    ).fetchall()
+    return [_row_dict(row) for row in rows]
+
+
+def bundles_for_run(
+    conn: sqlite3.Connection, run_id: str, limit: int = 200
+) -> list[dict[str, Any]]:
+    rows = conn.execute(
+        "SELECT * FROM bundles WHERE run_id = ? ORDER BY ts_utc DESC LIMIT ?",
+        (run_id, max(1, int(limit))),
+    ).fetchall()
+    return [_row_dict(row) for row in rows]
+
+
 def events_since(
     conn: sqlite3.Connection,
     last_id: int = 0,

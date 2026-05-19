@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% set active_page = "agentic" %}
+
+{% block content %}
+<h1 class="h3 mb-1">Activity log</h1>
+<p class="text-body-secondary mb-3">Recent agentic stage transitions.</p>
+
+{% include "_target_filter.html" %}
+
+<div class="table-responsive">
+  <table class="table table-sm">
+    <thead><tr><th>When</th><th>Job</th><th>Stage</th><th>Duration</th><th>Message</th></tr></thead>
+    <tbody>
+      {% for a in activity %}
+      <tr>
+        <td>{{ a.ts }}</td>
+        <td class="font-monospace">
+          {% if a.job_id %}<a href="{{ request.url_for('agentic_job_detail', job_id=a.job_id) }}">{{ a.job_id }}</a>{% else %}—{% endif %}
+        </td>
+        <td>{{ a.stage or '—' }}</td>
+        <td>{{ a.duration_ms if a.duration_ms is not none else '—' }}</td>
+        <td>{{ a.message or '—' }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" class="text-body-secondary">No activity yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

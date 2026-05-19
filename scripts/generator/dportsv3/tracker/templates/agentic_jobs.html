@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% set active_page = "agentic" %}
+
+{% block content %}
+<h1 class="h3 mb-1">Jobs</h1>
+<p class="text-body-secondary mb-3">Triage + patch jobs in the agentic queue.</p>
+
+{% with show_state = True %}
+  {% include "_target_filter.html" %}
+{% endwith %}
+
+<div class="table-responsive">
+  <table class="table table-sm table-hover">
+    <thead>
+      <tr><th>Job</th><th>State</th><th>Type</th><th>Origin</th><th>Target</th><th>Created</th></tr>
+    </thead>
+    <tbody>
+      {% for j in jobs %}
+      <tr>
+        <td class="font-monospace"><a href="{{ request.url_for('agentic_job_detail', job_id=j.job_id) }}">{{ j.job_id }}</a></td>
+        <td>
+          {% set badge = {'pending':'text-bg-secondary','inflight':'text-bg-warning','done':'text-bg-success','failed':'text-bg-danger'}.get(j.state,'text-bg-light') %}
+          <span class="badge rounded-pill {{ badge }}">{{ j.state }}</span>
+        </td>
+        <td>{{ j.type or '—' }}</td>
+        <td>{{ j.origin or '—' }}</td>
+        <td>{{ j.target or '—' }}</td>
+        <td>{{ j.created_ts_utc or '—' }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="text-body-secondary">No jobs match this filter.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

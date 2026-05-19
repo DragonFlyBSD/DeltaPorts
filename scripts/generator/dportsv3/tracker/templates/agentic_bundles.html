@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% set active_page = "agentic" %}
+
+{% block content %}
+<h1 class="h3 mb-1">Bundles</h1>
+<p class="text-body-secondary mb-3">Failure-evidence bundles uploaded by dsynth hooks.</p>
+
+{% with show_origin = True %}
+  {% include "_target_filter.html" %}
+{% endwith %}
+
+<div class="table-responsive">
+  <table class="table table-sm table-hover">
+    <thead>
+      <tr><th>Bundle</th><th>Origin</th><th>Flavor</th><th>Target</th><th>Result</th><th>When</th><th>Run</th></tr>
+    </thead>
+    <tbody>
+      {% for b in bundles %}
+      <tr>
+        <td class="font-monospace"><a href="{{ request.url_for('agentic_bundle_detail', bundle_id=b.bundle_id) }}">{{ b.bundle_id }}</a></td>
+        <td>{{ b.origin }}</td>
+        <td>{{ b.flavor or '—' }}</td>
+        <td>{{ b.target or '—' }}</td>
+        <td>{{ b.result }}</td>
+        <td>{{ b.ts_utc }}</td>
+        <td class="font-monospace">
+          {% if b.run_id %}<a href="{{ request.url_for('agentic_run_detail', run_id=b.run_id) }}">{{ b.run_id }}</a>{% else %}—{% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7" class="text-body-secondary">No bundles match this filter.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
