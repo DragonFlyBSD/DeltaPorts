@@ -99,6 +99,7 @@ Pick a logs root that artifact-store + tracker share:
 LOGS_ROOT=/build/synth/logs
 STATE_DB=$LOGS_ROOT/evidence/state.db
 ARTIFACT_ROOT=$LOGS_ROOT/evidence
+QUEUE_ROOT=$LOGS_ROOT/evidence/queue   # where hooks write .job files
 ```
 
 LLM credentials — pick a provider for each phase:
@@ -130,7 +131,7 @@ DPORTSV3_ARTIFACT_ROOT=$ARTIFACT_ROOT \
 DPORTSV3_STATE_DB=$STATE_DB \
 DPORTSV3_TRACKER_URL=http://127.0.0.1:8080 \
 ARTIFACT_STORE_URL=http://127.0.0.1:8788 \
-  scripts/agent-queue-runner
+  scripts/agent-queue-runner --queue-root $QUEUE_ROOT
 ```
 
 Order doesn't matter; each is idempotent on schema init. Open

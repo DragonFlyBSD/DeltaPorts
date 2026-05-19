@@ -56,7 +56,7 @@ dsynth build ──fail──▶ hook ──▶ artifact-store (bundle)
 |---|---|---|
 | `dportsv3 artifact-store` | Receives bundles + `/v1/user-context` POSTs; writes to `state.db`; serves artifact streams under `/v1/artifacts/get` | 8788 |
 | `dportsv3 tracker serve` | Read API + HTML views (`/`, `/target/{target}`, `/builds/{id}`, `/agentic/*`); SSE event tail | 8080 |
-| `dportsv3 agent-queue-runner` | Pops bundles from `state.db`, runs triage + patch jobs against the LLM provider | — |
+| `scripts/agent-queue-runner --queue-root $LOGS_ROOT/evidence/queue` | Pops bundles from the file queue, runs triage + patch jobs against the LLM provider | — |
 
 All three read the same `state.db`. Order of startup doesn't matter —
 each one is idempotent on the schema.
