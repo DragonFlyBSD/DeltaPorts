@@ -78,36 +78,40 @@ class ArtifactStore:
         flavor = payload.get("flavor")
         ts_utc = payload.get("ts_utc")
         result = payload.get("result")
+        target = payload.get("target")
         now = datetime.now(timezone.utc).isoformat()
 
         with self._lock:
             if run_id:
                 self.conn.execute(
-                    """INSERT INTO runs (run_id, profile, path, ts_start, ts_end, last_seen_at)
-                       VALUES (?, ?, NULL, ?, NULL, ?)
+                    """INSERT INTO runs (run_id, profile, target, path, ts_start, ts_end, last_seen_at)
+                       VALUES (?, ?, ?, NULL, ?, NULL, ?)
                        ON CONFLICT(run_id) DO UPDATE SET
                          profile=excluded.profile,
+                         target=COALESCE(excluded.target, runs.target),
                          last_seen_at=excluded.last_seen_at""",
-                    (run_id, profile, ts_utc, now),
+                    (run_id, profile, target, ts_utc, now),
                 )
 
             self.conn.execute(
-                """INSERT INTO bundles (bundle_id, run_id, origin, flavor, ts_utc, result, path, last_seen_at)
-                   VALUES (?, ?, ?, ?, ?, ?, NULL, ?)
+                """INSERT INTO bundles (bundle_id, run_id, origin, flavor, ts_utc, result, target, path, last_seen_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?)
                    ON CONFLICT(bundle_id) DO UPDATE SET
                      run_id=excluded.run_id,
                      origin=excluded.origin,
                      flavor=excluded.flavor,
                      ts_utc=excluded.ts_utc,
                      result=excluded.result,
+                     target=COALESCE(excluded.target, bundles.target),
                      last_seen_at=excluded.last_seen_at""",
-                (bundle_id, run_id, origin, flavor, ts_utc, result, now),
+                (bundle_id, run_id, origin, flavor, ts_utc, result, target, now),
             )
             emit_event(self.conn, "bundle_upserted", {
                 "bundle_id": bundle_id,
                 "run_id": run_id,
                 "origin": origin,
                 "result": result,
+                "target": target,
             })
             self.conn.commit()
 

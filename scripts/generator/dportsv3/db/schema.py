@@ -197,6 +197,14 @@ MIGRATIONS: tuple[str, ...] = (
     "ALTER TABLE build_results ADD COLUMN status TEXT NOT NULL DEFAULT 'recorded'",
     "ALTER TABLE build_runs ADD COLUMN total_expected INTEGER",
     "ALTER TABLE runs ADD COLUMN build_run_id INTEGER",
+    # Phase 4 step 5: target awareness on the agentic side. Nullable
+    # because pre-step-5 rows exist; new writes carry target.
+    "ALTER TABLE bundles ADD COLUMN target TEXT",
+    "ALTER TABLE jobs ADD COLUMN target TEXT",
+    "ALTER TABLE runs ADD COLUMN target TEXT",
+    "CREATE INDEX IF NOT EXISTS idx_bundles_target ON bundles(target)",
+    "CREATE INDEX IF NOT EXISTS idx_jobs_target ON jobs(target)",
+    "CREATE INDEX IF NOT EXISTS idx_runs_target ON runs(target)",
 )
 
 

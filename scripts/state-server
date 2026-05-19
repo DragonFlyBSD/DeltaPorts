@@ -521,7 +521,8 @@ class Observer:
         flavor = None
         bundle_dir = None
         created_ts_utc = None
-        
+        target = None
+
         if job_path.exists():
             for line in job_path.read_text().splitlines():
                 if "=" in line:
@@ -538,6 +539,8 @@ class Observer:
                         bundle_dir = value
                     elif key == "created_ts_utc":
                         created_ts_utc = value
+                    elif key == "target":
+                        target = value or None
         
         # Check for error file
         last_error = None
@@ -550,18 +553,19 @@ class Observer:
         if existing:
             self.conn.execute(
                 """UPDATE jobs SET state=?, type=?, origin=?, flavor=?, bundle_dir=?,
-                   created_ts_utc=?, path=?, last_error=?, last_seen_at=?
+                   created_ts_utc=?, path=?, last_error=?, last_seen_at=?,
+                   target=COALESCE(?, target)
                    WHERE job_id=?""",
                 (state, job_type, origin, flavor, bundle_dir, created_ts_utc,
-                 str(job_path), last_error, now, job_id)
+                 str(job_path), last_error, now, target, job_id)
             )
         else:
             self.conn.execute(
                 """INSERT INTO jobs (job_id, state, type, origin, flavor, bundle_dir,
-                   created_ts_utc, path, last_error, last_seen_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                   created_ts_utc, path, last_error, last_seen_at, target)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (job_id, state, job_type, origin, flavor, bundle_dir,
-                 created_ts_utc, str(job_path), last_error, now)
+                 created_ts_utc, str(job_path), last_error, now, target)
             )
         
         self.conn.commit()

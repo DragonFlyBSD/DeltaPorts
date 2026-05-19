@@ -192,10 +192,14 @@ enqueue_job() {
 	# Write to temp file first
 	tmpfile="${qroot}/pending/.tmp.$$.${ts}"
 
-	# Base job fields
+	# Base job fields. target comes from DPORTSV3_TRACKER_TARGET if
+	# set (loaded by tracker_load_config); empty otherwise — that
+	# leaves jobs.target NULL, which step 5 read endpoints surface
+	# as "unknown" under target filters.
 	write_kv_file "$tmpfile" \
 		"created_ts_utc=${ts}" \
 		"profile=${profile}" \
+		"target=${DPORTSV3_TRACKER_TARGET:-}" \
 		"origin=${origin}" \
 		"flavor=${flavor}" \
 		"bundle_id=${bundle_id}" \

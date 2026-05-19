@@ -45,6 +45,7 @@ def cmd_bundle_upsert(args):
         "origin": args.origin,
         "flavor": args.flavor,
         "result": args.result,
+        "target": args.target,
     }
     resp = request_json("POST", f"{args.url}/v1/bundles/upsert", payload)
     print(json.dumps(resp, indent=2))
@@ -95,6 +96,7 @@ def main():
     p_bundle.add_argument("--origin", required=True)
     p_bundle.add_argument("--flavor", default="")
     p_bundle.add_argument("--result", default="")
+    p_bundle.add_argument("--target", default="")
     p_bundle.set_defaults(func=cmd_bundle_upsert)
 
     p_blob = sub.add_parser("put-blob")

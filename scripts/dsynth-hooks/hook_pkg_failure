@@ -25,9 +25,12 @@ if [ -n "$FLAVOR" ] && [ "$FLAVOR" != "$ORIGIN" ] && [ "$FLAVOR" != "$origin_bas
 fi
 bundle_id="${bundle_id}-${ts}"
 
+tracker_load_config
+
 artifact_store bundle-upsert \
 	--run-id "${run_id}" \
 	--profile "${PROFILE}" \
+	--target "${DPORTSV3_TRACKER_TARGET}" \
 	--ts-utc "${ts}" \
 	--bundle-id "${bundle_id}" \
 	--origin "${origin_base}" \

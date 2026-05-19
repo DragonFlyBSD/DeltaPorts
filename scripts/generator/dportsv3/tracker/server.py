@@ -3,11 +3,26 @@
 from __future__ import annotations
 
 import importlib
+import os
 from contextlib import contextmanager
 from importlib import util as importlib_util
 from pathlib import Path
 from typing import Any, cast
 
+from dportsv3.tracker.agentic_queries import (
+    agentic_status,
+    events_since,
+    get_artifact_ref,
+    get_bundle,
+    get_job,
+    get_run,
+    list_bundles,
+    list_jobs,
+    list_port_bundles,
+    list_runs,
+    recent_activity,
+    runner_status,
+)
 from dportsv3.tracker.db import (
     ActiveBuildError,
     compare_builds,
@@ -69,6 +84,8 @@ if (
     HTMLResponseType = _responses.HTMLResponse
     StaticFilesType = _staticfiles.StaticFiles
     Jinja2TemplatesType = _templating.Jinja2Templates
+    FileResponseType = _responses.FileResponse
+    StreamingResponseType = _responses.StreamingResponse
 else:
 
     class _MissingFastAPI:
@@ -102,6 +119,39 @@ else:
     HTMLResponseType = _MissingHTMLResponse
     StaticFilesType = _MissingStaticFiles
     Jinja2TemplatesType = _MissingTemplates
+    FileResponseType = _MissingHTMLResponse
+    StreamingResponseType = _MissingHTMLResponse
+
+
+def _resolve_artifact_path(
+    artifact_root: Path, ref: dict[str, Any]
+) -> Path | None:
+    """Locate the on-disk file for an artifact_refs row.
+
+    Two backends:
+    - 'blob': content-addressed under ``<artifact_root>/objects/sha256/aa/bb/<full>``
+    - 'fs':   absolute ``fs_path`` recorded at upsert time
+    """
+    backend = ref.get("backend")
+    if backend == "blob":
+        sha = ref.get("sha256")
+        if not sha or len(sha) < 4:
+            return None
+        return (
+            artifact_root
+            / "blobstore"
+            / "objects"
+            / "sha256"
+            / sha[0:2]
+            / sha[2:4]
+            / sha
+        )
+    if backend == "fs":
+        fs_path = ref.get("fs_path")
+        if not fs_path:
+            return None
+        return Path(fs_path)
+    return None
 
 
 def create_app(db_path: str | Path) -> Any:
@@ -122,9 +172,16 @@ def create_app(db_path: str | Path) -> Any:
     HTMLResponse = cast(Any, HTMLResponseType)
     StaticFiles = cast(Any, StaticFilesType)
     Jinja2Templates = cast(Any, Jinja2TemplatesType)
+    FileResponse = cast(Any, FileResponseType)
+    StreamingResponse = cast(Any, StreamingResponseType)
 
     app: Any = FastAPI(title="DeltaPorts Build Tracker")
     app.state.db_path = str(db_path)
+    # Resolves /api/bundles/<id>/artifacts/<relpath> for the 'blob'
+    # backend. Defaults match artifact-store's --logs-root default.
+    app.state.artifact_root = Path(
+        os.environ.get("DPORTSV3_ARTIFACT_ROOT", "/build/synth/logs/evidence")
+    )
     templates_dir = Path(__file__).with_name("templates")
     static_dir = Path(__file__).with_name("static")
     templates: Any = Jinja2Templates(directory=str(templates_dir))
@@ -292,6 +349,134 @@ def create_app(db_path: str | Path) -> Any:
     def api_diff(a: str, b: str) -> dict[str, Any]:
         with _conn() as conn:
             return get_diff(conn, a, b)
+
+    # ------------------------------------------------------------------
+    # Phase 4 step 5: agentic-read endpoints (absorbed from state-server).
+    # state-server keeps running in parallel until step 8.
+    # ------------------------------------------------------------------
+
+    @app.get("/api/health")
+    def api_health() -> dict[str, str]:
+        return {"status": "ok"}
+
+    @app.get("/api/agentic-status")
+    def api_agentic_status() -> dict[str, Any]:
+        with _conn() as conn:
+            return agentic_status(conn)
+
+    @app.get("/api/activity")
+    def api_activity(
+        limit: int = Query(default=10, ge=1, le=500),
+        target: str | None = None,
+    ) -> list[dict[str, Any]]:
+        with _conn() as conn:
+            return recent_activity(conn, limit=limit, target=target)
+
+    @app.get("/api/runner-status")
+    def api_runner_status() -> dict[str, Any]:
+        with _conn() as conn:
+            return runner_status(conn)
+
+    @app.get("/api/runs")
+    def api_runs(
+        target: str | None = None,
+        limit: int = Query(default=50, ge=1, le=500),
+    ) -> list[dict[str, Any]]:
+        with _conn() as conn:
+            return list_runs(conn, target=target, limit=limit)
+
+    @app.get("/api/runs/{run_id}")
+    def api_run_detail(run_id: str) -> dict[str, Any]:
+        with _conn() as conn:
+            row = get_run(conn, run_id)
+        if row is None:
+            raise HTTPException(status_code=404, detail=f"Unknown run: {run_id}")
+        return row
+
+    @app.get("/api/jobs")
+    def api_jobs(
+        state: str | None = None,
+        target: str | None = None,
+        limit: int = Query(default=100, ge=1, le=500),
+    ) -> list[dict[str, Any]]:
+        with _conn() as conn:
+            return list_jobs(conn, state=state, target=target, limit=limit)
+
+    @app.get("/api/jobs/{job_id}")
+    def api_job_detail(job_id: str) -> dict[str, Any]:
+        with _conn() as conn:
+            row = get_job(conn, job_id)
+        if row is None:
+            raise HTTPException(status_code=404, detail=f"Unknown job: {job_id}")
+        return row
+
+    @app.get("/api/bundles")
+    def api_bundles(
+        target: str | None = None,
+        origin: str | None = None,
+        limit: int = Query(default=100, ge=1, le=500),
+    ) -> list[dict[str, Any]]:
+        with _conn() as conn:
+            return list_bundles(conn, target=target, origin=origin, limit=limit)
+
+    @app.get("/api/bundles/{bundle_id}")
+    def api_bundle_detail(bundle_id: str) -> dict[str, Any]:
+        with _conn() as conn:
+            row = get_bundle(conn, bundle_id)
+        if row is None:
+            raise HTTPException(status_code=404, detail=f"Unknown bundle: {bundle_id}")
+        return row
+
+    @app.get("/api/ports/{origin:path}")
+    def api_port_bundles(
+        origin: str,
+        target: str | None = None,
+        limit: int = Query(default=50, ge=1, le=500),
+    ) -> list[dict[str, Any]]:
+        with _conn() as conn:
+            return list_port_bundles(conn, origin=origin, target=target, limit=limit)
+
+    @app.get("/api/bundles/{bundle_id}/artifacts/{relpath:path}")
+    def api_bundle_artifact(bundle_id: str, relpath: str) -> Any:
+        # Resolve via artifact_refs, then stream from disk. Two backends:
+        # 'blob' (content-addressed under blob_root/objects/sha256) or
+        # 'fs' (absolute path in fs_path).
+        with _conn() as conn:
+            ref = get_artifact_ref(conn, bundle_id, relpath)
+        if ref is None:
+            raise HTTPException(status_code=404, detail="Unknown artifact")
+        path = _resolve_artifact_path(app.state.artifact_root, ref)
+        if path is None or not path.exists():
+            raise HTTPException(status_code=404, detail="Artifact file missing")
+        media_type = "application/gzip" if (ref.get("kind") == "gzip") else "application/octet-stream"
+        return FileResponse(str(path), media_type=media_type)
+
+    @app.get("/api/events")
+    def api_events(
+        target: str | None = None,
+        last_id: int = 0,
+    ) -> Any:
+        # Server-sent events: poll the events table on a 1s tick, emit
+        # rows with id > last_id, filter by target (best-effort — see
+        # events_since docstring).
+        import asyncio
+        import json as _json
+
+        async def _gen() -> Any:
+            cursor = int(last_id)
+            try:
+                while True:
+                    with _conn() as conn:
+                        rows = events_since(conn, last_id=cursor, target=target)
+                    for row in rows:
+                        cursor = max(cursor, int(row["id"]))
+                        payload = _json.dumps(row, default=str)
+                        yield f"event: {row['type']}\ndata: {payload}\n\n"
+                    await asyncio.sleep(1.0)
+            except asyncio.CancelledError:
+                return
+
+        return StreamingResponse(_gen(), media_type="text/event-stream")
 
     @app.get("/", response_class=HTMLResponse)
     def dashboard_index(request: RequestType) -> Any:
