@@ -635,32 +635,16 @@ def create_app(db_path: str | Path) -> Any:
     # change to the existing /target/{target} dashboard yet.
     # ------------------------------------------------------------------
 
-    # Mounted under /progress/{target} (not /target/{target}/progress)
-    # to avoid colliding with the legacy /target/{target}/{cat}/{port}
-    # port-detail route. Some FastAPI/Starlette versions on dfly route
-    # the more-specific path through the catch-all anyway, so we keep
-    # the prefix unambiguous.
+    # JSON endpoints live under /api/progress/{target}/ to stay clear
+    # of the legacy /target/{target}/{cat}/{port} catch-all. The HTML
+    # page is served at the canonical /target/{target} below.
 
-    @app.get("/progress/{target}", response_class=HTMLResponse)
-    def dashboard_target_progress(request: RequestType, target: str) -> Any:
-        # <base> tag pins relative URLs (summary.json, NN_history.json)
-        # to this dir regardless of trailing-slash on the page URL.
-        return templates.TemplateResponse(
-            request,
-            "progress.html",
-            {
-                "title": target,
-                "target": target,
-                "progress_base": f"/progress/{target}/",
-            },
-        )
-
-    @app.get("/progress/{target}/summary.json")
+    @app.get("/api/progress/{target}/summary.json")
     def progress_summary(target: str) -> dict[str, Any]:
         with _conn() as conn:
             return target_summary(conn, target)
 
-    @app.get("/progress/{target}/{chunk}_history.json")
+    @app.get("/api/progress/{target}/{chunk}_history.json")
     def progress_history(target: str, chunk: str) -> Any:
         try:
             chunk_index = int(chunk)
@@ -672,47 +656,19 @@ def create_app(db_path: str | Path) -> Any:
             return target_history_chunk(conn, target, chunk_index)
 
     @app.get("/target/{target}", response_class=HTMLResponse)
-    def dashboard_target(
-        request: RequestType,
-        target: str,
-        status_filter: str = Query(default="all", alias="filter"),
-        q: str = "",
-        page: int = Query(default=1, ge=1),
-    ) -> Any:
-        with _conn() as conn:
-            rows = get_port_status(conn, target=target)
-            query = q.strip().lower()
-            if status_filter == "failures":
-                rows = [
-                    row for row in rows if row.get("last_attempt_result") == "failure"
-                ]
-            elif status_filter == "successes":
-                rows = [
-                    row for row in rows if row.get("last_attempt_result") == "success"
-                ]
-            if query:
-                rows = [
-                    row for row in rows if query in str(row.get("origin", "")).lower()
-                ]
-            page_size = 100
-            start = (page - 1) * page_size
-            page_rows = rows[start : start + page_size]
-            page_count = max(1, (len(rows) + page_size - 1) // page_size)
-            return templates.TemplateResponse(
-                request,
-                "target.html",
-                {
-                    "title": target,
-                    "target": target,
-                    "rows": page_rows,
-                    "status_filter": status_filter,
-                    "query": q,
-                    "page": page,
-                    "page_count": page_count,
-                    "page_size": page_size,
-                    "total_rows": len(rows),
-                },
-            )
+    def dashboard_target(request: RequestType, target: str) -> Any:
+        # The page uses progress.{css,js} (lifted from dsynth-progress)
+        # and fetches data from /api/progress/{target}/. The <base> tag
+        # pins those relative URLs to the canonical API root.
+        return templates.TemplateResponse(
+            request,
+            "progress.html",
+            {
+                "title": target,
+                "target": target,
+                "progress_base": f"/api/progress/{target}/",
+            },
+        )
 
     @app.get("/target/{target}/{cat}/{port}", response_class=HTMLResponse)
     def dashboard_port_detail(

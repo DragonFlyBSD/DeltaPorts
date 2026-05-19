@@ -19,6 +19,17 @@
 </head>
 <body>
 
+  <div id="dp-nav" style="padding:.4rem .8rem;background:#1a1a1a;color:#ccc;font:13px/1.4 sans-serif;border-bottom:1px solid #333;">
+    <a href="{{ request.url_for('dashboard_index') }}" style="color:#9cf;text-decoration:none;">Tracker</a>
+    <span style="color:#666;margin:0 .5rem;">/</span>
+    <span>{{ target }}</span>
+    <span style="float:right;">
+      <a href="{{ request.url_for('dashboard_builds') }}" style="color:#9cf;text-decoration:none;">Builds</a>
+      <span style="color:#666;margin:0 .5rem;">·</span>
+      <a href="{{ request.url_for('agentic_index') }}" style="color:#9cf;text-decoration:none;">Agentic</a>
+    </span>
+  </div>
+
   <div id="header">
     <div id="header-top">
       <div class="header-top-inner">

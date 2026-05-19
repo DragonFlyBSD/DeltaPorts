@@ -59,18 +59,18 @@ def client(seeded_state_db: Path) -> TestClient:
 
 
 def test_progress_html_serves(client: TestClient) -> None:
-    resp = client.get("/progress/@2026Q2")
+    resp = client.get("/target/@2026Q2")
     assert resp.status_code == 200
     body = resp.text
     # Pinned base + key dsynth-progress hooks
-    assert '<base href="/progress/@2026Q2/">' in body
+    assert '<base href="/api/progress/@2026Q2/">' in body
     assert "progress.css" in body
     assert "progress.js" in body
     assert 'id="stats_built"' in body
 
 
 def test_progress_summary_shape(client: TestClient) -> None:
-    body = client.get("/progress/@2026Q2/summary.json").json()
+    body = client.get("/api/progress/@2026Q2/summary.json").json()
     assert body["profile"] == "@2026Q2"
     assert body["active"] == 1  # finished_at IS NULL
     stats = body["stats"]
@@ -88,7 +88,7 @@ def test_progress_summary_shape(client: TestClient) -> None:
 
 
 def test_progress_history_chunk_one(client: TestClient) -> None:
-    body = client.get("/progress/@2026Q2/01_history.json").json()
+    body = client.get("/api/progress/@2026Q2/01_history.json").json()
     # Excludes the 'building' row (active builder, not history)
     assert isinstance(body, list)
     assert len(body) == 4
@@ -102,12 +102,12 @@ def test_progress_history_chunk_one(client: TestClient) -> None:
 
 
 def test_progress_history_past_last_chunk(client: TestClient) -> None:
-    body = client.get("/progress/@2026Q2/99_history.json").json()
+    body = client.get("/api/progress/@2026Q2/99_history.json").json()
     assert body == []
 
 
 def test_progress_summary_unknown_target(client: TestClient) -> None:
-    body = client.get("/progress/@nonexistent/summary.json").json()
+    body = client.get("/api/progress/@nonexistent/summary.json").json()
     assert body["kfiles"] == 0
     assert body["stats"]["built"] == 0
     assert body["builders"] == []
