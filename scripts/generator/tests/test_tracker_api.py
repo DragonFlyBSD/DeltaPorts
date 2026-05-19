@@ -13,7 +13,7 @@ import dportsv3.tracker.server as tracker_server
 
 @pytest.fixture
 def client(tmp_path: Path) -> TestClient:
-    app = create_app(tmp_path / "tracker.db")
+    app = create_app(tmp_path / "state.db")
     with TestClient(app) as test_client:
         yield test_client
 
@@ -231,7 +231,7 @@ def test_api_uses_fresh_db_connection_per_request(
 
     monkeypatch.setattr(tracker_server, "open_db", _counting_open_db)
 
-    app = create_app(tmp_path / "tracker.db")
+    app = create_app(tmp_path / "state.db")
     with TestClient(app) as test_client:
         start = test_client.post(
             "/api/builds",

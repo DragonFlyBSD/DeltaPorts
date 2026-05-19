@@ -56,6 +56,25 @@ def cmd_tracker(args: Namespace) -> int:
     return 1
 
 
+def _resolve_state_db_path(args: Namespace) -> Path:
+    """Resolve the state.db path with the precedence:
+      1. --db PATH (explicit operator override)
+      2. DPORTSV3_STATE_DB env var
+      3. $PWD/state.db (fall-back default)
+
+    Tracker reads + writes the same file artifact-store writes. The
+    operator is responsible for ensuring the path matches whatever
+    artifact-store was started with (typically --logs-root
+    /build/synth/logs → /build/synth/logs/evidence/state.db).
+    """
+    if args.db is not None:
+        return Path(args.db)
+    env_db = os.environ.get("DPORTSV3_STATE_DB")
+    if env_db:
+        return Path(env_db)
+    return Path.cwd() / "state.db"
+
+
 def _cmd_serve(args: Namespace) -> int:
     uvicorn_spec = importlib_util.find_spec("uvicorn")
     if uvicorn_spec is None:
@@ -68,7 +87,8 @@ def _cmd_serve(args: Namespace) -> int:
 
     from dportsv3.tracker.server import create_app
 
-    app = create_app(Path(args.db))
+    db_path = _resolve_state_db_path(args)
+    app = create_app(db_path)
     uvicorn.run(app, host="0.0.0.0", port=int(args.port))
     return 0
 

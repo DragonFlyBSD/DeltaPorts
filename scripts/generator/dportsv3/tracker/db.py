@@ -1,4 +1,15 @@
-"""SQLite-backed build tracker database helpers."""
+"""SQLite-backed build tracker database helpers.
+
+As of Phase 4 step 4 the tracker is a read+write consumer of ``state.db``
+(the same file artifact-store writes). The schema is defined once in
+``dportsv3.db.schema``; this module imports it and provides the
+tracker-specific query helpers on top.
+
+Two writers (artifact-store + this module) share state.db under SQLite
+WAL — one writer at a time at the SQLite layer, readers proceed in
+parallel. Each connection opens with the same PRAGMA set (WAL,
+busy_timeout=5000, foreign_keys=ON) via ``open_db`` / ``init_db``.
+"""
 
 from __future__ import annotations
 
@@ -8,19 +19,27 @@ from pathlib import Path
 from typing import Any, cast
 
 from dportsv3.common.validation import is_compose_target
+from dportsv3.db.schema import DEFAULT_BUILD_TYPES, init_db as _init_state_db
 
 VALID_BUILD_RESULTS = frozenset({"success", "failure", "skipped", "ignored"})
-DEFAULT_BUILD_TYPES = ("test", "release")
 
 
 def open_db(db_path: str | Path) -> sqlite3.Connection:
-    """Open one configured SQLite connection for tracker operations."""
+    """Open one configured SQLite connection for tracker operations.
+
+    PRAGMAs match what ``dportsv3.db.schema.init_db`` sets so that
+    artifact-store and tracker write under identical conditions. Pragmas
+    are per-connection in SQLite — applying them here on every
+    connection (the tracker server opens fresh ones per request after
+    commit a14fe9c4dab) is the only safe pattern.
+    """
     path_text = str(db_path)
     conn = sqlite3.connect(path_text, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     if path_text != ":memory:":
         conn.execute("PRAGMA journal_mode = WAL")
+    conn.execute("PRAGMA busy_timeout = 5000")
     return conn
 
 
@@ -40,78 +59,14 @@ class ActiveBuildError(RuntimeError):
 
 
 def init_db(db_path: str | Path) -> sqlite3.Connection:
-    """Initialize the tracker schema and return one configured connection."""
-    path_text = str(db_path)
-    conn = open_db(path_text)
+    """Open state.db and ensure the schema + seed + migrations are present.
 
-    with conn:
-        conn.executescript(
-            """
-            CREATE TABLE IF NOT EXISTS build_types (
-                name TEXT PRIMARY KEY
-            );
-
-            CREATE TABLE IF NOT EXISTS build_runs (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                target TEXT NOT NULL,
-                build_type TEXT NOT NULL REFERENCES build_types(name),
-                started_at TEXT NOT NULL,
-                finished_at TEXT,
-                commit_sha TEXT,
-                commit_branch TEXT,
-                commit_pushed_at TEXT
-            );
-
-            CREATE TABLE IF NOT EXISTS build_results (
-                build_run_id INTEGER NOT NULL REFERENCES build_runs(id),
-                origin TEXT NOT NULL,
-                version TEXT NOT NULL,
-                result TEXT NOT NULL,
-                log_url TEXT,
-                recorded_at TEXT NOT NULL,
-                PRIMARY KEY (build_run_id, origin)
-            );
-
-            CREATE TABLE IF NOT EXISTS port_status (
-                target TEXT NOT NULL,
-                origin TEXT NOT NULL,
-                last_attempt_version TEXT,
-                last_attempt_result TEXT,
-                last_attempt_at TEXT,
-                last_attempt_run_id INTEGER REFERENCES build_runs(id),
-                last_success_version TEXT,
-                last_success_at TEXT,
-                last_success_run_id INTEGER REFERENCES build_runs(id),
-                PRIMARY KEY (target, origin)
-            );
-
-            CREATE INDEX IF NOT EXISTS idx_build_runs_target ON build_runs(target);
-            CREATE INDEX IF NOT EXISTS idx_build_results_origin ON build_results(origin);
-            CREATE INDEX IF NOT EXISTS idx_port_status_target ON port_status(target);
-            CREATE INDEX IF NOT EXISTS idx_port_status_failures
-                ON port_status(target, last_attempt_result);
-            CREATE INDEX IF NOT EXISTS idx_build_runs_target_type_started
-                ON build_runs(target, build_type, started_at DESC, id DESC);
-            CREATE UNIQUE INDEX IF NOT EXISTS uq_build_runs_active
-                ON build_runs(target, build_type)
-                WHERE finished_at IS NULL;
-            """
-        )
-        conn.executemany(
-            "INSERT OR IGNORE INTO build_types(name) VALUES (?)",
-            [(name,) for name in DEFAULT_BUILD_TYPES],
-        )
-
-    # Idempotent schema migrations for queue tracking
-    for stmt in (
-        "ALTER TABLE build_results ADD COLUMN status TEXT NOT NULL DEFAULT 'recorded'",
-        "ALTER TABLE build_runs ADD COLUMN total_expected INTEGER",
-    ):
-        try:
-            conn.execute(stmt)
-        except sqlite3.OperationalError:
-            pass  # column already exists
-
+    Delegates to ``dportsv3.db.schema.init_db`` so the schema definition
+    lives in one place. Idempotent on existing files (artifact-store may
+    already have initialized the same DB).
+    """
+    conn = open_db(db_path)
+    _init_state_db(conn)
     return conn
 
 

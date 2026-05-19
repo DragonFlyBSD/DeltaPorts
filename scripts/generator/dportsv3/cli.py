@@ -448,8 +448,8 @@ def _register_tracker_parser(subparsers: argparse._SubParsersAction) -> None:
     serve.add_argument(
         "--db",
         type=Path,
-        default=Path("tracker.db"),
-        help="SQLite database path",
+        default=None,
+        help="SQLite database path. If unset, uses DPORTSV3_STATE_DB env var, else $PWD/state.db",
     )
 
     start = tracker_sub.add_parser("start-build", help="Create a build run")
