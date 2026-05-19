@@ -81,7 +81,11 @@ def target_summary(conn: sqlite3.Connection, target: str) -> dict[str, Any]:
 
     builders = _active_builders(conn, run_id)
 
-    kfiles = max(1, (total_recorded + CHUNK_SIZE - 1) // CHUNK_SIZE)
+    # kfiles counts chunks of *historical* rows the UI will fetch —
+    # building/queued rows live in `builders`, not in NN_history.json,
+    # so exclude them from the chunk math.
+    historical = total_recorded - int(counts["building"]) - int(counts["queued"])
+    kfiles = max(1, (historical + CHUNK_SIZE - 1) // CHUNK_SIZE) if historical else 0
 
     return {
         "profile": str(run["target"]),
@@ -123,10 +127,13 @@ def target_history_chunk(
         return []
 
     offset = (chunk_index - 1) * CHUNK_SIZE
+    # 'building' and 'queued' rows are in-flight — they belong in
+    # summary.builders, not in the historical record.
     rows = conn.execute(
         """SELECT origin, version, result, recorded_at, status
            FROM build_results
            WHERE build_run_id = ?
+             AND status NOT IN ('building', 'queued')
            ORDER BY recorded_at ASC, origin ASC
            LIMIT ? OFFSET ?""",
         (run_id, CHUNK_SIZE, offset),

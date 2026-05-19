@@ -89,9 +89,10 @@ def test_progress_summary_shape(client: TestClient) -> None:
 
 def test_progress_history_chunk_one(client: TestClient) -> None:
     body = client.get("/progress/@2026Q2/01_history.json").json()
-    # Excludes the 'building' (empty result) row
+    # Excludes the 'building' row (active builder, not history)
     assert isinstance(body, list)
-    assert len(body) == 5
+    assert len(body) == 4
+    assert "devel/inprogress" not in {row["origin"] for row in body}
     # dsynth vocabulary
     results = {row["origin"]: row["result"] for row in body}
     assert results["devel/foo"] == "built"
