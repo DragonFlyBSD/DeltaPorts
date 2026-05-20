@@ -132,6 +132,36 @@ else:
     StreamingResponseType = _MissingHTMLResponse
 
 
+_INLINE_TEXT_MEDIA: dict[str, str] = {
+    ".md":    "text/plain; charset=utf-8",
+    ".txt":   "text/plain; charset=utf-8",
+    ".log":   "text/plain; charset=utf-8",
+    ".diff":  "text/plain; charset=utf-8",
+    ".patch": "text/plain; charset=utf-8",
+    ".json":  "application/json; charset=utf-8",
+    ".html":  "text/html; charset=utf-8",
+    ".xml":   "application/xml; charset=utf-8",
+    ".yaml":  "text/plain; charset=utf-8",
+    ".yml":   "text/plain; charset=utf-8",
+}
+
+
+def _artifact_media_type(relpath: str, kind: str | None) -> tuple[str, bool]:
+    """Pick a Content-Type and an inline-vs-attachment flag for an artifact.
+
+    Text-like extensions render in the browser; gzip and unknown fall
+    through to a download. ``kind`` is honored only for compressed
+    payloads (the runner sets it on bundled logs).
+    """
+    if kind == "gzip":
+        return "application/gzip", False
+    ext = Path(relpath).suffix.lower()
+    media = _INLINE_TEXT_MEDIA.get(ext)
+    if media is not None:
+        return media, True
+    return "application/octet-stream", False
+
+
 def _resolve_artifact_path(
     artifact_root: Path, ref: dict[str, Any]
 ) -> Path | None:
@@ -456,8 +486,11 @@ def create_app(db_path: str | Path) -> Any:
         path = _resolve_artifact_path(app.state.artifact_root, ref)
         if path is None or not path.exists():
             raise HTTPException(status_code=404, detail="Artifact file missing")
-        media_type = "application/gzip" if (ref.get("kind") == "gzip") else "application/octet-stream"
-        return FileResponse(str(path), media_type=media_type)
+        media_type, inline = _artifact_media_type(relpath, ref.get("kind"))
+        # Set Content-Disposition: inline for text-like artifacts so the
+        # browser renders them instead of triggering a download.
+        headers = {"Content-Disposition": f"inline; filename=\"{Path(relpath).name}\""} if inline else None
+        return FileResponse(str(path), media_type=media_type, headers=headers)
 
     @app.get("/api/events")
     def api_events(
