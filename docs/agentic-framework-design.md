@@ -309,3 +309,14 @@ implementation plans (TBD, one per migration step).
 | Detailed layer-1 implementation plan | TODO (after pilot) |
 | Per-layer test plan | TODO |
 | Decision: this doc → ADR (architecture decision record) or stays exploratory? | TODO |
+
+## Future work (parking lot)
+
+Ideas surfaced during phase implementation that don't fit the
+current layer's scope but should be revisited later. These are
+notes, not commitments — the next phase decides whether each item
+is worth promoting into its plan.
+
+| Idea | Surfaced in | Why it's parked |
+|---|---|---|
+| **Operator notification on env-broken / persistent failure.** When the runner skips work because the env is broken, or when a (target, origin) hits the retry cap, the operator currently has to discover this by polling the UI / activity log. A push channel (email/webhook/Slack/badge) would let the operator act sooner. | Phase 3 (decision: env-broken → skip) | Needs a notification framework; out of scope for the policy engine. Candidate for a dedicated layer-6 or post-phase-5 polish. |
