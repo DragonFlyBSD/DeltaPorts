@@ -115,6 +115,59 @@ class ArtifactStore:
             })
             self.conn.commit()
 
+    def upsert_job(self, payload: dict[str, Any]) -> None:
+        """Insert or update a row in the ``jobs`` table.
+
+        Filesystem queue (.job files) is the source of truth for what
+        the runner processes; this table is the read model the UI
+        consumes. Writes happen on enqueue (state=pending), claim
+        (state=inflight), and completion (state=done|failed).
+        ``COALESCE`` on identity fields keeps earlier inserts'
+        metadata intact when later updates omit them.
+        """
+        job_id = payload.get("job_id")
+        if not job_id:
+            return
+        now = datetime.now(timezone.utc).isoformat()
+        values = (
+            job_id,
+            payload.get("state"),
+            payload.get("type"),
+            payload.get("origin"),
+            payload.get("flavor"),
+            payload.get("bundle_dir"),
+            payload.get("created_ts_utc"),
+            payload.get("path"),
+            payload.get("last_error"),
+            payload.get("target"),
+            now,
+        )
+        with self._lock:
+            self.conn.execute(
+                """INSERT INTO jobs (job_id, state, type, origin, flavor, bundle_dir,
+                                     created_ts_utc, path, last_error, target, last_seen_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                   ON CONFLICT(job_id) DO UPDATE SET
+                     state=excluded.state,
+                     type=COALESCE(excluded.type, jobs.type),
+                     origin=COALESCE(excluded.origin, jobs.origin),
+                     flavor=COALESCE(excluded.flavor, jobs.flavor),
+                     bundle_dir=COALESCE(excluded.bundle_dir, jobs.bundle_dir),
+                     created_ts_utc=COALESCE(excluded.created_ts_utc, jobs.created_ts_utc),
+                     path=COALESCE(excluded.path, jobs.path),
+                     last_error=excluded.last_error,
+                     target=COALESCE(excluded.target, jobs.target),
+                     last_seen_at=excluded.last_seen_at""",
+                values,
+            )
+            emit_event(self.conn, "job_upserted", {
+                "job_id": job_id,
+                "state": payload.get("state"),
+                "origin": payload.get("origin"),
+                "target": payload.get("target"),
+            })
+            self.conn.commit()
+
     def put_blob(self, bundle_id: str, relpath: str, data: bytes, kind: str | None) -> dict[str, Any]:
         sha = sha256_bytes(data)
         obj_path = blob_path(self.blob_root, sha)
@@ -346,6 +399,18 @@ class Handler(BaseHTTPRequestHandler):
                 return
             result = store.put_fs_ref(bundle_id, relpath, fs_path, kind)
             self._send_json({"ok": True, **result})
+            return
+
+        if path == "/v1/jobs/upsert":
+            body = self._read_json_body()
+            if not body:
+                self._send_error_json(400, "invalid JSON body")
+                return
+            if not body.get("job_id"):
+                self._send_error_json(400, "job_id required")
+                return
+            store.upsert_job(body)
+            self._send_json({"ok": True})
             return
 
         if path == "/v1/user-context":

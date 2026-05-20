@@ -163,6 +163,45 @@ def bundle_artifact_list(bundle_id: str) -> list[str]:
         return []
 
 
+def _post_job_upsert(
+    job_id: str,
+    state: str,
+    *,
+    job: dict | None = None,
+    path: Path | None = None,
+    last_error: str | None = None,
+) -> bool:
+    """Tell the artifact-store about a job state transition.
+
+    The UI reads the ``jobs`` table; the filesystem queue is the source
+    of truth for what the runner processes. Best-effort: failures are
+    silent so a flaky store doesn't break job processing.
+    """
+    payload: dict = {"job_id": job_id, "state": state}
+    if job is not None:
+        for key in ("type", "origin", "flavor", "bundle_dir",
+                    "created_ts_utc", "target"):
+            v = job.get(key)
+            if v:
+                payload[key] = v
+    if path is not None:
+        payload["path"] = str(path)
+    if last_error is not None:
+        payload["last_error"] = last_error[:500]
+    try:
+        data = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(
+            f"{_artifact_store_url()}/v1/jobs/upsert",
+            data=data,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=10):
+            return True
+    except Exception:
+        return False
+
+
 def _materialize_bundle(bundle_id: str, dest: Path) -> int:
     """Download all artifacts for ``bundle_id`` into ``dest``.
 
@@ -409,6 +448,17 @@ def enqueue_triage_job(
     with open(tmp_path, "w") as f:
         f.write("\n".join(content) + "\n")
     tmp_path.rename(job_path)
+    _post_job_upsert(
+        job_path.name, "pending",
+        job={
+            "type": "triage",
+            "origin": origin,
+            "flavor": flavor,
+            "created_ts_utc": ts,
+            "target": os.environ.get("DPORTSV3_TRACKER_TARGET", ""),
+        },
+        path=job_path,
+    )
     return job_path
 
 
@@ -1253,6 +1303,8 @@ def claim_next_job_batch(queue_root: Path) -> tuple[Path, list[Path]] | None:
             lead_path.rename(lead_dest)
         except OSError:
             continue
+        _post_job_upsert(lead_dest.name, "inflight",
+                         job=lead_meta, path=lead_dest)
         moved_siblings: list[Path] = []
         for s in candidate_siblings:
             try:
@@ -1262,6 +1314,12 @@ def claim_next_job_batch(queue_root: Path) -> tuple[Path, list[Path]] | None:
             except OSError:
                 # Another runner grabbed it or it vanished — skip.
                 continue
+            try:
+                s_meta = parse_job_file(s_dest)
+            except Exception:
+                s_meta = {}
+            _post_job_upsert(s_dest.name, "inflight",
+                             job=s_meta, path=s_dest)
         return lead_dest, moved_siblings
     return None
 
@@ -1321,7 +1379,19 @@ def enqueue_patch_job(
     with open(tmp_path, "w") as f:
         f.write("\n".join(content) + "\n")
     tmp_path.rename(job_path)
-    
+
+    _post_job_upsert(
+        job_path.name, "pending",
+        job={
+            "type": "patch",
+            "origin": job.get("origin", ""),
+            "flavor": job.get("flavor", ""),
+            "created_ts_utc": ts,
+            "target": job.get("target")
+                or os.environ.get("DPORTSV3_TRACKER_TARGET", ""),
+        },
+        path=job_path,
+    )
     return job_path
 
 
@@ -1864,30 +1934,36 @@ def process_job(
         success, status = False, f"unknown job type: {job_type}"
 
     if success:
-        move_job(job_path, "done")
+        new_path = move_job(job_path, "done")
+        _post_job_upsert(job_path.name, "done", job=job, path=new_path)
         for s in sibling_paths:
             try:
-                move_job(s, "done")
+                s_new = move_job(s, "done")
             except OSError:
-                pass
+                continue
+            _post_job_upsert(s.name, "done", path=s_new)
         log(queue_root, "INFO",
             f"moved job + {len(sibling_paths)} sibling(s) to done/")
     else:
         # Write error file for visibility in UI
+        error_msg = (status or "Unknown error")[:500]
         error_file = job_path.with_suffix(".job.error")
         try:
-            error_msg = status[:500] if status else "Unknown error"
             error_file.write_text(error_msg)
             log(queue_root, "DEBUG", f"wrote error file: {error_file}")
         except OSError as e:
             log(queue_root, "WARN", f"failed to write error file: {e}")
 
-        move_job(job_path, "failed")
+        new_path = move_job(job_path, "failed")
+        _post_job_upsert(job_path.name, "failed", job=job, path=new_path,
+                         last_error=error_msg)
         for s in sibling_paths:
             try:
-                move_job(s, "failed")
+                s_new = move_job(s, "failed")
             except OSError:
-                pass
+                continue
+            _post_job_upsert(s.name, "failed", path=s_new,
+                             last_error=error_msg)
         log(queue_root, "ERROR",
             f"moved job + {len(sibling_paths)} sibling(s) to failed/ ({status})")
     

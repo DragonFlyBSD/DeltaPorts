@@ -229,6 +229,21 @@ enqueue_job() {
 
 	# Atomic move to final location
 	mv "$tmpfile" "${qroot}/pending/${fname}"
+
+	# Tell the artifact-store about the new pending job so the UI can
+	# show it. Best-effort: store outages don't block enqueue (the
+	# .job file is the source of truth; the runner will upsert again
+	# on claim).
+	artifact_store job-upsert \
+		--job-id "$fname" \
+		--state pending \
+		--type triage \
+		--origin "$origin" \
+		--flavor "$flavor" \
+		--created-ts-utc "$ts" \
+		--path "${qroot}/pending/${fname}" \
+		--target "${DPORTSV3_TRACKER_TARGET:-}" \
+		>/dev/null 2>&1 || true
 }
 
 write_kv_file() {
