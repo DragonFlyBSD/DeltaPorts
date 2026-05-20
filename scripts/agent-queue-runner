@@ -35,9 +35,11 @@ import argparse
 import json
 import os
 import re
+import shutil
 import sqlite3
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import urllib.request
@@ -159,6 +161,31 @@ def bundle_artifact_list(bundle_id: str) -> list[str]:
         return [a.get("relpath") for a in data.get("artifacts", []) if a.get("relpath")]
     except Exception:
         return []
+
+
+def _materialize_bundle(bundle_id: str, dest: Path) -> int:
+    """Download all artifacts for ``bundle_id`` into ``dest``.
+
+    Bundles delivered via the artifact-store HTTP path live in state.db,
+    not on the filesystem; the harness triage flow (and snippet-extractor)
+    need a real directory. Materialize on demand into a tempdir.
+
+    Returns the number of artifacts written. Skips relpaths the store
+    can't return (silently — the caller decides whether 0 is an error).
+    """
+    relpaths = bundle_artifact_list(bundle_id)
+    written = 0
+    for rel in relpaths:
+        data = artifact_store_get(bundle_id, rel)
+        if data is None:
+            data = tracker_artifact_get(bundle_id, rel)
+        if data is None:
+            continue
+        out = dest / rel
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_bytes(data)
+        written += 1
+    return written
 
 
 def port_bundle_history(origin: str) -> list[dict]:
@@ -1352,16 +1379,77 @@ def _process_triage_job_harness(
     model: str,
 ) -> tuple[bool, str]:
     """Triage path that uses dportsv3.agent.triage instead of opencode."""
-    from dportsv3.agent import triage as harness_triage  # type: ignore[import-not-found]
-
     api_base = os.environ.get("DP_HARNESS_TRIAGE_API_BASE") or None
     api_key = os.environ.get("DP_HARNESS_TRIAGE_API_KEY") or None
     custom_llm_provider = os.environ.get("DP_HARNESS_TRIAGE_PROVIDER") or None
     timeout = int(os.environ.get("DP_HARNESS_TIMEOUT", "120"))
     max_snippet_rounds = int(os.environ.get("DP_HARNESS_MAX_SNIPPET_ROUNDS", "5"))
 
+    bundle_id = job.get("bundle_id")
+    materialized_tmp: Path | None = None
     if bundle_dir is None:
-        return False, "harness triage requires a local bundle_dir"
+        if not bundle_id:
+            return False, "harness triage requires bundle_dir or bundle_id"
+        # Bundles delivered via artifact-store have no on-disk dir.
+        # Materialize all artifacts into a tempdir so snippet-extractor
+        # and the intermediate triage.md write can use a real path.
+        try:
+            materialized_tmp = Path(tempfile.mkdtemp(prefix=f"bundle-{bundle_id}-"))
+            n = _materialize_bundle(bundle_id, materialized_tmp)
+        except Exception as exc:
+            return False, f"failed to materialize bundle {bundle_id}: {exc}"
+        if n == 0:
+            try:
+                shutil.rmtree(materialized_tmp, ignore_errors=True)
+            except Exception:
+                pass
+            return False, f"bundle {bundle_id} has no artifacts in the store"
+        bundle_dir = materialized_tmp
+        log(queue_root, "INFO",
+            f"materialized {n} artifact(s) for bundle {bundle_id} into {materialized_tmp}")
+
+    try:
+        return _run_harness_triage_inner(
+            queue_root, job_path, job, bundle_dir, kedb_dir,
+            payload, origin, job_id, model,
+            api_base, api_key, custom_llm_provider, timeout, max_snippet_rounds,
+            bundle_id,
+        )
+    finally:
+        if materialized_tmp is not None:
+            # Upload the final triage.md back so the patch job (and
+            # operator/UI) can read it from the artifact store.
+            if bundle_id:
+                tmd = materialized_tmp / "analysis" / "triage.md"
+                if tmd.exists():
+                    try:
+                        artifact_store_put(
+                            bundle_id, "analysis/triage.md",
+                            tmd.read_bytes(), "text",
+                        )
+                    except Exception:
+                        pass
+            shutil.rmtree(materialized_tmp, ignore_errors=True)
+
+
+def _run_harness_triage_inner(
+    queue_root: Path,
+    job_path: Path,
+    job: dict,
+    bundle_dir: Path,
+    kedb_dir: Path | None,
+    payload: str,
+    origin: str,
+    job_id: str,
+    model: str,
+    api_base: str | None,
+    api_key: str | None,
+    custom_llm_provider: str | None,
+    timeout: int,
+    max_snippet_rounds: int,
+    bundle_id: str | None,
+) -> tuple[bool, str]:
+    from dportsv3.agent import triage as harness_triage  # type: ignore[import-not-found]
 
     activity_log(
         queue_root, "api_call_start",
