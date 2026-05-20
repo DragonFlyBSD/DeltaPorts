@@ -1016,157 +1016,52 @@ def build_triage_payload(
     kedb_dir: Path | None = None,
     job: dict | None = None
 ) -> str:
-    """Build the triage prompt from bundle contents."""
-    parts = []
-    
-    # Include snippet feedback and content if this is a follow-up round
-    snippet_round = int(job.get("snippet_round", "0")) if job else 0
-    has_snippets = job.get("has_snippets", "false") == "true" if job else False
-    
-    if bundle_dir is not None and has_snippets and snippet_round > 0:
-        # Add feedback about previous extraction
-        feedback = build_snippet_feedback(bundle_dir, snippet_round)
-        if feedback:
-            parts.append(feedback)
-            parts.append("")
-        
-        # Add extracted snippet contents
-        snippet_content = load_snippets_content(bundle_dir, snippet_round)
-        if snippet_content:
-            parts.append(snippet_content)
-            parts.append("")
-    
-    # Known Error Database (if available)
-    kedb_content = load_kedb(kedb_dir)
-    if kedb_content:
-        parts.append(kedb_content)
-        parts.append("")
-    
-    # User-provided context (run-scoped)
-    run_id = job.get("run_id") if job else None
-    origin = job.get("origin") if job else None
-    user_context, _ = get_user_context(run_id, origin)
-    if user_context:
-        parts.append("## User Context (run-scoped)")
-        parts.append(user_context)
-        parts.append("")
-    
-    bundle_id = job.get("bundle_id") if job else None
+    """Build the triage prompt from bundle contents.
 
-    # Metadata
-    meta = read_bundle_text(bundle_dir, bundle_id, "meta.txt")
-    if meta:
-        parts.append("## Metadata")
-        parts.append(meta)
-        parts.append("")
+    Phase 4: assembles via ``dportsv3.agent.context.render_payload``
+    over the section roster in ``context.TRIAGE_SECTIONS``. Behavior
+    is byte-equivalent to the pre-Phase-4 ``parts.append(...)`` form;
+    parity is locked in by ``tests/test_triage_payload_parity.py``.
+    """
+    from dportsv3.agent.context import ContextCtx, TRIAGE_SECTIONS, render_payload
 
-    
-    # Build errors
-    errors = read_bundle_text(bundle_dir, bundle_id, "logs/errors.txt")
-    if errors:
-        parts.append("## Build Errors")
-        parts.append(errors)
-        parts.append("")
-    
-    # Port files
-    parts.append("## Port Files")
-    
-    makefile = read_bundle_text(bundle_dir, bundle_id, "port/Makefile")
-    if makefile:
-        parts.append("### Makefile")
-        parts.append("```makefile")
-        parts.append(makefile)
-        parts.append("```")
-        parts.append("")
-    
-    plist = read_bundle_text(bundle_dir, bundle_id, "port/pkg-plist")
-    if plist:
-        parts.append("### pkg-plist")
-        parts.append("```")
-        parts.append(plist)
-        parts.append("```")
-        parts.append("")
-    
-    distinfo = read_bundle_text(bundle_dir, bundle_id, "port/distinfo")
-    if distinfo:
-        parts.append("### distinfo")
-        parts.append("```")
-        parts.append(distinfo)
-        parts.append("```")
-        parts.append("")
-    
-    # Existing patches (if stored)
-    if bundle_id:
-        patch_relpaths = [p for p in bundle_artifact_list(bundle_id) if p.startswith("port/files/patch-")]
-    else:
-        patch_relpaths = []
-    if patch_relpaths:
-        parts.append("### Existing Patches")
-        for rel in sorted(patch_relpaths):
-            content = read_bundle_text(bundle_dir, bundle_id, rel)
-            if content:
-                parts.append(f"#### {Path(rel).name}")
-                parts.append("```diff")
-                parts.append(content)
-                parts.append("```")
-                parts.append("")
-    
-    # Sibling bundles in this batch (other pending failures for same origin)
-    sibling_raw = (job.get("sibling_bundle_ids") if job else "") or ""
+    job = job or {}
+    bundle_id = job.get("bundle_id")
+    run_id = job.get("run_id")
+    origin = job.get("origin")
+
+    # Pre-load fields sections need without doing I/O at render time.
+    sibling_raw = job.get("sibling_bundle_ids", "") or ""
     sibling_ids = [s.strip() for s in sibling_raw.split(",") if s.strip()]
-    if sibling_ids:
-        parts.append("## Sibling Pending Failures (this batch)")
-        parts.append(
-            "These bundles failed for the same origin and were queued "
-            "before this triage ran. Treat them as additional evidence "
-            "for the same underlying issue."
-        )
-        parts.append("")
-        for sib_id in sibling_ids[:3]:
-            sib_errors = read_bundle_text(None, sib_id, "logs/errors.txt")
-            if not sib_errors:
-                continue
-            parts.append(f"### Bundle {sib_id}")
-            parts.append("```")
-            parts.append(sib_errors)
-            parts.append("```")
-            parts.append("")
 
-    # Prior triages (historical: earlier completed jobs for this origin)
-    origin_for_history = job.get("origin") if job else None
-    if origin_for_history:
-        history = []
-        for entry in port_bundle_history(origin_for_history):
+    prior_triage_ids: list[str] = []
+    if origin:
+        for entry in port_bundle_history(origin):
             bid = entry.get("bundle_id")
             if not bid or bid == bundle_id or bid in sibling_ids:
                 continue
-            history.append(bid)
-            if len(history) >= 2:
+            prior_triage_ids.append(bid)
+            if len(prior_triage_ids) >= 2:
                 break
-        if history:
-            parts.append("## Prior Triages (most recent 2)")
-            for past_bundle in history:
-                parts.append(f"### Bundle {past_bundle}")
-                for relpath, title, code_block in [
-                    ("analysis/triage.md", "Triage", None),
-                    ("analysis/rebuild_proof.json", "Rebuild Proof", "json"),
-                ]:
-                    content = read_bundle_text(None, past_bundle, relpath)
-                    if not content:
-                        continue
-                    parts.append(f"#### {title}")
-                    if code_block:
-                        parts.append(f"```{code_block}")
-                        parts.append(content)
-                        parts.append("```")
-                    else:
-                        parts.append(content)
-                    parts.append("")
 
-    parts.append("---")
-    parts.append("Analyze this build failure and provide your triage report.")
+    user_context_text, _ = get_user_context(run_id, origin)
+    kedb_text = load_kedb(kedb_dir)
 
-    return "\n".join(parts)
+    ctx = ContextCtx(
+        bundle_dir=bundle_dir,
+        bundle_id=bundle_id,
+        job=job,
+        kedb_dir=kedb_dir,
+        sibling_bundle_ids=sibling_ids,
+        prior_triage_bundle_ids=prior_triage_ids,
+        user_context_text=user_context_text or None,
+        kedb_text=kedb_text or None,
+        read_bundle_text=read_bundle_text,
+        bundle_artifact_list=bundle_artifact_list,
+        snippet_feedback=build_snippet_feedback,
+        snippet_content=load_snippets_content,
+    )
+    return render_payload(list(TRIAGE_SECTIONS), ctx)
 
 
 def build_patch_payload(
