@@ -1,144 +1,166 @@
-# Agentic framework — Phase 1 plan: lifecycle + pilot
+# Agentic framework — Phase 1 plan: lifecycle
 
 > **Phase:** 1 of N (see `agentic-framework-design.md` for the arc).
-> **Goal:** install the job lifecycle layer (layer 1) and validate the
-> design via one pilot feature. Six independently-reviewable steps.
+> **Goal:** install the job lifecycle layer (layer 1). Four
+> independently-reviewable steps. No pilot, no parallel code paths,
+> no schema migrations preserving old shapes — we're in alpha, the
+> cutover *is* the change.
 >
 > When Phase 1 ships, this file gets **rewritten** to be Phase 2's
-> plan. The arc and historical scaffolding stay in
-> `agentic-framework-design.md`.
+> plan.
 >
 > **Status:** draft. Awaiting operator review of step plans below
 > before implementation starts.
 
+## Operator decisions captured in this revision
+
+- `JobEvent` is a constrained enum — no free-form `event_name`. The
+  set is finite, code that wants a new transition adds a new enum
+  value.
+- No crash-recovery event. On runner startup, any job stuck in an
+  inflight-ish state (CLAIMED / TRIAGING / TRIAGED / PATCHING /
+  VERIFYING) gets transitioned to DEAD with `retire_reason=
+  "runner_restart"`. Operator re-enqueues from the original bundle
+  if they want it retried — much simpler than threading recovery
+  semantics through every step.
+- Yolo mode: hard cutover everywhere. No "alongside" columns. The
+  existing `jobs.state` column gets **repurposed** to hold the
+  typed `JobState` values directly. UI templates and queries get
+  updated in the same commit. No legacy fallback.
+- **No pilot.** Layer 1 lands on its own; later phases validate
+  later layers.
+
 ## Scope of Phase 1
 
 **In scope:**
-- Layer 1: a typed job lifecycle state machine backed by `state.db`.
-- The pilot: `TwoModelEscalationStep` — first attempt uses a cheap
-  model; on `gave-up` outcome, second attempt uses a strong model.
-  Hand-shaped step that informs (but doesn't formalize) the future
-  Step protocol.
-- Tests at every step.
+- Typed `JobState` + `JobEvent` enums.
+- `lifecycle.py` module: transitions table, `apply()`, `current()`,
+  `history()`, startup `reap_orphans()`.
+- `job_events` table + supporting columns.
+- Runner + artifact-store cutover: all state writes go through
+  `lifecycle.apply()`. `_post_job_upsert` and `upsert_job` deleted.
+- UI templates updated to render the new typed values.
+- Integration test of the full transition sequence.
 
 **Out of scope (deferred to later phases):**
 - Layer 2 (formal Step Protocol).
-- Layer 3 (Health/readiness).
+- Layer 3 (Health/readiness as a typed precondition).
 - Layer 4 (Context assembly).
 - Layer 5 (Policy engine).
-- UI changes beyond what falls out for free.
-
-**Hard cutover principle (per operator preference):** when each step
-lands, the equivalent old code is **deleted in the same commit**. No
-dual code paths surviving past their cutover step.
+- Pulling claim ordering out of the filesystem into the DB. The
+  `.job` file stays the payload container; only the *state* moves
+  into the typed lifecycle. Filesystem-as-claim-queue can move in a
+  later phase if useful.
 
 ## Pre-conditions before starting
 
-These must be true at HEAD of master before Step 1 begins:
-
-1. The May 20 operational fixes (sibling batching, env_broken,
-   retry cap, loop-aware prompt) are verified working on a real
-   dsynth run end-to-end. Without that we'll mistake framework bugs
-   for inherited bugs.
-2. `dportsv3.agent.policy.Tier` is the single source of truth for tier
-   names — no other code path hard-codes tier strings.
-3. `state.db`'s `jobs` table is being populated for new jobs (the
-   `_post_job_upsert` plumbing from `f1272152971`).
-
-If any precondition fails, fix it first, don't paper over.
-
-## Decision points before starting
-
-Two things the operator should confirm before Step 1 lands:
-
-1. **Pilot choice:** is "cheap → strong on gave-up" the right pilot?
-   Alternative is a layer-3 health-probe pilot. Two-model gives
-   broader interface coverage; health is smaller and safer.
-2. **Schema migration window:** confirm production `state.db` can
-   absorb `ALTER TABLE ADD COLUMN` + a new table during a runner
-   restart. Should be trivial but worth a one-line ack.
+1. May 20 operational fixes (sibling batching, env_broken, retry
+   cap, loop-aware prompt) verified working on a real dsynth run.
+2. `state.db`'s `jobs` table is being populated for new jobs (the
+   `_post_job_upsert` plumbing from `f1272152971`). This gives us a
+   baseline to compare against post-cutover.
 
 ---
 
-## The state set (used by all steps)
-
-Final, explicit, exhaustive. Codified in `lifecycle.py:JobState`:
+## The state set
 
 ```
-queued       — written by hook on dsynth failure (.job file in pending/)
-claimed      — runner has moved .job to inflight/, before any step starts
-triaging     — TriageStep running
-triaged      — TriageStep complete, awaiting next-step decision
-patching     — PatchAttemptStep running (one attempt)
-verifying    — RebuildVerifyStep running (separate from patching)
-done         — rebuild_ok=true, no further work
-escalated    — MANUAL tier resolved; operator must act
-dead         — terminal: env_broken, parse error, exhausted budget
-               without progress, etc.
+QUEUED       — .job file written by hook; jobs row inserted
+CLAIMED      — runner moved .job to inflight/, before any step starts
+TRIAGING     — TriageStep running
+TRIAGED      — TriageStep complete, awaiting next-step decision
+PATCHING     — PatchAttemptStep running
+VERIFYING    — RebuildVerifyStep running (currently fused into
+               patching; we'll split when Layer 2 lands. Phase 1
+               just defines the state so Layer 2 has a target.)
+DONE         — rebuild_ok=true
+ESCALATED    — MANUAL tier resolved; operator must act
+DEAD         — terminal failure: env_broken, parse error, exhausted
+               budget without progress, runner restart
 ```
 
-Allowed transitions are a small fixed table; anything else is a bug.
+## The event set
+
+```
+HOOK_ENQUEUED    → QUEUED                  (initial insertion)
+CLAIM            QUEUED → CLAIMED
+TRIAGE_START     CLAIMED → TRIAGING
+TRIAGE_OK        TRIAGING → TRIAGED
+TRIAGE_FAIL      TRIAGING → DEAD
+PATCH_START      TRIAGED → PATCHING
+PATCH_OK         PATCHING → VERIFYING
+PATCH_GAVE_UP    PATCHING → DEAD
+PATCH_BUDGET_OUT PATCHING → DEAD
+VERIFY_OK        VERIFYING → DONE
+VERIFY_FAIL      VERIFYING → DEAD
+ESCALATE_MANUAL  TRIAGED → ESCALATED
+ENV_BROKEN       (CLAIMED|TRIAGING|PATCHING|VERIFYING) → DEAD
+REAP_ORPHAN      (CLAIMED|TRIAGING|TRIAGED|PATCHING|VERIFYING) → DEAD
+```
+
+Phase 1 only fires events corresponding to the existing flow:
+`HOOK_ENQUEUED`, `CLAIM`, `TRIAGE_START`, `TRIAGE_OK`,
+`PATCH_START`, `VERIFY_OK` (or `VERIFY_FAIL`), `ESCALATE_MANUAL`,
+`ENV_BROKEN`, `REAP_ORPHAN`. `TRIAGE_FAIL`, `PATCH_GAVE_UP`,
+`PATCH_BUDGET_OUT` are defined now but fired by later phases when
+the corresponding logic exists as its own step.
 
 ---
 
-## Step 1 — Schema migration
+## Step 1 — Schema
 
-**Goal:** land the database surface for the state machine. No
-consumers yet.
+**Goal:** land the database surface. No consumers yet.
 
 **Files:**
 - `scripts/generator/dportsv3/db/schema.py` — modified
 
-**Schema additions:**
+**Schema changes:**
+
+The existing `jobs.state` column is **repurposed** to hold typed
+`JobState` values directly (lowercase strings: `"queued"`,
+`"claimed"`, etc.). No new column. UI queries that filter on
+`state` will be updated in Step 3 to use the typed values.
+
+Adds:
+
 ```sql
 -- in SCHEMA executescript block
 CREATE TABLE IF NOT EXISTS job_events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     ts TEXT NOT NULL,
     job_id TEXT NOT NULL,
-    from_state TEXT,
+    from_state TEXT,            -- NULL on initial HOOK_ENQUEUED
     to_state TEXT NOT NULL,
-    event_name TEXT NOT NULL,
+    event_name TEXT NOT NULL,   -- always one of the JobEvent enum values
     detail_json TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_job_events_job ON job_events(job_id, id);
 
 -- in MIGRATIONS tuple
-"ALTER TABLE jobs ADD COLUMN state_machine_state TEXT",
 "ALTER TABLE jobs ADD COLUMN last_transition_at TEXT",
 "ALTER TABLE jobs ADD COLUMN retire_reason TEXT",
 ```
 
-**Tests:**
-- `test_schema_migration.py` (new): open a temp DB through
-  `init_db()`, assert the three new `jobs` columns exist and
-  `job_events` table is reachable. Existing tests must keep passing
-  (idempotent ALTER).
+**Tests:** `test_schema_lifecycle.py`
+- Init a temp DB through `init_db()`, assert the new columns and
+  table exist.
+- Existing tests must still pass.
 
-**Cutover criteria:**
-- `pytest scripts/generator/tests/` green.
-- Manual: `sqlite3 production-state.db < schema.sql` (or just
-  restart artifact-store, which runs `init_db()`) and `SELECT *
-  FROM job_events` returns empty without error.
-
-**Done criteria:** new columns + table visible in schema, no
-consumers wired up yet. The `state_machine_state` column will be
-NULL for all existing rows — that's expected; legacy rows aren't
-migrated.
+**Done criteria:** schema visible, no consumers wired.
 
 **Dependencies:** none.
 
-**Rollback:** revert the commit; columns + table stay (sqlite has
-no DROP COLUMN, and dropping an empty table is harmless to leave).
+**Rollback:** revert. Empty table + null columns stay (harmless;
+sqlite has no DROP COLUMN, but no code reads them either).
 
-**Commit:** `feat(db): add job_events table + state_machine_state column`
+**Commit:** `feat(db): add job_events table for lifecycle state machine`
 
 ---
 
 ## Step 2 — Lifecycle module
 
-**Goal:** the typed state machine itself. Pure logic + sqlite, no
-LLM, no subprocess, no file I/O. Not wired up yet.
+**Goal:** the typed state machine. Pure logic + sqlite. Not wired
+to the runner yet.
 
 **Files:**
 - `scripts/generator/dportsv3/agent/lifecycle.py` — new
@@ -147,42 +169,75 @@ LLM, no subprocess, no file I/O. Not wired up yet.
 **Interface:**
 
 ```python
+from __future__ import annotations
 from enum import StrEnum
+from typing import Iterator
+import json, sqlite3
+from datetime import datetime, timezone
+
 
 class JobState(StrEnum):
-    QUEUED = "queued"
-    CLAIMED = "claimed"
-    TRIAGING = "triaging"
-    TRIAGED = "triaged"
-    PATCHING = "patching"
+    QUEUED    = "queued"
+    CLAIMED   = "claimed"
+    TRIAGING  = "triaging"
+    TRIAGED   = "triaged"
+    PATCHING  = "patching"
     VERIFYING = "verifying"
-    DONE = "done"
+    DONE      = "done"
     ESCALATED = "escalated"
-    DEAD = "dead"
+    DEAD      = "dead"
+
 
 class JobEvent(StrEnum):
-    HOOK_ENQUEUED       = "hook_enqueued"          # → QUEUED
-    CLAIM               = "claim"                  # QUEUED → CLAIMED
-    TRIAGE_START        = "triage_start"           # CLAIMED → TRIAGING
-    TRIAGE_OK           = "triage_ok"              # TRIAGING → TRIAGED
-    TRIAGE_FAIL         = "triage_fail"            # TRIAGING → DEAD
-    PATCH_START         = "patch_start"            # TRIAGED → PATCHING
-    PATCH_OK            = "patch_ok"               # PATCHING → VERIFYING
-    PATCH_GAVE_UP       = "patch_gave_up"          # PATCHING → DEAD
-    PATCH_BUDGET_OUT    = "patch_budget_out"       # PATCHING → DEAD
-    VERIFY_OK           = "verify_ok"              # VERIFYING → DONE
-    VERIFY_FAIL         = "verify_fail"            # VERIFYING → DEAD
-    ESCALATE_MANUAL     = "escalate_manual"        # TRIAGED → ESCALATED
-    ENV_BROKEN          = "env_broken"             # any → DEAD
+    HOOK_ENQUEUED    = "hook_enqueued"
+    CLAIM            = "claim"
+    TRIAGE_START     = "triage_start"
+    TRIAGE_OK        = "triage_ok"
+    TRIAGE_FAIL      = "triage_fail"
+    PATCH_START      = "patch_start"
+    PATCH_OK         = "patch_ok"
+    PATCH_GAVE_UP    = "patch_gave_up"
+    PATCH_BUDGET_OUT = "patch_budget_out"
+    VERIFY_OK        = "verify_ok"
+    VERIFY_FAIL      = "verify_fail"
+    ESCALATE_MANUAL  = "escalate_manual"
+    ENV_BROKEN       = "env_broken"
+    REAP_ORPHAN      = "reap_orphan"
 
+
+# (from_state, event) -> to_state. None as from_state means "new job"
+# (only valid for HOOK_ENQUEUED).
 TRANSITIONS: dict[tuple[JobState | None, JobEvent], JobState] = {
-    (None, JobEvent.HOOK_ENQUEUED): JobState.QUEUED,
-    (JobState.QUEUED, JobEvent.CLAIM): JobState.CLAIMED,
-    (JobState.CLAIMED, JobEvent.TRIAGE_START): JobState.TRIAGING,
-    # ... etc, exhaustive
+    (None,                 JobEvent.HOOK_ENQUEUED):  JobState.QUEUED,
+    (JobState.QUEUED,      JobEvent.CLAIM):          JobState.CLAIMED,
+    (JobState.CLAIMED,     JobEvent.TRIAGE_START):   JobState.TRIAGING,
+    (JobState.TRIAGING,    JobEvent.TRIAGE_OK):      JobState.TRIAGED,
+    (JobState.TRIAGING,    JobEvent.TRIAGE_FAIL):    JobState.DEAD,
+    (JobState.TRIAGED,     JobEvent.PATCH_START):    JobState.PATCHING,
+    (JobState.PATCHING,    JobEvent.PATCH_OK):       JobState.VERIFYING,
+    (JobState.PATCHING,    JobEvent.PATCH_GAVE_UP):  JobState.DEAD,
+    (JobState.PATCHING,    JobEvent.PATCH_BUDGET_OUT): JobState.DEAD,
+    (JobState.VERIFYING,   JobEvent.VERIFY_OK):      JobState.DONE,
+    (JobState.VERIFYING,   JobEvent.VERIFY_FAIL):    JobState.DEAD,
+    (JobState.TRIAGED,     JobEvent.ESCALATE_MANUAL): JobState.ESCALATED,
+    # ENV_BROKEN can fire from any active state
+    (JobState.CLAIMED,     JobEvent.ENV_BROKEN):     JobState.DEAD,
+    (JobState.TRIAGING,    JobEvent.ENV_BROKEN):     JobState.DEAD,
+    (JobState.TRIAGED,     JobEvent.ENV_BROKEN):     JobState.DEAD,
+    (JobState.PATCHING,    JobEvent.ENV_BROKEN):     JobState.DEAD,
+    (JobState.VERIFYING,   JobEvent.ENV_BROKEN):     JobState.DEAD,
+    # REAP_ORPHAN: runner-startup cleanup of inflight-ish states
+    (JobState.CLAIMED,     JobEvent.REAP_ORPHAN):    JobState.DEAD,
+    (JobState.TRIAGING,    JobEvent.REAP_ORPHAN):    JobState.DEAD,
+    (JobState.TRIAGED,     JobEvent.REAP_ORPHAN):    JobState.DEAD,
+    (JobState.PATCHING,    JobEvent.REAP_ORPHAN):    JobState.DEAD,
+    (JobState.VERIFYING,   JobEvent.REAP_ORPHAN):    JobState.DEAD,
 }
 
-class IllegalTransition(Exception): ...
+
+class IllegalTransition(Exception):
+    """Raised when (current_state, event) is not in TRANSITIONS."""
+
 
 def apply(
     conn: sqlite3.Connection,
@@ -190,438 +245,260 @@ def apply(
     event: JobEvent,
     detail: dict | None = None,
 ) -> JobState:
-    """Atomic state transition under one transaction.
+    """Atomic state transition. One BEGIN IMMEDIATE … COMMIT.
 
-    Reads current state from jobs.state_machine_state (or None for new
-    jobs), validates (state, event) is in TRANSITIONS, writes a
-    job_events row + updates jobs.state_machine_state +
-    jobs.last_transition_at. Raises IllegalTransition for invalid
-    transitions.
+    Reads current state, validates the transition, writes a
+    job_events row, updates jobs.state + jobs.last_transition_at
+    (and jobs.retire_reason if transitioning into DEAD/ESCALATED).
     """
 
 def current(conn: sqlite3.Connection, job_id: str) -> JobState | None:
-    """Latest state. Authoritative source is job_events; jobs.state_machine_state
-    is a denormalized cache, fall back to event log on mismatch."""
+    """Latest state. Reads jobs.state; falls back to the last
+    job_events.to_state if the cache is somehow stale."""
 
 def history(conn: sqlite3.Connection, job_id: str) -> list[dict]:
-    """Ordered list of job_events rows for this job, oldest first."""
+    """All transitions for this job, oldest first."""
+
+def reap_orphans(conn: sqlite3.Connection) -> int:
+    """Transition every job in an inflight-ish state to DEAD via
+    REAP_ORPHAN. Called by the runner at startup. Returns count.
+
+    Inflight-ish: CLAIMED, TRIAGING, TRIAGED, PATCHING, VERIFYING.
+    Terminal states (DONE, ESCALATED, DEAD) and QUEUED are skipped.
+    """
 ```
 
 **Tests** (`test_lifecycle.py`):
-- Every defined `(state, event) → state` round-trips through
-  `apply()` and writes exactly one event row.
-- Disallowed transitions raise `IllegalTransition` and write no row.
-- `current()` returns the latest event's `to_state` even when the
-  denormalized `jobs.state_machine_state` is stale (simulate by
-  inserting a `job_events` row without updating `jobs`).
-- Concurrent `apply()` from two threads: under sqlite WAL + BEGIN
-  IMMEDIATE, one wins, other raises `sqlite3.OperationalError` or
-  `IllegalTransition` based on whether the first commit landed in
-  time. Both behaviors are acceptable; the invariant is "no double
-  apply."
-- `history()` returns rows in id order, oldest first.
-- A full path test: `QUEUED → CLAIMED → TRIAGING → TRIAGED →
-  PATCHING → VERIFYING → DONE` produces 6 transitions.
+- Every TRANSITIONS entry round-trips: `apply()` writes one event
+  row, updates `jobs.state` correctly.
+- Disallowed transitions raise `IllegalTransition` and write no
+  row (assert event count unchanged after the raise).
+- `current()` falls back to event log when `jobs.state` mismatches.
+- Concurrent `apply()` from two threads: one wins, other raises or
+  no-ops. Invariant: no double-apply (event count == 1).
+- `history()` returns rows in id order.
+- `reap_orphans()` transitions all CLAIMED/TRIAGING/etc. jobs to
+  DEAD with `retire_reason="runner_restart"`. QUEUED, DONE,
+  ESCALATED, DEAD jobs are untouched.
+- Full happy path: `HOOK_ENQUEUED → CLAIM → TRIAGE_START →
+  TRIAGE_OK → PATCH_START → PATCH_OK → VERIFY_OK` produces 7 event
+  rows.
 
 **Cutover criteria:** `pytest test_lifecycle.py` green.
 
-**Done criteria:** module exists, fully tested, **no call sites in
-the runner yet**. Importable from
-`scripts/generator/dportsv3/agent/lifecycle.py`.
+**Done criteria:** module importable, fully tested, no call sites
+in the runner yet.
 
 **Dependencies:** Step 1.
 
-**Rollback:** revert the commit; no consumers depend on it.
+**Rollback:** revert. No consumers yet.
 
 **Commit:** `feat(agent): job lifecycle state machine`
 
 ---
 
-## Step 3 — Extract `run_patch_attempt`
+## Step 3 — Runner + UI cutover
 
-**Goal:** refactor today's patch invocation into a single callable
-function with no behavior change. Sets the stage for the pilot
-(Step 5) to compose multiple attempts.
-
-This is a **pure refactor** — same inputs, same outputs, same side
-effects, just relocated.
-
-**Files:**
-- `scripts/generator/dportsv3/agent/patch.py` — modified
-- `scripts/agent-queue-runner` — modified (one call site)
-- `scripts/generator/tests/test_patch_attempt.py` — new (lightweight)
-
-**Interface:**
-
-```python
-# in dportsv3/agent/patch.py
-@dataclass
-class PatchAttemptConfig:
-    model: str
-    tier: Tier
-    env: str
-    api_base: str | None
-    api_key: str | None
-    custom_llm_provider: str | None
-    timeout: int
-    seed_context: str | None = None   # extra user message prepended (None today)
-
-def run_attempt(payload: str, config: PatchAttemptConfig,
-                on_event=None) -> PatchResult:
-    """One patch attempt, model-agnostic. Today's harness_patch.run
-    becomes a one-line wrapper that builds a PatchAttemptConfig.
-    """
-```
-
-Today's `harness_patch.run(payload, tier=..., env=..., model=..., ...)`
-becomes:
-
-```python
-def run(payload, *, tier, env, model, ...) -> PatchResult:
-    config = PatchAttemptConfig(model=model, tier=tier, env=env, ...)
-    return run_attempt(payload, config, on_event=on_event)
-```
-
-**Tests** (`test_patch_attempt.py`):
-- Trivial smoke test: a stubbed LLM module (monkeypatched) returns
-  a canned response with `Rebuild Proof JSON {rebuild_ok: true}`;
-  `run_attempt(...)` returns a `PatchResult` with `status="success"`.
-- Same payload, `seed_context="foo bar"`: messages array passed to
-  the LLM stub contains `"foo bar"` as a user message.
-
-**Cutover criteria:**
-- Existing patch end-to-end on a known port still succeeds (smoke
-  manual test against a real bundle).
-- `pytest` green.
-- No diff in `analysis/patch_audit.json` shape for a frozen bundle
-  before vs. after this commit.
-
-**Done criteria:** `run_attempt` exists, `run` calls it, behavior
-identical.
-
-**Dependencies:** none (purely a refactor of existing code).
-
-**Rollback:** revert; runner reverts to calling `harness_patch.run`
-directly.
-
-**Commit:** `refactor(agent): extract run_patch_attempt from
-harness_patch.run`
-
----
-
-## Step 4 — Runner cutover to `lifecycle.apply()`
-
-**Goal:** the hard cutover. Replace `_post_job_upsert` with
-`lifecycle.apply()` at every call site, **delete** `_post_job_upsert`
-in the same commit.
+**Goal:** the hard cutover. Replace `_post_job_upsert` calls with
+`lifecycle.apply()`. Delete `_post_job_upsert` + the
+artifact-store's `upsert_job` method + the `/v1/jobs/upsert`
+endpoint's old shape. Update UI templates to render the new typed
+state values.
 
 **Files:**
-- `scripts/agent-queue-runner` — modified (5 call sites:
-  enqueue_triage, enqueue_patch, claim_next_job_batch, success-path,
-  failure-path)
+- `scripts/agent-queue-runner` — modified (5+ call sites, deletes)
 - `scripts/generator/dportsv3/artifact_store.py` — modified
-  (the `/v1/jobs/upsert` endpoint internally calls
-  `lifecycle.apply(...)` instead of `upsert_job(...)`)
+- `scripts/generator/dportsv3/tracker/agentic_queries.py` — modified
+  (queries that filter by `state` use new values)
+- `scripts/generator/dportsv3/tracker/templates/agentic_jobs.html`
+  — modified (state badges)
+- `scripts/dsynth-hooks/hook_common.sh` — modified (artifact-store
+  client call may need updated args; check the wire shape)
 
-**Mapping (existing → new):**
+**Mapping (existing call → new call):**
 
-| Old call | Replacement |
-|---|---|
-| `_post_job_upsert(job_id, "pending", job=..., path=...)` after `enqueue_triage_job` | `lifecycle.apply(conn, job_id, JobEvent.HOOK_ENQUEUED, detail={...})` |
-| `_post_job_upsert(job_id, "pending", ...)` after `enqueue_patch_job` | `lifecycle.apply(conn, job_id, JobEvent.HOOK_ENQUEUED, detail={"type": "patch", ...})` |
-| `_post_job_upsert(lead_dest.name, "inflight", ...)` in `claim_next_job_batch` | `lifecycle.apply(conn, lead_id, JobEvent.CLAIM)` |
-| `_post_job_upsert(s_dest.name, "inflight", ...)` for siblings | `lifecycle.apply(conn, sibling_id, JobEvent.CLAIM)` |
-| `_post_job_upsert(job_id, "done", ...)` success path | `lifecycle.apply(conn, job_id, JobEvent.VERIFY_OK, detail={...})` |
-| `_post_job_upsert(job_id, "failed", ..., last_error=msg)` failure path | `lifecycle.apply(conn, job_id, JobEvent.<appropriate fail event>, detail={"last_error": msg})` |
+| Site | Old | New |
+|---|---|---|
+| `enqueue_triage_job` end | `_post_job_upsert(name, "pending", ...)` | `lifecycle.apply(conn, name, JobEvent.HOOK_ENQUEUED, detail={...})` |
+| `enqueue_patch_job` end | `_post_job_upsert(name, "pending", ...)` | `lifecycle.apply(conn, name, JobEvent.HOOK_ENQUEUED, detail={"type": "patch", ...})` |
+| `claim_next_job_batch` lead | `_post_job_upsert(name, "inflight", ...)` | `lifecycle.apply(conn, name, JobEvent.CLAIM)` |
+| `claim_next_job_batch` sibling | same | same |
+| `process_job` success | `_post_job_upsert(name, "done", ...)` | `lifecycle.apply(conn, name, JobEvent.VERIFY_OK, detail={...})` |
+| `process_job` failure | `_post_job_upsert(name, "failed", last_error=...)` | mapped to one of `TRIAGE_FAIL`, `PATCH_GAVE_UP`, `PATCH_BUDGET_OUT`, `VERIFY_FAIL`, `ENV_BROKEN` based on the failure reason |
 
-The failure path needs to map the failure reason to the right event:
-`patch_gave_up`, `patch_budget_out`, `verify_fail`, or `env_broken`.
+For triage and patch start, the runner now also fires
+`TRIAGE_START` and `PATCH_START` events just before invoking the
+respective harness. This adds two events per job; total event count
+per happy-path job is 7 (was implicitly 4 in the old upsert flow:
+pending, inflight, done).
 
-**Hook side (already POSTs `/v1/jobs/upsert`):** unchanged on the
-shell side; the artifact-store endpoint dispatches into
-`lifecycle.apply(HOOK_ENQUEUED)`.
+**Failure-event mapping:** when `process_job` reports failure
+status, we route based on which step failed:
 
-**The legacy `jobs.state` column** stays populated for UI
-backward-compat. Inside `lifecycle.apply()`, when transitioning into
-a state, also update the old `jobs.state` mapping:
-
+```python
+def _failure_event(job_type: str, status: str) -> JobEvent:
+    if "env_broken" in status or _env_broken_reason:
+        return JobEvent.ENV_BROKEN
+    if job_type == "triage":
+        return JobEvent.TRIAGE_FAIL
+    if "budget" in status:
+        return JobEvent.PATCH_BUDGET_OUT
+    if "gave-up" in status or "gave_up" in status or "needs-help" in status:
+        return JobEvent.PATCH_GAVE_UP
+    return JobEvent.VERIFY_FAIL  # default for unknown patch failure
 ```
-QUEUED              → "pending"
-CLAIMED             → "inflight"
-TRIAGING, TRIAGED   → "inflight"
-PATCHING, VERIFYING → "inflight"
-DONE                → "done"
-ESCALATED, DEAD     → "failed"
-```
 
-This keeps the existing `/agentic/jobs` UI working without any
-template change in Phase 1.
+**Runner startup:** call `lifecycle.reap_orphans(conn)` once before
+the main loop starts. Log the count if non-zero.
+
+**Artifact-store side:** the `/v1/jobs/upsert` endpoint becomes a
+thin shim over `lifecycle.apply()`. Hook-side `job-upsert` calls
+HOOK_ENQUEUED via the shim. The handler is renamed to
+`/v1/jobs/transition` and takes `{job_id, event, detail}` instead
+of `{job_id, state, ...}`. The old shape is **deleted** (no
+backward compat).
+
+**UI changes:**
+- `agentic_queries.py:job_counts`: queries like `WHERE state =
+  'pending'` change to `WHERE state = 'queued'`. The four pinned
+  count rows (pending / inflight / done / failed) become
+  computed groups: pending=queued, inflight=any of
+  claimed/triaging/triaged/patching/verifying, done=done,
+  failed=dead+escalated. Single query, GROUP BY a CASE expression.
+- `agentic_jobs.html` state filter dropdown: options become the
+  JobState values directly.
+- `agentic_job.html` doesn't filter — just renders `job.state`,
+  works automatically.
+
+**Hook side:** the `artifact_store job-upsert --state pending`
+shell call needs to be updated to the new endpoint shape:
+`artifact_store job-transition --event hook_enqueued`. The
+`artifact-store-client` subcommand renames.
 
 **Tests:**
-- Existing tests must still pass.
-- New: a small integration that enqueues a synthetic .job (via the
-  artifact-store endpoint), claims it via the runner code path,
-  fakes success, and asserts `current() == DONE` and the
-  `job_events` row count is the expected number.
+- Existing tests must pass after this commit (with updated
+  expectations where state strings appear).
+- New: in `test_runner_cutover.py`, mock the runner's main loop
+  step-by-step (without LLM) and assert the `job_events` rows that
+  land for a synthetic .job file.
 
 **Cutover criteria:**
-- `grep -n "_post_job_upsert\|upsert_job\b" scripts/` returns no
-  matches in runner/artifact-store.
-- After one real run, every `jobs.state_machine_state` for newly-
-  created rows is non-NULL and one of the typed values.
-- UI `/agentic/jobs` renders without errors.
+- `grep -nE '_post_job_upsert|upsert_job\b|"/v1/jobs/upsert"' scripts/ docs/` returns nothing live in code (docs may still reference historically — that's fine).
+- A fresh dsynth failure produces `jobs.state` in the typed set;
+  `SELECT DISTINCT state FROM jobs WHERE last_seen_at > '<commit
+  time>'` returns only `JobState` values.
+- UI `/agentic/jobs` renders without errors, counts at top of
+  `/agentic` reflect the typed states.
 
-**Done criteria:** all state writes go through `lifecycle.apply()`;
-old function deleted.
+**Done criteria:** all state writes through `lifecycle.apply()`.
+Old upsert paths deleted. UI reflects typed states.
 
 **Dependencies:** Step 1, Step 2.
 
-**Rollback:** revert. Old code returns; no DB cleanup needed
-(`state_machine_state` column will just stop getting updated for
-new jobs).
+**Rollback:** revert. The DB will have one set of rows in the new
+shape; new writes go back to the old shape. Mixed shape will look
+ugly but won't break anything.
 
-**Commit:** `refactor(runner): route job state changes through
-lifecycle.apply()`
-
----
-
-## Step 5 — Pilot: `TwoModelEscalationStep`
-
-**Goal:** add the pilot feature. Feature-flagged **off** by default
-so production behavior doesn't change until the operator opts in.
-
-**Files:**
-- `scripts/generator/dportsv3/agent/steps/__init__.py` — new
-- `scripts/generator/dportsv3/agent/steps/two_model_escalation.py` — new
-- `scripts/agent-queue-runner` — modified (conditionally dispatch to
-  pilot when `DP_HARNESS_TWO_MODEL_ESCALATION=1`)
-- `scripts/generator/tests/test_two_model_escalation.py` — new
-
-**Interface:**
-
-```python
-# dportsv3/agent/steps/two_model_escalation.py
-@dataclass
-class TwoModelConfig:
-    cheap_model: str
-    strong_model: str | None      # None disables escalation
-    cheap_tier: Tier              # max_iterations=1, smaller max_tokens
-    strong_tier: Tier             # max_iterations=2, larger max_tokens
-    env: str
-    api_base: str | None
-    api_key: str | None
-    custom_llm_provider: str | None
-    timeout: int
-
-@dataclass
-class TwoModelResult:
-    status: Literal["success", "needs-help", "budget-exhausted", "escalated"]
-    final_result: PatchResult     # the winning (or last) attempt
-    attempts: list[PatchResult]   # all attempts, ordered
-
-def run(payload: str, config: TwoModelConfig, on_event=None) -> TwoModelResult: ...
-```
-
-Internals:
-
-```python
-cheap = run_patch_attempt(payload, PatchAttemptConfig(
-    model=config.cheap_model, tier=config.cheap_tier, ...))
-if cheap.status == "success":
-    return TwoModelResult(status="success", final_result=cheap, attempts=[cheap])
-if not _is_gave_up(cheap):
-    # budget-exhausted or needs-help: don't escalate (thrasher)
-    return TwoModelResult(status=cheap.status, final_result=cheap, attempts=[cheap])
-if not config.strong_model:
-    return TwoModelResult(status="needs-help", final_result=cheap, attempts=[cheap])
-seed = _format_gave_up_seed(cheap)
-strong = run_patch_attempt(payload, PatchAttemptConfig(
-    model=config.strong_model, tier=config.strong_tier,
-    seed_context=seed, ...))
-status = "success" if strong.status == "success" else "escalated"
-return TwoModelResult(status=status, final_result=strong, attempts=[cheap, strong])
-```
-
-`_is_gave_up`: parse `Rebuild Status:` from `cheap.final_text`,
-return True iff value is `"gave-up"`.
-
-`_format_gave_up_seed`: extract `## Patch Log` from `cheap.final_text`
-and wrap as: `"Prior attempt with model X gave up. Their Patch Log:
-\n<log>\nLearn from this and try a different approach."`
-
-**Runner wiring:**
-
-```python
-if os.environ.get("DP_HARNESS_TWO_MODEL_ESCALATION") == "1":
-    # use TwoModelEscalationStep
-    cheap_model = os.environ.get("DP_HARNESS_PATCH_MODEL_CHEAP",
-                                  os.environ.get("DP_HARNESS_TRIAGE_MODEL"))
-    strong_model = os.environ.get("DP_HARNESS_PATCH_MODEL_STRONG") or None
-    # ...
-    result = two_model.run(payload, TwoModelConfig(...), on_event=_on_event)
-    # adapt TwoModelResult → PatchResult for downstream code that expects PatchResult
-else:
-    # today's single-model path (still via run_patch_attempt)
-    result = run_patch_attempt(payload, single_model_config, on_event=_on_event)
-```
-
-**Tests** (`test_two_model_escalation.py`, all with stubbed LLM):
-- Cheap returns success → strong never called; `attempts == [cheap]`.
-- Cheap returns gave-up, strong returns success → both called,
-  strong gets the cheap log as seed, `attempts == [cheap, strong]`,
-  `status == "success"`.
-- Cheap returns budget-exhausted → strong not called (don't
-  escalate thrashers).
-- Cheap returns gave-up, `strong_model = None` → not called,
-  result status is `"needs-help"`.
-- Cheap returns gave-up, strong returns gave-up → result status is
-  `"escalated"`.
-
-**Cutover criteria:**
-- All unit tests green.
-- Feature flag is **off** by default; running with no env-var
-  change uses today's path.
-- Manual: enable flag, set both model env-vars, trigger a known
-  fixable port, watch the activity log show two attempts.
-
-**Done criteria:** pilot reachable behind flag; default behavior
-unchanged.
-
-**Dependencies:** Step 3 (`run_patch_attempt`), Step 4 (so
-`lifecycle.apply()` emits the right events when the pilot triggers
-two attempts back-to-back). Step 1, 2 transitively.
-
-**Rollback:** revert; feature flag becomes a no-op.
-
-**Commit:** `feat(agent): TwoModelEscalationStep pilot
-(feature-flagged)`
+**Commit:** `refactor(runner+ui): cutover to lifecycle.apply()`
 
 ---
 
-## Step 6 — Integration test
+## Step 4 — Integration test
 
-**Goal:** end-to-end test that drives a synthetic job through the
-runner's main loop using a stubbed LLM + throwaway sqlite DB.
-Catches integration-level breakage that unit tests miss.
+**Goal:** drive a synthetic job through the runner main loop with
+stubbed LLM + throwaway DB. Catches breakage that unit tests miss.
 
 **Files:**
 - `scripts/generator/tests/test_runner_e2e_lifecycle.py` — new
-- Possibly a small `scripts/generator/tests/_stubs/` directory for
-  reusable LLM stubs.
+- Maybe `scripts/generator/tests/_stubs/llm_stub.py` if reusable.
 
-**Test shape:**
+**Test cases:**
 
-```python
-def test_full_lifecycle_to_done(tmp_path, monkeypatch):
-    # 1. Build a throwaway queue + state.db.
-    # 2. Monkeypatch dportsv3.agent.llm.complete to return canned
-    #    responses (triage + patch + rebuild_proof rebuild_ok=true).
-    # 3. Monkeypatch dportsv3.agent.worker tool calls to no-op
-    #    (we're not testing tools here, we're testing the loop).
-    # 4. Drop a .job file in pending/.
-    # 5. Run the runner main loop with --once.
-    # 6. Assert:
-    #    - lifecycle.history(conn, job_id) shows the expected
-    #      transition sequence
-    #    - jobs.state_machine_state == "done"
-    #    - the bundle has triage.md, patch.md, rebuild_proof.json,
-    #      tool_trace.jsonl
-```
+1. **Happy path to DONE.** Stub LLM returns canned triage + canned
+   patch with `Rebuild Proof JSON {rebuild_ok: true}`. Drop a .job
+   file in `pending/`, run runner main with `--once`. Assert
+   `lifecycle.history(conn, job_id)` is exactly:
+   `HOOK_ENQUEUED → CLAIM → TRIAGE_START → TRIAGE_OK → PATCH_START
+   → PATCH_OK → VERIFY_OK`. Final `jobs.state == "done"`.
 
-Other test cases:
-- `test_full_lifecycle_to_escalated`: triage classifies as
-  `missing-dep` (MANUAL tier) → no patch enqueue → final state
-  ESCALATED.
-- `test_pilot_escalates_to_strong`: with feature flag on, cheap LLM
-  stub returns gave-up, strong LLM stub returns success → both
-  attempts executed.
+2. **Triage forces MANUAL.** Stub LLM returns triage with
+   classification `missing-dep` (mapped to MANUAL tier). Patch
+   never enqueues. Final state: `ESCALATED`. Last event:
+   `ESCALATE_MANUAL`.
 
-**Cutover criteria:**
-- Tests green on CI (Linux/macOS — gate the dev-env-shelling tests
-  on dfly via pytest marker).
-- Test runs in under 5 seconds (no real LLM calls, no real
-  subprocess).
+3. **Reap orphans on startup.** Pre-populate a synthetic job in
+   state `PATCHING`. Run runner startup. Assert the job is now
+   `DEAD` with `retire_reason="runner_restart"`.
 
-**Done criteria:** at least three integration tests covering the
-happy path, the escalation path, and the pilot. CI green.
+4. **env_broken trips lifecycle.** Stub the worker so
+   `materialize_dports` returns `error_category=env_broken`. Run a
+   patch job through. Assert final state is `DEAD`, last event is
+   `ENV_BROKEN`, and the runner's `_env_broken_reason` flag is set
+   (subsequent claims gated).
 
-**Dependencies:** Steps 1–5.
+**No real LLM calls. No real subprocess. No DragonFly assumptions.**
+Runs on Linux/macOS CI for the generator venv.
 
-**Rollback:** revert; no production impact, tests just disappear.
+**Cutover criteria:** all four tests green on CI. Runtime under 5s.
 
-**Commit:** `test(agent): end-to-end lifecycle + pilot integration`
+**Done criteria:** integration test suite exists and passes.
+
+**Dependencies:** Steps 1, 2, 3.
+
+**Rollback:** revert. Tests vanish; no production impact.
+
+**Commit:** `test(agent): end-to-end lifecycle integration`
 
 ---
 
 ## Phase 1 cutover criteria (overall)
 
-Phase 1 is "done" when **all** of:
+Phase 1 is "done" when all of:
 
-1. Steps 1–6 are all committed and reviewed.
+1. Steps 1–4 committed and reviewed.
 2. `pytest scripts/generator/tests/` green.
-3. `grep -n "_post_job_upsert\|upsert_job\b" scripts/` returns no
-   matches in runner/artifact-store.
-4. Manual smoke: run a real dsynth failure end-to-end with the
-   feature flag **off**. Confirm:
-   - `jobs.state_machine_state` is non-NULL and one of the typed
-     values for the new row.
-   - `job_events` has the expected sequence of transitions.
-   - UI `/agentic/jobs` and `/agentic/jobs/<id>` render correctly.
-5. Manual smoke: same run with `DP_HARNESS_TWO_MODEL_ESCALATION=1`,
-   both model env-vars set. Confirm two attempts run when triage
-   classifies AUTO/ASSIST and the cheap model gives up.
-6. This `agentic-framework-plan.md` file gets **rewritten** for
-   Phase 2 (probably layer 3 health). The Phase 1 content moves to
-   a one-paragraph summary in `agentic-framework-design.md` under
-   "completed phases."
+3. `grep -nE '_post_job_upsert|upsert_job\b' scripts/` returns
+   nothing live in runner/artifact-store.
+4. Manual smoke: real dsynth failure end-to-end. Confirm:
+   - `jobs.state` values are typed (`queued`, `triaging`, etc.).
+   - `job_events` has the expected sequence.
+   - UI renders correctly with typed states.
+   - Runner restart mid-job reaps the orphan and the next claim
+     proceeds normally.
+5. This file gets **rewritten** for Phase 2 (probably layer 3
+   health). Phase 1 summary moves to a one-paragraph entry in
+   `agentic-framework-design.md`'s "completed phases" section.
 
 ## Risk + rollback
 
 | Step | Risk | Mitigation |
 |---|---|---|
-| 1 | sqlite migration breaks existing DB | `ALTER TABLE ADD COLUMN` is O(1) + idempotent via existing `MIGRATIONS` tuple pattern. Tested on a copy of production state.db first. |
-| 2 | State machine deadlocks under contention | WAL + `busy_timeout=5000` already set in `init_db`. Concurrent test covers it. |
-| 3 | Refactor changes behavior accidentally | Parity smoke against a frozen bundle (manual). |
-| 4 | Hard cutover misses a call site | `grep` checks before commit; integration test (Step 6) catches it post-facto. |
-| 5 | Pilot escalates incorrectly | Feature-flagged off by default; unit tests cover all four outcome branches. |
-| 6 | Tests flaky due to monkeypatch ordering | Use pytest fixtures with explicit teardown; no global state in tests. |
-
-## What's explicitly not in Phase 1
-
-If you find yourself wanting to do these during Phase 1, stop and
-defer to Phase 2:
-
-- A `Step` Protocol formalized as an ABC. Wait for two more steps
-  to exist before drawing the abstraction.
-- Replacing `build_patch_payload`.
-- Replacing `policy.tier_for` + the cap with `decide()`.
-- Surfacing `state_machine_state` in the UI beyond the existing
-  `jobs.state` mirror.
-- Generalizing `EnvHealth`.
-- Refactoring the existing triage path beyond the small wiring
-  changes in Step 4.
+| 1 | Schema migration broken on fresh DB | tests cover `init_db()` happy path. |
+| 2 | Concurrent `apply()` races | WAL + `busy_timeout=5000` already set; concurrent test in suite. |
+| 3 | UI breaks on the new state values | UI templates updated in same commit; state-filter dropdown options re-listed; tested manually before merge. |
+| 3 | Failure-event mapping picks the wrong event | Default to `VERIFY_FAIL` (catchall DEAD transition); operator can re-classify later if needed via the bundle artifacts. |
+| 4 | Stub LLM unrealistic | Pull canned responses from a real bundle's `triage.md` and `patch.md` rather than hand-writing. |
 
 ## Review notes for the operator
 
-Things to specifically check when reviewing each step before
-implementation:
+Things to specifically check before implementation:
 
-- **Step 1:** is the `job_events.detail_json` field schema flexible
-  enough? Should `event_name` be free-form or constrained to the
-  `JobEvent` enum?
-- **Step 2:** are the listed transitions exhaustive? Specifically:
-  what's the right event for "the runner crashed mid-attempt"? Do
-  we need a `CRASH_RECOVERY` event with a transition `* → DEAD`?
-- **Step 3:** does extracting `run_patch_attempt` from
-  `harness_patch.run` introduce any subtle parameter passing issue?
-  In particular `on_event` threading.
-- **Step 4:** does the `JobEvent` → legacy `jobs.state` mapping
-  preserve every behavior the UI relies on? Worth a manual UI walk.
-- **Step 5:** does `_format_gave_up_seed` extract the right text?
-  Should it include the agent's `Patch Plan` JSON too, not just
-  `Patch Log`?
-- **Step 6:** is the stub LLM realistic enough? In particular, does
-  it test the case where `_parse_rebuild_proof` finds the JSON
-  block in the expected place?
+- **Step 1:** Is the `job_events` schema enough? Specifically — do
+  we need `actor` (which step/runner instance triggered the event)
+  for forensics, or is `detail_json` enough room?
+- **Step 2:** Is REAP_ORPHAN the right cleanup story? Alternative:
+  on startup, transition orphans back to QUEUED (re-claim instead
+  of give-up). Re-claim is more eager to retry but risks burning
+  tokens on a job that was failing for a reason. DEAD is safer.
+- **Step 3:** Are there any other call sites I missed that touch
+  `jobs.state`? `grep -nE 'jobs\.state|jobs SET|jobs (' scripts/`
+  before starting.
+- **Step 3:** The endpoint rename (`/v1/jobs/upsert` →
+  `/v1/jobs/transition`) breaks any external caller. Anyone besides
+  the hook + the runner posting to it? Should be no.
+- **Step 4:** Are four test cases enough? Happy / MANUAL / reap /
+  env_broken covers the main transitions. Patch-gave-up and
+  budget-exhausted are exercised in production but not here; worth
+  adding?
 
 Sign off on these before Step 1 starts.
