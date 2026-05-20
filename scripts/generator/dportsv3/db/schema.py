@@ -132,7 +132,23 @@ CREATE TABLE IF NOT EXISTS artifact_refs (
     PRIMARY KEY (bundle_id, relpath)
 );
 
+-- Phase 1 framework: typed job lifecycle. Every transition writes one row.
+-- jobs.state holds the latest JobState value as a denormalized cache;
+-- job_events is authoritative.
+CREATE TABLE IF NOT EXISTS job_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts TEXT NOT NULL,
+    job_id TEXT NOT NULL,
+    from_state TEXT,            -- NULL on initial HOOK_ENQUEUED
+    to_state TEXT NOT NULL,
+    event_name TEXT NOT NULL,   -- one of the JobEvent enum values
+    actor TEXT,                 -- free-form label: "hook", "runner",
+                                -- "runner-<pid>", "tests", etc.
+    detail_json TEXT
+);
+
 CREATE INDEX IF NOT EXISTS idx_events_id ON events(id);
+CREATE INDEX IF NOT EXISTS idx_job_events_job ON job_events(job_id, id);
 CREATE INDEX IF NOT EXISTS idx_activity_log_ts ON activity_log(ts);
 CREATE INDEX IF NOT EXISTS idx_user_context_updated ON user_context(updated_at);
 CREATE INDEX IF NOT EXISTS idx_user_context_requests_pending ON user_context_requests(status, requested_at);
@@ -205,6 +221,9 @@ MIGRATIONS: tuple[str, ...] = (
     "CREATE INDEX IF NOT EXISTS idx_bundles_target ON bundles(target)",
     "CREATE INDEX IF NOT EXISTS idx_jobs_target ON jobs(target)",
     "CREATE INDEX IF NOT EXISTS idx_runs_target ON runs(target)",
+    # Phase 1 framework: per-job transition forensics.
+    "ALTER TABLE jobs ADD COLUMN last_transition_at TEXT",
+    "ALTER TABLE jobs ADD COLUMN retire_reason TEXT",
 )
 
 
