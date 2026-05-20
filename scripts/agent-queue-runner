@@ -170,42 +170,93 @@ def bundle_artifact_list(bundle_id: str) -> list[str]:
         return []
 
 
-def _post_job_upsert(
+def _apply_transition(
     job_id: str,
-    state: str,
+    event,  # dportsv3.agent.lifecycle.JobEvent
     *,
-    job: dict | None = None,
-    path: Path | None = None,
-    last_error: str | None = None,
+    actor: str = "runner",
+    detail: dict | None = None,
 ) -> bool:
-    """Tell the artifact-store about a job state transition.
+    """Run a lifecycle transition under the runner's DB lock.
 
-    The UI reads the ``jobs`` table; the filesystem queue is the source
-    of truth for what the runner processes. Best-effort: failures are
-    silent so a flaky store doesn't break job processing.
+    Best-effort observability write: if the state DB isn't available or
+    the transition is illegal (mid-race), log + continue. The
+    filesystem queue is the source of truth for what processes next;
+    the typed jobs table is the UI's read model.
     """
-    payload: dict = {"job_id": job_id, "state": state}
-    if job is not None:
-        for key in ("type", "origin", "flavor", "bundle_dir",
-                    "created_ts_utc", "target"):
-            v = job.get(key)
-            if v:
-                payload[key] = v
-    if path is not None:
-        payload["path"] = str(path)
-    if last_error is not None:
-        payload["last_error"] = last_error[:500]
+    from dportsv3.agent import lifecycle  # type: ignore[import-not-found]
+
+    if _state_db_conn is None:
+        return False
     try:
-        data = json.dumps(payload).encode("utf-8")
-        req = urllib.request.Request(
-            f"{_artifact_store_url()}/v1/jobs/upsert",
-            data=data,
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
-        with urllib.request.urlopen(req, timeout=10):
-            return True
-    except Exception:
+        with _state_db_lock:
+            lifecycle.apply(_state_db_conn, job_id, event, actor=actor, detail=detail)
+        return True
+    except lifecycle.IllegalTransition as exc:
+        print(f"Warning: illegal transition {event} on {job_id}: {exc}",
+              file=sys.stderr)
+        return False
+    except Exception as exc:
+        print(f"Warning: lifecycle.apply({event}) on {job_id} failed: {exc}",
+              file=sys.stderr)
+        return False
+
+
+def _register_new_job(
+    job_id: str,
+    metadata: dict,
+    *,
+    actor: str = "runner",
+) -> bool:
+    """Insert a jobs row + fire the initial HOOK_ENQUEUED event.
+
+    Called by hook-driven enqueue paths (triage + auto-enqueued patch).
+    Metadata fields (type, origin, flavor, bundle_dir, created_ts_utc,
+    path, target) populate the jobs row; the typed state column is
+    set by lifecycle.apply.
+    """
+    from dportsv3.agent import lifecycle  # type: ignore[import-not-found]
+
+    if _state_db_conn is None:
+        return False
+    ok = _apply_transition(job_id, lifecycle.JobEvent.HOOK_ENQUEUED,
+                           actor=actor, detail=metadata)
+    if not ok:
+        return False
+    # Fill in the metadata columns. lifecycle.apply set jobs.state +
+    # jobs.last_transition_at; we add the rest here in a second small
+    # transaction.
+    try:
+        now = datetime.now(timezone.utc).isoformat()
+        with _state_db_lock:
+            _state_db_conn.execute(
+                """UPDATE jobs SET
+                       type = COALESCE(?, type),
+                       origin = COALESCE(?, origin),
+                       flavor = COALESCE(?, flavor),
+                       bundle_dir = COALESCE(?, bundle_dir),
+                       created_ts_utc = COALESCE(?, created_ts_utc),
+                       path = COALESCE(?, path),
+                       target = COALESCE(?, target),
+                       last_seen_at = ?
+                   WHERE job_id = ?""",
+                (
+                    metadata.get("type"),
+                    metadata.get("origin"),
+                    metadata.get("flavor"),
+                    metadata.get("bundle_dir"),
+                    metadata.get("created_ts_utc"),
+                    metadata.get("path"),
+                    metadata.get("target"),
+                    now,
+                    job_id,
+                ),
+            )
+            _state_db_conn.commit()
+        return True
+    except Exception as exc:
+        print(f"Warning: jobs metadata update for {job_id} failed: {exc}",
+              file=sys.stderr)
         return False
 
 
@@ -489,16 +540,16 @@ def enqueue_triage_job(
     with open(tmp_path, "w") as f:
         f.write("\n".join(content) + "\n")
     tmp_path.rename(job_path)
-    _post_job_upsert(
-        job_path.name, "pending",
-        job={
+    _register_new_job(
+        job_path.name,
+        metadata={
             "type": "triage",
             "origin": origin,
             "flavor": flavor,
             "created_ts_utc": ts,
+            "path": str(job_path),
             "target": os.environ.get("DPORTSV3_TRACKER_TARGET", ""),
         },
-        path=job_path,
     )
     return job_path
 
@@ -1381,8 +1432,8 @@ def claim_next_job_batch(queue_root: Path) -> tuple[Path, list[Path]] | None:
             lead_path.rename(lead_dest)
         except OSError:
             continue
-        _post_job_upsert(lead_dest.name, "inflight",
-                         job=lead_meta, path=lead_dest)
+        from dportsv3.agent.lifecycle import JobEvent
+        _apply_transition(lead_dest.name, JobEvent.CLAIM)
         moved_siblings: list[Path] = []
         for s in candidate_siblings:
             try:
@@ -1392,12 +1443,7 @@ def claim_next_job_batch(queue_root: Path) -> tuple[Path, list[Path]] | None:
             except OSError:
                 # Another runner grabbed it or it vanished — skip.
                 continue
-            try:
-                s_meta = parse_job_file(s_dest)
-            except Exception:
-                s_meta = {}
-            _post_job_upsert(s_dest.name, "inflight",
-                             job=s_meta, path=s_dest)
+            _apply_transition(s_dest.name, JobEvent.CLAIM)
         return lead_dest, moved_siblings
     return None
 
@@ -1458,17 +1504,17 @@ def enqueue_patch_job(
         f.write("\n".join(content) + "\n")
     tmp_path.rename(job_path)
 
-    _post_job_upsert(
-        job_path.name, "pending",
-        job={
+    _register_new_job(
+        job_path.name,
+        metadata={
             "type": "patch",
             "origin": job.get("origin", ""),
             "flavor": job.get("flavor", ""),
             "created_ts_utc": ts,
+            "path": str(job_path),
             "target": job.get("target")
                 or os.environ.get("DPORTSV3_TRACKER_TARGET", ""),
         },
-        path=job_path,
     )
     return job_path
 
@@ -2097,6 +2143,57 @@ def process_patch_job(
         queue_root, job_path, job, bundle_dir, kedb_dir,
         payload, origin, job_id, harness_model,
     )
+def _completion_events_for(job_type: str, success: bool, status: str) -> list:
+    """Map a handler's (job_type, success, status) outcome to one or
+    more lifecycle events.
+
+    Triage:
+      success + "done"        -> TRIAGE_OK (terminal-for-triage: TRIAGED)
+      success + "manual_tier" -> TRIAGE_OK, ESCALATE_MANUAL (-> ESCALATED)
+      failure                 -> TRIAGE_FAIL (or ENV_BROKEN if the
+                                 runner-wide flag is set)
+
+    Patch (single attempt today; verifying step is fused into the
+    LLM-driven dsynth_build call, so we fire PATCH_OK + VERIFY_OK as
+    a pair on success):
+      success + "done"        -> PATCH_OK, VERIFY_OK (-> DONE)
+      success + "needs-help"  -> PATCH_GAVE_UP (-> DEAD)
+      success + "gave-up"     -> PATCH_GAVE_UP
+      success + "budget-..."  -> PATCH_BUDGET_OUT (-> DEAD)
+      success + "env_broken"  -> ENV_BROKEN (-> DEAD)
+      failure                 -> ENV_BROKEN if flag set, else PATCH_GAVE_UP
+
+    Unknown / dispatch error: PATCH_GAVE_UP (catchall DEAD).
+    """
+    from dportsv3.agent.lifecycle import JobEvent
+
+    status_l = (status or "").lower()
+    if _env_broken_reason:
+        return [JobEvent.ENV_BROKEN]
+
+    if job_type == "triage":
+        if not success:
+            return [JobEvent.TRIAGE_FAIL]
+        if status_l == "manual_tier":
+            return [JobEvent.TRIAGE_OK, JobEvent.ESCALATE_MANUAL]
+        return [JobEvent.TRIAGE_OK]
+
+    if job_type == "patch":
+        if not success:
+            return [JobEvent.PATCH_GAVE_UP]
+        if "budget" in status_l:
+            return [JobEvent.PATCH_BUDGET_OUT]
+        if "gave-up" in status_l or "needs-help" in status_l:
+            return [JobEvent.PATCH_GAVE_UP]
+        if "env_broken" in status_l:
+            return [JobEvent.ENV_BROKEN]
+        # success path: success → "done" or any non-failure string.
+        return [JobEvent.PATCH_OK, JobEvent.VERIFY_OK]
+
+    # Unknown job type — log it via the catchall failure event.
+    return [JobEvent.PATCH_GAVE_UP]
+
+
 def process_job(
     queue_root: Path,
     job_path: Path,
@@ -2168,31 +2265,46 @@ def process_job(
         update_runner_status("idle", job_id=None, stage=None)
         return
 
+    from dportsv3.agent.lifecycle import JobEvent
+
     if job_type == "patch":
+        _apply_transition(job_path.name, JobEvent.PATCH_START)
+        for s in sibling_paths:
+            _apply_transition(s.name, JobEvent.PATCH_START)
         success, status = process_patch_job(
             queue_root, job_path, job, bundle_dir, kedb_dir,
         )
     elif job_type == "triage":
+        _apply_transition(job_path.name, JobEvent.TRIAGE_START)
+        for s in sibling_paths:
+            _apply_transition(s.name, JobEvent.TRIAGE_START)
         success, status = process_triage_job(
             queue_root, job_path, job, bundle_dir, kedb_dir,
         )
     else:
         success, status = False, f"unknown job type: {job_type}"
 
+    # Map (job_type, success, status) to the right completion event(s).
+    completion_events = _completion_events_for(job_type, success, status)
+    error_msg = (status or "Unknown error")[:500] if not success else None
+
     if success:
         new_path = move_job(job_path, "done")
-        _post_job_upsert(job_path.name, "done", job=job, path=new_path)
+        for event in completion_events:
+            _apply_transition(job_path.name, event,
+                              detail={"status": status} if status else None)
         for s in sibling_paths:
             try:
-                s_new = move_job(s, "done")
+                move_job(s, "done")
             except OSError:
                 continue
-            _post_job_upsert(s.name, "done", path=s_new)
+            for event in completion_events:
+                _apply_transition(s.name, event,
+                                  detail={"status": status} if status else None)
         log(queue_root, "INFO",
             f"moved job + {len(sibling_paths)} sibling(s) to done/")
     else:
         # Write error file for visibility in UI
-        error_msg = (status or "Unknown error")[:500]
         error_file = job_path.with_suffix(".job.error")
         try:
             error_file.write_text(error_msg)
@@ -2200,16 +2312,18 @@ def process_job(
         except OSError as e:
             log(queue_root, "WARN", f"failed to write error file: {e}")
 
-        new_path = move_job(job_path, "failed")
-        _post_job_upsert(job_path.name, "failed", job=job, path=new_path,
-                         last_error=error_msg)
+        move_job(job_path, "failed")
+        for event in completion_events:
+            _apply_transition(job_path.name, event,
+                              detail={"last_error": error_msg})
         for s in sibling_paths:
             try:
-                s_new = move_job(s, "failed")
+                move_job(s, "failed")
             except OSError:
                 continue
-            _post_job_upsert(s.name, "failed", path=s_new,
-                             last_error=error_msg)
+            for event in completion_events:
+                _apply_transition(s.name, event,
+                                  detail={"last_error": error_msg})
         log(queue_root, "ERROR",
             f"moved job + {len(sibling_paths)} sibling(s) to failed/ ({status})")
     
@@ -2239,6 +2353,20 @@ def main():
 
     init_state_db(queue_root)
     start_heartbeat()
+
+    # Reap any inflight-ish jobs left over from a previous runner
+    # instance — they're DEAD-with-runner_restart by definition.
+    # Operator can re-enqueue via the bundle if a retry is warranted.
+    if _state_db_conn is not None:
+        try:
+            from dportsv3.agent import lifecycle  # type: ignore[import-not-found]
+            with _state_db_lock:
+                n = lifecycle.reap_orphans(_state_db_conn, actor=f"runner-{os.getpid()}")
+            if n > 0:
+                log(queue_root, "INFO",
+                    f"reaped {n} orphan job(s) from previous runner instance")
+        except Exception as exc:
+            log(queue_root, "WARN", f"reap_orphans failed: {exc}")
 
     if args.kedb_dir:
         kedb_dir = Path(args.kedb_dir)

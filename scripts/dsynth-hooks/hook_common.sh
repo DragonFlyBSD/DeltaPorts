@@ -230,13 +230,15 @@ enqueue_job() {
 	# Atomic move to final location
 	mv "$tmpfile" "${qroot}/pending/${fname}"
 
-	# Tell the artifact-store about the new pending job so the UI can
-	# show it. Best-effort: store outages don't block enqueue (the
-	# .job file is the source of truth; the runner will upsert again
-	# on claim).
-	artifact_store job-upsert \
+	# Fire the HOOK_ENQUEUED lifecycle event so the UI sees the new
+	# job. Best-effort: store outages don't block enqueue (the .job
+	# file is the source of truth; the runner emits a CLAIM event on
+	# pickup and the metadata flows via the detail block on this
+	# initial transition).
+	artifact_store job-transition \
 		--job-id "$fname" \
-		--state pending \
+		--event hook_enqueued \
+		--actor hook \
 		--type triage \
 		--origin "$origin" \
 		--flavor "$flavor" \

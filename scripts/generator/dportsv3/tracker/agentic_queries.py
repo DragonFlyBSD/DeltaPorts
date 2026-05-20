@@ -26,29 +26,33 @@ def _maybe(row: sqlite3.Row | None) -> dict[str, Any] | None:
 
 
 def agentic_status(conn: sqlite3.Connection) -> dict[str, Any]:
-    """Global aggregate counts for /api/agentic-status."""
+    """Global aggregate counts for /api/agentic-status.
+
+    Groups the typed lifecycle states into the four traditional
+    buckets the UI displays:
+        pending  = queued
+        inflight = claimed | triaging | triaged | patching | verifying
+        done     = done
+        failed   = dead | escalated
+    """
     bundles = conn.execute("SELECT count(*) FROM bundles").fetchone()[0]
-    jobs_pending = conn.execute(
-        "SELECT count(*) FROM jobs WHERE state = 'pending'"
-    ).fetchone()[0]
-    jobs_inflight = conn.execute(
-        "SELECT count(*) FROM jobs WHERE state = 'inflight'"
-    ).fetchone()[0]
-    jobs_done = conn.execute(
-        "SELECT count(*) FROM jobs WHERE state = 'done'"
-    ).fetchone()[0]
-    jobs_failed = conn.execute(
-        "SELECT count(*) FROM jobs WHERE state = 'failed'"
-    ).fetchone()[0]
+    rows = conn.execute(
+        """SELECT
+             SUM(CASE WHEN state = 'queued' THEN 1 ELSE 0 END) AS pending,
+             SUM(CASE WHEN state IN ('claimed','triaging','triaged','patching','verifying') THEN 1 ELSE 0 END) AS inflight,
+             SUM(CASE WHEN state = 'done' THEN 1 ELSE 0 END) AS done,
+             SUM(CASE WHEN state IN ('dead','escalated') THEN 1 ELSE 0 END) AS failed
+           FROM jobs"""
+    ).fetchone()
     runs = conn.execute("SELECT count(*) FROM runs").fetchone()[0]
     return {
         "bundles": bundles,
         "runs": runs,
         "jobs": {
-            "pending": jobs_pending,
-            "inflight": jobs_inflight,
-            "done": jobs_done,
-            "failed": jobs_failed,
+            "pending": int(rows[0] or 0),
+            "inflight": int(rows[1] or 0),
+            "done": int(rows[2] or 0),
+            "failed": int(rows[3] or 0),
         },
     }
 
@@ -113,6 +117,16 @@ def get_run(conn: sqlite3.Connection, run_id: str) -> dict[str, Any] | None:
     )
 
 
+_STATE_BUCKETS: dict[str, tuple[str, ...]] = {
+    # Bucket aliases for filter UX: a user picks "inflight" and gets
+    # every job in any inflight-ish lifecycle state.
+    "pending":  ("queued",),
+    "inflight": ("claimed", "triaging", "triaged", "patching", "verifying"),
+    "done":     ("done",),
+    "failed":   ("dead", "escalated"),
+}
+
+
 def list_jobs(
     conn: sqlite3.Connection,
     state: str | None = None,
@@ -123,8 +137,15 @@ def list_jobs(
     clauses: list[str] = []
     params: list[Any] = []
     if state is not None:
-        clauses.append("state = ?")
-        params.append(state)
+        if state in _STATE_BUCKETS:
+            bucket = _STATE_BUCKETS[state]
+            placeholders = ",".join("?" * len(bucket))
+            clauses.append(f"state IN ({placeholders})")
+            params.extend(bucket)
+        else:
+            # Allow direct typed-state filtering too (queued, triaging, etc.)
+            clauses.append("state = ?")
+            params.append(state)
     if target is not None:
         clauses.append("target = ?")
         params.append(target)

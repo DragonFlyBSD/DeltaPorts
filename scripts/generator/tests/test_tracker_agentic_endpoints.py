@@ -60,10 +60,13 @@ def seeded_state_db(tmp_path: Path) -> Path:
             created_ts_utc, path, last_seen_at, target)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         [
-            ("job-q2-a", "pending", "triage", "devel/foo", "", "", now, "", now, "@2026Q2"),
-            ("job-q2-b", "done",    "triage", "devel/bar", "", "", now, "", now, "@2026Q2"),
-            ("job-main", "pending", "triage", "devel/foo", "", "", now, "", now, "@main"),
-            ("job-legacy", "pending","triage", "devel/baz", "", "", now, "", now, None),
+            # Typed JobState values after Phase 1 lifecycle cutover.
+            # "queued" maps into the "pending" UI bucket; "claimed",
+            # "triaging", etc. all map into "inflight".
+            ("job-q2-a", "queued", "triage", "devel/foo", "", "", now, "", now, "@2026Q2"),
+            ("job-q2-b", "done",   "triage", "devel/bar", "", "", now, "", now, "@2026Q2"),
+            ("job-main", "queued", "triage", "devel/foo", "", "", now, "", now, "@main"),
+            ("job-legacy", "queued", "triage", "devel/baz", "", "", now, "", now, None),
         ],
     )
     conn.execute(

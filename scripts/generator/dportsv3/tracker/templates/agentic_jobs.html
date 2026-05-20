@@ -27,7 +27,13 @@
         <tr>
           <td><a href="{{ request.url_for('agentic_job_detail', job_id=j.job_id) }}">{{ j.job_id }}</a></td>
           <td>
-            {% set cls = {'pending':'ignored','inflight':'skipped','done':'built','failed':'failed'}.get(j.state,'total') %}
+            {% set cls = {
+                'queued':'ignored',
+                'claimed':'skipped','triaging':'skipped','triaged':'skipped',
+                'patching':'skipped','verifying':'skipped',
+                'done':'built',
+                'dead':'failed','escalated':'failed'
+            }.get(j.state,'total') %}
             <span class="stat-pill {{ cls }}">{{ j.state }}</span>
           </td>
           <td>{{ j.type or '—' }}</td>

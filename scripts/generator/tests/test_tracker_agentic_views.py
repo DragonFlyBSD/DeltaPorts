@@ -66,7 +66,7 @@ def seeded_state_db(tmp_path: Path) -> Path:
             created_ts_utc, path, last_seen_at, target)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         [
-            ("job-q2-foo", "pending", "triage", "devel/foo", "", "",
+            ("job-q2-foo", "queued", "triage", "devel/foo", "", "",
              now, "/tmp/job-q2-foo.job", now, "@2026Q2"),
             ("job-main-foo", "done", "triage", "devel/foo", "", "",
              now, "/tmp/job-main-foo.job", now, "@main"),

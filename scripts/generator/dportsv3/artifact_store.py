@@ -115,58 +115,70 @@ class ArtifactStore:
             })
             self.conn.commit()
 
-    def upsert_job(self, payload: dict[str, Any]) -> None:
-        """Insert or update a row in the ``jobs`` table.
+    def apply_transition(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """Hook-side entry point for the lifecycle state machine.
 
-        Filesystem queue (.job files) is the source of truth for what
-        the runner processes; this table is the read model the UI
-        consumes. Writes happen on enqueue (state=pending), claim
-        (state=inflight), and completion (state=done|failed).
-        ``COALESCE`` on identity fields keeps earlier inserts'
-        metadata intact when later updates omit them.
+        Expects: {job_id, event, actor?, detail?}. Returns a dict with
+        the new state or an error message. The actual transition logic
+        lives in ``dportsv3.agent.lifecycle``; this method is a thin
+        wrapper that also populates the metadata columns on
+        HOOK_ENQUEUED (origin, type, flavor, etc.) since those come
+        from the hook's payload, not from any later transition.
         """
+        from dportsv3.agent import lifecycle  # local import to avoid agent-package import on store-only deployments
         job_id = payload.get("job_id")
-        if not job_id:
-            return
-        now = datetime.now(timezone.utc).isoformat()
-        values = (
-            job_id,
-            payload.get("state"),
-            payload.get("type"),
-            payload.get("origin"),
-            payload.get("flavor"),
-            payload.get("bundle_dir"),
-            payload.get("created_ts_utc"),
-            payload.get("path"),
-            payload.get("last_error"),
-            payload.get("target"),
-            now,
-        )
+        event_name = payload.get("event")
+        actor = payload.get("actor") or "hook"
+        detail = payload.get("detail") or {}
+        if not job_id or not event_name:
+            return {"ok": False, "error": "job_id and event required"}
+        try:
+            event = lifecycle.JobEvent(event_name)
+        except ValueError:
+            return {"ok": False, "error": f"unknown event: {event_name}"}
         with self._lock:
-            self.conn.execute(
-                """INSERT INTO jobs (job_id, state, type, origin, flavor, bundle_dir,
-                                     created_ts_utc, path, last_error, target, last_seen_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                   ON CONFLICT(job_id) DO UPDATE SET
-                     state=excluded.state,
-                     type=COALESCE(excluded.type, jobs.type),
-                     origin=COALESCE(excluded.origin, jobs.origin),
-                     flavor=COALESCE(excluded.flavor, jobs.flavor),
-                     bundle_dir=COALESCE(excluded.bundle_dir, jobs.bundle_dir),
-                     created_ts_utc=COALESCE(excluded.created_ts_utc, jobs.created_ts_utc),
-                     path=COALESCE(excluded.path, jobs.path),
-                     last_error=excluded.last_error,
-                     target=COALESCE(excluded.target, jobs.target),
-                     last_seen_at=excluded.last_seen_at""",
-                values,
-            )
-            emit_event(self.conn, "job_upserted", {
+            try:
+                new_state = lifecycle.apply(self.conn, job_id, event,
+                                            actor=actor, detail=detail)
+            except lifecycle.IllegalTransition as exc:
+                return {"ok": False, "error": str(exc)}
+            # For HOOK_ENQUEUED, populate metadata columns from the
+            # detail payload (origin/type/flavor/etc.). Later events
+            # don't carry these — they're stable across the job's life.
+            if event == lifecycle.JobEvent.HOOK_ENQUEUED:
+                now = datetime.now(timezone.utc).isoformat()
+                self.conn.execute(
+                    """UPDATE jobs SET
+                           type = COALESCE(?, type),
+                           origin = COALESCE(?, origin),
+                           flavor = COALESCE(?, flavor),
+                           bundle_dir = COALESCE(?, bundle_dir),
+                           created_ts_utc = COALESCE(?, created_ts_utc),
+                           path = COALESCE(?, path),
+                           target = COALESCE(?, target),
+                           last_seen_at = ?
+                       WHERE job_id = ?""",
+                    (
+                        detail.get("type"),
+                        detail.get("origin"),
+                        detail.get("flavor"),
+                        detail.get("bundle_dir"),
+                        detail.get("created_ts_utc"),
+                        detail.get("path"),
+                        detail.get("target"),
+                        now,
+                        job_id,
+                    ),
+                )
+            emit_event(self.conn, "job_transitioned", {
                 "job_id": job_id,
-                "state": payload.get("state"),
-                "origin": payload.get("origin"),
-                "target": payload.get("target"),
+                "event": event.value,
+                "to_state": new_state.value,
+                "origin": detail.get("origin"),
+                "target": detail.get("target"),
             })
             self.conn.commit()
+        return {"ok": True, "state": new_state.value}
 
     def put_blob(self, bundle_id: str, relpath: str, data: bytes, kind: str | None) -> dict[str, Any]:
         sha = sha256_bytes(data)
@@ -401,16 +413,19 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json({"ok": True, **result})
             return
 
-        if path == "/v1/jobs/upsert":
+        if path == "/v1/jobs/transition":
             body = self._read_json_body()
             if not body:
                 self._send_error_json(400, "invalid JSON body")
                 return
-            if not body.get("job_id"):
-                self._send_error_json(400, "job_id required")
+            if not body.get("job_id") or not body.get("event"):
+                self._send_error_json(400, "job_id and event required")
                 return
-            store.upsert_job(body)
-            self._send_json({"ok": True})
+            result = store.apply_transition(body)
+            if not result.get("ok"):
+                self._send_error_json(400, result.get("error") or "transition rejected")
+                return
+            self._send_json(result)
             return
 
         if path == "/v1/user-context":

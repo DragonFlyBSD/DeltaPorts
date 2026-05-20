@@ -80,21 +80,25 @@ def cmd_put_fs(args):
     print(json.dumps(resp, indent=2))
 
 
-def cmd_job_upsert(args):
-    payload = {
-        "job_id": args.job_id,
-        "state": args.state,
+def cmd_job_transition(args):
+    detail = {
         "type": args.type,
         "origin": args.origin,
         "flavor": args.flavor,
         "bundle_dir": args.bundle_dir,
         "created_ts_utc": args.created_ts_utc,
         "path": args.path,
-        "last_error": args.last_error,
         "target": args.target,
+        "last_error": args.last_error,
     }
-    payload = {k: v for k, v in payload.items() if v}
-    resp = request_json("POST", f"{args.url}/v1/jobs/upsert", payload)
+    detail = {k: v for k, v in detail.items() if v}
+    payload = {
+        "job_id": args.job_id,
+        "event": args.event,
+        "actor": args.actor or "hook",
+        "detail": detail,
+    }
+    resp = request_json("POST", f"{args.url}/v1/jobs/transition", payload)
     print(json.dumps(resp, indent=2))
 
 
@@ -132,10 +136,13 @@ def main():
     p_fs.add_argument("--kind", default="")
     p_fs.set_defaults(func=cmd_put_fs)
 
-    p_job = sub.add_parser("job-upsert")
+    p_job = sub.add_parser("job-transition")
     p_job.add_argument("--job-id", required=True)
-    p_job.add_argument("--state", required=True,
-                       choices=["pending", "inflight", "done", "failed"])
+    p_job.add_argument("--event", required=True,
+                       help="JobEvent name (e.g. hook_enqueued, claim, "
+                            "triage_start, triage_ok, patch_start, "
+                            "patch_ok, verify_ok, ...)")
+    p_job.add_argument("--actor", default="hook")
     p_job.add_argument("--type", default="")
     p_job.add_argument("--origin", default="")
     p_job.add_argument("--flavor", default="")
@@ -144,7 +151,7 @@ def main():
     p_job.add_argument("--path", default="")
     p_job.add_argument("--last-error", default="")
     p_job.add_argument("--target", default="")
-    p_job.set_defaults(func=cmd_job_upsert)
+    p_job.set_defaults(func=cmd_job_transition)
 
     args = parser.parse_args()
     try:
