@@ -14,16 +14,30 @@
 
   <div class="tracker-page">
     <h1>Activity log</h1>
-    <p class="lede">Recent agentic stage transitions.</p>
+    <p class="lede">Recent agentic stage transitions ({{ activity|length }} of last {{ limit }}).</p>
 
     {% include "_target_filter.html" %}
 
+    <form method="get" style="font-size:12px;margin:8px 0;">
+      {% if selected_target %}<input type="hidden" name="target" value="{{ selected_target }}">{% endif %}
+      Show
+      <select name="limit" onchange="this.form.submit()">
+        {% for n in limit_options %}
+        <option value="{{ n }}" {% if n == limit %}selected{% endif %}>{{ n }}</option>
+        {% endfor %}
+      </select>
+      events
+    </form>
+
     <table class="tracker-table">
-      <thead><tr><th>When</th><th>Job</th><th>Stage</th><th>Duration</th><th>Message</th></tr></thead>
+      <thead><tr><th>When</th><th>Job</th><th>Stage</th><th>Dur (ms)</th><th>Message</th></tr></thead>
       <tbody>
         {% for a in activity %}
-        <tr>
-          <td>{{ a.ts }}</td>
+        <tr {% if a.stage == 'attempt_start' %}style="background:var(--c-info-bg, #f0f4ff);font-weight:600;"
+            {% elif a.stage == 'attempt_end' %}style="background:var(--c-success-bg, #f0fff4);font-weight:600;"
+            {% elif a.stage and a.stage.startswith('tool:') %}style="font-family:ui-monospace,monospace;font-size:11px;"
+            {% endif %}>
+          <td style="white-space:nowrap;">{{ a.ts }}</td>
           <td>{% if a.job_id %}<a href="{{ request.url_for('agentic_job_detail', job_id=a.job_id) }}">{{ a.job_id }}</a>{% else %}—{% endif %}</td>
           <td>{{ a.stage or '—' }}</td>
           <td>{{ a.duration_ms if a.duration_ms is not none else '—' }}</td>

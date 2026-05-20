@@ -611,16 +611,30 @@ def create_app(db_path: str | Path) -> Any:
             )
 
     @app.get("/agentic/jobs/{job_id}", response_class=HTMLResponse)
-    def agentic_job_detail(request: RequestType, job_id: str) -> Any:
+    def agentic_job_detail(
+        request: RequestType,
+        job_id: str,
+        limit: int = 500,
+    ) -> Any:
+        limit = max(10, min(int(limit), 5000))
         with _conn() as conn:
             job = get_job(conn, job_id)
-            activity = activity_for_job(conn, job_id) if job is not None else []
+            activity = activity_for_job(conn, job_id, limit=limit) if job is not None else []
         if job is None:
             raise HTTPException(status_code=404, detail=f"Unknown job: {job_id}")
+        # Activity rows come back newest-first from the query; flip for
+        # chronological reading (attempt 1 tools → attempt 2 tools → ...).
+        activity = list(reversed(activity))
         return templates.TemplateResponse(
             request,
             "agentic_job.html",
-            {"title": job_id, "job": job, "activity": activity},
+            {
+                "title": job_id,
+                "job": job,
+                "activity": activity,
+                "limit": limit,
+                "limit_options": [50, 200, 500, 2000, 5000],
+            },
         )
 
     @app.get("/agentic/runs/{run_id}", response_class=HTMLResponse)
@@ -649,17 +663,21 @@ def create_app(db_path: str | Path) -> Any:
     def agentic_activity(
         request: RequestType,
         target: str | None = None,
+        limit: int = 200,
     ) -> Any:
         target_value = target or None
+        limit = max(10, min(int(limit), 5000))
         with _conn() as conn:
             return templates.TemplateResponse(
                 request,
                 "agentic_activity.html",
                 {
                     "title": "Activity",
-                    "activity": recent_activity(conn, limit=200, target=target_value),
+                    "activity": recent_activity(conn, limit=limit, target=target_value),
                     "target_options": distinct_targets(conn),
                     "selected_target": target_value,
+                    "limit": limit,
+                    "limit_options": [50, 200, 500, 2000, 5000],
                 },
             )
 
