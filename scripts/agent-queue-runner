@@ -889,9 +889,61 @@ def build_triage_payload(
                 parts.append("```")
                 parts.append("")
     
+    # Sibling bundles in this batch (other pending failures for same origin)
+    sibling_raw = (job.get("sibling_bundle_ids") if job else "") or ""
+    sibling_ids = [s.strip() for s in sibling_raw.split(",") if s.strip()]
+    if sibling_ids:
+        parts.append("## Sibling Pending Failures (this batch)")
+        parts.append(
+            "These bundles failed for the same origin and were queued "
+            "before this triage ran. Treat them as additional evidence "
+            "for the same underlying issue."
+        )
+        parts.append("")
+        for sib_id in sibling_ids[:3]:
+            sib_errors = read_bundle_text(None, sib_id, "logs/errors.txt")
+            if not sib_errors:
+                continue
+            parts.append(f"### Bundle {sib_id}")
+            parts.append("```")
+            parts.append(sib_errors)
+            parts.append("```")
+            parts.append("")
+
+    # Prior triages (historical: earlier completed jobs for this origin)
+    origin_for_history = job.get("origin") if job else None
+    if origin_for_history:
+        history = []
+        for entry in port_bundle_history(origin_for_history):
+            bid = entry.get("bundle_id")
+            if not bid or bid == bundle_id or bid in sibling_ids:
+                continue
+            history.append(bid)
+            if len(history) >= 2:
+                break
+        if history:
+            parts.append("## Prior Triages (most recent 2)")
+            for past_bundle in history:
+                parts.append(f"### Bundle {past_bundle}")
+                for relpath, title, code_block in [
+                    ("analysis/triage.md", "Triage", None),
+                    ("analysis/rebuild_proof.json", "Rebuild Proof", "json"),
+                ]:
+                    content = read_bundle_text(None, past_bundle, relpath)
+                    if not content:
+                        continue
+                    parts.append(f"#### {title}")
+                    if code_block:
+                        parts.append(f"```{code_block}")
+                        parts.append(content)
+                        parts.append("```")
+                    else:
+                        parts.append(content)
+                    parts.append("")
+
     parts.append("---")
     parts.append("Analyze this build failure and provide your triage report.")
-    
+
     return "\n".join(parts)
 
 
@@ -929,13 +981,28 @@ def build_patch_payload(
         parts.append(triage)
         parts.append("")
 
-    # Prior attempts (last 3 bundles for this origin)
+    # Sibling bundles in this batch (other pending failures for same origin)
+    sibling_raw = (job.get("sibling_bundle_ids") if job else "") or ""
+    sibling_ids = [s.strip() for s in sibling_raw.split(",") if s.strip()]
+    if sibling_ids:
+        parts.append("## Sibling Pending Failures (this batch)")
+        for sib_id in sibling_ids[:3]:
+            sib_errors = read_bundle_text(None, sib_id, "logs/errors.txt")
+            if not sib_errors:
+                continue
+            parts.append(f"### Bundle {sib_id}")
+            parts.append("```")
+            parts.append(sib_errors)
+            parts.append("```")
+            parts.append("")
+
+    # Prior attempts (last 3 bundles for this origin, excluding siblings above)
     origin = job.get("origin") if job else None
     if origin:
         history = []
         for entry in port_bundle_history(origin):
             bundle = entry.get("bundle_id")
-            if not bundle or bundle == bundle_id:
+            if not bundle or bundle == bundle_id or bundle in sibling_ids:
                 continue
             history.append(bundle)
             if len(history) >= 3:
@@ -1107,21 +1174,68 @@ def dsynth_active(env_name: str, queue_root: Path) -> tuple[bool, str]:
     return False, ""
 
 
-def claim_next_job(queue_root: Path) -> Path | None:
-    """Claim the oldest pending job by moving to inflight/."""
+def _job_dedup_key(meta: dict) -> tuple | None:
+    """Key for grouping pending jobs that should be processed together.
+
+    Jobs are siblings when they share (type, profile, origin, flavor).
+    Returning ``None`` means "can't group this job" — claim it alone.
+    """
+    jt = meta.get("type")
+    profile = meta.get("profile")
+    origin = meta.get("origin")
+    if not jt or not origin or not profile:
+        return None
+    return (jt, profile, origin, meta.get("flavor", ""))
+
+
+def claim_next_job_batch(queue_root: Path) -> tuple[Path, list[Path]] | None:
+    """Claim the oldest pending job and any sibling pending jobs.
+
+    Siblings = pending jobs with the same (type, profile, origin,
+    flavor) as the lead. All move to inflight/. The lead is the file
+    the runner processes; sibling evidence is folded into the payload
+    via ``job["sibling_bundle_ids"]``. All members move together to
+    done/failed on completion.
+
+    Returns ``(lead_path, sibling_paths)`` or ``None`` if nothing pending.
+    """
     pending_dir = queue_root / "pending"
     inflight_dir = queue_root / "inflight"
-    
     jobs = sorted(pending_dir.glob("*.job"))
-    
-    for job_path in jobs:
+
+    for lead_path in jobs:
         try:
-            dest = inflight_dir / job_path.name
-            job_path.rename(dest)
-            return dest
+            lead_meta = parse_job_file(lead_path)
+        except Exception:
+            continue
+        lead_key = _job_dedup_key(lead_meta)
+        candidate_siblings: list[Path] = []
+        if lead_key is not None:
+            for other in jobs:
+                if other == lead_path:
+                    continue
+                try:
+                    other_meta = parse_job_file(other)
+                except Exception:
+                    continue
+                if _job_dedup_key(other_meta) == lead_key:
+                    candidate_siblings.append(other)
+        # Move lead first; if that races, try the next pending job.
+        try:
+            lead_dest = inflight_dir / lead_path.name
+            lead_path.rename(lead_dest)
         except OSError:
             continue
-    
+        moved_siblings: list[Path] = []
+        for s in candidate_siblings:
+            try:
+                s_dest = inflight_dir / s.name
+                s.rename(s_dest)
+                moved_siblings.append(s_dest)
+            except OSError:
+                # Another runner grabbed it or it vanished — skip.
+                continue
+        return lead_dest, moved_siblings
     return None
 
 
@@ -1582,11 +1696,33 @@ def process_patch_job(
 def process_job(
     queue_root: Path,
     job_path: Path,
+    sibling_paths: list[Path],
     dry_run: bool,
     kedb_dir: Path | None,
 ):
-    """Process a single job (dispatch based on type)."""
+    """Process a single job (dispatch based on type).
+
+    ``sibling_paths`` are inflight job files claimed alongside the lead
+    by ``claim_next_job_batch``. Their bundles feed into the payload as
+    additional evidence; on completion all members move together to
+    done/failed.
+    """
     job = parse_job_file(job_path)
+    # Fold sibling bundles into the payload context.
+    sibling_bundles: list[str] = []
+    for s_path in sibling_paths:
+        try:
+            s_meta = parse_job_file(s_path)
+        except Exception:
+            continue
+        bid = s_meta.get("bundle_id")
+        if bid and bid != job.get("bundle_id"):
+            sibling_bundles.append(bid)
+    if sibling_bundles:
+        job["sibling_bundle_ids"] = ",".join(sibling_bundles)
+        log(queue_root, "INFO",
+            f"batched {len(sibling_bundles)} sibling job(s) with {job_path.name}: "
+            f"{','.join(sibling_bundles)}")
     job_type = job.get("type", "triage")
     bundle_dir_value = job.get("bundle_dir")
     bundle_dir = Path(bundle_dir_value) if bundle_dir_value else None
@@ -1641,7 +1777,13 @@ def process_job(
 
     if success:
         move_job(job_path, "done")
-        log(queue_root, "INFO", "moved job to done/")
+        for s in sibling_paths:
+            try:
+                move_job(s, "done")
+            except OSError:
+                pass
+        log(queue_root, "INFO",
+            f"moved job + {len(sibling_paths)} sibling(s) to done/")
     else:
         # Write error file for visibility in UI
         error_file = job_path.with_suffix(".job.error")
@@ -1651,9 +1793,15 @@ def process_job(
             log(queue_root, "DEBUG", f"wrote error file: {error_file}")
         except OSError as e:
             log(queue_root, "WARN", f"failed to write error file: {e}")
-        
+
         move_job(job_path, "failed")
-        log(queue_root, "ERROR", f"moved job to failed/ ({status})")
+        for s in sibling_paths:
+            try:
+                move_job(s, "failed")
+            except OSError:
+                pass
+        log(queue_root, "ERROR",
+            f"moved job + {len(sibling_paths)} sibling(s) to failed/ ({status})")
     
     # Update runner status back to idle
     update_runner_status("idle", job_id=None, stage=None)
@@ -1732,9 +1880,10 @@ def main():
             if _gate_blocked():
                 log(queue_root, "INFO", "skipping --once: dsynth active")
             else:
-                job = claim_next_job(queue_root)
-                if job:
-                    process_job(queue_root, job, args.dry_run, kedb_dir)
+                batch = claim_next_job_batch(queue_root)
+                if batch:
+                    lead, siblings = batch
+                    process_job(queue_root, lead, siblings, args.dry_run, kedb_dir)
                 else:
                     log(queue_root, "INFO", "no jobs in queue")
         else:
@@ -1743,9 +1892,10 @@ def main():
                     time.sleep(DSYNTH_LOCK_POLL_SECONDS)
                     continue
                 process_user_context_updates(queue_root)
-                job = claim_next_job(queue_root)
-                if job:
-                    process_job(queue_root, job, args.dry_run, kedb_dir)
+                batch = claim_next_job_batch(queue_root)
+                if batch:
+                    lead, siblings = batch
+                    process_job(queue_root, lead, siblings, args.dry_run, kedb_dir)
                 else:
                     update_runner_status("idle", job_id=None, stage="waiting")
                     time.sleep(5)

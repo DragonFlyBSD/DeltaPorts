@@ -61,6 +61,22 @@ distinct role:
     `materialize_dports(origin)`. **Never edit directly; your edits
     will be wiped on the next materialize.** Read-only reference.
 
+## Overlay state (read before editing)
+
+This batch may bundle several failures for the same port. The writable
+overlay may already contain edits from a previous attempt — either
+earlier in this batch or from a prior queued job. Before assuming a
+clean tree:
+
+- Call `emit_diff(origin, "")` early to see what files have already
+  been modified vs HEAD. An empty diff means the tree is clean
+  (first attempt). A non-empty diff means prior edits are in place;
+  decide whether to extend them, revert specific files via `put_file`
+  back to their HEAD content, or build on the existing changes.
+- Don't assume HEAD == current — always check before a `put_file` on
+  a file you haven't read this session. Use `expected_sha256` to make
+  edits race-safe.
+
 ## The repair loop
 
 1. Call `env_verify` once at the start. If status != ready, stop and
