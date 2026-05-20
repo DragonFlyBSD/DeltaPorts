@@ -58,6 +58,14 @@ DEFAULT_MAX_ITERATIONS = 3
 DEFAULT_ARTIFACT_STORE_URL = "http://127.0.0.1:8788"
 DEFAULT_TRACKER_URL = "http://127.0.0.1:8080"
 
+# Default location of config/agentic-policy.json. ``runner.py`` lives
+# at scripts/generator/dportsv3/agent/runner.py; walk four parents up
+# to reach the repo root, then into config/. Operator can override via
+# DP_HARNESS_POLICY.
+_DEFAULT_POLICY_PATH = str(
+    Path(__file__).resolve().parents[4] / "config" / "agentic-policy.json"
+)
+
 # Heartbeat interval (seconds)
 HEARTBEAT_INTERVAL = 5
 
@@ -1695,7 +1703,7 @@ def _run_harness_triage_inner(
     from dportsv3.agent import policy as harness_policy  # type: ignore[import-not-found]
     policy_path = os.environ.get(
         "DP_HARNESS_POLICY",
-        str(Path(__file__).resolve().parent.parent / "config" / "agentic-policy.json"),
+        _DEFAULT_POLICY_PATH,
     )
     try:
         pol = harness_policy.load_policy(policy_path)
@@ -1991,7 +1999,7 @@ def _process_patch_job_harness(
     bundle_id = job.get("bundle_id")
     policy_path = os.environ.get(
         "DP_HARNESS_POLICY",
-        str(Path(__file__).resolve().parent.parent / "config" / "agentic-policy.json"),
+        _DEFAULT_POLICY_PATH,
     )
     try:
         pol = harness_policy.load_policy(policy_path)
