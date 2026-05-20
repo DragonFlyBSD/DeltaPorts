@@ -84,12 +84,55 @@ _heartbeat_thread: threading.Thread | None = None
 _current_job_id: str | None = None
 _current_stage: str | None = None
 
-# Set when any tool call reports ``error_category=env_broken`` (the
-# dev-env chroot is misconfigured at the OS level). The main loop
-# gates further claims on this so we don't burn LLM tokens against an
-# environment no agent can fix. Operator must restart the runner after
-# repairing the env.
-_env_broken_reason: str | None = None
+# Cached EnvHealth probe result. The runner gate consults this on
+# every poll; a fresh probe is taken when (a) the cached entry is
+# older than DP_HARNESS_HEALTH_CACHE_SECONDS, or (b)
+# invalidate_health_cache() is called explicitly (e.g. when a tool
+# result looks env-suspicious mid-job).
+_health_cache: dict[str, tuple[float, object]] = {}  # env → (ts, EnvHealth)
+
+
+def invalidate_health_cache(env: str | None = None) -> None:
+    """Drop the cached health probe for ``env`` (or all envs)."""
+    if env is None:
+        _health_cache.clear()
+    else:
+        _health_cache.pop(env, None)
+
+
+def _cached_health_broken() -> bool:
+    """True iff the most recently cached probe (any env) was broken.
+
+    Used by ``_completion_events_for`` to route a mid-flight job that
+    just failed to ENV_BROKEN when we already know the env is bad.
+    Doesn't trigger a probe — purely reads the cache.
+    """
+    for _ts, eh in _health_cache.values():
+        status = getattr(eh, "status", None)
+        if status == "broken":
+            return True
+    return False
+
+
+def _looks_env_suspicious(result: dict) -> bool:
+    """Heuristic: does this tool result look like an env-level failure?
+
+    Used purely to force a health re-probe. Setting the gate state
+    is still the probe's job — we never infer broken-ness from a
+    tool error directly anymore.
+    """
+    if not isinstance(result, dict) or result.get("ok") is True:
+        return False
+    stderr = (result.get("stderr_tail") or "").lower()
+    for needle in (
+        "missing dragonfly packages",
+        "pyproject.toml not found",
+        "venv setup failed",
+        "no such file or directory: /work/deltaports",
+    ):
+        if needle in stderr:
+            return True
+    return False
 
 
 def get_state_db_path(queue_root: Path) -> Path:
@@ -2029,17 +2072,17 @@ def _process_patch_job_harness(
         # UI can show live progress while the agent runs.
         trace_events.append(ev)
         et = ev.get("type")
-        # Detect chroot-level failure (missing py311 packages, broken
-        # venv) and trip the runner-wide gate so we don't keep wasting
-        # LLM tokens on something the agent can't fix.
+        # If a tool result looks env-suspicious (stderr matches a known
+        # health-broken pattern), force a re-probe on the next gate
+        # check. We never set "broken" from a tool error directly —
+        # the probe is authoritative.
         if et == "tool_call":
             res = ev.get("result") or {}
-            if isinstance(res, dict) and res.get("error_category") == "env_broken":
-                global _env_broken_reason
-                _env_broken_reason = res.get("operator_action") or "dev-env chroot is broken"
+            if isinstance(res, dict) and _looks_env_suspicious(res):
+                invalidate_health_cache()
                 activity_log(
-                    queue_root, "env_broken",
-                    f"dev-env chroot is broken; pausing runner. {_env_broken_reason}",
+                    queue_root, "health_recheck_forced",
+                    f"tool result looks env-suspicious; forcing re-probe",
                     job_id=job_id, extra={"tool": ev.get("tool")},
                 )
         if et == "attempt_start":
@@ -2173,7 +2216,7 @@ def _completion_events_for(job_type: str, success: bool, status: str) -> list:
     from dportsv3.agent.lifecycle import JobEvent
 
     status_l = (status or "").lower()
-    if _env_broken_reason:
+    if _cached_health_broken():
         return [JobEvent.ENV_BROKEN]
 
     if job_type == "triage":
@@ -2408,18 +2451,52 @@ def main(argv: list[str] | None = None) -> int:
             "Concurrent dsynth runs in the same env may corrupt buildbase.")
 
     _last_busy_reason = ""
+    _last_health_reason = ""
+    health_cache_seconds = int(
+        os.environ.get("DP_HARNESS_HEALTH_CACHE_SECONDS", "60")
+    )
+
+    def _probe_health(env: str):
+        """Return an EnvHealth, using the module cache when fresh."""
+        from dportsv3.agent import health as health_mod
+        now = time.monotonic()
+        cached = _health_cache.get(env)
+        if cached is not None and (now - cached[0]) < health_cache_seconds:
+            return cached[1]
+        eh = health_mod.check(env)
+        _health_cache[env] = (now, eh)
+        return eh
 
     def _gate_blocked() -> bool:
-        nonlocal _last_busy_reason
-        # env_broken is sticky for the runner's lifetime — operator
-        # must restart after fixing the chroot. No point auto-resuming
-        # since we have no reliable way to retest.
-        if _env_broken_reason:
-            update_runner_status(
-                "paused", job_id=None,
-                stage=f"env_broken: {_env_broken_reason[:120]}",
-            )
-            return True
+        nonlocal _last_busy_reason, _last_health_reason
+        # Health probe first. If broken, we pause regardless of
+        # dsynth-busy state — there's no point running anything until
+        # the env is repaired. Cache keeps this cheap (default 60s);
+        # tool errors that look env-suspicious invalidate the cache
+        # so a freshly-broken env is detected on the next gate.
+        if runner_env:
+            eh = _probe_health(runner_env)
+            if eh.status == "broken":
+                reason = (eh.operator_action
+                          or f"env {runner_env} status=broken")
+                if reason != _last_health_reason:
+                    log(queue_root, "INFO",
+                        f"runner paused: health broken: {reason}")
+                    activity_log(queue_root, "health_broken",
+                                 f"env {runner_env} broken; pausing runner",
+                                 extra={"operator_action": reason[:500]})
+                    _last_health_reason = reason
+                update_runner_status(
+                    "paused", job_id=None,
+                    stage=f"health_broken: {reason[:120]}",
+                )
+                return True
+            if _last_health_reason and eh.status == "ready":
+                log(queue_root, "INFO", "runner resumed: health ready")
+                activity_log(queue_root, "health_ready",
+                             f"env {runner_env} healthy; resuming")
+                _last_health_reason = ""
+
         if not runner_env:
             return False
         busy, reason = dsynth_active(runner_env, queue_root)
@@ -2447,10 +2524,11 @@ def main(argv: list[str] | None = None) -> int:
         else:
             while True:
                 if _gate_blocked():
-                    if _env_broken_reason:
-                        # No point checking back fast — operator has to
-                        # restart the runner after fixing the chroot.
-                        time.sleep(60)
+                    if _last_health_reason:
+                        # Don't hammer the chroot probing while the env
+                        # is known broken; the cache (default 60s) is
+                        # what limits the rate. Sleep aligns with that.
+                        time.sleep(health_cache_seconds)
                     else:
                         time.sleep(DSYNTH_LOCK_POLL_SECONDS)
                     continue

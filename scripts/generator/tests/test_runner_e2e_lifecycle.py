@@ -11,9 +11,12 @@ Coverage:
   + ESCALATE_MANUAL, final state ESCALATED.
 - Reap orphans on startup: a pre-existing PATCHING job is
   transitioned to DEAD with retire_reason="runner_restart".
-- env_broken: when the runner's _env_broken_reason flag is set,
+- env_broken: when the cached health probe (Phase 2) shows broken,
   completion routes to ENV_BROKEN regardless of job_type and the
   job ends DEAD with retire_reason="env_broken".
+- invalidate_health_cache clears entries.
+- _looks_env_suspicious heuristic recognizes the known stderr
+  patterns that trigger a forced re-probe.
 
 The runner's LLM calls (``triage.run`` / ``patch.run``) and the dev-env
 worker boundary are stubbed via monkeypatch. No real network, no
@@ -88,7 +91,8 @@ def queue_env(tmp_path, monkeypatch):
 
     # Wire the runner's module-level connection at the throwaway DB.
     monkeypatch.setattr(runner, "_state_db_conn", conn, raising=False)
-    monkeypatch.setattr(runner, "_env_broken_reason", None, raising=False)
+    # Drop any health cache state from previous tests.
+    runner.invalidate_health_cache()
 
     # Stub artifact-store HTTP calls (no server in tests).
     monkeypatch.setattr(runner, "artifact_store_put",
@@ -274,22 +278,37 @@ def test_reap_orphans_on_startup(queue_env):
     assert hist[-1]["actor"] == "runner-test"
 
 
-def test_env_broken_routes_to_dead(queue_env, monkeypatch):
-    """When the runner-level env_broken flag is set, completion
-    routes to ENV_BROKEN regardless of job_type and final state is
-    DEAD with retire_reason=env_broken."""
-    conn = queue_env["conn"]
-    monkeypatch.setattr(runner, "_env_broken_reason",
-                        "missing py311 packages", raising=False)
+def test_env_broken_routes_to_dead(queue_env):
+    """When the cached health probe shows broken, completion routes
+    to ENV_BROKEN regardless of job_type and final state is DEAD
+    with retire_reason=env_broken.
+    """
+    from dportsv3.agent import health as health_mod
+    import time as _time
 
-    # Confirm the mapping function itself routes correctly under the flag.
+    conn = queue_env["conn"]
+    # Plant a "broken" probe in the cache directly. ``time.monotonic``
+    # is what _probe_health reads, so use that for the cache timestamp.
+    broken = health_mod.EnvHealth(
+        env="test-env",
+        status="broken",
+        checks=[health_mod.HealthCheck(
+            name="python_runtime", status="broken",
+            detail="missing py311 packages",
+            operator_action="pkg install py311-...",
+        )],
+        operator_action="pkg install py311-...",
+    )
+    runner._health_cache["test-env"] = (_time.monotonic(), broken)
+
+    # Mapping function routes to ENV_BROKEN for both job types.
     events = runner._completion_events_for("patch", False, "any-error")
     assert events == [lifecycle.JobEvent.ENV_BROKEN]
     events = runner._completion_events_for("triage", False, "any-error")
     assert events == [lifecycle.JobEvent.ENV_BROKEN]
 
-    # And end-to-end: walk a job to PATCHING, then fire the env_broken
-    # event; the job should land DEAD with the env_broken reason.
+    # End-to-end: walk a job to PATCHING, then fire ENV_BROKEN; the
+    # job should land DEAD with retire_reason="env_broken".
     jid = "env-broken-job"
     for ev in [
         lifecycle.JobEvent.HOOK_ENQUEUED,
@@ -307,3 +326,29 @@ def test_env_broken_routes_to_dead(queue_env, monkeypatch):
         "SELECT retire_reason FROM jobs WHERE job_id = ?", (jid,)
     ).fetchone()
     assert row["retire_reason"] == "env_broken"
+
+
+def test_invalidate_health_cache_clears_all(queue_env):
+    """invalidate_health_cache() with no arg drops every env's entry."""
+    import time as _time
+    from dportsv3.agent import health as health_mod
+    runner._health_cache["a"] = (_time.monotonic(), health_mod.EnvHealth(env="a", status="ready"))
+    runner._health_cache["b"] = (_time.monotonic(), health_mod.EnvHealth(env="b", status="broken"))
+    assert runner._cached_health_broken() is True
+    runner.invalidate_health_cache()
+    assert runner._cached_health_broken() is False
+
+
+def test_looks_env_suspicious_detects_known_sentinels():
+    """The heuristic that triggers cache invalidation mid-job."""
+    assert runner._looks_env_suspicious({
+        "ok": False, "stderr_tail": "dportsv3: missing DragonFly packages required...",
+    }) is True
+    assert runner._looks_env_suspicious({
+        "ok": False, "stderr_tail": "compile error: foo.c:42",
+    }) is False
+    # ok=True is never suspicious
+    assert runner._looks_env_suspicious({
+        "ok": True, "stderr_tail": "missing DragonFly packages",
+    }) is False
+    assert runner._looks_env_suspicious(None) is False

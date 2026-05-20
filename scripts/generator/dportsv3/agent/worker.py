@@ -464,28 +464,6 @@ def _exec(
     )
 
 
-_ENV_BROKEN_SENTINELS: tuple[str, ...] = (
-    "dportsv3: missing DragonFly packages",
-    "dportsv3: error: pyproject.toml not found",
-    "dportsv3: error: venv setup failed",
-)
-
-
-def _classify_env_error(stderr: str) -> str | None:
-    """Detect environment-level failures that no per-port fix can recover from.
-
-    Returns a short category string (``env_broken``) when the chroot
-    itself is misconfigured — e.g. missing py311-* packages prevent
-    ``dportsv3`` from running at all. The runner uses this to
-    short-circuit the patch flow and pause the runner instead of
-    burning more LLM tokens on something the agent can't fix.
-    """
-    for sentinel in _ENV_BROKEN_SENTINELS:
-        if sentinel in stderr:
-            return "env_broken"
-    return None
-
-
 def materialize_dports(env: str, origin: str) -> dict:
     """Regenerate the DPorts tree for ``origin`` using ``reapply`` inside the env.
 
@@ -493,25 +471,14 @@ def materialize_dports(env: str, origin: str) -> dict:
     ``stderr_tail``, etc.). The LLM inspects ``ok`` and the tails
     to decide what to do — no exceptions bubble up for build failures.
 
-    When the chroot itself is broken (missing py311 deps so ``dportsv3``
-    can't run), the result carries ``error_category=env_broken`` so the
-    runner can halt the agent loop with an operator-actionable message
-    instead of letting the LLM thrash.
+    Env-level failures (missing py311 deps, broken venv) used to be
+    inferred from stderr here and tagged onto the result; that path
+    moved to ``dportsv3.agent.health`` as a direct probe. The runner
+    gates on health before claiming jobs; tool errors that look
+    health-related trigger a cache-invalidating re-probe.
     """
     p = _exec(env, "reapply", origin)
-    extra: dict = {"origin": origin}
-    cat = _classify_env_error(p.stderr or "")
-    if cat is not None:
-        extra["error_category"] = cat
-        extra["operator_action"] = (
-            "dev-env chroot is missing runtime packages. Run "
-            "`pkg install py311-sqlite3 py311-pydantic2 py311-pydantic-core "
-            "py311-fastapi py311-uvicorn py311-watchfiles py311-uvloop "
-            "py311-httptools py311-websockets py311-python-dotenv` inside the "
-            "chroot (or via `dportsv3 dev-env exec NAME -- pkg install ...`) "
-            "and re-run."
-        )
-    return _exec_result(p.returncode, p.stdout, p.stderr, **extra)
+    return _exec_result(p.returncode, p.stdout, p.stderr, origin=origin)
 
 
 PORTSDIR = "/work/DPorts"
