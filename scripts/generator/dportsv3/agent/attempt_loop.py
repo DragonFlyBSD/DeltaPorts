@@ -95,6 +95,7 @@ def run(
     custom_llm_provider: str | None = None,
     timeout: int = 600,
     max_tool_turns: int = 12,
+    on_event=None,
 ) -> PatchResult:
     """Run the patch flow for one bundle, returning a structured PatchResult."""
     base_messages = [
@@ -134,6 +135,18 @@ def run(
                 proof=None,
             )
 
+        if on_event is not None:
+            try:
+                on_event({
+                    "type": "attempt_start",
+                    "attempt": attempt_idx,
+                    "iterations": iterations,
+                    "tokens_used_so_far": total_usage.total_tokens,
+                    "budget": budget,
+                })
+            except Exception:
+                pass
+
         response, attempt_usage = tool_loop.run(
             messages,
             model=model,
@@ -144,6 +157,8 @@ def run(
             timeout=timeout,
             max_turns=max_tool_turns,
             max_tokens=remaining,
+            on_event=on_event,
+            attempt_idx=attempt_idx,
         )
         total_usage.add(attempt_usage)
         prev_text = response.text or ""
@@ -160,6 +175,17 @@ def run(
                 proof=proof,
             )
         )
+
+        if on_event is not None:
+            try:
+                on_event({
+                    "type": "attempt_end",
+                    "attempt": attempt_idx,
+                    "rebuild_ok": rebuild_ok,
+                    "tokens": attempt_usage.total_tokens,
+                })
+            except Exception:
+                pass
 
         if rebuild_ok:
             log.info("attempt_loop: success on attempt %d", attempt_idx)

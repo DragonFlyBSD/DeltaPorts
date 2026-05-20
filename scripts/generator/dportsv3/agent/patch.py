@@ -17,11 +17,17 @@ def run(
     custom_llm_provider: str | None = None,
     timeout: int = 600,
     max_tool_turns: int = 30,
+    on_event=None,
 ) -> PatchResult:
     """Run the patch agent for one bundle. Returns the PatchResult.
 
     The runner is responsible for persisting the result to the bundle
     (patch.md, rebuild_proof.json, changes.diff, audit JSON).
+
+    ``on_event`` is a callback invoked with structured dicts as the
+    loop progresses: ``attempt_start``, ``tool_call``, ``attempt_end``.
+    Used by the runner for live activity-log writes and to build a
+    tool-trace artifact. Exceptions inside the callback are swallowed.
     """
     return attempt_loop.run(
         payload,
@@ -33,4 +39,5 @@ def run(
         custom_llm_provider=custom_llm_provider,
         timeout=timeout,
         max_tool_turns=max_tool_turns,
+        on_event=on_event,
     )

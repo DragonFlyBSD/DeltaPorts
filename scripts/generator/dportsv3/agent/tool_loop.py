@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 
 from . import llm, tools
 from .llm import Response, Usage
@@ -60,6 +61,8 @@ def run(
     timeout: int = 120,
     max_turns: int = 12,
     max_tokens: int = 0,
+    on_event=None,
+    attempt_idx: int = 1,
 ) -> tuple[Response, Usage]:
     """Drive the LLM through tool calls until it returns text-only.
 
@@ -117,7 +120,22 @@ def run(
         messages.append(_assistant_message_from(response))
 
         for call in response.tool_calls:
+            t0 = time.monotonic()
             result = tools.dispatch(call.name, call.arguments, env=env)
+            duration_ms = int((time.monotonic() - t0) * 1000)
+            if on_event is not None:
+                try:
+                    on_event({
+                        "type": "tool_call",
+                        "attempt": attempt_idx,
+                        "turn": turn,
+                        "tool": call.name,
+                        "args": call.arguments or {},
+                        "result": result if isinstance(result, dict) else {"value": result},
+                        "duration_ms": duration_ms,
+                    })
+                except Exception:
+                    pass  # callback must never break the loop
             messages.append(
                 {
                     "role": "tool",

@@ -542,11 +542,16 @@ def activity_log(
                 (ts, job_id, stage, message, duration_ms, extra_json)
             )
             
-            # Prune to keep only last 10 entries
+            # Prune to keep only last N entries (N comes from
+            # DP_ACTIVITY_LOG_MAX, default 5000). The previous cap of
+            # 10 made the UI's activity page useless and dropped
+            # tool-call traces before the next page-refresh.
+            cap = max(50, int(os.environ.get("DP_ACTIVITY_LOG_MAX", "5000")))
             _state_db_conn.execute(
                 """DELETE FROM activity_log WHERE id NOT IN (
-                     SELECT id FROM activity_log ORDER BY id DESC LIMIT 10
-                   )"""
+                     SELECT id FROM activity_log ORDER BY id DESC LIMIT ?
+                   )""",
+                (cap,),
             )
             
             _state_db_conn.commit()
@@ -1660,6 +1665,77 @@ def process_triage_job(
         queue_root, job_path, job, bundle_dir, kedb_dir,
         payload, origin, job_id, harness_model,
     )
+def _summarize_tool_call(tool: str, args: dict, result: dict) -> str:
+    """One-line summary of a tool invocation for the activity log.
+
+    The activity_log's ``message`` column drives the UI's at-a-glance
+    view. Keep it short and informative — favor the args/result fields
+    a human would look for first.
+    """
+    args = args or {}
+    result = result if isinstance(result, dict) else {"value": result}
+    ok = result.get("ok")
+    ok_tag = "" if ok is None else (" ok" if ok else " FAIL")
+    if tool == "env_verify":
+        return f"status={result.get('status', '?')}{ok_tag}"
+    if tool in ("get_file", "list_dir"):
+        return f"{args.get('path', '')}{ok_tag}"
+    if tool == "put_file":
+        return f"{args.get('path', '')} ({len((args.get('content') or '') )} bytes){ok_tag}"
+    if tool == "grep":
+        return (
+            f"pattern={args.get('pattern', '')!r} path={args.get('path', '')} "
+            f"matches={len(result.get('matches') or [])}{ok_tag}"
+        )
+    if tool == "materialize_dports":
+        return f"origin={args.get('origin', '')}{ok_tag}"
+    if tool == "extract":
+        return f"origin={args.get('origin', '')}{ok_tag}"
+    if tool in ("dupe", "genpatch"):
+        return f"path={args.get('path', '')}{ok_tag}"
+    if tool == "install_patches":
+        n = len(result.get("installed") or [])
+        return f"origin={args.get('origin', '')} installed={n}{ok_tag}"
+    if tool == "emit_diff":
+        diff_len = len(result.get('diff') or '')
+        return (
+            f"origin={args.get('origin', '')} relpath={args.get('relpath', '')} "
+            f"diff_bytes={diff_len}{ok_tag}"
+        )
+    if tool == "dsynth_build":
+        rb = result.get("rebuild_ok")
+        return f"origin={args.get('origin', '')} rebuild_ok={rb}{ok_tag}"
+    if tool == "dsynth_log":
+        return f"origin={args.get('origin', '')} lines={len((result.get('text') or '').splitlines())}{ok_tag}"
+    # Fallback: show first arg key=value pair
+    if args:
+        k, v = next(iter(args.items()))
+        return f"{k}={str(v)[:80]}{ok_tag}"
+    return f"(no args){ok_tag}"
+
+
+def _write_tool_trace(
+    bundle_dir: Path | None,
+    bundle_id: str | None,
+    trace_events: list[dict],
+) -> None:
+    """Persist the structured per-tool trace to the bundle.
+
+    JSONL so it appends naturally and is grep-friendly. One line per
+    event (attempt_start / tool_call / attempt_end).
+    """
+    if not trace_events:
+        return
+    lines = [json.dumps(ev, default=str) for ev in trace_events]
+    data = ("\n".join(lines) + "\n").encode("utf-8")
+    if bundle_id:
+        artifact_store_put(bundle_id, "analysis/tool_trace.jsonl", data, "text")
+    elif bundle_dir is not None:
+        out = bundle_dir / "analysis" / "tool_trace.jsonl"
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_bytes(data)
+
+
 def _write_patch_audit_harness(
     bundle_dir: Path | None,
     bundle_id: str | None,
@@ -1797,6 +1873,43 @@ def _process_patch_job_harness(
         job_id=job_id, extra={"agent": "dports-patch", "model": model, "tier": tier.name},
     )
 
+    trace_events: list[dict] = []
+
+    def _on_event(ev: dict) -> None:
+        # Persist a structured copy + emit an activity_log row so the
+        # UI can show live progress while the agent runs.
+        trace_events.append(ev)
+        et = ev.get("type")
+        if et == "attempt_start":
+            activity_log(
+                queue_root, "attempt_start",
+                f"attempt {ev.get('attempt')}/{ev.get('iterations')} for {origin} "
+                f"(tokens used {ev.get('tokens_used_so_far')}/{ev.get('budget')})",
+                job_id=job_id, extra={k: v for k, v in ev.items() if k != "type"},
+            )
+        elif et == "tool_call":
+            args = ev.get("args") or {}
+            res = ev.get("result") or {}
+            summary = _summarize_tool_call(ev.get("tool", ""), args, res)
+            activity_log(
+                queue_root, f"tool:{ev.get('tool')}",
+                summary,
+                job_id=job_id,
+                duration_ms=ev.get("duration_ms"),
+                extra={
+                    "attempt": ev.get("attempt"),
+                    "turn": ev.get("turn"),
+                    "ok": bool(res.get("ok")) if isinstance(res, dict) else None,
+                },
+            )
+        elif et == "attempt_end":
+            activity_log(
+                queue_root, "attempt_end",
+                f"attempt {ev.get('attempt')} for {origin}: "
+                f"rebuild_ok={ev.get('rebuild_ok')} tokens={ev.get('tokens')}",
+                job_id=job_id, extra={k: v for k, v in ev.items() if k != "type"},
+            )
+
     start = time.time()
     try:
         result = harness_patch.run(
@@ -1808,6 +1921,7 @@ def _process_patch_job_harness(
             api_key=api_key,
             custom_llm_provider=custom_llm_provider,
             timeout=timeout,
+            on_event=_on_event,
         )
     except Exception as exc:
         activity_log(
@@ -1827,6 +1941,7 @@ def _process_patch_job_harness(
     )
 
     _write_patch_audit_harness(bundle_dir, bundle_id, result, model)
+    _write_tool_trace(bundle_dir, bundle_id, trace_events)
     _write_changes_diff(bundle_dir, bundle_id, env, origin)
 
     activity_log(
