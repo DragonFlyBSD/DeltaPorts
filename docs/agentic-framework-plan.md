@@ -2,11 +2,14 @@
 
 > **Phase:** 1 of N (see `agentic-framework-design.md` for the arc).
 > **Goal:** install the job lifecycle layer (layer 1) and validate the
-> design via one pilot feature. Nothing else.
+> design via one pilot feature. Six independently-reviewable steps.
 >
 > When Phase 1 ships, this file gets **rewritten** to be Phase 2's
 > plan. The arc and historical scaffolding stay in
 > `agentic-framework-design.md`.
+>
+> **Status:** draft. Awaiting operator review of step plans below
+> before implementation starts.
 
 ## Scope of Phase 1
 
@@ -14,87 +17,82 @@
 - Layer 1: a typed job lifecycle state machine backed by `state.db`.
 - The pilot: `TwoModelEscalationStep` — first attempt uses a cheap
   model; on `gave-up` outcome, second attempt uses a strong model.
-  Built using whatever interface shape feels natural for the
-  *future* `Step` protocol, not against today's `_process_patch_job_harness`.
-- Tests: state-machine invariants + pilot end-to-end on a known port.
+  Hand-shaped step that informs (but doesn't formalize) the future
+  Step protocol.
+- Tests at every step.
 
 **Out of scope (deferred to later phases):**
-- Layer 2 (Step contract as a formal Protocol) — the pilot will hand-
-  shape one step; we won't generalize until layer 3, 4, 5 settle.
-- Layer 3 (Health/readiness) — keep today's `env_broken` regex.
-- Layer 4 (Context assembly) — keep today's `build_*_payload`.
-- Layer 5 (Policy engine) — keep today's `policy.tier_for` + the cap.
-- UI changes — the new state column surfaces through existing
-  queries; templates already render `job.state`.
+- Layer 2 (formal Step Protocol).
+- Layer 3 (Health/readiness).
+- Layer 4 (Context assembly).
+- Layer 5 (Policy engine).
+- UI changes beyond what falls out for free.
 
-The hard cutover principle (per user preference): when each piece in
-this phase lands, the equivalent old code is **deleted in the same
-commit**. No dual code paths.
+**Hard cutover principle (per operator preference):** when each step
+lands, the equivalent old code is **deleted in the same commit**. No
+dual code paths surviving past their cutover step.
 
 ## Pre-conditions before starting
 
-These must be true at HEAD of master before Phase 1 begins:
+These must be true at HEAD of master before Step 1 begins:
 
 1. The May 20 operational fixes (sibling batching, env_broken,
    retry cap, loop-aware prompt) are verified working on a real
    dsynth run end-to-end. Without that we'll mistake framework bugs
    for inherited bugs.
 2. `dportsv3.agent.policy.Tier` is the single source of truth for tier
-   names. Today `_process_triage_job_harness` and `process_patch_job`
-   both consult `policy.tier_for`; if any other code path hard-codes
-   tier names, fix that first.
+   names — no other code path hard-codes tier strings.
 3. `state.db`'s `jobs` table is being populated for new jobs (the
-   `_post_job_upsert` plumbing from `f1272152971`). Verify with the
-   smoke `curl http://127.0.0.1:8788/v1/jobs/upsert ...` and a
-   `SELECT * FROM jobs LIMIT 5`.
+   `_post_job_upsert` plumbing from `f1272152971`).
 
 If any precondition fails, fix it first, don't paper over.
 
-## Layer 1: Job lifecycle
+## Decision points before starting
 
-### The state set
+Two things the operator should confirm before Step 1 lands:
 
-Final, explicit, exhaustive:
+1. **Pilot choice:** is "cheap → strong on gave-up" the right pilot?
+   Alternative is a layer-3 health-probe pilot. Two-model gives
+   broader interface coverage; health is smaller and safer.
+2. **Schema migration window:** confirm production `state.db` can
+   absorb `ALTER TABLE ADD COLUMN` + a new table during a runner
+   restart. Should be trivial but worth a one-line ack.
+
+---
+
+## The state set (used by all steps)
+
+Final, explicit, exhaustive. Codified in `lifecycle.py:JobState`:
 
 ```
-queued       — written by hook on dsynth failure, .job file in pending/
+queued       — written by hook on dsynth failure (.job file in pending/)
 claimed      — runner has moved .job to inflight/, before any step starts
 triaging     — TriageStep running
 triaged      — TriageStep complete, awaiting next-step decision
 patching     — PatchAttemptStep running (one attempt)
-verifying    — RebuildVerifyStep running (separate from patching;
-               currently fused into the patch LLM call — pilot will
-               split them)
+verifying    — RebuildVerifyStep running (separate from patching)
 done         — rebuild_ok=true, no further work
 escalated    — MANUAL tier resolved; operator must act
-dead         — terminal failure: env_broken, parse error, exhausted
-               budget without progress
+dead         — terminal: env_broken, parse error, exhausted budget
+               without progress, etc.
 ```
 
-Allowed transitions are a small fixed table; anything else is a
-bug. Codified as a Python `dict[tuple[State, Event], State]`.
+Allowed transitions are a small fixed table; anything else is a bug.
 
-### The schema
+---
 
-One migration:
+## Step 1 — Schema migration
 
+**Goal:** land the database surface for the state machine. No
+consumers yet.
+
+**Files:**
+- `scripts/generator/dportsv3/db/schema.py` — modified
+
+**Schema additions:**
 ```sql
-ALTER TABLE jobs ADD COLUMN state_machine_state TEXT;  -- the new typed value
-ALTER TABLE jobs ADD COLUMN last_transition_at TEXT;
-ALTER TABLE jobs ADD COLUMN retire_reason TEXT;        -- why dead/escalated
-```
-
-The existing `jobs.state` column stays — it's a coarse filesystem-
-queue mirror used by the UI today. The new `state_machine_state`
-column is the typed source of truth. UI templates will eventually
-read the new column; in Phase 1 we just populate both and let the
-old column become read-only legacy.
-
-`event_log` table — new, not folding into existing `activity_log`
-(different schemas, different consumers):
-
-```sql
-CREATE TABLE job_events (
+-- in SCHEMA executescript block
+CREATE TABLE IF NOT EXISTS job_events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     ts TEXT NOT NULL,
     job_id TEXT NOT NULL,
@@ -103,245 +101,490 @@ CREATE TABLE job_events (
     event_name TEXT NOT NULL,
     detail_json TEXT
 );
-CREATE INDEX idx_job_events_job ON job_events(job_id, id);
+CREATE INDEX IF NOT EXISTS idx_job_events_job ON job_events(job_id, id);
+
+-- in MIGRATIONS tuple
+"ALTER TABLE jobs ADD COLUMN state_machine_state TEXT",
+"ALTER TABLE jobs ADD COLUMN last_transition_at TEXT",
+"ALTER TABLE jobs ADD COLUMN retire_reason TEXT",
 ```
 
-One row per transition. The job's current `state_machine_state` is
-`SELECT to_state FROM job_events WHERE job_id = ? ORDER BY id DESC LIMIT 1`.
-Caching that in `jobs.state_machine_state` is a denormalization for
-query speed; `job_events` is authoritative.
+**Tests:**
+- `test_schema_migration.py` (new): open a temp DB through
+  `init_db()`, assert the three new `jobs` columns exist and
+  `job_events` table is reachable. Existing tests must keep passing
+  (idempotent ALTER).
 
-### The transitions module
+**Cutover criteria:**
+- `pytest scripts/generator/tests/` green.
+- Manual: `sqlite3 production-state.db < schema.sql` (or just
+  restart artifact-store, which runs `init_db()`) and `SELECT *
+  FROM job_events` returns empty without error.
 
-New file `scripts/generator/dportsv3/agent/lifecycle.py`:
+**Done criteria:** new columns + table visible in schema, no
+consumers wired up yet. The `state_machine_state` column will be
+NULL for all existing rows — that's expected; legacy rows aren't
+migrated.
+
+**Dependencies:** none.
+
+**Rollback:** revert the commit; columns + table stay (sqlite has
+no DROP COLUMN, and dropping an empty table is harmless to leave).
+
+**Commit:** `feat(db): add job_events table + state_machine_state column`
+
+---
+
+## Step 2 — Lifecycle module
+
+**Goal:** the typed state machine itself. Pure logic + sqlite, no
+LLM, no subprocess, no file I/O. Not wired up yet.
+
+**Files:**
+- `scripts/generator/dportsv3/agent/lifecycle.py` — new
+- `scripts/generator/tests/test_lifecycle.py` — new
+
+**Interface:**
 
 ```python
-class JobState(StrEnum): ...
-class JobEvent(StrEnum): ...
-@dataclass
-class Transition: from_state, event, to_state, guard?
+from enum import StrEnum
 
-TRANSITIONS: dict[tuple[JobState, JobEvent], JobState] = {...}
+class JobState(StrEnum):
+    QUEUED = "queued"
+    CLAIMED = "claimed"
+    TRIAGING = "triaging"
+    TRIAGED = "triaged"
+    PATCHING = "patching"
+    VERIFYING = "verifying"
+    DONE = "done"
+    ESCALATED = "escalated"
+    DEAD = "dead"
 
-def apply(conn, job_id, event, detail=None) -> JobState:
-    """Atomic state transition.
+class JobEvent(StrEnum):
+    HOOK_ENQUEUED       = "hook_enqueued"          # → QUEUED
+    CLAIM               = "claim"                  # QUEUED → CLAIMED
+    TRIAGE_START        = "triage_start"           # CLAIMED → TRIAGING
+    TRIAGE_OK           = "triage_ok"              # TRIAGING → TRIAGED
+    TRIAGE_FAIL         = "triage_fail"            # TRIAGING → DEAD
+    PATCH_START         = "patch_start"            # TRIAGED → PATCHING
+    PATCH_OK            = "patch_ok"               # PATCHING → VERIFYING
+    PATCH_GAVE_UP       = "patch_gave_up"          # PATCHING → DEAD
+    PATCH_BUDGET_OUT    = "patch_budget_out"       # PATCHING → DEAD
+    VERIFY_OK           = "verify_ok"              # VERIFYING → DONE
+    VERIFY_FAIL         = "verify_fail"            # VERIFYING → DEAD
+    ESCALATE_MANUAL     = "escalate_manual"        # TRIAGED → ESCALATED
+    ENV_BROKEN          = "env_broken"             # any → DEAD
 
-    Reads current state, validates (state, event) is in TRANSITIONS,
-    writes a row to job_events, updates jobs.state_machine_state, all
-    under one transaction. Raises IllegalTransition if invalid.
+TRANSITIONS: dict[tuple[JobState | None, JobEvent], JobState] = {
+    (None, JobEvent.HOOK_ENQUEUED): JobState.QUEUED,
+    (JobState.QUEUED, JobEvent.CLAIM): JobState.CLAIMED,
+    (JobState.CLAIMED, JobEvent.TRIAGE_START): JobState.TRIAGING,
+    # ... etc, exhaustive
+}
+
+class IllegalTransition(Exception): ...
+
+def apply(
+    conn: sqlite3.Connection,
+    job_id: str,
+    event: JobEvent,
+    detail: dict | None = None,
+) -> JobState:
+    """Atomic state transition under one transaction.
+
+    Reads current state from jobs.state_machine_state (or None for new
+    jobs), validates (state, event) is in TRANSITIONS, writes a
+    job_events row + updates jobs.state_machine_state +
+    jobs.last_transition_at. Raises IllegalTransition for invalid
+    transitions.
     """
 
-def current(conn, job_id) -> JobState: ...
+def current(conn: sqlite3.Connection, job_id: str) -> JobState | None:
+    """Latest state. Authoritative source is job_events; jobs.state_machine_state
+    is a denormalized cache, fall back to event log on mismatch."""
+
+def history(conn: sqlite3.Connection, job_id: str) -> list[dict]:
+    """Ordered list of job_events rows for this job, oldest first."""
 ```
 
-No file I/O, no LLM calls, no subprocess. Pure state-machine logic
-+ sqlite. ~150 LOC.
+**Tests** (`test_lifecycle.py`):
+- Every defined `(state, event) → state` round-trips through
+  `apply()` and writes exactly one event row.
+- Disallowed transitions raise `IllegalTransition` and write no row.
+- `current()` returns the latest event's `to_state` even when the
+  denormalized `jobs.state_machine_state` is stale (simulate by
+  inserting a `job_events` row without updating `jobs`).
+- Concurrent `apply()` from two threads: under sqlite WAL + BEGIN
+  IMMEDIATE, one wins, other raises `sqlite3.OperationalError` or
+  `IllegalTransition` based on whether the first commit landed in
+  time. Both behaviors are acceptable; the invariant is "no double
+  apply."
+- `history()` returns rows in id order, oldest first.
+- A full path test: `QUEUED → CLAIMED → TRIAGING → TRIAGED →
+  PATCHING → VERIFYING → DONE` produces 6 transitions.
 
-### Wiring into the runner
+**Cutover criteria:** `pytest test_lifecycle.py` green.
 
-Hard cutover: the existing `move_job(path, dest)` + `_post_job_upsert(job_id, state)` pairs are replaced by a single `lifecycle.apply(conn, job_id, event)` call. The filesystem move stays
-(`.job` files are still the inbox); the state update goes through
-the new module.
+**Done criteria:** module exists, fully tested, **no call sites in
+the runner yet**. Importable from
+`scripts/generator/dportsv3/agent/lifecycle.py`.
 
-Touched files:
-- `scripts/agent-queue-runner` — the four upsert call sites become
-  `lifecycle.apply()` calls with explicit event names (`claimed`,
-  `triage_started`, `triage_succeeded`, `patch_succeeded`, etc.).
-  `_post_job_upsert` is **deleted** in the same commit.
-- `scripts/generator/dportsv3/artifact_store.py` — the
-  `/v1/jobs/upsert` endpoint stays for hook-fired writes (the
-  `queued` transition), but internally it calls `lifecycle.apply()`.
-  No more direct `INSERT INTO jobs`.
+**Dependencies:** Step 1.
 
-### Tests
+**Rollback:** revert the commit; no consumers depend on it.
 
-`scripts/generator/tests/test_lifecycle.py`:
+**Commit:** `feat(agent): job lifecycle state machine`
 
-1. Every defined `(state, event) → state` round-trips through
-   `apply()` and writes one event row.
-2. Disallowed transitions raise `IllegalTransition` and write no row.
-3. `current()` returns the latest event's `to_state` even if the
-   denormalized `jobs.state_machine_state` is stale (simulate by
-   updating only `job_events`).
-4. Concurrent `apply()` from two threads: exactly one wins,
-   the other sees the post-conditional state and either raises or
-   no-ops based on event semantics.
-5. End-to-end through a synthetic job: `queued → claimed → triaging →
-   triaged → patching → verifying → done` produces 6 event rows in
-   order.
+---
 
-## The pilot: TwoModelEscalationStep
+## Step 3 — Extract `run_patch_attempt`
 
-### What it does
+**Goal:** refactor today's patch invocation into a single callable
+function with no behavior change. Sets the stage for the pilot
+(Step 5) to compose multiple attempts.
 
-A patch job today runs one attempt loop with one model (the
-fallback handles unset patch model). The pilot adds a step that:
+This is a **pure refactor** — same inputs, same outputs, same side
+effects, just relocated.
 
-1. Runs the patch agent with a **cheap model** for one attempt.
-2. If the outcome is `gave-up` (the Patch Log explicitly states the
-   agent couldn't make progress), runs a **second attempt with a
-   strong model**, seeding the prompt with the cheap model's
-   gave-up reasoning.
-3. Returns the final outcome.
+**Files:**
+- `scripts/generator/dportsv3/agent/patch.py` — modified
+- `scripts/agent-queue-runner` — modified (one call site)
+- `scripts/generator/tests/test_patch_attempt.py` — new (lightweight)
 
-This is the smallest feature that exercises:
-- The `Decision` shape (which model to use for which attempt)
-- The `Budget` shape (each attempt has its own budget)
-- The `Step` protocol's `run(ctx) -> Outcome` shape
-- An event stream consumer (each attempt's outcome is an event)
-
-It's **not** the full Step Protocol; we're hand-shaping one step to
-see what the protocol should look like.
-
-### Implementation
-
-New file `scripts/generator/dportsv3/agent/steps/two_model_escalation.py`:
+**Interface:**
 
 ```python
+# in dportsv3/agent/patch.py
 @dataclass
-class TwoModelEscalationConfig:
-    cheap_model: str               # DP_HARNESS_PATCH_MODEL_CHEAP or fallback
-    strong_model: str              # DP_HARNESS_PATCH_MODEL_STRONG (required for escalation)
-    cheap_budget: Budget           # max_iterations=1, smaller max_tokens
-    strong_budget: Budget          # max_iterations=2, larger max_tokens
+class PatchAttemptConfig:
+    model: str
+    tier: Tier
+    env: str
+    api_base: str | None
+    api_key: str | None
+    custom_llm_provider: str | None
+    timeout: int
+    seed_context: str | None = None   # extra user message prepended (None today)
 
-def run(ctx: JobContext, config: TwoModelEscalationConfig) -> StepOutcome:
-    cheap_result = run_patch_attempt(ctx, model=config.cheap_model, budget=config.cheap_budget)
-    if cheap_result.status == "success":
-        return success_outcome(cheap_result)
-    if not _is_gave_up(cheap_result):
-        # budget-exhausted, needs-help — don't waste the strong model on a thrasher
-        return needs_help_outcome(cheap_result)
-    # Strong model gets the cheap model's gave-up reasoning as seed context
-    seed = _format_gave_up_context(cheap_result)
-    strong_result = run_patch_attempt(ctx, model=config.strong_model, budget=config.strong_budget, seed_context=seed)
-    return outcome_from(strong_result, prior_attempts=[cheap_result])
+def run_attempt(payload: str, config: PatchAttemptConfig,
+                on_event=None) -> PatchResult:
+    """One patch attempt, model-agnostic. Today's harness_patch.run
+    becomes a one-line wrapper that builds a PatchAttemptConfig.
+    """
 ```
 
-`run_patch_attempt` is a refactor extraction of today's
-`harness_patch.run(...)` call — the existing code becomes a single
-function the new step calls. No behavior change in the existing path.
+Today's `harness_patch.run(payload, tier=..., env=..., model=..., ...)`
+becomes:
 
-### Configuration
-
-Two new env vars:
-
-```
-DP_HARNESS_PATCH_MODEL_CHEAP   — defaults to DP_HARNESS_TRIAGE_MODEL
-DP_HARNESS_PATCH_MODEL_STRONG  — required to enable escalation;
-                                 if unset, only the cheap attempt runs
-                                 (one-shot, today's behavior)
+```python
+def run(payload, *, tier, env, model, ...) -> PatchResult:
+    config = PatchAttemptConfig(model=model, tier=tier, env=env, ...)
+    return run_attempt(payload, config, on_event=on_event)
 ```
 
-Feature flag: `DP_HARNESS_TWO_MODEL_ESCALATION=1` to enable. Off by
-default during Phase 1 so we don't change production behavior; the
-operator turns it on per test.
+**Tests** (`test_patch_attempt.py`):
+- Trivial smoke test: a stubbed LLM module (monkeypatched) returns
+  a canned response with `Rebuild Proof JSON {rebuild_ok: true}`;
+  `run_attempt(...)` returns a `PatchResult` with `status="success"`.
+- Same payload, `seed_context="foo bar"`: messages array passed to
+  the LLM stub contains `"foo bar"` as a user message.
 
-### Tests
+**Cutover criteria:**
+- Existing patch end-to-end on a known port still succeeds (smoke
+  manual test against a real bundle).
+- `pytest` green.
+- No diff in `analysis/patch_audit.json` shape for a frozen bundle
+  before vs. after this commit.
 
-`scripts/generator/tests/test_two_model_escalation.py`:
+**Done criteria:** `run_attempt` exists, `run` calls it, behavior
+identical.
 
-1. Cheap succeeds → strong is never called.
-2. Cheap returns gave-up → strong is called with seed context that
-   contains the cheap model's Patch Log.
-3. Cheap returns budget-exhausted → strong is not called (escalation
-   is only for gave-up, not for thrash).
-4. `DP_HARNESS_PATCH_MODEL_STRONG` unset → escalation skipped, even
-   if `TWO_MODEL_ESCALATION=1`.
+**Dependencies:** none (purely a refactor of existing code).
 
-### What the pilot teaches us
+**Rollback:** revert; runner reverts to calling `harness_patch.run`
+directly.
 
-The interfaces that emerge will inform the future `Step` protocol:
+**Commit:** `refactor(agent): extract run_patch_attempt from
+harness_patch.run`
 
-- Does `JobContext` need to carry prior attempts? (Likely yes —
-  seed context.)
-- Should `Budget` be per-step or per-attempt? (Pilot says
-  per-attempt because we have two budgets here.)
-- How does a step emit events without coupling to the runner's
-  callback shape? (Pilot will probably show that the callback shape
-  needs to be a typed protocol, not `dict[str, Any]`.)
-- What's the right `StepOutcome` shape — single `status` enum, or a
-  union of named outcomes? (Pilot has at least `success`,
-  `gave-up`, `needs-help`, `budget-exhausted` — does the
-  orchestrator branch on these, or does the step pre-resolve them
-  into one of {`continue_next`, `stop_done`, `stop_escalate`}?)
+---
 
-These questions get sketched in code, not on paper. If the pilot
-feels natural to write, the layering is right. If it's painful,
-redesign the layer before generalizing.
+## Step 4 — Runner cutover to `lifecycle.apply()`
 
-## Test strategy
+**Goal:** the hard cutover. Replace `_post_job_upsert` with
+`lifecycle.apply()` at every call site, **delete** `_post_job_upsert`
+in the same commit.
 
-Two test suites land with this phase:
+**Files:**
+- `scripts/agent-queue-runner` — modified (5 call sites:
+  enqueue_triage, enqueue_patch, claim_next_job_batch, success-path,
+  failure-path)
+- `scripts/generator/dportsv3/artifact_store.py` — modified
+  (the `/v1/jobs/upsert` endpoint internally calls
+  `lifecycle.apply(...)` instead of `upsert_job(...)`)
 
-1. **Unit:** `test_lifecycle.py` (state machine), `test_two_model_escalation.py`
-   (pilot).
-2. **Integration:** one new test in `scripts/generator/tests/` that
-   runs a full job through: hook-fired (synthetic .job file
-   creation) → runner picks it up → lifecycle transitions all fire
-   → ends in `done` or `escalated` with the right event rows in
-   `job_events`. Uses a stubbed LLM (deterministic responses) and a
-   throwaway sqlite DB.
+**Mapping (existing → new):**
 
-CI considerations:
-- No DragonFly-specific assumptions in unit tests — they must pass
-  on macOS and Linux for the generator venv.
-- Integration tests can require dfly (the worker calls subprocess
-  `dportsv3 dev-env exec`) — gate them with a marker.
+| Old call | Replacement |
+|---|---|
+| `_post_job_upsert(job_id, "pending", job=..., path=...)` after `enqueue_triage_job` | `lifecycle.apply(conn, job_id, JobEvent.HOOK_ENQUEUED, detail={...})` |
+| `_post_job_upsert(job_id, "pending", ...)` after `enqueue_patch_job` | `lifecycle.apply(conn, job_id, JobEvent.HOOK_ENQUEUED, detail={"type": "patch", ...})` |
+| `_post_job_upsert(lead_dest.name, "inflight", ...)` in `claim_next_job_batch` | `lifecycle.apply(conn, lead_id, JobEvent.CLAIM)` |
+| `_post_job_upsert(s_dest.name, "inflight", ...)` for siblings | `lifecycle.apply(conn, sibling_id, JobEvent.CLAIM)` |
+| `_post_job_upsert(job_id, "done", ...)` success path | `lifecycle.apply(conn, job_id, JobEvent.VERIFY_OK, detail={...})` |
+| `_post_job_upsert(job_id, "failed", ..., last_error=msg)` failure path | `lifecycle.apply(conn, job_id, JobEvent.<appropriate fail event>, detail={"last_error": msg})` |
 
-## Cutover criteria
+The failure path needs to map the failure reason to the right event:
+`patch_gave_up`, `patch_budget_out`, `verify_fail`, or `env_broken`.
 
-Phase 1 is "done" when:
+**Hook side (already POSTs `/v1/jobs/upsert`):** unchanged on the
+shell side; the artifact-store endpoint dispatches into
+`lifecycle.apply(HOOK_ENQUEUED)`.
 
-1. `jobs.state_machine_state` is populated for every new job by
-   the runner. (`SELECT DISTINCT state_machine_state FROM jobs
-   WHERE last_seen_at > '<phase-start>'` shows only the typed
-   states, no NULLs.)
-2. `_post_job_upsert` is **deleted** from
-   `scripts/agent-queue-runner`. (`grep -n _post_job_upsert scripts/` returns nothing.)
-3. `lifecycle.py` test suite is green on CI.
-4. The pilot runs end-to-end on at least one real failing port:
-   cheap model attempts, returns `gave-up`, strong model picks up
-   the seed context, produces a patch. `job_events` table contains
-   the expected transition rows.
-5. The existing UI's `/agentic/jobs` page renders without errors
-   against the new schema (it can keep reading `jobs.state` —
-   that column still exists and is populated; we just add
-   `state_machine_state` alongside).
+**The legacy `jobs.state` column** stays populated for UI
+backward-compat. Inside `lifecycle.apply()`, when transitioning into
+a state, also update the old `jobs.state` mapping:
+
+```
+QUEUED              → "pending"
+CLAIMED             → "inflight"
+TRIAGING, TRIAGED   → "inflight"
+PATCHING, VERIFYING → "inflight"
+DONE                → "done"
+ESCALATED, DEAD     → "failed"
+```
+
+This keeps the existing `/agentic/jobs` UI working without any
+template change in Phase 1.
+
+**Tests:**
+- Existing tests must still pass.
+- New: a small integration that enqueues a synthetic .job (via the
+  artifact-store endpoint), claims it via the runner code path,
+  fakes success, and asserts `current() == DONE` and the
+  `job_events` row count is the expected number.
+
+**Cutover criteria:**
+- `grep -n "_post_job_upsert\|upsert_job\b" scripts/` returns no
+  matches in runner/artifact-store.
+- After one real run, every `jobs.state_machine_state` for newly-
+  created rows is non-NULL and one of the typed values.
+- UI `/agentic/jobs` renders without errors.
+
+**Done criteria:** all state writes go through `lifecycle.apply()`;
+old function deleted.
+
+**Dependencies:** Step 1, Step 2.
+
+**Rollback:** revert. Old code returns; no DB cleanup needed
+(`state_machine_state` column will just stop getting updated for
+new jobs).
+
+**Commit:** `refactor(runner): route job state changes through
+lifecycle.apply()`
+
+---
+
+## Step 5 — Pilot: `TwoModelEscalationStep`
+
+**Goal:** add the pilot feature. Feature-flagged **off** by default
+so production behavior doesn't change until the operator opts in.
+
+**Files:**
+- `scripts/generator/dportsv3/agent/steps/__init__.py` — new
+- `scripts/generator/dportsv3/agent/steps/two_model_escalation.py` — new
+- `scripts/agent-queue-runner` — modified (conditionally dispatch to
+  pilot when `DP_HARNESS_TWO_MODEL_ESCALATION=1`)
+- `scripts/generator/tests/test_two_model_escalation.py` — new
+
+**Interface:**
+
+```python
+# dportsv3/agent/steps/two_model_escalation.py
+@dataclass
+class TwoModelConfig:
+    cheap_model: str
+    strong_model: str | None      # None disables escalation
+    cheap_tier: Tier              # max_iterations=1, smaller max_tokens
+    strong_tier: Tier             # max_iterations=2, larger max_tokens
+    env: str
+    api_base: str | None
+    api_key: str | None
+    custom_llm_provider: str | None
+    timeout: int
+
+@dataclass
+class TwoModelResult:
+    status: Literal["success", "needs-help", "budget-exhausted", "escalated"]
+    final_result: PatchResult     # the winning (or last) attempt
+    attempts: list[PatchResult]   # all attempts, ordered
+
+def run(payload: str, config: TwoModelConfig, on_event=None) -> TwoModelResult: ...
+```
+
+Internals:
+
+```python
+cheap = run_patch_attempt(payload, PatchAttemptConfig(
+    model=config.cheap_model, tier=config.cheap_tier, ...))
+if cheap.status == "success":
+    return TwoModelResult(status="success", final_result=cheap, attempts=[cheap])
+if not _is_gave_up(cheap):
+    # budget-exhausted or needs-help: don't escalate (thrasher)
+    return TwoModelResult(status=cheap.status, final_result=cheap, attempts=[cheap])
+if not config.strong_model:
+    return TwoModelResult(status="needs-help", final_result=cheap, attempts=[cheap])
+seed = _format_gave_up_seed(cheap)
+strong = run_patch_attempt(payload, PatchAttemptConfig(
+    model=config.strong_model, tier=config.strong_tier,
+    seed_context=seed, ...))
+status = "success" if strong.status == "success" else "escalated"
+return TwoModelResult(status=status, final_result=strong, attempts=[cheap, strong])
+```
+
+`_is_gave_up`: parse `Rebuild Status:` from `cheap.final_text`,
+return True iff value is `"gave-up"`.
+
+`_format_gave_up_seed`: extract `## Patch Log` from `cheap.final_text`
+and wrap as: `"Prior attempt with model X gave up. Their Patch Log:
+\n<log>\nLearn from this and try a different approach."`
+
+**Runner wiring:**
+
+```python
+if os.environ.get("DP_HARNESS_TWO_MODEL_ESCALATION") == "1":
+    # use TwoModelEscalationStep
+    cheap_model = os.environ.get("DP_HARNESS_PATCH_MODEL_CHEAP",
+                                  os.environ.get("DP_HARNESS_TRIAGE_MODEL"))
+    strong_model = os.environ.get("DP_HARNESS_PATCH_MODEL_STRONG") or None
+    # ...
+    result = two_model.run(payload, TwoModelConfig(...), on_event=_on_event)
+    # adapt TwoModelResult → PatchResult for downstream code that expects PatchResult
+else:
+    # today's single-model path (still via run_patch_attempt)
+    result = run_patch_attempt(payload, single_model_config, on_event=_on_event)
+```
+
+**Tests** (`test_two_model_escalation.py`, all with stubbed LLM):
+- Cheap returns success → strong never called; `attempts == [cheap]`.
+- Cheap returns gave-up, strong returns success → both called,
+  strong gets the cheap log as seed, `attempts == [cheap, strong]`,
+  `status == "success"`.
+- Cheap returns budget-exhausted → strong not called (don't
+  escalate thrashers).
+- Cheap returns gave-up, `strong_model = None` → not called,
+  result status is `"needs-help"`.
+- Cheap returns gave-up, strong returns gave-up → result status is
+  `"escalated"`.
+
+**Cutover criteria:**
+- All unit tests green.
+- Feature flag is **off** by default; running with no env-var
+  change uses today's path.
+- Manual: enable flag, set both model env-vars, trigger a known
+  fixable port, watch the activity log show two attempts.
+
+**Done criteria:** pilot reachable behind flag; default behavior
+unchanged.
+
+**Dependencies:** Step 3 (`run_patch_attempt`), Step 4 (so
+`lifecycle.apply()` emits the right events when the pilot triggers
+two attempts back-to-back). Step 1, 2 transitively.
+
+**Rollback:** revert; feature flag becomes a no-op.
+
+**Commit:** `feat(agent): TwoModelEscalationStep pilot
+(feature-flagged)`
+
+---
+
+## Step 6 — Integration test
+
+**Goal:** end-to-end test that drives a synthetic job through the
+runner's main loop using a stubbed LLM + throwaway sqlite DB.
+Catches integration-level breakage that unit tests miss.
+
+**Files:**
+- `scripts/generator/tests/test_runner_e2e_lifecycle.py` — new
+- Possibly a small `scripts/generator/tests/_stubs/` directory for
+  reusable LLM stubs.
+
+**Test shape:**
+
+```python
+def test_full_lifecycle_to_done(tmp_path, monkeypatch):
+    # 1. Build a throwaway queue + state.db.
+    # 2. Monkeypatch dportsv3.agent.llm.complete to return canned
+    #    responses (triage + patch + rebuild_proof rebuild_ok=true).
+    # 3. Monkeypatch dportsv3.agent.worker tool calls to no-op
+    #    (we're not testing tools here, we're testing the loop).
+    # 4. Drop a .job file in pending/.
+    # 5. Run the runner main loop with --once.
+    # 6. Assert:
+    #    - lifecycle.history(conn, job_id) shows the expected
+    #      transition sequence
+    #    - jobs.state_machine_state == "done"
+    #    - the bundle has triage.md, patch.md, rebuild_proof.json,
+    #      tool_trace.jsonl
+```
+
+Other test cases:
+- `test_full_lifecycle_to_escalated`: triage classifies as
+  `missing-dep` (MANUAL tier) → no patch enqueue → final state
+  ESCALATED.
+- `test_pilot_escalates_to_strong`: with feature flag on, cheap LLM
+  stub returns gave-up, strong LLM stub returns success → both
+  attempts executed.
+
+**Cutover criteria:**
+- Tests green on CI (Linux/macOS — gate the dev-env-shelling tests
+  on dfly via pytest marker).
+- Test runs in under 5 seconds (no real LLM calls, no real
+  subprocess).
+
+**Done criteria:** at least three integration tests covering the
+happy path, the escalation path, and the pilot. CI green.
+
+**Dependencies:** Steps 1–5.
+
+**Rollback:** revert; no production impact, tests just disappear.
+
+**Commit:** `test(agent): end-to-end lifecycle + pilot integration`
+
+---
+
+## Phase 1 cutover criteria (overall)
+
+Phase 1 is "done" when **all** of:
+
+1. Steps 1–6 are all committed and reviewed.
+2. `pytest scripts/generator/tests/` green.
+3. `grep -n "_post_job_upsert\|upsert_job\b" scripts/` returns no
+   matches in runner/artifact-store.
+4. Manual smoke: run a real dsynth failure end-to-end with the
+   feature flag **off**. Confirm:
+   - `jobs.state_machine_state` is non-NULL and one of the typed
+     values for the new row.
+   - `job_events` has the expected sequence of transitions.
+   - UI `/agentic/jobs` and `/agentic/jobs/<id>` render correctly.
+5. Manual smoke: same run with `DP_HARNESS_TWO_MODEL_ESCALATION=1`,
+   both model env-vars set. Confirm two attempts run when triage
+   classifies AUTO/ASSIST and the cheap model gives up.
+6. This `agentic-framework-plan.md` file gets **rewritten** for
+   Phase 2 (probably layer 3 health). The Phase 1 content moves to
+   a one-paragraph summary in `agentic-framework-design.md` under
+   "completed phases."
 
 ## Risk + rollback
 
-The hard cutover means there's no "old code path" to fall back to
-within Phase 1. Rollback is git revert of the Phase 1 commits.
-
-Specific risks:
-
-| Risk | Mitigation |
-|---|---|
-| `lifecycle.apply()` deadlocks under contention | sqlite WAL + `busy_timeout=5000` already in `init_db`; tests cover concurrent transitions. |
-| Existing UI breaks when reading `jobs.state` because we changed semantics | We don't change `jobs.state` semantics. We add a new column. The old column keeps its today behavior until Phase N retires it. |
-| Pilot's strong model is expensive to invoke per test | Feature-flagged off by default; only operator-triggered tests exercise it. Synthetic LLM in unit tests. |
-| Migration script fails partway on a non-empty DB | `ALTER TABLE ... ADD COLUMN` is idempotent under the existing `MIGRATIONS` tuple pattern in `db/schema.py`; the migration is one line. No data backfill needed (NULL is fine for the legacy rows). |
-
-## Commit structure
-
-Five commits, ordered:
-
-1. `feat(db): add job_events table + state_machine_state column`
-   — schema only, no consumers. Lands the migration.
-2. `feat(agent): job lifecycle state machine`
-   — `lifecycle.py` + tests. No call sites yet.
-3. `refactor(runner): route job state changes through lifecycle.apply()`
-   — cutover. Deletes `_post_job_upsert`. Touches the four runner
-   call sites + the artifact-store endpoint.
-4. `feat(agent): TwoModelEscalationStep pilot`
-   — new step + env-var wiring + unit tests. Feature-flagged off.
-5. `test(agent): end-to-end lifecycle + pilot`
-   — integration test that proves the full chain works on a stubbed
-   LLM + throwaway DB.
-
-Each commit is independently reviewable and runnable. CI must pass
-on each.
+| Step | Risk | Mitigation |
+|---|---|---|
+| 1 | sqlite migration breaks existing DB | `ALTER TABLE ADD COLUMN` is O(1) + idempotent via existing `MIGRATIONS` tuple pattern. Tested on a copy of production state.db first. |
+| 2 | State machine deadlocks under contention | WAL + `busy_timeout=5000` already set in `init_db`. Concurrent test covers it. |
+| 3 | Refactor changes behavior accidentally | Parity smoke against a frozen bundle (manual). |
+| 4 | Hard cutover misses a call site | `grep` checks before commit; integration test (Step 6) catches it post-facto. |
+| 5 | Pilot escalates incorrectly | Feature-flagged off by default; unit tests cover all four outcome branches. |
+| 6 | Tests flaky due to monkeypatch ordering | Use pytest fixtures with explicit teardown; no global state in tests. |
 
 ## What's explicitly not in Phase 1
 
@@ -350,24 +593,35 @@ defer to Phase 2:
 
 - A `Step` Protocol formalized as an ABC. Wait for two more steps
   to exist before drawing the abstraction.
-- Replacing `build_patch_payload`. Phase 4.
-- Replacing `policy.tier_for` + the cap with `decide()`. Phase 3.
-- Surfacing `state_machine_state` in the UI. After Phase 1 ships,
-  small follow-up commit.
-- Generalizing `EnvHealth`. Phase 2.
+- Replacing `build_patch_payload`.
+- Replacing `policy.tier_for` + the cap with `decide()`.
+- Surfacing `state_machine_state` in the UI beyond the existing
+  `jobs.state` mirror.
+- Generalizing `EnvHealth`.
+- Refactoring the existing triage path beyond the small wiring
+  changes in Step 4.
 
-## Decision points before starting
+## Review notes for the operator
 
-Two things the operator should confirm before the first commit lands:
+Things to specifically check when reviewing each step before
+implementation:
 
-1. **Pilot scope:** is "cheap → strong on gave-up" the right pilot?
-   The alternative is a pilot tied to layer 3 instead (a structured
-   `EnvHealth` probe). Two-model escalation exercises layer-1 + a
-   forward sketch of layer-2; health probe exercises layer-3 alone.
-   Two-model gives broader interface coverage; health is smaller
-   and safer.
-2. **Schema migration timing:** the new columns + table are zero-
-   cost on an existing DB (NULL columns + empty table). Confirm
-   that production state.db can absorb the migration without
-   downtime. Should be fine — sqlite ALTER TABLE ADD COLUMN is O(1)
-   — but worth a one-line confirmation.
+- **Step 1:** is the `job_events.detail_json` field schema flexible
+  enough? Should `event_name` be free-form or constrained to the
+  `JobEvent` enum?
+- **Step 2:** are the listed transitions exhaustive? Specifically:
+  what's the right event for "the runner crashed mid-attempt"? Do
+  we need a `CRASH_RECOVERY` event with a transition `* → DEAD`?
+- **Step 3:** does extracting `run_patch_attempt` from
+  `harness_patch.run` introduce any subtle parameter passing issue?
+  In particular `on_event` threading.
+- **Step 4:** does the `JobEvent` → legacy `jobs.state` mapping
+  preserve every behavior the UI relies on? Worth a manual UI walk.
+- **Step 5:** does `_format_gave_up_seed` extract the right text?
+  Should it include the agent's `Patch Plan` JSON too, not just
+  `Patch Log`?
+- **Step 6:** is the stub LLM realistic enough? In particular, does
+  it test the case where `_parse_rebuild_proof` finds the JSON
+  block in the expected place?
+
+Sign off on these before Step 1 starts.
