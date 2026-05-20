@@ -352,38 +352,19 @@ def _materialize_bundle(bundle_id: str, dest: Path) -> int:
     return written
 
 
-def recent_failure_count(target: str, origin: str, window_hours: int) -> int:
-    """Count failure bundles for (target, origin) within a rolling window.
+def _load_port_history(target: str, origin: str, window_hours: int):
+    """Thin lock-wrapper over PortHistory.load using the runner DB.
 
-    Used to detect a per-origin retry loop: if the same port has
-    produced N failed bundles in a short window without ever flipping
-    to success, the agent is burning tokens without progress. The
-    runner uses this to force MANUAL tier and stop auto-enqueuing
-    patch jobs.
-
-    A "success" appearing in the window resets the count by virtue
-    of how dsynth re-runs: a successful build wouldn't generate a
-    failure bundle in the first place.
+    The decision engine's ``PortHistory.load`` does the SQL; this
+    helper just supplies ``_state_db_conn`` under ``_state_db_lock``
+    so callers don't have to import sqlite3 or know about the lock.
     """
+    from dportsv3.agent.decision import PortHistory
+
     if _state_db_conn is None or not origin:
-        return 0
-    cutoff = (
-        datetime.now(timezone.utc)
-        - timedelta(hours=max(0, int(window_hours)))
-    ).isoformat()
-    try:
-        with _state_db_lock:
-            row = _state_db_conn.execute(
-                """SELECT COUNT(*) AS n FROM bundles
-                   WHERE origin = ?
-                     AND (target = ? OR (? = '' AND (target IS NULL OR target = '')))
-                     AND result = 'failure'
-                     AND last_seen_at >= ?""",
-                (origin, target, target, cutoff),
-            ).fetchone()
-        return int(row["n"]) if row else 0
-    except Exception:
-        return 0
+        return PortHistory.empty(target=target or "", origin=origin or "")
+    with _state_db_lock:
+        return PortHistory.load(_state_db_conn, target or "", origin, window_hours)
 
 
 def port_bundle_history(origin: str) -> list[dict]:
@@ -1227,7 +1208,7 @@ def build_patch_payload(
     window_hours = int(os.environ.get("DP_HARNESS_ATTEMPT_WINDOW_HOURS", "2"))
     max_attempts_cap = int(os.environ.get("DP_HARNESS_MAX_PATCH_ATTEMPTS", "3"))
     prior_failures = (
-        recent_failure_count(target_for_ctx, origin_for_ctx, window_hours)
+        _load_port_history(target_for_ctx, origin_for_ctx, window_hours).recent_failures
         if origin_for_ctx else 0
     )
     parts.append("## Automation Context")
@@ -1776,34 +1757,56 @@ def _run_harness_triage_inner(
             job_id=job_id,
         )
         return False, f"policy load failed: {exc}"
-    tier = harness_policy.tier_for(pol, result.classification, result.confidence)
 
-    # Anti-loop: if this origin has already failed N times in a short
-    # window without success, force MANUAL to stop the burn. The agent
-    # is clearly not converging — repeated attempts cost tokens and
-    # produce nothing. Operator can hand-fire a patch job to override.
+    # Decision engine: one decide() call replaces the inline tier-
+    # resolution + retry-cap + env-broken-short-circuit logic.
+    from dportsv3.agent.decision import decide
+
     max_attempts = int(os.environ.get("DP_HARNESS_MAX_PATCH_ATTEMPTS", "3"))
     window_hours = int(os.environ.get("DP_HARNESS_ATTEMPT_WINDOW_HOURS", "2"))
     target_value = job.get("target", "") or ""
-    recent_failures = recent_failure_count(target_value, origin, window_hours)
-    if tier.name != "MANUAL" and recent_failures >= max_attempts:
-        activity_log(
-            queue_root, "tier_capped",
-            f"Forcing MANUAL for {origin}: {recent_failures} failures in "
-            f"last {window_hours}h (>= {max_attempts}). Tier was {tier.name}.",
-            job_id=job_id,
-            extra={
-                "origin": origin,
-                "target": target_value,
-                "recent_failures": recent_failures,
-                "max_attempts": max_attempts,
-                "window_hours": window_hours,
-                "original_tier": tier.name,
-            },
-        )
-        tier = pol.tiers.get("MANUAL") or harness_policy.Tier(name="MANUAL")
+    history = _load_port_history(target_value, origin, window_hours)
 
-    if tier.name == "MANUAL":
+    # Current env health (cached). May be None if DP_HARNESS_ENV is
+    # unset; decide() treats None as ready.
+    env_health = None
+    runner_env_name = os.environ.get("DP_HARNESS_ENV") or ""
+    if runner_env_name:
+        health_ttl = int(os.environ.get("DP_HARNESS_HEALTH_CACHE_SECONDS", "60"))
+        try:
+            env_health = probe_health_cached(runner_env_name, health_ttl)
+        except Exception:
+            env_health = None
+
+    dec = decide(
+        classification=result.classification,
+        confidence=result.confidence,
+        history=history,
+        env_health=env_health,
+        policy=pol,
+        max_attempts=max_attempts,
+        window_hours=window_hours,
+    )
+    tier = dec.tier
+
+    # One activity_log entry per decision, regardless of outcome,
+    # gives the UI a single audit trail row.
+    activity_log(
+        queue_root, "decision",
+        dec.reason,
+        job_id=job_id,
+        extra={**dec.extra, "action": dec.action, "tier": tier.name},
+    )
+
+    if dec.action == "skip":
+        # Env is broken at decision time. The runner gate is already
+        # paused; we don't auto-enqueue a patch and don't flag the
+        # port as MANUAL (the chroot is the fault, not the port).
+        # Triage completion mapping routes to ENV_BROKEN via the
+        # cached probe → job lands DEAD with retire_reason=env_broken.
+        return True, "skipped_env_broken"
+
+    if dec.action == "escalate_manual":
         # Surface low-confidence + non-patchable cases to the operator
         # via the user_context request channel (UI picks them up).
         run_id = job.get("run_id", "")
@@ -2215,10 +2218,14 @@ def _completion_events_for(job_type: str, success: bool, status: str) -> list:
     more lifecycle events.
 
     Triage:
-      success + "done"        -> TRIAGE_OK (terminal-for-triage: TRIAGED)
-      success + "manual_tier" -> TRIAGE_OK, ESCALATE_MANUAL (-> ESCALATED)
-      failure                 -> TRIAGE_FAIL (or ENV_BROKEN if the
-                                 runner-wide flag is set)
+      success + "done"                -> TRIAGE_OK (-> TRIAGED)
+      success + "manual_tier"         -> TRIAGE_OK, ESCALATE_MANUAL
+                                         (-> ESCALATED)
+      success + "skipped_env_broken"  -> handled by the cache check
+                                         above: returns [ENV_BROKEN]
+                                         which lands DEAD with
+                                         retire_reason=env_broken.
+      failure                         -> TRIAGE_FAIL
 
     Patch (single attempt today; verifying step is fused into the
     LLM-driven dsynth_build call, so we fire PATCH_OK + VERIFY_OK as

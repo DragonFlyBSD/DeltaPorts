@@ -94,6 +94,19 @@ def queue_env(tmp_path, monkeypatch):
     # Drop any health cache state from previous tests.
     runner.invalidate_health_cache()
 
+    # Stub the health probe — without DP_HARNESS_ENV the runner skips
+    # the probe; with it (set below), the decision engine probes on
+    # every triage. Default the stub to "ready" so the happy-path
+    # tests don't accidentally route to skip; individual tests that
+    # want a broken env plant a broken EnvHealth into _health_cache.
+    from dportsv3.agent import health as health_mod
+    monkeypatch.setattr(
+        health_mod, "check",
+        lambda env, only=None: health_mod.EnvHealth(
+            env=env, status="ready", probed_at="2026-05-21T00:00:00Z",
+        ),
+    )
+
     # Stub artifact-store HTTP calls (no server in tests).
     monkeypatch.setattr(runner, "artifact_store_put",
                         lambda *a, **kw: True, raising=False)
