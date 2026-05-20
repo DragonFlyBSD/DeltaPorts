@@ -134,6 +134,25 @@ def build_parser() -> argparse.ArgumentParser:
         help="Override source dir for staleness comparison",
     )
 
+    health = subparsers.add_parser(
+        "health",
+        help="Probe env health (python_runtime, writable_overlay, dports_compose); "
+             "exits 0=ready, 1=broken, 2=degraded",
+    )
+    health.add_argument("name", help="Environment name")
+    health.add_argument(
+        "--only",
+        action="append",
+        default=None,
+        help="Run only this check (repeatable). Names: python_runtime, "
+             "writable_overlay, dports_compose.",
+    )
+    health.add_argument(
+        "--no-indent",
+        action="store_true",
+        help="Compact JSON output (single line).",
+    )
+
     return parser
 
 
@@ -382,6 +401,40 @@ def cmd_hooks_status(args: argparse.Namespace) -> int:
     return _impl(args, _hooks_resolve_state(args))
 
 
+def cmd_health(args: argparse.Namespace) -> int:
+    """Run dportsv3.agent.health.check(env) and emit JSON.
+
+    Exit codes:
+        0 = ready (all checks ok)
+        1 = broken (at least one check broken)
+        2 = degraded (warn but no broken)
+
+    The agent package lives in scripts/generator/dportsv3/ — outside
+    the dev-env venv's site-packages — so we add it to sys.path
+    on demand. The health probe itself only uses stdlib + lazy
+    imports of dportsv3.agent.worker.
+    """
+    import json
+
+    generator_dir = Path(__file__).resolve().parents[3] / "generator"
+    if generator_dir.is_dir() and str(generator_dir) not in sys.path:
+        sys.path.insert(0, str(generator_dir))
+    try:
+        from dportsv3.agent import health
+    except ImportError as exc:
+        error(f"could not import dportsv3.agent.health (looked in {generator_dir}): {exc}")
+        return 1
+
+    eh = health.check(args.name, only=args.only)
+    indent = None if args.no_indent else 2
+    print(json.dumps(eh.to_dict(), indent=indent))
+    if eh.status == "ready":
+        return 0
+    if eh.status == "broken":
+        return 1
+    return 2  # degraded
+
+
 def dispatch(args: argparse.Namespace) -> int:
     if args.action is None:
         build_parser().print_help()
@@ -400,6 +453,7 @@ def dispatch(args: argparse.Namespace) -> int:
         "hooks-install": cmd_hooks_install,
         "hooks-uninstall": cmd_hooks_uninstall,
         "hooks-status": cmd_hooks_status,
+        "health": cmd_health,
     }
     return commands[args.action](args)
 
