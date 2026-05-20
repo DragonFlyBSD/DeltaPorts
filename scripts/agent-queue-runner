@@ -79,6 +79,13 @@ _heartbeat_thread: threading.Thread | None = None
 _current_job_id: str | None = None
 _current_stage: str | None = None
 
+# Set when any tool call reports ``error_category=env_broken`` (the
+# dev-env chroot is misconfigured at the OS level). The main loop
+# gates further claims on this so we don't burn LLM tokens against an
+# environment no agent can fix. Operator must restart the runner after
+# repairing the env.
+_env_broken_reason: str | None = None
+
 
 def get_state_db_path(queue_root: Path) -> Path:
     """Get path to state.db (same directory as queue)."""
@@ -1880,6 +1887,19 @@ def _process_patch_job_harness(
         # UI can show live progress while the agent runs.
         trace_events.append(ev)
         et = ev.get("type")
+        # Detect chroot-level failure (missing py311 packages, broken
+        # venv) and trip the runner-wide gate so we don't keep wasting
+        # LLM tokens on something the agent can't fix.
+        if et == "tool_call":
+            res = ev.get("result") or {}
+            if isinstance(res, dict) and res.get("error_category") == "env_broken":
+                global _env_broken_reason
+                _env_broken_reason = res.get("operator_action") or "dev-env chroot is broken"
+                activity_log(
+                    queue_root, "env_broken",
+                    f"dev-env chroot is broken; pausing runner. {_env_broken_reason}",
+                    job_id=job_id, extra={"tool": ev.get("tool")},
+                )
         if et == "attempt_start":
             activity_log(
                 queue_root, "attempt_start",
@@ -2167,6 +2187,15 @@ def main():
 
     def _gate_blocked() -> bool:
         nonlocal _last_busy_reason
+        # env_broken is sticky for the runner's lifetime — operator
+        # must restart after fixing the chroot. No point auto-resuming
+        # since we have no reliable way to retest.
+        if _env_broken_reason:
+            update_runner_status(
+                "paused", job_id=None,
+                stage=f"env_broken: {_env_broken_reason[:120]}",
+            )
+            return True
         if not runner_env:
             return False
         busy, reason = dsynth_active(runner_env, queue_root)
@@ -2194,7 +2223,12 @@ def main():
         else:
             while True:
                 if _gate_blocked():
-                    time.sleep(DSYNTH_LOCK_POLL_SECONDS)
+                    if _env_broken_reason:
+                        # No point checking back fast — operator has to
+                        # restart the runner after fixing the chroot.
+                        time.sleep(60)
+                    else:
+                        time.sleep(DSYNTH_LOCK_POLL_SECONDS)
                     continue
                 process_user_context_updates(queue_root)
                 batch = claim_next_job_batch(queue_root)
