@@ -114,6 +114,25 @@ def _cached_health_broken() -> bool:
     return False
 
 
+def probe_health_cached(env: str, ttl_seconds: int):
+    """Return an EnvHealth for ``env``, using the cache when fresh.
+
+    Re-probes when (a) no cached entry exists, (b) the cached entry
+    is older than ``ttl_seconds``, or (c) the cache was invalidated
+    by ``invalidate_health_cache``. Module-level so tests + the
+    runner gate share one implementation.
+    """
+    from dportsv3.agent import health as health_mod
+
+    now = time.monotonic()
+    cached = _health_cache.get(env)
+    if cached is not None and (now - cached[0]) < ttl_seconds:
+        return cached[1]
+    eh = health_mod.check(env)
+    _health_cache[env] = (now, eh)
+    return eh
+
+
 def _looks_env_suspicious(result: dict) -> bool:
     """Heuristic: does this tool result look like an env-level failure?
 
@@ -2456,17 +2475,6 @@ def main(argv: list[str] | None = None) -> int:
         os.environ.get("DP_HARNESS_HEALTH_CACHE_SECONDS", "60")
     )
 
-    def _probe_health(env: str):
-        """Return an EnvHealth, using the module cache when fresh."""
-        from dportsv3.agent import health as health_mod
-        now = time.monotonic()
-        cached = _health_cache.get(env)
-        if cached is not None and (now - cached[0]) < health_cache_seconds:
-            return cached[1]
-        eh = health_mod.check(env)
-        _health_cache[env] = (now, eh)
-        return eh
-
     def _gate_blocked() -> bool:
         nonlocal _last_busy_reason, _last_health_reason
         # Health probe first. If broken, we pause regardless of
@@ -2475,7 +2483,7 @@ def main(argv: list[str] | None = None) -> int:
         # tool errors that look env-suspicious invalidate the cache
         # so a freshly-broken env is detected on the next gate.
         if runner_env:
-            eh = _probe_health(runner_env)
+            eh = probe_health_cached(runner_env, health_cache_seconds)
             if eh.status == "broken":
                 reason = (eh.operator_action
                           or f"env {runner_env} status=broken")
