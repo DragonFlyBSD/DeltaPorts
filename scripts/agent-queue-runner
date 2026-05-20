@@ -45,7 +45,7 @@ import time
 import urllib.request
 import urllib.error
 import urllib.parse
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 # Make dportsv3.agent.* importable from the standalone runner script.
@@ -232,6 +232,40 @@ def _materialize_bundle(bundle_id: str, dest: Path) -> int:
         out.write_bytes(data)
         written += 1
     return written
+
+
+def recent_failure_count(target: str, origin: str, window_hours: int) -> int:
+    """Count failure bundles for (target, origin) within a rolling window.
+
+    Used to detect a per-origin retry loop: if the same port has
+    produced N failed bundles in a short window without ever flipping
+    to success, the agent is burning tokens without progress. The
+    runner uses this to force MANUAL tier and stop auto-enqueuing
+    patch jobs.
+
+    A "success" appearing in the window resets the count by virtue
+    of how dsynth re-runs: a successful build wouldn't generate a
+    failure bundle in the first place.
+    """
+    if _state_db_conn is None or not origin:
+        return 0
+    cutoff = (
+        datetime.now(timezone.utc)
+        - timedelta(hours=max(0, int(window_hours)))
+    ).isoformat()
+    try:
+        with _state_db_lock:
+            row = _state_db_conn.execute(
+                """SELECT COUNT(*) AS n FROM bundles
+                   WHERE origin = ?
+                     AND (target = ? OR (? = '' AND (target IS NULL OR target = '')))
+                     AND result = 'failure'
+                     AND last_seen_at >= ?""",
+                (origin, target, target, cutoff),
+            ).fetchone()
+        return int(row["n"]) if row else 0
+    except Exception:
+        return 0
 
 
 def port_bundle_history(origin: str) -> list[dict]:
@@ -1063,6 +1097,38 @@ def build_patch_payload(
 
     bundle_id = job.get("bundle_id") if job else None
 
+    # Automation Context — tell the agent it's part of a loop and how
+    # many prior attempts have happened. The system prompt directs the
+    # agent to apply triage's Suggested Fix first; this section anchors
+    # "how much budget have we already spent on this port."
+    origin_for_ctx = (job.get("origin") if job else "") or ""
+    target_for_ctx = (job.get("target") if job else "") or ""
+    iteration = int((job.get("iteration") if job else "1") or "1")
+    max_iterations = int((job.get("max_iterations") if job else "3") or "3")
+    tier_ctx = (job.get("tier") if job else "") or "?"
+    window_hours = int(os.environ.get("DP_HARNESS_ATTEMPT_WINDOW_HOURS", "2"))
+    max_attempts_cap = int(os.environ.get("DP_HARNESS_MAX_PATCH_ATTEMPTS", "3"))
+    prior_failures = (
+        recent_failure_count(target_for_ctx, origin_for_ctx, window_hours)
+        if origin_for_ctx else 0
+    )
+    parts.append("## Automation Context")
+    parts.append(
+        f"- You are the patch agent in an automated DragonFly ports fix loop.\n"
+        f"- This is iteration {iteration}/{max_iterations} for this patch job (tier={tier_ctx}).\n"
+        f"- The same origin has produced {prior_failures} failure bundle(s) "
+        f"in the last {window_hours} hour(s); the runner caps at "
+        f"{max_attempts_cap} before forcing MANUAL.\n"
+        f"- Your goal: either make dsynth_build report rebuild_ok=true, or "
+        f"emit your best proposed fix with `Rebuild Status: gave-up` and a "
+        f"concrete next-step recommendation in Patch Log. Either is a valid "
+        f"outcome — burning the budget without trying anything is not.\n"
+        f"- The Triage Summary below contains a `Suggested Fix` section. "
+        f"**Apply it first.** Only explore further if the suggested fix has "
+        f"already been tried (check Prior Attempts) or doesn't work."
+    )
+    parts.append("")
+
     # Triage summary (most important context)
     triage = read_bundle_text(bundle_dir, bundle_id, "analysis/triage.md")
     if triage:
@@ -1598,6 +1664,31 @@ def _run_harness_triage_inner(
         )
         return False, f"policy load failed: {exc}"
     tier = harness_policy.tier_for(pol, result.classification, result.confidence)
+
+    # Anti-loop: if this origin has already failed N times in a short
+    # window without success, force MANUAL to stop the burn. The agent
+    # is clearly not converging — repeated attempts cost tokens and
+    # produce nothing. Operator can hand-fire a patch job to override.
+    max_attempts = int(os.environ.get("DP_HARNESS_MAX_PATCH_ATTEMPTS", "3"))
+    window_hours = int(os.environ.get("DP_HARNESS_ATTEMPT_WINDOW_HOURS", "2"))
+    target_value = job.get("target", "") or ""
+    recent_failures = recent_failure_count(target_value, origin, window_hours)
+    if tier.name != "MANUAL" and recent_failures >= max_attempts:
+        activity_log(
+            queue_root, "tier_capped",
+            f"Forcing MANUAL for {origin}: {recent_failures} failures in "
+            f"last {window_hours}h (>= {max_attempts}). Tier was {tier.name}.",
+            job_id=job_id,
+            extra={
+                "origin": origin,
+                "target": target_value,
+                "recent_failures": recent_failures,
+                "max_attempts": max_attempts,
+                "window_hours": window_hours,
+                "original_tier": tier.name,
+            },
+        )
+        tier = pol.tiers.get("MANUAL") or harness_policy.Tier(name="MANUAL")
 
     if tier.name == "MANUAL":
         # Surface low-confidence + non-patchable cases to the operator
