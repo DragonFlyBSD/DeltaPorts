@@ -1746,9 +1746,18 @@ def _process_patch_job_harness(
     from dportsv3.agent import patch as harness_patch  # type: ignore[import-not-found]
     from dportsv3.agent import policy as harness_policy  # type: ignore[import-not-found]
 
-    api_base = os.environ.get("DP_HARNESS_PATCH_API_BASE") or None
-    api_key = os.environ.get("DP_HARNESS_PATCH_API_KEY") or None
-    custom_llm_provider = os.environ.get("DP_HARNESS_PATCH_PROVIDER") or None
+    # Companion vars fall back to the triage equivalents when unset, so
+    # an operator who's only configured triage credentials gets a
+    # coherent setup if/when the patch model also falls back.
+    api_base = (os.environ.get("DP_HARNESS_PATCH_API_BASE")
+                or os.environ.get("DP_HARNESS_TRIAGE_API_BASE")
+                or None)
+    api_key = (os.environ.get("DP_HARNESS_PATCH_API_KEY")
+               or os.environ.get("DP_HARNESS_TRIAGE_API_KEY")
+               or None)
+    custom_llm_provider = (os.environ.get("DP_HARNESS_PATCH_PROVIDER")
+                           or os.environ.get("DP_HARNESS_TRIAGE_PROVIDER")
+                           or None)
     timeout = int(os.environ.get("DP_HARNESS_PATCH_TIMEOUT", "600"))
 
     # Resolve the dev-env name. Prefer the explicit job field; fall back to
@@ -1841,9 +1850,20 @@ def process_patch_job(
     """Process a patch job via the dportsv3.agent harness."""
     harness_model = os.environ.get("DP_HARNESS_PATCH_MODEL")
     if not harness_model:
-        msg = "DP_HARNESS_PATCH_MODEL not set; cannot run patch"
-        write_error_note(job_path, msg)
-        return False, msg
+        # Fall back to the triage model so a single env var is enough
+        # to get the loop running. Patch is a different workload
+        # (multi-turn tool calls) — a cheap triage model may produce
+        # weaker fixes or fail tool calling. Operator can set
+        # DP_HARNESS_PATCH_MODEL explicitly to override.
+        harness_model = os.environ.get("DP_HARNESS_TRIAGE_MODEL")
+        if not harness_model:
+            msg = "neither DP_HARNESS_PATCH_MODEL nor DP_HARNESS_TRIAGE_MODEL set"
+            write_error_note(job_path, msg)
+            return False, msg
+        log(queue_root, "WARN",
+            f"DP_HARNESS_PATCH_MODEL unset; falling back to triage model "
+            f"({harness_model}) for patch — set DP_HARNESS_PATCH_MODEL "
+            f"to silence this and likely improve patch quality")
     payload = build_patch_payload(bundle_dir, kedb_dir, job)
     origin = job.get("origin", "unknown")
     job_id = job_path.name
@@ -2003,7 +2023,13 @@ def main():
         kedb_dir = find_kedb_dir()
 
     triage_model = os.environ.get("DP_HARNESS_TRIAGE_MODEL") or "<unset>"
-    patch_model = os.environ.get("DP_HARNESS_PATCH_MODEL") or "<unset>"
+    patch_model_env = os.environ.get("DP_HARNESS_PATCH_MODEL")
+    if patch_model_env:
+        patch_model = patch_model_env
+    elif triage_model != "<unset>":
+        patch_model = f"{triage_model} (fallback from triage)"
+    else:
+        patch_model = "<unset>"
     kedb_info = str(kedb_dir) if kedb_dir else "none"
     log(queue_root, "INFO",
         f"starting runner (once={args.once}, dry_run={args.dry_run}, "
