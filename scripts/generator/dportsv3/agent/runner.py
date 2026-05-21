@@ -2038,6 +2038,29 @@ def main(argv: list[str] | None = None) -> int:
         except Exception as exc:
             log(queue_root, "WARN", f"reap_orphans failed: {exc}")
 
+        # Step 10a: also reap stale QUEUED rows whose .job file has
+        # vanished from pending/ (gated on age + missing-file). Catches
+        # the failure mode where a row records a path the host runner
+        # never scans (in-chroot paths from earlier deployments) and
+        # blocks _has_active_same_origin_job indefinitely.
+        try:
+            max_age = int(os.environ.get(
+                "DPORTSV3_STALE_QUEUED_MAX_AGE_SECONDS", "3600",
+            ))
+            with _state_db_lock:
+                stale = lifecycle.reap_stale_queued(
+                    _state_db_conn, queue_root,
+                    max_age_seconds=max_age,
+                    actor=f"runner-{os.getpid()}",
+                )
+            if stale:
+                log(queue_root, "INFO",
+                    f"reaped {len(stale)} stale queued job(s): "
+                    + ", ".join(stale[:5])
+                    + ("..." if len(stale) > 5 else ""))
+        except Exception as exc:
+            log(queue_root, "WARN", f"reap_stale_queued failed: {exc}")
+
     if args.kedb_dir:
         kedb_dir = Path(args.kedb_dir)
         if not kedb_dir.exists():

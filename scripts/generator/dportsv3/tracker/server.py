@@ -6,6 +6,7 @@ import importlib
 import html
 import json
 import os
+import sqlite3
 from contextlib import contextmanager
 from importlib import util as importlib_util
 from pathlib import Path
@@ -638,6 +639,51 @@ def create_app(db_path: str | Path) -> Any:
         if row is None:
             raise HTTPException(status_code=404, detail=f"Unknown job: {job_id}")
         return row
+
+    @app.post("/api/jobs/{job_id}/abandon")
+    def api_job_abandon(job_id: str) -> dict[str, Any]:
+        """Operator-triggered kill. Transitions a QUEUED or in-flight
+        job to DEAD with ``retire_reason='abandoned'``. Rejects calls
+        against terminal states (DONE/DEAD/ESCALATED) — the operator
+        can't abandon something that's already retired."""
+        from dportsv3.agent import lifecycle as _lc  # noqa: PLC0415
+        with _conn() as conn:
+            row = get_job(conn, job_id)
+        if row is None:
+            raise HTTPException(
+                status_code=404, detail=f"Unknown job: {job_id}",
+            )
+        # lifecycle.apply runs explicit BEGIN IMMEDIATE / COMMIT and
+        # is incompatible with sqlite3's default deferred-transaction
+        # wrapper. Use a dedicated autocommit-mode connection so the
+        # explicit transaction works as authored.
+        write_conn = sqlite3.connect(
+            str(app.state.db_path), check_same_thread=False,
+            isolation_level=None,
+        )
+        write_conn.row_factory = sqlite3.Row
+        try:
+            try:
+                new_state = _lc.apply(
+                    write_conn, job_id, _lc.JobEvent.ABANDON, actor="operator",
+                )
+            except _lc.IllegalTransition as exc:
+                raise HTTPException(
+                    status_code=409,
+                    detail=(
+                        f"Cannot abandon job in state {row.get('state')!r}: "
+                        f"{exc}"
+                    ),
+                )
+        finally:
+            write_conn.close()
+        return {
+            "ok": True,
+            "job_id": job_id,
+            "previous_state": row.get("state"),
+            "new_state": new_state.value,
+            "retire_reason": "abandoned",
+        }
 
     @app.get("/api/bundles")
     def api_bundles(

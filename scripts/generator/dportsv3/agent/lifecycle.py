@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from enum import StrEnum
 
 
@@ -55,6 +55,11 @@ class JobEvent(StrEnum):
     ESCALATE_MANUAL  = "escalate_manual"
     ENV_BROKEN       = "env_broken"
     REAP_ORPHAN      = "reap_orphan"
+    # Step 10b: operator-triggered job kill. Distinct from REAP_ORPHAN
+    # so retire_reason ('abandoned') can be filled differently and
+    # audit history can tell "operator killed this" apart from
+    # "runner restart reaped this".
+    ABANDON          = "abandon"
 
 
 # (from_state, event) -> to_state. ``None`` as from_state means
@@ -98,6 +103,22 @@ TRANSITIONS: dict[tuple[JobState | None, JobEvent], JobState] = {
     (JobState.TRIAGED,     JobEvent.REAP_ORPHAN):      JobState.DEAD,
     (JobState.PATCHING,    JobEvent.REAP_ORPHAN):      JobState.DEAD,
     (JobState.VERIFYING,   JobEvent.REAP_ORPHAN):      JobState.DEAD,
+    # Step 10a: QUEUED jobs can be reaped too, but ONLY by the
+    # stricter ``reap_stale_queued`` helper — never by ``reap_orphans``
+    # (which would kill brand-new claimable work). The state-machine
+    # entry is permissive; the safety lives in the caller.
+    (JobState.QUEUED,      JobEvent.REAP_ORPHAN):      JobState.DEAD,
+
+    # Step 10b: operator-triggered ABANDON. Permitted from QUEUED and
+    # every in-flight state. Terminal states (DONE/DEAD/ESCALATED)
+    # remain off-limits — the operator can't "abandon" something
+    # that's already terminal.
+    (JobState.QUEUED,      JobEvent.ABANDON):          JobState.DEAD,
+    (JobState.CLAIMED,     JobEvent.ABANDON):          JobState.DEAD,
+    (JobState.TRIAGING,    JobEvent.ABANDON):          JobState.DEAD,
+    (JobState.TRIAGED,     JobEvent.ABANDON):          JobState.DEAD,
+    (JobState.PATCHING,    JobEvent.ABANDON):          JobState.DEAD,
+    (JobState.VERIFYING,   JobEvent.ABANDON):          JobState.DEAD,
 }
 
 
@@ -110,6 +131,7 @@ _TERMINAL_REASONS: dict[JobEvent, str] = {
     JobEvent.ESCALATE_MANUAL:  "escalated_manual",
     JobEvent.ENV_BROKEN:       "env_broken",
     JobEvent.REAP_ORPHAN:      "runner_restart",
+    JobEvent.ABANDON:          "abandoned",
 }
 
 
@@ -334,5 +356,60 @@ def reap_orphans(conn: sqlite3.Connection, actor: str = "runner") -> int:
             reaped += 1
         except IllegalTransition:
             # State changed between SELECT and apply() — fine, skip.
+            continue
+    return reaped
+
+
+def reap_stale_queued(
+    conn: sqlite3.Connection,
+    queue_root,                 # Path: host's queue dir; pending/ underneath
+    *,
+    max_age_seconds: int = 3600,
+    actor: str = "runner",
+) -> list[str]:
+    """Reap QUEUED rows whose ``.job`` file is missing from
+    ``queue_root/pending/`` AND whose last transition is older than
+    ``max_age_seconds``.
+
+    Both conditions are required:
+
+    - **File missing.** A queued row whose `.job` file is still on
+      disk in pending/ is legitimate work waiting to be claimed; do
+      not touch it. Missing file = the row references a job that can
+      never advance (the file was swept up, or written into a path the
+      runner doesn't scan — see the chroot-path bug surfaced during
+      first smoke).
+    - **Old.** ``last_transition_at`` (or ``last_seen_at`` as
+      fallback) older than the threshold. Guards against racing with
+      a brand-new HOOK_ENQUEUED whose .job file is *about* to be
+      written.
+
+    Returns the list of reaped ``job_id`` values for logging.
+    """
+    from pathlib import Path  # local import: lifecycle is otherwise stdlib-only
+    pending_dir = Path(queue_root) / "pending"
+
+    cutoff_iso = (
+        datetime.now(timezone.utc) - timedelta(seconds=max_age_seconds)
+    ).isoformat()
+
+    rows = conn.execute(
+        """SELECT job_id, last_transition_at, last_seen_at
+           FROM jobs
+           WHERE state = ?
+             AND COALESCE(last_transition_at, last_seen_at, '') < ?""",
+        (JobState.QUEUED.value, cutoff_iso),
+    ).fetchall()
+
+    reaped: list[str] = []
+    for row in rows:
+        job_id = row[0] if not hasattr(row, "keys") else row["job_id"]
+        if (pending_dir / job_id).exists():
+            # File is still on disk — legitimate work, leave alone.
+            continue
+        try:
+            apply(conn, job_id, JobEvent.REAP_ORPHAN, actor=actor)
+            reaped.append(job_id)
+        except IllegalTransition:
             continue
     return reaped
