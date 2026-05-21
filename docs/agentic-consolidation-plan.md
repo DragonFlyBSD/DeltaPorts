@@ -571,6 +571,306 @@ Tests:
 heuristics don't cover, e.g. a 30-minute-old job that's
 legitimately stuck).
 
+### Step 11 — fix delivery & verification
+
+The plan's earlier phases stop at "agent says `rebuild_ok=true` and writes
+`analysis/changes.diff`". Everything past that — the operator extracting
+the diff into their own clone, reviewing, signing, committing, pushing,
+opening a PR — is improvised and undocumented beyond a paragraph in
+`docs/AGENTIC_BUILDS.md` ("When a fix lands").
+
+Step 11 closes that gap. The goal is a documented, trackable path from
+"agent thinks it fixed it" to "the change is in front of a code reviewer
+on the upstream code-hosting platform" — without violating the plan's
+hard rule that the agent loop itself does not branch, commit, push, or
+PR. Delivery is a *separate, explicit, operator-triggered* phase that
+runs after the agent's local work is complete and (ideally) verified.
+
+The agent's own ``rebuild_ok=true`` is from ``dsynth_build`` inside the
+same env it just edited. That's not the same as "this fix works on a
+clean tree." Step 11 distinguishes the agent's claim from a real
+independent verification, then formalizes accept → submit.
+
+#### 11a — proposed-fix artifact
+
+When ``analysis/rebuild_proof.json`` lands with ``rebuild_ok=true``,
+write ``analysis/proposed_fix.md`` summarizing what the operator needs
+to act on:
+
+- Origin and target.
+- One-line agent summary (from ``analysis/patch.md``, capped).
+- The diff path and a copy-paste-ready ``patch -p1`` / ``git apply``
+  recipe against a fresh DeltaPorts clone.
+- The exact ``dportsv3 dev-env verify-fix <bundle_id>`` invocation
+  the operator can run to independently confirm.
+- Token cost, attempts, model used (for audit).
+
+Mirrors the ``manual_handoff.md`` machinery: pure render + lazy build
+helper, write at PATCH_OK in ``steps.py``, surface in the bundle's
+artifact list and as the default preview when
+``resolution='agent_fixed'``.
+
+Tests:
+
+- Bundle with ``rebuild_ok=true`` produces ``proposed_fix.md``.
+- ``rebuild_ok=false`` does *not* produce it.
+- Renders cleanly with manual handoff's markdown extensions.
+- Diff path + verify command reference the actual bundle_id.
+
+#### 11b — independent verification
+
+Add a new dev-env subcommand:
+
+```
+dportsv3 dev-env verify-fix BUNDLE_ID [--target ...] [--keep]
+```
+
+What it does:
+
+1. Resolves the bundle's origin + target.
+2. Provisions or selects a *fresh* dev-env (clean writable overlay,
+   no agent edits in flight). ``--keep`` preserves the verification
+   env for inspection; default is throwaway.
+3. Fetches the bundle's ``analysis/changes.diff`` from artifact-store.
+4. Applies the diff to the verification env's DeltaPorts overlay.
+5. Runs ``dsynth -S -y -p $PROFILE build <origin>`` in that env, with
+   the same ``DPORTSV3_HOOKS_FLAG_FILE`` discipline as the patch
+   agent (so hooks don't recursively trigger).
+6. Reports back to the tracker via a new endpoint:
+   ``POST /api/bundles/{bundle_id}/verification`` with
+   ``{ok: bool, dsynth_log: str, verified_at: iso}``.
+7. The bundle row grows a ``verification_status`` column with values
+   ``verified`` / ``verification_failed`` / NULL (not yet attempted).
+
+Surface in the UI:
+
+- Bundle detail and bundle list show the verification status as a
+  pill alongside ``resolution``.
+- ``proposed_fix.md`` updates to include the verification badge once
+  it's set (lazy render at view time).
+
+Tests:
+
+- A trivially-applying diff against a freshly-failing port produces
+  ``verified``.
+- A diff that doesn't apply cleanly (context mismatch, missing file)
+  produces ``verification_failed`` with the patch error in the log.
+- A diff that applies but doesn't actually fix the build produces
+  ``verification_failed`` with the dsynth log tail.
+- Tracker endpoint validation: 404 unknown bundle, 400 missing fields,
+  200 happy path.
+
+#### 11c — accept / reject in the tracker
+
+Two buttons on any bundle with ``resolution='agent_fixed'``
+(stronger UX when ``verification_status='verified'``):
+
+- **Accept** → ``POST /api/bundles/{bundle_id}/accept`` with optional
+  operator note. Sets ``resolution='accepted'``, records
+  ``accepted_at`` + ``accepted_by`` (when auth lands), emits an
+  ``accepted`` event. The diff is now considered the authoritative
+  fix for that origin.
+- **Reject** → ``POST /api/bundles/{bundle_id}/reject`` with reason.
+  Sets ``resolution='rejected'`` and *reopens* the loop: enqueues a
+  fresh triage job with the rejection reason injected as
+  ``user_context`` (so the next agent attempt knows what humans
+  didn't like about the last one).
+
+State machine on ``bundles.resolution``:
+
+```
+   ┌─ NULL ──────────────► agent_fixed ───► verified ──► accepted (terminal)
+   │                            │              │
+   │                            ▼              ▼
+   │                       rejected ─┐    verification_failed ─┐
+   │                                 │                          │
+   │                                 ▼                          ▼
+   └──────────────────────── (re-triage, new bundle) ───────────┘
+```
+
+Tests: accept/reject endpoints (happy path, 404, 409 if already
+terminal); reject path enqueues a follow-up triage with user_context
+populated; UI surfaces buttons only on appropriate states.
+
+#### 11d — push to code-hosting providers
+
+On Accept (11c), optionally drive the change all the way to a review
+request on the upstream code repository. **Operator-triggered, not
+automatic.** Provider-agnostic by design — GitHub is the primary
+target but the abstraction must support GitLab, Gitea, Forgejo, and
+self-hosted variants.
+
+##### Abstraction
+
+A new module ``scripts/generator/dportsv3/delivery/`` (sibling to
+``dportsv3.agent``) with a ``ReviewProvider`` protocol:
+
+```python
+class ReviewProvider(Protocol):
+    name: str   # "github" / "gitlab" / "gitea" / ...
+
+    def create_review_request(
+        self,
+        *,
+        clone_dir: Path,          # local DeltaPorts clone with applied diff
+        branch_name: str,         # already-created local branch
+        base_branch: str,         # "master" / "main" / target-specific
+        title: str,
+        body: str,
+        labels: list[str],
+        draft: bool = False,
+    ) -> ReviewRequestResult:
+        """Push the branch + open a review request. Returns the
+        provider-side URL + ID for tracker storage. Idempotent: if
+        an open request already exists for the same (origin, target,
+        signature), update its body and return the existing URL."""
+```
+
+Concrete implementations:
+
+- ``GitHubProvider`` — uses ``gh`` CLI by default (already installed
+  on most operator boxes, handles auth via ``gh auth``). Falls back
+  to the REST API with a personal-access-token if ``gh`` is absent.
+- ``GitLabProvider`` — REST API + token. Project ID configurable.
+- ``GiteaProvider`` — REST API + token. Same shape as GitLab.
+- ``LocalPatchProvider`` — fallback no-network provider that writes
+  the proposed patch to a designated outbox directory
+  (``$DPORTSV3_DELIVERY_OUTBOX``) for manual fetch. The default
+  when no provider is configured. Keeps the "diff via copy-paste"
+  story intact for operators who don't want any push at all.
+
+Selection:
+
+```toml
+# config/delivery.toml (new)
+[provider]
+type = "github"          # "github" | "gitlab" | "gitea" | "local-patch"
+repo = "DragonFlyBSD/DeltaPorts"
+base_branch = "master"
+draft = true             # open PRs as draft by default — operator un-drafts
+labels = ["agentic-fix", "needs-review"]
+branch_template = "agentic/{origin_safe}-{bundle_short}"
+```
+
+Env-var overrides for the secret (``DPORTSV3_DELIVERY_TOKEN``).
+Per-target overrides via TOML sections so quarter branches can
+land on different repos / base branches.
+
+##### Mechanism
+
+On Accept, if a provider is configured:
+
+1. Resolve the operator's local DeltaPorts clone path
+   (``$DPORTSV3_OPERATOR_CLONE`` env var, or operator selects per-call).
+   *The agent does not touch this clone* — the delivery module
+   uses it strictly as a normal git working copy on the operator's
+   behalf.
+2. Verify it's clean (no staged/unstaged changes) and on
+   ``base_branch``. Abort with a clear error otherwise.
+3. ``git fetch origin``, then ``git checkout -b <branch_name>
+   origin/<base_branch>``.
+4. Apply the bundle's ``analysis/changes.diff`` (``git apply --3way``).
+5. ``git commit -s`` with a templated message:
+
+   ```
+   {origin}: fix dsynth build under {target}
+
+   {one-line agent summary}
+
+   Verified by `dportsv3 dev-env verify-fix {bundle_id}` ({timestamp}).
+   Operator: {accepted_by}
+   Agent: model={model} attempts={n} tokens={total}
+   Bundle: {bundle_url}
+   ```
+
+   ``-s`` adds the operator's Signed-off-by, which is what we want
+   when a human accepts. The agent itself does *not* sign.
+6. Call ``provider.create_review_request(...)`` to push + open the
+   review request.
+7. Record the returned URL + ID in a new ``bundle_review_requests``
+   table linked back to the bundle. The bundle detail page links
+   to the review request.
+
+##### Idempotency + retry
+
+If the operator clicks Accept twice, or the push fails partway:
+
+- The provider implementation looks for an existing open review
+  request matching ``(origin, target, signature)`` (the same
+  ``error_signature`` we added in Step 6). If found, updates the
+  body instead of opening a duplicate.
+- ``git apply --3way`` either succeeds, conflicts (operator notified
+  on tracker, given the conflict in the response body), or no-ops
+  if already applied.
+
+##### Safety rails
+
+- No automatic accept-then-push without an explicit operator click.
+  Auto-push would re-introduce the very thing the consolidation
+  plan ruled out.
+- Tracker must show a "delivery in progress" / "delivery succeeded
+  with URL X" / "delivery failed: Y" state distinctly. Operator
+  shouldn't have to refresh and pray.
+- Token storage: read from env var or a 0400 file under
+  ``$DPORTSV3_CONFIG_DIR/delivery.token``. Never committed to the
+  repo, never written to artifact-store.
+- Each provider has a ``--dry-run`` mode that prints what it would
+  do without pushing — useful for the first run against a new
+  target repo, and required for the test suite.
+
+##### Tests
+
+- ``LocalPatchProvider`` (no network): writes a patch file to the
+  outbox; happy path + collision (same origin twice) + outbox-doesnt-
+  exist error.
+- Each network provider: monkeypatched HTTP layer; verify it sends
+  the right shape of request, parses the right shape of response,
+  handles auth-failed and rate-limit responses gracefully.
+- The Accept-with-delivery flow: stubs the provider, asserts the
+  bundle row gets the URL recorded and the lifecycle event fires.
+- Idempotency: clicking Accept twice produces one URL, not two
+  open PRs.
+
+##### Out of scope for 11d
+
+- Auto-merging PRs after CI passes. That stays a human call.
+- Posting PR status (CI green/red) back into the tracker. Belongs
+  in a separate "review-status feedback" step if we want it later.
+- Multi-PR per bundle (one diff → one review request). If the
+  operator wants to split the diff into multiple PRs, they do that
+  in their clone — outside this loop.
+
+#### Order
+
+11a → 11b → 11c → 11d. Each builds on the previous:
+
+- 11a is independent and useful even without verification (operator
+  reads a structured artifact instead of grepping diffs).
+- 11b's verification result feeds 11c's accept UX (verified bundles
+  get a stronger Accept affordance).
+- 11c's accept lifecycle is the trigger 11d hooks into.
+
+11d can stay disabled (LocalPatchProvider default) until the team
+agrees on which upstream repo / which base branch / which review
+discipline. Shipping 11a–11c without 11d still closes most of the
+"how does this get delivered?" gap; 11d is the optional final mile.
+
+#### Constraint preservation
+
+11a–11d do *not* violate the plan's "Out of scope (actively removed)"
+section. The agent loop itself still doesn't branch, commit, push, or
+PR. All of that happens in the *delivery* phase, which:
+
+- runs in a separate module (``dportsv3.delivery``), not
+  ``dportsv3.agent``;
+- triggers only on explicit operator action via the tracker;
+- operates on the operator's own clone, never on the agent's
+  writable overlay.
+
+The agent stays scoped to "produce a fix in a sandbox". Delivery is
+a thin operator-facing layer that walks that fix out of the sandbox
+and onto a review platform — with the operator's signature attached.
+
 ### Suggested implementation order
 
 1. Artifact viewer and artifact-link cleanup.
@@ -583,7 +883,13 @@ legitimately stuck).
 8. Lifecycle/UI naming cleanup.
 9. Tracker UX polish for manual work.
 10. Kick out stale queued jobs (10a automatic reap, 10b operator abandon).
+11. Fix delivery & verification (11a proposed-fix artifact,
+    11b verify-fix subcommand, 11c accept/reject UI,
+    11d push to code-hosting providers).
 
 This order improves operator visibility first, then improves agent
-context, then adds the retry loop, then refines policy, and
-finally hardens the edges that the first real smoke test surfaced.
+context, then adds the retry loop, then refines policy, then hardens
+the edges that the first real smoke test surfaced, and finally walks
+the agent's local fix all the way out to a review request on the
+upstream code-hosting platform — closing the loop from "agent says
+it works" to "human reviewer is looking at it."
