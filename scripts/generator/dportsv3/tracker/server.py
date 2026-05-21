@@ -142,12 +142,16 @@ _INLINE_TEXT_MEDIA: dict[str, str] = {
     ".log":   "text/plain; charset=utf-8",
     ".diff":  "text/plain; charset=utf-8",
     ".patch": "text/plain; charset=utf-8",
+    ".rej":   "text/plain; charset=utf-8",
+    ".dops":  "text/plain; charset=utf-8",
     ".json":  "application/json; charset=utf-8",
     ".html":  "text/html; charset=utf-8",
     ".xml":   "application/xml; charset=utf-8",
     ".yaml":  "text/plain; charset=utf-8",
     ".yml":   "text/plain; charset=utf-8",
 }
+
+_INLINE_TEXT_NAMES = {"Makefile", "distinfo", "pkg-plist", "pkg-descr"}
 
 
 def _artifact_media_type(relpath: str, kind: str | None) -> tuple[str, bool]:
@@ -159,11 +163,57 @@ def _artifact_media_type(relpath: str, kind: str | None) -> tuple[str, bool]:
     """
     if kind == "gzip":
         return "application/gzip", False
-    ext = Path(relpath).suffix.lower()
+    artifact_path = Path(relpath)
+    if artifact_path.name in _INLINE_TEXT_NAMES:
+        return "text/plain; charset=utf-8", True
+    ext = artifact_path.suffix.lower()
     media = _INLINE_TEXT_MEDIA.get(ext)
     if media is not None:
         return media, True
     return "application/octet-stream", False
+
+
+def _artifact_view_data(
+    artifact_root: Path,
+    bundle_id: str,
+    relpath: str,
+    ref: dict[str, Any],
+) -> dict[str, Any] | None:
+    path = _resolve_artifact_path(artifact_root, ref)
+    if path is None or not path.exists():
+        return None
+    media_type, inline = _artifact_media_type(relpath, ref.get("kind"))
+    is_json = Path(relpath).suffix.lower() == ".json"
+    content: str | None = None
+    render_kind = "download"
+    error: str | None = None
+    if inline:
+        render_kind = "json" if is_json else "text"
+        try:
+            raw = path.read_text(errors="replace")
+            if is_json:
+                try:
+                    content = json.dumps(json.loads(raw), indent=2, sort_keys=True)
+                except ValueError as exc:
+                    content = raw
+                    error = f"invalid JSON: {exc}"
+            else:
+                content = raw
+        except OSError as exc:
+            error = str(exc)
+            content = ""
+    return {
+        "bundle_id": bundle_id,
+        "relpath": relpath,
+        "ref": ref,
+        "media_type": media_type,
+        "inline": inline,
+        "render_kind": render_kind,
+        "content": content,
+        "error": error,
+        "filename": Path(relpath).name,
+        "size": path.stat().st_size if path.exists() else ref.get("size"),
+    }
 
 
 def _resolve_artifact_path(
@@ -621,6 +671,28 @@ def create_app(db_path: str | Path) -> Any:
             request,
             "agentic_bundle.html",
             {"title": bundle_id, "bundle": bundle, "tool_trace": tool_trace},
+        )
+
+    @app.get("/agentic/bundles/{bundle_id}/artifacts/{relpath:path}", response_class=HTMLResponse)
+    def agentic_bundle_artifact_view(
+        request: RequestType,
+        bundle_id: str,
+        relpath: str,
+    ) -> Any:
+        with _conn() as conn:
+            bundle = get_bundle(conn, bundle_id)
+            ref = get_artifact_ref(conn, bundle_id, relpath)
+        if bundle is None:
+            raise HTTPException(status_code=404, detail=f"Unknown bundle: {bundle_id}")
+        if ref is None:
+            raise HTTPException(status_code=404, detail="Unknown artifact")
+        artifact = _artifact_view_data(app.state.artifact_root, bundle_id, relpath, ref)
+        if artifact is None:
+            raise HTTPException(status_code=404, detail="Artifact file missing")
+        return templates.TemplateResponse(
+            request,
+            "agentic_artifact.html",
+            {"title": relpath, "bundle": bundle, "artifact": artifact},
         )
 
     @app.get("/agentic/jobs", response_class=HTMLResponse)

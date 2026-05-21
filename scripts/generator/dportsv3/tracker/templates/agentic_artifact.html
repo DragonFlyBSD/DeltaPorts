@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ artifact.relpath }} — DeltaPorts Tracker</title>
+  <link href="{{ request.url_for('static', path='progress.css') }}" type="text/css" rel="stylesheet">
+  <link rel="icon" type="image/png" href="{{ request.url_for('static', path='favicon.png') }}">
+  <style>
+    .artifact-content { white-space: pre-wrap; overflow-x: auto; font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: var(--panel-bg, #f8fafc); border: 1px solid var(--border, #d8dee9); border-radius: 6px; padding: 14px; }
+    .artifact-meta { font-size: 12px; color: var(--text-dim); }
+  </style>
+</head>
+<body>
+  {% with nav_crumbs = [{"label": "Agentic", "url": request.url_for('agentic_index')}, {"label": "Bundles", "url": request.url_for('agentic_bundles')}, {"label": bundle.bundle_id, "url": request.url_for('agentic_bundle_detail', bundle_id=bundle.bundle_id)}, {"label": artifact.relpath}] %}
+    {% include "_tracker_nav.html" %}
+  {% endwith %}
+
+  <div class="tracker-page">
+    <h1>{{ artifact.relpath }}</h1>
+    <div class="tracker-card artifact-meta">
+      <div><strong>Bundle:</strong> <a href="{{ request.url_for('agentic_bundle_detail', bundle_id=bundle.bundle_id) }}">{{ bundle.bundle_id }}</a></div>
+      <div><strong>Origin:</strong> {{ bundle.origin }}{% if bundle.flavor %} @ {{ bundle.flavor }}{% endif %}</div>
+      <div><strong>Target:</strong> {{ bundle.target or '—' }}</div>
+      <div><strong>Backend:</strong> {{ artifact.ref.backend }}</div>
+      <div><strong>Kind:</strong> {{ artifact.ref.kind or '—' }}</div>
+      <div><strong>Media type:</strong> {{ artifact.media_type }}</div>
+      <div><strong>Size:</strong> {{ artifact.size if artifact.size is not none else '—' }}</div>
+      <div><a href="/api/bundles/{{ bundle.bundle_id }}/artifacts/{{ artifact.relpath }}">Open raw artifact</a></div>
+    </div>
+
+    {% if artifact.error %}
+      <div class="tracker-card" style="border-color:var(--c-fail, #c00);">{{ artifact.error }}</div>
+    {% endif %}
+
+    {% if artifact.inline %}
+      <h2>{% if artifact.render_kind == 'json' %}JSON{% else %}Text{% endif %}</h2>
+      <pre class="artifact-content">{{ artifact.content }}</pre>
+    {% else %}
+      <div class="empty-state">
+        This artifact is {{ artifact.media_type }} and is available as a raw download.
+      </div>
+    {% endif %}
+  </div>
+</body>
+</html>

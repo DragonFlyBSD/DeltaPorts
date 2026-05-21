@@ -39,6 +39,14 @@ def seeded_state_db(tmp_path: Path) -> Path:
         + json.dumps({"type": "tool_call", "attempt": 1, "turn": 1, "tool": "dsynth_build", "args": {"origin": "devel/foo"}, "result": {"ok": False}, "duration_ms": 42}) + "\n"
         + json.dumps({"type": "attempt_end", "attempt": 1, "rebuild_ok": False, "tokens": 500}) + "\n"
     )
+    meta_path = tmp_path / "meta.txt"
+    meta_path.write_text("origin=devel/foo\n", encoding="utf-8")
+    errors_path = tmp_path / "errors.txt"
+    errors_path.write_text("build failed\n", encoding="utf-8")
+    json_path = tmp_path / "patch_audit.json"
+    json_path.write_text('{"status":"budget-exhausted","attempts":[1]}', encoding="utf-8")
+    gzip_path = tmp_path / "full.log.gz"
+    gzip_path.write_bytes(b"\x1f\x8bcompressed")
     conn.executemany(
         """INSERT INTO runs (run_id, profile, target, ts_start, last_seen_at)
            VALUES (?, ?, ?, ?, ?)""",
@@ -60,18 +68,16 @@ def seeded_state_db(tmp_path: Path) -> Path:
     )
     conn.executemany(
         """INSERT INTO artifact_refs
-           (bundle_id, relpath, backend, sha256, kind, size, created_at)
-           VALUES (?, ?, 'blob', ?, ?, ?, ?)""",
-        [
-            ("b-q2-foo", "meta.txt", "abc123def456", "text/plain", 42, now),
-            ("b-q2-foo", "logs/errors.txt", "ffee1122", "text/plain", 100, now),
-        ],
-    )
-    conn.execute(
-        """INSERT INTO artifact_refs
            (bundle_id, relpath, backend, fs_path, kind, size, created_at)
            VALUES (?, ?, 'fs', ?, ?, ?, ?)""",
-        ("b-q2-foo", "analysis/tool_trace.jsonl", str(trace_path), "text", trace_path.stat().st_size, now),
+        [
+            ("b-q2-foo", "meta.txt", str(meta_path), "text", meta_path.stat().st_size, now),
+            ("b-q2-foo", "logs/errors.txt", str(errors_path), "text", errors_path.stat().st_size, now),
+            ("b-q2-foo", "analysis/patch_audit.json", str(json_path), "json", json_path.stat().st_size, now),
+            ("b-q2-foo", "logs/full.log.gz", str(gzip_path), "gzip", gzip_path.stat().st_size, now),
+            ("b-q2-foo", "analysis/tool_trace.jsonl", str(trace_path), "text", trace_path.stat().st_size, now),
+            ("b-q2-foo", "logs/missing.txt", str(tmp_path / "missing.txt"), "text", 0, now),
+        ],
     )
     conn.executemany(
         """INSERT INTO jobs
@@ -198,6 +204,34 @@ def test_view_agentic_bundle_detail_lists_artifacts(client: TestClient) -> None:
     assert "rebuild_ok=False" in body
     # Link to artifact stream endpoint
     assert "/api/bundles/b-q2-foo/artifacts/meta.txt" in body
+    assert "/agentic/bundles/b-q2-foo/artifacts/meta.txt" in body
+    assert "raw" in body
+
+
+def test_view_agentic_artifact_text_inline(client: TestClient) -> None:
+    resp = client.get("/agentic/bundles/b-q2-foo/artifacts/meta.txt")
+    assert resp.status_code == 200
+    assert "origin=devel/foo" in resp.text
+    assert "Open raw artifact" in resp.text
+
+
+def test_view_agentic_artifact_json_pretty_printed(client: TestClient) -> None:
+    resp = client.get("/agentic/bundles/b-q2-foo/artifacts/analysis/patch_audit.json")
+    assert resp.status_code == 200
+    assert "JSON" in resp.text
+    assert "budget-exhausted" in resp.text
+    assert "&#34;status&#34;" in resp.text
+
+
+def test_view_agentic_artifact_gzip_download_notice(client: TestClient) -> None:
+    resp = client.get("/agentic/bundles/b-q2-foo/artifacts/logs/full.log.gz")
+    assert resp.status_code == 200
+    assert "application/gzip" in resp.text
+    assert "raw download" in resp.text
+
+
+def test_view_agentic_artifact_missing_file_404(client: TestClient) -> None:
+    assert client.get("/agentic/bundles/b-q2-foo/artifacts/logs/missing.txt").status_code == 404
 
 
 def test_view_agentic_bundle_detail_404(client: TestClient) -> None:

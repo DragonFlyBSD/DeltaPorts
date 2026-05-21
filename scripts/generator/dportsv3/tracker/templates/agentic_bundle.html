@@ -28,14 +28,15 @@
     <h2>Artifacts</h2>
     {% if bundle.artifacts %}
     <table class="tracker-table">
-      <thead><tr><th>Path</th><th>Backend</th><th>Kind</th><th>Size</th></tr></thead>
+      <thead><tr><th>Path</th><th>Backend</th><th>Kind</th><th>Size</th><th>Raw</th></tr></thead>
       <tbody>
         {% for a in bundle.artifacts %}
         <tr>
-          <td><a href="/api/bundles/{{ bundle.bundle_id }}/artifacts/{{ a.relpath }}">{{ a.relpath }}</a></td>
+          <td><a href="{{ request.url_for('agentic_bundle_artifact_view', bundle_id=bundle.bundle_id, relpath=a.relpath) }}">{{ a.relpath }}</a></td>
           <td>{{ a.backend }}</td>
           <td>{{ a.kind or '—' }}</td>
           <td>{{ a.size if a.size is not none else '—' }}</td>
+          <td><a href="/api/bundles/{{ bundle.bundle_id }}/artifacts/{{ a.relpath }}">raw</a></td>
         </tr>
         {% endfor %}
       </tbody>
