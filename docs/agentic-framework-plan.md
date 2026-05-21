@@ -82,255 +82,314 @@ Commits: `2f6d4c604d8` (design doc parking-lot entry) ·
 
 Test delta: +27 (19 unit + 8 parity). 337 total green at phase end.
 
+### Phase 4 — Context assembly (shipped 2026-05-21)
+
+Replaced the two `build_*_payload` walls of `parts.append(...)`
+with composable `ContextSection` classes the `ContextAssembler`
+renders in priority order. Strict byte-for-byte parity — no LLM
+prompt changes, just structure.
+
+New module `dportsv3.agent.context` with `ContextCtx`,
+`ContextSection` Protocol, `render_payload`, and 13 concrete
+section classes:
+
+- Reused across triage + patch (7): `SnippetsRoundSection`,
+  `KEDBSection`, `UserContextSection`, `MetadataSection`,
+  `BuildErrorsSection`, `PortFilesSection`,
+  `ExistingPatchesSection`. `SiblingBundlesSection` is shared with
+  a `with_intro` flag (triage uses True; patch uses False).
+- Triage-specific (3): `PriorTriagesSection`,
+  `TriagePromptFooterSection`, plus the shared sibling section.
+- Patch-specific (4): `AutomationContextSection`,
+  `TriageSummarySection`, `PriorAttemptsSection`,
+  `PatchPromptFooterSection`.
+
+I/O isolation: sections never query DB or network at render time.
+Callers pre-load fields (`prior_*_bundle_ids`, `user_context_text`,
+`kedb_text`, `prior_failure_count`) and bind runner-side helpers as
+callables into `ContextCtx` (`read_bundle_text`,
+`bundle_artifact_list`, `snippet_feedback`, `snippet_content`).
+
+`build_triage_payload` shrunk from ~155 LOC to ~36 LOC of pre-load
++ render. `build_patch_payload` shrunk from ~190 LOC to ~50 LOC.
+
+12 parity test cases (6 triage + 6 patch) lock byte-equivalence.
+
+Commits: `2d3cb9e367c` (module) · `331e526fa54` (triage cutover) ·
+`399224ea029` (patch cutover).
+
+Test delta: +25 (13 assembler + 6 triage parity + 6 patch parity).
+362 total green at phase end.
+
 ---
 
-## Current phase: Phase 4 — Context assembly
+## Current phase: Phase 5 — Step contract
 
-> **Goal:** replace the two `build_*_payload` walls of
-> `parts.append(...)` with composable `ContextSection` classes the
-> `ContextAssembler` renders in priority order. Strict parity:
-> byte-for-byte identical output on the same inputs. Adding new
-> sections, changing prompts, or enforcing a hard global token
-> budget is **out of scope** — this phase only refactors structure.
+> **Goal:** formalize what Phases 1–4 sketched. Define the `Step`
+> Protocol with `precheck → run → record` hooks, build an
+> `Orchestrator` that drives steps in sequence, and replace the
+> hand-coded `_process_{triage,patch}_job_harness` /
+> `_run_harness_triage_inner` / `process_job` dispatch with
+> orchestrator-driven flows. End state: the runner is a small
+> driver that hands `(job, [steps])` to the orchestrator; the
+> heavyweight per-step logic lives in named classes with explicit
+> preconditions and outcomes.
 
 ### Decisions captured up front
 
-- **Strict parity.** Phase 4 must not change a single byte of any
-  LLM prompt vs. today. The whole point is to land the structure
-  *first*; behavior changes ride on top in later commits. Golden
-  fixtures lock this in via the parity tests in Steps 2 and 3.
-- **No global token budget yet.** Today neither payload enforces an
-  aggregate cap; sections that have per-section caps keep them.
-  Aggregate budget enforcement is a future enhancement once the
-  layer exists.
-- **Section priority = render order.** Today the order is hard-
-  coded by where `parts.append(...)` lives. Sections get integer
-  priorities such that sorting reproduces today's order. The
-  Assembler does not reorder beyond that.
-- **Sections are reusable across triage + patch where the content
-  overlaps** (e.g. `SiblingBundlesSection`, `PriorAttemptsSection`,
-  `BuildErrorsSection`, `PortFilesSection`, `ExistingPatchesSection`,
-  `KEDBSection`, `UserContextSection`, `SnippetsRoundSection`).
-  Triage- or patch-specific sections (`AutomationContextSection`,
-  `TriageSummarySection`, `PromptFooterSection`) live next to the
-  caller.
-- **`ctx` is a dataclass, not a kwargs dict.** Render takes one
-  typed `ContextCtx` containing `bundle_dir`, `bundle_id`, `job`,
-  `kedb_dir`, and the runner's connection (for sections that need
-  to query state.db). Cleaner than mutating dicts everywhere.
+- **Step Protocol shape.** Each step exposes `name`,
+  `precheck(ctx) -> StepReadiness`, `run(ctx) -> StepOutcome`,
+  `record(ctx, outcome) -> None`. The orchestrator calls precheck
+  (skips if not ready), run (the actual work), then record
+  (persists artifacts + fires lifecycle events).
+- **No verify split in this phase.** Today `dsynth_build` is fused
+  inside the patch LLM call (the agent runs it as a tool). Splitting
+  verification into a separate `RebuildVerifyStep` would require the
+  agent to *stop* before verifying and the orchestrator to verify
+  itself — meaningful behavior change. Out of scope; Phase 5 only
+  ships the Step protocol with `RebuildVerifyStep` as a *named*
+  step that's fused into `PatchAttemptStep` for now. The actual
+  split is a follow-up.
+- **The legacy `tier_for` fallback in `_process_patch_job_harness`
+  gets folded.** When a hand-fired patch job arrives with no
+  `tier` field, the orchestrator's `decide()` call uses
+  classification + confidence parsed from the bundle's `triage.md`
+  exactly as the legacy code does, via the Phase-3 decision engine.
+- **Hard cutover.** Same as Phases 1–4: when each step lands, the
+  legacy equivalent is deleted in the same commit. The five-commit
+  budget plans accordingly.
+- **Parity through end-to-end.** The Phase-5 cutover is the only
+  one that touches the full triage→patch dispatch. The existing
+  e2e lifecycle tests + the 12 parity tests from Phase 4 catch
+  byte-level regressions. Add a fresh e2e test for the
+  orchestrator flow itself.
 
 ### Pre-conditions
 
-- `bundle_dir`, `bundle_id` semantics from Phase 1 still hold —
-  bundles are either on-disk (via `_materialize_bundle`) or in the
-  artifact-store.
-- `read_bundle_text`, `bundle_artifact_list`, and the snippet
-  helpers in runner.py still work as today.
-- All 337 tests currently green; the parity assertions in Steps 2
-  and 3 are net-additive.
+- All 362 tests currently green.
+- `lifecycle.apply` is the single state-write boundary. Verified
+  end of Phase 1.
+- `decide()` is the single decision boundary. Verified end of
+  Phase 3.
+- `render_payload` is the single payload-assembly boundary.
+  Verified end of Phase 4.
 
-### Step 1 — `context.py` module
-
-**Goal:** the `ContextSection` Protocol, the `ContextCtx`
-dataclass, the `ContextAssembler.render()` driver, and unit tests.
-No concrete section classes yet (those land in Steps 2 and 3 as
-they're needed).
-
-**Files:**
-- `scripts/generator/dportsv3/agent/context.py` — new
-- `scripts/generator/tests/test_context.py` — new
-
-**Interface:**
+### Step Protocol shape
 
 ```python
-from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Protocol, runtime_checkable
-import sqlite3
-
+@dataclass
+class StepReadiness:
+    status: Literal["ready", "skip", "fail"]
+    reason: str = ""
+    # When status="skip", orchestrator moves to the next step.
+    # When status="fail", orchestrator halts with the reason.
 
 @dataclass
-class ContextCtx:
-    """One render-time context object passed to every Section.render."""
-    bundle_dir: Path | None
-    bundle_id: str | None
-    job: dict
-    kedb_dir: Path | None = None
-    db_conn: sqlite3.Connection | None = None
-    # Anything else a section needs goes here, not in **kwargs.
-
+class StepOutcome:
+    status: Literal["success", "needs-help", "failed", "skipped"]
+    next_event: JobEvent | None
+    detail: dict = field(default_factory=dict)
+    # next_event is the lifecycle transition to fire after this step.
+    # None means "step is internal; no transition."
 
 @runtime_checkable
-class ContextSection(Protocol):
+class Step(Protocol):
     name: str
-    priority: int        # lower runs first
-
-    def render(self, ctx: ContextCtx) -> str | None: ...
-    # None means "skip this section silently" (the only way to
-    # produce a missing optional section in today's output).
-
-
-def render_payload(sections: list[ContextSection], ctx: ContextCtx) -> str:
-    """Sort sections by priority, render each, join non-None with
-    "\\n" exactly as the legacy parts.append(...) + "\\n".join(parts)
-    produced. Empty + None sections drop out."""
+    def precheck(self, ctx: StepCtx) -> StepReadiness: ...
+    def run(self, ctx: StepCtx) -> StepOutcome: ...
+    def record(self, ctx: StepCtx, outcome: StepOutcome) -> None: ...
 ```
 
-**Tests** (`test_context.py`):
-- Two sections render in priority order regardless of input order.
-- A section returning None is omitted (no extra blank line).
-- A section returning "" is omitted (no empty section).
-- A section that raises propagates the exception (no swallowing —
-  payload assembly should crash loudly on bugs).
-- The driver concatenates with `"\n"` as the today's join character.
-- `ContextCtx` is hashable-fields-only (so future caching is
-  straightforward) — or document if not.
+`StepCtx` carries job + DB conn + lifecycle helpers + the
+`dportsv3.agent.{health,decision,context}` machinery. Likely
+absorbs `ContextCtx` (Phase 4) since payload assembly is one
+step's concern.
 
-**Done criteria:** module importable, tests green, no consumers.
+### Step 1 — `step.py` module
 
-**Commit:** `feat(agent): context assembly module`
+**Goal:** the protocol, `StepReadiness` / `StepOutcome` /
+`StepCtx`, and an `Orchestrator.run(job_id, [steps])` that:
+
+1. Loads job state from `lifecycle.current()`.
+2. For each step in order:
+   - calls `precheck(ctx)`; if `skip`, continues; if `fail`,
+     halts and fires the appropriate failure event;
+   - calls `run(ctx)`;
+   - calls `record(ctx, outcome)`;
+   - fires `outcome.next_event` via `lifecycle.apply()` if set.
+3. Returns a summary of step outcomes.
+
+Plus unit tests covering the dispatch logic (skip propagation,
+fail-halt behavior, event firing, exception isolation).
+
+**Done criteria:** module importable + tested, **no consumers wired**.
+
+**Commit:** `feat(agent): step orchestrator module`
 
 ---
 
-### Step 2 — Triage payload cutover
+### Step 2 — `TriageStep`
 
-**Goal:** replace `build_triage_payload` with `ContextAssembler.
-render(triage_sections, ctx)`. Add a parity test against a synthetic
-bundle fixture so the cutover proves byte-equivalence.
+**Goal:** lift `_run_harness_triage_inner`'s body into a
+`TriageStep` class. The runner's `_process_triage_job_harness`
+becomes a wrapper that constructs a `StepCtx`, instantiates
+`TriageStep`, and hands it to the orchestrator.
 
-**Files:**
-- `scripts/generator/dportsv3/agent/context.py` — adds the concrete
-  section classes used by the triage payload.
-- `scripts/generator/dportsv3/agent/runner.py` — `build_triage_payload`
-  becomes a thin wrapper that builds the sections list + ctx and
-  calls `render_payload`.
-- `scripts/generator/tests/test_triage_payload_parity.py` — new.
+**What lives in `TriageStep.run`:**
+- The bundle materialization (`_materialize_bundle` for
+  artifact-store bundles)
+- The LLM call (`harness_triage.run`)
+- The `_write_triage_audit_harness` write
+- The `decide()` call
+- The `enqueue_patch_job` / `upsert_user_context_request` branches
 
-**Sections to migrate (in render order):**
+`TriageStep.record` writes the triage.md to the bundle if
+materialized, cleans up the tempdir, fires the activity_log
+`decision` entry.
 
-| Priority | Section | Today's slot |
-|---|---|---|
-| 10 | `SnippetsRoundSection` | Top — when `has_snippets=true` + `snippet_round>0` |
-| 20 | `KEDBSection` | KEDB content |
-| 30 | `UserContextSection` | Run-scoped user context |
-| 40 | `MetadataSection` | bundle's `meta.txt` |
-| 50 | `BuildErrorsSection` | `logs/errors.txt` |
-| 60 | `PortFilesSection` | Makefile + pkg-plist + distinfo |
-| 70 | `ExistingPatchesSection` | Existing `port/files/patch-*` |
-| 80 | `SiblingBundlesSection` | Phase-1 batch siblings |
-| 90 | `PriorTriagesSection` | Last 2 historical bundles' triage.md |
-| 100 | `PromptFooterSection` | `---` separator + "Analyze this..." |
-
-**Parity test:** create a synthetic on-disk bundle directory with
-hand-crafted `meta.txt`, `logs/errors.txt`, `port/Makefile`,
-`port/pkg-plist`, etc. Call `build_triage_payload(bundle_dir,
-kedb_dir, job)` *before* the refactor lands; capture the bytes as
-a fixture string in the test file. After the refactor, the new
-implementation must produce the exact same bytes for the same
-input. Multiple fixtures exercise: minimal bundle, full bundle,
-bundle with siblings, bundle with snippet round.
+**Parity:** the existing `test_runner_e2e_lifecycle.py` cases
+(`test_full_triage_path_to_triaged`, `test_triage_manual_escalates`)
+must still pass with the orchestrator-driven flow. Add a new test
+that asserts `TriageStep.precheck` skips if env_health is broken.
 
 **Cutover criteria:**
-- New `build_triage_payload` is ≤ 30 LOC (composes sections,
-  delegates everything else).
-- Old inline `parts.append(...)` blocks for the triage path are
-  deleted.
-- Parity test green for at least 3 fixture variants.
-- All 337 existing tests still green.
+- `_run_harness_triage_inner` deleted; `_process_triage_job_harness`
+  is a thin wrapper around the orchestrator.
+- e2e tests green; parity tests green.
 
-**Commit:** `refactor(agent): triage payload via ContextAssembler`
+**Commit:** `refactor(agent): triage as a Step`
 
 ---
 
-### Step 3 — Patch payload cutover
+### Step 3 — `PatchAttemptStep`
 
-**Goal:** same treatment for `build_patch_payload`. Reuses the
-sections that landed in Step 2 + adds patch-specific ones.
+**Goal:** lift `_process_patch_job_harness` body into
+`PatchAttemptStep`. Today's body is bigger — it includes
+`_write_patch_audit_harness`, `_write_changes_diff`,
+`_write_tool_trace`, the `on_event` callback infrastructure, and
+the policy fallback that this phase absorbs.
 
-**Files:**
-- `scripts/generator/dportsv3/agent/context.py` — adds patch-only
-  sections.
-- `scripts/generator/dportsv3/agent/runner.py` — `build_patch_payload`
-  becomes a thin wrapper.
-- `scripts/generator/tests/test_patch_payload_parity.py` — new.
+The legacy `tier_for` fallback (when a hand-fired job has no
+`tier` field) becomes: `PatchAttemptStep.precheck` parses
+`triage.md` if needed and calls `decide()` to set the tier.
 
-**Patch-specific sections (in render order):**
-
-| Priority | Section | Today's slot |
-|---|---|---|
-| 10 | `SnippetsRoundSection` (reused) | Top — same as triage |
-| 20 | `TriageSummarySection` | Triage summary from bundle |
-| 30 | `AutomationContextSection` | Iteration count, prior failures |
-| 40 | `SiblingBundlesSection` (reused) | Batch siblings |
-| 50 | `PriorAttemptsSection` | Last 3 bundles' patch_plan + log + status |
-| 60 | `UserContextSection` (reused) | Run-scoped user context |
-| 70 | `KEDBSection` (reused) | KEDB content |
-| 80 | `MetadataSection` (reused) | meta.txt |
-| 90 | `BuildErrorsSection` (reused) | logs/errors.txt |
-| 100 | `PortFilesSection` (reused) | Makefile + plist + distinfo |
-| 110 | `ExistingPatchesSection` (reused) | port/files/patch-* |
-| 120 | `PatchPromptFooterSection` | `---` + "Use the dports tools..." footer |
-
-**Parity test:** mirror the triage parity test — synthetic bundle
-fixtures, capture pre-refactor output, assert byte-equivalence after
-the cutover. Includes fixtures with prior-attempt history and
-sibling bundles.
+**Parity:** the existing patch parity tests + e2e tests must pass.
+Add a new test for the precheck path (hand-fired patch job →
+`decide()` resolves tier from triage.md).
 
 **Cutover criteria:**
-- New `build_patch_payload` is ≤ 30 LOC.
-- Old inline blocks deleted.
-- Parity test green for at least 3 fixture variants (minimal,
-  with-history, with-siblings).
-- All existing tests still green.
+- `_process_patch_job_harness` and `_run_harness_patch_inner` (if
+  any) deleted.
+- `_process_patch_job` is a thin wrapper.
+- The lone `harness_policy.tier_for(pol, ...)` call from Phase 3
+  is gone (now flows through `decide`).
+- All tests green.
 
-**Commit:** `refactor(agent): patch payload via ContextAssembler`
+**Commit:** `refactor(agent): patch as a Step`
 
 ---
 
-### Phase 4 cutover criteria (overall)
+### Step 4 — `process_job` orchestrator cutover
 
-Phase 4 is "done" when:
+**Goal:** the runner's `process_job` becomes a small dispatcher
+that constructs the right step list for the job type and hands it
+to the orchestrator. Today's hard-coded `if job_type == "patch":
+process_patch_job(...) elif "triage": ...` block is replaced.
 
-1. All three steps committed.
+**What still lives in `process_job`:**
+- `.job` file parsing (`parse_job_file`)
+- The filesystem move (pending→inflight→done/failed)
+- Sibling-paths bookkeeping (Phase 1)
+- The `_completion_events_for` mapping — moves into orchestrator
+  as the post-run event resolution
+
+**What moves into the orchestrator:**
+- TRIAGE_START / PATCH_START / completion event firing
+- The decision routing (auto_patch / escalate_manual / skip)
+- The siblings-also-get-events fan-out
+
+**Cutover criteria:**
+- `process_job` is ≤ 60 LOC.
+- `_completion_events_for` either deleted or simplified to a
+  helper consumed by the orchestrator.
+- All e2e tests green.
+
+**Commit:** `refactor(runner): orchestrator-driven process_job`
+
+---
+
+### Step 5 — Cleanup + parity smoke
+
+**Goal:** delete any vestigial helpers superseded by the
+orchestrator. Add a fresh e2e parity test that walks a full
+triage→auto_patch chain through the orchestrator (stubbed LLM)
+and asserts identical lifecycle event sequences vs. pre-Phase-5.
+
+Final pass: check `grep` for anything stale —
+`_run_harness_triage_inner`, `_run_harness_patch_inner` (if it
+ever existed), the legacy `tier_for` call in patch code, etc.
+
+**Commit:** `test(agent): orchestrator e2e parity`
+
+---
+
+### Phase 5 cutover criteria (overall)
+
+Phase 5 is "done" when all of:
+
+1. All steps committed.
 2. `pytest scripts/generator/tests/` green.
-3. `grep -nE "parts\\.append" scripts/generator/dportsv3/agent/runner.py` returns nothing — both legacy walls deleted.
-4. Both parity test files green (triage + patch), across all
-   fixture variants.
-5. Manual smoke: run one real triage and one real patch on dfly,
-   eyeball the activity-log's `decision` entry and the bundle's
-   `analysis/{triage,patch}.md` — they should look indistinguishable
-   from pre-refactor output.
-6. This plan file gets updated: Phase 4 ledger entry written,
-   Phase 5 (step contract) detail replaces this body.
+3. `grep -nE "_run_harness_(triage|patch)_inner|_process_(triage|patch)_job_harness" scripts/`
+   returns nothing live in code.
+4. `grep -nE "harness_policy\\.tier_for" scripts/generator/dportsv3/agent/runner.py`
+   returns nothing — the Phase-3 leftover is folded.
+5. e2e lifecycle test + new orchestrator parity test cover the
+   happy-path triage→auto_patch chain end to end with stubbed LLM.
+6. Manual smoke on dfly: trigger one real triage and one real
+   patch, eyeball the activity log + bundle artifacts —
+   indistinguishable from pre-Phase-5.
+7. This plan file gets updated: Phase 5 ledger entry written;
+   Phases overview shows all 5 shipped.
 
 ### Risk + rollback
 
 | Step | Risk | Mitigation |
 |---|---|---|
-| 1 | `ContextSection` Protocol too restrictive — a real section needs something the interface doesn't allow | Land the Protocol with no consumers; Step 2 immediately exercises it for 10 sections. If the API doesn't fit, redesign in the same Step 2 commit. |
-| 2 | Byte-for-byte parity fails because of subtle whitespace differences | Parity test runs on multiple fixtures; first failure is concrete (golden diff). Iterate until match. |
-| 2 | A section uses external state (DB query, HTTP call) that's hard to stub | Mock at the `ContextCtx.db_conn` boundary — that's why ctx carries the conn explicitly. |
-| 3 | Patch payload has more sections than triage; some need fixture data triage didn't | Each fixture variant has all the bundle artifacts needed for the sections in scope; new variants add new files. |
-| 3 | Section reuse breaks a triage parity test by accident | The triage parity test pins exact bytes; if a "reusable" section changes its render output, triage immediately catches it. |
+| 1 | Protocol shape too restrictive once first real step is built | Land protocol with no consumers; Steps 2–3 exercise it immediately. Iterate in same commit if needed. |
+| 2 | Triage refactor breaks bundle materialization edge cases | `TriageStep.record` handles tempdir cleanup just as today; e2e test catches regressions. |
+| 3 | Patch refactor loses the `_on_event` callback chain that feeds activity_log + tool trace | `PatchAttemptStep.run` wires the same callback; existing tool-trace test catches gaps. |
+| 4 | `process_job` cutover misses an edge case (sibling bookkeeping, error-note writing) | Step 5 e2e test exercises siblings + failure paths; manual smoke confirms. |
+| 5 | Hand-fired patch jobs (no `tier` field) regress because Phase-3 leftover removed | Step 3 includes a test for this exact case. |
 
 ---
 
-## Phases overview (remaining)
+## Phases overview (status)
 
 | # | Phase | Layer(s) | Status |
 |---|---|---|---|
 | 1 | Lifecycle | Layer 1 | ✅ shipped |
 | 2 | Health / readiness | Layer 3 | ✅ shipped |
 | 3 | Policy engine | Layer 5 | ✅ shipped |
-| **4** | **Context assembly** | **Layer 4** | **active (this doc)** |
-| 5 | Step contract | Layer 2 | pending |
+| 4 | Context assembly | Layer 4 | ✅ shipped |
+| **5** | **Step contract** | **Layer 2** | **active (this doc)** |
 
-Estimated remaining sizing:
+Estimated sizing for Phase 5:
 
-| Phase | LOC delta | Commits | Risk |
-|---|---|---|---|
-| 4 | +700, −500 | 3 | Medium |
-| 5 | +500, −800 | 5–6 | Highest |
+| Step | LOC delta | Risk |
+|---|---|---|
+| 1 (protocol + orchestrator) | +200, −0 | Low |
+| 2 (TriageStep) | +200, −250 | Medium |
+| 3 (PatchAttemptStep) | +250, −300 | Medium |
+| 4 (process_job cutover) | +100, −200 | Medium |
+| 5 (cleanup + e2e parity) | +80, −50 | Low |
+| **Total** | **+830, −800** | **Medium** |
 
-Each phase has a **parity test** against today's behavior. No
+Each step has a **parity check** against today's behavior. No
 regression on something that works.
+
+## Future-work parking lot (in design doc)
+
+- Operator notification on env-broken / cap (`2f6d4c604d8`).
+- `RebuildVerifyStep` actually splits verification out of the
+  patch LLM call (named in Phase 5 but kept fused; the split is a
+  follow-up that requires changing the agent's contract).
