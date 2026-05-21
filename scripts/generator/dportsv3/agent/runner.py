@@ -1593,167 +1593,6 @@ def _write_changes_diff(bundle_dir: Path | None, bundle_id: str | None, env: str
         out.write_bytes(diff_bytes)
 
 
-def _process_patch_job_harness(
-    queue_root: Path,
-    job_path: Path,
-    job: dict,
-    bundle_dir: Path | None,
-    kedb_dir: Path | None,
-    payload: str,
-    origin: str,
-    job_id: str,
-    model: str,
-) -> tuple[bool, str]:
-    """Patch path that uses dportsv3.agent.patch instead of opencode."""
-    from dportsv3.agent import patch as harness_patch  # type: ignore[import-not-found]
-    from dportsv3.agent import policy as harness_policy  # type: ignore[import-not-found]
-
-    # Companion vars fall back to the triage equivalents when unset, so
-    # an operator who's only configured triage credentials gets a
-    # coherent setup if/when the patch model also falls back.
-    api_base = (os.environ.get("DP_HARNESS_PATCH_API_BASE")
-                or os.environ.get("DP_HARNESS_TRIAGE_API_BASE")
-                or None)
-    api_key = (os.environ.get("DP_HARNESS_PATCH_API_KEY")
-               or os.environ.get("DP_HARNESS_TRIAGE_API_KEY")
-               or None)
-    custom_llm_provider = (os.environ.get("DP_HARNESS_PATCH_PROVIDER")
-                           or os.environ.get("DP_HARNESS_TRIAGE_PROVIDER")
-                           or None)
-    timeout = int(os.environ.get("DP_HARNESS_PATCH_TIMEOUT", "600"))
-
-    # Resolve the dev-env name. Prefer the explicit job field; fall back to
-    # DP_HARNESS_ENV (an operator-set default for the runner).
-    env = job.get("dev_env") or os.environ.get("DP_HARNESS_ENV") or ""
-    if not env:
-        msg = "patch job missing dev_env (set job 'dev_env' field or DP_HARNESS_ENV)"
-        write_error_note(job_path, msg)
-        return False, msg
-
-    # Resolve tier. Prefer the tier the triage step already resolved
-    # (carried via the job's `tier=` field); fall back to re-resolving
-    # from triage.md if missing (legacy / hand-fired patch jobs).
-    bundle_id = job.get("bundle_id")
-    policy_path = os.environ.get(
-        "DP_HARNESS_POLICY",
-        _DEFAULT_POLICY_PATH,
-    )
-    try:
-        pol = harness_policy.load_policy(policy_path)
-    except Exception as exc:
-        msg = f"failed to load harness policy at {policy_path}: {exc}"
-        write_error_note(job_path, msg)
-        return False, msg
-
-    tier_name = (job.get("tier") or "").strip()
-    if tier_name and tier_name in pol.tiers:
-        tier = pol.tiers[tier_name]
-    else:
-        triage_text = read_bundle_text(bundle_dir, bundle_id, "analysis/triage.md") or ""
-        triage = parse_triage_output(triage_text)
-        tier = harness_policy.tier_for(pol, triage.get("classification", ""), triage.get("confidence", ""))
-
-    activity_log(
-        queue_root, "api_call_start",
-        f"Calling harness patch for {origin} (tier={tier.name}, env={env})",
-        job_id=job_id, extra={"agent": "dports-patch", "model": model, "tier": tier.name},
-    )
-
-    trace_events: list[dict] = []
-
-    def _on_event(ev: dict) -> None:
-        # Persist a structured copy + emit an activity_log row so the
-        # UI can show live progress while the agent runs.
-        trace_events.append(ev)
-        et = ev.get("type")
-        # If a tool result looks env-suspicious (stderr matches a known
-        # health-broken pattern), force a re-probe on the next gate
-        # check. We never set "broken" from a tool error directly —
-        # the probe is authoritative.
-        if et == "tool_call":
-            res = ev.get("result") or {}
-            if isinstance(res, dict) and _looks_env_suspicious(res):
-                invalidate_health_cache()
-                activity_log(
-                    queue_root, "health_recheck_forced",
-                    f"tool result looks env-suspicious; forcing re-probe",
-                    job_id=job_id, extra={"tool": ev.get("tool")},
-                )
-        if et == "attempt_start":
-            activity_log(
-                queue_root, "attempt_start",
-                f"attempt {ev.get('attempt')}/{ev.get('iterations')} for {origin} "
-                f"(tokens used {ev.get('tokens_used_so_far')}/{ev.get('budget')})",
-                job_id=job_id, extra={k: v for k, v in ev.items() if k != "type"},
-            )
-        elif et == "tool_call":
-            args = ev.get("args") or {}
-            res = ev.get("result") or {}
-            summary = _summarize_tool_call(ev.get("tool", ""), args, res)
-            activity_log(
-                queue_root, f"tool:{ev.get('tool')}",
-                summary,
-                job_id=job_id,
-                duration_ms=ev.get("duration_ms"),
-                extra={
-                    "attempt": ev.get("attempt"),
-                    "turn": ev.get("turn"),
-                    "ok": bool(res.get("ok")) if isinstance(res, dict) else None,
-                },
-            )
-        elif et == "attempt_end":
-            activity_log(
-                queue_root, "attempt_end",
-                f"attempt {ev.get('attempt')} for {origin}: "
-                f"rebuild_ok={ev.get('rebuild_ok')} tokens={ev.get('tokens')}",
-                job_id=job_id, extra={k: v for k, v in ev.items() if k != "type"},
-            )
-
-    start = time.time()
-    try:
-        result = harness_patch.run(
-            payload,
-            tier=tier,
-            env=env,
-            model=model,
-            api_base=api_base,
-            api_key=api_key,
-            custom_llm_provider=custom_llm_provider,
-            timeout=timeout,
-            on_event=_on_event,
-        )
-    except Exception as exc:
-        activity_log(
-            queue_root, "api_error",
-            f"Harness patch failed for {origin}: {str(exc)[:200]}",
-            job_id=job_id,
-        )
-        write_error_note(job_path, str(exc))
-        return False, str(exc)
-    duration_ms = int((time.time() - start) * 1000)
-
-    activity_log(
-        queue_root, "api_call_complete",
-        f"Harness patch finished for {origin} (status={result.status}, "
-        f"attempts={len(result.attempts)}, tokens={result.usage.total_tokens})",
-        job_id=job_id, duration_ms=duration_ms,
-    )
-
-    _write_patch_audit_harness(bundle_dir, bundle_id, result, model)
-    _write_tool_trace(bundle_dir, bundle_id, trace_events)
-    _write_changes_diff(bundle_dir, bundle_id, env, origin)
-
-    activity_log(
-        queue_root, "write_output",
-        f"Wrote harness patch outputs for {origin}",
-        job_id=job_id,
-    )
-
-    if result.status == "success":
-        return True, "done"
-    return True, result.status  # needs-help / budget-exhausted — job recorded, not retried
-
-
 def process_patch_job(
     queue_root: Path,
     job_path: Path,
@@ -1761,30 +1600,74 @@ def process_patch_job(
     bundle_dir: Path | None,
     kedb_dir: Path | None,
 ) -> tuple[bool, str]:
-    """Process a patch job via the dportsv3.agent harness."""
-    harness_model = os.environ.get("DP_HARNESS_PATCH_MODEL")
-    if not harness_model:
-        # Fall back to the triage model so a single env var is enough
-        # to get the loop running. Patch is a different workload
-        # (multi-turn tool calls) — a cheap triage model may produce
-        # weaker fixes or fail tool calling. Operator can set
-        # DP_HARNESS_PATCH_MODEL explicitly to override.
-        harness_model = os.environ.get("DP_HARNESS_TRIAGE_MODEL")
-        if not harness_model:
-            msg = "neither DP_HARNESS_PATCH_MODEL nor DP_HARNESS_TRIAGE_MODEL set"
-            write_error_note(job_path, msg)
-            return False, msg
-        log(queue_root, "WARN",
-            f"DP_HARNESS_PATCH_MODEL unset; falling back to triage model "
-            f"({harness_model}) for patch — set DP_HARNESS_PATCH_MODEL "
-            f"to silence this and likely improve patch quality")
+    """Process a patch job by driving PatchAttemptStep through the orchestrator.
+
+    Phase 5 Step 3: lifted the legacy ``_process_patch_job_harness`` body
+    (LLM call + on_event closure + output persistence + tier fallback)
+    into ``PatchAttemptStep`` in ``dportsv3.agent.steps``. This wrapper
+    builds the StepCtx + helper bindings and surfaces the step outcome
+    as the ``(success, status_str)`` tuple ``process_job`` expects.
+
+    The Phase-3 leftover ``tier_for`` fallback for hand-fired patches
+    (no ``tier`` field) was absorbed into ``PatchAttemptStep.precheck``
+    via ``decide(empty_history, env_health=None)`` — preserves legacy
+    behavior (no cap, no env short-circuit) for operator-triggered
+    patches.
+    """
+    from dportsv3.agent.step import Orchestrator, StepCtx
+    from dportsv3.agent.steps import PatchAttemptStep
+
     payload = build_patch_payload(bundle_dir, kedb_dir, job)
     origin = job.get("origin", "unknown")
     job_id = job_path.name
-    return _process_patch_job_harness(
-        queue_root, job_path, job, bundle_dir, kedb_dir,
-        payload, origin, job_id, harness_model,
+
+    ctx = StepCtx(
+        job_id=job_id,
+        job=job,
+        queue_root=queue_root,
+        apply_transition=_apply_transition,
+        activity_log=activity_log,
+        db_conn=_state_db_conn,
+        env_name=job.get("dev_env") or os.environ.get("DP_HARNESS_ENV") or None,
+        bundle_dir=bundle_dir,
+        bundle_id=job.get("bundle_id"),
+        kedb_dir=kedb_dir,
     )
+    ctx.state["job_path"] = job_path
+    ctx.state["payload"] = payload
+    ctx.state["origin"] = origin
+    ctx.state["policy_path"] = os.environ.get(
+        "DP_HARNESS_POLICY", _DEFAULT_POLICY_PATH,
+    )
+    ctx.state["runner_helpers"] = {
+        "read_bundle_text": read_bundle_text,
+        "write_error_note": write_error_note,
+        "write_patch_audit": _write_patch_audit_harness,
+        "write_tool_trace": _write_tool_trace,
+        "write_changes_diff": _write_changes_diff,
+        "looks_env_suspicious": _looks_env_suspicious,
+        "invalidate_health_cache": invalidate_health_cache,
+        "summarize_tool_call": _summarize_tool_call,
+        "activity_log": activity_log,
+        "log": log,
+        "load_port_history": _load_port_history,
+    }
+
+    result = Orchestrator().run(ctx, [PatchAttemptStep()])
+
+    if result.halted:
+        return False, result.halt_reason or "patch halted"
+
+    step_result = result.step_by_name("patch")
+    if step_result is None or step_result.outcome is None:
+        reason = step_result.readiness.reason if step_result else "patch skipped"
+        return False, reason
+
+    outcome = step_result.outcome
+    status_str = outcome.detail.get("status_str", "unknown")
+    if outcome.status == "failed":
+        return False, status_str
+    return True, status_str
 def _completion_events_for(job_type: str, success: bool, status: str) -> list:
     """Map a handler's (job_type, success, status) outcome to one or
     more lifecycle events.

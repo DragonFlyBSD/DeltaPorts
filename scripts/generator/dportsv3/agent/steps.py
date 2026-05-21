@@ -406,3 +406,258 @@ def _err(msg: str, helpers: dict[str, Any], job_path: Path) -> StepOutcome:
         status="failed",
         detail={"status_str": msg, "error": True},
     )
+
+
+# -----------------------------------------------------------------------------
+# PatchAttemptStep — one patch run via the dportsv3.agent.patch harness.
+# -----------------------------------------------------------------------------
+
+
+@dataclass
+class PatchAttemptStep:
+    """One patch attempt against a triage-classified failure.
+
+    ``ctx.state`` carries:
+
+      - ``job_path``       : Path of the .job file
+      - ``payload``        : str (build_patch_payload output)
+      - ``origin``         : str (job.origin)
+      - ``policy_path``    : str (resolved DP_HARNESS_POLICY)
+      - ``runner_helpers`` : dict of injected callables (see below)
+
+    Required ``runner_helpers``:
+
+      - read_bundle_text(bundle_dir, bundle_id, relpath) -> str | None
+      - write_error_note(job_path, msg) -> None
+      - write_patch_audit(bundle_dir, bundle_id, result, model) -> None
+      - write_tool_trace(bundle_dir, bundle_id, trace_events) -> None
+      - write_changes_diff(bundle_dir, bundle_id, env, origin) -> None
+      - looks_env_suspicious(result: dict) -> bool
+      - invalidate_health_cache() -> None
+      - summarize_tool_call(tool, args, result) -> str
+      - activity_log(queue_root, stage, msg, ...) -> None
+      - log(queue_root, level, msg) -> None
+      - load_port_history(target, origin, window_hours) -> PortHistory
+
+    Precheck resolves the tier (preferring ``job["tier"]`` set by
+    the triage step). When the field is missing — hand-fired patch
+    jobs — it parses ``analysis/triage.md`` and calls
+    ``decide(empty_history, env_health=None)``. Empty history +
+    None env_health give the *legacy* tier_for behavior (no cap,
+    no env short-circuit on hand-fired). This absorbs the Phase-3
+    leftover ``tier_for`` call without changing hand-fired
+    behavior; the Phase-3 retry cap applies only to auto-enqueued
+    patch jobs (which already carry tier).
+    """
+    name: str = "patch"
+
+    def precheck(self, ctx: StepCtx) -> StepReadiness:
+        # Model resolution — DP_HARNESS_PATCH_MODEL takes precedence;
+        # fall back to DP_HARNESS_TRIAGE_MODEL with a warning so the
+        # operator knows patch quality may be lower.
+        helpers = ctx.state.get("runner_helpers") or {}
+        model = os.environ.get("DP_HARNESS_PATCH_MODEL")
+        if not model:
+            model = os.environ.get("DP_HARNESS_TRIAGE_MODEL")
+            if not model:
+                return StepReadiness(
+                    status="fail",
+                    reason="neither DP_HARNESS_PATCH_MODEL nor DP_HARNESS_TRIAGE_MODEL set",
+                )
+            if "log" in helpers:
+                helpers["log"](
+                    ctx.queue_root, "WARN",
+                    f"DP_HARNESS_PATCH_MODEL unset; falling back to triage model "
+                    f"({model}) for patch — set DP_HARNESS_PATCH_MODEL "
+                    f"to silence this and likely improve patch quality",
+                )
+        ctx.state["model"] = model
+
+        # dev_env: prefer job field, fall back to env var. Required.
+        env = ctx.job.get("dev_env") or os.environ.get("DP_HARNESS_ENV") or ""
+        if not env:
+            return StepReadiness(
+                status="fail",
+                reason="patch job missing dev_env (set job 'dev_env' field or DP_HARNESS_ENV)",
+            )
+        ctx.state["env"] = env
+
+        # Policy + tier resolution.
+        from dportsv3.agent import policy as harness_policy  # noqa: PLC0415
+        policy_path = ctx.state.get("policy_path")
+        if not policy_path:
+            return StepReadiness(status="fail",
+                                 reason="policy_path missing from ctx.state")
+        try:
+            pol = harness_policy.load_policy(policy_path)
+        except Exception as exc:
+            return StepReadiness(
+                status="fail",
+                reason=f"failed to load harness policy at {policy_path}: {exc}",
+            )
+        ctx.state["policy"] = pol
+
+        tier_name = (ctx.job.get("tier") or "").strip()
+        if tier_name and tier_name in pol.tiers:
+            ctx.state["tier"] = pol.tiers[tier_name]
+            return StepReadiness(status="ready")
+
+        # Hand-fired patch path: derive tier from triage.md via
+        # decide(). Empty history + None env_health preserve legacy
+        # tier_for semantics (no cap, no env short-circuit) for
+        # operator-triggered patches.
+        from dportsv3.agent.decision import PortHistory, decide  # noqa: PLC0415
+
+        read_bundle_text = helpers.get("read_bundle_text")
+        if read_bundle_text is None:
+            return StepReadiness(
+                status="fail",
+                reason="runner_helpers missing read_bundle_text for tier fallback",
+            )
+        triage_text = read_bundle_text(
+            ctx.bundle_dir, ctx.bundle_id or ctx.job.get("bundle_id"),
+            "analysis/triage.md",
+        ) or ""
+        # parse_triage_output is a runner-side helper — keep the
+        # parsing here inline so steps.py doesn't depend on runner.py
+        # imports. Cheap copy of the two regex lookups.
+        triage = _parse_triage_minimal(triage_text)
+        history = PortHistory.empty(
+            target=ctx.job.get("target", "") or "",
+            origin=ctx.state.get("origin") or ctx.job.get("origin", ""),
+        )
+        dec = decide(
+            classification=triage.get("classification", ""),
+            confidence=triage.get("confidence", ""),
+            history=history,
+            env_health=None,
+            policy=pol,
+        )
+        ctx.state["tier"] = dec.tier
+        return StepReadiness(status="ready")
+
+    def run(self, ctx: StepCtx) -> StepOutcome:
+        from dportsv3.agent import patch as harness_patch  # noqa: PLC0415
+
+        helpers = ctx.state["runner_helpers"]
+        queue_root = ctx.queue_root
+        job = ctx.job
+        job_path: Path = ctx.state["job_path"]
+        origin: str = ctx.state["origin"]
+        payload: str = ctx.state["payload"]
+        model: str = ctx.state["model"]
+        env: str = ctx.state["env"]
+        tier = ctx.state["tier"]
+        bundle_id = ctx.bundle_id or job.get("bundle_id")
+
+        # Companion vars with triage-fallback chain.
+        api_base = (os.environ.get("DP_HARNESS_PATCH_API_BASE")
+                    or os.environ.get("DP_HARNESS_TRIAGE_API_BASE")
+                    or None)
+        api_key = (os.environ.get("DP_HARNESS_PATCH_API_KEY")
+                   or os.environ.get("DP_HARNESS_TRIAGE_API_KEY")
+                   or None)
+        custom_llm_provider = (os.environ.get("DP_HARNESS_PATCH_PROVIDER")
+                               or os.environ.get("DP_HARNESS_TRIAGE_PROVIDER")
+                               or None)
+        timeout = int(os.environ.get("DP_HARNESS_PATCH_TIMEOUT", "600"))
+
+        helpers["activity_log"](
+            queue_root, "api_call_start",
+            f"Calling harness patch for {origin} (tier={tier.name}, env={env})",
+            job_id=ctx.job_id,
+            extra={"agent": "dports-patch", "model": model, "tier": tier.name},
+        )
+
+        dispatcher = PatchEventDispatcher(
+            queue_root=queue_root,
+            job_id=ctx.job_id,
+            origin=origin,
+            activity_log=helpers["activity_log"],
+            looks_env_suspicious=helpers["looks_env_suspicious"],
+            invalidate_health_cache=helpers["invalidate_health_cache"],
+            summarize_tool_call=helpers["summarize_tool_call"],
+        )
+
+        start = time.time()
+        try:
+            result = harness_patch.run(
+                payload,
+                tier=tier,
+                env=env,
+                model=model,
+                api_base=api_base,
+                api_key=api_key,
+                custom_llm_provider=custom_llm_provider,
+                timeout=timeout,
+                on_event=dispatcher,
+            )
+        except Exception as exc:
+            helpers["activity_log"](
+                queue_root, "api_error",
+                f"Harness patch failed for {origin}: {str(exc)[:200]}",
+                job_id=ctx.job_id,
+            )
+            return _err(str(exc), helpers, job_path)
+        duration_ms = int((time.time() - start) * 1000)
+
+        helpers["activity_log"](
+            queue_root, "api_call_complete",
+            f"Harness patch finished for {origin} (status={result.status}, "
+            f"attempts={len(result.attempts)}, tokens={result.usage.total_tokens})",
+            job_id=ctx.job_id, duration_ms=duration_ms,
+        )
+
+        # Stash for record() — and for any downstream step.
+        ctx.state["patch_result"] = result
+        ctx.state["trace_events"] = list(dispatcher.trace_events)
+
+        # Persist outputs.
+        helpers["write_patch_audit"](ctx.bundle_dir, bundle_id, result, model)
+        helpers["write_tool_trace"](ctx.bundle_dir, bundle_id, dispatcher.trace_events)
+        helpers["write_changes_diff"](ctx.bundle_dir, bundle_id, env, origin)
+        helpers["activity_log"](
+            queue_root, "write_output",
+            f"Wrote harness patch outputs for {origin}",
+            job_id=ctx.job_id,
+        )
+
+        if result.status == "success":
+            return StepOutcome(
+                status="success",
+                detail={"status_str": "done", "patch_status": result.status},
+            )
+        # needs-help / budget-exhausted — job recorded, not retried.
+        return StepOutcome(
+            status="success",
+            detail={"status_str": result.status, "patch_status": result.status},
+        )
+
+    def record(self, ctx: StepCtx, outcome: StepOutcome) -> None:
+        # Patch doesn't materialize the bundle into a tempdir
+        # (unlike triage), so there's no cleanup to do here. Outputs
+        # are persisted inside run() because they depend on the
+        # tool_trace + dispatcher state captured during the LLM call.
+        return None
+
+
+def _parse_triage_minimal(text: str) -> dict[str, str]:
+    """Tiny mirror of runner.parse_triage_output — extracts
+    classification + confidence from a triage.md.
+
+    Inlined here so steps.py doesn't import from runner.py. The
+    regexes track the runner's authoritative parser; if the agent's
+    output format changes, update both. (Phase 5 doesn't change the
+    output format.)
+    """
+    import re  # noqa: PLC0415
+    out = {"classification": "", "confidence": ""}
+    if not text:
+        return out
+    m = re.search(r"^##\s*Classification\s*\n+([^\n#]+)", text, re.MULTILINE)
+    if m:
+        out["classification"] = m.group(1).strip().lower()
+    m = re.search(r"^##\s*Confidence\s*\n+([^\n#]+)", text, re.MULTILINE)
+    if m:
+        out["confidence"] = m.group(1).strip().lower()
+    return out
