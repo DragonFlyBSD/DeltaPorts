@@ -20,11 +20,106 @@ import os
 import shutil
 import tempfile
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from .step import Step, StepCtx, StepOutcome, StepReadiness
+
+
+# -----------------------------------------------------------------------------
+# PatchEventDispatcher — observability sink for harness_patch.run's on_event.
+# -----------------------------------------------------------------------------
+
+
+@dataclass
+class PatchEventDispatcher:
+    """Named callable that routes ``harness_patch.run`` events.
+
+    Replaces the ad-hoc closure that lived inside
+    ``_process_patch_job_harness``. Three responsibilities:
+
+    1. Append every event to ``trace_events`` (the runner persists
+       this to ``analysis/tool_trace.jsonl`` after the run).
+    2. Emit one ``activity_log`` row per event so the UI shows
+       live progress.
+    3. On tool results that look env-suspicious, force-invalidate
+       the health cache so the next gate cycle re-probes. We
+       never set "broken" from a tool error directly — the probe
+       is authoritative.
+
+    Construction:
+        dispatcher = PatchEventDispatcher(
+            queue_root=..., job_id=..., origin=...,
+            activity_log=activity_log,
+            looks_env_suspicious=_looks_env_suspicious,
+            invalidate_health_cache=invalidate_health_cache,
+            summarize_tool_call=_summarize_tool_call,
+        )
+        # then pass dispatcher as on_event:
+        harness_patch.run(payload, ..., on_event=dispatcher)
+
+    Callables are injected (not module imports) so the class is
+    decoupled from runner internals and trivial to unit-test.
+    """
+    queue_root: Path | None
+    job_id: str
+    origin: str
+    activity_log: Callable[..., None]
+    looks_env_suspicious: Callable[[dict], bool]
+    invalidate_health_cache: Callable[..., None]
+    summarize_tool_call: Callable[[str, dict, dict], str]
+    trace_events: list[dict] = field(default_factory=list)
+
+    def __call__(self, ev: dict) -> None:
+        self.trace_events.append(ev)
+        et = ev.get("type")
+        if et == "tool_call":
+            res = ev.get("result") or {}
+            if isinstance(res, dict) and self.looks_env_suspicious(res):
+                try:
+                    self.invalidate_health_cache()
+                except Exception:
+                    pass
+                self.activity_log(
+                    self.queue_root, "health_recheck_forced",
+                    "tool result looks env-suspicious; forcing re-probe",
+                    job_id=self.job_id,
+                    extra={"tool": ev.get("tool")},
+                )
+
+        if et == "attempt_start":
+            self.activity_log(
+                self.queue_root, "attempt_start",
+                f"attempt {ev.get('attempt')}/{ev.get('iterations')} for "
+                f"{self.origin} (tokens used "
+                f"{ev.get('tokens_used_so_far')}/{ev.get('budget')})",
+                job_id=self.job_id,
+                extra={k: v for k, v in ev.items() if k != "type"},
+            )
+        elif et == "tool_call":
+            args = ev.get("args") or {}
+            res = ev.get("result") or {}
+            summary = self.summarize_tool_call(ev.get("tool", ""), args, res)
+            self.activity_log(
+                self.queue_root, f"tool:{ev.get('tool')}",
+                summary,
+                job_id=self.job_id,
+                duration_ms=ev.get("duration_ms"),
+                extra={
+                    "attempt": ev.get("attempt"),
+                    "turn": ev.get("turn"),
+                    "ok": bool(res.get("ok")) if isinstance(res, dict) else None,
+                },
+            )
+        elif et == "attempt_end":
+            self.activity_log(
+                self.queue_root, "attempt_end",
+                f"attempt {ev.get('attempt')} for {self.origin}: "
+                f"rebuild_ok={ev.get('rebuild_ok')} tokens={ev.get('tokens')}",
+                job_id=self.job_id,
+                extra={k: v for k, v in ev.items() if k != "type"},
+            )
 
 
 @dataclass
