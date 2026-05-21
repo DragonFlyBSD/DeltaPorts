@@ -124,6 +124,22 @@ class PatchEventDispatcher:
 
 
 @dataclass
+class TriageServices:
+    materialize_bundle: Callable[..., Any]
+    artifact_store_put: Callable[..., Any]
+    write_error_note: Callable[..., Any]
+    write_triage_audit: Callable[..., Any]
+    enqueue_patch_job: Callable[..., Any]
+    upsert_user_context_request: Callable[..., Any]
+    update_runner_status: Callable[..., Any]
+    probe_health_cached: Callable[..., Any]
+    cached_health_broken: Callable[..., bool]
+    load_port_history: Callable[..., Any]
+    log: Callable[..., Any]
+    activity_log: Callable[..., Any]
+
+
+@dataclass
 class TriageStep:
     """One triage attempt against a failure bundle.
 
@@ -133,7 +149,7 @@ class TriageStep:
       - ``payload``      : str (output of build_triage_payload)
       - ``origin``       : str (job.origin, defaulting to "unknown")
       - ``policy_path``  : str (resolved DP_HARNESS_POLICY)
-      - ``runner_helpers``: dict of callables the step needs:
+      - ``services``: TriageServices with callables the step needs:
           materialize_bundle    (bundle_id, dest_dir) -> int
           artifact_store_put    (bundle_id, relpath, data, kind) -> bool
           write_error_note      (job_path, msg) -> None
@@ -173,7 +189,7 @@ class TriageStep:
         from dportsv3.agent import triage as harness_triage  # noqa: PLC0415
         from dportsv3.agent.decision import decide            # noqa: PLC0415
 
-        helpers = ctx.state["runner_helpers"]
+        services: TriageServices = ctx.state["services"]
         queue_root = ctx.queue_root
         job = ctx.job
         job_path: Path = ctx.state["job_path"]
@@ -199,26 +215,26 @@ class TriageStep:
         if bundle_dir is None:
             if not bundle_id:
                 return _err("harness triage requires bundle_dir or bundle_id",
-                            helpers, job_path, JobEvent.TRIAGE_FAIL)
+                            services, job_path, JobEvent.TRIAGE_FAIL)
             try:
                 materialized_tmp = Path(tempfile.mkdtemp(prefix=f"bundle-{bundle_id}-"))
-                n = helpers["materialize_bundle"](bundle_id, materialized_tmp)
+                n = services.materialize_bundle(bundle_id, materialized_tmp)
             except Exception as exc:
                 return _err(f"failed to materialize bundle {bundle_id}: {exc}",
-                            helpers, job_path, JobEvent.TRIAGE_FAIL)
+                            services, job_path, JobEvent.TRIAGE_FAIL)
             if n == 0:
                 shutil.rmtree(materialized_tmp, ignore_errors=True)
                 return _err(f"bundle {bundle_id} has no artifacts in the store",
-                            helpers, job_path, JobEvent.TRIAGE_FAIL)
+                            services, job_path, JobEvent.TRIAGE_FAIL)
             bundle_dir = materialized_tmp
-            helpers["log"](queue_root, "INFO",
-                           f"materialized {n} artifact(s) for bundle {bundle_id} "
-                           f"into {materialized_tmp}")
+            services.log(queue_root, "INFO",
+                         f"materialized {n} artifact(s) for bundle {bundle_id} "
+                         f"into {materialized_tmp}")
             ctx.state["materialized_tmp"] = materialized_tmp
             ctx.state["bundle_dir"] = bundle_dir
 
         # ----- LLM call -----
-        helpers["activity_log"](
+        services.activity_log(
             queue_root, "api_call_start",
             f"Calling harness triage for {origin}",
             job_id=ctx.job_id,
@@ -237,22 +253,22 @@ class TriageStep:
                 max_snippet_rounds=max_snippet_rounds,
             )
         except Exception as exc:
-            helpers["activity_log"](
+            services.activity_log(
                 queue_root, "api_error",
                 f"Harness triage failed for {origin}: {str(exc)[:200]}",
                 job_id=ctx.job_id,
             )
-            return _err(str(exc), helpers, job_path, JobEvent.TRIAGE_FAIL)
+            return _err(str(exc), services, job_path, JobEvent.TRIAGE_FAIL)
         duration_ms = int((time.time() - start) * 1000)
-        helpers["activity_log"](
+        services.activity_log(
             queue_root, "api_call_complete",
             f"Harness triage response received for {origin} "
             f"(rounds={result.snippet_rounds}, tokens={result.usage.total_tokens})",
             job_id=ctx.job_id, duration_ms=duration_ms,
         )
 
-        helpers["write_triage_audit"](bundle_dir, bundle_id, result, model)
-        helpers["activity_log"](
+        services.write_triage_audit(bundle_dir, bundle_id, result, model)
+        services.activity_log(
             queue_root, "write_output",
             f"Wrote harness triage outputs for {origin}",
             job_id=ctx.job_id,
@@ -262,25 +278,25 @@ class TriageStep:
         try:
             pol = harness_policy.load_policy(policy_path)
         except Exception as exc:
-            helpers["activity_log"](
+            services.activity_log(
                 queue_root, "policy_error",
                 f"Failed to load harness policy at {policy_path}: {exc}",
                 job_id=ctx.job_id,
             )
-            return _err(f"policy load failed: {exc}", helpers, job_path,
+            return _err(f"policy load failed: {exc}", services, job_path,
                         JobEvent.TRIAGE_FAIL)
 
         max_attempts = int(os.environ.get("DP_HARNESS_MAX_PATCH_ATTEMPTS", "3"))
         window_hours = int(os.environ.get("DP_HARNESS_ATTEMPT_WINDOW_HOURS", "2"))
         target_value = job.get("target", "") or ""
-        history = helpers["load_port_history"](target_value, origin, window_hours)
+        history = services.load_port_history(target_value, origin, window_hours)
 
         env_health = None
         runner_env_name = os.environ.get("DP_HARNESS_ENV") or ""
         if runner_env_name:
             health_ttl = int(os.environ.get("DP_HARNESS_HEALTH_CACHE_SECONDS", "60"))
             try:
-                env_health = helpers["probe_health_cached"](runner_env_name, health_ttl)
+                env_health = services.probe_health_cached(runner_env_name, health_ttl)
             except Exception:
                 env_health = None
 
@@ -297,7 +313,7 @@ class TriageStep:
         ctx.state["decision"] = dec
         ctx.state["tier"] = tier
 
-        helpers["activity_log"](
+        services.activity_log(
             queue_root, "decision",
             dec.reason,
             job_id=ctx.job_id,
@@ -309,8 +325,7 @@ class TriageStep:
         # if the env is known-broken, the job is DEAD-env_broken
         # regardless of what the LLM said. Mirrors the legacy
         # _completion_events_for cache check.
-        cached_broken = bool(helpers.get("cached_health_broken")
-                             and helpers["cached_health_broken"]())
+        cached_broken = bool(services.cached_health_broken(runner_env_name or None))
 
         if dec.action == "skip" or cached_broken:
             return StepOutcome(
@@ -323,7 +338,7 @@ class TriageStep:
             run_id = job.get("run_id", "")
             iteration = int(job.get("iteration", "1"))
             max_iterations = int(job.get("max_iterations", "3"))
-            helpers["upsert_user_context_request"](
+            services.upsert_user_context_request(
                 queue_root,
                 run_id=run_id,
                 origin=origin,
@@ -333,7 +348,7 @@ class TriageStep:
                 iteration=iteration,
                 max_iterations=max_iterations,
             )
-            helpers["activity_log"](
+            services.activity_log(
                 queue_root, "triage_manual",
                 f"Triage tier MANUAL for {origin} "
                 f"(classification={result.classification}, confidence={result.confidence}); "
@@ -346,7 +361,7 @@ class TriageStep:
                     "run_id": run_id,
                 },
             )
-            helpers["update_runner_status"](
+            services.update_runner_status(
                 "waiting", job_id=ctx.job_id, stage="waiting_user_context",
                 extra={"origin": origin, "type": "triage", "tier": tier.name},
             )
@@ -358,12 +373,12 @@ class TriageStep:
             )
 
         # auto_patch
-        helpers["enqueue_patch_job"](
+        services.enqueue_patch_job(
             queue_root, job,
             tier_name=tier.name,
             dev_env=os.environ.get("DP_HARNESS_ENV") or None,
         )
-        helpers["activity_log"](
+        services.activity_log(
             queue_root, "enqueue_patch",
             f"Auto-enqueued patch job for {origin} "
             f"(tier={tier.name}, classification={result.classification})",
@@ -391,12 +406,12 @@ class TriageStep:
         if materialized_tmp is None:
             return
         bundle_id = ctx.bundle_id or ctx.job.get("bundle_id")
-        helpers = ctx.state.get("runner_helpers") or {}
-        if bundle_id and "artifact_store_put" in helpers:
+        services: TriageServices | None = ctx.state.get("services")
+        if bundle_id and services is not None:
             tmd = materialized_tmp / "analysis" / "triage.md"
             if tmd.exists():
                 try:
-                    helpers["artifact_store_put"](
+                    services.artifact_store_put(
                         bundle_id, "analysis/triage.md",
                         tmd.read_bytes(), "text",
                     )
@@ -407,7 +422,7 @@ class TriageStep:
 
 def _err(
     msg: str,
-    helpers: dict[str, Any],
+    services: Any,
     job_path: Path,
     failure_event: JobEvent,
 ) -> StepOutcome:
@@ -418,7 +433,7 @@ def _err(
     PATCH_GAVE_UP for the patch step (the catchall DEAD route).
     """
     try:
-        helpers["write_error_note"](job_path, msg)
+        services.write_error_note(job_path, msg)
     except Exception:
         pass
     return StepOutcome(
@@ -434,6 +449,23 @@ def _err(
 
 
 @dataclass
+class PatchServices:
+    read_bundle_text: Callable[..., Any]
+    parse_triage_output: Callable[..., Any]
+    write_error_note: Callable[..., Any]
+    write_patch_audit: Callable[..., Any]
+    write_tool_trace: Callable[..., Any]
+    write_changes_diff: Callable[..., Any]
+    looks_env_suspicious: Callable[..., bool]
+    invalidate_health_cache: Callable[..., Any]
+    cached_health_broken: Callable[..., bool]
+    summarize_tool_call: Callable[..., str]
+    activity_log: Callable[..., Any]
+    log: Callable[..., Any]
+    load_port_history: Callable[..., Any]
+
+
+@dataclass
 class PatchAttemptStep:
     """One patch attempt against a triage-classified failure.
 
@@ -443,9 +475,9 @@ class PatchAttemptStep:
       - ``payload``        : str (build_patch_payload output)
       - ``origin``         : str (job.origin)
       - ``policy_path``    : str (resolved DP_HARNESS_POLICY)
-      - ``runner_helpers`` : dict of injected callables (see below)
+      - ``services``       : PatchServices with injected callables
 
-    Required ``runner_helpers``:
+    Required ``services`` fields:
 
       - read_bundle_text(bundle_dir, bundle_id, relpath) -> str | None
       - write_error_note(job_path, msg) -> None
@@ -475,7 +507,7 @@ class PatchAttemptStep:
         # Model resolution — DP_HARNESS_PATCH_MODEL takes precedence;
         # fall back to DP_HARNESS_TRIAGE_MODEL with a warning so the
         # operator knows patch quality may be lower.
-        helpers = ctx.state.get("runner_helpers") or {}
+        services: PatchServices = ctx.state["services"]
         model = os.environ.get("DP_HARNESS_PATCH_MODEL")
         if not model:
             model = os.environ.get("DP_HARNESS_TRIAGE_MODEL")
@@ -484,13 +516,12 @@ class PatchAttemptStep:
                     status="fail",
                     reason="neither DP_HARNESS_PATCH_MODEL nor DP_HARNESS_TRIAGE_MODEL set",
                 )
-            if "log" in helpers:
-                helpers["log"](
-                    ctx.queue_root, "WARN",
-                    f"DP_HARNESS_PATCH_MODEL unset; falling back to triage model "
-                    f"({model}) for patch — set DP_HARNESS_PATCH_MODEL "
-                    f"to silence this and likely improve patch quality",
-                )
+            services.log(
+                ctx.queue_root, "WARN",
+                f"DP_HARNESS_PATCH_MODEL unset; falling back to triage model "
+                f"({model}) for patch — set DP_HARNESS_PATCH_MODEL "
+                f"to silence this and likely improve patch quality",
+            )
         ctx.state["model"] = model
 
         # dev_env: prefer job field, fall back to env var. Required.
@@ -528,19 +559,11 @@ class PatchAttemptStep:
         # operator-triggered patches.
         from dportsv3.agent.decision import PortHistory, decide  # noqa: PLC0415
 
-        read_bundle_text = helpers.get("read_bundle_text")
-        parse_triage = helpers.get("parse_triage_output")
-        if read_bundle_text is None or parse_triage is None:
-            return StepReadiness(
-                status="fail",
-                reason="runner_helpers missing read_bundle_text or "
-                       "parse_triage_output for tier fallback",
-            )
-        triage_text = read_bundle_text(
+        triage_text = services.read_bundle_text(
             ctx.bundle_dir, ctx.bundle_id or ctx.job.get("bundle_id"),
             "analysis/triage.md",
         ) or ""
-        triage = parse_triage(triage_text)
+        triage = services.parse_triage_output(triage_text)
         history = PortHistory.empty(
             target=ctx.job.get("target", "") or "",
             origin=ctx.state.get("origin") or ctx.job.get("origin", ""),
@@ -558,7 +581,7 @@ class PatchAttemptStep:
     def run(self, ctx: StepCtx) -> StepOutcome:
         from dportsv3.agent import patch as harness_patch  # noqa: PLC0415
 
-        helpers = ctx.state["runner_helpers"]
+        services: PatchServices = ctx.state["services"]
         queue_root = ctx.queue_root
         job = ctx.job
         job_path: Path = ctx.state["job_path"]
@@ -581,7 +604,7 @@ class PatchAttemptStep:
                                or None)
         timeout = int(os.environ.get("DP_HARNESS_PATCH_TIMEOUT", "600"))
 
-        helpers["activity_log"](
+        services.activity_log(
             queue_root, "api_call_start",
             f"Calling harness patch for {origin} (tier={tier.name}, env={env})",
             job_id=ctx.job_id,
@@ -592,10 +615,10 @@ class PatchAttemptStep:
             queue_root=queue_root,
             job_id=ctx.job_id,
             origin=origin,
-            activity_log=helpers["activity_log"],
-            looks_env_suspicious=helpers["looks_env_suspicious"],
-            invalidate_health_cache=helpers["invalidate_health_cache"],
-            summarize_tool_call=helpers["summarize_tool_call"],
+            activity_log=services.activity_log,
+            looks_env_suspicious=services.looks_env_suspicious,
+            invalidate_health_cache=services.invalidate_health_cache,
+            summarize_tool_call=services.summarize_tool_call,
         )
 
         start = time.time()
@@ -612,15 +635,15 @@ class PatchAttemptStep:
                 on_event=dispatcher,
             )
         except Exception as exc:
-            helpers["activity_log"](
+            services.activity_log(
                 queue_root, "api_error",
                 f"Harness patch failed for {origin}: {str(exc)[:200]}",
                 job_id=ctx.job_id,
             )
-            return _err(str(exc), helpers, job_path, JobEvent.PATCH_GAVE_UP)
+            return _err(str(exc), services, job_path, JobEvent.PATCH_GAVE_UP)
         duration_ms = int((time.time() - start) * 1000)
 
-        helpers["activity_log"](
+        services.activity_log(
             queue_root, "api_call_complete",
             f"Harness patch finished for {origin} (status={result.status}, "
             f"attempts={len(result.attempts)}, tokens={result.usage.total_tokens})",
@@ -632,10 +655,10 @@ class PatchAttemptStep:
         ctx.state["trace_events"] = list(dispatcher.trace_events)
 
         # Persist outputs.
-        helpers["write_patch_audit"](ctx.bundle_dir, bundle_id, result, model)
-        helpers["write_tool_trace"](ctx.bundle_dir, bundle_id, dispatcher.trace_events)
-        helpers["write_changes_diff"](ctx.bundle_dir, bundle_id, env, origin)
-        helpers["activity_log"](
+        services.write_patch_audit(ctx.bundle_dir, bundle_id, result, model)
+        services.write_tool_trace(ctx.bundle_dir, bundle_id, dispatcher.trace_events)
+        services.write_changes_diff(ctx.bundle_dir, bundle_id, env, origin)
+        services.activity_log(
             queue_root, "write_output",
             f"Wrote harness patch outputs for {origin}",
             job_id=ctx.job_id,
@@ -643,7 +666,7 @@ class PatchAttemptStep:
 
         # If the cached health probe shows broken, the env poisoned
         # the result — ENV_BROKEN overrides whatever the LLM said.
-        if helpers.get("cached_health_broken") and helpers["cached_health_broken"]():
+        if services.cached_health_broken(env):
             return StepOutcome(
                 status="success",
                 next_event=JobEvent.ENV_BROKEN,
@@ -677,5 +700,3 @@ class PatchAttemptStep:
         # are persisted inside run() because they depend on the
         # tool_trace + dispatcher state captured during the LLM call.
         return None
-
-

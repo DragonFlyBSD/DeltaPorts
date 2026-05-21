@@ -100,14 +100,23 @@ def invalidate_health_cache(env: str | None = None) -> None:
         _health_cache.pop(env, None)
 
 
-def _cached_health_broken() -> bool:
-    """True iff the most recently cached probe (any env) was broken.
+def _cached_health_broken(env: str | None = None) -> bool:
+    """True iff the cached probe for ``env`` was broken.
 
     Read directly by ``PatchAttemptStep.run`` (via the
-    ``cached_health_broken`` runner_helpers binding) to route a
+    ``cached_health_broken`` service binding) to route a
     mid-flight job to ENV_BROKEN when the env is known bad.
     Doesn't trigger a probe — purely reads the cache.
+
+    ``env=None`` preserves the legacy "any env" behavior for callers
+    that do not have a scoped env, but step code should pass the current
+    job env so one broken chroot does not poison another.
     """
+    if env is not None:
+        cached = _health_cache.get(env)
+        if cached is None:
+            return False
+        return getattr(cached[1], "status", None) == "broken"
     for _ts, eh in _health_cache.values():
         status = getattr(eh, "status", None)
         if status == "broken":
@@ -1392,8 +1401,23 @@ def _finish_orchestrator_run(
     it for lead + siblings.
     """
     from dportsv3.agent.lifecycle import JobEvent
+    from dportsv3.agent.step import outcome_events
 
     if result.halted:
+        # Normal orchestrator halts happen before outcome events are
+        # fired. If a future step shape returns an outcome while halting,
+        # mirror those events instead of synthesizing a second failure.
+        step_result = result.step_by_name(step_name)
+        events = outcome_events(step_result.outcome if step_result else None)
+        if events:
+            detail = (step_result.outcome.detail if step_result and step_result.outcome
+                      else {"reason": result.halt_reason})
+            for s in sibling_paths:
+                for evt in events:
+                    _apply_transition(s.name, evt, detail=detail)
+            status_str = detail.get("status_str", result.halt_reason)
+            return False, status_str or f"{step_name} halted"
+
         # Lead got no events from the orchestrator; synthesize the
         # catchall failure event.
         evt = JobEvent(failure_event)
@@ -1416,10 +1440,7 @@ def _finish_orchestrator_run(
 
     outcome = step_result.outcome
     # Sibling fan-out: same events the orchestrator fired for the lead.
-    sibling_events: list[JobEvent] = []
-    if outcome.next_event is not None:
-        sibling_events.append(outcome.next_event)
-    sibling_events.extend(outcome.extra_events)
+    sibling_events = outcome_events(outcome)
     detail = outcome.detail or {}
     for s in sibling_paths:
         for evt in sibling_events:
@@ -1447,7 +1468,7 @@ def process_triage_job(
     same events out to siblings. ``_completion_events_for`` retires.
     """
     from dportsv3.agent.step import Orchestrator, StepCtx
-    from dportsv3.agent.steps import TriageStep
+    from dportsv3.agent.steps import TriageServices, TriageStep
 
     payload = build_triage_payload(bundle_dir, kedb_dir, job)
     origin = job.get("origin", "unknown")
@@ -1471,20 +1492,20 @@ def process_triage_job(
     ctx.state["policy_path"] = os.environ.get(
         "DP_HARNESS_POLICY", _DEFAULT_POLICY_PATH,
     )
-    ctx.state["runner_helpers"] = {
-        "materialize_bundle": _materialize_bundle,
-        "artifact_store_put": artifact_store_put,
-        "write_error_note": write_error_note,
-        "write_triage_audit": _write_triage_audit_harness,
-        "enqueue_patch_job": enqueue_patch_job,
-        "upsert_user_context_request": upsert_user_context_request,
-        "update_runner_status": update_runner_status,
-        "probe_health_cached": probe_health_cached,
-        "cached_health_broken": _cached_health_broken,
-        "load_port_history": _load_port_history,
-        "log": log,
-        "activity_log": activity_log,
-    }
+    ctx.state["services"] = TriageServices(
+        materialize_bundle=_materialize_bundle,
+        artifact_store_put=artifact_store_put,
+        write_error_note=write_error_note,
+        write_triage_audit=_write_triage_audit_harness,
+        enqueue_patch_job=enqueue_patch_job,
+        upsert_user_context_request=upsert_user_context_request,
+        update_runner_status=update_runner_status,
+        probe_health_cached=probe_health_cached,
+        cached_health_broken=_cached_health_broken,
+        load_port_history=_load_port_history,
+        log=log,
+        activity_log=activity_log,
+    )
 
     result = Orchestrator().run(ctx, [TriageStep()])
     return _finish_orchestrator_run(
@@ -1650,7 +1671,7 @@ def process_patch_job(
     wrapper fans the same events out to siblings.
     """
     from dportsv3.agent.step import Orchestrator, StepCtx
-    from dportsv3.agent.steps import PatchAttemptStep
+    from dportsv3.agent.steps import PatchAttemptStep, PatchServices
 
     payload = build_patch_payload(bundle_dir, kedb_dir, job)
     origin = job.get("origin", "unknown")
@@ -1674,21 +1695,21 @@ def process_patch_job(
     ctx.state["policy_path"] = os.environ.get(
         "DP_HARNESS_POLICY", _DEFAULT_POLICY_PATH,
     )
-    ctx.state["runner_helpers"] = {
-        "read_bundle_text": read_bundle_text,
-        "parse_triage_output": parse_triage_output,
-        "write_error_note": write_error_note,
-        "write_patch_audit": _write_patch_audit_harness,
-        "write_tool_trace": _write_tool_trace,
-        "write_changes_diff": _write_changes_diff,
-        "looks_env_suspicious": _looks_env_suspicious,
-        "invalidate_health_cache": invalidate_health_cache,
-        "cached_health_broken": _cached_health_broken,
-        "summarize_tool_call": _summarize_tool_call,
-        "activity_log": activity_log,
-        "log": log,
-        "load_port_history": _load_port_history,
-    }
+    ctx.state["services"] = PatchServices(
+        read_bundle_text=read_bundle_text,
+        parse_triage_output=parse_triage_output,
+        write_error_note=write_error_note,
+        write_patch_audit=_write_patch_audit_harness,
+        write_tool_trace=_write_tool_trace,
+        write_changes_diff=_write_changes_diff,
+        looks_env_suspicious=_looks_env_suspicious,
+        invalidate_health_cache=invalidate_health_cache,
+        cached_health_broken=_cached_health_broken,
+        summarize_tool_call=_summarize_tool_call,
+        activity_log=activity_log,
+        log=log,
+        load_port_history=_load_port_history,
+    )
 
     result = Orchestrator().run(ctx, [PatchAttemptStep()])
     return _finish_orchestrator_run(

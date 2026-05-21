@@ -134,6 +134,8 @@ def test_cached_health_broken_reads_cache_only(monkeypatch):
     runner.probe_health_cached("x", ttl_seconds=60)
     assert calls == ["x"]
     assert runner._cached_health_broken() is True
+    assert runner._cached_health_broken("x") is True
+    assert runner._cached_health_broken("other") is False
     # Still only one underlying call.
     assert calls == ["x"]
 

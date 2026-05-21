@@ -146,6 +146,16 @@ retired) · `0a86d12f8ce` (e2e parity + lifecycle fix).
 
 Test delta: +45. 407 total green at phase end.
 
+Post-review stabilization follow-ups shipped after the phase cutover:
+
+- Scoped cached-health-broken checks by env so one broken chroot does not
+  poison another env in the same runner process.
+- Replaced untyped `runner_helpers` dicts with named `TriageServices` and
+  `PatchServices` containers.
+- Centralized step outcome event derivation through `outcome_events()`.
+- Added a composite `bundles(origin, target, last_seen_at)` index for
+  `PortHistory.load()`.
+
 ---
 
 ## Current phase: Stabilization
@@ -166,10 +176,11 @@ Test delta: +45. 407 total green at phase end.
    when chroot is repaired mid-run, retry cap firing when an
    origin loops, sibling fan-out on a batch.
 
-2. **Parallel review.** A separate agent has been briefed to
-   audit the framework against the design doc (see prompt
-   shared with operator). Findings will land in a follow-up
-   document; this plan file gets updated when they're triaged.
+2. **Parallel review follow-ups.** Initial review findings have
+   been triaged into small stabilization changes: env-scoped health
+   cache reads, typed step service containers, shared outcome-event
+   derivation, and the `PortHistory.load()` index. Larger items stay
+   parked below.
 
 3. **Operator notification (parking lot).** Currently when
    `decide()` returns `skip` because env is broken, or
@@ -247,6 +258,10 @@ layer's scope:
   for skip + cap escalation events.
 - **`RebuildVerifyStep` actual split** — name lives in the Step
   protocol; behavioral split is a follow-up.
+- **Context aggregate-budget enforcement** — priority exists, but
+  budget-based dropping is still deferred.
+- **Unified typed event stream** — lifecycle, activity log, tool trace,
+  and artifact writes are not yet one event pipeline.
 
 Both will likely become new phases when promoted, with their own
 plan documents that replace this file when active.

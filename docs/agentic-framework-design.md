@@ -1,12 +1,8 @@
 # Agentic framework — design sketch
 
-> **Status:** draft, no code yet. Captures the layered design that the
-> ad-hoc fixes accumulated in May 2026 (sibling batching, env_broken
-> detection, retry cap, automation-context prompt, jobs-table backfill,
-> tool tracing) point toward. Goal of this doc is to name the layers,
-> draw the interfaces, and lay out a migration that replaces the
-> hacks one batch at a time — not to ship the whole framework in one
-> commit.
+> **Status:** implemented in five phases. This document remains the
+> architecture sketch and rationale; implementation details and shipped
+> deviations are tracked in `agentic-framework-plan.md`.
 
 ## Why
 
@@ -320,3 +316,6 @@ is worth promoting into its plan.
 | Idea | Surfaced in | Why it's parked |
 |---|---|---|
 | **Operator notification on env-broken / persistent failure.** When the runner skips work because the env is broken, or when a (target, origin) hits the retry cap, the operator currently has to discover this by polling the UI / activity log. A push channel (email/webhook/Slack/badge) would let the operator act sooner. | Phase 3 (decision: env-broken → skip) | Needs a notification framework; out of scope for the policy engine. Candidate for a dedicated layer-6 or post-phase-5 polish. |
+| **Budget enforcement in context assembly.** `ContextSection.priority` exists, but aggregate byte-budget enforcement / lowest-priority dropping is still deferred. | Phase 4 | Phase 4 intentionally preserved byte-for-byte prompt parity. |
+| **Unified event stream.** Lifecycle events, activity log, tool trace, and bundle artifacts still have separate writers. | Phase 5 | A single typed event stream is larger than the step cutover. |
+| **Split `RebuildVerifyStep`.** Verification remains fused into the patch LLM/tool loop. | Phase 5 | Splitting it changes the agent contract and should be a dedicated behavior-change phase. |

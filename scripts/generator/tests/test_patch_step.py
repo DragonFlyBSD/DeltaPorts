@@ -25,7 +25,7 @@ import pytest
 
 from dportsv3.agent.policy import Policy, Tier
 from dportsv3.agent.step import StepCtx
-from dportsv3.agent.steps import PatchAttemptStep
+from dportsv3.agent.steps import PatchAttemptStep, PatchServices
 
 
 # --- helpers ------------------------------------------------------------------
@@ -65,7 +65,7 @@ def _ctx(tmp_path, job=None, *, helpers_overrides=None, bundle_text=None):
     log_rec = _LogRec()
     from dportsv3.agent.runner import parse_triage_output
 
-    helpers = {
+    services_kwargs = {
         "log": log_rec,
         "read_bundle_text": (lambda bd, bid, rp: bundle_text)
                               if bundle_text is not None
@@ -78,18 +78,18 @@ def _ctx(tmp_path, job=None, *, helpers_overrides=None, bundle_text=None):
         "write_changes_diff": lambda *a, **kw: None,
         "looks_env_suspicious": lambda res: False,
         "invalidate_health_cache": lambda: None,
-        "cached_health_broken": lambda: False,
+        "cached_health_broken": lambda env=None: False,
         "summarize_tool_call": lambda t, a, r: "",
         "activity_log": lambda *a, **kw: None,
         "load_port_history": lambda t, o, w: None,
     }
     if helpers_overrides:
-        helpers.update(helpers_overrides)
+        services_kwargs.update(helpers_overrides)
     ctx = StepCtx(job_id="job-x", job=job, queue_root=tmp_path)
     ctx.state["job_path"] = tmp_path / "job-x"
     ctx.state["payload"] = "(payload)"
     ctx.state["origin"] = job.get("origin", "?")
-    ctx.state["runner_helpers"] = helpers
+    ctx.state["services"] = PatchServices(**services_kwargs)
     return ctx, log_rec
 
 

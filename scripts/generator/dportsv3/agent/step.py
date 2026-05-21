@@ -80,6 +80,17 @@ class StepResult:
     outcome: StepOutcome | None = None
 
 
+def outcome_events(outcome: StepOutcome | None) -> list[JobEvent]:
+    """Lifecycle events encoded by a step outcome, in fire order."""
+    if outcome is None:
+        return []
+    events: list[JobEvent] = []
+    if outcome.next_event is not None:
+        events.append(outcome.next_event)
+    events.extend(outcome.extra_events)
+    return events
+
+
 @dataclass
 class OrchestratorResult:
     """End-of-run summary for a job's step list."""
@@ -221,11 +232,7 @@ class Orchestrator:
                     except Exception:
                         pass
 
-            events_to_fire: list[JobEvent] = []
-            if outcome.next_event is not None:
-                events_to_fire.append(outcome.next_event)
-            events_to_fire.extend(outcome.extra_events)
-            for evt in events_to_fire:
+            for evt in outcome_events(outcome):
                 if ctx.apply_transition is None:
                     break
                 try:

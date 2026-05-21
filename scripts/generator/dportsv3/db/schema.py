@@ -219,6 +219,8 @@ MIGRATIONS: tuple[str, ...] = (
     "ALTER TABLE jobs ADD COLUMN target TEXT",
     "ALTER TABLE runs ADD COLUMN target TEXT",
     "CREATE INDEX IF NOT EXISTS idx_bundles_target ON bundles(target)",
+    "CREATE INDEX IF NOT EXISTS idx_bundles_origin_target_seen "
+    "ON bundles(origin, target, last_seen_at)",
     "CREATE INDEX IF NOT EXISTS idx_jobs_target ON jobs(target)",
     "CREATE INDEX IF NOT EXISTS idx_runs_target ON runs(target)",
     # Phase 1 framework: per-job transition forensics.
