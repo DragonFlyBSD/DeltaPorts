@@ -12,6 +12,27 @@ export PATH
 
 umask 022
 
+# Skip all hook side effects when the caller is the patch agent.
+#
+# The patch agent runs ``dsynth build`` itself as part of its
+# attempt loop (dportsv3/agent/worker.py:dsynth_build). The env
+# the agent runs in is the same operator-hooked env (one env per
+# target — that's the architecture). Without this guard, every
+# agent-driven build failure would fire ``hook_pkg_failure``,
+# upload a new bundle, and the runner would enqueue another
+# triage job for an origin the agent is already working on.
+# That loop is unbounded in the worst case (one fix attempt
+# unmasks ten new failures, each of which spawns a new agent
+# loop) and pure waste in the best case (the agent already
+# knows its build failed; the bundle is redundant).
+#
+# The patch agent's dsynth_build sets this var before invoking
+# dsynth. All hook scripts inherit it via dsynth's child
+# environment.
+if [ "${DPORTSV3_HOOKS_DISABLED:-0}" = "1" ]; then
+	exit 0
+fi
+
 # Source the operator config first so its values win over the defaults
 # below. The path is overridable via DPORTSV3_HOOKS_CONFIG; default is
 # the conf installed next to this script (typically

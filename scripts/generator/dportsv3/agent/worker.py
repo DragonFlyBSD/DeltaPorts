@@ -622,7 +622,17 @@ def dsynth_build(env: str, origin: str) -> dict:
     # Read DPORTS_DSYNTH_PROFILE inside the chroot (set by dev-env's
     # build_env_dict at helpers.py:113) and invoke dsynth directly.
     # Using sh -c so we can reference the env var on the chroot side.
+    #
+    # ``DPORTSV3_HOOKS_DISABLED=1`` short-circuits dsynth-hooks/
+    # hook_common.sh so an agent-driven build never produces a new
+    # failure bundle. There is one env per target — the same env the
+    # operator uses for production dsynth runs — so without this guard
+    # every failed attempt the agent makes would fire the hooks, upload
+    # a new bundle, and the runner would enqueue another triage job
+    # for an origin the agent is already actively patching. That's an
+    # unbounded loop in the worst case and pure waste in the best.
     cmd = (
+        'DPORTSV3_HOOKS_DISABLED=1 '
         'dsynth -S -y -p "$DPORTS_DSYNTH_PROFILE" build "$1"'
     )
     p = _exec(env, "/bin/sh", "-c", cmd, "_", origin)
