@@ -1547,6 +1547,7 @@ def process_triage_job(
         load_port_history=_load_port_history,
         log=log,
         activity_log=activity_log,
+        write_manual_handoff=_write_manual_handoff,
     )
 
     result = Orchestrator().run(ctx, [TriageStep()])
@@ -1697,6 +1698,49 @@ def _write_changes_diff(bundle_dir: Path | None, bundle_id: str | None, env: str
         out.write_bytes(diff_bytes)
 
 
+def _write_manual_handoff(
+    bundle_dir: Path | None,
+    bundle_id: str | None,
+    *,
+    origin: str,
+    target: str,
+    reason: str,
+    reason_detail: str = "",
+    decision_extra: dict | None = None,
+    patch_result: object | None = None,
+) -> None:
+    """Render and persist ``analysis/manual_handoff.md`` for an
+    escalated job. Best-effort: failures are swallowed so escalation
+    bookkeeping (lifecycle event, user-context-request row) never gets
+    blocked by an artifact write."""
+    try:
+        from dportsv3.agent import manual_handoff  # noqa: PLC0415
+
+        ctx = manual_handoff.build_handoff_ctx(
+            origin=origin,
+            target=target,
+            reason=reason,
+            reason_detail=reason_detail,
+            bundle_id=bundle_id or "",
+            bundle_dir=bundle_dir,
+            read_bundle_text=read_bundle_text,
+            decision_extra=decision_extra,
+            patch_result=patch_result,
+        )
+        body = manual_handoff.render_handoff(ctx).encode("utf-8")
+    except Exception as exc:
+        print(f"Warning: manual_handoff render failed for {origin}: {exc}",
+              file=sys.stderr)
+        return
+
+    if bundle_id:
+        artifact_store_put(bundle_id, "analysis/manual_handoff.md", body, "text")
+    elif bundle_dir is not None:
+        out = bundle_dir / "analysis" / "manual_handoff.md"
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_bytes(body)
+
+
 def process_patch_job(
     queue_root: Path,
     job_path: Path,
@@ -1751,6 +1795,7 @@ def process_patch_job(
         activity_log=activity_log,
         log=log,
         load_port_history=_load_port_history,
+        write_manual_handoff=_write_manual_handoff,
     )
 
     result = Orchestrator().run(ctx, [PatchAttemptStep()])

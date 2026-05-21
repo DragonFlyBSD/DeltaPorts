@@ -137,6 +137,7 @@ class TriageServices:
     load_port_history: Callable[..., Any]
     log: Callable[..., Any]
     activity_log: Callable[..., Any]
+    write_manual_handoff: Callable[..., Any] | None = None
 
 
 @dataclass
@@ -338,6 +339,28 @@ class TriageStep:
             run_id = job.get("run_id", "")
             iteration = int(job.get("iteration", "1"))
             max_iterations = int(job.get("max_iterations", "3"))
+            if services.write_manual_handoff is not None:
+                # Two paths land here: classification → MANUAL, and
+                # retry-cap. ``dec.extra["recent_failures"]`` is only
+                # set on the retry-cap branch; use that as the
+                # discriminator so the handoff renders the right
+                # operator question.
+                handoff_reason = (
+                    "retry_cap" if "recent_failures" in dec.extra
+                    else "manual_tier"
+                )
+                try:
+                    services.write_manual_handoff(
+                        bundle_dir,
+                        bundle_id or (bundle_dir.name if bundle_dir else None),
+                        origin=origin,
+                        target=job.get("target", "") or "",
+                        reason=handoff_reason,
+                        reason_detail=dec.reason,
+                        decision_extra=dec.extra,
+                    )
+                except Exception:
+                    pass
             services.upsert_user_context_request(
                 queue_root,
                 run_id=run_id,
@@ -420,6 +443,39 @@ class TriageStep:
         shutil.rmtree(materialized_tmp, ignore_errors=True)
 
 
+def _try_write_handoff(
+    services: Any,
+    ctx: StepCtx,
+    origin: str,
+    *,
+    reason: str,
+    reason_detail: str = "",
+    patch_result: object | None = None,
+) -> None:
+    """Best-effort manual_handoff.md writer for terminal patch paths.
+
+    Swallows all errors — lifecycle bookkeeping must not be blocked
+    by an artifact-write failure. The injected callable is optional;
+    if a service was constructed without it (e.g. legacy callers),
+    this is a no-op."""
+    fn = getattr(services, "write_manual_handoff", None)
+    if fn is None:
+        return
+    bundle_id = ctx.bundle_id or ctx.job.get("bundle_id")
+    try:
+        fn(
+            ctx.bundle_dir,
+            bundle_id,
+            origin=origin,
+            target=ctx.job.get("target", "") or "",
+            reason=reason,
+            reason_detail=reason_detail,
+            patch_result=patch_result,
+        )
+    except Exception:
+        pass
+
+
 def _err(
     msg: str,
     services: Any,
@@ -463,6 +519,7 @@ class PatchServices:
     activity_log: Callable[..., Any]
     log: Callable[..., Any]
     load_port_history: Callable[..., Any]
+    write_manual_handoff: Callable[..., Any] | None = None
 
 
 @dataclass
@@ -640,6 +697,12 @@ class PatchAttemptStep:
                 f"Harness patch failed for {origin}: {str(exc)[:200]}",
                 job_id=ctx.job_id,
             )
+            _try_write_handoff(
+                services, ctx, origin,
+                reason="patch_gave_up",
+                reason_detail=f"harness raised before producing a result: {str(exc)[:200]}",
+                patch_result=None,
+            )
             return _err(str(exc), services, job_path, JobEvent.PATCH_GAVE_UP)
         duration_ms = int((time.time() - start) * 1000)
 
@@ -682,12 +745,24 @@ class PatchAttemptStep:
                 detail={"status_str": "done", "patch_status": result.status},
             )
         if "budget" in status_l:
+            _try_write_handoff(
+                services, ctx, origin,
+                reason="patch_budget_exhausted",
+                reason_detail=f"patch ended with status={result.status}",
+                patch_result=result,
+            )
             return StepOutcome(
                 status="success",
                 next_event=JobEvent.PATCH_BUDGET_OUT,
                 detail={"status_str": result.status, "patch_status": result.status},
             )
         # needs-help / gave-up / anything else — catchall DEAD.
+        _try_write_handoff(
+            services, ctx, origin,
+            reason="patch_gave_up",
+            reason_detail=f"patch ended with status={result.status}",
+            patch_result=result,
+        )
         return StepOutcome(
             status="success",
             next_event=JobEvent.PATCH_GAVE_UP,
