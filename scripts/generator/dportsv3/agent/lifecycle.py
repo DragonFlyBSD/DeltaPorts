@@ -112,6 +112,19 @@ _TERMINAL_REASONS: dict[JobEvent, str] = {
     JobEvent.REAP_ORPHAN:      "runner_restart",
 }
 
+
+# Events that close the agent's investigation of a bundle. Propagated
+# to ``bundles.resolution`` so the UI can show "this failure was
+# resolved by the agent" without spelunking analysis/patch_audit.json.
+# ``bundles.result`` stays unchanged (the bundle WAS a failure at
+# ingest); ``resolution`` carries the post-ingest verdict.
+_EVENT_TO_RESOLUTION: dict[JobEvent, str] = {
+    JobEvent.PATCH_OK:         "agent_fixed",
+    JobEvent.PATCH_GAVE_UP:    "agent_gave_up",
+    JobEvent.PATCH_BUDGET_OUT: "agent_budget_exhausted",
+    JobEvent.ESCALATE_MANUAL:  "escalated_manual",
+}
+
 _INFLIGHT_STATES: tuple[JobState, ...] = (
     JobState.CLAIMED,
     JobState.TRIAGING,
@@ -224,6 +237,22 @@ def apply(
                      last_transition_at=excluded.last_transition_at""",
                 (job_id, new_state.value, ts),
             )
+
+        # Resolution propagation: if this event closes the agent's
+        # investigation and ``detail`` carries the originating
+        # bundle_id, write the verdict onto the bundle. Best-effort:
+        # a missing bundles row (older bundle, or detail lacking the
+        # field) just silently skips. Idempotent — running the same
+        # transition twice writes the same resolution.
+        resolution = _EVENT_TO_RESOLUTION.get(event)
+        if resolution and detail and detail.get("bundle_id"):
+            conn.execute(
+                """UPDATE bundles
+                   SET resolution = ?, last_seen_at = ?
+                   WHERE bundle_id = ?""",
+                (resolution, ts, str(detail["bundle_id"])),
+            )
+
         conn.execute("COMMIT")
         return new_state
     except IllegalTransition:

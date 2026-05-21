@@ -30,7 +30,22 @@
       <table style="font-size:12px;">
         <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Origin</th><td>{{ bundle.origin }}{% if bundle.flavor %} @ {{ bundle.flavor }}{% endif %}</td></tr>
         <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Target</th><td>{{ bundle.target or '—' }}</td></tr>
-        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Result</th><td><span class="stat-pill {% if bundle.result == 'fail' %}failed{% else %}built{% endif %}">{{ bundle.result }}</span></td></tr>
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Result</th><td><span class="stat-pill {% if bundle.result == 'fail' or bundle.result == 'failure' %}failed{% else %}built{% endif %}">{{ bundle.result }}</span></td></tr>
+        {% if bundle.resolution %}
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Resolution</th><td>
+          {% if bundle.resolution == 'agent_fixed' %}
+            <span class="stat-pill built">agent fixed</span>
+          {% elif bundle.resolution == 'agent_gave_up' %}
+            <span class="stat-pill failed">agent gave up</span>
+          {% elif bundle.resolution == 'agent_budget_exhausted' %}
+            <span class="stat-pill failed">budget exhausted</span>
+          {% elif bundle.resolution == 'escalated_manual' %}
+            <span class="stat-pill skipped">escalated manual</span>
+          {% else %}
+            {{ bundle.resolution }}
+          {% endif %}
+        </td></tr>
+        {% endif %}
         <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Timestamp</th><td>{{ bundle.ts_utc }}</td></tr>
         <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Run</th><td>{% if bundle.run_id %}<a href="{{ request.url_for('agentic_run_detail', run_id=bundle.run_id) }}">{{ bundle.run_id }}</a>{% else %}—{% endif %}</td></tr>
       </table>

@@ -1491,6 +1491,16 @@ def _finish_orchestrator_run(
     from dportsv3.agent.lifecycle import JobEvent
     from dportsv3.agent.step import outcome_events
 
+    def _sibling_detail(s: Path, base_detail: dict) -> dict:
+        """Per-sibling detail dict carrying its OWN bundle_id so the
+        resolution propagates to the right bundles row."""
+        out = dict(base_detail) if base_detail else {}
+        try:
+            out["bundle_id"] = parse_job_file(s).get("bundle_id", "") or None
+        except Exception:
+            pass
+        return out
+
     if result.halted:
         # Normal orchestrator halts happen before outcome events are
         # fired. If a future step shape returns an outcome while halting,
@@ -1501,8 +1511,9 @@ def _finish_orchestrator_run(
             detail = (step_result.outcome.detail if step_result and step_result.outcome
                       else {"reason": result.halt_reason})
             for s in sibling_paths:
+                sd = _sibling_detail(s, detail)
                 for evt in events:
-                    _apply_transition(s.name, evt, detail=detail)
+                    _apply_transition(s.name, evt, detail=sd)
             status_str = detail.get("status_str", result.halt_reason)
             return False, status_str or f"{step_name} halted"
 
@@ -1523,7 +1534,8 @@ def _finish_orchestrator_run(
         evt = JobEvent(failure_event)
         _apply_transition(result.job_id, evt, detail={"reason": reason})
         for s in sibling_paths:
-            _apply_transition(s.name, evt, detail={"reason": reason})
+            _apply_transition(s.name, evt,
+                              detail=_sibling_detail(s, {"reason": reason}))
         return False, reason
 
     outcome = step_result.outcome
@@ -1531,8 +1543,9 @@ def _finish_orchestrator_run(
     sibling_events = outcome_events(outcome)
     detail = outcome.detail or {}
     for s in sibling_paths:
+        sd = _sibling_detail(s, detail)
         for evt in sibling_events:
-            _apply_transition(s.name, evt, detail=detail)
+            _apply_transition(s.name, evt, detail=sd)
 
     status_str = outcome.detail.get("status_str", "unknown")
     if outcome.status == "failed":

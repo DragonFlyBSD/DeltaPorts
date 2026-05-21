@@ -39,7 +39,8 @@ CREATE TABLE IF NOT EXISTS bundles (
     ts_utc TEXT,
     result TEXT,
     path TEXT,
-    last_seen_at TEXT
+    last_seen_at TEXT,
+    resolution TEXT
 );
 
 CREATE TABLE IF NOT EXISTS jobs (
@@ -236,6 +237,15 @@ MIGRATIONS: tuple[str, ...] = (
     # Phase 1 framework: per-job transition forensics.
     "ALTER TABLE jobs ADD COLUMN last_transition_at TEXT",
     "ALTER TABLE jobs ADD COLUMN retire_reason TEXT",
+    # Post-impl plan: agent-driven resolution propagation. The hook
+    # writes bundles.result='failure' at ingest; that never changes,
+    # even after the patch agent fixes the build. Resolution carries
+    # the agent's verdict: 'agent_fixed' on PATCH_OK,
+    # 'agent_gave_up' / 'agent_budget_exhausted' on terminal patch
+    # failures, 'escalated_manual' when triage routes to MANUAL.
+    # NULL = no agent disposition yet (typical for fresh bundles).
+    "ALTER TABLE bundles ADD COLUMN resolution TEXT",
+    "CREATE INDEX IF NOT EXISTS idx_bundles_resolution ON bundles(resolution)",
 )
 
 

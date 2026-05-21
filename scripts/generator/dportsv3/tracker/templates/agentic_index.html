@@ -66,17 +66,30 @@
 
     <h2>Recent bundles</h2>
     <table class="tracker-table">
-      <thead><tr><th>Bundle</th><th>Origin</th><th>Target</th><th>Result</th></tr></thead>
+      <thead><tr><th>Bundle</th><th>Origin</th><th>Target</th><th>Result</th><th>Resolution</th></tr></thead>
       <tbody>
         {% for b in recent_bundles %}
         <tr>
           <td><a href="{{ request.url_for('agentic_bundle_detail', bundle_id=b.bundle_id) }}">{{ b.bundle_id }}</a></td>
           <td>{{ b.origin }}</td>
           <td>{{ b.target or '—' }}</td>
-          <td><span class="stat-pill {% if b.result == 'fail' %}failed{% else %}built{% endif %}">{{ b.result }}</span></td>
+          <td><span class="stat-pill {% if b.result == 'fail' or b.result == 'failure' %}failed{% else %}built{% endif %}">{{ b.result }}</span></td>
+          <td>
+            {% if b.resolution == 'agent_fixed' %}
+              <span class="stat-pill built">agent fixed</span>
+            {% elif b.resolution == 'agent_gave_up' %}
+              <span class="stat-pill failed">agent gave up</span>
+            {% elif b.resolution == 'agent_budget_exhausted' %}
+              <span class="stat-pill failed">budget out</span>
+            {% elif b.resolution == 'escalated_manual' %}
+              <span class="stat-pill skipped">escalated</span>
+            {% else %}
+              —
+            {% endif %}
+          </td>
         </tr>
         {% else %}
-        <tr><td colspan="4" style="color:var(--text-dim);">No bundles yet.</td></tr>
+        <tr><td colspan="5" style="color:var(--text-dim);">No bundles yet.</td></tr>
         {% endfor %}
       </tbody>
     </table>

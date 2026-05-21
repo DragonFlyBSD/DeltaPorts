@@ -235,9 +235,16 @@ class Orchestrator:
             for evt in outcome_events(outcome):
                 if ctx.apply_transition is None:
                     break
+                # Thread bundle_id through so lifecycle.apply can
+                # propagate the resolution onto bundles.resolution
+                # for the closing patch/escalate events.
+                transition_detail = dict(outcome.detail) if outcome.detail else {}
+                if ctx.bundle_id and "bundle_id" not in transition_detail:
+                    transition_detail["bundle_id"] = ctx.bundle_id
                 try:
                     ctx.apply_transition(
-                        ctx.job_id, evt, detail=outcome.detail or None,
+                        ctx.job_id, evt,
+                        detail=transition_detail or None,
                     )
                 except Exception as exc:  # noqa: BLE001
                     if ctx.activity_log is not None:
