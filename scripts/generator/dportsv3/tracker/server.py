@@ -6,6 +6,7 @@ import importlib
 import html
 import json
 import os
+import re
 import sqlite3
 from contextlib import contextmanager
 from importlib import util as importlib_util
@@ -164,12 +165,39 @@ _INLINE_TEXT_MEDIA: dict[str, str] = {
 _INLINE_TEXT_NAMES = {"Makefile", "distinfo", "pkg-plist", "pkg-descr"}
 
 
+_INLINE_CODE_RE = re.compile(r"`([^`\n]+)`")
+_INLINE_BOLD_RE = re.compile(r"\*\*([^*\n]+)\*\*")
+
+
+def _render_inline(escaped: str) -> str:
+    """Apply inline ``code`` and ``**bold**`` to already-HTML-escaped text.
+
+    ``code`` spans are extracted to sentinels before ``**bold**`` is
+    processed, then re-substituted. Without that, asterisks inside
+    backticks (e.g. ``` `**literal**` ```) would be wrongly bolded.
+    The patterns reject newlines so a stray asterisk or backtick on
+    its own line can't accidentally span paragraphs.
+    """
+    placeholders: list[str] = []
+
+    def _stash(m):
+        placeholders.append(m.group(1))
+        return f"\x00C{len(placeholders) - 1}\x00"
+
+    s = _INLINE_CODE_RE.sub(_stash, escaped)
+    s = _INLINE_BOLD_RE.sub(r"<strong>\1</strong>", s)
+    for i, content in enumerate(placeholders):
+        s = s.replace(f"\x00C{i}\x00", f"<code>{content}</code>")
+    return s
+
+
 def _render_markdown(text: str) -> str:
     """Render the small Markdown subset used by agent artifacts.
 
     Keep this stdlib-only and escape all content before wrapping it in
     HTML. It is intentionally conservative: headings, paragraphs,
-    bullet lists, and fenced code blocks cover triage/patch reports.
+    bullet lists, fenced code blocks, and inline ``code`` + ``**bold**``
+    cover triage/patch reports and the manual_handoff artifact.
     """
     out: list[str] = []
     paragraph: list[str] = []
@@ -219,16 +247,24 @@ def _render_markdown(text: str) -> str:
             marker, _, title = stripped.partition(" ")
             if title and 1 <= len(marker) <= 6 and set(marker) == {"#"}:
                 level = min(len(marker) + 1, 6)
-                out.append(f"<h{level}>" + html.escape(title) + f"</h{level}>")
+                out.append(
+                    f"<h{level}>"
+                    + _render_inline(html.escape(title))
+                    + f"</h{level}>"
+                )
                 continue
         if stripped.startswith("- "):
             flush_paragraph()
             if not bullets_open:
                 out.append("<ul>")
                 bullets_open = True
-            out.append("<li>" + html.escape(stripped[2:].strip()) + "</li>")
+            out.append(
+                "<li>"
+                + _render_inline(html.escape(stripped[2:].strip()))
+                + "</li>"
+            )
             continue
-        paragraph.append(html.escape(stripped))
+        paragraph.append(_render_inline(html.escape(stripped)))
     if code_open:
         out.append(
             "<pre class=\"artifact-content\"><code>"

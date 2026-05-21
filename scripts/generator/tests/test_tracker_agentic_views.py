@@ -246,6 +246,47 @@ def test_view_agentic_artifact_markdown_rendered(client: TestClient) -> None:
     assert "<unsafe>" not in resp.text
 
 
+def test_markdown_inline_bold_and_code_rendered():
+    """Step 6 follow-up: ``**bold**`` and ``inline `code` `` show as
+    <strong> / <code> rather than literal asterisks and backticks.
+    Surfaced by the manual_handoff.md viewer where every bullet uses
+    both styles."""
+    from dportsv3.tracker.server import _render_markdown
+    md = (
+        "- **Origin:** `devel/readline`\n"
+        "- **Reason:** retry cap reached\n"
+        "\n"
+        "Plain paragraph with `inline` and **strong** bits.\n"
+    )
+    out = _render_markdown(md)
+    assert "<strong>Origin:</strong>" in out
+    assert "<code>devel/readline</code>" in out
+    assert "<strong>Reason:</strong>" in out
+    assert "<code>inline</code>" in out
+    assert "<strong>strong</strong>" in out
+    # Literal asterisks must not leak.
+    assert "**Origin" not in out
+
+
+def test_markdown_inline_does_not_break_html_escape():
+    """Bold/code containing HTML-special chars stay escaped — no XSS
+    via, e.g., ``**<script>**`` markdown."""
+    from dportsv3.tracker.server import _render_markdown
+    out = _render_markdown("- **<script>** and `<img src=x>`\n")
+    assert "<script>" not in out  # raw tag would be a vuln
+    assert "<strong>&lt;script&gt;</strong>" in out
+    assert "<code>&lt;img src=x&gt;</code>" in out
+
+
+def test_markdown_inline_code_blocks_backticks_from_being_bolded():
+    """`**not bold**` inside backticks stays literal — the order of
+    application protects it."""
+    from dportsv3.tracker.server import _render_markdown
+    out = _render_markdown("Try `**literal**` here.\n")
+    assert "<code>**literal**</code>" in out
+    assert "<strong>literal</strong>" not in out
+
+
 def test_view_agentic_artifact_json_pretty_printed(client: TestClient) -> None:
     resp = client.get("/agentic/bundles/b-q2-foo/artifacts/analysis/patch_audit.json")
     assert resp.status_code == 200
