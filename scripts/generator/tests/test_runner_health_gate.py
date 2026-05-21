@@ -21,11 +21,13 @@ This file is the contract for the cache layer the gate depends on.
 from __future__ import annotations
 
 import time
+import sqlite3
 from dataclasses import dataclass
 
 import pytest
 
 from dportsv3.agent import health, runner
+from dportsv3.db.schema import init_db as init_state_db
 
 
 @dataclass
@@ -168,3 +170,27 @@ def test_force_reprobe_via_invalidate(monkeypatch):
     runner.invalidate_health_cache()
     second = runner.probe_health_cached("x", ttl_seconds=60)
     assert second.status == "broken"
+
+
+def test_probe_persists_env_health_status(tmp_path, monkeypatch):
+    db_path = tmp_path / "state.db"
+    conn = sqlite3.connect(str(db_path), check_same_thread=False)
+    conn.row_factory = sqlite3.Row
+    init_state_db(conn)
+    monkeypatch.setattr(runner, "_state_db_conn", conn, raising=False)
+    try:
+        calls = _patch_check(monkeypatch, returns=_FakeHealth(env="persist-env", status="broken"))
+
+        runner.probe_health_cached("persist-env", ttl_seconds=60)
+
+        assert calls == ["persist-env"]
+        row = conn.execute(
+            "SELECT env, status, detail_json FROM env_health_status WHERE env = ?",
+            ("persist-env",),
+        ).fetchone()
+        assert row["env"] == "persist-env"
+        assert row["status"] == "broken"
+        assert "persist-env" in row["detail_json"]
+    finally:
+        monkeypatch.setattr(runner, "_state_db_conn", None, raising=False)
+        conn.close()

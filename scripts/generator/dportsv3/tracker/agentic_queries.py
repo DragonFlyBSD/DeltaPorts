@@ -13,7 +13,9 @@ target.
 
 from __future__ import annotations
 
+import json
 import sqlite3
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 
@@ -25,15 +27,27 @@ def _maybe(row: sqlite3.Row | None) -> dict[str, Any] | None:
     return _row_dict(row) if row is not None else None
 
 
+def _decode_extra_json(item: dict[str, Any]) -> dict[str, Any]:
+    raw = item.get("extra_json")
+    if raw:
+        try:
+            item["extra"] = json.loads(raw)
+        except (TypeError, ValueError):
+            item["extra"] = raw
+    else:
+        item["extra"] = None
+    return item
+
+
 def agentic_status(conn: sqlite3.Connection) -> dict[str, Any]:
     """Global aggregate counts for /api/agentic-status.
 
-    Groups the typed lifecycle states into the four traditional
-    buckets the UI displays:
+    Groups the typed lifecycle states into operator-facing buckets:
         pending  = queued
         inflight = claimed | triaging | triaged | patching | verifying
         done     = done
-        failed   = dead | escalated
+        dead     = dead
+        escalated = escalated
     """
     bundles = conn.execute("SELECT count(*) FROM bundles").fetchone()[0]
     rows = conn.execute(
@@ -41,7 +55,8 @@ def agentic_status(conn: sqlite3.Connection) -> dict[str, Any]:
              SUM(CASE WHEN state = 'queued' THEN 1 ELSE 0 END) AS pending,
              SUM(CASE WHEN state IN ('claimed','triaging','triaged','patching','verifying') THEN 1 ELSE 0 END) AS inflight,
              SUM(CASE WHEN state = 'done' THEN 1 ELSE 0 END) AS done,
-             SUM(CASE WHEN state IN ('dead','escalated') THEN 1 ELSE 0 END) AS failed
+             SUM(CASE WHEN state = 'dead' THEN 1 ELSE 0 END) AS dead,
+             SUM(CASE WHEN state = 'escalated' THEN 1 ELSE 0 END) AS escalated
            FROM jobs"""
     ).fetchone()
     runs = conn.execute("SELECT count(*) FROM runs").fetchone()[0]
@@ -52,7 +67,8 @@ def agentic_status(conn: sqlite3.Connection) -> dict[str, Any]:
             "pending": int(rows[0] or 0),
             "inflight": int(rows[1] or 0),
             "done": int(rows[2] or 0),
-            "failed": int(rows[3] or 0),
+            "dead": int(rows[3] or 0),
+            "escalated": int(rows[4] or 0),
         },
     }
 
@@ -83,7 +99,7 @@ def recent_activity(
                LIMIT ?""",
             (target, max(1, int(limit))),
         ).fetchall()
-    return [_row_dict(row) for row in rows]
+    return [_decode_extra_json(_row_dict(row)) for row in rows]
 
 
 def runner_status(conn: sqlite3.Connection) -> dict[str, Any]:
@@ -94,6 +110,32 @@ def runner_status(conn: sqlite3.Connection) -> dict[str, Any]:
     if row is None:
         return {"status": "unknown"}
     return _row_dict(row)
+
+
+def env_health_statuses(conn: sqlite3.Connection) -> list[dict[str, Any]]:
+    """Latest persisted health probe per dev-env."""
+    rows = conn.execute(
+        """SELECT env, status, probed_at, operator_action, detail_json, updated_at
+           FROM env_health_status
+           ORDER BY env ASC"""
+    ).fetchall()
+    items: list[dict[str, Any]] = []
+    for row in rows:
+        item = _row_dict(row)
+        raw = item.get("detail_json")
+        checks: list[dict[str, Any]] = []
+        if raw:
+            try:
+                detail = json.loads(raw)
+                item["detail"] = detail
+                checks = detail.get("checks") or [] if isinstance(detail, dict) else []
+            except (TypeError, ValueError):
+                item["detail"] = raw
+        else:
+            item["detail"] = None
+        item["checks"] = checks
+        items.append(item)
+    return items
 
 
 def list_runs(
@@ -123,7 +165,11 @@ _STATE_BUCKETS: dict[str, tuple[str, ...]] = {
     "pending":  ("queued",),
     "inflight": ("claimed", "triaging", "triaged", "patching", "verifying"),
     "done":     ("done",),
-    "failed":   ("dead", "escalated"),
+    "dead":     ("dead",),
+    "escalated": ("escalated",),
+    # Legacy API/filter alias: keep accepting failed, but make it mean
+    # actual dead jobs instead of conflating operator-escalated work.
+    "failed":   ("dead",),
 }
 
 
@@ -256,7 +302,70 @@ def activity_for_job(
         "SELECT * FROM activity_log WHERE job_id = ? ORDER BY id DESC LIMIT ?",
         (job_id, max(1, int(limit))),
     ).fetchall()
-    return [_row_dict(row) for row in rows]
+    return [_decode_extra_json(_row_dict(row)) for row in rows]
+
+
+def job_events_for_job(
+    conn: sqlite3.Connection,
+    job_id: str,
+    limit: int = 200,
+) -> list[dict[str, Any]]:
+    """Lifecycle transition rows for one job, oldest first."""
+    rows = conn.execute(
+        """SELECT id, ts, from_state, to_state, event_name, actor, detail_json
+           FROM job_events
+           WHERE job_id = ?
+           ORDER BY id ASC
+           LIMIT ?""",
+        (job_id, max(1, int(limit))),
+    ).fetchall()
+    items: list[dict[str, Any]] = []
+    for row in rows:
+        item = _row_dict(row)
+        raw = item.get("detail_json")
+        if raw:
+            try:
+                item["detail"] = json.loads(raw)
+            except (TypeError, ValueError):
+                item["detail"] = raw
+        else:
+            item["detail"] = None
+        items.append(item)
+    return items
+
+
+def port_attempt_summary(
+    conn: sqlite3.Connection,
+    *,
+    target: str | None,
+    origin: str | None,
+    window_hours: int,
+    max_attempts: int,
+) -> dict[str, Any] | None:
+    """Recent bundle failures for a target/origin retry-cap window."""
+    if not origin:
+        return None
+    cutoff = (
+        datetime.now(timezone.utc) - timedelta(hours=max(0, int(window_hours)))
+    ).isoformat()
+    row = conn.execute(
+        """SELECT
+             SUM(CASE WHEN result = 'failure' AND last_seen_at >= ?
+                      THEN 1 ELSE 0 END) AS recent_failures,
+             MAX(last_seen_at) AS last_attempt_at
+           FROM bundles
+           WHERE origin = ?
+             AND (target = ? OR (? IS NULL AND target IS NULL))""",
+        (cutoff, origin, target, target),
+    ).fetchone()
+    return {
+        "target": target,
+        "origin": origin,
+        "window_hours": int(window_hours),
+        "max_attempts": int(max_attempts),
+        "recent_failures": int((row[0] if row else 0) or 0),
+        "last_attempt_at": row[1] if row else None,
+    }
 
 
 def bundles_for_run(
@@ -290,8 +399,6 @@ def events_since(
     if target is None:
         return items
     out: list[dict[str, Any]] = []
-    import json
-
     for item in items:
         raw = item.get("data_json")
         if not raw:

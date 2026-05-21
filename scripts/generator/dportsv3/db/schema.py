@@ -91,6 +91,15 @@ CREATE TABLE IF NOT EXISTS runner_status (
     extra_json TEXT
 );
 
+CREATE TABLE IF NOT EXISTS env_health_status (
+    env TEXT PRIMARY KEY,
+    status TEXT NOT NULL,
+    probed_at TEXT,
+    operator_action TEXT,
+    detail_json TEXT,
+    updated_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS user_context (
     run_id TEXT NOT NULL,
     origin TEXT NOT NULL,
@@ -150,6 +159,7 @@ CREATE TABLE IF NOT EXISTS job_events (
 CREATE INDEX IF NOT EXISTS idx_events_id ON events(id);
 CREATE INDEX IF NOT EXISTS idx_job_events_job ON job_events(job_id, id);
 CREATE INDEX IF NOT EXISTS idx_activity_log_ts ON activity_log(ts);
+CREATE INDEX IF NOT EXISTS idx_env_health_status_status ON env_health_status(status);
 CREATE INDEX IF NOT EXISTS idx_user_context_updated ON user_context(updated_at);
 CREATE INDEX IF NOT EXISTS idx_user_context_requests_pending ON user_context_requests(status, requested_at);
 CREATE INDEX IF NOT EXISTS idx_artifact_refs_bundle ON artifact_refs(bundle_id);

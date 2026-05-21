@@ -140,7 +140,42 @@ def probe_health_cached(env: str, ttl_seconds: int):
         return cached[1]
     eh = health_mod.check(env)
     _health_cache[env] = (now, eh)
+    record_env_health(eh)
     return eh
+
+
+def record_env_health(env_health) -> None:
+    """Persist the latest EnvHealth snapshot for tracker/UI reads."""
+    if _state_db_conn is None or env_health is None:
+        return
+    env = getattr(env_health, "env", None)
+    status = getattr(env_health, "status", None)
+    if not env or not status:
+        return
+    probed_at = getattr(env_health, "probed_at", None)
+    operator_action = getattr(env_health, "operator_action", None)
+    try:
+        detail = env_health.to_dict()
+    except Exception:
+        detail = {"env": env, "status": status}
+    ts = datetime.now(timezone.utc).isoformat()
+    try:
+        with _state_db_lock:
+            _state_db_conn.execute(
+                """INSERT INTO env_health_status
+                   (env, status, probed_at, operator_action, detail_json, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?)
+                   ON CONFLICT(env) DO UPDATE SET
+                     status=excluded.status,
+                     probed_at=excluded.probed_at,
+                     operator_action=excluded.operator_action,
+                     detail_json=excluded.detail_json,
+                     updated_at=excluded.updated_at""",
+                (env, status, probed_at, operator_action, json.dumps(detail), ts),
+            )
+            _state_db_conn.commit()
+    except Exception as exc:
+        print(f"Warning: Failed to record env health: {exc}", file=sys.stderr)
 
 
 def _looks_env_suspicious(result: dict) -> bool:

@@ -11,7 +11,7 @@
   <label style="color:var(--text-dim);margin-left:12px;">State</label>
   <select name="state" onchange="this.form.submit()" style="font:inherit;padding:2px 6px;border:1px solid var(--amber-border);background:var(--bg);">
     <option value="">(all)</option>
-    {% for s in ['pending', 'inflight', 'done', 'failed'] %}
+    {% for s in ['pending', 'inflight', 'done', 'dead', 'escalated'] %}
     <option value="{{ s }}"{% if s == selected_state %} selected{% endif %}>{{ s }}</option>
     {% endfor %}
   </select>

@@ -43,6 +43,48 @@
     {% else %}
     <div class="empty-state">No artifacts recorded for this bundle.</div>
     {% endif %}
+
+    {% if tool_trace %}
+    <h2>Tool trace</h2>
+    <table class="tracker-table">
+      <thead><tr><th>Attempt</th><th>Turn</th><th>Event</th><th>Tool</th><th>Status</th><th>Duration</th><th>Summary</th></tr></thead>
+      <tbody>
+        {% for ev in tool_trace %}
+        {% set res = ev.result if ev.result is mapping else {} %}
+        <tr {% if ev.type == 'attempt_start' %}style="background:var(--c-info-bg, #f0f4ff);font-weight:600;"
+            {% elif ev.type == 'attempt_end' %}style="background:var(--c-success-bg, #f0fff4);font-weight:600;"
+            {% elif ev.type == 'tool_call' %}style="font-family:ui-monospace,monospace;font-size:11px;"
+            {% endif %}>
+          <td>{{ ev.attempt or '—' }}</td>
+          <td>{{ ev.turn if ev.turn is defined else '—' }}</td>
+          <td>{{ ev.type or '—' }}</td>
+          <td>{{ ev.tool or '—' }}</td>
+          <td>
+            {% if ev.type == 'attempt_end' %}
+              rebuild_ok={{ ev.rebuild_ok }}
+            {% elif res %}
+              <span class="stat-pill {% if res.ok %}built{% else %}failed{% endif %}">{{ 'ok' if res.ok else 'fail' }}</span>
+            {% else %}
+              —
+            {% endif %}
+          </td>
+          <td>{{ ev.duration_ms if ev.duration_ms is defined else '—' }}</td>
+          <td>
+            {% if ev.type == 'attempt_start' %}
+              tokens {{ ev.tokens_used_so_far or 0 }}/{{ ev.budget or '?' }}
+            {% elif ev.type == 'attempt_end' %}
+              tokens={{ ev.tokens or '—' }}
+            {% elif ev.args is mapping %}
+              {{ ev.args.origin or ev.args.path or ev.args.relpath or '' }}
+            {% else %}
+              —
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
   </div>
 </body>
 </html>

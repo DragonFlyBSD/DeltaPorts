@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib
+import json
 import os
 from contextlib import contextmanager
 from importlib import util as importlib_util
@@ -21,14 +22,17 @@ from dportsv3.tracker.agentic_queries import (
     bundles_for_run,
     distinct_targets,
     events_since,
+    env_health_statuses,
     get_artifact_ref,
     get_bundle,
     get_job,
     get_run,
+    job_events_for_job,
     list_bundles,
     list_jobs,
     list_port_bundles,
     list_runs,
+    port_attempt_summary,
     recent_activity,
     runner_status,
 )
@@ -191,6 +195,30 @@ def _resolve_artifact_path(
             return None
         return Path(fs_path)
     return None
+
+
+def _load_tool_trace(artifact_root: Path, ref: dict[str, Any] | None) -> list[dict[str, Any]]:
+    """Parse analysis/tool_trace.jsonl for compact bundle rendering."""
+    if ref is None:
+        return []
+    path = _resolve_artifact_path(artifact_root, ref)
+    if path is None or not path.exists():
+        return []
+    events: list[dict[str, Any]] = []
+    try:
+        for line in path.read_text(errors="replace").splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                ev = json.loads(line)
+            except ValueError:
+                continue
+            if isinstance(ev, dict):
+                events.append(ev)
+    except OSError:
+        return []
+    return events
 
 
 def create_app(db_path: str | Path) -> Any:
@@ -415,6 +443,11 @@ def create_app(db_path: str | Path) -> Any:
         with _conn() as conn:
             return runner_status(conn)
 
+    @app.get("/api/env-health")
+    def api_env_health() -> list[dict[str, Any]]:
+        with _conn() as conn:
+            return env_health_statuses(conn)
+
     @app.get("/api/runs")
     def api_runs(
         target: str | None = None,
@@ -547,6 +580,7 @@ def create_app(db_path: str | Path) -> Any:
                 {
                     "title": "Agentic",
                     "status": agentic_status(conn),
+                    "env_health": env_health_statuses(conn),
                     "recent_bundles": list_bundles(conn, limit=10),
                     "recent_jobs": list_jobs(conn, limit=10),
                 },
@@ -579,12 +613,14 @@ def create_app(db_path: str | Path) -> Any:
     def agentic_bundle_detail(request: RequestType, bundle_id: str) -> Any:
         with _conn() as conn:
             bundle = get_bundle(conn, bundle_id)
+            tool_trace_ref = get_artifact_ref(conn, bundle_id, "analysis/tool_trace.jsonl")
         if bundle is None:
             raise HTTPException(status_code=404, detail=f"Unknown bundle: {bundle_id}")
+        tool_trace = _load_tool_trace(app.state.artifact_root, tool_trace_ref)
         return templates.TemplateResponse(
             request,
             "agentic_bundle.html",
-            {"title": bundle_id, "bundle": bundle},
+            {"title": bundle_id, "bundle": bundle, "tool_trace": tool_trace},
         )
 
     @app.get("/agentic/jobs", response_class=HTMLResponse)
@@ -620,6 +656,19 @@ def create_app(db_path: str | Path) -> Any:
         with _conn() as conn:
             job = get_job(conn, job_id)
             activity = activity_for_job(conn, job_id, limit=limit) if job is not None else []
+            transitions = (
+                job_events_for_job(conn, job_id, limit=limit)
+                if job is not None else []
+            )
+            attempt_summary = (
+                port_attempt_summary(
+                    conn,
+                    target=job.get("target"),
+                    origin=job.get("origin"),
+                    window_hours=int(os.environ.get("DP_HARNESS_ATTEMPT_WINDOW_HOURS", "2")),
+                    max_attempts=int(os.environ.get("DP_HARNESS_MAX_PATCH_ATTEMPTS", "3")),
+                ) if job is not None else None
+            )
         if job is None:
             raise HTTPException(status_code=404, detail=f"Unknown job: {job_id}")
         # Activity rows come back newest-first from the query; flip for
@@ -632,6 +681,8 @@ def create_app(db_path: str | Path) -> Any:
                 "title": job_id,
                 "job": job,
                 "activity": activity,
+                "transitions": transitions,
+                "attempt_summary": attempt_summary,
                 "limit": limit,
                 "limit_options": [50, 200, 500, 2000, 5000],
             },

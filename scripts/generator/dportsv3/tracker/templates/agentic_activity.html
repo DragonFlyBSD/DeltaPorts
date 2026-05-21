@@ -35,13 +35,25 @@
         {% for a in activity %}
         <tr {% if a.stage == 'attempt_start' %}style="background:var(--c-info-bg, #f0f4ff);font-weight:600;"
             {% elif a.stage == 'attempt_end' %}style="background:var(--c-success-bg, #f0fff4);font-weight:600;"
+            {% elif a.stage == 'decision' %}style="background:var(--c-meta-bg, #f2eeff);"
             {% elif a.stage and a.stage.startswith('tool:') %}style="font-family:ui-monospace,monospace;font-size:11px;"
             {% endif %}>
           <td style="white-space:nowrap;">{{ a.ts }}</td>
           <td>{% if a.job_id %}<a href="{{ request.url_for('agentic_job_detail', job_id=a.job_id) }}">{{ a.job_id }}</a>{% else %}—{% endif %}</td>
           <td>{{ a.stage or '—' }}</td>
           <td>{{ a.duration_ms if a.duration_ms is not none else '—' }}</td>
-          <td>{{ a.message or '—' }}</td>
+          <td>
+            {{ a.message or '—' }}
+            {% if a.stage == 'decision' and a.extra is mapping %}
+            <div style="margin-top:4px;font-size:11px;color:var(--text-dim);">
+              action={{ a.extra.action or '—' }} · tier={{ a.extra.tier or '—' }}
+              {% if a.extra.classification %} · class={{ a.extra.classification }}{% endif %}
+              {% if a.extra.confidence %} · confidence={{ a.extra.confidence }}{% endif %}
+              {% if a.extra.recent_failures is defined %} · failures={{ a.extra.recent_failures }}/{{ a.extra.max_attempts or '?' }}{% endif %}
+              {% if a.extra.original_tier %} · original={{ a.extra.original_tier }}{% endif %}
+            </div>
+            {% endif %}
+          </td>
         </tr>
         {% else %}
         <tr><td colspan="5" style="color:var(--text-dim);">No activity yet.</td></tr>

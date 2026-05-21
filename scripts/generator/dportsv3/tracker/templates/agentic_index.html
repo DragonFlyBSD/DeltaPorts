@@ -28,10 +28,41 @@
         <div style="font-size:22px;font-weight:600;">{{ status.jobs.pending }} / {{ status.jobs.inflight }}</div>
       </div>
       <div class="tracker-card">
-        <div style="color:var(--text-dim);font-size:11px;">Jobs done / failed</div>
-        <div style="font-size:22px;font-weight:600;">{{ status.jobs.done }} / {{ status.jobs.failed }}</div>
+        <div style="color:var(--text-dim);font-size:11px;">Jobs done / dead / escalated</div>
+        <div style="font-size:22px;font-weight:600;">{{ status.jobs.done }} / {{ status.jobs.dead }} / {{ status.jobs.escalated }}</div>
       </div>
     </div>
+
+    <h2>Environment health</h2>
+    {% if env_health %}
+    <table class="tracker-table">
+      <thead><tr><th>Env</th><th>Status</th><th>Probed</th><th>Operator action</th><th>Checks</th></tr></thead>
+      <tbody>
+        {% for h in env_health %}
+        <tr>
+          <td>{{ h.env }}</td>
+          <td>
+            {% set cls = {'ready':'built','degraded':'skipped','broken':'failed'}.get(h.status,'total') %}
+            <span class="stat-pill {{ cls }}">{{ h.status }}</span>
+          </td>
+          <td>{{ h.probed_at or h.updated_at or '—' }}</td>
+          <td>{{ h.operator_action or '—' }}</td>
+          <td>
+            {% if h.checks %}
+              {% for c in h.checks %}
+                <span class="stat-pill {{ {'ok':'built','warn':'skipped','broken':'failed'}.get(c.status,'total') }}" title="{{ c.detail }}">{{ c.name }}: {{ c.status }}</span>
+              {% endfor %}
+            {% else %}
+              —
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">No environment health probes recorded yet.</div>
+    {% endif %}
 
     <h2>Recent bundles</h2>
     <table class="tracker-table">
@@ -53,20 +84,25 @@
 
     <h2>Recent jobs</h2>
     <table class="tracker-table">
-      <thead><tr><th>Job</th><th>State</th><th>Origin</th><th>Target</th></tr></thead>
+      <thead><tr><th>Job</th><th>State</th><th>Retire reason</th><th>Origin</th><th>Target</th></tr></thead>
       <tbody>
         {% for j in recent_jobs %}
         <tr>
           <td><a href="{{ request.url_for('agentic_job_detail', job_id=j.job_id) }}">{{ j.job_id }}</a></td>
           <td>
-            {% set cls = {'pending':'ignored','inflight':'skipped','done':'built','failed':'failed'}.get(j.state,'total') %}
+            {% set cls = {
+              'queued':'ignored',
+              'claimed':'skipped','triaging':'skipped','triaged':'skipped','patching':'skipped','verifying':'skipped',
+              'done':'built','dead':'failed','escalated':'skipped'
+            }.get(j.state,'total') %}
             <span class="stat-pill {{ cls }}">{{ j.state }}</span>
           </td>
+          <td>{{ j.retire_reason or '—' }}</td>
           <td>{{ j.origin or '—' }}</td>
           <td>{{ j.target or '—' }}</td>
         </tr>
         {% else %}
-        <tr><td colspan="4" style="color:var(--text-dim);">No jobs yet.</td></tr>
+        <tr><td colspan="5" style="color:var(--text-dim);">No jobs yet.</td></tr>
         {% endfor %}
       </tbody>
     </table>

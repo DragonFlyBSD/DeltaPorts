@@ -33,6 +33,12 @@ def seeded_state_db(tmp_path: Path) -> Path:
     init_state_db(conn)
 
     now = _now()
+    trace_path = tmp_path / "tool_trace.jsonl"
+    trace_path.write_text(
+        json.dumps({"type": "attempt_start", "attempt": 1, "tokens_used_so_far": 0, "budget": 1000}) + "\n"
+        + json.dumps({"type": "tool_call", "attempt": 1, "turn": 1, "tool": "dsynth_build", "args": {"origin": "devel/foo"}, "result": {"ok": False}, "duration_ms": 42}) + "\n"
+        + json.dumps({"type": "attempt_end", "attempt": 1, "rebuild_ok": False, "tokens": 500}) + "\n"
+    )
     conn.executemany(
         """INSERT INTO runs (run_id, profile, target, ts_start, last_seen_at)
            VALUES (?, ?, ?, ?, ?)""",
@@ -47,6 +53,7 @@ def seeded_state_db(tmp_path: Path) -> Path:
            VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
         [
             ("b-q2-foo", "run-q2-001", "devel/foo", "", now, "fail", "@2026Q2", now),
+            ("b-q2-foo-retry", "run-q2-001", "devel/foo", "", now, "failure", "@2026Q2", now),
             ("b-q2-bar", "run-q2-001", "devel/bar", "", now, "fail", "@2026Q2", now),
             ("b-main-foo", "run-main-002", "devel/foo", "", now, "fail", "@main", now),
         ],
@@ -60,6 +67,12 @@ def seeded_state_db(tmp_path: Path) -> Path:
             ("b-q2-foo", "logs/errors.txt", "ffee1122", "text/plain", 100, now),
         ],
     )
+    conn.execute(
+        """INSERT INTO artifact_refs
+           (bundle_id, relpath, backend, fs_path, kind, size, created_at)
+           VALUES (?, ?, 'fs', ?, ?, ?, ?)""",
+        ("b-q2-foo", "analysis/tool_trace.jsonl", str(trace_path), "text", trace_path.stat().st_size, now),
+    )
     conn.executemany(
         """INSERT INTO jobs
            (job_id, state, type, origin, flavor, bundle_dir,
@@ -67,10 +80,20 @@ def seeded_state_db(tmp_path: Path) -> Path:
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         [
             ("job-q2-foo", "queued", "triage", "devel/foo", "", "",
-             now, "/tmp/job-q2-foo.job", now, "@2026Q2"),
+              now, "/tmp/job-q2-foo.job", now, "@2026Q2"),
             ("job-main-foo", "done", "triage", "devel/foo", "", "",
-             now, "/tmp/job-main-foo.job", now, "@main"),
+              now, "/tmp/job-main-foo.job", now, "@main"),
+            ("job-q2-dead", "dead", "patch", "devel/dead", "", "",
+              now, "/tmp/job-q2-dead.job", now, "@2026Q2"),
+            ("job-q2-manual", "escalated", "triage", "devel/manual", "", "",
+              now, "/tmp/job-q2-manual.job", now, "@2026Q2"),
         ],
+    )
+    conn.execute(
+        "UPDATE jobs SET retire_reason = 'patch_gave_up' WHERE job_id = 'job-q2-dead'"
+    )
+    conn.execute(
+        "UPDATE jobs SET retire_reason = 'escalated_manual' WHERE job_id = 'job-q2-manual'"
     )
     conn.execute(
         """INSERT INTO activity_log (ts, job_id, stage, message, duration_ms)
@@ -78,9 +101,50 @@ def seeded_state_db(tmp_path: Path) -> Path:
         (now, "job-q2-foo", "triage_start", "began triage", 12),
     )
     conn.execute(
+        """INSERT INTO activity_log
+           (ts, job_id, stage, message, duration_ms, extra_json)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        (
+            now, "job-q2-foo", "decision", "tier=AUTO for plist-error/high",
+            0,
+            json.dumps({
+                "action": "auto_patch",
+                "tier": "AUTO",
+                "classification": "plist-error",
+                "confidence": "high",
+                "recent_failures": 0,
+                "max_attempts": 3,
+            }),
+        ),
+    )
+    conn.executemany(
+        """INSERT INTO job_events
+           (ts, job_id, from_state, to_state, event_name, actor, detail_json)
+           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        [
+            (now, "job-q2-foo", None, "queued", "hook_enqueued", "hook", '{"origin":"devel/foo"}'),
+            (now, "job-q2-foo", "queued", "claimed", "claim", "runner", None),
+            (now, "job-q2-foo", "claimed", "triaging", "triage_start", "runner", None),
+        ],
+    )
+    conn.execute(
         """INSERT INTO runner_status (id, status, job_id, updated_at)
            VALUES (1, 'idle', NULL, ?)""",
         (now,),
+    )
+    conn.execute(
+        """INSERT INTO env_health_status
+           (env, status, probed_at, operator_action, detail_json, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        (
+            "test-env", "broken", now, "fix python runtime",
+            json.dumps({
+                "env": "test-env",
+                "status": "broken",
+                "checks": [{"name": "python_runtime", "status": "broken", "detail": "missing py311"}],
+            }),
+            now,
+        ),
     )
     conn.commit()
     conn.close()
@@ -101,8 +165,13 @@ def test_view_agentic_index(client: TestClient) -> None:
     assert "Agentic" in body
     assert "b-q2-foo" in body
     assert "job-q2-foo" in body
+    assert "Jobs done / dead / escalated" in body
+    assert "patch_gave_up" in body
+    assert "Environment health" in body
+    assert "test-env" in body
+    assert "fix python runtime" in body
     # Counts panel
-    assert ">3<" in body or "3</div>" in body  # bundles count
+    assert ">4<" in body or "4</div>" in body  # bundles count
 
 
 def test_view_agentic_bundles_filter(client: TestClient) -> None:
@@ -124,6 +193,9 @@ def test_view_agentic_bundle_detail_lists_artifacts(client: TestClient) -> None:
     assert "b-q2-foo" in body
     assert "meta.txt" in body
     assert "logs/errors.txt" in body
+    assert "Tool trace" in body
+    assert "dsynth_build" in body
+    assert "rebuild_ok=False" in body
     # Link to artifact stream endpoint
     assert "/api/bundles/b-q2-foo/artifacts/meta.txt" in body
 
@@ -140,6 +212,16 @@ def test_view_agentic_jobs_state_filter(client: TestClient) -> None:
     assert "job-q2-foo" in pending.text
     assert "job-main-foo" not in pending.text
 
+    dead = client.get("/agentic/jobs", params={"state": "dead"})
+    assert dead.status_code == 200
+    assert "job-q2-dead" in dead.text
+    assert "job-q2-manual" not in dead.text
+
+    escalated = client.get("/agentic/jobs", params={"state": "escalated"})
+    assert escalated.status_code == 200
+    assert "job-q2-manual" in escalated.text
+    assert "job-q2-dead" not in escalated.text
+
 
 def test_view_agentic_job_detail_shows_activity(client: TestClient) -> None:
     resp = client.get("/agentic/jobs/job-q2-foo")
@@ -147,6 +229,13 @@ def test_view_agentic_job_detail_shows_activity(client: TestClient) -> None:
     body = resp.text
     assert "triage_start" in body
     assert "began triage" in body
+    assert "action=auto_patch" in body
+    assert "class=plist-error" in body
+    assert "Retire reason" in body
+    assert "1/3 failures in last 2h" in body
+    assert "Lifecycle transitions" in body
+    assert "hook_enqueued" in body
+    assert "claimed" in body
 
 
 def test_view_agentic_runner(client: TestClient) -> None:
@@ -161,6 +250,7 @@ def test_view_agentic_activity(client: TestClient) -> None:
     body = resp.text
     assert "triage_start" in body
     assert "job-q2-foo" in body
+    assert "action=auto_patch" in body
 
 
 def test_view_agentic_run_detail(client: TestClient) -> None:

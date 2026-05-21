@@ -67,7 +67,15 @@ def seeded_state_db(tmp_path: Path) -> Path:
             ("job-q2-b", "done",   "triage", "devel/bar", "", "", now, "", now, "@2026Q2"),
             ("job-main", "queued", "triage", "devel/foo", "", "", now, "", now, "@main"),
             ("job-legacy", "queued", "triage", "devel/baz", "", "", now, "", now, None),
+            ("job-dead", "dead", "patch", "devel/qux", "", "", now, "", now, "@2026Q2"),
+            ("job-manual", "escalated", "triage", "devel/manual", "", "", now, "", now, "@2026Q2"),
         ],
+    )
+    conn.execute(
+        "UPDATE jobs SET retire_reason = 'patch_gave_up' WHERE job_id = 'job-dead'"
+    )
+    conn.execute(
+        "UPDATE jobs SET retire_reason = 'escalated_manual' WHERE job_id = 'job-manual'"
     )
     conn.execute(
         """INSERT INTO events (ts, type, data_json) VALUES (?, ?, ?)""",
@@ -81,6 +89,20 @@ def seeded_state_db(tmp_path: Path) -> Path:
         """INSERT INTO runner_status (id, status, updated_at)
            VALUES (1, 'idle', ?)""",
         (now,),
+    )
+    conn.execute(
+        """INSERT INTO env_health_status
+           (env, status, probed_at, operator_action, detail_json, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        (
+            "test-env", "broken", now, "fix python runtime",
+            json.dumps({
+                "env": "test-env",
+                "status": "broken",
+                "checks": [{"name": "python_runtime", "status": "broken", "detail": "missing py311"}],
+            }),
+            now,
+        ),
     )
     conn.commit()
     conn.close()
@@ -106,6 +128,8 @@ def test_api_agentic_status_counts(client: TestClient) -> None:
     assert body["runs"] == 3
     assert body["jobs"]["pending"] == 3
     assert body["jobs"]["done"] == 1
+    assert body["jobs"]["dead"] == 1
+    assert body["jobs"]["escalated"] == 1
 
 
 def test_api_runs_filters_by_target(client: TestClient) -> None:
@@ -128,6 +152,12 @@ def test_api_jobs_filters_by_state_and_target(client: TestClient) -> None:
         "/api/jobs", params={"state": "pending", "target": "@2026Q2"}
     ).json()
     assert [j["job_id"] for j in q2_pending] == ["job-q2-a"]
+
+    dead = client.get("/api/jobs", params={"state": "dead"}).json()
+    assert [j["job_id"] for j in dead] == ["job-dead"]
+
+    escalated = client.get("/api/jobs", params={"state": "escalated"}).json()
+    assert [j["job_id"] for j in escalated] == ["job-manual"]
 
 
 def test_api_jobs_legacy_null_target_only_in_unfiltered(client: TestClient) -> None:
@@ -169,6 +199,14 @@ def test_api_port_history_target_scoped(client: TestClient) -> None:
 def test_api_runner_status_returns_singleton(client: TestClient) -> None:
     body = client.get("/api/runner-status").json()
     assert body["status"] == "idle"
+
+
+def test_api_env_health_returns_persisted_status(client: TestClient) -> None:
+    body = client.get("/api/env-health").json()
+    assert body[0]["env"] == "test-env"
+    assert body[0]["status"] == "broken"
+    assert body[0]["operator_action"] == "fix python runtime"
+    assert body[0]["checks"][0]["name"] == "python_runtime"
 
 
 def test_api_events_filters_by_target_payload(

@@ -20,7 +20,7 @@
 
     <table class="tracker-table">
       <thead>
-        <tr><th>Job</th><th>State</th><th>Type</th><th>Origin</th><th>Target</th><th>Created</th></tr>
+        <tr><th>Job</th><th>State</th><th>Retire reason</th><th>Type</th><th>Origin</th><th>Target</th><th>Created</th></tr>
       </thead>
       <tbody>
         {% for j in jobs %}
@@ -32,17 +32,18 @@
                 'claimed':'skipped','triaging':'skipped','triaged':'skipped',
                 'patching':'skipped','verifying':'skipped',
                 'done':'built',
-                'dead':'failed','escalated':'failed'
+                'dead':'failed','escalated':'skipped'
             }.get(j.state,'total') %}
             <span class="stat-pill {{ cls }}">{{ j.state }}</span>
           </td>
+          <td>{{ j.retire_reason or '—' }}</td>
           <td>{{ j.type or '—' }}</td>
           <td>{{ j.origin or '—' }}</td>
           <td>{{ j.target or '—' }}</td>
           <td>{{ j.created_ts_utc or '—' }}</td>
         </tr>
         {% else %}
-        <tr><td colspan="6" style="color:var(--text-dim);">No jobs match this filter.</td></tr>
+        <tr><td colspan="7" style="color:var(--text-dim);">No jobs match this filter.</td></tr>
         {% endfor %}
       </tbody>
     </table>
