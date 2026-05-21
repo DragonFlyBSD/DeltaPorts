@@ -180,9 +180,11 @@ def test_with_prior_attempts(tmp_path, monkeypatch):
 
     def fake_history(origin):
         return [
+            {"bundle_id": "empty-first"},
             {"bundle_id": "past-a"},
             {"bundle_id": "past-b"},
             {"bundle_id": "past-c"},
+            {"bundle_id": "past-d"},
         ]
     monkeypatch.setattr(runner, "port_bundle_history", fake_history)
 
@@ -190,12 +192,25 @@ def test_with_prior_attempts(tmp_path, monkeypatch):
         if bd is not None:
             p = bd / relpath
             return p.read_text() if p.exists() else None
-        if bid == "past-a" and relpath == "analysis/patch_plan.json":
-            return '{"summary": "tried X"}\n'
-        if bid == "past-a" and relpath == "analysis/patch.log":
-            return "X failed because Y\n"
-        if bid == "past-a" and relpath == "analysis/rebuild_status.txt":
-            return "rebuild_ok=false\n"
+        if bid == "past-a" and relpath == "analysis/patch.md":
+            return "## Patch Log\nTried X and failed.\n"
+        if bid == "past-a" and relpath == "analysis/patch_audit.json":
+            return (
+                '{"status":"budget-exhausted","model":"test/model",'
+                '"tokens_used":{"prompt":10,"completion":2,"total":12},'
+                '"attempts":[{"attempt":1,"tokens":12,"rebuild_ok":false}],'
+                '"via":"dportsv3.agent.patch"}'
+            )
+        if bid == "past-a" and relpath == "analysis/changes.diff":
+            return "diff --git a/foo b/foo\n+changed\n"
+        if bid == "past-a" and relpath == "analysis/tool_trace.jsonl":
+            return (
+                '{"type":"attempt_start","attempt":1,"tokens_used_so_far":0,"budget":120}\n'
+                '{"type":"tool_call","tool":"dsynth_build","args":{"origin":"devel/foo"},"result":{"ok":false}}\n'
+                '{"type":"attempt_end","attempt":1,"rebuild_ok":false,"tokens":12}\n'
+            )
+        if bid == "past-b" and relpath == "analysis/patch_plan.json":
+            return '{"summary": "legacy tried Z"}\n'
         return None
     monkeypatch.setattr(runner, "read_bundle_text", fake_read)
 
@@ -211,11 +226,23 @@ def test_with_prior_attempts(tmp_path, monkeypatch):
 
     assert "## Prior Attempts (most recent 3)" in actual
     assert "### Bundle past-a" in actual
-    assert "#### Patch Plan" in actual
-    assert "```json" in actual
-    assert "#### Patch Log" in actual
-    assert "X failed because Y" in actual
-    assert "#### Rebuild Status" in actual
+    assert "### Bundle empty-first" not in actual
+    assert "#### Patch Report" in actual
+    assert "Tried X and failed" in actual
+    assert "#### Patch Audit Summary" in actual
+    assert "- status: budget-exhausted" in actual
+    assert "- tokens: prompt=10 completion=2 total=12" in actual
+    assert "attempt=1 tokens=12 rebuild_ok=False" in actual
+    assert "- last_rebuild_ok: False" in actual
+    assert "#### Changes Diff" in actual
+    assert "```diff" in actual
+    assert "+changed" in actual
+    assert "#### Tool Trace Summary" in actual
+    assert "tool dsynth_build fail: devel/foo" in actual
+    assert "### Bundle past-b" in actual
+    assert "#### Legacy Patch Plan" in actual
+    assert "legacy tried Z" in actual
+    assert "### Bundle past-d" not in actual
 
 
 # --- snippet round -----------------------------------------------------------

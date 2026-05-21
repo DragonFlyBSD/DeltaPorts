@@ -34,6 +34,7 @@ priority sections when total exceeds N bytes); that's not in Phase 4.
 
 from __future__ import annotations
 
+import json
 import sqlite3
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -446,33 +447,166 @@ class TriageSummarySection:
 
 @dataclass
 class PriorAttemptsSection:
-    """``## Prior Attempts (most recent 3)`` — historical patch
-    bundles' patch_plan.json + patch.log + rebuild_status.txt.
+    """``## Prior Attempts (most recent 3)`` — historical patch bundles.
 
     Pre-loaded by the caller into ``ctx.prior_patch_bundle_ids``;
-    section reads each bundle's artifacts via ``ctx.read_bundle_text``.
+    section reads each bundle's current patch artifacts via
+    ``ctx.read_bundle_text``. Legacy artifact names are retained as a
+    fallback for older bundles.
     """
     name: str = "prior_attempts"
     priority: int = 50
+    max_bundles: int = 3
+    max_patch_chars: int = 4000
+    max_diff_chars: int = 6000
+    max_trace_events: int = 12
+
+    def _clip(self, value: str, limit: int) -> str:
+        if len(value) <= limit:
+            return value
+        return value[:limit] + f"\n[...truncated to {limit} chars...]\n"
+
+    def _audit_summary(self, content: str) -> str:
+        try:
+            data = json.loads(content)
+        except ValueError:
+            return self._clip(content, 2000)
+        if not isinstance(data, dict):
+            return self._clip(content, 2000)
+        lines = []
+        for key in ("status", "model", "via"):
+            if data.get(key) is not None:
+                lines.append(f"- {key}: {data[key]}")
+        usage = data.get("tokens_used")
+        if isinstance(usage, dict):
+            lines.append(
+                "- tokens: "
+                f"prompt={usage.get('prompt', 0)} "
+                f"completion={usage.get('completion', 0)} "
+                f"total={usage.get('total', 0)}"
+            )
+        attempts = data.get("attempts")
+        if isinstance(attempts, list):
+            lines.append(f"- attempts: {len(attempts)}")
+            for attempt in attempts[:5]:
+                if isinstance(attempt, dict):
+                    lines.append(
+                        "  - "
+                        f"attempt={attempt.get('attempt', '?')} "
+                        f"tokens={attempt.get('tokens', '?')} "
+                        f"rebuild_ok={attempt.get('rebuild_ok', '?')}"
+                    )
+            if attempts and isinstance(attempts[-1], dict):
+                last_rebuild_ok = attempts[-1].get("rebuild_ok", "?")
+                lines.append(f"- last_rebuild_ok: {last_rebuild_ok}")
+        return "\n".join(lines) if lines else self._clip(content, 2000)
+
+    def _tool_trace_summary(self, content: str) -> str:
+        events: list[dict] = []
+        for line in content.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                event = json.loads(line)
+            except ValueError:
+                continue
+            if isinstance(event, dict):
+                events.append(event)
+        if not events:
+            return self._clip(content, 2000)
+        lines = []
+        for event in events[-self.max_trace_events:]:
+            event_type = event.get("type", "?")
+            if event_type == "attempt_start":
+                used = event.get("tokens_used_so_far", 0)
+                budget = event.get("budget", "?")
+                lines.append(
+                    f"- attempt_start {event.get('attempt', '?')}: "
+                    f"tokens={used}/{budget}"
+                )
+                continue
+            if event_type == "attempt_end":
+                lines.append(
+                    f"- attempt_end {event.get('attempt', '?')}: "
+                    f"rebuild_ok={event.get('rebuild_ok', '?')} "
+                    f"tokens={event.get('tokens', '?')}"
+                )
+                continue
+            if event_type == "tool_call":
+                args = event.get("args") if isinstance(event.get("args"), dict) else {}
+                result = (
+                    event.get("result")
+                    if isinstance(event.get("result"), dict)
+                    else {}
+                )
+                status = "?"
+                if result.get("ok") is True:
+                    status = "ok"
+                elif result.get("ok") is False:
+                    status = "fail"
+                subject = (
+                    args.get("origin") or args.get("path") or args.get("relpath") or ""
+                )
+                lines.append(f"- tool {event.get('tool', '?')} {status}: {subject}")
+        return "\n".join(lines)
 
     def render(self, ctx: ContextCtx) -> str | None:
         if not ctx.prior_patch_bundle_ids or ctx.read_bundle_text is None:
             return None
         lines = ["## Prior Attempts (most recent 3)"]
         emitted_any = False
-        for past_bundle in ctx.prior_patch_bundle_ids[:3]:
+        emitted_count = 0
+        for past_bundle in ctx.prior_patch_bundle_ids:
+            if emitted_count >= self.max_bundles:
+                break
             section_lines = [f"### Bundle {past_bundle}"]
             had_content = False
-            for relpath, title, code_block in [
-                ("analysis/patch_plan.json", "Patch Plan", "json"),
-                ("analysis/patch.log", "Patch Log", None),
-                ("analysis/rebuild_status.txt", "Rebuild Status", None),
+            for relpath, title, code_block, transform in [
+                (
+                    "analysis/patch.md",
+                    "Patch Report",
+                    None,
+                    lambda s: self._clip(s, self.max_patch_chars),
+                ),
+                (
+                    "analysis/patch_audit.json",
+                    "Patch Audit Summary",
+                    None,
+                    self._audit_summary,
+                ),
+                (
+                    "analysis/changes.diff",
+                    "Changes Diff",
+                    "diff",
+                    lambda s: self._clip(s, self.max_diff_chars),
+                ),
+                (
+                    "analysis/tool_trace.jsonl",
+                    "Tool Trace Summary",
+                    None,
+                    self._tool_trace_summary,
+                ),
+                (
+                    "analysis/patch_plan.json",
+                    "Legacy Patch Plan",
+                    "json",
+                    lambda s: s,
+                ),
+                ("analysis/patch.log", "Legacy Patch Log", None, lambda s: s),
+                (
+                    "analysis/rebuild_status.txt",
+                    "Legacy Rebuild Status",
+                    None,
+                    lambda s: s,
+                ),
             ]:
                 content = ctx.read_bundle_text(None, past_bundle, relpath)
                 if not content:
                     continue
                 had_content = True
                 section_lines.append(f"#### {title}")
+                content = transform(content)
                 if code_block:
                     section_lines.extend([f"```{code_block}", content, "```"])
                 else:
@@ -481,6 +615,7 @@ class PriorAttemptsSection:
             if had_content:
                 lines.extend(section_lines)
                 emitted_any = True
+                emitted_count += 1
         if not emitted_any:
             return None
         return "\n".join(lines)

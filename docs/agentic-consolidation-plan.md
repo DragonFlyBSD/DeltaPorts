@@ -222,7 +222,10 @@ retry loop:
 6. Retry caps distinguish repeated build failures from failed automated
    patch attempts.
 
-### Step 1 — improve bundle artifact reading
+### Step 1 — improve bundle artifact reading — done
+
+Status: shipped via tracker artifact viewer, inline bundle-page previews,
+and Markdown rendering.
 
 Make bundle artifacts readable from the tracker before changing manual
 flow. Operators need to inspect the evidence quickly before they can
