@@ -57,12 +57,17 @@ class StepOutcome:
 
     - ``status``: coarse outcome for orchestrator routing.
     - ``next_event``: lifecycle event the orchestrator fires after
-      ``record`` (None means "step is internal; no transition").
+      ``record`` (None means "no primary transition").
+    - ``extra_events``: additional events to fire after
+      ``next_event`` (e.g. TriageStep emits TRIAGE_OK as
+      ``next_event`` and adds ESCALATE_MANUAL when the decision
+      routes to MANUAL).
     - ``detail``: free-form structured data the orchestrator
-      includes in the lifecycle event's ``detail_json``.
+      includes in the lifecycle events' ``detail_json``.
     """
     status: Literal["success", "needs-help", "failed", "skipped"]
     next_event: JobEvent | None = None
+    extra_events: list[JobEvent] = field(default_factory=list)
     detail: dict[str, Any] = field(default_factory=dict)
 
 
@@ -216,17 +221,23 @@ class Orchestrator:
                     except Exception:
                         pass
 
-            if outcome.next_event is not None and ctx.apply_transition is not None:
+            events_to_fire: list[JobEvent] = []
+            if outcome.next_event is not None:
+                events_to_fire.append(outcome.next_event)
+            events_to_fire.extend(outcome.extra_events)
+            for evt in events_to_fire:
+                if ctx.apply_transition is None:
+                    break
                 try:
                     ctx.apply_transition(
-                        ctx.job_id, outcome.next_event, detail=outcome.detail or None,
+                        ctx.job_id, evt, detail=outcome.detail or None,
                     )
                 except Exception as exc:  # noqa: BLE001
                     if ctx.activity_log is not None:
                         try:
                             ctx.activity_log(
                                 ctx.queue_root, "step_transition_error",
-                                f"{step.name} → {outcome.next_event} failed: "
+                                f"{step.name} → {evt} failed: "
                                 f"{type(exc).__name__}: {exc}",
                                 job_id=ctx.job_id,
                             )

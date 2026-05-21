@@ -1374,256 +1374,6 @@ def _write_triage_audit_harness(
     out.write_bytes(data)
 
 
-def _process_triage_job_harness(
-    queue_root: Path,
-    job_path: Path,
-    job: dict,
-    bundle_dir: Path | None,
-    kedb_dir: Path | None,
-    payload: str,
-    origin: str,
-    job_id: str,
-    model: str,
-) -> tuple[bool, str]:
-    """Triage path that uses dportsv3.agent.triage instead of opencode."""
-    api_base = os.environ.get("DP_HARNESS_TRIAGE_API_BASE") or None
-    api_key = os.environ.get("DP_HARNESS_TRIAGE_API_KEY") or None
-    custom_llm_provider = os.environ.get("DP_HARNESS_TRIAGE_PROVIDER") or None
-    timeout = int(os.environ.get("DP_HARNESS_TIMEOUT", "120"))
-    max_snippet_rounds = int(os.environ.get("DP_HARNESS_MAX_SNIPPET_ROUNDS", "5"))
-
-    bundle_id = job.get("bundle_id")
-    materialized_tmp: Path | None = None
-    if bundle_dir is None:
-        if not bundle_id:
-            return False, "harness triage requires bundle_dir or bundle_id"
-        # Bundles delivered via artifact-store have no on-disk dir.
-        # Materialize all artifacts into a tempdir so snippet-extractor
-        # and the intermediate triage.md write can use a real path.
-        try:
-            materialized_tmp = Path(tempfile.mkdtemp(prefix=f"bundle-{bundle_id}-"))
-            n = _materialize_bundle(bundle_id, materialized_tmp)
-        except Exception as exc:
-            return False, f"failed to materialize bundle {bundle_id}: {exc}"
-        if n == 0:
-            try:
-                shutil.rmtree(materialized_tmp, ignore_errors=True)
-            except Exception:
-                pass
-            return False, f"bundle {bundle_id} has no artifacts in the store"
-        bundle_dir = materialized_tmp
-        log(queue_root, "INFO",
-            f"materialized {n} artifact(s) for bundle {bundle_id} into {materialized_tmp}")
-
-    try:
-        return _run_harness_triage_inner(
-            queue_root, job_path, job, bundle_dir, kedb_dir,
-            payload, origin, job_id, model,
-            api_base, api_key, custom_llm_provider, timeout, max_snippet_rounds,
-            bundle_id,
-        )
-    finally:
-        if materialized_tmp is not None:
-            # Upload the final triage.md back so the patch job (and
-            # operator/UI) can read it from the artifact store.
-            if bundle_id:
-                tmd = materialized_tmp / "analysis" / "triage.md"
-                if tmd.exists():
-                    try:
-                        artifact_store_put(
-                            bundle_id, "analysis/triage.md",
-                            tmd.read_bytes(), "text",
-                        )
-                    except Exception:
-                        pass
-            shutil.rmtree(materialized_tmp, ignore_errors=True)
-
-
-def _run_harness_triage_inner(
-    queue_root: Path,
-    job_path: Path,
-    job: dict,
-    bundle_dir: Path,
-    kedb_dir: Path | None,
-    payload: str,
-    origin: str,
-    job_id: str,
-    model: str,
-    api_base: str | None,
-    api_key: str | None,
-    custom_llm_provider: str | None,
-    timeout: int,
-    max_snippet_rounds: int,
-    bundle_id: str | None,
-) -> tuple[bool, str]:
-    from dportsv3.agent import triage as harness_triage  # type: ignore[import-not-found]
-
-    activity_log(
-        queue_root, "api_call_start",
-        f"Calling harness triage for {origin}",
-        job_id=job_id, extra={"agent": "dports-triage", "model": model},
-    )
-    start = time.time()
-    try:
-        result = harness_triage.run(
-            payload,
-            bundle_dir=bundle_dir,
-            model=model,
-            api_base=api_base,
-            api_key=api_key,
-            custom_llm_provider=custom_llm_provider,
-            timeout=timeout,
-            max_snippet_rounds=max_snippet_rounds,
-        )
-    except Exception as exc:
-        activity_log(
-            queue_root, "api_error",
-            f"Harness triage failed for {origin}: {str(exc)[:200]}",
-            job_id=job_id,
-        )
-        write_error_note(job_path, str(exc))
-        return False, str(exc)
-    duration_ms = int((time.time() - start) * 1000)
-    activity_log(
-        queue_root, "api_call_complete",
-        f"Harness triage response received for {origin} (rounds={result.snippet_rounds}, tokens={result.usage.total_tokens})",
-        job_id=job_id, duration_ms=duration_ms,
-    )
-
-    bundle_id = job.get("bundle_id")
-    _write_triage_audit_harness(bundle_dir, bundle_id, result, model)
-    activity_log(
-        queue_root, "write_output",
-        f"Wrote harness triage outputs for {origin}",
-        job_id=job_id,
-    )
-
-    triage = {
-        "classification": result.classification,
-        "confidence": result.confidence,
-        "raw": result.text,
-    }
-
-    # Resolve trust tier from triage outcome. The policy's
-    # confidence_floor downgrades automatically (AUTO with low
-    # confidence -> ASSIST -> MANUAL), so low confidence is captured
-    # naturally as MANUAL without a separate needs_user_context check.
-    from dportsv3.agent import policy as harness_policy  # type: ignore[import-not-found]
-    policy_path = os.environ.get(
-        "DP_HARNESS_POLICY",
-        _DEFAULT_POLICY_PATH,
-    )
-    try:
-        pol = harness_policy.load_policy(policy_path)
-    except Exception as exc:
-        activity_log(
-            queue_root, "policy_error",
-            f"Failed to load harness policy at {policy_path}: {exc}",
-            job_id=job_id,
-        )
-        return False, f"policy load failed: {exc}"
-
-    # Decision engine: one decide() call replaces the inline tier-
-    # resolution + retry-cap + env-broken-short-circuit logic.
-    from dportsv3.agent.decision import decide
-
-    max_attempts = int(os.environ.get("DP_HARNESS_MAX_PATCH_ATTEMPTS", "3"))
-    window_hours = int(os.environ.get("DP_HARNESS_ATTEMPT_WINDOW_HOURS", "2"))
-    target_value = job.get("target", "") or ""
-    history = _load_port_history(target_value, origin, window_hours)
-
-    # Current env health (cached). May be None if DP_HARNESS_ENV is
-    # unset; decide() treats None as ready.
-    env_health = None
-    runner_env_name = os.environ.get("DP_HARNESS_ENV") or ""
-    if runner_env_name:
-        health_ttl = int(os.environ.get("DP_HARNESS_HEALTH_CACHE_SECONDS", "60"))
-        try:
-            env_health = probe_health_cached(runner_env_name, health_ttl)
-        except Exception:
-            env_health = None
-
-    dec = decide(
-        classification=result.classification,
-        confidence=result.confidence,
-        history=history,
-        env_health=env_health,
-        policy=pol,
-        max_attempts=max_attempts,
-        window_hours=window_hours,
-    )
-    tier = dec.tier
-
-    # One activity_log entry per decision, regardless of outcome,
-    # gives the UI a single audit trail row.
-    activity_log(
-        queue_root, "decision",
-        dec.reason,
-        job_id=job_id,
-        extra={**dec.extra, "action": dec.action, "tier": tier.name},
-    )
-
-    if dec.action == "skip":
-        # Env is broken at decision time. The runner gate is already
-        # paused; we don't auto-enqueue a patch and don't flag the
-        # port as MANUAL (the chroot is the fault, not the port).
-        # Triage completion mapping routes to ENV_BROKEN via the
-        # cached probe → job lands DEAD with retire_reason=env_broken.
-        return True, "skipped_env_broken"
-
-    if dec.action == "escalate_manual":
-        # Surface low-confidence + non-patchable cases to the operator
-        # via the user_context request channel (UI picks them up).
-        run_id = job.get("run_id", "")
-        iteration = int(job.get("iteration", "1"))
-        max_iterations = int(job.get("max_iterations", str(DEFAULT_MAX_ITERATIONS)))
-        upsert_user_context_request(
-            queue_root,
-            run_id=run_id,
-            origin=origin,
-            bundle_id=bundle_id or (bundle_dir.name if bundle_dir else ""),
-            classification=result.classification,
-            confidence=result.confidence,
-            iteration=iteration,
-            max_iterations=max_iterations,
-        )
-        activity_log(
-            queue_root, "triage_manual",
-            f"Triage tier MANUAL for {origin} (classification={result.classification}, confidence={result.confidence}); no auto-enqueue",
-            job_id=job_id,
-            extra={
-                "classification": result.classification,
-                "confidence": result.confidence,
-                "tier": tier.name,
-                "run_id": run_id,
-            },
-        )
-        update_runner_status("waiting", job_id=job_id, stage="waiting_user_context",
-                             extra={"origin": origin, "type": "triage", "tier": tier.name})
-        return True, "manual_tier"
-
-    # AUTO or ASSIST: auto-enqueue a patch job, carrying the resolved
-    # tier + dev_env so the patch worker doesn't re-resolve.
-    enqueue_patch_job(
-        queue_root, job,
-        tier_name=tier.name,
-        dev_env=os.environ.get("DP_HARNESS_ENV") or None,
-    )
-    activity_log(
-        queue_root, "enqueue_patch",
-        f"Auto-enqueued patch job for {origin} (tier={tier.name}, classification={result.classification})",
-        job_id=job_id,
-        extra={
-            "classification": result.classification,
-            "confidence": result.confidence,
-            "tier": tier.name,
-            "max_iterations": tier.max_iterations,
-            "max_tokens": tier.max_tokens,
-        },
-    )
-    return True, "done"
-
-
 def process_triage_job(
     queue_root: Path,
     job_path: Path,
@@ -1631,19 +1381,76 @@ def process_triage_job(
     bundle_dir: Path | None,
     kedb_dir: Path | None,
 ) -> tuple[bool, str]:
-    """Process a triage job via the dportsv3.agent harness."""
-    harness_model = os.environ.get("DP_HARNESS_TRIAGE_MODEL")
-    if not harness_model:
-        msg = "DP_HARNESS_TRIAGE_MODEL not set; cannot run triage"
-        write_error_note(job_path, msg)
-        return False, msg
+    """Process a triage job by driving TriageStep through the orchestrator.
+
+    Phase 5 Step 2: lifted the legacy ``_process_triage_job_harness``
+    + ``_run_harness_triage_inner`` bodies into ``TriageStep`` in
+    ``dportsv3.agent.steps``. This wrapper builds the StepCtx + helper
+    bindings and surfaces the step outcome as the
+    ``(success, status_str)`` tuple ``process_job`` expects.
+
+    Lifecycle event firing (TRIAGE_OK, ESCALATE_MANUAL, ENV_BROKEN)
+    still happens in ``process_job`` via ``_completion_events_for``;
+    Step 4 of the phase moves that into ``StepOutcome.next_event``.
+    """
+    from dportsv3.agent.step import Orchestrator, StepCtx
+    from dportsv3.agent.steps import TriageStep
+
     payload = build_triage_payload(bundle_dir, kedb_dir, job)
     origin = job.get("origin", "unknown")
     job_id = job_path.name
-    return _process_triage_job_harness(
-        queue_root, job_path, job, bundle_dir, kedb_dir,
-        payload, origin, job_id, harness_model,
+
+    ctx = StepCtx(
+        job_id=job_id,
+        job=job,
+        queue_root=queue_root,
+        apply_transition=_apply_transition,
+        activity_log=activity_log,
+        db_conn=_state_db_conn,
+        env_name=os.environ.get("DP_HARNESS_ENV") or None,
+        bundle_dir=bundle_dir,
+        bundle_id=job.get("bundle_id"),
+        kedb_dir=kedb_dir,
     )
+    ctx.state["job_path"] = job_path
+    ctx.state["payload"] = payload
+    ctx.state["origin"] = origin
+    ctx.state["policy_path"] = os.environ.get(
+        "DP_HARNESS_POLICY", _DEFAULT_POLICY_PATH,
+    )
+    ctx.state["runner_helpers"] = {
+        "materialize_bundle": _materialize_bundle,
+        "artifact_store_put": artifact_store_put,
+        "write_error_note": write_error_note,
+        "write_triage_audit": _write_triage_audit_harness,
+        "enqueue_patch_job": enqueue_patch_job,
+        "upsert_user_context_request": upsert_user_context_request,
+        "update_runner_status": update_runner_status,
+        "probe_health_cached": probe_health_cached,
+        "load_port_history": _load_port_history,
+        "log": log,
+        "activity_log": activity_log,
+    }
+
+    result = Orchestrator().run(ctx, [TriageStep()])
+
+    # The orchestrator halts on precheck/run exceptions; surface that
+    # as (False, halt_reason) to preserve the legacy contract.
+    if result.halted:
+        return False, result.halt_reason or "triage halted"
+
+    step_result = result.step_by_name("triage")
+    if step_result is None or step_result.outcome is None:
+        # Precheck said skip/fail and the orchestrator didn't get to
+        # run. Surface a non-success outcome.
+        reason = step_result.readiness.reason if step_result else "triage skipped"
+        return False, reason
+
+    outcome = step_result.outcome
+    status_str = outcome.detail.get("status_str", "unknown")
+    if outcome.status == "failed":
+        return False, status_str
+    return True, status_str
 def _summarize_tool_call(tool: str, args: dict, result: dict) -> str:
     """One-line summary of a tool invocation for the activity log.
 
