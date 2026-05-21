@@ -75,3 +75,72 @@ def test_step_outcome_events_populated_by_steps():
     from dportsv3.agent.steps import TriageStep, PatchAttemptStep
     assert TriageStep().name == "triage"
     assert PatchAttemptStep().name == "patch"
+
+
+def test_init_state_db_creates_missing_file(tmp_path, monkeypatch):
+    """If state.db doesn't exist, the runner must create + schema-init
+    it instead of silently disabling writes. Otherwise a first-time
+    runner on a clean host emits activity to runner.log while the
+    tracker UI sees nothing — the bug surfaced during smoke."""
+    from dportsv3.agent import runner
+
+    db_path = tmp_path / "fresh-state.db"
+    assert not db_path.exists()
+    monkeypatch.setenv("DPORTSV3_STATE_DB", str(db_path))
+    monkeypatch.setattr(runner, "_state_db_conn", None, raising=False)
+
+    conn = runner.init_state_db(queue_root=tmp_path / "queue")
+    assert conn is not None
+    assert db_path.exists()
+    # Schema actually applied — the canonical agentic tables exist.
+    tables = {
+        row[0] for row in conn.execute(
+            "SELECT name FROM sqlite_master WHERE type = 'table'"
+        ).fetchall()
+    }
+    for needed in ("bundles", "jobs", "job_events", "activity_log",
+                   "user_context_requests"):
+        assert needed in tables, f"missing table {needed!r}"
+
+
+def test_init_state_db_opens_existing_file(tmp_path, monkeypatch):
+    """Existing DB must not be re-initialized destructively. Pre-seed
+    a row, run init_state_db, confirm the row is still there."""
+    from dportsv3.agent import runner
+    from dportsv3.db.schema import init_db as init_schema
+
+    db_path = tmp_path / "existing.db"
+    import sqlite3
+    seed = sqlite3.connect(str(db_path))
+    init_schema(seed)
+    seed.execute(
+        """INSERT INTO bundles (bundle_id, origin, result, last_seen_at)
+           VALUES ('keep-me', 'devel/foo', 'failure', '2026-05-22T00:00:00Z')"""
+    )
+    seed.commit()
+    seed.close()
+
+    monkeypatch.setenv("DPORTSV3_STATE_DB", str(db_path))
+    monkeypatch.setattr(runner, "_state_db_conn", None, raising=False)
+    conn = runner.init_state_db(queue_root=tmp_path / "queue")
+    assert conn is not None
+    row = conn.execute(
+        "SELECT bundle_id FROM bundles WHERE bundle_id = 'keep-me'"
+    ).fetchone()
+    assert row is not None
+
+
+def test_init_state_db_returns_none_when_parent_dir_missing(
+    tmp_path, monkeypatch,
+):
+    """Real misconfig (parent dir doesn't exist) should not silently
+    swallow — return None so the operator can fix the path."""
+    from dportsv3.agent import runner
+
+    bad = tmp_path / "nope" / "really-nope" / "state.db"
+    monkeypatch.setenv("DPORTSV3_STATE_DB", str(bad))
+    monkeypatch.setattr(runner, "_state_db_conn", None, raising=False)
+
+    conn = runner.init_state_db(queue_root=tmp_path / "queue")
+    assert conn is None
+    assert not bad.exists()

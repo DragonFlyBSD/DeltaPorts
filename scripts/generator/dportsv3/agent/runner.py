@@ -209,27 +209,64 @@ def get_state_db_path(queue_root: Path) -> Path:
 
 
 def init_state_db(queue_root: Path) -> sqlite3.Connection | None:
-    """Initialize connection to state.db for activity logging."""
+    """Initialize connection to state.db, creating + schema-initing the
+    file if it doesn't exist yet.
+
+    A first-time runner on a clean host (or after a wipe) must not
+    silently disable all DB writes — that produces a runner.log full
+    of activity that the tracker UI never sees. Auto-create matches
+    artifact-store's behaviour: the schema is idempotent
+    (``init_db`` uses CREATE TABLE IF NOT EXISTS + ADD COLUMN
+    migrations), so it's safe to run on every startup.
+
+    Returns ``None`` only when the parent dir is missing or
+    ``sqlite3.connect`` itself raises — those are real misconfigs the
+    operator must fix.
+    """
     global _state_db_conn
-    
+
     db_path = get_state_db_path(queue_root)
-    
-    if not db_path.exists():
+
+    parent = db_path.parent
+    if not parent.exists():
         print(
-            f"Warning: state.db not found at {db_path}; "
-            "runner lifecycle/status writes disabled",
+            f"Warning: state.db parent dir {parent} does not exist; "
+            "runner lifecycle/status writes disabled. Create the "
+            "directory or set DPORTSV3_STATE_DB to a valid path.",
             file=sys.stderr,
         )
         return None
-    
+
+    created = not db_path.exists()
     try:
         conn = sqlite3.connect(str(db_path), check_same_thread=False)
         conn.row_factory = sqlite3.Row
-        _state_db_conn = conn
-        return conn
-    except Exception as e:
-        print(f"Warning: Could not connect to state.db: {e}", file=sys.stderr)
+    except Exception as exc:
+        print(f"Warning: could not connect to state.db at {db_path}: "
+              f"{exc}", file=sys.stderr)
         return None
+
+    # Always run init_db — it's idempotent and applies any pending
+    # ALTER TABLE migrations. Cheap, and protects against running
+    # against a partially-migrated DB.
+    try:
+        from dportsv3.db.schema import init_db as _init_schema  # noqa: PLC0415
+        _init_schema(conn)
+    except Exception as exc:
+        print(f"Warning: schema init on state.db at {db_path} failed: "
+              f"{exc}; runner lifecycle/status writes disabled",
+              file=sys.stderr)
+        try:
+            conn.close()
+        except Exception:
+            pass
+        return None
+
+    if created:
+        print(f"Initialized new state.db at {db_path}", file=sys.stderr)
+
+    _state_db_conn = conn
+    return conn
 
 
 def _artifact_store_url() -> str:
