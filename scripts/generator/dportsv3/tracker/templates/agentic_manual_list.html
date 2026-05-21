@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manual Queue — DeltaPorts Tracker</title>
+  <link href="{{ request.url_for('static', path='progress.css') }}" type="text/css" rel="stylesheet">
+  <link rel="icon" type="image/png" href="{{ request.url_for('static', path='favicon.png') }}">
+</head>
+<body>
+  {% with nav_crumbs = [{"label": "Agentic", "url": request.url_for('agentic_index')}, {"label": "Manual Queue"}] %}
+    {% include "_tracker_nav.html" %}
+  {% endwith %}
+
+  <div class="tracker-page">
+    <h1>Manual Queue</h1>
+    <p class="lede">Jobs the agent escalated to a human. Each row has a
+    handoff artifact and a textarea for operator context — submitting
+    context bumps <code>context_rev</code> and the runner re-enqueues
+    triage on its next sweep.</p>
+
+    <p>
+      <a href="{{ request.url_for('agentic_manual_list') }}{% if open_only %}?open_only=false{% endif %}">
+        {% if open_only %}Show resolved too{% else %}Show only open{% endif %}
+      </a>
+    </p>
+
+    <table class="tracker-table">
+      <thead>
+        <tr>
+          <th>Origin</th><th>Target</th><th>Run</th>
+          <th>Classification</th><th>Confidence</th>
+          <th>Status</th><th>Context rev</th>
+          <th>Requested</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in requests %}
+        <tr>
+          <td>
+            <a href="{{ request.url_for('agentic_manual_detail', run_id=r.run_id, origin=r.origin) }}">
+              {{ r.origin }}
+            </a>
+          </td>
+          <td>{{ r.target or '—' }}</td>
+          <td>
+            {% if r.run_id %}
+              <a href="{{ request.url_for('agentic_run_detail', run_id=r.run_id) }}">{{ r.run_id }}</a>
+            {% else %}—{% endif %}
+          </td>
+          <td>{{ r.classification or '—' }}</td>
+          <td>{{ r.confidence or '—' }}</td>
+          <td>{{ r.status }}</td>
+          <td>
+            {{ r.context_rev or 0 }}
+            {% if r.last_context_rev_handled is not none %}
+              <span style="color:var(--text-dim);">
+                (handled: {{ r.last_context_rev_handled }})
+              </span>
+            {% endif %}
+          </td>
+          <td>{{ r.requested_at }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8" style="color:var(--text-dim);">No manual requests match this filter.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>

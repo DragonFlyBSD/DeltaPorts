@@ -1,0 +1,296 @@
+"""Tests for the manual escalation queue (Step 4, post-impl plan).
+
+Covers:
+- ``GET /agentic/manual`` list page renders the row and a link to detail.
+- ``GET /agentic/manual/{run_id}/{origin}`` renders the handoff
+  markdown inline.
+- ``GET /api/manual-requests`` returns the same rows the list page sees.
+- ``POST /api/manual-requests/{run_id}/{origin}/context`` happy path
+  inserts a ``user_context`` row, bumps ``context_rev``, and emits a
+  ``user_context_updated`` event.
+- POST with empty / overlong context → 400.
+- POST for a nonexistent request → 404.
+- ``open_only`` filter excludes requests whose context has already
+  been picked up by the runner (``context_rev <= last_context_rev_handled``).
+"""
+
+from __future__ import annotations
+
+import json
+import sqlite3
+from datetime import datetime, timezone
+from pathlib import Path
+
+import pytest
+
+fastapi = pytest.importorskip("fastapi")
+from fastapi.testclient import TestClient
+
+from dportsv3.db.schema import init_db as init_state_db
+from dportsv3.tracker.server import create_app
+
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+@pytest.fixture
+def seeded_state_db(tmp_path: Path) -> Path:
+    """State DB with two open manual requests + one resolved + a
+    handoff artifact on the open one's bundle."""
+    db_path = tmp_path / "state.db"
+    conn = sqlite3.connect(str(db_path))
+    conn.row_factory = sqlite3.Row
+    init_state_db(conn)
+
+    now = _now()
+    # Handoff artifact file (filesystem-backed).
+    handoff_path = tmp_path / "manual_handoff.md"
+    handoff_path.write_text(
+        "# Manual Handoff\n\n"
+        "- **Origin:** `devel/foo`\n"
+        "- **Reason:** triage classified as MANUAL\n\n"
+        "## Operator Question\n\nWhat approach should the agent take?\n",
+        encoding="utf-8",
+    )
+
+    conn.executemany(
+        """INSERT INTO runs (run_id, profile, target, ts_start, last_seen_at)
+           VALUES (?, ?, ?, ?, ?)""",
+        [
+            ("run-q2-001", "2026Q2", "@2026Q2", now, now),
+            ("run-main-002", "main", "@main", now, now),
+        ],
+    )
+    conn.executemany(
+        """INSERT INTO bundles
+           (bundle_id, run_id, origin, flavor, ts_utc, result, target, last_seen_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+        [
+            ("b-foo", "run-q2-001", "devel/foo", "", now, "fail", "@2026Q2", now),
+            ("b-bar", "run-q2-001", "devel/bar", "", now, "fail", "@2026Q2", now),
+            ("b-resolved", "run-main-002", "devel/baz", "", now, "fail", "@main", now),
+        ],
+    )
+    conn.execute(
+        """INSERT INTO artifact_refs
+           (bundle_id, relpath, backend, fs_path, kind, size, created_at)
+           VALUES (?, ?, 'fs', ?, 'text', ?, ?)""",
+        (
+            "b-foo", "analysis/manual_handoff.md",
+            str(handoff_path), handoff_path.stat().st_size, now,
+        ),
+    )
+    # Two open requests: one with no operator context yet, one with
+    # context already submitted but waiting for the runner sweep.
+    conn.executemany(
+        """INSERT INTO user_context_requests
+           (run_id, origin, bundle_id, confidence, classification,
+            iteration, max_iterations, requested_at, status,
+            last_context_rev_handled)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)""",
+        [
+            ("run-q2-001", "devel/foo", "b-foo", "low", "missing-dep",
+             1, 3, now, 0),
+            ("run-q2-001", "devel/bar", "b-bar", "medium", "compile-error",
+             2, 3, now, 0),
+            # Resolved: runner already handled rev 1.
+            ("run-main-002", "devel/baz", "b-resolved", "high", "plist-error",
+             1, 3, now, 1),
+        ],
+    )
+    # The resolved request has its context_rev consumed.
+    conn.execute(
+        """INSERT INTO user_context (run_id, origin, context_text,
+           updated_at, context_rev)
+           VALUES (?, ?, ?, ?, ?)""",
+        ("run-main-002", "devel/baz", "use freebsd-side patch", now, 1),
+    )
+    conn.commit()
+    conn.close()
+    return db_path
+
+
+@pytest.fixture
+def client(seeded_state_db: Path, tmp_path: Path, monkeypatch) -> TestClient:
+    # artifact_root only matters for blob-backend artifacts; the
+    # handoff seeded above uses fs backend with an absolute fs_path
+    # so artifact_root never gets consulted.
+    monkeypatch.setenv("DPORTSV3_ARTIFACT_ROOT", str(tmp_path))
+    app = create_app(seeded_state_db)
+    with TestClient(app) as c:
+        yield c
+
+
+# --- list page / API --------------------------------------------------------
+
+
+def test_manual_list_page_renders_open_rows(client: TestClient) -> None:
+    resp = client.get("/agentic/manual")
+    assert resp.status_code == 200
+    body = resp.text
+    assert "Manual Queue" in body
+    assert "devel/foo" in body
+    assert "devel/bar" in body
+    # Resolved row should not appear under open_only=True.
+    assert "devel/baz" not in body
+
+
+def test_manual_list_page_open_only_false_shows_resolved(client: TestClient) -> None:
+    resp = client.get("/agentic/manual", params={"open_only": False})
+    assert resp.status_code == 200
+    assert "devel/baz" in resp.text
+
+
+def test_api_manual_requests_shape(client: TestClient) -> None:
+    body = client.get("/api/manual-requests").json()
+    rows = body["requests"]
+    origins = {r["origin"] for r in rows}
+    assert origins == {"devel/foo", "devel/bar"}
+    foo = next(r for r in rows if r["origin"] == "devel/foo")
+    assert foo["bundle_id"] == "b-foo"
+    assert foo["classification"] == "missing-dep"
+    assert foo["context_rev"] == 0
+
+
+def test_api_manual_requests_include_resolved_when_open_only_false(
+    client: TestClient,
+) -> None:
+    rows = client.get(
+        "/api/manual-requests", params={"open_only": False}
+    ).json()["requests"]
+    assert {r["origin"] for r in rows} == {
+        "devel/foo", "devel/bar", "devel/baz",
+    }
+
+
+# --- detail page ------------------------------------------------------------
+
+
+def test_manual_detail_renders_handoff_markdown(client: TestClient) -> None:
+    resp = client.get("/agentic/manual/run-q2-001/devel/foo")
+    assert resp.status_code == 200
+    body = resp.text
+    # Handoff content rendered as markdown (header tag).
+    assert "Manual Handoff" in body
+    assert "What approach should the agent take" in body
+    # Form is present.
+    assert "Try again with this context" in body
+    assert 'name="context_text"' in body
+
+
+def test_manual_detail_404_for_unknown_request(client: TestClient) -> None:
+    resp = client.get("/agentic/manual/run-q2-001/devel/nonexistent")
+    assert resp.status_code == 404
+
+
+def test_manual_detail_origin_with_slash_resolves(client: TestClient) -> None:
+    """The origin path param uses ``{origin:path}`` so origin slashes
+    (e.g. ``devel/foo``) survive routing without further encoding."""
+    resp = client.get("/agentic/manual/run-q2-001/devel/foo")
+    assert resp.status_code == 200
+
+
+def test_manual_detail_renders_without_handoff_artifact(
+    client: TestClient,
+) -> None:
+    """Older bundles predating Step 3 have no handoff; page still
+    renders with an explanatory empty-state."""
+    resp = client.get("/agentic/manual/run-q2-001/devel/bar")
+    assert resp.status_code == 200
+    assert "No <code>analysis/manual_handoff.md</code>" in resp.text
+
+
+# --- POST happy path + validation -------------------------------------------
+
+
+def test_post_context_inserts_row_and_bumps_rev(
+    client: TestClient, seeded_state_db: Path,
+) -> None:
+    resp = client.post(
+        "/api/manual-requests/run-q2-001/devel/foo/context",
+        json={"context_text": "Try the freebsd-side patch from FORTS r12345."},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["ok"] is True
+    assert body["context_rev"] == 1
+
+    # Row landed in user_context.
+    conn = sqlite3.connect(str(seeded_state_db))
+    conn.row_factory = sqlite3.Row
+    row = conn.execute(
+        "SELECT context_text, context_rev FROM user_context "
+        "WHERE run_id = ? AND origin = ?",
+        ("run-q2-001", "devel/foo"),
+    ).fetchone()
+    assert row is not None
+    assert "freebsd-side patch" in row["context_text"]
+    assert row["context_rev"] == 1
+    # Event emitted for activity log.
+    ev = conn.execute(
+        "SELECT data_json FROM events WHERE type = 'user_context_updated'"
+    ).fetchone()
+    assert ev is not None
+    payload = json.loads(ev["data_json"])
+    assert payload["run_id"] == "run-q2-001"
+    assert payload["origin"] == "devel/foo"
+    assert payload["context_rev"] == 1
+    conn.close()
+
+
+def test_post_context_second_submission_bumps_rev(client: TestClient) -> None:
+    first = client.post(
+        "/api/manual-requests/run-q2-001/devel/foo/context",
+        json={"context_text": "First attempt."},
+    )
+    assert first.json()["context_rev"] == 1
+    second = client.post(
+        "/api/manual-requests/run-q2-001/devel/foo/context",
+        json={"context_text": "Revised — try option B instead."},
+    )
+    assert second.json()["context_rev"] == 2
+
+
+def test_post_context_empty_returns_400(client: TestClient) -> None:
+    resp = client.post(
+        "/api/manual-requests/run-q2-001/devel/foo/context",
+        json={"context_text": "   "},
+    )
+    assert resp.status_code == 400
+    assert "empty" in resp.json()["detail"]
+
+
+def test_post_context_too_long_returns_400(client: TestClient) -> None:
+    resp = client.post(
+        "/api/manual-requests/run-q2-001/devel/foo/context",
+        json={"context_text": "x" * 8001},
+    )
+    assert resp.status_code == 400
+    assert "8000" in resp.json()["detail"]
+
+
+def test_post_context_unknown_request_returns_404(client: TestClient) -> None:
+    resp = client.post(
+        "/api/manual-requests/run-q2-001/devel/nope/context",
+        json={"context_text": "any"},
+    )
+    assert resp.status_code == 404
+
+
+def test_post_context_origin_with_slash(client: TestClient) -> None:
+    """Path param uses ``{origin:path}`` so ``devel/foo`` survives."""
+    resp = client.post(
+        "/api/manual-requests/run-q2-001/devel/foo/context",
+        json={"context_text": "ok"},
+    )
+    assert resp.status_code == 200
+
+
+# --- dashboard link ----------------------------------------------------------
+
+
+def test_agentic_index_links_to_manual_queue(client: TestClient) -> None:
+    body = client.get("/agentic").text
+    assert "Manual queue" in body
+    assert "/agentic/manual" in body

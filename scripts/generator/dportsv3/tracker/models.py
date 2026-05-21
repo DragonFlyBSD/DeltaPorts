@@ -186,3 +186,12 @@ class EnqueueResponse(TrackerModel):
 
 class UpdatePortStatusRequest(TrackerModel):
     status: Literal["building"]
+
+
+class ManualContextRequest(TrackerModel):
+    context_text: str
+
+
+class ManualContextResponse(TrackerModel):
+    ok: bool
+    context_rev: int

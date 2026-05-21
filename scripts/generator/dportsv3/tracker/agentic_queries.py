@@ -378,6 +378,148 @@ def bundles_for_run(
     return [_row_dict(row) for row in rows]
 
 
+def list_manual_requests(
+    conn: sqlite3.Connection,
+    open_only: bool = True,
+    limit: int = 200,
+) -> list[dict[str, Any]]:
+    """Return rows from ``user_context_requests`` for the manual queue UI.
+
+    Joins ``user_context`` so the operator can see when context has
+    already been provided and at what rev. ``open_only`` filters to
+    rows where the runner hasn't yet picked up the latest context
+    (``last_context_rev_handled < user_context.context_rev``) OR where
+    the request has no context yet (``user_context`` row absent or
+    ``context_rev`` = 0).
+
+    Rows are sorted oldest-pending first — operator queue discipline.
+    """
+    sql = """
+        SELECT
+            ucr.run_id              AS run_id,
+            ucr.origin              AS origin,
+            ucr.bundle_id           AS bundle_id,
+            ucr.classification      AS classification,
+            ucr.confidence          AS confidence,
+            ucr.iteration           AS iteration,
+            ucr.max_iterations      AS max_iterations,
+            ucr.requested_at        AS requested_at,
+            ucr.status              AS status,
+            ucr.last_context_rev_handled
+                                    AS last_context_rev_handled,
+            COALESCE(uc.context_rev, 0)
+                                    AS context_rev,
+            uc.context_text         AS context_text,
+            uc.updated_at           AS context_updated_at,
+            b.target                AS target
+        FROM user_context_requests AS ucr
+        LEFT JOIN user_context AS uc
+          ON uc.run_id = ucr.run_id AND uc.origin = ucr.origin
+        LEFT JOIN bundles AS b
+          ON b.bundle_id = ucr.bundle_id
+    """
+    params: list[Any] = []
+    if open_only:
+        # "open" = either (a) the operator hasn't answered yet
+        # (no context row), or (b) the operator answered but the
+        # runner sweep hasn't picked it up yet (rev > handled).
+        sql += (
+            " WHERE COALESCE(uc.context_rev, 0) > ucr.last_context_rev_handled "
+            "    OR (COALESCE(uc.context_rev, 0) = 0 "
+            "        AND ucr.last_context_rev_handled = 0)"
+        )
+    sql += " ORDER BY ucr.requested_at ASC LIMIT ?"
+    params.append(max(1, int(limit)))
+    return [_row_dict(row) for row in conn.execute(sql, params).fetchall()]
+
+
+def get_manual_request(
+    conn: sqlite3.Connection,
+    run_id: str,
+    origin: str,
+) -> dict[str, Any] | None:
+    """Return the most-recent ``user_context_requests`` row for
+    ``(run_id, origin)`` joined with any provided context and the
+    bundle metadata. ``None`` if no such request exists."""
+    row = conn.execute(
+        """SELECT
+               ucr.run_id              AS run_id,
+               ucr.origin              AS origin,
+               ucr.bundle_id           AS bundle_id,
+               ucr.classification      AS classification,
+               ucr.confidence          AS confidence,
+               ucr.iteration           AS iteration,
+               ucr.max_iterations      AS max_iterations,
+               ucr.requested_at        AS requested_at,
+               ucr.status              AS status,
+               ucr.last_context_rev_handled
+                                       AS last_context_rev_handled,
+               COALESCE(uc.context_rev, 0)
+                                       AS context_rev,
+               uc.context_text         AS context_text,
+               uc.updated_at           AS context_updated_at,
+               b.target                AS target
+           FROM user_context_requests AS ucr
+           LEFT JOIN user_context AS uc
+             ON uc.run_id = ucr.run_id AND uc.origin = ucr.origin
+           LEFT JOIN bundles AS b
+             ON b.bundle_id = ucr.bundle_id
+           WHERE ucr.run_id = ? AND ucr.origin = ?
+           ORDER BY ucr.requested_at DESC
+           LIMIT 1""",
+        (run_id, origin),
+    ).fetchone()
+    return _row_dict(row) if row is not None else None
+
+
+def upsert_user_context_text(
+    conn: sqlite3.Connection,
+    run_id: str,
+    origin: str,
+    context_text: str,
+) -> int:
+    """Set/replace the operator's hint text for ``(run_id, origin)``.
+
+    Bumps ``context_rev`` by 1 on every write so the runner's
+    ``process_user_context_updates`` loop picks it up. Mirrors the
+    artifact-store's ``/v1/user-context`` write path; tracker writes
+    directly because it shares ``state.db``. Emits a
+    ``user_context_updated`` event for activity-log visibility.
+
+    Returns the new ``context_rev``.
+    """
+    now = datetime.now(timezone.utc).isoformat()
+    row = conn.execute(
+        "SELECT context_rev FROM user_context WHERE run_id = ? AND origin = ?",
+        (run_id, origin),
+    ).fetchone()
+    if row:
+        new_rev = int(row[0]) + 1
+        conn.execute(
+            """UPDATE user_context
+               SET context_text = ?, updated_at = ?, context_rev = ?
+               WHERE run_id = ? AND origin = ?""",
+            (context_text, now, new_rev, run_id, origin),
+        )
+    else:
+        new_rev = 1
+        conn.execute(
+            """INSERT INTO user_context
+               (run_id, origin, context_text, updated_at, context_rev)
+               VALUES (?, ?, ?, ?, ?)""",
+            (run_id, origin, context_text, now, new_rev),
+        )
+    conn.execute(
+        """INSERT INTO events (ts, type, data_json)
+           VALUES (?, ?, ?)""",
+        (now, "user_context_updated",
+         json.dumps({"run_id": run_id, "origin": origin,
+                     "context_rev": new_rev, "updated_at": now})),
+    )
+    conn.commit()
+    return new_rev
+
+
 def events_since(
     conn: sqlite3.Connection,
     last_id: int = 0,

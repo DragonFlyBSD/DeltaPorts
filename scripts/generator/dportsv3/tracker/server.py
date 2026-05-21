@@ -27,15 +27,18 @@ from dportsv3.tracker.agentic_queries import (
     get_artifact_ref,
     get_bundle,
     get_job,
+    get_manual_request,
     get_run,
     job_events_for_job,
     list_bundles,
     list_jobs,
+    list_manual_requests,
     list_port_bundles,
     list_runs,
     port_attempt_summary,
     recent_activity,
     runner_status,
+    upsert_user_context_text,
 )
 from dportsv3.tracker.db import (
     ActiveBuildError,
@@ -64,6 +67,8 @@ from dportsv3.tracker.models import (
     EnqueueRequest,
     EnqueueResponse,
     FinishBuildRequest,
+    ManualContextRequest,
+    ManualContextResponse,
     PortStatusOut,
     RecordResultsRequest,
     RecordResultsResponse,
@@ -926,6 +931,101 @@ def create_app(db_path: str | Path) -> Any:
                     "limit_options": [50, 200, 500, 2000, 5000],
                 },
             )
+
+    # ------------------------------------------------------------------
+    # Manual escalation queue (post-impl plan, Step 4).
+    # Operators land here when a job escalates to MANUAL — read the
+    # handoff artifact, type context, hit "Try again with this
+    # context." POST writes the context_text + bumps context_rev; the
+    # runner's existing process_user_context_updates loop picks it up
+    # and re-enqueues a triage job.
+    # ------------------------------------------------------------------
+
+    @app.get("/agentic/manual", response_class=HTMLResponse)
+    def agentic_manual_list(
+        request: RequestType,
+        open_only: bool = True,
+    ) -> Any:
+        with _conn() as conn:
+            return templates.TemplateResponse(
+                request,
+                "agentic_manual_list.html",
+                {
+                    "title": "Manual Queue",
+                    "requests": list_manual_requests(conn, open_only=open_only),
+                    "open_only": open_only,
+                },
+            )
+
+    @app.get("/agentic/manual/{run_id}/{origin:path}", response_class=HTMLResponse)
+    def agentic_manual_detail(
+        request: RequestType,
+        run_id: str,
+        origin: str,
+    ) -> Any:
+        with _conn() as conn:
+            mr = get_manual_request(conn, run_id, origin)
+            handoff = None
+            if mr is not None and mr.get("bundle_id"):
+                ref = get_artifact_ref(
+                    conn, mr["bundle_id"], "analysis/manual_handoff.md",
+                )
+                if ref is not None:
+                    handoff = _artifact_view_data(
+                        app.state.artifact_root,
+                        mr["bundle_id"],
+                        "analysis/manual_handoff.md",
+                        ref,
+                    )
+        if mr is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No manual request for run={run_id} origin={origin}",
+            )
+        return templates.TemplateResponse(
+            request,
+            "agentic_manual_detail.html",
+            {
+                "title": f"Manual: {origin}",
+                "request_row": mr,
+                "handoff": handoff,
+            },
+        )
+
+    @app.get("/api/manual-requests")
+    def api_manual_requests(open_only: bool = True) -> dict[str, Any]:
+        with _conn() as conn:
+            rows = list_manual_requests(conn, open_only=open_only)
+        return {"requests": rows}
+
+    @app.post(
+        "/api/manual-requests/{run_id}/{origin:path}/context",
+        response_model=ManualContextResponse,
+    )
+    def api_manual_submit_context(
+        run_id: str,
+        origin: str,
+        payload: ManualContextRequest,
+    ) -> dict[str, Any]:
+        text = (payload.context_text or "").strip()
+        if not text:
+            raise HTTPException(
+                status_code=400, detail="context_text cannot be empty",
+            )
+        if len(text) > 8000:
+            raise HTTPException(
+                status_code=400,
+                detail="context_text too long (max 8000 chars)",
+            )
+        with _conn() as conn:
+            mr = get_manual_request(conn, run_id, origin)
+            if mr is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"No manual request for run={run_id} origin={origin}",
+                )
+            new_rev = upsert_user_context_text(conn, run_id, origin, text)
+        return {"ok": True, "context_rev": new_rev}
 
     # ------------------------------------------------------------------
     # Phase 5 step 1: dsynth-progress UI adapter. Lifts the

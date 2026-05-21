@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manual: {{ request_row.origin }} — DeltaPorts Tracker</title>
+  <link href="{{ request.url_for('static', path='progress.css') }}" type="text/css" rel="stylesheet">
+  <link rel="icon" type="image/png" href="{{ request.url_for('static', path='favicon.png') }}">
+  <style>
+    .artifact-content { white-space: pre-wrap; overflow-x: auto; font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: var(--panel-bg, #f8fafc); border: 1px solid var(--border, #d8dee9); border-radius: 6px; padding: 14px; }
+    .artifact-markdown { font-size:13px; line-height:1.5; }
+    .artifact-markdown h2, .artifact-markdown h3, .artifact-markdown h4 { margin:16px 0 8px; }
+    .artifact-markdown p { margin:8px 0; }
+    .artifact-markdown ul { margin:8px 0 8px 22px; padding:0; }
+    .manual-meta { font-size:12px; color:var(--text-dim); }
+    .manual-form textarea { width:100%; min-height:160px; font:13px/1.45 ui-monospace, monospace; padding:10px; box-sizing:border-box; }
+    .manual-form button { padding:8px 16px; font-size:14px; cursor:pointer; }
+    .manual-flash { padding:10px 12px; border-radius:6px; margin:12px 0; }
+    .manual-flash.ok { background:#e6f4ea; border:1px solid #34a853; }
+    .manual-flash.err { background:#fde7e7; border:1px solid #c00; }
+  </style>
+</head>
+<body>
+  {% with nav_crumbs = [
+      {"label": "Agentic", "url": request.url_for('agentic_index')},
+      {"label": "Manual Queue", "url": request.url_for('agentic_manual_list')},
+      {"label": request_row.origin}
+  ] %}
+    {% include "_tracker_nav.html" %}
+  {% endwith %}
+
+  <div class="tracker-page">
+    <h1>{{ request_row.origin }}</h1>
+
+    <div class="tracker-card manual-meta">
+      <div><strong>Run:</strong>
+        <a href="{{ request.url_for('agentic_run_detail', run_id=request_row.run_id) }}">{{ request_row.run_id }}</a>
+      </div>
+      <div><strong>Target:</strong> {{ request_row.target or '—' }}</div>
+      <div><strong>Bundle:</strong>
+        {% if request_row.bundle_id %}
+          <a href="{{ request.url_for('agentic_bundle_detail', bundle_id=request_row.bundle_id) }}">{{ request_row.bundle_id }}</a>
+        {% else %}—{% endif %}
+      </div>
+      <div><strong>Classification:</strong> {{ request_row.classification or '—' }}</div>
+      <div><strong>Confidence:</strong> {{ request_row.confidence or '—' }}</div>
+      <div><strong>Status:</strong> {{ request_row.status }}</div>
+      <div><strong>Iteration:</strong> {{ request_row.iteration }} / {{ request_row.max_iterations }}</div>
+      <div><strong>Requested:</strong> {{ request_row.requested_at }}</div>
+      <div><strong>Context rev:</strong> {{ request_row.context_rev or 0 }}
+        (handled: {{ request_row.last_context_rev_handled or 0 }})</div>
+    </div>
+
+    <h2>Manual Handoff</h2>
+    {% if handoff %}
+      {% if handoff.render_kind == 'markdown' %}
+        <div class="artifact-markdown">{{ handoff.content | safe }}</div>
+      {% else %}
+        <pre class="artifact-content">{{ handoff.content }}</pre>
+      {% endif %}
+    {% else %}
+      <div class="empty-state" style="color:var(--text-dim);">
+        No <code>analysis/manual_handoff.md</code> on this bundle yet.
+        It is written when a job escalates; older bundles may predate
+        the artifact.
+      </div>
+    {% endif %}
+
+    {% if request_row.context_text %}
+      <h2>Last Submitted Context (rev {{ request_row.context_rev }})</h2>
+      <div class="manual-meta">Submitted: {{ request_row.context_updated_at }}</div>
+      <pre class="artifact-content">{{ request_row.context_text }}</pre>
+    {% endif %}
+
+    <h2>Provide Context</h2>
+    <p>Type instructions, hints, or a known good FreeBSD-side fix.
+       Submitting bumps <code>context_rev</code>; the runner picks it
+       up on its next sweep and re-enqueues triage.</p>
+
+    <form class="manual-form" id="manual-form"
+          data-endpoint="/api/manual-requests/{{ request_row.run_id }}/{{ request_row.origin }}/context">
+      <textarea name="context_text" maxlength="8000" required
+                placeholder="What should the agent know or do differently?"></textarea>
+      <div style="margin-top:10px;">
+        <button type="submit">Try again with this context</button>
+      </div>
+      <div id="manual-flash"></div>
+    </form>
+
+    <script>
+      (function () {
+        var form = document.getElementById("manual-form");
+        var flash = document.getElementById("manual-flash");
+        form.addEventListener("submit", async function (ev) {
+          ev.preventDefault();
+          flash.innerHTML = "";
+          var text = form.elements["context_text"].value.trim();
+          if (!text) {
+            flash.innerHTML = '<div class="manual-flash err">Context cannot be empty.</div>';
+            return;
+          }
+          try {
+            var resp = await fetch(form.dataset.endpoint, {
+              method: "POST",
+              headers: {"Content-Type": "application/json"},
+              body: JSON.stringify({"context_text": text})
+            });
+            var data = await resp.json().catch(function () { return {}; });
+            if (resp.ok) {
+              flash.innerHTML = '<div class="manual-flash ok">Context recorded (rev '
+                + data.context_rev
+                + '). Runner will pick it up on its next sweep — refresh in a few seconds to see the new triage job.</div>';
+              setTimeout(function () { window.location.reload(); }, 1500);
+            } else {
+              flash.innerHTML = '<div class="manual-flash err">'
+                + (data.detail || ("HTTP " + resp.status))
+                + '</div>';
+            }
+          } catch (err) {
+            flash.innerHTML = '<div class="manual-flash err">Network error: ' + err + '</div>';
+          }
+        });
+      })();
+    </script>
+  </div>
+</body>
+</html>
