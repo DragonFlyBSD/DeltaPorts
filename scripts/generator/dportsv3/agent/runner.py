@@ -654,6 +654,39 @@ def enqueue_triage_job(
     return job_path
 
 
+_ACTIVE_JOB_STATES = (
+    "queued", "claimed", "triaging", "triaged", "patching", "verifying",
+)
+
+
+def _has_active_same_origin_job(run_id: str, origin: str) -> str | None:
+    """Return the job_id of an active same-(run_id, origin) job, or None.
+
+    "Active" matches the JobState values that aren't terminal — anything
+    upstream of DONE/DEAD/ESCALATED. Used as a duplicate-enqueue guard
+    on operator-triggered retries: we should not enqueue a new triage
+    while one is already in flight for the same port in the same run.
+    """
+    if _state_db_conn is None:
+        return None
+    placeholders = ",".join("?" for _ in _ACTIVE_JOB_STATES)
+    try:
+        with _state_db_lock:
+            row = _state_db_conn.execute(
+                f"""SELECT job_id FROM jobs
+                    WHERE origin = ? AND state IN ({placeholders})
+                      AND (
+                        ? = '' OR target IS NULL OR target = ''
+                        OR target = (SELECT target FROM runs WHERE run_id = ?)
+                      )
+                    ORDER BY last_seen_at DESC LIMIT 1""",
+                (origin, *_ACTIVE_JOB_STATES, run_id, run_id),
+            ).fetchone()
+    except Exception:
+        return None
+    return row["job_id"] if row else None
+
+
 def process_user_context_updates(queue_root: Path):
     """Enqueue triage jobs when new user context is provided."""
     if _state_db_conn is None:
@@ -672,6 +705,19 @@ def process_user_context_updates(queue_root: Path):
             last_handled = int(row["last_context_rev_handled"])
             context_text, context_rev = get_user_context(run_id, origin)
             if not context_text or context_rev <= last_handled:
+                continue
+            # Guard: don't enqueue a duplicate while same-origin work is
+            # already in flight. The next sweep will re-evaluate; the
+            # request row stays 'pending' so it isn't lost.
+            blocker = _has_active_same_origin_job(run_id, origin)
+            if blocker:
+                activity_log(
+                    queue_root, "retriage_blocked",
+                    f"Skipping retriage for {origin}: active job {blocker}",
+                    extra={"run_id": run_id, "origin": origin,
+                           "blocking_job_id": blocker,
+                           "context_rev": context_rev},
+                )
                 continue
             latest_bundle_id = find_latest_bundle_id(run_id, origin)
             if not latest_bundle_id:
