@@ -500,6 +500,77 @@ Rationale:
 Manual intervention should be fast and local to the tracker, not a hunt
 through API endpoints and raw artifacts.
 
+### Step 10 — kick out stale queued jobs
+
+Surfaced during the first real smoke test: a 4-hour-old `state=queued`
+job for `devel/readline` was blocking the operator-triggered retriage
+guard (`_has_active_same_origin_job` in
+`scripts/generator/dportsv3/agent/runner.py`). The row was an
+abandoned tombstone — its `.job` file no longer existed on the host,
+nothing was ever going to claim it, but the guard saw it as "active"
+and refused to enqueue the new triage.
+
+Today the runner's `REAP_ORPHAN` event only covers in-flight states
+(CLAIMED/TRIAGING/TRIAGED/PATCHING/VERIFYING) on the assumption that
+queued rows are always recent and claimable. That assumption breaks
+when the `.job` file goes missing or the runner restarts without
+processing.
+
+Two complementary fixes.
+
+#### 10a — automatic reap of stale queued (defensive)
+
+Extend the lifecycle transitions to include
+`(JobState.QUEUED, JobEvent.REAP_ORPHAN) → DEAD`, but the runner-
+startup reap path adds a guard: only reap a queued row when
+*both* (a) `last_transition_at` is older than a configurable
+threshold (default 1 hour) AND (b) the corresponding `.job` file
+is missing from the host's `pending/` directory. Either condition
+alone is too aggressive — a fresh runner restart must not reap
+brand-new legitimate queued work, and a file present + recent
+timestamp means the runner just hasn't gotten to it yet.
+
+Tests:
+
+- Stale (>1h, missing file) → reaped to DEAD with
+  `retire_reason='runner_restart'`.
+- Stale but file present → not reaped (claim will pick it up).
+- Recent (<1h) regardless of file → not reaped.
+- The threshold is overridable via env var so operators can shorten
+  it for high-churn deployments.
+
+#### 10b — operator-triggered abandon
+
+A queued or in-flight job that the operator decides is unwanted
+(stuck, superseded, wrong origin, etc.) needs an explicit kill
+mechanism. Add a new `JobEvent.ABANDON` with transitions from
+QUEUED + every in-flight state → DEAD with
+`retire_reason='abandoned'`.
+
+Tracker side:
+
+- `POST /api/jobs/{job_id}/abandon` — fires the transition.
+- Button on `/agentic/jobs/{job_id}` for any non-terminal state.
+- On the manual queue detail page, if the request is blocked by an
+  in-flight job, surface "blocked by job X — [Abandon job X]" so
+  the operator can clear the blocker without sqlite spelunking.
+- Activity-log + events row so the abandonment is auditable.
+
+Tests:
+
+- Abandon from QUEUED, CLAIMED, TRIAGING, TRIAGED, PATCHING,
+  VERIFYING → all land at DEAD with `retire_reason='abandoned'`.
+- Abandon from DONE/DEAD/ESCALATED → rejected (IllegalTransition).
+- Abandon endpoint returns 404 for unknown job_id.
+- UI: button hidden on terminal jobs, shown on non-terminal.
+
+#### Order
+
+10a first (defensive — fixes the recurrence at runner startup),
+10b after (gives the operator the agency for the cases 10a's
+heuristics don't cover, e.g. a 30-minute-old job that's
+legitimately stuck).
+
 ### Suggested implementation order
 
 1. Artifact viewer and artifact-link cleanup.
@@ -510,6 +581,9 @@ through API endpoints and raw artifacts.
 6. Retry-cap refinement.
 7. Synthesized patch reports for empty/budget-exhausted outputs.
 8. Lifecycle/UI naming cleanup.
+9. Tracker UX polish for manual work.
+10. Kick out stale queued jobs (10a automatic reap, 10b operator abandon).
 
 This order improves operator visibility first, then improves agent
-context, then adds the retry loop, then refines policy.
+context, then adds the retry loop, then refines policy, and
+finally hardens the edges that the first real smoke test surfaced.
