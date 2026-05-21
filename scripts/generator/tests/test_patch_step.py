@@ -63,11 +63,14 @@ class _LogRec:
 def _ctx(tmp_path, job=None, *, helpers_overrides=None, bundle_text=None):
     job = job or {"origin": "devel/foo", "bundle_id": "b-1"}
     log_rec = _LogRec()
+    from dportsv3.agent.runner import parse_triage_output
+
     helpers = {
         "log": log_rec,
         "read_bundle_text": (lambda bd, bid, rp: bundle_text)
                               if bundle_text is not None
                               else (lambda bd, bid, rp: None),
+        "parse_triage_output": parse_triage_output,
         # Stubbed I/O helpers; precheck never calls these.
         "write_error_note": lambda *a, **kw: None,
         "write_patch_audit": lambda *a, **kw: None,
@@ -75,6 +78,7 @@ def _ctx(tmp_path, job=None, *, helpers_overrides=None, bundle_text=None):
         "write_changes_diff": lambda *a, **kw: None,
         "looks_env_suspicious": lambda res: False,
         "invalidate_health_cache": lambda: None,
+        "cached_health_broken": lambda: False,
         "summarize_tool_call": lambda t, a, r: "",
         "activity_log": lambda *a, **kw: None,
         "load_port_history": lambda t, o, w: None,

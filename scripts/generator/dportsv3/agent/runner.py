@@ -103,8 +103,9 @@ def invalidate_health_cache(env: str | None = None) -> None:
 def _cached_health_broken() -> bool:
     """True iff the most recently cached probe (any env) was broken.
 
-    Used by ``_completion_events_for`` to route a mid-flight job that
-    just failed to ENV_BROKEN when we already know the env is bad.
+    Read directly by ``PatchAttemptStep.run`` (via the
+    ``cached_health_broken`` runner_helpers binding) to route a
+    mid-flight job to ENV_BROKEN when the env is known bad.
     Doesn't trigger a probe — purely reads the cache.
     """
     for _ts, eh in _health_cache.values():
@@ -1675,6 +1676,7 @@ def process_patch_job(
     )
     ctx.state["runner_helpers"] = {
         "read_bundle_text": read_bundle_text,
+        "parse_triage_output": parse_triage_output,
         "write_error_note": write_error_note,
         "write_patch_audit": _write_patch_audit_harness,
         "write_tool_trace": _write_tool_trace,

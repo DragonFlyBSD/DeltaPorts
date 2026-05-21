@@ -529,19 +529,18 @@ class PatchAttemptStep:
         from dportsv3.agent.decision import PortHistory, decide  # noqa: PLC0415
 
         read_bundle_text = helpers.get("read_bundle_text")
-        if read_bundle_text is None:
+        parse_triage = helpers.get("parse_triage_output")
+        if read_bundle_text is None or parse_triage is None:
             return StepReadiness(
                 status="fail",
-                reason="runner_helpers missing read_bundle_text for tier fallback",
+                reason="runner_helpers missing read_bundle_text or "
+                       "parse_triage_output for tier fallback",
             )
         triage_text = read_bundle_text(
             ctx.bundle_dir, ctx.bundle_id or ctx.job.get("bundle_id"),
             "analysis/triage.md",
         ) or ""
-        # parse_triage_output is a runner-side helper — keep the
-        # parsing here inline so steps.py doesn't depend on runner.py
-        # imports. Cheap copy of the two regex lookups.
-        triage = _parse_triage_minimal(triage_text)
+        triage = parse_triage(triage_text)
         history = PortHistory.empty(
             target=ctx.job.get("target", "") or "",
             origin=ctx.state.get("origin") or ctx.job.get("origin", ""),
@@ -680,23 +679,3 @@ class PatchAttemptStep:
         return None
 
 
-def _parse_triage_minimal(text: str) -> dict[str, str]:
-    """Tiny mirror of runner.parse_triage_output — extracts
-    classification + confidence from a triage.md.
-
-    Inlined here so steps.py doesn't import from runner.py. The
-    regexes track the runner's authoritative parser; if the agent's
-    output format changes, update both. (Phase 5 doesn't change the
-    output format.)
-    """
-    import re  # noqa: PLC0415
-    out = {"classification": "", "confidence": ""}
-    if not text:
-        return out
-    m = re.search(r"^##\s*Classification\s*\n+([^\n#]+)", text, re.MULTILINE)
-    if m:
-        out["classification"] = m.group(1).strip().lower()
-    m = re.search(r"^##\s*Confidence\s*\n+([^\n#]+)", text, re.MULTILINE)
-    if m:
-        out["confidence"] = m.group(1).strip().lower()
-    return out

@@ -67,6 +67,10 @@ TRANSITIONS: dict[tuple[JobState | None, JobEvent], JobState] = {
     (JobState.QUEUED,      JobEvent.CLAIM):            JobState.CLAIMED,
     (JobState.CLAIMED,     JobEvent.TRIAGE_START):     JobState.TRIAGING,
     (JobState.TRIAGING,    JobEvent.TRIAGE_OK):        JobState.TRIAGED,
+    # Patch jobs (created by enqueue_patch_job after a triage decides
+    # auto_patch) arrive at CLAIMED with no preceding triage in their
+    # own lifecycle. PATCH_START transitions them straight to PATCHING.
+    (JobState.CLAIMED,     JobEvent.PATCH_START):      JobState.PATCHING,
     (JobState.TRIAGED,     JobEvent.PATCH_START):      JobState.PATCHING,
     (JobState.PATCHING,    JobEvent.PATCH_OK):         JobState.VERIFYING,
     (JobState.VERIFYING,   JobEvent.VERIFY_OK):        JobState.DONE,
