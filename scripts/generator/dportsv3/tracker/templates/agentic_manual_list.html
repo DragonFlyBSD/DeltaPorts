@@ -29,14 +29,15 @@
       <thead>
         <tr>
           <th>Origin</th><th>Target</th><th>Run</th>
+          <th>What the agent did</th><th>Attempts</th>
           <th>Classification</th><th>Confidence</th>
           <th>Status</th><th>Context rev</th>
-          <th>Requested</th>
+          <th>Requested</th><th></th>
         </tr>
       </thead>
       <tbody>
         {% for r in requests %}
-        <tr>
+        <tr data-row-key="{{ r.run_id }}/{{ r.origin }}">
           <td>
             <a href="{{ request.url_for('agentic_manual_detail', run_id=r.run_id, origin=r.origin) }}">
               {{ r.origin }}
@@ -48,6 +49,14 @@
               <a href="{{ request.url_for('agentic_run_detail', run_id=r.run_id) }}">{{ r.run_id }}</a>
             {% else %}—{% endif %}
           </td>
+          <td>
+            {% if r.latest_retire_reason %}
+              <code>{{ r.latest_retire_reason }}</code>
+            {% else %}
+              <span style="color:var(--text-dim);">no patch attempt yet</span>
+            {% endif %}
+          </td>
+          <td>{{ r.patch_attempts or 0 }}</td>
           <td>{{ r.classification or '—' }}</td>
           <td>{{ r.confidence or '—' }}</td>
           <td>{{ r.status }}</td>
@@ -60,12 +69,57 @@
             {% endif %}
           </td>
           <td>{{ r.requested_at }}</td>
+          <td>
+            {% if r.status != 'discarded' %}
+              <button type="button"
+                      class="discard-btn"
+                      data-run-id="{{ r.run_id }}"
+                      data-origin="{{ r.origin }}">
+                Discard
+              </button>
+            {% else %}
+              <span style="color:var(--text-dim);">discarded</span>
+            {% endif %}
+          </td>
         </tr>
         {% else %}
-        <tr><td colspan="8" style="color:var(--text-dim);">No manual requests match this filter.</td></tr>
+        <tr><td colspan="11" style="color:var(--text-dim);">No manual requests match this filter.</td></tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
+
+  <script>
+    document.querySelectorAll(".discard-btn").forEach(function (btn) {
+      btn.addEventListener("click", async function () {
+        var runId = btn.dataset.runId;
+        var origin = btn.dataset.origin;
+        if (!confirm("Discard " + origin + " from the manual queue?")) return;
+        var endpoint = "/api/manual-requests/" + encodeURIComponent(runId)
+          + "/" + origin + "/discard";
+        btn.disabled = true;
+        try {
+          var resp = await fetch(endpoint, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({})
+          });
+          if (resp.ok) {
+            var row = btn.closest("tr");
+            if (row) row.style.opacity = "0.35";
+            btn.replaceWith(Object.assign(document.createElement("span"),
+              {textContent: "discarded", style: "color:var(--text-dim);"}));
+          } else {
+            var data = await resp.json().catch(function () { return {}; });
+            alert("Discard failed: " + (data.detail || ("HTTP " + resp.status)));
+            btn.disabled = false;
+          }
+        } catch (err) {
+          alert("Network error: " + err);
+          btn.disabled = false;
+        }
+      });
+    });
+  </script>
 </body>
 </html>

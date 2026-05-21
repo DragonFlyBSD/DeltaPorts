@@ -21,6 +21,7 @@ from dportsv3.tracker.agentic_queries import (
     activity_for_job,
     agentic_status,
     bundles_for_run,
+    discard_manual_request,
     distinct_targets,
     events_since,
     env_health_statuses,
@@ -69,6 +70,8 @@ from dportsv3.tracker.models import (
     FinishBuildRequest,
     ManualContextRequest,
     ManualContextResponse,
+    ManualDiscardRequest,
+    ManualDiscardResponse,
     PortStatusOut,
     RecordResultsRequest,
     RecordResultsResponse,
@@ -1026,6 +1029,26 @@ def create_app(db_path: str | Path) -> Any:
                 )
             new_rev = upsert_user_context_text(conn, run_id, origin, text)
         return {"ok": True, "context_rev": new_rev}
+
+    @app.post(
+        "/api/manual-requests/{run_id}/{origin:path}/discard",
+        response_model=ManualDiscardResponse,
+    )
+    def api_manual_discard(
+        run_id: str,
+        origin: str,
+        payload: ManualDiscardRequest | None = None,
+    ) -> dict[str, Any]:
+        with _conn() as conn:
+            mr = get_manual_request(conn, run_id, origin)
+            if mr is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"No manual request for run={run_id} origin={origin}",
+                )
+            reason = (payload.reason if payload else "") or ""
+            discarded = discard_manual_request(conn, run_id, origin, reason)
+        return {"ok": True, "discarded": discarded}
 
     # ------------------------------------------------------------------
     # Phase 5 step 1: dsynth-progress UI adapter. Lifts the

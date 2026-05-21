@@ -411,7 +411,18 @@ def list_manual_requests(
                                     AS context_rev,
             uc.context_text         AS context_text,
             uc.updated_at           AS context_updated_at,
-            b.target                AS target
+            b.target                AS target,
+            (SELECT retire_reason FROM jobs
+                WHERE origin = ucr.origin
+                  AND target IS b.target
+                  AND retire_reason IS NOT NULL
+                ORDER BY last_seen_at DESC LIMIT 1)
+                                    AS latest_retire_reason,
+            (SELECT COUNT(*) FROM jobs
+                WHERE origin = ucr.origin
+                  AND target IS b.target
+                  AND type = 'patch')
+                                    AS patch_attempts
         FROM user_context_requests AS ucr
         LEFT JOIN user_context AS uc
           ON uc.run_id = ucr.run_id AND uc.origin = ucr.origin
@@ -423,10 +434,12 @@ def list_manual_requests(
         # "open" = either (a) the operator hasn't answered yet
         # (no context row), or (b) the operator answered but the
         # runner sweep hasn't picked it up yet (rev > handled).
+        # ``discarded`` is always excluded from the open set.
         sql += (
-            " WHERE COALESCE(uc.context_rev, 0) > ucr.last_context_rev_handled "
-            "    OR (COALESCE(uc.context_rev, 0) = 0 "
-            "        AND ucr.last_context_rev_handled = 0)"
+            " WHERE ucr.status != 'discarded' "
+            "   AND (COALESCE(uc.context_rev, 0) > ucr.last_context_rev_handled "
+            "        OR (COALESCE(uc.context_rev, 0) = 0 "
+            "            AND ucr.last_context_rev_handled = 0))"
         )
     sql += " ORDER BY ucr.requested_at ASC LIMIT ?"
     params.append(max(1, int(limit)))
@@ -458,7 +471,18 @@ def get_manual_request(
                                        AS context_rev,
                uc.context_text         AS context_text,
                uc.updated_at           AS context_updated_at,
-               b.target                AS target
+               b.target                AS target,
+               (SELECT retire_reason FROM jobs
+                   WHERE origin = ucr.origin
+                     AND target IS b.target
+                     AND retire_reason IS NOT NULL
+                   ORDER BY last_seen_at DESC LIMIT 1)
+                                       AS latest_retire_reason,
+               (SELECT COUNT(*) FROM jobs
+                   WHERE origin = ucr.origin
+                     AND target IS b.target
+                     AND type = 'patch')
+                                       AS patch_attempts
            FROM user_context_requests AS ucr
            LEFT JOIN user_context AS uc
              ON uc.run_id = ucr.run_id AND uc.origin = ucr.origin
@@ -470,6 +494,42 @@ def get_manual_request(
         (run_id, origin),
     ).fetchone()
     return _row_dict(row) if row is not None else None
+
+
+def discard_manual_request(
+    conn: sqlite3.Connection,
+    run_id: str,
+    origin: str,
+    reason: str = "",
+) -> bool:
+    """Mark all open requests for ``(run_id, origin)`` as discarded.
+
+    Affects every ``user_context_requests`` row matching the pair
+    (there can be multiple, one per bundle iteration). Emits a
+    ``manual_request_discarded`` event so the activity log surfaces
+    operator intent.
+
+    Returns True if at least one row was updated.
+    """
+    now = datetime.now(timezone.utc).isoformat()
+    cur = conn.execute(
+        """UPDATE user_context_requests
+           SET status = 'discarded'
+           WHERE run_id = ? AND origin = ?
+             AND status != 'discarded'""",
+        (run_id, origin),
+    )
+    changed = cur.rowcount > 0
+    if changed:
+        conn.execute(
+            """INSERT INTO events (ts, type, data_json)
+               VALUES (?, ?, ?)""",
+            (now, "manual_request_discarded",
+             json.dumps({"run_id": run_id, "origin": origin,
+                         "reason": reason or None, "discarded_at": now})),
+        )
+    conn.commit()
+    return changed
 
 
 def upsert_user_context_text(
@@ -515,6 +575,15 @@ def upsert_user_context_text(
         (now, "user_context_updated",
          json.dumps({"run_id": run_id, "origin": origin,
                      "context_rev": new_rev, "updated_at": now})),
+    )
+    # Fresh operator context overrides a prior discard — the operator
+    # changed their mind. Flip any discarded request rows back to
+    # 'pending' so the runner sweep picks the new rev up.
+    conn.execute(
+        """UPDATE user_context_requests
+           SET status = 'pending'
+           WHERE run_id = ? AND origin = ? AND status = 'discarded'""",
+        (run_id, origin),
     )
     conn.commit()
     return new_rev

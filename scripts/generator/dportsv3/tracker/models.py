@@ -195,3 +195,12 @@ class ManualContextRequest(TrackerModel):
 class ManualContextResponse(TrackerModel):
     ok: bool
     context_rev: int
+
+
+class ManualDiscardRequest(TrackerModel):
+    reason: str = ""
+
+
+class ManualDiscardResponse(TrackerModel):
+    ok: bool
+    discarded: bool

@@ -45,6 +45,14 @@
       <div><strong>Classification:</strong> {{ request_row.classification or '—' }}</div>
       <div><strong>Confidence:</strong> {{ request_row.confidence or '—' }}</div>
       <div><strong>Status:</strong> {{ request_row.status }}</div>
+      <div><strong>What the agent did:</strong>
+        {% if request_row.latest_retire_reason %}
+          <code>{{ request_row.latest_retire_reason }}</code>
+          ({{ request_row.patch_attempts or 0 }} patch attempt(s))
+        {% else %}
+          no patch attempt yet
+        {% endif %}
+      </div>
       <div><strong>Iteration:</strong> {{ request_row.iteration }} / {{ request_row.max_iterations }}</div>
       <div><strong>Requested:</strong> {{ request_row.requested_at }}</div>
       <div><strong>Context rev:</strong> {{ request_row.context_rev or 0 }}
@@ -83,6 +91,16 @@
                 placeholder="What should the agent know or do differently?"></textarea>
       <div style="margin-top:10px;">
         <button type="submit">Try again with this context</button>
+        {% if request_row.status != 'discarded' %}
+          <button type="button" id="discard-btn"
+                  style="margin-left:8px;">
+            Discard request
+          </button>
+        {% else %}
+          <span style="margin-left:10px;color:var(--text-dim);">
+            request already discarded
+          </span>
+        {% endif %}
       </div>
       <div id="manual-flash"></div>
     </form>
@@ -118,6 +136,41 @@
             }
           } catch (err) {
             flash.innerHTML = '<div class="manual-flash err">Network error: ' + err + '</div>';
+          }
+        });
+      })();
+
+      (function () {
+        var btn = document.getElementById("discard-btn");
+        if (!btn) return;
+        btn.addEventListener("click", async function () {
+          if (!confirm("Discard this request? Submitting fresh context later will un-discard it.")) return;
+          btn.disabled = true;
+          var endpoint = "/api/manual-requests/{{ request_row.run_id }}/{{ request_row.origin }}/discard";
+          try {
+            var resp = await fetch(endpoint, {
+              method: "POST",
+              headers: {"Content-Type": "application/json"},
+              body: JSON.stringify({})
+            });
+            var data = await resp.json().catch(function () { return {}; });
+            if (resp.ok) {
+              document.getElementById("manual-flash").innerHTML =
+                '<div class="manual-flash ok">Request discarded. Returning to queue…</div>';
+              setTimeout(function () {
+                window.location = "{{ request.url_for('agentic_manual_list') }}";
+              }, 900);
+            } else {
+              document.getElementById("manual-flash").innerHTML =
+                '<div class="manual-flash err">'
+                + (data.detail || ("HTTP " + resp.status))
+                + '</div>';
+              btn.disabled = false;
+            }
+          } catch (err) {
+            document.getElementById("manual-flash").innerHTML =
+              '<div class="manual-flash err">Network error: ' + err + '</div>';
+            btn.disabled = false;
           }
         });
       })();

@@ -294,3 +294,162 @@ def test_agentic_index_links_to_manual_queue(client: TestClient) -> None:
     body = client.get("/agentic").text
     assert "Manual queue" in body
     assert "/agentic/manual" in body
+
+
+# --- discard ---------------------------------------------------------------
+
+
+def test_discard_marks_request_and_hides_from_open_list(
+    client: TestClient, seeded_state_db: Path,
+) -> None:
+    resp = client.post(
+        "/api/manual-requests/run-q2-001/devel/foo/discard",
+        json={"reason": "resolved out-of-band"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+
+    # No longer in open list.
+    open_rows = client.get("/api/manual-requests").json()["requests"]
+    assert all(r["origin"] != "devel/foo" for r in open_rows)
+
+    # Still visible with open_only=false.
+    all_rows = client.get(
+        "/api/manual-requests", params={"open_only": False}
+    ).json()["requests"]
+    foo = next(r for r in all_rows if r["origin"] == "devel/foo")
+    assert foo["status"] == "discarded"
+
+    # Event emitted.
+    conn = sqlite3.connect(str(seeded_state_db))
+    conn.row_factory = sqlite3.Row
+    ev = conn.execute(
+        "SELECT data_json FROM events WHERE type = 'manual_request_discarded'"
+    ).fetchone()
+    assert ev is not None
+    payload = json.loads(ev["data_json"])
+    assert payload["origin"] == "devel/foo"
+    assert payload["reason"] == "resolved out-of-band"
+    conn.close()
+
+
+def test_discard_unknown_returns_404(client: TestClient) -> None:
+    resp = client.post(
+        "/api/manual-requests/run-q2-001/devel/nope/discard",
+        json={},
+    )
+    assert resp.status_code == 404
+
+
+def test_discard_twice_is_idempotent(client: TestClient) -> None:
+    first = client.post(
+        "/api/manual-requests/run-q2-001/devel/foo/discard", json={},
+    )
+    assert first.status_code == 200
+    assert first.json()["discarded"] is True
+
+    second = client.post(
+        "/api/manual-requests/run-q2-001/devel/foo/discard", json={},
+    )
+    assert second.status_code == 200
+    # Second call updates zero rows since status is already discarded.
+    assert second.json()["discarded"] is False
+
+
+def test_fresh_context_un_discards_request(
+    client: TestClient, seeded_state_db: Path,
+) -> None:
+    """Operator changed their mind: submitting fresh context after
+    discarding flips the request back to 'pending' so the runner
+    sweep picks it up."""
+    client.post(
+        "/api/manual-requests/run-q2-001/devel/foo/discard", json={},
+    )
+    client.post(
+        "/api/manual-requests/run-q2-001/devel/foo/context",
+        json={"context_text": "actually — try this approach instead"},
+    )
+
+    conn = sqlite3.connect(str(seeded_state_db))
+    conn.row_factory = sqlite3.Row
+    row = conn.execute(
+        "SELECT status FROM user_context_requests "
+        "WHERE run_id = ? AND origin = ?",
+        ("run-q2-001", "devel/foo"),
+    ).fetchone()
+    assert row["status"] == "pending"
+    conn.close()
+
+
+def test_discard_button_in_list_page(client: TestClient) -> None:
+    body = client.get("/agentic/manual").text
+    assert "Discard" in body
+    assert "data-run-id" in body
+
+
+# --- "what the agent did" surfacing ----------------------------------------
+
+
+def test_list_shows_retire_reason_and_patch_attempts(
+    client: TestClient, seeded_state_db: Path,
+) -> None:
+    # Plant a retired patch job for devel/foo on @2026Q2.
+    conn = sqlite3.connect(str(seeded_state_db))
+    now = _now()
+    conn.executemany(
+        """INSERT INTO jobs
+           (job_id, state, type, origin, flavor, bundle_dir,
+            created_ts_utc, path, last_seen_at, target, retire_reason)
+           VALUES (?, ?, ?, ?, '', '', ?, '', ?, ?, ?)""",
+        [
+            ("p1", "dead", "patch", "devel/foo", now, now, "@2026Q2",
+             "patch_gave_up"),
+            ("p2", "dead", "patch", "devel/foo", now, now, "@2026Q2",
+             "patch_budget_exhausted"),
+        ],
+    )
+    conn.commit()
+    conn.close()
+
+    rows = client.get("/api/manual-requests").json()["requests"]
+    foo = next(r for r in rows if r["origin"] == "devel/foo")
+    # Latest retire_reason wins; we inserted budget_exhausted second.
+    assert foo["latest_retire_reason"] in (
+        "patch_budget_exhausted", "patch_gave_up",
+    )
+    assert foo["patch_attempts"] == 2
+
+    # Same data on list page.
+    body = client.get("/agentic/manual").text
+    assert "patch_" in body  # one of the retire reasons rendered as <code>
+    assert "What the agent did" in body
+
+
+def test_list_shows_placeholder_when_no_patch_attempt(
+    client: TestClient,
+) -> None:
+    body = client.get("/agentic/manual").text
+    # devel/bar in the fixture has no patch jobs.
+    assert "no patch attempt yet" in body
+
+
+def test_detail_shows_what_agent_did(
+    client: TestClient, seeded_state_db: Path,
+) -> None:
+    conn = sqlite3.connect(str(seeded_state_db))
+    now = _now()
+    conn.execute(
+        """INSERT INTO jobs
+           (job_id, state, type, origin, flavor, bundle_dir,
+            created_ts_utc, path, last_seen_at, target, retire_reason)
+           VALUES ('p1', 'dead', 'patch', 'devel/foo', '', '',
+                   ?, '', ?, '@2026Q2', 'patch_gave_up')""",
+        (now, now),
+    )
+    conn.commit()
+    conn.close()
+
+    body = client.get("/agentic/manual/run-q2-001/devel/foo").text
+    assert "What the agent did" in body
+    assert "patch_gave_up" in body
+    assert "patch attempt" in body
