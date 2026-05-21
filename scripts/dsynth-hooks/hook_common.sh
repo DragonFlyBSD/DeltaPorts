@@ -26,12 +26,22 @@ umask 022
 # loop) and pure waste in the best case (the agent already
 # knows its build failed; the bundle is redundant).
 #
-# The patch agent's dsynth_build sets this var before invoking
-# dsynth. All hook scripts inherit it via dsynth's child
-# environment.
-if [ "${DPORTSV3_HOOKS_DISABLED:-0}" = "1" ]; then
+# Earlier this used a ``DPORTSV3_HOOKS_DISABLED=1`` env var, but
+# dsynth strips arbitrary env vars before invoking hooks (it
+# passes only its known set: PROFILE, DIR_LOGS, etc.). The var
+# never reached the hook. A sentinel file on the writable overlay
+# is dsynth-proof — the filesystem state is the same regardless
+# of what dsynth does to the environment.
+#
+# The agent creates this file before ``dsynth build`` and removes
+# it on EXIT (trap). If the agent process dies uncatchably (kill
+# -9), the operator must ``rm`` it by hand — otherwise the next
+# legitimate operator dsynth would skip its hooks too.
+_dports_hooks_flag="${DPORTSV3_HOOKS_FLAG_FILE:-/work/.dports-agent-hooks-disabled}"
+if [ -f "$_dports_hooks_flag" ]; then
 	exit 0
 fi
+unset _dports_hooks_flag
 
 # Source the operator config first so its values win over the defaults
 # below. The path is overridable via DPORTSV3_HOOKS_CONFIG; default is

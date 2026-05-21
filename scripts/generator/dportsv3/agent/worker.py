@@ -623,16 +623,25 @@ def dsynth_build(env: str, origin: str) -> dict:
     # build_env_dict at helpers.py:113) and invoke dsynth directly.
     # Using sh -c so we can reference the env var on the chroot side.
     #
-    # ``DPORTSV3_HOOKS_DISABLED=1`` short-circuits dsynth-hooks/
-    # hook_common.sh so an agent-driven build never produces a new
-    # failure bundle. There is one env per target — the same env the
-    # operator uses for production dsynth runs — so without this guard
-    # every failed attempt the agent makes would fire the hooks, upload
-    # a new bundle, and the runner would enqueue another triage job
-    # for an origin the agent is already actively patching. That's an
-    # unbounded loop in the worst case and pure waste in the best.
+    # ``/work/.dports-agent-hooks-disabled`` short-circuits
+    # dsynth-hooks/hook_common.sh so an agent-driven build never
+    # produces a new failure bundle. There is one env per target —
+    # the same env the operator uses for production dsynth runs — so
+    # without this guard every failed attempt the agent makes would
+    # fire the hooks, upload a new bundle, and the runner would
+    # enqueue another triage job for an origin the agent is already
+    # actively patching. That's an unbounded loop in the worst case
+    # and pure waste in the best.
+    #
+    # A flag file (not an env var) because dsynth strips arbitrary
+    # env vars before invoking hooks. The trap on EXIT cleans up even
+    # if dsynth exits non-zero. ``/work`` is the dev-env's writable
+    # overlay so we can write/remove it freely from any in-chroot
+    # process.
     cmd = (
-        'DPORTSV3_HOOKS_DISABLED=1 '
+        'flag=/work/.dports-agent-hooks-disabled; '
+        'trap "rm -f \\"$flag\\"" EXIT; '
+        ': > "$flag"; '
         'dsynth -S -y -p "$DPORTS_DSYNTH_PROFILE" build "$1"'
     )
     p = _exec(env, "/bin/sh", "-c", cmd, "_", origin)
