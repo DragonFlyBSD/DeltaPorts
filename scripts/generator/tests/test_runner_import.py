@@ -7,6 +7,8 @@ internals directly. Lock that in with a tiny import test.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 
 def test_runner_module_imports():
     """The package import works at all (catches missing deps + syntax)."""
@@ -18,6 +20,25 @@ def test_runner_main_is_callable():
     from dportsv3.agent.runner import main
 
     assert callable(main)
+
+
+def test_runner_state_db_path_honors_env(monkeypatch, tmp_path):
+    from dportsv3.agent.runner import get_state_db_path
+
+    db_path = tmp_path / "custom-state.db"
+    monkeypatch.setenv("DPORTSV3_STATE_DB", str(db_path))
+
+    assert get_state_db_path(Path("/build/synth/logs/evidence/queue")) == db_path
+
+
+def test_runner_state_db_path_falls_back_to_queue_parent(monkeypatch):
+    from dportsv3.agent.runner import get_state_db_path
+
+    monkeypatch.delenv("DPORTSV3_STATE_DB", raising=False)
+
+    assert get_state_db_path(Path("/build/synth/logs/evidence/queue")) == Path(
+        "/build/synth/logs/evidence/state.db"
+    )
 
 
 def test_runner_orchestration_helpers_importable():

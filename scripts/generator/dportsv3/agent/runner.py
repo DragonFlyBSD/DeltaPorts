@@ -200,7 +200,10 @@ def _looks_env_suspicious(result: dict) -> bool:
 
 
 def get_state_db_path(queue_root: Path) -> Path:
-    """Get path to state.db (same directory as queue)."""
+    """Get path to state.db used for lifecycle/status writes."""
+    env_db = os.environ.get("DPORTSV3_STATE_DB")
+    if env_db:
+        return Path(env_db)
     # Queue is at <logs>/evidence/queue/, state.db is at <logs>/evidence/state.db
     return queue_root.parent / "state.db"
 
@@ -212,7 +215,11 @@ def init_state_db(queue_root: Path) -> sqlite3.Connection | None:
     db_path = get_state_db_path(queue_root)
     
     if not db_path.exists():
-        # State server hasn't created the DB yet - that's ok
+        print(
+            f"Warning: state.db not found at {db_path}; "
+            "runner lifecycle/status writes disabled",
+            file=sys.stderr,
+        )
         return None
     
     try:
