@@ -253,7 +253,10 @@ Manual escalation starts with reading evidence. The current artifact
 links are inconsistent: some render as text, some download, and some
 lack enough context for quick triage.
 
-### Step 2 — fix prior patch attempt ingestion
+### Step 2 — fix prior patch attempt ingestion — done
+
+Status: shipped in `f34ef92ed90 fix(agent): summarize prior patch
+attempts`.
 
 The patch prompt currently has a `Prior Attempts` section, but it looks
 for legacy artifact names:
