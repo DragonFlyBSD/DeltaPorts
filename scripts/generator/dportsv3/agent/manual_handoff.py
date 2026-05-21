@@ -292,8 +292,12 @@ def build_handoff_ctx(
         if diff_text:
             files_touched = _parse_diff_files(diff_text)
             diff_summary = _truncate_bytes(diff_text, _MAX_DIFF_BYTES)
+        # The dsynth hook uploads the distilled build log to
+        # ``logs/errors.txt`` (scripts/dsynth-hooks/hook_pkg_failure:89);
+        # context.py:233 reads the same path. Match it so the "Last
+        # Failing Build (tail)" section actually has content.
         err_text = read_bundle_text(
-            bundle_dir, bundle_id or None, "errors.txt",
+            bundle_dir, bundle_id or None, "logs/errors.txt",
         )
         if err_text:
             errors_tail = _tail_lines(err_text, _MAX_ERRORS_LINES)

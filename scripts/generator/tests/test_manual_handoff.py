@@ -314,7 +314,7 @@ def test_build_ctx_truncates_diff_over_byte_limit():
 
 def test_build_ctx_tails_errors_log():
     body = "\n".join(f"line {i}" for i in range(200)) + "\n"
-    reader = _read_from_dict({"errors.txt": body})
+    reader = _read_from_dict({"logs/errors.txt": body})
     ctx = mh.build_handoff_ctx(
         origin="devel/foo",
         reason=mh.REASON_PATCH_GAVE_UP,
@@ -375,7 +375,7 @@ def test_render_via_build_ctx_full_payload():
         "analysis/triage.md": triage_md,
         "analysis/patch_audit.json": json.dumps(audit),
         "analysis/changes.diff": diff,
-        "errors.txt": errors,
+        "logs/errors.txt": errors,
     })
     ctx = mh.build_handoff_ctx(
         origin="devel/foo",
