@@ -85,6 +85,21 @@ print(digest.hexdigest())
 PY
 }
 
+runtime_profile_packages() {
+    "$PYTHON_BIN" - "$DEV_ENV_DIR/runtime-profiles.toml" <<'PY'
+from __future__ import annotations
+
+import os
+import pathlib
+import sys
+import tomllib
+
+data = tomllib.loads(pathlib.Path(sys.argv[1]).read_text())
+name = os.environ.get("DPORTS_DEV_RUNTIME_PROFILE") or data["default"]
+print(" ".join(data["profiles"][name]["packages"]))
+PY
+}
+
 if [ "${1:-}" = "dev-env" ]; then
     shift
     if [ ! -f "$DEV_ENV_PYPROJECT_FILE" ]; then
@@ -171,7 +186,7 @@ if [ "$needs_install" -eq 1 ]; then
     fi
 
     if [ "$(uname -s)" = "DragonFly" ]; then
-        REQUIRED_DFLY_PKGS="py311-sqlite3 py311-pydantic2 py311-pydantic-core py311-fastapi py311-uvicorn py311-watchfiles py311-uvloop py311-httptools py311-websockets py311-python-dotenv"
+        REQUIRED_DFLY_PKGS=$(runtime_profile_packages)
         missing_pkgs=
         for p in $REQUIRED_DFLY_PKGS; do
             pkg info -e "$p" >/dev/null 2>&1 || missing_pkgs="$missing_pkgs $p"

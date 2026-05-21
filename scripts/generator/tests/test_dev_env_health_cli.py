@@ -94,9 +94,9 @@ def test_broken_returns_exit_1_surfaces_action(cli_module, monkeypatch, capsys):
             checks=[health.HealthCheck(
                 name="python_runtime", status="broken",
                 detail="missing: py311-sqlite3",
-                operator_action="pkg install -y py311-sqlite3",
+                operator_action="recreate the env",
             )],
-            operator_action="pkg install -y py311-sqlite3",
+            operator_action="recreate the env",
         ),
     )
 
@@ -106,7 +106,7 @@ def test_broken_returns_exit_1_surfaces_action(cli_module, monkeypatch, capsys):
     out = capsys.readouterr().out
     data = json.loads(out)
     assert data["status"] == "broken"
-    assert data["operator_action"] == "pkg install -y py311-sqlite3"
+    assert data["operator_action"] == "recreate the env"
     assert data["checks"][0]["name"] == "python_runtime"
 
 

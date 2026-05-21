@@ -40,7 +40,7 @@ This will:
 6. clone env-local DeltaPorts and FreeBSD ports from cached mirrors and export
    the DPorts tree into the env,
 7. run `cd /usr && make pkg-bootstrap` when `pkg` is missing, then bootstrap a
-   few development tools inside the chroot,
+   few development tools and the default runtime profile inside the chroot,
 8. generate `/etc/dsynth/dsynth.ini` and the env-specific dsynth make config,
 9. mark the environment ready,
 10. run `compose` with `--oracle-profile off` and `--lock-root /work/DPorts`,
@@ -117,9 +117,17 @@ By default the helper stores state under `~/.cache/dports-dev/`:
   `/root`, `/tmp`, `/var/tmp`, `/etc/dsynth`, and `/construction`
 
 The provisioned base cache is keyed by the Avalon world asset and configured
-tool package lists. Fresh envs mount this provisioned root read-only and layer
-small writable per-env directories over the paths that need mutation, avoiding
-both repeated `pkg-bootstrap` work and full root copies.
+tool package lists, including the selected runtime profile from
+`scripts/tools/dev-env/runtime-profiles.toml`. Fresh envs mount this
+provisioned root read-only and layer small writable per-env directories over the
+paths that need mutation, avoiding both repeated `pkg-bootstrap` work and full
+root copies.
+
+Runtime profiles declare the DragonFly packages required by the repo tooling
+inside the chroot. The default profile is installed automatically during
+provisioning. When a future Python release changes those package names, update
+the manifest default/profile and recreate affected environments; the changed
+profile data naturally creates a distinct provisioned base.
 
 The generator virtualenv cache is keyed by provisioned base id, Python version,
 and `scripts/generator/pyproject.toml`. It is restored into

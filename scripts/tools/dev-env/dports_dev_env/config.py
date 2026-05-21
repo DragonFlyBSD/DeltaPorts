@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .errors import ConfigError
+from .runtime_profiles import RuntimeProfile, load_runtime_profile
 
 
 @dataclass(frozen=True)
@@ -30,6 +31,7 @@ class DevEnvConfig:
     python_pkgs: list[str]
     tool_pkgs_optional: list[str]
     python_commands: list[str]
+    runtime_profile: RuntimeProfile
     dsynth_builders: int
     dsynth_jobs: int
 
@@ -63,6 +65,7 @@ def load_config() -> DevEnvConfig:
         python_pkgs=split_words(os.environ.get("DPORTS_DEV_PYTHON_PKGS", "python3 python313 python312 python311")),
         tool_pkgs_optional=split_words(os.environ.get("DPORTS_DEV_TOOL_PKGS_OPTIONAL", "dsynth python311 python312 python313 py311-pip py312-pip py313-pip genpatch")),
         python_commands=split_words(os.environ.get("DPORTS_DEV_PYTHON_COMMANDS", "python3 python3.13 python3.12 python3.11")),
+        runtime_profile=load_runtime_profile(),
         dsynth_builders=parse_positive_int("DPORTS_DEV_DSYNTH_BUILDERS", os.environ.get("DPORTS_DEV_DSYNTH_BUILDERS", "2")),
         dsynth_jobs=parse_positive_int("DPORTS_DEV_DSYNTH_JOBS", os.environ.get("DPORTS_DEV_DSYNTH_JOBS", "2")),
     )

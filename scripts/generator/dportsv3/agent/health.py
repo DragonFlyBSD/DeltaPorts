@@ -13,10 +13,10 @@ longer set state directly.
 
 Three checks land in Phase 2 because each has already burned us:
 
-- ``python_runtime``: the py311-* packages dportsv3 itself depends on
-  are installed in the chroot. Missing → every materialize_dports
-  fails identically; the agent can't fix it; the operator must
-  ``pkg install``.
+- ``python_runtime``: the runtime profile packages dportsv3 itself
+  depends on are installed in the chroot. Missing → every
+  materialize_dports fails identically; the agent can't fix it; the
+  operator should recreate the env from the current profile.
 - ``writable_overlay``: the env's writable overlay is mounted and
   writable. Touch-test a sentinel under ``work/.health/``.
 - ``dports_compose``: ``dportsv3 compose --check`` (dry-run) succeeds
@@ -30,30 +30,19 @@ table. Aggregation logic stays put.
 from __future__ import annotations
 
 import json
+import os
 import subprocess
+import tomllib
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Callable, Literal
 
 # Imported lazily inside check functions to avoid heavyweight
 # dportsv3 worker imports for callers that only want one check.
 
 
-# Python packages the in-chroot dportsv3 venv depends on. Match
-# DEV_ENV_PYTHON_PACKAGES in scripts/tools/dev-env so the operator
-# advice mirrors what the env-setup tooling installs.
-PY311_RUNTIME_PKGS: tuple[str, ...] = (
-    "py311-sqlite3",
-    "py311-pydantic2",
-    "py311-pydantic-core",
-    "py311-fastapi",
-    "py311-uvicorn",
-    "py311-watchfiles",
-    "py311-uvloop",
-    "py311-httptools",
-    "py311-websockets",
-    "py311-python-dotenv",
-)
+RUNTIME_PROFILES_PATH = Path(__file__).resolve().parents[3] / "tools/dev-env/runtime-profiles.toml"
 
 CheckStatus = Literal["ok", "warn", "broken"]
 EnvStatus = Literal["ready", "degraded", "broken"]
@@ -89,6 +78,13 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _runtime_profile() -> tuple[str, tuple[str, ...]]:
+    data = tomllib.loads(RUNTIME_PROFILES_PATH.read_text())
+    profile_name = os.environ.get("DPORTS_DEV_RUNTIME_PROFILE") or data["default"]
+    profile = data["profiles"][profile_name]
+    return profile_name, tuple(profile["packages"])
+
+
 def _aggregate(checks: list[HealthCheck]) -> EnvStatus:
     if any(c.status == "broken" for c in checks):
         return "broken"
@@ -122,11 +118,19 @@ def _run_in_env(env: str, *argv: str, timeout: int = 10) -> subprocess.Completed
 def _check_python_runtime(env: str) -> HealthCheck:
     """Verify required py311-* packages are installed in the chroot.
 
-    Uses ``pkg query`` with ``-e %n=PKG`` — one subprocess per pkg
-    would be wasteful, so we use a single ``pkg info -e`` form.
+    One subprocess per pkg would be wasteful, so we use a single
+    ``pkg info -e`` form before probing individual missing packages.
     """
     try:
-        p = _run_in_env(env, "pkg", "info", "-e", *PY311_RUNTIME_PKGS, timeout=15)
+        profile_name, runtime_pkgs = _runtime_profile()
+    except Exception as exc:  # noqa: BLE001 — health output should not crash
+        return HealthCheck(
+            name="python_runtime", status="broken",
+            detail=f"could not load runtime profile: {exc}",
+            operator_action="recreate the env",
+        )
+    try:
+        p = _run_in_env(env, "pkg", "info", "-e", *runtime_pkgs, timeout=15)
     except subprocess.TimeoutExpired:
         return HealthCheck(
             name="python_runtime", status="broken",
@@ -143,14 +147,14 @@ def _check_python_runtime(env: str) -> HealthCheck:
     if p.returncode == 0:
         return HealthCheck(
             name="python_runtime", status="ok",
-            detail=f"all {len(PY311_RUNTIME_PKGS)} packages present",
+            detail=f"all {len(runtime_pkgs)} packages present from runtime profile {profile_name}",
         )
     # pkg info -e returns 70 (EX_SOFTWARE) when at least one package is
     # missing. We can't tell which without re-running, but the stderr
     # usually lists them. Probe per-pkg to give a precise list, since
     # the operator_action depends on it.
     missing: list[str] = []
-    for pkg in PY311_RUNTIME_PKGS:
+    for pkg in runtime_pkgs:
         try:
             one = _run_in_env(env, "pkg", "info", "-e", pkg, timeout=5)
         except subprocess.TimeoutExpired:
@@ -163,16 +167,12 @@ def _check_python_runtime(env: str) -> HealthCheck:
         # Treat as ok with a warn-quality detail.
         return HealthCheck(
             name="python_runtime", status="ok",
-            detail=f"all {len(PY311_RUNTIME_PKGS)} packages present (after re-check)",
+            detail=f"all {len(runtime_pkgs)} packages present from runtime profile {profile_name} (after re-check)",
         )
-    install_cmd = "pkg install -y " + " ".join(missing)
     return HealthCheck(
         name="python_runtime", status="broken",
-        detail=f"missing: {', '.join(missing)}",
-        operator_action=(
-            f"inside the env: {install_cmd}\n"
-            f"or from the host: dportsv3 dev-env exec {env} -- {install_cmd}"
-        ),
+        detail=f"missing from runtime profile {profile_name}: {', '.join(missing)}",
+        operator_action="recreate the env",
     )
 
 
@@ -225,24 +225,24 @@ def _check_dports_compose(env: str) -> HealthCheck:
     actually composing anything.
     """
     try:
-        p = _run_in_env(env, "dportsv3", "--version", timeout=15)
+        p = _run_in_env(env, "/work/DeltaPorts/dportsv3", "--version", timeout=15)
     except subprocess.TimeoutExpired:
         return HealthCheck(
             name="dports_compose", status="broken",
-            detail="dportsv3 --version timed out (>15s) inside env",
+            detail="/work/DeltaPorts/dportsv3 --version timed out (>15s) inside env",
             operator_action="check the env's venv state",
         )
     if p.returncode == 0:
         return HealthCheck(
             name="dports_compose", status="ok",
-            detail=(p.stdout.strip() or "dportsv3 --version OK"),
+            detail=(p.stdout.strip() or "/work/DeltaPorts/dportsv3 --version OK"),
         )
     stderr = (p.stderr or "").strip()
     # Surface the missing-deps message verbatim; that's the most
     # actionable diagnostic and what python_runtime would also catch.
     return HealthCheck(
         name="dports_compose", status="broken",
-        detail=f"dportsv3 --version failed (rc={p.returncode}): {stderr[:500]}",
+        detail=f"/work/DeltaPorts/dportsv3 --version failed (rc={p.returncode}): {stderr[:500]}",
         operator_action=(
             "run `dportsv3 dev-env health {env}` for per-aspect detail; "
             "if python_runtime is broken, fix it first"

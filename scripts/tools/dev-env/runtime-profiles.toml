@@ -1,0 +1,17 @@
+schema = 1
+default = "dportsv3-py311"
+
+[profiles.dportsv3-py311]
+python = "3.11"
+packages = [
+  "py311-sqlite3",
+  "py311-pydantic2",
+  "py311-pydantic-core",
+  "py311-fastapi",
+  "py311-uvicorn",
+  "py311-watchfiles",
+  "py311-uvloop",
+  "py311-httptools",
+  "py311-websockets",
+  "py311-python-dotenv",
+]

@@ -77,6 +77,12 @@ def provisioned_base_id(config: DevEnvConfig, archive: BaseArchive) -> str:
         "required_commands": config.tool_cmds_required,
         "python_packages": config.python_pkgs,
         "python_commands": config.python_commands,
+        "runtime_profile": {
+            "schema": config.runtime_profile.schema,
+            "name": config.runtime_profile.name,
+            "python": config.runtime_profile.python,
+            "packages": config.runtime_profile.packages,
+        },
         "optional_packages": config.tool_pkgs_optional,
         "helper_signature": helper_signature(),
     }

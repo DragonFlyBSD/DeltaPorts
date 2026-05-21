@@ -81,6 +81,7 @@ class BaseProvisioner:
             self.install_bootstrap_packages(root)
             self.install_required_packages(root)
             self.ensure_python(root)
+            self.install_runtime_profile_packages(root)
             self.install_optional_packages(root)
             write_helper_scripts(root)
             self.prepare_mountpoints(root)
@@ -163,6 +164,23 @@ class BaseProvisioner:
             if result.returncode != 0:
                 warn(f"optional package unavailable or failed: {package}")
 
+    def install_runtime_profile_packages(self, root: Path) -> None:
+        packages = self.config.runtime_profile.packages
+        if not packages:
+            return
+        info(
+            f"installing runtime profile {self.config.runtime_profile.name} packages "
+            + " ".join(packages)
+        )
+        result = ChrootRunner(root).run(
+            ["pkg", "install", "-y", *packages],
+            env={"ASSUME_ALWAYS_YES": "yes"},
+        )
+        if result.returncode != 0:
+            raise ProvisionError(
+                f"failed to install runtime profile {self.config.runtime_profile.name} packages"
+            )
+
     def validate_tools(self, root: Path) -> bool:
         return all(command_exists(root, command) for command in self.config.tool_cmds_required)
 
@@ -207,6 +225,12 @@ class BaseProvisioner:
             "required_commands": self.config.tool_cmds_required,
             "python_packages": self.config.python_pkgs,
             "python_commands": self.config.python_commands,
+            "runtime_profile": {
+                "schema": self.config.runtime_profile.schema,
+                "name": self.config.runtime_profile.name,
+                "python": self.config.runtime_profile.python,
+                "packages": self.config.runtime_profile.packages,
+            },
             "optional_packages": self.config.tool_pkgs_optional,
         }
         (base_dir / "metadata.json").write_text(json.dumps(metadata, indent=2, sort_keys=True) + "\n")

@@ -91,6 +91,7 @@ def test_python_runtime_all_present(monkeypatch):
     c = health._check_python_runtime("env")
     assert c.status == "ok"
     assert "packages present" in c.detail
+    assert "runtime profile" in c.detail
 
 
 def test_python_runtime_missing_some(monkeypatch):
@@ -112,7 +113,7 @@ def test_python_runtime_missing_some(monkeypatch):
     assert c.status == "broken"
     assert "py311-sqlite3" in c.detail
     assert "py311-pydantic2" in c.detail
-    assert "pkg install" in (c.operator_action or "")
+    assert c.operator_action == "recreate the env"
 
 
 def test_python_runtime_timeout(monkeypatch):
@@ -266,7 +267,7 @@ def test_check_propagates_broken_to_aggregate(monkeypatch, tmp_path):
     assert eh.status == "broken"
     # operator_action populated from the first broken check
     assert eh.operator_action is not None
-    assert "pkg install" in eh.operator_action
+    assert eh.operator_action == "recreate the env"
 
 
 def test_check_swallows_per_check_exceptions(monkeypatch):
