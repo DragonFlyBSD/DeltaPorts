@@ -75,6 +75,22 @@ def phase(label: str) -> None:
     print(label, file=sys.stderr, flush=True)
 
 
+def subphase(label: str) -> None:
+    """Indented sub-step under the current phase().
+
+    Same routing as ``phase()``, just visually nested two spaces in
+    with a bullet. Use for sub-operations inside a phase that may
+    each take a while (e.g. per-package pkg install inside the
+    "Preparing provisioned base" phase). The point is to show the
+    operator that progress is happening even when the parent phase
+    has been on screen for minutes.
+    """
+    line = f"  · {label}"
+    if _user_term is not None:
+        print(line, file=_user_term, flush=True)
+    print(line, file=sys.stderr, flush=True)
+
+
 def to_user(message: str) -> None:
     """Print a free-form line to the user terminal only.
 

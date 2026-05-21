@@ -7,7 +7,7 @@ from pathlib import Path
 from .config import DevEnvConfig
 from .errors import CommandError
 from .locks import CacheLock
-from .log import info, step_timer
+from .log import info, step_timer, subphase
 
 
 @dataclass(frozen=True)
@@ -32,9 +32,11 @@ class RepoCache:
         with CacheLock(self.config.locks_dir, f"repo-{name}"):
             with step_timer(f"refresh {name} mirror"):
                 if not mirror.is_dir():
+                    subphase(f"cloning {name} mirror (first time)")
                     info(f"creating {name} mirror at {mirror}")
                     self.run(["git", "clone", "--mirror", url, str(mirror)])
                 else:
+                    subphase(f"fetching {name}")
                     info(f"updating {name} mirror {mirror}")
                     self.run(["git", "--git-dir", str(mirror), "fetch", "--prune", "origin"])
         return mirror
@@ -44,21 +46,25 @@ class RepoCache:
         with CacheLock(self.config.locks_dir, f"repo-{name}"):
             with step_timer(f"refresh {name} mirror"):
                 if not mirror.is_dir():
+                    subphase(f"cloning {name} mirror from host repo")
                     info(f"creating {name} mirror from {source_repo}")
                     self.run(["git", "clone", "--mirror", str(source_repo), str(mirror)])
                 else:
+                    subphase(f"fetching {name} from host repo")
                     info(f"updating {name} mirror from {source_repo}")
                     self.run(["git", "--git-dir", str(mirror), "remote", "set-url", "origin", str(source_repo)])
                     self.run(["git", "--git-dir", str(mirror), "fetch", "--prune", "origin", "+refs/*:refs/*"])
         return mirror
 
     def clone_branch(self, label: str, mirror: Path, branch: str, destination: Path) -> None:
+        subphase(f"cloning {label} ({branch}) into env")
         info(f"cloning {label} branch {branch} into {destination}")
         with step_timer(f"clone {label}"):
             self.run(["git", "clone", "--single-branch", "--branch", branch, str(mirror), str(destination)])
 
     def export_branch(self, label: str, mirror: Path, branch: str, destination: Path) -> None:
         ref = self.resolve_ref(label, mirror, branch)
+        subphase(f"exporting {label} ({branch}) into env")
         info(f"exporting {label} branch {branch} into {destination}")
         destination.mkdir(parents=True, exist_ok=True)
         archive = subprocess.Popen(["git", "--git-dir", str(mirror), "archive", ref], stdout=subprocess.PIPE)

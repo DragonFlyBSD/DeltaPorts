@@ -12,7 +12,7 @@ from .errors import ProvisionError
 from .fs import safe_remove_tree
 from .helpers import write_helper_scripts
 from .locks import CacheLock
-from .log import info, step_timer, warn
+from .log import info, step_timer, subphase, warn
 from .mounts import mounts_under, unmount_targets, unmount_under
 from .runtime import prepare_root_runtime
 
@@ -41,6 +41,7 @@ class BaseProvisioner:
             tmp_root = tmp_dir / "root"
             tmp_root.mkdir(parents=True)
             try:
+                subphase("extracting world archive")
                 with step_timer("extract DragonFly world archive"):
                     self.extract_archive(archive.path, tmp_root)
                 with step_timer("bootstrap provisioned base"):
@@ -117,16 +118,19 @@ class BaseProvisioner:
     def bootstrap_pkg(self, root: Path) -> None:
         runner = ChrootRunner(root)
         if not command_exists(root, "pkg"):
+            subphase("bootstrapping pkg from /usr")
             info("pkg is not present; bootstrapping it from /usr")
             result = runner.run_shell("cd /usr && make pkg-bootstrap >/dev/null")
             if result.returncode != 0:
                 raise ProvisionError("failed to bootstrap pkg inside the chroot")
+        subphase("refreshing pkg repository")
         runner.run(["pkg", "bootstrap", "-yf"], env={"ASSUME_ALWAYS_YES": "yes"})
         runner.run(["pkg", "update", "-f"], env={"ASSUME_ALWAYS_YES": "yes"})
 
     def install_bootstrap_packages(self, root: Path) -> None:
         if not self.config.bootstrap_pkgs:
             return
+        subphase(f"installing bootstrap packages ({len(self.config.bootstrap_pkgs)})")
         info(f"installing bootstrap packages {' '.join(self.config.bootstrap_pkgs)}")
         result = ChrootRunner(root).run(["pkg", "install", "-y", *self.config.bootstrap_pkgs], env={"ASSUME_ALWAYS_YES": "yes"})
         if result.returncode != 0:
@@ -135,6 +139,7 @@ class BaseProvisioner:
     def install_required_packages(self, root: Path) -> None:
         if not self.config.tool_pkgs_required:
             return
+        subphase(f"installing required packages ({len(self.config.tool_pkgs_required)})")
         info(f"installing required packages {' '.join(self.config.tool_pkgs_required)}")
         result = ChrootRunner(root).run(["pkg", "install", "-y", *self.config.tool_pkgs_required], env={"ASSUME_ALWAYS_YES": "yes"})
         if result.returncode != 0:
@@ -145,6 +150,7 @@ class BaseProvisioner:
             self.ensure_python3_shim(root)
             return
         for package in self.config.python_pkgs:
+            subphase(f"installing python candidate {package}")
             info(f"installing python candidate {package}")
             result = ChrootRunner(root).run(["pkg", "install", "-y", package], env={"ASSUME_ALWAYS_YES": "yes"})
             if result.returncode != 0:
@@ -171,6 +177,9 @@ class BaseProvisioner:
             raise ProvisionError("failed to create a python3 shim inside the chroot")
 
     def install_optional_packages(self, root: Path) -> None:
+        if not self.config.tool_pkgs_optional:
+            return
+        subphase(f"installing optional packages ({len(self.config.tool_pkgs_optional)})")
         for package in self.config.tool_pkgs_optional:
             info(f"installing optional package {package}")
             result = ChrootRunner(root).run(["pkg", "install", "-y", package], env={"ASSUME_ALWAYS_YES": "yes"})
@@ -181,6 +190,10 @@ class BaseProvisioner:
         packages = self.config.runtime_profile.packages
         if not packages:
             return
+        subphase(
+            f"installing runtime profile {self.config.runtime_profile.name} "
+            f"packages ({len(packages)})"
+        )
         info(
             f"installing runtime profile {self.config.runtime_profile.name} packages "
             + " ".join(packages)

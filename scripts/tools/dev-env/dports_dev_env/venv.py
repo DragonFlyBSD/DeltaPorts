@@ -10,7 +10,7 @@ from .config import DevEnvConfig
 from .errors import ProvisionError
 from .fs import copy_tree
 from .locks import CacheLock
-from .log import info, step_timer, warn
+from .log import info, step_timer, subphase, warn
 
 
 GENERATOR_VENV_SCHEMA = 1
@@ -34,6 +34,7 @@ class GeneratorVenvCache:
 
         with CacheLock(self.config.locks_dir, f"venv-generator-{venv_id}", timeout=1800):
             if (cache_root / "ready").exists():
+                subphase("restoring cached generator venv")
                 info(f"restoring cached generator venv {venv_id}")
                 if venv_dest.exists():
                     shutil.rmtree(venv_dest)
@@ -44,10 +45,12 @@ class GeneratorVenvCache:
                 shutil.rmtree(venv_dest)
                 shutil.rmtree(cache_root)
 
+            subphase("building generator venv (first time)")
             with step_timer("bootstrap generator venv"):
                 result = runner.run(["/work/DeltaPorts/dportsv3", "compose", "--help"])
                 if result.returncode != 0:
                     raise ProvisionError("failed to bootstrap dportsv3 generator venv inside chroot")
+            subphase("caching generator venv for next time")
             tmp_cache = cache_root.with_suffix(".tmp")
             if tmp_cache.exists():
                 shutil.rmtree(tmp_cache)

@@ -172,6 +172,26 @@ def test_phase_outside_context_falls_back_to_stderr(log_mod, capsys):
     assert "[N/M] standalone" in out.err
 
 
+# --- subphase routing --------------------------------------------------------
+
+
+def test_subphase_writes_to_user_terminal_and_log(tmp_path, log_mod, capfd):
+    log_path = tmp_path / "create.log"
+    with log_mod.run_log_context(log_path):
+        log_mod.subphase("installing required packages (5)")
+
+    captured = capfd.readouterr()
+    # Indented bullet form on terminal + in the log.
+    assert "  · installing required packages (5)" in captured.err
+    assert "  · installing required packages (5)" in _read_log(log_path)
+
+
+def test_subphase_outside_context_falls_back_to_stderr(log_mod, capsys):
+    log_mod.subphase("installing X")
+    out = capsys.readouterr()
+    assert "  · installing X" in out.err
+
+
 # --- exception propagation ---------------------------------------------------
 
 

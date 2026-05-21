@@ -11,7 +11,7 @@ from .config import DevEnvConfig
 from .errors import ProvisionError, StateError
 from .helpers import helper_signature
 from .locks import CacheLock
-from .log import info
+from .log import info, subphase
 from .names import sanitize_name
 
 
@@ -57,13 +57,13 @@ def ensure_base_archive(config: DevEnvConfig, asset: str) -> BaseArchive:
     # this they race on a shared tmp path and produce a corrupt archive.
     with CacheLock(config.locks_dir, f"archive-{sanitize_name(asset)}", timeout=1800):
         if not path.exists():
-            info(f"downloading world archive {asset}")
+            subphase(f"downloading world archive {asset}")
             url = config.avalon_releases_url.rstrip("/") + "/" + asset
             tmp_path = path.with_suffix(path.suffix + ".tmp")
             urllib.request.urlretrieve(url, tmp_path)
             tmp_path.replace(path)
         else:
-            info(f"reusing cached world archive {path}")
+            subphase(f"reusing cached world archive ({path.name})")
         return BaseArchive(asset=asset, path=path, sha256=file_sha256(path))
 
 
