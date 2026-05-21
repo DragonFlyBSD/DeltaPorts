@@ -114,6 +114,7 @@ class BaseProvisioner:
         # destroy the operator's local git clones. The survivor check
         # above guarantees no mounts remain under ``root`` at this point.
         self.wipe_cache_dirs(root)
+        self.prepare_mountpoints(root)
 
     def bootstrap_pkg(self, root: Path) -> None:
         runner = ChrootRunner(root)
@@ -221,6 +222,13 @@ class BaseProvisioner:
         ]:
             path.mkdir(parents=True, exist_ok=True)
             path.chmod(mode)
+        # /work/repos is a bind-mount target during prepare_root_runtime;
+        # never chmod it while the bind mount may be live.
+        (root / "work/repos").mkdir(parents=True, exist_ok=True)
+        repos_link = root / "root/.cache/dports-dev/repos"
+        repos_link.parent.mkdir(parents=True, exist_ok=True)
+        if not repos_link.exists() and not repos_link.is_symlink():
+            repos_link.symlink_to("/work/repos")
         # /usr/distfiles is a bind-mount target during prepare_root_runtime;
         # ensure it exists in the provisioned base so future env shells can
         # mount onto it, but never chmod -- the bind-mount would forward the
@@ -241,9 +249,8 @@ class BaseProvisioner:
         Preserves the directories themselves so pkg/etc. don't have to
         recreate them on first env use. Must run with **no live mounts**
         under ``root`` — otherwise rmtree would descend into bind-mounted
-        host filesystems (notably the host repos cache at
-        ``root/.cache/dports-dev/repos``). Callers must guarantee that
-        invariant; this function does not re-check.
+        host filesystems. Callers must guarantee that invariant; this
+        function does not re-check.
         """
         for path in [root / "root/.cache", root / "var/cache/pkg",
                      root / "tmp", root / "var/tmp"]:

@@ -5,8 +5,12 @@ import shutil
 from pathlib import Path
 
 from .config import Config
+from .errors import ProvisionError
 from .log import warn
 from .mounts import mount_null, mount_procfs
+
+
+MAX_STATFS_MOUNT_TARGET_LEN = 79
 
 
 WRITABLE_DIRS = [
@@ -17,6 +21,25 @@ WRITABLE_DIRS = [
     ("etc_dsynth", "etc/dsynth", 0o755),
     ("construction", "construction", 0o755),
 ]
+
+
+def check_mount_target_length(target: Path) -> None:
+    target_s = str(target)
+    if len(target_s) >= MAX_STATFS_MOUNT_TARGET_LEN:
+        raise ProvisionError(
+            f"mount target too long ({len(target_s)} >= 79 chars), "
+            f"would be truncated by statfs: {target}"
+        )
+
+
+def mount_null_checked(source: Path, target: Path, *, read_only: bool = False) -> bool:
+    check_mount_target_length(target)
+    return mount_null(source, target, read_only=read_only)
+
+
+def mount_procfs_checked(target: Path) -> bool:
+    check_mount_target_length(target)
+    return mount_procfs(target)
 
 
 def ensure_resolv_conf(root_dir: Path, *, force: bool = False) -> None:
@@ -47,12 +70,12 @@ def prepare_env_writable_dirs(env_dir: Path) -> None:
 def mount_env_writable_dirs(env_dir: Path, root_dir: Path) -> None:
     writable_dir = env_dir / "writable"
     for source_name, target_name, _mode in WRITABLE_DIRS:
-        mount_null(writable_dir / source_name, root_dir / target_name)
+        mount_null_checked(writable_dir / source_name, root_dir / target_name)
 
 
 def mount_env_root(provisioned_root: Path, env_dir: Path, root_dir: Path) -> None:
     root_dir.mkdir(parents=True, exist_ok=True)
-    mount_null(provisioned_root, root_dir, read_only=True)
+    mount_null_checked(provisioned_root, root_dir, read_only=True)
     prepare_env_writable_dirs(env_dir)
     mount_env_writable_dirs(env_dir, root_dir)
 
@@ -63,14 +86,14 @@ def prepare_root_runtime(config: Config, root_dir: Path, *, refresh_resolv_conf:
         (root_dir / name).mkdir(parents=True, exist_ok=True)
     ensure_resolv_conf(root_dir, force=refresh_resolv_conf)
     dev_target = root_dir / "dev"
-    if mount_null(Path("/dev"), dev_target):
+    if mount_null_checked(Path("/dev"), dev_target):
         mounted_targets.append(dev_target)
     proc_target = root_dir / "proc"
-    if mount_procfs(proc_target):
+    if mount_procfs_checked(proc_target):
         mounted_targets.append(proc_target)
     if str(config.host_distdir) and config.host_distdir.is_dir():
         distfiles_target = root_dir / "usr/distfiles"
-        if mount_null(config.host_distdir, distfiles_target):
+        if mount_null_checked(config.host_distdir, distfiles_target):
             mounted_targets.append(distfiles_target)
     # Bind-mount the repo mirror cache so the env's git origin URLs
     # (recorded at clone time as host paths under config.repos_dir)
@@ -78,8 +101,8 @@ def prepare_root_runtime(config: Config, root_dir: Path, *, refresh_resolv_conf:
     # env shouldn't mutate the shared cache; `dportsv3 dev-env update`
     # is the supported way to refresh it.
     if config.repos_dir.is_dir():
-        repos_target = root_dir / config.repos_dir.relative_to("/")
+        repos_target = root_dir / "work/repos"
         repos_target.parent.mkdir(parents=True, exist_ok=True)
-        if mount_null(config.repos_dir, repos_target, read_only=True):
+        if mount_null_checked(config.repos_dir, repos_target, read_only=True):
             mounted_targets.append(repos_target)
     return mounted_targets

@@ -40,6 +40,8 @@ def test_runtime_profile_participates_in_base_id(monkeypatch, tmp_path):
     config = load_config()
     archive = BaseArchive("world.tar.gz", tmp_path / "world.tar.gz", "abc123")
 
+    assert len(provisioned_base_id(config, archive)) == 12
+
     changed = replace(
         config,
         runtime_profile=RuntimeProfile(

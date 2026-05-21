@@ -44,7 +44,7 @@ def load_config() -> DevEnvConfig:
         cache_root=cache_root,
         bases_dir=bases_dir,
         archives_dir=Path(os.environ.get("DPORTS_DEV_ARCHIVES_DIR", str(bases_dir / "archives"))),
-        provisioned_bases_dir=Path(os.environ.get("DPORTS_DEV_PROVISIONED_BASES_DIR", str(bases_dir / "provisioned"))),
+        provisioned_bases_dir=Path(os.environ.get("DPORTS_DEV_PROVISIONED_BASES_DIR", str(bases_dir / "p"))),
         envs_dir=Path(os.environ.get("DPORTS_DEV_ENVS_DIR", str(cache_root / "envs"))),
         repos_dir=Path(os.environ.get("DPORTS_DEV_REPOS_DIR", str(cache_root / "repos"))),
         venvs_dir=venvs_dir,

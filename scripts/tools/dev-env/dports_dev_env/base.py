@@ -87,7 +87,7 @@ def provisioned_base_id(config: DevEnvConfig, archive: BaseArchive) -> str:
         "helper_signature": helper_signature(),
     }
     encoded = json.dumps(data, sort_keys=True, separators=(",", ":")).encode()
-    return hashlib.sha256(encoded).hexdigest()[:32]
+    return hashlib.sha256(encoded).hexdigest()[:12]
 
 
 def find_ready_provisioned_base(config: DevEnvConfig, provisioned_base_id: str) -> Path:
