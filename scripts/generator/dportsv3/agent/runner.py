@@ -1069,194 +1069,64 @@ def build_patch_payload(
     kedb_dir: Path | None = None,
     job: dict | None = None
 ) -> str:
-    """Build the patch generation prompt including triage output."""
-    parts = []
+    """Build the patch generation prompt including triage output.
 
-    # Include snippet feedback and content if this is a follow-up round
-    snippet_round = int(job.get("snippet_round", "0")) if job else 0
-    has_snippets = job.get("has_snippets", "false") == "true" if job else False
+    Phase 4: assembles via ``dportsv3.agent.context.render_payload``
+    over the section roster in ``context.PATCH_SECTIONS``. Byte-
+    equivalent to the pre-Phase-4 ``parts.append(...)`` form; parity
+    locked in by ``tests/test_patch_payload_parity.py``.
+    """
+    from dportsv3.agent.context import ContextCtx, PATCH_SECTIONS, render_payload
 
-    if bundle_dir is not None and has_snippets and snippet_round > 0:
-        # Add feedback about previous extraction
-        feedback = build_snippet_feedback(bundle_dir, snippet_round)
-        if feedback:
-            parts.append(feedback)
-            parts.append("")
+    job = job or {}
+    bundle_id = job.get("bundle_id")
+    run_id = job.get("run_id")
+    origin = job.get("origin")
+    target = job.get("target", "") or ""
 
-        # Add extracted snippet contents
-        snippet_content = load_snippets_content(bundle_dir, snippet_round)
-        if snippet_content:
-            parts.append(snippet_content)
-            parts.append("")
+    # Pre-load sibling list + prior-patch bundle list.
+    sibling_raw = job.get("sibling_bundle_ids", "") or ""
+    sibling_ids = [s.strip() for s in sibling_raw.split(",") if s.strip()]
 
-    bundle_id = job.get("bundle_id") if job else None
+    prior_patch_ids: list[str] = []
+    if origin:
+        for entry in port_bundle_history(origin):
+            bid = entry.get("bundle_id")
+            if not bid or bid == bundle_id or bid in sibling_ids:
+                continue
+            prior_patch_ids.append(bid)
+            if len(prior_patch_ids) >= 3:
+                break
 
-    # Automation Context — tell the agent it's part of a loop and how
-    # many prior attempts have happened. The system prompt directs the
-    # agent to apply triage's Suggested Fix first; this section anchors
-    # "how much budget have we already spent on this port."
-    origin_for_ctx = (job.get("origin") if job else "") or ""
-    target_for_ctx = (job.get("target") if job else "") or ""
-    iteration = int((job.get("iteration") if job else "1") or "1")
-    max_iterations = int((job.get("max_iterations") if job else "3") or "3")
-    tier_ctx = (job.get("tier") if job else "") or "?"
+    # Automation-context inputs.
     window_hours = int(os.environ.get("DP_HARNESS_ATTEMPT_WINDOW_HOURS", "2"))
     max_attempts_cap = int(os.environ.get("DP_HARNESS_MAX_PATCH_ATTEMPTS", "3"))
     prior_failures = (
-        _load_port_history(target_for_ctx, origin_for_ctx, window_hours).recent_failures
-        if origin_for_ctx else 0
+        _load_port_history(target, origin, window_hours).recent_failures
+        if origin else 0
     )
-    parts.append("## Automation Context")
-    parts.append(
-        f"- You are the patch agent in an automated DragonFly ports fix loop.\n"
-        f"- This is iteration {iteration}/{max_iterations} for this patch job (tier={tier_ctx}).\n"
-        f"- The same origin has produced {prior_failures} failure bundle(s) "
-        f"in the last {window_hours} hour(s); the runner caps at "
-        f"{max_attempts_cap} before forcing MANUAL.\n"
-        f"- Your goal: either make dsynth_build report rebuild_ok=true, or "
-        f"emit your best proposed fix with `Rebuild Status: gave-up` and a "
-        f"concrete next-step recommendation in Patch Log. Either is a valid "
-        f"outcome — burning the budget without trying anything is not.\n"
-        f"- The Triage Summary below contains a `Suggested Fix` section. "
-        f"**Apply it first.** Only explore further if the suggested fix has "
-        f"already been tried (check Prior Attempts) or doesn't work."
+
+    user_context_text, _ = get_user_context(run_id, origin)
+    kedb_text = load_kedb(kedb_dir)
+
+    ctx = ContextCtx(
+        bundle_dir=bundle_dir,
+        bundle_id=bundle_id,
+        job=job,
+        kedb_dir=kedb_dir,
+        sibling_bundle_ids=sibling_ids,
+        prior_patch_bundle_ids=prior_patch_ids,
+        user_context_text=user_context_text or None,
+        kedb_text=kedb_text or None,
+        prior_failure_count=prior_failures,
+        window_hours=window_hours,
+        max_attempts_cap=max_attempts_cap,
+        read_bundle_text=read_bundle_text,
+        bundle_artifact_list=bundle_artifact_list,
+        snippet_feedback=build_snippet_feedback,
+        snippet_content=load_snippets_content,
     )
-    parts.append("")
-
-    # Triage summary (most important context)
-    triage = read_bundle_text(bundle_dir, bundle_id, "analysis/triage.md")
-    if triage:
-        parts.append("## Triage Summary")
-        parts.append(triage)
-        parts.append("")
-
-    # Sibling bundles in this batch (other pending failures for same origin)
-    sibling_raw = (job.get("sibling_bundle_ids") if job else "") or ""
-    sibling_ids = [s.strip() for s in sibling_raw.split(",") if s.strip()]
-    if sibling_ids:
-        parts.append("## Sibling Pending Failures (this batch)")
-        for sib_id in sibling_ids[:3]:
-            sib_errors = read_bundle_text(None, sib_id, "logs/errors.txt")
-            if not sib_errors:
-                continue
-            parts.append(f"### Bundle {sib_id}")
-            parts.append("```")
-            parts.append(sib_errors)
-            parts.append("```")
-            parts.append("")
-
-    # Prior attempts (last 3 bundles for this origin, excluding siblings above)
-    origin = job.get("origin") if job else None
-    if origin:
-        history = []
-        for entry in port_bundle_history(origin):
-            bundle = entry.get("bundle_id")
-            if not bundle or bundle == bundle_id or bundle in sibling_ids:
-                continue
-            history.append(bundle)
-            if len(history) >= 3:
-                break
-        if history:
-            parts.append("## Prior Attempts (most recent 3)")
-            for past_bundle in history:
-                parts.append(f"### Bundle {past_bundle}")
-                for relpath, title, code_block in [
-                    ("analysis/patch_plan.json", "Patch Plan", "json"),
-                    ("analysis/patch.log", "Patch Log", None),
-                    ("analysis/rebuild_status.txt", "Rebuild Status", None),
-                ]:
-                    content = read_bundle_text(None, past_bundle, relpath)
-                    if not content:
-                        continue
-                    parts.append(f"#### {title}")
-                    if code_block:
-                        parts.append(f"```{code_block}")
-                        parts.append(content)
-                        parts.append("```")
-                    else:
-                        parts.append(content)
-                    parts.append("")
-
-    # User-provided context (run-scoped)
-    run_id = job.get("run_id") if job else None
-    user_context, _ = get_user_context(run_id, origin)
-    if user_context:
-        parts.append("## User Context (run-scoped)")
-        parts.append(user_context)
-        parts.append("")
-
-    # Known Error Database (if available)
-    kedb_content = load_kedb(kedb_dir)
-    if kedb_content:
-        parts.append(kedb_content)
-        parts.append("")
-
-    # Metadata
-    meta = read_bundle_text(bundle_dir, bundle_id, "meta.txt")
-    if meta:
-        parts.append("## Metadata")
-        parts.append(meta)
-        parts.append("")
-
-    # Build errors
-    errors = read_bundle_text(bundle_dir, bundle_id, "logs/errors.txt")
-    if errors:
-        parts.append("## Build Errors")
-        parts.append(errors)
-        parts.append("")
-
-    # Port files
-    parts.append("## Port Files")
-
-    makefile = read_bundle_text(bundle_dir, bundle_id, "port/Makefile")
-    if makefile:
-        parts.append("### Makefile")
-        parts.append("```makefile")
-        parts.append(makefile)
-        parts.append("```")
-        parts.append("")
-
-    plist = read_bundle_text(bundle_dir, bundle_id, "port/pkg-plist")
-    if plist:
-        parts.append("### pkg-plist")
-        parts.append("```")
-        parts.append(plist)
-        parts.append("```")
-        parts.append("")
-
-    distinfo = read_bundle_text(bundle_dir, bundle_id, "port/distinfo")
-    if distinfo:
-        parts.append("### distinfo")
-        parts.append("```")
-        parts.append(distinfo)
-        parts.append("```")
-        parts.append("")
-
-    # Existing patches (if stored)
-    if bundle_id:
-        patch_relpaths = [p for p in bundle_artifact_list(bundle_id) if p.startswith("port/files/patch-")]
-    else:
-        patch_relpaths = []
-    if patch_relpaths:
-        parts.append("### Existing Patches")
-        for rel in sorted(patch_relpaths):
-            content = read_bundle_text(bundle_dir, bundle_id, rel)
-            if content:
-                parts.append(f"#### {Path(rel).name}")
-                parts.append("```diff")
-                parts.append(content)
-                parts.append("```")
-                parts.append("")
-
-    parts.append("---")
-    parts.append("Use the dports tools to apply fixes in the shared workspace and rebuild the target origin.")
-    parts.append("Return a report with these exact sections:")
-    parts.append("- ## Patch Log")
-    parts.append("- ## Rebuild Status")
-    parts.append("- ## Patch Plan (JSON) with a ```json block")
-    parts.append("- ## Rebuild Proof (JSON) with a ```json block")
-
-    return "\n".join(parts)
+    return render_payload(list(PATCH_SECTIONS), ctx)
 
 
 

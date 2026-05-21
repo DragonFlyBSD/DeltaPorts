@@ -68,6 +68,10 @@ class ContextCtx:
     prior_patch_bundle_ids: list[str] = field(default_factory=list)
     user_context_text: str | None = None
     kedb_text: str | None = None
+    # Automation-context inputs the patch flow pre-loads.
+    prior_failure_count: int = 0
+    window_hours: int = 0
+    max_attempts_cap: int = 0
     # I/O callables — caller binds runner-side helpers so sections
     # stay pure (no import cycle, easy to stub in tests).
     read_bundle_text: ReadBundleText | None = None
@@ -291,19 +295,29 @@ class ExistingPatchesSection:
 @dataclass
 class SiblingBundlesSection:
     """``## Sibling Pending Failures (this batch)`` — same-origin
-    bundles queued before this triage ran, capped at 3."""
+    bundles queued before the current job ran, capped at 3.
+
+    Triage and patch payloads differ slightly: triage includes an
+    introductory paragraph explaining the section; patch jumps
+    straight to the per-bundle subsections. The ``with_intro`` flag
+    parameterizes that difference.
+    """
     name: str = "sibling_bundles"
     priority: int = 80
+    with_intro: bool = True
 
     def render(self, ctx: ContextCtx) -> str | None:
         if not ctx.sibling_bundle_ids or ctx.read_bundle_text is None:
             return None
-        intro = (
-            "These bundles failed for the same origin and were queued "
-            "before this triage ran. Treat them as additional evidence "
-            "for the same underlying issue."
-        )
-        lines = ["## Sibling Pending Failures (this batch)", intro, ""]
+        lines = ["## Sibling Pending Failures (this batch)"]
+        if self.with_intro:
+            intro = (
+                "These bundles failed for the same origin and were queued "
+                "before this triage ran. Treat them as additional evidence "
+                "for the same underlying issue."
+            )
+            lines.append(intro)
+            lines.append("")
         for sib_id in ctx.sibling_bundle_ids[:3]:
             sib_errors = ctx.read_bundle_text(None, sib_id, "logs/errors.txt")
             if not sib_errors:
@@ -374,4 +388,143 @@ TRIAGE_SECTIONS: tuple[ContextSection, ...] = (
     SiblingBundlesSection(),
     PriorTriagesSection(),
     TriagePromptFooterSection(),
+)
+
+
+# -----------------------------------------------------------------------------
+# Patch-payload-specific sections.
+# -----------------------------------------------------------------------------
+
+
+@dataclass
+class AutomationContextSection:
+    """The ``## Automation Context`` block that anchors the patch
+    agent in the loop. Reads ``ctx.job`` (iteration / max_iterations /
+    tier) and the pre-loaded ``ctx.prior_failure_count`` /
+    ``window_hours`` / ``max_attempts_cap``.
+    """
+    name: str = "automation_context"
+    priority: int = 20
+
+    def render(self, ctx: ContextCtx) -> str | None:
+        job = ctx.job or {}
+        iteration = int(job.get("iteration", "1") or "1")
+        max_iterations = int(job.get("max_iterations", "3") or "3")
+        tier_ctx = job.get("tier", "") or "?"
+        body = (
+            f"- You are the patch agent in an automated DragonFly ports fix loop.\n"
+            f"- This is iteration {iteration}/{max_iterations} for this patch job (tier={tier_ctx}).\n"
+            f"- The same origin has produced {ctx.prior_failure_count} failure bundle(s) "
+            f"in the last {ctx.window_hours} hour(s); the runner caps at "
+            f"{ctx.max_attempts_cap} before forcing MANUAL.\n"
+            f"- Your goal: either make dsynth_build report rebuild_ok=true, or "
+            f"emit your best proposed fix with `Rebuild Status: gave-up` and a "
+            f"concrete next-step recommendation in Patch Log. Either is a valid "
+            f"outcome — burning the budget without trying anything is not.\n"
+            f"- The Triage Summary below contains a `Suggested Fix` section. "
+            f"**Apply it first.** Only explore further if the suggested fix has "
+            f"already been tried (check Prior Attempts) or doesn't work."
+        )
+        return f"## Automation Context\n{body}\n"
+
+
+@dataclass
+class TriageSummarySection:
+    """Embeds the bundle's ``analysis/triage.md`` so the patch agent
+    has the classification, root cause, and suggested fix at hand."""
+    name: str = "triage_summary"
+    priority: int = 30
+
+    def render(self, ctx: ContextCtx) -> str | None:
+        if ctx.read_bundle_text is None:
+            return None
+        triage = ctx.read_bundle_text(ctx.bundle_dir, ctx.bundle_id, "analysis/triage.md")
+        if not triage:
+            return None
+        return f"## Triage Summary\n{triage}\n"
+
+
+@dataclass
+class PriorAttemptsSection:
+    """``## Prior Attempts (most recent 3)`` — historical patch
+    bundles' patch_plan.json + patch.log + rebuild_status.txt.
+
+    Pre-loaded by the caller into ``ctx.prior_patch_bundle_ids``;
+    section reads each bundle's artifacts via ``ctx.read_bundle_text``.
+    """
+    name: str = "prior_attempts"
+    priority: int = 50
+
+    def render(self, ctx: ContextCtx) -> str | None:
+        if not ctx.prior_patch_bundle_ids or ctx.read_bundle_text is None:
+            return None
+        lines = ["## Prior Attempts (most recent 3)"]
+        emitted_any = False
+        for past_bundle in ctx.prior_patch_bundle_ids[:3]:
+            section_lines = [f"### Bundle {past_bundle}"]
+            had_content = False
+            for relpath, title, code_block in [
+                ("analysis/patch_plan.json", "Patch Plan", "json"),
+                ("analysis/patch.log", "Patch Log", None),
+                ("analysis/rebuild_status.txt", "Rebuild Status", None),
+            ]:
+                content = ctx.read_bundle_text(None, past_bundle, relpath)
+                if not content:
+                    continue
+                had_content = True
+                section_lines.append(f"#### {title}")
+                if code_block:
+                    section_lines.extend([f"```{code_block}", content, "```"])
+                else:
+                    section_lines.append(content)
+                section_lines.append("")
+            if had_content:
+                lines.extend(section_lines)
+                emitted_any = True
+        if not emitted_any:
+            return None
+        return "\n".join(lines)
+
+
+@dataclass
+class PatchPromptFooterSection:
+    """Closing instruction for the patch agent. Always renders.
+
+    The legacy code emits five lines without a trailing blank line.
+    No trailing newline in render output (it's the last section)."""
+    name: str = "patch_prompt_footer"
+    priority: int = 120
+
+    def render(self, ctx: ContextCtx) -> str | None:
+        return (
+            "---\n"
+            "Use the dports tools to apply fixes in the shared workspace and rebuild the target origin.\n"
+            "Return a report with these exact sections:\n"
+            "- ## Patch Log\n"
+            "- ## Rebuild Status\n"
+            "- ## Patch Plan (JSON) with a ```json block\n"
+            "- ## Rebuild Proof (JSON) with a ```json block"
+        )
+
+
+# Default patch section roster. ``build_patch_payload`` binds I/O
+# callables into ctx and passes this list to ``render_payload``.
+#
+# Reused sections: Snippets, UserContext, KEDB, Metadata, BuildErrors,
+# PortFiles, ExistingPatches. New: AutomationContext, TriageSummary,
+# PriorAttempts, PatchPromptFooter. SiblingBundles is parameterized
+# (with_intro=False for the patch variant).
+PATCH_SECTIONS: tuple[ContextSection, ...] = (
+    SnippetsRoundSection(priority=10),
+    AutomationContextSection(),
+    TriageSummarySection(),
+    SiblingBundlesSection(priority=40, with_intro=False),
+    PriorAttemptsSection(),
+    UserContextSection(priority=60),
+    KEDBSection(priority=70),
+    MetadataSection(priority=80),
+    BuildErrorsSection(priority=90),
+    PortFilesSection(priority=100),
+    ExistingPatchesSection(priority=110),
+    PatchPromptFooterSection(),
 )
