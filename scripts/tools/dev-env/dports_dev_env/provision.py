@@ -61,7 +61,11 @@ class BaseProvisioner:
                         + ", ".join(str(m.target) for m in survivors)
                     )
                 elif tmp_dir.exists():
-                    shutil.rmtree(tmp_dir)
+                    # Use safe_remove_tree so chflags -R noschg,nouchg
+                    # clears DragonFly's immutable flags before rmtree.
+                    # Raw shutil.rmtree fails with EPERM on /sbin/init
+                    # and friends.
+                    safe_remove_tree(self.config, tmp_dir)
                 raise
             return ProvisionedBase(base_id, root, metadata_path)
 
@@ -85,7 +89,9 @@ class BaseProvisioner:
             self.install_optional_packages(root)
             write_helper_scripts(root)
             self.prepare_mountpoints(root)
-            self.clean_package_caches(root)
+            # In-chroot pkg clean needs the bind mounts live (it shells
+            # out to `pkg`, which expects /dev, /proc, etc.).
+            self.run_pkg_clean(root)
         finally:
             unmount_targets(mounted_targets)
             unmount_under(root)
@@ -100,6 +106,13 @@ class BaseProvisioner:
             )
         if not self.validate_tools(root):
             raise ProvisionError("provisioned base is missing required developer tools")
+        # Wholesale cache wipe happens AFTER unmount. Doing this while
+        # bind mounts (especially the host's repos cache at
+        # ``root/.cache/dports-dev/repos``) are still live would walk
+        # rmtree into host filesystems and — were the mount not RO —
+        # destroy the operator's local git clones. The survivor check
+        # above guarantees no mounts remain under ``root`` at this point.
+        self.wipe_cache_dirs(root)
 
     def bootstrap_pkg(self, root: Path) -> None:
         runner = ChrootRunner(root)
@@ -201,12 +214,26 @@ class BaseProvisioner:
         # mode change to the host's distdir.
         (root / "usr/distfiles").mkdir(parents=True, exist_ok=True)
 
-    def clean_package_caches(self, root: Path) -> None:
+    def run_pkg_clean(self, root: Path) -> None:
+        """Run ``pkg clean -ay`` inside the chroot. Needs live mounts."""
         info("cleaning package caches from provisioned base")
-        ChrootRunner(root).run(["pkg", "clean", "-ay"], env={"ASSUME_ALWAYS_YES": "yes"})
-        # Wipe contents but preserve the directories so pkg/etc. don't have to
-        # recreate them on first use inside an env.
-        for path in [root / "root/.cache", root / "var/cache/pkg", root / "tmp", root / "var/tmp"]:
+        ChrootRunner(root).run(
+            ["pkg", "clean", "-ay"],
+            env={"ASSUME_ALWAYS_YES": "yes"},
+        )
+
+    def wipe_cache_dirs(self, root: Path) -> None:
+        """Wipe contents of cache directories on the unmounted base.
+
+        Preserves the directories themselves so pkg/etc. don't have to
+        recreate them on first env use. Must run with **no live mounts**
+        under ``root`` — otherwise rmtree would descend into bind-mounted
+        host filesystems (notably the host repos cache at
+        ``root/.cache/dports-dev/repos``). Callers must guarantee that
+        invariant; this function does not re-check.
+        """
+        for path in [root / "root/.cache", root / "var/cache/pkg",
+                     root / "tmp", root / "var/tmp"]:
             if not path.is_dir():
                 continue
             for child in path.iterdir():
