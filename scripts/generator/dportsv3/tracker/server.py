@@ -216,6 +216,25 @@ def _artifact_view_data(
     }
 
 
+_DEFAULT_ARTIFACT_PRIORITY = (
+    "analysis/manual_handoff.md",
+    "analysis/triage.md",
+    "analysis/patch.md",
+    "logs/errors.txt",
+    "meta.txt",
+)
+
+
+def _default_artifact_relpath(bundle: dict[str, Any]) -> str | None:
+    artifacts = bundle.get("artifacts") or []
+    relpaths = [str(a.get("relpath")) for a in artifacts if a.get("relpath")]
+    relpath_set = set(relpaths)
+    for candidate in _DEFAULT_ARTIFACT_PRIORITY:
+        if candidate in relpath_set:
+            return candidate
+    return relpaths[0] if relpaths else None
+
+
 def _resolve_artifact_path(
     artifact_root: Path, ref: dict[str, Any]
 ) -> Path | None:
@@ -660,17 +679,40 @@ def create_app(db_path: str | Path) -> Any:
             )
 
     @app.get("/agentic/bundles/{bundle_id}", response_class=HTMLResponse)
-    def agentic_bundle_detail(request: RequestType, bundle_id: str) -> Any:
+    def agentic_bundle_detail(
+        request: RequestType,
+        bundle_id: str,
+        artifact: str | None = None,
+    ) -> Any:
         with _conn() as conn:
             bundle = get_bundle(conn, bundle_id)
             tool_trace_ref = get_artifact_ref(conn, bundle_id, "analysis/tool_trace.jsonl")
+            selected_relpath = artifact or (_default_artifact_relpath(bundle) if bundle else None)
+            selected_ref = (
+                get_artifact_ref(conn, bundle_id, selected_relpath)
+                if selected_relpath else None
+            )
         if bundle is None:
             raise HTTPException(status_code=404, detail=f"Unknown bundle: {bundle_id}")
+        if selected_relpath and selected_ref is None:
+            raise HTTPException(status_code=404, detail="Unknown artifact")
+        selected_artifact = (
+            _artifact_view_data(app.state.artifact_root, bundle_id, selected_relpath, selected_ref)
+            if selected_relpath and selected_ref else None
+        )
+        if selected_relpath and selected_artifact is None:
+            raise HTTPException(status_code=404, detail="Artifact file missing")
         tool_trace = _load_tool_trace(app.state.artifact_root, tool_trace_ref)
         return templates.TemplateResponse(
             request,
             "agentic_bundle.html",
-            {"title": bundle_id, "bundle": bundle, "tool_trace": tool_trace},
+            {
+                "title": bundle_id,
+                "bundle": bundle,
+                "tool_trace": tool_trace,
+                "selected_artifact": selected_artifact,
+                "selected_artifact_relpath": selected_relpath,
+            },
         )
 
     @app.get("/agentic/bundles/{bundle_id}/artifacts/{relpath:path}", response_class=HTMLResponse)

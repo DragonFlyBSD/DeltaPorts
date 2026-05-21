@@ -204,8 +204,22 @@ def test_view_agentic_bundle_detail_lists_artifacts(client: TestClient) -> None:
     assert "rebuild_ok=False" in body
     # Link to artifact stream endpoint
     assert "/api/bundles/b-q2-foo/artifacts/meta.txt" in body
-    assert "/agentic/bundles/b-q2-foo/artifacts/meta.txt" in body
+    assert "/agentic/bundles/b-q2-foo?artifact=meta.txt" in body
+    assert "/agentic/bundles/b-q2-foo/artifacts/logs/errors.txt" in body
     assert "raw" in body
+    # Default preview prefers logs/errors.txt over meta.txt.
+    assert "build failed" in body
+
+
+def test_view_agentic_bundle_detail_selects_artifact_inline(client: TestClient) -> None:
+    resp = client.get("/agentic/bundles/b-q2-foo", params={"artifact": "meta.txt"})
+    assert resp.status_code == 200
+    assert "origin=devel/foo" in resp.text
+    assert "open full page" in resp.text
+
+
+def test_view_agentic_bundle_detail_missing_selected_artifact_404(client: TestClient) -> None:
+    assert client.get("/agentic/bundles/b-q2-foo", params={"artifact": "nope.txt"}).status_code == 404
 
 
 def test_view_agentic_artifact_text_inline(client: TestClient) -> None:
