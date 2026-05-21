@@ -2,8 +2,18 @@
 
 Rolling-ledger format: shipped phases summarized at top, current phase
 detail below. Full arc and rationale in
-`agentic-framework-design.md`; overview of remaining phases at the
-bottom of this file.
+`agentic-framework-design.md`.
+
+**Framework migration is complete.** All five layers from the
+design doc are shipped (commit `0a86d12f8ce` and earlier). The
+runner is a thin orchestration shell over a `Step` protocol; the
+heavyweight per-job logic lives in named classes with explicit
+preconditions, outcomes, and lifecycle events.
+
+The current "phase" is therefore **stabilization** — verify the
+framework holds up under real DragonFly traffic, exercise the
+parking-lot items, and decide which framework-native feature to
+build first.
 
 ---
 
@@ -65,14 +75,9 @@ policy) -> Decision` function. The orchestrator routes on
 New module `dportsv3.agent.decision` with `Decision`, `PortHistory`,
 and `decide()`. `PortHistory.load(conn, target, origin,
 window_hours)` absorbs the runner's `recent_failure_count` query;
-that helper got deleted. The lone remaining `tier_for` call site
-is `_process_patch_job_harness`'s legacy fallback for hand-fired
-patch jobs missing the `tier` field — explicitly out of scope; Phase
-5 absorbs it.
-
-Parity test sweeps every `(classification, confidence)` in the
-shipped `config/agentic-policy.json` against legacy `tier_for`.
-Side artifact: future-work parking lot in
+that helper got deleted. Parity test sweeps every `(classification,
+confidence)` in the shipped `config/agentic-policy.json` against
+legacy `tier_for`. Side artifact: future-work parking lot in
 `agentic-framework-design.md` for operator notification on
 env-broken / cap.
 
@@ -80,7 +85,7 @@ Commits: `2f6d4c604d8` (design doc parking-lot entry) ·
 `89d66e2d4a3` (module) · `30f7a50bc76` (runner cutover) ·
 `69fd1be477c` (parity smoke).
 
-Test delta: +27 (19 unit + 8 parity). 337 total green at phase end.
+Test delta: +27. 337 total green at phase end.
 
 ### Phase 4 — Context assembly (shipped 2026-05-21)
 
@@ -91,279 +96,131 @@ prompt changes, just structure.
 
 New module `dportsv3.agent.context` with `ContextCtx`,
 `ContextSection` Protocol, `render_payload`, and 13 concrete
-section classes:
-
-- Reused across triage + patch (7): `SnippetsRoundSection`,
-  `KEDBSection`, `UserContextSection`, `MetadataSection`,
-  `BuildErrorsSection`, `PortFilesSection`,
-  `ExistingPatchesSection`. `SiblingBundlesSection` is shared with
-  a `with_intro` flag (triage uses True; patch uses False).
-- Triage-specific (3): `PriorTriagesSection`,
-  `TriagePromptFooterSection`, plus the shared sibling section.
-- Patch-specific (4): `AutomationContextSection`,
-  `TriageSummarySection`, `PriorAttemptsSection`,
-  `PatchPromptFooterSection`.
+section classes. 7 sections shared between triage + patch (Snippets,
+KEDB, UserContext, Metadata, BuildErrors, PortFiles, ExistingPatches);
+`SiblingBundlesSection` parameterized via `with_intro`; 3 triage-
+specific (PriorTriages, TriagePromptFooter), 4 patch-specific
+(AutomationContext, TriageSummary, PriorAttempts, PatchPromptFooter).
 
 I/O isolation: sections never query DB or network at render time.
-Callers pre-load fields (`prior_*_bundle_ids`, `user_context_text`,
-`kedb_text`, `prior_failure_count`) and bind runner-side helpers as
-callables into `ContextCtx` (`read_bundle_text`,
-`bundle_artifact_list`, `snippet_feedback`, `snippet_content`).
-
-`build_triage_payload` shrunk from ~155 LOC to ~36 LOC of pre-load
-+ render. `build_patch_payload` shrunk from ~190 LOC to ~50 LOC.
-
-12 parity test cases (6 triage + 6 patch) lock byte-equivalence.
+Callers pre-load fields and bind runner-side helpers as callables
+into `ContextCtx`. `build_triage_payload` shrunk from ~155 LOC to
+~36; `build_patch_payload` from ~190 to ~50. 12 parity test cases
+lock byte-equivalence.
 
 Commits: `2d3cb9e367c` (module) · `331e526fa54` (triage cutover) ·
 `399224ea029` (patch cutover).
 
-Test delta: +25 (13 assembler + 6 triage parity + 6 patch parity).
-362 total green at phase end.
+Test delta: +25. 362 total green at phase end.
+
+### Phase 5 — Step contract (shipped 2026-05-21)
+
+Formal `Step` Protocol with `precheck → run → record` hooks;
+`Orchestrator.run(ctx, [steps])` drives them; lifecycle event
+firing intrinsic to each step's `StepOutcome.next_event` +
+`extra_events`. The legacy `_process_{triage,patch}_job_harness`,
+`_run_harness_triage_inner`, and `_completion_events_for`
+indirection all deleted.
+
+New modules: `dportsv3.agent.step` (Protocol + Orchestrator) and
+`dportsv3.agent.steps` (`TriageStep`, `PatchAttemptStep`,
+`PatchEventDispatcher`). The Phase-3 leftover `tier_for` fallback
+for hand-fired patch jobs absorbed via `decide(empty_history,
+env_health=None)`.
+
+`process_job` is now a pure dispatcher (~70 LOC): parse, dry_run,
+fire START events, delegate to step wrapper, move files. Sibling
+event fan-out lives in `_finish_orchestrator_run`.
+
+Latent bug caught + fixed in Step 5: the lifecycle TRANSITIONS
+table had no `(CLAIMED, PATCH_START) → PATCHING` entry, meaning
+every patch job silently failed its PATCH_START transition (the
+runner's IllegalTransition handler just logged a warning). No
+pre-Phase-5 test exercised the patch lifecycle.
+
+Commits: `7afe33370c1` (Orchestrator module) · `ec86d37d7f0`
+(TriageStep) · `d937b17f344` (PatchEventDispatcher) ·
+`a616c1b5d57` (PatchAttemptStep + tier_for absorption) ·
+`9eff04962e0` (process_job cutover + _completion_events_for
+retired) · `0a86d12f8ce` (e2e parity + lifecycle fix).
+
+Test delta: +45. 407 total green at phase end.
 
 ---
 
-## Current phase: Phase 5 — Step contract
+## Current phase: Stabilization
 
-> **Goal:** formalize what Phases 1–4 sketched. Define the `Step`
-> Protocol with `precheck → run → record` hooks, build an
-> `Orchestrator` that drives steps in sequence, and replace the
-> hand-coded `_process_{triage,patch}_job_harness` /
-> `_run_harness_triage_inner` / `process_job` dispatch with
-> orchestrator-driven flows. End state: the runner is a small
-> driver that hands `(job, [steps])` to the orchestrator; the
-> heavyweight per-step logic lives in named classes with explicit
-> preconditions and outcomes.
+> **Goal:** verify the framework holds up under real DragonFly
+> traffic, gather observability on phase-shipped behaviors that
+> haven't been exercised in production yet, and pick the next
+> framework-native feature to build.
 
-### Decisions captured up front
+### Open items
 
-- **Step Protocol shape.** Each step exposes `name`,
-  `precheck(ctx) -> StepReadiness`, `run(ctx) -> StepOutcome`,
-  `record(ctx, outcome) -> None`. The orchestrator calls precheck
-  (skips if not ready), run (the actual work), then record
-  (persists artifacts + fires lifecycle events).
-- **No verify split in this phase.** Today `dsynth_build` is fused
-  inside the patch LLM call (the agent runs it as a tool). Splitting
-  verification into a separate `RebuildVerifyStep` would require the
-  agent to *stop* before verifying and the orchestrator to verify
-  itself — meaningful behavior change. Out of scope; Phase 5 only
-  ships the Step protocol with `RebuildVerifyStep` as a *named*
-  step that's fused into `PatchAttemptStep` for now. The actual
-  split is a follow-up.
-- **The legacy `tier_for` fallback in `_process_patch_job_harness`
-  gets folded.** When a hand-fired patch job arrives with no
-  `tier` field, the orchestrator's `decide()` call uses
-  classification + confidence parsed from the bundle's `triage.md`
-  exactly as the legacy code does, via the Phase-3 decision engine.
-- **Hard cutover.** Same as Phases 1–4: when each step lands, the
-  legacy equivalent is deleted in the same commit. The five-commit
-  budget plans accordingly.
-- **Parity through end-to-end.** The Phase-5 cutover is the only
-  one that touches the full triage→patch dispatch. The existing
-  e2e lifecycle tests + the 12 parity tests from Phase 4 catch
-  byte-level regressions. Add a fresh e2e test for the
-  orchestrator flow itself.
+1. **Manual smoke on dfly.** None of Phases 1-5 has been
+   end-to-end exercised against a real dsynth failure stream.
+   The 407 unit/integration tests give confidence in the code
+   surface; only real traffic verifies the operational chain.
+   Specifically check: lifecycle event sequence on a real
+   triage→auto_patch→done chain, env_broken auto-recovery
+   when chroot is repaired mid-run, retry cap firing when an
+   origin loops, sibling fan-out on a batch.
 
-### Pre-conditions
+2. **Parallel review.** A separate agent has been briefed to
+   audit the framework against the design doc (see prompt
+   shared with operator). Findings will land in a follow-up
+   document; this plan file gets updated when they're triaged.
 
-- All 362 tests currently green.
-- `lifecycle.apply` is the single state-write boundary. Verified
-  end of Phase 1.
-- `decide()` is the single decision boundary. Verified end of
-  Phase 3.
-- `render_payload` is the single payload-assembly boundary.
-  Verified end of Phase 4.
+3. **Operator notification (parking lot).** Currently when
+   `decide()` returns `skip` because env is broken, or
+   `escalate_manual` after the retry cap fires, the operator
+   has to poll the UI / activity log to find out. A push
+   channel (webhook / Slack / badge) would let them act
+   sooner. Surfaced during Phase 3; recorded in
+   `agentic-framework-design.md`'s parking lot
+   (`2f6d4c604d8`).
 
-### Step Protocol shape
+4. **`RebuildVerifyStep` split (parking lot).** Today
+   `dsynth_build` runs inside the patch LLM call (the agent
+   itself decides to invoke the rebuild tool). A real
+   verify-after-the-LLM-finishes step would change the
+   agent's contract — meaningful behavior change, not just a
+   structural refactor. Named in the Phase 5 Step protocol but
+   fused into `PatchAttemptStep` for now.
 
-```python
-@dataclass
-class StepReadiness:
-    status: Literal["ready", "skip", "fail"]
-    reason: str = ""
-    # When status="skip", orchestrator moves to the next step.
-    # When status="fail", orchestrator halts with the reason.
+5. **Pilot feature: two-model escalation.** Originally drafted
+   as the Phase 1 pilot, then dropped per yolo-mode operator
+   preference. Re-evaluate now that the Step protocol exists:
+   *cheap model for first attempt; on gave-up, escalate to
+   strong model with the cheap model's reasoning as seed
+   context.* Trivial to express as a step list: `[CheapPatchStep,
+   ConditionalStrongPatchStep]`. Tests the orchestrator's
+   conditional-step muscle (precheck returns skip based on
+   prior step's outcome via ctx.state).
 
-@dataclass
-class StepOutcome:
-    status: Literal["success", "needs-help", "failed", "skipped"]
-    next_event: JobEvent | None
-    detail: dict = field(default_factory=dict)
-    # next_event is the lifecycle transition to fire after this step.
-    # None means "step is internal; no transition."
+### What this phase is not
 
-@runtime_checkable
-class Step(Protocol):
-    name: str
-    def precheck(self, ctx: StepCtx) -> StepReadiness: ...
-    def run(self, ctx: StepCtx) -> StepOutcome: ...
-    def record(self, ctx: StepCtx, outcome: StepOutcome) -> None: ...
-```
+- Not a code-change phase by default. The framework migration
+  is the LOC budget for the month. Stabilization adds tests +
+  small follow-ups, not new layers.
+- Not the place to discover new requirements. If a new
+  layer is needed (e.g. operator notification), it gets a
+  parking-lot entry in the design doc and a future phase plan,
+  not a snuck-in change here.
 
-`StepCtx` carries job + DB conn + lifecycle helpers + the
-`dportsv3.agent.{health,decision,context}` machinery. Likely
-absorbs `ContextCtx` (Phase 4) since payload assembly is one
-step's concern.
+### Possible next actions (operator picks one)
 
-### Step 1 — `step.py` module
-
-**Goal:** the protocol, `StepReadiness` / `StepOutcome` /
-`StepCtx`, and an `Orchestrator.run(job_id, [steps])` that:
-
-1. Loads job state from `lifecycle.current()`.
-2. For each step in order:
-   - calls `precheck(ctx)`; if `skip`, continues; if `fail`,
-     halts and fires the appropriate failure event;
-   - calls `run(ctx)`;
-   - calls `record(ctx, outcome)`;
-   - fires `outcome.next_event` via `lifecycle.apply()` if set.
-3. Returns a summary of step outcomes.
-
-Plus unit tests covering the dispatch logic (skip propagation,
-fail-halt behavior, event firing, exception isolation).
-
-**Done criteria:** module importable + tested, **no consumers wired**.
-
-**Commit:** `feat(agent): step orchestrator module`
-
----
-
-### Step 2 — `TriageStep`
-
-**Goal:** lift `_run_harness_triage_inner`'s body into a
-`TriageStep` class. The runner's `_process_triage_job_harness`
-becomes a wrapper that constructs a `StepCtx`, instantiates
-`TriageStep`, and hands it to the orchestrator.
-
-**What lives in `TriageStep.run`:**
-- The bundle materialization (`_materialize_bundle` for
-  artifact-store bundles)
-- The LLM call (`harness_triage.run`)
-- The `_write_triage_audit_harness` write
-- The `decide()` call
-- The `enqueue_patch_job` / `upsert_user_context_request` branches
-
-`TriageStep.record` writes the triage.md to the bundle if
-materialized, cleans up the tempdir, fires the activity_log
-`decision` entry.
-
-**Parity:** the existing `test_runner_e2e_lifecycle.py` cases
-(`test_full_triage_path_to_triaged`, `test_triage_manual_escalates`)
-must still pass with the orchestrator-driven flow. Add a new test
-that asserts `TriageStep.precheck` skips if env_health is broken.
-
-**Cutover criteria:**
-- `_run_harness_triage_inner` deleted; `_process_triage_job_harness`
-  is a thin wrapper around the orchestrator.
-- e2e tests green; parity tests green.
-
-**Commit:** `refactor(agent): triage as a Step`
-
----
-
-### Step 3 — `PatchAttemptStep`
-
-**Goal:** lift `_process_patch_job_harness` body into
-`PatchAttemptStep`. Today's body is bigger — it includes
-`_write_patch_audit_harness`, `_write_changes_diff`,
-`_write_tool_trace`, the `on_event` callback infrastructure, and
-the policy fallback that this phase absorbs.
-
-The legacy `tier_for` fallback (when a hand-fired job has no
-`tier` field) becomes: `PatchAttemptStep.precheck` parses
-`triage.md` if needed and calls `decide()` to set the tier.
-
-**Parity:** the existing patch parity tests + e2e tests must pass.
-Add a new test for the precheck path (hand-fired patch job →
-`decide()` resolves tier from triage.md).
-
-**Cutover criteria:**
-- `_process_patch_job_harness` and `_run_harness_patch_inner` (if
-  any) deleted.
-- `_process_patch_job` is a thin wrapper.
-- The lone `harness_policy.tier_for(pol, ...)` call from Phase 3
-  is gone (now flows through `decide`).
-- All tests green.
-
-**Commit:** `refactor(agent): patch as a Step`
-
----
-
-### Step 4 — `process_job` orchestrator cutover
-
-**Goal:** the runner's `process_job` becomes a small dispatcher
-that constructs the right step list for the job type and hands it
-to the orchestrator. Today's hard-coded `if job_type == "patch":
-process_patch_job(...) elif "triage": ...` block is replaced.
-
-**What still lives in `process_job`:**
-- `.job` file parsing (`parse_job_file`)
-- The filesystem move (pending→inflight→done/failed)
-- Sibling-paths bookkeeping (Phase 1)
-- The `_completion_events_for` mapping — moves into orchestrator
-  as the post-run event resolution
-
-**What moves into the orchestrator:**
-- TRIAGE_START / PATCH_START / completion event firing
-- The decision routing (auto_patch / escalate_manual / skip)
-- The siblings-also-get-events fan-out
-
-**Cutover criteria:**
-- `process_job` is ≤ 60 LOC.
-- `_completion_events_for` either deleted or simplified to a
-  helper consumed by the orchestrator.
-- All e2e tests green.
-
-**Commit:** `refactor(runner): orchestrator-driven process_job`
-
----
-
-### Step 5 — Cleanup + parity smoke
-
-**Goal:** delete any vestigial helpers superseded by the
-orchestrator. Add a fresh e2e parity test that walks a full
-triage→auto_patch chain through the orchestrator (stubbed LLM)
-and asserts identical lifecycle event sequences vs. pre-Phase-5.
-
-Final pass: check `grep` for anything stale —
-`_run_harness_triage_inner`, `_run_harness_patch_inner` (if it
-ever existed), the legacy `tier_for` call in patch code, etc.
-
-**Commit:** `test(agent): orchestrator e2e parity`
-
----
-
-### Phase 5 cutover criteria (overall)
-
-Phase 5 is "done" when all of:
-
-1. All steps committed.
-2. `pytest scripts/generator/tests/` green.
-3. `grep -nE "_run_harness_(triage|patch)_inner|_process_(triage|patch)_job_harness" scripts/`
-   returns nothing live in code.
-4. `grep -nE "harness_policy\\.tier_for" scripts/generator/dportsv3/agent/runner.py`
-   returns nothing — the Phase-3 leftover is folded.
-5. e2e lifecycle test + new orchestrator parity test cover the
-   happy-path triage→auto_patch chain end to end with stubbed LLM.
-6. Manual smoke on dfly: trigger one real triage and one real
-   patch, eyeball the activity log + bundle artifacts —
-   indistinguishable from pre-Phase-5.
-7. This plan file gets updated: Phase 5 ledger entry written;
-   Phases overview shows all 5 shipped.
-
-### Risk + rollback
-
-| Step | Risk | Mitigation |
+| Action | Effort | When useful |
 |---|---|---|
-| 1 | Protocol shape too restrictive once first real step is built | Land protocol with no consumers; Steps 2–3 exercise it immediately. Iterate in same commit if needed. |
-| 2 | Triage refactor breaks bundle materialization edge cases | `TriageStep.record` handles tempdir cleanup just as today; e2e test catches regressions. |
-| 3 | Patch refactor loses the `_on_event` callback chain that feeds activity_log + tool trace | `PatchAttemptStep.run` wires the same callback; existing tool-trace test catches gaps. |
-| 4 | `process_job` cutover misses an edge case (sibling bookkeeping, error-note writing) | Step 5 e2e test exercises siblings + failure paths; manual smoke confirms. |
-| 5 | Hand-fired patch jobs (no `tier` field) regress because Phase-3 leftover removed | Step 3 includes a test for this exact case. |
+| Run a real dfly triage+patch and post the event log here | 1-2 hours | Right now — pure operational validation |
+| Read the parallel agent's report when it arrives | 15 min | When the agent finishes |
+| Implement two-model escalation as a framework-native pilot | ~3 commits, ~+250 LOC | If pilot validates Step protocol shape and adds real value |
+| Implement operator notification | ~4 commits, ~+300 LOC | If gnome_subr-style loops are still a problem in practice |
+| Split `RebuildVerifyStep` out of PatchAttemptStep | ~3 commits, ~+200 LOC | Only if the operator wants separation between LLM-decided rebuild and a runner-side rebuild verification |
 
 ---
 
-## Phases overview (status)
+## Phases summary
 
 | # | Phase | Layer(s) | Status |
 |---|---|---|---|
@@ -371,25 +228,25 @@ Phase 5 is "done" when all of:
 | 2 | Health / readiness | Layer 3 | ✅ shipped |
 | 3 | Policy engine | Layer 5 | ✅ shipped |
 | 4 | Context assembly | Layer 4 | ✅ shipped |
-| **5** | **Step contract** | **Layer 2** | **active (this doc)** |
+| 5 | Step contract | Layer 2 | ✅ shipped |
 
-Estimated sizing for Phase 5:
-
-| Step | LOC delta | Risk |
-|---|---|---|
-| 1 (protocol + orchestrator) | +200, −0 | Low |
-| 2 (TriageStep) | +200, −250 | Medium |
-| 3 (PatchAttemptStep) | +250, −300 | Medium |
-| 4 (process_job cutover) | +100, −200 | Medium |
-| 5 (cleanup + e2e parity) | +80, −50 | Low |
-| **Total** | **+830, −800** | **Medium** |
-
-Each step has a **parity check** against today's behavior. No
-regression on something that works.
+Framework state: **all five layers shipped, parity-tested, 407
+unit/integration tests green**. The runner is a thin orchestration
+shell; per-job logic lives in named Step classes with explicit
+preconditions and typed outcomes. Adding new functionality is now
+"implement a Step / a section / a check / a decision rule" — not
+"find the right place to splice into the runner."
 
 ## Future-work parking lot (in design doc)
 
-- Operator notification on env-broken / cap (`2f6d4c604d8`).
-- `RebuildVerifyStep` actually splits verification out of the
-  patch LLM call (named in Phase 5 but kept fused; the split is a
-  follow-up that requires changing the agent's contract).
+`agentic-framework-design.md` carries durable notes on items that
+surfaced during phase implementation but didn't fit the active
+layer's scope:
+
+- **Operator notification on env-broken / cap** — push channel
+  for skip + cap escalation events.
+- **`RebuildVerifyStep` actual split** — name lives in the Step
+  protocol; behavioral split is a follow-up.
+
+Both will likely become new phases when promoted, with their own
+plan documents that replace this file when active.
