@@ -160,8 +160,12 @@ def test_auto_with_low_confidence_downgrades_then_manual():
 
 
 def test_retry_cap_forces_manual_with_extra_fields():
+    """Step 6: the retry cap is now driven by ``failed_patch_attempts``,
+    not ``recent_failures``. Three failed agent patches triggers
+    escalation; three bundle failures alone do not (those just mean
+    the build keeps failing — operators expect the agent to engage)."""
     history = PortHistory(target="@test", origin="foo/bar",
-                          recent_failures=3)
+                          failed_patch_attempts=3)
     d = decide(
         "plist-error", "high",
         history,
@@ -173,14 +177,14 @@ def test_retry_cap_forces_manual_with_extra_fields():
     assert d.action == "escalate_manual"
     assert d.tier.name == "MANUAL"
     assert d.extra["original_tier"] == "AUTO"
-    assert d.extra["recent_failures"] == 3
-    assert d.extra["max_attempts"] == 3
-    assert "retry cap" in d.reason
+    assert d.extra["failed_patch_attempts"] == 3
+    assert d.extra["patch_cap"] == 3
+    assert "patch cap" in d.reason
 
 
 def test_cap_just_below_threshold_still_auto_patches():
     history = PortHistory(target="@test", origin="foo/bar",
-                          recent_failures=2)
+                          failed_patch_attempts=2)
     d = decide(
         "plist-error", "high",
         history,
@@ -223,10 +227,16 @@ def test_decision_to_dict_json_friendly():
 @pytest.fixture
 def bundles_db():
     conn = sqlite3.connect(":memory:")
+    # Step 6 added jobs.failed_patch_attempts and signature columns to
+    # PortHistory.load's queries. Mirror only the columns load() reads
+    # — load() is now per-query try/except so missing tables degrade
+    # gracefully, but providing them here keeps the legacy assertions
+    # working.
     conn.execute(
         """CREATE TABLE bundles (
                bundle_id TEXT PRIMARY KEY,
-               origin TEXT, target TEXT, result TEXT, last_seen_at TEXT
+               origin TEXT, target TEXT, result TEXT, last_seen_at TEXT,
+               error_signature TEXT
            )"""
     )
     yield conn
@@ -243,7 +253,8 @@ def _hours_ago(n: float) -> str:
 
 def test_port_history_load_counts_recent_failures(bundles_db):
     bundles_db.executemany(
-        "INSERT INTO bundles VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO bundles (bundle_id, origin, target, result, last_seen_at) "
+        "VALUES (?, ?, ?, ?, ?)",
         [
             ("b1", "foo/bar", "@test", "failure", _now()),
             ("b2", "foo/bar", "@test", "failure", _hours_ago(0.5)),
@@ -280,7 +291,8 @@ def test_port_history_load_legacy_null_target(bundles_db):
     """Legacy bundle rows pre-Phase-4-step-5 may have NULL target.
     When the caller passes target='', match those rows."""
     bundles_db.executemany(
-        "INSERT INTO bundles VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO bundles (bundle_id, origin, target, result, last_seen_at) "
+        "VALUES (?, ?, ?, ?, ?)",
         [
             ("l1", "foo/bar", None, "failure", _now()),
             ("l2", "foo/bar", "",   "failure", _now()),

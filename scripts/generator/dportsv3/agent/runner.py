@@ -404,17 +404,87 @@ def _materialize_bundle(bundle_id: str, dest: Path) -> int:
     return written
 
 
+def _compute_error_signature(text: str | None) -> str | None:
+    """Return a stable short hex digest for the first non-empty line of
+    ``logs/errors.txt``. Used by Step 6's sticky-signature retry-cap
+    check. ``None`` if the text is missing/empty.
+
+    Stable across runs because the hook truncates errors.txt at 200KB
+    and writes deterministic content. The first non-empty line is
+    typically ``cc: error: ...`` or ``[hook] ports/...: build failed``;
+    same root cause → same line → same signature.
+    """
+    if not text:
+        return None
+    import hashlib  # noqa: PLC0415 — local import, only on first triage
+    for raw in text.splitlines():
+        line = raw.strip()
+        if line:
+            return hashlib.sha256(line.encode("utf-8", errors="replace"))\
+                .hexdigest()[:16]
+    return None
+
+
+def _ensure_recent_signatures(target: str, origin: str, window_hours: int) -> None:
+    """Backfill ``bundles.error_signature`` for recent same-origin
+    failure bundles whose signature is still NULL.
+
+    Lazy population so that Step 6's sticky-signature check has data
+    to work with. Idempotent (UPDATE only runs against NULL rows).
+    Failures are swallowed — sticky-signature simply doesn't fire if
+    we couldn't read the artifact.
+    """
+    if _state_db_conn is None or not origin:
+        return
+    from datetime import datetime, timedelta, timezone  # noqa: PLC0415
+    cutoff = (
+        datetime.now(timezone.utc) - timedelta(hours=max(0, int(window_hours)))
+    ).isoformat()
+    try:
+        with _state_db_lock:
+            rows = _state_db_conn.execute(
+                """SELECT bundle_id FROM bundles
+                   WHERE origin = ? AND result IN ('failure', 'fail')
+                     AND error_signature IS NULL
+                     AND last_seen_at >= ?
+                     AND (target = ?
+                          OR (? = '' AND (target IS NULL OR target = '')))""",
+                (origin, cutoff, target, target),
+            ).fetchall()
+    except Exception:
+        return
+    for row in rows:
+        bundle_id = row["bundle_id"] if hasattr(row, "keys") else row[0]
+        text = read_bundle_text(None, bundle_id, "logs/errors.txt")
+        sig = _compute_error_signature(text)
+        if not sig:
+            continue
+        try:
+            with _state_db_lock:
+                _state_db_conn.execute(
+                    "UPDATE bundles SET error_signature = ? WHERE bundle_id = ?",
+                    (sig, bundle_id),
+                )
+                _state_db_conn.commit()
+        except Exception:
+            continue
+
+
 def _load_port_history(target: str, origin: str, window_hours: int):
     """Thin lock-wrapper over PortHistory.load using the runner DB.
 
     The decision engine's ``PortHistory.load`` does the SQL; this
     helper just supplies ``_state_db_conn`` under ``_state_db_lock``
     so callers don't have to import sqlite3 or know about the lock.
+
+    Backfills error_signature for recent failure bundles first so the
+    sticky-signature retry-cap check has data to operate on.
     """
     from dportsv3.agent.decision import PortHistory
 
     if _state_db_conn is None or not origin:
         return PortHistory.empty(target=target or "", origin=origin or "")
+    _ensure_recent_signatures(target or "", origin, window_hours)
     with _state_db_lock:
         return PortHistory.load(_state_db_conn, target or "", origin, window_hours)
 

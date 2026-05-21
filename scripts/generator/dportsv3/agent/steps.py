@@ -289,6 +289,10 @@ class TriageStep:
 
         max_attempts = int(os.environ.get("DP_HARNESS_MAX_PATCH_ATTEMPTS", "3"))
         window_hours = int(os.environ.get("DP_HARNESS_ATTEMPT_WINDOW_HOURS", "2"))
+        bundle_backstop = int(os.environ.get("DP_HARNESS_BUNDLE_BACKSTOP", "10"))
+        signature_stickiness = int(
+            os.environ.get("DP_HARNESS_SIGNATURE_STICKINESS", "3")
+        )
         target_value = job.get("target", "") or ""
         history = services.load_port_history(target_value, origin, window_hours)
 
@@ -309,6 +313,8 @@ class TriageStep:
             policy=pol,
             max_attempts=max_attempts,
             window_hours=window_hours,
+            bundle_backstop=bundle_backstop,
+            signature_stickiness=signature_stickiness,
         )
         tier = dec.tier
         ctx.state["decision"] = dec

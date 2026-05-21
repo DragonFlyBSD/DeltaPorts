@@ -42,16 +42,28 @@ Action = Literal["auto_patch", "escalate_manual", "skip"]
 class PortHistory:
     """Per-(target, origin) outcome history within a rolling window.
 
-    The runner used to compute ``recent_failure_count`` inline;
-    that logic moves here so ``decide()`` is the single consumer
-    and unit tests can stand up a synthetic history without
-    touching the DB.
+    Step 6 enrichment — beyond raw bundle-failure count, ``decide()``
+    needs to know:
+
+    - ``failed_patch_attempts``: how many times the agent actually
+      tried and failed (``patch_gave_up`` / ``patch_budget_exhausted``
+      retire reasons). The primary signal — "is automation stuck?"
+    - ``has_fresh_user_context``: did the operator just intervene?
+      One free retry after fresh context lands.
+    - ``last_failure_signature`` + ``signature_repeat_count``: if every
+      attempt fails with the same first-error-line, the agent is
+      stuck on the same wall; if signatures vary, it's progressing.
     """
     target: str
     origin: str
     recent_failures: int = 0
     last_success_at: str | None = None
     last_attempt_at: str | None = None
+    # Step 6 fields.
+    failed_patch_attempts: int = 0
+    has_fresh_user_context: bool = False
+    last_failure_signature: str | None = None
+    signature_repeat_count: int = 0
 
     @classmethod
     def empty(cls, target: str, origin: str) -> "PortHistory":
@@ -66,12 +78,19 @@ class PortHistory:
         origin: str,
         window_hours: int,
     ) -> "PortHistory":
-        """Query the bundles table for this port's recent outcomes."""
+        """Query state.db for this port's recent outcomes + agent attempts."""
         if conn is None or not origin:
             return cls.empty(target, origin)
         cutoff = (
             datetime.now(timezone.utc) - timedelta(hours=max(0, int(window_hours)))
         ).isoformat()
+        # Per-query try/except so tests with stripped-down schemas
+        # (and runtime situations where a column hasn't migrated yet)
+        # still get a partial PortHistory rather than an empty()
+        # short-circuit.
+        recent_failures = 0
+        last_success_at = None
+        last_attempt_at = None
         try:
             row = conn.execute(
                 """SELECT
@@ -85,16 +104,92 @@ class PortHistory:
                           OR (? = '' AND (target IS NULL OR target = '')))""",
                 (cutoff, origin, target, target),
             ).fetchone()
+            if row is not None:
+                recent_failures = int(row[0] or 0)
+                last_success_at = row[1]
+                last_attempt_at = row[2]
         except sqlite3.Error:
-            return cls.empty(target, origin)
-        if row is None:
-            return cls.empty(target, origin)
+            pass
+
+        failed_patch_attempts = 0
+        last_failed_patch_at = ""
+        try:
+            row = conn.execute(
+                """SELECT COUNT(*),
+                          MAX(COALESCE(last_transition_at, last_seen_at, ''))
+                   FROM jobs
+                   WHERE origin = ?
+                     AND type = 'patch'
+                     AND retire_reason IN ('patch_gave_up', 'patch_budget_exhausted')
+                     AND COALESCE(last_transition_at, last_seen_at, '') >= ?
+                     AND (target = ?
+                          OR (? = '' AND (target IS NULL OR target = '')))""",
+                (origin, cutoff, target, target),
+            ).fetchone()
+            if row is not None:
+                failed_patch_attempts = int(row[0] or 0)
+                last_failed_patch_at = (row[1] or "")
+        except sqlite3.Error:
+            pass
+
+        has_fresh_user_context = False
+        try:
+            row = conn.execute(
+                """SELECT updated_at FROM user_context
+                   WHERE origin = ? ORDER BY updated_at DESC LIMIT 1""",
+                (origin,),
+            ).fetchone()
+            user_context_at = (row[0] if row and row[0] else "") or ""
+            # If there are no failed patch attempts yet, any operator
+            # context counts as "fresh". Otherwise it must be newer
+            # than the last failed patch.
+            if user_context_at:
+                if not last_failed_patch_at:
+                    has_fresh_user_context = True
+                else:
+                    has_fresh_user_context = (
+                        user_context_at > last_failed_patch_at
+                    )
+        except sqlite3.Error:
+            pass
+
+        last_failure_signature = None
+        signature_repeat_count = 0
+        try:
+            row = conn.execute(
+                """SELECT error_signature FROM bundles
+                   WHERE origin = ? AND result IN ('failure', 'fail')
+                     AND error_signature IS NOT NULL
+                     AND (target = ?
+                          OR (? = '' AND (target IS NULL OR target = '')))
+                   ORDER BY last_seen_at DESC LIMIT 1""",
+                (origin, target, target),
+            ).fetchone()
+            last_failure_signature = (row[0] if row else None) or None
+            if last_failure_signature:
+                row = conn.execute(
+                    """SELECT COUNT(*) FROM bundles
+                       WHERE origin = ? AND result IN ('failure', 'fail')
+                         AND error_signature = ?
+                         AND last_seen_at >= ?
+                         AND (target = ?
+                              OR (? = '' AND (target IS NULL OR target = '')))""",
+                    (origin, last_failure_signature, cutoff, target, target),
+                ).fetchone()
+                signature_repeat_count = int(row[0] or 0) if row else 0
+        except sqlite3.Error:
+            pass
+
         return cls(
             target=target,
             origin=origin,
-            recent_failures=int(row[0] or 0),
-            last_success_at=row[1],
-            last_attempt_at=row[2],
+            recent_failures=recent_failures,
+            last_success_at=last_success_at,
+            last_attempt_at=last_attempt_at,
+            failed_patch_attempts=failed_patch_attempts,
+            has_fresh_user_context=has_fresh_user_context,
+            last_failure_signature=last_failure_signature,
+            signature_repeat_count=signature_repeat_count,
         )
 
 
@@ -117,8 +212,21 @@ class Decision:
 
 # Default thresholds. Operator overrides via env vars consumed at the
 # runner-side call site (kept out of decide() so the function is pure).
-DEFAULT_MAX_ATTEMPTS = 3
+#
+# Step 6 renames the old single ``max_attempts`` knob into two:
+# - ``patch_cap``         : the primary signal. Number of failed
+#   agent patch attempts (patch_gave_up / patch_budget_exhausted)
+#   that triggers escalation. Was ``max_attempts``.
+# - ``bundle_backstop``   : absolute safety. If failure bundles for
+#   this origin go *way* past the patch cap (even without any
+#   patch attempts), escalate anyway. Catches the "agent never
+#   engaged but something is clearly very wrong" case.
+# - ``signature_stickiness``: how many consecutive same-signature
+#   failure bundles count as "stuck on the same wall".
+DEFAULT_MAX_ATTEMPTS = 3      # patch_cap (kept name for callers)
 DEFAULT_WINDOW_HOURS = 2
+DEFAULT_BUNDLE_BACKSTOP = 10
+DEFAULT_SIGNATURE_STICKINESS = 3
 
 
 def _manual_tier(policy: Policy) -> Tier:
@@ -136,20 +244,34 @@ def decide(
     *,
     max_attempts: int = DEFAULT_MAX_ATTEMPTS,
     window_hours: int = DEFAULT_WINDOW_HOURS,
+    bundle_backstop: int = DEFAULT_BUNDLE_BACKSTOP,
+    signature_stickiness: int = DEFAULT_SIGNATURE_STICKINESS,
 ) -> Decision:
     """Resolve the right action for one triage outcome.
 
-    Priority order (first matching rule wins):
+    Step 6 priority order (first matching rule wins):
 
-    1. ``env_health.status == "broken"`` → ``skip``. The runner gate
-       will pause the loop; no point flagging the port as MANUAL for
-       a chroot-level fault.
+    1. ``env_health.status == "broken"`` → ``skip``.
     2. ``tier_for(...).name == "MANUAL"`` → ``escalate_manual``.
-       Triage's own classification says manual.
-    3. ``history.recent_failures >= max_attempts`` → ``escalate_manual``
-       with tier forced to MANUAL. The retry cap: the agent keeps
-       failing on this port; stop burning tokens.
-    4. Otherwise → ``auto_patch`` with the resolved tier.
+    3. ``failed_patch_attempts >= patch_cap`` AND fresh user context
+       → ``auto_patch``. Operator just intervened; give it one more
+       shot. (Cap is allowed to climb past patch_cap by one — if the
+       fresh-context attempt also fails, the next decision lands on
+       rule 4 instead.)
+    4. ``failed_patch_attempts >= patch_cap`` AND sticky signature
+       (``signature_repeat_count >= signature_stickiness``)
+       → ``escalate_manual``. Agent has hit the same wall repeatedly.
+    5. ``failed_patch_attempts >= patch_cap`` AND no fresh context
+       → ``escalate_manual``. Agent flailed.
+    6. ``recent_failures >= bundle_backstop`` → ``escalate_manual``.
+       Absolute safety net even if the agent never engaged.
+    7. Otherwise → ``auto_patch``.
+
+    Key inversion vs. the legacy single-cap: ``recent_failures``
+    (bundle ingest count) is no longer the primary signal. A port can
+    fail N times due to upstream churn without escalating, as long as
+    the agent gets its turns. Only N failed agent attempts (or the
+    absolute backstop) triggers MANUAL.
     """
     # (1) Env-broken short-circuit.
     if env_health is not None and getattr(env_health, "status", None) == "broken":
@@ -178,26 +300,80 @@ def decide(
             extra={"classification": classification, "confidence": confidence},
         )
 
-    # (3) Retry cap.
-    if history.recent_failures >= max_attempts:
+    # Common extra dict for the patch-cap branches.
+    cap_extra = {
+        "classification": classification,
+        "confidence": confidence,
+        "failed_patch_attempts": history.failed_patch_attempts,
+        "patch_cap": max_attempts,
+        "recent_failures": history.recent_failures,
+        "bundle_backstop": bundle_backstop,
+        "window_hours": window_hours,
+        "has_fresh_user_context": history.has_fresh_user_context,
+        "signature_repeat_count": history.signature_repeat_count,
+        "signature_stickiness": signature_stickiness,
+    }
+
+    patch_cap_hit = history.failed_patch_attempts >= max_attempts
+
+    # (3) Patch cap hit but operator provided fresh context — one
+    # more shot. Allows up to ``patch_cap`` agent retries per
+    # operator-context revision.
+    if patch_cap_hit and history.has_fresh_user_context:
+        return Decision(
+            action="auto_patch",
+            tier=resolved,
+            reason=(
+                f"patch cap reached ({history.failed_patch_attempts} failures) "
+                f"but fresh operator context lands — retrying"
+            ),
+            extra={**cap_extra, "original_tier": resolved.name,
+                   "cap_reset_via": "user_context"},
+        )
+
+    # (4) Patch cap hit + same failure signature seen N times → stuck.
+    if patch_cap_hit and history.signature_repeat_count >= signature_stickiness:
         return Decision(
             action="escalate_manual",
             tier=_manual_tier(policy),
             reason=(
-                f"retry cap: {history.recent_failures} failures "
-                f">= {max_attempts} in last {window_hours}h"
+                f"patch cap reached and same failure signature recurred "
+                f"{history.signature_repeat_count}× "
+                f"(sig={history.last_failure_signature}) — automation stuck"
             ),
-            extra={
-                "original_tier": resolved.name,
-                "classification": classification,
-                "confidence": confidence,
-                "recent_failures": history.recent_failures,
-                "max_attempts": max_attempts,
-                "window_hours": window_hours,
-            },
+            extra={**cap_extra, "original_tier": resolved.name,
+                   "escalation_cause": "sticky_signature"},
         )
 
-    # (4) Default — auto-patch.
+    # (5) Patch cap hit, no fresh context, signatures vary or absent.
+    if patch_cap_hit:
+        return Decision(
+            action="escalate_manual",
+            tier=_manual_tier(policy),
+            reason=(
+                f"patch cap reached: {history.failed_patch_attempts} failed "
+                f"agent attempts >= {max_attempts} in last {window_hours}h"
+            ),
+            extra={**cap_extra, "original_tier": resolved.name,
+                   "escalation_cause": "patch_cap"},
+        )
+
+    # (6) Absolute backstop. Should rarely fire — it means the
+    # bundles are piling up without the agent producing any patch
+    # attempts (e.g. all the patch jobs are failing on env_broken).
+    if history.recent_failures >= bundle_backstop:
+        return Decision(
+            action="escalate_manual",
+            tier=_manual_tier(policy),
+            reason=(
+                f"absolute backstop: {history.recent_failures} failure bundles "
+                f">= {bundle_backstop} in last {window_hours}h"
+            ),
+            extra={**cap_extra, "original_tier": resolved.name,
+                   "escalation_cause": "bundle_backstop"},
+        )
+
+    # (7) Default — auto-patch.
     return Decision(
         action="auto_patch",
         tier=resolved,
@@ -205,5 +381,7 @@ def decide(
             f"tier={resolved.name} for classification={classification}, "
             f"confidence={confidence}"
         ),
-        extra={"classification": classification, "confidence": confidence},
+        extra={"classification": classification, "confidence": confidence,
+               "failed_patch_attempts": history.failed_patch_attempts,
+               "recent_failures": history.recent_failures},
     )

@@ -40,7 +40,8 @@ CREATE TABLE IF NOT EXISTS bundles (
     result TEXT,
     path TEXT,
     last_seen_at TEXT,
-    resolution TEXT
+    resolution TEXT,
+    error_signature TEXT
 );
 
 CREATE TABLE IF NOT EXISTS jobs (
@@ -246,6 +247,14 @@ MIGRATIONS: tuple[str, ...] = (
     # NULL = no agent disposition yet (typical for fresh bundles).
     "ALTER TABLE bundles ADD COLUMN resolution TEXT",
     "CREATE INDEX IF NOT EXISTS idx_bundles_resolution ON bundles(resolution)",
+    # Step 6: cached hash of the bundle's first error-line. Lazy-
+    # computed by the runner the first time the retry-cap query needs
+    # it; the hook itself doesn't write this so old bundles can still
+    # contribute. Stored as a short hex digest. NULL = not computed
+    # yet OR no errors.txt artifact available.
+    "ALTER TABLE bundles ADD COLUMN error_signature TEXT",
+    "CREATE INDEX IF NOT EXISTS idx_bundles_signature_origin "
+    "ON bundles(origin, target, error_signature)",
 )
 
 

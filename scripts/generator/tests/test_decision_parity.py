@@ -136,14 +136,14 @@ def test_auto_clean_history_is_auto_patch(policy):
     assert dec.tier.name == "AUTO"
 
 
-def test_three_recent_failures_caps_to_manual(policy):
-    """The retry cap: AUTO classification but 3+ recent failures
-    forces MANUAL regardless of what tier_for says."""
+def test_three_failed_patch_attempts_caps_to_manual(policy):
+    """Step 6: the retry cap is now driven by ``failed_patch_attempts``,
+    not raw ``recent_failures``. Three failed agent patches → MANUAL."""
     dec = decide(
         classification="plist-error",
         confidence="high",
         history=PortHistory(
-            target="@x", origin="cat/port", recent_failures=3,
+            target="@x", origin="cat/port", failed_patch_attempts=3,
         ),
         env_health=_FakeHealth(status="ready"),
         policy=policy,
@@ -152,7 +152,7 @@ def test_three_recent_failures_caps_to_manual(policy):
     assert dec.action == "escalate_manual"
     assert dec.tier.name == "MANUAL"
     assert dec.extra.get("original_tier") == "AUTO"
-    assert dec.extra.get("recent_failures") == 3
+    assert dec.extra.get("failed_patch_attempts") == 3
 
 
 def test_env_broken_short_circuits_to_skip(policy):
