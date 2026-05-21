@@ -13,7 +13,7 @@ from .dsynth import write_dsynth_config
 from .errors import CommandError, DevEnvError, UsageError
 from .helpers import write_shell_rc
 from .locks import CacheLock
-from .log import info, step_timer, warn
+from .log import info, phase, step_timer, warn
 from .names import default_env_name, target_to_branch
 from .provision import BaseProvisioner
 from .repos import RepoCache
@@ -84,27 +84,27 @@ class EnvironmentBuilder:
                 raise
 
     def build(self, state: EnvironmentState) -> EnvironmentState:
-        info("[1/7] Resolving latest DragonFly world asset")
+        phase("[1/7] Resolving latest DragonFly world asset")
         with step_timer("resolve latest DragonFly world asset"):
             asset = fetch_latest_world_asset(self.config)
 
-        info("[2/7] Preparing provisioned DragonFly base")
+        phase("[2/7] Preparing provisioned DragonFly base")
         with step_timer("prepare provisioned DragonFly base"):
             archive = ensure_base_archive(self.config, asset)
             provisioned_base = BaseProvisioner(self.config).prepare(archive)
             state = replace(state, provisioned_base_id=provisioned_base.id, updated_at=now_utc())
             self.store.save(state)
 
-        info("[3/7] Refreshing cached repo mirrors")
+        phase("[3/7] Refreshing cached repo mirrors")
         with step_timer("refresh cached repo mirrors"):
             mirrors = RepoCache(self.config).refresh_all(self.options.delta_root)
 
-        info("[4/7] Mounting throwaway chroot root from provisioned base")
+        phase("[4/7] Mounting throwaway chroot root from provisioned base")
         with step_timer("create throwaway chroot root"):
             mount_env_root(provisioned_base.root, self.env_dir, self.root_dir)
             prepare_root_runtime(self.config, self.root_dir)
 
-        info("[5/7] Seeding env-local source trees and writing runtime config")
+        phase("[5/7] Seeding env-local source trees and writing runtime config")
         with step_timer("seed env-local source trees and runtime config"):
             repos = RepoCache(self.config)
             repos.clone_branch("DeltaPorts", mirrors.deltaports, state.repos.deltaports_branch, self.root_dir / "work/DeltaPorts")
@@ -117,7 +117,7 @@ class EnvironmentBuilder:
             write_dsynth_config(self.config, state)
             write_shell_rc(state)
 
-        info("[6/7] Preparing generator venv")
+        phase("[6/7] Preparing generator venv")
         with step_timer("prepare generator venv"):
             GeneratorVenvCache(self.config).prepare(self.root_dir, provisioned_base.id)
 
@@ -125,12 +125,12 @@ class EnvironmentBuilder:
         self.store.save(state)
 
         if self.options.no_initial_compose:
-            info("[7/7] Skipping initial compose (--no-initial-compose); run 'regen' inside the shell when ready")
+            phase("[7/7] Skipping initial compose (--no-initial-compose); run 'regen' inside the shell when ready")
             state = replace(state, initial_compose=InitialComposeState("skipped", now_utc(), "--no-initial-compose"), updated_at=now_utc())
             self.store.save(state)
             return state
 
-        info("[7/7] Running initial compose")
+        phase("[7/7] Running initial compose")
         state = replace(state, initial_compose=InitialComposeState("running", now_utc()), updated_at=now_utc())
         self.store.save(state)
         with step_timer("initial compose"):

@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import argparse
 import sys
+import time
 from pathlib import Path
 
 from .builder import CreateOptions, EnvironmentBuilder, default_delta_root
 from .config import load_config, require_root, validate_cache_root
 from .errors import DevEnvError, UsageError
 from .fs import safe_remove_tree
-from .log import error, info, warn
+from .log import error, info, run_log_context, to_user, warn
 from .mounts import mounts_under, ordered_mounts_under, unmount_under
 from .session import EnvironmentSession
 from .store import EnvironmentStore
@@ -360,7 +361,28 @@ def cmd_create(args: argparse.Namespace) -> int:
         no_initial_compose=args.no_initial_compose,
         oracle_profile=args.oracle_profile,
     )
-    result = EnvironmentBuilder(config, store, options).create()
+    builder = EnvironmentBuilder(config, store, options)
+
+    # Per-invocation log file. Lives outside env_dir so it survives env
+    # destruction; one file per attempt so retries don't clobber.
+    ts = time.strftime("%Y%m%d-%H%M%SZ", time.gmtime())
+    log_path = config.cache_root / ".logs" / "dev-env" / f"create-{builder.env_name}-{ts}.log"
+    to_user(f"==> creating dev-env {builder.env_name} (log: {log_path})")
+    started = time.monotonic()
+
+    with run_log_context(log_path):
+        result = builder.create()
+
+    elapsed = int(time.monotonic() - started)
+    if result.exit_code == 0:
+        to_user(f"==> created {result.env_name} in {elapsed}s")
+        to_user(f"    log: {log_path}")
+    else:
+        to_user(f"==> create FAILED for {result.env_name} after {elapsed}s "
+                f"(exit {result.exit_code})")
+        to_user(f"    log: {log_path}")
+        to_user(f"    tail it: tail -n 80 {log_path}")
+
     if args.shell:
         try:
             state = store.load(result.env_name)
