@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib
+import html
 import json
 import os
 from contextlib import contextmanager
@@ -154,6 +155,82 @@ _INLINE_TEXT_MEDIA: dict[str, str] = {
 _INLINE_TEXT_NAMES = {"Makefile", "distinfo", "pkg-plist", "pkg-descr"}
 
 
+def _render_markdown(text: str) -> str:
+    """Render the small Markdown subset used by agent artifacts.
+
+    Keep this stdlib-only and escape all content before wrapping it in
+    HTML. It is intentionally conservative: headings, paragraphs,
+    bullet lists, and fenced code blocks cover triage/patch reports.
+    """
+    out: list[str] = []
+    paragraph: list[str] = []
+    bullets_open = False
+    code_open = False
+    code_lines: list[str] = []
+
+    def flush_paragraph() -> None:
+        nonlocal paragraph
+        if paragraph:
+            out.append("<p>" + "<br>".join(paragraph) + "</p>")
+            paragraph = []
+
+    def close_bullets() -> None:
+        nonlocal bullets_open
+        if bullets_open:
+            out.append("</ul>")
+            bullets_open = False
+
+    for raw_line in text.splitlines():
+        line = raw_line.rstrip()
+        stripped = line.strip()
+        if stripped.startswith("```"):
+            flush_paragraph()
+            close_bullets()
+            if code_open:
+                out.append(
+                    "<pre class=\"artifact-content\"><code>"
+                    + html.escape("\n".join(code_lines))
+                    + "</code></pre>"
+                )
+                code_lines = []
+                code_open = False
+            else:
+                code_open = True
+            continue
+        if code_open:
+            code_lines.append(line)
+            continue
+        if not stripped:
+            flush_paragraph()
+            close_bullets()
+            continue
+        if stripped.startswith("#"):
+            flush_paragraph()
+            close_bullets()
+            marker, _, title = stripped.partition(" ")
+            if title and 1 <= len(marker) <= 6 and set(marker) == {"#"}:
+                level = min(len(marker) + 1, 6)
+                out.append(f"<h{level}>" + html.escape(title) + f"</h{level}>")
+                continue
+        if stripped.startswith("- "):
+            flush_paragraph()
+            if not bullets_open:
+                out.append("<ul>")
+                bullets_open = True
+            out.append("<li>" + html.escape(stripped[2:].strip()) + "</li>")
+            continue
+        paragraph.append(html.escape(stripped))
+    if code_open:
+        out.append(
+            "<pre class=\"artifact-content\"><code>"
+            + html.escape("\n".join(code_lines))
+            + "</code></pre>"
+        )
+    flush_paragraph()
+    close_bullets()
+    return "\n".join(out)
+
+
 def _artifact_media_type(relpath: str, kind: str | None) -> tuple[str, bool]:
     """Pick a Content-Type and an inline-vs-attachment flag for an artifact.
 
@@ -183,15 +260,19 @@ def _artifact_view_data(
     if path is None or not path.exists():
         return None
     media_type, inline = _artifact_media_type(relpath, ref.get("kind"))
-    is_json = Path(relpath).suffix.lower() == ".json"
+    suffix = Path(relpath).suffix.lower()
+    is_json = suffix == ".json"
+    is_markdown = suffix == ".md"
     content: str | None = None
     render_kind = "download"
     error: str | None = None
     if inline:
-        render_kind = "json" if is_json else "text"
+        render_kind = "markdown" if is_markdown else ("json" if is_json else "text")
         try:
             raw = path.read_text(errors="replace")
-            if is_json:
+            if is_markdown:
+                content = _render_markdown(raw)
+            elif is_json:
                 try:
                     content = json.dumps(json.loads(raw), indent=2, sort_keys=True)
                 except ValueError as exc:

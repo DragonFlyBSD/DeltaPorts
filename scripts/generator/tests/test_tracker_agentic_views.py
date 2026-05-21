@@ -43,6 +43,11 @@ def seeded_state_db(tmp_path: Path) -> Path:
     meta_path.write_text("origin=devel/foo\n", encoding="utf-8")
     errors_path = tmp_path / "errors.txt"
     errors_path.write_text("build failed\n", encoding="utf-8")
+    triage_path = tmp_path / "triage.md"
+    triage_path.write_text(
+        "## Classification\npatch-error\n\n- one\n\n```\n<unsafe>\n```\n",
+        encoding="utf-8",
+    )
     json_path = tmp_path / "patch_audit.json"
     json_path.write_text('{"status":"budget-exhausted","attempts":[1]}', encoding="utf-8")
     gzip_path = tmp_path / "full.log.gz"
@@ -73,6 +78,7 @@ def seeded_state_db(tmp_path: Path) -> Path:
         [
             ("b-q2-foo", "meta.txt", str(meta_path), "text", meta_path.stat().st_size, now),
             ("b-q2-foo", "logs/errors.txt", str(errors_path), "text", errors_path.stat().st_size, now),
+            ("b-q2-foo", "analysis/triage.md", str(triage_path), "text", triage_path.stat().st_size, now),
             ("b-q2-foo", "analysis/patch_audit.json", str(json_path), "json", json_path.stat().st_size, now),
             ("b-q2-foo", "logs/full.log.gz", str(gzip_path), "gzip", gzip_path.stat().st_size, now),
             ("b-q2-foo", "analysis/tool_trace.jsonl", str(trace_path), "text", trace_path.stat().st_size, now),
@@ -205,10 +211,11 @@ def test_view_agentic_bundle_detail_lists_artifacts(client: TestClient) -> None:
     # Link to artifact stream endpoint
     assert "/api/bundles/b-q2-foo/artifacts/meta.txt" in body
     assert "/agentic/bundles/b-q2-foo?artifact=meta.txt" in body
-    assert "/agentic/bundles/b-q2-foo/artifacts/logs/errors.txt" in body
+    assert "/agentic/bundles/b-q2-foo/artifacts/analysis/triage.md" in body
     assert "raw" in body
-    # Default preview prefers logs/errors.txt over meta.txt.
-    assert "build failed" in body
+    # Default preview prefers analysis/triage.md over logs/errors.txt.
+    assert "patch-error" in body
+    assert "<h3>Classification</h3>" in body
 
 
 def test_view_agentic_bundle_detail_selects_artifact_inline(client: TestClient) -> None:
@@ -227,6 +234,16 @@ def test_view_agentic_artifact_text_inline(client: TestClient) -> None:
     assert resp.status_code == 200
     assert "origin=devel/foo" in resp.text
     assert "Open raw artifact" in resp.text
+
+
+def test_view_agentic_artifact_markdown_rendered(client: TestClient) -> None:
+    resp = client.get("/agentic/bundles/b-q2-foo/artifacts/analysis/triage.md")
+    assert resp.status_code == 200
+    assert "Markdown" in resp.text
+    assert "<h3>Classification</h3>" in resp.text
+    assert "<li>one</li>" in resp.text
+    assert "&lt;unsafe&gt;" in resp.text
+    assert "<unsafe>" not in resp.text
 
 
 def test_view_agentic_artifact_json_pretty_printed(client: TestClient) -> None:
