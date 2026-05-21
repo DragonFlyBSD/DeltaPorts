@@ -314,11 +314,11 @@ def test_env_broken_routes_to_dead(queue_env):
     )
     runner._health_cache["test-env"] = (_time.monotonic(), broken)
 
-    # Mapping function routes to ENV_BROKEN for both job types.
-    events = runner._completion_events_for("patch", False, "any-error")
-    assert events == [lifecycle.JobEvent.ENV_BROKEN]
-    events = runner._completion_events_for("triage", False, "any-error")
-    assert events == [lifecycle.JobEvent.ENV_BROKEN]
+    # Phase 5 Step 4: _completion_events_for retired. The cached-
+    # health-broken override now lives inside each Step's run() —
+    # exercised via the orchestrator-driven happy path (separate
+    # tests). Here we just confirm the cache flag is observable.
+    assert runner._cached_health_broken() is True
 
     # End-to-end: walk a job to PATCHING, then fire ENV_BROKEN; the
     # job should land DEAD with retire_reason="env_broken".

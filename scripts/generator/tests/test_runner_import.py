@@ -21,44 +21,36 @@ def test_runner_main_is_callable():
 
 
 def test_runner_orchestration_helpers_importable():
-    """Helpers used by the lifecycle integration test in Step 4 must be
-    importable without firing up the LLM, the DB, or the queue."""
+    """Helpers used by the lifecycle integration tests must be
+    importable without firing up the LLM, the DB, or the queue.
+
+    Phase 5 Step 4: _completion_events_for retired — event firing
+    moved into each Step's StepOutcome. The wrapper helpers
+    process_*_job + _finish_orchestrator_run live in their place.
+    """
     from dportsv3.agent.runner import (
         _apply_transition,           # lifecycle.apply wrapper
-        _completion_events_for,      # outcome → events mapping
+        _finish_orchestrator_run,    # extract events + sibling fan-out
         _register_new_job,           # initial HOOK_ENQUEUED + jobs metadata
         claim_next_job_batch,        # filesystem queue claim
         parse_job_file,              # .job file → dict
         process_job,                 # the orchestration entrypoint
+        process_triage_job,          # orchestrator wrapper for TriageStep
+        process_patch_job,           # orchestrator wrapper for PatchAttemptStep
     )
 
-    # Sanity: the symbols are actually callable.
-    for fn in (_apply_transition, _completion_events_for, _register_new_job,
-               claim_next_job_batch, parse_job_file, process_job):
+    for fn in (_apply_transition, _finish_orchestrator_run,
+               _register_new_job, claim_next_job_batch, parse_job_file,
+               process_job, process_triage_job, process_patch_job):
         assert callable(fn)
 
 
-def test_completion_events_mapping_basic():
-    """Quick sanity on the (job_type, success, status) → events mapping
-    so a refactor doesn't silently break it. Full coverage lives in
-    the Step 4 integration test."""
-    from dportsv3.agent.lifecycle import JobEvent
-    from dportsv3.agent.runner import _completion_events_for
-
-    assert _completion_events_for("triage", True, "done") == [JobEvent.TRIAGE_OK]
-    assert _completion_events_for("triage", True, "manual_tier") == [
-        JobEvent.TRIAGE_OK, JobEvent.ESCALATE_MANUAL,
-    ]
-    assert _completion_events_for("triage", False, "boom") == [JobEvent.TRIAGE_FAIL]
-    assert _completion_events_for("patch", True, "done") == [
-        JobEvent.PATCH_OK, JobEvent.VERIFY_OK,
-    ]
-    assert _completion_events_for("patch", True, "budget-exhausted") == [
-        JobEvent.PATCH_BUDGET_OUT,
-    ]
-    assert _completion_events_for("patch", True, "gave-up") == [
-        JobEvent.PATCH_GAVE_UP,
-    ]
-    assert _completion_events_for("patch", False, "anything") == [
-        JobEvent.PATCH_GAVE_UP,
-    ]
+def test_step_outcome_events_populated_by_steps():
+    """The Phase 5 cutover moved event mapping inside the Step
+    classes. Smoke-check that TriageStep + PatchAttemptStep import
+    cleanly — Step-class-specific behavior is covered by
+    test_patch_step.py and the e2e suite.
+    """
+    from dportsv3.agent.steps import TriageStep, PatchAttemptStep
+    assert TriageStep().name == "triage"
+    assert PatchAttemptStep().name == "patch"

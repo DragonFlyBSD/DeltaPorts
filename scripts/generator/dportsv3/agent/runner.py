@@ -1374,24 +1374,76 @@ def _write_triage_audit_harness(
     out.write_bytes(data)
 
 
+def _finish_orchestrator_run(
+    result,                         # OrchestratorResult
+    *,
+    step_name: str,
+    sibling_paths: list[Path],
+    failure_event: str,             # JobEvent value to fire on halt
+) -> tuple[bool, str]:
+    """Extract (success, status_str) from an OrchestratorResult and
+    fan the step's lifecycle events out to sibling jobs.
+
+    The orchestrator already fired the step's outcome events for the
+    lead job_id. For siblings, we replay the same events here. When
+    the orchestrator halted (precheck-fail, run-exception), no events
+    fired for the lead either — synthesize ``failure_event`` and fire
+    it for lead + siblings.
+    """
+    from dportsv3.agent.lifecycle import JobEvent
+
+    if result.halted:
+        # Lead got no events from the orchestrator; synthesize the
+        # catchall failure event.
+        evt = JobEvent(failure_event)
+        _apply_transition(result.job_id, evt,
+                          detail={"reason": result.halt_reason})
+        for s in sibling_paths:
+            _apply_transition(s.name, evt,
+                              detail={"reason": result.halt_reason})
+        return False, result.halt_reason or f"{step_name} halted"
+
+    step_result = result.step_by_name(step_name)
+    if step_result is None or step_result.outcome is None:
+        reason = (step_result.readiness.reason
+                  if step_result else f"{step_name} skipped")
+        evt = JobEvent(failure_event)
+        _apply_transition(result.job_id, evt, detail={"reason": reason})
+        for s in sibling_paths:
+            _apply_transition(s.name, evt, detail={"reason": reason})
+        return False, reason
+
+    outcome = step_result.outcome
+    # Sibling fan-out: same events the orchestrator fired for the lead.
+    sibling_events: list[JobEvent] = []
+    if outcome.next_event is not None:
+        sibling_events.append(outcome.next_event)
+    sibling_events.extend(outcome.extra_events)
+    detail = outcome.detail or {}
+    for s in sibling_paths:
+        for evt in sibling_events:
+            _apply_transition(s.name, evt, detail=detail)
+
+    status_str = outcome.detail.get("status_str", "unknown")
+    if outcome.status == "failed":
+        return False, status_str
+    return True, status_str
+
+
 def process_triage_job(
     queue_root: Path,
     job_path: Path,
+    sibling_paths: list[Path],
     job: dict,
     bundle_dir: Path | None,
     kedb_dir: Path | None,
 ) -> tuple[bool, str]:
     """Process a triage job by driving TriageStep through the orchestrator.
 
-    Phase 5 Step 2: lifted the legacy ``_process_triage_job_harness``
-    + ``_run_harness_triage_inner`` bodies into ``TriageStep`` in
-    ``dportsv3.agent.steps``. This wrapper builds the StepCtx + helper
-    bindings and surfaces the step outcome as the
-    ``(success, status_str)`` tuple ``process_job`` expects.
-
-    Lifecycle event firing (TRIAGE_OK, ESCALATE_MANUAL, ENV_BROKEN)
-    still happens in ``process_job`` via ``_completion_events_for``;
-    Step 4 of the phase moves that into ``StepOutcome.next_event``.
+    Phase 5: TriageStep's ``StepOutcome.next_event`` + ``extra_events``
+    encode the lifecycle events to fire on completion. The
+    orchestrator fires them for the lead; this wrapper fans the
+    same events out to siblings. ``_completion_events_for`` retires.
     """
     from dportsv3.agent.step import Orchestrator, StepCtx
     from dportsv3.agent.steps import TriageStep
@@ -1427,30 +1479,18 @@ def process_triage_job(
         "upsert_user_context_request": upsert_user_context_request,
         "update_runner_status": update_runner_status,
         "probe_health_cached": probe_health_cached,
+        "cached_health_broken": _cached_health_broken,
         "load_port_history": _load_port_history,
         "log": log,
         "activity_log": activity_log,
     }
 
     result = Orchestrator().run(ctx, [TriageStep()])
-
-    # The orchestrator halts on precheck/run exceptions; surface that
-    # as (False, halt_reason) to preserve the legacy contract.
-    if result.halted:
-        return False, result.halt_reason or "triage halted"
-
-    step_result = result.step_by_name("triage")
-    if step_result is None or step_result.outcome is None:
-        # Precheck said skip/fail and the orchestrator didn't get to
-        # run. Surface a non-success outcome.
-        reason = step_result.readiness.reason if step_result else "triage skipped"
-        return False, reason
-
-    outcome = step_result.outcome
-    status_str = outcome.detail.get("status_str", "unknown")
-    if outcome.status == "failed":
-        return False, status_str
-    return True, status_str
+    return _finish_orchestrator_run(
+        result, step_name="triage",
+        sibling_paths=sibling_paths,
+        failure_event="triage_fail",
+    )
 def _summarize_tool_call(tool: str, args: dict, result: dict) -> str:
     """One-line summary of a tool invocation for the activity log.
 
@@ -1596,23 +1636,17 @@ def _write_changes_diff(bundle_dir: Path | None, bundle_id: str | None, env: str
 def process_patch_job(
     queue_root: Path,
     job_path: Path,
+    sibling_paths: list[Path],
     job: dict,
     bundle_dir: Path | None,
     kedb_dir: Path | None,
 ) -> tuple[bool, str]:
     """Process a patch job by driving PatchAttemptStep through the orchestrator.
 
-    Phase 5 Step 3: lifted the legacy ``_process_patch_job_harness`` body
-    (LLM call + on_event closure + output persistence + tier fallback)
-    into ``PatchAttemptStep`` in ``dportsv3.agent.steps``. This wrapper
-    builds the StepCtx + helper bindings and surfaces the step outcome
-    as the ``(success, status_str)`` tuple ``process_job`` expects.
-
-    The Phase-3 leftover ``tier_for`` fallback for hand-fired patches
-    (no ``tier`` field) was absorbed into ``PatchAttemptStep.precheck``
-    via ``decide(empty_history, env_health=None)`` — preserves legacy
-    behavior (no cap, no env short-circuit) for operator-triggered
-    patches.
+    Phase 5: PatchAttemptStep's ``StepOutcome.next_event`` +
+    ``extra_events`` encode the lifecycle events to fire on
+    completion. The orchestrator fires them for the lead; this
+    wrapper fans the same events out to siblings.
     """
     from dportsv3.agent.step import Orchestrator, StepCtx
     from dportsv3.agent.steps import PatchAttemptStep
@@ -1647,6 +1681,7 @@ def process_patch_job(
         "write_changes_diff": _write_changes_diff,
         "looks_env_suspicious": _looks_env_suspicious,
         "invalidate_health_cache": invalidate_health_cache,
+        "cached_health_broken": _cached_health_broken,
         "summarize_tool_call": _summarize_tool_call,
         "activity_log": activity_log,
         "log": log,
@@ -1654,75 +1689,11 @@ def process_patch_job(
     }
 
     result = Orchestrator().run(ctx, [PatchAttemptStep()])
-
-    if result.halted:
-        return False, result.halt_reason or "patch halted"
-
-    step_result = result.step_by_name("patch")
-    if step_result is None or step_result.outcome is None:
-        reason = step_result.readiness.reason if step_result else "patch skipped"
-        return False, reason
-
-    outcome = step_result.outcome
-    status_str = outcome.detail.get("status_str", "unknown")
-    if outcome.status == "failed":
-        return False, status_str
-    return True, status_str
-def _completion_events_for(job_type: str, success: bool, status: str) -> list:
-    """Map a handler's (job_type, success, status) outcome to one or
-    more lifecycle events.
-
-    Triage:
-      success + "done"                -> TRIAGE_OK (-> TRIAGED)
-      success + "manual_tier"         -> TRIAGE_OK, ESCALATE_MANUAL
-                                         (-> ESCALATED)
-      success + "skipped_env_broken"  -> handled by the cache check
-                                         above: returns [ENV_BROKEN]
-                                         which lands DEAD with
-                                         retire_reason=env_broken.
-      failure                         -> TRIAGE_FAIL
-
-    Patch (single attempt today; verifying step is fused into the
-    LLM-driven dsynth_build call, so we fire PATCH_OK + VERIFY_OK as
-    a pair on success):
-      success + "done"        -> PATCH_OK, VERIFY_OK (-> DONE)
-      success + "needs-help"  -> PATCH_GAVE_UP (-> DEAD)
-      success + "gave-up"     -> PATCH_GAVE_UP
-      success + "budget-..."  -> PATCH_BUDGET_OUT (-> DEAD)
-      success + "env_broken"  -> ENV_BROKEN (-> DEAD)
-      failure                 -> ENV_BROKEN if flag set, else PATCH_GAVE_UP
-
-    Unknown / dispatch error: PATCH_GAVE_UP (catchall DEAD).
-    """
-    from dportsv3.agent.lifecycle import JobEvent
-
-    status_l = (status or "").lower()
-    if _cached_health_broken():
-        return [JobEvent.ENV_BROKEN]
-
-    if job_type == "triage":
-        if not success:
-            return [JobEvent.TRIAGE_FAIL]
-        if status_l == "manual_tier":
-            return [JobEvent.TRIAGE_OK, JobEvent.ESCALATE_MANUAL]
-        return [JobEvent.TRIAGE_OK]
-
-    if job_type == "patch":
-        if not success:
-            return [JobEvent.PATCH_GAVE_UP]
-        if "budget" in status_l:
-            return [JobEvent.PATCH_BUDGET_OUT]
-        if "gave-up" in status_l or "needs-help" in status_l:
-            return [JobEvent.PATCH_GAVE_UP]
-        if "env_broken" in status_l:
-            return [JobEvent.ENV_BROKEN]
-        # success path: success → "done" or any non-failure string.
-        return [JobEvent.PATCH_OK, JobEvent.VERIFY_OK]
-
-    # Unknown job type — log it via the catchall failure event.
-    return [JobEvent.PATCH_GAVE_UP]
-
-
+    return _finish_orchestrator_run(
+        result, step_name="patch",
+        sibling_paths=sibling_paths,
+        failure_event="patch_gave_up",
+    )
 def process_job(
     queue_root: Path,
     job_path: Path,
@@ -1732,11 +1703,18 @@ def process_job(
 ):
     """Process a single job (dispatch based on type).
 
+    Phase 5 Step 4: lifecycle event firing moved into the steps
+    themselves (via ``StepOutcome.next_event`` / ``extra_events``).
+    The orchestrator fires those for the lead; the step's wrapper
+    (``process_triage_job`` / ``process_patch_job``) fans them out
+    to siblings. This function is now a pure dispatcher: job-file
+    parsing, dry-run handling, START-event firing, filesystem move.
+
     ``sibling_paths`` are inflight job files claimed alongside the lead
-    by ``claim_next_job_batch``. Their bundles feed into the payload as
-    additional evidence; on completion all members move together to
-    done/failed.
+    by ``claim_next_job_batch``.
     """
+    from dportsv3.agent.lifecycle import JobEvent
+
     job = parse_job_file(job_path)
     # Fold sibling bundles into the payload context.
     sibling_bundles: list[str] = []
@@ -1761,9 +1739,8 @@ def process_job(
     job_id = job_path.name
 
     log(queue_root, "INFO", f"processing job {job_path.name}")
-
     update_runner_status("processing", job_id=job_id, stage=f"{job_type}_start",
-                        extra={"origin": origin, "type": job_type})
+                         extra={"origin": origin, "type": job_type})
 
     if bundle_dir is None and not bundle_id:
         log(queue_root, "ERROR", "missing bundle_id/bundle_dir in job")
@@ -1784,7 +1761,8 @@ def process_job(
         else:
             payload = build_triage_payload(bundle_dir, kedb_dir, job)
 
-        log(queue_root, "INFO", f"[dry-run] type={job_type}, would send payload ({len(payload)} bytes)")
+        log(queue_root, "INFO",
+            f"[dry-run] type={job_type}, would send payload ({len(payload)} bytes)")
         print("=" * 60)
         print(f"JOB TYPE: {job_type}")
         print("=" * 60)
@@ -1794,46 +1772,47 @@ def process_job(
         update_runner_status("idle", job_id=None, stage=None)
         return
 
-    from dportsv3.agent.lifecycle import JobEvent
-
+    # Fire the START lifecycle event for the lead + siblings before
+    # invoking the step (which fires its own completion events).
     if job_type == "patch":
-        _apply_transition(job_path.name, JobEvent.PATCH_START)
+        start_event = JobEvent.PATCH_START
+        _apply_transition(job_path.name, start_event)
         for s in sibling_paths:
-            _apply_transition(s.name, JobEvent.PATCH_START)
+            _apply_transition(s.name, start_event)
         success, status = process_patch_job(
-            queue_root, job_path, job, bundle_dir, kedb_dir,
+            queue_root, job_path, sibling_paths, job, bundle_dir, kedb_dir,
         )
     elif job_type == "triage":
-        _apply_transition(job_path.name, JobEvent.TRIAGE_START)
+        start_event = JobEvent.TRIAGE_START
+        _apply_transition(job_path.name, start_event)
         for s in sibling_paths:
-            _apply_transition(s.name, JobEvent.TRIAGE_START)
+            _apply_transition(s.name, start_event)
         success, status = process_triage_job(
-            queue_root, job_path, job, bundle_dir, kedb_dir,
+            queue_root, job_path, sibling_paths, job, bundle_dir, kedb_dir,
         )
     else:
+        # Unknown job type — fire the catchall failure event for lead +
+        # siblings, write the error note, move everything to failed/.
         success, status = False, f"unknown job type: {job_type}"
+        _apply_transition(job_path.name, JobEvent.PATCH_GAVE_UP,
+                          detail={"reason": status})
+        for s in sibling_paths:
+            _apply_transition(s.name, JobEvent.PATCH_GAVE_UP,
+                              detail={"reason": status})
 
-    # Map (job_type, success, status) to the right completion event(s).
-    completion_events = _completion_events_for(job_type, success, status)
     error_msg = (status or "Unknown error")[:500] if not success else None
 
     if success:
-        new_path = move_job(job_path, "done")
-        for event in completion_events:
-            _apply_transition(job_path.name, event,
-                              detail={"status": status} if status else None)
+        move_job(job_path, "done")
         for s in sibling_paths:
             try:
                 move_job(s, "done")
             except OSError:
                 continue
-            for event in completion_events:
-                _apply_transition(s.name, event,
-                                  detail={"status": status} if status else None)
         log(queue_root, "INFO",
             f"moved job + {len(sibling_paths)} sibling(s) to done/")
     else:
-        # Write error file for visibility in UI
+        # Write error file for visibility in UI.
         error_file = job_path.with_suffix(".job.error")
         try:
             error_file.write_text(error_msg)
@@ -1842,21 +1821,14 @@ def process_job(
             log(queue_root, "WARN", f"failed to write error file: {e}")
 
         move_job(job_path, "failed")
-        for event in completion_events:
-            _apply_transition(job_path.name, event,
-                              detail={"last_error": error_msg})
         for s in sibling_paths:
             try:
                 move_job(s, "failed")
             except OSError:
                 continue
-            for event in completion_events:
-                _apply_transition(s.name, event,
-                                  detail={"last_error": error_msg})
         log(queue_root, "ERROR",
             f"moved job + {len(sibling_paths)} sibling(s) to failed/ ({status})")
-    
-    # Update runner status back to idle
+
     update_runner_status("idle", job_id=None, stage=None)
 
 

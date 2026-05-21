@@ -24,6 +24,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable
 
+from .lifecycle import JobEvent
 from .step import Step, StepCtx, StepOutcome, StepReadiness
 
 
@@ -198,17 +199,17 @@ class TriageStep:
         if bundle_dir is None:
             if not bundle_id:
                 return _err("harness triage requires bundle_dir or bundle_id",
-                            helpers, job_path)
+                            helpers, job_path, JobEvent.TRIAGE_FAIL)
             try:
                 materialized_tmp = Path(tempfile.mkdtemp(prefix=f"bundle-{bundle_id}-"))
                 n = helpers["materialize_bundle"](bundle_id, materialized_tmp)
             except Exception as exc:
                 return _err(f"failed to materialize bundle {bundle_id}: {exc}",
-                            helpers, job_path)
+                            helpers, job_path, JobEvent.TRIAGE_FAIL)
             if n == 0:
                 shutil.rmtree(materialized_tmp, ignore_errors=True)
                 return _err(f"bundle {bundle_id} has no artifacts in the store",
-                            helpers, job_path)
+                            helpers, job_path, JobEvent.TRIAGE_FAIL)
             bundle_dir = materialized_tmp
             helpers["log"](queue_root, "INFO",
                            f"materialized {n} artifact(s) for bundle {bundle_id} "
@@ -241,7 +242,7 @@ class TriageStep:
                 f"Harness triage failed for {origin}: {str(exc)[:200]}",
                 job_id=ctx.job_id,
             )
-            return _err(str(exc), helpers, job_path)
+            return _err(str(exc), helpers, job_path, JobEvent.TRIAGE_FAIL)
         duration_ms = int((time.time() - start) * 1000)
         helpers["activity_log"](
             queue_root, "api_call_complete",
@@ -266,7 +267,8 @@ class TriageStep:
                 f"Failed to load harness policy at {policy_path}: {exc}",
                 job_id=ctx.job_id,
             )
-            return _err(f"policy load failed: {exc}", helpers, job_path)
+            return _err(f"policy load failed: {exc}", helpers, job_path,
+                        JobEvent.TRIAGE_FAIL)
 
         max_attempts = int(os.environ.get("DP_HARNESS_MAX_PATCH_ATTEMPTS", "3"))
         window_hours = int(os.environ.get("DP_HARNESS_ATTEMPT_WINDOW_HOURS", "2"))
@@ -303,9 +305,17 @@ class TriageStep:
         )
 
         # ----- route -----
-        if dec.action == "skip":
+        # The cached_health_broken check overrides any happy outcome:
+        # if the env is known-broken, the job is DEAD-env_broken
+        # regardless of what the LLM said. Mirrors the legacy
+        # _completion_events_for cache check.
+        cached_broken = bool(helpers.get("cached_health_broken")
+                             and helpers["cached_health_broken"]())
+
+        if dec.action == "skip" or cached_broken:
             return StepOutcome(
                 status="success",
+                next_event=JobEvent.ENV_BROKEN,
                 detail={"status_str": "skipped_env_broken", "action": dec.action},
             )
 
@@ -342,6 +352,8 @@ class TriageStep:
             )
             return StepOutcome(
                 status="success",
+                next_event=JobEvent.TRIAGE_OK,
+                extra_events=[JobEvent.ESCALATE_MANUAL],
                 detail={"status_str": "manual_tier", "action": dec.action},
             )
 
@@ -366,6 +378,7 @@ class TriageStep:
         )
         return StepOutcome(
             status="success",
+            next_event=JobEvent.TRIAGE_OK,
             detail={"status_str": "done", "action": dec.action},
         )
 
@@ -392,11 +405,17 @@ class TriageStep:
         shutil.rmtree(materialized_tmp, ignore_errors=True)
 
 
-def _err(msg: str, helpers: dict[str, Any], job_path: Path) -> StepOutcome:
+def _err(
+    msg: str,
+    helpers: dict[str, Any],
+    job_path: Path,
+    failure_event: JobEvent,
+) -> StepOutcome:
     """Build a failure StepOutcome + write the .job.error note.
 
-    Mirrors what _process_triage_job_harness used to do when its
-    inner call returned (False, msg).
+    ``failure_event`` is the lifecycle event the orchestrator will
+    fire on this outcome — TRIAGE_FAIL for the triage step,
+    PATCH_GAVE_UP for the patch step (the catchall DEAD route).
     """
     try:
         helpers["write_error_note"](job_path, msg)
@@ -404,6 +423,7 @@ def _err(msg: str, helpers: dict[str, Any], job_path: Path) -> StepOutcome:
         pass
     return StepOutcome(
         status="failed",
+        next_event=failure_event,
         detail={"status_str": msg, "error": True},
     )
 
@@ -598,7 +618,7 @@ class PatchAttemptStep:
                 f"Harness patch failed for {origin}: {str(exc)[:200]}",
                 job_id=ctx.job_id,
             )
-            return _err(str(exc), helpers, job_path)
+            return _err(str(exc), helpers, job_path, JobEvent.PATCH_GAVE_UP)
         duration_ms = int((time.time() - start) * 1000)
 
         helpers["activity_log"](
@@ -622,14 +642,33 @@ class PatchAttemptStep:
             job_id=ctx.job_id,
         )
 
+        # If the cached health probe shows broken, the env poisoned
+        # the result — ENV_BROKEN overrides whatever the LLM said.
+        if helpers.get("cached_health_broken") and helpers["cached_health_broken"]():
+            return StepOutcome(
+                status="success",
+                next_event=JobEvent.ENV_BROKEN,
+                detail={"status_str": "env_broken", "patch_status": result.status},
+            )
+
+        status_l = (result.status or "").lower()
         if result.status == "success":
             return StepOutcome(
                 status="success",
+                next_event=JobEvent.PATCH_OK,
+                extra_events=[JobEvent.VERIFY_OK],
                 detail={"status_str": "done", "patch_status": result.status},
             )
-        # needs-help / budget-exhausted — job recorded, not retried.
+        if "budget" in status_l:
+            return StepOutcome(
+                status="success",
+                next_event=JobEvent.PATCH_BUDGET_OUT,
+                detail={"status_str": result.status, "patch_status": result.status},
+            )
+        # needs-help / gave-up / anything else — catchall DEAD.
         return StepOutcome(
             status="success",
+            next_event=JobEvent.PATCH_GAVE_UP,
             detail={"status_str": result.status, "patch_status": result.status},
         )
 
