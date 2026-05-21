@@ -195,3 +195,315 @@ End-to-end check after step 5 lands:
    `bundle_upserted` event for the same upload.
 6. Same checks against `state-server`'s legacy endpoints still pass
    (parallel operation until step 8).
+
+## Post-implementation follow-up — manual escalation and operator loop
+
+Phase 4 shipped the unified DB/tracker surface, but the first real
+agentic runs exposed gaps in the manual escalation path. The current
+system can mark work as escalated and record a `user_context_request`,
+but the operator handoff is not yet good enough: artifacts are hard to
+read, prior attempts are not summarized well, retry caps are too coarse,
+and providing new context is not a first-class tracker workflow.
+
+### Goal
+
+Turn manual escalation from a terminal dead end into an operator-guided
+retry loop:
+
+1. The tracker makes bundle artifacts easy to inspect inline.
+2. Escalated jobs produce a concise handoff artifact explaining what
+   happened and what input is needed.
+3. Operators can provide context from the tracker and explicitly ask the
+   runner to try again.
+4. The runner re-enters triage/patch only when no same-origin job is
+   already queued or running.
+5. Prior patch attempts are included in future patch prompts using the
+   artifacts the system actually writes today.
+6. Retry caps distinguish repeated build failures from failed automated
+   patch attempts.
+
+### Step 1 — improve bundle artifact reading
+
+Make bundle artifacts readable from the tracker before changing manual
+flow. Operators need to inspect the evidence quickly before they can
+provide useful context.
+
+Changes:
+
+- Add an artifact viewer page under
+  `/agentic/bundles/{bundle_id}/artifacts/{relpath:path}`.
+- Render common text artifacts inline instead of forcing downloads:
+  `*.txt`, `*.md`, `*.json`, `*.diff`, `*.patch`, `*.log`, `*.rej`,
+  `*.dops`, `Makefile`, `distinfo`, `pkg-plist`, `pkg-descr`.
+- Pretty-print JSON artifacts.
+- Render diff/patch artifacts in a readable `<pre>` block.
+- For gzip full logs, keep download behavior, but add a clear label that
+  the artifact is compressed.
+- Link artifact names in bundle detail to the viewer page, not directly
+  to raw download, while retaining a raw/download link.
+- Add tests for inline text, JSON, binary/download, and missing artifact
+  behavior.
+
+Rationale:
+
+Manual escalation starts with reading evidence. The current artifact
+links are inconsistent: some render as text, some download, and some
+lack enough context for quick triage.
+
+### Step 2 — fix prior patch attempt ingestion
+
+The patch prompt currently has a `Prior Attempts` section, but it looks
+for legacy artifact names:
+
+- `analysis/patch_plan.json`
+- `analysis/patch.log`
+- `analysis/rebuild_status.txt`
+
+Current patch jobs write:
+
+- `analysis/patch.md`
+- `analysis/patch_audit.json`
+- `analysis/changes.diff`
+- `analysis/tool_trace.jsonl`
+
+Update `PriorAttemptsSection` to consume the current artifacts.
+
+Changes:
+
+- Include `analysis/patch.md` when present.
+- Include `analysis/patch_audit.json`, especially status, token usage,
+  attempts, and rebuild result.
+- Include `analysis/changes.diff`, capped to a safe size.
+- Include a compact summary of `analysis/tool_trace.jsonl`, not the full
+  trace.
+- Prefer the most recent three patch-producing bundles for the same
+  `(target, origin)`.
+- Add tests proving prior attempts appear in patch payloads.
+
+Rationale:
+
+Agents are currently told to check prior attempts, but may receive no
+useful prior attempt content. This encourages repeated failed strategies
+and token burn.
+
+### Step 3 — write a manual handoff artifact
+
+When a job escalates to manual, write a structured
+`analysis/manual_handoff.md` artifact.
+
+Contents:
+
+- Origin and target.
+- Why manual was triggered.
+- Whether the trigger was policy/manual classification, retry cap,
+  budget exhaustion, or repeated patch failure.
+- Latest triage classification and confidence.
+- Latest triage suggested fix.
+- Recent attempt count and window.
+- Previous patch job summary.
+- Files touched by the last patch attempt.
+- Latest `changes.diff` summary.
+- Last failing build/log summary.
+- Specific question for the operator.
+
+Example operator question:
+
+```text
+The agent tried updating dragonfly/patch-terminal.c but the rebuild
+still failed. Should the fix remain a static patch, or should this be
+converted to a semantic dops / REINPLACE_CMD operation?
+```
+
+Add tests for handoff generation on retry-cap escalation and direct
+MANUAL-tier escalation.
+
+Rationale:
+
+Manual escalation should produce a useful handoff, not just a terminal
+state and scattered artifacts.
+
+### Step 4 — expose manual requests in tracker
+
+Add a first-class manual work queue in the tracker.
+
+Routes:
+
+- `/agentic/manual`
+- `/agentic/manual/{run_id}/{origin}`
+- `GET /api/manual-requests`
+- `POST /api/manual-requests/{run_id}/{origin}/context`
+
+The tracker API can forward context to artifact-store's existing
+`POST /v1/user-context` endpoint or write directly to the shared DB if
+we decide tracker should own this write path.
+
+Display:
+
+- Origin, target, run, bundle.
+- Classification/confidence.
+- Escalation reason.
+- Latest manual handoff.
+- Links to relevant artifacts.
+- Text box for operator context.
+- Button: `Try again with this context`.
+
+Rationale:
+
+`user_context_requests` exists, but operators currently have no obvious
+UI to see pending requests or provide context.
+
+### Step 5 — operator-guided retry loop
+
+When the operator submits context and clicks `Try again with this
+context`, the runner should enqueue a new triage job only if the same
+origin is not already active.
+
+Rules:
+
+- Check for existing queued/inflight jobs for the same `(target, origin)`.
+- Treat these states as active:
+  `queued`, `claimed`, `triaging`, `triaged`, `patching`, `verifying`.
+- If active work exists, reject or mark the request as waiting, and show
+  the blocking job.
+- If no active work exists, enqueue a new triage job with:
+  `user_context_rev`,
+  `previous_bundle`,
+  same run/origin/target,
+  incremented manual retry metadata.
+- The next triage/patch payload includes `## User Context`.
+
+State changes:
+
+- Keep `escalated` as a terminal state for the old job.
+- The retry is a new job linked by `previous_bundle` and
+  `user_context_rev`.
+- Add enough metadata for tracker to show the lineage.
+
+Rationale:
+
+The operator needs an explicit “try again with this info” mechanism, but
+we must avoid duplicate same-origin jobs racing.
+
+### Step 6 — refine retry cap
+
+The current retry cap is based on recent bundle failures:
+
+```text
+recent bundle failures >= max attempts
+```
+
+That is too coarse. Replace or supplement it with agentic attempt
+history.
+
+Better signals:
+
+- Number of failed patch jobs for the same `(target, origin)`.
+- Number of patch jobs that produced non-empty `changes.diff`.
+- Number of patch jobs ending in `patch_budget_exhausted`.
+- Number of patch jobs ending in `patch_gave_up`.
+- Whether the last failure signature changed.
+- Whether user context has been provided since the last escalation.
+
+Policy proposal:
+
+- Keep bundle-failure cap as a safety backstop.
+- Do not force manual solely from bundle count if there has been no
+  meaningful patch attempt.
+- Escalate when there are repeated failed patch attempts with similar
+  failure signatures.
+- Reset or relax the cap when fresh operator context is provided.
+
+Tests:
+
+- Bundle failures alone do not escalate if no patch attempt was made.
+- Repeated failed patch jobs escalate.
+- Fresh user context permits another attempt.
+- Active same-origin job prevents duplicate retry.
+
+Rationale:
+
+Manual escalation should mean “automation is stuck”, not merely “dsynth
+has failed N times”.
+
+### Step 7 — synthesize patch reports on empty/budget-exhausted output
+
+If a patch attempt ends with empty `patch.md`, invalid final sections, or
+budget exhaustion, synthesize a fallback report.
+
+Fallback artifact:
+
+- `analysis/patch.md` with generated summary.
+- `analysis/patch_audit.json` already exists; keep it authoritative.
+- Optional `analysis/patch_summary.json` for machine-readable UI use.
+
+Summary sources:
+
+- `patch_audit.json`
+- `changes.diff`
+- last N `tool_trace.jsonl` events
+- last `dsynth_build` result
+- last `dsynth_log` result if available
+
+The synthesized report should say clearly that it is generated by the
+runner, not by the LLM.
+
+Rationale:
+
+The operator and future agents need an actionable trail even when the
+LLM exhausts budget without producing a final response.
+
+### Step 8 — lifecycle naming cleanup
+
+Keep `escalated` for completed handoff, but introduce clearer UI
+language around manual waiting and retry.
+
+Options:
+
+- Keep DB state as `escalated`, but show UI status:
+  `waiting for operator context`.
+- Or add a new lifecycle state:
+  `blocked_user_context`.
+
+Preferred minimal approach:
+
+- Keep lifecycle states unchanged for now.
+- Use `retire_reason`, `user_context_requests`, and UI labels to
+  distinguish:
+  `manual_requested`,
+  `waiting_for_context`,
+  `context_received`,
+  `retry_enqueued`.
+
+Rationale:
+
+Avoid a larger state-machine migration until the operator loop is proven.
+
+### Step 9 — tracker UX polish for manual work
+
+Add job and bundle page affordances:
+
+- Prominent manual handoff panel on escalated jobs.
+- “Open latest artifacts” shortcuts:
+  triage, handoff, patch audit, changes diff, tool trace, errors.
+- Prior attempts table for same origin.
+- Inline indication when an origin already has queued/running work.
+- Link from `/agentic` dashboard to pending manual requests.
+
+Rationale:
+
+Manual intervention should be fast and local to the tracker, not a hunt
+through API endpoints and raw artifacts.
+
+### Suggested implementation order
+
+1. Artifact viewer and artifact-link cleanup.
+2. Prior attempt ingestion fix.
+3. Manual handoff artifact generation.
+4. Manual requests tracker page/API.
+5. Operator “try again with this context” flow with duplicate-job guard.
+6. Retry-cap refinement.
+7. Synthesized patch reports for empty/budget-exhausted outputs.
+8. Lifecycle/UI naming cleanup.
+
+This order improves operator visibility first, then improves agent
+context, then adds the retry loop, then refines policy.
