@@ -1537,6 +1537,33 @@ def enqueue_patch_job(
     return job_path
 
 
+def _find_active_convert_job(origin: str, target: str) -> str | None:
+    """Return job_id of an open convert job for (origin, target), if any.
+
+    Step 20d: triage consults this before enqueuing a new convert
+    job, so two triage attempts on the same failing port don't each
+    spin up their own convert and double-bill tokens.
+    """
+    global _state_db_conn
+    if _state_db_conn is None:
+        return None
+    try:
+        row = _state_db_conn.execute(
+            """SELECT job_id FROM jobs
+               WHERE type = 'convert'
+                 AND origin = ?
+                 AND (target = ? OR (? = '' AND (target IS NULL OR target = '')))
+                 AND state IN ('queued','claimed','converting')
+               ORDER BY created_ts_utc DESC LIMIT 1""",
+            (origin, target, target),
+        ).fetchone()
+    except sqlite3.Error:
+        return None
+    if row is None:
+        return None
+    return row[0] if not hasattr(row, "keys") else row["job_id"]
+
+
 def enqueue_convert_job(
     queue_root: Path,
     *,
@@ -1715,6 +1742,100 @@ def _finish_orchestrator_run(
     return True, status_str
 
 
+def _maybe_defer_to_convert(
+    *,
+    queue_root: Path,
+    job: dict,
+    job_path: Path,
+    origin: str,
+) -> tuple[bool, str] | None:
+    """Step 20d: defer this triage if the port still has legacy
+    overlay artifacts.
+
+    Returns ``None`` to let the triage proceed normally, or a
+    ``(success, status)`` tuple to short-circuit it. On defer:
+    enqueue a convert job (or attach to an in-flight one) and
+    park this triage at ESCALATED so the manual queue surfaces
+    the chain.
+    """
+    from dportsv3.agent.dops import classify as classify_dops
+    from dportsv3.agent.lifecycle import JobEvent
+
+    target = job.get("target") or os.environ.get(
+        "DPORTSV3_TRACKER_TARGET", "",
+    )
+    repo_root = Path(
+        os.environ.get("DP_HARNESS_REPO_ROOT")
+        or os.environ.get("DPORTSV3_REPO_ROOT")
+        or "."
+    ).resolve()
+
+    try:
+        state = classify_dops(origin, repo_root)
+    except Exception as exc:
+        log(queue_root, "WARN",
+            f"classify_dops({origin!r}) failed: {exc}; proceeding with triage")
+        return None
+
+    if state not in ("auto_safe_pending", "needs_judgment"):
+        # converted / stale / not_in_scope all mean "no conversion
+        # needed". Let triage run.
+        return None
+
+    existing = _find_active_convert_job(origin, target)
+    if existing:
+        convert_job_id = existing
+        log(queue_root, "INFO",
+            f"triage for {origin!r} deferring to in-flight convert job "
+            f"{convert_job_id}")
+    else:
+        convert_path = enqueue_convert_job(
+            queue_root,
+            origin=origin,
+            target=target,
+            profile=job.get("profile", ""),
+            requested_by="triage",
+            dev_env=job.get("dev_env"),
+        )
+        convert_job_id = convert_path.name
+        log(queue_root, "INFO",
+            f"triage for {origin!r} enqueued convert job {convert_job_id} "
+            f"(dops state={state!r})")
+
+    detail = {
+        "deferred_for_convert": True,
+        "convert_job_id": convert_job_id,
+        "dops_state": state,
+    }
+    try:
+        activity_log(
+            queue_root,
+            "triage_deferred_for_convert",
+            (
+                f"deferred to convert job {convert_job_id} "
+                f"(dops_state={state})"
+            ),
+            job_id=job_path.name,
+            extra=detail,
+        )
+    except Exception as exc:
+        log(queue_root, "WARN", f"activity_log failed in defer: {exc}")
+
+    # Walk the lifecycle: TRIAGING -> TRIAGED (TRIAGE_OK) ->
+    # ESCALATED (ESCALATE_MANUAL). The manual-queue UI picks up
+    # ESCALATED jobs and the activity log carries the convert_job_id
+    # so the operator can navigate the chain.
+    try:
+        _apply_transition(job_path.name, JobEvent.TRIAGE_OK, detail=detail)
+        _apply_transition(
+            job_path.name, JobEvent.ESCALATE_MANUAL, detail=detail,
+        )
+    except Exception as exc:
+        log(queue_root, "WARN", f"failed to defer triage lifecycle: {exc}")
+
+    return True, f"deferred_for_convert:convert_job_id={convert_job_id}"
+
+
 def process_triage_job(
     queue_root: Path,
     job_path: Path,
@@ -1729,13 +1850,28 @@ def process_triage_job(
     encode the lifecycle events to fire on completion. The
     orchestrator fires them for the lead; this wrapper fans the
     same events out to siblings. ``_completion_events_for`` retires.
+
+    Step 20d: before invoking the triage step, check whether the
+    port still has legacy overlay artifacts. If so, enqueue a
+    convert job and defer this triage to ESCALATED with a clear
+    detail — the agent should not spend tokens triaging a port
+    whose framework patches are about to be rewritten anyway.
     """
     from dportsv3.agent.step import Orchestrator, StepCtx
     from dportsv3.agent.steps import TriageServices, TriageStep
 
-    payload = build_triage_payload(bundle_dir, kedb_dir, job)
     origin = job.get("origin", "unknown")
     job_id = job_path.name
+
+    # ---- Step 20d: lazy convert hook ------------------------------
+    deferred = _maybe_defer_to_convert(
+        queue_root=queue_root, job=job, job_path=job_path, origin=origin,
+    )
+    if deferred is not None:
+        return deferred
+    # ---------------------------------------------------------------
+
+    payload = build_triage_payload(bundle_dir, kedb_dir, job)
 
     ctx = StepCtx(
         job_id=job_id,
