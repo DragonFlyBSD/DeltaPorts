@@ -475,7 +475,12 @@ def _register_tracker_parser(subparsers: argparse._SubParsersAction) -> None:
     record.add_argument("--run", type=int, required=True, help="Build run ID")
     record.add_argument("--origin", type=str, required=True, help="Port origin")
     record.add_argument("--version", type=str, required=True, help="Port version")
-    record.add_argument("--result", type=str, required=True, help="Build result")
+    record.add_argument(
+        "--result", type=str, required=True,
+        choices=["success", "failure", "skipped", "ignored"],
+        help="Build result. Must match the API's BuildResultLiteral; "
+             "use these exact tokens (hooks must NOT send 'pass'/'fail').",
+    )
     record.add_argument("--log-url", type=str, help="External build log URL")
     record.add_argument("--server", type=str, help="Tracker base URL")
 

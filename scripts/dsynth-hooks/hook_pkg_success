@@ -7,6 +7,6 @@ set -eu
 
 . "$(dirname "$0")/hook_common.sh"
 
-tracker_record_result pass
+tracker_record_result success
 
 exit 0

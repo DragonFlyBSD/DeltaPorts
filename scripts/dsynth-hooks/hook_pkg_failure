@@ -102,6 +102,6 @@ fi
 enqueue_job "$bundle_id" "$origin_base" "$FLAVOR" "$PROFILE" "$run_id" "$ts"
 
 # Record the failure in tracker (soft no-op if tracker isn't configured).
-tracker_record_result fail
+tracker_record_result failure
 
 exit 0
