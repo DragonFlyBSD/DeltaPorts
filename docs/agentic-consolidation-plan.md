@@ -495,10 +495,60 @@ Add job and bundle page affordances:
 - Inline indication when an origin already has queued/running work.
 - Link from `/agentic` dashboard to pending manual requests.
 
-Rationale:
+#### 9a — token-cost columns on the activity table
+
+Surfaced during smoke: ``llm_turn`` events emit structured data
+(``prompt_tokens``, ``completion_tokens``, ``total_tokens``,
+``cumulative_total_tokens``) into ``activity_log.extra_json``, but the
+UI crams them into the ``message`` column as prose:
+
+```
+A1.T6 in=15896 out=1920 total=17816 cumulative=75170 → dupe
+```
+
+That's hostile to scanning. The structured fields are already there;
+the UI just doesn't render them as columns. Concrete shape:
+
+- The activity table on ``/agentic/jobs/{job_id}`` gains four columns:
+  ``prompt``, ``completion``, ``total``, ``cumulative``. Filled for
+  ``llm_turn`` rows; empty for ``tool:*`` and other rows.
+- The crammed message becomes a clean "→ tool1, tool2" affordance.
+- A small "Token usage" summary card lands above the activity table:
+
+```
+┌──────────────────────────────────────────────┐
+│ Token usage                                  │
+│   Prompt:        478,940    (94.7%)          │
+│   Completion:     26,610    (5.3%)           │
+│   Total:         505,550                     │
+│   LLM turns:     19                          │
+│   Largest turn:  T8 (593,472 — after dupe)   │
+└──────────────────────────────────────────────┘
+```
+
+Aggregated from the same event stream, no new write path. Layered
+addition: once Step 12's pricing config lands, the card grows a
+``$cost`` line derived from the model + token totals.
+
+Same columns on ``/agentic/bundles/{id}`` for the *bundle's* lifetime
+cost summed across all attempts that touched it — useful for "is this
+port costing too much?"
+
+#### 9b — sorting + filtering on llm_turn
+
+Once tokens are columns, sorting by ``prompt`` lets the operator
+find the prompt-explosion turn in two clicks instead of scanning
+the message text. A ``filter: llm_turn only`` or ``filter: tool calls
+only`` toggle on the activity table makes per-turn analysis viable
+without scrolling past tool rows.
+
+#### Rationale
 
 Manual intervention should be fast and local to the tracker, not a hunt
-through API endpoints and raw artifacts.
+through API endpoints and raw artifacts. Per-turn token cost is
+specifically high-value because it's the variable that operators
+need to read to make budget + model decisions; cramming it into prose
+defeats the telemetry that smoke testing put in place.
 
 ### Step 10 — kick out stale queued jobs
 
