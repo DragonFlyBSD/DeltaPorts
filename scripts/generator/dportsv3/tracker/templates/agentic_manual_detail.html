@@ -81,7 +81,7 @@
     {% endif %}
 
     {% if blocking_job %}
-    <div class="manual-flash" style="background:#fff7e6;border:1px solid #d68b00;">
+    <div class="manual-flash" id="blocker-banner" style="background:#fff7e6;border:1px solid #d68b00;">
       <strong>Heads up — a job is already in flight for this origin.</strong><br>
       <a href="{{ request.url_for('agentic_job_detail', job_id=blocking_job.job_id) }}">
         {{ blocking_job.job_id }}
@@ -90,7 +90,51 @@
       Submitting fresh context now will bump <code>context_rev</code>, but
       the runner will only re-trigger triage once this job finishes —
       otherwise you'll just queue behind the work that's already running.
+      <div style="margin-top:8px;">
+        <button type="button" id="abandon-blocker-btn"
+                data-job-id="{{ blocking_job.job_id }}"
+                data-state="{{ blocking_job.state }}"
+                style="padding:4px 10px;font-size:12px;">
+          Abandon job {{ blocking_job.job_id }}
+        </button>
+        <span id="abandon-blocker-flash" style="margin-left:10px;font-size:12px;"></span>
+      </div>
     </div>
+    <script>
+      (function () {
+        var btn = document.getElementById("abandon-blocker-btn");
+        if (!btn) return;
+        var flash = document.getElementById("abandon-blocker-flash");
+        btn.addEventListener("click", async function () {
+          var msg = "Abandon job " + btn.dataset.jobId + " (state="
+            + btn.dataset.state + ")? It will be marked dead with "
+            + "retire_reason='abandoned' so the runner picks up the "
+            + "fresh context you submit next.";
+          if (!confirm(msg)) return;
+          btn.disabled = true;
+          try {
+            var resp = await fetch(
+              "/api/jobs/" + encodeURIComponent(btn.dataset.jobId) + "/abandon",
+              {method: "POST", headers: {"Content-Type": "application/json"}}
+            );
+            var data = await resp.json().catch(function () { return {}; });
+            if (resp.ok) {
+              flash.textContent = "Abandoned. Reloading…";
+              flash.style.color = "green";
+              setTimeout(function () { window.location.reload(); }, 700);
+            } else {
+              flash.textContent = (data.detail || ("HTTP " + resp.status));
+              flash.style.color = "var(--c-fail, #c00)";
+              btn.disabled = false;
+            }
+          } catch (err) {
+            flash.textContent = "Network error: " + err;
+            flash.style.color = "var(--c-fail, #c00)";
+            btn.disabled = false;
+          }
+        });
+      })();
+    </script>
     {% endif %}
 
     <h2>Provide Context</h2>

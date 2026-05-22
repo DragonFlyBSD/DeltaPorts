@@ -510,6 +510,10 @@ def test_view_agentic_manual_detail_shows_blocking_job(client: TestClient) -> No
     # *some* job is in flight, so just assert one is linked.
     assert ("job-q2-foo-blocker" in body) or ("job-q2-foo" in body)
     assert "queued" in body
+    # Step 10b: the banner exposes an inline Abandon affordance so
+    # the operator can clear the blocker without sqlite spelunking.
+    assert "abandon-blocker-btn" in body
+    assert "Abandon job " in body
 
 
 def test_view_agentic_runner(client: TestClient) -> None:
