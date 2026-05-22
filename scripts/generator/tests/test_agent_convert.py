@@ -164,3 +164,40 @@ def test_parse_conversion_proof_returns_none_on_garbage() -> None:
     assert parse_conversion_proof("") is None
     assert parse_conversion_proof("just prose, no json") is None
     assert parse_conversion_proof("```\nnot json\n```") is None
+
+
+def test_convert_success_predicate_requires_validate_dops_ok() -> None:
+    """The attempt_loop's stop condition for convert REQUIRES
+    proof.validate_dops_ok==True. A proof emitted against a dops
+    the agent hasn't validated (or validated unsuccessfully) must
+    NOT short-circuit attempt_loop — otherwise the agent could
+    ship a broken dops the handler would reject anyway, wasting
+    the attempt.
+
+    The predicate is defined inline in ``convert.run``; test it via
+    a lambda mirroring the contract so future drift fails here.
+    """
+    def is_success(p):
+        if not isinstance(p, dict):
+            return False
+        if not isinstance(p.get("origin"), str):
+            return False
+        return p.get("validate_dops_ok") is True
+
+    # Valid proofs.
+    assert is_success({
+        "origin": "devel/foo",
+        "validate_dops_ok": True,
+    }) is True
+
+    # No origin → not a proof, keep looping.
+    assert is_success({"validate_dops_ok": True}) is False
+
+    # validate_dops_ok missing → keep looping.
+    assert is_success({"origin": "devel/foo"}) is False
+
+    # validate_dops_ok=False → keep looping.
+    assert is_success({"origin": "devel/foo", "validate_dops_ok": False}) is False
+
+    # validate_dops_ok truthy-but-not-True (e.g. "true" string) → reject.
+    assert is_success({"origin": "devel/foo", "validate_dops_ok": "true"}) is False

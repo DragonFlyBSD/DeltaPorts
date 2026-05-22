@@ -216,6 +216,7 @@ def test_process_convert_job_needs_judgment_llm_success(
         "source_patches_retained": [],
         "files_removed": ["Makefile.DragonFly"],
         "files_added": ["overlay.dops"],
+        "validate_dops_ok": True,
         "verification_pending": True,
     }
     monkeypatch.setattr(

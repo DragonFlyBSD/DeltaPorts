@@ -503,13 +503,23 @@ Your final response must end with a JSON block:
   ],
   "files_removed":                ["Makefile.DragonFly", "diffs/patch-config.diff"],
   "files_added":                  ["overlay.dops"],
+  "validate_dops_ok":             true,
   "verification_pending":         true
 }
 ```
 
-`verification_pending` is always `true` for now (Step 20e adds the
-build step). The runner mechanically parses this block; the heading
-text and field names are contractual.
+`validate_dops_ok` must be **`true`** — meaning the most recent
+`validate_dops` call returned `ok=true`. The runner refuses proofs
+where this field is missing or `false`; it will treat that as a
+failed attempt and re-run with feedback. Do not emit a proof
+against a dops that didn't pass validation; iterate on the dops
+until validate_dops is clean first.
+
+`verification_pending` is always `true` (the handler runs
+compose-side verification — see "Verification" below).
+
+The runner mechanically parses this block; the heading text and
+field names are contractual.
 
 No branching, no git push, no PR. Conversion is a local rewrite.
 """

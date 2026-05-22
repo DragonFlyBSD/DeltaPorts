@@ -225,26 +225,28 @@ def run(
     from .tools import CONVERT_TOOL_NAMES
 
     def _convert_is_success(p: dict | None) -> bool:
-        """attempt_loop's stop condition for convert: any Conversion
-        Proof with an ``origin`` field and at least one bucket
-        populated. The detailed validity check in
-        :func:`run` (below) inspects the same proof and reports the
-        finer status, so this is intentionally permissive — it
-        prevents attempt_loop from looping after a viable proof
-        lands."""
+        """attempt_loop's stop condition for convert.
+
+        Two requirements, both contractual with CONVERT_SYSTEM:
+
+        - ``origin`` field present (it's the Conversion Proof, not
+          some other JSON the agent emitted along the way).
+        - ``validate_dops_ok`` is exactly ``True`` — the agent
+          asserts the most recent ``validate_dops`` call passed.
+          Without this gate, the agent can give up after one
+          validate failure and ship a broken proof; the handler
+          would then redo the same engine check via compose and
+          reject it, wasting the attempt.
+
+        If either fails, attempt_loop runs another attempt (up to
+        ``max_iterations``) with the failure context appended, so
+        the agent gets feedback rather than silently shipping
+        garbage."""
         if not isinstance(p, dict):
             return False
         if not isinstance(p.get("origin"), str):
             return False
-        return any(
-            p.get(key) for key in (
-                "framework_migrated_to_dops",
-                "source_migrated_to_semantic",
-                "source_patches_retained",
-                "mechanical_ops_written",
-                "files_added",
-            )
-        )
+        return p.get("validate_dops_ok") is True
 
     raw = attempt_loop.run(
         payload,
