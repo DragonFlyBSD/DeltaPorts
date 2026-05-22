@@ -2231,3 +2231,133 @@ ongoing; the implementation cost is one step.
 #### Suggested updated order
 
 10 → 20 → 11 → 16 → 19 → 12/13 → 17/18 → 14/15.
+
+### Step 21 — DB layer consolidation pass
+
+Scan during smoke testing of Step 20: 120 raw ``conn.execute`` calls
+across six files. The reads are mostly localized in
+``dportsv3.tracker.agentic_queries`` already, but the *writes* are
+scattered, and three different connection-management patterns
+coexist. The pain is latent today — schema is stable, the existing
+patterns work — but it surfaces every time a new feature adds tables
+or columns (Step 17's runner_id, Step 18's audit-log triggers,
+Step 14's KEDB metadata all bolt onto the same DB).
+
+This step pays off the technical debt before those features land.
+
+#### Goal
+
+After Step 21:
+
+- One canonical place to look for each table's mutations.
+- One documented choice per layer for connection management, with
+  outliers either migrated or marked with a written rationale.
+- The 36 read queries in ``agentic_queries.py`` become directly
+  unit-testable (they are today, but the writes weren't, so a full
+  layer-level test plan was unhelpful).
+
+No behavior change. The whole point is that the tests stay green
+through the refactor.
+
+#### Sub-steps
+
+**21a — settle connection management.**
+
+Three patterns coexist today:
+
+1. **Module-level singleton** (``dportsv3.agent.runner._state_db_conn``)
+   — the agent-queue-runner is long-running and opens one connection
+   for its lifetime.
+2. **Per-request context manager** (``dportsv3.tracker.server._conn()``)
+   — the FastAPI tracker opens / closes per HTTP request.
+3. **Dedicated autocommit connection** (created inside
+   ``lifecycle.apply``) — needed because the state-machine uses
+   ``BEGIN IMMEDIATE`` + explicit ``COMMIT`` that the default
+   deferred-transaction sqlite3 wrapper interferes with.
+
+Each is justifiable. The inconsistency itself is the problem — a
+new write doesn't know which pattern to use. Action:
+
+- Document each pattern at the top of its host module with one
+  short paragraph explaining *why* this one, not the others.
+- Audit for accidental fourth patterns (e.g. one-off
+  ``sqlite3.connect`` calls in helpers). Migrate them onto an
+  established pattern or document a new exception.
+- Add a brief section in ``docs/operator-runbook.md`` (or wherever
+  contributor-facing docs live) explaining when each pattern is
+  appropriate.
+
+LOC: small — mostly comments + small migrations. ~50.
+
+**21b — centralize writes.**
+
+Writes today live in five files: ``runner.py`` (job registration,
+runner_status, activity_log), ``lifecycle.py`` (state machine,
+job_events), ``artifact_store.py`` (bundles, artifact_refs),
+``tracker/db.py`` (legacy builds/diffs), and a few stragglers in
+``tracker/server.py``. Schema drift = grep + manual fix in five
+places. Action:
+
+- Create ``dportsv3.db.writes`` (or extend ``agentic_queries.py``
+  to cover writes — TBD on convention; one-module-per-concern vs
+  one-module-per-direction). For each table that has more than
+  one write call site, add a typed helper:
+  ``insert_bundle(...)``, ``insert_artifact_ref(...)``,
+  ``upsert_runner_status(...)``, ``record_activity(...)``, etc.
+- Migrate call sites onto the helpers.
+- **lifecycle.py stays put.** The state machine owns its own
+  transactional discipline and pulling its writes into a generic
+  helper would invert the abstraction. Document the carve-out.
+- **tracker/db.py legacy code stays put** for now — it's
+  isolated, slated to retire when the legacy builds UI does.
+
+LOC: ~200 net (refactor; no new SQL).
+
+**21c — query-layer unit tests.**
+
+With 21b in place, the read + write surface is finally small
+enough to test directly:
+
+- Per-helper unit test: insert → read-back round-trip with a tmp
+  state.db.
+- Schema-drift tests: assert each helper's INSERT lists every
+  column ``schema.py`` declares NOT NULL on for that table.
+
+LOC: ~150 of tests.
+
+#### LOC estimate
+
+~400 total: 50 for 21a documentation + small migrations, 200 for
+21b refactor, 150 for 21c tests.
+
+#### Order
+
+21a → 21b → 21c. Connection management first (the canonical-pattern
+decision feeds 21b's helper signatures); writes consolidated next;
+tests last because they need 21b's helpers to exist.
+
+#### Dependencies
+
+- **Hard:** none.
+- **Soft:** completing 21 before 17 (remote runners adds a
+  ``runners`` table — would prefer to plug it into 21b's helpers
+  rather than add a sixth ad-hoc INSERT site). Same for 18g
+  (audit-log immutability triggers — easier to add the trigger DDL
+  in the same place as the write helpers).
+
+#### Why not earlier
+
+The existing patterns work and the schema is reasonably stable.
+The pain is latent — it hasn't bit hard yet. Step 21 is exactly the
+kind of consolidation that pays off when *future* steps layer new
+tables on top; doing it before there's a real reason would have been
+premature.
+
+#### Suggested updated order
+
+10 → 20 → 11 → 16 → 21 → 19 → 12/13 → 17/18 → 14/15.
+
+21 sits between 16 and the architectural sweep (12/13/17/18) on
+purpose: small enough not to block the operator-facing features, and
+enables 17 + 18g to plug into a clean write surface rather than
+adding the sixth ad-hoc site.
