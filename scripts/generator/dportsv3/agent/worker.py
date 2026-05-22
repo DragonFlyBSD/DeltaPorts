@@ -695,13 +695,22 @@ def validate_dops(env: str, origin: str) -> dict:
     The full compose-side check still runs in
     ``_verify_conversion`` after the agent finishes — this is the
     cheap inner-loop validation, not a replacement.
+
+    Invokes the dportsv3 script via the ``DELTAPORTS_ROOT`` env var
+    that dev-env's ``build_env_dict`` sets inside the chroot — the
+    binary lives in the DeltaPorts checkout and isn't on the
+    chroot's PATH. Using the env var (not a hardcoded path)
+    survives a future relocation.
     """
-    dops_path = f"/work/DeltaPorts/ports/{origin}/overlay.dops"
-    p = _exec(env, "dportsv3", "dsl", "check", dops_path)
+    cmd = (
+        '"$DELTAPORTS_ROOT/dportsv3" dsl check '
+        '"$DELTAPORTS_ROOT/ports/$1/overlay.dops"'
+    )
+    p = _exec(env, "/bin/sh", "-c", cmd, "_", origin)
     return _exec_result(
         p.returncode, p.stdout, p.stderr,
         origin=origin,
-        dops_path=dops_path,
+        dops_path=f"$DELTAPORTS_ROOT/ports/{origin}/overlay.dops",
     )
 
 
