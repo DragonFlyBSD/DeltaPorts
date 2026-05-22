@@ -1927,15 +1927,33 @@ def _summarize_tool_call(tool: str, args: dict, result: dict) -> str:
         return f"status={result.get('status', '?')}{ok_tag}"
     if tool in ("get_file", "list_dir"):
         return f"{args.get('path', '')}{ok_tag}"
-    if tool == "put_file":
-        return f"{args.get('path', '')} ({len((args.get('content') or '') )} bytes){ok_tag}"
     if tool == "grep":
         return (
             f"pattern={args.get('pattern', '')!r} path={args.get('path', '')} "
             f"matches={len(result.get('matches') or [])}{ok_tag}"
         )
     if tool == "materialize_dports":
-        return f"origin={args.get('origin', '')}{ok_tag}"
+        tail = (result.get("stderr_tail") or "").strip().splitlines()
+        last = tail[-1][:120] if tail else ""
+        suffix = f" — {last}" if (not ok and last) else ""
+        return f"origin={args.get('origin', '')}{ok_tag}{suffix}"
+    if tool == "validate_dops":
+        # On failure, the dops diagnostics are in stderr_tail
+        # (ERROR E_* CODE: msg [path:line:col]). Surface the first
+        # one — agent diagnostic at a glance.
+        tail = (result.get("stderr_tail") or "").strip().splitlines()
+        first_err = next((ln for ln in tail if ln.startswith("ERROR ")), "")
+        suffix = f" — {first_err[:120]}" if (not ok and first_err) else ""
+        return f"origin={args.get('origin', '')}{ok_tag}{suffix}"
+    if tool == "put_file":
+        # On failure (sha mismatch / permission), the worker's
+        # ``error`` field carries the reason — show it.
+        err = (result.get("error") or result.get("stderr_tail") or "")
+        err = err.strip().splitlines()
+        suffix = f" — {err[0][:120]}" if (not ok and err) else ""
+        path = args.get('path', '')
+        size = len((args.get('content') or ''))
+        return f"{path} ({size} bytes){ok_tag}{suffix}"
     if tool == "extract":
         return f"origin={args.get('origin', '')}{ok_tag}"
     if tool in ("dupe", "genpatch"):
