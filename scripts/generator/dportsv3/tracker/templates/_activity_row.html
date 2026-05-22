@@ -58,6 +58,24 @@
         {% if a.extra.original_tier %} · original={{ a.extra.original_tier }}{% endif %}
       </div>
       {% endif %}
+      {% if is_tool and a.extra is mapping and a.extra.ok is false %}
+      {% if a.extra.stderr_tail or a.extra.stdout_tail or a.extra.error %}
+      <details style="margin-top:4px;font-size:11px;">
+        <summary style="cursor:pointer;color:var(--c-fail, #c00);">
+          show diagnostic{% if a.extra.rc is defined %} (rc={{ a.extra.rc }}){% endif %}
+        </summary>
+        {% if a.extra.error %}
+        <div style="color:var(--c-fail, #c00);">error: {{ a.extra.error }}</div>
+        {% endif %}
+        {% if a.extra.stderr_tail %}
+        <pre style="margin:4px 0;padding:6px;background:var(--panel-bg, #f8fafc);border:1px solid var(--border, #d8dee9);border-radius:4px;white-space:pre-wrap;max-height:300px;overflow:auto;">{{ a.extra.stderr_tail }}</pre>
+        {% endif %}
+        {% if a.extra.stdout_tail and not a.extra.stderr_tail %}
+        <pre style="margin:4px 0;padding:6px;background:var(--panel-bg, #f8fafc);border:1px solid var(--border, #d8dee9);border-radius:4px;white-space:pre-wrap;max-height:300px;overflow:auto;">{{ a.extra.stdout_tail }}</pre>
+        {% endif %}
+      </details>
+      {% endif %}
+      {% endif %}
     </td>
   {% endif %}
 </tr>

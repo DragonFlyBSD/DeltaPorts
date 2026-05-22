@@ -102,16 +102,34 @@ class PatchEventDispatcher:
             args = ev.get("args") or {}
             res = ev.get("result") or {}
             summary = self.summarize_tool_call(ev.get("tool", ""), args, res)
+            ok = bool(res.get("ok")) if isinstance(res, dict) else None
+            extra: dict = {
+                "attempt": ev.get("attempt"),
+                "turn": ev.get("turn"),
+                "ok": ok,
+            }
+            # On failure, pin stderr_tail + stdout_tail + rc into
+            # the activity row's extra_json so /api/activity surfaces
+            # the diagnostic without anyone having to spelunk
+            # runner.log or tool_trace artifacts. The summary line
+            # is one cap'd line; this is the full picture.
+            if ok is False and isinstance(res, dict):
+                err = (res.get("stderr_tail") or "").strip()
+                out = (res.get("stdout_tail") or "").strip()
+                if err:
+                    extra["stderr_tail"] = err[:2000]
+                if out:
+                    extra["stdout_tail"] = out[:2000]
+                if "rc" in res:
+                    extra["rc"] = res["rc"]
+                if "error" in res:
+                    extra["error"] = str(res["error"])[:500]
             self.activity_log(
                 self.queue_root, f"tool:{ev.get('tool')}",
                 summary,
                 job_id=self.job_id,
                 duration_ms=ev.get("duration_ms"),
-                extra={
-                    "attempt": ev.get("attempt"),
-                    "turn": ev.get("turn"),
-                    "ok": bool(res.get("ok")) if isinstance(res, dict) else None,
-                },
+                extra=extra,
             )
         elif et == "attempt_end":
             self.activity_log(
