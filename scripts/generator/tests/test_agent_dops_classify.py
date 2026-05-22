@@ -67,13 +67,59 @@ def test_classify_needs_judgment_with_conditional_block(tmp_path: Path) -> None:
     assert classify("devel/with-conditional", tmp_path) == "needs_judgment"
 
 
+def test_classify_needs_judgment_with_dragonfly_patches(tmp_path: Path) -> None:
+    """Modern DeltaPorts layout: static patches live under
+    ``ports/<origin>/dragonfly/patch-*``. The classifier must
+    detect them — earlier versions missed this directory entirely
+    because the underlying migration inventory was written for the
+    older legacy-program layout."""
+    port = _make_port(tmp_path, "devel/libuv-like")
+    dragonfly = port / "dragonfly"
+    dragonfly.mkdir()
+    (dragonfly / "patch-Makefile.in").write_text(
+        "--- a/Makefile.in\n+++ b/Makefile.in\n@@ -1 +1 @@\n-old\n+new\n"
+    )
+    assert classify("devel/libuv-like", tmp_path) == "needs_judgment"
+
+
+def test_classify_converted_only_when_dragonfly_cleared(tmp_path: Path) -> None:
+    """A port with both ``overlay.dops`` AND ``dragonfly/`` files
+    is mid-migration, not converted — the agent should still
+    finish the job (move the remaining patches into dops where
+    possible)."""
+    port = _make_port(tmp_path, "devel/half-modern")
+    (port / "overlay.dops").write_text(
+        'target @main\nport devel/half-modern\ntype port\nreason "test"\n'
+    )
+    dragonfly = port / "dragonfly"
+    dragonfly.mkdir()
+    (dragonfly / "patch-Makefile").write_text("--- a/M\n+++ b/M\n")
+    state = classify("devel/half-modern", tmp_path)
+    assert state != "converted"
+    assert state == "needs_judgment"
+
+
+def test_classify_in_scope_with_targeted_makefile_dragonfly(tmp_path: Path) -> None:
+    """``Makefile.DragonFly.@2026Q2`` and similar per-target
+    variants are in scope too — they're the target-specific framework
+    layer."""
+    port = _make_port(tmp_path, "devel/targeted")
+    (port / "Makefile.DragonFly.@2026Q2").write_text("USES+=pkgconfig\n")
+    state = classify("devel/targeted", tmp_path)
+    assert state in ("auto_safe_pending", "needs_judgment")
+
+
 def test_classify_needs_judgment_with_raw_diffs(tmp_path: Path) -> None:
     """``diffs/`` directory → fallback-only bucket → agent must
     classify each diff as framework vs source vs complex."""
     port = _make_port(tmp_path, "devel/with-diffs")
     diffs = port / "diffs"
     diffs.mkdir()
-    (diffs / "patch-foo.c").write_text("--- a/foo.c\n+++ b/foo.c\n@@ -1 +1 @@\n-old\n+new\n")
+    # Diffs are detected by suffix (.diff/.patch) to match
+    # compose_discovery's per-port logic.
+    (diffs / "patch-foo.c.diff").write_text(
+        "--- a/foo.c\n+++ b/foo.c\n@@ -1 +1 @@\n-old\n+new\n"
+    )
     assert classify("devel/with-diffs", tmp_path) == "needs_judgment"
 
 

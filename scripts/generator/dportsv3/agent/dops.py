@@ -1,28 +1,31 @@
 """Port-scoped dops classification for the agent.
 
-Thin wrapper over ``dportsv3.migration.{inventory,classify}`` that
-exposes one function: given an origin, return the port's current
-state in vocabulary the agent runner uses.
-
-The migration package's ``scan_inventory`` walks the entire ports
-tree — the agent only needs one port at a time, so this module
-reimplements the per-port scan inline and hands a one-item list to
-``classify_inventory``.
+Uses the same overlay-artifact detection as
+:mod:`dportsv3.compose_discovery` — which understands the *current*
+DeltaPorts layout — instead of :mod:`dportsv3.migration.inventory`
+which was written for an older legacy-program shape that didn't
+include the ``dragonfly/`` directory the modern layout puts static
+patches in.
 
 States returned by :func:`classify`:
 
 - ``converted``: the port has ``overlay.dops`` and no remaining
-  legacy overlay artifacts (``Makefile.DragonFly`` / ``diffs/`` /
-  ``newport/``). The agent does nothing.
-- ``auto_safe_pending``: classifier bucket ``auto-safe`` and the
-  port is not yet converted. The deterministic converter in
-  ``migration.convert`` can handle it without LLM judgment.
-- ``needs_judgment``: classifier bucket ``review-needed`` or
-  ``fallback-only``. LLM territory — conditional blocks in
-  ``Makefile.DragonFly``, raw diffs, newport scaffolding.
-- ``stale``: classifier bucket ``stale``. Out of scope; do nothing.
+  compat overlay artifacts (``dragonfly/`` / ``diffs/`` /
+  ``newport/`` / any ``Makefile.DragonFly[.target]``). The agent
+  does nothing.
+- ``auto_safe_pending``: a plain ``Makefile.DragonFly`` is present
+  whose contents are pure assignments (no conditionals, no recipes).
+  The deterministic converter in ``migration.convert`` can handle
+  the framework half without LLM judgment; any ``dragonfly/`` patch
+  files still need the LLM to classify them.
+- ``needs_judgment``: any other compat shape. LLM has to classify
+  each artifact (framework / source-simple / source-complex).
 - ``not_in_scope``: no overlay artifacts at all (or the port path
   doesn't exist). Nothing to convert.
+
+The ``stale`` state from the legacy migration vocabulary is not
+emitted here — staleness is a manual operator flag (carried on
+``STATUS``) that the agent layer does not consult.
 """
 
 from __future__ import annotations
@@ -30,7 +33,6 @@ from __future__ import annotations
 from pathlib import Path
 
 from dportsv3.migration.classify import classify_inventory
-from dportsv3.migration.inventory import _complexity_signals, _extract_targets
 
 
 CLASSIFICATION_STATES = (
@@ -42,85 +44,162 @@ CLASSIFICATION_STATES = (
 )
 
 
-def _scan_one_port(port_dir: Path, origin: str) -> dict | None:
-    """Build one inventory record for ``port_dir``.
+_MAKEFILE_DRAGONFLY_NAMES = (
+    "Makefile.DragonFly",
+    "Makefile.DragonFly.@any",
+)
 
-    Mirrors the inner loop of :func:`dportsv3.migration.inventory.scan_inventory`
-    but for a single port. Returns ``None`` if the port has no
-    overlay artifacts at all (i.e. it would be skipped by
-    ``scan_inventory``'s ``if not legacy_overlay and not has_overlay_dops``
-    guard).
+
+def _detect_compat_artifacts(port_dir: Path) -> dict:
+    """Return a flag-bag of compat-overlay artifacts.
+
+    Mirrors :func:`dportsv3.compose_discovery.discover_overlay_contexts`'s
+    per-port detection. Includes the modern ``dragonfly/`` directory
+    that the older migration ``inventory.py`` misses.
     """
     if not port_dir.is_dir():
-        return None
+        return {"present": False}
 
-    has_makefile_dragonfly = (port_dir / "Makefile.DragonFly").exists()
-    has_diffs = (port_dir / "diffs").exists()
-    has_newport = (port_dir / "newport").exists()
-    has_overlay_dops = (port_dir / "overlay.dops").exists()
-
-    legacy_overlay = has_makefile_dragonfly or has_diffs or has_newport
-    if not legacy_overlay and not has_overlay_dops:
-        return None
-
-    signals, churn = _complexity_signals(port_dir, has_makefile_dragonfly)
-    explicit_targets = [
-        target for target in _extract_targets(port_dir) if target != "@any"
-    ]
-    baseline_capable = not explicit_targets
-    target_mode = "baseline" if baseline_capable else "explicit"
-    available_targets = sorted(
-        set(explicit_targets + (["@any"] if baseline_capable else []))
+    diffs_dir = port_dir / "diffs"
+    has_any_diff = diffs_dir.exists() and any(
+        path.is_file() and path.suffix in {".diff", ".patch"}
+        for path in diffs_dir.rglob("*")
     )
-    category = origin.split("/", 1)[0] if "/" in origin else ""
+
+    dragonfly_dir = port_dir / "dragonfly"
+    has_any_dragonfly = dragonfly_dir.exists() and any(
+        path.is_file() for path in dragonfly_dir.rglob("*")
+    )
+
+    has_newport = (port_dir / "newport").exists()
+
+    has_makefile_dragonfly = any(
+        (port_dir / name).exists() for name in _MAKEFILE_DRAGONFLY_NAMES
+    )
+    # Per-target Makefile.DragonFly.<target> variants — match the
+    # discovery layer's naming convention.
+    has_makefile_dragonfly_targeted = any(
+        path.name.startswith("Makefile.DragonFly.")
+        and path.name not in _MAKEFILE_DRAGONFLY_NAMES
+        for path in port_dir.iterdir()
+        if path.is_file()
+    )
+
+    has_dops = (port_dir / "overlay.dops").exists()
 
     return {
-        "origin": origin,
-        "category": category,
-        "path": str(port_dir),
-        "has_makefile_dragonfly": has_makefile_dragonfly,
-        "has_diffs": has_diffs,
+        "present": (
+            has_any_diff or has_any_dragonfly or has_newport
+            or has_makefile_dragonfly or has_makefile_dragonfly_targeted
+            or has_dops
+        ),
+        "has_diffs": has_any_diff,
+        "has_dragonfly": has_any_dragonfly,
         "has_newport": has_newport,
-        "has_overlay_dops": has_overlay_dops,
-        "legacy_overlay": legacy_overlay,
-        "targets": available_targets,
-        "target_mode": target_mode,
-        "available_targets": available_targets,
-        "complexity_signals": signals,
-        "churn": churn,
-        "stale": False,
+        "has_makefile_dragonfly": has_makefile_dragonfly,
+        "has_makefile_dragonfly_targeted": has_makefile_dragonfly_targeted,
+        "has_dops": has_dops,
     }
+
+
+def _has_compat_artifacts(detected: dict) -> bool:
+    """True if any compat (non-dops) overlay artifact is present."""
+    return any(
+        detected.get(key, False) for key in (
+            "has_diffs", "has_dragonfly", "has_newport",
+            "has_makefile_dragonfly", "has_makefile_dragonfly_targeted",
+        )
+    )
 
 
 def classify(origin: str, repo_root: Path) -> str:
     """Return the agent-facing classification for one port.
 
     ``origin`` is the ``category/name`` slug; ``repo_root`` is the
-    DeltaPorts checkout root (the directory that contains
-    ``ports/``).
+    DeltaPorts checkout root (the directory that contains ``ports/``).
     """
     port_dir = Path(repo_root) / "ports" / origin
-    record = _scan_one_port(port_dir, origin)
-    if record is None:
+    detected = _detect_compat_artifacts(port_dir)
+    if not detected.get("present"):
         return "not_in_scope"
 
-    classified = classify_inventory([record])[0]
-    bucket = classified.get("bucket", "")
+    has_dops = detected["has_dops"]
+    has_compat = _has_compat_artifacts(detected)
 
-    if bucket == "stale":
-        return "stale"
-
-    has_dops = bool(classified.get("has_overlay_dops"))
-    has_legacy = bool(classified.get("legacy_overlay"))
-
-    # Converted = dops exists and the legacy artifacts have been
-    # cleared. A port with both is mid-migration / inconsistent —
-    # treat it as still needing work so the agent finishes the job.
-    if has_dops and not has_legacy:
+    # Converted = dops file present and no compat artifacts left.
+    if has_dops and not has_compat:
         return "converted"
 
-    if bucket == "auto-safe":
-        return "auto_safe_pending"
+    # No compat and no dops shouldn't happen — guard against it.
+    if not has_compat:
+        return "not_in_scope"
 
-    # review-needed and fallback-only both want LLM judgment.
+    # auto_safe_pending is only meaningful when ``Makefile.DragonFly``
+    # exists AND is the only compat artifact AND parses as
+    # assignment-only. Otherwise the LLM has to do the work.
+    if (
+        detected["has_makefile_dragonfly"]
+        and not detected["has_dragonfly"]
+        and not detected["has_diffs"]
+        and not detected["has_newport"]
+        and not detected["has_makefile_dragonfly_targeted"]
+    ):
+        # Reuse the legacy classifier to decide auto-safe vs review.
+        # Synthesize a minimal record that satisfies its inputs.
+        record = {
+            "origin": origin,
+            "path": str(port_dir),
+            "has_makefile_dragonfly": True,
+            "has_diffs": False,
+            "has_newport": False,
+            "has_overlay_dops": has_dops,
+            "stale": False,
+        }
+        classified = classify_inventory([record])[0]
+        if classified.get("bucket") == "auto-safe":
+            return "auto_safe_pending"
+
     return "needs_judgment"
+
+
+# Re-exported for callers that previously used the synthesized record
+# directly (e.g. ``runner._maybe_defer_to_convert``). Kept as a thin
+# wrapper around the discovery flags so callers don't need to know
+# the inventory schema.
+def _scan_one_port(port_dir: Path, origin: str) -> dict | None:
+    """Backwards-compatible record builder for callers expecting the
+    migration inventory shape. Returns ``None`` if the port has no
+    overlay artifacts at all.
+
+    Most agent callers should switch to :func:`classify` or directly
+    use :func:`_detect_compat_artifacts`; this helper is retained for
+    the deterministic-converter call site that still needs a
+    migration-shaped record.
+    """
+    if not port_dir.is_dir():
+        return None
+    detected = _detect_compat_artifacts(port_dir)
+    if not detected.get("present"):
+        return None
+
+    # Compute migration-inventory-compatible fields. We pass through
+    # ``has_diffs`` (mapping ``dragonfly/`` onto it too, since the
+    # migration classifier doesn't know about ``dragonfly/`` and
+    # treating dragonfly-only ports as "fallback-only / raw_diffs"
+    # is the closest existing bucket and routes to ``needs_judgment``).
+    return {
+        "origin": origin,
+        "category": origin.split("/", 1)[0] if "/" in origin else "",
+        "path": str(port_dir),
+        "has_makefile_dragonfly": detected["has_makefile_dragonfly"],
+        "has_diffs": detected["has_diffs"] or detected["has_dragonfly"],
+        "has_newport": detected["has_newport"],
+        "has_overlay_dops": detected["has_dops"],
+        "legacy_overlay": _has_compat_artifacts(detected),
+        "targets": [],
+        "target_mode": "baseline",
+        "available_targets": [],
+        "complexity_signals": [],
+        "churn": 0,
+        "stale": False,
+    }
