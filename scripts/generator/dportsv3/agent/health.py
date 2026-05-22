@@ -224,25 +224,29 @@ def _check_dports_compose(env: str) -> HealthCheck:
     env, which exercises the same import path as compose without
     actually composing anything.
     """
+    # Resolve dportsv3 via $DELTAPORTS_ROOT (set inside the chroot
+    # by dev-env's build_env_dict) rather than hardcoding the path.
+    # See validate_dops in worker.py for the same convention.
+    sh_cmd = '"$DELTAPORTS_ROOT/dportsv3" --version'
     try:
-        p = _run_in_env(env, "/work/DeltaPorts/dportsv3", "--version", timeout=15)
+        p = _run_in_env(env, "/bin/sh", "-c", sh_cmd, timeout=15)
     except subprocess.TimeoutExpired:
         return HealthCheck(
             name="dports_compose", status="broken",
-            detail="/work/DeltaPorts/dportsv3 --version timed out (>15s) inside env",
+            detail="$DELTAPORTS_ROOT/dportsv3 --version timed out (>15s) inside env",
             operator_action="check the env's venv state",
         )
     if p.returncode == 0:
         return HealthCheck(
             name="dports_compose", status="ok",
-            detail=(p.stdout.strip() or "/work/DeltaPorts/dportsv3 --version OK"),
+            detail=(p.stdout.strip() or "$DELTAPORTS_ROOT/dportsv3 --version OK"),
         )
     stderr = (p.stderr or "").strip()
     # Surface the missing-deps message verbatim; that's the most
     # actionable diagnostic and what python_runtime would also catch.
     return HealthCheck(
         name="dports_compose", status="broken",
-        detail=f"/work/DeltaPorts/dportsv3 --version failed (rc={p.returncode}): {stderr[:500]}",
+        detail=f"$DELTAPORTS_ROOT/dportsv3 --version failed (rc={p.returncode}): {stderr[:500]}",
         operator_action=(
             "run `dportsv3 dev-env health {env}` for per-aspect detail; "
             "if python_runtime is broken, fix it first"
