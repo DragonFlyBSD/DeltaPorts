@@ -2361,3 +2361,168 @@ premature.
 purpose: small enough not to block the operator-facing features, and
 enables 17 + 18g to plug into a clean write surface rather than
 adding the sixth ad-hoc site.
+
+### Step 22 — agent step layer refactor
+
+Smoke testing on Step 20 surfaced the same complaint reading the
+code that the line counts already implied:
+``dportsv3/agent/steps.py`` is 873 lines, with one method
+(``TriageStep.run``) at 262 lines, another (``PatchAttemptStep.run``)
+at 139, and two ``Services`` dataclasses that each grow another
+``Callable`` field every time a feature adds an artifact writer or
+side-effect helper. The orchestrator + step abstraction is
+load-bearing but the modules it lives in have become hard to
+navigate.
+
+This step pays off the technical debt before further additions
+(Step 19 playbook hook, Step 14 KEDB lookup) layer on top.
+
+#### Goal
+
+After Step 22:
+
+- ``steps.py`` is replaced by a small package; no single file or
+  method is the wall-of-code it is today.
+- Triage and Patch share their backbone (payload → LLM →
+  parse-proof → record artifacts → decide next event) instead of
+  re-implementing it inline.
+- The Services dataclasses retire in favor of direct imports;
+  the dependency-injection layer was useful when each had 4
+  fields, but at 8+ it obscures more than it abstracts.
+- The Orchestrator either earns its keep (multi-step sequences)
+  or goes away.
+
+No behavior change. The whole point is tests staying green.
+
+#### Sub-steps
+
+**22a — split `steps.py` into a small package.**
+
+Layout:
+
+```
+dportsv3/agent/steps/
+    __init__.py        # re-exports the public Step classes for
+                       #   backwards compatibility with anyone
+                       #   importing from dportsv3.agent.steps
+    triage.py          # TriageStep + TriageServices
+    patch.py           # PatchAttemptStep + PatchServices
+    _dispatcher.py     # PatchEventDispatcher (shared by both flows)
+    _phases.py         # phase helpers extracted from run()
+    _shared.py         # _try_write_proposed_fix, _try_write_handoff,
+                       #   _err helpers
+```
+
+Pure move — no logic changes. Tests stay green by construction;
+existing imports keep working because ``__init__.py`` re-exports.
+
+LOC: ~50 of new module boilerplate, ~870 of moves.
+
+**22b — extract phase helpers from `run()`.**
+
+The 262-line ``TriageStep.run`` decomposes into:
+
+```
+def assemble_payload(ctx) -> str
+def call_llm_with_snippet_rounds(ctx, payload) -> LLMResult
+def parse_triage_output(ctx, llm_text) -> TriageOutput
+def write_artifacts(ctx, payload, llm_text, parsed) -> None
+def decide_next_event(ctx, parsed) -> tuple[JobEvent, list[JobEvent], dict]
+def maybe_enqueue_followup(ctx, parsed) -> None
+```
+
+``run()`` becomes ~30 lines: orchestrate the phases, build the
+``StepOutcome``. Patch follows the same pattern with its own
+``parse_patch_proof`` and ``decide_next_event``.
+
+This is the bulk of the refactor. The phases are independently
+unit-testable for the first time — currently the only way to
+exercise them is to drive the whole orchestrator with fake LLM
+responses.
+
+LOC: net -150 (fewer because shared backbone collapses
+duplication between triage and patch).
+
+**22c — retire the Services dataclasses.**
+
+Both ``TriageServices`` and ``PatchServices`` were good when each
+had 4 fields. At 8–10 they obscure more than they abstract — every
+phase function takes a Services arg, then unpacks ``services.foo``,
+``services.bar``, ``services.baz`` from it.
+
+Replace with module-level imports from
+``dportsv3.agent.runner`` (or wherever the helpers naturally live
+post-22a). The runner is the only caller anyway; the indirection
+was a not-yet-needed seam.
+
+Worth keeping the seam in *one* place: ``activity_log`` and
+``log`` get passed explicitly into phase helpers because tests
+need to swap them. Everything else can be a direct import.
+
+LOC: net -100 (delete the dataclasses + the unpacking lines).
+
+**22d — Orchestrator: earn its keep or delete it.**
+
+Today every call site does ``Orchestrator().run(ctx, [SomeStep()])``
+with exactly one step. The "orchestration" is firing
+``StepOutcome.next_event`` + ``extra_events`` after run() — a
+3-line job that doesn't need a class.
+
+Two options:
+
+1. **Earn it.** Compose multi-step sequences where it actually
+   helps — e.g. triage → enqueue-patch as one orchestrator run
+   instead of two separate handler calls. Possible but a larger
+   refactor than this step deserves.
+
+2. **Delete it.** Steps become plain functions; the runner's
+   dispatcher fires lifecycle events directly from the function's
+   return tuple. ``StepCtx`` / ``StepReadiness`` / ``StepOutcome``
+   can stay as named records.
+
+Recommend (2): the indirection isn't pulling weight, and (1) can
+be added later if real orchestration emerges. Step deletes
+``Orchestrator``, keeps the dataclasses for typed returns.
+
+LOC: net -50.
+
+#### LOC estimate
+
+Net ~-300 LOC across the agent layer. The work is mostly moves +
+extractions; the size reduction comes from collapsing duplicated
+backbone between triage and patch.
+
+#### Order
+
+22a → 22b → 22c → 22d. Split first (purely mechanical, gives
+test confidence), then extract phases (the main intellectual
+work), then retire Services, then decide Orchestrator's fate.
+
+#### Dependencies
+
+- **Hard:** none.
+- **Soft:** completing 22 before 19 (playbook hook) and 14 (KEDB
+  lookup), since both will want to add new behavior to triage's
+  pre-LLM phase. Adding into the current monolithic ``run()`` is
+  what got us to 262 lines; the phase helpers from 22b are the
+  right place to hang those.
+
+#### Why not earlier
+
+The current shape works. The "fest" is real but latent — it costs
+*future* contributors reading the code more than it costs the
+loop running. We've shipped most of Step 20 against this exact
+file; the test suite covers the externals. Doing 22 *before* Step
+20 would have delayed working dops conversion for an abstraction
+cleanup. Doing it *now* — with Step 20 stable in production —
+pays off the debt at the right time.
+
+#### Suggested updated order
+
+10 → 20 → 11 → 16 → 21 → 22 → 19 → 12/13 → 17/18 → 14/15.
+
+22 sits next to 21 because both are "consolidate the engineering
+we did opportunistically." Doing them together is appealing —
+they're both no-behavior-change refactors — but they touch
+different files and can ship independently. 21 first (smaller,
+DB-layer-scoped); 22 second (agent-layer-scoped).
