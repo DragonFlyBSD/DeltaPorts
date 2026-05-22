@@ -105,25 +105,41 @@ clean tree:
   a file you haven't read this session. Use `expected_sha256` to make
   edits race-safe.
 
-## Version mismatch is common — verify before chasing paths
+## After extract, trust the response — don't guess source paths
 
-Triage's `Suggested Fix` sometimes names paths with an upstream version
-that doesn't match what's actually built on this env. Example: triage
-says "look at /work/obj/<origin>/<name>-1.52.0/" but the env still has
-1.50.0 because the version bump is recent or the obj tree is stale.
-Hunting a non-existent versioned path wastes turns.
+bsd.port.mk lays the extracted source under a nested `work/` subdir
+(``/work/obj/<origin>/work/<name>-<version>/``), not directly at
+``/work/obj/<origin>/<name>-<version>/``. The obj tree may also contain
+**stale dirs from prior versions** that look like current source but
+aren't — extract doesn't clean them between version bumps.
 
-Before chasing a specific versioned path:
+The ``extract`` tool's response already includes the resolved
+``wrkdir`` and ``wrksrc`` fields — those are bsd.port.mk's authoritative
+answer to "where is the source right now." Use them directly:
 
-1. `list_dir /work/obj/<origin>/` to see what version is actually
-   present (one or more `<name>-X.Y.Z/` subdirs).
-2. Adapt to ground truth: use the version that exists, not the one
-   triage guessed.
+```
+extract(origin) → { ok: true, wrkdir: "...", wrksrc: "...", summary: "..." }
+                                                ^^^^^^^^
+                              this is the only reliable source path
+```
 
-If none of triage's named paths exist, the failure is real evidence of
-version drift — not a missing file. The likely fix in that case is
-*remove the stale patch* (patch refers to a Makefile that no longer
-exists at this version) rather than regenerate it.
+Don't construct ``/work/obj/<origin>/<name>-<version>/`` paths from
+the Makefile's ``DISTVERSION`` and the origin. That path shape is
+wrong (missing the ``work/`` segment), and even if you guess the right
+shape the version dir you see in ``/work/obj/<origin>/`` may be a
+leftover from a prior build, not the current one.
+
+If triage's `Suggested Fix` cites a versioned path that doesn't match
+the extract response's ``wrksrc``:
+
+1. **First** assume it's a path-shape or stale-leftover mismatch —
+   look at ``wrksrc`` and proceed from there.
+2. **Only if the patch genuinely no longer applies to any current
+   version of the target file** consider removing the static patch
+   altogether. Don't reach for "delete the patch" as the first move;
+   most patch-error failures are regenerate-against-new-context cases.
+
+## Worker-enforced "don'ts"
 
 Two tool calls fail with a `refused` error rather than returning data —
 they enforce the corresponding "don't" rules:

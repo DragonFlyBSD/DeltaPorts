@@ -609,8 +609,20 @@ def extract(env: str, origin: str) -> dict:
     lines = [line.strip() for line in q.stdout.splitlines() if line.strip()]
     wrkdir = lines[0] if len(lines) > 0 else ""
     wrksrc = lines[1] if len(lines) > 1 else ""
+    # Concrete "use this path" hint right at the top of the result so
+    # the LLM doesn't have to discover wrksrc by scanning fields. The
+    # obj tree often contains stale version dirs from prior builds;
+    # the wrksrc from extract is the only authoritative answer.
+    summary = (
+        f"Extracted {origin}. wrksrc={wrksrc} — use this exact path "
+        f"to inspect the source; do not guess the version dir from "
+        f"DISTVERSION (the obj tree may contain stale leftovers)."
+        if wrksrc else
+        f"Extracted {origin}, but wrkdir/wrksrc query returned empty."
+    )
     return _exec_result(0, p.stdout, p.stderr,
-                        origin=origin, wrkdir=wrkdir, wrksrc=wrksrc)
+                        origin=origin, wrkdir=wrkdir, wrksrc=wrksrc,
+                        summary=summary)
 
 
 def dupe(env: str, path: str) -> dict:

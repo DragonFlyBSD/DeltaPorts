@@ -143,13 +143,14 @@ def test_grep_allows_obj_dirs(env_dir):
 # --- prompt smoke ---------------------------------------------------------
 
 
-def test_patch_prompt_mentions_version_mismatch():
-    """Prompt instructs the agent to verify versions before chasing
-    triage-suggested paths."""
+def test_patch_prompt_mentions_extract_wrksrc_authority():
+    """Prompt instructs the agent to trust the extract tool's wrksrc
+    field over constructed paths. (The earlier 'list_dir
+    /work/obj/<origin>/' advice was wrong because the obj tree
+    contains stale leftovers from prior version-bumps.)"""
     from dportsv3.agent.prompts import PATCH_SYSTEM
-    assert "Version mismatch" in PATCH_SYSTEM
+    assert "wrksrc" in PATCH_SYSTEM
     assert "/work/obj/" in PATCH_SYSTEM
-    assert "remove the stale patch" in PATCH_SYSTEM
 
 
 def test_patch_prompt_documents_worker_refusals():
@@ -159,3 +160,47 @@ def test_patch_prompt_documents_worker_refusals():
     assert "/work/DPorts/" in PATCH_SYSTEM
     assert "refused" in PATCH_SYSTEM
     assert "Template" in PATCH_SYSTEM
+
+
+def test_patch_prompt_tells_agent_to_use_extract_wrksrc():
+    """The libuv smoke surfaced the agent inventing path shapes
+    (``/work/obj/<origin>/<name>-<version>/``) instead of using
+    extract's response's wrksrc (``/work/obj/<origin>/work/...``).
+    Prompt must steer toward the response field."""
+    from dportsv3.agent.prompts import PATCH_SYSTEM
+    assert "wrksrc" in PATCH_SYSTEM
+    assert "stale" in PATCH_SYSTEM
+    # The "delete the patch" advice must be the LAST resort, not first.
+    assert "not as the first move" in PATCH_SYSTEM \
+        or "Don't reach for" in PATCH_SYSTEM
+
+
+def test_extract_result_carries_summary_pointing_at_wrksrc(monkeypatch):
+    """worker.extract's response must include a summary string that
+    names wrksrc explicitly — so an LLM skimming the result hits the
+    right path immediately instead of constructing one."""
+    from dportsv3.agent import worker
+
+    def fake_exec(env, *argv, **kw):
+        cmd = " ".join(argv)
+        if "-V" in cmd:
+            # The make -V WRKDIR -V WRKSRC query.
+            import subprocess
+            return subprocess.CompletedProcess(
+                args=argv, returncode=0,
+                stdout="/work/obj/devel/libuv/work\n"
+                       "/work/obj/devel/libuv/work/libuv-1.52.0\n",
+                stderr="",
+            )
+        # The make extract step.
+        import subprocess
+        return subprocess.CompletedProcess(
+            args=argv, returncode=0, stdout="", stderr="",
+        )
+
+    monkeypatch.setattr(worker, "_exec", fake_exec)
+    res = worker.extract("env", "devel/libuv")
+    assert res["wrksrc"] == "/work/obj/devel/libuv/work/libuv-1.52.0"
+    assert "summary" in res
+    assert "/work/obj/devel/libuv/work/libuv-1.52.0" in res["summary"]
+    assert "do not guess" in res["summary"]
