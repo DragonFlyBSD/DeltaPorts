@@ -1958,205 +1958,275 @@ envisioned.
 ### Step 20 — direct ops conversion as a first-class job type
 
 `overlay.dops` is the highest-leverage feature for LLM-driven port
-maintenance: pattern-based instead of line-position-based, survives
-upstream drift, expresses intent rather than implementation, and
-sidesteps the entire "patch fuzz" failure mode that today wastes
-significant token budget on regenerating exactly-correct hunks.
-Ports that still ship with static `dragonfly/patches/*` and no
-`overlay.dops` are the worst-case substrate for an LLM agent.
+maintenance. The mental model that matters:
 
-Today the directive "if no `overlay.dops` then first convert the
-port to dops" is prompt-only, attached to the patch agent's system
-prompt and the on-demand `dops_reference` tool. The agent is *told*
-to convert first, but nothing models conversion as a distinct
-operation, nothing tracks whether it succeeded, nothing exposes it
-to the operator, and nothing prevents the agent from mixing
-conversion and fixing in one churning attempt.
+- **Framework-level adjustments** (Makefile tweaks for DragonFly,
+  `USES`/`CONFIGURE_ARGS` swaps, OSVERSION guards, dep
+  substitutions, build-system glue) → always belong in dops.
+  Pattern-based, intent-driven, exactly the shape dops was
+  designed for.
+- **Software-level changes that are simple substitutions** (e.g.
+  hardcoded `/usr/local` → `${PREFIX}`, bounded-scope sed
+  replacements) → expressible as dops `REPLACE_*` commands at
+  build time, also belong in dops.
+- **Software-level complex surgery** (multi-line restructuring,
+  conditional ifdef logic, intertwined-with-context changes) →
+  stays as real static patches under `dragonfly/`. This is what
+  `patch -p1` is for and dops doesn't pretend to solve it.
 
-This step lifts conversion out of the patch flow and gives it its
-own job type, lifecycle, prompt, payload, and tracker surface.
+The win is *not* "no more static patches ever." It's that the
+*framework* layer's tax on patching shrinks dramatically, and
+simple source changes follow it into dops. The irreducible
+complex-source-patch tail remains, but it's a minority of the
+volume and that's a feature, not a defect.
+
+#### Existing infrastructure to build on
+
+`scripts/generator/dportsv3/migration/` is an eight-module package
+that already covers most of the deterministic side of conversion:
+
+- `inventory.py` — scans the tree, detects targets, complexity
+  signals.
+- `classify.py` — auto-safe vs needs-judgment classification.
+- `convert.py` — MVP mechanical translator
+  (`Makefile.dragonfly` → dops ops + a list of
+  ``unsupported_reasons`` for what it couldn't handle).
+- `batch.py`, `waves.py`, `policy.py`, `progress.py`,
+  `dashboard.py` — deterministic batch infrastructure +
+  observability.
+
+Step 20 does **not** rebuild any of this. It adds an LLM layer
+that handles the long tail the deterministic converter flags
+as unsupported, and wires that layer into the job lifecycle so
+results land in the same tracker surfaces as triage and patch.
 
 #### Goal
 
-A port that lacks `overlay.dops` is converted exactly once — either
-proactively (operator-triggered batch sweep) or lazily (triage
-detects the gap and enqueues a convert job before any patch
-attempt). Conversion success means: the port builds with
-`overlay.dops` only, the static-patch directory has been deleted
-or emptied, the `Makefile` references are updated accordingly,
-and a `dsynth_build` rebuild produces a working package. Failure
-either escalates to manual or marks the port as "needs human
-conversion." Either way, the patch flow never has to think about
-this again.
+A port that lacks `overlay.dops` is converted exactly once,
+lazily on first triage. Conversion runs the existing
+deterministic converter first; only the unsupported items reach
+an LLM. Success means the port builds end-to-end with dops
+(plus any complex-source patches the agent correctly judged
+should stay). The patch flow downstream then operates on the
+converted port and never has to think about framework-level
+patch fuzz again.
+
+The deterministic batch CLI in `migration/batch.py` continues
+to exist for operator-driven mass migration; Step 20 does not
+add a parallel agent-driven batch surface (see "20g — removed"
+below).
 
 #### Sub-steps
 
-**20a — detection.**
+**20a — wire detection through the existing classifier.**
 
-`dportsv3.agent.dops.needs_conversion(origin) -> bool`. Mechanical,
-no LLM. Returns True iff the port has `dragonfly/patches/*` files
-(or other static-patch markers) and no `overlay.dops` alongside.
-Detection runs:
-- Inside `triage.run` as a precondition check.
-- Standalone for the operator batch tool (20g).
+No bespoke `needs_conversion()`. Step 20's contribution is the
+*entry point* into the existing pipeline:
 
-Detection results cached on the port row in `state.db` so repeated
-calls are cheap. Cache invalidated when the port's overlay
-directory is touched.
+- A thin `dportsv3.agent.dops.classify(origin)` that calls
+  `migration.classify` + `migration.inventory` and returns the
+  port's current state: `converted` / `auto_safe_pending` /
+  `needs_judgment` / `complex_only_keep_patches`.
+- Cache results on the port row in `state.db`; invalidate when
+  the port's overlay tree is touched.
 
-**20b — convert system prompt + payload builder.**
+Detection emits a tag set similar to Step 19's playbook tags
+(e.g. `{"has-framework-patches", "has-complex-source-patches"}`),
+which the convert prompt later uses to scope the work.
 
-A new `CONVERT_SYSTEM` prompt in `dportsv3.agent.prompts` that
-describes the conversion procedure: read the existing static
-patches, understand what each one does, express that intent in
-`overlay.dops` syntax, delete the static patches, update the
-`Makefile` to remove `PATCHES`/`EXTRA_PATCHES` references,
-verify with `dsynth_build`.
+**20b — convert system prompt + payload builder, scoped to the
+unsupported tail.**
 
-The convert prompt is fundamentally different from the patch
-prompt:
-- Input is a known-good port (static patches that *already work*),
-  not a failure to diagnose.
-- Success criterion is "byte-equivalent or close-enough package
-  built from dops" (loose) or "matches static-patch build product"
-  (strict, deferred to 20e).
-- No diagnosis pressure, no failure log to parse, just refactoring.
+A new `CONVERT_SYSTEM` prompt in `dportsv3.agent.prompts`. The
+payload built by `build_convert_payload(origin, target)`
+deliberately *narrows* the agent's view to what the mechanical
+converter could not handle:
 
-`build_convert_payload(origin, target)` assembles a markdown
-payload containing: the static patches, the current `Makefile`,
-the dops reference doc, the port source tree's key file
-manifest.
+- The deterministic converter's auto-generated dops ops (already
+  applied — the agent does not re-do this work).
+- The list of ``unsupported_reasons`` from `migration/convert.py`.
+- For each unsupported item: the relevant source/Makefile excerpt
+  + the existing static patch (if any) that addresses it.
+- The dops reference doc, focused on `REPLACE_*` semantics.
+
+The prompt teaches three judgment calls, in order:
+
+1. **Framework vs source.** Is this an adjustment to the ports
+   framework (Makefile, USES, etc.) or a real source-file edit?
+2. **Source-simple vs source-complex.** If source: is the change
+   a bounded substitution expressible as `REPLACE_*` (yes → dops
+   it), or genuine surgery (no → keep the static patch under
+   `dragonfly/`)?
+3. **Audit-worthy reason.** Whatever the call, record a short
+   reason — feeds the proof JSON and the tracker UI so reviewers
+   see *why* each item ended up where it did.
+
+The prompt is fundamentally different from the patch prompt:
+input is a known-good port (the existing patches already work),
+no diagnosis pressure, no failure log. Just judgment over a
+bounded list of items.
 
 **20c — `process_convert_job` handler + enqueue.**
 
-New handler `dportsv3.agent.convert.run(payload, env)` modeled on
-`patch.run` — runs the attempt_loop with the CONVERT system
-prompt, uses the same worker tool surface (file ops + dsynth_build
-verification), parses a final `## Conversion Proof (JSON)` block
-that asserts:
+New handler `dportsv3.agent.convert.run(payload, env)`. Flow:
+
+1. Run `migration.convert.convert_record(...)` (deterministic).
+2. If `unsupported_reasons` is empty: write the generated dops,
+   verify with `dsynth_build`, parse Conversion Proof, mark
+   `done` without any LLM call.
+3. Otherwise: enter the attempt_loop with `CONVERT_SYSTEM` + the
+   payload built in 20b, restricted to the unsupported items.
+4. Parse final `## Conversion Proof (JSON)`:
 
 ```json
 {
   "origin": "...",
-  "overlay_dops_written": true,
-  "static_patches_removed": ["patch-foo.c", "patch-bar.h"],
-  "makefile_updated": true,
+  "mechanical_ops_written": <count>,
+  "framework_migrated_to_dops": ["...", "..."],
+  "source_migrated_to_replace_ops": ["...", "..."],
+  "source_patches_retained": [
+    {"file": "patch-foo.c", "reason": "multi-line restructuring"}
+  ],
   "rebuild_ok": true
 }
 ```
 
-New `enqueue_convert_job(...)` mirrors `enqueue_triage_job` /
-`enqueue_patch_job`. Job lifecycle uses the existing
-queued/claimed/converting/done/dead/escalated states; new
-sub-state `converting` parallels `triaging` / `patching` (one
-new value in the JobState enum).
+Three buckets, with reason strings on retained patches so the
+audit is reviewable.
 
-Runner dispatcher gets a new `elif job_type == "convert"` arm
-in `runner.py:2105`.
+New `enqueue_convert_job(...)` mirrors `enqueue_triage_job` /
+`enqueue_patch_job`. New `JobState.CONVERTING` parallels
+`TRIAGING` / `PATCHING`. Runner dispatcher gains a new
+`elif job_type == "convert"` arm in `runner.py:2105`.
 
 **20d — triage hook for lazy conversion.**
 
 In `process_triage_job`, before invoking `triage.run`:
 
 ```
-if needs_conversion(origin) and not has_active_convert_job(origin, target):
+state = classify(origin)
+if state in ("auto_safe_pending", "needs_judgment") and not has_active_convert_job(...):
     enqueue_convert_job(origin, target, requested_by="triage")
     return "deferred: awaiting dops conversion"
 ```
 
-The failing build's manual-handoff (if it gets that far) and the
-triage's stop reason both reference the spawned convert job
-explicitly, so the operator can navigate convert → triage in the
-tracker. Once the convert job hits `done`, the original failure
-either retriages automatically (if Step 5's operator-guided retry
-infrastructure picks it up) or sits in manual queue with a clear
-"ready to retriage" affordance.
+`complex_only_keep_patches` does *not* trigger conversion — the
+port already lives in its correct end state. `converted` is the
+no-op success case.
+
+The deferred triage's stop reason references the spawned convert
+job by id so the tracker chain is navigable. Once the convert
+job hits `done`, the original failure either auto-retriages via
+the Step 5 retry path or sits in manual queue with a "ready to
+retriage" affordance.
 
 **20e — verification.**
 
 Loose first, strict later:
 
-- *Loose (ships with 20):* the convert agent runs `dsynth_build`
+- *Loose (ships with 20):* the convert handler runs `dsynth_build`
   on the converted port and asserts `rebuild_ok=true`. If the
-  port builds with dops, the conversion is good enough by the
-  only criterion that matters end-to-end.
+  port builds end-to-end with dops + any retained complex
+  patches, the conversion is good enough by the only criterion
+  that matters end-to-end.
 - *Strict (deferred to Step 11b):* build the port twice — once
-  with the original static patches (saved aside as
-  `pre-convert.bundle`), once with the converted dops — and
-  byte-compare the resulting `pkg create` manifests. Mismatch
-  → escalate.
+  pre-convert, once post-convert — and byte-compare the resulting
+  `pkg create` manifests. Mismatch → escalate.
 
 20 ships with loose verification; the verification harness
 arriving in 11b naturally extends to convert jobs as a bonus.
 
-**20f — tracker UI surfacing.**
+**20f — tracker UI surfacing, integrated with `migration/dashboard.py`.**
+
+Read the existing `migration/dashboard.py` first; it likely
+already presents the deterministic side. Step 20's UI work
+*extends* that surface rather than building a parallel one:
 
 - New retire reasons: `convert_succeeded`, `convert_failed`,
   `convert_escalated`. Activity-log entries for each.
 - Job-list filter `type=convert` on `/agentic/jobs`.
-- New stat card on the dashboard: "Convert jobs (queued / done /
-  escalated)" — surfaces batch progress when 20g is running.
-- Bundle/job detail pages link convert → triage → patch when
-  the chain exists for one port.
-- A per-port "Toolchain" line (Step 19e) gets a sibling line:
-  "dops status: converted / pending convert job <id> / not yet
-  attempted / human-converted."
+- Dashboard card showing open convert jobs (separate from the
+  deterministic batch progress that `migration/dashboard.py`
+  already tracks).
+- Bundle/job detail pages link the convert → triage → patch
+  chain when one exists for the port.
+- A per-port "dops status" line (sibling to Step 19e's
+  "Toolchain" line) showing the classifier's state.
 
 **20g — operator batch CLI.**
 
-`dportsv3 convert-batch [--targets ...] [--limit N] [--dry-run]`.
-Sweeps the tree, enumerates ports that need conversion, enqueues
-convert jobs (respecting the target filter), prints a summary.
-Operators can run this on a quiet afternoon to pre-pay the
-conversion cost across many ports before any of them fail.
+**Removed.** Two reasons:
 
-Optional flag `--seed-from-failures` to enqueue only ports that
-have failed at least once in the last N days, in priority order.
+1. `migration/batch.py` already provides deterministic batch
+   conversion. Mass migration is a solved deterministic problem;
+   it does not need an agent-driven parallel surface.
+2. The lazy path in 20d catches every port that *actually fails*,
+   which is the only set with a payoff. Converting a port that
+   never fails wastes tokens and introduces regression risk for
+   no observable benefit — and contradicts the case-by-case
+   judgment model the convert prompt is built around.
+
+If proactive agent-driven sweeps ever become a real policy
+need ("we want to be off framework-patches by Q3"), they can be
+added then as a small follow-up. They are not part of Step 20.
 
 #### LOC estimate
 
-- 20a detection: ~60
-- 20b prompt + payload: ~120 + ~400 words of prompt
+- 20a thin classifier wrapper + caching: ~50
+- 20b prompt + payload (focused on unsupported tail): ~100 +
+  ~500 words of prompt
 - 20c handler + enqueue + dispatcher arm: ~150
 - 20d triage hook: ~40
-- 20e loose verification (mostly assertion logic on conversion
-  proof): ~30
-- 20f UI surfacing: ~120
-- 20g batch CLI: ~80
+- 20e loose verification: ~30
+- 20f UI integration with `migration/dashboard.py`: ~80
 
-~600 LOC + prompt content. About the size of one of the bigger
-single-purpose steps.
+~350 LOC + prompt content. Substantially smaller than the
+original draft because the deterministic infrastructure is
+already in place; the agent layer is the long-tail handler,
+not a from-scratch system.
 
 #### Order
 
-20a → 20c → 20b → 20e → 20d → 20f → 20g. Detection and the
-dispatcher arm first (mechanical, easy to test); convert prompt
-next so the agent has something to do; loose verification right
-after because it's the success criterion; lazy triage hook so
-real failures start exercising the path; UI to make it
-observable; batch CLI last to enable the proactive sweep once
-the lazy path is proven on real ports.
+20a → 20c → 20b → 20e → 20d → 20f. Classifier wrapper first
+(read-only, easy to verify against real ports); dispatcher arm
++ handler skeleton next (with a stub LLM call) so the lifecycle
+is exercised end-to-end; convert prompt then so the handler has
+real work to do; loose verification right after as the success
+criterion; lazy triage hook so real failures start exercising
+the path; UI integration last.
 
 #### Dependencies
 
 - **Hard:** existing job-type dispatcher, lifecycle state
-  machine, worker tool surface — all shipped.
+  machine, worker tool surface — all shipped. Also: the
+  `migration/` package, also shipped.
 - **Soft:** Step 11b verification harness (lets 20e graduate from
   loose to strict); Step 13 guardrail middleware (could enforce
   "no static-patch writes on a port with an open convert job",
   but the lazy dispatch already provides ordering implicitly).
 - **No blocker.** Step 20 can land immediately after Step 10.
 
+#### Implementation prerequisite
+
+Before writing any code: read the dops framework end-to-end —
+`engine/api.py` (parse_dsl, check_dsl, build_plan), `migration/`
+(convert.py, classify.py, inventory.py, batch.py at minimum), and
+any prose docs under `docs/` covering dops syntax and
+`REPLACE_*` semantics. The plan above is built from inference
+about the framework's shape; the implementation has to be built
+from the framework's actual API.
+
 #### Why early, not later
 
 dops is the single highest-leverage feature for LLM-driven
-maintenance — patch-fuzz failures evaporate, drift survival
-goes way up, audit trails become readable. Every patch attempt
-on a non-dops port pays the static-patch tax in tokens and
-correctness risk. Pulling conversion forward in the order
-means future patch attempts on those ports run cheaper and
-more reliably. The deferral cost is real and ongoing; the
-implementation cost is one step.
+maintenance — patch-fuzz failures on framework-level changes
+evaporate, simple source changes follow them into dops, drift
+survival goes up, audit trails become readable. Every patch
+attempt on a non-converted port pays the framework-patch tax
+in tokens and correctness risk. Pulling conversion forward in
+the order means future patch attempts on those ports run
+cheaper and more reliably. The deferral cost is real and
+ongoing; the implementation cost is one step.
 
 #### Suggested updated order
 
