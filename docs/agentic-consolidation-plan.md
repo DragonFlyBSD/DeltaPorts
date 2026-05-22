@@ -2526,3 +2526,169 @@ we did opportunistically." Doing them together is appealing —
 they're both no-behavior-change refactors — but they touch
 different files and can ship independently. 21 first (smaller,
 DB-layer-scoped); 22 second (agent-layer-scoped).
+
+### Step 23 — execution layer consolidation
+
+The agent layer's substrate is "shell out `dportsv3 dev-env exec ENV
+-- ARGV` for every tool call." That shape works, but it's accumulated
+the same kind of opportunistic wear as ``steps.py``:
+
+- ``worker._exec(env, *argv, cwd=, input_text=, timeout=None)`` and
+  ``health._run_in_env(env, *argv, timeout=10)`` are two parallel
+  shell-out wrappers that do the same thing with mildly different
+  signatures. ``_run_in_env`` lazy-imports ``_dportsv3_cmd`` from
+  worker.
+- Shell-mode is open-coded. Two recent fixes (``validate_dops``,
+  ``_check_dports_compose``) needed ``/bin/sh -c "cmd" _ args...`` to
+  expand ``$DELTAPORTS_ROOT``. Easy to copy-paste wrong; the dev-env
+  package's ``Session.exec_command`` already uses this exact
+  pattern internally (``session.py:61``) but the agent layer doesn't
+  consume it.
+- Default timeout is ``None`` (unbounded). dsynth_build can in
+  principle wedge the whole runner.
+- The ``duration_ms`` recorded on each tool call includes python
+  wrap + chroot startup + actual command, no decomposition. Hard
+  to tell what's slow when a call takes 30s.
+
+Step 23 consolidates these without changing the substrate (still
+``dev-env exec`` per tool call — the persistent in-chroot worker
+question is explicitly deferred).
+
+#### Goal
+
+After Step 23:
+
+- One ``chroot_exec`` helper used by both ``worker`` and ``health``.
+- A first-class ``shell=True`` mode (or a sibling
+  ``chroot_exec_sh``) so env-var expansion is a one-line call, not
+  a sh-c-quoting puzzle.
+- One configurable default timeout, not ``None``. Per-call override
+  for outliers like dsynth_build.
+- Per-call timing telemetry that decomposes total → chroot startup
+  + actual command + python wrap.
+
+Persistent in-chroot worker is **out of scope** here — we're not
+running enough volume to justify the IPC/lifecycle complexity.
+Revisit when timing data from this step shows it actually hurts.
+
+#### Sub-steps
+
+**23a — unify ``_exec`` + ``_run_in_env``.**
+
+New module ``dportsv3/agent/chroot_exec.py``:
+
+```python
+def chroot_exec(
+    env: str,
+    *argv: str,
+    cwd: str = "/work/DeltaPorts",
+    input_text: str | None = None,
+    timeout: int | None = None,
+    shell: bool = False,
+) -> ExecResult: ...
+```
+
+``ExecResult`` is a typed wrapper around CompletedProcess + the new
+timing fields (23c). ``shell=True`` wraps ``argv`` in the same
+``/bin/sh -c "$1" _ ...`` pattern ``Session.exec_command`` uses, so
+callers can write:
+
+```python
+chroot_exec(env, '"$DELTAPORTS_ROOT/dportsv3" --version', shell=True)
+```
+
+instead of building the ``/bin/sh -c`` argv themselves.
+
+``worker._exec`` becomes a one-line alias; ``health._run_in_env``
+gets deleted in favor of direct ``chroot_exec`` calls. The lazy
+import in health vanishes.
+
+LOC: ~80 (new helper + signatures + small migrations).
+
+**23b — first-class shell-mode helper.**
+
+Subsumed by 23a's ``shell=True`` kwarg, but worth calling out:
+``validate_dops`` and ``_check_dports_compose`` both stop hand-
+rolling ``/bin/sh -c CMD _ ARG`` and use the new shape. Existing
+``reapply`` script (host-side) keeps its hardcoded path for now —
+fixing that is a separate cleanup pass in
+``scripts/tools/dev-env/dports_dev_env/helpers.py``.
+
+LOC: ~20 (call-site migrations).
+
+**23c — sane default timeout + timing telemetry.**
+
+Two changes:
+
+1. Default ``timeout`` becomes ``DP_HARNESS_CHROOT_TIMEOUT`` env
+   var (default 600s). ``timeout=None`` no longer means "unbounded
+   by default" — explicit unbounded callers (if any survive) must
+   ask for it via ``timeout=0``.
+2. ``ExecResult`` adds ``startup_ms`` (time from chroot_exec entry
+   to subprocess.run kicked off) and ``run_ms`` (subprocess
+   wall-clock). PatchEventDispatcher includes both in the
+   activity_log ``extra_json`` for tool_call rows, so the per-tool
+   ``duration_ms`` can be decomposed in the UI.
+
+LOC: ~60 (telemetry plumbing).
+
+**23d — UI surfacing of the timing decomposition.**
+
+The job-detail activity table's ``Dur (ms)`` column today shows
+one number. Extend the tool-call row to show
+``total / startup / run`` when the extra fields are present, so
+operators can see which tool calls eat the startup tax.
+
+Minor change — purely visual. No new data, just rendering.
+
+LOC: ~20 (template).
+
+#### LOC estimate
+
+~180 net additions (mostly the new helper). ~50 deletions from
+consolidating the two wrappers + removing hand-rolled sh-c. Test
+coverage: round-trip the new helper against a tmp env in unit
+tests; mock the subprocess for shell-mode + timing assertions.
+
+#### Order
+
+23a → 23b → 23c → 23d. Helper first (purely additive — both old
+wrappers can call into it during transition), call-site migrations
+next, telemetry plumbing third, UI surfacing last.
+
+#### Dependencies
+
+- **Hard:** none.
+- **Soft:** before Step 22b's phase-helper extraction, since 22b
+  will move a lot of code around that touches ``_exec``. Doing 23
+  first means 22b ships against the consolidated helper instead of
+  two parallel ones.
+
+#### Why not earlier
+
+Same answer as 21 and 22: the layer worked, the wear was latent.
+Two recent shell-mode bugs (validate_dops + health probe) plus the
+unbounded-timeout foot-gun made it concrete. Now's the time.
+
+#### What's explicitly NOT in scope
+
+- **Persistent in-chroot worker** to amortize the ~100–300ms
+  ``dportsv3 dev-env exec`` startup cost across tool calls. That's
+  an architectural change (IPC framing, process lifecycle, crash
+  recovery) that should follow real measurements, not precede
+  them. 23c's timing telemetry is what those measurements would
+  look like.
+- **Retry logic at exec layer.** Chroot transients (mount race,
+  fs hiccup) are rare and the agent gets a useful tool result
+  either way. Adding retries here would obscure real failures.
+- **Argument parsing / typed schemas at the helper level.** Overkill
+  for a 2-function module.
+
+#### Suggested updated order
+
+10 → 20 → 11 → 16 → 21 → 23 → 22 → 19 → 12/13 → 17/18 → 14/15.
+
+23 slots before 22 because 22b's phase-helper extraction will
+touch every ``_exec`` call site; doing 23 first means 22b ships
+against the consolidated helper rather than refactoring two
+parallel ones.
