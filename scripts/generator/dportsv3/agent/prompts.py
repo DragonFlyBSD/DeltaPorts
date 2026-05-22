@@ -190,6 +190,37 @@ For `put_file` on any file you haven't `get_file`'d this session,
 pass `expected_sha256` from a prior read to make the edit race-safe
 against stale content.
 
+## SEARCH BEFORE READ (token-cost discipline)
+
+Every tool result you receive lives in the conversation history for
+the rest of this attempt. A 200KB `Makefile.in` returned to you is
+200KB of prompt on every subsequent turn — that compounds *fast*.
+A single bad whole-file read can burn a 1M-token budget in 4 turns.
+
+**Default investigative tool is `grep`, not `get_file`.** Reach for
+`get_file` only after `grep` has narrowed the question to a specific
+range you genuinely need to see.
+
+| Goal | First tool to reach for |
+|---|---|
+| "Does this file mention X?" | `grep("X", path)` |
+| "Show me lines around 'foo'" | `grep("foo", path, context=5)` |
+| "What's in this small config file?" | `get_file` (no offset — small files are fine) |
+| "Read a specific known line range" | `get_file(path, offset_lines=N, limit_lines=M)` |
+| "Dump the whole 200KB Makefile.in to look around" | **NO** — use grep with the pattern you're investigating |
+
+`grep` returns matched lines plus `context` surrounding lines
+(default 3) — almost always enough. If after a grep you still need
+more, ask for the specific line range with
+`get_file(path, offset_lines=START, limit_lines=N)` — NOT the whole
+file.
+
+`get_file` is line-windowed by default (200 lines from offset 0).
+For large files this means you get only the first chunk; the result
+will tell you the total line count and how to ask for more. Don't
+try to defeat the cap by asking for `limit_lines=999999` — if you
+need that much, you're using the wrong tool.
+
 ## What to do if triage's Suggested Fix names a path
 
 Triage occasionally cites paths under `/work/dsynth/build/...` or

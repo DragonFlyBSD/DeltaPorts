@@ -55,9 +55,19 @@ _TOOLS: list[dict] = [
           "List a directory's entries in the writable overlay.",
           {"path": _STR, "max_entries": _INT}, ["path"]),
     _tool("get_file",
-          "Read a file. Returns encoding=text (UTF-8) or encoding=base64 (binary). "
-          "Use sha256 from this result in put_file's expected_sha256 to guard stale writes.",
-          {"path": _STR}, ["path"]),
+          "Read up to limit_lines lines from a file starting at zero-indexed "
+          "offset_lines. Default 200 lines from start. **Prefer grep first** to "
+          "narrow down before reading — whole-file reads on large files (e.g. "
+          "Makefile.in, configure) inflate every subsequent turn's prompt by "
+          "the file's full size. Returns encoding=text (UTF-8, line-windowed) "
+          "or encoding=base64 (binary, capped at 32KB). On truncation, the "
+          "result includes total_lines + a hint with the next offset_lines to "
+          "request. Use sha256 from this result in put_file's expected_sha256 "
+          "to guard stale writes (sha256 is over the FULL file, not the window).",
+          {"path": _STR,
+           "offset_lines": _INT,
+           "limit_lines": _INT},
+          ["path"]),
     _tool("put_file",
           "Write a file. encoding='text' (UTF-8, default) or 'base64' (binary). "
           "expected_sha256 is an optimistic lock — pass the sha256 from a prior get_file.",
@@ -69,9 +79,15 @@ _TOOLS: list[dict] = [
           "Working-tree diff for ports/<origin>/<relpath> in DeltaPorts (read-only).",
           {"origin": _STR, "relpath": _STR}, ["origin", "relpath"]),
     _tool("grep",
-          "Recursive POSIX grep -rn over the writable overlay. "
-          "ok=True with empty matches just means 'no matches' (not an error).",
-          {"pattern": _STR, "path": _STR, "include": _STR, "max_bytes": _INT},
+          "Recursive POSIX grep -rn over the writable overlay with N lines of "
+          "surrounding context (default 3) per match. **Your default tool for "
+          "investigating any large file** — returns only the relevant lines + "
+          "context, not the whole file. ok=True with empty matches just means "
+          "'no matches' (not an error). Use `include` to glob-filter filenames; "
+          "set `context=0` to suppress surrounding lines if you only want "
+          "match lines themselves.",
+          {"pattern": _STR, "path": _STR, "include": _STR,
+           "max_bytes": _INT, "context": _INT},
           ["pattern", "path"]),
     _tool("materialize_dports",
           "Propagate DeltaPorts edits into the buildable DPorts tree for one origin. "

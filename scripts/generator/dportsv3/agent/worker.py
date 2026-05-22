@@ -328,18 +328,42 @@ def list_dir(env: str, path: str, *, max_entries: int = 200) -> dict:
     }
 
 
-def get_file(env: str, path: str) -> dict:
-    """Read ``path`` from the env's writable overlay.
+_GET_FILE_DEFAULT_LIMIT_LINES = 200
 
-    Returns ``encoding='text'`` with raw UTF-8 ``content`` when the file
-    decodes cleanly and contains no NULs (the common case for source,
-    Makefiles, patches, docs). Falls back to ``encoding='base64'`` for
-    binary content. sha256 is computed over the **bytes**, so the round
-    trip via ``put_file(expected_sha256=...)`` works regardless of
-    encoding.
 
-    Distinct error envelopes for "doesn't exist" vs "is a directory"
-    vs "read failed" — the agent can react usefully rather than guessing.
+def get_file(
+    env: str,
+    path: str,
+    *,
+    offset_lines: int = 0,
+    limit_lines: int = _GET_FILE_DEFAULT_LIMIT_LINES,
+) -> dict:
+    """Read ``path`` from the env's writable overlay, **line-windowed**.
+
+    Returns up to ``limit_lines`` lines starting at zero-indexed
+    ``offset_lines``. Default is the first 200 lines.
+
+    Why line-windowed: whole-file reads pile up in the conversation
+    history. A 200KB ``Makefile.in`` returned to the LLM becomes
+    200KB of prompt on every subsequent turn — quadratic cost. A
+    smoke run on devel/libuv burned 1.5M tokens almost entirely on
+    re-sent ``Makefile.in`` content. With windowed reads + grep-first
+    discipline, the same investigation costs an order of magnitude less.
+
+    The fields you get back:
+
+    - ``content``: the slice of the file as text (UTF-8) or base64 for
+      binary; line-windowing applies only to text content
+    - ``total_lines``: total lines in the source file
+    - ``first_line`` / ``last_line``: 1-indexed inclusive range covered
+    - ``truncated``: True iff there are more lines past ``last_line``
+    - ``sha256``: hash over the **full** file's bytes (stable across
+      windows so ``put_file(expected_sha256=...)`` works regardless)
+    - ``hint`` *(when truncated)*: a line telling you how to resume
+
+    For binary content (NULs / non-UTF-8), the read is still
+    whole-file (no line concept), but capped at 32KB to avoid the
+    same problem. Use ``grep`` instead for searching binary-ish files.
     """
     paths = env_paths(env)
     host = _resolve_chroot_path(paths, path)
@@ -365,6 +389,8 @@ def get_file(env: str, path: str) -> dict:
             "path": path,
         }
     data = host.read_bytes()
+    full_sha = _sha256(data)
+    full_size = len(data)
 
     text: str | None = None
     if b"\x00" not in data:
@@ -374,19 +400,72 @@ def get_file(env: str, path: str) -> dict:
             text = None
 
     if text is not None:
-        return {
+        lines = text.splitlines(keepends=True)
+        total_lines = len(lines)
+        # Clamp inputs defensively. limit_lines<=0 means "use default";
+        # offset_lines<0 means "from start".
+        if limit_lines <= 0:
+            limit_lines = _GET_FILE_DEFAULT_LIMIT_LINES
+        if offset_lines < 0:
+            offset_lines = 0
+        start = min(offset_lines, total_lines)
+        end = min(start + limit_lines, total_lines)
+        window = "".join(lines[start:end])
+        truncated = end < total_lines
+        # When the window is empty (offset past EOF, or empty file),
+        # report first_line=0 to signal "no content returned" rather
+        # than a confusing 1-past-last value. Otherwise it's the
+        # 1-indexed first line covered.
+        if end > start:
+            first_line = start + 1
+        else:
+            first_line = 0
+        result = {
             "path": path,
             "encoding": "text",
-            "content": text,
-            "sha256": _sha256(data),
-            "size": len(data),
+            "content": window,
+            "sha256": full_sha,
+            "size": full_size,
+            "total_lines": total_lines,
+            "first_line": first_line,
+            "last_line": end,
+            "truncated": truncated,
+        }
+        if truncated:
+            remaining = total_lines - end
+            result["hint"] = (
+                f"{remaining} more line(s) past line {end}. To continue, "
+                f"call get_file({path!r}, offset_lines={end}). To narrow "
+                f"down without reading the whole file, prefer grep "
+                f"(returns only matching lines + context)."
+            )
+        return result
+
+    # Binary path: cap at 32KB and report what was elided. The agent
+    # almost never needs raw binary content anyway; this is a backstop.
+    _MAX_BINARY_BYTES = 32_768
+    if len(data) > _MAX_BINARY_BYTES:
+        capped = data[:_MAX_BINARY_BYTES]
+        return {
+            "path": path,
+            "encoding": "base64",
+            "content": base64.b64encode(capped).decode("ascii"),
+            "sha256": full_sha,
+            "size": full_size,
+            "truncated": True,
+            "hint": (
+                f"binary file capped at {_MAX_BINARY_BYTES} bytes of "
+                f"{full_size}. Use grep or extract specific tools rather "
+                f"than reading the raw bytes."
+            ),
         }
     return {
         "path": path,
         "encoding": "base64",
         "content": base64.b64encode(data).decode("ascii"),
-        "sha256": _sha256(data),
-        "size": len(data),
+        "sha256": full_sha,
+        "size": full_size,
+        "truncated": False,
     }
 
 
@@ -472,14 +551,22 @@ def grep(
     *,
     include: str | None = None,
     max_bytes: int = 8192,
+    context: int = 3,
 ) -> dict:
-    """Recursive grep over the env's writable overlay.
+    """Recursive grep over the env's writable overlay, with context lines.
 
     Uses POSIX ``grep -rn`` (always present on dfly) — not ripgrep,
     which isn't packaged for DragonFly. ``ok=True`` whenever grep
     ran without error, even when there were zero matches (rc=1 from
     grep is "no matches", not a failure). ``ok=False`` only when
     grep itself crashed (rc>=2) or the path is invalid.
+
+    ``context`` (default 3) is the number of surrounding lines
+    (``grep -C``) returned per match, so the agent rarely needs to
+    fall back to ``get_file`` after grep. Set to 0 to suppress
+    context entirely. The token cost difference between "matches +
+    a few context lines" and "the whole 200KB Makefile.in" is the
+    difference between affordable and not.
     """
     refused = _reject_dsynth_scaffolding(path, op="grep")
     if refused is not None:
@@ -498,8 +585,11 @@ def grep(
             "match_count": 0,
         }
     # -E extended regex (closest to rg's default), -r recursive, -n line numbers,
-    # -I skip binary files, --include= glob (gnu/bsd grep both support it).
+    # -I skip binary files, --include= glob (gnu/bsd grep both support it),
+    # -C <n> context lines around each match (both GNU and BSD grep support it).
     cmd = ["grep", "-rnIE"]
+    if context and context > 0:
+        cmd.append(f"-C{int(context)}")
     if include:
         cmd.append(f"--include={include}")
     cmd.extend(["--", pattern, str(host)])
