@@ -6,6 +6,25 @@
   <title>{{ job.job_id }} — DeltaPorts Tracker</title>
   <link href="{{ request.url_for('static', path='progress.css') }}" type="text/css" rel="stylesheet">
   <link rel="icon" type="image/png" href="{{ request.url_for('static', path='favicon.png') }}">
+  <style>
+    .token-card { font-size: 12px; margin: 12px 0; }
+    .token-card td { padding-right: 16px; }
+    .token-card .num { font-variant-numeric: tabular-nums; text-align: right; }
+    .token-card .pct { color: var(--text-dim); font-size: 11px; }
+    .live-indicator { font-size: 11px; color: var(--text-dim); margin-left: 8px; }
+    .live-indicator .dot { display: inline-block; width: 8px; height: 8px;
+                           border-radius: 50%; vertical-align: middle;
+                           margin-right: 4px; background: #ccc; }
+    .live-indicator.active .dot { background: #29b346; animation: pulse 1.4s ease-in-out infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+    .activity-table .tok { font-variant-numeric: tabular-nums; text-align: right;
+                            font-family: ui-monospace, monospace; font-size: 11px; }
+    .activity-table .tok-empty { color: transparent; }
+    .activity-table .tool-list { font-family: ui-monospace, monospace;
+                                  font-size: 11px; color: var(--text-dim); }
+    .new-row { animation: fade-in 1.2s ease-out; }
+    @keyframes fade-in { from { background: #fffae0; } to { background: transparent; } }
+  </style>
 </head>
 <body>
   {% with nav_crumbs = [{"label": "Agentic", "url": request.url_for('agentic_index')}, {"label": "Jobs", "url": request.url_for('agentic_jobs')}, {"label": job.job_id}] %}
@@ -13,7 +32,20 @@
   {% endwith %}
 
   <div class="tracker-page">
-    <h1>{{ job.job_id }}</h1>
+    <h1>{{ job.job_id }}
+      {% set is_active = job.state in ('queued', 'claimed', 'triaging', 'triaged', 'patching', 'verifying') %}
+      <span id="live-indicator"
+            class="live-indicator{% if is_active %} active{% endif %}"
+            data-job-id="{{ job.job_id }}"
+            data-job-state="{{ job.state }}"
+            data-since-id="{{ max_activity_id }}">
+        <span class="dot"></span><span class="status-text">{% if is_active %}live{% else %}idle{% endif %}</span>
+        {% if is_active %}
+          · <span class="last-update">just now</span>
+          · <a href="#" id="pause-toggle">[pause]</a>
+        {% endif %}
+      </span>
+    </h1>
 
     <div class="tracker-card">
       <table style="font-size:12px;">
@@ -33,7 +65,7 @@
         <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;vertical-align:top;">Last error</th><td><pre style="margin:0;padding:8px;background:var(--c-failed-bg);color:var(--c-failed);white-space:pre-wrap;">{{ job.last_error }}</pre></td></tr>
         {% endif %}
       </table>
-      {% if job.state in ('queued', 'claimed', 'triaging', 'triaged', 'patching', 'verifying') %}
+      {% if is_active %}
       <div style="margin-top:12px;">
         <button type="button" id="abandon-btn"
                 data-job-id="{{ job.job_id }}"
@@ -78,6 +110,46 @@
       {% endif %}
     </div>
 
+    {% if token_usage and token_usage.has_data %}
+    {# Step 9a: token-cost summary card. Aggregated from llm_turn rows in activity_log. #}
+    <h2>Token usage</h2>
+    {% set total = token_usage.total_tokens %}
+    {% set p = token_usage.prompt_tokens %}
+    {% set c = token_usage.completion_tokens %}
+    <table class="tracker-card token-card">
+      <tr>
+        <th style="text-align:left;color:var(--text-dim);">Prompt</th>
+        <td class="num">{{ '{:,}'.format(p) }}</td>
+        <td class="pct">{% if total %}{{ '%0.1f' % (100 * p / total) }}%{% endif %}</td>
+      </tr>
+      <tr>
+        <th style="text-align:left;color:var(--text-dim);">Completion</th>
+        <td class="num">{{ '{:,}'.format(c) }}</td>
+        <td class="pct">{% if total %}{{ '%0.1f' % (100 * c / total) }}%{% endif %}</td>
+      </tr>
+      <tr style="border-top:1px solid var(--border, #d8dee9);">
+        <th style="text-align:left;">Total</th>
+        <td class="num"><strong>{{ '{:,}'.format(total) }}</strong></td>
+        <td></td>
+      </tr>
+      <tr>
+        <th style="text-align:left;color:var(--text-dim);">LLM turns</th>
+        <td class="num">{{ token_usage.llm_turns }}</td>
+        <td></td>
+      </tr>
+      {% if token_usage.largest_turn %}
+      {% set lt = token_usage.largest_turn %}
+      <tr>
+        <th style="text-align:left;color:var(--text-dim);">Largest turn</th>
+        <td colspan="2" class="pct">
+          A{{ lt.attempt }}.T{{ lt.turn }} — prompt {{ '{:,}'.format(lt.prompt_tokens) }}
+          {% if lt.tools_requested %}(after {{ lt.tools_requested|join(', ') }}){% endif %}
+        </td>
+      </tr>
+      {% endif %}
+    </table>
+    {% endif %}
+
     {% if transitions %}
     <h2>Lifecycle transitions
       <span style="font-size:11px;color:var(--text-dim);font-weight:normal;">
@@ -105,7 +177,7 @@
 
     {% if activity %}
     <h2>Activity
-      <span style="font-size:11px;color:var(--text-dim);font-weight:normal;">
+      <span id="activity-count" style="font-size:11px;color:var(--text-dim);font-weight:normal;">
         ({{ activity|length }} of last {{ limit }})
       </span>
     </h2>
@@ -118,31 +190,23 @@
       </select>
       events
     </form>
-    <table class="tracker-table">
-      <thead><tr><th>When</th><th>Stage</th><th>Dur (ms)</th><th>Message</th></tr></thead>
-      <tbody>
-        {% for a in activity %}
-        <tr {% if a.stage == 'attempt_start' %}style="background:var(--c-info-bg, #f0f4ff);font-weight:600;"
-            {% elif a.stage == 'attempt_end' %}style="background:var(--c-success-bg, #f0fff4);font-weight:600;"
-            {% elif a.stage == 'decision' %}style="background:var(--c-meta-bg, #f2eeff);"
-            {% elif a.stage and a.stage.startswith('tool:') %}style="font-family:ui-monospace,monospace;font-size:11px;"
-            {% endif %}>
-          <td style="white-space:nowrap;">{{ a.ts }}</td>
-          <td>{{ a.stage or '—' }}</td>
-          <td>{{ a.duration_ms if a.duration_ms is not none else '—' }}</td>
-          <td>
-            {{ a.message or '—' }}
-            {% if a.stage == 'decision' and a.extra is mapping %}
-            <div style="margin-top:4px;font-size:11px;color:var(--text-dim);">
-              action={{ a.extra.action or '—' }} · tier={{ a.extra.tier or '—' }}
-              {% if a.extra.classification %} · class={{ a.extra.classification }}{% endif %}
-              {% if a.extra.confidence %} · confidence={{ a.extra.confidence }}{% endif %}
-              {% if a.extra.recent_failures is defined %} · failures={{ a.extra.recent_failures }}/{{ a.extra.max_attempts or '?' }}{% endif %}
-              {% if a.extra.original_tier %} · original={{ a.extra.original_tier }}{% endif %}
-            </div>
-            {% endif %}
-          </td>
+    {# Step 9a column layout: structured token columns next to the message. #}
+    <table class="tracker-table activity-table" id="activity-table">
+      <thead>
+        <tr>
+          <th>When</th>
+          <th>Stage</th>
+          <th>Dur (ms)</th>
+          <th class="tok">Prompt</th>
+          <th class="tok">Compl</th>
+          <th class="tok">Total</th>
+          <th class="tok">Cum</th>
+          <th>Message / tools</th>
         </tr>
+      </thead>
+      <tbody id="activity-tbody">
+        {% for a in activity %}
+        {% include "_activity_row.html" %}
         {% endfor %}
       </tbody>
     </table>
@@ -150,5 +214,129 @@
     <div class="empty-state">No activity recorded for this job.</div>
     {% endif %}
   </div>
+
+  {% if is_active %}
+  {# Step 9c: live refresh on active jobs. Poll /api/activity with a
+     since_id cursor every 3s, prepend new rows. Pause on tab hidden.
+     A single [pause] link is the only manual control. #}
+  <script>
+    (function () {
+      var indicator = document.getElementById("live-indicator");
+      if (!indicator) return;
+      var jobId = indicator.dataset.jobId;
+      var sinceId = parseInt(indicator.dataset.sinceId || "0", 10);
+      var tbody = document.getElementById("activity-tbody");
+      var countEl = document.getElementById("activity-count");
+      var lastUpdateEl = indicator.querySelector(".last-update");
+      var statusText = indicator.querySelector(".status-text");
+      var pauseLink = document.getElementById("pause-toggle");
+      var pollMs = 3000;
+      var paused = false;
+      var timer = null;
+
+      // States that terminate polling.
+      var TERMINAL = ["done", "dead", "escalated"];
+
+      function fmtAgo(ts) {
+        var seconds = Math.round((Date.now() - ts) / 1000);
+        if (seconds < 5) return "just now";
+        if (seconds < 60) return seconds + "s ago";
+        var m = Math.floor(seconds / 60);
+        return m + "m ago";
+      }
+
+      function renderRow(a) {
+        // Mirror _activity_row.html shape. Server-side is canonical;
+        // this is the live-prepend fallback for new rows.
+        var tr = document.createElement("tr");
+        tr.className = "new-row";
+        var stage = a.stage || "—";
+        var extra = a.extra || {};
+        var isLLMTurn = stage === "llm_turn";
+        var p = isLLMTurn ? (extra.prompt_tokens || 0).toLocaleString() : "";
+        var c = isLLMTurn ? (extra.completion_tokens || 0).toLocaleString() : "";
+        var t = isLLMTurn ? (extra.total_tokens || 0).toLocaleString() : "";
+        var cum = isLLMTurn ? (extra.cumulative_total_tokens || 0).toLocaleString() : "";
+        var tools = (isLLMTurn && extra.tools_requested && extra.tools_requested.length)
+                      ? "→ " + extra.tools_requested.join(", ")
+                      : (a.message || "—");
+        tr.innerHTML =
+          '<td style="white-space:nowrap;">' + (a.ts || "") + "</td>" +
+          "<td>" + stage + "</td>" +
+          "<td>" + (a.duration_ms == null ? "—" : a.duration_ms) + "</td>" +
+          '<td class="tok' + (isLLMTurn ? "" : " tok-empty") + '">' + (p || "·") + "</td>" +
+          '<td class="tok' + (isLLMTurn ? "" : " tok-empty") + '">' + (c || "·") + "</td>" +
+          '<td class="tok' + (isLLMTurn ? "" : " tok-empty") + '">' + (t || "·") + "</td>" +
+          '<td class="tok' + (isLLMTurn ? "" : " tok-empty") + '">' + (cum || "·") + "</td>" +
+          '<td' + (isLLMTurn ? ' class="tool-list"' : "") + ">" + tools + "</td>";
+        return tr;
+      }
+
+      async function poll() {
+        if (document.hidden || paused) {
+          schedule();
+          return;
+        }
+        try {
+          var resp = await fetch(
+            "/api/activity?job_id=" + encodeURIComponent(jobId)
+              + "&since_id=" + sinceId + "&limit=200"
+          );
+          if (resp.ok) {
+            var rows = await resp.json();
+            if (rows && rows.length) {
+              // Server returns oldest-first when since_id > 0; the
+              // activity table is newest-first, so we prepend each
+              // in reverse to make the newest land at the top.
+              rows.forEach(function (a) {
+                if (a.id && a.id > sinceId) sinceId = a.id;
+                tbody.insertBefore(renderRow(a), tbody.firstChild);
+              });
+              if (countEl) {
+                var current = tbody.querySelectorAll("tr").length;
+                countEl.textContent = "(" + current + " rows, " + rows.length + " new)";
+              }
+            }
+            if (lastUpdateEl) lastUpdateEl.textContent = fmtAgo(Date.now());
+          }
+        } catch (err) { /* network blip, try again next tick */ }
+        // Re-fetch the job state to detect terminal transitions.
+        try {
+          var jobResp = await fetch("/api/jobs/" + encodeURIComponent(jobId));
+          if (jobResp.ok) {
+            var job = await jobResp.json();
+            if (TERMINAL.indexOf(job.state) >= 0) {
+              indicator.classList.remove("active");
+              if (statusText) statusText.textContent = "idle (" + job.state + ")";
+              if (pauseLink) pauseLink.style.display = "none";
+              return;  // stop polling
+            }
+          }
+        } catch (err) { /* swallow */ }
+        schedule();
+      }
+
+      function schedule() { timer = setTimeout(poll, pollMs); }
+
+      document.addEventListener("visibilitychange", function () {
+        if (!document.hidden && statusText) statusText.textContent = "live";
+      });
+
+      if (pauseLink) {
+        pauseLink.addEventListener("click", function (ev) {
+          ev.preventDefault();
+          paused = !paused;
+          pauseLink.textContent = paused ? "[resume]" : "[pause]";
+          if (statusText) statusText.textContent = paused ? "paused" : "live";
+          if (!paused) poll();
+        });
+      }
+
+      // Kick off the loop after a short delay so initial render
+      // finishes first.
+      schedule();
+    })();
+  </script>
+  {% endif %}
 </body>
 </html>

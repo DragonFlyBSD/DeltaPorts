@@ -1,0 +1,51 @@
+{# One row of the per-job activity table. Step 9a structured columns.
+   - llm_turn rows: token columns filled from extra_json; message
+     shows the tool fan-out concisely ("→ get_file, grep").
+   - Other rows: token columns are "·" placeholders; message column
+     shows the original prose.
+   The JS in agentic_job.html renders new rows with the same shape
+   so prepended live-refresh rows match the static initial render. #}
+{% set is_llm_turn = a.stage == 'llm_turn' %}
+{% set is_decision = a.stage == 'decision' %}
+{% set is_attempt_start = a.stage == 'attempt_start' %}
+{% set is_attempt_end = a.stage == 'attempt_end' %}
+{% set is_tool = a.stage and a.stage.startswith('tool:') %}
+<tr {% if is_attempt_start %}style="background:var(--c-info-bg, #f0f4ff);font-weight:600;"
+    {% elif is_attempt_end %}style="background:var(--c-success-bg, #f0fff4);font-weight:600;"
+    {% elif is_decision %}style="background:var(--c-meta-bg, #f2eeff);"
+    {% elif is_tool %}style="font-family:ui-monospace,monospace;font-size:11px;"
+    {% endif %}>
+  <td style="white-space:nowrap;">{{ a.ts }}</td>
+  <td>{{ a.stage or '—' }}</td>
+  <td>{{ a.duration_ms if a.duration_ms is not none else '—' }}</td>
+  {% if is_llm_turn and a.extra is mapping %}
+    <td class="tok">{{ '{:,}'.format(a.extra.prompt_tokens or 0) }}</td>
+    <td class="tok">{{ '{:,}'.format(a.extra.completion_tokens or 0) }}</td>
+    <td class="tok">{{ '{:,}'.format(a.extra.total_tokens or 0) }}</td>
+    <td class="tok">{{ '{:,}'.format(a.extra.cumulative_total_tokens or 0) }}</td>
+    <td class="tool-list">
+      {% if a.extra.tools_requested %}
+        → {{ a.extra.tools_requested|join(', ') }}
+      {% elif a.extra.text_only %}
+        (text-only final response)
+      {% else %}—{% endif %}
+    </td>
+  {% else %}
+    <td class="tok tok-empty">·</td>
+    <td class="tok tok-empty">·</td>
+    <td class="tok tok-empty">·</td>
+    <td class="tok tok-empty">·</td>
+    <td>
+      {{ a.message or '—' }}
+      {% if is_decision and a.extra is mapping %}
+      <div style="margin-top:4px;font-size:11px;color:var(--text-dim);">
+        action={{ a.extra.action or '—' }} · tier={{ a.extra.tier or '—' }}
+        {% if a.extra.classification %} · class={{ a.extra.classification }}{% endif %}
+        {% if a.extra.confidence %} · confidence={{ a.extra.confidence }}{% endif %}
+        {% if a.extra.recent_failures is defined %} · failures={{ a.extra.recent_failures }}/{{ a.extra.max_attempts or '?' }}{% endif %}
+        {% if a.extra.original_tier %} · original={{ a.extra.original_tier }}{% endif %}
+      </div>
+      {% endif %}
+    </td>
+  {% endif %}
+</tr>

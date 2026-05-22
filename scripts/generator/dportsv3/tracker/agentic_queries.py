@@ -295,14 +295,106 @@ def distinct_targets(conn: sqlite3.Connection) -> list[str]:
 
 
 def activity_for_job(
-    conn: sqlite3.Connection, job_id: str, limit: int = 50
+    conn: sqlite3.Connection,
+    job_id: str,
+    limit: int = 50,
+    since_id: int = 0,
 ) -> list[dict[str, Any]]:
-    """Activity-log rows for one job_id, newest first."""
-    rows = conn.execute(
-        "SELECT * FROM activity_log WHERE job_id = ? ORDER BY id DESC LIMIT ?",
-        (job_id, max(1, int(limit))),
-    ).fetchall()
+    """Activity-log rows for one ``job_id``.
+
+    Newest first by default (the static initial render).
+
+    With ``since_id > 0``, returns rows with ``id > since_id`` in
+    **oldest-first** order — the polling shape, so the client can
+    prepend each new row at the top of an existing newest-first table.
+    """
+    if since_id and since_id > 0:
+        rows = conn.execute(
+            """SELECT * FROM activity_log
+               WHERE job_id = ? AND id > ?
+               ORDER BY id ASC LIMIT ?""",
+            (job_id, int(since_id), max(1, int(limit))),
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT * FROM activity_log WHERE job_id = ? "
+            "ORDER BY id DESC LIMIT ?",
+            (job_id, max(1, int(limit))),
+        ).fetchall()
     return [_decode_extra_json(_row_dict(row)) for row in rows]
+
+
+def token_usage_for_job(
+    conn: sqlite3.Connection, job_id: str,
+) -> dict[str, Any]:
+    """Aggregate token usage from ``llm_turn`` activity_log rows.
+
+    Returns a structured summary card for the job detail page:
+
+    - ``prompt_tokens``, ``completion_tokens``, ``total_tokens``: sums
+    - ``llm_turns``: count of llm_turn events for this job
+    - ``largest_turn``: the single turn with the largest prompt;
+      includes ``turn``, ``prompt_tokens``, ``tools_requested``
+    - ``has_data``: False when there are no llm_turn rows yet
+      (older jobs predating the telemetry, or fresh jobs that
+      haven't hit their first LLM call). Operators see "no data"
+      rather than zeros.
+
+    Sums are computed from ``extra_json`` rather than the message
+    text — that's the structured source of truth for the data.
+    """
+    rows = conn.execute(
+        """SELECT extra_json FROM activity_log
+           WHERE job_id = ? AND stage = 'llm_turn'
+           ORDER BY id ASC""",
+        (job_id,),
+    ).fetchall()
+    if not rows:
+        return {
+            "has_data": False,
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0,
+            "llm_turns": 0,
+            "largest_turn": None,
+        }
+    prompt_sum = 0
+    completion_sum = 0
+    total_sum = 0
+    largest: dict[str, Any] | None = None
+    for row in rows:
+        raw = row[0] if not hasattr(row, "keys") else row["extra_json"]
+        if not raw:
+            continue
+        try:
+            extra = json.loads(raw)
+        except (TypeError, ValueError):
+            continue
+        if not isinstance(extra, dict):
+            continue
+        p = int(extra.get("prompt_tokens") or 0)
+        c = int(extra.get("completion_tokens") or 0)
+        t = int(extra.get("total_tokens") or 0)
+        prompt_sum += p
+        completion_sum += c
+        total_sum += t
+        if largest is None or p > largest["prompt_tokens"]:
+            largest = {
+                "turn": extra.get("turn"),
+                "attempt": extra.get("attempt"),
+                "prompt_tokens": p,
+                "completion_tokens": c,
+                "total_tokens": t,
+                "tools_requested": extra.get("tools_requested") or [],
+            }
+    return {
+        "has_data": True,
+        "prompt_tokens": prompt_sum,
+        "completion_tokens": completion_sum,
+        "total_tokens": total_sum,
+        "llm_turns": len(rows),
+        "largest_turn": largest,
+    }
 
 
 def job_events_for_job(

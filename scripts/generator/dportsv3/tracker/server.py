@@ -41,6 +41,7 @@ from dportsv3.tracker.agentic_queries import (
     port_attempt_summary,
     recent_activity,
     runner_status,
+    token_usage_for_job,
     upsert_user_context_text,
 )
 from dportsv3.tracker.db import (
@@ -633,8 +634,22 @@ def create_app(db_path: str | Path) -> Any:
     def api_activity(
         limit: int = Query(default=10, ge=1, le=500),
         target: str | None = None,
+        job_id: str | None = None,
+        since_id: int = Query(default=0, ge=0),
     ) -> list[dict[str, Any]]:
+        """Activity-log query.
+
+        - ``job_id`` set → per-job rows. With ``since_id > 0`` returns
+          new rows oldest-first (polling shape for the job detail
+          page's live refresh — Step 9c).
+        - ``job_id`` unset → global recent (newest-first), optionally
+          filtered by target.
+        """
         with _conn() as conn:
+            if job_id:
+                return activity_for_job(
+                    conn, job_id, limit=limit, since_id=since_id,
+                )
             return recent_activity(conn, limit=limit, target=target)
 
     @app.get("/api/runner-status")
@@ -958,11 +973,18 @@ def create_app(db_path: str | Path) -> Any:
                     max_attempts=int(os.environ.get("DP_HARNESS_MAX_PATCH_ATTEMPTS", "3")),
                 ) if job is not None else None
             )
+            token_usage = (
+                token_usage_for_job(conn, job_id)
+                if job is not None else None
+            )
         if job is None:
             raise HTTPException(status_code=404, detail=f"Unknown job: {job_id}")
         # Activity rows come back newest-first from the query; flip for
         # chronological reading (attempt 1 tools → attempt 2 tools → ...).
         activity = list(reversed(activity))
+        # Cursor for the live-refresh polling — the client polls
+        # /api/activity?job_id=X&since_id=N for new rows.
+        max_id = max((a.get("id") or 0) for a in activity) if activity else 0
         return templates.TemplateResponse(
             request,
             "agentic_job.html",
@@ -972,6 +994,8 @@ def create_app(db_path: str | Path) -> Any:
                 "activity": activity,
                 "transitions": transitions,
                 "attempt_summary": attempt_summary,
+                "token_usage": token_usage,
+                "max_activity_id": max_id,
                 "limit": limit,
                 "limit_options": [50, 200, 500, 2000, 5000],
             },
