@@ -1821,15 +1821,13 @@ def _maybe_defer_to_convert(
     except Exception as exc:
         log(queue_root, "WARN", f"activity_log failed in defer: {exc}")
 
-    # Walk the lifecycle: TRIAGING -> TRIAGED (TRIAGE_OK) ->
-    # ESCALATED (ESCALATE_MANUAL). The manual-queue UI picks up
-    # ESCALATED jobs and the activity log carries the convert_job_id
-    # so the operator can navigate the chain.
+    # Walk the lifecycle: TRIAGING -> DEAD via TRIAGE_DEFER. The
+    # retire_reason 'deferred_for_convert' tells the manual queue
+    # to skip this triage — operator action is on the convert job,
+    # not here. activity_log row above carries the convert_job_id
+    # so the chain is navigable.
     try:
-        _apply_transition(job_path.name, JobEvent.TRIAGE_OK, detail=detail)
-        _apply_transition(
-            job_path.name, JobEvent.ESCALATE_MANUAL, detail=detail,
-        )
+        _apply_transition(job_path.name, JobEvent.TRIAGE_DEFER, detail=detail)
     except Exception as exc:
         log(queue_root, "WARN", f"failed to defer triage lifecycle: {exc}")
 
@@ -2488,7 +2486,10 @@ def process_job(
     update_runner_status("processing", job_id=job_id, stage=f"{job_type}_start",
                          extra={"origin": origin, "type": job_type})
 
-    if bundle_dir is None and not bundle_id:
+    # Step 20: convert jobs are port-level — there's no failure
+    # bundle attached and they don't need one. The bundle-required
+    # gate below only applies to triage/patch.
+    if job_type != "convert" and bundle_dir is None and not bundle_id:
         log(queue_root, "ERROR", "missing bundle_id/bundle_dir in job")
         write_error_note(job_path, "missing bundle_id/bundle_dir in job")
         move_job(job_path, "failed")
@@ -2504,6 +2505,12 @@ def process_job(
     if dry_run:
         if job_type == "patch":
             payload = build_patch_payload(bundle_dir, kedb_dir, job)
+        elif job_type == "convert":
+            log(queue_root, "INFO",
+                f"[dry-run] type=convert, origin={origin}, target={job.get('target','')}")
+            move_job(job_path, "pending")
+            update_runner_status("idle", job_id=None, stage=None)
+            return
         else:
             payload = build_triage_payload(bundle_dir, kedb_dir, job)
 

@@ -95,11 +95,15 @@ def test_defer_for_needs_judgment_port(tmp_path: Path, monkeypatch, state_db) ->
     assert "origin=devel/cond" in content
     assert "requested_by=triage" in content
 
-    # The triage job has been escalated.
+    # The triage job is parked at DEAD with the dedicated
+    # 'deferred_for_convert' retire reason, so the manual queue
+    # filters it out instead of surfacing it as actionable.
     row = state_db.execute(
-        "SELECT state FROM jobs WHERE job_id = ?", (job_path.name,),
+        "SELECT state, retire_reason FROM jobs WHERE job_id = ?",
+        (job_path.name,),
     ).fetchone()
-    assert row["state"] == "escalated"
+    assert row["state"] == "dead"
+    assert row["retire_reason"] == "deferred_for_convert"
 
 
 def test_defer_attaches_to_existing_convert_job(

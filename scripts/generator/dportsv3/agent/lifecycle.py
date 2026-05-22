@@ -73,6 +73,11 @@ class JobEvent(StrEnum):
     CONVERT_START    = "convert_start"
     CONVERT_OK       = "convert_ok"
     CONVERT_GAVE_UP  = "convert_gave_up"
+    # Step 20d follow-up: when triage detects a port needs conversion
+    # it fires TRIAGE_DEFER (not ESCALATE_MANUAL) so the deferred
+    # triage doesn't pollute the operator's manual queue. The convert
+    # job carries the actual work; this triage is just parked.
+    TRIAGE_DEFER     = "triage_defer"
 
 
 # (from_state, event) -> to_state. ``None`` as from_state means
@@ -107,6 +112,9 @@ TRANSITIONS: dict[tuple[JobState | None, JobEvent], JobState] = {
     (JobState.CONVERTING,  JobEvent.CONVERT_OK):       JobState.DONE,
     (JobState.CONVERTING,  JobEvent.CONVERT_GAVE_UP):  JobState.DEAD,
     (JobState.CONVERTING,  JobEvent.ESCALATE_MANUAL):  JobState.ESCALATED,
+    # Step 20d: TRIAGE_DEFER lands at DEAD with a distinct retire
+    # reason so the manual queue is not polluted with parked triages.
+    (JobState.TRIAGING,    JobEvent.TRIAGE_DEFER):     JobState.DEAD,
 
     # env_broken can interrupt any active state
     (JobState.CLAIMED,     JobEvent.ENV_BROKEN):       JobState.DEAD,
@@ -155,6 +163,7 @@ _TERMINAL_REASONS: dict[JobEvent, str] = {
     JobEvent.REAP_ORPHAN:      "runner_restart",
     JobEvent.ABANDON:          "abandoned",
     JobEvent.CONVERT_GAVE_UP:  "convert_failed",
+    JobEvent.TRIAGE_DEFER:     "deferred_for_convert",
 }
 
 

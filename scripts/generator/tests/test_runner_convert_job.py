@@ -49,6 +49,52 @@ def _isolate_state_db(tmp_path: Path, monkeypatch):
     conn.close()
 
 
+def test_process_job_accepts_convert_without_bundle(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """Regression: process_job's bundle-required gate must NOT fail
+    convert jobs. Convert is port-level, so bundle_id and bundle_dir
+    are both empty. The gate from earlier dispatcher versions
+    silently moved convert jobs to failed/ and the runner went idle,
+    which is exactly what happened in the smoke test."""
+    from dportsv3.agent.runner import process_job
+
+    repo = _make_repo(tmp_path)
+    port = _make_port(repo, "devel/no-bundle")
+    (port / "Makefile.DragonFly").write_text("USES+=pkgconfig\n")
+    monkeypatch.setenv("DP_HARNESS_REPO_ROOT", str(repo))
+    monkeypatch.delenv("DP_HARNESS_ENV", raising=False)
+
+    queue_root = tmp_path / "queue"
+    (queue_root / "pending").mkdir(parents=True)
+    (queue_root / "inflight").mkdir()
+    (queue_root / "done").mkdir()
+    (queue_root / "failed").mkdir()
+
+    # Pretend the runner already claimed it (file is in inflight/).
+    job_file = queue_root / "inflight" / "20260522-000000Z-test-convert.job"
+    job_file.write_text(
+        "type=convert\norigin=devel/no-bundle\ntarget=@main\n"
+    )
+
+    from dportsv3.agent.lifecycle import JobEvent, apply as la
+    la(runner_mod._state_db_conn, job_file.name, JobEvent.HOOK_ENQUEUED)
+    la(runner_mod._state_db_conn, job_file.name, JobEvent.CLAIM)
+
+    process_job(queue_root, job_file, [], dry_run=False, kedb_dir=None)
+
+    # The convert job either landed at DONE (deterministic conversion
+    # succeeded + no env to verify in, accepted on faith) or at DEAD
+    # via CONVERT_GAVE_UP. Either is acceptable — the regression
+    # check is that the job is NOT stuck in CLAIMED.
+    row = runner_mod._state_db_conn.execute(
+        "SELECT state FROM jobs WHERE job_id = ?", (job_file.name,),
+    ).fetchone()
+    assert row[0] in ("done", "dead"), (
+        f"convert job stuck in state={row[0]!r}; expected done or dead"
+    )
+
+
 def test_enqueue_convert_job_writes_jobfile(tmp_path: Path) -> None:
     queue_root = tmp_path / "queue"
     (queue_root / "pending").mkdir(parents=True)
