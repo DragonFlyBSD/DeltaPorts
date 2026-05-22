@@ -885,6 +885,16 @@ def create_app(db_path: str | Path) -> Any:
                 get_artifact_ref(conn, bundle_id, selected_relpath)
                 if selected_relpath else None
             )
+            # Step 9: prior attempts table. Other bundles for the same
+            # (origin, target) so the operator can see the agent's
+            # history at a glance from any bundle page.
+            prior_attempts = (
+                [b for b in list_port_bundles(
+                    conn, origin=bundle.get("origin"),
+                    target=bundle.get("target"), limit=10,
+                ) if b["bundle_id"] != bundle_id]
+                if bundle is not None else []
+            )
         if bundle is None:
             raise HTTPException(status_code=404, detail=f"Unknown bundle: {bundle_id}")
         if selected_relpath and selected_ref is None:
@@ -905,6 +915,7 @@ def create_app(db_path: str | Path) -> Any:
                 "tool_trace": tool_trace,
                 "selected_artifact": selected_artifact,
                 "selected_artifact_relpath": selected_relpath,
+                "prior_attempts": prior_attempts,
             },
         )
 
@@ -985,6 +996,15 @@ def create_app(db_path: str | Path) -> Any:
                 token_usage_for_job(conn, job_id)
                 if job is not None else None
             )
+            # Step 9: prior-attempts table — recent bundles for the
+            # same (origin, target) so the operator can see history.
+            prior_attempts = (
+                list_port_bundles(
+                    conn, origin=job.get("origin"),
+                    target=job.get("target"), limit=10,
+                )
+                if job is not None and job.get("origin") else []
+            )
         if job is None:
             raise HTTPException(status_code=404, detail=f"Unknown job: {job_id}")
         # Activity rows come back newest-first from the query; flip for
@@ -1007,6 +1027,7 @@ def create_app(db_path: str | Path) -> Any:
                 "limit": limit,
                 "limit_options": [50, 200, 500, 2000, 5000],
                 "stage_filter": sf,
+                "prior_attempts": prior_attempts,
             },
         )
 

@@ -129,6 +129,8 @@
     <div class="empty-state">No artifacts recorded for this bundle.</div>
     {% endif %}
 
+    {% include "_prior_attempts.html" %}
+
     {% if tool_trace %}
     <h2>Tool trace</h2>
     <table class="tracker-table">

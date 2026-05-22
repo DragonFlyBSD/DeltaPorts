@@ -244,6 +244,46 @@ def test_view_agentic_bundle_detail_renders_artifact_rail(client: TestClient) ->
     assert "?artifact=logs/errors.txt" in body
 
 
+def test_view_agentic_bundle_detail_shows_prior_attempts(client: TestClient) -> None:
+    """Step 9 — prior-attempts table lists other bundles for the same
+    (origin, target) and excludes the bundle being viewed.
+
+    Fixture has two ``devel/foo @2026Q2`` bundles (b-q2-foo and
+    b-q2-foo-retry) plus an unrelated ``devel/foo @main`` bundle. From
+    b-q2-foo's page, the table must include b-q2-foo-retry, exclude
+    b-q2-foo itself, and exclude the @main variant."""
+    resp = client.get("/agentic/bundles/b-q2-foo")
+    assert resp.status_code == 200
+    body = resp.text
+    assert "Prior attempts for this origin" in body
+    # The retry bundle for the same target is listed…
+    assert "b-q2-foo-retry" in body
+    # …the @main variant (different target) is not.
+    assert "b-main-foo" not in body
+    # The current bundle appears in the page title etc., but not as a
+    # row inside the prior-attempts table — assert the table block
+    # itself doesn't contain a row link to the current bundle.
+    prior_section = body.split("Prior attempts for this origin", 1)[1]
+    prior_section = prior_section.split("</table>", 1)[0]
+    assert "b-q2-foo-retry" in prior_section
+    assert "/agentic/bundles/b-q2-foo<" not in prior_section
+    assert ">b-q2-foo</a>" not in prior_section
+
+
+def test_view_agentic_job_detail_shows_prior_attempts(client: TestClient) -> None:
+    """Step 9 — same prior-attempts table on the job detail page,
+    keyed off the job's (origin, target). job-q2-foo is devel/foo
+    @2026Q2 → both b-q2-foo and b-q2-foo-retry are valid prior
+    attempts."""
+    resp = client.get("/agentic/jobs/job-q2-foo")
+    assert resp.status_code == 200
+    body = resp.text
+    assert "Prior attempts for this origin" in body
+    assert "b-q2-foo-retry" in body
+    assert "b-q2-foo" in body
+    assert "b-main-foo" not in body
+
+
 def test_view_agentic_bundle_detail_selects_artifact_inline(client: TestClient) -> None:
     resp = client.get("/agentic/bundles/b-q2-foo", params={"artifact": "meta.txt"})
     assert resp.status_code == 200

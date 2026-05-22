@@ -1,0 +1,58 @@
+{# Step 9 — recent bundles for this (origin, target). Rendered on
+   both the bundle detail page (excluding the bundle being viewed)
+   and the job detail page. Compact table; the operator gets a
+   one-glance sense of "is this the 3rd attempt with budget
+   exhausted, or is this a fresh failure?". #}
+{% if prior_attempts %}
+<h2>Prior attempts for this origin
+  <span style="font-size:11px;color:var(--text-dim);font-weight:normal;">
+    ({{ prior_attempts | length }} of last 10)
+  </span>
+</h2>
+<table class="tracker-table" style="font-size:12px;">
+  <thead>
+    <tr>
+      <th>Bundle</th>
+      <th>When</th>
+      <th>Result</th>
+      <th>Resolution</th>
+      <th>Run</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for b in prior_attempts %}
+    <tr>
+      <td>
+        <a href="{{ request.url_for('agentic_bundle_detail', bundle_id=b.bundle_id) }}">
+          {{ b.bundle_id }}
+        </a>
+      </td>
+      <td style="white-space:nowrap;">{{ b.ts_utc }}</td>
+      <td>
+        <span class="stat-pill {% if b.result in ('fail', 'failure') %}failed{% else %}built{% endif %}">
+          {{ b.result }}
+        </span>
+      </td>
+      <td>
+        {% if b.resolution == 'agent_fixed' %}
+          <span class="stat-pill built">agent fixed</span>
+        {% elif b.resolution == 'agent_gave_up' %}
+          <span class="stat-pill failed">agent gave up</span>
+        {% elif b.resolution == 'agent_budget_exhausted' %}
+          <span class="stat-pill failed">budget out</span>
+        {% elif b.resolution == 'escalated_manual' %}
+          <span class="stat-pill skipped">escalated</span>
+        {% else %}
+          —
+        {% endif %}
+      </td>
+      <td>
+        {% if b.run_id %}
+          <a href="{{ request.url_for('agentic_run_detail', run_id=b.run_id) }}">{{ b.run_id }}</a>
+        {% else %}—{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
