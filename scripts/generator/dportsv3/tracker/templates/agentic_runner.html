@@ -13,21 +13,86 @@
   {% endwith %}
 
   <div class="tracker-page">
-    <h1>Runner status</h1>
+    <h1>Runner status
+      <span id="live-indicator" style="font-size:12px;font-weight:normal;color:#22c55e;margin-left:8px;">●live</span>
+      <button type="button" id="live-toggle"
+              style="font-size:11px;margin-left:4px;padding:2px 8px;cursor:pointer;">[pause]</button>
+    </h1>
     <p class="lede">Heartbeat from the agent queue runner.</p>
 
     <div class="tracker-card">
       <table style="font-size:12px;">
-        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Status</th><td>{{ runner.status }}</td></tr>
-        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Current job</th><td>{% if runner.job_id %}<a href="{{ request.url_for('agentic_job_detail', job_id=runner.job_id) }}">{{ runner.job_id }}</a>{% else %}—{% endif %}</td></tr>
-        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Stage</th><td>{{ runner.current_stage or '—' }}</td></tr>
-        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Started at</th><td>{{ runner.started_at or '—' }}</td></tr>
-        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Updated at</th><td>{{ runner.updated_at or '—' }}</td></tr>
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Status</th><td id="runner-status">{{ runner.status }}</td></tr>
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Current job</th><td id="runner-job">{% if runner.job_id %}<a href="{{ request.url_for('agentic_job_detail', job_id=runner.job_id) }}">{{ runner.job_id }}</a>{% else %}—{% endif %}</td></tr>
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Stage</th><td id="runner-stage">{{ runner.current_stage or '—' }}</td></tr>
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Started at</th><td id="runner-started">{{ runner.started_at or '—' }}</td></tr>
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Updated at</th><td id="runner-updated">{{ runner.updated_at or '—' }}</td></tr>
         {% if runner.extra_json %}
-        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;vertical-align:top;">Extra</th><td><pre style="margin:0;font-size:11px;">{{ runner.extra_json }}</pre></td></tr>
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;vertical-align:top;">Extra</th><td><pre id="runner-extra" style="margin:0;font-size:11px;">{{ runner.extra_json }}</pre></td></tr>
         {% endif %}
       </table>
     </div>
   </div>
+
+  <script>
+    // Step 16 — live refresh on the runner status page. Polls
+    // /api/runner-status every 4s and updates the cells in place.
+    // Matches the ●live / [pause] pattern from the job detail page.
+    (function () {
+      var indicator = document.getElementById("live-indicator");
+      var toggle = document.getElementById("live-toggle");
+      var paused = false;
+      var intervalId = null;
+      var INTERVAL_MS = 4000;
+
+      function setText(id, value) {
+        var el = document.getElementById(id);
+        if (el) el.textContent = value == null ? "—" : value;
+      }
+
+      function setJob(jobId) {
+        var el = document.getElementById("runner-job");
+        if (!el) return;
+        if (jobId) {
+          el.innerHTML = '<a href="/agentic/jobs/' + encodeURIComponent(jobId) + '">'
+            + jobId + '</a>';
+        } else {
+          el.textContent = "—";
+        }
+      }
+
+      async function refresh() {
+        if (paused) return;
+        try {
+          var resp = await fetch("/api/runner-status", {cache: "no-store"});
+          if (!resp.ok) return;
+          var d = await resp.json();
+          setText("runner-status", d.status);
+          setJob(d.job_id);
+          setText("runner-stage", d.current_stage);
+          setText("runner-started", d.started_at);
+          setText("runner-updated", d.updated_at);
+          var extra = document.getElementById("runner-extra");
+          if (extra && d.extra_json) extra.textContent = d.extra_json;
+        } catch (err) { /* swallow; next tick will retry */ }
+      }
+
+      toggle.addEventListener("click", function () {
+        paused = !paused;
+        if (paused) {
+          indicator.style.color = "var(--text-dim)";
+          indicator.textContent = "●paused";
+          toggle.textContent = "[resume]";
+        } else {
+          indicator.style.color = "#22c55e";
+          indicator.textContent = "●live";
+          toggle.textContent = "[pause]";
+          refresh();
+        }
+      });
+
+      intervalId = setInterval(refresh, INTERVAL_MS);
+    })();
+  </script>
 </body>
 </html>
