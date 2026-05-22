@@ -218,6 +218,32 @@ def test_view_agentic_bundle_detail_lists_artifacts(client: TestClient) -> None:
     assert "<h3>Classification</h3>" in body
 
 
+def test_view_agentic_bundle_detail_renders_artifact_rail(client: TestClient) -> None:
+    """Step 9 — operator-canonical files surface as a quick-links rail
+    above the full artifact table. Only artifacts that actually exist
+    on the bundle become pills.
+
+    The fixture's b-q2-foo has meta.txt, logs/errors.txt,
+    analysis/triage.md, analysis/patch_audit.json, logs/full.log.gz,
+    analysis/tool_trace.jsonl. It does NOT have proposed_fix.md or
+    manual_handoff.md, so those pills must be absent."""
+    resp = client.get("/agentic/bundles/b-q2-foo")
+    assert resp.status_code == 200
+    body = resp.text
+    assert "Quick links" in body
+    assert 'class="artifact-rail"' in body
+    # Present-artifact pills surface.
+    for label in ("Triage", "Patch audit", "Tool trace",
+                  "Errors log", "Full log (.gz)", "meta.txt"):
+        assert label in body, f"missing rail pill for {label!r}"
+    # Absent artifacts must NOT have pills (b-q2-foo doesn't have these).
+    assert "Proposed fix" not in body
+    assert "Manual handoff" not in body
+    # Each pill links into the bundle detail with ?artifact=…
+    assert "?artifact=analysis/triage.md" in body
+    assert "?artifact=logs/errors.txt" in body
+
+
 def test_view_agentic_bundle_detail_selects_artifact_inline(client: TestClient) -> None:
     resp = client.get("/agentic/bundles/b-q2-foo", params={"artifact": "meta.txt"})
     assert resp.status_code == 200

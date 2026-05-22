@@ -51,6 +51,38 @@
       </table>
     </div>
 
+    {# Step 9: artifact shortcut rail. Operator-canonical files
+       surface as labeled pills at the top, with the long full list
+       further down. Pills appear only for artifacts that actually
+       exist on this bundle. #}
+    {% set artifact_paths = bundle.artifacts | map(attribute='relpath') | list %}
+    {% set rail = [
+        ('analysis/proposed_fix.md',  'Proposed fix',  'built'),
+        ('analysis/manual_handoff.md','Manual handoff','skipped'),
+        ('analysis/triage.md',         'Triage',         'total'),
+        ('analysis/patch.md',          'Patch',          'total'),
+        ('analysis/patch_audit.json',  'Patch audit',    'total'),
+        ('analysis/changes.diff',      'Changes diff',   'total'),
+        ('analysis/tool_trace.jsonl',  'Tool trace',     'total'),
+        ('analysis/rebuild_proof.json','Rebuild proof',  'total'),
+        ('logs/errors.txt',            'Errors log',     'failed'),
+        ('logs/full.log.gz',           'Full log (.gz)', 'total'),
+        ('meta.txt',                   'meta.txt',       'total'),
+    ] %}
+    {% set visible_rail = rail | selectattr(0, 'in', artifact_paths) | list %}
+    {% if visible_rail %}
+    <h2>Quick links</h2>
+    <div class="artifact-rail" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;">
+      {% for relpath, label, pill_class in visible_rail %}
+      <a href="{{ request.url_for('agentic_bundle_detail', bundle_id=bundle.bundle_id) }}?artifact={{ relpath | urlencode }}"
+         class="stat-pill {{ pill_class }}"
+         style="text-decoration:none;font-size:11px;padding:3px 8px;">
+        {{ label }}
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+
     <h2>Artifacts</h2>
     {% if bundle.artifacts %}
     <div class="artifact-reader">
