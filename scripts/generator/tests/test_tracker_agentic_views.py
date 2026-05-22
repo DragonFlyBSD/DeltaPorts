@@ -292,6 +292,38 @@ def test_view_agentic_bundle_detail_renders_artifact_rail(client: TestClient) ->
     assert "?artifact=logs/errors.txt" in body
 
 
+def test_view_agentic_index_shows_convert_card(client: TestClient) -> None:
+    """Step 20f: dashboard surfaces convert-job progress alongside the
+    existing pending-manual card. Fixture has no convert jobs so the
+    card reads '0 / 0 / 0' but must render."""
+    resp = client.get("/agentic")
+    assert resp.status_code == 200
+    body = resp.text
+    assert "Convert open / done / dead" in body
+
+
+def test_view_agentic_bundle_detail_shows_dops_state(
+    client: TestClient, monkeypatch, tmp_path: Path
+) -> None:
+    """Step 20f: bundle detail page shows the port's dops state.
+    Fixture's b-q2-foo references devel/foo; we point
+    DP_HARNESS_REPO_ROOT at a tmp repo where devel/foo has an
+    overlay.dops, so the page should read 'converted'."""
+    # Build a tmp repo with devel/foo carrying overlay.dops.
+    ports = tmp_path / "ports" / "devel" / "foo"
+    ports.mkdir(parents=True)
+    (ports / "overlay.dops").write_text(
+        'target @main\nport devel/foo\ntype port\nreason "test"\n'
+    )
+    monkeypatch.setenv("DP_HARNESS_REPO_ROOT", str(tmp_path))
+    resp = client.get("/agentic/bundles/b-q2-foo")
+    assert resp.status_code == 200
+    body = resp.text
+    # The "dops" row is added by Step 20f; expect "converted" pill.
+    assert ">dops<" in body
+    assert "converted" in body
+
+
 def test_view_agentic_bundle_detail_shows_lifetime_token_cost(client: TestClient) -> None:
     """Step 9 — bundle page surfaces accumulated token cost across
     every job for this (origin, target). Fixture has two llm_turn

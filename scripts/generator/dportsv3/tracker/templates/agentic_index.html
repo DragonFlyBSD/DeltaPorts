@@ -45,6 +45,19 @@
           {% endif %}
         </div>
       </div>
+      {# Step 20f — convert-job progress. Open count is the operator's
+         load signal; done/dead/escalated trail behind. #}
+      <div class="tracker-card"
+           {% if status.convert and status.convert.open %}style="border-color:#3b82f6;"{% endif %}>
+        <div style="color:var(--text-dim);font-size:11px;">Convert open / done / dead</div>
+        <div style="font-size:22px;font-weight:600;">
+          {% if status.convert %}
+            {{ status.convert.open }} / {{ status.convert.done }} / {{ status.convert.dead }}
+          {% else %}
+            0 / 0 / 0
+          {% endif %}
+        </div>
+      </div>
     </div>
 
     <h2>Environment health</h2>
@@ -119,7 +132,7 @@
           <td>
             {% set cls = {
               'queued':'ignored',
-              'claimed':'skipped','triaging':'skipped','triaged':'skipped','patching':'skipped','verifying':'skipped',
+              'claimed':'skipped','triaging':'skipped','triaged':'skipped','patching':'skipped','verifying':'skipped','converting':'skipped',
               'done':'built','dead':'failed','escalated':'skipped'
             }.get(j.state,'total') %}
             <span class="stat-pill {{ cls }}">{{ j.state }}</span>

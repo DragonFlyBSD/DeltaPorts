@@ -906,6 +906,24 @@ def create_app(db_path: str | Path) -> Any:
                 )
                 if bundle is not None and bundle.get("origin") else None
             )
+            # Step 20f: dops conversion state for the port. Surfaces
+            # whether this failure is on an already-converted port,
+            # one waiting for conversion, etc.
+            dops_state = None
+            if bundle is not None and bundle.get("origin"):
+                try:
+                    from dportsv3.agent.dops import classify as _classify_dops
+                    import os as _os
+                    _repo = (
+                        _os.environ.get("DP_HARNESS_REPO_ROOT")
+                        or _os.environ.get("DPORTSV3_REPO_ROOT")
+                        or "."
+                    )
+                    dops_state = _classify_dops(
+                        bundle["origin"], _repo,
+                    )
+                except Exception:
+                    dops_state = None
         if bundle is None:
             raise HTTPException(status_code=404, detail=f"Unknown bundle: {bundle_id}")
         if selected_relpath and selected_ref is None:
@@ -928,6 +946,7 @@ def create_app(db_path: str | Path) -> Any:
                 "selected_artifact_relpath": selected_relpath,
                 "prior_attempts": prior_attempts,
                 "port_token_usage": port_token_usage,
+                "dops_state": dops_state,
             },
         )
 

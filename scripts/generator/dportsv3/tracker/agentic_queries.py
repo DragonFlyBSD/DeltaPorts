@@ -66,6 +66,17 @@ def agentic_status(conn: sqlite3.Connection) -> dict[str, Any]:
     manual_pending = conn.execute(
         "SELECT count(*) FROM user_context_requests WHERE status = 'pending'"
     ).fetchone()[0]
+    # Step 20f — convert-job progress by state. open=queued/claimed/converting,
+    # done/dead/escalated mirror the global rollup so the operator can read
+    # progress at a glance.
+    convert_rows = conn.execute(
+        """SELECT
+             SUM(CASE WHEN state IN ('queued','claimed','converting') THEN 1 ELSE 0 END) AS open,
+             SUM(CASE WHEN state = 'done' THEN 1 ELSE 0 END) AS done,
+             SUM(CASE WHEN state = 'dead' THEN 1 ELSE 0 END) AS dead,
+             SUM(CASE WHEN state = 'escalated' THEN 1 ELSE 0 END) AS escalated
+           FROM jobs WHERE type = 'convert'"""
+    ).fetchone()
     return {
         "bundles": bundles,
         "runs": runs,
@@ -76,6 +87,12 @@ def agentic_status(conn: sqlite3.Connection) -> dict[str, Any]:
             "done": int(rows[2] or 0),
             "dead": int(rows[3] or 0),
             "escalated": int(rows[4] or 0),
+        },
+        "convert": {
+            "open":      int(convert_rows[0] or 0),
+            "done":      int(convert_rows[1] or 0),
+            "dead":      int(convert_rows[2] or 0),
+            "escalated": int(convert_rows[3] or 0),
         },
     }
 

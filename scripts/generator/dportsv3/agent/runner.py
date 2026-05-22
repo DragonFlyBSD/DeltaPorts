@@ -2265,11 +2265,9 @@ def process_convert_job(
     classified = classify_inventory([record])[0]
 
     if state == "needs_judgment":
-        # 20b not implemented yet — surface this clearly so the
-        # operator sees what's blocked on the LLM tool loop.
-        return False, (
-            f"needs_llm: bucket={classified.get('bucket')!r}, "
-            f"reasons={classified.get('classification_reasons')!r}"
+        return _run_llm_conversion(
+            job=job, job_path=job_path, origin=origin,
+            repo_root=repo_root, classified=classified,
         )
 
     # state == "auto_safe_pending" → run the deterministic translator.
@@ -2293,6 +2291,121 @@ def process_convert_job(
 
     # Step 20e: verify the rewrite with dsynth_build inside the env.
     # No env → skip; the smoke-test path always sets DP_HARNESS_ENV.
+    return _verify_conversion(job, origin)
+
+
+def _run_llm_conversion(
+    *,
+    job: dict,
+    job_path: Path,
+    origin: str,
+    repo_root: Path,
+    classified: dict,
+) -> tuple[bool, str]:
+    """Drive the convert agent (CONVERT_SYSTEM + attempt_loop) for a
+    ``needs_judgment`` port. The deterministic translator can't
+    handle it (conditional blocks / raw diffs / newport), so the
+    LLM has to make the framework/source-simple/source-complex call.
+
+    Returns ``(success, status)`` for the dispatcher. Verification
+    (Step 20e) runs after the proof parses successfully.
+    """
+    from dportsv3.agent import convert as convert_mod
+    from dportsv3.migration.convert import convert_record
+
+    env = job.get("dev_env") or os.environ.get("DP_HARNESS_ENV")
+    if not env:
+        return False, (
+            "needs_llm but DP_HARNESS_ENV unset — convert agent needs "
+            "a dev-env for the tool surface"
+        )
+
+    # Model resolution mirrors patch flow: dedicated CONVERT_MODEL
+    # env var with fallback to PATCH_MODEL so single-model deployments
+    # work out of the box.
+    model = (
+        os.environ.get("DP_HARNESS_CONVERT_MODEL")
+        or os.environ.get("DP_HARNESS_PATCH_MODEL")
+        or os.environ.get("DP_HARNESS_TRIAGE_MODEL")
+    )
+    if not model:
+        return False, (
+            "no model configured (set DP_HARNESS_CONVERT_MODEL or "
+            "DP_HARNESS_PATCH_MODEL)"
+        )
+    api_base = (
+        os.environ.get("DP_HARNESS_CONVERT_API_BASE")
+        or os.environ.get("DP_HARNESS_PATCH_API_BASE")
+        or None
+    )
+    api_key = (
+        os.environ.get("DP_HARNESS_CONVERT_API_KEY")
+        or os.environ.get("DP_HARNESS_PATCH_API_KEY")
+        or None
+    )
+    provider = (
+        os.environ.get("DP_HARNESS_CONVERT_PROVIDER")
+        or os.environ.get("DP_HARNESS_PATCH_PROVIDER")
+        or None
+    )
+
+    # Convert is bounded refactoring (not exploratory debugging) so
+    # the tier is tighter than the patch tier — 2 attempts, 80K
+    # tokens. Override via DP_HARNESS_CONVERT_BUDGET if needed.
+    from dportsv3.agent.policy import Tier
+    tier = Tier(
+        name="CONVERT",
+        max_iterations=int(os.environ.get("DP_HARNESS_CONVERT_ITERATIONS", "2")),
+        max_tokens=int(os.environ.get("DP_HARNESS_CONVERT_BUDGET", "80000")),
+    )
+
+    # Build the payload — deterministic_result reuses convert_record
+    # in dry_run mode just to get a status snapshot for the prompt.
+    det_result = convert_record(classified, repo_root=repo_root, dry_run=True)
+    quickref_path = (
+        Path(__file__).resolve().parent / "dops_quickref.md"
+    )
+    try:
+        quickref = quickref_path.read_text()
+    except OSError:
+        quickref = ""
+
+    payload = convert_mod.build_convert_payload(
+        origin=origin,
+        repo_root=repo_root,
+        classified_record=classified,
+        deterministic_result=det_result,
+        dops_quickref_text=quickref,
+    )
+
+    def _on_event(ev: dict) -> None:
+        try:
+            activity_log(
+                Path(job.get("queue_root") or "."),
+                f"convert:{ev.get('type', 'event')}",
+                str(ev.get('summary') or ev.get('type') or '')[:500],
+                job_id=job_path.name,
+                extra=ev,
+            )
+        except Exception:
+            pass
+
+    result = convert_mod.run(
+        payload,
+        tier=tier, env=env, model=model,
+        api_base=api_base, api_key=api_key,
+        custom_llm_provider=provider,
+        on_event=_on_event,
+    )
+    if not result.success:
+        return False, (
+            f"llm_convert_failed: {result.status} "
+            f"({result.raw_result.status})"
+        )
+
+    # The agent wrote overlay.dops + cleaned up legacy files via
+    # its tool calls. Verify with dsynth_build same as the
+    # deterministic path.
     return _verify_conversion(job, origin)
 
 

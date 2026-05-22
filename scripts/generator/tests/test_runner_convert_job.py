@@ -95,29 +95,139 @@ def test_process_convert_job_auto_safe_port(
     assert "port devel/auto-safe" in dops
 
 
-def test_process_convert_job_needs_llm_for_conditional(
+def test_process_convert_job_needs_judgment_without_env(
     tmp_path: Path, monkeypatch
 ) -> None:
-    """A Makefile.DragonFly with a .if conditional → ``needs_judgment``
-    → the handler returns a ``needs_llm:`` failure so the dispatcher
-    fires CONVERT_GAVE_UP with that detail. Once 20b lands, this
-    case will run the LLM tool loop instead."""
+    """needs_judgment + no DP_HARNESS_ENV → clear refusal so the
+    operator knows the LLM path needs the env wired up."""
     repo = _make_repo(tmp_path)
     port = _make_port(repo, "devel/with-cond")
     (port / "Makefile.DragonFly").write_text(
         ".if ${OPSYS} == DragonFly\nUSES+=pkgconfig\n.endif\n"
     )
     monkeypatch.setenv("DP_HARNESS_REPO_ROOT", str(repo))
+    monkeypatch.delenv("DP_HARNESS_ENV", raising=False)
 
-    job = {"origin": "devel/with-cond", "target": "@main"}
     success, status = process_convert_job(
         queue_root=tmp_path / "queue",
         job_path=tmp_path / "queue" / "x.job",
         sibling_paths=[],
-        job=job,
+        job={"origin": "devel/with-cond", "target": "@main"},
     )
     assert not success
-    assert "needs_llm" in status
+    assert "DP_HARNESS_ENV unset" in status
+
+
+def test_process_convert_job_needs_judgment_without_model(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """needs_judgment + env but no model → clear refusal."""
+    repo = _make_repo(tmp_path)
+    port = _make_port(repo, "devel/with-cond")
+    (port / "Makefile.DragonFly").write_text(
+        ".if ${OPSYS} == DragonFly\n.endif\n"
+    )
+    monkeypatch.setenv("DP_HARNESS_REPO_ROOT", str(repo))
+    monkeypatch.setenv("DP_HARNESS_ENV", "test-env")
+    for var in ("DP_HARNESS_CONVERT_MODEL", "DP_HARNESS_PATCH_MODEL",
+                "DP_HARNESS_TRIAGE_MODEL"):
+        monkeypatch.delenv(var, raising=False)
+
+    success, status = process_convert_job(
+        queue_root=tmp_path / "queue",
+        job_path=tmp_path / "queue" / "x.job",
+        sibling_paths=[],
+        job={"origin": "devel/with-cond", "target": "@main"},
+    )
+    assert not success
+    assert "no model configured" in status
+
+
+def test_process_convert_job_needs_judgment_llm_success(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """needs_judgment + env + model + mocked convert.run returning
+    a valid proof + mocked dsynth_build green → handler succeeds.
+    Verifies the LLM wire-up is in place."""
+    from dportsv3.agent import convert as convert_mod
+    from dportsv3.agent import worker
+    from dportsv3.agent.attempt_loop import PatchResult, Usage
+
+    repo = _make_repo(tmp_path)
+    port = _make_port(repo, "devel/llm-ok")
+    (port / "Makefile.DragonFly").write_text(
+        ".if ${OPSYS} == DragonFly\nUSES+=pkgconfig\n.endif\n"
+    )
+    monkeypatch.setenv("DP_HARNESS_REPO_ROOT", str(repo))
+    monkeypatch.setenv("DP_HARNESS_ENV", "test-env")
+    monkeypatch.setenv("DP_HARNESS_CONVERT_MODEL", "openai/test-model")
+
+    fake_proof = {
+        "origin": "devel/llm-ok",
+        "mechanical_ops_written": 0,
+        "framework_migrated_to_dops": ["mk block set for OPSYS"],
+        "source_migrated_to_semantic": [],
+        "source_patches_retained": [],
+        "files_removed": ["Makefile.DragonFly"],
+        "files_added": ["overlay.dops"],
+        "verification_pending": True,
+    }
+    monkeypatch.setattr(
+        convert_mod, "run",
+        lambda *args, **kwargs: convert_mod.ConvertResult(
+            success=True, proof=fake_proof,
+            raw_result=PatchResult(status="success", final_text="ok"),
+            status="conversion_proof_parsed",
+        ),
+    )
+    monkeypatch.setattr(worker, "materialize_dports",
+                        lambda env, origin: {"ok": True, "rc": 0})
+    monkeypatch.setattr(worker, "dsynth_build",
+                        lambda env, origin: {"rebuild_ok": True, "ok": True})
+
+    success, status = process_convert_job(
+        queue_root=tmp_path / "queue",
+        job_path=tmp_path / "queue" / "x.job",
+        sibling_paths=[],
+        job={"origin": "devel/llm-ok", "target": "@main"},
+    )
+    assert success, status
+    assert "verified" in status
+
+
+def test_process_convert_job_needs_judgment_llm_failure(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """convert.run returns success=False → handler reports
+    llm_convert_failed with the proof-parser's status."""
+    from dportsv3.agent import convert as convert_mod
+    from dportsv3.agent.attempt_loop import PatchResult
+
+    repo = _make_repo(tmp_path)
+    port = _make_port(repo, "devel/llm-fail")
+    (port / "Makefile.DragonFly").write_text(".if 1\n.endif\n")
+    monkeypatch.setenv("DP_HARNESS_REPO_ROOT", str(repo))
+    monkeypatch.setenv("DP_HARNESS_ENV", "test-env")
+    monkeypatch.setenv("DP_HARNESS_CONVERT_MODEL", "openai/test-model")
+
+    monkeypatch.setattr(
+        convert_mod, "run",
+        lambda *args, **kwargs: convert_mod.ConvertResult(
+            success=False, proof=None,
+            raw_result=PatchResult(status="budget-exhausted", final_text=""),
+            status="no_conversion_proof_block",
+        ),
+    )
+
+    success, status = process_convert_job(
+        queue_root=tmp_path / "queue",
+        job_path=tmp_path / "queue" / "x.job",
+        sibling_paths=[],
+        job={"origin": "devel/llm-fail", "target": "@main"},
+    )
+    assert not success
+    assert "llm_convert_failed" in status
+    assert "no_conversion_proof_block" in status
 
 
 def test_process_convert_job_already_converted(

@@ -14,7 +14,7 @@
 
   <div class="tracker-page">
     <h1>Jobs</h1>
-    <p class="lede">Triage + patch jobs in the agentic queue.</p>
+    <p class="lede">Triage, patch, and convert jobs in the agentic queue.</p>
 
     {% with show_state = True %}{% include "_target_filter.html" %}{% endwith %}
 
@@ -31,6 +31,7 @@
                 'queued':'ignored',
                 'claimed':'skipped','triaging':'skipped','triaged':'skipped',
                 'patching':'skipped','verifying':'skipped',
+                'converting':'skipped',
                 'done':'built',
                 'dead':'failed','escalated':'skipped'
             }.get(j.state,'total') %}

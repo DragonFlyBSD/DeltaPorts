@@ -46,6 +46,21 @@
           {% endif %}
         </td></tr>
         {% endif %}
+        {% if dops_state %}
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">dops</th><td>
+          {% if dops_state == 'converted' %}
+            <span class="stat-pill built">converted</span>
+          {% elif dops_state == 'auto_safe_pending' %}
+            <span class="stat-pill skipped">auto-safe pending</span>
+          {% elif dops_state == 'needs_judgment' %}
+            <span class="stat-pill skipped">needs LLM judgment</span>
+          {% elif dops_state == 'not_in_scope' %}
+            <span style="color:var(--text-dim);">not in scope</span>
+          {% else %}
+            {{ dops_state }}
+          {% endif %}
+        </td></tr>
+        {% endif %}
         <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Timestamp</th><td>{{ bundle.ts_utc }}</td></tr>
         <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Run</th><td>{% if bundle.run_id %}<a href="{{ request.url_for('agentic_run_detail', run_id=bundle.run_id) }}">{{ bundle.run_id }}</a>{% else %}—{% endif %}</td></tr>
       </table>
