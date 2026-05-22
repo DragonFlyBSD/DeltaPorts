@@ -129,6 +129,28 @@
     <div class="empty-state">No artifacts recorded for this bundle.</div>
     {% endif %}
 
+    {% if port_token_usage and port_token_usage.has_data %}
+    <h2>Lifetime token cost for this port
+      <span style="font-size:11px;color:var(--text-dim);font-weight:normal;">
+        ({{ port_token_usage.jobs }} job(s), {{ port_token_usage.llm_turns }} LLM turn(s))
+      </span>
+    </h2>
+    <div class="target-grid" style="margin-bottom:14px;">
+      <div class="tracker-card">
+        <div style="color:var(--text-dim);font-size:11px;">Prompt</div>
+        <div style="font-size:18px;font-weight:600;">{{ '{:,}'.format(port_token_usage.prompt_tokens) }}</div>
+      </div>
+      <div class="tracker-card">
+        <div style="color:var(--text-dim);font-size:11px;">Completion</div>
+        <div style="font-size:18px;font-weight:600;">{{ '{:,}'.format(port_token_usage.completion_tokens) }}</div>
+      </div>
+      <div class="tracker-card">
+        <div style="color:var(--text-dim);font-size:11px;">Total</div>
+        <div style="font-size:18px;font-weight:600;">{{ '{:,}'.format(port_token_usage.total_tokens) }}</div>
+      </div>
+    </div>
+    {% endif %}
+
     {% include "_prior_attempts.html" %}
 
     {% if tool_trace %}

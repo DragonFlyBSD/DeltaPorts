@@ -43,6 +43,7 @@ from dportsv3.tracker.agentic_queries import (
     recent_activity,
     runner_status,
     token_usage_for_job,
+    token_usage_for_port,
     upsert_user_context_text,
 )
 from dportsv3.tracker.db import (
@@ -896,6 +897,15 @@ def create_app(db_path: str | Path) -> Any:
                 ) if b["bundle_id"] != bundle_id]
                 if bundle is not None else []
             )
+            # Step 9: lifetime token usage for this port, across
+            # every job (triage + each patch attempt).
+            port_token_usage = (
+                token_usage_for_port(
+                    conn, origin=bundle.get("origin"),
+                    target=bundle.get("target"),
+                )
+                if bundle is not None and bundle.get("origin") else None
+            )
         if bundle is None:
             raise HTTPException(status_code=404, detail=f"Unknown bundle: {bundle_id}")
         if selected_relpath and selected_ref is None:
@@ -917,6 +927,7 @@ def create_app(db_path: str | Path) -> Any:
                 "selected_artifact": selected_artifact,
                 "selected_artifact_relpath": selected_relpath,
                 "prior_attempts": prior_attempts,
+                "port_token_usage": port_token_usage,
             },
         )
 

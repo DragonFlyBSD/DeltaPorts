@@ -138,6 +138,24 @@ def seeded_state_db(tmp_path: Path) -> Path:
            VALUES (?, ?, ?, ?, ?)""",
         (now, "job-q2-foo", "triage_start", "began triage", 12),
     )
+    # Step 9 lifetime-token-cost fixture: two llm_turn rows on
+    # job-q2-foo so the bundle detail page for b-q2-foo can show
+    # accumulated cost (job-q2-foo is queued/devel/foo @2026Q2).
+    conn.executemany(
+        """INSERT INTO activity_log
+           (ts, job_id, stage, message, duration_ms, extra_json)
+           VALUES (?, ?, 'llm_turn', ?, ?, ?)""",
+        [
+            (now, "job-q2-foo", "turn 1", 0, json.dumps({
+                "attempt": 1, "turn": 1, "prompt_tokens": 1200,
+                "completion_tokens": 400, "total_tokens": 1600,
+            })),
+            (now, "job-q2-foo", "turn 2", 0, json.dumps({
+                "attempt": 1, "turn": 2, "prompt_tokens": 2300,
+                "completion_tokens": 700, "total_tokens": 3000,
+            })),
+        ],
+    )
     conn.execute(
         """INSERT INTO activity_log
            (ts, job_id, stage, message, duration_ms, extra_json)
@@ -272,6 +290,20 @@ def test_view_agentic_bundle_detail_renders_artifact_rail(client: TestClient) ->
     # Each pill links into the bundle detail with ?artifact=…
     assert "?artifact=analysis/triage.md" in body
     assert "?artifact=logs/errors.txt" in body
+
+
+def test_view_agentic_bundle_detail_shows_lifetime_token_cost(client: TestClient) -> None:
+    """Step 9 — bundle page surfaces accumulated token cost across
+    every job for this (origin, target). Fixture has two llm_turn
+    rows on job-q2-foo (devel/foo @2026Q2): totals 3500 prompt,
+    1100 completion, 4600 total."""
+    resp = client.get("/agentic/bundles/b-q2-foo")
+    assert resp.status_code == 200
+    body = resp.text
+    assert "Lifetime token cost for this port" in body
+    assert "3,500" in body
+    assert "1,100" in body
+    assert "4,600" in body
 
 
 def test_view_agentic_bundle_detail_shows_prior_attempts(client: TestClient) -> None:

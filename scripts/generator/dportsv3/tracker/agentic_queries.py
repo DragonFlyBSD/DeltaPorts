@@ -444,6 +444,72 @@ def token_usage_for_job(
     }
 
 
+def token_usage_for_port(
+    conn: sqlite3.Connection,
+    origin: str,
+    target: str | None = None,
+) -> dict[str, Any]:
+    """Lifetime token usage across every job for (origin, target).
+
+    Step 9 bundle-page card: sum ``llm_turn`` activity rows whose job
+    matches the origin/target. The bundle being viewed is one
+    failure for the port; this aggregate is "what has the agent
+    burned trying to fix this port across all attempts."
+
+    Same return shape as :func:`token_usage_for_job` but with an
+    extra ``jobs`` count instead of ``largest_turn`` (the per-turn
+    detail is more useful one job at a time on the job page).
+    """
+    clauses = ["j.origin = ?", "al.stage = ?"]
+    params: list[Any] = [origin, "llm_turn"]
+    if target is not None:
+        clauses.append("j.target = ?")
+        params.append(target)
+    sql = (
+        "SELECT al.extra_json, al.job_id FROM activity_log AS al "
+        "JOIN jobs AS j ON j.job_id = al.job_id WHERE "
+        + " AND ".join(clauses)
+    )
+    rows = conn.execute(sql, params).fetchall()
+    if not rows:
+        return {
+            "has_data": False,
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0,
+            "llm_turns": 0,
+            "jobs": 0,
+        }
+    prompt_sum = 0
+    completion_sum = 0
+    total_sum = 0
+    jobs_seen: set[str] = set()
+    for row in rows:
+        raw = row[0] if not hasattr(row, "keys") else row["extra_json"]
+        job_id = row[1] if not hasattr(row, "keys") else row["job_id"]
+        if job_id:
+            jobs_seen.add(str(job_id))
+        if not raw:
+            continue
+        try:
+            extra = json.loads(raw)
+        except (TypeError, ValueError):
+            continue
+        if not isinstance(extra, dict):
+            continue
+        prompt_sum += int(extra.get("prompt_tokens") or 0)
+        completion_sum += int(extra.get("completion_tokens") or 0)
+        total_sum += int(extra.get("total_tokens") or 0)
+    return {
+        "has_data": True,
+        "prompt_tokens": prompt_sum,
+        "completion_tokens": completion_sum,
+        "total_tokens": total_sum,
+        "llm_turns": len(rows),
+        "jobs": len(jobs_seen),
+    }
+
+
 def job_events_for_job(
     conn: sqlite3.Connection,
     job_id: str,
