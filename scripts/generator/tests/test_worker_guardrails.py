@@ -46,7 +46,7 @@ def test_put_file_refuses_dports_root(env_dir):
     from dportsv3.agent import worker
     res = worker.put_file("env", "/work/DPorts/devel/foo/Makefile", "X")
     assert res["ok"] is False
-    assert res["kind"] == "dports_write_refused"
+    assert res["kind"] == "regenerated_tree_write_refused"
     assert "/work/DeltaPorts" in res["error"]
     assert "materialize_dports" in res["error"]
 
@@ -59,7 +59,7 @@ def test_put_file_refuses_dports_deep_path(env_dir):
         "diff body",
     )
     assert res["ok"] is False
-    assert res["kind"] == "dports_write_refused"
+    assert res["kind"] == "regenerated_tree_write_refused"
     # The on-disk file is NOT created.
     target = env_dir / "work" / "DPorts" / "devel" / "foo" / "dragonfly" / \
         "patch-Makefile.in"
@@ -89,6 +89,36 @@ def test_put_file_refusal_does_not_leak_into_other_paths(env_dir):
         "env",
         "/work/DeltaPorts/ports/devel/foo/.dpconfig",
         "ok",
+    )
+    assert res.get("ok") is not False
+
+
+def test_put_file_refuses_compose_root(env_dir):
+    """The compose root at /work/artifacts/compose/<target>/ is
+    materialize_dports' output — wiped on every materialize. Writes
+    there evaporate silently. The guard refuses them with the same
+    error mechanism as the lock root."""
+    from dportsv3.agent import worker
+    res = worker.put_file(
+        "env",
+        "/work/artifacts/compose/@2026Q2/devel/foo/Makefile",
+        "X",
+    )
+    assert res["ok"] is False
+    assert res["kind"] == "regenerated_tree_write_refused"
+    assert "compose root" in res["error"]
+    assert "/work/DeltaPorts" in res["error"]
+
+
+def test_put_file_allows_compose_lookalike(env_dir):
+    """``/work/artifacts/compose-unrelated`` must not be caught by
+    the compose-root prefix."""
+    from dportsv3.agent import worker
+    (env_dir / "work" / "artifacts" / "compose-unrelated").mkdir(parents=True)
+    res = worker.put_file(
+        "env",
+        "/work/DeltaPorts/ports/devel/foo/notes.md",
+        "y",
     )
     assert res.get("ok") is not False
 
@@ -175,32 +205,131 @@ def test_patch_prompt_tells_agent_to_use_extract_wrksrc():
         or "Don't reach for" in PATCH_SYSTEM
 
 
-def test_extract_result_carries_summary_pointing_at_wrksrc(monkeypatch):
-    """worker.extract's response must include a summary string that
-    names wrksrc explicitly — so an LLM skimming the result hits the
-    right path immediately instead of constructing one."""
+def test_extract_targets_compose_root_via_sh(monkeypatch):
+    """worker.extract must invoke make against ``$DPORTS_COMPOSE_ROOT``
+    (the materialized port tree for this target), NOT ``/work/DPorts/``
+    (the lock root with stale versions). Uses sh -c so the env var
+    is expanded in-chroot."""
     from dportsv3.agent import worker
 
+    captured = []
+
     def fake_exec(env, *argv, **kw):
-        cmd = " ".join(argv)
-        if "-V" in cmd:
-            # The make -V WRKDIR -V WRKSRC query.
-            import subprocess
+        captured.append(argv)
+        import subprocess
+        # First call = make extract; second call = make -V WRKDIR/WRKSRC.
+        if "-V" in " ".join(argv):
             return subprocess.CompletedProcess(
                 args=argv, returncode=0,
-                stdout="/work/obj/devel/libuv/work\n"
-                       "/work/obj/devel/libuv/work/libuv-1.52.0\n",
+                stdout="/work/obj/work\n/work/obj/work/libuv-1.52.0\n",
                 stderr="",
             )
-        # The make extract step.
-        import subprocess
         return subprocess.CompletedProcess(
             args=argv, returncode=0, stdout="", stderr="",
         )
 
     monkeypatch.setattr(worker, "_exec", fake_exec)
     res = worker.extract("env", "devel/libuv")
-    assert res["wrksrc"] == "/work/obj/devel/libuv/work/libuv-1.52.0"
-    assert "summary" in res
-    assert "/work/obj/devel/libuv/work/libuv-1.52.0" in res["summary"]
-    assert "do not guess" in res["summary"]
+    assert res["wrksrc"] == "/work/obj/work/libuv-1.52.0"
+
+    # Both invocations must shell out so $DPORTS_COMPOSE_ROOT expands.
+    assert all(call[0] == "/bin/sh" for call in captured)
+    assert all(call[1] == "-c" for call in captured)
+    # The shell payload must reference $DPORTS_COMPOSE_ROOT, NOT a
+    # hardcoded /work/DPorts path.
+    extract_payload, query_payload = captured[0][2], captured[1][2]
+    for payload in (extract_payload, query_payload):
+        assert "$DPORTS_COMPOSE_ROOT" in payload
+        assert "/work/DPorts" not in payload
+
+
+def test_extract_summary_warns_against_lock_root(monkeypatch):
+    """The extract response's summary must explicitly tell the LLM
+    NOT to look under /work/DPorts/ — that's the lock root with
+    stale versions."""
+    from dportsv3.agent import worker
+    import subprocess
+
+    def fake_exec(env, *argv, **kw):
+        if "-V" in " ".join(argv):
+            return subprocess.CompletedProcess(
+                args=argv, returncode=0,
+                stdout="/work/obj/work\n/work/obj/work/foo-1.0\n", stderr="",
+            )
+        return subprocess.CompletedProcess(
+            args=argv, returncode=0, stdout="", stderr="",
+        )
+
+    monkeypatch.setattr(worker, "_exec", fake_exec)
+    res = worker.extract("env", "devel/foo")
+    assert "/work/DPorts" in res["summary"]   # mentions the wrong path
+    assert "lock root" in res["summary"]      # by name
+    assert res["wrksrc"] in res["summary"]    # and the right path
+
+
+# --- dops_reference (on-demand tool) -----------------------------------------
+
+
+def test_dops_reference_returns_quickref_content():
+    """The dops_reference tool returns the co-located quick-reference
+    file. Should be roughly the size of the markdown file on disk and
+    include identifiable dops keywords."""
+    from dportsv3.agent import worker
+    res = worker.dops_reference("any-env")
+    assert res["ok"] is True
+    body = res["content"]
+    for keyword in ("port", "type", "target", "mk set", "mk replace-if",
+                    "mk target", "text replace-once", "file copy",
+                    "patch apply", "overlay.dops"):
+        assert keyword in body, f"dops quick-ref missing keyword {keyword!r}"
+    # Mention of the full grammar source so operators/agents know
+    # where to look for the long-form spec.
+    assert "dsl-v0.md" in body
+
+
+def test_dops_reference_is_not_in_kedb_directory():
+    """The cheat-sheet must NOT live under docs/kedb/ — otherwise
+    the runner's KEDB auto-loader would ship it in every payload,
+    defeating the on-demand goal."""
+    from pathlib import Path
+    repo_root = Path(__file__).resolve().parents[3]
+    cheatsheet = repo_root / "scripts/generator/dportsv3/agent/dops_quickref.md"
+    assert cheatsheet.is_file(), "dops_quickref.md must be co-located with the agent module"
+    # Confirm it is NOT under docs/kedb/.
+    kedb_copy = repo_root / "docs/kedb/dops_quickref.md"
+    assert not kedb_copy.exists(), (
+        "dops quick-reference must not live under docs/kedb/ — that would "
+        "auto-load it into every payload"
+    )
+
+
+def test_dops_reference_tool_registered():
+    """The tool must be discoverable in the registry the harness
+    passes to litellm. Otherwise the LLM can't call it even if the
+    prompt mentions it."""
+    from dportsv3.agent.tools import names, schemas
+    assert "dops_reference" in names()
+    spec = next(s for s in schemas()
+                if s["function"]["name"] == "dops_reference")
+    # Zero required params — calling it doesn't need an argument.
+    assert spec["function"]["parameters"]["required"] == []
+
+
+# --- prompt updates ----------------------------------------------------------
+
+
+def test_prompt_documents_compose_vs_lock_distinction():
+    """Smoke surfaced an entire patch loop wasted on this confusion.
+    The prompt must explicitly distinguish the four trees."""
+    from dportsv3.agent.prompts import PATCH_SYSTEM
+    assert "LOCK ROOT" in PATCH_SYSTEM or "lock root" in PATCH_SYSTEM
+    assert "COMPOSE ROOT" in PATCH_SYSTEM or "compose root" in PATCH_SYSTEM
+    assert "/work/artifacts/compose" in PATCH_SYSTEM
+
+
+def test_prompt_directs_overlay_dops_check_first():
+    """First probe on patch-error should be checking whether
+    overlay.dops exists — that decides the entire fix strategy."""
+    from dportsv3.agent.prompts import PATCH_SYSTEM
+    assert "overlay.dops" in PATCH_SYSTEM
+    assert "dops_reference" in PATCH_SYSTEM

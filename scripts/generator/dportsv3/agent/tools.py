@@ -100,6 +100,14 @@ _TOOLS: list[dict] = [
           "Read the tail of dsynth's per-port build log "
           "(/work/dsynth/logs/<origin-with-underscores>.log). Call after dsynth_build failure.",
           {"origin": _STR, "tail_lines": _INT}, ["origin"]),
+    _tool("dops_reference",
+          "Return a condensed quick-reference for the dops DSL (overlay.dops "
+          "syntax: mk set/add/remove, mk replace-if, mk target set/append, "
+          "text replace-once, file copy/remove, patch apply). On-demand — "
+          "call ONCE only if (a) overlay.dops does NOT exist for this origin "
+          "and (b) you are about to write one. Skip otherwise; the reference "
+          "is large and re-reading wastes tokens.",
+          {}, []),
 ]
 
 

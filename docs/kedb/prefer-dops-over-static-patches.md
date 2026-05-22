@@ -31,6 +31,24 @@ operation that survives upstream churn.
 
 ## Fix
 
+### Step 0 — does overlay.dops already exist?
+
+```
+get_file /work/DeltaPorts/ports/<origin>/overlay.dops
+```
+
+- **Yes** → the port is dops-managed. Add new operations to the
+  existing file; follow the existing style.
+- **No** → the port is still on static patches. The durable fix is
+  conversion (Option 1 below); the throwaway fix is regeneration
+  (Option 3). Prefer conversion when the patch logic reduces to a
+  dops op.
+
+If you're about to write an `overlay.dops` and you don't have the
+syntax memorized, call `dops_reference()` **once** to get the
+condensed quick-reference. Don't call it on later turns — the
+reference doesn't change between attempts.
+
 ### Option 1 (preferred for autotools-generated files) — convert to dops
 
 If the failing patch's target file is *generated* (configure,
