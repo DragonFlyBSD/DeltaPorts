@@ -277,6 +277,32 @@ def list_port_bundles(
     return [_row_dict(row) for row in conn.execute(sql, params).fetchall()]
 
 
+def active_job_for_port(
+    conn: sqlite3.Connection,
+    origin: str,
+    target: str | None = None,
+) -> dict[str, Any] | None:
+    """Return the most-recent open job for (origin, target), if any.
+
+    Step 9 manual-queue blocker indicator: when an operator submits
+    fresh context, the runner only re-enqueues triage if no job is
+    already in flight for the same origin/target. This surfaces "yes,
+    a job is in flight — wait for it" vs. "queue is clear" on the UI.
+    """
+    open_states = ("queued", "claimed", "triaging", "triaged",
+                   "patching", "verifying")
+    placeholders = ",".join("?" * len(open_states))
+    sql = (
+        f"SELECT * FROM jobs WHERE origin = ? AND state IN ({placeholders})"
+    )
+    params: list[Any] = [origin, *open_states]
+    if target is not None:
+        sql += " AND target = ?"
+        params.append(target)
+    sql += " ORDER BY created_ts_utc DESC LIMIT 1"
+    return _maybe(conn.execute(sql, params).fetchone())
+
+
 def distinct_targets(conn: sqlite3.Connection) -> list[str]:
     """Sorted list of non-NULL targets seen across bundles/jobs/runs.
 

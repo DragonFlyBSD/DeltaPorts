@@ -20,6 +20,7 @@ from dportsv3.tracker.progress_adapter import (
     target_summary,
 )
 from dportsv3.tracker.agentic_queries import (
+    active_job_for_port,
     activity_for_job,
     agentic_status,
     bundles_for_run,
@@ -1109,6 +1110,12 @@ def create_app(db_path: str | Path) -> Any:
         with _conn() as conn:
             mr = get_manual_request(conn, run_id, origin)
             handoff = None
+            blocking_job = (
+                active_job_for_port(
+                    conn, origin=origin, target=mr.get("target"),
+                )
+                if mr is not None else None
+            )
             if mr is not None and mr.get("bundle_id"):
                 ref = get_artifact_ref(
                     conn, mr["bundle_id"], "analysis/manual_handoff.md",
@@ -1132,6 +1139,7 @@ def create_app(db_path: str | Path) -> Any:
                 "title": f"Manual: {origin}",
                 "request_row": mr,
                 "handoff": handoff,
+                "blocking_job": blocking_job,
             },
         )
 

@@ -101,6 +101,24 @@ def seeded_state_db(tmp_path: Path) -> Path:
               now, "/tmp/job-q2-manual.job", now, "@2026Q2"),
         ],
     )
+    # Step 9 — a manual request for devel/foo with a sibling queued
+    # triage job that should surface as the active-job blocker.
+    conn.execute(
+        """INSERT INTO user_context_requests
+           (run_id, origin, bundle_id, classification, confidence,
+            iteration, max_iterations, requested_at, status)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        ("run-q2-001", "devel/foo", "b-q2-foo", "patch-error", "medium",
+         1, 3, now, "pending"),
+    )
+    conn.execute(
+        """INSERT INTO jobs
+           (job_id, state, type, origin, flavor, bundle_dir,
+            created_ts_utc, path, last_seen_at, target)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        ("job-q2-foo-blocker", "queued", "triage", "devel/foo", "", "",
+         now, "/tmp/job-q2-foo-blocker.job", now, "@2026Q2"),
+    )
     conn.execute(
         "UPDATE jobs SET retire_reason = 'patch_gave_up' WHERE job_id = 'job-q2-dead'"
     )
@@ -408,6 +426,23 @@ def test_view_agentic_job_detail_shows_activity(client: TestClient) -> None:
     assert "Lifecycle transitions" in body
     assert "hook_enqueued" in body
     assert "claimed" in body
+
+
+def test_view_agentic_manual_detail_shows_blocking_job(client: TestClient) -> None:
+    """Step 9 — when an open triage/patch job exists for the same
+    (origin, target), surface a banner explaining that submitting
+    fresh context will queue behind it. Fixture has job-q2-foo-blocker
+    in 'queued' state for devel/foo @2026Q2; the manual detail for
+    that pair must reference it."""
+    resp = client.get("/agentic/manual/run-q2-001/devel/foo")
+    assert resp.status_code == 200
+    body = resp.text
+    assert "job is already in flight" in body
+    # Either of the two queued devel/foo @2026Q2 jobs in the fixture
+    # is a legitimate "blocker"; the runner-facing point is that
+    # *some* job is in flight, so just assert one is linked.
+    assert ("job-q2-foo-blocker" in body) or ("job-q2-foo" in body)
+    assert "queued" in body
 
 
 def test_view_agentic_runner(client: TestClient) -> None:

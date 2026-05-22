@@ -80,6 +80,19 @@
       <pre class="artifact-content">{{ request_row.context_text }}</pre>
     {% endif %}
 
+    {% if blocking_job %}
+    <div class="manual-flash" style="background:#fff7e6;border:1px solid #d68b00;">
+      <strong>Heads up — a job is already in flight for this origin.</strong><br>
+      <a href="{{ request.url_for('agentic_job_detail', job_id=blocking_job.job_id) }}">
+        {{ blocking_job.job_id }}
+      </a>
+      (<code>{{ blocking_job.type }}</code> · state <code>{{ blocking_job.state }}</code>).
+      Submitting fresh context now will bump <code>context_rev</code>, but
+      the runner will only re-trigger triage once this job finishes —
+      otherwise you'll just queue behind the work that's already running.
+    </div>
+    {% endif %}
+
     <h2>Provide Context</h2>
     <p>Type instructions, hints, or a known good FreeBSD-side fix.
        Submitting bumps <code>context_rev</code>; the runner picks it
