@@ -2325,16 +2325,56 @@ enough to test directly:
 
 LOC: ~150 of tests.
 
+**21d — DB ops hygiene.**
+
+SQLite is fine for the foreseeable horizon (dozens of builds with
+several hundred failures each = ~800K activity_log rows, ~8K
+bundles — well within SQLite's comfort zone). But three small
+hygiene items make it stay that way:
+
+- **WAL mode.** Set ``PRAGMA journal_mode=WAL`` in
+  :func:`init_db`. Decouples readers (tracker FastAPI processes)
+  from the writer (runner) so they don't block each other. One
+  line, big concurrency win. Verify whether it's already on; if
+  yes, this is just a documented assertion.
+- **``synchronous=NORMAL``.** Safe to pair with WAL (durability
+  on crash is "last committed transaction" vs FULL's "everything
+  fsync'd"). Faster commits, no correctness loss for our use
+  case. Optional micro-optimization.
+- **Periodic VACUUM.** A monthly cron (or a runner-startup
+  one-shot when the file grows past a threshold) keeps the file
+  compact after bundle/activity deletion. Without it, deleted
+  rows leave gaps that the file keeps but doesn't reuse
+  efficiently.
+- **Retention policy.** Archive or delete bundles + their
+  activity_log/job_events rows older than 6 months. Most useful
+  data is from the last few weeks; old data is for forensics and
+  can move to a separate ``state.archive.db`` (or just be
+  dropped — we keep the artifact_refs anyway).
+
+Document the Postgres-migration trigger criteria explicitly:
+
+- Direct-writer remote runners (Step 17 routes writes through the
+  tracker, so SQLite stays fine even with N runners).
+- ``activity_log`` over ~10M rows (years away at current shape).
+- Multi-host deployment without a central tracker (SQLite is a
+  single file).
+
+Until one of those crosses, SQLite is the right choice.
+
+LOC: ~80 (PRAGMA + VACUUM helper + retention script + docs).
+
 #### LOC estimate
 
-~400 total: 50 for 21a documentation + small migrations, 200 for
-21b refactor, 150 for 21c tests.
+~480 total: 50 for 21a documentation + small migrations, 200 for
+21b refactor, 150 for 21c tests, 80 for 21d hygiene.
 
 #### Order
 
-21a → 21b → 21c. Connection management first (the canonical-pattern
-decision feeds 21b's helper signatures); writes consolidated next;
-tests last because they need 21b's helpers to exist.
+21a → 21b → 21c → 21d. Connection management first (the
+canonical-pattern decision feeds 21b's helper signatures);
+writes consolidated next; tests once the helpers exist; hygiene
+last (cheap, no dependencies on 21a–c).
 
 #### Dependencies
 
