@@ -299,6 +299,7 @@ def activity_for_job(
     job_id: str,
     limit: int = 50,
     since_id: int = 0,
+    stage_filter: str | None = None,
 ) -> list[dict[str, Any]]:
     """Activity-log rows for one ``job_id``.
 
@@ -307,20 +308,33 @@ def activity_for_job(
     With ``since_id > 0``, returns rows with ``id > since_id`` in
     **oldest-first** order — the polling shape, so the client can
     prepend each new row at the top of an existing newest-first table.
+
+    ``stage_filter`` (Step 9b):
+    - ``"llm_turn"`` → rows where ``stage = 'llm_turn'``
+    - ``"tool"``      → rows where ``stage LIKE 'tool:%'``
+    - any other value or ``None`` → no filter
     """
+    clauses = ["job_id = ?"]
+    params: list[Any] = [job_id]
+    if stage_filter == "llm_turn":
+        clauses.append("stage = ?")
+        params.append("llm_turn")
+    elif stage_filter == "tool":
+        clauses.append("stage LIKE ?")
+        params.append("tool:%")
     if since_id and since_id > 0:
-        rows = conn.execute(
-            """SELECT * FROM activity_log
-               WHERE job_id = ? AND id > ?
-               ORDER BY id ASC LIMIT ?""",
-            (job_id, int(since_id), max(1, int(limit))),
-        ).fetchall()
+        clauses.append("id > ?")
+        params.append(int(since_id))
+        order = "ASC"
     else:
-        rows = conn.execute(
-            "SELECT * FROM activity_log WHERE job_id = ? "
-            "ORDER BY id DESC LIMIT ?",
-            (job_id, max(1, int(limit))),
-        ).fetchall()
+        order = "DESC"
+    params.append(max(1, int(limit)))
+    sql = (
+        "SELECT * FROM activity_log WHERE "
+        + " AND ".join(clauses)
+        + f" ORDER BY id {order} LIMIT ?"
+    )
+    rows = conn.execute(sql, params).fetchall()
     return [_decode_extra_json(_row_dict(row)) for row in rows]
 
 

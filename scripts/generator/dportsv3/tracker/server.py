@@ -636,12 +636,14 @@ def create_app(db_path: str | Path) -> Any:
         target: str | None = None,
         job_id: str | None = None,
         since_id: int = Query(default=0, ge=0),
+        stage_filter: str | None = None,
     ) -> list[dict[str, Any]]:
         """Activity-log query.
 
         - ``job_id`` set → per-job rows. With ``since_id > 0`` returns
           new rows oldest-first (polling shape for the job detail
-          page's live refresh — Step 9c).
+          page's live refresh — Step 9c). Optional ``stage_filter``
+          narrows to ``llm_turn`` or ``tool`` (Step 9b).
         - ``job_id`` unset → global recent (newest-first), optionally
           filtered by target.
         """
@@ -649,6 +651,7 @@ def create_app(db_path: str | Path) -> Any:
             if job_id:
                 return activity_for_job(
                     conn, job_id, limit=limit, since_id=since_id,
+                    stage_filter=stage_filter,
                 )
             return recent_activity(conn, limit=limit, target=target)
 
@@ -955,11 +958,16 @@ def create_app(db_path: str | Path) -> Any:
         request: RequestType,
         job_id: str,
         limit: int = 500,
+        stage_filter: str | None = None,
     ) -> Any:
         limit = max(10, min(int(limit), 5000))
+        # Normalize the filter. Step 9b — three pills: all/llm_turn/tool.
+        sf = stage_filter if stage_filter in ("llm_turn", "tool") else None
         with _conn() as conn:
             job = get_job(conn, job_id)
-            activity = activity_for_job(conn, job_id, limit=limit) if job is not None else []
+            activity = (activity_for_job(conn, job_id, limit=limit,
+                                          stage_filter=sf)
+                        if job is not None else [])
             transitions = (
                 job_events_for_job(conn, job_id, limit=limit)
                 if job is not None else []
@@ -998,6 +1006,7 @@ def create_app(db_path: str | Path) -> Any:
                 "max_activity_id": max_id,
                 "limit": limit,
                 "limit_options": [50, 200, 500, 2000, 5000],
+                "stage_filter": sf,
             },
         )
 

@@ -38,7 +38,8 @@
             class="live-indicator{% if is_active %} active{% endif %}"
             data-job-id="{{ job.job_id }}"
             data-job-state="{{ job.state }}"
-            data-since-id="{{ max_activity_id }}">
+            data-since-id="{{ max_activity_id }}"
+            data-stage-filter="{{ stage_filter or '' }}">
         <span class="dot"></span><span class="status-text">{% if is_active %}live{% else %}idle{% endif %}</span>
         {% if is_active %}
           · <span class="last-update">just now</span>
@@ -181,15 +182,42 @@
         ({{ activity|length }} of last {{ limit }})
       </span>
     </h2>
-    <form method="get" style="font-size:12px;margin-bottom:8px;">
-      Show
-      <select name="limit" onchange="this.form.submit()">
-        {% for n in limit_options %}
-        <option value="{{ n }}" {% if n == limit %}selected{% endif %}>{{ n }}</option>
-        {% endfor %}
-      </select>
-      events
-    </form>
+    {# Step 9b: filter pills (server-side) + sort affordance (client). #}
+    <div class="filter-bar" style="font-size:12px;margin-bottom:8px;display:flex;gap:18px;align-items:center;flex-wrap:wrap;">
+      <span>
+        Filter:
+        {% set base = "?limit=" ~ limit %}
+        <a href="{{ base }}" class="filter-pill{% if not stage_filter %} active{% endif %}">all</a>
+        ·
+        <a href="{{ base }}&stage_filter=llm_turn" class="filter-pill{% if stage_filter == 'llm_turn' %} active{% endif %}">llm_turn only</a>
+        ·
+        <a href="{{ base }}&stage_filter=tool" class="filter-pill{% if stage_filter == 'tool' %} active{% endif %}">tool calls only</a>
+      </span>
+      <form method="get" style="margin:0;">
+        {% if stage_filter %}<input type="hidden" name="stage_filter" value="{{ stage_filter }}">{% endif %}
+        Show
+        <select name="limit" onchange="this.form.submit()">
+          {% for n in limit_options %}
+          <option value="{{ n }}" {% if n == limit %}selected{% endif %}>{{ n }}</option>
+          {% endfor %}
+        </select>
+        events
+      </form>
+      <span id="sort-state" style="color:var(--text-dim);">
+        Sort: <strong id="sort-label">chronological</strong>
+        <a href="#" id="sort-reset" style="display:none;">[reset]</a>
+      </span>
+    </div>
+    <style>
+      .filter-pill { text-decoration: none; padding: 1px 6px; border-radius: 3px;
+                     color: var(--text-dim); }
+      .filter-pill.active { background: var(--c-info-bg, #e0e8f8);
+                            color: var(--text, #000); font-weight: 600; }
+      .activity-table th.sortable { cursor: pointer; user-select: none; }
+      .activity-table th.sortable:hover { color: var(--c-link, #06f); }
+      .activity-table th.sort-asc::after { content: " ▲"; font-size: 10px; }
+      .activity-table th.sort-desc::after { content: " ▼"; font-size: 10px; }
+    </style>
     {# Step 9a column layout: structured token columns next to the message. #}
     <table class="tracker-table activity-table" id="activity-table">
       <thead>
@@ -197,10 +225,10 @@
           <th>When</th>
           <th>Stage</th>
           <th>Dur (ms)</th>
-          <th class="tok">Prompt</th>
-          <th class="tok">Compl</th>
-          <th class="tok">Total</th>
-          <th class="tok">Cum</th>
+          <th class="tok sortable" data-sort="prompt">Prompt</th>
+          <th class="tok sortable" data-sort="completion">Compl</th>
+          <th class="tok sortable" data-sort="total">Total</th>
+          <th class="tok sortable" data-sort="cumulative">Cum</th>
           <th>Message / tools</th>
         </tr>
       </thead>
@@ -225,6 +253,7 @@
       if (!indicator) return;
       var jobId = indicator.dataset.jobId;
       var sinceId = parseInt(indicator.dataset.sinceId || "0", 10);
+      var stageFilter = indicator.dataset.stageFilter || "";
       var tbody = document.getElementById("activity-tbody");
       var countEl = document.getElementById("activity-count");
       var lastUpdateEl = indicator.querySelector(".last-update");
@@ -278,10 +307,12 @@
           return;
         }
         try {
-          var resp = await fetch(
-            "/api/activity?job_id=" + encodeURIComponent(jobId)
-              + "&since_id=" + sinceId + "&limit=200"
-          );
+          var url = "/api/activity?job_id=" + encodeURIComponent(jobId)
+                    + "&since_id=" + sinceId + "&limit=200";
+          if (stageFilter) {
+            url += "&stage_filter=" + encodeURIComponent(stageFilter);
+          }
+          var resp = await fetch(url);
           if (resp.ok) {
             var rows = await resp.json();
             if (rows && rows.length) {
@@ -338,5 +369,76 @@
     })();
   </script>
   {% endif %}
+
+  {# Step 9b: client-side column sort. Sortable headers carry
+     data-sort=KEY; rows expose data-sort-KEY values. Click toggles
+     desc→asc→reset. Non-llm_turn rows sort to the bottom on desc
+     (sentinel -1) so the operator immediately sees "biggest prompt"
+     without scrolling past tool rows. #}
+  <script>
+    (function () {
+      var table = document.getElementById("activity-table");
+      if (!table) return;
+      var tbody = document.getElementById("activity-tbody");
+      var sortLabel = document.getElementById("sort-label");
+      var sortReset = document.getElementById("sort-reset");
+      var headers = table.querySelectorAll("th.sortable");
+
+      // Snapshot the initial row order so [reset] can restore it.
+      var originalOrder = Array.from(tbody.querySelectorAll("tr"));
+
+      var current = { key: null, dir: 0 };  // dir: 0=none, 1=desc, -1=asc
+
+      function applySort(key, dir) {
+        var rows = Array.from(tbody.querySelectorAll("tr"));
+        rows.sort(function (a, b) {
+          var av = parseInt(a.dataset["sort" + key.charAt(0).toUpperCase() + key.slice(1)] || "0", 10);
+          var bv = parseInt(b.dataset["sort" + key.charAt(0).toUpperCase() + key.slice(1)] || "0", 10);
+          return dir === 1 ? bv - av : av - bv;
+        });
+        rows.forEach(function (r) { tbody.appendChild(r); });
+        headers.forEach(function (h) {
+          h.classList.remove("sort-asc", "sort-desc");
+          if (h.dataset.sort === key) {
+            h.classList.add(dir === 1 ? "sort-desc" : "sort-asc");
+          }
+        });
+        if (sortLabel) sortLabel.textContent = key + " " + (dir === 1 ? "↓" : "↑");
+        if (sortReset) sortReset.style.display = "inline";
+      }
+
+      function reset() {
+        originalOrder.forEach(function (r) { tbody.appendChild(r); });
+        headers.forEach(function (h) {
+          h.classList.remove("sort-asc", "sort-desc");
+        });
+        current = { key: null, dir: 0 };
+        if (sortLabel) sortLabel.textContent = "chronological";
+        if (sortReset) sortReset.style.display = "none";
+      }
+
+      headers.forEach(function (h) {
+        h.addEventListener("click", function () {
+          var key = h.dataset.sort;
+          if (current.key !== key) {
+            current = { key: key, dir: 1 };       // first click = desc
+          } else if (current.dir === 1) {
+            current = { key: key, dir: -1 };       // second = asc
+          } else {
+            reset();
+            return;
+          }
+          applySort(current.key, current.dir);
+        });
+      });
+
+      if (sortReset) {
+        sortReset.addEventListener("click", function (ev) {
+          ev.preventDefault();
+          reset();
+        });
+      }
+    })();
+  </script>
 </body>
 </html>
