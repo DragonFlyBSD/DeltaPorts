@@ -29,15 +29,19 @@ from enum import StrEnum
 
 
 class JobState(StrEnum):
-    QUEUED    = "queued"
-    CLAIMED   = "claimed"
-    TRIAGING  = "triaging"
-    TRIAGED   = "triaged"
-    PATCHING  = "patching"
-    VERIFYING = "verifying"
-    DONE      = "done"
-    ESCALATED = "escalated"
-    DEAD      = "dead"
+    QUEUED     = "queued"
+    CLAIMED    = "claimed"
+    TRIAGING   = "triaging"
+    TRIAGED    = "triaged"
+    PATCHING   = "patching"
+    VERIFYING  = "verifying"
+    # Step 20: dops-conversion in progress. Parallel to TRIAGING /
+    # PATCHING — a convert job is its own type that lives entirely
+    # in this state until done/dead/escalated.
+    CONVERTING = "converting"
+    DONE       = "done"
+    ESCALATED  = "escalated"
+    DEAD       = "dead"
 
 
 class JobEvent(StrEnum):
@@ -60,6 +64,15 @@ class JobEvent(StrEnum):
     # audit history can tell "operator killed this" apart from
     # "runner restart reaped this".
     ABANDON          = "abandon"
+    # Step 20: dops-conversion job lifecycle. CONVERT_OK lands a
+    # converted port at DONE; CONVERT_GAVE_UP lands at DEAD with
+    # retire_reason='convert_failed'. The "needs_llm" sub-case (the
+    # deterministic converter bailed and 20b's LLM tool loop isn't
+    # implemented yet) reuses CONVERT_GAVE_UP with a distinct detail
+    # field; once 20b lands those will instead exercise the loop.
+    CONVERT_START    = "convert_start"
+    CONVERT_OK       = "convert_ok"
+    CONVERT_GAVE_UP  = "convert_gave_up"
 
 
 # (from_state, event) -> to_state. ``None`` as from_state means
@@ -89,12 +102,19 @@ TRANSITIONS: dict[tuple[JobState | None, JobEvent], JobState] = {
     (JobState.PATCHING,    JobEvent.PATCH_BUDGET_OUT): JobState.DEAD,
     (JobState.VERIFYING,   JobEvent.VERIFY_FAIL):      JobState.DEAD,
 
+    # Step 20: convert-job happy path + failure.
+    (JobState.CLAIMED,     JobEvent.CONVERT_START):    JobState.CONVERTING,
+    (JobState.CONVERTING,  JobEvent.CONVERT_OK):       JobState.DONE,
+    (JobState.CONVERTING,  JobEvent.CONVERT_GAVE_UP):  JobState.DEAD,
+    (JobState.CONVERTING,  JobEvent.ESCALATE_MANUAL):  JobState.ESCALATED,
+
     # env_broken can interrupt any active state
     (JobState.CLAIMED,     JobEvent.ENV_BROKEN):       JobState.DEAD,
     (JobState.TRIAGING,    JobEvent.ENV_BROKEN):       JobState.DEAD,
     (JobState.TRIAGED,     JobEvent.ENV_BROKEN):       JobState.DEAD,
     (JobState.PATCHING,    JobEvent.ENV_BROKEN):       JobState.DEAD,
     (JobState.VERIFYING,   JobEvent.ENV_BROKEN):       JobState.DEAD,
+    (JobState.CONVERTING,  JobEvent.ENV_BROKEN):       JobState.DEAD,
 
     # Startup orphan reap — same shape as env_broken but a distinct
     # event so retire_reason can be filled differently.
@@ -103,6 +123,7 @@ TRANSITIONS: dict[tuple[JobState | None, JobEvent], JobState] = {
     (JobState.TRIAGED,     JobEvent.REAP_ORPHAN):      JobState.DEAD,
     (JobState.PATCHING,    JobEvent.REAP_ORPHAN):      JobState.DEAD,
     (JobState.VERIFYING,   JobEvent.REAP_ORPHAN):      JobState.DEAD,
+    (JobState.CONVERTING,  JobEvent.REAP_ORPHAN):      JobState.DEAD,
     # Step 10a: QUEUED jobs can be reaped too, but ONLY by the
     # stricter ``reap_stale_queued`` helper — never by ``reap_orphans``
     # (which would kill brand-new claimable work). The state-machine
@@ -119,6 +140,7 @@ TRANSITIONS: dict[tuple[JobState | None, JobEvent], JobState] = {
     (JobState.TRIAGED,     JobEvent.ABANDON):          JobState.DEAD,
     (JobState.PATCHING,    JobEvent.ABANDON):          JobState.DEAD,
     (JobState.VERIFYING,   JobEvent.ABANDON):          JobState.DEAD,
+    (JobState.CONVERTING,  JobEvent.ABANDON):          JobState.DEAD,
 }
 
 
@@ -132,6 +154,7 @@ _TERMINAL_REASONS: dict[JobEvent, str] = {
     JobEvent.ENV_BROKEN:       "env_broken",
     JobEvent.REAP_ORPHAN:      "runner_restart",
     JobEvent.ABANDON:          "abandoned",
+    JobEvent.CONVERT_GAVE_UP:  "convert_failed",
 }
 
 
@@ -153,6 +176,7 @@ _INFLIGHT_STATES: tuple[JobState, ...] = (
     JobState.TRIAGED,
     JobState.PATCHING,
     JobState.VERIFYING,
+    JobState.CONVERTING,
 )
 
 

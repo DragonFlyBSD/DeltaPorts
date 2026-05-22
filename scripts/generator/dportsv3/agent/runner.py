@@ -1537,6 +1537,61 @@ def enqueue_patch_job(
     return job_path
 
 
+def enqueue_convert_job(
+    queue_root: Path,
+    *,
+    origin: str,
+    target: str,
+    profile: str = "",
+    requested_by: str = "operator",
+    dev_env: str | None = None,
+) -> Path:
+    """Enqueue a dops-conversion job for one port (Step 20c).
+
+    Convert jobs are port-level, not bundle-level — there's no
+    failure to attribute them to. They're created either lazily
+    by triage when a port still has legacy overlay artifacts, or
+    proactively by an operator.
+    """
+    ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%SZ")
+    origin_safe = origin.replace("/", "_")
+    pid = os.getpid()
+    job_name = f"{ts}-{profile or 'any'}-{origin_safe}-{pid}-convert.job"
+
+    pending_dir = queue_root / "pending"
+    job_path = pending_dir / job_name
+
+    content = [
+        "type=convert",
+        f"created_ts_utc={ts}",
+        f"profile={profile}",
+        f"origin={origin}",
+        f"target={target}",
+        f"requested_by={requested_by}",
+    ]
+    if dev_env:
+        content.append(f"dev_env={dev_env}")
+
+    tmp_path = job_path.with_suffix(".tmp")
+    with open(tmp_path, "w") as f:
+        f.write("\n".join(content) + "\n")
+    tmp_path.rename(job_path)
+
+    _register_new_job(
+        job_path.name,
+        metadata={
+            "type": "convert",
+            "origin": origin,
+            "flavor": "",
+            "created_ts_utc": ts,
+            "path": str(job_path),
+            "target": target
+                or os.environ.get("DPORTSV3_TRACKER_TARGET", ""),
+        },
+    )
+    return job_path
+
+
 
 # -----------------------------------------------------------------------------
 # Job processing
@@ -2022,6 +2077,84 @@ def process_patch_job(
         sibling_paths=sibling_paths,
         failure_event="patch_gave_up",
     )
+
+
+def process_convert_job(
+    queue_root: Path,
+    job_path: Path,
+    sibling_paths: list[Path],
+    job: dict,
+) -> tuple[bool, str]:
+    """Process a dops-conversion job (Step 20c).
+
+    First-cut handler: runs the deterministic
+    :func:`dportsv3.migration.convert.convert_record` translator
+    against the port. Auto-safe ports get converted; everything
+    else (review-needed / fallback-only) parks at
+    ``CONVERT_GAVE_UP`` with a ``needs_llm`` reason, waiting for
+    20b's LLM loop to be wired up.
+
+    Verification via ``dsynth_build`` is Step 20e and not done
+    here yet.
+    """
+    from dportsv3.agent.dops import classify as classify_dops
+    from dportsv3.migration.classify import classify_inventory
+    from dportsv3.agent.dops import _scan_one_port
+    from dportsv3.migration.convert import convert_record
+
+    origin = job.get("origin", "")
+    if not origin:
+        return False, "convert job missing origin"
+
+    repo_root = Path(
+        os.environ.get("DP_HARNESS_REPO_ROOT")
+        or os.environ.get("DPORTSV3_REPO_ROOT")
+        or "."
+    ).resolve()
+
+    state = classify_dops(origin, repo_root)
+    if state == "converted":
+        # No work to do. CONVERT_OK is appropriate — the goal state
+        # is already reached.
+        return True, "already converted"
+    if state == "not_in_scope":
+        return False, "port not in dops scope (no overlay artifacts)"
+    if state == "stale":
+        return False, "port marked stale"
+
+    port_dir = repo_root / "ports" / origin
+    record = _scan_one_port(port_dir, origin)
+    if record is None:
+        return False, "port directory missing"
+    classified = classify_inventory([record])[0]
+
+    if state == "needs_judgment":
+        # 20b not implemented yet — surface this clearly so the
+        # operator sees what's blocked on the LLM tool loop.
+        return False, (
+            f"needs_llm: bucket={classified.get('bucket')!r}, "
+            f"reasons={classified.get('classification_reasons')!r}"
+        )
+
+    # state == "auto_safe_pending" → run the deterministic translator.
+    result = convert_record(classified, repo_root=repo_root, dry_run=False)
+    status = result.get("status", "")
+    if status == "converted":
+        ok = (
+            result.get("parse_ok")
+            and result.get("check_ok")
+            and result.get("plan_ok")
+            and result.get("deterministic_ok")
+        )
+        if ok:
+            return True, "deterministic conversion succeeded"
+        return False, (
+            f"deterministic conversion failed validation: "
+            f"errors={result.get('errors')!r}"
+        )
+    return False, f"convert_record status={status!r} errors={result.get('errors')!r}"
+
+
 def process_job(
     queue_root: Path,
     job_path: Path,
@@ -2118,6 +2251,30 @@ def process_job(
         success, status = process_triage_job(
             queue_root, job_path, sibling_paths, job, bundle_dir, kedb_dir,
         )
+    elif job_type == "convert":
+        # Step 20c: convert jobs are port-level (no bundle, no
+        # siblings to fan out to in practice). Fire CONVERT_START,
+        # run the deterministic handler, then fire OK / GAVE_UP
+        # based on the result.
+        start_event = JobEvent.CONVERT_START
+        _apply_transition(job_path.name, start_event)
+        for s in sibling_paths:
+            _apply_transition(s.name, start_event)
+        success, status = process_convert_job(
+            queue_root, job_path, sibling_paths, job,
+        )
+        finish_event = (
+            JobEvent.CONVERT_OK if success else JobEvent.CONVERT_GAVE_UP
+        )
+        _apply_transition(
+            job_path.name, finish_event,
+            detail={"status": status} if not success else None,
+        )
+        for s in sibling_paths:
+            _apply_transition(
+                s.name, finish_event,
+                detail={"status": status} if not success else None,
+            )
     else:
         # Unknown job type — fire the catchall failure event for lead +
         # siblings, write the error note, move everything to failed/.
