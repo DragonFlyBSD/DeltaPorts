@@ -2347,16 +2347,37 @@ def _run_llm_conversion(
         or None
     )
 
-    # Convert is bounded refactoring (not exploratory debugging) so
-    # the tier is tighter than the patch tier — 2 attempts. Budget
-    # default raised to 150K after libuv smoke-tested at 80,601
-    # tokens for 10 turns, exceeding an 80K cap. Override via
-    # DP_HARNESS_CONVERT_BUDGET if needed.
-    from dportsv3.agent.policy import Tier
+    # CONVERT tier lives in config/agentic-policy.json next to
+    # AUTO/ASSIST/MANUAL. DP_HARNESS_CONVERT_ITERATIONS /
+    # DP_HARNESS_CONVERT_BUDGET still override at runtime for
+    # one-off experiments without editing the config file.
+    from dportsv3.agent.policy import Tier, load_policy
+    policy_path = os.environ.get("DP_HARNESS_POLICY", _DEFAULT_POLICY_PATH)
+    convert_tier_from_policy: Tier | None = None
+    try:
+        convert_tier_from_policy = load_policy(policy_path).tiers.get("CONVERT")
+    except Exception as exc:
+        log(Path("."), "WARN",
+            f"failed to load policy from {policy_path!r}: {exc}; "
+            f"using built-in CONVERT defaults")
+    base_iterations = (
+        convert_tier_from_policy.max_iterations
+        if convert_tier_from_policy and convert_tier_from_policy.max_iterations
+        else 2
+    )
+    base_tokens = (
+        convert_tier_from_policy.max_tokens
+        if convert_tier_from_policy and convert_tier_from_policy.max_tokens
+        else 150000
+    )
     tier = Tier(
         name="CONVERT",
-        max_iterations=int(os.environ.get("DP_HARNESS_CONVERT_ITERATIONS", "2")),
-        max_tokens=int(os.environ.get("DP_HARNESS_CONVERT_BUDGET", "150000")),
+        max_iterations=int(
+            os.environ.get("DP_HARNESS_CONVERT_ITERATIONS", str(base_iterations))
+        ),
+        max_tokens=int(
+            os.environ.get("DP_HARNESS_CONVERT_BUDGET", str(base_tokens))
+        ),
     )
 
     # Build the payload — deterministic_result reuses convert_record
