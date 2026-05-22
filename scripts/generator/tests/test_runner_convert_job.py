@@ -385,7 +385,7 @@ def test_convert_tool_whitelist_blocks_build_tools() -> None:
         )
     # Sanity: the tools we DO need are in the whitelist.
     for needed in ("env_verify", "list_dir", "get_file", "put_file",
-                   "grep", "dops_reference"):
+                   "grep", "dops_reference", "validate_dops"):
         assert needed in CONVERT_TOOL_NAMES
     # materialize_dports is intentionally NOT exposed to the
     # convert agent — only the handler invokes it for verification

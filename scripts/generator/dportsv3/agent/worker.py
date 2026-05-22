@@ -681,6 +681,30 @@ def materialize_dports(env: str, origin: str) -> dict:
 WRKDIRPREFIX = "/work/obj"
 
 
+def validate_dops(env: str, origin: str) -> dict:
+    """Run ``dportsv3 dsl check`` against the port's overlay.dops.
+
+    Used by the convert agent to validate its rewrite *before*
+    emitting the Conversion Proof. Cheap — parse + semantic check
+    via dportsv3.engine.api, no compose, no filesystem materialize.
+
+    Returns ``ok=True`` only when the dsl check exits 0 (no
+    diagnostics). On failure, the diagnostics (stderr) carry the
+    line/column/code so the agent can fix and retry.
+
+    The full compose-side check still runs in
+    ``_verify_conversion`` after the agent finishes — this is the
+    cheap inner-loop validation, not a replacement.
+    """
+    dops_path = f"/work/DeltaPorts/ports/{origin}/overlay.dops"
+    p = _exec(env, "dportsv3", "dsl", "check", dops_path)
+    return _exec_result(
+        p.returncode, p.stdout, p.stderr,
+        origin=origin,
+        dops_path=dops_path,
+    )
+
+
 _DOPS_QUICKREF_PATH = Path(__file__).resolve().parent / "dops_quickref.md"
 
 

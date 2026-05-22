@@ -124,6 +124,15 @@ _TOOLS: list[dict] = [
           "and (b) you are about to write one. Skip otherwise; the reference "
           "is large and re-reading wastes tokens.",
           {}, []),
+    _tool("validate_dops",
+          "Run `dportsv3 dsl check` against the port's overlay.dops. Cheap "
+          "parse + semantic validation (no compose, no filesystem mutation). "
+          "Returns ok=True only when there are zero diagnostics. On failure, "
+          "stderr_tail carries diagnostics with line:column and an E_* error "
+          "code. Convert flow: call once after writing overlay.dops via "
+          "put_file; if not ok, fix the offending line(s) and call again. "
+          "Only emit the Conversion Proof after a clean validate_dops.",
+          {"origin": _STR}, ["origin"]),
 ]
 
 
@@ -173,6 +182,7 @@ CONVERT_TOOL_NAMES: frozenset[str] = frozenset({
     "put_file",
     "grep",
     "dops_reference",
+    "validate_dops",
 })
 
 

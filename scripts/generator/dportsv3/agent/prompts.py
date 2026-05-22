@@ -466,18 +466,26 @@ the overlay tree only; the upstream source is none of your business.
    already-generated dops body to form the final `overlay.dops`.
    Use `put_file` to write it at
    `/work/DeltaPorts/ports/<origin>/overlay.dops`.
-4. For any static patch you decided to retain via `patch apply`:
+4. Call `validate_dops` to syntax-check the result. If
+   `ok=false`, the diagnostics in `stderr_tail` carry line, column,
+   and an `E_*` error code. Fix the offending lines and call
+   `validate_dops` again. Repeat until `ok=true`. Do not skip
+   this step — emitting a proof against malformed dops just makes
+   the handler reject it after the fact.
+5. For any static patch you decided to retain via `patch apply`:
    leave the file in place under `dragonfly/`.
-5. For any framework or source-simple item you migrated: note the
+6. For any framework or source-simple item you migrated: note the
    files that should be removed in the Conversion Proof's
    `files_removed` field — the handler will finalize the cleanup
    so the overlay stays consistent with the proof.
-6. Emit the Conversion Proof JSON block (see below) and stop.
+7. Emit the Conversion Proof JSON block (see below) and stop.
 
-Verification is the handler's job. After you finish, the handler
-runs `reapply` (which exercises `compose` against your new
-`overlay.dops`) and accepts the conversion if compose succeeds.
-You do NOT need to verify anything yourself.
+Final verification is the handler's job. After you finish, the
+handler runs `reapply` (which exercises `compose` against your
+new `overlay.dops`) and accepts the conversion if compose
+succeeds. ``validate_dops`` is the cheap inner-loop check that
+catches mistakes early so you don't burn an attempt on a syntax
+error the handler would have caught anyway.
 
 ## Response format
 
