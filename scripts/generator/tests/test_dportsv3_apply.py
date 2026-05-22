@@ -1129,6 +1129,92 @@ def test_apply_plan_patch_apply_uses_noninteractive_patch_command(
     assert observed["timeout"] == 30
 
 
+def test_apply_plan_patch_apply_resolves_via_source_root(tmp_path: Path) -> None:
+    """patch.apply reads the patch FILE from source_root (the
+    overlay tree where the dops file lives) — not from port_root
+    (compose's materialized output). Compose calls apply_plan with
+    distinct source_root and port_root; under dops-mode compose
+    no longer copies dragonfly/patch-* into port_root
+    (I_COMPOSE_MODE_DOPS_SUPPRESSES_COMPAT), so the executor must
+    resolve the patch path against the overlay.
+
+    Before the apply.py:68 fix this test would fail with
+    E_APPLY_MISSING_SUBJECT because the executor looked in
+    port_root which never had the patch file.
+    """
+    source = tmp_path / "src" / "ports" / "cat" / "port"
+    port = tmp_path / "out" / "cat" / "port"
+    (source / "dragonfly").mkdir(parents=True)
+    port.mkdir(parents=True)
+    # The target source lives in port_root (where compose materialized it).
+    (port / "file.txt").write_text("old\n")
+    # The patch file lives in the source overlay at dragonfly/.
+    (source / "dragonfly" / "patch-file.txt").write_text(
+        "--- file.txt\n+++ file.txt\n@@ -1 +1 @@\n-old\n+new\n"
+    )
+
+    plan = Plan(
+        port="cat/port",
+        ops=[
+            PlanOp(
+                id="op-1",
+                target="@main",
+                kind="patch.apply",
+                payload={"path": "dragonfly/patch-file.txt"},
+            )
+        ],
+    )
+    result = apply_plan(
+        plan,
+        source_root=source,
+        port_root=port,
+        target="@main",
+        oracle_profile="off",
+    )
+    assert result.ok, [
+        (d.code, d.message) for d in result.op_results[0].diagnostics
+    ]
+    # Patch actually applied — the target was rewritten in port_root.
+    assert (port / "file.txt").read_text() == "new\n"
+
+
+def test_apply_plan_patch_apply_missing_in_source_root(tmp_path: Path) -> None:
+    """If the patch file is missing from source_root, the diagnostic
+    points at source_root (not port_root) — distinguishes 'forgot
+    to ship the patch' from 'compose didn't copy it'."""
+    source = tmp_path / "src" / "ports" / "cat" / "port"
+    port = tmp_path / "out" / "cat" / "port"
+    source.mkdir(parents=True)
+    port.mkdir(parents=True)
+    (port / "file.txt").write_text("old\n")
+    # NB: no dragonfly/ directory under source — the patch is missing.
+
+    plan = Plan(
+        port="cat/port",
+        ops=[
+            PlanOp(
+                id="op-1",
+                target="@main",
+                kind="patch.apply",
+                payload={"path": "dragonfly/patch-missing"},
+            )
+        ],
+    )
+    result = apply_plan(
+        plan,
+        source_root=source,
+        port_root=port,
+        target="@main",
+        oracle_profile="off",
+    )
+    assert not result.ok
+    diags = result.op_results[0].diagnostics
+    assert any(d.code == "E_APPLY_MISSING_SUBJECT" for d in diags)
+    # The diagnostic's source_path is inside source_root, not port_root.
+    err = next(d for d in diags if d.code == "E_APPLY_MISSING_SUBJECT")
+    assert str(source) in str(err.source_path)
+
+
 def test_apply_plan_oracle_failure_rolls_back_when_strict(
     tmp_path: Path, monkeypatch
 ) -> None:

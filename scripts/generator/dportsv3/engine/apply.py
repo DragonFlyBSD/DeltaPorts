@@ -64,14 +64,24 @@ def _exec_patch_apply(
             op, code="E_APPLY_INVALID_PATH", message="patch.apply requires path"
         )
 
+    # patch.apply reads its input patch FILE from the source overlay
+    # (e.g. /work/DeltaPorts/ports/<origin>/dragonfly/patch-X), not
+    # from the materialized port_root (compose's output). Same model
+    # as file.materialize. Before this fix the executor resolved
+    # against port_root, which meant any dops with `patch apply
+    # dragonfly/X` failed with E_APPLY_MISSING_SUBJECT under
+    # dops-mode compose (the I_COMPOSE_MODE_DOPS_SUPPRESSES_COMPAT
+    # warning means compose doesn't copy the patches into port_root
+    # anymore). source_root falls back to port_root when not set —
+    # preserves legacy callers + the existing test fixtures.
     try:
-        patch_path = _resolve_path(context.port_root, rel)
+        patch_path = _resolve_path(context.source_root, rel)
     except ValueError as exc:
         return _failed_row(
             op,
             code="E_APPLY_INVALID_PATH",
             message=str(exc),
-            source_path=context.port_root,
+            source_path=context.source_root,
         )
 
     if not patch_path.exists():
