@@ -343,7 +343,11 @@ def _artifact_view_data(
 
 
 _DEFAULT_ARTIFACT_PRIORITY = (
-    "analysis/manual_handoff.md",
+    # Operator-facing summaries first — these are what the operator
+    # wants to land on when they open a bundle.
+    "analysis/proposed_fix.md",     # success path: actionable recipe
+    "analysis/manual_handoff.md",   # escalation path: what to do next
+    # Then the agent's own outputs, then raw evidence.
     "analysis/triage.md",
     "analysis/patch.md",
     "logs/errors.txt",

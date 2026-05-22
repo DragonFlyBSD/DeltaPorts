@@ -1907,6 +1907,57 @@ def _write_manual_handoff(
         out.write_bytes(body)
 
 
+def _write_proposed_fix(
+    bundle_dir: Path | None,
+    bundle_id: str | None,
+    *,
+    origin: str,
+    target: str,
+    model: str,
+    classification: str = "",
+    confidence: str = "",
+    attempts_max: int = 0,
+    patch_result: object | None = None,
+) -> None:
+    """Render and persist ``analysis/proposed_fix.md`` after a
+    successful patch attempt. Best-effort: failures are swallowed so
+    the artifact write never blocks the lifecycle event.
+
+    Operator-facing one-pager: what the agent did, the cost, and the
+    recipe to land the fix in the operator's own DeltaPorts clone.
+    Surfaces as the default bundle preview when
+    ``resolution='agent_fixed'``.
+    """
+    try:
+        from dportsv3.agent import proposed_fix  # noqa: PLC0415
+
+        ctx = proposed_fix.build_proposed_fix_ctx(
+            origin=origin,
+            target=target,
+            bundle_id=bundle_id or "",
+            bundle_dir=bundle_dir,
+            read_bundle_text=read_bundle_text,
+            patch_result=patch_result,
+            model=model,
+            classification=classification,
+            confidence=confidence,
+            attempts_max=attempts_max,
+            tracker_url=_tracker_url(),
+        )
+        body = proposed_fix.render_proposed_fix(ctx).encode("utf-8")
+    except Exception as exc:
+        print(f"Warning: proposed_fix render failed for {origin}: {exc}",
+              file=sys.stderr)
+        return
+
+    if bundle_id:
+        artifact_store_put(bundle_id, "analysis/proposed_fix.md", body, "text")
+    elif bundle_dir is not None:
+        out = bundle_dir / "analysis" / "proposed_fix.md"
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_bytes(body)
+
+
 def process_patch_job(
     queue_root: Path,
     job_path: Path,
@@ -1962,6 +2013,7 @@ def process_patch_job(
         log=log,
         load_port_history=_load_port_history,
         write_manual_handoff=_write_manual_handoff,
+        write_proposed_fix=_write_proposed_fix,
     )
 
     result = Orchestrator().run(ctx, [PatchAttemptStep()])

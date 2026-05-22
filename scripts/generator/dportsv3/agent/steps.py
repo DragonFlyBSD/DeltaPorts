@@ -483,6 +483,38 @@ class TriageStep:
         shutil.rmtree(materialized_tmp, ignore_errors=True)
 
 
+def _try_write_proposed_fix(
+    services: Any,
+    ctx: StepCtx,
+    origin: str,
+    *,
+    model: str,
+    patch_result: object | None = None,
+) -> None:
+    """Best-effort proposed_fix.md writer for the successful patch
+    path. Swallows all errors — lifecycle bookkeeping must not be
+    blocked by an artifact-write failure. The injected callable is
+    optional; legacy callers without it get a no-op."""
+    fn = getattr(services, "write_proposed_fix", None)
+    if fn is None:
+        return
+    bundle_id = ctx.bundle_id or ctx.job.get("bundle_id")
+    tier = ctx.state.get("tier")
+    attempts_max = int(getattr(tier, "max_iterations", 0) or 0)
+    try:
+        fn(
+            ctx.bundle_dir,
+            bundle_id,
+            origin=origin,
+            target=ctx.job.get("target", "") or "",
+            model=model,
+            attempts_max=attempts_max,
+            patch_result=patch_result,
+        )
+    except Exception:
+        pass
+
+
 def _try_write_handoff(
     services: Any,
     ctx: StepCtx,
@@ -560,6 +592,7 @@ class PatchServices:
     log: Callable[..., Any]
     load_port_history: Callable[..., Any]
     write_manual_handoff: Callable[..., Any] | None = None
+    write_proposed_fix: Callable[..., Any] | None = None
 
 
 @dataclass
@@ -778,6 +811,11 @@ class PatchAttemptStep:
 
         status_l = (result.status or "").lower()
         if result.status == "success":
+            _try_write_proposed_fix(
+                services, ctx, origin,
+                model=model,
+                patch_result=result,
+            )
             return StepOutcome(
                 status="success",
                 next_event=JobEvent.PATCH_OK,
