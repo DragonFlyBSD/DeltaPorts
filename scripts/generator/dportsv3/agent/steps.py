@@ -121,6 +121,22 @@ class PatchEventDispatcher:
                 job_id=self.job_id,
                 extra={k: v for k, v in ev.items() if k != "type"},
             )
+        elif et == "llm_turn":
+            # Per-LLM-round telemetry. The "prompt" share usually
+            # dominates because conversation history compounds with
+            # every tool result; this row makes that visible.
+            tools_str = ",".join(ev.get("tools_requested") or []) or "(text-only)"
+            self.activity_log(
+                self.queue_root, "llm_turn",
+                f"A{ev.get('attempt')}.T{ev.get('turn')} "
+                f"in={ev.get('prompt_tokens')} "
+                f"out={ev.get('completion_tokens')} "
+                f"total={ev.get('total_tokens')} "
+                f"cumulative={ev.get('cumulative_total_tokens')} "
+                f"→ {tools_str}",
+                job_id=self.job_id,
+                extra={k: v for k, v in ev.items() if k != "type"},
+            )
 
 
 @dataclass
@@ -241,6 +257,23 @@ class TriageStep:
             job_id=ctx.job_id,
             extra={"agent": "dports-triage", "model": model},
         )
+        # Per-turn token telemetry — also wired for triage so the
+        # operator can see how many tokens each snippet round consumed.
+        def _triage_event(ev: dict) -> None:
+            if ev.get("type") != "llm_turn":
+                return
+            services.activity_log(
+                queue_root, "llm_turn",
+                f"triage T{ev.get('turn')} "
+                f"(snippet_round={ev.get('snippet_round')}) "
+                f"in={ev.get('prompt_tokens')} "
+                f"out={ev.get('completion_tokens')} "
+                f"total={ev.get('total_tokens')} "
+                f"cumulative={ev.get('cumulative_total_tokens')}",
+                job_id=ctx.job_id,
+                extra={k: v for k, v in ev.items() if k != "type"},
+            )
+
         start = time.time()
         try:
             result = harness_triage.run(
@@ -252,6 +285,7 @@ class TriageStep:
                 custom_llm_provider=custom_llm_provider,
                 timeout=timeout,
                 max_snippet_rounds=max_snippet_rounds,
+                on_event=_triage_event,
             )
         except Exception as exc:
             services.activity_log(

@@ -104,6 +104,29 @@ def run(
         )
         total.add(response.usage)
 
+        # Per-turn telemetry. Without this, only the per-attempt
+        # totals are visible, which makes it hard to see WHERE the
+        # tokens went (typically the prompt grows fast because
+        # conversation history compounds with every tool result).
+        tools_requested = (
+            [tc.name for tc in response.tool_calls] if response.tool_calls else []
+        )
+        if on_event is not None:
+            try:
+                on_event({
+                    "type": "llm_turn",
+                    "attempt": attempt_idx,
+                    "turn": turn,
+                    "prompt_tokens": response.usage.prompt_tokens,
+                    "completion_tokens": response.usage.completion_tokens,
+                    "total_tokens": response.usage.total_tokens,
+                    "tools_requested": tools_requested,
+                    "text_only": not response.tool_calls,
+                    "cumulative_total_tokens": total.total_tokens,
+                })
+            except Exception:
+                pass  # callback must never break the loop
+
         if not response.tool_calls:
             log.debug("tool_loop: turn %d returned text-only, stopping", turn)
             return response, total
@@ -112,7 +135,7 @@ def run(
             "tool_loop: turn %d issued %d tool call(s): %s",
             turn,
             len(response.tool_calls),
-            [tc.name for tc in response.tool_calls],
+            tools_requested,
         )
 
         # Echo the assistant's tool-call message back into history so

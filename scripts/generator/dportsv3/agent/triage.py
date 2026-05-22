@@ -71,6 +71,7 @@ def run(
     custom_llm_provider: str | None = None,
     timeout: int = 120,
     max_snippet_rounds: int | None = None,
+    on_event=None,
 ) -> TriageResult:
     """Run the triage flow end-to-end for one bundle.
 
@@ -91,8 +92,10 @@ def run(
     total_usage = llm.Usage()
     response_text = ""
     snippet_round = 0
+    turn = 0
 
     while True:
+        turn += 1
         response = llm.complete(
             messages,
             model=model,
@@ -103,6 +106,21 @@ def run(
         )
         total_usage.add(response.usage)
         response_text = response.text
+
+        if on_event is not None:
+            try:
+                on_event({
+                    "type": "llm_turn",
+                    "phase": "triage",
+                    "turn": turn,
+                    "snippet_round": snippet_round,
+                    "prompt_tokens": response.usage.prompt_tokens,
+                    "completion_tokens": response.usage.completion_tokens,
+                    "total_tokens": response.usage.total_tokens,
+                    "cumulative_total_tokens": total_usage.total_tokens,
+                })
+            except Exception:
+                pass  # callback must never break the loop
 
         _write_intermediate_triage(bundle_dir, response_text)
 
