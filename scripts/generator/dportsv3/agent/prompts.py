@@ -115,82 +115,95 @@ to "verify" — that's the lock root, it can and will disagree with
 extract's output, and following it leads to chasing the wrong
 version.
 
-## First probe on patch-error: does overlay.dops exist?
+## MANDATORY OPENING PROCEDURE (do these in order, every patch attempt)
 
-If the triage classification is `patch-error` (or any failure that
-implicates a `dragonfly/patch-*` file), your first non-`emit_diff`
-read should be:
+Smoke runs have shown weaker models skipping these steps and burning
+whole token budgets on guesses. Do them. They are cheap. Each is a
+single tool call.
 
-```
-get_file /work/DeltaPorts/ports/<origin>/overlay.dops
-```
+**Step 1 — `env_verify`**. If status != ready, stop. No other tool
+will produce useful results.
 
-Two branches:
+**Step 2 — `emit_diff(origin, "")`**. See whether the overlay
+already has uncommitted edits from a prior attempt. Note the
+diff_bytes value; it tells you whether you start from a clean tree
+or are continuing previous work.
 
-- **overlay.dops exists** → the port is dops-managed. Add/modify
-  operations in that file; the existing dops style is your guide.
-  Don't introduce a new static patch when an op fits.
+**Step 3 — `get_file /work/DeltaPorts/ports/<origin>/overlay.dops`**.
+This single call decides your whole strategy:
 
-- **overlay.dops does NOT exist** → the port is still on static
-  patches. The durable fix is to **convert the relevant patches to
-  dops** rather than regenerate them (regenerated patches break
-  again on the next upstream bump; dops survive). Only fall back to
-  regenerating the static patch when the patch's logic doesn't
-  reduce to any of the dops operations.
+- **File exists** → the port is *already* dops-managed. Your fix
+  goes into this file as additional ops. Do NOT introduce a new
+  static `dragonfly/patch-*` when a dops operation fits the change.
 
-When you're about to write an `overlay.dops` and you don't have the
-syntax memorized, call `dops_reference()` **once**. The reference
-is ~2KB; calling it on later turns wastes context.
+- **File returns 'no such path'** → the port is *unconverted*.
+  The durable fix is conversion to dops, NOT regenerating a static
+  patch (regenerated patches re-break on the next upstream bump;
+  dops survive). Before writing the file, call `dops_reference()`
+  exactly once (Step 4 below). Only fall back to regenerating the
+  static patch when the patch's logic genuinely doesn't reduce to
+  any dops operation.
 
-## Overlay state (read before editing)
+**Step 4 — `dops_reference()`** *(only if Step 3 returned 'no such
+path' AND you intend to write `overlay.dops`)*. Returns the dops
+quick-reference (~2KB). Call ONCE per patch attempt. Do not call
+again on later turns; it doesn't change.
 
-This batch may bundle several failures for the same port. The writable
-overlay may already contain edits from a previous attempt — either
-earlier in this batch or from a prior queued job. Before assuming a
-clean tree:
+**Step 5 — `materialize_dports(origin)` then `extract(origin)`**.
+These produce the buildable tree + extracted source for THIS port.
 
-- Call `emit_diff(origin, "")` early to see what files have already
-  been modified vs HEAD. An empty diff means the tree is clean
-  (first attempt). A non-empty diff means prior edits are in place;
-  decide whether to extend them, revert specific files via `put_file`
-  back to their HEAD content, or build on the existing changes.
-- Don't assume HEAD == current — always check before a `put_file` on
-  a file you haven't read this session. Use `expected_sha256` to make
-  edits race-safe.
-
-## After extract, trust the response — don't guess source paths
-
-bsd.port.mk lays the extracted source under a nested `work/` subdir
-(``/work/obj/<origin>/work/<name>-<version>/``), not directly at
-``/work/obj/<origin>/<name>-<version>/``. The obj tree may also contain
-**stale dirs from prior versions** that look like current source but
-aren't — extract doesn't clean them between version bumps.
-
-The ``extract`` tool's response already includes the resolved
-``wrkdir`` and ``wrksrc`` fields — those are bsd.port.mk's authoritative
-answer to "where is the source right now." Use them directly:
+**Step 6 — store and use `extract`'s wrksrc**. The `extract` tool's
+response contains a `wrksrc` field — bsd.port.mk's authoritative
+answer to where the source lives **right now**.
 
 ```
-extract(origin) → { ok: true, wrkdir: "...", wrksrc: "...", summary: "..." }
-                                                ^^^^^^^^
-                              this is the only reliable source path
+extract(origin) → {
+   ok: true,
+   wrksrc: "<authoritative absolute path>",   ← USE THIS PATH
+   wrkdir: "<parent of wrksrc>",
+   summary: "<warns about lock root>"
+}
 ```
 
-Don't construct ``/work/obj/<origin>/<name>-<version>/`` paths from
-the Makefile's ``DISTVERSION`` and the origin. That path shape is
-wrong (missing the ``work/`` segment), and even if you guess the right
-shape the version dir you see in ``/work/obj/<origin>/`` may be a
-leftover from a prior build, not the current one.
+**Mandatory pattern for source inspection from this point on:**
 
-If triage's `Suggested Fix` cites a versioned path that doesn't match
-the extract response's ``wrksrc``:
+- Every `get_file`, `list_dir`, `grep` you do on the extracted
+  source MUST use the path from `extract.wrksrc`.
+- You may NOT construct paths of the form
+  `/work/obj/<origin>/<name>-<version>/`. That path is wrong (the
+  obj tree nests source under `work/` and may also contain stale
+  leftovers from prior version-bumps).
+- You may NOT use `/work/DPorts/<origin>/...` for source inspection.
+  That's the lock root — last-known-good versions, NOT what was
+  just extracted.
 
-1. **First** assume it's a path-shape or stale-leftover mismatch —
-   look at ``wrksrc`` and proceed from there.
-2. **Only if the patch genuinely no longer applies to any current
-   version of the target file** consider removing the static patch
-   altogether. Don't reach for "delete the patch" as the first move;
-   most patch-error failures are regenerate-against-new-context cases.
+If `extract.wrksrc` is empty or its contents don't match what triage
+described, that's the signal to surface — don't paper over it by
+guessing. Stop and report what you see.
+
+**Step 7 — only now begin editing**. Use the wrksrc from Step 6 for
+all reads. Edit under `/work/DeltaPorts/ports/<origin>/` (not the
+lock root, not the compose root — the worker will refuse both).
+After each edit, run `materialize_dports` again before `dsynth_build`.
+
+For `put_file` on any file you haven't `get_file`'d this session,
+pass `expected_sha256` from a prior read to make the edit race-safe
+against stale content.
+
+## What to do if triage's Suggested Fix names a path
+
+Triage occasionally cites paths under `/work/dsynth/build/...` or
+`/work/obj/<origin>/<name>-<version>/` that don't actually exist or
+are stale. Treat triage's path as a *hint*, not a fact:
+
+1. **Always cross-check against `extract.wrksrc`.** That's ground
+   truth.
+2. **If wrksrc differs from triage's path:** trust wrksrc. Triage
+   doesn't have the extract tool's output.
+3. **Only consider 'remove the static patch entirely'** when the
+   patch logic genuinely no longer applies anywhere in the current
+   source. Don't reach for it as a first move; most patch-error
+   failures are regenerate-against-new-context cases.
 
 ## Worker-enforced "don'ts"
 
