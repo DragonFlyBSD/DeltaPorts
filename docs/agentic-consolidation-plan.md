@@ -886,10 +886,312 @@ and onto a review platform — with the operator's signature attached.
 11. Fix delivery & verification (11a proposed-fix artifact,
     11b verify-fix subcommand, 11c accept/reject UI,
     11d push to code-hosting providers).
+12. Telemetry bus + sinks (replace ad-hoc event plumbing).
+13. Tool guardrail middleware (replace inline per-tool refusals).
+14. Context budget + KEDB metadata (cap payload growth, gate entries
+    by classification).
 
 This order improves operator visibility first, then improves agent
 context, then adds the retry loop, then refines policy, then hardens
-the edges that the first real smoke test surfaced, and finally walks
-the agent's local fix all the way out to a review request on the
-upstream code-hosting platform — closing the loop from "agent says
-it works" to "human reviewer is looking at it."
+the edges that the first real smoke test surfaced, then walks the
+agent's local fix all the way out to a review request on the
+upstream code-hosting platform, and finally pays down the
+architectural debt that smoke surfaced — turning the recurring
+"ad-hoc patch every smoke run" pattern into proper composable
+abstractions.
+
+---
+
+## Architectural follow-ups (steps 12–14)
+
+Steps 12–14 are different in shape from 1–11. Steps 1–11 were
+*missing features*; 12–14 are *missing abstractions*. Smoke testing
+made the shapes visible: each new metric, each new guardrail, each
+new context section landed as an in-place edit to multiple files,
+because the underlying mechanisms weren't compositional. These
+three steps refactor the offending seams.
+
+### Step 12 — telemetry bus + sinks
+
+Today every new metric is its own code path: emit-via-callback,
+handle-in-dispatcher, write-to-activity-log. Adding ``llm_turn``
+required touching ``tool_loop.py`` (emit), ``triage.py`` (emit
+again, separately), ``steps.py`` PatchEventDispatcher (route), and
+``steps.py`` TriageStep (route again, also separately). N metrics
+× M flows = N×M edits.
+
+The cleaner shape:
+
+```
+emit_event(LLMTurn(prompt=..., completion=..., turn=...))
+    │
+    ▼
+TelemetryBus.fanout
+    │
+    ├──► ActivityLogSink     (existing activity_log table)
+    ├──► ToolTraceSink       (existing tool_trace.jsonl artifact)
+    ├──► PrometheusSink      (later)
+    └──► CostSink            (computes $ via per-model pricing config)
+```
+
+Components:
+
+- **Typed events.** ``TelemetryEvent`` dataclasses, one per kind:
+  ``AttemptStart``, ``AttemptEnd``, ``LLMTurn``, ``ToolCall``,
+  ``ResolutionWritten``, etc. Fields are typed. Schema evolution
+  goes through normal dataclass updates rather than dict-key
+  drift.
+- **Sink Protocol.** ``Sink.emit(event)`` is the only contract.
+  Implementations decide whether they care about a given event
+  type (most sinks filter; some — like an aggregate-tokens sink —
+  consume everything).
+- **TelemetryBus.** Owns the sink list and the per-job context
+  (job_id, origin, target). One ``emit`` call fans out to every
+  sink with the context attached.
+- **Pricing config.** ``config/model-pricing.json`` mapping model
+  name → ``{ in_per_mtoken, out_per_mtoken }``. CostSink derives
+  ``$cost`` as a field on cost-bearing events.
+- **Aggregator helpers.** ``metrics.cost_per_port(target)``,
+  ``metrics.median_attempts(target)``, etc. — derived from the
+  event stream, queryable from the tracker UI.
+
+What it replaces:
+
+- ``PatchEventDispatcher`` and the duplicated ``_triage_event``
+  closure in ``steps.py`` both retire — they become sink
+  instances.
+- The ad-hoc ``activity_log(...)`` calls inside ``runner.py`` and
+  ``steps.py`` route through the bus instead, with the
+  ActivityLogSink doing the table write.
+- New metrics ship as one new dataclass + zero downstream edits
+  if the existing sinks cover them.
+
+Tests:
+
+- Sink registration + fanout: emit one event, all registered
+  sinks see it.
+- Each existing sink emits the same rows it did before (parity
+  with current activity_log content).
+- Pricing config: a malformed pricing entry surfaces an explicit
+  warning, doesn't silently zero out cost.
+- Schema evolution: an event field added later doesn't break old
+  sinks (Pydantic ``extra='ignore'`` or equivalent).
+
+Rationale:
+
+Adding ``llm_turn`` cost ~50 LOC + careful audit of two dispatchers
+to make sure it landed in both places. With a bus, the same change
+is ~10 LOC and zero audit. The next 5 metrics earn the abstraction
+back; the bus has paid for itself by metric #3.
+
+### Step 13 — tool guardrail middleware
+
+Today every "the agent must not X" rule is a manual ``if
+chroot_path.startswith(...)`` block at the top of each affected
+tool. Three guardrails today:
+
+- ``_reject_dports_write`` — called from ``put_file``
+- ``_reject_dsynth_scaffolding`` — called from ``list_dir``
+  and ``grep`` (two callsites)
+- (implicit) get_file's line-window cap
+
+Five forthcoming guardrails the smoke pattern hints at:
+
+- Refuse repeated ``get_file`` on the same path within an attempt
+  (prompts the agent to keep state).
+- Refuse ``grep`` patterns expected to return >N matches (forces
+  narrower patterns).
+- Refuse ``put_file`` writes that don't match an ``expected_sha256``
+  for files already read this session.
+- Cap ``list_dir`` to N entries (already partly implemented inline).
+- Forbid ``extract`` outside ``$DPORTS_COMPOSE_ROOT``.
+
+Without middleware, each new guardrail edits 1–3 tool function
+bodies. Five new guardrails × ~3 tools each = 15 edits, with
+ordering pitfalls (which guard fires first if two apply?).
+
+The cleaner shape:
+
+```python
+class Guardrail(Protocol):
+    def check(self, tool_name: str, args: dict) -> dict | None:
+        """Return a refusal envelope to block the call, or None to
+        proceed. Composable; the dispatcher runs guards in order
+        and returns the first refusal."""
+
+# Registry assembles per-tool guardrail stacks declaratively:
+TOOLS_WITH_GUARDS = {
+    "put_file": [
+        RefuseWritesUnderPrefix(["/work/DPorts/", "/work/artifacts/compose/"]),
+        RequireExpectedSha256IfReadThisSession(),
+    ],
+    "list_dir": [RefusePathsUnderPrefix(["/work/dsynth/build/Template"])],
+    "grep":     [RefusePathsUnderPrefix(["/work/dsynth/build/Template"])],
+    "get_file": [LineWindowed(default_limit=200)],
+}
+```
+
+The dispatcher (already in ``tools.dispatch``) runs the stack
+before calling the handler. A refusal returns the envelope; the
+handler is never invoked.
+
+Components:
+
+- **Guardrail Protocol.** Single ``check`` method. Stateless by
+  default; stateful guardrails (``RequireExpectedSha256``) get a
+  per-attempt scratch dict from the dispatcher.
+- **Concrete guards.** ``RefuseWritesUnderPrefix``,
+  ``RefusePathsUnderPrefix``, ``CapOutputSize``,
+  ``RequireExpectedSha256``, ``DenyRepeatedRead``.
+- **Composition.** Per-tool guardrail list, run in order. First
+  refusal wins.
+- **Telemetry hook.** Refusals emit a ``GuardrailFired`` event so
+  operators can see "the agent tried to write under /work/DPorts/
+  3 times this attempt" — useful for prompt tuning.
+
+What it replaces:
+
+- ``_reject_dports_write`` and ``_reject_dsynth_scaffolding`` retire
+  as inline helpers; they become ``RefuseWritesUnderPrefix`` and
+  ``RefusePathsUnderPrefix`` instances.
+- The line-window logic in ``get_file`` becomes a ``LineWindowed``
+  guard that wraps the response (technically a *response*
+  middleware, not an input guard — both fit the same shape).
+
+Tests:
+
+- One refusal per guardrail (the existing behavior).
+- Composition: two guards on the same tool, both fire when
+  applicable, first-refusal-wins ordering.
+- Telemetry: refusals emit a guardrail_fired event.
+- Stateful guard: tracks state across calls within an attempt,
+  resets between attempts.
+
+Rationale:
+
+The five forthcoming guardrails above would be 15+ edits across
+3–4 tool function bodies without middleware. With middleware,
+each is one new class + one registry entry. Same observability
+(the GuardrailFired event lets us see when guards fire), better
+testability (each guard is unit-testable in isolation).
+
+### Step 14 — context budget + KEDB metadata
+
+``context.py`` already has the cleanest abstraction of the three
+(``ContextSection`` Protocol with priority-ordered render). What
+fails today:
+
+- **Triage payload grew from ~3K to ~30K tokens** as KEDB +
+  prompt sections accumulated. No budget; each section just adds
+  whatever it adds.
+- **KEDB is read as "concatenate all *.md".** No metadata to say
+  "this entry applies only to patch-error" or "this entry is 1.2K
+  tokens, drop it first if we're over budget."
+- **No telemetry on which sections fired or what they cost.** Adds
+  to the prior bullet — operators can't even see what's bloating
+  triage.
+- **System prompts (PATCH_SYSTEM, TRIAGE_SYSTEM) bypass the
+  section mechanism entirely.** They're string constants. We can't
+  observe which fragments fired, can't compose them, can't trim
+  on a budget basis.
+
+The cleaner shape:
+
+```python
+@dataclass
+class KEDBEntry:
+    path: Path
+    body: str
+    applies_to_classifications: tuple[str, ...] = ()   # () = any
+    applies_to_platforms: tuple[str, ...] = ()
+    est_tokens: int                                     # computed at load
+    priority: int = 100                                 # smaller = drop later
+```
+
+- KEDB loader reads frontmatter (YAML-style) from each ``*.md``
+  for these fields. Old entries without frontmatter default to
+  "applies to any, priority 100."
+- ``KEDBSection.render`` gates entries by classification AND by
+  per-section token budget, picking entries by priority until the
+  budget is exhausted.
+- ``SectionRenderEvent`` telemetry per section: name, included or
+  skipped, estimated tokens, reason if skipped. Operators see
+  "KEDB included 4 of 7 entries, skipped 3 (budget); patch-error
+  filter excluded 0."
+
+For system prompts:
+
+- Decompose ``PATCH_SYSTEM`` into named sections (the "Directory
+  layout" section, the "Mandatory opening procedure" section,
+  etc.) with the same ContextSection mechanism.
+- Tag each with role=system. The assembler joins them at the
+  top of the messages list instead of using the monolithic
+  string.
+- Same telemetry: which system sections fired, what they cost.
+
+Components:
+
+- **Section frontmatter parser** for KEDB entries (10 LOC).
+- **Token estimator** (per-section ``est_tokens`` — rough
+  ``len(text) // 4`` is fine for budget enforcement).
+- **Budget gate** in ``ContextAssembler`` (drop lowest-priority
+  sections until under budget).
+- **System prompt decomposition** — ``PATCH_SYSTEM_SECTIONS`` as
+  a list of ``ContextSection`` objects.
+- **SectionRenderEvent telemetry** (depends on step 12's bus).
+
+Tests:
+
+- KEDB frontmatter parse: with frontmatter, without it, malformed
+  → safe default.
+- Classification filter: ``patch-error`` triage includes only
+  entries with that classification (or with ``()`` = any).
+- Budget enforcement: 7 entries totaling 10K tokens, budget 5K →
+  drops lowest-priority entries to fit, telemetry records what
+  was dropped.
+- System prompt sections assemble in the right order and produce
+  byte-identical output to the current PATCH_SYSTEM string when
+  budget is unlimited and all sections fire.
+
+Rationale:
+
+KEDB will keep growing. Without per-entry metadata + budget, every
+new entry tax-es every triage. With the abstraction, KEDB scales
+to dozens of entries while triage cost stays bounded.
+
+The system-prompt decomposition is a smaller-payoff but
+higher-quality change: it lets us observe and trim the prompt the
+same way we observe and trim KEDB. The recent libuv smoke run
+revealed PATCH_SYSTEM had grown sections (some of them mine!) that
+weren't pulling their weight; without telemetry, we can't tell.
+
+#### Order
+
+Step 12 (telemetry) first — steps 13 and 14 both want to emit
+their own events (GuardrailFired, SectionRenderEvent), and those
+become free once the bus exists. Doing 13/14 first means writing
+ad-hoc event plumbing twice.
+
+Step 13 (guardrails) second — small, contained, paying down a
+specific in-progress pattern (the smoke run keeps adding
+inline guardrails).
+
+Step 14 (context budget) third — most ambitious, includes a
+non-trivial system-prompt decomposition that's a behavior change
+the operator should be able to opt out of (env var to use the
+monolithic string instead, as a safety hatch).
+
+#### What stays ad-hoc
+
+Some patterns look ad-hoc but are working. Not refactoring:
+
+- **Tool result shapes** (some return ``{ok: False, kind: ...}``,
+  others raise). Working; don't normalize without a concrete
+  reason.
+- **Per-role tool sets** (triage vs. patch with the same tools).
+  No current need; would be premature.
+- **Event schemas as Pydantic classes vs. dataclasses.** Step 12
+  picks one and sticks; migration to the other later is cheap.
+- **KEDB stored as files vs. SQLite rows.** Files are fine for
+  the volume; convert only if the volume grows past a few hundred
+  entries.
