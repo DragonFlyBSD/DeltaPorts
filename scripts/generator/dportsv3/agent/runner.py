@@ -2139,20 +2139,56 @@ def process_convert_job(
     # state == "auto_safe_pending" → run the deterministic translator.
     result = convert_record(classified, repo_root=repo_root, dry_run=False)
     status = result.get("status", "")
-    if status == "converted":
-        ok = (
-            result.get("parse_ok")
-            and result.get("check_ok")
-            and result.get("plan_ok")
-            and result.get("deterministic_ok")
+    if status != "converted":
+        return False, (
+            f"convert_record status={status!r} errors={result.get('errors')!r}"
         )
-        if ok:
-            return True, "deterministic conversion succeeded"
+    ok = (
+        result.get("parse_ok")
+        and result.get("check_ok")
+        and result.get("plan_ok")
+        and result.get("deterministic_ok")
+    )
+    if not ok:
         return False, (
             f"deterministic conversion failed validation: "
             f"errors={result.get('errors')!r}"
         )
-    return False, f"convert_record status={status!r} errors={result.get('errors')!r}"
+
+    # Step 20e: verify the rewrite with dsynth_build inside the env.
+    # No env → skip; the smoke-test path always sets DP_HARNESS_ENV.
+    return _verify_conversion(job, origin)
+
+
+def _verify_conversion(job: dict, origin: str) -> tuple[bool, str]:
+    """Run materialize_dports + dsynth_build to verify a fresh
+    conversion produces a working build (Step 20e — loose
+    verification). Returns ``(True, status)`` if the build came
+    back rebuild_ok=true, or if no env was available to verify in.
+    """
+    env = job.get("dev_env") or os.environ.get("DP_HARNESS_ENV")
+    if not env:
+        return True, (
+            "deterministic conversion succeeded (no DP_HARNESS_ENV — "
+            "verification skipped)"
+        )
+
+    from dportsv3.agent import worker
+
+    mat = worker.materialize_dports(env, origin)
+    if not mat.get("ok"):
+        return False, (
+            f"materialize_dports failed: rc={mat.get('rc')!r} "
+            f"stderr={(mat.get('stderr_tail') or '')[:200]!r}"
+        )
+
+    build = worker.dsynth_build(env, origin)
+    if build.get("rebuild_ok"):
+        return True, "conversion verified by dsynth_build (rebuild_ok=true)"
+    return False, (
+        f"dsynth_build returned rebuild_ok=false: "
+        f"log_hint={build.get('log_hint')!r}"
+    )
 
 
 def process_job(

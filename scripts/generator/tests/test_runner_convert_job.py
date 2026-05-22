@@ -146,6 +146,126 @@ def test_process_convert_job_already_converted(
     assert (port / "overlay.dops").read_text() == before
 
 
+def test_process_convert_job_verifies_with_dsynth_build_pass(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """Auto-safe conversion + DP_HARNESS_ENV set → verification runs.
+    materialize_dports + dsynth_build both return ok → handler
+    succeeds with the 'verified' status string."""
+    repo = _make_repo(tmp_path)
+    port = _make_port(repo, "devel/verify-pass")
+    (port / "Makefile.DragonFly").write_text("USES+=pkgconfig\n")
+    monkeypatch.setenv("DP_HARNESS_REPO_ROOT", str(repo))
+    monkeypatch.setenv("DP_HARNESS_ENV", "test-env")
+
+    from dportsv3.agent import worker
+    monkeypatch.setattr(worker, "materialize_dports",
+                        lambda env, origin: {"ok": True, "rc": 0})
+    monkeypatch.setattr(worker, "dsynth_build",
+                        lambda env, origin: {"rebuild_ok": True, "ok": True})
+
+    success, status = process_convert_job(
+        queue_root=tmp_path / "queue",
+        job_path=tmp_path / "queue" / "x.job",
+        sibling_paths=[],
+        job={"origin": "devel/verify-pass", "target": "@main"},
+    )
+    assert success, status
+    assert "verified" in status
+    assert (port / "overlay.dops").exists()
+
+
+def test_process_convert_job_dsynth_build_fail(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """Auto-safe conversion succeeds but dsynth_build comes back
+    rebuild_ok=false → handler reports the failure with the
+    log_hint surfaced for the operator."""
+    repo = _make_repo(tmp_path)
+    port = _make_port(repo, "devel/verify-fail")
+    (port / "Makefile.DragonFly").write_text("USES+=pkgconfig\n")
+    monkeypatch.setenv("DP_HARNESS_REPO_ROOT", str(repo))
+    monkeypatch.setenv("DP_HARNESS_ENV", "test-env")
+
+    from dportsv3.agent import worker
+    monkeypatch.setattr(worker, "materialize_dports",
+                        lambda env, origin: {"ok": True, "rc": 0})
+    monkeypatch.setattr(
+        worker, "dsynth_build",
+        lambda env, origin: {
+            "rebuild_ok": False, "ok": False,
+            "log_hint": "/var/log/dsynth/01_logs/devel___verify-fail.log",
+        },
+    )
+
+    success, status = process_convert_job(
+        queue_root=tmp_path / "queue",
+        job_path=tmp_path / "queue" / "x.job",
+        sibling_paths=[],
+        job={"origin": "devel/verify-fail", "target": "@main"},
+    )
+    assert not success
+    assert "rebuild_ok=false" in status
+    assert "log_hint" in status
+
+
+def test_process_convert_job_materialize_dports_fail(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """If materialize_dports fails before we even reach
+    dsynth_build, surface that error specifically."""
+    repo = _make_repo(tmp_path)
+    port = _make_port(repo, "devel/mat-fail")
+    (port / "Makefile.DragonFly").write_text("USES+=pkgconfig\n")
+    monkeypatch.setenv("DP_HARNESS_REPO_ROOT", str(repo))
+    monkeypatch.setenv("DP_HARNESS_ENV", "test-env")
+
+    from dportsv3.agent import worker
+    monkeypatch.setattr(
+        worker, "materialize_dports",
+        lambda env, origin: {
+            "ok": False, "rc": 2, "stderr_tail": "compose plan error",
+        },
+    )
+    # Should never reach dsynth_build in this case.
+    monkeypatch.setattr(
+        worker, "dsynth_build",
+        lambda env, origin: pytest.fail("dsynth_build called unexpectedly"),
+    )
+
+    success, status = process_convert_job(
+        queue_root=tmp_path / "queue",
+        job_path=tmp_path / "queue" / "x.job",
+        sibling_paths=[],
+        job={"origin": "devel/mat-fail", "target": "@main"},
+    )
+    assert not success
+    assert "materialize_dports failed" in status
+    assert "compose plan error" in status
+
+
+def test_process_convert_job_no_env_skips_verification(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """No DP_HARNESS_ENV → handler accepts the conversion on faith
+    and notes that verification was skipped. Useful for offline
+    runs / unit tests; smoke tests always have DP_HARNESS_ENV set."""
+    repo = _make_repo(tmp_path)
+    port = _make_port(repo, "devel/no-env")
+    (port / "Makefile.DragonFly").write_text("USES+=pkgconfig\n")
+    monkeypatch.setenv("DP_HARNESS_REPO_ROOT", str(repo))
+    monkeypatch.delenv("DP_HARNESS_ENV", raising=False)
+
+    success, status = process_convert_job(
+        queue_root=tmp_path / "queue",
+        job_path=tmp_path / "queue" / "x.job",
+        sibling_paths=[],
+        job={"origin": "devel/no-env", "target": "@main"},
+    )
+    assert success
+    assert "verification skipped" in status
+
+
 def test_process_convert_job_not_in_scope(
     tmp_path: Path, monkeypatch
 ) -> None:
