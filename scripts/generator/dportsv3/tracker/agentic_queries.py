@@ -60,9 +60,16 @@ def agentic_status(conn: sqlite3.Connection) -> dict[str, Any]:
            FROM jobs"""
     ).fetchone()
     runs = conn.execute("SELECT count(*) FROM runs").fetchone()[0]
+    # Step 9 — surface the open manual-queue depth on the dashboard
+    # so operators see "5 ports waiting for me" without first
+    # clicking through.
+    manual_pending = conn.execute(
+        "SELECT count(*) FROM user_context_requests WHERE status = 'pending'"
+    ).fetchone()[0]
     return {
         "bundles": bundles,
         "runs": runs,
+        "manual_pending": int(manual_pending or 0),
         "jobs": {
             "pending": int(rows[0] or 0),
             "inflight": int(rows[1] or 0),

@@ -210,6 +210,10 @@ def test_view_agentic_index(client: TestClient) -> None:
     assert "fix python runtime" in body
     # Counts panel
     assert ">5<" in body or "5</div>" in body  # bundles count
+    # Step 9 — pending-manual count surfaces with a link out to the
+    # queue (fixture has one open user_context_requests row).
+    assert "Pending manual" in body
+    assert "/agentic/manual" in body
 
 
 def test_view_agentic_bundles_filter(client: TestClient) -> None:

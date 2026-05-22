@@ -31,6 +31,20 @@
         <div style="color:var(--text-dim);font-size:11px;">Jobs done / dead / escalated</div>
         <div style="font-size:22px;font-weight:600;">{{ status.jobs.done }} / {{ status.jobs.dead }} / {{ status.jobs.escalated }}</div>
       </div>
+      <div class="tracker-card"
+           {% if status.manual_pending %}style="border-color:#d68b00;background:#fff7e6;"{% endif %}>
+        <div style="color:var(--text-dim);font-size:11px;">Pending manual</div>
+        <div style="font-size:22px;font-weight:600;">
+          {% if status.manual_pending %}
+            <a href="{{ request.url_for('agentic_manual_list') }}"
+               style="color:#b56b00;text-decoration:none;">
+              {{ status.manual_pending }} →
+            </a>
+          {% else %}
+            0
+          {% endif %}
+        </div>
+      </div>
     </div>
 
     <h2>Environment health</h2>
