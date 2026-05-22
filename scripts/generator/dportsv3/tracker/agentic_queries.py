@@ -360,15 +360,17 @@ def activity_for_job(
     prepend each new row at the top of an existing newest-first table.
 
     ``stage_filter`` (Step 9b):
-    - ``"llm_turn"`` → rows where ``stage = 'llm_turn'``
+    - ``"llm_turn"`` → rows where ``stage`` matches ``%llm_turn``
+      (catches the canonical name plus any prefixed variant like
+      ``convert:llm_turn`` written by earlier convert-flow builds)
     - ``"tool"``      → rows where ``stage LIKE 'tool:%'``
     - any other value or ``None`` → no filter
     """
     clauses = ["job_id = ?"]
     params: list[Any] = [job_id]
     if stage_filter == "llm_turn":
-        clauses.append("stage = ?")
-        params.append("llm_turn")
+        clauses.append("stage LIKE ?")
+        params.append("%llm_turn")
     elif stage_filter == "tool":
         clauses.append("stage LIKE ?")
         params.append("tool:%")
@@ -407,9 +409,14 @@ def token_usage_for_job(
     Sums are computed from ``extra_json`` rather than the message
     text — that's the structured source of truth for the data.
     """
+    # ``stage LIKE '%llm_turn'`` matches both the canonical
+    # 'llm_turn' written by PatchEventDispatcher and any
+    # prefix-namespaced variant (e.g. 'convert:llm_turn' from
+    # earlier convert-flow builds). Defends the token card against
+    # stage-name drift across job types.
     rows = conn.execute(
         """SELECT extra_json FROM activity_log
-           WHERE job_id = ? AND stage = 'llm_turn'
+           WHERE job_id = ? AND stage LIKE '%llm_turn'
            ORDER BY id ASC""",
         (job_id,),
     ).fetchall()

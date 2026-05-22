@@ -2348,13 +2348,15 @@ def _run_llm_conversion(
     )
 
     # Convert is bounded refactoring (not exploratory debugging) so
-    # the tier is tighter than the patch tier — 2 attempts, 80K
-    # tokens. Override via DP_HARNESS_CONVERT_BUDGET if needed.
+    # the tier is tighter than the patch tier — 2 attempts. Budget
+    # default raised to 150K after libuv smoke-tested at 80,601
+    # tokens for 10 turns, exceeding an 80K cap. Override via
+    # DP_HARNESS_CONVERT_BUDGET if needed.
     from dportsv3.agent.policy import Tier
     tier = Tier(
         name="CONVERT",
         max_iterations=int(os.environ.get("DP_HARNESS_CONVERT_ITERATIONS", "2")),
-        max_tokens=int(os.environ.get("DP_HARNESS_CONVERT_BUDGET", "80000")),
+        max_tokens=int(os.environ.get("DP_HARNESS_CONVERT_BUDGET", "150000")),
     )
 
     # Build the payload — deterministic_result reuses convert_record
@@ -2376,24 +2378,30 @@ def _run_llm_conversion(
         dops_quickref_text=quickref,
     )
 
-    def _on_event(ev: dict) -> None:
-        try:
-            activity_log(
-                Path(job.get("queue_root") or "."),
-                f"convert:{ev.get('type', 'event')}",
-                str(ev.get('summary') or ev.get('type') or '')[:500],
-                job_id=job_path.name,
-                extra=ev,
-            )
-        except Exception:
-            pass
+    # Reuse the rich PatchEventDispatcher for the convert flow so
+    # the activity log gets the same A1.T7 in=... → tool format the
+    # patch agent uses. ``looks_env_suspicious`` and
+    # ``invalidate_health_cache`` are no-ops here (convert is a
+    # rewrite, not a build-driven loop), but the dispatcher's
+    # contract requires callables.
+    from dportsv3.agent.steps import PatchEventDispatcher
+    queue_root = Path(job.get("queue_root") or ".")
+    dispatcher = PatchEventDispatcher(
+        queue_root=queue_root,
+        job_id=job_path.name,
+        origin=origin,
+        activity_log=activity_log,
+        looks_env_suspicious=lambda _res: False,
+        invalidate_health_cache=lambda: None,
+        summarize_tool_call=_summarize_tool_call,
+    )
 
     result = convert_mod.run(
         payload,
         tier=tier, env=env, model=model,
         api_base=api_base, api_key=api_key,
         custom_llm_provider=provider,
-        on_event=_on_event,
+        on_event=dispatcher,
     )
     if not result.success:
         return False, (
