@@ -223,6 +223,29 @@ def run(
     """
     from . import prompts
     from .tools import CONVERT_TOOL_NAMES
+
+    def _convert_is_success(p: dict | None) -> bool:
+        """attempt_loop's stop condition for convert: any Conversion
+        Proof with an ``origin`` field and at least one bucket
+        populated. The detailed validity check in
+        :func:`run` (below) inspects the same proof and reports the
+        finer status, so this is intentionally permissive — it
+        prevents attempt_loop from looping after a viable proof
+        lands."""
+        if not isinstance(p, dict):
+            return False
+        if not isinstance(p.get("origin"), str):
+            return False
+        return any(
+            p.get(key) for key in (
+                "framework_migrated_to_dops",
+                "source_migrated_to_semantic",
+                "source_patches_retained",
+                "mechanical_ops_written",
+                "files_added",
+            )
+        )
+
     raw = attempt_loop.run(
         payload,
         tier=tier,
@@ -236,6 +259,8 @@ def run(
         on_event=on_event,
         system_prompt=prompts.CONVERT_SYSTEM,
         tool_whitelist=CONVERT_TOOL_NAMES,
+        proof_parser=parse_conversion_proof,
+        is_success=_convert_is_success,
     )
 
     proof = parse_conversion_proof(raw.final_text or "")

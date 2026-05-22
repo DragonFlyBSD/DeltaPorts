@@ -160,15 +160,18 @@ def names() -> list[str]:
 # Tools the convert flow needs. Deliberately omits the build-loop
 # tools that turn out to be tar pits for a port-overlay rewriter:
 # extract / dsynth_build / dupe / genpatch / install_patches.
-# Verification (Step 20e) is materialize_dports + compose, run by
-# the handler — not as an agent tool call.
+#
+# materialize_dports is ALSO excluded — it's the verification step
+# the *handler* runs after the agent emits the proof. If the agent
+# can call it, the resulting compose output at
+# /work/artifacts/compose/.../ becomes another tree the agent
+# wanders into.
 CONVERT_TOOL_NAMES: frozenset[str] = frozenset({
     "env_verify",
     "list_dir",
     "get_file",
     "put_file",
     "grep",
-    "materialize_dports",
     "dops_reference",
 })
 

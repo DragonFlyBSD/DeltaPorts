@@ -98,6 +98,8 @@ def run(
     on_event=None,
     system_prompt: str | None = None,
     tool_whitelist: set[str] | frozenset[str] | None = None,
+    proof_parser=None,
+    is_success=None,
 ) -> PatchResult:
     """Run the patch flow for one bundle, returning a structured PatchResult.
 
@@ -173,8 +175,17 @@ def run(
         prev_text = response.text or ""
         final_text = prev_text
 
-        proof = _parse_rebuild_proof(prev_text)
-        rebuild_ok = bool(proof and proof.get("rebuild_ok") is True)
+        # Step 20: the success criterion is configurable. Patch
+        # uses _parse_rebuild_proof + proof.rebuild_ok==True;
+        # convert passes a Conversion-Proof parser + an existence
+        # predicate. Without this, attempt_loop would always retry
+        # convert attempts even after a clean proof.
+        _parse = proof_parser or _parse_rebuild_proof
+        _ok = is_success or (
+            lambda p: bool(p and p.get("rebuild_ok") is True)
+        )
+        proof = _parse(prev_text)
+        rebuild_ok = bool(_ok(proof))
 
         attempts.append(
             AttemptInfo(

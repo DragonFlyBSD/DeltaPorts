@@ -385,8 +385,13 @@ def test_convert_tool_whitelist_blocks_build_tools() -> None:
         )
     # Sanity: the tools we DO need are in the whitelist.
     for needed in ("env_verify", "list_dir", "get_file", "put_file",
-                   "grep", "materialize_dports", "dops_reference"):
+                   "grep", "dops_reference"):
         assert needed in CONVERT_TOOL_NAMES
+    # materialize_dports is intentionally NOT exposed to the
+    # convert agent — only the handler invokes it for verification
+    # after the agent emits the proof. If the agent has it, it
+    # tends to call it and then wander into /work/artifacts/compose/.
+    assert "materialize_dports" not in CONVERT_TOOL_NAMES
 
 
 def test_process_convert_job_no_env_skips_verification(
