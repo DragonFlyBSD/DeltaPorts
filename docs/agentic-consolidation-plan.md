@@ -542,6 +542,45 @@ the message text. A ``filter: llm_turn only`` or ``filter: tool calls
 only`` toggle on the activity table makes per-turn analysis viable
 without scrolling past tool rows.
 
+#### 9c — live-refresh on active jobs
+
+The job and bundle detail pages should auto-update while the
+underlying job is in a non-terminal state, and stop the moment it
+retires. No dropdown selector, no operator config — the page knows
+when it's interesting from ``jobs.state``.
+
+Design:
+
+- Page renders a discreet ``● live · last update 2s ago``
+  affordance in the header when ``jobs.state`` is non-terminal
+  (queued/claimed/triaging/triaged/patching/verifying). Goes
+  ``○ idle`` and stops polling when state moves to done/dead/
+  escalated.
+- Polling mechanism: JS calls ``/api/activity?job_id=X&since_id=N``
+  every 3s with a monotonic cursor (``N`` = highest id rendered
+  so far). Server returns only new rows. Client prepends them with
+  a brief fade so the operator can see what just landed.
+- Per-page-visibility: pause polling when ``document.hidden`` is
+  true (tab not active). Auto-resume on visibility change. Saves
+  bandwidth without operator interaction.
+- One manual control: a ``[pause]`` ↔ ``[resume]`` text link in
+  the corner for operators who want the table to stop scrolling
+  while reading. Default is auto.
+
+What it does NOT replace:
+- The page initial render still happens server-side (no SPA
+  rewrite). Live-refresh only adds *new* rows; existing rows
+  stay where they are.
+- The bundle list and the agentic dashboard don't get live polling
+  — they refresh on operator action only.
+- SSE could be a future swap (the ``/api/events`` endpoint
+  already exists), but the current implementation goes with
+  polling + cursor because the activity_log → server-sent-events
+  bridge would be a bigger change than the polling JS.
+
+Pairs with 9a structurally — same template, same activity-table
+JS, same cursor logic. Ship them in the same commit.
+
 #### Rationale
 
 Manual intervention should be fast and local to the tracker, not a hunt
