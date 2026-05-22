@@ -222,6 +222,7 @@ def run(
     is wired in.
     """
     from . import prompts
+    from .tools import CONVERT_TOOL_NAMES
     raw = attempt_loop.run(
         payload,
         tier=tier,
@@ -234,6 +235,7 @@ def run(
         max_tool_turns=max_tool_turns,
         on_event=on_event,
         system_prompt=prompts.CONVERT_SYSTEM,
+        tool_whitelist=CONVERT_TOOL_NAMES,
     )
 
     proof = parse_conversion_proof(raw.final_text or "")

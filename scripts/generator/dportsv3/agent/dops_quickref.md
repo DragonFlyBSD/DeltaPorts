@@ -135,15 +135,21 @@ branches).
 
 ## Conversion workflow (when overlay.dops doesn't exist yet)
 
-1. List `ports/<origin>/dragonfly/` and identify the static patches.
-2. For each patch file, classify:
+1. List `/work/DeltaPorts/ports/<origin>/` and identify the compat
+   artifacts: `Makefile.DragonFly[.<target>]`, `diffs/*.diff`,
+   `dragonfly/patch-*` files, and any `newport/`.
+2. For each patch / Makefile line, classify:
    - Single-line/few-line substitution → convert to `text replace-once`.
    - OS-detection block → convert to `mk replace-if` or `mk target`.
    - Complex multi-hunk patch → fall back to `patch apply` for now,
      plan to decompose later.
-3. Write `ports/<origin>/overlay.dops` with the equivalent ops.
-4. Remove the now-redundant `dragonfly/patch-*` files for ops you
-   converted (`file remove` from the overlay; or `git rm` if doing
-   this locally).
-5. `materialize_dports` + `dsynth_build` to verify the conversion
-   produces the same build result.
+3. Write `/work/DeltaPorts/ports/<origin>/overlay.dops` with the
+   equivalent ops.
+4. For any artifact you migrated to a semantic op, delete the
+   redundant compat file from the overlay (`put_file` with empty
+   content is not enough — use the worker's file-removal path if
+   exposed, or note the cleanup in your Conversion Proof so the
+   handler can finalize it).
+5. **Do not run a build.** Verification is the handler's job and
+   runs as `reapply` (compose), not `dsynth_build`. Your task ends
+   with the rewrite + the Conversion Proof block.

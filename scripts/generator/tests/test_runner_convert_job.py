@@ -302,12 +302,13 @@ def test_process_convert_job_already_converted(
     assert (port / "overlay.dops").read_text() == before
 
 
-def test_process_convert_job_verifies_with_dsynth_build_pass(
+def test_process_convert_job_verifies_with_reapply_pass(
     tmp_path: Path, monkeypatch
 ) -> None:
     """Auto-safe conversion + DP_HARNESS_ENV set → verification runs.
-    materialize_dports + dsynth_build both return ok → handler
-    succeeds with the 'verified' status string."""
+    materialize_dports (reapply / compose) returns ok → handler
+    succeeds. We do NOT call dsynth_build; build outcome isn't a
+    proxy for conversion correctness."""
     repo = _make_repo(tmp_path)
     port = _make_port(repo, "devel/verify-pass")
     (port / "Makefile.DragonFly").write_text("USES+=pkgconfig\n")
@@ -317,8 +318,15 @@ def test_process_convert_job_verifies_with_dsynth_build_pass(
     from dportsv3.agent import worker
     monkeypatch.setattr(worker, "materialize_dports",
                         lambda env, origin: {"ok": True, "rc": 0})
-    monkeypatch.setattr(worker, "dsynth_build",
-                        lambda env, origin: {"rebuild_ok": True, "ok": True})
+    # Guard: dsynth_build must NOT be called from the verification
+    # path. If it is, the test fails fast.
+    monkeypatch.setattr(
+        worker, "dsynth_build",
+        lambda env, origin: pytest.fail(
+            "dsynth_build called from convert verification — "
+            "conversion is validated by reapply (compose) only"
+        ),
+    )
 
     success, status = process_convert_job(
         queue_root=tmp_path / "queue",
@@ -327,16 +335,16 @@ def test_process_convert_job_verifies_with_dsynth_build_pass(
         job={"origin": "devel/verify-pass", "target": "@main"},
     )
     assert success, status
-    assert "verified" in status
+    assert "reapply" in status or "verified" in status
     assert (port / "overlay.dops").exists()
 
 
-def test_process_convert_job_dsynth_build_fail(
+def test_process_convert_job_reapply_fail(
     tmp_path: Path, monkeypatch
 ) -> None:
-    """Auto-safe conversion succeeds but dsynth_build comes back
-    rebuild_ok=false → handler reports the failure with the
-    log_hint surfaced for the operator."""
+    """Conversion writes overlay.dops but reapply (compose) rejects
+    it — handler surfaces the rc + stderr so the operator can read
+    the compose diagnostics."""
     repo = _make_repo(tmp_path)
     port = _make_port(repo, "devel/verify-fail")
     (port / "Makefile.DragonFly").write_text("USES+=pkgconfig\n")
@@ -344,13 +352,11 @@ def test_process_convert_job_dsynth_build_fail(
     monkeypatch.setenv("DP_HARNESS_ENV", "test-env")
 
     from dportsv3.agent import worker
-    monkeypatch.setattr(worker, "materialize_dports",
-                        lambda env, origin: {"ok": True, "rc": 0})
     monkeypatch.setattr(
-        worker, "dsynth_build",
+        worker, "materialize_dports",
         lambda env, origin: {
-            "rebuild_ok": False, "ok": False,
-            "log_hint": "/var/log/dsynth/01_logs/devel___verify-fail.log",
+            "ok": False, "rc": 2,
+            "stderr_tail": "compose: dops parse error at line 3",
         },
     )
 
@@ -361,43 +367,26 @@ def test_process_convert_job_dsynth_build_fail(
         job={"origin": "devel/verify-fail", "target": "@main"},
     )
     assert not success
-    assert "rebuild_ok=false" in status
-    assert "log_hint" in status
+    assert "reapply failed" in status
+    assert "dops parse error" in status
 
 
-def test_process_convert_job_materialize_dports_fail(
-    tmp_path: Path, monkeypatch
-) -> None:
-    """If materialize_dports fails before we even reach
-    dsynth_build, surface that error specifically."""
-    repo = _make_repo(tmp_path)
-    port = _make_port(repo, "devel/mat-fail")
-    (port / "Makefile.DragonFly").write_text("USES+=pkgconfig\n")
-    monkeypatch.setenv("DP_HARNESS_REPO_ROOT", str(repo))
-    monkeypatch.setenv("DP_HARNESS_ENV", "test-env")
-
-    from dportsv3.agent import worker
-    monkeypatch.setattr(
-        worker, "materialize_dports",
-        lambda env, origin: {
-            "ok": False, "rc": 2, "stderr_tail": "compose plan error",
-        },
-    )
-    # Should never reach dsynth_build in this case.
-    monkeypatch.setattr(
-        worker, "dsynth_build",
-        lambda env, origin: pytest.fail("dsynth_build called unexpectedly"),
-    )
-
-    success, status = process_convert_job(
-        queue_root=tmp_path / "queue",
-        job_path=tmp_path / "queue" / "x.job",
-        sibling_paths=[],
-        job={"origin": "devel/mat-fail", "target": "@main"},
-    )
-    assert not success
-    assert "materialize_dports failed" in status
-    assert "compose plan error" in status
+def test_convert_tool_whitelist_blocks_build_tools() -> None:
+    """Defense-in-depth: even if a future change ships extract /
+    dsynth_build schemas to convert by mistake, the tool_loop's
+    whitelist check refuses them at dispatch time."""
+    from dportsv3.agent.tools import CONVERT_TOOL_NAMES, names
+    forbidden = {"extract", "dsynth_build", "dupe", "genpatch",
+                 "install_patches"}
+    for f in forbidden:
+        assert f in names(), f"tool {f!r} should exist for patch flow"
+        assert f not in CONVERT_TOOL_NAMES, (
+            f"convert flow must not expose {f!r}"
+        )
+    # Sanity: the tools we DO need are in the whitelist.
+    for needed in ("env_verify", "list_dir", "get_file", "put_file",
+                   "grep", "materialize_dports", "dops_reference"):
+        assert needed in CONVERT_TOOL_NAMES
 
 
 def test_process_convert_job_no_env_skips_verification(

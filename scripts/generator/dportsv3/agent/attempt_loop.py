@@ -97,6 +97,7 @@ def run(
     max_tool_turns: int = 12,
     on_event=None,
     system_prompt: str | None = None,
+    tool_whitelist: set[str] | frozenset[str] | None = None,
 ) -> PatchResult:
     """Run the patch flow for one bundle, returning a structured PatchResult.
 
@@ -166,6 +167,7 @@ def run(
             max_tokens=remaining,
             on_event=on_event,
             attempt_idx=attempt_idx,
+            tool_whitelist=tool_whitelist,
         )
         total_usage.add(attempt_usage)
         prev_text = response.text or ""

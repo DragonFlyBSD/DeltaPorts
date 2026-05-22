@@ -449,23 +449,35 @@ conversion are:
 
 ## Procedure
 
-1. Read the items handed to you in the payload's "Unsupported
-   items" section.
-2. For each, classify (framework / source-simple / source-complex)
-   and write the corresponding dops op (or `patch apply` reference).
-3. Concatenate your ops to the deterministic translator's already-
-   generated dops body (handed to you as "Deterministic ops") to
-   form the final `overlay.dops`. Use `put_file` to write it.
-4. For any static patch you decided to retain via `patch apply`:
-   leave the file in place under `dragonfly/`. Do not delete it.
-5. For any framework or source-simple item you migrated: delete the
-   redundant legacy artifact (the `Makefile.DragonFly` once fully
-   migrated, the corresponding `diffs/*.diff` once expressed as
-   semantic ops).
-6. Emit the Conversion Proof JSON block (see below).
+You operate inside the dev-env, on the DeltaPorts overlay tree at
+`/work/DeltaPorts/ports/<origin>/`. **Do not** call `extract`,
+`dsynth_build`, `dupe`, `genpatch`, or `install_patches` — those
+are patch-loop tools and are not available to you. Your scope is
+the overlay tree only; the upstream source is none of your business.
 
-You do NOT run a build to verify. Step 20e adds that. For now your
-output is the rewrite + the proof.
+1. Read the items handed to you in the payload's "Unsupported
+   items" section. The deterministic translator has already
+   produced the safe ops — they appear above. You do not redo that
+   work.
+2. For each unsupported item, classify (framework / source-simple
+   / source-complex) and write the corresponding dops op (or
+   `patch apply` reference).
+3. Concatenate your ops to the deterministic translator's
+   already-generated dops body to form the final `overlay.dops`.
+   Use `put_file` to write it at
+   `/work/DeltaPorts/ports/<origin>/overlay.dops`.
+4. For any static patch you decided to retain via `patch apply`:
+   leave the file in place under `dragonfly/`.
+5. For any framework or source-simple item you migrated: note the
+   files that should be removed in the Conversion Proof's
+   `files_removed` field — the handler will finalize the cleanup
+   so the overlay stays consistent with the proof.
+6. Emit the Conversion Proof JSON block (see below) and stop.
+
+Verification is the handler's job. After you finish, the handler
+runs `reapply` (which exercises `compose` against your new
+`overlay.dops`) and accepts the conversion if compose succeeds.
+You do NOT need to verify anything yourself.
 
 ## Response format
 

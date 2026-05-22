@@ -63,6 +63,7 @@ def run(
     max_tokens: int = 0,
     on_event=None,
     attempt_idx: int = 1,
+    tool_whitelist: set[str] | frozenset[str] | None = None,
 ) -> tuple[Response, Usage]:
     """Drive the LLM through tool calls until it returns text-only.
 
@@ -82,7 +83,7 @@ def run(
       exists.
     """
     total = Usage()
-    tool_schemas = tools.schemas()
+    tool_schemas = tools.schemas(only=tool_whitelist)
     final: Response | None = None
 
     for turn in range(1, max_turns + 1):
@@ -144,7 +145,19 @@ def run(
 
         for call in response.tool_calls:
             t0 = time.monotonic()
-            result = tools.dispatch(call.name, call.arguments, env=env)
+            # Defense-in-depth: even though we filtered the schemas
+            # the model receives, refuse non-whitelisted tools if the
+            # model hallucinates one (or the schema filter has a bug).
+            if tool_whitelist is not None and call.name not in tool_whitelist:
+                result = {
+                    "ok": False,
+                    "error": (
+                        f"tool {call.name!r} is not allowed in this flow; "
+                        f"available tools: {sorted(tool_whitelist)}"
+                    ),
+                }
+            else:
+                result = tools.dispatch(call.name, call.arguments, env=env)
             duration_ms = int((time.monotonic() - t0) * 1000)
             if on_event is not None:
                 try:

@@ -139,13 +139,38 @@ _HANDLERS: dict[str, Callable] = {
 # -----------------------------------------------------------------------------
 
 
-def schemas() -> list[dict]:
-    """Return the OpenAI-format tool list to pass to litellm."""
-    return list(_TOOLS)
+def schemas(only: set[str] | None = None) -> list[dict]:
+    """Return the OpenAI-format tool list to pass to litellm.
+
+    With ``only`` set, restrict the returned schemas to that name
+    set — used by the convert flow (Step 20) to drop build-loop
+    tools (``extract``, ``dsynth_build``, ``dupe``, ``genpatch``,
+    ``install_patches``) it doesn't need, which prevents the model
+    from going on source-exploration tangents.
+    """
+    if only is None:
+        return list(_TOOLS)
+    return [spec for spec in _TOOLS if spec["function"]["name"] in only]
 
 
 def names() -> list[str]:
     return [spec["function"]["name"] for spec in _TOOLS]
+
+
+# Tools the convert flow needs. Deliberately omits the build-loop
+# tools that turn out to be tar pits for a port-overlay rewriter:
+# extract / dsynth_build / dupe / genpatch / install_patches.
+# Verification (Step 20e) is materialize_dports + compose, run by
+# the handler — not as an agent tool call.
+CONVERT_TOOL_NAMES: frozenset[str] = frozenset({
+    "env_verify",
+    "list_dir",
+    "get_file",
+    "put_file",
+    "grep",
+    "materialize_dports",
+    "dops_reference",
+})
 
 
 # -----------------------------------------------------------------------------

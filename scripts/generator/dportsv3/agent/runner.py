@@ -2437,33 +2437,34 @@ def _run_llm_conversion(
 
 
 def _verify_conversion(job: dict, origin: str) -> tuple[bool, str]:
-    """Run materialize_dports + dsynth_build to verify a fresh
-    conversion produces a working build (Step 20e — loose
-    verification). Returns ``(True, status)`` if the build came
-    back rebuild_ok=true, or if no env was available to verify in.
+    """Step 20e — verify a fresh conversion via compose (``reapply``).
+
+    The convert agent's job is to produce a valid ``overlay.dops``.
+    The correct validation is "does compose accept it?" — i.e. can
+    ``reapply`` materialize a DPorts tree from the new overlay
+    without dops parse/check/plan errors. We do NOT run dsynth_build
+    here: build success or failure depends on factors outside the
+    overlay (upstream source, dep graph, env health) and isn't a
+    proxy for "the conversion is correct."
+
+    Returns ``(True, status)`` when reapply succeeds, or when no
+    env is available to verify in (offline / unit-test path).
     """
     env = job.get("dev_env") or os.environ.get("DP_HARNESS_ENV")
     if not env:
         return True, (
-            "deterministic conversion succeeded (no DP_HARNESS_ENV — "
+            "conversion succeeded (no DP_HARNESS_ENV — "
             "verification skipped)"
         )
 
     from dportsv3.agent import worker
 
     mat = worker.materialize_dports(env, origin)
-    if not mat.get("ok"):
-        return False, (
-            f"materialize_dports failed: rc={mat.get('rc')!r} "
-            f"stderr={(mat.get('stderr_tail') or '')[:200]!r}"
-        )
-
-    build = worker.dsynth_build(env, origin)
-    if build.get("rebuild_ok"):
-        return True, "conversion verified by dsynth_build (rebuild_ok=true)"
+    if mat.get("ok"):
+        return True, "conversion verified by reapply (compose accepted overlay.dops)"
     return False, (
-        f"dsynth_build returned rebuild_ok=false: "
-        f"log_hint={build.get('log_hint')!r}"
+        f"reapply failed: rc={mat.get('rc')!r} "
+        f"stderr={(mat.get('stderr_tail') or '')[:200]!r}"
     )
 
 
