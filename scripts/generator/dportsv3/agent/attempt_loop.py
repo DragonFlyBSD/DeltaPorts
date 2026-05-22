@@ -96,10 +96,17 @@ def run(
     timeout: int = 600,
     max_tool_turns: int = 12,
     on_event=None,
+    system_prompt: str | None = None,
 ) -> PatchResult:
-    """Run the patch flow for one bundle, returning a structured PatchResult."""
+    """Run the patch flow for one bundle, returning a structured PatchResult.
+
+    ``system_prompt`` defaults to ``prompts.PATCH_SYSTEM``. Step 20b's
+    convert flow passes ``prompts.CONVERT_SYSTEM`` so the same
+    attempt-loop / tool-loop infrastructure drives the conversion
+    agent without forking the engine.
+    """
     base_messages = [
-        {"role": "system", "content": prompts.PATCH_SYSTEM},
+        {"role": "system", "content": system_prompt or prompts.PATCH_SYSTEM},
         {"role": "user", "content": payload},
     ]
 
