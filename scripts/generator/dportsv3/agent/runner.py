@@ -763,6 +763,7 @@ def enqueue_triage_job(
 
 _ACTIVE_JOB_STATES = (
     "queued", "claimed", "triaging", "triaged", "patching", "verifying",
+    "converting",
 )
 
 

@@ -314,7 +314,7 @@ def active_job_for_port(
     a job is in flight — wait for it" vs. "queue is clear" on the UI.
     """
     open_states = ("queued", "claimed", "triaging", "triaged",
-                   "patching", "verifying")
+                   "patching", "verifying", "converting")
     placeholders = ",".join("?" * len(open_states))
     sql = (
         f"SELECT * FROM jobs WHERE origin = ? AND state IN ({placeholders})"

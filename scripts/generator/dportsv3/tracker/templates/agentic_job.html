@@ -33,7 +33,7 @@
 
   <div class="tracker-page">
     <h1>{{ job.job_id }}
-      {% set is_active = job.state in ('queued', 'claimed', 'triaging', 'triaged', 'patching', 'verifying') %}
+      {% set is_active = job.state in ('queued', 'claimed', 'triaging', 'triaged', 'patching', 'verifying', 'converting') %}
       <span id="live-indicator"
             class="live-indicator{% if is_active %} active{% endif %}"
             data-job-id="{{ job.job_id }}"
