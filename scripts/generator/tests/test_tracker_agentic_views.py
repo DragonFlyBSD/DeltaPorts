@@ -52,6 +52,12 @@ def seeded_state_db(tmp_path: Path) -> Path:
     json_path.write_text('{"status":"budget-exhausted","attempts":[1]}', encoding="utf-8")
     gzip_path = tmp_path / "full.log.gz"
     gzip_path.write_bytes(b"\x1f\x8bcompressed")
+    handoff_path = tmp_path / "manual_handoff.md"
+    handoff_path.write_text(
+        "## What we tried\n\n- **Origin:** `devel/manual`\n"
+        "- **Reason:** retry cap reached\n",
+        encoding="utf-8",
+    )
     conn.executemany(
         """INSERT INTO runs (run_id, profile, target, ts_start, last_seen_at)
            VALUES (?, ?, ?, ?, ?)""",
@@ -69,6 +75,7 @@ def seeded_state_db(tmp_path: Path) -> Path:
             ("b-q2-foo-retry", "run-q2-001", "devel/foo", "", now, "failure", "@2026Q2", now),
             ("b-q2-bar", "run-q2-001", "devel/bar", "", now, "fail", "@2026Q2", now),
             ("b-main-foo", "run-main-002", "devel/foo", "", now, "fail", "@main", now),
+            ("b-q2-manual", "run-q2-001", "devel/manual", "", now, "fail", "@2026Q2", now),
         ],
     )
     conn.executemany(
@@ -83,6 +90,7 @@ def seeded_state_db(tmp_path: Path) -> Path:
             ("b-q2-foo", "logs/full.log.gz", str(gzip_path), "gzip", gzip_path.stat().st_size, now),
             ("b-q2-foo", "analysis/tool_trace.jsonl", str(trace_path), "text", trace_path.stat().st_size, now),
             ("b-q2-foo", "logs/missing.txt", str(tmp_path / "missing.txt"), "text", 0, now),
+            ("b-q2-manual", "analysis/manual_handoff.md", str(handoff_path), "text", handoff_path.stat().st_size, now),
         ],
     )
     conn.executemany(
@@ -201,7 +209,7 @@ def test_view_agentic_index(client: TestClient) -> None:
     assert "test-env" in body
     assert "fix python runtime" in body
     # Counts panel
-    assert ">4<" in body or "4</div>" in body  # bundles count
+    assert ">5<" in body or "5</div>" in body  # bundles count
 
 
 def test_view_agentic_bundles_filter(client: TestClient) -> None:
@@ -426,6 +434,29 @@ def test_view_agentic_job_detail_shows_activity(client: TestClient) -> None:
     assert "Lifecycle transitions" in body
     assert "hook_enqueued" in body
     assert "claimed" in body
+
+
+def test_view_agentic_job_detail_renders_handoff_when_escalated(client: TestClient) -> None:
+    """Step 9 — escalated jobs inline the manual handoff so the
+    operator doesn't need to bounce out to /agentic/manual. The
+    fixture's job-q2-manual is escalated and its sibling bundle
+    b-q2-manual has analysis/manual_handoff.md."""
+    resp = client.get("/agentic/jobs/job-q2-manual")
+    assert resp.status_code == 200
+    body = resp.text
+    assert "Manual handoff" in body
+    assert "retry cap reached" in body
+    # Link out to the manual-queue page for follow-up.
+    assert "Open in manual queue" in body
+    assert "/agentic/manual/run-q2-001/devel/manual" in body
+
+
+def test_view_agentic_job_detail_no_handoff_when_not_escalated(client: TestClient) -> None:
+    """The handoff panel is gated on state=escalated; a queued job
+    should never show it even if a sibling bundle has the artifact."""
+    resp = client.get("/agentic/jobs/job-q2-foo")
+    assert resp.status_code == 200
+    assert "Manual handoff" not in resp.text
 
 
 def test_view_agentic_manual_detail_shows_blocking_job(client: TestClient) -> None:

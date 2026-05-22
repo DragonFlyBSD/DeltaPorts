@@ -153,6 +153,31 @@
 
     {% include "_prior_attempts.html" %}
 
+    {% if handoff %}
+    <h2>Manual handoff
+      <span style="font-size:11px;color:var(--text-dim);font-weight:normal;">
+        from
+        <a href="{{ request.url_for('agentic_bundle_detail', bundle_id=handoff.bundle_id) }}">
+          {{ handoff.bundle_id }}
+        </a>
+      </span>
+    </h2>
+    <div class="tracker-card">
+      {% if handoff.run_id and job.origin %}
+      <p style="font-size:12px;margin-top:0;">
+        <a href="{{ request.url_for('agentic_manual_detail', run_id=handoff.run_id, origin=job.origin) }}">
+          Open in manual queue → provide context, discard, or re-trigger triage.
+        </a>
+      </p>
+      {% endif %}
+      {% if handoff.render_kind == 'markdown' %}
+        <div class="artifact-markdown">{{ handoff.content | safe }}</div>
+      {% else %}
+        <pre style="white-space:pre-wrap;font:12px/1.45 ui-monospace,monospace;">{{ handoff.content }}</pre>
+      {% endif %}
+    </div>
+    {% endif %}
+
     {% if transitions %}
     <h2>Lifecycle transitions
       <span style="font-size:11px;color:var(--text-dim);font-weight:normal;">

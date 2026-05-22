@@ -1006,6 +1006,28 @@ def create_app(db_path: str | Path) -> Any:
                 )
                 if job is not None and job.get("origin") else []
             )
+            # Step 9: when a job ends in 'escalated', operators
+            # currently have to bounce out to /agentic/manual to read
+            # the handoff. Inline it: pull the most recent bundle for
+            # this (origin, target) that has manual_handoff.md and
+            # render it next to the activity timeline.
+            handoff = None
+            if job is not None and job.get("state") == "escalated" and prior_attempts:
+                for cand in prior_attempts:
+                    ref = get_artifact_ref(
+                        conn, cand["bundle_id"], "analysis/manual_handoff.md",
+                    )
+                    if ref is not None:
+                        handoff = _artifact_view_data(
+                            app.state.artifact_root,
+                            cand["bundle_id"],
+                            "analysis/manual_handoff.md",
+                            ref,
+                        )
+                        handoff = dict(handoff or {})
+                        handoff["bundle_id"] = cand["bundle_id"]
+                        handoff["run_id"] = cand.get("run_id")
+                        break
         if job is None:
             raise HTTPException(status_code=404, detail=f"Unknown job: {job_id}")
         # Activity rows come back newest-first from the query; flip for
@@ -1029,6 +1051,7 @@ def create_app(db_path: str | Path) -> Any:
                 "limit_options": [50, 200, 500, 2000, 5000],
                 "stage_filter": sf,
                 "prior_attempts": prior_attempts,
+                "handoff": handoff,
             },
         )
 
