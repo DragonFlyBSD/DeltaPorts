@@ -890,15 +890,18 @@ and onto a review platform — with the operator's signature attached.
 13. Tool guardrail middleware (replace inline per-tool refusals).
 14. Context budget + KEDB metadata (cap payload growth, gate entries
     by classification).
+15. Payload cost optimization pass (15a system-prompt trim,
+    15b don't-reread directive, 15c KEDB classification gating,
+    15d history elision, 15e model-tier experiment).
 
 This order improves operator visibility first, then improves agent
 context, then adds the retry loop, then refines policy, then hardens
 the edges that the first real smoke test surfaced, then walks the
 agent's local fix all the way out to a review request on the
-upstream code-hosting platform, and finally pays down the
-architectural debt that smoke surfaced — turning the recurring
-"ad-hoc patch every smoke run" pattern into proper composable
-abstractions.
+upstream code-hosting platform, then pays down the architectural
+debt that smoke surfaced, and finally uses that new machinery to
+drive the per-fix token cost down from "more than operator time" to
+"less than operator time."
 
 ---
 
@@ -1195,3 +1198,144 @@ Some patterns look ad-hoc but are working. Not refactoring:
 - **KEDB stored as files vs. SQLite rows.** Files are fine for
   the volume; convert only if the volume grows past a few hundred
   entries.
+
+### Step 15 — payload cost optimization pass
+
+Once Step 14's machinery exists (section budget, KEDB metadata,
+system-prompt decomposition, render-event telemetry), use it to
+actually trim the prompt and tool-result payloads.
+
+Smoke surfaced the numbers that motivate this step. First
+successful libuv fix cost 505K tokens; analysis showed ~95% was
+prompt tokens, dominated by:
+
+- the system prompt re-sent every turn (~9K × 19 turns ≈ 170K),
+- redundant ``get_file`` re-reads of the same Makefile.in across
+  several turns (~60K),
+- one verbose 11K-completion turn that then rode in the prompt for
+  every subsequent turn (~55K),
+- KEDB content that didn't apply to the actual classification.
+
+Target after this step: ~150-200K per successful fix. That moves
+the agent from "more expensive than operator time" to "operator
+time is more expensive."
+
+Sub-steps (rough order of leverage):
+
+#### 15a — System prompt audit & trim
+
+The system prompt grew organically across smoke fixes. Audit it
+section by section against Step 14's render telemetry: which
+sections actually fire in real attempts? Which sections produce
+behavior changes the model wouldn't otherwise exhibit?
+
+Concrete targets:
+
+- Condense the four-tree Directory layout to a compact table.
+- Move bug-reactive paragraphs (e.g. the "Version mismatch is
+  common" guidance) out of the system prompt and into a KEDB
+  entry tagged ``applies_to_classifications=['patch-error']``;
+  they don't need to ride every triage's system prompt.
+- Drop "Overlay state (read before editing)" if the mandatory
+  procedure (Step 6 in the prompt) makes ``emit_diff`` mandatory
+  anyway.
+- Per-section telemetry from Step 14 tells us which sections
+  actually fired vs. were rendered-but-ignored — drop the latter.
+
+Aim for ~30-40% reduction in prompt bytes without behavior change.
+Measure: ``prompt_tokens`` on the first turn before/after.
+
+#### 15b — "Don't re-read" prompt directive
+
+Smoke pattern: agent reads ``Makefile.in`` six times across
+T5/T8/T9 because each "I need more context" instinct fires a fresh
+``get_file``. The earlier windows are still in conversation
+history; the agent doesn't realize it has them.
+
+Add to the procedure:
+
+```
+You already have the content of any file you have read this
+session in your conversation history. Before requesting a new
+``get_file`` on a path you have already read, scan back: do you
+already have the lines you need? Re-requesting compounds prompt
+cost.
+```
+
+Pair with a structured "files read this session" summary the
+runner could prepend per turn (would require small worker change).
+Skip the structured part for now; the prose nudge is the cheap
+first attempt.
+
+#### 15c — KEDB classification gating
+
+Depends on Step 14's frontmatter. Once entries have
+``applies_to_classifications``, the KEDB section only includes
+entries that match the current triage classification (or have
+``[]`` = applies-to-any).
+
+Concrete: a ``patch-error`` triage doesn't need ``plist-mismatch``
+or ``freebsd-only-features`` entries; trimming those out cuts
+~1-2K per triage payload AND keeps the patch prompt focused.
+
+#### 15d — History elision (layer 2)
+
+Defer-able but high-leverage on multi-turn attempts. After N=3
+turns, walk back through ``role: tool`` messages and replace
+content > X bytes (say 4KB) with a stub:
+
+```json
+{
+  "role": "tool",
+  "tool_call_id": "call_abc",
+  "name": "get_file",
+  "content": "[elided: 290KB Makefile.in read at turn 6. sha256=...,
+              first_line=200. Use grep or get_file(offset_lines=...)
+              for specific content.]"
+}
+```
+
+The model sees "I read this at turn N, here's the gist" without
+paying postage on every subsequent turn. Keep the most recent N
+intact (model needs immediate context). Some models cope with
+rewritten history; some get confused — test against deepseek
+specifically before shipping.
+
+Expected savings: 30-50% on long attempts (10+ turns). On the
+505K libuv run, the T14 11K-completion would have elided after
+T17; saves ~20K. Cumulative-prompt savings compound when multiple
+large reads accumulate.
+
+#### 15e — Model-tier experiment (data, not code)
+
+Once 15a-d are in, re-run libuv with:
+
+1. v4-flash for both triage and patch
+2. v4-pro for triage, v4-flash for patch
+3. v4-pro for both (current)
+4. Anthropic Claude Sonnet for patch (different family, different
+   instruction-following profile)
+
+Each on a fresh bundle. Measure: cost per successful fix, fix
+success rate per attempt, total tokens. Pick the tier that
+minimizes ``$/successful-fix``.
+
+Not a code change — an operational experiment. But worth doing
+before any further architectural investment because the answer
+could shift the cost-effectiveness calculation entirely.
+
+#### Order
+
+15a → 15b → 15c → 15d → 15e. Each later substep depends on the
+machinery (Step 14) plus the savings already achieved. 15a alone
+might cut the bill 30%; that's a clean wedge before deciding
+whether 15d (history elision) is worth the cope-risk on weaker
+models.
+
+#### Why not earlier
+
+Doing 15a-c before Step 14 means hand-coding all the trims
+without telemetry to verify each cut is a wash on behavior. The
+"which sections actually fire" question requires Step 14's
+SectionRenderEvent to answer cleanly. Doing it blind is how the
+prompt grew bloated in the first place.
