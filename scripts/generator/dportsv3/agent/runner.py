@@ -2716,12 +2716,25 @@ def main(argv: list[str] | None = None) -> int:
         patch_model = f"{triage_model} (fallback from triage)"
     else:
         patch_model = "<unset>"
+    # Convert flow falls back through the same chain (Step 20):
+    # DP_HARNESS_CONVERT_MODEL → PATCH → TRIAGE.
+    convert_model_env = os.environ.get("DP_HARNESS_CONVERT_MODEL")
+    if convert_model_env:
+        convert_model = convert_model_env
+    elif patch_model_env:
+        convert_model = f"{patch_model_env} (fallback from patch)"
+    elif triage_model != "<unset>":
+        convert_model = f"{triage_model} (fallback from triage)"
+    else:
+        convert_model = "<unset>"
     kedb_info = str(kedb_dir) if kedb_dir else "none"
     log(queue_root, "INFO",
         f"starting runner (once={args.once}, dry_run={args.dry_run}, "
-        f"triage_model={triage_model}, patch_model={patch_model}, kedb={kedb_info})")
+        f"triage_model={triage_model}, patch_model={patch_model}, "
+        f"convert_model={convert_model}, kedb={kedb_info})")
     activity_log(queue_root, "runner_start",
-                 f"Runner started (triage={triage_model}, patch={patch_model})")
+                 f"Runner started (triage={triage_model}, "
+                 f"patch={patch_model}, convert={convert_model})")
     update_runner_status("idle", job_id=None, stage=None)
 
     # Runner-level dev-env. When set, the runner refuses to claim jobs
