@@ -333,3 +333,20 @@ def test_prompt_directs_overlay_dops_check_first():
     from dportsv3.agent.prompts import PATCH_SYSTEM
     assert "overlay.dops" in PATCH_SYSTEM
     assert "dops_reference" in PATCH_SYSTEM
+
+
+def test_prompt_fail_fasts_on_extract_failure():
+    """p5-Math-GSL smoke showed the agent burning 1M tokens after an
+    extract FAILED — the prompt didn't tell it to stop. With this
+    directive the agent gave-ups immediately, producing a useful
+    manual handoff instead of thrashing."""
+    from dportsv3.agent.prompts import PATCH_SYSTEM
+    # Must explicitly mention extract failure and the stop directive.
+    assert "extract" in PATCH_SYSTEM
+    assert "STOP" in PATCH_SYSTEM or "stop" in PATCH_SYSTEM
+    # Names the three known cause-classes so the agent can write a
+    # useful handoff.
+    assert "fetch-error" in PATCH_SYSTEM
+    assert "missing-dep" in PATCH_SYSTEM
+    # Tells the agent what to do (gave-up + handoff content).
+    assert "gave-up" in PATCH_SYSTEM

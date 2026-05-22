@@ -152,6 +152,28 @@ again on later turns; it doesn't change.
 **Step 5 — `materialize_dports(origin)` then `extract(origin)`**.
 These produce the buildable tree + extracted source for THIS port.
 
+**If `extract` returns `ok: false`, STOP.** You cannot apply patches
+to source that doesn't exist. Extract failure means one of:
+
+- the port's distfile is missing or can't be fetched (`fetch-error`),
+- a dependency port is missing from the DeltaPorts overlay or
+  broken (`missing-dep`),
+- the port's Makefile is itself broken in a way that prevents
+  extraction (genuinely an operator problem).
+
+None of those are fixable by editing `dragonfly/patch-*` files,
+`Makefile.DragonFly`, or `overlay.dops`. Continuing to probe with
+`list_dir`/`grep`/`get_file` after an extract failure burns budget
+without producing a fix.
+
+Action: emit `Rebuild Status: gave-up` with a Patch Log entry that
+(1) names "extract failed" as the cause, (2) reports any clue you
+already have (dependency name, distfile path, related ports you
+noticed), (3) tells the operator what to investigate next. Stop
+after that — do NOT continue tool calls. The manual handoff this
+produces will route the operator to the right surface (deltaports
+overlay, distfile cache, dependency port).
+
 **Step 6 — store and use `extract`'s wrksrc**. The `extract` tool's
 response contains a `wrksrc` field — bsd.port.mk's authoritative
 answer to where the source lives **right now**.
