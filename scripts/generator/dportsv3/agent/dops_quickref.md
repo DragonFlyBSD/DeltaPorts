@@ -78,11 +78,19 @@ mk target rename do-install -> do-install-dragonfly
 ## File / text ops
 
 ```dops
-# Drop a file alongside the port (from the DeltaPorts overlay).
-file copy dragonfly/keep-alive.c -> files/keep-alive.c
+# Stage a file from the DeltaPorts overlay (source) into the
+# materialized port_root. THIS is the op for "bring something
+# from the overlay into the compose output."
+file materialize dragonfly/keep-alive.c -> files/keep-alive.c
 
-# Copy a file from the overlay tree into the port at build time.
-file materialize templates/Makefile.in.dragonfly -> Makefile.in
+# Same op, common case: stage a `dragonfly/*` patch alongside the
+# port so bsd.port.mk's do-patch picks it up at build time.
+file materialize dragonfly/patch-Makefile.am -> dragonfly/patch-Makefile.am
+
+# Duplicate a file WITHIN port_root (e.g. after an earlier op
+# staged it). Both src and dst are relative to the materialized
+# port tree; `file copy` does NOT read from the source overlay.
+file copy Makefile.in.dragonfly -> Makefile.in
 
 # Drop a file out of the port.
 file remove files/patch-stale on-missing warn
@@ -143,12 +151,14 @@ they're inside the tarball and only appear at build time when
 engine has no extracted source to apply against; the patch will
 fail with no target file.
 
-The correct op is `file copy` — stage the patch alongside the port
-so the build phase picks it up:
+The correct op is `file materialize` — stage the patch from the
+DeltaPorts overlay into `port_root` so the build phase picks it up.
+(Note: `file copy` is a *within-`port_root`* duplication op, NOT
+overlay→port_root; the names are easy to confuse.)
 
 ```dops
-file copy dragonfly/patch-Makefile.am -> dragonfly/patch-Makefile.am
-file copy dragonfly/patch-Makefile.in -> dragonfly/patch-Makefile.in
+file materialize dragonfly/patch-Makefile.am -> dragonfly/patch-Makefile.am
+file materialize dragonfly/patch-Makefile.in -> dragonfly/patch-Makefile.in
 ```
 
 This matches what compat-mode's `payload_files` flow already does
@@ -179,7 +189,7 @@ branches).
 | Substituting one identifier in a source file | `text replace-once` against the file |
 | Inserting a whole `.if DragonFly ... .endif` block | `mk block set condition "..."` |
 | Framework patch logic that doesn't reduce to mk/text | `patch apply diffs/X.diff` (only for `diffs/`, not `dragonfly/`) |
-| Upstream-source patch (anything under `dragonfly/`) | `file copy dragonfly/X -> dragonfly/X` (stage, do NOT patch) |
+| Upstream-source patch (anything under `dragonfly/`) | `file materialize dragonfly/X -> dragonfly/X` (stage, do NOT patch) |
 
 ## Conversion workflow (when overlay.dops doesn't exist yet)
 
@@ -203,7 +213,7 @@ branches).
    - Simple bounded substitution → consider rewriting as
      `mk target set post-extract` with `REINPLACE_CMD`, which is
      more durable than a static patch against generated files.
-   - Otherwise → `file copy dragonfly/X -> dragonfly/X`. ALWAYS
+   - Otherwise → `file materialize dragonfly/X -> dragonfly/X`. ALWAYS
      stage; NEVER `patch apply` for these. `bsd.port.mk`'s
      `do-patch` will apply them at build time.
 
