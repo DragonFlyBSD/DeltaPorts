@@ -1538,6 +1538,100 @@ def enqueue_patch_job(
     return job_path
 
 
+def _resume_deferred_triage(
+    queue_root: Path, convert_job_id: str, origin: str, target: str,
+) -> str | None:
+    """After a convert job succeeds, re-enqueue the triage that was
+    deferred for it (Step 20d auto-resume).
+
+    Finds the most-recent dead triage with retire_reason
+    ``deferred_for_convert`` for the same (origin, target), reads
+    its original .job file from ``done/`` for the metadata
+    (bundle_id, run_id, profile, flavor, iteration, ...), and
+    enqueues a fresh triage. The new triage runs against the
+    now-converted port, so its own ``_maybe_defer_to_convert``
+    classify check returns ``converted`` and triage proceeds
+    normally.
+
+    Returns the new triage's job_id, or None if no deferred
+    triage was found (or its job file is missing).
+    """
+    global _state_db_conn
+    if _state_db_conn is None:
+        return None
+    try:
+        row = _state_db_conn.execute(
+            """SELECT job_id FROM jobs
+               WHERE type = 'triage'
+                 AND state = 'dead'
+                 AND retire_reason = 'deferred_for_convert'
+                 AND origin = ?
+                 AND (target = ?
+                      OR (? = '' AND (target IS NULL OR target = '')))
+               ORDER BY last_seen_at DESC LIMIT 1""",
+            (origin, target, target),
+        ).fetchone()
+    except sqlite3.Error as exc:
+        log(queue_root, "WARN", f"resume_deferred_triage db query failed: {exc}")
+        return None
+    if row is None:
+        return None
+    dead_triage_id = row[0] if not hasattr(row, "keys") else row["job_id"]
+
+    # The original .job file was moved to done/ by the dispatcher's
+    # success path (defer returned (True, ...) so the file was treated
+    # as a normal successful triage).
+    done_path = queue_root / "done" / dead_triage_id
+    if not done_path.exists():
+        log(queue_root, "WARN",
+            f"deferred triage {dead_triage_id} job file missing under "
+            f"{queue_root / 'done'}; cannot auto-resume")
+        return None
+    try:
+        meta = parse_job_file(done_path)
+    except Exception as exc:
+        log(queue_root, "WARN",
+            f"could not parse deferred triage {dead_triage_id}: {exc}")
+        return None
+
+    try:
+        new_path = enqueue_triage_job(
+            queue_root,
+            bundle_id=meta.get("bundle_id", ""),
+            run_id=meta.get("run_id", ""),
+            origin=meta.get("origin", origin),
+            profile=meta.get("profile", ""),
+            flavor=meta.get("flavor", ""),
+            iteration=int(meta.get("iteration", "1") or "1"),
+            max_iterations=int(
+                meta.get("max_iterations", str(DEFAULT_MAX_ITERATIONS))
+                or str(DEFAULT_MAX_ITERATIONS)
+            ),
+            previous_bundle=meta.get("previous_bundle") or None,
+            context_rev=int(meta.get("user_context_rev", "0") or "0"),
+        )
+    except Exception as exc:
+        log(queue_root, "WARN", f"failed to enqueue resumed triage: {exc}")
+        return None
+
+    log(queue_root, "INFO",
+        f"auto-resumed triage as {new_path.name} after convert "
+        f"{convert_job_id} (origin={origin})")
+    try:
+        activity_log(
+            queue_root, "triage_resumed_after_convert",
+            f"resumed as {new_path.name} after convert {convert_job_id}",
+            job_id=new_path.name,
+            extra={
+                "original_triage_id": dead_triage_id,
+                "convert_job_id": convert_job_id,
+            },
+        )
+    except Exception as exc:
+        log(queue_root, "WARN", f"activity_log failed in resume: {exc}")
+    return new_path.name
+
+
 def _find_active_convert_job(origin: str, target: str) -> str | None:
     """Return job_id of an open convert job for (origin, target), if any.
 
@@ -2502,9 +2596,20 @@ def _verify_conversion(job: dict, origin: str) -> tuple[bool, str]:
     mat = worker.materialize_dports(env, origin)
     if mat.get("ok"):
         return True, "conversion verified by reapply (compose accepted overlay.dops)"
+    # reapply is a shell script that often prints errors to stdout
+    # rather than stderr; include both so the failure is debuggable
+    # from the lifecycle transition detail.
+    stderr_tail = (mat.get("stderr_tail") or "").strip()
+    stdout_tail = (mat.get("stdout_tail") or "").strip()
+    diag = stderr_tail or stdout_tail or "(no output)"
+    # Surface the last non-empty line — compose tends to print
+    # context lines above the canonical error.
+    last_line = next(
+        (ln.strip() for ln in reversed(diag.splitlines()) if ln.strip()),
+        "(no output)",
+    )
     return False, (
-        f"reapply failed: rc={mat.get('rc')!r} "
-        f"stderr={(mat.get('stderr_tail') or '')[:200]!r}"
+        f"reapply failed: rc={mat.get('rc')!r} {last_line[:300]!r}"
     )
 
 
@@ -2637,6 +2742,23 @@ def process_job(
                 s.name, finish_event,
                 detail={"status": status} if not success else None,
             )
+        # Step 20d auto-resume: if convert succeeded, re-enqueue the
+        # triage that was parked at DEAD with retire_reason
+        # 'deferred_for_convert'. The fresh triage runs against the
+        # now-converted port and proceeds normally (classify returns
+        # 'converted'). Failures here are logged but do not derail
+        # the dispatcher; the operator can re-enqueue manually.
+        if success:
+            convert_target = job.get("target") or os.environ.get(
+                "DPORTSV3_TRACKER_TARGET", "",
+            )
+            try:
+                _resume_deferred_triage(
+                    queue_root, job_path.name, origin, convert_target,
+                )
+            except Exception as exc:
+                log(queue_root, "WARN",
+                    f"_resume_deferred_triage raised: {exc}")
     else:
         # Unknown job type — fire the catchall failure event for lead +
         # siblings, write the error note, move everything to failed/.

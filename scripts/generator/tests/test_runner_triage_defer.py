@@ -205,6 +205,85 @@ def test_defer_for_auto_safe_port(tmp_path: Path, monkeypatch, state_db) -> None
     assert success
 
 
+def test_resume_deferred_triage_after_convert_ok(
+    tmp_path: Path, monkeypatch, state_db
+) -> None:
+    """Step 20d auto-resume: when a convert job finishes successfully,
+    the previously-deferred triage gets re-enqueued from its
+    archived .job file in done/, with the same bundle/run/origin
+    metadata."""
+    from dportsv3.agent.runner import _resume_deferred_triage
+    from dportsv3.agent.lifecycle import (
+        JobEvent, apply as lifecycle_apply,
+    )
+
+    queue_root = _make_queue(tmp_path)
+    (queue_root / "done").mkdir()
+
+    # Write a triage .job file under done/ (where the dispatcher
+    # moved it after _maybe_defer_to_convert returned (True, ...)).
+    triage_id = "20260523-000000Z-2026Q2-devel_foo-1234.job"
+    triage_path = queue_root / "done" / triage_id
+    triage_path.write_text(
+        "type=triage\n"
+        "bundle_id=bundle-abc\n"
+        "run_id=run-xyz\n"
+        "origin=devel/foo\n"
+        "profile=main\n"
+        "flavor=devel/foo\n"
+        "iteration=1\n"
+        "max_iterations=3\n"
+        "user_context_rev=0\n"
+    )
+
+    # Drive the lifecycle of the triage to DEAD via TRIAGE_DEFER so
+    # state.db carries the retire_reason the lookup keys on.
+    lifecycle_apply(state_db, triage_id, JobEvent.HOOK_ENQUEUED,
+                    detail={"origin": "devel/foo", "target": "@2026Q2"})
+    lifecycle_apply(state_db, triage_id, JobEvent.CLAIM)
+    lifecycle_apply(state_db, triage_id, JobEvent.TRIAGE_START)
+    lifecycle_apply(state_db, triage_id, JobEvent.TRIAGE_DEFER,
+                    detail={"deferred_for_convert": True,
+                            "convert_job_id": "convert-1"})
+    # The triage row needs origin/target/type set so the lookup
+    # finds it (lifecycle.apply only manages state/retire_reason —
+    # the runner's _register_new_job populates the rest).
+    state_db.execute(
+        "UPDATE jobs SET origin = ?, target = ?, type = ? WHERE job_id = ?",
+        ("devel/foo", "@2026Q2", "triage", triage_id),
+    )
+
+    resumed = _resume_deferred_triage(
+        queue_root, "convert-job-id", "devel/foo", "@2026Q2",
+    )
+    assert resumed is not None, "expected a resumed triage"
+    new_path = queue_root / "pending" / resumed
+    assert new_path.exists()
+    content = new_path.read_text()
+    assert "type=triage" in content
+    assert "bundle_id=bundle-abc" in content
+    assert "run_id=run-xyz" in content
+    assert "origin=devel/foo" in content
+    assert "iteration=1" in content
+
+
+def test_resume_deferred_triage_returns_none_when_no_match(
+    tmp_path: Path, state_db
+) -> None:
+    """No deferred triage for the (origin, target) → returns None,
+    no .job file appears."""
+    from dportsv3.agent.runner import _resume_deferred_triage
+
+    queue_root = _make_queue(tmp_path)
+    (queue_root / "done").mkdir()
+
+    resumed = _resume_deferred_triage(
+        queue_root, "convert-job-id", "devel/nothing", "@2026Q2",
+    )
+    assert resumed is None
+    assert not list((queue_root / "pending").iterdir())
+
+
 def test_find_active_convert_job_filters_by_origin_target(
     tmp_path: Path, state_db
 ) -> None:
