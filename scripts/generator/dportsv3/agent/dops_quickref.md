@@ -103,16 +103,63 @@ static patches against generated files. If the patch's hunk is just
 generated file (or against the *source* of the generated file, e.g.
 Makefile.am instead of Makefile.in) replaces it.
 
-## Patch fallback
+## Two kinds of patches — different ops
+
+DeltaPorts has two separate patch domains. They look similar but
+compose treats them entirely differently. Mixing them up is the
+single most common conversion mistake.
+
+### A. `diffs/*.diff` — framework-level patches
+
+Patches under the port's `diffs/` directory target the **FreeBSD
+ports framework files** that compose materializes into `port_root`:
+the port's own `Makefile`, `distinfo`, `pkg-descr`, etc. After
+compose's seed_output stage these files exist in `port_root`, so a
+`patch -p0 -i diffs/X.diff` with `cwd=port_root` legitimately finds
+its target and applies cleanly.
+
+Direct-ops mostly *replaces* this whole category:
+
+- `mk set/add/remove/replace-if/block set` and `text replace-once`
+  express the same change semantically. Always prefer these.
+- `patch apply diffs/X.diff` exists as a fallback when the patch
+  is too gnarly for semantic ops. The engine reads the patch from
+  the source overlay and applies it against the materialized
+  framework files in `port_root` — works as advertised.
+
+If `diffs/Makefile.diff` adjusts a variable in the port's Makefile,
+convert it to a `mk` op. Only fall back to `patch apply diffs/...`
+when semantic ops genuinely cannot express the change.
+
+### B. `dragonfly/*` — upstream-source patches
+
+Patches under `dragonfly/` target **upstream source files** that
+live inside the distfile tarball (e.g. `Makefile.am`, `Makefile.in`,
+`src/foo.c`). Those files are NOT in `port_root` at compose time —
+they're inside the tarball and only appear at build time when
+`bsd.port.mk`'s `do-extract` runs.
+
+**Never use `patch apply` for `dragonfly/*` patches.** The compose
+engine has no extracted source to apply against; the patch will
+fail with no target file.
+
+The correct op is `file copy` — stage the patch alongside the port
+so the build phase picks it up:
 
 ```dops
-# When no semantic op fits, fall back to applying a static patch.
-patch apply dragonfly/patch-too-complex-for-dops
+file copy dragonfly/patch-Makefile.am -> dragonfly/patch-Makefile.am
+file copy dragonfly/patch-Makefile.in -> dragonfly/patch-Makefile.in
 ```
 
-Use sparingly. If you're reaching for `patch apply`, the patch
-either (a) genuinely needs to be hand-written (multi-hunk, complex
-context), or (b) hasn't yet been reduced to a `text` / `mk` op.
+This matches what compat-mode's `payload_files` flow already does
+automatically when there's no `overlay.dops`. Under dops mode that
+auto-copy is suppressed (see `I_COMPOSE_MODE_DOPS_SUPPRESSES_COMPAT`),
+so the dops must declare the staging explicitly.
+
+If a `dragonfly/*` patch is simple enough — e.g. one OS-detection
+substitution — prefer rewriting it as a `mk target` recipe with
+`REINPLACE_CMD` in `post-extract`, which is more durable than a
+static patch against generated files.
 
 ## On-missing modifiers
 
@@ -131,18 +178,35 @@ branches).
 | Adjusting a Makefile.in / config file at build time | `mk target set/append pre-configure` with REINPLACE_CMD recipe |
 | Substituting one identifier in a source file | `text replace-once` against the file |
 | Inserting a whole `.if DragonFly ... .endif` block | `mk block set condition "..."` |
-| Patch logic that doesn't reduce to any of the above | `patch apply` (fall back) |
+| Framework patch logic that doesn't reduce to mk/text | `patch apply diffs/X.diff` (only for `diffs/`, not `dragonfly/`) |
+| Upstream-source patch (anything under `dragonfly/`) | `file copy dragonfly/X -> dragonfly/X` (stage, do NOT patch) |
 
 ## Conversion workflow (when overlay.dops doesn't exist yet)
 
 1. List `/work/DeltaPorts/ports/<origin>/` and identify the compat
    artifacts: `Makefile.DragonFly[.<target>]`, `diffs/*.diff`,
    `dragonfly/patch-*` files, and any `newport/`.
-2. For each patch / Makefile line, classify:
-   - Single-line/few-line substitution → convert to `text replace-once`.
-   - OS-detection block → convert to `mk replace-if` or `mk target`.
-   - Complex multi-hunk patch → fall back to `patch apply` for now,
-     plan to decompose later.
+2. Classify each artifact by **domain** first (see "Two kinds of
+   patches" above), THEN by complexity:
+
+   **Framework patches (`Makefile.DragonFly`, `diffs/*.diff`):**
+   - Single-line/few-line substitution → `text replace-once` or
+     `mk set/add/remove`.
+   - OS-detection `.if` block → `mk replace-if` / `mk disable-if`
+     / `mk block set`.
+   - Recipe addition/override → `mk target set/append`.
+   - Genuinely complex (multi-hunk, conditional logic) → fall back
+     to `patch apply diffs/X.diff` (engine applies against
+     compose-materialized framework files in `port_root` — works).
+
+   **Upstream-source patches (`dragonfly/*`):**
+   - Simple bounded substitution → consider rewriting as
+     `mk target set post-extract` with `REINPLACE_CMD`, which is
+     more durable than a static patch against generated files.
+   - Otherwise → `file copy dragonfly/X -> dragonfly/X`. ALWAYS
+     stage; NEVER `patch apply` for these. `bsd.port.mk`'s
+     `do-patch` will apply them at build time.
+
 3. Write `/work/DeltaPorts/ports/<origin>/overlay.dops` with the
    equivalent ops.
 4. For any artifact you migrated to a semantic op, delete the

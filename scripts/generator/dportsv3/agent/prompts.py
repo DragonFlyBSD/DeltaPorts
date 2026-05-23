@@ -395,34 +395,56 @@ op should remove `-Werror`. If a Makefile.DragonFly assigns
 
 ## The classification call you have to make
 
-For each unsupported item handed to you, decide one of three buckets:
+DeltaPorts has TWO patch domains that compose treats differently:
 
-1. **Framework adjustment** (Makefile.DragonFly content the
-   translator couldn't auto-handle, like `.if` blocks, recipe
-   targets, conditional dep substitution): express as `mk` ops —
+- **Framework patches** live under `diffs/` (and `Makefile.DragonFly`
+  is the same domain) and target the FreeBSD ports framework
+  files compose materializes into `port_root` (the port's own
+  `Makefile`, `distinfo`, `pkg-descr`, etc.). These DO exist in
+  `port_root` after compose's seed stage; `patch apply diffs/X.diff`
+  works against them.
+
+- **Upstream-source patches** live under `dragonfly/` and target
+  files inside the upstream distfile tarball (e.g. `Makefile.am`,
+  `src/foo.c`). Those files are NOT in `port_root` at compose
+  time — they only appear at build time. `patch apply dragonfly/X`
+  DOES NOT WORK for these — the engine has nothing to patch
+  against. Stage them with `file copy` instead so `bsd.port.mk`'s
+  `do-patch` picks them up.
+
+For each unsupported item, decide which domain it's in, THEN
+which op to use:
+
+### Framework domain (`Makefile.DragonFly` or `diffs/*.diff`)
+
+1. **Framework adjustment expressible as semantic op** (Makefile
+   variable set/add, OS-detection `.if` block, recipe target):
    `mk set`, `mk add`, `mk remove`, `mk replace-if`, `mk
-   disable-if`, `mk block set`, `mk target set/append`, etc.
+   disable-if`, `mk block set`, `mk target set/append`.
+2. **Framework adjustment too complex for semantic ops** (multi-line
+   restructuring of the port's own Makefile, conditional logic
+   that doesn't fit `mk` ops): `patch apply diffs/<file>.diff`.
+   The engine applies this against the compose-materialized
+   framework files in `port_root`. Works.
 
-2. **Source-level simple substitution** (a `dragonfly/patch-*.diff`
-   or `diffs/*.diff` whose hunks reduce to bounded text changes —
-   single identifier rename, OS-detection adjustment, single-line
-   tweak): express as a `text replace-once` against the affected
-   file, or as a `mk target set/append` with `REINPLACE_CMD` in
-   `post-extract` when the change must happen at build time after
-   extraction.
+### Upstream-source domain (`dragonfly/*`)
 
-3. **Source-level complex surgery** (multi-hunk patches, conditional
-   ifdef logic, intertwined-with-context restructuring): keep the
-   static patch file under `dragonfly/` AND reference it from the
-   overlay via `patch apply dragonfly/<filename>`. This is the
-   right answer, not a defeat — complex source changes belong in
-   patches, dops just records the dependency.
+3. **Simple substitution against upstream source** (single-line
+   rename, OS-detection one-liner): consider expressing as a
+   `mk target set post-extract` with `REINPLACE_CMD` — runs at
+   build time inside `${WRKSRC}`, more durable than a static
+   patch against a generated file like `Makefile.in`.
+4. **Complex upstream-source surgery** (multi-hunk, intertwined
+   ifdef context, anything you can't describe in one sentence):
+   `file copy dragonfly/<file> -> dragonfly/<file>`. Stages the
+   patch into `port_root/dragonfly/`, `bsd.port.mk` applies it at
+   build time. NEVER use `patch apply` for `dragonfly/*` — that
+   will fail at compose time because the upstream source isn't
+   there yet.
 
-The judgment between (2) and (3) is the one you have to get right.
-A safe heuristic: if you can describe the change in one English
-sentence ("replace `FreeBSD` with `FreeBSDLike` in `configure.ac`"),
-it is (2). If you find yourself needing two or more sentences,
-or referring to "preserving surrounding context," it is (3).
+The bright line: anything under `dragonfly/` → `file copy`, never
+`patch apply`. Anything under `diffs/` or `Makefile.DragonFly` →
+semantic op preferred; `patch apply` as fallback.
 
 ## dops syntax reference
 
@@ -435,14 +457,21 @@ conversion are:
 - `mk block set condition "<cond>" <<'MK' ... MK` — whole .if block.
 - `mk target set/append <target> <<'MK' ... MK` — make recipes.
 - `text replace-once file <path> from "<from>" to "<to>"` — single
-  source-line substitution.
+  framework-file substitution.
 - `text line-remove file <path> exact "<line>"` — remove one line.
 - `text line-insert-after file <path> anchor "<anchor>" line
   "<new line>"` — insert one line.
-- `file copy dragonfly/<src> -> files/<dst>` — drop a support file.
+- `file copy <src> -> <dst>` — stage a file from the source
+  overlay into `port_root` at the destination relpath. Use this
+  for **upstream-source patches** under `dragonfly/`:
+  `file copy dragonfly/patch-X -> dragonfly/patch-X`.
 - `file remove files/<path> on-missing warn` — remove a file.
-- `patch apply dragonfly/<patch-file>` — fall back to a static
-  patch. Use only for source-level complex surgery.
+- `patch apply diffs/<patch-file>.diff` — fall back to a static
+  patch against the **framework** files compose materialized.
+  Only for `diffs/*.diff` (or the `Makefile.DragonFly` content
+  rewritten into a diff). NEVER for `dragonfly/*` — those
+  patches target upstream source that doesn't exist yet at
+  compose time; use `file copy` instead.
 
 `on-missing error|warn|noop` is accepted on most ops; default is
 `error`. Use `warn` when an op is idempotent across targets.
@@ -472,12 +501,21 @@ the overlay tree only; the upstream source is none of your business.
    `validate_dops` again. Repeat until `ok=true`. Do not skip
    this step — emitting a proof against malformed dops just makes
    the handler reject it after the fact.
-5. For any static patch you decided to retain via `patch apply`:
-   leave the file in place under `dragonfly/`.
-6. For any framework or source-simple item you migrated: note the
-   files that should be removed in the Conversion Proof's
+5. For static patches you decided to retain:
+   - **Framework patch** (`diffs/<file>.diff`): leave the file in
+     place and reference it via `patch apply diffs/<file>.diff`
+     in the overlay.dops. The engine applies it against the
+     compose-materialized framework files in `port_root`.
+   - **Upstream-source patch** (`dragonfly/<file>`): leave the
+     file in place and emit `file copy dragonfly/<file> ->
+     dragonfly/<file>`. Do NOT use `patch apply` for these —
+     the engine has no extracted upstream source to patch against
+     at compose time.
+6. For any framework item you fully migrated to semantic ops: note
+   the files that should be removed in the Conversion Proof's
    `files_removed` field — the handler will finalize the cleanup
-   so the overlay stays consistent with the proof.
+   so the overlay stays consistent with the proof. Do NOT list
+   retained patch files here.
 7. Emit the Conversion Proof JSON block (see below) and stop.
 
 Final verification is the handler's job. After you finish, the
