@@ -38,13 +38,45 @@ def _make_port(repo: Path, origin: str) -> Path:
 def _isolate_state_db(tmp_path: Path, monkeypatch):
     """Point runner._state_db_conn at a tmp state.db so the registration
     side-effects of enqueue_convert_job don't write to the host's
-    shared state.db."""
+    shared state.db.
+
+    Also monkeypatches ``worker.classify_dops`` + ``worker.env_paths``
+    so tests don't need a real dev-env — both route to the test's
+    tmp repo. The production code routes through the chroot via
+    ``_exec``; here we bypass that for unit-test speed.
+    """
     from dportsv3.db.schema import init_db
+    from dportsv3.agent import worker
+    from dportsv3.agent.dops import classify as _direct_classify
     import sqlite3
     db_path = tmp_path / "state.db"
     conn = sqlite3.connect(str(db_path), isolation_level=None)
     init_db(conn)
     monkeypatch.setattr(runner_mod, "_state_db_conn", conn)
+
+    def _fake_classify(env: str, origin: str) -> str:
+        import os as _os
+        from pathlib import Path as _Path
+        repo = _Path(_os.environ.get("DP_HARNESS_REPO_ROOT") or ".")
+        return _direct_classify(origin, repo)
+
+    def _fake_env_paths(env: str):
+        import os as _os
+        from pathlib import Path as _Path
+        repo = _Path(_os.environ.get("DP_HARNESS_REPO_ROOT") or ".")
+        # Synthesize a writable that contains work/DeltaPorts as the
+        # test repo. convert_record consumes this.
+        fake_writable = tmp_path / "_fake_writable"
+        target = fake_writable / "work" / "DeltaPorts"
+        if not target.exists():
+            target.parent.mkdir(parents=True, exist_ok=True)
+            # Symlink so writes through the path land in the real
+            # tmp repo where the test created ports/.
+            target.symlink_to(repo)
+        return worker.EnvPaths(env_dir=fake_writable, writable=fake_writable)
+
+    monkeypatch.setattr(worker, "classify_dops", _fake_classify)
+    monkeypatch.setattr(worker, "env_paths", _fake_env_paths)
     yield
     conn.close()
 
@@ -63,7 +95,7 @@ def test_process_job_accepts_convert_without_bundle(
     port = _make_port(repo, "devel/no-bundle")
     (port / "Makefile.DragonFly").write_text("USES+=pkgconfig\n")
     monkeypatch.setenv("DP_HARNESS_REPO_ROOT", str(repo))
-    monkeypatch.delenv("DP_HARNESS_ENV", raising=False)
+    monkeypatch.setenv("DP_HARNESS_ENV", "test-env")
 
     queue_root = tmp_path / "queue"
     (queue_root / "pending").mkdir(parents=True)
@@ -126,6 +158,12 @@ def test_process_convert_job_auto_safe_port(
         "USES+=pkgconfig\nCONFIGURE_ARGS+=--with-foo\n"
     )
     monkeypatch.setenv("DP_HARNESS_REPO_ROOT", str(repo))
+    monkeypatch.setenv("DP_HARNESS_ENV", "test-env")
+    # Mock the chroot-side verification — the real one shells
+    # `dev-env exec` which needs an actual env.
+    from dportsv3.agent import worker
+    monkeypatch.setattr(worker, "materialize_dports",
+                        lambda env, origin: {"ok": True, "rc": 0})
 
     job = {"origin": "devel/auto-safe", "target": "@main"}
     success, status = process_convert_job(
@@ -161,7 +199,9 @@ def test_process_convert_job_needs_judgment_without_env(
         job={"origin": "devel/with-cond", "target": "@main"},
     )
     assert not success
-    assert "DP_HARNESS_ENV unset" in status
+    # The runner's earlier "env required" gate fires before
+    # _run_llm_conversion can complain about its own model env.
+    assert "no DP_HARNESS_ENV" in status
 
 
 def test_process_convert_job_needs_judgment_without_model(
@@ -289,6 +329,7 @@ def test_process_convert_job_already_converted(
         'target @main\nport devel/done\ntype port\nreason "test"\n'
     )
     monkeypatch.setenv("DP_HARNESS_REPO_ROOT", str(repo))
+    monkeypatch.setenv("DP_HARNESS_ENV", "test-env")
 
     before = (port / "overlay.dops").read_text()
     job = {"origin": "devel/done", "target": "@main"}
@@ -395,12 +436,13 @@ def test_convert_tool_whitelist_blocks_build_tools() -> None:
     assert "materialize_dports" not in CONVERT_TOOL_NAMES
 
 
-def test_process_convert_job_no_env_skips_verification(
+def test_process_convert_job_requires_dev_env(
     tmp_path: Path, monkeypatch
 ) -> None:
-    """No DP_HARNESS_ENV → handler accepts the conversion on faith
-    and notes that verification was skipped. Useful for offline
-    runs / unit tests; smoke tests always have DP_HARNESS_ENV set."""
+    """Convert needs a dev-env — the substrate for both
+    classification and conversion is the chroot's writable
+    overlay. With no env set, the handler refuses with a clear
+    error rather than silently reading the host clone."""
     repo = _make_repo(tmp_path)
     port = _make_port(repo, "devel/no-env")
     (port / "Makefile.DragonFly").write_text("USES+=pkgconfig\n")
@@ -413,8 +455,8 @@ def test_process_convert_job_no_env_skips_verification(
         sibling_paths=[],
         job={"origin": "devel/no-env", "target": "@main"},
     )
-    assert success
-    assert "verification skipped" in status
+    assert not success
+    assert "no DP_HARNESS_ENV" in status
 
 
 def test_process_convert_job_not_in_scope(
@@ -427,6 +469,7 @@ def test_process_convert_job_not_in_scope(
     repo = _make_repo(tmp_path)
     _make_port(repo, "devel/nothing")
     monkeypatch.setenv("DP_HARNESS_REPO_ROOT", str(repo))
+    monkeypatch.setenv("DP_HARNESS_ENV", "test-env")
 
     success, status = process_convert_job(
         queue_root=tmp_path / "queue",

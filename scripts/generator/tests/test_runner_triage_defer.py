@@ -36,13 +36,33 @@ def _make_port(repo: Path, origin: str) -> Path:
 @pytest.fixture
 def state_db(tmp_path: Path, monkeypatch):
     """Wire _state_db_conn so lifecycle.apply + activity_log + the
-    convert-job lookup all see the same in-memory state."""
+    convert-job lookup all see the same in-memory state.
+
+    Also monkeypatches ``worker.classify_dops`` to bypass the
+    chroot shell-out — tests don't have a real dev-env.
+    ``DP_HARNESS_ENV`` is set so the runner's "env required" gate
+    passes; classify routes back to the test's tmp repo via
+    ``dops.classify`` directly.
+    """
+    from dportsv3.agent import worker
+    from dportsv3.agent.dops import classify as _direct_classify
+
     db_path = tmp_path / "state.db"
     conn = sqlite3.connect(str(db_path), isolation_level=None,
                            check_same_thread=False)
     conn.row_factory = sqlite3.Row
     init_db(conn)
     monkeypatch.setattr(runner_mod, "_state_db_conn", conn)
+
+    monkeypatch.setenv("DP_HARNESS_ENV", "test-env")
+
+    def _fake_classify(env: str, origin: str) -> str:
+        import os as _os
+        from pathlib import Path as _Path
+        repo = _Path(_os.environ.get("DP_HARNESS_REPO_ROOT") or ".")
+        return _direct_classify(origin, repo)
+    monkeypatch.setattr(worker, "classify_dops", _fake_classify)
+
     yield conn
     conn.close()
 

@@ -1859,14 +1859,23 @@ def _maybe_defer_to_convert(
     target = job.get("target") or os.environ.get(
         "DPORTSV3_TRACKER_TARGET", "",
     )
-    repo_root = Path(
-        os.environ.get("DP_HARNESS_REPO_ROOT")
-        or os.environ.get("DPORTSV3_REPO_ROOT")
-        or "."
-    ).resolve()
 
+    # Classification MUST run inside the dev-env (the chroot) — that's
+    # the substrate the convert agent writes into via put_file. Reading
+    # the host clone (or even the env's writable overlay from outside
+    # the chroot) bypasses the substrate and produces stale results.
+    # Goes through `dportsv3 dev-env exec ENV -- dportsv3 agent
+    # classify-dops <origin>` like every other tool-surface call.
+    env_name = job.get("dev_env") or os.environ.get("DP_HARNESS_ENV")
+    if not env_name:
+        log(queue_root, "WARN",
+            f"no DP_HARNESS_ENV for {origin!r}; cannot classify, "
+            f"proceeding with triage")
+        return None
+
+    from dportsv3.agent import worker
     try:
-        state = classify_dops(origin, repo_root)
+        state = worker.classify_dops(env_name, origin)
     except Exception as exc:
         log(queue_root, "WARN",
             f"classify_dops({origin!r}) failed: {exc}; proceeding with triage")
@@ -2365,22 +2374,35 @@ def process_convert_job(
     Verification via ``dsynth_build`` is Step 20e and not done
     here yet.
     """
-    from dportsv3.agent.dops import classify as classify_dops
     from dportsv3.migration.classify import classify_inventory
     from dportsv3.agent.dops import _scan_one_port
     from dportsv3.migration.convert import convert_record
+    from dportsv3.agent import worker
 
     origin = job.get("origin", "")
     if not origin:
         return False, "convert job missing origin"
 
-    repo_root = Path(
-        os.environ.get("DP_HARNESS_REPO_ROOT")
-        or os.environ.get("DPORTSV3_REPO_ROOT")
-        or "."
-    ).resolve()
+    env_name = job.get("dev_env") or os.environ.get("DP_HARNESS_ENV")
+    if not env_name:
+        return False, "no DP_HARNESS_ENV; convert needs an env"
 
-    state = classify_dops(origin, repo_root)
+    # Classification (and everything downstream) reads the dev-env's
+    # writable overlay via worker.classify_dops → dev-env exec →
+    # dportsv3 agent classify-dops. Host filesystem is never the
+    # substrate for tree contents.
+    try:
+        state = worker.classify_dops(env_name, origin)
+    except Exception as exc:
+        return False, f"classify_dops failed: {exc}"
+
+    # The deterministic converter still operates on a Path (it
+    # rewrites files), so we need the host-side path to the env's
+    # writable overlay for that downstream call. Resolved via
+    # worker.env_paths; this is the bridge between "decide via the
+    # env's view" and "act on the env's writable overlay."
+    env_paths = worker.env_paths(env_name)
+    repo_root = (env_paths.writable / "work" / "DeltaPorts").resolve()
     if state == "converted":
         # No work to do. CONVERT_OK is appropriate — the goal state
         # is already reached.

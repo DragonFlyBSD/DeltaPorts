@@ -681,6 +681,83 @@ def materialize_dports(env: str, origin: str) -> dict:
 WRKDIRPREFIX = "/work/obj"
 
 
+def classify_dops(env: str, origin: str) -> str:
+    """Classify a port's dops state by inspecting the dev-env's
+    writable overlay (the substrate the convert agent writes into).
+
+    Returns one of: ``converted`` / ``auto_safe_pending`` /
+    ``needs_judgment`` / ``not_in_scope``.
+
+    Runs a single shell script inside the chroot that emits a
+    handful of booleans; the classification logic lives here in
+    Python. The shell script touches:
+
+    - ``$DELTAPORTS_ROOT/ports/<origin>/overlay.dops``
+    - ``$DELTAPORTS_ROOT/ports/<origin>/Makefile.DragonFly[.*]``
+    - ``$DELTAPORTS_ROOT/ports/<origin>/dragonfly/`` (with content)
+    - ``$DELTAPORTS_ROOT/ports/<origin>/diffs/`` (with .diff/.patch)
+    - ``$DELTAPORTS_ROOT/ports/<origin>/newport/``
+
+    One ``_exec`` round-trip; no CLI subcommand needed. The
+    classify rules match :func:`dportsv3.agent.dops.classify` but
+    are evaluated here rather than there because the file checks
+    must happen against the env's view, not the host clone.
+    """
+    cmd = r'''
+set -u
+PORT="$DELTAPORTS_ROOT/ports/$1"
+[ -d "$PORT" ] || { echo MISSING=1; exit 0; }
+echo MISSING=0
+[ -e "$PORT/overlay.dops" ] && echo DOPS=1 || echo DOPS=0
+ls "$PORT"/Makefile.DragonFly* 2>/dev/null | grep -q . \
+    && echo MKDFLY=1 || echo MKDFLY=0
+[ -d "$PORT/dragonfly" ] && \
+    ls -A "$PORT/dragonfly" 2>/dev/null | grep -q . \
+    && echo DRAGONFLY=1 || echo DRAGONFLY=0
+ls "$PORT"/diffs/*.diff "$PORT"/diffs/*.patch 2>/dev/null \
+    | grep -q . && echo DIFFS=1 || echo DIFFS=0
+[ -d "$PORT/newport" ] && echo NEWPORT=1 || echo NEWPORT=0
+'''
+    p = _exec(env, "/bin/sh", "-c", cmd, "_", origin)
+    if p.returncode != 0:
+        raise RuntimeError(
+            f"classify_dops shell failed for {origin!r} in env "
+            f"{env!r} (rc={p.returncode}): "
+            f"{(p.stderr or '').strip()[:300]}"
+        )
+    flags = {}
+    for line in (p.stdout or "").splitlines():
+        if "=" in line:
+            k, _, v = line.partition("=")
+            flags[k.strip()] = v.strip() == "1"
+    if flags.get("MISSING"):
+        return "not_in_scope"
+    has_dops = flags.get("DOPS", False)
+    has_mkdfly = flags.get("MKDFLY", False)
+    has_dragonfly = flags.get("DRAGONFLY", False)
+    has_diffs = flags.get("DIFFS", False)
+    has_newport = flags.get("NEWPORT", False)
+    any_compat = (
+        has_mkdfly or has_dragonfly or has_diffs or has_newport
+    )
+    if not (has_dops or any_compat):
+        return "not_in_scope"
+    # Unmigrated debt = Makefile.DragonFly[*] or newport/ only.
+    # dragonfly/ and diffs/ may be peers of dops via file
+    # materialize / patch apply.
+    has_unmigrated = has_mkdfly or has_newport
+    if has_dops and not has_unmigrated:
+        return "converted"
+    # Pure Makefile.DragonFly (no other compat artifacts) is the
+    # only case the deterministic translator can handle.
+    if (
+        has_mkdfly and not has_dragonfly and not has_diffs
+        and not has_newport
+    ):
+        return "auto_safe_pending"
+    return "needs_judgment"
+
+
 def validate_dops(env: str, origin: str) -> dict:
     """Run ``dportsv3 dsl check`` against the port's overlay.dops.
 
