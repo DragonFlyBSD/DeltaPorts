@@ -484,7 +484,7 @@ Rationale:
 
 Avoid a larger state-machine migration until the operator loop is proven.
 
-### Step 9 — tracker UX polish for manual work
+### Step 9 — tracker UX polish for manual work — shipped
 
 Add job and bundle page affordances:
 
@@ -589,7 +589,7 @@ specifically high-value because it's the variable that operators
 need to read to make budget + model decisions; cramming it into prose
 defeats the telemetry that smoke testing put in place.
 
-### Step 10 — kick out stale queued jobs
+### Step 10 — kick out stale queued jobs — shipped
 
 Surfaced during the first real smoke test: a 4-hour-old `state=queued`
 job for `devel/readline` was blocking the operator-triggered retriage
@@ -660,7 +660,7 @@ Tests:
 heuristics don't cover, e.g. a 30-minute-old job that's
 legitimately stuck).
 
-### Step 11 — fix delivery & verification
+### Step 11 — fix delivery & verification — partial (11a shipped; 11b/c/d pending)
 
 The plan's earlier phases stop at "agent says `rebuild_ok=true` and writes
 `analysis/changes.diff`". Everything past that — the operator extracting
@@ -1003,7 +1003,7 @@ new context section landed as an in-place edit to multiple files,
 because the underlying mechanisms weren't compositional. These
 three steps refactor the offending seams.
 
-### Step 12 — telemetry bus + sinks
+### Step 12 — telemetry bus + sinks — pending
 
 Today every new metric is its own code path: emit-via-callback,
 handle-in-dispatcher, write-to-activity-log. Adding ``llm_turn``
@@ -1076,7 +1076,7 @@ to make sure it landed in both places. With a bus, the same change
 is ~10 LOC and zero audit. The next 5 metrics earn the abstraction
 back; the bus has paid for itself by metric #3.
 
-### Step 13 — tool guardrail middleware
+### Step 13 — tool guardrail middleware — pending
 
 Today every "the agent must not X" rule is a manual ``if
 chroot_path.startswith(...)`` block at the top of each affected
@@ -1167,7 +1167,7 @@ each is one new class + one registry entry. Same observability
 (the GuardrailFired event lets us see when guards fire), better
 testability (each guard is unit-testable in isolation).
 
-### Step 14 — context budget + KEDB metadata
+### Step 14 — context budget + KEDB metadata — pending
 
 ``context.py`` already has the cleanest abstraction of the three
 (``ContextSection`` Protocol with priority-ordered render). What
@@ -1288,7 +1288,7 @@ Some patterns look ad-hoc but are working. Not refactoring:
   the volume; convert only if the volume grows past a few hundred
   entries.
 
-### Step 15 — payload cost optimization pass
+### Step 15 — payload cost optimization pass — pending (blocked on 14)
 
 Once Step 14's machinery exists (section budget, KEDB metadata,
 system-prompt decomposition, render-event telemetry), use it to
@@ -1429,7 +1429,7 @@ without telemetry to verify each cut is a wash on behavior. The
 SectionRenderEvent to answer cleanly. Doing it blind is how the
 prompt grew bloated in the first place.
 
-### Step 16 — overall UX review
+### Step 16 — overall UX review — partial (runner page live-refresh shipped; /agentic dashboard live-refresh + other items pending)
 
 Step 9 closed the immediate manual-queue gaps, but a wider pass at
 the tracker UX is worth one focused sweep before committing to
@@ -1474,7 +1474,7 @@ the same time would have ballooned the task list. Better to ship
 9, smoke-test, then revisit with the rough edges actually
 identified rather than imagined.
 
-### Step 17 — remote runners + auth
+### Step 17 — remote runners + auth — pending
 
 Today every piece of the loop assumes colocation: the agent runner,
 the chroot, the artifact store, and the tracker all live on one
@@ -1603,7 +1603,7 @@ private network — every item here becomes load-bearing. Building
 it before there's a real second builder is speculation; building
 it the day you need one is too late.
 
-### Step 18 — security hardening
+### Step 18 — security hardening — pending
 
 Step 17 closes the remote-builder gap with bearer tokens and a
 runner identity model, but that's just the front door. The
@@ -1761,7 +1761,7 @@ be lost — every item here becomes load-bearing. Doing this
 doing it *with* 17 risks ballooning a single deliverable into a
 six-month project.
 
-### Step 19 — detection-driven triage playbooks
+### Step 19 — detection-driven triage playbooks — pending
 
 Today the triage LLM gets a generic system prompt and the build log,
 and is expected to figure out from scratch what kind of port it's
@@ -1955,7 +1955,7 @@ Step 14 should be re-scoped at that point to focus on the
 catch-net role rather than the universal-lookup role originally
 envisioned.
 
-### Step 20 — direct ops conversion as a first-class job type
+### Step 20 — direct ops conversion as a first-class job type — shipped
 
 `overlay.dops` is the highest-leverage feature for LLM-driven port
 maintenance. The mental model that matters:
@@ -2232,7 +2232,7 @@ ongoing; the implementation cost is one step.
 
 10 → 20 → 11 → 16 → 19 → 12/13 → 17/18 → 14/15.
 
-### Step 21 — DB layer consolidation pass
+### Step 21 — DB layer consolidation pass — pending
 
 Scan during smoke testing of Step 20: 120 raw ``conn.execute`` calls
 across six files. The reads are mostly localized in
@@ -2402,7 +2402,7 @@ purpose: small enough not to block the operator-facing features, and
 enables 17 + 18g to plug into a clean write surface rather than
 adding the sixth ad-hoc site.
 
-### Step 22 — agent step layer refactor
+### Step 22 — agent step layer refactor — pending
 
 Smoke testing on Step 20 surfaced the same complaint reading the
 code that the line counts already implied:
@@ -2567,7 +2567,7 @@ they're both no-behavior-change refactors — but they touch
 different files and can ship independently. 21 first (smaller,
 DB-layer-scoped); 22 second (agent-layer-scoped).
 
-### Step 23 — execution layer consolidation
+### Step 23 — execution layer consolidation — pending
 
 The agent layer's substrate is "shell out `dportsv3 dev-env exec ENV
 -- ARGV` for every tool call." That shape works, but it's accumulated
@@ -2733,7 +2733,7 @@ touch every ``_exec`` call site; doing 23 first means 22b ships
 against the consolidated helper rather than refactoring two
 parallel ones.
 
-### Step 24 — prompts + quickref consolidation
+### Step 24 — prompts + quickref consolidation — pending
 
 Surfaced during Step 20 smoke testing: ``CONVERT_SYSTEM`` and
 ``dops_quickref.md`` have grown by accretion as each smoke-test
@@ -2854,3 +2854,291 @@ extraction may surface more opportunities for prompt
 simplification (e.g. if `assemble_payload` becomes the natural
 home for some structured tool-surface description, that's a
 cue to drop one more duplication from the prompt).
+
+### Step 25 — edit-intent DSL for the agent edit surface — pending
+
+Surfaced during the devel/gperf analysis run (bundle
+`devel_gperf-20260523-094119Z`). The patch agent and the convert
+agent today operate on two different on-disk shapes — compat ports
+edit `dragonfly/*` and call `install_patches`; dops ports edit the
+`patch.apply` / `file.materialize` / `file.copy` statements inside
+`overlay.dops`. The agent has to *know which shape it's on* and pick
+the right tool calls. Today's classifier (`classify_dops`) returns
+`compat | dops | needs_judgment`, and the patch agent happens to have
+enough dops-aware tools (`validate_dops`, `put_file` against
+`overlay.dops`) that the `needs_judgment` path mostly works — but
+it's silently wrong on the boundary cases (e.g. `put_file` to
+`dragonfly/patch-*` on a dops port: the edit gets clobbered on next
+reapply). The architectural fix is to stop forcing the agent to know
+the substrate at all.
+
+Five shapes were considered during the design discussion:
+
+1. **Mode-aware patch agent** (cheap, narrow) — branch the system
+   prompt on `classify_dops` result, give each mode its own tool
+   subset.
+2. **Sibling agents** (incremental) — `patch_compat` and `patch_dops`
+   as two distinct agents; dispatcher picks.
+3. **Convert-first pipeline** — force every port to dops before
+   patch sees it. Simple but bets the farm on convert success rate.
+4. **Dops-as-universal-grammar with compat as a render target** —
+   patch agent only ever speaks dops; engine lowers dops to compat
+   for compat-mode ports. Requires a lossless dops→compat pass that
+   doesn't exist today.
+5. **Edit-intent DSL** (chosen). The agent emits intent statements
+   (`replace_in_patch`, `add_file`, `change_makefile_var`) instead
+   of file writes. A translator turns intent → compat ops or dops
+   ops depending on port mode. The agent stops knowing the
+   substrate.
+
+Edit-intent wins because the agent layer becomes *substrate-agnostic*
+without requiring convert success on every port (#3) or a lossless
+dops→compat lowering pass (#4). The translator is the only piece
+that knows about modes; the agent's prompt collapses to "what change
+do you want to make?" without "where on disk does that change live?"
+
+#### Goal
+
+After Step 25:
+
+- The patch agent emits a sequence of *intent statements* describing
+  the change it wants to apply, not file writes.
+- A new translator module (`dportsv3.agent.edit_intent`) reads the
+  port's mode from `classify_dops` and renders each intent statement
+  into either a compat-style file edit or a dops statement edit.
+- Adding a new edit primitive is one new intent type + one
+  translator branch per mode, not a prompt rewrite.
+- The patch agent's prompt no longer carries the dops/compat
+  distinction (it disappears below the intent layer).
+- Empty-diff bugs from the gperf class are impossible: every intent
+  statement produces a diff with a deterministic shape, captured by
+  the translator, not by post-hoc `git diff`.
+
+#### Sub-steps
+
+**25a — intent grammar design.**
+
+Before any code: design the intent grammar end-to-end and write it
+to `docs/edit-intent-design.md`. Concrete coverage target — every
+fix shape we've seen the patch agent attempt in smoke testing
+should be expressible:
+
+- `replace_in_patch{target, find, replace}` — edit a single hunk
+  context inside an existing patch (the most common drift case).
+- `drop_patch{target, reason}` — declare a patch obsolete and
+  remove it (gperf case).
+- `add_patch{target, diff}` — introduce a new patch for a file the
+  port doesn't currently touch.
+- `add_file{dest, source|content, kind}` — add a port-local file
+  (`kind=resource`) or materialize from the dragonfly source tree
+  (`kind=materialize`).
+- `change_makefile{path, key, value, op=set|append|remove}` —
+  Makefile/configure-arg edits.
+- `bump_portrevision{port}` — operator-flag intent (some intents
+  signal metadata changes rather than file edits).
+
+Each intent type spec: name, arguments + types, what compat-mode
+translates to, what dops-mode translates to, what the verification
+diff looks like.
+
+LOC: zero code; design doc only.
+
+**25b — translator module + intent dispatcher.**
+
+`dportsv3/agent/edit_intent/`:
+
+```
+__init__.py
+grammar.py       # @dataclass per intent type
+translator.py    # Translator(mode).apply(intent) -> EditResult
+_compat.py       # compat-mode renderers (one per intent type)
+_dops.py         # dops-mode renderers (one per intent type)
+```
+
+`Translator(mode).apply(intent)` returns an `EditResult` carrying
+the changed paths + the diff produced by *this specific intent*.
+This is the substitute for the broken `emit_diff` flow — every
+intent self-describes its change.
+
+Mode is resolved once at translator construction from
+`classify_dops`; the agent never sees it.
+
+LOC: ~250 (grammar + translator + per-mode renderers).
+
+**25c — new tool: `apply_intent`.**
+
+Replace today's mixed-surface edit tools (`put_file` against patch
+files, `install_patches`, `validate_dops`, direct `put_file`
+against `overlay.dops`) with a single tool the LLM calls:
+
+```python
+apply_intent(env, intent_json) -> {ok, kind, paths_changed, diff}
+```
+
+`put_file`, `install_patches`, and `validate_dops` stay in the tool
+registry but are no longer exposed to the patch agent's prompt —
+only the convert agent (whose job *is* to edit the overlay
+directly) keeps them. The patch agent's tool surface shrinks to
+`env_verify`, `materialize_dports`, `extract`, `get_file`, `grep`,
+`apply_intent`, `dsynth_build`.
+
+LOC: ~80 (tool wrapper + registry update).
+
+**25d — patch prompt rewrite.**
+
+`PATCH_SYSTEM` loses the "Two kinds of patches" framing and the
+dops vs compat decision tree. Replaces them with a short
+description of the intent grammar (one line per intent type) and
+points the agent at a new `intent_reference` tool for full
+syntax. The "Mandatory opening procedure" reduces — `classify_dops`
+is no longer something the agent has to think about.
+
+Behavior parity check: re-run devel/gperf, devel/libuv,
+archivers/liblz4 against the new prompt; assert the agent reaches
+`rebuild_ok=true` on each. (gperf in particular: the agent should
+emit `drop_patch{target: "patch-lib_getopt.c", reason: "obsolete:
+upstream gperf-3.3 unconditionally includes <string.h>"}` instead
+of a `put_file overlay.dops`.)
+
+LOC: ~150 net deletion from the prompt (the mode-handling sections
+were ~30% of `PATCH_SYSTEM`).
+
+**25e — diff capture via translator, not git.**
+
+The empty-diff bug from `devel_gperf-20260523-094119Z` was caused
+by `emit_diff` returning empty after `put_file` to `overlay.dops`
+(hypothesis: the diff baseline is snapshotted at job-start, not
+re-read at emit time). The translator-based path side-steps the
+bug entirely: each `apply_intent` call returns its own diff, the
+runner accumulates them, and `analysis/changes.diff` is the
+ordered concatenation of intent diffs. `emit_diff` retires as a
+patch-agent tool (kept for convert).
+
+Tests: a port with two intents applied produces a single
+`changes.diff` containing both diffs in order; the empty-diff
+regression case (dops `put_file` equivalent → `drop_patch` intent)
+produces a non-empty diff.
+
+LOC: ~80 (runner-side accumulator + retirement of the
+patch-agent emit_diff call).
+
+**25f — telemetry + audit trail.**
+
+Each intent application emits a `intent_applied` telemetry event
+(when Step 12's bus lands) or an `activity_log` row (in the
+meantime) carrying the intent type, paths changed, success bool,
+and rendered diff size. The tracker UI shows the intent sequence
+on the bundle/job page so an operator can read "agent emitted 1
+intent: drop_patch(patch-lib_getopt.c, reason=…)" without
+grepping `analysis/patch.md`.
+
+LOC: ~60 (logging + template).
+
+#### LOC estimate
+
+~620 net additions; ~150 net deletions (prompt + retired
+emit_diff). Behavior-preserving for the cases the patch agent
+already handles correctly; the gperf empty-diff class becomes
+impossible.
+
+#### Order
+
+25a → 25b → 25c → 25e → 25d → 25f.
+
+Design first (25a). Then translator (25b) — testable in isolation
+against canned intent inputs and assertable output diffs, no LLM
+needed. Then expose to the agent via the new tool (25c) but keep
+the existing tools in the registry so the prompt rewrite (25d)
+can be staged. Diff capture (25e) goes before the prompt swap so
+the new flow has its audit trail ready. Then swap the prompt
+(25d). Telemetry (25f) last because it's a layer on top of working
+behavior.
+
+#### Dependencies
+
+- **Hard:** Step 20 (the convert agent's edit surface stays as-is;
+  Step 25 only rewires the patch agent). Shipped.
+- **Soft:** Step 24 (prompts/quickref consolidation) — easier to
+  rewrite the patch prompt after the cleanup pass, since the
+  duplicated dops material in `PATCH_SYSTEM` would otherwise have
+  to be rewritten twice.
+- **Soft:** Step 12 (telemetry bus) — 25f's intent telemetry plugs
+  cleanly into the bus; without it, 25f writes to `activity_log`
+  directly and gets re-plumbed later.
+
+#### Why early in the priority order
+
+The architectural collision the gperf bundle made concrete — patch
+agent silently right on `needs_judgment` ports, silently wrong on
+the boundary cases — gets worse the more ports we convert to dops.
+Today the patch agent works because most ports are still compat.
+Each new dops port is a new opportunity for silent wrongness.
+Doing Step 25 sooner caps that risk before the dops/compat ratio
+inverts.
+
+The empty-diff bug from gperf is also load-bearing here: it's a
+symptom of the same "the agent's edit surface is whatever it
+guesses" problem. Step 25 makes the empty-diff class structurally
+impossible rather than papering over it with a `emit_diff`
+plumbing fix that would only survive until the next refactor.
+
+#### Out of scope
+
+- Rewriting the convert agent on top of intent. Convert's job *is*
+  to author overlay.dops; it needs the substrate-level tools. The
+  intent grammar is for patch (and any future agent whose job is
+  "make a change to a port", not "design a port").
+- A bidirectional intent ↔ raw-edit translator that lets operators
+  hand-edit compat patches and have intents inferred. Not the
+  problem we have.
+
+---
+
+## Current priority order (as of 2026-05-23)
+
+Replaces the trailing "Suggested updated order" lines scattered
+through the post-implementation sections, which were written
+before 9/10/20 shipped and before the gperf empty-diff bug
+surfaced.
+
+Shipped (no work needed): **1-10, 11a, 20**.
+
+Pending, in recommended order:
+
+1. **11b** — `verify-fix` subcommand. Closes the "agent says it's
+   fixed; can the operator trust it?" gap. Pairs with the gperf
+   empty-diff finding: verify-fix would have caught the bug.
+2. **11.0 (out-of-plan bugfix)** — diff capture in writable
+   overlay returns empty after dops `put_file`. Fix in-flight, not
+   tracked as a plan step (per operator decision). Subsumed by
+   25e once that lands.
+3. **25** — edit-intent DSL. Architectural; design (25a) first.
+   Can be developed in parallel with 11c/d once 25a is approved.
+4. **11c** — accept/reject in tracker. UX completion for the
+   delivery loop.
+5. **11d** — push to code-hosting providers. Closes the round
+   trip; gated on operator readiness.
+6. **24** — prompts/quickref consolidation. Cheap, no behavior
+   change. Recommended before 25d's prompt rewrite so the rewrite
+   isn't against a messy baseline.
+7. **16** — UX review (dashboard live-refresh + the rest).
+8. **23 → 22** — execution layer then steps.py refactor. 23 first
+   so 22's phase-helper extraction lands against the consolidated
+   `chroot_exec`.
+9. **21** — DB layer consolidation. Enables 17/18 to plug into a
+   clean write surface.
+10. **19** — playbooks. Needs operating corpus from 11/25
+    running in production.
+11. **12 → 13 → 14 → 15** — abstraction work. 12 unblocks the
+    others.
+12. **17 → 18** — remote runners + security. Only load-bearing
+    when a second builder appears.
+
+Rationale for the head of the order: the loop's first-class
+deliverable is "operator can land an agent-produced fix." Today
+that path is broken (empty diff, no verify, no accept button, no
+push). Closing 11b first is the single highest-impact change.
+Step 25 ranks early because it's the architectural answer to the
+same class of bug — and because every additional dops port that
+goes through patch under the current scheme is a new opportunity
+for silent wrongness.
