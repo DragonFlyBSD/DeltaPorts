@@ -82,21 +82,42 @@ def test_classify_needs_judgment_with_dragonfly_patches(tmp_path: Path) -> None:
     assert classify("devel/libuv-like", tmp_path) == "needs_judgment"
 
 
-def test_classify_converted_only_when_dragonfly_cleared(tmp_path: Path) -> None:
-    """A port with both ``overlay.dops`` AND ``dragonfly/`` files
-    is mid-migration, not converted — the agent should still
-    finish the job (move the remaining patches into dops where
-    possible)."""
-    port = _make_port(tmp_path, "devel/half-modern")
+def test_classify_converted_when_dops_plus_dragonfly_peers(tmp_path: Path) -> None:
+    """``dragonfly/*`` patch files ALONGSIDE ``overlay.dops`` is the
+    end state for ports that retain upstream-source patches — the
+    dops references them via ``file materialize``. These files
+    are NOT a migration debt; classify must return ``converted``.
+
+    (Regression test for the convert→resume loop we hit on libuv:
+    every triage→convert→resume cycle re-fired because the
+    classifier mistakenly treated dragonfly/ as legacy
+    artifacts even when overlay.dops was already in place.)"""
+    port = _make_port(tmp_path, "devel/dops-with-dragonfly")
     (port / "overlay.dops").write_text(
-        'target @main\nport devel/half-modern\ntype port\nreason "test"\n'
+        'target @main\nport devel/dops-with-dragonfly\ntype port\nreason "x"\n'
+        'file materialize dragonfly/patch-Makefile -> dragonfly/patch-Makefile\n'
     )
     dragonfly = port / "dragonfly"
     dragonfly.mkdir()
     (dragonfly / "patch-Makefile").write_text("--- a/M\n+++ b/M\n")
-    state = classify("devel/half-modern", tmp_path)
+    assert classify("devel/dops-with-dragonfly", tmp_path) == "converted"
+
+
+def test_classify_needs_judgment_when_dops_plus_makefile_dragonfly(
+    tmp_path: Path,
+) -> None:
+    """``Makefile.DragonFly`` alongside ``overlay.dops`` IS a
+    migration debt — those framework changes should be expressed
+    as ``mk`` ops in the dops. The agent should still finish the
+    migration."""
+    port = _make_port(tmp_path, "devel/half-migrated-mkfile")
+    (port / "overlay.dops").write_text(
+        'target @main\nport devel/half-migrated-mkfile\ntype port\nreason "x"\n'
+    )
+    (port / "Makefile.DragonFly").write_text("USES+=pkgconfig\n")
+    state = classify("devel/half-migrated-mkfile", tmp_path)
     assert state != "converted"
-    assert state == "needs_judgment"
+    assert state in ("auto_safe_pending", "needs_judgment")
 
 
 def test_classify_in_scope_with_targeted_makefile_dragonfly(tmp_path: Path) -> None:

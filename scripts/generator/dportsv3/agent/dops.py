@@ -103,11 +103,45 @@ def _detect_compat_artifacts(port_dir: Path) -> dict:
 
 
 def _has_compat_artifacts(detected: dict) -> bool:
-    """True if any compat (non-dops) overlay artifact is present."""
+    """True if any compat (non-dops) overlay artifact is present.
+
+    NOTE: includes ``dragonfly/`` — used for the "is this port in
+    scope?" gate at the top of :func:`classify`. For the
+    converted-vs-needs-work decision, use
+    :func:`_has_unmigrated_compat_artifacts` instead, which
+    treats ``dragonfly/`` as a peer of ``overlay.dops`` (the dops
+    legitimately stages those files into port_root via
+    ``file materialize``).
+    """
     return any(
         detected.get(key, False) for key in (
             "has_diffs", "has_dragonfly", "has_newport",
             "has_makefile_dragonfly", "has_makefile_dragonfly_targeted",
+        )
+    )
+
+
+def _has_unmigrated_compat_artifacts(detected: dict) -> bool:
+    """True if there's a compat artifact that should have been
+    migrated to dops form.
+
+    Excludes ``dragonfly/`` because those patch files are legitimate
+    peers of ``overlay.dops`` when the dops references them via
+    ``file materialize`` — keeping them isn't a migration debt, it's
+    the modern shape.
+
+    Also excludes ``diffs/`` for now: a dops may reference specific
+    diffs via ``patch apply diffs/X.diff`` (the fallback path for
+    framework patches the agent couldn't reduce to ``mk``/``text``
+    ops), and we can't tell from outside the dops which diffs are
+    referenced. Conservative classification treats diffs/ presence
+    as "needs LLM judgment" only when there's no overlay.dops; once
+    a dops exists the operator/agent has already decided.
+    """
+    return any(
+        detected.get(key, False) for key in (
+            "has_makefile_dragonfly", "has_makefile_dragonfly_targeted",
+            "has_newport",
         )
     )
 
@@ -125,9 +159,15 @@ def classify(origin: str, repo_root: Path) -> str:
 
     has_dops = detected["has_dops"]
     has_compat = _has_compat_artifacts(detected)
+    has_unmigrated = _has_unmigrated_compat_artifacts(detected)
 
-    # Converted = dops file present and no compat artifacts left.
-    if has_dops and not has_compat:
+    # Converted = dops file present and no UNMIGRATED legacy
+    # artifacts. dragonfly/ patches alongside dops are fine —
+    # the dops references them via file materialize. diffs/ likewise
+    # may be referenced via patch apply diffs/X.diff. Only
+    # Makefile.DragonFly* + newport/ are unambiguous "should have
+    # been migrated to dops" signals.
+    if has_dops and not has_unmigrated:
         return "converted"
 
     # No compat and no dops shouldn't happen — guard against it.
