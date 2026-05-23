@@ -2732,3 +2732,125 @@ unbounded-timeout foot-gun made it concrete. Now's the time.
 touch every ``_exec`` call site; doing 23 first means 22b ships
 against the consolidated helper rather than refactoring two
 parallel ones.
+
+### Step 24 — prompts + quickref consolidation
+
+Surfaced during Step 20 smoke testing: ``CONVERT_SYSTEM`` and
+``dops_quickref.md`` have grown by accretion as each smoke-test
+finding got jammed into whichever doc was open at the moment.
+Result: the same op-specific clarification ("``file.copy`` is
+within-port_root, ``file.materialize`` is overlay→port_root";
+"never ``patch apply dragonfly/*``") now lives in three different
+places, drifts independently when corrections happen, and bloats
+the agent's payload on every call.
+
+The two docs should have different jobs and stop overlapping.
+
+#### Goal
+
+- **``dops_quickref.md``** is the *complete reference* for the
+  DSL. Every op has shape + semantics + common-pitfalls note +
+  example. Self-contained — it's what the agent reads when it
+  calls ``dops_reference``.
+- **``CONVERT_SYSTEM``** is the *job description*. Goal,
+  classification framing, tool surface (one line each, deferring
+  to quickref for syntax detail), procedure, response contract.
+  Strip the embedded syntax-reference duplication.
+- Each fact about an op lives in exactly one place. Bright-line
+  rules ("never ``patch apply dragonfly/*``") live with the
+  most relevant op in the quickref, with a one-line reminder
+  in the procedure if needed.
+
+No behavior change. The agent's outputs should be identical
+across the cleanup; the prompt just gets shorter.
+
+#### Sub-steps
+
+**24a — inventory current duplications + drift.**
+
+Grep both files for each op name + each bright-line rule, find
+the duplicated paragraphs, pick the canonical home for each.
+Output is a small audit table; gives the cleanup a flight plan
+so 24b can be mechanical.
+
+LOC: zero code; one audit table in the commit message.
+
+**24b — consolidate the quickref.**
+
+For every op, ensure exactly one canonical entry in the quickref
+with:
+- Shape (one-line syntax).
+- Semantics (1–2 sentences).
+- Common pitfall / easy-confusion note (where relevant).
+- One example.
+
+Move framework-knowledge sections ("Two kinds of patches",
+"When to use which" table) into the quickref if they aren't
+already there exclusively.
+
+LOC: ~50 net deletions (deduped paragraphs).
+
+**24c — strip ``CONVERT_SYSTEM``.**
+
+Remove the embedded "dops syntax reference" subsection that
+duplicates the quickref. Replace with one line: "See the
+``dops_reference`` tool for the full op syntax; this prompt only
+covers what's specific to convert (classification + procedure +
+response contract)."
+
+Strip bright-line rules from the procedure where they're already
+in the quickref; keep at most one-line reminders ("classification
+rules — see quickref's 'Two kinds of patches'").
+
+LOC: ~80 net deletions from the prompt.
+
+**24d — token-cost measurement.**
+
+After 24b+24c, re-measure ``CONVERT_SYSTEM`` token count vs
+pre-cleanup baseline. Convert payload size measured against a
+real port (devel/libuv has been the canonical reproducer). Goal:
+prompt + quickref combined is smaller than today, agent behavior
+unchanged on smoke tests. If unchanged behavior + lower tokens,
+the cleanup paid off.
+
+LOC: a tiny measurement script under ``scripts/`` if it doesn't
+already exist; otherwise just `wc -w` + manual diff.
+
+#### LOC estimate
+
+Net ~-130 lines across the two files. No code changes; no test
+changes. Behavior preservation verified by re-running a known
+convert (libuv) before/after and asserting identical
+``put_file`` writes from the agent.
+
+#### Order
+
+24a → 24b → 24c → 24d. Audit first (so 24b/c know what to move
+where); quickref before prompt because the prompt will start
+referencing the quickref by section; measurement last as the
+acceptance check.
+
+#### Dependencies
+
+- **Hard:** none.
+- **Soft:** none. Can run anytime after Step 20 stabilizes —
+  this is purely the documentation half of the same accretion
+  problem 21/22/23 address for code.
+
+#### Why not earlier
+
+Same answer as 21/22/23: the docs grew opportunistically because
+we were chasing real bugs. Each correction was best landed
+quickly; the cleanup pass is what comes after the bug-fix
+cadence quiets down.
+
+#### Suggested updated order
+
+10 → 20 → 11 → 16 → 21 → 23 → 22 → 24 → 19 → 12/13 → 17/18 → 14/15.
+
+24 slots right after 22 — both touch the agent layer, both are
+no-behavior-change consolidation, and 22's phase-helper
+extraction may surface more opportunities for prompt
+simplification (e.g. if `assemble_payload` becomes the natural
+home for some structured tool-surface description, that's a
+cue to drop one more duplication from the prompt).
