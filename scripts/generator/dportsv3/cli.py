@@ -34,6 +34,8 @@ def create_parser() -> argparse.ArgumentParser:
     _register_tracker_parser(subparsers)
     _register_artifact_store_parser(subparsers)
     _register_agent_queue_runner_parser(subparsers)
+    from dportsv3.verify_fix import register_parser as _reg_verify_fix
+    _reg_verify_fix(subparsers)
     return parser
 
 
@@ -616,6 +618,10 @@ def main(argv: list[str] | None = None) -> int:
             )
             return 1
         return cmd_tracker(args)
+
+    if args.command == "verify-fix":
+        from dportsv3.verify_fix import cmd_verify_fix
+        return cmd_verify_fix(args)
 
     print(f"Unknown command: {args.command}", file=sys.stderr)
     return 1
