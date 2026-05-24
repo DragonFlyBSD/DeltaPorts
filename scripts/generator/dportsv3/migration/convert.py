@@ -130,6 +130,8 @@ def convert_record(
         result["errors"].append("bucket_not_auto_safe")
         return result
 
+    mk_path = port_path / "Makefile.DragonFly"
+
     if dops_path.exists():
         source = dops_path.read_text()
         parsed = parse_dsl(source, dops_path)
@@ -155,9 +157,13 @@ def convert_record(
             d.code
             for d in parsed.diagnostics + checked.diagnostics + planned.diagnostics
         ]
+        # The legacy Makefile.DragonFly keeps `classify_dops` returning
+        # `auto_safe_pending` forever, which loops the runner. A
+        # valid overlay.dops is the migrated form — drop the source.
+        if not dry_run and mk_path.exists():
+            mk_path.unlink()
         return result
 
-    mk_path = port_path / "Makefile.DragonFly"
     if not mk_path.exists():
         result["status"] = "blocked"
         result["errors"].append("missing_makefile_dragonfly")
@@ -202,6 +208,8 @@ def convert_record(
         result["status"] = "converted"
         if not dry_run:
             dops_path.write_text(source)
+            if mk_path.exists():
+                mk_path.unlink()
     else:
         result["status"] = "failed"
 

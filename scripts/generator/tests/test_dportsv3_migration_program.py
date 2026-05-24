@@ -63,6 +63,44 @@ def test_converter_writes_overlay_dops_for_auto_safe(tmp_path: Path) -> None:
     assert result["plan_ok"] is True
     assert result["deterministic_ok"] is True
     assert dops_path.exists()
+    # The legacy source file must be removed after a successful
+    # conversion: leaving it in place keeps `classify_dops` returning
+    # `auto_safe_pending`, which loops the runner.
+    assert not (repo / "ports" / "devel" / "tool" / "Makefile.DragonFly").exists()
+
+
+def test_converter_removes_legacy_makefile_on_revalidate(tmp_path: Path) -> None:
+    """Second-pass `convert_record` against an already-converted port
+    must still drop a stray Makefile.DragonFly (e.g. one re-introduced
+    by a partial revert) so the runner can escape the
+    auto_safe_pending loop without a fresh re-render."""
+    repo = _make_repo(tmp_path)
+    inventory = scan_inventory(repo)
+    classified = classify_inventory(inventory)
+    record = next(row for row in classified if row["origin"] == "devel/tool")
+
+    convert_record(record, repo_root=repo, dry_run=False)
+    port = repo / "ports" / "devel" / "tool"
+    (port / "Makefile.DragonFly").write_text("dummy resurrected\n")
+
+    result = convert_record(record, repo_root=repo, dry_run=False)
+
+    assert result["status"] == "converted"
+    assert not (port / "Makefile.DragonFly").exists()
+    assert (port / "overlay.dops").exists()
+
+
+def test_converter_dry_run_leaves_makefile_alone(tmp_path: Path) -> None:
+    repo = _make_repo(tmp_path)
+    inventory = scan_inventory(repo)
+    classified = classify_inventory(inventory)
+    record = next(row for row in classified if row["origin"] == "devel/tool")
+
+    result = convert_record(record, repo_root=repo, dry_run=True)
+
+    assert result["status"] == "converted"
+    assert (repo / "ports" / "devel" / "tool" / "Makefile.DragonFly").exists()
+    assert not (repo / "ports" / "devel" / "tool" / "overlay.dops").exists()
 
 
 def test_batch_policy_and_progress_reports(tmp_path: Path) -> None:

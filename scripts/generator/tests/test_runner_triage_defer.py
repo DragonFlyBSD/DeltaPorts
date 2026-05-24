@@ -324,3 +324,55 @@ def test_find_active_convert_job_filters_by_origin_target(
     assert found_foo is not None and "devel_foo" in found_foo
     assert found_bar is not None and "devel_bar" in found_bar
     assert found_baz is None
+
+
+def test_circuit_breaker_blocks_redefer_after_recent_convert_done(
+    tmp_path: Path, monkeypatch, state_db,
+) -> None:
+    """Recurrence guard: if a convert for (origin, target) already
+    reached DONE but classify still says auto_safe_pending,
+    `_maybe_defer_to_convert` must NOT re-enqueue another convert
+    (which would loop the runner). It returns None and lets triage
+    proceed instead."""
+    from dportsv3.agent.runner import _maybe_defer_to_convert, enqueue_convert_job
+
+    repo = _make_repo(tmp_path)
+    port = _make_port(repo, "devel/looper")
+    # auto_safe_pending state: legacy Makefile.DragonFly present,
+    # no overlay.dops. Classify will say "needs conversion."
+    (port / "Makefile.DragonFly").write_text(
+        'USES+= ssl\ndfly-patch:\n\t${REINPLACE_CMD} -e "s/a/b/" file\n'
+    )
+    monkeypatch.setenv("DP_HARNESS_REPO_ROOT", str(repo))
+    queue_root = _make_queue(tmp_path)
+
+    # Stage a recent done convert for this origin/target.
+    convert_path = enqueue_convert_job(
+        queue_root, origin="devel/looper", target="@main",
+        profile="main", requested_by="operator",
+    )
+    cid = convert_path.name
+    lifecycle_apply(state_db, cid, JobEvent.CLAIM)
+    lifecycle_apply(state_db, cid, JobEvent.CONVERT_START)
+    lifecycle_apply(state_db, cid, JobEvent.CONVERT_OK)
+    state_db.execute(
+        "UPDATE jobs SET type = 'convert', origin = ?, target = ? WHERE job_id = ?",
+        ("devel/looper", "@main", cid),
+    )
+
+    job_path = queue_root / "pending" / "triage-loop.job"
+    job_path.write_text("type=triage\norigin=devel/looper\n")
+    _bootstrap_triage_job(state_db, queue_root, job_path.name)
+
+    job = {"origin": "devel/looper", "target": "@main", "profile": "main"}
+    result = _maybe_defer_to_convert(
+        queue_root=queue_root, job=job, job_path=job_path,
+        origin="devel/looper",
+    )
+
+    # Triage must proceed (None), no second convert enqueued.
+    assert result is None, "circuit breaker should let triage run"
+    open_converts = [
+        p for p in queue_root.glob("pending/*-convert.job") if p.name != cid
+    ]
+    assert open_converts == [], "no new convert should be enqueued"

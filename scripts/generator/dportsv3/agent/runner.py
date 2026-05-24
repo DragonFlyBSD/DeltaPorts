@@ -1632,6 +1632,43 @@ def _resume_deferred_triage(
     return new_path.name
 
 
+def _recent_successful_convert(
+    origin: str, target: str, window_seconds: int = 600,
+) -> str | None:
+    """Return job_id of a convert for (origin, target) that reached DONE
+    within ``window_seconds``, else None.
+
+    Used as a circuit breaker in `_maybe_defer_to_convert`: if a convert
+    just succeeded for this origin but classify still says "needs
+    conversion", the defer→convert→resume cycle is stuck (the convert
+    cannot move the port out of `auto_safe_pending` for some reason).
+    Refusing to re-defer breaks the loop and lets triage run with the
+    state-as-is so the operator sees the bug instead of a runaway queue.
+    """
+    global _state_db_conn
+    if _state_db_conn is None:
+        return None
+    cutoff = (
+        datetime.now(timezone.utc) - timedelta(seconds=window_seconds)
+    ).strftime("%Y-%m-%dT%H:%M:%SZ")
+    try:
+        row = _state_db_conn.execute(
+            """SELECT job_id FROM jobs
+               WHERE type = 'convert'
+                 AND state = 'done'
+                 AND origin = ?
+                 AND (target = ? OR (? = '' AND (target IS NULL OR target = '')))
+                 AND last_seen_at >= ?
+               ORDER BY last_seen_at DESC LIMIT 1""",
+            (origin, target, target, cutoff),
+        ).fetchone()
+    except sqlite3.Error:
+        return None
+    if row is None:
+        return None
+    return row[0] if not hasattr(row, "keys") else row["job_id"]
+
+
 def _find_active_convert_job(origin: str, target: str) -> str | None:
     """Return job_id of an open convert job for (origin, target), if any.
 
@@ -1884,6 +1921,30 @@ def _maybe_defer_to_convert(
     if state not in ("auto_safe_pending", "needs_judgment"):
         # converted / stale / not_in_scope all mean "no conversion
         # needed". Let triage run.
+        return None
+
+    recent_done = _recent_successful_convert(origin, target)
+    if recent_done is not None:
+        log(queue_root, "WARN",
+            f"refusing to re-defer triage for {origin!r}: convert "
+            f"{recent_done} already succeeded but classify still says "
+            f"{state!r}; proceeding with triage to surface the bug")
+        try:
+            activity_log(
+                queue_root,
+                "triage_defer_circuit_break",
+                (
+                    f"convert {recent_done} succeeded but classify still "
+                    f"{state}; proceeding with triage"
+                ),
+                job_id=job_path.name,
+                extra={
+                    "recent_convert_job_id": recent_done,
+                    "dops_state": state,
+                },
+            )
+        except Exception as exc:
+            log(queue_root, "WARN", f"activity_log failed in circuit-break: {exc}")
         return None
 
     existing = _find_active_convert_job(origin, target)
