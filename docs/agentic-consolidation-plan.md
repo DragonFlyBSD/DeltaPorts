@@ -222,6 +222,20 @@ retry loop:
 6. Retry caps distinguish repeated build failures from failed automated
    patch attempts.
 
+### Snapshot (2026-05-24)
+
+For the canonical pending-work order see **[Current priority order](#current-priority-order-as-of-2026-05-24)** at the
+bottom. One-line summary:
+
+- **Shipped:** Steps 1–10, 11a, 20 (plus three post-shipment fixes
+  to 20 — see "Post-shipment fixes" subsection there).
+- **Next:** 11b (verify-fix) → 25 (edit-intent DSL) → 11c/d
+  (accept/reject + push) → 26 items 1–4 (lifecycle hardening:
+  lineage, transient-fail, state timeouts, originating_bundle_id).
+- **New steps since last edit:** Step 26 (lifecycle hardening
+  backlog) — folded in from the brittleness analysis after the
+  libunistring/python312/liblz4 incidents.
+
 ### Step 1 — improve bundle artifact reading — done
 
 Status: shipped via tracker artifact viewer, inline bundle-page previews,
@@ -2232,6 +2246,54 @@ ongoing; the implementation cost is one step.
 
 10 → 20 → 11 → 16 → 19 → 12/13 → 17/18 → 14/15.
 
+#### Post-shipment fixes (2026-05-24)
+
+Three substantive corrections to the Step 20 dispatch landed during
+smoke testing. None expand the design; they harden it against bugs
+that surfaced on real ports.
+
+- **`5369db9fd4e` — break infinite triage/convert loop on auto-safe
+  ports.** `convert_record` wrote `overlay.dops` but never removed
+  `Makefile.DragonFly`. `classify_dops` requires `has_dops AND NOT
+  has_unmigrated` to return `converted`; with both files present it
+  returned `auto_safe_pending` forever, so the
+  triage→defer→convert→resume cycle never terminated.
+  `devel/libunistring` spun up 100+ paired jobs in ~13 minutes.
+  Two fixes: `convert_record` now `mk_path.unlink()` after a
+  successful write, and `_maybe_defer_to_convert` got a wall-clock
+  circuit breaker (`_recent_successful_convert`) that refuses to
+  re-defer if a convert reached DONE for this `(origin, target)`
+  within the last 10 minutes.
+- **`ccab8ebad88` — unify overlay assessment across host and
+  chroot.** Pulled the "is this port converted / auto-safe /
+  needs-judgment / not-in-scope" logic into a new
+  `dportsv3.agent.overlay_state` module shared by host-side tooling
+  (`dops.classify`) and the in-chroot probe (`worker.classify_dops`).
+  Two collectors (`facts_from_repo`, `worker.probe_overlay_facts`)
+  build identical `OverlayFacts`; one `assess_overlay` rule set
+  decides the verdict. `OverlayAssessment.action` drives the runner
+  dispatch: `surface_invariant` (e.g. `overlay.dops` +
+  `Makefile.DragonFly` coexist) refuses to defer and logs
+  `triage_defer_invariant_break` so the broken half-migration is
+  visible instead of spinning another convert loop. The
+  substrate-drift bug that let host and chroot disagree on the same
+  port is structurally gone.
+- **`300b7b1e96a` — jobs inherit target from their bundle.** The
+  tracker's `token_usage_for_port` JOIN was filtering by
+  `j.target = bundle.target` while triage and patch jobs landed
+  with `target=NULL` (the hook runs with a possibly-empty
+  `DPORTSV3_TRACKER_TARGET` env var, and the client strips empty
+  strings out of the detail dict). The "Lifetime token cost"
+  card was silently suppressed even when the artifacts had the
+  numbers. Fixed in three places — `runner._lookup_bundle_target`
+  + `_register_new_job` backfill, server-side
+  `apply_transition` fallback with `--bundle-id` plumbed through
+  artifact-store-client + hook_common.sh, and
+  `enqueue_patch_job` now writes `target=` into the .job file
+  content so `proposed_fix.md` stops rendering `Target: (none)`.
+  Also folded into `proposed_fix.md`: triage tokens now appear
+  separately + a combined total.
+
 ### Step 21 — DB layer consolidation pass — pending
 
 Scan during smoke testing of Step 20: 120 raw ``conn.execute`` calls
@@ -3092,41 +3154,143 @@ plumbing fix that would only survive until the next refactor.
   hand-edit compat patches and have intents inferred. Not the
   problem we have.
 
+### Step 26 — lifecycle hardening backlog — pending
+
+The libunistring and python312 incidents both passed an individually
+legal sequence of FSM transitions. The bugs were structural: the
+per-job state machine in `dportsv3.agent.lifecycle` is clean and
+testable, but the cross-job orchestration (the seams between triage,
+patch, convert, and the resume-deferred-triage edge) has no
+first-class concept of lineage, attempt count, transient failure, or
+in-state timeout. Bugs hide in the seams. Today's circuit breaker
+is a wall-clock workaround for a missing structural primitive.
+
+See `docs/agentic-loop-brittleness-brief.md` for the full FSM
+diagram, the per-call orchestration paths, and the file:line refs.
+This step turns the 9-item backlog there into shippable work.
+
+#### Scope
+
+In recommended order; each item is independently shippable:
+
+1. **Lineage + attempt counter on `jobs`.** Add
+   `originating_bundle_id` and `attempt_n` (or `lineage_id`)
+   columns. `_maybe_defer_to_convert` caps defers per lineage in
+   the FSM, not in wall-clock. Removes the need for
+   `_recent_successful_convert`.
+2. **`TRANSIENT_FAIL` → re-queue edge.** Today every failure goes
+   straight to DEAD. A transient verifier crash or chroot blip
+   kills the job. Add an event that loops back to CLAIMED, gated
+   by the lineage attempt counter.
+3. **Per-state timeout sweep.** Equivalent of `reap_stale_queued`
+   for in-flight states. PATCHING/CONVERTING jobs hung indefinitely
+   only die on next runner restart.
+4. **`originating_bundle_id` for resolution propagation.**
+   `_EVENT_TO_RESOLUTION` only fires when callers thread
+   `detail={"bundle_id": ...}`. Convert jobs have no bundle;
+   resumed triages may have empty-string bundle_id. The bundle's
+   `resolution` can stay NULL after a fix lands. A DB column +
+   join replaces the thread-the-needle convention. (Partially
+   addressed by `300b7b1e96a` for the target column; this is the
+   same shape applied to bundle_id.)
+5. **Collapse the three interrupt blocks.** `ENV_BROKEN`,
+   `REAP_ORPHAN`, `ABANDON` each enumerate 6 hand-typed rows over
+   the in-flight states (18 entries total). Derive from
+   `_INFLIGHT_STATES`.
+6. **Reconcile cache vs log readers.** `_read_current_locked` is
+   log-first, `current()` is cache-first. Pick one.
+7. **`CONVERT_START` before vs after the work.** Today
+   `convert_record` writes the file *then* fires CONVERT_START →
+   CONVERT_OK quickly. Idempotent, so crash mid-sequence is fine,
+   but the log doesn't distinguish "work attempted, not confirmed"
+   from "work confirmed." Split into pre-work CONVERT_START + post-
+   work CONVERT_OK with a recoverable intermediate state.
+8. **`TRIAGING → ESCALATE_MANUAL`.** Triage can only escalate
+   from TRIAGED. Unparseable LLM responses or partial-write
+   failures can't ask for operator help; they land TRIAGE_FAIL →
+   DEAD instead.
+9. **Split `REAP_ORPHAN` into `REAP_STALE_QUEUED` (QUEUED-only)
+   and `REAP_ORPHAN` (in-flight-only).** The FSM enforces the
+   split the comment currently asks readers to enforce by
+   convention.
+
+#### Why now
+
+Three bugs in one week (libunistring loop, python312 wasted patch
+budget, archivers/liblz4 missing token card) all root-caused to the
+seams between FSM transitions and the orchestration layer above
+them. The bugs are getting harder to find (each one needed a
+dedicated analyzer pass) and the fixes are getting larger (the
+circuit breaker is 30 lines; lineage tracking is closer to 100 but
+makes the circuit breaker delete-able). The cost of leaving items
+1-3 specifically un-addressed compounds with every new port that
+hits a transient issue.
+
+#### Dependencies
+
+- **Hard:** Step 21 (DB layer consolidation) — items 1 and 4 add
+  columns; landing them on the consolidated write surface avoids
+  a second schema migration.
+- **Soft:** Step 22 (steps.py refactor) — item 7's CONVERT_START
+  split is cleaner if it lands against the consolidated phase
+  helpers.
+- **No blocker.** Items 5, 6, 8, 9 are pure FSM cleanups and can
+  ship independently of any other step.
+
+#### Out of scope
+
+- A general "retry policy" engine. The TRANSIENT_FAIL edge is a
+  primitive; what counts as transient is a per-call decision, not
+  a config-driven policy.
+- Job graph visualizations or lineage UIs. The columns enable
+  those; the UI work is Step 16 territory.
+
 ---
 
-## Current priority order (as of 2026-05-23)
+## Current priority order (as of 2026-05-24)
 
-Replaces the trailing "Suggested updated order" lines scattered
-through the post-implementation sections, which were written
-before 9/10/20 shipped and before the gperf empty-diff bug
-surfaced.
+Replaces every "Suggested updated order" line scattered through the
+post-implementation sections.
 
-Shipped (no work needed): **1-10, 11a, 20**.
+Shipped (no work needed):
+
+- **1–10, 11a, 20** (per-step status above).
+- **11.0** (out-of-plan) — empty-`changes.diff` bug. Fixed
+  `2d9de6c4edc`. Will be subsumed by 25e when that lands; not
+  rolled back.
+- **Step 20 post-shipment fixes** (`5369db9fd4e`, `ccab8ebad88`,
+  `300b7b1e96a`) — convert-loop break + circuit breaker, overlay
+  assessment unification (host/chroot drift gone), bundle-target
+  propagation (token cost card renders).
 
 Pending, in recommended order:
 
 1. **11b** — `verify-fix` subcommand. Closes the "agent says it's
-   fixed; can the operator trust it?" gap. Pairs with the gperf
-   empty-diff finding: verify-fix would have caught the bug.
-2. **11.0 (out-of-plan bugfix)** — diff capture in writable
-   overlay returns empty after dops `put_file`. Fix in-flight, not
-   tracked as a plan step (per operator decision). Subsumed by
-   25e once that lands.
-3. **25** — edit-intent DSL. Architectural; design (25a) first.
+   fixed; can the operator trust it?" gap. Highest single-impact
+   change; would have caught the gperf empty-diff bug
+   independently.
+2. **25** — edit-intent DSL. Architectural; design (25a) first.
    Can be developed in parallel with 11c/d once 25a is approved.
-4. **11c** — accept/reject in tracker. UX completion for the
+3. **11c** — accept/reject in tracker. UX completion for the
    delivery loop.
-5. **11d** — push to code-hosting providers. Closes the round
+4. **11d** — push to code-hosting providers. Closes the round
    trip; gated on operator readiness.
+5. **26 (items 1–4 first)** — lifecycle hardening: lineage +
+   attempt counter, `TRANSIENT_FAIL` edge, per-state timeout,
+   `originating_bundle_id` for resolution propagation. Three
+   incidents this week traced to seam-level bugs the wall-clock
+   circuit breaker only papered over. Items 5–9 of Step 26 are
+   pure FSM cleanups and can interleave whenever.
 6. **24** — prompts/quickref consolidation. Cheap, no behavior
-   change. Recommended before 25d's prompt rewrite so the rewrite
-   isn't against a messy baseline.
+   change. Before 25d's prompt rewrite so it isn't against a
+   messy baseline.
 7. **16** — UX review (dashboard live-refresh + the rest).
 8. **23 → 22** — execution layer then steps.py refactor. 23 first
    so 22's phase-helper extraction lands against the consolidated
    `chroot_exec`.
 9. **21** — DB layer consolidation. Enables 17/18 to plug into a
-   clean write surface.
+   clean write surface. Also the natural landing site for Step 26
+   items 1 + 4 (the column adds).
 10. **19** — playbooks. Needs operating corpus from 11/25
     running in production.
 11. **12 → 13 → 14 → 15** — abstraction work. 12 unblocks the
@@ -3136,9 +3300,9 @@ Pending, in recommended order:
 
 Rationale for the head of the order: the loop's first-class
 deliverable is "operator can land an agent-produced fix." Today
-that path is broken (empty diff, no verify, no accept button, no
-push). Closing 11b first is the single highest-impact change.
-Step 25 ranks early because it's the architectural answer to the
-same class of bug — and because every additional dops port that
-goes through patch under the current scheme is a new opportunity
-for silent wrongness.
+that path is broken (no verify, no accept button, no push).
+Closing 11b first is the single highest-impact change. Step 25
+ranks early because it's the architectural answer to the
+empty-diff/edit-surface class of bug. Step 26 items 1–4 rank
+above 24/16 because three lifecycle bugs in one week is a
+warning, not a coincidence.
