@@ -1890,7 +1890,6 @@ def _maybe_defer_to_convert(
     park this triage at ESCALATED so the manual queue surfaces
     the chain.
     """
-    from dportsv3.agent.dops import classify as classify_dops
     from dportsv3.agent.lifecycle import JobEvent
 
     target = job.get("target") or os.environ.get(
@@ -1912,13 +1911,34 @@ def _maybe_defer_to_convert(
 
     from dportsv3.agent import worker
     try:
-        state = worker.classify_dops(env_name, origin)
+        assessment = worker.assess_dops(env_name, origin)
     except Exception as exc:
         log(queue_root, "WARN",
-            f"classify_dops({origin!r}) failed: {exc}; proceeding with triage")
+            f"assess_dops({origin!r}) failed: {exc}; proceeding with triage")
         return None
 
-    if state not in ("auto_safe_pending", "needs_judgment"):
+    state = assessment.state
+    if assessment.action == "surface_invariant":
+        log(queue_root, "WARN",
+            f"refusing to defer triage for {origin!r}: overlay assessment "
+            f"found invariant violations {assessment.invariant_violations!r}; "
+            f"state={state!r} reasons={assessment.reasons!r}")
+        try:
+            activity_log(
+                queue_root,
+                "triage_defer_invariant_break",
+                (
+                    f"overlay invariant violation; proceeding with triage "
+                    f"(state={state})"
+                ),
+                job_id=job_path.name,
+                extra=assessment.to_log_dict(),
+            )
+        except Exception as exc:
+            log(queue_root, "WARN", f"activity_log failed in invariant-break: {exc}")
+        return None
+
+    if assessment.action != "defer_to_convert":
         # converted / stale / not_in_scope all mean "no conversion
         # needed". Let triage run.
         return None
@@ -1941,6 +1961,7 @@ def _maybe_defer_to_convert(
                 extra={
                     "recent_convert_job_id": recent_done,
                     "dops_state": state,
+                    "assessment": assessment.to_log_dict(),
                 },
             )
         except Exception as exc:
@@ -1971,6 +1992,7 @@ def _maybe_defer_to_convert(
         "deferred_for_convert": True,
         "convert_job_id": convert_job_id,
         "dops_state": state,
+        "assessment": assessment.to_log_dict(),
     }
     try:
         activity_log(

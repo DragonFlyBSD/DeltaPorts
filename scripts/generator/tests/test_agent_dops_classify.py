@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from dportsv3.agent.dops import classify
+from dportsv3.agent.dops import assess, classify
 
 
 def _make_port(root: Path, origin: str) -> Path:
@@ -118,6 +118,10 @@ def test_classify_needs_judgment_when_dops_plus_makefile_dragonfly(
     state = classify("devel/half-migrated-mkfile", tmp_path)
     assert state != "converted"
     assert state in ("auto_safe_pending", "needs_judgment")
+    assessment = assess("devel/half-migrated-mkfile", tmp_path)
+    assert assessment.action == "surface_invariant"
+    assert "dops_with_unmigrated_makefile_dragonfly" in assessment.invariant_violations
+    assert "Makefile.DragonFly" in assessment.unmigrated_artifacts
 
 
 def test_classify_in_scope_with_targeted_makefile_dragonfly(tmp_path: Path) -> None:
@@ -151,6 +155,23 @@ def test_classify_needs_judgment_with_newport(tmp_path: Path) -> None:
     newport.mkdir()
     (newport / "Makefile").write_text("PORTNAME=foo\n")
     assert classify("devel/with-newport", tmp_path) == "needs_judgment"
+
+
+def test_assess_converted_when_dops_plus_diffs_peers(tmp_path: Path) -> None:
+    """diffs/*.diff can be referenced by dops and is allowed beside it."""
+    port = _make_port(tmp_path, "devel/dops-with-diffs")
+    (port / "overlay.dops").write_text(
+        'target @main\nport devel/dops-with-diffs\ntype port\nreason "x"\n'
+        'patch apply diffs/fix.diff\n'
+    )
+    diffs = port / "diffs"
+    diffs.mkdir()
+    (diffs / "fix.diff").write_text("--- a/x\n+++ b/x\n")
+
+    assessment = assess("devel/dops-with-diffs", tmp_path)
+    assert assessment.state == "converted"
+    assert assessment.action == "proceed_triage"
+    assert "diffs_allowed_with_dops" in [r.code for r in assessment.rules]
 
 
 def test_classify_needs_judgment_when_dops_and_legacy_coexist(tmp_path: Path) -> None:

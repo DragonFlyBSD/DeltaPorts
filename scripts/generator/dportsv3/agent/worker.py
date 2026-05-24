@@ -706,6 +706,101 @@ def materialize_dports(env: str, origin: str) -> dict:
 WRKDIRPREFIX = "/work/obj"
 
 
+def probe_overlay_facts(env: str, origin: str):
+    """Collect raw overlay facts from inside the dev-env chroot."""
+    from dportsv3.agent.overlay_state import (  # noqa: PLC0415
+        OverlayFacts,
+        makefile_dragonfly_text_auto_safe,
+    )
+
+    cmd = r'''
+set -u
+PORT="$DELTAPORTS_ROOT/ports/$1"
+[ -d "$PORT" ] || { echo MISSING=1; exit 0; }
+echo MISSING=0
+[ -e "$PORT/overlay.dops" ] && echo DOPS=1 || echo DOPS=0
+for f in "$PORT"/Makefile.DragonFly "$PORT"/Makefile.DragonFly.@any; do
+    [ -e "$f" ] && echo MKDFLY=${f##*/}
+done
+for f in "$PORT"/Makefile.DragonFly.*; do
+    [ -e "$f" ] || continue
+    case "${f##*/}" in Makefile.DragonFly.@any) continue ;; esac
+    echo TARGET_MKDFLY=${f##*/}
+done
+if [ -d "$PORT/dragonfly" ]; then
+    find "$PORT/dragonfly" -type f | sed "s|^$PORT/||; s|^|DRAGONFLY_FILE=|"
+fi
+if [ -d "$PORT/diffs" ]; then
+    find "$PORT/diffs" -type f \( -name '*.diff' -o -name '*.patch' \) \
+        | sed "s|^$PORT/||; s|^|DIFF_FILE=|"
+fi
+[ -d "$PORT/newport" ] && echo NEWPORT=1 || echo NEWPORT=0
+'''
+    p = _exec(env, "/bin/sh", "-c", cmd, "_", origin)
+    if p.returncode != 0:
+        raise RuntimeError(
+            f"overlay fact probe failed for {origin!r} in env "
+            f"{env!r} (rc={p.returncode}): "
+            f"{(p.stderr or '').strip()[:300]}"
+        )
+
+    flags: dict[str, list[str] | bool] = {
+        "MKDFLY": [],
+        "TARGET_MKDFLY": [],
+        "DRAGONFLY_FILE": [],
+        "DIFF_FILE": [],
+    }
+    for line in (p.stdout or "").splitlines():
+        if "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key = key.strip()
+        value = value.strip()
+        if key in {"MKDFLY", "TARGET_MKDFLY", "DRAGONFLY_FILE", "DIFF_FILE"}:
+            flags.setdefault(key, [])
+            assert isinstance(flags[key], list)
+            flags[key].append(value)
+        else:
+            flags[key] = value == "1"
+
+    if flags.get("MISSING"):
+        return OverlayFacts(origin=origin, port_exists=False)
+
+    makefiles = tuple(sorted(flags.get("MKDFLY") or ()))
+    targeted = tuple(sorted(flags.get("TARGET_MKDFLY") or ()))
+    auto_safe = False
+    reasons: list[str] = []
+    if len(makefiles) == 1 and makefiles[0] == "Makefile.DragonFly":
+        cat_cmd = 'cat "$DELTAPORTS_ROOT/ports/$1/Makefile.DragonFly"'
+        cat = _exec(env, "/bin/sh", "-c", cat_cmd, "_", origin)
+        if cat.returncode == 0:
+            auto_safe, reason = makefile_dragonfly_text_auto_safe(cat.stdout)
+        else:
+            auto_safe, reason = False, "makefile_read_error"
+        reasons.append(reason)
+    elif makefiles or targeted:
+        reasons.append("targeted_or_multiple_makefile_dragonfly")
+
+    return OverlayFacts(
+        origin=origin,
+        port_exists=True,
+        overlay_dops=bool(flags.get("DOPS")),
+        makefile_dragonfly=makefiles,
+        targeted_makefile_dragonfly=targeted,
+        dragonfly_files=tuple(sorted(flags.get("DRAGONFLY_FILE") or ())),
+        diff_files=tuple(sorted(flags.get("DIFF_FILE") or ())),
+        newport=bool(flags.get("NEWPORT")),
+        auto_safe_makefile=auto_safe,
+        makefile_reasons=tuple(reasons),
+    )
+
+
+def assess_dops(env: str, origin: str):
+    """Return the shared overlay assessment for a port in the dev-env."""
+    from dportsv3.agent.overlay_state import assess_overlay  # noqa: PLC0415
+    return assess_overlay(probe_overlay_facts(env, origin))
+
+
 def classify_dops(env: str, origin: str) -> str:
     """Classify a port's dops state by inspecting the dev-env's
     writable overlay (the substrate the convert agent writes into).
@@ -713,9 +808,9 @@ def classify_dops(env: str, origin: str) -> str:
     Returns one of: ``converted`` / ``auto_safe_pending`` /
     ``needs_judgment`` / ``not_in_scope``.
 
-    Runs a single shell script inside the chroot that emits a
-    handful of booleans; the classification logic lives here in
-    Python. The shell script touches:
+    Probes facts inside the chroot, then feeds the shared
+    overlay-state assessment used by host-side tooling. The probe
+    touches:
 
     - ``$DELTAPORTS_ROOT/ports/<origin>/overlay.dops``
     - ``$DELTAPORTS_ROOT/ports/<origin>/Makefile.DragonFly[.*]``
@@ -723,64 +818,10 @@ def classify_dops(env: str, origin: str) -> str:
     - ``$DELTAPORTS_ROOT/ports/<origin>/diffs/`` (with .diff/.patch)
     - ``$DELTAPORTS_ROOT/ports/<origin>/newport/``
 
-    One ``_exec`` round-trip; no CLI subcommand needed. The
-    classify rules match :func:`dportsv3.agent.dops.classify` but
-    are evaluated here rather than there because the file checks
-    must happen against the env's view, not the host clone.
+    The classification rules match :func:`dportsv3.agent.dops.classify`,
+    but file checks happen against the env's view, not the host clone.
     """
-    cmd = r'''
-set -u
-PORT="$DELTAPORTS_ROOT/ports/$1"
-[ -d "$PORT" ] || { echo MISSING=1; exit 0; }
-echo MISSING=0
-[ -e "$PORT/overlay.dops" ] && echo DOPS=1 || echo DOPS=0
-ls "$PORT"/Makefile.DragonFly* 2>/dev/null | grep -q . \
-    && echo MKDFLY=1 || echo MKDFLY=0
-[ -d "$PORT/dragonfly" ] && \
-    ls -A "$PORT/dragonfly" 2>/dev/null | grep -q . \
-    && echo DRAGONFLY=1 || echo DRAGONFLY=0
-ls "$PORT"/diffs/*.diff "$PORT"/diffs/*.patch 2>/dev/null \
-    | grep -q . && echo DIFFS=1 || echo DIFFS=0
-[ -d "$PORT/newport" ] && echo NEWPORT=1 || echo NEWPORT=0
-'''
-    p = _exec(env, "/bin/sh", "-c", cmd, "_", origin)
-    if p.returncode != 0:
-        raise RuntimeError(
-            f"classify_dops shell failed for {origin!r} in env "
-            f"{env!r} (rc={p.returncode}): "
-            f"{(p.stderr or '').strip()[:300]}"
-        )
-    flags = {}
-    for line in (p.stdout or "").splitlines():
-        if "=" in line:
-            k, _, v = line.partition("=")
-            flags[k.strip()] = v.strip() == "1"
-    if flags.get("MISSING"):
-        return "not_in_scope"
-    has_dops = flags.get("DOPS", False)
-    has_mkdfly = flags.get("MKDFLY", False)
-    has_dragonfly = flags.get("DRAGONFLY", False)
-    has_diffs = flags.get("DIFFS", False)
-    has_newport = flags.get("NEWPORT", False)
-    any_compat = (
-        has_mkdfly or has_dragonfly or has_diffs or has_newport
-    )
-    if not (has_dops or any_compat):
-        return "not_in_scope"
-    # Unmigrated debt = Makefile.DragonFly[*] or newport/ only.
-    # dragonfly/ and diffs/ may be peers of dops via file
-    # materialize / patch apply.
-    has_unmigrated = has_mkdfly or has_newport
-    if has_dops and not has_unmigrated:
-        return "converted"
-    # Pure Makefile.DragonFly (no other compat artifacts) is the
-    # only case the deterministic translator can handle.
-    if (
-        has_mkdfly and not has_dragonfly and not has_diffs
-        and not has_newport
-    ):
-        return "auto_safe_pending"
-    return "needs_judgment"
+    return assess_dops(env, origin).state
 
 
 def validate_dops(env: str, origin: str) -> dict:

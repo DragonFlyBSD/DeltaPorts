@@ -38,14 +38,14 @@ def state_db(tmp_path: Path, monkeypatch):
     """Wire _state_db_conn so lifecycle.apply + activity_log + the
     convert-job lookup all see the same in-memory state.
 
-    Also monkeypatches ``worker.classify_dops`` to bypass the
+    Also monkeypatches ``worker.assess_dops`` / ``classify_dops`` to bypass the
     chroot shell-out — tests don't have a real dev-env.
     ``DP_HARNESS_ENV`` is set so the runner's "env required" gate
     passes; classify routes back to the test's tmp repo via
     ``dops.classify`` directly.
     """
     from dportsv3.agent import worker
-    from dportsv3.agent.dops import classify as _direct_classify
+    from dportsv3.agent.dops import assess as _direct_assess
 
     db_path = tmp_path / "state.db"
     conn = sqlite3.connect(str(db_path), isolation_level=None,
@@ -56,11 +56,16 @@ def state_db(tmp_path: Path, monkeypatch):
 
     monkeypatch.setenv("DP_HARNESS_ENV", "test-env")
 
-    def _fake_classify(env: str, origin: str) -> str:
+    def _fake_assess(env: str, origin: str):
         import os as _os
         from pathlib import Path as _Path
         repo = _Path(_os.environ.get("DP_HARNESS_REPO_ROOT") or ".")
-        return _direct_classify(origin, repo)
+        return _direct_assess(origin, repo)
+
+    def _fake_classify(env: str, origin: str) -> str:
+        return _fake_assess(env, origin).state
+
+    monkeypatch.setattr(worker, "assess_dops", _fake_assess)
     monkeypatch.setattr(worker, "classify_dops", _fake_classify)
 
     yield conn
@@ -223,6 +228,41 @@ def test_defer_for_auto_safe_port(tmp_path: Path, monkeypatch, state_db) -> None
     assert result is not None
     success, _ = result
     assert success
+
+
+def test_invariant_violation_does_not_defer(
+    tmp_path: Path, monkeypatch, state_db,
+) -> None:
+    """overlay.dops plus Makefile.DragonFly is a broken half-migration;
+    the runner should surface it, not enqueue another convert loop."""
+    repo = _make_repo(tmp_path)
+    port = _make_port(repo, "devel/half")
+    (port / "overlay.dops").write_text(
+        'target @main\nport devel/half\ntype port\nreason "x"\n'
+    )
+    (port / "Makefile.DragonFly").write_text("USES+=pkgconfig\n")
+    monkeypatch.setenv("DP_HARNESS_REPO_ROOT", str(repo))
+    queue_root = _make_queue(tmp_path)
+
+    job_path = queue_root / "pending" / "triage-half.job"
+    job_path.write_text("type=triage\norigin=devel/half\n")
+    _bootstrap_triage_job(state_db, queue_root, job_path.name)
+
+    result = _maybe_defer_to_convert(
+        queue_root=queue_root,
+        job={"origin": "devel/half", "target": "@main"},
+        job_path=job_path,
+        origin="devel/half",
+    )
+
+    assert result is None
+    assert list(queue_root.glob("pending/*-convert.job")) == []
+    row = state_db.execute(
+        "SELECT state, retire_reason FROM jobs WHERE job_id = ?",
+        (job_path.name,),
+    ).fetchone()
+    assert row["state"] == "triaging"
+    assert row["retire_reason"] in (None, "")
 
 
 def test_resume_deferred_triage_after_convert_ok(
