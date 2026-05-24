@@ -722,28 +722,63 @@ Tests:
 
 #### 11b — independent verification
 
-Add a new dev-env subcommand:
+**Layering note (added 2026-05-24).** The original draft placed the
+verifier as `dportsv3 dev-env verify-fix BUNDLE_ID`. That couples
+the dev-env subcommand to bundles, which are an artifact-store /
+tracker concept the dev-env layer otherwise knows nothing about. Of
+the six steps in verification — resolve origin+target, provision
+env, fetch diff, apply diff, run dsynth, POST result — only steps 2
+and 5 are pure dev-env concerns; the rest are tracker/git
+orchestration. Folding all of that into `dev-env` makes the
+subcommand the wrong shape and pollutes a layer whose only job is
+chroot substrate.
 
-```
-dportsv3 dev-env verify-fix BUNDLE_ID [--target ...] [--keep]
-```
+Split the work:
 
-What it does:
+1. **`dev-env` exposes a thin primitive** that takes substrate
+   inputs (an env, an origin, optionally a diff path on disk) and
+   returns dsynth's result. No bundles, no tracker calls, no
+   artifact-store knowledge:
 
-1. Resolves the bundle's origin + target.
-2. Provisions or selects a *fresh* dev-env (clean writable overlay,
-   no agent edits in flight). ``--keep`` preserves the verification
-   env for inspection; default is throwaway.
-3. Fetches the bundle's ``analysis/changes.diff`` from artifact-store.
-4. Applies the diff to the verification env's DeltaPorts overlay.
-5. Runs ``dsynth -S -y -p $PROFILE build <origin>`` in that env, with
-   the same ``DPORTSV3_HOOKS_FLAG_FILE`` discipline as the patch
-   agent (so hooks don't recursively trigger).
-6. Reports back to the tracker via a new endpoint:
-   ``POST /api/bundles/{bundle_id}/verification`` with
-   ``{ok: bool, dsynth_log: str, verified_at: iso}``.
-7. The bundle row grows a ``verification_status`` column with values
-   ``verified`` / ``verification_failed`` / NULL (not yet attempted).
+   ```
+   dportsv3 dev-env apply-and-build ENV ORIGIN \
+       [--diff PATH] [--clean] [--json]
+   ```
+
+   Runs `git apply` (or `patch`) on the env's DeltaPorts overlay if
+   `--diff` is given, then `dsynth -S -y -p $PROFILE build ORIGIN`,
+   then prints a JSON record of the outcome (`{ok, log_path,
+   dsynth_exit, applied_diff_sha256?}`). `--clean` provisions a
+   throwaway env; default reuses the named one. Substrate-level
+   only.
+
+2. **Top-level orchestrator** owns the bundle resolution and the
+   tracker round-trip:
+
+   ```
+   dportsv3 verify-fix BUNDLE_ID [--keep]
+   ```
+
+   What it does:
+
+   a. Resolves the bundle's origin + target via the tracker API.
+   b. Fetches `analysis/changes.diff` from the artifact-store into
+      a tmpfile.
+   c. Provisions a fresh dev-env (clean writable overlay, no agent
+      edits in flight). `--keep` preserves it for inspection;
+      default is throwaway.
+   d. Invokes `dportsv3 dev-env apply-and-build ENV ORIGIN --diff
+      DIFFPATH --json` and parses the result.
+   e. POSTs back to the tracker:
+      `POST /api/bundles/{bundle_id}/verification` with
+      `{ok: bool, dsynth_log: str, verified_at: iso,
+        applied_diff_sha256: str}`.
+   f. Each layer enforces its own discipline: the runner sets
+      `DPORTSV3_HOOKS_FLAG_FILE` to prevent recursive hook
+      triggers; the dev-env layer doesn't need to know why.
+
+The bundle row grows a `verification_status` column with values
+`verified` / `verification_failed` / NULL (not yet attempted).
 
 Surface in the UI:
 
@@ -754,14 +789,26 @@ Surface in the UI:
 
 Tests:
 
-- A trivially-applying diff against a freshly-failing port produces
-  ``verified``.
-- A diff that doesn't apply cleanly (context mismatch, missing file)
-  produces ``verification_failed`` with the patch error in the log.
-- A diff that applies but doesn't actually fix the build produces
-  ``verification_failed`` with the dsynth log tail.
-- Tracker endpoint validation: 404 unknown bundle, 400 missing fields,
-  200 happy path.
+- **`dev-env apply-and-build` primitive**: builds without `--diff`
+  succeed/fail correctly against a known-good/known-bad port; with
+  `--diff` applying a trivially-passing fix flips a failing port to
+  green; with a non-applying diff returns `ok=false` with the
+  `git apply` error in the log; JSON output is parseable.
+- **`verify-fix` orchestrator**: a trivially-applying diff against a
+  freshly-failing port produces `verified`; a diff that doesn't
+  apply cleanly produces `verification_failed` with the patch error;
+  a diff that applies but doesn't fix the build produces
+  `verification_failed` with the dsynth log tail; unknown bundle_id
+  exits non-zero with a clear message; `--keep` preserves the env.
+- **Tracker endpoint**: 404 unknown bundle, 400 missing fields, 200
+  happy path; applied_diff_sha256 is recorded so re-verification of
+  the same diff is deduplicable.
+
+Why this split matters for later steps: Step 17 (remote runners)
+will want to delegate verification to a non-colocated builder. A
+substrate-only `apply-and-build` primitive ships over SSH (or a
+runner-API) trivially; a bundle-aware monolithic subcommand
+doesn't.
 
 #### 11c — accept / reject in the tracker
 
