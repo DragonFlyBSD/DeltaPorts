@@ -521,19 +521,44 @@ def put_file(
     return {"path": path, "sha256": _sha256(data), "size": len(data)}
 
 
+def _git_diff_with_untracked(repo_dir: Path, rel: str) -> subprocess.CompletedProcess:
+    """Run ``git diff`` for ``rel`` against HEAD, including untracked files.
+
+    Plain ``git diff`` is silent on untracked files; agents that create
+    new files (e.g. a fresh ``overlay.dops`` on a compat-mode port)
+    would otherwise produce an empty diff despite a real edit.
+    ``add --intent-to-add`` registers a placeholder entry so the new
+    file shows up as an addition in the diff; ``reset`` after returns
+    the index to its prior state so we leave no staged residue.
+    """
+    repo = str(repo_dir)
+    subprocess.run(
+        ["git", "-C", repo, "add", "--intent-to-add", "--", rel],
+        capture_output=True, text=True, check=False,
+    )
+    diff = subprocess.run(
+        ["git", "-C", repo, "diff", "--", rel],
+        capture_output=True, text=True, check=False,
+    )
+    subprocess.run(
+        ["git", "-C", repo, "reset", "--", rel],
+        capture_output=True, text=True, check=False,
+    )
+    return diff
+
+
 def emit_diff(env: str, origin: str, relpath: str) -> dict:
     """Return the working-tree diff for ``ports/<origin>/<relpath>``.
 
-    Pure read — never commits, never stages. ``diff`` is empty when
-    the file hasn't been modified vs HEAD. ``ok`` is False only on
-    git invocation errors (rc >= 128), not on "no changes" (rc=0).
+    Pure read — never commits. Captures both modified-tracked and
+    freshly-created files (the ``--intent-to-add`` dance in
+    ``_git_diff_with_untracked``). ``diff`` is empty only when the path
+    truly hasn't changed vs HEAD. ``ok`` is False only on git invocation
+    errors (rc >= 128), not on "no changes" (rc=0).
     """
     paths = env_paths(env)
     rel = f"ports/{origin}/{relpath}"
-    p = subprocess.run(
-        ["git", "-C", str(paths.deltaports), "diff", "--", rel],
-        capture_output=True, text=True, check=False,
-    )
+    p = _git_diff_with_untracked(paths.deltaports, rel)
     diff_text, diff_trunc = _tail(p.stdout, max_bytes=_MAX_STREAM_BYTES * 2)
     return _exec_result(
         p.returncode, "", p.stderr,

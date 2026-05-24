@@ -2173,17 +2173,17 @@ def _write_patch_audit_harness(
 def _write_changes_diff(bundle_dir: Path | None, bundle_id: str | None, env: str, origin: str) -> None:
     """Capture host-side `git diff` against the env's DeltaPorts overlay HEAD
     and write to analysis/changes.diff. Best-effort: failures are logged but
-    not fatal — the agent's reasoning is in patch.md regardless."""
+    not fatal — the agent's reasoning is in patch.md regardless.
+
+    Uses ``worker._git_diff_with_untracked`` so freshly-created files
+    (a new ``overlay.dops`` on a compat-mode port) show up as additions
+    rather than being silently dropped by plain ``git diff``.
+    """
     try:
         from dportsv3.agent import worker  # type: ignore[import-not-found]
         paths = worker.env_paths(env)
-        delta = paths.deltaports
-        import subprocess
         rel = f"ports/{origin}"
-        p = subprocess.run(
-            ["git", "-C", str(delta), "diff", "--", rel],
-            capture_output=True, text=True, check=False,
-        )
+        p = worker._git_diff_with_untracked(paths.deltaports, rel)
         diff_bytes = p.stdout.encode("utf-8")
     except Exception as exc:
         diff_bytes = f"# failed to capture diff: {exc}\n".encode("utf-8")
