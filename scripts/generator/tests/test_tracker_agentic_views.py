@@ -303,25 +303,36 @@ def test_view_agentic_index_shows_convert_card(client: TestClient) -> None:
 
 
 def test_view_agentic_bundle_detail_shows_dops_state(
-    client: TestClient, monkeypatch, tmp_path: Path
+    client: TestClient, seeded_state_db: Path,
 ) -> None:
-    """Step 20f: bundle detail page shows the port's dops state.
-    Fixture's b-q2-foo references devel/foo; we point
-    DP_HARNESS_REPO_ROOT at a tmp repo where devel/foo has an
-    overlay.dops, so the page should read 'converted'."""
-    # Build a tmp repo with devel/foo carrying overlay.dops.
-    ports = tmp_path / "ports" / "devel" / "foo"
-    ports.mkdir(parents=True)
-    (ports / "overlay.dops").write_text(
-        'target @main\nport devel/foo\ntype port\nreason "test"\n'
+    """Step 20f + Step 11c layer-violation cleanup: bundle detail
+    page reads dops_state from the bundle row (the runner persists
+    it at triage time via worker.assess_dops, so the tracker no
+    longer reaches into the host filesystem at render time)."""
+    import sqlite3
+    conn = sqlite3.connect(str(seeded_state_db))
+    conn.execute(
+        "UPDATE bundles SET dops_state = 'converted' WHERE bundle_id = 'b-q2-foo'",
     )
-    monkeypatch.setenv("DP_HARNESS_REPO_ROOT", str(tmp_path))
+    conn.commit()
+    conn.close()
+
     resp = client.get("/agentic/bundles/b-q2-foo")
     assert resp.status_code == 200
     body = resp.text
-    # The "dops" row is added by Step 20f; expect "converted" pill.
     assert ">dops<" in body
     assert "converted" in body
+
+
+def test_view_agentic_bundle_detail_hides_dops_when_null(
+    client: TestClient,
+) -> None:
+    """Legacy rows without persisted dops_state don't show the
+    pill — the template short-circuits on NULL."""
+    resp = client.get("/agentic/bundles/b-q2-foo")
+    assert resp.status_code == 200
+    # Without an UPDATE the dops_state stays NULL; pill suppressed.
+    assert ">dops<" not in resp.text
 
 
 def test_view_agentic_bundle_detail_shows_lifetime_token_cost(client: TestClient) -> None:

@@ -428,6 +428,47 @@ def test_find_active_convert_job_filters_by_origin_target(
     assert found_baz is None
 
 
+def test_dops_state_persisted_to_bundle_row(
+    tmp_path: Path, monkeypatch, state_db,
+) -> None:
+    """Step 11c layer-violation cleanup: the runner persists the
+    dops assessment onto bundles.dops_state at triage time so the
+    tracker doesn't have to compute it live."""
+    from dportsv3.agent.runner import _maybe_defer_to_convert
+
+    repo = _make_repo(tmp_path)
+    port = _make_port(repo, "devel/converted")
+    (port / "overlay.dops").write_text(
+        'target @main\nport devel/converted\ntype port\nreason "x"\n'
+    )
+    monkeypatch.setenv("DP_HARNESS_REPO_ROOT", str(repo))
+
+    state_db.execute(
+        """INSERT INTO bundles (bundle_id, run_id, origin, flavor, ts_utc,
+                                result, target, path, last_seen_at)
+           VALUES ('b-1', '', 'devel/converted', '', '', 'failure',
+                   '@main', '', '')""",
+    )
+
+    queue_root = _make_queue(tmp_path)
+    job_path = queue_root / "pending" / "triage-state.job"
+    job_path.write_text("type=triage\norigin=devel/converted\nbundle_id=b-1\n")
+    _bootstrap_triage_job(state_db, queue_root, job_path.name)
+
+    _maybe_defer_to_convert(
+        queue_root=queue_root,
+        job={"origin": "devel/converted", "target": "@main",
+             "bundle_id": "b-1"},
+        job_path=job_path,
+        origin="devel/converted",
+    )
+
+    row = state_db.execute(
+        "SELECT dops_state FROM bundles WHERE bundle_id = 'b-1'",
+    ).fetchone()
+    assert row["dops_state"] == "converted"
+
+
 def test_circuit_breaker_blocks_redefer_after_recent_convert_done(
     tmp_path: Path, monkeypatch, state_db,
 ) -> None:

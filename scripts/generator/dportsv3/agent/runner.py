@@ -802,6 +802,99 @@ def enqueue_triage_job(
     return job_path
 
 
+def process_verify_requests(queue_root: Path) -> None:
+    """Reconcile operator-triggered verify requests (Step 11c
+    layer-violation cleanup).
+
+    The tracker's ``POST /api/bundles/{id}/verify`` writes a row to
+    ``verify_requests`` and returns immediately. This loop scans for
+    ``status='pending'`` rows, fetches the bundle metadata from the
+    shared state.db, calls :func:`enqueue_verify_job`, and marks the
+    request ``enqueued`` (or ``failed`` if enqueue raised). Mirrors
+    the ``process_user_context_updates`` shape.
+
+    The runner is the only process that touches the queue
+    filesystem, restoring the tracker-is-read-only-for-queue
+    invariant. Remote runners (Step 17) can serve this poll over
+    the shared state.db without any tracker changes.
+    """
+    if _state_db_conn is None:
+        return
+    try:
+        with _state_db_lock:
+            rows = _state_db_conn.execute(
+                """SELECT id, bundle_id, env, requested_by
+                   FROM verify_requests
+                   WHERE status = 'pending'
+                   ORDER BY requested_at ASC"""
+            ).fetchall()
+    except sqlite3.Error as exc:
+        log(queue_root, "WARN",
+            f"verify_requests scan failed: {exc}")
+        return
+    for row in rows:
+        req_id = row["id"] if hasattr(row, "keys") else row[0]
+        bundle_id = row["bundle_id"] if hasattr(row, "keys") else row[1]
+        env = row["env"] if hasattr(row, "keys") else row[2]
+        requested_by = (row["requested_by"]
+                        if hasattr(row, "keys") else row[3]) or "operator"
+        # Look up bundle to get origin + target.
+        try:
+            with _state_db_lock:
+                brow = _state_db_conn.execute(
+                    "SELECT origin, target FROM bundles WHERE bundle_id = ?",
+                    (bundle_id,),
+                ).fetchone()
+        except sqlite3.Error as exc:
+            log(queue_root, "WARN",
+                f"verify request {req_id}: bundle lookup failed: {exc}")
+            continue
+        if brow is None:
+            _mark_verify_request(req_id, "failed",
+                                 error=f"bundle {bundle_id} not found")
+            continue
+        origin = brow["origin"] if hasattr(brow, "keys") else brow[0]
+        target = (brow["target"] if hasattr(brow, "keys") else brow[1]) or ""
+        try:
+            job_path = enqueue_verify_job(
+                queue_root, bundle_id=bundle_id, origin=origin,
+                target=target, env=env, requested_by=requested_by,
+            )
+        except Exception as exc:
+            log(queue_root, "WARN",
+                f"verify request {req_id} enqueue failed: {exc}")
+            _mark_verify_request(req_id, "failed", error=str(exc)[:500])
+            continue
+        _mark_verify_request(req_id, "enqueued", job_id=job_path.name)
+        activity_log(
+            queue_root, "verify_enqueued_from_request",
+            f"verify request {req_id} for {bundle_id} → {job_path.name}",
+            job_id=job_path.name,
+            extra={"request_id": req_id, "bundle_id": bundle_id,
+                   "env": env},
+        )
+
+
+def _mark_verify_request(
+    req_id: int, status: str, *,
+    job_id: str | None = None, error: str | None = None,
+) -> None:
+    if _state_db_conn is None:
+        return
+    try:
+        with _state_db_lock:
+            _state_db_conn.execute(
+                """UPDATE verify_requests
+                   SET status = ?, job_id = COALESCE(?, job_id),
+                       error = COALESCE(?, error)
+                   WHERE id = ?""",
+                (status, job_id, error, req_id),
+            )
+            _state_db_conn.commit()
+    except sqlite3.Error:
+        pass
+
+
 _ACTIVE_JOB_STATES = (
     "queued", "claimed", "triaging", "triaged", "patching", "verifying",
     "converting",
@@ -2056,6 +2149,25 @@ def _maybe_defer_to_convert(
         return None
 
     state = assessment.state
+    # Step 11c layer-violation cleanup: persist dops_state on the
+    # bundle row so the tracker can show it without reaching into
+    # the host filesystem at render time. Best-effort: a missing
+    # bundle_id or write error is non-fatal.
+    bundle_id = job.get("bundle_id")
+    if bundle_id and _state_db_conn is not None:
+        try:
+            with _state_db_lock:
+                _state_db_conn.execute(
+                    "UPDATE bundles SET dops_state = ?, last_seen_at = ? "
+                    "WHERE bundle_id = ?",
+                    (state, datetime.now(timezone.utc).isoformat(),
+                     bundle_id),
+                )
+                _state_db_conn.commit()
+        except sqlite3.Error as exc:
+            log(queue_root, "WARN",
+                f"failed to persist dops_state for {bundle_id}: {exc}")
+
     if assessment.action == "surface_invariant":
         log(queue_root, "WARN",
             f"refusing to defer triage for {origin!r}: overlay assessment "
@@ -3261,6 +3373,7 @@ def main(argv: list[str] | None = None) -> int:
                         time.sleep(DSYNTH_LOCK_POLL_SECONDS)
                     continue
                 process_user_context_updates(queue_root)
+                process_verify_requests(queue_root)
                 batch = claim_next_job_batch(queue_root)
                 if batch:
                     lead, siblings = batch

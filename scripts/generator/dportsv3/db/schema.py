@@ -275,6 +275,37 @@ MIGRATIONS: tuple[str, ...] = (
     "ALTER TABLE bundles ADD COLUMN accepted_by TEXT",
     "ALTER TABLE bundles ADD COLUMN rejected_at TEXT",
     "ALTER TABLE bundles ADD COLUMN rejection_reason TEXT",
+    # Step 11c layer-violation cleanup: tracker used to call
+    # dops.classify() live on every bundle detail render, which
+    # required host-side DP_HARNESS_REPO_ROOT access — defeating
+    # the "tracker reads state.db, not the host filesystem" rule.
+    # The runner now writes dops_state at triage time (it has
+    # chroot access via worker.assess_dops); the tracker just reads
+    # the column. NULL for legacy rows where no triage ran post-
+    # this-change.
+    "ALTER TABLE bundles ADD COLUMN dops_state TEXT",
+    # Step 11c layer-violation cleanup: the operator-triggered
+    # /verify endpoint used to import dportsv3.agent.runner and
+    # write .job files directly into the queue. That couples the
+    # tracker to runner colocation (breaks Step 17 remote runners)
+    # and crosses the read-only boundary. Mirror the existing
+    # user_context_requests pattern instead: the tracker INSERTs a
+    # row here, the runner polls and enqueues the verify job.
+    # status: 'pending' | 'enqueued' | 'failed'.
+    """CREATE TABLE IF NOT EXISTS verify_requests (
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        bundle_id       TEXT NOT NULL,
+        env             TEXT NOT NULL,
+        requested_by    TEXT NOT NULL DEFAULT 'operator',
+        requested_at    TEXT NOT NULL,
+        status          TEXT NOT NULL DEFAULT 'pending',
+        job_id          TEXT,
+        error           TEXT
+    )""",
+    "CREATE INDEX IF NOT EXISTS idx_verify_requests_status "
+    "ON verify_requests(status, requested_at)",
+    "CREATE INDEX IF NOT EXISTS idx_verify_requests_bundle "
+    "ON verify_requests(bundle_id, requested_at)",
 )
 
 

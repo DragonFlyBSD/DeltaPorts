@@ -856,15 +856,23 @@ def create_app(db_path: str | Path) -> Any:
     def api_bundle_verify(
         bundle_id: str, body: dict[str, Any],
     ) -> dict[str, Any]:
-        """Operator-triggered verify (Step 11c). Enqueues a new
-        ``verify`` job that the runner picks up and calls
-        ``dportsv3.verify_fix.run_verify_fix`` in-process. Returns
-        the enqueued job_id; result POSTs back to the
-        ``/verification`` endpoint when done.
+        """Operator-triggered verify (Step 11c). Writes a row to
+        ``verify_requests``; the runner's poll loop picks it up,
+        calls ``dportsv3.verify_fix.run_verify_fix`` in-process, and
+        the result POSTs back to ``/verification`` (Slice 2) when
+        done.
 
         Body: ``{"env": "<dev-env-name>"}``. Operator-chosen env;
         auto-provisioning is a follow-up.
+
+        The tracker doesn't import the runner or touch the queue
+        filesystem any more (layer-violation cleanup). The
+        ``verify_requests`` table mirrors the
+        ``user_context_requests`` pattern: the tracker records
+        intent, the runner reconciles.
         """
+        from datetime import datetime, timezone  # noqa: PLC0415
+
         env = (body or {}).get("env")
         if not env or not isinstance(env, str):
             raise HTTPException(
@@ -886,47 +894,35 @@ def create_app(db_path: str | Path) -> Any:
                 ),
             )
 
-        # enqueue_verify_job lives in the runner module; importing
-        # it here keeps the tracker independent of the agent stack
-        # for read-only deployments.
-        from dportsv3.agent import runner as _runner  # noqa: PLC0415
-
-        # Tracker doesn't own a writable queue normally; use the
-        # configured queue root or fail loudly.
-        import os as _os  # noqa: PLC0415
-        from pathlib import Path as _Path  # noqa: PLC0415
-
-        qroot_str = _os.environ.get("DPORTSV3_QUEUE_ROOT")
-        if not qroot_str:
-            raise HTTPException(
-                status_code=500,
-                detail="DPORTSV3_QUEUE_ROOT not configured on tracker",
-            )
-        # The runner-side enqueue uses its own _state_db_conn; the
-        # tracker's app.state.db_path is the same DB, so wire it up
-        # for this call.
-        _runner._state_db_conn = sqlite3.connect(
+        now = datetime.now(timezone.utc).isoformat()
+        write_conn = sqlite3.connect(
             str(app.state.db_path), check_same_thread=False,
             isolation_level=None,
         )
-        _runner._state_db_conn.row_factory = sqlite3.Row
+        write_conn.row_factory = sqlite3.Row
         try:
-            job_path = _runner.enqueue_verify_job(
-                _Path(qroot_str),
-                bundle_id=bundle_id,
-                origin=row.get("origin", ""),
-                target=row.get("target") or "",
-                env=env,
-                requested_by="operator",
+            cur = write_conn.execute(
+                """INSERT INTO verify_requests
+                       (bundle_id, env, requested_by, requested_at, status)
+                   VALUES (?, ?, 'operator', ?, 'pending')""",
+                (bundle_id, env, now),
             )
+            request_id = cur.lastrowid
+            from dportsv3.artifact_store import emit_event  # noqa: PLC0415
+            emit_event(write_conn, "verify_requested", {
+                "bundle_id": bundle_id,
+                "request_id": request_id,
+                "env": env,
+                "requested_at": now,
+            })
         finally:
-            _runner._state_db_conn.close()
-            _runner._state_db_conn = None
+            write_conn.close()
 
         return {
             "ok": True,
             "bundle_id": bundle_id,
-            "job_id": job_path.name,
+            "request_id": request_id,
+            "status": "pending",
             "env": env,
         }
 
@@ -1205,24 +1201,14 @@ def create_app(db_path: str | Path) -> Any:
                 )
                 if bundle is not None and bundle.get("origin") else None
             )
-            # Step 20f: dops conversion state for the port. Surfaces
-            # whether this failure is on an already-converted port,
-            # one waiting for conversion, etc.
-            dops_state = None
-            if bundle is not None and bundle.get("origin"):
-                try:
-                    from dportsv3.agent.dops import classify as _classify_dops
-                    import os as _os
-                    _repo = (
-                        _os.environ.get("DP_HARNESS_REPO_ROOT")
-                        or _os.environ.get("DPORTSV3_REPO_ROOT")
-                        or "."
-                    )
-                    dops_state = _classify_dops(
-                        bundle["origin"], _repo,
-                    )
-                except Exception:
-                    dops_state = None
+            # Step 20f / Step 11c layer-violation cleanup: the dops
+            # state is now persisted to bundles.dops_state at triage
+            # time by the runner (which has chroot access). The
+            # tracker no longer reaches into the host filesystem to
+            # compute it live. NULL on legacy rows where no triage
+            # ran post-this-change — the template hides the pill in
+            # that case.
+            dops_state = bundle.get("dops_state") if bundle is not None else None
         if bundle is None:
             raise HTTPException(status_code=404, detail=f"Unknown bundle: {bundle_id}")
         if selected_relpath and selected_ref is None:

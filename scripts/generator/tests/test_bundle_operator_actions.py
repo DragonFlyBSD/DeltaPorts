@@ -62,11 +62,7 @@ def seeded_db(tmp_path: Path):
 
 
 @pytest.fixture
-def client(seeded_db, monkeypatch, tmp_path: Path):
-    # /verify needs a queue root.
-    qroot = tmp_path / "queue"
-    (qroot / "pending").mkdir(parents=True)
-    monkeypatch.setenv("DPORTSV3_QUEUE_ROOT", str(qroot))
+def client(seeded_db, monkeypatch):
     app = create_app(seeded_db)
     with TestClient(app) as c:
         yield c
@@ -85,7 +81,10 @@ def _row(db_path: Path, bid: str) -> sqlite3.Row:
 # ---------------------------------------------------------------------------
 
 
-def test_verify_enqueues_job_for_agent_fixed(client, seeded_db, tmp_path):
+def test_verify_records_pending_request_for_agent_fixed(client, seeded_db):
+    """Layer-violation cleanup: the tracker no longer touches the
+    queue filesystem. It records intent in verify_requests; the
+    runner's poll loop reconciles."""
     resp = client.post(
         "/api/bundles/b-agent-fixed/verify",
         json={"env": "verify-env"},
@@ -94,14 +93,38 @@ def test_verify_enqueues_job_for_agent_fixed(client, seeded_db, tmp_path):
     body = resp.json()
     assert body["ok"] is True
     assert body["bundle_id"] == "b-agent-fixed"
-    assert body["job_id"].endswith("-verify.job")
+    assert body["status"] == "pending"
+    assert isinstance(body["request_id"], int)
     assert body["env"] == "verify-env"
-    # The .job file is on disk.
-    pending = list((tmp_path / "queue" / "pending").glob("*-verify.job"))
-    assert len(pending) == 1
-    content = pending[0].read_text()
-    assert "bundle_id=b-agent-fixed" in content
-    assert "dev_env=verify-env" in content
+    # The row landed in verify_requests with status='pending'.
+    conn = sqlite3.connect(str(seeded_db))
+    conn.row_factory = sqlite3.Row
+    row = conn.execute(
+        "SELECT * FROM verify_requests WHERE id = ?", (body["request_id"],),
+    ).fetchone()
+    conn.close()
+    assert row["bundle_id"] == "b-agent-fixed"
+    assert row["env"] == "verify-env"
+    assert row["status"] == "pending"
+    assert row["job_id"] is None
+
+
+def test_verify_emits_verify_requested_event(client, seeded_db):
+    client.post(
+        "/api/bundles/b-agent-fixed/verify",
+        json={"env": "verify-env"},
+    )
+    conn = sqlite3.connect(str(seeded_db))
+    conn.row_factory = sqlite3.Row
+    row = conn.execute(
+        "SELECT data_json FROM events WHERE type = 'verify_requested' "
+        "ORDER BY id DESC LIMIT 1",
+    ).fetchone()
+    conn.close()
+    import json
+    data = json.loads(row["data_json"])
+    assert data["bundle_id"] == "b-agent-fixed"
+    assert data["env"] == "verify-env"
 
 
 def test_verify_works_from_verified_re_run(client):
@@ -132,6 +155,20 @@ def test_verify_404_unknown_bundle(client):
 def test_verify_400_missing_env(client):
     resp = client.post("/api/bundles/b-agent-fixed/verify", json={})
     assert resp.status_code == 400
+
+
+def test_verify_does_not_touch_queue_filesystem(client, seeded_db, tmp_path):
+    """Regression: tracker /verify used to write a .job file into a
+    queue path resolved from $DPORTSV3_QUEUE_ROOT or a convention,
+    coupling the tracker to runner colocation. It no longer does."""
+    queue_candidate = tmp_path / "queue" / "pending"
+    queue_candidate.mkdir(parents=True)
+    client.post(
+        "/api/bundles/b-agent-fixed/verify",
+        json={"env": "verify-env"},
+    )
+    # No .job file should have been written anywhere by the tracker.
+    assert list(queue_candidate.glob("*.job")) == []
 
 
 # ---------------------------------------------------------------------------
