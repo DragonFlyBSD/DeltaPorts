@@ -193,9 +193,11 @@
             const d = await r.json();
             if (d.verification_status &&
                 d.verification_status !== initialVerificationStatus) {
+              const verdict = d.verification_status === 'verified'
+                ? 'PASSED' : 'FAILED';
               statusEl.textContent =
-                'verify done: ' + d.verification_status + ' — reloading';
-              setTimeout(() => location.reload(), 400);
+                'verify ' + verdict + ' (' + d.verification_status + ') — reloading';
+              setTimeout(() => location.reload(), 600);
               return;
             }
           } catch (exc) {
@@ -205,7 +207,10 @@
           intervalMs = Math.min(intervalMs + 2000, 15000);
         }
         statusEl.textContent =
-          'verify still pending after 30 min — reload manually to check';
+          'verify still pending after 30 min — reload manually to check ' +
+          'runner logs / activity for errors';
+        // Re-enable buttons so the operator can react.
+        allButtons().forEach(b => { b.disabled = false; });
       }
 
       document.querySelectorAll('button[id^="op-"]').forEach(btn => {

@@ -3125,7 +3125,17 @@ def process_job(
         # bundles.verification_status via the Slice 2 endpoint).
         # VERIFY_FIX_GAVE_UP only fires if the orchestrator itself
         # raised (env gone, tracker unreachable, etc.).
-        from dportsv3.verify_fix import run_verify_fix  # noqa: PLC0415
+        #
+        # Note: run_verify_fix raises VerifyFixError (an Exception
+        # subclass), not SystemExit, so the except-Exception below
+        # catches its caller-recoverable failures without killing
+        # the runner process. SystemExit would have escaped the
+        # runner main loop and exited the process — that bug was
+        # what made the runner silently disappear on the first
+        # verify run.
+        from dportsv3.verify_fix import (  # noqa: PLC0415
+            VerifyFixError, run_verify_fix,
+        )
 
         start_event = JobEvent.VERIFY_FIX_START
         _apply_transition(job_path.name, start_event)
@@ -3146,11 +3156,61 @@ def process_job(
                 "applied_diff_sha256": result.applied_diff_sha256,
                 "dsynth_exit": result.dsynth_exit,
                 "posted": result.posted,
+                "bundle_id": bundle_id,
+                "env": verify_env,
             }
-        except Exception as exc:
+            try:
+                activity_log(
+                    queue_root, "verify_complete",
+                    (f"verify {('OK' if result.ok else 'FAIL')} for "
+                     f"{bundle_id} (env={verify_env}, "
+                     f"dsynth_exit={result.dsynth_exit})"),
+                    job_id=job_path.name, extra=detail,
+                )
+            except Exception as log_exc:
+                log(queue_root, "WARN",
+                    f"activity_log failed for verify_complete: {log_exc}")
+        except (VerifyFixError, Exception) as exc:
             success, status = False, f"verify_fix raised: {exc}"
             finish_event = JobEvent.VERIFY_FIX_GAVE_UP
-            detail = {"reason": str(exc)[:500]}
+            err_msg = str(exc)[:500]
+            detail = {
+                "reason": err_msg,
+                "exception_type": type(exc).__name__,
+                "bundle_id": bundle_id,
+                "env": verify_env,
+            }
+            log(queue_root, "ERROR",
+                f"verify job {job_path.name} failed: "
+                f"{type(exc).__name__}: {err_msg}")
+            try:
+                activity_log(
+                    queue_root, "verify_failed",
+                    f"verify FAILED for {bundle_id}: {err_msg}",
+                    job_id=job_path.name, extra=detail,
+                )
+            except Exception as log_exc:
+                log(queue_root, "WARN",
+                    f"activity_log failed for verify_failed: {log_exc}")
+            # Flip bundle.verification_status so the UI stops showing
+            # "in flight forever" — the orchestrator never got far
+            # enough to POST a result to /verification itself.
+            if bundle_id and _state_db_conn is not None:
+                try:
+                    with _state_db_lock:
+                        now = datetime.now(timezone.utc).isoformat()
+                        _state_db_conn.execute(
+                            """UPDATE bundles SET
+                                   verification_status = 'verification_failed',
+                                   verification_at = ?,
+                                   last_seen_at = ?
+                               WHERE bundle_id = ?""",
+                            (now, now, bundle_id),
+                        )
+                        _state_db_conn.commit()
+                except sqlite3.Error as db_exc:
+                    log(queue_root, "WARN",
+                        f"failed to mark bundle {bundle_id} verification_failed: {db_exc}")
         _apply_transition(job_path.name, finish_event, detail=detail)
     else:
         # Unknown job type — fire the catchall failure event for lead +

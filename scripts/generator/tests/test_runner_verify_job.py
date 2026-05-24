@@ -141,6 +141,34 @@ def test_dispatch_verify_job_ok_lands_done(tmp_path, monkeypatch, state_db):
     assert row["state"] == JobState.DONE.value
 
 
+def test_run_verify_fix_raises_verify_fix_error_not_system_exit():
+    """Regression: the first cut raised SystemExit on the error
+    paths because run_verify_fix was originally written as a CLI
+    consumer. SystemExit inherits from BaseException, not Exception,
+    so the runner's dispatch arm (`except Exception`) didn't catch
+    it — the entire runner process exited the first time anyone
+    clicked Verify.
+
+    Now error paths raise VerifyFixError (an Exception subclass)
+    and the CLI wrapper translates to SystemExit so shell callers
+    still get a non-zero exit."""
+    from dportsv3 import verify_fix as vf
+
+    def _bundle_no_origin(url, timeout=10):
+        return {"bundle_id": "b-1"}  # missing origin
+
+    with pytest.raises(vf.VerifyFixError):
+        vf.run_verify_fix(
+            bundle_id="b-1", env="verify-env", tracker_url="http://t",
+            _get_json=_bundle_no_origin,
+            _get_bytes=lambda u, timeout=20: b"diff",
+            _post_json=lambda u, b, timeout=10: {},
+            _run=lambda *a, **kw: None,
+        )
+    # VerifyFixError must be a plain Exception, not BaseException.
+    assert issubclass(vf.VerifyFixError, Exception)
+
+
 def test_dispatch_verify_job_orchestrator_raises_lands_dead(
     tmp_path, monkeypatch, state_db,
 ):

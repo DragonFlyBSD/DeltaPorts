@@ -71,6 +71,16 @@ def _post_json(url: str, body: dict, timeout: int = 10) -> dict:
         return json.load(resp)
 
 
+class VerifyFixError(RuntimeError):
+    """Raised by run_verify_fix on caller-recoverable failures.
+
+    Subclasses Exception (not BaseException) so in-process callers
+    like the runner's verify-job dispatch can `except Exception`
+    them. The CLI wrapper (``cmd_verify_fix``) translates these to
+    SystemExit so shell callers still get a non-zero exit code.
+    """
+
+
 @dataclass
 class VerifyResult:
     bundle_id: str
@@ -110,7 +120,7 @@ def run_verify_fix(
     bundle = _get_json(bundle_url)
     origin = bundle.get("origin")
     if not origin:
-        raise SystemExit(
+        raise VerifyFixError(
             f"bundle {bundle_id!r} has no origin field; cannot verify"
         )
 
@@ -121,12 +131,12 @@ def run_verify_fix(
     try:
         diff_bytes = _get_bytes(diff_url)
     except urllib.error.HTTPError as exc:
-        raise SystemExit(
+        raise VerifyFixError(
             f"bundle {bundle_id!r} has no {DIFF_RELPATH} artifact "
             f"({exc.code}); cannot verify"
         )
     if not diff_bytes.strip():
-        raise SystemExit(
+        raise VerifyFixError(
             f"bundle {bundle_id!r}'s {DIFF_RELPATH} is empty; "
             "nothing to verify"
         )
@@ -156,7 +166,7 @@ def run_verify_fix(
     try:
         ab = json.loads((proc.stdout or "").strip().splitlines()[-1])
     except (json.JSONDecodeError, IndexError):
-        raise SystemExit(
+        raise VerifyFixError(
             f"apply-and-build produced no JSON on stdout (rc={proc.returncode})"
         )
 
@@ -203,12 +213,18 @@ def run_verify_fix(
 
 def cmd_verify_fix(args: argparse.Namespace) -> int:
     """CLI entrypoint. See module docstring."""
-    result = run_verify_fix(
-        bundle_id=args.bundle_id,
-        env=args.env,
-        tracker_url=args.tracker_url,
-        keep_log=args.keep_log,
-    )
+    try:
+        result = run_verify_fix(
+            bundle_id=args.bundle_id,
+            env=args.env,
+            tracker_url=args.tracker_url,
+            keep_log=args.keep_log,
+        )
+    except VerifyFixError as exc:
+        # Translate to SystemExit so the shell sees a non-zero exit
+        # code with the error on stderr. In-process callers (the
+        # runner's verify-job dispatch) catch VerifyFixError instead.
+        raise SystemExit(str(exc))
     if args.json:
         print(json.dumps(result.__dict__))
     else:

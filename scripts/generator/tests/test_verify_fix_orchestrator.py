@@ -135,7 +135,7 @@ def test_verify_fix_missing_origin_raises():
     def _bundle_no_origin(url: str, timeout: int = 10):
         return {"bundle_id": "b-1"}  # no origin
 
-    with pytest.raises(SystemExit, match="has no origin"):
+    with pytest.raises(verify_fix.VerifyFixError, match="has no origin"):
         verify_fix.run_verify_fix(
             bundle_id="b-1", env="verify-env", tracker_url="http://t",
             _get_json=_bundle_no_origin,
@@ -148,7 +148,7 @@ def test_verify_fix_missing_origin_raises():
 def test_verify_fix_empty_diff_raises():
     fake_run, _ = _fake_run_factory(_ab_json())
 
-    with pytest.raises(SystemExit, match="is empty"):
+    with pytest.raises(verify_fix.VerifyFixError, match="is empty"):
         verify_fix.run_verify_fix(
             bundle_id="b-1", env="verify-env", tracker_url="http://t",
             _get_json=_stub_get_bundle(),
@@ -166,7 +166,7 @@ def test_verify_fix_diff_404_raises():
     def _missing_diff(url: str, timeout: int = 20):
         raise urllib.error.HTTPError(url, 404, "Not Found", {}, None)
 
-    with pytest.raises(SystemExit, match="has no analysis/changes.diff"):
+    with pytest.raises(verify_fix.VerifyFixError, match="has no analysis/changes.diff"):
         verify_fix.run_verify_fix(
             bundle_id="b-1", env="verify-env", tracker_url="http://t",
             _get_json=_stub_get_bundle(),
@@ -179,7 +179,7 @@ def test_verify_fix_diff_404_raises():
 def test_verify_fix_unparseable_ab_output_raises():
     fake_run, _ = _fake_run_factory("not json\n", returncode=2)
 
-    with pytest.raises(SystemExit, match="no JSON on stdout"):
+    with pytest.raises(verify_fix.VerifyFixError, match="no JSON on stdout"):
         verify_fix.run_verify_fix(
             bundle_id="b-1", env="verify-env", tracker_url="http://t",
             _get_json=_stub_get_bundle(),
