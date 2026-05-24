@@ -810,37 +810,104 @@ substrate-only `apply-and-build` primitive ships over SSH (or a
 runner-API) trivially; a bundle-aware monolithic subcommand
 doesn't.
 
-#### 11c — accept / reject in the tracker
+#### 11c — verify / accept / reject in the tracker
 
-Two buttons on any bundle with ``resolution='agent_fixed'``
-(stronger UX when ``verification_status='verified'``):
+**Revised 2026-05-25 after 11b Slices 1-4 shipped.** Original draft
+had only two buttons (Accept / Reject) on ``agent_fixed`` and called
+verify-first "stronger UX". That was too lenient — an operator
+could accept an unverified claim and 11d would happily push it to
+upstream. Verify is now the **gate**: Accept is structurally
+impossible on an unverified bundle.
 
-- **Accept** → ``POST /api/bundles/{bundle_id}/accept`` with optional
-  operator note. Sets ``resolution='accepted'``, records
-  ``accepted_at`` + ``accepted_by`` (when auth lands), emits an
-  ``accepted`` event. The diff is now considered the authoritative
-  fix for that origin.
-- **Reject** → ``POST /api/bundles/{bundle_id}/reject`` with reason.
-  Sets ``resolution='rejected'`` and *reopens* the loop: enqueues a
-  fresh triage job with the rejection reason injected as
-  ``user_context`` (so the next agent attempt knows what humans
-  didn't like about the last one).
+Three operator buttons on the bundle detail page, enabled per state:
 
-State machine on ``bundles.resolution``:
+| State | Verify | Accept | Reject |
+|---|---|---|---|
+| ``agent_fixed`` (no verify yet) | ✓ | ✗ (gated) | ✓ |
+| ``verified`` | ✓ (re-run) | ✓ | ✓ |
+| ``verification_failed`` | ✓ (re-run) | ✗ | ✓ |
+| ``accepted`` / ``rejected`` | — | — | — |
 
-```
-   ┌─ NULL ──────────────► agent_fixed ───► verified ──► accepted (terminal)
-   │                            │              │
-   │                            ▼              ▼
-   │                       rejected ─┐    verification_failed ─┐
-   │                                 │                          │
-   │                                 ▼                          ▼
-   └──────────────────────── (re-triage, new bundle) ───────────┘
-```
+State machine on ``bundles.resolution`` + ``bundles.verification_status``::
 
-Tests: accept/reject endpoints (happy path, 404, 409 if already
-terminal); reject path enqueues a follow-up triage with user_context
-populated; UI surfaces buttons only on appropriate states.
+    NULL ──PATCH_OK──► agent_fixed
+                           │
+                           ├──[Verify]──► verified ──[Accept]──► accepted (terminal)
+                           │                  │
+                           │                  └──[Reject]──► rejected (re-triage)
+                           │
+                           ├──[Verify]──► verification_failed
+                           │                  │
+                           │                  ├──[Verify again]──► (retry)
+                           │                  └──[Reject]──► rejected
+                           │
+                           └──[Reject]──► rejected (skip verify entirely)
+                              (for obviously-wrong fixes)
+
+##### Endpoints
+
+- ``POST /api/bundles/{bundle_id}/verify`` → enqueues a ``verify``
+  job (new job type). Body: ``{"env": "..."}`` (the dev-env to
+  verify in). Returns the enqueued ``job_id`` immediately; result
+  POSTs back to ``/verification`` (Slice 2) when the runner
+  finishes and the SSE stream picks it up.
+- ``POST /api/bundles/{bundle_id}/accept`` → synchronous. Rejects
+  (409) if ``verification_status != 'verified'``. Sets
+  ``resolution='accepted'`` + ``accepted_at`` + (later)
+  ``accepted_by``. Emits ``bundle_accepted`` event.
+- ``POST /api/bundles/{bundle_id}/reject`` → synchronous. Body:
+  ``{"reason": "..."}``. Sets ``resolution='rejected'``, enqueues
+  a fresh triage with the rejection reason injected as
+  ``user_context``. Emits ``bundle_rejected`` event.
+
+##### New job type: ``verify``
+
+The runner gets a new dispatch arm. Verify jobs carry
+``{bundle_id, env, target}``; the worker calls
+``dportsv3.verify_fix.run_verify_fix(...)`` **in-process** — no
+subprocess, no shell-out. ``run_verify_fix`` already exists as a
+public function from 11b Slice 3; the CLI was its only consumer
+so far.
+
+Lifecycle events: reuse ``CONVERT_*`` shape — ``VERIFY_START`` /
+``VERIFY_OK`` / ``VERIFY_GAVE_UP`` (or shoehorn into existing
+events with a detail field; decision at implementation time).
+The job's terminal state mirrors the verification outcome but is
+*independent* of ``bundles.verification_status`` (which Slice 2's
+endpoint owns).
+
+##### SSE event wiring
+
+The runner's existing ``bundle_verified`` event (emitted by the
+Slice 2 endpoint) is what triggers the UI refresh. New event types
+``bundle_accepted`` / ``bundle_rejected`` follow the same pattern.
+
+##### Scope estimate
+
+- New ``verify`` job type + lifecycle events: ~60 LOC.
+- Runner dispatch arm calling ``run_verify_fix`` in-process: ~40 LOC.
+- Three POST endpoints + body validation: ~100 LOC + tests.
+- UI button matrix in ``agentic_bundle.html`` with state-aware
+  enabling: ~50 LOC.
+- SSE event additions: mostly reuse, ~10 LOC.
+
+~300 LOC total + tests. Single coherent slice, larger than the
+original 11c but covers the full verify→accept/reject flow.
+
+##### Tests
+
+- Verify endpoint: enqueue happy path; 404 unknown bundle; 409 on
+  terminal states.
+- Accept endpoint: happy path from ``verified``; 409 from
+  ``agent_fixed`` (not verified); 409 from terminal; 404.
+- Reject endpoint: happy path enqueues triage with user_context;
+  404; works from any non-terminal state.
+- Lifecycle: VERIFY_START / VERIFY_OK / VERIFY_GAVE_UP transitions
+  + matrix of illegal-transition rejections.
+- UI: button matrix renders correct buttons per state; disabled
+  buttons render disabled (not absent).
+- Runner: verify job picks up, calls run_verify_fix, lifecycle
+  transitions correctly.
 
 #### 11d — push to code-hosting providers
 
@@ -3301,7 +3368,13 @@ post-implementation sections.
 
 Shipped (no work needed):
 
-- **1–10, 11a, 20** (per-step status above).
+- **1–10, 11a, 11b, 20** (per-step status above).
+- **11b** shipped 2026-05-24/25 as four slices: dev-env
+  apply-and-build primitive (`6800f9c5216`), bundle verification
+  endpoint + columns (`1454a55ca11`), verify-fix orchestrator
+  (`ef584cf6937`), UI pill + proposed_fix badge (`ee3afa36a70`).
+  The verify-fix Verify button is folded into 11c (see revised
+  scope there).
 - **11.0** (out-of-plan) — empty-`changes.diff` bug. Fixed
   `2d9de6c4edc`. Will be subsumed by 25e when that lands; not
   rolled back.
@@ -3312,37 +3385,35 @@ Shipped (no work needed):
 
 Pending, in recommended order:
 
-1. **11b** — `verify-fix` subcommand. Closes the "agent says it's
-   fixed; can the operator trust it?" gap. Highest single-impact
-   change; would have caught the gperf empty-diff bug
-   independently.
+1. **11c** — verify/accept/reject buttons in tracker. Revised after
+   11b shipped: now includes the Verify button + the new `verify`
+   job type that lets the runner call `run_verify_fix` in-process.
+   Verify is the gate (Accept disabled until verified).
 2. **25** — edit-intent DSL. Architectural; design (25a) first.
-   Can be developed in parallel with 11c/d once 25a is approved.
-3. **11c** — accept/reject in tracker. UX completion for the
-   delivery loop.
-4. **11d** — push to code-hosting providers. Closes the round
+   Can be developed in parallel with 11d once 25a is approved.
+3. **11d** — push to code-hosting providers. Closes the round
    trip; gated on operator readiness.
-5. **26 (items 1–4 first)** — lifecycle hardening: lineage +
+4. **26 (items 1–4 first)** — lifecycle hardening: lineage +
    attempt counter, `TRANSIENT_FAIL` edge, per-state timeout,
    `originating_bundle_id` for resolution propagation. Three
    incidents this week traced to seam-level bugs the wall-clock
    circuit breaker only papered over. Items 5–9 of Step 26 are
    pure FSM cleanups and can interleave whenever.
-6. **24** — prompts/quickref consolidation. Cheap, no behavior
+5. **24** — prompts/quickref consolidation. Cheap, no behavior
    change. Before 25d's prompt rewrite so it isn't against a
    messy baseline.
-7. **16** — UX review (dashboard live-refresh + the rest).
-8. **23 → 22** — execution layer then steps.py refactor. 23 first
+6. **16** — UX review (dashboard live-refresh + the rest).
+7. **23 → 22** — execution layer then steps.py refactor. 23 first
    so 22's phase-helper extraction lands against the consolidated
    `chroot_exec`.
-9. **21** — DB layer consolidation. Enables 17/18 to plug into a
+8. **21** — DB layer consolidation. Enables 17/18 to plug into a
    clean write surface. Also the natural landing site for Step 26
    items 1 + 4 (the column adds).
-10. **19** — playbooks. Needs operating corpus from 11/25
-    running in production.
-11. **12 → 13 → 14 → 15** — abstraction work. 12 unblocks the
+9. **19** — playbooks. Needs operating corpus from 11/25
+   running in production.
+10. **12 → 13 → 14 → 15** — abstraction work. 12 unblocks the
     others.
-12. **17 → 18** — remote runners + security. Only load-bearing
+11. **17 → 18** — remote runners + security. Only load-bearing
     when a second builder appears.
 
 Rationale for the head of the order: the loop's first-class
