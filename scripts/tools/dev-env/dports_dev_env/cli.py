@@ -98,6 +98,26 @@ def build_parser() -> argparse.ArgumentParser:
     )
     path_.add_argument("name", help="Environment name")
 
+    ab = subparsers.add_parser(
+        "apply-and-build",
+        help="Substrate primitive: optionally apply a diff to the env's "
+             "DeltaPorts overlay, then reapply + dsynth build one origin",
+    )
+    ab.add_argument("name", help="Environment name")
+    ab.add_argument("origin", help="category/portname to build")
+    ab.add_argument(
+        "--diff", default=None,
+        help="Path on host to a unified diff to apply against "
+             "the env's DeltaPorts overlay before building",
+    )
+    ab.add_argument(
+        "--json", action="store_true",
+        help="Emit a single-line JSON result on stdout "
+             "(ok, apply_exit, reapply_exit, dsynth_exit, log_path, "
+             "applied_diff_sha256). Without --json, prints a one-line "
+             "human-readable summary.",
+    )
+
     # ----- hooks: install/uninstall/status the dsynth hooks inside an env -----
     hi = subparsers.add_parser(
         "hooks-install",
@@ -234,6 +254,133 @@ def cmd_path(args: argparse.Namespace) -> int:
     target = store.writable_dir(args.name) if args.writable else store.env_dir(args.name)
     print(str(target))
     return 0
+
+
+def cmd_apply_and_build(args: argparse.Namespace) -> int:
+    """Substrate primitive for fix verification (plan Step 11b Slice 1).
+
+    No knowledge of bundles, tracker, or artifact-store. Takes an env
+    name, an origin, and optionally a diff to apply against the env's
+    DeltaPorts overlay. Runs `reapply ORIGIN` to re-materialize the
+    DPorts tree, then `dbuild ORIGIN` (which runs dsynth). Captures
+    combined stdout+stderr to a log file under the env's writable
+    layer. Emits a JSON or plaintext result with the exit codes.
+
+    Higher-level orchestrators (e.g. `dportsv3 verify-fix BUNDLE_ID`,
+    Slice 3) resolve bundles and POST results back to the tracker;
+    this command stays substrate-only so it remains useful by hand
+    and ships over SSH cleanly for Step 17 remote runners.
+    """
+    import hashlib
+    import json
+    import shlex
+
+    from .chroot import ChrootRunner, chroot_env
+    from .helpers import build_env_dict
+
+    require_root()
+    config = load_config()
+    validate_cache_root(config.cache_root)
+    store = EnvironmentStore(config)
+    session = EnvironmentSession(config, store)
+    state = session.prepare(args.name)
+
+    env_dir = store.env_dir(args.name)
+    writable_root = env_dir / "writable"
+    runner = ChrootRunner(state.root_dir)
+    env = chroot_env() | build_env_dict(state)
+
+    result: dict = {
+        "ok": False,
+        "env": args.name,
+        "origin": args.origin,
+        "applied_diff_sha256": None,
+        "apply_exit": None,
+        "reapply_exit": None,
+        "dsynth_exit": None,
+        "log_path": None,
+    }
+
+    def emit_and_return(rc: int) -> int:
+        if args.json:
+            print(json.dumps(result))
+        else:
+            parts = [f"ok={result['ok']}",
+                     f"apply={result['apply_exit']}",
+                     f"reapply={result['reapply_exit']}",
+                     f"dsynth={result['dsynth_exit']}"]
+            if result["log_path"]:
+                parts.append(f"log={result['log_path']}")
+            print(" ".join(parts))
+        return rc
+
+    # 1. Apply diff (optional). Run through the chroot so the substrate
+    #    sees its own filesystem — host and chroot share the physical
+    #    writable layer, but going through `chroot exec` keeps the
+    #    operator memory rule honest (no host-side tree IO).
+    if args.diff is not None:
+        diff_host = Path(args.diff).expanduser().resolve()
+        if not diff_host.is_file():
+            raise UsageError(f"--diff: file not found: {diff_host}")
+        diff_bytes = diff_host.read_bytes()
+        result["applied_diff_sha256"] = hashlib.sha256(diff_bytes).hexdigest()
+
+        # Stage the diff into the writable layer so it's visible from
+        # inside the chroot at /work/.apply-and-build.diff.
+        staged_host = writable_root / "work" / ".apply-and-build.diff"
+        staged_host.parent.mkdir(parents=True, exist_ok=True)
+        staged_host.write_bytes(diff_bytes)
+        diff_chroot_path = "/work/.apply-and-build.diff"
+        try:
+            apply_proc = runner.run(
+                ["/bin/sh", "-c",
+                 f"cd /work/DeltaPorts && git apply --3way "
+                 f"{shlex.quote(diff_chroot_path)}", "_"],
+                env=env, capture_output=True,
+            )
+            result["apply_exit"] = apply_proc.returncode
+            if apply_proc.returncode != 0:
+                # Surface the git-apply error so the operator (and
+                # the orchestrator's POST body) can see why.
+                sys.stderr.write(apply_proc.stderr or "")
+                sys.stderr.write(apply_proc.stdout or "")
+                return emit_and_return(apply_proc.returncode)
+        finally:
+            try:
+                staged_host.unlink()
+            except FileNotFoundError:
+                pass
+
+    # 2. reapply ORIGIN — re-materialize the DPorts tree from the
+    #    (possibly-edited) DeltaPorts source.
+    reapply_proc = runner.run(
+        ["/bin/sh", "-c", f"cd /work/DeltaPorts && reapply "
+                          f"{shlex.quote(args.origin)}", "_"],
+        env=env, capture_output=True,
+    )
+    result["reapply_exit"] = reapply_proc.returncode
+    if reapply_proc.returncode != 0:
+        sys.stderr.write(reapply_proc.stderr or "")
+        sys.stderr.write(reapply_proc.stdout or "")
+        return emit_and_return(reapply_proc.returncode)
+
+    # 3. dbuild ORIGIN — runs dsynth. Capture combined output to a
+    #    log file under writable so the orchestrator can POST it.
+    log_rel = f"work/artifacts/apply-and-build-{args.origin.replace('/', '_')}.log"
+    log_host = writable_root / log_rel
+    log_host.parent.mkdir(parents=True, exist_ok=True)
+    log_chroot = f"/{log_rel}"
+    build_proc = runner.run(
+        ["/bin/sh", "-c",
+         f"cd /work/DeltaPorts && dbuild {shlex.quote(args.origin)} "
+         f"> {shlex.quote(log_chroot)} 2>&1", "_"],
+        env=env, capture_output=False,
+    )
+    result["dsynth_exit"] = build_proc.returncode
+    result["log_path"] = str(log_host)
+    result["ok"] = (build_proc.returncode == 0)
+
+    return emit_and_return(0 if result["ok"] else 1)
 
 
 def cmd_cleanup_mounts(args: argparse.Namespace) -> int:
@@ -472,6 +619,7 @@ def dispatch(args: argparse.Namespace) -> int:
         "status": cmd_status,
         "update": cmd_update,
         "path": cmd_path,
+        "apply-and-build": cmd_apply_and_build,
         "hooks-install": cmd_hooks_install,
         "hooks-uninstall": cmd_hooks_uninstall,
         "hooks-status": cmd_hooks_status,
