@@ -762,6 +762,96 @@ def create_app(db_path: str | Path) -> Any:
             raise HTTPException(status_code=404, detail=f"Unknown bundle: {bundle_id}")
         return row
 
+    @app.post("/api/bundles/{bundle_id}/verification")
+    def api_bundle_verification(
+        bundle_id: str, body: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Record an independent-verification outcome for a bundle
+        (plan Step 11b Slice 2).
+
+        Body shape (validated minimally on purpose — the orchestrator
+        in Slice 3 owns the schema):
+
+            {
+              "ok": bool,                          # required
+              "applied_diff_sha256": "<hex>"|null, # required (forensics)
+              "verified_at": "<iso>"|null,         # optional; server fills
+              "dsynth_exit": int|null,             # optional, kept for audit
+            }
+
+        Updates three columns on bundles: verification_status (set to
+        'verified' or 'verification_failed'), verification_at,
+        verification_applied_diff_sha256. Emits a bundle_verified
+        event so the SSE stream picks it up. Idempotent: re-POSTing
+        with a different applied_diff_sha256 overwrites — the column
+        records the *last* verification attempt, not a history.
+
+        The dsynth log itself is not stored here — Slice 3 may upload
+        it as a bundle artifact (e.g. analysis/verification.log) via
+        the artifact-store endpoint independently.
+        """
+        from datetime import datetime, timezone  # noqa: PLC0415
+
+        if "ok" not in body or not isinstance(body["ok"], bool):
+            raise HTTPException(
+                status_code=400,
+                detail="body must include boolean 'ok'",
+            )
+        if "applied_diff_sha256" not in body:
+            raise HTTPException(
+                status_code=400,
+                detail="body must include 'applied_diff_sha256' "
+                       "(null acceptable if no diff was applied)",
+            )
+
+        with _conn() as conn:
+            row = get_bundle(conn, bundle_id)
+        if row is None:
+            raise HTTPException(
+                status_code=404, detail=f"Unknown bundle: {bundle_id}",
+            )
+
+        status = "verified" if body["ok"] else "verification_failed"
+        verified_at = body.get("verified_at") or (
+            datetime.now(timezone.utc).isoformat()
+        )
+        applied_diff_sha = body.get("applied_diff_sha256")
+
+        write_conn = sqlite3.connect(
+            str(app.state.db_path), check_same_thread=False,
+            isolation_level=None,
+        )
+        write_conn.row_factory = sqlite3.Row
+        try:
+            write_conn.execute(
+                """UPDATE bundles SET
+                       verification_status = ?,
+                       verification_at = ?,
+                       verification_applied_diff_sha256 = ?,
+                       last_seen_at = ?
+                   WHERE bundle_id = ?""",
+                (status, verified_at, applied_diff_sha,
+                 verified_at, bundle_id),
+            )
+            from dportsv3.artifact_store import emit_event  # noqa: PLC0415
+            emit_event(write_conn, "bundle_verified", {
+                "bundle_id": bundle_id,
+                "verification_status": status,
+                "verification_at": verified_at,
+                "applied_diff_sha256": applied_diff_sha,
+                "dsynth_exit": body.get("dsynth_exit"),
+            })
+        finally:
+            write_conn.close()
+
+        return {
+            "ok": True,
+            "bundle_id": bundle_id,
+            "verification_status": status,
+            "verification_at": verified_at,
+            "applied_diff_sha256": applied_diff_sha,
+        }
+
     @app.get("/api/ports/{origin:path}")
     def api_port_bundles(
         origin: str,

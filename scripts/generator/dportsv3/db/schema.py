@@ -255,6 +255,19 @@ MIGRATIONS: tuple[str, ...] = (
     "ALTER TABLE bundles ADD COLUMN error_signature TEXT",
     "CREATE INDEX IF NOT EXISTS idx_bundles_signature_origin "
     "ON bundles(origin, target, error_signature)",
+    # Step 11b Slice 2: independent fix verification. The orchestrator
+    # (`dportsv3 verify-fix BUNDLE_ID`, Slice 3) provisions a fresh
+    # env, replays the bundle's analysis/changes.diff, runs
+    # dsynth_build, and POSTs the result back here. Three columns:
+    # - verification_status: 'verified' | 'verification_failed' | NULL
+    # - verification_at: ISO timestamp of last verification attempt
+    # - verification_applied_diff_sha256: sha256 of the diff that was
+    #   replayed; lets the UI dedupe re-verifications of the same fix
+    "ALTER TABLE bundles ADD COLUMN verification_status TEXT",
+    "ALTER TABLE bundles ADD COLUMN verification_at TEXT",
+    "ALTER TABLE bundles ADD COLUMN verification_applied_diff_sha256 TEXT",
+    "CREATE INDEX IF NOT EXISTS idx_bundles_verification_status "
+    "ON bundles(verification_status)",
 )
 
 
