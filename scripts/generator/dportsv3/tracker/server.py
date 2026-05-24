@@ -852,6 +852,215 @@ def create_app(db_path: str | Path) -> Any:
             "applied_diff_sha256": applied_diff_sha,
         }
 
+    @app.post("/api/bundles/{bundle_id}/verify")
+    def api_bundle_verify(
+        bundle_id: str, body: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Operator-triggered verify (Step 11c). Enqueues a new
+        ``verify`` job that the runner picks up and calls
+        ``dportsv3.verify_fix.run_verify_fix`` in-process. Returns
+        the enqueued job_id; result POSTs back to the
+        ``/verification`` endpoint when done.
+
+        Body: ``{"env": "<dev-env-name>"}``. Operator-chosen env;
+        auto-provisioning is a follow-up.
+        """
+        env = (body or {}).get("env")
+        if not env or not isinstance(env, str):
+            raise HTTPException(
+                status_code=400,
+                detail="body must include 'env' (dev-env name)",
+            )
+        with _conn() as conn:
+            row = get_bundle(conn, bundle_id)
+        if row is None:
+            raise HTTPException(
+                status_code=404, detail=f"Unknown bundle: {bundle_id}",
+            )
+        if row.get("resolution") in ("accepted", "rejected"):
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"Cannot verify bundle in terminal state "
+                    f"{row.get('resolution')!r}"
+                ),
+            )
+
+        # enqueue_verify_job lives in the runner module; importing
+        # it here keeps the tracker independent of the agent stack
+        # for read-only deployments.
+        from dportsv3.agent import runner as _runner  # noqa: PLC0415
+
+        # Tracker doesn't own a writable queue normally; use the
+        # configured queue root or fail loudly.
+        import os as _os  # noqa: PLC0415
+        from pathlib import Path as _Path  # noqa: PLC0415
+
+        qroot_str = _os.environ.get("DPORTSV3_QUEUE_ROOT")
+        if not qroot_str:
+            raise HTTPException(
+                status_code=500,
+                detail="DPORTSV3_QUEUE_ROOT not configured on tracker",
+            )
+        # The runner-side enqueue uses its own _state_db_conn; the
+        # tracker's app.state.db_path is the same DB, so wire it up
+        # for this call.
+        _runner._state_db_conn = sqlite3.connect(
+            str(app.state.db_path), check_same_thread=False,
+            isolation_level=None,
+        )
+        _runner._state_db_conn.row_factory = sqlite3.Row
+        try:
+            job_path = _runner.enqueue_verify_job(
+                _Path(qroot_str),
+                bundle_id=bundle_id,
+                origin=row.get("origin", ""),
+                target=row.get("target") or "",
+                env=env,
+                requested_by="operator",
+            )
+        finally:
+            _runner._state_db_conn.close()
+            _runner._state_db_conn = None
+
+        return {
+            "ok": True,
+            "bundle_id": bundle_id,
+            "job_id": job_path.name,
+            "env": env,
+        }
+
+    @app.post("/api/bundles/{bundle_id}/accept")
+    def api_bundle_accept(
+        bundle_id: str, body: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Operator accept (Step 11c). Gated on
+        verification_status='verified' — 409 otherwise. Sets
+        resolution='accepted' + accepted_at; emits a
+        bundle_accepted event."""
+        from datetime import datetime, timezone  # noqa: PLC0415
+
+        with _conn() as conn:
+            row = get_bundle(conn, bundle_id)
+        if row is None:
+            raise HTTPException(
+                status_code=404, detail=f"Unknown bundle: {bundle_id}",
+            )
+        if row.get("resolution") in ("accepted", "rejected"):
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"Cannot accept bundle in terminal state "
+                    f"{row.get('resolution')!r}"
+                ),
+            )
+        if row.get("verification_status") != "verified":
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "Accept requires verification_status='verified'; "
+                    f"current: {row.get('verification_status') or 'unverified'!r}"
+                ),
+            )
+
+        now = datetime.now(timezone.utc).isoformat()
+        write_conn = sqlite3.connect(
+            str(app.state.db_path), check_same_thread=False,
+            isolation_level=None,
+        )
+        write_conn.row_factory = sqlite3.Row
+        try:
+            write_conn.execute(
+                """UPDATE bundles SET
+                       resolution = 'accepted',
+                       accepted_at = ?,
+                       last_seen_at = ?
+                   WHERE bundle_id = ?""",
+                (now, now, bundle_id),
+            )
+            from dportsv3.artifact_store import emit_event  # noqa: PLC0415
+            emit_event(write_conn, "bundle_accepted", {
+                "bundle_id": bundle_id,
+                "accepted_at": now,
+                "note": (body or {}).get("note"),
+            })
+        finally:
+            write_conn.close()
+
+        return {
+            "ok": True,
+            "bundle_id": bundle_id,
+            "resolution": "accepted",
+            "accepted_at": now,
+        }
+
+    @app.post("/api/bundles/{bundle_id}/reject")
+    def api_bundle_reject(
+        bundle_id: str, body: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Operator reject (Step 11c). Sets resolution='rejected' +
+        rejected_at + rejection_reason. The rejection reason is
+        injected into the next triage as user_context so the agent
+        knows what humans didn't like about the last attempt.
+
+        Body: ``{"reason": "<text>"}``. Reason is required (an
+        unexplained reject is uninformative)."""
+        from datetime import datetime, timezone  # noqa: PLC0415
+
+        reason = (body or {}).get("reason")
+        if not reason or not isinstance(reason, str):
+            raise HTTPException(
+                status_code=400,
+                detail="body must include 'reason' (rejection text)",
+            )
+        with _conn() as conn:
+            row = get_bundle(conn, bundle_id)
+        if row is None:
+            raise HTTPException(
+                status_code=404, detail=f"Unknown bundle: {bundle_id}",
+            )
+        if row.get("resolution") in ("accepted", "rejected"):
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"Cannot reject bundle in terminal state "
+                    f"{row.get('resolution')!r}"
+                ),
+            )
+
+        now = datetime.now(timezone.utc).isoformat()
+        write_conn = sqlite3.connect(
+            str(app.state.db_path), check_same_thread=False,
+            isolation_level=None,
+        )
+        write_conn.row_factory = sqlite3.Row
+        try:
+            write_conn.execute(
+                """UPDATE bundles SET
+                       resolution = 'rejected',
+                       rejected_at = ?,
+                       rejection_reason = ?,
+                       last_seen_at = ?
+                   WHERE bundle_id = ?""",
+                (now, reason, now, bundle_id),
+            )
+            from dportsv3.artifact_store import emit_event  # noqa: PLC0415
+            emit_event(write_conn, "bundle_rejected", {
+                "bundle_id": bundle_id,
+                "rejected_at": now,
+                "reason": reason,
+            })
+        finally:
+            write_conn.close()
+
+        return {
+            "ok": True,
+            "bundle_id": bundle_id,
+            "resolution": "rejected",
+            "rejected_at": now,
+            "reason": reason,
+        }
+
     @app.get("/api/ports/{origin:path}")
     def api_port_bundles(
         origin: str,
@@ -1025,6 +1234,23 @@ def create_app(db_path: str | Path) -> Any:
         if selected_relpath and selected_artifact is None:
             raise HTTPException(status_code=404, detail="Artifact file missing")
         tool_trace = _load_tool_trace(app.state.artifact_root, tool_trace_ref)
+        # Step 11c: operator-action button matrix. Buttons show on
+        # any bundle whose agent has finished (resolution=
+        # 'agent_fixed') and the operator hasn't decided yet
+        # (accepted/rejected are terminal). Verify is the gate:
+        # Accept is enabled only when verification_status='verified'.
+        # Reject is always enabled on the non-terminal cases — the
+        # operator can refuse without verifying for obviously-wrong
+        # fixes.
+        actionable = (bundle is not None
+                      and bundle.get("resolution") == "agent_fixed")
+        operator_actions = {
+            "show": actionable,
+            "can_verify": actionable,
+            "can_accept": (actionable
+                           and bundle.get("verification_status") == "verified"),
+            "can_reject": actionable,
+        }
         return templates.TemplateResponse(
             request,
             "agentic_bundle.html",
@@ -1037,6 +1263,7 @@ def create_app(db_path: str | Path) -> Any:
                 "prior_attempts": prior_attempts,
                 "port_token_usage": port_token_usage,
                 "dops_state": dops_state,
+                "operator_actions": operator_actions,
             },
         )
 

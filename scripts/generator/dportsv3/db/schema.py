@@ -268,6 +268,13 @@ MIGRATIONS: tuple[str, ...] = (
     "ALTER TABLE bundles ADD COLUMN verification_applied_diff_sha256 TEXT",
     "CREATE INDEX IF NOT EXISTS idx_bundles_verification_status "
     "ON bundles(verification_status)",
+    # Step 11c: operator accept/reject decisions on agent-fixed
+    # bundles. Acceptance is gated on verification_status='verified'.
+    # accepted_by is intentionally NULL today (auth lands in Step 18).
+    "ALTER TABLE bundles ADD COLUMN accepted_at TEXT",
+    "ALTER TABLE bundles ADD COLUMN accepted_by TEXT",
+    "ALTER TABLE bundles ADD COLUMN rejected_at TEXT",
+    "ALTER TABLE bundles ADD COLUMN rejection_reason TEXT",
 )
 
 

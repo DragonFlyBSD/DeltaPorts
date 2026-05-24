@@ -39,6 +39,13 @@ class JobState(StrEnum):
     # PATCHING — a convert job is its own type that lives entirely
     # in this state until done/dead/escalated.
     CONVERTING = "converting"
+    # Step 11c: operator-triggered verification of a proposed fix
+    # (separate from the inner VERIFYING state used by patch jobs).
+    # A verify-fix job lives here from CLAIMED → VERIFY_FIX_START
+    # until VERIFY_FIX_OK lands at DONE (independent of whether the
+    # underlying dsynth verdict said verified or verification_failed
+    # — the *job* succeeded if the orchestrator ran end-to-end).
+    VERIFYING_FIX = "verifying_fix"
     DONE       = "done"
     ESCALATED  = "escalated"
     DEAD       = "dead"
@@ -73,6 +80,16 @@ class JobEvent(StrEnum):
     CONVERT_START    = "convert_start"
     CONVERT_OK       = "convert_ok"
     CONVERT_GAVE_UP  = "convert_gave_up"
+    # Step 11c: verify-fix job lifecycle. Mirrors the CONVERT_*
+    # shape. VERIFY_FIX_OK lands at DONE regardless of the
+    # underlying verification verdict — that lives on bundles.
+    # verification_status, written by the orchestrator's POST to
+    # /api/bundles/<id>/verification. VERIFY_FIX_GAVE_UP fires only
+    # if the orchestrator itself crashed (env gone, tracker
+    # unreachable, etc.) and lands at DEAD.
+    VERIFY_FIX_START   = "verify_fix_start"
+    VERIFY_FIX_OK      = "verify_fix_ok"
+    VERIFY_FIX_GAVE_UP = "verify_fix_gave_up"
     # Step 20d follow-up: when triage detects a port needs conversion
     # it fires TRIAGE_DEFER (not ESCALATE_MANUAL) so the deferred
     # triage doesn't pollute the operator's manual queue. The convert
@@ -112,6 +129,10 @@ TRANSITIONS: dict[tuple[JobState | None, JobEvent], JobState] = {
     (JobState.CONVERTING,  JobEvent.CONVERT_OK):       JobState.DONE,
     (JobState.CONVERTING,  JobEvent.CONVERT_GAVE_UP):  JobState.DEAD,
     (JobState.CONVERTING,  JobEvent.ESCALATE_MANUAL):  JobState.ESCALATED,
+    # Step 11c: verify-fix-job happy path + failure.
+    (JobState.CLAIMED,       JobEvent.VERIFY_FIX_START):   JobState.VERIFYING_FIX,
+    (JobState.VERIFYING_FIX, JobEvent.VERIFY_FIX_OK):      JobState.DONE,
+    (JobState.VERIFYING_FIX, JobEvent.VERIFY_FIX_GAVE_UP): JobState.DEAD,
     # Step 20d: TRIAGE_DEFER lands at DEAD with a distinct retire
     # reason so the manual queue is not polluted with parked triages.
     (JobState.TRIAGING,    JobEvent.TRIAGE_DEFER):     JobState.DEAD,
@@ -123,6 +144,7 @@ TRANSITIONS: dict[tuple[JobState | None, JobEvent], JobState] = {
     (JobState.PATCHING,    JobEvent.ENV_BROKEN):       JobState.DEAD,
     (JobState.VERIFYING,   JobEvent.ENV_BROKEN):       JobState.DEAD,
     (JobState.CONVERTING,  JobEvent.ENV_BROKEN):       JobState.DEAD,
+    (JobState.VERIFYING_FIX, JobEvent.ENV_BROKEN):     JobState.DEAD,
 
     # Startup orphan reap — same shape as env_broken but a distinct
     # event so retire_reason can be filled differently.
@@ -132,6 +154,7 @@ TRANSITIONS: dict[tuple[JobState | None, JobEvent], JobState] = {
     (JobState.PATCHING,    JobEvent.REAP_ORPHAN):      JobState.DEAD,
     (JobState.VERIFYING,   JobEvent.REAP_ORPHAN):      JobState.DEAD,
     (JobState.CONVERTING,  JobEvent.REAP_ORPHAN):      JobState.DEAD,
+    (JobState.VERIFYING_FIX, JobEvent.REAP_ORPHAN):    JobState.DEAD,
     # Step 10a: QUEUED jobs can be reaped too, but ONLY by the
     # stricter ``reap_stale_queued`` helper — never by ``reap_orphans``
     # (which would kill brand-new claimable work). The state-machine
@@ -149,6 +172,7 @@ TRANSITIONS: dict[tuple[JobState | None, JobEvent], JobState] = {
     (JobState.PATCHING,    JobEvent.ABANDON):          JobState.DEAD,
     (JobState.VERIFYING,   JobEvent.ABANDON):          JobState.DEAD,
     (JobState.CONVERTING,  JobEvent.ABANDON):          JobState.DEAD,
+    (JobState.VERIFYING_FIX, JobEvent.ABANDON):        JobState.DEAD,
 }
 
 
@@ -163,6 +187,7 @@ _TERMINAL_REASONS: dict[JobEvent, str] = {
     JobEvent.REAP_ORPHAN:      "runner_restart",
     JobEvent.ABANDON:          "abandoned",
     JobEvent.CONVERT_GAVE_UP:  "convert_failed",
+    JobEvent.VERIFY_FIX_GAVE_UP: "verify_fix_failed",
     JobEvent.TRIAGE_DEFER:     "deferred_for_convert",
 }
 
@@ -186,6 +211,7 @@ _INFLIGHT_STATES: tuple[JobState, ...] = (
     JobState.PATCHING,
     JobState.VERIFYING,
     JobState.CONVERTING,
+    JobState.VERIFYING_FIX,
 )
 
 

@@ -80,6 +80,71 @@
       </table>
     </div>
 
+    {# Step 11c: operator-action buttons. Verify is the gate; Accept
+       is disabled until verification_status='verified'. Reject is
+       always available on non-terminal agent_fixed bundles. The
+       JS posts to the API endpoints and reloads on success — keeps
+       the templates dumb while the SSE wiring lands later. #}
+    {% if operator_actions and operator_actions.show %}
+    <div class="tracker-card" style="margin-top:8px;">
+      <strong style="font-size:12px;">Operator actions</strong>
+      <div style="margin-top:6px;display:flex;gap:8px;align-items:center;">
+        <button id="op-verify"
+                style="font-size:12px;padding:4px 10px;"
+                {% if not operator_actions.can_verify %}disabled title="Not available in current state"{% endif %}
+                onclick="dpOpAction('verify', {{ bundle.bundle_id | tojson }})">
+          Verify
+        </button>
+        <button id="op-accept"
+                style="font-size:12px;padding:4px 10px;"
+                {% if not operator_actions.can_accept %}disabled title="Accept requires verification_status='verified'"{% endif %}
+                onclick="dpOpAction('accept', {{ bundle.bundle_id | tojson }})">
+          Accept
+        </button>
+        <button id="op-reject"
+                style="font-size:12px;padding:4px 10px;"
+                {% if not operator_actions.can_reject %}disabled{% endif %}
+                onclick="dpOpAction('reject', {{ bundle.bundle_id | tojson }})">
+          Reject
+        </button>
+        <span id="op-status" style="color:var(--text-dim);font-size:11px;"></span>
+      </div>
+    </div>
+    <script>
+    async function dpOpAction(action, bundleId) {
+      const statusEl = document.getElementById('op-status');
+      statusEl.textContent = action + ' in progress…';
+      let body = {};
+      if (action === 'verify') {
+        const env = prompt('Dev-env name to verify in:', '');
+        if (!env) { statusEl.textContent = ''; return; }
+        body = {env: env};
+      } else if (action === 'reject') {
+        const reason = prompt('Rejection reason (will be passed to next triage as user_context):', '');
+        if (!reason) { statusEl.textContent = ''; return; }
+        body = {reason: reason};
+      }
+      try {
+        const resp = await fetch(
+          '/api/bundles/' + encodeURIComponent(bundleId) + '/' + action,
+          {method: 'POST',
+           headers: {'Content-Type': 'application/json'},
+           body: JSON.stringify(body)}
+        );
+        const data = await resp.json();
+        if (resp.ok) {
+          statusEl.textContent = action + ' OK — reloading';
+          setTimeout(() => location.reload(), 500);
+        } else {
+          statusEl.textContent = 'error: ' + (data.detail || resp.status);
+        }
+      } catch (exc) {
+        statusEl.textContent = 'error: ' + exc;
+      }
+    }
+    </script>
+    {% endif %}
+
     {# Step 9: artifact shortcut rail. Operator-canonical files
        surface as labeled pills at the top, with the long full list
        further down. Pills appear only for artifacts that actually

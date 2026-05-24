@@ -1800,6 +1800,64 @@ def enqueue_convert_job(
     return job_path
 
 
+def enqueue_verify_job(
+    queue_root: Path,
+    *,
+    bundle_id: str,
+    origin: str,
+    target: str,
+    env: str,
+    requested_by: str = "operator",
+) -> Path:
+    """Enqueue a fix-verification job (Step 11c).
+
+    Verify jobs are operator-triggered: the bundle UI's Verify
+    button POSTs to a tracker endpoint which calls this. The
+    runner's dispatch arm picks the job up and calls
+    ``dportsv3.verify_fix.run_verify_fix`` in-process — no
+    subprocess, no shell-out.
+
+    Carries ``bundle_id`` so the in-process call has what it
+    needs; ``env`` is the operator-chosen dev-env name.
+    """
+    ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%SZ")
+    origin_safe = origin.replace("/", "_")
+    pid = os.getpid()
+    job_name = f"{ts}-{origin_safe}-{pid}-verify.job"
+
+    pending_dir = queue_root / "pending"
+    job_path = pending_dir / job_name
+
+    content = [
+        "type=verify",
+        f"created_ts_utc={ts}",
+        f"bundle_id={bundle_id}",
+        f"origin={origin}",
+        f"target={target}",
+        f"dev_env={env}",
+        f"requested_by={requested_by}",
+    ]
+
+    tmp_path = job_path.with_suffix(".tmp")
+    with open(tmp_path, "w") as f:
+        f.write("\n".join(content) + "\n")
+    tmp_path.rename(job_path)
+
+    _register_new_job(
+        job_path.name,
+        metadata={
+            "type": "verify",
+            "origin": origin,
+            "flavor": "",
+            "created_ts_utc": ts,
+            "path": str(job_path),
+            "target": target,
+            "bundle_id": bundle_id,
+        },
+    )
+    return job_path
+
+
 
 # -----------------------------------------------------------------------------
 # Job processing
@@ -2847,9 +2905,11 @@ def process_job(
                          extra={"origin": origin, "type": job_type})
 
     # Step 20: convert jobs are port-level — there's no failure
-    # bundle attached and they don't need one. The bundle-required
-    # gate below only applies to triage/patch.
-    if job_type != "convert" and bundle_dir is None and not bundle_id:
+    # bundle attached and they don't need one. Step 11c: verify
+    # jobs reference a bundle but don't need bundle_dir
+    # materialized (run_verify_fix fetches the diff via tracker).
+    if (job_type not in ("convert", "verify")
+            and bundle_dir is None and not bundle_id):
         log(queue_root, "ERROR", "missing bundle_id/bundle_dir in job")
         write_error_note(job_path, "missing bundle_id/bundle_dir in job")
         move_job(job_path, "failed")
@@ -2944,6 +3004,42 @@ def process_job(
             except Exception as exc:
                 log(queue_root, "WARN",
                     f"_resume_deferred_triage raised: {exc}")
+    elif job_type == "verify":
+        # Step 11c: operator-triggered fix verification. Calls
+        # dportsv3.verify_fix.run_verify_fix() in-process — no
+        # subprocess. The job's terminal state is VERIFY_FIX_OK
+        # whenever the orchestrator ran end-to-end (regardless of
+        # the underlying dsynth verdict, which lives on
+        # bundles.verification_status via the Slice 2 endpoint).
+        # VERIFY_FIX_GAVE_UP only fires if the orchestrator itself
+        # raised (env gone, tracker unreachable, etc.).
+        from dportsv3.verify_fix import run_verify_fix  # noqa: PLC0415
+
+        start_event = JobEvent.VERIFY_FIX_START
+        _apply_transition(job_path.name, start_event)
+        bundle_id = job.get("bundle_id", "")
+        verify_env = job.get("dev_env", "")
+        try:
+            result = run_verify_fix(
+                bundle_id=bundle_id,
+                env=verify_env,
+                tracker_url=_tracker_url(),
+            )
+            success, status = True, (
+                "verified" if result.ok else "verification_failed"
+            )
+            finish_event = JobEvent.VERIFY_FIX_OK
+            detail = {
+                "ok": result.ok,
+                "applied_diff_sha256": result.applied_diff_sha256,
+                "dsynth_exit": result.dsynth_exit,
+                "posted": result.posted,
+            }
+        except Exception as exc:
+            success, status = False, f"verify_fix raised: {exc}"
+            finish_event = JobEvent.VERIFY_FIX_GAVE_UP
+            detail = {"reason": str(exc)[:500]}
+        _apply_transition(job_path.name, finish_event, detail=detail)
     else:
         # Unknown job type — fire the catchall failure event for lead +
         # siblings, write the error note, move everything to failed/.
