@@ -93,7 +93,7 @@
 
     <h2>Recent bundles</h2>
     <table class="tracker-table">
-      <thead><tr><th>Bundle</th><th>Origin</th><th>Target</th><th>Result</th><th>Resolution</th></tr></thead>
+      <thead><tr><th>Bundle</th><th>Origin</th><th>Target</th><th>Result</th><th>Resolution</th><th>Verified</th></tr></thead>
       <tbody>
         {% for b in recent_bundles %}
         <tr>
@@ -114,9 +114,18 @@
               —
             {% endif %}
           </td>
+          <td>
+            {% if b.verification_status == 'verified' %}
+              <span class="stat-pill built">verified</span>
+            {% elif b.verification_status == 'verification_failed' %}
+              <span class="stat-pill failed">failed</span>
+            {% else %}
+              —
+            {% endif %}
+          </td>
         </tr>
         {% else %}
-        <tr><td colspan="5" style="color:var(--text-dim);">No bundles yet.</td></tr>
+        <tr><td colspan="6" style="color:var(--text-dim);">No bundles yet.</td></tr>
         {% endfor %}
       </tbody>
     </table>

@@ -20,7 +20,7 @@
 
     <table class="tracker-table">
       <thead>
-        <tr><th>Bundle</th><th>Origin</th><th>Flavor</th><th>Target</th><th>Result</th><th>Resolution</th><th>When</th><th>Run</th></tr>
+        <tr><th>Bundle</th><th>Origin</th><th>Flavor</th><th>Target</th><th>Result</th><th>Resolution</th><th>Verified</th><th>When</th><th>Run</th></tr>
       </thead>
       <tbody>
         {% for b in bundles %}
@@ -43,11 +43,20 @@
               —
             {% endif %}
           </td>
+          <td>
+            {% if b.verification_status == 'verified' %}
+              <span class="stat-pill built">verified</span>
+            {% elif b.verification_status == 'verification_failed' %}
+              <span class="stat-pill failed">failed</span>
+            {% else %}
+              —
+            {% endif %}
+          </td>
           <td>{{ b.ts_utc }}</td>
           <td>{% if b.run_id %}<a href="{{ request.url_for('agentic_run_detail', run_id=b.run_id) }}">{{ b.run_id }}</a>{% else %}—{% endif %}</td>
         </tr>
         {% else %}
-        <tr><td colspan="8" style="color:var(--text-dim);">No bundles match this filter.</td></tr>
+        <tr><td colspan="9" style="color:var(--text-dim);">No bundles match this filter.</td></tr>
         {% endfor %}
       </tbody>
     </table>

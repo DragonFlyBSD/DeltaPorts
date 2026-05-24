@@ -189,3 +189,44 @@ def test_post_verification_emits_event(client, seeded_db):
     data = json.loads(row["data_json"])
     assert data["bundle_id"] == "b-verified"
     assert data["verification_status"] == "verified"
+
+
+# ---------------------------------------------------------------------------
+# Slice 4 — UI surface (verification pill on bundle list + detail)
+# ---------------------------------------------------------------------------
+
+
+def test_bundle_detail_renders_verified_pill(client, seeded_db):
+    client.post(
+        "/api/bundles/b-verified/verification",
+        json={"ok": True, "applied_diff_sha256": "a" * 64},
+    )
+    body = client.get("/agentic/bundles/b-verified").text
+    assert ">Verification<" in body
+    assert "verified" in body
+
+
+def test_bundle_detail_renders_verification_failed_pill(client, seeded_db):
+    client.post(
+        "/api/bundles/b-failed/verification",
+        json={"ok": False, "applied_diff_sha256": "b" * 64},
+    )
+    body = client.get("/agentic/bundles/b-failed").text
+    assert ">Verification<" in body
+    assert "verification failed" in body
+
+
+def test_bundle_detail_omits_verification_row_when_unset(client):
+    """Pre-Step-11b bundles should render unchanged."""
+    body = client.get("/agentic/bundles/b-verified").text
+    assert ">Verification<" not in body
+
+
+def test_bundle_list_renders_verified_column(client, seeded_db):
+    client.post(
+        "/api/bundles/b-verified/verification",
+        json={"ok": True, "applied_diff_sha256": "a" * 64},
+    )
+    body = client.get("/agentic/bundles").text
+    assert ">Verified<" in body  # column header
+    assert "verified" in body

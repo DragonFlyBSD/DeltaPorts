@@ -203,6 +203,34 @@ def test_render_cost_shows_triage_breakdown_when_present():
     assert "Combined total" in out
 
 
+def test_render_includes_verification_badge_when_verified():
+    """Step 11b Slice 4 — the proposed_fix.md surface picks up the
+    verification status once it's set on the bundle, so operators
+    reading the artifact see the verdict alongside the diff recipe."""
+    out = pf.render_proposed_fix(_ctx(
+        verification_status="verified",
+        verification_at="2026-05-24T20:00:00Z",
+    ))
+    assert "Verification" in out
+    assert "verified" in out.lower()
+    assert "2026-05-24T20:00:00Z" in out
+
+
+def test_render_includes_verification_failed_badge():
+    out = pf.render_proposed_fix(_ctx(
+        verification_status="verification_failed",
+    ))
+    assert "Verification" in out
+    assert "verification failed" in out.lower()
+
+
+def test_render_omits_verification_line_when_unset():
+    """Older bundles (pre-Step-11b) and bundles whose verify hasn't
+    run yet must render without a Verification line."""
+    out = pf.render_proposed_fix(_ctx())  # default empty
+    assert "**Verification:**" not in out
+
+
 def test_render_cost_omits_triage_when_zero():
     out = pf.render_proposed_fix(_ctx(
         prompt_tokens=80_000, completion_tokens=5_000, total_tokens=85_000,

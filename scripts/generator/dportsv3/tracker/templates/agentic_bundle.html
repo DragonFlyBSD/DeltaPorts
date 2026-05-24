@@ -46,6 +46,20 @@
           {% endif %}
         </td></tr>
         {% endif %}
+        {% if bundle.verification_status %}
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Verification</th><td>
+          {% if bundle.verification_status == 'verified' %}
+            <span class="stat-pill built">verified</span>
+          {% elif bundle.verification_status == 'verification_failed' %}
+            <span class="stat-pill failed">verification failed</span>
+          {% else %}
+            {{ bundle.verification_status }}
+          {% endif %}
+          {% if bundle.verification_at %}
+            <span style="color:var(--text-dim);font-size:11px;">at {{ bundle.verification_at }}</span>
+          {% endif %}
+        </td></tr>
+        {% endif %}
         {% if dops_state %}
         <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">dops</th><td>
           {% if dops_state == 'converted' %}

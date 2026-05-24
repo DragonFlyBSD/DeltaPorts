@@ -69,6 +69,12 @@ class ProposedFixCtx:
     # that fetches the diff from the artifact API.
     tracker_url: str = ""
 
+    # Independent-verification outcome from Step 11b. Empty string
+    # means "not yet attempted"; surface only when set so older
+    # bundles render unchanged.
+    verification_status: str = ""
+    verification_at: str = ""
+
 
 # ---------------------------------------------------------------------------
 # Markdown rendering
@@ -114,6 +120,15 @@ def render_proposed_fix(ctx: ProposedFixCtx) -> str:
             f"- **Triage:** `{ctx.classification or 'unknown'}` "
             f"(confidence: `{ctx.confidence or 'unknown'}`)"
         )
+    if ctx.verification_status:
+        if ctx.verification_status == "verified":
+            badge = "✅ verified"
+        elif ctx.verification_status == "verification_failed":
+            badge = "❌ verification failed"
+        else:
+            badge = ctx.verification_status
+        verified_at = f" at `{ctx.verification_at}`" if ctx.verification_at else ""
+        lines.append(f"- **Verification:** {badge}{verified_at}")
     lines.append("")
 
     # Cost — concrete numbers operators can use to estimate scale.
