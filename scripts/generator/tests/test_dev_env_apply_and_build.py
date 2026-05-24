@@ -211,7 +211,10 @@ def test_reapply_failure_short_circuits_dsynth(fake_env, monkeypatch) -> None:
     ]
     rc = cmd_apply_and_build(_args(fake_env.env_name, "devel/foo", json=True))
 
-    assert rc == 2
+    # CLI exit is binary (0 if ok, 1 otherwise) so shell pipelines
+    # behave consistently. The per-stage exit code lives in the
+    # JSON for callers who want it.
+    assert rc == 1
     result = json.loads(out.getvalue())
     assert result["reapply_exit"] == 2
     assert result["dsynth_exit"] is None

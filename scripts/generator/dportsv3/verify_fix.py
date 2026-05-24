@@ -32,7 +32,6 @@ import argparse
 import hashlib
 import json
 import os
-import subprocess
 import sys
 import tempfile
 import urllib.error
@@ -95,24 +94,37 @@ class VerifyResult:
     posted: bool
 
 
+def _default_apply_and_build(env_name: str, origin: str,
+                             *, diff_path: str | None) -> dict:
+    """Import-on-demand wrapper around the dev-env primitive. Kept
+    out of module-import time so unit tests don't have to load the
+    dev-env package."""
+    # The dev-env package lives outside the generator's package tree
+    # (scripts/tools/dev-env/). The runner process already has it on
+    # sys.path because runner.py imports from it; importing here
+    # too is a no-op in that context.
+    from dports_dev_env.cli import apply_and_build as _ab  # noqa: PLC0415
+    return _ab(env_name, origin, diff_path=diff_path)
+
+
 def run_verify_fix(
     *,
     bundle_id: str,
     env: str,
     tracker_url: str | None = None,
-    apply_and_build: list[str] | None = None,
     keep_log: bool = False,
     # Injectable hooks for tests; production callers don't pass these.
     _get_json=_get_json,
     _get_bytes=_get_bytes,
     _post_json=_post_json,
-    _run=subprocess.run,
+    _apply_and_build=_default_apply_and_build,
 ) -> VerifyResult:
     """Run the orchestrator end-to-end.
 
-    ``apply_and_build`` is the argv prefix used to invoke the Slice 1
-    primitive; defaults to ``["dportsv3", "dev-env", "apply-and-build"]``
-    but tests can swap in a stub.
+    Calls ``dports_dev_env.cli.apply_and_build`` in-process — no
+    subprocess, no PATH lookup, no JSON-over-stdout round trip.
+    Tests inject ``_apply_and_build`` with a stub that returns the
+    same dict shape.
     """
     base = (tracker_url or _tracker_url()).rstrip("/")
     bundle_url = f"{base}/api/bundles/{urllib.parse.quote(bundle_id)}"
@@ -143,7 +155,6 @@ def run_verify_fix(
 
     diff_sha = hashlib.sha256(diff_bytes).hexdigest()
 
-    argv_prefix = apply_and_build or ["dportsv3", "dev-env", "apply-and-build"]
     with tempfile.NamedTemporaryFile(
         mode="wb", suffix=".diff", prefix=f"verify-{bundle_id}-",
         delete=False,
@@ -151,24 +162,20 @@ def run_verify_fix(
         tmp.write(diff_bytes)
         diff_path = tmp.name
     try:
-        proc = _run(
-            [*argv_prefix, env, origin, "--diff", diff_path, "--json"],
-            capture_output=True, text=True, check=False,
-        )
+        # In-process call into the dev-env primitive. Any error
+        # bubbles up as the original exception — no JSON parsing,
+        # no return-code translation.
+        ab = _apply_and_build(env, origin, diff_path=diff_path)
+    except Exception as exc:
+        raise VerifyFixError(
+            f"apply-and-build failed for {bundle_id} (env={env}): "
+            f"{type(exc).__name__}: {exc}"
+        ) from exc
     finally:
         try:
             os.unlink(diff_path)
         except FileNotFoundError:
             pass
-
-    if proc.stderr:
-        sys.stderr.write(proc.stderr)
-    try:
-        ab = json.loads((proc.stdout or "").strip().splitlines()[-1])
-    except (json.JSONDecodeError, IndexError):
-        raise VerifyFixError(
-            f"apply-and-build produced no JSON on stdout (rc={proc.returncode})"
-        )
 
     ok = bool(ab.get("ok"))
     post_body = {

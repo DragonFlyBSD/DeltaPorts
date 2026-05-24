@@ -256,23 +256,32 @@ def cmd_path(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_apply_and_build(args: argparse.Namespace) -> int:
+def apply_and_build(
+    env_name: str,
+    origin: str,
+    *,
+    diff_path: str | None = None,
+) -> dict:
     """Substrate primitive for fix verification (plan Step 11b Slice 1).
 
-    No knowledge of bundles, tracker, or artifact-store. Takes an env
-    name, an origin, and optionally a diff to apply against the env's
-    DeltaPorts overlay. Runs `reapply ORIGIN` to re-materialize the
-    DPorts tree, then `dbuild ORIGIN` (which runs dsynth). Captures
-    combined stdout+stderr to a log file under the env's writable
-    layer. Emits a JSON or plaintext result with the exit codes.
+    In-process function — the public callable that the verify-fix
+    orchestrator and any future in-process consumer use directly,
+    without subprocess-out-and-back-in. The CLI thin-wrapper
+    ``cmd_apply_and_build`` just unwraps argparse.Namespace and
+    prints; the real work lives here.
 
-    Higher-level orchestrators (e.g. `dportsv3 verify-fix BUNDLE_ID`,
-    Slice 3) resolve bundles and POST results back to the tracker;
-    this command stays substrate-only so it remains useful by hand
-    and ships over SSH cleanly for Step 17 remote runners.
+    No knowledge of bundles, tracker, or artifact-store. Optionally
+    applies a diff to the env's DeltaPorts overlay (through the
+    chroot, not host-side IO), runs ``reapply ORIGIN`` to re-
+    materialize the DPorts tree, then ``dbuild ORIGIN`` (dsynth).
+    Captures combined dsynth output to a log file under writable.
+
+    Returns a dict with: ok, env, origin, applied_diff_sha256,
+    apply_exit, reapply_exit, dsynth_exit, log_path, stderr_tail.
+    Each stage short-circuits on failure; later fields stay None.
+    Raises UsageError on bad inputs (missing diff file, etc.).
     """
     import hashlib
-    import json
     import shlex
 
     from .chroot import ChrootRunner, chroot_env
@@ -283,50 +292,37 @@ def cmd_apply_and_build(args: argparse.Namespace) -> int:
     validate_cache_root(config.cache_root)
     store = EnvironmentStore(config)
     session = EnvironmentSession(config, store)
-    state = session.prepare(args.name)
+    state = session.prepare(env_name)
 
-    env_dir = store.env_dir(args.name)
+    env_dir = store.env_dir(env_name)
     writable_root = env_dir / "writable"
     runner = ChrootRunner(state.root_dir)
     env = chroot_env() | build_env_dict(state)
 
     result: dict = {
         "ok": False,
-        "env": args.name,
-        "origin": args.origin,
+        "env": env_name,
+        "origin": origin,
         "applied_diff_sha256": None,
         "apply_exit": None,
         "reapply_exit": None,
         "dsynth_exit": None,
         "log_path": None,
+        "stderr_tail": None,
     }
 
-    def emit_and_return(rc: int) -> int:
-        if args.json:
-            print(json.dumps(result))
-        else:
-            parts = [f"ok={result['ok']}",
-                     f"apply={result['apply_exit']}",
-                     f"reapply={result['reapply_exit']}",
-                     f"dsynth={result['dsynth_exit']}"]
-            if result["log_path"]:
-                parts.append(f"log={result['log_path']}")
-            print(" ".join(parts))
-        return rc
-
-    # 1. Apply diff (optional). Run through the chroot so the substrate
-    #    sees its own filesystem — host and chroot share the physical
-    #    writable layer, but going through `chroot exec` keeps the
-    #    operator memory rule honest (no host-side tree IO).
-    if args.diff is not None:
-        diff_host = Path(args.diff).expanduser().resolve()
+    # 1. Apply diff (optional). Run through the chroot so the
+    #    substrate sees its own filesystem — host and chroot share
+    #    the physical writable layer, but going through `chroot
+    #    exec` keeps the operator memory rule honest (no host-side
+    #    tree IO).
+    if diff_path is not None:
+        diff_host = Path(diff_path).expanduser().resolve()
         if not diff_host.is_file():
             raise UsageError(f"--diff: file not found: {diff_host}")
         diff_bytes = diff_host.read_bytes()
         result["applied_diff_sha256"] = hashlib.sha256(diff_bytes).hexdigest()
 
-        # Stage the diff into the writable layer so it's visible from
-        # inside the chroot at /work/.apply-and-build.diff.
         staged_host = writable_root / "work" / ".apply-and-build.diff"
         staged_host.parent.mkdir(parents=True, exist_ok=True)
         staged_host.write_bytes(diff_bytes)
@@ -340,47 +336,72 @@ def cmd_apply_and_build(args: argparse.Namespace) -> int:
             )
             result["apply_exit"] = apply_proc.returncode
             if apply_proc.returncode != 0:
-                # Surface the git-apply error so the operator (and
-                # the orchestrator's POST body) can see why.
-                sys.stderr.write(apply_proc.stderr or "")
-                sys.stderr.write(apply_proc.stdout or "")
-                return emit_and_return(apply_proc.returncode)
+                tail = (apply_proc.stderr or "") + (apply_proc.stdout or "")
+                result["stderr_tail"] = tail[-2000:]
+                sys.stderr.write(tail)
+                return result
         finally:
             try:
                 staged_host.unlink()
             except FileNotFoundError:
                 pass
 
-    # 2. reapply ORIGIN — re-materialize the DPorts tree from the
-    #    (possibly-edited) DeltaPorts source.
+    # 2. reapply ORIGIN — re-materialize DPorts from the (possibly-
+    #    edited) DeltaPorts source.
     reapply_proc = runner.run(
         ["/bin/sh", "-c", f"cd /work/DeltaPorts && reapply "
-                          f"{shlex.quote(args.origin)}", "_"],
+                          f"{shlex.quote(origin)}", "_"],
         env=env, capture_output=True,
     )
     result["reapply_exit"] = reapply_proc.returncode
     if reapply_proc.returncode != 0:
-        sys.stderr.write(reapply_proc.stderr or "")
-        sys.stderr.write(reapply_proc.stdout or "")
-        return emit_and_return(reapply_proc.returncode)
+        tail = (reapply_proc.stderr or "") + (reapply_proc.stdout or "")
+        result["stderr_tail"] = tail[-2000:]
+        sys.stderr.write(tail)
+        return result
 
     # 3. dbuild ORIGIN — runs dsynth. Capture combined output to a
     #    log file under writable so the orchestrator can POST it.
-    log_rel = f"work/artifacts/apply-and-build-{args.origin.replace('/', '_')}.log"
+    log_rel = f"work/artifacts/apply-and-build-{origin.replace('/', '_')}.log"
     log_host = writable_root / log_rel
     log_host.parent.mkdir(parents=True, exist_ok=True)
     log_chroot = f"/{log_rel}"
     build_proc = runner.run(
         ["/bin/sh", "-c",
-         f"cd /work/DeltaPorts && dbuild {shlex.quote(args.origin)} "
+         f"cd /work/DeltaPorts && dbuild {shlex.quote(origin)} "
          f"> {shlex.quote(log_chroot)} 2>&1", "_"],
         env=env, capture_output=False,
     )
     result["dsynth_exit"] = build_proc.returncode
     result["log_path"] = str(log_host)
     result["ok"] = (build_proc.returncode == 0)
+    return result
 
-    return emit_and_return(0 if result["ok"] else 1)
+
+def cmd_apply_and_build(args: argparse.Namespace) -> int:
+    """CLI wrapper for :func:`apply_and_build`. Higher-level
+    orchestrators (e.g. ``dportsv3.verify_fix.run_verify_fix``)
+    call the function directly — no subprocess hop.
+    """
+    import json
+
+    result = apply_and_build(
+        args.name, args.origin, diff_path=args.diff,
+    )
+    if args.json:
+        # Drop the stderr_tail from JSON output unless we're emitting
+        # for the operator — keep the on-wire shape stable.
+        printable = {k: v for k, v in result.items() if k != "stderr_tail"}
+        print(json.dumps(printable))
+    else:
+        parts = [f"ok={result['ok']}",
+                 f"apply={result['apply_exit']}",
+                 f"reapply={result['reapply_exit']}",
+                 f"dsynth={result['dsynth_exit']}"]
+        if result["log_path"]:
+            parts.append(f"log={result['log_path']}")
+        print(" ".join(parts))
+    return 0 if result["ok"] else 1
 
 
 def cmd_cleanup_mounts(args: argparse.Namespace) -> int:

@@ -163,7 +163,7 @@ def test_run_verify_fix_raises_verify_fix_error_not_system_exit():
             _get_json=_bundle_no_origin,
             _get_bytes=lambda u, timeout=20: b"diff",
             _post_json=lambda u, b, timeout=10: {},
-            _run=lambda *a, **kw: None,
+            _apply_and_build=lambda env, origin, *, diff_path: {},
         )
     # VerifyFixError must be a plain Exception, not BaseException.
     assert issubclass(vf.VerifyFixError, Exception)
