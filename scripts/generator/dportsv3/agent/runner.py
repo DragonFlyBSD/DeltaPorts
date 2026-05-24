@@ -1907,6 +1907,22 @@ def _maybe_defer_to_convert(
         log(queue_root, "WARN",
             f"no DP_HARNESS_ENV for {origin!r}; cannot classify, "
             f"proceeding with triage")
+        try:
+            activity_log(
+                queue_root,
+                "triage_dops_assessment_skipped",
+                "dops assessment skipped: missing dev-env; proceeding with triage",
+                job_id=job_path.name,
+                extra={
+                    "origin": origin,
+                    "target": target,
+                    "reason": "missing_dev_env",
+                    "job_has_dev_env": bool(job.get("dev_env")),
+                    "runner_has_DP_HARNESS_ENV": bool(os.environ.get("DP_HARNESS_ENV")),
+                },
+            )
+        except Exception as exc:
+            log(queue_root, "WARN", f"activity_log failed in dops-skip: {exc}")
         return None
 
     from dportsv3.agent import worker
@@ -1915,6 +1931,21 @@ def _maybe_defer_to_convert(
     except Exception as exc:
         log(queue_root, "WARN",
             f"assess_dops({origin!r}) failed: {exc}; proceeding with triage")
+        try:
+            activity_log(
+                queue_root,
+                "triage_dops_assessment_failed",
+                "dops assessment failed; proceeding with triage",
+                job_id=job_path.name,
+                extra={
+                    "origin": origin,
+                    "target": target,
+                    "env": env_name,
+                    "error": str(exc)[:500],
+                },
+            )
+        except Exception as log_exc:
+            log(queue_root, "WARN", f"activity_log failed in dops-fail: {log_exc}")
         return None
 
     state = assessment.state

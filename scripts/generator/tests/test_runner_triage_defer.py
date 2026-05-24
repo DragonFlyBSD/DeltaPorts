@@ -205,6 +205,68 @@ def test_no_defer_for_not_in_scope_port(
     assert result is None
 
 
+def test_missing_env_logs_dops_assessment_skip(
+    tmp_path: Path, monkeypatch, state_db,
+) -> None:
+    """No job dev_env and no DP_HARNESS_ENV should be visible in the UI,
+    not only in runner.log."""
+    monkeypatch.delenv("DP_HARNESS_ENV", raising=False)
+    queue_root = _make_queue(tmp_path)
+    job_path = queue_root / "pending" / "triage-no-env.job"
+    job_path.write_text("type=triage\norigin=devel/no-env\n")
+    _bootstrap_triage_job(state_db, queue_root, job_path.name)
+
+    result = _maybe_defer_to_convert(
+        queue_root=queue_root,
+        job={"origin": "devel/no-env", "target": "@main"},
+        job_path=job_path,
+        origin="devel/no-env",
+    )
+
+    assert result is None
+    row = state_db.execute(
+        "SELECT stage, extra_json FROM activity_log WHERE job_id = ? ORDER BY id DESC LIMIT 1",
+        (job_path.name,),
+    ).fetchone()
+    assert row is not None
+    assert row["stage"] == "triage_dops_assessment_skipped"
+    assert "missing_dev_env" in row["extra_json"]
+    assert list(queue_root.glob("pending/*-convert.job")) == []
+
+
+def test_assessment_failure_logs_activity(
+    tmp_path: Path, monkeypatch, state_db,
+) -> None:
+    """A dev-env assessment exception should be operator-visible."""
+    from dportsv3.agent import worker
+
+    def _boom(env: str, origin: str):
+        raise RuntimeError("synthetic classify failure")
+
+    monkeypatch.setattr(worker, "assess_dops", _boom)
+    queue_root = _make_queue(tmp_path)
+    job_path = queue_root / "pending" / "triage-assess-fail.job"
+    job_path.write_text("type=triage\norigin=devel/fail\n")
+    _bootstrap_triage_job(state_db, queue_root, job_path.name)
+
+    result = _maybe_defer_to_convert(
+        queue_root=queue_root,
+        job={"origin": "devel/fail", "target": "@main"},
+        job_path=job_path,
+        origin="devel/fail",
+    )
+
+    assert result is None
+    row = state_db.execute(
+        "SELECT stage, extra_json FROM activity_log WHERE job_id = ? ORDER BY id DESC LIMIT 1",
+        (job_path.name,),
+    ).fetchone()
+    assert row is not None
+    assert row["stage"] == "triage_dops_assessment_failed"
+    assert "synthetic classify failure" in row["extra_json"]
+    assert list(queue_root.glob("pending/*-convert.job")) == []
+
+
 def test_defer_for_auto_safe_port(tmp_path: Path, monkeypatch, state_db) -> None:
     """Even ``auto_safe_pending`` ports get deferred — the
     deterministic converter still needs to run; triage on a

@@ -104,6 +104,7 @@ def run(
             timeout=timeout,
         )
         total.add(response.usage)
+        final = response
 
         # Per-turn telemetry. Without this, only the per-attempt
         # totals are visible, which makes it hard to see WHERE the
@@ -127,6 +128,27 @@ def run(
                 })
             except Exception:
                 pass  # callback must never break the loop
+
+        if max_tokens and total.total_tokens >= max_tokens:
+            log.warning(
+                "tool_loop: token budget exhausted after turn %d (%d >= %d); "
+                "stopping before tool dispatch",
+                turn, total.total_tokens, max_tokens,
+            )
+            if on_event is not None:
+                try:
+                    on_event({
+                        "type": "token_budget_exhausted",
+                        "attempt": attempt_idx,
+                        "turn": turn,
+                        "tokens": total.total_tokens,
+                        "budget": max_tokens,
+                        "phase": "after_llm_turn",
+                        "tools_skipped": tools_requested,
+                    })
+                except Exception:
+                    pass
+            return response, total
 
         if not response.tool_calls:
             log.debug("tool_loop: turn %d returned text-only, stopping", turn)
@@ -180,9 +202,6 @@ def run(
                     "content": json.dumps(result),
                 }
             )
-        final = response
-
-
     log.warning(
         "tool_loop: hit max_turns=%d without a text-only response", max_turns
     )
