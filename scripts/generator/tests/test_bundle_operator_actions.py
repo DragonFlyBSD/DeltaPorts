@@ -322,6 +322,28 @@ def test_ui_terminal_states_hide_buttons(client):
         assert "Operator actions" not in body, bid
 
 
+def test_ui_buttons_use_data_attributes_not_onclick(client):
+    """Regression: the first cut put bundle_id inside onclick="..."
+    via {{ ... | tojson }}, which produced double-quoted JSON inside
+    a double-quoted HTML attribute and silently broke the handler.
+    The bundle_id must flow via a data-* attribute instead."""
+    body = client.get("/agentic/bundles/b-agent-fixed").text
+    # No onclick attributes on op-* buttons.
+    import re
+    for action in ("verify", "accept", "reject"):
+        pattern = rf'<button[^>]*id="op-{action}"[^>]*>'
+        match = re.search(pattern, body, re.DOTALL)
+        assert match, f"button op-{action} missing"
+        assert "onclick" not in match.group(0), (
+            f"button op-{action} regressed to onclick='...'"
+        )
+        assert 'data-bundle="b-agent-fixed"' in match.group(0), (
+            f"button op-{action} missing data-bundle"
+        )
+    # The script block sets up listeners via addEventListener.
+    assert "addEventListener('click'" in body
+
+
 def test_ui_bundle_without_resolution_hides_buttons(client, seeded_db, tmp_path):
     # Insert a bundle that hasn't been triaged yet (resolution=NULL).
     conn = sqlite3.connect(str(seeded_db))

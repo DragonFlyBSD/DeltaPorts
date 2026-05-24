@@ -83,65 +83,139 @@
     {# Step 11c: operator-action buttons. Verify is the gate; Accept
        is disabled until verification_status='verified'. Reject is
        always available on non-terminal agent_fixed bundles. The
-       JS posts to the API endpoints and reloads on success — keeps
-       the templates dumb while the SSE wiring lands later. #}
+       JS posts to the API endpoints and gives in-flight feedback
+       (verify enqueues a job that takes minutes — the page polls
+       the bundle until verification_status changes, then reloads). #}
     {% if operator_actions and operator_actions.show %}
     <div class="tracker-card" style="margin-top:8px;">
       <strong style="font-size:12px;">Operator actions</strong>
       <div style="margin-top:6px;display:flex;gap:8px;align-items:center;">
-        <button id="op-verify"
+        <button id="op-verify" type="button"
+                data-bundle="{{ bundle.bundle_id }}"
                 style="font-size:12px;padding:4px 10px;"
-                {% if not operator_actions.can_verify %}disabled title="Not available in current state"{% endif %}
-                onclick="dpOpAction('verify', {{ bundle.bundle_id | tojson }})">
+                {% if not operator_actions.can_verify %}disabled title="Not available in current state"{% endif %}>
           Verify
         </button>
-        <button id="op-accept"
+        <button id="op-accept" type="button"
+                data-bundle="{{ bundle.bundle_id }}"
                 style="font-size:12px;padding:4px 10px;"
-                {% if not operator_actions.can_accept %}disabled title="Accept requires verification_status='verified'"{% endif %}
-                onclick="dpOpAction('accept', {{ bundle.bundle_id | tojson }})">
+                {% if not operator_actions.can_accept %}disabled title="Accept requires verification_status='verified'"{% endif %}>
           Accept
         </button>
-        <button id="op-reject"
+        <button id="op-reject" type="button"
+                data-bundle="{{ bundle.bundle_id }}"
                 style="font-size:12px;padding:4px 10px;"
-                {% if not operator_actions.can_reject %}disabled{% endif %}
-                onclick="dpOpAction('reject', {{ bundle.bundle_id | tojson }})">
+                {% if not operator_actions.can_reject %}disabled{% endif %}>
           Reject
         </button>
         <span id="op-status" style="color:var(--text-dim);font-size:11px;"></span>
       </div>
     </div>
     <script>
-    async function dpOpAction(action, bundleId) {
+    (function () {
       const statusEl = document.getElementById('op-status');
-      statusEl.textContent = action + ' in progress…';
-      let body = {};
-      if (action === 'verify') {
-        const env = prompt('Dev-env name to verify in:', '');
-        if (!env) { statusEl.textContent = ''; return; }
-        body = {env: env};
-      } else if (action === 'reject') {
-        const reason = prompt('Rejection reason (will be passed to next triage as user_context):', '');
-        if (!reason) { statusEl.textContent = ''; return; }
-        body = {reason: reason};
+      const initialVerificationStatus = {{ bundle.verification_status | tojson }};
+      const allButtons = () => document.querySelectorAll('button[id^="op-"]');
+
+      function disableAll() {
+        allButtons().forEach(b => { b.disabled = true; });
       }
-      try {
-        const resp = await fetch(
-          '/api/bundles/' + encodeURIComponent(bundleId) + '/' + action,
-          {method: 'POST',
-           headers: {'Content-Type': 'application/json'},
-           body: JSON.stringify(body)}
-        );
-        const data = await resp.json();
-        if (resp.ok) {
-          statusEl.textContent = action + ' OK — reloading';
-          setTimeout(() => location.reload(), 500);
-        } else {
-          statusEl.textContent = 'error: ' + (data.detail || resp.status);
+      function restorePreClickEnabled(preState) {
+        allButtons().forEach(b => { b.disabled = preState[b.id]; });
+      }
+      function snapshotEnabled() {
+        const s = {};
+        allButtons().forEach(b => { s[b.id] = b.disabled; });
+        return s;
+      }
+
+      async function dpOpAction(action, bundleId) {
+        const preState = snapshotEnabled();
+        let body = {};
+        if (action === 'verify') {
+          const env = prompt('Dev-env name to verify in:', '');
+          if (!env) { return; }
+          body = {env: env};
+        } else if (action === 'reject') {
+          const reason = prompt('Rejection reason (will be passed to next triage as user_context):', '');
+          if (!reason) { return; }
+          body = {reason: reason};
         }
-      } catch (exc) {
-        statusEl.textContent = 'error: ' + exc;
+        // Disable all buttons immediately so a double-click can't
+        // enqueue a second verify (or fire accept while verify is
+        // in-flight). Re-enable only on error; on success the
+        // reload re-renders with fresh state-derived enables.
+        disableAll();
+        statusEl.textContent = action + ' in progress…';
+
+        let resp, data;
+        try {
+          resp = await fetch(
+            '/api/bundles/' + encodeURIComponent(bundleId) + '/' + action,
+            {method: 'POST',
+             headers: {'Content-Type': 'application/json'},
+             body: JSON.stringify(body)}
+          );
+          data = await resp.json();
+        } catch (exc) {
+          statusEl.textContent = 'error: ' + exc;
+          restorePreClickEnabled(preState);
+          return;
+        }
+        if (!resp.ok) {
+          statusEl.textContent = 'error: ' + (data.detail || resp.status);
+          restorePreClickEnabled(preState);
+          return;
+        }
+        if (action === 'verify') {
+          // Verify is async — the runner picks the job up, runs
+          // dsynth (minutes), then POSTs back to /verification.
+          // Poll the bundle until verification_status changes.
+          // Buttons stay disabled the whole time.
+          statusEl.textContent =
+            'verify enqueued as ' + (data.job_id || 'job') +
+            ' — polling for result (this can take minutes)…';
+          pollForVerificationChange(bundleId);
+        } else {
+          statusEl.textContent = action + ' OK — reloading';
+          setTimeout(() => location.reload(), 400);
+        }
       }
-    }
+
+      async function pollForVerificationChange(bundleId) {
+        const start = Date.now();
+        const maxMs = 30 * 60 * 1000;  // 30 min ceiling
+        let intervalMs = 5000;
+        while (Date.now() - start < maxMs) {
+          await new Promise(r => setTimeout(r, intervalMs));
+          try {
+            const r = await fetch('/api/bundles/' + encodeURIComponent(bundleId));
+            const d = await r.json();
+            if (d.verification_status &&
+                d.verification_status !== initialVerificationStatus) {
+              statusEl.textContent =
+                'verify done: ' + d.verification_status + ' — reloading';
+              setTimeout(() => location.reload(), 400);
+              return;
+            }
+          } catch (exc) {
+            // transient network blip — keep polling
+          }
+          // Back off slowly so long verifies don't hammer the tracker.
+          intervalMs = Math.min(intervalMs + 2000, 15000);
+        }
+        statusEl.textContent =
+          'verify still pending after 30 min — reload manually to check';
+      }
+
+      document.querySelectorAll('button[id^="op-"]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (btn.disabled) return;
+          const action = btn.id.replace('op-', '');
+          dpOpAction(action, btn.dataset.bundle);
+        });
+      });
+    })();
     </script>
     {% endif %}
 
