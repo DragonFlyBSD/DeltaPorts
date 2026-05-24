@@ -276,6 +276,7 @@ enqueue_job() {
 		--created-ts-utc "$ts" \
 		--path "${qroot}/pending/${fname}" \
 		--target "${DPORTSV3_TRACKER_TARGET:-}" \
+		--bundle-id "$bundle_id" \
 		>/dev/null 2>&1 || true
 }
 

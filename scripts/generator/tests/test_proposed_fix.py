@@ -165,6 +165,54 @@ def test_build_ctx_caps_summary_length():
     assert len(ctx.summary) <= 501   # 500 chars + the truncation ellipsis
 
 
+def test_build_ctx_reads_triage_tokens_from_triage_json():
+    """Cost section is otherwise patch-only; build_proposed_fix_ctx
+    reads analysis/triage.json and surfaces the triage spend so the
+    operator sees the full run cost (triage + patch)."""
+    audit = {
+        "status": "success",
+        "tokens_used": {"prompt": 165_000, "completion": 3_000,
+                         "total": 168_000},
+    }
+    triage = {
+        "tokens_used": {"prompt": 2_500, "completion": 3_700,
+                         "total": 6_200},
+    }
+    reader = _read_from_dict({
+        "analysis/patch_audit.json": json.dumps(audit),
+        "analysis/triage.json": json.dumps(triage),
+    })
+    ctx = pf.build_proposed_fix_ctx(
+        origin="devel/foo", read_bundle_text=reader,
+    )
+    assert ctx.total_tokens == 168_000
+    assert ctx.triage_total_tokens == 6_200
+    assert ctx.triage_prompt_tokens == 2_500
+    assert ctx.triage_completion_tokens == 3_700
+
+
+def test_render_cost_shows_triage_breakdown_when_present():
+    out = pf.render_proposed_fix(_ctx(
+        prompt_tokens=165_000, completion_tokens=3_000, total_tokens=168_000,
+        triage_prompt_tokens=2_500, triage_completion_tokens=3_700,
+        triage_total_tokens=6_200,
+    ))
+    assert "Triage" in out
+    assert "6,200" in out
+    assert "174,200" in out  # combined total: 168,000 + 6,200
+    assert "Combined total" in out
+
+
+def test_render_cost_omits_triage_when_zero():
+    out = pf.render_proposed_fix(_ctx(
+        prompt_tokens=80_000, completion_tokens=5_000, total_tokens=85_000,
+        triage_total_tokens=0,
+    ))
+    assert "Triage" not in out
+    assert "Combined total" not in out
+    assert "85,000" in out
+
+
 def test_build_ctx_reads_patch_audit_when_no_patch_result():
     audit = {
         "status": "success",

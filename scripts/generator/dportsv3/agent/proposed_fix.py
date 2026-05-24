@@ -46,10 +46,15 @@ class ProposedFixCtx:
     attempts_max: int = 0
     rebuild_ok: bool = True
 
-    # Cost
+    # Cost — patch attempt(s) only.
     prompt_tokens: int = 0
     completion_tokens: int = 0
     total_tokens: int = 0
+    # Triage cost, read separately from analysis/triage.json. The
+    # operator-facing "true" cost is triage + patch.
+    triage_prompt_tokens: int = 0
+    triage_completion_tokens: int = 0
+    triage_total_tokens: int = 0
 
     # Diff
     diff_bytes: int = 0
@@ -112,12 +117,23 @@ def render_proposed_fix(ctx: ProposedFixCtx) -> str:
     lines.append("")
 
     # Cost — concrete numbers operators can use to estimate scale.
+    # Triage and patch are separate LLM jobs; the "true" full-run
+    # cost is the sum.
+    combined_total = ctx.total_tokens + ctx.triage_total_tokens
     lines.append("## Cost")
     lines.append("")
     lines.append(f"- Model: `{ctx.model or 'unknown'}`")
-    lines.append(f"- Prompt tokens: {ctx.prompt_tokens:,}")
-    lines.append(f"- Completion tokens: {ctx.completion_tokens:,}")
-    lines.append(f"- Total tokens: {ctx.total_tokens:,}")
+    lines.append(f"- Patch — prompt: {ctx.prompt_tokens:,}, "
+                 f"completion: {ctx.completion_tokens:,}, "
+                 f"total: {ctx.total_tokens:,}")
+    if ctx.triage_total_tokens:
+        lines.append(f"- Triage — prompt: {ctx.triage_prompt_tokens:,}, "
+                     f"completion: {ctx.triage_completion_tokens:,}, "
+                     f"total: {ctx.triage_total_tokens:,}")
+        lines.append(f"- **Combined total (triage + patch): "
+                     f"{combined_total:,}**")
+    else:
+        lines.append(f"- Total tokens: {ctx.total_tokens:,}")
     lines.append("")
 
     # Files touched — surfaced from the diff.
@@ -299,6 +315,28 @@ def build_proposed_fix_ctx(
                         triage_md, "Confidence",
                     )
 
+    # Triage cost — read separately so proposed_fix.md surfaces the
+    # full run cost (triage + patch). The patch attempt loop only
+    # knows its own usage; without this, proposed_fix.md misreports
+    # the cost as patch-only.
+    triage_prompt_tokens = 0
+    triage_completion_tokens = 0
+    triage_total_tokens = 0
+    if read_bundle_text is not None:
+        triage_json = read_bundle_text(
+            bundle_dir, bundle_id or None, "analysis/triage.json",
+        )
+        if triage_json:
+            try:
+                tdoc = json.loads(triage_json)
+                ttu = tdoc.get("tokens_used") or {}
+                if isinstance(ttu, dict):
+                    triage_prompt_tokens = int(ttu.get("prompt", 0) or 0)
+                    triage_completion_tokens = int(ttu.get("completion", 0) or 0)
+                    triage_total_tokens = int(ttu.get("total", 0) or 0)
+            except Exception:
+                pass
+
     # Files touched + diff size — from changes.diff.
     files_touched: list[str] = []
     diff_bytes = 0
@@ -322,6 +360,9 @@ def build_proposed_fix_ctx(
         prompt_tokens=prompt_tokens,
         completion_tokens=completion_tokens,
         total_tokens=total_tokens,
+        triage_prompt_tokens=triage_prompt_tokens,
+        triage_completion_tokens=triage_completion_tokens,
+        triage_total_tokens=triage_total_tokens,
         diff_bytes=diff_bytes,
         files_touched=files_touched,
         summary=summary,

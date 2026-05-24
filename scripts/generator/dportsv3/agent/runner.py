@@ -358,6 +358,33 @@ def _apply_transition(
         return False
 
 
+def _lookup_bundle_target(bundle_id: str | None) -> str:
+    """Return ``bundles.target`` for ``bundle_id`` or ``""``.
+
+    Used as the canonical fallback when an enqueue path doesn't carry
+    its own target: a triage/patch job for a known bundle should
+    inherit the bundle's target. Without this, jobs created under a
+    runner whose ``DPORTSV3_TRACKER_TARGET`` env var is unset land
+    with ``target=NULL`` while the bundle has the real value, and
+    the tracker UI's per-port aggregates (``token_usage_for_port``)
+    join-out to zero rows.
+    """
+    if not bundle_id or _state_db_conn is None:
+        return ""
+    try:
+        with _state_db_lock:
+            row = _state_db_conn.execute(
+                "SELECT target FROM bundles WHERE bundle_id = ?",
+                (bundle_id,),
+            ).fetchone()
+    except Exception:
+        return ""
+    if row is None:
+        return ""
+    val = row["target"] if hasattr(row, "keys") else row[0]
+    return val or ""
+
+
 def _register_new_job(
     job_id: str,
     metadata: dict,
@@ -370,11 +397,18 @@ def _register_new_job(
     Metadata fields (type, origin, flavor, bundle_dir, created_ts_utc,
     path, target) populate the jobs row; the typed state column is
     set by lifecycle.apply.
+
+    If ``metadata["target"]`` is empty/missing but ``metadata["bundle_id"]``
+    is set, resolves the target via ``_lookup_bundle_target`` so the
+    job inherits the bundle's target instead of landing NULL.
     """
     from dportsv3.agent import lifecycle  # type: ignore[import-not-found]
 
     if _state_db_conn is None:
         return False
+    target = metadata.get("target") or ""
+    if not target:
+        target = _lookup_bundle_target(metadata.get("bundle_id"))
     ok = _apply_transition(job_id, lifecycle.JobEvent.HOOK_ENQUEUED,
                            actor=actor, detail=metadata)
     if not ok:
@@ -393,7 +427,7 @@ def _register_new_job(
                        bundle_dir = COALESCE(?, bundle_dir),
                        created_ts_utc = COALESCE(?, created_ts_utc),
                        path = COALESCE(?, path),
-                       target = COALESCE(?, target),
+                       target = COALESCE(NULLIF(?, ''), target),
                        last_seen_at = ?
                    WHERE job_id = ?""",
                 (
@@ -403,7 +437,7 @@ def _register_new_job(
                     metadata.get("bundle_dir"),
                     metadata.get("created_ts_utc"),
                     metadata.get("path"),
-                    metadata.get("target"),
+                    target,
                     now,
                     job_id,
                 ),
@@ -728,10 +762,16 @@ def enqueue_triage_job(
     pending_dir = queue_root / "pending"
     job_path = pending_dir / job_name
 
+    target = (
+        _lookup_bundle_target(bundle_id)
+        or os.environ.get("DPORTSV3_TRACKER_TARGET", "")
+    )
+
     content = [
         "type=triage",
         f"created_ts_utc={ts}",
         f"profile={profile}",
+        f"target={target}",
         f"origin={origin}",
         f"flavor={flavor}",
         f"bundle_id={bundle_id}",
@@ -755,7 +795,8 @@ def enqueue_triage_job(
             "flavor": flavor,
             "created_ts_utc": ts,
             "path": str(job_path),
-            "target": os.environ.get("DPORTSV3_TRACKER_TARGET", ""),
+            "target": target,
+            "bundle_id": bundle_id,
         },
     )
     return job_path
@@ -1495,13 +1536,21 @@ def enqueue_patch_job(
     iteration = int(job.get("iteration", "1"))
     max_iterations = int(job.get("max_iterations", str(DEFAULT_MAX_ITERATIONS)))
 
+    bundle_id = job.get("bundle_id", "")
+    target = (
+        job.get("target")
+        or _lookup_bundle_target(bundle_id)
+        or os.environ.get("DPORTSV3_TRACKER_TARGET", "")
+    )
+
     content = [
         f"type=patch",
         f"created_ts_utc={ts}",
         f"profile={job.get('profile', '')}",
+        f"target={target}",
         f"origin={job.get('origin', '')}",
         f"flavor={job.get('flavor', '')}",
-        f"bundle_id={job.get('bundle_id', '')}",
+        f"bundle_id={bundle_id}",
         f"run_id={job.get('run_id', '')}",
         f"triage_relpath=analysis/triage.md",
         f"iteration={iteration}",
@@ -1516,7 +1565,7 @@ def enqueue_patch_job(
     previous_bundle = job.get("previous_bundle")
     if previous_bundle:
         content.append(f"previous_bundle={previous_bundle}")
-    
+
     # Atomic write
     tmp_path = job_path.with_suffix(".tmp")
     with open(tmp_path, "w") as f:
@@ -1531,8 +1580,8 @@ def enqueue_patch_job(
             "flavor": job.get("flavor", ""),
             "created_ts_utc": ts,
             "path": str(job_path),
-            "target": job.get("target")
-                or os.environ.get("DPORTSV3_TRACKER_TARGET", ""),
+            "target": target,
+            "bundle_id": bundle_id,
         },
     )
     return job_path

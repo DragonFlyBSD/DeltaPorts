@@ -86,6 +86,7 @@ def cmd_job_transition(args):
         "origin": args.origin,
         "flavor": args.flavor,
         "bundle_dir": args.bundle_dir,
+        "bundle_id": args.bundle_id,
         "created_ts_utc": args.created_ts_utc,
         "path": args.path,
         "target": args.target,
@@ -151,6 +152,10 @@ def main():
     p_job.add_argument("--path", default="")
     p_job.add_argument("--last-error", default="")
     p_job.add_argument("--target", default="")
+    p_job.add_argument("--bundle-id", default="",
+                       help="bundle this job is attached to; lets the "
+                            "store fall back to bundles.target when "
+                            "--target is empty")
     p_job.set_defaults(func=cmd_job_transition)
 
     args = parser.parse_args()

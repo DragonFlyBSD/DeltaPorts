@@ -147,6 +147,21 @@ class ArtifactStore:
             # don't carry these — they're stable across the job's life.
             if event == lifecycle.JobEvent.HOOK_ENQUEUED:
                 now = datetime.now(timezone.utc).isoformat()
+                # Fall back to the bundle's target when the hook did
+                # not pass one. Hooks run with a possibly-empty
+                # DPORTSV3_TRACKER_TARGET env var, and stripping
+                # empty strings client-side (artifact-store-client)
+                # leaves jobs.target NULL while the bundle has the
+                # real value. The bundle is the canonical source.
+                target = detail.get("target") or ""
+                bundle_id_hint = detail.get("bundle_id")
+                if not target and bundle_id_hint:
+                    row = self.conn.execute(
+                        "SELECT target FROM bundles WHERE bundle_id = ?",
+                        (bundle_id_hint,),
+                    ).fetchone()
+                    if row is not None and row[0]:
+                        target = row[0]
                 self.conn.execute(
                     """UPDATE jobs SET
                            type = COALESCE(?, type),
@@ -155,7 +170,7 @@ class ArtifactStore:
                            bundle_dir = COALESCE(?, bundle_dir),
                            created_ts_utc = COALESCE(?, created_ts_utc),
                            path = COALESCE(?, path),
-                           target = COALESCE(?, target),
+                           target = COALESCE(NULLIF(?, ''), target),
                            last_seen_at = ?
                        WHERE job_id = ?""",
                     (
@@ -165,7 +180,7 @@ class ArtifactStore:
                         detail.get("bundle_dir"),
                         detail.get("created_ts_utc"),
                         detail.get("path"),
-                        detail.get("target"),
+                        target,
                         now,
                         job_id,
                     ),
