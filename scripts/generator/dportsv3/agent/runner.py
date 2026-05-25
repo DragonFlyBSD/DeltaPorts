@@ -2520,6 +2520,15 @@ def _write_intent_log_harness(
     Best-effort: a missing log just means apply_intent wasn't used
     this run (the patch agent was still on the legacy edit surface).
     Silent skip in that case.
+
+    On serialization failure, drops a tombstone
+    ``analysis/intent_log.json.error`` carrying the exception
+    message + intent count we had, AND fires an
+    ``intent_log_serialize_failed`` activity_log row so the
+    operator sees the loss in the tracker UI rather than only in
+    runner stderr. The bundle's verify-fix flow will then fall
+    back to ``analysis/changes.diff`` (per the orchestrator's
+    legacy-fallback path).
     """
     from dportsv3.agent import worker as _worker  # noqa: PLC0415
 
@@ -2529,8 +2538,49 @@ def _write_intent_log_harness(
     try:
         body = (log.to_json() + "\n").encode("utf-8")
     except Exception as exc:
-        print(f"Warning: intent_log serialize failed for {origin}: {exc}",
-              file=sys.stderr)
+        intent_count = len(getattr(log, "intents", []) or [])
+        tomb = json.dumps({
+            "error": f"{type(exc).__name__}: {exc}",
+            "origin": origin,
+            "intent_count_at_failure": intent_count,
+            "note": (
+                "Intent log serialization failed. The bundle's "
+                "verify-fix will fall back to analysis/changes.diff "
+                "(legacy path)."
+            ),
+        }, indent=2).encode("utf-8") + b"\n"
+        if bundle_id:
+            artifact_store_put(
+                bundle_id, "analysis/intent_log.json.error", tomb, "json",
+            )
+        elif bundle_dir is not None:
+            out = bundle_dir / "analysis" / "intent_log.json.error"
+            out.parent.mkdir(parents=True, exist_ok=True)
+            out.write_bytes(tomb)
+        log_fn = log  # name reuse safety
+        try:
+            queue_root = (bundle_dir.parent
+                          if bundle_dir is not None else Path("."))
+            activity_log(
+                queue_root,
+                "intent_log_serialize_failed",
+                (f"intent_log.json serialization failed for "
+                 f"{origin} ({intent_count} entries); fell back "
+                 f"to changes.diff"),
+                extra={
+                    "origin": origin,
+                    "intent_count_at_failure": intent_count,
+                    "error": f"{type(exc).__name__}: {exc}",
+                },
+            )
+        except Exception:
+            # activity_log infra failure shouldn't mask the
+            # serialization error.
+            pass
+        print(
+            f"Warning: intent_log serialize failed for {origin}: {exc}",
+            file=sys.stderr,
+        )
         return
     if bundle_id:
         artifact_store_put(bundle_id, "analysis/intent_log.json", body, "json")

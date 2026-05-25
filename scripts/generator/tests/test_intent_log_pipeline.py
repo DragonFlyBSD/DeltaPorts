@@ -138,6 +138,65 @@ class TestWorkerLogAccumulation:
         assert doc["baseline_commit"] == "fake-baseline"
         assert len(doc["intents"]) == 1
 
+    def test_intent_log_cap_zero_immediate_overflow_preserves_ok(
+        self, env_with_workspace, monkeypatch,
+    ):
+        """Edge case for the ok-preservation contract: cap=0 means
+        the FIRST intent overflows immediately after a successful
+        substrate apply. ok must still reflect the underlying
+        outcome (the substrate change happened); only the log
+        record is lost."""
+        monkeypatch.setenv("DP_HARNESS_INTENT_MAX_COUNT", "0")
+        ws = env_with_workspace
+        patch = ws / "ports/devel/foo/dragonfly/patch-zero.c"
+        patch.parent.mkdir(parents=True)
+        patch.write_text("--- a/x\n+++ b/x\n")
+        subprocess.run(
+            ["git", "-C", str(ws), "add", str(patch.relative_to(ws))],
+            check=True,
+        )
+        subprocess.run(["git", "-C", str(ws), "commit", "-qm", "add"],
+                       check=True)
+
+        result = worker.apply_intent("test-env", "devel/foo", {
+            "type": "drop_patch", "target": "dragonfly/patch-zero.c",
+            "reason": "x",
+        })
+        # Substrate change DID happen.
+        assert result["ok"] is True
+        assert not patch.exists()
+        # Cap flag tells the LLM to escalate, not retry.
+        assert result.get("intent_log_full") is True
+
+    def test_mode_drift_refused_within_transaction(
+        self, env_with_workspace, monkeypatch,
+    ):
+        """Once a transaction starts in one mode, subsequent intents
+        that resolve to a different mode are refused — prevents
+        single-log mixed-flavor accumulation."""
+        # Apply one intent in the default (compat) mode.
+        r1 = worker.apply_intent("test-env", "devel/foo", {
+            "type": "drop_patch",
+            "target": "dragonfly/missing.c",  # ok=False, but logged
+            "reason": "x",
+        })
+        assert r1["ok"] is False  # intent failed but transaction started
+
+        # Flip the assess stub to return 'converted' (dops mode).
+        monkeypatch.setattr(worker, "assess_dops",
+                            lambda env, origin: _stub_assess(
+                                state="converted", action="proceed_triage"))
+        # Try another intent — same (env, origin). Mode now resolves
+        # to dops; the existing log was started in compat. Refuse.
+        r2 = worker.apply_intent("test-env", "devel/foo", {
+            "type": "drop_patch",
+            "target": "dragonfly/whatever.c", "reason": "y",
+        })
+        assert r2["ok"] is False
+        assert r2["blocked_by"] == "transaction_mode_drift"
+        assert r2["transaction_mode"] == "compat"
+        assert r2["current_mode"] == "dops"
+
     def test_intent_log_size_cap_surfaces_to_tool_result(
         self, env_with_workspace, monkeypatch,
     ):
@@ -228,6 +287,36 @@ class TestRunnerIntentLogWrite:
 
         assert not (bundle_dir / "analysis" / "intent_log.json").exists()
 
+    def test_serialize_failure_writes_tombstone(
+        self, env_with_workspace, tmp_path, monkeypatch,
+    ):
+        """When IntentLog.to_json raises, the harness drops a
+        .json.error tombstone with the failure detail instead of
+        silently swallowing the failure."""
+        from dportsv3.agent.runner import _write_intent_log_harness
+
+        worker.apply_intent("test-env", "devel/foo", {
+            "type": "drop_patch", "target": "x", "reason": "y",
+        })
+        # Make to_json blow up.
+        log = worker._INTENT_LOGS[("test-env", "devel/foo")]
+        def _bad(self_):
+            raise RuntimeError("synthetic serialize fail")
+        monkeypatch.setattr(type(log), "to_json", _bad)
+
+        bundle_dir = tmp_path / "bundle"
+        bundle_dir.mkdir()
+        _write_intent_log_harness(bundle_dir, None, "test-env", "devel/foo")
+
+        # No main artifact.
+        assert not (bundle_dir / "analysis" / "intent_log.json").exists()
+        # Tombstone exists and carries the error.
+        tomb = bundle_dir / "analysis" / "intent_log.json.error"
+        assert tomb.is_file()
+        doc = json.loads(tomb.read_text())
+        assert "synthetic serialize fail" in doc["error"]
+        assert doc["intent_count_at_failure"] == 1
+
 
 # --------------------------------------------------------------------
 # Dev-env primitive: --intent-log replay
@@ -273,7 +362,7 @@ class TestApplyAndBuildIntentLog:
         log_path = tmp_path / "intent_log.json"
         log_path.write_text(json.dumps(log))
 
-        rc, applied, err = _replay_intent_log(log_path, ws, "devel/foo")
+        rc, applied, total, err = _replay_intent_log(log_path, ws, "devel/foo")
         assert rc == 0, err
         assert applied == 1
         assert not patch.exists()
@@ -284,7 +373,7 @@ class TestApplyAndBuildIntentLog:
         log = {"origin": "devel/bar", "mode_at_apply": "compat", "intents": []}
         log_path = tmp_path / "log.json"
         log_path.write_text(json.dumps(log))
-        rc, applied, err = _replay_intent_log(log_path, ws, "devel/foo")
+        rc, applied, total, err = _replay_intent_log(log_path, ws, "devel/foo")
         assert rc == 1
         assert "origin" in err.lower()
         assert applied == 0
@@ -306,7 +395,7 @@ class TestApplyAndBuildIntentLog:
         }
         log_path = tmp_path / "log.json"
         log_path.write_text(json.dumps(log))
-        rc, applied, err = _replay_intent_log(log_path, ws, "devel/foo")
+        rc, applied, total, err = _replay_intent_log(log_path, ws, "devel/foo")
         # No intents successfully applied, but no error either —
         # ok=False entries are skipped.
         assert rc == 0, err
@@ -327,7 +416,7 @@ class TestApplyAndBuildIntentLog:
         }
         log_path = tmp_path / "log.json"
         log_path.write_text(json.dumps(log))
-        rc, applied, err = _replay_intent_log(log_path, ws, "devel/foo")
+        rc, applied, total, err = _replay_intent_log(log_path, ws, "devel/foo")
         assert rc == 1
         assert applied == 0
         assert "baseline_commit" in err
@@ -347,7 +436,7 @@ class TestApplyAndBuildIntentLog:
         }
         log_path = tmp_path / "log.json"
         log_path.write_text(json.dumps(log))
-        rc, applied, err = _replay_intent_log(log_path, ws, "devel/foo")
+        rc, applied, total, err = _replay_intent_log(log_path, ws, "devel/foo")
         # rc=0 even with empty intent list; the warning goes to
         # stderr, not the return value's error blob.
         assert rc == 0, err
@@ -367,7 +456,7 @@ class TestApplyAndBuildIntentLog:
         }
         log_path = tmp_path / "log.json"
         log_path.write_text(json.dumps(log))
-        rc, applied, err = _replay_intent_log(log_path, ws, "devel/foo")
+        rc, applied, total, err = _replay_intent_log(log_path, ws, "devel/foo")
         assert rc == 1
         assert applied == 0
         assert "drop_patch" in err
@@ -516,11 +605,12 @@ class TestPipelineEndToEnd:
         assert (ws / "ports/devel/foo/dragonfly/patch-b.c").exists()
 
         # 4. Replay the intent log against the clean workspace.
-        rc, applied, err = _replay_intent_log(
+        rc, applied, total, err = _replay_intent_log(
             log_artifact, ws, "devel/foo",
         )
         assert rc == 0, err
         assert applied == 2
+        assert total == 2
         # End state matches what the agent left behind.
         assert not (ws / "ports/devel/foo/dragonfly/patch-a.c").exists()
         assert not (ws / "ports/devel/foo/dragonfly/patch-b.c").exists()
@@ -609,6 +699,10 @@ class TestVerifyFixIntentLogPreference:
         assert result.ok is False
         _, body = posts[0]
         assert body["ok"] is False
+        # The orchestrator also updates ab["ok"] in sync so any
+        # downstream reader of the dict sees the same verdict.
+        # (Implicit here — the dict is internal — but the test
+        # also exercises the path that flips it.)
 
     def test_orchestrator_falls_back_to_diff_when_intent_log_missing(
         self, tmp_path,

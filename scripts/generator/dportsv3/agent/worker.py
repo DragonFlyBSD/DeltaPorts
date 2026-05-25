@@ -959,15 +959,20 @@ def reset_port(env: str, origin: str) -> dict:
         git checkout HEAD -- ports/<origin>
         git clean -fd ports/<origin>
 
-    Used by apply-and-build's pre-replay clean assertion (when
-    the operator opts into auto-reset via the
-    ``dportsv3 dev-env reset-port`` escape hatch) and by the
-    patch-flow post-job cleanup (deferred to 25d).
+    Today's callers:
+    - the ``dportsv3 dev-env reset-port`` CLI (operator escape
+      hatch — see ``cmd_reset_port`` in the dev-env tools).
+
+    ``apply-and-build`` inlines an equivalent shell sequence
+    (host-side chroot exec) for its post-build cleanup rather
+    than calling this function — kept consistent so the dev-env
+    primitive stays self-contained. 25d will wire the patch flow
+    here for its post-job cleanup.
 
     Returns the standard worker result dict with paths_changed
-    summarizing what was reset. Best-effort: both git commands
-    run; if either fails, the result reflects the union of their
-    outcomes.
+    summarizing the relpath that was reset. Best-effort: both
+    git commands run as one shell pipeline; if either fails the
+    result reflects the failure rc.
     """
     rel = f"ports/{origin}"
     # Run both commands; capture combined output. checkout HEAD --
@@ -1008,13 +1013,26 @@ def apply_intent(
     JSON schema, then ``Translator.apply`` renders + applies it
     against the env's writable overlay.
 
-    Per-call Translator — the in-transaction half-migration
-    invariant (designed in §9.3) catches at-write-time conflicts
-    within a single Translator instance. Across calls the same
-    invariant fires on the next attempt: the substrate state
-    persists between calls, so a follow-up apply_intent in the
-    wrong flavor sees the prior write and rejects accordingly.
-    Substrate-level cross-call enforcement lands in 25g.
+    Three guard layers run before the Translator is constructed:
+
+    1. **Substrate invariant.** ``assess_dops.action ==
+       'surface_invariant'`` means the env's port subtree is in a
+       half-migrated state (overlay.dops + Makefile.DragonFly).
+       Refused; operator must resolve.
+    2. **Valid mode.** ``not_in_scope`` / ``stale`` ports can't be
+       intent targets — the patch agent should escalate rather
+       than scaffold a port via intents.
+    3. **Transaction mode-drift.** Once an IntentLog exists for
+       this (env, origin), subsequent calls must resolve to the
+       same mode the log was started with. A stray write in one
+       intent that flips the substrate state would otherwise
+       silently mix flavors in a single log; the guard refuses
+       and points the operator at ``dportsv3 dev-env reset-port``.
+
+    A fresh Translator is built per call. The Translator itself
+    is stateless across calls; the IntentLog accumulator is the
+    only cross-call state (per-(env, origin), drained at PATCH_OK /
+    PATCH_GAVE_UP by the runner).
     """
     from dportsv3.agent.edit_intent import Translator  # noqa: PLC0415
 
@@ -1058,6 +1076,33 @@ def apply_intent(
                 f"needs_judgment, or converted)."
             ),
             "blocked_by": f"state:{state}",
+        }
+
+    # Look up the IntentLog for this (env, origin) FIRST so we can
+    # apply the mode-drift guard before mutating any substrate.
+    # The log's mode_at_apply is snapshotted at construction (the
+    # first apply_intent call for this transaction); subsequent
+    # calls that resolve to a different mode are refused. Without
+    # this guard a single transaction could mix compat + dops
+    # writes if the agent's first compat intent caused enough
+    # substrate change to flip classify_dops between calls (e.g.
+    # writing a stray overlay.dops would make the next call see
+    # state='converted' and run in dops mode).
+    existing_log = _INTENT_LOGS.get(_intent_log_key(env, origin))
+    if existing_log is not None and existing_log.mode_at_apply != mode:
+        return {
+            "ok": False,
+            "error": (
+                f"apply_intent refused: transaction mode-drift. "
+                f"This (env, origin) transaction started in "
+                f"{existing_log.mode_at_apply!r} mode but the current "
+                f"substrate now resolves to {mode!r}. Reset the port "
+                f"subtree (`dportsv3 dev-env reset-port ENV ORIGIN`) "
+                f"to start a fresh transaction."
+            ),
+            "blocked_by": "transaction_mode_drift",
+            "transaction_mode": existing_log.mode_at_apply,
+            "current_mode": mode,
         }
 
     translator = Translator(workspace, origin, mode)

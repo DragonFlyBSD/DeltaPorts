@@ -73,6 +73,10 @@ def env_with_workspace(tmp_path, monkeypatch):
     # patch-target shape).
     monkeypatch.setattr(worker, "assess_dops",
                         lambda env, origin: _stub_assess())
+    # Drain any leftover log so the mode-drift guard doesn't
+    # refuse this test based on the previous test's transaction
+    # mode (tests share process state via worker._INTENT_LOGS).
+    worker._INTENT_LOGS.clear()
     return ws
 
 

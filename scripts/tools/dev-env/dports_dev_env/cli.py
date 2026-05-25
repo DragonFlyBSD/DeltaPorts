@@ -345,6 +345,7 @@ def apply_and_build(
         "stderr_tail": None,
         "replay_mode": None,
         "intents_applied": None,
+        "intents_in_log": None,
     }
 
     if diff_path is not None and intent_log_path is not None:
@@ -384,11 +385,12 @@ def apply_and_build(
             sys.stderr.write(tail + "\n")
             return result
 
-        rc, applied_count, err = _replay_intent_log(
+        rc, applied_count, total_count, err = _replay_intent_log(
             intent_host, workspace, origin,
         )
         result["apply_exit"] = rc
         result["intents_applied"] = applied_count
+        result["intents_in_log"] = total_count
         if rc != 0:
             result["stderr_tail"] = (err or "")[-2000:]
             sys.stderr.write(err or "")
@@ -543,7 +545,7 @@ def _git_head(workspace: Path) -> str:
 
 def _replay_intent_log(
     intent_log_path: Path, workspace: Path, origin: str,
-) -> tuple[int, int, str]:
+) -> tuple[int, int, int, str]:
     """Replay an intent log against a workspace (Step 25e).
 
     Loads ``analysis/intent_log.json``, walks its intents in order,
@@ -553,9 +555,12 @@ def _replay_intent_log(
     chosen verify env is at the same git HEAD as the original
     apply baseline.
 
-    Returns (rc, applied_count, stderr_blob). rc=0 means every
-    intent applied cleanly. The first failure short-circuits and
-    returns its error in stderr_blob.
+    Returns (rc, applied_count, total_intents, stderr_blob). rc=0
+    means every intent applied cleanly. The first failure short-
+    circuits and returns its error in stderr_blob. total_intents
+    is the count of entries in the input log — operators can
+    distinguish "applied 2 of 5 (rc=1)" from "applied 5 of 5
+    (rc=0)" or "applied 0 of 3 (all ok=False, rc=0)".
 
     Implementation note: this function imports the
     ``dportsv3.agent.edit_intent`` package directly. Adding it to
@@ -583,17 +588,20 @@ def _replay_intent_log(
             IntentError, Translator, parse_intent,
         )
     except ImportError as exc:
-        return (1, 0,
+        return (1, 0, 0,
                 f"intent-log replay requires dportsv3.agent.edit_intent: "
                 f"{exc}")
 
     try:
         doc = json.loads(intent_log_path.read_text())
     except Exception as exc:
-        return (1, 0, f"intent log JSON parse failed: {exc}")
+        return (1, 0, 0, f"intent log JSON parse failed: {exc}")
+
+    entries = doc.get("intents") or []
+    total = len(entries)
 
     if doc.get("origin") != origin:
-        return (1, 0,
+        return (1, 0, total,
                 f"intent log origin {doc.get('origin')!r} does not match "
                 f"requested origin {origin!r}")
 
@@ -605,7 +613,7 @@ def _replay_intent_log(
     baseline = doc.get("baseline_commit") or ""
     head = _git_head(workspace)
     if baseline and head and baseline != head:
-        return (1, 0,
+        return (1, 0, total,
                 f"intent log baseline_commit {baseline[:12]} does not "
                 f"match env HEAD {head[:12]}; refusing replay to avoid "
                 f"drift. Update the env (dportsv3 dev-env update) so "
@@ -621,11 +629,10 @@ def _replay_intent_log(
 
     mode = doc.get("mode_at_apply", "compat")
     if mode not in ("compat", "dops", "convert"):
-        return (1, 0, f"unknown mode_at_apply: {mode!r}")
+        return (1, 0, total, f"unknown mode_at_apply: {mode!r}")
 
     translator = Translator(workspace, origin, mode)
     applied = 0
-    entries = doc.get("intents") or []
     for entry in entries:
         intent_dict = entry.get("intent") or entry  # backward-compat
         # Skip ok=False entries from the original run — they did
@@ -635,13 +642,14 @@ def _replay_intent_log(
         try:
             result = translator.apply(intent_dict)
         except IntentError as exc:
-            return (1, applied, f"intent[{applied}] validation: {exc}")
+            return (1, applied, total,
+                    f"intent[{applied}] validation: {exc}")
         if not result.ok:
-            return (1, applied,
+            return (1, applied, total,
                     f"intent[{applied}] ({result.intent_type}) failed: "
                     f"{result.error}")
         applied += 1
-    return (0, applied, "")
+    return (0, applied, total, "")
 
 
 def cmd_reset_port(args: argparse.Namespace) -> int:

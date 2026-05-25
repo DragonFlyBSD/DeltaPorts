@@ -280,6 +280,7 @@ def run_verify_fix(
     intents_applied = ab.get("intents_applied")
     if intent_log_bytes is not None and ok and intents_applied == 0:
         ok = False
+        ab["ok"] = False
         ab["error"] = (
             "intent log replay applied 0 intents (the agent's "
             "original run had no successful edits to reproduce); "
