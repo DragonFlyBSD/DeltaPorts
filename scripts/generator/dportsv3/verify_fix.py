@@ -98,11 +98,21 @@ def _default_apply_and_build(env_name: str, origin: str,
                              *, diff_path: str | None) -> dict:
     """Import-on-demand wrapper around the dev-env primitive. Kept
     out of module-import time so unit tests don't have to load the
-    dev-env package."""
-    # The dev-env package lives outside the generator's package tree
-    # (scripts/tools/dev-env/). The runner process already has it on
-    # sys.path because runner.py imports from it; importing here
-    # too is a no-op in that context.
+    dev-env package.
+
+    The ``dports_dev_env`` package lives outside the generator's
+    package tree at ``scripts/tools/dev-env/`` and isn't installed
+    into the generator's venv (the runner has historically shelled
+    out via ``dportsv3 dev-env exec``). Add the source dir to
+    sys.path before importing — same pattern the dev-env test
+    fixtures use.
+    """
+    import sys as _sys  # noqa: PLC0415
+    _dev_env_pkg = (
+        Path(__file__).resolve().parents[2] / "tools" / "dev-env"
+    )
+    if _dev_env_pkg.is_dir() and str(_dev_env_pkg) not in _sys.path:
+        _sys.path.insert(0, str(_dev_env_pkg))
     from dports_dev_env.cli import apply_and_build as _ab  # noqa: PLC0415
     return _ab(env_name, origin, diff_path=diff_path)
 
