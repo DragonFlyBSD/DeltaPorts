@@ -96,25 +96,43 @@ class VerifyResult:
 
 def _default_apply_and_build(env_name: str, origin: str,
                              *, diff_path: str | None) -> dict:
-    """Import-on-demand wrapper around the dev-env primitive. Kept
-    out of module-import time so unit tests don't have to load the
-    dev-env package.
+    """Invoke the dev-env apply-and-build primitive via the same
+    subprocess pattern every other agent operation uses.
 
-    The ``dports_dev_env`` package lives outside the generator's
-    package tree at ``scripts/tools/dev-env/`` and isn't installed
-    into the generator's venv (the runner has historically shelled
-    out via ``dportsv3 dev-env exec``). Add the source dir to
-    sys.path before importing — same pattern the dev-env test
-    fixtures use.
+    The runner doesn't import ``dports_dev_env`` directly — that
+    package lives outside the generator's venv at
+    ``scripts/tools/dev-env/`` and the worker has historically
+    shelled out via ``dportsv3 dev-env exec`` for every chroot-
+    bound tool (classify_dops, dsynth_build, materialize_dports,
+    etc.). ``worker._run_dportsv3`` resolves the dportsv3 wrapper
+    in order: ``$DPORTSV3_CMD`` override → repo-root sibling →
+    ``shutil.which('dportsv3')`` → RuntimeError. Using that same
+    helper keeps verify-fix consistent with the rest of the agent
+    stack and inherits the production-tested resolution path.
     """
-    import sys as _sys  # noqa: PLC0415
-    _dev_env_pkg = (
-        Path(__file__).resolve().parents[2] / "tools" / "dev-env"
-    )
-    if _dev_env_pkg.is_dir() and str(_dev_env_pkg) not in _sys.path:
-        _sys.path.insert(0, str(_dev_env_pkg))
-    from dports_dev_env.cli import apply_and_build as _ab  # noqa: PLC0415
-    return _ab(env_name, origin, diff_path=diff_path)
+    from dportsv3.agent.worker import _run_dportsv3  # noqa: PLC0415
+
+    argv = ["dev-env", "apply-and-build", env_name, origin, "--json"]
+    if diff_path is not None:
+        argv += ["--diff", diff_path]
+    proc = _run_dportsv3(*argv)
+    if proc.stderr:
+        sys.stderr.write(proc.stderr)
+    stdout = (proc.stdout or "").strip()
+    if not stdout:
+        raise RuntimeError(
+            f"dev-env apply-and-build produced no stdout "
+            f"(rc={proc.returncode}); stderr tail: "
+            f"{(proc.stderr or '')[-500:]}"
+        )
+    try:
+        return json.loads(stdout.splitlines()[-1])
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(
+            f"dev-env apply-and-build emitted non-JSON output "
+            f"(rc={proc.returncode}): {exc}; stdout tail: "
+            f"{stdout[-500:]}"
+        )
 
 
 def run_verify_fix(
