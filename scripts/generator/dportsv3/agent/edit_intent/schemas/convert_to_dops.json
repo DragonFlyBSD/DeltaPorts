@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "convert_to_dops",
+  "description": "Convert-agent-only intent: atomically lift a compat port to dops (write overlay.dops, delete Makefile.DragonFly and other legacy artifacts). The patch agent cannot emit this; validator rejects it in non-convert transactions.",
+  "type": "object",
+  "required": ["type"],
+  "additionalProperties": false,
+  "properties": {
+    "type": {"const": "convert_to_dops"}
+  }
+}

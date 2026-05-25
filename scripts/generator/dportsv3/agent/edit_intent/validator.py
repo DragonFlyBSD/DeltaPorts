@@ -1,0 +1,140 @@
+"""Intent validation (Step 25b).
+
+Two layers per the design doc §9:
+
+1. **Schema-level validation** via jsonschema (universal shape:
+   required fields, types, enum constraints). Produced by
+   ``parse_intent(dict_or_json) -> Intent``.
+
+2. **Mode-sensitive + invariant checks** done by the Translator at
+   apply time, knowing the current substrate state (e.g.
+   "target file must exist" — depends on the env).
+
+Layer 1 lives here; Layer 2 lives in translator.py / _compat.py /
+_dops.py. The two split because Layer 1 can run anywhere, anytime
+(useful for `intent_reference` tool dry-runs); Layer 2 needs the
+env.
+"""
+
+from __future__ import annotations
+
+import json
+from importlib import resources
+from typing import Any
+
+import jsonschema
+
+from .grammar import INTENT_DATACLASSES, INTENT_TYPES, Intent
+
+
+class IntentError(ValueError):
+    """Raised on validation failure (schema or semantic).
+
+    Carries a short summary plus the underlying jsonschema /
+    semantic detail. The intent the validator was checking is
+    attached as ``self.intent`` (raw dict) so the runner can log it.
+    """
+
+    def __init__(self, message: str, *,
+                 intent: dict[str, Any] | None = None,
+                 detail: str = ""):
+        super().__init__(message)
+        self.intent = intent
+        self.detail = detail
+
+    def for_log(self) -> dict[str, Any]:
+        return {
+            "error": str(self),
+            "detail": self.detail,
+            "intent_type": (self.intent or {}).get("type"),
+        }
+
+
+# Schema cache. Lazy-loaded on first parse to keep import-time cheap.
+_SCHEMAS: dict[str, dict[str, Any]] = {}
+
+
+def _load_schema(intent_type: str) -> dict[str, Any]:
+    if intent_type not in _SCHEMAS:
+        try:
+            with resources.files(
+                "dportsv3.agent.edit_intent.schemas"
+            ).joinpath(f"{intent_type}.json").open("r") as fp:
+                _SCHEMAS[intent_type] = json.load(fp)
+        except (FileNotFoundError, ModuleNotFoundError) as exc:
+            raise IntentError(
+                f"no JSON schema bundled for intent type {intent_type!r}",
+                detail=str(exc),
+            )
+    return _SCHEMAS[intent_type]
+
+
+def schema_for(intent_type: str) -> dict[str, Any]:
+    """Public accessor — backs the ``intent_reference`` tool (25c)."""
+    if intent_type not in INTENT_TYPES:
+        raise IntentError(
+            f"unknown intent type {intent_type!r}; known: "
+            f"{', '.join(INTENT_TYPES)}",
+        )
+    return _load_schema(intent_type)
+
+
+def parse_intent(raw: dict[str, Any] | str) -> Intent:
+    """Validate a wire-format intent and return its dataclass.
+
+    Accepts either a Python dict or a JSON string. Validates
+    against the per-type schema; raises IntentError on any
+    schema violation with the path + reason in the detail.
+
+    Type discrimination on the ``type`` field. Unknown types
+    fail with a clear "unknown intent type" message rather than
+    the more cryptic jsonschema diagnostic.
+    """
+    if isinstance(raw, str):
+        try:
+            raw = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            raise IntentError(
+                f"intent body is not valid JSON: {exc}",
+                detail=str(exc),
+            )
+    if not isinstance(raw, dict):
+        raise IntentError(
+            f"intent body must be a JSON object, got {type(raw).__name__}",
+        )
+    intent_type = raw.get("type")
+    if intent_type not in INTENT_TYPES:
+        raise IntentError(
+            f"unknown or missing intent type: {intent_type!r}; "
+            f"known: {', '.join(INTENT_TYPES)}",
+            intent=raw,
+        )
+    schema = _load_schema(intent_type)
+    try:
+        jsonschema.validate(raw, schema)
+    except jsonschema.ValidationError as exc:
+        # Walk the path so the LLM sees where the error is.
+        path = ".".join(str(p) for p in exc.absolute_path) or "(root)"
+        raise IntentError(
+            f"intent {intent_type!r} failed schema at {path}: {exc.message}",
+            intent=raw,
+            detail=str(exc),
+        )
+    # Schema passed — construct the dataclass. Drop fields the
+    # dataclass doesn't know about (shouldn't exist after schema
+    # validation since additionalProperties=false, but defense in
+    # depth). Defaults are filled in by the dataclass itself.
+    cls = INTENT_DATACLASSES[intent_type]
+    fields = {f for f in cls.__dataclass_fields__}
+    kwargs = {k: v for k, v in raw.items() if k in fields}
+    try:
+        return cls(**kwargs)
+    except TypeError as exc:
+        # E.g. missing required dataclass field that the schema let
+        # through. Shouldn't happen if schemas + dataclasses are in
+        # sync, but fail loud rather than crash later.
+        raise IntentError(
+            f"intent {intent_type!r} could not be constructed: {exc}",
+            intent=raw,
+            detail=str(exc),
+        )

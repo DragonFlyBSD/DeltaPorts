@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "bump_portrevision",
+  "description": "Increment PORTREVISION in the port's Makefile (insert if missing).",
+  "type": "object",
+  "required": ["type"],
+  "additionalProperties": false,
+  "properties": {
+    "type": {"const": "bump_portrevision"}
+  }
+}

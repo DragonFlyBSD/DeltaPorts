@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "add_patch",
+  "description": "Introduce a new patch for a file the port doesn't currently touch. Either supply diff inline, or set from_dupe=true to pick up the latest matching basename from <wrksrc>/.genpatch-out/.",
+  "type": "object",
+  "required": ["type", "target"],
+  "additionalProperties": false,
+  "properties": {
+    "type": {"const": "add_patch"},
+    "target": {"type": "string", "minLength": 1,
+               "description": "Relpath under ports/<origin>/ where the new patch lives, e.g. 'dragonfly/patch-src_main.c'"},
+    "diff": {"type": ["string", "null"],
+             "description": "Full unified-diff content"},
+    "from_dupe": {"type": "boolean", "default": false,
+                  "description": "If true, translator picks the most recent file matching target's basename from the env's genpatch output dir"}
+  },
+  "anyOf": [
+    {"required": ["diff"], "properties": {"diff": {"type": "string", "minLength": 1}}},
+    {"required": ["from_dupe"], "properties": {"from_dupe": {"const": true}}}
+  ]
+}

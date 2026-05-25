@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "change_makefile",
+  "description": "Edit a Makefile variable (set/append/remove).",
+  "type": "object",
+  "required": ["type", "path", "key", "value", "op"],
+  "additionalProperties": false,
+  "properties": {
+    "type": {"const": "change_makefile"},
+    "path": {"type": "string", "minLength": 1,
+             "description": "Relpath, typically 'Makefile.DragonFly' or 'Makefile'"},
+    "key": {"type": "string", "minLength": 1,
+            "pattern": "^[A-Z_][A-Z0-9_]*$",
+            "description": "Make variable name (upper-case + underscore + digits)"},
+    "value": {"type": "string",
+              "description": "Value (or token to remove)"},
+    "op": {"enum": ["set", "append", "remove"]}
+  }
+}
