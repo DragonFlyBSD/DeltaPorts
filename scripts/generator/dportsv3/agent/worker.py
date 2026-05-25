@@ -838,6 +838,65 @@ _STATE_TO_MODE: dict[str, str] = {
 }
 
 
+# Per-(env, origin) intent log accumulator (Step 25e).
+#
+# Stays at module scope because the worker is stateless otherwise;
+# the runner is the only caller and drains the log at PATCH_OK /
+# PATCH_GAVE_UP via `drain_intent_log`. A runner restart between
+# apply_intent calls and the drain forfeits the log — that matches
+# the existing convention for in-flight state (job is reaped on
+# restart anyway).
+_INTENT_LOGS: dict[tuple[str, str], "object"] = {}
+
+
+def _intent_log_key(env: str, origin: str) -> tuple[str, str]:
+    return (env, origin)
+
+
+def _ensure_intent_log(env: str, origin: str, mode: str):
+    from dportsv3.agent.edit_intent import IntentLog  # noqa: PLC0415
+    key = _intent_log_key(env, origin)
+    log = _INTENT_LOGS.get(key)
+    if log is None:
+        log = IntentLog(
+            origin=origin,
+            target=os.environ.get("DPORTSV3_TRACKER_TARGET", ""),
+            mode_at_apply=mode,
+            baseline_commit=_resolve_baseline_commit(env),
+        )
+        _INTENT_LOGS[key] = log
+    return log
+
+
+def _resolve_baseline_commit(env: str) -> str:
+    """Resolve HEAD of the env's DeltaPorts checkout via dev-env exec.
+
+    Best-effort: failure returns empty string. The intent log stores
+    this so verify-fix can refuse replay against a drifted baseline
+    (design §8 step 2). Cheap to compute once per job (cached in
+    IntentLog).
+    """
+    try:
+        p = _exec(env, "/bin/sh", "-c", "git -C /work/DeltaPorts rev-parse HEAD",
+                  cwd="/work/DeltaPorts")
+        if p.returncode == 0:
+            return (p.stdout or "").strip()
+    except Exception:
+        pass
+    return ""
+
+
+def drain_intent_log(env: str, origin: str):
+    """Return + clear the in-memory intent log for one (env, origin).
+
+    Runner calls this at PATCH_OK / PATCH_GAVE_UP to serialize the
+    log into the bundle as ``analysis/intent_log.json``. Returns
+    None if no apply_intent calls landed for this pair this run.
+    """
+    key = _intent_log_key(env, origin)
+    return _INTENT_LOGS.pop(key, None)
+
+
 def apply_intent(
     env: str, origin: str, intent: dict | str,
 ) -> dict:
@@ -906,6 +965,45 @@ def apply_intent(
 
     translator = Translator(workspace, origin, mode)
     result = translator.apply(intent)
+
+    # Append to the per-(env, origin) intent log. Both ok=True and
+    # ok=False rows land — failed attempts are forensics. Size caps
+    # in IntentLog.append fire here; on overflow we surface the cap
+    # error to the LLM as a tool result (the agent should escalate
+    # rather than continue, per the design §13.2 message).
+    log = _ensure_intent_log(env, origin, mode)
+    try:
+        # Normalize: dict in, dict back out. parse_intent already
+        # accepted either a dict or a JSON string; here we want the
+        # canonical dict form for the log.
+        log_entry_intent = intent if isinstance(intent, dict) else None
+        if log_entry_intent is None:
+            try:
+                import json as _json  # noqa: PLC0415
+                log_entry_intent = _json.loads(intent)
+            except Exception:
+                log_entry_intent = {"raw": str(intent)[:500]}
+        log.append(
+            log_entry_intent,
+            ok=result.ok,
+            substrate_diff=result.substrate_diff,
+            error=result.error,
+        )
+    except Exception as exc:
+        # Cap exceeded. Return the cap error in addition to the
+        # underlying result so the agent sees BOTH: the intent's
+        # outcome AND the fact that no more intents will be
+        # accepted for this transaction.
+        return {
+            "ok": False,
+            "intent_type": result.intent_type,
+            "paths_changed": result.paths_changed,
+            "substrate_diff": result.substrate_diff,
+            "error": (result.error or "")
+                     + f" [intent_log_full: {exc}]",
+            "mode": mode,
+            "intent_log_full": True,
+        }
 
     return {
         "ok": result.ok,

@@ -108,7 +108,15 @@ def build_parser() -> argparse.ArgumentParser:
     ab.add_argument(
         "--diff", default=None,
         help="Path on host to a unified diff to apply against "
-             "the env's DeltaPorts overlay before building",
+             "the env's DeltaPorts overlay before building "
+             "(legacy; prefer --intent-log)",
+    )
+    ab.add_argument(
+        "--intent-log", dest="intent_log", default=None,
+        help="Path on host to a Step 25e intent log "
+             "(analysis/intent_log.json). Each intent is replayed "
+             "via the translator — drift-free, no git apply. "
+             "Mutually exclusive with --diff.",
     )
     ab.add_argument(
         "--json", action="store_true",
@@ -261,8 +269,10 @@ def apply_and_build(
     origin: str,
     *,
     diff_path: str | None = None,
+    intent_log_path: str | None = None,
 ) -> dict:
-    """Substrate primitive for fix verification (plan Step 11b Slice 1).
+    """Substrate primitive for fix verification (Step 11b Slice 1 +
+    Step 25e intent-log replay).
 
     In-process function — the public callable that the verify-fix
     orchestrator and any future in-process consumer use directly,
@@ -270,18 +280,26 @@ def apply_and_build(
     ``cmd_apply_and_build`` just unwraps argparse.Namespace and
     prints; the real work lives here.
 
-    No knowledge of bundles, tracker, or artifact-store. Optionally
-    applies a diff to the env's DeltaPorts overlay (through the
-    chroot, not host-side IO), runs ``reapply ORIGIN`` to re-
-    materialize the DPorts tree, then ``dbuild ORIGIN`` (dsynth).
-    Captures combined dsynth output to a log file under writable.
+    Two replay modes, mutually exclusive:
 
-    Returns a dict with: ok, env, origin, applied_diff_sha256,
-    apply_exit, reapply_exit, dsynth_exit, log_path, stderr_tail.
-    Each stage short-circuits on failure; later fields stay None.
-    Raises UsageError on bad inputs (missing diff file, etc.).
+    - ``diff_path``: legacy. Applies the unified diff with
+      ``git apply --3way`` (which has known issues with new-file
+      diffs against drifted envs — see Step 25e bandages-retired).
+    - ``intent_log_path``: Step 25e. Loads the
+      ``analysis/intent_log.json`` shape, replays each intent via
+      the in-process Translator, drift-free. Preferred when a
+      bundle has both artifacts.
+
+    Then runs ``reapply ORIGIN`` to re-materialize the DPorts tree
+    and ``dbuild ORIGIN`` (dsynth). Captures combined dsynth output
+    to a log file under writable.
+
+    Returns a dict with: ok, env, origin, applied_diff_sha256
+    (legacy mode) or intents_applied (intent mode), apply_exit,
+    reapply_exit, dsynth_exit, log_path, stderr_tail, replay_mode.
     """
     import hashlib
+    import json
     import shlex
 
     from .chroot import ChrootRunner, chroot_env
@@ -309,13 +327,44 @@ def apply_and_build(
         "dsynth_exit": None,
         "log_path": None,
         "stderr_tail": None,
+        "replay_mode": None,
+        "intents_applied": None,
     }
 
-    # 1. Apply diff (optional). Run through the chroot so the
-    #    substrate sees its own filesystem — host and chroot share
-    #    the physical writable layer, but going through `chroot
-    #    exec` keeps the operator memory rule honest (no host-side
-    #    tree IO).
+    if diff_path is not None and intent_log_path is not None:
+        raise UsageError(
+            "apply-and-build: pass either --diff OR --intent-log, not both"
+        )
+
+    # Intent-log replay (Step 25e). Takes precedence — drift-free,
+    # validator-protected, no git apply at all. The translator
+    # operates in-process against the env's writable DeltaPorts
+    # overlay (no chroot exec needed; the writable layer is the
+    # same physical filesystem the chroot sees).
+    if intent_log_path is not None:
+        intent_host = Path(intent_log_path).expanduser().resolve()
+        if not intent_host.is_file():
+            raise UsageError(
+                f"--intent-log: file not found: {intent_host}"
+            )
+        result["replay_mode"] = "intent_log"
+        rc, applied_count, err = _replay_intent_log(
+            intent_host, writable_root / "work" / "DeltaPorts", origin,
+        )
+        result["apply_exit"] = rc
+        result["intents_applied"] = applied_count
+        if rc != 0:
+            result["stderr_tail"] = (err or "")[-2000:]
+            sys.stderr.write(err or "")
+            return result
+    else:
+        result["replay_mode"] = "diff" if diff_path is not None else "none"
+
+    # 1. Apply diff (optional, legacy path). Run through the chroot
+    #    so the substrate sees its own filesystem — host and chroot
+    #    share the physical writable layer, but going through
+    #    `chroot exec` keeps the operator memory rule honest
+    #    (no host-side tree IO).
     if diff_path is not None:
         diff_host = Path(diff_path).expanduser().resolve()
         if not diff_host.is_file():
@@ -378,6 +427,87 @@ def apply_and_build(
     return result
 
 
+def _replay_intent_log(
+    intent_log_path: Path, workspace: Path, origin: str,
+) -> tuple[int, int, str]:
+    """Replay an intent log against a workspace (Step 25e).
+
+    Loads ``analysis/intent_log.json``, walks its intents in order,
+    and applies each via the dev-env's in-process Translator. The
+    translator's mode is resolved from the log's
+    ``mode_at_apply`` field — the assumption is the operator-
+    chosen verify env is at the same git HEAD as the original
+    apply baseline.
+
+    Returns (rc, applied_count, stderr_blob). rc=0 means every
+    intent applied cleanly. The first failure short-circuits and
+    returns its error in stderr_blob.
+
+    Implementation note: this function imports the
+    ``dportsv3.agent.edit_intent`` package directly. Adding it to
+    sys.path is the caller's responsibility — in production, the
+    runner already has the generator package importable; in
+    tests, the test harness arranges path.
+    """
+    import json
+    import sys as _sys
+    from pathlib import Path as _Path
+
+    # Add scripts/generator to sys.path so we can import the
+    # edit-intent library. The dev-env tools and the generator
+    # share a repo root; locate it relative to this file.
+    here = _Path(__file__).resolve()
+    candidates = [
+        here.parents[3] / "generator",  # scripts/generator
+    ]
+    for cand in candidates:
+        if cand.is_dir() and str(cand) not in _sys.path:
+            _sys.path.insert(0, str(cand))
+
+    try:
+        from dportsv3.agent.edit_intent import (  # noqa: PLC0415
+            IntentError, Translator, parse_intent,
+        )
+    except ImportError as exc:
+        return (1, 0,
+                f"intent-log replay requires dportsv3.agent.edit_intent: "
+                f"{exc}")
+
+    try:
+        doc = json.loads(intent_log_path.read_text())
+    except Exception as exc:
+        return (1, 0, f"intent log JSON parse failed: {exc}")
+
+    if doc.get("origin") != origin:
+        return (1, 0,
+                f"intent log origin {doc.get('origin')!r} does not match "
+                f"requested origin {origin!r}")
+
+    mode = doc.get("mode_at_apply", "compat")
+    if mode not in ("compat", "dops", "convert"):
+        return (1, 0, f"unknown mode_at_apply: {mode!r}")
+
+    translator = Translator(workspace, origin, mode)
+    applied = 0
+    entries = doc.get("intents") or []
+    for entry in entries:
+        intent_dict = entry.get("intent") or entry  # backward-compat
+        # Skip ok=False entries from the original run — they did
+        # nothing then, replaying them would emit phantom failures.
+        if entry.get("ok") is False:
+            continue
+        try:
+            result = translator.apply(intent_dict)
+        except IntentError as exc:
+            return (1, applied, f"intent[{applied}] validation: {exc}")
+        if not result.ok:
+            return (1, applied,
+                    f"intent[{applied}] ({result.intent_type}) failed: "
+                    f"{result.error}")
+        applied += 1
+    return (0, applied, "")
+
+
 def cmd_apply_and_build(args: argparse.Namespace) -> int:
     """CLI wrapper for :func:`apply_and_build`. Higher-level
     orchestrators (e.g. ``dportsv3.verify_fix.run_verify_fix``)
@@ -386,7 +516,9 @@ def cmd_apply_and_build(args: argparse.Namespace) -> int:
     import json
 
     result = apply_and_build(
-        args.name, args.origin, diff_path=args.diff,
+        args.name, args.origin,
+        diff_path=args.diff,
+        intent_log_path=getattr(args, "intent_log", None),
     )
     if args.json:
         # Include stderr_tail when a stage failed — the verify-fix

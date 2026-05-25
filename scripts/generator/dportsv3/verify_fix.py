@@ -43,6 +43,7 @@ from pathlib import Path
 
 DEFAULT_TRACKER_URL = "http://127.0.0.1:8080"
 DIFF_RELPATH = "analysis/changes.diff"
+INTENT_LOG_RELPATH = "analysis/intent_log.json"
 
 
 def _tracker_url() -> str:
@@ -119,7 +120,8 @@ class VerifyResult:
 
 
 def _default_apply_and_build(env_name: str, origin: str,
-                             *, diff_path: str | None) -> dict:
+                             *, diff_path: str | None = None,
+                             intent_log_path: str | None = None) -> dict:
     """Invoke the dev-env apply-and-build primitive via the same
     subprocess pattern every other agent operation uses.
 
@@ -133,11 +135,17 @@ def _default_apply_and_build(env_name: str, origin: str,
     ``shutil.which('dportsv3')`` → RuntimeError. Using that same
     helper keeps verify-fix consistent with the rest of the agent
     stack and inherits the production-tested resolution path.
+
+    ``intent_log_path`` (Step 25e) and ``diff_path`` are mutually
+    exclusive; the verify-fix orchestrator picks whichever the
+    bundle has.
     """
     from dportsv3.agent.worker import _run_dportsv3  # noqa: PLC0415
 
     argv = ["dev-env", "apply-and-build", env_name, origin, "--json"]
-    if diff_path is not None:
+    if intent_log_path is not None:
+        argv += ["--intent-log", intent_log_path]
+    elif diff_path is not None:
         argv += ["--diff", diff_path]
     proc = _run_dportsv3(*argv)
     if proc.stderr:
@@ -189,36 +197,58 @@ def run_verify_fix(
             f"bundle {bundle_id!r} has no origin field; cannot verify"
         )
 
-    diff_url = (
+    # Prefer intent log (Step 25e): drift-free replay via
+    # translator. Fall back to legacy diff path for older bundles
+    # that pre-date Step 25 (no intent_log.json).
+    intent_log_url = (
         f"{base}/api/bundles/{urllib.parse.quote(bundle_id)}"
-        f"/artifacts/{urllib.parse.quote(DIFF_RELPATH, safe='/')}"
+        f"/artifacts/{urllib.parse.quote(INTENT_LOG_RELPATH, safe='/')}"
     )
+    intent_log_bytes: bytes | None = None
     try:
-        diff_bytes = _get_bytes(diff_url)
-    except urllib.error.HTTPError as exc:
-        raise VerifyFixError(
-            f"bundle {bundle_id!r} has no {DIFF_RELPATH} artifact "
-            f"({exc.code}); cannot verify"
-        )
-    if not diff_bytes.strip():
-        raise VerifyFixError(
-            f"bundle {bundle_id!r}'s {DIFF_RELPATH} is empty; "
-            "nothing to verify"
-        )
+        intent_log_bytes = _get_bytes(intent_log_url)
+    except urllib.error.HTTPError:
+        intent_log_bytes = None  # bundle is pre-Step-25; try diff
+    except Exception:
+        intent_log_bytes = None
 
-    diff_sha = hashlib.sha256(diff_bytes).hexdigest()
+    diff_bytes: bytes | None = None
+    if not intent_log_bytes:
+        diff_url = (
+            f"{base}/api/bundles/{urllib.parse.quote(bundle_id)}"
+            f"/artifacts/{urllib.parse.quote(DIFF_RELPATH, safe='/')}"
+        )
+        try:
+            diff_bytes = _get_bytes(diff_url)
+        except urllib.error.HTTPError as exc:
+            raise VerifyFixError(
+                f"bundle {bundle_id!r} has neither {INTENT_LOG_RELPATH} "
+                f"nor {DIFF_RELPATH} ({exc.code}); cannot verify"
+            )
+        if not diff_bytes.strip():
+            raise VerifyFixError(
+                f"bundle {bundle_id!r}'s {DIFF_RELPATH} is empty; "
+                "nothing to verify"
+            )
+
+    if intent_log_bytes:
+        replay_sha = hashlib.sha256(intent_log_bytes).hexdigest()
+        suffix, payload, kw = ".json", intent_log_bytes, "intent_log_path"
+    else:
+        replay_sha = hashlib.sha256(diff_bytes or b"").hexdigest()
+        suffix, payload, kw = ".diff", diff_bytes, "diff_path"
 
     with tempfile.NamedTemporaryFile(
-        mode="wb", suffix=".diff", prefix=f"verify-{bundle_id}-",
+        mode="wb", suffix=suffix, prefix=f"verify-{bundle_id}-",
         delete=False,
     ) as tmp:
-        tmp.write(diff_bytes)
-        diff_path = tmp.name
+        tmp.write(payload or b"")
+        tmp_path = tmp.name
     try:
         # In-process call into the dev-env primitive. Any error
         # bubbles up as the original exception — no JSON parsing,
         # no return-code translation.
-        ab = _apply_and_build(env, origin, diff_path=diff_path)
+        ab = _apply_and_build(env, origin, **{kw: tmp_path})
     except Exception as exc:
         raise VerifyFixError(
             f"apply-and-build failed for {bundle_id} (env={env}): "
@@ -226,9 +256,16 @@ def run_verify_fix(
         ) from exc
     finally:
         try:
-            os.unlink(diff_path)
+            os.unlink(tmp_path)
         except FileNotFoundError:
             pass
+
+    # Preserve naming: applied_diff_sha256 stays the field name in
+    # the POST body for backward compat with the tracker endpoint,
+    # but its content is whatever payload we replayed (diff or
+    # intent_log JSON).
+    diff_sha = replay_sha
+    diff_bytes = payload  # used by signatures below
 
     ok = bool(ab.get("ok"))
     post_body = {

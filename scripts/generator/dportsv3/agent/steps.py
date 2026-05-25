@@ -611,6 +611,11 @@ class PatchServices:
     load_port_history: Callable[..., Any]
     write_manual_handoff: Callable[..., Any] | None = None
     write_proposed_fix: Callable[..., Any] | None = None
+    # Step 25e: drain the worker-side intent log into the bundle as
+    # analysis/intent_log.json. Optional so older PatchServices
+    # constructions don't need updating; the runner injects the
+    # harness implementation.
+    write_intent_log: Callable[..., Any] | None = None
 
 
 @dataclass
@@ -812,6 +817,13 @@ class PatchAttemptStep:
         services.write_patch_audit(ctx.bundle_dir, bundle_id, result, model)
         services.write_tool_trace(ctx.bundle_dir, bundle_id, dispatcher.trace_events)
         services.write_changes_diff(ctx.bundle_dir, bundle_id, env, origin)
+        if services.write_intent_log is not None:
+            # Step 25e: drain the per-(env, origin) intent log into
+            # analysis/intent_log.json. No-op when apply_intent
+            # wasn't used this run (legacy patch-agent surface).
+            services.write_intent_log(
+                ctx.bundle_dir, bundle_id, env, origin,
+            )
         services.activity_log(
             queue_root, "write_output",
             f"Wrote harness patch outputs for {origin}",

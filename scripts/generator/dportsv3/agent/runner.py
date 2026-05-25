@@ -2503,6 +2503,43 @@ def _write_patch_audit_harness(
         (bundle_dir / "analysis" / "patch_audit.json").write_bytes(audit_bytes)
 
 
+def _write_intent_log_harness(
+    bundle_dir: Path | None,
+    bundle_id: str | None,
+    env: str,
+    origin: str,
+) -> None:
+    """Drain the worker-side per-(env, origin) intent log into the
+    bundle as ``analysis/intent_log.json`` (Step 25e).
+
+    Called alongside ``_write_patch_audit_harness`` at PATCH_OK and
+    PATCH_GAVE_UP. The log is what makes verify-fix's intent-replay
+    possible (no diff apply needed; the translator re-renders each
+    intent against a clean baseline).
+
+    Best-effort: a missing log just means apply_intent wasn't used
+    this run (the patch agent was still on the legacy edit surface).
+    Silent skip in that case.
+    """
+    from dportsv3.agent import worker as _worker  # noqa: PLC0415
+
+    log = _worker.drain_intent_log(env, origin)
+    if log is None:
+        return
+    try:
+        body = (log.to_json() + "\n").encode("utf-8")
+    except Exception as exc:
+        print(f"Warning: intent_log serialize failed for {origin}: {exc}",
+              file=sys.stderr)
+        return
+    if bundle_id:
+        artifact_store_put(bundle_id, "analysis/intent_log.json", body, "json")
+    else:
+        out = bundle_dir / "analysis" / "intent_log.json"
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_bytes(body)
+
+
 def _write_changes_diff(bundle_dir: Path | None, bundle_id: str | None, env: str, origin: str) -> None:
     """Capture host-side `git diff` against the env's DeltaPorts overlay HEAD
     and write to analysis/changes.diff. Best-effort: failures are logged but
@@ -2670,6 +2707,7 @@ def process_patch_job(
         write_patch_audit=_write_patch_audit_harness,
         write_tool_trace=_write_tool_trace,
         write_changes_diff=_write_changes_diff,
+        write_intent_log=_write_intent_log_harness,
         looks_env_suspicious=_looks_env_suspicious,
         invalidate_health_cache=invalidate_health_cache,
         cached_health_broken=_cached_health_broken,
