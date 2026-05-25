@@ -3133,9 +3133,7 @@ def process_job(
         # runner main loop and exited the process — that bug was
         # what made the runner silently disappear on the first
         # verify run.
-        from dportsv3.verify_fix import (  # noqa: PLC0415
-            VerifyFixError, run_verify_fix,
-        )
+        from dportsv3.verify_fix import run_verify_fix  # noqa: PLC0415
 
         start_event = JobEvent.VERIFY_FIX_START
         _apply_transition(job_path.name, start_event)
@@ -3151,26 +3149,42 @@ def process_job(
                 "verified" if result.ok else "verification_failed"
             )
             finish_event = JobEvent.VERIFY_FIX_OK
+            failed_stage = result.failure_stage()
             detail = {
                 "ok": result.ok,
-                "applied_diff_sha256": result.applied_diff_sha256,
+                "failed_stage": failed_stage,
+                "apply_exit": result.apply_exit,
+                "reapply_exit": result.reapply_exit,
                 "dsynth_exit": result.dsynth_exit,
+                "applied_diff_sha256": result.applied_diff_sha256,
+                "log_path": result.log_path,
+                "stderr_tail": result.stderr_tail,
                 "posted": result.posted,
                 "bundle_id": bundle_id,
                 "env": verify_env,
             }
+            if result.ok:
+                msg = (f"verify OK for {bundle_id} (env={verify_env}, "
+                       f"dsynth_exit=0)")
+            else:
+                # Name which stage failed so the activity row is
+                # actionable without opening the log.
+                stage_exit = {
+                    "apply": result.apply_exit,
+                    "reapply": result.reapply_exit,
+                    "dsynth": result.dsynth_exit,
+                }.get(failed_stage)
+                msg = (f"verify FAIL for {bundle_id} (env={verify_env}): "
+                       f"{failed_stage} stage exit={stage_exit}")
             try:
                 activity_log(
-                    queue_root, "verify_complete",
-                    (f"verify {('OK' if result.ok else 'FAIL')} for "
-                     f"{bundle_id} (env={verify_env}, "
-                     f"dsynth_exit={result.dsynth_exit})"),
+                    queue_root, "verify_complete", msg,
                     job_id=job_path.name, extra=detail,
                 )
             except Exception as log_exc:
                 log(queue_root, "WARN",
                     f"activity_log failed for verify_complete: {log_exc}")
-        except (VerifyFixError, Exception) as exc:
+        except Exception as exc:
             success, status = False, f"verify_fix raised: {exc}"
             finish_event = JobEvent.VERIFY_FIX_GAVE_UP
             err_msg = str(exc)[:500]

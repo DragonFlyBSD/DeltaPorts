@@ -389,10 +389,11 @@ def cmd_apply_and_build(args: argparse.Namespace) -> int:
         args.name, args.origin, diff_path=args.diff,
     )
     if args.json:
-        # Drop the stderr_tail from JSON output unless we're emitting
-        # for the operator — keep the on-wire shape stable.
-        printable = {k: v for k, v in result.items() if k != "stderr_tail"}
-        print(json.dumps(printable))
+        # Include stderr_tail when a stage failed — the verify-fix
+        # orchestrator reads it to populate the activity log so the
+        # operator sees *why* apply or reapply died without opening
+        # the build log.
+        print(json.dumps(result))
     else:
         parts = [f"ok={result['ok']}",
                  f"apply={result['apply_exit']}",

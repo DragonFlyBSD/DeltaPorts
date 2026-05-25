@@ -92,6 +92,30 @@ class VerifyResult:
     applied_diff_sha256: str | None
     log_path: str | None
     posted: bool
+    # Tail of the failing stage's stderr/stdout, when the primitive
+    # short-circuited before dsynth. Lets the activity log say *why*
+    # apply or reapply failed without making the operator open the
+    # log file. None when apply + reapply both passed.
+    stderr_tail: str | None = None
+
+    def failure_stage(self) -> str | None:
+        """Name of the first stage that failed, or None on success.
+
+        Used by the runner's verify dispatch to produce a human
+        activity-log message that names where in the pipeline the
+        verify died (apply / reapply / dsynth), so the operator
+        sees "verify FAIL: reapply failed (exit 2)" not just
+        "dsynth_exit=None".
+        """
+        if self.ok:
+            return None
+        if self.apply_exit not in (None, 0):
+            return "apply"
+        if self.reapply_exit not in (None, 0):
+            return "reapply"
+        if self.dsynth_exit not in (None, 0):
+            return "dsynth"
+        return "unknown"
 
 
 def _default_apply_and_build(env_name: str, origin: str,
@@ -149,10 +173,11 @@ def run_verify_fix(
 ) -> VerifyResult:
     """Run the orchestrator end-to-end.
 
-    Calls ``dports_dev_env.cli.apply_and_build`` in-process — no
-    subprocess, no PATH lookup, no JSON-over-stdout round trip.
-    Tests inject ``_apply_and_build`` with a stub that returns the
-    same dict shape.
+    Invokes the dev-env apply-and-build primitive via the same
+    subprocess pattern every other agent operation uses
+    (see :func:`_default_apply_and_build` for the resolution
+    details). Tests inject ``_apply_and_build`` with a stub that
+    returns the same dict shape so unit tests don't shell out.
     """
     base = (tracker_url or _tracker_url()).rstrip("/")
     bundle_url = f"{base}/api/bundles/{urllib.parse.quote(bundle_id)}"
@@ -243,6 +268,7 @@ def run_verify_fix(
         applied_diff_sha256=ab.get("applied_diff_sha256") or diff_sha,
         log_path=log_path,
         posted=posted,
+        stderr_tail=ab.get("stderr_tail"),
     )
 
 
