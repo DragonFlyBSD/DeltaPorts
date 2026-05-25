@@ -67,14 +67,20 @@ class Translator:
         self.origin = origin
         self.mode = mode
         self.port_dir = self.workspace / "ports" / origin
-        # Wrote-by-this-transaction tracking. Used by the half-
-        # migration invariant (§9.3): if a transaction has already
-        # written dops-flavored ops, refuse subsequent compat-flavored
-        # writes, and vice versa.
-        self._touched_dops: bool = False
-        self._touched_compat_makefile: bool = False
         # subprocess.run shim — tests inject a fake.
         self._git = git or _real_git
+        # NOTE on the half-migration invariant: design §9.3 originally
+        # specified an in-transaction tracker (touched_dops vs
+        # touched_compat_makefile). It turned out to be unreachable in
+        # production because (a) mode is fixed at construction and
+        # (b) renderers dispatch by mode, so a compat-mode Translator
+        # can't ever produce dops-flavored writes and vice versa. The
+        # real guard lives at the worker.apply_intent boundary:
+        # worker.assess_dops returns action='surface_invariant' when
+        # the substrate is in a mixed state, and apply_intent refuses
+        # before constructing the Translator. See worker.apply_intent
+        # docstring + the test at test_refuses_substrate_in_half_
+        # migrated_state.
 
     # ----- public API -------------------------------------------------
 
@@ -91,74 +97,32 @@ class Translator:
             else:
                 intent = raw
         except IntentError as exc:
+            # parse_intent attaches the raw intent dict to the
+            # exception when it could resolve a type field; use that
+            # for the EditResult's intent_type so the LLM sees the
+            # type it tried to emit, not a generic "unknown".
+            attached = (exc.intent or {}) if isinstance(exc.intent, dict) else {}
             return EditResult(
-                ok=False, intent_type=(
-                    getattr(raw, "type", None)
-                    or (raw.get("type") if isinstance(raw, dict) else "")
+                ok=False,
+                intent_type=(
+                    attached.get("type")
+                    or (raw.get("type") if isinstance(raw, dict) else None)
                     or "unknown"
                 ),
                 error=str(exc),
             )
 
-        self._check_half_migration_invariant(intent)
-
-        # Dispatch on the intent type, mode-aware.
+        # Dispatch on the intent type, mode-aware. The half-migration
+        # invariant is enforced upstream at worker.apply_intent via
+        # assess_dops; the Translator itself only runs after the
+        # substrate has been validated.
         renderer = self._renderer_for(intent)
         try:
-            result = renderer(intent)
+            return renderer(intent)
         except IntentError as exc:
             return EditResult(
                 ok=False, intent_type=intent.type, error=str(exc),
             )
-        # Track for the invariant.
-        if result.ok:
-            self._record_flavor(intent)
-        return result
-
-    # ----- invariants -------------------------------------------------
-
-    def _check_half_migration_invariant(self, intent: Intent) -> None:
-        """Design §9.3: no transaction may write both
-        compat-Makefile.DragonFly edits and dops-statement edits.
-
-        Specifically reject:
-          - compat-mode change_makefile against Makefile.DragonFly,
-            *after* the transaction has already touched overlay.dops
-          - any dops-flavored intent (in compat mode) when
-            Makefile.DragonFly has been touched
-          - the convert_to_dops intent when any compat-flavored
-            intent has already landed
-        """
-        # convert_to_dops is mode-restricted at the renderer level;
-        # the invariant check fires only after a compat write tried
-        # to coexist with it.
-        if isinstance(intent, ConvertToDops):
-            if self._touched_compat_makefile:
-                raise IntentError(
-                    "half-migration invariant: convert_to_dops "
-                    "cannot follow a compat-mode write in the same "
-                    "transaction",
-                    intent={"type": "convert_to_dops"},
-                )
-        if isinstance(intent, ChangeMakefile):
-            # Compat Makefile.DragonFly write after a dops write?
-            if (intent.path.endswith("Makefile.DragonFly")
-                    and self._touched_dops):
-                raise IntentError(
-                    "half-migration invariant: cannot edit "
-                    f"{intent.path!r} after dops-flavored writes "
-                    "in this transaction",
-                )
-
-    def _record_flavor(self, intent: Intent) -> None:
-        # In dops mode, every successful apply touches overlay.dops.
-        if self.mode == "dops":
-            self._touched_dops = True
-        elif self.mode == "compat":
-            if isinstance(intent, ChangeMakefile) and intent.path.endswith(
-                "Makefile.DragonFly"
-            ):
-                self._touched_compat_makefile = True
 
     # ----- dispatch ---------------------------------------------------
 

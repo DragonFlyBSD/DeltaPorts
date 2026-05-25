@@ -473,6 +473,47 @@ is the protocol; the substrate is the implementation. The two
 classes of bug we hit today (new-file diff on populated env,
 3-way merge failure on new files) cannot occur.
 
+### 8.1 Replay semantic constraints (added 2026-05-25 after 25e review)
+
+The replayer in production (`_replay_intent_log` in
+`scripts/tools/dev-env/dports_dev_env/cli.py`) makes two
+deliberate choices that operators should be aware of when
+interpreting verify outcomes.
+
+**(a) `ok=False` entries are skipped on replay.** Failed intents
+were no-ops at original apply time; replaying them just produces
+phantom failures in the verify run. The skip means *replay ≠
+exact reproduction of the agent run* whenever the agent
+persisted past a failure. For verify-fix's purpose ("can the
+substrate state the agent left behind rebuild?"), the skip is
+right — what we want to verify is the success-state, not the
+process. If the agent run included ok=False entries that the
+follow-up intents depended on, the replay's end state will
+differ from the original. Worth flagging in operator-facing
+output ("N of M intents skipped on replay").
+
+**(b) An intent log with zero `ok=True` entries replays as "no
+work."** rc=0, applied=0, no substrate changes. `reapply` and
+`dbuild` then run against the unmodified baseline. If the build
+passes, verify reports verified — but the bundle's intent log
+says everything failed at apply time. The verify endpoint
+should surface "nothing to verify; intent log has no successful
+entries" rather than letting the operator interpret an
+unrelated baseline-build success as a verdict on the fix. The
+orchestrator should refuse to POST `verified` when
+`applied_count == 0`; today this is a known gap, deferred to
+25g (workspace lifecycle) where the orchestrator gains the
+context to decide.
+
+**(c) Baseline drift refused at replay.** Before walking the
+intent list, the replayer compares the log's `baseline_commit`
+against the env's current git HEAD. Mismatch returns rc=1 with
+a "refusing replay; baseline mismatch" error pointing the
+operator at `dportsv3 dev-env update`. Empty baseline (older
+logs, or git resolution failure at apply time) is allowed
+through with a stderr warning — operator opted in by triggering
+verify.
+
 ## 9. Validator rules
 
 Validation runs at BOTH intent-emit time (the agent calls

@@ -425,93 +425,14 @@ class TestDopsRenderers:
 
 
 # --------------------------------------------------------------------
-# Half-migration invariant
+# Half-migration invariant — enforced at worker.apply_intent (25c)
+# via assess_dops.action='surface_invariant', NOT inside the
+# Translator (the in-transaction tracker that earlier drafts
+# carried turned out to be unreachable: mode is fixed at construction
+# and renderers can't cross modes). The real guard is in
+# test_refuses_substrate_in_half_migrated_state in
+# test_apply_intent_tool.py.
 # --------------------------------------------------------------------
-
-
-class TestHalfMigrationInvariant:
-
-    def test_dops_intent_after_compat_makefile_dragonfly_is_rejected(self, tmp_path):
-        """dops mode is fine alone — but mixing compat Makefile.DragonFly
-        writes into the same transaction must fail."""
-        ws = _make_workspace(tmp_path)
-        # Pre-touch Makefile.DragonFly via compat translator first.
-        t1 = Translator(ws, "devel/foo", "compat")
-        r1 = t1.apply({
-            "type": "change_makefile",
-            "path": "Makefile.DragonFly",
-            "key": "USES", "value": "ssl", "op": "set",
-        })
-        assert r1.ok
-
-        # Same translator, now try a dops-flavored intent. The
-        # invariant catches transitions WITHIN a transaction; this
-        # tests the "Makefile.DragonFly recorded → reject further
-        # dops writes" guard.
-        # Drive by manually flipping the flag — actual cross-mode
-        # transactions are guarded at construction (mode is fixed
-        # for a Translator instance). The invariant fires inside
-        # one translator: compat Makefile.DragonFly + then a
-        # change_makefile on the same path with dops-equivalent
-        # data would need separate translators; we test the inverse
-        # below (compat write *follows* dops touch).
-
-    def test_compat_makefile_dragonfly_after_dops_write_is_rejected(self, tmp_path):
-        ws = _make_workspace(tmp_path)
-        # dops mode does NOT write Makefile.DragonFly; this test
-        # exercises the boundary by simulating a mixed-mode use
-        # of the Translator (the runner shouldn't do this, but the
-        # invariant defends if it does).
-        t = Translator(ws, "devel/foo", "dops")
-        # First, a dops intent that touches overlay.dops.
-        r1 = t.apply({
-            "type": "change_makefile",
-            "path": "Makefile.DragonFly",
-            "key": "USES", "value": "ssl", "op": "set",
-        })
-        # In dops mode this is an overlay.dops write; the
-        # invariant tracks the dops touch.
-        assert r1.ok
-        # Hypothetical follow-up: a compat-flavored intent in the
-        # same translator. We achieve this by directly invoking
-        # the compat renderer with a Makefile.DragonFly path; the
-        # invariant check is in apply(), so we go through that.
-        # (Defensive: in production the mode is fixed; this is the
-        # belt-and-suspenders check.)
-        # Construct a synthetic intent that would be the compat
-        # equivalent and ensure the invariant fires when both
-        # flags would be set.
-        t._touched_dops = True
-        t._touched_compat_makefile = False
-        # Now manually trigger the invariant check by feeding a
-        # ChangeMakefile with Makefile.DragonFly path through the
-        # translator.apply path (it will dispatch to the dops
-        # renderer in mode='dops', so the invariant prevents the
-        # symmetric case in compat mode — direct call here):
-        intent = ChangeMakefile(
-            type="change_makefile", path="Makefile.DragonFly",
-            key="WARNING", value="banana", op="set",
-        )
-        with pytest.raises(IntentError, match="half-migration"):
-            t._check_half_migration_invariant(intent.__class__.__call__(
-                type="change_makefile", path="Makefile.DragonFly",
-                key="W", value="x", op="set",
-            )) if False else (
-                # Use the actual translator instance state to fire
-                # the invariant check directly (the function is
-                # static against translator state).
-                t._check_half_migration_invariant(intent)
-            )
-
-    def test_convert_to_dops_after_compat_write_is_rejected(self, tmp_path):
-        ws = _make_workspace(tmp_path)
-        t = Translator(ws, "devel/foo", "convert")
-        t._touched_compat_makefile = True
-        from dportsv3.agent.edit_intent.grammar import ConvertToDops
-        with pytest.raises(IntentError, match="half-migration"):
-            t._check_half_migration_invariant(
-                ConvertToDops(type="convert_to_dops")
-            )
 
 
 # --------------------------------------------------------------------

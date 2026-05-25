@@ -990,19 +990,22 @@ def apply_intent(
             error=result.error,
         )
     except Exception as exc:
-        # Cap exceeded. Return the cap error in addition to the
-        # underlying result so the agent sees BOTH: the intent's
-        # outcome AND the fact that no more intents will be
-        # accepted for this transaction.
+        # Cap exceeded. The substrate edit ALREADY HAPPENED (the
+        # translator applied it before we tried to record); we just
+        # can't record it. Preserve result.ok so the LLM sees the
+        # underlying outcome (avoids a misleading ok=False that
+        # could trigger a re-attempt and double-apply). Surface the
+        # cap as a separate intent_log_full=True flag — the LLM
+        # should gate on this, not on ok, and escalate.
         return {
-            "ok": False,
+            "ok": result.ok,
             "intent_type": result.intent_type,
             "paths_changed": result.paths_changed,
             "substrate_diff": result.substrate_diff,
-            "error": (result.error or "")
-                     + f" [intent_log_full: {exc}]",
+            "error": result.error,
             "mode": mode,
             "intent_log_full": True,
+            "intent_log_full_reason": str(exc),
         }
 
     return {

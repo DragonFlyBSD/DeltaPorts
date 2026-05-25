@@ -427,6 +427,21 @@ def apply_and_build(
     return result
 
 
+def _git_head(workspace: Path) -> str:
+    """Return ``git -C <workspace> rev-parse HEAD`` or ''."""
+    import subprocess as _sp
+    try:
+        p = _sp.run(
+            ["git", "-C", str(workspace), "rev-parse", "HEAD"],
+            capture_output=True, text=True, check=False,
+        )
+        if p.returncode == 0:
+            return (p.stdout or "").strip()
+    except Exception:
+        pass
+    return ""
+
+
 def _replay_intent_log(
     intent_log_path: Path, workspace: Path, origin: str,
 ) -> tuple[int, int, str]:
@@ -482,6 +497,28 @@ def _replay_intent_log(
         return (1, 0,
                 f"intent log origin {doc.get('origin')!r} does not match "
                 f"requested origin {origin!r}")
+
+    # Design §8 step 2: assert baseline_commit matches the env's
+    # git HEAD before replay. Mismatch means the env has drifted
+    # from the agent's apply baseline; replay's results would be
+    # against a different starting state. Refuse rather than
+    # silently produce a verdict the operator can't trust.
+    baseline = doc.get("baseline_commit") or ""
+    head = _git_head(workspace)
+    if baseline and head and baseline != head:
+        return (1, 0,
+                f"intent log baseline_commit {baseline[:12]} does not "
+                f"match env HEAD {head[:12]}; refusing replay to avoid "
+                f"drift. Update the env (dportsv3 dev-env update) so "
+                f"its DeltaPorts checkout matches the agent's baseline.")
+    # Empty baseline (older logs or git resolution failure during
+    # apply) is allowed through — the operator opted-in by triggering
+    # verify against this bundle. Logged for forensics.
+    if not baseline:
+        sys.stderr.write(
+            "intent log has no baseline_commit; replay will proceed "
+            "but drift cannot be detected\n"
+        )
 
     mode = doc.get("mode_at_apply", "compat")
     if mode not in ("compat", "dops", "convert"):

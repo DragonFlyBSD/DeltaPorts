@@ -141,17 +141,51 @@ class TestWorkerLogAccumulation:
     def test_intent_log_size_cap_surfaces_to_tool_result(
         self, env_with_workspace, monkeypatch,
     ):
+        """When the cap fires AFTER a successful translator apply,
+        ok preserves the underlying outcome (the substrate change
+        already happened) and intent_log_full=True signals the LLM
+        to escalate rather than re-attempt. ok=False would risk a
+        double-apply."""
         monkeypatch.setenv("DP_HARNESS_INTENT_MAX_COUNT", "1")
-        # First intent succeeds.
-        worker.apply_intent("test-env", "devel/foo", {
-            "type": "drop_patch", "target": "x", "reason": "y",
+        # Stage a patch so the underlying drop_patch succeeds.
+        ws = env_with_workspace
+        patch = ws / "ports/devel/foo/dragonfly/patch-first.c"
+        patch.parent.mkdir(parents=True)
+        patch.write_text("--- a/x\n+++ b/x\n")
+        subprocess.run(
+            ["git", "-C", str(ws), "add", str(patch.relative_to(ws))],
+            check=True,
+        )
+        subprocess.run(["git", "-C", str(ws), "commit", "-qm", "add"],
+                       check=True)
+
+        # First intent succeeds and fills the cap.
+        r1 = worker.apply_intent("test-env", "devel/foo", {
+            "type": "drop_patch", "target": "dragonfly/patch-first.c",
+            "reason": "y",
         })
-        # Second hits the count cap; tool surfaces the cap error.
+        assert r1["ok"] is True
+        # Stage another patch for the second intent's substrate work.
+        patch2 = ws / "ports/devel/foo/dragonfly/patch-second.c"
+        patch2.write_text("--- a/x\n+++ b/x\n")
+        subprocess.run(
+            ["git", "-C", str(ws), "add", str(patch2.relative_to(ws))],
+            check=True,
+        )
+        subprocess.run(["git", "-C", str(ws), "commit", "-qm", "add"],
+                       check=True)
+        # Second intent: substrate apply succeeds, log cap fires.
         result = worker.apply_intent("test-env", "devel/foo", {
-            "type": "drop_patch", "target": "z", "reason": "y",
+            "type": "drop_patch", "target": "dragonfly/patch-second.c",
+            "reason": "y",
         })
+        # ok preserves the underlying outcome — the substrate DID
+        # change (patch deleted) even though we can't record it.
+        assert result["ok"] is True
+        assert not patch2.exists()
+        # The cap flag is the gate the LLM should look at.
         assert result.get("intent_log_full") is True
-        assert "intent_log_full" in result["error"]
+        assert "exceeds" in result.get("intent_log_full_reason", "")
 
 
 # --------------------------------------------------------------------
@@ -220,12 +254,15 @@ class TestApplyAndBuildIntentLog:
         subprocess.run(["git", "-C", str(ws), "commit", "-qm", "add"],
                        check=True)
 
+        from dports_dev_env.cli import _git_head
         log = {
             "schema_version": 1,
             "origin": "devel/foo",
             "target": "@main",
             "mode_at_apply": "compat",
-            "baseline_commit": "fake",
+            # baseline_commit must match the workspace's HEAD or the
+            # baseline check refuses replay (added in §3 follow-up).
+            "baseline_commit": _git_head(ws),
             "intents": [
                 {"seq": 0, "ok": True,
                  "intent": {"type": "drop_patch",
@@ -275,6 +312,47 @@ class TestApplyAndBuildIntentLog:
         assert rc == 0, err
         assert applied == 0
 
+    def test_replay_refuses_baseline_mismatch(self, tmp_path):
+        """Design §8 step 2: refuse replay when intent log's
+        baseline_commit doesn't match the env's git HEAD. Drift
+        protection — operator can't verify against a different
+        starting state than the agent ran on."""
+        from dports_dev_env.cli import _replay_intent_log
+
+        ws = _make_workspace(tmp_path)
+        log = {
+            "origin": "devel/foo", "mode_at_apply": "compat",
+            "baseline_commit": "deadbeef0000deadbeef0000deadbeef00000000",
+            "intents": [],
+        }
+        log_path = tmp_path / "log.json"
+        log_path.write_text(json.dumps(log))
+        rc, applied, err = _replay_intent_log(log_path, ws, "devel/foo")
+        assert rc == 1
+        assert applied == 0
+        assert "baseline_commit" in err
+        assert "drift" in err.lower()
+
+    def test_replay_allows_missing_baseline(self, tmp_path):
+        """Empty baseline (older logs / git failure at apply time)
+        is allowed through with a stderr warning — operator opted
+        in by triggering verify."""
+        from dports_dev_env.cli import _replay_intent_log
+
+        ws = _make_workspace(tmp_path)
+        log = {
+            "origin": "devel/foo", "mode_at_apply": "compat",
+            "baseline_commit": "",
+            "intents": [],
+        }
+        log_path = tmp_path / "log.json"
+        log_path.write_text(json.dumps(log))
+        rc, applied, err = _replay_intent_log(log_path, ws, "devel/foo")
+        # rc=0 even with empty intent list; the warning goes to
+        # stderr, not the return value's error blob.
+        assert rc == 0, err
+        assert applied == 0
+
     def test_replay_first_failure_short_circuits(self, tmp_path):
         from dports_dev_env.cli import _replay_intent_log
         ws = _make_workspace(tmp_path)
@@ -293,6 +371,92 @@ class TestApplyAndBuildIntentLog:
         assert rc == 1
         assert applied == 0
         assert "drop_patch" in err
+
+
+# --------------------------------------------------------------------
+# End-to-end pipeline: apply_intent → drain → serialize → load →
+# replay. Regression guard for the whole 25b-25e chain. If any
+# link breaks, this test should catch it before the dependent
+# slices touch it.
+# --------------------------------------------------------------------
+
+
+class TestPipelineEndToEnd:
+
+    def test_apply_drain_replay_round_trip(
+        self, env_with_workspace, tmp_path, monkeypatch,
+    ):
+        """Full pipeline: the agent applies two intents against a
+        fresh workspace, the runner drains the log to JSON, a clean
+        copy of the workspace replays the log via the dev-env
+        primitive — the end states should be identical."""
+        from dports_dev_env.cli import _git_head, _replay_intent_log
+        from dportsv3.agent.runner import _write_intent_log_harness
+
+        ws = env_with_workspace
+
+        # Make the worker's baseline resolver actually return the
+        # workspace's real HEAD — the default fixture stubbed it
+        # to "fake-baseline" which would fail the new drift check
+        # at replay.
+        monkeypatch.setattr(
+            worker, "_resolve_baseline_commit",
+            lambda env: _git_head(ws),
+        )
+        worker._INTENT_LOGS.clear()
+
+        # Stage two patches for two drop_patch intents.
+        for name in ("patch-a.c", "patch-b.c"):
+            p = ws / f"ports/devel/foo/dragonfly/{name}"
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text("--- a/x\n+++ b/x\n")
+        subprocess.run(
+            ["git", "-C", str(ws), "add",
+             "ports/devel/foo/dragonfly/patch-a.c",
+             "ports/devel/foo/dragonfly/patch-b.c"],
+            check=True,
+        )
+        subprocess.run(["git", "-C", str(ws), "commit", "-qm", "stage"],
+                       check=True)
+        head_at_apply = _git_head(ws)
+
+        # 1. Agent applies two intents via the worker tool.
+        r1 = worker.apply_intent("test-env", "devel/foo", {
+            "type": "drop_patch", "target": "dragonfly/patch-a.c",
+            "reason": "obsolete A",
+        })
+        r2 = worker.apply_intent("test-env", "devel/foo", {
+            "type": "drop_patch", "target": "dragonfly/patch-b.c",
+            "reason": "obsolete B",
+        })
+        assert r1["ok"] and r2["ok"]
+        assert not (ws / "ports/devel/foo/dragonfly/patch-a.c").exists()
+        assert not (ws / "ports/devel/foo/dragonfly/patch-b.c").exists()
+
+        # 2. Runner drains + writes intent_log.json.
+        bundle_dir = tmp_path / "bundle"
+        bundle_dir.mkdir()
+        _write_intent_log_harness(bundle_dir, None, "test-env", "devel/foo")
+        log_artifact = bundle_dir / "analysis" / "intent_log.json"
+        assert log_artifact.is_file()
+
+        # 3. Reset the workspace to the pre-apply state so replay
+        #    operates on a clean baseline. (Simulating the verify
+        #    env that hasn't seen the agent's edits.)
+        subprocess.run(["git", "-C", str(ws), "checkout", "HEAD",
+                        "--", "ports/devel/foo"], check=True)
+        assert (ws / "ports/devel/foo/dragonfly/patch-a.c").exists()
+        assert (ws / "ports/devel/foo/dragonfly/patch-b.c").exists()
+
+        # 4. Replay the intent log against the clean workspace.
+        rc, applied, err = _replay_intent_log(
+            log_artifact, ws, "devel/foo",
+        )
+        assert rc == 0, err
+        assert applied == 2
+        # End state matches what the agent left behind.
+        assert not (ws / "ports/devel/foo/dragonfly/patch-a.c").exists()
+        assert not (ws / "ports/devel/foo/dragonfly/patch-b.c").exists()
 
 
 # --------------------------------------------------------------------
