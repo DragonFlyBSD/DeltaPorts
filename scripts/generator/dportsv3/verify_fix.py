@@ -268,6 +268,26 @@ def run_verify_fix(
     diff_bytes = payload  # used by signatures below
 
     ok = bool(ab.get("ok"))
+
+    # Step 25g: refuse "verified" on zero-success replay. The intent
+    # log path can produce intents_applied=0 in two ways: (a) the
+    # log itself had no ok=True entries (every original intent
+    # failed at apply time), or (b) the replay refused every entry
+    # (e.g. validation drift). Either way, the subsequent
+    # reapply + dbuild pass tells us only that the BASELINE builds,
+    # not that the fix works. Posting verified would mislead the
+    # operator; the bundle is genuinely "nothing to verify".
+    intents_applied = ab.get("intents_applied")
+    if intent_log_bytes is not None and ok and intents_applied == 0:
+        ok = False
+        ab["error"] = (
+            "intent log replay applied 0 intents (the agent's "
+            "original run had no successful edits to reproduce); "
+            "build success indicates the baseline builds, not that "
+            "any fix was verified"
+        )
+        ab["replay_zero_success"] = True
+
     post_body = {
         "ok": ok,
         "applied_diff_sha256": ab.get("applied_diff_sha256") or diff_sha,

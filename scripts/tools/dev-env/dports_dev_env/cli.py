@@ -98,6 +98,22 @@ def build_parser() -> argparse.ArgumentParser:
     )
     path_.add_argument("name", help="Environment name")
 
+    rp = subparsers.add_parser(
+        "reset-port",
+        help="Step 25g operator escape hatch: reset ports/<origin>/ "
+             "to git HEAD in the env's DeltaPorts checkout. "
+             "Discards tracked modifications + untracked additions. "
+             "Used to clean up after a verify drift refusal or "
+             "between agent runs without restarting the env.",
+    )
+    rp.add_argument("name", help="Environment name")
+    rp.add_argument("origin", help="category/portname to reset")
+    rp.add_argument(
+        "--json", action="store_true",
+        help="Emit a single-line JSON result on stdout instead of "
+             "a human-readable summary.",
+    )
+
     ab = subparsers.add_parser(
         "apply-and-build",
         help="Substrate primitive: optionally apply a diff to the env's "
@@ -348,8 +364,28 @@ def apply_and_build(
                 f"--intent-log: file not found: {intent_host}"
             )
         result["replay_mode"] = "intent_log"
+        workspace = writable_root / "work" / "DeltaPorts"
+
+        # Step 25g pre-replay assertion: refuse if the port subtree
+        # has uncommitted changes. Replaying intents against a dirty
+        # working tree produces undefined results; better to surface
+        # the conflict than silently merge. Operator escape hatch:
+        # `dportsv3 dev-env reset-port ENV ORIGIN` or `git stash`.
+        dirty = _port_dirty_paths(workspace, origin)
+        if dirty:
+            tail = (f"intent-log replay refused: ports/{origin}/ has "
+                    f"uncommitted changes:\n  "
+                    + "\n  ".join(dirty)
+                    + "\nrun `dportsv3 dev-env reset-port ENV ORIGIN` "
+                    "or `git stash` first")
+            result["apply_exit"] = 1
+            result["stderr_tail"] = tail[-2000:]
+            result["dirty_paths"] = dirty
+            sys.stderr.write(tail + "\n")
+            return result
+
         rc, applied_count, err = _replay_intent_log(
-            intent_host, writable_root / "work" / "DeltaPorts", origin,
+            intent_host, workspace, origin,
         )
         result["apply_exit"] = rc
         result["intents_applied"] = applied_count
@@ -424,7 +460,70 @@ def apply_and_build(
     result["dsynth_exit"] = build_proc.returncode
     result["log_path"] = str(log_host)
     result["ok"] = (build_proc.returncode == 0)
+
+    # Step 25g post-build cleanup: for intent-log mode, leave the
+    # env exactly as we found it. Replay modified ports/<origin>/;
+    # the build is done (success or fail) so the substrate state
+    # is no longer needed. Resetting now means the next verify run
+    # starts from a clean baseline without operator intervention.
+    # The diff path is unchanged for backward compat — pre-25e
+    # bundles rely on the legacy "leave drift in place" behavior.
+    if intent_log_path is not None:
+        rel = f"ports/{origin}"
+        cleanup = runner.run(
+            ["/bin/sh", "-c",
+             f"cd /work/DeltaPorts && "
+             f"git checkout HEAD -- {shlex.quote(rel)} && "
+             f"git clean -fd -- {shlex.quote(rel)}", "_"],
+            env=env, capture_output=True,
+        )
+        if cleanup.returncode != 0:
+            # Non-fatal: build result stands. Surface in stderr_tail
+            # so the operator knows the env may have leftover state.
+            warn = (
+                f"\n[25g post-build cleanup failed: rc={cleanup.returncode}; "
+                f"env's {rel} may have leftover state]\n"
+                + (cleanup.stderr or "")[-512:]
+            )
+            existing = result.get("stderr_tail") or ""
+            result["stderr_tail"] = (existing + warn)[-2000:]
+
     return result
+
+
+def _port_dirty_paths(workspace: Path, origin: str) -> list[str]:
+    """Return the porcelain dirty-paths for ports/<origin>/ in
+    ``workspace`` (host-side; the workspace is the shared writable
+    layer).
+
+    Empty list = clean. Used by apply_and_build's pre-replay check
+    and by the dev-env reset-port CLI's "is there anything to reset"
+    sanity message.
+    """
+    import subprocess as _sp
+    rel = f"ports/{origin}"
+    try:
+        p = _sp.run(
+            ["git", "-C", str(workspace),
+             "status", "--porcelain", "--", rel],
+            capture_output=True, text=True, check=False,
+        )
+    except Exception:
+        return []
+    if p.returncode != 0:
+        return []
+    out: list[str] = []
+    for line in (p.stdout or "").splitlines():
+        s = line.lstrip()
+        if " " in s:
+            _, _, rest = s.partition(" ")
+            path = rest.strip()
+            if "->" in path:
+                path = path.split("->", 1)[1].strip()
+            out.append(path)
+        elif s:
+            out.append(s)
+    return out
 
 
 def _git_head(workspace: Path) -> str:
@@ -543,6 +642,67 @@ def _replay_intent_log(
                     f"{result.error}")
         applied += 1
     return (0, applied, "")
+
+
+def cmd_reset_port(args: argparse.Namespace) -> int:
+    """CLI for ``dportsv3 dev-env reset-port`` (Step 25g).
+
+    Mirrors the post-build cleanup from apply_and_build: runs
+    ``git checkout HEAD -- ports/<origin>`` + ``git clean -fd``
+    inside the chroot. Operator escape hatch when verify refused
+    due to drift, or between runs without restarting the env.
+    """
+    import json
+    import shlex as _shlex
+
+    from .chroot import ChrootRunner, chroot_env
+    from .helpers import build_env_dict
+
+    require_root()
+    config = load_config()
+    validate_cache_root(config.cache_root)
+    store = EnvironmentStore(config)
+    session = EnvironmentSession(config, store)
+    state = session.prepare(args.name)
+
+    env_dir = store.env_dir(args.name)
+    writable_root = env_dir / "writable"
+    workspace = writable_root / "work" / "DeltaPorts"
+    runner = ChrootRunner(state.root_dir)
+    env = chroot_env() | build_env_dict(state)
+
+    # Report what would be reset BEFORE doing it so the operator
+    # can see the scope.
+    dirty_before = _port_dirty_paths(workspace, args.origin)
+
+    rel = f"ports/{args.origin}"
+    p = runner.run(
+        ["/bin/sh", "-c",
+         f"cd /work/DeltaPorts && "
+         f"git checkout HEAD -- {_shlex.quote(rel)} && "
+         f"git clean -fd -- {_shlex.quote(rel)}", "_"],
+        env=env, capture_output=True,
+    )
+    result = {
+        "ok": p.returncode == 0,
+        "env": args.name,
+        "origin": args.origin,
+        "rc": p.returncode,
+        "paths_reset": dirty_before,
+    }
+    if p.returncode != 0:
+        result["stderr_tail"] = (p.stderr or "")[-2000:]
+        sys.stderr.write(p.stderr or "")
+    if args.json:
+        print(json.dumps(result))
+    else:
+        if not dirty_before:
+            print(f"ok=True env={args.name} origin={args.origin} "
+                  "(nothing to reset)")
+        else:
+            print(f"ok={result['ok']} env={args.name} "
+                  f"origin={args.origin} reset={len(dirty_before)} paths")
+    return 0 if result["ok"] else 1
 
 
 def cmd_apply_and_build(args: argparse.Namespace) -> int:
@@ -811,6 +971,7 @@ def dispatch(args: argparse.Namespace) -> int:
         "update": cmd_update,
         "path": cmd_path,
         "apply-and-build": cmd_apply_and_build,
+        "reset-port": cmd_reset_port,
         "hooks-install": cmd_hooks_install,
         "hooks-uninstall": cmd_hooks_uninstall,
         "hooks-status": cmd_hooks_status,

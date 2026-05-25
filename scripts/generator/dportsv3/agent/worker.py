@@ -897,6 +897,103 @@ def drain_intent_log(env: str, origin: str):
     return _INTENT_LOGS.pop(key, None)
 
 
+import shlex  # noqa: E402 — needed by assert_port_clean / reset_port
+
+
+def assert_port_clean(env: str, origin: str) -> dict:
+    """Step 25g: assert the env's ``ports/<origin>/`` subtree is
+    at git HEAD with no uncommitted or untracked changes.
+
+    Returns ``{ok: bool, dirty_paths: list[str]}``. dirty_paths is
+    the parsed output of ``git status --porcelain`` for the
+    subtree — empty when ok=True.
+
+    Used by:
+    - verify-fix's pre-replay check (apply-and-build refuses to
+      replay against a dirty port subtree; operator must
+      ``git stash`` or ``dportsv3 dev-env reset-port`` first)
+    - the patch flow's pre-job invariant (future 25d slice)
+    - operator inspection via the CLI
+
+    Runs ``git status`` inside the chroot for substrate parity
+    with every other tool.
+    """
+    rel = f"ports/{origin}"
+    p = _exec(
+        env, "/bin/sh", "-c",
+        f"cd /work/DeltaPorts && git status --porcelain -- {shlex.quote(rel)}",
+        cwd="/work/DeltaPorts",
+    )
+    if p.returncode != 0:
+        return _exec_result(
+            p.returncode, p.stdout or "", p.stderr or "",
+            error=f"git status failed for {rel}",
+        )
+    raw = (p.stdout or "").rstrip("\n")
+    if not raw:
+        return {"ok": True, "dirty_paths": []}
+    # Each porcelain line: "XY path" (X=index, Y=worktree, then
+    # space, then path). Take the path; for renames git emits
+    # "old -> new" — we keep the new side.
+    dirty: list[str] = []
+    for line in raw.splitlines():
+        line = line.lstrip()
+        if " " in line:
+            _, _, rest = line.partition(" ")
+            path = rest.strip()
+            if "->" in path:
+                path = path.split("->", 1)[1].strip()
+            dirty.append(path)
+        elif line:
+            dirty.append(line)
+    return {"ok": False, "dirty_paths": dirty}
+
+
+def reset_port(env: str, origin: str) -> dict:
+    """Step 25g: reset the env's ``ports/<origin>/`` subtree to
+    git HEAD, discarding tracked modifications and untracked
+    additions.
+
+    Equivalent to::
+
+        git checkout HEAD -- ports/<origin>
+        git clean -fd ports/<origin>
+
+    Used by apply-and-build's pre-replay clean assertion (when
+    the operator opts into auto-reset via the
+    ``dportsv3 dev-env reset-port`` escape hatch) and by the
+    patch-flow post-job cleanup (deferred to 25d).
+
+    Returns the standard worker result dict with paths_changed
+    summarizing what was reset. Best-effort: both git commands
+    run; if either fails, the result reflects the union of their
+    outcomes.
+    """
+    rel = f"ports/{origin}"
+    # Run both commands; capture combined output. checkout HEAD --
+    # restores tracked-modified or tracked-deleted files; clean
+    # -fd drops untracked additions (including dirs).
+    cmd = (
+        f"cd /work/DeltaPorts && "
+        f"git checkout HEAD -- {shlex.quote(rel)} && "
+        f"git clean -fd -- {shlex.quote(rel)}"
+    )
+    p = _exec(env, "/bin/sh", "-c", cmd, cwd="/work/DeltaPorts")
+    out = (p.stdout or "")
+    err = (p.stderr or "")
+    if p.returncode != 0:
+        return _exec_result(
+            p.returncode, out, err,
+            error=f"reset_port failed for {rel}",
+        )
+    return {
+        "ok": True,
+        "origin": origin,
+        "paths_changed": [rel],
+        "stdout_tail": out[-1024:],
+    }
+
+
 def apply_intent(
     env: str, origin: str, intent: dict | str,
 ) -> dict:

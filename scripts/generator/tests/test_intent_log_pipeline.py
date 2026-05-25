@@ -374,6 +374,73 @@ class TestApplyAndBuildIntentLog:
 
 
 # --------------------------------------------------------------------
+# Step 25g: pre-replay clean assertion + post-build cleanup
+# --------------------------------------------------------------------
+
+
+class TestStep25gLifecycle:
+
+    def test_port_dirty_paths_returns_porcelain_paths(self, tmp_path):
+        from dports_dev_env.cli import _port_dirty_paths
+        ws = _make_workspace(tmp_path)
+        # Workspace starts clean.
+        assert _port_dirty_paths(ws, "devel/foo") == []
+        # Make a tracked file dirty + add an untracked file.
+        port = ws / "ports/devel/foo"
+        (port / "Makefile.DragonFly").write_text("USES+= ssl\n")
+        subprocess.run(
+            ["git", "-C", str(ws), "add",
+             "ports/devel/foo/Makefile.DragonFly"], check=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(ws), "commit", "-qm", "add"], check=True,
+        )
+        (port / "Makefile.DragonFly").write_text("USES+= ssl readline\n")
+        (port / "untracked.txt").write_text("scratch\n")
+        dirty = _port_dirty_paths(ws, "devel/foo")
+        assert any("Makefile.DragonFly" in p for p in dirty)
+        assert any("untracked.txt" in p for p in dirty)
+
+    def test_reset_port_cli_registers(self):
+        """`dportsv3 dev-env reset-port --help` should not blow up,
+        and the subcommand should be in the dispatch table."""
+        from dports_dev_env.cli import build_parser
+        parser = build_parser()
+        args = parser.parse_args(["reset-port", "my-env", "devel/foo"])
+        assert args.action == "reset-port"
+        assert args.name == "my-env"
+        assert args.origin == "devel/foo"
+
+    def test_reset_logic_via_helper(self, tmp_path):
+        """Verify the reset shell command shape works against a
+        real workspace (the same command apply_and_build's
+        post-build runs inside the chroot)."""
+        ws = _make_workspace(tmp_path)
+        # Commit a baseline file.
+        port = ws / "ports/devel/foo"
+        (port / "Makefile.DragonFly").write_text("baseline\n")
+        subprocess.run(["git", "-C", str(ws), "add", "."], check=True)
+        subprocess.run(["git", "-C", str(ws), "commit", "-qm", "base"],
+                       check=True)
+        # Dirty it: modify tracked + add untracked.
+        (port / "Makefile.DragonFly").write_text("modified\n")
+        (port / "scratch").write_text("untracked\n")
+
+        # Run the same reset sequence apply_and_build uses.
+        subprocess.run(
+            ["git", "-C", str(ws), "checkout", "HEAD", "--",
+             "ports/devel/foo"], check=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(ws), "clean", "-fd", "--",
+             "ports/devel/foo"], check=True,
+        )
+
+        assert (port / "Makefile.DragonFly").read_text() == "baseline\n"
+        assert not (port / "scratch").exists()
+
+
+# --------------------------------------------------------------------
 # End-to-end pipeline: apply_intent → drain → serialize → load →
 # replay. Regression guard for the whole 25b-25e chain. If any
 # link breaks, this test should catch it before the dependent
@@ -502,6 +569,46 @@ class TestVerifyFixIntentLogPreference:
         assert result.ok is True
         assert captured["intent_log_path"] is not None
         assert captured["diff_path"] is None
+
+    def test_orchestrator_refuses_zero_success_replay(self, tmp_path):
+        """Step 25g: when intent_log replay produces intents_applied=0,
+        the subsequent build success doesn't constitute "verified" —
+        the baseline builds, but no fix was reproduced. Orchestrator
+        flips ok=False and surfaces a clear reason in the POST body."""
+        from dportsv3 import verify_fix
+
+        captured: dict = {}
+
+        def _fake_ab(env, origin, *, diff_path=None, intent_log_path=None):
+            # Pretend replay applied zero intents but the build passed.
+            return {"ok": True, "env": env, "origin": origin,
+                    "applied_diff_sha256": "x",
+                    "apply_exit": 0, "reapply_exit": 0, "dsynth_exit": 0,
+                    "intents_applied": 0, "replay_mode": "intent_log",
+                    "log_path": None, "stderr_tail": None}
+
+        def _get_json(url, timeout=10):
+            return {"bundle_id": "b-1", "origin": "devel/foo"}
+
+        def _get_bytes(url, timeout=20):
+            if "intent_log.json" in url:
+                return b'{"origin":"devel/foo","intents":[]}\n'
+            assert False
+
+        posts: list = []
+        def _post_json(url, body, timeout=10):
+            posts.append((url, body))
+            return {"ok": True}
+
+        result = verify_fix.run_verify_fix(
+            bundle_id="b-1", env="verify-env", tracker_url="http://t",
+            _get_json=_get_json, _get_bytes=_get_bytes,
+            _post_json=_post_json, _apply_and_build=_fake_ab,
+        )
+        # Refused verified despite the build passing.
+        assert result.ok is False
+        _, body = posts[0]
+        assert body["ok"] is False
 
     def test_orchestrator_falls_back_to_diff_when_intent_log_missing(
         self, tmp_path,
