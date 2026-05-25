@@ -214,3 +214,23 @@ def test_get_bundle_raises_on_404(monkeypatch):
     with pytest.raises(RuntimeError) as exc:
         client.get_bundle("http://t", "ghost")
     assert "404" in str(exc.value)
+
+
+def test_get_bundle_with_include_jobs_sends_query(monkeypatch):
+    captured = {}
+    def _fake(req):
+        captured["url"] = req.full_url
+        return _FakeResponse('{"bundle_id":"b-1","jobs":[]}')
+    monkeypatch.setattr(client.request, "urlopen", _fake)
+    client.get_bundle("http://t", "b-1", include_jobs=True)
+    assert "include=jobs" in captured["url"]
+
+
+def test_get_bundle_without_include_jobs_omits_query(monkeypatch):
+    captured = {}
+    def _fake(req):
+        captured["url"] = req.full_url
+        return _FakeResponse('{"bundle_id":"b-1"}')
+    monkeypatch.setattr(client.request, "urlopen", _fake)
+    client.get_bundle("http://t", "b-1")
+    assert "include" not in captured["url"]

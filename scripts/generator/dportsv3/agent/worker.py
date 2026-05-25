@@ -1094,6 +1094,63 @@ def reset_port(env: str, origin: str) -> dict:
     }
 
 
+def commit_port_changes(
+    env: str, origin: str, message: str,
+) -> dict:
+    """Commit any working-tree changes under ``ports/<origin>/`` to
+    the env's git, so the next job's preflight sees a clean HEAD.
+
+    Stopgap for the convert→patch handoff (Step 26 will replace this
+    with per-attempt branches). The convert agent's ``put_file``
+    landing of ``overlay.dops`` produces an untracked file in the
+    env's writable layer; without this commit the patch job that the
+    runner auto-enqueues right after immediately hits
+    ``patch_preflight_dirty`` and dies.
+
+    No-op when ``ports/<origin>/`` is already clean (no diff, no
+    untracked). The commit author is set to a dportsv3-managed
+    identity so operator-authored commits stay distinguishable.
+
+    Returns the standard worker result dict. ``committed: bool``
+    distinguishes "committed N files" from "nothing to commit".
+    """
+    rel = f"ports/{origin}"
+    # `git add -A` picks up tracked-modified, deleted, AND untracked
+    # files. `git diff --cached --quiet` returns non-zero when the
+    # index has staged changes — that's our signal to commit.
+    # `git -c user.name=... -c user.email=... commit` keeps the
+    # config local to this invocation so we don't mutate the env's
+    # git config.
+    safe_msg = message.replace("'", "'\\''")
+    cmd = (
+        f"cd /work/DeltaPorts && "
+        f"git add -A -- {shlex.quote(rel)} && "
+        f"if git diff --cached --quiet -- {shlex.quote(rel)}; then "
+        f"  echo 'nothing-to-commit'; "
+        f"else "
+        f"  git -c user.name=dportsv3-runner "
+        f"      -c user.email=runner@dportsv3 "
+        f"      commit -m '{safe_msg}' -- {shlex.quote(rel)}; "
+        f"fi"
+    )
+    p = _exec(env, "/bin/sh", "-c", cmd, cwd="/work/DeltaPorts")
+    out = (p.stdout or "")
+    err = (p.stderr or "")
+    if p.returncode != 0:
+        return _exec_result(
+            p.returncode, out, err,
+            error=f"commit_port_changes failed for {rel}",
+        )
+    committed = "nothing-to-commit" not in out
+    return {
+        "ok": True,
+        "origin": origin,
+        "committed": committed,
+        "paths_changed": [rel] if committed else [],
+        "stdout_tail": out[-1024:],
+    }
+
+
 def apply_intent(
     env: str, origin: str, intent: dict | str,
 ) -> dict:

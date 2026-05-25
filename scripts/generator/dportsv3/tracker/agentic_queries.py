@@ -322,6 +322,32 @@ def get_artifact_ref(
     )
 
 
+def list_jobs_for_bundle(
+    conn: sqlite3.Connection, bundle_id: str,
+) -> list[dict[str, Any]]:
+    """Return all jobs whose ``bundle_dir`` references ``bundle_id``.
+
+    Jobs link to bundles by ``bundle_dir`` (a filesystem path like
+    ``…/bundles/<bundle_id>/``); the bundles table holds the canonical
+    bundle row. We match by basename suffix because the runner writes
+    different parent paths over time (queue migrations etc.) but the
+    bundle_id stays in the last path segment.
+
+    Ordered newest-first by created_ts_utc — most operators want
+    "what was the most recent attempt on this bundle?"
+    """
+    rows = conn.execute(
+        """SELECT * FROM jobs
+           WHERE bundle_dir = ?
+              OR bundle_dir = ? || '/'
+              OR bundle_dir LIKE '%/' || ?
+              OR bundle_dir LIKE '%/' || ? || '/'
+           ORDER BY created_ts_utc DESC, job_id DESC""",
+        (bundle_id, bundle_id, bundle_id, bundle_id),
+    ).fetchall()
+    return [_row_dict(r) for r in rows]
+
+
 def list_port_bundles(
     conn: sqlite3.Connection,
     origin: str,

@@ -166,6 +166,11 @@ def test_process_convert_job_auto_safe_port(
     from dportsv3.agent import worker
     monkeypatch.setattr(worker, "materialize_dports",
                         lambda env, origin: {"ok": True, "rc": 0})
+    monkeypatch.setattr(worker, "commit_port_changes",
+                        lambda env, origin, message: {"ok": True,
+                                                       "committed": True,
+                                                       "origin": origin,
+                                                       "paths_changed": []})
 
     job = {"origin": "devel/auto-safe", "target": "@main"}
     success, status = process_convert_job(
@@ -272,6 +277,11 @@ def test_process_convert_job_needs_judgment_llm_success(
                         lambda env, origin: {"ok": True, "rc": 0})
     monkeypatch.setattr(worker, "dsynth_build",
                         lambda env, origin: {"rebuild_ok": True, "ok": True})
+    monkeypatch.setattr(worker, "commit_port_changes",
+                        lambda env, origin, message: {"ok": True,
+                                                       "committed": True,
+                                                       "origin": origin,
+                                                       "paths_changed": []})
 
     success, status = process_convert_job(
         queue_root=tmp_path / "queue",
@@ -370,6 +380,15 @@ def test_process_convert_job_verifies_with_reapply_pass(
             "conversion is validated by reapply (compose) only"
         ),
     )
+    # The post-convert env commit (stopgap for the convert→patch
+    # handoff). Stub here; real coverage is in
+    # test_worker_commit_port_changes.py.
+    commit_calls = []
+    def fake_commit(env, origin, message):
+        commit_calls.append((env, origin, message))
+        return {"ok": True, "committed": True, "origin": origin,
+                "paths_changed": [f"ports/{origin}"]}
+    monkeypatch.setattr(worker, "commit_port_changes", fake_commit)
 
     success, status = process_convert_job(
         queue_root=tmp_path / "queue",
@@ -379,6 +398,10 @@ def test_process_convert_job_verifies_with_reapply_pass(
     )
     assert success, status
     assert "reapply" in status or "verified" in status
+    assert "committed to env" in status
+    # commit_port_changes fires exactly once with the resolved env.
+    assert len(commit_calls) == 1
+    assert commit_calls[0][1] == "devel/verify-pass"
     assert (port / "overlay.dops").exists()
 
 

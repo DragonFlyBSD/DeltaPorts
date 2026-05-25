@@ -122,7 +122,7 @@ def test_tracker_compare_builds_text_output(
 
 def test_tracker_get_bundle_text(monkeypatch, capsys):
     from dportsv3.commands import tracker as t
-    monkeypatch.setattr(t, "get_bundle", lambda server, bundle_id: {
+    monkeypatch.setattr(t, "get_bundle", lambda server, bundle_id, *, include_jobs=False: {
         "bundle_id": "b-1", "origin": "devel/foo", "target": "@main",
         "result": "failure", "resolution": "agent_fixed",
         "last_seen_at": "2026-05-26T10:00:00Z",
@@ -143,7 +143,7 @@ def test_tracker_get_bundle_text(monkeypatch, capsys):
 
 def test_tracker_get_bundle_json(monkeypatch, capsys):
     from dportsv3.commands import tracker as t
-    monkeypatch.setattr(t, "get_bundle", lambda server, bundle_id: {
+    monkeypatch.setattr(t, "get_bundle", lambda server, bundle_id, *, include_jobs=False: {
         "bundle_id": "b-1", "origin": "devel/foo", "artifacts": [],
     })
     code = main(["tracker", "get-bundle", "b-1",
@@ -244,7 +244,7 @@ def test_tracker_get_bundle_uses_env_var_server_when_omitted(
 ):
     from dportsv3.commands import tracker as t
     captured = {}
-    def fake(server, bundle_id):
+    def fake(server, bundle_id, *, include_jobs=False):
         captured["server"] = server
         return {"bundle_id": bundle_id, "artifacts": []}
     monkeypatch.setattr(t, "get_bundle", fake)
@@ -259,3 +259,53 @@ def test_tracker_get_bundle_errors_without_server(capsys):
     err = capsys.readouterr().err
     assert code == 1
     assert "Tracker server URL required" in err
+
+
+def test_tracker_get_bundle_with_jobs_flag(monkeypatch, capsys):
+    """--jobs surfaces the related job IDs in the text rendering."""
+    from dportsv3.commands import tracker as t
+    captured = {}
+    def fake_get(server, bundle_id, *, include_jobs=False):
+        captured["include_jobs"] = include_jobs
+        return {
+            "bundle_id": bundle_id, "origin": "devel/foo",
+            "target": "@main", "result": "fail",
+            "resolution": "agent_gave_up",
+            "last_seen_at": "2026-05-26T10:00Z",
+            "artifacts": [],
+            "jobs": [
+                {"job_id": "triage-1", "type": "triage", "state": "done",
+                 "created_ts_utc": "2026-05-26T09:00Z"},
+                {"job_id": "convert-1", "type": "convert", "state": "done",
+                 "created_ts_utc": "2026-05-26T09:30Z"},
+                {"job_id": "patch-1", "type": "patch", "state": "dead",
+                 "created_ts_utc": "2026-05-26T09:31Z"},
+            ],
+        }
+    monkeypatch.setattr(t, "get_bundle", fake_get)
+
+    code = main(["tracker", "get-bundle", "b-1", "--jobs",
+                 "--server", "http://t"])
+    out = capsys.readouterr().out
+    assert code == 0
+    assert captured["include_jobs"] is True
+    assert "Jobs:       3" in out
+    assert "triage-1" in out
+    assert "convert-1" in out
+    assert "patch-1" in out
+
+
+def test_tracker_get_bundle_without_jobs_flag_omits_section(monkeypatch, capsys):
+    """No --jobs → no jobs section + include_jobs not requested."""
+    from dportsv3.commands import tracker as t
+    captured = {}
+    def fake_get(server, bundle_id, *, include_jobs=False):
+        captured["include_jobs"] = include_jobs
+        return {"bundle_id": bundle_id, "artifacts": []}
+    monkeypatch.setattr(t, "get_bundle", fake_get)
+
+    code = main(["tracker", "get-bundle", "b-1", "--server", "http://t"])
+    out = capsys.readouterr().out
+    assert code == 0
+    assert captured["include_jobs"] is False
+    assert "Jobs:" not in out

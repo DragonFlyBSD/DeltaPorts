@@ -295,7 +295,10 @@ def _cmd_compare_builds(args: Namespace) -> int:
 def _cmd_get_bundle(args: Namespace) -> int:
     try:
         server = _resolve_server_url(args)
-        payload = get_bundle(server, str(args.bundle_id))
+        payload = get_bundle(
+            server, str(args.bundle_id),
+            include_jobs=bool(getattr(args, "jobs", False)),
+        )
     except RuntimeError as exc:
         print(str(exc), file=sys.stderr)
         return 1
@@ -452,6 +455,17 @@ def _format_bundle(b: dict[str, Any]) -> list[str]:
         size = a.get("size")
         size_str = f"{size}B" if isinstance(size, int) else "?"
         lines.append(f"  - {a.get('relpath', '?'):<40} {size_str:>10}")
+    # Jobs are only present when --jobs / include=jobs was requested.
+    jobs = b.get("jobs")
+    if jobs is not None:
+        lines.append(f"Jobs:       {len(jobs)}")
+        for j in jobs:
+            lines.append(
+                f"  - {j.get('job_id', '?'):<48}  "
+                f"{(j.get('type') or '-'):<8}  "
+                f"{(j.get('state') or '-'):<10}  "
+                f"{j.get('created_ts_utc', '-')}"
+            )
     return lines
 
 

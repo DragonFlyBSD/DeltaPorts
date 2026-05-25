@@ -38,6 +38,7 @@ from dportsv3.tracker.agentic_queries import (
     job_events_for_job,
     list_bundles,
     list_jobs,
+    list_jobs_for_bundle,
     list_manual_requests,
     list_port_bundles,
     list_runs,
@@ -802,11 +803,23 @@ def create_app(db_path: str | Path) -> Any:
             return list_bundles(conn, target=target, origin=origin, limit=limit)
 
     @app.get("/api/bundles/{bundle_id}")
-    def api_bundle_detail(bundle_id: str) -> dict[str, Any]:
+    def api_bundle_detail(
+        bundle_id: str,
+        include: str = "",
+    ) -> dict[str, Any]:
+        """Return the bundle row + its artifacts. With ``include=jobs``
+        also attaches the list of jobs that touched this bundle
+        (linked via jobs.bundle_dir basename → bundle_id) so the
+        analyzer subagent doesn't need a separate list-jobs join."""
         with _conn() as conn:
             row = get_bundle(conn, bundle_id)
-        if row is None:
-            raise HTTPException(status_code=404, detail=f"Unknown bundle: {bundle_id}")
+            if row is None:
+                raise HTTPException(
+                    status_code=404, detail=f"Unknown bundle: {bundle_id}",
+                )
+            includes = {t.strip() for t in include.split(",") if t.strip()}
+            if "jobs" in includes:
+                row["jobs"] = list_jobs_for_bundle(conn, bundle_id)
         return row
 
     @app.post("/api/bundles/{bundle_id}/verification")

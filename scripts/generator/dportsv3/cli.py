@@ -539,6 +539,11 @@ def _register_tracker_parser(subparsers: argparse._SubParsersAction) -> None:
         "get-bundle", help="Fetch one bundle's detail (includes artifact list)",
     )
     get_bundle_p.add_argument("bundle_id", type=str)
+    get_bundle_p.add_argument(
+        "--jobs", action="store_true",
+        help="Also include the list of jobs that touched this bundle "
+             "(saves a separate list-jobs join)",
+    )
     get_bundle_p.add_argument("--server", type=str)
     get_bundle_p.add_argument("--json", action="store_true",
                               help="Pretty JSON output (default: terse text)")

@@ -3142,7 +3142,27 @@ def _verify_conversion(job: dict, origin: str) -> tuple[bool, str]:
 
     mat = worker.materialize_dports(env, origin)
     if mat.get("ok"):
-        return True, "conversion verified by reapply (compose accepted overlay.dops)"
+        # Stopgap pre-Step-26: commit the convert output to the env's
+        # git so the next patch job's pre-job clean assertion
+        # (design §5.1, runner step 25d-1) doesn't refuse on the
+        # untracked overlay.dops. Without this the runner spawns a
+        # patch job that dies immediately on patch_preflight_dirty
+        # — observed thrash on devel/gperf 2026-05-25.
+        try:
+            commit = worker.commit_port_changes(
+                env, origin,
+                f"convert: {origin} (auto-commit, bundle {job.get('bundle_dir') or '?'})",
+            )
+            if not commit.get("ok"):
+                return False, (
+                    f"conversion verified but env commit failed: "
+                    f"{commit.get('error') or commit.get('stderr_tail', '')[:200]}"
+                )
+        except Exception as exc:
+            return False, (
+                f"conversion verified but env commit raised: {exc!s}"[:300]
+            )
+        return True, "conversion verified by reapply (compose accepted overlay.dops); committed to env"
     # reapply is a shell script that often prints errors to stdout
     # rather than stderr; include both so the failure is debuggable
     # from the lifecycle transition detail.

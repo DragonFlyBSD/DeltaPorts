@@ -175,9 +175,19 @@ def compare_builds(server_url: str, run_id_a: int, run_id_b: int) -> dict[str, A
 # --------------------------------------------------------------------
 
 
-def get_bundle(server_url: str, bundle_id: str) -> dict[str, Any]:
-    """Fetch one bundle's full detail (includes ``artifacts`` list)."""
-    return _request_json(server_url, f"/api/bundles/{bundle_id}")
+def get_bundle(
+    server_url: str, bundle_id: str, *, include_jobs: bool = False,
+) -> dict[str, Any]:
+    """Fetch one bundle's full detail (includes ``artifacts`` list).
+
+    With ``include_jobs=True`` the response also carries a ``jobs``
+    list of every job whose bundle_dir references this bundle —
+    saves the analyzer from a separate list-jobs join.
+    """
+    query = _compact_query({"include": "jobs" if include_jobs else None})
+    return _request_json(
+        server_url, f"/api/bundles/{bundle_id}", query=query,
+    )
 
 
 def list_bundles(
