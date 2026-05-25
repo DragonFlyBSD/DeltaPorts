@@ -824,6 +824,126 @@ def classify_dops(env: str, origin: str) -> str:
     return assess_dops(env, origin).state
 
 
+# Map from classify_dops state → translator mode. needs_judgment
+# means the port has compat artifacts the deterministic translator
+# can't resolve; for intent-based edits we treat it as compat (the
+# patch agent's intents render to compat ops). converted ports get
+# dops mode. not_in_scope and stale block apply_intent — the agent
+# should escalate rather than scaffold a new port via intents.
+_STATE_TO_MODE: dict[str, str] = {
+    "compat":            "compat",   # alias used by external callers
+    "auto_safe_pending": "compat",
+    "needs_judgment":    "compat",
+    "converted":         "dops",
+}
+
+
+def apply_intent(
+    env: str, origin: str, intent: dict | str,
+) -> dict:
+    """Apply one edit intent (Step 25c).
+
+    Mode is resolved per-call from the current substrate state via
+    :func:`assess_dops`. The Translator does the actual work; this
+    wrapper produces a tool-result-shaped dict for the LLM.
+
+    The caller (typically the patch agent's tool loop) passes the
+    raw intent dict; ``parse_intent`` validates it against the
+    JSON schema, then ``Translator.apply`` renders + applies it
+    against the env's writable overlay.
+
+    Per-call Translator — the in-transaction half-migration
+    invariant (designed in §9.3) catches at-write-time conflicts
+    within a single Translator instance. Across calls the same
+    invariant fires on the next attempt: the substrate state
+    persists between calls, so a follow-up apply_intent in the
+    wrong flavor sees the prior write and rejects accordingly.
+    Substrate-level cross-call enforcement lands in 25g.
+    """
+    from dportsv3.agent.edit_intent import Translator  # noqa: PLC0415
+
+    paths = env_paths(env)
+    workspace = paths.deltaports
+    if not workspace.is_dir():
+        return _exec_result(
+            1, "", f"workspace not found: {workspace}",
+            error="env not provisioned for apply_intent",
+        )
+
+    # Resolve mode from current substrate via the shared overlay
+    # assessment (the same abstraction surface_invariant lives in).
+    # We get more than just the state string: assessment.action
+    # tells us if the substrate itself is already in a half-
+    # migrated state (overlay.dops + Makefile.DragonFly together),
+    # in which case we refuse to start any intent transaction —
+    # the operator needs to resolve the corruption first.
+    assessment = assess_dops(env, origin)
+    state = assessment.state
+    if assessment.action == "surface_invariant":
+        return {
+            "ok": False,
+            "error": (
+                f"apply_intent refused: substrate is in a half-migrated "
+                f"state for {origin}: {assessment.invariant_violations!r}. "
+                f"Resolve the legacy artifacts before applying intents."
+            ),
+            "blocked_by": "substrate_invariant",
+            "invariant_violations": list(assessment.invariant_violations),
+            "unmigrated_artifacts": list(assessment.unmigrated_artifacts),
+        }
+    mode = _STATE_TO_MODE.get(state)
+    if mode is None:
+        return {
+            "ok": False,
+            "error": (
+                f"apply_intent refused: overlay state {state!r} for "
+                f"{origin} is not a valid intent target — escalate to "
+                f"operator (state must be compat, auto_safe_pending, "
+                f"needs_judgment, or converted)."
+            ),
+            "blocked_by": f"state:{state}",
+        }
+
+    translator = Translator(workspace, origin, mode)
+    result = translator.apply(intent)
+
+    return {
+        "ok": result.ok,
+        "intent_type": result.intent_type,
+        "paths_changed": result.paths_changed,
+        "substrate_diff": result.substrate_diff,
+        "error": result.error,
+        "mode": mode,
+    }
+
+
+def intent_reference(env: str, intent_type: str) -> dict:
+    """Return the JSON schema for one intent type (Step 25c).
+
+    Read-only — env arg is unused but kept for tool-dispatch shape.
+    Backs the patch agent's "look up the syntax" affordance:
+    instead of inlining the full grammar in PATCH_SYSTEM, the
+    prompt mentions intent types by name and points at this tool.
+    """
+    from dportsv3.agent.edit_intent import (  # noqa: PLC0415
+        IntentError, schema_for, INTENT_TYPES,
+    )
+
+    try:
+        schema = schema_for(intent_type)
+    except IntentError as exc:
+        return {
+            "ok": False,
+            "error": str(exc),
+            "known_intent_types": list(INTENT_TYPES),
+        }
+    return {
+        "ok": True,
+        "intent_type": intent_type,
+        "schema": schema,
+    }
+
+
 def validate_dops(env: str, origin: str) -> dict:
     """Run ``dportsv3 dsl check`` against the port's overlay.dops.
 

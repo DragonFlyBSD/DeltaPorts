@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from . import attempt_loop
+from . import attempt_loop, tools
 from .attempt_loop import PatchResult
 
 
@@ -28,6 +28,13 @@ def run(
     loop progresses: ``attempt_start``, ``tool_call``, ``attempt_end``.
     Used by the runner for live activity-log writes and to build a
     tool-trace artifact. Exceptions inside the callback are swallowed.
+
+    The tool surface comes from :func:`tools.patch_tool_names`, which
+    conditionally includes the Step 25 edit-intent tools
+    (``apply_intent`` / ``intent_reference``) based on
+    ``DP_HARNESS_PATCH_USE_INTENT``. Default is the pre-Step-25 set
+    so 25c lands without disturbing production behavior; 25d swaps
+    the prompt once the new surface is proven.
     """
     return attempt_loop.run(
         payload,
@@ -40,4 +47,5 @@ def run(
         timeout=timeout,
         max_tool_turns=max_tool_turns,
         on_event=on_event,
+        tool_whitelist=tools.patch_tool_names(),
     )

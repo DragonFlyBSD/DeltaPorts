@@ -133,6 +133,35 @@ _TOOLS: list[dict] = [
           "put_file; if not ok, fix the offending line(s) and call again. "
           "Only emit the Conversion Proof after a clean validate_dops.",
           {"origin": _STR}, ["origin"]),
+    # Step 25c: edit-intent tools. Opt-in via DP_HARNESS_PATCH_USE_INTENT
+    # — gated in patch_tool_names() below so the prompt rewrite (25d)
+    # can stage independently. Schemas always live in the registry
+    # (so `dispatch()` works for unit tests + future operator-driven
+    # invocations); whether the patch LLM sees them is the gate.
+    _tool("apply_intent",
+          "Apply one declarative edit intent (Step 25 grammar). The "
+          "translator validates the intent against its JSON schema, "
+          "renders it into substrate ops (compat or dops, resolved "
+          "from the port's current overlay state), and applies them "
+          "atomically. Returns paths_changed + substrate_diff. Refuses "
+          "intents that violate the half-migration invariant or land "
+          "on not_in_scope ports. Call `intent_reference(<type>)` for "
+          "the per-type schema if you need to look up syntax.",
+          {"origin": _STR,
+           "intent": {"type": "object",
+                      "description": "Intent body as a JSON object with "
+                                     "a 'type' field selecting the variant "
+                                     "(replace_in_patch, drop_patch, "
+                                     "add_patch, add_file, change_makefile, "
+                                     "bump_portrevision).",
+                      "additionalProperties": True}},
+          ["origin", "intent"]),
+    _tool("intent_reference",
+          "Return the JSON schema for one intent type. Read-only "
+          "lookup — use this when you forgot the exact field names "
+          "of an intent variant. Listing every known type: pass an "
+          "unknown name; the error response carries known_intent_types.",
+          {"intent_type": _STR}, ["intent_type"]),
 ]
 
 
@@ -184,6 +213,37 @@ CONVERT_TOOL_NAMES: frozenset[str] = frozenset({
     "dops_reference",
     "validate_dops",
 })
+
+
+# Step 25c: edit-intent tools are gated behind
+# DP_HARNESS_PATCH_USE_INTENT so 25c can land without disturbing
+# the production patch agent's behavior. Once 25d (prompt swap)
+# ships, the gate retires and intents become the default.
+_INTENT_TOOL_NAMES: frozenset[str] = frozenset({
+    "apply_intent",
+    "intent_reference",
+})
+
+
+def patch_tool_names() -> frozenset[str]:
+    """Patch-agent's tool list, with the Step 25c intent tools
+    conditionally included based on ``DP_HARNESS_PATCH_USE_INTENT``.
+
+    Default (env var unset or '' / '0' / 'false'): all current
+    patch tools EXCEPT the intent ones — behavior identical to
+    pre-Step-25 production.
+
+    Opt-in (env var = '1' / 'true' / 'yes'): all current patch
+    tools PLUS the intent ones. The prompt rewrite (25d) is when
+    we drop port-subtree put_file from this set; until then both
+    surfaces coexist so the prompt can be staged.
+    """
+    import os as _os  # noqa: PLC0415
+    all_names = set(names())
+    flag = (_os.environ.get("DP_HARNESS_PATCH_USE_INTENT") or "").lower()
+    if flag in ("1", "true", "yes", "on"):
+        return frozenset(all_names)
+    return frozenset(all_names - _INTENT_TOOL_NAMES)
 
 
 # -----------------------------------------------------------------------------
