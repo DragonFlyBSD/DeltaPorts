@@ -280,6 +280,118 @@ class TestRegistryGate:
 
 
 # --------------------------------------------------------------------
+# Step 25d-2: prompt selection + intent-gate put_file guardrail
+# --------------------------------------------------------------------
+
+
+class TestPatchPromptSelection:
+
+    def test_patch_run_uses_legacy_prompt_when_gate_off(
+        self, monkeypatch,
+    ):
+        """patch.run threads the system_prompt to attempt_loop.run.
+        Default (gate off) is the legacy PATCH_SYSTEM."""
+        from dportsv3.agent import patch, prompts, attempt_loop
+        monkeypatch.delenv("DP_HARNESS_PATCH_USE_INTENT", raising=False)
+
+        captured: dict = {}
+        def _fake_run(payload, *, system_prompt=None, **kw):
+            captured["system_prompt"] = system_prompt
+            captured["tool_whitelist"] = kw.get("tool_whitelist")
+            from dportsv3.agent.attempt_loop import PatchResult, Usage
+            return PatchResult(status="success", final_text="",
+                               proof={}, attempts=[], usage=Usage())
+        monkeypatch.setattr(attempt_loop, "run", _fake_run)
+        from dportsv3.agent.policy import Tier
+        tier = Tier(name="AUTO", max_iterations=2, max_tokens=30000)
+        patch.run(
+            "(payload)", tier=tier, env="e", model="m",
+        )
+        assert captured["system_prompt"] is prompts.PATCH_SYSTEM
+        assert "apply_intent" not in captured["tool_whitelist"]
+
+    def test_patch_run_uses_intent_prompt_when_gate_on(
+        self, monkeypatch,
+    ):
+        from dportsv3.agent import patch, prompts, attempt_loop
+        monkeypatch.setenv("DP_HARNESS_PATCH_USE_INTENT", "1")
+
+        captured: dict = {}
+        def _fake_run(payload, *, system_prompt=None, **kw):
+            captured["system_prompt"] = system_prompt
+            captured["tool_whitelist"] = kw.get("tool_whitelist")
+            from dportsv3.agent.attempt_loop import PatchResult, Usage
+            return PatchResult(status="success", final_text="",
+                               proof={}, attempts=[], usage=Usage())
+        monkeypatch.setattr(attempt_loop, "run", _fake_run)
+        from dportsv3.agent.policy import Tier
+        tier = Tier(name="AUTO", max_iterations=2, max_tokens=30000)
+        patch.run("(payload)", tier=tier, env="e", model="m")
+        assert captured["system_prompt"] is prompts.PATCH_INTENT_SYSTEM
+        # Intent tools visible.
+        assert "apply_intent" in captured["tool_whitelist"]
+        assert "intent_reference" in captured["tool_whitelist"]
+        # Legacy port-subtree write tools NOT visible.
+        assert "install_patches" not in captured["tool_whitelist"]
+        assert "validate_dops" not in captured["tool_whitelist"]
+        assert "emit_diff" not in captured["tool_whitelist"]
+        assert "dops_reference" not in captured["tool_whitelist"]
+        # put_file STAYS visible — WRKSRC writes via dupe/genpatch
+        # need it. Worker-side guardrail handles port-subtree case.
+        assert "put_file" in captured["tool_whitelist"]
+
+
+class TestPutFileIntentGuardrail:
+    """Step 25d-2 worker guardrail: when the intent gate is ON,
+    put_file refuses port-subtree writes so the agent routes
+    through apply_intent instead of bypassing the intent log."""
+
+    def test_port_subtree_write_refused_when_gate_on(
+        self, monkeypatch,
+    ):
+        from dportsv3.agent.worker import _reject_intent_path_put_file
+        monkeypatch.setenv("DP_HARNESS_PATCH_USE_INTENT", "1")
+        r = _reject_intent_path_put_file(
+            "/work/DeltaPorts/ports/devel/foo/dragonfly/patch-x.c",
+        )
+        assert r is not None
+        assert r["ok"] is False
+        assert r["blocked_by"] == "intent_gate_port_subtree_write"
+        assert "apply_intent" in r["error"]
+
+    def test_port_subtree_write_allowed_when_gate_off(
+        self, monkeypatch,
+    ):
+        from dportsv3.agent.worker import _reject_intent_path_put_file
+        monkeypatch.delenv("DP_HARNESS_PATCH_USE_INTENT", raising=False)
+        r = _reject_intent_path_put_file(
+            "/work/DeltaPorts/ports/devel/foo/dragonfly/patch-x.c",
+        )
+        assert r is None
+
+    def test_wrksrc_write_allowed_when_gate_on(self, monkeypatch):
+        """WRKSRC writes via the dupe/genpatch flow stay legal so
+        the agent can still snapshot + edit + genpatch + emit
+        add_patch{from_dupe=true}."""
+        from dportsv3.agent.worker import _reject_intent_path_put_file
+        monkeypatch.setenv("DP_HARNESS_PATCH_USE_INTENT", "1")
+        r = _reject_intent_path_put_file(
+            "/work/obj/devel/foo/work/foo-1.2/src/main.c",
+        )
+        assert r is None
+
+    def test_lock_root_write_still_refused_by_other_guard(
+        self, monkeypatch,
+    ):
+        """The new gate doesn't disturb the existing lock-root /
+        compose-root guardrails — those fire independently."""
+        from dportsv3.agent.worker import _reject_dports_write
+        r = _reject_dports_write("/work/DPorts/devel/foo/Makefile")
+        assert r is not None
+        assert "lock root" in r["error"]
+
+
+# --------------------------------------------------------------------
 # dispatch
 # --------------------------------------------------------------------
 

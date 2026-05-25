@@ -241,22 +241,55 @@ def patch_use_intent_enabled() -> bool:
         in ("1", "true", "yes", "on")
 
 
+# Step 25d-2: patch-subtree write tools the LLM no longer sees on
+# the intent path. Convert agent still needs them; only the patch
+# agent's visible surface shrinks. (Tools stay in the registry so
+# dispatch() works for tests + future operator-driven invocations.)
+#
+# Note ``put_file`` is NOT in this set — the new prompt still
+# references it for WRKSRC writes in the dupe/genpatch flow. A
+# worker-side guardrail (worker._reject_intent_path_put_file)
+# rejects port-subtree puts when the intent gate is on so the
+# "use apply_intent instead" constraint is enforced at the
+# substrate boundary, not just by prompt convention.
+_LEGACY_WRITE_TOOL_NAMES: frozenset[str] = frozenset({
+    "install_patches",   # folded into apply_intent{add_patch,from_dupe}
+    "emit_diff",         # intent log IS the diff; no post-hoc capture
+    "validate_dops",     # translator validates dops statements
+    "dops_reference",    # intent_reference replaces it for patch
+})
+
+
 def patch_tool_names() -> frozenset[str]:
-    """Patch-agent's tool list, with the Step 25c intent tools
-    conditionally included based on ``DP_HARNESS_PATCH_USE_INTENT``.
+    """Patch-agent's tool list, gated by ``DP_HARNESS_PATCH_USE_INTENT``
+    (:func:`patch_use_intent_enabled`).
 
-    Default (env var unset or '' / '0' / 'false'): all current
-    patch tools EXCEPT the intent ones — behavior identical to
-    pre-Step-25 production.
+    Default (gate OFF): all current patch tools EXCEPT the intent
+    tools (``apply_intent`` / ``intent_reference``). Behavior
+    identical to pre-Step-25 production — the legacy ``PATCH_SYSTEM``
+    prompt expects ``put_file`` / ``install_patches`` / ``emit_diff``
+    / ``validate_dops`` / ``dops_reference``.
 
-    Opt-in (env var = '1' / 'true' / 'yes'): all current patch
-    tools PLUS the intent ones. The prompt rewrite (25d-2) is
-    when we drop port-subtree put_file from this set; until then
-    both surfaces coexist so the prompt can be staged.
+    Gate ON: intent-only surface. The legacy write tools
+    (_LEGACY_WRITE_TOOL_NAMES) are dropped; ``apply_intent`` and
+    ``intent_reference`` are exposed. The new ``PATCH_INTENT_SYSTEM``
+    prompt is written against this surface. ``put_file`` is still
+    callable for paths outside ``ports/<origin>/`` (WRKSRC for the
+    dupe/genpatch flow) — the worker's path guard handles that
+    boundary, not the registry.
+
+    NOTE: this method removes ``put_file`` entirely from the
+    visible surface on the intent path. WRKSRC writes via
+    ``put_file`` are still possible via the *registry* (and via
+    direct ``dispatch()`` calls), they're just not in the LLM's
+    visible tool list. If smoke testing shows the agent needs
+    ``put_file`` for the dupe flow even on the intent path, move
+    ``put_file`` out of _LEGACY_WRITE_TOOL_NAMES and rely on the
+    worker's path-guardrails alone.
     """
     all_names = set(names())
     if patch_use_intent_enabled():
-        return frozenset(all_names)
+        return frozenset(all_names - _LEGACY_WRITE_TOOL_NAMES)
     return frozenset(all_names - _INTENT_TOOL_NAMES)
 
 

@@ -190,6 +190,47 @@ def _sha256(data: bytes) -> str:
 # -----------------------------------------------------------------------------
 
 
+def _reject_intent_path_put_file(chroot_path: str) -> dict | None:
+    """Step 25d-2: when the intent gate is on, refuse ``put_file``
+    writes to ``/work/DeltaPorts/ports/<origin>/`` — those edits
+    belong in the intent log, not in a bypass write.
+
+    The agent's prompt (``PATCH_INTENT_SYSTEM``) says exactly this,
+    but agents drift. Enforcing at the substrate boundary turns
+    "the agent ignored the prompt" into "the agent saw an error
+    result and retried correctly". The WRKSRC case
+    (``/work/obj/<origin>/work/...``, used by the dupe/genpatch
+    flow) is unaffected — only port-subtree writes are gated.
+
+    Off when the gate is off (legacy flow needs port-subtree
+    put_file). Returns None when the path is allowed.
+    """
+    # Gate off → no restriction. Avoid importing tools here to
+    # dodge an agent.tools → agent.worker import cycle: read the
+    # env var directly. Mirrors the truthy convention in
+    # tools.patch_use_intent_enabled.
+    flag = (os.environ.get("DP_HARNESS_PATCH_USE_INTENT") or "").lower()
+    if flag not in ("1", "true", "yes", "on"):
+        return None
+    if not chroot_path.startswith("/work/DeltaPorts/ports/"):
+        return None
+    return {
+        "ok": False,
+        "error": (
+            f"put_file rejected: {chroot_path!r} is under "
+            f"/work/DeltaPorts/ports/<origin>/. With the intent "
+            f"flow enabled, port-subtree edits must go through "
+            f"apply_intent so they land in the intent log "
+            f"(analysis/intent_log.json). Use the appropriate "
+            f"intent type: replace_in_patch / drop_patch / "
+            f"add_patch / add_file / change_makefile. Call "
+            f"intent_reference(<type>) for the schema."
+        ),
+        "path": chroot_path,
+        "blocked_by": "intent_gate_port_subtree_write",
+    }
+
+
 def _reject_dports_write(chroot_path: str) -> dict | None:
     """Refuse ``put_file`` writes to regenerated trees.
 
@@ -489,6 +530,9 @@ def put_file(
     agent at the correct ``/work/DeltaPorts/ports/<origin>/`` path.
     """
     refused = _reject_dports_write(path)
+    if refused is not None:
+        return refused
+    refused = _reject_intent_path_put_file(path)
     if refused is not None:
         return refused
     paths = env_paths(env)
