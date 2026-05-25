@@ -21,6 +21,21 @@ If the analysis will read large traces (>50 KB of artifacts), delegate the read+
 
 **Prefer the `dportsv3 tracker get-*` CLI** over curl. It talks to the same tracker HTTP API but returns clean structured output and handles URL encoding for you. Set `DPORTSV3_TRACKER_URL` once and every command picks it up; or pass `--server URL`.
 
+### Locating the `dportsv3` binary
+
+The CLI is not always on `$PATH`. **At the start of your analysis**, resolve the binary once and reuse it:
+
+```sh
+# Repo-root-anchored fallback. The venv binary is the project's
+# own and is the safe deterministic location.
+DPORTSV3="${DPORTSV3:-$(command -v dportsv3 || echo /Users/tuxillo/s/DeltaPorts/scripts/generator/.venv/bin/dportsv3)}"
+# Verify before using it:
+"$DPORTSV3" tracker --help >/dev/null \
+    || { echo "dportsv3 unusable at $DPORTSV3" >&2; exit 1; }
+```
+
+Then every later call uses `"$DPORTSV3" tracker get-bundle …` etc. If you can't make the CLI work after that probe, fall back to `curl` and flag the gap.
+
 ### CLI commands (prefer these)
 
 | Purpose | Command |
