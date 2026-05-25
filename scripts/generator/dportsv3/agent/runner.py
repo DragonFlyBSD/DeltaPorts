@@ -15,7 +15,6 @@ relevant job type):
     DP_HARNESS_*_API_KEY      provider API keys
     DP_HARNESS_*_API_BASE     optional custom endpoint
     DP_HARNESS_*_PROVIDER     optional custom_llm_provider override
-    DP_HARNESS_ENV            dev-env name for patch tool dispatch
     DP_HARNESS_POLICY         optional path to agentic-policy.json
     DP_HARNESS_TIMEOUT        triage timeout (default 120)
     DP_HARNESS_PATCH_TIMEOUT  patch timeout (default 600)
@@ -30,7 +29,10 @@ Job fields:
     iteration=N           — current fix iteration (1-based)
     max_iterations=N      — max iterations before giving up (default: 3)
     tier=NAME             — pre-resolved trust tier (set by triage step)
-    dev_env=NAME          — dev-env to use (set by triage step or DP_HARNESS_ENV)
+    dev_env=NAME          — dev-env for this job; resolved by
+                            env_resolver if absent (tracker active
+                            env → --env CLI flag → auto-pick if
+                            exactly one env exists → refuse)
     previous_bundle=...   — bundle from previous failed attempt
 """
 
@@ -79,6 +81,58 @@ DSYNTH_LOCK_POLL_SECONDS = 30
 
 _state_db_conn: sqlite3.Connection | None = None
 _state_db_lock = threading.Lock()
+
+# --env NAME from the runner CLI. Trackerless / step-3-of-precedence
+# fallback consulted by resolve_env(). main() sets this before any
+# job is dispatched.
+_CLI_ENV_DEFAULT: str | None = None
+
+
+def resolve_env(job: dict | None) -> str | None:
+    """Per-job env resolution. Wraps env_resolver.resolve_env_for_job
+    with the runner's DB connection + CLI flag default.
+
+    Returns the env name, or None if no env could be resolved (the
+    caller surfaces "needs_env_selection" to the operator).
+    """
+    from dportsv3.agent.env_resolver import resolve_env_for_job  # noqa: PLC0415
+    r = resolve_env_for_job(job, _state_db_conn, cli_env=_CLI_ENV_DEFAULT)
+    return r.env
+
+
+# Gate-cycle cache for resolve_env(None). The gate runs every poll
+# (sub-second) and re-resolves to pick up tracker UI changes
+# without a restart. The DB read is cheap but it adds up; a 1-second
+# TTL keeps UI changes effectively-immediate while collapsing
+# burst-rate polls onto a single read.
+_GATE_RESOLVE_CACHE: tuple[float, str | None] | None = None
+_GATE_RESOLVE_TTL_SECONDS: float = 1.0
+
+
+def resolve_env_for_gate() -> str | None:
+    """Cached resolve_env(None) for the runner's per-poll gate.
+
+    Cache TTL is :data:`_GATE_RESOLVE_TTL_SECONDS`; UI changes take
+    effect within that window. Job-dispatch paths still use the
+    uncached :func:`resolve_env` so per-job semantics are exact.
+    """
+    global _GATE_RESOLVE_CACHE
+    import time  # noqa: PLC0415
+    now = time.monotonic()
+    if _GATE_RESOLVE_CACHE is not None:
+        cached_at, cached_val = _GATE_RESOLVE_CACHE
+        if now - cached_at < _GATE_RESOLVE_TTL_SECONDS:
+            return cached_val
+    val = resolve_env(None)
+    _GATE_RESOLVE_CACHE = (now, val)
+    return val
+
+
+def resolve_env_or_reason(job: dict | None):
+    """Like resolve_env but returns the full EnvResolution so callers
+    can surface refusal_reason in their error path."""
+    from dportsv3.agent.env_resolver import resolve_env_for_job  # noqa: PLC0415
+    return resolve_env_for_job(job, _state_db_conn, cli_env=_CLI_ENV_DEFAULT)
 _heartbeat_stop_event = threading.Event()
 _heartbeat_thread: threading.Thread | None = None
 _current_job_id: str | None = None
@@ -142,6 +196,48 @@ def probe_health_cached(env: str, ttl_seconds: int):
     _health_cache[env] = (now, eh)
     record_env_health(eh)
     return eh
+
+
+def stub_unprobed_envs() -> int:
+    """Insert a placeholder ``env_health_status`` row for every env
+    on disk that isn't already in the table.
+
+    Without this, brand-new envs are invisible to the tracker UI
+    (the dropdown sources from this table) until the runner's first
+    health probe touches them. Stubbing on runner start closes the
+    UI ↔ runner truth gap: any env the runner could auto-pick is
+    also visible to the operator. Real probes overwrite the stub.
+
+    Returns the number of stub rows inserted (0 if all envs were
+    already in the table or no envs exist).
+    """
+    if _state_db_conn is None:
+        return 0
+    from dportsv3.agent.env_resolver import list_available_envs  # noqa: PLC0415
+    envs = list_available_envs()
+    if not envs:
+        return 0
+    ts = datetime.now(timezone.utc).isoformat()
+    inserted = 0
+    try:
+        with _state_db_lock:
+            for env in envs:
+                # INSERT OR IGNORE: real probe rows (with status=ready /
+                # degraded / broken) must not be overwritten by stubs.
+                cur = _state_db_conn.execute(
+                    """INSERT OR IGNORE INTO env_health_status
+                       (env, status, probed_at, operator_action,
+                        detail_json, updated_at)
+                       VALUES (?, 'unprobed', NULL, NULL,
+                               '{"checks":[]}', ?)""",
+                    (env, ts),
+                )
+                if cur.rowcount:
+                    inserted += 1
+            _state_db_conn.commit()
+    except Exception as exc:
+        print(f"Warning: stub_unprobed_envs failed: {exc}", file=sys.stderr)
+    return inserted
 
 
 def record_env_health(env_health) -> None:
@@ -1613,8 +1709,8 @@ def enqueue_patch_job(
     ``tier_name`` is the trust tier resolved at triage time (AUTO/ASSIST);
     propagating it lets the patch worker use the right budget without
     re-parsing triage.md. ``dev_env`` is the dev-env name the patch
-    flow should operate against; omit to let the patch worker fall
-    back to DP_HARNESS_ENV.
+    flow should operate against; omit to let env_resolver pick
+    (tracker active env → --env CLI flag → auto-pick).
     """
     ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%SZ")
     origin_safe = job.get("origin", "unknown").replace("/", "_")
@@ -2102,10 +2198,12 @@ def _maybe_defer_to_convert(
     # the chroot) bypasses the substrate and produces stale results.
     # Goes through `dportsv3 dev-env exec ENV -- dportsv3 agent
     # classify-dops <origin>` like every other tool-surface call.
-    env_name = job.get("dev_env") or os.environ.get("DP_HARNESS_ENV")
+    env_resolution = resolve_env_or_reason(job)
+    env_name = env_resolution.env
     if not env_name:
         log(queue_root, "WARN",
-            f"no DP_HARNESS_ENV for {origin!r}; cannot classify, "
+            f"no dev-env resolved for {origin!r} "
+            f"({env_resolution.refusal_reason}); cannot classify, "
             f"proceeding with triage")
         try:
             activity_log(
@@ -2118,7 +2216,7 @@ def _maybe_defer_to_convert(
                     "target": target,
                     "reason": "missing_dev_env",
                     "job_has_dev_env": bool(job.get("dev_env")),
-                    "runner_has_DP_HARNESS_ENV": bool(os.environ.get("DP_HARNESS_ENV")),
+                    "refusal_reason": env_resolution.refusal_reason,
                 },
             )
         except Exception as exc:
@@ -2315,7 +2413,7 @@ def process_triage_job(
         apply_transition=_apply_transition,
         activity_log=activity_log,
         db_conn=_state_db_conn,
-        env_name=os.environ.get("DP_HARNESS_ENV") or None,
+        env_name=resolve_env(job),
         bundle_dir=bundle_dir,
         bundle_id=job.get("bundle_id"),
         kedb_dir=kedb_dir,
@@ -2739,7 +2837,7 @@ def process_patch_job(
         apply_transition=_apply_transition,
         activity_log=activity_log,
         db_conn=_state_db_conn,
-        env_name=job.get("dev_env") or os.environ.get("DP_HARNESS_ENV") or None,
+        env_name=resolve_env(job),
         bundle_dir=bundle_dir,
         bundle_id=job.get("bundle_id"),
         kedb_dir=kedb_dir,
@@ -2804,9 +2902,13 @@ def process_convert_job(
     if not origin:
         return False, "convert job missing origin"
 
-    env_name = job.get("dev_env") or os.environ.get("DP_HARNESS_ENV")
+    env_resolution = resolve_env_or_reason(job)
+    env_name = env_resolution.env
     if not env_name:
-        return False, "no DP_HARNESS_ENV; convert needs an env"
+        return False, (
+            f"no dev-env resolved; convert needs an env "
+            f"({env_resolution.refusal_reason})"
+        )
 
     # Classification (and everything downstream) reads the dev-env's
     # writable overlay via worker.classify_dops → dev-env exec →
@@ -2865,7 +2967,7 @@ def process_convert_job(
         )
 
     # Step 20e: verify the rewrite with dsynth_build inside the env.
-    # No env → skip; the smoke-test path always sets DP_HARNESS_ENV.
+    # No env → skip; env_resolver handles the auto/manual selection.
     return _verify_conversion(job, origin)
 
 
@@ -2888,11 +2990,13 @@ def _run_llm_conversion(
     from dportsv3.agent import convert as convert_mod
     from dportsv3.migration.convert import convert_record
 
-    env = job.get("dev_env") or os.environ.get("DP_HARNESS_ENV")
+    env_resolution = resolve_env_or_reason(job)
+    env = env_resolution.env
     if not env:
         return False, (
-            "needs_llm but DP_HARNESS_ENV unset — convert agent needs "
-            "a dev-env for the tool surface"
+            f"needs_llm but no dev-env resolved — convert agent "
+            f"needs a dev-env for the tool surface "
+            f"({env_resolution.refusal_reason})"
         )
 
     # Model resolution mirrors patch flow: dedicated CONVERT_MODEL
@@ -3027,10 +3131,10 @@ def _verify_conversion(job: dict, origin: str) -> tuple[bool, str]:
     Returns ``(True, status)`` when reapply succeeds, or when no
     env is available to verify in (offline / unit-test path).
     """
-    env = job.get("dev_env") or os.environ.get("DP_HARNESS_ENV")
+    env = resolve_env(job)
     if not env:
         return True, (
-            "conversion succeeded (no DP_HARNESS_ENV — "
+            "conversion succeeded (no dev-env resolved — "
             "verification skipped)"
         )
 
@@ -3366,7 +3470,21 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--once", action="store_true", help="Process one job and exit")
     parser.add_argument("--dry-run", action="store_true", help="Print payload without calling the LLM")
     parser.add_argument("--kedb-dir", help="Path to KEDB directory (default: auto-detect)")
+    parser.add_argument(
+        "--env",
+        help=(
+            "Default dev-env name when a job doesn't carry one and "
+            "the tracker hasn't recorded an active env. Trackerless "
+            "escape hatch — for tracker-attached runs prefer setting "
+            "the active env in the tracker UI."
+        ),
+    )
     args = parser.parse_args(argv)
+
+    # Stash the CLI env on the module so handlers reach it via
+    # cli_env_default() without threading it through every signature.
+    global _CLI_ENV_DEFAULT
+    _CLI_ENV_DEFAULT = args.env or None
 
     queue_root = Path(args.queue_root)
 
@@ -3377,6 +3495,17 @@ def main(argv: list[str] | None = None) -> int:
             return 1
 
     init_state_db(queue_root)
+    # Populate env_health_status with stub rows for every env on
+    # disk so the tracker UI dropdown reflects the runner's view of
+    # available envs even before the first health probe fires.
+    if _state_db_conn is not None:
+        try:
+            n = stub_unprobed_envs()
+            if n:
+                log(queue_root, "INFO",
+                    f"stubbed {n} previously-unseen env(s) into env_health_status")
+        except Exception as exc:
+            log(queue_root, "WARN", f"stub_unprobed_envs failed: {exc}")
     start_heartbeat()
 
     # Reap any inflight-ish jobs left over from a previous runner
@@ -3453,15 +3582,19 @@ def main(argv: list[str] | None = None) -> int:
                  f"patch={patch_model}, convert={convert_model})")
     update_runner_status("idle", job_id=None, stage=None)
 
-    # Runner-level dev-env. When set, the runner refuses to claim jobs
-    # while dsynth is active in / on that env, to avoid two dsynth
-    # invocations against the same buildbase. Unset = no gate (operator
-    # accepts the risk).
-    runner_env = os.environ.get("DP_HARNESS_ENV") or ""
+    # Runner-level dev-env for the health probe + dsynth-busy gate.
+    # Resolved from the env_resolver with no job context — picks up
+    # the tracker active env, --env CLI flag, or auto-picked single
+    # env. Re-resolved on each gate tick so UI changes take effect
+    # without a runner restart. Empty = no gate (no env to watch);
+    # operator gets a one-time WARN at startup.
+    runner_env = resolve_env(None) or ""
     if not runner_env:
         log(queue_root, "WARN",
-            "DP_HARNESS_ENV is unset; dsynth-busy gating disabled. "
-            "Concurrent dsynth runs in the same env may corrupt buildbase.")
+            "no dev-env resolved at runner start; dsynth-busy gating "
+            "disabled. Concurrent dsynth runs in the same env may "
+            "corrupt buildbase. Set an active env in the tracker UI "
+            "or pass --env NAME.")
 
     _last_busy_reason = ""
     _last_health_reason = ""
@@ -3471,6 +3604,9 @@ def main(argv: list[str] | None = None) -> int:
 
     def _gate_blocked() -> bool:
         nonlocal _last_busy_reason, _last_health_reason
+        # Re-resolve per cycle (cached for 1 s) so operator selection
+        # in the tracker UI takes effect without a runner restart.
+        runner_env = resolve_env_for_gate() or ""
         # Health probe first. If broken, we pause regardless of
         # dsynth-busy state — there's no point running anything until
         # the env is repaired. Cache keeps this cheap (default 60s);

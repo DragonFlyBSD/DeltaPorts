@@ -107,7 +107,7 @@ def queue_env(tmp_path, monkeypatch):
 
     monkeypatch.setenv("DP_HARNESS_TRIAGE_MODEL", "stub-triage")
     monkeypatch.setenv("DP_HARNESS_PATCH_MODEL", "stub-patch")
-    monkeypatch.setenv("DP_HARNESS_ENV", "test-env")
+    monkeypatch.setattr(runner, "_CLI_ENV_DEFAULT", "test-env")
 
     yield {"queue_root": queue_root, "conn": conn, "tmp_path": tmp_path}
     conn.close()

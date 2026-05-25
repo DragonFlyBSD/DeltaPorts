@@ -421,7 +421,8 @@ class TriageStep:
         history = services.load_port_history(target_value, origin, window_hours)
 
         env_health = None
-        runner_env_name = os.environ.get("DP_HARNESS_ENV") or ""
+        from dportsv3.agent import runner as _runner  # noqa: PLC0415
+        runner_env_name = _runner.resolve_env(job) or ""
         if runner_env_name:
             health_ttl = int(os.environ.get("DP_HARNESS_HEALTH_CACHE_SECONDS", "60"))
             try:
@@ -526,10 +527,11 @@ class TriageStep:
             )
 
         # auto_patch
+        from dportsv3.agent import runner as _runner  # noqa: PLC0415
         services.enqueue_patch_job(
             queue_root, job,
             tier_name=tier.name,
-            dev_env=os.environ.get("DP_HARNESS_ENV") or None,
+            dev_env=_runner.resolve_env(job),
         )
         services.activity_log(
             queue_root, "enqueue_patch",
@@ -749,12 +751,15 @@ class PatchAttemptStep:
             )
         ctx.state["model"] = model
 
-        # dev_env: prefer job field, fall back to env var. Required.
-        env = ctx.job.get("dev_env") or os.environ.get("DP_HARNESS_ENV") or ""
+        # dev_env: env_resolver decides (job field → tracker active env
+        # → --env CLI flag → auto-pick if exactly one env). Required.
+        from dportsv3.agent import runner as _runner  # noqa: PLC0415
+        env_res = _runner.resolve_env_or_reason(ctx.job)
+        env = env_res.env or ""
         if not env:
             return StepReadiness(
                 status="fail",
-                reason="patch job missing dev_env (set job 'dev_env' field or DP_HARNESS_ENV)",
+                reason=f"patch job has no resolvable dev-env: {env_res.refusal_reason}",
             )
         ctx.state["env"] = env
 

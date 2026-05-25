@@ -40,8 +40,8 @@ def state_db(tmp_path: Path, monkeypatch):
 
     Also monkeypatches ``worker.assess_dops`` / ``classify_dops`` to bypass the
     chroot shell-out — tests don't have a real dev-env.
-    ``DP_HARNESS_ENV`` is set so the runner's "env required" gate
-    passes; classify routes back to the test's tmp repo via
+    ``runner._CLI_ENV_DEFAULT`` is set so the resolver's "env required"
+    gate passes; classify routes back to the test's tmp repo via
     ``dops.classify`` directly.
     """
     from dportsv3.agent import worker
@@ -54,7 +54,7 @@ def state_db(tmp_path: Path, monkeypatch):
     init_db(conn)
     monkeypatch.setattr(runner_mod, "_state_db_conn", conn)
 
-    monkeypatch.setenv("DP_HARNESS_ENV", "test-env")
+    monkeypatch.setattr(runner_mod, "_CLI_ENV_DEFAULT", "test-env")
 
     def _fake_assess(env: str, origin: str):
         import os as _os
@@ -208,9 +208,9 @@ def test_no_defer_for_not_in_scope_port(
 def test_missing_env_logs_dops_assessment_skip(
     tmp_path: Path, monkeypatch, state_db,
 ) -> None:
-    """No job dev_env and no DP_HARNESS_ENV should be visible in the UI,
+    """No job dev_env and no resolvable dev-env should be visible in the UI,
     not only in runner.log."""
-    monkeypatch.delenv("DP_HARNESS_ENV", raising=False)
+    monkeypatch.setattr(runner_mod, "_CLI_ENV_DEFAULT", None)
     queue_root = _make_queue(tmp_path)
     job_path = queue_root / "pending" / "triage-no-env.job"
     job_path.write_text("type=triage\norigin=devel/no-env\n")

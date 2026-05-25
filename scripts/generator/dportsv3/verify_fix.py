@@ -330,12 +330,39 @@ def run_verify_fix(
     )
 
 
+def _resolve_env_from_tracker(tracker_url: str | None) -> str | None:
+    """Fall back to the tracker's active env when --env is omitted.
+
+    Returns the env name, or None if the tracker has no active env
+    set OR the GET fails (network, tracker not running). Callers
+    surface a clear "no env, pass --env" message in either case —
+    we don't differentiate the two failure modes since the operator
+    fix is the same.
+    """
+    base = (tracker_url or _tracker_url()).rstrip("/")
+    try:
+        payload = _get_json(f"{base}/api/config/active-env", timeout=5)
+        name = payload.get("name")
+        return name if isinstance(name, str) and name else None
+    except Exception:
+        return None
+
+
 def cmd_verify_fix(args: argparse.Namespace) -> int:
     """CLI entrypoint. See module docstring."""
+    env = args.env
+    if not env:
+        env = _resolve_env_from_tracker(args.tracker_url)
+    if not env:
+        raise SystemExit(
+            "verify-fix: no dev-env specified. Pass --env NAME, "
+            "or set an active env in the tracker UI (the env health "
+            "card on the agentic dashboard)."
+        )
     try:
         result = run_verify_fix(
             bundle_id=args.bundle_id,
-            env=args.env,
+            env=env,
             tracker_url=args.tracker_url,
             keep_log=args.keep_log,
         )
@@ -372,9 +399,12 @@ def register_parser(subparsers: argparse._SubParsersAction) -> None:
     )
     p.add_argument("bundle_id", help="Bundle ID to verify")
     p.add_argument(
-        "--env", required=True,
-        help="Dev-env name to verify in. The env should be clean (no "
-             "in-flight agent edits) and target-matched to the bundle.",
+        "--env", default=None,
+        help="Dev-env name to verify in. Optional — when omitted, "
+             "falls back to the tracker's active env "
+             "(GET /api/config/active-env). The env should be clean "
+             "(no in-flight agent edits) and target-matched to the "
+             "bundle.",
     )
     p.add_argument(
         "--tracker-url", default=None,

@@ -28,6 +28,8 @@ from dportsv3.tracker.agentic_queries import (
     distinct_targets,
     events_since,
     env_health_statuses,
+    get_active_env,
+    set_active_env,
     get_artifact_ref,
     get_bundle,
     get_job,
@@ -692,6 +694,26 @@ def create_app(db_path: str | Path) -> Any:
         with _conn() as conn:
             return env_health_statuses(conn)
 
+    @app.get("/api/config/active-env")
+    def api_get_active_env() -> dict[str, Any]:
+        with _conn() as conn:
+            return {"name": get_active_env(conn)}
+
+    @app.put("/api/config/active-env")
+    def api_put_active_env(payload: dict[str, Any]) -> dict[str, Any]:
+        name = payload.get("name")
+        if name is not None and not isinstance(name, str):
+            raise HTTPException(
+                status_code=400,
+                detail="name must be a string or null",
+            )
+        # Empty string normalizes to None (clear).
+        if isinstance(name, str) and not name.strip():
+            name = None
+        with _conn() as conn:
+            set_active_env(conn, name)
+            return {"name": get_active_env(conn)}
+
     @app.get("/api/runs")
     def api_runs(
         target: str | None = None,
@@ -1165,6 +1187,7 @@ def create_app(db_path: str | Path) -> Any:
                     "title": "Agentic",
                     "status": agentic_status(conn),
                     "env_health": env_health_statuses(conn),
+                    "active_env": get_active_env(conn),
                     "recent_bundles": list_bundles(conn, limit=10),
                     "recent_jobs": list_jobs(conn, limit=10),
                 },

@@ -20,6 +20,8 @@ import pytest
 
 from dportsv3.agent import runner as runner_mod
 from dportsv3.agent.runner import enqueue_convert_job, process_convert_job
+# tests/conftest.py autouse-fixture stubs list_available_envs to ()
+# and resets runner._CLI_ENV_DEFAULT for every test.
 
 
 def _make_repo(tmp_path: Path) -> Path:
@@ -95,7 +97,7 @@ def test_process_job_accepts_convert_without_bundle(
     port = _make_port(repo, "devel/no-bundle")
     (port / "Makefile.DragonFly").write_text("USES+=pkgconfig\n")
     monkeypatch.setenv("DP_HARNESS_REPO_ROOT", str(repo))
-    monkeypatch.setenv("DP_HARNESS_ENV", "test-env")
+    monkeypatch.setattr(runner_mod, "_CLI_ENV_DEFAULT", "test-env")
 
     queue_root = tmp_path / "queue"
     (queue_root / "pending").mkdir(parents=True)
@@ -158,7 +160,7 @@ def test_process_convert_job_auto_safe_port(
         "USES+=pkgconfig\nCONFIGURE_ARGS+=--with-foo\n"
     )
     monkeypatch.setenv("DP_HARNESS_REPO_ROOT", str(repo))
-    monkeypatch.setenv("DP_HARNESS_ENV", "test-env")
+    monkeypatch.setattr(runner_mod, "_CLI_ENV_DEFAULT", "test-env")
     # Mock the chroot-side verification — the real one shells
     # `dev-env exec` which needs an actual env.
     from dportsv3.agent import worker
@@ -182,7 +184,7 @@ def test_process_convert_job_auto_safe_port(
 def test_process_convert_job_needs_judgment_without_env(
     tmp_path: Path, monkeypatch
 ) -> None:
-    """needs_judgment + no DP_HARNESS_ENV → clear refusal so the
+    """needs_judgment + no resolvable dev-env → clear refusal so the
     operator knows the LLM path needs the env wired up."""
     repo = _make_repo(tmp_path)
     port = _make_port(repo, "devel/with-cond")
@@ -190,7 +192,6 @@ def test_process_convert_job_needs_judgment_without_env(
         ".if ${OPSYS} == DragonFly\nUSES+=pkgconfig\n.endif\n"
     )
     monkeypatch.setenv("DP_HARNESS_REPO_ROOT", str(repo))
-    monkeypatch.delenv("DP_HARNESS_ENV", raising=False)
 
     success, status = process_convert_job(
         queue_root=tmp_path / "queue",
@@ -201,7 +202,7 @@ def test_process_convert_job_needs_judgment_without_env(
     assert not success
     # The runner's earlier "env required" gate fires before
     # _run_llm_conversion can complain about its own model env.
-    assert "no DP_HARNESS_ENV" in status
+    assert "no dev-env resolved" in status
 
 
 def test_process_convert_job_needs_judgment_without_model(
@@ -214,7 +215,7 @@ def test_process_convert_job_needs_judgment_without_model(
         ".if ${OPSYS} == DragonFly\n.endif\n"
     )
     monkeypatch.setenv("DP_HARNESS_REPO_ROOT", str(repo))
-    monkeypatch.setenv("DP_HARNESS_ENV", "test-env")
+    monkeypatch.setattr(runner_mod, "_CLI_ENV_DEFAULT", "test-env")
     for var in ("DP_HARNESS_CONVERT_MODEL", "DP_HARNESS_PATCH_MODEL",
                 "DP_HARNESS_TRIAGE_MODEL"):
         monkeypatch.delenv(var, raising=False)
@@ -245,7 +246,7 @@ def test_process_convert_job_needs_judgment_llm_success(
         ".if ${OPSYS} == DragonFly\nUSES+=pkgconfig\n.endif\n"
     )
     monkeypatch.setenv("DP_HARNESS_REPO_ROOT", str(repo))
-    monkeypatch.setenv("DP_HARNESS_ENV", "test-env")
+    monkeypatch.setattr(runner_mod, "_CLI_ENV_DEFAULT", "test-env")
     monkeypatch.setenv("DP_HARNESS_CONVERT_MODEL", "openai/test-model")
 
     fake_proof = {
@@ -294,7 +295,7 @@ def test_process_convert_job_needs_judgment_llm_failure(
     port = _make_port(repo, "devel/llm-fail")
     (port / "Makefile.DragonFly").write_text(".if 1\n.endif\n")
     monkeypatch.setenv("DP_HARNESS_REPO_ROOT", str(repo))
-    monkeypatch.setenv("DP_HARNESS_ENV", "test-env")
+    monkeypatch.setattr(runner_mod, "_CLI_ENV_DEFAULT", "test-env")
     monkeypatch.setenv("DP_HARNESS_CONVERT_MODEL", "openai/test-model")
 
     monkeypatch.setattr(
@@ -329,7 +330,7 @@ def test_process_convert_job_already_converted(
         'target @main\nport devel/done\ntype port\nreason "test"\n'
     )
     monkeypatch.setenv("DP_HARNESS_REPO_ROOT", str(repo))
-    monkeypatch.setenv("DP_HARNESS_ENV", "test-env")
+    monkeypatch.setattr(runner_mod, "_CLI_ENV_DEFAULT", "test-env")
 
     before = (port / "overlay.dops").read_text()
     job = {"origin": "devel/done", "target": "@main"}
@@ -347,7 +348,7 @@ def test_process_convert_job_already_converted(
 def test_process_convert_job_verifies_with_reapply_pass(
     tmp_path: Path, monkeypatch
 ) -> None:
-    """Auto-safe conversion + DP_HARNESS_ENV set → verification runs.
+    """Auto-safe conversion + dev-env resolvable → verification runs.
     materialize_dports (reapply / compose) returns ok → handler
     succeeds. We do NOT call dsynth_build; build outcome isn't a
     proxy for conversion correctness."""
@@ -355,7 +356,7 @@ def test_process_convert_job_verifies_with_reapply_pass(
     port = _make_port(repo, "devel/verify-pass")
     (port / "Makefile.DragonFly").write_text("USES+=pkgconfig\n")
     monkeypatch.setenv("DP_HARNESS_REPO_ROOT", str(repo))
-    monkeypatch.setenv("DP_HARNESS_ENV", "test-env")
+    monkeypatch.setattr(runner_mod, "_CLI_ENV_DEFAULT", "test-env")
 
     from dportsv3.agent import worker
     monkeypatch.setattr(worker, "materialize_dports",
@@ -391,7 +392,7 @@ def test_process_convert_job_reapply_fail(
     port = _make_port(repo, "devel/verify-fail")
     (port / "Makefile.DragonFly").write_text("USES+=pkgconfig\n")
     monkeypatch.setenv("DP_HARNESS_REPO_ROOT", str(repo))
-    monkeypatch.setenv("DP_HARNESS_ENV", "test-env")
+    monkeypatch.setattr(runner_mod, "_CLI_ENV_DEFAULT", "test-env")
 
     from dportsv3.agent import worker
     monkeypatch.setattr(
@@ -447,7 +448,6 @@ def test_process_convert_job_requires_dev_env(
     port = _make_port(repo, "devel/no-env")
     (port / "Makefile.DragonFly").write_text("USES+=pkgconfig\n")
     monkeypatch.setenv("DP_HARNESS_REPO_ROOT", str(repo))
-    monkeypatch.delenv("DP_HARNESS_ENV", raising=False)
 
     success, status = process_convert_job(
         queue_root=tmp_path / "queue",
@@ -456,7 +456,7 @@ def test_process_convert_job_requires_dev_env(
         job={"origin": "devel/no-env", "target": "@main"},
     )
     assert not success
-    assert "no DP_HARNESS_ENV" in status
+    assert "no dev-env resolved" in status
 
 
 def test_process_convert_job_not_in_scope(
@@ -469,7 +469,7 @@ def test_process_convert_job_not_in_scope(
     repo = _make_repo(tmp_path)
     _make_port(repo, "devel/nothing")
     monkeypatch.setenv("DP_HARNESS_REPO_ROOT", str(repo))
-    monkeypatch.setenv("DP_HARNESS_ENV", "test-env")
+    monkeypatch.setattr(runner_mod, "_CLI_ENV_DEFAULT", "test-env")
 
     success, status = process_convert_job(
         queue_root=tmp_path / "queue",

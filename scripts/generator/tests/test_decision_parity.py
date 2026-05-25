@@ -187,7 +187,7 @@ def test_env_broken_beats_cap(policy):
 
 
 def test_env_health_none_treated_as_ready(policy):
-    """env_health=None (e.g. DP_HARNESS_ENV unset) → decide proceeds
+    """env_health=None (e.g. no env resolved) → decide proceeds
     as if env is healthy, doesn't short-circuit."""
     dec = decide(
         classification="plist-error",

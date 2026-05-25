@@ -587,3 +587,30 @@ def test_view_nav_includes_agentic(client: TestClient) -> None:
     resp = client.get("/")
     assert resp.status_code == 200
     assert ">Agentic<" in resp.text
+
+
+# --------------------------------------------------------------------
+# Active env UI control
+# --------------------------------------------------------------------
+
+
+def test_view_agentic_index_renders_active_env_banner_unset(client: TestClient) -> None:
+    resp = client.get("/agentic")
+    assert resp.status_code == 200
+    body = resp.text
+    # Banner shows the "none" message when unset.
+    assert "Active env" in body
+    assert "none" in body
+    # Per-row "set" button is present for the seeded env.
+    assert 'data-env="test-env"' in body
+
+
+def test_view_agentic_index_renders_active_env_when_set(client: TestClient) -> None:
+    # PUT to set the active env, then re-render.
+    client.put("/api/config/active-env", json={"name": "test-env"})
+    resp = client.get("/agentic")
+    body = resp.text
+    assert "<strong>test-env</strong>" in body
+    # Active row gets the active pill (instead of a set button).
+    assert "env-row-active" in body
+    assert ">active</span>" in body

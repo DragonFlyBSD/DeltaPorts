@@ -4,7 +4,7 @@ Phase 5 Substep 3b. Covers the new precheck branches:
 
 - Model resolution: PATCH_MODEL → TRIAGE_MODEL fallback (with WARN
   log); both unset → fail.
-- dev_env resolution: from job field, from DP_HARNESS_ENV; absent
+- dev_env resolution: from job field, from runner --env CLI flag; absent
   in both → fail.
 - Tier resolution from ``job['tier']`` happy path.
 - Tier resolution via decide() fallback for hand-fired jobs
@@ -23,6 +23,7 @@ from pathlib import Path
 
 import pytest
 
+from dportsv3.agent import runner as _runner
 from dportsv3.agent.policy import Policy, Tier
 from dportsv3.agent.step import StepCtx
 from dportsv3.agent.steps import PatchAttemptStep, PatchServices
@@ -95,10 +96,13 @@ def _ctx(tmp_path, job=None, *, helpers_overrides=None, bundle_text=None):
 
 @pytest.fixture(autouse=True)
 def _clean_env(monkeypatch):
-    """Each test starts with a clean DP_HARNESS_* env var set."""
+    """Each test starts with a clean DP_HARNESS_* env var set + a
+    reset _CLI_ENV_DEFAULT so env resolution starts from a known
+    blank slate."""
     for var in ("DP_HARNESS_PATCH_MODEL", "DP_HARNESS_TRIAGE_MODEL",
-                "DP_HARNESS_ENV", "DP_HARNESS_POLICY"):
+                "DP_HARNESS_POLICY"):
         monkeypatch.delenv(var, raising=False)
+    monkeypatch.setattr(_runner, "_CLI_ENV_DEFAULT", None)
 
 
 @pytest.fixture
@@ -125,7 +129,7 @@ def policy_file(tmp_path, monkeypatch):
 
 
 def test_precheck_fails_when_no_models_set(tmp_path, policy_file, monkeypatch):
-    monkeypatch.setenv("DP_HARNESS_ENV", "test-env")
+    monkeypatch.setattr(_runner, "_CLI_ENV_DEFAULT", "test-env")
     ctx, _ = _ctx(tmp_path, job={"tier": "AUTO", "origin": "devel/foo"})
     ctx.state["policy_path"] = str(policy_file)
     readiness = PatchAttemptStep().precheck(ctx)
@@ -135,7 +139,7 @@ def test_precheck_fails_when_no_models_set(tmp_path, policy_file, monkeypatch):
 
 def test_precheck_uses_patch_model(tmp_path, policy_file, monkeypatch):
     monkeypatch.setenv("DP_HARNESS_PATCH_MODEL", "stub-patch")
-    monkeypatch.setenv("DP_HARNESS_ENV", "test-env")
+    monkeypatch.setattr(_runner, "_CLI_ENV_DEFAULT", "test-env")
     ctx, log_rec = _ctx(tmp_path, job={"tier": "AUTO", "origin": "devel/foo"})
     ctx.state["policy_path"] = str(policy_file)
     readiness = PatchAttemptStep().precheck(ctx)
@@ -147,7 +151,7 @@ def test_precheck_uses_patch_model(tmp_path, policy_file, monkeypatch):
 
 def test_precheck_falls_back_to_triage_model_with_warn(tmp_path, policy_file, monkeypatch):
     monkeypatch.setenv("DP_HARNESS_TRIAGE_MODEL", "stub-triage")
-    monkeypatch.setenv("DP_HARNESS_ENV", "test-env")
+    monkeypatch.setattr(_runner, "_CLI_ENV_DEFAULT", "test-env")
     ctx, log_rec = _ctx(tmp_path, job={"tier": "AUTO", "origin": "devel/foo"})
     ctx.state["policy_path"] = str(policy_file)
     readiness = PatchAttemptStep().precheck(ctx)
@@ -174,14 +178,14 @@ def test_precheck_dev_env_from_job_field(tmp_path, policy_file, monkeypatch):
     assert ctx.state["env"] == "from-job-env"
 
 
-def test_precheck_dev_env_from_envvar(tmp_path, policy_file, monkeypatch):
+def test_precheck_dev_env_from_cli_flag(tmp_path, policy_file, monkeypatch):
     monkeypatch.setenv("DP_HARNESS_PATCH_MODEL", "stub")
-    monkeypatch.setenv("DP_HARNESS_ENV", "from-envvar")
+    monkeypatch.setattr(_runner, "_CLI_ENV_DEFAULT", "from-cli")
     ctx, _ = _ctx(tmp_path, job={"tier": "AUTO", "origin": "devel/foo"})
     ctx.state["policy_path"] = str(policy_file)
     readiness = PatchAttemptStep().precheck(ctx)
     assert readiness.status == "ready"
-    assert ctx.state["env"] == "from-envvar"
+    assert ctx.state["env"] == "from-cli"
 
 
 def test_precheck_fails_without_dev_env(tmp_path, policy_file, monkeypatch):
@@ -190,7 +194,7 @@ def test_precheck_fails_without_dev_env(tmp_path, policy_file, monkeypatch):
     ctx.state["policy_path"] = str(policy_file)
     readiness = PatchAttemptStep().precheck(ctx)
     assert readiness.status == "fail"
-    assert "missing dev_env" in readiness.reason
+    assert "no resolvable dev-env" in readiness.reason
 
 
 # --- tier resolution --------------------------------------------------------
@@ -198,7 +202,7 @@ def test_precheck_fails_without_dev_env(tmp_path, policy_file, monkeypatch):
 
 def test_precheck_tier_from_job_field(tmp_path, policy_file, monkeypatch):
     monkeypatch.setenv("DP_HARNESS_PATCH_MODEL", "stub")
-    monkeypatch.setenv("DP_HARNESS_ENV", "test-env")
+    monkeypatch.setattr(_runner, "_CLI_ENV_DEFAULT", "test-env")
     ctx, _ = _ctx(tmp_path, job={
         "tier": "ASSIST", "origin": "devel/foo",
     })
@@ -214,7 +218,7 @@ def test_precheck_tier_fallback_to_decide_for_hand_fired_job(
     """No 'tier' field → parse triage.md → decide() resolves it.
     Empty history + None env_health → legacy tier_for semantics."""
     monkeypatch.setenv("DP_HARNESS_PATCH_MODEL", "stub")
-    monkeypatch.setenv("DP_HARNESS_ENV", "test-env")
+    monkeypatch.setattr(_runner, "_CLI_ENV_DEFAULT", "test-env")
 
     triage_md = (
         "## Classification\nplist-error\n\n"
@@ -239,7 +243,7 @@ def test_precheck_tier_fallback_with_missing_triage_md_lands_at_manual(
     """Hand-fired patch with no triage.md → empty classification
     → unknown → MANUAL via the policy default."""
     monkeypatch.setenv("DP_HARNESS_PATCH_MODEL", "stub")
-    monkeypatch.setenv("DP_HARNESS_ENV", "test-env")
+    monkeypatch.setattr(_runner, "_CLI_ENV_DEFAULT", "test-env")
     ctx, _ = _ctx(
         tmp_path,
         job={"origin": "devel/foo", "bundle_id": "b-1"},
@@ -255,7 +259,7 @@ def test_precheck_tier_fallback_bogus_classification_lands_at_manual(
     tmp_path, policy_file, monkeypatch,
 ):
     monkeypatch.setenv("DP_HARNESS_PATCH_MODEL", "stub")
-    monkeypatch.setenv("DP_HARNESS_ENV", "test-env")
+    monkeypatch.setattr(_runner, "_CLI_ENV_DEFAULT", "test-env")
     ctx, _ = _ctx(
         tmp_path,
         job={"origin": "devel/foo"},
@@ -273,7 +277,7 @@ def test_precheck_unknown_tier_string_falls_back_to_decide(
     """If job['tier'] is set but not a known tier name, fall back
     to parsing triage.md (don't crash, don't silently accept)."""
     monkeypatch.setenv("DP_HARNESS_PATCH_MODEL", "stub")
-    monkeypatch.setenv("DP_HARNESS_ENV", "test-env")
+    monkeypatch.setattr(_runner, "_CLI_ENV_DEFAULT", "test-env")
     ctx, _ = _ctx(
         tmp_path,
         job={"tier": "TOTALLY_NEW_TIER", "origin": "devel/foo"},
@@ -290,7 +294,7 @@ def test_precheck_unknown_tier_string_falls_back_to_decide(
 
 def test_precheck_fails_when_policy_path_missing(tmp_path, monkeypatch):
     monkeypatch.setenv("DP_HARNESS_PATCH_MODEL", "stub")
-    monkeypatch.setenv("DP_HARNESS_ENV", "test-env")
+    monkeypatch.setattr(_runner, "_CLI_ENV_DEFAULT", "test-env")
     ctx, _ = _ctx(tmp_path, job={"tier": "AUTO", "origin": "devel/foo"})
     # Intentionally don't set ctx.state["policy_path"]
     readiness = PatchAttemptStep().precheck(ctx)
@@ -300,7 +304,7 @@ def test_precheck_fails_when_policy_path_missing(tmp_path, monkeypatch):
 
 def test_precheck_fails_when_policy_file_unreadable(tmp_path, monkeypatch):
     monkeypatch.setenv("DP_HARNESS_PATCH_MODEL", "stub")
-    monkeypatch.setenv("DP_HARNESS_ENV", "test-env")
+    monkeypatch.setattr(_runner, "_CLI_ENV_DEFAULT", "test-env")
     ctx, _ = _ctx(tmp_path, job={"tier": "AUTO", "origin": "devel/foo"})
     ctx.state["policy_path"] = "/nonexistent/policy.json"
     readiness = PatchAttemptStep().precheck(ctx)

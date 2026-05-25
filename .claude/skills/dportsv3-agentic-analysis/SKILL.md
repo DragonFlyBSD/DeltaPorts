@@ -56,7 +56,8 @@ All under `/api/bundles/<bundle-id>/artifacts/`:
 | `analysis/patch_audit.json` | Status, model, token usage, attempts breakdown. |
 | `analysis/rebuild_proof.json` | `rebuild_ok` + build command — the success gate. |
 | `analysis/tool_trace.jsonl` | Per-turn tool calls. Where you find inefficiencies. |
-| `analysis/changes.diff` | The diff operators would land. **Empty diff with `rebuild_ok=true` is always a bug.** |
+| `analysis/changes.diff` | The diff operators would land. **Empty diff with `rebuild_ok=true` is always a bug** (legacy flow). In intent flow this is derived from `intent_log.json`. |
+| `analysis/intent_log.json` | **Canonical record of an intent-flow patch attempt** (Step 25). Schema: `{schema_version, origin, target, mode_at_apply, baseline_commit, intents: [{seq, intent, applied_at, ok, substrate_diff, error}]}`. Present iff the agent used the intent DSL. When present, this — not `changes.diff` — is the source of truth verify-fix replays. |
 | `analysis/proposed_fix.md` | Operator-facing summary the tracker generates. |
 | `port/Makefile`, `port/distinfo`, `port/pkg-plist` | Snapshot of the port at failure time. |
 
@@ -64,11 +65,15 @@ Bulk-fetch recipe:
 ```sh
 for f in meta.txt logs/errors.txt analysis/triage.md analysis/patch.md \
          analysis/patch_audit.json analysis/rebuild_proof.json \
-         analysis/changes.diff analysis/tool_trace.jsonl; do
+         analysis/changes.diff analysis/tool_trace.jsonl \
+         analysis/intent_log.json; do
   echo "===== $f ====="
   curl -sS "http://<base>/api/bundles/<bundle-id>/artifacts/$f"
 done
 ```
+
+Note: `analysis/intent_log.json` 404s on legacy-flow bundles — that's
+fine, it means the bundle predates Step 25 or the gate was off.
 
 ## Expected behavior (current code contract)
 
@@ -83,7 +88,15 @@ This section is what the agent *should* be doing if the code is working. Update 
 - Success gate: `rebuild_proof.json` parsed from the LLM's `## Rebuild Proof (JSON)` block with `rebuild_ok=true`. Convert jobs additionally require `validate_dops_ok=true`.
 
 ### Tool surface (patch agent)
-`env_verify`, `materialize_dports`, `extract`, `dupe`, `genpatch`, `install_patches`, `dsynth_build`, `get_file`, `put_file`, `emit_diff`, `grep`. Convert agent: `env_verify`, `list_dir`, `get_file`, `put_file`, `grep`, `dops_reference`, `validate_dops`. Today the patch agent's set may overlap with convert tools (e.g. `validate_dops`) — check `dportsv3/agent/tools.py` if uncertain.
+
+The patch agent has **two surfaces** gated by `DP_HARNESS_PATCH_USE_INTENT`:
+
+- **Legacy flow** (gate off): `env_verify`, `materialize_dports`, `extract`, `dupe`, `genpatch`, `install_patches`, `dsynth_build`, `get_file`, `put_file`, `emit_diff`, `grep`.
+- **Intent flow** (gate on, Step 25): `env_verify`, `materialize_dports`, `extract`, `dsynth_build`, `get_file`, `grep`, **`apply_intent`**, **`intent_reference`**. The edit surface collapses to `apply_intent` only — no `put_file`/`install_patches`/`emit_diff`. Selection drives the system prompt too: `PATCH_INTENT_SYSTEM` vs `PATCH_SYSTEM`.
+
+Convert agent (unchanged by Step 25): `env_verify`, `list_dir`, `get_file`, `put_file`, `grep`, `dops_reference`, `validate_dops`. Convert intentionally keeps the direct edit surface — its job *is* to edit `overlay.dops`.
+
+Check `dportsv3/agent/tools.py::tools_for_patch_agent` + `patch_use_intent_enabled` if uncertain which surface a given bundle saw.
 
 ### Substrate contract
 - All chroot-bound operations route through `dportsv3 dev-env exec <env> -- ...`.
@@ -119,9 +132,33 @@ When the port is dops-mode, verify in the trace:
 
 When the port is compat-mode but the agent reached for dops tools (`validate_dops`, edited `overlay.dops`): also wrong direction. Flag it.
 
+### Intent flow (Step 25 — DP_HARNESS_PATCH_USE_INTENT)
+
+When `analysis/intent_log.json` is present, the bundle used the intent DSL. Different rules apply:
+
+- **Canonical record:** `intent_log.json` is the source of truth, not `changes.diff`. Verify-fix replays the intent log; `changes.diff` is a derived audit artifact (ordered concatenation of per-intent `substrate_diff` values).
+- **Intent grammar:** seven intent types — `replace_in_patch`, `drop_patch`, `add_patch`, `add_file`, `change_makefile`, `bump_portrevision`, `convert_to_dops`. Full schemas at `scripts/generator/dportsv3/agent/edit_intent/schemas/`.
+- **Mode is fixed per transaction:** `mode_at_apply` ∈ `{compat, dops, convert}`, set at the first `apply_intent` call from `worker.assess_dops`. Mid-transaction mode drift is refused (`blocked_by: transaction_mode_drift`).
+- **Half-migration invariant:** if both `Makefile.DragonFly` AND `overlay.dops` exist on the port, `apply_intent` refuses (`blocked_by: substrate_invariant`). The substrate must be all-compat or all-dops before edits begin.
+- **Canonical-log invariant:** every substrate change has a matching log row. Cap-overflow refusals revert substrate. `intent_log_full=True` in a tool result means the agent should escalate, not retry.
+- **Pre-job clean assertion (25d-1 / design §5.1):** patch jobs refuse to start (`PATCH_GAVE_UP`, `patch_preflight_dirty` activity row) if `ports/<origin>/` has uncommitted edits from a prior run. `patch_preflight_error` means the clean check itself raised — env in unknown state.
+- **Post-build cleanup (25g):** after dsynth, the env's `ports/<origin>/` is reset to HEAD so the next attempt starts clean. Operator escape: `dportsv3 dev-env reset-port ENV ORIGIN`.
+- **Telemetry:** every `apply_intent` call emits a dedicated `intent_applied` activity row alongside the generic `tool:apply_intent` row, carrying `intent_type`, `intent_target`, `ok`, `blocked_by`, `substrate_diff_sha256`, `substrate_diff_bytes`, and inline `substrate_diff` if ≤ 4 KB.
+- **Bundle UI:** the "Intent sequence" card on the bundle detail page renders the intent log as a structured table — mode, baseline commit, per-intent rows.
+
+### Mode-correctness checks for intent flow
+
+When `intent_log.json` is present, check:
+- Does `mode_at_apply` match what `classify_dops` would return for the port? (If the substrate was half-migrated, the agent should have hit `substrate_invariant` instead.)
+- For each intent row, is `ok=true`? Failed-intent rows are forensics — the agent saw the error and should have either retried with a different intent or escalated. Repeated identical failed intents = loop.
+- For dops-mode bundles: does the agent's intent sequence touch `overlay.dops` (via `change_makefile`/`add_file` against the overlay) and NOT `dragonfly/patch-*`? Editing `dragonfly/*` on a dops port via `add_patch`/`replace_in_patch` is wrong (regenerated at compose).
+- Does `changes.diff` match the concatenation of `substrate_diff` values from the ok=true rows? Mismatch = canonical-log invariant broken (look for `canonical_log_broken=true` in tool results).
+- Is `baseline_commit` a real commit in the env's writable DeltaPorts? (Replay refuses against a missing baseline.)
+
 ### Output contract for operators
-- `changes.diff` must contain the operator-applyable diff. **Empty diff with `rebuild_ok=true` is a contract violation.**
-- `proposed_fix.md` must reference a non-zero diff.
+- `changes.diff` must contain the operator-applyable diff. **Empty diff with `rebuild_ok=true` is a contract violation** (legacy flow).
+- In intent flow, `intent_log.json` is the operator-applyable record. `changes.diff` is still produced (concat of intent diffs) but its emptiness is benign iff no intents fired (e.g. agent escalated immediately).
+- `proposed_fix.md` must reference a non-zero diff (legacy) OR a non-empty intent sequence (intent flow).
 
 ## Analysis checklist
 
@@ -136,7 +173,8 @@ For each bundle, work through these questions and write the report against them.
 - Did the agent reach `rebuild_ok=true`?
 - Does the **fix actually fix the root cause**, or did it bypass the problem? (E.g. removing a patch the agent declared obsolete vs. actually adapting it — both may produce `rebuild_ok=true`, but only one is right. Cross-check `patch.md`'s reasoning against the upstream code it read.)
 - For dops-mode ports: did the agent edit `overlay.dops` (correct) or `dragonfly/*` files directly (wrong, edits will be clobbered)?
-- For compat-mode ports: did the agent run `install_patches` after `genpatch`?
+- For compat-mode ports (legacy flow): did the agent run `install_patches` after `genpatch`?
+- **Intent flow:** does the intent sequence make sense? Did the agent escalate when blocked (e.g. on `intent_log_full`, `substrate_invariant`, `transaction_mode_drift`) or did it keep retrying? Did it pick the right intent type for the fix shape (e.g. `drop_patch` for an obsolete patch, not a no-op `replace_in_patch`)?
 
 ### 3. Output contract
 - Is `analysis/changes.diff` non-empty when `rebuild_ok=true`?
@@ -162,6 +200,11 @@ Patterns seen in the wild. When you see a new one, append it here and flag it in
 - **Dops port classified as `needs_judgment` but patch agent proceeds anyway.** Today the patch agent has dops-aware tools, so it sometimes works. But it's an architectural gap — the convert/patch boundary is still soft for dops ports.
 - **Agent declares a patch "obsolete" based on shallow upstream inspection.** Removing a patch and getting a green dsynth is not proof the patch was actually obsolete — it may have addressed a runtime or platform-specific issue dsynth doesn't catch. Flag when the agent's justification is thin.
 - **Wasted `get_file` turn from a mis-guessed offset.** When inspecting a C source file for include directives, the agent sometimes first reads from a non-zero offset and then re-reads from the top, burning a turn. The patch prompt could steer the agent toward `grep` for include-presence checks instead of speculative offset reads. Seen in `devel_gperf-20260523-094119Z` turn 6 → turn 7.
+- **Intent-flow: agent retries past `intent_log_full=True`.** When a tool result carries `intent_log_full: true` the agent is supposed to escalate (MANUAL), not retry — the log either hit the count cap (~loop) or a byte cap that revert already undid. If the trace shows further `apply_intent` calls after this flag fires, it's a prompt/behavior bug.
+- **Intent-flow: agent ignores `blocked_by: substrate_invariant`.** Half-migrated substrate (`Makefile.DragonFly` + `overlay.dops` both present) must be resolved by the operator or by `convert_to_dops` BEFORE other intents can land. Retries that don't first emit `convert_to_dops` will keep getting refused.
+- **Intent-flow: agent ignores `blocked_by: transaction_mode_drift`.** Once the first `apply_intent` pins `mode_at_apply`, subsequent calls in a different mode are refused. Drift usually means the agent's mental model of the port flipped mid-job — flag if `assess_dops` would now return something different from `mode_at_apply`.
+- **Intent-flow: substrate_diff disagrees with the rendered changes.diff.** Concat of ok=true `substrate_diff` values should equal `changes.diff`. Drift here means either a bug in the diff accumulator or a bypass of the canonical-log path (`canonical_log_broken=true` in some tool result).
+- **Intent-flow: patch job aborted with `patch_preflight_dirty` or `patch_preflight_error`.** Not a bug — design §5.1's hard pre-job clean assertion. Operator either has uncommitted edits in the env or the env is in unknown state (chroot unmounted, etc.). Flag as lifecycle hygiene, not a patch agent bug.
 - **Premature `materialize_dports` on the consumer origin before the provider overlay is activated.** When a port uses `MASTERDIR` (or otherwise shares compose artifacts with a sibling origin), the agent sometimes materializes the *consumer* origin immediately after writing the dops overlay for the *provider*, before materializing the provider itself. Compose runs against the wrong origin, shows `modes: compat=1`, and the wasted call is only caught because the agent then self-corrects with a second call to the right origin. Seen in `multimedia_v4l_compat-20260523-101601Z` turn 13: agent wrote `overlay.dops` for `multimedia/libv4l`, then materialized `multimedia/v4l_compat` (the consumer), got compat-mode compose, then re-materialized `multimedia/libv4l`. Prompt should steer the agent to always `materialize_dports` the origin that owns `overlay.dops` first; the MASTERDIR consumer can ride the shared compose artifacts.
 
 ## Report shape
@@ -181,15 +224,18 @@ Produce something like this (markdown, no fluff):
 
 ## Patch
 - Status: <success / needs-help / budget-exhausted>
+- Flow: <legacy | intent>  ← intent if analysis/intent_log.json exists
 - Attempts: <N> / tier max
 - Tokens: <prompt / completion / total>
-- Mode: <compat | dops | needs_judgment>
+- Mode: <compat | dops | needs_judgment>  (intent: also `mode_at_apply` from intent_log)
 - Tool sequence: <one-line summary of the trace>
+- Intent sequence (intent flow only): <seq N: type(target) ok|FAIL[reason]; ...>
 - Fix narrative: <what patch.md claims>
 - Fix verdict: <is the fix real?>
 
 ## Output contract
 - changes.diff: <bytes> — <ok / empty-bug / mismatched>
+- intent_log.json (intent flow): <N intents, M ok> — <canonical / canonical_log_broken / missing>
 - proposed_fix.md: <usable / broken>
 
 ## Inefficiencies

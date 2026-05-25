@@ -61,12 +61,30 @@
     </div>
 
     <h2>Environment health</h2>
+    <div class="env-active-banner">
+      Active env (runner default + verify-fix fallback):
+      <strong>{{ active_env or 'none — runner will auto-pick if exactly one env exists' }}</strong>
+      {% if active_env %}
+        <button type="button" class="env-set-btn" data-env="" title="Clear the active env">clear</button>
+      {% endif %}
+      <div style="color:var(--text-dim);font-size:11px;margin-top:4px;">
+        Name is not validated when set — a typo only surfaces when
+        the runner or verify-fix tries to use it.
+      </div>
+    </div>
     {% if env_health %}
     <table class="tracker-table">
-      <thead><tr><th>Env</th><th>Status</th><th>Probed</th><th>Operator action</th><th>Checks</th></tr></thead>
+      <thead><tr><th>Active</th><th>Env</th><th>Status</th><th>Probed</th><th>Operator action</th><th>Checks</th></tr></thead>
       <tbody>
         {% for h in env_health %}
-        <tr>
+        <tr {% if h.env == active_env %}class="env-row-active"{% endif %}>
+          <td>
+            {% if h.env == active_env %}
+              <span class="stat-pill built" title="This env is the runner default">active</span>
+            {% else %}
+              <button type="button" class="env-set-btn" data-env="{{ h.env }}" title="Make {{ h.env }} the active env">set</button>
+            {% endif %}
+          </td>
           <td>{{ h.env }}</td>
           <td>
             {% set cls = {'ready':'built','degraded':'skipped','broken':'failed'}.get(h.status,'total') %}
@@ -90,6 +108,21 @@
     {% else %}
     <div class="empty-state">No environment health probes recorded yet.</div>
     {% endif %}
+    <script>
+      document.querySelectorAll('.env-set-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          var name = btn.dataset.env || null;
+          fetch('/api/config/active-env', {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({name: name}),
+          }).then(function(r) {
+            if (r.ok) { window.location.reload(); }
+            else { alert('Failed to set active env: HTTP ' + r.status); }
+          }).catch(function(e) { alert('Failed to set active env: ' + e); });
+        });
+      });
+    </script>
 
     <h2>Recent bundles</h2>
     <table class="tracker-table">

@@ -250,3 +250,47 @@ def test_api_uses_fresh_db_connection_per_request(
         assert detail.status_code == 200
 
     assert open_count >= 3
+
+
+# --------------------------------------------------------------------
+# Active env config endpoints
+# --------------------------------------------------------------------
+
+
+def test_api_active_env_initially_null(client: TestClient) -> None:
+    r = client.get("/api/config/active-env")
+    assert r.status_code == 200
+    assert r.json() == {"name": None}
+
+
+def test_api_active_env_set_and_read(client: TestClient) -> None:
+    put = client.put("/api/config/active-env", json={"name": "2026Q2"})
+    assert put.status_code == 200
+    assert put.json() == {"name": "2026Q2"}
+
+    get = client.get("/api/config/active-env")
+    assert get.json() == {"name": "2026Q2"}
+
+
+def test_api_active_env_clear_with_null(client: TestClient) -> None:
+    client.put("/api/config/active-env", json={"name": "2026Q2"})
+    cleared = client.put("/api/config/active-env", json={"name": None})
+    assert cleared.json() == {"name": None}
+    assert client.get("/api/config/active-env").json() == {"name": None}
+
+
+def test_api_active_env_empty_string_clears(client: TestClient) -> None:
+    client.put("/api/config/active-env", json={"name": "2026Q2"})
+    cleared = client.put("/api/config/active-env", json={"name": "   "})
+    assert cleared.json() == {"name": None}
+
+
+def test_api_active_env_rejects_non_string(client: TestClient) -> None:
+    r = client.put("/api/config/active-env", json={"name": 42})
+    assert r.status_code == 400
+
+
+def test_api_active_env_upsert_overwrites(client: TestClient) -> None:
+    client.put("/api/config/active-env", json={"name": "alpha"})
+    client.put("/api/config/active-env", json={"name": "beta"})
+    assert client.get("/api/config/active-env").json() == {"name": "beta"}

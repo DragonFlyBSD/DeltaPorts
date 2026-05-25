@@ -27,7 +27,7 @@ Plus the **tracker base URL**. Resolve in this order: explicit argument from the
 
    If the skill file is missing, fall back to the embedded summary in your description and flag the missing skill in your report.
 
-2. **Fetch artifacts via curl** (HTTP only). Bulk recipe is in the skill. Always fetch at minimum: `meta.txt`, `logs/errors.txt`, `analysis/triage.md`, `analysis/patch.md`, `analysis/patch_audit.json`, `analysis/rebuild_proof.json`, `analysis/changes.diff`, `analysis/tool_trace.jsonl`. Fetch `port/Makefile` and `port/distinfo` if relevant to your judgment.
+2. **Fetch artifacts via curl** (HTTP only). Bulk recipe is in the skill. Always fetch at minimum: `meta.txt`, `logs/errors.txt`, `analysis/triage.md`, `analysis/patch.md`, `analysis/patch_audit.json`, `analysis/rebuild_proof.json`, `analysis/changes.diff`, `analysis/tool_trace.jsonl`, `analysis/intent_log.json` (the last 404s on legacy-flow bundles — that's fine). Fetch `port/Makefile` and `port/distinfo` if relevant to your judgment.
 
 3. **Locate prior bundles** for the same port by curling `/agentic` and grepping for the origin (with `/` replaced by `_`). Note whether the loop converged or thrashed.
 
@@ -36,6 +36,8 @@ Plus the **tracker base URL**. Resolve in this order: explicit argument from the
 5. **Code-check when needed.** If you're unsure what the *current* expected behavior is (e.g. "is `validate_dops` in the patch agent's tool set?"), open the relevant file under `scripts/generator/dportsv3/agent/` and check. Do not guess from memory.
 
 5a. **Read the dops grammar reference when the bundle is dops-mode.** Bundles tagged `dops` or `needs LLM judgment` (visible on the bundle detail page and in tool traces that touch `overlay.dops`) require dops-aware analysis. The canonical grammar reference is `scripts/generator/dportsv3/agent/dops_quickref.md` — read it before judging dops edits. Real examples: `ports/devel/readline/overlay.dops`, `ports/editors/vim/overlay.dops`, `ports/ports-mgmt/pkg/overlay.dops`. The skill's "Mode-correctness checks for the analyzer" section lists what to verify; do not skip it for dops bundles.
+
+5b. **Check for the intent flow.** If `analysis/intent_log.json` is present, the bundle used the Step 25 intent DSL — use the skill's "Intent flow" + "Mode-correctness checks for intent flow" sections and check `intent_log.json` as the canonical record, not `changes.diff`. Intent grammar lives at `scripts/generator/dportsv3/agent/edit_intent/grammar.py` and per-intent schemas at `scripts/generator/dportsv3/agent/edit_intent/schemas/`. Convert bundles are unchanged by Step 25; they never have `intent_log.json`.
 
 6. **Produce the report in the exact shape specified in the skill's "Report shape" section.** Markdown, terse, no fluff. End with "Skill update suggestions" — if you found a new failure mode, name it and propose the one-paragraph entry to append to the skill's "Known failure modes" list.
 

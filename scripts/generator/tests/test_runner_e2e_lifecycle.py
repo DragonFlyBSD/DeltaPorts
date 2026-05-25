@@ -94,7 +94,7 @@ def queue_env(tmp_path, monkeypatch):
     # Drop any health cache state from previous tests.
     runner.invalidate_health_cache()
 
-    # Stub the health probe — without DP_HARNESS_ENV the runner skips
+    # Stub the health probe — without an active env the runner skips
     # the probe; with it (set below), the decision engine probes on
     # every triage. Default the stub to "ready" so the happy-path
     # tests don't accidentally route to skip; individual tests that
@@ -123,7 +123,7 @@ def queue_env(tmp_path, monkeypatch):
     # Required env vars; values don't matter because we stub the LLM call.
     monkeypatch.setenv("DP_HARNESS_TRIAGE_MODEL", "test/stub-triage")
     monkeypatch.setenv("DP_HARNESS_PATCH_MODEL", "test/stub-patch")
-    monkeypatch.setenv("DP_HARNESS_ENV", "test-env")
+    monkeypatch.setattr(runner, "_CLI_ENV_DEFAULT", "test-env")
 
     yield {"queue_root": queue_root, "conn": conn, "db_path": db_path}
 

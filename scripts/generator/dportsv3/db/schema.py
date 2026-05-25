@@ -206,6 +206,12 @@ CREATE TABLE IF NOT EXISTS port_status (
     PRIMARY KEY (target, origin)
 );
 
+CREATE TABLE IF NOT EXISTS tracker_active_env (
+    singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
+    env_name  TEXT,
+    set_at    TEXT
+);
+
 CREATE INDEX IF NOT EXISTS idx_build_runs_target ON build_runs(target);
 CREATE INDEX IF NOT EXISTS idx_build_results_origin ON build_results(origin);
 CREATE INDEX IF NOT EXISTS idx_port_status_target ON port_status(target);
