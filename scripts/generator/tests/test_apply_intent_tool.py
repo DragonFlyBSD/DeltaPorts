@@ -261,6 +261,23 @@ class TestRegistryGate:
         monkeypatch.setenv("DP_HARNESS_PATCH_USE_INTENT", value)
         assert "apply_intent" not in tools.patch_tool_names()
 
+    def test_patch_use_intent_enabled_helper_unset(self, monkeypatch):
+        """The shared gate helper (Step 25d-1) — used by both the
+        tool-registry filter and the patch-flow lifecycle hooks.
+        Default: OFF."""
+        monkeypatch.delenv("DP_HARNESS_PATCH_USE_INTENT", raising=False)
+        assert tools.patch_use_intent_enabled() is False
+
+    @pytest.mark.parametrize("value", ["1", "true", "yes", "on", "TRUE", "Yes"])
+    def test_patch_use_intent_enabled_helper_truthy(self, monkeypatch, value):
+        monkeypatch.setenv("DP_HARNESS_PATCH_USE_INTENT", value)
+        assert tools.patch_use_intent_enabled() is True
+
+    @pytest.mark.parametrize("value", ["0", "false", "no", "off", "", "random"])
+    def test_patch_use_intent_enabled_helper_falsy(self, monkeypatch, value):
+        monkeypatch.setenv("DP_HARNESS_PATCH_USE_INTENT", value)
+        assert tools.patch_use_intent_enabled() is False
+
 
 # --------------------------------------------------------------------
 # dispatch

@@ -225,6 +225,22 @@ _INTENT_TOOL_NAMES: frozenset[str] = frozenset({
 })
 
 
+def patch_use_intent_enabled() -> bool:
+    """Read the ``DP_HARNESS_PATCH_USE_INTENT`` gate.
+
+    Truthy values: ``1`` ``true`` ``yes`` ``on`` (case-insensitive).
+    Anything else (including unset / empty) means OFF — default
+    production behavior, no intent tools, no 25g lifecycle hooks.
+
+    Shared helper so the gate is checked the same way everywhere
+    (tool registry filter, patch-flow lifecycle wiring in 25d-1,
+    future 25d-2 prompt selector).
+    """
+    import os as _os  # noqa: PLC0415
+    return (_os.environ.get("DP_HARNESS_PATCH_USE_INTENT") or "").lower() \
+        in ("1", "true", "yes", "on")
+
+
 def patch_tool_names() -> frozenset[str]:
     """Patch-agent's tool list, with the Step 25c intent tools
     conditionally included based on ``DP_HARNESS_PATCH_USE_INTENT``.
@@ -234,14 +250,12 @@ def patch_tool_names() -> frozenset[str]:
     pre-Step-25 production.
 
     Opt-in (env var = '1' / 'true' / 'yes'): all current patch
-    tools PLUS the intent ones. The prompt rewrite (25d) is when
-    we drop port-subtree put_file from this set; until then both
-    surfaces coexist so the prompt can be staged.
+    tools PLUS the intent ones. The prompt rewrite (25d-2) is
+    when we drop port-subtree put_file from this set; until then
+    both surfaces coexist so the prompt can be staged.
     """
-    import os as _os  # noqa: PLC0415
     all_names = set(names())
-    flag = (_os.environ.get("DP_HARNESS_PATCH_USE_INTENT") or "").lower()
-    if flag in ("1", "true", "yes", "on"):
+    if patch_use_intent_enabled():
         return frozenset(all_names)
     return frozenset(all_names - _INTENT_TOOL_NAMES)
 

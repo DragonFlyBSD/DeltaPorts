@@ -764,6 +764,46 @@ class PatchAttemptStep:
             extra={"agent": "dports-patch", "model": model, "tier": tier.name},
         )
 
+        # Step 25d-1: pre-job clean assertion (intent-flow gate).
+        # When DP_HARNESS_PATCH_USE_INTENT is on, refuse to start a
+        # patch job if ports/<origin>/ has leftover edits from a
+        # prior run. Replay/diff capture both depend on a clean
+        # baseline; starting from a dirty state silently mixes
+        # accumulated state into the bundle's record. Operator
+        # escape: `dportsv3 dev-env reset-port ENV ORIGIN`.
+        from dportsv3.agent import tools as _tools  # noqa: PLC0415
+        intent_flow = _tools.patch_use_intent_enabled()
+        if intent_flow:
+            from dportsv3.agent import worker as _worker  # noqa: PLC0415
+            try:
+                clean = _worker.assert_port_clean(env, origin)
+            except Exception as exc:
+                services.activity_log(
+                    queue_root, "patch_preflight_warn",
+                    f"assert_port_clean failed for {origin}: "
+                    f"{str(exc)[:200]} — proceeding without clean check",
+                    job_id=ctx.job_id,
+                )
+                clean = {"ok": True}
+            if not clean.get("ok"):
+                dirty = clean.get("dirty_paths") or []
+                msg = (
+                    f"patch refused: ports/{origin}/ has "
+                    f"{len(dirty)} uncommitted change(s) from a "
+                    f"prior run; resolve before starting a new "
+                    f"patch transaction. Run "
+                    f"`dportsv3 dev-env reset-port {env} {origin}` "
+                    f"or `git stash` in the env."
+                )
+                services.activity_log(
+                    queue_root, "patch_preflight_dirty",
+                    msg, job_id=ctx.job_id,
+                    extra={"origin": origin, "dirty_paths": dirty[:20]},
+                )
+                services.write_error_note(job_path, msg)
+                return _err(msg, services, job_path,
+                            JobEvent.PATCH_GAVE_UP)
+
         dispatcher = PatchEventDispatcher(
             queue_root=queue_root,
             job_id=ctx.job_id,
@@ -829,6 +869,35 @@ class PatchAttemptStep:
             f"Wrote harness patch outputs for {origin}",
             job_id=ctx.job_id,
         )
+
+        # Step 25d-1: post-job workspace reset (intent-flow gate).
+        # The intent log is the canonical record; the env's port
+        # subtree no longer needs to carry the agent's edits. Reset
+        # to git HEAD so the next patch job (or operator inspection)
+        # starts from a clean baseline. Mirrors apply-and-build's
+        # post-build cleanup. Best-effort: a reset failure surfaces
+        # as an activity row but doesn't affect the patch outcome.
+        if intent_flow:
+            from dportsv3.agent import worker as _worker  # noqa: PLC0415
+            try:
+                reset = _worker.reset_port(env, origin)
+            except Exception as exc:
+                reset = {"ok": False, "error": str(exc)[:200]}
+            if not reset.get("ok"):
+                services.activity_log(
+                    queue_root, "patch_post_reset_failed",
+                    f"reset_port failed for {origin} after patch "
+                    f"({reset.get('error', 'unknown')[:200]}); env "
+                    f"may have leftover edits — next patch will "
+                    f"refuse via preflight",
+                    job_id=ctx.job_id,
+                )
+            else:
+                services.activity_log(
+                    queue_root, "patch_post_reset",
+                    f"reset ports/{origin}/ to baseline after patch",
+                    job_id=ctx.job_id,
+                )
 
         # If the cached health probe shows broken, the env poisoned
         # the result — ENV_BROKEN overrides whatever the LLM said.
