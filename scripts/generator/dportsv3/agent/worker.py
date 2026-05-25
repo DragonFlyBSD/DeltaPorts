@@ -1149,50 +1149,104 @@ def apply_intent(
             "current_mode": mode,
         }
 
+    # Step 25g review #2 fix: keep substrate and log in sync. The
+    # cap check runs in two phases so we catch BOTH the cheap
+    # failures (count + intent payload) before doing substrate
+    # work, AND the expensive ones (large generated diff bytes —
+    # dops overlay rewrites, from_dupe payloads, replace_in_patch
+    # against big patch files) by re-checking against the real
+    # substrate_diff after apply. On post-apply overflow we revert
+    # the substrate edit and refuse, so the canonical-log
+    # invariant (every substrate change has a log row) holds.
+    log = _ensure_intent_log(env, origin, mode)
+    # Normalize: dict in, dict back out for the log entry.
+    log_entry_intent: dict[str, Any]
+    if isinstance(intent, dict):
+        log_entry_intent = intent
+    else:
+        try:
+            import json as _json  # noqa: PLC0415
+            log_entry_intent = _json.loads(intent)
+        except Exception:
+            log_entry_intent = {"raw": str(intent)[:500]}
+
+    # Phase 1 — pre-apply: counts + intent-payload bytes only.
+    overflow = log.would_overflow(log_entry_intent)
+    if overflow is not None:
+        return {
+            "ok": False,
+            "intent_type": (log_entry_intent.get("type") or "unknown"),
+            "paths_changed": [],
+            "substrate_diff": "",
+            "error": (
+                f"intent log full: {overflow}. Substrate left "
+                f"unchanged. The patch agent should escalate to "
+                f"MANUAL rather than continue."
+            ),
+            "mode": mode,
+            "intent_log_full": True,
+            "intent_log_full_reason": overflow,
+        }
+
     translator = Translator(workspace, origin, mode)
     result = translator.apply(intent)
 
-    # Append to the per-(env, origin) intent log. Both ok=True and
-    # ok=False rows land — failed attempts are forensics. Size caps
-    # in IntentLog.append fire here; on overflow we surface the cap
-    # error to the LLM as a tool result (the agent should escalate
-    # rather than continue, per the design §13.2 message).
-    log = _ensure_intent_log(env, origin, mode)
-    try:
-        # Normalize: dict in, dict back out. parse_intent already
-        # accepted either a dict or a JSON string; here we want the
-        # canonical dict form for the log.
-        log_entry_intent = intent if isinstance(intent, dict) else None
-        if log_entry_intent is None:
-            try:
-                import json as _json  # noqa: PLC0415
-                log_entry_intent = _json.loads(intent)
-            except Exception:
-                log_entry_intent = {"raw": str(intent)[:500]}
-        log.append(
-            log_entry_intent,
-            ok=result.ok,
-            substrate_diff=result.substrate_diff,
-            error=result.error,
+    # Phase 2 — post-apply: re-check with the REAL substrate_diff.
+    # Only meaningful when apply succeeded (failed applies have an
+    # empty substrate_diff so the pre-apply check already covered
+    # them). If overflow, revert the substrate before refusing.
+    if result.ok:
+        overflow = log.would_overflow(
+            log_entry_intent, substrate_diff=result.substrate_diff,
         )
-    except Exception as exc:
-        # Cap exceeded. The substrate edit ALREADY HAPPENED (the
-        # translator applied it before we tried to record); we just
-        # can't record it. Preserve result.ok so the LLM sees the
-        # underlying outcome (avoids a misleading ok=False that
-        # could trigger a re-attempt and double-apply). Surface the
-        # cap as a separate intent_log_full=True flag — the LLM
-        # should gate on this, not on ok, and escalate.
-        return {
-            "ok": result.ok,
-            "intent_type": result.intent_type,
-            "paths_changed": result.paths_changed,
-            "substrate_diff": result.substrate_diff,
-            "error": result.error,
-            "mode": mode,
-            "intent_log_full": True,
-            "intent_log_full_reason": str(exc),
-        }
+        if overflow is not None:
+            revert_err = _revert_workspace_paths(
+                workspace, result.paths_changed,
+            )
+            if revert_err is not None:
+                # Revert itself failed — the substrate is now in an
+                # unknown state. Surface as canonical_log_broken so
+                # the operator notices; this should be near-impossible
+                # but we don't want a silent corruption.
+                return {
+                    "ok": False,
+                    "intent_type": result.intent_type,
+                    "paths_changed": result.paths_changed,
+                    "substrate_diff": result.substrate_diff,
+                    "error": (
+                        f"intent log full ({overflow}) AND revert "
+                        f"failed: {revert_err}. Substrate in "
+                        f"unknown state; bundle should not be "
+                        f"verified. Reset the port subtree via "
+                        f"`dportsv3 dev-env reset-port ENV ORIGIN`."
+                    ),
+                    "mode": mode,
+                    "intent_log_full": True,
+                    "intent_log_full_reason": overflow,
+                    "canonical_log_broken": True,
+                }
+            return {
+                "ok": False,
+                "intent_type": result.intent_type,
+                "paths_changed": [],
+                "substrate_diff": "",
+                "error": (
+                    f"intent log full: {overflow}. Substrate "
+                    f"reverted. The patch agent should escalate "
+                    f"to MANUAL rather than continue."
+                ),
+                "mode": mode,
+                "intent_log_full": True,
+                "intent_log_full_reason": overflow,
+            }
+
+    # Both caps cleared (or apply failed with empty diff). Append.
+    log.append(
+        log_entry_intent,
+        ok=result.ok,
+        substrate_diff=result.substrate_diff,
+        error=result.error,
+    )
 
     return {
         "ok": result.ok,
@@ -1202,6 +1256,42 @@ def apply_intent(
         "error": result.error,
         "mode": mode,
     }
+
+
+def _revert_workspace_paths(
+    workspace: Path, paths: list[str],
+) -> str | None:
+    """Revert ``paths`` in ``workspace`` to HEAD via git. Returns
+    ``None`` on success or a one-line error message on failure.
+
+    Used to undo a substrate edit when the post-apply log-cap check
+    fires — restores the canonical-log invariant by ensuring no
+    substrate change happens without a matching log row. ``git
+    checkout HEAD --`` reverts tracked-file edits; ``git clean
+    -fd --`` removes new files the renderer created.
+    """
+    if not paths:
+        return None
+    import subprocess as _sp  # noqa: PLC0415
+    try:
+        co = _sp.run(
+            ["git", "-C", str(workspace), "checkout", "HEAD", "--", *paths],
+            capture_output=True, text=True, check=False,
+        )
+        # checkout on a new file (not in HEAD) returns nonzero with
+        # "pathspec did not match" — that's fine, `clean` handles it.
+        cl = _sp.run(
+            ["git", "-C", str(workspace), "clean", "-fd", "--", *paths],
+            capture_output=True, text=True, check=False,
+        )
+        if cl.returncode != 0:
+            return (
+                f"git clean rc={cl.returncode}: "
+                f"{(cl.stderr or '').strip()[:200]}"
+            )
+        return None
+    except Exception as exc:
+        return f"revert raised: {exc!s}"[:300]
 
 
 def intent_reference(env: str, intent_type: str) -> dict:

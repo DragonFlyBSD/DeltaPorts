@@ -847,16 +847,33 @@ class PatchAttemptStep:
         intent_flow = _tools.patch_use_intent_enabled()
         if intent_flow:
             from dportsv3.agent import worker as _worker  # noqa: PLC0415
+            # Review #3 fix: design §5.1 makes the pre-job clean
+            # check a HARD rule — "if not clean, BEGIN aborts". A
+            # failure of the check itself (chroot not mounted, env
+            # gone, subprocess raised) means we DON'T KNOW if the
+            # port is clean, so the safe answer is refuse, not
+            # proceed. The prior shape swallowed the exception and
+            # set clean={ok: True}, which let patch jobs start
+            # against unknown-state envs.
             try:
                 clean = _worker.assert_port_clean(env, origin)
             except Exception as exc:
-                services.activity_log(
-                    queue_root, "patch_preflight_warn",
-                    f"assert_port_clean failed for {origin}: "
-                    f"{str(exc)[:200]} — proceeding without clean check",
-                    job_id=ctx.job_id,
+                msg = (
+                    f"patch refused: assert_port_clean({origin}) "
+                    f"raised — env state is unknown so we can't "
+                    f"safely start a patch transaction. Resolve "
+                    f"the env (verify chroot is mounted, run "
+                    f"`dportsv3 dev-env status {env}`) and retry. "
+                    f"Underlying error: {str(exc)[:300]}"
                 )
-                clean = {"ok": True}
+                services.activity_log(
+                    queue_root, "patch_preflight_error",
+                    msg, job_id=ctx.job_id,
+                    extra={"origin": origin, "error": str(exc)[:500]},
+                )
+                services.write_error_note(job_path, msg)
+                return _err(msg, services, job_path,
+                            JobEvent.PATCH_GAVE_UP)
             if not clean.get("ok"):
                 dirty = clean.get("dirty_paths") or []
                 msg = (

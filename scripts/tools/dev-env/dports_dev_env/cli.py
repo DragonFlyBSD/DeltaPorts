@@ -385,92 +385,23 @@ def apply_and_build(
             sys.stderr.write(tail + "\n")
             return result
 
-        rc, applied_count, total_count, err = _replay_intent_log(
-            intent_host, workspace, origin,
-        )
-        result["apply_exit"] = rc
-        result["intents_applied"] = applied_count
-        result["intents_in_log"] = total_count
-        if rc != 0:
-            result["stderr_tail"] = (err or "")[-2000:]
-            sys.stderr.write(err or "")
-            return result
     else:
         result["replay_mode"] = "diff" if diff_path is not None else "none"
 
-    # 1. Apply diff (optional, legacy path). Run through the chroot
-    #    so the substrate sees its own filesystem — host and chroot
-    #    share the physical writable layer, but going through
-    #    `chroot exec` keeps the operator memory rule honest
-    #    (no host-side tree IO).
-    if diff_path is not None:
-        diff_host = Path(diff_path).expanduser().resolve()
-        if not diff_host.is_file():
-            raise UsageError(f"--diff: file not found: {diff_host}")
-        diff_bytes = diff_host.read_bytes()
-        result["applied_diff_sha256"] = hashlib.sha256(diff_bytes).hexdigest()
-
-        staged_host = writable_root / "work" / ".apply-and-build.diff"
-        staged_host.parent.mkdir(parents=True, exist_ok=True)
-        staged_host.write_bytes(diff_bytes)
-        diff_chroot_path = "/work/.apply-and-build.diff"
-        try:
-            apply_proc = runner.run(
-                ["/bin/sh", "-c",
-                 f"cd /work/DeltaPorts && git apply --3way "
-                 f"{shlex.quote(diff_chroot_path)}", "_"],
-                env=env, capture_output=True,
-            )
-            result["apply_exit"] = apply_proc.returncode
-            if apply_proc.returncode != 0:
-                tail = (apply_proc.stderr or "") + (apply_proc.stdout or "")
-                result["stderr_tail"] = tail[-2000:]
-                sys.stderr.write(tail)
-                return result
-        finally:
-            try:
-                staged_host.unlink()
-            except FileNotFoundError:
-                pass
-
-    # 2. reapply ORIGIN — re-materialize DPorts from the (possibly-
-    #    edited) DeltaPorts source.
-    reapply_proc = runner.run(
-        ["/bin/sh", "-c", f"cd /work/DeltaPorts && reapply "
-                          f"{shlex.quote(origin)}", "_"],
-        env=env, capture_output=True,
-    )
-    result["reapply_exit"] = reapply_proc.returncode
-    if reapply_proc.returncode != 0:
-        tail = (reapply_proc.stderr or "") + (reapply_proc.stdout or "")
-        result["stderr_tail"] = tail[-2000:]
-        sys.stderr.write(tail)
-        return result
-
-    # 3. dbuild ORIGIN — runs dsynth. Capture combined output to a
-    #    log file under writable so the orchestrator can POST it.
-    log_rel = f"work/artifacts/apply-and-build-{origin.replace('/', '_')}.log"
-    log_host = writable_root / log_rel
-    log_host.parent.mkdir(parents=True, exist_ok=True)
-    log_chroot = f"/{log_rel}"
-    build_proc = runner.run(
-        ["/bin/sh", "-c",
-         f"cd /work/DeltaPorts && dbuild {shlex.quote(origin)} "
-         f"> {shlex.quote(log_chroot)} 2>&1", "_"],
-        env=env, capture_output=False,
-    )
-    result["dsynth_exit"] = build_proc.returncode
-    result["log_path"] = str(log_host)
-    result["ok"] = (build_proc.returncode == 0)
-
-    # Step 25g post-build cleanup: for intent-log mode, leave the
-    # env exactly as we found it. Replay modified ports/<origin>/;
-    # the build is done (success or fail) so the substrate state
-    # is no longer needed. Resetting now means the next verify run
-    # starts from a clean baseline without operator intervention.
-    # The diff path is unchanged for backward compat — pre-25e
-    # bundles rely on the legacy "leave drift in place" behavior.
-    if intent_log_path is not None:
+    # Step 25g post-build cleanup: for intent-log mode, the substrate
+    # edits to ports/<origin>/ MUST be reset before we return, so the
+    # next verify run starts from a clean baseline. Review #1 fix:
+    # this runs in a finally block so it fires on every exit path —
+    # replay failure, diff-apply failure, reapply failure, build
+    # success, build failure. The prior shape had three early returns
+    # that bypassed cleanup and left ports/<origin>/ drifted, which
+    # broke the next attempt's pre-replay clean check.
+    #
+    # The diff path doesn't get this — pre-25e bundles rely on the
+    # legacy "leave drift in place" behavior.
+    def _post_build_cleanup() -> None:
+        if intent_log_path is None:
+            return
         rel = f"ports/{origin}"
         cleanup = runner.run(
             ["/bin/sh", "-c",
@@ -480,8 +411,6 @@ def apply_and_build(
             env=env, capture_output=True,
         )
         if cleanup.returncode != 0:
-            # Non-fatal: build result stands. Surface in stderr_tail
-            # so the operator knows the env may have leftover state.
             warn = (
                 f"\n[25g post-build cleanup failed: rc={cleanup.returncode}; "
                 f"env's {rel} may have leftover state]\n"
@@ -489,6 +418,86 @@ def apply_and_build(
             )
             existing = result.get("stderr_tail") or ""
             result["stderr_tail"] = (existing + warn)[-2000:]
+
+    try:
+        if intent_log_path is not None:
+            rc, applied_count, total_count, err = _replay_intent_log(
+                intent_host, workspace, origin,
+            )
+            result["apply_exit"] = rc
+            result["intents_applied"] = applied_count
+            result["intents_in_log"] = total_count
+            if rc != 0:
+                result["stderr_tail"] = (err or "")[-2000:]
+                sys.stderr.write(err or "")
+                return result
+
+        # 1. Apply diff (optional, legacy path). Run through the chroot
+        #    so the substrate sees its own filesystem — host and chroot
+        #    share the physical writable layer, but going through
+        #    `chroot exec` keeps the operator memory rule honest
+        #    (no host-side tree IO).
+        if diff_path is not None:
+            diff_host = Path(diff_path).expanduser().resolve()
+            if not diff_host.is_file():
+                raise UsageError(f"--diff: file not found: {diff_host}")
+            diff_bytes = diff_host.read_bytes()
+            result["applied_diff_sha256"] = hashlib.sha256(diff_bytes).hexdigest()
+
+            staged_host = writable_root / "work" / ".apply-and-build.diff"
+            staged_host.parent.mkdir(parents=True, exist_ok=True)
+            staged_host.write_bytes(diff_bytes)
+            diff_chroot_path = "/work/.apply-and-build.diff"
+            try:
+                apply_proc = runner.run(
+                    ["/bin/sh", "-c",
+                     f"cd /work/DeltaPorts && git apply --3way "
+                     f"{shlex.quote(diff_chroot_path)}", "_"],
+                    env=env, capture_output=True,
+                )
+                result["apply_exit"] = apply_proc.returncode
+                if apply_proc.returncode != 0:
+                    tail = (apply_proc.stderr or "") + (apply_proc.stdout or "")
+                    result["stderr_tail"] = tail[-2000:]
+                    sys.stderr.write(tail)
+                    return result
+            finally:
+                try:
+                    staged_host.unlink()
+                except FileNotFoundError:
+                    pass
+
+        # 2. reapply ORIGIN — re-materialize DPorts from the (possibly-
+        #    edited) DeltaPorts source.
+        reapply_proc = runner.run(
+            ["/bin/sh", "-c", f"cd /work/DeltaPorts && reapply "
+                              f"{shlex.quote(origin)}", "_"],
+            env=env, capture_output=True,
+        )
+        result["reapply_exit"] = reapply_proc.returncode
+        if reapply_proc.returncode != 0:
+            tail = (reapply_proc.stderr or "") + (reapply_proc.stdout or "")
+            result["stderr_tail"] = tail[-2000:]
+            sys.stderr.write(tail)
+            return result
+
+        # 3. dbuild ORIGIN — runs dsynth. Capture combined output to a
+        #    log file under writable so the orchestrator can POST it.
+        log_rel = f"work/artifacts/apply-and-build-{origin.replace('/', '_')}.log"
+        log_host = writable_root / log_rel
+        log_host.parent.mkdir(parents=True, exist_ok=True)
+        log_chroot = f"/{log_rel}"
+        build_proc = runner.run(
+            ["/bin/sh", "-c",
+             f"cd /work/DeltaPorts && dbuild {shlex.quote(origin)} "
+             f"> {shlex.quote(log_chroot)} 2>&1", "_"],
+            env=env, capture_output=False,
+        )
+        result["dsynth_exit"] = build_proc.returncode
+        result["log_path"] = str(log_host)
+        result["ok"] = (build_proc.returncode == 0)
+    finally:
+        _post_build_cleanup()
 
     return result
 

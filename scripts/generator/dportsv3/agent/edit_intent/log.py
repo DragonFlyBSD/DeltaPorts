@@ -57,6 +57,54 @@ class IntentLog:
         os.environ.get("DP_HARNESS_INTENT_MAX_BYTES", DEFAULT_MAX_BYTES)
     ))
 
+    def would_overflow(self, intent: dict[str, Any], *,
+                       substrate_diff: str = "") -> str | None:
+        """Predicate: returns an error message if appending the
+        given intent would exceed either cap, or ``None`` if it
+        would fit. Used by callers to refuse a substrate edit
+        before the log would reject it — the canonical-log
+        invariant requires log and substrate to stay in sync.
+
+        ``substrate_diff`` MUST be the real diff the intent
+        produced (or will produce) — passing ``""`` UNDERestimates
+        the projected size and can let a byte-cap-busting edit
+        through. The supported usage pattern in
+        ``worker.apply_intent`` is:
+
+        1. pre-apply check with ``substrate_diff=""`` — cheap
+           guard for count cap + intent-payload byte cap;
+        2. translator.apply;
+        3. post-apply check with ``substrate_diff=result.substrate_diff``
+           — catches large generated diffs (dops overlay rewrites,
+           from_dupe payloads, replace_in_patch); on overflow the
+           caller must revert the substrate edit before returning.
+        """
+        if len(self.intents) >= self.max_count:
+            return (
+                f"intent log exceeds {self.max_count} entries — "
+                f"almost certainly an agent loop; the patch agent "
+                f"should split into smaller bundles or escalate to "
+                f"the operator"
+            )
+        # Build a hypothetical entry to measure projected size.
+        probe = IntentLogEntry(
+            seq=len(self.intents),
+            intent=intent,
+            applied_at="0000-00-00T00:00:00+00:00",
+            ok=True,
+            substrate_diff=substrate_diff,
+            error=None,
+        )
+        projected = self.intents + [probe]
+        size = len(self._serialize(projected).encode("utf-8"))
+        if size > self.max_bytes:
+            return (
+                f"intent log size would exceed "
+                f"{self.max_bytes} bytes ({size} after this intent) "
+                f"— split, simplify, or escalate"
+            )
+        return None
+
     def append(self, intent: dict[str, Any], *,
                ok: bool,
                substrate_diff: str = "",
@@ -64,18 +112,15 @@ class IntentLog:
         """Append a row, enforcing the caps.
 
         Raises IntentError if appending would exceed either cap.
-        The runner is expected to surface the error to the operator
-        — the agent has hit a structural limit and should escalate
-        rather than continue.
+        Production callers should use :meth:`would_overflow`
+        first to refuse the substrate edit ahead of time — calling
+        ``append`` after the substrate change has landed and then
+        hitting the cap creates an unrecorded edit, which the
+        canonical-log contract forbids.
         """
-        if len(self.intents) >= self.max_count:
-            raise IntentError(
-                f"intent log exceeds {self.max_count} entries — "
-                f"almost certainly an agent loop; the patch agent "
-                f"should split into smaller bundles or escalate to "
-                f"the operator",
-                intent=intent,
-            )
+        msg = self.would_overflow(intent, substrate_diff=substrate_diff)
+        if msg is not None:
+            raise IntentError(msg, intent=intent)
         entry = IntentLogEntry(
             seq=len(self.intents),
             intent=intent,
@@ -84,17 +129,6 @@ class IntentLog:
             substrate_diff=substrate_diff,
             error=error,
         )
-        # Project size after the append. Approximate via serialized
-        # JSON length (sufficient — the writers won't add much).
-        projected = self.intents + [entry]
-        size = len(self._serialize(projected).encode("utf-8"))
-        if size > self.max_bytes:
-            raise IntentError(
-                f"intent log size would exceed "
-                f"{self.max_bytes} bytes ({size} after this intent) "
-                f"— split, simplify, or escalate",
-                intent=intent,
-            )
         self.intents.append(entry)
         return entry
 

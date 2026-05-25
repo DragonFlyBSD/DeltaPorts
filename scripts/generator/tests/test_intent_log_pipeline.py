@@ -138,14 +138,15 @@ class TestWorkerLogAccumulation:
         assert doc["baseline_commit"] == "fake-baseline"
         assert len(doc["intents"]) == 1
 
-    def test_intent_log_cap_zero_immediate_overflow_preserves_ok(
+    def test_intent_log_cap_zero_refuses_apply_substrate_unchanged(
         self, env_with_workspace, monkeypatch,
     ):
-        """Edge case for the ok-preservation contract: cap=0 means
-        the FIRST intent overflows immediately after a successful
-        substrate apply. ok must still reflect the underlying
-        outcome (the substrate change happened); only the log
-        record is lost."""
+        """Review #2 fix: the cap check runs BEFORE the translator
+        applies. cap=0 means the first intent is refused outright;
+        substrate stays clean and the LLM sees ok=False +
+        intent_log_full=True. The old shape ran the apply then
+        flagged the overflow, which left an unrecorded substrate
+        edit and corrupted verify's replay."""
         monkeypatch.setenv("DP_HARNESS_INTENT_MAX_COUNT", "0")
         ws = env_with_workspace
         patch = ws / "ports/devel/foo/dragonfly/patch-zero.c"
@@ -162,11 +163,12 @@ class TestWorkerLogAccumulation:
             "type": "drop_patch", "target": "dragonfly/patch-zero.c",
             "reason": "x",
         })
-        # Substrate change DID happen.
-        assert result["ok"] is True
-        assert not patch.exists()
-        # Cap flag tells the LLM to escalate, not retry.
+        # Substrate is unchanged — patch still on disk.
+        assert result["ok"] is False
+        assert patch.exists()
+        # Cap flag tells the LLM to escalate.
         assert result.get("intent_log_full") is True
+        assert "log full" in result["error"].lower()
 
     def test_mode_drift_refused_within_transaction(
         self, env_with_workspace, monkeypatch,
@@ -200,11 +202,10 @@ class TestWorkerLogAccumulation:
     def test_intent_log_size_cap_surfaces_to_tool_result(
         self, env_with_workspace, monkeypatch,
     ):
-        """When the cap fires AFTER a successful translator apply,
-        ok preserves the underlying outcome (the substrate change
-        already happened) and intent_log_full=True signals the LLM
-        to escalate rather than re-attempt. ok=False would risk a
-        double-apply."""
+        """Review #2 fix: when the second intent would overflow the
+        cap, the apply is refused BEFORE translator runs. ok=False,
+        intent_log_full=True, and the substrate stays unchanged so
+        verify's canonical-log replay stays consistent."""
         monkeypatch.setenv("DP_HARNESS_INTENT_MAX_COUNT", "1")
         # Stage a patch so the underlying drop_patch succeeds.
         ws = env_with_workspace
@@ -233,18 +234,70 @@ class TestWorkerLogAccumulation:
         )
         subprocess.run(["git", "-C", str(ws), "commit", "-qm", "add"],
                        check=True)
-        # Second intent: substrate apply succeeds, log cap fires.
+        # Second intent: cap full, apply refused, substrate untouched.
         result = worker.apply_intent("test-env", "devel/foo", {
             "type": "drop_patch", "target": "dragonfly/patch-second.c",
             "reason": "y",
         })
-        # ok preserves the underlying outcome — the substrate DID
-        # change (patch deleted) even though we can't record it.
-        assert result["ok"] is True
-        assert not patch2.exists()
-        # The cap flag is the gate the LLM should look at.
+        # ok=False — the apply was refused.
+        assert result["ok"] is False
+        # Substrate unchanged: patch-second.c still on disk.
+        assert patch2.exists()
+        # The cap flag tells the LLM to escalate, not retry.
         assert result.get("intent_log_full") is True
         assert "exceeds" in result.get("intent_log_full_reason", "")
+
+    def test_byte_cap_against_large_substrate_diff_reverts_substrate(
+        self, env_with_workspace, monkeypatch,
+    ):
+        """Follow-up #3 regression: a small intent that produces a
+        large substrate_diff must trigger the post-apply byte-cap
+        check. The pre-apply check sees an empty diff and lets it
+        through; the post-apply check catches it; and the substrate
+        edit is reverted so the canonical-log invariant holds."""
+        # Cap byte budget below what the generated diff will weigh.
+        monkeypatch.setenv("DP_HARNESS_INTENT_MAX_BYTES", "2000")
+        ws = env_with_workspace
+        # Stage a patch with ~10 KB of content. drop_patch's
+        # substrate_diff includes the deletion of every line, so
+        # the diff itself will be > 10 KB — well past the 2 KB cap.
+        patch = ws / "ports/devel/foo/dragonfly/patch-fat.c"
+        patch.parent.mkdir(parents=True)
+        big = "+ some patched line that is reasonably long\n" * 250
+        patch.write_text("--- a/x\n+++ b/x\n" + big)
+        subprocess.run(
+            ["git", "-C", str(ws), "add", str(patch.relative_to(ws))],
+            check=True,
+        )
+        subprocess.run(["git", "-C", str(ws), "commit", "-qm", "add"],
+                       check=True)
+
+        # Sanity: the intent payload itself is tiny, so phase-1
+        # (no substrate_diff) would let this through. If this
+        # assertion fails the test is no longer exercising phase-2.
+        intent_dict = {
+            "type": "drop_patch",
+            "target": "dragonfly/patch-fat.c",
+            "reason": "obsolete",
+        }
+        log_probe = worker._ensure_intent_log("test-env", "devel/foo", "compat")
+        assert log_probe.would_overflow(intent_dict) is None, (
+            "phase-1 should accept the small intent; if not, this "
+            "test is exercising phase-1, not phase-2"
+        )
+
+        result = worker.apply_intent("test-env", "devel/foo", intent_dict)
+        # Post-apply byte cap fired, substrate was reverted.
+        assert result["ok"] is False
+        assert result.get("intent_log_full") is True
+        # patch-fat.c is back on disk — the drop was undone.
+        assert patch.exists(), (
+            "substrate revert failed: patch-fat.c should exist after "
+            "the byte-cap refusal reverted the drop_patch edit"
+        )
+        # Log has no row for this attempt (canonical-log invariant).
+        log = worker._ensure_intent_log("test-env", "devel/foo", "compat")
+        assert len(log.intents) == 0
 
 
 # --------------------------------------------------------------------
