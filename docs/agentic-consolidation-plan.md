@@ -3089,6 +3089,110 @@ After Step 25:
 - Empty-diff bugs from the gperf class are impossible: every intent
   statement produces a diff with a deterministic shape, captured by
   the translator, not by post-hoc `git diff`.
+- **Job execution is transactional.** An agent run is "begin →
+  emit intents → apply (deterministic) → record → reset
+  workspace." Failure mid-apply rolls back; success records the
+  intent log as the canonical artifact and resets the env to
+  baseline. Verify-fix replays the intent log against a known
+  baseline (no drift possible).
+- **Workspace state is bounded.** The env's writable overlay is no
+  longer a state-accumulator across runs. After every patch/verify
+  job, `ports/<origin>/` returns to the baseline (typically
+  `git HEAD` of the DeltaPorts checkout). Convert is the one
+  exception — its output is meant to persist (and would itself be
+  expressed as a single "lift to dops" intent set committed to the
+  env's local branch). See "Workspace lifecycle" below.
+
+#### Bandages this step retires
+
+The chain of week-of-2026-05-24 incidents (gperf empty diff,
+libunistring loop, python312 wasted budget, liblz4 missing token
+card, v4l_compat verify drift, the staged-`new file` leak from
+`git apply --3way`) is one symptom set: the agent has no framework
+for "what change am I making, in what transaction, against what
+baseline." Each fix shipped this week is a localized patch around a
+hole the framework would fill structurally.
+
+| Commit | Bandage | What Step 25 makes structurally impossible |
+|---|---|---|
+| `2d9de6c4edc` | `_git_diff_with_untracked` (intent-to-add dance to make new files visible to `git diff`) | Intent log IS the record; no post-hoc `git diff` capture, no untracked-file blind spot. |
+| `5369db9fd4e` | `convert_record` manually `mk_path.unlink()`s `Makefile.DragonFly` after writing `overlay.dops`; runner adds a wall-clock circuit breaker (`_recent_successful_convert`) to detect re-defer loops | Convert is a single transactional intent set ("migrate to dops"). The "remove legacy" half is intrinsic to the intent, not a separate cleanup that can be forgotten. No loop possible. |
+| `ccab8ebad88` | New `overlay_state` module to unify host/chroot classification because the two paths had drifted | A single substrate. Classification is a property of git HEAD + intent log replay, not of accumulated workspace state. |
+| `surface_invariant` action in `overlay_state.assess_overlay` | Runtime check at *next* triage time for "overlay.dops + Makefile.DragonFly together" | Intent validator rejects contradictory intents at write time. The half-migration we saw on `multimedia/v4l_compat` today (agent emitted both `Makefile.DragonFly` AND `overlay.dops` in one run) is rejected before any file is written. |
+| `300b7b1e96a` | `_lookup_bundle_target` fallback because jobs landed with `target=NULL` while the bundle had it | Tangential to 25 but related — same shape of "implicit state propagation across processes" that intents formalize. |
+| `b376a58f47b`, `1776bc894ab`, `a77e2500a60`, `bfd0d68473b`, `ed8e97b6007` | Five-commit zigzag to make verify-fix call the dev-env primitive without killing the runner, finding `dportsv3`, or breaking PATH resolution | If verify replays the intent log (25e), there's no diff-apply path at all; no `git apply --3way`, no subprocess gymnastics, no PATH dependency on the verify side. |
+| Today's `git apply --3way` staging leak (verify failure leaves `new file` entries in the index) | `--3way` implies `--index`; partial apply on new-file diff stages files before erroring | No `git apply` in the verify path. Intents replay deterministically; no partial apply, no staging side effect. |
+| Today's accumulating env state across jobs (verify drift on gperf + v4l_compat — diff says "create new file" but env already has it from the agent's prior run) | The env's `ports/<origin>/` carries forward every agent edit forever | "Workspace lifecycle" below: each job resets to baseline on completion. Drift is structurally impossible. |
+| Today's `Makefile.DragonFly + overlay.dops` half-migration emitted by the patch agent | Patch agent has no schema saying "you write a dops or a compat overlay, not both" | Intent grammar enforces it — there is no intent that writes a `Makefile.DragonFly` if `overlay.dops` is in scope (or vice versa). |
+| `process_verify_requests` reconciler (runner polls a DB table because the tracker can't enqueue) | DB-mediated request channel because tracker can't reach the runner's queue | Tangential — same pattern works fine for intent submission. Step 25 doesn't change this. |
+
+In aggregate: **eight of the past ten bugfix commits would not have been written** if the agent had been operating on intents the whole time. The recurring pattern is "the agent did X, we observed it via Y, the observation has a blind spot Z, ship a patch for Z." Intents short-circuit the observation — there's nothing to observe because the intent log already says what happened.
+
+#### Workspace lifecycle (new — added 2026-05-25)
+
+The verify-drift incidents on `archivers/liblz4`, `devel/gperf`,
+and `multimedia/v4l_compat` revealed that the env's writable
+overlay is an unbounded accumulator. Each agent run mutates
+`ports/<origin>/` and leaves the edits in place; the next run (or
+verify) sees the previous edits as "the baseline."
+
+Step 25 introduces a clean two-tier state model:
+
+- **Baseline** = git HEAD of the env's DeltaPorts checkout.
+  Operator-controlled. Doesn't change without explicit operator
+  action (or convert; see exception below).
+- **Ephemeral** = intent log for the current job. Applied on top
+  of baseline at job-start, captured at job-end (whether success
+  or failure), then **discarded** with `git checkout HEAD --
+  ports/<origin>/ && git clean -fd ports/<origin>/`.
+
+The bundle's `analysis/intent_log.json` (or equivalent) is the
+canonical record. Verify replays it against any env at the same
+baseline. The "did the env happen to have leftover edits"
+question disappears.
+
+**The convert exception.** Convert's output is meant to persist
+(triage immediately depends on the converted state). Two options
+once Step 25 is live:
+
+- (a) Convert is expressed as a single intent set committed to a
+  local branch (`agent/convert/<origin>`) in the env's checkout.
+  Reset preserves it. Operator promotes by merging the local
+  branch to main.
+- (b) Convert is special-cased: its intent log applies and is NOT
+  reset. The intent log is still the canonical record; only the
+  cleanup step skips. Operator promotes by reading the intent log
+  and applying it to their own clone.
+
+Decision lives in 25a (design doc).
+
+#### Sub-step changes from this scope expansion
+
+- **25a** also has to cover: transaction semantics (begin/apply/
+  rollback), workspace lifecycle policy, and the convert exception.
+- **25b** the translator becomes the apply engine for the
+  transaction. Intent emission, validation, application, and
+  rollback are all in this module.
+- **25c** `apply_intent` is the tool surface. A separate `commit`
+  step (implicit in PATCH_OK) writes the intent log to the bundle
+  and triggers workspace reset.
+- **25e** is now the load-bearing slice for verify-drift. Renames
+  from "diff capture via translator" to **"intent log as canonical
+  record + verify replays log"**. Verify-fix's `apply_and_build`
+  primitive grows an `intent_log_path` parameter as the
+  replacement for `diff_path`.
+- New **25g — workspace reset policy.** Apply the
+  baseline-vs-ephemeral split. Patch/verify jobs reset on
+  completion. Convert special-cased per the 25a decision.
+  Operator gets a `dportsv3 dev-env reset-port ENV ORIGIN`
+  manual escape hatch.
+
+#### LOC estimate (revised)
+
+~800 net additions; ~250 net deletions (prompt + retired
+emit_diff + retired `--intent-to-add` helper + retired
+`surface_invariant` runtime check). Larger than the original
+estimate because the scope grew to include the transaction model.
 
 #### Sub-steps
 
@@ -3219,16 +3323,23 @@ impossible.
 
 #### Order
 
-25a → 25b → 25c → 25e → 25d → 25f.
+25a → 25b → 25c → 25e → 25g → 25d → 25f.
 
-Design first (25a). Then translator (25b) — testable in isolation
-against canned intent inputs and assertable output diffs, no LLM
-needed. Then expose to the agent via the new tool (25c) but keep
-the existing tools in the registry so the prompt rewrite (25d)
-can be staged. Diff capture (25e) goes before the prompt swap so
-the new flow has its audit trail ready. Then swap the prompt
-(25d). Telemetry (25f) last because it's a layer on top of working
-behavior.
+Design first (25a). Then translator/transaction engine (25b) —
+testable in isolation against canned intent inputs and assertable
+output diffs, no LLM needed. Then expose to the agent via the new
+tool (25c) but keep the existing tools in the registry so the
+prompt rewrite (25d) can be staged. Intent-log capture (25e) goes
+before workspace reset (25g) so the bundle record exists before
+state gets wiped. Workspace reset (25g) ships next; this is what
+fixes verify-drift in production. Then swap the patch prompt
+(25d). Telemetry (25f) last because it's a layer on top of
+working behavior.
+
+25e + 25g together are the verify-fix structural fix. Once both
+land, the four bandages around verify (`--3way` quirks, env reset
+before apply, drift detection, partial-staging cleanup) all retire
+together.
 
 #### Dependencies
 
