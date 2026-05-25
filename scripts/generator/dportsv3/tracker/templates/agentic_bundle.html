@@ -235,6 +235,7 @@
         ('analysis/triage.md',         'Triage',         'total'),
         ('analysis/patch.md',          'Patch',          'total'),
         ('analysis/patch_audit.json',  'Patch audit',    'total'),
+        ('analysis/intent_log.json',   'Intent log',     'built'),
         ('analysis/changes.diff',      'Changes diff',   'total'),
         ('analysis/tool_trace.jsonl',  'Tool trace',     'total'),
         ('analysis/rebuild_proof.json','Rebuild proof',  'total'),
@@ -325,6 +326,57 @@
     {% endif %}
 
     {% include "_prior_attempts.html" %}
+
+    {% if intent_log and intent_log.intents %}
+    <h2>Intent sequence
+      <span style="font-weight:normal;color:var(--text-dim);font-size:12px;">
+        ({{ intent_log.intents | length }} intent{{ '' if intent_log.intents | length == 1 else 's' }};
+        mode = {{ intent_log.mode_at_apply or '—' }})
+      </span>
+    </h2>
+    <table class="tracker-table" style="font-size:12px;">
+      <thead><tr><th>#</th><th>Intent</th><th>Target / reason</th><th>OK</th><th>Diff</th><th>When</th></tr></thead>
+      <tbody>
+        {% for entry in intent_log.intents %}
+        {% set i = entry.intent or {} %}
+        <tr>
+          <td style="font-family:ui-monospace,monospace;">{{ entry.seq }}</td>
+          <td style="font-family:ui-monospace,monospace;">{{ i.type or '—' }}</td>
+          <td style="font-family:ui-monospace,monospace;font-size:11px;">
+            {%- if i.target -%}
+              {{ i.target }}
+              {%- if i.reason %} <span style="color:var(--text-dim);">— {{ i.reason }}</span>{% endif -%}
+            {%- elif i.dest -%}
+              {{ i.dest }} ({{ i.kind or '' }})
+            {%- elif i.path -%}
+              {{ i.path }} {{ i.op or '' }} {{ i.key or '' }}
+            {%- else -%}
+              —
+            {%- endif -%}
+          </td>
+          <td>
+            {% if entry.ok %}
+              <span class="stat-pill built">ok</span>
+            {% else %}
+              <span class="stat-pill failed">fail</span>
+              {% if entry.error %}
+              <div style="color:var(--text-dim);font-size:11px;">{{ entry.error[:200] }}</div>
+              {% endif %}
+            {% endif %}
+          </td>
+          <td style="text-align:right;">{{ (entry.substrate_diff | length) if entry.substrate_diff else 0 }}B</td>
+          <td style="color:var(--text-dim);font-size:11px;">{{ entry.applied_at[-15:-6] if entry.applied_at else '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% if intent_log.baseline_commit %}
+    <p style="color:var(--text-dim);font-size:11px;margin-top:4px;">
+      baseline = <code>{{ intent_log.baseline_commit[:12] }}</code>
+      &nbsp;|&nbsp; verify replays against this commit; drift refused.
+    </p>
+    {% endif %}
+    {% endif %}
 
     {% if tool_trace %}
     <h2>Tool trace</h2>

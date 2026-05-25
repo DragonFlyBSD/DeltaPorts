@@ -423,6 +423,31 @@ def _load_tool_trace(artifact_root: Path, ref: dict[str, Any] | None) -> list[di
     return events
 
 
+def _load_intent_log(
+    artifact_root: Path, ref: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    """Step 25f: load and parse analysis/intent_log.json for the
+    bundle detail page's "Intent sequence" card.
+
+    Returns the full document on success (the template iterates
+    intents[].intent + intents[].substrate_diff). Returns None for
+    missing / malformed / non-dict artifacts so the template's
+    `{% if intent_log %}` short-circuits cleanly. Pre-Step-25
+    bundles + bundles where the patch agent didn't use the intent
+    flow simply skip this rendering.
+    """
+    if ref is None:
+        return None
+    path = _resolve_artifact_path(artifact_root, ref)
+    if path is None or not path.exists():
+        return None
+    try:
+        doc = json.loads(path.read_text(errors="replace"))
+    except (OSError, ValueError):
+        return None
+    return doc if isinstance(doc, dict) else None
+
+
 def create_app(db_path: str | Path) -> Any:
     """Create one tracker FastAPI app instance."""
     if (
@@ -1177,6 +1202,7 @@ def create_app(db_path: str | Path) -> Any:
         with _conn() as conn:
             bundle = get_bundle(conn, bundle_id)
             tool_trace_ref = get_artifact_ref(conn, bundle_id, "analysis/tool_trace.jsonl")
+            intent_log_ref = get_artifact_ref(conn, bundle_id, "analysis/intent_log.json")
             selected_relpath = artifact or (_default_artifact_relpath(bundle) if bundle else None)
             selected_ref = (
                 get_artifact_ref(conn, bundle_id, selected_relpath)
@@ -1220,6 +1246,7 @@ def create_app(db_path: str | Path) -> Any:
         if selected_relpath and selected_artifact is None:
             raise HTTPException(status_code=404, detail="Artifact file missing")
         tool_trace = _load_tool_trace(app.state.artifact_root, tool_trace_ref)
+        intent_log = _load_intent_log(app.state.artifact_root, intent_log_ref)
         # Step 11c: operator-action button matrix. Buttons show on
         # any bundle whose agent has finished (resolution=
         # 'agent_fixed') and the operator hasn't decided yet
@@ -1244,6 +1271,7 @@ def create_app(db_path: str | Path) -> Any:
                 "title": bundle_id,
                 "bundle": bundle,
                 "tool_trace": tool_trace,
+                "intent_log": intent_log,
                 "selected_artifact": selected_artifact,
                 "selected_artifact_relpath": selected_relpath,
                 "prior_attempts": prior_attempts,

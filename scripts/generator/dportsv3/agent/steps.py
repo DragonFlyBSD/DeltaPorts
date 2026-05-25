@@ -131,6 +131,17 @@ class PatchEventDispatcher:
                 duration_ms=ev.get("duration_ms"),
                 extra=extra,
             )
+            # Step 25f: rich per-intent telemetry. Fires alongside
+            # the generic tool:apply_intent row whenever the agent
+            # calls apply_intent. The extra payload follows the
+            # design §13.5 contract: type + target + ok +
+            # substrate_diff_sha256 + bytes; inline the diff iff
+            # it's ≤ 4 KB so the operator can read it in the
+            # activity row without opening intent_log.json. Large
+            # diffs are sha-only here and live in full in the
+            # bundle artifact.
+            if ev.get("tool") == "apply_intent" and isinstance(res, dict):
+                self._emit_intent_applied(args, res, ev)
         elif et == "attempt_end":
             self.activity_log(
                 self.queue_root, "attempt_end",
@@ -155,6 +166,67 @@ class PatchEventDispatcher:
                 job_id=self.job_id,
                 extra={k: v for k, v in ev.items() if k != "type"},
             )
+
+    # Step 25f telemetry helper. Inlined here (rather than as a
+    # free function) because it shares self.activity_log + self.
+    # queue_root + self.job_id and the rate is bounded by intent
+    # count per attempt — no perf reason to factor out.
+    _INTENT_INLINE_DIFF_LIMIT = 4096  # design §13.5
+
+    def _emit_intent_applied(
+        self, args: dict, res: dict, ev: dict,
+    ) -> None:
+        import hashlib  # noqa: PLC0415
+        intent = (args.get("intent") or {}) if isinstance(args, dict) else {}
+        substrate_diff = res.get("substrate_diff") or ""
+        diff_bytes = len(substrate_diff.encode("utf-8"))
+        sha = hashlib.sha256(substrate_diff.encode("utf-8")).hexdigest() \
+            if substrate_diff else ""
+        # Find the natural "target" field on the intent — varies
+        # by type (target / dest / path / nothing for
+        # bump_portrevision). Operator wants ONE name in the
+        # summary; "target" is the conventional one.
+        intent_target = (
+            intent.get("target")
+            or intent.get("dest")
+            or intent.get("path")
+            or ""
+        )
+        intent_type = intent.get("type") or res.get("intent_type") or ""
+        ok = bool(res.get("ok"))
+        extra = {
+            "intent_type": intent_type,
+            "intent_target": intent_target,
+            "ok": ok,
+            "mode": res.get("mode"),
+            "substrate_diff_sha256": sha,
+            "substrate_diff_bytes": diff_bytes,
+            "attempt": ev.get("attempt"),
+            "turn": ev.get("turn"),
+        }
+        if diff_bytes <= self._INTENT_INLINE_DIFF_LIMIT and substrate_diff:
+            extra["substrate_diff"] = substrate_diff
+        # Surface failure-mode flags so the operator can react
+        # without spelunking patch.md.
+        for flag in ("blocked_by", "intent_log_full", "error",
+                     "invariant_violations", "unmigrated_artifacts",
+                     "transaction_mode", "current_mode"):
+            if flag in res:
+                extra[flag] = res[flag]
+        verdict = "OK" if ok else "FAIL"
+        summary = (
+            f"intent {intent_type} {verdict}"
+            + (f" target={intent_target}" if intent_target else "")
+            + (f" ({diff_bytes}B diff)" if diff_bytes else "")
+        )
+        try:
+            self.activity_log(
+                self.queue_root, "intent_applied", summary,
+                job_id=self.job_id, extra=extra,
+            )
+        except Exception:
+            # Never let telemetry failure derail a tool call.
+            pass
 
 
 @dataclass
