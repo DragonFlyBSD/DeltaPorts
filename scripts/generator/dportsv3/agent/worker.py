@@ -191,9 +191,9 @@ def _sha256(data: bytes) -> str:
 
 
 def _reject_intent_path_put_file(chroot_path: str) -> dict | None:
-    """Step 25d-2: when the intent gate is on, refuse ``put_file``
-    writes to ``/work/DeltaPorts/ports/<origin>/`` — those edits
-    belong in the intent log, not in a bypass write.
+    """Step 25d-2: when the intent gate is on, refuse PATCH-agent
+    ``put_file`` writes to ``/work/DeltaPorts/ports/<origin>/`` —
+    those edits belong in the intent log, not in a bypass write.
 
     The agent's prompt (``PATCH_INTENT_SYSTEM``) says exactly this,
     but agents drift. Enforcing at the substrate boundary turns
@@ -202,13 +202,25 @@ def _reject_intent_path_put_file(chroot_path: str) -> dict | None:
     (``/work/obj/<origin>/work/...``, used by the dupe/genpatch
     flow) is unaffected — only port-subtree writes are gated.
 
+    **Convert-agent calls are NOT gated.** The convert agent's
+    whole job is to write ``ports/<origin>/overlay.dops`` directly;
+    blocking it would break ``needs_judgment`` conversions. The
+    dispatcher sets ``tools.active_agent_flow()`` to ``"convert"``
+    for convert calls and ``"patch"`` for patch calls.
+
     Off when the gate is off (legacy flow needs port-subtree
     put_file). Returns None when the path is allowed.
     """
-    # Gate off → no restriction. Avoid importing tools here to
-    # dodge an agent.tools → agent.worker import cycle: read the
-    # env var directly. Mirrors the truthy convention in
-    # tools.patch_use_intent_enabled.
+    # Convert agent has a legitimate need to write the overlay.
+    # tools is the source-of-truth for the active flow; if the
+    # import cycle bites, the contextvar default is "patch" which
+    # is the conservative answer (guard fires).
+    from dportsv3.agent import tools as _tools  # noqa: PLC0415
+    if _tools.active_agent_flow() == "convert":
+        return None
+    # Gate off → no restriction. Read the env directly to dodge
+    # any further import-cycle risk; matches the truthy convention
+    # in tools.patch_use_intent_enabled.
     flag = (os.environ.get("DP_HARNESS_PATCH_USE_INTENT") or "").lower()
     if flag not in ("1", "true", "yes", "on"):
         return None
@@ -228,6 +240,42 @@ def _reject_intent_path_put_file(chroot_path: str) -> dict | None:
         ),
         "path": chroot_path,
         "blocked_by": "intent_gate_port_subtree_write",
+    }
+
+
+def _reject_orphan_dops_write(chroot_path: str) -> dict | None:
+    """Refuse ``put_file`` writes of ``*.dops`` files outside the
+    port subtree.
+
+    Background: the convert agent in gperf-20260525-173301Z hit a
+    related guard, then "creatively" worked around it by writing
+    ``overlay.dops`` to ``/work/overlay.dops`` (writable root).
+    The write succeeded — there was no canonical-path check — and
+    the file was orphaned: ``validate_dops`` reads from
+    ``/work/DeltaPorts/ports/<origin>/overlay.dops``, so it saw
+    "not found" and the agent burned its budget thrashing.
+
+    Bright-line rule: ``*.dops`` files only live at
+    ``/work/DeltaPorts/ports/<origin>/<name>.dops``. Anywhere else
+    is an orphan write and should fail loudly with the right
+    destination in the error message so the agent self-corrects.
+    """
+    if not chroot_path.endswith(".dops"):
+        return None
+    # Canonical: ports/<origin>/<name>.dops under DeltaPorts.
+    if chroot_path.startswith("/work/DeltaPorts/ports/"):
+        return None
+    return {
+        "ok": False,
+        "error": (
+            f"put_file rejected: {chroot_path!r} is a *.dops file "
+            f"outside the port subtree. The canonical location is "
+            f"/work/DeltaPorts/ports/<origin>/<name>.dops — writing "
+            f"anywhere else produces an orphan file that "
+            f"validate_dops and the composer cannot see."
+        ),
+        "path": chroot_path,
+        "blocked_by": "orphan_dops_write",
     }
 
 
@@ -533,6 +581,9 @@ def put_file(
     if refused is not None:
         return refused
     refused = _reject_intent_path_put_file(path)
+    if refused is not None:
+        return refused
+    refused = _reject_orphan_dops_write(path)
     if refused is not None:
         return refused
     paths = env_paths(env)

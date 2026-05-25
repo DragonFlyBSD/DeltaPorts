@@ -390,6 +390,78 @@ class TestPutFileIntentGuardrail:
         assert r is not None
         assert "lock root" in r["error"]
 
+    def test_convert_agent_port_subtree_write_allowed_when_gate_on(
+        self, monkeypatch,
+    ):
+        """Convert agent's whole job is to write overlay.dops to
+        the port subtree. The intent gate must not block it even
+        when DP_HARNESS_PATCH_USE_INTENT is on. Regression for
+        devel_gperf-20260525-173301Z (convert thrashed because the
+        guard blocked the legitimate write)."""
+        from dportsv3.agent import tools
+        from dportsv3.agent.worker import _reject_intent_path_put_file
+        monkeypatch.setenv("DP_HARNESS_PATCH_USE_INTENT", "1")
+        token = tools._ACTIVE_FLOW.set("convert")
+        try:
+            r = _reject_intent_path_put_file(
+                "/work/DeltaPorts/ports/devel/foo/overlay.dops",
+            )
+            assert r is None
+        finally:
+            tools._ACTIVE_FLOW.reset(token)
+
+    def test_patch_agent_port_subtree_write_still_refused_when_gate_on(
+        self, monkeypatch,
+    ):
+        """Sanity: the patch-flow gate still fires when the active
+        agent is patch (default). The convert exemption is keyed
+        on the active flow, not just the existence of the env var."""
+        from dportsv3.agent import tools
+        from dportsv3.agent.worker import _reject_intent_path_put_file
+        monkeypatch.setenv("DP_HARNESS_PATCH_USE_INTENT", "1")
+        token = tools._ACTIVE_FLOW.set("patch")
+        try:
+            r = _reject_intent_path_put_file(
+                "/work/DeltaPorts/ports/devel/foo/overlay.dops",
+            )
+            assert r is not None
+            assert r["blocked_by"] == "intent_gate_port_subtree_write"
+        finally:
+            tools._ACTIVE_FLOW.reset(token)
+
+
+class TestOrphanDopsGuardrail:
+    """Refuse *.dops writes outside the canonical port subtree.
+    Regression for devel_gperf-20260525-173301Z: convert escaped
+    the intent guard by writing overlay.dops to /work root, where
+    validate_dops couldn't see it."""
+
+    def test_orphan_overlay_at_writable_root_refused(self):
+        from dportsv3.agent.worker import _reject_orphan_dops_write
+        r = _reject_orphan_dops_write("/work/overlay.dops")
+        assert r is not None
+        assert r["ok"] is False
+        assert r["blocked_by"] == "orphan_dops_write"
+        assert "canonical location" in r["error"]
+
+    def test_orphan_overlay_at_deltaports_root_refused(self):
+        from dportsv3.agent.worker import _reject_orphan_dops_write
+        r = _reject_orphan_dops_write("/work/DeltaPorts/overlay.dops")
+        assert r is not None
+        assert r["blocked_by"] == "orphan_dops_write"
+
+    def test_canonical_port_subtree_overlay_allowed(self):
+        from dportsv3.agent.worker import _reject_orphan_dops_write
+        r = _reject_orphan_dops_write(
+            "/work/DeltaPorts/ports/devel/foo/overlay.dops",
+        )
+        assert r is None
+
+    def test_non_dops_files_unaffected(self):
+        from dportsv3.agent.worker import _reject_orphan_dops_write
+        assert _reject_orphan_dops_write("/work/some-other.txt") is None
+        assert _reject_orphan_dops_write("/work/overlay.txt") is None
+
 
 # --------------------------------------------------------------------
 # dispatch

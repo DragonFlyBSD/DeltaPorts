@@ -294,11 +294,39 @@ def patch_tool_names() -> frozenset[str]:
 
 
 # -----------------------------------------------------------------------------
+# Active-agent-flow context
+# -----------------------------------------------------------------------------
+#
+# Worker-side guardrails (e.g. worker._reject_intent_path_put_file) need
+# to know which agent is calling so they can refuse patch-agent writes
+# while allowing convert-agent writes to the same path. The dispatcher
+# sets this contextvar for the duration of one tool call; workers read
+# it without taking an import on tool_loop/patch/convert.
+import contextvars as _contextvars  # noqa: E402
+
+_ACTIVE_FLOW: _contextvars.ContextVar[str] = _contextvars.ContextVar(
+    "dportsv3_active_agent_flow", default="patch",
+)
+
+
+def active_agent_flow() -> str:
+    """Return the agent flow currently dispatching a tool call.
+
+    One of ``"patch"`` | ``"convert"``. Defaults to ``"patch"`` when
+    no dispatcher has set it (covers ad-hoc test/operator
+    invocations of ``dispatch()`` — the stricter guards fire,
+    which is the safer default).
+    """
+    return _ACTIVE_FLOW.get()
+
+
+# -----------------------------------------------------------------------------
 # Dispatch
 # -----------------------------------------------------------------------------
 
 
-def dispatch(name: str, arguments: dict | None, *, env: str) -> dict:
+def dispatch(name: str, arguments: dict | None, *, env: str,
+             agent_flow: str = "patch") -> dict:
     """Invoke the tool ``name`` with ``arguments`` (env bound by caller).
 
     Worker exceptions are caught and surfaced as
@@ -339,14 +367,26 @@ def dispatch(name: str, arguments: dict | None, *, env: str) -> dict:
     if missing:
         return {"ok": False, "error": f"tool {name}: missing required argument(s): {missing}"}
 
-    try:
-        result = handler(env, **args)
-    except Exception as exc:  # noqa: BLE001 — intentional broad catch; surface to LLM
+    if agent_flow not in ("patch", "convert"):
         return {
             "ok": False,
-            "error": f"{type(exc).__name__}: {exc}",
-            "traceback": traceback.format_exc(limit=4),
+            "error": (
+                f"tools.dispatch: invalid agent_flow={agent_flow!r}; "
+                f"must be 'patch' or 'convert'"
+            ),
         }
+    flow_token = _ACTIVE_FLOW.set(agent_flow)
+    try:
+        try:
+            result = handler(env, **args)
+        except Exception as exc:  # noqa: BLE001 — intentional broad catch; surface to LLM
+            return {
+                "ok": False,
+                "error": f"{type(exc).__name__}: {exc}",
+                "traceback": traceback.format_exc(limit=4),
+            }
+    finally:
+        _ACTIVE_FLOW.reset(flow_token)
 
     # Workers already return {ok: bool, ...} or raise; if a worker returned
     # something else (e.g. dict without 'ok'), pass through unchanged.

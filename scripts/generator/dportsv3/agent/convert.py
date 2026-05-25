@@ -261,6 +261,7 @@ def run(
         on_event=on_event,
         system_prompt=prompts.CONVERT_SYSTEM,
         tool_whitelist=CONVERT_TOOL_NAMES,
+        agent_flow="convert",
         proof_parser=parse_conversion_proof,
         is_success=_convert_is_success,
     )

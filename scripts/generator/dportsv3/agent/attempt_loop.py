@@ -98,6 +98,7 @@ def run(
     on_event=None,
     system_prompt: str | None = None,
     tool_whitelist: set[str] | frozenset[str] | None = None,
+    agent_flow: str = "patch",
     proof_parser=None,
     is_success=None,
 ) -> PatchResult:
@@ -170,6 +171,7 @@ def run(
             on_event=on_event,
             attempt_idx=attempt_idx,
             tool_whitelist=tool_whitelist,
+            agent_flow=agent_flow,
         )
         total_usage.add(attempt_usage)
         prev_text = response.text or ""
