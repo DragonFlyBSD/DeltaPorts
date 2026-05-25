@@ -603,27 +603,98 @@ convert; its translator branch calls the same
 convert agent later be rewritten on intents without changing
 behavior.
 
-## 13. Open questions
+## 13. Resolved questions (decisions for 25b)
 
-These are deliberate hand-offs to 25b implementation. None
-block the design; all need a decision when code lands.
+These were open in the first draft; resolved 2026-05-25 with the
+operator.
 
-1. **JSON schema enforcement.** Use `jsonschema` library or
-   hand-rolled validators? Argument for jsonschema: better
-   error messages for the LLM. Argument against: another dep.
-2. **Intent log size limits.** A pathological agent could emit
-   thousands of intents. Cap at N (1000? 10000?) and refuse?
-3. **`add_patch.from_dupe` round-trip.** When agent says
-   `from_dupe=true`, the translator needs to find the captured
-   patch in `genpatch-out/`. Convention: most recent file with
-   matching basename.
-4. **Convert exception detached-HEAD handling.** §6.3 says
-   "explicit error pointing the operator to run
-   `dportsv3 dev-env update`." The operator may prefer auto-attach
-   to `main`. Decision time at 25b.
-5. **Telemetry payload size.** Per-intent telemetry with
-   `substrate_diff` could be large. Consider a `substrate_diff_sha256`
-   in telemetry and the full diff only in the bundle.
+### 13.1 Schema enforcement — `jsonschema` library
+
+Use the `jsonschema` library, not hand-rolled validators. The
+extra dep is worth it for two reasons: (1) LLM-friendly error
+messages (`jsonschema.ValidationError` carries path + expected +
+actual, which feeds back into a good `apply_intent` error
+response the agent can react to), and (2) the per-intent JSON
+schemas double as machine-readable spec — the `intent_reference`
+tool can return them verbatim.
+
+The schemas live next to the grammar dataclasses:
+`dportsv3/agent/edit_intent/schemas/{replace_in_patch,drop_patch,
+add_patch,add_file,change_makefile,bump_portrevision,
+convert_to_dops}.json`.
+
+### 13.2 Intent log size cap — 100 intents, 1 MB total
+
+Two caps on the same intent log:
+
+- **Count cap: 100 intents per log.** A realistic patch fix is
+  1–5 intents; complex ports might hit 10–20. 100 leaves
+  headroom for unusual cases and catches runaway agent loops
+  early. Refuse the 101st with a clear error: *"intent log
+  exceeds 100 entries — almost certainly an agent loop; the
+  patch agent should split into smaller bundles or escalate to
+  the operator."*
+- **Size cap: 1 MB total.** Per-intent size varies from ~100
+  bytes (`drop_patch`) to many KB (`add_patch` with a big diff).
+  The 1 MB ceiling catches a single intent with a pathological
+  diff *and* a swarm of medium intents. Refuse with: *"intent
+  log size exceeds 1 MB — split, simplify, or escalate."*
+
+Both caps are operator-overridable via env var
+(`DP_HARNESS_INTENT_MAX_COUNT`, `DP_HARNESS_INTENT_MAX_BYTES`)
+for the genuinely-complex-port edge case, but defaults are
+strict.
+
+### 13.3 `add_patch.from_dupe` round-trip — most-recent + basename match
+
+When the agent emits `add_patch{target, from_dupe: true}`,
+the translator looks in `<env>/writable/work/<wrksrc>/.genpatch-out/`
+(or wherever genpatch deposits patches in the env) for the
+file whose basename matches `target`'s basename, picking the
+most recently modified one if multiple match. The captured
+content goes into `target` (compat) or gets referenced from
+`overlay.dops` (dops).
+
+Refuses with explicit error if no matching file exists in the
+genpatch output dir.
+
+### 13.4 Convert exception detached-HEAD — error, don't auto-attach
+
+§6.3 stays as-drafted: explicit error pointing the operator to
+`dportsv3 dev-env update`. Auto-attaching to `main` could
+silently clobber operator intent — they might be on a tag for
+a reason (testing against a specific FPORTS revision, comparing
+behavior across branches, etc.). The error message names the
+attachment command so the operator-fix is one paste.
+
+### 13.5 Telemetry payload — inline diff if ≤ 4 KB, else sha256
+
+Per-intent telemetry event shape:
+
+```json
+{
+  "type": "intent_applied",
+  "ts": "...",
+  "bundle_id": "...",
+  "intent_seq": 0,
+  "intent_type": "drop_patch",
+  "intent_target": "dragonfly/patch-...",
+  "ok": true,
+  "substrate_diff_sha256": "abc...",
+  "substrate_diff_bytes": 234,
+  "substrate_diff": "diff --git a/...\n..."  // present iff bytes <= 4096
+}
+```
+
+If `substrate_diff_bytes <= 4096` the full diff is inline. If
+larger, only the sha256 + byte count flow through telemetry; the
+full diff lives in `analysis/intent_log.json[intents[N]].substrate_diff`
+and the operator clicks through. Keeps event throughput modest
+while making the common case (small diffs from
+`replace_in_patch`, `drop_patch`, `change_makefile`,
+`bump_portrevision`) maximally readable in the UI.
+
+## 14. Bandages retired (cross-reference)
 
 ## 14. Bandages retired (cross-reference)
 
