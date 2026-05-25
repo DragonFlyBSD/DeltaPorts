@@ -532,6 +532,71 @@ def _register_tracker_parser(subparsers: argparse._SubParsersAction) -> None:
     compare.add_argument("--server", type=str, help="Tracker base URL")
     compare.add_argument("--json", action="store_true", help="Pretty JSON output")
 
+    # Agentic-side reads. Used by operators (and the analyzer subagent)
+    # so bundle / job / activity inspection doesn't need curl + jq.
+    # All read-only; all go through the tracker HTTP API.
+    get_bundle_p = tracker_sub.add_parser(
+        "get-bundle", help="Fetch one bundle's detail (includes artifact list)",
+    )
+    get_bundle_p.add_argument("bundle_id", type=str)
+    get_bundle_p.add_argument("--server", type=str)
+    get_bundle_p.add_argument("--json", action="store_true",
+                              help="Pretty JSON output (default: terse text)")
+
+    list_bundles_p = tracker_sub.add_parser(
+        "list-bundles", help="List bundles, newest first",
+    )
+    list_bundles_p.add_argument("--origin", type=str,
+                                help="Filter by port origin (e.g. devel/gperf)")
+    list_bundles_p.add_argument("--target", type=str,
+                                help="Filter by target (e.g. @main)")
+    list_bundles_p.add_argument("--limit", type=int, default=20)
+    list_bundles_p.add_argument("--server", type=str)
+    list_bundles_p.add_argument("--json", action="store_true")
+
+    get_job_p = tracker_sub.add_parser(
+        "get-job", help="Fetch one job by ID",
+    )
+    get_job_p.add_argument("job_id", type=str)
+    get_job_p.add_argument("--server", type=str)
+    get_job_p.add_argument("--json", action="store_true")
+
+    list_jobs_p = tracker_sub.add_parser(
+        "list-jobs", help="List jobs",
+    )
+    list_jobs_p.add_argument("--state", type=str,
+                             help="Filter by lifecycle state (e.g. queued, inflight, done, dead)")
+    list_jobs_p.add_argument("--target", type=str)
+    list_jobs_p.add_argument("--limit", type=int, default=50)
+    list_jobs_p.add_argument("--server", type=str)
+    list_jobs_p.add_argument("--json", action="store_true")
+
+    get_activity_p = tracker_sub.add_parser(
+        "get-activity", help="Activity-log rows (filter by job or target)",
+    )
+    get_activity_p.add_argument("--job", dest="job_id", type=str,
+                                help="Per-job entries (oldest-first when paged)")
+    get_activity_p.add_argument("--target", type=str)
+    get_activity_p.add_argument("--stage", dest="stage_filter", type=str,
+                                help="Substring filter on the stage column")
+    get_activity_p.add_argument("--since-id", type=int, default=0,
+                                help="Only return rows with id > N")
+    get_activity_p.add_argument("--limit", type=int, default=50)
+    get_activity_p.add_argument("--server", type=str)
+    get_activity_p.add_argument("--json", action="store_true")
+
+    fetch_artifact_p = tracker_sub.add_parser(
+        "fetch-artifact",
+        help="Dump a bundle artifact's raw bytes to stdout (pipe to "
+             "a file for binary artifacts like *.gz or *.png)",
+    )
+    fetch_artifact_p.add_argument("bundle_id", type=str)
+    fetch_artifact_p.add_argument(
+        "relpath", type=str,
+        help="e.g. analysis/triage.md, logs/errors.txt, logs/full.log.gz",
+    )
+    fetch_artifact_p.add_argument("--server", type=str)
+
 
 def _register_artifact_store_parser(subparsers: argparse._SubParsersAction) -> None:
     """Register artifact-store command (serves bundles into state.db).

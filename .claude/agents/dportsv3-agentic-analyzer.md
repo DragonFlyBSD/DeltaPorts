@@ -27,9 +27,9 @@ Plus the **tracker base URL**. Resolve in this order: explicit argument from the
 
    If the skill file is missing, fall back to the embedded summary in your description and flag the missing skill in your report.
 
-2. **Fetch artifacts via curl** (HTTP only). Bulk recipe is in the skill. Always fetch at minimum: `meta.txt`, `logs/errors.txt`, `analysis/triage.md`, `analysis/patch.md`, `analysis/patch_audit.json`, `analysis/rebuild_proof.json`, `analysis/changes.diff`, `analysis/tool_trace.jsonl`, `analysis/intent_log.json` (the last 404s on legacy-flow bundles — that's fine). Fetch `port/Makefile` and `port/distinfo` if relevant to your judgment.
+2. **Fetch data via the `dportsv3 tracker` CLI**, not curl. Bulk recipe is in the skill. Common commands you'll use: `dportsv3 tracker list-bundles --origin <port>`, `dportsv3 tracker get-bundle <id>` (use `--json` for structured output, plain for terse text), `dportsv3 tracker fetch-artifact <id> <relpath>` for raw artifact bytes, `dportsv3 tracker get-activity --job <id>` for activity-log rows, `dportsv3 tracker get-job <id>` for a single job. Always fetch at minimum: `meta.txt`, `logs/errors.txt`, `analysis/triage.md`, `analysis/patch.md`, `analysis/patch_audit.json`, `analysis/rebuild_proof.json`, `analysis/changes.diff`, `analysis/tool_trace.jsonl`, `analysis/intent_log.json` (the last 404s on legacy-flow bundles — that's fine). Fetch `port/Makefile` and `port/distinfo` if relevant. The CLI reads `DPORTSV3_TRACKER_URL` (or `--server URL`); resolve the URL the same way the prior step in this procedure did.
 
-3. **Locate prior bundles** for the same port by curling `/agentic` and grepping for the origin (with `/` replaced by `_`). Note whether the loop converged or thrashed.
+3. **Locate prior bundles** for the same port via `dportsv3 tracker list-bundles --origin <category/port> --limit 10`. Note whether the loop converged or thrashed (timestamps in the output).
 
 4. **Cross-check claims against artifacts.** When `patch.md` says "the patch was obsolete because upstream already does X", verify the agent actually read the upstream code by looking at the tool_trace for the relevant `get_file` calls. When `rebuild_ok=true`, verify `changes.diff` is non-empty (this is the most common contract violation today).
 
@@ -45,7 +45,7 @@ Plus the **tracker base URL**. Resolve in this order: explicit argument from the
 
 - Do not edit code, do not modify the skill file, do not write files anywhere except via your final report message. The main agent decides what (if anything) to change based on your findings.
 - Do not run any agentic loop operations (no enqueueing, no triggering builds, no `dportsv3 dev-env` mutations). Read-only.
-- Do not use WebFetch. The tracker is plain HTTP on port 8080 and WebFetch will force HTTPS and fail with ECONNREFUSED. Use `curl -sS` via Bash.
+- Do not use WebFetch. The tracker is plain HTTP and WebFetch will force HTTPS and fail with ECONNREFUSED. Use `dportsv3 tracker <action>` via Bash; only fall back to `curl -sS` if the CLI is missing the surface you need (and flag the gap in your skill-update suggestions).
 - Do not pad the report. If a section has nothing to say, write one line: "Nothing notable."
 
 ## Response format

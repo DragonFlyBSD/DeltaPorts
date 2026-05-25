@@ -15,11 +15,18 @@ from dportsv3.common.io import emit_json
 from dportsv3.tracker.client import (
     compare_builds,
     enqueue_ports,
+    fetch_artifact,
     finish_build,
+    get_activity,
     get_build,
+    get_bundle,
     get_diff,
     get_failures,
+    get_job,
     get_status,
+    list_bundles,
+    list_jobs,
+    list_port_bundles,
     mark_port_building,
     record_result,
     start_build,
@@ -51,6 +58,18 @@ def cmd_tracker(args: Namespace) -> int:
         return _cmd_show_build(args)
     if action == "compare-builds":
         return _cmd_compare_builds(args)
+    if action == "get-bundle":
+        return _cmd_get_bundle(args)
+    if action == "list-bundles":
+        return _cmd_list_bundles(args)
+    if action == "get-job":
+        return _cmd_get_job(args)
+    if action == "list-jobs":
+        return _cmd_list_jobs(args)
+    if action == "get-activity":
+        return _cmd_get_activity(args)
+    if action == "fetch-artifact":
+        return _cmd_fetch_artifact(args)
 
     print(f"Unknown tracker action: {action}", file=sys.stderr)
     return 1
@@ -264,6 +283,192 @@ def _cmd_compare_builds(args: Namespace) -> int:
         for line in _format_build_compare(payload):
             print(line)
     return 0
+
+
+# --------------------------------------------------------------------
+# Agentic-side read handlers (get-bundle / list-bundles / get-job /
+# list-jobs / get-activity / fetch-artifact). Used by operators and
+# the analyzer subagent.
+# --------------------------------------------------------------------
+
+
+def _cmd_get_bundle(args: Namespace) -> int:
+    try:
+        server = _resolve_server_url(args)
+        payload = get_bundle(server, str(args.bundle_id))
+    except RuntimeError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+    if bool(args.json):
+        emit_json(payload, pretty=True)
+    else:
+        for line in _format_bundle(payload):
+            print(line)
+    return 0
+
+
+def _cmd_list_bundles(args: Namespace) -> int:
+    try:
+        server = _resolve_server_url(args)
+        if getattr(args, "origin", None):
+            # /api/ports/{origin} returns the origin-scoped list; preferred
+            # when the caller knows the origin since it sorts newest-first
+            # and accepts the same target filter.
+            payload = list_port_bundles(
+                server, str(args.origin),
+                target=str(args.target) if getattr(args, "target", None) else None,
+                limit=int(args.limit),
+            )
+        else:
+            payload = list_bundles(
+                server,
+                target=str(args.target) if getattr(args, "target", None) else None,
+                origin=None,
+                limit=int(args.limit),
+            )
+    except RuntimeError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+    if bool(args.json):
+        emit_json({"bundles": payload}, pretty=True)
+    else:
+        if not payload:
+            print("No matching bundles.")
+        for row in payload:
+            print(
+                f"{row.get('bundle_id', '-')}  "
+                f"{row.get('origin', '-'):<28}  "
+                f"{row.get('target', '-') or '-':<8}  "
+                f"{row.get('result', '-'):<8}  "
+                f"{row.get('resolution', '-') or '-':<22}  "
+                f"{row.get('last_seen_at', '-')}"
+            )
+    return 0
+
+
+def _cmd_get_job(args: Namespace) -> int:
+    try:
+        server = _resolve_server_url(args)
+        payload = get_job(server, str(args.job_id))
+    except RuntimeError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+    if bool(args.json):
+        emit_json(payload, pretty=True)
+    else:
+        for line in _format_job(payload):
+            print(line)
+    return 0
+
+
+def _cmd_list_jobs(args: Namespace) -> int:
+    try:
+        server = _resolve_server_url(args)
+        payload = list_jobs(
+            server,
+            state=str(args.state) if getattr(args, "state", None) else None,
+            target=str(args.target) if getattr(args, "target", None) else None,
+            limit=int(args.limit),
+        )
+    except RuntimeError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+    if bool(args.json):
+        emit_json({"jobs": payload}, pretty=True)
+    else:
+        if not payload:
+            print("No matching jobs.")
+        for row in payload:
+            print(
+                f"{row.get('job_id', '-')}  "
+                f"{row.get('state', '-'):<10}  "
+                f"{row.get('origin', '-'):<28}  "
+                f"{row.get('target', '-') or '-':<8}  "
+                f"{row.get('updated_at', '-')}"
+            )
+    return 0
+
+
+def _cmd_get_activity(args: Namespace) -> int:
+    try:
+        server = _resolve_server_url(args)
+        payload = get_activity(
+            server,
+            job_id=str(args.job_id) if getattr(args, "job_id", None) else None,
+            target=str(args.target) if getattr(args, "target", None) else None,
+            stage_filter=str(args.stage_filter)
+            if getattr(args, "stage_filter", None) else None,
+            since_id=int(args.since_id),
+            limit=int(args.limit),
+        )
+    except RuntimeError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+    if bool(args.json):
+        emit_json({"activity": payload}, pretty=True)
+    else:
+        if not payload:
+            print("No matching activity rows.")
+        for row in payload:
+            stage = row.get("stage", "-")
+            message = row.get("message", "")
+            ts = row.get("ts", row.get("created_at", "-"))
+            print(f"{ts}  {stage:<24}  {message}")
+    return 0
+
+
+def _cmd_fetch_artifact(args: Namespace) -> int:
+    try:
+        server = _resolve_server_url(args)
+        data = fetch_artifact(
+            server, str(args.bundle_id), str(args.relpath),
+        )
+    except RuntimeError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+    # Write raw bytes to stdout so callers can pipe binary artifacts
+    # (logs.gz etc.) without text-mode mangling.
+    sys.stdout.buffer.write(data)
+    return 0
+
+
+def _format_bundle(b: dict[str, Any]) -> list[str]:
+    lines = [
+        f"Bundle:     {b.get('bundle_id', '-')}",
+        f"Origin:     {b.get('origin', '-')}",
+        f"Target:     {b.get('target', '-') or '-'}",
+        f"Result:     {b.get('result', '-')}",
+        f"Resolution: {b.get('resolution', '-') or '-'}",
+        f"Last seen:  {b.get('last_seen_at', '-')}",
+    ]
+    if b.get("verification_status"):
+        lines.append(
+            f"Verified:   {b['verification_status']} at "
+            f"{b.get('verification_at', '-')}"
+        )
+    artifacts = b.get("artifacts") or []
+    lines.append(f"Artifacts:  {len(artifacts)}")
+    for a in artifacts:
+        size = a.get("size")
+        size_str = f"{size}B" if isinstance(size, int) else "?"
+        lines.append(f"  - {a.get('relpath', '?'):<40} {size_str:>10}")
+    return lines
+
+
+def _format_job(j: dict[str, Any]) -> list[str]:
+    lines = [
+        f"Job:        {j.get('job_id', '-')}",
+        f"State:      {j.get('state', '-')}",
+        f"Origin:     {j.get('origin', '-')}",
+        f"Target:     {j.get('target', '-') or '-'}",
+        f"Bundle:     {j.get('bundle_id', '-') or '-'}",
+        f"Updated:    {j.get('updated_at', '-')}",
+    ]
+    if j.get("retire_reason"):
+        lines.append(f"Retired:    {j['retire_reason']}")
+    if j.get("last_transition_at"):
+        lines.append(f"Last txn:   {j['last_transition_at']}")
+    return lines
 
 
 def _resolve_server_url(args: Namespace) -> str:

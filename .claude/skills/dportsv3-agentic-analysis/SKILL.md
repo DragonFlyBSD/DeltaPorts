@@ -19,29 +19,42 @@ If the analysis will read large traces (>50 KB of artifacts), delegate the read+
 
 ## How to fetch data
 
-The tracker exposes both rendered HTML pages and a JSON-ish API. **Prefer the API**; only scrape HTML when no API exists for what you need. URLs are plain HTTP — do not use WebFetch (it force-upgrades to HTTPS); use `curl` via Bash.
+**Prefer the `dportsv3 tracker get-*` CLI** over curl. It talks to the same tracker HTTP API but returns clean structured output and handles URL encoding for you. Set `DPORTSV3_TRACKER_URL` once and every command picks it up; or pass `--server URL`.
 
-### API endpoints (prefer these)
+### CLI commands (prefer these)
+
+| Purpose | Command |
+|---|---|
+| List recent bundles for a port | `dportsv3 tracker list-bundles --origin <category/port> --limit 10` |
+| Get one bundle's detail (incl. artifact list) | `dportsv3 tracker get-bundle <bundle-id>` |
+| Same, structured JSON | `dportsv3 tracker get-bundle <bundle-id> --json` |
+| Fetch one artifact's raw bytes (logs/diffs/JSON) | `dportsv3 tracker fetch-artifact <bundle-id> <relpath>` |
+| Get one job by ID | `dportsv3 tracker get-job <job-id>` |
+| List jobs (filter by state) | `dportsv3 tracker list-jobs --state dead --limit 20` |
+| Activity log for one job | `dportsv3 tracker get-activity --job <job-id> --limit 200` |
+| Activity log filtered by stage | `dportsv3 tracker get-activity --job <id> --stage tool:` |
+
+### HTML pages (use only when no equivalent API exists)
 
 | Purpose | URL |
 |---|---|
-| Raw artifact bytes | `GET /api/bundles/<bundle-id>/artifacts/<path>` |
-| (probe for more API routes if needed) | `curl -sS <base>/api/ \| head` |
-
-### HTML pages (use to locate bundles, fall back when no API)
-
-| Purpose | URL |
-|---|---|
-| Agentic dashboard (recent bundles per port) | `GET /agentic` |
-| Bundle index for a port | grep the dashboard HTML for `<port-origin-with-_>-<timestamp>Z` rows |
-| Bundle detail (artifact list + tool trace table) | `GET /agentic/bundles/<bundle-id>` |
-| Single artifact rendered | `GET /agentic/bundles/<bundle-id>?artifact=<path>` |
+| Agentic dashboard (rendered overview) | `GET /agentic` |
+| Bundle detail rendering | `GET /agentic/bundles/<bundle-id>` |
 
 ### Discovery flow
 
-1. `curl -sS http://<base>/agentic | grep -A2 "devel/<port>"` — find recent bundle IDs for the port.
-2. For each interesting bundle, fetch the artifacts listed below.
-3. If multiple bundles exist for the same port, analyze the most recent **and** scan timestamps of prior failures to see if the loop kept retrying.
+1. `dportsv3 tracker list-bundles --origin devel/<port> --limit 5` — find recent bundle IDs.
+2. `dportsv3 tracker get-bundle <id> --json` — full detail with the artifact list.
+3. For each artifact you actually need to read: `dportsv3 tracker fetch-artifact <id> <relpath>`.
+4. If multiple bundles exist for the same port, analyze the most recent **and** scan timestamps of prior failures to see if the loop kept retrying.
+
+### Why not curl?
+
+- The CLI handles URL encoding of slashed paths (`devel/gperf` → `devel%2Fgperf`) without you remembering.
+- Structured output (or `--json` for full JSON) means no grep/sed/jq pipelines that break on whitespace or special characters in error messages.
+- The single binary already knows the tracker URL (`DPORTSV3_TRACKER_URL`) so you don't repeat it.
+
+Fall back to `curl` only if the CLI is missing a command you need; then file a SKILL-update suggestion so the next analyzer doesn't have to fall back.
 
 ## Artifacts that matter
 
@@ -61,16 +74,20 @@ All under `/api/bundles/<bundle-id>/artifacts/`:
 | `analysis/proposed_fix.md` | Operator-facing summary the tracker generates. |
 | `port/Makefile`, `port/distinfo`, `port/pkg-plist` | Snapshot of the port at failure time. |
 
-Bulk-fetch recipe:
+Bulk-fetch recipe (preferred — uses the CLI):
 ```sh
+BID=<bundle-id>
 for f in meta.txt logs/errors.txt analysis/triage.md analysis/patch.md \
          analysis/patch_audit.json analysis/rebuild_proof.json \
          analysis/changes.diff analysis/tool_trace.jsonl \
          analysis/intent_log.json; do
   echo "===== $f ====="
-  curl -sS "http://<base>/api/bundles/<bundle-id>/artifacts/$f"
+  dportsv3 tracker fetch-artifact "$BID" "$f" 2>/dev/null \
+    || echo "(absent)"
 done
 ```
+
+Or in one structured call: `dportsv3 tracker get-bundle <bundle-id> --json` returns the bundle row PLUS the artifact list with sizes, so you can decide which artifacts are worth fetching.
 
 Note: `analysis/intent_log.json` 404s on legacy-flow bundles — that's
 fine, it means the bundle predates Step 25 or the gate was off.

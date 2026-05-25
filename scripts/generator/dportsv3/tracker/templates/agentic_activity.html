@@ -43,7 +43,15 @@
           <td>{{ a.stage or '—' }}</td>
           <td>{{ a.duration_ms if a.duration_ms is not none else '—' }}</td>
           <td>
-            {{ a.message or '—' }}
+            {% set _msg = a.message or '—' %}
+            {% if _msg|length > 240 %}
+              <details class="collapse-long">
+                <summary>{{ _msg[:200] }}… <em>(click to expand, {{ _msg|length }} chars)</em></summary>
+                <div style="white-space:pre-wrap;font-family:ui-monospace,monospace;font-size:11px;margin-top:4px;">{{ _msg }}</div>
+              </details>
+            {% else %}
+              {{ _msg }}
+            {% endif %}
             {% if a.stage == 'decision' and a.extra is mapping %}
             <div style="margin-top:4px;font-size:11px;color:var(--text-dim);">
               action={{ a.extra.action or '—' }} · tier={{ a.extra.tier or '—' }}

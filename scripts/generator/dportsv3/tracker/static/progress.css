@@ -703,14 +703,54 @@ table.tracker-table td {
   text-align: left;
   padding: 6px 10px;
   border-bottom: 1px solid var(--amber-border);
-  white-space: nowrap;
+  /* Wrap long messages, paths, JSON blobs etc. rather than widening
+     the table past the viewport. Cells that should stay on one line
+     (timestamps, numeric tokens) opt in via inline white-space:nowrap
+     or the .tok class. */
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  vertical-align: top;
 }
 table.tracker-table th {
   color: var(--text-dim);
   font-weight: 600;
   background: var(--bg);
+  white-space: nowrap;
 }
 table.tracker-table tbody tr:hover { background: var(--c-neutral-bg); }
+/* Token numeric columns: short, look better right-aligned + nowrap. */
+table.tracker-table td.tok {
+  white-space: nowrap;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+table.tracker-table td.tok-empty { color: var(--text-dim); }
+
+/* Long-content collapser: wrap any block that might exceed
+   `--collapse-max` in a <details class="collapse-long"> and the
+   CSS keeps it bounded with a scroll fallback. Used by activity-log
+   message cells and bundle-detail artifact previews. */
+.collapse-long {
+  max-height: 240px;
+  overflow: auto;
+  border: 1px dashed var(--amber-border);
+  border-radius: 4px;
+  padding: 4px 6px;
+  background: var(--bg);
+}
+.collapse-long > summary {
+  cursor: pointer;
+  color: var(--text-dim);
+  font-size: 11px;
+  list-style: none;
+  user-select: none;
+}
+.collapse-long > summary::-webkit-details-marker { display: none; }
+.collapse-long[open] {
+  /* When opened, lift the height cap so the operator sees the full
+     content; the outer page can scroll instead. */
+  max-height: none;
+}
 
 .progress-mini {
   position: relative;

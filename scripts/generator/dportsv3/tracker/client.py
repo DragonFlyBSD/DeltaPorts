@@ -166,6 +166,119 @@ def compare_builds(server_url: str, run_id_a: int, run_id_b: int) -> dict[str, A
     )
 
 
+# --------------------------------------------------------------------
+# Agentic reads — bundle / job / activity / artifact
+#
+# Used by the `dportsv3 tracker get-*` CLI subcommands so operators
+# (and the dportsv3-agentic-analyzer subagent) can read tracker state
+# without curl-grep-jq pipelines. All HTTP, all GET, no DB cross-talk.
+# --------------------------------------------------------------------
+
+
+def get_bundle(server_url: str, bundle_id: str) -> dict[str, Any]:
+    """Fetch one bundle's full detail (includes ``artifacts`` list)."""
+    return _request_json(server_url, f"/api/bundles/{bundle_id}")
+
+
+def list_bundles(
+    server_url: str,
+    *,
+    target: str | None = None,
+    origin: str | None = None,
+    limit: int = 100,
+) -> list[dict[str, Any]]:
+    """List bundles, newest first. Filter by target / origin."""
+    return _request_json(
+        server_url, "/api/bundles",
+        query=_compact_query({"target": target, "origin": origin, "limit": limit}),
+    )
+
+
+def list_port_bundles(
+    server_url: str,
+    origin: str,
+    *,
+    target: str | None = None,
+    limit: int = 50,
+) -> list[dict[str, Any]]:
+    """All bundles for an origin (path-encoded). Newest first."""
+    # Path-encode the origin so category/portname survives the URL parse.
+    encoded = parse.quote(origin, safe="")
+    return _request_json(
+        server_url, f"/api/ports/{encoded}",
+        query=_compact_query({"target": target, "limit": limit}),
+    )
+
+
+def get_job(server_url: str, job_id: str) -> dict[str, Any]:
+    """Fetch one job by ID."""
+    return _request_json(server_url, f"/api/jobs/{job_id}")
+
+
+def list_jobs(
+    server_url: str,
+    *,
+    state: str | None = None,
+    target: str | None = None,
+    limit: int = 100,
+) -> list[dict[str, Any]]:
+    """List jobs, optionally filtered by state and/or target."""
+    return _request_json(
+        server_url, "/api/jobs",
+        query=_compact_query({"state": state, "target": target, "limit": limit}),
+    )
+
+
+def get_activity(
+    server_url: str,
+    *,
+    job_id: str | None = None,
+    target: str | None = None,
+    stage_filter: str | None = None,
+    since_id: int = 0,
+    limit: int = 100,
+) -> list[dict[str, Any]]:
+    """Activity log rows. With ``job_id`` returns per-job entries
+    (oldest-first when paged via ``since_id``); otherwise returns
+    the most recent entries newest-first.
+    """
+    return _request_json(
+        server_url, "/api/activity",
+        query=_compact_query({
+            "job_id": job_id, "target": target,
+            "stage_filter": stage_filter,
+            "since_id": since_id, "limit": limit,
+        }),
+    )
+
+
+def fetch_artifact(
+    server_url: str, bundle_id: str, relpath: str,
+) -> bytes:
+    """Fetch raw artifact bytes (logs, JSON, diffs — whatever).
+
+    Returns the bytes verbatim — caller decides whether to decode
+    text or stream binary. The HTTP layer is bytes-aware so this
+    can handle multi-MB logs without re-encoding."""
+    base = server_url.rstrip("/")
+    encoded = "/".join(parse.quote(p, safe="") for p in relpath.split("/"))
+    url = f"{base}/api/bundles/{bundle_id}/artifacts/{encoded}"
+    try:
+        with request.urlopen(url) as response:
+            return response.read()
+    except error.HTTPError as exc:
+        raise RuntimeError(
+            f"Tracker API error ({exc.code}) fetching artifact "
+            f"{bundle_id}/{relpath}: "
+            f"{exc.read().decode('utf-8', errors='replace')}"
+        ) from exc
+    except error.URLError as exc:
+        raise RuntimeError(
+            f"Tracker connection failed for artifact "
+            f"{bundle_id}/{relpath}: {exc.reason}"
+        ) from exc
+
+
 def _request_json(
     server_url: str,
     path: str,
