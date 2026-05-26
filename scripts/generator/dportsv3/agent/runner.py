@@ -1254,9 +1254,18 @@ def read_file_if_exists(path: Path, max_bytes: int = 200_000) -> str | None:
 
 
 def find_kedb_dir() -> Path | None:
-    """Find the KEDB directory relative to this script or in DeltaPorts repo."""
+    """Find the agent playbook directory (successor to the legacy KEDB
+    location). The symbol name retains ``kedb`` until Step 27b's
+    selector rename; only the on-disk directory name changed in 27a.
+
+    The parent chain here is pre-existing and underspecified — it
+    resolves to a path that doesn't match the repo's actual
+    ``docs/agent-playbooks/`` location, so callers that rely on
+    auto-detect get None. Operators pass ``--kedb-dir`` explicitly.
+    Fixing the lookup is out of 27a scope (separate bug, behavior-
+    preserving rename only)."""
     script_dir = Path(__file__).resolve().parent
-    kedb_dir = script_dir.parent / "docs" / "kedb"
+    kedb_dir = script_dir.parent / "docs" / "agent-playbooks"
     if kedb_dir.exists():
         return kedb_dir
     return None
