@@ -40,6 +40,7 @@ def build_convert_payload(
     classified_record: dict,
     deterministic_result: dict,
     dops_quickref_text: str,
+    playbooks_text: str = "",
 ) -> str:
     """Assemble the markdown payload handed to ``CONVERT_SYSTEM``.
 
@@ -159,6 +160,11 @@ def build_convert_payload(
     sections.append("")
     sections.append(dops_quickref_text)
     sections.append("")
+
+    if playbooks_text:
+        sections.append(playbooks_text)
+        if not playbooks_text.endswith("\n"):
+            sections.append("")
 
     return "\n".join(sections)
 

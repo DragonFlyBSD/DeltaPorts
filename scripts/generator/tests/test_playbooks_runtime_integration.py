@@ -247,6 +247,42 @@ def test_build_patch_payload_telemetry_silent_when_queue_root_absent(
 # -----------------------------------------------------------------
 
 
+def test_build_convert_payload_attaches_convert_playbooks(
+    tmp_path: Path, monkeypatch,
+):
+    """Convert payload bulk-attaches every entry with
+    `flows: [convert]`. The two convert-*.md entries authored in 27e
+    should appear in the assembled payload."""
+    from dportsv3.agent import convert as convert_mod
+    repo = tmp_path / "repo"
+    (repo / "ports" / "devel" / "x").mkdir(parents=True)
+    (repo / "ports" / "devel" / "x" / "Makefile.DragonFly").write_text(
+        "USES+= pkgconfig\n"
+    )
+
+    classified = {"origin": "devel/x", "bucket": "needs-judgment",
+                  "classification_reasons": []}
+    det_result = {
+        "status": "needs-judgment", "parse_ok": True,
+        "check_ok": True, "plan_ok": True, "deterministic_ok": True,
+        "errors": ["unsupported_line: .if defined(FOO)"],
+    }
+    playbooks_dir = find_playbooks_dir()
+    selection = load_playbooks(playbooks_dir, role="convert")
+
+    payload = convert_mod.build_convert_payload(
+        origin="devel/x", repo_root=repo,
+        classified_record=classified, deterministic_result=det_result,
+        dops_quickref_text="(quickref placeholder)",
+        playbooks_text=selection.text,
+    )
+    # Both convert entries land.
+    assert "Classifying a patch's domain" in payload
+    assert "Picking the `target` directive" in payload
+    # The wildcard error entry (flows: [..., convert]) also lands.
+    assert "Static patch fails after upstream version bump" in payload
+
+
 def test_intent_reference_attaches_every_intent_playbook():
     """Round-trip: for each intent type in INTENT_TYPES, calling
     intent_reference returns the schema AND at least one playbook

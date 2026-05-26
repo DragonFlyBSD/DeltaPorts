@@ -3145,12 +3145,28 @@ def _run_llm_conversion(
     except OSError:
         quickref = ""
 
+    queue_root = Path(job.get("queue_root") or ".")
+
+    # Load convert-flow playbooks (Step 27e). Convert agent reads
+    # the whole payload up front, so we attach every entry that
+    # declares flows=[convert] regardless of which phase it's about
+    # (convert_phases triggers can refine attachment later if the
+    # catalog grows large; today we have two convert entries and
+    # bulk-attach is fine).
+    from dportsv3.agent.playbooks import find_playbooks_dir, load_playbooks  # noqa: PLC0415
+    playbooks_dir = find_playbooks_dir()
+    convert_playbooks = load_playbooks(playbooks_dir, role="convert")
+    _log_playbook_selection(
+        queue_root, "convert", origin, convert_playbooks,
+    )
+
     payload = convert_mod.build_convert_payload(
         origin=origin,
         repo_root=repo_root,
         classified_record=classified,
         deterministic_result=det_result,
         dops_quickref_text=quickref,
+        playbooks_text=convert_playbooks.text,
     )
 
     # Reuse the rich PatchEventDispatcher for the convert flow so
@@ -3160,7 +3176,6 @@ def _run_llm_conversion(
     # rewrite, not a build-driven loop), but the dispatcher's
     # contract requires callables.
     from dportsv3.agent.steps import PatchEventDispatcher
-    queue_root = Path(job.get("queue_root") or ".")
     dispatcher = PatchEventDispatcher(
         queue_root=queue_root,
         job_id=job_path.name,

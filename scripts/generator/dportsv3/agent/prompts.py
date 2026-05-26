@@ -671,86 +671,18 @@ existing semantics exactly. If a patch removes a `-Werror`, your dops
 op should remove `-Werror`. If a Makefile.DragonFly assigns
 `USES+=foo`, the dops op is `mk add USES foo`.
 
-## The classification call you have to make
+## Domain classification + target directive
 
-DeltaPorts has TWO patch domains that compose treats differently:
+Two decisions you have to make per unsupported item:
 
-- **Framework patches** live under `diffs/` (and `Makefile.DragonFly`
-  is the same domain) and target the FreeBSD ports framework
-  files compose materializes into `port_root` (the port's own
-  `Makefile`, `distinfo`, `pkg-descr`, etc.). These DO exist in
-  `port_root` after compose's seed stage; `patch apply diffs/X.diff`
-  works against them.
+1. Which **patch domain** the item lives in (framework vs
+   upstream-source) — this picks the right dops op shape.
+2. Which **`target` directive** the overlay declares — the wrong
+   scope produces a silently-dead overlay.
 
-- **Upstream-source patches** live under `dragonfly/` and target
-  files inside the upstream distfile tarball (e.g. `Makefile.am`,
-  `src/foo.c`). Those files are NOT in `port_root` at compose
-  time — they only appear at build time. `patch apply dragonfly/X`
-  DOES NOT WORK for these — the engine has nothing to patch
-  against. Stage them with `file materialize` instead so
-  `bsd.port.mk`'s `do-patch` picks them up at build time.
-
-For each unsupported item, decide which domain it's in, THEN
-which op to use:
-
-### Framework domain (`Makefile.DragonFly` or `diffs/*.diff`)
-
-1. **Framework adjustment expressible as semantic op** (Makefile
-   variable set/add, OS-detection `.if` block, recipe target):
-   `mk set`, `mk add`, `mk remove`, `mk replace-if`, `mk
-   disable-if`, `mk block set`, `mk target set/append`.
-2. **Framework adjustment too complex for semantic ops** (multi-line
-   restructuring of the port's own Makefile, conditional logic
-   that doesn't fit `mk` ops): `patch apply diffs/<file>.diff`.
-   The engine applies this against the compose-materialized
-   framework files in `port_root`. Works.
-
-### Upstream-source domain (`dragonfly/*`)
-
-3. **Simple substitution against upstream source** (single-line
-   rename, OS-detection one-liner): consider expressing as a
-   `mk target set post-extract` with `REINPLACE_CMD` — runs at
-   build time inside `${WRKSRC}`, more durable than a static
-   patch against a generated file like `Makefile.in`.
-4. **Complex upstream-source surgery** (multi-hunk, intertwined
-   ifdef context, anything you can't describe in one sentence):
-   `file materialize dragonfly/<file> -> dragonfly/<file>`. Stages
-   the patch from the source overlay into `port_root/dragonfly/`,
-   `bsd.port.mk` applies it at build time. NEVER use `patch apply`
-   for `dragonfly/*` — that will fail at compose time because the
-   upstream source isn't there yet. NEVER use `file copy` for
-   `dragonfly/*` either — `file copy`'s src is resolved within
-   `port_root`, NOT the source overlay, and the dragonfly/ patch
-   doesn't exist in `port_root` at that point.
-
-The bright line: anything under `dragonfly/` → `file materialize`,
-never `patch apply`, never `file copy`. Anything under `diffs/` or
-`Makefile.DragonFly` → semantic op preferred; `patch apply` as
-fallback.
-
-## Picking the `target` directive
-
-`overlay.dops` must declare a `target` scope on its first line.
-The scope decides which compose targets (e.g. `@main`, `@2026Q2`,
-`@2026Q1`) will actually apply the ops. **Picking wrong here
-makes the overlay silently dead** — compose runs successfully
-but every op is filtered out with `I_APPLY_TARGET_MISMATCH`.
-
-Rule of thumb, based on what the legacy artifact looked like:
-
-- `Makefile.DragonFly` (no suffix) → **`target @any`**. The legacy
-  file applied on every quarterly branch, so the dops translation
-  must too. This is the common case.
-- `Makefile.DragonFly.@main` → `target @main`.
-- `Makefile.DragonFly.@2026Q2` → `target @2026Q2`. Same shape for
-  any quarterly suffix.
-- Multiple variants with different content → emit one
-  `target <selector>` block per variant, or `target @any` for the
-  common ops + `target <selector>` for the specifics.
-
-**Default to `@any` unless you have evidence of target-scoping in
-the source.** A bare `Makefile.DragonFly` is target-agnostic by
-definition; the dops translation must preserve that.
+The decision trees live in your payload's `## Agent Playbooks`
+section (search for `convert-classify-patch-domain` and
+`convert-target-directive`). Read those before emitting ops.
 
 ## dops syntax reference
 
