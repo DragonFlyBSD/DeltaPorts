@@ -417,6 +417,130 @@ class TestDopsRenderers:
         overlay_text = t.port_path("overlay.dops").read_text()
         assert 'mk set CFG "a\\"b\\\\c"' in overlay_text
 
+    def test_replace_in_dops_block_edits_heredoc_body(self, t):
+        """Step C-4: replace text inside an `mk target set <name>`
+        heredoc body. The convert agent produces these for ports
+        whose Makefile.DragonFly had a multi-line target recipe
+        (e.g. archivers/liblz4 dfly-patch with sed commands)."""
+        overlay = t.port_path("overlay.dops")
+        overlay.write_text(
+            "port devel/foo\ntype port\ntarget @main\n"
+            'reason "test"\n\n'
+            "mk target set dfly-patch <<'MK1'\n"
+            "\t${REINPLACE_CMD} 's|GNU FreeBSD|GNU FreeBSD DragonFly|' \\\n"
+            "\t\t${WRKSRC}/../../Makefile\n"
+            "MK1\n"
+        )
+        result = t.apply({
+            "type": "replace_in_dops_block",
+            "block_name": "dfly-patch",
+            "find": "${WRKSRC}/../../Makefile",
+            "replace": "${WRKSRC}/Makefile",
+        })
+        assert result.ok is True, result.error
+        new_text = overlay.read_text()
+        assert "${WRKSRC}/Makefile" in new_text
+        assert "${WRKSRC}/../../Makefile" not in new_text
+        # Block structure preserved.
+        assert "mk target set dfly-patch <<'MK1'" in new_text
+        assert "\nMK1\n" in new_text
+
+    def test_replace_in_dops_block_refuses_when_block_missing(self, t):
+        overlay = t.port_path("overlay.dops")
+        overlay.write_text(
+            "port devel/foo\ntype port\ntarget @main\n"
+            'reason "test"\n\n'
+            "mk target set post-extract <<'MK'\n\techo x\nMK\n"
+        )
+        result = t.apply({
+            "type": "replace_in_dops_block",
+            "block_name": "nonexistent",
+            "find": "x", "replace": "y",
+        })
+        assert result.ok is False
+        assert "no `mk target" in result.error
+
+    def test_replace_in_dops_block_refuses_when_find_absent(self, t):
+        overlay = t.port_path("overlay.dops")
+        overlay.write_text(
+            "port devel/foo\ntype port\ntarget @main\n"
+            'reason "test"\n\n'
+            "mk target set foo <<'MK'\n\tline-a\n\tline-b\nMK\n"
+        )
+        result = t.apply({
+            "type": "replace_in_dops_block",
+            "block_name": "foo",
+            "find": "line-c", "replace": "line-d",
+        })
+        assert result.ok is False
+        assert "find string not present" in result.error
+
+    def test_replace_in_dops_block_refuses_unbounded_block(self, t):
+        """Overlay with `<<TAG` but no closing TAG line — refuse,
+        don't blindly edit through the end of file."""
+        overlay = t.port_path("overlay.dops")
+        overlay.write_text(
+            "port devel/foo\ntype port\ntarget @main\n"
+            'reason "test"\n\n'
+            "mk target set foo <<'MK'\n\tline-a\n"
+            # no closing MK
+        )
+        result = t.apply({
+            "type": "replace_in_dops_block",
+            "block_name": "foo",
+            "find": "line-a", "replace": "line-b",
+        })
+        assert result.ok is False
+        assert "no closing line" in result.error
+
+    def test_replace_in_dops_block_occurrence_picks_nth(self, t):
+        overlay = t.port_path("overlay.dops")
+        overlay.write_text(
+            "port devel/foo\ntype port\ntarget @main\n"
+            'reason "test"\n\n'
+            "mk target set foo <<'MK'\n"
+            "\tdupe-target dupe-target dupe-target\n"
+            "MK\n"
+        )
+        result = t.apply({
+            "type": "replace_in_dops_block",
+            "block_name": "foo",
+            "find": "dupe-target",
+            "replace": "ZAP",
+            "occurrence": 2,
+        })
+        assert result.ok is True, result.error
+        body = overlay.read_text()
+        # Second occurrence replaced; first and third intact.
+        assert "dupe-target ZAP dupe-target" in body
+
+    def test_replace_in_dops_block_does_not_touch_outside_block(self, t):
+        """Critical safety: the find string also appears outside the
+        target block; the renderer must only edit inside."""
+        overlay = t.port_path("overlay.dops")
+        overlay.write_text(
+            "port devel/foo\ntype port\ntarget @main\n"
+            'reason "test"\n\n'
+            "patch apply dragonfly/some.c\n"
+            "# OUTSIDE: ${WRKSRC}/../../Makefile mentioned here\n"
+            "mk target set foo <<'MK'\n"
+            "\tINSIDE: ${WRKSRC}/../../Makefile\n"
+            "MK\n"
+            "# AFTER: ${WRKSRC}/../../Makefile mentioned again\n"
+        )
+        t.apply({
+            "type": "replace_in_dops_block",
+            "block_name": "foo",
+            "find": "${WRKSRC}/../../Makefile",
+            "replace": "${WRKSRC}/Makefile",
+        })
+        new = overlay.read_text()
+        # Inside replaced once.
+        assert "INSIDE: ${WRKSRC}/Makefile" in new
+        # The two outside-block mentions stay.
+        assert new.count("${WRKSRC}/../../Makefile") == 2
+
+
     def test_change_makefile_remove_op_emits_mk_remove(self, t):
         result = t.apply({
             "type": "change_makefile",

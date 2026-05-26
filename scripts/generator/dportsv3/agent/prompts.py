@@ -421,9 +421,12 @@ port at all. So:
 
 **You do not write files directly.** Instead, you emit *intents*
 that describe the change you want to make. The runner's translator
-turns each intent into the right substrate edit — whether this
-port is compat-style (`dragonfly/patch-*` + `Makefile.DragonFly`)
-or dops-style (`overlay.dops` statements) is **not your concern**.
+turns each intent into the right edit on `overlay.dops` and its
+companion patch files. **Every port you'll see is in dops mode**
+— compat-style ports (`Makefile.DragonFly` + `dragonfly/patch-*`
+without an overlay) get converted first by the convert agent
+before you ever touch them; the patch flow refuses non-converted
+substrate.
 
 ```
 apply_intent(origin, intent)  →  { ok, intent_type, paths_changed,
@@ -462,19 +465,27 @@ One paragraph per type. For exact field syntax call `intent_reference`.
   `path` (usually `Makefile.DragonFly`), `key`, `value`, `op`
   (`set` / `append` / `remove`).
 - **`bump_portrevision`** — increment PORTREVISION. No other fields.
+- **`replace_in_dops_block`** — edit text inside an `mk target set
+  <name> <<TAG ... TAG` heredoc body in `overlay.dops`. Use when
+  convert produced an overlay whose target recipe is internally
+  broken (e.g. wrong `${WRKSRC}/../../path` references inside a
+  REINPLACE_CMD). Fields: `block_name`, `find`, `replace`,
+  optional `occurrence`. The only intent that reaches heredoc
+  bodies — nothing else can.
 
 You cannot emit `convert_to_dops` — that's the convert agent's job.
 
 ### What the runner enforces (so you don't have to)
 
+- **Dops-only substrate.** Every port you'll see is in dops mode
+  (`overlay.dops` present, no `Makefile.DragonFly`). If somehow a
+  non-converted port reaches you, `apply_intent` refuses with
+  `blocked_by: state:<state>`. Escalate to MANUAL — there is no
+  fallback to compat-mode editing.
 - **Substrate consistency.** If the port is in a half-migrated
   state (`overlay.dops` + `Makefile.DragonFly` together), every
   `apply_intent` call is refused with `blocked_by:
   substrate_invariant` until an operator resolves it.
-- **Transaction mode lock.** Once your first intent in a session
-  resolves to a mode (compat or dops), subsequent intents must
-  resolve to the same mode. Mode-drift refusals carry
-  `blocked_by: transaction_mode_drift`.
 - **Path safety.** All intent targets must be relative paths
   under the port subtree. No `..`, no absolute paths.
 - **Size caps.** Per-job: 100 intents max, 1 MB total intent log.

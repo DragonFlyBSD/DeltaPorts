@@ -144,7 +144,12 @@ Check `dportsv3/agent/tools.py::tools_for_patch_agent` + `patch_use_intent_enabl
 - Host filesystem ops only on `env_dir/writable/...` (resolved via `dportsv3 dev-env path <env> --writable`).
 - No git commits, branches, push, or PRs from the loop. The writable overlay is the workspace; `analysis/changes.diff` is the audit trail.
 
-### Mode handling (dops vs compat)
+### Mode handling (dops-only as of Step C, 2026-05-26)
+
+**Step C** (commit `0b7ed09fc26` onward): the patch agent operates ONLY on dops-converted substrate. Compat-mode editing was removed entirely. Compat-shaped ports (`Makefile.DragonFly` + `dragonfly/patch-*` without `overlay.dops`) get converted by the convert agent first; the patch flow refuses non-converted substrate with `blocked_by: state:<state>` and the agent escalates to MANUAL.
+
+The points below describe the older dual-mode model for historical bundle analysis (bundles created before commit `0b7ed09fc26` may show compat-mode behavior).
+
 - `classify_dops` decides if a port is `compat`, `dops`, or `needs_judgment` (overlay.dops present but ambiguous).
 - For dops-mode ports the agent should edit `overlay.dops` directly (using `file.materialize` / `file.copy` / `patch.apply` statements). Editing `dragonfly/*` files directly on a dops port is wrong because they're regenerated at compose time.
 - For compat-mode ports the agent edits `dragonfly/*` and uses `install_patches`.
@@ -179,7 +184,7 @@ When `analysis/intent_log.json` is present, the bundle used the intent DSL. Diff
 
 - **Canonical record:** `intent_log.json` is the source of truth, not `changes.diff`. Verify-fix replays the intent log; `changes.diff` is a derived audit artifact (ordered concatenation of per-intent `substrate_diff` values).
 - **Intent grammar:** seven intent types — `replace_in_patch`, `drop_patch`, `add_patch`, `add_file`, `change_makefile`, `bump_portrevision`, `convert_to_dops`. Full schemas at `scripts/generator/dportsv3/agent/edit_intent/schemas/`.
-- **Mode is fixed per transaction:** `mode_at_apply` ∈ `{compat, dops, convert}`, set at the first `apply_intent` call from `worker.assess_dops`. Mid-transaction mode drift is refused (`blocked_by: transaction_mode_drift`).
+- **Mode is fixed per transaction:** `mode_at_apply` is `dops` for any patch-agent bundle post-Step-C. Older bundles may also show `compat` or `convert` in this field. The runner refuses cross-mode transactions; under Step C drift is moot because only `dops` mode is reachable from the patch surface.
 - **Half-migration invariant:** if both `Makefile.DragonFly` AND `overlay.dops` exist on the port, `apply_intent` refuses (`blocked_by: substrate_invariant`). The substrate must be all-compat or all-dops before edits begin.
 - **Canonical-log invariant:** every substrate change has a matching log row. Cap-overflow refusals revert substrate. `intent_log_full=True` in a tool result means the agent should escalate, not retry.
 - **Pre-job clean assertion (25d-1 / design §5.1):** patch jobs refuse to start (`PATCH_GAVE_UP`, `patch_preflight_dirty` activity row) if `ports/<origin>/` has uncommitted edits from a prior run. `patch_preflight_error` means the clean check itself raised — env in unknown state.

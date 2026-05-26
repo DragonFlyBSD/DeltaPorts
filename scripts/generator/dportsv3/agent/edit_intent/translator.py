@@ -40,6 +40,7 @@ from .grammar import (
     ConvertToDops,
     DropPatch,
     Intent,
+    ReplaceInDopsBlock,
     ReplaceInPatch,
 )
 from .validator import IntentError, parse_intent
@@ -148,6 +149,8 @@ class Translator:
             return lambda i: _mod.change_makefile(self, i)
         if isinstance(intent, BumpPortrevision):
             return lambda i: _mod.bump_portrevision(self, i)
+        if isinstance(intent, ReplaceInDopsBlock):
+            return lambda i: _mod.replace_in_dops_block(self, i)
         if isinstance(intent, ConvertToDops):
             # Restricted: only the convert agent (mode=="convert")
             # may emit this intent.

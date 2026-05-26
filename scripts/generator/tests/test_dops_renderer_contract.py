@@ -176,6 +176,24 @@ class TestDopsRendererContract:
         })
         _parse_overlay(t)
 
+    def test_replace_in_dops_block_parses(self, t):
+        """C-4 intent: edits inside `mk target set` heredoc body
+        must leave the overlay still parseable by the engine."""
+        overlay = t.port_path("overlay.dops")
+        overlay.write_text(
+            _MIN_HEADER
+            + "mk target set dfly-patch <<'MK'\n"
+            "\t${REINPLACE_CMD} 's|A|B|' ${WRKSRC}/../../Makefile\n"
+            "MK\n"
+        )
+        t.apply({
+            "type": "replace_in_dops_block",
+            "block_name": "dfly-patch",
+            "find": "${WRKSRC}/../../Makefile",
+            "replace": "${WRKSRC}/Makefile",
+        })
+        _parse_overlay(t)
+
     def test_replace_in_patch_parses(self, t):
         """replace_in_patch in dops mode appends a `text replace-once`
         directive (deferred at compose time). The directive itself

@@ -27,6 +27,7 @@ from .grammar import (
     ChangeMakefile,
     BumpPortrevision,
     ConvertToDops,
+    ReplaceInDopsBlock,
 )
 from .log import IntentLog, IntentLogEntry, SCHEMA_VERSION
 from .translator import EditResult, Mode, Translator
@@ -39,6 +40,7 @@ __all__ = [
     "Intent",
     "ReplaceInPatch", "DropPatch", "AddPatch", "AddFile",
     "ChangeMakefile", "BumpPortrevision", "ConvertToDops",
+    "ReplaceInDopsBlock",
     # Validator
     "parse_intent", "schema_for", "IntentError",
     # Translator

@@ -21,6 +21,7 @@ INTENT_TYPES: tuple[str, ...] = (
     "change_makefile",
     "bump_portrevision",
     "convert_to_dops",
+    "replace_in_dops_block",
 )
 
 
@@ -96,6 +97,27 @@ class ConvertToDops:
     type: Literal["convert_to_dops"]
 
 
+@dataclass(frozen=True)
+class ReplaceInDopsBlock:
+    """Edit text inside an ``mk target set <name> <<MK ... MK``
+    heredoc body in overlay.dops (Step C-4).
+
+    Closes the gap surfaced by archivers/liblz4 2026-05-26 where
+    convert produced a structurally valid overlay containing a
+    ``mk target set dfly-patch`` block with internally broken
+    sed-target paths. No other intent reaches heredoc bodies:
+    drop_patch is line-level on top-level statements;
+    replace_in_patch operates on patch files; change_makefile
+    edits variable assignments. This intent is the surgical
+    text-replace inside one named target block.
+    """
+    type: Literal["replace_in_dops_block"]
+    block_name: str
+    find: str
+    replace: str
+    occurrence: int = 1
+
+
 Intent = Union[
     ReplaceInPatch,
     DropPatch,
@@ -104,17 +126,19 @@ Intent = Union[
     ChangeMakefile,
     BumpPortrevision,
     ConvertToDops,
+    ReplaceInDopsBlock,
 ]
 
 
 # Type → dataclass map. Used by parse_intent in validator.py to
 # dispatch from the wire-format ``type`` field.
 INTENT_DATACLASSES: dict[str, type] = {
-    "replace_in_patch":  ReplaceInPatch,
-    "drop_patch":        DropPatch,
-    "add_patch":         AddPatch,
-    "add_file":          AddFile,
-    "change_makefile":   ChangeMakefile,
-    "bump_portrevision": BumpPortrevision,
-    "convert_to_dops":   ConvertToDops,
+    "replace_in_patch":      ReplaceInPatch,
+    "drop_patch":            DropPatch,
+    "add_patch":             AddPatch,
+    "add_file":              AddFile,
+    "change_makefile":       ChangeMakefile,
+    "bump_portrevision":     BumpPortrevision,
+    "convert_to_dops":       ConvertToDops,
+    "replace_in_dops_block": ReplaceInDopsBlock,
 }

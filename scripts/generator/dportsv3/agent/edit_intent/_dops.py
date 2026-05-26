@@ -18,7 +18,7 @@ from typing import Iterable
 
 from .grammar import (
     AddFile, AddPatch, BumpPortrevision, ChangeMakefile,
-    DropPatch, ReplaceInPatch,
+    DropPatch, ReplaceInDopsBlock, ReplaceInPatch,
 )
 from .validator import IntentError
 
@@ -353,6 +353,165 @@ def change_makefile(t, intent: ChangeMakefile):
     action = {"set": "set", "append": "add", "remove": "remove"}[intent.op]
     stmt = f"mk {action} {intent.key} {_quote_dops_string(intent.value)}"
     return _append_overlay(t, "change_makefile", [stmt])
+
+
+def replace_in_dops_block(t, intent: ReplaceInDopsBlock):
+    """Edit text inside an ``mk target set <name>`` heredoc body.
+
+    Step C-4. Closes the gap that thrashed archivers/liblz4 on
+    2026-05-26: convert produced a structurally valid overlay
+    whose heredoc-bodied target recipe was internally broken,
+    and no existing intent could reach into the heredoc to fix
+    it. The agent could only ``add`` more directives via
+    change_makefile / add_file, which corrupted the overlay
+    further. This intent surgically replaces one occurrence of
+    ``find`` with ``replace`` inside the named block's body —
+    nothing outside the block is touched.
+
+    The block delimiter is the line ``mk target set <block_name> <<TAG``
+    (or ``mk target append/remove/rename ... <<TAG``). The body
+    runs until a line matching exactly ``TAG`` (the heredoc tag
+    chosen by the convert agent — typically ``MK``, ``MK1``, etc.).
+
+    Refusals (ok=False):
+    - block not found by name
+    - find string not present in the block body
+    - occurrence requested exceeds matches
+    - block body is unbounded (no closing tag) — corrupt overlay
+    """
+    from .translator import EditResult
+    overlay = t.port_path(_DOPS_FILE)
+    if not overlay.is_file():
+        return EditResult(
+            ok=False, intent_type="replace_in_dops_block",
+            error=f"{_DOPS_FILE} does not exist; nothing to edit",
+        )
+    text = overlay.read_text()
+    new_text, found, why = _replace_in_mk_target_block(
+        text, intent.block_name, intent.find, intent.replace,
+        intent.occurrence,
+    )
+    if not found:
+        return EditResult(
+            ok=False, intent_type="replace_in_dops_block",
+            error=why,
+        )
+    try:
+        overlay.write_text(new_text)
+    except OSError as exc:
+        return EditResult(
+            ok=False, intent_type="replace_in_dops_block",
+            error=f"write failed for {_DOPS_FILE}: {exc}",
+        )
+    return EditResult(
+        ok=True, intent_type="replace_in_dops_block",
+        paths_changed=[str(overlay.relative_to(t.workspace))],
+        substrate_diff=t.git_diff(overlay),
+    )
+
+
+def _replace_in_mk_target_block(
+    text: str, block_name: str, find: str, replace: str,
+    occurrence: int,
+) -> tuple[str, bool, str]:
+    """Replace ``find`` with ``replace`` inside the body of the
+    ``mk target set|append|remove|rename <block_name>`` heredoc
+    block.
+
+    Returns (new_text, found, reason). ``found`` is True on
+    success; reason is empty. On failure, ``new_text`` equals the
+    input and ``reason`` names the specific shape problem so the
+    agent can react.
+
+    Heredoc body extraction is tag-based: ``<<TAG`` opens, a line
+    matching exactly ``TAG`` closes. Tabs/spaces around the tag
+    are tolerated on the open form (``mk target set foo <<MK``);
+    the close line is checked stripped.
+    """
+    lines = text.splitlines(keepends=True)
+    open_idx: int | None = None
+    tag: str | None = None
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        # `mk target <action> <block_name> ...` shape.
+        # Tolerate `set`, `append`, `remove`, `rename` after `mk target`.
+        if not stripped.startswith("mk target "):
+            continue
+        rest = stripped[len("mk target "):]
+        # Expect: <action> <name> ... <<TAG
+        parts = rest.split(None, 2)
+        if len(parts) < 2:
+            continue
+        # rename has a different shape: `rename <old> -> <new>`. Not
+        # our concern — it doesn't have a body.
+        if parts[0] == "rename":
+            continue
+        if parts[1] != block_name:
+            continue
+        # Find the heredoc tag — token after `<<`.
+        heredoc_pos = stripped.find("<<")
+        if heredoc_pos < 0:
+            # Block without a body (single-line variant); no body
+            # to edit.
+            continue
+        tag_part = stripped[heredoc_pos + 2:].strip()
+        # Allow quoted ('<<'TAG') and unquoted (<<TAG). Strip one
+        # outer pair of single quotes if present.
+        if tag_part.startswith("'") and tag_part.endswith("'") and len(tag_part) >= 2:
+            tag_part = tag_part[1:-1]
+        if not tag_part:
+            continue
+        open_idx = i
+        tag = tag_part
+        break
+    if open_idx is None or tag is None:
+        return (text, False, (
+            f"no `mk target set/append/remove {block_name} <<...` "
+            f"heredoc block found in overlay.dops"
+        ))
+    # Find the close line.
+    close_idx: int | None = None
+    for j in range(open_idx + 1, len(lines)):
+        if lines[j].strip() == tag:
+            close_idx = j
+            break
+    if close_idx is None:
+        return (text, False, (
+            f"heredoc block {block_name!r} opens with <<{tag} but "
+            f"has no closing line — overlay.dops is corrupt"
+        ))
+    # Body is lines (open_idx+1, close_idx) exclusive of the tag
+    # lines.
+    body_lines = lines[open_idx + 1:close_idx]
+    body = "".join(body_lines)
+    # Replace nth occurrence in body.
+    matches = []
+    start = 0
+    while True:
+        pos = body.find(find, start)
+        if pos < 0:
+            break
+        matches.append(pos)
+        start = pos + 1
+    if not matches:
+        return (text, False, (
+            f"find string not present in block {block_name!r}: "
+            f"{find[:80]!r}"
+        ))
+    if occurrence < 1 or occurrence > len(matches):
+        return (text, False, (
+            f"occurrence {occurrence} requested but block "
+            f"{block_name!r} has {len(matches)} match(es) of "
+            f"{find[:40]!r}"
+        ))
+    pos = matches[occurrence - 1]
+    new_body = body[:pos] + replace + body[pos + len(find):]
+    new_text = (
+        "".join(lines[:open_idx + 1])
+        + new_body
+        + "".join(lines[close_idx:])
+    )
+    return (new_text, True, "")
 
 
 def bump_portrevision(t, intent: BumpPortrevision):

@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "replace_in_dops_block",
+  "description": "Edit text inside the body of an `mk target set <name>` heredoc in overlay.dops. Use when convert produced a structurally valid overlay whose target-recipe contents are internally broken (e.g. wrong ${WRKSRC}/../../ paths, drifted REINPLACE_CMD arguments). No other intent can reach heredoc bodies.",
+  "type": "object",
+  "required": ["type", "block_name", "find", "replace"],
+  "additionalProperties": false,
+  "properties": {
+    "type": {"const": "replace_in_dops_block"},
+    "block_name": {
+      "type": "string", "minLength": 1,
+      "description": "Name of the mk target block: the token after `mk target set` (e.g. `dfly-patch`, `post-extract`)."
+    },
+    "find": {
+      "type": "string", "minLength": 1,
+      "description": "Exact substring to replace inside the heredoc body. Must occur at least once in the block; refused if non-unique unless occurrence is specified."
+    },
+    "replace": {
+      "type": "string",
+      "description": "Replacement text (may be empty)."
+    },
+    "occurrence": {
+      "type": "integer", "minimum": 1, "default": 1,
+      "description": "Which match to replace if find is non-unique inside the block (1-based)."
+    }
+  }
+}
