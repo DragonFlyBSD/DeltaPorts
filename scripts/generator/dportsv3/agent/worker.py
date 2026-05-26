@@ -1486,15 +1486,32 @@ def _revert_workspace_paths(
 
 
 def intent_reference(env: str, intent_type: str) -> dict:
-    """Return the JSON schema for one intent type (Step 25c).
+    """Return the JSON schema + matching playbook recipes for one
+    intent type (Step 25c / Step 27c).
+
+    The result carries:
+
+    - ``schema`` (from ``grammar.py`` via ``edit_intent.schema_for``) —
+      the canonical field shape. Always present on success.
+    - ``playbooks`` — a list of ``intent-*.md`` entries from
+      ``docs/agent-playbooks/`` whose frontmatter declares this
+      intent in ``triggers.intents``. Empty list if none match
+      (the common case until Step 27d fills the catalog).
+
+    Pulling recipe content on demand via this tool keeps the base
+    patch payload small — intent-tagged playbooks do NOT appear in
+    the system payload (the patch-flow ``load_playbooks`` call
+    passes ``intents=()``). The agent calls ``intent_reference``
+    before ``apply_intent``; the recipe lands in conversation
+    context only for the intent types the agent actually uses.
 
     Read-only — env arg is unused but kept for tool-dispatch shape.
-    Backs the patch agent's "look up the syntax" affordance:
-    instead of inlining the full grammar in PATCH_SYSTEM, the
-    prompt mentions intent types by name and points at this tool.
     """
     from dportsv3.agent.edit_intent import (  # noqa: PLC0415
         IntentError, schema_for, INTENT_TYPES,
+    )
+    from dportsv3.agent.playbooks import (  # noqa: PLC0415
+        find_playbooks_dir, list_entries,
     )
 
     try:
@@ -1505,10 +1522,40 @@ def intent_reference(env: str, intent_type: str) -> dict:
             "error": str(exc),
             "known_intent_types": list(INTENT_TYPES),
         }
+
+    # Collect matching intent-tagged playbooks. We don't go through
+    # load_playbooks() here because that function applies the full
+    # role/classification gate (geared to payload-build context);
+    # intent_reference's question is narrower: "does any entry
+    # declare this intent in its triggers.intents?" An entry can
+    # legitimately scope flows=[patch] but appear here regardless of
+    # whether the caller "is" in patch flow — the agent reaches for
+    # this tool from the patch loop, so flow is implied.
+    playbooks: list[dict] = []
+    try:
+        pdir = find_playbooks_dir()
+        if pdir is not None:
+            for entry in list_entries(pdir):
+                if intent_type in entry.triggers.intents:
+                    playbooks.append({
+                        "path": entry.path.name,
+                        "title": entry.title,
+                        "tags": list(entry.tags),
+                        "priority": entry.priority,
+                        "body": entry.body,
+                    })
+            playbooks.sort(key=lambda p: (p["priority"], p["path"]))
+    except Exception:
+        # Telemetry would help here but intent_reference must not
+        # fail just because the playbook tree is missing or
+        # malformed — fall back to schema-only.
+        playbooks = []
+
     return {
         "ok": True,
         "intent_type": intent_type,
         "schema": schema,
+        "playbooks": playbooks,
     }
 
 

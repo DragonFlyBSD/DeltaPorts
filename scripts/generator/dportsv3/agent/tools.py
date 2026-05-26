@@ -157,10 +157,15 @@ _TOOLS: list[dict] = [
                       "additionalProperties": True}},
           ["origin", "intent"]),
     _tool("intent_reference",
-          "Return the JSON schema for one intent type. Read-only "
-          "lookup — use this when you forgot the exact field names "
-          "of an intent variant. Listing every known type: pass an "
-          "unknown name; the error response carries known_intent_types.",
+          "Return the JSON schema for one intent type PLUS any "
+          "matching playbook recipes from docs/agent-playbooks/ that "
+          "declare this intent in their frontmatter triggers. Read-only "
+          "lookup — use this before each `apply_intent` call to pick "
+          "up the exact field shape AND any recipe patterns for the "
+          "intent (e.g. how to extend an `mk target set` heredoc body "
+          "via `replace_in_dops_block`). Pass an unknown intent_type to "
+          "list every known type via the error response's "
+          "known_intent_types field.",
           {"intent_type": _STR}, ["intent_type"]),
 ]
 

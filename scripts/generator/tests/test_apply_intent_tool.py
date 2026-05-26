@@ -233,6 +233,73 @@ class TestIntentReference:
         assert "drop_patch" in result["known_intent_types"]
         assert "replace_in_patch" in result["known_intent_types"]
 
+    def test_returns_playbooks_field_on_success(self):
+        """Step 27c: result carries a playbooks list. Today the
+        catalog has no intent-tagged entries yet (those land in 27d),
+        so the list is empty for every intent type."""
+        result = worker.intent_reference("test-env", "drop_patch")
+        assert "playbooks" in result
+        assert isinstance(result["playbooks"], list)
+        assert result["playbooks"] == []
+
+    def test_returns_matching_intent_playbooks(self, tmp_path, monkeypatch):
+        """When an intent-tagged playbook exists, intent_reference
+        attaches it. Matches by frontmatter triggers.intents only —
+        flow gate doesn't apply here (the tool is patch-flow internal)."""
+        from dportsv3.agent import playbooks as pb
+        (tmp_path / "intent-replace_in_dops_block.md").write_text(
+            "---\n"
+            "triggers:\n"
+            "  intents: [replace_in_dops_block]\n"
+            "  flows: [patch]\n"
+            "priority: 40\n"
+            "tags: [heredoc]\n"
+            "---\n"
+            "# Replace in dops block — extending heredoc bodies\n"
+            "\n"
+            "Recipe body.\n"
+        )
+        (tmp_path / "intent-other.md").write_text(
+            "---\n"
+            "triggers:\n"
+            "  intents: [drop_patch]\n"
+            "  flows: [patch]\n"
+            "---\n"
+            "# Drop patch\n\nOther body.\n"
+        )
+        monkeypatch.setattr(pb, "find_playbooks_dir", lambda: tmp_path)
+        result = worker.intent_reference("test-env", "replace_in_dops_block")
+        assert result["ok"] is True
+        assert len(result["playbooks"]) == 1
+        pb_entry = result["playbooks"][0]
+        assert pb_entry["path"] == "intent-replace_in_dops_block.md"
+        assert pb_entry["title"].startswith("Replace in dops block")
+        assert pb_entry["priority"] == 40
+        assert pb_entry["tags"] == ["heredoc"]
+        assert "Recipe body." in pb_entry["body"]
+
+    def test_unknown_intent_does_not_attach_playbooks(self):
+        """Failure path still bypasses playbook lookup (schema check
+        comes first; no schema means no recipes to attach)."""
+        result = worker.intent_reference("test-env", "nope")
+        assert result["ok"] is False
+        # The result shape on failure is schema-less; no need for
+        # a playbooks field at all on the error path.
+        assert "playbooks" not in result
+
+    def test_missing_playbooks_dir_falls_back_to_empty_list(
+        self, monkeypatch,
+    ):
+        """If find_playbooks_dir() returns None (e.g. operator
+        misconfigured the runner, or running outside the repo),
+        intent_reference still succeeds with schema + empty
+        playbooks list. Recipe lookup must never break the tool."""
+        from dportsv3.agent import playbooks as pb
+        monkeypatch.setattr(pb, "find_playbooks_dir", lambda: None)
+        result = worker.intent_reference("test-env", "drop_patch")
+        assert result["ok"] is True
+        assert result["playbooks"] == []
+
 
 # --------------------------------------------------------------------
 # Registry + gate
