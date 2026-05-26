@@ -2468,6 +2468,11 @@ def process_triage_job(
         return deferred
     # ---------------------------------------------------------------
 
+    # Seed queue_root into job so payload-build telemetry
+    # (`playbooks_selected` activity row) can find it. parse_job_file
+    # doesn't populate this; only the runner's per-job dispatch knows
+    # the live queue_root.
+    job["queue_root"] = str(queue_root)
     payload = build_triage_payload(bundle_dir, playbooks_dir, job)
 
     ctx = StepCtx(
@@ -2890,6 +2895,10 @@ def process_patch_job(
     from dportsv3.agent.step import Orchestrator, StepCtx
     from dportsv3.agent.steps import PatchAttemptStep, PatchServices
 
+    # Seed queue_root into job so payload-build telemetry
+    # (`playbooks_selected` activity row) can find it. See the same
+    # comment in process_triage_job.
+    job["queue_root"] = str(queue_root)
     payload = build_patch_payload(bundle_dir, playbooks_dir, job)
     origin = job.get("origin", "unknown")
     job_id = job_path.name

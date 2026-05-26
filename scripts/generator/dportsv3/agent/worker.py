@@ -1530,7 +1530,11 @@ def intent_reference(env: str, intent_type: str) -> dict:
     # declare this intent in its triggers.intents?" An entry can
     # legitimately scope flows=[patch] but appear here regardless of
     # whether the caller "is" in patch flow — the agent reaches for
-    # this tool from the patch loop, so flow is implied.
+    # this tool from the patch loop, so flow is implied. The two
+    # lookup paths (load_playbooks vs this direct filter) share the
+    # entry model and frontmatter parser but apply different gate
+    # rules; if those rules ever need to converge, fold this loop
+    # into a shared "select_by_intent" helper in playbooks.py.
     playbooks: list[dict] = []
     try:
         pdir = find_playbooks_dir()
@@ -1545,10 +1549,12 @@ def intent_reference(env: str, intent_type: str) -> dict:
                         "body": entry.body,
                     })
             playbooks.sort(key=lambda p: (p["priority"], p["path"]))
-    except Exception:
-        # Telemetry would help here but intent_reference must not
-        # fail just because the playbook tree is missing or
-        # malformed — fall back to schema-only.
+    except (OSError, ValueError):
+        # Filesystem missing/unreadable, or a malformed entry
+        # surfaced through the parser. intent_reference must not
+        # fail just because the playbook tree is missing — fall
+        # back to schema-only. Any other exception propagates so
+        # real bugs aren't silently masked.
         playbooks = []
 
     return {

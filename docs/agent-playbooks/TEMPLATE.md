@@ -24,6 +24,17 @@ File naming: <category>-<short-slug>.md
   toolchain-*   port toolchain "usual suspects" playbooks
 
 Keep entries focused: one pattern per file, ~100 lines max.
+
+Pick ONE primary trigger axis per entry. An entry that declares
+BOTH `triggers.classifications` AND `triggers.intents` will
+attach via the system payload (load_playbooks) AND show up in
+intent_reference results — double-attach. Pick the axis that
+best matches WHEN the agent needs this knowledge:
+
+  - error-*       primary axis: classifications
+  - intent-*      primary axis: intents
+  - convert-*     primary axis: convert_phases + flows=[convert]
+  - toolchain-*   primary axis: toolchains
 -->
 
 ## Pattern

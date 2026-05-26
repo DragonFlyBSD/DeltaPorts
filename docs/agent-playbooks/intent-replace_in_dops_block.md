@@ -60,14 +60,26 @@ is untouched.
 To add a new line to an existing recipe body, replace the last
 existing line in the body with that line followed by the new line.
 Pick a unique substring of the last line as `find`; include it
-plus your new line in `replace`:
+plus your new line in `replace`.
+
+Given a body that ends with one `REINPLACE_CMD` and needs a second
+covering an additional source file:
+
+```
+mk target set post-patch <<MK
+        ${REINPLACE_CMD} -e 's/old-pattern/new-pattern/' \
+                ${WRKSRC}/src/foo.c
+MK
+```
+
+emit:
 
 ```json
 {
   "type": "replace_in_dops_block",
-  "block_name": "dfly-patch",
-  "find": "${WRKSRC}/interface/utils.h",
-  "replace": "${WRKSRC}/interface/utils.h\n\t${REINPLACE_CMD} -e 's/#elif defined(__FreeBSD__)/#elif defined(__FreeBSD__) || defined(__DragonFly__)/' \\\n\t\t${WRKSRC}/interface/scan_devices.c"
+  "block_name": "post-patch",
+  "find": "${WRKSRC}/src/foo.c",
+  "replace": "${WRKSRC}/src/foo.c\n\t${REINPLACE_CMD} -e 's/old-pattern/new-pattern/' \\\n\t\t${WRKSRC}/src/bar.c"
 }
 ```
 
