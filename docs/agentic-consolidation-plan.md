@@ -3848,6 +3848,253 @@ could grow into if the conditions warrant.
 
 ---
 
+### Step 28 — failed-bundle operator action matrix — pending
+
+Closes a long-standing asymmetry in the operator surface:
+
+| Terminal event           | State        | `manual_handoff.md` | `user_context_requests` row | Reachable from `/agentic/manual` | Operator can act? |
+|--------------------------|--------------|---------------------|-----------------------------|----------------------------------|-------------------|
+| `ESCALATE_MANUAL` (triage) | `escalated` | written             | written                     | yes                              | yes (context / discard) |
+| `PATCH_BUDGET_OUT`       | `dead`       | written             | **not written**             | **no**                           | **no**            |
+| `PATCH_GAVE_UP`          | `dead`       | written             | **not written**             | **no**                           | **no**            |
+| `CONVERT_GAVE_UP`        | `dead`       | (varies)            | **not written**             | **no**                           | **no**            |
+
+Patch-side terminal failures and convert-side give-ups write a
+forensics handoff but no first-class operator action surface
+exists for them. Recovery only happens if the dsynth hook
+re-fires for the same port AND the new triage decides
+differently. The operator cannot stake a bundle ("I'm taking
+over"), cannot mark a port unsalvageable ("don't try this
+again"), and cannot retrigger triage with their context except
+by going through the manual-queue path that DEAD bundles never
+reach.
+
+Step 28 mirrors Step 11c on the failure side. 11c gave success
+bundles a three-button matrix (Verify / Accept / Reject); 28
+gives failure bundles a three-button matrix (Take over / Discard
+/ Retry with context). Same UI infra, same lifecycle event
+plumbing, same SSE pattern.
+
+#### State machine on `bundles.resolution`
+
+Extends 11c's state machine (which only covered the
+`agent_fixed` lane) with a parallel failure lane::
+
+    agent_budget_exhausted | agent_gave_up | convert_gave_up
+        │
+        ├──[Take over]──► operator_owned ──► (then Verify/Accept
+        │                                      via 11c's path)
+        │
+        ├──[Discard]──► discarded (terminal; per-origin skip flag
+        │                          on by default until reset)
+        │
+        └──[Retry with context]──► (re-triage; same machinery as
+                                    Step 5's manual-queue retry,
+                                    just reachable from the
+                                    bundle detail page itself)
+
+`agent_fixed` lane (Step 11c) is unchanged.
+
+#### Endpoints
+
+Three new POSTs, mirroring 11c's shape (synchronous where the
+operation is pure metadata; asynchronous where it enqueues a
+job):
+
+- `POST /api/bundles/{bundle_id}/take-over` — synchronous. Body:
+  `{"operator": "..."}` (optional; defaults to anonymous).
+  Refuses (409) if `resolution` is already terminal
+  (`accepted` / `discarded`) or if `operator_owned`. Sets
+  `resolution='operator_owned'`, `taken_over_at`, `taken_over_by`.
+  Sets a per-`(target, origin)` lock flag so subsequent dsynth
+  hooks for that port produce a tombstone bundle (`result=skipped`,
+  reason `operator_owned_elsewhere`) instead of enqueuing fresh
+  triage. Emits `bundle_taken_over` event.
+
+- `POST /api/bundles/{bundle_id}/discard` — synchronous. Body:
+  `{"reason": "...", "skip_origin": bool}`. `reason` is required;
+  `skip_origin` defaults to true. Refuses (409) if terminal. Sets
+  `resolution='discarded'`, `discarded_at`, `discard_reason`. If
+  `skip_origin=true`, sets the per-`(target, origin)` lock flag
+  (same flag take-over uses) — operator says "don't bother
+  trying this port again." Emits `bundle_discarded` event.
+
+- `POST /api/bundles/{bundle_id}/retry` — asynchronous. Body:
+  `{"context": "..."}` (required, non-empty). Refuses (409) if
+  terminal. Equivalent in effect to Step 5's
+  `/api/manual-requests/{run_id}/{origin}/context` but reachable
+  from the bundle page without round-tripping through the
+  manual-queue UI. Writes a `user_context` row, marks the
+  bundle's resolution `retry_requested`, and lets the existing
+  Step 5 retry-loop pick it up on the next sweep. Emits
+  `bundle_retry_requested` event.
+
+The per-`(target, origin)` lock flag is a new
+`origin_skip_flags` table (`target`, `origin`, `set_by`,
+`set_at`, `reason`, `cleared_at NULL`). One row = "don't
+auto-process bundles for this `(target, origin)` until
+cleared." A small `POST /api/origins/{target}/{origin}/unskip`
+endpoint clears it; UI surfaces a one-click un-skip on the
+origin detail page (Step 16's territory if not present).
+
+#### Bundle row changes
+
+New columns on `bundles`:
+
+- `taken_over_at` TIMESTAMP NULL
+- `taken_over_by` TEXT NULL
+- `discarded_at` TIMESTAMP NULL
+- `discard_reason` TEXT NULL
+
+New resolutions accepted in `resolution`:
+
+- `operator_owned` (non-terminal — Verify/Accept can still fire)
+- `discarded` (terminal)
+- `retry_requested` (transient — clears when the retry triage
+  enqueues)
+
+The `accepted` / `rejected` resolutions from 11c remain
+unchanged.
+
+#### New job-side handling
+
+When a bundle is `operator_owned`, the runner's hook-fired
+triage path must check the origin's skip flag first. The check
+lives one level above triage so the no-op cost is a single
+SELECT, not a full triage prompt build. Activity-log entry:
+`hook_skipped_origin_locked` with the originating bundle id.
+
+#### SSE event wiring
+
+`bundle_taken_over` / `bundle_discarded` / `bundle_retry_requested`
+follow the existing `bundle_verified` / `bundle_accepted`
+pattern from 11c. The bundle detail page's existing live-refresh
+infra picks them up without further work.
+
+#### UI surface
+
+Bundle detail page (`agentic_bundle.html`) gains a state-aware
+"Operator actions" panel:
+
+- For `agent_fixed` / `verified` / `verification_failed`: the
+  11c matrix (Verify / Accept / Reject).
+- For `agent_budget_exhausted` / `agent_gave_up` /
+  `convert_gave_up`: the new 28 matrix (Take over / Discard /
+  Retry with context).
+- For `operator_owned`: a "Verify your fix" button (drops into
+  11c's Verify path) plus a "Hand back to the loop" un-skip
+  control.
+- For terminal states (`accepted`, `discarded`, `rejected`):
+  a read-only badge plus a "Reopen for retry" override that
+  clears the terminal flag (gated behind a confirmation modal
+  since it's an undo).
+
+Buttons render disabled (not absent) when not applicable so the
+operator sees the full action surface and the reason a specific
+action is blocked (tooltip on the disabled state). Matches 11c.
+
+#### Sub-steps (slicing for ship-ability)
+
+The full Step 28 is one coherent slice but can be sliced for
+incremental delivery:
+
+- **28a — origin skip flag + take-over endpoint.** The
+  highest-value piece: gives operators the "stop competing with
+  me" guarantee. ~120 LOC + tests.
+- **28b — discard endpoint + per-origin skip on by default.**
+  Closes the "this port is hopeless" gap. ~80 LOC + tests.
+- **28c — retry endpoint on bundle page (UI surfacing of Step
+  5).** Smallest slice; mostly a UI wiring. ~50 LOC + tests.
+- **28d — terminal-state reopen override.** Last in line —
+  rarely needed, but cheap once 28a-c land. ~40 LOC + tests.
+
+Each slice is independently shippable. 28a–c are the load-bearing
+ones; 28d is polish.
+
+#### Lifecycle events (lifecycle.py)
+
+New events:
+
+- `BUNDLE_TAKEN_OVER` — bundle → `operator_owned`. Job state
+  unchanged (still `dead` if it was already; the event is
+  bundle-side).
+- `BUNDLE_DISCARDED` — bundle → `discarded`.
+- `BUNDLE_RETRY_REQUESTED` — bundle → `retry_requested`; clears
+  on next triage enqueue.
+
+These are bundle-resolution events, not job-state events — they
+extend the resolution lane that 11c introduced (`accepted` /
+`rejected`) rather than the `JobState` enum. The runner's
+`_apply_transition` already handles bundle resolution updates
+separately from job state updates; reuse that path.
+
+#### Tests
+
+- Take-over endpoint: happy path from each failure resolution;
+  409 on already-terminal; 409 on already-operator_owned; lock
+  flag observable; subsequent hook-fired triage produces
+  `hook_skipped_origin_locked` instead of enqueuing.
+- Discard endpoint: happy path; reason required (422); 409 on
+  terminal; `skip_origin=true` writes the lock flag,
+  `skip_origin=false` does not.
+- Retry endpoint: happy path enqueues triage with context;
+  409 on terminal; empty context rejected; the
+  `bundle_retry_requested` resolution clears when triage picks
+  up.
+- Skip-flag check in hook path: a bundle write for a locked
+  `(target, origin)` produces a tombstone bundle and an
+  activity row, no triage job enqueued.
+- Reopen override (28d): all three terminal resolutions reopen
+  cleanly; the resolution returns to the prior non-terminal
+  state.
+- UI button matrix: each resolution renders the correct subset
+  of buttons in the correct enabled/disabled state.
+- Lifecycle: BUNDLE_TAKEN_OVER / BUNDLE_DISCARDED /
+  BUNDLE_RETRY_REQUESTED transitions accepted from valid
+  prior resolutions, rejected from invalid ones (matrix).
+
+#### Scope estimate
+
+~300–400 LOC across the runner, tracker server, and
+templates, plus ~250 LOC of tests. Comparable to Step 11c.
+The lifecycle / SSE / button-matrix infra is reused, not
+re-built.
+
+#### Rationale
+
+Three concrete problems Step 28 fixes:
+
+1. **Budget-exhausted bundles are operationally invisible.**
+   The handoff file is written but never surfaces in any
+   queue an operator routinely watches. The bundle sits dead
+   until the same port fails again.
+2. **No way to tell the loop "I'm working on it."** An
+   operator inspecting a failed bundle and fixing it locally
+   races against the next dsynth hook firing fresh triage.
+   No primitive prevents that today.
+3. **No way to mark a port unsalvageable.** Hopeless ports
+   (deprecated upstream, vendored binary, legal issues)
+   generate failure bundles indefinitely. The skip flag is
+   the off-switch.
+
+Could be deferred behind 11c if priority order requires
+it, but should not be deferred indefinitely — every operator
+hour spent triaging failures manually is an hour the surface
+gap costs.
+
+#### Out of scope
+
+- Operator authentication / identity. The `taken_over_by`
+  column is a freeform string for now; integrating with the
+  auth model is Step 17 territory.
+- A general "policy override per origin" engine. The skip
+  flag is a single boolean; multi-axis policy
+  (tier-per-origin, model-per-origin) is a separate concern.
+- Discarded-bundle archival. Discarded bundles stay in the
+  artifact store; an eventual GC pass is its own project.
+
+---
+
 ## Current priority order (as of 2026-05-24)
 
 Replaces every "Suggested updated order" line scattered through the
@@ -3883,41 +4130,55 @@ Pending, in recommended order:
    11b shipped: now includes the Verify button + the new `verify`
    job type that lets the runner call `run_verify_fix` in-process.
    Verify is the gate (Accept disabled until verified).
-2. **25** — edit-intent DSL. Architectural; design (25a) first.
+2. **28 (28a–c first)** — failed-bundle operator action matrix.
+   Mirror of 11c on the failure side: Take over / Discard /
+   Retry with context, plus the per-`(target, origin)` skip
+   flag. Closes the operator-surface asymmetry where success
+   bundles get three buttons (11c) and failure bundles get
+   nothing — today a budget-exhausted bundle has no actionable
+   surface at all. Reuses 11c's UI infra and lifecycle plumbing
+   so the marginal cost after 11c lands is small. Sequenced
+   here, not after 11c specifically, because the
+   "operationally-invisible failure bundle" problem is hitting
+   the loop now and the 28a slice (take-over + skip flag) is
+   independently shippable.
+3. **25** — edit-intent DSL. Architectural; design (25a) first.
    Can be developed in parallel with 11d once 25a is approved.
-3. **11d** — push to code-hosting providers. Closes the round
+4. **11d** — push to code-hosting providers. Closes the round
    trip; gated on operator readiness.
-4. **26 (items 1–4 first)** — lifecycle hardening: lineage +
+5. **26 (items 1–4 first)** — lifecycle hardening: lineage +
    attempt counter, `TRANSIENT_FAIL` edge, per-state timeout,
    `originating_bundle_id` for resolution propagation. Three
    incidents this week traced to seam-level bugs the wall-clock
    circuit breaker only papered over. Items 5–9 of Step 26 are
    pure FSM cleanups and can interleave whenever.
-5. **24** — prompts/quickref consolidation. Cheap, no behavior
+6. **24** — prompts/quickref consolidation. Cheap, no behavior
    change. Before 25d's prompt rewrite so it isn't against a
    messy baseline. (Step 27 already trimmed prompts.py
    substantially; what remains for 24 is the structural
    `dops_quickref.md` audit against the engine source-of-truth.)
-6. **16** — UX review (dashboard live-refresh + the rest).
-7. **23 → 22** — execution layer then steps.py refactor. 23 first
+7. **16** — UX review (dashboard live-refresh + the rest).
+8. **23 → 22** — execution layer then steps.py refactor. 23 first
    so 22's phase-helper extraction lands against the consolidated
    `chroot_exec`.
-8. **21** — DB layer consolidation. Enables 17/18 to plug into a
+9. **21** — DB layer consolidation. Enables 17/18 to plug into a
    clean write surface. Also the natural landing site for Step 26
    items 1 + 4 (the column adds).
-9. **12 → 13 → 14 (system-prompt decomposition only) → 15** —
-   abstraction work. 12 unblocks 13/14/15. Step 14's KEDB-
-   specific metadata work shipped via Step 27b; what remains is
-   the system-prompt decomposition (`PATCH_SYSTEM_SECTIONS`,
-   per-section telemetry).
-10. **17 → 18** — remote runners + security. Only load-bearing
+10. **12 → 13 → 14 (system-prompt decomposition only) → 15** —
+    abstraction work. 12 unblocks 13/14/15. Step 14's KEDB-
+    specific metadata work shipped via Step 27b; what remains is
+    the system-prompt decomposition (`PATCH_SYSTEM_SECTIONS`,
+    per-section telemetry).
+11. **17 → 18** — remote runners + security. Only load-bearing
     when a second builder appears.
 
 Rationale for the head of the order: the loop's first-class
 deliverable is "operator can land an agent-produced fix." Today
-that path is broken (no verify, no accept button, no push).
-Closing 11b first is the single highest-impact change. Step 25
-ranks early because it's the architectural answer to the
-empty-diff/edit-surface class of bug. Step 26 items 1–4 rank
-above 24/16 because three lifecycle bugs in one week is a
-warning, not a coincidence.
+that path is broken on both sides — success bundles have no
+verify/accept buttons (11c), failure bundles have no operator
+action surface at all (28). 11c and 28 together close the
+operator's primary interaction loop. Step 25 ranks early
+because it's the architectural answer to the empty-diff/
+edit-surface class of bug. Step 26 items 1–4 rank above 24/16
+because three lifecycle bugs in one week is a warning, not a
+coincidence.
