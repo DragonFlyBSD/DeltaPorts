@@ -2668,12 +2668,33 @@ def _write_patch_audit_harness(
         analysis.mkdir(parents=True, exist_ok=True)
         (analysis / "patch.md").write_bytes(md_bytes)
 
+    # Always emit rebuild_proof.json on terminal states. Without
+    # this, budget-exhausted / needs-help bundles produced
+    # patch_audit.json but no proof artifact, leaving operators
+    # unable to tell "agent gave up cleanly" from "agent crashed
+    # mid-attempt" by skimming the artifact list. When the LLM
+    # parsed a Rebuild Proof block we write it verbatim; otherwise
+    # we synthesize one carrying the terminal status + attempt
+    # count so the contract holds.
     if result.proof is not None:
-        proof_bytes = (json.dumps(result.proof, indent=2) + "\n").encode("utf-8")
-        if bundle_id:
-            artifact_store_put(bundle_id, "analysis/rebuild_proof.json", proof_bytes, "json")
-        else:
-            (bundle_dir / "analysis" / "rebuild_proof.json").write_bytes(proof_bytes)
+        proof_payload = dict(result.proof)
+    else:
+        proof_payload = {
+            "rebuild_ok": False,
+            "status": result.status,
+            "reason": (
+                "agent gave up: " + result.status
+                if result.status != "success"
+                else "no rebuild proof parsed despite success status"
+            ),
+            "attempts": len(result.attempts),
+            "synthetic": True,
+        }
+    proof_bytes = (json.dumps(proof_payload, indent=2) + "\n").encode("utf-8")
+    if bundle_id:
+        artifact_store_put(bundle_id, "analysis/rebuild_proof.json", proof_bytes, "json")
+    else:
+        (bundle_dir / "analysis" / "rebuild_proof.json").write_bytes(proof_bytes)
 
     audit = {
         "status": result.status,
