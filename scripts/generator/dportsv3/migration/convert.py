@@ -83,8 +83,19 @@ def _parse_makefile_dragonfly(path: Path) -> tuple[list[str], list[str]]:
 
 
 def _render_dops(origin: str, ops: list[str]) -> str:
+    # `target @any`: the deterministic translator only runs on ports
+    # whose source is an UNSCOPED Makefile.DragonFly (the classifier
+    # in overlay_state.assess_overlay refuses to mark a port
+    # auto_safe_pending if a `Makefile.DragonFly.@xxx` variant exists
+    # — those need judgment, not deterministic conversion). An
+    # unscoped legacy artifact is target-agnostic by definition; the
+    # dops translation must preserve that semantic, otherwise the
+    # converted overlay is silently dead on every env whose target
+    # ≠ the hardcoded scope. The prior hardcoded `@main` caused
+    # exactly that bug on archivers/liblz4 2026-05-26 (env @2026Q2,
+    # every op skipped with I_APPLY_TARGET_MISMATCH).
     header = [
-        "target @main",
+        "target @any",
         f"port {origin}",
         "type port",
         'reason "auto-converted from Makefile.DragonFly"',

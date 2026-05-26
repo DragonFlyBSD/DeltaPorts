@@ -212,7 +212,9 @@ def test_process_convert_job_auto_safe_port(
     assert success, f"expected success, got status={status!r}"
     assert (port / "overlay.dops").exists()
     dops = (port / "overlay.dops").read_text()
-    assert "target @main" in dops
+    # Deterministic-converted overlays declare `target @any`
+    # (auto_safe_pending only fires for unscoped Makefile.DragonFly).
+    assert "target @any" in dops
     assert "port devel/auto-safe" in dops
 
 

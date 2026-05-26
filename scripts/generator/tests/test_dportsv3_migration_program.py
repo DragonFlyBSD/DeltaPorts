@@ -67,6 +67,16 @@ def test_converter_writes_overlay_dops_for_auto_safe(tmp_path: Path) -> None:
     # conversion: leaving it in place keeps `classify_dops` returning
     # `auto_safe_pending`, which loops the runner.
     assert not (repo / "ports" / "devel" / "tool" / "Makefile.DragonFly").exists()
+    # Regression: deterministic-converted overlays must declare
+    # `target @any`. auto_safe_pending only fires for UNSCOPED
+    # Makefile.DragonFly (the classifier excludes
+    # Makefile.DragonFly.@xxx variants), so the dops translation
+    # must be target-agnostic. The prior hardcoded `target @main`
+    # produced silently-dead overlays on every env whose target
+    # wasn't @main (archivers/liblz4 2026-05-26).
+    dops_text = dops_path.read_text()
+    assert "target @any" in dops_text
+    assert "target @main" not in dops_text
 
 
 def test_converter_removes_legacy_makefile_on_revalidate(tmp_path: Path) -> None:
