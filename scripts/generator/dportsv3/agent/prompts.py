@@ -735,6 +735,30 @@ never `patch apply`, never `file copy`. Anything under `diffs/` or
 `Makefile.DragonFly` → semantic op preferred; `patch apply` as
 fallback.
 
+## Picking the `target` directive
+
+`overlay.dops` must declare a `target` scope on its first line.
+The scope decides which compose targets (e.g. `@main`, `@2026Q2`,
+`@2026Q1`) will actually apply the ops. **Picking wrong here
+makes the overlay silently dead** — compose runs successfully
+but every op is filtered out with `I_APPLY_TARGET_MISMATCH`.
+
+Rule of thumb, based on what the legacy artifact looked like:
+
+- `Makefile.DragonFly` (no suffix) → **`target @any`**. The legacy
+  file applied on every quarterly branch, so the dops translation
+  must too. This is the common case.
+- `Makefile.DragonFly.@main` → `target @main`.
+- `Makefile.DragonFly.@2026Q2` → `target @2026Q2`. Same shape for
+  any quarterly suffix.
+- Multiple variants with different content → emit one
+  `target <selector>` block per variant, or `target @any` for the
+  common ops + `target <selector>` for the specifics.
+
+**Default to `@any` unless you have evidence of target-scoping in
+the source.** A bare `Makefile.DragonFly` is target-agnostic by
+definition; the dops translation must preserve that.
+
 ## dops syntax reference
 
 The full reference is in the file `agent/dops_quickref.md`. It is

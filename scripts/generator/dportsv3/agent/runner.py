@@ -3134,6 +3134,87 @@ def _run_llm_conversion(
     return _verify_conversion(job, origin)
 
 
+def _check_overlay_effective_ops(
+    env: str, origin: str, env_target: str,
+) -> str | None:
+    """Re-plan the just-written overlay.dops against ``env_target``
+    and return an error message if every op would be filtered out
+    by compose's target-mismatch rule.
+
+    Returns ``None`` when at least one op's scope matches
+    ``env_target`` (or is ``@any``). Returns a single-line error
+    when the overlay parses but is "dead on this env" — every op
+    is scoped to a target compose isn't running for. Returns ``None``
+    on best-effort failure paths (engine import error, can't read
+    file, no env_target known) so the verify step doesn't get
+    stricter than the underlying check can support.
+    """
+    if not env_target:
+        # No target context — can't decide. Conservative: don't
+        # refuse; the compose-stage diagnostics still surface
+        # I_APPLY_TARGET_MISMATCH in stage output.
+        return None
+    try:
+        from dportsv3.agent import worker as _worker  # noqa: PLC0415
+        from dportsv3.engine.api import build_plan  # noqa: PLC0415
+    except Exception:
+        return None
+    try:
+        paths = _worker.env_paths(env)
+    except Exception:
+        return None
+    overlay = paths.deltaports / "ports" / origin / "overlay.dops"
+    if not overlay.is_file():
+        # No overlay → convert didn't write one. The reapply step
+        # above already accepted that (e.g. an empty / no-op
+        # conversion). Nothing for us to check.
+        return None
+    try:
+        text = overlay.read_text()
+    except OSError:
+        return None
+    result = build_plan(text)
+    if not result.ok or result.plan is None:
+        # Parse / plan failure. Reapply already accepted the file,
+        # which means it probably parsed there too — but if our
+        # in-process plan disagrees, fail safe (don't claim the
+        # overlay is effective when we can't tell).
+        diag = next(
+            (d.message for d in (result.diagnostics or [])
+             if getattr(d, "severity", "") == "error"),
+            "unknown plan error",
+        )
+        return f"overlay.dops failed in-process plan: {diag}"
+    ops = result.plan.ops if result.plan else []
+    if not ops:
+        # Conversion that produced no ops (e.g. only port/type/reason
+        # directives). Not necessarily wrong — but compose would
+        # have nothing to do either. Surface so the operator
+        # notices an empty conversion.
+        return (
+            f"overlay.dops parsed but produced zero plan ops — "
+            f"the conversion did not translate any legacy artifact "
+            f"into a dops op. Likely missing `mk` / `file` / "
+            f"`patch apply` statements."
+        )
+    effective = [op for op in ops if op.target in ("@any", env_target)]
+    if effective:
+        return None
+    # Build an informative error: list the distinct targets the
+    # overlay's ops are scoped to, so the operator sees the
+    # mismatch directly.
+    scopes = sorted({op.target for op in ops if op.target})
+    return (
+        f"every op in overlay.dops is scoped to {scopes!r}; "
+        f"compose for this bundle runs target {env_target!r}. "
+        f"None of the convert's ops will apply. Convert agent "
+        f"likely picked the wrong `target` directive — "
+        f"unscoped legacy artifacts (`Makefile.DragonFly` with "
+        f"no `.@xxx` suffix) should map to `target @any`, not "
+        f"a specific target."
+    )
+
+
 def _verify_conversion(job: dict, origin: str) -> tuple[bool, str]:
     """Step 20e — verify a fresh conversion via compose (``reapply``).
 
@@ -3159,6 +3240,24 @@ def _verify_conversion(job: dict, origin: str) -> tuple[bool, str]:
 
     mat = worker.materialize_dports(env, origin)
     if mat.get("ok"):
+        # Effective-ops check (Step-C follow-up).
+        # Compose can succeed with ZERO of the convert's ops actually
+        # applying — every op gets `I_APPLY_TARGET_MISMATCH` if the
+        # overlay declares `target @main` but compose runs for
+        # `@2026Q2`. Compose's overall success is "dops parses + plan
+        # ran"; it doesn't know we wanted ops to LAND. Re-plan the
+        # overlay here against the env's effective target and refuse
+        # if every op would be filtered out — convert wrote a dead
+        # overlay (observed on archivers/liblz4 post-Step-C: dops
+        # declared `target @main`, env was `@2026Q2`, every op
+        # silently skipped).
+        env_target = job.get("target") or ""
+        eff = _check_overlay_effective_ops(env, origin, env_target)
+        if eff is not None:  # None means "ok"; non-None is the error
+            return False, (
+                f"conversion verified but overlay is dead on this env: "
+                f"{eff}"
+            )
         # Stopgap pre-Step-26: commit the convert output to the env's
         # git so the next patch job's pre-job clean assertion
         # (design §5.1, runner step 25d-1) doesn't refuse on the
