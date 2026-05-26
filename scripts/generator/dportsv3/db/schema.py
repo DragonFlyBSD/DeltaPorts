@@ -244,6 +244,14 @@ MIGRATIONS: tuple[str, ...] = (
     # Phase 1 framework: per-job transition forensics.
     "ALTER TABLE jobs ADD COLUMN last_transition_at TEXT",
     "ALTER TABLE jobs ADD COLUMN retire_reason TEXT",
+    # bundle_id FK: the canonical relation between jobs and bundles.
+    # Pre-2026-05-26 the relation was expressed via jobs.bundle_dir
+    # (a filesystem-path string), which list_jobs_for_bundle joined
+    # on with LIKE matching. Patch / verify enqueue paths never set
+    # bundle_dir, so any query "what jobs touched this bundle" was
+    # silently incomplete. Normalized FK + index now.
+    "ALTER TABLE jobs ADD COLUMN bundle_id TEXT",
+    "CREATE INDEX IF NOT EXISTS idx_jobs_bundle_id ON jobs(bundle_id)",
     # Post-impl plan: agent-driven resolution propagation. The hook
     # writes bundles.result='failure' at ingest; that never changes,
     # even after the patch agent fixes the build. Resolution carries

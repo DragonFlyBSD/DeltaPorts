@@ -521,6 +521,7 @@ def _register_new_job(
                        origin = COALESCE(?, origin),
                        flavor = COALESCE(?, flavor),
                        bundle_dir = COALESCE(?, bundle_dir),
+                       bundle_id = COALESCE(?, bundle_id),
                        created_ts_utc = COALESCE(?, created_ts_utc),
                        path = COALESCE(?, path),
                        target = COALESCE(NULLIF(?, ''), target),
@@ -531,6 +532,7 @@ def _register_new_job(
                     metadata.get("origin"),
                     metadata.get("flavor"),
                     metadata.get("bundle_dir"),
+                    metadata.get("bundle_id"),
                     metadata.get("created_ts_utc"),
                     metadata.get("path"),
                     target,
@@ -1943,13 +1945,16 @@ def enqueue_convert_job(
     requested_by: str = "operator",
     dev_env: str | None = None,
     bundle_dir: str | None = None,
+    bundle_id: str | None = None,
 ) -> Path:
     """Enqueue a dops-conversion job for one port (Step 20c).
 
-    Convert jobs are port-level, not bundle-level — there's no
-    failure to attribute them to. They're created either lazily
-    by triage when a port still has legacy overlay artifacts, or
-    proactively by an operator.
+    Convert jobs can be port-level (operator-fired against an origin
+    with no failure) or bundle-tied (triage enqueues one when a
+    failure bundle's port has dops_state=needs_judgment). The
+    bundle_id is propagated only in the latter case so the
+    bundles↔jobs FK reflects the actual relation; operator-fired
+    converts leave it NULL.
     """
     ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%SZ")
     origin_safe = origin.replace("/", "_")
@@ -1974,6 +1979,8 @@ def enqueue_convert_job(
         # convert job's audit (e.g. the commit_port_changes
         # message) can reference the originating bundle.
         content.append(f"bundle_dir={bundle_dir}")
+    if bundle_id:
+        content.append(f"bundle_id={bundle_id}")
 
     tmp_path = job_path.with_suffix(".tmp")
     with open(tmp_path, "w") as f:
@@ -1991,6 +1998,7 @@ def enqueue_convert_job(
             "target": target
                 or os.environ.get("DPORTSV3_TRACKER_TARGET", ""),
             "bundle_dir": bundle_dir,
+            "bundle_id": bundle_id,
         },
     )
     return job_path
@@ -2338,6 +2346,7 @@ def _maybe_defer_to_convert(
             requested_by="triage",
             dev_env=job.get("dev_env"),
             bundle_dir=job.get("bundle_dir"),
+            bundle_id=job.get("bundle_id"),
         )
         convert_job_id = convert_path.name
         log(queue_root, "INFO",

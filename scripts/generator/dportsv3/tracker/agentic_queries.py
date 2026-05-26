@@ -325,25 +325,27 @@ def get_artifact_ref(
 def list_jobs_for_bundle(
     conn: sqlite3.Connection, bundle_id: str,
 ) -> list[dict[str, Any]]:
-    """Return all jobs whose ``bundle_dir`` references ``bundle_id``.
+    """Return all jobs whose ``bundle_id`` FK references ``bundle_id``.
 
-    Jobs link to bundles by ``bundle_dir`` (a filesystem path like
-    ``…/bundles/<bundle_id>/``); the bundles table holds the canonical
-    bundle row. We match by basename suffix because the runner writes
-    different parent paths over time (queue migrations etc.) but the
-    bundle_id stays in the last path segment.
+    Primary match is on the normalized ``jobs.bundle_id`` column
+    (added 2026-05-26). The previous shape used ``bundle_dir`` LIKE
+    matching, which silently missed every patch / verify job (those
+    paths set bundle_id but not bundle_dir). Kept as a fallback
+    predicate for legacy rows where the bundle_id backfill hasn't
+    happened yet — operators with a brand-new tracker can rely on
+    the primary, while live deployments don't drop existing data.
 
-    Ordered newest-first by created_ts_utc — most operators want
-    "what was the most recent attempt on this bundle?"
+    Ordered newest-first by created_ts_utc.
     """
     rows = conn.execute(
         """SELECT * FROM jobs
-           WHERE bundle_dir = ?
+           WHERE bundle_id = ?
+              OR bundle_dir = ?
               OR bundle_dir = ? || '/'
               OR bundle_dir LIKE '%/' || ?
               OR bundle_dir LIKE '%/' || ? || '/'
            ORDER BY created_ts_utc DESC, job_id DESC""",
-        (bundle_id, bundle_id, bundle_id, bundle_id),
+        (bundle_id, bundle_id, bundle_id, bundle_id, bundle_id),
     ).fetchall()
     return [_row_dict(r) for r in rows]
 
