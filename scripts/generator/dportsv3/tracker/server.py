@@ -1427,9 +1427,11 @@ def create_app(db_path: str | Path) -> Any:
                         break
         if job is None:
             raise HTTPException(status_code=404, detail=f"Unknown job: {job_id}")
-        # Activity rows come back newest-first from the query; flip for
-        # chronological reading (attempt 1 tools → attempt 2 tools → ...).
-        activity = list(reversed(activity))
+        # Activity rows stay newest-first (the query default) so the
+        # autorefresh JS — which prepends new rows to the top — keeps
+        # the table consistent. Mixing ASC initial + prepended new
+        # rows produced a chaotic sort (gperf/liblz4 2026-05-26):
+        # live rows piled up at the top above an ASC-sorted body.
         # Cursor for the live-refresh polling — the client polls
         # /api/activity?job_id=X&since_id=N for new rows.
         max_id = max((a.get("id") or 0) for a in activity) if activity else 0
