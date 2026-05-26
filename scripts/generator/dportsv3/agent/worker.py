@@ -977,17 +977,19 @@ def classify_dops(env: str, origin: str) -> str:
     return assess_dops(env, origin).state
 
 
-# Map from classify_dops state → translator mode. needs_judgment
-# means the port has compat artifacts the deterministic translator
-# can't resolve; for intent-based edits we treat it as compat (the
-# patch agent's intents render to compat ops). converted ports get
-# dops mode. not_in_scope and stale block apply_intent — the agent
-# should escalate rather than scaffold a new port via intents.
+# Map from classify_dops state → translator mode.
+#
+# Step C: the patch agent operates ONLY on dops-converted substrate.
+# Non-converted states (auto_safe_pending, needs_judgment) are
+# handled upstream by the triage→convert deferral; if a port somehow
+# reaches apply_intent in those states, the substrate is in an
+# unexpected shape and the agent must escalate rather than fall
+# back to compat-mode editing (the prior behavior corrupted overlays
+# on convert-produced heredocs — see archivers/liblz4 2026-05-26).
+# not_in_scope ports (no overlay at all) also have no valid edit
+# surface on the dops-only model and escalate to MANUAL.
 _STATE_TO_MODE: dict[str, str] = {
-    "compat":            "compat",   # alias used by external callers
-    "auto_safe_pending": "compat",
-    "needs_judgment":    "compat",
-    "converted":         "dops",
+    "converted": "dops",
 }
 
 
@@ -1281,9 +1283,13 @@ def apply_intent(
             "ok": False,
             "error": (
                 f"apply_intent refused: overlay state {state!r} for "
-                f"{origin} is not a valid intent target — escalate to "
-                f"operator (state must be compat, auto_safe_pending, "
-                f"needs_judgment, or converted)."
+                f"{origin} is not a valid intent target — the patch "
+                f"agent operates only on dops-converted substrate. "
+                f"If state is auto_safe_pending or needs_judgment, "
+                f"triage should have routed this through convert "
+                f"first; if state is not_in_scope, there's no "
+                f"overlay to edit. Escalate to MANUAL — no fallback "
+                f"to compat-mode editing exists."
             ),
             "blocked_by": f"state:{state}",
         }

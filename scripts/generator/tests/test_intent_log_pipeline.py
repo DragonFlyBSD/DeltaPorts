@@ -51,7 +51,7 @@ def _make_workspace(tmp_path: Path, origin: str = "devel/foo") -> Path:
     return ws
 
 
-def _stub_assess(state="auto_safe_pending", action="defer_to_convert"):
+def _stub_assess(state="converted", action="proceed_triage"):
     return OverlayAssessment(
         state=state, action=action,
         rules=(OverlayRuleResult("test_stub"),),
@@ -71,6 +71,33 @@ def env_with_workspace(tmp_path, monkeypatch):
     # Drain any leftover log from a prior test.
     worker._INTENT_LOGS.clear()
     return ws
+
+
+def _seed_overlay_with_patch_apply(ws, origin, *patch_relpaths):
+    """Helper: seed overlay.dops with `patch apply <relpath>` lines.
+    Under Step C the patch agent operates only in dops mode, so
+    drop_patch needs the corresponding statement in overlay.dops to
+    succeed. Tests that exercise drop_patch / replace_in_patch on
+    pre-seeded patch files use this to keep the substrate honest.
+    """
+    overlay = ws / "ports" / origin / "overlay.dops"
+    overlay.parent.mkdir(parents=True, exist_ok=True)
+    lines = [
+        f"port {origin}",
+        "type port",
+        "target @any",
+        'reason "test"',
+        "",
+    ] + [f"patch apply {p}" for p in patch_relpaths]
+    overlay.write_text("\n".join(lines) + "\n")
+    subprocess.run(
+        ["git", "-C", str(ws), "add", str(overlay.relative_to(ws))],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(ws), "commit", "-qm", "add-overlay"],
+        check=True,
+    )
 
 
 # --------------------------------------------------------------------
@@ -94,6 +121,8 @@ class TestWorkerLogAccumulation:
         )
         subprocess.run(["git", "-C", str(ws), "commit", "-qm", "add"],
                        check=True)
+        _seed_overlay_with_patch_apply(ws, "devel/foo",
+                                       "dragonfly/patch-old.c")
 
         result = worker.apply_intent("test-env", "devel/foo", {
             "type": "drop_patch",
@@ -127,14 +156,18 @@ class TestWorkerLogAccumulation:
         assert "does not exist" in (log.intents[0].error or "")
 
     def test_log_serializes_to_canonical_shape(self, env_with_workspace):
+        _seed_overlay_with_patch_apply(env_with_workspace, "devel/foo",
+                                       "dragonfly/patch-x.c")
         worker.apply_intent("test-env", "devel/foo", {
-            "type": "drop_patch", "target": "x", "reason": "y",
+            "type": "drop_patch",
+            "target": "dragonfly/patch-x.c", "reason": "y",
         })
         log = worker.drain_intent_log("test-env", "devel/foo")
         doc = json.loads(log.to_json())
         assert doc["schema_version"] == 1
         assert doc["origin"] == "devel/foo"
-        assert doc["mode_at_apply"] == "compat"
+        # Step C: patch agent operates only on dops-converted substrate.
+        assert doc["mode_at_apply"] == "dops"
         assert doc["baseline_commit"] == "fake-baseline"
         assert len(doc["intents"]) == 1
 
@@ -170,34 +203,10 @@ class TestWorkerLogAccumulation:
         assert result.get("intent_log_full") is True
         assert "log full" in result["error"].lower()
 
-    def test_mode_drift_refused_within_transaction(
-        self, env_with_workspace, monkeypatch,
-    ):
-        """Once a transaction starts in one mode, subsequent intents
-        that resolve to a different mode are refused — prevents
-        single-log mixed-flavor accumulation."""
-        # Apply one intent in the default (compat) mode.
-        r1 = worker.apply_intent("test-env", "devel/foo", {
-            "type": "drop_patch",
-            "target": "dragonfly/missing.c",  # ok=False, but logged
-            "reason": "x",
-        })
-        assert r1["ok"] is False  # intent failed but transaction started
-
-        # Flip the assess stub to return 'converted' (dops mode).
-        monkeypatch.setattr(worker, "assess_dops",
-                            lambda env, origin: _stub_assess(
-                                state="converted", action="proceed_triage"))
-        # Try another intent — same (env, origin). Mode now resolves
-        # to dops; the existing log was started in compat. Refuse.
-        r2 = worker.apply_intent("test-env", "devel/foo", {
-            "type": "drop_patch",
-            "target": "dragonfly/whatever.c", "reason": "y",
-        })
-        assert r2["ok"] is False
-        assert r2["blocked_by"] == "transaction_mode_drift"
-        assert r2["transaction_mode"] == "compat"
-        assert r2["current_mode"] == "dops"
+    # Step C: mode-drift test deleted. With apply_intent restricted
+    # to dops-only substrate (only `converted` state proceeds), no
+    # second-mode is reachable from the agent's surface. The mode
+    # parameter on IntentLog still records "dops" for forensics.
 
     def test_intent_log_size_cap_surfaces_to_tool_result(
         self, env_with_workspace, monkeypatch,
@@ -219,6 +228,11 @@ class TestWorkerLogAccumulation:
         subprocess.run(["git", "-C", str(ws), "commit", "-qm", "add"],
                        check=True)
 
+        _seed_overlay_with_patch_apply(
+            ws, "devel/foo",
+            "dragonfly/patch-first.c",
+            "dragonfly/patch-second.c",
+        )
         # First intent succeeds and fills the cap.
         r1 = worker.apply_intent("test-env", "devel/foo", {
             "type": "drop_patch", "target": "dragonfly/patch-first.c",
@@ -271,6 +285,23 @@ class TestWorkerLogAccumulation:
         )
         subprocess.run(["git", "-C", str(ws), "commit", "-qm", "add"],
                        check=True)
+        # Use `file materialize` shape so drop_patch ALSO deletes
+        # the patch file (the dops shape that includes the file
+        # bytes in the substrate_diff). The bare `patch apply` shape
+        # only edits overlay.dops — small diff, wouldn't exercise
+        # the byte-cap path.
+        overlay = ws / "ports/devel/foo/overlay.dops"
+        overlay.write_text(
+            "port devel/foo\ntype port\ntarget @any\n"
+            'reason "test"\n\n'
+            "file materialize dragonfly/patch-fat.c -> dragonfly/patch-fat.c\n"
+        )
+        subprocess.run(
+            ["git", "-C", str(ws), "add", str(overlay.relative_to(ws))],
+            check=True,
+        )
+        subprocess.run(["git", "-C", str(ws), "commit", "-qm", "overlay"],
+                       check=True)
 
         # Sanity: the intent payload itself is tiny, so phase-1
         # (no substrate_diff) would let this through. If this
@@ -280,7 +311,7 @@ class TestWorkerLogAccumulation:
             "target": "dragonfly/patch-fat.c",
             "reason": "obsolete",
         }
-        log_probe = worker._ensure_intent_log("test-env", "devel/foo", "compat")
+        log_probe = worker._ensure_intent_log("test-env", "devel/foo", "dops")
         assert log_probe.would_overflow(intent_dict) is None, (
             "phase-1 should accept the small intent; if not, this "
             "test is exercising phase-1, not phase-2"
@@ -296,7 +327,7 @@ class TestWorkerLogAccumulation:
             "the byte-cap refusal reverted the drop_patch edit"
         )
         # Log has no row for this attempt (canonical-log invariant).
-        log = worker._ensure_intent_log("test-env", "devel/foo", "compat")
+        log = worker._ensure_intent_log("test-env", "devel/foo", "dops")
         assert len(log.intents) == 0
 
 
@@ -626,6 +657,22 @@ class TestPipelineEndToEnd:
             check=True,
         )
         subprocess.run(["git", "-C", str(ws), "commit", "-qm", "stage"],
+                       check=True)
+        # Seed overlay with `file materialize` shape so drop_patch
+        # also deletes the patch files (round-trip needs file-delete
+        # behavior to be reproducible on the replay end).
+        overlay = ws / "ports/devel/foo/overlay.dops"
+        overlay.write_text(
+            "port devel/foo\ntype port\ntarget @any\n"
+            'reason "test"\n\n'
+            "file materialize dragonfly/patch-a.c -> dragonfly/patch-a.c\n"
+            "file materialize dragonfly/patch-b.c -> dragonfly/patch-b.c\n"
+        )
+        subprocess.run(
+            ["git", "-C", str(ws), "add", str(overlay.relative_to(ws))],
+            check=True,
+        )
+        subprocess.run(["git", "-C", str(ws), "commit", "-qm", "overlay"],
                        check=True)
         head_at_apply = _git_head(ws)
 

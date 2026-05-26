@@ -47,8 +47,8 @@ def _make_workspace(tmp_path: Path, origin: str = "devel/foo") -> Path:
     return ws
 
 
-def _stub_assess(state: str = "auto_safe_pending",
-                 action: str = "defer_to_convert"):
+def _stub_assess(state: str = "converted",
+                 action: str = "proceed_triage"):
     """Build an OverlayAssessment stub for worker.assess_dops."""
     return OverlayAssessment(
         state=state, action=action,
@@ -87,14 +87,26 @@ def env_with_workspace(tmp_path, monkeypatch):
 
 class TestApplyIntentHappy:
 
-    def test_drop_patch_compat_mode(self, env_with_workspace, tmp_path):
+    def test_drop_patch_dops_mode(self, env_with_workspace, tmp_path):
+        """Step C: patch agent operates only on dops-converted
+        substrate. drop_patch removes the matching `patch apply`
+        line from overlay.dops (the convert agent's product)."""
         ws = env_with_workspace
-        # Stage a patch file so drop_patch has something to remove.
+        # Stage a patch file so the dops `patch apply` line has a
+        # corresponding file on disk.
         patch = ws / "ports/devel/foo/dragonfly/patch-old.c"
         patch.parent.mkdir(parents=True)
         patch.write_text("--- a/x\n+++ b/x\n")
+        # Seed overlay.dops with the matching dops directive.
+        overlay = ws / "ports/devel/foo/overlay.dops"
+        overlay.write_text(
+            "port devel/foo\ntype port\ntarget @any\n"
+            'reason "test"\n\n'
+            "patch apply dragonfly/patch-old.c\n"
+        )
         subprocess.run(
-            ["git", "-C", str(ws), "add", str(patch.relative_to(ws))],
+            ["git", "-C", str(ws), "add",
+             str(patch.relative_to(ws)), str(overlay.relative_to(ws))],
             check=True,
         )
         subprocess.run(["git", "-C", str(ws), "commit", "-qm", "add"],
@@ -107,9 +119,9 @@ class TestApplyIntentHappy:
         })
         assert result["ok"] is True
         assert result["intent_type"] == "drop_patch"
-        assert result["mode"] == "compat"
-        assert not patch.exists()
-        assert "deleted file" in result["substrate_diff"]
+        assert result["mode"] == "dops"
+        # The `patch apply` line is gone from overlay.dops.
+        assert "patch apply dragonfly/patch-old.c" not in overlay.read_text()
 
     def test_replace_in_patch_in_dops_mode(
         self, env_with_workspace, monkeypatch,
