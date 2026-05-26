@@ -13,6 +13,7 @@ Per design §11.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Iterable
 
@@ -366,11 +367,44 @@ def change_makefile(t, intent: ChangeMakefile):
     to dops ``add`` (the parser's name for "append to a list-shaped
     variable"). ``set`` takes a quoted STRING value; ``add`` /
     ``remove`` take a token (we quote them too for safety).
+
+    For ``op=set``: any pre-existing ``mk set <KEY>`` line for the
+    same key is stripped before the new statement is appended. The
+    engine renders multiple ``mk set`` for one key as sequential
+    ``mk.var.set`` ops (last-wins), so the on-disk form was
+    redundant but functionally correct — the bug was that the agent
+    would re-emit ``set`` intents while iterating, accumulating dead
+    lines in ``overlay.dops`` and then rationalizing the result as
+    "last wins." Stripping keeps the substrate clean and makes a
+    re-emit a true replace. ``op=append`` / ``op=remove`` keep the
+    plain-append behavior — multiple ``mk add`` / ``mk remove`` for
+    the same key are semantically distinct (list operations).
     """
-    from .translator import EditResult
     action = {"set": "set", "append": "add", "remove": "remove"}[intent.op]
     stmt = f"mk {action} {intent.key} {_quote_dops_string(intent.value)}"
-    return _append_overlay(t, "change_makefile", [stmt])
+    strip = _strip_existing_mk_set(intent.key) if intent.op == "set" else None
+    return _append_overlay(t, "change_makefile", [stmt], prefilter=strip)
+
+
+def _strip_existing_mk_set(key: str):
+    """Build a text-prefilter that removes ``mk set <key> ...`` lines.
+
+    Matches at top-level only (no leading word other than ``mk``)
+    with the action token ``set`` and the exact key. ``mk target
+    set NAME ...`` is distinct (3 tokens before the name) and won't
+    match.
+    """
+    pat = re.compile(rf"^\s*mk\s+set\s+{re.escape(key)}(\s+|$)")
+
+    def _filter(text: str) -> str:
+        kept: list[str] = []
+        for line in text.split("\n"):
+            if pat.match(line):
+                continue
+            kept.append(line)
+        return "\n".join(kept)
+
+    return _filter
 
 
 def replace_in_dops_block(t, intent: ReplaceInDopsBlock):
@@ -568,18 +602,24 @@ def bump_portrevision(t, intent: BumpPortrevision):
 # --------------------------------------------------------------------
 
 
-def _append_overlay(t, intent_type: str, statements: Iterable[str]):
+def _append_overlay(t, intent_type: str, statements: Iterable[str],
+                    prefilter=None):
     """Append one or more dops statements to ports/<origin>/overlay.dops.
 
     Creates the file with a minimal header if it didn't already
     exist. Returns an EditResult with the diff scoped to overlay.dops.
+
+    ``prefilter`` is an optional ``str -> str`` callable applied to
+    the original overlay text before the new statements are
+    appended. Used by ``change_makefile`` op=set to strip prior
+    ``mk set <KEY>`` lines for the same key.
     """
     from .translator import EditResult
     overlay = t.port_path(_DOPS_FILE)
     existed = overlay.is_file()
     before_overlay = overlay.read_text() if existed else None
     original = before_overlay if existed else _initial_overlay_header(t)
-    new = original
+    new = prefilter(original) if prefilter is not None else original
     if not new.endswith("\n"):
         new += "\n"
     for stmt in statements:

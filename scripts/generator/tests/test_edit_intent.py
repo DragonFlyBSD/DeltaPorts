@@ -440,6 +440,99 @@ class TestDopsRenderers:
         overlay_text = t.port_path("overlay.dops").read_text()
         assert 'mk set CFG "a\\"b\\\\c"' in overlay_text
 
+    def test_change_makefile_set_op_replaces_prior_mk_set_for_same_key(self, t):
+        """Two sequential set-ops for the same key must collapse to
+        one `mk set KEY ...` line in overlay.dops, not accumulate.
+
+        Regression for the redis smoke-test finding: three sequential
+        `change_makefile(op=set)` intents on BINARY_ALIAS produced
+        three additive `mk set BINARY_ALIAS "..."` lines (all ok=True),
+        and the agent rationalized the result as "last wins."
+        Functionally equivalent under the engine planner (last write
+        wins) but the substrate accumulates dead lines and the diff
+        grows unboundedly across re-edits.
+        """
+        r1 = t.apply({
+            "type": "change_makefile", "path": "Makefile",
+            "key": "BINARY_ALIAS", "value": "gmd5sum=md5 -r", "op": "set",
+        })
+        assert r1.ok is True
+        r2 = t.apply({
+            "type": "change_makefile", "path": "Makefile",
+            "key": "BINARY_ALIAS", "value": "gmd5sum=md5", "op": "set",
+        })
+        assert r2.ok is True
+        r3 = t.apply({
+            "type": "change_makefile", "path": "Makefile",
+            "key": "BINARY_ALIAS", "value": "gmd5sum=md5 -r", "op": "set",
+        })
+        assert r3.ok is True
+
+        overlay_text = t.port_path("overlay.dops").read_text()
+        # Exactly one mk-set line for this key, with the last value.
+        mk_set_lines = [
+            line for line in overlay_text.splitlines()
+            if line.strip().startswith("mk set BINARY_ALIAS")
+        ]
+        assert mk_set_lines == ['mk set BINARY_ALIAS "gmd5sum=md5 -r"'], (
+            f"expected one collapsed mk set line, got: {mk_set_lines!r}\n"
+            f"full overlay:\n{overlay_text}"
+        )
+
+    def test_change_makefile_set_op_preserves_other_mk_set_keys(self, t):
+        """Scrubbing for one key must NOT touch mk set lines for other keys."""
+        t.apply({
+            "type": "change_makefile", "path": "Makefile",
+            "key": "FOO", "value": "v1", "op": "set",
+        })
+        t.apply({
+            "type": "change_makefile", "path": "Makefile",
+            "key": "BAR", "value": "v2", "op": "set",
+        })
+        t.apply({
+            "type": "change_makefile", "path": "Makefile",
+            "key": "FOO", "value": "v3", "op": "set",
+        })
+        overlay_text = t.port_path("overlay.dops").read_text()
+        assert 'mk set FOO "v3"' in overlay_text
+        assert 'mk set BAR "v2"' in overlay_text
+        # FOO's old value must be gone, but only one FOO line remains.
+        assert overlay_text.count("mk set FOO") == 1
+        assert 'mk set FOO "v1"' not in overlay_text
+
+    def test_change_makefile_append_op_still_accumulates(self, t):
+        """`append` op (mk add) is a list op — repeated calls must
+        keep all lines. Only `set` collapses."""
+        t.apply({
+            "type": "change_makefile", "path": "Makefile",
+            "key": "USES", "value": "ssl", "op": "append",
+        })
+        t.apply({
+            "type": "change_makefile", "path": "Makefile",
+            "key": "USES", "value": "cmake", "op": "append",
+        })
+        overlay_text = t.port_path("overlay.dops").read_text()
+        assert 'mk add USES "ssl"' in overlay_text
+        assert 'mk add USES "cmake"' in overlay_text
+
+    def test_change_makefile_set_op_does_not_strip_mk_target_set(self, t):
+        """`mk target set NAME` is a distinct form (3 tokens before
+        name vs 2 for mk set VAR). Scrubbing for VAR=FOO must not
+        touch `mk target set FOO ...`."""
+        overlay = t.port_path("overlay.dops")
+        overlay.parent.mkdir(parents=True, exist_ok=True)
+        overlay.write_text(
+            'target @main\nport cat/x\ntype port\nreason "x"\n'
+            'mk target set FOO <<MK\nbody\nMK\n'
+        )
+        t.apply({
+            "type": "change_makefile", "path": "Makefile",
+            "key": "FOO", "value": "v1", "op": "set",
+        })
+        overlay_text = overlay.read_text()
+        assert "mk target set FOO <<MK" in overlay_text
+        assert 'mk set FOO "v1"' in overlay_text
+
     def test_replace_in_dops_block_edits_heredoc_body(self, t):
         """Step C-4: replace text inside an `mk target set <name>`
         heredoc body. The convert agent produces these for ports
