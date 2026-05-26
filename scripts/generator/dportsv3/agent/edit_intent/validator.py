@@ -10,7 +10,7 @@ Two layers per the design doc §9:
    apply time, knowing the current substrate state (e.g.
    "target file must exist" — depends on the env).
 
-Layer 1 lives here; Layer 2 lives in translator.py / _compat.py /
+Layer 1 lives here; Layer 2 lives in translator.py /
 _dops.py. The two split because Layer 1 can run anywhere, anytime
 (useful for `intent_reference` tool dry-runs); Layer 2 needs the
 env.

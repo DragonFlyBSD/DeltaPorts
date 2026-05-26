@@ -11,8 +11,7 @@ Module layout:
 - ``validator``   — parse_intent, IntentError, schema_for
 - ``translator``  — Translator(workspace, origin, mode).apply
 - ``log``         — IntentLog accumulator + size caps
-- ``_compat``     — compat-mode renderers (one per intent type)
-- ``_dops``       — dops-mode renderers
+- ``_dops``       — dops-mode renderers (one per intent type)
 - ``_convert``    — convert-mode renderer for convert_to_dops
 - ``schemas/``    — one JSON Schema per intent type
 """

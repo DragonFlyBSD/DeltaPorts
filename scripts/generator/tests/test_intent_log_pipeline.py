@@ -416,12 +416,23 @@ class TestApplyAndBuildIntentLog:
         from dports_dev_env.cli import _replay_intent_log
 
         ws = _make_workspace(tmp_path)
-        # Pre-stage a patch we can drop.
+        # Pre-stage a patch + dops overlay referencing it. Under
+        # Step C the agent operates only on dops-converted
+        # substrate, so the log's mode_at_apply is "dops" and
+        # drop_patch finds a `file materialize` line to strip.
         patch = ws / "ports/devel/foo/dragonfly/patch-old.c"
         patch.parent.mkdir(parents=True)
         patch.write_text("--- a/x\n+++ b/x\n")
+        overlay = ws / "ports/devel/foo/overlay.dops"
+        overlay.write_text(
+            "port devel/foo\ntype port\ntarget @main\n"
+            'reason "test"\n\n'
+            "file materialize dragonfly/patch-old.c -> "
+            "dragonfly/patch-old.c\n"
+        )
         subprocess.run(
-            ["git", "-C", str(ws), "add", str(patch.relative_to(ws))],
+            ["git", "-C", str(ws), "add",
+             str(patch.relative_to(ws)), str(overlay.relative_to(ws))],
             check=True,
         )
         subprocess.run(["git", "-C", str(ws), "commit", "-qm", "add"],
@@ -432,7 +443,7 @@ class TestApplyAndBuildIntentLog:
             "schema_version": 1,
             "origin": "devel/foo",
             "target": "@main",
-            "mode_at_apply": "compat",
+            "mode_at_apply": "dops",
             # baseline_commit must match the workspace's HEAD or the
             # baseline check refuses replay (added in §3 follow-up).
             "baseline_commit": _git_head(ws),
@@ -449,12 +460,15 @@ class TestApplyAndBuildIntentLog:
         rc, applied, total, err = _replay_intent_log(log_path, ws, "devel/foo")
         assert rc == 0, err
         assert applied == 1
+        # `file materialize` shape: drop_patch removes the overlay
+        # line AND deletes the patch file.
         assert not patch.exists()
+        assert "patch-old.c" not in overlay.read_text()
 
     def test_replay_rejects_origin_mismatch(self, tmp_path):
         from dports_dev_env.cli import _replay_intent_log
         ws = _make_workspace(tmp_path)
-        log = {"origin": "devel/bar", "mode_at_apply": "compat", "intents": []}
+        log = {"origin": "devel/bar", "mode_at_apply": "dops", "intents": []}
         log_path = tmp_path / "log.json"
         log_path.write_text(json.dumps(log))
         rc, applied, total, err = _replay_intent_log(log_path, ws, "devel/foo")
@@ -469,7 +483,7 @@ class TestApplyAndBuildIntentLog:
         from dports_dev_env.cli import _replay_intent_log
         ws = _make_workspace(tmp_path)
         log = {
-            "origin": "devel/foo", "mode_at_apply": "compat",
+            "origin": "devel/foo", "mode_at_apply": "dops",
             "intents": [
                 {"seq": 0, "ok": False,
                  "intent": {"type": "drop_patch",
@@ -494,7 +508,7 @@ class TestApplyAndBuildIntentLog:
 
         ws = _make_workspace(tmp_path)
         log = {
-            "origin": "devel/foo", "mode_at_apply": "compat",
+            "origin": "devel/foo", "mode_at_apply": "dops",
             "baseline_commit": "deadbeef0000deadbeef0000deadbeef00000000",
             "intents": [],
         }
@@ -514,7 +528,7 @@ class TestApplyAndBuildIntentLog:
 
         ws = _make_workspace(tmp_path)
         log = {
-            "origin": "devel/foo", "mode_at_apply": "compat",
+            "origin": "devel/foo", "mode_at_apply": "dops",
             "baseline_commit": "",
             "intents": [],
         }
@@ -530,7 +544,7 @@ class TestApplyAndBuildIntentLog:
         from dports_dev_env.cli import _replay_intent_log
         ws = _make_workspace(tmp_path)
         log = {
-            "origin": "devel/foo", "mode_at_apply": "compat",
+            "origin": "devel/foo", "mode_at_apply": "dops",
             "intents": [
                 {"seq": 0, "ok": True,
                  "intent": {"type": "drop_patch",

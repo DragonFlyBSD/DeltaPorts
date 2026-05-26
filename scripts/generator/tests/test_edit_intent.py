@@ -174,209 +174,6 @@ class TestSchemaFor:
             schema_for("nope")
 
 
-# --------------------------------------------------------------------
-# Translator — compat mode renderers
-# --------------------------------------------------------------------
-
-
-class TestCompatRenderers:
-
-    @pytest.fixture
-    def t(self, tmp_path):
-        ws = _make_workspace(tmp_path)
-        return Translator(ws, "devel/foo", "compat")
-
-    def test_replace_in_patch_happy(self, t):
-        patch = t.port_path("dragonfly/patch-foo.c")
-        patch.parent.mkdir(parents=True)
-        patch.write_text("ORIGINAL CONTENT here\n")
-
-        result = t.apply({
-            "type": "replace_in_patch",
-            "target": "dragonfly/patch-foo.c",
-            "find": "ORIGINAL", "replace": "NEW",
-        })
-        assert result.ok is True
-        assert patch.read_text() == "NEW CONTENT here\n"
-        assert "+NEW CONTENT" in result.substrate_diff
-
-    def test_replace_in_patch_missing_target(self, t):
-        result = t.apply({
-            "type": "replace_in_patch",
-            "target": "dragonfly/nope.c",
-            "find": "x", "replace": "y",
-        })
-        assert result.ok is False
-        assert "does not exist" in result.error
-
-    def test_replace_in_patch_find_not_found(self, t):
-        patch = t.port_path("dragonfly/patch-foo.c")
-        patch.parent.mkdir(parents=True)
-        patch.write_text("hello\n")
-
-        result = t.apply({
-            "type": "replace_in_patch",
-            "target": "dragonfly/patch-foo.c",
-            "find": "WORLD", "replace": "x",
-        })
-        assert result.ok is False
-        assert "find string not found" in result.error
-
-    def test_replace_in_patch_nth_occurrence(self, t):
-        patch = t.port_path("dragonfly/patch-foo.c")
-        patch.parent.mkdir(parents=True)
-        patch.write_text("X Y X Y X\n")
-
-        result = t.apply({
-            "type": "replace_in_patch",
-            "target": "dragonfly/patch-foo.c",
-            "find": "X", "replace": "Z", "occurrence": 2,
-        })
-        assert result.ok is True
-        assert patch.read_text() == "X Y Z Y X\n"
-
-    def test_drop_patch_happy(self, t):
-        patch = t.port_path("dragonfly/patch-old.c")
-        patch.parent.mkdir(parents=True)
-        patch.write_text("--- a/x\n+++ b/x\n")
-        subprocess.run(["git", "-C", str(t.workspace), "add",
-                        "ports/devel/foo/dragonfly/patch-old.c"], check=True)
-        subprocess.run(["git", "-C", str(t.workspace), "commit", "-qm", "add"],
-                       check=True)
-
-        result = t.apply({
-            "type": "drop_patch",
-            "target": "dragonfly/patch-old.c",
-            "reason": "obsolete",
-        })
-        assert result.ok is True
-        assert not patch.exists()
-        assert "deleted file" in result.substrate_diff
-
-    def test_drop_patch_missing_target(self, t):
-        result = t.apply({
-            "type": "drop_patch",
-            "target": "dragonfly/never-existed.c",
-            "reason": "x",
-        })
-        assert result.ok is False
-        assert "does not exist" in result.error
-
-    def test_add_patch_happy_with_inline_diff(self, t):
-        result = t.apply({
-            "type": "add_patch",
-            "target": "dragonfly/patch-new.c",
-            "diff": "--- a/src/x.c\n+++ b/src/x.c\n@@ -1 +1 @@\n-1\n+2\n",
-        })
-        assert result.ok is True
-        target = t.port_path("dragonfly/patch-new.c")
-        assert target.exists()
-        assert "new file" in result.substrate_diff
-
-    def test_add_patch_refuses_existing_target(self, t):
-        existing = t.port_path("dragonfly/patch-here.c")
-        existing.parent.mkdir(parents=True)
-        existing.write_text("--- a\n+++ b\n")
-        result = t.apply({
-            "type": "add_patch",
-            "target": "dragonfly/patch-here.c",
-            "diff": "--- a\n+++ b\n",
-        })
-        assert result.ok is False
-        assert "already exists" in result.error
-
-    def test_add_file_resource_happy(self, t):
-        result = t.apply({
-            "type": "add_file",
-            "dest": "files/post-install.sh",
-            "kind": "resource",
-            "content": "#!/bin/sh\necho hello\n",
-        })
-        assert result.ok is True
-        target = t.port_path("files/post-install.sh")
-        assert target.read_text().startswith("#!/bin/sh")
-
-    def test_add_file_resource_refuses_existing(self, t):
-        existing = t.port_path("files/here.txt")
-        existing.parent.mkdir(parents=True)
-        existing.write_text("x")
-        result = t.apply({
-            "type": "add_file",
-            "dest": "files/here.txt", "kind": "resource", "content": "y",
-        })
-        assert result.ok is False
-        assert "already exists" in result.error
-
-    def test_add_file_materialize_stubbed_in_25b(self, t):
-        """Materialize in compat mode is a 25b stub; explicit error
-        so the agent doesn't silently succeed."""
-        result = t.apply({
-            "type": "add_file",
-            "dest": "files/from-dfly.c",
-            "kind": "materialize",
-            "source": "lib/foo.c",
-        })
-        assert result.ok is False
-        assert "not yet supported" in result.error
-
-    def test_change_makefile_set_creates_file(self, t):
-        result = t.apply({
-            "type": "change_makefile",
-            "path": "Makefile.DragonFly",
-            "key": "USES", "value": "ssl", "op": "set",
-        })
-        assert result.ok is True
-        target = t.port_path("Makefile.DragonFly")
-        assert "USES=\tssl" in target.read_text()
-
-    def test_change_makefile_append_to_existing(self, t):
-        target = t.port_path("Makefile.DragonFly")
-        target.write_text("USES=\tpkgconfig\n")
-        result = t.apply({
-            "type": "change_makefile",
-            "path": "Makefile.DragonFly",
-            "key": "USES", "value": "ssl", "op": "append",
-        })
-        assert result.ok is True
-        assert "pkgconfig ssl" in target.read_text()
-
-    def test_change_makefile_remove_token(self, t):
-        target = t.port_path("Makefile.DragonFly")
-        target.write_text("USES=\tpkgconfig ssl readline\n")
-        result = t.apply({
-            "type": "change_makefile",
-            "path": "Makefile.DragonFly",
-            "key": "USES", "value": "ssl", "op": "remove",
-        })
-        assert result.ok is True
-        new = target.read_text()
-        assert "ssl" not in new.split("=", 1)[1]
-        assert "pkgconfig readline" in new
-
-    def test_change_makefile_remove_missing_file_errors(self, t):
-        result = t.apply({
-            "type": "change_makefile",
-            "path": "Makefile.DragonFly",
-            "key": "USES", "value": "x", "op": "remove",
-        })
-        assert result.ok is False
-
-    def test_bump_portrevision_increments(self, t):
-        target = t.port_path("Makefile")
-        target.write_text(
-            "PORTNAME=\tfoo\nPORTVERSION=\t1.0\nPORTREVISION=\t3\n"
-        )
-        result = t.apply({"type": "bump_portrevision"})
-        assert result.ok is True
-        assert "PORTREVISION=\t4" in target.read_text()
-
-    def test_bump_portrevision_inserts_when_missing(self, t):
-        target = t.port_path("Makefile")
-        target.write_text("PORTNAME=\tfoo\nPORTVERSION=\t1.0\n")
-        result = t.apply({"type": "bump_portrevision"})
-        assert result.ok is True
-        assert "PORTREVISION=\t1" in target.read_text()
-
 
 # --------------------------------------------------------------------
 # Translator — dops mode renderers
@@ -651,7 +448,7 @@ class TestModeRestrictions:
 
     def test_convert_to_dops_in_patch_mode_rejected(self, tmp_path):
         ws = _make_workspace(tmp_path)
-        t = Translator(ws, "devel/foo", "compat")
+        t = Translator(ws, "devel/foo", "dops")
         result = t.apply({"type": "convert_to_dops"})
         assert result.ok is False
         assert "only the convert agent" in result.error
@@ -672,7 +469,7 @@ class TestPathSafety:
     @pytest.fixture
     def t(self, tmp_path):
         ws = _make_workspace(tmp_path)
-        return Translator(ws, "devel/foo", "compat")
+        return Translator(ws, "devel/foo", "dops")
 
     def test_dotdot_in_target_rejected(self, t):
         result = t.apply({
@@ -699,7 +496,7 @@ class TestIntentLog:
 
     def test_append_records_entry(self):
         log = IntentLog(origin="devel/foo", target="@main",
-                        mode_at_apply="compat", baseline_commit="abc")
+                        mode_at_apply="dops", baseline_commit="abc")
         log.append({"type": "drop_patch", "target": "x", "reason": "y"},
                    ok=True, substrate_diff="diff")
         assert len(log.intents) == 1
@@ -708,18 +505,18 @@ class TestIntentLog:
 
     def test_serialize_round_trips(self):
         log = IntentLog(origin="devel/foo", target="@main",
-                        mode_at_apply="compat", baseline_commit="abc")
+                        mode_at_apply="dops", baseline_commit="abc")
         log.append({"type": "drop_patch", "target": "x", "reason": "y"},
                    ok=True)
         doc = json.loads(log.to_json())
         assert doc["schema_version"] == 1
         assert doc["origin"] == "devel/foo"
-        assert doc["mode_at_apply"] == "compat"
+        assert doc["mode_at_apply"] == "dops"
         assert len(doc["intents"]) == 1
 
     def test_count_cap_default_100(self):
         log = IntentLog(origin="devel/foo", target="@main",
-                        mode_at_apply="compat", baseline_commit="abc")
+                        mode_at_apply="dops", baseline_commit="abc")
         for i in range(100):
             log.append({"type": "drop_patch", "target": f"x{i}",
                         "reason": "y"}, ok=True)
@@ -730,7 +527,7 @@ class TestIntentLog:
     def test_count_cap_env_override(self, monkeypatch):
         monkeypatch.setenv("DP_HARNESS_INTENT_MAX_COUNT", "3")
         log = IntentLog(origin="devel/foo", target="@main",
-                        mode_at_apply="compat", baseline_commit="abc")
+                        mode_at_apply="dops", baseline_commit="abc")
         for i in range(3):
             log.append({"type": "drop_patch", "target": f"x{i}",
                         "reason": "y"}, ok=True)
@@ -741,7 +538,7 @@ class TestIntentLog:
     def test_size_cap_rejects_huge_diff(self, monkeypatch):
         monkeypatch.setenv("DP_HARNESS_INTENT_MAX_BYTES", "1000")
         log = IntentLog(origin="devel/foo", target="@main",
-                        mode_at_apply="compat", baseline_commit="abc")
+                        mode_at_apply="dops", baseline_commit="abc")
         # First entry within budget.
         log.append({"type": "drop_patch", "target": "small", "reason": "x"},
                    ok=True, substrate_diff="x")
@@ -761,7 +558,7 @@ class TestFromDupe:
 
     def test_from_dupe_picks_basename_match(self, tmp_path):
         ws = _make_workspace(tmp_path)
-        t = Translator(ws, "devel/foo", "compat")
+        t = Translator(ws, "devel/foo", "dops")
         genpatch = ws / ".genpatch-out"
         genpatch.mkdir()
         (genpatch / "patch-src_main.c").write_text("--- a/x\n+++ b/x\n")
@@ -777,7 +574,7 @@ class TestFromDupe:
 
     def test_from_dupe_no_match_errors(self, tmp_path):
         ws = _make_workspace(tmp_path)
-        t = Translator(ws, "devel/foo", "compat")
+        t = Translator(ws, "devel/foo", "dops")
         result = t.apply({
             "type": "add_patch",
             "target": "dragonfly/patch-missing.c",

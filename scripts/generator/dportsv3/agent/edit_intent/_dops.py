@@ -38,8 +38,22 @@ def replace_in_patch(t, intent: ReplaceInPatch):
     absence of dots — the prior shape ``text.replace_once file=...``
     was invalid grammar that the engine parser rejected, silently
     corrupting overlays (archivers/liblz4 2026-05-26).
+
+    Validates target is a safe port-subtree relpath BEFORE
+    appending — without this guard a malicious or buggy intent
+    could write ``text replace-once file ../escape.c ...`` to
+    overlay.dops, which compose would happily try to apply at
+    materialize time.
     """
     from .translator import EditResult
+    # Path safety. Reuses port_path's escape-check; we don't need
+    # the resolved path, just the validation.
+    try:
+        t.port_path(intent.target)
+    except IntentError as exc:
+        return EditResult(
+            ok=False, intent_type="replace_in_patch", error=str(exc),
+        )
     stmt = _stmt_text_replace_once(intent.target, intent.find, intent.replace)
     return _append_overlay(t, "replace_in_patch", [stmt])
 
@@ -135,17 +149,74 @@ def drop_patch(t, intent: DropPatch):
     )
 
 
+def _resolve_from_dupe(t, target: str) -> str | None:
+    """Find the most recently modified file matching ``target``'s
+    basename in the env's genpatch output directory.
+
+    The env layout for the genpatch output isn't fully resolved
+    without consulting the dev-env state (the WRKSRC path depends
+    on the port's distfile layout). Conventional location is
+    ``<workspace>/.genpatch-out/<basename>``; the helper also walks
+    the workspace tree for sibling ``.genpatch-out`` directories
+    so tests can place the file freely. Returns the file's text
+    contents, or ``None`` if nothing matches.
+    """
+    from pathlib import Path  # noqa: PLC0415
+    basename = Path(target).name
+    candidates = [t.workspace / ".genpatch-out" / basename]
+    work = t.workspace
+    if work.is_dir():
+        for sub in work.rglob(".genpatch-out"):
+            cand = sub / basename
+            if cand.is_file():
+                candidates.append(cand)
+    matches = [c for c in candidates if c.is_file()]
+    if not matches:
+        return None
+    matches.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+    return matches[0].read_text()
+
+
 def add_patch(t, intent: AddPatch):
     """Write the patch file + append `patch apply <target>` to overlay.dops."""
     from .translator import EditResult
-    from . import _compat
-    # In dops mode we still need the patch file on disk.
-    # Delegate the file-write half to the compat renderer (which
-    # writes the diff content); then append the dops statement.
-    file_result = _compat.add_patch(t, intent)
-    if not file_result.ok:
-        return file_result
+    # Write the patch file. In dops mode the patch lives on disk
+    # next to overlay.dops; the dops directive is the install
+    # declaration. The file content comes from intent.diff or, if
+    # from_dupe=True, from the env's genpatch output.
     target = t.port_path(intent.target)
+    if target.exists():
+        return EditResult(
+            ok=False, intent_type="add_patch",
+            error=f"patch already exists: {intent.target}",
+        )
+    if intent.from_dupe:
+        diff_content = _resolve_from_dupe(t, intent.target)
+        if diff_content is None:
+            return EditResult(
+                ok=False, intent_type="add_patch",
+                error=(
+                    f"from_dupe: no file matching basename "
+                    f"{intent.target.rsplit('/', 1)[-1]!r} found in "
+                    f"env's genpatch output dir"
+                ),
+            )
+    else:
+        diff_content = intent.diff or ""
+    if not diff_content.strip():
+        return EditResult(
+            ok=False, intent_type="add_patch",
+            error="add_patch requires non-empty diff content",
+        )
+    target.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        target.write_text(diff_content)
+    except OSError as exc:
+        return EditResult(
+            ok=False, intent_type="add_patch",
+            error=f"write failed for {intent.target}: {exc}",
+        )
+    # Now append the dops directive that installs it.
     stmt_result = _append_overlay(t, "add_patch",
                                   [f"patch apply {intent.target}"])
     if not stmt_result.ok:

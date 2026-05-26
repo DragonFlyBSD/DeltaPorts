@@ -8,10 +8,12 @@ Public surface:
 (typically ``<env>/writable/work/DeltaPorts``). The translator
 edits files under ``<workspace>/ports/<origin>/`` only.
 
-``mode`` is one of ``"compat" | "dops" | "convert"``. Resolved by
-the caller (in production: from ``classify_dops`` at BEGIN time).
-Convert mode is for the convert agent and accepts the
-``convert_to_dops`` intent; compat and dops modes reject it.
+``mode`` is one of ``"dops" | "convert"`` (Step C: compat-mode
+editing was removed; the patch agent operates only on
+dops-converted substrate, enforced upstream at
+worker.apply_intent). ``"dops"`` is what the patch agent uses;
+``"convert"`` is for the convert agent and accepts the
+``convert_to_dops`` intent; dops mode rejects it.
 
 Per-intent atomicity: each ``apply`` either applies the intent in
 full and returns ok=True, or rolls back any partial substrate
@@ -43,7 +45,7 @@ from .grammar import (
 from .validator import IntentError, parse_intent
 
 
-Mode = Literal["compat", "dops", "convert"]
+Mode = Literal["dops", "convert"]
 
 
 @dataclass
@@ -61,26 +63,26 @@ class Translator:
 
     def __init__(self, workspace: Path, origin: str, mode: Mode,
                  *, git: Callable[..., subprocess.CompletedProcess] | None = None):
-        if mode not in ("compat", "dops", "convert"):
-            raise ValueError(f"invalid mode: {mode!r}")
+        if mode not in ("dops", "convert"):
+            raise ValueError(
+                f"invalid mode: {mode!r} (Step C: only 'dops' and "
+                f"'convert' remain; 'compat' was removed)"
+            )
         self.workspace = Path(workspace)
         self.origin = origin
         self.mode = mode
         self.port_dir = self.workspace / "ports" / origin
         # subprocess.run shim — tests inject a fake.
         self._git = git or _real_git
-        # NOTE on the half-migration invariant: design §9.3 originally
-        # specified an in-transaction tracker (touched_dops vs
-        # touched_compat_makefile). It turned out to be unreachable in
-        # production because (a) mode is fixed at construction and
-        # (b) renderers dispatch by mode, so a compat-mode Translator
-        # can't ever produce dops-flavored writes and vice versa. The
-        # real guard lives at the worker.apply_intent boundary:
-        # worker.assess_dops returns action='surface_invariant' when
-        # the substrate is in a mixed state, and apply_intent refuses
-        # before constructing the Translator. See worker.apply_intent
-        # docstring + the test at test_refuses_substrate_in_half_
-        # migrated_state.
+        # The half-migration invariant lives at the
+        # worker.apply_intent boundary: worker.assess_dops returns
+        # action='surface_invariant' when the substrate is in a
+        # mixed state (Makefile.DragonFly + overlay.dops together),
+        # and apply_intent refuses before constructing the
+        # Translator. Step C: compat-mode editing was removed, so
+        # the only Translator the patch agent constructs is
+        # mode='dops'. The 'convert' mode remains for the convert
+        # agent's one-shot convert_to_dops intent.
 
     # ----- public API -------------------------------------------------
 
@@ -127,14 +129,13 @@ class Translator:
     # ----- dispatch ---------------------------------------------------
 
     def _renderer_for(self, intent: Intent) -> Callable[[Intent], EditResult]:
-        # Import-on-demand to keep cycles benign + allow per-mode
-        # renderer files to live alongside this module.
-        if self.mode in ("compat", "convert"):
-            from . import _compat as _mod
-        else:
-            from . import _dops as _mod
+        # Step C: dops-only renderers. compat-mode editing was
+        # removed from the agent's surface — the only path through
+        # apply_intent is mode="dops". Mode="convert" remains for
+        # the convert agent's single intent (convert_to_dops).
+        from . import _dops as _mod  # noqa: PLC0415
 
-        # Per-intent dispatch table per mode.
+        # Per-intent dispatch.
         if isinstance(intent, ReplaceInPatch):
             return lambda i: _mod.replace_in_patch(self, i)
         if isinstance(intent, DropPatch):
