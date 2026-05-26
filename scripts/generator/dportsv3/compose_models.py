@@ -68,6 +68,14 @@ class ComposePortReport:
     mode_reason: str = "legacy-overlay"
     compat_stages_executed: list[str] = field(default_factory=list)
     dops_ops_executed: int = 0
+    failed_ops: int = 0
+    # Per-op detail for failed ops only — empty for successful ports
+    # (keeps the report small). Each entry is the dict shape of
+    # ApplyOpResult.to_dict(). Populated by semantic_stage so
+    # compose-report (and operators) can see WHICH op failed without
+    # re-running `dsl apply` by hand (audio/cdparanoia 2026-05-26
+    # debug session burned several round-trips on this).
+    dops_failed_op_results: list[dict[str, Any]] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
@@ -77,6 +85,7 @@ class ComposePortReport:
             "total_ops": self.total_ops,
             "applied_ops": self.applied_ops,
             "skipped_ops": self.skipped_ops,
+            "failed_ops": self.failed_ops,
             "warnings": self.warnings,
             "errors": self.errors,
             "fallback_patch_count": self.fallback_patch_count,
@@ -88,6 +97,7 @@ class ComposePortReport:
             "mode_reason": self.mode_reason,
             "compat_stages_executed": self.compat_stages_executed,
             "dops_ops_executed": self.dops_ops_executed,
+            "dops_failed_op_results": self.dops_failed_op_results,
             "notes": self.notes,
         }
 

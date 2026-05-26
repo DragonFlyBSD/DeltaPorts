@@ -61,6 +61,7 @@ def test_compose_result_and_overview_schema_contract() -> None:
         "stale",
         "special",
         "hints",
+        "dops_failed_ops",
     }
     assert set(overview["stale"].keys()) == {
         "count",

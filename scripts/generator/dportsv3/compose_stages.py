@@ -728,17 +728,37 @@ def semantic_stage(
         report.total_ops += apply_result.total_ops
         report.applied_ops += apply_result.applied_ops
         report.skipped_ops += apply_result.skipped_ops
+        report.failed_ops += apply_result.failed_ops
         report.warnings += apply_result.warning_count
         report.errors += apply_result.error_count
         report.oracle_checks += apply_result.oracle_checks
         report.oracle_failures += apply_result.oracle_failures
         report.oracle_skipped += apply_result.oracle_skipped
         report.dops_ops_executed += apply_result.total_ops
+        # Persist per-op detail for any failed ops so compose-report
+        # and operators can see WHICH op failed and WHY without
+        # re-running `dsl apply` by hand. Successful ops omitted to
+        # keep the report compact.
+        for row in apply_result.op_results:
+            if row.status == "failed":
+                report.dops_failed_op_results.append(row.to_dict())
         stage.changed += apply_result.applied_ops
         stage.skipped += apply_result.skipped_ops
         if not apply_result.ok:
+            # Surface a per-op summary alongside the stage marker so
+            # operators don't have to scroll through ports[] to find
+            # the failed op codes. One line per failed op; full
+            # diagnostics live in report.dops_failed_op_results.
+            failed_summary = ", ".join(
+                f"{row.id}({row.kind})="
+                f"{row.diagnostics[0].code if row.diagnostics else 'unknown'}"
+                for row in apply_result.op_results
+                if row.status == "failed"
+            ) or "no per-op detail"
             stage.add_error(
-                "E_COMPOSE_APPLY_FAILED", f"{ctx.origin}: semantic apply failed"
+                "E_COMPOSE_APPLY_FAILED",
+                f"{ctx.origin}: {apply_result.failed_ops} op(s) failed "
+                f"[{failed_summary}]",
             )
             if strict:
                 stage.finished_at = datetime.now()

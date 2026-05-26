@@ -3228,6 +3228,16 @@ def _verify_conversion(job: dict, origin: str) -> tuple[bool, str]:
 
     Returns ``(True, status)`` when reapply succeeds, or when no
     env is available to verify in (offline / unit-test path).
+
+    On any failure path, rolls back the env's ports/<origin>/ subtree
+    to git HEAD via ``worker.reset_port`` and logs a
+    ``convert_verify_failed`` activity row. Without rollback, the
+    LLM convert agent's ``put_file overlay.dops`` lands in the env's
+    writable layer permanently — the next convert retry would see
+    a stale broken overlay and the next patch job would die at
+    ``patch_preflight_dirty`` (observed on audio/cdparanoia
+    2026-05-26 — the file remained "untracked" on disk for the
+    operator after the verify-failure return).
     """
     env = resolve_env(job)
     if not env:
@@ -3237,6 +3247,35 @@ def _verify_conversion(job: dict, origin: str) -> tuple[bool, str]:
         )
 
     from dportsv3.agent import worker
+
+    queue_root = Path(job.get("queue_root") or ".")
+
+    def _fail(status: str, reason_code: str, extra: dict | None = None) -> tuple[bool, str]:
+        """Common failure tail: rollback env state, log to activity,
+        return ``(False, status)``."""
+        reset_extra: dict[str, object] = {"origin": origin, "env": env,
+                                          "reason_code": reason_code}
+        if extra:
+            reset_extra.update(extra)
+        try:
+            reset = worker.reset_port(env, origin)
+            reset_extra["reset_ok"] = bool(reset.get("ok"))
+            if not reset.get("ok"):
+                reset_extra["reset_error"] = (
+                    reset.get("error") or reset.get("stderr_tail", "")
+                )[:300]
+        except Exception as exc:
+            reset_extra["reset_ok"] = False
+            reset_extra["reset_error"] = f"raised: {exc!s}"[:300]
+        try:
+            activity_log(
+                queue_root, "convert_verify_failed",
+                f"{origin}: {status[:240]}",
+                extra=reset_extra,
+            )
+        except Exception:
+            pass
+        return False, status
 
     mat = worker.materialize_dports(env, origin)
     if mat.get("ok"):
@@ -3254,9 +3293,10 @@ def _verify_conversion(job: dict, origin: str) -> tuple[bool, str]:
         env_target = job.get("target") or ""
         eff = _check_overlay_effective_ops(env, origin, env_target)
         if eff is not None:  # None means "ok"; non-None is the error
-            return False, (
-                f"conversion verified but overlay is dead on this env: "
-                f"{eff}"
+            return _fail(
+                f"conversion verified but overlay is dead on this env: {eff}",
+                "effective_ops_empty",
+                extra={"effective_ops_detail": eff[:300]},
             )
         # Stopgap pre-Step-26: commit the convert output to the env's
         # git so the next patch job's pre-job clean assertion
@@ -3264,7 +3304,6 @@ def _verify_conversion(job: dict, origin: str) -> tuple[bool, str]:
         # untracked overlay.dops. Without this the runner spawns a
         # patch job that dies immediately on patch_preflight_dirty
         # — observed thrash on devel/gperf 2026-05-25.
-        queue_root = Path(job.get("queue_root") or ".")
         bundle_dir = job.get("bundle_dir") or ""
         try:
             commit = worker.commit_port_changes(
@@ -3272,10 +3311,6 @@ def _verify_conversion(job: dict, origin: str) -> tuple[bool, str]:
                 f"convert: {origin} (auto-commit, bundle {bundle_dir or '?'})",
             )
             if not commit.get("ok"):
-                # Log loudly — silent failure here is exactly the bug
-                # the gperf 2026-05-25 thrash surfaced. Operator sees
-                # "commit_port_changes_failed" in the activity log
-                # and knows the next patch will hit preflight_dirty.
                 try:
                     activity_log(
                         queue_root, "commit_port_changes_failed",
@@ -3290,9 +3325,10 @@ def _verify_conversion(job: dict, origin: str) -> tuple[bool, str]:
                     )
                 except Exception:
                     pass
-                return False, (
+                return _fail(
                     f"conversion verified but env commit failed: "
-                    f"{commit.get('error') or commit.get('stderr_tail', '')[:200]}"
+                    f"{commit.get('error') or commit.get('stderr_tail', '')[:200]}",
+                    "env_commit_failed",
                 )
         except Exception as exc:
             try:
@@ -3304,8 +3340,9 @@ def _verify_conversion(job: dict, origin: str) -> tuple[bool, str]:
                 )
             except Exception:
                 pass
-            return False, (
-                f"conversion verified but env commit raised: {exc!s}"[:300]
+            return _fail(
+                f"conversion verified but env commit raised: {exc!s}"[:300],
+                "env_commit_raised",
             )
         # Success row so the analyzer / operator can confirm the
         # handoff cleared without scraping git history.
@@ -3337,8 +3374,10 @@ def _verify_conversion(job: dict, origin: str) -> tuple[bool, str]:
         (ln.strip() for ln in reversed(diag.splitlines()) if ln.strip()),
         "(no output)",
     )
-    return False, (
-        f"reapply failed: rc={mat.get('rc')!r} {last_line[:300]!r}"
+    return _fail(
+        f"reapply failed: rc={mat.get('rc')!r} {last_line[:300]!r}",
+        "reapply_failed",
+        extra={"rc": mat.get("rc"), "diag_tail": diag[-512:]},
     )
 
 

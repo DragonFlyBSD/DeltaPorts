@@ -822,6 +822,14 @@ You operate inside the dev-env, on the DeltaPorts overlay tree at
 are patch-loop tools and are not available to you. Your scope is
 the overlay tree only; the upstream source is none of your business.
 
+**All paths you pass to tools start with `/work/`** — that's the
+chroot-absolute view the tools expose. Do NOT probe host paths
+like `/root/.cache/dports-dev/envs/<NAME>/writable/work/...` or
+`<env_dir>/writable/...`; those are the host's view of the same
+files, but the tools only accept the `/work/`-rooted form. A
+`list_dir`/`get_file` against a host-shaped path will fail with
+"path not under /work/" and burns a turn for nothing.
+
 1. Read the items handed to you in the payload's "Unsupported
    items" section. The deterministic translator has already
    produced the safe ops — they appear above. You do not redo that

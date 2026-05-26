@@ -126,10 +126,26 @@ def build_compose_report_overview(
                 if origin is not None:
                     stale_origins.add(origin)
 
+    dops_failed_ops: list[dict[str, Any]] = []
     for port in ports:
         mode = str(port.get("mode", ""))
         if mode:
             mode_counts[mode] += 1
+        # Surface per-op failures from semantic_stage. compose-stage
+        # error messages summarize "N op(s) failed [op-id(kind)=CODE, ...]"
+        # but the full diagnostic message lives in
+        # ports[].dops_failed_op_results. Hoist it into the overview
+        # so `compose-report` shows it as a top-level section.
+        for row in list(port.get("dops_failed_op_results", [])):
+            diags = list(row.get("diagnostics") or [])
+            first_diag = diags[0] if diags else {}
+            dops_failed_ops.append({
+                "origin": str(port.get("origin", "")),
+                "op_id": str(row.get("id", "")),
+                "kind": str(row.get("kind", "")),
+                "code": str(first_diag.get("code") or row.get("message", "")),
+                "message": str(first_diag.get("message", "")),
+            })
 
     prune_stage = next(
         (stage for stage in stages if str(stage.get("name")) == "prune_stale_overlays"),
@@ -199,6 +215,7 @@ def build_compose_report_overview(
             for patch, count in patch_failures.most_common(top)
         ],
         "mode_counts": dict(sorted(mode_counts.items())),
+        "dops_failed_ops": dops_failed_ops[:top],
         "stale": {
             "count": len(stale_origins),
             "origins": sorted(stale_origins)[:top],
@@ -245,6 +262,16 @@ def format_compose_overview(
             "top_failed_patches: "
             + ", ".join(f"{row['patch']}({row['count']})" for row in top_patches)
         )
+
+    dops_failed = list(overview.get("dops_failed_ops", []))
+    if dops_failed:
+        lines.append("dops_failed_ops:")
+        for row in dops_failed:
+            msg_suffix = f" — {row['message']}" if row.get("message") else ""
+            lines.append(
+                f"  {row['origin']} {row['op_id']} ({row['kind']}): "
+                f"{row['code']}{msg_suffix}"
+            )
 
     stale = dict(overview.get("stale", {}))
     if stale.get("count", 0) > 0:

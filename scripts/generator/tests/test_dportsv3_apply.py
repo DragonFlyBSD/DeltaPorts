@@ -405,6 +405,74 @@ def test_apply_plan_mk_var_set_creates_before_first_target(tmp_path: Path) -> No
     )
 
 
+def test_apply_plan_mk_var_token_add_creates_when_subject_missing(tmp_path: Path) -> None:
+    """`mk add VAR token` against an undefined VAR must create the
+    assignment (matches make's `+=` semantics). The prior strict
+    refusal was tighter than make and broke faithful translation of
+    legacy Makefile.DragonFly artifacts (audio/cdparanoia 2026-05-26:
+    convert emitted `mk add CFLAGS -D__FreeBSD_version=900001` from
+    `CFLAGS+= ...`, executor rejected because upstream Makefile had
+    no `CFLAGS=` line).
+    """
+    makefile = tmp_path / "Makefile"
+    makefile.write_text("PORTNAME= sample\ndo-build:\n\t@true\n")
+    plan = Plan(
+        port="category/name",
+        ops=[
+            PlanOp(
+                id="op-1",
+                target="@main",
+                kind="mk.var.token_add",
+                payload={"name": "CFLAGS", "value": "-D__FreeBSD_version=900001"},
+            )
+        ],
+    )
+
+    result = apply_plan(
+        plan,
+        port_root=tmp_path,
+        target="@main",
+        dry_run=False,
+        oracle_profile="off",
+    )
+
+    assert result.ok, [d.code for d in result.op_results[0].diagnostics]
+    assert result.op_results[0].message == "mk-token-created"
+    assert makefile.read_text() == (
+        "PORTNAME= sample\nCFLAGS= -D__FreeBSD_version=900001\ndo-build:\n\t@true\n"
+    )
+
+
+def test_apply_plan_mk_var_token_add_appends_when_subject_present(tmp_path: Path) -> None:
+    """When the subject variable exists, `mk add` appends the token —
+    behavior unchanged from before the create-or-append fix."""
+    makefile = tmp_path / "Makefile"
+    makefile.write_text("PORTNAME= sample\nUSES= cmake\ndo-build:\n\t@true\n")
+    plan = Plan(
+        port="category/name",
+        ops=[
+            PlanOp(
+                id="op-1",
+                target="@main",
+                kind="mk.var.token_add",
+                payload={"name": "USES", "value": "ssl"},
+            )
+        ],
+    )
+
+    result = apply_plan(
+        plan,
+        port_root=tmp_path,
+        target="@main",
+        dry_run=False,
+        oracle_profile="off",
+    )
+
+    assert result.ok
+    assert result.op_results[0].message == "mk-token-added"
+    assert "USES= cmake ssl" in makefile.read_text()
+
+
 def test_apply_plan_mk_var_set_creates_before_first_include(tmp_path: Path) -> None:
     makefile = tmp_path / "Makefile"
     makefile.write_text("PORTNAME= sample\n.include <bsd.port.post.mk>\n")

@@ -567,6 +567,66 @@ def test_process_convert_job_reapply_fail(
     assert "dops parse error" in status
 
 
+def test_verify_failure_rolls_back_env_and_logs_activity(
+    tmp_path: Path, monkeypatch,
+) -> None:
+    """On any _verify_conversion failure path, the env's ports/<origin>/
+    subtree must be rolled back to git HEAD (worker.reset_port) AND a
+    convert_verify_failed activity row must be emitted with the reason
+    code. Without rollback the LLM convert agent's put_file overlay.dops
+    persists as an untracked file (audio/cdparanoia 2026-05-26 had
+    operators staring at a "live" dops file while the job reported
+    failure with no rollback trail)."""
+    repo = _make_repo(tmp_path)
+    port = _make_port(repo, "devel/verify-rollback")
+    (port / "Makefile.DragonFly").write_text("USES+=pkgconfig\n")
+    monkeypatch.setenv("DP_HARNESS_REPO_ROOT", str(repo))
+    monkeypatch.setattr(runner_mod, "_CLI_ENV_DEFAULT", "test-env")
+
+    from dportsv3.agent import worker
+    monkeypatch.setattr(
+        worker, "materialize_dports",
+        lambda env, origin: {
+            "ok": False, "rc": 2,
+            "stderr_tail": "compose: E_COMPOSE_APPLY_FAILED",
+        },
+    )
+    reset_calls: list[tuple[str, str]] = []
+    monkeypatch.setattr(
+        worker, "reset_port",
+        lambda env, origin: (
+            reset_calls.append((env, origin))
+            or {"ok": True, "origin": origin,
+                "paths_changed": [f"ports/{origin}"]}
+        ),
+    )
+    activity_rows: list[dict] = []
+    monkeypatch.setattr(
+        runner_mod, "activity_log",
+        lambda queue_root, stage, message, **kw: activity_rows.append(
+            {"stage": stage, "message": message, **kw}
+        ),
+    )
+
+    success, status = process_convert_job(
+        queue_root=tmp_path / "queue",
+        job_path=tmp_path / "queue" / "x.job",
+        sibling_paths=[],
+        job={"origin": "devel/verify-rollback", "target": "@main"},
+    )
+    assert not success
+    # Rollback fired exactly once with the right env/origin.
+    assert reset_calls == [("test-env", "devel/verify-rollback")]
+    # convert_verify_failed activity row carries the reason code.
+    verify_rows = [r for r in activity_rows
+                   if r["stage"] == "convert_verify_failed"]
+    assert len(verify_rows) == 1, activity_rows
+    extra = verify_rows[0]["extra"]
+    assert extra["reason_code"] == "reapply_failed"
+    assert extra["reset_ok"] is True
+    assert extra["origin"] == "devel/verify-rollback"
+
+
 def test_convert_tool_whitelist_blocks_build_tools() -> None:
     """Defense-in-depth: even if a future change ships extract /
     dsynth_build schemas to convert by mistake, the tool_loop's

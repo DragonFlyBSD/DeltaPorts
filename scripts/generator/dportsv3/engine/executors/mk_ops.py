@@ -196,10 +196,6 @@ def exec_mk_var_token_add(
 
     text, document = loaded
     intent = token_add(document, name, value)
-    if not intent.node_indices:
-        return _missing_row(
-            op, policy=policy, message=f"assignment not found: {name}", source_path=path
-        )
     if intent.ambiguous:
         return _failed_row(
             op,
@@ -207,6 +203,42 @@ def exec_mk_var_token_add(
             message=f"multiple assignments found for {name}",
             source_path=path,
         )
+
+    if not intent.node_indices:
+        # No existing assignment. Mirror make's `+=` semantics:
+        # `VAR+= token` on an undefined VAR is equivalent to
+        # `VAR= token` (creates the assignment with the token as
+        # its sole value). The prior strict refusal was stricter
+        # than make and forced every translator (LLM convert
+        # agent, deterministic migration/convert.py) to track
+        # upstream-variable presence before deciding between
+        # `mk add` and `mk set` — a distinction make itself
+        # doesn't require. Observed on audio/cdparanoia
+        # 2026-05-26: convert faithfully emitted `mk add CFLAGS
+        # -D__FreeBSD_version=900001` from the source's
+        # `CFLAGS+= ...`, executor rejected because upstream
+        # Makefile has no `CFLAGS=` line. Matches the existing
+        # exec_mk_var_set "no prior assignment" code path so
+        # set/add stay symmetric.
+        replacement = f"{name}= {value}"
+        insert_before = _mk_var_set_insert_line(document)
+        if insert_before is None:
+            line_count = len(text.splitlines(keepends=False))
+            updated = _replace_line_range(
+                text,
+                start=line_count + 1,
+                end=line_count,
+                new_lines=[replacement],
+            )
+        else:
+            updated = _replace_line_range(
+                text,
+                start=insert_before,
+                end=insert_before - 1,
+                new_lines=[replacement],
+            )
+        txn.stage_write(path, updated)
+        return _success_row(op, "mk-token-created")
 
     node = document.nodes[intent.node_indices[0]]
     tokens = [tok for tok in node.value.split() if tok]
