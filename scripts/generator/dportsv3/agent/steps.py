@@ -920,6 +920,7 @@ class PatchAttemptStep:
                 custom_llm_provider=custom_llm_provider,
                 timeout=timeout,
                 on_event=dispatcher,
+                origin=origin,
             )
         except Exception as exc:
             services.activity_log(

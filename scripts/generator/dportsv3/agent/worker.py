@@ -1071,6 +1071,20 @@ def drain_intent_log(env: str, origin: str):
     return _INTENT_LOGS.pop(key, None)
 
 
+def peek_intent_log(env: str, origin: str):
+    """Non-destructive read of the in-memory intent log for one
+    (env, origin). Returns the live IntentLog object (mutations
+    visible to subsequent reads) or None if no apply_intent calls
+    have landed yet.
+
+    Used between patch attempts to summarize prior-attempt intents
+    into the failure-context message so the agent doesn't blindly
+    re-emit an intent that already failed in attempt 1 (the
+    attempt-boundary amnesia symptom observed on databases/redis).
+    """
+    return _INTENT_LOGS.get(_intent_log_key(env, origin))
+
+
 import shlex  # noqa: E402 — needed by assert_port_clean / reset_port
 
 

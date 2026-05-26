@@ -67,21 +67,33 @@ def _parse_rebuild_proof(text: str) -> dict | None:
     return proof
 
 
-def _failure_context_message(attempt_idx: int, prev_text: str) -> dict:
-    """Build the user message that nudges the LLM into a retry."""
+def _failure_context_message(attempt_idx: int, prev_text: str,
+                             prior_summary: str | None = None) -> dict:
+    """Build the user message that nudges the LLM into a retry.
+
+    ``prior_summary``, when supplied, is appended verbatim under a
+    "Prior-attempt actions" header. Patch flow uses this to surface
+    the prior attempt's intent log so the agent doesn't re-emit an
+    intent that already failed (attempt-boundary amnesia).
+    """
     snippet = prev_text[-2000:] if len(prev_text) > 2000 else prev_text
-    return {
-        "role": "user",
-        "content": (
-            f"Previous attempt #{attempt_idx} did not succeed.\n\n"
-            f"Tail of your prior response:\n"
-            f"```\n{snippet}\n```\n\n"
-            "Inspect what went wrong, adjust your approach, and try again. "
-            "If you've tried the same idea twice and it failed both times, "
-            "describe the obstacle in your Patch Log and stop — don't burn "
-            "the budget thrashing."
-        ),
-    }
+    parts = [
+        f"Previous attempt #{attempt_idx} did not succeed.\n",
+        f"Tail of your prior response:\n```\n{snippet}\n```\n",
+    ]
+    if prior_summary:
+        parts.append(
+            "Prior-attempt actions (canonical record; the tail above is "
+            "narrative, this is what actually happened):\n"
+            f"{prior_summary}\n"
+        )
+    parts.append(
+        "Inspect what went wrong, adjust your approach, and try again. "
+        "If you've tried the same idea twice and it failed both times, "
+        "describe the obstacle in your Patch Log and stop — don't burn "
+        "the budget thrashing."
+    )
+    return {"role": "user", "content": "\n".join(parts)}
 
 
 def run(
@@ -101,6 +113,7 @@ def run(
     agent_flow: str = "patch",
     proof_parser=None,
     is_success=None,
+    prior_attempt_summary=None,
 ) -> PatchResult:
     """Run the patch flow for one bundle, returning a structured PatchResult.
 
@@ -127,7 +140,15 @@ def run(
         if attempt_idx == 1:
             messages = list(base_messages)
         else:
-            messages = list(base_messages) + [_failure_context_message(attempt_idx - 1, prev_text)]
+            summary = None
+            if prior_attempt_summary is not None:
+                try:
+                    summary = prior_attempt_summary()
+                except Exception:
+                    summary = None
+            messages = list(base_messages) + [
+                _failure_context_message(attempt_idx - 1, prev_text, summary)
+            ]
 
         # Remaining tokens this attempt is allowed to consume.
         remaining = (budget - total_usage.total_tokens) if budget else 0
