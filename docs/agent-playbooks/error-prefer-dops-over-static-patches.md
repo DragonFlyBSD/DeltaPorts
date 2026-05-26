@@ -1,6 +1,6 @@
 ---
 triggers:
-  classifications: [patch-error]
+  classifications: []      # wildcard — cross-cutting guidance, attach to every triage/patch/convert payload
   flows: [triage, patch, convert]
 tags: [dops, static-patch, version-bump]
 priority: 50

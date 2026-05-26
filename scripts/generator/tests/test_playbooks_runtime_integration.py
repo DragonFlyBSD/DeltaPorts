@@ -38,6 +38,34 @@ def _write_triage_md(bundle_dir: Path, classification: str) -> None:
     )
 
 
+def test_build_triage_payload_attaches_wildcard_playbooks_only(
+    tmp_path: Path, monkeypatch,
+):
+    """Triage flow doesn't know a classification yet (it's the thing
+    being determined). Wildcard entries (classifications: []) still
+    attach; classification-tagged entries don't. Validates the
+    Option-D mixed-trigger curation that resolved review issue #3."""
+    bundle_dir = tmp_path / "bundle"
+    bundle_dir.mkdir()
+
+    monkeypatch.setattr(runner_mod, "artifact_store_get", lambda *a, **kw: None)
+    monkeypatch.setattr(runner_mod, "tracker_artifact_get", lambda *a, **kw: None)
+    monkeypatch.setattr(runner_mod, "bundle_artifact_list", lambda *a, **kw: [])
+    monkeypatch.setattr(runner_mod, "port_bundle_history", lambda *a, **kw: [])
+    monkeypatch.setattr(runner_mod, "get_user_context",
+                        lambda *a, **kw: (None, 0))
+
+    playbooks_dir = find_playbooks_dir()
+    job = {"origin": "category/x", "target": "@main"}
+    payload = runner_mod.build_triage_payload(bundle_dir, playbooks_dir, job)
+
+    # The wildcard cross-cutting entry attaches at triage time.
+    assert "Agent Playbooks" in payload
+    # Classification-tagged entries do NOT attach (no classification known).
+    assert "Orphaned" not in payload  # error-plist-mismatch signature
+    assert "blacklist.h" not in payload  # error-freebsd-only-features signature
+
+
 def test_build_patch_payload_attaches_classification_matching_playbook(
     tmp_path: Path, monkeypatch,
 ):
@@ -79,11 +107,16 @@ def test_build_patch_payload_attaches_classification_matching_playbook(
     assert "plist" in payload.lower()
 
 
-def test_build_patch_payload_omits_irrelevant_playbooks(
+def test_build_patch_payload_attaches_only_wildcard_playbooks_when_classification_unmatched(
     tmp_path: Path, monkeypatch,
 ):
-    """A classification with no matching playbook attaches nothing.
-    Selection is strict — no fallback to wildcard entries."""
+    """A classification not matched by any classification-tagged
+    entry still pulls in any wildcard entries (classifications: []).
+    Wildcard semantics: the entry's classification trigger is empty,
+    so it matches regardless of context — cross-cutting guidance.
+
+    The classification-tagged entries (plist, freebsd-only,
+    dragonfly-source) all skip in this case."""
     bundle_dir = tmp_path / "bundle"
     bundle_dir.mkdir()
     _write_triage_md(bundle_dir, "no-such-classification")
@@ -104,8 +137,18 @@ def test_build_patch_payload_omits_irrelevant_playbooks(
     job = {"origin": "category/x", "target": "@main"}
     payload = runner_mod.build_patch_payload(bundle_dir, playbooks_dir, job)
 
-    # No playbook section because no entry matches this classification.
-    assert "Agent Playbooks" not in payload
+    # Wildcard entries (the dops-preference cross-cutting guidance)
+    # still attach — section header present.
+    assert "Agent Playbooks" in payload
+    # The wildcard entry's signature appears in the body.
+    assert "dops" in payload.lower() and "static-patch" in payload.lower() or \
+           "Static patch" in payload, (
+        "expected the cross-cutting dops-preference entry to attach "
+        "as the wildcard match"
+    )
+    # The classification-tagged entries do NOT appear.
+    assert "Orphaned" not in payload  # error-plist-mismatch signature
+    assert "blacklist.h" not in payload  # error-freebsd-only-features signature
 
 
 # -----------------------------------------------------------------
