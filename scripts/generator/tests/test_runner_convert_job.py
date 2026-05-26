@@ -627,6 +627,147 @@ def test_verify_failure_rolls_back_env_and_logs_activity(
     assert extra["origin"] == "devel/verify-rollback"
 
 
+def test_llm_convert_failure_rolls_back_env_and_logs_activity(
+    tmp_path: Path, monkeypatch,
+) -> None:
+    """When `convert_mod.run` returns success=False (budget exhausted,
+    no proof block, etc.), the orphaned overlay.dops the agent may have
+    written via put_file persists in the env's writable layer unless
+    the handler rolls back. Fix #4 covered _verify_conversion failures
+    only — this branch was uncovered. cdparanoia 2026-05-26 burned 4
+    patch attempts on the residue from such a budget-out."""
+    repo = _make_repo(tmp_path)
+    port = _make_port(repo, "devel/needs-judge")
+    (port / "Makefile.DragonFly").write_text(
+        ".if ${OPSYS} == DragonFly\nUSES+= pkgconfig\n.endif\n"
+    )
+    monkeypatch.setenv("DP_HARNESS_REPO_ROOT", str(repo))
+    monkeypatch.setattr(runner_mod, "_CLI_ENV_DEFAULT", "test-env")
+    monkeypatch.setenv("DP_HARNESS_CONVERT_MODEL", "x")
+    monkeypatch.setenv("DP_HARNESS_CONVERT_API_KEY", "x")
+
+    from dportsv3.agent import worker, convert as convert_mod
+    from types import SimpleNamespace
+    monkeypatch.setattr(
+        convert_mod, "run",
+        lambda *a, **kw: SimpleNamespace(
+            success=False, proof=None,
+            raw_result=SimpleNamespace(status="budget_exhausted"),
+            status="no_conversion_proof_block",
+        ),
+    )
+    reset_calls: list[tuple[str, str]] = []
+    monkeypatch.setattr(
+        worker, "reset_port",
+        lambda env, origin: (
+            reset_calls.append((env, origin))
+            or {"ok": True, "origin": origin,
+                "paths_changed": [f"ports/{origin}"]}
+        ),
+    )
+    activity_rows: list[dict] = []
+    monkeypatch.setattr(
+        runner_mod, "activity_log",
+        lambda queue_root, stage, message, **kw: activity_rows.append(
+            {"stage": stage, "message": message, **kw}
+        ),
+    )
+
+    success, status = process_convert_job(
+        queue_root=tmp_path / "queue",
+        job_path=tmp_path / "queue" / "x.job",
+        sibling_paths=[],
+        job={"origin": "devel/needs-judge", "target": "@main"},
+    )
+    assert not success
+    assert "llm_convert_failed" in status
+    assert reset_calls == [("test-env", "devel/needs-judge")]
+    verify_rows = [r for r in activity_rows
+                   if r["stage"] == "convert_verify_failed"]
+    assert len(verify_rows) == 1, activity_rows
+    assert verify_rows[0]["extra"]["reason_code"] == "llm_convert_failed"
+
+
+def test_apply_files_removed_deletes_listed_paths(
+    tmp_path: Path, monkeypatch,
+) -> None:
+    """The CONVERT_SYSTEM prompt promises the handler will finalize
+    `files_removed` from the proof. Verify the handler actually
+    deletes the listed port-subtree files and logs an activity row."""
+    from dportsv3.agent import worker
+    from dportsv3.agent.runner import _apply_files_removed
+
+    port_dir = tmp_path / "writable" / "work" / "DeltaPorts" / "ports" / "devel" / "p"
+    port_dir.mkdir(parents=True)
+    (port_dir / "Makefile.DragonFly").write_text("legacy\n")
+    (port_dir / "overlay.dops").write_text("# fresh\n")
+    (port_dir / "diffs").mkdir()
+    (port_dir / "diffs" / "old.diff").write_text("--- a\n+++ b\n")
+
+    monkeypatch.setattr(
+        worker, "env_paths",
+        lambda env: worker.EnvPaths(
+            env_dir=tmp_path / "writable",
+            writable=tmp_path / "writable",
+        ),
+    )
+    activity_rows: list[dict] = []
+    monkeypatch.setattr(
+        runner_mod, "activity_log",
+        lambda queue_root, stage, message, **kw: activity_rows.append(
+            {"stage": stage, "message": message, **kw}
+        ),
+    )
+
+    _apply_files_removed(
+        queue_root=tmp_path / "queue", env="test-env", origin="devel/p",
+        proof={"files_removed": [
+            "Makefile.DragonFly",                # legitimate
+            "ports/devel/p/diffs/old.diff",      # fully-qualified, stripped
+            "../escape.txt",                     # refused
+            "overlay.dops",                      # refused (don't delete the fresh overlay)
+            "nonexistent",                       # idempotent, no error
+        ]},
+    )
+
+    assert not (port_dir / "Makefile.DragonFly").exists()
+    assert not (port_dir / "diffs" / "old.diff").exists()
+    assert (port_dir / "overlay.dops").exists()  # protected
+    rows = [r for r in activity_rows if r["stage"] == "convert_files_removed"]
+    assert len(rows) == 1
+    extra = rows[0]["extra"]
+    assert "Makefile.DragonFly" in extra["removed"]
+    assert "diffs/old.diff" in extra["removed"]
+    assert "nonexistent" in extra["removed"]  # idempotent
+    skipped_paths = {row["path"] for row in extra["skipped"]}
+    assert "../escape.txt" in skipped_paths
+    assert "overlay.dops" in skipped_paths
+
+
+def test_apply_files_removed_noop_when_field_missing(
+    tmp_path: Path, monkeypatch,
+) -> None:
+    """No `files_removed` key (or empty) → silent no-op. No activity
+    row emitted (avoids noise for successful auto-safe converts where
+    the deterministic translator handled the cleanup)."""
+    from dportsv3.agent.runner import _apply_files_removed
+    activity_rows: list[dict] = []
+    monkeypatch.setattr(
+        runner_mod, "activity_log",
+        lambda queue_root, stage, message, **kw: activity_rows.append(
+            {"stage": stage}
+        ),
+    )
+    _apply_files_removed(
+        queue_root=tmp_path, env="e", origin="devel/x", proof={},
+    )
+    _apply_files_removed(
+        queue_root=tmp_path, env="e", origin="devel/x",
+        proof={"files_removed": []},
+    )
+    assert activity_rows == []
+
+
 def test_convert_tool_whitelist_blocks_build_tools() -> None:
     """Defense-in-depth: even if a future change ships extract /
     dsynth_build schemas to convert by mistake, the tool_loop's

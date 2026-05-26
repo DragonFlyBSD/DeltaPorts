@@ -3123,15 +3123,161 @@ def _run_llm_conversion(
         on_event=dispatcher,
     )
     if not result.success:
+        # Rollback any port-subtree dirt the agent left behind. Without
+        # this, an orphaned put_file'd overlay.dops persists in the
+        # env's writable layer — the next convert retry sees both the
+        # stale overlay AND the legacy Makefile.DragonFly (half-migrated
+        # substrate), the patch agent then hits substrate_invariant and
+        # burns its budget on a state convert never closed. Observed on
+        # audio/cdparanoia 2026-05-26 between attempts 130732Z and
+        # 141838Z. Fix #4 covered _verify_conversion failures but not
+        # the convert-loop-failed branch here.
+        _rollback_env_after_convert_failure(
+            queue_root, env, origin, reason_code="llm_convert_failed",
+            status=f"{result.status} ({result.raw_result.status})",
+        )
         return False, (
             f"llm_convert_failed: {result.status} "
             f"({result.raw_result.status})"
         )
 
-    # The agent wrote overlay.dops + cleaned up legacy files via
-    # its tool calls. Verify with dsynth_build same as the
-    # deterministic path.
+    # Handler-side cleanup: act on files_removed from the agent's
+    # Conversion Proof. The CONVERT_SYSTEM prompt explicitly delegates
+    # legacy-file deletion to the handler (the agent has no tool to
+    # remove port-subtree files; apply_intent is patch-flow). Without
+    # this loop the LLM convert path produces a half-migrated
+    # substrate (overlay.dops + Makefile.DragonFly together) that
+    # poisons every subsequent patch job with substrate_invariant.
+    _apply_files_removed(
+        queue_root=queue_root, env=env, origin=origin,
+        proof=result.proof or {},
+    )
+
+    # The agent wrote overlay.dops + the handler finalized legacy
+    # cleanup. Verify via reapply.
     return _verify_conversion(job, origin)
+
+
+def _rollback_env_after_convert_failure(
+    queue_root: Path, env: str, origin: str, *,
+    reason_code: str, status: str,
+) -> None:
+    """Reset ports/<origin>/ to git HEAD + emit a convert_verify_failed
+    activity row. Used when ``_run_llm_conversion`` exits before
+    ``_verify_conversion`` runs — keeps the env clean for the next
+    attempt and surfaces the reason to operators."""
+    from dportsv3.agent import worker
+    reset_extra: dict[str, object] = {
+        "origin": origin, "env": env, "reason_code": reason_code,
+    }
+    try:
+        reset = worker.reset_port(env, origin)
+        reset_extra["reset_ok"] = bool(reset.get("ok"))
+        if not reset.get("ok"):
+            reset_extra["reset_error"] = (
+                reset.get("error") or reset.get("stderr_tail", "")
+            )[:300]
+    except Exception as exc:
+        reset_extra["reset_ok"] = False
+        reset_extra["reset_error"] = f"raised: {exc!s}"[:300]
+    try:
+        activity_log(
+            queue_root, "convert_verify_failed",
+            f"{origin}: {status[:240]}",
+            extra=reset_extra,
+        )
+    except Exception:
+        pass
+
+
+def _apply_files_removed(
+    *, queue_root: Path, env: str, origin: str, proof: dict,
+) -> None:
+    """Honor the proof's ``files_removed`` list — delete each port-
+    subtree relpath the agent flagged for removal.
+
+    CONVERT_SYSTEM tells the agent: "note the files that should be
+    removed in `files_removed` — the handler will finalize the
+    cleanup". This is that finalization. The agent has no port-
+    subtree delete tool of its own (would clash with the patch-flow
+    apply_intent gate); the handler is the only place this can land.
+
+    Path safety: each entry must be a relpath under
+    ports/<origin>/. Absolute paths, ``..`` segments, the freshly-
+    written ``overlay.dops``, and any path escaping the port subtree
+    are skipped with an activity log warning rather than executed.
+    """
+    from dportsv3.agent import worker
+    requested = proof.get("files_removed") or []
+    if not isinstance(requested, list):
+        return
+    if not requested:
+        return
+    try:
+        paths = worker.env_paths(env)
+    except Exception as exc:
+        try:
+            activity_log(
+                queue_root, "convert_files_removed_failed",
+                f"{origin}: could not resolve env paths: {exc!s}"[:240],
+                extra={"origin": origin, "env": env,
+                       "requested": requested[:32]},
+            )
+        except Exception:
+            pass
+        return
+    port_dir = (paths.deltaports / "ports" / origin).resolve()
+    if not port_dir.is_dir():
+        return
+    removed: list[str] = []
+    skipped: list[dict] = []
+    for raw in requested:
+        if not isinstance(raw, str) or not raw.strip():
+            skipped.append({"path": str(raw), "reason": "not-a-string"})
+            continue
+        rel = raw.strip()
+        # Tolerate `ports/<origin>/...` prefix in case the agent
+        # emitted a fully-qualified relpath; strip it.
+        prefix = f"ports/{origin}/"
+        if rel.startswith(prefix):
+            rel = rel[len(prefix):]
+        if rel.startswith("/") or ".." in rel.split("/"):
+            skipped.append({"path": raw, "reason": "escapes-port-subtree"})
+            continue
+        if rel in {"overlay.dops", ""}:
+            skipped.append({"path": raw, "reason": "refused-overlay-or-empty"})
+            continue
+        target = (port_dir / rel).resolve()
+        try:
+            target.relative_to(port_dir)
+        except ValueError:
+            skipped.append({"path": raw, "reason": "resolves-outside-port"})
+            continue
+        if not target.exists():
+            # Idempotent: missing target is fine; the agent's intent
+            # was "this should not be present", which it isn't.
+            removed.append(rel)
+            continue
+        try:
+            if target.is_dir():
+                shutil.rmtree(target)
+            else:
+                target.unlink()
+            removed.append(rel)
+        except OSError as exc:
+            skipped.append({"path": raw, "reason": f"unlink-failed: {exc!s}"[:200]})
+    try:
+        activity_log(
+            queue_root, "convert_files_removed",
+            f"{origin}: removed={len(removed)} skipped={len(skipped)}",
+            extra={
+                "origin": origin, "env": env,
+                "removed": removed[:32],
+                "skipped": skipped[:32],
+            },
+        )
+    except Exception:
+        pass
 
 
 def _check_overlay_effective_ops(
