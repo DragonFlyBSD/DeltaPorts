@@ -89,23 +89,32 @@ All under `/api/bundles/<bundle-id>/artifacts/`:
 | `analysis/proposed_fix.md` | Operator-facing summary the tracker generates. |
 | `port/Makefile`, `port/distinfo`, `port/pkg-plist` | Snapshot of the port at failure time. |
 
-Bulk-fetch recipe (preferred — uses the CLI):
-```sh
-BID=<bundle-id>
-for f in meta.txt logs/errors.txt analysis/triage.md analysis/patch.md \
-         analysis/patch_audit.json analysis/rebuild_proof.json \
-         analysis/changes.diff analysis/tool_trace.jsonl \
-         analysis/intent_log.json; do
-  echo "===== $f ====="
-  dportsv3 tracker fetch-artifact "$BID" "$f" 2>/dev/null \
-    || echo "(absent)"
-done
-```
+**Bulk-fetch the bundle in ONE shell command, not N small calls.**
 
-Or in one structured call: `dportsv3 tracker get-bundle <bundle-id> --json` returns the bundle row PLUS the artifact list with sizes, so you can decide which artifacts are worth fetching.
+Every Bash invocation costs a permission prompt and a tool turn. The whole analysis should fit in 2–4 Bash calls total:
 
-Note: `analysis/intent_log.json` 404s on legacy-flow bundles — that's
-fine, it means the bundle predates Step 25 or the gate was off.
+1. **List + pick** (1 call): `"$DPORTSV3" tracker list-bundles --origin <port> --limit 5`
+2. **Full bundle dump in one shell pipeline** (1 call):
+
+   ```sh
+   BID=<bundle-id>
+   echo "===== bundle detail + jobs ====="
+   "$DPORTSV3" tracker get-bundle "$BID" --jobs --json
+   for f in meta.txt logs/errors.txt analysis/triage.md analysis/patch.md \
+            analysis/patch_audit.json analysis/rebuild_proof.json \
+            analysis/changes.diff analysis/tool_trace.jsonl \
+            analysis/intent_log.json; do
+     echo "===== $f ====="
+     "$DPORTSV3" tracker fetch-artifact "$BID" "$f" 2>/dev/null \
+       || echo "(absent)"
+   done
+   ```
+
+3. **Activity log if needed** (1 call): `"$DPORTSV3" tracker get-activity --job <job-id> --limit 200`
+
+That's it. Three Bash calls covers ~95% of analyses. Do NOT make one call per artifact, one call per job ID, one call per stage filter — the shell loop above is a single Bash invocation from the permission system's perspective. Reach for more calls only when the first dump leaves a specific gap (e.g. an unexpected stage you want to grep for).
+
+Note: `analysis/intent_log.json` 404s on legacy-flow bundles — the `|| echo "(absent)"` handles it.
 
 ## Expected behavior (current code contract)
 
