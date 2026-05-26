@@ -51,6 +51,13 @@ def test_dsynth_build_creates_and_removes_flag_file(monkeypatch):
 
     monkeypatch.setattr(worker, "_exec", fake_exec)
     monkeypatch.setattr(worker, "_dsynth_log_path", lambda origin: "/tmp/log")
+    # Stale-compose guard requires a prior successful materialize.
+    # Pre-seed the baseline so this test exercises the dsynth invocation
+    # path, not the new freshness refusal.
+    monkeypatch.setattr(worker, "_port_subtree_hash",
+                        lambda env, origin: "deadbeef")
+    monkeypatch.setitem(worker._MATERIALIZE_STATE,
+                        ("test-env", "devel/foo"), "deadbeef")
 
     worker.dsynth_build("test-env", "devel/foo")
 
@@ -145,6 +152,10 @@ def test_dsynth_build_payload_is_resilient_to_dsynth_failure(monkeypatch):
 
     monkeypatch.setattr(worker, "_exec", fake_exec)
     monkeypatch.setattr(worker, "_dsynth_log_path", lambda origin: "/tmp/log")
+    monkeypatch.setattr(worker, "_port_subtree_hash",
+                        lambda env, origin: "deadbeef")
+    monkeypatch.setitem(worker._MATERIALIZE_STATE,
+                        ("test-env", "devel/foo"), "deadbeef")
 
     result = worker.dsynth_build("test-env", "devel/foo")
     assert result["rebuild_ok"] is False

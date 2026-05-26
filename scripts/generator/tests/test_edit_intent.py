@@ -104,6 +104,37 @@ class TestParseIntent:
         })
         assert intent.occurrence == 1
 
+    def test_replace_in_patch_refuses_dops_target(self):
+        """Regression: agent tried replace_in_patch(target=overlay.dops)
+        as a text editor; renderer appended escalating
+        text.replace_once directives, corrupting the overlay
+        (devel_gperf-20260526-064013Z). Validator now refuses any
+        .dops target — replace_in_patch is for patch hunks only."""
+        with pytest.raises(IntentError, match="refuses target"):
+            parse_intent({
+                "type": "replace_in_patch",
+                "target": "overlay.dops",
+                "find": "old", "replace": "new",
+            })
+
+    def test_replace_in_patch_refuses_any_dops_target(self):
+        """Any *.dops file is refused, not just overlay.dops literally."""
+        with pytest.raises(IntentError, match="refuses target"):
+            parse_intent({
+                "type": "replace_in_patch",
+                "target": "ports/devel/foo/other.dops",
+                "find": "x", "replace": "y",
+            })
+
+    def test_replace_in_patch_allows_patch_targets(self):
+        """Non-.dops targets (the intended use case) still validate."""
+        intent = parse_intent({
+            "type": "replace_in_patch",
+            "target": "dragonfly/patch-lib_getopt.c",
+            "find": "OLD", "replace": "NEW",
+        })
+        assert intent.target == "dragonfly/patch-lib_getopt.c"
+
     def test_add_patch_anyof_requires_diff_or_dupe(self):
         with pytest.raises(IntentError, match="failed schema"):
             parse_intent({"type": "add_patch", "target": "x"})
@@ -398,7 +429,80 @@ class TestDopsRenderers:
             "target": "dragonfly/never-referenced.c", "reason": "x",
         })
         assert result.ok is False
+        # Error names BOTH shapes so the agent doesn't get a
+        # misleading "no patch apply" when the overlay would use
+        # file materialize.
         assert "no `patch apply" in result.error
+        assert "file materialize" in result.error
+
+    def test_drop_patch_removes_file_materialize_and_deletes_file(self, t):
+        """Regression: convert-produced overlays install patches via
+        `file materialize` rather than `patch apply`. drop_patch must
+        recognize this shape and delete both the overlay line and the
+        referenced patch file (gperf 2026-05-26 trap)."""
+        patch_file = t.port_path("dragonfly/patch-lib_getopt.c")
+        patch_file.parent.mkdir(parents=True, exist_ok=True)
+        patch_file.write_text("--- a\n+++ b\n@@ -1 +1 @@\n-x\n+y\n")
+        overlay = t.port_path("overlay.dops")
+        overlay.write_text(
+            "target @main\nport devel/foo\ntype port\n"
+            'reason "x"\n\n'
+            "file materialize dragonfly/patch-lib_getopt.c -> "
+            "dragonfly/patch-lib_getopt.c\n"
+            "file materialize dragonfly/patch-keep.c -> "
+            "dragonfly/patch-keep.c\n"
+        )
+        result = t.apply({
+            "type": "drop_patch",
+            "target": "dragonfly/patch-lib_getopt.c",
+            "reason": "obsolete upstream",
+        })
+        assert result.ok is True, result.error
+        new = overlay.read_text()
+        # Line removed from overlay.
+        assert "patch-lib_getopt.c" not in new
+        # Sibling materialize statement kept.
+        assert "patch-keep.c" in new
+        # Patch file deleted.
+        assert not patch_file.exists()
+        # paths_changed names both the overlay AND the deleted file.
+        assert any("overlay.dops" in p for p in result.paths_changed)
+        assert any("patch-lib_getopt.c" in p for p in result.paths_changed)
+
+    def test_drop_patch_only_matches_patch_shaped_file_materialize(self, t):
+        """`file materialize` for non-patch destinations (e.g. source
+        replacements like file materialize src/foo -> some/dest) must
+        NOT match drop_patch — the looks-like-patch guard requires
+        dragonfly/patch-* prefix."""
+        overlay = t.port_path("overlay.dops")
+        overlay.write_text(
+            "file materialize src/replacement.c -> work/foo/main.c\n"
+        )
+        result = t.apply({
+            "type": "drop_patch",
+            "target": "work/foo/main.c",
+            "reason": "x",
+        })
+        assert result.ok is False
+        assert "no `patch apply" in result.error
+
+    def test_drop_patch_tolerates_whitespace_around_arrow(self, t):
+        """`file materialize <src> -> <dest>` should match whether
+        the agent emitted tight or loose spacing around the arrow."""
+        patch_file = t.port_path("dragonfly/patch-x.c")
+        patch_file.parent.mkdir(parents=True, exist_ok=True)
+        patch_file.write_text("--- a\n+++ b\n")
+        overlay = t.port_path("overlay.dops")
+        overlay.write_text(
+            # Extra spaces before/after the arrow.
+            "file materialize dragonfly/patch-x.c   ->   dragonfly/patch-x.c\n"
+        )
+        result = t.apply({
+            "type": "drop_patch",
+            "target": "dragonfly/patch-x.c", "reason": "x",
+        })
+        assert result.ok is True
+        assert not patch_file.exists()
 
     def test_add_patch_writes_file_and_statement(self, t):
         result = t.apply({

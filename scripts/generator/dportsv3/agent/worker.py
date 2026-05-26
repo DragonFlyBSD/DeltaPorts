@@ -781,6 +781,50 @@ def _exec(
     )
 
 
+# --------------------------------------------------------------------
+# Compose-freshness tracking (refuses dsynth_build against a stale
+# compose tree — observed false positive on devel/gperf 2026-05-26
+# where dsynth claimed rebuild_ok=true against a pre-corruption
+# compose because materialize_dports had failed 3× mid-attempt).
+#
+# State is per-(env, origin) and lives in-process: dsynth_build is
+# always called inside an agent attempt that's also calling
+# materialize_dports, so the in-memory dict is sufficient. The hash
+# is recomputed from disk at each check, so external operator
+# changes are still caught (the next dsynth_build will see a
+# mismatch and refuse).
+# --------------------------------------------------------------------
+
+# (env, origin) → port-subtree content hash at last successful materialize
+_MATERIALIZE_STATE: dict[tuple[str, str], str] = {}
+
+
+def _port_subtree_hash(env: str, origin: str) -> str:
+    """Hash of ``ports/<origin>/`` contents inside the env's chroot.
+
+    Used to detect "the substrate has changed since the last
+    successful materialize_dports". Hashes the sorted list of file
+    sha256s under the port subtree; cheap (~ms for typical ports)
+    and stable.
+
+    Returns empty string on any error — caller treats that as "no
+    valid baseline," which is the conservative answer.
+    """
+    cmd = (
+        f"cd /work/DeltaPorts && "
+        f"find {shlex.quote('ports/' + origin)} -type f -print0 2>/dev/null "
+        f"| sort -z "
+        f"| xargs -0 sha256sum 2>/dev/null "
+        f"| sha256sum "
+        f"| cut -d' ' -f1"
+    )
+    try:
+        p = _exec(env, "/bin/sh", "-c", cmd, "_")
+        return (p.stdout or "").strip() if p.returncode == 0 else ""
+    except Exception:
+        return ""
+
+
 def materialize_dports(env: str, origin: str) -> dict:
     """Regenerate the DPorts tree for ``origin`` using ``reapply`` inside the env.
 
@@ -793,9 +837,23 @@ def materialize_dports(env: str, origin: str) -> dict:
     moved to ``dportsv3.agent.health`` as a direct probe. The runner
     gates on health before claiming jobs; tool errors that look
     health-related trigger a cache-invalidating re-probe.
+
+    On success, records the port subtree's content hash so
+    :func:`dsynth_build` can detect a stale compose tree later in
+    the same attempt.
     """
     p = _exec(env, "reapply", origin)
-    return _exec_result(p.returncode, p.stdout, p.stderr, origin=origin)
+    result = _exec_result(p.returncode, p.stdout, p.stderr, origin=origin)
+    if result.get("ok"):
+        h = _port_subtree_hash(env, origin)
+        if h:
+            _MATERIALIZE_STATE[(env, origin)] = h
+    else:
+        # Failed materialize invalidates the baseline — substrate
+        # may be in an intermediate state. Drop the entry; next
+        # dsynth_build sees "no baseline" and refuses.
+        _MATERIALIZE_STATE.pop((env, origin), None)
+    return result
 
 
 WRKDIRPREFIX = "/work/obj"
@@ -1646,6 +1704,44 @@ def dsynth_build(env: str, origin: str) -> dict:
     intentionally not used: it doesn't pass -S/-y because humans use
     it interactively.
     """
+    # Stale-compose guard: refuse if substrate state at last
+    # successful materialize_dports doesn't match the substrate
+    # state now. Without this, dsynth builds against a stale
+    # compose tree from an earlier materialize and falsely reports
+    # rebuild_ok=true even when the agent's intervening edits
+    # haven't been re-composed (seen on devel_gperf-20260526-064013Z
+    # — 3 mid-attempt materialize failures but dsynth still passed
+    # against the pre-corruption tree).
+    baseline = _MATERIALIZE_STATE.get((env, origin))
+    if baseline is None:
+        return {
+            "ok": False,
+            "rebuild_ok": False,
+            "origin": origin,
+            "error": (
+                f"dsynth_build refused: no successful "
+                f"materialize_dports for {origin!r} in this attempt. "
+                f"Call materialize_dports first; the compose tree "
+                f"on disk may be from a stale state."
+            ),
+            "blocked_by": "stale_compose",
+        }
+    current = _port_subtree_hash(env, origin)
+    if current and current != baseline:
+        return {
+            "ok": False,
+            "rebuild_ok": False,
+            "origin": origin,
+            "error": (
+                f"dsynth_build refused: ports/{origin}/ has changed "
+                f"since the last successful materialize_dports "
+                f"(baseline sha {baseline[:12]}…, now {current[:12]}…). "
+                f"Re-run materialize_dports to refresh the compose "
+                f"tree before building."
+            ),
+            "blocked_by": "stale_compose",
+        }
+
     # Read DPORTS_DSYNTH_PROFILE inside the chroot (set by dev-env's
     # build_env_dict at helpers.py:113) and invoke dsynth directly.
     # Using sh -c so we can reference the env var on the chroot side.

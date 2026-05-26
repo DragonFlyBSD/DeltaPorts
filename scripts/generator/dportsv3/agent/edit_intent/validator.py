@@ -128,7 +128,7 @@ def parse_intent(raw: dict[str, Any] | str) -> Intent:
     fields = {f for f in cls.__dataclass_fields__}
     kwargs = {k: v for k, v in raw.items() if k in fields}
     try:
-        return cls(**kwargs)
+        intent_obj = cls(**kwargs)
     except TypeError as exc:
         # E.g. missing required dataclass field that the schema let
         # through. Shouldn't happen if schemas + dataclasses are in
@@ -138,3 +138,42 @@ def parse_intent(raw: dict[str, Any] | str) -> Intent:
             intent=raw,
             detail=str(exc),
         )
+    # Semantic checks the JSON schema can't easily express.
+    _check_semantics(intent_obj, raw)
+    return intent_obj
+
+
+def _check_semantics(intent_obj, raw: dict) -> None:
+    """Post-schema semantic checks for parsed intents.
+
+    Catches cases the JSON schema accepts as well-formed but the
+    grammar/translator would mishandle. Currently:
+
+    - ``replace_in_patch`` whose ``target`` ends in ``.dops``: the
+      dops-mode renderer expresses this as a deferred
+      ``text.replace_once`` directive in ``overlay.dops``. If the
+      target IS ``overlay.dops`` the resulting directive references
+      the DSL file itself, which is meta-recursive nonsense — and
+      the agent calling it N times appends N escalating directives
+      (the "escalating quine" corruption observed on
+      ``devel_gperf-20260526-064013Z``). ``replace_in_patch`` is
+      strictly for hunks inside patch files; edits to the DSL go
+      through ``change_makefile`` / ``drop_patch`` / ``add_patch``.
+    """
+    intent_type = getattr(intent_obj, "type", None) or raw.get("type")
+    if intent_type == "replace_in_patch":
+        target = getattr(intent_obj, "target", "") or ""
+        if target.endswith(".dops"):
+            raise IntentError(
+                f"replace_in_patch refuses target={target!r}: this "
+                f"intent edits patch hunks, not the dops DSL file. "
+                f"In dops mode the renderer would append a "
+                f"`text.replace_once` directive referencing the DSL "
+                f"itself, producing a self-referential overlay. To "
+                f"remove a `patch apply` block use drop_patch; to "
+                f"remove a `file materialize dragonfly/patch-*` "
+                f"line use drop_patch (extended in this codebase to "
+                f"match both forms); to add an arbitrary file use "
+                f"add_file.",
+                intent=raw,
+            )

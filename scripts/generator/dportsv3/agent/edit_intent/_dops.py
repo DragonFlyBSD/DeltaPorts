@@ -39,7 +39,22 @@ def replace_in_patch(t, intent: ReplaceInPatch):
 
 
 def drop_patch(t, intent: DropPatch):
-    """Remove the patch apply <target> statement from overlay.dops."""
+    """Remove a patch install for ``intent.target`` from overlay.dops.
+
+    Handles both shapes the dops grammar emits for patch installs:
+
+    - ``patch apply <target>`` (inline) — strips the line.
+    - ``file materialize <src> -> <target>`` (materialized) —
+      strips the line AND deletes the referenced patch file under
+      ``ports/<origin>/<target>``. Without the file-delete the
+      materialize itself was the only declaration of the patch's
+      existence in the overlay, but the patch bytes would still
+      sit on disk and confuse the next person to read the port.
+
+    Refusal when no shape matches names both shapes so the agent
+    doesn't get an ambiguous "no `patch apply` found" when the
+    overlay uses ``file materialize`` (the gperf 2026-05-26 trap).
+    """
     from .translator import EditResult
     overlay = t.port_path(_DOPS_FILE)
     if not overlay.is_file():
@@ -48,13 +63,14 @@ def drop_patch(t, intent: DropPatch):
             error=f"{_DOPS_FILE} does not exist; nothing to remove from",
         )
     original = overlay.read_text()
-    new, removed = _strip_patch_apply_stmt(original, intent.target)
+    new, removed, shape = _strip_patch_apply_stmt(original, intent.target)
     if not removed:
         return EditResult(
             ok=False, intent_type="drop_patch",
             error=(
-                f"no `patch apply {intent.target}` statement found "
-                f"in {_DOPS_FILE}"
+                f"no `patch apply {intent.target}` or "
+                f"`file materialize ... -> {intent.target}` statement "
+                f"found in {_DOPS_FILE}"
             ),
         )
     try:
@@ -64,10 +80,31 @@ def drop_patch(t, intent: DropPatch):
             ok=False, intent_type="drop_patch",
             error=f"write failed for {_DOPS_FILE}: {exc}",
         )
+    paths_changed = [str(overlay.relative_to(t.workspace))]
+    diff_targets = [overlay]
+    # For materialized patches, also delete the patch file itself.
+    if shape == "file_materialize":
+        patch_file = t.port_path(intent.target)
+        if patch_file.is_file():
+            try:
+                patch_file.unlink()
+            except OSError as exc:
+                # Rollback the overlay edit so the half-applied state
+                # doesn't confuse the next intent.
+                overlay.write_text(original)
+                return EditResult(
+                    ok=False, intent_type="drop_patch",
+                    error=(
+                        f"could not delete patch file "
+                        f"{intent.target}: {exc}"
+                    ),
+                )
+            paths_changed.append(str(patch_file.relative_to(t.workspace)))
+            diff_targets.append(patch_file)
     return EditResult(
         ok=True, intent_type="drop_patch",
-        paths_changed=[str(overlay.relative_to(t.workspace))],
-        substrate_diff=t.git_diff(overlay),
+        paths_changed=paths_changed,
+        substrate_diff=t.git_diff(*diff_targets),
     )
 
 
@@ -252,19 +289,47 @@ def _stmt_text_replace_once(target: str, find: str, replace: str) -> str:
     return f"text.replace_once file={target} from={q(find)} to={q(replace)}"
 
 
-def _strip_patch_apply_stmt(text: str, target: str) -> tuple[str, bool]:
-    """Remove a `patch apply <target>` line from dops text.
+def _strip_patch_apply_stmt(text: str, target: str) -> tuple[str, bool, str]:
+    """Remove a patch-install statement for ``target`` from dops text.
 
-    Returns (new_text, removed). Matches with optional leading
-    whitespace; preserves all other lines.
+    Recognizes two shapes (convert produces the second; older
+    hand-authored overlays produce the first):
+
+    1. ``patch apply <target>`` — inline patch install
+    2. ``file materialize <src> -> <target>`` — materialized
+       patch install (only matched when the destination is the
+       target AND the destination looks like a patch path,
+       i.e. starts with ``dragonfly/patch-`` to avoid
+       accidentally stripping non-patch ``file materialize``
+       lines)
+
+    Returns (new_text, removed, shape) where ``shape`` is
+    ``"patch_apply"`` or ``"file_materialize"`` or ``""`` if
+    nothing matched. Matches with optional leading whitespace;
+    preserves all other lines.
     """
     out = []
     removed = False
-    needle = f"patch apply {target}"
+    shape = ""
+    patch_apply_needle = f"patch apply {target}"
+    looks_like_patch = target.startswith("dragonfly/patch-")
     for line in text.splitlines():
-        if line.strip() == needle and not removed:
-            removed = True
-            continue
+        stripped = line.strip()
+        if not removed:
+            if stripped == patch_apply_needle:
+                removed = True
+                shape = "patch_apply"
+                continue
+            if looks_like_patch and stripped.startswith("file materialize "):
+                # Parse "file materialize <src> -> <dest>". Tolerate
+                # extra whitespace around the arrow.
+                rest = stripped[len("file materialize "):]
+                if "->" in rest:
+                    src, _, dest = rest.partition("->")
+                    if dest.strip() == target:
+                        removed = True
+                        shape = "file_materialize"
+                        continue
         out.append(line)
     suffix = "\n" if text.endswith("\n") else ""
-    return ("\n".join(out) + suffix, removed)
+    return ("\n".join(out) + suffix, removed, shape)
