@@ -66,6 +66,46 @@ the assignment lands in `overlay.dops` as an `mk` directive (the
 file path is used by the engine for diagnostic context, not for
 filesystem routing).
 
+## Before guessing a variable's semantics, check the framework
+
+The ports framework (`Mk/bsd.port.mk` and friends) is the source of
+truth for what a Makefile variable means: how it's parsed, what
+shape its value must take, whether it's iterated as a list, whether
+embedded whitespace breaks something. The build error you'll get
+back if you guess wrong is usually opaque (a `.for` substitution
+arity mismatch, a missing-file error from a path you didn't
+construct, a "Wrong number of words" message from `.for`).
+
+Before emitting a `change_makefile` for a variable you don't
+recognize — or whose **value shape** you're inferring rather than
+reading — grep the framework first:
+
+```
+grep("^[[:space:]]*<VARIABLE>[[:space:]]*[+:?]?=", "/work/freebsd-ports/Mk")
+grep("\\$\\{<VARIABLE>\\}|\\$\\(<VARIABLE>\\)", "/work/freebsd-ports/Mk")
+grep("\\.for .* in .*<VARIABLE>", "/work/freebsd-ports/Mk")
+```
+
+The first grep finds the variable's *definition* and default. The
+second finds *consumers* — where the value is referenced. The third
+finds `.for` iteration, which is the tell that the value is parsed
+as a whitespace-separated list and each entry must match a fixed
+arity (e.g. `BINARY_ALIAS` is iterated as `.for entry in
+${BINARY_ALIAS}` with each entry parsed as `key=value` — values
+containing a space break the parse with "Wrong number of words").
+
+Other framework trees worth grepping when a Makefile assignment
+fails compose:
+- `/work/freebsd-ports/Mk/Uses/*.mk` — per-USES module behavior
+  (`USES=cmake` pulls in `Uses/cmake.mk`, etc.).
+- `/work/freebsd-ports/Mk/Features/*.mk` — feature toggles.
+- `/work/freebsd-ports/Mk/Scripts/*.sh` — helpers some framework
+  variables hand to a shell with quoting rules of their own.
+
+Cheap reads beat expensive guesses. A failed `apply_intent +
+materialize + dsynth_build` cycle is several thousand tokens; a
+grep into `Mk/` is a few hundred and usually answers the question.
+
 ## Failure modes
 
 - `op: "remove"` against an undefined variable → `ok=false`. Make
