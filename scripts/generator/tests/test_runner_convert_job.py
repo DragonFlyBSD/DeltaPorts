@@ -148,6 +148,36 @@ def test_enqueue_convert_job_writes_jobfile(tmp_path: Path) -> None:
     assert "requested_by=triage" in content
 
 
+def test_enqueue_convert_job_propagates_bundle_dir(tmp_path: Path) -> None:
+    """Triage-enqueued converts must carry the originating bundle_dir
+    so the convert's audit (commit message, activity rows) can link
+    back. Regression for the empty 'bundle ?' in commit messages
+    seen on devel/gperf 2026-05-25."""
+    queue_root = tmp_path / "queue"
+    (queue_root / "pending").mkdir(parents=True)
+    job_path = enqueue_convert_job(
+        queue_root,
+        origin="devel/foo",
+        target="@main",
+        requested_by="triage",
+        bundle_dir="/logs/bundles/devel_foo-20260526-100000Z",
+    )
+    content = job_path.read_text()
+    assert "bundle_dir=/logs/bundles/devel_foo-20260526-100000Z" in content
+
+
+def test_enqueue_convert_job_omits_bundle_dir_when_absent(tmp_path: Path) -> None:
+    """Operator-fired converts have no originating bundle; bundle_dir
+    is dropped from the jobfile rather than written as 'bundle_dir='."""
+    queue_root = tmp_path / "queue"
+    (queue_root / "pending").mkdir(parents=True)
+    job_path = enqueue_convert_job(
+        queue_root, origin="devel/foo", target="@main",
+        requested_by="operator",
+    )
+    assert "bundle_dir" not in job_path.read_text()
+
+
 def test_process_convert_job_auto_safe_port(
     tmp_path: Path, monkeypatch
 ) -> None:
@@ -390,6 +420,17 @@ def test_process_convert_job_verifies_with_reapply_pass(
                 "paths_changed": [f"ports/{origin}"]}
     monkeypatch.setattr(worker, "commit_port_changes", fake_commit)
 
+    # Capture activity_log rows so we can assert the
+    # commit_port_changes_ok row gets emitted (observability gap
+    # the analyzer flagged on devel/gperf 2026-05-25).
+    activity_rows = []
+    monkeypatch.setattr(
+        runner_mod, "activity_log",
+        lambda queue_root, stage, message, **kw: activity_rows.append(
+            {"stage": stage, "message": message, **kw}
+        ),
+    )
+
     success, status = process_convert_job(
         queue_root=tmp_path / "queue",
         job_path=tmp_path / "queue" / "x.job",
@@ -403,6 +444,93 @@ def test_process_convert_job_verifies_with_reapply_pass(
     assert len(commit_calls) == 1
     assert commit_calls[0][1] == "devel/verify-pass"
     assert (port / "overlay.dops").exists()
+    # commit_port_changes_ok activity row recorded — operator /
+    # analyzer can see the handoff cleared without reading git log.
+    ok_rows = [r for r in activity_rows
+               if r["stage"] == "commit_port_changes_ok"]
+    assert len(ok_rows) == 1
+    assert ok_rows[0]["extra"]["origin"] == "devel/verify-pass"
+    assert ok_rows[0]["extra"]["committed"] is True
+
+
+def test_process_convert_job_emits_failure_row_when_commit_fails(
+    tmp_path: Path, monkeypatch,
+) -> None:
+    """When commit_port_changes returns ok=False, _verify_conversion
+    must emit a commit_port_changes_failed activity row AND return
+    success=False so the operator sees the broken handoff."""
+    repo = _make_repo(tmp_path)
+    port = _make_port(repo, "devel/commit-fail")
+    (port / "Makefile.DragonFly").write_text("USES+=pkgconfig\n")
+    monkeypatch.setenv("DP_HARNESS_REPO_ROOT", str(repo))
+    monkeypatch.setattr(runner_mod, "_CLI_ENV_DEFAULT", "test-env")
+
+    from dportsv3.agent import worker
+    monkeypatch.setattr(worker, "materialize_dports",
+                        lambda env, origin: {"ok": True, "rc": 0})
+    monkeypatch.setattr(
+        worker, "commit_port_changes",
+        lambda env, origin, message: {
+            "ok": False,
+            "error": "commit_port_changes failed for ports/devel/commit-fail",
+            "stderr_tail": "fatal: not a git repository",
+        },
+    )
+    activity_rows = []
+    monkeypatch.setattr(
+        runner_mod, "activity_log",
+        lambda queue_root, stage, message, **kw: activity_rows.append(
+            {"stage": stage, "message": message, **kw}
+        ),
+    )
+
+    success, status = process_convert_job(
+        queue_root=tmp_path / "queue",
+        job_path=tmp_path / "queue" / "x.job",
+        sibling_paths=[],
+        job={"origin": "devel/commit-fail", "target": "@main"},
+    )
+    assert not success
+    assert "env commit failed" in status
+    fail_rows = [r for r in activity_rows
+                 if r["stage"] == "commit_port_changes_failed"]
+    assert len(fail_rows) == 1
+    assert "not a git repository" in fail_rows[0]["extra"]["stderr_tail"]
+
+
+def test_process_convert_job_commit_message_includes_bundle_dir(
+    tmp_path: Path, monkeypatch,
+) -> None:
+    """The convert job's bundle_dir field must reach the commit
+    message — was rendered as 'bundle ?' before bundle_dir
+    propagation."""
+    repo = _make_repo(tmp_path)
+    port = _make_port(repo, "devel/with-bundle")
+    (port / "Makefile.DragonFly").write_text("USES+=pkgconfig\n")
+    monkeypatch.setenv("DP_HARNESS_REPO_ROOT", str(repo))
+    monkeypatch.setattr(runner_mod, "_CLI_ENV_DEFAULT", "test-env")
+
+    from dportsv3.agent import worker
+    monkeypatch.setattr(worker, "materialize_dports",
+                        lambda env, origin: {"ok": True, "rc": 0})
+    captured_message = []
+    def fake_commit(env, origin, message):
+        captured_message.append(message)
+        return {"ok": True, "committed": True, "origin": origin,
+                "paths_changed": [f"ports/{origin}"]}
+    monkeypatch.setattr(worker, "commit_port_changes", fake_commit)
+
+    process_convert_job(
+        queue_root=tmp_path / "queue",
+        job_path=tmp_path / "queue" / "x.job",
+        sibling_paths=[],
+        job={"origin": "devel/with-bundle", "target": "@main",
+             "bundle_dir": "/logs/bundles/devel_with-bundle-20260526Z"},
+    )
+    assert len(captured_message) == 1
+    # The bundle ref made it into the commit message — no more "?".
+    assert "devel_with-bundle-20260526Z" in captured_message[0]
+    assert "?" not in captured_message[0]
 
 
 def test_process_convert_job_reapply_fail(

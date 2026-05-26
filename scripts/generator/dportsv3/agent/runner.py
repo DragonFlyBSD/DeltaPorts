@@ -1942,6 +1942,7 @@ def enqueue_convert_job(
     profile: str = "",
     requested_by: str = "operator",
     dev_env: str | None = None,
+    bundle_dir: str | None = None,
 ) -> Path:
     """Enqueue a dops-conversion job for one port (Step 20c).
 
@@ -1968,6 +1969,11 @@ def enqueue_convert_job(
     ]
     if dev_env:
         content.append(f"dev_env={dev_env}")
+    if bundle_dir:
+        # Propagate from the triage job that enqueued us so the
+        # convert job's audit (e.g. the commit_port_changes
+        # message) can reference the originating bundle.
+        content.append(f"bundle_dir={bundle_dir}")
 
     tmp_path = job_path.with_suffix(".tmp")
     with open(tmp_path, "w") as f:
@@ -1984,6 +1990,7 @@ def enqueue_convert_job(
             "path": str(job_path),
             "target": target
                 or os.environ.get("DPORTSV3_TRACKER_TARGET", ""),
+            "bundle_dir": bundle_dir,
         },
     )
     return job_path
@@ -2330,6 +2337,7 @@ def _maybe_defer_to_convert(
             profile=job.get("profile", ""),
             requested_by="triage",
             dev_env=job.get("dev_env"),
+            bundle_dir=job.get("bundle_dir"),
         )
         convert_job_id = convert_path.name
         log(queue_root, "INFO",
@@ -3148,20 +3156,66 @@ def _verify_conversion(job: dict, origin: str) -> tuple[bool, str]:
         # untracked overlay.dops. Without this the runner spawns a
         # patch job that dies immediately on patch_preflight_dirty
         # — observed thrash on devel/gperf 2026-05-25.
+        queue_root = Path(job.get("queue_root") or ".")
+        bundle_dir = job.get("bundle_dir") or ""
         try:
             commit = worker.commit_port_changes(
                 env, origin,
-                f"convert: {origin} (auto-commit, bundle {job.get('bundle_dir') or '?'})",
+                f"convert: {origin} (auto-commit, bundle {bundle_dir or '?'})",
             )
             if not commit.get("ok"):
+                # Log loudly — silent failure here is exactly the bug
+                # the gperf 2026-05-25 thrash surfaced. Operator sees
+                # "commit_port_changes_failed" in the activity log
+                # and knows the next patch will hit preflight_dirty.
+                try:
+                    activity_log(
+                        queue_root, "commit_port_changes_failed",
+                        f"env commit failed for {origin}: "
+                        f"{commit.get('error') or '(no error)'}",
+                        extra={
+                            "origin": origin,
+                            "env": env,
+                            "error": commit.get("error"),
+                            "stderr_tail": commit.get("stderr_tail"),
+                        },
+                    )
+                except Exception:
+                    pass
                 return False, (
                     f"conversion verified but env commit failed: "
                     f"{commit.get('error') or commit.get('stderr_tail', '')[:200]}"
                 )
         except Exception as exc:
+            try:
+                activity_log(
+                    queue_root, "commit_port_changes_failed",
+                    f"env commit raised for {origin}: {exc!s}",
+                    extra={"origin": origin, "env": env,
+                           "exception": str(exc)[:500]},
+                )
+            except Exception:
+                pass
             return False, (
                 f"conversion verified but env commit raised: {exc!s}"[:300]
             )
+        # Success row so the analyzer / operator can confirm the
+        # handoff cleared without scraping git history.
+        try:
+            activity_log(
+                queue_root, "commit_port_changes_ok",
+                f"env commit ok for {origin} "
+                f"({'committed' if commit.get('committed') else 'nothing-to-commit'})",
+                extra={
+                    "origin": origin,
+                    "env": env,
+                    "committed": bool(commit.get("committed")),
+                    "paths_changed": commit.get("paths_changed", []),
+                    "bundle_dir": bundle_dir or None,
+                },
+            )
+        except Exception:
+            pass
         return True, "conversion verified by reapply (compose accepted overlay.dops); committed to env"
     # reapply is a shell script that often prints errors to stdout
     # rather than stderr; include both so the failure is debuggable
