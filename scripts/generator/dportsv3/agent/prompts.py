@@ -586,6 +586,24 @@ flow is still the right idiom):
     finds the latest genpatch output matching the target's
     basename and stages it correctly for this port's mode
 
+`dupe` is **only** the first step of `add_patch(from_dupe=true)`
+— it creates a `.orig` snapshot you'll edit against. Do **not**
+call `dupe` for investigation, for taking a "before" picture, or
+when modifying an **existing** `dragonfly/patch-*`. Existing
+patches are edited via `replace_in_patch` (single-hunk drift) or
+replaced via `drop_patch` + `add_patch` (whole-file rewrite). A
+`dupe` call without a follow-up `add_patch(from_dupe=true)` is
+wasted work and a sign you've reached for the wrong tool.
+
+**Multi-hunk drift in one patch file.** When `dsynth_log` reports
+"N out of M hunks failed" on a single patch, identify **every**
+drifted hunk before any `apply_intent`. Grep all hunk contexts
+against the upstream source in one pass, then emit one
+`replace_in_patch` per drifted hunk, **then** `materialize_dports`
++ `dsynth_build` once. Do not apply-build-diagnose-apply for hunks
+that were visible in the same `get_file` you already did — it
+burns 10+ turns rediagnosing what one careful read would catch.
+
 ## Discipline
 
 - Prefer minimal, surgical intents. One `replace_in_patch` beats

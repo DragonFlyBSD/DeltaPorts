@@ -27,6 +27,7 @@ transaction semantics, and validator rules.
 
 from __future__ import annotations
 
+import difflib
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -163,6 +164,50 @@ class Translator:
                 "under ports/<origin>/, not absolute or with '..'",
             )
         return self.port_dir / relpath
+
+    def diff_from_before(self, before: dict[Path, str | None]) -> str:
+        """Per-intent unified diff over the given paths.
+
+        ``before`` maps absolute Paths to their pre-intent contents
+        (None means the file did not exist). The current on-disk
+        state is read after writes and diffed against ``before``;
+        the result captures **only what this intent changed**, not
+        the cumulative working-tree state.
+
+        The prior implementation used ``git diff HEAD -- ...``,
+        which reports cumulative state since HEAD. After N intents
+        on the same file every intent's ``substrate_diff`` shows
+        the same cumulative diff — making it impossible to read
+        the intent log forensically and giving the agent false
+        "I made progress" signals for no-op intents (archivers/liblz4
+        2026-05-26). difflib is stdlib-only and matches the
+        agent-visible diff shape git produced.
+        """
+        if not before:
+            return ""
+        chunks: list[str] = []
+        for path, old in before.items():
+            if path.is_file():
+                try:
+                    new = path.read_text()
+                except OSError:
+                    new = ""
+            else:
+                new = None
+            if old == new:
+                continue
+            rel = str(path.relative_to(self.workspace))
+            from_label = "a/" + rel if old is not None else "/dev/null"
+            to_label = "b/" + rel if new is not None else "/dev/null"
+            old_lines = (old or "").splitlines(keepends=True)
+            new_lines = (new or "").splitlines(keepends=True)
+            diff = difflib.unified_diff(
+                old_lines, new_lines, fromfile=from_label, tofile=to_label,
+            )
+            text = "".join(diff)
+            if text:
+                chunks.append(text)
+        return "".join(chunks)
 
     def git_diff(self, *paths: Path) -> str:
         """Capture a unified diff over the given paths, covering all

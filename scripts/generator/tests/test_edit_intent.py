@@ -564,6 +564,59 @@ class TestDopsRenderers:
         assert new.count("${WRKSRC}/../../Makefile") == 2
 
 
+    def test_replace_in_dops_block_refuses_noop_find_equals_replace(self, t):
+        """Self-confirming no-op: agent emits find == replace and
+        gets ok=True with empty diff, reading that as progress.
+        Observed in archivers/liblz4 2026-05-26 thrash where the
+        agent degraded its find/replace pair across attempts.
+        Refuse with a message that tells the agent how to confirm
+        prior intents landed without re-emitting."""
+        overlay = t.port_path("overlay.dops")
+        overlay.write_text(
+            "port devel/foo\ntype port\ntarget @main\n"
+            'reason "test"\n\n'
+            "mk target set foo <<'MK'\n\tline-a\n\tline-b\nMK\n"
+        )
+        result = t.apply({
+            "type": "replace_in_dops_block",
+            "block_name": "foo",
+            "find": "line-a", "replace": "line-a",
+        })
+        assert result.ok is False
+        assert "no-op" in result.error
+        assert "identical" in result.error
+
+    def test_substrate_diff_is_per_intent_not_cumulative(self, t):
+        """Each intent's substrate_diff must show only what THAT
+        intent changed, not the cumulative working-tree state since
+        HEAD. Prior git-diff implementation reported cumulative
+        state, so after N intents on overlay.dops every entry's
+        substrate_diff showed every prior change — making the
+        intent log unreadable forensically and giving the agent
+        false-progress signals (archivers/liblz4 2026-05-26)."""
+        r1 = t.apply({
+            "type": "change_makefile",
+            "path": "Makefile.DragonFly",
+            "key": "USES", "value": "ssl", "op": "append",
+        })
+        assert r1.ok is True
+        r2 = t.apply({
+            "type": "change_makefile",
+            "path": "Makefile.DragonFly",
+            "key": "USES", "value": "compiler:c++17-lang", "op": "append",
+        })
+        assert r2.ok is True
+        # r2's diff mentions the ssl line only as context (or not at
+        # all if difflib elides it); it must NOT show the ssl line
+        # as a fresh `+` insertion. The `+` insertion in r2 is the
+        # c++17-lang line, exclusively.
+        added_in_r2 = [
+            line for line in r2.substrate_diff.splitlines()
+            if line.startswith("+") and not line.startswith("+++")
+        ]
+        assert any("c++17-lang" in line for line in added_in_r2), added_in_r2
+        assert not any('"ssl"' in line for line in added_in_r2), added_in_r2
+
     def test_change_makefile_remove_op_emits_mk_remove(self, t):
         result = t.apply({
             "type": "change_makefile",

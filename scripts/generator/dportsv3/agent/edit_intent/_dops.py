@@ -83,6 +83,9 @@ def drop_patch(t, intent: DropPatch):
             error=f"{_DOPS_FILE} does not exist; nothing to remove from",
         )
     original = overlay.read_text()
+    before_overlay = original
+    patch_file = t.port_path(intent.target)
+    before_patch = patch_file.read_text() if patch_file.is_file() else None
     new, removed, shape = _strip_patch_apply_stmt(original, intent.target)
     if not removed:
         # Diagnostic improvement: if the overlay has an `mk target
@@ -122,10 +125,9 @@ def drop_patch(t, intent: DropPatch):
             error=f"write failed for {_DOPS_FILE}: {exc}",
         )
     paths_changed = [str(overlay.relative_to(t.workspace))]
-    diff_targets = [overlay]
+    before_state: dict[Path, str | None] = {overlay: before_overlay}
     # For materialized patches, also delete the patch file itself.
     if shape == "file_materialize":
-        patch_file = t.port_path(intent.target)
         if patch_file.is_file():
             try:
                 patch_file.unlink()
@@ -141,11 +143,11 @@ def drop_patch(t, intent: DropPatch):
                     ),
                 )
             paths_changed.append(str(patch_file.relative_to(t.workspace)))
-            diff_targets.append(patch_file)
+            before_state[patch_file] = before_patch
     return EditResult(
         ok=True, intent_type="drop_patch",
         paths_changed=paths_changed,
-        substrate_diff=t.git_diff(*diff_targets),
+        substrate_diff=t.diff_from_before(before_state),
     )
 
 
@@ -209,6 +211,8 @@ def add_patch(t, intent: AddPatch):
             error="add_patch requires non-empty diff content",
         )
     target.parent.mkdir(parents=True, exist_ok=True)
+    overlay = t.port_path(_DOPS_FILE)
+    before_overlay = overlay.read_text() if overlay.is_file() else None
     try:
         target.write_text(diff_content)
     except OSError as exc:
@@ -227,16 +231,15 @@ def add_patch(t, intent: AddPatch):
         except OSError:
             pass
         return stmt_result
-    # Merge paths_changed; substrate_diff is the union (we re-run
-    # git_diff over both).
-    overlay = t.port_path(_DOPS_FILE)
     return EditResult(
         ok=True, intent_type="add_patch",
         paths_changed=[
             str(target.relative_to(t.workspace)),
             str(overlay.relative_to(t.workspace)),
         ],
-        substrate_diff=t.git_diff(target, overlay),
+        substrate_diff=t.diff_from_before({
+            target: None, overlay: before_overlay,
+        }),
     )
 
 
@@ -290,6 +293,8 @@ def add_file(t, intent: AddFile):
                 error=f"dest already exists: {intent.dest}",
             )
         target.parent.mkdir(parents=True, exist_ok=True)
+        overlay = t.port_path(_DOPS_FILE)
+        before_overlay = overlay.read_text() if overlay.is_file() else None
         try:
             target.write_text(intent.content or "")
         except OSError as exc:
@@ -307,14 +312,15 @@ def add_file(t, intent: AddFile):
             except OSError:
                 pass
             return stmt_result
-        overlay = t.port_path(_DOPS_FILE)
         return EditResult(
             ok=True, intent_type="add_file",
             paths_changed=[
                 str(target.relative_to(t.workspace)),
                 str(overlay.relative_to(t.workspace)),
             ],
-            substrate_diff=t.git_diff(target, overlay),
+            substrate_diff=t.diff_from_before({
+                target: None, overlay: before_overlay,
+            }),
         )
     if intent.kind == "materialize":
         # `file materialize <src> -> <dst>` per the dops grammar.
@@ -392,6 +398,22 @@ def replace_in_dops_block(t, intent: ReplaceInDopsBlock):
     - block body is unbounded (no closing tag) — corrupt overlay
     """
     from .translator import EditResult
+    # Refuse no-op replacements (find == replace). Without this
+    # guard the call returns ok=True with an empty substrate_diff
+    # and the agent reads that as progress — but nothing changed.
+    # Observed on archivers/liblz4 2026-05-26 where the agent
+    # degraded its find/replace pair across attempts until both
+    # were identical, then kept logging "ok" intents while the
+    # build was already green from an earlier (real) intent.
+    if intent.find == intent.replace:
+        return EditResult(
+            ok=False, intent_type="replace_in_dops_block",
+            error=(
+                "no-op: find and replace are identical. If you "
+                "meant to confirm a prior intent already landed, "
+                "check the substrate; don't re-emit."
+            ),
+        )
     overlay = t.port_path(_DOPS_FILE)
     if not overlay.is_file():
         return EditResult(
@@ -399,6 +421,7 @@ def replace_in_dops_block(t, intent: ReplaceInDopsBlock):
             error=f"{_DOPS_FILE} does not exist; nothing to edit",
         )
     text = overlay.read_text()
+    before_overlay = text
     new_text, found, why = _replace_in_mk_target_block(
         text, intent.block_name, intent.find, intent.replace,
         intent.occurrence,
@@ -418,7 +441,7 @@ def replace_in_dops_block(t, intent: ReplaceInDopsBlock):
     return EditResult(
         ok=True, intent_type="replace_in_dops_block",
         paths_changed=[str(overlay.relative_to(t.workspace))],
-        substrate_diff=t.git_diff(overlay),
+        substrate_diff=t.diff_from_before({overlay: before_overlay}),
     )
 
 
@@ -554,10 +577,8 @@ def _append_overlay(t, intent_type: str, statements: Iterable[str]):
     from .translator import EditResult
     overlay = t.port_path(_DOPS_FILE)
     existed = overlay.is_file()
-    if existed:
-        original = overlay.read_text()
-    else:
-        original = _initial_overlay_header(t)
+    before_overlay = overlay.read_text() if existed else None
+    original = before_overlay if existed else _initial_overlay_header(t)
     new = original
     if not new.endswith("\n"):
         new += "\n"
@@ -567,10 +588,9 @@ def _append_overlay(t, intent_type: str, statements: Iterable[str]):
         overlay.parent.mkdir(parents=True, exist_ok=True)
         overlay.write_text(new)
     except OSError as exc:
-        # Roll back to original if it existed.
-        if existed:
+        if existed and before_overlay is not None:
             try:
-                overlay.write_text(original)
+                overlay.write_text(before_overlay)
             except OSError:
                 pass
         return EditResult(
@@ -580,7 +600,7 @@ def _append_overlay(t, intent_type: str, statements: Iterable[str]):
     return EditResult(
         ok=True, intent_type=intent_type,
         paths_changed=[str(overlay.relative_to(t.workspace))],
-        substrate_diff=t.git_diff(overlay),
+        substrate_diff=t.diff_from_before({overlay: before_overlay}),
     )
 
 
