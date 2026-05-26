@@ -287,20 +287,25 @@ def test_dops_reference_returns_quickref_content():
     assert "dsl-v0.md" in body
 
 
-def test_dops_reference_is_not_in_kedb_directory():
-    """The cheat-sheet must NOT live under docs/kedb/ — otherwise
-    the runner's KEDB auto-loader would ship it in every payload,
+def test_dops_reference_is_not_in_playbooks_directory():
+    """The cheat-sheet must NOT live under docs/agent-playbooks/ —
+    otherwise the playbook selector could attach it to payloads,
     defeating the on-demand goal."""
     from pathlib import Path
     repo_root = Path(__file__).resolve().parents[3]
     cheatsheet = repo_root / "scripts/generator/dportsv3/agent/dops_quickref.md"
     assert cheatsheet.is_file(), "dops_quickref.md must be co-located with the agent module"
-    # Confirm it is NOT under docs/kedb/.
-    kedb_copy = repo_root / "docs/kedb/dops_quickref.md"
-    assert not kedb_copy.exists(), (
-        "dops quick-reference must not live under docs/kedb/ — that would "
-        "auto-load it into every payload"
-    )
+    # Confirm it is NOT under docs/agent-playbooks/ (the legacy
+    # docs/kedb/ location is also checked since the constraint is the
+    # same — neither directory should host the quickref).
+    for candidate in (
+        repo_root / "docs/agent-playbooks/dops_quickref.md",
+        repo_root / "docs/kedb/dops_quickref.md",
+    ):
+        assert not candidate.exists(), (
+            f"dops quick-reference must not live under {candidate.parent} — "
+            "that would auto-load it into every payload"
+        )
 
 
 def test_dops_reference_tool_registered():

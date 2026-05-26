@@ -163,7 +163,7 @@ def test_context_ctx_defaults_are_reasonable():
     assert ctx.bundle_dir is None
     assert ctx.bundle_id is None
     assert ctx.job == {}
-    assert ctx.kedb_dir is None
+    assert ctx.playbooks_dir is None
     assert ctx.port_history is None
     assert ctx.sibling_bundle_ids == []
     assert ctx.db_conn is None

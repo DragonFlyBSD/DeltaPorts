@@ -1,3 +1,11 @@
+---
+triggers:
+  classifications: [compile-error, link-error, configure-error, missing-dep]
+  flows: [triage, patch]
+tags: [freebsd-only, blacklist, capsicum, audit, sctp]
+priority: 100
+---
+
 # Known Issue: FreeBSD-Only Base Features
 
 ## Pattern

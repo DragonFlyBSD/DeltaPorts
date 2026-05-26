@@ -1,3 +1,11 @@
+---
+triggers:
+  classifications: [patch-error]
+  flows: [triage, patch, convert]
+tags: [dops, static-patch, version-bump]
+priority: 50
+---
+
 # Known Issue: Static patch fails after upstream version bump
 
 ## Pattern

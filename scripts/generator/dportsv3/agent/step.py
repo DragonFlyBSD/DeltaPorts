@@ -132,7 +132,7 @@ class StepCtx:
     env_name: str | None = None
     bundle_dir: Path | None = None
     bundle_id: str | None = None
-    kedb_dir: Path | None = None
+    playbooks_dir: Path | None = None
 
     # Step-shared scratchpad. precheck → run → record pass data
     # through here (e.g. precheck resolves a tier; run consumes it).

@@ -173,7 +173,7 @@ def test_patch_success_full_chain(queue_env, tmp_path, monkeypatch):
     job_path = _drop_patch_job(queue_env, job_id="job-patch-1.job", bundle_dir=bdir)
     inflight = _claim(queue_env, job_path)
     runner.process_job(queue_env["queue_root"], inflight, [],
-                       dry_run=False, kedb_dir=None)
+                       dry_run=False, playbooks_dir=None)
 
     events = [r["event_name"]
               for r in lifecycle.history(queue_env["conn"], "job-patch-1.job")]
@@ -196,7 +196,7 @@ def test_patch_budget_exhausted(queue_env, tmp_path, monkeypatch):
     job_path = _drop_patch_job(queue_env, job_id="job-budget.job", bundle_dir=bdir)
     inflight = _claim(queue_env, job_path)
     runner.process_job(queue_env["queue_root"], inflight, [],
-                       dry_run=False, kedb_dir=None)
+                       dry_run=False, playbooks_dir=None)
 
     events = [r["event_name"]
               for r in lifecycle.history(queue_env["conn"], "job-budget.job")]
@@ -221,7 +221,7 @@ def test_patch_gave_up(queue_env, tmp_path, monkeypatch):
     job_path = _drop_patch_job(queue_env, job_id="job-help.job", bundle_dir=bdir)
     inflight = _claim(queue_env, job_path)
     runner.process_job(queue_env["queue_root"], inflight, [],
-                       dry_run=False, kedb_dir=None)
+                       dry_run=False, playbooks_dir=None)
 
     events = [r["event_name"]
               for r in lifecycle.history(queue_env["conn"], "job-help.job")]
@@ -249,7 +249,7 @@ def test_patch_sibling_fan_out(queue_env, tmp_path, monkeypatch):
     sib_inflight = _claim(queue_env, sib_path)
 
     runner.process_job(queue_env["queue_root"], lead_inflight, [sib_inflight],
-                       dry_run=False, kedb_dir=None)
+                       dry_run=False, playbooks_dir=None)
 
     lead_events = [r["event_name"]
                    for r in lifecycle.history(queue_env["conn"], "lead.job")]
@@ -282,7 +282,7 @@ def test_patch_sibling_fan_out_on_failure(queue_env, tmp_path, monkeypatch):
     sib_inflight = _claim(queue_env, sib_path)
 
     runner.process_job(queue_env["queue_root"], lead_inflight, [sib_inflight],
-                       dry_run=False, kedb_dir=None)
+                       dry_run=False, playbooks_dir=None)
 
     expected = ["hook_enqueued", "claim", "patch_start", "patch_budget_out"]
     for jid in ("lead-fail.job", "sib-fail.job"):
@@ -311,7 +311,7 @@ def test_patch_precheck_halt_synthesizes_failure_event(
     sib_inflight = _claim(queue_env, sib_path)
 
     runner.process_job(queue_env["queue_root"], lead_inflight, [sib_inflight],
-                       dry_run=False, kedb_dir=None)
+                       dry_run=False, playbooks_dir=None)
 
     expected = ["hook_enqueued", "claim", "patch_start", "patch_gave_up"]
     for jid in ("halt-lead.job", "halt-sib.job"):
@@ -370,7 +370,7 @@ def test_triage_env_broken_override_via_step(queue_env, tmp_path, monkeypatch):
 
     inflight = _claim(queue_env, job_path)
     runner.process_job(queue_env["queue_root"], inflight, [],
-                       dry_run=False, kedb_dir=None)
+                       dry_run=False, playbooks_dir=None)
 
     events = [r["event_name"]
               for r in lifecycle.history(queue_env["conn"], "triage-env-broken.job")]

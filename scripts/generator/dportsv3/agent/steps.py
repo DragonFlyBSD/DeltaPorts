@@ -304,7 +304,7 @@ class TriageStep:
         payload: str = ctx.state["payload"]
         model: str = ctx.state["model"]
         policy_path: str = ctx.state["policy_path"]
-        kedb_dir = ctx.kedb_dir
+        playbooks_dir = ctx.playbooks_dir
         bundle_dir = ctx.bundle_dir
         bundle_id = ctx.bundle_id or job.get("bundle_id")
 

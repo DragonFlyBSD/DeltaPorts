@@ -60,7 +60,7 @@ class ContextCtx:
     bundle_dir: Path | None = None
     bundle_id: str | None = None
     job: dict = field(default_factory=dict)
-    kedb_dir: Path | None = None
+    playbooks_dir: Path | None = None
     # Pre-loaded data the caller computes once and hands to sections
     # that need it.
     port_history: object | None = None  # decision.PortHistory or None
@@ -68,7 +68,7 @@ class ContextCtx:
     prior_triage_bundle_ids: list[str] = field(default_factory=list)
     prior_patch_bundle_ids: list[str] = field(default_factory=list)
     user_context_text: str | None = None
-    kedb_text: str | None = None
+    playbooks_text: str | None = None
     # Automation-context inputs the patch flow pre-loads.
     prior_failure_count: int = 0
     window_hours: int = 0
@@ -183,15 +183,17 @@ class SnippetsRoundSection:
 
 
 @dataclass
-class KEDBSection:
-    """Known Error Database content. Pre-loaded into ctx.kedb_text."""
-    name: str = "kedb"
+class PlaybooksSection:
+    """Agent playbook library content. Pre-loaded into
+    ctx.playbooks_text by the runner via
+    ``dportsv3.agent.playbooks.load_playbooks``."""
+    name: str = "playbooks"
     priority: int = 20
 
     def render(self, ctx: ContextCtx) -> str | None:
-        if not ctx.kedb_text:
+        if not ctx.playbooks_text:
             return None
-        return _trailing_blank(ctx.kedb_text)
+        return _trailing_blank(ctx.playbooks_text)
 
 
 @dataclass
@@ -380,7 +382,7 @@ class TriagePromptFooterSection:
 # this list to ``render_payload`` after binding I/O callables in ctx.
 TRIAGE_SECTIONS: tuple[ContextSection, ...] = (
     SnippetsRoundSection(),
-    KEDBSection(),
+    PlaybooksSection(),
     UserContextSection(),
     MetadataSection(),
     BuildErrorsSection(),
@@ -645,7 +647,7 @@ class PatchPromptFooterSection:
 # Default patch section roster. ``build_patch_payload`` binds I/O
 # callables into ctx and passes this list to ``render_payload``.
 #
-# Reused sections: Snippets, UserContext, KEDB, Metadata, BuildErrors,
+# Reused sections: Snippets, UserContext, Playbooks, Metadata, BuildErrors,
 # PortFiles, ExistingPatches. New: AutomationContext, TriageSummary,
 # PriorAttempts, PatchPromptFooter. SiblingBundles is parameterized
 # (with_intro=False for the patch variant).
@@ -656,7 +658,7 @@ PATCH_SECTIONS: tuple[ContextSection, ...] = (
     SiblingBundlesSection(priority=40, with_intro=False),
     PriorAttemptsSection(),
     UserContextSection(priority=60),
-    KEDBSection(priority=70),
+    PlaybooksSection(priority=70),
     MetadataSection(priority=80),
     BuildErrorsSection(priority=90),
     PortFilesSection(priority=100),

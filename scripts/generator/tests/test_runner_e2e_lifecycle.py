@@ -197,7 +197,7 @@ def test_full_triage_path_to_triaged(queue_env, tmp_path, monkeypatch):
     runner._apply_transition(job_id, lifecycle.JobEvent.CLAIM)
 
     runner.process_job(queue_env["queue_root"], inflight_path, [],
-                       dry_run=False, kedb_dir=None)
+                       dry_run=False, playbooks_dir=None)
 
     hist = lifecycle.history(conn, job_id)
     events = [r["event_name"] for r in hist]
@@ -238,7 +238,7 @@ def test_triage_manual_escalates(queue_env, tmp_path, monkeypatch):
     runner._apply_transition(job_id, lifecycle.JobEvent.CLAIM)
 
     runner.process_job(queue_env["queue_root"], inflight_path, [],
-                       dry_run=False, kedb_dir=None)
+                       dry_run=False, playbooks_dir=None)
 
     events = [r["event_name"] for r in lifecycle.history(conn, job_id)]
     assert events == [

@@ -1253,48 +1253,57 @@ def read_file_if_exists(path: Path, max_bytes: int = 200_000) -> str | None:
         return None
 
 
-def find_kedb_dir() -> Path | None:
-    """Find the agent playbook directory (successor to the legacy KEDB
-    location). The symbol name retains ``kedb`` until Step 27b's
-    selector rename; only the on-disk directory name changed in 27a.
-
-    The parent chain here is pre-existing and underspecified — it
-    resolves to a path that doesn't match the repo's actual
-    ``docs/agent-playbooks/`` location, so callers that rely on
-    auto-detect get None. Operators pass ``--kedb-dir`` explicitly.
-    Fixing the lookup is out of 27a scope (separate bug, behavior-
-    preserving rename only)."""
-    script_dir = Path(__file__).resolve().parent
-    kedb_dir = script_dir.parent / "docs" / "agent-playbooks"
-    if kedb_dir.exists():
-        return kedb_dir
-    return None
+# find_kedb_dir / load_kedb retired in Step 27b. The replacements
+# live in dportsv3.agent.playbooks (find_playbooks_dir,
+# load_playbooks) and are imported lazily at call sites to keep
+# this module's import surface stable.
+#
+# Alpha-mode hard cutover: no compatibility shims. The 4 existing
+# entries (error-*.md) were retrofitted with explicit triggers; the
+# selector's flows-default ([triage, patch]) covers them anyway.
 
 
-def load_kedb(kedb_dir: Path | None) -> str:
-    """Load all KEDB markdown files into a single context block."""
-    if not kedb_dir or not kedb_dir.exists():
-        return ""
-    
-    kedb_files = sorted(kedb_dir.glob("*.md"))
-    skip_files = {"readme.md", "template.md"}
-    kedb_files = [f for f in kedb_files if f.name.lower() not in skip_files]
-    
-    if not kedb_files:
-        return ""
-    
-    parts = ["## Known Error Database (KEDB)", ""]
-    parts.append("The following are known DragonFlyBSD-specific build issues and their fixes:")
-    parts.append("")
-    
-    for kf in kedb_files:
-        content = read_file_if_exists(kf, max_bytes=50_000)
-        if content:
-            parts.append(f"### {kf.stem}")
-            parts.append(content)
-            parts.append("")
-    
-    return "\n".join(parts)
+def queue_root_for_log(job: dict | None) -> Path | None:
+    """Best-effort queue_root extraction for telemetry from any
+    payload-building context. Returns None silently if absent (the
+    activity_log call accepts None and downgrades to a no-op)."""
+    if not job:
+        return None
+    qr = job.get("queue_root")
+    return Path(qr) if qr else None
+
+
+def _log_playbook_selection(queue_root, role, origin, selection):
+    """Emit a `playbooks_selected` activity row with included +
+    skipped counts so operators see WHY their entry didn't fire.
+
+    Best-effort: any failure (no queue_root, write error) silently
+    no-ops — telemetry must not break payload assembly.
+    """
+    if queue_root is None:
+        return
+    try:
+        activity_log(
+            queue_root, "playbooks_selected",
+            (
+                f"{origin or '?'}: role={role} "
+                f"included={len(selection.included)} "
+                f"skipped={len(selection.skipped)}"
+            ),
+            extra={
+                "role": role,
+                "origin": origin,
+                "included": list(selection.included),
+                "skipped_count": len(selection.skipped),
+                # Cap skipped reasons to avoid bloating the log.
+                "skipped_sample": [
+                    {"file": f, "reason": r}
+                    for f, r in selection.skipped[:8]
+                ],
+            },
+        )
+    except Exception:
+        pass
 
 
 # -----------------------------------------------------------------------------
@@ -1460,7 +1469,7 @@ def load_snippets_content(bundle_dir: Path, round_num: int, max_bytes: int = 200
 
 def build_triage_payload(
     bundle_dir: Path | None,
-    kedb_dir: Path | None = None,
+    playbooks_dir: Path | None = None,
     job: dict | None = None
 ) -> str:
     """Build the triage prompt from bundle contents.
@@ -1492,17 +1501,28 @@ def build_triage_payload(
                 break
 
     user_context_text, _ = get_user_context(run_id, origin)
-    kedb_text = load_kedb(kedb_dir)
+    # Triage runs BEFORE classification is known — we attach
+    # entries that don't require a classification (the entry's
+    # `triggers.classifications` is empty / wildcard) or whose
+    # triggers don't depend on patch-flow context. Step 19a's
+    # toolchain detection would feed `toolchains` here once it
+    # lands; today it's empty.
+    from dportsv3.agent.playbooks import load_playbooks  # noqa: PLC0415
+    playbook_selection = load_playbooks(
+        playbooks_dir, role="triage", classification=None,
+    )
+    _log_playbook_selection(queue_root_for_log(job), "triage", origin,
+                            playbook_selection)
 
     ctx = ContextCtx(
         bundle_dir=bundle_dir,
         bundle_id=bundle_id,
         job=job,
-        kedb_dir=kedb_dir,
+        playbooks_dir=playbooks_dir,
         sibling_bundle_ids=sibling_ids,
         prior_triage_bundle_ids=prior_triage_ids,
         user_context_text=user_context_text or None,
-        kedb_text=kedb_text or None,
+        playbooks_text=playbook_selection.text or None,
         read_bundle_text=read_bundle_text,
         bundle_artifact_list=bundle_artifact_list,
         snippet_feedback=build_snippet_feedback,
@@ -1513,7 +1533,7 @@ def build_triage_payload(
 
 def build_patch_payload(
     bundle_dir: Path | None,
-    kedb_dir: Path | None = None,
+    playbooks_dir: Path | None = None,
     job: dict | None = None
 ) -> str:
     """Build the patch generation prompt including triage output.
@@ -1554,17 +1574,35 @@ def build_patch_payload(
     )
 
     user_context_text, _ = get_user_context(run_id, origin)
-    kedb_text = load_kedb(kedb_dir)
+    # Patch flow: classification is known from the prior triage in
+    # this bundle. Extract from triage.md so the selector can match
+    # `triggers.classifications`. Intent triggers fire at
+    # intent_reference time (Step 27c) — not in the system payload —
+    # so we pass an empty intent set here.
+    triage_classification: str | None = None
+    if bundle_dir is not None:
+        triage_md = read_bundle_text(bundle_dir, bundle_id, "analysis/triage.md")
+        if triage_md:
+            parsed = parse_triage_output(triage_md)
+            cls = parsed.get("classification")
+            if cls:
+                triage_classification = cls
+    from dportsv3.agent.playbooks import load_playbooks  # noqa: PLC0415
+    playbook_selection = load_playbooks(
+        playbooks_dir, role="patch", classification=triage_classification,
+    )
+    _log_playbook_selection(queue_root_for_log(job), "patch", origin,
+                            playbook_selection)
 
     ctx = ContextCtx(
         bundle_dir=bundle_dir,
         bundle_id=bundle_id,
         job=job,
-        kedb_dir=kedb_dir,
+        playbooks_dir=playbooks_dir,
         sibling_bundle_ids=sibling_ids,
         prior_patch_bundle_ids=prior_patch_ids,
         user_context_text=user_context_text or None,
-        kedb_text=kedb_text or None,
+        playbooks_text=playbook_selection.text or None,
         prior_failure_count=prior_failures,
         window_hours=window_hours,
         max_attempts_cap=max_attempts_cap,
@@ -2401,7 +2439,7 @@ def process_triage_job(
     sibling_paths: list[Path],
     job: dict,
     bundle_dir: Path | None,
-    kedb_dir: Path | None,
+    playbooks_dir: Path | None,
 ) -> tuple[bool, str]:
     """Process a triage job by driving TriageStep through the orchestrator.
 
@@ -2430,7 +2468,7 @@ def process_triage_job(
         return deferred
     # ---------------------------------------------------------------
 
-    payload = build_triage_payload(bundle_dir, kedb_dir, job)
+    payload = build_triage_payload(bundle_dir, playbooks_dir, job)
 
     ctx = StepCtx(
         job_id=job_id,
@@ -2442,7 +2480,7 @@ def process_triage_job(
         env_name=resolve_env(job),
         bundle_dir=bundle_dir,
         bundle_id=job.get("bundle_id"),
-        kedb_dir=kedb_dir,
+        playbooks_dir=playbooks_dir,
     )
     ctx.state["job_path"] = job_path
     ctx.state["payload"] = payload
@@ -2840,7 +2878,7 @@ def process_patch_job(
     sibling_paths: list[Path],
     job: dict,
     bundle_dir: Path | None,
-    kedb_dir: Path | None,
+    playbooks_dir: Path | None,
 ) -> tuple[bool, str]:
     """Process a patch job by driving PatchAttemptStep through the orchestrator.
 
@@ -2852,7 +2890,7 @@ def process_patch_job(
     from dportsv3.agent.step import Orchestrator, StepCtx
     from dportsv3.agent.steps import PatchAttemptStep, PatchServices
 
-    payload = build_patch_payload(bundle_dir, kedb_dir, job)
+    payload = build_patch_payload(bundle_dir, playbooks_dir, job)
     origin = job.get("origin", "unknown")
     job_id = job_path.name
 
@@ -2866,7 +2904,7 @@ def process_patch_job(
         env_name=resolve_env(job),
         bundle_dir=bundle_dir,
         bundle_id=job.get("bundle_id"),
-        kedb_dir=kedb_dir,
+        playbooks_dir=playbooks_dir,
     )
     ctx.state["job_path"] = job_path
     ctx.state["payload"] = payload
@@ -3541,7 +3579,7 @@ def process_job(
     job_path: Path,
     sibling_paths: list[Path],
     dry_run: bool,
-    kedb_dir: Path | None,
+    playbooks_dir: Path | None,
 ):
     """Process a single job (dispatch based on type).
 
@@ -3604,7 +3642,7 @@ def process_job(
 
     if dry_run:
         if job_type == "patch":
-            payload = build_patch_payload(bundle_dir, kedb_dir, job)
+            payload = build_patch_payload(bundle_dir, playbooks_dir, job)
         elif job_type == "convert":
             log(queue_root, "INFO",
                 f"[dry-run] type=convert, origin={origin}, target={job.get('target','')}")
@@ -3612,7 +3650,7 @@ def process_job(
             update_runner_status("idle", job_id=None, stage=None)
             return
         else:
-            payload = build_triage_payload(bundle_dir, kedb_dir, job)
+            payload = build_triage_payload(bundle_dir, playbooks_dir, job)
 
         log(queue_root, "INFO",
             f"[dry-run] type={job_type}, would send payload ({len(payload)} bytes)")
@@ -3633,7 +3671,7 @@ def process_job(
         for s in sibling_paths:
             _apply_transition(s.name, start_event)
         success, status = process_patch_job(
-            queue_root, job_path, sibling_paths, job, bundle_dir, kedb_dir,
+            queue_root, job_path, sibling_paths, job, bundle_dir, playbooks_dir,
         )
     elif job_type == "triage":
         start_event = JobEvent.TRIAGE_START
@@ -3641,7 +3679,7 @@ def process_job(
         for s in sibling_paths:
             _apply_transition(s.name, start_event)
         success, status = process_triage_job(
-            queue_root, job_path, sibling_paths, job, bundle_dir, kedb_dir,
+            queue_root, job_path, sibling_paths, job, bundle_dir, playbooks_dir,
         )
     elif job_type == "convert":
         # Step 20c: convert jobs are port-level (no bundle, no
@@ -3845,7 +3883,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--queue-root", required=True, help="Path to queue directory")
     parser.add_argument("--once", action="store_true", help="Process one job and exit")
     parser.add_argument("--dry-run", action="store_true", help="Print payload without calling the LLM")
-    parser.add_argument("--kedb-dir", help="Path to KEDB directory (default: auto-detect)")
+    parser.add_argument(
+        "--playbooks-dir",
+        help="Path to docs/agent-playbooks/ (default: auto-detect via "
+             "find_playbooks_dir)",
+    )
     parser.add_argument(
         "--env",
         help=(
@@ -3921,13 +3963,17 @@ def main(argv: list[str] | None = None) -> int:
         except Exception as exc:
             log(queue_root, "WARN", f"reap_stale_queued failed: {exc}")
 
-    if args.kedb_dir:
-        kedb_dir = Path(args.kedb_dir)
-        if not kedb_dir.exists():
-            print(f"warning: KEDB directory not found: {kedb_dir}", file=sys.stderr)
-            kedb_dir = None
+    if args.playbooks_dir:
+        playbooks_dir = Path(args.playbooks_dir)
+        if not playbooks_dir.exists():
+            print(
+                f"warning: playbooks directory not found: {playbooks_dir}",
+                file=sys.stderr,
+            )
+            playbooks_dir = None
     else:
-        kedb_dir = find_kedb_dir()
+        from dportsv3.agent.playbooks import find_playbooks_dir  # noqa: PLC0415
+        playbooks_dir = find_playbooks_dir()
 
     triage_model = os.environ.get("DP_HARNESS_TRIAGE_MODEL") or "<unset>"
     patch_model_env = os.environ.get("DP_HARNESS_PATCH_MODEL")
@@ -3948,11 +3994,11 @@ def main(argv: list[str] | None = None) -> int:
         convert_model = f"{triage_model} (fallback from triage)"
     else:
         convert_model = "<unset>"
-    kedb_info = str(kedb_dir) if kedb_dir else "none"
+    playbooks_info = str(playbooks_dir) if playbooks_dir else "none"
     log(queue_root, "INFO",
         f"starting runner (once={args.once}, dry_run={args.dry_run}, "
         f"triage_model={triage_model}, patch_model={patch_model}, "
-        f"convert_model={convert_model}, kedb={kedb_info})")
+        f"convert_model={convert_model}, playbooks={playbooks_info})")
     activity_log(queue_root, "runner_start",
                  f"Runner started (triage={triage_model}, "
                  f"patch={patch_model}, convert={convert_model})")
@@ -4032,7 +4078,7 @@ def main(argv: list[str] | None = None) -> int:
                 batch = claim_next_job_batch(queue_root)
                 if batch:
                     lead, siblings = batch
-                    process_job(queue_root, lead, siblings, args.dry_run, kedb_dir)
+                    process_job(queue_root, lead, siblings, args.dry_run, playbooks_dir)
                 else:
                     log(queue_root, "INFO", "no jobs in queue")
         else:
@@ -4051,7 +4097,7 @@ def main(argv: list[str] | None = None) -> int:
                 batch = claim_next_job_batch(queue_root)
                 if batch:
                     lead, siblings = batch
-                    process_job(queue_root, lead, siblings, args.dry_run, kedb_dir)
+                    process_job(queue_root, lead, siblings, args.dry_run, playbooks_dir)
                 else:
                     update_runner_status("idle", job_id=None, stage="waiting")
                     time.sleep(5)

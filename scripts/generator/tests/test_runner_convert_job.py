@@ -115,7 +115,7 @@ def test_process_job_accepts_convert_without_bundle(
     la(runner_mod._state_db_conn, job_file.name, JobEvent.HOOK_ENQUEUED)
     la(runner_mod._state_db_conn, job_file.name, JobEvent.CLAIM)
 
-    process_job(queue_root, job_file, [], dry_run=False, kedb_dir=None)
+    process_job(queue_root, job_file, [], dry_run=False, playbooks_dir=None)
 
     # The convert job either landed at DONE (deterministic conversion
     # succeeded + no env to verify in, accepted on faith) or at DEAD

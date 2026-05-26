@@ -66,8 +66,10 @@ def _no_artifact_store(monkeypatch):
     monkeypatch.setattr(runner, "tracker_artifact_get", lambda *a, **kw: None)
     monkeypatch.setattr(runner, "bundle_artifact_list", lambda *a, **kw: [])
     monkeypatch.setattr(runner, "port_bundle_history", lambda *a, **kw: [])
-    monkeypatch.setattr(runner, "load_kedb", lambda *a, **kw: "")
     monkeypatch.setattr(runner, "get_user_context", lambda *a, **kw: (None, 0))
+    # build_*_payload now goes through dportsv3.agent.playbooks.load_playbooks;
+    # passing playbooks_dir=None at the call site short-circuits it to an
+    # empty result, so no monkeypatch is needed here (load_kedb retired).
 
 
 # --- minimal -----------------------------------------------------------------

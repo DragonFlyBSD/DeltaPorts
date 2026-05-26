@@ -1,3 +1,11 @@
+---
+triggers:
+  classifications: [compile-error, patch-error, configure-error]
+  flows: [triage, patch]
+tags: [dragonfly-source, ifdef]
+priority: 100
+---
+
 # Known Issue: Creating DragonFly-specific source patches
 
 ## Pattern

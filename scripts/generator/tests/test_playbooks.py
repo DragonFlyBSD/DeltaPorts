@@ -1,0 +1,289 @@
+"""Tests for the agent playbook library (Step 27b).
+
+Covers:
+- frontmatter parser (YAML-subset, list values, defaults, malformed)
+- entry parsing (title extraction, body separation, est_tokens)
+- selector (role / classification / intents / toolchains / convert_phase)
+- budget gate (priority-aware drop)
+- find_playbooks_dir walking up ancestors to locate the docs/ dir
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import pytest
+
+from dportsv3.agent.playbooks import (
+    PlaybookEntry,
+    PlaybookTriggers,
+    SelectionResult,
+    _parse_frontmatter,
+    _parse_inline_list,
+    find_playbooks_dir,
+    list_entries,
+    load_playbooks,
+)
+
+
+# ----- frontmatter primitives -----------------------------------------
+
+
+@pytest.mark.parametrize("raw,expected", [
+    ("", ()),
+    ("[]", ()),
+    ("[a, b, c]", ("a", "b", "c")),
+    ('["quoted", \'single\']', ("quoted", "single")),
+    ("[ spaced , trailing , ]", ("spaced", "trailing")),
+    ("not-a-list", ()),
+])
+def test_parse_inline_list(raw, expected):
+    assert _parse_inline_list(raw) == expected
+
+
+def test_parse_frontmatter_extracts_top_and_nested():
+    text = (
+        "---\n"
+        "priority: 50\n"
+        "tags: [a, b]\n"
+        "triggers:\n"
+        "  classifications: [compile-error]\n"
+        "  flows: [patch]\n"
+        "---\n"
+        "# Title\n\nBody.\n"
+    )
+    fm, body = _parse_frontmatter(text)
+    assert fm["priority"] == "50"
+    assert fm["tags"] == "[a, b]"
+    assert isinstance(fm["triggers"], dict)
+    assert fm["triggers"]["classifications"] == "[compile-error]"
+    assert fm["triggers"]["flows"] == "[patch]"
+    assert body == "# Title\n\nBody.\n"
+
+
+def test_parse_frontmatter_missing_returns_empty_dict_and_body_unchanged():
+    text = "# No frontmatter\n\nBody only."
+    fm, body = _parse_frontmatter(text)
+    assert fm == {}
+    assert body == text
+
+
+def test_parse_frontmatter_ignores_comment_lines():
+    text = (
+        "---\n"
+        "# this is a comment\n"
+        "priority: 10\n"
+        "---\n"
+        "body\n"
+    )
+    fm, body = _parse_frontmatter(text)
+    assert fm == {"priority": "10"}
+    assert body == "body\n"
+
+
+# ----- entry loading --------------------------------------------------
+
+
+def _write(dirpath: Path, name: str, content: str) -> Path:
+    path = dirpath / name
+    path.write_text(content)
+    return path
+
+
+def test_list_entries_parses_frontmatter_and_skips_readme_template(tmp_path):
+    _write(tmp_path, "README.md", "skip me")
+    _write(tmp_path, "TEMPLATE.md", "skip me too")
+    _write(tmp_path, "error-x.md",
+        "---\n"
+        "triggers:\n"
+        "  classifications: [compile-error]\n"
+        "  flows: [triage, patch]\n"
+        "priority: 80\n"
+        "---\n"
+        "# Title X\n\nBody X\n"
+    )
+    _write(tmp_path, "intent-y.md",
+        "---\n"
+        "triggers:\n"
+        "  intents: [replace_in_dops_block]\n"
+        "  flows: [patch]\n"
+        "---\n"
+        "# Title Y\n\nBody Y\n"
+    )
+    entries = list_entries(tmp_path)
+    names = sorted(e.path.name for e in entries)
+    assert names == ["error-x.md", "intent-y.md"]
+    by_name = {e.path.name: e for e in entries}
+    assert by_name["error-x.md"].title == "Title X"
+    assert by_name["error-x.md"].priority == 80
+    assert by_name["error-x.md"].triggers.classifications == ("compile-error",)
+    assert by_name["error-x.md"].triggers.flows == ("triage", "patch")
+    assert by_name["intent-y.md"].triggers.intents == ("replace_in_dops_block",)
+    assert by_name["intent-y.md"].triggers.flows == ("patch",)
+
+
+def test_list_entries_handles_missing_dir():
+    assert list_entries(None) == []
+    assert list_entries(Path("/no/such/dir/here")) == []
+
+
+def test_entry_without_frontmatter_gets_default_flows(tmp_path):
+    """Legacy-shape entry (no frontmatter) defaults to flows=[triage, patch]."""
+    _write(tmp_path, "error-legacy.md", "# Legacy\n\nBody.\n")
+    entries = list_entries(tmp_path)
+    assert len(entries) == 1
+    assert entries[0].triggers.flows == ("triage", "patch")
+    assert entries[0].triggers.classifications == ()
+
+
+def test_entry_title_falls_back_to_filename_stem_when_no_h1(tmp_path):
+    _write(tmp_path, "intent-z.md", "no headers here\njust prose.\n")
+    entries = list_entries(tmp_path)
+    assert len(entries) == 1
+    assert entries[0].title == "intent-z"
+
+
+# ----- selector -------------------------------------------------------
+
+
+def _fixture_dir(tmp_path: Path) -> Path:
+    """Build a small fixture library covering the 4 categories."""
+    _write(tmp_path, "error-plist.md",
+        "---\n"
+        "triggers:\n"
+        "  classifications: [plist-error]\n"
+        "  flows: [triage, patch]\n"
+        "priority: 100\n"
+        "---\n"
+        "# Plist\n\nplist body\n"
+    )
+    _write(tmp_path, "intent-rin.md",
+        "---\n"
+        "triggers:\n"
+        "  intents: [replace_in_dops_block]\n"
+        "  flows: [patch]\n"
+        "priority: 50\n"
+        "---\n"
+        "# Replace-in-dops\n\nrid body\n"
+    )
+    _write(tmp_path, "convert-target.md",
+        "---\n"
+        "triggers:\n"
+        "  convert_phases: [picking_target]\n"
+        "  flows: [convert]\n"
+        "priority: 100\n"
+        "---\n"
+        "# Convert target\n\ntarget body\n"
+    )
+    _write(tmp_path, "toolchain-autoconf.md",
+        "---\n"
+        "triggers:\n"
+        "  toolchains: [autoconf]\n"
+        "  flows: [triage, patch]\n"
+        "priority: 60\n"
+        "---\n"
+        "# Autoconf\n\nautoconf body\n"
+    )
+    return tmp_path
+
+
+def test_selector_classification_filter(tmp_path):
+    d = _fixture_dir(tmp_path)
+    result = load_playbooks(d, role="patch", classification="plist-error")
+    assert "error-plist.md" in result.included
+    # No toolchain context → autoconf entry skipped.
+    assert "toolchain-autoconf.md" not in result.included
+    # No intent context → intent entry skipped.
+    assert "intent-rin.md" not in result.included
+    # Wrong flow for convert entry.
+    assert "convert-target.md" not in result.included
+    skipped_names = {name for name, _ in result.skipped}
+    assert "convert-target.md" in skipped_names
+
+
+def test_selector_flow_gate(tmp_path):
+    d = _fixture_dir(tmp_path)
+    result = load_playbooks(d, role="convert")
+    # Only entries whose flows include `convert` may fire.
+    assert "convert-target.md" not in result.included  # needs phase
+    result_with_phase = load_playbooks(
+        d, role="convert", convert_phases=["picking_target"],
+    )
+    assert "convert-target.md" in result_with_phase.included
+    # Patch entries don't leak into convert.
+    assert "intent-rin.md" not in result_with_phase.included
+
+
+def test_selector_intent_overlap(tmp_path):
+    d = _fixture_dir(tmp_path)
+    result = load_playbooks(
+        d, role="patch", intents=["replace_in_dops_block"],
+    )
+    assert "intent-rin.md" in result.included
+
+
+def test_selector_toolchain_overlap(tmp_path):
+    d = _fixture_dir(tmp_path)
+    result = load_playbooks(
+        d, role="patch", toolchains=["autoconf"],
+    )
+    assert "toolchain-autoconf.md" in result.included
+    # No intent → intent entry still skipped.
+    assert "intent-rin.md" not in result.included
+
+
+def test_selector_priority_order_in_output(tmp_path):
+    d = _fixture_dir(tmp_path)
+    # patch flow + classification matches plist (prio 100). Add intent
+    # context to also pull intent-rin (prio 50). intent-rin should come
+    # first in the rendered text by lower-priority-first rule.
+    result = load_playbooks(
+        d, role="patch", classification="plist-error",
+        intents=["replace_in_dops_block"],
+    )
+    assert "intent-rin.md" in result.included
+    assert "error-plist.md" in result.included
+    # intent-rin (prio 50) appears earlier in text than error-plist (prio 100).
+    assert result.text.index("Replace-in-dops") < result.text.index("Plist")
+
+
+def test_selector_budget_gate_drops_lowest_priority(tmp_path):
+    d = _fixture_dir(tmp_path)
+    # Tight budget that fits only ONE entry. intent-rin (prio 50) wins
+    # over toolchain-autoconf (prio 60). Bodies are ~7 and ~6 est_tokens
+    # respectively, so a budget of 8 fits the first but not the second.
+    result = load_playbooks(
+        d, role="patch", intents=["replace_in_dops_block"],
+        toolchains=["autoconf"], budget_tokens=8,
+    )
+    assert result.included == ("intent-rin.md",)
+    dropped = {name for name, reason in result.skipped if reason.startswith("budget:")}
+    assert "toolchain-autoconf.md" in dropped
+
+
+def test_selector_empty_result_returns_empty_text(tmp_path):
+    _write(tmp_path, "intent-x.md",
+        "---\n"
+        "triggers:\n"
+        "  intents: [some_other_intent]\n"
+        "  flows: [patch]\n"
+        "---\n"
+        "# X\n\nbody\n"
+    )
+    result = load_playbooks(tmp_path, role="patch")
+    assert result.text == ""
+    assert result.included == ()
+    assert len(result.skipped) == 1
+
+
+# ----- discovery ------------------------------------------------------
+
+
+def test_find_playbooks_dir_walks_up_to_repo_docs():
+    """The real repo's docs/agent-playbooks/ should be locatable from
+    this test file (Step 27a moved it there). This guards against the
+    pre-existing parent-chain bug being reintroduced."""
+    located = find_playbooks_dir()
+    assert located is not None, "find_playbooks_dir() should locate the live dir"
+    assert located.name == "agent-playbooks"
+    assert (located / "README.md").is_file()

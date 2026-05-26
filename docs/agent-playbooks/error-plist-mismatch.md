@@ -1,3 +1,11 @@
+---
+triggers:
+  classifications: [plist-error, pkg-format]
+  flows: [triage, patch]
+tags: [check-plist, pkg-plist]
+priority: 100
+---
+
 # Known Issue: check-plist phase failures (Orphaned / Missing files)
 
 ## Pattern
