@@ -726,6 +726,36 @@ table.tracker-table td.tok {
 }
 table.tracker-table td.tok-empty { color: var(--text-dim); }
 
+/* Live indicator (job detail + runner status). Pulsing dot when
+   active; static gray when paused/idle. One shared shape so the
+   two surfaces look identical.
+
+   HTML:  <span class="live-indicator active">
+            <span class="dot"></span>
+            <span class="status-text">live</span>
+          </span>
+   Drop the `active` class for an idle/paused state. */
+.live-indicator {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-left: 8px;
+  font-weight: normal;
+}
+.live-indicator .dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  vertical-align: middle;
+  margin-right: 4px;
+  background: #ccc;
+}
+.live-indicator.active .dot {
+  background: #29b346;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+
 /* Long-content collapser: wrap any block that might exceed
    `--collapse-max` in a <details class="collapse-long"> and the
    CSS keeps it bounded with a scroll fallback. Used by activity-log

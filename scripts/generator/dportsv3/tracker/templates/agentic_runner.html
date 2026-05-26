@@ -14,7 +14,12 @@
 
   <div class="tracker-page">
     <h1>Runner status
-      <span id="live-indicator" style="font-size:12px;font-weight:normal;color:#22c55e;margin-left:8px;">●live</span>
+      {# Shares .live-indicator from progress.css with agentic_job.html.
+         The polling JS below toggles the `.active` class when the
+         operator pauses/resumes refresh. #}
+      <span id="live-indicator" class="live-indicator active">
+        <span class="dot"></span><span class="status-text">live</span>
+      </span>
       <button type="button" id="live-toggle"
               style="font-size:11px;margin-left:4px;padding:2px 8px;cursor:pointer;">[pause]</button>
     </h1>
@@ -77,15 +82,21 @@
         } catch (err) { /* swallow; next tick will retry */ }
       }
 
+      // Drop/add `.active` to the live indicator so the shared
+      // CSS in progress.css turns the pulse on/off, instead of
+      // swapping unicode bullets inline. The dot + status-text
+      // children come from the static HTML — we only flip the
+      // text and the modifier class here.
+      var statusText = indicator.querySelector(".status-text");
       toggle.addEventListener("click", function () {
         paused = !paused;
         if (paused) {
-          indicator.style.color = "var(--text-dim)";
-          indicator.textContent = "●paused";
+          indicator.classList.remove("active");
+          if (statusText) statusText.textContent = "paused";
           toggle.textContent = "[resume]";
         } else {
-          indicator.style.color = "#22c55e";
-          indicator.textContent = "●live";
+          indicator.classList.add("active");
+          if (statusText) statusText.textContent = "live";
           toggle.textContent = "[pause]";
           refresh();
         }
