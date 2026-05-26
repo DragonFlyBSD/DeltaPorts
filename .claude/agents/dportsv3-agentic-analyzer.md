@@ -41,6 +41,8 @@ Plus the **tracker base URL**. Resolve in this order: explicit argument from the
 
 5b. **Check for the intent flow.** If `analysis/intent_log.json` is present, the bundle used the Step 25 intent DSL — use the skill's "Intent flow" + "Mode-correctness checks for intent flow" sections and check `intent_log.json` as the canonical record, not `changes.diff`. Intent grammar lives at `scripts/generator/dportsv3/agent/edit_intent/grammar.py` and per-intent schemas at `scripts/generator/dportsv3/agent/edit_intent/schemas/`. Convert bundles are unchanged by Step 25; they never have `intent_log.json`.
 
+5c. **Check playbook coverage (Step 27).** The agent's pattern knowledge now lives in `docs/agent-playbooks/` and is attached via the selector in `dportsv3/agent/playbooks.py`. Use `get-activity` to find the `playbooks_selected` row(s) for the bundle's jobs (one per role: triage / patch / convert). The row carries `included` (filenames that fired) and a `skipped_sample` of `{file, reason}` pairs. Cross-check against the bundle's classification + detected toolchains — see the skill's "Playbook library (Step 27)" section for what to look for. Also scan `tool_trace.jsonl` for `intent_reference` calls; the patch agent is supposed to call it before the first `apply_intent` of each new type.
+
 6. **Produce the report in the exact shape specified in the skill's "Report shape" section.** Markdown, terse, no fluff. End with "Skill update suggestions" — if you found a new failure mode, name it and propose the one-paragraph entry to append to the skill's "Known failure modes" list.
 
 ## What you do not do

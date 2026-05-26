@@ -183,7 +183,7 @@ When the port is compat-mode but the agent reached for dops tools (`validate_dop
 When `analysis/intent_log.json` is present, the bundle used the intent DSL. Different rules apply:
 
 - **Canonical record:** `intent_log.json` is the source of truth, not `changes.diff`. Verify-fix replays the intent log; `changes.diff` is a derived audit artifact (ordered concatenation of per-intent `substrate_diff` values).
-- **Intent grammar:** seven intent types — `replace_in_patch`, `drop_patch`, `add_patch`, `add_file`, `change_makefile`, `bump_portrevision`, `convert_to_dops`. Full schemas at `scripts/generator/dportsv3/agent/edit_intent/schemas/`.
+- **Intent grammar:** seven intent types — `replace_in_patch`, `drop_patch`, `add_patch`, `add_file`, `change_makefile`, `bump_portrevision`, `replace_in_dops_block`. Full schemas at `scripts/generator/dportsv3/agent/edit_intent/schemas/`. Canonical list at `dportsv3/agent/edit_intent/grammar.py::INTENT_TYPES`.
 - **Mode is fixed per transaction:** `mode_at_apply` is `dops` for any patch-agent bundle post-Step-C. Older bundles may also show `compat` or `convert` in this field. The runner refuses cross-mode transactions; under Step C drift is moot because only `dops` mode is reachable from the patch surface.
 - **Half-migration invariant:** if both `Makefile.DragonFly` AND `overlay.dops` exist on the port, `apply_intent` refuses (`blocked_by: substrate_invariant`). The substrate must be all-compat or all-dops before edits begin.
 - **Canonical-log invariant:** every substrate change has a matching log row. Cap-overflow refusals revert substrate. `intent_log_full=True` in a tool result means the agent should escalate, not retry.
@@ -205,6 +205,30 @@ When `intent_log.json` is present, check:
 - `changes.diff` must contain the operator-applyable diff. **Empty diff with `rebuild_ok=true` is a contract violation** (legacy flow).
 - In intent flow, `intent_log.json` is the operator-applyable record. `changes.diff` is still produced (concat of intent diffs) but its emptiness is benign iff no intents fired (e.g. agent escalated immediately).
 - `proposed_fix.md` must reference a non-zero diff (legacy) OR a non-empty intent sequence (intent flow).
+
+### Playbook library (Step 27)
+
+The legacy KEDB (`docs/known-errors/`) and the prompt-embedded pattern content have been replaced by a single playbook library at `docs/agent-playbooks/` (markdown entries with YAML-subset frontmatter triggers). The selector is `dportsv3/agent/playbooks.py::load_playbooks`. Four entry categories — filename prefix is authoritative:
+
+- `error-*.md` — triggered by triage classification (`triggers.classifications:`); attached to triage + patch payloads.
+- `intent-*.md` — triggered by intent type; **not attached to the system payload**. Pulled on demand when the patch agent calls the `intent_reference(intent_type)` tool (`dportsv3/agent/worker.py::intent_reference`). The recipe lands in conversation context only for intent types the agent actually uses.
+- `convert-*.md` — attached to convert payloads when `triggers.flows` contains `convert`.
+- `toolchain-*.md` — triggered by mechanical toolchain detection on the port Makefile (`playbooks.py::detect_toolchains` — parses `USES=`, `GNU_CONFIGURE=`, file-presence signals like `CMakeLists.txt`, `Cargo.toml`).
+
+Two attachment paths to keep straight when analyzing a bundle:
+1. **Payload-build-time** (system prompt): error-*, convert-*, toolchain-* via classification/toolchain/convert-phase triggers. Fires once when the job's system prompt is built.
+2. **On-demand** (mid-conversation): intent-* via `intent_reference` tool calls. Fires per-intent-type the agent reaches for.
+
+**Telemetry signal — `playbooks_selected` activity row.** Every payload build emits one. The row carries `role` (triage / patch / convert), `included` (list of entry filenames that fired), `skipped_count`, and a `skipped_sample` of up to 8 `{file, reason}` pairs. Fetch via `dportsv3 tracker get-activity --job <id>` and filter for `event=playbooks_selected`. Reasons take shapes like `flow:patch-not-in-['convert']`, `classification:'patch-error'-not-in-['compile-error']`, `toolchains:no-overlap-with-['autoconf']`, or `budget:N+M>BUDGET`.
+
+**What to check in an analysis:**
+- For a triage/patch bundle: did `playbooks_selected` fire, and does `included` include the entries you'd expect given the classification and the port's Makefile? E.g. a `patch-error` triage on a `USES=cmake` port should pull `error-*` entries gated on `patch-error` plus `toolchain-cmake.md`. Empty `included` on a port with a recognized toolchain is a red flag — likely a missing trigger or a `find_playbooks_dir()` failure.
+- For each intent type the agent actually emitted, did the trace include an `intent_reference(intent_type=X)` call BEFORE the first `apply_intent` of that type? `prompts.py` instructs the agent to call it first; skipping it isn't fatal but is a discipline regression worth flagging if the agent then misused the intent.
+- Convert bundles: did `playbooks_selected` with `role=convert` fire and include `convert-target-directive.md` and `convert-classify-patch-domain.md`?
+
+**Known parser quirks** (smoke-testing surface, mention if you spot symptoms):
+- `_parse_inline_list` only parses inline-form YAML (`[a, b]`). Block-form list (`- a\n  - b`) silently yields `()`, which means *wildcard* in the selector. A new entry that "fires on everything" probably has block-form triggers.
+- `intent_reference` deliberately ignores the `flows` and `classifications` gates and only filters on `triggers.intents`. An entry with `intents: [add_patch]` will surface via the tool regardless of whether the bundle "is" in patch flow.
 
 ## Analysis checklist
 
@@ -233,7 +257,13 @@ For each bundle, work through these questions and write the report against them.
 - Did the agent re-read files it had already read?
 - Did it call tools with the wrong args (e.g. passing origin where relpath was expected)?
 
-### 5. Lifecycle hygiene
+### 5. Playbook coverage (Step 27)
+- Did `playbooks_selected` fire for each role this bundle ran? (triage always; patch if it reached patch; convert if it's a convert bundle.)
+- Does `included` look right for the bundle's classification + detected toolchains? Empty `included` on a port with recognized USES= is a red flag — investigate.
+- For each distinct `intent_type` the agent emitted, was there a preceding `intent_reference(intent_type=X)` tool call in the trace? Skipping it is a discipline regression worth a note.
+- Does the `skipped_sample` reveal a likely-buggy entry (e.g. a `toolchain-cmake.md` skipped with `toolchains:no-overlap-with-['cmake']` when the port's Makefile clearly has `USES=cmake`)? That points at `detect_toolchains()` not seeing the Makefile.
+
+### 6. Lifecycle hygiene
 - Was this port previously bundled? (Scan `/agentic` for older timestamps.) If so, did the loop converge or thrash?
 - If MANUAL tier: was the classification one that should have been AUTO/ASSIST?
 
@@ -247,7 +277,7 @@ Patterns seen in the wild. When you see a new one, append it here and flag it in
 - **Agent declares a patch "obsolete" based on shallow upstream inspection.** Removing a patch and getting a green dsynth is not proof the patch was actually obsolete — it may have addressed a runtime or platform-specific issue dsynth doesn't catch. Flag when the agent's justification is thin.
 - **Wasted `get_file` turn from a mis-guessed offset.** When inspecting a C source file for include directives, the agent sometimes first reads from a non-zero offset and then re-reads from the top, burning a turn. The patch prompt could steer the agent toward `grep` for include-presence checks instead of speculative offset reads. Seen in `devel_gperf-20260523-094119Z` turn 6 → turn 7.
 - **Intent-flow: agent retries past `intent_log_full=True`.** When a tool result carries `intent_log_full: true` the agent is supposed to escalate (MANUAL), not retry — the log either hit the count cap (~loop) or a byte cap that revert already undid. If the trace shows further `apply_intent` calls after this flag fires, it's a prompt/behavior bug.
-- **Intent-flow: agent ignores `blocked_by: substrate_invariant`.** Half-migrated substrate (`Makefile.DragonFly` + `overlay.dops` both present) must be resolved by the operator or by `convert_to_dops` BEFORE other intents can land. Retries that don't first emit `convert_to_dops` will keep getting refused.
+- **Intent-flow: agent ignores `blocked_by: substrate_invariant`.** Half-migrated substrate (`Makefile.DragonFly` + `overlay.dops` both present) must be resolved by an operator (or by the convert agent, which produces the dops overlay) BEFORE other intents can land. The patch agent has no intent that fixes this state — retries that ignore the block will keep getting refused. Correct response is MANUAL escalation.
 - **Intent-flow: agent ignores `blocked_by: transaction_mode_drift`.** Once the first `apply_intent` pins `mode_at_apply`, subsequent calls in a different mode are refused. Drift usually means the agent's mental model of the port flipped mid-job — flag if `assess_dops` would now return something different from `mode_at_apply`.
 - **Intent-flow: substrate_diff disagrees with the rendered changes.diff.** Concat of ok=true `substrate_diff` values should equal `changes.diff`. Drift here means either a bug in the diff accumulator or a bypass of the canonical-log path (`canonical_log_broken=true` in some tool result).
 - **Intent-flow: patch job aborted with `patch_preflight_dirty` or `patch_preflight_error`.** Not a bug — design §5.1's hard pre-job clean assertion. Operator either has uncommitted edits in the env or the env is in unknown state (chroot unmounted, etc.). Flag as lifecycle hygiene, not a patch agent bug.
@@ -283,6 +313,12 @@ Produce something like this (markdown, no fluff):
 - changes.diff: <bytes> — <ok / empty-bug / mismatched>
 - intent_log.json (intent flow): <N intents, M ok> — <canonical / canonical_log_broken / missing>
 - proposed_fix.md: <usable / broken>
+
+## Playbooks (Step 27)
+- Triage: included=<list or "—">, skipped=<count> — <looks right / suspicious / missing event>
+- Patch: included=<list or "—">, skipped=<count> — <…>
+- Convert (if convert bundle): included=<list>, skipped=<count> — <…>
+- `intent_reference` discipline: <every intent type preceded by ref / N skips: …>
 
 ## Inefficiencies
 - <bullets>
