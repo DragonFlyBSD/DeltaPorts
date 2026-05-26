@@ -1295,20 +1295,22 @@ each is one new class + one registry entry. Same observability
 (the GuardrailFired event lets us see when guards fire), better
 testability (each guard is unit-testable in isolation).
 
-### Step 14 — context budget + system-prompt decomposition — pending
+### Step 14 — context budget + system-prompt decomposition — pending (partly shipped)
 
-> **Scope narrowed 2026-05-26.** The KEDB-specific portions of this
-> step (per-entry frontmatter, classification filter, est_tokens,
-> priority, budget gate over the KEDB section) are **subsumed by
-> Step 27 — unified agent playbook library**. What remains in Step
-> 14 is the orthogonal piece: **decomposing the monolithic system
-> prompts** (`PATCH_SYSTEM`, `TRIAGE_SYSTEM`, `PATCH_INTENT_SYSTEM`,
-> `CONVERT_SYSTEM`) into named `ContextSection` objects with
-> per-section telemetry. Step 27's selector handles the knowledge
-> library; Step 14 handles the prompt scaffolding. Read the section
-> below knowing the KEDB-flavored examples are illustrative of the
-> old framing — the durable part is the system-prompt decomposition
-> abstraction.
+> **KEDB-specific portions shipped 2026-05-26 via Step 27b**
+> (`80c0192517a`): per-entry frontmatter, classification filter,
+> `est_tokens`, priority, budget gate over the playbook section.
+> Per-section telemetry for playbook attachment also landed
+> (`playbooks_selected` activity row).
+>
+> **What remains pending in Step 14**: decomposing the monolithic
+> system prompts (`PATCH_SYSTEM`, `TRIAGE_SYSTEM`,
+> `PATCH_INTENT_SYSTEM`, `CONVERT_SYSTEM`) into named
+> `ContextSection` objects with per-section telemetry. Step 27's
+> selector handles the knowledge library; Step 14 handles the
+> prompt scaffolding decomposition. The KEDB-flavored examples in
+> the section below are illustrative of the old framing — the
+> durable part is the system-prompt decomposition abstraction.
 
 ``context.py`` already has the cleanest abstraction of the three
 (``ContextSection`` Protocol with priority-ordered render). What
@@ -1902,23 +1904,19 @@ be lost — every item here becomes load-bearing. Doing this
 doing it *with* 17 risks ballooning a single deliverable into a
 six-month project.
 
-### Step 19 — detection-driven triage playbooks — pending (partly subsumed)
+### Step 19 — detection-driven triage playbooks — shipped (via Step 27)
 
-> **Scope narrowed 2026-05-26.** The library infrastructure portions
-> of this step (the `dportsv3/agent/playbooks/` directory, the
-> `load(tags) -> str` loader, the frontmatter-style metadata model)
-> are **subsumed by Step 27 — unified agent playbook library**. The
-> 10 hand-authored toolchain markdown files (`autoconf`, `cmake`,
-> `meson`, `perl5`, `python`, `go`, `cargo`, `gnu-make`,
-> `pkg-config`, `libtool`) remain Step 19's deliverable — they land
-> as `toolchain-*.md` entries in Step 27's unified library, with
-> Step 27's frontmatter (`triggers.toolchains: [autoconf]` etc.)
-> and Step 27's selector consuming the tag set from 19a's
-> `detect()`. Step 19a (mechanical toolchain detection) also stays
-> in Step 19; it's the input to Step 27's selector for toolchain-
-> kind triggers. Read the section below knowing 19b's "playbook
-> authoring" is the durable scope and 19c's loader sketch is
-> superseded by Step 27's `load_playbooks`.
+> **Fully shipped in Step 27.** Both 19a (mechanical toolchain
+> detection — `detect_toolchains()` in
+> `dportsv3.agent.playbooks`) and 19b (the 10 hand-authored
+> toolchain markdown files) landed in `c7e1c865298` as part of
+> Step 27f. The catalog actually shipped 11 entries
+> (`toolchain-autoconf.md`, `cmake.md`, `meson.md`, `perl5.md`,
+> `python.md`, `go.md`, `cargo.md`, `gmake.md`, `pkg-config.md`,
+> `libtool.md`, plus a `c.md` catch-all) under
+> `docs/agent-playbooks/`. 19c's loader sketch is superseded by
+> Step 27's `load_playbooks`. The section below preserves the
+> original design rationale.
 
 Today the triage LLM gets a generic system prompt and the build log,
 and is expected to figure out from scratch what kind of port it's
@@ -3501,7 +3499,28 @@ hits a transient issue.
 
 ---
 
-### Step 27 — unified agent playbook library — pending
+### Step 27 — unified agent playbook library — shipped
+
+> **Shipped end-to-end across 2026-05-26.** All seven sub-steps
+> (27a-g) landed; Steps 19a and 19b's deliverables landed here
+> too (subsuming Step 19 entirely). Live catalog: 24 markdown
+> entries across `error-*`, `intent-*`, `convert-*`, and
+> `toolchain-*` categories. 1092 tests pass.
+>
+> Commit chain (chronological):
+> - 27a — `8b2801fdbdd`, `d91fcb2bb04` — `docs/kedb/` → `docs/agent-playbooks/`, `error-` prefix, README/TEMPLATE
+> - 27b — `80c0192517a` — `dportsv3.agent.playbooks` module, selector, budget gate, `load_kedb` retired
+> - 27c — `33f7f0312ef` — `intent_reference` returns schema + matching playbooks
+> - 27d — `97eac8aa655` — seven intent recipes, `PATCH_INTENT_SYSTEM` trimmed
+> - review — `488de85162e`, `8583c119cb7` — telemetry fix, wildcard cross-cutting entry
+> - 27e — `1a955344014` — two convert recipes, `CONVERT_SYSTEM` trimmed
+> - 27g — `46c6ae14ccd` — structural-vs-pattern boundary in module docstring, dops-quickref dup trimmed
+> - 27f — `c7e1c865298` — `detect_toolchains()` + 11 toolchain playbooks
+>
+> The original plan text is preserved below for context — the
+> design rationale that drove the work. The "Out of scope" section
+> at the end still applies as a forward-looking statement on
+> directions the library deliberately doesn't take.
 
 The plan today has three parallel knowledge-attachment mechanisms,
 each with its own naming, its own loader, and its own selector (or
@@ -3762,16 +3781,53 @@ Three concrete forcing functions:
    Centralizing the knowledge surface and making `intent_reference`
    the discovery primitive directly addresses the failure mode.
 
-#### Out of scope
+#### Out of scope (and future directions worth keeping in mind)
+
+The three items below were deliberately deferred. They're
+interesting in their own right and the architecture leaves room
+for each — listed here as forward-looking directions the library
+could grow into if the conditions warrant.
 
 - **LLM-driven playbook discovery / RAG / embedding search.**
-  Deterministic tag filter only. If the volume ever exceeds what
-  filename + frontmatter handles (hundreds of entries), revisit.
+  Deterministic tag filter only today. The selector's existing
+  axes (classifications, intents, toolchains, convert_phases,
+  flows) handle the catalog at ~24 entries comfortably. If the
+  volume ever exceeds what filename + frontmatter handles
+  (hundreds of entries, or if catalog-author intent becomes
+  hard to encode in tags), the natural next step is semantic
+  retrieval: embed each entry's body, embed the query context
+  (failure log + classification + toolchain), select top-K by
+  cosine similarity within the tag-filtered candidate set. The
+  tag filter stays as a coarse pre-filter; embeddings refine
+  within the matched set. Revisit when the catalog grows past
+  ~50-100 entries or when operators start wanting "find me
+  entries about X" without browsing.
+
 - **Editing playbooks from within the runtime.** The agents read
-  the library; only operators write to it. No "agent learned a new
-  pattern, add it to playbooks" loop. Keeps the library auditable.
-- **Versioning / deprecation policy.** Out of scope until volume
-  forces the question. Markdown + git history is fine.
+  the library today; only operators write to it. The
+  authoritative ownership is human, which keeps the library
+  auditable and stable. A future direction worth considering
+  carefully: an "agent learned a new pattern" feedback loop where
+  the agent proposes a new entry (or a refinement to an existing
+  one) at the end of an attempt, the runner stages it as a
+  pull-request-shaped artifact, and the operator approves
+  before it lands. This preserves the human-write authority
+  while letting the agent contribute knowledge from real
+  failures. The risk is drift: agents writing for agents
+  produces playbooks that pattern-match against LLM idioms
+  rather than build-system reality. Revisit when there's
+  enough operator capacity to review agent-proposed entries
+  and enough corpus to evaluate whether the proposals are
+  actually useful.
+
+- **Versioning / deprecation policy.** Markdown + git history is
+  fine until volume forces the question. Two scenarios that
+  would force it: (a) an entry's recipe becomes incorrect (e.g.
+  upstream tooling changes) and we want to keep the historical
+  text reachable while flagging the current-state, (b) entries
+  carry per-DragonFly-release scope (`triggers.platform_release:
+  [dragonfly-6.x]`) and need a sunset mechanism. Until either
+  scenario lands, "edit the file, commit, done" is the policy.
 
 #### Verification
 
@@ -3813,6 +3869,13 @@ Shipped (no work needed):
   `300b7b1e96a`) — convert-loop break + circuit breaker, overlay
   assessment unification (host/chroot drift gone), bundle-target
   propagation (token cost card renders).
+- **Step 27** — unified agent playbook library, all sub-steps
+  (27a-g) shipped 2026-05-26. Catalog of 24 entries across
+  `error-*` (4), `intent-*` (7), `convert-*` (2), `toolchain-*`
+  (11). Subsumed Step 19 entirely and Step 14's KEDB-specific
+  portions. See the Step 27 section for the commit chain.
+- **Step 19** — fully shipped via Step 27f (`c7e1c865298`):
+  `detect_toolchains()` plus 11 toolchain markdown entries.
 
 Pending, in recommended order:
 
@@ -3832,31 +3895,22 @@ Pending, in recommended order:
    pure FSM cleanups and can interleave whenever.
 5. **24** — prompts/quickref consolidation. Cheap, no behavior
    change. Before 25d's prompt rewrite so it isn't against a
-   messy baseline. Cosmetic prereq for 27.
-6. **27** — unified agent playbook library. Subsumes Step 14's
-   KEDB-specific work and Step 19's loader + directory layout.
-   Lands after 24 so the prompt trim has a destination, before 14
-   (which retains only the system-prompt decomposition piece) and
-   before 19's authoring (which lands as `toolchain-*` entries in
-   27's library). Recent patch-flow runs surfaced prompt-cruft cost
-   as current, not theoretical, so this ranks above the abstraction
-   batch below.
-7. **16** — UX review (dashboard live-refresh + the rest).
-8. **23 → 22** — execution layer then steps.py refactor. 23 first
+   messy baseline. (Step 27 already trimmed prompts.py
+   substantially; what remains for 24 is the structural
+   `dops_quickref.md` audit against the engine source-of-truth.)
+6. **16** — UX review (dashboard live-refresh + the rest).
+7. **23 → 22** — execution layer then steps.py refactor. 23 first
    so 22's phase-helper extraction lands against the consolidated
    `chroot_exec`.
-9. **21** — DB layer consolidation. Enables 17/18 to plug into a
+8. **21** — DB layer consolidation. Enables 17/18 to plug into a
    clean write surface. Also the natural landing site for Step 26
    items 1 + 4 (the column adds).
-10. **19 (authoring only)** — the 10 toolchain markdown files land
-    as `toolchain-*` entries in Step 27's library. Step 19's
-    loader + directory work is subsumed by 27.
-11. **12 → 13 → 14 (system-prompt decomposition only) → 15** —
-    abstraction work. 12 unblocks 13/14/15. Step 14's KEDB-
-    specific metadata work is subsumed by 27; what remains is the
-    system-prompt decomposition (`PATCH_SYSTEM_SECTIONS`,
-    per-section telemetry).
-12. **17 → 18** — remote runners + security. Only load-bearing
+9. **12 → 13 → 14 (system-prompt decomposition only) → 15** —
+   abstraction work. 12 unblocks 13/14/15. Step 14's KEDB-
+   specific metadata work shipped via Step 27b; what remains is
+   the system-prompt decomposition (`PATCH_SYSTEM_SECTIONS`,
+   per-section telemetry).
+10. **17 → 18** — remote runners + security. Only load-bearing
     when a second builder appears.
 
 Rationale for the head of the order: the loop's first-class
