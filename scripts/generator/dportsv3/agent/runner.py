@@ -1273,9 +1273,16 @@ def queue_root_for_log(job: dict | None) -> Path | None:
     return Path(qr) if qr else None
 
 
-def _log_playbook_selection(queue_root, role, origin, selection):
+def _log_playbook_selection(queue_root, role, origin, selection,
+                            job_id: str | None = None):
     """Emit a `playbooks_selected` activity row with included +
     skipped counts so operators see WHY their entry didn't fire.
+
+    ``job_id`` is required for the row to appear under the per-job
+    activity query (`tracker get-activity --job ID`). Rows written
+    with ``job_id=None`` land in the table with a NULL job_id and
+    are invisible to that query — silently swallowing the Step-27
+    telemetry signal.
 
     Best-effort: any failure (no queue_root, write error) silently
     no-ops — telemetry must not break payload assembly.
@@ -1290,6 +1297,7 @@ def _log_playbook_selection(queue_root, role, origin, selection):
                 f"included={len(selection.included)} "
                 f"skipped={len(selection.skipped)}"
             ),
+            job_id=job_id,
             extra={
                 "role": role,
                 "origin": origin,
@@ -1519,7 +1527,8 @@ def build_triage_payload(
         toolchains=detected_toolchains,
     )
     _log_playbook_selection(queue_root_for_log(job), "triage", origin,
-                            playbook_selection)
+                            playbook_selection,
+                            job_id=job.get("job_id"))
 
     ctx = ContextCtx(
         bundle_dir=bundle_dir,
@@ -1605,7 +1614,8 @@ def build_patch_payload(
         toolchains=detected_toolchains,
     )
     _log_playbook_selection(queue_root_for_log(job), "patch", origin,
-                            playbook_selection)
+                            playbook_selection,
+                            job_id=job.get("job_id"))
 
     ctx = ContextCtx(
         bundle_dir=bundle_dir,
@@ -2481,11 +2491,14 @@ def process_triage_job(
         return deferred
     # ---------------------------------------------------------------
 
-    # Seed queue_root into job so payload-build telemetry
-    # (`playbooks_selected` activity row) can find it. parse_job_file
-    # doesn't populate this; only the runner's per-job dispatch knows
-    # the live queue_root.
+    # Seed queue_root + job_id into job so payload-build telemetry
+    # (`playbooks_selected` activity row) can find them. parse_job_file
+    # doesn't populate either; only the runner's per-job dispatch
+    # knows the live queue_root and the dispatcher knows the job_id.
+    # Without job_id the activity row lands with NULL job_id and is
+    # invisible to `tracker get-activity --job ID`.
     job["queue_root"] = str(queue_root)
+    job["job_id"] = job_id
     payload = build_triage_payload(bundle_dir, playbooks_dir, job)
 
     ctx = StepCtx(
@@ -2908,10 +2921,11 @@ def process_patch_job(
     from dportsv3.agent.step import Orchestrator, StepCtx
     from dportsv3.agent.steps import PatchAttemptStep, PatchServices
 
-    # Seed queue_root into job so payload-build telemetry
-    # (`playbooks_selected` activity row) can find it. See the same
+    # Seed queue_root + job_id into job so payload-build telemetry
+    # (`playbooks_selected` activity row) can find them. See the same
     # comment in process_triage_job.
     job["queue_root"] = str(queue_root)
+    job["job_id"] = job_path.name
     payload = build_patch_payload(bundle_dir, playbooks_dir, job)
     origin = job.get("origin", "unknown")
     job_id = job_path.name
@@ -3171,6 +3185,7 @@ def _run_llm_conversion(
     convert_playbooks = load_playbooks(playbooks_dir, role="convert")
     _log_playbook_selection(
         queue_root, "convert", origin, convert_playbooks,
+        job_id=job_path.name,
     )
 
     payload = convert_mod.build_convert_payload(

@@ -191,14 +191,19 @@ def test_build_patch_payload_emits_playbooks_selected_activity_row(
     job = {
         "origin": "category/x",
         "target": "@main",
-        # Production callers (process_patch_job) seed this — mirror
+        # Production callers (process_patch_job) seed these — mirror
         # that here so the test exercises the wired-up path.
         "queue_root": str(tmp_path / "queue"),
+        "job_id": "20260527-000000Z-main-x-1.job",
     }
     runner_mod.build_patch_payload(bundle_dir, playbooks_dir, job)
 
     selected = [r for r in rows if r["stage"] == "playbooks_selected"]
     assert len(selected) == 1, rows
+    # job_id must reach activity_log so the row is visible to
+    # `tracker get-activity --job ID`. Without it the row lands
+    # with NULL job_id and the Step-27 telemetry signal is invisible.
+    assert selected[0]["job_id"] == "20260527-000000Z-main-x-1.job", selected[0]
     extra = selected[0]["extra"]
     assert extra["role"] == "patch"
     assert extra["origin"] == "category/x"
