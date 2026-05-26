@@ -287,3 +287,26 @@ def test_find_playbooks_dir_walks_up_to_repo_docs():
     assert located is not None, "find_playbooks_dir() should locate the live dir"
     assert located.name == "agent-playbooks"
     assert (located / "README.md").is_file()
+
+
+def test_every_intent_type_has_a_playbook():
+    """Step 27d contract: each intent type declared in
+    edit_intent.INTENT_TYPES must have a corresponding intent-*.md
+    playbook tagged with `intents: [<type>]`. Guards against an
+    intent being added later without a matching recipe — every new
+    intent type should ship with its usage recipe."""
+    from dportsv3.agent.edit_intent import INTENT_TYPES
+    located = find_playbooks_dir()
+    assert located is not None
+    entries = list_entries(located)
+    intent_coverage: dict[str, list[str]] = {t: [] for t in INTENT_TYPES}
+    for e in entries:
+        for t in e.triggers.intents:
+            if t in intent_coverage:
+                intent_coverage[t].append(e.path.name)
+    missing = [t for t, files in intent_coverage.items() if not files]
+    assert not missing, (
+        f"Intent types lack a playbook entry tagged with their type "
+        f"in triggers.intents: {missing}. Every intent should ship "
+        f"with a usage recipe in docs/agent-playbooks/intent-<type>.md"
+    )

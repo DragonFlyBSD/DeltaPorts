@@ -234,13 +234,17 @@ class TestIntentReference:
         assert "replace_in_patch" in result["known_intent_types"]
 
     def test_returns_playbooks_field_on_success(self):
-        """Step 27c: result carries a playbooks list. Today the
-        catalog has no intent-tagged entries yet (those land in 27d),
-        so the list is empty for every intent type."""
+        """Result carries a playbooks list. Post-27d the live catalog
+        ships an intent-<type>.md recipe for every intent type, so
+        each lookup returns at least one matching entry."""
         result = worker.intent_reference("test-env", "drop_patch")
         assert "playbooks" in result
         assert isinstance(result["playbooks"], list)
-        assert result["playbooks"] == []
+        assert len(result["playbooks"]) >= 1
+        # The canonical intent-drop_patch.md entry should be in the
+        # result list (selected by frontmatter triggers.intents).
+        paths = [p["path"] for p in result["playbooks"]]
+        assert "intent-drop_patch.md" in paths
 
     def test_returns_matching_intent_playbooks(self, tmp_path, monkeypatch):
         """When an intent-tagged playbook exists, intent_reference

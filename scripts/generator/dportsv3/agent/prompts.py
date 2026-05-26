@@ -445,33 +445,33 @@ intent_reference(intent_type)  →  { schema }
 Returns the JSON schema for one intent type. Read-only, cheap. Use
 it instead of guessing.
 
-### Intent grammar (v0)
+### Intent types (call `intent_reference` for fields + recipes)
 
-One paragraph per type. For exact field syntax call `intent_reference`.
+The seven intent types you can emit:
 
-- **`replace_in_patch`** — edit a single hunk inside an existing
-  `dragonfly/patch-*`. The most common drift fix: a context line
-  changed upstream, a function name moved, etc. Fields: `target`,
-  `find`, `replace`, optional `occurrence`.
-- **`drop_patch`** — remove a now-obsolete patch. Fields: `target`,
-  `reason` (operator-readable explanation).
-- **`add_patch`** — introduce a new patch. Either supply the full
-  unified diff inline (`diff`), or set `from_dupe=true` after
-  using `dupe`/`genpatch` to capture a WRKSRC edit.
-- **`add_file`** — add a port-local file. Two kinds: `resource`
-  (you supply `content`) or `materialize` (you supply a `source`
-  path in the dragonfly tree).
-- **`change_makefile`** — edit a Makefile variable. Fields:
-  `path` (usually `Makefile.DragonFly`), `key`, `value`, `op`
-  (`set` / `append` / `remove`).
-- **`bump_portrevision`** — increment PORTREVISION. No other fields.
-- **`replace_in_dops_block`** — edit text inside an `mk target set
-  <name> <<TAG ... TAG` heredoc body in `overlay.dops`. Use when
-  convert produced an overlay whose target recipe is internally
-  broken (e.g. wrong `${WRKSRC}/../../path` references inside a
-  REINPLACE_CMD). Fields: `block_name`, `find`, `replace`,
-  optional `occurrence`. The only intent that reaches heredoc
-  bodies — nothing else can.
+- `replace_in_patch` — fix a drifted hunk inside an existing
+  `dragonfly/patch-*`
+- `drop_patch` — remove a now-obsolete patch (handles both
+  `patch apply` and `file materialize` install shapes)
+- `add_patch` — introduce a new patch (inline `diff`, or
+  `from_dupe=true` after the dupe/genpatch flow)
+- `add_file` — add a port-local resource or materialize a file
+  already present in the overlay
+- `change_makefile` — set / append / remove a Makefile variable
+- `bump_portrevision` — increment PORTREVISION
+- `replace_in_dops_block` — edit text inside an `mk target` heredoc
+  body in `overlay.dops` (the only intent that reaches heredocs)
+
+For exact field shape AND usage recipes, call
+`intent_reference(intent_type=X)`. The result carries:
+- the JSON schema (canonical field shape)
+- any playbook entries tagged for that intent (when to use it,
+  worked examples, common failure modes, patterns like
+  "extend a heredoc body" or "multi-hunk drift")
+
+Call `intent_reference` BEFORE the first `apply_intent` of a given
+type in an attempt — it's cheap, idempotent, and the recipes
+prevent the most common misuse patterns.
 
 ### What the runner enforces (so you don't have to)
 
@@ -574,35 +574,10 @@ the `dupe`/`genpatch` flow.
    `dsynth_log(origin)` for the real build error and return to
    step 2.
 
-For generating new patches against extracted source (the dupe
-flow is still the right idiom):
-  - `dupe(/work/obj/.../file.c)` — snapshot the original
-  - `put_file` to edit the source under WRKSRC (NOT under
-    `ports/<origin>/`)
-  - `genpatch(<same path>)` — produce a unified diff in
-    `/work/genpatch-out/`
-  - `apply_intent({type: "add_patch", target:
-    "dragonfly/patch-...", from_dupe: true})` — the translator
-    finds the latest genpatch output matching the target's
-    basename and stages it correctly for this port's mode
-
-`dupe` is **only** the first step of `add_patch(from_dupe=true)`
-— it creates a `.orig` snapshot you'll edit against. Do **not**
-call `dupe` for investigation, for taking a "before" picture, or
-when modifying an **existing** `dragonfly/patch-*`. Existing
-patches are edited via `replace_in_patch` (single-hunk drift) or
-replaced via `drop_patch` + `add_patch` (whole-file rewrite). A
-`dupe` call without a follow-up `add_patch(from_dupe=true)` is
-wasted work and a sign you've reached for the wrong tool.
-
-**Multi-hunk drift in one patch file.** When `dsynth_log` reports
-"N out of M hunks failed" on a single patch, identify **every**
-drifted hunk before any `apply_intent`. Grep all hunk contexts
-against the upstream source in one pass, then emit one
-`replace_in_patch` per drifted hunk, **then** `materialize_dports`
-+ `dsynth_build` once. Do not apply-build-diagnose-apply for hunks
-that were visible in the same `get_file` you already did — it
-burns 10+ turns rediagnosing what one careful read would catch.
+For procedural patterns (the `dupe`/`genpatch` flow for new
+patches, multi-hunk drift in one file, heredoc-body extension,
+etc.) call `intent_reference(intent_type=X)` for the relevant
+intent — its result carries any matching playbook recipes.
 
 ## Discipline
 
