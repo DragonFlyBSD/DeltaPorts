@@ -1295,7 +1295,20 @@ each is one new class + one registry entry. Same observability
 (the GuardrailFired event lets us see when guards fire), better
 testability (each guard is unit-testable in isolation).
 
-### Step 14 — context budget + KEDB metadata — pending
+### Step 14 — context budget + system-prompt decomposition — pending
+
+> **Scope narrowed 2026-05-26.** The KEDB-specific portions of this
+> step (per-entry frontmatter, classification filter, est_tokens,
+> priority, budget gate over the KEDB section) are **subsumed by
+> Step 27 — unified agent playbook library**. What remains in Step
+> 14 is the orthogonal piece: **decomposing the monolithic system
+> prompts** (`PATCH_SYSTEM`, `TRIAGE_SYSTEM`, `PATCH_INTENT_SYSTEM`,
+> `CONVERT_SYSTEM`) into named `ContextSection` objects with
+> per-section telemetry. Step 27's selector handles the knowledge
+> library; Step 14 handles the prompt scaffolding. Read the section
+> below knowing the KEDB-flavored examples are illustrative of the
+> old framing — the durable part is the system-prompt decomposition
+> abstraction.
 
 ``context.py`` already has the cleanest abstraction of the three
 (``ContextSection`` Protocol with priority-ordered render). What
@@ -1889,7 +1902,23 @@ be lost — every item here becomes load-bearing. Doing this
 doing it *with* 17 risks ballooning a single deliverable into a
 six-month project.
 
-### Step 19 — detection-driven triage playbooks — pending
+### Step 19 — detection-driven triage playbooks — pending (partly subsumed)
+
+> **Scope narrowed 2026-05-26.** The library infrastructure portions
+> of this step (the `dportsv3/agent/playbooks/` directory, the
+> `load(tags) -> str` loader, the frontmatter-style metadata model)
+> are **subsumed by Step 27 — unified agent playbook library**. The
+> 10 hand-authored toolchain markdown files (`autoconf`, `cmake`,
+> `meson`, `perl5`, `python`, `go`, `cargo`, `gnu-make`,
+> `pkg-config`, `libtool`) remain Step 19's deliverable — they land
+> as `toolchain-*.md` entries in Step 27's unified library, with
+> Step 27's frontmatter (`triggers.toolchains: [autoconf]` etc.)
+> and Step 27's selector consuming the tag set from 19a's
+> `detect()`. Step 19a (mechanical toolchain detection) also stays
+> in Step 19; it's the input to Step 27's selector for toolchain-
+> kind triggers. Read the section below knowing 19b's "playbook
+> authoring" is the durable scope and 19c's loader sketch is
+> superseded by Step 27's `load_playbooks`.
 
 Today the triage LLM gets a generic system prompt and the build log,
 and is expected to figure out from scratch what kind of port it's
@@ -3472,6 +3501,300 @@ hits a transient issue.
 
 ---
 
+### Step 27 — unified agent playbook library — pending
+
+The plan today has three parallel knowledge-attachment mechanisms,
+each with its own naming, its own loader, and its own selector (or
+lack of one):
+
+- **Step 14 (KEDB metadata).** Reactive error catalog under
+  `docs/kedb/`. Today: bulk-loaded into every triage/patch payload
+  via `load_kedb`. Planned: frontmatter + classification filter +
+  budget gate.
+- **Step 19 (toolchain playbooks).** Proactive "local laws of
+  physics" catalog under `scripts/generator/dportsv3/agent/playbooks/`,
+  selected by mechanical toolchain detection (`autoconf`, `cmake`,
+  etc.). Distinct directory, distinct loader, distinct selector.
+- **`prompts.py` prose.** Recipe-style content embedded directly in
+  Python strings — per-intent usage patterns, convert classification
+  decision trees, the `dupe`/`add_patch` flow, the "extending an
+  inline `mk target` heredoc body" pattern that cdparanoia surfaced
+  on 2026-05-26. Edited via code commits, accreting per port shape
+  encountered.
+
+The audio/cdparanoia debugging session on 2026-05-26 surfaced the
+problem concretely. The patch agent needed to know "use
+`replace_in_dops_block` to append a REINPLACE_CMD to the
+`dfly-patch` heredoc body" — a recipe, not an error fix. That
+knowledge had no natural home: too procedural for KEDB, not
+toolchain-shaped for Step 19, would have ended up as another
+paragraph in `PATCH_INTENT_SYSTEM`. Adding it there is the cruft we
+keep adding; the next port shape will add another. The structure is
+asking for unification.
+
+#### Scope
+
+One library, one loader, one tagged selector. All three current
+mechanisms collapse into it. Categories are encoded in filename
+prefix so the library is self-describing on `ls`:
+
+```
+docs/agent-playbooks/
+  error-plist-mismatch.md           ← migrated from docs/kedb/
+  error-freebsd-only-features.md
+  error-dragonfly-source-patches.md
+  error-prefer-dops-over-static-patches.md
+  intent-replace_in_dops_block.md   ← migrated from prompts.py recipes
+  intent-replace_in_patch.md
+  intent-add_patch-from-source.md
+  intent-drop_patch.md
+  convert-target-directive.md       ← migrated from CONVERT_SYSTEM
+  convert-classify-patch-domain.md
+  toolchain-autoconf.md             ← Step 19 deliverables land here
+  toolchain-cmake.md
+  toolchain-meson.md
+  …
+  TEMPLATE.md
+  README.md
+```
+
+(Decision in 27a: `docs/agent-playbooks/` vs
+`scripts/generator/dportsv3/agent/playbooks/`. Co-locating with
+agent code aids discoverability for that audience; placing under
+`docs/` aids operator editing without a venv. Lean toward `docs/`
+based on KEDB's existing location and the "operator-editable"
+principle.)
+
+#### Frontmatter convention
+
+Every entry carries YAML frontmatter declaring its triggers + meta.
+Triggers are AND'd within a kind (all listed classifications must
+include the bundle's) and OR'd across kinds (matches if any trigger
+kind fires). Empty list = wildcard for that kind. Empty trigger
+block = always loaded (for fundamental references).
+
+```yaml
+---
+triggers:
+  classifications: [patch-error, compile-error]   # from triage
+  intents: [replace_in_dops_block]                # from patch-flow tool surface
+  toolchains: [autoconf]                          # from Step 19a's detect()
+  convert_phases: [picking_target]                # for convert agent
+  flows: [patch, convert, triage]                 # which agent role can see this
+tags: [heredoc, post-patch-target]
+priority: 100                                     # smaller = drop later under budget
+est_tokens: 0                                     # computed at load time, 0 = recompute
+---
+# Known Pattern: …
+```
+
+Old KEDB entries without frontmatter default to
+`{classifications: [], flows: [triage, patch], priority: 100}` —
+wildcard, both agents see them. Migration is purely additive; no
+existing entry breaks.
+
+#### Selection
+
+Selection happens **at payload-build time**, not at agent demand.
+The runner knows enough at the moment it constructs the
+triage/patch/convert payload to pick:
+
+- Bundle's classification (from prior triage, if any).
+- Detected toolchain (Step 19a's `detect(port_dir)` cached on the
+  bundle).
+- Intent surface for the flow (patch-flow exposes the 7 intent
+  types; convert exposes none; triage exposes none).
+- Convert phase context (which convert step is in progress).
+
+Pseudocode:
+
+```python
+def load_playbooks(role: Literal["triage", "patch", "convert"],
+                   *, classification: str | None = None,
+                   toolchains: set[str] = (),
+                   intents: set[str] = (),
+                   convert_phase: str | None = None,
+                   budget_tokens: int = 8000) -> str:
+    candidates = [e for e in _ALL_ENTRIES if e.matches(
+        role=role, classification=classification,
+        toolchains=toolchains, intents=intents,
+        convert_phase=convert_phase,
+    )]
+    candidates.sort(key=lambda e: e.priority)
+    return _assemble_under_budget(candidates, budget_tokens)
+```
+
+This preserves prefix caching (deterministic selection on identical
+context) and gives observability: the runner can log "selected N of
+M playbooks, dropped K under budget."
+
+#### Intent-driven suggestion via `intent_reference`
+
+The cleanest surface for the "suggest playbooks for intent X" idea
+we discussed pre-step: extend `intent_reference(intent_type=X)`
+to return the JSON schema (from `grammar.py`) **plus** any
+`intent-*` playbook entries tagged `intents: [X]`. Pure tag filter,
+no LLM reasoning, no RAG, no novel infrastructure. The agent calls
+the existing tool with the existing arg and gets back schema +
+matching recipes.
+
+This means baseline payload no longer needs the full intent-recipe
+catalog inline. The agent pulls it on demand per intent it's about
+to emit. Trade-off: agent pays one extra `intent_reference` call
+per intent type used. Worth it because (a) it's already best
+practice to call `intent_reference` before `apply_intent`, (b)
+prefix cache stays warm across attempts on the same port shape.
+
+#### What it subsumes
+
+- **Step 14's KEDB-specific work** (frontmatter, classification
+  filter, est_tokens, priority, budget gate) — folds into Step 27.
+  Step 14's *system-prompt decomposition* (PATCH_SYSTEM sections,
+  per-section telemetry) is separable and stays in Step 14; it's a
+  different abstraction concern (prompt structure, not knowledge
+  base).
+- **Step 19's `playbooks/` directory + `detect()` + `load(tags)`
+  loader.** Migrates to Step 27's library. Step 19's hand-authoring
+  of 10 toolchain markdown files remains valid work that lands as
+  `toolchain-*.md` in the new library.
+- **Step 24's prompts/quickref consolidation.** Step 24 trims
+  duplicated content from prompts.py against `dops_quickref.md`;
+  Step 27 takes the next logical hop and moves recipe-style content
+  to the library. 24 stays as the cosmetic pass; 27 is the
+  architectural pass that gives the cosmetic work somewhere to land.
+
+#### Sub-steps
+
+In recommended order; each is independently shippable.
+
+**27a — library skeleton + frontmatter convention.**
+
+Create `docs/agent-playbooks/` (or final location per the decision
+above). Move the 4 existing KEDB entries unchanged. Update
+`TEMPLATE.md` with the full frontmatter shape including all trigger
+kinds. Update `README.md` with the new file-naming convention and
+selector model. Pure rename + scaffold; no behavior change yet
+(`load_kedb` continues to bulk-load from the new location). One
+commit, easy to bisect.
+
+**27b — frontmatter parser + selector + `load_playbooks`.**
+
+Implement the entry model, frontmatter parser (handle missing /
+malformed gracefully with safe defaults), the selector function,
+and a token estimator. Replace `load_kedb` call sites in
+`build_triage_payload` / `build_patch_payload` /
+`build_convert_payload` with `load_playbooks(role=..., ...)`.
+Telemetry: emit a `playbooks_selected` activity row per payload
+build with included/dropped counts, total tokens, dropped reasons
+("budget" vs "no trigger match"). Keep all current entries with
+wildcard triggers so this is behavior-preserving.
+
+**27c — `intent_reference` returns matching playbooks.**
+
+Extend `intent_reference(intent_type=X)` to also return playbook
+entries tagged `intents: [X]`. Update the tool result shape to
+carry both `schema` and `playbooks` arrays. Patch-agent prompt is
+updated to reference this; no recipe prose stays in the prompt for
+intents that have a playbook entry.
+
+**27d — migrate intent-related prose from `prompts.py`.**
+
+Extract per-intent recipe content from `PATCH_INTENT_SYSTEM` into
+`intent-*.md` files with `intents: [X]` triggers. Land the
+cdparanoia recipe (`intent-replace_in_dops_block.md` covering the
+"extend a heredoc body by replacing the last line of the body" use
+case) as part of this sub-step. Trim the prompt accordingly.
+
+**27e — migrate convert-related prose.**
+
+Extract from `CONVERT_SYSTEM`: target directive picking →
+`convert-target-directive.md`; framework vs upstream classification
+decision tree → `convert-classify-patch-domain.md`. Trigger by
+`flows: [convert]` and `convert_phases: [...]` where appropriate.
+Trim the prompt.
+
+**27f — Step 19's toolchain playbook authoring, in the new library.**
+
+The 10 hand-authored toolchain playbooks from Step 19's
+deliverables (`toolchain-autoconf.md`, `toolchain-cmake.md`, etc.)
+land in the unified library. Step 19a's `detect()` returns the tag
+set the selector consumes. The 10 markdown files remain Step 19's
+authoring work; their *home* is Step 27.
+
+**27g — drop redundant prose from `prompts.py`, audit pass.**
+
+After 27d/e, sweep `prompts.py` for any remaining prose that's
+pattern-matched by a playbook category but wasn't migrated.
+Document the boundary explicitly in `prompts.py`'s module
+docstring: "this file holds STRUCTURAL prompt content — loop
+shape, tool surface, refusal codes, output format. Pattern-shaped
+content (intent recipes, port-toolchain patterns, error fixes)
+lives in `docs/agent-playbooks/`."
+
+#### Order and dependencies
+
+- **Hard:** Step 25 (intent DSL) — 27c's `intent_reference`
+  extension is meaningless without intents existing. Shipped.
+- **Soft:** Step 24 (prompts/quickref cleanup) — does some of the
+  cosmetic trim 27 makes structural. Land 24 first against the
+  current (smaller) prompt, then 27's deeper trim.
+- **Subsumes:** Step 14's KEDB metadata work, Step 19's loader +
+  directory. Step 19's *authoring* (the 10 toolchain files)
+  remains valid as 27f.
+- **Order within 27:** 27a (skeleton) → 27b (loader, behavior-
+  preserving) → 27c (intent_reference + suggestion) → 27d + 27e
+  (prompt migration) → 27f (toolchain authoring, parallel-shippable
+  with 27d/e) → 27g (audit pass).
+
+#### Why now
+
+Three concrete forcing functions:
+
+1. **Step 25 just shipped** — intents are the natural unit for
+   suggestion, and `intent_reference` is the natural tool surface
+   for tag-filtered lookup. Building 27 against intent + tool
+   surfaces that already exist is much cheaper than retrofitting.
+2. **Two pending entries on the runway** — the cdparanoia recipe
+   (`intent-replace_in_dops_block.md` covering heredoc-body
+   extension) and the `dsynth_log` failed-phase tagging. Both
+   would otherwise land as more paragraphs in `PATCH_INTENT_SYSTEM`,
+   baking the old shape deeper.
+3. **The cdparanoia debug session showed prompt cruft as a current
+   cost, not a future one.** The patch agent thrashed for ~1M
+   tokens in part because the recipe it needed wasn't anywhere it
+   would look. Centralizing the knowledge surface and making
+   `intent_reference` the discovery primitive directly addresses
+   the failure mode.
+
+#### Out of scope
+
+- **LLM-driven playbook discovery / RAG / embedding search.**
+  Deterministic tag filter only. If the volume ever exceeds what
+  filename + frontmatter handles (hundreds of entries), revisit.
+- **Editing playbooks from within the runtime.** The agents read
+  the library; only operators write to it. No "agent learned a new
+  pattern, add it to playbooks" loop. Keeps the library auditable.
+- **Versioning / deprecation policy.** Out of scope until volume
+  forces the question. Markdown + git history is fine.
+
+#### Verification
+
+- 27a: ports of existing KEDB entries continue to load identically
+  (byte-identical output of `load_kedb` before vs. `load_playbooks`
+  with wildcard triggers after, for triage/patch payloads on a
+  fixture bundle).
+- 27b: telemetry shows playbook selection for known bundles
+  matches expected sets; budget gate drops lowest-priority entries
+  first when forced under budget.
+- 27c: `intent_reference(intent_type="replace_in_dops_block")`
+  returns schema + the cdparanoia recipe entry; same call against
+  an intent type with no playbook returns schema + empty list.
+- 27d-g: integration tests assert per-flow payload size shrinks
+  (prompts trim) while behavior is preserved on a corpus of
+  fixture bundles.
+
+---
+
 ## Current priority order (as of 2026-05-24)
 
 Replaces every "Suggested updated order" line scattered through the
@@ -3512,19 +3835,31 @@ Pending, in recommended order:
    pure FSM cleanups and can interleave whenever.
 5. **24** — prompts/quickref consolidation. Cheap, no behavior
    change. Before 25d's prompt rewrite so it isn't against a
-   messy baseline.
-6. **16** — UX review (dashboard live-refresh + the rest).
-7. **23 → 22** — execution layer then steps.py refactor. 23 first
+   messy baseline. Cosmetic prereq for 27.
+6. **27** — unified agent playbook library. Subsumes Step 14's
+   KEDB-specific work and Step 19's loader + directory layout.
+   Lands after 24 so the prompt trim has a destination, before 14
+   (which retains only the system-prompt decomposition piece) and
+   before 19's authoring (which lands as `toolchain-*` entries in
+   27's library). cdparanoia 2026-05-26 surfaced the prompt-cruft
+   cost as current, not theoretical, so this ranks above the
+   abstraction batch below.
+7. **16** — UX review (dashboard live-refresh + the rest).
+8. **23 → 22** — execution layer then steps.py refactor. 23 first
    so 22's phase-helper extraction lands against the consolidated
    `chroot_exec`.
-8. **21** — DB layer consolidation. Enables 17/18 to plug into a
+9. **21** — DB layer consolidation. Enables 17/18 to plug into a
    clean write surface. Also the natural landing site for Step 26
    items 1 + 4 (the column adds).
-9. **19** — playbooks. Needs operating corpus from 11/25
-   running in production.
-10. **12 → 13 → 14 → 15** — abstraction work. 12 unblocks the
-    others.
-11. **17 → 18** — remote runners + security. Only load-bearing
+10. **19 (authoring only)** — the 10 toolchain markdown files land
+    as `toolchain-*` entries in Step 27's library. Step 19's
+    loader + directory work is subsumed by 27.
+11. **12 → 13 → 14 (system-prompt decomposition only) → 15** —
+    abstraction work. 12 unblocks 13/14/15. Step 14's KEDB-
+    specific metadata work is subsumed by 27; what remains is the
+    system-prompt decomposition (`PATCH_SYSTEM_SECTIONS`,
+    per-section telemetry).
+12. **17 → 18** — remote runners + security. Only load-bearing
     when a second builder appears.
 
 Rationale for the head of the order: the loop's first-class
