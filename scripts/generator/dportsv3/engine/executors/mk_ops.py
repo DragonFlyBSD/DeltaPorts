@@ -208,18 +208,14 @@ def exec_mk_var_token_add(
         # No existing assignment. Mirror make's `+=` semantics:
         # `VAR+= token` on an undefined VAR is equivalent to
         # `VAR= token` (creates the assignment with the token as
-        # its sole value). The prior strict refusal was stricter
-        # than make and forced every translator (LLM convert
-        # agent, deterministic migration/convert.py) to track
-        # upstream-variable presence before deciding between
-        # `mk add` and `mk set` — a distinction make itself
-        # doesn't require. Observed on audio/cdparanoia
-        # 2026-05-26: convert faithfully emitted `mk add CFLAGS
-        # -D__FreeBSD_version=900001` from the source's
-        # `CFLAGS+= ...`, executor rejected because upstream
-        # Makefile has no `CFLAGS=` line. Matches the existing
-        # exec_mk_var_set "no prior assignment" code path so
-        # set/add stay symmetric.
+        # its sole value). A stricter refusal would force every
+        # translator (LLM convert agent, deterministic
+        # migration/convert.py) to track upstream-variable presence
+        # before deciding between `mk add` and `mk set` — a
+        # distinction make itself doesn't require, and one that
+        # neither translator can answer reliably without an extra
+        # read. Matches the existing exec_mk_var_set "no prior
+        # assignment" code path so set/add stay symmetric.
         replacement = f"{name}= {value}"
         insert_before = _mk_var_set_insert_line(document)
         if insert_before is None:

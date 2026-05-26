@@ -72,9 +72,8 @@ class ComposePortReport:
     # Per-op detail for failed ops only — empty for successful ports
     # (keeps the report small). Each entry is the dict shape of
     # ApplyOpResult.to_dict(). Populated by semantic_stage so
-    # compose-report (and operators) can see WHICH op failed without
-    # re-running `dsl apply` by hand (audio/cdparanoia 2026-05-26
-    # debug session burned several round-trips on this).
+    # compose-report (and operators) can see WHICH op failed and WHY
+    # without re-running `dsl apply` by hand against the same overlay.
     dops_failed_op_results: list[dict[str, Any]] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
 

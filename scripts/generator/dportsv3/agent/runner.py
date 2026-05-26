@@ -3175,10 +3175,10 @@ def _run_llm_conversion(
         # env's writable layer — the next convert retry sees both the
         # stale overlay AND the legacy Makefile.DragonFly (half-migrated
         # substrate), the patch agent then hits substrate_invariant and
-        # burns its budget on a state convert never closed. Observed on
-        # audio/cdparanoia 2026-05-26 between attempts 130732Z and
-        # 141838Z. Fix #4 covered _verify_conversion failures but not
-        # the convert-loop-failed branch here.
+        # burns its budget on a state convert never closed. The
+        # symmetric rollback in _verify_conversion covers verify-time
+        # failures; this branch covers convert-loop failures (budget
+        # out, no proof block, proof missing required fields).
         _rollback_env_after_convert_failure(
             queue_root, env, origin, reason_code="llm_convert_failed",
             status=f"{result.status} ({result.raw_result.status})",
@@ -3426,11 +3426,9 @@ def _verify_conversion(job: dict, origin: str) -> tuple[bool, str]:
     to git HEAD via ``worker.reset_port`` and logs a
     ``convert_verify_failed`` activity row. Without rollback, the
     LLM convert agent's ``put_file overlay.dops`` lands in the env's
-    writable layer permanently — the next convert retry would see
-    a stale broken overlay and the next patch job would die at
-    ``patch_preflight_dirty`` (observed on audio/cdparanoia
-    2026-05-26 — the file remained "untracked" on disk for the
-    operator after the verify-failure return).
+    writable layer permanently — the next convert retry would see a
+    stale broken overlay and the next patch job would die at
+    ``patch_preflight_dirty``.
     """
     env = resolve_env(job)
     if not env:

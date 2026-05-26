@@ -3517,20 +3517,17 @@ lack of one):
   etc.). Distinct directory, distinct loader, distinct selector.
 - **`prompts.py` prose.** Recipe-style content embedded directly in
   Python strings — per-intent usage patterns, convert classification
-  decision trees, the `dupe`/`add_patch` flow, the "extending an
-  inline `mk target` heredoc body" pattern that cdparanoia surfaced
-  on 2026-05-26. Edited via code commits, accreting per port shape
-  encountered.
+  decision trees, the `dupe`/`add_patch` flow, "extending an inline
+  `mk target` heredoc body" patterns, etc. Edited via code commits,
+  accreting per port shape encountered.
 
-The audio/cdparanoia debugging session on 2026-05-26 surfaced the
-problem concretely. The patch agent needed to know "use
-`replace_in_dops_block` to append a REINPLACE_CMD to the
-`dfly-patch` heredoc body" — a recipe, not an error fix. That
-knowledge had no natural home: too procedural for KEDB, not
-toolchain-shaped for Step 19, would have ended up as another
-paragraph in `PATCH_INTENT_SYSTEM`. Adding it there is the cruft we
-keep adding; the next port shape will add another. The structure is
-asking for unification.
+A concrete forcing function: the patch agent needs recipes like
+"use `replace_in_dops_block` to append a REINPLACE_CMD to an inline
+`mk target` body" — procedural knowledge, not an error fix. That
+shape has no natural home: too procedural for KEDB, not toolchain-
+shaped for Step 19, ends up as another paragraph in
+`PATCH_INTENT_SYSTEM`. Each new port shape adds another paragraph.
+The structure is asking for unification.
 
 #### Scope
 
@@ -3700,10 +3697,10 @@ intents that have a playbook entry.
 **27d — migrate intent-related prose from `prompts.py`.**
 
 Extract per-intent recipe content from `PATCH_INTENT_SYSTEM` into
-`intent-*.md` files with `intents: [X]` triggers. Land the
-cdparanoia recipe (`intent-replace_in_dops_block.md` covering the
-"extend a heredoc body by replacing the last line of the body" use
-case) as part of this sub-step. Trim the prompt accordingly.
+`intent-*.md` files with `intents: [X]` triggers. Includes
+`intent-replace_in_dops_block.md` covering the "extend a heredoc
+body by replacing the last line of the body" use case (the recipe
+shape that motivated this step). Trim the prompt accordingly.
 
 **27e — migrate convert-related prose.**
 
@@ -3754,17 +3751,16 @@ Three concrete forcing functions:
    suggestion, and `intent_reference` is the natural tool surface
    for tag-filtered lookup. Building 27 against intent + tool
    surfaces that already exist is much cheaper than retrofitting.
-2. **Two pending entries on the runway** — the cdparanoia recipe
-   (`intent-replace_in_dops_block.md` covering heredoc-body
-   extension) and the `dsynth_log` failed-phase tagging. Both
-   would otherwise land as more paragraphs in `PATCH_INTENT_SYSTEM`,
+2. **Two pending entries on the runway** — an
+   `intent-replace_in_dops_block.md` recipe covering heredoc-body
+   extension, and a `dsynth_log` failed-phase tagging. Both would
+   otherwise land as more paragraphs in `PATCH_INTENT_SYSTEM`,
    baking the old shape deeper.
-3. **The cdparanoia debug session showed prompt cruft as a current
-   cost, not a future one.** The patch agent thrashed for ~1M
-   tokens in part because the recipe it needed wasn't anywhere it
-   would look. Centralizing the knowledge surface and making
-   `intent_reference` the discovery primitive directly addresses
-   the failure mode.
+3. **Prompt cruft is a current cost, not a future one.** Recent
+   patch-flow runs have burned attempt budget thrashing on cases
+   where the recipe the agent needed wasn't anywhere it would look.
+   Centralizing the knowledge surface and making `intent_reference`
+   the discovery primitive directly addresses the failure mode.
 
 #### Out of scope
 
@@ -3787,8 +3783,9 @@ Three concrete forcing functions:
   matches expected sets; budget gate drops lowest-priority entries
   first when forced under budget.
 - 27c: `intent_reference(intent_type="replace_in_dops_block")`
-  returns schema + the cdparanoia recipe entry; same call against
-  an intent type with no playbook returns schema + empty list.
+  returns schema + the heredoc-extension recipe entry; same call
+  against an intent type with no playbook returns schema + empty
+  list.
 - 27d-g: integration tests assert per-flow payload size shrinks
   (prompts trim) while behavior is preserved on a corpus of
   fixture bundles.
@@ -3841,9 +3838,9 @@ Pending, in recommended order:
    Lands after 24 so the prompt trim has a destination, before 14
    (which retains only the system-prompt decomposition piece) and
    before 19's authoring (which lands as `toolchain-*` entries in
-   27's library). cdparanoia 2026-05-26 surfaced the prompt-cruft
-   cost as current, not theoretical, so this ranks above the
-   abstraction batch below.
+   27's library). Recent patch-flow runs surfaced prompt-cruft cost
+   as current, not theoretical, so this ranks above the abstraction
+   batch below.
 7. **16** — UX review (dashboard live-refresh + the rest).
 8. **23 → 22** — execution layer then steps.py refactor. 23 first
    so 22's phase-helper extraction lands against the consolidated
