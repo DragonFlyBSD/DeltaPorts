@@ -1504,12 +1504,19 @@ def build_triage_payload(
     # Triage runs BEFORE classification is known — we attach
     # entries that don't require a classification (the entry's
     # `triggers.classifications` is empty / wildcard) or whose
-    # triggers don't depend on patch-flow context. Step 19a's
-    # toolchain detection would feed `toolchains` here once it
-    # lands; today it's empty.
-    from dportsv3.agent.playbooks import load_playbooks  # noqa: PLC0415
+    # triggers don't depend on patch-flow context. Toolchain
+    # detection (Step 19a / 27f) feeds `toolchains` so
+    # toolchain-*.md playbooks fire for ports whose framework
+    # Makefile carries recognizable signals (USES=, GNU_CONFIGURE=).
+    from dportsv3.agent.playbooks import (  # noqa: PLC0415
+        detect_toolchains, load_playbooks,
+    )
+    detected_toolchains = detect_toolchains(
+        bundle_dir / "port" if bundle_dir else None,
+    )
     playbook_selection = load_playbooks(
         playbooks_dir, role="triage", classification=None,
+        toolchains=detected_toolchains,
     )
     _log_playbook_selection(queue_root_for_log(job), "triage", origin,
                             playbook_selection)
@@ -1587,9 +1594,15 @@ def build_patch_payload(
             cls = parsed.get("classification")
             if cls:
                 triage_classification = cls
-    from dportsv3.agent.playbooks import load_playbooks  # noqa: PLC0415
+    from dportsv3.agent.playbooks import (  # noqa: PLC0415
+        detect_toolchains, load_playbooks,
+    )
+    detected_toolchains = detect_toolchains(
+        bundle_dir / "port" if bundle_dir else None,
+    )
     playbook_selection = load_playbooks(
         playbooks_dir, role="patch", classification=triage_classification,
+        toolchains=detected_toolchains,
     )
     _log_playbook_selection(queue_root_for_log(job), "patch", origin,
                             playbook_selection)

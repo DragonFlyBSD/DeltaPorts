@@ -283,6 +283,46 @@ def test_build_convert_payload_attaches_convert_playbooks(
     assert "Static patch fails after upstream version bump" in payload
 
 
+def test_build_patch_payload_attaches_detected_toolchain_playbook(
+    tmp_path: Path, monkeypatch,
+):
+    """End-to-end: a bundle with port/Makefile declaring
+    `USES=cmake` should pull in toolchain-cmake.md via Step 19a's
+    detect_toolchains() feeding load_playbooks's `toolchains`
+    trigger. Validates the 27f wiring from runner → playbooks
+    → selector."""
+    bundle_dir = tmp_path / "bundle"
+    (bundle_dir / "port").mkdir(parents=True)
+    (bundle_dir / "port" / "Makefile").write_text(
+        "PORTNAME=foo\nUSES= cmake\n"
+    )
+    _write_triage_md(bundle_dir, "compile-error")
+
+    monkeypatch.setattr(runner_mod, "artifact_store_get", lambda *a, **kw: None)
+    monkeypatch.setattr(runner_mod, "tracker_artifact_get", lambda *a, **kw: None)
+    monkeypatch.setattr(runner_mod, "bundle_artifact_list", lambda *a, **kw: [])
+    monkeypatch.setattr(runner_mod, "port_bundle_history", lambda *a, **kw: [])
+    monkeypatch.setattr(runner_mod, "get_user_context",
+                        lambda *a, **kw: (None, 0))
+    from dportsv3.agent.decision import PortHistory
+    monkeypatch.setattr(
+        runner_mod, "_load_port_history",
+        lambda target, origin, window_hours: PortHistory.empty(target, origin),
+    )
+
+    playbooks_dir = find_playbooks_dir()
+    job = {"origin": "category/foo", "target": "@main"}
+    payload = runner_mod.build_patch_payload(bundle_dir, playbooks_dir, job)
+
+    # toolchain-cmake.md title is "CMake — usual suspects on DragonFly"
+    assert "CMake — usual suspects" in payload, (
+        "expected toolchain-cmake.md to attach via detected USES=cmake"
+    )
+    # toolchain-autoconf.md should NOT fire (the Makefile didn't
+    # declare autoreconf or GNU_CONFIGURE).
+    assert "Autoconf — usual suspects" not in payload
+
+
 def test_intent_reference_attaches_every_intent_playbook():
     """Round-trip: for each intent type in INTENT_TYPES, calling
     intent_reference returns the schema AND at least one playbook

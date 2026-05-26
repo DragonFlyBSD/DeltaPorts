@@ -289,6 +289,73 @@ def test_find_playbooks_dir_walks_up_to_repo_docs():
     assert (located / "README.md").is_file()
 
 
+def test_detect_toolchains_from_uses_line(tmp_path):
+    """detect_toolchains parses USES= tokens (with and without
+    :option suffixes) and maps to toolchain tags."""
+    from dportsv3.agent.playbooks import detect_toolchains
+    port = tmp_path / "ports" / "devel" / "x"
+    port.mkdir(parents=True)
+    (port / "Makefile").write_text(
+        "PORTNAME=x\n"
+        "USES= autoreconf cmake pkgconfig compiler:c11 perl5:build,run\n"
+    )
+    tags = detect_toolchains(port)
+    assert "autoconf" in tags
+    assert "cmake" in tags
+    assert "pkg-config" in tags
+    assert "c" in tags
+    assert "perl5" in tags
+
+
+def test_detect_toolchains_handles_gnu_configure_and_use_gmake(tmp_path):
+    from dportsv3.agent.playbooks import detect_toolchains
+    port = tmp_path / "port"
+    port.mkdir()
+    (port / "Makefile").write_text(
+        "PORTNAME=y\n"
+        "GNU_CONFIGURE= yes\n"
+        "USE_GMAKE= yes\n"
+    )
+    tags = detect_toolchains(port)
+    assert "autoconf" in tags
+    assert "gmake" in tags
+
+
+def test_detect_toolchains_handles_file_presence_signals(tmp_path):
+    """File-presence checks fire even without a recognizable
+    Makefile USES line — useful when the framework Makefile is
+    minimal but a CMakeLists.txt / Cargo.toml / meson.build /
+    configure.ac is present in the same dir."""
+    from dportsv3.agent.playbooks import detect_toolchains
+    port = tmp_path / "port"
+    port.mkdir()
+    (port / "Makefile").write_text("PORTNAME=z\n")
+    (port / "CMakeLists.txt").write_text("cmake_minimum_required(VERSION 3.0)\n")
+    (port / "Cargo.toml").write_text("[package]\n")
+    tags = detect_toolchains(port)
+    assert "cmake" in tags
+    assert "cargo" in tags
+
+
+def test_detect_toolchains_missing_dir_returns_empty(tmp_path):
+    from dportsv3.agent.playbooks import detect_toolchains
+    assert detect_toolchains(None) == set()
+    assert detect_toolchains(tmp_path / "does-not-exist") == set()
+
+
+def test_detect_toolchains_unreadable_makefile_does_not_raise(tmp_path):
+    """If Makefile is present but unreadable (rare; permission
+    issues), detect_toolchains returns whatever file-presence
+    signals fire and doesn't raise."""
+    from dportsv3.agent.playbooks import detect_toolchains
+    port = tmp_path / "port"
+    port.mkdir()
+    # No Makefile at all → tags come only from file-presence.
+    (port / "configure.ac").write_text("AC_INIT([x],[1])\n")
+    tags = detect_toolchains(port)
+    assert "autoconf" in tags
+
+
 def test_every_intent_type_has_a_playbook():
     """Step 27d contract: each intent type declared in
     edit_intent.INTENT_TYPES must have a corresponding intent-*.md

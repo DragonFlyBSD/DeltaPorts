@@ -45,6 +45,7 @@ __all__ = [
     "find_playbooks_dir",
     "list_entries",
     "load_playbooks",
+    "detect_toolchains",
 ]
 
 
@@ -221,6 +222,105 @@ def _parse_entry(path: Path) -> PlaybookEntry | None:
         # Rough estimate; sufficient for budget gate. ~4 chars/token.
         est_tokens=max(1, len(body) // 4),
     )
+
+
+# ---------------------------------------------------------------------
+# Toolchain detection (Step 19a / Step 27f)
+# ---------------------------------------------------------------------
+
+
+# Maps FreeBSD ports `USES=` token (base name, before any `:option`
+# suffix) to the toolchain tags the selector recognizes. Tags are
+# the values that appear in playbook frontmatter `triggers.toolchains`.
+_USES_TO_TAGS: dict[str, tuple[str, ...]] = {
+    "autoreconf": ("autoconf",),
+    "automake":   ("autoconf",),
+    "autotools":  ("autoconf",),
+    "libtool":    ("libtool",),
+    "cmake":      ("cmake",),
+    "meson":      ("meson",),
+    "perl5":      ("perl5",),
+    "python":     ("python",),
+    "go":         ("go",),
+    "cargo":      ("cargo",),
+    "gmake":      ("gmake",),
+    "gnumake":    ("gmake",),  # legacy alias
+    "pkgconfig":  ("pkg-config",),
+    "compiler":   ("c",),       # most commonly compiler:c11 etc.
+}
+
+
+_USES_ASSIGN_RE = re.compile(r"^USES\s*[+:?]?=\s*(.+?)\s*(?:#.*)?$")
+_GNU_CONFIGURE_RE = re.compile(r"^GNU_CONFIGURE\s*[+:?]?=\s*yes\b")
+_USE_GMAKE_RE = re.compile(r"^USE_GMAKE\s*[+:?]?=\s*yes\b")
+
+
+def _tags_from_makefile_text(text: str) -> set[str]:
+    """Parse a port Makefile for toolchain-relevant assignments."""
+    tags: set[str] = set()
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        m = _USES_ASSIGN_RE.match(line)
+        if m:
+            for tok in m.group(1).split():
+                base = tok.split(":", 1)[0].strip()
+                if base in _USES_TO_TAGS:
+                    tags.update(_USES_TO_TAGS[base])
+        if _GNU_CONFIGURE_RE.match(line):
+            tags.add("autoconf")
+        if _USE_GMAKE_RE.match(line):
+            tags.add("gmake")
+    return tags
+
+
+def detect_toolchains(port_dir: Path | None) -> set[str]:
+    """Detect toolchain tags for a port directory.
+
+    Reads ``<port_dir>/Makefile`` (the FreeBSD ports framework
+    Makefile, NOT ``Makefile.DragonFly``) and infers tags from:
+    - ``USES=`` line tokens (mapped via ``_USES_TO_TAGS``)
+    - ``GNU_CONFIGURE=yes`` → autoconf
+    - ``USE_GMAKE=yes`` → gmake (legacy assignment, equivalent to
+      ``USES=gmake``)
+
+    Plus file-presence signals (independent of the Makefile):
+    - ``configure.ac`` / ``configure.in`` → autoconf
+    - ``CMakeLists.txt`` → cmake
+    - ``meson.build`` → meson
+    - ``Cargo.toml`` → cargo
+
+    Returns the union as a set. The selector's ``toolchains``
+    trigger axis matches any overlap with this set.
+
+    Best-effort: missing directory or unreadable Makefile returns
+    an empty set rather than raising. The selector treats empty
+    as "no toolchain context known" — toolchain-tagged playbooks
+    won't fire, but other selection axes still apply.
+    """
+    if port_dir is None or not port_dir.is_dir():
+        return set()
+    tags: set[str] = set()
+
+    mk = port_dir / "Makefile"
+    if mk.is_file():
+        try:
+            text = mk.read_text()
+        except OSError:
+            text = ""
+        tags |= _tags_from_makefile_text(text)
+
+    if (port_dir / "configure.ac").is_file() or (port_dir / "configure.in").is_file():
+        tags.add("autoconf")
+    if (port_dir / "CMakeLists.txt").is_file():
+        tags.add("cmake")
+    if (port_dir / "meson.build").is_file():
+        tags.add("meson")
+    if (port_dir / "Cargo.toml").is_file():
+        tags.add("cargo")
+
+    return tags
 
 
 # ---------------------------------------------------------------------
