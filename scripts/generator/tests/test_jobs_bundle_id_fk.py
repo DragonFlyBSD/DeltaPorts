@@ -50,32 +50,14 @@ def test_finds_jobs_with_bundle_id_set(db):
     assert ids == ["patch-1", "triage-1", "verify-1"]
 
 
-def test_finds_legacy_jobs_via_bundle_dir_fallback(db):
-    """Pre-migration rows have bundle_dir but no bundle_id (NULL).
-    The query still finds them so old data isn't dropped."""
-    _insert_job(db, "legacy-1", bundle_id=None,
+def test_ignores_jobs_with_only_bundle_dir(db):
+    """bundle_dir is no longer load-bearing for the relation — a
+    job with only bundle_dir set (no bundle_id) is invisible to
+    list_jobs_for_bundle. Documents the cutover: alpha-stage DB
+    wipes mean every job written post-migration has bundle_id."""
+    _insert_job(db, "orphan", bundle_id=None,
                 bundle_dir="/logs/bundles/b-1", type_="triage")
-    _insert_job(db, "legacy-2", bundle_id=None,
-                bundle_dir="/logs/bundles/b-1/", type_="patch")
-    rows = list_jobs_for_bundle(db, "b-1")
-    assert sorted(r["job_id"] for r in rows) == ["legacy-1", "legacy-2"]
-
-
-def test_mixed_modern_and_legacy_rows(db):
-    """A bundle with both modern (bundle_id set) and legacy
-    (bundle_dir only) jobs returns all of them — no double-count
-    when both are present on the same row."""
-    _insert_job(db, "modern-1", bundle_id="b-1", type_="patch")
-    _insert_job(db, "legacy-1", bundle_id=None,
-                bundle_dir="/logs/bundles/b-1", type_="triage")
-    _insert_job(db, "both-set", bundle_id="b-1",
-                bundle_dir="/logs/bundles/b-1", type_="convert")
-    rows = list_jobs_for_bundle(db, "b-1")
-    ids = sorted(r["job_id"] for r in rows)
-    assert ids == ["both-set", "legacy-1", "modern-1"]
-    # Critically, both-set appears exactly once even though it
-    # would match by both bundle_id and bundle_dir.
-    assert len(rows) == 3
+    assert list_jobs_for_bundle(db, "b-1") == []
 
 
 def test_returns_empty_for_unknown_bundle(db):

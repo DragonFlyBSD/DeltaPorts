@@ -327,25 +327,14 @@ def list_jobs_for_bundle(
 ) -> list[dict[str, Any]]:
     """Return all jobs whose ``bundle_id`` FK references ``bundle_id``.
 
-    Primary match is on the normalized ``jobs.bundle_id`` column
-    (added 2026-05-26). The previous shape used ``bundle_dir`` LIKE
-    matching, which silently missed every patch / verify job (those
-    paths set bundle_id but not bundle_dir). Kept as a fallback
-    predicate for legacy rows where the bundle_id backfill hasn't
-    happened yet — operators with a brand-new tracker can rely on
-    the primary, while live deployments don't drop existing data.
-
-    Ordered newest-first by created_ts_utc.
+    Joins on the normalized ``jobs.bundle_id`` column. Ordered
+    newest-first by created_ts_utc.
     """
     rows = conn.execute(
         """SELECT * FROM jobs
            WHERE bundle_id = ?
-              OR bundle_dir = ?
-              OR bundle_dir = ? || '/'
-              OR bundle_dir LIKE '%/' || ?
-              OR bundle_dir LIKE '%/' || ? || '/'
            ORDER BY created_ts_utc DESC, job_id DESC""",
-        (bundle_id, bundle_id, bundle_id, bundle_id, bundle_id),
+        (bundle_id,),
     ).fetchall()
     return [_row_dict(r) for r in rows]
 
