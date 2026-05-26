@@ -315,6 +315,29 @@ class TestDopsRenderers:
         assert result.ok is False
         assert "half-migrated" in result.error
 
+    def test_add_file_materialize_refuses_dotdot_dest(self, t):
+        """Path-safety gap surfaced in Step C review: kind=materialize
+        previously skipped port_path validation (only kind=resource
+        triggered it because that branch wrote the file). An intent
+        like add_file(kind='materialize', dest='../../etc/foo', ...)
+        could write `file materialize ... -> ../../etc/foo` to
+        overlay.dops, escaping the port subtree at compose time."""
+        result = t.apply({
+            "type": "add_file",
+            "dest": "../escape.c", "kind": "materialize",
+            "source": "src/x",
+        })
+        assert result.ok is False
+        assert "must be a relative path" in result.error
+
+    def test_add_file_materialize_refuses_absolute_dest(self, t):
+        result = t.apply({
+            "type": "add_file",
+            "dest": "/etc/passwd", "kind": "materialize",
+            "source": "src/x",
+        })
+        assert result.ok is False
+
     def test_add_file_allows_non_makefile_dest_in_dops_mode(self, t):
         """Other dests (resources, materialized files) keep working."""
         result = t.apply({
@@ -570,17 +593,25 @@ class TestDopsRenderers:
 
 class TestModeRestrictions:
 
-    def test_convert_to_dops_in_patch_mode_rejected(self, tmp_path):
-        ws = _make_workspace(tmp_path)
-        t = Translator(ws, "devel/foo", "dops")
-        result = t.apply({"type": "convert_to_dops"})
-        assert result.ok is False
-        assert "only the convert agent" in result.error
+    def test_convert_to_dops_intent_no_longer_exists(self, tmp_path):
+        """Post-Step-C cleanup: convert_to_dops was dead code (no
+        production path constructed Translator(mode='convert')).
+        The intent type, schema, renderer, and convert mode were
+        all removed. parse_intent now refuses the wire-format
+        type."""
+        from dportsv3.agent.edit_intent import parse_intent
+        with pytest.raises(IntentError, match="unknown"):
+            parse_intent({"type": "convert_to_dops"})
 
     def test_invalid_mode_at_construction(self, tmp_path):
         ws = _make_workspace(tmp_path)
+        # Only "dops" is valid post-Step-C.
         with pytest.raises(ValueError, match="invalid mode"):
             Translator(ws, "devel/foo", "bogus")  # type: ignore[arg-type]
+        with pytest.raises(ValueError, match="invalid mode"):
+            Translator(ws, "devel/foo", "compat")  # type: ignore[arg-type]
+        with pytest.raises(ValueError, match="invalid mode"):
+            Translator(ws, "devel/foo", "convert")  # type: ignore[arg-type]
 
 
 # --------------------------------------------------------------------

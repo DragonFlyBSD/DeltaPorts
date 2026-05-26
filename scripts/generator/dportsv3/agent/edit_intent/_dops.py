@@ -248,6 +248,18 @@ def add_file(t, intent: AddFile):
     For kind=materialize: emit ``file materialize <src> -> <dst>``.
     """
     from .translator import EditResult
+    # Path safety BEFORE kind-dispatch. The resource branch already
+    # got escape protection via port_path() on its file write; the
+    # materialize branch (which only appends a directive, no file
+    # IO) skipped it and would happily write
+    # ``file materialize ... -> ../../etc/foo`` into overlay.dops.
+    # Hoist the check so both kinds are covered.
+    try:
+        t.port_path(intent.dest)
+    except IntentError as exc:
+        return EditResult(
+            ok=False, intent_type="add_file", error=str(exc),
+        )
     # Refuse to create Makefile.DragonFly on a dops-mode port — that
     # would create the half-migrated state (dops_with_unmigrated_makefile_dragonfly)
     # that the substrate invariant later refuses on every apply_intent.

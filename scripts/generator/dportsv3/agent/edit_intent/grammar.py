@@ -20,7 +20,6 @@ INTENT_TYPES: tuple[str, ...] = (
     "add_file",
     "change_makefile",
     "bump_portrevision",
-    "convert_to_dops",
     "replace_in_dops_block",
 )
 
@@ -88,16 +87,6 @@ class BumpPortrevision:
 
 
 @dataclass(frozen=True)
-class ConvertToDops:
-    """Convert-agent-only: lift compat → dops atomically (§3.2.7).
-
-    The patch agent cannot emit this intent; the validator rejects
-    it in any non-convert transaction.
-    """
-    type: Literal["convert_to_dops"]
-
-
-@dataclass(frozen=True)
 class ReplaceInDopsBlock:
     """Edit text inside an ``mk target set <name> <<MK ... MK``
     heredoc body in overlay.dops (Step C-4).
@@ -125,7 +114,6 @@ Intent = Union[
     AddFile,
     ChangeMakefile,
     BumpPortrevision,
-    ConvertToDops,
     ReplaceInDopsBlock,
 ]
 
@@ -139,6 +127,5 @@ INTENT_DATACLASSES: dict[str, type] = {
     "add_file":              AddFile,
     "change_makefile":       ChangeMakefile,
     "bump_portrevision":     BumpPortrevision,
-    "convert_to_dops":       ConvertToDops,
     "replace_in_dops_block": ReplaceInDopsBlock,
 }

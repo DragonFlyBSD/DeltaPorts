@@ -8,12 +8,12 @@ Public surface:
 (typically ``<env>/writable/work/DeltaPorts``). The translator
 edits files under ``<workspace>/ports/<origin>/`` only.
 
-``mode`` is one of ``"dops" | "convert"`` (Step C: compat-mode
-editing was removed; the patch agent operates only on
-dops-converted substrate, enforced upstream at
-worker.apply_intent). ``"dops"`` is what the patch agent uses;
-``"convert"`` is for the convert agent and accepts the
-``convert_to_dops`` intent; dops mode rejects it.
+``mode`` is ``"dops"`` — the only supported mode after Step C.
+The patch agent operates only on dops-converted substrate
+(enforced upstream at worker.apply_intent). Compat-mode editing
+and the convert-mode intent (convert_to_dops) were both removed
+as part of dops-only consolidation; the convert agent uses
+direct put_file, not apply_intent.
 
 Per-intent atomicity: each ``apply`` either applies the intent in
 full and returns ok=True, or rolls back any partial substrate
@@ -37,7 +37,6 @@ from .grammar import (
     AddPatch,
     BumpPortrevision,
     ChangeMakefile,
-    ConvertToDops,
     DropPatch,
     Intent,
     ReplaceInDopsBlock,
@@ -46,7 +45,7 @@ from .grammar import (
 from .validator import IntentError, parse_intent
 
 
-Mode = Literal["dops", "convert"]
+Mode = Literal["dops"]
 
 
 @dataclass
@@ -64,10 +63,11 @@ class Translator:
 
     def __init__(self, workspace: Path, origin: str, mode: Mode,
                  *, git: Callable[..., subprocess.CompletedProcess] | None = None):
-        if mode not in ("dops", "convert"):
+        if mode != "dops":
             raise ValueError(
-                f"invalid mode: {mode!r} (Step C: only 'dops' and "
-                f"'convert' remain; 'compat' was removed)"
+                f"invalid mode: {mode!r} (post-Step-C: only 'dops' "
+                f"is supported; compat and convert modes were "
+                f"removed)"
             )
         self.workspace = Path(workspace)
         self.origin = origin
@@ -80,10 +80,9 @@ class Translator:
         # action='surface_invariant' when the substrate is in a
         # mixed state (Makefile.DragonFly + overlay.dops together),
         # and apply_intent refuses before constructing the
-        # Translator. Step C: compat-mode editing was removed, so
-        # the only Translator the patch agent constructs is
-        # mode='dops'. The 'convert' mode remains for the convert
-        # agent's one-shot convert_to_dops intent.
+        # Translator. Post-Step-C: only mode='dops' is supported;
+        # compat-mode and convert-mode were both removed as
+        # unreachable dead code.
 
     # ----- public API -------------------------------------------------
 
@@ -130,13 +129,10 @@ class Translator:
     # ----- dispatch ---------------------------------------------------
 
     def _renderer_for(self, intent: Intent) -> Callable[[Intent], EditResult]:
-        # Step C: dops-only renderers. compat-mode editing was
-        # removed from the agent's surface — the only path through
-        # apply_intent is mode="dops". Mode="convert" remains for
-        # the convert agent's single intent (convert_to_dops).
+        # Step C: dops-only renderers. The patch agent's surface is
+        # mode="dops"; every renderer lives in _dops.
         from . import _dops as _mod  # noqa: PLC0415
 
-        # Per-intent dispatch.
         if isinstance(intent, ReplaceInPatch):
             return lambda i: _mod.replace_in_patch(self, i)
         if isinstance(intent, DropPatch):
@@ -151,19 +147,6 @@ class Translator:
             return lambda i: _mod.bump_portrevision(self, i)
         if isinstance(intent, ReplaceInDopsBlock):
             return lambda i: _mod.replace_in_dops_block(self, i)
-        if isinstance(intent, ConvertToDops):
-            # Restricted: only the convert agent (mode=="convert")
-            # may emit this intent.
-            if self.mode != "convert":
-                return lambda i: EditResult(
-                    ok=False, intent_type="convert_to_dops",
-                    error=(
-                        "convert_to_dops intent rejected: only the "
-                        "convert agent (mode='convert') may emit it"
-                    ),
-                )
-            from . import _convert as _conv_mod  # noqa: PLC0415
-            return lambda i: _conv_mod.convert_to_dops(self, i)
         return lambda i: EditResult(
             ok=False, intent_type=getattr(i, "type", "unknown"),
             error=f"no renderer for intent: {i!r}",

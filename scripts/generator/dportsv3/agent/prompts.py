@@ -473,8 +473,6 @@ One paragraph per type. For exact field syntax call `intent_reference`.
   optional `occurrence`. The only intent that reaches heredoc
   bodies — nothing else can.
 
-You cannot emit `convert_to_dops` — that's the convert agent's job.
-
 ### What the runner enforces (so you don't have to)
 
 - **Dops-only substrate.** Every port you'll see is in dops mode

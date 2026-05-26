@@ -12,7 +12,6 @@ Module layout:
 - ``translator``  — Translator(workspace, origin, mode).apply
 - ``log``         — IntentLog accumulator + size caps
 - ``_dops``       — dops-mode renderers (one per intent type)
-- ``_convert``    — convert-mode renderer for convert_to_dops
 - ``schemas/``    — one JSON Schema per intent type
 """
 
@@ -26,7 +25,6 @@ from .grammar import (
     AddFile,
     ChangeMakefile,
     BumpPortrevision,
-    ConvertToDops,
     ReplaceInDopsBlock,
 )
 from .log import IntentLog, IntentLogEntry, SCHEMA_VERSION
@@ -39,7 +37,7 @@ __all__ = [
     "INTENT_TYPES", "INTENT_DATACLASSES",
     "Intent",
     "ReplaceInPatch", "DropPatch", "AddPatch", "AddFile",
-    "ChangeMakefile", "BumpPortrevision", "ConvertToDops",
+    "ChangeMakefile", "BumpPortrevision",
     "ReplaceInDopsBlock",
     # Validator
     "parse_intent", "schema_for", "IntentError",
