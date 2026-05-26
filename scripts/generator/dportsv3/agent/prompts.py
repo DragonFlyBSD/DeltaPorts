@@ -1,9 +1,43 @@
-"""System prompts for the triage and patch agents.
+"""System prompts for the triage, patch, and convert agents.
 
-Bodies lifted (and adapted) from the former config/opencode/agent/*.md
-files. The response-format directives below are contractual: the
-runner's parsers (parse_triage_output, the rebuild_proof JSON block
-extraction in attempt_loop) depend on the exact heading text.
+This module holds STRUCTURAL prompt content only:
+
+- Loop scaffolding (how the agent thinks about its tools, attempts,
+  the substrate model).
+- Tool surface enumeration (what tools exist, what they return,
+  what's whitelisted per role).
+- Refusal codes + worker-enforced invariants (what the runner will
+  reject and why).
+- Output contracts (exact heading text and JSON field names the
+  runner's parsers depend on — ``parse_triage_output``, the
+  rebuild_proof / conversion_proof JSON extractors in
+  ``attempt_loop`` / ``convert``).
+- Discipline rules (truthfulness, when to stop, when to give up,
+  no commits/push/PR).
+
+Pattern-shaped content does NOT live here. It lives in
+``docs/agent-playbooks/`` as tagged markdown:
+
+- Per-intent usage recipes → ``intent-<type>.md`` (pulled on demand
+  via ``intent_reference`` in the patch flow)
+- Per-classification error fixes → ``error-*.md`` (pulled at
+  payload-build time via classification triggers)
+- Convert-agent procedures (domain classification, target directive
+  picking) → ``convert-*.md`` (pulled at payload-build time via
+  ``flows: [convert]``)
+- Per-toolchain "usual suspects" → ``toolchain-*.md`` (pulled via
+  ``toolchains:`` triggers — pending Step 19a's ``detect()``)
+
+Boundary check before adding to this file: if the content describes
+*when/how to use* something rather than the *structure of the
+loop*, it's a playbook entry. Pattern, not scaffolding. The
+playbook library is operator-editable markdown; prompts.py changes
+require a code commit and review. Keeping the boundary clean keeps
+both surfaces tractable.
+
+Bodies originally lifted (and adapted) from the former
+config/opencode/agent/*.md files. Subsequently trimmed in Step 27
+as the playbook library absorbed the pattern-shaped content.
 """
 
 TRIAGE_SYSTEM = """# DeltaPorts Build Failure Triage Agent
@@ -686,40 +720,11 @@ section (search for `convert-classify-patch-domain` and
 
 ## dops syntax reference
 
-The full reference is in the file `agent/dops_quickref.md`. It is
-attached as part of your payload. The most useful ops for
-conversion are:
-
-- `mk set/add/remove/unset` — Makefile variable assignments.
-- `mk replace-if`, `mk disable-if` — conditional block adjustment.
-- `mk block set condition "<cond>" <<'MK' ... MK` — whole .if block.
-- `mk target set/append <target> <<'MK' ... MK` — make recipes.
-- `text replace-once file <path> from "<from>" to "<to>"` — single
-  framework-file substitution.
-- `text line-remove file <path> exact "<line>"` — remove one line.
-- `text line-insert-after file <path> anchor "<anchor>" line
-  "<new line>"` — insert one line.
-- `file materialize <src> -> <dst>` — stage a file FROM the source
-  overlay (`source_root`) INTO `port_root` at the destination
-  relpath. Use this for **upstream-source patches** under
-  `dragonfly/`:
-  `file materialize dragonfly/patch-X -> dragonfly/patch-X`.
-- `file copy <src> -> <dst>` — duplicate a file within `port_root`.
-  Both `src` and `dst` are resolved relative to the materialized
-  `port_root`. Do NOT use this to bring files in from the source
-  overlay — it can't see them. (Common confusion: the names are
-  similar; `materialize` is the overlay→port one, `copy` is the
-  within-tree one.)
-- `file remove files/<path> on-missing warn` — remove a file.
-- `patch apply diffs/<patch-file>.diff` — fall back to a static
-  patch against the **framework** files compose materialized.
-  Only for `diffs/*.diff` (or the `Makefile.DragonFly` content
-  rewritten into a diff). NEVER for `dragonfly/*` — those
-  patches target upstream source that doesn't exist yet at
-  compose time; use `file materialize` instead.
-
-`on-missing error|warn|noop` is accepted on most ops; default is
-`error`. Use `warn` when an op is idempotent across targets.
+The full reference is attached to your payload as the section
+following this prompt (search for the heading `# dops Quick
+Reference (on-demand)`). Read it before emitting ops. The
+attached reference covers every op kind, the `on-missing
+error|warn|noop` modifier, and worked examples.
 
 ## Procedure
 
