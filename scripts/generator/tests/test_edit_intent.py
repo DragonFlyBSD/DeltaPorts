@@ -400,8 +400,14 @@ class TestDopsRenderers:
         overlay = t.port_path("overlay.dops")
         assert overlay.exists()
         contents = overlay.read_text()
-        assert "text.replace_once" in contents
-        assert "file=dragonfly/patch-foo.c" in contents
+        # Correct dops grammar: `text replace-once file <path> from "X" to "Y"`.
+        # The prior form `text.replace_once file=...` was invalid
+        # (engine parser rejects dots + named args).
+        assert "text replace-once file dragonfly/patch-foo.c" in contents
+        assert 'from "OLD"' in contents
+        assert 'to "NEW"' in contents
+        # Negative: the broken form must not appear.
+        assert "text.replace_once" not in contents
 
     def test_drop_patch_removes_dops_statement(self, t):
         overlay = t.port_path("overlay.dops")
@@ -486,6 +492,63 @@ class TestDopsRenderers:
         assert result.ok is False
         assert "no `patch apply" in result.error
 
+    def test_add_file_refuses_makefile_dragonfly_in_dops_mode(self, t):
+        """archivers/liblz4 2026-05-26: agent created Makefile.DragonFly
+        via add_file on a dops port, hit substrate_invariant on the
+        very next intent, and self-induced a deadlock. The renderer
+        now refuses this at the substrate boundary with a clear
+        message pointing at change_makefile as the alternative."""
+        result = t.apply({
+            "type": "add_file",
+            "dest": "Makefile.DragonFly", "kind": "resource",
+            "content": "USES+=ssl\n",
+        })
+        assert result.ok is False
+        assert "half-migrated" in result.error
+        assert "change_makefile" in result.error
+
+    def test_add_file_refuses_makefile_dragonfly_variants_in_dops_mode(self, t):
+        """Suffix variants like Makefile.DragonFly.@main are also
+        invariant violators."""
+        result = t.apply({
+            "type": "add_file",
+            "dest": "Makefile.DragonFly.@main", "kind": "resource",
+            "content": "",
+        })
+        assert result.ok is False
+        assert "half-migrated" in result.error
+
+    def test_add_file_allows_non_makefile_dest_in_dops_mode(self, t):
+        """Other dests (resources, materialized files) keep working."""
+        result = t.apply({
+            "type": "add_file",
+            "dest": "files/post-install.sh", "kind": "resource",
+            "content": "#!/bin/sh\n",
+        })
+        assert result.ok is True
+
+    def test_drop_patch_no_match_diagnostic_when_mk_target_set_present(self, t):
+        """Diagnostic improvement: when the overlay has an mk target
+        block referencing the target (liblz4-shaped heredoc patch),
+        the refusal message points at MANUAL escalation, not at
+        change_makefile / add_file workarounds."""
+        overlay = t.port_path("overlay.dops")
+        overlay.write_text(
+            "port devel/foo\ntype port\ntarget @any\n"
+            'reason "x"\n\n'
+            "mk target set post-extract <<MK\n"
+            "    @${REINPLACE_CMD} -e 's,foo,bar,' dfly-patch\n"
+            "MK\n"
+        )
+        result = t.apply({
+            "type": "drop_patch",
+            "target": "dfly-patch", "reason": "obsolete",
+        })
+        assert result.ok is False
+        assert "mk target" in result.error
+        assert "escalate to MANUAL" in result.error
+        assert "change_makefile" in result.error  # warns against the workaround
+
     def test_drop_patch_tolerates_whitespace_around_arrow(self, t):
         """`file materialize <src> -> <dest>` should match whether
         the agent emitted tight or loose spacing around the arrow."""
@@ -516,16 +579,56 @@ class TestDopsRenderers:
         assert target.exists()
         assert "patch apply dragonfly/patch-new.c" in overlay.read_text()
 
-    def test_change_makefile_emits_mk_var_op(self, t):
+    def test_change_makefile_emits_valid_mk_grammar(self, t):
+        """change_makefile in dops mode must emit grammar the
+        engine parser actually accepts: `mk <action> VAR "value"`
+        (space-separated tokens, quoted string value), NOT the
+        prior `mk.var.<op> var=K value=V` form which was invalid
+        dops and got silently appended to overlay.dops, breaking
+        materialize_dports (archivers/liblz4 2026-05-26)."""
         result = t.apply({
             "type": "change_makefile",
             "path": "Makefile.DragonFly",
             "key": "USES", "value": "ssl", "op": "append",
         })
         assert result.ok is True
-        overlay = t.port_path("overlay.dops")
-        assert "mk.var.append" in overlay.read_text()
-        assert "var=USES" in overlay.read_text()
+        overlay_text = t.port_path("overlay.dops").read_text()
+        # `append` op → dops `add` action.
+        assert 'mk add USES "ssl"' in overlay_text
+        # Negative: the old broken form must not appear.
+        assert "mk.var" not in overlay_text
+        assert "var=USES" not in overlay_text
+
+    def test_change_makefile_set_op_quotes_value(self, t):
+        result = t.apply({
+            "type": "change_makefile",
+            "path": "Makefile.DragonFly",
+            "key": "DFLY_PATCH", "value": "/some/path with space",
+            "op": "set",
+        })
+        assert result.ok is True
+        overlay_text = t.port_path("overlay.dops").read_text()
+        assert 'mk set DFLY_PATCH "/some/path with space"' in overlay_text
+
+    def test_change_makefile_escapes_quotes_and_backslashes(self, t):
+        result = t.apply({
+            "type": "change_makefile",
+            "path": "Makefile.DragonFly",
+            "key": "CFG", "value": 'a"b\\c', "op": "set",
+        })
+        assert result.ok is True
+        overlay_text = t.port_path("overlay.dops").read_text()
+        assert 'mk set CFG "a\\"b\\\\c"' in overlay_text
+
+    def test_change_makefile_remove_op_emits_mk_remove(self, t):
+        result = t.apply({
+            "type": "change_makefile",
+            "path": "Makefile.DragonFly",
+            "key": "USES", "value": "ssl", "op": "remove",
+        })
+        assert result.ok is True
+        overlay_text = t.port_path("overlay.dops").read_text()
+        assert 'mk remove USES "ssl"' in overlay_text
 
 
 # --------------------------------------------------------------------

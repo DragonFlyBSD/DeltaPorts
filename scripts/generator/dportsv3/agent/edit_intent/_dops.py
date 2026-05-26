@@ -32,7 +32,13 @@ _DOPS_FILE = "overlay.dops"
 
 
 def replace_in_patch(t, intent: ReplaceInPatch):
-    """text.replace_once { file=<target>, from=<find>, to=<replace> }"""
+    """``text replace-once file <target> from "X" to "Y"`` per dops grammar.
+
+    Note the hyphen in ``replace-once`` (not underscore) and the
+    absence of dots — the prior shape ``text.replace_once file=...``
+    was invalid grammar that the engine parser rejected, silently
+    corrupting overlays (archivers/liblz4 2026-05-26).
+    """
     from .translator import EditResult
     stmt = _stmt_text_replace_once(intent.target, intent.find, intent.replace)
     return _append_overlay(t, "replace_in_patch", [stmt])
@@ -65,12 +71,33 @@ def drop_patch(t, intent: DropPatch):
     original = overlay.read_text()
     new, removed, shape = _strip_patch_apply_stmt(original, intent.target)
     if not removed:
+        # Diagnostic improvement: if the overlay has an `mk target
+        # set <name>` block whose body references the target, tell
+        # the agent we can't edit heredoc bodies via drop_patch
+        # (no intent type covers that shape) and point at
+        # escalation. Stops the workaround thrash seen on
+        # archivers/liblz4 2026-05-26 where the agent reached for
+        # change_makefile + add_file as substitutes and corrupted
+        # the overlay.
+        mk_target_hint = ""
+        if "mk target " in original and (
+            intent.target.rsplit("/", 1)[-1] in original
+        ):
+            mk_target_hint = (
+                f" — note: {_DOPS_FILE} contains an `mk target` "
+                f"block referencing {intent.target!r}, which is a "
+                f"heredoc-body patch (sed/REINPLACE_CMD inside the "
+                f"target body). No intent type can edit heredoc "
+                f"bodies; the agent should escalate to MANUAL "
+                f"rather than reach for change_makefile or add_file "
+                f"as workarounds (they will corrupt the overlay)."
+            )
         return EditResult(
             ok=False, intent_type="drop_patch",
             error=(
                 f"no `patch apply {intent.target}` or "
                 f"`file materialize ... -> {intent.target}` statement "
-                f"found in {_DOPS_FILE}"
+                f"found in {_DOPS_FILE}{mk_target_hint}"
             ),
         )
     try:
@@ -146,12 +173,32 @@ def add_file(t, intent: AddFile):
     """Render add_file in dops mode.
 
     For kind=resource: write content + emit
-    file.copy { from=resources/<dest>, to=<dest> }. (Convention: the
-    resource lives in the port subtree alongside the dops.)
-    For kind=materialize: emit
-    file.materialize { from=<source>, to=<dest> } only.
+    ``file copy <dest> -> <dest>``.
+    For kind=materialize: emit ``file materialize <src> -> <dst>``.
     """
     from .translator import EditResult
+    # Refuse to create Makefile.DragonFly on a dops-mode port — that
+    # would create the half-migrated state (dops_with_unmigrated_makefile_dragonfly)
+    # that the substrate invariant later refuses on every apply_intent.
+    # Observed self-induced deadlock on archivers/liblz4 2026-05-26:
+    # agent called add_file(dest=Makefile.DragonFly), then immediately
+    # hit substrate_invariant on the next intent and burned 4 attempts
+    # against a wall it had built itself.
+    dest_basename = intent.dest.rsplit("/", 1)[-1]
+    if dest_basename.startswith("Makefile.DragonFly"):
+        return EditResult(
+            ok=False, intent_type="add_file",
+            error=(
+                f"add_file refused: creating {intent.dest!r} on a "
+                f"dops-mode port would produce a half-migrated "
+                f"state (Makefile.DragonFly + overlay.dops together) "
+                f"that violates the substrate invariant. Use "
+                f"change_makefile to express Makefile.DragonFly-shaped "
+                f"variable edits as `mk` directives in overlay.dops "
+                f"instead. If the port genuinely needs both forms "
+                f"the conversion is incorrect — escalate to operator."
+            ),
+        )
     if intent.kind == "resource":
         target = t.port_path(intent.dest)
         if target.exists():
@@ -167,7 +214,9 @@ def add_file(t, intent: AddFile):
                 ok=False, intent_type="add_file",
                 error=f"write failed for {intent.dest}: {exc}",
             )
-        stmt = f"file.copy from={intent.dest} to={intent.dest}"
+        # `file copy <src> -> <dst>` per the dops grammar (arrow
+        # token between operands, no dots, no named args).
+        stmt = f"file copy {intent.dest} -> {intent.dest}"
         stmt_result = _append_overlay(t, "add_file", [stmt])
         if not stmt_result.ok:
             try:
@@ -185,9 +234,8 @@ def add_file(t, intent: AddFile):
             substrate_diff=t.git_diff(target, overlay),
         )
     if intent.kind == "materialize":
-        stmt = (
-            f"file.materialize from={intent.source} to={intent.dest}"
-        )
+        # `file materialize <src> -> <dst>` per the dops grammar.
+        stmt = f"file materialize {intent.source} -> {intent.dest}"
         return _append_overlay(t, "add_file", [stmt])
     return EditResult(
         ok=False, intent_type="add_file",
@@ -195,28 +243,58 @@ def add_file(t, intent: AddFile):
     )
 
 
+def _quote_dops_string(s: str) -> str:
+    """Escape ``s`` for use as a quoted string literal in dops.
+
+    Matches the lexer's string-escape rules at engine/lexer.py:
+    ``\\``→``\\\\``, ``"``→``\\"``, newline→``\\n``, tab→``\\t``.
+    All other characters pass through.
+    """
+    out: list[str] = ['"']
+    for ch in s:
+        if ch == "\\":
+            out.append("\\\\")
+        elif ch == '"':
+            out.append('\\"')
+        elif ch == "\n":
+            out.append("\\n")
+        elif ch == "\t":
+            out.append("\\t")
+        else:
+            out.append(ch)
+    out.append('"')
+    return "".join(out)
+
+
 def change_makefile(t, intent: ChangeMakefile):
-    """mk.var.{op} { var=<key>, value=<value> }"""
+    """``mk <action> VAR "value"`` per the dops grammar.
+
+    The previous form (``mk.var.set var=K value=V``, dot-separated
+    with named args) was invented — the actual engine parser at
+    ``engine/parser.py:343`` expects space-separated tokens
+    ``mk set|unset|add|remove VAR "value"``. The intent's ``op``
+    field uses ``set`` / ``append`` / ``remove``; ``append`` maps
+    to dops ``add`` (the parser's name for "append to a list-shaped
+    variable"). ``set`` takes a quoted STRING value; ``add`` /
+    ``remove`` take a token (we quote them too for safety).
+    """
     from .translator import EditResult
-    op_name = {
-        "set":    "mk.var.set",
-        "append": "mk.var.append",
-        "remove": "mk.var.remove",
-    }[intent.op]
-    stmt = f"{op_name} var={intent.key} value={intent.value}"
+    action = {"set": "set", "append": "add", "remove": "remove"}[intent.op]
+    stmt = f"mk {action} {intent.key} {_quote_dops_string(intent.value)}"
     return _append_overlay(t, "change_makefile", [stmt])
 
 
 def bump_portrevision(t, intent: BumpPortrevision):
-    """mk.var.set var=PORTREVISION value=<n+1>.
+    """``mk set PORTREVISION "<n+1>"`` per the dops grammar.
 
-    The actual increment requires reading the current value, which
-    lives in the upstream Makefile. For 25b we emit a fixed
-    `mk.var.append` token that the compose engine resolves at
-    materialize time; 25c can wire a smarter increment if needed.
+    Hardcoded to "1" today — the actual increment needs to read
+    the current PORTREVISION from the upstream Makefile (or from
+    a prior dops `mk set PORTREVISION` statement). 25c can wire a
+    smarter increment later; for now the agent emits "1" which is
+    correct for a port that's never been revision-bumped before.
     """
     from .translator import EditResult
-    stmt = "mk.var.set var=PORTREVISION value=1"
+    stmt = 'mk set PORTREVISION "1"'
     return _append_overlay(t, "bump_portrevision", [stmt])
 
 
@@ -279,14 +357,19 @@ def _initial_overlay_header(t) -> str:
 
 
 def _stmt_text_replace_once(target: str, find: str, replace: str) -> str:
-    """Serialize a text.replace_once statement.
+    """Serialize a ``text replace-once`` statement per the dops grammar.
 
-    Uses the dops DSL form; values are quoted with double-quotes.
-    Find/replace strings are escaped for embedded quotes.
+    Form: ``text replace-once file <path> from "X" to "Y"`` —
+    space-separated tokens, hyphen in ``replace-once``, strings
+    double-quoted with lexer-compatible escapes. The previous
+    form (``text.replace_once file=... from=... to=...``) was
+    invented; the engine parser rejects it.
     """
-    def q(s: str) -> str:
-        return '"' + s.replace("\\", "\\\\").replace('"', '\\"') + '"'
-    return f"text.replace_once file={target} from={q(find)} to={q(replace)}"
+    return (
+        f"text replace-once file {target} "
+        f"from {_quote_dops_string(find)} "
+        f"to {_quote_dops_string(replace)}"
+    )
 
 
 def _strip_patch_apply_stmt(text: str, target: str) -> tuple[str, bool, str]:

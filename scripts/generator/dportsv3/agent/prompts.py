@@ -594,6 +594,21 @@ flow is still the right idiom):
   `Rebuild Status: gave-up` with a brief Patch Log explaining
   what an operator should investigate next.
 
+## Truthfulness rule
+
+Your `Patch Log` and any narrative MUST reflect what you actually
+observed and did in this attempt. Do NOT assert about the
+substrate's pre-existing state without an evidence reference (an
+`intent_log` seq number, a `get_file` you ran, the prior tool
+result). If you created a file via `add_file`, do not later
+describe it as "already present" — that is fabricated history
+and misleads the operator reviewing the bundle.
+
+If you are uncertain about substrate state at attempt-start,
+say so explicitly. Bad: "Makefile.DragonFly was already there".
+Good: "After my `add_file` at seq=4, Makefile.DragonFly is now
+present; before that it didn't exist in `list_dir` output."
+
 ## Output (exact headings)
 
 When you finish (success or give-up), end your response with these

@@ -128,7 +128,10 @@ class TestApplyIntentHappy:
         # In dops mode this writes overlay.dops.
         overlay = env_with_workspace / "ports/devel/foo/overlay.dops"
         assert overlay.exists()
-        assert "text.replace_once" in overlay.read_text()
+        # Correct dops grammar: `text replace-once file <path> from "X" to "Y"`
+        # (no dots, no named-arg syntax). The prior `text.replace_once`
+        # form was invalid and corrupted overlays.
+        assert "text replace-once file dragonfly/patch-foo.c" in overlay.read_text()
 
 
 # --------------------------------------------------------------------
