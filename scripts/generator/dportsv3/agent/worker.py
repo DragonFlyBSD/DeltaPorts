@@ -800,29 +800,48 @@ _MATERIALIZE_STATE: dict[tuple[str, str], str] = {}
 
 
 def _port_subtree_hash(env: str, origin: str) -> str:
-    """Hash of ``ports/<origin>/`` contents inside the env's chroot.
+    """Hash of ``ports/<origin>/`` contents in the env's writable layer.
 
     Used to detect "the substrate has changed since the last
-    successful materialize_dports". Hashes the sorted list of file
-    sha256s under the port subtree; cheap (~ms for typical ports)
-    and stable.
+    successful materialize_dports". Computed host-side using Python's
+    hashlib over the writable overlay — same physical filesystem the
+    chroot writes to, no need to enter the chroot. Reads files in
+    sorted relpath order so the hash is stable across calls.
 
-    Returns empty string on any error — caller treats that as "no
-    valid baseline," which is the conservative answer.
+    Returns empty string on any error (no env paths, port subtree
+    doesn't exist, OS-level read failure) — caller treats that as
+    "no valid baseline" and refuses dsynth_build, which is the
+    conservative answer.
+
+    Prior shell-pipeline implementation used ``sort -z`` and
+    ``xargs -0`` — both GNU-only flags. On DragonFly the BSD ``sort``
+    rejects ``-z`` and the pipeline silently produced no hash,
+    so every dsynth_build refused with "no successful
+    materialize_dports" (observed on archivers/liblz4 2026-05-26).
     """
-    cmd = (
-        f"cd /work/DeltaPorts && "
-        f"find {shlex.quote('ports/' + origin)} -type f -print0 2>/dev/null "
-        f"| sort -z "
-        f"| xargs -0 sha256sum 2>/dev/null "
-        f"| sha256sum "
-        f"| cut -d' ' -f1"
-    )
     try:
-        p = _exec(env, "/bin/sh", "-c", cmd, "_")
-        return (p.stdout or "").strip() if p.returncode == 0 else ""
+        paths = env_paths(env)
     except Exception:
         return ""
+    port_dir = paths.deltaports / "ports" / origin
+    if not port_dir.is_dir():
+        return ""
+    h = hashlib.sha256()
+    try:
+        for path in sorted(port_dir.rglob("*")):
+            if not path.is_file():
+                continue
+            rel = path.relative_to(port_dir).as_posix()
+            h.update(rel.encode("utf-8"))
+            h.update(b"\0")
+            try:
+                h.update(path.read_bytes())
+            except OSError:
+                return ""
+            h.update(b"\0")
+    except OSError:
+        return ""
+    return h.hexdigest()
 
 
 def materialize_dports(env: str, origin: str) -> dict:
