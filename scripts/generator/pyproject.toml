@@ -28,7 +28,12 @@ classifiers = [
 dependencies = [
     "tomli >= 2.0; python_version < '3.11'",
     "tomli_w >= 1.0",
-    "jsonschema >= 4.0",
+    # Upper-bound below 4.18: that release made `referencing`
+    # (→ Rust-built `rpds-py`) a hard dep. The dev-env chroot has
+    # no Rust toolchain and the pure-Python source build of
+    # `rpds-py` fails. We only use jsonschema.validate +
+    # ValidationError, both stable across 4.x.
+    "jsonschema >= 4.0, < 4.18",
 ]
 
 [project.optional-dependencies]
