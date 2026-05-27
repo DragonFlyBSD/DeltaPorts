@@ -2278,16 +2278,22 @@ def _maybe_skip_locked_origin(
     job_id: str,
     sibling_paths: list[Path] | None,
     origin: str,
+    job_type: str = "triage",
 ) -> tuple[bool, str] | None:
-    """Step 28a: short-circuit triage when the operator has staked
-    (target, origin) via take-over.
+    """Step 28a / 28-extra: short-circuit a job when the operator
+    has staked (target, origin) via take-over.
 
-    Returns None when the origin is not locked (triage proceeds
+    Returns None when the origin is not locked (job proceeds
     normally), or a ``(True, status)`` tuple to retire the job
-    immediately. Idempotent: a second triage for a still-locked
+    immediately. Idempotent: a second job for a still-locked
     origin produces the same short-circuit + a fresh activity row
     so each bypass is observable. Best-effort lookup — DB errors
-    don't block triage, just log and proceed.
+    don't block the job, just log and proceed.
+
+    ``job_type`` ("triage" / "patch" / "convert") selects the
+    activity-log stage name so a per-job-type filter on the UI
+    can distinguish the three bypass paths. The lifecycle event
+    (``SKIP_ORIGIN_LOCKED``) is shared across all three.
     """
     from dportsv3.agent.lifecycle import JobEvent
 
@@ -2317,10 +2323,10 @@ def _maybe_skip_locked_origin(
     set_by = lock.get("set_by") or "?"
     reason = lock.get("reason") or ""
     activity_log(
-        queue_root, "triage_skipped_origin_locked",
+        queue_root, f"{job_type}_skipped_origin_locked",
         (
             f"{origin}: origin locked by bundle {locked_bundle} "
-            f"({set_by}); triage skipped"
+            f"({set_by}); {job_type} skipped"
         ),
         job_id=job_id,
         extra={
@@ -2329,14 +2335,15 @@ def _maybe_skip_locked_origin(
             "locking_bundle_id": locked_bundle,
             "locked_by": set_by,
             "lock_reason": reason,
+            "job_type": job_type,
         },
     )
     # Retire the job DEAD with retire_reason='origin_locked'. The
     # dedicated SKIP_ORIGIN_LOCKED event keeps this case separable
     # from Step 10b's ABANDON (operator hand-killed) in lineage
     # views and the manual queue. Fan out to siblings so a multi-
-    # job triage fanout doesn't leave parallel jobs stuck in
-    # TRIAGING after this lead bypasses.
+    # job fanout doesn't leave parallel jobs stuck after this lead
+    # bypasses.
     detail = {
         "skipped_because": "origin_locked",
         "locking_bundle_id": locked_bundle,
@@ -2344,6 +2351,7 @@ def _maybe_skip_locked_origin(
         "lock_reason": reason,
         "origin": origin,
         "target": target,
+        "job_type": job_type,
     }
     _apply_transition(job_id, JobEvent.SKIP_ORIGIN_LOCKED, detail=detail)
     for s in sibling_paths or ():
@@ -3056,14 +3064,29 @@ def process_patch_job(
     from dportsv3.agent.step import Orchestrator, StepCtx
     from dportsv3.agent.steps import PatchAttemptStep, PatchServices
 
+    origin = job.get("origin", "unknown")
+    job_id = job_path.name
+
+    # ---- Step 28-extra: operator-owned origin short-circuit -------
+    # If the operator has staked (target, origin) between when this
+    # patch job was enqueued and when the runner picked it up, don't
+    # burn LLM tokens — retire the job DEAD with
+    # retire_reason='origin_locked'. Mirrors the triage-side check.
+    skipped = _maybe_skip_locked_origin(
+        queue_root=queue_root, job=job, job_id=job_id,
+        sibling_paths=sibling_paths, origin=origin,
+        job_type="patch",
+    )
+    if skipped is not None:
+        return skipped
+    # ---------------------------------------------------------------
+
     # Seed queue_root + job_id into job so payload-build telemetry
     # (`playbooks_selected` activity row) can find them. See the same
     # comment in process_triage_job.
     job["queue_root"] = str(queue_root)
     job["job_id"] = job_path.name
     payload = build_patch_payload(bundle_dir, playbooks_dir, job)
-    origin = job.get("origin", "unknown")
-    job_id = job_path.name
 
     ctx = StepCtx(
         job_id=job_id,
@@ -3136,6 +3159,19 @@ def process_convert_job(
     origin = job.get("origin", "")
     if not origin:
         return False, "convert job missing origin"
+
+    # ---- Step 28-extra: operator-owned origin short-circuit -------
+    # A locked (target, origin) shouldn't be auto-converted either —
+    # the operator may be hand-converting it. Same shape as the
+    # triage / patch checks.
+    skipped = _maybe_skip_locked_origin(
+        queue_root=queue_root, job=job, job_id=job_path.name,
+        sibling_paths=sibling_paths, origin=origin,
+        job_type="convert",
+    )
+    if skipped is not None:
+        return skipped
+    # ---------------------------------------------------------------
 
     env_resolution = resolve_env_or_reason(job)
     env_name = env_resolution.env

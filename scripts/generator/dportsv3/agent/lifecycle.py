@@ -180,15 +180,18 @@ TRANSITIONS: dict[tuple[JobState | None, JobEvent], JobState] = {
     (JobState.CONVERTING,  JobEvent.ABANDON):          JobState.DEAD,
     (JobState.VERIFYING_FIX, JobEvent.ABANDON):        JobState.DEAD,
 
-    # Step 28a: operator-owned origin short-circuit. Permitted from
-    # any pre-terminal triage state — the runner check fires after
-    # TRIAGE_START (so usually TRIAGING) but covering CLAIMED/QUEUED
-    # is cheap defensive coverage if the check ever moves earlier.
-    # TRIAGED is included for completeness (no current call site).
+    # Step 28a/28-extra: operator-owned origin short-circuit.
+    # Permitted from every pre-terminal job state — the runner check
+    # fires at process_<type>_job entry, so usually TRIAGING /
+    # PATCHING / CONVERTING. Covering CLAIMED/QUEUED is cheap
+    # defensive coverage if the check ever moves earlier. TRIAGED
+    # is included for completeness.
     (JobState.QUEUED,      JobEvent.SKIP_ORIGIN_LOCKED): JobState.DEAD,
     (JobState.CLAIMED,     JobEvent.SKIP_ORIGIN_LOCKED): JobState.DEAD,
     (JobState.TRIAGING,    JobEvent.SKIP_ORIGIN_LOCKED): JobState.DEAD,
     (JobState.TRIAGED,     JobEvent.SKIP_ORIGIN_LOCKED): JobState.DEAD,
+    (JobState.PATCHING,    JobEvent.SKIP_ORIGIN_LOCKED): JobState.DEAD,
+    (JobState.CONVERTING,  JobEvent.SKIP_ORIGIN_LOCKED): JobState.DEAD,
 }
 
 

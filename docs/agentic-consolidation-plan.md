@@ -3906,10 +3906,12 @@ job):
   Refuses (409) if `resolution` is already terminal
   (`accepted` / `discarded`) or if `operator_owned`. Sets
   `resolution='operator_owned'`, `taken_over_at`, `taken_over_by`.
-  Sets a per-`(target, origin)` lock flag so subsequent dsynth
-  hooks for that port produce a tombstone bundle (`result=skipped`,
-  reason `operator_owned_elsewhere`) instead of enqueuing fresh
-  triage. Emits `bundle_taken_over` event.
+  Sets a per-`(target, origin)` lock flag so subsequent triage
+  for that port short-circuits (see "New job-side handling" below
+  for the runner-side mechanism — the original draft proposed a
+  hook-emitted "tombstone bundle" but the dsynth hook is a sealed
+  shell contract that can't query state.db). Emits
+  `bundle_taken_over` event.
 
 - `POST /api/bundles/{bundle_id}/discard` — synchronous. Body:
   `{"reason": "...", "skip_origin": bool}`. `reason` is required;
@@ -3958,11 +3960,25 @@ unchanged.
 
 #### New job-side handling
 
-When a bundle is `operator_owned`, the runner's hook-fired
-triage path must check the origin's skip flag first. The check
-lives one level above triage so the no-op cost is a single
-SELECT, not a full triage prompt build. Activity-log entry:
-`hook_skipped_origin_locked` with the originating bundle id.
+**Where the skip-flag check lives.** The dsynth hook is a sealed
+shell contract that has no access to `state.db` — modifying it to
+query the lock would couple the hook tree to the tracker DB schema
+(big architectural cost). The check lives one level later instead,
+at the top of `process_triage_job` (and parallel checks in
+`process_patch_job` / `process_convert_job` per 28-extra). When
+the (target, origin) is locked, the runner fires
+`JobEvent.SKIP_ORIGIN_LOCKED` (Step 28a) with
+`retire_reason='origin_locked'` and emits a
+`triage_skipped_origin_locked` activity row (parallel:
+`patch_skipped_origin_locked` / `convert_skipped_origin_locked`).
+The bundle row itself is unchanged — the hook's failure record
+stays as-is; only the per-job dispatch short-circuits.
+
+Functionally equivalent to the "tombstone bundle" wording in the
+original draft (no triage burns LLM tokens, the origin is honored
+as locked) but the artifact-store row is a full bundle, not a
+lightweight `result=skipped` stub. Worth recording explicitly so
+the next reader doesn't grep for tombstone code that isn't there.
 
 #### SSE event wiring
 
@@ -4005,35 +4021,57 @@ incremental delivery:
   Closes the "this port is hopeless" gap. ~80 LOC + tests.
 - **28c — retry endpoint on bundle page (UI surfacing of Step
   5).** Smallest slice; mostly a UI wiring. ~50 LOC + tests.
-- **28d — terminal-state reopen override.** Last in line —
-  rarely needed, but cheap once 28a-c land. ~40 LOC + tests.
+- **28d — terminal-state reopen override.** Cheap once 28a-c land.
+  ~40 LOC + tests.
+- **28e — release endpoint + operator_owned UI completion.**
+  Bundle-scoped "Hand back to the loop" action, plus the
+  Verify-on-operator_owned extension the plan called for. ~150
+  LOC + tests.
+- **28-extra — patch/convert skip-check.** Parallel
+  `_maybe_skip_locked_origin` calls at the top of
+  `process_patch_job` / `process_convert_job` so in-flight jobs
+  enqueued before the take-over also short-circuit. ~30 LOC each.
 
 Each slice is independently shippable. 28a–c are the load-bearing
-ones; 28d is polish.
+ones; 28d-e are polish/completion; 28-extra closes the race window.
 
-#### Lifecycle events (lifecycle.py)
+#### Lifecycle events (lifecycle.py / SSE)
 
-New events:
+Two distinct event surfaces:
 
-- `BUNDLE_TAKEN_OVER` — bundle → `operator_owned`. Job state
-  unchanged (still `dead` if it was already; the event is
-  bundle-side).
-- `BUNDLE_DISCARDED` — bundle → `discarded`.
-- `BUNDLE_RETRY_REQUESTED` — bundle → `retry_requested`; clears
+**SSE event topics** (emitted via `emit_event`) for the UI's
+live-refresh + the runner's bundle-resolution lane:
+
+- `bundle_taken_over` — bundle → `operator_owned`.
+- `bundle_discarded` — bundle → `discarded`.
+- `bundle_retry_requested` — bundle → `retry_requested`; clears
   on next triage enqueue.
+- `bundle_reopened` — bundle terminal → NULL (28d).
+- `bundle_released` — bundle `operator_owned` → NULL (28e).
 
-These are bundle-resolution events, not job-state events — they
-extend the resolution lane that 11c introduced (`accepted` /
-`rejected`) rather than the `JobState` enum. The runner's
-`_apply_transition` already handles bundle resolution updates
-separately from job state updates; reuse that path.
+These are bundle-resolution events, not `JobState` transitions —
+they extend the resolution lane that 11c introduced (`accepted` /
+`rejected`) rather than the `JobState` enum. Each endpoint emits
+exactly one event with a structured payload (bundle_id, origin,
+target, plus per-action fields like `taken_over_by` /
+`reopened_from` / `skip_action`).
+
+**JobEvent additions** (`lifecycle.py`):
+
+- `SKIP_ORIGIN_LOCKED` — fires on triage / patch / convert jobs
+  when the (target, origin) is locked. Lands at `DEAD` with
+  `retire_reason='origin_locked'`. Distinct from `ABANDON` (Step
+  10b's operator job-kill) so lineage queries can tell the cases
+  apart. Permitted from QUEUED / CLAIMED / TRIAGING / TRIAGED /
+  PATCHING / CONVERTING.
 
 #### Tests
 
 - Take-over endpoint: happy path from each failure resolution;
   409 on already-terminal; 409 on already-operator_owned; lock
-  flag observable; subsequent hook-fired triage produces
-  `hook_skipped_origin_locked` instead of enqueuing.
+  flag observable; subsequent triage produces
+  `triage_skipped_origin_locked` (or patch/convert variants for
+  in-flight jobs) instead of running.
 - Discard endpoint: happy path; reason required (422); 409 on
   terminal; `skip_origin=true` writes the lock flag,
   `skip_origin=false` does not.
@@ -4041,9 +4079,13 @@ separately from job state updates; reuse that path.
   409 on terminal; empty context rejected; the
   `bundle_retry_requested` resolution clears when triage picks
   up.
-- Skip-flag check in hook path: a bundle write for a locked
-  `(target, origin)` produces a tombstone bundle and an
-  activity row, no triage job enqueued.
+- Skip-flag check in runner path: a triage job for a locked
+  `(target, origin)` short-circuits at `process_triage_job`
+  entry (firing `SKIP_ORIGIN_LOCKED` with
+  `retire_reason='origin_locked'`) and emits a
+  `triage_skipped_origin_locked` activity row. The bundle row
+  itself is unchanged. Parallel checks at the patch/convert
+  dispatch tops handle in-flight jobs queued before the take-over.
 - Reopen override (28d): all three terminal resolutions reopen
   cleanly; the resolution returns to the prior non-terminal
   state.
