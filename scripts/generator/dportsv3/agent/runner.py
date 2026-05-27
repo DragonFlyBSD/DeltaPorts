@@ -3576,6 +3576,18 @@ def _apply_files_removed(
         except ValueError:
             skipped.append({"path": raw, "reason": "resolves-outside-port"})
             continue
+        # Q2: safety guard for STATUS removal. STATUS encodes the
+        # port's role (PORT/MASK/DPORT/LOCK). overlay.dops can carry
+        # the same fact via the ``type`` directive, but if the agent's
+        # dops doesn't match STATUS's declared type, deleting STATUS
+        # would silently switch the port's behavior (e.g. MASK → PORT
+        # = "start materializing the upstream we explicitly denied").
+        # Refuse the delete and surface the mismatch.
+        if rel == "STATUS":
+            mismatch = _check_status_dops_type_parity(port_dir)
+            if mismatch is not None:
+                skipped.append({"path": raw, "reason": mismatch})
+                continue
         if not target.exists():
             # Idempotent: missing target is fine; the agent's intent
             # was "this should not be present", which it isn't.
@@ -3601,6 +3613,66 @@ def _apply_files_removed(
         )
     except Exception:
         pass
+
+
+_DOPS_TYPE_RE = re.compile(
+    r"^\s*type\s+(port|mask|dport|lock)\s*(?:#.*)?$",
+    re.MULTILINE,
+)
+
+
+def _read_dops_port_type(port_dir: Path) -> str | None:
+    """Q2: read the ``type`` directive from ``ports/<origin>/overlay.dops``.
+
+    Returns ``"port"`` / ``"mask"`` / ``"dport"`` / ``"lock"`` when
+    the directive is present and well-formed, or ``None`` when the
+    overlay.dops file is absent / unreadable / has no ``type``
+    directive. Default type for an absent directive is ``"port"``
+    in the planner; callers that need the effective type should
+    treat ``None`` as ``"port"``.
+
+    Light regex match rather than full parse — the planner does the
+    authoritative parse at compose time. This is just for the
+    handler-side STATUS-removal safety guard.
+    """
+    overlay = port_dir / "overlay.dops"
+    if not overlay.is_file():
+        return None
+    try:
+        text = overlay.read_text()
+    except OSError:
+        return None
+    m = _DOPS_TYPE_RE.search(text)
+    return m.group(1) if m else None
+
+
+def _check_status_dops_type_parity(port_dir: Path) -> str | None:
+    """Q2: safety guard for STATUS deletion during convert.
+
+    Returns ``None`` when it is safe to delete STATUS — either both
+    STATUS and overlay.dops agree on the port type, or the type
+    encoded in STATUS is the default (``port``) and dops's absent
+    directive resolves to the same default.
+
+    Returns a short skip-reason string when the types disagree, so
+    the caller can record it in ``skipped[]`` and surface it to the
+    operator.
+
+    Treats ``None`` from either side as ``"port"`` (the planner's
+    default for an absent directive; the compat fallback for an
+    absent or unrecognized STATUS token).
+    """
+    from dportsv3.agent.convert import read_status_port_type
+    status_type = read_status_port_type(port_dir) or "port"
+    dops_type = _read_dops_port_type(port_dir) or "port"
+    if status_type == dops_type:
+        return None
+    return (
+        f"status-type-mismatch: STATUS declares "
+        f"`{status_type}`, overlay.dops carries "
+        f"`{dops_type}` (deleting STATUS would switch the port's "
+        f"behavior; fix the dops type directive first)"
+    )
 
 
 def _check_overlay_effective_ops(

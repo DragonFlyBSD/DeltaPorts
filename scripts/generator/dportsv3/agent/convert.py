@@ -33,6 +33,38 @@ class ConvertResult:
     status: str
 
 
+_STATUS_TYPE_TOKENS = {"PORT", "MASK", "DPORT", "LOCK"}
+
+
+def read_status_port_type(port_dir: Path) -> str | None:
+    """Q2: Resolve the canonical port type from ``ports/<origin>/STATUS``.
+
+    Returns lowercase ``"port"`` / ``"mask"`` / ``"dport"`` / ``"lock"``
+    when STATUS's first line begins with the matching uppercase token,
+    or None when STATUS is absent, unreadable, empty, or starts with
+    an unrecognized token.
+
+    The compose-time fallback (``compat.infer_compat_port_type``)
+    treats absent/unrecognized STATUS as ``"port"`` (the default),
+    but the convert handler needs the raw signal — including ``None``
+    — to decide whether the port has a load-bearing type that must
+    be carried into ``overlay.dops`` before STATUS is removed.
+    """
+    status_file = port_dir / "STATUS"
+    if not status_file.is_file():
+        return None
+    try:
+        first = status_file.read_text().splitlines()[0].strip()
+    except (OSError, IndexError):
+        return None
+    if not first:
+        return None
+    token = first.split()[0].upper() if first else ""
+    if token in _STATUS_TYPE_TOKENS:
+        return token.lower()
+    return None
+
+
 def build_convert_payload(
     *,
     origin: str,
@@ -53,6 +85,12 @@ def build_convert_payload(
     from dportsv3.migration.convert import _parse_makefile_dragonfly
 
     port_dir = repo_root / "ports" / origin
+    # Q2: surface the STATUS-encoded port type so the agent emits a
+    # matching ``type`` directive in overlay.dops. The handler's
+    # post-conversion safety guard refuses to delete STATUS if the
+    # types don't match — this section is the agent's chance to get
+    # it right on the first pass.
+    expected_port_type = read_status_port_type(port_dir)
 
     # convert_record's return doesn't expose the parsed ops list —
     # re-run the parser to surface what the translator could handle.
@@ -76,6 +114,44 @@ def build_convert_payload(
         f"Classifier bucket: `{classified_record.get('bucket', '?')}`",
         f"Classifier reasons: `{classified_record.get('classification_reasons', [])}`",
         "",
+    ]
+
+    # Q2: state the expected dops type directive *before* anything
+    # else the agent reads. If STATUS encodes a non-default type
+    # (mask/dport/lock), the dops file MUST carry the matching
+    # ``type`` directive or the handler's safety guard will refuse
+    # to delete STATUS — leaving the substrate half-migrated.
+    if expected_port_type and expected_port_type != "port":
+        sections.append("## Expected port type")
+        sections.append("")
+        sections.append(
+            f"`ports/{origin}/STATUS` declares this port as "
+            f"**`{expected_port_type.upper()}`**. Your `overlay.dops` "
+            f"MUST include a matching `type {expected_port_type}` "
+            f"directive in the header. Without it the planner defaults "
+            f"to `port` and the handler will refuse to delete STATUS "
+            f"(it would silently change the port's behavior — "
+            f"e.g. `mask` means \"deny this upstream port\"; losing "
+            f"that signal would start materializing a port we "
+            f"explicitly denied)."
+        )
+        sections.append("")
+    elif expected_port_type == "port":
+        # Default type — emit the directive for clarity, but the
+        # handler does not enforce its presence (an absent ``type``
+        # directive defaults to ``port`` in the planner).
+        sections.append("## Expected port type")
+        sections.append("")
+        sections.append(
+            f"`ports/{origin}/STATUS` declares this port as "
+            f"`PORT` (the default). Emit `type port` in your "
+            f"`overlay.dops` header for clarity; the planner's "
+            f"default is also `port` so an absent directive would "
+            f"work but the explicit form is what conventions show."
+        )
+        sections.append("")
+
+    sections += [
         "## Deterministic translator status",
         "",
         f"- status: `{deterministic_result.get('status', '?')}`",

@@ -799,7 +799,14 @@ files, but the tools only accept the `/work/`-rooted form. A
    the files that should be removed in the Conversion Proof's
    `files_removed` field — the handler will finalize the cleanup
    so the overlay stays consistent with the proof. Do NOT list
-   retained patch files here.
+   retained patch files here. Always include `STATUS` in
+   `files_removed`: its `PORT`/`MASK`/`DPORT`/`LOCK` first-token
+   role is taken over by the `type` directive in your overlay.dops,
+   and its `Last attempt:` / `Last success:` lines are recoverable
+   from git log + bundle history. The handler refuses to delete
+   STATUS if its declared type doesn't match what your dops carries
+   (safety guard) — so the dops `type` directive must match the
+   port's actual role before this removal lands.
 7. Emit the Conversion Proof JSON block (see below) and stop.
 
 Final verification is the handler's job. After you finish, the
@@ -823,7 +830,7 @@ Your final response must end with a JSON block:
       {"file": "dragonfly/patch-libfoo-multi-hunk.diff",
        "reason": "five-hunk patch, intertwined ifdef context"}
   ],
-  "files_removed":                ["Makefile.DragonFly", "diffs/patch-config.diff"],
+  "files_removed":                ["STATUS", "Makefile.DragonFly", "diffs/patch-config.diff"],
   "files_added":                  ["overlay.dops"],
   "validate_dops_ok":             true,
   "verification_pending":         true
