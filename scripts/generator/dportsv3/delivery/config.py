@@ -1,0 +1,205 @@
+"""Load + resolve ``config/delivery.toml`` for Step 11d.
+
+Schema (per the plan §11d):
+
+    [provider]
+    type = "github"        # "github" | "gitlab" | "gitea" | "local-patch"
+    repo = "DragonFlyBSD/DeltaPorts"
+    base_branch = "master"
+    draft = true
+    labels = ["agentic-fix", "needs-review"]
+    branch_template = "agentic/{origin_safe}-{bundle_short}"
+
+    [target."@2026Q2"]     # optional per-target override section
+    base_branch = "2026Q2"
+    repo = "DragonFlyBSD/DeltaPorts-2026Q2"
+
+The TOP-LEVEL ``[provider]`` block is the default. Per-target
+sections override individual fields for a specific target value;
+unspecified fields fall back to the top-level.
+
+Token resolution (highest precedence first):
+- ``$DPORTSV3_DELIVERY_TOKEN`` env var.
+- ``$DPORTSV3_CONFIG_DIR/delivery.token`` file (must be 0400 or
+  caller-readable only — we don't enforce the mode but document
+  the expectation).
+- None — only valid when ``provider.type == "local-patch"``.
+"""
+
+from __future__ import annotations
+
+import os
+import tomllib
+from dataclasses import dataclass, field
+from pathlib import Path
+
+from . import DeliveryConfigError
+
+
+__all__ = [
+    "DeliveryConfig",
+    "load_delivery_config",
+]
+
+
+_KNOWN_PROVIDERS = frozenset({"github", "gitlab", "gitea", "local-patch"})
+_DEFAULT_BRANCH_TEMPLATE = "agentic/{origin_safe}-{bundle_short}"
+
+
+@dataclass(frozen=True)
+class DeliveryConfig:
+    """Resolved per-target delivery configuration.
+
+    ``token`` is the resolved secret (may be empty for
+    ``local-patch``). ``outbox`` is set for ``local-patch`` only
+    (from ``$DPORTSV3_DELIVERY_OUTBOX``, required at provider
+    invocation time).
+    """
+    provider_type: str
+    repo: str | None
+    base_branch: str
+    draft: bool
+    labels: tuple[str, ...]
+    branch_template: str
+    token: str | None
+    outbox: str | None
+    extras: dict[str, object] = field(default_factory=dict)
+
+
+def load_delivery_config(
+    config_path: Path,
+    *,
+    target: str | None = None,
+    env: dict[str, str] | None = None,
+) -> DeliveryConfig:
+    """Parse ``delivery.toml`` and resolve per-target overrides.
+
+    Raises ``DeliveryConfigError`` on missing required fields,
+    unknown provider types, or unreadable token files. Caller
+    distinguishes by the message string; the exception type is
+    intentionally flat for v1.
+    """
+    env = env if env is not None else dict(os.environ)
+    if not config_path.is_file():
+        raise DeliveryConfigError(
+            f"delivery.toml not found at {config_path!s}"
+        )
+    try:
+        raw = tomllib.loads(config_path.read_text())
+    except tomllib.TOMLDecodeError as exc:
+        raise DeliveryConfigError(
+            f"delivery.toml is not valid TOML: {exc}"
+        ) from exc
+
+    provider_block = raw.get("provider")
+    if not isinstance(provider_block, dict):
+        raise DeliveryConfigError(
+            "delivery.toml: required [provider] block missing"
+        )
+
+    # Resolve per-target overrides. The target lookup is a nested
+    # `[target."<name>"]` section. tomllib turns those into the
+    # nested dict structure raw["target"][target].
+    target_overrides: dict = {}
+    if target:
+        target_section = raw.get("target", {})
+        if isinstance(target_section, dict):
+            specific = target_section.get(target)
+            if isinstance(specific, dict):
+                target_overrides = specific
+
+    def field_value(key: str, default=None):
+        if key in target_overrides:
+            return target_overrides[key]
+        return provider_block.get(key, default)
+
+    provider_type = field_value("type")
+    if not provider_type or not isinstance(provider_type, str):
+        raise DeliveryConfigError(
+            "delivery.toml: required field provider.type missing "
+            "(one of 'github', 'gitlab', 'gitea', 'local-patch')"
+        )
+    if provider_type not in _KNOWN_PROVIDERS:
+        raise DeliveryConfigError(
+            f"delivery.toml: unknown provider type {provider_type!r} "
+            f"(known: {sorted(_KNOWN_PROVIDERS)!r})"
+        )
+
+    repo = field_value("repo")
+    if provider_type != "local-patch" and not repo:
+        raise DeliveryConfigError(
+            f"delivery.toml: provider.repo is required for "
+            f"type={provider_type!r}"
+        )
+
+    base_branch = field_value("base_branch") or "master"
+    draft = bool(field_value("draft", True))
+    labels_val = field_value("labels", [])
+    if not isinstance(labels_val, list):
+        raise DeliveryConfigError(
+            "delivery.toml: provider.labels must be a list of strings"
+        )
+    labels = tuple(str(x) for x in labels_val)
+    branch_template = field_value("branch_template", _DEFAULT_BRANCH_TEMPLATE)
+
+    # Token: env var first, then file fallback. Local-patch never
+    # needs one.
+    token: str | None = None
+    if provider_type != "local-patch":
+        token = _resolve_token(env)
+        if not token:
+            raise DeliveryConfigError(
+                f"delivery.toml: provider type {provider_type!r} "
+                f"requires a token. Set $DPORTSV3_DELIVERY_TOKEN or "
+                f"place it at $DPORTSV3_CONFIG_DIR/delivery.token."
+            )
+
+    outbox = (
+        env.get("DPORTSV3_DELIVERY_OUTBOX")
+        if provider_type == "local-patch" else None
+    )
+
+    # Preserve any extra top-level fields so providers can read
+    # implementation-specific knobs (e.g. gitea host) without
+    # extending this dataclass for every variant.
+    extras = {
+        k: v for k, v in provider_block.items()
+        if k not in {"type", "repo", "base_branch", "draft",
+                     "labels", "branch_template"}
+    }
+    for k, v in target_overrides.items():
+        if k not in {"type", "repo", "base_branch", "draft",
+                     "labels", "branch_template"}:
+            extras[k] = v
+
+    return DeliveryConfig(
+        provider_type=str(provider_type),
+        repo=str(repo) if repo else None,
+        base_branch=str(base_branch),
+        draft=draft,
+        labels=labels,
+        branch_template=str(branch_template),
+        token=token,
+        outbox=outbox,
+        extras=extras,
+    )
+
+
+def _resolve_token(env: dict[str, str]) -> str | None:
+    """Token from env var, then from file under
+    $DPORTSV3_CONFIG_DIR. Returns None if neither yields a value."""
+    direct = env.get("DPORTSV3_DELIVERY_TOKEN", "").strip()
+    if direct:
+        return direct
+    config_dir = env.get("DPORTSV3_CONFIG_DIR", "").strip()
+    if not config_dir:
+        return None
+    token_file = Path(config_dir) / "delivery.token"
+    if not token_file.is_file():
+        return None
+    try:
+        return token_file.read_text().strip() or None
+    except OSError as exc:
+        raise DeliveryConfigError(
+            f"delivery.token at {token_file!s} is unreadable: {exc}"
+        ) from exc

@@ -383,6 +383,36 @@ MIGRATIONS: tuple[str, ...] = (
     "ALTER TABLE bundles ADD COLUMN reopened_at TEXT",
     "ALTER TABLE bundles ADD COLUMN reopened_by TEXT",
     "ALTER TABLE bundles ADD COLUMN reopened_from TEXT",
+    # Step 11d-1: per-bundle review-request tracking. Append-only;
+    # every delivery attempt writes a row. The bundle UI shows the
+    # most-recent row's status. Partial-unique index enforces "at
+    # most one open delivery per (provider, error_signature)" at
+    # the DB layer — a double-clicked Accept can't produce two
+    # open PRs. provider_pr_id is the upstream's identifier
+    # (PR number / MR iid / outbox filename). status moves
+    # 'created' → 'closed'/'merged' via operator action; future
+    # PR-status polling (out of scope for 11d) will keep it in
+    # sync with the upstream platform.
+    """CREATE TABLE IF NOT EXISTS bundle_review_requests (
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        bundle_id       TEXT NOT NULL,
+        provider        TEXT NOT NULL,
+        provider_pr_id  TEXT,
+        url             TEXT,
+        branch          TEXT,
+        title           TEXT,
+        status          TEXT NOT NULL DEFAULT 'created',
+        created_at      TEXT NOT NULL,
+        last_synced_at  TEXT,
+        error           TEXT,
+        operator        TEXT,
+        error_signature TEXT
+    )""",
+    "CREATE INDEX IF NOT EXISTS idx_brr_bundle "
+    "ON bundle_review_requests(bundle_id)",
+    "CREATE UNIQUE INDEX IF NOT EXISTS uq_brr_open_signature "
+    "ON bundle_review_requests(provider, error_signature) "
+    "WHERE status NOT IN ('closed', 'merged', 'create_failed')",
 )
 
 

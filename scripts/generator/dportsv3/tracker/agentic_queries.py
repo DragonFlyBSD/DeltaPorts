@@ -1031,3 +1031,124 @@ def clear_origin_skip(
         (ts, cleared_by, target, origin),
     )
     return cur.rowcount > 0
+
+
+# ---------------------------------------------------------------------
+# Step 11d-1: bundle_review_requests
+# ---------------------------------------------------------------------
+
+
+def insert_review_request(
+    conn: sqlite3.Connection, *,
+    bundle_id: str,
+    provider: str,
+    status: str = "created",
+    provider_pr_id: str | None = None,
+    url: str | None = None,
+    branch: str | None = None,
+    title: str | None = None,
+    error: str | None = None,
+    operator: str | None = None,
+    error_signature: str | None = None,
+) -> int:
+    """Append one ``bundle_review_requests`` row. Returns row id.
+
+    Raises ``sqlite3.IntegrityError`` if the partial-unique index
+    ``uq_brr_open_signature`` blocks a duplicate open delivery —
+    caller surfaces this as HTTP 409 with the existing row's URL.
+    """
+    ts = datetime.now(timezone.utc).isoformat()
+    cur = conn.execute(
+        """INSERT INTO bundle_review_requests
+           (bundle_id, provider, provider_pr_id, url, branch, title,
+            status, created_at, error, operator, error_signature)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (bundle_id, provider, provider_pr_id, url, branch, title,
+         status, ts, error, operator, error_signature),
+    )
+    return int(cur.lastrowid or 0)
+
+
+def latest_review_request_for_bundle(
+    conn: sqlite3.Connection, bundle_id: str,
+) -> dict[str, Any] | None:
+    """Most-recent ``bundle_review_requests`` row for one bundle,
+    or None. Drives the bundle detail page's "Delivery" card."""
+    row = conn.execute(
+        """SELECT id, bundle_id, provider, provider_pr_id, url, branch,
+                  title, status, created_at, last_synced_at, error,
+                  operator, error_signature
+           FROM bundle_review_requests
+           WHERE bundle_id = ?
+           ORDER BY id DESC LIMIT 1""",
+        (bundle_id,),
+    ).fetchone()
+    return _maybe(row)
+
+
+def find_open_review_request(
+    conn: sqlite3.Connection, *,
+    provider: str,
+    error_signature: str,
+) -> dict[str, Any] | None:
+    """Idempotency lookup: return the open delivery row for
+    ``(provider, error_signature)`` if one exists, else None.
+
+    "Open" matches the partial-unique index condition: status NOT
+    IN ('closed', 'merged', 'create_failed'). Caller uses this to
+    decide between create-new and patch-existing-body.
+    """
+    row = conn.execute(
+        """SELECT id, bundle_id, provider, provider_pr_id, url, branch,
+                  title, status, created_at, last_synced_at, error,
+                  operator, error_signature
+           FROM bundle_review_requests
+           WHERE provider = ? AND error_signature = ?
+             AND status NOT IN ('closed', 'merged', 'create_failed')
+           ORDER BY id DESC LIMIT 1""",
+        (provider, error_signature),
+    ).fetchone()
+    return _maybe(row)
+
+
+def update_review_request_status(
+    conn: sqlite3.Connection, *,
+    request_id: int,
+    status: str,
+    error: str | None = None,
+    provider_pr_id: str | None = None,
+    url: str | None = None,
+    branch: str | None = None,
+) -> bool:
+    """Move a delivery row's status. Used for transitions like
+    ``created`` → ``closed``/``merged`` (operator action), or
+    ``created`` → ``updated`` on idempotency hits, or to attach
+    PR-side data when the provider-create returns asynchronously.
+
+    Returns True if a row was updated, False if no row matched
+    ``request_id``. Always bumps ``last_synced_at``.
+    """
+    ts = datetime.now(timezone.utc).isoformat()
+    # Build the SET clause dynamically so we don't blow away
+    # fields the caller didn't pass.
+    sets = ["status = ?", "last_synced_at = ?"]
+    args: list[object] = [status, ts]
+    if error is not None:
+        sets.append("error = ?")
+        args.append(error)
+    if provider_pr_id is not None:
+        sets.append("provider_pr_id = ?")
+        args.append(provider_pr_id)
+    if url is not None:
+        sets.append("url = ?")
+        args.append(url)
+    if branch is not None:
+        sets.append("branch = ?")
+        args.append(branch)
+    args.append(request_id)
+    cur = conn.execute(
+        f"UPDATE bundle_review_requests SET {', '.join(sets)} "
+        f"WHERE id = ?",
+        tuple(args),
+    )
+    return cur.rowcount > 0
