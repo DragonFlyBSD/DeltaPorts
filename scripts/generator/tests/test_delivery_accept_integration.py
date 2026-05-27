@@ -91,6 +91,7 @@ def deployment(tmp_path, monkeypatch):
     (config_dir / "delivery.toml").write_text(
         '[provider]\n'
         'type = "local-patch"\n'
+        f'outbox = "{outbox}"\n'
         'branch_template = "agentic/{origin_safe}-{bundle_short}"\n'
     )
 
@@ -100,7 +101,6 @@ def deployment(tmp_path, monkeypatch):
     conn.close()
 
     monkeypatch.setenv("DPORTSV3_CONFIG_DIR", str(config_dir))
-    monkeypatch.setenv("DPORTSV3_DELIVERY_OUTBOX", str(outbox))
     monkeypatch.delenv("DPORTSV3_DELIVERY_CONFIG", raising=False)
 
     app = create_app(db_path)
@@ -270,23 +270,18 @@ def test_empty_changes_diff_skips(client, deployment):
 # =====================================================================
 
 
-def test_github_provider_missing_clone_env_clear_error(
+def test_github_provider_missing_clone_dir_field_clear_error(
     client, deployment, monkeypatch,
 ):
-    """Finding 5 (11d-3 review): orchestrator pre-validates
-    $DPORTSV3_OPERATOR_CLONE for network providers. When unset,
-    the create_failed row carries a config-specific error message
-    naming the missing env var, not "clone_dir /nonexistent
-    doesn't exist" from deep inside _git."""
-    # Reconfigure delivery to point at github so the validation
-    # path fires (local-patch ignores clone_dir).
+    """The config loader requires provider.clone_dir for network
+    providers; a missing field surfaces as create_failed naming
+    the TOML key rather than blowing up deep inside _git."""
     (deployment["config_dir"] / "delivery.toml").write_text(
         '[provider]\n'
         'type = "github"\n'
         'repo = "DragonFlyBSD/DeltaPorts"\n'
     )
     monkeypatch.setenv("DPORTSV3_DELIVERY_TOKEN", "ghp_test")
-    monkeypatch.delenv("DPORTSV3_OPERATOR_CLONE", raising=False)
 
     conn = _open(deployment)
     _seed_bundle(conn, "b-no-clone")
@@ -300,24 +295,23 @@ def test_github_provider_missing_clone_env_clear_error(
     assert resp.status_code == 200
     d = resp.json()["delivery"]
     assert d["status"] == "create_failed"
-    assert "$DPORTSV3_OPERATOR_CLONE" in d["error"]
-    assert "/nonexistent" not in d["error"]  # no fabricated path
+    assert "clone_dir" in d["error"]
 
 
-def test_github_provider_missing_clone_dir_clear_error(
+def test_github_provider_clone_dir_does_not_exist_clear_error(
     client, deployment, monkeypatch, tmp_path,
 ):
-    """Pre-validation also catches the case where the env var IS
-    set but points at a nonexistent path."""
+    """The loader accepts the path string blindly; the orchestrator
+    catches the missing-directory case before invoking the provider
+    and surfaces a config-specific error message."""
+    missing = tmp_path / "does-not-exist"
     (deployment["config_dir"] / "delivery.toml").write_text(
         '[provider]\n'
         'type = "github"\n'
         'repo = "DragonFlyBSD/DeltaPorts"\n'
+        f'clone_dir = "{missing}"\n'
     )
     monkeypatch.setenv("DPORTSV3_DELIVERY_TOKEN", "ghp_test")
-    monkeypatch.setenv(
-        "DPORTSV3_OPERATOR_CLONE", str(tmp_path / "does-not-exist"),
-    )
 
     conn = _open(deployment)
     _seed_bundle(conn, "b-bad-clone")

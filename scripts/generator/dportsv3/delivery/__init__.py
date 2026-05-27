@@ -111,7 +111,7 @@ class ReviewProvider(Protocol):
         """Push the branch + open a review request.
 
         ``clone_dir`` is the operator's local DeltaPorts clone
-        (resolved by the caller from ``$DPORTSV3_OPERATOR_CLONE``).
+        (resolved by the caller from ``provider.clone_dir``).
         Network providers use it to run git operations (fetch,
         checkout, apply, commit, push). ``LocalPatchProvider``
         ignores it.

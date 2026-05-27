@@ -3,7 +3,7 @@
 
 Network providers need to push a branch to the upstream remote
 before opening a review request. This module drives those git
-operations against the operator's clone (``$DPORTSV3_OPERATOR_CLONE``)
+operations against the operator's clone (``provider.clone_dir``)
 via subprocess — we don't import a Python git library; ``git``
 is the source of truth for git semantics and subprocess is enough.
 
@@ -132,8 +132,8 @@ def _assert_clone_dir(clone_dir: Path) -> None:
     if not clone_dir.is_dir():
         raise GitError(
             f"clone_dir {clone_dir!s} doesn't exist; set "
-            f"$DPORTSV3_OPERATOR_CLONE to your local DeltaPorts "
-            f"working tree"
+            f"provider.clone_dir in delivery.toml to your local "
+            f"DeltaPorts working tree"
         )
     if not (clone_dir / ".git").exists():
         raise GitError(

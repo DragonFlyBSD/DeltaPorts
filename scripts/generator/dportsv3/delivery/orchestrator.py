@@ -93,9 +93,13 @@ def build_provider(cfg: DeliveryConfig) -> ReviewProvider:
     """
     if cfg.provider_type == "local-patch":
         from .local_patch import LocalPatchProvider  # noqa: PLC0415
+        # The loader already requires provider.outbox for
+        # local-patch — assert here just to surface a clear error
+        # if someone hand-constructs a DeliveryConfig in tests.
         if not cfg.outbox:
             raise DeliveryConfigError(
-                "LocalPatchProvider requires $DPORTSV3_DELIVERY_OUTBOX"
+                "LocalPatchProvider requires provider.outbox in "
+                "delivery.toml"
             )
         return LocalPatchProvider(outbox=Path(cfg.outbox))
     if cfg.provider_type == "github":
@@ -250,36 +254,12 @@ def deliver(
     provider = build_provider(cfg)
 
     # Resolve the operator clone before invoking the provider so a
-    # missing $DPORTSV3_OPERATOR_CLONE surfaces with a clear,
-    # config-specific error instead of "clone_dir /nonexistent
-    # doesn't exist" from deep inside _git. local-patch ignores
-    # clone_dir entirely so the env var stays optional there.
-    clone_dir_str = os.environ.get("DPORTSV3_OPERATOR_CLONE", "").strip()
+    # bad provider.clone_dir surfaces with a clear, config-specific
+    # error instead of "doesn't exist" from deep inside _git. The
+    # loader guarantees clone_dir is set for non-local-patch, but
+    # the path can still point at a missing directory.
     if cfg.provider_type != "local-patch":
-        if not clone_dir_str:
-            request_id = insert_review_request(
-                write_conn,
-                bundle_id=bundle_id,
-                provider=cfg.provider_type,
-                status="create_failed",
-                error=(
-                    "DeliveryConfigError: $DPORTSV3_OPERATOR_CLONE "
-                    "is unset; network providers need a local "
-                    "DeltaPorts clone to push from"
-                ),
-                operator=operator,
-                error_signature=error_signature,
-            )
-            return DeliveryOutcome(
-                status="create_failed",
-                provider=cfg.provider_type,
-                error=(
-                    "$DPORTSV3_OPERATOR_CLONE is unset; network "
-                    "providers need a local clone"
-                ),
-                request_id=request_id,
-            )
-        clone_path = Path(clone_dir_str)
+        clone_path = Path(cfg.clone_dir or "")
         if not clone_path.is_dir():
             request_id = insert_review_request(
                 write_conn,
@@ -287,8 +267,9 @@ def deliver(
                 provider=cfg.provider_type,
                 status="create_failed",
                 error=(
-                    f"DeliveryConfigError: $DPORTSV3_OPERATOR_CLONE "
-                    f"points at {clone_dir_str!r} which doesn't exist"
+                    f"DeliveryConfigError: provider.clone_dir "
+                    f"points at {str(clone_path)!r} which doesn't "
+                    f"exist"
                 ),
                 operator=operator,
                 error_signature=error_signature,
@@ -297,16 +278,15 @@ def deliver(
                 status="create_failed",
                 provider=cfg.provider_type,
                 error=(
-                    f"$DPORTSV3_OPERATOR_CLONE points at "
-                    f"{clone_dir_str!r} which doesn't exist"
+                    f"provider.clone_dir points at "
+                    f"{str(clone_path)!r} which doesn't exist"
                 ),
                 request_id=request_id,
             )
     else:
-        # local-patch never reads clone_dir; pass an existing path
-        # to satisfy the Protocol signature without leaking the
-        # /nonexistent sentinel that the old code used.
-        clone_path = Path(clone_dir_str) if clone_dir_str else Path(".")
+        # local-patch never reads clone_dir; pass cwd to satisfy
+        # the Protocol signature.
+        clone_path = Path(".")
 
     # Look up an open delivery row BEFORE calling the provider so
     # we can pass its recorded diff_sha256 in — same-content

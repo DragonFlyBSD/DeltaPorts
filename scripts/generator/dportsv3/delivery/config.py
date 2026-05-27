@@ -5,6 +5,7 @@ Schema (per the plan §11d):
     [provider]
     type = "github"        # "github" | "gitlab" | "gitea" | "local-patch"
     repo = "DragonFlyBSD/DeltaPorts"
+    clone_dir = "/srv/dports-clone"   # required for non-local-patch
     base_branch = "master"
     draft = true
     labels = ["agentic-fix", "needs-review"]
@@ -24,6 +25,10 @@ Token resolution (highest precedence first):
   caller-readable only — we don't enforce the mode but document
   the expectation).
 - None — only valid when ``provider.type == "local-patch"``.
+
+Tokens are the ONLY env-var input — they're secrets and don't
+belong in a committable file. Everything else (clone path,
+outbox) lives in this TOML.
 """
 
 from __future__ import annotations
@@ -50,10 +55,11 @@ _DEFAULT_BRANCH_TEMPLATE = "agentic/{origin_safe}-{bundle_short}"
 class DeliveryConfig:
     """Resolved per-target delivery configuration.
 
-    ``token`` is the resolved secret (may be empty for
-    ``local-patch``). ``outbox`` is set for ``local-patch`` only
-    (from ``$DPORTSV3_DELIVERY_OUTBOX``, required at provider
-    invocation time).
+    ``token`` is the resolved secret (None for ``local-patch``).
+    ``clone_dir`` is the operator's local DeltaPorts checkout —
+    required for network providers, ignored for ``local-patch``.
+    ``outbox`` is the local-patch destination directory —
+    required for ``local-patch``, None otherwise.
     """
     provider_type: str
     repo: str | None
@@ -62,6 +68,7 @@ class DeliveryConfig:
     labels: tuple[str, ...]
     branch_template: str
     token: str | None
+    clone_dir: str | None
     outbox: str | None
     extras: dict[str, object] = field(default_factory=dict)
 
@@ -154,22 +161,40 @@ def load_delivery_config(
                 f"place it at $DPORTSV3_CONFIG_DIR/delivery.token."
             )
 
-    outbox = (
-        env.get("DPORTSV3_DELIVERY_OUTBOX")
-        if provider_type == "local-patch" else None
-    )
+    clone_dir_val = field_value("clone_dir")
+    if provider_type != "local-patch":
+        if not clone_dir_val or not isinstance(clone_dir_val, str):
+            raise DeliveryConfigError(
+                f"delivery.toml: provider.clone_dir is required "
+                f"for type={provider_type!r} (the local DeltaPorts "
+                f"checkout the tracker pushes from)"
+            )
+        clone_dir: str | None = clone_dir_val
+    else:
+        clone_dir = None
+
+    outbox_val = field_value("outbox")
+    if provider_type == "local-patch":
+        if not outbox_val or not isinstance(outbox_val, str):
+            raise DeliveryConfigError(
+                "delivery.toml: provider.outbox is required for "
+                "type='local-patch' (directory where patches get "
+                "written)"
+            )
+        outbox: str | None = outbox_val
+    else:
+        outbox = None
 
     # Preserve any extra top-level fields so providers can read
     # implementation-specific knobs (e.g. gitea host) without
     # extending this dataclass for every variant.
+    _known = {"type", "repo", "base_branch", "draft", "labels",
+              "branch_template", "clone_dir", "outbox"}
     extras = {
-        k: v for k, v in provider_block.items()
-        if k not in {"type", "repo", "base_branch", "draft",
-                     "labels", "branch_template"}
+        k: v for k, v in provider_block.items() if k not in _known
     }
     for k, v in target_overrides.items():
-        if k not in {"type", "repo", "base_branch", "draft",
-                     "labels", "branch_template"}:
+        if k not in _known:
             extras[k] = v
 
     return DeliveryConfig(
@@ -180,6 +205,7 @@ def load_delivery_config(
         labels=labels,
         branch_template=str(branch_template),
         token=token,
+        clone_dir=clone_dir,
         outbox=outbox,
         extras=extras,
     )

@@ -45,7 +45,7 @@ __all__ = ["LocalPatchProvider"]
 @dataclass
 class LocalPatchProvider:
     """No-network provider. ``outbox`` is the directory we write
-    into (caller resolves from ``$DPORTSV3_DELIVERY_OUTBOX`` via
+    into (caller resolves from ``provider.outbox`` in delivery.toml via
     ``DeliveryConfig.outbox``).
 
     The outbox itself must be created by the operator — a missing
@@ -74,7 +74,7 @@ class LocalPatchProvider:
         if not self.outbox:
             raise DeliveryConfigError(
                 "LocalPatchProvider: outbox is unset. Set "
-                "$DPORTSV3_DELIVERY_OUTBOX to a writable directory."
+                "provider.outbox in delivery.toml to a writable directory."
             )
         outbox = Path(self.outbox)
         if not outbox.is_dir():

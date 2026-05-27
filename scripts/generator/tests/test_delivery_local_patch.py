@@ -150,14 +150,24 @@ def _write_toml(path: Path, content: str) -> None:
 
 def test_load_local_patch_no_token_needed(tmp_path):
     cfg_path = tmp_path / "delivery.toml"
-    _write_toml(cfg_path, '[provider]\ntype = "local-patch"\n')
-    cfg = load_delivery_config(cfg_path, env={
-        "DPORTSV3_DELIVERY_OUTBOX": str(tmp_path / "outbox"),
-    })
+    outbox = tmp_path / "outbox"
+    _write_toml(cfg_path, (
+        '[provider]\n'
+        'type = "local-patch"\n'
+        f'outbox = "{outbox}"\n'
+    ))
+    cfg = load_delivery_config(cfg_path, env={})
     assert cfg.provider_type == "local-patch"
     assert cfg.token is None
-    assert cfg.outbox == str(tmp_path / "outbox")
+    assert cfg.outbox == str(outbox)
     assert cfg.repo is None  # local-patch doesn't need a repo
+
+
+def test_load_local_patch_missing_outbox_rejects(tmp_path):
+    cfg_path = tmp_path / "delivery.toml"
+    _write_toml(cfg_path, '[provider]\ntype = "local-patch"\n')
+    with pytest.raises(DeliveryConfigError, match="provider.outbox"):
+        load_delivery_config(cfg_path, env={})
 
 
 def test_load_github_requires_token(tmp_path):
@@ -166,9 +176,23 @@ def test_load_github_requires_token(tmp_path):
         '[provider]\n'
         'type = "github"\n'
         'repo = "DragonFlyBSD/DeltaPorts"\n'
+        f'clone_dir = "{tmp_path}"\n'
     ))
     with pytest.raises(DeliveryConfigError, match="token"):
         load_delivery_config(cfg_path, env={})
+
+
+def test_load_github_requires_clone_dir(tmp_path):
+    cfg_path = tmp_path / "delivery.toml"
+    _write_toml(cfg_path, (
+        '[provider]\n'
+        'type = "github"\n'
+        'repo = "DragonFlyBSD/DeltaPorts"\n'
+    ))
+    with pytest.raises(DeliveryConfigError, match="clone_dir"):
+        load_delivery_config(cfg_path, env={
+            "DPORTSV3_DELIVERY_TOKEN": "tok",
+        })
 
 
 def test_load_github_token_from_env(tmp_path):
@@ -177,6 +201,7 @@ def test_load_github_token_from_env(tmp_path):
         '[provider]\n'
         'type = "github"\n'
         'repo = "DragonFlyBSD/DeltaPorts"\n'
+        f'clone_dir = "{tmp_path}"\n'
         'labels = ["agentic-fix"]\n'
     ))
     cfg = load_delivery_config(cfg_path, env={
@@ -185,6 +210,7 @@ def test_load_github_token_from_env(tmp_path):
     assert cfg.provider_type == "github"
     assert cfg.token == "ghp_token123"
     assert cfg.repo == "DragonFlyBSD/DeltaPorts"
+    assert cfg.clone_dir == str(tmp_path)
     assert cfg.labels == ("agentic-fix",)
 
 
@@ -194,6 +220,7 @@ def test_load_token_from_file_when_env_missing(tmp_path):
         '[provider]\n'
         'type = "github"\n'
         'repo = "x/y"\n'
+        f'clone_dir = "{tmp_path}"\n'
     ))
     token_file = tmp_path / "delivery.token"
     token_file.write_text("ghp_from_file  \n")
@@ -209,6 +236,7 @@ def test_env_token_takes_precedence_over_file(tmp_path):
         '[provider]\n'
         'type = "github"\n'
         'repo = "x/y"\n'
+        f'clone_dir = "{tmp_path}"\n'
     ))
     (tmp_path / "delivery.token").write_text("ghp_from_file")
     cfg = load_delivery_config(cfg_path, env={
@@ -238,6 +266,7 @@ def test_target_overrides_apply(tmp_path):
         '[provider]\n'
         'type = "github"\n'
         'repo = "DragonFlyBSD/DeltaPorts"\n'
+        f'clone_dir = "{tmp_path}"\n'
         'base_branch = "master"\n'
         '\n'
         '[target."@2026Q2"]\n'
@@ -259,6 +288,7 @@ def test_default_target_falls_back_when_target_section_absent(tmp_path):
         '[provider]\n'
         'type = "github"\n'
         'repo = "x/y"\n'
+        f'clone_dir = "{tmp_path}"\n'
         'base_branch = "master"\n'
     ))
     cfg = load_delivery_config(
