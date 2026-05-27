@@ -642,6 +642,41 @@ def _git_diff_with_untracked(repo_dir: Path, rel: str) -> subprocess.CompletedPr
     return diff
 
 
+def _git_diff_against_base(
+    repo_dir: Path, base_branch: str, rel: str,
+) -> subprocess.CompletedProcess:
+    """Step 30 slice 2: capture the diff between the env's base
+    branch and the current working tree for ``rel``.
+
+    Combines committed deltas on the current bundle branch
+    (convert's overlay.dops creation, files-removed deletions,
+    etc.) with the agent's uncommitted working-tree edits (patch
+    agent's add_patch / change_makefile output). ``--intent-to-add``
+    handles freshly-created files; the trailing reset returns the
+    index to its prior state.
+
+    Use case: ``analysis/delivery.diff`` — the artifact the
+    Accept-delivery path sends to the configured provider. Unlike
+    ``changes.diff`` (HEAD-relative, audit + intent-replay focus),
+    this is "everything since upstream" and is therefore the
+    correct shape for an upstream PR.
+    """
+    repo = str(repo_dir)
+    subprocess.run(
+        ["git", "-C", repo, "add", "--intent-to-add", "--", rel],
+        capture_output=True, text=True, check=False,
+    )
+    diff = subprocess.run(
+        ["git", "-C", repo, "diff", base_branch, "--", rel],
+        capture_output=True, text=True, check=False,
+    )
+    subprocess.run(
+        ["git", "-C", repo, "reset", "--", rel],
+        capture_output=True, text=True, check=False,
+    )
+    return diff
+
+
 def emit_diff(env: str, origin: str, relpath: str) -> dict:
     """Return the working-tree diff for ``ports/<origin>/<relpath>``.
 

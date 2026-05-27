@@ -77,6 +77,7 @@ def _ctx(tmp_path, job=None, *, helpers_overrides=None, bundle_text=None):
         "write_patch_audit": lambda *a, **kw: None,
         "write_tool_trace": lambda *a, **kw: None,
         "write_changes_diff": lambda *a, **kw: None,
+        "write_delivery_diff": lambda *a, **kw: None,
         "looks_env_suspicious": lambda res: False,
         "invalidate_health_cache": lambda: None,
         "cached_health_broken": lambda env=None: False,

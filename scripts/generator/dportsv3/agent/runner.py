@@ -3041,6 +3041,10 @@ def _write_changes_diff(bundle_dir: Path | None, bundle_id: str | None, env: str
     Uses ``worker._git_diff_with_untracked`` so freshly-created files
     (a new ``overlay.dops`` on a compat-mode port) show up as additions
     rather than being silently dropped by plain ``git diff``.
+
+    Step 30 slice 2: this stays HEAD-relative (audit + intent-replay
+    semantics). ``_write_delivery_diff`` is the new branch-vs-base
+    artifact the delivery path consumes.
     """
     try:
         from dportsv3.agent import worker  # type: ignore[import-not-found]
@@ -3055,6 +3059,52 @@ def _write_changes_diff(bundle_dir: Path | None, bundle_id: str | None, env: str
         artifact_store_put(bundle_id, "analysis/changes.diff", diff_bytes, "text")
     elif bundle_dir:
         out = bundle_dir / "analysis" / "changes.diff"
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_bytes(diff_bytes)
+
+
+def _write_delivery_diff(
+    bundle_dir: Path | None, bundle_id: str | None,
+    env: str, origin: str,
+) -> None:
+    """Step 30 slice 2: capture the full branch-vs-base diff for
+    delivery. Stored as ``analysis/delivery.diff`` separately from
+    ``changes.diff``.
+
+    Diffs the env's base branch (``_resolve_bundle_base_branch``)
+    against the current working tree of ``ports/<origin>``. Naturally
+    includes:
+
+    - Convert commits on the bundle branch (overlay.dops creation,
+      Makefile.DragonFly / diffs / STATUS removals).
+    - The patch agent's uncommitted working-tree edits.
+
+    This is the diff Accept-delivery sends to the configured
+    provider (slice 3). ``changes.diff`` continues to be the
+    HEAD-relative artifact verify-fix and intent replay use.
+
+    Best-effort: failures emit a tombstone-style diff body so the
+    operator sees the failure shape rather than getting silent
+    delivery breakage downstream.
+    """
+    try:
+        from dportsv3.agent import worker  # type: ignore[import-not-found]
+        paths = worker.env_paths(env)
+        rel = f"ports/{origin}"
+        base = worker._resolve_bundle_base_branch(env)
+        p = worker._git_diff_against_base(paths.deltaports, base, rel)
+        diff_bytes = p.stdout.encode("utf-8")
+    except Exception as exc:
+        diff_bytes = (
+            f"# failed to capture delivery diff: {exc}\n"
+        ).encode("utf-8")
+
+    if bundle_id:
+        artifact_store_put(
+            bundle_id, "analysis/delivery.diff", diff_bytes, "text",
+        )
+    elif bundle_dir:
+        out = bundle_dir / "analysis" / "delivery.diff"
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_bytes(diff_bytes)
 
@@ -3255,6 +3305,7 @@ def process_patch_job(
         write_patch_audit=_write_patch_audit_harness,
         write_tool_trace=_write_tool_trace,
         write_changes_diff=_write_changes_diff,
+        write_delivery_diff=_write_delivery_diff,
         write_intent_log=_write_intent_log_harness,
         looks_env_suspicious=_looks_env_suspicious,
         invalidate_health_cache=invalidate_health_cache,
