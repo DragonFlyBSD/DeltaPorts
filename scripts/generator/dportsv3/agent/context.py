@@ -332,9 +332,27 @@ class SiblingBundlesSection:
 @dataclass
 class PriorTriagesSection:
     """``## Prior Triages (most recent 2)`` — pre-loaded historical
-    bundles' triage.md + rebuild_proof.json."""
+    bundles' triage outputs *and* the patch agent's evidence from
+    those bundles. Step 29d added the patch artifacts so the
+    triage model can see what was already tried, not just what
+    the prior triage said.
+
+    Pulled per bundle (oldest → newest in the input list, but the
+    list is already most-recent-first):
+      - analysis/triage.md         — prior classification + reasoning
+      - analysis/rebuild_proof.json — terminal proof or synthetic
+      - analysis/patch.md          — patch agent narrative (clipped)
+      - analysis/changes.diff      — what edits the patch agent made
+
+    Char caps are tighter than the patch flow's
+    ``PriorAttemptsSection`` because triage budget is leaner.
+    Missing files are silently skipped — pre-29d bundles render
+    exactly as before (just triage + rebuild_proof).
+    """
     name: str = "prior_triages"
     priority: int = 90
+    max_patch_chars: int = 2000
+    max_diff_chars: int = 3000
 
     def render(self, ctx: ContextCtx) -> str | None:
         if not ctx.prior_triage_bundle_ids or ctx.read_bundle_text is None:
@@ -344,13 +362,21 @@ class PriorTriagesSection:
         for past_bundle in ctx.prior_triage_bundle_ids[:2]:
             section_lines = [f"### Bundle {past_bundle}"]
             had_content = False
-            for relpath, title, code_block in [
-                ("analysis/triage.md", "Triage", None),
-                ("analysis/rebuild_proof.json", "Rebuild Proof", "json"),
+            for relpath, title, code_block, cap in [
+                ("analysis/triage.md", "Triage", None, None),
+                ("analysis/rebuild_proof.json", "Rebuild Proof", "json", None),
+                ("analysis/patch.md", "Patch Report", None,
+                 self.max_patch_chars),
+                ("analysis/changes.diff", "Changes Diff", "diff",
+                 self.max_diff_chars),
             ]:
                 content = ctx.read_bundle_text(None, past_bundle, relpath)
                 if not content:
                     continue
+                if cap is not None and len(content) > cap:
+                    content = content[:cap] + (
+                        f"\n[...truncated to {cap} chars...]\n"
+                    )
                 had_content = True
                 section_lines.append(f"#### {title}")
                 if code_block:

@@ -204,6 +204,90 @@ def test_with_prior_triages(tmp_path, monkeypatch):
     assert "```json" in actual
 
 
+def test_prior_triages_includes_patch_evidence(tmp_path, monkeypatch):
+    """Step 29d: prior bundles' patch.md + changes.diff land in the
+    triage payload so the triage model can see what the patch
+    agent already tried. Without this, operator context like
+    "i don't see you tried X" makes no sense to the model — it
+    has no record of what the patch agent did."""
+    bdir = _minimal_bundle(tmp_path)
+
+    def fake_history(origin):
+        return [{"bundle_id": "old-a"}]
+
+    patch_md = "# Patch Report\n\nTried `mk set X` — failed.\n"
+    diff = (
+        "diff --git a/ports/x/y/Makefile b/ports/x/y/Makefile\n"
+        "--- a/ports/x/y/Makefile\n"
+        "+++ b/ports/x/y/Makefile\n"
+        "@@ -1,1 +1,1 @@\n"
+        "-OLD\n"
+        "+NEW\n"
+    )
+
+    def fake_read(bd, bid, relpath):
+        if bd is not None:
+            p = bd / relpath
+            return p.read_text() if p.exists() else None
+        if bid == "old-a" and relpath == "analysis/triage.md":
+            return "## Classification\nmissing-dep\n"
+        if bid == "old-a" and relpath == "analysis/patch.md":
+            return patch_md
+        if bid == "old-a" and relpath == "analysis/changes.diff":
+            return diff
+        return None
+
+    monkeypatch.setattr(runner, "port_bundle_history", fake_history)
+    monkeypatch.setattr(runner, "read_bundle_text", fake_read)
+
+    actual = runner.build_triage_payload(
+        bdir, None,
+        {"origin": "devel/foo", "snippet_round": "0",
+         "has_snippets": "false"},
+    )
+    assert "#### Patch Report" in actual
+    assert "Tried `mk set X` — failed." in actual
+    assert "#### Changes Diff" in actual
+    assert "```diff" in actual
+    assert "+NEW" in actual
+
+
+def test_prior_triages_truncates_long_patch_evidence(tmp_path, monkeypatch):
+    """Caps on patch.md (2000) and changes.diff (3000) keep the
+    triage payload bounded — patch logs and diffs can be very
+    large and triage budget is leaner than patch's."""
+    bdir = _minimal_bundle(tmp_path)
+
+    huge_patch = "x" * 5000
+    huge_diff = "diff line\n" * 2000  # ~20000 chars
+
+    def fake_history(origin):
+        return [{"bundle_id": "old-a"}]
+
+    def fake_read(bd, bid, relpath):
+        if bd is not None:
+            p = bd / relpath
+            return p.read_text() if p.exists() else None
+        if bid == "old-a" and relpath == "analysis/triage.md":
+            return "## Classification\nmissing-dep\n"
+        if bid == "old-a" and relpath == "analysis/patch.md":
+            return huge_patch
+        if bid == "old-a" and relpath == "analysis/changes.diff":
+            return huge_diff
+        return None
+
+    monkeypatch.setattr(runner, "port_bundle_history", fake_history)
+    monkeypatch.setattr(runner, "read_bundle_text", fake_read)
+
+    actual = runner.build_triage_payload(
+        bdir, None,
+        {"origin": "devel/foo", "snippet_round": "0",
+         "has_snippets": "false"},
+    )
+    assert "[...truncated to 2000 chars...]" in actual
+    assert "[...truncated to 3000 chars...]" in actual
+
+
 # --- snippet round -----------------------------------------------------------
 
 
