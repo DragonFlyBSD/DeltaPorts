@@ -943,13 +943,24 @@ class ReviewProvider(Protocol):
         signature), update its body and return the existing URL."""
 ```
 
-Concrete implementations:
+Concrete implementations all use **direct REST via ``httpx``** (the
+HTTP client already in the venv via FastAPI). The original draft
+defaulted GitHub to the ``gh`` CLI on the assumption it would be
+installed on operator boxes — but the tracker runs as a daemon on a
+known host with a configured token, not in an operator's interactive
+shell. Direct REST keeps the provider abstraction symmetric across
+GitHub / GitLab / Gitea (all REST-only anyway) and avoids the
+parse-CLI-output brittleness of ``gh``.
 
-- ``GitHubProvider`` — uses ``gh`` CLI by default (already installed
-  on most operator boxes, handles auth via ``gh auth``). Falls back
-  to the REST API with a personal-access-token if ``gh`` is absent.
-- ``GitLabProvider`` — REST API + token. Project ID configurable.
-- ``GiteaProvider`` — REST API + token. Same shape as GitLab.
+- ``GitHubProvider`` — ``httpx`` against
+  ``https://api.github.com/repos/{owner}/{repo}/pulls``. Three
+  operations: create PR, find-open-PR-by-head (idempotency check),
+  patch PR body. ~80 LOC including error/rate-limit handling.
+- ``GitLabProvider`` — ``httpx`` against
+  ``https://gitlab.com/api/v4/projects/{id}/merge_requests``. Same
+  three operations.
+- ``GiteaProvider`` — ``httpx`` against the configured Gitea host's
+  ``/api/v1/repos/{owner}/{repo}/pulls``. Same three operations.
 - ``LocalPatchProvider`` — fallback no-network provider that writes
   the proposed patch to a designated outbox directory
   (``$DPORTSV3_DELIVERY_OUTBOX``) for manual fetch. The default
@@ -1008,10 +1019,55 @@ On Accept, if a provider is configured:
    table linked back to the bundle. The bundle detail page links
    to the review request.
 
+##### Schema — ``bundle_review_requests``
+
+New table linked to ``bundles``. Mirrors the ``verify_requests``
+shape Step 11c established. Append-only — every delivery attempt
+gets a row; the latest row's status drives the bundle UI.
+
+```sql
+CREATE TABLE bundle_review_requests (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    bundle_id       TEXT NOT NULL,
+    provider        TEXT NOT NULL,         -- "github" / "gitlab" / "gitea" / "local-patch"
+    provider_pr_id  TEXT,                  -- PR number / MR iid / outbox filename
+    url             TEXT,                  -- web URL (NULL for local-patch)
+    branch          TEXT,                  -- branch name on the remote
+    title           TEXT,
+    status          TEXT NOT NULL DEFAULT 'created',
+                                            -- 'created' / 'create_failed' /
+                                            -- 'updated' / 'closed' / 'merged'
+    created_at      TEXT NOT NULL,
+    last_synced_at  TEXT,                  -- for future status-polling
+    error           TEXT,                  -- on create_failed: exception summary
+    operator        TEXT,                  -- who clicked Accept
+    error_signature TEXT                    -- idempotency key (Step 6)
+);
+CREATE INDEX idx_brr_bundle ON bundle_review_requests(bundle_id);
+-- At most one OPEN PR per (provider, error_signature).
+CREATE UNIQUE INDEX uq_brr_open_signature
+    ON bundle_review_requests(provider, error_signature)
+    WHERE status NOT IN ('closed', 'merged', 'create_failed');
+```
+
+Rows are written:
+
+- ``status='created'`` on first successful PR open (with ``url`` +
+  ``provider_pr_id``).
+- ``status='create_failed'`` if push or PR-create errored. ``error``
+  carries the exception summary so the bundle UI can show it.
+- ``status='updated'`` if the idempotency check found an existing
+  PR and we patched its body instead of creating a duplicate.
+- ``status='closed'`` / ``'merged'`` only via operator action (UI
+  button) for v1; PR-status polling is out of scope.
+
 ##### Idempotency + retry
 
 If the operator clicks Accept twice, or the push fails partway:
 
+- The unique index ``uq_brr_open_signature`` blocks a duplicate
+  open delivery at the DB level — the provider's create call
+  refuses with a 409 returning the existing row's URL.
 - The provider implementation looks for an existing open review
   request matching ``(origin, target, signature)`` (the same
   ``error_signature`` we added in Step 6). If found, updates the
@@ -1047,6 +1103,142 @@ If the operator clicks Accept twice, or the push fails partway:
   bundle row gets the URL recorded and the lifecycle event fires.
 - Idempotency: clicking Accept twice produces one URL, not two
   open PRs.
+
+##### Slicing — 11d-1 through 11d-5
+
+11d ships in five slices. Each is independently usable: the loop
+keeps closing the operator-fix arc one provider at a time, with
+LocalPatchProvider serving as the always-available fallback so no
+slice is gated on the next.
+
+###### 11d-1 — schema + Protocol + LocalPatchProvider + config loading
+
+The foundation, no network:
+
+- Schema migration: ``bundle_review_requests`` table (per
+  "Schema" subsection above) + index + partial-unique on
+  ``(provider, error_signature)``.
+- ``scripts/generator/dportsv3/delivery/__init__.py`` exposing
+  ``ReviewProvider`` Protocol (per "Abstraction" subsection above)
+  and ``ReviewRequestResult`` dataclass.
+- ``LocalPatchProvider`` — writes ``analysis/changes.diff`` to
+  ``$DPORTSV3_DELIVERY_OUTBOX/<branch_name>.patch`` plus a
+  ``.metadata.json`` carrying the commit-message templated fields.
+  Idempotency: if ``<branch_name>.patch`` already exists at the
+  same SHA, returns the existing record instead of writing twice.
+- ``config/delivery.toml`` loader (TOML stdlib in Python 3.11+);
+  reads provider type / repo / base_branch / labels /
+  branch_template / draft. Per-target overrides via TOML sections
+  (e.g. ``[target."@2026Q2"]``). Env-var precedence:
+  ``DPORTSV3_DELIVERY_PROVIDER`` overrides TOML; the token comes
+  from ``DPORTSV3_DELIVERY_TOKEN`` env var or a 0400 file under
+  ``$DPORTSV3_CONFIG_DIR/delivery.token``.
+- Tests: schema migration applies cleanly; partial-unique index
+  enforces one-open-row-per-signature; LocalPatchProvider happy
+  path + collision (same patch twice → same outbox file) +
+  outbox-doesn't-exist error + outbox-not-writable error;
+  delivery.toml parsing happy paths + missing-required-field
+  rejection + env-var override; ``ReviewProvider`` Protocol
+  type-check via a fake provider in the test suite.
+
+~250 LOC + ~150 LOC tests. Independently shippable — the slice
+ends with LocalPatchProvider working end-to-end against the
+DB schema, no UI yet.
+
+###### 11d-2 — Accept-endpoint integration + Delivery UI card
+
+Wire LocalPatchProvider into the Accept flow:
+
+- ``POST /api/bundles/{id}/accept`` (Step 11c endpoint, recently
+  extended for 28e operator_owned-verified) gains a delivery
+  step. Body adds optional ``deliver: bool`` (default true) so
+  operators can accept-without-delivering via curl. UI always
+  delivers.
+- On Accept-with-delivery: resolve provider from delivery.toml,
+  call ``provider.create_review_request(...)``, write a
+  ``bundle_review_requests`` row, emit ``bundle_delivered``
+  event. On failure, write a ``create_failed`` row with the
+  exception summary — the accept itself still succeeds (the
+  bundle is accepted, just not delivered).
+- Bundle detail page gains a "Delivery" card showing the most-
+  recent ``bundle_review_requests`` row for the bundle. Status
+  pill (created / failed / updated / closed / merged), URL link,
+  branch name, sent_by, sent_at. For ``create_failed`` rows, the
+  error column renders inline so the operator sees what went
+  wrong without grepping logs.
+- Tests: accept-with-delivery happy path (stub LocalPatchProvider,
+  assert row written + event emitted); accept-without-delivery
+  (``deliver=false``); provider-raises (asserts ``create_failed``
+  row + bundle still accepted); UI card renders all five status
+  shapes; UI card absent on bundles with no delivery row.
+
+~120 LOC + ~80 LOC tests. After this slice ships, the full
+operator arc (failure → fix → verify → accept → delivered to
+outbox) is end-to-end usable on the default LocalPatch path.
+
+###### 11d-3 — HTTP base + GitHubProvider
+
+Add the first network provider:
+
+- ``delivery/_http.py`` — thin ``httpx``-based REST client
+  wrapper. Common bits: token auth header injection, rate-limit
+  detection (HTTP 429 + ``X-RateLimit-Remaining: 0``), retry
+  with exponential backoff (max 3 attempts), structured
+  exceptions (``DeliveryAuthError``, ``DeliveryRateLimitError``,
+  ``DeliveryConflictError``, ``DeliveryError``).
+- ``delivery/github.py`` — ``GitHubProvider`` using the base.
+  Three REST calls: list-open-PRs filtered by head branch
+  (idempotency), create-PR, patch-PR-body. Returns
+  ``ReviewRequestResult`` with PR number + URL.
+- Local-clone driver: ``delivery/_git.py`` — ``git fetch`` /
+  ``git checkout -b`` / ``git apply --3way`` / ``git commit -s``
+  with the templated commit message (per the "Mechanism"
+  subsection). Operator clone path from ``$DPORTSV3_OPERATOR_CLONE``
+  env var. Refuses if the clone is dirty or off-base-branch.
+- Tests: monkeypatched ``httpx`` — verifies request shapes
+  (URL, headers, body JSON) for each call; happy paths for
+  create + find + update; 401 → ``DeliveryAuthError``;
+  429 → ``DeliveryRateLimitError`` (no automatic retry past the
+  cap); 422 (PR-exists) → looks up existing and updates body.
+  ``_git`` tests use a real temporary git repo + diff fixture.
+
+~250 LOC + ~200 LOC tests. After 11d-3 ships, ``provider.type
+= "github"`` in ``delivery.toml`` drives the full flow.
+
+###### 11d-4 — GitLab + Gitea providers
+
+Add the remaining two REST providers:
+
+- ``delivery/gitlab.py`` — same three operations against the
+  GitLab API. Project ID configurable in TOML.
+- ``delivery/gitea.py`` — same three operations against the
+  Gitea API. Host configurable in TOML.
+- Both reuse ``_http.py`` and ``_git.py`` from 11d-3 — only
+  the REST endpoint URLs and the JSON shapes differ.
+
+~180 LOC + ~150 LOC tests. The two providers ship together
+because they're substantially identical to GitHub's
+implementation modulo URL shapes.
+
+###### 11d-5 — Operator manual status update
+
+Small UI affordance for the "I just merged this PR" case until
+PR-status polling lands (deferred):
+
+- Bundle detail page's Delivery card gains a "Mark as merged"
+  / "Mark as closed" button (text input optional for a note).
+  Updates the row's status + writes ``last_synced_at`` so the
+  bundle UI reflects the real-world state.
+- New endpoint: ``POST /api/bundles/{id}/delivery/status`` body
+  ``{"status": "merged" | "closed", "note"?: "..."}``.
+- Tests: status update writes row; idempotent re-update with
+  same status; rejects setting status back to ``created`` (one-
+  way state machine).
+
+~60 LOC + ~40 LOC tests. Last slice for v1 11d. Future
+PR-status polling (out of scope for 11d entirely) would slot
+in as a runner-side ``process_delivery_status`` poll loop —
+parallel to ``process_user_context_updates`` / ``process_verify_requests``.
 
 ##### Out of scope for 11d
 
