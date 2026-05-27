@@ -398,3 +398,89 @@ def test_render_via_build_ctx_full_payload():
     assert "ports/devel/foo/Makefile" in out
     assert "cc: error" in out
     assert "Operator Question" in out
+
+
+# --- Step 29c: operator-context history rendering ----------------------------
+
+
+def test_render_omits_operator_context_section_when_empty():
+    out = mh.render_handoff(mh.HandoffCtx(
+        origin="devel/foo", reason=mh.REASON_MANUAL_TIER,
+    ))
+    assert "## Operator Context" not in out
+
+
+def test_render_operator_context_history_orders_rounds_and_labels():
+    history = [
+        {
+            "context_rev": 1,
+            "submitted_at": "2026-05-27T10:00:00+00:00",
+            "text": "first round note about the failure shape",
+            "submitted_by": "tuxillo",
+        },
+        {
+            "context_rev": 2,
+            "submitted_at": "2026-05-27T11:30:00+00:00",
+            "text": "second round — check the configure shim",
+            "submitted_by": None,
+        },
+    ]
+    out = mh.render_handoff(mh.HandoffCtx(
+        origin="devel/foo", reason=mh.REASON_MANUAL_TIER,
+        operator_context_history=history,
+    ))
+    assert "## Operator Context" in out
+    # Round 1 carries operator parenthetical; Round 2 omits when None.
+    assert (
+        "### Round 1 — 2026-05-27T10:00:00+00:00 (operator: tuxillo)"
+    ) in out
+    assert "### Round 2 — 2026-05-27T11:30:00+00:00" in out
+    assert "(operator:" not in out.split("Round 2")[1].split("Round")[0]
+    # Texts appear in submission order.
+    pos1 = out.index("first round note about the failure shape")
+    pos2 = out.index("second round — check the configure shim")
+    assert pos1 < pos2
+    # The section lands before the Operator Question footer.
+    assert out.index("## Operator Context") < out.index("## Operator Question")
+
+
+def test_render_operator_context_history_tolerates_missing_fields():
+    """A history entry with no submitted_at / submitted_by / text
+    should still render a heading line without crashing."""
+    history = [
+        {"context_rev": 1, "text": "only the text"},
+        {"context_rev": 2, "submitted_at": None,
+         "submitted_by": None, "text": None},
+    ]
+    out = mh.render_handoff(mh.HandoffCtx(
+        origin="devel/foo", reason=mh.REASON_MANUAL_TIER,
+        operator_context_history=history,
+    ))
+    assert "## Operator Context" in out
+    assert "### Round 1 — (unknown time)" in out
+    assert "only the text" in out
+    assert "### Round 2 — (unknown time)" in out
+
+
+def test_build_ctx_threads_operator_context_history():
+    history = [
+        {"context_rev": 1, "submitted_at": "ts1",
+         "text": "round one", "submitted_by": "op-a"},
+    ]
+    ctx = mh.build_handoff_ctx(
+        origin="devel/foo",
+        reason=mh.REASON_MANUAL_TIER,
+        operator_context_history=history,
+    )
+    assert ctx.operator_context_history == history
+    # Defensive copy: mutating the input list doesn't leak into ctx.
+    history.append({"context_rev": 2, "submitted_at": "ts2",
+                    "text": "round two", "submitted_by": None})
+    assert len(ctx.operator_context_history) == 1
+
+
+def test_build_ctx_default_operator_context_history_is_empty_list():
+    ctx = mh.build_handoff_ctx(
+        origin="devel/foo", reason=mh.REASON_MANUAL_TIER,
+    )
+    assert ctx.operator_context_history == []

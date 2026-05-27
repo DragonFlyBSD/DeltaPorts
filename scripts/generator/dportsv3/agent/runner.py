@@ -2952,6 +2952,27 @@ def _write_changes_diff(bundle_dir: Path | None, bundle_id: str | None, env: str
         out.write_bytes(diff_bytes)
 
 
+def _load_operator_context_history(
+    run_id: str | None, origin: str | None,
+) -> list[dict]:
+    """Step 29c: read every operator-submitted context round for
+    ``(run_id, origin)`` so ``manual_handoff.md`` can render the
+    full operator-side narrative. Returns ``[]`` if the DB isn't
+    available, the lookup is unscoped, or no rounds exist."""
+    if _state_db_conn is None or not run_id or not origin:
+        return []
+    try:
+        with _state_db_lock:
+            from dportsv3.tracker.agentic_queries import (  # noqa: PLC0415
+                list_user_context_history,
+            )
+            return list_user_context_history(
+                _state_db_conn, run_id, origin,
+            )
+    except Exception:
+        return []
+
+
 def _write_manual_handoff(
     bundle_dir: Path | None,
     bundle_id: str | None,
@@ -2962,6 +2983,7 @@ def _write_manual_handoff(
     reason_detail: str = "",
     decision_extra: dict | None = None,
     patch_result: object | None = None,
+    run_id: str | None = None,
 ) -> None:
     """Render and persist ``analysis/manual_handoff.md`` for an
     escalated job. Best-effort: failures are swallowed so escalation
@@ -2970,6 +2992,7 @@ def _write_manual_handoff(
     try:
         from dportsv3.agent import manual_handoff  # noqa: PLC0415
 
+        history = _load_operator_context_history(run_id, origin)
         ctx = manual_handoff.build_handoff_ctx(
             origin=origin,
             target=target,
@@ -2980,6 +3003,7 @@ def _write_manual_handoff(
             read_bundle_text=read_bundle_text,
             decision_extra=decision_extra,
             patch_result=patch_result,
+            operator_context_history=history,
         )
         body = manual_handoff.render_handoff(ctx).encode("utf-8")
     except Exception as exc:

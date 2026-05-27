@@ -85,6 +85,11 @@ class HandoffCtx:
     changes_diff_summary: str = ""
     # Last failing build
     errors_tail: str = ""
+    # Step 29c: operator-context history, oldest → newest. Each
+    # entry is a dict with keys: context_rev, submitted_at, text,
+    # submitted_by (any of submitted_by may be None). When the
+    # list is empty the rendered handoff omits the section.
+    operator_context_history: list[dict] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -166,6 +171,22 @@ def render_handoff(ctx: HandoffCtx) -> str:
         lines.append("```")
         lines.append("")
 
+    if ctx.operator_context_history:
+        lines.append("## Operator Context")
+        lines.append("")
+        for idx, entry in enumerate(ctx.operator_context_history, start=1):
+            submitted_at = entry.get("submitted_at") or "(unknown time)"
+            submitted_by = entry.get("submitted_by") or ""
+            heading = f"### Round {idx} — {submitted_at}"
+            if submitted_by:
+                heading += f" (operator: {submitted_by})"
+            lines.append(heading)
+            lines.append("")
+            text = (entry.get("text") or "").rstrip()
+            if text:
+                lines.append(text)
+            lines.append("")
+
     lines.append("## Operator Question")
     lines.append("")
     lines.append(_question(ctx))
@@ -232,6 +253,7 @@ def build_handoff_ctx(
     read_bundle_text: ReadBundleText | None = None,
     decision_extra: dict | None = None,
     patch_result: object | None = None,
+    operator_context_history: list[dict] | None = None,
 ) -> HandoffCtx:
     """Assemble a ``HandoffCtx`` from the bundle artifacts available now.
 
@@ -320,6 +342,7 @@ def build_handoff_ctx(
         files_touched=files_touched,
         changes_diff_summary=diff_summary,
         errors_tail=errors_tail,
+        operator_context_history=list(operator_context_history or []),
     )
 
 

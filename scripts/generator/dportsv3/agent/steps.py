@@ -489,6 +489,7 @@ class TriageStep:
                         reason=handoff_reason,
                         reason_detail=dec.reason,
                         decision_extra=dec.extra,
+                        run_id=run_id or None,
                     )
                 except Exception:
                     pass
@@ -635,6 +636,7 @@ def _try_write_handoff(
             reason=reason,
             reason_detail=reason_detail,
             patch_result=patch_result,
+            run_id=ctx.job.get("run_id") or None,
         )
     except Exception:
         pass
