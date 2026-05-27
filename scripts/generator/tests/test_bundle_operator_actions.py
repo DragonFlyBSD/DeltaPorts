@@ -57,6 +57,15 @@ def seeded_db(tmp_path: Path):
                    resolution="accepted", verification_status="verified")
     _insert_bundle(c, "b-rejected",
                    resolution="rejected", verification_status=None)
+    # Seed at least one dev-env so the bundle detail page's Verify
+    # picker renders a non-empty <select> (the new UI disables the
+    # Verify button outright when no envs are registered).
+    c.execute(
+        """INSERT INTO env_health_status
+           (env, status, updated_at) VALUES (?, ?, ?)""",
+        ("verify-env", "healthy", "2026-05-27T00:00:00+00:00"),
+    )
+    c.commit()
     c.close()
     return db_path
 

@@ -95,10 +95,36 @@
            so an operator's manual fix can be verified too. Same
            endpoint, same dispatch. #}
         {% if operator_actions.can_verify %}
-        <button id="op-verify" type="button" class="btn btn-success"
-                data-bundle="{{ bundle.bundle_id }}">
-          Verify
-        </button>
+        {# Env picker replaces the old JS prompt(). The <select>
+           is populated server-side from env_health and the active
+           env is pre-selected; operator just clicks Verify. When
+           no envs are known the button stays disabled with a
+           tooltip explaining what's missing. #}
+        <span style="display:inline-flex;gap:4px;align-items:center;">
+          <button id="op-verify" type="button" class="btn btn-success"
+                  data-bundle="{{ bundle.bundle_id }}"
+                  {% if not operator_actions.verify_envs %}
+                  disabled
+                  title="No dev-envs registered with the tracker. Provision one with `dportsv3 dev-env create ...` first."
+                  {% endif %}>
+            Verify
+          </button>
+          <select id="op-verify-env"
+                  style="font-size:12px;padding:3px 6px;"
+                  {% if not operator_actions.verify_envs %}disabled{% endif %}
+                  title="Dev-env to run the verify build in">
+            {% if not operator_actions.verify_envs %}
+            <option value="">(no envs)</option>
+            {% else %}
+              {% for env_name in operator_actions.verify_envs %}
+              <option value="{{ env_name }}"
+                      {% if env_name == operator_actions.verify_default_env %}selected{% endif %}>
+                {{ env_name }}
+              </option>
+              {% endfor %}
+            {% endif %}
+          </select>
+        </span>
         {% endif %}
         {# Step 11c Accept — agent_fixed lane renders it disabled
            before verification (so the operator sees the path);
@@ -382,8 +408,16 @@
         const preState = snapshotEnabled();
         let body = {};
         if (action === 'verify') {
-          const env = prompt('Dev-env name to verify in:', '');
-          if (!env) { return; }
+          // Env comes from the inline <select> next to the Verify
+          // button — no more prompt(). The select is server-
+          // populated and pre-selects the active env, so the
+          // common case is "click Verify and go".
+          const sel = document.getElementById('op-verify-env');
+          const env = sel ? sel.value : '';
+          if (!env) {
+            statusEl.textContent = 'pick a dev-env to verify in';
+            return;
+          }
           body = {env: env};
         } else if (action === 'reject') {
           const reason = prompt('Rejection reason (will be passed to next triage as user_context):', '');

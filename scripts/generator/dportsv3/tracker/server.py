@@ -2482,6 +2482,35 @@ def create_app(db_path: str | Path) -> Any:
         # show_11c_group — its semantics (re-triage with rejection
         # reason as user_context) make sense only on agent_fixed.
         show_accept_button = actionable or can_accept
+        # Env picker for the Verify button — replaces the old JS
+        # prompt() which forced operators to remember the env name
+        # by hand. Populate from env_health (the tracker's known
+        # set of dev-envs) and default-select the active env. Skip
+        # the lookup when Verify isn't even eligible — keeps the
+        # accept-only / terminal lanes cheap.
+        verify_envs: list[str] = []
+        verify_default_env: str | None = None
+        if verify_eligible:
+            with _conn() as _envs_conn:
+                verify_envs = [
+                    str(r.get("env"))
+                    for r in env_health_statuses(_envs_conn)
+                    if r.get("env")
+                ]
+                verify_default_env = get_active_env(_envs_conn)
+            # If the active env isn't in the health list (cleared,
+            # decommissioned), fall back to the first env. None
+            # stays None when no envs are known at all.
+            if (
+                verify_default_env is not None
+                and verify_default_env not in verify_envs
+            ):
+                verify_default_env = (
+                    verify_envs[0] if verify_envs else None
+                )
+            elif verify_default_env is None and verify_envs:
+                verify_default_env = verify_envs[0]
+
         operator_actions = {
             "show": (actionable or can_take_over or can_discard
                      or can_retry or can_reopen or can_release),
@@ -2498,6 +2527,8 @@ def create_app(db_path: str | Path) -> Any:
             "can_retry": can_retry,
             "can_reopen": can_reopen,
             "can_release": can_release,
+            "verify_envs": verify_envs,
+            "verify_default_env": verify_default_env,
         }
         return templates.TemplateResponse(
             request,
