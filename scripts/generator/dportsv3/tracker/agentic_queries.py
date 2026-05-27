@@ -62,9 +62,23 @@ def agentic_status(conn: sqlite3.Connection) -> dict[str, Any]:
     runs = conn.execute("SELECT count(*) FROM runs").fetchone()[0]
     # Step 9 — surface the open manual-queue depth on the dashboard
     # so operators see "5 ports waiting for me" without first
-    # clicking through.
+    # clicking through. Must use the same definition of "open" as
+    # ``list_manual_requests(open_only=True)`` — otherwise the
+    # dashboard advertises N pending and the queue page renders
+    # empty. The discrepancy arises after a re-triage: the UCR row
+    # is flipped back to status='pending' but last_context_rev_handled
+    # still equals the latest user_context.context_rev, so the
+    # operator has nothing new to act on. status='pending' alone
+    # over-counts those rows.
     manual_pending = conn.execute(
-        "SELECT count(*) FROM user_context_requests WHERE status = 'pending'"
+        """SELECT count(*) FROM user_context_requests AS ucr
+           LEFT JOIN user_context AS uc
+             ON uc.run_id = ucr.run_id AND uc.origin = ucr.origin
+           WHERE ucr.status != 'discarded'
+             AND (COALESCE(uc.context_rev, 0)
+                    > ucr.last_context_rev_handled
+                  OR (COALESCE(uc.context_rev, 0) = 0
+                      AND ucr.last_context_rev_handled = 0))"""
     ).fetchone()[0]
     # Step 20f — convert-job progress by state. open=queued/claimed/converting,
     # done/dead/escalated mirror the global rollup so the operator can read
