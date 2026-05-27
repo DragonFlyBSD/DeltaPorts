@@ -190,6 +190,77 @@ def test_accept_emits_bundle_delivered_event(client, deployment):
     assert payload["provider"] == "local-patch"
 
 
+def test_accept_writes_activity_rows_for_visibility(client, deployment):
+    """Visibility plan: every accept emits a ``bundle_accepted``
+    activity row, and every delivery outcome emits a
+    ``delivery_complete`` activity row — including skips and
+    pre-provider failures that don't write to
+    bundle_review_requests. The prior shape left skipped /
+    config-error deliveries invisible (no row, no event, no log)."""
+    conn = _open(deployment)
+    _seed_bundle(conn, "b-act-happy")
+    sha = _seed_diff_artifact(
+        deployment["artifact_root"], "b-act-happy", _SAMPLE_DIFF,
+    )
+    _insert_artifact_ref(conn, "b-act-happy", "analysis/changes.diff", sha)
+    conn.close()
+
+    resp = client.post("/api/bundles/b-act-happy/accept", json={})
+    assert resp.status_code == 200
+
+    conn = _open(deployment)
+    rows = conn.execute(
+        "SELECT stage, message, extra_json FROM activity_log "
+        "ORDER BY id ASC"
+    ).fetchall()
+    conn.close()
+    stages = [r["stage"] for r in rows]
+    assert "bundle_accepted" in stages
+    assert "delivery_complete" in stages
+    dc = [r for r in rows if r["stage"] == "delivery_complete"][-1]
+    payload = json.loads(dc["extra_json"])
+    assert payload["bundle_id"] == "b-act-happy"
+    assert payload["status"] == "created"
+    assert payload["provider"] == "local-patch"
+
+
+def test_accept_activity_row_records_skipped_delivery(
+    client, deployment, monkeypatch,
+):
+    """A skipped delivery (no_config / no_changes_diff / etc.)
+    still produces an activity row carrying the skip_reason —
+    that's the only durable record an operator can find later."""
+    (deployment["config_dir"] / "delivery.toml").unlink()
+    monkeypatch.delenv("DPORTSV3_DELIVERY_CONFIG", raising=False)
+    # Also clear the repo-anchored fallback by pointing
+    # DPORTSV3_CONFIG_DIR somewhere with no delivery.toml.
+    monkeypatch.setenv(
+        "DPORTSV3_CONFIG_DIR", str(deployment["config_dir"]),
+    )
+
+    conn = _open(deployment)
+    _seed_bundle(conn, "b-act-skip")
+    sha = _seed_diff_artifact(
+        deployment["artifact_root"], "b-act-skip", _SAMPLE_DIFF,
+    )
+    _insert_artifact_ref(conn, "b-act-skip", "analysis/changes.diff", sha)
+    conn.close()
+
+    resp = client.post("/api/bundles/b-act-skip/accept", json={})
+    assert resp.status_code == 200
+
+    conn = _open(deployment)
+    rows = conn.execute(
+        "SELECT extra_json FROM activity_log "
+        "WHERE stage = 'delivery_complete' ORDER BY id DESC LIMIT 1"
+    ).fetchall()
+    conn.close()
+    assert rows
+    payload = json.loads(rows[0]["extra_json"])
+    assert payload["status"] == "skipped"
+    assert payload["skip_reason"] == "no_config"
+
+
 # =====================================================================
 # Skipping paths — accept stays successful, no delivery row
 # =====================================================================

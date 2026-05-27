@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib
 import html
 import json
+import logging
 import os
 import re
 import sqlite3
@@ -92,6 +93,8 @@ from dportsv3.tracker.models import (
     StartBuildResponse,
     UpdatePortStatusRequest,
 )
+
+_LOG = logging.getLogger(__name__)
 
 _fastapi = (
     importlib.import_module("fastapi") if importlib_util.find_spec("fastapi") else None
@@ -991,6 +994,37 @@ def create_app(db_path: str | Path) -> Any:
             "env": env,
         }
 
+    def _activity_log(
+        write_conn: sqlite3.Connection,
+        stage: str,
+        message: str,
+        extra: dict[str, Any] | None = None,
+    ) -> None:
+        """Tracker-side activity_log writer. Mirrors the runner's
+        ``activity_log()`` helper but uses the connection the caller
+        already holds (the runner's is bound to a module global).
+
+        Visibility plan: every accept and every delivery outcome
+        emits one row so operators can see what happened on the
+        bundle detail page's activity ribbon AND via
+        ``dportsv3 tracker get-activity``. Pairs with a daemon-log
+        line for tail-the-log workflows.
+        """
+        from datetime import datetime, timezone  # noqa: PLC0415
+        ts = datetime.now(timezone.utc).isoformat()
+        try:
+            write_conn.execute(
+                """INSERT INTO activity_log
+                       (ts, job_id, stage, message, duration_ms, extra_json)
+                       VALUES (?, NULL, ?, ?, NULL, ?)""",
+                (ts, stage, message,
+                 json.dumps(extra) if extra is not None else None),
+            )
+        except sqlite3.Error as exc:
+            # Activity logging is best-effort — never break an
+            # accept because the activity table couldn't take a row.
+            _LOG.warning("activity_log insert failed: %s", exc)
+
     def _accept_delivery_step(
         *,
         bundle: dict[str, Any],
@@ -1225,6 +1259,25 @@ def create_app(db_path: str | Path) -> Any:
                 "note": (body or {}).get("note"),
             })
 
+            # Visibility plan: activity row + daemon log for every
+            # accept. Pairs with the delivery_complete row below so
+            # operators see the full accept-then-deliver story on
+            # the bundle's activity ribbon and `get-activity` output.
+            accept_msg = (
+                f"bundle {bundle_id} accepted (prior_resolution="
+                f"{prior_resolution!r}, skip_action={skip_action!r})"
+            )
+            _activity_log(
+                write_conn, "bundle_accepted", accept_msg,
+                extra={
+                    "bundle_id": bundle_id,
+                    "prior_resolution": prior_resolution,
+                    "skip_action": skip_action,
+                    "accepted_at": now,
+                },
+            )
+            _LOG.info(accept_msg)
+
             # Step 11d-2: Accept-with-delivery. Best-effort — any
             # exception path here writes a create_failed row and
             # logs but the bundle stays accepted. Skipped silently
@@ -1233,6 +1286,57 @@ def create_app(db_path: str | Path) -> Any:
                 bundle=row,
                 request_body=(body or {}),
                 write_conn=write_conn,
+            )
+
+            # Visibility plan: one activity row + one daemon log
+            # line per delivery outcome, regardless of status. The
+            # prior shape only wrote a bundle_review_requests row
+            # for provider-stage outcomes (created / updated /
+            # provider-raised create_failed); skips and pre-provider
+            # config errors went into a black hole. This row covers
+            # all of them in one stage so a tail / grep / activity-
+            # table render shows the full story.
+            d_status = (delivery or {}).get("status", "unknown")
+            d_skip = (delivery or {}).get("skip_reason")
+            d_url = (delivery or {}).get("url")
+            d_err = (delivery or {}).get("error")
+            d_provider = (delivery or {}).get("provider")
+            d_request = (delivery or {}).get("request_id")
+            if d_status == "skipped":
+                d_msg = (
+                    f"delivery skipped for {bundle_id}: "
+                    f"{d_skip or 'unknown'}"
+                )
+                _LOG.info(d_msg)
+            elif d_status in ("created", "updated"):
+                d_msg = (
+                    f"delivery {d_status} for {bundle_id} "
+                    f"(provider={d_provider}, url={d_url or 'n/a'})"
+                )
+                _LOG.info(d_msg)
+            elif d_status == "create_failed":
+                d_msg = (
+                    f"delivery FAILED for {bundle_id}: "
+                    f"{d_err or 'unspecified error'}"
+                )
+                _LOG.error(d_msg)
+            else:
+                d_msg = (
+                    f"delivery completed for {bundle_id} with "
+                    f"unrecognized status={d_status!r}"
+                )
+                _LOG.warning(d_msg)
+            _activity_log(
+                write_conn, "delivery_complete", d_msg,
+                extra={
+                    "bundle_id": bundle_id,
+                    "status": d_status,
+                    "skip_reason": d_skip,
+                    "provider": d_provider,
+                    "url": d_url,
+                    "request_id": d_request,
+                    "error": d_err,
+                },
             )
         finally:
             write_conn.close()
