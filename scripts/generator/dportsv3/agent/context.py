@@ -68,6 +68,14 @@ class ContextCtx:
     prior_triage_bundle_ids: list[str] = field(default_factory=list)
     prior_patch_bundle_ids: list[str] = field(default_factory=list)
     user_context_text: str | None = None
+    # Step 29e: full operator-context history (oldest → newest) for
+    # the bundle's (run_id, origin). Each entry is a dict with keys
+    # ``context_rev`` / ``submitted_at`` / ``text`` / ``submitted_by``
+    # — matching what list_user_context_history returns. When non-
+    # empty, ``UserContextSection`` renders all rounds verbatim
+    # instead of just ``user_context_text``; the model sees
+    # continuity across operator submissions.
+    user_context_history: list[dict] = field(default_factory=list)
     playbooks_text: str | None = None
     # Automation-context inputs the patch flow pre-loads.
     prior_failure_count: int = 0
@@ -198,14 +206,40 @@ class PlaybooksSection:
 
 @dataclass
 class UserContextSection:
-    """Run-scoped user context. Pre-loaded into ctx.user_context_text."""
+    """Run-scoped user context. Pre-loaded into ctx.user_context_text
+    (single current text) and ctx.user_context_history (every round
+    in submission order).
+
+    When history is non-empty, renders each round as a separate
+    block so the model sees continuity ("consider what I said
+    before" only makes sense with prior rounds visible). When
+    history is empty but a current text exists, falls back to the
+    single-block legacy shape — covers ports that have the text
+    but no history rows (pre-29b submissions) and direct
+    test seeds that set ``user_context_text`` only.
+    """
     name: str = "user_context"
     priority: int = 30
 
     def render(self, ctx: ContextCtx) -> str | None:
-        if not ctx.user_context_text:
-            return None
-        return f"## User Context (run-scoped)\n{ctx.user_context_text}\n"
+        history = ctx.user_context_history or []
+        if history:
+            lines = ["## User Context (run-scoped)"]
+            for idx, entry in enumerate(history, start=1):
+                submitted_at = entry.get("submitted_at") or "(unknown time)"
+                submitted_by = entry.get("submitted_by") or ""
+                heading = f"### Round {idx} — {submitted_at}"
+                if submitted_by:
+                    heading += f" (operator: {submitted_by})"
+                lines.append(heading)
+                text = (entry.get("text") or "").rstrip()
+                if text:
+                    lines.append(text)
+                lines.append("")
+            return "\n".join(lines)
+        if ctx.user_context_text:
+            return f"## User Context (run-scoped)\n{ctx.user_context_text}\n"
+        return None
 
 
 @dataclass

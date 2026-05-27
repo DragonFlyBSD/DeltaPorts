@@ -1543,6 +1543,11 @@ def build_triage_payload(
                 break
 
     user_context_text, _ = get_user_context(run_id, origin)
+    # Step 29e: load every operator round so UserContextSection
+    # can render history, not just the latest overwrite. The
+    # current ``user_context_text`` is kept for the empty-history
+    # fallback path (pre-29b submissions, test seeds).
+    user_context_history = _load_operator_context_history(run_id, origin)
     # Triage runs BEFORE classification is known — we attach
     # entries that don't require a classification (the entry's
     # `triggers.classifications` is empty / wildcard) or whose
@@ -1572,6 +1577,7 @@ def build_triage_payload(
         sibling_bundle_ids=sibling_ids,
         prior_triage_bundle_ids=prior_triage_ids,
         user_context_text=user_context_text or None,
+        user_context_history=user_context_history,
         playbooks_text=playbook_selection.text or None,
         read_bundle_text=read_bundle_text,
         bundle_artifact_list=bundle_artifact_list,
@@ -1624,6 +1630,10 @@ def build_patch_payload(
     )
 
     user_context_text, _ = get_user_context(run_id, origin)
+    # Step 29e: same history wiring as triage — patch flow also
+    # benefits from seeing every operator round, not just the
+    # latest overwrite.
+    user_context_history = _load_operator_context_history(run_id, origin)
     # Patch flow: classification is known from the prior triage in
     # this bundle. Extract from triage.md so the selector can match
     # `triggers.classifications`. Intent triggers fire at
@@ -1659,6 +1669,7 @@ def build_patch_payload(
         sibling_bundle_ids=sibling_ids,
         prior_patch_bundle_ids=prior_patch_ids,
         user_context_text=user_context_text or None,
+        user_context_history=user_context_history,
         playbooks_text=playbook_selection.text or None,
         prior_failure_count=prior_failures,
         window_hours=window_hours,

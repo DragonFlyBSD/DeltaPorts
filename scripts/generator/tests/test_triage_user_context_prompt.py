@@ -87,3 +87,71 @@ def test_payload_includes_user_context_section_when_present(
     payload = runner.build_triage_payload(bdir, None, job)
     assert "## User Context (run-scoped)" in payload
     assert operator_text in payload
+
+
+def test_payload_renders_full_operator_context_history_when_present(
+    tmp_path, monkeypatch,
+):
+    """Step 29e: when user_context_history is non-empty, the triage
+    payload renders each round verbatim (Round 1, 2, 3 in submission
+    order) instead of just the latest overwrite. Without this, the
+    model sees only the last operator message and can't follow
+    references like "consider what I said before"."""
+    bdir = _minimal_bundle(tmp_path)
+    monkeypatch.setattr(
+        runner, "get_user_context",
+        lambda *a, **kw: ("round three text", 3),
+    )
+    history = [
+        {"context_rev": 1, "submitted_at": "2026-05-27T10:00:00Z",
+         "text": "round one text", "submitted_by": "alice"},
+        {"context_rev": 2, "submitted_at": "2026-05-27T11:00:00Z",
+         "text": "round two text", "submitted_by": None},
+        {"context_rev": 3, "submitted_at": "2026-05-27T12:00:00Z",
+         "text": "round three text", "submitted_by": "alice"},
+    ]
+    monkeypatch.setattr(
+        runner, "_load_operator_context_history",
+        lambda *a, **kw: history,
+    )
+    job = {
+        "origin": "devel/foo", "run_id": "run-1",
+        "snippet_round": "0", "has_snippets": "false",
+    }
+    payload = runner.build_triage_payload(bdir, None, job)
+    assert "## User Context (run-scoped)" in payload
+    # Each round renders with its timestamp + heading.
+    assert "### Round 1 — 2026-05-27T10:00:00Z (operator: alice)" in payload
+    # Anonymous round omits the operator parenthetical.
+    assert "### Round 2 — 2026-05-27T11:00:00Z" in payload
+    # All three texts present in submission order.
+    pos1 = payload.index("round one text")
+    pos2 = payload.index("round two text")
+    pos3 = payload.index("round three text")
+    assert pos1 < pos2 < pos3
+
+
+def test_payload_falls_back_to_single_text_when_history_empty(
+    tmp_path, monkeypatch,
+):
+    """Empty history + non-empty current text → legacy single-block
+    rendering. Covers pre-29b submissions whose history table rows
+    don't exist, and direct test seeds."""
+    bdir = _minimal_bundle(tmp_path)
+    monkeypatch.setattr(
+        runner, "get_user_context",
+        lambda *a, **kw: ("legacy single-block text", 1),
+    )
+    monkeypatch.setattr(
+        runner, "_load_operator_context_history",
+        lambda *a, **kw: [],
+    )
+    job = {
+        "origin": "devel/foo", "run_id": "run-1",
+        "snippet_round": "0", "has_snippets": "false",
+    }
+    payload = runner.build_triage_payload(bdir, None, job)
+    assert "## User Context (run-scoped)" in payload
+    assert "legacy single-block text" in payload
+    # Legacy shape has no Round headings.
+    assert "### Round" not in payload
