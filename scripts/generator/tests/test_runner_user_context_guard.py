@@ -106,7 +106,7 @@ def runner_db(tmp_path, monkeypatch):
 
 
 @pytest.mark.parametrize("blocking_state", [
-    "queued", "claimed", "triaging", "triaged", "patching", "verifying",
+    "queued", "claimed", "triaging", "patching", "verifying",
 ])
 def test_active_same_origin_job_blocks_retriage(runner_db, blocking_state):
     conn, queue_root, enqueued = runner_db
@@ -121,6 +121,29 @@ def test_active_same_origin_job_blocks_retriage(runner_db, blocking_state):
     ).fetchone()
     assert row["status"] == "pending"
     assert row["last_context_rev_handled"] == 0
+
+
+def test_triaged_handoff_state_does_not_block_retriage(runner_db):
+    """Triage's TRIAGED state is a hand-off point: TRIAGE_OK landed
+    it there and triage spawned a patch, but there's no follow-up
+    event to transition it past TRIAGED. The real in-flight work
+    is the patch (queued/patching/etc., still counted as active).
+    A stale TRIAGED job from a prior triage-and-handoff cycle must
+    not block fresh operator-context retriage; that produced 5s
+    retriage_blocked log spam on bundles whose patch went terminal.
+    """
+    conn, queue_root, enqueued = runner_db
+    _seed(conn, job_state="triaged")
+
+    runner.process_user_context_updates(queue_root)
+
+    # Retriage proceeds — the TRIAGED hand-off job doesn't count.
+    assert len(enqueued) == 1
+    assert enqueued[0]["origin"] == "devel/foo"
+    row = conn.execute(
+        "SELECT status FROM user_context_requests"
+    ).fetchone()
+    assert row["status"] == "retriage_enqueued"
 
 
 @pytest.mark.parametrize("terminal_state", ["done", "dead", "escalated"])
