@@ -48,9 +48,11 @@ class LocalPatchProvider:
     into (caller resolves from ``$DPORTSV3_DELIVERY_OUTBOX`` via
     ``DeliveryConfig.outbox``).
 
-    Refuses to ``mkdir`` the outbox — it should be set up
-    deliberately by the operator. A missing outbox is a config
-    error, not something we silently work around.
+    The outbox itself must be created by the operator — a missing
+    outbox is a config error, not something we silently work around.
+    Subdirectories *under* the outbox (driven by branch names with
+    ``/`` separators, e.g. ``agentic/devel-foo-<ts>``) are created
+    on demand via ``mkdir(parents=True)``.
     """
     outbox: Path
     name: Final[str] = "local-patch"

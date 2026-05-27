@@ -995,14 +995,18 @@ def create_app(db_path: str | Path) -> Any:
         bundle: dict[str, Any],
         request_body: dict[str, Any],
         write_conn: sqlite3.Connection,
-    ) -> dict[str, Any] | None:
+    ) -> dict[str, Any]:
         """Step 11d-2: optional delivery side-effect on Accept.
 
-        Returns a small dict for the accept response when delivery
-        was attempted (regardless of outcome), or None when delivery
-        was deliberately skipped (operator passed deliver=false, or
-        no delivery.toml is configured, or the bundle has no
-        changes.diff to push).
+        Always returns a dict carrying the outcome for the accept
+        response. ``status`` is one of:
+          - ``created`` / ``updated`` — provider succeeded.
+          - ``create_failed`` — provider raised; a create_failed row
+            is also written for operator visibility.
+          - ``skipped`` — delivery wasn't attempted; ``skip_reason``
+            names which gate fired (``operator_optout``,
+            ``no_config``, ``no_changes_diff``, ``changes_diff_empty``,
+            ``changes_diff_unreadable``).
 
         The bundle accept itself never depends on delivery — any
         exception in here writes a create_failed row and returns a
@@ -1232,17 +1236,18 @@ def create_app(db_path: str | Path) -> Any:
         finally:
             write_conn.close()
 
-        response: dict[str, Any] = {
+        return {
             "ok": True,
             "bundle_id": bundle_id,
             "resolution": "accepted",
             "accepted_at": now,
             "prior_resolution": prior_resolution,
             "skip_action": skip_action,
+            # _accept_delivery_step always returns a dict (skipped /
+            # created / updated / create_failed), so `delivery` is
+            # always present on the response.
+            "delivery": delivery,
         }
-        if delivery is not None:
-            response["delivery"] = delivery
-        return response
 
     @app.post("/api/bundles/{bundle_id}/reject")
     def api_bundle_reject(

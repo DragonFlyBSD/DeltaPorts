@@ -79,9 +79,6 @@ def resolve_config(
         config_dir = env.get("DPORTSV3_CONFIG_DIR", "").strip()
         if not config_dir:
             return None
-        path = Path(config_dir) / "delivery.token"  # presence probe
-        # Actually look for the toml file, not the token. The probe
-        # above was a typo; check the canonical location.
         path = Path(config_dir) / "delivery.toml"
     if not path.is_file():
         return None
