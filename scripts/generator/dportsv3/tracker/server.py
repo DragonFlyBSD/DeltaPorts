@@ -35,6 +35,7 @@ from dportsv3.tracker.agentic_queries import (
     get_job,
     get_manual_request,
     get_run,
+    is_origin_skipped,
     job_events_for_job,
     list_bundles,
     list_jobs,
@@ -45,6 +46,7 @@ from dportsv3.tracker.agentic_queries import (
     port_attempt_summary,
     recent_activity,
     runner_status,
+    set_origin_skip,
     token_usage_for_job,
     token_usage_for_port,
     upsert_user_context_text,
@@ -1117,6 +1119,152 @@ def create_app(db_path: str | Path) -> Any:
             "reason": reason,
         }
 
+    @app.post("/api/bundles/{bundle_id}/take-over")
+    def api_bundle_take_over(
+        bundle_id: str, body: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Operator take-over of a failed bundle (Step 28a).
+
+        Stakes the (target, origin) pair so the runner stops competing
+        with the operator's manual work. Sets bundle.resolution to
+        ``operator_owned`` (non-terminal — Step 11c's Verify/Accept
+        path can still fire from this state) and opens a row in
+        ``origin_skip_flags`` so subsequent dsynth hooks for the same
+        pair produce a tombstone bundle instead of fresh triage.
+
+        Allowed only from failure resolutions
+        (``agent_budget_exhausted`` / ``agent_gave_up`` /
+        ``escalated_manual``). 409 from already-terminal accept/reject
+        or already-operator_owned. 404 if bundle unknown.
+
+        Body (all optional):
+          - ``operator``: freeform identifier (defaults to "operator");
+            integrating with the auth model is Step 17 territory.
+          - ``reason``: short note describing the take-over context;
+            defaults to a generic label.
+        """
+        from datetime import datetime, timezone  # noqa: PLC0415
+
+        operator = ((body or {}).get("operator") or "operator").strip()
+        reason = ((body or {}).get("reason") or "operator take-over").strip()
+        if not operator:
+            operator = "operator"
+        if not reason:
+            reason = "operator take-over"
+
+        with _conn() as conn:
+            row = get_bundle(conn, bundle_id)
+        if row is None:
+            raise HTTPException(
+                status_code=404, detail=f"Unknown bundle: {bundle_id}",
+            )
+        current_resolution = row.get("resolution")
+        if current_resolution in ("accepted", "rejected", "discarded"):
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"Cannot take over bundle in terminal state "
+                    f"{current_resolution!r}"
+                ),
+            )
+        if current_resolution == "operator_owned":
+            raise HTTPException(
+                status_code=409,
+                detail="Bundle is already operator_owned",
+            )
+        # The take-over is meaningful only on failure-shaped bundles.
+        # Success-shaped ones (agent_fixed) have Step 11c's
+        # Accept/Reject as the appropriate operator action surface;
+        # a takeover there would muddle the resolution lane.
+        allowed_from = {
+            "agent_budget_exhausted", "agent_gave_up",
+            "escalated_manual", "convert_gave_up", None,
+        }
+        if current_resolution not in allowed_from:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"Take-over is for failure-shaped bundles; "
+                    f"current resolution is {current_resolution!r}"
+                ),
+            )
+
+        target = (row.get("target") or "").strip()
+        origin = (row.get("origin") or "").strip()
+        if not target or not origin:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "Bundle is missing target/origin metadata; cannot "
+                    "open a skip lock for the (target, origin) pair"
+                ),
+            )
+
+        now = datetime.now(timezone.utc).isoformat()
+        write_conn = sqlite3.connect(
+            str(app.state.db_path), check_same_thread=False,
+            isolation_level=None,
+        )
+        write_conn.row_factory = sqlite3.Row
+        try:
+            # Pre-check the open-lock invariant against a different
+            # bundle for the same (target, origin) pair — could happen
+            # if the operator already took over a sibling bundle.
+            existing = is_origin_skipped(write_conn, target, origin)
+            if existing is not None and existing.get("bundle_id") != bundle_id:
+                raise HTTPException(
+                    status_code=409,
+                    detail=(
+                        f"(target={target!r}, origin={origin!r}) is "
+                        f"already locked by bundle "
+                        f"{existing.get('bundle_id')!r}; un-skip it first"
+                    ),
+                )
+            write_conn.execute("BEGIN IMMEDIATE")
+            try:
+                write_conn.execute(
+                    """UPDATE bundles SET
+                           resolution = 'operator_owned',
+                           taken_over_at = ?,
+                           taken_over_by = ?,
+                           last_seen_at = ?
+                       WHERE bundle_id = ?""",
+                    (now, operator, now, bundle_id),
+                )
+                if existing is None:
+                    set_origin_skip(
+                        write_conn,
+                        target=target, origin=origin,
+                        set_by=operator,
+                        reason=reason,
+                        bundle_id=bundle_id,
+                    )
+                write_conn.execute("COMMIT")
+            except Exception:
+                write_conn.execute("ROLLBACK")
+                raise
+            from dportsv3.artifact_store import emit_event  # noqa: PLC0415
+            emit_event(write_conn, "bundle_taken_over", {
+                "bundle_id": bundle_id,
+                "target": target,
+                "origin": origin,
+                "taken_over_at": now,
+                "taken_over_by": operator,
+                "reason": reason,
+            })
+        finally:
+            write_conn.close()
+
+        return {
+            "ok": True,
+            "bundle_id": bundle_id,
+            "resolution": "operator_owned",
+            "taken_over_at": now,
+            "taken_over_by": operator,
+            "target": target,
+            "origin": origin,
+        }
+
     @app.get("/api/ports/{origin:path}")
     def api_port_bundles(
         origin: str,
@@ -1291,14 +1439,35 @@ def create_app(db_path: str | Path) -> Any:
         # Reject is always enabled on the non-terminal cases — the
         # operator can refuse without verifying for obviously-wrong
         # fixes.
-        actionable = (bundle is not None
-                      and bundle.get("resolution") == "agent_fixed")
+        resolution = (bundle.get("resolution") if bundle else None)
+        actionable = resolution == "agent_fixed"
+        # Step 28a: take-over action shows on failure-shaped
+        # resolutions. The endpoint itself also accepts a NULL
+        # resolution (a CLI user can stake a fresh bundle before
+        # the loop touches it), but the UI surfacing is narrower —
+        # surfacing it on a brand-new bundle that hasn't yet been
+        # triaged would be racy and visually noisy. Terminal
+        # states (accepted/rejected/discarded) and already-
+        # operator_owned exclude it.
+        failure_resolutions = {
+            "agent_budget_exhausted",
+            "agent_gave_up",
+            "escalated_manual",
+            "convert_gave_up",
+        }
+        can_take_over = (
+            bundle is not None
+            and resolution in failure_resolutions
+            and bool(bundle.get("target"))
+            and bool(bundle.get("origin"))
+        )
         operator_actions = {
-            "show": actionable,
+            "show": actionable or can_take_over,
             "can_verify": actionable,
             "can_accept": (actionable
                            and bundle.get("verification_status") == "verified"),
             "can_reject": actionable,
+            "can_take_over": can_take_over,
         }
         return templates.TemplateResponse(
             request,

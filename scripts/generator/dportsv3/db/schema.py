@@ -320,6 +320,33 @@ MIGRATIONS: tuple[str, ...] = (
     "ON verify_requests(status, requested_at)",
     "CREATE INDEX IF NOT EXISTS idx_verify_requests_bundle "
     "ON verify_requests(bundle_id, requested_at)",
+    # Step 28a: operator take-over on failed bundles. The operator
+    # stakes a (target, origin) pair via POST /api/bundles/{id}/
+    # take-over; the bundle's resolution moves to 'operator_owned'
+    # (non-terminal — Verify/Accept from Step 11c can still fire)
+    # and a row lands in origin_skip_flags so subsequent dsynth
+    # hooks for the same (target, origin) produce a tombstone
+    # bundle instead of fresh triage. taken_over_by is freeform
+    # today; integrating with the auth model is Step 17 territory.
+    "ALTER TABLE bundles ADD COLUMN taken_over_at TEXT",
+    "ALTER TABLE bundles ADD COLUMN taken_over_by TEXT",
+    """CREATE TABLE IF NOT EXISTS origin_skip_flags (
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        target          TEXT NOT NULL,
+        origin          TEXT NOT NULL,
+        set_by          TEXT NOT NULL DEFAULT 'operator',
+        set_at          TEXT NOT NULL,
+        reason          TEXT NOT NULL,
+        bundle_id       TEXT,
+        cleared_at      TEXT,
+        cleared_by      TEXT
+    )""",
+    # Partial-unique index: at most one OPEN lock per (target, origin).
+    # Cleared rows accumulate as forensics and don't block re-locking.
+    "CREATE UNIQUE INDEX IF NOT EXISTS uq_origin_skip_flags_open "
+    "ON origin_skip_flags(target, origin) WHERE cleared_at IS NULL",
+    "CREATE INDEX IF NOT EXISTS idx_origin_skip_flags_lookup "
+    "ON origin_skip_flags(target, origin, cleared_at)",
 )
 
 

@@ -2255,6 +2255,85 @@ def _finish_orchestrator_run(
     return True, status_str
 
 
+def _maybe_skip_locked_origin(
+    *,
+    queue_root: Path,
+    job: dict,
+    job_id: str,
+    sibling_paths: list[Path] | None,
+    origin: str,
+) -> tuple[bool, str] | None:
+    """Step 28a: short-circuit triage when the operator has staked
+    (target, origin) via take-over.
+
+    Returns None when the origin is not locked (triage proceeds
+    normally), or a ``(True, status)`` tuple to retire the job
+    immediately. Idempotent: a second triage for a still-locked
+    origin produces the same short-circuit + a fresh activity row
+    so each bypass is observable. Best-effort lookup — DB errors
+    don't block triage, just log and proceed.
+    """
+    from dportsv3.agent.lifecycle import JobEvent
+
+    if _state_db_conn is None:
+        return None
+    target = job.get("target") or os.environ.get(
+        "DPORTSV3_TRACKER_TARGET", "",
+    )
+    if not target:
+        return None
+
+    try:
+        with _state_db_lock:
+            from dportsv3.tracker.agentic_queries import (  # noqa: PLC0415
+                is_origin_skipped,
+            )
+            lock = is_origin_skipped(_state_db_conn, target, origin)
+    except sqlite3.Error as exc:
+        log(queue_root, "WARN",
+            f"skip-lock lookup failed for {origin}: {exc}; proceeding")
+        return None
+
+    if lock is None:
+        return None
+
+    locked_bundle = lock.get("bundle_id") or "?"
+    set_by = lock.get("set_by") or "?"
+    reason = lock.get("reason") or ""
+    activity_log(
+        queue_root, "hook_skipped_origin_locked",
+        (
+            f"{origin}: origin locked by bundle {locked_bundle} "
+            f"({set_by}); triage skipped"
+        ),
+        job_id=job_id,
+        extra={
+            "origin": origin,
+            "target": target,
+            "locking_bundle_id": locked_bundle,
+            "locked_by": set_by,
+            "lock_reason": reason,
+        },
+    )
+    # Retire the job DEAD with a distinct retire_reason. ABANDON
+    # is the closest existing terminal event (operator-driven
+    # retire). The detail field carries the lock info for forensics.
+    # Fan out to siblings so a multi-job triage fanout doesn't leave
+    # parallel jobs stuck in TRIAGING after this lead bypasses.
+    detail = {
+        "skipped_because": "origin_locked",
+        "locking_bundle_id": locked_bundle,
+        "locked_by": set_by,
+        "lock_reason": reason,
+        "origin": origin,
+        "target": target,
+    }
+    _apply_transition(job_id, JobEvent.ABANDON, detail=detail)
+    for s in sibling_paths or ():
+        _apply_transition(s.name, JobEvent.ABANDON, detail=detail)
+    return True, f"origin_locked_by:{locked_bundle}"
+
+
 def _maybe_defer_to_convert(
     *,
     queue_root: Path,
@@ -2482,6 +2561,24 @@ def process_triage_job(
 
     origin = job.get("origin", "unknown")
     job_id = job_path.name
+
+    # ---- Step 28a: operator-owned origin short-circuit ------------
+    # If the operator has staked (target, origin) via take-over,
+    # don't burn cycles on this triage. Mark the job DEAD with a
+    # distinct retire_reason so the manual queue and lineage
+    # queries can tell "skipped because operator owns this" apart
+    # from "actually failed." Emit an activity row so the bypass
+    # is observable; reference the bundle that triggered the lock
+    # for forensics. The bundle row itself is left alone — the
+    # hook's failure record is unchanged; only the triage path
+    # short-circuits.
+    skipped = _maybe_skip_locked_origin(
+        queue_root=queue_root, job=job, job_id=job_id,
+        sibling_paths=sibling_paths, origin=origin,
+    )
+    if skipped is not None:
+        return skipped
+    # ---------------------------------------------------------------
 
     # ---- Step 20d: lazy convert hook ------------------------------
     deferred = _maybe_defer_to_convert(

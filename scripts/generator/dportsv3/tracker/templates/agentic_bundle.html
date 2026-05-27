@@ -108,6 +108,18 @@
                 {% if not operator_actions.can_reject %}disabled{% endif %}>
           Reject
         </button>
+        {# Step 28a: Take over — operator stakes (target, origin)
+           so the runner stops competing with the manual work. Only
+           shown on failure-shaped bundles; the success-side matrix
+           above is unaffected. #}
+        {% if operator_actions.can_take_over %}
+        <button id="op-take-over" type="button"
+                data-bundle="{{ bundle.bundle_id }}"
+                style="font-size:12px;padding:4px 10px;"
+                title="Stake this (target, origin) — runner stops auto-processing it until un-skipped">
+          Take over
+        </button>
+        {% endif %}
         <span id="op-status" style="color:var(--text-dim);font-size:11px;"></span>
       </div>
     </div>
@@ -140,6 +152,13 @@
           const reason = prompt('Rejection reason (will be passed to next triage as user_context):', '');
           if (!reason) { return; }
           body = {reason: reason};
+        } else if (action === 'take-over') {
+          const reason = prompt(
+            'Take-over reason (visible in activity log + skip-flag forensics):',
+            'operator is fixing this manually'
+          );
+          if (reason === null) { return; }  // explicit cancel
+          body = {reason: reason || 'operator take-over'};
         }
         // Disable all buttons immediately so a double-click can't
         // enqueue a second verify (or fire accept while verify is
