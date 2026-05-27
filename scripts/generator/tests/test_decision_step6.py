@@ -229,9 +229,14 @@ def test_manual_classification_short_circuits_before_cap(policy):
     assert "escalation_cause" not in d.extra
 
 
-def test_fresh_context_does_not_unblock_manual_classification(policy):
-    """Even with fresh user context, classification=MANUAL still
-    escalates. Context only resets the patch_cap rule."""
+def test_fresh_context_promotes_manual_classification_to_assist(policy):
+    """Step 29-A1: a MANUAL-tier classification with fresh operator
+    context auto-promotes to ASSIST instead of escalating. Before
+    A1 this was a structural dead-end — the /retry-with-context UX
+    re-triaged, reproduced the same classification, and re-
+    escalated forever. Now the patch agent gets a chance to apply
+    the operator's directive. The patch-cap counter does not reset
+    here (this rule fires before the patch-cap branch in decide())."""
     h = PortHistory(
         target="@t", origin="x/y",
         failed_patch_attempts=5,
@@ -239,7 +244,10 @@ def test_fresh_context_does_not_unblock_manual_classification(policy):
     )
     d = _decide(h, policy, classification="missing-dep",
                 confidence="high", max_attempts=3)
-    assert d.action == "escalate_manual"
+    assert d.action == "auto_patch"
+    assert d.tier.name == "ASSIST"
+    assert d.extra["original_tier"] == "MANUAL"
+    assert d.extra["promoted_via"] == "user_context"
 
 
 # --- (7) extra dict shape sanity -------------------------------------------

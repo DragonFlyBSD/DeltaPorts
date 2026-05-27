@@ -4292,13 +4292,77 @@ page) pick up the new content for free.
 - End-to-end: submit context twice via `/retry`, verify the
   bundle's re-rendered `manual_handoff.md` shows both rounds.
 
+**29-A1 — policy-layer MANUAL → ASSIST promotion under operator
+context** (decision.py, ~25 lines):
+
+Added after the redis smoke test demonstrated that 29a's prompt-
+side instruction was insufficient on its own. The structural
+issue: `policy.tier_for` is a pure classification → tier lookup,
+and `missing-dep` / `fetch-error` / `runtime-error` /
+`dependency-conflict` / `unknown` are unconditional MANUAL in
+`agentic-policy.json`. Even when the triage model produces a
+classification that fits semantically (e.g. "Missing md5sum" →
+`missing-dep`), the operator cannot escape MANUAL routing —
+every /retry-with-context loop re-classifies and re-escalates.
+
+The fix lives in `decide()`'s rule (2): when classification
+resolves to MANUAL **and** `PortHistory.has_fresh_user_context`
+is true, return an `auto_patch` Decision at ASSIST tier instead
+of `escalate_manual`. The patch agent then runs and gets the
+operator's directive via `UserContextSection` (already in
+`PATCH_SECTIONS`) plus any prior `changes.diff` via
+`PriorAttemptsSection`.
+
+`has_fresh_user_context` is the existing signal (already used
+by rule (3), the patch-cap-with-context branch). No new wiring;
+just a sub-branch inside rule (2).
+
+Trade-off accepted: operator with bad context can push a
+hopeless port into the patch agent and burn ASSIST budget. The
+patch agent's "give up cleanly" path handles this; the budget
+caps it.
+
+**29d — extend `PriorTriagesSection` with prior patch artifacts**
+(context.py, ~30 lines):
+
+Triage payload currently pulls only `triage.md` +
+`rebuild_proof.json` from past bundles. After the redis case
+(operator Round 3: "i don't see you tried to find gmd5sum in
+the extracted source"), the model needs to see what the patch
+agent already tried — but `analysis/changes.diff`, `patch.md`,
+`patch_audit.json`, `tool_trace.jsonl` are pulled only by
+`PATCH_SECTIONS.PriorAttemptsSection`, and patch never runs on
+MANUAL.
+
+Extend `PriorTriagesSection` (or add a sibling
+`PriorPatchEvidenceSection` to `TRIAGE_SECTIONS`) that pulls
+`changes.diff` and a `patch.md` tail from past bundles, with
+tighter char caps than the patch flow's section. Useful even
+with 29-A1 in place — gives the first-pass triage better
+evidence so the Suggested Fix is informed.
+
+**29e — render operator-context history in the triage payload**
+(context.py, ~15 lines):
+
+`UserContextSection` renders only the single overwriting
+`user_context.context_text`. The history table populated by 29b
+is read by `manual_handoff.py` but not by the triage payload.
+Change the section to render all rounds in submission order
+(or add a sibling section keyed off `operator_context_history`)
+so the model has continuity across operator submissions —
+Round 3's "consider what I said before" only makes sense with
+Round 1+2 visible.
+
 #### Out of scope
 
-- Policy-layer override that promotes MANUAL → ASSIST when
-  operator context is present. Considered and dropped — 29a
-  is the cleaner lever (model reclassifies → policy routes
-  naturally). Revisit only if 29a proves insufficient on
-  multiple real ports.
+- ~~Policy-layer override that promotes MANUAL → ASSIST when
+  operator context is present.~~ **Pulled back in as Step 29-A1
+  after the redis smoke test (commit 629f658ccf4 …). 29a alone
+  was insufficient: three rounds of operator context on
+  databases/redis, all three triages classified `missing-dep`
+  (a semantically obvious fit for "Missing md5sum"), all
+  routed to MANUAL. The prompt instruction couldn't overcome
+  the classification-list ambiguity. See Step 29-A1 below.**
 - Operator identity / auth. `submitted_by` is a freeform
   string for now, matching Step 28's `taken_over_by`. Step 17
   territory.

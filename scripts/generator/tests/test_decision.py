@@ -124,6 +124,83 @@ def test_unknown_classification_routes_manual():
     assert d.action == "escalate_manual"
 
 
+# --- Step 29-A1: operator-context promotion of MANUAL → ASSIST ---
+
+
+def test_manual_classification_with_fresh_user_context_promotes_to_assist():
+    """Step 29-A1: when a triage classification would route to MANUAL
+    but the operator has provided fresh context, the decision is
+    auto_patch at ASSIST tier so the patch agent can act on the
+    operator's directive. Without this promotion the /retry-with-
+    context UX is a dead-end for missing-dep / fetch-error /
+    runtime-error / dependency-conflict / unknown."""
+    history = PortHistory(
+        target="@test", origin="foo/bar",
+        has_fresh_user_context=True,
+    )
+    d = decide(
+        "missing-dep", "high",
+        history,
+        _FakeHealth(status="ready"),
+        _make_policy(),
+    )
+    assert d.action == "auto_patch"
+    assert d.tier.name == "ASSIST"
+    assert d.extra["original_tier"] == "MANUAL"
+    assert d.extra["promoted_via"] == "user_context"
+    assert "MANUAL" in d.reason and "ASSIST" in d.reason
+
+
+def test_manual_promotion_uses_assist_budget_not_manual():
+    """Promoted decision carries the ASSIST tier's budget, not
+    MANUAL's empty {} tier — otherwise the patch step would inherit
+    zero iterations / zero tokens and bail before running."""
+    history = PortHistory(
+        target="@test", origin="foo/bar",
+        has_fresh_user_context=True,
+    )
+    d = decide(
+        "fetch-error", "low",
+        history,
+        _FakeHealth(status="ready"),
+        _make_policy(),
+    )
+    assert d.tier.name == "ASSIST"
+    assert d.tier.max_iterations > 0
+    assert d.tier.max_tokens > 0
+
+
+def test_manual_without_user_context_still_escalates():
+    """Negative: the promotion only fires when operator context is
+    present. A fresh MANUAL classification with empty history
+    still escalates."""
+    d = decide(
+        "missing-dep", "high",
+        _empty_history(),
+        _FakeHealth(status="ready"),
+        _make_policy(),
+    )
+    assert d.action == "escalate_manual"
+    assert d.tier.name == "MANUAL"
+
+
+def test_env_broken_still_short_circuits_even_with_user_context():
+    """Step 6 priority order is preserved: env_broken outranks the
+    MANUAL-with-context promotion. The promotion is rule (2)'s
+    sub-branch, not a rule that fires before (1)."""
+    history = PortHistory(
+        target="@test", origin="foo/bar",
+        has_fresh_user_context=True,
+    )
+    d = decide(
+        "missing-dep", "high",
+        history,
+        _FakeHealth(status="broken"),
+        _make_policy(),
+    )
+    assert d.action == "skip"
+
+
 def test_auto_high_clean_history_auto_patches():
     d = decide(
         "plist-error", "high",

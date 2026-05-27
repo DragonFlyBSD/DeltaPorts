@@ -288,8 +288,35 @@ def decide(
 
     resolved = tier_for(policy, classification, confidence)
 
-    # (2) Triage routes to MANUAL by classification/confidence.
+    # (2) Triage routes to MANUAL by classification/confidence —
+    # *unless* the operator has provided fresh context. Step 29-A1:
+    # the MANUAL-tier classifications (missing-dep, fetch-error,
+    # runtime-error, dependency-conflict, unknown) are unconditional
+    # in the policy table, which makes the operator's /retry-with-
+    # context UX a dead-end — every round re-classifies the same way
+    # and re-escalates. When operator context is present we promote
+    # MANUAL → ASSIST so the patch agent runs and gets a chance to
+    # apply the operator's directive. The patch agent sees the
+    # operator's text via UserContextSection in PATCH_SECTIONS and
+    # any prior changes.diff via PriorAttemptsSection.
     if resolved.name == "MANUAL":
+        if history.has_fresh_user_context:
+            promoted = policy.tiers.get("ASSIST") or Tier(name="ASSIST")
+            return Decision(
+                action="auto_patch",
+                tier=promoted,
+                reason=(
+                    f"classification={classification} confidence={confidence} "
+                    f"would resolve to MANUAL but fresh operator context "
+                    f"promotes to ASSIST"
+                ),
+                extra={
+                    "classification": classification,
+                    "confidence": confidence,
+                    "original_tier": "MANUAL",
+                    "promoted_via": "user_context",
+                },
+            )
         return Decision(
             action="escalate_manual",
             tier=resolved,
