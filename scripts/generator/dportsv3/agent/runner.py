@@ -2300,6 +2300,82 @@ def _finish_orchestrator_run(
     return True, status_str
 
 
+def _drop_bundle_branch_for_job(
+    *,
+    queue_root: Path,
+    job_id: str,
+    env: str | None,
+    bundle_id: str | None,
+    job_type: str,
+    reason: str,
+) -> None:
+    """Step 30 slice 4: drop the bundle's branch at terminal job
+    end. Called from the dispatch after the job's
+    success/failure verdict is known.
+
+    Lifecycle: convert success keeps the branch (the next patch
+    job for the same bundle_id will reuse it). Convert failure,
+    patch end (either outcome), and verify end all drop. The
+    delivery.diff (slice 2) has already been captured by the time
+    we reach the drop, so the branch's purpose is done.
+
+    Bundles that never run a follow-up job (operator-fired
+    convert, MANUAL-escalated retriage) keep their branch until
+    the env itself is rebuilt — the "stale branch" case is
+    explicitly out of scope per the design discussion.
+
+    Soft-fail: drop failures are logged but never propagate. The
+    next bundle's branch creation will tolerate the existence of
+    a leftover branch (Slice 1 ``checkout_bundle_branch`` uses
+    ``checkout`` on an existing branch).
+    """
+    if not env or not bundle_id:
+        return
+    from dportsv3.agent import worker  # noqa: PLC0415
+    try:
+        result = worker.drop_bundle_branch(env, bundle_id)
+    except Exception as exc:
+        try:
+            activity_log(
+                queue_root, "bundle_branch_drop_failed",
+                f"{job_type} {job_id}: drop raised: {exc!s}"[:240],
+                job_id=job_id,
+                extra={"bundle_id": bundle_id, "env": env,
+                       "reason": reason,
+                       "exception": str(exc)[:300]},
+            )
+        except Exception:
+            pass
+        return
+    if not result.get("ok"):
+        try:
+            activity_log(
+                queue_root, "bundle_branch_drop_failed",
+                (f"{job_type} {job_id}: "
+                 f"{result.get('error') or 'drop failed'}")[:240],
+                job_id=job_id,
+                extra={"bundle_id": bundle_id, "env": env,
+                       "reason": reason,
+                       "branch": result.get("branch")},
+            )
+        except Exception:
+            pass
+        return
+    if result.get("removed"):
+        try:
+            activity_log(
+                queue_root, "bundle_branch_dropped",
+                f"{job_type} {job_id}: dropped {result.get('branch')} "
+                f"({reason})",
+                job_id=job_id,
+                extra={"bundle_id": bundle_id, "env": env,
+                       "branch": result.get("branch"),
+                       "reason": reason},
+            )
+        except Exception:
+            pass
+
+
 def _checkout_bundle_branch_for_job(
     *,
     queue_root: Path,
@@ -4171,6 +4247,16 @@ def process_job(
         success, status = process_patch_job(
             queue_root, job_path, sibling_paths, job, bundle_dir, playbooks_dir,
         )
+        # Step 30 slice 4: patch is terminal for the bundle branch
+        # — delivery.diff was captured (slice 2) on success, and on
+        # failure the branch's state is moot. Drop either way.
+        _drop_bundle_branch_for_job(
+            queue_root=queue_root, job_id=job_path.name,
+            env=resolve_env(job),
+            bundle_id=job.get("bundle_id") or None,
+            job_type="patch",
+            reason="patch_success" if success else "patch_failure",
+        )
     elif job_type == "triage":
         start_event = JobEvent.TRIAGE_START
         _apply_transition(job_path.name, start_event)
@@ -4191,6 +4277,21 @@ def process_job(
         success, status = process_convert_job(
             queue_root, job_path, sibling_paths, job,
         )
+        # Step 30 slice 4: convert SUCCESS keeps the branch — the
+        # post-convert retriage's patch job (if any) will reuse it.
+        # Convert FAILURE drops it — the partial commits are not
+        # useful, and the next attempt should start fresh from
+        # base. If retriage routes to MANUAL (no patch follows),
+        # the branch persists until the env is rebuilt; that's the
+        # explicit "stale branch out of scope" case.
+        if not success:
+            _drop_bundle_branch_for_job(
+                queue_root=queue_root, job_id=job_path.name,
+                env=resolve_env(job),
+                bundle_id=job.get("bundle_id") or None,
+                job_type="convert",
+                reason="convert_failure",
+            )
         # Step 28-extra: when process_convert_job short-circuits via
         # SKIP_ORIGIN_LOCKED (operator took over the (target, origin)
         # before this convert ran), the job is already at DEAD with
@@ -4354,6 +4455,18 @@ def process_job(
                     log(queue_root, "WARN",
                         f"failed to mark bundle {bundle_id} verification_failed: {db_exc}")
         _apply_transition(job_path.name, finish_event, detail=detail)
+        # Step 30 slice 4: verify is terminal for the bundle branch.
+        # The verify replays the bundle's payload against base on a
+        # fresh checkout; the branch isn't needed for any subsequent
+        # operator action (Accept reads delivery.diff captured at
+        # patch end). Drop either outcome.
+        _drop_bundle_branch_for_job(
+            queue_root=queue_root, job_id=job_path.name,
+            env=verify_env or None,
+            bundle_id=bundle_id or None,
+            job_type="verify",
+            reason="verify_complete" if success else "verify_failure",
+        )
     else:
         # Unknown job type — fire the catchall failure event for lead +
         # siblings, write the error note, move everything to failed/.
