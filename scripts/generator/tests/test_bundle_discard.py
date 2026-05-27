@@ -151,6 +151,36 @@ def test_discard_skip_origin_false_leaves_no_lock(client, seeded_db):
     assert lock is None
 
 
+def test_discard_race_lost_still_succeeds_with_distinct_skip_action(
+    client, seeded_db, monkeypatch,
+):
+    """Race semantics: discard expresses intent to walk away from the
+    bundle regardless of who locks the origin. If a concurrent action
+    opens the lock between the pre-check and the INSERT, the discard
+    still lands (200) but skip_action reports race_lost_to_concurrent_lock
+    so the operator sees what happened — distinct from take-over,
+    where the same race produces 409 because take-over IS the lock."""
+    conn = sqlite3.connect(str(seeded_db))
+    set_origin_skip(
+        conn, target="@2026Q2", origin="devel/budget",
+        set_by="racer", reason="raced first", bundle_id="b-budget",
+    )
+    conn.commit()
+    conn.close()
+
+    import dportsv3.tracker.server as server_mod
+    monkeypatch.setattr(server_mod, "is_origin_skipped", lambda *a, **kw: None)
+
+    resp = client.post(
+        "/api/bundles/b-budget/discard",
+        json={"reason": "walking away anyway"},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["resolution"] == "discarded"
+    assert body["skip_action"] == "race_lost_to_concurrent_lock"
+
+
 def test_discard_with_existing_sibling_lock_reports_already_locked(
     client, seeded_db,
 ):

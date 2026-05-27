@@ -184,6 +184,33 @@ def test_take_over_409_when_missing_target(client):
     assert "target/origin" in resp.json()["detail"]
 
 
+def test_take_over_409_when_race_loses_to_concurrent_insert(
+    client, seeded_db, monkeypatch,
+):
+    """If a concurrent operator action opens the lock between our
+    is_origin_skipped pre-check and the set_origin_skip INSERT, the
+    partial-unique index correctly rejects the duplicate. The
+    endpoint must convert that sqlite3.IntegrityError to a 409 (not
+    propagate it as a 500). Simulated by pre-seeding a lock + lying
+    in the pre-check via monkeypatch."""
+    # Pre-seed a lock that the endpoint's pre-check WILL miss
+    # (because we'll monkey-patch is_origin_skipped to return None).
+    conn = sqlite3.connect(str(seeded_db))
+    set_origin_skip(
+        conn, target="@2026Q2", origin="devel/budget",
+        set_by="racer", reason="raced first", bundle_id="b-budget",
+    )
+    conn.commit()
+    conn.close()
+
+    import dportsv3.tracker.server as server_mod
+    monkeypatch.setattr(server_mod, "is_origin_skipped", lambda *a, **kw: None)
+
+    resp = client.post("/api/bundles/b-budget/take-over", json={})
+    assert resp.status_code == 409
+    assert "concurrent" in resp.json()["detail"]
+
+
 def test_take_over_second_attempt_on_same_origin_via_sibling_bundle_409(
     client, seeded_db,
 ):
@@ -375,7 +402,7 @@ def test_maybe_skip_locked_origin_short_circuits_when_locked(tmp_path):
     assert "origin_locked_by:b-budget" in status
 
     skip_rows = [r for r in activity_rows
-                 if r["stage"] == "hook_skipped_origin_locked"]
+                 if r["stage"] == "triage_skipped_origin_locked"]
     assert len(skip_rows) == 1
     extra = skip_rows[0]["extra"]
     assert extra["origin"] == "devel/budget"

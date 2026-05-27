@@ -2301,7 +2301,7 @@ def _maybe_skip_locked_origin(
     set_by = lock.get("set_by") or "?"
     reason = lock.get("reason") or ""
     activity_log(
-        queue_root, "hook_skipped_origin_locked",
+        queue_root, "triage_skipped_origin_locked",
         (
             f"{origin}: origin locked by bundle {locked_bundle} "
             f"({set_by}); triage skipped"
@@ -2315,11 +2315,12 @@ def _maybe_skip_locked_origin(
             "lock_reason": reason,
         },
     )
-    # Retire the job DEAD with a distinct retire_reason. ABANDON
-    # is the closest existing terminal event (operator-driven
-    # retire). The detail field carries the lock info for forensics.
-    # Fan out to siblings so a multi-job triage fanout doesn't leave
-    # parallel jobs stuck in TRIAGING after this lead bypasses.
+    # Retire the job DEAD with retire_reason='origin_locked'. The
+    # dedicated SKIP_ORIGIN_LOCKED event keeps this case separable
+    # from Step 10b's ABANDON (operator hand-killed) in lineage
+    # views and the manual queue. Fan out to siblings so a multi-
+    # job triage fanout doesn't leave parallel jobs stuck in
+    # TRIAGING after this lead bypasses.
     detail = {
         "skipped_because": "origin_locked",
         "locking_bundle_id": locked_bundle,
@@ -2328,9 +2329,9 @@ def _maybe_skip_locked_origin(
         "origin": origin,
         "target": target,
     }
-    _apply_transition(job_id, JobEvent.ABANDON, detail=detail)
+    _apply_transition(job_id, JobEvent.SKIP_ORIGIN_LOCKED, detail=detail)
     for s in sibling_paths or ():
-        _apply_transition(s.name, JobEvent.ABANDON, detail=detail)
+        _apply_transition(s.name, JobEvent.SKIP_ORIGIN_LOCKED, detail=detail)
     return True, f"origin_locked_by:{locked_bundle}"
 
 

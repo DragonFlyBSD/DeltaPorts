@@ -1232,14 +1232,32 @@ def create_app(db_path: str | Path) -> Any:
                     (now, operator, now, bundle_id),
                 )
                 if existing is None:
-                    set_origin_skip(
-                        write_conn,
-                        target=target, origin=origin,
-                        set_by=operator,
-                        reason=reason,
-                        bundle_id=bundle_id,
-                    )
+                    try:
+                        set_origin_skip(
+                            write_conn,
+                            target=target, origin=origin,
+                            set_by=operator,
+                            reason=reason,
+                            bundle_id=bundle_id,
+                        )
+                    except sqlite3.IntegrityError:
+                        # Race window: another operator opened the lock
+                        # between our pre-check and this INSERT. The
+                        # partial-unique index correctly rejected the
+                        # duplicate; convert to 409 so the caller gets
+                        # the same answer as the pre-check would have.
+                        write_conn.execute("ROLLBACK")
+                        raise HTTPException(
+                            status_code=409,
+                            detail=(
+                                f"(target={target!r}, origin={origin!r}) "
+                                f"was just locked by a concurrent operator "
+                                f"action; refresh and try again"
+                            ),
+                        )
                 write_conn.execute("COMMIT")
+            except HTTPException:
+                raise
             except Exception:
                 write_conn.execute("ROLLBACK")
                 raise
@@ -1382,14 +1400,24 @@ def create_app(db_path: str | Path) -> Any:
                     (now, reason, now, bundle_id),
                 )
                 if skip_origin and target and origin and existing is None:
-                    set_origin_skip(
-                        write_conn,
-                        target=target, origin=origin,
-                        set_by=operator,
-                        reason=f"discard: {reason}",
-                        bundle_id=bundle_id,
-                    )
-                    skip_action = "opened"
+                    try:
+                        set_origin_skip(
+                            write_conn,
+                            target=target, origin=origin,
+                            set_by=operator,
+                            reason=f"discard: {reason}",
+                            bundle_id=bundle_id,
+                        )
+                        skip_action = "opened"
+                    except sqlite3.IntegrityError:
+                        # Race window: a concurrent operator action
+                        # opened the lock between our pre-check and
+                        # this INSERT. The discard itself still lands
+                        # (the bundle is being walked away from
+                        # regardless of who locks the origin), but
+                        # report skip_action so the operator sees
+                        # what happened.
+                        skip_action = "race_lost_to_concurrent_lock"
                 elif skip_origin and existing is not None:
                     # Sibling already locked the pair; don't duplicate.
                     # The discard still lands; the existing lock keeps

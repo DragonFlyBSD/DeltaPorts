@@ -95,6 +95,12 @@ class JobEvent(StrEnum):
     # triage doesn't pollute the operator's manual queue. The convert
     # job carries the actual work; this triage is just parked.
     TRIAGE_DEFER     = "triage_defer"
+    # Step 28a: triage short-circuits when the operator has staked
+    # the (target, origin) via take-over. Distinct from ABANDON
+    # (Step 10b operator job-kill) so retire_reason='origin_locked'
+    # stays separable from retire_reason='abandoned' in lineage
+    # views and the manual queue.
+    SKIP_ORIGIN_LOCKED = "skip_origin_locked"
 
 
 # (from_state, event) -> to_state. ``None`` as from_state means
@@ -173,6 +179,16 @@ TRANSITIONS: dict[tuple[JobState | None, JobEvent], JobState] = {
     (JobState.VERIFYING,   JobEvent.ABANDON):          JobState.DEAD,
     (JobState.CONVERTING,  JobEvent.ABANDON):          JobState.DEAD,
     (JobState.VERIFYING_FIX, JobEvent.ABANDON):        JobState.DEAD,
+
+    # Step 28a: operator-owned origin short-circuit. Permitted from
+    # any pre-terminal triage state — the runner check fires after
+    # TRIAGE_START (so usually TRIAGING) but covering CLAIMED/QUEUED
+    # is cheap defensive coverage if the check ever moves earlier.
+    # TRIAGED is included for completeness (no current call site).
+    (JobState.QUEUED,      JobEvent.SKIP_ORIGIN_LOCKED): JobState.DEAD,
+    (JobState.CLAIMED,     JobEvent.SKIP_ORIGIN_LOCKED): JobState.DEAD,
+    (JobState.TRIAGING,    JobEvent.SKIP_ORIGIN_LOCKED): JobState.DEAD,
+    (JobState.TRIAGED,     JobEvent.SKIP_ORIGIN_LOCKED): JobState.DEAD,
 }
 
 
@@ -189,6 +205,7 @@ _TERMINAL_REASONS: dict[JobEvent, str] = {
     JobEvent.CONVERT_GAVE_UP:  "convert_failed",
     JobEvent.VERIFY_FIX_GAVE_UP: "verify_fix_failed",
     JobEvent.TRIAGE_DEFER:     "deferred_for_convert",
+    JobEvent.SKIP_ORIGIN_LOCKED: "origin_locked",
 }
 
 
