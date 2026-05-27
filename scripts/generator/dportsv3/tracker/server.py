@@ -1004,7 +1004,7 @@ def create_app(db_path: str | Path) -> Any:
             raise HTTPException(
                 status_code=404, detail=f"Unknown bundle: {bundle_id}",
             )
-        if row.get("resolution") in ("accepted", "rejected"):
+        if row.get("resolution") in ("accepted", "rejected", "discarded"):
             raise HTTPException(
                 status_code=409,
                 detail=(
@@ -1077,7 +1077,7 @@ def create_app(db_path: str | Path) -> Any:
             raise HTTPException(
                 status_code=404, detail=f"Unknown bundle: {bundle_id}",
             )
-        if row.get("resolution") in ("accepted", "rejected"):
+        if row.get("resolution") in ("accepted", "rejected", "discarded"):
             raise HTTPException(
                 status_code=409,
                 detail=(
@@ -1263,6 +1263,171 @@ def create_app(db_path: str | Path) -> Any:
             "taken_over_by": operator,
             "target": target,
             "origin": origin,
+        }
+
+    @app.post("/api/bundles/{bundle_id}/discard")
+    def api_bundle_discard(
+        bundle_id: str, body: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Operator discard of a failed (or operator-owned) bundle
+        (Step 28b).
+
+        Marks the bundle resolved as ``discarded`` (terminal) and,
+        when ``skip_origin`` is true (the default), opens a row in
+        ``origin_skip_flags`` so the runner stops auto-processing
+        the (target, origin) pair until an operator un-skips it.
+
+        Allowed from failure-shaped resolutions
+        (``agent_budget_exhausted`` / ``agent_gave_up`` /
+        ``escalated_manual`` / ``convert_gave_up``) and from
+        ``operator_owned`` (operator gave a manual fix a try, then
+        decided to drop it). 409 from already-terminal resolutions
+        (``accepted`` / ``rejected`` / ``discarded``) and from
+        ``agent_fixed`` (success-side bundles route through Step
+        11c's Reject). 404 if bundle unknown.
+
+        Body (``reason`` required; an unexplained discard is
+        uninformative forensics):
+          - ``reason`` (str, required): why the operator is
+            walking away from this bundle.
+          - ``skip_origin`` (bool, default true): when true, opens
+            a per-``(target, origin)`` lock alongside the discard.
+            Pass false for "discard just this bundle; let the loop
+            try again on the next dsynth hook."
+          - ``operator`` (str, optional): freeform identifier;
+            defaults to ``"operator"``. Step 17 territory for real
+            auth.
+
+        If a sibling bundle already locked the (target, origin)
+        pair, the discard still succeeds — the lock is shared
+        forensics across the discard / take-over paths, and the
+        existing lock keeps its set_by / bundle_id provenance.
+        """
+        from datetime import datetime, timezone  # noqa: PLC0415
+
+        reason = (body or {}).get("reason")
+        if not reason or not isinstance(reason, str) or not reason.strip():
+            raise HTTPException(
+                status_code=400,
+                detail="body must include 'reason' (discard text)",
+            )
+        reason = reason.strip()
+        operator = ((body or {}).get("operator") or "operator").strip()
+        if not operator:
+            operator = "operator"
+        skip_origin = bool((body or {}).get("skip_origin", True))
+
+        with _conn() as conn:
+            row = get_bundle(conn, bundle_id)
+        if row is None:
+            raise HTTPException(
+                status_code=404, detail=f"Unknown bundle: {bundle_id}",
+            )
+        current_resolution = row.get("resolution")
+        if current_resolution in ("accepted", "rejected", "discarded"):
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"Cannot discard bundle in terminal state "
+                    f"{current_resolution!r}"
+                ),
+            )
+        allowed_from = {
+            "agent_budget_exhausted", "agent_gave_up",
+            "escalated_manual", "convert_gave_up",
+            "operator_owned", None,
+        }
+        if current_resolution not in allowed_from:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"Discard is for failure-shaped or operator-owned "
+                    f"bundles; current resolution is {current_resolution!r}"
+                ),
+            )
+
+        target = (row.get("target") or "").strip()
+        origin = (row.get("origin") or "").strip()
+        if skip_origin and (not target or not origin):
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "Bundle is missing target/origin metadata; cannot "
+                    "open a skip lock. Re-issue with skip_origin=false "
+                    "to discard the bundle without locking."
+                ),
+            )
+
+        now = datetime.now(timezone.utc).isoformat()
+        write_conn = sqlite3.connect(
+            str(app.state.db_path), check_same_thread=False,
+            isolation_level=None,
+        )
+        write_conn.row_factory = sqlite3.Row
+        skip_action = "none"
+        try:
+            existing = (
+                is_origin_skipped(write_conn, target, origin)
+                if skip_origin and target and origin else None
+            )
+            write_conn.execute("BEGIN IMMEDIATE")
+            try:
+                write_conn.execute(
+                    """UPDATE bundles SET
+                           resolution = 'discarded',
+                           discarded_at = ?,
+                           discard_reason = ?,
+                           last_seen_at = ?
+                       WHERE bundle_id = ?""",
+                    (now, reason, now, bundle_id),
+                )
+                if skip_origin and target and origin and existing is None:
+                    set_origin_skip(
+                        write_conn,
+                        target=target, origin=origin,
+                        set_by=operator,
+                        reason=f"discard: {reason}",
+                        bundle_id=bundle_id,
+                    )
+                    skip_action = "opened"
+                elif skip_origin and existing is not None:
+                    # Sibling already locked the pair; don't duplicate.
+                    # The discard still lands; the existing lock keeps
+                    # its provenance. Operator visibility comes from
+                    # the bundle_discarded event + the existing skip
+                    # flag (which is the same forensic record either
+                    # take-over or discard would have written).
+                    skip_action = (
+                        f"already_locked_by:{existing.get('bundle_id')}"
+                    )
+                write_conn.execute("COMMIT")
+            except Exception:
+                write_conn.execute("ROLLBACK")
+                raise
+            from dportsv3.artifact_store import emit_event  # noqa: PLC0415
+            emit_event(write_conn, "bundle_discarded", {
+                "bundle_id": bundle_id,
+                "target": target,
+                "origin": origin,
+                "discarded_at": now,
+                "discarded_by": operator,
+                "reason": reason,
+                "skip_origin": skip_origin,
+                "skip_action": skip_action,
+            })
+        finally:
+            write_conn.close()
+
+        return {
+            "ok": True,
+            "bundle_id": bundle_id,
+            "resolution": "discarded",
+            "discarded_at": now,
+            "discard_reason": reason,
+            "target": target,
+            "origin": origin,
+            "skip_origin": skip_origin,
+            "skip_action": skip_action,
         }
 
     @app.get("/api/ports/{origin:path}")
@@ -1461,13 +1626,22 @@ def create_app(db_path: str | Path) -> Any:
             and bool(bundle.get("target"))
             and bool(bundle.get("origin"))
         )
+        # Step 28b: discard surfaces on the same failure-shaped
+        # resolutions as take-over, AND on operator_owned (operator
+        # stakes a bundle then decides to drop it). Terminal states
+        # (accepted/rejected/discarded) exclude it.
+        can_discard = (
+            bundle is not None
+            and resolution in (failure_resolutions | {"operator_owned"})
+        )
         operator_actions = {
-            "show": actionable or can_take_over,
+            "show": actionable or can_take_over or can_discard,
             "can_verify": actionable,
             "can_accept": (actionable
                            and bundle.get("verification_status") == "verified"),
             "can_reject": actionable,
             "can_take_over": can_take_over,
+            "can_discard": can_discard,
         }
         return templates.TemplateResponse(
             request,

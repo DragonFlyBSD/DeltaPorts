@@ -347,6 +347,14 @@ MIGRATIONS: tuple[str, ...] = (
     "ON origin_skip_flags(target, origin) WHERE cleared_at IS NULL",
     "CREATE INDEX IF NOT EXISTS idx_origin_skip_flags_lookup "
     "ON origin_skip_flags(target, origin, cleared_at)",
+    # Step 28b: operator discard on failed (or operator-owned)
+    # bundles. resolution='discarded' is terminal — the operator
+    # has decided the bundle's underlying port isn't worth pursuing
+    # right now. discard_reason is required (an unexplained discard
+    # is uninformative); per-(target, origin) skip flag optional via
+    # the endpoint's skip_origin body field.
+    "ALTER TABLE bundles ADD COLUMN discarded_at TEXT",
+    "ALTER TABLE bundles ADD COLUMN discard_reason TEXT",
 )
 
 

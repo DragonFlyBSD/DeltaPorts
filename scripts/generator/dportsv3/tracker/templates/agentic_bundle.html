@@ -120,6 +120,19 @@
           Take over
         </button>
         {% endif %}
+        {# Step 28b: Discard — operator decides this bundle (and
+           optionally the whole port) isn't worth pursuing right now.
+           Terminal. Shown on failure-shaped resolutions AND on
+           operator_owned (an operator can give up on a manual
+           attempt). #}
+        {% if operator_actions.can_discard %}
+        <button id="op-discard" type="button"
+                data-bundle="{{ bundle.bundle_id }}"
+                style="font-size:12px;padding:4px 10px;"
+                title="Mark this bundle resolved as discarded (terminal); optionally lock the (target, origin) from future auto-processing">
+          Discard
+        </button>
+        {% endif %}
         <span id="op-status" style="color:var(--text-dim);font-size:11px;"></span>
       </div>
     </div>
@@ -159,6 +172,17 @@
           );
           if (reason === null) { return; }  // explicit cancel
           body = {reason: reason || 'operator take-over'};
+        } else if (action === 'discard') {
+          const reason = prompt(
+            'Discard reason (required; explains why this bundle is being walked away from):',
+            ''
+          );
+          if (!reason) { return; }
+          const skipOrigin = confirm(
+            'Also lock the (target, origin) so the runner stops trying ' +
+            'this port? OK = lock (default), Cancel = discard only this bundle.'
+          );
+          body = {reason: reason, skip_origin: skipOrigin};
         }
         // Disable all buttons immediately so a double-click can't
         // enqueue a second verify (or fire accept while verify is
