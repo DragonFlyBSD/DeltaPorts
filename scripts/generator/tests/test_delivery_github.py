@@ -331,3 +331,120 @@ def test_auth_error_from_http_layer_propagates():
     provider = _make_provider(http=_AuthHttp())
     with pytest.raises(DeliveryAuthError, match="bad token"):
         provider.create_review_request(**_common_args())
+
+
+# ---------------------------------------------------------------------
+# Finding 4: same-content short-circuit
+# ---------------------------------------------------------------------
+
+
+def test_same_content_short_circuits_git_pipeline():
+    """When existing_diff_sha256 matches the incoming diff_sha256
+    AND the GitHub API still reports an open PR on the branch,
+    skip the git pipeline + force-push entirely and just PATCH
+    the body. Avoids producing noise commits with fresh
+    timestamps for byte-identical re-Accepts."""
+    sha = "a" * 64
+    existing = {"number": 77, "html_url": "https://github.com/o/r/pull/77"}
+    http = _FakeHttp(
+        get_responses=[[existing]],
+        patch_responses=[{
+            "number": 77, "html_url": "https://github.com/o/r/pull/77",
+        }],
+        post_responses=[[]],  # labels
+    )
+    git = _FakeGit()
+    provider = _make_provider(http=http, git=git)
+    args = _common_args()
+    args["diff_sha256"] = sha
+    result = provider.create_review_request(
+        **args, existing_diff_sha256=sha,
+    )
+
+    assert result.status == "updated"
+    assert result.provider_pr_id == "77"
+    # No git operations ran.
+    assert git.calls == []
+    # HTTP sequence: GET (lookup) → PATCH (body) → POST (labels).
+    methods = [c["method"] for c in http.calls]
+    assert methods == ["GET", "PATCH", "POST"]
+
+
+def test_different_content_runs_full_pipeline():
+    """When the incoming SHA differs from the recorded SHA, the
+    short-circuit must not engage — re-deliver via the git
+    pipeline so the operator's PR head reflects new content."""
+    http = _FakeHttp(
+        get_responses=[[{
+            "number": 81, "html_url": "https://github.com/o/r/pull/81",
+        }]],
+        patch_responses=[{
+            "number": 81, "html_url": "https://github.com/o/r/pull/81",
+        }],
+        post_responses=[[]],
+    )
+    git = _FakeGit()
+    provider = _make_provider(http=http, git=git)
+    args = _common_args()
+    args["diff_sha256"] = "b" * 64
+    result = provider.create_review_request(
+        **args, existing_diff_sha256="c" * 64,
+    )
+    assert result.status == "updated"
+    # Full git pipeline ran despite the SHA-comparison path
+    # being reachable.
+    assert git.calls == [
+        "prepare_clean_branch", "apply_diff",
+        "commit_diff", "push_branch",
+    ]
+
+
+def test_no_existing_sha_runs_full_pipeline():
+    """Fresh delivery (no recorded SHA on file) → full pipeline.
+    Same as the create-path happy test but exercises the explicit
+    None plumbing."""
+    http = _FakeHttp(
+        get_responses=[[]],
+        post_responses=[
+            {"number": 9, "html_url": "https://x/pull/9"},
+            [],
+        ],
+    )
+    git = _FakeGit()
+    provider = _make_provider(http=http, git=git)
+    provider.create_review_request(
+        **_common_args(), existing_diff_sha256=None,
+    )
+    assert git.calls == [
+        "prepare_clean_branch", "apply_diff",
+        "commit_diff", "push_branch",
+    ]
+
+
+def test_short_circuit_falls_through_when_no_open_pr_found():
+    """Edge case: recorded SHA matches, but GitHub reports no
+    open PR on the branch (e.g. closed out-of-band). Run the
+    full pipeline so the operator still gets a delivery rather
+    than a silent no-op."""
+    sha = "d" * 64
+    http = _FakeHttp(
+        # First GET = short-circuit probe returns [].
+        # Second GET = post-push idempotency check returns [].
+        get_responses=[[], []],
+        post_responses=[
+            {"number": 10, "html_url": "https://x/pull/10"},
+            [],  # labels
+        ],
+    )
+    git = _FakeGit()
+    provider = _make_provider(http=http, git=git)
+    args = _common_args()
+    args["diff_sha256"] = sha
+    result = provider.create_review_request(
+        **args, existing_diff_sha256=sha,
+    )
+    assert result.status == "created"
+    assert git.calls == [
+        "prepare_clean_branch", "apply_diff",
+        "commit_diff", "push_branch",
+    ]

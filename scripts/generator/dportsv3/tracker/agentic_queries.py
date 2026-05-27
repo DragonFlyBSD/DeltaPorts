@@ -1050,6 +1050,7 @@ def insert_review_request(
     error: str | None = None,
     operator: str | None = None,
     error_signature: str | None = None,
+    diff_sha256: str | None = None,
 ) -> int:
     """Append one ``bundle_review_requests`` row. Returns row id.
 
@@ -1061,10 +1062,11 @@ def insert_review_request(
     cur = conn.execute(
         """INSERT INTO bundle_review_requests
            (bundle_id, provider, provider_pr_id, url, branch, title,
-            status, created_at, error, operator, error_signature)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            status, created_at, error, operator, error_signature,
+            diff_sha256)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (bundle_id, provider, provider_pr_id, url, branch, title,
-         status, ts, error, operator, error_signature),
+         status, ts, error, operator, error_signature, diff_sha256),
     )
     return int(cur.lastrowid or 0)
 
@@ -1077,7 +1079,7 @@ def latest_review_request_for_bundle(
     row = conn.execute(
         """SELECT id, bundle_id, provider, provider_pr_id, url, branch,
                   title, status, created_at, last_synced_at, error,
-                  operator, error_signature
+                  operator, error_signature, note, diff_sha256
            FROM bundle_review_requests
            WHERE bundle_id = ?
            ORDER BY id DESC LIMIT 1""",
@@ -1101,7 +1103,7 @@ def find_open_review_request(
     row = conn.execute(
         """SELECT id, bundle_id, provider, provider_pr_id, url, branch,
                   title, status, created_at, last_synced_at, error,
-                  operator, error_signature
+                  operator, error_signature, note, diff_sha256
            FROM bundle_review_requests
            WHERE provider = ? AND error_signature = ?
              AND status NOT IN ('closed', 'merged', 'create_failed')
@@ -1116,9 +1118,11 @@ def update_review_request_status(
     request_id: int,
     status: str,
     error: str | None = None,
+    note: str | None = None,
     provider_pr_id: str | None = None,
     url: str | None = None,
     branch: str | None = None,
+    diff_sha256: str | None = None,
 ) -> bool:
     """Move a delivery row's status. Used for transitions like
     ``created`` → ``closed``/``merged`` (operator action), or
@@ -1127,6 +1131,11 @@ def update_review_request_status(
 
     Returns True if a row was updated, False if no row matched
     ``request_id``. Always bumps ``last_synced_at``.
+
+    ``note`` is the operator-supplied annotation for manual
+    status updates (11d-5 / Finding 7 of the review). Lives in
+    its own column rather than being co-located with ``error`` —
+    the latter is for create-time failures only.
     """
     ts = datetime.now(timezone.utc).isoformat()
     # Build the SET clause dynamically so we don't blow away
@@ -1136,6 +1145,9 @@ def update_review_request_status(
     if error is not None:
         sets.append("error = ?")
         args.append(error)
+    if note is not None:
+        sets.append("note = ?")
+        args.append(note)
     if provider_pr_id is not None:
         sets.append("provider_pr_id = ?")
         args.append(provider_pr_id)
@@ -1145,6 +1157,9 @@ def update_review_request_status(
     if branch is not None:
         sets.append("branch = ?")
         args.append(branch)
+    if diff_sha256 is not None:
+        sets.append("diff_sha256 = ?")
+        args.append(diff_sha256)
     args.append(request_id)
     cur = conn.execute(
         f"UPDATE bundle_review_requests SET {', '.join(sets)} "

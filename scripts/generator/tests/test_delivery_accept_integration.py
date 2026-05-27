@@ -270,6 +270,71 @@ def test_empty_changes_diff_skips(client, deployment):
 # =====================================================================
 
 
+def test_github_provider_missing_clone_env_clear_error(
+    client, deployment, monkeypatch,
+):
+    """Finding 5 (11d-3 review): orchestrator pre-validates
+    $DPORTSV3_OPERATOR_CLONE for network providers. When unset,
+    the create_failed row carries a config-specific error message
+    naming the missing env var, not "clone_dir /nonexistent
+    doesn't exist" from deep inside _git."""
+    # Reconfigure delivery to point at github so the validation
+    # path fires (local-patch ignores clone_dir).
+    (deployment["config_dir"] / "delivery.toml").write_text(
+        '[provider]\n'
+        'type = "github"\n'
+        'repo = "DragonFlyBSD/DeltaPorts"\n'
+    )
+    monkeypatch.setenv("DPORTSV3_DELIVERY_TOKEN", "ghp_test")
+    monkeypatch.delenv("DPORTSV3_OPERATOR_CLONE", raising=False)
+
+    conn = _open(deployment)
+    _seed_bundle(conn, "b-no-clone")
+    sha = _seed_diff_artifact(
+        deployment["artifact_root"], "b-no-clone", _SAMPLE_DIFF,
+    )
+    _insert_artifact_ref(conn, "b-no-clone", "analysis/changes.diff", sha)
+    conn.close()
+
+    resp = client.post("/api/bundles/b-no-clone/accept", json={})
+    assert resp.status_code == 200
+    d = resp.json()["delivery"]
+    assert d["status"] == "create_failed"
+    assert "$DPORTSV3_OPERATOR_CLONE" in d["error"]
+    assert "/nonexistent" not in d["error"]  # no fabricated path
+
+
+def test_github_provider_missing_clone_dir_clear_error(
+    client, deployment, monkeypatch, tmp_path,
+):
+    """Pre-validation also catches the case where the env var IS
+    set but points at a nonexistent path."""
+    (deployment["config_dir"] / "delivery.toml").write_text(
+        '[provider]\n'
+        'type = "github"\n'
+        'repo = "DragonFlyBSD/DeltaPorts"\n'
+    )
+    monkeypatch.setenv("DPORTSV3_DELIVERY_TOKEN", "ghp_test")
+    monkeypatch.setenv(
+        "DPORTSV3_OPERATOR_CLONE", str(tmp_path / "does-not-exist"),
+    )
+
+    conn = _open(deployment)
+    _seed_bundle(conn, "b-bad-clone")
+    sha = _seed_diff_artifact(
+        deployment["artifact_root"], "b-bad-clone", _SAMPLE_DIFF,
+    )
+    _insert_artifact_ref(conn, "b-bad-clone", "analysis/changes.diff", sha)
+    conn.close()
+
+    resp = client.post("/api/bundles/b-bad-clone/accept", json={})
+    assert resp.status_code == 200
+    d = resp.json()["delivery"]
+    assert d["status"] == "create_failed"
+    assert "doesn't exist" in d["error"]
+    assert "does-not-exist" in d["error"]
+
+
 def test_provider_failure_records_create_failed_row(
     client, deployment, monkeypatch,
 ):
@@ -345,6 +410,28 @@ def test_second_accept_returns_updated_status(client, deployment):
     r2 = client.post("/api/bundles/b-idem/accept", json={})
     assert r2.status_code == 200, r2.text
     assert r2.json()["delivery"]["status"] == "updated"
+
+
+def test_accept_persists_diff_sha256(client, deployment):
+    """Finding 4: bundle_review_requests.diff_sha256 is populated
+    on every accept (created + updated) so the GitHub short-circuit
+    on a future re-Accept can compare against it."""
+    import hashlib
+    conn = _open(deployment)
+    _seed_bundle(conn, "b-sha")
+    sha = _seed_diff_artifact(deployment["artifact_root"], "b-sha", _SAMPLE_DIFF)
+    _insert_artifact_ref(conn, "b-sha", "analysis/changes.diff", sha)
+    conn.close()
+    expected = hashlib.sha256(_SAMPLE_DIFF.encode()).hexdigest()
+
+    r1 = client.post("/api/bundles/b-sha/accept", json={})
+    assert r1.status_code == 200
+    conn = _open(deployment)
+    try:
+        row = latest_review_request_for_bundle(conn, "b-sha")
+    finally:
+        conn.close()
+    assert row["diff_sha256"] == expected
 
 
 # =====================================================================

@@ -2146,6 +2146,20 @@ def create_app(db_path: str | Path) -> Any:
                 status_code=400,
                 detail="body 'note', if supplied, must be a string",
             )
+        # Cap note length explicitly rather than silently
+        # truncating — operators get a clear signal when their
+        # note won't fit. Matches the /retry context cap (8000)
+        # so operators don't have to remember two limits, but
+        # the practical use case is much shorter (one line).
+        _NOTE_MAX = 2000
+        if note is not None and len(note) > _NOTE_MAX:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"body 'note' too long ({len(note)} chars; "
+                    f"max {_NOTE_MAX})"
+                ),
+            )
 
         with _conn() as conn:
             latest = latest_review_request_for_bundle(conn, bundle_id)
@@ -2169,13 +2183,14 @@ def create_app(db_path: str | Path) -> Any:
                 ),
             )
 
-        # Build an error/note string. For 'closed'/'merged' the
-        # 'error' column carries the operator note as plain text
-        # — the column is column-name-misleading for these rows
-        # but reusing it avoids a schema migration for one field.
+        # 11d-5 Finding 7 follow-up: note lands in its own column.
+        # Trim leading/trailing whitespace; empty notes are stored
+        # as NULL (the operator skipped the prompt).
         note_text: str | None = None
         if note:
-            note_text = f"note: {note.strip()}"[:500] or None
+            stripped = note.strip()
+            if stripped:
+                note_text = stripped
 
         write_conn = sqlite3.connect(
             str(app.state.db_path), check_same_thread=False,
@@ -2187,7 +2202,7 @@ def create_app(db_path: str | Path) -> Any:
                 write_conn,
                 request_id=int(latest["id"]),
                 status=status,
-                error=note_text,
+                note=note_text,
             )
             if not updated:
                 # The row vanished between latest_review_request_for_bundle

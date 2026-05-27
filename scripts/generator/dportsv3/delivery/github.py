@@ -92,9 +92,57 @@ class GitHubProvider:
         body: str,
         labels: list[str],
         diff_text: str,
-        diff_sha256: str,  # accepted but unused — present in Protocol
+        diff_sha256: str,
         draft: bool = False,
+        existing_diff_sha256: str | None = None,
     ) -> ReviewRequestResult:
+        # Same-content short-circuit (review Finding 4): if the
+        # orchestrator already saw an open row for this signature
+        # AND its recorded diff SHA matches what we're about to
+        # deliver, the git pipeline would only produce a no-op
+        # commit (timestamps differ) and a force-push that adds
+        # noise to PR history. Probe the API for the existing PR
+        # and just PATCH the body. If no PR matches the recorded
+        # row (e.g. closed out-of-band), fall through to the full
+        # pipeline so the operator still gets a working delivery.
+        http = self._http()
+        if (
+            existing_diff_sha256 is not None
+            and existing_diff_sha256 == diff_sha256
+        ):
+            existing = http.get(
+                f"/repos/{self._owner}/{self._repo_name}/pulls",
+                params={
+                    "head": f"{self._owner}:{branch_name}",
+                    "state": "open",
+                },
+            )
+            if isinstance(existing, list) and existing:
+                pr = existing[0]
+                pr_number = pr.get("number")
+                updated = http.patch(
+                    f"/repos/{self._owner}/{self._repo_name}"
+                    f"/pulls/{pr_number}",
+                    json={"body": body},
+                )
+                url = (
+                    (updated or pr).get("html_url")
+                    or pr.get("html_url")
+                )
+                self._apply_labels_best_effort(
+                    http, pr_number, labels,
+                )
+                return ReviewRequestResult(
+                    provider=self.name,
+                    provider_pr_id=str(pr_number),
+                    url=url,
+                    branch=branch_name,
+                    title=title,
+                    status="updated",
+                )
+            # Fall through: recorded row exists but no open PR
+            # found on GitHub. Run the full pipeline.
+
         # Steps 1-4: local git work.
         git = self._git()
         git.prepare_clean_branch(
@@ -109,7 +157,6 @@ class GitHubProvider:
         # Step 5: idempotency check — does an open PR already
         # exist for this head branch? `head` qualifier is
         # `owner:branch`.
-        http = self._http()
         existing = http.get(
             f"/repos/{self._owner}/{self._repo_name}/pulls",
             params={

@@ -9,8 +9,9 @@ POST (create), PATCH (update). The wrapper handles:
   headers dict at client construction and the wrapper passes
   it through verbatim.
 - Rate-limit handling — HTTP 429 with optional ``Retry-After``
-  header retries up to ``max_retries`` times with exponential
-  backoff; on exhaustion raises ``DeliveryRateLimitError``.
+  header retries with exponential backoff up to
+  ``max_attempts`` total tries (1 initial + N-1 retries); on
+  exhaustion raises ``DeliveryRateLimitError``.
 - Auth errors — HTTP 401 / 403 → ``DeliveryAuthError`` (no
   retry; the token is the problem, retrying won't help).
 - Other 4xx / 5xx → ``DeliveryError`` with the status code +
@@ -25,6 +26,7 @@ relative path. Returns the parsed JSON body on success.
 
 from __future__ import annotations
 
+import re
 import time
 from dataclasses import dataclass, field
 from typing import Any
@@ -39,6 +41,32 @@ from . import (
 
 
 __all__ = ["DeliveryHttpClient"]
+
+
+# Patterns we scrub from response body excerpts before they land
+# in a DeliveryError message (and consequently in the operator-
+# visible bundle_review_requests.error column). Some misconfigured
+# proxies echo request headers in the response body; without
+# scrubbing, a Bearer token could persist in the DB.
+_TOKEN_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(r"(?i)\bBearer\s+[A-Za-z0-9._\-]+"),
+    re.compile(r"(?i)\btoken\s+[A-Za-z0-9._\-]+"),
+    re.compile(r"(?i)Authorization\s*:\s*[^\r\n,;]+"),
+    # GitHub fine-grained / personal access token prefixes.
+    re.compile(r"\bghp_[A-Za-z0-9]+"),
+    re.compile(r"\bgithub_pat_[A-Za-z0-9_]+"),
+    # GitLab personal access tokens.
+    re.compile(r"\bglpat-[A-Za-z0-9_\-]+"),
+)
+
+
+def _scrub(s: str) -> str:
+    """Replace recognized token/auth-header patterns with
+    [REDACTED]. Belt-and-suspenders against tokens leaking via
+    response-body echoes into DeliveryError messages."""
+    for pat in _TOKEN_PATTERNS:
+        s = pat.sub("[REDACTED]", s)
+    return s
 
 
 # Bound the retry backoff so a misbehaving server can't push us
@@ -63,7 +91,10 @@ class DeliveryHttpClient:
     base_url: str
     headers: dict[str, str] = field(default_factory=dict)
     timeout: float = 30.0
-    max_retries: int = 3
+    # Total tries before giving up on 429s: 1 initial + (N-1)
+    # retries with exponential backoff. The default of 3 means
+    # the wrapper tries once, retries twice, then raises.
+    max_attempts: int = 3
     # The injected sleep/client are seams the tests replace to
     # avoid actually waiting and to monkeypatch the HTTP layer.
     _sleep: Any = field(default=time.sleep)
@@ -140,10 +171,10 @@ class DeliveryHttpClient:
 
             # Rate limit — retry with backoff if we have budget.
             if resp.status_code == 429:
-                if attempt >= self.max_retries:
+                if attempt >= self.max_attempts:
                     raise DeliveryRateLimitError(
                         f"HTTP 429 on {method} {url} after "
-                        f"{self.max_retries} attempts; abandoning"
+                        f"{self.max_attempts} attempts; abandoning"
                     )
                 # Prefer Retry-After if present; otherwise
                 # exponential backoff capped at _MAX_BACKOFF_SECONDS.
@@ -159,8 +190,10 @@ class DeliveryHttpClient:
                 continue
 
             # Any other status — surface as a generic delivery
-            # error with body excerpt for the operator.
-            body_excerpt = (resp.text or "")[:300]
+            # error with body excerpt for the operator. Scrub
+            # token-looking strings before they land in the
+            # bundle_review_requests.error column.
+            body_excerpt = _scrub((resp.text or "")[:300])
             raise DeliveryError(
                 f"HTTP {resp.status_code} on {method} {url}: "
                 f"{body_excerpt}"

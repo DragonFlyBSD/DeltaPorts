@@ -69,6 +69,7 @@ class LocalPatchProvider:
         diff_text: str,
         diff_sha256: str,
         draft: bool = False,       # unused for local-patch
+        existing_diff_sha256: str | None = None,  # unused — own idempotency via on-disk SHA
     ) -> ReviewRequestResult:
         if not self.outbox:
             raise DeliveryConfigError(

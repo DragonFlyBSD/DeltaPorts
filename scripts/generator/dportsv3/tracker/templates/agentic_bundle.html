@@ -281,16 +281,12 @@
       </div>
       {% if dr.error %}
       <div style="margin-top:6px;font-size:11px;color:var(--c-fail, #c00);">
-        {# 11d-5 reuses the `error` column to carry operator notes
-           on merged/closed transitions. Distinguish in the UI: the
-           note-prefixed string is informational, not an error. #}
-        {% if dr.error.startswith('note: ') %}
-          <span style="color:var(--text-dim);">
-            Note: <code>{{ dr.error[6:] }}</code>
-          </span>
-        {% else %}
-          Error: <code>{{ dr.error }}</code>
-        {% endif %}
+        Error: <code>{{ dr.error }}</code>
+      </div>
+      {% endif %}
+      {% if dr.note %}
+      <div style="margin-top:6px;font-size:11px;color:var(--text-dim);">
+        Note: <code>{{ dr.note }}</code>
       </div>
       {% endif %}
       {# Step 11d-5: Mark-merged / Mark-closed buttons. The status

@@ -106,6 +106,7 @@ class ReviewProvider(Protocol):
         diff_text: str,
         diff_sha256: str,
         draft: bool = False,
+        existing_diff_sha256: str | None = None,
     ) -> ReviewRequestResult:
         """Push the branch + open a review request.
 
@@ -118,5 +119,13 @@ class ReviewProvider(Protocol):
         ``diff_text`` and ``diff_sha256`` are the bundle's
         ``analysis/changes.diff`` — passed in directly so the
         provider doesn't need to refetch from the artifact store.
+
+        ``existing_diff_sha256`` is the SHA recorded on the open
+        ``bundle_review_requests`` row for the same signature, if
+        any. Providers may use it to short-circuit re-Accepts on
+        identical content — e.g. GitHubProvider skips the git
+        pipeline + force-push and just patches the PR body when
+        the incoming diff matches what was already delivered.
+        ``None`` for fresh deliveries.
         """
         ...

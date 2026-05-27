@@ -108,9 +108,9 @@ def test_mark_status_happy_path(client, deployment, new_status):
         conn.close()
     assert latest["status"] == new_status
     assert latest["last_synced_at"] is not None
-    # Note lands in the `error` column with a "note:" prefix.
-    assert latest["error"] is not None
-    assert "merged upstream" in latest["error"]
+    # Finding 7 fix: note lives in its own column, not error.
+    assert latest["note"] == "merged upstream"
+    assert latest["error"] is None
 
 
 def test_mark_status_without_note(client, deployment):
@@ -134,6 +134,7 @@ def test_mark_status_without_note(client, deployment):
         conn.close()
     assert latest["status"] == "merged"
     assert latest["error"] is None
+    assert latest["note"] is None
 
 
 def test_mark_status_from_updated_state(client, deployment):
@@ -174,6 +175,35 @@ def test_invalid_status_400(client, deployment, bad):
     resp = client.post("/api/bundles/b-bad/delivery/status", json=bad)
     assert resp.status_code == 400
     assert "merged" in resp.json()["detail"]
+
+
+def test_note_at_boundary_accepted(client, deployment):
+    """Finding 8 fix: explicit length cap (2000 chars) instead of
+    silent truncation. A note at the boundary length passes."""
+    conn = _open(deployment)
+    _seed_bundle(conn, "b-boundary")
+    _seed_review_request(conn, "b-boundary")
+    conn.commit()
+    conn.close()
+    resp = client.post(
+        "/api/bundles/b-boundary/delivery/status",
+        json={"status": "merged", "note": "x" * 2000},
+    )
+    assert resp.status_code == 200
+
+
+def test_note_over_boundary_rejected_400(client, deployment):
+    conn = _open(deployment)
+    _seed_bundle(conn, "b-too-long")
+    _seed_review_request(conn, "b-too-long")
+    conn.commit()
+    conn.close()
+    resp = client.post(
+        "/api/bundles/b-too-long/delivery/status",
+        json={"status": "merged", "note": "x" * 2001},
+    )
+    assert resp.status_code == 400
+    assert "too long" in resp.json()["detail"]
 
 
 def test_non_string_note_400(client, deployment):
@@ -305,15 +335,18 @@ def test_buttons_absent_without_delivery_row(client, deployment):
     assert 'id="op-mark-closed"' not in body
 
 
-def test_note_renders_as_note_not_error(client, deployment):
-    """A 'note:' prefixed value in the error column renders under
-    the 'Note:' label rather than 'Error:' — distinguishes
-    operator annotations from real provider failures."""
+def test_note_renders_under_note_label(client, deployment):
+    """Finding 7 follow-up: note lives in its own column. The UI
+    surfaces it under a dedicated 'Note:' label, independent of
+    the 'Error:' surfacing for create_failed rows."""
     conn = _open(deployment)
     _seed_bundle(conn, "b-note-ui")
-    _seed_review_request(
-        conn, "b-note-ui", status="merged",
-        error="note: landed upstream",
+    rid = _seed_review_request(conn, "b-note-ui", status="merged")
+    # Stuff the note in via direct UPDATE since _seed helper
+    # doesn't expose it.
+    conn.execute(
+        "UPDATE bundle_review_requests SET note = ? WHERE id = ?",
+        ("landed upstream", rid),
     )
     conn.commit()
     conn.close()

@@ -29,10 +29,20 @@ a meaningful error.
 
 from __future__ import annotations
 
+import os
 import subprocess
 from pathlib import Path
 
 from . import DeliveryError
+
+
+# Default timeout (seconds) for individual git subprocesses.
+# A hung remote on `git push` would otherwise block the Accept
+# request thread indefinitely. Overridable via the env var for
+# operators on slow networks / huge histories.
+_GIT_DEFAULT_TIMEOUT = float(
+    os.environ.get("DPORTSV3_GIT_TIMEOUT", "60.0")
+)
 
 
 __all__ = [
@@ -85,6 +95,7 @@ def _run(
     cwd: Path,
     stdin_text: str | None = None,
     check: bool = False,
+    timeout: float | None = None,
 ) -> subprocess.CompletedProcess:
     """Thin wrapper around subprocess.run with capture + UTF-8 text.
 
@@ -92,12 +103,29 @@ def _run(
     raise structured exceptions rather than letting CalledProcessError
     propagate. Set ``check=True`` only for invariants that should
     never fail given the prior validation steps.
+
+    A timeout (default ``$DPORTSV3_GIT_TIMEOUT`` or 60s) bounds the
+    subprocess so a hung remote can't block the request thread.
+    On timeout, raises ``GitError`` with a clear message rather
+    than propagating subprocess.TimeoutExpired (callers don't
+    know about subprocess internals).
     """
-    return subprocess.run(
-        args, cwd=str(cwd),
-        capture_output=True, text=True,
-        input=stdin_text, check=check,
+    effective_timeout = (
+        timeout if timeout is not None else _GIT_DEFAULT_TIMEOUT
     )
+    try:
+        return subprocess.run(
+            args, cwd=str(cwd),
+            capture_output=True, text=True,
+            input=stdin_text, check=check,
+            timeout=effective_timeout,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise GitError(
+            f"{' '.join(args[:3])}… timed out after "
+            f"{effective_timeout}s (set $DPORTSV3_GIT_TIMEOUT "
+            f"if the remote is legitimately slow)"
+        ) from exc
 
 
 def _assert_clone_dir(clone_dir: Path) -> None:
@@ -192,7 +220,13 @@ def prepare_clean_branch(
 
 
 def apply_diff(clone_dir: Path, diff_text: str) -> None:
-    """Apply ``diff_text`` to ``clone_dir`` via ``git apply --3way``.
+    """Apply ``diff_text`` to ``clone_dir`` via ``git apply --3way
+    --index``. The ``--index`` flag stages the result as it
+    applies, including registering newly-created files. Without
+    it the downstream ``commit_diff`` would only catch
+    modifications to already-tracked files via ``git add -u`` and
+    silently drop NEW files (e.g. dragonfly/patch-* created by an
+    add_patch intent).
 
     Raises ``GitApplyConflict`` if the diff doesn't apply cleanly
     (probably the operator's clone has drifted from the bundle's
@@ -200,7 +234,7 @@ def apply_diff(clone_dir: Path, diff_text: str) -> None:
     """
     _assert_clone_dir(clone_dir)
     p = _run(
-        ["git", "apply", "--3way", "--whitespace=nowarn"],
+        ["git", "apply", "--3way", "--index", "--whitespace=nowarn"],
         cwd=clone_dir,
         stdin_text=diff_text,
     )
@@ -227,23 +261,21 @@ def commit_diff(
     body: str,
     signoff: bool = True,
 ) -> None:
-    """Stage all changes + commit with the templated message.
+    """Commit the staged changes (already in the index after
+    ``apply_diff``, which uses ``--index``) with the templated
+    message.
 
     Refuses if there's nothing to commit (would produce an empty
     commit, which the upstream review platform would reject). The
     message is built as ``<title>\\n\\n<body>``.
+
+    Pre-11d-3-fix this ran ``git add -u`` to stage tracked-file
+    modifications, but that pattern silently dropped new files
+    (the load-bearing case for add_patch / add_file intents).
+    Now relies on apply_diff's ``--index`` to populate the index
+    correctly, so add isn't needed.
     """
     _assert_clone_dir(clone_dir)
-    # Stage tracked changes only — agent's changes.diff has
-    # already been applied via apply_diff, so the relevant edits
-    # are in the index/worktree. Using `git add -A` would also
-    # pick up stray untracked files in the operator's clone,
-    # which is wrong.
-    add = _run(["git", "add", "-u"], cwd=clone_dir)
-    if add.returncode != 0:
-        raise GitCommitError(
-            f"git add -u failed: {(add.stderr or '').strip()[:200]}"
-        )
     if not _is_dirty_after_add(clone_dir):
         raise GitCommitError(
             "nothing to commit — apply_diff produced no changes "

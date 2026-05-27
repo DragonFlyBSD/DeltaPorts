@@ -413,6 +413,20 @@ MIGRATIONS: tuple[str, ...] = (
     "CREATE UNIQUE INDEX IF NOT EXISTS uq_brr_open_signature "
     "ON bundle_review_requests(provider, error_signature) "
     "WHERE status NOT IN ('closed', 'merged', 'create_failed')",
+    # Step 11d-5 follow-up (review): dedicated `note` column for
+    # operator annotations on manual status updates. Pre-fix the
+    # endpoint reused the `error` column with a "note: " prefix,
+    # which required the UI to disambiguate via string parsing.
+    # A separate column is cleaner; the migration runs once on
+    # init_db and ADD COLUMN defaults to NULL on existing rows.
+    "ALTER TABLE bundle_review_requests ADD COLUMN note TEXT",
+    # Step 11d-3 follow-up (review Finding 4): track the diff
+    # SHA delivered for each open row so re-Accept on identical
+    # content can skip the git pipeline + force-push and just
+    # patch the PR body. Without this, every re-Accept produces
+    # a fresh commit (timestamps differ) and adds noise to the
+    # upstream PR history.
+    "ALTER TABLE bundle_review_requests ADD COLUMN diff_sha256 TEXT",
 )
 
 

@@ -165,6 +165,43 @@ def test_apply_diff_conflict_raises(clone):
         apply_diff(clone, bad_diff)
 
 
+def test_apply_diff_with_new_file_lands_in_commit(clone):
+    """Finding 1 (11d-3 review): apply_diff must stage newly-
+    created files so they make it into the commit. Pre-fix the
+    `--index` flag was missing and commit_diff's `git add -u`
+    only caught modifications, silently dropping new files (the
+    load-bearing case for add_patch / add_file intents producing
+    a fresh dragonfly/patch-* file)."""
+    prepare_clean_branch(
+        clone, base_branch="master", branch_name="feature/newfile",
+    )
+    new_file_diff = (
+        "diff --git a/dragonfly/patch-src_foo.c b/dragonfly/patch-src_foo.c\n"
+        "new file mode 100644\n"
+        "--- /dev/null\n"
+        "+++ b/dragonfly/patch-src_foo.c\n"
+        "@@ -0,0 +1,3 @@\n"
+        "+--- src/foo.c.orig\n"
+        "+++ src/foo.c\n"
+        "+@@ ...\n"
+    )
+    apply_diff(clone, new_file_diff)
+    commit_diff(clone, title="add new patch", body="x")
+    # Verify the new file is part of the commit, not lurking
+    # untracked.
+    out = subprocess.run(
+        ["git", "show", "--name-only", "--pretty=format:", "HEAD"],
+        cwd=str(clone), capture_output=True, text=True,
+    )
+    assert "dragonfly/patch-src_foo.c" in out.stdout
+    # And the file is no longer untracked.
+    status = subprocess.run(
+        ["git", "status", "--porcelain"],
+        cwd=str(clone), capture_output=True, text=True,
+    )
+    assert "dragonfly/patch-src_foo.c" not in status.stdout
+
+
 def test_apply_diff_malformed_raises_apply_error(clone):
     prepare_clean_branch(
         clone, base_branch="master", branch_name="feature/m",
@@ -236,6 +273,21 @@ def test_push_branch_happy_path(clone, remote):
         cwd=str(remote), capture_output=True, text=True,
     )
     assert "feature/push-me" in out.stdout
+
+
+def test_subprocess_timeout_surfaces_as_git_error(clone, monkeypatch):
+    """Finding 3 (11d-3 review): a git subprocess that hangs longer
+    than _GIT_DEFAULT_TIMEOUT must surface as GitError, not bubble
+    up as raw subprocess.TimeoutExpired."""
+    from dportsv3.delivery import _git as gitmod
+    import subprocess as sp
+
+    def _fake_run(*a, **kw):
+        raise sp.TimeoutExpired(cmd=a[0] if a else "git", timeout=1.0)
+
+    monkeypatch.setattr(sp, "run", _fake_run)
+    with pytest.raises(gitmod.GitError, match="timed out"):
+        gitmod._run(["git", "status"], cwd=clone)
 
 
 def test_push_branch_failure_to_invalid_remote(clone, tmp_path):

@@ -181,7 +181,7 @@ def test_429_retries_then_succeeds():
         _FakeResponse(429, text_body=""),
         _FakeResponse(200, json_body={"ok": True}),
     ]
-    data = _client(max_retries=5).get("/x")
+    data = _client(max_attempts=5).get("/x")
     assert data == {"ok": True}
     assert len(_FakeClient.captured) == 3
 
@@ -193,7 +193,7 @@ def test_429_exhausts_to_rate_limit_error():
         _FakeResponse(429, text_body=""),
     ]
     with pytest.raises(DeliveryRateLimitError, match="after 3 attempts"):
-        _client(max_retries=3).get("/x")
+        _client(max_attempts=3).get("/x")
 
 
 def test_429_honors_retry_after_header(monkeypatch):
@@ -259,6 +259,35 @@ def test_500_raises_delivery_error():
 # ---------------------------------------------------------------------
 # Connection errors
 # ---------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("body,expected_redacted_present", [
+    # Bearer header echoed in body.
+    ("Bearer ghp_abc123def", True),
+    # GitHub PAT in body.
+    ("token leaked: ghp_xyz789mno", True),
+    # GitLab PAT.
+    ("trace: glpat-aaaa1111bbbb2222", True),
+    # Authorization header verbatim.
+    ("Authorization: Bearer secret_token", True),
+    # No token in body — nothing to scrub.
+    ("plain error message no secrets", False),
+])
+def test_error_body_excerpt_scrubs_tokens(body, expected_redacted_present):
+    """Finding 6 (11d-3 review): tokens that show up in echoed
+    response bodies must be redacted before they land in the
+    DeliveryError (and therefore in bundle_review_requests.error)."""
+    _FakeClient.responses = [_FakeResponse(500, text_body=body)]
+    with pytest.raises(DeliveryError) as exc_info:
+        _client().get("/x")
+    msg = str(exc_info.value)
+    if expected_redacted_present:
+        assert "[REDACTED]" in msg
+        # And the original secret is gone.
+        for marker in ("ghp_abc", "ghp_xyz", "glpat-", "secret_token"):
+            assert marker not in msg
+    else:
+        assert "[REDACTED]" not in msg
 
 
 def test_httpx_error_wraps_to_delivery_error():

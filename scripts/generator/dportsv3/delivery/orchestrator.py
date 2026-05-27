@@ -249,11 +249,86 @@ def deliver(
 
     provider = build_provider(cfg)
 
+    # Resolve the operator clone before invoking the provider so a
+    # missing $DPORTSV3_OPERATOR_CLONE surfaces with a clear,
+    # config-specific error instead of "clone_dir /nonexistent
+    # doesn't exist" from deep inside _git. local-patch ignores
+    # clone_dir entirely so the env var stays optional there.
+    clone_dir_str = os.environ.get("DPORTSV3_OPERATOR_CLONE", "").strip()
+    if cfg.provider_type != "local-patch":
+        if not clone_dir_str:
+            request_id = insert_review_request(
+                write_conn,
+                bundle_id=bundle_id,
+                provider=cfg.provider_type,
+                status="create_failed",
+                error=(
+                    "DeliveryConfigError: $DPORTSV3_OPERATOR_CLONE "
+                    "is unset; network providers need a local "
+                    "DeltaPorts clone to push from"
+                ),
+                operator=operator,
+                error_signature=error_signature,
+            )
+            return DeliveryOutcome(
+                status="create_failed",
+                provider=cfg.provider_type,
+                error=(
+                    "$DPORTSV3_OPERATOR_CLONE is unset; network "
+                    "providers need a local clone"
+                ),
+                request_id=request_id,
+            )
+        clone_path = Path(clone_dir_str)
+        if not clone_path.is_dir():
+            request_id = insert_review_request(
+                write_conn,
+                bundle_id=bundle_id,
+                provider=cfg.provider_type,
+                status="create_failed",
+                error=(
+                    f"DeliveryConfigError: $DPORTSV3_OPERATOR_CLONE "
+                    f"points at {clone_dir_str!r} which doesn't exist"
+                ),
+                operator=operator,
+                error_signature=error_signature,
+            )
+            return DeliveryOutcome(
+                status="create_failed",
+                provider=cfg.provider_type,
+                error=(
+                    f"$DPORTSV3_OPERATOR_CLONE points at "
+                    f"{clone_dir_str!r} which doesn't exist"
+                ),
+                request_id=request_id,
+            )
+    else:
+        # local-patch never reads clone_dir; pass an existing path
+        # to satisfy the Protocol signature without leaking the
+        # /nonexistent sentinel that the old code used.
+        clone_path = Path(clone_dir_str) if clone_dir_str else Path(".")
+
+    # Look up an open delivery row BEFORE calling the provider so
+    # we can pass its recorded diff_sha256 in — same-content
+    # re-Accepts then short-circuit the provider's git pipeline
+    # (review Finding 4). Legacy rows without a signature can't
+    # collide (partial-unique index doesn't fire on NULL) so we
+    # skip the lookup there.
+    existing_open = None
+    if error_signature:
+        existing_open = find_open_review_request(
+            write_conn,
+            provider=cfg.provider_type,
+            error_signature=error_signature,
+        )
+    existing_diff_sha256 = (
+        existing_open["diff_sha256"] if existing_open is not None
+        else None
+    )
+
     try:
         result: ReviewRequestResult = provider.create_review_request(
-            clone_dir=Path(
-                os.environ.get("DPORTSV3_OPERATOR_CLONE", "/nonexistent")
-            ),
+            clone_dir=clone_path,
             branch_name=branch,
             base_branch=cfg.base_branch,
             title=title,
@@ -262,6 +337,7 @@ def deliver(
             diff_text=diff_text,
             diff_sha256=diff_sha256,
             draft=cfg.draft,
+            existing_diff_sha256=existing_diff_sha256,
         )
     except Exception as exc:
         request_id = insert_review_request(
@@ -286,17 +362,8 @@ def deliver(
     # On status='updated' the partial-unique index would block a
     # fresh INSERT (an open row already exists for this signature);
     # touch the existing row's last_synced_at instead. status=
-    # 'created' is the fresh-write path. error_signature can be
-    # None for legacy bundles — those skip the find_open lookup
-    # because the index doesn't fire on NULL signatures.
-    existing_open = None
-    if error_signature:
-        existing_open = find_open_review_request(
-            write_conn,
-            provider=cfg.provider_type,
-            error_signature=error_signature,
-        )
-
+    # 'created' is the fresh-write path. The existing_open lookup
+    # already ran above the provider call.
     if existing_open is not None and result.status == "updated":
         update_review_request_status(
             write_conn,
@@ -305,6 +372,7 @@ def deliver(
             provider_pr_id=result.provider_pr_id,
             url=result.url,
             branch=result.branch,
+            diff_sha256=diff_sha256,
         )
         request_id = int(existing_open["id"])
     else:
@@ -319,6 +387,7 @@ def deliver(
             title=result.title,
             operator=operator,
             error_signature=error_signature,
+            diff_sha256=diff_sha256,
         )
     return DeliveryOutcome(
         status=result.status,
