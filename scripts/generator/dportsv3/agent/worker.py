@@ -1284,6 +1284,239 @@ def _clean_port_workdir(env: str, origin: str) -> dict:
     }
 
 
+# --------------------------------------------------------------------
+# Per-bundle branch lifecycle (Step 30 slice 1).
+#
+# Each bundle gets its own branch ``bundle/<bundle_id>`` in the env's
+# ``/work/DeltaPorts`` git. All convert / patch / verify work for that
+# bundle lands on the branch — so the env's base branch (master/main)
+# stays at upstream and no convert commits accumulate across bundles.
+#
+# Lifecycle:
+# - Job dispatch calls ``checkout_bundle_branch`` before any worker.*
+#   call that touches the substrate. Idempotent: re-entry on the same
+#   bundle (convert → retriage → patch chain) reuses the branch.
+# - Terminal resolution sweep calls ``drop_bundle_branch`` to garbage-
+#   collect branches whose bundle landed at accepted / rejected /
+#   discarded. Slice 4.
+# - Failed-mid-flight bundles keep their branch until the operator
+#   resolves them via take-over / retry / discard.
+# --------------------------------------------------------------------
+
+# Per-env cache of the resolved base branch (``master``/``main``).
+# ``git symbolic-ref refs/remotes/origin/HEAD`` is deterministic but
+# costs a subprocess per call; the env's base doesn't change during
+# its lifetime so cache is safe.
+_BUNDLE_BASE_BRANCH_CACHE: dict[str, str] = {}
+
+
+def _resolve_bundle_base_branch(env: str) -> str:
+    """Detect the env's base branch (the branch new bundle/<id>
+    branches should be created from).
+
+    Reads ``git symbolic-ref refs/remotes/origin/HEAD`` inside the
+    env's ``/work/DeltaPorts`` and strips the ``refs/remotes/origin/``
+    prefix. Falls back to ``master`` when the symbolic-ref is not set
+    (rare — clones from a mirror usually have it). Cached per env.
+    """
+    cached = _BUNDLE_BASE_BRANCH_CACHE.get(env)
+    if cached:
+        return cached
+    p = _exec(
+        env, "/bin/sh", "-c",
+        "cd /work/DeltaPorts && "
+        "git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null "
+        "|| echo master",
+        cwd="/work/DeltaPorts",
+    )
+    raw = (p.stdout or "").strip()
+    # ``--short`` already strips ``refs/remotes/`` but the result is
+    # still ``origin/<branch>``. Strip the remote prefix.
+    if raw.startswith("origin/"):
+        raw = raw[len("origin/"):]
+    base = raw or "master"
+    _BUNDLE_BASE_BRANCH_CACHE[env] = base
+    return base
+
+
+def _branch_name_for(bundle_id: str) -> str:
+    """Branch naming convention: ``bundle/<bundle_id>``. Stripping
+    the trailing ``.job`` extension if a job filename was passed by
+    accident — bundle IDs themselves don't carry it but caller
+    plumbing sometimes does."""
+    name = bundle_id.strip()
+    if name.endswith(".job"):
+        name = name[:-len(".job")]
+    return f"bundle/{name}"
+
+
+def checkout_bundle_branch(env: str, bundle_id: str) -> dict:
+    """Ensure the env's ``/work/DeltaPorts`` is checked out on the
+    branch dedicated to ``bundle_id``.
+
+    Three cases:
+
+    - Current branch is already ``bundle/<bundle_id>``: no-op,
+      returns ``reused=True``.
+    - Branch exists but isn't current (e.g. another bundle's job ran
+      in this env between this bundle's convert and patch jobs):
+      ``git checkout`` it.
+    - Branch doesn't exist (first job for this bundle): switch to
+      base branch first to avoid branching off some other bundle's
+      branch, then ``git checkout -b`` to create.
+
+    Returns a standard worker result dict with extra keys:
+    ``branch``, ``base``, ``reused``, ``created``.
+
+    Best-effort on the base-switch step: if the env's working tree
+    can't be reset cleanly the function fails — the caller's job
+    should not proceed against an unknown branch state.
+    """
+    if not bundle_id:
+        return {
+            "ok": False,
+            "error": "bundle_id is required",
+        }
+    branch = _branch_name_for(bundle_id)
+    base = _resolve_bundle_base_branch(env)
+
+    # Detect current branch.
+    cur_p = _exec(
+        env, "/bin/sh", "-c",
+        "cd /work/DeltaPorts && git rev-parse --abbrev-ref HEAD",
+        cwd="/work/DeltaPorts",
+    )
+    if cur_p.returncode != 0:
+        return _exec_result(
+            cur_p.returncode, cur_p.stdout, cur_p.stderr,
+            error="rev-parse HEAD failed", branch=branch, base=base,
+        )
+    current = (cur_p.stdout or "").strip()
+    if current == branch:
+        return {
+            "ok": True, "branch": branch, "base": base,
+            "reused": True, "created": False,
+        }
+
+    # Does the branch already exist?
+    exists_p = _exec(
+        env, "/bin/sh", "-c",
+        f"cd /work/DeltaPorts && "
+        f"git rev-parse --verify --quiet "
+        f"refs/heads/{shlex.quote(branch)}",
+        cwd="/work/DeltaPorts",
+    )
+    branch_exists = exists_p.returncode == 0
+
+    if branch_exists:
+        # Switch to existing branch directly.
+        co_p = _exec(
+            env, "/bin/sh", "-c",
+            f"cd /work/DeltaPorts && "
+            f"git checkout {shlex.quote(branch)}",
+            cwd="/work/DeltaPorts",
+        )
+        if co_p.returncode != 0:
+            return _exec_result(
+                co_p.returncode, co_p.stdout, co_p.stderr,
+                error=f"checkout {branch} failed",
+                branch=branch, base=base,
+            )
+        return {
+            "ok": True, "branch": branch, "base": base,
+            "reused": True, "created": False,
+        }
+
+    # Create the branch off the base. Switch to base first so we
+    # don't accidentally branch off some other bundle's branch that
+    # might be currently checked out.
+    create_cmd = (
+        f"cd /work/DeltaPorts && "
+        f"git checkout {shlex.quote(base)} && "
+        f"git checkout -b {shlex.quote(branch)}"
+    )
+    create_p = _exec(env, "/bin/sh", "-c", create_cmd,
+                     cwd="/work/DeltaPorts")
+    if create_p.returncode != 0:
+        return _exec_result(
+            create_p.returncode, create_p.stdout, create_p.stderr,
+            error=f"create branch {branch} failed",
+            branch=branch, base=base,
+        )
+    return {
+        "ok": True, "branch": branch, "base": base,
+        "reused": False, "created": True,
+    }
+
+
+def drop_bundle_branch(env: str, bundle_id: str) -> dict:
+    """Delete the env's ``bundle/<bundle_id>`` branch, switching to
+    the base branch first if it's currently checked out.
+
+    Slice 4's terminal-resolution sweep calls this once a bundle
+    reaches accepted / rejected / discarded — the branch's history
+    has either been captured in a delivered PR or is meaningfully
+    abandoned, so the env can reclaim the namespace.
+
+    Idempotent: returns ``ok=True, removed=False`` when the branch
+    doesn't exist. ``-D`` (force) is used because the branch may
+    carry commits that aren't on any other ref.
+    """
+    if not bundle_id:
+        return {"ok": False, "error": "bundle_id is required"}
+    branch = _branch_name_for(bundle_id)
+    base = _resolve_bundle_base_branch(env)
+
+    cur_p = _exec(
+        env, "/bin/sh", "-c",
+        "cd /work/DeltaPorts && git rev-parse --abbrev-ref HEAD",
+        cwd="/work/DeltaPorts",
+    )
+    current = (cur_p.stdout or "").strip() if cur_p.returncode == 0 else ""
+
+    exists_p = _exec(
+        env, "/bin/sh", "-c",
+        f"cd /work/DeltaPorts && "
+        f"git rev-parse --verify --quiet "
+        f"refs/heads/{shlex.quote(branch)}",
+        cwd="/work/DeltaPorts",
+    )
+    if exists_p.returncode != 0:
+        return {
+            "ok": True, "branch": branch, "base": base,
+            "removed": False, "reason": "branch_absent",
+        }
+
+    if current == branch:
+        sw_p = _exec(
+            env, "/bin/sh", "-c",
+            f"cd /work/DeltaPorts && git checkout {shlex.quote(base)}",
+            cwd="/work/DeltaPorts",
+        )
+        if sw_p.returncode != 0:
+            return _exec_result(
+                sw_p.returncode, sw_p.stdout, sw_p.stderr,
+                error=f"checkout base {base} before drop failed",
+                branch=branch, base=base,
+            )
+
+    del_p = _exec(
+        env, "/bin/sh", "-c",
+        f"cd /work/DeltaPorts && git branch -D {shlex.quote(branch)}",
+        cwd="/work/DeltaPorts",
+    )
+    if del_p.returncode != 0:
+        return _exec_result(
+            del_p.returncode, del_p.stdout, del_p.stderr,
+            error=f"git branch -D {branch} failed",
+            branch=branch, base=base,
+        )
+    return {
+        "ok": True, "branch": branch, "base": base,
+        "removed": True,
+    }
+
+
 def commit_port_changes(
     env: str, origin: str, message: str,
 ) -> dict:

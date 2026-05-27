@@ -2300,6 +2300,84 @@ def _finish_orchestrator_run(
     return True, status_str
 
 
+def _checkout_bundle_branch_for_job(
+    *,
+    queue_root: Path,
+    job_id: str,
+    env: str | None,
+    bundle_id: str | None,
+    job_type: str,
+) -> None:
+    """Step 30 slice 1: ensure the env is checked out on this
+    bundle's dedicated branch before any worker.* call touches the
+    substrate. Called from process_convert_job, process_patch_job,
+    and the verify dispatch.
+
+    Soft-fail by design: if the checkout itself fails (env doesn't
+    exist, git unavailable, subprocess raises), the job proceeds
+    anyway and falls back to pre-Step-30 behavior (commits land on
+    whatever branch is current, changes.diff is HEAD-relative).
+    The activity row makes the lost-isolation visible so an operator
+    can spot it; failing the job hard would regress a class of
+    bundles that have already passed triage and would otherwise
+    run fine.
+
+    No-op when env or bundle_id is missing (e.g. triage jobs that
+    don't touch the substrate).
+    """
+    if not env or not bundle_id:
+        return
+    from dportsv3.agent import worker  # noqa: PLC0415
+    try:
+        result = worker.checkout_bundle_branch(env, bundle_id)
+    except Exception as exc:
+        try:
+            activity_log(
+                queue_root, "bundle_branch_checkout_failed",
+                f"{job_type} {job_id}: checkout raised: {exc!s}"[:240],
+                job_id=job_id,
+                extra={"bundle_id": bundle_id, "env": env,
+                       "exception": str(exc)[:300]},
+            )
+        except Exception:
+            pass
+        return
+    if not result.get("ok"):
+        try:
+            activity_log(
+                queue_root, "bundle_branch_checkout_failed",
+                (f"{job_type} {job_id}: "
+                 f"{result.get('error') or 'checkout failed'}")[:240],
+                job_id=job_id,
+                extra={"bundle_id": bundle_id, "env": env,
+                       "branch": result.get("branch"),
+                       "base": result.get("base"),
+                       "stderr_tail": result.get("stderr_tail", "")[:300]},
+            )
+        except Exception:
+            pass
+        return
+    # Success row. Only emit when we actually did work (created
+    # the branch, or switched onto an existing one) — the "already
+    # current" no-op path would otherwise flood the activity log on
+    # the convert → retriage → patch chain.
+    if result.get("created") or not result.get("reused"):
+        try:
+            activity_log(
+                queue_root, "bundle_branch_checkout",
+                (f"{job_type} {job_id}: "
+                 f"{'created' if result.get('created') else 'switched to'} "
+                 f"{result.get('branch')} (base={result.get('base')})"),
+                job_id=job_id,
+                extra={"bundle_id": bundle_id, "env": env,
+                       "branch": result.get("branch"),
+                       "base": result.get("base"),
+                       "created": bool(result.get("created"))},
+            )
+        except Exception:
+            pass
+
+
 def _maybe_skip_locked_origin(
     *,
     queue_root: Path,
@@ -3134,6 +3212,17 @@ def process_patch_job(
         return skipped
     # ---------------------------------------------------------------
 
+    # Step 30 slice 1: pin the patch's work to the same per-bundle
+    # branch the convert (if any) wrote to. Reuses an existing
+    # bundle/<id> branch; creates a fresh one off the env's base
+    # when this is a patch on an un-converted port. Soft-fail —
+    # see process_convert_job for the trade-off rationale.
+    _checkout_bundle_branch_for_job(
+        queue_root=queue_root, job_id=job_path.name,
+        env=resolve_env(job), bundle_id=job.get("bundle_id") or None,
+        job_type="patch",
+    )
+
     # Seed queue_root + job_id into job so payload-build telemetry
     # (`playbooks_selected` activity row) can find them. See the same
     # comment in process_triage_job.
@@ -3233,6 +3322,18 @@ def process_convert_job(
             f"no dev-env resolved; convert needs an env "
             f"({env_resolution.refusal_reason})"
         )
+
+    # Step 30 slice 1: pin the convert's work to a per-bundle branch
+    # so commits (overlay.dops creation, etc.) don't accumulate on
+    # the env's base branch across bundles. Soft-fail: if the
+    # checkout doesn't take, the convert falls back to pre-Step-30
+    # behavior (commit lands on whatever branch is current). The
+    # activity row makes the regression visible.
+    _checkout_bundle_branch_for_job(
+        queue_root=queue_root, job_id=job_path.name,
+        env=env_name, bundle_id=job.get("bundle_id") or None,
+        job_type="convert",
+    )
 
     # Classification (and everything downstream) reads the dev-env's
     # writable overlay via worker.classify_dops → dev-env exec →
@@ -4105,6 +4206,16 @@ def process_job(
         _apply_transition(job_path.name, start_event)
         bundle_id = job.get("bundle_id", "")
         verify_env = job.get("dev_env", "")
+        # Step 30 slice 1: verify replays the bundle's intent log /
+        # diff against the env. Pin to the bundle's branch so the
+        # replay sees the same baseline the original convert + patch
+        # commits sat on.
+        _checkout_bundle_branch_for_job(
+            queue_root=queue_root, job_id=job_path.name,
+            env=verify_env or None,
+            bundle_id=bundle_id or None,
+            job_type="verify",
+        )
         try:
             result = run_verify_fix(
                 bundle_id=bundle_id,
