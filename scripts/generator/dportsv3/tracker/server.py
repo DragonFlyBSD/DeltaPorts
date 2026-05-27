@@ -38,6 +38,7 @@ from dportsv3.tracker.agentic_queries import (
     clear_origin_skip,
     is_origin_skipped,
     job_events_for_job,
+    latest_review_request_for_bundle,
     list_bundles,
     list_jobs,
     list_jobs_for_bundle,
@@ -989,6 +990,145 @@ def create_app(db_path: str | Path) -> Any:
             "env": env,
         }
 
+    def _accept_delivery_step(
+        *,
+        bundle: dict[str, Any],
+        request_body: dict[str, Any],
+        write_conn: sqlite3.Connection,
+    ) -> dict[str, Any] | None:
+        """Step 11d-2: optional delivery side-effect on Accept.
+
+        Returns a small dict for the accept response when delivery
+        was attempted (regardless of outcome), or None when delivery
+        was deliberately skipped (operator passed deliver=false, or
+        no delivery.toml is configured, or the bundle has no
+        changes.diff to push).
+
+        The bundle accept itself never depends on delivery — any
+        exception in here writes a create_failed row and returns a
+        descriptive dict but does not propagate.
+        """
+        if request_body.get("deliver") is False:
+            return {"status": "skipped", "skip_reason": "operator_optout"}
+
+        from dportsv3.delivery.orchestrator import (  # noqa: PLC0415
+            resolve_config, deliver, DeliveryOutcome,
+        )
+        from dportsv3.delivery import DeliveryConfigError  # noqa: PLC0415
+
+        try:
+            cfg = resolve_config(target=bundle.get("target") or None)
+        except DeliveryConfigError as exc:
+            # Config exists but is malformed — surface as a delivery
+            # error rather than silently skipping.
+            return {
+                "status": "create_failed",
+                "error": f"DeliveryConfigError: {exc}",
+            }
+        if cfg is None:
+            return {"status": "skipped", "skip_reason": "no_config"}
+
+        bundle_id = bundle.get("bundle_id") or ""
+        diff_ref = get_artifact_ref(
+            write_conn, bundle_id, "analysis/changes.diff",
+        )
+        if diff_ref is None:
+            return {
+                "status": "skipped",
+                "skip_reason": "no_changes_diff",
+            }
+        diff_path = _resolve_artifact_path(app.state.artifact_root, diff_ref)
+        if diff_path is None or not diff_path.is_file():
+            return {
+                "status": "skipped",
+                "skip_reason": "changes_diff_unreadable",
+            }
+        try:
+            diff_text = diff_path.read_text()
+        except OSError as exc:
+            return {
+                "status": "create_failed",
+                "error": f"changes.diff read failed: {exc}",
+            }
+        if not diff_text.strip():
+            return {
+                "status": "skipped",
+                "skip_reason": "changes_diff_empty",
+            }
+
+        operator = (
+            (request_body.get("operator") or "operator").strip()
+            or "operator"
+        )
+
+        # Pull the per-attempt audit so we can include model /
+        # attempts / tokens in the commit message. Best-effort.
+        model = attempts = tokens = None
+        one_line_summary = None
+        audit_ref = get_artifact_ref(
+            write_conn, bundle_id, "analysis/patch_audit.json",
+        )
+        if audit_ref is not None:
+            audit_path = _resolve_artifact_path(
+                app.state.artifact_root, audit_ref,
+            )
+            if audit_path is not None and audit_path.is_file():
+                try:
+                    import json as _json  # noqa: PLC0415
+                    audit_data = _json.loads(audit_path.read_text())
+                    model = audit_data.get("model")
+                    raw_attempts = audit_data.get("attempts")
+                    if isinstance(raw_attempts, list):
+                        attempts = len(raw_attempts)
+                    tu = audit_data.get("tokens_used") or {}
+                    tokens = tu.get("total") if isinstance(tu, dict) else None
+                except Exception:
+                    pass
+
+        try:
+            outcome: DeliveryOutcome = deliver(
+                bundle=bundle,
+                diff_text=diff_text,
+                cfg=cfg,
+                operator=operator,
+                bundle_url=None,  # tracker URL not threaded yet
+                one_line_summary=one_line_summary,
+                model=model, attempts=attempts, tokens=tokens,
+                write_conn=write_conn,
+            )
+        except Exception as exc:
+            # The orchestrator already catches provider failures and
+            # writes a create_failed row. Any exception that escapes
+            # here is a bug in orchestrator.deliver itself; surface
+            # without crashing the accept.
+            return {
+                "status": "create_failed",
+                "error": f"deliver() raised: {type(exc).__name__}: {exc}",
+            }
+
+        from dportsv3.artifact_store import emit_event  # noqa: PLC0415
+        emit_event(write_conn, "bundle_delivered", {
+            "bundle_id": bundle_id,
+            "provider": outcome.provider,
+            "status": outcome.status,
+            "url": outcome.url,
+            "branch": outcome.branch,
+            "operator": operator,
+        })
+        result: dict[str, Any] = {
+            "status": outcome.status,
+            "provider": outcome.provider,
+        }
+        if outcome.url:
+            result["url"] = outcome.url
+        if outcome.provider_pr_id:
+            result["provider_pr_id"] = outcome.provider_pr_id
+        if outcome.branch:
+            result["branch"] = outcome.branch
+        if outcome.error:
+            result["error"] = outcome.error
+        return result
+
     @app.post("/api/bundles/{bundle_id}/accept")
     def api_bundle_accept(
         bundle_id: str, body: dict[str, Any] | None = None,
@@ -1079,10 +1219,20 @@ def create_app(db_path: str | Path) -> Any:
                 "skip_action": skip_action,
                 "note": (body or {}).get("note"),
             })
+
+            # Step 11d-2: Accept-with-delivery. Best-effort — any
+            # exception path here writes a create_failed row and
+            # logs but the bundle stays accepted. Skipped silently
+            # when delivery.toml isn't configured.
+            delivery = _accept_delivery_step(
+                bundle=row,
+                request_body=(body or {}),
+                write_conn=write_conn,
+            )
         finally:
             write_conn.close()
 
-        return {
+        response: dict[str, Any] = {
             "ok": True,
             "bundle_id": bundle_id,
             "resolution": "accepted",
@@ -1090,6 +1240,9 @@ def create_app(db_path: str | Path) -> Any:
             "prior_resolution": prior_resolution,
             "skip_action": skip_action,
         }
+        if delivery is not None:
+            response["delivery"] = delivery
+        return response
 
     @app.post("/api/bundles/{bundle_id}/reject")
     def api_bundle_reject(
@@ -2095,6 +2248,12 @@ def create_app(db_path: str | Path) -> Any:
             # ran post-this-change — the template hides the pill in
             # that case.
             dops_state = bundle.get("dops_state") if bundle is not None else None
+            # Step 11d-2: most-recent delivery attempt for the Delivery
+            # card. None on bundles that haven't been delivered yet
+            # (the template hides the card in that case).
+            delivery_request = latest_review_request_for_bundle(
+                conn, bundle_id,
+            )
         if bundle is None:
             raise HTTPException(status_code=404, detail=f"Unknown bundle: {bundle_id}")
         if selected_relpath and selected_ref is None:
@@ -2212,6 +2371,7 @@ def create_app(db_path: str | Path) -> Any:
                 "port_token_usage": port_token_usage,
                 "dops_state": dops_state,
                 "operator_actions": operator_actions,
+                "delivery_request": delivery_request,
             },
         )
 

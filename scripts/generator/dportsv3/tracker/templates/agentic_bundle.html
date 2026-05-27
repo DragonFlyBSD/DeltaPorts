@@ -229,6 +229,63 @@
       </div>
       {% endif %}
     </div>
+    {# Step 11d-2: Delivery card. Renders the most-recent
+       bundle_review_requests row for this bundle. Absent on
+       bundles that haven't been delivered yet — keeps the
+       bundle page uncluttered for the common case. #}
+    {% if delivery_request %}
+    {% set dr = delivery_request %}
+    <div class="tracker-card" style="margin-top:8px;">
+      <strong style="font-size:12px;">Delivery</strong>
+      <div style="margin-top:6px;font-size:12px;display:flex;flex-wrap:wrap;gap:14px;align-items:baseline;">
+        <span>
+          Status:
+          {% if dr.status == 'created' %}
+            <span class="stat-pill built">created</span>
+          {% elif dr.status == 'updated' %}
+            <span class="stat-pill skipped">updated</span>
+          {% elif dr.status == 'create_failed' %}
+            <span class="stat-pill failed">create failed</span>
+          {% elif dr.status == 'closed' %}
+            <span class="stat-pill skipped">closed</span>
+          {% elif dr.status == 'merged' %}
+            <span class="stat-pill built">merged</span>
+          {% else %}
+            <span class="stat-pill">{{ dr.status }}</span>
+          {% endif %}
+        </span>
+        <span>Provider: <code>{{ dr.provider }}</code></span>
+        {% if dr.branch %}
+        <span>Branch: <code>{{ dr.branch }}</code></span>
+        {% endif %}
+        {% if dr.url %}
+        <span>
+          {% if dr.provider == 'local-patch' %}
+            File: <code>{{ dr.url }}</code>
+          {% else %}
+            <a href="{{ dr.url }}" target="_blank" rel="noopener">
+              View on {{ dr.provider }}
+            </a>
+            {% if dr.provider_pr_id %}
+              · #{{ dr.provider_pr_id }}
+            {% endif %}
+          {% endif %}
+        </span>
+        {% endif %}
+        {% if dr.operator %}
+        <span style="color:var(--text-dim);">
+          by {{ dr.operator }}
+          {% if dr.created_at %} at {{ dr.created_at }}{% endif %}
+        </span>
+        {% endif %}
+      </div>
+      {% if dr.error %}
+      <div style="margin-top:6px;font-size:11px;color:var(--c-fail, #c00);">
+        Error: <code>{{ dr.error }}</code>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
     <script>
     (function () {
       const statusEl = document.getElementById('op-status');
