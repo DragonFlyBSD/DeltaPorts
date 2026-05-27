@@ -63,9 +63,15 @@ def resolve_config(
 
     Search order:
       1. ``$DPORTSV3_DELIVERY_CONFIG`` — explicit path override.
-      2. ``$DPORTSV3_CONFIG_DIR/delivery.toml`` — default location.
+      2. ``$DPORTSV3_CONFIG_DIR/delivery.toml`` — env-pointed dir.
+      3. ``<repo-root>/config/delivery.toml`` — repo-anchored
+         default, mirrors how ``agent/runner.py`` finds
+         ``agentic-policy.json``. The asymmetry was a footgun:
+         operators dropped delivery.toml next to agentic-policy.json
+         expecting it to be picked up the same way, and got a
+         silent ``no_config`` skip instead.
 
-    Returns ``None`` if no file is configured / present (delivery
+    Returns ``None`` if no file is found at any of the three (delivery
     silently disabled). Raises ``DeliveryConfigError`` only on a
     config file that EXISTS but is malformed — silent "no config
     found" path doesn't disrupt accepts on systems that haven't
@@ -77,9 +83,16 @@ def resolve_config(
         path = Path(explicit)
     else:
         config_dir = env.get("DPORTSV3_CONFIG_DIR", "").strip()
-        if not config_dir:
-            return None
-        path = Path(config_dir) / "delivery.toml"
+        if config_dir:
+            path = Path(config_dir) / "delivery.toml"
+        else:
+            # Repo-anchored fallback. This file lives at
+            # scripts/generator/dportsv3/delivery/orchestrator.py;
+            # parents[4] is the repo root.
+            path = (
+                Path(__file__).resolve().parents[4]
+                / "config" / "delivery.toml"
+            )
     if not path.is_file():
         return None
     return load_delivery_config(path, target=target, env=env)

@@ -2,7 +2,9 @@
 #
 # Copy to delivery.toml and edit. The tracker loads this file from:
 #   1. $DPORTSV3_DELIVERY_CONFIG (explicit path), or
-#   2. $DPORTSV3_CONFIG_DIR/delivery.toml (default).
+#   2. $DPORTSV3_CONFIG_DIR/delivery.toml, or
+#   3. <repo-root>/config/delivery.toml (default; mirrors how
+#      agentic-policy.json is found).
 #
 # If neither resolves to an existing file, delivery is silently
 # disabled and Accept stays a pure tracker-side action.
