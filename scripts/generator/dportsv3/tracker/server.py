@@ -49,6 +49,7 @@ from dportsv3.tracker.agentic_queries import (
     list_runs,
     port_attempt_summary,
     recent_activity,
+    recent_activity_for_bundle,
     runner_status,
     set_origin_skip,
     token_usage_for_job,
@@ -999,6 +1000,7 @@ def create_app(db_path: str | Path) -> Any:
         stage: str,
         message: str,
         extra: dict[str, Any] | None = None,
+        bundle_id: str | None = None,
     ) -> None:
         """Tracker-side activity_log writer. Mirrors the runner's
         ``activity_log()`` helper but uses the connection the caller
@@ -1008,16 +1010,19 @@ def create_app(db_path: str | Path) -> Any:
         emits one row so operators can see what happened on the
         bundle detail page's activity ribbon AND via
         ``dportsv3 tracker get-activity``. Pairs with a daemon-log
-        line for tail-the-log workflows.
+        line for tail-the-log workflows. ``bundle_id`` lands in
+        its own column so the bundle page can render
+        bundle-scoped rows without parsing extra_json.
         """
         from datetime import datetime, timezone  # noqa: PLC0415
         ts = datetime.now(timezone.utc).isoformat()
         try:
             write_conn.execute(
                 """INSERT INTO activity_log
-                       (ts, job_id, stage, message, duration_ms, extra_json)
-                       VALUES (?, NULL, ?, ?, NULL, ?)""",
-                (ts, stage, message,
+                       (ts, job_id, bundle_id, stage, message,
+                        duration_ms, extra_json)
+                       VALUES (?, NULL, ?, ?, ?, NULL, ?)""",
+                (ts, bundle_id, stage, message,
                  json.dumps(extra) if extra is not None else None),
             )
         except sqlite3.Error as exc:
@@ -1269,6 +1274,7 @@ def create_app(db_path: str | Path) -> Any:
             )
             _activity_log(
                 write_conn, "bundle_accepted", accept_msg,
+                bundle_id=bundle_id,
                 extra={
                     "bundle_id": bundle_id,
                     "prior_resolution": prior_resolution,
@@ -1328,6 +1334,7 @@ def create_app(db_path: str | Path) -> Any:
                 _LOG.warning(d_msg)
             _activity_log(
                 write_conn, "delivery_complete", d_msg,
+                bundle_id=bundle_id,
                 extra={
                     "bundle_id": bundle_id,
                     "status": d_status,
@@ -2500,6 +2507,14 @@ def create_app(db_path: str | Path) -> Any:
             delivery_request = latest_review_request_for_bundle(
                 conn, bundle_id,
             )
+            # Visibility plan: tracker-side activity rows
+            # (bundle_accepted, delivery_complete) live with
+            # bundle_id set but job_id=NULL. Surface them on the
+            # bundle page directly so accept-and-deliver outcomes
+            # are visible without dropping out to the CLI.
+            bundle_activity = recent_activity_for_bundle(
+                conn, bundle_id, limit=20,
+            )
         if bundle is None:
             raise HTTPException(status_code=404, detail=f"Unknown bundle: {bundle_id}")
         if selected_relpath and selected_ref is None:
@@ -2649,6 +2664,7 @@ def create_app(db_path: str | Path) -> Any:
                 "dops_state": dops_state,
                 "operator_actions": operator_actions,
                 "delivery_request": delivery_request,
+                "bundle_activity": bundle_activity,
             },
         )
 

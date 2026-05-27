@@ -77,6 +77,7 @@ CREATE TABLE IF NOT EXISTS activity_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     ts TEXT NOT NULL,
     job_id TEXT,
+    bundle_id TEXT,
     stage TEXT,
     message TEXT,
     duration_ms INTEGER,
@@ -427,6 +428,18 @@ MIGRATIONS: tuple[str, ...] = (
     # a fresh commit (timestamps differ) and adds noise to the
     # upstream PR history.
     "ALTER TABLE bundle_review_requests ADD COLUMN diff_sha256 TEXT",
+    # Visibility upgrade: tracker-side bundle_accepted +
+    # delivery_complete activity rows previously landed with
+    # job_id=NULL because they originate from an HTTP endpoint,
+    # not a runner job. That made them invisible on the bundle
+    # detail page (filtered by job_id) and dropped by
+    # `get-activity --target` (joins through jobs.job_id).
+    # Adding bundle_id lets the bundle page render
+    # bundle-scoped activity and lets future writers cross-
+    # reference rows to their bundle without parsing extra_json.
+    "ALTER TABLE activity_log ADD COLUMN bundle_id TEXT",
+    "CREATE INDEX IF NOT EXISTS idx_activity_log_bundle "
+    "ON activity_log(bundle_id) WHERE bundle_id IS NOT NULL",
 )
 
 

@@ -230,6 +230,40 @@ def test_load_token_from_file_when_env_missing(tmp_path):
     assert cfg.token == "ghp_from_file"
 
 
+def test_token_repo_anchored_fallback(tmp_path, monkeypatch):
+    """Mirror of the TOML repo-anchored fallback: when
+    $DPORTSV3_CONFIG_DIR isn't set, _resolve_token should still
+    find <repo-root>/config/delivery.token. Operators who drop
+    both files into the repo's config/ directory (alongside
+    agentic-policy.json) shouldn't have to set an env var just
+    for the token lookup."""
+    from dportsv3.delivery import config as cfg_mod
+    cfg_path = tmp_path / "delivery.toml"
+    _write_toml(cfg_path, (
+        '[provider]\n'
+        'type = "github"\n'
+        'repo = "x/y"\n'
+        f'clone_dir = "{tmp_path}"\n'
+    ))
+    # Stage a fake delivery.token in a fake "repo root" and point
+    # _resolve_token's parents[4] computation at it.
+    fake_repo = tmp_path / "fake-repo"
+    (fake_repo / "config").mkdir(parents=True)
+    (fake_repo / "config" / "delivery.token").write_text("ghp_repo_fallback")
+    # config.py lives 4 parents under the repo root in production.
+    # Recreate the same shape so parents[4] resolves.
+    fake_config_py = (
+        fake_repo / "scripts" / "generator" / "dportsv3"
+        / "delivery" / "config.py"
+    )
+    fake_config_py.parent.mkdir(parents=True)
+    fake_config_py.write_text("# stand-in")
+    monkeypatch.setattr(cfg_mod, "__file__", str(fake_config_py))
+
+    cfg = load_delivery_config(cfg_path, env={})  # no env vars
+    assert cfg.token == "ghp_repo_fallback"
+
+
 def test_env_token_takes_precedence_over_file(tmp_path):
     cfg_path = tmp_path / "delivery.toml"
     _write_toml(cfg_path, (

@@ -212,20 +212,45 @@ def load_delivery_config(
 
 
 def _resolve_token(env: dict[str, str]) -> str | None:
-    """Token from env var, then from file under
-    $DPORTSV3_CONFIG_DIR. Returns None if neither yields a value."""
+    """Token from env var, then from file. Search order mirrors
+    ``orchestrator.resolve_config``'s tier-3 fallback so an operator
+    who drops ``delivery.toml`` + ``delivery.token`` into the repo's
+    ``config/`` directory (next to ``agentic-policy.json``) doesn't
+    also have to export ``$DPORTSV3_CONFIG_DIR`` just for the token
+    lookup. The prior shape gated the file lookup entirely on
+    ``$DPORTSV3_CONFIG_DIR`` and silently treated "env var unset"
+    as "no token", producing ``DeliveryConfigError: requires a
+    token`` even when ``config/delivery.token`` was sitting right
+    next to the TOML the loader had just successfully read.
+
+    Search order:
+      1. ``$DPORTSV3_DELIVERY_TOKEN`` env var.
+      2. ``$DPORTSV3_CONFIG_DIR/delivery.token`` when the env var
+         is set.
+      3. ``<repo-root>/config/delivery.token`` — repo-anchored
+         default, same root computation as the TOML fallback.
+    """
     direct = env.get("DPORTSV3_DELIVERY_TOKEN", "").strip()
     if direct:
         return direct
+    candidates: list[Path] = []
     config_dir = env.get("DPORTSV3_CONFIG_DIR", "").strip()
-    if not config_dir:
-        return None
-    token_file = Path(config_dir) / "delivery.token"
-    if not token_file.is_file():
-        return None
-    try:
-        return token_file.read_text().strip() or None
-    except OSError as exc:
-        raise DeliveryConfigError(
-            f"delivery.token at {token_file!s} is unreadable: {exc}"
-        ) from exc
+    if config_dir:
+        candidates.append(Path(config_dir) / "delivery.token")
+    # Repo-anchored fallback. This file lives at scripts/generator/
+    # dportsv3/delivery/config.py — parents[4] is the repo root.
+    candidates.append(
+        Path(__file__).resolve().parents[4] / "config" / "delivery.token"
+    )
+    for token_file in candidates:
+        if not token_file.is_file():
+            continue
+        try:
+            value = token_file.read_text().strip()
+        except OSError as exc:
+            raise DeliveryConfigError(
+                f"delivery.token at {token_file!s} is unreadable: {exc}"
+            ) from exc
+        if value:
+            return value
+    return None

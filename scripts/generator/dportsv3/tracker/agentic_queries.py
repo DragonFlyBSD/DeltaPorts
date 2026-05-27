@@ -104,6 +104,27 @@ def agentic_status(conn: sqlite3.Connection) -> dict[str, Any]:
     }
 
 
+def recent_activity_for_bundle(
+    conn: sqlite3.Connection,
+    bundle_id: str,
+    limit: int = 20,
+) -> list[dict[str, Any]]:
+    """Activity rows tagged with a specific bundle_id.
+
+    Tracker-side endpoints (accept, delivery, etc.) write rows
+    with ``bundle_id`` populated but no ``job_id`` because they
+    don't originate from a runner job. This query surfaces them
+    on the bundle detail page where the job-scoped activity
+    ribbon can't see them.
+    """
+    rows = conn.execute(
+        "SELECT * FROM activity_log WHERE bundle_id = ? "
+        "ORDER BY id DESC LIMIT ?",
+        (bundle_id, max(1, int(limit))),
+    ).fetchall()
+    return [_decode_extra_json(_row_dict(row)) for row in rows]
+
+
 def recent_activity(
     conn: sqlite3.Connection,
     limit: int = 10,

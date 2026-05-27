@@ -386,6 +386,41 @@
       {% endif %}
     </div>
     {% endif %}
+    {# Visibility upgrade: tracker-side activity rows tagged with
+       this bundle_id (bundle_accepted, delivery_complete, etc.).
+       These originate from HTTP endpoints, not runner jobs, so the
+       per-job activity ribbon elsewhere on the page misses them.
+       Card is hidden when there's nothing to show — keeps the
+       bundle page uncluttered for pre-accept bundles. #}
+    {% if bundle_activity %}
+    <div class="tracker-card" style="margin-top:8px;">
+      <strong style="font-size:12px;">Operator activity</strong>
+      <table style="margin-top:6px;width:100%;font-size:11px;border-collapse:collapse;">
+        <thead>
+          <tr style="text-align:left;color:var(--text-dim);">
+            <th style="padding:2px 6px;width:170px;">When</th>
+            <th style="padding:2px 6px;width:160px;">Stage</th>
+            <th style="padding:2px 6px;">Message</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for act in bundle_activity %}
+          <tr>
+            <td style="padding:2px 6px;color:var(--text-dim);white-space:nowrap;">
+              {{ act.ts }}
+            </td>
+            <td style="padding:2px 6px;">
+              <code>{{ act.stage }}</code>
+            </td>
+            <td style="padding:2px 6px;">
+              {{ act.message }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
     <script>
     (function () {
       const statusEl = document.getElementById('op-status');
@@ -539,6 +574,9 @@
             // to accepted so reloading would still show the
             // accept; but the toast is the only place this
             // particular error message lives in the UI.
+            // Re-enable buttons so the operator can act on the
+            // bundle (Reopen, etc.) without a manual page refresh.
+            restorePreClickEnabled(preState);
           } else {
             statusEl.textContent =
               'accepted — delivery: ' +

@@ -224,6 +224,27 @@ def test_accept_writes_activity_rows_for_visibility(client, deployment):
     assert payload["provider"] == "local-patch"
 
 
+def test_bundle_page_renders_per_bundle_activity_rows(client, deployment):
+    """Visibility plan: bundle_accepted + delivery_complete activity
+    rows tagged with bundle_id render on the bundle detail page
+    under an Operator-activity card. Prior shape left them invisible
+    because the page's job-scoped activity ribbon dropped rows with
+    job_id=NULL."""
+    conn = _open(deployment)
+    _seed_bundle(conn, "b-act-render")
+    sha = _seed_diff_artifact(
+        deployment["artifact_root"], "b-act-render", _SAMPLE_DIFF,
+    )
+    _insert_artifact_ref(conn, "b-act-render", "analysis/changes.diff", sha)
+    conn.close()
+
+    client.post("/api/bundles/b-act-render/accept", json={})
+    body = client.get("/agentic/bundles/b-act-render").text
+    assert "Operator activity" in body
+    assert "bundle_accepted" in body
+    assert "delivery_complete" in body
+
+
 def test_accept_activity_row_records_skipped_delivery(
     client, deployment, monkeypatch,
 ):
