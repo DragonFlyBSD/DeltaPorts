@@ -8,7 +8,15 @@ version = "0.1.0"
 description = "DragonFly DeltaPorts development environment manager"
 requires-python = ">=3.11"
 license = "BSD-2-Clause"
-dependencies = []
+dependencies = [
+    # Pulled in transitively when _replay_intent_log imports
+    # dportsv3.agent.edit_intent for Step 25e intent-log replay.
+    # Pin matches scripts/generator/pyproject.toml: 4.18 introduced
+    # the rpds-py wheel dependency that fails to build on this
+    # toolchain; we only need validate + ValidationError so older
+    # versions are fine.
+    "jsonschema >= 4.0, < 4.18",
+]
 
 [project.scripts]
 dports-dev-env = "dports_dev_env.cli:main"
