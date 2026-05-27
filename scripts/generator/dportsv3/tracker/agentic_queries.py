@@ -820,6 +820,7 @@ def upsert_user_context_text(
     run_id: str,
     origin: str,
     context_text: str,
+    submitted_by: str | None = None,
 ) -> int:
     """Set/replace the operator's hint text for ``(run_id, origin)``.
 
@@ -828,6 +829,12 @@ def upsert_user_context_text(
     artifact-store's ``/v1/user-context`` write path; tracker writes
     directly because it shares ``state.db``. Emits a
     ``user_context_updated`` event for activity-log visibility.
+
+    Step 29b: every write also appends an immutable row to
+    ``user_context_history`` carrying this round's text +
+    ``submitted_by``. ``user_context`` keeps overwriting (its
+    callers expect a single current row); the history table is
+    the audit/render source for ``manual_handoff.md``.
 
     Returns the new ``context_rev``.
     """
@@ -853,6 +860,12 @@ def upsert_user_context_text(
             (run_id, origin, context_text, now, new_rev),
         )
     conn.execute(
+        """INSERT INTO user_context_history
+           (run_id, origin, context_rev, submitted_at, text, submitted_by)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        (run_id, origin, new_rev, now, context_text, submitted_by),
+    )
+    conn.execute(
         """INSERT INTO events (ts, type, data_json)
            VALUES (?, ?, ?)""",
         (now, "user_context_updated",
@@ -870,6 +883,37 @@ def upsert_user_context_text(
     )
     conn.commit()
     return new_rev
+
+
+def list_user_context_history(
+    conn: sqlite3.Connection,
+    run_id: str,
+    origin: str,
+) -> list[dict[str, Any]]:
+    """Step 29b: return every operator-submitted context round for
+    ``(run_id, origin)``, ordered oldest → newest.
+
+    Each row carries ``context_rev``, ``submitted_at``, ``text``,
+    ``submitted_by``. Returns ``[]`` if no rounds were submitted.
+    ``manual_handoff.build_handoff_ctx`` consumes this to render
+    the operator-context section.
+    """
+    rows = conn.execute(
+        """SELECT context_rev, submitted_at, text, submitted_by
+           FROM user_context_history
+           WHERE run_id = ? AND origin = ?
+           ORDER BY context_rev ASC, id ASC""",
+        (run_id, origin),
+    ).fetchall()
+    return [
+        {
+            "context_rev": int(r["context_rev"]),
+            "submitted_at": r["submitted_at"],
+            "text": r["text"],
+            "submitted_by": r["submitted_by"],
+        }
+        for r in rows
+    ]
 
 
 def events_since(

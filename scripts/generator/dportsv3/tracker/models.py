@@ -190,6 +190,10 @@ class UpdatePortStatusRequest(TrackerModel):
 
 class ManualContextRequest(TrackerModel):
     context_text: str
+    # Step 29b: freeform operator identifier persisted into
+    # user_context_history.submitted_by. Optional — pre-29b
+    # callers omit it and the history row records NULL.
+    operator: str | None = None
 
 
 class ManualContextResponse(TrackerModel):

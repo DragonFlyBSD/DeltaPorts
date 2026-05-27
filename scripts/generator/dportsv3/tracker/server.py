@@ -1567,6 +1567,7 @@ def create_app(db_path: str | Path) -> Any:
             # runner's poll loop still acts on the UCR row.
             new_rev = upsert_user_context_text(
                 write_conn, run_id, origin, text,
+                submitted_by=operator,
             )
             # Default iteration to 1 — operator-driven retry is an
             # explicit override of the automated retry-cap logic.
@@ -2432,7 +2433,10 @@ def create_app(db_path: str | Path) -> Any:
                     status_code=404,
                     detail=f"No manual request for run={run_id} origin={origin}",
                 )
-            new_rev = upsert_user_context_text(conn, run_id, origin, text)
+            operator = (payload.operator or "").strip() or None
+            new_rev = upsert_user_context_text(
+                conn, run_id, origin, text, submitted_by=operator,
+            )
         return {"ok": True, "context_rev": new_rev}
 
     @app.post(

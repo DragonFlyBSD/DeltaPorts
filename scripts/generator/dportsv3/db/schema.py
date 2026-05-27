@@ -125,6 +125,21 @@ CREATE TABLE IF NOT EXISTS user_context_requests (
     PRIMARY KEY (run_id, origin, bundle_id)
 );
 
+-- Step 29b: append-only history of every operator-submitted
+-- context for a (run_id, origin). user_context above carries
+-- only the *current* row (overwritten on every submission);
+-- this table preserves each round verbatim so manual_handoff.md
+-- can render the full operator-side narrative.
+CREATE TABLE IF NOT EXISTS user_context_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    run_id TEXT NOT NULL,
+    origin TEXT NOT NULL,
+    context_rev INTEGER NOT NULL,
+    submitted_at TEXT NOT NULL,
+    text TEXT NOT NULL,
+    submitted_by TEXT
+);
+
 CREATE TABLE IF NOT EXISTS blob_objects (
     sha256 TEXT PRIMARY KEY,
     size INTEGER NOT NULL,
@@ -164,6 +179,7 @@ CREATE INDEX IF NOT EXISTS idx_activity_log_ts ON activity_log(ts);
 CREATE INDEX IF NOT EXISTS idx_env_health_status_status ON env_health_status(status);
 CREATE INDEX IF NOT EXISTS idx_user_context_updated ON user_context(updated_at);
 CREATE INDEX IF NOT EXISTS idx_user_context_requests_pending ON user_context_requests(status, requested_at);
+CREATE INDEX IF NOT EXISTS idx_user_context_history_lookup ON user_context_history(run_id, origin, context_rev);
 CREATE INDEX IF NOT EXISTS idx_artifact_refs_bundle ON artifact_refs(bundle_id);
 CREATE INDEX IF NOT EXISTS idx_artifact_refs_sha ON artifact_refs(sha256);
 
