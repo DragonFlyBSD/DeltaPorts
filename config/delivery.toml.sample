@@ -1,0 +1,69 @@
+# DeltaPorts agentic delivery — Step 11d configuration.
+#
+# Copy to delivery.toml and edit. The tracker loads this file from:
+#   1. $DPORTSV3_DELIVERY_CONFIG (explicit path), or
+#   2. $DPORTSV3_CONFIG_DIR/delivery.toml (default).
+#
+# If neither resolves to an existing file, delivery is silently
+# disabled and Accept stays a pure tracker-side action.
+#
+# Token resolution (network providers only):
+#   1. $DPORTSV3_DELIVERY_TOKEN env var, then
+#   2. $DPORTSV3_CONFIG_DIR/delivery.token (chmod 0400).
+# local-patch never needs a token.
+
+[provider]
+# One of: "github" | "gitlab" | "gitea" | "local-patch".
+# local-patch writes the diff to $DPORTSV3_DELIVERY_OUTBOX instead
+# of pushing — handy as a no-network smoke test before flipping to
+# a real provider.
+type = "github"
+
+# "owner/name" for github/gitlab/gitea. Required unless type =
+# "local-patch".
+repo = "DragonFlyBSD/DeltaPorts"
+
+# Branch the PR targets on the upstream remote.
+base_branch = "master"
+
+# Open the PR as draft so the operator un-drafts after manual review.
+draft = true
+
+# Labels applied best-effort after PR creation. Label-apply failures
+# never fail the delivery (the PR is the load-bearing artifact).
+labels = ["agentic-fix", "needs-review"]
+
+# Template for the local feature branch + remote head. Placeholders:
+#   {origin_safe}    — origin with '/' → '-' (devel-foo)
+#   {bundle_short}   — first 8 chars of bundle_id
+#   {bundle_id}      — full bundle id
+#   {target}         — quarter target (@2026Q2)
+branch_template = "agentic/{origin_safe}-{bundle_short}"
+
+
+# Optional per-target overrides. The section name must match the
+# target value on the bundle exactly, including the leading '@'.
+# Any field omitted here falls back to [provider] above.
+#
+# [target."@2026Q2"]
+# base_branch = "2026Q2"
+# repo = "DragonFlyBSD/DeltaPorts-2026Q2"
+# labels = ["agentic-fix", "needs-review", "2026Q2"]
+
+
+# ---------------------------------------------------------------------
+# Operator environment (set in the tracker daemon's environment, NOT
+# in this file — they're listed here only for discoverability):
+#
+#   $DPORTSV3_CONFIG_DIR        — where this file + delivery.token live
+#   $DPORTSV3_DELIVERY_TOKEN    — GitHub PAT (scope: repo). Overrides
+#                                 the token file when both are set
+#   $DPORTSV3_OPERATOR_CLONE    — path to a clean DeltaPorts checkout
+#                                 the daemon pushes from (required for
+#                                 network providers; ignored for
+#                                 local-patch)
+#   $DPORTSV3_DELIVERY_OUTBOX   — required for local-patch only; the
+#                                 directory diffs get written into
+#   $DPORTSV3_DELIVERY_CONFIG   — explicit override for this file's
+#                                 path (skips the CONFIG_DIR lookup)
+# ---------------------------------------------------------------------
