@@ -40,6 +40,7 @@ from dportsv3.tracker.agentic_queries import (
     job_events_for_job,
     latest_review_request_for_bundle,
     list_bundles,
+    update_review_request_status,
     list_jobs,
     list_jobs_for_bundle,
     list_manual_requests,
@@ -2097,6 +2098,127 @@ def create_app(db_path: str | Path) -> Any:
             "target": target,
             "origin": origin,
             "skip_action": skip_action,
+        }
+
+    @app.post("/api/bundles/{bundle_id}/delivery/status")
+    def api_bundle_delivery_status(
+        bundle_id: str, body: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Operator-driven manual status update on the latest
+        ``bundle_review_requests`` row (Step 11d-5).
+
+        Bridges to a future PR-status polling step (out of scope
+        for 11d): for now the operator tells the tracker "I just
+        merged this PR upstream" / "I closed the PR" so the bundle's
+        Delivery card reflects reality.
+
+        Body:
+          - ``status`` (str, required): one of ``"merged"`` /
+            ``"closed"``. Other values (``created`` / ``updated``)
+            are reserved for the orchestrator and refused here.
+          - ``note`` (str, optional): short freeform context. Stored
+            as the row's ``error`` column with a ``note:`` prefix
+            (the column is repurposed for both create failures and
+            operator-supplied annotations — v1 keeps the schema small).
+
+        Refuses (404) if the bundle has no delivery row. Refuses
+        (409) if the latest row is already in a terminal state
+        (``closed`` / ``merged``) or in ``create_failed`` — the
+        status machine is one-way; an operator who needs to flip
+        a terminal back to created can use the standard reopen
+        flow (Step 28d) followed by a fresh Accept.
+        """
+        from datetime import datetime, timezone  # noqa: PLC0415
+
+        status = (body or {}).get("status")
+        if status not in ("merged", "closed"):
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "body 'status' must be 'merged' or 'closed'; "
+                    "'created'/'updated' are reserved for the "
+                    "orchestrator"
+                ),
+            )
+        note = (body or {}).get("note")
+        if note is not None and not isinstance(note, str):
+            raise HTTPException(
+                status_code=400,
+                detail="body 'note', if supplied, must be a string",
+            )
+
+        with _conn() as conn:
+            latest = latest_review_request_for_bundle(conn, bundle_id)
+        if latest is None:
+            raise HTTPException(
+                status_code=404,
+                detail=(
+                    f"Bundle {bundle_id!r} has no delivery row "
+                    f"(was it ever Accepted?)"
+                ),
+            )
+        prior_status = latest.get("status")
+        if prior_status in ("merged", "closed", "create_failed"):
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"Latest delivery row is in terminal state "
+                    f"{prior_status!r}; manual status updates are "
+                    f"a one-way street. Reopen the bundle (Step 28d) "
+                    f"and re-Accept for a fresh delivery."
+                ),
+            )
+
+        # Build an error/note string. For 'closed'/'merged' the
+        # 'error' column carries the operator note as plain text
+        # — the column is column-name-misleading for these rows
+        # but reusing it avoids a schema migration for one field.
+        note_text: str | None = None
+        if note:
+            note_text = f"note: {note.strip()}"[:500] or None
+
+        write_conn = sqlite3.connect(
+            str(app.state.db_path), check_same_thread=False,
+            isolation_level=None,
+        )
+        write_conn.row_factory = sqlite3.Row
+        try:
+            updated = update_review_request_status(
+                write_conn,
+                request_id=int(latest["id"]),
+                status=status,
+                error=note_text,
+            )
+            if not updated:
+                # The row vanished between latest_review_request_for_bundle
+                # and the UPDATE. Vanishingly rare; surface as 404.
+                raise HTTPException(
+                    status_code=404,
+                    detail=(
+                        f"Bundle {bundle_id!r} delivery row "
+                        f"disappeared mid-update"
+                    ),
+                )
+            from dportsv3.artifact_store import emit_event  # noqa: PLC0415
+            emit_event(write_conn, "bundle_delivery_status_changed", {
+                "bundle_id": bundle_id,
+                "request_id": int(latest["id"]),
+                "prior_status": prior_status,
+                "new_status": status,
+                "note": note,
+            })
+        finally:
+            write_conn.close()
+
+        now = datetime.now(timezone.utc).isoformat()
+        return {
+            "ok": True,
+            "bundle_id": bundle_id,
+            "request_id": int(latest["id"]),
+            "status": status,
+            "prior_status": prior_status,
+            "last_synced_at": now,
+            "note": note,
         }
 
     @app.get("/api/ports/{origin:path}")

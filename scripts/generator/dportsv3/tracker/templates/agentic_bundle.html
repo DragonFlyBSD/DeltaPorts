@@ -281,8 +281,86 @@
       </div>
       {% if dr.error %}
       <div style="margin-top:6px;font-size:11px;color:var(--c-fail, #c00);">
-        Error: <code>{{ dr.error }}</code>
+        {# 11d-5 reuses the `error` column to carry operator notes
+           on merged/closed transitions. Distinguish in the UI: the
+           note-prefixed string is informational, not an error. #}
+        {% if dr.error.startswith('note: ') %}
+          <span style="color:var(--text-dim);">
+            Note: <code>{{ dr.error[6:] }}</code>
+          </span>
+        {% else %}
+          Error: <code>{{ dr.error }}</code>
+        {% endif %}
       </div>
+      {% endif %}
+      {# Step 11d-5: Mark-merged / Mark-closed buttons. The status
+         machine is one-way: created/updated → merged/closed →
+         terminal. The buttons are absent on terminal/failed rows.
+         Operators who need to undo a terminal can reopen the
+         bundle (Step 28d) and re-Accept. #}
+      {% if dr.status in ('created', 'updated') %}
+      <div class="btn-group" style="margin-top:8px;">
+        <button id="op-mark-merged" type="button" class="btn btn-success"
+                data-bundle="{{ bundle.bundle_id }}"
+                style="font-size:12px;padding:4px 10px;"
+                title="Mark this delivery as merged upstream — bridge to a future PR-status polling step">
+          Mark merged
+        </button>
+        <button id="op-mark-closed" type="button" class="btn btn-ghost"
+                data-bundle="{{ bundle.bundle_id }}"
+                style="font-size:12px;padding:4px 10px;"
+                title="Mark this delivery as closed without merge (rejected, superseded, etc.)">
+          Mark closed
+        </button>
+        <span id="op-delivery-status"
+              style="color:var(--text-dim);font-size:11px;"></span>
+      </div>
+      <script>
+        (function () {
+          const statusEl = document.getElementById('op-delivery-status');
+          async function dpMarkStatus(newStatus, bundleId) {
+            const note = prompt(
+              'Optional note (short context for the audit log; can be empty):',
+              ''
+            );
+            if (note === null) { return; }  // explicit cancel
+            const body = {status: newStatus};
+            if (note) { body.note = note; }
+            statusEl.textContent = 'updating…';
+            const merged = document.getElementById('op-mark-merged');
+            const closed = document.getElementById('op-mark-closed');
+            merged.disabled = true; closed.disabled = true;
+            let resp, data;
+            try {
+              resp = await fetch(
+                '/api/bundles/' + encodeURIComponent(bundleId) +
+                '/delivery/status',
+                {method: 'POST',
+                 headers: {'Content-Type': 'application/json'},
+                 body: JSON.stringify(body)}
+              );
+              data = await resp.json();
+            } catch (exc) {
+              statusEl.textContent = 'error: ' + exc;
+              merged.disabled = false; closed.disabled = false;
+              return;
+            }
+            if (!resp.ok) {
+              statusEl.textContent = 'error: ' + (data.detail || resp.status);
+              merged.disabled = false; closed.disabled = false;
+              return;
+            }
+            statusEl.textContent = newStatus + ' — reloading';
+            setTimeout(() => location.reload(), 400);
+          }
+          document.getElementById('op-mark-merged').addEventListener(
+            'click', (e) => dpMarkStatus('merged', e.target.dataset.bundle)
+          );
+          document.getElementById('op-mark-closed').addEventListener(
+            'click', (e) => dpMarkStatus('closed', e.target.dataset.bundle)
+          );
+        })();
+      </script>
       {% endif %}
     </div>
     {% endif %}
