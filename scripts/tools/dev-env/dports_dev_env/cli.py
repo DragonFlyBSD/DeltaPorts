@@ -397,6 +397,23 @@ def apply_and_build(
     # that bypassed cleanup and left ports/<origin>/ drifted, which
     # broke the next attempt's pre-replay clean check.
     #
+    # Q1 follow-up: also ``make clean`` against the per-origin
+    # compose root so the WRKDIR under ``$WRKDIRPREFIX/<origin>/`` is
+    # wiped along with any ``.orig`` files / extracted-source edits
+    # the prior run left behind. Mirrors the same cleanup the agent's
+    # ``worker.reset_port`` does for patch + convert jobs (commit
+    # a3c7b2ca44c). Without this, a second verify on the same env
+    # sees stale WRKSRC and ``make extract`` no-ops against polluted
+    # state.
+    #
+    # The two stages stay in this function rather than calling
+    # ``worker.reset_port`` because apply-and-build is a separate
+    # package from the generator: importing across the boundary
+    # would couple dev-env to the agent loop unnecessarily. The
+    # cleanup logic is small enough to duplicate; the shape is
+    # parallel to worker.reset_port so the two stay easy to keep
+    # in sync.
+    #
     # The diff path doesn't get this — pre-25e bundles rely on the
     # legacy "leave drift in place" behavior.
     def _post_build_cleanup() -> None:
@@ -415,6 +432,29 @@ def apply_and_build(
                 f"\n[25g post-build cleanup failed: rc={cleanup.returncode}; "
                 f"env's {rel} may have leftover state]\n"
                 + (cleanup.stderr or "")[-512:]
+            )
+            existing = result.get("stderr_tail") or ""
+            result["stderr_tail"] = (existing + warn)[-2000:]
+            # Substrate reset is load-bearing — if it failed, skip
+            # the WRKDIR wipe so we don't compound the diagnosis.
+            return
+
+        # Best-effort WRKDIR wipe. Failure surfaces as a warning in
+        # stderr_tail but does not flip the result.
+        wrkdir_cleanup = runner.run(
+            ["/bin/sh", "-c",
+             'cd "$DPORTS_COMPOSE_ROOT/' + origin + '" && '
+             'make PORTSDIR="$DPORTS_COMPOSE_ROOT" '
+             'WRKDIRPREFIX=/work/obj BATCH=yes clean', "_"],
+            env=env, capture_output=True,
+        )
+        if wrkdir_cleanup.returncode != 0:
+            warn = (
+                f"\n[Q1 post-build WRKDIR clean failed: "
+                f"rc={wrkdir_cleanup.returncode}; /work/obj/{origin}/ "
+                f"may carry stale extracted source into the next "
+                f"verify run]\n"
+                + (wrkdir_cleanup.stderr or "")[-512:]
             )
             existing = result.get("stderr_tail") or ""
             result["stderr_tail"] = (existing + warn)[-2000:]
