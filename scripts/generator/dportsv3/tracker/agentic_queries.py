@@ -62,23 +62,16 @@ def agentic_status(conn: sqlite3.Connection) -> dict[str, Any]:
     runs = conn.execute("SELECT count(*) FROM runs").fetchone()[0]
     # Step 9 — surface the open manual-queue depth on the dashboard
     # so operators see "5 ports waiting for me" without first
-    # clicking through. Must use the same definition of "open" as
-    # ``list_manual_requests(open_only=True)`` — otherwise the
-    # dashboard advertises N pending and the queue page renders
-    # empty. The discrepancy arises after a re-triage: the UCR row
-    # is flipped back to status='pending' but last_context_rev_handled
-    # still equals the latest user_context.context_rev, so the
-    # operator has nothing new to act on. status='pending' alone
-    # over-counts those rows.
+    # clicking through. The status column carries the operator-action
+    # signal directly: ``pending`` = operator action awaited (whether
+    # because they haven't submitted context yet, or because they
+    # submitted some and the agent re-escalated anyway);
+    # ``retriage_enqueued`` = runner mid-flight; ``discarded`` =
+    # terminal. The list/count uses the same predicate as
+    # ``list_manual_requests`` so dashboard and queue agree.
     manual_pending = conn.execute(
-        """SELECT count(*) FROM user_context_requests AS ucr
-           LEFT JOIN user_context AS uc
-             ON uc.run_id = ucr.run_id AND uc.origin = ucr.origin
-           WHERE ucr.status != 'discarded'
-             AND (COALESCE(uc.context_rev, 0)
-                    > ucr.last_context_rev_handled
-                  OR (COALESCE(uc.context_rev, 0) = 0
-                      AND ucr.last_context_rev_handled = 0))"""
+        "SELECT count(*) FROM user_context_requests "
+        "WHERE status = 'pending'"
     ).fetchone()[0]
     # Step 20f — convert-job progress by state. open=queued/claimed/converting,
     # done/dead/escalated mirror the global rollup so the operator can read
@@ -728,16 +721,22 @@ def list_manual_requests(
     """
     params: list[Any] = []
     if open_only:
-        # "open" = either (a) the operator hasn't answered yet
-        # (no context row), or (b) the operator answered but the
-        # runner sweep hasn't picked it up yet (rev > handled).
-        # ``discarded`` is always excluded from the open set.
-        sql += (
-            " WHERE ucr.status != 'discarded' "
-            "   AND (COALESCE(uc.context_rev, 0) > ucr.last_context_rev_handled "
-            "        OR (COALESCE(uc.context_rev, 0) = 0 "
-            "            AND ucr.last_context_rev_handled = 0))"
-        )
+        # "open" = the row is in ``pending`` status, which by
+        # construction means operator action is awaited. The status
+        # column is set to ``pending`` on every triage MANUAL/retry-
+        # cap escalation, and flipped to ``retriage_enqueued`` when
+        # the runner sweep picks up a new operator context.
+        #
+        # The prior filter required ``context_rev > last_handled``
+        # OR ``(both = 0)``, which excluded rows in the
+        # "operator-submitted-context, runner-processed-it, agent-
+        # re-escalated" state — the queue went empty while the
+        # bundle sat in ``escalated_manual`` with operator action
+        # implicitly required. Dropping that predicate so a pending
+        # status alone makes a row visible; the runner's own sweep
+        # gate (``process_user_context_updates``) keeps the
+        # ``rev > handled`` check, so no infinite re-triage loops.
+        sql += " WHERE ucr.status = 'pending'"
     sql += " ORDER BY ucr.requested_at ASC LIMIT ?"
     params.append(max(1, int(limit)))
     return [_row_dict(row) for row in conn.execute(sql, params).fetchall()]

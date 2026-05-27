@@ -1,16 +1,23 @@
-"""Regression: ``agentic_status.manual_pending`` must match
-``list_manual_requests(open_only=True)``.
+"""Regression: ``agentic_status.manual_pending`` and
+``list_manual_requests(open_only=True)`` agree on what "pending"
+means, and a re-escalated bundle (status='pending' AND
+last_handled == context_rev) is visible to the operator.
 
-Symptom: dashboard shows "1 pending" and the queue page renders
-empty. Cause: count used ``status = 'pending'`` alone while the
-list joined ``user_context`` and required
-``context_rev > last_context_rev_handled``. After a re-triage flips
-a UCR row back to ``status='pending'`` without bumping
-``last_context_rev_handled``, the row qualifies for the count but
-not the list.
+Two distinct bugs covered:
 
-These tests pin the two queries to the same semantic so the
-dashboard never advertises work the queue can't show.
+1. Initial mismatch — count showed N while the queue rendered
+   empty (queue used a stricter filter than the count).
+2. Re-escalation invisible — after the runner processed an
+   operator round and the agent escalated again, the UCR row's
+   ``last_context_rev_handled`` equaled the latest ``context_rev``,
+   so the queue's ``rev > handled`` predicate excluded it. The
+   operator saw nothing in the queue despite the bundle sitting
+   in ``escalated_manual`` with operator action implicitly required.
+
+Both bugs are fixed by simplifying the queue/count predicate to
+``status = 'pending'``. The status column directly encodes
+"operator action awaited"; the runner sweep keeps its own
+``rev > handled`` gate so we don't get infinite re-triage loops.
 """
 
 from __future__ import annotations
@@ -91,14 +98,21 @@ def test_count_matches_list_operator_answered_runner_not_yet(conn):
 
 
 def test_count_matches_list_after_retriage_handled_equals_rev(conn):
-    """The reported bug: after re-triage, status='pending' but
-    last_handled = context_rev. No new operator action to take.
-    Pre-fix: count=1, list=0 (dashboard lies). Post-fix: both 0."""
+    """The reported bug: bundle re-escalated after the operator's
+    context was processed (status='pending', last_handled = context_rev).
+    Operator should see this row in the queue — the agent's re-
+    escalation means the prior round didn't unblock the build, and
+    the operator can submit another round or discard.
+
+    Pre-fix: count was 1 (status-only filter), list was 0 (rev>handled
+    excluded). After the count fix to match the list, both reported
+    0 — dashboard agreed with queue, but the bundle was invisible.
+    Post-fix: both 1, by simplifying both queries to status='pending'."""
     _insert_ucr(conn, "r1", "devel/foo", "b1",
                 status="pending", last_handled=1)
     _insert_user_context(conn, "r1", "devel/foo", context_rev=1)
-    assert _pending_count(conn) == 0
-    assert _list_len(conn) == 0
+    assert _pending_count(conn) == 1
+    assert _list_len(conn) == 1
 
 
 def test_count_matches_list_new_round_after_prior_handled(conn):
@@ -132,21 +146,26 @@ def test_count_excludes_retriage_enqueued(conn):
 
 
 def test_count_matches_list_mixed_population(conn):
-    """Three rows in three different states — count and list
-    agree on which are operator-actionable."""
-    # Actionable: fresh pending, no context yet.
+    """Four rows across distinct states — count and list agree on
+    which are operator-actionable (i.e. status='pending')."""
+    # Pending: fresh, no context yet.
     _insert_ucr(conn, "r1", "devel/a", "b1",
                 status="pending", last_handled=0)
-    # Actionable: new operator round.
+    # Pending: new operator round, runner hasn't picked up yet.
     _insert_ucr(conn, "r1", "devel/b", "b2",
                 status="pending", last_handled=1)
     _insert_user_context(conn, "r1", "devel/b", context_rev=2)
-    # Not actionable: handled equals rev.
+    # Pending: re-escalated after the operator's context was handled.
+    # This is the previously-invisible state — operator should see it.
     _insert_ucr(conn, "r1", "devel/c", "b3",
                 status="pending", last_handled=1)
     _insert_user_context(conn, "r1", "devel/c", context_rev=1)
-    # Not actionable: discarded.
+    # Mid-flight: runner enqueued a re-triage, not yet escalated.
     _insert_ucr(conn, "r1", "devel/d", "b4",
+                status="retriage_enqueued", last_handled=2)
+    _insert_user_context(conn, "r1", "devel/d", context_rev=2)
+    # Discarded: terminal, not actionable.
+    _insert_ucr(conn, "r1", "devel/e", "b5",
                 status="discarded", last_handled=0)
-    assert _pending_count(conn) == 2
-    assert _list_len(conn) == 2
+    assert _pending_count(conn) == 3
+    assert _list_len(conn) == 3

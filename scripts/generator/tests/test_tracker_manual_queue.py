@@ -82,21 +82,23 @@ def seeded_state_db(tmp_path: Path) -> Path:
         ),
     )
     # Two open requests: one with no operator context yet, one with
-    # context already submitted but waiting for the runner sweep.
+    # Two ``pending`` rows (visible in the open queue) and one
+    # ``retriage_enqueued`` row (mid-flight; hidden from the open
+    # queue, shown when ``open_only=False``).
     conn.executemany(
         """INSERT INTO user_context_requests
            (run_id, origin, bundle_id, confidence, classification,
             iteration, max_iterations, requested_at, status,
             last_context_rev_handled)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)""",
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         [
             ("run-q2-001", "devel/foo", "b-foo", "low", "missing-dep",
-             1, 3, now, 0),
+             1, 3, now, "pending", 0),
             ("run-q2-001", "devel/bar", "b-bar", "medium", "compile-error",
-             2, 3, now, 0),
-            # Resolved: runner already handled rev 1.
+             2, 3, now, "pending", 0),
+            # Mid-flight: runner picked up rev 1 and is processing.
             ("run-main-002", "devel/baz", "b-resolved", "high", "plist-error",
-             1, 3, now, 1),
+             1, 3, now, "retriage_enqueued", 1),
         ],
     )
     # The resolved request has its context_rev consumed.
