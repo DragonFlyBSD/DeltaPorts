@@ -133,6 +133,19 @@
           Discard
         </button>
         {% endif %}
+        {# Step 28c: Retry with context — operator hands the bundle
+           back to the loop with a hint. Plants the same DB rows the
+           manual-queue context-submit path plants, so the runner's
+           existing retry loop picks it up. Resolution moves to
+           retry_requested (transient) until the runner enqueues. #}
+        {% if operator_actions.can_retry %}
+        <button id="op-retry" type="button"
+                data-bundle="{{ bundle.bundle_id }}"
+                style="font-size:12px;padding:4px 10px;"
+                title="Hand this bundle back to the agent loop with operator context">
+          Retry with context
+        </button>
+        {% endif %}
         <span id="op-status" style="color:var(--text-dim);font-size:11px;"></span>
       </div>
     </div>
@@ -183,6 +196,13 @@
             'this port? OK = lock (default), Cancel = discard only this bundle.'
           );
           body = {reason: reason, skip_origin: skipOrigin};
+        } else if (action === 'retry') {
+          const ctx = prompt(
+            'Operator context for the next triage attempt (required; max 8000 chars):',
+            ''
+          );
+          if (!ctx) { return; }
+          body = {context: ctx};
         }
         // Disable all buttons immediately so a double-click can't
         // enqueue a second verify (or fire accept while verify is

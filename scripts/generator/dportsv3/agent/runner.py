@@ -1082,6 +1082,22 @@ def process_user_context_updates(queue_root: Path):
                        WHERE run_id = ? AND origin = ? AND bundle_id = ?""",
                     (context_rev, run_id, origin, row["bundle_id"])
                 )
+                # Step 28c: clear the transient retry_requested
+                # resolution on the originating bundle. Without this,
+                # a bundle whose retry was honored would stay at
+                # retry_requested forever — the new triage runs on
+                # the same bundle and will set the resolution via
+                # _EVENT_TO_RESOLUTION on its own terminal events,
+                # but only if it reaches one. Clearing here also
+                # serves as the observability signal "the runner
+                # picked up the operator's request."
+                _state_db_conn.execute(
+                    """UPDATE bundles
+                       SET resolution = NULL
+                       WHERE bundle_id = ?
+                         AND resolution = 'retry_requested'""",
+                    (row["bundle_id"],),
+                )
                 _state_db_conn.commit()
     except Exception as e:
         print(f"Warning: Failed to process user context updates: {e}", file=sys.stderr)

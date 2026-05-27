@@ -1458,6 +1458,181 @@ def create_app(db_path: str | Path) -> Any:
             "skip_action": skip_action,
         }
 
+    @app.post("/api/bundles/{bundle_id}/retry")
+    def api_bundle_retry(
+        bundle_id: str, body: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Operator retry-with-context on a failed (or operator-owned)
+        bundle (Step 28c).
+
+        Plants the same DB rows the manual-queue context-submit path
+        plants (``user_context`` text + ``user_context_requests``
+        pending row) so the runner's existing
+        ``process_user_context_updates`` poll picks the retry up
+        without any runner-side changes. The bundle's resolution
+        moves to ``retry_requested`` (transient) until the runner
+        enqueues the new triage.
+
+        Allowed from failure-shaped resolutions
+        (``agent_budget_exhausted`` / ``agent_gave_up`` /
+        ``escalated_manual`` / ``convert_gave_up``) and from
+        ``operator_owned`` (operator gives up on the manual
+        attempt and hands back to the loop with context). 409 from
+        already-terminal accept / reject / discarded and from
+        ``agent_fixed`` (the 11c Reject path already routes
+        rejected fixes back to triage with the rejection reason as
+        context — no separate retry needed).
+
+        Body:
+          - ``context`` (str, required, ≤ 8000 chars): operator's
+            note that will land in the next triage's payload via
+            the existing ``## User Context`` section.
+          - ``operator`` (str, optional): freeform identifier.
+        """
+        from datetime import datetime, timezone  # noqa: PLC0415
+
+        text = ((body or {}).get("context") or "")
+        if not isinstance(text, str):
+            raise HTTPException(
+                status_code=400,
+                detail="body 'context' must be a string",
+            )
+        text = text.strip()
+        if not text:
+            raise HTTPException(
+                status_code=400,
+                detail="body 'context' is required (non-empty)",
+            )
+        if len(text) > 8000:
+            raise HTTPException(
+                status_code=400,
+                detail="body 'context' too long (max 8000 chars)",
+            )
+        operator = ((body or {}).get("operator") or "operator").strip()
+        if not operator:
+            operator = "operator"
+
+        with _conn() as conn:
+            row = get_bundle(conn, bundle_id)
+        if row is None:
+            raise HTTPException(
+                status_code=404, detail=f"Unknown bundle: {bundle_id}",
+            )
+        current_resolution = row.get("resolution")
+        if current_resolution in ("accepted", "rejected", "discarded"):
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"Cannot retry bundle in terminal state "
+                    f"{current_resolution!r}"
+                ),
+            )
+        if current_resolution == "agent_fixed":
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "agent_fixed bundles use the Step 11c Reject path "
+                    "to re-triage with rejection context; /retry is "
+                    "for failure-shaped or operator-owned bundles"
+                ),
+            )
+        run_id = (row.get("run_id") or "").strip()
+        origin = (row.get("origin") or "").strip()
+        if not run_id or not origin:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "Bundle is missing run_id/origin metadata; cannot "
+                    "plant a retry request"
+                ),
+            )
+
+        now = datetime.now(timezone.utc).isoformat()
+        write_conn = sqlite3.connect(
+            str(app.state.db_path), check_same_thread=False,
+            isolation_level=None,
+        )
+        write_conn.row_factory = sqlite3.Row
+        try:
+            # Atomicity note: BEGIN IMMEDIATE doesn't work cleanly
+            # here because upsert_user_context_text commits internally
+            # (it's a shared helper used by other paths). Mirroring
+            # 11c's accept/reject pattern, the three writes are
+            # sequential under autocommit. Partial-failure tradeoff
+            # is acceptable: a user_context row that landed without
+            # a matching UCR row gets picked up by the next operator
+            # /retry call; a UCR row without a bundle resolution
+            # update degrades the UI badge but not correctness — the
+            # runner's poll loop still acts on the UCR row.
+            new_rev = upsert_user_context_text(
+                write_conn, run_id, origin, text,
+            )
+            # Default iteration to 1 — operator-driven retry is an
+            # explicit override of the automated retry-cap logic.
+            # max_iterations defaults to the runner's standard
+            # (matches enqueue_triage_job's caller convention).
+            ucr_row = write_conn.execute(
+                """SELECT 1 FROM user_context_requests
+                   WHERE run_id = ? AND origin = ? AND bundle_id = ?""",
+                (run_id, origin, bundle_id),
+            ).fetchone()
+            if ucr_row:
+                write_conn.execute(
+                    """UPDATE user_context_requests
+                       SET requested_at = ?, status = 'pending',
+                           iteration = ?, max_iterations = ?
+                       WHERE run_id = ? AND origin = ? AND bundle_id = ?""",
+                    (now, 1, 3, run_id, origin, bundle_id),
+                )
+            else:
+                write_conn.execute(
+                    """INSERT INTO user_context_requests
+                       (run_id, origin, bundle_id, classification,
+                        confidence, iteration, max_iterations,
+                        requested_at, status,
+                        last_context_rev_handled)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?,
+                               'pending', ?)""",
+                    (run_id, origin, bundle_id,
+                     row.get("classification") or "",
+                     row.get("confidence") or "",
+                     1, 3, now, max(0, new_rev - 1)),
+                )
+            # Move bundle resolution to retry_requested (transient).
+            # The runner's enqueue path (process_user_context_updates)
+            # clears this back to NULL when it actually plants the
+            # new triage job, so a stuck retry_requested is observable.
+            write_conn.execute(
+                """UPDATE bundles SET
+                       resolution = 'retry_requested',
+                       last_seen_at = ?
+                   WHERE bundle_id = ?""",
+                (now, bundle_id),
+            )
+            from dportsv3.artifact_store import emit_event  # noqa: PLC0415
+            emit_event(write_conn, "bundle_retry_requested", {
+                "bundle_id": bundle_id,
+                "run_id": run_id,
+                "origin": origin,
+                "requested_at": now,
+                "requested_by": operator,
+                "context_rev": new_rev,
+                "context_chars": len(text),
+            })
+        finally:
+            write_conn.close()
+
+        return {
+            "ok": True,
+            "bundle_id": bundle_id,
+            "resolution": "retry_requested",
+            "run_id": run_id,
+            "origin": origin,
+            "context_rev": new_rev,
+            "requested_at": now,
+            "requested_by": operator,
+        }
+
     @app.get("/api/ports/{origin:path}")
     def api_port_bundles(
         origin: str,
@@ -1662,14 +1837,20 @@ def create_app(db_path: str | Path) -> Any:
             bundle is not None
             and resolution in (failure_resolutions | {"operator_owned"})
         )
+        # Step 28c: retry-with-context surfaces wherever discard
+        # does (failure resolutions + operator_owned). The 11c
+        # Reject path already handles agent_fixed bundles, so /retry
+        # is deliberately not surfaced there.
+        can_retry = can_discard
         operator_actions = {
-            "show": actionable or can_take_over or can_discard,
+            "show": actionable or can_take_over or can_discard or can_retry,
             "can_verify": actionable,
             "can_accept": (actionable
                            and bundle.get("verification_status") == "verified"),
             "can_reject": actionable,
             "can_take_over": can_take_over,
             "can_discard": can_discard,
+            "can_retry": can_retry,
         }
         return templates.TemplateResponse(
             request,
