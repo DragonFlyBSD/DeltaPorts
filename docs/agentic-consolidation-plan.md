@@ -4137,6 +4137,185 @@ gap costs.
 
 ---
 
+### Step 29 — context-aware re-triage + operator-context history — pending
+
+Closes a UX dead-end surfaced by smoke-testing the
+`databases/redis` re-escalation loop:
+
+- Operator submits context via `/api/manual-requests/.../context`
+  or Step 28c's `/api/bundles/{bundle_id}/retry`.
+- `process_user_context_updates` enqueues a fresh triage job.
+- Triage LLM receives the operator text via the `## User Context`
+  section but treats it as supporting prose, not as evidence
+  worth changing its mind over. Lands the same classification
+  as the prior run.
+- `policy.tier_for` is a pure classification → tier lookup. If
+  the prior tier was MANUAL (e.g. `missing-dep`,
+  `dependency-conflict`, `runtime-error`), the re-triage routes
+  back to MANUAL. The operator's effort accomplishes nothing.
+
+Compounding: `manual_handoff.md` is regenerated from triage
+output only and contains zero reference to the operator's
+input, so on re-escalation the handoff document is
+indistinguishable from the first one. Operator cannot tell
+whether their context was received, what it said, or how the
+agent reasoned about it. Multi-round operator context is
+silently lossy at the storage layer too — `upsert_user_context_text`
+**overwrites** the prior `context_text` for the
+`(run_id, origin)` row on every submission.
+
+Step 29 reframes the operator-context loop end-to-end:
+
+1. **Triage prompt prioritizes operator context.** When a
+   `## User Context` section is present in the payload, the
+   triage prompt instructs the model to **consult operator
+   context before classifying** — not as a reclassification
+   afterthought but as a first-class input weighted ahead of
+   the bundle's mechanical signals. The model is told the
+   operator has direct knowledge the bundle artifacts can't
+   convey (e.g. "this is a configure failure, not a missing
+   dep; the dep is there as `gmd5sum` from `coreutils`").
+   Classification follows from synthesizing the operator's
+   evidence with the bundle, not from defaulting to the bundle
+   alone with operator text as decoration.
+
+2. **Append-only operator-context history.** New
+   `user_context_history` table. `upsert_user_context_text`
+   continues to write the current row to `user_context` (no
+   read-site changes elsewhere) AND appends an immutable row
+   to `user_context_history` capturing
+   `(run_id, origin, context_rev, submitted_at, text,
+   submitted_by)`. Each round preserved verbatim; no schema
+   change to the read-heavy `user_context` table.
+
+3. **`manual_handoff.md` surfaces operator context history.**
+   `manual_handoff.build_handoff_ctx` reads
+   `user_context_history` for the bundle's `(run_id, origin)`
+   and renders an "## Operator context" section showing each
+   submission as a round-numbered block with timestamp.
+   Renders nothing when no rows exist. Tracker UI gets this
+   automatically since the bundle detail page already renders
+   `manual_handoff.md`.
+
+#### Why Step 29 is distinct from Step 28
+
+Step 28 gives operators the *buttons* to act on failure
+bundles (take-over / discard / retry). What happens *after*
+the button is the loop's existing re-triage behavior. Step 28c
+specifically wires `/retry` → existing `process_user_context_updates`
+poll loop, inheriting whatever (lossy, ineffective) behavior
+that loop has. Step 29 fixes that downstream behavior.
+
+#### Implementation
+
+**29a — triage prompt change** (prompts.py, ~15 lines):
+
+In `TRIAGE_SYSTEM`, add a section near the top of the
+classification instructions that says approximately:
+
+> If this payload contains a `## User Context` section, an
+> operator has reviewed the prior triage and added direct
+> knowledge of the failure shape. Consult that section
+> **before** picking a classification. The operator has access
+> to evidence the bundle artifacts don't expose — they may be
+> correcting a mis-classification, naming a hidden cause, or
+> pointing at a fix path. Synthesize their evidence with the
+> mechanical signals; do not default to the prior
+> classification just because the bundle hasn't changed.
+
+No policy-layer change. If the model lands a new
+classification under operator context, the policy table
+naturally routes the new tier (`missing-dep` → MANUAL,
+`compile-error` → ASSIST, etc.). The lever is purely at the
+classification step.
+
+**29b — `user_context_history` table + write site** (db/schema.py,
+agentic_queries.py, ~40 lines):
+
+```sql
+CREATE TABLE IF NOT EXISTS user_context_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    run_id TEXT NOT NULL,
+    origin TEXT NOT NULL,
+    context_rev INTEGER NOT NULL,
+    submitted_at TEXT NOT NULL,
+    text TEXT NOT NULL,
+    submitted_by TEXT
+);
+CREATE INDEX idx_user_context_history_lookup
+    ON user_context_history(run_id, origin, context_rev);
+```
+
+`upsert_user_context_text` appends a row to the history table
+immediately before the existing INSERT/UPDATE on
+`user_context`. `submitted_by` is the operator string from
+the request body when present (Step 28c's `/retry` already
+collects this; Step 5's `/context` endpoint takes it as a
+no-op for now), NULL otherwise. New query
+`list_user_context_history(conn, run_id, origin) -> list[dict]`
+returns rows ordered by `context_rev` ascending.
+
+**29c — `manual_handoff.md` operator-context section**
+(manual_handoff.py, ~30 lines):
+
+`build_handoff_ctx` reads `list_user_context_history` for the
+bundle's `(run_id, origin)`. `render_handoff` renders an
+"## Operator context" section when the history is non-empty,
+with each row as:
+
+```
+### Round N — 2026-05-27T11:54:32Z (operator: tuxillo)
+
+<verbatim text>
+```
+
+Rounds appear in submission order. Section omitted entirely
+when history is empty. Existing renderers (bundle detail
+page) pick up the new content for free.
+
+#### Tests
+
+- **29a**: triage-flow integration test with a `## User
+  Context` section asserting the model is *permitted* to land
+  a different classification than the prior run. Cannot
+  assert outcome of a real LLM call, but can assert payload
+  shape and the prompt-section presence.
+- **29b**: write site appends to history on each submission;
+  history rows are immutable (no UPDATE path);
+  `context_rev` matches the value `user_context` lands at;
+  multi-round write produces N history rows.
+- **29c**: `build_handoff_ctx` returns an empty list when no
+  history exists; renders nothing in that case. With N rounds
+  in history, the rendered section contains exactly N
+  round-blocks in order, with the right timestamps and
+  texts.
+- End-to-end: submit context twice via `/retry`, verify the
+  bundle's re-rendered `manual_handoff.md` shows both rounds.
+
+#### Out of scope
+
+- Policy-layer override that promotes MANUAL → ASSIST when
+  operator context is present. Considered and dropped — 29a
+  is the cleaner lever (model reclassifies → policy routes
+  naturally). Revisit only if 29a proves insufficient on
+  multiple real ports.
+- Operator identity / auth. `submitted_by` is a freeform
+  string for now, matching Step 28's `taken_over_by`. Step 17
+  territory.
+- Surfacing per-round LLM responses (what the model said
+  about each round of operator context). The triage output
+  already lands in `triage.md`; a per-round response history
+  would require an artifact-store layout change. Defer until
+  operators ask for it.
+
+#### Scope estimate
+
+~90 LOC across `prompts.py`, `db/schema.py`,
+`tracker/agentic_queries.py`, `agent/manual_handoff.py`, plus
+~120 LOC of tests.
+
+---
+
 ## Current priority order (as of 2026-05-24)
 
 Replaces every "Suggested updated order" line scattered through the
@@ -4172,7 +4351,17 @@ Pending, in recommended order:
    11b shipped: now includes the Verify button + the new `verify`
    job type that lets the runner call `run_verify_fix` in-process.
    Verify is the gate (Accept disabled until verified).
-2. **28 (28a–c first)** — failed-bundle operator action matrix.
+2. **29** — context-aware re-triage + operator-context history.
+   Closes the dead-end where the operator's `/retry`-with-context
+   reproduces the same classification and re-escalates to
+   MANUAL, and where `manual_handoff.md` doesn't surface what
+   the operator said. Three slices (29a triage prompt, 29b
+   history table, 29c handoff rendering) are independently
+   shippable. Sequenced ahead of 28's remaining slices because
+   it makes the existing 28c `/retry` button actually
+   *do* something on MANUAL-tier classifications — without 29
+   the button is a UX trap.
+3. **28 (28a–c first)** — failed-bundle operator action matrix.
    Mirror of 11c on the failure side: Take over / Discard /
    Retry with context, plus the per-`(target, origin)` skip
    flag. Closes the operator-surface asymmetry where success
@@ -4184,34 +4373,34 @@ Pending, in recommended order:
    "operationally-invisible failure bundle" problem is hitting
    the loop now and the 28a slice (take-over + skip flag) is
    independently shippable.
-3. **25** — edit-intent DSL. Architectural; design (25a) first.
+4. **25** — edit-intent DSL. Architectural; design (25a) first.
    Can be developed in parallel with 11d once 25a is approved.
-4. **11d** — push to code-hosting providers. Closes the round
+5. **11d** — push to code-hosting providers. Closes the round
    trip; gated on operator readiness.
-5. **26 (items 1–4 first)** — lifecycle hardening: lineage +
+6. **26 (items 1–4 first)** — lifecycle hardening: lineage +
    attempt counter, `TRANSIENT_FAIL` edge, per-state timeout,
    `originating_bundle_id` for resolution propagation. Three
    incidents this week traced to seam-level bugs the wall-clock
    circuit breaker only papered over. Items 5–9 of Step 26 are
    pure FSM cleanups and can interleave whenever.
-6. **24** — prompts/quickref consolidation. Cheap, no behavior
+7. **24** — prompts/quickref consolidation. Cheap, no behavior
    change. Before 25d's prompt rewrite so it isn't against a
    messy baseline. (Step 27 already trimmed prompts.py
    substantially; what remains for 24 is the structural
    `dops_quickref.md` audit against the engine source-of-truth.)
-7. **16** — UX review (dashboard live-refresh + the rest).
-8. **23 → 22** — execution layer then steps.py refactor. 23 first
+8. **16** — UX review (dashboard live-refresh + the rest).
+9. **23 → 22** — execution layer then steps.py refactor. 23 first
    so 22's phase-helper extraction lands against the consolidated
    `chroot_exec`.
-9. **21** — DB layer consolidation. Enables 17/18 to plug into a
-   clean write surface. Also the natural landing site for Step 26
-   items 1 + 4 (the column adds).
-10. **12 → 13 → 14 (system-prompt decomposition only) → 15** —
+10. **21** — DB layer consolidation. Enables 17/18 to plug into a
+    clean write surface. Also the natural landing site for Step 26
+    items 1 + 4 (the column adds).
+11. **12 → 13 → 14 (system-prompt decomposition only) → 15** —
     abstraction work. 12 unblocks 13/14/15. Step 14's KEDB-
     specific metadata work shipped via Step 27b; what remains is
     the system-prompt decomposition (`PATCH_SYSTEM_SECTIONS`,
     per-section telemetry).
-11. **17 → 18** — remote runners + security. Only load-bearing
+12. **17 → 18** — remote runners + security. Only load-bearing
     when a second builder appears.
 
 Rationale for the head of the order: the loop's first-class

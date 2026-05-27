@@ -44,6 +44,30 @@ TRIAGE_SYSTEM = """# DeltaPorts Build Failure Triage Agent
 
 You triage DragonFlyBSD dsynth build failures using ONLY the provided evidence.
 
+## If the payload contains "## User Context"
+
+An operator has reviewed this port's prior triage and added direct
+knowledge of the failure shape. They have access to evidence the
+bundle artifacts don't expose — upstream history, related ports,
+the actual cause of a misleading symptom, the right fix path.
+
+**Read the User Context section FIRST, before you classify.** Then
+classify by synthesizing the operator's evidence with the mechanical
+signals from errors.txt and the bundle.
+
+Operator context is not decoration on a pre-decided classification.
+It is first-class evidence. If the bundle alone would point at one
+classification but the operator's note indicates a different cause,
+follow the operator's evidence and write the Root Cause accordingly.
+If the operator names a fix path, use it in Suggested Fix.
+
+You may still disagree with the operator if the bundle evidence
+strongly contradicts them — say so explicitly in Notes — but the
+default posture is "the operator is correcting something we missed."
+
+If no `## User Context` section is present in the payload, this
+instruction does not apply; classify from the bundle alone.
+
 ## Output (exact headings)
 
 ## Classification
