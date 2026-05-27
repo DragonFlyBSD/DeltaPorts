@@ -353,10 +353,15 @@ def test_ui_verification_failed_blocks_accept(client):
     assert "disabled" not in verify_match.group(0)
 
 
-def test_ui_terminal_states_hide_buttons(client):
+def test_ui_terminal_states_show_only_reopen(client):
+    """Terminal resolutions (accepted/rejected) hide the 11c trio
+    but Step 28d's Reopen button surfaces so the operator can undo."""
     for bid in ("b-accepted", "b-rejected"):
         body = client.get(f"/agentic/bundles/{bid}").text
-        assert "Operator actions" not in body, bid
+        assert 'id="op-verify"' not in body, bid
+        assert 'id="op-accept"' not in body, bid
+        assert 'id="op-reject"' not in body, bid
+        assert 'id="op-reopen"' in body, bid
 
 
 def test_ui_buttons_use_data_attributes_not_onclick(client):

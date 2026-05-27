@@ -35,6 +35,7 @@ from dportsv3.tracker.agentic_queries import (
     get_job,
     get_manual_request,
     get_run,
+    clear_origin_skip,
     is_origin_skipped,
     job_events_for_job,
     list_bundles,
@@ -1633,6 +1634,145 @@ def create_app(db_path: str | Path) -> Any:
             "requested_by": operator,
         }
 
+    @app.post("/api/bundles/{bundle_id}/reopen")
+    def api_bundle_reopen(
+        bundle_id: str, body: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Operator reopen of a terminally-resolved bundle (Step 28d).
+
+        Clears ``bundle.resolution`` back to NULL so the bundle is
+        actionable again (take-over / discard / retry can fire from
+        a fresh slate). Rare — undo path for an operator decision
+        that turned out to be wrong (accepted a fix that then broke,
+        rejected a fix that was actually correct, discarded a port
+        that should be retried).
+
+        Allowed only from terminal resolutions (``accepted`` /
+        ``rejected`` / ``discarded``). 409 from any non-terminal
+        state (no point reopening). 404 unknown bundle.
+
+        Body:
+          - ``reason`` (str, required): why the prior terminal
+            decision is being undone. Audit trail; freeform.
+          - ``operator`` (str, optional): freeform identifier.
+
+        Side effects:
+          - ``resolution`` → NULL.
+          - ``reopened_at``, ``reopened_by``, ``reopened_from``
+            populated. Prior terminal-state columns
+            (``accepted_at``, ``rejected_at``, ``discarded_*``,
+            ``taken_over_*``) are preserved as historical record.
+          - If the prior state was ``discarded`` AND this bundle
+            holds the open ``origin_skip_flags`` row (its
+            ``bundle_id`` matches), the lock is cleared. If a
+            sibling holds the lock, it's left alone — that's the
+            sibling's stake to release.
+          - Emits ``bundle_reopened`` event with
+            ``prior_resolution`` + ``skip_action``.
+        """
+        from datetime import datetime, timezone  # noqa: PLC0415
+
+        reason = (body or {}).get("reason")
+        if not reason or not isinstance(reason, str) or not reason.strip():
+            raise HTTPException(
+                status_code=400,
+                detail="body must include 'reason' (reopen text)",
+            )
+        reason = reason.strip()
+        operator = ((body or {}).get("operator") or "operator").strip()
+        if not operator:
+            operator = "operator"
+
+        with _conn() as conn:
+            row = get_bundle(conn, bundle_id)
+        if row is None:
+            raise HTTPException(
+                status_code=404, detail=f"Unknown bundle: {bundle_id}",
+            )
+        prior = row.get("resolution")
+        if prior not in ("accepted", "rejected", "discarded"):
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"Reopen requires a terminal resolution; current "
+                    f"is {prior!r} (nothing to undo)"
+                ),
+            )
+
+        target = (row.get("target") or "").strip()
+        origin = (row.get("origin") or "").strip()
+        now = datetime.now(timezone.utc).isoformat()
+
+        write_conn = sqlite3.connect(
+            str(app.state.db_path), check_same_thread=False,
+            isolation_level=None,
+        )
+        write_conn.row_factory = sqlite3.Row
+        skip_action = "none"
+        try:
+            write_conn.execute("BEGIN IMMEDIATE")
+            try:
+                write_conn.execute(
+                    """UPDATE bundles SET
+                           resolution = NULL,
+                           reopened_at = ?,
+                           reopened_by = ?,
+                           reopened_from = ?,
+                           last_seen_at = ?
+                       WHERE bundle_id = ?""",
+                    (now, operator, prior, now, bundle_id),
+                )
+                # Clear the origin skip lock if (a) we came from
+                # 'discarded' (only path that opens a lock — accept
+                # and reject don't), and (b) THIS bundle owns it.
+                # Sibling-owned locks are left alone — the sibling
+                # made the lock decision and should release it.
+                if prior == "discarded" and target and origin:
+                    existing = is_origin_skipped(write_conn, target, origin)
+                    if existing is not None:
+                        if existing.get("bundle_id") == bundle_id:
+                            clear_origin_skip(
+                                write_conn,
+                                target=target, origin=origin,
+                                cleared_by=operator,
+                            )
+                            skip_action = "cleared"
+                        else:
+                            skip_action = (
+                                f"left_intact_owned_by:"
+                                f"{existing.get('bundle_id')}"
+                            )
+                write_conn.execute("COMMIT")
+            except Exception:
+                write_conn.execute("ROLLBACK")
+                raise
+            from dportsv3.artifact_store import emit_event  # noqa: PLC0415
+            emit_event(write_conn, "bundle_reopened", {
+                "bundle_id": bundle_id,
+                "target": target,
+                "origin": origin,
+                "reopened_at": now,
+                "reopened_by": operator,
+                "reopened_from": prior,
+                "reason": reason,
+                "skip_action": skip_action,
+            })
+        finally:
+            write_conn.close()
+
+        return {
+            "ok": True,
+            "bundle_id": bundle_id,
+            "resolution": None,
+            "reopened_at": now,
+            "reopened_by": operator,
+            "reopened_from": prior,
+            "reason": reason,
+            "target": target,
+            "origin": origin,
+            "skip_action": skip_action,
+        }
+
     @app.get("/api/ports/{origin:path}")
     def api_port_bundles(
         origin: str,
@@ -1842,8 +1982,18 @@ def create_app(db_path: str | Path) -> Any:
         # Reject path already handles agent_fixed bundles, so /retry
         # is deliberately not surfaced there.
         can_retry = can_discard
+        # Step 28d: reopen-from-terminal undoes an accept/reject/
+        # discard. Rare; the only state where the button surfaces.
+        can_reopen = resolution in ("accepted", "rejected", "discarded")
         operator_actions = {
-            "show": actionable or can_take_over or can_discard or can_retry,
+            "show": (actionable or can_take_over or can_discard
+                     or can_retry or can_reopen),
+            # 11c buttons render together when the bundle is in the
+            # agent_fixed lane; outside that lane they're irrelevant
+            # noise (e.g. a discarded bundle showing disabled
+            # Verify/Accept/Reject). 28d kept this clean by gating
+            # the whole 11c group on `actionable`.
+            "show_11c_group": actionable,
             "can_verify": actionable,
             "can_accept": (actionable
                            and bundle.get("verification_status") == "verified"),
@@ -1851,6 +2001,7 @@ def create_app(db_path: str | Path) -> Any:
             "can_take_over": can_take_over,
             "can_discard": can_discard,
             "can_retry": can_retry,
+            "can_reopen": can_reopen,
         }
         return templates.TemplateResponse(
             request,

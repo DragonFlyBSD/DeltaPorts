@@ -331,13 +331,15 @@ def test_discard_button_absent_on_other_resolutions(client, bundle_id):
     assert 'id="op-discard"' not in body
 
 
-def test_terminal_discarded_hides_all_action_buttons(client):
-    """A discarded bundle is terminal — no buttons should surface."""
+def test_terminal_discarded_hides_action_buttons_except_reopen(client):
+    """A discarded bundle is terminal — only the Step 28d Reopen
+    button is allowed (it's the undo path)."""
     body = client.get("/agentic/bundles/b-discarded").text
     assert 'id="op-verify"' not in body
     assert 'id="op-accept"' not in body
     assert 'id="op-reject"' not in body
     assert 'id="op-take-over"' not in body
     assert 'id="op-discard"' not in body
-    # The "Operator actions" panel itself shouldn't render.
-    assert "Operator actions" not in body
+    assert 'id="op-retry"' not in body
+    # Reopen is the only action surfaced on terminal states.
+    assert 'id="op-reopen"' in body

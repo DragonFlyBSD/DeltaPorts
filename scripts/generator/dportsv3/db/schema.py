@@ -355,6 +355,18 @@ MIGRATIONS: tuple[str, ...] = (
     # the endpoint's skip_origin body field.
     "ALTER TABLE bundles ADD COLUMN discarded_at TEXT",
     "ALTER TABLE bundles ADD COLUMN discard_reason TEXT",
+    # Step 28d: terminal-state reopen override. Operator clears a
+    # terminal resolution (accepted/rejected/discarded) back to NULL
+    # so the bundle can be re-actioned. Rare — guarded behind a
+    # confirmation modal in the UI. Forensics columns are populated
+    # only on reopen; the prior terminal columns
+    # (accepted_at, rejected_at, discarded_*, taken_over_*) are
+    # preserved as historical record. reopened_from records which
+    # terminal state was being undone so the audit trail is
+    # self-explanatory without joining job_events.
+    "ALTER TABLE bundles ADD COLUMN reopened_at TEXT",
+    "ALTER TABLE bundles ADD COLUMN reopened_by TEXT",
+    "ALTER TABLE bundles ADD COLUMN reopened_from TEXT",
 )
 
 

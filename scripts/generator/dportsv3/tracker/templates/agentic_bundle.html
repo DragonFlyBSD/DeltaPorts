@@ -90,6 +90,13 @@
     <div class="tracker-card" style="margin-top:8px;">
       <strong style="font-size:12px;">Operator actions</strong>
       <div style="margin-top:6px;display:flex;gap:8px;align-items:center;">
+        {# Step 11c trio — relevant only on the agent_fixed lane.
+           Render-disabled (not absent) inside the group so the
+           operator sees why a specific action is blocked, but the
+           group itself hides on lanes where Verify / Accept /
+           Reject have no contextual meaning (failure-shaped,
+           operator_owned, terminal). #}
+        {% if operator_actions.show_11c_group %}
         <button id="op-verify" type="button"
                 data-bundle="{{ bundle.bundle_id }}"
                 style="font-size:12px;padding:4px 10px;"
@@ -108,6 +115,7 @@
                 {% if not operator_actions.can_reject %}disabled{% endif %}>
           Reject
         </button>
+        {% endif %}
         {# Step 28a: Take over — operator stakes (target, origin)
            so the runner stops competing with the manual work. Only
            shown on failure-shaped bundles; the success-side matrix
@@ -144,6 +152,19 @@
                 style="font-size:12px;padding:4px 10px;"
                 title="Hand this bundle back to the agent loop with operator context">
           Retry with context
+        </button>
+        {% endif %}
+        {# Step 28d: Reopen — undo a terminal accept/reject/discard.
+           Gated behind a confirm() modal in JS since it's a true
+           undo of an operator decision. If the prior state was
+           discarded and this bundle owns the open origin skip lock,
+           the lock is also cleared. #}
+        {% if operator_actions.can_reopen %}
+        <button id="op-reopen" type="button"
+                data-bundle="{{ bundle.bundle_id }}"
+                style="font-size:12px;padding:4px 10px;"
+                title="Undo the terminal accept/reject/discard so the bundle is actionable again">
+          Reopen
         </button>
         {% endif %}
         <span id="op-status" style="color:var(--text-dim);font-size:11px;"></span>
@@ -203,6 +224,22 @@
           );
           if (!ctx) { return; }
           body = {context: ctx};
+        } else if (action === 'reopen') {
+          // Gating modal: reopen is a true undo of a prior operator
+          // decision, so require an explicit confirm before the
+          // reason prompt.
+          if (!confirm(
+            'Reopen this bundle? This undoes the prior accept / reject / ' +
+            'discard so the bundle is actionable again. If it was discarded ' +
+            'with an origin skip lock owned by this bundle, the lock will ' +
+            'also be cleared.'
+          )) { return; }
+          const reopenReason = prompt(
+            'Reason for reopening (required; audit trail):',
+            ''
+          );
+          if (!reopenReason) { return; }
+          body = {reason: reopenReason};
         }
         // Disable all buttons immediately so a double-click can't
         // enqueue a second verify (or fire accept while verify is
