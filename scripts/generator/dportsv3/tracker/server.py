@@ -993,10 +993,21 @@ def create_app(db_path: str | Path) -> Any:
     def api_bundle_accept(
         bundle_id: str, body: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        """Operator accept (Step 11c). Gated on
-        verification_status='verified' — 409 otherwise. Sets
-        resolution='accepted' + accepted_at; emits a
-        bundle_accepted event."""
+        """Operator accept (Step 11c + 28e follow-up).
+
+        Gated on ``verification_status='verified'`` (409 otherwise).
+        Sets ``resolution='accepted'`` + ``accepted_at``; emits a
+        ``bundle_accepted`` event.
+
+        Step 28e follow-up: when the prior resolution was
+        ``operator_owned`` (operator's manual fix being accepted),
+        also release the ``origin_skip_flags`` row if this bundle
+        owns it. Without this the lock would stay forever — accept
+        is terminal, and ``/reopen`` only clears locks on reopen-
+        from-discarded. Mirrors release/reopen's own/sibling
+        semantics. The ``skip_action`` field on the response and
+        the event payload makes the lock disposition observable.
+        """
         from datetime import datetime, timezone  # noqa: PLC0415
 
         with _conn() as conn:
@@ -1022,12 +1033,17 @@ def create_app(db_path: str | Path) -> Any:
                 ),
             )
 
+        prior_resolution = row.get("resolution")
+        target = (row.get("target") or "").strip()
+        origin = (row.get("origin") or "").strip()
         now = datetime.now(timezone.utc).isoformat()
+
         write_conn = sqlite3.connect(
             str(app.state.db_path), check_same_thread=False,
             isolation_level=None,
         )
         write_conn.row_factory = sqlite3.Row
+        skip_action = "none"
         try:
             write_conn.execute(
                 """UPDATE bundles SET
@@ -1037,10 +1053,30 @@ def create_app(db_path: str | Path) -> Any:
                    WHERE bundle_id = ?""",
                 (now, now, bundle_id),
             )
+            # 28e follow-up: only the operator_owned → accepted
+            # path interacts with the skip lock. agent_fixed accepts
+            # never opened a lock, so there's nothing to clear.
+            if prior_resolution == "operator_owned" and target and origin:
+                existing = is_origin_skipped(write_conn, target, origin)
+                if existing is not None:
+                    if existing.get("bundle_id") == bundle_id:
+                        clear_origin_skip(
+                            write_conn,
+                            target=target, origin=origin,
+                            cleared_by="operator-accept",
+                        )
+                        skip_action = "cleared"
+                    else:
+                        skip_action = (
+                            f"left_intact_owned_by:"
+                            f"{existing.get('bundle_id')}"
+                        )
             from dportsv3.artifact_store import emit_event  # noqa: PLC0415
             emit_event(write_conn, "bundle_accepted", {
                 "bundle_id": bundle_id,
                 "accepted_at": now,
+                "prior_resolution": prior_resolution,
+                "skip_action": skip_action,
                 "note": (body or {}).get("note"),
             })
         finally:
@@ -1051,6 +1087,8 @@ def create_app(db_path: str | Path) -> Any:
             "bundle_id": bundle_id,
             "resolution": "accepted",
             "accepted_at": now,
+            "prior_resolution": prior_resolution,
+            "skip_action": skip_action,
         }
 
     @app.post("/api/bundles/{bundle_id}/reject")
@@ -2115,27 +2153,44 @@ def create_app(db_path: str | Path) -> Any:
         # Step 28d: reopen-from-terminal undoes an accept/reject/
         # discard. Rare; the only state where the button surfaces.
         can_reopen = resolution in ("accepted", "rejected", "discarded")
-        # Step 28e: operator_owned bundles get the Verify button too
-        # — an operator who manually fixed something wants to verify
+        # Step 28e: operator_owned bundles get the Verify button —
+        # an operator who manually fixed something wants to verify
         # the build before moving on. Reuses 11c's verify endpoint
-        # as-is. Accept and Reject stay agent_fixed-only because they
-        # express opinions on an agent-produced fix specifically.
+        # as-is.
         verify_eligible = actionable or (resolution == "operator_owned")
+        # Step 28e follow-up: Accept also surfaces on operator_owned
+        # once verification_status='verified'. The flow operators
+        # want is "take over → fix manually → Verify → Accept";
+        # without this gate the Verify ran but Accept stayed
+        # disabled, dead-ending the manual-fix path. Reject stays
+        # agent_fixed-only — its semantics (enqueue new triage with
+        # rejection reason as user_context) make sense only for
+        # rejecting an agent-produced fix.
         # Step 28e: release surfaces only on operator_owned — it's
         # the operator's "I'm done staking this, hand back to the
         # loop" action.
         can_release = resolution == "operator_owned"
+        can_accept = (
+            verify_eligible
+            and bundle.get("verification_status") == "verified"
+        )
+        # Accept renders whenever it's contextually relevant: on the
+        # agent_fixed lane (where 11c renders it disabled-before-verify
+        # so the operator sees the path) AND on operator_owned-verified
+        # (the manual-fix terminalization). Reject stays gated to
+        # show_11c_group — its semantics (re-triage with rejection
+        # reason as user_context) make sense only on agent_fixed.
+        show_accept_button = actionable or can_accept
         operator_actions = {
             "show": (actionable or can_take_over or can_discard
                      or can_retry or can_reopen or can_release),
-            # 11c verify/accept/reject group renders together when
-            # the bundle is in the agent_fixed lane. Step 28e extends
-            # the Verify button alone to operator_owned (the manual-
-            # fix verification flow); accept/reject stay agent-only.
+            # show_11c_group still gates Reject; Accept moved to its
+            # own flag (show_accept_button) so it can surface on
+            # operator_owned-verified without dragging Reject along.
             "show_11c_group": actionable,
+            "show_accept_button": show_accept_button,
             "can_verify": verify_eligible,
-            "can_accept": (actionable
-                           and bundle.get("verification_status") == "verified"),
+            "can_accept": can_accept,
             "can_reject": actionable,
             "can_take_over": can_take_over,
             "can_discard": can_discard,

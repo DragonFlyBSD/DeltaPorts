@@ -3938,35 +3938,49 @@ def process_job(
         success, status = process_convert_job(
             queue_root, job_path, sibling_paths, job,
         )
-        finish_event = (
-            JobEvent.CONVERT_OK if success else JobEvent.CONVERT_GAVE_UP
+        # Step 28-extra: when process_convert_job short-circuits via
+        # SKIP_ORIGIN_LOCKED (operator took over the (target, origin)
+        # before this convert ran), the job is already at DEAD with
+        # retire_reason='origin_locked'. Firing CONVERT_OK on top of
+        # that raises IllegalTransition (logged as a warning at
+        # _apply_transition); _resume_deferred_triage is also
+        # pointless because the resumed triage would itself
+        # skip-lock-bypass. Detect the sentinel status string and
+        # skip both.
+        origin_locked_exit = (
+            success and status.startswith("origin_locked_by:")
         )
-        _apply_transition(
-            job_path.name, finish_event,
-            detail={"status": status} if not success else None,
-        )
-        for s in sibling_paths:
+        if not origin_locked_exit:
+            finish_event = (
+                JobEvent.CONVERT_OK if success else JobEvent.CONVERT_GAVE_UP
+            )
             _apply_transition(
-                s.name, finish_event,
+                job_path.name, finish_event,
                 detail={"status": status} if not success else None,
             )
-        # Step 20d auto-resume: if convert succeeded, re-enqueue the
-        # triage that was parked at DEAD with retire_reason
-        # 'deferred_for_convert'. The fresh triage runs against the
-        # now-converted port and proceeds normally (classify returns
-        # 'converted'). Failures here are logged but do not derail
-        # the dispatcher; the operator can re-enqueue manually.
-        if success:
-            convert_target = job.get("target") or os.environ.get(
-                "DPORTSV3_TRACKER_TARGET", "",
-            )
-            try:
-                _resume_deferred_triage(
-                    queue_root, job_path.name, origin, convert_target,
+            for s in sibling_paths:
+                _apply_transition(
+                    s.name, finish_event,
+                    detail={"status": status} if not success else None,
                 )
-            except Exception as exc:
-                log(queue_root, "WARN",
-                    f"_resume_deferred_triage raised: {exc}")
+            # Step 20d auto-resume: if convert succeeded, re-enqueue
+            # the triage that was parked at DEAD with retire_reason
+            # 'deferred_for_convert'. The fresh triage runs against
+            # the now-converted port and proceeds normally (classify
+            # returns 'converted'). Failures here are logged but do
+            # not derail the dispatcher; the operator can re-enqueue
+            # manually.
+            if success:
+                convert_target = job.get("target") or os.environ.get(
+                    "DPORTSV3_TRACKER_TARGET", "",
+                )
+                try:
+                    _resume_deferred_triage(
+                        queue_root, job_path.name, origin, convert_target,
+                    )
+                except Exception as exc:
+                    log(queue_root, "WARN",
+                        f"_resume_deferred_triage raised: {exc}")
     elif job_type == "verify":
         # Step 11c: operator-triggered fix verification. Calls
         # dportsv3.verify_fix.run_verify_fix() in-process — no

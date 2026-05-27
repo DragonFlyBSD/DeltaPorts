@@ -100,17 +100,23 @@
           Verify
         </button>
         {% endif %}
-        {# Step 11c Accept / Reject — agent_fixed lane only. These
-           express opinions on an agent-produced fix specifically,
-           so they don't extend to operator_owned. Render disabled
-           inside the group so the operator sees why a specific
-           action is blocked when contextually relevant. #}
-        {% if operator_actions.show_11c_group %}
+        {# Step 11c Accept — agent_fixed lane renders it disabled
+           before verification (so the operator sees the path);
+           28e follow-up extends it to operator_owned once verified
+           so manual fixes can be terminalized. Reject stays
+           agent_fixed-only — see show_11c_group block below. #}
+        {% if operator_actions.show_accept_button %}
         <button id="op-accept" type="button" class="btn btn-success"
                 data-bundle="{{ bundle.bundle_id }}"
                 {% if not operator_actions.can_accept %}disabled title="Accept requires verification_status='verified'"{% endif %}>
           Accept
         </button>
+        {% endif %}
+        {# Step 11c Reject — agent_fixed lane only. Its semantics
+           (enqueue new triage with rejection reason as user_context)
+           make sense only for rejecting an agent-produced fix, not
+           for an operator's manual fix. #}
+        {% if operator_actions.show_11c_group %}
         <button id="op-reject" type="button" class="btn btn-danger"
                 data-bundle="{{ bundle.bundle_id }}"
                 {% if not operator_actions.can_reject %}disabled{% endif %}>
