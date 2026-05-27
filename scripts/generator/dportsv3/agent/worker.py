@@ -878,6 +878,30 @@ def materialize_dports(env: str, origin: str) -> dict:
 WRKDIRPREFIX = "/work/obj"
 
 
+# Per-(env, origin) WRKSRC cache, populated by `extract()` and read
+# by `genpatch()` (to invoke the script from the right cwd with a
+# WRKSRC-relative arg) and `apply_intent` (to pass into the
+# Translator so `_resolve_from_dupe` knows where to look for the
+# patch file genpatch produced).
+#
+# Stays at module scope because the worker is otherwise stateless;
+# entries live for the runner process's lifetime. A worker restart
+# between extract and a downstream call empties the cache — those
+# downstream calls then fall back to legacy behavior. The patch
+# agent's per-attempt opening procedure already calls extract first,
+# so the cache is repopulated naturally on the next attempt.
+_WRKSRC_CACHE: dict[tuple[str, str], str] = {}
+
+
+def peek_wrksrc(env: str, origin: str) -> str | None:
+    """Non-destructive read of the cached WRKSRC for (env, origin).
+
+    Returns None if extract hasn't run yet for this pair (cache miss
+    is the legacy fallback signal for genpatch and apply_intent).
+    """
+    return _WRKSRC_CACHE.get((env, origin))
+
+
 def probe_overlay_facts(env: str, origin: str):
     """Collect raw overlay facts from inside the dev-env chroot."""
     from dportsv3.agent.overlay_state import (  # noqa: PLC0415
@@ -1453,7 +1477,15 @@ def apply_intent(
             "intent_log_full_reason": overflow,
         }
 
-    translator = Translator(workspace, origin, mode)
+    # Thread the cached WRKSRC (populated by `extract()` earlier in
+    # the agent's turn) so `add_patch(from_dupe=True)`'s lookup can
+    # find the patch genpatch produced in WRKSRC. Cache miss is
+    # fine — the lookup falls back to the legacy workspace-relative
+    # `.genpatch-out` path.
+    translator = Translator(
+        workspace, origin, mode,
+        wrksrc=_WRKSRC_CACHE.get((env, origin)),
+    )
     result = translator.apply(intent)
 
     # Phase 2 — post-apply: re-check with the REAL substrate_diff.
@@ -1752,6 +1784,13 @@ def extract(env: str, origin: str) -> dict:
     lines = [line.strip() for line in q.stdout.splitlines() if line.strip()]
     wrkdir = lines[0] if len(lines) > 0 else ""
     wrksrc = lines[1] if len(lines) > 1 else ""
+    # Cache WRKSRC so genpatch() can invoke the script from the
+    # right cwd with a WRKSRC-relative arg (producing clean
+    # patch-<rel> filenames), and apply_intent can pass WRKSRC into
+    # the Translator so `_resolve_from_dupe` can find the patch
+    # file genpatch produced.
+    if wrksrc:
+        _WRKSRC_CACHE[(env, origin)] = wrksrc
     summary = (
         f"Extracted {origin} from the compose root. "
         f"wrksrc={wrksrc} — use this exact path. "
@@ -1775,23 +1814,107 @@ def dupe(env: str, path: str) -> dict:
 
 
 def genpatch(env: str, path: str) -> dict:
-    """Run ``genpatch PATH`` inside the chroot; list generated patch files.
+    """Run ``genpatch PATH`` inside the chroot.
 
-    Always lists ``patch-*`` files from ``/work/genpatch-out/`` regardless
-    of rc (genpatch may produce partial output on failure). LLM inspects
-    ``ok`` to decide whether the patches are trustworthy.
+    The wrapped script (`ports-mgmt/genpatch`) has two requirements
+    we now satisfy explicitly:
+
+    1. It checks `realpath /usr/obj/dports` to compute its strip-prefix
+       unless `$WORKTREE` is set. Our extract uses `WRKDIRPREFIX=
+       /work/obj` because the DragonFly default is read-only, so the
+       fallback fails — we always set `WORKTREE=/work/obj`.
+    2. It encodes its `$1` arg verbatim into the patch filename
+       (`s|/|_|g` etc.). To get the canonical `dragonfly/patch-<rel>`
+       naming, the caller must `cd <WRKSRC>` and pass a WRKSRC-relative
+       arg. The wrapper does this when `_WRKSRC_CACHE` has a wrksrc
+       entry whose prefix `path` starts with.
+
+    Two staging conventions, one per flow:
+
+    - Intent flow (cache hit): patch lands in WRKSRC with a clean
+      WRKSRC-relative encoded name. `_resolve_from_dupe` walks
+      WRKSRC to find it when the Translator carries the matching
+      wrksrc (see `apply_intent`).
+    - Legacy install_patches flow (cache miss): patch lands in
+      `/work/genpatch-out/` with a full-path-encoded filename.
+      `install_patches` copies from there into the port's
+      `dragonfly/` subtree by basename, so the encoded filename is
+      irrelevant — only the location matters.
+
+    Returns ``patch_path`` / ``patch_basename`` on cache-hit so
+    callers can locate the file without re-deriving the encoding.
     """
-    p = _exec(env, "genpatch", path)
+    import shlex  # noqa: PLC0415
+
+    # Find the (env, origin) whose cached WRKSRC contains `path`.
+    # Multiple ports can be cached for one env; we match on prefix.
+    matched_wrksrc: str | None = None
+    matched_origin: str | None = None
+    for (cached_env, cached_origin), cached_wrksrc in _WRKSRC_CACHE.items():
+        if cached_env != env:
+            continue
+        ws = cached_wrksrc.rstrip("/")
+        if path == ws or path.startswith(ws + "/"):
+            matched_wrksrc = ws
+            matched_origin = cached_origin
+            break
+
+    patch_basename: str | None = None
+    patch_path: str | None = None
     paths = env_paths(env)
     genpatch_out = paths.writable / "work" / "genpatch-out"
+
+    if matched_wrksrc is not None:
+        # Cache hit — intent-flow staging.
+        relpath = (
+            "" if path == matched_wrksrc
+            else path[len(matched_wrksrc) + 1:]
+        )
+        if not relpath:
+            # Caller passed the WRKSRC root itself, not a file under
+            # it. genpatch can't operate on a directory.
+            return _exec_result(
+                1, "", f"path {path!r} is the WRKSRC root, not a file",
+                error="genpatch expects a file path under WRKSRC",
+                path=path,
+            )
+        patch_basename = (
+            "patch-" + relpath.replace("_", "__").replace("/", "_")
+        )
+        patch_path = f"{matched_wrksrc}/{patch_basename}"
+        cmd = (
+            f'cd {shlex.quote(matched_wrksrc)} && '
+            f'WORKTREE={shlex.quote(WRKDIRPREFIX)} '
+            f'genpatch {shlex.quote(relpath)}'
+        )
+    else:
+        # Cache miss — legacy install_patches staging. `mkdir -p` is
+        # cheap and guards against a wiped /work/genpatch-out.
+        cmd = (
+            'mkdir -p /work/genpatch-out && '
+            'cd /work/genpatch-out && '
+            f'WORKTREE={shlex.quote(WRKDIRPREFIX)} '
+            f'genpatch {shlex.quote(path)}'
+        )
+
+    p = _exec(env, "/bin/sh", "-c", cmd)
+
+    # List both staging dirs for diagnostic completeness — operators
+    # debugging a cache-miss case may be looking at the legacy dir
+    # while we expected the wrksrc one (or vice versa).
     patches: list[str] = []
     if genpatch_out.is_dir():
         for f in sorted(genpatch_out.iterdir()):
             if f.is_file() and f.name.startswith("patch-"):
                 patches.append(f.name)
+
     return _exec_result(
         p.returncode, p.stdout, p.stderr,
         path=path,
+        wrksrc=matched_wrksrc,
+        origin=matched_origin,
+        patch_path=patch_path,
+        patch_basename=patch_basename,
         output_dir=str(genpatch_out),
         patches=patches,
     )

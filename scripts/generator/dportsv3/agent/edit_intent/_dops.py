@@ -154,25 +154,44 @@ def drop_patch(t, intent: DropPatch):
 
 def _resolve_from_dupe(t, target: str) -> str | None:
     """Find the most recently modified file matching ``target``'s
-    basename in the env's genpatch output directory.
+    basename in either the WRKSRC (intent flow, since the genpatch
+    wrapper cd's into WRKSRC and runs the script there) or the
+    workspace-relative ``.genpatch-out`` (legacy / test fallback).
 
-    The env layout for the genpatch output isn't fully resolved
-    without consulting the dev-env state (the WRKSRC path depends
-    on the port's distfile layout). Conventional location is
-    ``<workspace>/.genpatch-out/<basename>``; the helper also walks
-    the workspace tree for sibling ``.genpatch-out`` directories
-    so tests can place the file freely. Returns the file's text
-    contents, or ``None`` if nothing matches.
+    The intent-flow path is the canonical one for runtime: the
+    `genpatch` wrapper produces `patch-<wrksrc-rel>` files inside
+    WRKSRC under that branch. The legacy fallback handles tests
+    that place files at known workspace-relative locations without
+    a real extract.
+
+    Returns the file's text contents, or ``None`` if nothing matches.
     """
     from pathlib import Path  # noqa: PLC0415
     basename = Path(target).name
-    candidates = [t.workspace / ".genpatch-out" / basename]
+    candidates: list[Path] = []
+
+    # Intent-flow location: WRKSRC, set by worker.apply_intent when
+    # the cache has a hit. The genpatch wrapper writes here under
+    # the cache-hit branch.
+    wrksrc = getattr(t, "wrksrc", None)
+    if wrksrc:
+        ws = Path(wrksrc)
+        if ws.is_dir():
+            for cand in ws.rglob(basename):
+                if cand.is_file() and cand.name.startswith("patch-"):
+                    candidates.append(cand)
+
+    # Legacy / test-fixture location: workspace-relative
+    # `.genpatch-out`. Kept so tests can stage files without
+    # mocking out a full WRKSRC tree.
+    candidates.append(t.workspace / ".genpatch-out" / basename)
     work = t.workspace
     if work.is_dir():
         for sub in work.rglob(".genpatch-out"):
             cand = sub / basename
             if cand.is_file():
                 candidates.append(cand)
+
     matches = [c for c in candidates if c.is_file()]
     if not matches:
         return None

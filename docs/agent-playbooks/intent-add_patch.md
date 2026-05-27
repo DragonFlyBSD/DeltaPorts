@@ -51,11 +51,14 @@ workflow for non-trivial source patches:
    the file. `put_file` to a WRKSRC path is allowed; to
    `ports/<origin>/` it is not.
 4. `genpatch(<same path>)` — runs `diff -u` between the `.orig`
-   and current content, deposits the result in
-   `/work/genpatch-out/`.
+   and current content, deposits the result inside WRKSRC with a
+   clean WRKSRC-relative name (e.g.
+   `patch-src_include_foo.h`). The runner picked up WRKSRC from
+   the prior `extract()` call automatically — no extra arg needed.
 5. `apply_intent({type: "add_patch", target: "dragonfly/patch-...",
-   from_dupe: true})` — the translator finds the latest
-   genpatch output matching the target's basename and stages it.
+   from_dupe: true})` — the translator walks WRKSRC for the patch
+   file matching the target's basename and stages it under
+   `ports/<origin>/dragonfly/`.
 
 ## `dupe` is only step 1 of this flow
 
@@ -74,8 +77,10 @@ for the wrong tool.
 
 - Target already exists → `ok=false`. Use `replace_in_patch` to
   modify it, or `drop_patch` + `add_patch` to replace it.
-- `from_dupe=true` but no matching basename in
-  `/work/genpatch-out/` → `ok=false`. Did `genpatch` actually run?
-  Check its return value.
+- `from_dupe=true` but no matching `patch-*` file in WRKSRC →
+  `ok=false`. Did `genpatch` actually run, and did `extract` run
+  before it so WRKSRC was populated? Check `genpatch`'s return —
+  `patch_basename` / `patch_path` are populated on success and
+  null otherwise.
 - Empty diff content (inline or from_dupe) → `ok=false`. A
   no-content patch is never the right answer.

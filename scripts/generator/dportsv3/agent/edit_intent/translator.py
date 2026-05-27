@@ -63,7 +63,9 @@ class Translator:
     """Per-transaction translator. Construct once per agent run."""
 
     def __init__(self, workspace: Path, origin: str, mode: Mode,
-                 *, git: Callable[..., subprocess.CompletedProcess] | None = None):
+                 *,
+                 wrksrc: str | None = None,
+                 git: Callable[..., subprocess.CompletedProcess] | None = None):
         if mode != "dops":
             raise ValueError(
                 f"invalid mode: {mode!r} (post-Step-C: only 'dops' "
@@ -73,6 +75,12 @@ class Translator:
         self.workspace = Path(workspace)
         self.origin = origin
         self.mode = mode
+        # `wrksrc` is the extracted source root for this transaction.
+        # `add_patch(from_dupe=True)`'s lookup walks this directory
+        # for the patch genpatch produced. Optional — legacy callers
+        # (and tests) that don't have a wrksrc fall back to the
+        # workspace-relative `.genpatch-out` lookup.
+        self.wrksrc = wrksrc
         self.port_dir = self.workspace / "ports" / origin
         # subprocess.run shim — tests inject a fake.
         self._git = git or _real_git
