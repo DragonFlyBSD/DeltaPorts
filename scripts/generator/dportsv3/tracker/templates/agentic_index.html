@@ -65,7 +65,7 @@
       Active env (runner default + verify-fix fallback):
       <strong>{{ active_env or 'none — runner will auto-pick if exactly one env exists' }}</strong>
       {% if active_env %}
-        <button type="button" class="env-set-btn" data-env="" title="Clear the active env">clear</button>
+        <button type="button" class="btn btn-ghost btn-sm env-set-btn" data-env="" title="Clear the active env">clear</button>
       {% endif %}
       <div style="color:var(--text-dim);font-size:11px;margin-top:4px;">
         Name is not validated when set — a typo only surfaces when
@@ -82,7 +82,7 @@
             {% if h.env == active_env %}
               <span class="stat-pill built" title="This env is the runner default">active</span>
             {% else %}
-              <button type="button" class="env-set-btn" data-env="{{ h.env }}" title="Make {{ h.env }} the active env">set</button>
+              <button type="button" class="btn btn-ghost btn-sm env-set-btn" data-env="{{ h.env }}" title="Make {{ h.env }} the active env">set</button>
             {% endif %}
           </td>
           <td>{{ h.env }}</td>

@@ -89,15 +89,14 @@
     {% if operator_actions and operator_actions.show %}
     <div class="tracker-card" style="margin-top:8px;">
       <strong style="font-size:12px;">Operator actions</strong>
-      <div style="margin-top:6px;display:flex;gap:8px;align-items:center;">
+      <div class="btn-group" style="margin-top:6px;">
         {# Step 11c Verify — agent_fixed lane uses it to verify an
            agent-produced fix; Step 28e extends it to operator_owned
            so an operator's manual fix can be verified too. Same
            endpoint, same dispatch. #}
         {% if operator_actions.can_verify %}
-        <button id="op-verify" type="button"
-                data-bundle="{{ bundle.bundle_id }}"
-                style="font-size:12px;padding:4px 10px;">
+        <button id="op-verify" type="button" class="btn btn-success"
+                data-bundle="{{ bundle.bundle_id }}">
           Verify
         </button>
         {% endif %}
@@ -107,15 +106,13 @@
            inside the group so the operator sees why a specific
            action is blocked when contextually relevant. #}
         {% if operator_actions.show_11c_group %}
-        <button id="op-accept" type="button"
+        <button id="op-accept" type="button" class="btn btn-success"
                 data-bundle="{{ bundle.bundle_id }}"
-                style="font-size:12px;padding:4px 10px;"
                 {% if not operator_actions.can_accept %}disabled title="Accept requires verification_status='verified'"{% endif %}>
           Accept
         </button>
-        <button id="op-reject" type="button"
+        <button id="op-reject" type="button" class="btn btn-danger"
                 data-bundle="{{ bundle.bundle_id }}"
-                style="font-size:12px;padding:4px 10px;"
                 {% if not operator_actions.can_reject %}disabled{% endif %}>
           Reject
         </button>
@@ -125,9 +122,8 @@
            shown on failure-shaped bundles; the success-side matrix
            above is unaffected. #}
         {% if operator_actions.can_take_over %}
-        <button id="op-take-over" type="button"
+        <button id="op-take-over" type="button" class="btn"
                 data-bundle="{{ bundle.bundle_id }}"
-                style="font-size:12px;padding:4px 10px;"
                 title="Stake this (target, origin) — runner stops auto-processing it until un-skipped">
           Take over
         </button>
@@ -138,9 +134,8 @@
            operator_owned (an operator can give up on a manual
            attempt). #}
         {% if operator_actions.can_discard %}
-        <button id="op-discard" type="button"
+        <button id="op-discard" type="button" class="btn btn-danger"
                 data-bundle="{{ bundle.bundle_id }}"
-                style="font-size:12px;padding:4px 10px;"
                 title="Mark this bundle resolved as discarded (terminal); optionally lock the (target, origin) from future auto-processing">
           Discard
         </button>
@@ -151,9 +146,8 @@
            existing retry loop picks it up. Resolution moves to
            retry_requested (transient) until the runner enqueues. #}
         {% if operator_actions.can_retry %}
-        <button id="op-retry" type="button"
+        <button id="op-retry" type="button" class="btn"
                 data-bundle="{{ bundle.bundle_id }}"
-                style="font-size:12px;padding:4px 10px;"
                 title="Hand this bundle back to the agent loop with operator context">
           Retry with context
         </button>
@@ -165,9 +159,8 @@
            the skip lock, the lock clears too. taken_over_* columns
            are preserved as forensics. #}
         {% if operator_actions.can_release %}
-        <button id="op-release" type="button"
+        <button id="op-release" type="button" class="btn btn-ghost"
                 data-bundle="{{ bundle.bundle_id }}"
-                style="font-size:12px;padding:4px 10px;"
                 title="Stop staking this bundle — hand it back to the agent loop">
           Release
         </button>
@@ -178,9 +171,8 @@
            discarded and this bundle owns the open origin skip lock,
            the lock is also cleared. #}
         {% if operator_actions.can_reopen %}
-        <button id="op-reopen" type="button"
+        <button id="op-reopen" type="button" class="btn btn-ghost"
                 data-bundle="{{ bundle.bundle_id }}"
-                style="font-size:12px;padding:4px 10px;"
                 title="Undo the terminal accept/reject/discard so the bundle is actionable again">
           Reopen
         </button>

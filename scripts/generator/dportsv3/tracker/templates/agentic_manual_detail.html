@@ -91,10 +91,9 @@
       the runner will only re-trigger triage once this job finishes —
       otherwise you'll just queue behind the work that's already running.
       <div style="margin-top:8px;">
-        <button type="button" id="abandon-blocker-btn"
+        <button type="button" id="abandon-blocker-btn" class="btn btn-danger"
                 data-job-id="{{ blocking_job.job_id }}"
-                data-state="{{ blocking_job.state }}"
-                style="padding:4px 10px;font-size:12px;">
+                data-state="{{ blocking_job.state }}">
           Abandon job {{ blocking_job.job_id }}
         </button>
         <span id="abandon-blocker-flash" style="margin-left:10px;font-size:12px;"></span>
@@ -146,11 +145,10 @@
           data-endpoint="/api/manual-requests/{{ request_row.run_id }}/{{ request_row.origin }}/context">
       <textarea name="context_text" maxlength="8000" required
                 placeholder="What should the agent know or do differently?"></textarea>
-      <div style="margin-top:10px;">
-        <button type="submit">Try again with this context</button>
+      <div class="btn-group" style="margin-top:10px;">
+        <button type="submit" class="btn btn-success">Try again with this context</button>
         {% if request_row.status != 'discarded' %}
-          <button type="button" id="discard-btn"
-                  style="margin-left:8px;">
+          <button type="button" id="discard-btn" class="btn btn-danger">
             Discard request
           </button>
         {% else %}
