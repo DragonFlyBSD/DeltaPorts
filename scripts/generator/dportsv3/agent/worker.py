@@ -1183,33 +1183,35 @@ def assert_port_clean(env: str, origin: str) -> dict:
 
 def reset_port(env: str, origin: str) -> dict:
     """Step 25g: reset the env's ``ports/<origin>/`` subtree to
-    git HEAD, discarding tracked modifications and untracked
-    additions.
+    git HEAD AND wipe the per-origin WRKDIR under ``/work/obj/``,
+    so the next job starts from a pristine substrate AND from
+    pristine upstream source.
 
-    Equivalent to::
+    The substrate reset is::
 
         git checkout HEAD -- ports/<origin>
         git clean -fd ports/<origin>
 
-    Today's callers:
-    - the ``dportsv3 dev-env reset-port`` CLI (operator escape
-      hatch — see ``cmd_reset_port`` in the dev-env tools).
+    Plus a best-effort ``make clean`` invocation against the
+    compose root for ``<origin>`` to remove the WRKDIR under
+    ``$WRKDIRPREFIX/<origin>/<version>/`` along with any
+    ``.orig`` files / agent edits the prior job left in WRKSRC.
+    Without this, the next job's ``extract()`` is a no-op
+    (``make extract`` sees an existing WRKDIR and skips), the
+    agent's ``get_file`` reads polluted source, and ``genpatch``
+    diffs against stale ``.orig`` baselines.
 
-    ``apply-and-build`` inlines an equivalent shell sequence
-    (host-side chroot exec) for its post-build cleanup rather
-    than calling this function — kept consistent so the dev-env
-    primitive stays self-contained. 25d will wire the patch flow
-    here for its post-job cleanup.
+    Cache hygiene: drop ``_WRKSRC_CACHE`` and ``_MATERIALIZE_STATE``
+    entries for ``(env, origin)`` so any code path that holds a
+    cached path/hash sees the cache miss and re-derives.
 
-    Returns the standard worker result dict with paths_changed
-    summarizing the relpath that was reset. Best-effort: both
-    git commands run as one shell pipeline; if either fails the
-    result reflects the failure rc.
+    The substrate-reset stage is load-bearing; ``make clean``
+    failure surfaces as ``workdir_clean_*`` keys in the result
+    but does not flip ``ok`` to false. Callers can inspect
+    ``workdir_clean_ok`` if they want to act on it.
     """
     rel = f"ports/{origin}"
-    # Run both commands; capture combined output. checkout HEAD --
-    # restores tracked-modified or tracked-deleted files; clean
-    # -fd drops untracked additions (including dirs).
+    # Run both substrate commands; capture combined output.
     cmd = (
         f"cd /work/DeltaPorts && "
         f"git checkout HEAD -- {shlex.quote(rel)} && "
@@ -1223,11 +1225,62 @@ def reset_port(env: str, origin: str) -> dict:
             p.returncode, out, err,
             error=f"reset_port failed for {rel}",
         )
-    return {
+
+    # Best-effort WRKDIR cleanup — ok stays True even on failure.
+    workdir = _clean_port_workdir(env, origin)
+    result = {
         "ok": True,
         "origin": origin,
         "paths_changed": [rel],
         "stdout_tail": out[-1024:],
+        "workdir_clean_ok": bool(workdir.get("ok")),
+    }
+    if not workdir.get("ok"):
+        # Surface diagnosis without flipping the overall result.
+        # Prefer the actual stderr tail since the static ``error``
+        # label is just "make clean failed for <origin>" and the
+        # stderr usually carries the make/target-specific reason.
+        result["workdir_clean_error"] = (
+            workdir.get("stderr_tail") or workdir.get("error", "")
+        )[:300]
+    return result
+
+
+def _clean_port_workdir(env: str, origin: str) -> dict:
+    """Best-effort ``make clean`` for ``<origin>``'s WRKDIR + cache
+    invalidation. Used by :func:`reset_port` as a post-substrate
+    cleanup step.
+
+    Runs ``make clean`` against ``$DPORTS_COMPOSE_ROOT/<origin>``
+    with ``WRKDIRPREFIX=/work/obj`` so the per-origin WRKDIR
+    under ``/work/obj/<origin>/<version>/`` is removed along
+    with everything the agent's ``dupe``/``genpatch``/``put_file``
+    edits dropped into WRKSRC.
+
+    Drops the in-process ``_WRKSRC_CACHE`` and ``_MATERIALIZE_STATE``
+    entries for ``(env, origin)`` regardless of the make rc —
+    once we've asked for the WRKDIR to go away, any cached path
+    or content hash for it is stale by definition.
+    """
+    _WRKSRC_CACHE.pop((env, origin), None)
+    _MATERIALIZE_STATE.pop((env, origin), None)
+    cmd = (
+        'set -e; '
+        f'cd "$DPORTS_COMPOSE_ROOT/{origin}"; '
+        f'make PORTSDIR="$DPORTS_COMPOSE_ROOT" '
+        f'     WRKDIRPREFIX="{WRKDIRPREFIX}" '
+        f'     BATCH=yes clean'
+    )
+    p = _exec(env, "/bin/sh", "-c", cmd)
+    if p.returncode != 0:
+        return _exec_result(
+            p.returncode, p.stdout, p.stderr,
+            error=f"make clean failed for {origin}",
+        )
+    return {
+        "ok": True,
+        "origin": origin,
+        "stdout_tail": (p.stdout or "")[-512:],
     }
 
 
