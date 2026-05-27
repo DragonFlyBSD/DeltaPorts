@@ -150,7 +150,11 @@
            back to the loop with a hint. Plants the same DB rows the
            manual-queue context-submit path plants, so the runner's
            existing retry loop picks it up. Resolution moves to
-           retry_requested (transient) until the runner enqueues. #}
+           retry_requested (transient) until the runner enqueues.
+           Uses a <details>-based inline form (textarea) instead of
+           the single-line prompt() the other actions use — operator
+           context is typically multi-line and the prompt() box
+           wasn't usable for that. #}
         {% if operator_actions.can_retry %}
         <button id="op-retry" type="button" class="btn"
                 data-bundle="{{ bundle.bundle_id }}"
@@ -185,6 +189,45 @@
         {% endif %}
         <span id="op-status" style="color:var(--text-dim);font-size:11px;"></span>
       </div>
+      {# Step 28c (revised): inline form for the Retry context. The
+         original implementation used a JS prompt() which only
+         supports a single line of input — operator context is
+         typically multi-line and the single-line modal was clunky.
+         The form is hidden by default and revealed when the Retry
+         button is clicked. Cancel hides it again; Send posts to
+         /api/bundles/{id}/retry. #}
+      {% if operator_actions.can_retry %}
+      <div id="op-retry-form"
+           data-bundle="{{ bundle.bundle_id }}"
+           style="display:none;margin-top:10px;">
+        <label style="display:block;font-size:11px;color:var(--text-dim);margin-bottom:4px;">
+          Operator context (required; max 8000 chars). The agent will
+          see this verbatim in the next triage's ## User Context
+          section.
+        </label>
+        <textarea id="op-retry-text" rows="6"
+                  maxlength="8000"
+                  style="width:100%;font:12px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;padding:6px;box-sizing:border-box;"
+                  placeholder="What should the next triage know? Paste error excerpts, point at upstream fixes, suggest a different angle..."></textarea>
+        <div style="margin-top:6px;display:flex;gap:8px;align-items:center;">
+          {# IDs deliberately NOT prefixed `op-` so the generic
+             `button[id^="op-"]` action-dispatch loop below skips
+             them. The retry-form has its own send/cancel handlers. #}
+          <button id="retry-form-send" type="button" class="btn btn-success"
+                  style="font-size:12px;padding:4px 10px;">
+            Send retry
+          </button>
+          <button id="retry-form-cancel" type="button" class="btn btn-ghost"
+                  style="font-size:12px;padding:4px 10px;">
+            Cancel
+          </button>
+          <span id="retry-form-charcount"
+                style="color:var(--text-dim);font-size:11px;">
+            0 / 8000
+          </span>
+        </div>
+      </div>
+      {% endif %}
     </div>
     <script>
     (function () {
@@ -234,12 +277,12 @@
           );
           body = {reason: reason, skip_origin: skipOrigin};
         } else if (action === 'retry') {
-          const ctx = prompt(
-            'Operator context for the next triage attempt (required; max 8000 chars):',
-            ''
-          );
-          if (!ctx) { return; }
-          body = {context: ctx};
+          // Retry no longer uses prompt() — show the inline textarea
+          // form instead. dpRetryShowForm handles the rest of the
+          // flow (textarea → Send button → POST). Bail out of the
+          // standard dpOpAction path here.
+          dpRetryShowForm();
+          return;
         } else if (action === 'release') {
           const releaseReason = prompt(
             'Release reason (required; explains why the operator stake is ending):',
@@ -343,6 +386,72 @@
           dpOpAction(action, btn.dataset.bundle);
         });
       });
+
+      // Step 28c inline-form: replaces the prompt() that the other
+      // operator actions still use. Retry context is the only field
+      // that can be substantively multi-line (up to 8000 chars), so
+      // it gets a proper textarea + Send/Cancel surface.
+      const retryForm = document.getElementById('op-retry-form');
+      const retryText = document.getElementById('op-retry-text');
+      const retrySend = document.getElementById('retry-form-send');
+      const retryCancel = document.getElementById('retry-form-cancel');
+      const retryCharcount = document.getElementById('retry-form-charcount');
+
+      function dpRetryShowForm() {
+        if (!retryForm) return;
+        retryForm.style.display = 'block';
+        retryText.focus();
+      }
+      function dpRetryHideForm() {
+        if (!retryForm) return;
+        retryForm.style.display = 'none';
+        retryText.value = '';
+        if (retryCharcount) retryCharcount.textContent = '0 / 8000';
+      }
+      if (retryText && retryCharcount) {
+        retryText.addEventListener('input', () => {
+          retryCharcount.textContent = retryText.value.length + ' / 8000';
+        });
+      }
+      if (retryCancel) {
+        retryCancel.addEventListener('click', () => dpRetryHideForm());
+      }
+      if (retrySend && retryForm) {
+        retrySend.addEventListener('click', async () => {
+          const bundleId = retryForm.dataset.bundle;
+          const text = (retryText.value || '').trim();
+          if (!text) {
+            statusEl.textContent = 'context is required';
+            return;
+          }
+          retrySend.disabled = true;
+          retryCancel.disabled = true;
+          statusEl.textContent = 'sending retry…';
+          let resp, data;
+          try {
+            resp = await fetch(
+              '/api/bundles/' + encodeURIComponent(bundleId) + '/retry',
+              {method: 'POST',
+               headers: {'Content-Type': 'application/json'},
+               body: JSON.stringify({context: text})}
+            );
+            data = await resp.json();
+          } catch (exc) {
+            statusEl.textContent = 'error: ' + exc;
+            retrySend.disabled = false;
+            retryCancel.disabled = false;
+            return;
+          }
+          if (!resp.ok) {
+            statusEl.textContent = 'error: ' + (data.detail || resp.status);
+            retrySend.disabled = false;
+            retryCancel.disabled = false;
+            return;
+          }
+          statusEl.textContent = 'retry queued — reloading';
+          setTimeout(() => location.reload(), 400);
+        });
+      }
     })();
     </script>
     {% endif %}

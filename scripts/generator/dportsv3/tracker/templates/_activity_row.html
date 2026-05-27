@@ -4,7 +4,10 @@
    - Other rows: token columns are "·" placeholders; message column
      shows the original prose.
    The JS in agentic_job.html renders new rows with the same shape
-   so prepended live-refresh rows match the static initial render. #}
+   so prepended live-refresh rows match the static initial render.
+   Both paths set the same `activity-<stage>` CSS class so the
+   per-stage colors / fonts (defined in agentic_job.html's <style>
+   block) apply identically. #}
 {% set is_llm_turn = a.stage == 'llm_turn' %}
 {% set is_decision = a.stage == 'decision' %}
 {% set is_attempt_start = a.stage == 'attempt_start' %}
@@ -17,16 +20,17 @@
 {% set sort_c = (a.extra.completion_tokens or 0) if is_llm_turn and a.extra is mapping else -1 %}
 {% set sort_t = (a.extra.total_tokens or 0) if is_llm_turn and a.extra is mapping else -1 %}
 {% set sort_cum = (a.extra.cumulative_total_tokens or 0) if is_llm_turn and a.extra is mapping else -1 %}
+{% if is_attempt_start %}{% set row_class = 'activity-attempt-start' %}
+{% elif is_attempt_end %}{% set row_class = 'activity-attempt-end' %}
+{% elif is_decision %}{% set row_class = 'activity-decision' %}
+{% elif is_tool %}{% set row_class = 'activity-tool' %}
+{% else %}{% set row_class = '' %}{% endif %}
 <tr data-id="{{ a.id or 0 }}"
+    class="{{ row_class }}"
     data-sort-prompt="{{ sort_p }}"
     data-sort-completion="{{ sort_c }}"
     data-sort-total="{{ sort_t }}"
-    data-sort-cumulative="{{ sort_cum }}"
-    {% if is_attempt_start %}style="background:var(--c-info-bg, #f0f4ff);font-weight:600;"
-    {% elif is_attempt_end %}style="background:var(--c-success-bg, #f0fff4);font-weight:600;"
-    {% elif is_decision %}style="background:var(--c-meta-bg, #f2eeff);"
-    {% elif is_tool %}style="font-family:ui-monospace,monospace;font-size:11px;"
-    {% endif %}>
+    data-sort-cumulative="{{ sort_cum }}">
   <td style="white-space:nowrap;">{{ a.ts }}</td>
   <td>{{ a.stage or '—' }}</td>
   <td>{{ a.duration_ms if a.duration_ms is not none else '—' }}</td>
@@ -58,7 +62,7 @@
         {{ _msg }}
       {% endif %}
       {% if is_decision and a.extra is mapping %}
-      <div style="margin-top:4px;font-size:11px;color:var(--text-dim);">
+      <div class="decision-meta">
         action={{ a.extra.action or '—' }} · tier={{ a.extra.tier or '—' }}
         {% if a.extra.classification %} · class={{ a.extra.classification }}{% endif %}
         {% if a.extra.confidence %} · confidence={{ a.extra.confidence }}{% endif %}
@@ -68,18 +72,18 @@
       {% endif %}
       {% if is_tool and a.extra is mapping and a.extra.ok is false %}
       {% if a.extra.stderr_tail or a.extra.stdout_tail or a.extra.error %}
-      <details style="margin-top:4px;font-size:11px;">
-        <summary style="cursor:pointer;color:var(--c-fail, #c00);">
+      <details class="tool-diagnostic" style="margin-top:4px;font-size:11px;">
+        <summary>
           show diagnostic{% if a.extra.rc is defined %} (rc={{ a.extra.rc }}){% endif %}
         </summary>
         {% if a.extra.error %}
-        <div style="color:var(--c-fail, #c00);">error: {{ a.extra.error }}</div>
+        <div class="tool-error">error: {{ a.extra.error }}</div>
         {% endif %}
         {% if a.extra.stderr_tail %}
-        <pre style="margin:4px 0;padding:6px;background:var(--panel-bg, #f8fafc);border:1px solid var(--border, #d8dee9);border-radius:4px;white-space:pre-wrap;max-height:300px;overflow:auto;">{{ a.extra.stderr_tail }}</pre>
+        <pre>{{ a.extra.stderr_tail }}</pre>
         {% endif %}
         {% if a.extra.stdout_tail and not a.extra.stderr_tail %}
-        <pre style="margin:4px 0;padding:6px;background:var(--panel-bg, #f8fafc);border:1px solid var(--border, #d8dee9);border-radius:4px;white-space:pre-wrap;max-height:300px;overflow:auto;">{{ a.extra.stdout_tail }}</pre>
+        <pre>{{ a.extra.stdout_tail }}</pre>
         {% endif %}
       </details>
       {% endif %}

@@ -240,6 +240,30 @@
       .activity-table th.sortable:hover { color: var(--c-link, #06f); }
       .activity-table th.sort-asc::after { content: " ▲"; font-size: 10px; }
       .activity-table th.sort-desc::after { content: " ▼"; font-size: 10px; }
+      /* Per-stage row styling. Shared between the server-rendered
+         rows (_activity_row.html sets the class) and the live-refresh
+         JS (renderRow() sets the same class). Pre-class history: the
+         server template used inline styles which the JS path never
+         replicated, so live-appended rows looked unstyled until full
+         page reload. */
+      tr.activity-attempt-start { background: var(--c-info-bg, #f0f4ff);
+                                  font-weight: 600; }
+      tr.activity-attempt-end   { background: var(--c-success-bg, #f0fff4);
+                                  font-weight: 600; }
+      tr.activity-decision      { background: var(--c-meta-bg, #f2eeff); }
+      tr.activity-tool          { font-family: ui-monospace, monospace;
+                                  font-size: 11px; }
+      .tool-diagnostic > summary { cursor: pointer;
+                                   color: var(--c-fail, #c00); }
+      .tool-diagnostic pre       { margin: 4px 0; padding: 6px;
+                                   background: var(--panel-bg, #f8fafc);
+                                   border: 1px solid var(--border, #d8dee9);
+                                   border-radius: 4px;
+                                   white-space: pre-wrap;
+                                   max-height: 300px; overflow: auto; }
+      .tool-error                { color: var(--c-fail, #c00); }
+      .decision-meta             { margin-top: 4px; font-size: 11px;
+                                   color: var(--text-dim); }
     </style>
     {# Step 9a column layout: structured token columns next to the message. #}
     <table class="tracker-table activity-table" id="activity-table">
@@ -297,30 +321,107 @@
         return m + "m ago";
       }
 
+      // Escape a string for safe innerHTML insertion. Used everywhere
+      // user-content goes into innerHTML (messages, error fields,
+      // stderr_tail, etc.) — without this, an apostrophe in an error
+      // string could break the page or worse.
+      function esc(s) {
+        if (s == null) return "";
+        return String(s)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#39;");
+      }
+
+      // Stage → class lookup mirrors _activity_row.html's row_class
+      // logic. CSS for these classes lives in this file's <style>
+      // block so server-rendered and JS-rendered rows match.
+      function rowClassFor(stage) {
+        if (stage === "attempt_start") return "activity-attempt-start";
+        if (stage === "attempt_end")   return "activity-attempt-end";
+        if (stage === "decision")      return "activity-decision";
+        if (stage && stage.indexOf("tool:") === 0) return "activity-tool";
+        return "";
+      }
+
+      // Build the "extra info" markup that lands inside the message
+      // column for non-llm_turn rows. Mirrors the is_decision and
+      // is_tool-and-not-ok blocks in _activity_row.html so live-
+      // appended decision rows and failed-tool rows look the same as
+      // their server-rendered counterparts (the user-visible
+      // "show diagnostic" toggle in particular).
+      function extraInfoHTML(stage, extra) {
+        var parts = [];
+        if (stage === "decision" && extra && typeof extra === "object") {
+          var meta =
+            "action=" + esc(extra.action || "—") +
+            " · tier=" + esc(extra.tier || "—");
+          if (extra.classification) meta += " · class=" + esc(extra.classification);
+          if (extra.confidence) meta += " · confidence=" + esc(extra.confidence);
+          if (extra.recent_failures !== undefined) {
+            meta += " · failures=" + esc(extra.recent_failures)
+                  + "/" + esc(extra.max_attempts || "?");
+          }
+          if (extra.original_tier) meta += " · original=" + esc(extra.original_tier);
+          parts.push('<div class="decision-meta">' + meta + "</div>");
+        }
+        if (stage && stage.indexOf("tool:") === 0
+            && extra && extra.ok === false
+            && (extra.stderr_tail || extra.stdout_tail || extra.error)) {
+          var diag = '<details class="tool-diagnostic" style="margin-top:4px;font-size:11px;">';
+          diag += "<summary>show diagnostic";
+          if (extra.rc !== undefined) diag += " (rc=" + esc(extra.rc) + ")";
+          diag += "</summary>";
+          if (extra.error) {
+            diag += '<div class="tool-error">error: ' + esc(extra.error) + "</div>";
+          }
+          if (extra.stderr_tail) {
+            diag += "<pre>" + esc(extra.stderr_tail) + "</pre>";
+          } else if (extra.stdout_tail) {
+            diag += "<pre>" + esc(extra.stdout_tail) + "</pre>";
+          }
+          diag += "</details>";
+          parts.push(diag);
+        }
+        return parts.join("");
+      }
+
       function renderRow(a) {
         // Mirror _activity_row.html shape. Server-side is canonical;
         // this is the live-prepend fallback for new rows.
         var tr = document.createElement("tr");
-        tr.className = "new-row";
         var stage = a.stage || "—";
         var extra = a.extra || {};
         var isLLMTurn = stage === "llm_turn";
+        // Per-stage CSS class drives the row's background / font.
+        // "new-row" stays as an additional class so live-fade
+        // animations (if any are added later) can target it.
+        tr.className = ("new-row " + rowClassFor(stage)).trim();
         var p = isLLMTurn ? (extra.prompt_tokens || 0).toLocaleString() : "";
         var c = isLLMTurn ? (extra.completion_tokens || 0).toLocaleString() : "";
         var t = isLLMTurn ? (extra.total_tokens || 0).toLocaleString() : "";
         var cum = isLLMTurn ? (extra.cumulative_total_tokens || 0).toLocaleString() : "";
-        var tools = (isLLMTurn && extra.tools_requested && extra.tools_requested.length)
-                      ? "→ " + extra.tools_requested.join(", ")
-                      : (a.message || "—");
+        var messageCell;
+        if (isLLMTurn) {
+          messageCell = (extra.tools_requested && extra.tools_requested.length)
+                          ? "→ " + extra.tools_requested.map(esc).join(", ")
+                          : (extra.text_only
+                              ? "(text-only final response)"
+                              : esc(a.message || "—"));
+        } else {
+          messageCell = esc(a.message || "—") + extraInfoHTML(stage, extra);
+        }
         tr.innerHTML =
-          '<td style="white-space:nowrap;">' + (a.ts || "") + "</td>" +
-          "<td>" + stage + "</td>" +
-          "<td>" + (a.duration_ms == null ? "—" : a.duration_ms) + "</td>" +
+          '<td style="white-space:nowrap;">' + esc(a.ts || "") + "</td>" +
+          "<td>" + esc(stage) + "</td>" +
+          "<td>" + (a.duration_ms == null ? "—" : esc(a.duration_ms)) + "</td>" +
           '<td class="tok' + (isLLMTurn ? "" : " tok-empty") + '">' + (p || "·") + "</td>" +
           '<td class="tok' + (isLLMTurn ? "" : " tok-empty") + '">' + (c || "·") + "</td>" +
           '<td class="tok' + (isLLMTurn ? "" : " tok-empty") + '">' + (t || "·") + "</td>" +
           '<td class="tok' + (isLLMTurn ? "" : " tok-empty") + '">' + (cum || "·") + "</td>" +
-          '<td' + (isLLMTurn ? ' class="tool-list"' : "") + ">" + tools + "</td>";
+          '<td' + (isLLMTurn ? ' class="tool-list"' : "") + ">" + messageCell + "</td>";
         return tr;
       }
 
