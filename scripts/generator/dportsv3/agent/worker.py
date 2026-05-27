@@ -1004,12 +1004,32 @@ def classify_dops(env: str, origin: str) -> str:
 # reaches apply_intent in those states, the substrate is in an
 # unexpected shape and the agent must escalate rather than fall
 # back to compat-mode editing (the prior behavior corrupted overlays
-# on convert-produced heredocs — see archivers/liblz4 2026-05-26).
-# not_in_scope ports (no overlay at all) also have no valid edit
-# surface on the dops-only model and escalate to MANUAL.
+# on convert-produced heredocs).
+#
+# `not_in_scope` is the special case: the port has no overlay yet,
+# but creation intents (see `_CREATION_INTENTS` below) can bootstrap
+# one as a byproduct of their first write — `_append_overlay`
+# synthesizes `_initial_overlay_header` if the file is absent.
+# Modification intents on `not_in_scope` still refuse because they
+# presuppose existing substrate to edit.
 _STATE_TO_MODE: dict[str, str] = {
     "converted": "dops",
 }
+
+
+# Intents that create new substrate. These are allowed on
+# `not_in_scope` ports because their substrate writes naturally
+# bootstrap overlay.dops with a minimal header via
+# `_append_overlay`'s `_initial_overlay_header` fallback. After the
+# first creation intent lands, the port re-classifies to dops-mode
+# and subsequent intents (including modification ones) work
+# normally on the converted substrate.
+_CREATION_INTENTS: frozenset[str] = frozenset({
+    "add_patch",
+    "add_file",
+    "change_makefile",
+    "bump_portrevision",
+})
 
 
 # Per-(env, origin) intent log accumulator (Step 25e).
@@ -1312,20 +1332,60 @@ def apply_intent(
         }
     mode = _STATE_TO_MODE.get(state)
     if mode is None:
-        return {
-            "ok": False,
-            "error": (
-                f"apply_intent refused: overlay state {state!r} for "
-                f"{origin} is not a valid intent target — the patch "
-                f"agent operates only on dops-converted substrate. "
-                f"If state is auto_safe_pending or needs_judgment, "
-                f"triage should have routed this through convert "
-                f"first; if state is not_in_scope, there's no "
-                f"overlay to edit. Escalate to MANUAL — no fallback "
-                f"to compat-mode editing exists."
-            ),
-            "blocked_by": f"state:{state}",
-        }
+        # Extract the intent type once for the not_in_scope bootstrap
+        # decision below. Intents arrive as dict (typical) or str
+        # (rare JSON-string form from older callers); both are
+        # normalized later, but for the gate we just need the type.
+        if isinstance(intent, dict):
+            intent_type = str(intent.get("type") or "")
+        else:
+            try:
+                import json as _json  # noqa: PLC0415
+                intent_type = str(_json.loads(intent).get("type") or "")
+            except Exception:
+                intent_type = ""
+
+        # Bootstrap-on-first-write: `not_in_scope` ports have no
+        # overlay yet, but creation intents naturally produce one
+        # via `_append_overlay`'s header fallback. Let them through
+        # in dops mode so the first patch / file / makefile change
+        # also scaffolds the dragonfly substrate.
+        if state == "not_in_scope" and intent_type in _CREATION_INTENTS:
+            mode = "dops"
+        else:
+            # Two distinct refusal shapes so the agent's escalation
+            # decision is informed by what's actually missing:
+            # - not_in_scope + modification intent: there's nothing
+            #   to modify; pointer to the creation intents.
+            # - auto_safe_pending / needs_judgment / stale: substrate
+            #   needs convert first (triage routing bug if we got here).
+            if state == "not_in_scope":
+                error = (
+                    f"apply_intent refused: intent {intent_type!r} "
+                    f"expects existing dops substrate (a "
+                    f"dragonfly/patch-* to modify, an `mk target` "
+                    f"heredoc block, etc.) but port {origin} is "
+                    f"not_in_scope — no overlay exists yet. Use "
+                    f"add_patch / add_file / change_makefile / "
+                    f"bump_portrevision to scaffold the overlay "
+                    f"first, or escalate MANUAL."
+                )
+            else:
+                error = (
+                    f"apply_intent refused: overlay state {state!r} "
+                    f"for {origin} is not a valid intent target — "
+                    f"the patch agent operates only on dops-"
+                    f"converted substrate. If state is "
+                    f"auto_safe_pending or needs_judgment, triage "
+                    f"should have routed this through convert "
+                    f"first. Escalate to MANUAL — no fallback to "
+                    f"compat-mode editing exists."
+                )
+            return {
+                "ok": False,
+                "error": error,
+                "blocked_by": f"state:{state}",
+            }
 
     # Look up the IntentLog for this (env, origin) FIRST so we can
     # apply the mode-drift guard before mutating any substrate.
