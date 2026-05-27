@@ -197,58 +197,50 @@ def run_verify_fix(
             f"bundle {bundle_id!r} has no origin field; cannot verify"
         )
 
-    # Prefer intent log (Step 25e): drift-free replay via
-    # translator. Fall back to legacy diff path for older bundles
-    # that pre-date Step 25 (no intent_log.json).
-    intent_log_url = (
+    # Step 30 slice 5: changes.diff is the canonical replay payload.
+    # Pre-slice-5 this code preferred intent_log.json (drift-free
+    # via translator replay) and fell back to changes.diff for
+    # pre-Step-25 bundles. That model broke on converted bundles —
+    # intent_log's baseline_commit references the convert commit on
+    # bundle/<id>, which slice 4 drops at patch end; the resulting
+    # mismatch refused replay. changes.diff (now base-relative per
+    # slice 5) carries the full convert+patch chain and replays
+    # cleanly against a fresh checkout off base.
+    #
+    # intent_log.json stays in the bundle as the per-intent audit
+    # trail (what the agent emitted, attempt-by-attempt). It just
+    # isn't the replay payload anymore.
+    diff_url = (
         f"{base}/api/bundles/{urllib.parse.quote(bundle_id)}"
-        f"/artifacts/{urllib.parse.quote(INTENT_LOG_RELPATH, safe='/')}"
+        f"/artifacts/{urllib.parse.quote(DIFF_RELPATH, safe='/')}"
     )
-    intent_log_bytes: bytes | None = None
     try:
-        intent_log_bytes = _get_bytes(intent_log_url)
-    except urllib.error.HTTPError:
-        intent_log_bytes = None  # bundle is pre-Step-25; try diff
-    except Exception:
-        intent_log_bytes = None
-
-    diff_bytes: bytes | None = None
-    if not intent_log_bytes:
-        diff_url = (
-            f"{base}/api/bundles/{urllib.parse.quote(bundle_id)}"
-            f"/artifacts/{urllib.parse.quote(DIFF_RELPATH, safe='/')}"
+        diff_bytes = _get_bytes(diff_url)
+    except urllib.error.HTTPError as exc:
+        raise VerifyFixError(
+            f"bundle {bundle_id!r} has no {DIFF_RELPATH} "
+            f"({exc.code}); cannot verify"
         )
-        try:
-            diff_bytes = _get_bytes(diff_url)
-        except urllib.error.HTTPError as exc:
-            raise VerifyFixError(
-                f"bundle {bundle_id!r} has neither {INTENT_LOG_RELPATH} "
-                f"nor {DIFF_RELPATH} ({exc.code}); cannot verify"
-            )
-        if not diff_bytes.strip():
-            raise VerifyFixError(
-                f"bundle {bundle_id!r}'s {DIFF_RELPATH} is empty; "
-                "nothing to verify"
-            )
+    if not diff_bytes.strip():
+        raise VerifyFixError(
+            f"bundle {bundle_id!r}'s {DIFF_RELPATH} is empty; "
+            "nothing to verify"
+        )
 
-    if intent_log_bytes:
-        replay_sha = hashlib.sha256(intent_log_bytes).hexdigest()
-        suffix, payload, kw = ".json", intent_log_bytes, "intent_log_path"
-    else:
-        replay_sha = hashlib.sha256(diff_bytes or b"").hexdigest()
-        suffix, payload, kw = ".diff", diff_bytes, "diff_path"
+    replay_sha = hashlib.sha256(diff_bytes).hexdigest()
+    payload = diff_bytes
 
     with tempfile.NamedTemporaryFile(
-        mode="wb", suffix=suffix, prefix=f"verify-{bundle_id}-",
+        mode="wb", suffix=".diff", prefix=f"verify-{bundle_id}-",
         delete=False,
     ) as tmp:
-        tmp.write(payload or b"")
+        tmp.write(payload)
         tmp_path = tmp.name
     try:
         # In-process call into the dev-env primitive. Any error
         # bubbles up as the original exception — no JSON parsing,
         # no return-code translation.
-        ab = _apply_and_build(env, origin, **{kw: tmp_path})
+        ab = _apply_and_build(env, origin, diff_path=tmp_path)
     except Exception as exc:
         raise VerifyFixError(
             f"apply-and-build failed for {bundle_id} (env={env}): "
@@ -260,34 +252,9 @@ def run_verify_fix(
         except FileNotFoundError:
             pass
 
-    # Preserve naming: applied_diff_sha256 stays the field name in
-    # the POST body for backward compat with the tracker endpoint,
-    # but its content is whatever payload we replayed (diff or
-    # intent_log JSON).
     diff_sha = replay_sha
-    diff_bytes = payload  # used by signatures below
 
     ok = bool(ab.get("ok"))
-
-    # Step 25g: refuse "verified" on zero-success replay. The intent
-    # log path can produce intents_applied=0 in two ways: (a) the
-    # log itself had no ok=True entries (every original intent
-    # failed at apply time), or (b) the replay refused every entry
-    # (e.g. validation drift). Either way, the subsequent
-    # reapply + dbuild pass tells us only that the BASELINE builds,
-    # not that the fix works. Posting verified would mislead the
-    # operator; the bundle is genuinely "nothing to verify".
-    intents_applied = ab.get("intents_applied")
-    if intent_log_bytes is not None and ok and intents_applied == 0:
-        ok = False
-        ab["ok"] = False
-        ab["error"] = (
-            "intent log replay applied 0 intents (the agent's "
-            "original run had no successful edits to reproduce); "
-            "build success indicates the baseline builds, not that "
-            "any fix was verified"
-        )
-        ab["replay_zero_success"] = True
 
     post_body = {
         "ok": ok,

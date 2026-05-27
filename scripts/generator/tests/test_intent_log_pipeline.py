@@ -735,15 +735,25 @@ class TestPipelineEndToEnd:
 # --------------------------------------------------------------------
 
 
-class TestVerifyFixIntentLogPreference:
+class TestVerifyFixReplaysChangesDiff:
+    """Slice 5: ``changes.diff`` is the single canonical replay
+    payload. The pre-slice-5 "prefer intent_log, fall back to
+    diff" model is gone — intent_log.json stays as per-intent
+    audit but is never the replay payload.
+    """
 
-    def test_orchestrator_prefers_intent_log(self, tmp_path):
-        """When the bundle has both intent_log.json and changes.diff,
-        the orchestrator pulls intent_log and invokes apply_and_build
-        with intent_log_path, not diff_path."""
+    def test_orchestrator_always_uses_changes_diff_for_replay(
+        self, tmp_path,
+    ):
+        """Even when the bundle has intent_log.json (the agent
+        emitted apply_intent ops), verify_fix replays
+        changes.diff — the full branch-vs-base diff that includes
+        any convert commits. intent_log.json stays in the bundle
+        as audit but isn't fetched as the replay payload."""
         from dportsv3 import verify_fix
 
         captured: dict = {}
+        fetched_urls: list[str] = []
 
         def _fake_ab(env, origin, *, diff_path=None, intent_log_path=None):
             captured["diff_path"] = diff_path
@@ -758,9 +768,15 @@ class TestVerifyFixIntentLogPreference:
                     "target": "@main"}
 
         def _get_bytes(url, timeout=20):
-            if "intent_log.json" in url:
-                return b'{"origin":"devel/foo","intents":[]}\n'
-            assert False, f"unexpected fetch: {url}"
+            fetched_urls.append(url)
+            if "changes.diff" in url:
+                return b"--- a\n+++ b\n@@ -1 +1 @@\n-x\n+y\n"
+            # If the orchestrator ever reaches for intent_log.json
+            # again, the test will see that URL in fetched_urls
+            # and the assertion below will fail.
+            raise AssertionError(
+                f"unexpected fetch (intent_log preference resurfaced?): {url}"
+            )
 
         def _post_json(url, body, timeout=10):
             return {"ok": True}
@@ -771,87 +787,66 @@ class TestVerifyFixIntentLogPreference:
             _post_json=_post_json, _apply_and_build=_fake_ab,
         )
         assert result.ok is True
-        assert captured["intent_log_path"] is not None
-        assert captured["diff_path"] is None
+        assert captured["diff_path"] is not None
+        assert captured["intent_log_path"] is None
+        # changes.diff is the only artifact we should have fetched.
+        assert all("changes.diff" in u for u in fetched_urls)
 
-    def test_orchestrator_refuses_zero_success_replay(self, tmp_path):
-        """Step 25g: when intent_log replay produces intents_applied=0,
-        the subsequent build success doesn't constitute "verified" —
-        the baseline builds, but no fix was reproduced. Orchestrator
-        flips ok=False and surfaces a clear reason in the POST body."""
+    def test_orchestrator_raises_when_changes_diff_missing(
+        self, tmp_path,
+    ):
+        """No fallback exists for a missing changes.diff —
+        verify_fix raises VerifyFixError. Pre-slice-5 this case
+        was handled by the intent_log path; post-slice-5 the
+        diff is canonical so its absence is a real error."""
+        import urllib.error
+
         from dportsv3 import verify_fix
+        from dportsv3.verify_fix import VerifyFixError
 
-        captured: dict = {}
-
-        def _fake_ab(env, origin, *, diff_path=None, intent_log_path=None):
-            # Pretend replay applied zero intents but the build passed.
-            return {"ok": True, "env": env, "origin": origin,
-                    "applied_diff_sha256": "x",
-                    "apply_exit": 0, "reapply_exit": 0, "dsynth_exit": 0,
-                    "intents_applied": 0, "replay_mode": "intent_log",
-                    "log_path": None, "stderr_tail": None}
+        def _fake_ab(*a, **kw):
+            raise AssertionError("apply_and_build should not be called")
 
         def _get_json(url, timeout=10):
             return {"bundle_id": "b-1", "origin": "devel/foo"}
 
         def _get_bytes(url, timeout=20):
-            if "intent_log.json" in url:
-                return b'{"origin":"devel/foo","intents":[]}\n'
-            assert False
+            raise urllib.error.HTTPError(
+                url, 404, "Not Found", {}, None,
+            )
 
-        posts: list = []
-        def _post_json(url, body, timeout=10):
-            posts.append((url, body))
-            return {"ok": True}
+        with pytest.raises(VerifyFixError, match="changes.diff"):
+            verify_fix.run_verify_fix(
+                bundle_id="b-1", env="verify-env",
+                tracker_url="http://t",
+                _get_json=_get_json, _get_bytes=_get_bytes,
+                _post_json=lambda *a, **kw: None,
+                _apply_and_build=_fake_ab,
+            )
 
-        result = verify_fix.run_verify_fix(
-            bundle_id="b-1", env="verify-env", tracker_url="http://t",
-            _get_json=_get_json, _get_bytes=_get_bytes,
-            _post_json=_post_json, _apply_and_build=_fake_ab,
-        )
-        # Refused verified despite the build passing.
-        assert result.ok is False
-        _, body = posts[0]
-        assert body["ok"] is False
-        # The orchestrator also updates ab["ok"] in sync so any
-        # downstream reader of the dict sees the same verdict.
-        # (Implicit here — the dict is internal — but the test
-        # also exercises the path that flips it.)
-
-    def test_orchestrator_falls_back_to_diff_when_intent_log_missing(
+    def test_orchestrator_raises_on_empty_changes_diff(
         self, tmp_path,
     ):
+        """Empty diff = nothing to verify. Distinct error from
+        the missing-artifact case so the operator can tell them
+        apart."""
         from dportsv3 import verify_fix
+        from dportsv3.verify_fix import VerifyFixError
 
-        captured: dict = {}
-
-        def _fake_ab(env, origin, *, diff_path=None, intent_log_path=None):
-            captured["diff_path"] = diff_path
-            captured["intent_log_path"] = intent_log_path
-            return {"ok": True, "env": env, "origin": origin,
-                    "applied_diff_sha256": "x", "dsynth_exit": 0,
-                    "apply_exit": 0, "reapply_exit": 0,
-                    "log_path": None, "stderr_tail": None}
+        def _fake_ab(*a, **kw):
+            raise AssertionError("apply_and_build should not be called")
 
         def _get_json(url, timeout=10):
-            return {"bundle_id": "b-1", "origin": "devel/foo",
-                    "target": "@main"}
+            return {"bundle_id": "b-1", "origin": "devel/foo"}
 
         def _get_bytes(url, timeout=20):
-            if "intent_log.json" in url:
-                raise urllib.error.HTTPError(url, 404, "Not Found", {}, None)
-            if "changes.diff" in url:
-                return b"--- a\n+++ b\n@@ -1 +1 @@\n-x\n+y\n"
-            assert False, f"unexpected fetch: {url}"
+            return b"   \n"  # whitespace only
 
-        def _post_json(url, body, timeout=10):
-            return {"ok": True}
-
-        result = verify_fix.run_verify_fix(
-            bundle_id="b-1", env="verify-env", tracker_url="http://t",
-            _get_json=_get_json, _get_bytes=_get_bytes,
-            _post_json=_post_json, _apply_and_build=_fake_ab,
-        )
-        assert result.ok is True
-        assert captured["intent_log_path"] is None
-        assert captured["diff_path"] is not None
+        with pytest.raises(VerifyFixError, match="empty"):
+            verify_fix.run_verify_fix(
+                bundle_id="b-1", env="verify-env",
+                tracker_url="http://t",
+                _get_json=_get_json, _get_bytes=_get_bytes,
+                _post_json=lambda *a, **kw: None,
+                _apply_and_build=_fake_ab,
+            )

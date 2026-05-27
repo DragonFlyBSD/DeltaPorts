@@ -1045,16 +1045,15 @@ def create_app(db_path: str | Path) -> Any:
             is also written for operator visibility.
           - ``skipped`` — delivery wasn't attempted; ``skip_reason``
             names which gate fired (``operator_optout``,
-            ``no_config``, ``no_delivery_diff``,
-            ``delivery_diff_empty``, ``delivery_diff_unreadable``).
+            ``no_config``, ``no_changes_diff``,
+            ``changes_diff_empty``, ``changes_diff_unreadable``).
 
-        Step 30 slice 3: the delivery path reads
-        ``analysis/delivery.diff`` (branch-vs-base, includes any
-        convert commits) instead of ``analysis/changes.diff``
-        (HEAD-relative, missing convert work on converted ports).
-        Hard cutover — pre-slice-2 bundles have no delivery.diff
-        and will skip with ``no_delivery_diff``. Per "we reset
-        everything," that's the right operator-facing signal.
+        Step 30 slice 5: reads ``analysis/changes.diff`` — now the
+        single canonical diff (branch-vs-base, includes convert
+        commits). Pre-slice-5 bundles had a HEAD-relative
+        changes.diff that silently lost convert work on converted
+        ports; the slice-5 cutover makes changes.diff the
+        full-chain artifact.
 
         The bundle accept itself never depends on delivery — any
         exception in here writes a create_failed row and returns a
@@ -1082,30 +1081,30 @@ def create_app(db_path: str | Path) -> Any:
 
         bundle_id = bundle.get("bundle_id") or ""
         diff_ref = get_artifact_ref(
-            write_conn, bundle_id, "analysis/delivery.diff",
+            write_conn, bundle_id, "analysis/changes.diff",
         )
         if diff_ref is None:
             return {
                 "status": "skipped",
-                "skip_reason": "no_delivery_diff",
+                "skip_reason": "no_changes_diff",
             }
         diff_path = _resolve_artifact_path(app.state.artifact_root, diff_ref)
         if diff_path is None or not diff_path.is_file():
             return {
                 "status": "skipped",
-                "skip_reason": "delivery_diff_unreadable",
+                "skip_reason": "changes_diff_unreadable",
             }
         try:
             diff_text = diff_path.read_text()
         except OSError as exc:
             return {
                 "status": "create_failed",
-                "error": f"delivery.diff read failed: {exc}",
+                "error": f"changes.diff read failed: {exc}",
             }
         if not diff_text.strip():
             return {
                 "status": "skipped",
-                "skip_reason": "delivery_diff_empty",
+                "skip_reason": "changes_diff_empty",
             }
 
         operator = (

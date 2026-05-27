@@ -678,7 +678,6 @@ class PatchServices:
     write_patch_audit: Callable[..., Any]
     write_tool_trace: Callable[..., Any]
     write_changes_diff: Callable[..., Any]
-    write_delivery_diff: Callable[..., Any]
     looks_env_suspicious: Callable[..., bool]
     invalidate_health_cache: Callable[..., Any]
     cached_health_broken: Callable[..., bool]
@@ -954,14 +953,11 @@ class PatchAttemptStep:
         # Persist outputs.
         services.write_patch_audit(ctx.bundle_dir, bundle_id, result, model)
         services.write_tool_trace(ctx.bundle_dir, bundle_id, dispatcher.trace_events)
+        # Step 30 slice 5: changes.diff is now branch-vs-base
+        # (the former delivery.diff shape) and is the single
+        # canonical artifact for delivery + verify + operator
+        # recipe.
         services.write_changes_diff(ctx.bundle_dir, bundle_id, env, origin)
-        # Step 30 slice 2: branch-vs-base diff for delivery. Includes
-        # any convert commits the bundle's branch carries + the
-        # patch agent's working-tree edits. Slice 3 makes the Accept-
-        # delivery path consume this.
-        services.write_delivery_diff(
-            ctx.bundle_dir, bundle_id, env, origin,
-        )
         if services.write_intent_log is not None:
             # Step 25e: drain the per-(env, origin) intent log into
             # analysis/intent_log.json. No-op when apply_intent

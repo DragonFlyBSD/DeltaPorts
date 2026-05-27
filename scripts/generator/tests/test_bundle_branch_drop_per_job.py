@@ -7,9 +7,9 @@ Lifecycle pinned by these tests:
   ``checkout_bundle_branch`` will reuse it).
 - Convert FAILURE → branch is dropped (the next attempt starts
   fresh from base; partial convert commits are not useful).
-- Patch end (either outcome) → branch is dropped (delivery.diff
-  was already captured at patch success by slice 2; on failure
-  the branch's state is moot).
+- Patch end (either outcome) → branch is dropped (changes.diff
+  was already captured at patch success — slice 5 made it the
+  branch-vs-base shape; on failure the branch's state is moot).
 - Verify end (either outcome) → branch is dropped (verify
   replays against base on a fresh checkout; subsequent operator
   actions read artifacts, not the branch).

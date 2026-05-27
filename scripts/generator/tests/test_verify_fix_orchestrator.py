@@ -52,14 +52,10 @@ def _stub_get_bundle(bundle_id: str = "b-1", origin: str = "devel/foo",
 
 
 def _stub_get_diff(diff_bytes: bytes):
-    """Stub that serves changes.diff and 404s the intent_log URL
-    (the orchestrator probes intent_log first, falls back to diff
-    on 404 — Step 25e)."""
-    import urllib.error
-
+    """Stub that serves changes.diff. Slice 5 retired the
+    intent_log preference; the orchestrator now always fetches
+    changes.diff (the branch-vs-base canonical artifact)."""
     def _get_bytes(url: str, timeout: int = 20):
-        if "/artifacts/analysis/intent_log.json" in url:
-            raise urllib.error.HTTPError(url, 404, "Not Found", {}, None)
         assert "/artifacts/analysis/changes.diff" in url
         return diff_bytes
     return _get_bytes
@@ -174,7 +170,7 @@ def test_verify_fix_diff_404_raises():
     def _missing_diff(url: str, timeout: int = 20):
         raise urllib.error.HTTPError(url, 404, "Not Found", {}, None)
 
-    with pytest.raises(verify_fix.VerifyFixError, match="has neither.*intent_log.*nor.*changes.diff"):
+    with pytest.raises(verify_fix.VerifyFixError, match="has no analysis/changes.diff"):
         verify_fix.run_verify_fix(
             bundle_id="b-1", env="verify-env", tracker_url="http://t",
             _get_json=_stub_get_bundle(),
