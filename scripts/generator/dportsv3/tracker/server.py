@@ -1634,6 +1634,128 @@ def create_app(db_path: str | Path) -> Any:
             "requested_by": operator,
         }
 
+    @app.post("/api/bundles/{bundle_id}/release")
+    def api_bundle_release(
+        bundle_id: str, body: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Operator release of an ``operator_owned`` bundle (Step 28e).
+
+        The "Hand back to the loop" action: the operator stops
+        staking the bundle's (target, origin) pair, without
+        terminalizing it via Discard. Bundle moves back to a NULL
+        resolution (re-actionable); the skip lock is released iff
+        this bundle owns it.
+
+        Allowed only from ``operator_owned``. 409 from any other
+        resolution. 404 unknown bundle.
+
+        Body:
+          - ``reason`` (str, required): why the stake is being
+            released. Audit trail.
+          - ``operator`` (str, optional): freeform identifier.
+
+        Side effects:
+          - ``resolution`` → NULL. ``taken_over_at`` and
+            ``taken_over_by`` are preserved as historical record;
+            only the live resolution clears.
+          - If this bundle owns the open ``origin_skip_flags`` row
+            for its (target, origin), the lock is cleared. If a
+            sibling owns it, it's left intact — that's the
+            sibling's stake to release.
+          - Emits ``bundle_released`` event.
+        """
+        from datetime import datetime, timezone  # noqa: PLC0415
+
+        reason = (body or {}).get("reason")
+        if not reason or not isinstance(reason, str) or not reason.strip():
+            raise HTTPException(
+                status_code=400,
+                detail="body must include 'reason' (release text)",
+            )
+        reason = reason.strip()
+        operator = ((body or {}).get("operator") or "operator").strip()
+        if not operator:
+            operator = "operator"
+
+        with _conn() as conn:
+            row = get_bundle(conn, bundle_id)
+        if row is None:
+            raise HTTPException(
+                status_code=404, detail=f"Unknown bundle: {bundle_id}",
+            )
+        if row.get("resolution") != "operator_owned":
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"Release requires resolution='operator_owned'; "
+                    f"current is {row.get('resolution')!r}"
+                ),
+            )
+
+        target = (row.get("target") or "").strip()
+        origin = (row.get("origin") or "").strip()
+        now = datetime.now(timezone.utc).isoformat()
+
+        write_conn = sqlite3.connect(
+            str(app.state.db_path), check_same_thread=False,
+            isolation_level=None,
+        )
+        write_conn.row_factory = sqlite3.Row
+        skip_action = "none"
+        try:
+            write_conn.execute("BEGIN IMMEDIATE")
+            try:
+                write_conn.execute(
+                    """UPDATE bundles SET
+                           resolution = NULL,
+                           last_seen_at = ?
+                       WHERE bundle_id = ?""",
+                    (now, bundle_id),
+                )
+                if target and origin:
+                    existing = is_origin_skipped(write_conn, target, origin)
+                    if existing is not None:
+                        if existing.get("bundle_id") == bundle_id:
+                            clear_origin_skip(
+                                write_conn,
+                                target=target, origin=origin,
+                                cleared_by=operator,
+                            )
+                            skip_action = "cleared"
+                        else:
+                            skip_action = (
+                                f"left_intact_owned_by:"
+                                f"{existing.get('bundle_id')}"
+                            )
+                write_conn.execute("COMMIT")
+            except Exception:
+                write_conn.execute("ROLLBACK")
+                raise
+            from dportsv3.artifact_store import emit_event  # noqa: PLC0415
+            emit_event(write_conn, "bundle_released", {
+                "bundle_id": bundle_id,
+                "target": target,
+                "origin": origin,
+                "released_at": now,
+                "released_by": operator,
+                "reason": reason,
+                "skip_action": skip_action,
+            })
+        finally:
+            write_conn.close()
+
+        return {
+            "ok": True,
+            "bundle_id": bundle_id,
+            "resolution": None,
+            "released_at": now,
+            "released_by": operator,
+            "reason": reason,
+            "target": target,
+            "origin": origin,
+            "skip_action": skip_action,
+        }
+
     @app.post("/api/bundles/{bundle_id}/reopen")
     def api_bundle_reopen(
         bundle_id: str, body: dict[str, Any],
@@ -1985,16 +2107,25 @@ def create_app(db_path: str | Path) -> Any:
         # Step 28d: reopen-from-terminal undoes an accept/reject/
         # discard. Rare; the only state where the button surfaces.
         can_reopen = resolution in ("accepted", "rejected", "discarded")
+        # Step 28e: operator_owned bundles get the Verify button too
+        # — an operator who manually fixed something wants to verify
+        # the build before moving on. Reuses 11c's verify endpoint
+        # as-is. Accept and Reject stay agent_fixed-only because they
+        # express opinions on an agent-produced fix specifically.
+        verify_eligible = actionable or (resolution == "operator_owned")
+        # Step 28e: release surfaces only on operator_owned — it's
+        # the operator's "I'm done staking this, hand back to the
+        # loop" action.
+        can_release = resolution == "operator_owned"
         operator_actions = {
             "show": (actionable or can_take_over or can_discard
-                     or can_retry or can_reopen),
-            # 11c buttons render together when the bundle is in the
-            # agent_fixed lane; outside that lane they're irrelevant
-            # noise (e.g. a discarded bundle showing disabled
-            # Verify/Accept/Reject). 28d kept this clean by gating
-            # the whole 11c group on `actionable`.
+                     or can_retry or can_reopen or can_release),
+            # 11c verify/accept/reject group renders together when
+            # the bundle is in the agent_fixed lane. Step 28e extends
+            # the Verify button alone to operator_owned (the manual-
+            # fix verification flow); accept/reject stay agent-only.
             "show_11c_group": actionable,
-            "can_verify": actionable,
+            "can_verify": verify_eligible,
             "can_accept": (actionable
                            and bundle.get("verification_status") == "verified"),
             "can_reject": actionable,
@@ -2002,6 +2133,7 @@ def create_app(db_path: str | Path) -> Any:
             "can_discard": can_discard,
             "can_retry": can_retry,
             "can_reopen": can_reopen,
+            "can_release": can_release,
         }
         return templates.TemplateResponse(
             request,

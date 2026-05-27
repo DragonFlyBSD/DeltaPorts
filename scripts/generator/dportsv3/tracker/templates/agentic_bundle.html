@@ -90,19 +90,23 @@
     <div class="tracker-card" style="margin-top:8px;">
       <strong style="font-size:12px;">Operator actions</strong>
       <div style="margin-top:6px;display:flex;gap:8px;align-items:center;">
-        {# Step 11c trio — relevant only on the agent_fixed lane.
-           Render-disabled (not absent) inside the group so the
-           operator sees why a specific action is blocked, but the
-           group itself hides on lanes where Verify / Accept /
-           Reject have no contextual meaning (failure-shaped,
-           operator_owned, terminal). #}
-        {% if operator_actions.show_11c_group %}
+        {# Step 11c Verify — agent_fixed lane uses it to verify an
+           agent-produced fix; Step 28e extends it to operator_owned
+           so an operator's manual fix can be verified too. Same
+           endpoint, same dispatch. #}
+        {% if operator_actions.can_verify %}
         <button id="op-verify" type="button"
                 data-bundle="{{ bundle.bundle_id }}"
-                style="font-size:12px;padding:4px 10px;"
-                {% if not operator_actions.can_verify %}disabled title="Not available in current state"{% endif %}>
+                style="font-size:12px;padding:4px 10px;">
           Verify
         </button>
+        {% endif %}
+        {# Step 11c Accept / Reject — agent_fixed lane only. These
+           express opinions on an agent-produced fix specifically,
+           so they don't extend to operator_owned. Render disabled
+           inside the group so the operator sees why a specific
+           action is blocked when contextually relevant. #}
+        {% if operator_actions.show_11c_group %}
         <button id="op-accept" type="button"
                 data-bundle="{{ bundle.bundle_id }}"
                 style="font-size:12px;padding:4px 10px;"
@@ -152,6 +156,20 @@
                 style="font-size:12px;padding:4px 10px;"
                 title="Hand this bundle back to the agent loop with operator context">
           Retry with context
+        </button>
+        {% endif %}
+        {# Step 28e: Release — operator stops staking the bundle's
+           (target, origin) and hands it back to the loop without
+           terminalizing. Surfaces only on operator_owned. The
+           bundle's resolution clears to NULL; if this bundle owns
+           the skip lock, the lock clears too. taken_over_* columns
+           are preserved as forensics. #}
+        {% if operator_actions.can_release %}
+        <button id="op-release" type="button"
+                data-bundle="{{ bundle.bundle_id }}"
+                style="font-size:12px;padding:4px 10px;"
+                title="Stop staking this bundle — hand it back to the agent loop">
+          Release
         </button>
         {% endif %}
         {# Step 28d: Reopen — undo a terminal accept/reject/discard.
@@ -224,6 +242,13 @@
           );
           if (!ctx) { return; }
           body = {context: ctx};
+        } else if (action === 'release') {
+          const releaseReason = prompt(
+            'Release reason (required; explains why the operator stake is ending):',
+            ''
+          );
+          if (!releaseReason) { return; }
+          body = {reason: releaseReason};
         } else if (action === 'reopen') {
           // Gating modal: reopen is a true undo of a prior operator
           // decision, so require an explicit confirm before the
