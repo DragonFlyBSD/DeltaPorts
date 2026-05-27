@@ -138,7 +138,7 @@ def test_accept_with_delivery_writes_row_and_creates_patch(
     conn = _open(deployment)
     _seed_bundle(conn, "b-1")
     sha = _seed_diff_artifact(deployment["artifact_root"], "b-1", _SAMPLE_DIFF)
-    _insert_artifact_ref(conn, "b-1", "analysis/changes.diff", sha)
+    _insert_artifact_ref(conn, "b-1", "analysis/delivery.diff", sha)
     conn.close()
 
     resp = client.post("/api/bundles/b-1/accept", json={"operator": "alice"})
@@ -172,7 +172,7 @@ def test_accept_emits_bundle_delivered_event(client, deployment):
     conn = _open(deployment)
     _seed_bundle(conn, "b-evt")
     sha = _seed_diff_artifact(deployment["artifact_root"], "b-evt", _SAMPLE_DIFF)
-    _insert_artifact_ref(conn, "b-evt", "analysis/changes.diff", sha)
+    _insert_artifact_ref(conn, "b-evt", "analysis/delivery.diff", sha)
     conn.close()
 
     resp = client.post("/api/bundles/b-evt/accept", json={})
@@ -202,7 +202,7 @@ def test_accept_writes_activity_rows_for_visibility(client, deployment):
     sha = _seed_diff_artifact(
         deployment["artifact_root"], "b-act-happy", _SAMPLE_DIFF,
     )
-    _insert_artifact_ref(conn, "b-act-happy", "analysis/changes.diff", sha)
+    _insert_artifact_ref(conn, "b-act-happy", "analysis/delivery.diff", sha)
     conn.close()
 
     resp = client.post("/api/bundles/b-act-happy/accept", json={})
@@ -235,7 +235,7 @@ def test_bundle_page_renders_per_bundle_activity_rows(client, deployment):
     sha = _seed_diff_artifact(
         deployment["artifact_root"], "b-act-render", _SAMPLE_DIFF,
     )
-    _insert_artifact_ref(conn, "b-act-render", "analysis/changes.diff", sha)
+    _insert_artifact_ref(conn, "b-act-render", "analysis/delivery.diff", sha)
     conn.close()
 
     client.post("/api/bundles/b-act-render/accept", json={})
@@ -248,7 +248,7 @@ def test_bundle_page_renders_per_bundle_activity_rows(client, deployment):
 def test_accept_activity_row_records_skipped_delivery(
     client, deployment, monkeypatch,
 ):
-    """A skipped delivery (no_config / no_changes_diff / etc.)
+    """A skipped delivery (no_config / no_delivery_diff / etc.)
     still produces an activity row carrying the skip_reason —
     that's the only durable record an operator can find later."""
     (deployment["config_dir"] / "delivery.toml").unlink()
@@ -264,7 +264,7 @@ def test_accept_activity_row_records_skipped_delivery(
     sha = _seed_diff_artifact(
         deployment["artifact_root"], "b-act-skip", _SAMPLE_DIFF,
     )
-    _insert_artifact_ref(conn, "b-act-skip", "analysis/changes.diff", sha)
+    _insert_artifact_ref(conn, "b-act-skip", "analysis/delivery.diff", sha)
     conn.close()
 
     resp = client.post("/api/bundles/b-act-skip/accept", json={})
@@ -291,7 +291,7 @@ def test_deliver_false_skips_delivery(client, deployment):
     conn = _open(deployment)
     _seed_bundle(conn, "b-skip")
     sha = _seed_diff_artifact(deployment["artifact_root"], "b-skip", _SAMPLE_DIFF)
-    _insert_artifact_ref(conn, "b-skip", "analysis/changes.diff", sha)
+    _insert_artifact_ref(conn, "b-skip", "analysis/delivery.diff", sha)
     conn.close()
 
     resp = client.post(
@@ -318,7 +318,7 @@ def test_no_delivery_config_skips_silently(client, deployment, monkeypatch):
     conn = _open(deployment)
     _seed_bundle(conn, "b-no-cfg")
     sha = _seed_diff_artifact(deployment["artifact_root"], "b-no-cfg", _SAMPLE_DIFF)
-    _insert_artifact_ref(conn, "b-no-cfg", "analysis/changes.diff", sha)
+    _insert_artifact_ref(conn, "b-no-cfg", "analysis/delivery.diff", sha)
     conn.close()
 
     resp = client.post("/api/bundles/b-no-cfg/accept", json={})
@@ -340,21 +340,21 @@ def test_missing_changes_diff_skips(client, deployment):
     assert resp.status_code == 200
     d = resp.json()["delivery"]
     assert d["status"] == "skipped"
-    assert d["skip_reason"] == "no_changes_diff"
+    assert d["skip_reason"] == "no_delivery_diff"
 
 
 def test_empty_changes_diff_skips(client, deployment):
     conn = _open(deployment)
     _seed_bundle(conn, "b-emptydiff")
     sha = _seed_diff_artifact(deployment["artifact_root"], "b-emptydiff", "")
-    _insert_artifact_ref(conn, "b-emptydiff", "analysis/changes.diff", sha)
+    _insert_artifact_ref(conn, "b-emptydiff", "analysis/delivery.diff", sha)
     conn.close()
 
     resp = client.post("/api/bundles/b-emptydiff/accept", json={})
     assert resp.status_code == 200
     d = resp.json()["delivery"]
     assert d["status"] == "skipped"
-    assert d["skip_reason"] == "changes_diff_empty"
+    assert d["skip_reason"] == "delivery_diff_empty"
 
 
 # =====================================================================
@@ -380,7 +380,7 @@ def test_github_provider_missing_clone_dir_field_clear_error(
     sha = _seed_diff_artifact(
         deployment["artifact_root"], "b-no-clone", _SAMPLE_DIFF,
     )
-    _insert_artifact_ref(conn, "b-no-clone", "analysis/changes.diff", sha)
+    _insert_artifact_ref(conn, "b-no-clone", "analysis/delivery.diff", sha)
     conn.close()
 
     resp = client.post("/api/bundles/b-no-clone/accept", json={})
@@ -410,7 +410,7 @@ def test_github_provider_clone_dir_does_not_exist_clear_error(
     sha = _seed_diff_artifact(
         deployment["artifact_root"], "b-bad-clone", _SAMPLE_DIFF,
     )
-    _insert_artifact_ref(conn, "b-bad-clone", "analysis/changes.diff", sha)
+    _insert_artifact_ref(conn, "b-bad-clone", "analysis/delivery.diff", sha)
     conn.close()
 
     resp = client.post("/api/bundles/b-bad-clone/accept", json={})
@@ -430,7 +430,7 @@ def test_provider_failure_records_create_failed_row(
     conn = _open(deployment)
     _seed_bundle(conn, "b-fail")
     sha = _seed_diff_artifact(deployment["artifact_root"], "b-fail", _SAMPLE_DIFF)
-    _insert_artifact_ref(conn, "b-fail", "analysis/changes.diff", sha)
+    _insert_artifact_ref(conn, "b-fail", "analysis/delivery.diff", sha)
     conn.close()
 
     # Sabotage LocalPatchProvider by removing the outbox AFTER setup
@@ -467,7 +467,7 @@ def test_second_accept_returns_updated_status(client, deployment):
     conn = _open(deployment)
     _seed_bundle(conn, "b-idem")
     sha = _seed_diff_artifact(deployment["artifact_root"], "b-idem", _SAMPLE_DIFF)
-    _insert_artifact_ref(conn, "b-idem", "analysis/changes.diff", sha)
+    _insert_artifact_ref(conn, "b-idem", "analysis/delivery.diff", sha)
     conn.close()
 
     r1 = client.post("/api/bundles/b-idem/accept", json={})
@@ -506,7 +506,7 @@ def test_accept_persists_diff_sha256(client, deployment):
     conn = _open(deployment)
     _seed_bundle(conn, "b-sha")
     sha = _seed_diff_artifact(deployment["artifact_root"], "b-sha", _SAMPLE_DIFF)
-    _insert_artifact_ref(conn, "b-sha", "analysis/changes.diff", sha)
+    _insert_artifact_ref(conn, "b-sha", "analysis/delivery.diff", sha)
     conn.close()
     expected = hashlib.sha256(_SAMPLE_DIFF.encode()).hexdigest()
 
@@ -529,7 +529,7 @@ def test_delivery_card_renders_on_created(client, deployment):
     conn = _open(deployment)
     _seed_bundle(conn, "b-ui-1")
     sha = _seed_diff_artifact(deployment["artifact_root"], "b-ui-1", _SAMPLE_DIFF)
-    _insert_artifact_ref(conn, "b-ui-1", "analysis/changes.diff", sha)
+    _insert_artifact_ref(conn, "b-ui-1", "analysis/delivery.diff", sha)
     conn.close()
 
     client.post("/api/bundles/b-ui-1/accept", json={"operator": "alice"})
@@ -563,7 +563,7 @@ def test_delivery_card_shows_error_on_create_failed(
     conn = _open(deployment)
     _seed_bundle(conn, "b-ui-fail")
     sha = _seed_diff_artifact(deployment["artifact_root"], "b-ui-fail", _SAMPLE_DIFF)
-    _insert_artifact_ref(conn, "b-ui-fail", "analysis/changes.diff", sha)
+    _insert_artifact_ref(conn, "b-ui-fail", "analysis/delivery.diff", sha)
     conn.close()
 
     import shutil
