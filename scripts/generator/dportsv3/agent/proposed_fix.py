@@ -184,9 +184,16 @@ def render_proposed_fix(ctx: ProposedFixCtx) -> str:
         )
         lines.append("# (use the bundle viewer's 'raw' link to download).")
     lines.append("cd /path/to/your/DeltaPorts")
-    lines.append("git apply --3way /tmp/proposed-fix.diff")
-    lines.append("git diff   # review the change")
-    lines.append(f"git add ports/{ctx.origin}/")
+    # ``--index`` stages the apply result (modifications + new
+    # files + tracked-file deletions) directly. Without it the
+    # follow-up commit can silently miss file removals from
+    # converted-port bundles where changes.diff includes
+    # Makefile.DragonFly / diffs/* / STATUS deletions alongside
+    # the new overlay.dops. Step 30 slice 5 made changes.diff
+    # branch-vs-base, so deletions are now part of the canonical
+    # artifact.
+    lines.append("git apply --3way --index /tmp/proposed-fix.diff")
+    lines.append("git diff --cached   # review the staged change")
     lines.append(
         "git commit -s -m "
         f"\"{ctx.origin}: fix dsynth build"

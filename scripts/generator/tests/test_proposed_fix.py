@@ -97,14 +97,35 @@ def test_render_apply_recipe_uses_tracker_url_when_set():
     ))
     assert "curl -sS http://192.168.5.98:8080" in out
     assert "/api/bundles/b-1/artifacts/analysis/changes.diff" in out
-    assert "git apply --3way /tmp/proposed-fix.diff" in out
+    assert "git apply --3way --index /tmp/proposed-fix.diff" in out
 
 
 def test_render_apply_recipe_falls_back_without_tracker_url():
     out = pf.render_proposed_fix(_ctx(tracker_url=""))
     # No curl line, but recipe is still actionable.
     assert "curl " not in out or "/api/bundles" not in out
-    assert "git apply --3way" in out
+    assert "git apply --3way --index" in out
+
+
+def test_render_apply_recipe_uses_index_flag_for_deletion_staging():
+    """Step 30 slice 5 follow-up: changes.diff is now branch-vs-base
+    and can carry file *deletions* on converted-port bundles
+    (Makefile.DragonFly / diffs/* / STATUS removed by convert).
+    Without ``--index`` the deletions land in the working tree but
+    not the index, so a subsequent ``git add ports/<origin>/``
+    might silently miss them depending on the operator's git
+    version. The recipe uses ``--index`` so the apply result is
+    staged in one shot — no separate ``git add`` step needed."""
+    out = pf.render_proposed_fix(_ctx(
+        tracker_url="http://localhost", diff_bytes=200,
+    ))
+    # Recipe stages via --index, not via a separate git add line.
+    assert "git apply --3way --index" in out
+    # The old recipe had ``git add ports/<origin>/`` after apply;
+    # the new recipe drops it (--index already staged everything).
+    assert "git add ports/" not in out
+    # Review step inspects the staged change, not the working tree.
+    assert "git diff --cached" in out
 
 
 def test_render_includes_signed_off_reminder():
