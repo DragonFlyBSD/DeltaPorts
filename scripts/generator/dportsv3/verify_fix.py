@@ -43,7 +43,6 @@ from pathlib import Path
 
 DEFAULT_TRACKER_URL = "http://127.0.0.1:8080"
 DIFF_RELPATH = "analysis/changes.diff"
-INTENT_LOG_RELPATH = "analysis/intent_log.json"
 
 
 def _tracker_url() -> str:
@@ -120,8 +119,7 @@ class VerifyResult:
 
 
 def _default_apply_and_build(env_name: str, origin: str,
-                             *, diff_path: str | None = None,
-                             intent_log_path: str | None = None) -> dict:
+                             *, diff_path: str) -> dict:
     """Invoke the dev-env apply-and-build primitive via the same
     subprocess pattern every other agent operation uses.
 
@@ -136,17 +134,19 @@ def _default_apply_and_build(env_name: str, origin: str,
     helper keeps verify-fix consistent with the rest of the agent
     stack and inherits the production-tested resolution path.
 
-    ``intent_log_path`` (Step 25e) and ``diff_path`` are mutually
-    exclusive; the verify-fix orchestrator picks whichever the
-    bundle has.
+    Slice 5 retired the intent_log_path branch from the
+    orchestrator. The ``dportsv3 dev-env apply-and-build``
+    subcommand still accepts ``--intent-log`` for direct
+    operator use, but verify-fix always uses ``--diff`` with the
+    bundle's ``analysis/changes.diff`` (the branch-vs-base
+    canonical artifact).
     """
     from dportsv3.agent.worker import _run_dportsv3  # noqa: PLC0415
 
-    argv = ["dev-env", "apply-and-build", env_name, origin, "--json"]
-    if intent_log_path is not None:
-        argv += ["--intent-log", intent_log_path]
-    elif diff_path is not None:
-        argv += ["--diff", diff_path]
+    argv = [
+        "dev-env", "apply-and-build", env_name, origin, "--json",
+        "--diff", diff_path,
+    ]
     proc = _run_dportsv3(*argv)
     if proc.stderr:
         sys.stderr.write(proc.stderr)
