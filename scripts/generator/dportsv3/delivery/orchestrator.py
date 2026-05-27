@@ -88,8 +88,8 @@ def resolve_config(
 def build_provider(cfg: DeliveryConfig) -> ReviewProvider:
     """Construct the concrete provider for ``cfg.provider_type``.
 
-    Only LocalPatchProvider is wired today (11d-1). GitHub / GitLab
-    / Gitea slots land in 11d-3 / 11d-4 with the same shape.
+    LocalPatchProvider (11d-1) and GitHubProvider (11d-3) are
+    wired. GitLab / Gitea slots land in 11d-4 with the same shape.
     """
     if cfg.provider_type == "local-patch":
         from .local_patch import LocalPatchProvider  # noqa: PLC0415
@@ -98,9 +98,26 @@ def build_provider(cfg: DeliveryConfig) -> ReviewProvider:
                 "LocalPatchProvider requires $DPORTSV3_DELIVERY_OUTBOX"
             )
         return LocalPatchProvider(outbox=Path(cfg.outbox))
+    if cfg.provider_type == "github":
+        from .github import GitHubProvider  # noqa: PLC0415
+        # The config loader already enforces both fields when
+        # provider_type=="github", but be defensive against
+        # someone constructing a DeliveryConfig by hand.
+        if not cfg.token:
+            raise DeliveryConfigError(
+                "GitHubProvider requires a token; set "
+                "$DPORTSV3_DELIVERY_TOKEN or place it at "
+                "$DPORTSV3_CONFIG_DIR/delivery.token"
+            )
+        if not cfg.repo:
+            raise DeliveryConfigError(
+                "GitHubProvider requires provider.repo in "
+                "delivery.toml (e.g. 'DragonFlyBSD/DeltaPorts')"
+            )
+        return GitHubProvider(token=cfg.token, repo=cfg.repo)
     raise DeliveryConfigError(
         f"provider type {cfg.provider_type!r} not wired yet — "
-        f"11d-3 (github) / 11d-4 (gitlab, gitea) ship the rest"
+        f"11d-4 ships gitlab + gitea"
     )
 
 
