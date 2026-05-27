@@ -119,6 +119,19 @@ def _ucr(db_path: Path, run_id: str, origin: str, bundle_id: str) -> sqlite3.Row
     return r
 
 
+def _history(db_path: Path, run_id: str, origin: str) -> list[sqlite3.Row]:
+    conn = sqlite3.connect(str(db_path))
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute(
+        """SELECT context_rev, submitted_by FROM user_context_history
+           WHERE run_id = ? AND origin = ?
+           ORDER BY context_rev ASC""",
+        (run_id, origin),
+    ).fetchall()
+    conn.close()
+    return list(rows)
+
+
 # ---------------------------------------------------------------------
 # Happy paths
 # ---------------------------------------------------------------------
@@ -183,6 +196,58 @@ def test_retry_bumps_context_rev_on_second_call(client, seeded_db):
     uc = _user_context(seeded_db, "run-budget", "devel/budget")
     assert uc["context_text"] == "second, with more detail"
     assert uc["context_rev"] == 2
+
+
+def test_retry_history_records_operator_when_supplied(client, seeded_db):
+    """Step 29b symmetry: with operator field set, the new
+    user_context_history row carries submitted_by = that name."""
+    resp = client.post(
+        "/api/bundles/b-budget/retry",
+        json={"context": "round one", "operator": "alice"},
+    )
+    assert resp.status_code == 200, resp.text
+    rows = _history(seeded_db, "run-budget", "devel/budget")
+    assert len(rows) == 1
+    assert rows[0]["submitted_by"] == "alice"
+
+
+def test_retry_history_submitted_by_is_null_when_operator_absent(
+    client, seeded_db,
+):
+    """Step 29b symmetry fix: missing/empty ``operator`` body field
+    lands ``submitted_by = NULL`` in user_context_history, matching
+    /api/manual-requests/.../context's NULL-on-empty behavior.
+
+    Previously ``/retry`` defaulted the field to the literal
+    "operator" string for both the response (``requested_by``) AND
+    the history row, which made the same anonymous submission look
+    different depending on which endpoint produced it. The fix
+    splits the two roles: ``requested_by`` keeps the literal
+    fallback for compatibility, ``submitted_by`` records NULL.
+    """
+    # Case 1: operator field omitted entirely.
+    resp = client.post(
+        "/api/bundles/b-budget/retry",
+        json={"context": "anonymous round"},
+    )
+    assert resp.status_code == 200, resp.text
+    # Response stamps "operator" so existing event consumers still
+    # see a non-empty requested_by.
+    assert resp.json()["requested_by"] == "operator"
+
+    # Case 2: operator field present but empty/whitespace.
+    resp2 = client.post(
+        "/api/bundles/b-budget/retry",
+        json={"context": "second round", "operator": "   "},
+    )
+    assert resp2.status_code == 200, resp2.text
+    assert resp2.json()["requested_by"] == "operator"
+
+    # Both history rows record NULL (not the literal "operator").
+    rows = _history(seeded_db, "run-budget", "devel/budget")
+    assert len(rows) == 2
+    assert rows[0]["submitted_by"] is None
+    assert rows[1]["submitted_by"] is None
 
 
 def test_retry_emits_bundle_retry_requested_event(client, seeded_db):

@@ -1509,9 +1509,16 @@ def create_app(db_path: str | Path) -> Any:
                 status_code=400,
                 detail="body 'context' too long (max 8000 chars)",
             )
-        operator = ((body or {}).get("operator") or "operator").strip()
-        if not operator:
-            operator = "operator"
+        # Two distinct roles for the body's ``operator`` field:
+        #   - ``submitted_by`` on the new user_context_history row: NULL
+        #     when the operator didn't identify themselves, matching
+        #     /api/manual-requests/.../context's NULL-on-empty behavior.
+        #   - ``requested_by`` on the response/event payload: keeps the
+        #     pre-29b "operator" literal fallback so existing event
+        #     consumers see a non-empty string.
+        raw_operator = ((body or {}).get("operator") or "").strip()
+        submitted_by = raw_operator or None
+        operator = raw_operator or "operator"
 
         with _conn() as conn:
             row = get_bundle(conn, bundle_id)
@@ -1567,7 +1574,7 @@ def create_app(db_path: str | Path) -> Any:
             # runner's poll loop still acts on the UCR row.
             new_rev = upsert_user_context_text(
                 write_conn, run_id, origin, text,
-                submitted_by=operator,
+                submitted_by=submitted_by,
             )
             # Default iteration to 1 — operator-driven retry is an
             # explicit override of the automated retry-cap logic.
