@@ -111,7 +111,7 @@ dsynth -p 2026Q2 -S -y build devel/known-failing-port
 
 ### Smoking individual surfaces without a real build
 
-`docs/agentic-consolidation-plan.md` has a seed-script for state.db that
+`docs/agentic-phase4-db.md` has a seed-script for state.db that
 populates bundles/jobs/runs with mixed targets. Useful for UI smokes
 when you don't want to wait for a real dsynth run. The same snippet
 works for shaking the agentic read endpoints (`/api/bundles`,

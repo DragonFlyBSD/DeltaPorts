@@ -4,7 +4,7 @@
 > Step 25b implementation. Sections marked **DECISION** below have
 > default answers; the operator can override before 25b starts.
 >
-> Cross-reference: `docs/agentic-consolidation-plan.md` Step 25,
+> Cross-reference: `docs/agentic-architecture-backlog.md` Step 25,
 > `docs/agentic-loop-brittleness-brief.md`, `docs/dsl-v0.md`
 > (the substrate dops grammar).
 
@@ -566,7 +566,7 @@ This replaces today's `surface_invariant` runtime check at
 
 ## 10. Tool surface boundary
 
-After Step 25 (recap from `docs/agentic-consolidation-plan.md`):
+After Step 25 (recap from `docs/agentic-architecture-backlog.md`):
 
 | Tool | Patch agent | Convert agent |
 |---|---|---|
@@ -739,7 +739,7 @@ while making the common case (small diffs from
 
 ## 14. Bandages retired (cross-reference)
 
-From `agentic-consolidation-plan.md` Step 25's "Bandages this
+From `agentic-architecture-backlog.md` Step 25's "Bandages this
 step retires" table. The design above structurally eliminates
 each:
 

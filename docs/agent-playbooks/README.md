@@ -9,7 +9,7 @@ Successor to the original "Known Errors Database" (KEDB). The scope
 broadened past errors-only as the agent loop matured: per-intent
 usage recipes, convert-phase decisions (target directive picking,
 domain classification), and toolchain-shaped patterns (autoconf,
-cmake, …) all live here too. See `docs/agentic-consolidation-plan.md`
+cmake, …) all live here too. See `docs/agentic-architecture-backlog.md`
 Step 27 for the design rationale.
 
 ## Categories (filename prefix)
