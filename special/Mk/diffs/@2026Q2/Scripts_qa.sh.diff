@@ -1,5 +1,5 @@
---- Scripts/qa.sh
-+++ Scripts/qa.sh
+--- Scripts/qa.sh.orig	2026-05-28 13:29:52
++++ Scripts/qa.sh	2026-05-28 13:34:44
 @@ -30,7 +30,7 @@
  }
  
@@ -81,20 +81,14 @@
  		| cut -f 1 -d $'\1')
  	EOF
  	return $rc
-@@ -1043,6 +1064,7 @@
- 	return 0
- }
- 
-+<<<<<<< /tmp/tmp.wuCy7AQI/new-base
- pythonpackagedir() {
- 	# Detects Python packages installing top-level directories like docs/, tests/,
- 	# etc. into site-packages, which can cause conflicts between packages.
-@@ -1077,10 +1099,65 @@
- 	return ${rc}
- }
- 
-+||||||| /tmp/tmp.wuCy7AQI/old-base
-+=======
+@@ -1073,7 +1094,59 @@
+ 			rc=1
+ 		fi
+ 	done
++
++	return ${rc}
++}
++
 +foreign_binaries() {
 +	local filearch rc
 +	rc=0
@@ -126,7 +120,7 @@
 +	fi
 +	return ${rc}
 +}
-+
+ 
 +freebsd_binaries() {
 +	local rc
 +	rc=0
@@ -144,10 +138,10 @@
 +		| grep -aE 'ELF .* [LM]SB .*, .*, version [0-9]+ \(FreeBSD\)' \
 +		| cut -f 1 -d $'\1')
 +	EOF
-+	return ${rc}
-+}
-+
- checks="shebang symlinks paths stripped desktopfileutils sharedmimeinfo"
+ 	return ${rc}
+ }
+ 
+@@ -1081,6 +1154,7 @@
  checks="$checks suidfiles libtool libperl prefixvar baselibs terminfo"
  checks="$checks proxydeps sonames perlcore no_arch gemdeps gemfiledeps flavors"
  checks="$checks license depends_blacklist pkgmessage reinplace prefixman pythonpackagedir"
