@@ -169,9 +169,9 @@ def test_drop_helper_tolerates_worker_raise(monkeypatch, tmp_path):
 # --- verify-branch wrappers -----------------------------------------
 
 
-def test_checkout_verify_wrapper_returns_previous_ref(monkeypatch, tmp_path):
-    """The verify checkout wrapper returns worker's previous_ref so
-    the dispatch can hand it to the end-of-run drop."""
+def test_checkout_verify_wrapper_returns_ok_and_previous_ref(monkeypatch, tmp_path):
+    """On success the wrapper returns (True, previous_ref) so the
+    dispatch can hand the ref to the end-of-run drop."""
     rows = _activity_recorder(monkeypatch)
     from dportsv3.agent import worker
     monkeypatch.setattr(
@@ -181,14 +181,17 @@ def test_checkout_verify_wrapper_returns_previous_ref(monkeypatch, tmp_path):
             "previous_ref": "bundle/b", "created": True,
         },
     )
-    prev = runner._checkout_verify_branch_for_job(
+    ok, prev = runner._checkout_verify_branch_for_job(
         queue_root=tmp_path, job_id="j-1", env="e1", bundle_id="b",
     )
+    assert ok is True
     assert prev == "bundle/b"
     assert any(r["stage"] == "verify_branch_checkout" for r in rows)
 
 
-def test_checkout_verify_wrapper_noop_without_env_or_bundle(monkeypatch, tmp_path):
+def test_checkout_verify_wrapper_fails_without_env_or_bundle(monkeypatch, tmp_path):
+    """Missing env/bundle on a verify job is malformed — return
+    ok=False so the dispatch aborts (NOT soft-fail like patch)."""
     rows = _activity_recorder(monkeypatch)
     called: list = []
     from dportsv3.agent import worker
@@ -198,24 +201,25 @@ def test_checkout_verify_wrapper_noop_without_env_or_bundle(monkeypatch, tmp_pat
     )
     assert runner._checkout_verify_branch_for_job(
         queue_root=tmp_path, job_id="j", env=None, bundle_id="b",
-    ) is None
+    ) == (False, None)
     assert runner._checkout_verify_branch_for_job(
         queue_root=tmp_path, job_id="j", env="e", bundle_id=None,
-    ) is None
+    ) == (False, None)
     assert called == []
     assert rows == []
 
 
-def test_checkout_verify_wrapper_soft_fails_on_error(monkeypatch, tmp_path):
+def test_checkout_verify_wrapper_returns_false_on_error(monkeypatch, tmp_path):
     rows = _activity_recorder(monkeypatch)
     from dportsv3.agent import worker
     monkeypatch.setattr(
         worker, "checkout_verify_branch",
         lambda env, bundle_id: {"ok": False, "error": "boom", "branch": "x"},
     )
-    prev = runner._checkout_verify_branch_for_job(
+    ok, prev = runner._checkout_verify_branch_for_job(
         queue_root=tmp_path, job_id="j-1", env="e1", bundle_id="b",
     )
+    assert ok is False
     assert prev is None
     assert any(r["stage"] == "verify_branch_checkout_failed" for r in rows)
 

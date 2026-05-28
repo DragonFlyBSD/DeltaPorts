@@ -181,6 +181,36 @@ def test_diff_path_is_staged_into_writable_and_applied(fake_env, monkeypatch, tm
     assert not (fake_env.writable / "work" / ".apply-and-build.diff").exists()
 
 
+def test_diff_mode_refuses_dirty_port_tree(fake_env, monkeypatch, tmp_path) -> None:
+    """Diff replay must refuse when ports/<origin>/ is dirty —
+    applying onto stale state would make the verdict meaningless. The
+    refusal happens BEFORE any chroot work, so no apply/reapply/dtest
+    AND no cleanup runs (cleanup would reset the operator's state)."""
+    from dports_dev_env import cli
+    from dports_dev_env.cli import cmd_apply_and_build
+    out = _capture_stdout(monkeypatch)
+
+    monkeypatch.setattr(
+        cli, "_port_dirty_paths",
+        lambda workspace, origin: [" M ports/devel/foo/Makefile"],
+    )
+    diff = tmp_path / "fix.diff"
+    diff.write_text("--- a/x\n+++ b/x\n@@ -1 +1 @@\n-1\n+2\n")
+
+    rc = cmd_apply_and_build(_args(fake_env.env_name, "devel/foo",
+                                   diff=str(diff), json=True))
+
+    assert rc == 1
+    result = json.loads(out.getvalue())
+    assert result["apply_exit"] == 1
+    assert result["ok"] is False
+    assert result["dirty_paths"] == [" M ports/devel/foo/Makefile"]
+    # Refused before touching the chroot: no apply, no cleanup.
+    all_argv = [" ".join(c["argv"]) for c in fake_env.calls]
+    assert not any("git apply --3way" in a for a in all_argv)
+    assert not any("git reset" in a for a in all_argv)
+
+
 def test_diff_apply_failure_short_circuits(fake_env, monkeypatch, tmp_path) -> None:
     from dports_dev_env.cli import cmd_apply_and_build
     out = _capture_stdout(monkeypatch)
@@ -337,10 +367,10 @@ def test_intent_log_path_runs_substrate_reset_then_make_clean(
 
     shell_calls = _post_build_calls(fake_env.calls)
     # Find the cleanup commands by content. The substrate reset
-    # carries `git reset --hard`; the WRKDIR clean carries
+    # carries `git reset -q --`; the WRKDIR clean carries
     # `make` + `WRKDIRPREFIX`.
     substrate = [
-        c[2] for c in shell_calls if "git reset --hard" in c[2]
+        c[2] for c in shell_calls if "git reset -q --" in c[2]
     ]
     wrkdir = [
         c[2] for c in shell_calls
@@ -353,7 +383,7 @@ def test_intent_log_path_runs_substrate_reset_then_make_clean(
     assert (
         fake_env.calls.index(
             next(c for c in fake_env.calls
-                 if "git reset --hard" in (c["argv"][2] if len(c["argv"]) > 2 else ""))
+                 if "git reset -q --" in (c["argv"][2] if len(c["argv"]) > 2 else ""))
         )
         < fake_env.calls.index(
             next(c for c in fake_env.calls
@@ -378,7 +408,7 @@ def test_diff_path_runs_post_build_cleanup(
     apply_and_build(fake_env.env_name, "devel/foo", diff_path=str(diff))
 
     shell_calls = _post_build_calls(fake_env.calls)
-    assert any("git reset --hard" in c[2] for c in shell_calls)
+    assert any("git reset -q --" in c[2] for c in shell_calls)
     assert any(
         "WRKDIRPREFIX=/work/obj" in c[2] and "clean" in c[2]
         for c in shell_calls
@@ -414,7 +444,7 @@ def test_make_clean_skipped_when_substrate_reset_fails(
     )
 
     shell_calls = _post_build_calls(fake_env.calls)
-    assert any("git reset --hard" in c[2] for c in shell_calls)
+    assert any("git reset -q --" in c[2] for c in shell_calls)
     # WRKDIR wipe must not fire when substrate reset failed.
     assert not any(
         "WRKDIRPREFIX=/work/obj" in c[2] and "clean" in c[2]

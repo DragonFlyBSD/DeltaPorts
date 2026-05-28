@@ -60,6 +60,13 @@ from pathlib import Path
 from dportsv3.agent.lifecycle import ACTIVE_WORK_STATE_VALUES
 
 
+class _VerifyBranchUnavailable(Exception):
+    """Raised inside the verify dispatch when the fresh
+    ``bundle/<id>-verify`` branch couldn't be checked out. Aborts the
+    verify run before replay — verify's verdict only means anything if
+    the diff was applied against a known-clean base."""
+
+
 # Max fix iterations before giving up on a port
 DEFAULT_MAX_ITERATIONS = 3
 
@@ -2463,23 +2470,29 @@ def _checkout_verify_branch_for_job(
     job_id: str,
     env: str | None,
     bundle_id: str | None,
-) -> str | None:
+) -> tuple[bool, str | None]:
     """Put the env on a throwaway ``bundle/<id>-verify`` branch cut
-    from base for the verify run, and return the ref that was checked
-    out before (so the dispatch can pass it to the end-of-run drop).
+    from base for the verify run.
 
     Verify uses its own branch rather than the patch agent's
     ``bundle/<id>``: changes.diff is the complete canonical artifact,
     and the patch branch may already have been dropped by Slice 4's
-    terminal sweep. Soft-fail like
-    :func:`_checkout_bundle_branch_for_job` — a failed checkout logs
-    and proceeds on whatever branch is current.
+    terminal sweep.
 
-    Returns ``previous_ref`` (or None when the checkout was skipped or
-    failed).
+    Returns ``(ok, previous_ref)``. Unlike the convert/patch checkout
+    helper this is NOT soft-fail: a failed checkout returns
+    ``ok=False`` and the caller MUST abort verify rather than replay.
+    Verify's entire contract is "does the diff apply cleanly on a
+    fresh base" — if we couldn't establish that base, any verdict is
+    meaningless and replaying onto whatever branch is current would
+    both lie and let cleanup reset the wrong tree. ``previous_ref`` is
+    the ref the env was on before (for the end-of-run drop), valid
+    only when ``ok``.
     """
     if not env or not bundle_id:
-        return None
+        # A real verify job always carries both; missing them means a
+        # malformed job we can't verify — treat as checkout failure.
+        return (False, None)
     from dportsv3.agent import worker  # noqa: PLC0415
     try:
         result = worker.checkout_verify_branch(env, bundle_id)
@@ -2494,7 +2507,7 @@ def _checkout_verify_branch_for_job(
             )
         except Exception:
             pass
-        return None
+        return (False, None)
     if not result.get("ok"):
         try:
             activity_log(
@@ -2509,7 +2522,7 @@ def _checkout_verify_branch_for_job(
             )
         except Exception:
             pass
-        return None
+        return (False, None)
     try:
         activity_log(
             queue_root, "verify_branch_checkout",
@@ -2524,7 +2537,7 @@ def _checkout_verify_branch_for_job(
         )
     except Exception:
         pass
-    return result.get("previous_ref")
+    return (True, result.get("previous_ref"))
 
 
 def _drop_verify_branch_for_job(
@@ -4454,6 +4467,29 @@ def process_job(
         _apply_transition(job_path.name, start_event)
         bundle_id = job.get("bundle_id", "")
         verify_env = job.get("dev_env", "")
+
+        def _flag_bundle_verification_failed() -> None:
+            # Flip bundle.verification_status so the UI stops showing
+            # "in flight forever" — the orchestrator never got far
+            # enough to POST a result to /verification itself.
+            if bundle_id and _state_db_conn is not None:
+                try:
+                    with _state_db_lock:
+                        now = datetime.now(timezone.utc).isoformat()
+                        _state_db_conn.execute(
+                            """UPDATE bundles SET
+                                   verification_status = 'verification_failed',
+                                   verification_at = ?,
+                                   last_seen_at = ?
+                               WHERE bundle_id = ?""",
+                            (now, now, bundle_id),
+                        )
+                        _state_db_conn.commit()
+                except sqlite3.Error as db_exc:
+                    log(queue_root, "WARN",
+                        f"failed to mark bundle {bundle_id} "
+                        f"verification_failed: {db_exc}")
+
         # Verify replays changes.diff (the complete branch-vs-base
         # canonical artifact) on a throwaway ``bundle/<id>-verify``
         # branch cut fresh from base. This decouples verify from the
@@ -4461,12 +4497,19 @@ def process_job(
         # terminal sweep may already have dropped — and from master,
         # which verify must never build against directly. We record
         # the ref the env was on so the end-of-run drop can restore it.
-        verify_prev_ref = _checkout_verify_branch_for_job(
+        checkout_ok, verify_prev_ref = _checkout_verify_branch_for_job(
             queue_root=queue_root, job_id=job_path.name,
             env=verify_env or None,
             bundle_id=bundle_id or None,
         )
         try:
+            if not checkout_ok:
+                # Abort BEFORE replay. Without a fresh base branch we
+                # can't prove the diff applies cleanly, so any verdict
+                # would be meaningless — and replaying onto whatever
+                # branch is current would also let apply-and-build's
+                # cleanup reset the wrong tree.
+                raise _VerifyBranchUnavailable()
             result = run_verify_fix(
                 bundle_id=bundle_id,
                 env=verify_env,
@@ -4511,6 +4554,33 @@ def process_job(
             except Exception as log_exc:
                 log(queue_root, "WARN",
                     f"activity_log failed for verify_complete: {log_exc}")
+        except _VerifyBranchUnavailable:
+            # Checkout of the fresh verify branch failed (logged by
+            # _checkout_verify_branch_for_job). Fail the job (→ DEAD
+            # via the shared tail) and mark the bundle as
+            # verification_failed so the UI stops showing "in flight".
+            success = False
+            status = "verify aborted: could not establish fresh verify branch"
+            finish_event = JobEvent.VERIFY_FIX_GAVE_UP
+            detail = {
+                "reason": status,
+                "bundle_id": bundle_id,
+                "env": verify_env,
+            }
+            log(queue_root, "ERROR",
+                f"verify job {job_path.name} aborted: "
+                f"verify-branch checkout failed")
+            try:
+                activity_log(
+                    queue_root, "verify_failed",
+                    f"verify ABORTED for {bundle_id}: "
+                    f"verify-branch checkout failed",
+                    job_id=job_path.name, extra=detail,
+                )
+            except Exception as log_exc:
+                log(queue_root, "WARN",
+                    f"activity_log failed for verify abort: {log_exc}")
+            _flag_bundle_verification_failed()
         except Exception as exc:
             success, status = False, f"verify_fix raised: {exc}"
             finish_event = JobEvent.VERIFY_FIX_GAVE_UP
@@ -4533,25 +4603,7 @@ def process_job(
             except Exception as log_exc:
                 log(queue_root, "WARN",
                     f"activity_log failed for verify_failed: {log_exc}")
-            # Flip bundle.verification_status so the UI stops showing
-            # "in flight forever" — the orchestrator never got far
-            # enough to POST a result to /verification itself.
-            if bundle_id and _state_db_conn is not None:
-                try:
-                    with _state_db_lock:
-                        now = datetime.now(timezone.utc).isoformat()
-                        _state_db_conn.execute(
-                            """UPDATE bundles SET
-                                   verification_status = 'verification_failed',
-                                   verification_at = ?,
-                                   last_seen_at = ?
-                               WHERE bundle_id = ?""",
-                            (now, now, bundle_id),
-                        )
-                        _state_db_conn.commit()
-                except sqlite3.Error as db_exc:
-                    log(queue_root, "WARN",
-                        f"failed to mark bundle {bundle_id} verification_failed: {db_exc}")
+            _flag_bundle_verification_failed()
         _apply_transition(job_path.name, finish_event, detail=detail)
         # The throwaway verify branch is done either way. Drop it and
         # restore the ref the env was on before verify (verify_prev_ref)

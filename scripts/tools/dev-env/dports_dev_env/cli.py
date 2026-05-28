@@ -388,6 +388,29 @@ def apply_and_build(
     else:
         result["replay_mode"] = "diff" if diff_path is not None else "none"
 
+        # Diff-mode pre-replay dirty check, mirroring the intent-log
+        # one above. `git apply --3way` onto a dirty ports/<origin>/
+        # would silently merge stale env state with the candidate fix,
+        # making the verify verdict meaningless. Normally the fresh
+        # verify branch guarantees cleanliness, but this is the
+        # explicit invariant + a clear failure mode if it isn't.
+        # Placed BEFORE the cleanup try/finally so a refusal never
+        # resets the operator's own uncommitted state.
+        if diff_path is not None:
+            workspace = writable_root / "work" / "DeltaPorts"
+            dirty = _port_dirty_paths(workspace, origin)
+            if dirty:
+                tail = (f"diff replay refused: ports/{origin}/ has "
+                        f"uncommitted changes:\n  "
+                        + "\n  ".join(dirty)
+                        + "\nrun `dportsv3 dev-env reset-port ENV ORIGIN` "
+                        "or `git stash` first")
+                result["apply_exit"] = 1
+                result["stderr_tail"] = tail[-2000:]
+                result["dirty_paths"] = dirty
+                sys.stderr.write(tail + "\n")
+                return result
+
     # Step 25g post-build cleanup: for intent-log mode, the substrate
     # edits to ports/<origin>/ MUST be reset before we return, so the
     # next verify run starts from a clean baseline. Review #1 fix:
@@ -423,22 +446,29 @@ def apply_and_build(
     # any more.
     def _post_build_cleanup() -> None:
         rel = f"ports/{origin}"
-        # `git apply --3way` implies --index, so the applied diff
-        # (including brand-new files like overlay.dops) is STAGED.
-        # `git checkout HEAD -- <rel>` doesn't unstage a new file
-        # (it isn't in HEAD) and `git clean` skips anything in the
-        # index — so a plain checkout+clean left the staged new file
-        # behind, and the verify-branch drop's `git checkout <base>`
-        # then carried it onto the base branch. `git reset --hard`
-        # unstages it (reset never deletes untracked files, so the
-        # new file becomes untracked) and the scoped clean removes
-        # it. Safe to reset the whole tree: apply-and-build's git
-        # tree only ever holds our applied diff (reapply composes
-        # into $DPORTS_COMPOSE_ROOT, not the git tree).
+        # Reset ONLY ports/<origin> back to HEAD. `git apply --3way`
+        # implies --index, so the applied diff (incl. brand-new files
+        # like overlay.dops) is STAGED — a plain `git checkout HEAD --`
+        # + `git clean` can't remove a staged new file, so it leaked
+        # onto the base branch via the verify-branch drop. The three
+        # scoped steps cover every shape without a whole-tree reset
+        # (which could discard unrelated changes if verify ever ran on
+        # the wrong branch):
+        #   1. `git reset -- <rel>`     unstages everything under rel
+        #      (staged-new files become untracked; staged deletions/
+        #      mods become unstaged).
+        #   2. `git checkout -- <rel>`  reverts the now-unstaged tracked
+        #      mods/deletions back to HEAD. Tolerate a pathspec
+        #      no-match (a brand-new port dir absent from HEAD) with
+        #      `|| true`.
+        #   3. `git clean -fd -- <rel>` removes the leftover untracked
+        #      files (the formerly-staged new files from step 1).
         cleanup = runner.run(
             ["/bin/sh", "-c",
              f"cd /work/DeltaPorts && "
-             f"git reset --hard -q HEAD && "
+             f"git reset -q -- {shlex.quote(rel)} && "
+             f"{{ git checkout -q -- {shlex.quote(rel)} 2>/dev/null "
+             f"|| true; }} && "
              f"git clean -fd -- {shlex.quote(rel)}", "_"],
             env=env, capture_output=True,
         )
