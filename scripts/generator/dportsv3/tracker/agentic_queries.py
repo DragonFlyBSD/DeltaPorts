@@ -18,6 +18,8 @@ import sqlite3
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+from dportsv3.agent.lifecycle import ACTIVE_WORK_STATE_VALUES
+
 
 def _row_dict(row: sqlite3.Row) -> dict[str, Any]:
     return {str(key): row[key] for key in row.keys()}
@@ -44,20 +46,32 @@ def agentic_status(conn: sqlite3.Connection) -> dict[str, Any]:
 
     Groups the typed lifecycle states into operator-facing buckets:
         pending  = queued
-        inflight = claimed | triaging | triaged | patching | verifying
+        inflight = lifecycle.ACTIVE_WORK_STATES minus queued
+                   (claimed | triaging | patching | converting |
+                    verifying | verifying_fix)
         done     = done
         dead     = dead
         escalated = escalated
+
+    ``triaged`` is intentionally in NO bucket: a triaged triage job
+    has finished and handed its work to a spawned patch/convert job
+    (which is itself counted), so counting it in ``inflight`` would
+    double-count one origin's work. See ACTIVE_WORK_STATES.
     """
     bundles = conn.execute("SELECT count(*) FROM bundles").fetchone()[0]
+    inflight_states = tuple(
+        s for s in ACTIVE_WORK_STATE_VALUES if s != "queued"
+    )
+    placeholders = ",".join("?" for _ in inflight_states)
     rows = conn.execute(
-        """SELECT
+        f"""SELECT
              SUM(CASE WHEN state = 'queued' THEN 1 ELSE 0 END) AS pending,
-             SUM(CASE WHEN state IN ('claimed','triaging','triaged','patching','verifying') THEN 1 ELSE 0 END) AS inflight,
+             SUM(CASE WHEN state IN ({placeholders}) THEN 1 ELSE 0 END) AS inflight,
              SUM(CASE WHEN state = 'done' THEN 1 ELSE 0 END) AS done,
              SUM(CASE WHEN state = 'dead' THEN 1 ELSE 0 END) AS dead,
              SUM(CASE WHEN state = 'escalated' THEN 1 ELSE 0 END) AS escalated
-           FROM jobs"""
+           FROM jobs""",
+        inflight_states,
     ).fetchone()
     runs = conn.execute("SELECT count(*) FROM runs").fetchone()[0]
     # Step 9 — surface the open manual-queue depth on the dashboard
@@ -248,11 +262,21 @@ def get_run(conn: sqlite3.Connection, run_id: str) -> dict[str, Any] | None:
     )
 
 
+# The "inflight" filter bucket mirrors the dashboard inflight count
+# (agentic_status): the actively-working set minus queued (which is
+# its own "pending" bucket). Derived from the single canonical
+# lifecycle constant so the filtered list and the dashboard count
+# can't disagree. `triaged` is intentionally excluded here too — a
+# triaged job is still reachable via an exact ?state=triaged match.
+_INFLIGHT_BUCKET: tuple[str, ...] = tuple(
+    s for s in ACTIVE_WORK_STATE_VALUES if s != "queued"
+)
+
 _STATE_BUCKETS: dict[str, tuple[str, ...]] = {
     # Bucket aliases for filter UX: a user picks "inflight" and gets
     # every job in any inflight-ish lifecycle state.
     "pending":  ("queued",),
-    "inflight": ("claimed", "triaging", "triaged", "patching", "verifying"),
+    "inflight": _INFLIGHT_BUCKET,
     "done":     ("done",),
     "dead":     ("dead",),
     "escalated": ("escalated",),
@@ -394,9 +418,14 @@ def active_job_for_port(
     fresh context, the runner only re-enqueues triage if no job is
     already in flight for the same origin/target. This surfaces "yes,
     a job is in flight — wait for it" vs. "queue is clear" on the UI.
+
+    Uses the same canonical actively-working set as the runner's
+    retriage guard (lifecycle.ACTIVE_WORK_STATES), so the UI
+    indicator and the runner's actual enqueue decision agree — and
+    so a resting `triaged` job doesn't pin the indicator to
+    "in flight" forever.
     """
-    open_states = ("queued", "claimed", "triaging", "triaged",
-                   "patching", "verifying", "converting")
+    open_states = ACTIVE_WORK_STATE_VALUES
     placeholders = ",".join("?" * len(open_states))
     sql = (
         f"SELECT * FROM jobs WHERE origin = ? AND state IN ({placeholders})"

@@ -20,10 +20,13 @@ from pathlib import Path
 import pytest
 
 from dportsv3.agent.lifecycle import (
+    ACTIVE_WORK_STATES,
+    ACTIVE_WORK_STATE_VALUES,
     IllegalTransition,
     JobEvent,
     JobState,
     TRANSITIONS,
+    _INFLIGHT_STATES,
     apply,
     current,
     history,
@@ -42,6 +45,34 @@ def _open(db_path: Path) -> sqlite3.Connection:
 def _enqueue(conn: sqlite3.Connection, job_id: str = "job-1") -> JobState:
     return apply(conn, job_id, JobEvent.HOOK_ENQUEUED, actor="hook",
                  detail={"origin": "foo/bar"})
+
+
+def test_active_work_states_exclude_triaged_include_verifying_fix():
+    """The 'actively working' set drops TRIAGED (the triage job rests
+    there after handing off to a spawned job) and includes
+    VERIFYING_FIX. Pin both so the live-poll / retriage-guard /
+    dashboard set can't silently regress."""
+    assert JobState.TRIAGED not in ACTIVE_WORK_STATES
+    assert JobState.VERIFYING_FIX in ACTIVE_WORK_STATES
+    assert JobState.QUEUED in ACTIVE_WORK_STATES
+    # Terminals never count as active.
+    for terminal in (JobState.DONE, JobState.DEAD, JobState.ESCALATED):
+        assert terminal not in ACTIVE_WORK_STATES
+    # The string-value form mirrors the enum form exactly.
+    assert ACTIVE_WORK_STATE_VALUES == tuple(
+        s.value for s in ACTIVE_WORK_STATES
+    )
+
+
+def test_active_work_vs_inflight_differ_by_exactly_triaged_and_queued():
+    """The two sets are deliberately distinct: reap-orphans
+    (_INFLIGHT_STATES) keeps TRIAGED and omits QUEUED; actively-working
+    (ACTIVE_WORK_STATES) does the opposite. Lock the exact delta so a
+    future edit to one forces a conscious decision about the other."""
+    active = set(ACTIVE_WORK_STATES)
+    inflight = set(_INFLIGHT_STATES)
+    assert active - inflight == {JobState.QUEUED}
+    assert inflight - active == {JobState.TRIAGED}
 
 
 def test_hook_enqueued_creates_queued_job(tmp_path):

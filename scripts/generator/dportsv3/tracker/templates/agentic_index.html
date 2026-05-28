@@ -174,7 +174,7 @@
           <td>
             {% set cls = {
               'queued':'ignored',
-              'claimed':'skipped','triaging':'skipped','triaged':'skipped','patching':'skipped','verifying':'skipped','converting':'skipped',
+              'claimed':'skipped','triaging':'skipped','triaged':'skipped','patching':'skipped','verifying':'skipped','converting':'skipped','verifying_fix':'skipped',
               'done':'built','dead':'failed','escalated':'skipped'
             }.get(j.state,'total') %}
             <span class="stat-pill {{ cls }}">{{ j.state }}</span>

@@ -234,6 +234,45 @@ _INFLIGHT_STATES: tuple[JobState, ...] = (
     JobState.VERIFYING_FIX,
 )
 
+# "Is this job still doing its own work right now?" — distinct from
+# _INFLIGHT_STATES (which answers "is this reapable on runner
+# restart?"). The two differ by exactly two members and the
+# difference is deliberate:
+#
+#   - TRIAGED is OUT here but IN _INFLIGHT_STATES. A triage job's
+#     happy path lands at TRIAGED and STAYS there — it auto-enqueues
+#     a *separate* patch/convert job rather than transitioning itself.
+#     So for "actively working" a TRIAGED job is done (the real work
+#     is the spawned job). But for reaping it must stay in-flight: a
+#     TRIAGED job whose spawned patch died should still get reaped.
+#     (Counting TRIAGED as active also blocked operator retriage
+#     forever after a patch terminal — the redis/skalibs log-spam
+#     bug.)
+#   - QUEUED is IN here but OUT of _INFLIGHT_STATES. A queued job is
+#     about to run (its activity is imminent — live UI should poll,
+#     the retriage guard should treat the origin as taken), but
+#     stale-queued reaping is handled by a separate path, so
+#     _INFLIGHT_STATES (reap callers) leaves it out.
+#
+# Single source of truth for: the retriage duplicate-enqueue guard
+# (runner), the dashboard inflight count (tracker query), and the
+# job-page live-poll indicator (tracker server → template).
+ACTIVE_WORK_STATES: tuple[JobState, ...] = (
+    JobState.QUEUED,
+    JobState.CLAIMED,
+    JobState.TRIAGING,
+    JobState.PATCHING,
+    JobState.CONVERTING,
+    JobState.VERIFYING,
+    JobState.VERIFYING_FIX,
+)
+
+# String-value form for SQL `IN (...)`, template comparisons, and
+# any consumer comparing against the raw `state` column text.
+ACTIVE_WORK_STATE_VALUES: tuple[str, ...] = tuple(
+    s.value for s in ACTIVE_WORK_STATES
+)
+
 
 class IllegalTransition(Exception):
     """Raised when (current_state, event) is not in TRANSITIONS."""

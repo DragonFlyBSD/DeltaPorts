@@ -29,7 +29,11 @@
 
   <div class="tracker-page">
     <h1>{{ job.job_id }}
-      {% set is_active = job.state in ('queued', 'claimed', 'triaging', 'triaged', 'patching', 'verifying', 'converting') %}
+      {# is_active comes from the server (lifecycle.ACTIVE_WORK_STATES)
+         so the live-poll set can't drift from the runner's retriage
+         guard / dashboard count. `triaged` is NOT active (resting
+         after handoff to a spawned job); `verifying_fix` IS. #}
+      {% set is_active = job_is_active %}
       <span id="live-indicator"
             class="live-indicator{% if is_active %} active{% endif %}"
             data-job-id="{{ job.job_id }}"

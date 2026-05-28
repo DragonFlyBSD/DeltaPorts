@@ -2817,6 +2817,17 @@ def create_app(db_path: str | Path) -> Any:
         # Cursor for the live-refresh polling — the client polls
         # /api/activity?job_id=X&since_id=N for new rows.
         max_id = max((a.get("id") or 0) for a in activity) if activity else 0
+        # Whether the job is still doing its own work — drives the
+        # live-poll indicator. Computed server-side from the single
+        # canonical set (lifecycle.ACTIVE_WORK_STATES) rather than an
+        # inline template literal, so it can't drift from the runner's
+        # retriage guard and the dashboard count. Notably: a `triaged`
+        # job is NOT active (it handed off to a spawned patch/convert
+        # job and rests there), and `verifying_fix` IS active.
+        from dportsv3.agent.lifecycle import (  # noqa: PLC0415
+            ACTIVE_WORK_STATE_VALUES,
+        )
+        job_is_active = job.get("state") in ACTIVE_WORK_STATE_VALUES
         return templates.TemplateResponse(
             request,
             "agentic_job.html",
@@ -2833,6 +2844,7 @@ def create_app(db_path: str | Path) -> Any:
                 "stage_filter": sf,
                 "prior_attempts": prior_attempts,
                 "handoff": handoff,
+                "job_is_active": job_is_active,
             },
         )
 

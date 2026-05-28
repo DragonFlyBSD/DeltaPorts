@@ -53,6 +53,12 @@ import urllib.parse
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+# lifecycle imports only stdlib (no cycle back to runner), so the
+# canonical "actively working" state set is safe to bind at module
+# load. Other lifecycle uses stay function-local per this file's
+# convention, but this one backs a module-level constant.
+from dportsv3.agent.lifecycle import ACTIVE_WORK_STATE_VALUES
+
 
 # Max fix iterations before giving up on a port
 DEFAULT_MAX_ITERATIONS = 3
@@ -1008,26 +1014,10 @@ def _mark_verify_request(
 
 # Job states that count as "active work in progress for this origin"
 # for the operator-retriage duplicate-enqueue guard
-# (`_has_active_same_origin_job`).
-#
-# `triaged` is deliberately omitted. Triage's happy-path successor
-# event (TRIAGE_OK lands at TRIAGED) has no follow-up transition
-# when triage auto-enqueues a patch — the job sits at TRIAGED
-# indefinitely. The real in-flight work for the origin is the
-# spawned patch (or convert) job, which lives in queued / claimed /
-# patching / converting — all still in this tuple. Counting TRIAGED
-# as active would block operator-context retriage forever after a
-# patch terminal, which is the failure mode the redis/skalibs
-# bundles exhibited (5s retriage_blocked log spam).
-#
-# Note that `_INFLIGHT_STATES` in lifecycle.py keeps TRIAGED for
-# its `reap_orphans` callers — that's the right behavior there
-# (a TRIAGED job at runner restart should still get reaped if its
-# spawned patch isn't healthy).
-_ACTIVE_JOB_STATES = (
-    "queued", "claimed", "triaging", "patching", "verifying",
-    "converting",
-)
+# (`_has_active_same_origin_job`). Canonical definition + the full
+# rationale for why TRIAGED is excluded (and how this differs from
+# the reap-orphans set) live in lifecycle.ACTIVE_WORK_STATES.
+_ACTIVE_JOB_STATES = ACTIVE_WORK_STATE_VALUES
 
 
 def _has_active_same_origin_job(run_id: str, origin: str) -> str | None:
