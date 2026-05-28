@@ -1,0 +1,6 @@
+# overlay.dops at ports/devel/gperf/overlay.dops
+port devel/gperf
+type port
+target @any
+reason "DragonFly needs <string.h> for strcmp/strncmp/strlen visibility in lib/getopt.c"
+
