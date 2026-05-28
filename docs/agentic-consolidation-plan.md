@@ -11,7 +11,7 @@ this document outgrew a single file):
 |---|---|---|
 | [Phase 4 — DB consolidation](agentic-phase4-db.md) | state-server + tracker onto one DB (Steps 5/6/8) | frozen / done |
 | [Operator loop](agentic-operator-loop.md) | Steps 1–11, 28, 29, 30 — manual escalation, verify/accept, delivery, branch isolation | mostly shipped |
-| [Architecture backlog](agentic-architecture-backlog.md) | Steps 12–27 — abstraction, refactors, lifecycle hardening, edit-intent DSL, playbook design records | mostly pending |
+| [Architecture backlog](agentic-architecture-backlog.md) | Steps 12–27, 31 — abstraction, refactors, lifecycle hardening, edit-intent DSL, single-service consolidation, playbook design records | mostly pending |
 
 The *operative* playbooks the queue runner loads at fix time are not
 in this plan set — they live as individual files in
@@ -88,14 +88,22 @@ Pending, in recommended order:
 6. **23 → 22** — execution layer then steps.py refactor. 23 first
    so 22's phase-helper extraction lands against the consolidated
    `chroot_exec`.
-7. **21** — DB layer consolidation. Enables 17/18 to plug into a
-   clean write surface. Natural landing site for Step 26 items 1+4.
+7. **21 → 31 → 17 → 18** — consolidation + remote chain, in this
+   order:
+   - **21** DB layer consolidation — centralize scattered writes into
+     `dportsv3.db.writes`, settle connection patterns. No behavior
+     change. Natural landing site for Step 26 items 1+4.
+   - **31** fold the artifact-store into the tracker — one service,
+     one port, one auth surface. Makes the tracker the single writer
+     process. Pure HTTP routing once 21 has a clean write surface.
+   - **17** remote runners — runner stops opening `state.db` directly,
+     uses the tracker's HTTP write endpoints + new read/claim
+     endpoints. Only load-bearing when a second builder appears.
+   - **18** security hardening — auth on the (now single) service.
 8. **12 → 13 → 14 (system-prompt decomposition only) → 15** —
    abstraction work. 12 unblocks 13/14/15. Step 14's KEDB metadata
    work shipped via Step 27b; what remains is system-prompt
    decomposition (`PATCH_SYSTEM_SECTIONS`, per-section telemetry).
-9. **17 → 18** — remote runners + security. Only load-bearing when
-   a second builder appears.
 
 Rationale for the head of the order: as of 2026-05-28 the operator's
 primary interaction loop is closed — both success and failure bundles

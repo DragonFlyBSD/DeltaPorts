@@ -2,7 +2,7 @@
 
 > **Agentic plan set:** [Roadmap & priority order](agentic-consolidation-plan.md) · [Phase 4 — DB consolidation](agentic-phase4-db.md) · [Operator loop](agentic-operator-loop.md) · [Architecture backlog](agentic-architecture-backlog.md)
 
-> Steps 12–27: telemetry bus, tool guardrails, context budgeting,
+> Steps 12–27 + 31: telemetry bus, tool guardrails, context budgeting,
 > UX review, remote runners, security, the DB/step/exec refactors,
 > the edit-intent DSL, and the playbook-library *design records*
 > (Step 19/27 — the operative playbooks themselves live in
@@ -522,6 +522,17 @@ LLM is already a remote HTTPS call so it doesn't care. The only
 new thing is that the artifact-store POST and the tracker job
 dispatch now traverse a network the operator does not necessarily
 control end-to-end.
+
+> **Depends on Step 31 + Step 21.** A remote runner should aim at a
+> *single* service and auth surface, not two — fold the artifact-store
+> into the tracker (Step 31) first. And the runner must stop opening
+> `state.db` directly (it does today via local sqlite — lifecycle,
+> `verify_requests`/`user_context_requests` polls) and instead use the
+> tracker's HTTP write endpoints (`/v1/jobs/transition`,
+> `/v1/user-context`) plus **new read/claim endpoints that don't exist
+> yet** (the store has no GET for pending state rows). That conversion
+> is cheapest once Step 21 has centralized the write surface.
+> Sequence: **21 → 31 → 17.**
 
 #### Goal
 
@@ -1334,6 +1345,13 @@ or columns (Step 17's runner_id, Step 18's audit-log triggers,
 Step 14's KEDB metadata all bolt onto the same DB).
 
 This step pays off the technical debt before those features land.
+
+> **Sequencing:** do this *before* Step 31 (fold artifact-store into
+> the tracker) and Step 17 (remote runner). Both target the DB write
+> surface — once 21b centralizes writes into `dportsv3.db.writes`, the
+> service merge becomes pure HTTP routing onto that surface and the
+> remote runner has one clean target instead of scattered call sites.
+> Recommended order: **21 → 31 → 17.**
 
 #### Goal
 
@@ -2732,6 +2750,106 @@ could grow into if the conditions warrant.
 - 27d-g: integration tests assert per-flow payload size shrinks
   (prompts trim) while behavior is preserved on a corpus of
   fixture bundles.
+
+---
+
+### Step 31 — fold the artifact-store into the tracker (single service) — pending
+
+Today the central side runs **two** HTTP services on one host:
+
+- **tracker** (`:8080`, FastAPI) — reads `state.db` and serves bundle
+  artifacts from a local `artifact_root`; also writes `state.db`
+  directly (operator actions: verify/accept/reject/take-over/…).
+- **artifact-store** (`:8788`, stdlib `BaseHTTPRequestHandler`) — the
+  nominal "single writer" for `state.db`, blobs, and full logs, with
+  `/v1/artifacts/{get,put,put-fs}`, `/v1/bundles/upsert`,
+  `/v1/jobs/transition`, `/v1/user-context`.
+
+The two share **one filesystem** (`/build/synth/logs`) and **one
+`state.db` file** — the tracker reads exactly what the artifact-store
+writes — so they already *must* co-locate. The "single writer"
+invariant is also already fiction: the tracker writes `state.db`
+directly, and so does the runner (via local sqlite). Running them as
+separate processes buys nothing and costs an extra port, an extra
+thing to supervise, and — critically — **a second network + auth
+surface** the moment a remote runner appears (Step 17/18).
+
+Folding the artifact-store into the tracker makes the tracker the
+single central service *and* the single writer process. The only
+remaining direct-sqlite writer is then the runner, which Step 17
+converts to HTTP.
+
+#### Goal
+
+After Step 31:
+
+- One process, one port (`:8080`). `:8788` retired.
+- The runner and the dsynth hook point at the tracker URL for blobs
+  and state writes; no `ARTIFACT_STORE_URL` second endpoint.
+- The tracker is the single *process* writing `state.db` (runner's
+  direct writes remain until Step 17 — see sequencing).
+
+No change to the on-disk layout (`artifact_root`, `objects/sha256/…`)
+or the wire contract of the `/v1/` endpoints — only the host:port they
+live on.
+
+#### Sub-steps
+
+**31a — mount the artifact-store endpoints on the FastAPI app.**
+Port `/v1/artifacts/{get,put,put-fs}`, `/v1/bundles/upsert`,
+`/v1/jobs/transition`, `/v1/user-context` to FastAPI routes that call
+the existing `ArtifactStore` class in-process (or `dportsv3.db.writes`
+once Step 21 lands — see sequencing). Define the blob `put` routes as
+**sync `def`** so FastAPI dispatches them in its threadpool and a large
+upload can't block the async UI/event loop. Keep the `/v1/` paths
+verbatim to minimise client churn.
+
+**31b — repoint clients.** Default the runner's `ARTIFACT_STORE_URL`
+and the hook's `artifact-store-client` (`hook_common.sh`) to the
+tracker URL. One env var (`DPORTSV3_TRACKER_URL`) becomes the single
+endpoint for both blobs and state.
+
+**31c — retire the standalone service.** Remove the
+`scripts/artifact-store` entrypoint, the `:8788` bind, and
+`ArtifactStoreServer` / `main()` argparse. Keep the `ArtifactStore`
+class — it's now invoked in-process by the FastAPI routes.
+
+**31d — ops + permissions.** The tracker process now *writes*
+`artifact_root` (it only read it before); confirm the service account
+has write perms and update the runbook / supervisor config to start
+one service instead of two.
+
+#### Sequencing
+
+- **After Step 21.** 21b centralizes scattered writes into
+  `dportsv3.db.writes`; doing it first means 31a is pure HTTP routing
+  onto that surface instead of physically relocating
+  `artifact_store.py`'s still-scattered write code and re-consolidating
+  later.
+- **Before Step 17.** A remote runner should aim at *one* service and
+  one auth surface, not two. Wiring remote against two endpoints you're
+  about to collapse is wasted work.
+- Recommended order: **21 → 31 → 17.** Exception: if reducing the
+  deployment surface is urgent on its own, 31 can ship first as a crude
+  routing change (mount `ArtifactStore` as-is) and let 21 tidy it
+  afterward — the "topology win now, refactor later" tradeoff.
+
+#### Tests
+
+- Existing artifact-store round-trip tests retargeted at the FastAPI
+  app (put → get returns identical bytes; `put-fs`; `bundles/upsert`
+  row written; `jobs/transition` applies a lifecycle event).
+- Blob `put` route runs off the event loop (threadpool) — a large
+  upload doesn't stall a concurrent UI request.
+- Client-repoint smoke: runner + hook configured with only
+  `DPORTSV3_TRACKER_URL` complete a full triage→patch→verify cycle.
+- WAL stays on; write transactions stay short (blob bytes go to the
+  filesystem, not the DB).
+
+#### LOC estimate
+
+Moderate — endpoint porting (~150) + client config (~30) + entrypoint
+removal (negative) + tests (~120).
 
 ---
 
