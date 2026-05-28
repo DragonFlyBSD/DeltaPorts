@@ -222,19 +222,22 @@ retry loop:
 6. Retry caps distinguish repeated build failures from failed automated
    patch attempts.
 
-### Snapshot (2026-05-24)
+### Snapshot (2026-05-28)
 
-For the canonical pending-work order see **[Current priority order](#current-priority-order-as-of-2026-05-24)** at the
+For the canonical pending-work order see **[Current priority order](#current-priority-order-as-of-2026-05-28)** at the
 bottom. One-line summary:
 
-- **Shipped:** Steps 1–10, 11a, 20 (plus three post-shipment fixes
-  to 20 — see "Post-shipment fixes" subsection there).
-- **Next:** 11b (verify-fix) → 25 (edit-intent DSL) → 11c/d
-  (accept/reject + push) → 26 items 1–4 (lifecycle hardening:
-  lineage, transient-fail, state timeouts, originating_bundle_id).
-- **New steps since last edit:** Step 26 (lifecycle hardening
-  backlog) — folded in from the brittleness analysis after the
-  libunistring/python312/liblz4 incidents.
+- **Shipped:** Steps 1–10, 11a–d (11d-4 deferred), 19, 20, 27, 28,
+  29, 30. The full operator loop — verify/accept/reject, GitHub
+  delivery, failed-bundle actions, context-aware re-triage,
+  per-bundle branch isolation — is in place.
+- **Next:** 26 items 1–4 (lifecycle hardening) → 25 (edit-intent
+  DSL) → 24 (prompts/quickref) → 16 (UX) → refactor + abstraction
+  backlog. 11d-4 (GitLab/Gitea) on-demand only.
+- **New steps since last edit:** Step 28 (failed-bundle action
+  matrix), Step 29 (context-aware re-triage), Step 30 (per-bundle
+  branch isolation), all shipped; plus Q1/Q2/config-split folded
+  under Step 30.
 
 ### Step 1 — improve bundle artifact reading — done
 
@@ -674,7 +677,33 @@ Tests:
 heuristics don't cover, e.g. a 30-minute-old job that's
 legitimately stuck).
 
-### Step 11 — fix delivery & verification — partial (11a shipped; 11b/c/d pending)
+### Step 11 — fix delivery & verification — shipped (11a–c + 11d; 11d-4 deferred)
+
+> **Status (2026-05-28): shipped.**
+> - **11a** — verification claim vs. reality split. Shipped.
+> - **11b** — four slices: dev-env apply-and-build primitive
+>   (`6800f9c5216`), bundle verification endpoint + columns
+>   (`1454a55ca11`), verify-fix orchestrator (`ef584cf6937`),
+>   verification pill + proposed_fix badge (`ee3afa36a70`). Plus
+>   orchestrator robustness fixes (`a77e2500a60`, `bfd0d68473b`,
+>   `ed8e97b6007`, `1776bc894ab`, `b376a58f47b`).
+> - **11c** — verify/accept/reject operator buttons + `verify` job
+>   type (`775cb2a8e6b`); button-wiring fix (`328f00e3f80`); env
+>   picker for Verify (`b2143aab447`). Verify is the gate — Accept
+>   stays disabled until verified.
+> - **11d** — delivery module (`dportsv3/delivery/`): schema +
+>   `ReviewProvider` Protocol + `LocalPatchProvider` (`9ae293c6b7d`,
+>   11d-1); Accept-with-delivery + UI card (`39a29072c7b`, 11d-2);
+>   `GitHubProvider` over httpx + local-clone git driver
+>   (`7b2f42f76cd`, 11d-3); operator manual status update
+>   (`3b1aa957f9f`, 11d-5); plus config + push-auth fixes
+>   (`9f62a8cdc8f`, `4502ac61e63`, `54c286d5ef7`, `5bd1a86e9d6`,
+>   `aaa1baa4310`, `61cec76d2d5`).
+> - **11d-4** (GitLab + Gitea providers) — **deferred**, not yet
+>   built. `_http.py` + `_git.py` are provider-agnostic, so the
+>   marginal cost is small when a non-GitHub target appears.
+
+> *Original plan body below; preserved as the design record.*
 
 The plan's earlier phases stop at "agent says `rebuild_ok=true` and writes
 `analysis/changes.diff`". Everything past that — the operator extracting
@@ -4040,7 +4069,19 @@ could grow into if the conditions warrant.
 
 ---
 
-### Step 28 — failed-bundle operator action matrix — pending
+### Step 28 — failed-bundle operator action matrix — shipped (28a–e)
+
+> **Status (2026-05-28): shipped.** All five slices landed:
+> 28a take-over + origin skip flag (`883e40014c9`); 28b discard
+> endpoint + button (`df9a7c99d7c`); 28a/28b review-pass
+> (`c0bf126dae5`); 28c retry-with-context on failure bundles
+> (`fd8149a8633`); 28d terminal-state reopen override
+> (`10cdc1abe73`); 28e operator release of `operator_owned` +
+> Verify on manual fixes (`d33d81463d8`). Convert-dispatcher
+> noise + Accept-on-`operator_owned`-verified fix (`86cbaa23ec5`).
+> Skip-check enforcement on patch/convert dispatch (`19ad6291076`).
+
+> *Original plan body below; preserved as the design record.*
 
 Closes a long-standing asymmetry in the operator surface:
 
@@ -4329,7 +4370,18 @@ gap costs.
 
 ---
 
-### Step 29 — context-aware re-triage + operator-context history — pending
+### Step 29 — context-aware re-triage + operator-context history — shipped (29a–e + A1)
+
+> **Status (2026-05-28): shipped.** 29a triage-consults-context
+> prompt (`629f658ccf4`); 29b append-only `user_context_history`
+> table (`b2aa33850ba`); 29c operator-context history in
+> `manual_handoff.md` (`97b6d0812f3`); 29d prior patch artifacts in
+> triage payload (`fcc4657e240`); 29e full history rendering in
+> triage + patch payloads (`c3c3ee0f91f`); 29-A1 MANUAL → ASSIST
+> promotion under fresh operator context (`73138ce7ee8`). Manual
+> queue visibility fixes alongside (`b26744d922f`, `83e4e8c65f6`).
+
+> *Original plan body below; preserved as the design record.*
 
 Closes a UX dead-end surfaced by smoke-testing the
 `databases/redis` re-escalation loop:
@@ -4572,100 +4624,146 @@ Round 1+2 visible.
 
 ---
 
-## Current priority order (as of 2026-05-24)
+### Step 30 — per-bundle branch isolation in the dev-env — shipped
+
+> **Status (2026-05-28): shipped.**
+
+Convert jobs land `overlay.dops` by committing it into the dev-env's
+`/work/DeltaPorts` git so the auto-enqueued patch job doesn't trip the
+dirty-tree preflight. Those commits accumulated on the env's working
+branch across bundles, so `changes.diff` (computed relative to the
+latest commit) drifted: a later bundle's diff silently included an
+earlier bundle's committed overlay, and delivery on a converted port
+carried edits it never made.
+
+Step 30 gives every bundle its own throwaway git branch in the dev-env
+so no job's commits leak into the next.
+
+- **Branch model.** `bundle/<bundle_id>` cut from the env's own base
+  branch (resolved via `git symbolic-ref refs/remotes/origin/HEAD`,
+  falling back to `master`; cached per env). Convert and patch jobs for
+  the same bundle share the branch. A new bundle id ⇒ a new branch.
+- **`changes.diff` is the single canonical artifact.** Computed
+  branch-vs-base via `git diff <base> -- <rel>` with an
+  `--intent-to-add` pass so newly-created files (the convert overlay)
+  show up. The short-lived `delivery.diff` sibling introduced in
+  slice 2 was retired in slice 5 — accept/verify/delivery all read
+  `changes.diff`.
+- **Per-job drop policy.** Patch is terminal → drop either way. Convert
+  success keeps the branch (the post-convert re-triage's patch job
+  reuses it); convert failure drops it (partial commits are useless,
+  next attempt starts from base). If re-triage routes to MANUAL with no
+  patch following, the branch persists until the env is rebuilt — the
+  explicit "stale branch out of scope" case.
+- **Verify runs on its own throwaway branch.** `bundle/<id>-verify`,
+  recreated from base via `git checkout -B` every run, replays
+  `changes.diff` on a clean base, then drops and restores the prior
+  ref. Decoupled from the patch/convert branch (which may already be
+  dropped) — `changes.diff` being complete is what makes this safe.
+
+Slices: per-bundle branch lifecycle (`d7cef088be1`, slice 1);
+`delivery.diff` artifact (`9c0d6848925`, slice 2, later retired);
+`_accept_delivery_step` reads it (`e8e46b58101`, slice 3);
+per-job branch cleanup at terminal job end (`5df287e3158`, slice 4,
+rebuilt from a periodic-sweep false start);
+`changes.diff` as single canonical diff (`3f2b6ff0540`, slice 5);
+dead intent_log path cleanup (`c3ccc0e9fa4`); verify on isolated
+branch (`51c4e52ef81`).
+
+The agent loop still never branches/commits/pushes at the git-remote
+level — these branches are dev-env-local scratch, never pushed.
+
+#### Adjacent fixes shipped alongside Step 30
+
+- **Q1 — `make clean` on reset.** `reset_port` now also wipes the
+  per-origin WRKDIR and invalidates the materialize/WRKSRC caches
+  (`a3c7b2ca44c`); the dev-env `apply-and-build` post-build cleanup
+  gained the matching `make clean` for parity (`dea2c695149`).
+- **Q2 — STATUS → `overlay.dops` port-type integration.** Convert now
+  reads the legacy `STATUS` port type (mask/block/normal) and surfaces
+  it as an `## Expected port type` payload section, with a safety guard
+  that refuses to remove `STATUS` if the resulting `.dops` type doesn't
+  match (`35a94a49538`).
+- **Config sample/local split.** `config/agentic-policy.json` →
+  `config/agentic-policy.json.sample`; the live copy is gitignored.
+  Loaders prefer the local copy and fall back to `.sample` so a fresh
+  checkout works unconfigured (`6f4ef38f3a2`).
+
+#### Doc-debt left behind (cosmetic, not action-blocking)
+
+A handful of comments still reference the retired `delivery.diff` as a
+live artifact (`runner.py:2332`/`3263`/`4357`, `worker.py:658`,
+`steps.py:957`). The code is correct; only the comments are stale.
+Fold into Step 24's cleanup pass.
+
+---
+
+## Current priority order (as of 2026-05-28)
 
 Replaces every "Suggested updated order" line scattered through the
 post-implementation sections.
 
 Shipped (no work needed):
 
-- **1–10, 11a, 11b, 20** (per-step status above).
-- **11b** shipped 2026-05-24/25 as four slices: dev-env
-  apply-and-build primitive (`6800f9c5216`), bundle verification
-  endpoint + columns (`1454a55ca11`), verify-fix orchestrator
-  (`ef584cf6937`), UI pill + proposed_fix badge (`ee3afa36a70`).
-  The verify-fix Verify button is folded into 11c (see revised
-  scope there).
-- **11.0** (out-of-plan) — empty-`changes.diff` bug. Fixed
-  `2d9de6c4edc`. Will be subsumed by 25e when that lands; not
-  rolled back.
+- **Phase 4: 1–8** (per the Status table at the top).
+- **1–10, 11a–d, 19, 20, 27, 28, 29, 30** (per-step status above).
+  The entire operator-facing loop — verify/accept/reject (11c),
+  delivery to GitHub (11d), failed-bundle actions (28),
+  context-aware re-triage (29), and per-bundle branch isolation
+  (30) — is shipped. The 2026-05-24 "broken on both sides"
+  rationale no longer holds; both the success and failure operator
+  surfaces exist.
+- **11b** four slices: `6800f9c5216`, `1454a55ca11`, `ef584cf6937`,
+  `ee3afa36a70`.
+- **11.0** (out-of-plan) — empty-`changes.diff` bug, fixed
+  `2d9de6c4edc`. Subsumed by Step 30's canonical-diff rework.
 - **Step 20 post-shipment fixes** (`5369db9fd4e`, `ccab8ebad88`,
-  `300b7b1e96a`) — convert-loop break + circuit breaker, overlay
-  assessment unification (host/chroot drift gone), bundle-target
-  propagation (token cost card renders).
-- **Step 27** — unified agent playbook library, all sub-steps
-  (27a-g) shipped 2026-05-26. Catalog of 24 entries across
-  `error-*` (4), `intent-*` (7), `convert-*` (2), `toolchain-*`
-  (11). Subsumed Step 19 entirely and Step 14's KEDB-specific
-  portions. See the Step 27 section for the commit chain.
-- **Step 19** — fully shipped via Step 27f (`c7e1c865298`):
-  `detect_toolchains()` plus 11 toolchain markdown entries.
+  `300b7b1e96a`).
+- **Step 27** — unified playbook library, 27a–g, 2026-05-26.
+  Subsumed Step 19 and Step 14's KEDB portions.
+- **Step 19** — shipped via Step 27f (`c7e1c865298`).
 
 Pending, in recommended order:
 
-1. **11c** — verify/accept/reject buttons in tracker. Revised after
-   11b shipped: now includes the Verify button + the new `verify`
-   job type that lets the runner call `run_verify_fix` in-process.
-   Verify is the gate (Accept disabled until verified).
-2. **29** — context-aware re-triage + operator-context history.
-   Closes the dead-end where the operator's `/retry`-with-context
-   reproduces the same classification and re-escalates to
-   MANUAL, and where `manual_handoff.md` doesn't surface what
-   the operator said. Three slices (29a triage prompt, 29b
-   history table, 29c handoff rendering) are independently
-   shippable. Sequenced ahead of 28's remaining slices because
-   it makes the existing 28c `/retry` button actually
-   *do* something on MANUAL-tier classifications — without 29
-   the button is a UX trap.
-3. **28 (28a–c first)** — failed-bundle operator action matrix.
-   Mirror of 11c on the failure side: Take over / Discard /
-   Retry with context, plus the per-`(target, origin)` skip
-   flag. Closes the operator-surface asymmetry where success
-   bundles get three buttons (11c) and failure bundles get
-   nothing — today a budget-exhausted bundle has no actionable
-   surface at all. Reuses 11c's UI infra and lifecycle plumbing
-   so the marginal cost after 11c lands is small. Sequenced
-   here, not after 11c specifically, because the
-   "operationally-invisible failure bundle" problem is hitting
-   the loop now and the 28a slice (take-over + skip flag) is
-   independently shippable.
-4. **25** — edit-intent DSL. Architectural; design (25a) first.
-   Can be developed in parallel with 11d once 25a is approved.
-5. **11d** — push to code-hosting providers. Closes the round
-   trip; gated on operator readiness.
-6. **26 (items 1–4 first)** — lifecycle hardening: lineage +
+1. **11d-4** — GitLab + Gitea delivery providers. The only
+   unshipped slice of an otherwise-complete Step 11. Deferred, not
+   blocking: `_http.py` + `_git.py` are provider-agnostic, so this
+   is small when a non-GitHub target actually appears. Do it
+   on-demand, not speculatively.
+2. **26 (items 1–4 first)** — lifecycle hardening: lineage +
    attempt counter, `TRANSIENT_FAIL` edge, per-state timeout,
-   `originating_bundle_id` for resolution propagation. Three
-   incidents this week traced to seam-level bugs the wall-clock
-   circuit breaker only papered over. Items 5–9 of Step 26 are
-   pure FSM cleanups and can interleave whenever.
-7. **24** — prompts/quickref consolidation. Cheap, no behavior
-   change. Before 25d's prompt rewrite so it isn't against a
-   messy baseline. (Step 27 already trimmed prompts.py
-   substantially; what remains for 24 is the structural
-   `dops_quickref.md` audit against the engine source-of-truth.)
-8. **16** — UX review (dashboard live-refresh + the rest).
-9. **23 → 22** — execution layer then steps.py refactor. 23 first
+   `originating_bundle_id` for resolution propagation. Now the
+   highest-value pending work: the operator loop is feature-complete
+   but its FSM seams are where the recurring bugs live. Items 5–9
+   are pure FSM cleanups and can interleave whenever.
+3. **25** — edit-intent DSL. Architectural; design (25a) first.
+   The structural answer to the empty-diff / edit-surface class of
+   bug. Can develop in parallel with anything once 25a is approved.
+4. **24** — prompts/quickref consolidation. Cheap, no behavior
+   change. Folds in the stale-`delivery.diff`-comment cleanup noted
+   under Step 30. Before 25d's prompt rewrite so it isn't against a
+   messy baseline. What remains is the structural `dops_quickref.md`
+   audit against the engine source-of-truth.
+5. **16** — UX review (dashboard live-refresh + the rest).
+6. **23 → 22** — execution layer then steps.py refactor. 23 first
    so 22's phase-helper extraction lands against the consolidated
    `chroot_exec`.
-10. **21** — DB layer consolidation. Enables 17/18 to plug into a
-    clean write surface. Also the natural landing site for Step 26
-    items 1 + 4 (the column adds).
-11. **12 → 13 → 14 (system-prompt decomposition only) → 15** —
-    abstraction work. 12 unblocks 13/14/15. Step 14's KEDB-
-    specific metadata work shipped via Step 27b; what remains is
-    the system-prompt decomposition (`PATCH_SYSTEM_SECTIONS`,
-    per-section telemetry).
-12. **17 → 18** — remote runners + security. Only load-bearing
-    when a second builder appears.
+7. **21** — DB layer consolidation. Enables 17/18 to plug into a
+   clean write surface. Natural landing site for Step 26 items 1+4.
+8. **12 → 13 → 14 (system-prompt decomposition only) → 15** —
+   abstraction work. 12 unblocks 13/14/15. Step 14's KEDB metadata
+   work shipped via Step 27b; what remains is system-prompt
+   decomposition (`PATCH_SYSTEM_SECTIONS`, per-section telemetry).
+9. **17 → 18** — remote runners + security. Only load-bearing when
+   a second builder appears.
 
-Rationale for the head of the order: the loop's first-class
-deliverable is "operator can land an agent-produced fix." Today
-that path is broken on both sides — success bundles have no
-verify/accept buttons (11c), failure bundles have no operator
-action surface at all (28). 11c and 28 together close the
-operator's primary interaction loop. Step 25 ranks early
-because it's the architectural answer to the empty-diff/
-edit-surface class of bug. Step 26 items 1–4 rank above 24/16
-because three lifecycle bugs in one week is a warning, not a
-coincidence.
+Rationale for the head of the order: as of 2026-05-28 the operator's
+primary interaction loop is closed — both success and failure bundles
+have full action surfaces, delivery reaches GitHub, and per-bundle
+branches stopped diffs from leaking across jobs. The remaining work is
+no longer about closing the loop but about hardening it (26),
+restructuring the edit surface (25), and paying down abstraction debt
+(24/21/22/23/12–15). Step 26 leads because the loop is now wide enough
+that seam-level FSM bugs are the dominant failure mode; everything
+below it is cleanup that can wait for a real trigger (a second builder
+for 17/18, a non-GitHub target for 11d-4).
