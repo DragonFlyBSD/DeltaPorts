@@ -423,10 +423,22 @@ def apply_and_build(
     # any more.
     def _post_build_cleanup() -> None:
         rel = f"ports/{origin}"
+        # `git apply --3way` implies --index, so the applied diff
+        # (including brand-new files like overlay.dops) is STAGED.
+        # `git checkout HEAD -- <rel>` doesn't unstage a new file
+        # (it isn't in HEAD) and `git clean` skips anything in the
+        # index — so a plain checkout+clean left the staged new file
+        # behind, and the verify-branch drop's `git checkout <base>`
+        # then carried it onto the base branch. `git reset --hard`
+        # unstages it (reset never deletes untracked files, so the
+        # new file becomes untracked) and the scoped clean removes
+        # it. Safe to reset the whole tree: apply-and-build's git
+        # tree only ever holds our applied diff (reapply composes
+        # into $DPORTS_COMPOSE_ROOT, not the git tree).
         cleanup = runner.run(
             ["/bin/sh", "-c",
              f"cd /work/DeltaPorts && "
-             f"git checkout HEAD -- {shlex.quote(rel)} && "
+             f"git reset --hard -q HEAD && "
              f"git clean -fd -- {shlex.quote(rel)}", "_"],
             env=env, capture_output=True,
         )
@@ -534,8 +546,22 @@ def apply_and_build(
         log_host = writable_root / log_rel
         log_host.parent.mkdir(parents=True, exist_ok=True)
         log_chroot = f"/{log_rel}"
+        # Suppress the dsynth failure hooks for the verify build.
+        # The dev-env has the operator hooks installed; without this
+        # a failed verify would fire hook_pkg_failure, upload a new
+        # bundle, and the runner would enqueue another triage for an
+        # origin the loop is already handling. The patch agent guards
+        # its own dsynth_build the same way (worker.py); the sentinel
+        # is a file (not an env var) because dsynth strips env vars
+        # before invoking hooks. The `trap … EXIT` removes it even
+        # when dsynth exits non-zero — the verify-failure case. The
+        # guard lives here in the verify primitive, NOT in the
+        # dtest/dbuild helper, so an operator running dbuild by hand
+        # still feeds the loop on a genuine failure.
         build_proc = runner.run(
             ["/bin/sh", "-c",
+             "flag=/work/.dports-agent-hooks-disabled; "
+             "trap 'rm -f \"$flag\"' EXIT; : > \"$flag\"; "
              f"cd /work/DeltaPorts && dtest {shlex.quote(origin)} "
              f"> {shlex.quote(log_chroot)} 2>&1", "_"],
             env=env, capture_output=False,

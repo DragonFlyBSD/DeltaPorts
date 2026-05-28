@@ -154,6 +154,11 @@ def test_no_diff_happy_path_returns_zero(fake_env, monkeypatch) -> None:
     dtest_argv = " ".join(fake_env.calls[1]["argv"])
     assert "reapply devel/foo" in reapply_argv
     assert "dtest devel/foo" in dtest_argv
+    # The verify build suppresses the dsynth failure hooks (sentinel
+    # file + trap) so a failed verify doesn't upload a new bundle and
+    # re-trigger triage for an origin the loop is already handling.
+    assert ".dports-agent-hooks-disabled" in dtest_argv
+    assert "trap" in dtest_argv and "EXIT" in dtest_argv
 
 
 def test_diff_path_is_staged_into_writable_and_applied(fake_env, monkeypatch, tmp_path) -> None:
@@ -332,10 +337,10 @@ def test_intent_log_path_runs_substrate_reset_then_make_clean(
 
     shell_calls = _post_build_calls(fake_env.calls)
     # Find the cleanup commands by content. The substrate reset
-    # carries `git checkout HEAD`; the WRKDIR clean carries
+    # carries `git reset --hard`; the WRKDIR clean carries
     # `make` + `WRKDIRPREFIX`.
     substrate = [
-        c[2] for c in shell_calls if "git checkout HEAD" in c[2]
+        c[2] for c in shell_calls if "git reset --hard" in c[2]
     ]
     wrkdir = [
         c[2] for c in shell_calls
@@ -348,7 +353,7 @@ def test_intent_log_path_runs_substrate_reset_then_make_clean(
     assert (
         fake_env.calls.index(
             next(c for c in fake_env.calls
-                 if "git checkout HEAD" in (c["argv"][2] if len(c["argv"]) > 2 else ""))
+                 if "git reset --hard" in (c["argv"][2] if len(c["argv"]) > 2 else ""))
         )
         < fake_env.calls.index(
             next(c for c in fake_env.calls
@@ -373,7 +378,7 @@ def test_diff_path_runs_post_build_cleanup(
     apply_and_build(fake_env.env_name, "devel/foo", diff_path=str(diff))
 
     shell_calls = _post_build_calls(fake_env.calls)
-    assert any("git checkout HEAD" in c[2] for c in shell_calls)
+    assert any("git reset --hard" in c[2] for c in shell_calls)
     assert any(
         "WRKDIRPREFIX=/work/obj" in c[2] and "clean" in c[2]
         for c in shell_calls
@@ -409,7 +414,7 @@ def test_make_clean_skipped_when_substrate_reset_fails(
     )
 
     shell_calls = _post_build_calls(fake_env.calls)
-    assert any("git checkout HEAD" in c[2] for c in shell_calls)
+    assert any("git reset --hard" in c[2] for c in shell_calls)
     # WRKDIR wipe must not fire when substrate reset failed.
     assert not any(
         "WRKDIRPREFIX=/work/obj" in c[2] and "clean" in c[2]
