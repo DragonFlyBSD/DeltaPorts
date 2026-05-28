@@ -104,6 +104,36 @@ def _render_dops(origin: str, ops: list[str]) -> str:
     return "\n".join(header + ops + [""])
 
 
+def _drop_legacy_status(port_path: Path) -> None:
+    """Remove ``STATUS`` after a successful deterministic conversion.
+
+    The legacy ``STATUS`` file is part of the compat-overlay artifact
+    set (alongside ``Makefile.DragonFly``); once a port carries a valid
+    ``overlay.dops`` it's dead metadata that, if left behind, keeps the
+    port looking half-migrated. Mirrors the LLM convert path, which
+    drops ``STATUS`` via the handler's ``files_removed`` cleanup.
+
+    Guard: the deterministic translator always renders ``type port``
+    (see :func:`_render_dops`). If ``STATUS`` declares a non-default
+    role (``MASK``/``DPORT``/``LOCK``), deleting it would silently
+    switch the port's behavior to the rendered ``port`` — so leave it
+    in place. (In that case the rendered ``type port`` is itself wrong;
+    the retained ``STATUS`` surfaces the half-migration for review
+    rather than hiding it.)
+    """
+    status_path = port_path / "STATUS"
+    if not status_path.is_file():
+        return
+    try:
+        first = status_path.read_text().splitlines()[0].strip()
+    except (OSError, IndexError):
+        first = ""
+    token = first.split()[0].upper() if first else ""
+    if token in {"MASK", "DPORT", "LOCK"}:
+        return
+    status_path.unlink()
+
+
 def convert_record(
     record: dict[str, Any],
     *,
@@ -173,6 +203,8 @@ def convert_record(
         # valid overlay.dops is the migrated form — drop the source.
         if not dry_run and mk_path.exists():
             mk_path.unlink()
+        if not dry_run:
+            _drop_legacy_status(port_path)
         return result
 
     if not mk_path.exists():
@@ -221,6 +253,7 @@ def convert_record(
             dops_path.write_text(source)
             if mk_path.exists():
                 mk_path.unlink()
+            _drop_legacy_status(port_path)
     else:
         result["status"] = "failed"
 

@@ -113,6 +113,57 @@ def test_converter_dry_run_leaves_makefile_alone(tmp_path: Path) -> None:
     assert not (repo / "ports" / "devel" / "tool" / "overlay.dops").exists()
 
 
+def test_converter_drops_default_status(tmp_path: Path) -> None:
+    """A `PORT` (default-type) STATUS is part of the dead compat-overlay
+    set once overlay.dops exists; the deterministic converter must drop
+    it, matching the LLM path's files_removed cleanup. Without this the
+    port looks half-migrated (overlay.dops live, STATUS orphaned)."""
+    repo = _make_repo(tmp_path)
+    port = repo / "ports" / "devel" / "tool"
+    (port / "STATUS").write_text("PORT\nLast success: 1.0\n")
+    classified = classify_inventory(scan_inventory(repo))
+    record = next(row for row in classified if row["origin"] == "devel/tool")
+
+    result = convert_record(record, repo_root=repo, dry_run=False)
+
+    assert result["status"] == "converted"
+    assert (port / "overlay.dops").exists()
+    assert not (port / "Makefile.DragonFly").exists()
+    assert not (port / "STATUS").exists()
+
+
+def test_converter_keeps_nondefault_status(tmp_path: Path) -> None:
+    """The deterministic translator always renders `type port`. If
+    STATUS declares MASK/DPORT/LOCK, deleting it would silently switch
+    the port's role to `port`, so STATUS is retained — the surviving
+    file surfaces the (wrong) `type port` half-migration for review."""
+    repo = _make_repo(tmp_path)
+    port = repo / "ports" / "devel" / "tool"
+    (port / "STATUS").write_text("MASK\nLast success: 1.0\n")
+    classified = classify_inventory(scan_inventory(repo))
+    record = next(row for row in classified if row["origin"] == "devel/tool")
+
+    result = convert_record(record, repo_root=repo, dry_run=False)
+
+    assert result["status"] == "converted"
+    assert (port / "overlay.dops").exists()
+    assert not (port / "Makefile.DragonFly").exists()
+    assert (port / "STATUS").exists()
+
+
+def test_converter_dry_run_leaves_status_alone(tmp_path: Path) -> None:
+    repo = _make_repo(tmp_path)
+    port = repo / "ports" / "devel" / "tool"
+    (port / "STATUS").write_text("PORT\n")
+    classified = classify_inventory(scan_inventory(repo))
+    record = next(row for row in classified if row["origin"] == "devel/tool")
+
+    result = convert_record(record, repo_root=repo, dry_run=True)
+
+    assert result["status"] == "converted"
+    assert (port / "STATUS").exists()
+
+
 def test_batch_policy_and_progress_reports(tmp_path: Path) -> None:
     repo = _make_repo(tmp_path)
     classified = classify_inventory(scan_inventory(repo))
