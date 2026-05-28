@@ -52,6 +52,12 @@ labels = ["agentic-fix", "needs-review"]
 #   {target}         — quarter target (@2026Q2)
 branch_template = "agentic/{origin_safe}-{bundle_short}"
 
+# Commit author/committer identity for the delivered fix (also used
+# for the Signed-off-by trailer). Applied per-invocation via
+# `git -c`, never written to the clone's git config. Defaults shown.
+committer_name = "Fred [bot]"
+committer_email = "github@dragonflybsd.org"
+
 # Required for type="local-patch" only: directory where patches
 # get written. Ignored by network providers.
 # outbox = "/var/spool/dports-delivery"

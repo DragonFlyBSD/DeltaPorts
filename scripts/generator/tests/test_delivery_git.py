@@ -242,6 +242,34 @@ def test_commit_diff_nothing_to_commit_refuses(clone):
         commit_diff(clone, title="t", body="b")
 
 
+def test_commit_diff_uses_configured_identity(clone):
+    """committer_name/email override the clone's git identity for
+    this commit only (and feed the Signed-off-by trailer), without
+    touching the clone's git config."""
+    prepare_clean_branch(
+        clone, base_branch="master", branch_name="feature/ident",
+    )
+    apply_diff(clone, _SAMPLE_DIFF)
+    commit_diff(
+        clone, title="t: fix x", body="b", signoff=True,
+        committer_name="Fred [bot]",
+        committer_email="github@dragonflybsd.org",
+    )
+    out = subprocess.run(
+        ["git", "log", "-1", "--format=%an <%ae>%n%cn <%ce>%n%B"],
+        cwd=str(clone), capture_output=True, text=True,
+    )
+    assert "Fred [bot] <github@dragonflybsd.org>" in out.stdout
+    assert "Signed-off-by: Fred [bot] <github@dragonflybsd.org>" in out.stdout
+    # The clone's persisted config is untouched (still the fixture's
+    # "t" identity).
+    cfg = subprocess.run(
+        ["git", "config", "user.name"],
+        cwd=str(clone), capture_output=True, text=True,
+    )
+    assert cfg.stdout.strip() == "t"
+
+
 def test_commit_diff_without_signoff(clone):
     prepare_clean_branch(
         clone, base_branch="master", branch_name="feature/no-s",
@@ -288,6 +316,51 @@ def test_subprocess_timeout_surfaces_as_git_error(clone, monkeypatch):
     monkeypatch.setattr(sp, "run", _fake_run)
     with pytest.raises(gitmod.GitError, match="timed out"):
         gitmod._run(["git", "status"], cwd=clone)
+
+
+def test_push_branch_injects_auth_via_env_not_argv(clone, monkeypatch):
+    """The token must reach git as an HTTP auth header (origin is an
+    anonymous HTTPS URL), but never via argv — argv shows up in `ps`
+    and in the timeout error message. It's passed through GIT_CONFIG_*
+    env instead."""
+    import base64
+    from dportsv3.delivery import _git as gitmod
+
+    captured: dict = {}
+
+    def _fake_run(args, *, cwd, env_extra=None, **kw):
+        captured["args"] = list(args)
+        captured["env_extra"] = env_extra
+        return subprocess.CompletedProcess(args, 0, "", "")
+
+    monkeypatch.setattr(gitmod, "_run", _fake_run)
+    push_branch(clone, branch_name="feature/x", token="secret-tok-123")
+
+    # Token is nowhere in argv.
+    assert all("secret-tok-123" not in a for a in captured["args"])
+    # Token rides in the GIT_CONFIG_* env, base64'd as Basic auth.
+    env = captured["env_extra"]
+    assert env["GIT_CONFIG_COUNT"] == "1"
+    assert env["GIT_CONFIG_KEY_0"] == "http.extraHeader"
+    header = env["GIT_CONFIG_VALUE_0"]
+    assert header.startswith("Authorization: Basic ")
+    decoded = base64.b64decode(header.split("Basic ", 1)[1]).decode()
+    assert decoded == "x-access-token:secret-tok-123"
+
+
+def test_push_branch_no_token_sends_no_auth_env(clone, monkeypatch):
+    """Without a token, no auth env is injected (push stays
+    anonymous — matches pre-fix behavior for the local-remote tests)."""
+    from dportsv3.delivery import _git as gitmod
+    captured: dict = {}
+
+    def _fake_run(args, *, cwd, env_extra=None, **kw):
+        captured["env_extra"] = env_extra
+        return subprocess.CompletedProcess(args, 0, "", "")
+
+    monkeypatch.setattr(gitmod, "_run", _fake_run)
+    push_branch(clone, branch_name="feature/x")
+    assert captured["env_extra"] is None
 
 
 def test_push_branch_failure_to_invalid_remote(clone, tmp_path):

@@ -96,6 +96,7 @@ def _run(
     stdin_text: str | None = None,
     check: bool = False,
     timeout: float | None = None,
+    env_extra: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess:
     """Thin wrapper around subprocess.run with capture + UTF-8 text.
 
@@ -103,6 +104,11 @@ def _run(
     raise structured exceptions rather than letting CalledProcessError
     propagate. Set ``check=True`` only for invariants that should
     never fail given the prior validation steps.
+
+    ``env_extra`` is merged onto the inherited environment. Used to
+    pass secrets (e.g. an auth header via ``GIT_CONFIG_*``) without
+    putting them in ``args`` — argv is visible in ``ps`` and leaks
+    into the timeout message below.
 
     A timeout (default ``$DPORTSV3_GIT_TIMEOUT`` or 60s) bounds the
     subprocess so a hung remote can't block the request thread.
@@ -113,12 +119,14 @@ def _run(
     effective_timeout = (
         timeout if timeout is not None else _GIT_DEFAULT_TIMEOUT
     )
+    run_env = {**os.environ, **env_extra} if env_extra else None
     try:
         return subprocess.run(
             args, cwd=str(cwd),
             capture_output=True, text=True,
             input=stdin_text, check=check,
             timeout=effective_timeout,
+            env=run_env,
         )
     except subprocess.TimeoutExpired as exc:
         raise GitError(
@@ -260,6 +268,8 @@ def commit_diff(
     title: str,
     body: str,
     signoff: bool = True,
+    committer_name: str | None = None,
+    committer_email: str | None = None,
 ) -> None:
     """Commit the staged changes (already in the index after
     ``apply_diff``, which uses ``--index``) with the templated
@@ -268,6 +278,14 @@ def commit_diff(
     Refuses if there's nothing to commit (would produce an empty
     commit, which the upstream review platform would reject). The
     message is built as ``<title>\\n\\n<body>``.
+
+    ``committer_name`` / ``committer_email`` set the commit identity
+    (and the Signed-off-by trailer) via ``-c user.name`` /
+    ``-c user.email`` for this invocation only — never mutating the
+    operator clone's git config. When unset, git falls back to the
+    clone's configured identity (which may be absent, producing an
+    opaque "Please tell me who you are" failure — callers should
+    pass the delivery config's committer fields).
 
     Pre-11d-3-fix this ran ``git add -u`` to stage tracked-file
     modifications, but that pattern silently dropped new files
@@ -281,7 +299,12 @@ def commit_diff(
             "nothing to commit — apply_diff produced no changes "
             "(diff may have already been applied or be empty)"
         )
-    args = ["git", "commit"]
+    args = ["git"]
+    if committer_name:
+        args += ["-c", f"user.name={committer_name}"]
+    if committer_email:
+        args += ["-c", f"user.email={committer_email}"]
+    args.append("commit")
     if signoff:
         args.append("-s")
     args += ["-m", title, "-m", body]
@@ -306,11 +329,41 @@ def _is_dirty_after_add(clone_dir: Path) -> bool:
     return p.returncode != 0
 
 
+def _auth_env(token: str | None) -> dict[str, str] | None:
+    """Build a ``GIT_CONFIG_*`` env that injects an HTTP auth header
+    for the push, without putting the token in argv or persisting it
+    to ``.git/config``.
+
+    The origin remote is an anonymous HTTPS URL (no embedded creds),
+    so pushes go out unauthenticated and GitHub rejects them with
+    "No anonymous write access". We add ``http.extraHeader`` for the
+    one invocation. GitHub accepts a PAT / app token via HTTP Basic
+    where the username is ``x-access-token`` and the password is the
+    token — the same scheme actions/checkout uses.
+
+    Returns None when no token is configured (push stays anonymous —
+    the caller's create_review_request only reaches here when the
+    provider has a token, but keep the no-token path harmless).
+    """
+    if not token:
+        return None
+    import base64  # noqa: PLC0415
+    cred = base64.b64encode(
+        f"x-access-token:{token}".encode()
+    ).decode("ascii")
+    return {
+        "GIT_CONFIG_COUNT": "1",
+        "GIT_CONFIG_KEY_0": "http.extraHeader",
+        "GIT_CONFIG_VALUE_0": f"Authorization: Basic {cred}",
+    }
+
+
 def push_branch(
     clone_dir: Path,
     *,
     branch_name: str,
     remote: str = "origin",
+    token: str | None = None,
 ) -> None:
     """``git push --force-with-lease`` the feature branch.
 
@@ -318,12 +371,17 @@ def push_branch(
     workflow update an existing branch safely: if the operator
     pushed to the same branch from elsewhere meanwhile, the lease
     check fails and we don't clobber.
+
+    ``token`` authenticates the push to the upstream over HTTPS (the
+    origin remote carries no credentials). Injected via env, never
+    argv — see :func:`_auth_env`.
     """
     _assert_clone_dir(clone_dir)
     p = _run(
         ["git", "push", "--force-with-lease",
          "--set-upstream", remote, branch_name],
         cwd=clone_dir,
+        env_extra=_auth_env(token),
     )
     if p.returncode != 0:
         stderr = (p.stderr or "").strip()

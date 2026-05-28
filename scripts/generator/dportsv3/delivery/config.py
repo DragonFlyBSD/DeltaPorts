@@ -10,6 +10,8 @@ Schema (per the plan §11d):
     draft = true
     labels = ["agentic-fix", "needs-review"]
     branch_template = "agentic/{origin_safe}-{bundle_short}"
+    committer_name = "Fred [bot]"           # commit author/committer identity
+    committer_email = "github@dragonflybsd.org"
 
     [target."@2026Q2"]     # optional per-target override section
     base_branch = "2026Q2"
@@ -49,6 +51,8 @@ __all__ = [
 
 _KNOWN_PROVIDERS = frozenset({"github", "gitlab", "gitea", "local-patch"})
 _DEFAULT_BRANCH_TEMPLATE = "agentic/{origin_safe}-{bundle_short}"
+_DEFAULT_COMMITTER_NAME = "Fred [bot]"
+_DEFAULT_COMMITTER_EMAIL = "github@dragonflybsd.org"
 
 
 @dataclass(frozen=True)
@@ -70,6 +74,8 @@ class DeliveryConfig:
     token: str | None
     clone_dir: str | None
     outbox: str | None
+    committer_name: str = _DEFAULT_COMMITTER_NAME
+    committer_email: str = _DEFAULT_COMMITTER_EMAIL
     extras: dict[str, object] = field(default_factory=dict)
 
 
@@ -148,6 +154,14 @@ def load_delivery_config(
         )
     labels = tuple(str(x) for x in labels_val)
     branch_template = field_value("branch_template", _DEFAULT_BRANCH_TEMPLATE)
+    committer_name = str(
+        field_value("committer_name", _DEFAULT_COMMITTER_NAME)
+        or _DEFAULT_COMMITTER_NAME
+    )
+    committer_email = str(
+        field_value("committer_email", _DEFAULT_COMMITTER_EMAIL)
+        or _DEFAULT_COMMITTER_EMAIL
+    )
 
     # Token: env var first, then file fallback. Local-patch never
     # needs one.
@@ -189,7 +203,8 @@ def load_delivery_config(
     # implementation-specific knobs (e.g. gitea host) without
     # extending this dataclass for every variant.
     _known = {"type", "repo", "base_branch", "draft", "labels",
-              "branch_template", "clone_dir", "outbox"}
+              "branch_template", "clone_dir", "outbox",
+              "committer_name", "committer_email"}
     extras = {
         k: v for k, v in provider_block.items() if k not in _known
     }
@@ -207,6 +222,8 @@ def load_delivery_config(
         token=token,
         clone_dir=clone_dir,
         outbox=outbox,
+        committer_name=committer_name,
+        committer_email=committer_email,
         extras=extras,
     )
 

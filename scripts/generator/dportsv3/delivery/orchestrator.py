@@ -131,7 +131,11 @@ def build_provider(cfg: DeliveryConfig) -> ReviewProvider:
                 "GitHubProvider requires provider.repo in "
                 "delivery.toml (e.g. 'DragonFlyBSD/DeltaPorts')"
             )
-        return GitHubProvider(token=cfg.token, repo=cfg.repo)
+        return GitHubProvider(
+            token=cfg.token, repo=cfg.repo,
+            committer_name=cfg.committer_name,
+            committer_email=cfg.committer_email,
+        )
     raise DeliveryConfigError(
         f"provider type {cfg.provider_type!r} not wired yet — "
         f"11d-4 ships gitlab + gitea"
@@ -173,6 +177,39 @@ def format_branch(
         ) from exc
 
 
+def _diffstat(diff_text: str) -> str:
+    """Approximate ``git diff --stat`` from a unified diff string.
+
+    We don't have a git repo in hand at message-build time (the diff
+    is the canonical artifact), so this counts added/removed lines
+    and the changed-file list directly from the diff text. Hunk
+    headers and the ``+++``/``---`` file markers are excluded from
+    the +/- tally. Returns "" for an empty diff.
+    """
+    files: list[str] = []
+    insertions = deletions = 0
+    for line in diff_text.splitlines():
+        if line.startswith("diff --git "):
+            _, _, rest = line.partition(" b/")
+            if rest:
+                files.append(rest.strip())
+        elif line.startswith("+++ ") or line.startswith("--- "):
+            continue
+        elif line.startswith("+"):
+            insertions += 1
+        elif line.startswith("-"):
+            deletions += 1
+    if not files and not insertions and not deletions:
+        return ""
+    n = len(files)
+    header = (
+        f"{n} file{'s' if n != 1 else ''} changed, "
+        f"+{insertions}/-{deletions}"
+    )
+    file_lines = "\n".join(f"- `{f}`" for f in files)
+    return header + ("\n\n" + file_lines if file_lines else "")
+
+
 def format_commit_message(
     *,
     origin: str,
@@ -185,22 +222,41 @@ def format_commit_message(
     attempts: int | None,
     tokens: int | None,
     verified_at: str | None,
+    diff_text: str | None = None,
 ) -> tuple[str, str]:
-    """Build (title, body) per the plan's commit-message template
-    (§11d "Mechanism" step 5).
-    """
-    title = f"{origin}: fix dsynth build under {target}"
+    """Build (title, body) for the delivered PR.
 
-    lines: list[str] = []
-    if one_line_summary:
-        lines.append(one_line_summary.strip())
-        lines.append("")
-    if verified_at:
-        lines.append(
-            f"Verified by `dportsv3 dev-env verify-fix {bundle_id}` "
-            f"({verified_at})."
+    Title is a concise, upstream-facing one-liner — no internal
+    target jargon (the base branch already encodes the quarterly).
+    Body is sectioned markdown a reviewer can read top-to-bottom:
+    Summary → What changed (diffstat) → Verification → Provenance.
+    """
+    title = f"{origin}: fix build failure on DragonFly"
+
+    summary = (one_line_summary or "").strip()
+    if not summary:
+        summary = (
+            f"Automated fix for the dsynth build failure in "
+            f"`{origin}`"
+            + (f" on `{target}`." if target else ".")
         )
-    lines.append(f"Operator: {operator}")
+
+    sections: list[str] = [f"## Summary\n\n{summary}"]
+
+    if diff_text:
+        stat = _diffstat(diff_text)
+        if stat:
+            sections.append(f"## What changed\n\n{stat}")
+
+    verify_lines = [
+        "Built successfully in a DragonFly dev-env (dsynth)"
+        + (f" for target `{target}`." if target else ".")
+    ]
+    if verified_at:
+        verify_lines.append(f"Verified {verified_at}.")
+    sections.append("## Verification\n\n" + "\n".join(verify_lines))
+
+    prov = [f"- Operator: {operator}"]
     agent_parts = []
     if model:
         agent_parts.append(f"model={model}")
@@ -209,10 +265,12 @@ def format_commit_message(
     if tokens is not None:
         agent_parts.append(f"tokens={tokens}")
     if agent_parts:
-        lines.append("Agent: " + " ".join(agent_parts))
+        prov.append("- Agent: " + " ".join(agent_parts))
     if bundle_url:
-        lines.append(f"Bundle: {bundle_url}")
-    body = "\n".join(lines) + "\n"
+        prov.append(f"- Bundle: {bundle_url}")
+    sections.append("## Provenance\n\n" + "\n".join(prov))
+
+    body = "\n\n".join(sections) + "\n"
     return title, body
 
 
@@ -261,6 +319,7 @@ def deliver(
         one_line_summary=one_line_summary, operator=operator,
         model=model, attempts=attempts, tokens=tokens,
         verified_at=bundle.get("verification_at"),
+        diff_text=diff_text,
     )
     diff_sha256 = hashlib.sha256(diff_text.encode("utf-8")).hexdigest()
 

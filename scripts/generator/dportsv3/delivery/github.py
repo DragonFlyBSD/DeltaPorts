@@ -51,6 +51,8 @@ class GitHubProvider:
     repo: str  # "owner/name"
     name: Final[str] = "github"
     base_url: str = _API_BASE
+    committer_name: str = "Fred [bot]"
+    committer_email: str = "github@dragonflybsd.org"
     # Test seams — overridable so we don't actually push to GitHub
     # or run real git in unit tests.
     _http_client_factory: Any = field(default=None)
@@ -151,8 +153,12 @@ class GitHubProvider:
             branch_name=branch_name,
         )
         git.apply_diff(clone_dir, diff_text)
-        git.commit_diff(clone_dir, title=title, body=body, signoff=True)
-        git.push_branch(clone_dir, branch_name=branch_name)
+        git.commit_diff(
+            clone_dir, title=title, body=body, signoff=True,
+            committer_name=self.committer_name,
+            committer_email=self.committer_email,
+        )
+        git.push_branch(clone_dir, branch_name=branch_name, token=self.token)
 
         # Step 5: idempotency check — does an open PR already
         # exist for this head branch? `head` qualifier is
