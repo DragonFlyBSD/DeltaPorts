@@ -1,0 +1,6 @@
+port devel/gperf
+type port
+target @any
+reason "DragonFly needs <string.h> for strcmp/strncmp/strlen visibility in lib/getopt.c"
+
+# Upstream-source patch staged for bsd.port.mk do-patch
