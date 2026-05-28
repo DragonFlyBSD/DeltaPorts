@@ -1,0 +1,11 @@
+target @any
+port archivers/liblz4
+type port
+reason "auto-converted from Makefile.DragonFly"
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} 's|GNU FreeBSD|GNU FreeBSD DragonFly|' \
+		${WRKSRC}/Makefile \
+		${WRKSRC}/lib/Makefile \
+		${WRKSRC}/programs/Makefile
+MK1
