@@ -1112,29 +1112,39 @@ def create_app(db_path: str | Path) -> Any:
             or "operator"
         )
 
-        # Pull the per-attempt audit so we can include model /
-        # attempts / tokens in the commit message. Best-effort.
+        # Read artifact text best-effort for the PR body. triage.md
+        # supplies the Problem section (Root Cause / Evidence /
+        # classification); patch.md supplies the Fix rationale;
+        # patch_audit.json supplies model / attempts / tokens.
+        def _read_artifact_text(relpath: str) -> str | None:
+            ref = get_artifact_ref(write_conn, bundle_id, relpath)
+            if ref is None:
+                return None
+            path = _resolve_artifact_path(app.state.artifact_root, ref)
+            if path is None or not path.is_file():
+                return None
+            try:
+                return path.read_text()
+            except OSError:
+                return None
+
         model = attempts = tokens = None
-        one_line_summary = None
-        audit_ref = get_artifact_ref(
-            write_conn, bundle_id, "analysis/patch_audit.json",
-        )
-        if audit_ref is not None:
-            audit_path = _resolve_artifact_path(
-                app.state.artifact_root, audit_ref,
-            )
-            if audit_path is not None and audit_path.is_file():
-                try:
-                    import json as _json  # noqa: PLC0415
-                    audit_data = _json.loads(audit_path.read_text())
-                    model = audit_data.get("model")
-                    raw_attempts = audit_data.get("attempts")
-                    if isinstance(raw_attempts, list):
-                        attempts = len(raw_attempts)
-                    tu = audit_data.get("tokens_used") or {}
-                    tokens = tu.get("total") if isinstance(tu, dict) else None
-                except Exception:
-                    pass
+        audit_text = _read_artifact_text("analysis/patch_audit.json")
+        if audit_text:
+            try:
+                import json as _json  # noqa: PLC0415
+                audit_data = _json.loads(audit_text)
+                model = audit_data.get("model")
+                raw_attempts = audit_data.get("attempts")
+                if isinstance(raw_attempts, list):
+                    attempts = len(raw_attempts)
+                tu = audit_data.get("tokens_used") or {}
+                tokens = tu.get("total") if isinstance(tu, dict) else None
+            except Exception:
+                pass
+
+        triage_md = _read_artifact_text("analysis/triage.md")
+        patch_md = _read_artifact_text("analysis/patch.md")
 
         try:
             outcome: DeliveryOutcome = deliver(
@@ -1142,8 +1152,8 @@ def create_app(db_path: str | Path) -> Any:
                 diff_text=diff_text,
                 cfg=cfg,
                 operator=operator,
-                bundle_url=None,  # tracker URL not threaded yet
-                one_line_summary=one_line_summary,
+                triage_md=triage_md,
+                patch_md=patch_md,
                 model=model, attempts=attempts, tokens=tokens,
                 write_conn=write_conn,
             )
