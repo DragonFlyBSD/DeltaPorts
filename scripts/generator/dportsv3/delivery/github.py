@@ -145,84 +145,104 @@ class GitHubProvider:
             # Fall through: recorded row exists but no open PR
             # found on GitHub. Run the full pipeline.
 
-        # Steps 1-4: local git work.
+        # Steps 1-4: local git work. prepare_clean_branch stays
+        # OUTSIDE the try/finally: it asserts the clone is clean +
+        # on base before touching anything, so if it raises the
+        # clone was already in a bad state we didn't create — and
+        # restore_to_base (reset --hard) would destroy the operator's
+        # own uncommitted work. Once it succeeds, every subsequent
+        # step is our doing, so the finally restores base on any exit
+        # (success or failure) — otherwise a mid-pipeline failure
+        # (e.g. push auth error) leaves the clone wedged on the
+        # feature branch and the next Accept's clean-base precondition
+        # refuses.
         git = self._git()
         git.prepare_clean_branch(
             clone_dir,
             base_branch=base_branch,
             branch_name=branch_name,
         )
-        git.apply_diff(clone_dir, diff_text)
-        git.commit_diff(
-            clone_dir, title=title, body=body, signoff=True,
-            committer_name=self.committer_name,
-            committer_email=self.committer_email,
-        )
-        git.push_branch(clone_dir, branch_name=branch_name, token=self.token)
+        try:
+            git.apply_diff(clone_dir, diff_text)
+            git.commit_diff(
+                clone_dir, title=title, body=body, signoff=True,
+                committer_name=self.committer_name,
+                committer_email=self.committer_email,
+            )
+            git.push_branch(
+                clone_dir, branch_name=branch_name, token=self.token,
+            )
 
-        # Step 5: idempotency check — does an open PR already
-        # exist for this head branch? `head` qualifier is
-        # `owner:branch`.
-        existing = http.get(
-            f"/repos/{self._owner}/{self._repo_name}/pulls",
-            params={
-                "head": f"{self._owner}:{branch_name}",
-                "state": "open",
-            },
-        )
-        # GitHub returns a list. Empty → no existing PR. Non-empty
-        # → take the first (an open head should be unique to one
-        # PR; GitHub enforces this).
-        if isinstance(existing, list) and existing:
-            pr = existing[0]
-            pr_number = pr.get("number")
-            # PATCH the body so the operator sees up-to-date
-            # context on the existing PR.
-            updated = http.patch(
-                f"/repos/{self._owner}/{self._repo_name}/pulls/{pr_number}",
-                json={"body": body},
+            # Step 5: idempotency check — does an open PR already
+            # exist for this head branch? `head` qualifier is
+            # `owner:branch`.
+            existing = http.get(
+                f"/repos/{self._owner}/{self._repo_name}/pulls",
+                params={
+                    "head": f"{self._owner}:{branch_name}",
+                    "state": "open",
+                },
             )
-            url = (updated or pr).get("html_url") or pr.get("html_url")
-            self._apply_labels_best_effort(
-                http, pr_number, labels,
+            # GitHub returns a list. Empty → no existing PR. Non-empty
+            # → take the first (an open head should be unique to one
+            # PR; GitHub enforces this).
+            if isinstance(existing, list) and existing:
+                pr = existing[0]
+                pr_number = pr.get("number")
+                # PATCH the body so the operator sees up-to-date
+                # context on the existing PR.
+                updated = http.patch(
+                    f"/repos/{self._owner}/{self._repo_name}"
+                    f"/pulls/{pr_number}",
+                    json={"body": body},
+                )
+                url = (updated or pr).get("html_url") or pr.get("html_url")
+                self._apply_labels_best_effort(
+                    http, pr_number, labels,
+                )
+                return ReviewRequestResult(
+                    provider=self.name,
+                    provider_pr_id=str(pr_number),
+                    url=url,
+                    branch=branch_name,
+                    title=title,
+                    status="updated",
+                )
+
+            # Step 6: create fresh PR.
+            created = http.post(
+                f"/repos/{self._owner}/{self._repo_name}/pulls",
+                json={
+                    "title": title,
+                    "head": branch_name,
+                    "base": base_branch,
+                    "body": body,
+                    "draft": draft,
+                },
             )
+            pr_number = created.get("number")
+            url = created.get("html_url")
+            if pr_number is None:
+                raise DeliveryError(
+                    f"GitHub PR creation returned no number; body: "
+                    f"{str(created)[:300]}"
+                )
+            # Step 7: labels (best-effort).
+            self._apply_labels_best_effort(http, pr_number, labels)
             return ReviewRequestResult(
                 provider=self.name,
                 provider_pr_id=str(pr_number),
                 url=url,
                 branch=branch_name,
                 title=title,
-                status="updated",
+                status="created",
             )
-
-        # Step 6: create fresh PR.
-        created = http.post(
-            f"/repos/{self._owner}/{self._repo_name}/pulls",
-            json={
-                "title": title,
-                "head": branch_name,
-                "base": base_branch,
-                "body": body,
-                "draft": draft,
-            },
-        )
-        pr_number = created.get("number")
-        url = created.get("html_url")
-        if pr_number is None:
-            raise DeliveryError(
-                f"GitHub PR creation returned no number; body: "
-                f"{str(created)[:300]}"
+        finally:
+            git.restore_to_base(
+                clone_dir,
+                base_branch=base_branch,
+                scope_paths=git.changed_paths(diff_text),
             )
-        # Step 7: labels (best-effort).
-        self._apply_labels_best_effort(http, pr_number, labels)
-        return ReviewRequestResult(
-            provider=self.name,
-            provider_pr_id=str(pr_number),
-            url=url,
-            branch=branch_name,
-            title=title,
-            status="created",
-        )
 
     def _apply_labels_best_effort(
         self,

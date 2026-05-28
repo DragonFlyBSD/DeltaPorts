@@ -96,6 +96,14 @@ class _FakeGit:
     def push_branch(self, clone_dir, **kw):
         self._maybe_raise("push_branch")
 
+    def changed_paths(self, diff_text):
+        return []
+
+    def restore_to_base(self, clone_dir, **kw):
+        # Records the call but never raises — mirrors the real
+        # best-effort helper that runs in a finally.
+        self.calls.append("restore_to_base")
+
 
 def _make_provider(http=None, git=None):
     return GitHubProvider(
@@ -185,7 +193,7 @@ def test_create_path_happy(capsys):
     # Git pipeline ran in order.
     assert git.calls == [
         "prepare_clean_branch", "apply_diff",
-        "commit_diff", "push_branch",
+        "commit_diff", "push_branch", "restore_to_base",
     ]
 
     # HTTP sequence: GET existing → POST create → POST labels.
@@ -293,6 +301,9 @@ def test_git_apply_failure_propagates_without_http_call():
     with pytest.raises(DeliveryError, match="apply rejected"):
         provider.create_review_request(**_common_args())
     assert http.calls == []  # no PRs touched
+    # The clone is restored to base even though apply failed, so the
+    # next Accept isn't wedged on the feature branch.
+    assert "restore_to_base" in git.calls
 
 
 def test_git_push_failure_propagates_without_http_call():
@@ -305,6 +316,8 @@ def test_git_push_failure_propagates_without_http_call():
     with pytest.raises(DeliveryError, match="permission denied"):
         provider.create_review_request(**_common_args())
     assert http.calls == []
+    # Push auth failure (the real-world case) must still restore base.
+    assert "restore_to_base" in git.calls
 
 
 # ---------------------------------------------------------------------
@@ -395,7 +408,7 @@ def test_different_content_runs_full_pipeline():
     # being reachable.
     assert git.calls == [
         "prepare_clean_branch", "apply_diff",
-        "commit_diff", "push_branch",
+        "commit_diff", "push_branch", "restore_to_base",
     ]
 
 
@@ -417,7 +430,7 @@ def test_no_existing_sha_runs_full_pipeline():
     )
     assert git.calls == [
         "prepare_clean_branch", "apply_diff",
-        "commit_diff", "push_branch",
+        "commit_diff", "push_branch", "restore_to_base",
     ]
 
 
@@ -446,5 +459,5 @@ def test_short_circuit_falls_through_when_no_open_pr_found():
     assert result.status == "created"
     assert git.calls == [
         "prepare_clean_branch", "apply_diff",
-        "commit_diff", "push_branch",
+        "commit_diff", "push_branch", "restore_to_base",
     ]

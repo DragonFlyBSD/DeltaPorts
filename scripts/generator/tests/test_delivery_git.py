@@ -21,9 +21,11 @@ from dportsv3.delivery._git import (
     GitPushError,
     GitWrongBranch,
     apply_diff,
+    changed_paths,
     commit_diff,
     prepare_clean_branch,
     push_branch,
+    restore_to_base,
 )
 
 
@@ -378,3 +380,98 @@ def test_push_branch_failure_to_invalid_remote(clone, tmp_path):
     _sh(["git", "commit", "-qm", "x"], clone)
     with pytest.raises(GitPushError, match="push"):
         push_branch(clone, branch_name="broken-push")
+
+
+# ---------------------------------------------------------------------
+# changed_paths / restore_to_base
+# ---------------------------------------------------------------------
+
+
+def test_changed_paths_extracts_b_side():
+    diff = (
+        "diff --git a/devel/foo/Makefile b/devel/foo/Makefile\n"
+        "--- a/devel/foo/Makefile\n"
+        "+++ b/devel/foo/Makefile\n"
+        "@@ -1 +1 @@\n-x\n+y\n"
+        "diff --git a/devel/foo/files/patch-x b/devel/foo/files/patch-x\n"
+        "new file mode 100644\n"
+        "--- /dev/null\n"
+        "+++ b/devel/foo/files/patch-x\n"
+        "@@ -0,0 +1 @@\n+z\n"
+    )
+    paths = changed_paths(diff)
+    assert paths == [
+        "devel/foo/Makefile", "devel/foo/files/patch-x",
+    ]
+
+
+def test_restore_to_base_after_failed_push_returns_to_clean_base(clone):
+    """The real-world wedge: commit lands locally, push fails, clone
+    left on the feature branch. restore_to_base must put it back on
+    a clean master so the next Accept's precondition holds."""
+    prepare_clean_branch(
+        clone, base_branch="master", branch_name="agentic/x",
+    )
+    apply_diff(clone, _SAMPLE_DIFF)
+    commit_diff(clone, title="t", body="b")
+    # Simulate push failure: we just don't push. Clone is now on
+    # agentic/x with a commit.
+    on_branch = subprocess.run(
+        ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+        cwd=str(clone), capture_output=True, text=True,
+    ).stdout.strip()
+    assert on_branch == "agentic/x"
+
+    ok = restore_to_base(
+        clone, base_branch="master",
+        scope_paths=changed_paths(_SAMPLE_DIFF),
+    )
+    assert ok is True
+    # Back on master, clean.
+    back = subprocess.run(
+        ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+        cwd=str(clone), capture_output=True, text=True,
+    ).stdout.strip()
+    assert back == "master"
+    status = subprocess.run(
+        ["git", "status", "--porcelain"],
+        cwd=str(clone), capture_output=True, text=True,
+    ).stdout.strip()
+    assert status == ""
+
+
+def test_restore_to_base_removes_only_scoped_untracked(clone):
+    """A new file the delivery staged (apply --index) must be cleaned
+    on restore, but an operator's unrelated untracked file outside the
+    scope must survive."""
+    prepare_clean_branch(
+        clone, base_branch="master", branch_name="agentic/y",
+    )
+    # Delivery adds a new file under the port path.
+    new_diff = (
+        "diff --git a/devel/foo/files/patch-new b/devel/foo/files/patch-new\n"
+        "new file mode 100644\n"
+        "--- /dev/null\n"
+        "+++ b/devel/foo/files/patch-new\n"
+        "@@ -0,0 +1 @@\n+content\n"
+    )
+    (clone / "devel" / "foo" / "files").mkdir(parents=True)
+    apply_diff(clone, new_diff)
+    # Operator has an unrelated untracked file elsewhere.
+    (clone / "MY-SCRATCH").write_text("operator work\n")
+
+    restore_to_base(
+        clone, base_branch="master",
+        scope_paths=changed_paths(new_diff),
+    )
+    # Scoped new file gone; operator's scratch file survives.
+    assert not (clone / "devel" / "foo" / "files" / "patch-new").exists()
+    assert (clone / "MY-SCRATCH").exists()
+
+
+def test_restore_to_base_never_raises_on_bad_clone(tmp_path):
+    """Best-effort: a non-clone dir returns False, doesn't raise (it
+    runs in a finally and must not mask the delivery exception)."""
+    assert restore_to_base(
+        tmp_path / "not-a-clone", base_branch="master",
+    ) is False

@@ -57,6 +57,8 @@ __all__ = [
     "apply_diff",
     "commit_diff",
     "push_branch",
+    "restore_to_base",
+    "changed_paths",
 ]
 
 
@@ -327,6 +329,63 @@ def _is_dirty_after_add(clone_dir: Path) -> bool:
     )
     # `--quiet` returns 0 if no changes, 1 if there are changes.
     return p.returncode != 0
+
+
+def changed_paths(diff_text: str) -> list[str]:
+    """Extract the set of paths a unified diff touches (the ``b/``
+    side). Used to scope the post-delivery ``git clean`` so only the
+    files this delivery created get removed — never the operator
+    clone's unrelated untracked files."""
+    paths: set[str] = set()
+    for line in diff_text.splitlines():
+        if line.startswith("diff --git "):
+            _, _, rest = line.partition(" b/")
+            if rest:
+                paths.add(rest.strip())
+        elif line.startswith("+++ b/"):
+            paths.add(line[len("+++ b/"):].strip())
+    return sorted(p for p in paths if p and p != "/dev/null")
+
+
+def restore_to_base(
+    clone_dir: Path,
+    *,
+    base_branch: str,
+    scope_paths: list[str] | None = None,
+) -> bool:
+    """Return the clone to a clean ``base_branch`` after a delivery
+    attempt (success OR failure).
+
+    Without this, a delivery that fails partway (e.g. push auth
+    error) leaves the clone checked out on the feature branch with
+    the applied diff staged — and the next Accept's
+    ``prepare_clean_branch`` precondition (clean + on base) then
+    refuses, wedging the clone until manual cleanup.
+
+    Safety: this only runs AFTER ``prepare_clean_branch`` succeeded,
+    i.e. only undoes state THIS delivery created (the clone was
+    verified clean + on base before we touched it). ``reset --hard``
+    discards our tracked-file edits; ``checkout -f`` switches back to
+    base; the ``git clean`` is scoped to ``scope_paths`` (the diff's
+    touched paths) so a shared clone's unrelated untracked files are
+    never removed.
+
+    Best-effort and never raises — it runs in a ``finally`` and must
+    not mask the original delivery exception. Returns True on a clean
+    restore, False if any step failed (the caller can log it).
+    """
+    try:
+        _assert_clone_dir(clone_dir)
+        _run(["git", "reset", "--hard"], cwd=clone_dir)
+        co = _run(["git", "checkout", "-f", base_branch], cwd=clone_dir)
+        if scope_paths:
+            _run(
+                ["git", "clean", "-fd", "--", *scope_paths],
+                cwd=clone_dir,
+            )
+        return co.returncode == 0
+    except Exception:
+        return False
 
 
 def _auth_env(token: str | None) -> dict[str, str] | None:
