@@ -440,6 +440,15 @@ MIGRATIONS: tuple[str, ...] = (
     "ALTER TABLE activity_log ADD COLUMN bundle_id TEXT",
     "CREATE INDEX IF NOT EXISTS idx_activity_log_bundle "
     "ON activity_log(bundle_id) WHERE bundle_id IS NOT NULL",
+    # Reopen restore: terminal-state handlers (accept/reject/discard)
+    # snapshot the prior resolution here so reopen can restore the
+    # actionable state instead of nulling it. Without this the
+    # operator action gates (verify/accept/reject) — all keyed on
+    # resolution='agent_fixed' or 'operator_owned' — stay hidden
+    # after reopen, dead-ending the "undo my decision" flow. NULL on
+    # legacy rows; reopen falls back to NULL resolution (prior
+    # behavior) in that case.
+    "ALTER TABLE bundles ADD COLUMN pre_terminal_resolution TEXT",
 )
 
 

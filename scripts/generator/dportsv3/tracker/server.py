@@ -1240,9 +1240,10 @@ def create_app(db_path: str | Path) -> Any:
                 """UPDATE bundles SET
                        resolution = 'accepted',
                        accepted_at = ?,
+                       pre_terminal_resolution = ?,
                        last_seen_at = ?
                    WHERE bundle_id = ?""",
-                (now, now, bundle_id),
+                (now, prior_resolution, now, bundle_id),
             )
             # 28e follow-up: only the operator_owned → accepted
             # path interacts with the skip lock. agent_fixed accepts
@@ -1402,6 +1403,7 @@ def create_app(db_path: str | Path) -> Any:
                 ),
             )
 
+        prior_resolution = row.get("resolution")
         now = datetime.now(timezone.utc).isoformat()
         write_conn = sqlite3.connect(
             str(app.state.db_path), check_same_thread=False,
@@ -1414,9 +1416,10 @@ def create_app(db_path: str | Path) -> Any:
                        resolution = 'rejected',
                        rejected_at = ?,
                        rejection_reason = ?,
+                       pre_terminal_resolution = ?,
                        last_seen_at = ?
                    WHERE bundle_id = ?""",
-                (now, reason, now, bundle_id),
+                (now, reason, prior_resolution, now, bundle_id),
             )
             from dportsv3.artifact_store import emit_event  # noqa: PLC0415
             emit_event(write_conn, "bundle_rejected", {
@@ -1711,9 +1714,10 @@ def create_app(db_path: str | Path) -> Any:
                            resolution = 'discarded',
                            discarded_at = ?,
                            discard_reason = ?,
+                           pre_terminal_resolution = ?,
                            last_seen_at = ?
                        WHERE bundle_id = ?""",
-                    (now, reason, now, bundle_id),
+                    (now, reason, current_resolution, now, bundle_id),
                 )
                 if skip_origin and target and origin and existing is None:
                     try:
@@ -2157,15 +2161,24 @@ def create_app(db_path: str | Path) -> Any:
         try:
             write_conn.execute("BEGIN IMMEDIATE")
             try:
+                # Restore the pre-terminal resolution so the
+                # operator-action gates (verify/accept/reject — all
+                # keyed on resolution='agent_fixed' or
+                # 'operator_owned') light up again. Falls back to
+                # NULL for legacy rows where the snapshot wasn't
+                # taken; those land in the "actionable from take-
+                # over" lane, same as pre-restore behavior.
+                restored = row.get("pre_terminal_resolution")
                 write_conn.execute(
                     """UPDATE bundles SET
-                           resolution = NULL,
+                           resolution = ?,
                            reopened_at = ?,
                            reopened_by = ?,
                            reopened_from = ?,
+                           pre_terminal_resolution = NULL,
                            last_seen_at = ?
                        WHERE bundle_id = ?""",
-                    (now, operator, prior, now, bundle_id),
+                    (restored, now, operator, prior, now, bundle_id),
                 )
                 # Clear the origin skip lock if (a) we came from
                 # 'discarded' (only path that opens a lock — accept
@@ -2199,6 +2212,7 @@ def create_app(db_path: str | Path) -> Any:
                 "reopened_at": now,
                 "reopened_by": operator,
                 "reopened_from": prior,
+                "restored_resolution": restored,
                 "reason": reason,
                 "skip_action": skip_action,
             })
@@ -2208,7 +2222,7 @@ def create_app(db_path: str | Path) -> Any:
         return {
             "ok": True,
             "bundle_id": bundle_id,
-            "resolution": None,
+            "resolution": restored,
             "reopened_at": now,
             "reopened_by": operator,
             "reopened_from": prior,

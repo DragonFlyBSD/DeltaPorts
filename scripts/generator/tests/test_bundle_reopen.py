@@ -46,13 +46,14 @@ def _insert_bundle(conn, bundle_id: str, **kw) -> None:
                                 result, target, path, last_seen_at,
                                 resolution, accepted_at, rejected_at,
                                 rejection_reason, discarded_at,
-                                discard_reason)
-           VALUES (?, '', ?, '', ?, 'failure', ?, '', ?, ?, ?, ?, ?, ?, ?)""",
+                                discard_reason, pre_terminal_resolution)
+           VALUES (?, '', ?, '', ?, 'failure', ?, '', ?, ?, ?, ?, ?, ?, ?, ?)""",
         (bundle_id, kw.get("origin", "devel/foo"), now,
          kw.get("target", "@2026Q2"), now, kw.get("resolution"),
          kw.get("accepted_at"), kw.get("rejected_at"),
          kw.get("rejection_reason"),
-         kw.get("discarded_at"), kw.get("discard_reason")),
+         kw.get("discarded_at"), kw.get("discard_reason"),
+         kw.get("pre_terminal_resolution")),
     )
     conn.commit()
 
@@ -65,19 +66,27 @@ def seeded_db(tmp_path: Path):
     init_db(c)
     now = _now()
     _insert_bundle(c, "b-accepted", resolution="accepted",
-                   origin="devel/acc", accepted_at=now)
+                   origin="devel/acc", accepted_at=now,
+                   pre_terminal_resolution="agent_fixed")
     _insert_bundle(c, "b-rejected", resolution="rejected",
                    origin="devel/rej", rejected_at=now,
-                   rejection_reason="wrong fix")
+                   rejection_reason="wrong fix",
+                   pre_terminal_resolution="agent_fixed")
     _insert_bundle(c, "b-discarded-own-lock",
                    resolution="discarded", origin="devel/disc1",
-                   discarded_at=now, discard_reason="hopeless")
+                   discarded_at=now, discard_reason="hopeless",
+                   pre_terminal_resolution="agent_gave_up")
     _insert_bundle(c, "b-discarded-sibling-lock",
                    resolution="discarded", origin="devel/disc2",
-                   discarded_at=now, discard_reason="duplicate")
+                   discarded_at=now, discard_reason="duplicate",
+                   pre_terminal_resolution="agent_gave_up")
     _insert_bundle(c, "b-discarded-no-lock",
                    resolution="discarded", origin="devel/disc3",
-                   discarded_at=now, discard_reason="discard only this bundle")
+                   discarded_at=now, discard_reason="discard only this bundle",
+                   pre_terminal_resolution="agent_budget_exhausted")
+    _insert_bundle(c, "b-discarded-legacy",
+                   resolution="discarded", origin="devel/disc4",
+                   discarded_at=now, discard_reason="legacy row pre-snapshot")
     _insert_bundle(c, "b-agent-fixed", resolution="agent_fixed",
                    origin="devel/fixed")
     _insert_bundle(c, "b-budget", resolution="agent_budget_exhausted",
@@ -128,13 +137,14 @@ def _row(db_path: Path, bid: str) -> sqlite3.Row:
 # ---------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("bundle_id,prior", [
-    ("b-accepted", "accepted"),
-    ("b-rejected", "rejected"),
-    ("b-discarded-no-lock", "discarded"),
+@pytest.mark.parametrize("bundle_id,prior,restored", [
+    ("b-accepted", "accepted", "agent_fixed"),
+    ("b-rejected", "rejected", "agent_fixed"),
+    ("b-discarded-no-lock", "discarded", "agent_budget_exhausted"),
+    ("b-discarded-legacy", "discarded", None),
 ])
-def test_reopen_happy_path_clears_resolution(
-    client, seeded_db, bundle_id, prior,
+def test_reopen_happy_path_restores_resolution(
+    client, seeded_db, bundle_id, prior, restored,
 ):
     resp = client.post(
         f"/api/bundles/{bundle_id}/reopen",
@@ -144,15 +154,18 @@ def test_reopen_happy_path_clears_resolution(
     assert resp.status_code == 200, resp.text
     body = resp.json()
     assert body["ok"] is True
-    assert body["resolution"] is None
+    assert body["resolution"] == restored
     assert body["reopened_from"] == prior
     assert body["reopened_by"] == "alice"
 
     row = _row(seeded_db, bundle_id)
-    assert row["resolution"] is None
+    assert row["resolution"] == restored
     assert row["reopened_at"]
     assert row["reopened_by"] == "alice"
     assert row["reopened_from"] == prior
+    # Snapshot is consumed on reopen so a re-accept-and-reopen
+    # cycle doesn't restore stale state from the first round.
+    assert row["pre_terminal_resolution"] is None
 
 
 def test_reopen_preserves_prior_terminal_columns(client, seeded_db):
