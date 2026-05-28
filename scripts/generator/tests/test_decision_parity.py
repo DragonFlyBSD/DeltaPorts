@@ -43,7 +43,15 @@ def _policy_path() -> Path:
     # __file__ = scripts/generator/tests/test_decision_parity.py
     #   parents[0]=tests, parents[1]=generator, parents[2]=scripts,
     #   parents[3]=repo root.
-    return Path(__file__).resolve().parents[3] / "config" / "agentic-policy.json"
+    #
+    # Prefer the operator-local copy ``agentic-policy.json`` (real,
+    # gitignored); fall back to the tracked ``agentic-policy.json.sample``
+    # so the parity test works on fresh checkouts without manual setup.
+    config_dir = Path(__file__).resolve().parents[3] / "config"
+    local = config_dir / "agentic-policy.json"
+    if local.is_file():
+        return local
+    return config_dir / "agentic-policy.json.sample"
 
 
 @pytest.fixture(scope="module")

@@ -40,6 +40,13 @@ dports.toml
 state/
 *.log
 
+# Operator-local config copies. The ``.sample`` files in config/
+# are tracked templates; operators copy them locally and edit. The
+# loaders fall back to ``.sample`` when the local copy is absent
+# so a fresh checkout works out of the box.
+/config/agentic-policy.json
+/config/delivery.toml
+
 # OS
 .DS_Store
 Thumbs.db

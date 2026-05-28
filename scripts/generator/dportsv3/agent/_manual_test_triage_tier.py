@@ -176,10 +176,15 @@ output format.
           f"{result.usage.completion_tokens}/{result.usage.total_tokens}")
     print()
 
-    # Resolve tier via the same policy the runner uses.
+    # Resolve tier via the same policy the runner uses. Prefer the
+    # operator-local copy; fall back to the tracked ``.sample`` so the
+    # script works on fresh checkouts.
+    config_dir = Path(__file__).resolve().parents[4] / "config"
+    default_policy = config_dir / "agentic-policy.json"
+    if not default_policy.is_file():
+        default_policy = config_dir / "agentic-policy.json.sample"
     policy_path = os.environ.get(
-        "DP_HARNESS_POLICY",
-        str(Path(__file__).resolve().parents[4] / "config" / "agentic-policy.json"),
+        "DP_HARNESS_POLICY", str(default_policy),
     )
     pol = policy.load_policy(policy_path)
     tier = policy.tier_for(pol, result.classification, result.confidence)

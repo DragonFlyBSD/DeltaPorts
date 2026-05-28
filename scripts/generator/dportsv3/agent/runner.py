@@ -64,9 +64,22 @@ DEFAULT_TRACKER_URL = "http://127.0.0.1:8080"
 # at scripts/generator/dportsv3/agent/runner.py; walk four parents up
 # to reach the repo root, then into config/. Operator can override via
 # DP_HARNESS_POLICY.
-_DEFAULT_POLICY_PATH = str(
-    Path(__file__).resolve().parents[4] / "config" / "agentic-policy.json"
-)
+#
+# Sample/local split: ``config/agentic-policy.json.sample`` is the
+# tracked template; operators copy it to ``config/agentic-policy.json``
+# and edit locally. .gitignore covers the local copy. Resolver prefers
+# the local copy if present, falls back to the sample so fresh
+# checkouts work out of the box.
+def _resolve_default_policy_path() -> str:
+    config_dir = Path(__file__).resolve().parents[4] / "config"
+    local = config_dir / "agentic-policy.json"
+    sample = config_dir / "agentic-policy.json.sample"
+    if local.is_file():
+        return str(local)
+    return str(sample)
+
+
+_DEFAULT_POLICY_PATH = _resolve_default_policy_path()
 
 # Heartbeat interval (seconds)
 HEARTBEAT_INTERVAL = 5
