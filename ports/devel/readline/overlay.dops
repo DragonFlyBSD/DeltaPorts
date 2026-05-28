@@ -12,3 +12,4 @@ mk target set pre-configure-script <<'MK'
 MK
 
 file materialize dragonfly/patch-terminal.c -> dragonfly/patch-terminal.c
+text replace-once file dragonfly/patch-terminal.c from "++  dumbterm =" to "+  dumbterm ="
