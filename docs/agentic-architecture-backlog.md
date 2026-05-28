@@ -2853,3 +2853,413 @@ removal (negative) + tests (~120).
 
 ---
 
+### Step 32 — job model definition (JobSpec / JobRecord + spec-vs-state ownership) — pending
+
+A job exists today as two asymmetric representations with no single
+owner of the payload, and that is the structural root of a recurring
+class of bugs (operator abandon that doesn't stop execution, stale
+`bundle_dir`/`path` field references, and the per-field shotgun edit
+across the four enqueue functions + the shell hook). This step nails
+the job *model* — what a job is, where each part lives, and who may
+mutate it — **without a DB migration**, so it is independent of Step
+21 and can start immediately.
+
+#### The root cause (verified)
+
+- The `.job` file is the **complete, immutable spec**: triage files
+  carry `type, created_ts_utc, profile, target, origin, flavor,
+  bundle_id, run_id, iteration, max_iterations, user_context_rev,
+  previous_bundle` (per-type: `dev_env, tier, requested_by`).
+- The `jobs` DB row is a **strict subset**: `job_id, state, type,
+  origin, flavor, bundle_dir, created_ts_utc, path, target,
+  bundle_id` + lifecycle/audit columns. It cannot reconstruct a
+  job's execution inputs.
+- So the two stores are not "duplicates that drift" — they hold
+  different *kinds* of data (immutable spec vs mutable state +
+  query projection), but the split is implicit and leaky. Nobody
+  ever decided where the spec lives, so it landed in the file by
+  default and the DB got a partial denormalized copy for querying.
+
+The concrete failure this produces — the abandon race:
+
+- `tracker/server.py` `api_job_abandon` calls
+  `lifecycle.apply(ABANDON)` on the DB row and **never touches the
+  queue file** (`server.py:760-803`).
+- `runner.py` `claim_next_job_batch` globs `pending/*.job` and
+  renames to `inflight/` **without consulting DB state**
+  (`runner.py:1776-1826`); the post-claim `CLAIM` transition from a
+  now-`DEAD` row is illegal and soft-fails to a log line
+  (`runner.py:438-467`).
+- Net: DB says dead, the file is still runnable, the runner runs it.
+
+#### Constraint: no DB migration
+
+This forces the spec to stay in the file (the DB can't hold it
+without new columns / a blob) and rules out the
+"`verify_requests`-style intent table" for abandon (a new table is
+itself a migration). The model below is the best coherent foundation
+achievable under that constraint; it makes the spec-vs-state split
+*explicit and enforced* rather than eliminating it.
+
+#### The model (three rules)
+
+1. **Spec ownership — `JobSpec`.** One typed serializer/parser for
+   the `.job` file format, in a neutral `dportsv3.jobs` package (NOT
+   `dportsv3.agent`, so the tracker doesn't import runner internals;
+   `lifecycle` should migrate there too). The four enqueue functions
+   build a `JobSpec` and write it; `parse_job_file` returns one; the
+   shell hook's writer is pinned to the format by a round-trip
+   contract test (`hook_common.sh` output parses into a valid
+   `JobSpec`, and runner-created jobs serialize to the same shape).
+   This is the high-value, low-risk piece: it ends the per-field
+   edit across five writers.
+2. **State ownership.** State lives only in the DB, mutates only
+   through `lifecycle.apply`, and post-creation only the runner
+   calls it (artifact-store at creation via `HOOK_ENQUEUED` is the
+   one exception, and that is ingest, not control). The DB
+   projection columns (`type/origin/target/flavor/bundle_id`) are
+   write-once-at-create, display/query only — never a spec source
+   for execution.
+3. **The single coupling point — claim-time state guard.** The
+   runner re-reads DB state immediately after claiming, before
+   executing. If `state='dead'` and `retire_reason='abandoned'`, it
+   moves the file aside and skips. This is the entire abandon fix:
+   the file may sit in `pending/` looking runnable, but the DB is
+   the gate. No migration, no new table.
+
+`JobRecord` = `JobSpec` + state + audit fields — the typed shape the
+tracker/API/CLI read. `JobSpec ⊂ JobRecord` is the layering. It also
+kills the stale `bundle_dir`-linkage comments by making `bundle_id`
+the obvious relation (`tracker/server.py:819-822`,
+`tracker/client.py:181-185`).
+
+#### Scope
+
+Each item is independently shippable; 1 and 4 have no dependency on
+each other.
+
+1. **`JobSpec`** in `dportsv3.jobs` — one serializer/parser; repoint
+   the four enqueue functions (`enqueue_triage_job`,
+   `enqueue_patch_job`, `enqueue_convert_job`, `enqueue_verify_job`)
+   and `parse_job_file` at it; round-trip contract test pinning the
+   shell hook's output.
+2. **`JobRecord`** — typed DB-projection read shape for the tracker
+   API/CLI; document `jobs.path` as creation-time provenance (not
+   the live location — can't rename the column without a migration)
+   and `job_id` as identity; scrub stale `bundle_dir` comments.
+3. **Enforce the spec-vs-state ownership rule** — runner reads
+   execution inputs only from the file; DB projection columns are
+   never read as spec. Mostly a discipline + comment pass once 1/2
+   land; add a lint/test guard if cheap.
+4. **Claim-time abandon guard** — runner consults DB state after
+   `claim_next_job_batch` and before `process_job` executes; on
+   `dead/abandoned`, move the file aside without running. Closes the
+   pending-abandon race.
+
+#### Abandon semantics
+
+- **Pending / claimed-not-started:** the guard (item 4) makes
+  abandon effective — the job never executes.
+- **Actively running:** abandon is *not* interruptible here. The
+  runner finishes the current step; its terminal transition then
+  becomes illegal-from-`DEAD` and soft-fails to a log. Semantically
+  "abandon requested, job finished." True mid-run cancellation needs
+  the runner to re-check its own state at checkpoints and bail — a
+  separate effort, and arguably not worth it for dsynth/LLM steps
+  that can't be cleanly killed. Don't promise it.
+- **Terminal:** reject (as today).
+
+#### Reversal noted
+
+Under the no-migration constraint the "tracker writes intent, runner
+reconciles" pattern (the `verify_requests` shape) is **not available
+for abandon** — a control-requests table is a migration. So the
+tracker keeps calling `lifecycle.apply(ABANDON)`, and correctness
+comes entirely from the claim-time guard (item 4). The purity goal —
+tracker never mutates job lifecycle — is unreachable without a
+migration and is explicitly deferred.
+
+#### Out of scope (needs a future migration-allowed step)
+
+- Eliminating the dual representation. The clean end-state is a
+  `spec_json` column making the DB the system of record for the
+  immutable spec, with the file degraded to a `job_id` claim token —
+  but that requires schema change and is deferred. **Do not** add a
+  half-step that keeps the full payload in the file *and* adds
+  `spec_json`: that is three copies and makes drift worse.
+- A `JobControlRequest` intent table (abandon/retry as reconciled
+  requests). Correct long-term shape; blocked on migration.
+- DB-atomic claim (`UPDATE … WHERE state='queued'`) replacing
+  rename-claim. Optional; only sensible once the file is a token.
+- Mid-run cancellation checkpoints.
+
+#### Dependencies
+
+- **None hard.** Deliberately migration-free, so independent of Step
+  21. Items 1 and 4 can start immediately.
+- **Soft / adjacent:** Step 26 (lifecycle hardening) — item 4's
+  claim guard sits at the same FSM seam Step 26 hardens; Step 26
+  item 5 (derive interrupt blocks from `_INFLIGHT_STATES`) shares
+  the spec-vs-state spirit. A future migration-allowed follow-up
+  (the `spec_json` end-state) would supersede the file-as-spec model
+  this step formalizes.
+
+#### Why now
+
+The operator loop is feature-complete; the dominant failure mode is
+now seam/model-level (Step 26's thesis), and this is the job-*model*
+half of that. The abandon hole is a live correctness bug, and the
+per-field shotgun edit across five writers is the concrete "patching
+over and over without proper fundamentals" cost this step removes.
+Being migration-free, it carries no dependency tax — the JobSpec
+consolidation *deletes* the key-value serialization and dual
+field-building (net less code), which is the signal it is a real
+foundation rather than another layer.
+
+#### LOC estimate
+
+Small–moderate — `JobSpec`/`JobRecord` + serializer in
+`dportsv3.jobs` (~120, mostly replacing existing hand-built strings)
++ claim-time guard (~20) + contract/round-trip tests (~80); net LOC
+roughly flat once the duplicated enqueue field-building is removed.
+
+---
+
+
+### Step 33 — operator SSO via a Redmine OIDC provider plugin + tracker RBAC — pending
+
+Until now the tracker has run **without any auth**: every read AND
+every operator mutation (verify / accept / reject / abandon /
+take-over / discard / retry / reopen / delivery) is open, and the
+operator identity is a *self-asserted string* in the request body
+(`operator="alice"`). That's fine on a trusted LAN, but it blocks the
+goal of exposing the read-only views to the public internet while
+restricting mutations to known DragonFly developers — and it's a
+latent integrity gap on its own (anyone can claim to be anyone in the
+lifecycle audit and in the delivered PR's `operator` provenance).
+
+#### Decision + rationale (how we got here)
+
+Redmine is the **only** multi-user system the project runs, so it's
+the natural identity directory, and the goal is single-sign-on — not
+one-more-password-per-site. Several cheaper routes were evaluated and
+rejected (see below); the chosen architecture is:
+
+- **Redmine becomes a real OIDC identity provider** via a new Redmine
+  plugin built on the `doorkeeper` + `doorkeeper-openid_connect` gems.
+- **The tracker is an OIDC relying party** (Authorization Code +
+  PKCE) that authenticates developers against Redmine.
+- **The tracker owns RBAC.** Roles live in the tracker; the OIDC
+  `groups` claim from Redmine is an *input* to the role mapping, not
+  the authority. This keeps "who may operate" under tracker control
+  and sidesteps the "must authority live in GitHub teams vs Redmine
+  groups" question.
+
+Why this and not the alternatives:
+- **Redmine REST API key** — works on stock Redmine, but it's a
+  long-lived, full-account credential with a paste-it-in UX, and the
+  tracker would be storing developer credentials on a public service.
+  Rejected.
+- **Fork `suer/redmine_oauth_provider`** — it's OAuth 1.0a on the dead
+  `oauth-plugin` gem, Rails-3 era (2015); ~nothing survives a port, so
+  it's a from-scratch build mislabeled as a fork. We build fresh on
+  Doorkeeper instead.
+- **External IdP (Keycloak/Authentik) fed from Redmine** — correct for
+  multi-app SSO, but a new always-on critical service for a single
+  consumer. Deferred unless a second consumer appears.
+- **Reading Redmine password hashes / reusing its session cookie** —
+  couples to undocumented internals, bypasses or shares secrets, and
+  re-implements auth badly. Rejected.
+
+Confirmed by research (2026-05): **no maintained Redmine OIDC
+*provider* plugin exists** — every Redmine OIDC plugin on
+redmine.org is a *consumer* (Redmine logging in via Google/Keycloak),
+and core Redmine is not a provider (open feature #24808). So this is
+net-new work, but on maintained gems: Doorkeeper does the OAuth2/OIDC
+protocol; the plugin is the Redmine glue.
+
+#### Role model
+
+Coarse, capability-based, **tracker-owned** — read vs operate, not
+per-resource ACLs:
+
+- **public / anonymous** — read-only, no identity. The open-internet
+  surface.
+- **viewer** — authenticated developer, read-only but *identified*.
+- **operator** — read + all operator actions.
+- **admin** (optional, can defer) — manage role assignments / config.
+
+Default mapping (configurable in the tracker): Redmine group
+`dports-operators` (via the `groups` claim) → operator; authenticated
+but ungrouped → viewer; unauthenticated → public. Authority is the
+tracker's RBAC table; the claim only feeds it.
+
+#### Sub-steps — Redmine plugin side (Ruby/Rails)
+
+**33a — Doorkeeper provider plugin scaffold.** New Redmine plugin
+mounting Doorkeeper's engine + `doorkeeper-openid_connect`. Migrations
+for `oauth_applications` / `oauth_access_grants` / `oauth_access_tokens`
++ the OIDC signing key (RS256). Pin gem versions to the target
+Redmine's Rails (Redmine 6.x = Rails 7.x) — this compatibility pin is
+the load-bearing risk; re-verify on each Redmine major.
+
+**33b — wire `resource_owner_authenticator` to the Redmine session.**
+The authorize endpoint uses Redmine's *already-logged-in* user
+(`User.current` / session). This is what makes it true SSO and means
+the flow inherits Redmine's 2FA, lockout, and account status for
+free — no credentials touch the tracker.
+
+**33c — OIDC claims + endpoints.** Emit `sub` (stable user id),
+`preferred_username` (login), `email`, `name`, and a **`groups`**
+claim (global Redmine groups) in the id_token / userinfo. Expose the
+discovery doc (`/.well-known/openid-configuration`) and JWKS. Register
+the tracker as an OAuth application (client_id/secret, redirect_uri)
+in Redmine admin.
+
+#### Sub-steps — tracker side (Python/FastAPI)
+
+**33d — OIDC relying party.** Authorization Code + PKCE via a
+maintained client lib (e.g. authlib). Discover Redmine's endpoints via
+its discovery doc; on callback, validate the id_token signature/claims
+and establish a tracker session cookie.
+
+**33e — tracker user records + RBAC.** Tracker-owned user table keyed
+on the OIDC `sub`; on login, upsert identity (login/email) and map the
+`groups` claim → tracker role. Role assignments are tracker config /
+admin, not Redmine's.
+
+**33f — enforcement.** Guard the mutating endpoints (the
+11c / 28 / 29 / 11d action set) to require `operator`; GET routes stay
+public (anonymous read). 401 for unauthenticated writes, 403 for
+authenticated-but-under-privileged.
+
+**33g — operator identity from the session.** Replace the
+self-asserted `operator=` request-body field with the authenticated
+identity across accept / reject / abandon / take-over / discard /
+retry / reopen / delivery. The lifecycle audit and the delivered PR's
+`operator` provenance (Step 11d) become trustworthy rather than
+self-reported.
+
+**33h — login/logout UI + CSRF.** "Sign in with Redmine" → OIDC
+redirect; logout; show current identity + role in the nav. CSRF
+protection for the now-cookie-authenticated POSTs (tokens or a custom
+header / per-session token).
+
+#### Why now
+
+The public-internet exposure goal is the trigger (see Step 34). The
+self-asserted operator identity is also a standing integrity gap — the
+accept/reject/abandon audit and the PR `operator` line are currently
+unverifiable claims. 33g closes that independent of public exposure.
+
+#### Dependencies + maintenance
+
+- **Hard:** `doorkeeper` + `doorkeeper-openid_connect` versions
+  compatible with the target Redmine's Rails. This pin is the main
+  risk and the source of the **maintenance tail** — owning a Redmine
+  plugin means re-testing it on each Redmine/Rails major upgrade. This
+  cost was weighed and accepted as the price of SSO without a separate
+  IdP service.
+- **Soft:** Step 31 (single service) — one service is one auth surface
+  to protect; doing 33 before 31 means you protect the tracker and the
+  artifact-store (`:8788`) stays internal/firewalled (see Step 34, 34b).
+- **Orthogonal to Steps 17/18.** Those are *machine* auth
+  (runner↔tracker bearer tokens + rotation); this is *human* auth.
+  Different axes — 33 needs neither. The intersection lives in Step 34
+  (the write endpoints must be machine-authed or isolated before the
+  service faces the internet).
+
+#### Out of scope
+
+- Machine/runner auth and token rotation (Steps 17/18).
+- Network/TLS/rate-limiting/exposure audit (Step 34).
+- Fine-grained per-resource permissions. The role model is coarse
+  (read vs operate) by design; widen only if a real need appears.
+- An external IdP. If a *second* app ever needs dev auth, revisit —
+  at that point the Redmine OIDC provider this step builds could even
+  serve it directly, or federate into a shared IdP.
+
+#### LOC estimate
+
+Moderate–large, two codebases. Redmine plugin (~250–400 Ruby incl.
+migrations, Doorkeeper/OIDC config, claims, the resource-owner wiring)
++ tracker RP client (~150) + user table/RBAC + enforcement (~150) +
+operator-from-session (~60) + login UI + CSRF (~80) + tests (~150).
+
+---
+
+### Step 34 — public-internet exposure hardening — pending
+
+Step 33 supplies identity + RBAC; this step is the network/deployment
+gate that must land *with* it before the read-only surface actually
+faces the open internet. Confirmed target: **public internet**, so
+design to the strictest assumptions.
+
+#### Goal
+
+The read-only surface is safe for anonymous access on the open
+internet, and **every** mutating/ingest endpoint requires auth (human
+via 33, machine via 17/18) or is network-isolated — there is no
+publicly writable surface.
+
+#### Sub-steps
+
+**34a — exposure audit.** Enumerate every GET route / artifact / field
+reachable anonymously. Confirm no secrets leak (delivery tokens live
+in config files, not artifacts — verify), no internal-only data is
+exposed, and decide whether any reads should be operator-only rather
+than public.
+
+**34b — write-surface isolation (hard gate).** The runner/hook ingest
+endpoints (`/v1/artifacts`, `/v1/bundles`, `/v1/jobs/transition`,
+`/v1/user-context`; currently the `:8788` artifact-store, post-Step-31
+folded into the tracker) MUST NOT be publicly writable. Either (a)
+keep them on an internal bind / firewalled port, or (b) require
+machine-auth (Steps 17/18) once folded into the public service. This
+is the load-bearing intersection with 31 and 17/18: **do not fold
+`/v1` into a public service without machine-auth on it.**
+
+**34c — TLS termination + HSTS** (reverse proxy or app-level).
+
+**34d — rate limiting / abuse protection** on anonymous reads and on
+login attempts.
+
+**34e — runbook.** Deployment topology — proxy, ports, firewall — and
+how the public read surface and the internal write surface are
+physically separated.
+
+#### Why now
+
+Same trigger as Step 33. This is the deployment gate; the public flip
+requires 33 (who can write) AND 34 (nothing else can) together.
+
+#### Dependencies
+
+- **Hard pairing with Step 33** — the public flip needs both.
+- **Intersects Steps 31 + 17/18.** If Step 31 folds `/v1` into the
+  public tracker, machine-auth (17/18) on `/v1` becomes mandatory;
+  until then `/v1` stays internal (34b). Step 34 *requires that
+  isolation-or-machine-auth exists* — it does not implement the
+  machine-auth itself (that's 17/18).
+
+#### Out of scope
+
+- Human RBAC (Step 33).
+- The machine-auth implementation (Steps 17/18) — 34 only requires it
+  exist, or that `/v1` stay network-isolated.
+
+#### Relationship to Step 18
+
+Step 18 ("security hardening") was scoped around *runner* token
+rotation. Steps 33/34 add the *human* + *public-exposure* dimension it
+didn't cover. When this work is scheduled, reconcile: 18 may collapse
+into "machine-auth + rotation" with 33/34 owning the human/public side,
+or 18 becomes the umbrella. Don't rewrite 18 pre-emptively; flag at
+scheduling time.
+
+#### LOC estimate
+
+Small app code (rate-limit + security headers ~40); the bulk is
+ops/config (TLS, proxy, firewall) + the 34a exposure audit.
+
+---
