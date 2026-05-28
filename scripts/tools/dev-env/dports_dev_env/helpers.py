@@ -11,7 +11,7 @@ def quote(value: str) -> str:
     return shlex.quote(value)
 
 
-HELPER_NAMES = ["regen", "reapply", "showenv", "dbuild"]
+HELPER_NAMES = ["regen", "reapply", "showenv", "dbuild", "dtest"]
 TOUCHED_ORIGINS_PATH = "/work/.dports-dev-touched-origins"
 HELPER_BIN_DIR = "/root/.dports-dev/bin"
 
@@ -59,17 +59,24 @@ done
         return """#!/bin/sh
 env | grep '^DPORTS_' | sort
 """
-    if name == "dbuild":
+    if name in ("dbuild", "dtest"):
+        # dbuild runs `dsynth build` (build + stage + package, the
+        # patch loop's fast iteration target). dtest runs
+        # `dsynth test`, which exercises the extra Q/A phases
+        # (stage-qa, check-plist, the test target) AND force-rebuilds
+        # by removing any existing package first — the heavier gate
+        # verify-fix uses before an operator accepts a fix.
+        subcommand = "build" if name == "dbuild" else "test"
         return f"""#!/bin/sh
 set -eu
-: "${{DPORTS_TARGET:?dbuild: DPORTS_TARGET is not set; run from a dports-dev shell}}"
-: "${{DPORTS_DSYNTH_PROFILE:?dbuild: DPORTS_DSYNTH_PROFILE is not set; run from a dports-dev shell}}"
+: "${{DPORTS_TARGET:?{name}: DPORTS_TARGET is not set; run from a dports-dev shell}}"
+: "${{DPORTS_DSYNTH_PROFILE:?{name}: DPORTS_DSYNTH_PROFILE is not set; run from a dports-dev shell}}"
 if ! command -v dsynth >/dev/null 2>&1; then
-    printf '%s\n' 'dbuild requires dsynth; recreate the env with dsynth available' >&2
+    printf '%s\n' '{name} requires dsynth; recreate the env with dsynth available' >&2
     exit 1
 fi
 if [ ! -f /etc/dsynth/dsynth.ini ]; then
-    printf '%s\n' 'dbuild requires /etc/dsynth/dsynth.ini; rerun shell --refresh from the host' >&2
+    printf '%s\n' '{name} requires /etc/dsynth/dsynth.ini; rerun shell --refresh from the host' >&2
     exit 1
 fi
 if [ "$#" -eq 0 ]; then
@@ -82,11 +89,11 @@ if [ "$#" -eq 0 ]; then
             set -- "$@" "$origin"
         done < "${{DPORTS_TOUCHED_ORIGINS_FILE:-{quote(str(TOUCHED_ORIGINS_PATH))}}}"
     else
-        printf '%s\n' 'usage: dbuild ORIGIN... (or run sync-dirty first, or create the env with --origin)' >&2
+        printf '%s\n' 'usage: {name} ORIGIN... (or run sync-dirty first, or create the env with --origin)' >&2
         exit 1
     fi
 fi
-exec dsynth -p "$DPORTS_DSYNTH_PROFILE" build "$@"
+exec dsynth -p "$DPORTS_DSYNTH_PROFILE" {subcommand} "$@"
 """
     raise ValueError(f"unknown helper script: {name}")
 

@@ -2467,6 +2467,136 @@ def _checkout_bundle_branch_for_job(
             pass
 
 
+def _checkout_verify_branch_for_job(
+    *,
+    queue_root: Path,
+    job_id: str,
+    env: str | None,
+    bundle_id: str | None,
+) -> str | None:
+    """Put the env on a throwaway ``bundle/<id>-verify`` branch cut
+    from base for the verify run, and return the ref that was checked
+    out before (so the dispatch can pass it to the end-of-run drop).
+
+    Verify uses its own branch rather than the patch agent's
+    ``bundle/<id>``: changes.diff is the complete canonical artifact,
+    and the patch branch may already have been dropped by Slice 4's
+    terminal sweep. Soft-fail like
+    :func:`_checkout_bundle_branch_for_job` — a failed checkout logs
+    and proceeds on whatever branch is current.
+
+    Returns ``previous_ref`` (or None when the checkout was skipped or
+    failed).
+    """
+    if not env or not bundle_id:
+        return None
+    from dportsv3.agent import worker  # noqa: PLC0415
+    try:
+        result = worker.checkout_verify_branch(env, bundle_id)
+    except Exception as exc:
+        try:
+            activity_log(
+                queue_root, "verify_branch_checkout_failed",
+                f"verify {job_id}: checkout raised: {exc!s}"[:240],
+                job_id=job_id,
+                extra={"bundle_id": bundle_id, "env": env,
+                       "exception": str(exc)[:300]},
+            )
+        except Exception:
+            pass
+        return None
+    if not result.get("ok"):
+        try:
+            activity_log(
+                queue_root, "verify_branch_checkout_failed",
+                (f"verify {job_id}: "
+                 f"{result.get('error') or 'checkout failed'}")[:240],
+                job_id=job_id,
+                extra={"bundle_id": bundle_id, "env": env,
+                       "branch": result.get("branch"),
+                       "base": result.get("base"),
+                       "stderr_tail": result.get("stderr_tail", "")[:300]},
+            )
+        except Exception:
+            pass
+        return None
+    try:
+        activity_log(
+            queue_root, "verify_branch_checkout",
+            (f"verify {job_id}: created {result.get('branch')} "
+             f"(base={result.get('base')}, "
+             f"prev={result.get('previous_ref')})"),
+            job_id=job_id,
+            extra={"bundle_id": bundle_id, "env": env,
+                   "branch": result.get("branch"),
+                   "base": result.get("base"),
+                   "previous_ref": result.get("previous_ref")},
+        )
+    except Exception:
+        pass
+    return result.get("previous_ref")
+
+
+def _drop_verify_branch_for_job(
+    *,
+    queue_root: Path,
+    job_id: str,
+    env: str | None,
+    bundle_id: str | None,
+    restore_ref: str | None,
+    reason: str,
+) -> None:
+    """Delete the verify run's ``bundle/<id>-verify`` branch and
+    restore the ref the env was on before verify started
+    (``restore_ref`` from :func:`_checkout_verify_branch_for_job`).
+    Soft-fail; mirrors :func:`_drop_bundle_branch_for_job`."""
+    if not env or not bundle_id:
+        return
+    from dportsv3.agent import worker  # noqa: PLC0415
+    try:
+        result = worker.drop_verify_branch(env, bundle_id, restore_ref)
+    except Exception as exc:
+        try:
+            activity_log(
+                queue_root, "verify_branch_drop_failed",
+                f"verify {job_id}: drop raised: {exc!s}"[:240],
+                job_id=job_id,
+                extra={"bundle_id": bundle_id, "env": env,
+                       "reason": reason, "exception": str(exc)[:300]},
+            )
+        except Exception:
+            pass
+        return
+    if not result.get("ok"):
+        try:
+            activity_log(
+                queue_root, "verify_branch_drop_failed",
+                (f"verify {job_id}: "
+                 f"{result.get('error') or 'drop failed'}")[:240],
+                job_id=job_id,
+                extra={"bundle_id": bundle_id, "env": env,
+                       "reason": reason,
+                       "branch": result.get("branch")},
+            )
+        except Exception:
+            pass
+        return
+    if result.get("removed"):
+        try:
+            activity_log(
+                queue_root, "verify_branch_dropped",
+                (f"verify {job_id}: dropped {result.get('branch')} "
+                 f"(restored {result.get('restored_to')}, {reason})"),
+                job_id=job_id,
+                extra={"bundle_id": bundle_id, "env": env,
+                       "branch": result.get("branch"),
+                       "restored_to": result.get("restored_to"),
+                       "reason": reason},
+            )
+        except Exception:
+            pass
+
+
 def _maybe_skip_locked_origin(
     *,
     queue_root: Path,
@@ -4334,15 +4464,17 @@ def process_job(
         _apply_transition(job_path.name, start_event)
         bundle_id = job.get("bundle_id", "")
         verify_env = job.get("dev_env", "")
-        # Step 30 slice 1: verify replays the bundle's intent log /
-        # diff against the env. Pin to the bundle's branch so the
-        # replay sees the same baseline the original convert + patch
-        # commits sat on.
-        _checkout_bundle_branch_for_job(
+        # Verify replays changes.diff (the complete branch-vs-base
+        # canonical artifact) on a throwaway ``bundle/<id>-verify``
+        # branch cut fresh from base. This decouples verify from the
+        # patch agent's ``bundle/<id>`` branch, which Slice 4's
+        # terminal sweep may already have dropped — and from master,
+        # which verify must never build against directly. We record
+        # the ref the env was on so the end-of-run drop can restore it.
+        verify_prev_ref = _checkout_verify_branch_for_job(
             queue_root=queue_root, job_id=job_path.name,
             env=verify_env or None,
             bundle_id=bundle_id or None,
-            job_type="verify",
         )
         try:
             result = run_verify_fix(
@@ -4431,16 +4563,15 @@ def process_job(
                     log(queue_root, "WARN",
                         f"failed to mark bundle {bundle_id} verification_failed: {db_exc}")
         _apply_transition(job_path.name, finish_event, detail=detail)
-        # Step 30 slice 4: verify is terminal for the bundle branch.
-        # The verify replays the bundle's payload against base on a
-        # fresh checkout; the branch isn't needed for any subsequent
-        # operator action (Accept reads delivery.diff captured at
-        # patch end). Drop either outcome.
-        _drop_bundle_branch_for_job(
+        # The throwaway verify branch is done either way. Drop it and
+        # restore the ref the env was on before verify (verify_prev_ref)
+        # so we don't strand the env on a deleted branch or on base
+        # when the operator had something else checked out.
+        _drop_verify_branch_for_job(
             queue_root=queue_root, job_id=job_path.name,
             env=verify_env or None,
             bundle_id=bundle_id or None,
-            job_type="verify",
+            restore_ref=verify_prev_ref,
             reason="verify_complete" if success else "verify_failure",
         )
     else:

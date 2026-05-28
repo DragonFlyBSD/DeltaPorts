@@ -1484,24 +1484,21 @@ def checkout_bundle_branch(env: str, bundle_id: str) -> dict:
     }
 
 
-def drop_bundle_branch(env: str, bundle_id: str) -> dict:
-    """Delete the env's ``bundle/<bundle_id>`` branch, switching to
-    the base branch first if it's currently checked out.
+def _drop_branch(env: str, branch: str, restore_to: str, base: str) -> dict:
+    """Force-delete ``branch``, restoring ``restore_to`` first if the
+    branch is currently checked out (git refuses to delete the
+    current branch).
 
-    Slice 4's terminal-resolution sweep calls this once a bundle
-    reaches accepted / rejected / discarded — the branch's history
-    has either been captured in a delivered PR or is meaningfully
-    abandoned, so the env can reclaim the namespace.
+    ``restore_to`` is the ref to switch to before the delete — the
+    base branch for ``drop_bundle_branch``, or the operator's
+    pre-verify ref for ``drop_verify_branch``. If restoring it fails
+    (e.g. the recorded ref was itself a transient branch that's since
+    gone), falls back to ``base`` so the env never lands in a stuck
+    state on a branch about to be deleted.
 
-    Idempotent: returns ``ok=True, removed=False`` when the branch
-    doesn't exist. ``-D`` (force) is used because the branch may
-    carry commits that aren't on any other ref.
+    Idempotent: ``ok=True, removed=False, reason='branch_absent'``
+    when the branch doesn't exist.
     """
-    if not bundle_id:
-        return {"ok": False, "error": "bundle_id is required"}
-    branch = _branch_name_for(bundle_id)
-    base = _resolve_bundle_base_branch(env)
-
     cur_p = _exec(
         env, "/bin/sh", "-c",
         "cd /work/DeltaPorts && git rev-parse --abbrev-ref HEAD",
@@ -1519,19 +1516,28 @@ def drop_bundle_branch(env: str, bundle_id: str) -> dict:
     if exists_p.returncode != 0:
         return {
             "ok": True, "branch": branch, "base": base,
-            "removed": False, "reason": "branch_absent",
+            "restored_to": None, "removed": False, "reason": "branch_absent",
         }
 
     if current == branch:
         sw_p = _exec(
             env, "/bin/sh", "-c",
-            f"cd /work/DeltaPorts && git checkout {shlex.quote(base)}",
+            f"cd /work/DeltaPorts && git checkout {shlex.quote(restore_to)}",
             cwd="/work/DeltaPorts",
         )
+        if sw_p.returncode != 0 and restore_to != base:
+            # Recorded ref unrestorable — fall back to base so we can
+            # still get off the branch we're about to delete.
+            restore_to = base
+            sw_p = _exec(
+                env, "/bin/sh", "-c",
+                f"cd /work/DeltaPorts && git checkout {shlex.quote(base)}",
+                cwd="/work/DeltaPorts",
+            )
         if sw_p.returncode != 0:
             return _exec_result(
                 sw_p.returncode, sw_p.stdout, sw_p.stderr,
-                error=f"checkout base {base} before drop failed",
+                error=f"checkout {restore_to} before drop failed",
                 branch=branch, base=base,
             )
 
@@ -1548,8 +1554,123 @@ def drop_bundle_branch(env: str, bundle_id: str) -> dict:
         )
     return {
         "ok": True, "branch": branch, "base": base,
-        "removed": True,
+        "restored_to": restore_to, "removed": True,
     }
+
+
+def drop_bundle_branch(env: str, bundle_id: str) -> dict:
+    """Delete the env's ``bundle/<bundle_id>`` branch, switching to
+    the base branch first if it's currently checked out.
+
+    Slice 4's terminal-resolution sweep calls this once a bundle
+    reaches accepted / rejected / discarded — the branch's history
+    has either been captured in a delivered PR or is meaningfully
+    abandoned, so the env can reclaim the namespace.
+
+    Idempotent: returns ``ok=True, removed=False`` when the branch
+    doesn't exist. ``-D`` (force) is used because the branch may
+    carry commits that aren't on any other ref.
+    """
+    if not bundle_id:
+        return {"ok": False, "error": "bundle_id is required"}
+    branch = _branch_name_for(bundle_id)
+    base = _resolve_bundle_base_branch(env)
+    return _drop_branch(env, branch, base, base)
+
+
+def _verify_branch_name_for(bundle_id: str) -> str:
+    """Throwaway branch name verify-fix runs on: ``bundle/<id>-verify``.
+
+    Distinct from the patch/convert ``bundle/<id>`` branch so verify
+    can't collide with (or inherit commits from) the agent's working
+    branch. Verify recreates this from base every run — changes.diff
+    is the complete canonical artifact, so no prior commits are
+    needed."""
+    return _branch_name_for(bundle_id) + "-verify"
+
+
+def checkout_verify_branch(env: str, bundle_id: str) -> dict:
+    """Put the env on a fresh ``bundle/<id>-verify`` branch cut from
+    base, recording the ref that was checked out before so the caller
+    can restore it after the run.
+
+    Unlike :func:`checkout_bundle_branch` (which *reuses* an existing
+    branch), verify always resets to base via ``git checkout -B`` —
+    the verify gate replays changes.diff (the complete branch-vs-base
+    artifact) on a clean base, independent of the patch agent's branch
+    which Slice 4 may already have dropped.
+
+    Returns the standard result dict plus ``branch``, ``base``,
+    ``previous_ref`` (the ref to restore on drop; a branch name, or a
+    commit SHA when HEAD was detached), and ``created``.
+    """
+    if not bundle_id:
+        return {"ok": False, "error": "bundle_id is required"}
+    branch = _verify_branch_name_for(bundle_id)
+    base = _resolve_bundle_base_branch(env)
+
+    cur_p = _exec(
+        env, "/bin/sh", "-c",
+        "cd /work/DeltaPorts && git rev-parse --abbrev-ref HEAD",
+        cwd="/work/DeltaPorts",
+    )
+    if cur_p.returncode != 0:
+        return _exec_result(
+            cur_p.returncode, cur_p.stdout, cur_p.stderr,
+            error="rev-parse HEAD failed", branch=branch, base=base,
+        )
+    previous_ref = (cur_p.stdout or "").strip()
+    if previous_ref == "HEAD":
+        # Detached HEAD — record the commit SHA so we can return to it.
+        sha_p = _exec(
+            env, "/bin/sh", "-c",
+            "cd /work/DeltaPorts && git rev-parse HEAD",
+            cwd="/work/DeltaPorts",
+        )
+        previous_ref = (sha_p.stdout or "").strip() or base
+    if previous_ref == branch:
+        # Re-verify while the throwaway branch is still current (prior
+        # run didn't clean up). Don't try to restore to a branch we're
+        # about to recreate/delete — fall back to base.
+        previous_ref = base
+
+    create_cmd = (
+        f"cd /work/DeltaPorts && "
+        f"git checkout {shlex.quote(base)} && "
+        f"git checkout -B {shlex.quote(branch)}"
+    )
+    create_p = _exec(env, "/bin/sh", "-c", create_cmd,
+                     cwd="/work/DeltaPorts")
+    if create_p.returncode != 0:
+        return _exec_result(
+            create_p.returncode, create_p.stdout, create_p.stderr,
+            error=f"create verify branch {branch} failed",
+            branch=branch, base=base, previous_ref=previous_ref,
+        )
+    return {
+        "ok": True, "branch": branch, "base": base,
+        "previous_ref": previous_ref, "created": True,
+    }
+
+
+def drop_verify_branch(
+    env: str, bundle_id: str, restore_ref: str | None = None,
+) -> dict:
+    """Delete the ``bundle/<id>-verify`` branch, restoring the ref
+    that was checked out before the verify run (``restore_ref``, as
+    returned by :func:`checkout_verify_branch`'s ``previous_ref``).
+
+    Falls back to base when ``restore_ref`` is None or names the
+    verify branch itself. Idempotent on a missing branch.
+    """
+    if not bundle_id:
+        return {"ok": False, "error": "bundle_id is required"}
+    branch = _verify_branch_name_for(bundle_id)
+    base = _resolve_bundle_base_branch(env)
+    restore_to = restore_ref or base
+    if restore_to == branch:
+        restore_to = base
+    return _drop_branch(env, branch, restore_to, base)
 
 
 def commit_port_changes(

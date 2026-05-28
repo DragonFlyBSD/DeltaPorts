@@ -10,9 +10,11 @@ Lifecycle pinned by these tests:
 - Patch end (either outcome) → branch is dropped (changes.diff
   was already captured at patch success — slice 5 made it the
   branch-vs-base shape; on failure the branch's state is moot).
-- Verify end (either outcome) → branch is dropped (verify
-  replays against base on a fresh checkout; subsequent operator
-  actions read artifacts, not the branch).
+- Verify end (either outcome) → the throwaway ``bundle/<id>-verify``
+  branch is dropped and the pre-verify ref restored (verify runs on
+  its own branch cut fresh from base, decoupled from the patch
+  agent's ``bundle/<id>``). See the verify-branch wrapper tests
+  below.
 
 Soft-fail semantics mirror slice 1's checkout helper: drop
 failures activity-log and continue. The next bundle's checkout
@@ -160,5 +162,97 @@ def test_drop_helper_tolerates_worker_raise(monkeypatch, tmp_path):
         r for r in rows
         if r["stage"] == "bundle_branch_drop_failed"
     ]
+    assert len(failed) == 1
+    assert "env disconnected" in failed[0]["message"]
+
+
+# --- verify-branch wrappers -----------------------------------------
+
+
+def test_checkout_verify_wrapper_returns_previous_ref(monkeypatch, tmp_path):
+    """The verify checkout wrapper returns worker's previous_ref so
+    the dispatch can hand it to the end-of-run drop."""
+    rows = _activity_recorder(monkeypatch)
+    from dportsv3.agent import worker
+    monkeypatch.setattr(
+        worker, "checkout_verify_branch",
+        lambda env, bundle_id: {
+            "ok": True, "branch": "bundle/b-verify", "base": "main",
+            "previous_ref": "bundle/b", "created": True,
+        },
+    )
+    prev = runner._checkout_verify_branch_for_job(
+        queue_root=tmp_path, job_id="j-1", env="e1", bundle_id="b",
+    )
+    assert prev == "bundle/b"
+    assert any(r["stage"] == "verify_branch_checkout" for r in rows)
+
+
+def test_checkout_verify_wrapper_noop_without_env_or_bundle(monkeypatch, tmp_path):
+    rows = _activity_recorder(monkeypatch)
+    called: list = []
+    from dportsv3.agent import worker
+    monkeypatch.setattr(
+        worker, "checkout_verify_branch",
+        lambda env, bundle_id: called.append((env, bundle_id)) or {"ok": True},
+    )
+    assert runner._checkout_verify_branch_for_job(
+        queue_root=tmp_path, job_id="j", env=None, bundle_id="b",
+    ) is None
+    assert runner._checkout_verify_branch_for_job(
+        queue_root=tmp_path, job_id="j", env="e", bundle_id=None,
+    ) is None
+    assert called == []
+    assert rows == []
+
+
+def test_checkout_verify_wrapper_soft_fails_on_error(monkeypatch, tmp_path):
+    rows = _activity_recorder(monkeypatch)
+    from dportsv3.agent import worker
+    monkeypatch.setattr(
+        worker, "checkout_verify_branch",
+        lambda env, bundle_id: {"ok": False, "error": "boom", "branch": "x"},
+    )
+    prev = runner._checkout_verify_branch_for_job(
+        queue_root=tmp_path, job_id="j-1", env="e1", bundle_id="b",
+    )
+    assert prev is None
+    assert any(r["stage"] == "verify_branch_checkout_failed" for r in rows)
+
+
+def test_drop_verify_wrapper_passes_restore_ref(monkeypatch, tmp_path):
+    rows = _activity_recorder(monkeypatch)
+    seen: list = []
+    from dportsv3.agent import worker
+    monkeypatch.setattr(
+        worker, "drop_verify_branch",
+        lambda env, bundle_id, restore_ref: seen.append(
+            (env, bundle_id, restore_ref)
+        ) or {
+            "ok": True, "removed": True, "branch": "bundle/b-verify",
+            "restored_to": restore_ref,
+        },
+    )
+    runner._drop_verify_branch_for_job(
+        queue_root=tmp_path, job_id="j-1", env="e1", bundle_id="b",
+        restore_ref="bundle/b", reason="verify_complete",
+    )
+    assert seen == [("e1", "b", "bundle/b")]
+    assert any(r["stage"] == "verify_branch_dropped" for r in rows)
+
+
+def test_drop_verify_wrapper_tolerates_worker_raise(monkeypatch, tmp_path):
+    rows = _activity_recorder(monkeypatch)
+    from dportsv3.agent import worker
+
+    def _raise(env, bundle_id, restore_ref):
+        raise RuntimeError("env disconnected")
+    monkeypatch.setattr(worker, "drop_verify_branch", _raise)
+
+    runner._drop_verify_branch_for_job(
+        queue_root=tmp_path, job_id="j-1", env="e1", bundle_id="b",
+        restore_ref=None, reason="verify_failure",
+    )
+    failed = [r for r in rows if r["stage"] == "verify_branch_drop_failed"]
     assert len(failed) == 1
     assert "env disconnected" in failed[0]["message"]

@@ -414,11 +414,14 @@ def apply_and_build(
     # parallel to worker.reset_port so the two stay easy to keep
     # in sync.
     #
-    # The diff path doesn't get this — pre-25e bundles rely on the
-    # legacy "leave drift in place" behavior.
+    # Runs for both paths. The intent-log path always needed it
+    # (25g); the diff path was historically exempted, but post
+    # verify-fix Slice 5 `--diff` is the *only* verify path, so
+    # exempting it just left ports/<origin>/ and the WRKDIR dirty
+    # after every verify (operator-visible drift on the env's
+    # working tree). No caller relies on the leave-drift behavior
+    # any more.
     def _post_build_cleanup() -> None:
-        if intent_log_path is None:
-            return
         rel = f"ports/{origin}"
         cleanup = runner.run(
             ["/bin/sh", "-c",
@@ -521,15 +524,19 @@ def apply_and_build(
             sys.stderr.write(tail)
             return result
 
-        # 3. dbuild ORIGIN — runs dsynth. Capture combined output to a
-        #    log file under writable so the orchestrator can POST it.
+        # 3. dtest ORIGIN — runs `dsynth test`, which exercises the
+        #    extra Q/A phases and force-rebuilds (removes any existing
+        #    package first) so the verify gate proves a clean build
+        #    from scratch, not a cached package. Capture combined
+        #    output to a log file under writable so the orchestrator
+        #    can POST it.
         log_rel = f"work/artifacts/apply-and-build-{origin.replace('/', '_')}.log"
         log_host = writable_root / log_rel
         log_host.parent.mkdir(parents=True, exist_ok=True)
         log_chroot = f"/{log_rel}"
         build_proc = runner.run(
             ["/bin/sh", "-c",
-             f"cd /work/DeltaPorts && dbuild {shlex.quote(origin)} "
+             f"cd /work/DeltaPorts && dtest {shlex.quote(origin)} "
              f"> {shlex.quote(log_chroot)} 2>&1", "_"],
             env=env, capture_output=False,
         )

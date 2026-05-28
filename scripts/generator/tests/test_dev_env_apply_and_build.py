@@ -3,8 +3,8 @@ Slice 1).
 
 The command is a substrate primitive — no bundles, no tracker, no
 artifact-store. It optionally applies a diff to the env's
-DeltaPorts overlay, runs `reapply ORIGIN`, then `dbuild ORIGIN`
-(dsynth), capturing combined output to a log file under writable.
+DeltaPorts overlay, runs `reapply ORIGIN`, then `dtest ORIGIN`
+(dsynth test), capturing combined output to a log file under writable.
 
 We can't run a real DragonFly chroot in CI, so we mock
 ``ChrootRunner`` + ``EnvironmentSession.prepare`` and assert on the
@@ -147,12 +147,13 @@ def test_no_diff_happy_path_returns_zero(fake_env, monkeypatch) -> None:
     assert result["dsynth_exit"] == 0
     assert result["applied_diff_sha256"] is None
     assert "apply-and-build-devel_foo.log" in result["log_path"]
-    # Only two chroot calls happened: reapply, dbuild
-    assert len(fake_env.calls) == 2
+    # reapply + dtest, then post-build cleanup (substrate reset +
+    # WRKDIR clean) which now runs for every path.
+    assert len(fake_env.calls) == 4
     reapply_argv = " ".join(fake_env.calls[0]["argv"])
-    dbuild_argv = " ".join(fake_env.calls[1]["argv"])
+    dtest_argv = " ".join(fake_env.calls[1]["argv"])
     assert "reapply devel/foo" in reapply_argv
-    assert "dbuild devel/foo" in dbuild_argv
+    assert "dtest devel/foo" in dtest_argv
 
 
 def test_diff_path_is_staged_into_writable_and_applied(fake_env, monkeypatch, tmp_path) -> None:
@@ -166,8 +167,8 @@ def test_diff_path_is_staged_into_writable_and_applied(fake_env, monkeypatch, tm
                                    diff=str(diff), json=True))
 
     assert rc == 0
-    # Three calls: apply, reapply, dbuild
-    assert len(fake_env.calls) == 3
+    # apply, reapply, dtest, then post-build cleanup (2 calls).
+    assert len(fake_env.calls) == 5
     apply_argv = " ".join(fake_env.calls[0]["argv"])
     assert "git apply --3way" in apply_argv
     assert "/work/.apply-and-build.diff" in apply_argv
@@ -195,8 +196,12 @@ def test_diff_apply_failure_short_circuits(fake_env, monkeypatch, tmp_path) -> N
     assert result["reapply_exit"] is None
     assert result["dsynth_exit"] is None
     assert result["ok"] is False
-    # Only the apply call ran — reapply + dbuild were skipped.
-    assert len(fake_env.calls) == 1
+    # apply failed → reapply + dtest skipped. Post-build cleanup
+    # still runs in the finally, but the build stages don't.
+    all_argv = [" ".join(c["argv"]) for c in fake_env.calls]
+    assert any("git apply --3way" in a for a in all_argv)
+    assert not any("reapply devel/foo" in a for a in all_argv)
+    assert not any("dtest devel/foo" in a for a in all_argv)
     # sha256 still recorded so the orchestrator can dedupe.
     assert result["applied_diff_sha256"] is not None
 
@@ -219,14 +224,17 @@ def test_reapply_failure_short_circuits_dsynth(fake_env, monkeypatch) -> None:
     assert result["reapply_exit"] == 2
     assert result["dsynth_exit"] is None
     assert result["ok"] is False
-    assert len(fake_env.calls) == 1
+    # reapply failed → dtest skipped (cleanup still runs in finally).
+    all_argv = [" ".join(c["argv"]) for c in fake_env.calls]
+    assert any("reapply devel/foo" in a for a in all_argv)
+    assert not any("dtest devel/foo" in a for a in all_argv)
 
 
 def test_dsynth_failure_reports_ok_false_but_returns_one(fake_env, monkeypatch) -> None:
     from dports_dev_env.cli import cmd_apply_and_build
     out = _capture_stdout(monkeypatch)
 
-    # reapply ok, dbuild fails with 1.
+    # reapply ok, dtest fails with 1.
     fake_env.runner.outcomes = [
         subprocess.CompletedProcess([], 0, "", ""),
         subprocess.CompletedProcess([], 1, "", ""),
@@ -349,20 +357,24 @@ def test_intent_log_path_runs_substrate_reset_then_make_clean(
     )
 
 
-def test_no_intent_log_path_skips_post_build_cleanup_entirely(
-    fake_env, monkeypatch,
+def test_diff_path_runs_post_build_cleanup(
+    fake_env, monkeypatch, tmp_path,
 ) -> None:
-    """Legacy diff-only path keeps the pre-Q1 behavior: no
-    cleanup of any kind. The Q1 follow-up only wired make clean
-    into the intent-log post-build cleanup that already existed
-    for substrate reset."""
+    """Post-build cleanup runs for the diff path too. Pre-slice-5
+    the diff path was exempted, but ``--diff`` is now the only
+    verify path, so skipping cleanup left ports/<origin>/ + the
+    WRKDIR dirty after every verify (and blocked the runner's
+    verify-branch drop, which needs a clean tree to switch off
+    the throwaway branch)."""
     from dports_dev_env.cli import apply_and_build
 
-    apply_and_build(fake_env.env_name, "devel/foo")
+    diff = tmp_path / "fix.diff"
+    diff.write_text("--- a/x\n+++ b/x\n@@ -1 +1 @@\n-1\n+2\n")
+    apply_and_build(fake_env.env_name, "devel/foo", diff_path=str(diff))
 
     shell_calls = _post_build_calls(fake_env.calls)
-    assert not any("git checkout HEAD" in c[2] for c in shell_calls)
-    assert not any(
+    assert any("git checkout HEAD" in c[2] for c in shell_calls)
+    assert any(
         "WRKDIRPREFIX=/work/obj" in c[2] and "clean" in c[2]
         for c in shell_calls
     )
@@ -381,11 +393,11 @@ def test_make_clean_skipped_when_substrate_reset_fails(
 
     # Queue outcomes so the substrate reset fails. The runner
     # consumes outcomes from a list, in order — earlier reapply +
-    # dbuild stages consume the first two, then the substrate
+    # dtest stages consume the first two, then the substrate
     # cleanup gets rc=1.
     fake_env.runner.outcomes = [
         _sp.CompletedProcess([], 0, "", ""),     # reapply
-        _sp.CompletedProcess([], 0, "", ""),     # dsynth (dbuild)
+        _sp.CompletedProcess([], 0, "", ""),     # dsynth (dtest)
         _sp.CompletedProcess(                    # substrate reset → fails
             [], 1, "", "fatal: not a git repository",
         ),

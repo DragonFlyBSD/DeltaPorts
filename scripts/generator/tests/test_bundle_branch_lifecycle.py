@@ -283,3 +283,151 @@ def test_branch_name_strips_job_suffix(monkeypatch):
     ``bundle/<...>.job``."""
     assert worker._branch_name_for("b-abc.job") == "bundle/b-abc"
     assert worker._branch_name_for("b-abc") == "bundle/b-abc"
+
+
+# --- verify branch: checkout_verify_branch / drop_verify_branch ------
+
+
+def test_verify_branch_name_is_suffixed():
+    assert worker._verify_branch_name_for("b-abc") == "bundle/b-abc-verify"
+    assert worker._verify_branch_name_for("b-abc.job") == "bundle/b-abc-verify"
+
+
+def test_checkout_verify_recreates_from_base_and_records_prev(monkeypatch):
+    """Verify always resets the throwaway branch to base via
+    ``checkout -B`` and records the ref that was current so the drop
+    can restore it."""
+    calls, fake = _exec_recorder({
+        "symbolic-ref": (0, "origin/main\n", ""),
+        "rev-parse --abbrev-ref": (0, "bundle/b-abc\n", ""),
+    })
+    monkeypatch.setattr(worker, "_exec", fake)
+
+    result = worker.checkout_verify_branch("e1", "b-abc")
+    assert result["ok"] is True
+    assert result["branch"] == "bundle/b-abc-verify"
+    assert result["base"] == "main"
+    # The ref the env was on before is recorded for restore.
+    assert result["previous_ref"] == "bundle/b-abc"
+    # Reset-or-create from base in one pipeline.
+    create_cmd = next(
+        (c for c in calls if "git checkout -B bundle/b-abc-verify" in c),
+        None,
+    )
+    assert create_cmd is not None
+    assert "git checkout main" in create_cmd
+
+
+def test_checkout_verify_records_detached_head_sha(monkeypatch):
+    """Detached HEAD → record the commit SHA as previous_ref."""
+    calls, fake = _exec_recorder({
+        "symbolic-ref": (0, "origin/main\n", ""),
+        "rev-parse --abbrev-ref": (0, "HEAD\n", ""),  # detached
+        "rev-parse HEAD": (0, "cafe1234\n", ""),
+    })
+    monkeypatch.setattr(worker, "_exec", fake)
+
+    result = worker.checkout_verify_branch("e1", "b-abc")
+    assert result["ok"] is True
+    assert result["previous_ref"] == "cafe1234"
+
+
+def test_checkout_verify_falls_back_to_base_when_on_verify_branch(monkeypatch):
+    """Re-verify while the throwaway branch is still current → don't
+    record the branch we're about to recreate; restore base."""
+    calls, fake = _exec_recorder({
+        "symbolic-ref": (0, "origin/main\n", ""),
+        "rev-parse --abbrev-ref": (0, "bundle/b-abc-verify\n", ""),
+    })
+    monkeypatch.setattr(worker, "_exec", fake)
+
+    result = worker.checkout_verify_branch("e1", "b-abc")
+    assert result["ok"] is True
+    assert result["previous_ref"] == "main"
+
+
+def test_checkout_verify_refuses_without_bundle_id():
+    result = worker.checkout_verify_branch("e1", "")
+    assert result["ok"] is False
+    assert "bundle_id" in result.get("error", "").lower()
+
+
+def test_drop_verify_restores_recorded_ref(monkeypatch):
+    """drop_verify_branch switches back to the recorded ref (not
+    base) before deleting the throwaway branch."""
+    calls, fake = _exec_recorder({
+        "symbolic-ref": (0, "origin/main\n", ""),
+        "rev-parse --abbrev-ref": (0, "bundle/b-abc-verify\n", ""),
+        "rev-parse --verify --quiet": (0, "deadbeef\n", ""),
+    })
+    monkeypatch.setattr(worker, "_exec", fake)
+
+    result = worker.drop_verify_branch("e1", "b-abc", restore_ref="bundle/b-abc")
+    assert result["ok"] is True
+    assert result["removed"] is True
+    assert result["restored_to"] == "bundle/b-abc"
+    assert any("git checkout bundle/b-abc" in c for c in calls)
+    assert any("git branch -D bundle/b-abc-verify" in c for c in calls)
+
+
+def test_drop_verify_defaults_to_base_without_restore_ref(monkeypatch):
+    calls, fake = _exec_recorder({
+        "symbolic-ref": (0, "origin/main\n", ""),
+        "rev-parse --abbrev-ref": (0, "bundle/b-abc-verify\n", ""),
+        "rev-parse --verify --quiet": (0, "deadbeef\n", ""),
+    })
+    monkeypatch.setattr(worker, "_exec", fake)
+
+    result = worker.drop_verify_branch("e1", "b-abc")
+    assert result["ok"] is True
+    assert result["restored_to"] == "main"
+    assert any("git checkout main" in c for c in calls)
+
+
+def test_drop_verify_falls_back_to_base_when_restore_ref_unrestorable(monkeypatch):
+    """Recorded ref can't be checked out (e.g. since-deleted branch)
+    → fall back to base so the env isn't stranded on the branch
+    we're deleting."""
+    # The recorded ref checkout fails; the base checkout succeeds.
+    def _fake(env, *argv, **kwargs):
+        cmd = argv[-1] if argv else ""
+        calls.append(cmd)
+        if "symbolic-ref" in cmd:
+            return SimpleNamespace(returncode=0, stdout="origin/main\n", stderr="")
+        if "rev-parse --abbrev-ref" in cmd:
+            return SimpleNamespace(returncode=0, stdout="bundle/b-abc-verify\n", stderr="")
+        if "rev-parse --verify --quiet" in cmd:
+            return SimpleNamespace(returncode=0, stdout="deadbeef\n", stderr="")
+        if "git checkout bundle/gone" in cmd:
+            return SimpleNamespace(returncode=1, stdout="", stderr="error: pathspec")
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    calls: list[str] = []
+    monkeypatch.setattr(worker, "_exec", _fake)
+
+    result = worker.drop_verify_branch("e1", "b-abc", restore_ref="bundle/gone")
+    assert result["ok"] is True
+    assert result["removed"] is True
+    assert result["restored_to"] == "main"
+    assert any("git checkout main" in c for c in calls)
+
+
+def test_drop_verify_idempotent_on_missing(monkeypatch):
+    calls, fake = _exec_recorder({
+        "symbolic-ref": (0, "origin/main\n", ""),
+        "rev-parse --abbrev-ref": (0, "main\n", ""),
+        "rev-parse --verify --quiet": (1, "", ""),
+    })
+    monkeypatch.setattr(worker, "_exec", fake)
+
+    result = worker.drop_verify_branch("e1", "b-abc")
+    assert result["ok"] is True
+    assert result["removed"] is False
+    assert result["reason"] == "branch_absent"
+    assert not any("git branch -D" in c for c in calls)
+
+
+def test_drop_verify_refuses_without_bundle_id():
+    result = worker.drop_verify_branch("e1", "")
+    assert result["ok"] is False
+    assert "bundle_id" in result.get("error", "").lower()
