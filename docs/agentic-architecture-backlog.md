@@ -3263,3 +3263,153 @@ Small app code (rate-limit + security headers ~40); the bulk is
 ops/config (TLS, proxy, firewall) + the 34a exposure audit.
 
 ---
+
+### Step 35 — patch-phase working baseline: `make patch` tree + makepatch generation — pending
+
+The patch agent works against the **wrong source baseline**. Its
+opening procedure runs `make extract` (raw upstream distfile) and the
+patch-generation path is `extract → dupe PATH (clone the raw file to
+.orig) → edit → genpatch (diff edited-vs-.orig)`. Nowhere does it run
+`make patch`, so the **existing port patches are never applied** to the
+tree the agent inspects and edits. dsynth fails at configure/build —
+i.e. *after* the patch phase — so the source the compiler choked on is
+the *patched* tree, not the raw one the agent is looking at. Two
+concrete failure modes:
+
+1. **Wrong baseline for diagnosis.** If the failing file is already
+   covered by an existing patch, the agent inspects content that
+   differs from what actually failed.
+2. **`dupe`+`genpatch` against raw emits a conflicting patch.** `dupe`
+   makes the `.orig` from the *raw* file, so `genpatch` produces a
+   patch assuming the unpatched baseline. At build time `make patch`
+   applies the existing patch first, then this new patch against
+   already-patched content → context mismatch / a second bug.
+
+The fix is to mirror FreeBSD's native phase model — `extract → patch →
+build`, with `make makepatch` for regeneration — and make the
+**patched tree the default working baseline**.
+
+#### Layer boundary (in scope)
+
+Two distinct patch layers; only the build-time one is in scope:
+
+- **Compose-time — DeltaPorts framework layer** (`diffs/`,
+  `file.materialize`, `file.copy`). Applied by `materialize_dports` /
+  compose to adjust the *port itself*. `make patch` does **not** touch
+  this; it is out of scope here.
+- **Build-time — distfile + port patches.** `make patch` extracts the
+  distfile into WRKSRC and applies the port's `files/patch-*` to it.
+  For a dops port these build-time patches are the rendered
+  `patch.apply { diff }` blocks. **This** is the layer Step 35
+  addresses.
+
+#### Scope
+
+**35a — a `patch` tool, with failure as a first-class outcome.** Runs
+`make patch` (do-extract + do-patch) in the compose root
+(`WRKDIRPREFIX=/work/obj`). Unlike `extract` (which fails only on a bad
+distfile), `make patch` **fails routinely** — a drifted patch is the
+single most common triage class — so the tool models failure as a
+normal branch, not an error that aborts the agent. Returns roughly:
+
+```
+{ ok, exit_code, applied:[patch names], failed_patch, failed_hunks,
+  wrksrc, stdout_tail, rej_files:[…] }
+```
+
+- **Diagnostics come from captured stdout/stderr, not `.rej`.** `.rej`
+  files are NOT reliably produced (depends on patch flags, and
+  `do-patch` aborts on the first failing patch). The reliable signal is
+  the `patch` program's `patching file X` / `Hunk #N FAILED at NNN` /
+  `N out of M hunks failed` output plus `do-patch`'s `===> Applying …
+  patch-foo` echo — parse that to attribute the failure to a specific
+  patch + hunk. Include `.rej` opportunistically when present.
+- **Determinism.** `make patch` is not cleanly re-runnable on a
+  half-patched WRKDIR (double-apply / leftover `.orig`). The tool must
+  guarantee a fresh tree (`make clean` → extract → patch, or rely on
+  the between-attempt `reset_port` wipe) so the reported state is
+  deterministic. (See open question 2.)
+
+**35b — shift the opening baseline to `make patch`, branch on its
+result.** Opening becomes `env_verify → materialize_dports → patch`.
+The opening procedure cannot assume success:
+- **patch ok** → real compiled baseline + `.orig` backups present →
+  diagnose the compile/link error or add a patch.
+- **patch failed** → the `failed_patch`/`failed_hunks` *is* the
+  diagnosis for the patch-error class → rebase that patch.
+
+`extract` stays as a secondary tool for the rebase sub-case (pull the
+pristine upstream file to see how its context drifted from the failing
+hunk). The prompt gate changes accordingly: `extract` ok:false is still
+a hard STOP (bad distfile = dead end), but `patch` ok:false is the
+*opposite* — usually the rebase target, not a give-up trigger.
+
+**35c — `genpatch`/`dupe` → `makepatch` semantics.** The baseline bug:
+`dupe` clones the raw file as `.orig`, so generated patches assume the
+unpatched baseline and won't stack on existing ones. Fix: diff against
+the framework's `.orig` (the pre-patch backup `make patch` leaves).
+- **Edit an existing patch:** edit the already-patched file in WRKSRC,
+  run `make makepatch` → regenerate `files/patch-*` from
+  `.orig`-vs-current (correctly = "existing change + your edit").
+- **New patch to an unpatched file:** still need a `.orig` first
+  (`dupe`/`cp`), then edit, then `makepatch`.
+- **dops hop:** `makepatch` produces `files/patch-*` *text*; the
+  durable edit is folding that text back into the originating
+  `patch.apply { diff }` block in `overlay.dops` via Step 25's
+  `replace_in_patch` / `add_patch`. So `makepatch` = "produce correct
+  patch text"; the intent = "write it to the overlay."
+
+**35d — prompt + playbook: the patch-phase model + a classification
+decision tree.** A "patch phase model" section (extract = raw; patch =
+real baseline + `.orig`; makepatch = regenerate), plus a decision tree
+keyed on the triage class the agent already has:
+- **patch-error** → run `patch`, *expect* failure, read
+  `failed_patch`/`failed_hunks` from stdout (not `.rej`), pull pristine
+  context via `extract`, rebase the hunks.
+- **compile/link error** → `patch` should succeed → edit patched
+  WRKSRC → `makepatch`.
+- **missing fix / new patch** → `patch` for baseline → `dupe` the new
+  file → edit → `makepatch`.
+
+Two explicit cautions: (a) `make patch` failure is normal/diagnostic,
+not a give-up trigger (contrast `extract`); (b) the patch-phase work is
+the build-time layer only — do not touch the compose-time
+`diffs/` / `file.materialize` layer when rebasing a build patch.
+
+#### Open questions to settle before building
+
+1. **Does the ports patch phase leave `.orig` backups** in this
+   environment, or must "produce `.orig` reliably" be part of the
+   `makepatch` tool's job (set a backup flag in `PATCH_ARGS`, or diff
+   manually)? Also confirm `make makepatch` works in the composed port
+   dir.
+2. **Determinism:** is the between-attempt `reset_port` wipe enough to
+   assume `patch` always runs on a clean WRKDIR, or should the `patch`
+   tool force `make clean` + re-extract itself?
+
+#### Dependencies
+
+- **Upstream of Step 25.** There's no point being clever about
+  *editing* `patch.apply` blocks (Step 25's edit-intent DSL) if the
+  *baseline you diff against* is the raw tree. 35 fixes the baseline;
+  25 refines the edit surface on top of it. Cross-reference both ways.
+- **Prompt/playbook half folds into Steps 24 / 27** (the patch-phase
+  model + decision tree are prompt + playbook content).
+- **No DB / lifecycle interaction.** This is agent-tool + prompt work.
+
+#### Out of scope
+
+- The compose-time `diffs/` / `file.materialize` / `file.copy` layer —
+  a separate concern (porting the port itself), untouched by `make
+  patch`.
+- Convert-flow changes — convert operates on `overlay.dops`, not on
+  WRKSRC patch state.
+
+#### LOC estimate
+
+Moderate — `patch` tool with output parsing (~120) + `makepatch` tool
+(~80, partly replacing `dupe`/`genpatch`) + opening-procedure +
+prompt-gate changes (~60) + playbook/prompt section (~prose) + tests
+(~150).
+
+---
