@@ -1383,10 +1383,13 @@ def create_app(db_path: str | Path) -> Any:
     def api_bundle_reject(
         bundle_id: str, body: dict[str, Any],
     ) -> dict[str, Any]:
-        """Operator reject (Step 11c). Sets resolution='rejected' +
-        rejected_at + rejection_reason. The rejection reason is
-        injected into the next triage as user_context so the agent
-        knows what humans didn't like about the last attempt.
+        """Operator reject (Step 11c). Terminal "this fix is wrong,
+        stop" action: sets resolution='rejected' + rejected_at +
+        rejection_reason and stops. The reason is recorded for audit
+        only — reject does NOT re-triage. An operator who wants the
+        loop to try again with feedback uses /retry instead (allowed
+        on agent_fixed), which plants the feedback as user_context
+        and re-triages.
 
         Body: ``{"reason": "<text>"}``. Reason is required (an
         unexplained reject is uninformative)."""
@@ -1805,13 +1808,14 @@ def create_app(db_path: str | Path) -> Any:
 
         Allowed from failure-shaped resolutions
         (``agent_budget_exhausted`` / ``agent_gave_up`` /
-        ``escalated_manual`` / ``convert_gave_up``) and from
-        ``operator_owned`` (operator gives up on the manual
-        attempt and hands back to the loop with context). 409 from
-        already-terminal accept / reject / discarded and from
-        ``agent_fixed`` (the 11c Reject path already routes
-        rejected fixes back to triage with the rejection reason as
-        context — no separate retry needed).
+        ``escalated_manual`` / ``convert_gave_up``), from
+        ``operator_owned`` (operator gives up on the manual attempt
+        and hands back to the loop with context), and from
+        ``agent_fixed`` — the "this fix is wrong, try again with my
+        feedback" path for a verified-but-rejected fix. (Reject is
+        the separate *terminal* "this fix is wrong, stop" action; it
+        records a reason but does NOT re-triage.) 409 only from the
+        already-terminal states accept / reject / discarded.
 
         Body:
           - ``context`` (str, required, ≤ 8000 chars): operator's
@@ -1862,15 +1866,6 @@ def create_app(db_path: str | Path) -> Any:
                 detail=(
                     f"Cannot retry bundle in terminal state "
                     f"{current_resolution!r}"
-                ),
-            )
-        if current_resolution == "agent_fixed":
-            raise HTTPException(
-                status_code=409,
-                detail=(
-                    "agent_fixed bundles use the Step 11c Reject path "
-                    "to re-triage with rejection context; /retry is "
-                    "for failure-shaped or operator-owned bundles"
                 ),
             )
         run_id = (row.get("run_id") or "").strip()
@@ -2596,11 +2591,19 @@ def create_app(db_path: str | Path) -> Any:
             bundle is not None
             and resolution in (failure_resolutions | {"operator_owned"})
         )
-        # Step 28c: retry-with-context surfaces wherever discard
-        # does (failure resolutions + operator_owned). The 11c
-        # Reject path already handles agent_fixed bundles, so /retry
-        # is deliberately not surfaced there.
-        can_retry = can_discard
+        # Step 28c: retry-with-context surfaces wherever discard does
+        # (failure resolutions + operator_owned) AND on agent_fixed —
+        # the "this verified fix is wrong, try again with my feedback"
+        # path. Reject stays the separate *terminal* "wrong, stop"
+        # action on agent_fixed; retry is "wrong, re-triage with
+        # context". (Discard deliberately does NOT extend to
+        # agent_fixed, so can_retry is no longer just can_discard.)
+        can_retry = (
+            bundle is not None
+            and resolution in (
+                failure_resolutions | {"operator_owned", "agent_fixed"}
+            )
+        )
         # Step 28d: reopen-from-terminal undoes an accept/reject/
         # discard. Rare; the only state where the button surfaces.
         can_reopen = resolution in ("accepted", "rejected", "discarded")

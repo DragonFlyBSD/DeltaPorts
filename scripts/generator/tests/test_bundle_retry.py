@@ -1,17 +1,21 @@
-"""Step 28c: operator retry-with-context on a failed or
-operator-owned bundle.
+"""Step 28c: operator retry-with-context on a failed,
+operator-owned, or agent_fixed bundle.
 
 Covers:
 - POST /api/bundles/{id}/retry happy path across failure
-  resolutions + operator_owned. Plants user_context + user_context_requests
-  rows so the runner's existing process_user_context_updates poll
-  picks it up; sets bundle.resolution='retry_requested' (transient).
+  resolutions + operator_owned + agent_fixed. Plants user_context +
+  user_context_requests rows so the runner's existing
+  process_user_context_updates poll picks it up; sets
+  bundle.resolution='retry_requested' (transient).
+- agent_fixed retry = "this verified fix is wrong, try again with my
+  feedback" (Reject is the separate *terminal* "wrong, stop" action,
+  which does NOT re-triage).
 - Body validation: 400 on missing/blank/non-string/oversized context.
-- 409 on terminal (accepted/rejected/discarded) and agent_fixed.
+- 409 only on terminal states (accepted/rejected/discarded).
 - 404 unknown bundle.
 - bundle_retry_requested event emitted with rev + char count.
-- UI: Retry button surfaces on failure + operator_owned; absent on
-  terminal / agent_fixed / fresh.
+- UI: Retry button surfaces on failure + operator_owned + agent_fixed;
+  absent on terminal / fresh. agent_fixed shows both Reject and Retry.
 - Runner sweep clears retry_requested → NULL when actually enqueuing
   the retriage (so a stuck retry_requested is observable).
 """
@@ -331,16 +335,27 @@ def test_retry_409_on_terminal_resolution(client, bundle_id):
     assert "terminal" in resp.json()["detail"]
 
 
-def test_retry_409_on_agent_fixed(client):
-    """agent_fixed routes through 11c Reject (which already re-triages
-    with the rejection reason as user_context). /retry is for
-    failure-shaped bundles only."""
+def test_retry_allowed_on_agent_fixed(client, seeded_db):
+    """agent_fixed is the 'this verified fix is wrong, try again with
+    my feedback' path: /retry plants the context and re-triages
+    (Reject is the separate *terminal* 'wrong, stop' action and does
+    NOT re-triage)."""
     resp = client.post(
         "/api/bundles/b-agent-fixed/retry",
-        json={"context": "wrong fix"},
+        json={"context": "wrong fix — the patch drops the wrong hunk"},
     )
-    assert resp.status_code == 409
-    assert "11c Reject" in resp.json()["detail"]
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["ok"] is True
+    assert body["resolution"] == "retry_requested"
+
+    # Same machinery as failure-bundle retry: context + pending UCR.
+    uc = _user_context(seeded_db, "run-fixed", "devel/fixed")
+    assert uc is not None
+    assert uc["context_text"] == "wrong fix — the patch drops the wrong hunk"
+    ucr = _ucr(seeded_db, "run-fixed", "devel/fixed", "b-agent-fixed")
+    assert ucr is not None
+    assert ucr["status"] == "pending"
 
 
 def test_retry_404_unknown(client):
@@ -367,18 +382,28 @@ def test_retry_409_when_missing_run_id(client):
 
 @pytest.mark.parametrize("bundle_id", [
     "b-budget", "b-gave-up", "b-escalated", "b-convert-gave-up",
-    "b-owned",
+    "b-owned", "b-agent-fixed",
 ])
-def test_retry_button_renders_on_failure_or_operator_owned(client, bundle_id):
+def test_retry_button_renders_on_failure_operator_owned_or_agent_fixed(
+    client, bundle_id,
+):
     body = client.get(f"/agentic/bundles/{bundle_id}").text
     assert 'id="op-retry"' in body
     assert "Retry with context" in body
 
 
+def test_agent_fixed_shows_both_reject_and_retry(client):
+    """agent_fixed gets the terminal Reject AND the re-triage Retry —
+    'wrong, stop' vs 'wrong, try again with feedback'."""
+    body = client.get("/agentic/bundles/b-agent-fixed").text
+    assert 'id="op-reject"' in body
+    assert 'id="op-retry"' in body
+
+
 @pytest.mark.parametrize("bundle_id", [
-    "b-agent-fixed", "b-accepted", "b-rejected", "b-discarded", "b-fresh",
+    "b-accepted", "b-rejected", "b-discarded", "b-fresh",
 ])
-def test_retry_button_absent_on_other_resolutions(client, bundle_id):
+def test_retry_button_absent_on_terminal_and_fresh(client, bundle_id):
     body = client.get(f"/agentic/bundles/{bundle_id}").text
     assert 'id="op-retry"' not in body
 

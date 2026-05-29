@@ -138,13 +138,16 @@
           Accept
         </button>
         {% endif %}
-        {# Step 11c Reject — agent_fixed lane only. Its semantics
-           (enqueue new triage with rejection reason as user_context)
-           make sense only for rejecting an agent-produced fix, not
-           for an operator's manual fix. #}
+        {# Step 11c Reject — agent_fixed lane only. TERMINAL "this
+           fix is wrong, stop": records a reason and stops; it does
+           NOT re-triage. To try again with feedback, use "Retry with
+           context" below (now surfaced on agent_fixed too). Reject is
+           agent-fix-specific — it doesn't apply to an operator's
+           manual fix. #}
         {% if operator_actions.show_11c_group %}
         <button id="op-reject" type="button" class="btn btn-danger"
                 data-bundle="{{ bundle.bundle_id }}"
+                title="Terminal: reject this fix and stop (records a reason; does not re-triage)"
                 {% if not operator_actions.can_reject %}disabled{% endif %}>
           Reject
         </button>
