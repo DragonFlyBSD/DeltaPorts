@@ -53,30 +53,34 @@ def test_schema_migration_applies_cleanly(tmp_path):
         "AND tbl_name='bundle_review_requests'"
     ).fetchall()}
     assert "idx_brr_bundle" in indexes
-    assert "uq_brr_open_signature" in indexes
+    assert "uq_brr_open_branch" in indexes
+    # The old signature-keyed index was replaced because cross-port
+    # signature collisions (signature = sha256 of first error line,
+    # origin-agnostic) crashed delivery and orphaned upstream PRs.
+    assert "uq_brr_open_signature" not in indexes
     db.close()
 
 
 def test_partial_unique_blocks_duplicate_open_delivery(tmp_path):
-    """uq_brr_open_signature enforces "at most one open delivery
-    per (provider, error_signature)". Two open rows with the same
-    pair must raise sqlite3.IntegrityError."""
+    """uq_brr_open_branch enforces "at most one open delivery
+    per (provider, branch)". Two open rows with the same pair must
+    raise sqlite3.IntegrityError."""
     db = sqlite3.connect(str(tmp_path / "state.db"))
     init_db(db)
     now = _now()
     db.execute(
         """INSERT INTO bundle_review_requests
-           (bundle_id, provider, status, created_at, error_signature)
+           (bundle_id, provider, status, created_at, branch)
            VALUES (?, ?, 'created', ?, ?)""",
-        ("b1", "github", now, "sig123"),
+        ("b1", "github", now, "agentic/devel-foo-main-deadbeef"),
     )
     db.commit()
     with pytest.raises(sqlite3.IntegrityError):
         db.execute(
             """INSERT INTO bundle_review_requests
-               (bundle_id, provider, status, created_at, error_signature)
+               (bundle_id, provider, status, created_at, branch)
                VALUES (?, ?, 'created', ?, ?)""",
-            ("b2", "github", now, "sig123"),
+            ("b2", "github", now, "agentic/devel-foo-main-deadbeef"),
         )
     db.close()
 
@@ -84,23 +88,52 @@ def test_partial_unique_blocks_duplicate_open_delivery(tmp_path):
 def test_partial_unique_allows_reopen_after_terminal(tmp_path):
     """Terminal statuses (closed/merged/create_failed) drop OUT of
     the partial-unique constraint, so a new open delivery for the
-    same signature can land after the previous one is closed."""
+    same branch can land after the previous one is closed."""
     db = sqlite3.connect(str(tmp_path / "state.db"))
     init_db(db)
     now = _now()
     db.execute(
         """INSERT INTO bundle_review_requests
-           (bundle_id, provider, status, created_at, error_signature)
+           (bundle_id, provider, status, created_at, branch)
            VALUES (?, ?, 'closed', ?, ?)""",
-        ("b1", "github", now, "sig999"),
+        ("b1", "github", now, "agentic/devel-foo-main-cafecafe"),
     )
     db.commit()
-    # New 'created' row with the same signature is allowed.
+    # New 'created' row with the same branch is allowed.
     db.execute(
         """INSERT INTO bundle_review_requests
-           (bundle_id, provider, status, created_at, error_signature)
+           (bundle_id, provider, status, created_at, branch)
            VALUES (?, ?, 'created', ?, ?)""",
-        ("b2", "github", now, "sig999"),
+        ("b2", "github", now, "agentic/devel-foo-main-cafecafe"),
+    )
+    db.commit()
+    db.close()
+
+
+def test_partial_unique_allows_distinct_branches_same_signature(tmp_path):
+    """Cross-port signature collisions used to crash on (provider,
+    error_signature). With (provider, branch) as the unique key, two
+    open rows that share an error_signature but live on distinct
+    branches (e.g. unrelated ports whose first error lines match)
+    coexist freely."""
+    db = sqlite3.connect(str(tmp_path / "state.db"))
+    init_db(db)
+    now = _now()
+    db.execute(
+        """INSERT INTO bundle_review_requests
+           (bundle_id, provider, status, created_at,
+            branch, error_signature)
+           VALUES (?, ?, 'created', ?, ?, ?)""",
+        ("b1", "github", now,
+         "agentic/archivers-liblz4-main-aaaaaaaa", "sig-shared"),
+    )
+    db.execute(
+        """INSERT INTO bundle_review_requests
+           (bundle_id, provider, status, created_at,
+            branch, error_signature)
+           VALUES (?, ?, 'created', ?, ?, ?)""",
+        ("b2", "github", now,
+         "agentic/devel-foo-main-bbbbbbbb", "sig-shared"),
     )
     db.commit()
     db.close()
@@ -494,11 +527,13 @@ def test_latest_returns_most_recent(db):
 def test_find_open_review_request_matches(db):
     rid = q.insert_review_request(
         db, bundle_id="b1", provider="github",
+        branch="agentic/devel-foo-main-aaaaaaaa",
         error_signature="sig-A",
     )
     db.commit()
     found = q.find_open_review_request(
-        db, provider="github", error_signature="sig-A",
+        db, provider="github",
+        branch="agentic/devel-foo-main-aaaaaaaa",
     )
     assert found is not None
     assert found["id"] == rid
@@ -509,15 +544,20 @@ def test_find_open_skips_terminal_statuses(db):
     those are the same statuses the partial-unique drops."""
     q.insert_review_request(
         db, bundle_id="b1", provider="github",
-        status="closed", error_signature="sig-A",
+        status="closed",
+        branch="agentic/devel-foo-main-aaaaaaaa",
+        error_signature="sig-A",
     )
     q.insert_review_request(
         db, bundle_id="b2", provider="github",
-        status="create_failed", error_signature="sig-A",
+        status="create_failed",
+        branch="agentic/devel-foo-main-aaaaaaaa",
+        error_signature="sig-A",
     )
     db.commit()
     assert q.find_open_review_request(
-        db, provider="github", error_signature="sig-A",
+        db, provider="github",
+        branch="agentic/devel-foo-main-aaaaaaaa",
     ) is None
 
 

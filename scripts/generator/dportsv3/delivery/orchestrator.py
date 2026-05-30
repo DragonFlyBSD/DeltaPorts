@@ -146,6 +146,7 @@ def build_provider(cfg: DeliveryConfig) -> ReviewProvider:
 def format_branch(
     template: str, *,
     origin: str, target: str, bundle_id: str,
+    error_signature: str | None = None,
 ) -> str:
     """Apply the operator's branch_template to this bundle's data.
 
@@ -157,10 +158,18 @@ def format_branch(
     - ``{bundle_id}`` — the full bundle ID
     - ``{bundle_short}`` — the trailing timestamp (last 16 chars
       of the bundle ID typically; falls back to whole id)
+    - ``{signature_short}`` — first 8 hex chars of the bundle's
+      ``error_signature``, or ``bundle_short`` when the signature
+      is missing (legacy bundles + non-failure flows). Used by the
+      default template so same-(origin, target, root-cause) retries
+      converge on one branch / one PR.
     """
     origin_safe = origin.replace("/", "-").replace("_", "-")
     target_safe = target.lstrip("@") if target else ""
     bundle_short = bundle_id[-16:] if len(bundle_id) > 16 else bundle_id
+    signature_short = (
+        error_signature[:8] if error_signature else bundle_short
+    )
     try:
         return template.format(
             origin=origin,
@@ -169,12 +178,13 @@ def format_branch(
             target_safe=target_safe,
             bundle_id=bundle_id,
             bundle_short=bundle_short,
+            signature_short=signature_short,
         )
     except KeyError as exc:
         raise DeliveryError(
             f"branch_template references unknown field {exc}; "
             f"known: origin / origin_safe / target / target_safe / "
-            f"bundle_id / bundle_short"
+            f"bundle_id / bundle_short / signature_short"
         ) from exc
 
 
@@ -399,6 +409,7 @@ def deliver(
     branch = format_branch(
         cfg.branch_template,
         origin=origin, target=target, bundle_id=bundle_id,
+        error_signature=error_signature,
     )
     title, body = format_commit_message(
         origin=origin, target=target, operator=operator,
@@ -453,15 +464,19 @@ def deliver(
     # Look up an open delivery row BEFORE calling the provider so
     # we can pass its recorded diff_sha256 in — same-content
     # re-Accepts then short-circuit the provider's git pipeline
-    # (review Finding 4). Legacy rows without a signature can't
-    # collide (partial-unique index doesn't fire on NULL) so we
-    # skip the lookup there.
+    # (review Finding 4). Keyed on (provider, branch): the branch
+    # name encodes (origin, target, error_signature) under the
+    # default template, so this catches genuine retries of the same
+    # root cause on the same port without aliasing across ports
+    # whose first error lines happen to match. Legacy rows with
+    # NULL branch can't collide (partial-unique index doesn't fire
+    # on NULL) so we skip the lookup there.
     existing_open = None
-    if error_signature:
+    if branch:
         existing_open = find_open_review_request(
             write_conn,
             provider=cfg.provider_type,
-            error_signature=error_signature,
+            branch=branch,
         )
     existing_diff_sha256 = (
         existing_open["diff_sha256"] if existing_open is not None
@@ -502,7 +517,7 @@ def deliver(
         )
 
     # On status='updated' the partial-unique index would block a
-    # fresh INSERT (an open row already exists for this signature);
+    # fresh INSERT (an open row already exists for this branch);
     # touch the existing row's last_synced_at instead. status=
     # 'created' is the fresh-write path. The existing_open lookup
     # already ran above the provider call.
@@ -518,19 +533,45 @@ def deliver(
         )
         request_id = int(existing_open["id"])
     else:
-        request_id = insert_review_request(
-            write_conn,
-            bundle_id=bundle_id,
-            provider=cfg.provider_type,
-            status=result.status,
-            provider_pr_id=result.provider_pr_id,
-            url=result.url,
-            branch=result.branch,
-            title=result.title,
-            operator=operator,
-            error_signature=error_signature,
-            diff_sha256=diff_sha256,
-        )
+        try:
+            request_id = insert_review_request(
+                write_conn,
+                bundle_id=bundle_id,
+                provider=cfg.provider_type,
+                status=result.status,
+                provider_pr_id=result.provider_pr_id,
+                url=result.url,
+                branch=result.branch,
+                title=result.title,
+                operator=operator,
+                error_signature=error_signature,
+                diff_sha256=diff_sha256,
+            )
+        except sqlite3.IntegrityError:
+            # Race or stale view: the open-row lookup above missed a
+            # row that exists now (concurrent Accept, or the provider
+            # returned 'created' against a branch a parallel deliver
+            # just inserted). Re-query and reconcile by updating
+            # rather than crashing — the upstream PR already exists
+            # (provider succeeded), so swallowing the INSERT keeps the
+            # row coherent with reality instead of orphaning the PR.
+            reconciled = find_open_review_request(
+                write_conn,
+                provider=cfg.provider_type,
+                branch=branch,
+            )
+            if reconciled is None:
+                raise
+            update_review_request_status(
+                write_conn,
+                request_id=int(reconciled["id"]),
+                status=result.status,
+                provider_pr_id=result.provider_pr_id,
+                url=result.url,
+                branch=result.branch,
+                diff_sha256=diff_sha256,
+            )
+            request_id = int(reconciled["id"])
     return DeliveryOutcome(
         status=result.status,
         provider=cfg.provider_type,

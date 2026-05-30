@@ -1105,8 +1105,10 @@ def insert_review_request(
     """Append one ``bundle_review_requests`` row. Returns row id.
 
     Raises ``sqlite3.IntegrityError`` if the partial-unique index
-    ``uq_brr_open_signature`` blocks a duplicate open delivery —
-    caller surfaces this as HTTP 409 with the existing row's URL.
+    ``uq_brr_open_branch`` blocks a duplicate open delivery for the
+    same ``(provider, branch)`` — caller (``deliver`` in
+    ``delivery.orchestrator``) catches this and reconciles to the
+    existing row rather than orphaning the upstream PR.
     """
     ts = datetime.now(timezone.utc).isoformat()
     cur = conn.execute(
@@ -1141,24 +1143,31 @@ def latest_review_request_for_bundle(
 def find_open_review_request(
     conn: sqlite3.Connection, *,
     provider: str,
-    error_signature: str,
+    branch: str,
 ) -> dict[str, Any] | None:
     """Idempotency lookup: return the open delivery row for
-    ``(provider, error_signature)`` if one exists, else None.
+    ``(provider, branch)`` if one exists, else None.
 
     "Open" matches the partial-unique index condition: status NOT
     IN ('closed', 'merged', 'create_failed'). Caller uses this to
     decide between create-new and patch-existing-body.
+
+    Keyed on branch (not error_signature) because the branch is what
+    the provider keys on for find-or-create — matching that key means
+    "provider returned updated" ↔ "we have an open row" stays in
+    lockstep. The default branch template encodes (origin, target,
+    signature_short) so genuine same-port re-deliveries still
+    converge.
     """
     row = conn.execute(
         """SELECT id, bundle_id, provider, provider_pr_id, url, branch,
                   title, status, created_at, last_synced_at, error,
                   operator, error_signature, note, diff_sha256
            FROM bundle_review_requests
-           WHERE provider = ? AND error_signature = ?
+           WHERE provider = ? AND branch = ?
              AND status NOT IN ('closed', 'merged', 'create_failed')
            ORDER BY id DESC LIMIT 1""",
-        (provider, error_signature),
+        (provider, branch),
     ).fetchone()
     return _maybe(row)
 

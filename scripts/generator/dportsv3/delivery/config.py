@@ -9,7 +9,7 @@ Schema (per the plan §11d):
     base_branch = "master"
     draft = true
     labels = ["agentic-fix", "needs-review"]
-    branch_template = "agentic/{origin_safe}-{bundle_short}"
+    branch_template = "agentic/{origin_safe}-{target_safe}-{signature_short}"
     committer_name = "Fred [bot]"           # commit author/committer identity
     committer_email = "github@dragonflybsd.org"
 
@@ -50,7 +50,7 @@ __all__ = [
 
 
 _KNOWN_PROVIDERS = frozenset({"github", "gitlab", "gitea", "local-patch"})
-_DEFAULT_BRANCH_TEMPLATE = "agentic/{origin_safe}-{bundle_short}"
+_DEFAULT_BRANCH_TEMPLATE = "agentic/{origin_safe}-{target_safe}-{signature_short}"
 _DEFAULT_COMMITTER_NAME = "Fred [bot]"
 _DEFAULT_COMMITTER_EMAIL = "github@dragonflybsd.org"
 

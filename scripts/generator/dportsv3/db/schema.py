@@ -411,8 +411,19 @@ MIGRATIONS: tuple[str, ...] = (
     )""",
     "CREATE INDEX IF NOT EXISTS idx_brr_bundle "
     "ON bundle_review_requests(bundle_id)",
-    "CREATE UNIQUE INDEX IF NOT EXISTS uq_brr_open_signature "
-    "ON bundle_review_requests(provider, error_signature) "
+    # The original "one open row per (provider, error_signature)"
+    # index conflated unrelated ports whose first error line happened
+    # to match (signature is `sha256(first non-empty errors.txt line)`
+    # — origin-agnostic). Cross-port collisions on accept produced
+    # IntegrityError after the provider had already opened a PR
+    # upstream, leaving orphan PRs. Replaced by the per-branch index
+    # below: branch identity now encodes (origin, target, signature),
+    # so "one open row per branch" matches "one open PR per branch"
+    # at the provider, and signature aliasing within a port still
+    # rolls retries onto the same PR.
+    "DROP INDEX IF EXISTS uq_brr_open_signature",
+    "CREATE UNIQUE INDEX IF NOT EXISTS uq_brr_open_branch "
+    "ON bundle_review_requests(provider, branch) "
     "WHERE status NOT IN ('closed', 'merged', 'create_failed')",
     # Step 11d-5 follow-up (review): dedicated `note` column for
     # operator annotations on manual status updates. Pre-fix the
