@@ -8,7 +8,6 @@ Avoids echoing 2004h.
  
    _rl_term_isansi = RL_ANSI_TERM_DEFAULT;
 -  dumbterm = STREQ (term, "dumb") || STREQ (term, "vt52") || STREQ (term, "adm3a");
-++  dumbterm = STREQ (term, "dumb") || STREQ (term, "vt52") || STREQ (term, "adm3a") || STREQ (term, "cons25");
++  dumbterm = STREQ (term, "dumb") || STREQ (term, "vt52") || STREQ (term, "adm3a") || STREQ (term, "cons25");
    if (dumbterm)
      _rl_term_isansi = 0;
- 
