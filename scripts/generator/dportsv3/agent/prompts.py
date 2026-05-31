@@ -732,6 +732,14 @@ One of: success | failed | gave-up
 deferred patch. Omit the field entirely when no deferred patches
 were attached.
 
+The runner cross-references your verdicts against the convert
+bundle's deferred patches: any deferred patch you don't acknowledge
+is auto-synthesized as `escalated` with rationale "no verdict
+provided by patch agent" and routes the bundle to MANUAL. So:
+explicit `dropped` (you verified it doesn't apply) is much better
+than silent omission (the system can't tell silent omission from
+oversight).
+
 ## Rebuild Proof (JSON)
 ```json
 {

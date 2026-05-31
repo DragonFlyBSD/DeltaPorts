@@ -3215,6 +3215,93 @@ def _parse_patch_plan(text: str) -> dict | None:
     return obj if isinstance(obj, dict) else None
 
 
+_VALID_VERDICTS = frozenset({"regenerated", "dropped", "escalated"})
+
+
+def _resolve_deferred_verdicts_for_patch(
+    bundle_dir: Path | None,
+    bundle_id: str | None,
+    plan_text: str,
+) -> list:
+    """Canonical per-deferred-patch verdict list, computed from the
+    originating convert bundle's ``ConvertResult.deferred_patches``
+    cross-referenced against the agent's ``Patch Plan (JSON)``'s
+    ``deferred_verdicts`` field.
+
+    For each path convert deferred:
+    - If the agent emitted a valid verdict (one of regenerated /
+      dropped / escalated) for that path: use it.
+    - Otherwise: synthesize an ``escalated`` verdict with rationale
+      ``"no verdict provided by patch agent"`` — closes the gap where
+      the agent ignored a deferred patch entirely, which would
+      otherwise let the bundle route to ``agent_fixed`` silently.
+
+    Plan entries for paths NOT in convert's deferred list are dropped
+    silently — the agent isn't allowed to invent verdicts for patches
+    it wasn't handed.
+
+    Returns ``[]`` when convert didn't defer anything (the normal
+    case for ports that compose cleanly). Callers should treat that
+    as "no verdict layer applies."
+    """
+    from dportsv3.agent.phase_result import (  # noqa: PLC0415
+        ConvertResult, DeferredVerdict, load_phase_result,
+    )
+
+    try:
+        cr = load_phase_result(
+            bundle_dir, bundle_id, "convert", ConvertResult,
+        )
+    except Exception:
+        # Schema mismatch / parse error → degrade as if no convert
+        # context existed. The patch agent never saw deferred
+        # patches in its payload either (DeferredFromConvertSection
+        # uses the same load + same except).
+        cr = None
+    if cr is None or not cr.deferred_patches:
+        return []
+
+    expected_paths = [dp.path for dp in cr.deferred_patches]
+    plan = _parse_patch_plan(plan_text or "") or {}
+    raw_entries = plan.get("deferred_verdicts")
+    if not isinstance(raw_entries, list):
+        raw_entries = []
+
+    # Index by path (first valid entry wins; agent isn't supposed to
+    # repeat paths but if it does, take the first sensible one).
+    by_path: dict[str, dict] = {}
+    for entry in raw_entries:
+        if not isinstance(entry, dict):
+            continue
+        path = str(entry.get("path") or "").strip()
+        verdict = str(entry.get("verdict") or "").strip().lower()
+        if not path or verdict not in _VALID_VERDICTS:
+            continue
+        by_path.setdefault(path, entry)
+
+    out: list = []
+    for expected in expected_paths:
+        entry = by_path.get(expected)
+        if entry is None:
+            out.append(DeferredVerdict(
+                path=expected,
+                verdict="escalated",
+                rationale="no verdict provided by patch agent",
+                intents_emitted=[],
+            ))
+            continue
+        intents = entry.get("intents_emitted") or []
+        if not isinstance(intents, list):
+            intents = []
+        out.append(DeferredVerdict(
+            path=expected,
+            verdict=str(entry["verdict"]).strip().lower(),
+            rationale=str(entry.get("rationale") or ""),
+            intents_emitted=[str(x) for x in intents if isinstance(x, str)],
+        ))
+    return out
+
+
 def _write_patch_audit_harness(
     bundle_dir: Path | None,
     bundle_id: str | None,
@@ -3288,34 +3375,16 @@ def _write_patch_audit_harness(
     # by _write_intent_log_harness).
     from dataclasses import asdict  # noqa: PLC0415
     from dportsv3.agent.phase_result import (  # noqa: PLC0415
-        DeferredVerdict as _DeferredVerdictTyped,
         PatchResult as _PatchResultTyped, write_phase_result,
     )
-    # Step 37-3: extract per-patch verdicts from the agent's
-    # Patch Plan JSON block. Best-effort: missing block / missing
-    # field / non-conformant entries → empty list (operator UX is
-    # the same as today — just no per-patch resolution).
-    deferred_verdicts: list[_DeferredVerdictTyped] = []
-    plan = _parse_patch_plan(text)
-    if plan and isinstance(plan.get("deferred_verdicts"), list):
-        for entry in plan["deferred_verdicts"]:
-            if not isinstance(entry, dict):
-                continue
-            path = str(entry.get("path") or "").strip()
-            verdict = str(entry.get("verdict") or "").strip().lower()
-            if not path or verdict not in {
-                "regenerated", "dropped", "escalated",
-            }:
-                continue
-            intents = entry.get("intents_emitted") or []
-            if not isinstance(intents, list):
-                intents = []
-            deferred_verdicts.append(_DeferredVerdictTyped(
-                path=path,
-                verdict=verdict,
-                rationale=str(entry.get("rationale") or ""),
-                intents_emitted=[str(x) for x in intents if isinstance(x, str)],
-            ))
+    # Step 37-3/37-4 fix-up: canonical verdicts come from the
+    # cross-reference resolver. Missing per-deferred-patch verdicts
+    # are synthesized as "escalated: no verdict provided" so the
+    # bundle never silently routes to agent_fixed when the agent
+    # ignored deferred work.
+    deferred_verdicts = _resolve_deferred_verdicts_for_patch(
+        bundle_dir, bundle_id, text,
+    )
     typed = _PatchResultTyped(
         rebuild_ok=bool(proof_payload.get("rebuild_ok")),
         status=result.status,

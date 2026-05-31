@@ -331,3 +331,134 @@ def test_patching_to_escalated_transition_legal():
     )
     assert (JobState.PATCHING, JobEvent.ESCALATE_MANUAL) in TRANSITIONS
     assert TRANSITIONS[(JobState.PATCHING, JobEvent.ESCALATE_MANUAL)] == JobState.ESCALATED
+
+
+# --- Step 37-4 fix-up: resolver synthesizes missing verdicts -----------------
+
+
+from dportsv3.agent.runner import _resolve_deferred_verdicts_for_patch
+
+
+def _convert_with_deferred(paths):
+    return ConvertResult(
+        status="verified", reapply_ok=True, reason_code=None,
+        overlay_sha256="x", files_removed=[], diag_tail=None,
+        tokens_prompt=0, tokens_completion=0, tokens_total=0,
+        deferred_patches=[DeferredPatch(
+            path=p, target_file=p.split("/")[-1].replace(".diff", ""),
+            original_content="--- x.orig\n+++ x\n",
+            reject_summary="Hunks #1 failed",
+        ) for p in paths],
+    )
+
+
+def _plan_text(verdicts):
+    """Build a synthetic agent response with a Patch Plan block."""
+    return (
+        "## Patch Log\nfoo\n\n"
+        "## Rebuild Status\nsuccess\n\n"
+        "## Patch Plan (JSON)\n"
+        "```json\n"
+        + json.dumps({
+            "origin": "x/y", "summary": "s", "intents_emitted": [],
+            "tools_used": [],
+            "deferred_verdicts": verdicts,
+        }, indent=2)
+        + "\n```\n\n"
+        "## Rebuild Proof (JSON)\n"
+        "```json\n{\"rebuild_ok\": true}\n```\n"
+    )
+
+
+def test_resolver_returns_empty_when_convert_didnt_defer(saved_store):
+    write_phase_result("b1", "convert", _convert_with_deferred([]))
+    out = _resolve_deferred_verdicts_for_patch(None, "b1", _plan_text([]))
+    assert out == []
+
+
+def test_resolver_returns_empty_when_no_convert_result(saved_store):
+    """Fresh bundle (no convert ever ran) → nothing to verdict."""
+    out = _resolve_deferred_verdicts_for_patch(None, "b-missing", "any text")
+    assert out == []
+
+
+def test_resolver_uses_agent_verdict_when_provided(saved_store):
+    write_phase_result(
+        "b2", "convert", _convert_with_deferred(["diffs/a.diff"]),
+    )
+    plan = _plan_text([{
+        "path": "diffs/a.diff", "verdict": "regenerated",
+        "rationale": "lines moved; emitted add_patch",
+        "intents_emitted": ["add_patch"],
+    }])
+    out = _resolve_deferred_verdicts_for_patch(None, "b2", plan)
+    assert len(out) == 1
+    assert out[0].path == "diffs/a.diff"
+    assert out[0].verdict == "regenerated"
+    assert out[0].intents_emitted == ["add_patch"]
+
+
+def test_resolver_synthesizes_missing_verdict(saved_store):
+    """Convert deferred TWO patches; agent provided verdict for ONE.
+    The other gets escalated with synthetic rationale — closes the
+    silent-skip gap."""
+    write_phase_result(
+        "b3", "convert",
+        _convert_with_deferred(["diffs/a.diff", "diffs/b.diff"]),
+    )
+    plan = _plan_text([{
+        "path": "diffs/a.diff", "verdict": "dropped",
+        "rationale": "upstream removed lines",
+        "intents_emitted": [],
+    }])
+    out = _resolve_deferred_verdicts_for_patch(None, "b3", plan)
+    assert [v.path for v in out] == ["diffs/a.diff", "diffs/b.diff"]
+    assert out[0].verdict == "dropped"
+    assert out[1].verdict == "escalated"
+    assert "no verdict provided" in out[1].rationale
+
+
+def test_resolver_synthesizes_all_when_agent_provided_no_plan(saved_store):
+    """Worst case: agent emitted no Patch Plan at all. Every deferred
+    patch gets escalated. Bundle routes to MANUAL."""
+    write_phase_result(
+        "b4", "convert",
+        _convert_with_deferred(["diffs/a.diff", "diffs/b.diff"]),
+    )
+    out = _resolve_deferred_verdicts_for_patch(
+        None, "b4", "just prose, no JSON",
+    )
+    assert len(out) == 2
+    assert all(v.verdict == "escalated" for v in out)
+    assert all("no verdict provided" in v.rationale for v in out)
+
+
+def test_resolver_drops_invalid_verdict_strings(saved_store):
+    """Agent emits a bogus verdict string → treat as missing → synth."""
+    write_phase_result(
+        "b5", "convert", _convert_with_deferred(["diffs/a.diff"]),
+    )
+    plan = _plan_text([{
+        "path": "diffs/a.diff", "verdict": "totally-made-up",
+        "rationale": "...",
+    }])
+    out = _resolve_deferred_verdicts_for_patch(None, "b5", plan)
+    assert len(out) == 1
+    assert out[0].verdict == "escalated"
+    assert "no verdict provided" in out[0].rationale
+
+
+def test_resolver_ignores_verdicts_for_paths_not_deferred(saved_store):
+    """Agent invents a verdict for a path convert didn't defer →
+    silently dropped. Only convert-listed paths get verdicts in
+    the output."""
+    write_phase_result(
+        "b6", "convert", _convert_with_deferred(["diffs/a.diff"]),
+    )
+    plan = _plan_text([
+        {"path": "diffs/a.diff", "verdict": "dropped", "rationale": "."},
+        {"path": "diffs/never-deferred.diff", "verdict": "regenerated",
+         "rationale": "."},
+    ])
+    out = _resolve_deferred_verdicts_for_patch(None, "b6", plan)
+    assert [v.path for v in out] == ["diffs/a.diff"]

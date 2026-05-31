@@ -1073,23 +1073,21 @@ class PatchAttemptStep:
         status_l = (result.status or "").lower()
         if result.status == "success":
             # Step 37-4: rebuild_ok=true is necessary but not sufficient
-            # for full agent_fixed. If the agent's Patch Plan declared
-            # any deferred patches as "escalated" (couldn't determine
-            # relevance), the bundle needs operator review of those
-            # specific patches — fire ESCALATE_MANUAL instead of
-            # PATCH_OK, but persist the regenerated/dropped verdicts
-            # on PatchResult so the partial wins aren't lost.
-            from dportsv3.agent.runner import _parse_patch_plan  # noqa: PLC0415
-            plan = _parse_patch_plan(result.final_text or "")
-            escalated_paths: list[str] = []
-            if plan and isinstance(plan.get("deferred_verdicts"), list):
-                for entry in plan["deferred_verdicts"]:
-                    if not isinstance(entry, dict):
-                        continue
-                    verdict = str(entry.get("verdict") or "").strip().lower()
-                    path = str(entry.get("path") or "").strip()
-                    if verdict == "escalated" and path:
-                        escalated_paths.append(path)
+            # for full agent_fixed. The resolver computes the canonical
+            # verdicts list, synthesizing "escalated: no verdict
+            # provided" for any deferred patch the agent ignored, so
+            # an agent that skipped its deferred work doesn't silently
+            # route to agent_fixed. Routing decision: ANY escalated
+            # verdict (real or synthesized) → MANUAL.
+            from dportsv3.agent.runner import (  # noqa: PLC0415
+                _resolve_deferred_verdicts_for_patch,
+            )
+            verdicts = _resolve_deferred_verdicts_for_patch(
+                ctx.bundle_dir, bundle_id, result.final_text or "",
+            )
+            escalated_paths = [
+                v.path for v in verdicts if v.verdict == "escalated"
+            ]
             if escalated_paths:
                 _try_write_handoff(
                     services, ctx, origin,
