@@ -3808,6 +3808,7 @@ def _run_llm_conversion(
         _rollback_env_after_convert_failure(
             queue_root, env, origin, reason_code="llm_convert_failed",
             status=f"{result.status} ({result.raw_result.status})",
+            job_id=job_path.name,
         )
         return False, (
             f"llm_convert_failed: {result.status} "
@@ -3834,6 +3835,7 @@ def _run_llm_conversion(
 def _rollback_env_after_convert_failure(
     queue_root: Path, env: str, origin: str, *,
     reason_code: str, status: str,
+    job_id: str | None = None,
 ) -> None:
     """Reset ports/<origin>/ to git HEAD + emit a convert_verify_failed
     activity row. Used when ``_run_llm_conversion`` exits before
@@ -3857,6 +3859,7 @@ def _rollback_env_after_convert_failure(
         activity_log(
             queue_root, "convert_verify_failed",
             f"{origin}: {status[:240]}",
+            job_id=job_id,
             extra=reset_extra,
         )
     except Exception:
@@ -4138,6 +4141,7 @@ def _verify_conversion(job: dict, origin: str) -> tuple[bool, str]:
     from dportsv3.agent import worker
 
     queue_root = Path(job.get("queue_root") or ".")
+    job_id = job.get("job_id")
 
     def _fail(status: str, reason_code: str, extra: dict | None = None) -> tuple[bool, str]:
         """Common failure tail: rollback env state, log to activity,
@@ -4160,6 +4164,7 @@ def _verify_conversion(job: dict, origin: str) -> tuple[bool, str]:
             activity_log(
                 queue_root, "convert_verify_failed",
                 f"{origin}: {status[:240]}",
+                job_id=job_id,
                 extra=reset_extra,
             )
         except Exception:
@@ -4205,6 +4210,7 @@ def _verify_conversion(job: dict, origin: str) -> tuple[bool, str]:
                         queue_root, "commit_port_changes_failed",
                         f"env commit failed for {origin}: "
                         f"{commit.get('error') or '(no error)'}",
+                        job_id=job_id,
                         extra={
                             "origin": origin,
                             "env": env,
@@ -4224,6 +4230,7 @@ def _verify_conversion(job: dict, origin: str) -> tuple[bool, str]:
                 activity_log(
                     queue_root, "commit_port_changes_failed",
                     f"env commit raised for {origin}: {exc!s}",
+                    job_id=job_id,
                     extra={"origin": origin, "env": env,
                            "exception": str(exc)[:500]},
                 )
@@ -4240,6 +4247,7 @@ def _verify_conversion(job: dict, origin: str) -> tuple[bool, str]:
                 queue_root, "commit_port_changes_ok",
                 f"env commit ok for {origin} "
                 f"({'committed' if commit.get('committed') else 'nothing-to-commit'})",
+                job_id=job_id,
                 extra={
                     "origin": origin,
                     "env": env,
