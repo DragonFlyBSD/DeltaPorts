@@ -3191,6 +3191,30 @@ def _write_tool_trace(
         out.write_bytes(data)
 
 
+# Step 37-3: extract the `## Patch Plan (JSON)` block from the
+# agent's final text. Mirrors attempt_loop._parse_rebuild_proof's
+# heading-based regex. Returns None when the block is absent or
+# the JSON doesn't parse cleanly — caller treats as "no plan, no
+# deferred_verdicts" (graceful degrade).
+_PATCH_PLAN_BLOCK_RE = re.compile(
+    r"##\s+Patch\s+Plan\s*\(JSON\).*?```(?:json)?\s*(.*?)```",
+    re.DOTALL | re.IGNORECASE,
+)
+
+
+def _parse_patch_plan(text: str) -> dict | None:
+    if not text:
+        return None
+    m = _PATCH_PLAN_BLOCK_RE.search(text)
+    if not m:
+        return None
+    try:
+        obj = json.loads(m.group(1).strip())
+    except (json.JSONDecodeError, TypeError):
+        return None
+    return obj if isinstance(obj, dict) else None
+
+
 def _write_patch_audit_harness(
     bundle_dir: Path | None,
     bundle_id: str | None,
@@ -3264,8 +3288,34 @@ def _write_patch_audit_harness(
     # by _write_intent_log_harness).
     from dataclasses import asdict  # noqa: PLC0415
     from dportsv3.agent.phase_result import (  # noqa: PLC0415
+        DeferredVerdict as _DeferredVerdictTyped,
         PatchResult as _PatchResultTyped, write_phase_result,
     )
+    # Step 37-3: extract per-patch verdicts from the agent's
+    # Patch Plan JSON block. Best-effort: missing block / missing
+    # field / non-conformant entries → empty list (operator UX is
+    # the same as today — just no per-patch resolution).
+    deferred_verdicts: list[_DeferredVerdictTyped] = []
+    plan = _parse_patch_plan(text)
+    if plan and isinstance(plan.get("deferred_verdicts"), list):
+        for entry in plan["deferred_verdicts"]:
+            if not isinstance(entry, dict):
+                continue
+            path = str(entry.get("path") or "").strip()
+            verdict = str(entry.get("verdict") or "").strip().lower()
+            if not path or verdict not in {
+                "regenerated", "dropped", "escalated",
+            }:
+                continue
+            intents = entry.get("intents_emitted") or []
+            if not isinstance(intents, list):
+                intents = []
+            deferred_verdicts.append(_DeferredVerdictTyped(
+                path=path,
+                verdict=verdict,
+                rationale=str(entry.get("rationale") or ""),
+                intents_emitted=[str(x) for x in intents if isinstance(x, str)],
+            ))
     typed = _PatchResultTyped(
         rebuild_ok=bool(proof_payload.get("rebuild_ok")),
         status=result.status,
@@ -3274,6 +3324,7 @@ def _write_patch_audit_harness(
         tokens_prompt=result.usage.prompt_tokens,
         tokens_completion=result.usage.completion_tokens,
         tokens_total=result.usage.total_tokens,
+        deferred_verdicts=deferred_verdicts,
     )
     if bundle_id:
         write_phase_result(bundle_id, "patch", typed)

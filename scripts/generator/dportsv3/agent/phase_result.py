@@ -29,6 +29,7 @@ __all__ = [
     "TriageResult",
     "ConvertResult",
     "DeferredPatch",
+    "DeferredVerdict",
     "PatchResult",
     "PhaseResultVersionMismatch",
     "write_phase_result",
@@ -125,6 +126,28 @@ class ConvertResult:
 
 
 @dataclass(frozen=True)
+class DeferredVerdict:
+    """Step 37-3: per-patch outcome from the patch agent's relevance
+    pass on a ``DeferredPatch``. One of three verdicts:
+
+    - ``regenerated``: agent emitted a fresh intent (add_patch /
+      replace_in_patch / change_makefile / etc.) that achieves the
+      same semantic intent against current upstream.
+    - ``dropped``: agent verified the patch is no longer relevant
+      (e.g. upstream already removed the lines it was targeting);
+      no edit emitted; ``intents_emitted`` is empty.
+    - ``escalated``: agent couldn't determine relevance or how to
+      regenerate; bundle should be operator-actionable for this
+      specific patch (other deferred patches may still resolve).
+    """
+
+    path: str                   # diffs/pkg-plist.diff (matches DeferredPatch.path)
+    verdict: str                # "regenerated" | "dropped" | "escalated"
+    rationale: str              # one-sentence operator-readable reason
+    intents_emitted: list[str]  # intent types emitted for this patch (empty for dropped/escalated)
+
+
+@dataclass(frozen=True)
 class PatchResult:
     """What the patch agent did and how the rebuild gate judged it."""
 
@@ -135,7 +158,15 @@ class PatchResult:
     tokens_prompt: int
     tokens_completion: int
     tokens_total: int
-    schema_version: int = _SCHEMA_VERSION
+    # Step 37-3: per-patch verdicts from the deferred-patches
+    # relevance pass. Empty when convert didn't defer any patches OR
+    # the agent didn't emit a Patch Plan with this field. Patch agent
+    # is taught to emit one entry per ConvertResult.deferred_patches
+    # element via prompt clause in PATCH_INTENT_SYSTEM.
+    deferred_verdicts: list[DeferredVerdict] = field(default_factory=list)
+    # Step 37-3: schema bumped because deferred_verdicts is a new
+    # nested-dataclass field. Legacy v1 readers degrade to None.
+    schema_version: int = 2
 
 
 _T = TypeVar("_T")
@@ -211,13 +242,18 @@ def load_phase_result(
     known = {f.name for f in fields(cls)}  # type: ignore[arg-type]
     kwargs = {k: v for k, v in payload.items() if k in known}
 
-    # Step 37-2: reconstruct nested phase-result dataclasses. Only
-    # ConvertResult.deferred_patches (list[DeferredPatch]) is nested
-    # today; if more land, generalize on field type annotations.
+    # Step 37-2/37-3: reconstruct nested phase-result dataclasses.
+    # Two classes carry nested lists; generalize on field type
+    # annotations if a third lands.
     if cls is ConvertResult and "deferred_patches" in kwargs:
         kwargs["deferred_patches"] = [
             DeferredPatch(**dp) if isinstance(dp, dict) else dp
             for dp in (kwargs.get("deferred_patches") or [])
+        ]
+    if cls is PatchResult and "deferred_verdicts" in kwargs:
+        kwargs["deferred_verdicts"] = [
+            DeferredVerdict(**dv) if isinstance(dv, dict) else dv
+            for dv in (kwargs.get("deferred_verdicts") or [])
         ]
 
     return cls(**kwargs)  # type: ignore[call-arg]

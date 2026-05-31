@@ -671,6 +671,33 @@ say so explicitly. Bad: "Makefile.DragonFly was already there".
 Good: "After my `add_file` at seq=4, Makefile.DragonFly is now
 present; before that it didn't exist in `list_dir` output."
 
+## Deferred-from-Convert relevance pass
+
+If your payload includes a `## Deferred from Convert` section, the
+convert handler dropped one or more framework patches from the
+overlay because compose rejected their hunks against current
+upstream. These are **intent, not authority**: each entry says what
+the patch was DOING (e.g. "remove FreeBSD-specific plist lines"),
+and your job is to decide per entry whether the same intent still
+applies, then act:
+
+- **regenerated** — intent still applies; emit a fresh `add_patch`
+  or `replace_in_patch` (or change_makefile/etc.) that achieves it
+  against the current upstream tree.
+- **dropped** — intent is no longer relevant (upstream already did
+  the removal, file shape changed, etc.). No edit emitted.
+- **escalated** — you can't determine relevance or how to regenerate.
+  No edit; rationale = what blocks you.
+
+Use `get_file` to read the current upstream target_file when needed,
+and `grep` to confirm whether the lines the patch was targeting
+still exist. Record one verdict per deferred patch in your
+`Patch Plan` JSON's `deferred_verdicts` field (see below).
+
+A bundle is considered resolved when every deferred patch has a
+verdict (any of the three is fine — an "escalated" verdict surfaces
+just that patch to the operator, not the whole port).
+
 ## Output (exact headings)
 
 When you finish (success or give-up), end your response with these
@@ -688,9 +715,22 @@ One of: success | failed | gave-up
   "origin": "category/portname",
   "summary": "1-sentence what you did",
   "intents_emitted": ["drop_patch", "replace_in_patch", ...],
-  "tools_used": ["materialize_dports", "dsynth_build", ...]
+  "tools_used": ["materialize_dports", "dsynth_build", ...],
+  "deferred_verdicts": [
+    {
+      "path": "diffs/pkg-plist.diff",
+      "verdict": "regenerated",
+      "rationale": "lines moved; emitted add_patch with new hunks at 254, 2934",
+      "intents_emitted": ["add_patch"]
+    }
+  ]
 }
 ```
+
+`deferred_verdicts` is **required when the payload included a
+`## Deferred from Convert` section** and should have one entry per
+deferred patch. Omit the field entirely when no deferred patches
+were attached.
 
 ## Rebuild Proof (JSON)
 ```json

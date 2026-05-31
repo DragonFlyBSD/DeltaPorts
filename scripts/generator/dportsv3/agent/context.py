@@ -755,6 +755,92 @@ class PriorAttemptsSection:
 
 
 @dataclass
+class DeferredFromConvertSection:
+    """Step 37-3: surfaces the framework patches that the convert
+    handler dropped from overlay.dops (see DeferredPatch on the
+    bundle's ConvertResult). For each entry the patch agent decides
+    whether the original intent is still relevant against current
+    upstream, then emits a per-patch verdict.
+
+    Reads typed ``ConvertResult`` from the bundle's
+    ``analysis/convert_result.json`` via ``load_phase_result``. Renders
+    nothing when convert wrote no result, no deferred patches, or
+    schema mismatch (graceful degrade).
+    """
+    name: str = "deferred_from_convert"
+    priority: int = 35  # between TriageSummary (30) and SiblingBundles (40)
+    max_diff_chars: int = 8000  # cap per-patch diff inline
+
+    def render(self, ctx: ContextCtx) -> str | None:
+        if not ctx.bundle_id and not ctx.bundle_dir:
+            return None
+        try:
+            from dportsv3.agent.phase_result import (  # noqa: PLC0415
+                ConvertResult, load_phase_result,
+            )
+        except Exception:
+            return None
+        try:
+            cr = load_phase_result(
+                ctx.bundle_dir, ctx.bundle_id, "convert", ConvertResult,
+            )
+        except Exception:
+            # Schema mismatch / parse error → degrade silently.
+            return None
+        if cr is None or not cr.deferred_patches:
+            return None
+
+        lines = [
+            "## Deferred from Convert",
+            (
+                "Convert produced a valid overlay.dops but dropped the "
+                "framework patches listed below — compose rejected each "
+                "one's hunks against current upstream. Treat each entry "
+                "as INTENT (what the patch was doing) rather than "
+                "AUTHORITY (the literal diff). For each one, decide "
+                "whether the original intent is still relevant against "
+                "the current upstream tree, then emit a per-patch "
+                "verdict in your Patch Plan's `deferred_verdicts` field."
+            ),
+            (
+                "Three outcomes per patch:"
+            ),
+            (
+                "- `regenerated` — the intent still applies; emit a "
+                "fresh intent (`add_patch` / `replace_in_patch` / etc.) "
+                "that achieves it against current upstream."
+            ),
+            (
+                "- `dropped` — the intent is no longer relevant (e.g. "
+                "upstream already removed the lines); no edit, "
+                "rationale=one sentence."
+            ),
+            (
+                "- `escalated` — you can't determine relevance or how "
+                "to regenerate; rationale=what blocks you."
+            ),
+            "",
+        ]
+        for dp in cr.deferred_patches:
+            content = dp.original_content or ""
+            if len(content) > self.max_diff_chars:
+                content = (
+                    content[: self.max_diff_chars]
+                    + f"\n[... truncated to {self.max_diff_chars} chars ...]\n"
+                )
+            lines.extend([
+                f"### {dp.path} → {dp.target_file}",
+                f"Reject summary: {dp.reject_summary}",
+                "Original content:",
+                "```diff",
+                content,
+                "```",
+                "",
+            ])
+        return "\n".join(lines)
+
+
+@dataclass
 class PatchPromptFooterSection:
     """Closing instruction for the patch agent. Always renders.
 
@@ -786,6 +872,7 @@ PATCH_SECTIONS: tuple[ContextSection, ...] = (
     SnippetsRoundSection(priority=10),
     AutomationContextSection(),
     TriageSummarySection(),
+    DeferredFromConvertSection(),  # priority=35
     SiblingBundlesSection(priority=40, with_intro=False),
     PriorAttemptsSection(),
     UserContextSection(priority=60),
