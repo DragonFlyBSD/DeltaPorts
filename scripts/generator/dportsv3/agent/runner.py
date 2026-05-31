@@ -3551,6 +3551,19 @@ def process_convert_job(
         return skipped
     # ---------------------------------------------------------------
 
+    # Seed queue_root + job_id into job so downstream activity-log
+    # writers (`_verify_conversion._fail`, `_run_llm_conversion`'s
+    # rollback path) can route rows to the live tracker queue. Without
+    # this both helpers read `job.get("queue_root")` and fall back to
+    # `Path(".")` — meaning `convert_verify_failed` rows land in the
+    # runner's CWD and never reach the tracker DB. Symptom was a
+    # silent gap between `attempt_end rebuild_ok=True` and
+    # `bundle_branch_dropped convert_failure` with zero rows in
+    # between. Same pattern as `process_triage_job` (~2951) and
+    # `process_patch_job` (~3465); only this processor was missing it.
+    job["queue_root"] = str(queue_root)
+    job["job_id"] = job_path.name
+
     env_resolution = resolve_env_or_reason(job)
     env_name = env_resolution.env
     if not env_name:
