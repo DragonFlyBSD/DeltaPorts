@@ -3908,13 +3908,17 @@ def _run_llm_conversion(
         proof=result.proof or {},
     )
 
-    # Step 36-4: stash token spend on the job dict so _verify_conversion
-    # can populate the typed ConvertResult without changing its
-    # signature. Deterministic-convert path doesn't go through here
-    # (no LLM ran) — these fields stay unset → tokens=0 in the result.
+    # Step 36-4: stash token spend + files_removed on the job dict so
+    # _verify_conversion can populate the typed ConvertResult without
+    # changing its signature. Deterministic-convert path doesn't go
+    # through here (no LLM ran) — these fields stay unset → tokens=0
+    # and files_removed=[] in the result.
     job["convert_tokens_prompt"] = result.raw_result.usage.prompt_tokens
     job["convert_tokens_completion"] = result.raw_result.usage.completion_tokens
     job["convert_tokens_total"] = result.raw_result.usage.total_tokens
+    proof_fr = (result.proof or {}).get("files_removed") or []
+    if isinstance(proof_fr, list):
+        job["convert_files_removed"] = [str(x) for x in proof_fr]
 
     # The agent wrote overlay.dops + the handler finalized legacy
     # cleanup. Verify via reapply.
@@ -4000,6 +4004,11 @@ def _rollback_env_after_convert_failure(
     ``_verify_conversion`` runs — keeps the env clean for the next
     attempt and surfaces the reason to operators."""
     from dportsv3.agent import worker
+    # Capture overlay_sha256 BEFORE reset_port wipes the agent's
+    # overlay.dops back to git HEAD. Reading it after the reset
+    # would either miss the file or return the HEAD-version hash —
+    # neither audits what the convert agent actually wrote.
+    overlay_sha = _overlay_sha256(env, origin)
     reset_extra: dict[str, object] = {
         "origin": origin, "env": env, "reason_code": reason_code,
     }
@@ -4031,7 +4040,7 @@ def _rollback_env_after_convert_failure(
         status=status,
         reapply_ok=False,
         reason_code=reason_code,
-        overlay_sha256=_overlay_sha256(env, origin),
+        overlay_sha256=overlay_sha,
         files_removed=[],
         diag_tail=None,
         tokens_prompt=tokens_prompt,
@@ -4317,13 +4326,25 @@ def _verify_conversion(job: dict, origin: str) -> tuple[bool, str]:
     queue_root = Path(job.get("queue_root") or ".")
     job_id = job.get("job_id")
     bundle_id = job.get("bundle_id")
-    # Step 36-4: token spend isn't known to verify itself; the
-    # caller (_run_llm_conversion) stashes it on the job dict before
-    # invoking verify. Deterministic-convert path doesn't write
-    # these — tokens stay at 0 there (no LLM ran).
+    # Step 36-4: token spend + files_removed aren't visible from verify
+    # itself; the caller (_run_llm_conversion) stashes them on the job
+    # dict before invoking verify. Deterministic-convert path doesn't
+    # write these — tokens stay at 0 + files_removed empty there (no
+    # LLM ran, no proof block).
     tok_p = int(job.get("convert_tokens_prompt") or 0)
     tok_c = int(job.get("convert_tokens_completion") or 0)
     tok_t = int(job.get("convert_tokens_total") or 0)
+    files_removed = list(job.get("convert_files_removed") or [])
+    # Capture overlay_sha256 ONCE at entry, before any reset_port path
+    # can wipe the agent-written overlay. The failure path's reset
+    # rolls ports/<origin>/ back to git HEAD, which deletes the
+    # overlay.dops the convert agent just put_file'd. Reading the
+    # sha256 after reset would either return None (file gone) or the
+    # HEAD version's hash — neither audits what we want, which is the
+    # overlay the agent actually wrote. The success path also reuses
+    # this captured value for symmetry (the file is still there post-
+    # commit, but recomputing would add a redundant read).
+    overlay_sha = _overlay_sha256(env, origin)
 
     def _fail(status: str, reason_code: str, extra: dict | None = None) -> tuple[bool, str]:
         """Common failure tail: rollback env state, log to activity,
@@ -4352,13 +4373,15 @@ def _verify_conversion(job: dict, origin: str) -> tuple[bool, str]:
         except Exception:
             pass
         # Step 36-4: typed ConvertResult next to the activity row.
+        # overlay_sha was captured pre-reset so it reflects the
+        # agent's overlay, not the rolled-back HEAD.
         _write_convert_phase_result(
             bundle_id=bundle_id,
             status=status,
             reapply_ok=False,
             reason_code=reason_code,
-            overlay_sha256=_overlay_sha256(env, origin),
-            files_removed=[],
+            overlay_sha256=overlay_sha,
+            files_removed=files_removed,
             diag_tail=(extra or {}).get("diag_tail")
                        if isinstance(extra, dict) else None,
             tokens_prompt=tok_p,
@@ -4454,14 +4477,18 @@ def _verify_conversion(job: dict, origin: str) -> tuple[bool, str]:
             )
         except Exception:
             pass
-        # Step 36-4: typed ConvertResult for the success path.
+        # Step 36-4: typed ConvertResult for the success path. Uses
+        # the same pre-reset overlay_sha capture as the failure path
+        # for symmetry; files_removed is what _apply_files_removed
+        # actually consumed from the proof (stashed on job by
+        # _run_llm_conversion).
         _write_convert_phase_result(
             bundle_id=bundle_id,
             status="verified",
             reapply_ok=True,
             reason_code=None,
-            overlay_sha256=_overlay_sha256(env, origin),
-            files_removed=[],
+            overlay_sha256=overlay_sha,
+            files_removed=files_removed,
             diag_tail=None,
             tokens_prompt=tok_p,
             tokens_completion=tok_c,

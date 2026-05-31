@@ -50,8 +50,9 @@ class ProposedFixCtx:
     prompt_tokens: int = 0
     completion_tokens: int = 0
     total_tokens: int = 0
-    # Triage cost, read separately from analysis/triage.json. The
-    # operator-facing "true" cost is triage + patch.
+    # Triage cost, read separately from analysis/triage_result.json
+    # (typed ``TriageResult``, Step 36-2). The operator-facing "true"
+    # cost is triage + patch.
     triage_prompt_tokens: int = 0
     triage_completion_tokens: int = 0
     triage_total_tokens: int = 0
