@@ -785,24 +785,37 @@ class PatchAttemptStep:
             ctx.state["tier"] = pol.tiers[tier_name]
             return StepReadiness(status="ready")
 
-        # Hand-fired patch path: derive tier from triage.md via
-        # decide(). Empty history + None env_health preserve legacy
-        # tier_for semantics (no cap, no env short-circuit) for
-        # operator-triggered patches.
+        # Hand-fired patch path: derive tier from the typed
+        # ``TriageResult`` (Step 36-5) via decide(). Empty history +
+        # None env_health preserve legacy tier_for semantics (no cap,
+        # no env short-circuit) for operator-triggered patches.
         from dportsv3.agent.decision import PortHistory, decide  # noqa: PLC0415
+        from dportsv3.agent.phase_result import (  # noqa: PLC0415
+            TriageResult, load_phase_result,
+        )
 
-        triage_text = services.read_bundle_text(
-            ctx.bundle_dir, ctx.bundle_id or ctx.job.get("bundle_id"),
-            "analysis/triage.md",
-        ) or ""
-        triage = services.parse_triage_output(triage_text)
+        bundle_id = ctx.bundle_id or ctx.job.get("bundle_id")
+        classification = ""
+        confidence = ""
+        try:
+            triage_res = load_phase_result(
+                ctx.bundle_dir, bundle_id, "triage", TriageResult,
+            )
+            if triage_res is not None:
+                classification = triage_res.classification or ""
+                confidence = triage_res.confidence or ""
+        except Exception:
+            # Missing / version-mismatched typed result → fall through
+            # with empty classification + confidence; decide() will
+            # land on MANUAL via the tier-cascade.
+            pass
         history = PortHistory.empty(
             target=ctx.job.get("target", "") or "",
             origin=ctx.state.get("origin") or ctx.job.get("origin", ""),
         )
         dec = decide(
-            classification=triage.get("classification", ""),
-            confidence=triage.get("confidence", ""),
+            classification=classification,
+            confidence=confidence,
             history=history,
             env_health=None,
             policy=pol,

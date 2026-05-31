@@ -13,7 +13,6 @@ from dataclasses import asdict
 
 import pytest
 
-from dportsv3.agent import phase_result as pr
 from dportsv3.agent.phase_result import (
     ConvertResult,
     PatchResult,
@@ -24,25 +23,20 @@ from dportsv3.agent.phase_result import (
 )
 
 
-# ---------------------------------------------------------------------
-# Fixture: monkeypatch the runner's artifact-store helpers so the
-# tests don't need a live store. The helpers are looked up via
-# late binding inside write/load_phase_result, so substituting
-# attributes on dportsv3.agent.runner works without import loops.
-# ---------------------------------------------------------------------
-
-
 @pytest.fixture
 def fake_store(monkeypatch):
     """A dict-backed stand-in for the bundle artifact store.
 
     Keyed by ``(bundle_id, relpath) → bytes``. Returns the same
     object the test mutates so assertions can peek at writes.
+    The runner's helpers are looked up via late binding inside
+    ``write_phase_result`` / ``load_phase_result``, so substituting
+    attributes on ``dportsv3.agent.runner`` works without import
+    loops.
     """
     store: dict[tuple[str, str], bytes] = {}
 
-    def fake_put(bundle_id: str, relpath: str, data: bytes,
-                 kind: str | None = None) -> bool:
+    def fake_put(bundle_id, relpath, data, kind=None):
         store[(bundle_id, relpath)] = data
         return True
 
@@ -79,7 +73,7 @@ def test_triage_result_round_trip(fake_store):
     )
     write_phase_result("b1", "triage", original)
 
-    loaded = load_phase_result("b1", "triage", TriageResult)
+    loaded = load_phase_result(None, "b1", "triage", TriageResult)
     assert loaded == original
 
 
@@ -97,7 +91,7 @@ def test_convert_result_round_trip(fake_store):
     )
     write_phase_result("b1", "convert", original)
 
-    loaded = load_phase_result("b1", "convert", ConvertResult)
+    loaded = load_phase_result(None, "b1", "convert", ConvertResult)
     assert loaded == original
 
 
@@ -113,7 +107,7 @@ def test_patch_result_round_trip(fake_store):
     )
     write_phase_result("b1", "patch", original)
 
-    loaded = load_phase_result("b1", "patch", PatchResult)
+    loaded = load_phase_result(None, "b1", "patch", PatchResult)
     assert loaded == original
 
 
@@ -128,14 +122,14 @@ def test_load_missing_returns_none(fake_store):
     consult an upstream result that hasn't been produced yet (e.g.
     convert reading triage on an operator-fired convert with no
     bundle)."""
-    assert load_phase_result("b1", "triage", TriageResult) is None
+    assert load_phase_result(None, "b1", "triage", TriageResult) is None
 
 
 def test_load_with_empty_bundle_id_returns_none(fake_store):
     """Operator-fired convert: no bundle attached → no result. Same
     "degrade gracefully" path consumers take for legacy bundles."""
-    assert load_phase_result("", "triage", TriageResult) is None
-    assert load_phase_result(None, "triage", TriageResult) is None
+    assert load_phase_result(None, "", "triage", TriageResult) is None
+    assert load_phase_result(None, None, "triage", TriageResult) is None
 
 
 # ---------------------------------------------------------------------
@@ -160,7 +154,7 @@ def test_version_mismatch_raises(fake_store):
     )
 
     with pytest.raises(PhaseResultVersionMismatch) as exc:
-        load_phase_result("b1", "triage", TriageResult)
+        load_phase_result(None, "b1", "triage", TriageResult)
     assert exc.value.phase == "triage"
     assert exc.value.got == 999
     assert exc.value.expected == 1
@@ -177,7 +171,7 @@ def test_missing_schema_version_treated_as_mismatch(fake_store):
     )
 
     with pytest.raises(PhaseResultVersionMismatch):
-        load_phase_result("b1", "triage", TriageResult)
+        load_phase_result(None, "b1", "triage", TriageResult)
 
 
 # ---------------------------------------------------------------------
@@ -198,7 +192,7 @@ def test_unknown_field_at_same_version_ignored(fake_store):
         json.dumps(payload).encode("utf-8")
     )
 
-    loaded = load_phase_result("b1", "patch", PatchResult)
+    loaded = load_phase_result(None, "b1", "patch", PatchResult)
     assert loaded is not None
     assert loaded.rebuild_ok is True
 
@@ -228,3 +222,28 @@ def test_write_failure_raises(monkeypatch):
                 model="m",
             ),
         )
+
+
+# ---------------------------------------------------------------------
+# bundle_dir-based lookup (filesystem-mode bundles)
+# ---------------------------------------------------------------------
+
+
+def test_load_via_bundle_dir(tmp_path):
+    """When the bundle lives on the local filesystem (tests,
+    operator-fired paths), load_phase_result resolves via bundle_dir
+    using the same routing as read_bundle_text."""
+    analysis = tmp_path / "analysis"
+    analysis.mkdir()
+    payload = asdict(TriageResult(
+        classification="plist-error", confidence="medium",
+        root_cause="", evidence_excerpt="", error_signature=None,
+        tier="ASSIST", classifier_version="v1",
+        tokens_prompt=10, tokens_completion=5, tokens_total=15,
+        model="m",
+    ))
+    (analysis / "triage_result.json").write_text(json.dumps(payload))
+
+    loaded = load_phase_result(tmp_path, None, "triage", TriageResult)
+    assert loaded is not None
+    assert loaded.classification == "plist-error"

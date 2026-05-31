@@ -1646,18 +1646,26 @@ def build_patch_payload(
     # latest overwrite.
     user_context_history = _load_operator_context_history(run_id, origin)
     # Patch flow: classification is known from the prior triage in
-    # this bundle. Extract from triage.md so the selector can match
-    # `triggers.classifications`. Intent triggers fire at
-    # intent_reference time (Step 27c) — not in the system payload —
-    # so we pass an empty intent set here.
+    # this bundle. Step 36-5 reads it from the typed
+    # ``TriageResult`` written by ``_write_triage_audit_harness``
+    # rather than regex-parsing ``analysis/triage.md``. Intent
+    # triggers fire at intent_reference time (Step 27c) — not in the
+    # system payload — so we pass an empty intent set here.
     triage_classification: str | None = None
-    if bundle_dir is not None:
-        triage_md = read_bundle_text(bundle_dir, bundle_id, "analysis/triage.md")
-        if triage_md:
-            parsed = parse_triage_output(triage_md)
-            cls = parsed.get("classification")
-            if cls:
-                triage_classification = cls
+    try:
+        from dportsv3.agent.phase_result import (  # noqa: PLC0415
+            TriageResult, load_phase_result,
+        )
+        triage = load_phase_result(
+            bundle_dir, bundle_id, "triage", TriageResult,
+        )
+        if triage is not None:
+            triage_classification = triage.classification or None
+    except Exception:
+        # Best-effort: a stale on-disk shape (PhaseResultVersionMismatch)
+        # or a missing artifact degrades to "no classification" — the
+        # playbook selector falls back to its default set.
+        triage_classification = None
     from dportsv3.agent.playbooks import (  # noqa: PLC0415
         detect_toolchains, load_playbooks,
     )
@@ -3839,6 +3847,28 @@ def _run_llm_conversion(
         job_id=job_path.name,
     )
 
+    # Step 36-6: load the originating bundle's typed TriageResult so
+    # the convert agent can see the actual build failure it's being
+    # dispatched in response to. Without this, convert only sees
+    # substrate signals and can't tell whether the dsynth failure
+    # is a substrate problem (which it can address) or e.g. plist
+    # drift / compile error (which it can't — but produces a
+    # speculative overlay that fails reapply on the unrelated layer
+    # anyway). best-effort: missing / version-mismatched results
+    # degrade to "no triage context" — the agent sees the same
+    # payload it saw before Step 36-6.
+    triage_for_convert = None
+    try:
+        from dportsv3.agent.phase_result import (  # noqa: PLC0415
+            TriageResult, load_phase_result,
+        )
+        triage_for_convert = load_phase_result(
+            job.get("bundle_dir"), job.get("bundle_id"),
+            "triage", TriageResult,
+        )
+    except Exception:
+        triage_for_convert = None
+
     payload = convert_mod.build_convert_payload(
         origin=origin,
         repo_root=repo_root,
@@ -3846,6 +3876,7 @@ def _run_llm_conversion(
         deterministic_result=det_result,
         dops_quickref_text=quickref,
         playbooks_text=convert_playbooks.text,
+        triage_result=triage_for_convert,
     )
 
     # Reuse the rich PatchEventDispatcher for the convert flow so

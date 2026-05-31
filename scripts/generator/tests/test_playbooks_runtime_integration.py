@@ -36,6 +36,27 @@ def _write_triage_md(bundle_dir: Path, classification: str) -> None:
         f"## Classification\n{classification}\n\n"
         f"## Confidence\nhigh\n"
     )
+    # Step 36-5: build_patch_payload reads the typed TriageResult
+    # via load_phase_result, not the markdown. Write both so tests
+    # that grep the markdown for human-readable assertions stay
+    # representative while the typed consumer gets its source.
+    import json as _json
+    (bundle_dir / "analysis" / "triage_result.json").write_text(
+        _json.dumps({
+            "schema_version": 1,
+            "classification": classification,
+            "confidence": "high",
+            "root_cause": "",
+            "evidence_excerpt": "",
+            "error_signature": None,
+            "tier": "ASSIST",
+            "classifier_version": "triage-v1",
+            "tokens_prompt": 0,
+            "tokens_completion": 0,
+            "tokens_total": 0,
+            "model": "test-model",
+        })
+    )
 
 
 def test_build_triage_payload_attaches_wildcard_playbooks_only(

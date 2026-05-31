@@ -140,12 +140,22 @@ def write_phase_result(bundle_id: str, phase: str, result: Any) -> None:
 
 
 def load_phase_result(
-    bundle_id: str | None, phase: str, cls: type[_T],
+    bundle_dir: Any | None,
+    bundle_id: str | None,
+    phase: str,
+    cls: type[_T],
 ) -> _T | None:
-    """Load a typed phase result from the bundle artifact store.
+    """Load a typed phase result from the bundle artifact store or
+    bundle directory.
+
+    Signature mirrors :func:`dportsv3.agent.runner.read_bundle_text`
+    so consumers can pass through whatever they already have:
+    bundle_dir for filesystem-mode bundles (tests, operator-fired
+    paths), bundle_id for artifact-store-routed production bundles,
+    or both.
 
     Returns ``None`` when:
-    - ``bundle_id`` is empty (operator-fired job with no bundle)
+    - both ``bundle_dir`` and ``bundle_id`` are empty
     - the artifact doesn't exist (phase hasn't run yet, or legacy
       bundle predating Step 36)
 
@@ -153,11 +163,11 @@ def load_phase_result(
     ``schema_version`` doesn't match the dataclass default — the
     caller decides whether to degrade or surface.
     """
-    if not bundle_id:
+    if not bundle_dir and not bundle_id:
         return None
     from dportsv3.agent.runner import read_bundle_text  # noqa: PLC0415
 
-    raw = read_bundle_text(None, bundle_id, _relpath(phase))
+    raw = read_bundle_text(bundle_dir, bundle_id, _relpath(phase))
     if not raw:
         return None
     payload = json.loads(raw)

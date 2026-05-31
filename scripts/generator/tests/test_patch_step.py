@@ -66,6 +66,41 @@ def _ctx(tmp_path, job=None, *, helpers_overrides=None, bundle_text=None):
     log_rec = _LogRec()
     from dportsv3.agent.runner import parse_triage_output
 
+    # Step 36-5: the hand-fired patch tier-derivation now reads the
+    # typed TriageResult via load_phase_result, not the markdown.
+    # When the test passes a triage markdown body, synthesize a
+    # matching analysis/triage_result.json under tmp_path so the
+    # typed loader (bundle_dir routing) finds it.
+    if bundle_text and "## Classification" in bundle_text:
+        import json as _json
+        import re as _re
+        cls_m = _re.search(
+            r"^##\s*Classification\s*\n([^\n#]+)",
+            bundle_text, _re.MULTILINE,
+        )
+        conf_m = _re.search(
+            r"^##\s*Confidence\s*\n([^\n#]+)",
+            bundle_text, _re.MULTILINE,
+        )
+        cls = (cls_m.group(1).strip().lower() if cls_m else "")
+        conf = (conf_m.group(1).strip().lower() if conf_m else "")
+        analysis = tmp_path / "analysis"
+        analysis.mkdir(exist_ok=True)
+        (analysis / "triage_result.json").write_text(_json.dumps({
+            "schema_version": 1,
+            "classification": cls,
+            "confidence": conf,
+            "root_cause": "",
+            "evidence_excerpt": "",
+            "error_signature": None,
+            "tier": "ASSIST",
+            "classifier_version": "v1",
+            "tokens_prompt": 0,
+            "tokens_completion": 0,
+            "tokens_total": 0,
+            "model": "test",
+        }))
+
     services_kwargs = {
         "log": log_rec,
         "read_bundle_text": (lambda bd, bid, rp: bundle_text)
@@ -86,7 +121,10 @@ def _ctx(tmp_path, job=None, *, helpers_overrides=None, bundle_text=None):
     }
     if helpers_overrides:
         services_kwargs.update(helpers_overrides)
-    ctx = StepCtx(job_id="job-x", job=job, queue_root=tmp_path)
+    ctx = StepCtx(
+        job_id="job-x", job=job, queue_root=tmp_path,
+        bundle_dir=tmp_path,
+    )
     ctx.state["job_path"] = tmp_path / "job-x"
     ctx.state["payload"] = "(payload)"
     ctx.state["origin"] = job.get("origin", "?")

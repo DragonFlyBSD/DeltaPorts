@@ -17,10 +17,13 @@ import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from . import attempt_loop
 from .attempt_loop import PatchResult
+
+if TYPE_CHECKING:
+    from dportsv3.agent.phase_result import TriageResult
 
 
 @dataclass
@@ -73,6 +76,7 @@ def build_convert_payload(
     deterministic_result: dict,
     dops_quickref_text: str,
     playbooks_text: str = "",
+    triage_result: "TriageResult | None" = None,
 ) -> str:
     """Assemble the markdown payload handed to ``CONVERT_SYSTEM``.
 
@@ -81,6 +85,16 @@ def build_convert_payload(
     so the agent knows what work is done; the unsupported items
     appear with their source context so the agent has what it needs
     to translate them.
+
+    Step 36-6: ``triage_result`` is the typed ``TriageResult`` from
+    the same bundle's preceding triage (None when convert was
+    operator-fired against an origin with no failure bundle, or for
+    deterministic-convert paths that don't pass one in). When
+    present, the rendered payload includes an "Original build
+    failure (from triage)" section so the convert agent can see what
+    actually failed in dsynth — substrate vs. plist vs. compile —
+    and pick a strategy aligned with the real root cause instead of
+    speculating beyond the compat artifacts.
     """
     from dportsv3.migration.convert import _parse_makefile_dragonfly
 
@@ -150,6 +164,41 @@ def build_convert_payload(
             f"work but the explicit form is what conventions show."
         )
         sections.append("")
+
+    # Step 36-6: surface the originating build failure the convert
+    # agent was dispatched in response to. Without this the agent
+    # only sees substrate signals (Makefile.DragonFly, STATUS,
+    # classified bucket) and can't tell whether the dsynth failure
+    # was about substrate (which conversion can address) or about
+    # an unrelated layer like plist drift / compile error / missing
+    # dep (which it can't). Lets the agent narrow its overlay to
+    # what the substrate actually needs and avoid speculative edits
+    # against layers it can't affect. Render before the deterministic
+    # translator section so the agent reads root-cause context first.
+    if triage_result is not None:
+        sections += [
+            "## Original build failure (from triage)",
+            "",
+            f"- Classification: `{triage_result.classification or 'unknown'}`",
+            f"- Confidence: `{triage_result.confidence or 'unknown'}`",
+            "",
+        ]
+        rc = (triage_result.root_cause or "").strip()
+        if rc:
+            sections += ["**Root cause:**", "", rc, ""]
+        ev = (triage_result.evidence_excerpt or "").strip()
+        if ev:
+            sections += ["**Evidence excerpt:**", "", ev, ""]
+        sections += [
+            "Use this to decide whether the build failure is in a "
+            "layer the substrate conversion can actually address. "
+            "If the root cause is unrelated to compat artifacts "
+            "(e.g. plist drift, configure/compile bug, missing dep), "
+            "keep the overlay minimal — translate only what's needed "
+            "to retire the compat artifacts and leave the unrelated "
+            "issue for the patch flow.",
+            "",
+        ]
 
     sections += [
         "## Deterministic translator status",
