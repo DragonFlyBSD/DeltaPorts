@@ -2748,6 +2748,7 @@ def _maybe_defer_to_convert(
     job: dict,
     job_path: Path,
     origin: str,
+    apply_lifecycle: bool = True,
 ) -> tuple[bool, str] | None:
     """Step 20d: defer this triage if the port still has legacy
     overlay artifacts.
@@ -2757,6 +2758,15 @@ def _maybe_defer_to_convert(
     enqueue a convert job (or attach to an in-flight one) and
     park this triage at ESCALATED so the manual queue surfaces
     the chain.
+
+    ``apply_lifecycle``: when True (legacy default), walks the
+    triage lifecycle TRIAGING → DEAD via TRIAGE_DEFER inside this
+    function — used by the historical call-from-top-of-process_triage_job
+    code path and by direct-invocation tests. When False, skips the
+    lifecycle walk so the caller (post-Step-36-followup: TriageStep,
+    which now calls this AFTER classification so convert sees a
+    written triage_result.json) can emit its own TRIAGE_DEFER outcome
+    through the orchestrator and avoid double-transitions.
     """
     from dportsv3.agent.lifecycle import JobEvent
 
@@ -2934,11 +2944,17 @@ def _maybe_defer_to_convert(
     # retire_reason 'deferred_for_convert' tells the manual queue
     # to skip this triage — operator action is on the convert job,
     # not here. activity_log row above carries the convert_job_id
-    # so the chain is navigable.
-    try:
-        _apply_transition(job_path.name, JobEvent.TRIAGE_DEFER, detail=detail)
-    except Exception as exc:
-        log(queue_root, "WARN", f"failed to defer triage lifecycle: {exc}")
+    # so the chain is navigable. Skipped when the caller will emit
+    # TRIAGE_DEFER itself via the orchestrator (see ``apply_lifecycle``
+    # docstring).
+    if apply_lifecycle:
+        try:
+            _apply_transition(
+                job_path.name, JobEvent.TRIAGE_DEFER, detail=detail,
+            )
+        except Exception as exc:
+            log(queue_root, "WARN",
+                f"failed to defer triage lifecycle: {exc}")
 
     return True, f"deferred_for_convert:convert_job_id={convert_job_id}"
 
@@ -2988,12 +3004,15 @@ def process_triage_job(
         return skipped
     # ---------------------------------------------------------------
 
-    # ---- Step 20d: lazy convert hook ------------------------------
-    deferred = _maybe_defer_to_convert(
-        queue_root=queue_root, job=job, job_path=job_path, origin=origin,
-    )
-    if deferred is not None:
-        return deferred
+    # ---- Step 20d / Step 36 follow-up: lazy convert hook ----------
+    # The substrate defer used to short-circuit triage *before* the
+    # LLM ran — convert was then dispatched blind, with no view of
+    # what triage would have classified. Post-Step-36 the check
+    # moves INTO TriageStep, AFTER the LLM call and the typed
+    # ``TriageResult`` (analysis/triage_result.json) write, so
+    # convert reads triage's classification + root_cause + evidence
+    # via load_phase_result. Wired into services below; nothing to
+    # do here at the top of the dispatcher.
     # ---------------------------------------------------------------
 
     # Seed queue_root + job_id into job so payload-build telemetry
@@ -3038,6 +3057,16 @@ def process_triage_job(
         log=log,
         activity_log=activity_log,
         write_manual_handoff=_write_manual_handoff,
+        # Step 36 follow-up: substrate defer runs INSIDE TriageStep,
+        # after the LLM + triage_result.json write. apply_lifecycle=False
+        # so TriageStep emits TRIAGE_DEFER through its StepOutcome and
+        # the orchestrator wrapper walks lifecycle once.
+        maybe_defer_to_convert=lambda *, queue_root, job, job_path, origin: (
+            _maybe_defer_to_convert(
+                queue_root=queue_root, job=job, job_path=job_path,
+                origin=origin, apply_lifecycle=False,
+            )
+        ),
     )
 
     result = Orchestrator().run(ctx, [TriageStep()])

@@ -244,6 +244,14 @@ class TriageServices:
     log: Callable[..., Any]
     activity_log: Callable[..., Any]
     write_manual_handoff: Callable[..., Any] | None = None
+    # Step 36 follow-up: substrate-defer hook called AFTER the LLM
+    # has classified and ``write_triage_audit`` has persisted the
+    # typed TriageResult. Returns ``(success, status_str)`` if the
+    # bundle should defer to convert, or None to proceed with the
+    # normal post-triage decision tree. The runner-side
+    # implementation skips its own lifecycle walk; TriageStep emits
+    # TRIAGE_DEFER via the returned StepOutcome.
+    maybe_defer_to_convert: Callable[..., Any] | None = None
 
 
 @dataclass
@@ -398,6 +406,47 @@ class TriageStep:
             f"Wrote harness triage outputs for {origin}",
             job_id=ctx.job_id,
         )
+
+        # ----- Step 36 follow-up: substrate-defer (post-classify) -----
+        # Pre-Step-36 the substrate check ran at the top of
+        # process_triage_job — convert was dispatched *before* triage
+        # classified, leaving the convert agent blind to the actual
+        # build failure (python311 / plist-drift class). Now the
+        # check runs HERE, after triage_result.json is on the bundle,
+        # so convert can ``load_phase_result`` and see classification
+        # + root_cause + evidence excerpt in its payload. The
+        # service callback runs with apply_lifecycle=False; we emit
+        # TRIAGE_DEFER through StepOutcome so the orchestrator
+        # wrapper walks lifecycle once.
+        if services.maybe_defer_to_convert is not None:
+            try:
+                deferred = services.maybe_defer_to_convert(
+                    queue_root=queue_root, job=job, job_path=job_path,
+                    origin=origin,
+                )
+            except Exception as exc:
+                # Defer-check is best-effort: a failure here just
+                # means we fall through to the normal triage decision
+                # tree (no defer). The runner-side helper already
+                # logs its own warnings via ``log``/``activity_log``;
+                # don't re-raise.
+                services.activity_log(
+                    queue_root, "triage_defer_check_failed",
+                    f"substrate defer check failed for {origin}: "
+                    f"{exc!s}"[:240],
+                    job_id=ctx.job_id,
+                )
+                deferred = None
+            if deferred is not None:
+                status_str = (
+                    deferred[1] if isinstance(deferred, tuple)
+                    and len(deferred) >= 2 else "deferred_for_convert"
+                )
+                return StepOutcome(
+                    status="success",
+                    next_event=JobEvent.TRIAGE_DEFER,
+                    detail={"status_str": status_str},
+                )
 
         # ----- decide() -----
         try:

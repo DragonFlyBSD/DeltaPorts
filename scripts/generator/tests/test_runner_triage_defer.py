@@ -131,6 +131,62 @@ def test_defer_for_needs_judgment_port(tmp_path: Path, monkeypatch, state_db) ->
     assert row["retire_reason"] == "deferred_for_convert"
 
 
+def test_defer_with_apply_lifecycle_false_skips_transition(
+    tmp_path: Path, monkeypatch, state_db,
+) -> None:
+    """Step 36 follow-up: when called from TriageStep AFTER the LLM
+    has classified and triage_result.json has been written, the
+    defer helper must still enqueue convert + log the activity row
+    but NOT walk the triage lifecycle to DEAD — TriageStep emits
+    TRIAGE_DEFER through its StepOutcome and the orchestrator
+    wrapper walks lifecycle once. Without ``apply_lifecycle=False``
+    the lifecycle would transition twice (helper here + outcome
+    handler later) and produce an illegal-transition warning."""
+    repo = _make_repo(tmp_path)
+    port = _make_port(repo, "devel/lazy")
+    (port / "Makefile.DragonFly").write_text(
+        ".if ${OPSYS} == DragonFly\nUSES+=pkgconfig\n.endif\n"
+    )
+    monkeypatch.setenv("DP_HARNESS_REPO_ROOT", str(repo))
+    queue_root = _make_queue(tmp_path)
+
+    job_path = queue_root / "pending" / "triage-late.job"
+    job_path.write_text("type=triage\norigin=devel/lazy\n")
+    _bootstrap_triage_job(state_db, queue_root, job_path.name)
+
+    job = {"origin": "devel/lazy", "target": "@main",
+           "profile": "main"}
+    result = _maybe_defer_to_convert(
+        queue_root=queue_root, job=job, job_path=job_path,
+        origin="devel/lazy",
+        apply_lifecycle=False,
+    )
+    # Same return shape — caller can detect "deferred" with the
+    # existing tuple check.
+    assert result is not None
+    success, status = result
+    assert success
+    assert "deferred_for_convert" in status
+
+    # Convert was still enqueued (the audit + routing work happens
+    # regardless of lifecycle handling).
+    convert_jobs = list(queue_root.glob("pending/*-convert.job"))
+    assert len(convert_jobs) == 1
+
+    # But the triage row is still in its pre-defer state. TriageStep
+    # emits TRIAGE_DEFER through StepOutcome, so the lifecycle walk
+    # is the orchestrator's job — not this helper's.
+    row = state_db.execute(
+        "SELECT state, retire_reason FROM jobs WHERE job_id = ?",
+        (job_path.name,),
+    ).fetchone()
+    assert row["state"] != "dead", (
+        f"helper should not have walked lifecycle when "
+        f"apply_lifecycle=False; state={row['state']!r}"
+    )
+    assert row["retire_reason"] is None
+
+
 def test_defer_attaches_to_existing_convert_job(
     tmp_path: Path, monkeypatch, state_db
 ) -> None:
