@@ -4030,6 +4030,10 @@ def _run_llm_conversion(
 
 _DIFFS_PATH_RE = re.compile(r"\bdiffs/[\w./\-+]+\.diff\b")
 _PATCH_HUNK_RE = re.compile(r"Hunk\s+#\d+\s+failed", re.IGNORECASE)
+_HUNK_FAILED_DETAIL_RE = re.compile(
+    r"Hunk\s+#(\d+)\s+failed(?:\s+at\s+(\d+))?", re.IGNORECASE,
+)
+_DEFERRED_PATCH_CONTENT_CAP = 16 * 1024  # bytes
 
 
 def _parse_compose_rejects(diag: str) -> list[str]:
@@ -4076,6 +4080,67 @@ def _drop_patch_apply_from_overlay(text: str, path: str) -> tuple[str, bool]:
     return "".join(out_lines), dropped
 
 
+def _read_diff_content(env: str, origin: str, path: str) -> str:
+    """Read the framework diff file (e.g. ``diffs/pkg-plist.diff``)
+    from the env's writable DeltaPorts checkout. Returns empty string
+    on any IO error — caller treats empty original_content as "no
+    context available."""
+    try:
+        from dportsv3.agent import worker  # noqa: PLC0415
+        paths = worker.env_paths(env)
+    except Exception:
+        return ""
+    diff_path = paths.deltaports / "ports" / origin / path
+    if not diff_path.is_file():
+        return ""
+    try:
+        return diff_path.read_text(errors="replace")
+    except OSError:
+        return ""
+
+
+def _infer_target_file_from_diff(diff_content: str, fallback: str) -> str:
+    """Pull the target filename out of the diff's ``+++ <name>`` line.
+    Falls back to ``Path(fallback).stem`` (e.g. ``diffs/pkg-plist.diff``
+    → ``pkg-plist``) if the diff doesn't parse."""
+    for raw in diff_content.splitlines()[:8]:
+        line = raw.strip()
+        if line.startswith("+++ "):
+            tok = line[4:].split("\t", 1)[0].split(maxsplit=1)[0].strip()
+            if tok:
+                return tok
+    # Fallback: derive from the diff path's stem.
+    stem = Path(fallback).name
+    if stem.endswith(".diff"):
+        stem = stem[: -len(".diff")]
+    return stem or fallback
+
+
+def _extract_reject_summary(diag: str, diff_path: str) -> str:
+    """Build a short human-readable summary of which hunks failed for
+    a given diff path. Best-effort: scans the diag for ``Hunk #N
+    failed [at LLL]`` lines. We can't always attribute a specific
+    hunk to a specific diff path (compose's stdout interleaves output
+    from the patch tool with op-level framing), so we summarize what's
+    present in the whole diag. Returns a single-line string."""
+    matches = list(_HUNK_FAILED_DETAIL_RE.finditer(diag or ""))
+    if not matches:
+        return f"compose rejected {diff_path}"
+    pairs: list[tuple[str, str | None]] = []
+    seen_pairs: set[tuple[str, str | None]] = set()
+    for m in matches:
+        key = (m.group(1), m.group(2))
+        if key not in seen_pairs:
+            seen_pairs.add(key)
+            pairs.append(key)
+    hunk_ids = [f"#{n}" for n, _ in pairs]
+    lines = [pos for _, pos in pairs if pos]
+    msg = f"Hunks {' '.join(hunk_ids)} failed"
+    if lines:
+        msg += " at " + ", ".join(lines)
+    return msg
+
+
 def _drop_patch_apply_from_overlay_file(
     env: str, origin: str, path: str,
 ) -> bool:
@@ -4111,19 +4176,22 @@ def _materialize_with_defer_retry(
     queue_root: Path,
     job_id: str | None,
     max_drops: int,
-) -> tuple[dict, list[str]]:
+) -> tuple[dict, list]:
     """Wrap ``worker.materialize_dports`` with a bounded
     drop-and-retry loop. On compose failure carrying hunk-reject
-    shape, identify which ``diffs/*.diff`` failed, drop it from
-    overlay.dops, retry. Returns ``(final mat dict, deferred
-    paths)``.
+    shape, identify which ``diffs/*.diff`` failed, capture its
+    content + target file + reject summary BEFORE dropping the
+    overlay reference, retry compose. Returns ``(final mat dict,
+    list[DeferredPatch])``.
 
     Drops are capped at ``max_drops`` and we never drop the same path
     twice. The first non-hunk-reject failure exits the loop with the
     failure dict — caller's existing `_fail()` path handles the rest.
     """
     from dportsv3.agent import worker  # noqa: PLC0415
-    deferred: list[str] = []
+    from dportsv3.agent.phase_result import DeferredPatch  # noqa: PLC0415
+    deferred: list = []
+    deferred_paths: set[str] = set()  # quick dedupe lookup
     mat: dict = {}
     for attempt in range(max_drops + 1):
         mat = worker.materialize_dports(env, origin)
@@ -4133,28 +4201,48 @@ def _materialize_with_defer_retry(
                 + (mat.get("stderr_tail") or ""))
         candidates = _parse_compose_rejects(diag)
         # First candidate we haven't dropped yet
-        to_drop = next((p for p in candidates if p not in deferred), None)
+        to_drop = next(
+            (p for p in candidates if p not in deferred_paths), None,
+        )
         if to_drop is None:
             # Either non-reject failure or already exhausted candidates.
             return mat, deferred
         if attempt >= max_drops:
             # Cap reached. Don't drop more.
             return mat, deferred
+        # Step 37-2: capture rich context BEFORE the drop. Reading
+        # the diff after the drop would still succeed (we only edit
+        # overlay.dops, not the diff file), but the order keeps the
+        # snapshot semantically tied to the failure that triggered
+        # the drop.
+        original_content = _read_diff_content(env, origin, to_drop)
+        target_file = _infer_target_file_from_diff(
+            original_content, fallback=to_drop,
+        )
+        reject_summary = _extract_reject_summary(diag, to_drop)
         if not _drop_patch_apply_from_overlay_file(env, origin, to_drop):
             # Drop failed (overlay missing, line not present in
             # overlay, write failed). Bail with the current failure.
             return mat, deferred
-        deferred.append(to_drop)
+        deferred.append(DeferredPatch(
+            path=to_drop,
+            target_file=target_file,
+            original_content=original_content[:_DEFERRED_PATCH_CONTENT_CAP],
+            reject_summary=reject_summary,
+        ))
+        deferred_paths.add(to_drop)
         try:
             activity_log(
                 queue_root, "convert_patch_deferred",
                 f"deferred framework patch {to_drop} for {origin} "
-                f"(attempt {attempt + 1}/{max_drops})",
+                f"(attempt {attempt + 1}/{max_drops}): {reject_summary}",
                 job_id=job_id,
                 extra={
                     "origin": origin,
                     "deferred_patch": to_drop,
-                    "deferred_so_far": list(deferred),
+                    "target_file": target_file,
+                    "reject_summary": reject_summary,
+                    "deferred_so_far": [d.path for d in deferred],
                     "attempt": attempt + 1,
                     "max_drops": max_drops,
                 },
@@ -4196,9 +4284,13 @@ def _write_convert_phase_result(
     tokens_prompt: int,
     tokens_completion: int,
     tokens_total: int,
-    deferred_patches: list[str] | None = None,
+    deferred_patches: list | None = None,
 ) -> None:
     """Step 36-4: persist the typed ``ConvertResult`` to the bundle.
+
+    ``deferred_patches`` is a list of ``DeferredPatch`` instances
+    (Step 37-2). Empty list when no framework patches needed to be
+    dropped during the reapply retry loop.
 
     Best-effort: a missing ``bundle_id`` (operator-fired convert
     against an origin with no failure bundle) means no destination
@@ -4590,8 +4682,8 @@ def _verify_conversion(job: dict, origin: str) -> tuple[bool, str]:
     # Pre-declared so the _fail() closure can reference it before the
     # retry loop (Step 37-1) populates it. Drops happen later in the
     # function; _fail is only called post-loop so the value is final
-    # by then.
-    deferred_patches: list[str] = []
+    # by then. List of DeferredPatch (Step 37-2).
+    deferred_patches: list = []
 
     def _fail(status: str, reason_code: str, extra: dict | None = None) -> tuple[bool, str]:
         """Common failure tail: rollback env state, log to activity,

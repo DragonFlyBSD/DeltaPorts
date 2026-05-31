@@ -28,6 +28,7 @@ from typing import Any, TypeVar
 __all__ = [
     "TriageResult",
     "ConvertResult",
+    "DeferredPatch",
     "PatchResult",
     "PhaseResultVersionMismatch",
     "write_phase_result",
@@ -82,6 +83,23 @@ class TriageResult:
 
 
 @dataclass(frozen=True)
+class DeferredPatch:
+    """Step 37-2: rich context for a framework `diffs/*.diff` the
+    handler dropped from overlay.dops to get compose reapply through.
+    Intended for the patch agent's later relevance pass — INTENT not
+    authority. The agent reads ``original_content`` to figure out what
+    the patch was doing semantically, then decides per
+    ``target_file`` whether the intent is still relevant against
+    current upstream.
+    """
+
+    path: str               # e.g. "diffs/pkg-plist.diff"
+    target_file: str        # the file the patch was modifying (pkg-plist)
+    original_content: str   # full diff text, capped at 16 KB
+    reject_summary: str     # "Hunks #1 #3 #4 failed at 249, 2929, 2972"
+
+
+@dataclass(frozen=True)
 class ConvertResult:
     """What the convert phase produced + how the verifier judged it."""
 
@@ -94,12 +112,16 @@ class ConvertResult:
     tokens_prompt: int
     tokens_completion: int
     tokens_total: int
-    # Step 37-1: framework `diffs/*.diff` paths the handler dropped
+    # Step 37-2: typed list of framework patches the handler dropped
     # from overlay.dops to get compose reapply to succeed. Each entry
-    # is intent (not authority) for the patch agent's later relevance
-    # pass. Empty on the legacy path / when no drops were needed.
-    deferred_patches: list[str] = field(default_factory=list)
-    schema_version: int = _SCHEMA_VERSION
+    # carries enough context for the patch agent's relevance pass to
+    # work without re-reading the bundle.
+    deferred_patches: list[DeferredPatch] = field(default_factory=list)
+    # Step 37-2: schema bumped because deferred_patches' element type
+    # changed from str to DeferredPatch. Legacy v1 readers degrade to
+    # None via PhaseResultVersionMismatch (per existing
+    # load_phase_result contract).
+    schema_version: int = 2
 
 
 @dataclass(frozen=True)
@@ -188,6 +210,16 @@ def load_phase_result(
     # same-version-but-extra defensive only.)
     known = {f.name for f in fields(cls)}  # type: ignore[arg-type]
     kwargs = {k: v for k, v in payload.items() if k in known}
+
+    # Step 37-2: reconstruct nested phase-result dataclasses. Only
+    # ConvertResult.deferred_patches (list[DeferredPatch]) is nested
+    # today; if more land, generalize on field type annotations.
+    if cls is ConvertResult and "deferred_patches" in kwargs:
+        kwargs["deferred_patches"] = [
+            DeferredPatch(**dp) if isinstance(dp, dict) else dp
+            for dp in (kwargs.get("deferred_patches") or [])
+        ]
+
     return cls(**kwargs)  # type: ignore[call-arg]
 
 

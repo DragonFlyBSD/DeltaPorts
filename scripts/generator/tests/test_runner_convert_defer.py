@@ -21,6 +21,8 @@ import pytest
 
 from dportsv3.agent.runner import (
     _drop_patch_apply_from_overlay,
+    _extract_reject_summary,
+    _infer_target_file_from_diff,
     _materialize_with_defer_retry,
     _parse_compose_rejects,
 )
@@ -234,7 +236,7 @@ def test_loop_drops_one_patch_then_succeeds(fake_env, tmp_path):
         queue_root=queue_root, job_id="j-1", max_drops=3,
     )
     assert mat["ok"] is True
-    assert deferred == ["diffs/pkg-plist.diff"]
+    assert [d.path for d in deferred] == ["diffs/pkg-plist.diff"]
     text = overlay.read_text()
     assert "diffs/pkg-plist.diff" not in text
     assert "diffs/Makefile.diff" in text  # untouched
@@ -253,7 +255,10 @@ def test_loop_drops_two_patches_then_succeeds(fake_env, tmp_path):
         queue_root=queue_root, job_id="j-1", max_drops=3,
     )
     assert mat["ok"] is True
-    assert deferred == ["diffs/pkg-plist.diff", "diffs/Makefile.diff"]
+    assert [d.path for d in deferred] == [
+        "diffs/pkg-plist.diff",
+        "diffs/Makefile.diff",
+    ]
 
 
 def test_loop_respects_max_drops_cap(fake_env, tmp_path):
@@ -271,7 +276,7 @@ def test_loop_respects_max_drops_cap(fake_env, tmp_path):
         queue_root=queue_root, job_id="j-1", max_drops=1,
     )
     assert mat["ok"] is False
-    assert deferred == ["diffs/pkg-plist.diff"]
+    assert [d.path for d in deferred] == ["diffs/pkg-plist.diff"]
     # First patch is gone; the SECOND was identified but not dropped
     # because cap was reached.
     text = overlay.read_text()
@@ -316,4 +321,190 @@ def test_loop_doesnt_drop_same_path_twice(fake_env, tmp_path):
         queue_root=queue_root, job_id="j-1", max_drops=3,
     )
     assert mat["ok"] is False
-    assert deferred == ["diffs/pkg-plist.diff"]
+    assert [d.path for d in deferred] == ["diffs/pkg-plist.diff"]
+
+
+# --- Step 37-2: rich DeferredPatch context -----------------------------------
+
+
+def test_infer_target_file_from_plist_diff():
+    diff = (
+        "--- pkg-plist.orig\t2024-04-20 15:25:52 UTC\n"
+        "+++ pkg-plist\n"
+        "@@ -249,9 +249,6 @@\n"
+        " line\n"
+    )
+    assert _infer_target_file_from_diff(diff, fallback="diffs/pkg-plist.diff") == "pkg-plist"
+
+
+def test_infer_target_file_falls_back_to_path_stem():
+    """No +++ line in the diff → derive from the diff path's stem
+    (strip ``.diff`` suffix)."""
+    assert _infer_target_file_from_diff("", fallback="diffs/pkg-plist.diff") == "pkg-plist"
+    assert _infer_target_file_from_diff("garbage\n", fallback="diffs/Makefile.diff") == "Makefile"
+
+
+def test_extract_reject_summary_single_hunk():
+    diag = (
+        "patching pkg-plist using Plan A...\n"
+        "Hunk #1 failed at 249.\n"
+        "1 out of 5 hunks failed--saving rejects to -\n"
+    )
+    assert _extract_reject_summary(diag, "diffs/pkg-plist.diff") == "Hunks #1 failed at 249"
+
+
+def test_extract_reject_summary_multiple_hunks():
+    diag = (
+        "Hunk #1 failed at 249.\n"
+        "Hunk #2 succeeded at 720.\n"
+        "Hunk #3 failed at 2929.\n"
+        "Hunk #4 failed at 2972.\n"
+    )
+    summary = _extract_reject_summary(diag, "diffs/pkg-plist.diff")
+    assert summary == "Hunks #1 #3 #4 failed at 249, 2929, 2972"
+
+
+def test_extract_reject_summary_no_position_data():
+    diag = "Hunk #1 failed\n"
+    assert _extract_reject_summary(diag, "diffs/x.diff") == "Hunks #1 failed"
+
+
+def test_extract_reject_summary_no_hunks_fallback():
+    """No Hunk #N failed lines (shouldn't happen in practice, since
+    _parse_compose_rejects gates on them) — fall back to a generic
+    message naming the diff path so the field is never empty."""
+    assert _extract_reject_summary("(no useful diag)", "diffs/x.diff") == "compose rejected diffs/x.diff"
+
+
+def _hunk_fail_result_realistic(path: str, target_file: str = "pkg-plist"):
+    """Like _hunk_fail_result but with the patch-tool 'patching <target>'
+    line so the diag scan picks up hunk positions correctly."""
+    return {
+        "ok": False,
+        "rc": 2,
+        "stdout_tail": (
+            f"applying op patch.apply {path}\n"
+            f"patching {target_file} using Plan A...\n"
+            "Hunk #1 failed at 249.\n"
+            "Hunk #3 failed at 2929.\n"
+            "2 out of 5 hunks failed--saving rejects to -\n"
+        ),
+        "stderr_tail": "",
+    }
+
+
+def test_loop_populates_deferred_patch_fields(tmp_path, monkeypatch):
+    """End-to-end: loop drops one patch, the DeferredPatch carries
+    path, target_file, non-empty original_content, and a real
+    reject_summary."""
+    deltaports = tmp_path / "DeltaPorts"
+    port_dir = deltaports / "ports" / "lang" / "foo"
+    diffs_dir = port_dir / "diffs"
+    diffs_dir.mkdir(parents=True)
+    overlay = port_dir / "overlay.dops"
+    overlay.write_text(
+        "target @main\n"
+        "port lang/foo\n"
+        "patch apply diffs/pkg-plist.diff\n"
+    )
+    # Real diff file content so original_content + target_file are
+    # populated from the file, not the fallback.
+    diff_content = (
+        "--- pkg-plist.orig\t2024-04-20 15:25:52 UTC\n"
+        "+++ pkg-plist\n"
+        "@@ -249,9 +249,6 @@\n"
+        " %%PYTHON_LIBDIR%%/__pycache__/_strptime.opt-1.pyc\n"
+        "-%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata__freebsd99_.opt-1.pyc\n"
+    )
+    (diffs_dir / "pkg-plist.diff").write_text(diff_content)
+
+    fake_paths = _FakePaths(deltaports)
+    fake = _FakeWorker(
+        [_hunk_fail_result_realistic("diffs/pkg-plist.diff"), _ok_result()],
+        overlay, fake_paths,
+    )
+    from dportsv3.agent import worker as _real_worker
+    monkeypatch.setattr(_real_worker, "materialize_dports",
+                        fake.materialize_dports)
+    monkeypatch.setattr(_real_worker, "env_paths", fake.env_paths)
+
+    queue_root = tmp_path / "queue"
+    queue_root.mkdir()
+    mat, deferred = _materialize_with_defer_retry(
+        "test-env", "lang/foo",
+        queue_root=queue_root, job_id="j-1", max_drops=3,
+    )
+
+    assert mat["ok"] is True
+    assert len(deferred) == 1
+    dp = deferred[0]
+    assert dp.path == "diffs/pkg-plist.diff"
+    assert dp.target_file == "pkg-plist"             # from +++ line
+    assert diff_content in dp.original_content       # full content captured
+    assert "Hunks #1 #3 failed at 249, 2929" in dp.reject_summary
+
+
+def test_convert_result_round_trips_deferred_patches(tmp_path):
+    """ConvertResult with deferred_patches serializes via asdict +
+    rehydrates via load_phase_result (which reconstructs nested
+    DeferredPatch instances)."""
+    from dportsv3.agent.phase_result import (
+        ConvertResult, DeferredPatch, load_phase_result, write_phase_result,
+    )
+    from dportsv3.agent import runner as runner_mod
+    import json
+
+    # Stand up a fake bundle dir + artifact_store_put / read_bundle_text
+    # that point to it.
+    bundle_dir = tmp_path / "bundle"
+    bundle_dir.mkdir()
+    saved = {}
+
+    def fake_put(bundle_id, relpath, data, _kind):
+        saved[(bundle_id, relpath)] = data
+        return True
+
+    def fake_read(_bundle_dir, bundle_id, relpath):
+        data = saved.get((bundle_id, relpath))
+        return data.decode("utf-8") if data else None
+
+    import pytest as _pytest
+    monkey = _pytest.MonkeyPatch()
+    monkey.setattr(runner_mod, "artifact_store_put", fake_put)
+    monkey.setattr(runner_mod, "read_bundle_text", fake_read)
+    try:
+        result = ConvertResult(
+            status="verified",
+            reapply_ok=True,
+            reason_code=None,
+            overlay_sha256="abc123",
+            files_removed=["Makefile.DragonFly"],
+            diag_tail=None,
+            tokens_prompt=100,
+            tokens_completion=50,
+            tokens_total=150,
+            deferred_patches=[
+                DeferredPatch(
+                    path="diffs/pkg-plist.diff",
+                    target_file="pkg-plist",
+                    original_content="--- pkg-plist.orig\n+++ pkg-plist\n",
+                    reject_summary="Hunks #1 #3 failed at 249, 2929",
+                ),
+            ],
+        )
+        write_phase_result("bundle-X", "convert", result)
+
+        # Bytes on disk parse as JSON with the expected shape.
+        raw = saved[("bundle-X", "analysis/convert_result.json")].decode("utf-8")
+        payload = json.loads(raw)
+        assert payload["schema_version"] == 2
+        assert payload["deferred_patches"][0]["path"] == "diffs/pkg-plist.diff"
+
+        # Load round-trips into typed DeferredPatch.
+        loaded = load_phase_result(None, "bundle-X", "convert", ConvertResult)
+        assert loaded is not None
+        assert isinstance(loaded.deferred_patches[0], DeferredPatch)
+        assert loaded.deferred_patches[0].target_file == "pkg-plist"
+        assert loaded.deferred_patches[0].reject_summary.startswith("Hunks #1")
+    finally:
+        monkey.undo()
