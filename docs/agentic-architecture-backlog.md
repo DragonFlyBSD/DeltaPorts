@@ -3413,3 +3413,485 @@ prompt-gate changes (~60) + playbook/prompt section (~prose) + tests
 (~150).
 
 ---
+
+### Step 36 — typed phase results: replace markdown-regex with a `PhaseResult` contract — pending
+
+Surfaced during the lang/python311 convert-loop analysis (bundles
+`lang_python311-20260531-{084200Z, 094114Z, 095900Z}`). The convert
+agent ran three times against a port whose underlying failure was
+plist-drift (a packaging error unrelated to substrate state). Each
+attempt produced a syntactically valid `overlay.dops`, passed
+`validate_dops`, declared `rebuild_ok=true`, and was then rejected by
+`_verify_conversion` at `reapply` with `reason_code=reapply_failed`.
+The deeper finding was *why convert was running at all*: triage had
+classified-and-deferred, the convert agent was dispatched **with no
+view of triage's classification or root cause**, and produced an
+overlay that couldn't address the real problem.
+
+Tracing inter-phase context-passing showed the mechanism is **"each
+phase reads known relpaths out of the bundle artifact store and
+re-parses prose to fish out fields."** There is no typed contract:
+
+- Triage writes `analysis/triage.md` (LLM prose) AND
+  `analysis/triage.json` (audit metadata: classification, confidence,
+  usage, model).
+- Patch reads `analysis/triage.md` via `read_bundle_text`, then runs
+  `parse_triage_output` (a regex) to extract `Classification:` and
+  `Confidence:` from the markdown. The `triage.json` next door is
+  write-only.
+- Convert reads **nothing**. Its payload
+  (`convert.build_convert_payload`) only takes `origin`, `repo_root`,
+  `classified_record` (substrate-only classifier from
+  `classify_inventory`), `deterministic_result`, the dops quickref,
+  and convert-flow playbooks. No triage output is plumbed in.
+- Cross-bundle history (`prior_patch_bundle_ids`, `port_bundle_history`)
+  is a separate DB query plus more `read_bundle_text` calls — no
+  unified context object.
+
+Two problems compound:
+
+1. **Brittle implicit contract.** Nothing enforces what triage must
+   produce or what patch can consume; the spec is whichever regex
+   `parse_triage_output` happens to use. Prompt rewrites silently
+   break downstream consumers.
+2. **Asymmetric coverage.** Patch reads triage. Convert reads
+   nothing. The mechanism only exists where someone hardcoded it.
+   Adding a new consumer (convert wanting triage's classification)
+   requires plumbing every layer by hand — `enqueue_convert_job`
+   doesn't carry triage context, `process_convert_job` doesn't
+   thread it, `build_convert_payload` doesn't render it.
+
+#### Goal
+
+Replace prose-with-regex with a typed `PhaseResult` contract: each
+phase writes a single canonical `analysis/<phase>_result.json` matching
+a versioned schema; downstream phases load the typed object instead of
+re-parsing markdown. The markdown artifacts stay as **human-readable
+renders**, not the source of truth.
+
+After Step 36:
+
+- The convert agent has access to triage's classification, confidence,
+  root cause, and evidence excerpt — and can refuse a job whose root
+  cause isn't substrate-related, instead of burning attempts on the
+  wrong layer.
+- The patch agent's payload builder stops regex-parsing
+  `analysis/triage.md`.
+- Adding a new shared field is a schema change (one dataclass field +
+  one producer line + one consumer line), not a relpath-hunt across
+  three files.
+- Future tracker UI surfaces (per-bundle "what triage saw / what convert
+  decided / what patch fixed") render from the typed JSON without
+  inferring structure from prose.
+
+#### Schema layer — `dportsv3/agent/phase_result.py` (new)
+
+Single file, ~80 LOC. Stdlib `dataclasses` + `dataclasses.asdict` to
+avoid pulling Pydantic into the agent path. Frozen dataclasses, one per
+phase, each with a `schema_version: int` first field.
+
+```python
+@dataclass(frozen=True)
+class TriageResult:
+    schema_version: int                  # = 1
+    classification: str                  # "patch-error" etc.
+    confidence: str                      # "high" | "medium" | "low"
+    root_cause: str                      # extracted from ## Root Cause
+    evidence_excerpt: str                # extracted from ## Evidence, ≤2KB
+    error_signature: str | None          # sha256[:16] of first error line
+    tier: str                            # "AUTO" | "ASSIST" | "MANUAL"
+    classifier_version: str              # prompt/model hash for reproducibility
+    tokens_used: int
+    model: str
+
+@dataclass(frozen=True)
+class ConvertResult:
+    schema_version: int                  # = 1
+    status: str                          # "verified" | "reapply_failed" | ...
+    reason_code: str | None              # populated on failure
+    reapply_ok: bool
+    overlay_sha256: str | None           # what the agent wrote
+    files_removed: list[str]
+    diag_tail: str | None
+    tokens_used: int
+
+@dataclass(frozen=True)
+class PatchResult:
+    schema_version: int                  # = 1
+    rebuild_ok: bool
+    attempts: int
+    intents_applied: int                 # count of apply_intent ops
+    tokens_used: int
+    status: str                          # "success" | "needs-help" | "budget-exhausted"
+```
+
+#### Storage — same artifact store, new relpath convention
+
+- `analysis/triage_result.json` — `TriageResult`
+- `analysis/convert_result.json` — `ConvertResult`
+- `analysis/patch_result.json` — `PatchResult`
+
+Existing `analysis/<phase>.md` files stay as human-readable renders
+written from the typed result + LLM prose. Existing
+`analysis/triage.json` audit file is replaced wholesale by
+`triage_result.json` (no migration; the next bundle's triage just
+emits the new shape; legacy bundles' missing-result lookups return
+None and the consumer degrades gracefully — "no upstream context
+available" is a valid PhaseContext shape).
+
+#### I/O helpers in the same module
+
+```python
+def write_phase_result(bundle_id: str, phase: str, result) -> None:
+    data = json.dumps(asdict(result), indent=2).encode("utf-8")
+    artifact_store_put(bundle_id, f"analysis/{phase}_result.json", data, "json")
+
+def load_phase_result(bundle_id: str, phase: str, cls) -> Any | None:
+    raw = read_bundle_text(None, bundle_id, f"analysis/{phase}_result.json")
+    if not raw:
+        return None
+    payload = json.loads(raw)
+    if payload.get("schema_version") != _expected_version(cls):
+        raise PhaseResultVersionMismatch(phase, payload.get("schema_version"))
+    return cls(**payload)
+```
+
+Mirrors the existing `artifact_store_put` / `read_bundle_text`
+primitives; no new storage path, no new HTTP route, no DB change.
+
+#### Producer side — where it slots in
+
+Markdown→typed conversion runs **once, at write time** in the
+producer. The existing regex extractors (`parse_triage_output`,
+`_md_section`) stay — they just run in the producer instead of every
+consumer.
+
+```python
+# at end of process_triage_job, after write_triage_outputs
+parsed = parse_triage_output(triage_md)
+result = TriageResult(
+    schema_version=1,
+    classification=parsed.get("classification") or "unknown",
+    confidence=parsed.get("confidence") or "low",
+    root_cause=_md_section(triage_md, "Root Cause"),
+    evidence_excerpt=_md_section(triage_md, "Evidence")[:2000],
+    error_signature=_compute_error_signature(errors_text),
+    tier=tier_for(parsed.get("classification"),
+                  parsed.get("confidence")).name,
+    classifier_version=_classifier_version(),
+    tokens_used=usage.total_tokens,
+    model=model,
+)
+write_phase_result(bundle_id, "triage", result)
+```
+
+Same idea in `_verify_conversion` (emit `ConvertResult` whether verify
+passed or failed — both shapes carry `status` + optional `reason_code`)
+and in `process_patch_job` (emit `PatchResult` at attempt-loop end).
+
+Future prompt rewrites only break the producer's extractor; consumers
+read typed fields and don't see the prose.
+
+#### Consumer side — `build_patch_payload` becomes
+
+Today:
+
+```python
+triage_md = read_bundle_text(bundle_dir, bundle_id, "analysis/triage.md")
+parsed = parse_triage_output(triage_md)
+triage_classification = parsed.get("classification")
+```
+
+After:
+
+```python
+triage = load_phase_result(bundle_id, "triage", TriageResult)
+triage_classification = triage.classification if triage else None
+```
+
+`build_convert_payload` gains the same load and renders an `## Original
+build failure (from triage)` section from `triage.classification`,
+`triage.root_cause`, `triage.evidence_excerpt`. That section is what
+unblocks the python311 class of port — convert sees plist-drift in the
+triage context and can either route to a minimal substrate-only overlay
+(don't speculate beyond compat artifacts) or refuse the job with an
+escalation hint ("substrate conversion won't help; route to MANUAL").
+
+#### Plumbing for the convert chain specifically
+
+To make triage→convert work end to end, three small additions in
+`runner.py`:
+
+1. `enqueue_convert_job` learns a `triage_result_present: bool` flag (or
+   simply: always assume the triage result is on the bundle at the
+   relpath above — no field needed; convert reads it from the bundle
+   artifact store directly via `load_phase_result(bundle_id, "triage",
+   TriageResult)`).
+2. `process_convert_job` reads the typed `TriageResult` (if any) and
+   passes it to `_run_llm_conversion`.
+3. `build_convert_payload` gains a `triage_result: TriageResult | None`
+   parameter and renders the new section when present.
+
+~30 LOC. The bundle is already the shared store; the typed result is
+already addressable from any phase; convert just stops being blind.
+
+#### Out of scope
+
+- **Migrations.** Old bundles' `analysis/triage.json` is not converted.
+  `load_phase_result(...)` returns `None` on absence; consumers
+  degrade gracefully ("no upstream context available" is a valid
+  `PhaseContext` shape — same path consumers take on operator-fired
+  convert jobs that have no bundle attached).
+- **DB schema changes.** Phase results live in the bundle artifact
+  store, addressed by the existing
+  `(bundle_id, relpath) → blob_sha256` index.
+- **Replacing the artifact store.** Same routing (`artifact_store_put`
+  / `read_bundle_text`), same DB tracking. The change is purely about
+  typing the *content* of what we write.
+- **Tracker UI work.** The typed JSON makes future per-bundle
+  "what triage saw / what convert decided / what patch fixed" panels
+  trivial, but those panels are Step 16 territory, not this step.
+
+#### Dependencies
+
+- **Independent of Step 21** (DB consolidation) — phase results don't
+  touch SQL.
+- **Independent of Step 31** (single-service consolidation) — same
+  HTTP surfaces are used.
+- **Upstream of Step 25** in spirit but not strictly: Step 25's
+  edit-intent DSL produces structured agent output, this step produces
+  structured *phase* output. Both move the system from "prose with
+  regex" to "typed contract." Doing this first makes the patch agent's
+  intent_log a candidate to be folded into `PatchResult` (via an
+  `intent_log: list[IntentRecord]` field), which is a cleaner
+  consumption surface than the current `analysis/intent_log.json`
+  separate file.
+- **Composes with Step 26** (lifecycle hardening): once phase results
+  are typed, the FSM can read them at terminal transitions (e.g.
+  `bundle_branch_dropped` includes `reason_code` from
+  `ConvertResult.reason_code`) without scraping activity-log JSON.
+
+#### LOC estimate
+
+Small — `phase_result.py` (~80) + producer wiring in three places
+(~30) + consumer-side replacement of `parse_triage_output` callers
+(~20) + convert-chain plumbing for the python311 class (~30) + tests
+covering schema round-trips and the
+"convert-sees-triage-classification" path (~120). Total ~280 LOC.
+No prompt changes; no UI changes; no DB changes. The leverage comes
+from making the contract explicit, not from new code.
+
+#### Sub-steps
+
+Each sub-step is a self-contained commit. 36-1 through 36-4 ship
+producers with no consumers — safe to land in isolation, the new
+JSON sits next to the old artifacts unused. 36-5 and 36-6 turn
+consumers on. 36-7 closes out the old code path. Tests (36-8) ride
+alongside each step.
+
+##### 36-1 — schema module + I/O helpers
+
+New file `scripts/generator/dportsv3/agent/phase_result.py` (~100 LOC):
+
+- Frozen `dataclass`es: `TriageResult`, `ConvertResult`, `PatchResult`,
+  each with `schema_version: int = 1` first field.
+- `PhaseResultVersionMismatch(Exception)`.
+- `write_phase_result(bundle_id, phase, result)` —
+  `json.dumps(asdict(result))` →
+  `artifact_store_put(bundle_id, f"analysis/{phase}_result.json", …)`.
+- `load_phase_result(bundle_id, phase, cls)` —
+  `read_bundle_text(None, bundle_id, …)` → parse → version-check →
+  `cls(**payload)`.
+
+**Circular-import gotcha:** `artifact_store_put` + `read_bundle_text`
+live in `agent/runner.py`. To avoid pulling runner into phase_result,
+import them **lazily inside the helper functions** (same pattern the
+runner already uses for several cross-module loads).
+
+Risk: none. Touches: new file + new test.
+
+##### 36-2 — `TriageResult` producer
+
+File: `scripts/generator/dportsv3/agent/runner.py`,
+function: `_write_triage_audit_harness` at line 2195.
+
+Today it writes `analysis/triage.json` with
+`{classification, confidence, snippet_rounds, tokens_used, model, via}`.
+Replace that body with:
+
+1. Build `TriageResult` from the already-typed `result` (it's
+   `dportsv3.agent.triage.TriageResult`, carries classification +
+   confidence + usage).
+2. Extract `root_cause` and `evidence_excerpt` from the just-written
+   `analysis/triage.md` by calling `_md_section(...)`. **`_md_section`
+   doesn't exist in runner.py** — it lives in
+   `delivery/orchestrator.py:226`. Move `_md_section` + `_md_inline`
+   to a new `dportsv3/agent/markdown.py` shared util so both
+   `phase_result` producers and the existing delivery code import
+   from one place.
+3. Compute `error_signature` via `_compute_error_signature`
+   (runner.py:602) on `logs/errors.txt`.
+4. Compute `tier` via `decide(...)` (`agent/decision.py`) or
+   `tier_for(...)` (policy module).
+5. Drop the old `triage.json` write; call
+   `write_phase_result(bundle_id, "triage", result_obj)`.
+
+Tests touched: anything asserting `triage.json` shape — grep
+`tests/` for it.
+
+Risk: low. Touches: one function in runner + shared markdown util.
+
+##### 36-3 — `PatchResult` producer
+
+File: `runner.py`, function: `_write_patch_audit_harness` at line 3107
+(writes `patch.md`, `rebuild_proof.json`, `patch_audit.json`).
+
+Add at the end:
+
+```python
+result_obj = PatchResult(
+    schema_version=1,
+    rebuild_ok=bool(proof_payload.get("rebuild_ok")),
+    attempts=len(result.attempts),
+    intents_applied=…,                 # count from intent_log if available
+    tokens_used=result.usage.total_tokens,
+    status=result.status,
+)
+if bundle_id:
+    write_phase_result(bundle_id, "patch", result_obj)
+```
+
+Keep `rebuild_proof.json` and `patch_audit.json` — they have separate
+consumers (verify, UI) outside the phase-result contract. Those can
+be retired in a later step.
+
+Risk: low. Touches: one function in runner.
+
+##### 36-4 — `ConvertResult` producer
+
+File: `runner.py`. Two emission sites:
+
+**(a) `_verify_conversion` at line 4109** — both the success tail
+(line 4253) and the `_fail()` inner helper (line 4142):
+
+- Success: `ConvertResult(status="verified", reapply_ok=True,
+  overlay_sha256=sha256(overlay_bytes), files_removed=[],
+  diag_tail=None, …)`.
+- `_fail`: `ConvertResult(status=reason_code, reapply_ok=False,
+  overlay_sha256=…, diag_tail=extra.get("diag_tail"),
+  reason_code=reason_code, …)`.
+
+`bundle_id` is reachable inside `_verify_conversion` via
+`job.get("bundle_id")`.
+
+**(b) `_rollback_env_after_convert_failure` at line 3834** — same
+shape with `status="llm_convert_failed"`. Add a `bundle_id`
+parameter, mirroring the `job_id` parameter added during the
+`afe93b96a34` follow-up.
+
+Risk: low. Touches: two functions in runner.
+
+##### 36-5 — patch consumer swap
+
+File: `runner.py`, function: `build_patch_payload` at lines
+1652–1659.
+
+Replace:
+
+```python
+triage_md = read_bundle_text(bundle_dir, bundle_id, "analysis/triage.md")
+if triage_md:
+    parsed = parse_triage_output(triage_md)
+    cls = parsed.get("classification")
+    if cls:
+        triage_classification = cls
+```
+
+with:
+
+```python
+triage = load_phase_result(bundle_id, "triage", TriageResult)
+triage_classification = triage.classification if triage else None
+```
+
+**Second consumer:** `agent/steps.py:794-810` (hand-fired patch
+tier-derivation path). Same swap —
+`services.read_bundle_text + services.parse_triage_output` →
+`load_phase_result`.
+
+Risk: medium. Touches: hot-path payload builder + `steps.py`.
+
+##### 36-6 — convert chain plumbing (the python311 fix)
+
+Files:
+
+1. **`agent/convert.py:68`** — `build_convert_payload` gains
+   `triage_result: TriageResult | None = None`. When non-None, append
+   a `## Original build failure (from triage)` section rendering
+   `classification`, `confidence`, `root_cause`, `evidence_excerpt`.
+2. **`runner.py:3765`** — call site inside `_run_llm_conversion`.
+   Load the triage result and pass it:
+
+   ```python
+   triage = load_phase_result(
+       job.get("bundle_id"), "triage", TriageResult,
+   )
+   payload = convert_mod.build_convert_payload(
+       …,
+       triage_result=triage,
+   )
+   ```
+
+3. **`runner.py:2064`** — `enqueue_convert_job`: no signature change
+   needed; convert reads triage from the bundle artifact store
+   directly (the `bundle_id` is already plumbed via the `.job` file).
+   Document this in the docstring.
+
+Risk: medium. Touches: `convert.py` signature + caller.
+
+##### 36-7 — hard cutover: delete the regex parser
+
+Files:
+
+1. **`runner.py:1365`** — delete `parse_triage_output`.
+2. **`runner.py:3489`** — remove
+   `parse_triage_output=parse_triage_output` from
+   `PatchAgentServices` construction.
+3. **`agent/steps.py:676`** — remove the `parse_triage_output` field
+   from the `PatchAgentServices` dataclass.
+
+The `analysis/triage.md` artifact stays (rendered for humans,
+embedded in patch payload via `context.py:496` as a human-context
+prose-include; that's a context surface, not a parsing surface).
+
+Risk: low (after 36-5 + 36-6 land). Touches: three deletions.
+
+##### 36-8 — tests
+
+1. **New** `tests/test_phase_result.py` — schema round-trips,
+   missing-file returns `None`, version mismatch raises.
+2. **New** `tests/test_convert_payload_includes_triage.py` — given a
+   bundle with a written `TriageResult`,
+   `build_convert_payload(…, triage_result=…)` renders the new
+   section; without it the section is absent.
+3. **Updated** existing tests asserting `triage.json` shape — grep
+   `tests/` and refit to `triage_result.json`.
+4. **Updated** any test importing `parse_triage_output` — refit to
+   `load_phase_result`.
+
+Risk: concurrent with each step. Touches: test files only.
+
+#### Landing order
+
+| Step | Risk | Notes |
+|---|---|---|
+| 36-1 | none | new file + new test |
+| 36-2 | low | producer-only; consumer still reads the .md |
+| 36-3 | low | producer-only; no consumer until later |
+| 36-4 | low | producer-only |
+| 36-5 | medium | first consumer flip — patch payload builder + steps |
+| 36-6 | medium | convert sees triage — the python311 fix |
+| 36-7 | low | cleanup deletes; only safe after 36-5 + 36-6 |
+| 36-8 | low | rides alongside each step |
+
+---
