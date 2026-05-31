@@ -4446,14 +4446,26 @@ def process_job(
             finish_event = (
                 JobEvent.CONVERT_OK if success else JobEvent.CONVERT_GAVE_UP
             )
+            # Include bundle_id in failure detail so lifecycle's
+            # _EVENT_TO_RESOLUTION propagation writes
+            # resolution='convert_gave_up' onto the bundle row. Without
+            # this, the bundle stays at resolution=NULL and
+            # can_retry/can_take_over evaluate False, leaving operators
+            # with no UI surface to re-trigger or claim the failure.
+            fail_detail = (
+                None if success else {
+                    "status": status,
+                    "bundle_id": job.get("bundle_id"),
+                }
+            )
             _apply_transition(
                 job_path.name, finish_event,
-                detail={"status": status} if not success else None,
+                detail=fail_detail,
             )
             for s in sibling_paths:
                 _apply_transition(
                     s.name, finish_event,
-                    detail={"status": status} if not success else None,
+                    detail=fail_detail,
                 )
             # Step 20d auto-resume: if convert succeeded, re-enqueue
             # the triage that was parked at DEAD with retire_reason

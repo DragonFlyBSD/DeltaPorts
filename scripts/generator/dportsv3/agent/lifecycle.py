@@ -222,6 +222,7 @@ _EVENT_TO_RESOLUTION: dict[JobEvent, str] = {
     JobEvent.PATCH_GAVE_UP:    "agent_gave_up",
     JobEvent.PATCH_BUDGET_OUT: "agent_budget_exhausted",
     JobEvent.ESCALATE_MANUAL:  "escalated_manual",
+    JobEvent.CONVERT_GAVE_UP:  "convert_gave_up",
 }
 
 _INFLIGHT_STATES: tuple[JobState, ...] = (
