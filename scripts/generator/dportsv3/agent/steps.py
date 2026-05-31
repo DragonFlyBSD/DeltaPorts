@@ -1081,10 +1081,22 @@ class PatchAttemptStep:
             # verdict (real or synthesized) → MANUAL.
             from dportsv3.agent.runner import (  # noqa: PLC0415
                 _resolve_deferred_verdicts_for_patch,
+                cleanup_resolved_deferred_patches,
             )
             verdicts = _resolve_deferred_verdicts_for_patch(
                 ctx.bundle_dir, bundle_id, result.final_text or "",
             )
+            # Step 37 #4-fix: clean up the framework diff files
+            # whose verdicts resolved to regenerated/dropped — they
+            # were dead weight once the agent landed alternate
+            # intents (or proved they weren't needed). Runs only on
+            # the rebuild_ok=true path because failure-path drops
+            # are speculative.
+            if verdicts:
+                cleanup_resolved_deferred_patches(
+                    env=env, origin=origin, verdicts=verdicts,
+                    queue_root=queue_root, job_id=ctx.job_id,
+                )
             escalated_paths = [
                 v.path for v in verdicts if v.verdict == "escalated"
             ]

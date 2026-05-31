@@ -3216,6 +3216,106 @@ def _parse_patch_plan(text: str) -> dict | None:
 
 
 _VALID_VERDICTS = frozenset({"regenerated", "dropped", "escalated"})
+# Step 37 #4-fix: verdicts whose resolution means the original
+# framework diff file is dead weight on disk. ``escalated`` is
+# excluded — operator may want to see/restore the original.
+_CLEANUP_VERDICTS = frozenset({"regenerated", "dropped"})
+
+
+def cleanup_resolved_deferred_patches(
+    *,
+    env: str,
+    origin: str,
+    verdicts: list,
+    queue_root: Path,
+    job_id: str | None,
+) -> list[str]:
+    """Delete the framework ``diffs/*.diff`` files corresponding to
+    ``regenerated`` / ``dropped`` verdicts. Returns the list of
+    paths actually deleted. ``escalated`` paths are left in place so
+    the operator can inspect / restore them.
+
+    Path safety: only files under ``ports/<origin>/diffs/`` are
+    eligible. Anything else (absolute paths, ``..`` segments, paths
+    outside diffs/) is skipped with a warning — defends against a
+    malformed verdict that tries to escape the port subtree.
+
+    Best-effort: missing files / IO failures log a warning and
+    continue. The agent's intent application already happened; this
+    is post-hoc tree hygiene, not load-bearing.
+    """
+    if not verdicts:
+        return []
+    try:
+        from dportsv3.agent import worker  # noqa: PLC0415
+        paths = worker.env_paths(env)
+    except Exception as exc:
+        log(queue_root, "WARN",
+            f"cleanup_resolved_deferred_patches: env_paths({env!r}) "
+            f"failed: {exc}")
+        return []
+    port_dir = paths.deltaports / "ports" / origin
+    diffs_dir = (port_dir / "diffs").resolve()
+
+    deleted: list[str] = []
+    for v in verdicts:
+        verdict = getattr(v, "verdict", None)
+        rel = getattr(v, "path", None)
+        if not isinstance(rel, str) or not isinstance(verdict, str):
+            continue
+        if verdict not in _CLEANUP_VERDICTS:
+            continue
+        # Path-safety: must be a relative path under diffs/ that
+        # resolves inside the port's diffs/ subtree.
+        if rel.startswith("/") or ".." in Path(rel).parts:
+            log(queue_root, "WARN",
+                f"cleanup_resolved_deferred_patches: refusing "
+                f"unsafe path {rel!r}")
+            continue
+        if not rel.startswith("diffs/"):
+            # Convert only ever defers diffs/*.diff today. A verdict
+            # for some other path is suspicious — skip rather than
+            # delete random files.
+            log(queue_root, "WARN",
+                f"cleanup_resolved_deferred_patches: ignoring "
+                f"non-diffs/ path {rel!r}")
+            continue
+        candidate = (port_dir / rel).resolve()
+        try:
+            candidate.relative_to(diffs_dir)
+        except ValueError:
+            log(queue_root, "WARN",
+                f"cleanup_resolved_deferred_patches: {rel!r} resolved "
+                f"outside diffs/; skip")
+            continue
+        if not candidate.is_file():
+            # Already gone (operator cleaned up, or convert never
+            # wrote it). Not an error; nothing to do.
+            continue
+        try:
+            candidate.unlink()
+        except OSError as exc:
+            log(queue_root, "WARN",
+                f"cleanup_resolved_deferred_patches: unlink {rel} "
+                f"failed: {exc}")
+            continue
+        deleted.append(rel)
+        try:
+            activity_log(
+                queue_root, "convert_deferred_cleanup",
+                f"removed orphan framework patch {rel} for {origin} "
+                f"(verdict={verdict})",
+                job_id=job_id,
+                extra={
+                    "origin": origin,
+                    "path": rel,
+                    "verdict": verdict,
+                },
+            )
+        except Exception as exc:
+            log(queue_root, "WARN",
+                f"activity_log failed in deferred_cleanup: {exc}")
+    return deleted
 
 
 def _resolve_deferred_verdicts_for_patch(

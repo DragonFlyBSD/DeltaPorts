@@ -462,3 +462,107 @@ def test_resolver_ignores_verdicts_for_paths_not_deferred(saved_store):
     ])
     out = _resolve_deferred_verdicts_for_patch(None, "b6", plan)
     assert [v.path for v in out] == ["diffs/a.diff"]
+
+
+# --- Step 37 #4-fix: cleanup_resolved_deferred_patches -----------------------
+
+
+from dportsv3.agent.runner import cleanup_resolved_deferred_patches
+
+
+class _CleanupPaths:
+    def __init__(self, deltaports):
+        self.deltaports = deltaports
+
+
+def _setup_diffs_tree(tmp_path: Path, files: dict[str, str]):
+    """Build an env-like tree with ports/lang/foo/diffs/* populated."""
+    deltaports = tmp_path / "DeltaPorts"
+    diffs_dir = deltaports / "ports" / "lang" / "foo" / "diffs"
+    diffs_dir.mkdir(parents=True)
+    for name, content in files.items():
+        (diffs_dir / name).write_text(content)
+    return deltaports, diffs_dir
+
+
+def _verdict(path, verdict, rationale="."):
+    return DeferredVerdict(
+        path=path, verdict=verdict, rationale=rationale,
+        intents_emitted=[],
+    )
+
+
+def test_cleanup_removes_regenerated_and_dropped(tmp_path, monkeypatch):
+    deltaports, diffs_dir = _setup_diffs_tree(
+        tmp_path,
+        {"a.diff": "a", "b.diff": "b", "c.diff": "c"},
+    )
+    from dportsv3.agent import worker as _w
+    monkeypatch.setattr(_w, "env_paths",
+                        lambda env: _CleanupPaths(deltaports))
+    queue_root = tmp_path / "queue"
+    queue_root.mkdir()
+    verdicts = [
+        _verdict("diffs/a.diff", "regenerated"),
+        _verdict("diffs/b.diff", "dropped"),
+        _verdict("diffs/c.diff", "escalated"),
+    ]
+    deleted = cleanup_resolved_deferred_patches(
+        env="t", origin="lang/foo", verdicts=verdicts,
+        queue_root=queue_root, job_id="j-1",
+    )
+    assert sorted(deleted) == ["diffs/a.diff", "diffs/b.diff"]
+    assert (diffs_dir / "c.diff").exists()
+    assert not (diffs_dir / "a.diff").exists()
+    assert not (diffs_dir / "b.diff").exists()
+
+
+def test_cleanup_silent_on_missing_file(tmp_path, monkeypatch):
+    deltaports, _ = _setup_diffs_tree(tmp_path, {})
+    from dportsv3.agent import worker as _w
+    monkeypatch.setattr(_w, "env_paths",
+                        lambda env: _CleanupPaths(deltaports))
+    queue_root = tmp_path / "queue"
+    queue_root.mkdir()
+    verdicts = [_verdict("diffs/a.diff", "dropped")]
+    deleted = cleanup_resolved_deferred_patches(
+        env="t", origin="lang/foo", verdicts=verdicts,
+        queue_root=queue_root, job_id="j-1",
+    )
+    assert deleted == []
+
+
+def test_cleanup_refuses_path_escape(tmp_path, monkeypatch):
+    deltaports, diffs_dir = _setup_diffs_tree(
+        tmp_path,
+        {"keep.diff": "keep"},
+    )
+    outside = tmp_path / "outside-the-port.diff"
+    outside.write_text("nope")
+
+    from dportsv3.agent import worker as _w
+    monkeypatch.setattr(_w, "env_paths",
+                        lambda env: _CleanupPaths(deltaports))
+    queue_root = tmp_path / "queue"
+    queue_root.mkdir()
+    verdicts = [
+        _verdict("diffs/../../../outside-the-port.diff", "dropped"),
+        _verdict("/etc/passwd", "dropped"),
+        _verdict("dragonfly/patch-foo", "dropped"),
+    ]
+    deleted = cleanup_resolved_deferred_patches(
+        env="t", origin="lang/foo", verdicts=verdicts,
+        queue_root=queue_root, job_id="j-1",
+    )
+    assert deleted == []
+    assert (diffs_dir / "keep.diff").exists()
+    assert outside.exists()
+
+
+def test_cleanup_handles_empty_verdicts(tmp_path):
+    queue_root = tmp_path / "queue"
+    queue_root.mkdir()
+    assert cleanup_resolved_deferred_patches(
+        env="t", origin="lang/foo", verdicts=[],
+        queue_root=queue_root, job_id=None,
+    ) == []
