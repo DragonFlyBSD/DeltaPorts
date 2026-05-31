@@ -420,9 +420,15 @@ class TriageStep:
         # wrapper walks lifecycle once.
         if services.maybe_defer_to_convert is not None:
             try:
+                # Pass triage's classification so the runner-side helper
+                # can skip the defer for non-substrate failures (the
+                # convert agent can't fix plist/compile/configure-class
+                # bugs — letting it try just kills the bundle before
+                # patch runs).
                 deferred = services.maybe_defer_to_convert(
                     queue_root=queue_root, job=job, job_path=job_path,
                     origin=origin,
+                    triage_classification=result.classification,
                 )
             except Exception as exc:
                 # Defer-check is best-effort: a failure here just

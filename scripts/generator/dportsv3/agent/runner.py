@@ -2742,6 +2742,28 @@ def _maybe_skip_locked_origin(
     return True, f"origin_locked_by:{locked_bundle}"
 
 
+# Triage classifications whose root cause is a build-time problem
+# (compile error, missing dep, plist mismatch, etc.) — substrate
+# conversion CANNOT fix these. The convert agent only rearranges port
+# layout (compat → dops); it doesn't touch what dsynth actually builds.
+# Deferring these to convert burns tokens on the wrong layer, and a
+# failed convert kills the bundle before patch (the layer that COULD
+# fix the build) ever runs. Surfaced on lang/python311 (plist-error
+# classified correctly by triage, then routed to convert, which failed
+# at compose reapply and left the operator with no path forward).
+# Conservative negative list — an unknown classification still defers
+# (preserves prior behavior on novel triage outputs).
+_NON_SUBSTRATE_CLASSIFICATIONS: frozenset[str] = frozenset({
+    "plist-error",
+    "pkg-format",
+    "compile-error",
+    "configure-error",
+    "link-error",
+    "missing-dep",
+    "patch-error",
+})
+
+
 def _maybe_defer_to_convert(
     *,
     queue_root: Path,
@@ -2749,6 +2771,7 @@ def _maybe_defer_to_convert(
     job_path: Path,
     origin: str,
     apply_lifecycle: bool = True,
+    triage_classification: str | None = None,
 ) -> tuple[bool, str] | None:
     """Step 20d: defer this triage if the port still has legacy
     overlay artifacts.
@@ -2767,8 +2790,39 @@ def _maybe_defer_to_convert(
     which now calls this AFTER classification so convert sees a
     written triage_result.json) can emit its own TRIAGE_DEFER outcome
     through the orchestrator and avoid double-transitions.
+
+    ``triage_classification``: when set to a value in
+    ``_NON_SUBSTRATE_CLASSIFICATIONS``, skips the defer entirely —
+    convert can't fix non-substrate problems, and a failed convert
+    kills the bundle before patch (which CAN address build-time
+    failures) gets a chance.
     """
     from dportsv3.agent.lifecycle import JobEvent
+
+    # Classification-shaped early exit. Runs before the chroot
+    # assess_dops call so we save the substrate probe too. Logged so
+    # the bypass is auditable from the activity feed.
+    if (triage_classification or "").lower() in _NON_SUBSTRATE_CLASSIFICATIONS:
+        try:
+            activity_log(
+                queue_root,
+                "triage_defer_skipped_non_substrate",
+                (
+                    f"skipping convert defer for {origin}: "
+                    f"classification={triage_classification} is not a "
+                    f"substrate-fixable problem"
+                ),
+                job_id=job_path.name,
+                extra={
+                    "origin": origin,
+                    "classification": triage_classification,
+                    "reason": "non_substrate_classification",
+                },
+            )
+        except Exception as exc:
+            log(queue_root, "WARN",
+                f"activity_log failed in classification skip: {exc}")
+        return None
 
     target = job.get("target") or os.environ.get(
         "DPORTSV3_TRACKER_TARGET", "",
@@ -3061,10 +3115,12 @@ def process_triage_job(
         # after the LLM + triage_result.json write. apply_lifecycle=False
         # so TriageStep emits TRIAGE_DEFER through its StepOutcome and
         # the orchestrator wrapper walks lifecycle once.
-        maybe_defer_to_convert=lambda *, queue_root, job, job_path, origin: (
+        maybe_defer_to_convert=lambda *, queue_root, job, job_path, origin,
+        triage_classification=None: (
             _maybe_defer_to_convert(
                 queue_root=queue_root, job=job, job_path=job_path,
                 origin=origin, apply_lifecycle=False,
+                triage_classification=triage_classification,
             )
         ),
     )
