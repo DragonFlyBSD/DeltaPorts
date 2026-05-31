@@ -314,3 +314,47 @@ def test_snippet_round_includes_feedback_and_content(tmp_path, monkeypatch):
     assert "## Extracted Snippets" in actual
     # Snippet sections come BEFORE Port Files in the legacy ordering.
     assert actual.index("## Snippet Feedback") < actual.index("## Port Files")
+
+
+def test_large_pkg_plist_is_capped(tmp_path, monkeypatch):
+    """A big pkg-plist gets head+tail truncated instead of inlined
+    whole. Without the cap, triage on python311-class ports lands at
+    250K+ token prompts.
+
+    Uses ~88KB of plist — under the 200KB ``read_file_if_exists``
+    hard cap that runs before the section sees the file, so the
+    head/tail boundary lands on the real content.
+    """
+    monkeypatch.setenv("DP_HARNESS_CONTEXT_FILE_CAP", "4096")
+    bdir = tmp_path / "bundle-large"
+    _write(bdir / "logs" / "errors.txt", "boom\n")
+    _write(bdir / "port" / "Makefile", "PORTNAME=big\n")
+    plist_lines = [f"share/big/file-{n:06d}\n" for n in range(4000)]
+    _write(bdir / "port" / "pkg-plist", "".join(plist_lines))
+
+    job = {"origin": "devel/big", "snippet_round": "0",
+           "has_snippets": "false"}
+    actual = runner.build_triage_payload(bdir, None, job)
+
+    assert "share/big/file-000000" in actual, "head should be present"
+    assert "share/big/file-003999" in actual, "tail should be present"
+    assert "share/big/file-002000" not in actual, "middle should be elided"
+    assert "truncated" in actual and "chars" in actual
+    assert len(actual) < 8_000, f"expected capped, got {len(actual)} chars"
+
+
+def test_file_cap_env_var_large_disables_truncation(tmp_path, monkeypatch):
+    """A very large cap behaves like the legacy unbounded inline —
+    useful for one-off bundles that need the full plist."""
+    monkeypatch.setenv("DP_HARNESS_CONTEXT_FILE_CAP", "10000000")
+    bdir = tmp_path / "bundle-uncapped"
+    _write(bdir / "logs" / "errors.txt", "boom\n")
+    _write(bdir / "port" / "Makefile", "PORTNAME=big\n")
+    plist = "share/big/x\n" * 4000  # ~48KB, under read_file_if_exists cap
+    _write(bdir / "port" / "pkg-plist", plist)
+
+    job = {"origin": "devel/big", "snippet_round": "0",
+           "has_snippets": "false"}
+    actual = runner.build_triage_payload(bdir, None, job)
+    assert plist in actual
+    assert "truncated" not in actual

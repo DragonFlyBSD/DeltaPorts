@@ -35,10 +35,54 @@ priority sections when total exceeds N bytes); that's not in Phase 4.
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Protocol, runtime_checkable
+
+
+# Per-file cap (chars, not tokens — chars are deterministic and cheap
+# to bound; tokens are model-dependent). Triage on big-port classes
+# (python, perl, etc.) was inlining 500 KB+ pkg-plist files whole,
+# producing 250 K-token prompts where the classifier needed at most
+# the failing log + a snippet of plist. Patch agent has the ``get_file``
+# tool to fetch the full content when it actually needs it; triage has
+# snippet rounds. Either way, the unbounded inline was wasteful.
+# Override via DP_HARNESS_CONTEXT_FILE_CAP (chars).
+def _default_file_cap() -> int:
+    try:
+        return max(2048, int(os.environ.get(
+            "DP_HARNESS_CONTEXT_FILE_CAP", "32768",
+        )))
+    except (TypeError, ValueError):
+        return 32768
+
+
+def _truncate_head_tail(text: str, cap: int) -> str:
+    """Return ``text`` if under ``cap``, else a head+tail snippet with
+    an explicit truncation marker showing the original byte count and
+    the elided range. Head and tail get half the cap each (so the
+    rendered output stays inside the cap modulo the marker line).
+
+    ``cap=0`` means "resolve from DP_HARNESS_CONTEXT_FILE_CAP at call
+    time" — this is the default for the section-level field so the
+    env var can be set after module import (e.g. by tests, or by
+    a runtime override).
+    """
+    if cap == 0:
+        cap = _default_file_cap()
+    if cap <= 0 or len(text) <= cap:
+        return text
+    half = max(1024, cap // 2)
+    head = text[:half]
+    tail = text[-half:]
+    elided = len(text) - len(head) - len(tail)
+    marker = (
+        f"\n[... truncated {elided} of {len(text)} chars; "
+        f"showing first {len(head)} + last {len(tail)} ...]\n"
+    )
+    return head + marker + tail
 
 
 # I/O callables sections need but can't import directly (avoiding a
@@ -262,6 +306,8 @@ class BuildErrorsSection:
     """Distilled ``logs/errors.txt`` content."""
     name: str = "build_errors"
     priority: int = 50
+    # 0 = resolve from env at render time. Tests can override per-instance.
+    max_chars: int = 0
 
     def render(self, ctx: ContextCtx) -> str | None:
         if ctx.read_bundle_text is None:
@@ -269,7 +315,7 @@ class BuildErrorsSection:
         errors = ctx.read_bundle_text(ctx.bundle_dir, ctx.bundle_id, "logs/errors.txt")
         if not errors:
             return None
-        return f"## Build Errors\n{errors}\n"
+        return f"## Build Errors\n{_truncate_head_tail(errors, self.max_chars)}\n"
 
 
 @dataclass
@@ -278,9 +324,14 @@ class PortFilesSection:
 
     The header always renders (even with no files); the subsections
     only render when their respective files exist in the bundle.
+    Per-file head+tail cap protects against pkg-plist explosion on
+    large ports (python311's plist is 533 KB — that file alone was
+    pushing triage prompts past 250 K tokens).
     """
     name: str = "port_files"
     priority: int = 60
+    # 0 = resolve from env at render time. Tests can override per-instance.
+    max_chars: int = 0
 
     def render(self, ctx: ContextCtx) -> str | None:
         if ctx.read_bundle_text is None:
@@ -289,12 +340,18 @@ class PortFilesSection:
 
         makefile = ctx.read_bundle_text(ctx.bundle_dir, ctx.bundle_id, "port/Makefile")
         if makefile:
-            lines.extend(["### Makefile", "```makefile", makefile, "```", ""])
+            lines.extend(["### Makefile", "```makefile",
+                          _truncate_head_tail(makefile, self.max_chars),
+                          "```", ""])
 
         plist = ctx.read_bundle_text(ctx.bundle_dir, ctx.bundle_id, "port/pkg-plist")
         if plist:
-            lines.extend(["### pkg-plist", "```", plist, "```", ""])
+            lines.extend(["### pkg-plist", "```",
+                          _truncate_head_tail(plist, self.max_chars),
+                          "```", ""])
 
+        # distinfo is tiny by construction (checksums for a few
+        # distfiles); no cap needed.
         distinfo = ctx.read_bundle_text(ctx.bundle_dir, ctx.bundle_id, "port/distinfo")
         if distinfo:
             lines.extend(["### distinfo", "```", distinfo, "```", ""])
@@ -307,6 +364,8 @@ class ExistingPatchesSection:
     """``### Existing Patches`` listing — diff fences per patch file."""
     name: str = "existing_patches"
     priority: int = 70
+    # 0 = resolve from env at render time. Tests can override per-instance.
+    max_chars: int = 0
 
     def render(self, ctx: ContextCtx) -> str | None:
         if not ctx.bundle_id or ctx.bundle_artifact_list is None or ctx.read_bundle_text is None:
@@ -321,7 +380,9 @@ class ExistingPatchesSection:
             if not content:
                 continue
             name = Path(rel).name
-            lines.extend([f"#### {name}", "```diff", content, "```", ""])
+            lines.extend([f"#### {name}", "```diff",
+                          _truncate_head_tail(content, self.max_chars),
+                          "```", ""])
         if len(lines) == 1:
             # Header but no patches successfully read — mirror legacy
             # which still emitted the header in that case.
@@ -342,6 +403,8 @@ class SiblingBundlesSection:
     name: str = "sibling_bundles"
     priority: int = 80
     with_intro: bool = True
+    # 0 = resolve from env at render time. Tests can override per-instance.
+    max_chars: int = 0
 
     def render(self, ctx: ContextCtx) -> str | None:
         if not ctx.sibling_bundle_ids or ctx.read_bundle_text is None:
@@ -359,7 +422,9 @@ class SiblingBundlesSection:
             sib_errors = ctx.read_bundle_text(None, sib_id, "logs/errors.txt")
             if not sib_errors:
                 continue
-            lines.extend([f"### Bundle {sib_id}", "```", sib_errors, "```", ""])
+            lines.extend([f"### Bundle {sib_id}", "```",
+                          _truncate_head_tail(sib_errors, self.max_chars),
+                          "```", ""])
         return "\n".join(lines)
 
 
