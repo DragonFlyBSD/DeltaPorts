@@ -201,3 +201,124 @@ def test_convert_success_predicate_requires_validate_dops_ok() -> None:
 
     # validate_dops_ok truthy-but-not-True (e.g. "true" string) → reject.
     assert is_success({"origin": "devel/foo", "validate_dops_ok": "true"}) is False
+
+
+# --- Item-3: escalation proof -------------------------------------------------
+
+
+from dportsv3.agent.convert import (
+    parse_escalation_proof,
+    parse_convert_proof_either,
+)
+
+
+def test_parse_escalation_proof_labeled_block() -> None:
+    response = """
+Some prose first.
+
+## Escalation Proof (JSON)
+
+```json
+{
+  "origin": "lang/python311",
+  "kind": "escalation",
+  "reason": "non_substrate_failure",
+  "triage_classification": "plist-error",
+  "hint": "Add PLIST_SUB+=PYTHON_EXT_SUFFIX=... in Makefile."
+}
+```
+"""
+    proof = parse_escalation_proof(response)
+    assert proof is not None
+    assert proof["origin"] == "lang/python311"
+    assert proof["reason"] == "non_substrate_failure"
+    assert proof["triage_classification"] == "plist-error"
+    assert "PLIST_SUB" in proof["hint"]
+
+
+def test_parse_escalation_proof_no_fallback() -> None:
+    """Unlike parse_conversion_proof, escalation parser does NOT
+    fall back to last-fenced-json — the heading is contractual.
+    Defends against accidentally interpreting a random JSON block as
+    an escalation signal."""
+    response = """
+```json
+{"origin": "x/y", "reason": "non_substrate_failure"}
+```
+"""
+    assert parse_escalation_proof(response) is None
+
+
+def test_parse_escalation_proof_returns_none_on_garbage() -> None:
+    assert parse_escalation_proof("") is None
+    assert parse_escalation_proof("no proof at all") is None
+    assert parse_escalation_proof(
+        "## Escalation Proof (JSON)\n```\nnot json\n```"
+    ) is None
+
+
+def test_parse_convert_proof_either_prefers_escalation() -> None:
+    """If the agent emits BOTH proof headings in the same response
+    (unlikely but defensive), escalation wins — it's the explicit
+    'stop, wrong layer' signal."""
+    response = """
+## Conversion Proof (JSON)
+```json
+{"origin": "x/y", "validate_dops_ok": true}
+```
+
+## Escalation Proof (JSON)
+```json
+{"origin": "x/y", "reason": "non_substrate_failure"}
+```
+"""
+    proof = parse_convert_proof_either(response)
+    assert proof is not None
+    assert proof.get("_kind") == "escalation"
+
+
+def test_parse_convert_proof_either_tags_conversion() -> None:
+    response = """
+## Conversion Proof (JSON)
+```json
+{"origin": "x/y", "validate_dops_ok": true}
+```
+"""
+    proof = parse_convert_proof_either(response)
+    assert proof is not None
+    assert proof.get("_kind") == "conversion"
+    assert proof.get("origin") == "x/y"
+
+
+def test_convert_success_predicate_accepts_escalation_proof() -> None:
+    """The attempt_loop stops on a valid escalation proof too —
+    otherwise the agent would burn budget retrying after it
+    explicitly declined."""
+    def is_success(p):
+        if not isinstance(p, dict):
+            return False
+        if p.get("_kind") == "escalation":
+            return (isinstance(p.get("origin"), str)
+                    and isinstance(p.get("reason"), str))
+        if not isinstance(p.get("origin"), str):
+            return False
+        return p.get("validate_dops_ok") is True
+
+    assert is_success({
+        "_kind": "escalation",
+        "origin": "lang/python311",
+        "reason": "non_substrate_failure",
+    }) is True
+
+    # Missing reason → not a complete escalation, keep looping.
+    assert is_success({
+        "_kind": "escalation",
+        "origin": "lang/python311",
+    }) is False
+
+    # Conversion proof shape still works.
+    assert is_success({
+        "_kind": "conversion",
+        "origin": "devel/foo",
+        "validate_dops_ok": True,
+    }) is True

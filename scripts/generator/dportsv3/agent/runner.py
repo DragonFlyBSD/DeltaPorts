@@ -4014,6 +4014,55 @@ def _run_llm_conversion(
         custom_llm_provider=provider,
         on_event=dispatcher,
     )
+
+    # Item-3 terminal: agent emitted an Escalation Proof because the
+    # triage classification is non-substrate. No overlay was written
+    # (the prompt forbids put_file on this path), so there's nothing
+    # to roll back and nothing to verify. Write a ConvertResult with
+    # the escalation status + hint, then return a sentinel status the
+    # dispatcher detects to fire ESCALATE_MANUAL instead of
+    # CONVERT_GAVE_UP. This sets bundle.resolution='escalated_manual'
+    # which surfaces the Retry/Take-over operator actions.
+    if result.success and result.status == "escalated_by_agent":
+        proof = result.proof or {}
+        cls = str(proof.get("triage_classification") or "")
+        hint = str(proof.get("hint") or "")
+        reason = str(proof.get("reason") or "non_substrate_failure")
+        try:
+            activity_log(
+                queue_root, "convert_escalated_by_agent",
+                (
+                    f"convert agent escalated {origin}: "
+                    f"classification={cls or '?'}; {hint[:200]}"
+                ),
+                job_id=job_path.name,
+                extra={
+                    "origin": origin,
+                    "triage_classification": cls,
+                    "reason": reason,
+                    "hint": hint,
+                    "bundle_id": job.get("bundle_id"),
+                },
+            )
+        except Exception as exc:
+            log(queue_root, "WARN",
+                f"activity_log failed in convert escalate: {exc}")
+        _write_convert_phase_result(
+            bundle_id=job.get("bundle_id"),
+            status="escalated_by_agent",
+            reapply_ok=False,
+            reason_code=reason,
+            overlay_sha256=None,
+            files_removed=[],
+            diag_tail=(f"classification={cls}\nhint={hint}").strip() or None,
+            tokens_prompt=result.raw_result.usage.prompt_tokens,
+            tokens_completion=result.raw_result.usage.completion_tokens,
+            tokens_total=result.raw_result.usage.total_tokens,
+        )
+        return True, (
+            f"escalated_by_agent:classification={cls or 'unknown'}"
+        )
+
     if not result.success:
         # Rollback any port-subtree dirt the agent left behind. Without
         # this, an orphaned put_file'd overlay.dops persists in the
@@ -4820,7 +4869,30 @@ def process_job(
         origin_locked_exit = (
             success and status.startswith("origin_locked_by:")
         )
-        if not origin_locked_exit:
+        # Item-3 escalation exit: convert agent explicitly declined
+        # the work because triage's classification was non-substrate.
+        # Fire ESCALATE_MANUAL instead of CONVERT_OK so the bundle
+        # lands at resolution='escalated_manual' (per
+        # _EVENT_TO_RESOLUTION) rather than implying the conversion
+        # succeeded.
+        escalated_exit = (
+            success and status.startswith("escalated_by_agent:")
+        )
+        if escalated_exit:
+            escalate_detail = {
+                "status": status,
+                "bundle_id": job.get("bundle_id"),
+            }
+            _apply_transition(
+                job_path.name, JobEvent.ESCALATE_MANUAL,
+                detail=escalate_detail,
+            )
+            for s in sibling_paths:
+                _apply_transition(
+                    s.name, JobEvent.ESCALATE_MANUAL,
+                    detail=escalate_detail,
+                )
+        elif not origin_locked_exit:
             finish_event = (
                 JobEvent.CONVERT_OK if success else JobEvent.CONVERT_GAVE_UP
             )

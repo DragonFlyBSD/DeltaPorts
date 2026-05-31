@@ -298,6 +298,10 @@ _CONVERSION_PROOF_RE = re.compile(
     r"##\s+Conversion\s+Proof\s*\(JSON\).*?```(?:json)?\s*(.*?)```",
     re.DOTALL | re.IGNORECASE,
 )
+_ESCALATION_PROOF_RE = re.compile(
+    r"##\s+Escalation\s+Proof\s*\(JSON\).*?```(?:json)?\s*(.*?)```",
+    re.DOTALL | re.IGNORECASE,
+)
 _LAST_JSON_BLOCK_RE = re.compile(r"```(?:json)?\s*(\{.*?\})\s*```", re.DOTALL)
 
 
@@ -331,6 +335,47 @@ def parse_conversion_proof(response_text: str) -> dict | None:
     return None
 
 
+def parse_escalation_proof(response_text: str) -> dict | None:
+    """Extract a ``## Escalation Proof (JSON)`` block. Used when the
+    convert agent decides the failure isn't substrate-fixable and
+    declines to produce an overlay. Returns None if no block found
+    or JSON doesn't parse — no fallback heuristics (the heading is
+    contractual; without it we don't second-guess)."""
+    if not response_text:
+        return None
+    m = _ESCALATION_PROOF_RE.search(response_text)
+    if not m:
+        return None
+    try:
+        obj = json.loads(m.group(1).strip())
+    except (json.JSONDecodeError, TypeError):
+        return None
+    if not isinstance(obj, dict):
+        return None
+    return obj
+
+
+def parse_convert_proof_either(response_text: str) -> dict | None:
+    """Combined proof parser for attempt_loop's ``proof_parser`` hook.
+
+    Returns a dict tagged with ``_kind`` ∈ {"conversion", "escalation"}
+    so ``_convert_is_success`` can stop the attempt loop on either
+    terminal shape without confusing them. Escalation is checked
+    first — it's an explicit "stop, wrong layer" signal that should
+    win over a partially-emitted Conversion Proof in the same turn.
+    """
+    if not response_text:
+        return None
+    esc = parse_escalation_proof(response_text)
+    if esc is not None:
+        esc["_kind"] = "escalation"
+        return esc
+    conv = parse_conversion_proof(response_text)
+    if conv is not None:
+        conv["_kind"] = "conversion"
+    return conv
+
+
 def run(
     payload: str,
     *,
@@ -358,23 +403,25 @@ def run(
     def _convert_is_success(p: dict | None) -> bool:
         """attempt_loop's stop condition for convert.
 
-        Two requirements, both contractual with CONVERT_SYSTEM:
+        Two terminal shapes both stop the loop:
 
-        - ``origin`` field present (it's the Conversion Proof, not
-          some other JSON the agent emitted along the way).
-        - ``validate_dops_ok`` is exactly ``True`` — the agent
-          asserts the most recent ``validate_dops`` call passed.
-          Without this gate, the agent can give up after one
-          validate failure and ship a broken proof; the handler
-          would then redo the same engine check via compose and
-          reject it, wasting the attempt.
+        - Conversion Proof: ``origin`` is a string AND
+          ``validate_dops_ok`` is exactly ``True`` (the agent
+          asserts the most recent ``validate_dops`` call passed).
+        - Escalation Proof: ``_kind == "escalation"`` AND ``origin`` +
+          ``reason`` are strings. Agent declared the failure isn't
+          substrate-fixable; no overlay was written; no validation
+          to gate on.
 
-        If either fails, attempt_loop runs another attempt (up to
-        ``max_iterations``) with the failure context appended, so
-        the agent gets feedback rather than silently shipping
-        garbage."""
+        If neither shape parses cleanly, attempt_loop runs another
+        attempt (up to ``max_iterations``) with the failure context
+        appended, so the agent gets feedback rather than silently
+        shipping garbage."""
         if not isinstance(p, dict):
             return False
+        if p.get("_kind") == "escalation":
+            return (isinstance(p.get("origin"), str)
+                    and isinstance(p.get("reason"), str))
         if not isinstance(p.get("origin"), str):
             return False
         return p.get("validate_dops_ok") is True
@@ -393,9 +440,24 @@ def run(
         system_prompt=prompts.CONVERT_SYSTEM,
         tool_whitelist=CONVERT_TOOL_NAMES,
         agent_flow="convert",
-        proof_parser=parse_conversion_proof,
+        proof_parser=parse_convert_proof_either,
         is_success=_convert_is_success,
     )
+
+    # Escalation terminal: agent declined to produce an overlay
+    # because the triage classification is non-substrate. Don't go
+    # through conversion-proof checks (origin / bucket presence /
+    # files_removed handling) — none of that applies. Caller
+    # short-circuits on status="escalated_by_agent".
+    esc = parse_escalation_proof(raw.final_text or "")
+    if esc is not None and isinstance(esc.get("origin"), str):
+        esc["_kind"] = "escalation"
+        return ConvertResult(
+            success=True,
+            proof=esc,
+            raw_result=raw,
+            status="escalated_by_agent",
+        )
 
     proof = parse_conversion_proof(raw.final_text or "")
     if proof is None:
