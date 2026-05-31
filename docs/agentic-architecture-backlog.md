@@ -3907,3 +3907,277 @@ Risk: concurrent with each step. Touches: test files only.
 | 36-8 | low | rides alongside each step |
 
 ---
+
+### Step 37 — compose-time patch drift: handler-side defer + patch-side relevance pass — pending
+
+Surfaced on the lang/python311 class of port. When the upstream
+pkg-plist churns between releases, the framework-layer
+``diffs/pkg-plist.diff`` carries hunks whose context drifts off the
+new upstream lines. Convert produces a syntactically-valid
+``overlay.dops`` that references the diff; compose reapply tries to
+apply the diff and rejects several hunks (typical: `Hunk #N failed at
+LLL`); ``_verify_conversion`` fails with ``reason_code=reapply_failed``
+and the bundle dies at ``convert_gave_up``. Patch never runs because
+the substrate isn't dops-converted yet (the partial overlay is wiped
+on rollback), and even if it ran the patch agent has no fixture
+mechanism to fix a compose-time framework patch.
+
+The recurring drift is the dominant failure mode for big-port
+classes (python*, perl*, php*, anything that maintains a substantial
+DragonFly-vs-FreeBSD plist delta). Maintaining a wholesale
+``dragonfly/pkg-plist`` per port isn't viable — they're hundreds of
+KB and churn upstream. Step 37 unblocks the chain by making convert
+ship a *partial* overlay (omitting the rejecting patches) and
+handing the rejected patches to the patch agent as **intent, not
+authority**.
+
+#### Premise
+
+A deferred ``diffs/*.diff`` is not "fix this so it applies." It's
+"figure out what this patch was doing semantically, decide whether
+that intent is still relevant against current upstream, and act."
+Three outcomes per deferred patch:
+
+1. **Still relevant, just stale context** — patch agent writes a
+   fresh diff achieving the same intent.
+2. **No longer relevant** — patch agent drops the patch with a
+   one-line rationale (upstream removed the lines / changed shape).
+3. **Partially relevant** — patch agent writes a smaller patch
+   covering the still-applicable subset.
+
+Per-patch verdicts (regenerated / dropped / escalated) let the
+bundle progress even if a subset escalates — operator picks up only
+the unresolved subset, not the whole port.
+
+#### Goal
+
+Convert produces a partial overlay that composes successfully.
+Patch agent receives the deferred patches with semantic context and
+emits a verdict per patch. Bundle "succeeds" once every deferred
+patch has a verdict; operator surface activates only on per-patch
+escalations, not on the whole port.
+
+#### Scope (in)
+
+- **Handler-side** (``_verify_conversion``): detect hunk-reject
+  failures from compose's stdout, drop the offending ``patch apply
+  diffs/<file>.diff`` line from ``overlay.dops``, retry compose. Cap
+  the iterative drop (e.g. 3). Record the dropped patches with
+  enough context for patch to think semantically.
+- **Typed schema additions**: ``ConvertResult.deferred_patches:
+  list[DeferredPatch]``; ``PatchResult.deferred_verdicts:
+  list[DeferredVerdict]``.
+- **Patch payload**: new ``## Deferred from Convert`` section
+  rendering each deferred patch's path + original content + reject
+  summary + target file.
+- **Patch prompt clause**: relevance-check task with the three-
+  outcome verdict shape.
+- **Convert/patch playbooks**: a new ``convert-deferred-patch-
+  relevance.md`` covering the semantic-intent framing.
+
+#### Scope (out)
+
+- **Convert agent prompt changes.** Convert keeps doing what it does
+  — translate the substrate. The defer machinery is entirely
+  handler-side; the agent doesn't need to know about it.
+- **Maintaining wholesale ``dragonfly/<file>`` replacements** as an
+  alternative. Not viable for big-port classes; this step makes the
+  diff-based approach robust to drift instead.
+- **Compose-time patch regeneration tooling.** The patch agent uses
+  the existing ``apply_intent`` machinery (``add_patch`` /
+  ``replace_in_patch``) — no new tool surface.
+- **Lifecycle changes.** Convert still ends at ``CONVERT_OK`` on
+  partial success; patch fires as today's resume-deferred-triage
+  path enqueues it.
+
+#### Data flow
+
+```
+Convert agent  →  overlay.dops (full)
+       ↓
+Handler reapply  →  rc=2, "Hunk #N failed at LLL" in stdout
+       ↓
+Handler parse + drop "patch apply diffs/pkg-plist.diff", retry
+       ↓
+Reapply ok  →  ConvertResult.deferred_patches = [{path, content,
+                                                  rejects, target}]
+       ↓
+CONVERT_OK  →  fresh triage  →  patch enqueued
+       ↓
+Patch payload carries "## Deferred from Convert" with semantic ctx
+       ↓
+Patch agent per-patch verdict:
+  - regenerated → apply_intent(replace_in_patch or add_patch)
+  - dropped     → no edit; rationale recorded
+  - escalated   → no edit; reason recorded
+       ↓
+PatchResult.deferred_verdicts persisted; bundle resolves
+```
+
+#### Sub-steps
+
+Each sub-step is a self-contained commit. 37-1 unlocks convert
+*alone* (partial-success + deferred_patches recorded but patch
+doesn't act on them yet — same UX as today but bundle status reads
+honestly). 37-2 adds the per-patch context. 37-3 turns the patch
+agent on. 37-4 closes the loop with playbooks + tests.
+
+##### 37-1 — handler-side parse + drop + retry (no patch consumption yet)
+
+Files: ``dportsv3/agent/runner.py`` (``_verify_conversion``).
+
+- New helper ``_parse_compose_rejects(stdout, stderr)`` returns
+  ``list[{path, rejected_hunks}]`` from compose's diag.
+  Recognizes ``Hunk #N failed at LLL`` and the corresponding
+  ``patching file X`` / ``--- a/diffs/<file>.diff`` lines.
+- New helper ``_drop_patch_apply_from_overlay(overlay_text, path)``
+  removes the line referencing the dropped diff. Lossless edit; no
+  re-parse of dops needed.
+- Wrap the existing ``mat = worker.materialize_dports(...)`` call in
+  a bounded loop: on hunk-reject shape, drop one patch, retry.
+  Cap at ``DP_HARNESS_CONVERT_MAX_DROPS`` (default 3).
+- Plumb the recorded drops onto the job dict so
+  ``_write_convert_phase_result`` can include them in
+  ``ConvertResult``.
+- ``deferred_patches: list[str]`` (just paths for now — rich context
+  comes in 37-2).
+
+End state after 37-1: convert succeeds on python311 if exactly 1-3
+diffs/*.diff fail with rejects; bundle moves to ``CONVERT_OK`` with
+``deferred_patches`` visible in the activity feed.
+
+Risk: low. Behind a flag (``DP_HARNESS_CONVERT_DEFER_DROPS``) if
+caution wanted; otherwise the drop only happens on the specific
+hunk-reject shape, so non-reject failures still die as today.
+
+##### 37-2 — rich deferred-patch context
+
+Files: ``dportsv3/agent/phase_result.py``,
+``dportsv3/agent/runner.py``.
+
+- Promote ``deferred_patches`` field on ``ConvertResult`` from
+  ``list[str]`` to ``list[DeferredPatch]``:
+  ```python
+  @dataclass(frozen=True)
+  class DeferredPatch:
+      path: str               # diffs/pkg-plist.diff
+      target_file: str        # pkg-plist (inferred from --- a/X line)
+      original_content: str   # full diff text (capped at e.g. 16KB)
+      reject_summary: str     # "Hunks #1 #3 #4 failed at 249, 2929, 2972"
+  ```
+- Handler reads each dropped diff file's content (already on disk,
+  not deleted) before retry, attaches it to the in-memory list.
+- ``_write_convert_phase_result`` serializes the typed list.
+- ``analysis/convert_result.json`` schema bump (``schema_version=2``);
+  ``load_phase_result`` handles the bump via the existing
+  ``PhaseResultVersionMismatch`` path.
+
+End state: ``convert_result.json`` carries enough context for a
+human (and 37-3's patch agent) to do the semantic-relevance check
+without re-reading the bundle.
+
+Risk: low. Producer-only.
+
+##### 37-3 — patch payload + agent prompt
+
+Files: ``dportsv3/agent/context.py`` (new
+``DeferredFromConvertSection``), ``dportsv3/agent/prompts.py``
+(``PATCH_INTENT_SYSTEM`` clause).
+
+- New section in ``PATCH_SECTIONS`` (priority between
+  ``TriageSummarySection`` and ``PriorAttemptsSection``):
+  ```
+  ## Deferred from Convert
+  Convert produced a partial overlay; the following framework
+  patches were dropped because their hunks rejected against the
+  current upstream. For EACH entry, decide its relevance against
+  current upstream and emit a per-patch verdict (regenerated /
+  dropped / escalated).
+  
+  ### diffs/pkg-plist.diff → pkg-plist
+  Reject summary: Hunks #1 #3 #4 failed at 249, 2929, 2972
+  Original content:
+  ```diff
+  ...
+  ```
+  ```
+- Reads the typed ``DeferredPatch`` list via ``load_phase_result``
+  from the originating convert bundle.
+- Prompt clause in ``PATCH_INTENT_SYSTEM``: one paragraph framing
+  the relevance-check task and the three-verdict outcome.
+- ``PatchResult`` gains ``deferred_verdicts: list[DeferredVerdict]``
+  with shape ``{path, verdict, rationale, intents_emitted}``.
+- ``parse_rebuild_proof`` (or equivalent) recognizes the new
+  verdicts block.
+
+End state: patch agent sees the deferred patches in its payload and
+can act on them. If 37-1/37-2 already shipped without 37-3, the
+patch agent simply ignores the unrecognized section — graceful
+degradation.
+
+Risk: medium. Prompt change needs observation across real runs to
+confirm the agent picks up the rule. The relevance-check task is
+genuinely hard; expect a learning loop on prompt + playbook.
+
+##### 37-4 — playbook + tests + lifecycle hardening
+
+Files: ``docs/agent-playbooks/convert-deferred-patch-relevance.md``,
+``tests/test_runner_convert_defer.py``,
+``tests/test_patch_deferred_section.py``.
+
+- Playbook entry teaching the patch agent how to reason about the
+  three verdicts with worked examples (e.g. "patch removes
+  ``_sysconfigdata__freebsd99_*`` from plist; if those lines no
+  longer exist upstream → drop; if they moved → regenerate at new
+  line numbers; if shape changed → write smaller subset"). Triggers:
+  ``flows: [patch]`` + ``classifications: [plist-error,
+  patch-error]``.
+- Handler tests: synthetic stdout with hunk-reject shape →
+  ``_parse_compose_rejects`` extracts; ``_drop_patch_apply_from_overlay``
+  edits cleanly; full convert path with N=1, 2, 3 drops; cap
+  enforcement at N=4 drops bails to ``CONVERT_GAVE_UP``.
+- Payload tests: deferred patches render in the expected section
+  shape; absence of deferred patches → section omitted.
+- Per-patch escalation handling: ``deferred_verdicts`` with
+  ``verdict=escalated`` rows surface on bundle page; bundle stays
+  ``agent_fixed`` only if every verdict is ``regenerated`` or
+  ``dropped``.
+
+Risk: low after 37-1/37-2/37-3 land.
+
+#### Landing order
+
+| Step | Risk | Notes |
+|---|---|---|
+| 37-1 | low | handler-only; bundle moves to CONVERT_OK on partial success |
+| 37-2 | low | producer-only; richer deferred_patches context |
+| 37-3 | medium | first consumer; patch agent attempts the relevance check |
+| 37-4 | low | playbook + tests + per-verdict escalation polish |
+
+#### LOC estimate
+
+~440 LOC total. ~90 handler, ~20 schema, ~80 payload+prompt, ~50
+playbook, ~200 tests.
+
+#### Dependencies
+
+- **Independent of Step 35** (build-time patch baseline). Step 35
+  fixes the `make patch` baseline for the patch agent's own tools;
+  Step 37 is about compose-time framework patches the handler
+  drives, distinct layer.
+- **Composes with Step 36** — uses ``PhaseResult`` typed contracts
+  for deferred_patches / deferred_verdicts.
+- **Composes with Step 25** (edit-intent DSL) — patch's relevance
+  pass uses existing ``add_patch`` / ``replace_in_patch`` intents;
+  no new intent type needed.
+
+#### Out of scope (deferred)
+
+- Multi-bundle deferred-patch state sharing. Each bundle's convert
+  produces its own deferred list. No cross-bundle "this port's
+  pkg-plist diff always drifts" memo — that's playbook/operator
+  territory.
+- Auto-regeneration of `diffs/*.diff` from the patch agent's
+  verdicts back into the framework layer. Out of scope; the patch
+  agent operates on dops substrate only, so regenerated diffs live
+  in `overlay.dops` `patch.apply` blocks, not back in `diffs/`.
