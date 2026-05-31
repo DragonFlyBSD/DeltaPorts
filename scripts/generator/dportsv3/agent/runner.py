@@ -4426,6 +4426,32 @@ def _materialize_with_defer_retry(
         )
         if to_drop is None:
             # Either non-reject failure or already exhausted candidates.
+            # Instrument: log enough of the diag for the operator to
+            # confirm why the parser found nothing. Without this row,
+            # "defer didn't fire" is invisible (the bundle just dies
+            # at convert_gave_up with no signal about what we tried).
+            try:
+                has_hunk = bool(_PATCH_HUNK_RE.search(diag or ""))
+                has_diff_token = bool(_DIFFS_PATH_RE.search(diag or ""))
+                activity_log(
+                    queue_root, "convert_patch_defer_skipped",
+                    f"no defer candidate for {origin} (attempt {attempt + 1}): "
+                    f"hunk_shape={has_hunk} diff_token={has_diff_token} "
+                    f"deferred_so_far={len(deferred)}",
+                    job_id=job_id,
+                    extra={
+                        "origin": origin,
+                        "attempt": attempt + 1,
+                        "rc": mat.get("rc"),
+                        "hunk_shape_present": has_hunk,
+                        "diff_token_present": has_diff_token,
+                        "deferred_so_far": [d.path for d in deferred],
+                        "diag_tail": diag[-4096:],
+                    },
+                )
+            except Exception as exc:
+                log(queue_root, "WARN",
+                    f"activity_log failed in convert_patch_defer_skipped: {exc}")
             return mat, deferred
         if attempt >= max_drops:
             # Cap reached. Don't drop more.
