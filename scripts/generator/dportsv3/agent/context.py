@@ -562,6 +562,10 @@ class TriageSummarySection:
     has the classification, root cause, and suggested fix at hand."""
     name: str = "triage_summary"
     priority: int = 30
+    # 0 = resolve from env at render time. Triage outputs are usually
+    # small (~1-2 KB), but cap defensively for the same reason as the
+    # other inline-file sections.
+    max_chars: int = 0
 
     def render(self, ctx: ContextCtx) -> str | None:
         if ctx.read_bundle_text is None:
@@ -569,7 +573,7 @@ class TriageSummarySection:
         triage = ctx.read_bundle_text(ctx.bundle_dir, ctx.bundle_id, "analysis/triage.md")
         if not triage:
             return None
-        return f"## Triage Summary\n{triage}\n"
+        return f"## Triage Summary\n{_truncate_head_tail(triage, self.max_chars)}\n"
 
 
 @dataclass

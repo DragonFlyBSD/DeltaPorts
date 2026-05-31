@@ -2753,14 +2753,21 @@ def _maybe_skip_locked_origin(
 # at compose reapply and left the operator with no path forward).
 # Conservative negative list — an unknown classification still defers
 # (preserves prior behavior on novel triage outputs).
+# Canonical triage classification universe (per the rubric in
+# prompts.py PATCH_SYSTEM / TRIAGE_SYSTEM "## Classification" block):
+#   compile-error, configure-error, patch-error, plist-error,
+#   missing-dep, fetch-error, unknown
+# All concrete classifications below are build-time failures that
+# substrate conversion CANNOT address. ``unknown`` is deliberately
+# left out — the substrate probe sometimes surfaces what triage
+# couldn't classify, so the defer is still useful in that case.
 _NON_SUBSTRATE_CLASSIFICATIONS: frozenset[str] = frozenset({
-    "plist-error",
-    "pkg-format",
     "compile-error",
     "configure-error",
-    "link-error",
-    "missing-dep",
     "patch-error",
+    "plist-error",
+    "missing-dep",
+    "fetch-error",
 })
 
 
