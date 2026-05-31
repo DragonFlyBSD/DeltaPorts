@@ -2,9 +2,6 @@
 
 Three layers under test:
 
-- ``_parse_compose_rejects(diag)`` — extracts ``diffs/*.diff`` paths
-  from compose stdout when a hunk-reject shape is present, returns
-  ``[]`` otherwise.
 - ``_drop_patch_apply_from_overlay(text, path)`` — pure-string
   rewrite of an overlay.dops body, dropping the ``patch apply
   <path>`` line.
@@ -24,72 +21,7 @@ from dportsv3.agent.runner import (
     _extract_reject_summary,
     _infer_target_file_from_diff,
     _materialize_with_defer_retry,
-    _parse_compose_rejects,
 )
-
-
-# --- _parse_compose_rejects ---------------------------------------------------
-
-
-def test_parse_rejects_python_plist_shape():
-    """Real-shape diag tail from lang/python311: patch tool prints
-    'Hunk #N failed' + the rejected hunks reference the diff path
-    elsewhere in stdout."""
-    diag = (
-        "applying op patch.apply diffs/pkg-plist.diff\n"
-        "patching pkg-plist using Plan A...\n"
-        "Hunk #1 failed at 249.\n"
-        "Hunk #3 failed at 2929.\n"
-        "3 out of 5 hunks failed--saving rejects to -\n"
-        "done\n"
-        "modes: dops=1\n"
-    )
-    assert _parse_compose_rejects(diag) == ["diffs/pkg-plist.diff"]
-
-
-def test_parse_rejects_multiple_distinct_paths():
-    diag = (
-        "applying op patch.apply diffs/pkg-plist.diff\n"
-        "Hunk #1 failed at 100.\n"
-        "applying op patch.apply diffs/Makefile.diff\n"
-        "Hunk #2 failed at 50.\n"
-    )
-    # Order preserved by first appearance.
-    assert _parse_compose_rejects(diag) == [
-        "diffs/pkg-plist.diff",
-        "diffs/Makefile.diff",
-    ]
-
-
-def test_parse_rejects_dedupes():
-    diag = (
-        "diffs/pkg-plist.diff Hunk #1 failed\n"
-        "diffs/pkg-plist.diff Hunk #2 failed\n"
-    )
-    assert _parse_compose_rejects(diag) == ["diffs/pkg-plist.diff"]
-
-
-def test_parse_rejects_returns_empty_without_hunk_failure():
-    """Path in diag but no 'Hunk #N failed' → not the shape we
-    recover from. Don't treat unrelated compose errors as
-    patch drift."""
-    diag = (
-        "E_APPLY_INVALID_PATH diffs/pkg-plist.diff something\n"
-        "(other compose noise)\n"
-    )
-    assert _parse_compose_rejects(diag) == []
-
-
-def test_parse_rejects_returns_empty_on_no_diff_paths():
-    """Hunk failure but no diffs/*.diff path mentioned (e.g. inline
-    `patch.apply { diff = '...' }` failing) → can't auto-recover."""
-    diag = "Hunk #1 failed at 100\n3 out of 5 hunks failed\n"
-    assert _parse_compose_rejects(diag) == []
-
-
-def test_parse_rejects_handles_empty_input():
-    assert _parse_compose_rejects("") == []
-    assert _parse_compose_rejects("(no output)") == []
 
 
 # --- _drop_patch_apply_from_overlay -------------------------------------------
@@ -213,17 +145,39 @@ def _ok_result():
     return {"ok": True, "rc": 0, "stdout_tail": "done\nmodes: dops=1\n"}
 
 
-def _hunk_fail_result(path: str):
+def _hunk_fail_result(path: str, origin: str = "lang/foo",
+                      patch_msg: str = ""):
+    """Scripted failure result matching what `materialize_dports_with_
+    report` returns when a `patch.apply` op rejects. The `report` field
+    carries the structured shape compose's --json output emits; the
+    runner consumes that to identify the failing diff path."""
+    abs_path = f"/work/DeltaPorts/ports/{origin}/{path}"
+    msg = patch_msg or (
+        "patching foo using Plan A...\n"
+        "Hunk #1 failed at 249.\n"
+        "3 out of 5 hunks failed--saving rejects to -\n"
+    )
     return {
         "ok": False,
         "rc": 2,
-        "stdout_tail": (
-            f"applying op patch.apply {path}\n"
-            "patching foo using Plan A...\n"
-            "Hunk #1 failed at 249.\n"
-            "3 out of 5 hunks failed--saving rejects to -\n"
-        ),
+        "stdout_tail": "(structured report; stdout_tail is opaque)",
         "stderr_tail": "",
+        "report": {
+            "ok": False,
+            "ports": [{
+                "origin": origin,
+                "dops_failed_op_results": [{
+                    "id": "op-0001-patch-apply",
+                    "kind": "patch.apply",
+                    "diagnostics": [{
+                        "severity": "error",
+                        "code": "E_APPLY_PATCH_FAILED",
+                        "source_path": abs_path,
+                        "message": msg,
+                    }],
+                }],
+            }],
+        },
     }
 
 
@@ -388,26 +342,9 @@ def test_extract_reject_summary_no_position_data():
 
 def test_extract_reject_summary_no_hunks_fallback():
     """No Hunk #N failed lines (shouldn't happen in practice, since
-    _parse_compose_rejects gates on them) — fall back to a generic
+    _failed_patch_diags requires patch.apply rows) — fall back to a generic
     message naming the diff path so the field is never empty."""
     assert _extract_reject_summary("(no useful diag)", "diffs/x.diff") == "compose rejected diffs/x.diff"
-
-
-def _hunk_fail_result_realistic(path: str, target_file: str = "pkg-plist"):
-    """Like _hunk_fail_result but with the patch-tool 'patching <target>'
-    line so the diag scan picks up hunk positions correctly."""
-    return {
-        "ok": False,
-        "rc": 2,
-        "stdout_tail": (
-            f"applying op patch.apply {path}\n"
-            f"patching {target_file} using Plan A...\n"
-            "Hunk #1 failed at 249.\n"
-            "Hunk #3 failed at 2929.\n"
-            "2 out of 5 hunks failed--saving rejects to -\n"
-        ),
-        "stderr_tail": "",
-    }
 
 
 def test_loop_populates_deferred_patch_fields(tmp_path, monkeypatch):
@@ -437,7 +374,10 @@ def test_loop_populates_deferred_patch_fields(tmp_path, monkeypatch):
 
     fake_paths = _FakePaths(deltaports)
     fake = _FakeWorker(
-        [_hunk_fail_result_realistic("diffs/pkg-plist.diff"), _ok_result()],
+        [_hunk_fail_result("diffs/pkg-plist.diff", patch_msg=("patching pkg-plist using Plan A...\n"
+                                       "Hunk #1 failed at 249.\n"
+                                       "Hunk #3 failed at 2929.\n"
+                                       "2 out of 5 hunks failed--saving rejects to -\n")), _ok_result()],
         overlay, fake_paths,
     )
     from dportsv3.agent import worker as _real_worker
@@ -532,7 +472,7 @@ def test_convert_result_round_trips_deferred_patches(tmp_path):
 # --- Step 37 --json report path ----------------------------------------------
 
 
-from dportsv3.agent.runner import _candidates_from_compose_report
+from dportsv3.agent.runner import _failed_patch_diags
 
 
 def test_candidates_from_report_pulls_diff_path():
@@ -557,15 +497,13 @@ def test_candidates_from_report_pulls_diff_path():
             }],
         }],
     }
-    assert _candidates_from_compose_report(
-        report, "lang/python311",
-    ) == ["diffs/pkg-plist.diff"]
+    assert [p for p, _ in _failed_patch_diags(report, "lang/python311",)] == ["diffs/pkg-plist.diff"]
 
 
 def test_candidates_from_report_returns_empty_on_no_failures():
     report = {"ok": True, "ports": [{"origin": "x/y",
                                       "dops_failed_op_results": []}]}
-    assert _candidates_from_compose_report(report, "x/y") == []
+    assert [p for p, _ in _failed_patch_diags(report, "x/y")] == []
 
 
 def test_candidates_from_report_ignores_non_patch_failures():
@@ -582,7 +520,7 @@ def test_candidates_from_report_ignores_non_patch_failures():
             }],
         }],
     }
-    assert _candidates_from_compose_report(report, "x/y") == []
+    assert [p for p, _ in _failed_patch_diags(report, "x/y")] == []
 
 
 def test_candidates_from_report_ignores_other_origins():
@@ -606,44 +544,12 @@ def test_candidates_from_report_ignores_other_origins():
             },
         ],
     }
-    assert _candidates_from_compose_report(report, "lang/python311") == []
+    assert [p for p, _ in _failed_patch_diags(report, "lang/python311")] == []
 
 
 def test_candidates_from_report_returns_empty_on_none():
-    assert _candidates_from_compose_report(None, "x/y") == []
-    assert _candidates_from_compose_report({}, "x/y") == []
-
-
-def _hunk_fail_result_with_report(diff_path: str, origin: str):
-    """Scripted result simulating compose --json output: the JSON
-    report carries source_path natively; stdout_tail is irrelevant
-    on this path."""
-    abs_path = f"/work/DeltaPorts/ports/{origin}/{diff_path}"
-    return {
-        "ok": False, "rc": 2,
-        "stdout_tail": "(JSON output not interesting on this path)",
-        "stderr_tail": "",
-        "report": {
-            "ok": False,
-            "ports": [{
-                "origin": origin,
-                "dops_failed_op_results": [{
-                    "id": "op-0001-patch-apply",
-                    "kind": "patch.apply",
-                    "diagnostics": [{
-                        "severity": "error",
-                        "code": "E_APPLY_PATCH_FAILED",
-                        "source_path": abs_path,
-                        "message": (
-                            "patching pkg-plist using Plan A...\n"
-                            "Hunk #1 failed at 249.\n"
-                            "Hunk #3 failed at 2929.\n"
-                        ),
-                    }],
-                }],
-            }],
-        },
-    }
+    assert [p for p, _ in _failed_patch_diags(None, "x/y")] == []
+    assert [p for p, _ in _failed_patch_diags({}, "x/y")] == []
 
 
 def test_loop_drops_via_json_report_path(fake_env, tmp_path):
@@ -652,7 +558,7 @@ def test_loop_drops_via_json_report_path(fake_env, tmp_path):
     no text scraping. Pins the option-2 path so a regression
     surfaces here."""
     overlay = fake_env([
-        _hunk_fail_result_with_report("diffs/pkg-plist.diff", "lang/foo"),
+        _hunk_fail_result("diffs/pkg-plist.diff"),
         _ok_result(),
     ])
     queue_root = tmp_path / "queue"

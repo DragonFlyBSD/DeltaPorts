@@ -4248,102 +4248,49 @@ def _run_llm_conversion(
 # `deferred_patches` — INTENT, not authority — for the patch agent's
 # later relevance pass (Step 37-3).
 
-_DIFFS_PATH_RE = re.compile(r"\bdiffs/[\w./\-+]+\.diff\b")
-_PATCH_HUNK_RE = re.compile(r"Hunk\s+#\d+\s+failed", re.IGNORECASE)
 _HUNK_FAILED_DETAIL_RE = re.compile(
     r"Hunk\s+#(\d+)\s+failed(?:\s+at\s+(\d+))?", re.IGNORECASE,
 )
 _DEFERRED_PATCH_CONTENT_CAP = 16 * 1024  # bytes
 
 
-def _candidates_from_compose_report(
+def _failed_patch_diags(
     report: dict | None, origin: str,
-) -> list[str]:
-    """Pull rejecting ``diffs/*.diff`` paths out of compose's
-    ``--json`` structured report. Returns paths relative to
-    ``ports/<origin>/`` so they match overlay.dops's
-    ``patch apply <path>`` form.
-
-    Walks ``report['ports'][i]['dops_failed_op_results']`` for the
-    matching origin, picks rows where ``kind == 'patch.apply'``,
-    and pulls ``diagnostics[0]['source_path']`` (the absolute path
-    compose's engine resolved against). Strips the port subtree
-    prefix (``/work/DeltaPorts/ports/<origin>/`` or
-    ``ports/<origin>/`` for non-chroot/legacy shapes) to produce a
-    plain ``diffs/X.diff``.
+) -> list[tuple[str, str]]:
+    """Return ``[(diff_path, patch_message), ...]`` for each
+    rejecting ``patch.apply`` op in compose's ``--json`` structured
+    report. ``diff_path`` is relative to ``ports/<origin>/`` so it
+    matches overlay.dops's ``patch apply <path>`` form;
+    ``patch_message`` is the failing op's first diagnostic message
+    (the patch tool's stdout, used to build a reject summary).
 
     Returns ``[]`` when the report is missing, malformed, or
-    contains no patch.apply failures (some other compose failure).
-    Caller treats empty as "no defer candidate" — same shape as
-    the legacy text-scraping path.
+    contains no patch.apply failures.
     """
     if not isinstance(report, dict):
         return []
-    ports = report.get("ports") or []
-    if not isinstance(ports, list):
-        return []
     suffix = f"ports/{origin}/"
-    out: list[str] = []
-    for port in ports:
-        if not isinstance(port, dict):
+    out: list[tuple[str, str]] = []
+    seen: set[str] = set()
+    for port in report.get("ports") or []:
+        if not isinstance(port, dict) or port.get("origin") != origin:
             continue
-        if str(port.get("origin") or "") != origin:
-            continue
-        failed = port.get("dops_failed_op_results") or []
-        if not isinstance(failed, list):
-            continue
-        for row in failed:
-            if not isinstance(row, dict):
-                continue
-            if str(row.get("kind") or "") != "patch.apply":
+        for row in port.get("dops_failed_op_results") or []:
+            if not isinstance(row, dict) or row.get("kind") != "patch.apply":
                 continue
             diags = row.get("diagnostics") or []
-            if not isinstance(diags, list) or not diags:
+            if not diags or not isinstance(diags[0], dict):
                 continue
-            first = diags[0]
-            if not isinstance(first, dict):
-                continue
-            src = str(first.get("source_path") or "")
+            src = str(diags[0].get("source_path") or "")
             if not src:
                 continue
-            # Strip everything up to and including `ports/<origin>/`
-            # so we end up with a path relative to the port subtree
-            # (e.g. ``diffs/pkg-plist.diff``). Defends against both
-            # the chroot-rooted ``/work/DeltaPorts/ports/...`` form
-            # and any host-side variant a test might use.
             idx = src.find(suffix)
-            if idx >= 0:
-                rel = src[idx + len(suffix):]
-            else:
-                # Last-resort: keep the basename's parent slug pair
-                # (``diffs/X.diff``) if the path's tail looks like
-                # one. Unlikely with current compose output.
-                rel = src
-            if rel and rel not in out:
-                out.append(rel)
+            rel = src[idx + len(suffix):] if idx >= 0 else src
+            if not rel or rel in seen:
+                continue
+            seen.add(rel)
+            out.append((rel, str(diags[0].get("message") or "")))
     return out
-
-
-def _parse_compose_rejects(diag: str) -> list[str]:
-    """Return distinct ``diffs/*.diff`` paths likely to have rejected
-    in this compose run, in stdout order. Returns ``[]`` if no
-    hunk-reject shape is present (some other compose failure).
-
-    The structured signal compose emits is a ``dops_failed_ops:``
-    section listing the failing op + message; the patch tool's own
-    stdout (``Hunk #N failed at LLL``) also lands in the same buffer.
-    We require BOTH a hunk-reject line and one or more ``diffs/X.diff``
-    paths — keeps non-patch compose failures (parse errors, missing
-    files, etc.) from getting drop-retry treatment.
-    """
-    if not diag or not _PATCH_HUNK_RE.search(diag):
-        return []
-    seen: list[str] = []
-    for match in _DIFFS_PATH_RE.finditer(diag):
-        path = match.group(0)
-        if path not in seen:
-            seen.append(path)
-    return seen
 
 
 def _drop_patch_apply_from_overlay(text: str, path: str) -> tuple[str, bool]:
@@ -4479,105 +4426,84 @@ def _materialize_with_defer_retry(
     from dportsv3.agent import worker  # noqa: PLC0415
     from dportsv3.agent.phase_result import DeferredPatch  # noqa: PLC0415
     deferred: list = []
-    deferred_paths: set[str] = set()  # quick dedupe lookup
+    seen: set[str] = set()
     mat: dict = {}
     for attempt in range(max_drops + 1):
-        # Step 37: prefer compose's structured --json report over
-        # text scraping. The report has the failing diff's path
-        # natively in `dops_failed_op_results[].diagnostics[].
-        # source_path`; no dependency on the formatter being deployed
-        # or on patch-tool stdout containing the diff name.
         mat = worker.materialize_dports_with_report(env, origin)
         if mat.get("ok"):
             return mat, deferred
-        report = mat.get("report")
-        # diag is needed both as a fallback path and by the
-        # instrumentation block on no-candidate; build it once.
-        diag = ((mat.get("stdout_tail") or "") + "\n"
-                + (mat.get("stderr_tail") or ""))
-        candidates = _candidates_from_compose_report(report, origin)
-        if not candidates:
-            # Fallback: structured report missing / unparseable.
-            # Scan the text output as a backup (works when the
-            # deployed compose has the source_path formatter fix).
-            candidates = _parse_compose_rejects(diag)
-        # First candidate we haven't dropped yet
-        to_drop = next(
-            (p for p in candidates if p not in deferred_paths), None,
-        )
-        if to_drop is None:
-            # Either non-reject failure or already exhausted candidates.
-            # Instrument: log enough of the diag for the operator to
-            # confirm why the parser found nothing. Without this row,
-            # "defer didn't fire" is invisible (the bundle just dies
-            # at convert_gave_up with no signal about what we tried).
-            try:
-                has_hunk = bool(_PATCH_HUNK_RE.search(diag or ""))
-                has_diff_token = bool(_DIFFS_PATH_RE.search(diag or ""))
-                activity_log(
-                    queue_root, "convert_patch_defer_skipped",
-                    f"no defer candidate for {origin} (attempt {attempt + 1}): "
-                    f"hunk_shape={has_hunk} diff_token={has_diff_token} "
-                    f"deferred_so_far={len(deferred)}",
-                    job_id=job_id,
-                    extra={
-                        "origin": origin,
-                        "attempt": attempt + 1,
-                        "rc": mat.get("rc"),
-                        "hunk_shape_present": has_hunk,
-                        "diff_token_present": has_diff_token,
-                        "deferred_so_far": [d.path for d in deferred],
-                        "diag_tail": diag[-4096:],
-                    },
-                )
-            except Exception as exc:
-                log(queue_root, "WARN",
-                    f"activity_log failed in convert_patch_defer_skipped: {exc}")
+        diags = _failed_patch_diags(mat.get("report"), origin)
+        next_drop = next(((p, m) for p, m in diags if p not in seen), None)
+        if next_drop is None:
+            _log_defer_skipped(queue_root, job_id, origin, attempt, mat, deferred)
             return mat, deferred
         if attempt >= max_drops:
-            # Cap reached. Don't drop more.
-            return mat, deferred
-        # Step 37-2: capture rich context BEFORE the drop. Reading
-        # the diff after the drop would still succeed (we only edit
-        # overlay.dops, not the diff file), but the order keeps the
-        # snapshot semantically tied to the failure that triggered
-        # the drop.
-        original_content = _read_diff_content(env, origin, to_drop)
-        target_file = _infer_target_file_from_diff(
-            original_content, fallback=to_drop,
+            return mat, deferred  # cap reached
+        path, msg = next_drop
+        # Capture context BEFORE the overlay edit so the snapshot is
+        # tied to the failure that triggered the drop.
+        content = _read_diff_content(env, origin, path)
+        dp = DeferredPatch(
+            path=path,
+            target_file=_infer_target_file_from_diff(content, fallback=path),
+            original_content=content[:_DEFERRED_PATCH_CONTENT_CAP],
+            reject_summary=_extract_reject_summary(msg, path),
         )
-        reject_summary = _extract_reject_summary(diag, to_drop)
-        if not _drop_patch_apply_from_overlay_file(env, origin, to_drop):
-            # Drop failed (overlay missing, line not present in
-            # overlay, write failed). Bail with the current failure.
-            return mat, deferred
-        deferred.append(DeferredPatch(
-            path=to_drop,
-            target_file=target_file,
-            original_content=original_content[:_DEFERRED_PATCH_CONTENT_CAP],
-            reject_summary=reject_summary,
-        ))
-        deferred_paths.add(to_drop)
-        try:
-            activity_log(
-                queue_root, "convert_patch_deferred",
-                f"deferred framework patch {to_drop} for {origin} "
-                f"(attempt {attempt + 1}/{max_drops}): {reject_summary}",
-                job_id=job_id,
-                extra={
-                    "origin": origin,
-                    "deferred_patch": to_drop,
-                    "target_file": target_file,
-                    "reject_summary": reject_summary,
-                    "deferred_so_far": [d.path for d in deferred],
-                    "attempt": attempt + 1,
-                    "max_drops": max_drops,
-                },
-            )
-        except Exception as exc:
-            log(queue_root, "WARN",
-                f"activity_log failed in convert_patch_deferred: {exc}")
+        if not _drop_patch_apply_from_overlay_file(env, origin, path):
+            return mat, deferred  # overlay missing / line absent / write failed
+        deferred.append(dp)
+        seen.add(path)
+        _log_defer_dropped(queue_root, job_id, origin, attempt, max_drops,
+                           dp, deferred)
     return mat, deferred
+
+
+def _log_defer_skipped(queue_root, job_id, origin, attempt, mat, deferred):
+    """Activity row when the defer loop couldn't find a candidate.
+    Carries enough signal for operators to tell "non-patch failure"
+    from "report shape unexpected" without re-running compose."""
+    try:
+        activity_log(
+            queue_root, "convert_patch_defer_skipped",
+            f"no defer candidate for {origin} (attempt {attempt + 1}): "
+            f"deferred_so_far={len(deferred)} rc={mat.get('rc')}",
+            job_id=job_id,
+            extra={
+                "origin": origin,
+                "attempt": attempt + 1,
+                "rc": mat.get("rc"),
+                "report_present": isinstance(mat.get("report"), dict),
+                "deferred_so_far": [d.path for d in deferred],
+                "stderr_tail": (mat.get("stderr_tail") or "")[-2048:],
+                "stdout_tail": (mat.get("stdout_tail") or "")[-2048:],
+            },
+        )
+    except Exception as exc:
+        log(queue_root, "WARN",
+            f"activity_log failed in convert_patch_defer_skipped: {exc}")
+
+
+def _log_defer_dropped(queue_root, job_id, origin, attempt, max_drops, dp,
+                       deferred):
+    try:
+        activity_log(
+            queue_root, "convert_patch_deferred",
+            f"deferred framework patch {dp.path} for {origin} "
+            f"(attempt {attempt + 1}/{max_drops}): {dp.reject_summary}",
+            job_id=job_id,
+            extra={
+                "origin": origin,
+                "deferred_patch": dp.path,
+                "target_file": dp.target_file,
+                "reject_summary": dp.reject_summary,
+                "deferred_so_far": [d.path for d in deferred],
+                "attempt": attempt + 1,
+                "max_drops": max_drops,
+            },
+        )
+    except Exception as exc:
+        log(queue_root, "WARN",
+            f"activity_log failed in convert_patch_deferred: {exc}")
 
 
 def _overlay_sha256(env: str, origin: str) -> str | None:

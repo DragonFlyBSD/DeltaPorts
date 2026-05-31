@@ -931,25 +931,11 @@ def materialize_dports_with_report(env: str, origin: str) -> dict:
     """
     p = _exec(env, "reapply", "--json", origin)
     result = _exec_result(p.returncode, p.stdout, p.stderr, origin=origin)
-    report: dict | None = None
-    raw = (p.stdout or "").strip()
-    if raw:
-        try:
-            report = json.loads(raw)
-        except json.JSONDecodeError:
-            # The JSON document may be preceded by helper-script
-            # noise. Try to locate the first '{' and re-parse the
-            # tail (compose emits pretty-printed JSON so the document
-            # spans many lines but starts at a well-defined '{').
-            idx = raw.find("{")
-            if idx >= 0:
-                try:
-                    report = json.loads(raw[idx:])
-                except json.JSONDecodeError:
-                    report = None
-    if not isinstance(report, dict):
+    try:
+        report = json.loads((p.stdout or "").strip())
+    except (json.JSONDecodeError, ValueError):
         report = None
-    result["report"] = report
+    result["report"] = report if isinstance(report, dict) else None
     return result
 
 
