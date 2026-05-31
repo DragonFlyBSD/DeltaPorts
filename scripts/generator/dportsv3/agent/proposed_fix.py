@@ -341,21 +341,27 @@ def build_proposed_fix_ctx(
     # full run cost (triage + patch). The patch attempt loop only
     # knows its own usage; without this, proposed_fix.md misreports
     # the cost as patch-only.
+    #
+    # Step 36-2: source is now ``analysis/triage_result.json`` (typed
+    # ``TriageResult``) with flat ``tokens_{prompt,completion,total}``
+    # fields, replacing the pre-Step-36 ``analysis/triage.json`` audit
+    # shape with its nested ``tokens_used`` dict.
     triage_prompt_tokens = 0
     triage_completion_tokens = 0
     triage_total_tokens = 0
     if read_bundle_text is not None:
         triage_json = read_bundle_text(
-            bundle_dir, bundle_id or None, "analysis/triage.json",
+            bundle_dir, bundle_id or None,
+            "analysis/triage_result.json",
         )
         if triage_json:
             try:
                 tdoc = json.loads(triage_json)
-                ttu = tdoc.get("tokens_used") or {}
-                if isinstance(ttu, dict):
-                    triage_prompt_tokens = int(ttu.get("prompt", 0) or 0)
-                    triage_completion_tokens = int(ttu.get("completion", 0) or 0)
-                    triage_total_tokens = int(ttu.get("total", 0) or 0)
+                triage_prompt_tokens = int(tdoc.get("tokens_prompt", 0) or 0)
+                triage_completion_tokens = int(
+                    tdoc.get("tokens_completion", 0) or 0
+                )
+                triage_total_tokens = int(tdoc.get("tokens_total", 0) or 0)
             except Exception:
                 pass
 

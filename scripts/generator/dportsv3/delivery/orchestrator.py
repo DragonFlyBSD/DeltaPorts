@@ -221,46 +221,11 @@ def _diffstat(diff_text: str) -> str:
     return header + ("\n\n" + file_lines if file_lines else "")
 
 
-def _md_section(md: str | None, heading: str, *, max_chars: int = 3000) -> str:
-    """Full body under a ``## <heading>`` section (until the next
-    ``## `` or EOF), trimmed and length-capped. '' when absent.
-
-    Used to lift the reviewer-relevant prose out of triage.md
-    (Root Cause / Evidence) and patch.md (Patch Summary) into the PR
-    body. Markdown inside the section is preserved as-is (no
-    re-fencing) so quoted log lines / bullets render unchanged.
-    """
-    if not md:
-        return ""
-    pat = re.compile(
-        rf"^##\s+{re.escape(heading)}\s*\n(.*?)(?=^##\s+|\Z)",
-        re.MULTILINE | re.DOTALL | re.IGNORECASE,
-    )
-    m = pat.search(md)
-    if not m:
-        return ""
-    body = m.group(1).strip()
-    if len(body) > max_chars:
-        body = body[:max_chars].rstrip() + "\n…(truncated)"
-    return body
-
-
-def _md_inline(md: str | None, heading: str) -> str:
-    """First non-empty line under a ``## <heading>`` section."""
-    if not md:
-        return ""
-    pat = re.compile(
-        rf"^##\s+{re.escape(heading)}\s*\n(.*?)(?=^##\s+|\Z)",
-        re.MULTILINE | re.DOTALL | re.IGNORECASE,
-    )
-    m = pat.search(md)
-    if not m:
-        return ""
-    for line in m.group(1).splitlines():
-        s = line.strip()
-        if s:
-            return s
-    return ""
+# Step 36-2: extraction helpers moved to dportsv3.agent.markdown so
+# the typed phase-result producer can share them without importing
+# private symbols from the delivery package.
+from dportsv3.agent.markdown import md_section as _md_section  # noqa: E402
+from dportsv3.agent.markdown import md_inline as _md_inline  # noqa: E402
 
 
 def format_commit_message(

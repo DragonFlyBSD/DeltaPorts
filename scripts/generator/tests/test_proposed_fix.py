@@ -186,22 +186,25 @@ def test_build_ctx_caps_summary_length():
     assert len(ctx.summary) <= 501   # 500 chars + the truncation ellipsis
 
 
-def test_build_ctx_reads_triage_tokens_from_triage_json():
+def test_build_ctx_reads_triage_tokens_from_triage_result_json():
     """Cost section is otherwise patch-only; build_proposed_fix_ctx
-    reads analysis/triage.json and surfaces the triage spend so the
-    operator sees the full run cost (triage + patch)."""
+    reads analysis/triage_result.json (typed ``TriageResult``,
+    Step 36-2) and surfaces the triage spend so the operator sees
+    the full run cost (triage + patch)."""
     audit = {
         "status": "success",
         "tokens_used": {"prompt": 165_000, "completion": 3_000,
                          "total": 168_000},
     }
     triage = {
-        "tokens_used": {"prompt": 2_500, "completion": 3_700,
-                         "total": 6_200},
+        "schema_version": 1,
+        "tokens_prompt": 2_500,
+        "tokens_completion": 3_700,
+        "tokens_total": 6_200,
     }
     reader = _read_from_dict({
         "analysis/patch_audit.json": json.dumps(audit),
-        "analysis/triage.json": json.dumps(triage),
+        "analysis/triage_result.json": json.dumps(triage),
     })
     ctx = pf.build_proposed_fix_ctx(
         origin="devel/foo", read_bundle_text=reader,

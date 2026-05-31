@@ -37,6 +37,7 @@ Job fields:
 """
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -2198,33 +2199,82 @@ def _write_triage_audit_harness(
     result,  # dportsv3.agent.triage.TriageResult
     model: str,
 ) -> None:
-    """Write the harness-side audit JSON to the bundle.
+    """Step 36-2: write the typed ``TriageResult`` to the bundle.
 
-    The markdown response is already on disk (triage.run writes
-    analysis/triage.md after each LLM round). This adds an
-    analysis/triage.json with classification, confidence, usage, and
-    provenance.
+    The markdown response is already on disk (``triage.run`` writes
+    ``analysis/triage.md`` after each LLM round). This adds the
+    canonical typed result at ``analysis/triage_result.json`` —
+    classification + confidence + root_cause + evidence_excerpt +
+    error_signature + tier + token spend + model.
+
+    Replaces the pre-Step-36 ``analysis/triage.json`` audit shape; the
+    one downstream consumer (``proposed_fix.build_proposed_fix_ctx``)
+    is updated to read the new relpath in the same step.
     """
-    audit = {
-        "classification": result.classification,
-        "confidence": result.confidence,
-        "snippet_rounds": result.snippet_rounds,
-        "tokens_used": {
-            "prompt": result.usage.prompt_tokens,
-            "completion": result.usage.completion_tokens,
-            "total": result.usage.total_tokens,
-        },
-        "model": model,
-        "via": "dportsv3.agent.triage",
-    }
-    data = (json.dumps(audit, indent=2) + "\n").encode("utf-8")
+    from dataclasses import asdict  # noqa: PLC0415
+    from dportsv3.agent.markdown import md_section  # noqa: PLC0415
+    from dportsv3.agent.phase_result import (  # noqa: PLC0415
+        TriageResult, write_phase_result,
+    )
+    from dportsv3.agent.policy import (  # noqa: PLC0415
+        load_policy, tier_for as policy_tier_for,
+    )
+
+    # Re-read the markdown the agent just wrote to lift Root Cause +
+    # Evidence into the typed result. Same source-of-truth the
+    # delivery PR-body builder uses (and the same md_section helper),
+    # so they stay in lockstep on prose-section conventions.
+    triage_md = read_bundle_text(
+        bundle_dir, bundle_id, "analysis/triage.md",
+    ) or ""
+    errors_text = read_bundle_text(
+        bundle_dir, bundle_id, "logs/errors.txt",
+    )
+
+    tier_name = "MANUAL"
+    try:
+        policy_path = os.environ.get(
+            "DP_HARNESS_POLICY", _DEFAULT_POLICY_PATH,
+        )
+        pol = load_policy(policy_path)
+        tier_name = policy_tier_for(
+            pol, result.classification, result.confidence,
+        ).name
+    except Exception:
+        # Tier resolution is a derived field; persisting MANUAL on
+        # failure is a safe default (operator-only) and keeps the
+        # write path side-effect-free.
+        pass
+
+    triage_result = TriageResult(
+        classification=result.classification,
+        confidence=result.confidence,
+        root_cause=md_section(triage_md, "Root Cause", max_chars=2000),
+        evidence_excerpt=md_section(
+            triage_md, "Evidence", max_chars=2000,
+        ),
+        error_signature=_compute_error_signature(errors_text),
+        tier=tier_name,
+        classifier_version="triage-v1",
+        tokens_prompt=result.usage.prompt_tokens,
+        tokens_completion=result.usage.completion_tokens,
+        tokens_total=result.usage.total_tokens,
+        model=model,
+    )
+
     if bundle_id:
-        if not artifact_store_put(bundle_id, "analysis/triage.json", data, "json"):
-            raise RuntimeError("failed to write triage.json to artifact store")
+        write_phase_result(bundle_id, "triage", triage_result)
         return
+    # bundle_dir-only fallback (legacy / offline-test path). The
+    # phase_result write helper only routes through the artifact
+    # store; for the dir-only mode we serialize directly to disk
+    # using the same shape so future loads off the dir would match.
     if bundle_dir is None:
         raise RuntimeError("bundle_dir or bundle_id required")
-    out = bundle_dir / "analysis" / "triage.json"
+    data = (
+        json.dumps(asdict(triage_result), indent=2) + "\n"
+    ).encode("utf-8")
+    out = bundle_dir / "analysis" / "triage_result.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_bytes(data)
 
@@ -3167,6 +3217,33 @@ def _write_patch_audit_harness(
     else:
         (bundle_dir / "analysis" / "patch_audit.json").write_bytes(audit_bytes)
 
+    # Step 36-3: typed PatchResult for downstream phases / future
+    # tracker UI. patch_audit.json + rebuild_proof.json stay (verify
+    # and existing UI consume them); this writes the typed contract
+    # alongside. intents_applied=0 here — the canonical source for
+    # intent counts is analysis/intent_log.json (Step 25e, written
+    # by _write_intent_log_harness).
+    from dataclasses import asdict  # noqa: PLC0415
+    from dportsv3.agent.phase_result import (  # noqa: PLC0415
+        PatchResult as _PatchResultTyped, write_phase_result,
+    )
+    typed = _PatchResultTyped(
+        rebuild_ok=bool(proof_payload.get("rebuild_ok")),
+        status=result.status,
+        attempts=len(result.attempts),
+        intents_applied=0,
+        tokens_prompt=result.usage.prompt_tokens,
+        tokens_completion=result.usage.completion_tokens,
+        tokens_total=result.usage.total_tokens,
+    )
+    if bundle_id:
+        write_phase_result(bundle_id, "patch", typed)
+    elif bundle_dir is not None:
+        out = bundle_dir / "analysis" / "patch_result.json"
+        out.write_bytes(
+            (json.dumps(asdict(typed), indent=2) + "\n").encode("utf-8")
+        )
+
 
 def _write_intent_log_harness(
     bundle_dir: Path | None,
@@ -3809,6 +3886,10 @@ def _run_llm_conversion(
             queue_root, env, origin, reason_code="llm_convert_failed",
             status=f"{result.status} ({result.raw_result.status})",
             job_id=job_path.name,
+            bundle_id=job.get("bundle_id"),
+            tokens_prompt=result.raw_result.usage.prompt_tokens,
+            tokens_completion=result.raw_result.usage.completion_tokens,
+            tokens_total=result.raw_result.usage.total_tokens,
         )
         return False, (
             f"llm_convert_failed: {result.status} "
@@ -3827,15 +3908,92 @@ def _run_llm_conversion(
         proof=result.proof or {},
     )
 
+    # Step 36-4: stash token spend on the job dict so _verify_conversion
+    # can populate the typed ConvertResult without changing its
+    # signature. Deterministic-convert path doesn't go through here
+    # (no LLM ran) — these fields stay unset → tokens=0 in the result.
+    job["convert_tokens_prompt"] = result.raw_result.usage.prompt_tokens
+    job["convert_tokens_completion"] = result.raw_result.usage.completion_tokens
+    job["convert_tokens_total"] = result.raw_result.usage.total_tokens
+
     # The agent wrote overlay.dops + the handler finalized legacy
     # cleanup. Verify via reapply.
     return _verify_conversion(job, origin)
+
+
+def _overlay_sha256(env: str, origin: str) -> str | None:
+    """Best-effort sha256 of the just-written ``overlay.dops`` for
+    the typed ``ConvertResult`` audit. Returns ``None`` when the
+    overlay file isn't present (no convert wrote one) or can't be
+    read; the result field is optional."""
+    try:
+        from dportsv3.agent import worker  # noqa: PLC0415
+        paths = worker.env_paths(env)
+    except Exception:
+        return None
+    overlay = paths.deltaports / "ports" / origin / "overlay.dops"
+    if not overlay.is_file():
+        return None
+    try:
+        return hashlib.sha256(overlay.read_bytes()).hexdigest()
+    except OSError:
+        return None
+
+
+def _write_convert_phase_result(
+    *,
+    bundle_id: str | None,
+    status: str,
+    reapply_ok: bool,
+    reason_code: str | None,
+    overlay_sha256: str | None,
+    files_removed: list[str],
+    diag_tail: str | None,
+    tokens_prompt: int,
+    tokens_completion: int,
+    tokens_total: int,
+) -> None:
+    """Step 36-4: persist the typed ``ConvertResult`` to the bundle.
+
+    Best-effort: a missing ``bundle_id`` (operator-fired convert
+    against an origin with no failure bundle) means no destination
+    to write to; any artifact-store failure is swallowed because the
+    convert flow's terminal lifecycle event is the source of truth
+    for the bundle's outcome — the typed result is an audit /
+    downstream-consumer surface, not a load-bearing gate.
+    """
+    if not bundle_id:
+        return
+    try:
+        from dportsv3.agent.phase_result import (  # noqa: PLC0415
+            ConvertResult as _ConvertResultTyped,
+            write_phase_result,
+        )
+        typed = _ConvertResultTyped(
+            status=status,
+            reapply_ok=reapply_ok,
+            reason_code=reason_code,
+            overlay_sha256=overlay_sha256,
+            files_removed=list(files_removed),
+            diag_tail=diag_tail,
+            tokens_prompt=tokens_prompt,
+            tokens_completion=tokens_completion,
+            tokens_total=tokens_total,
+        )
+        write_phase_result(bundle_id, "convert", typed)
+    except Exception:
+        # Producer is intentionally best-effort: see docstring.
+        pass
 
 
 def _rollback_env_after_convert_failure(
     queue_root: Path, env: str, origin: str, *,
     reason_code: str, status: str,
     job_id: str | None = None,
+    bundle_id: str | None = None,
+    tokens_prompt: int = 0,
+    tokens_completion: int = 0,
+    tokens_total: int = 0,
 ) -> None:
     """Reset ports/<origin>/ to git HEAD + emit a convert_verify_failed
     activity row. Used when ``_run_llm_conversion`` exits before
@@ -3864,6 +4022,22 @@ def _rollback_env_after_convert_failure(
         )
     except Exception:
         pass
+    # Step 36-4: persist the typed ConvertResult alongside the
+    # activity row so downstream consumers (next-step retriage,
+    # tracker UI) see the LLM-loop failure shape without parsing
+    # activity-log extra dicts.
+    _write_convert_phase_result(
+        bundle_id=bundle_id,
+        status=status,
+        reapply_ok=False,
+        reason_code=reason_code,
+        overlay_sha256=_overlay_sha256(env, origin),
+        files_removed=[],
+        diag_tail=None,
+        tokens_prompt=tokens_prompt,
+        tokens_completion=tokens_completion,
+        tokens_total=tokens_total,
+    )
 
 
 def _apply_files_removed(
@@ -4142,6 +4316,14 @@ def _verify_conversion(job: dict, origin: str) -> tuple[bool, str]:
 
     queue_root = Path(job.get("queue_root") or ".")
     job_id = job.get("job_id")
+    bundle_id = job.get("bundle_id")
+    # Step 36-4: token spend isn't known to verify itself; the
+    # caller (_run_llm_conversion) stashes it on the job dict before
+    # invoking verify. Deterministic-convert path doesn't write
+    # these — tokens stay at 0 there (no LLM ran).
+    tok_p = int(job.get("convert_tokens_prompt") or 0)
+    tok_c = int(job.get("convert_tokens_completion") or 0)
+    tok_t = int(job.get("convert_tokens_total") or 0)
 
     def _fail(status: str, reason_code: str, extra: dict | None = None) -> tuple[bool, str]:
         """Common failure tail: rollback env state, log to activity,
@@ -4169,6 +4351,20 @@ def _verify_conversion(job: dict, origin: str) -> tuple[bool, str]:
             )
         except Exception:
             pass
+        # Step 36-4: typed ConvertResult next to the activity row.
+        _write_convert_phase_result(
+            bundle_id=bundle_id,
+            status=status,
+            reapply_ok=False,
+            reason_code=reason_code,
+            overlay_sha256=_overlay_sha256(env, origin),
+            files_removed=[],
+            diag_tail=(extra or {}).get("diag_tail")
+                       if isinstance(extra, dict) else None,
+            tokens_prompt=tok_p,
+            tokens_completion=tok_c,
+            tokens_total=tok_t,
+        )
         return False, status
 
     mat = worker.materialize_dports(env, origin)
@@ -4258,6 +4454,19 @@ def _verify_conversion(job: dict, origin: str) -> tuple[bool, str]:
             )
         except Exception:
             pass
+        # Step 36-4: typed ConvertResult for the success path.
+        _write_convert_phase_result(
+            bundle_id=bundle_id,
+            status="verified",
+            reapply_ok=True,
+            reason_code=None,
+            overlay_sha256=_overlay_sha256(env, origin),
+            files_removed=[],
+            diag_tail=None,
+            tokens_prompt=tok_p,
+            tokens_completion=tok_c,
+            tokens_total=tok_t,
+        )
         return True, "conversion verified by reapply (compose accepted overlay.dops); committed to env"
     # reapply is a shell script that often prints errors to stdout
     # rather than stderr; include both so the failure is debuggable

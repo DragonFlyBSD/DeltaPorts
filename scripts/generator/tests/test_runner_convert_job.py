@@ -652,7 +652,12 @@ def test_llm_convert_failure_rolls_back_env_and_logs_activity(
         convert_mod, "run",
         lambda *a, **kw: SimpleNamespace(
             success=False, proof=None,
-            raw_result=SimpleNamespace(status="budget_exhausted"),
+            raw_result=SimpleNamespace(
+                status="budget_exhausted",
+                usage=SimpleNamespace(
+                    prompt_tokens=0, completion_tokens=0, total_tokens=0,
+                ),
+            ),
             status="no_conversion_proof_block",
         ),
     )
