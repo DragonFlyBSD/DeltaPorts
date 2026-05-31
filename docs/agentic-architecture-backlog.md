@@ -3908,7 +3908,16 @@ Risk: concurrent with each step. Touches: test files only.
 
 ---
 
-### Step 37 — compose-time patch drift: handler-side defer + patch-side relevance pass — pending
+### Step 37 — compose-time patch drift: handler-side defer + patch-side relevance pass — shipped
+
+Landed across 37-1..37-4 in commits `7664cefad85`, `22c7419b091`,
+`30064a0295a`, and the 37-4 commit at the head of the branch
+(playbook + per-verdict ESCALATE_MANUAL routing + lifecycle
+transition + manual_handoff reason). Convert now ships partial
+overlays with `DeferredPatch` context; patch agent emits per-patch
+verdicts; bundles route to MANUAL only on `escalated` verdicts
+(rebuild_ok=true with all-regenerated-or-dropped is full
+agent_fixed). 1620 tests pass.
 
 Surfaced on the lang/python311 class of port. When the upstream
 pkg-plist churns between releases, the framework-layer

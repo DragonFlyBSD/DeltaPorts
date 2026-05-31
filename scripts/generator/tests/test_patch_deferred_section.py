@@ -275,3 +275,59 @@ def test_patch_result_invalid_verdict_strings_dropped_at_write(saved_store):
             valid.append(entry)
     assert len(valid) == 1
     assert valid[0]["path"] == "x"
+
+
+# --- Step 37-4: per-verdict escalation + playbook discovery ------------------
+
+
+def test_playbook_entry_is_discoverable_for_plist_error_patch_flow():
+    """The new convert-deferred-patch-relevance.md should attach to
+    patch payloads on plist-error classifications. Smoke test
+    against load_playbooks so a future trigger drift breaks the
+    test."""
+    from dportsv3.agent.playbooks import find_playbooks_dir, load_playbooks
+    pb_dir = find_playbooks_dir()
+    assert pb_dir is not None, "playbooks dir not found in this checkout"
+    sel = load_playbooks(
+        pb_dir, role="patch",
+        classification="plist-error",
+        toolchains=[],
+    )
+    assert "convert-deferred-patch-relevance.md" in sel.included, (
+        f"expected the deferred-patch playbook in patch+plist-error "
+        f"selection, got: {sel.included}"
+    )
+
+
+def test_playbook_not_attached_to_unrelated_classifications():
+    """missing-dep is not in the playbook's classifications trigger
+    ([plist-error, patch-error]); it should NOT attach there."""
+    from dportsv3.agent.playbooks import find_playbooks_dir, load_playbooks
+    pb_dir = find_playbooks_dir()
+    sel = load_playbooks(
+        pb_dir, role="patch",
+        classification="missing-dep",
+        toolchains=[],
+    )
+    assert "convert-deferred-patch-relevance.md" not in sel.included
+
+
+def test_manual_handoff_reason_for_escalated_verdicts_registered():
+    """Step 37-4 added REASON_PATCH_ESCALATED_VERDICTS. Verify it's
+    in VALID_REASONS so the handoff writer accepts it."""
+    from dportsv3.agent.manual_handoff import (
+        REASON_PATCH_ESCALATED_VERDICTS, VALID_REASONS,
+    )
+    assert REASON_PATCH_ESCALATED_VERDICTS == "patch_escalated_verdicts"
+    assert REASON_PATCH_ESCALATED_VERDICTS in VALID_REASONS
+
+
+def test_patching_to_escalated_transition_legal():
+    """Step 37-4 added (PATCHING, ESCALATE_MANUAL) → ESCALATED in
+    the FSM. Without this transition the per-verdict escalation
+    path in PatchAttemptStep would raise IllegalTransition."""
+    from dportsv3.agent.lifecycle import (
+        JobEvent, JobState, TRANSITIONS,
+    )
+    assert (JobState.PATCHING, JobEvent.ESCALATE_MANUAL) in TRANSITIONS
+    assert TRANSITIONS[(JobState.PATCHING, JobEvent.ESCALATE_MANUAL)] == JobState.ESCALATED

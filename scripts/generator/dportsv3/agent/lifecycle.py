@@ -128,6 +128,9 @@ TRANSITIONS: dict[tuple[JobState | None, JobEvent], JobState] = {
     # Patch / verify failures
     (JobState.PATCHING,    JobEvent.PATCH_GAVE_UP):    JobState.DEAD,
     (JobState.PATCHING,    JobEvent.PATCH_BUDGET_OUT): JobState.DEAD,
+    # Step 37-4: patch fixed the build but escalated some deferred
+    # patches → ESCALATED so operator surfaces the per-patch subset.
+    (JobState.PATCHING,    JobEvent.ESCALATE_MANUAL):  JobState.ESCALATED,
     (JobState.VERIFYING,   JobEvent.VERIFY_FAIL):      JobState.DEAD,
 
     # Step 20: convert-job happy path + failure.

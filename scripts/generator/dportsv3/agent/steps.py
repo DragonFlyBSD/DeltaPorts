@@ -1072,6 +1072,44 @@ class PatchAttemptStep:
 
         status_l = (result.status or "").lower()
         if result.status == "success":
+            # Step 37-4: rebuild_ok=true is necessary but not sufficient
+            # for full agent_fixed. If the agent's Patch Plan declared
+            # any deferred patches as "escalated" (couldn't determine
+            # relevance), the bundle needs operator review of those
+            # specific patches — fire ESCALATE_MANUAL instead of
+            # PATCH_OK, but persist the regenerated/dropped verdicts
+            # on PatchResult so the partial wins aren't lost.
+            from dportsv3.agent.runner import _parse_patch_plan  # noqa: PLC0415
+            plan = _parse_patch_plan(result.final_text or "")
+            escalated_paths: list[str] = []
+            if plan and isinstance(plan.get("deferred_verdicts"), list):
+                for entry in plan["deferred_verdicts"]:
+                    if not isinstance(entry, dict):
+                        continue
+                    verdict = str(entry.get("verdict") or "").strip().lower()
+                    path = str(entry.get("path") or "").strip()
+                    if verdict == "escalated" and path:
+                        escalated_paths.append(path)
+            if escalated_paths:
+                _try_write_handoff(
+                    services, ctx, origin,
+                    reason="patch_escalated_verdicts",
+                    reason_detail=(
+                        f"rebuild ok but {len(escalated_paths)} deferred "
+                        f"patch(es) escalated: "
+                        f"{', '.join(escalated_paths[:5])}"
+                    ),
+                    patch_result=result,
+                )
+                return StepOutcome(
+                    status="success",
+                    next_event=JobEvent.ESCALATE_MANUAL,
+                    detail={
+                        "status_str": "escalated_verdicts",
+                        "patch_status": result.status,
+                        "escalated_paths": escalated_paths,
+                    },
+                )
             _try_write_proposed_fix(
                 services, ctx, origin,
                 model=model,
