@@ -2076,6 +2076,15 @@ def enqueue_convert_job(
     bundle_id is propagated only in the latter case so the
     bundles↔jobs FK reflects the actual relation; operator-fired
     converts leave it NULL.
+
+    Step 36-6: no triage-context fields are added to the .job file.
+    When the convert is bundle-tied, the originating triage's typed
+    ``TriageResult`` is already addressable via
+    ``analysis/triage_result.json`` on the same bundle. The convert
+    flow reads it directly inside ``_run_llm_conversion`` via
+    ``load_phase_result(bundle_dir, bundle_id, "triage", TriageResult)``;
+    operator-fired converts (no bundle_id) skip the lookup and the
+    payload renders without the "Original build failure" section.
     """
     ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%SZ")
     origin_safe = origin.replace("/", "_")
@@ -3325,6 +3334,36 @@ def _write_intent_log_harness(
         out = bundle_dir / "analysis" / "intent_log.json"
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_bytes(body)
+
+    # Step 36-3 follow-up: backfill PatchResult.intents_applied now
+    # that the intent log has been drained and the count is known.
+    # _write_patch_audit_harness runs first and writes the typed
+    # patch_result.json with intents_applied=0 because the drain
+    # hasn't happened yet; this rewrites that field in place. Local
+    # read-modify-write rather than reshaping the producer signature
+    # to thread env/origin through. Best-effort: failures are
+    # swallowed (the canonical intent count remains in
+    # intent_log.json).
+    try:
+        intent_count = len(getattr(log, "intents", []) or [])
+    except Exception:
+        return
+    relpath = "analysis/patch_result.json"
+    try:
+        raw = read_bundle_text(bundle_dir, bundle_id, relpath)
+        if not raw:
+            return
+        doc = json.loads(raw)
+        if doc.get("intents_applied") == intent_count:
+            return
+        doc["intents_applied"] = intent_count
+        updated = (json.dumps(doc, indent=2) + "\n").encode("utf-8")
+        if bundle_id:
+            artifact_store_put(bundle_id, relpath, updated, "json")
+        elif bundle_dir is not None:
+            (bundle_dir / relpath).write_bytes(updated)
+    except Exception:
+        pass
 
 
 def _write_changes_diff(bundle_dir: Path | None, bundle_id: str | None, env: str, origin: str) -> None:

@@ -3414,7 +3414,19 @@ prompt-gate changes (~60) + playbook/prompt section (~prose) + tests
 
 ---
 
-### Step 36 — typed phase results: replace markdown-regex with a `PhaseResult` contract — pending
+### Step 36 — typed phase results: replace markdown-regex with a `PhaseResult` contract — shipped
+
+Landed across 36-1..36-7 in commits `a046f781530`, `07c3995c29f`,
+`fb9df8d5abe`, `aeca24185d5`. Producer + consumer + hard cutover all
+in place; `analysis/<phase>_result.json` is now the structural source
+of truth; markdown stays as the human-readable render. 1573 tests
+pass. Two design deviations from the spec below: (a) token spend is
+three flat ints (`tokens_prompt`/`tokens_completion`/`tokens_total`)
+rather than a single `tokens_used` because `proposed_fix.py` needs
+the breakdown; (b) `load_phase_result` signature is
+`(bundle_dir, bundle_id, phase, cls)` mirroring `read_bundle_text`
+so filesystem-mode bundles work alongside artifact-store bundles.
+
 
 Surfaced during the lang/python311 convert-loop analysis (bundles
 `lang_python311-20260531-{084200Z, 094114Z, 095900Z}`). The convert
