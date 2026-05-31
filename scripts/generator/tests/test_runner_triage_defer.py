@@ -619,12 +619,12 @@ def test_no_defer_for_non_substrate_classification(
     assert "plist-error" in rows[0]["message"]
 
 
-def test_defer_still_fires_for_unknown_classification(
+def test_defer_still_fires_for_novel_classification(
     tmp_path: Path, monkeypatch, state_db,
 ) -> None:
-    """Unknown classification → conservative behavior preserved: still
-    defer. Protects against a future classification name not yet in
-    the negative list."""
+    """Novel (not in the rubric) classification → conservative behavior
+    preserved: still defer. Protects against a future classification
+    name not yet in the negative list."""
     repo = _make_repo(tmp_path)
     port = _make_port(repo, "devel/unknown-cls")
     (port / "Makefile.DragonFly").write_text(
@@ -643,6 +643,37 @@ def test_defer_still_fires_for_unknown_classification(
         queue_root=queue_root, job=job, job_path=job_path,
         origin="devel/unknown-cls",
         triage_classification="brand-new-class-not-in-list",
+    )
+    assert result is not None
+    assert "deferred_for_convert" in result[1]
+
+
+def test_defer_still_fires_for_literal_unknown_classification(
+    tmp_path: Path, monkeypatch, state_db,
+) -> None:
+    """Triage's literal ``unknown`` classification (a real value from
+    the rubric, not a missing field) still defers. The convert
+    substrate probe sometimes surfaces what triage couldn't classify —
+    pins the design choice that ``unknown`` is OUT of the negative
+    set."""
+    repo = _make_repo(tmp_path)
+    port = _make_port(repo, "devel/literally-unknown")
+    (port / "Makefile.DragonFly").write_text(
+        ".if ${OPSYS} == DragonFly\nUSES+=pkgconfig\n.endif\n"
+    )
+    monkeypatch.setenv("DP_HARNESS_REPO_ROOT", str(repo))
+    queue_root = _make_queue(tmp_path)
+
+    job_path = queue_root / "pending" / "triage-unk-literal.job"
+    job_path.write_text("type=triage\norigin=devel/literally-unknown\n")
+    _bootstrap_triage_job(state_db, queue_root, job_path.name)
+
+    job = {"origin": "devel/literally-unknown", "target": "@main",
+           "profile": "main"}
+    result = _maybe_defer_to_convert(
+        queue_root=queue_root, job=job, job_path=job_path,
+        origin="devel/literally-unknown",
+        triage_classification="unknown",
     )
     assert result is not None
     assert "deferred_for_convert" in result[1]

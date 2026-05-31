@@ -2742,25 +2742,19 @@ def _maybe_skip_locked_origin(
     return True, f"origin_locked_by:{locked_bundle}"
 
 
-# Triage classifications whose root cause is a build-time problem
-# (compile error, missing dep, plist mismatch, etc.) — substrate
-# conversion CANNOT fix these. The convert agent only rearranges port
-# layout (compat → dops); it doesn't touch what dsynth actually builds.
-# Deferring these to convert burns tokens on the wrong layer, and a
-# failed convert kills the bundle before patch (the layer that COULD
-# fix the build) ever runs. Surfaced on lang/python311 (plist-error
-# classified correctly by triage, then routed to convert, which failed
-# at compose reapply and left the operator with no path forward).
-# Conservative negative list — an unknown classification still defers
-# (preserves prior behavior on novel triage outputs).
-# Canonical triage classification universe (per the rubric in
-# prompts.py PATCH_SYSTEM / TRIAGE_SYSTEM "## Classification" block):
+# Triage classifications whose root cause is a build-time problem —
+# substrate conversion CANNOT fix these. The convert agent only
+# rearranges port layout (compat → dops); it doesn't touch what dsynth
+# actually builds. Deferring these to convert burns tokens on the wrong
+# layer, and a failed convert kills the bundle before patch (the layer
+# that COULD fix the build) ever runs. Triage's canonical classification
+# universe per prompts.py's "## Classification" rubric is:
 #   compile-error, configure-error, patch-error, plist-error,
 #   missing-dep, fetch-error, unknown
-# All concrete classifications below are build-time failures that
-# substrate conversion CANNOT address. ``unknown`` is deliberately
-# left out — the substrate probe sometimes surfaces what triage
-# couldn't classify, so the defer is still useful in that case.
+# All concrete (non-``unknown``) values land in the negative set below.
+# ``unknown`` is deliberately left out — the substrate probe sometimes
+# surfaces what triage couldn't classify, so the defer is still useful
+# in that case.
 _NON_SUBSTRATE_CLASSIFICATIONS: frozenset[str] = frozenset({
     "compile-error",
     "configure-error",

@@ -49,7 +49,9 @@ from typing import Callable, Protocol, runtime_checkable
 # the failing log + a snippet of plist. Patch agent has the ``get_file``
 # tool to fetch the full content when it actually needs it; triage has
 # snippet rounds. Either way, the unbounded inline was wasteful.
-# Override via DP_HARNESS_CONTEXT_FILE_CAP (chars).
+# Override via DP_HARNESS_CONTEXT_FILE_CAP (chars). Floored at 2048 —
+# below that the head+tail split has no room for meaningful context
+# around the truncation marker. Smaller values are clamped silently.
 def _default_file_cap() -> int:
     try:
         return max(2048, int(os.environ.get(
