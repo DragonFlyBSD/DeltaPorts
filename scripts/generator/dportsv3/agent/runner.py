@@ -4016,6 +4016,155 @@ def _run_llm_conversion(
     return _verify_conversion(job, origin)
 
 
+# Step 37-1: framework-patch drift recovery -----------------------------------
+#
+# Compose's `patch.apply` op invokes /usr/bin/patch against the
+# upstream framework file. When upstream churn drifts the diff's
+# context (typical on big-port pkg-plist), `patch` rejects hunks and
+# the dops op returns E_APPLY_PATCH_FAILED. Compose's stdout carries
+# enough signal to identify which `diffs/*.diff` failed; we drop the
+# corresponding `patch apply <path>` line from overlay.dops and
+# retry. The dropped paths are recorded on ConvertResult as
+# `deferred_patches` — INTENT, not authority — for the patch agent's
+# later relevance pass (Step 37-3).
+
+_DIFFS_PATH_RE = re.compile(r"\bdiffs/[\w./\-+]+\.diff\b")
+_PATCH_HUNK_RE = re.compile(r"Hunk\s+#\d+\s+failed", re.IGNORECASE)
+
+
+def _parse_compose_rejects(diag: str) -> list[str]:
+    """Return distinct ``diffs/*.diff`` paths likely to have rejected
+    in this compose run, in stdout order. Returns ``[]`` if no
+    hunk-reject shape is present (some other compose failure).
+
+    The structured signal compose emits is a ``dops_failed_ops:``
+    section listing the failing op + message; the patch tool's own
+    stdout (``Hunk #N failed at LLL``) also lands in the same buffer.
+    We require BOTH a hunk-reject line and one or more ``diffs/X.diff``
+    paths — keeps non-patch compose failures (parse errors, missing
+    files, etc.) from getting drop-retry treatment.
+    """
+    if not diag or not _PATCH_HUNK_RE.search(diag):
+        return []
+    seen: list[str] = []
+    for match in _DIFFS_PATH_RE.finditer(diag):
+        path = match.group(0)
+        if path not in seen:
+            seen.append(path)
+    return seen
+
+
+def _drop_patch_apply_from_overlay(text: str, path: str) -> tuple[str, bool]:
+    """Remove the ``patch apply <path>`` line from ``overlay.dops``
+    contents. Returns ``(new_text, dropped)``; ``dropped`` is False
+    iff no matching line was found (caller can stop retrying).
+
+    Conservative match: strips leading whitespace, requires the
+    literal ``patch apply`` token followed by the path. Doesn't
+    re-parse dops — this is a single-line removal that preserves
+    indentation, comments, and other ops.
+    """
+    needle = f"patch apply {path}"
+    out_lines: list[str] = []
+    dropped = False
+    for line in text.splitlines(keepends=True):
+        stripped = line.strip()
+        if not dropped and stripped == needle:
+            dropped = True
+            continue
+        out_lines.append(line)
+    return "".join(out_lines), dropped
+
+
+def _drop_patch_apply_from_overlay_file(
+    env: str, origin: str, path: str,
+) -> bool:
+    """Read ``overlay.dops``, drop the ``patch apply <path>`` line,
+    write back. Returns True iff the file was found AND a line was
+    actually removed."""
+    try:
+        from dportsv3.agent import worker  # noqa: PLC0415
+        paths = worker.env_paths(env)
+    except Exception:
+        return False
+    overlay = paths.deltaports / "ports" / origin / "overlay.dops"
+    if not overlay.is_file():
+        return False
+    try:
+        text = overlay.read_text()
+    except OSError:
+        return False
+    new_text, dropped = _drop_patch_apply_from_overlay(text, path)
+    if not dropped:
+        return False
+    try:
+        overlay.write_text(new_text)
+    except OSError:
+        return False
+    return True
+
+
+def _materialize_with_defer_retry(
+    env: str,
+    origin: str,
+    *,
+    queue_root: Path,
+    job_id: str | None,
+    max_drops: int,
+) -> tuple[dict, list[str]]:
+    """Wrap ``worker.materialize_dports`` with a bounded
+    drop-and-retry loop. On compose failure carrying hunk-reject
+    shape, identify which ``diffs/*.diff`` failed, drop it from
+    overlay.dops, retry. Returns ``(final mat dict, deferred
+    paths)``.
+
+    Drops are capped at ``max_drops`` and we never drop the same path
+    twice. The first non-hunk-reject failure exits the loop with the
+    failure dict — caller's existing `_fail()` path handles the rest.
+    """
+    from dportsv3.agent import worker  # noqa: PLC0415
+    deferred: list[str] = []
+    mat: dict = {}
+    for attempt in range(max_drops + 1):
+        mat = worker.materialize_dports(env, origin)
+        if mat.get("ok"):
+            return mat, deferred
+        diag = ((mat.get("stdout_tail") or "") + "\n"
+                + (mat.get("stderr_tail") or ""))
+        candidates = _parse_compose_rejects(diag)
+        # First candidate we haven't dropped yet
+        to_drop = next((p for p in candidates if p not in deferred), None)
+        if to_drop is None:
+            # Either non-reject failure or already exhausted candidates.
+            return mat, deferred
+        if attempt >= max_drops:
+            # Cap reached. Don't drop more.
+            return mat, deferred
+        if not _drop_patch_apply_from_overlay_file(env, origin, to_drop):
+            # Drop failed (overlay missing, line not present in
+            # overlay, write failed). Bail with the current failure.
+            return mat, deferred
+        deferred.append(to_drop)
+        try:
+            activity_log(
+                queue_root, "convert_patch_deferred",
+                f"deferred framework patch {to_drop} for {origin} "
+                f"(attempt {attempt + 1}/{max_drops})",
+                job_id=job_id,
+                extra={
+                    "origin": origin,
+                    "deferred_patch": to_drop,
+                    "deferred_so_far": list(deferred),
+                    "attempt": attempt + 1,
+                    "max_drops": max_drops,
+                },
+            )
+        except Exception as exc:
+            log(queue_root, "WARN",
+                f"activity_log failed in convert_patch_deferred: {exc}")
+    return mat, deferred
+
+
 def _overlay_sha256(env: str, origin: str) -> str | None:
     """Best-effort sha256 of the just-written ``overlay.dops`` for
     the typed ``ConvertResult`` audit. Returns ``None`` when the
@@ -4047,6 +4196,7 @@ def _write_convert_phase_result(
     tokens_prompt: int,
     tokens_completion: int,
     tokens_total: int,
+    deferred_patches: list[str] | None = None,
 ) -> None:
     """Step 36-4: persist the typed ``ConvertResult`` to the bundle.
 
@@ -4074,6 +4224,7 @@ def _write_convert_phase_result(
             tokens_prompt=tokens_prompt,
             tokens_completion=tokens_completion,
             tokens_total=tokens_total,
+            deferred_patches=list(deferred_patches or []),
         )
         write_phase_result(bundle_id, "convert", typed)
     except Exception:
@@ -4436,6 +4587,11 @@ def _verify_conversion(job: dict, origin: str) -> tuple[bool, str]:
     # this captured value for symmetry (the file is still there post-
     # commit, but recomputing would add a redundant read).
     overlay_sha = _overlay_sha256(env, origin)
+    # Pre-declared so the _fail() closure can reference it before the
+    # retry loop (Step 37-1) populates it. Drops happen later in the
+    # function; _fail is only called post-loop so the value is final
+    # by then.
+    deferred_patches: list[str] = []
 
     def _fail(status: str, reason_code: str, extra: dict | None = None) -> tuple[bool, str]:
         """Common failure tail: rollback env state, log to activity,
@@ -4478,10 +4634,31 @@ def _verify_conversion(job: dict, origin: str) -> tuple[bool, str]:
             tokens_prompt=tok_p,
             tokens_completion=tok_c,
             tokens_total=tok_t,
+            deferred_patches=deferred_patches,
         )
         return False, status
 
-    mat = worker.materialize_dports(env, origin)
+    # Step 37-1: framework-patch drift recovery. On the typical
+    # hunk-reject failure (compose tried to apply a `diffs/*.diff`
+    # whose context drifted off upstream), drop that `patch apply`
+    # line from overlay.dops and retry compose. Cap at
+    # DP_HARNESS_CONVERT_MAX_DROPS (default 3) so a port with many
+    # bad patches still bails cleanly. Dropped paths become
+    # `deferred_patches` on the typed ConvertResult — intent for the
+    # patch agent's later relevance pass.
+    max_drops = int(os.environ.get("DP_HARNESS_CONVERT_MAX_DROPS", "3"))
+    mat, deferred_patches = _materialize_with_defer_retry(
+        env, origin,
+        queue_root=queue_root, job_id=job_id, max_drops=max_drops,
+    )
+    if deferred_patches:
+        # The overlay file has been edited; refresh the hash so the
+        # typed result reflects what compose actually accepted, not
+        # what the agent originally wrote. Failure path's _fail()
+        # ran reset_port before our overlay_sha capture in the
+        # entry block, so the hash here is the agent's-original;
+        # post-drop it should be the rewritten content.
+        overlay_sha = _overlay_sha256(env, origin) or overlay_sha
     if mat.get("ok"):
         # Effective-ops check (Step-C follow-up).
         # Compose can succeed with ZERO of the convert's ops actually
@@ -4584,7 +4761,14 @@ def _verify_conversion(job: dict, origin: str) -> tuple[bool, str]:
             tokens_prompt=tok_p,
             tokens_completion=tok_c,
             tokens_total=tok_t,
+            deferred_patches=deferred_patches,
         )
+        if deferred_patches:
+            return True, (
+                f"conversion verified by reapply (with "
+                f"{len(deferred_patches)} deferred patch(es)); "
+                f"committed to env"
+            )
         return True, "conversion verified by reapply (compose accepted overlay.dops); committed to env"
     # reapply is a shell script that often prints errors to stdout
     # rather than stderr; include both so the failure is debuggable

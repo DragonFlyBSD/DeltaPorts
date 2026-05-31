@@ -21,7 +21,7 @@ typed JSON is just a new relpath family.
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, dataclass, fields
+from dataclasses import asdict, dataclass, field, fields
 from typing import Any, TypeVar
 
 
@@ -94,6 +94,11 @@ class ConvertResult:
     tokens_prompt: int
     tokens_completion: int
     tokens_total: int
+    # Step 37-1: framework `diffs/*.diff` paths the handler dropped
+    # from overlay.dops to get compose reapply to succeed. Each entry
+    # is intent (not authority) for the patch agent's later relevance
+    # pass. Empty on the legacy path / when no drops were needed.
+    deferred_patches: list[str] = field(default_factory=list)
     schema_version: int = _SCHEMA_VERSION
 
 
