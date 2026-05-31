@@ -673,7 +673,6 @@ def _err(
 @dataclass
 class PatchServices:
     read_bundle_text: Callable[..., Any]
-    parse_triage_output: Callable[..., Any]
     write_error_note: Callable[..., Any]
     write_patch_audit: Callable[..., Any]
     write_tool_trace: Callable[..., Any]

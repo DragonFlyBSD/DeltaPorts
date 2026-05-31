@@ -1362,27 +1362,14 @@ def _log_playbook_selection(queue_root, role, origin, selection,
 # -----------------------------------------------------------------------------
 # Triage parsing
 # -----------------------------------------------------------------------------
-
-def parse_triage_output(content: str | None) -> dict:
-    """Extract Classification and Confidence from triage.md content."""
-    result = {"classification": "", "confidence": "", "raw": ""}
-    
-    if not content:
-        return result
-    
-    result["raw"] = content
-    
-    # Extract Classification
-    match = re.search(r"^##\s*Classification\s*\n+([^\n#]+)", content, re.MULTILINE | re.IGNORECASE)
-    if match:
-        result["classification"] = match.group(1).strip().lower()
-    
-    # Extract Confidence
-    match = re.search(r"^##\s*Confidence\s*\n+([^\n#]+)", content, re.MULTILINE | re.IGNORECASE)
-    if match:
-        result["confidence"] = match.group(1).strip().lower()
-    
-    return result
+#
+# Step 36-7 cutover: ``parse_triage_output`` (regex extraction of
+# Classification / Confidence from ``analysis/triage.md``) is gone.
+# The patch consumers (``build_patch_payload`` and
+# ``steps.PatchAttemptStep.precheck``) now load the typed
+# ``TriageResult`` via :func:`dportsv3.agent.phase_result.load_phase_result`
+# directly from ``analysis/triage_result.json`` instead of regex-fishing
+# fields out of prose.
 
 
 
@@ -3571,7 +3558,6 @@ def process_patch_job(
     )
     ctx.state["services"] = PatchServices(
         read_bundle_text=read_bundle_text,
-        parse_triage_output=parse_triage_output,
         write_error_note=write_error_note,
         write_patch_audit=_write_patch_audit_harness,
         write_tool_trace=_write_tool_trace,

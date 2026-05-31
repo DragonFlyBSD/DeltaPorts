@@ -9,9 +9,11 @@ This module holds STRUCTURAL prompt content only:
 - Refusal codes + worker-enforced invariants (what the runner will
   reject and why).
 - Output contracts (exact heading text and JSON field names the
-  runner's parsers depend on — ``parse_triage_output``, the
-  rebuild_proof / conversion_proof JSON extractors in
-  ``attempt_loop`` / ``convert``).
+  runner's parsers depend on — the typed ``TriageResult`` producer
+  in ``runner._write_triage_audit_harness`` extracts Classification
+  / Confidence / Root Cause / Evidence from the agent's markdown,
+  and the rebuild_proof / conversion_proof JSON extractors in
+  ``attempt_loop`` / ``convert`` consume the LLM's terminal blocks).
 - Discipline rules (truthfulness, when to stop, when to give up,
   no commits/push/PR).
 

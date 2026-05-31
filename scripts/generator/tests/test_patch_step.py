@@ -64,7 +64,6 @@ class _LogRec:
 def _ctx(tmp_path, job=None, *, helpers_overrides=None, bundle_text=None):
     job = job or {"origin": "devel/foo", "bundle_id": "b-1"}
     log_rec = _LogRec()
-    from dportsv3.agent.runner import parse_triage_output
 
     # Step 36-5: the hand-fired patch tier-derivation now reads the
     # typed TriageResult via load_phase_result, not the markdown.
@@ -106,7 +105,6 @@ def _ctx(tmp_path, job=None, *, helpers_overrides=None, bundle_text=None):
         "read_bundle_text": (lambda bd, bid, rp: bundle_text)
                               if bundle_text is not None
                               else (lambda bd, bid, rp: None),
-        "parse_triage_output": parse_triage_output,
         # Stubbed I/O helpers; precheck never calls these.
         "write_error_note": lambda *a, **kw: None,
         "write_patch_audit": lambda *a, **kw: None,
