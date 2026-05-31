@@ -910,6 +910,49 @@ def materialize_dports(env: str, origin: str) -> dict:
     return result
 
 
+def materialize_dports_with_report(env: str, origin: str) -> dict:
+    """Step 37: like :func:`materialize_dports`, but invokes reapply
+    with ``--json`` so the caller gets the structured compose report
+    instead of the text formatter's stdout.
+
+    Returns a dict shaped like ``materialize_dports`` (``ok``, ``rc``,
+    ``stdout_tail``, ``stderr_tail``) PLUS:
+
+    - ``report``: parsed compose result dict, or ``None`` when the
+      JSON didn't parse (compose's stdout may carry preamble lines
+      before/around the JSON document; we try to recover but degrade
+      gracefully).
+
+    Used by the convert defer loop to identify which framework patch
+    failed via ``report['ports'][i]['dops_failed_op_results'][j]
+    ['diagnostics'][0]['source_path']`` directly — no text scraping,
+    no dependency on the human formatter's bracket suffix being
+    deployed.
+    """
+    p = _exec(env, "reapply", "--json", origin)
+    result = _exec_result(p.returncode, p.stdout, p.stderr, origin=origin)
+    report: dict | None = None
+    raw = (p.stdout or "").strip()
+    if raw:
+        try:
+            report = json.loads(raw)
+        except json.JSONDecodeError:
+            # The JSON document may be preceded by helper-script
+            # noise. Try to locate the first '{' and re-parse the
+            # tail (compose emits pretty-printed JSON so the document
+            # spans many lines but starts at a well-defined '{').
+            idx = raw.find("{")
+            if idx >= 0:
+                try:
+                    report = json.loads(raw[idx:])
+                except json.JSONDecodeError:
+                    report = None
+    if not isinstance(report, dict):
+        report = None
+    result["report"] = report
+    return result
+
+
 WRKDIRPREFIX = "/work/obj"
 
 

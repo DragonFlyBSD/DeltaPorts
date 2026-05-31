@@ -143,8 +143,14 @@ def test_drop_only_removes_one_occurrence():
 
 class _FakeWorker:
     """Replaces dportsv3.agent.worker for the loop test. Each call to
-    materialize_dports pops the next scripted result; overlay state
-    is stored in a dict so the drop helper has somewhere to write."""
+    materialize_dports[_with_report] pops the next scripted result;
+    overlay state is stored in a dict so the drop helper has
+    somewhere to write.
+
+    Scripted results may carry a ``report`` key (a parsed compose
+    JSON dict) for the report-based defer path; if absent the loop
+    falls back to text scraping via ``stdout_tail``/``stderr_tail``.
+    """
 
     def __init__(self, results, overlay_path: Path, env_paths_obj):
         self._results = list(results)
@@ -154,6 +160,15 @@ class _FakeWorker:
     def materialize_dports(self, env, origin):  # noqa: ARG002
         assert self._results, "fake worker exhausted (loop ran too long)"
         return self._results.pop(0)
+
+    def materialize_dports_with_report(self, env, origin):  # noqa: ARG002
+        assert self._results, "fake worker exhausted (loop ran too long)"
+        result = self._results.pop(0)
+        # The runtime function always sets `report` (None if parse
+        # failed). Tests that don't care about the JSON path can
+        # supply only stdout_tail and the loop falls back to text.
+        result.setdefault("report", None)
+        return result
 
     def env_paths(self, env):  # noqa: ARG002
         return self._env_paths
@@ -186,6 +201,8 @@ def fake_env(tmp_path: Path, monkeypatch):
         from dportsv3.agent import worker as _real_worker
         monkeypatch.setattr(_real_worker, "materialize_dports",
                             fake.materialize_dports)
+        monkeypatch.setattr(_real_worker, "materialize_dports_with_report",
+                            fake.materialize_dports_with_report)
         monkeypatch.setattr(_real_worker, "env_paths", fake.env_paths)
         return overlay
 
@@ -426,6 +443,8 @@ def test_loop_populates_deferred_patch_fields(tmp_path, monkeypatch):
     from dportsv3.agent import worker as _real_worker
     monkeypatch.setattr(_real_worker, "materialize_dports",
                         fake.materialize_dports)
+    monkeypatch.setattr(_real_worker, "materialize_dports_with_report",
+                        fake.materialize_dports_with_report)
     monkeypatch.setattr(_real_worker, "env_paths", fake.env_paths)
 
     queue_root = tmp_path / "queue"
@@ -508,3 +527,141 @@ def test_convert_result_round_trips_deferred_patches(tmp_path):
         assert loaded.deferred_patches[0].reject_summary.startswith("Hunks #1")
     finally:
         monkey.undo()
+
+
+# --- Step 37 --json report path ----------------------------------------------
+
+
+from dportsv3.agent.runner import _candidates_from_compose_report
+
+
+def test_candidates_from_report_pulls_diff_path():
+    """The structured compose report carries the diff path natively
+    in dops_failed_op_results[].diagnostics[].source_path. Caller
+    no longer depends on the formatter's bracket suffix."""
+    report = {
+        "ok": False,
+        "ports": [{
+            "origin": "lang/python311",
+            "dops_failed_op_results": [{
+                "id": "op-0002-patch-apply",
+                "kind": "patch.apply",
+                "diagnostics": [{
+                    "severity": "error",
+                    "code": "E_APPLY_PATCH_FAILED",
+                    "source_path": (
+                        "/work/DeltaPorts/ports/lang/python311/"
+                        "diffs/pkg-plist.diff"
+                    ),
+                }],
+            }],
+        }],
+    }
+    assert _candidates_from_compose_report(
+        report, "lang/python311",
+    ) == ["diffs/pkg-plist.diff"]
+
+
+def test_candidates_from_report_returns_empty_on_no_failures():
+    report = {"ok": True, "ports": [{"origin": "x/y",
+                                      "dops_failed_op_results": []}]}
+    assert _candidates_from_compose_report(report, "x/y") == []
+
+
+def test_candidates_from_report_ignores_non_patch_failures():
+    """Other op kinds (mk.var.set, file.materialize) shouldn't be
+    treated as defer candidates — only patch.apply rejections."""
+    report = {
+        "ports": [{
+            "origin": "x/y",
+            "dops_failed_op_results": [{
+                "kind": "mk.var.set",
+                "diagnostics": [{
+                    "source_path": "/work/DeltaPorts/ports/x/y/Makefile",
+                }],
+            }],
+        }],
+    }
+    assert _candidates_from_compose_report(report, "x/y") == []
+
+
+def test_candidates_from_report_ignores_other_origins():
+    """When multiple ports failed, only the requested origin's
+    patch failures count — avoids dropping patches for an unrelated
+    port that happened to fail in the same compose run."""
+    report = {
+        "ports": [
+            {
+                "origin": "other/port",
+                "dops_failed_op_results": [{
+                    "kind": "patch.apply",
+                    "diagnostics": [{
+                        "source_path": "/work/DeltaPorts/ports/other/port/diffs/a.diff",
+                    }],
+                }],
+            },
+            {
+                "origin": "lang/python311",
+                "dops_failed_op_results": [],
+            },
+        ],
+    }
+    assert _candidates_from_compose_report(report, "lang/python311") == []
+
+
+def test_candidates_from_report_returns_empty_on_none():
+    assert _candidates_from_compose_report(None, "x/y") == []
+    assert _candidates_from_compose_report({}, "x/y") == []
+
+
+def _hunk_fail_result_with_report(diff_path: str, origin: str):
+    """Scripted result simulating compose --json output: the JSON
+    report carries source_path natively; stdout_tail is irrelevant
+    on this path."""
+    abs_path = f"/work/DeltaPorts/ports/{origin}/{diff_path}"
+    return {
+        "ok": False, "rc": 2,
+        "stdout_tail": "(JSON output not interesting on this path)",
+        "stderr_tail": "",
+        "report": {
+            "ok": False,
+            "ports": [{
+                "origin": origin,
+                "dops_failed_op_results": [{
+                    "id": "op-0001-patch-apply",
+                    "kind": "patch.apply",
+                    "diagnostics": [{
+                        "severity": "error",
+                        "code": "E_APPLY_PATCH_FAILED",
+                        "source_path": abs_path,
+                        "message": (
+                            "patching pkg-plist using Plan A...\n"
+                            "Hunk #1 failed at 249.\n"
+                            "Hunk #3 failed at 2929.\n"
+                        ),
+                    }],
+                }],
+            }],
+        },
+    }
+
+
+def test_loop_drops_via_json_report_path(fake_env, tmp_path):
+    """End-to-end: when the worker returns a structured report
+    (compose --json), the loop pulls candidates from it directly —
+    no text scraping. Pins the option-2 path so a regression
+    surfaces here."""
+    overlay = fake_env([
+        _hunk_fail_result_with_report("diffs/pkg-plist.diff", "lang/foo"),
+        _ok_result(),
+    ])
+    queue_root = tmp_path / "queue"
+    queue_root.mkdir()
+    mat, deferred = _materialize_with_defer_retry(
+        "test-env", "lang/foo",
+        queue_root=queue_root, job_id="j-1", max_drops=3,
+    )
+    assert mat["ok"] is True
+    assert [d.path for d in deferred] == ["diffs/pkg-plist.diff"]
+    # The overlay's reference is gone after the drop.
+    assert "diffs/pkg-plist.diff" not in overlay.read_text()

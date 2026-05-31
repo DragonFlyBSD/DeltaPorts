@@ -196,6 +196,8 @@ def test_process_convert_job_auto_safe_port(
     from dportsv3.agent import worker
     monkeypatch.setattr(worker, "materialize_dports",
                         lambda env, origin: {"ok": True, "rc": 0})
+    monkeypatch.setattr(worker, "materialize_dports_with_report",
+                        lambda env, origin: {"ok": True, "rc": 0, "report": None})
     monkeypatch.setattr(worker, "commit_port_changes",
                         lambda env, origin, message: {"ok": True,
                                                        "committed": True,
@@ -307,6 +309,8 @@ def test_process_convert_job_needs_judgment_llm_success(
     )
     monkeypatch.setattr(worker, "materialize_dports",
                         lambda env, origin: {"ok": True, "rc": 0})
+    monkeypatch.setattr(worker, "materialize_dports_with_report",
+                        lambda env, origin: {"ok": True, "rc": 0, "report": None})
     monkeypatch.setattr(worker, "dsynth_build",
                         lambda env, origin: {"rebuild_ok": True, "ok": True})
     monkeypatch.setattr(worker, "commit_port_changes",
@@ -403,6 +407,8 @@ def test_process_convert_job_verifies_with_reapply_pass(
     from dportsv3.agent import worker
     monkeypatch.setattr(worker, "materialize_dports",
                         lambda env, origin: {"ok": True, "rc": 0})
+    monkeypatch.setattr(worker, "materialize_dports_with_report",
+                        lambda env, origin: {"ok": True, "rc": 0, "report": None})
     # Guard: dsynth_build must NOT be called from the verification
     # path. If it is, the test fails fast.
     monkeypatch.setattr(
@@ -470,6 +476,8 @@ def test_process_convert_job_emits_failure_row_when_commit_fails(
     from dportsv3.agent import worker
     monkeypatch.setattr(worker, "materialize_dports",
                         lambda env, origin: {"ok": True, "rc": 0})
+    monkeypatch.setattr(worker, "materialize_dports_with_report",
+                        lambda env, origin: {"ok": True, "rc": 0, "report": None})
     monkeypatch.setattr(
         worker, "commit_port_changes",
         lambda env, origin, message: {
@@ -515,6 +523,8 @@ def test_process_convert_job_commit_message_includes_bundle_dir(
     from dportsv3.agent import worker
     monkeypatch.setattr(worker, "materialize_dports",
                         lambda env, origin: {"ok": True, "rc": 0})
+    monkeypatch.setattr(worker, "materialize_dports_with_report",
+                        lambda env, origin: {"ok": True, "rc": 0, "report": None})
     captured_message = []
     def fake_commit(env, origin, message):
         captured_message.append(message)
@@ -548,12 +558,15 @@ def test_process_convert_job_reapply_fail(
     monkeypatch.setattr(runner_mod, "_CLI_ENV_DEFAULT", "test-env")
 
     from dportsv3.agent import worker
+    fail_result = {
+        "ok": False, "rc": 2,
+        "stderr_tail": "compose: dops parse error at line 3",
+    }
+    monkeypatch.setattr(worker, "materialize_dports",
+                        lambda env, origin: dict(fail_result))
     monkeypatch.setattr(
-        worker, "materialize_dports",
-        lambda env, origin: {
-            "ok": False, "rc": 2,
-            "stderr_tail": "compose: dops parse error at line 3",
-        },
+        worker, "materialize_dports_with_report",
+        lambda env, origin: {**fail_result, "report": None},
     )
 
     success, status = process_convert_job(

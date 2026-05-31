@@ -4256,6 +4256,74 @@ _HUNK_FAILED_DETAIL_RE = re.compile(
 _DEFERRED_PATCH_CONTENT_CAP = 16 * 1024  # bytes
 
 
+def _candidates_from_compose_report(
+    report: dict | None, origin: str,
+) -> list[str]:
+    """Pull rejecting ``diffs/*.diff`` paths out of compose's
+    ``--json`` structured report. Returns paths relative to
+    ``ports/<origin>/`` so they match overlay.dops's
+    ``patch apply <path>`` form.
+
+    Walks ``report['ports'][i]['dops_failed_op_results']`` for the
+    matching origin, picks rows where ``kind == 'patch.apply'``,
+    and pulls ``diagnostics[0]['source_path']`` (the absolute path
+    compose's engine resolved against). Strips the port subtree
+    prefix (``/work/DeltaPorts/ports/<origin>/`` or
+    ``ports/<origin>/`` for non-chroot/legacy shapes) to produce a
+    plain ``diffs/X.diff``.
+
+    Returns ``[]`` when the report is missing, malformed, or
+    contains no patch.apply failures (some other compose failure).
+    Caller treats empty as "no defer candidate" — same shape as
+    the legacy text-scraping path.
+    """
+    if not isinstance(report, dict):
+        return []
+    ports = report.get("ports") or []
+    if not isinstance(ports, list):
+        return []
+    suffix = f"ports/{origin}/"
+    out: list[str] = []
+    for port in ports:
+        if not isinstance(port, dict):
+            continue
+        if str(port.get("origin") or "") != origin:
+            continue
+        failed = port.get("dops_failed_op_results") or []
+        if not isinstance(failed, list):
+            continue
+        for row in failed:
+            if not isinstance(row, dict):
+                continue
+            if str(row.get("kind") or "") != "patch.apply":
+                continue
+            diags = row.get("diagnostics") or []
+            if not isinstance(diags, list) or not diags:
+                continue
+            first = diags[0]
+            if not isinstance(first, dict):
+                continue
+            src = str(first.get("source_path") or "")
+            if not src:
+                continue
+            # Strip everything up to and including `ports/<origin>/`
+            # so we end up with a path relative to the port subtree
+            # (e.g. ``diffs/pkg-plist.diff``). Defends against both
+            # the chroot-rooted ``/work/DeltaPorts/ports/...`` form
+            # and any host-side variant a test might use.
+            idx = src.find(suffix)
+            if idx >= 0:
+                rel = src[idx + len(suffix):]
+            else:
+                # Last-resort: keep the basename's parent slug pair
+                # (``diffs/X.diff``) if the path's tail looks like
+                # one. Unlikely with current compose output.
+                rel = src
+            if rel and rel not in out:
+                out.append(rel)
+    return out
+
+
 def _parse_compose_rejects(diag: str) -> list[str]:
     """Return distinct ``diffs/*.diff`` paths likely to have rejected
     in this compose run, in stdout order. Returns ``[]`` if no
@@ -4414,12 +4482,25 @@ def _materialize_with_defer_retry(
     deferred_paths: set[str] = set()  # quick dedupe lookup
     mat: dict = {}
     for attempt in range(max_drops + 1):
-        mat = worker.materialize_dports(env, origin)
+        # Step 37: prefer compose's structured --json report over
+        # text scraping. The report has the failing diff's path
+        # natively in `dops_failed_op_results[].diagnostics[].
+        # source_path`; no dependency on the formatter being deployed
+        # or on patch-tool stdout containing the diff name.
+        mat = worker.materialize_dports_with_report(env, origin)
         if mat.get("ok"):
             return mat, deferred
+        report = mat.get("report")
+        # diag is needed both as a fallback path and by the
+        # instrumentation block on no-candidate; build it once.
         diag = ((mat.get("stdout_tail") or "") + "\n"
                 + (mat.get("stderr_tail") or ""))
-        candidates = _parse_compose_rejects(diag)
+        candidates = _candidates_from_compose_report(report, origin)
+        if not candidates:
+            # Fallback: structured report missing / unparseable.
+            # Scan the text output as a backup (works when the
+            # deployed compose has the source_path formatter fix).
+            candidates = _parse_compose_rejects(diag)
         # First candidate we haven't dropped yet
         to_drop = next(
             (p for p in candidates if p not in deferred_paths), None,

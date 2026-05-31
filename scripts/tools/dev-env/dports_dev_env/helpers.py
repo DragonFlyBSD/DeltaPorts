@@ -36,6 +36,20 @@ set -eu
 : "${{DPORTS_COMPOSE_ROOT:?reapply: DPORTS_COMPOSE_ROOT is not set}}"
 : "${{DPORTS_LOCK_ROOT:?reapply: DPORTS_LOCK_ROOT is not set}}"
 : "${{DPORTS_ORACLE_PROFILE:=off}}"
+# --json passthrough: when present (anywhere in $@), forward to
+# `dportsv3 compose` so callers can consume the structured report
+# instead of the text formatter's output. Keeps the LLM-facing
+# default (no --json → text) unchanged.
+json_flag=""
+remaining=""
+for arg in "$@"; do
+    case "$arg" in
+        --json) json_flag="--json" ;;
+        *) remaining="$remaining $arg" ;;
+    esac
+done
+# shellcheck disable=SC2086 -- intentional word-splitting on remaining
+set -- $remaining
 origins_file="${{DPORTS_TOUCHED_ORIGINS_FILE:-{quote(str(TOUCHED_ORIGINS_PATH))}}}"
 if [ "$#" -eq 0 ]; then
     if [ -s "$origins_file" ]; then
@@ -47,12 +61,12 @@ if [ "$#" -eq 0 ]; then
     elif [ -n "${{DPORTS_ORIGIN:-}}" ]; then
         set -- "$DPORTS_ORIGIN"
     else
-        printf '%s\n' 'usage: reapply ORIGIN... (or run sync-dirty first, or create the env with --origin)' >&2
+        printf '%s\n' 'usage: reapply [--json] ORIGIN... (or run sync-dirty first, or create the env with --origin)' >&2
         exit 1
     fi
 fi
 for origin in "$@"; do
-    /work/DeltaPorts/dportsv3 compose --target "$DPORTS_TARGET" --origin "$origin" --delta-root /work/DeltaPorts --freebsd-root /work/freebsd-ports --lock-root "$DPORTS_LOCK_ROOT" --output "$DPORTS_COMPOSE_ROOT" --oracle-profile "$DPORTS_ORACLE_PROFILE" || exit $?
+    /work/DeltaPorts/dportsv3 compose $json_flag --target "$DPORTS_TARGET" --origin "$origin" --delta-root /work/DeltaPorts --freebsd-root /work/freebsd-ports --lock-root "$DPORTS_LOCK_ROOT" --output "$DPORTS_COMPOSE_ROOT" --oracle-profile "$DPORTS_ORACLE_PROFILE" || exit $?
 done
 """
     if name == "showenv":
