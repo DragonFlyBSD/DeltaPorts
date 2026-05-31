@@ -132,9 +132,12 @@ def test_every_combination_is_exercised(policy, classifications):
 
 def test_auto_clean_history_is_auto_patch(policy):
     """The happy path: AUTO tier classification + high confidence +
-    no prior failures → auto_patch."""
+    no prior failures → auto_patch. ``fetch-checksum`` is the
+    representative AUTO classification (plist-error / pkg-format were
+    promoted to ASSIST after the lang/python311 budget incident —
+    AUTO is now reserved for trivial fixes like distinfo bumps)."""
     dec = decide(
-        classification="plist-error",
+        classification="fetch-checksum",
         confidence="high",
         history=PortHistory.empty(target="@x", origin="cat/port"),
         env_health=_FakeHealth(status="ready"),
@@ -146,9 +149,11 @@ def test_auto_clean_history_is_auto_patch(policy):
 
 def test_three_failed_patch_attempts_caps_to_manual(policy):
     """Step 6: the retry cap is now driven by ``failed_patch_attempts``,
-    not raw ``recent_failures``. Three failed agent patches → MANUAL."""
+    not raw ``recent_failures``. Three failed agent patches → MANUAL.
+    Uses ``fetch-checksum`` as the representative AUTO classification
+    (see test_auto_clean_history_is_auto_patch for rationale)."""
     dec = decide(
-        classification="plist-error",
+        classification="fetch-checksum",
         confidence="high",
         history=PortHistory(
             target="@x", origin="cat/port", failed_patch_attempts=3,

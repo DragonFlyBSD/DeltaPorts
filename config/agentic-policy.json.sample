@@ -6,9 +6,9 @@
     "CONVERT": {"max_iterations": 2, "max_tokens": 150000}
   },
   "classification_to_tier": {
-    "plist-error":         "AUTO",
+    "plist-error":         "ASSIST",
     "fetch-checksum":      "AUTO",
-    "pkg-format":          "AUTO",
+    "pkg-format":          "ASSIST",
     "compile-error":       "ASSIST",
     "patch-error":         "ASSIST",
     "link-error":          "ASSIST",
