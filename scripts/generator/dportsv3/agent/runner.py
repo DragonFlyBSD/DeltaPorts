@@ -4866,11 +4866,16 @@ def _verify_conversion(job: dict, origin: str) -> tuple[bool, str]:
     if deferred_patches:
         # The overlay file has been edited; refresh the hash so the
         # typed result reflects what compose actually accepted, not
-        # what the agent originally wrote. Failure path's _fail()
-        # ran reset_port before our overlay_sha capture in the
-        # entry block, so the hash here is the agent's-original;
-        # post-drop it should be the rewritten content.
-        overlay_sha = _overlay_sha256(env, origin) or overlay_sha
+        # what the agent originally wrote. If the refresh fails
+        # (rare IO problem), propagate None — better an honest
+        # "we don't know" than a hash that lies about disk content.
+        refreshed = _overlay_sha256(env, origin)
+        if refreshed is None:
+            log(queue_root, "WARN",
+                f"overlay_sha refresh failed for {origin} after "
+                f"{len(deferred_patches)} deferred drops; audit "
+                f"will report overlay_sha256=null")
+        overlay_sha = refreshed
     if mat.get("ok"):
         # Effective-ops check (Step-C follow-up).
         # Compose can succeed with ZERO of the convert's ops actually
