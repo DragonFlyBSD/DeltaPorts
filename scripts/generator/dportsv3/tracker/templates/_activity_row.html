@@ -88,6 +88,33 @@
       </details>
       {% endif %}
       {% endif %}
+      {# Non-tool failure rows (convert_verify_failed,
+         commit_port_changes_failed, patch_preflight_*, etc.) carry
+         their diagnostic in extra.diag_tail / stderr_tail / stdout_tail
+         too. The message column truncates it to a single line, so
+         surface the full tail here in the same disclosure shape as
+         tool diagnostics. #}
+      {% if not is_tool and not is_llm_turn and a.extra is mapping
+            and (a.extra.diag_tail or a.extra.stderr_tail
+                 or a.extra.stdout_tail or a.extra.error) %}
+      <details class="tool-diagnostic" style="margin-top:4px;font-size:11px;">
+        <summary>
+          show diagnostic{% if a.extra.rc is defined %} (rc={{ a.extra.rc }}){% endif %}
+        </summary>
+        {% if a.extra.error %}
+        <div class="tool-error">error: {{ a.extra.error }}</div>
+        {% endif %}
+        {% if a.extra.diag_tail %}
+        <pre>{{ a.extra.diag_tail }}</pre>
+        {% endif %}
+        {% if a.extra.stderr_tail and not a.extra.diag_tail %}
+        <pre>{{ a.extra.stderr_tail }}</pre>
+        {% endif %}
+        {% if a.extra.stdout_tail and not a.extra.diag_tail and not a.extra.stderr_tail %}
+        <pre>{{ a.extra.stdout_tail }}</pre>
+        {% endif %}
+      </details>
+      {% endif %}
     </td>
   {% endif %}
 </tr>

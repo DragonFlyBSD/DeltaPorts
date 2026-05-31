@@ -389,6 +389,32 @@
           diag += "</details>";
           parts.push(diag);
         }
+        // Non-tool failure rows (convert_verify_failed,
+        // commit_port_changes_failed, patch_preflight_*, etc.) carry
+        // their diagnostic in extra.diag_tail / stderr_tail / stdout_tail.
+        // Mirror the server-side _activity_row.html block.
+        var isTool = stage && stage.indexOf("tool:") === 0;
+        var isLLMTurn = stage === "llm_turn";
+        if (!isTool && !isLLMTurn && extra
+            && (extra.diag_tail || extra.stderr_tail
+                || extra.stdout_tail || extra.error)) {
+          var diag2 = '<details class="tool-diagnostic" style="margin-top:4px;font-size:11px;">';
+          diag2 += "<summary>show diagnostic";
+          if (extra.rc !== undefined) diag2 += " (rc=" + esc(extra.rc) + ")";
+          diag2 += "</summary>";
+          if (extra.error) {
+            diag2 += '<div class="tool-error">error: ' + esc(extra.error) + "</div>";
+          }
+          if (extra.diag_tail) {
+            diag2 += "<pre>" + esc(extra.diag_tail) + "</pre>";
+          } else if (extra.stderr_tail) {
+            diag2 += "<pre>" + esc(extra.stderr_tail) + "</pre>";
+          } else if (extra.stdout_tail) {
+            diag2 += "<pre>" + esc(extra.stdout_tail) + "</pre>";
+          }
+          diag2 += "</details>";
+          parts.push(diag2);
+        }
         return parts.join("");
       }
 

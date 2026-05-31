@@ -4265,16 +4265,24 @@ def _verify_conversion(job: dict, origin: str) -> tuple[bool, str]:
     stderr_tail = (mat.get("stderr_tail") or "").strip()
     stdout_tail = (mat.get("stdout_tail") or "").strip()
     diag = stderr_tail or stdout_tail or "(no output)"
-    # Surface the last non-empty line — compose tends to print
-    # context lines above the canonical error.
+    # Surface the last meaningful line. Compose always ends with its
+    # summary footer ("done", "modes: dops=N", "hint: …", "stale: …"),
+    # so the naive "last non-empty line" picks the footer instead of
+    # the actual error. Skip footer prefixes and try again; fall back
+    # to the unfiltered last line if everything looks like footer.
+    _FOOTER_PREFIXES = ("modes:", "hint:", "stale:")
+    def _is_footer(ln: str) -> bool:
+        s = ln.strip()
+        return s == "done" or any(s.startswith(p) for p in _FOOTER_PREFIXES)
+    lines = [ln.strip() for ln in diag.splitlines() if ln.strip()]
     last_line = next(
-        (ln.strip() for ln in reversed(diag.splitlines()) if ln.strip()),
-        "(no output)",
+        (ln for ln in reversed(lines) if not _is_footer(ln)),
+        lines[-1] if lines else "(no output)",
     )
     return _fail(
         f"reapply failed: rc={mat.get('rc')!r} {last_line[:300]!r}",
         "reapply_failed",
-        extra={"rc": mat.get("rc"), "diag_tail": diag[-512:]},
+        extra={"rc": mat.get("rc"), "diag_tail": diag[-2048:]},
     )
 
 
