@@ -2742,29 +2742,6 @@ def _maybe_skip_locked_origin(
     return True, f"origin_locked_by:{locked_bundle}"
 
 
-# Triage classifications whose root cause is a build-time problem —
-# substrate conversion CANNOT fix these. The convert agent only
-# rearranges port layout (compat → dops); it doesn't touch what dsynth
-# actually builds. Deferring these to convert burns tokens on the wrong
-# layer, and a failed convert kills the bundle before patch (the layer
-# that COULD fix the build) ever runs. Triage's canonical classification
-# universe per prompts.py's "## Classification" rubric is:
-#   compile-error, configure-error, patch-error, plist-error,
-#   missing-dep, fetch-error, unknown
-# All concrete (non-``unknown``) values land in the negative set below.
-# ``unknown`` is deliberately left out — the substrate probe sometimes
-# surfaces what triage couldn't classify, so the defer is still useful
-# in that case.
-_NON_SUBSTRATE_CLASSIFICATIONS: frozenset[str] = frozenset({
-    "compile-error",
-    "configure-error",
-    "patch-error",
-    "plist-error",
-    "missing-dep",
-    "fetch-error",
-})
-
-
 def _maybe_defer_to_convert(
     *,
     queue_root: Path,
@@ -2772,7 +2749,6 @@ def _maybe_defer_to_convert(
     job_path: Path,
     origin: str,
     apply_lifecycle: bool = True,
-    triage_classification: str | None = None,
 ) -> tuple[bool, str] | None:
     """Step 20d: defer this triage if the port still has legacy
     overlay artifacts.
@@ -2792,38 +2768,13 @@ def _maybe_defer_to_convert(
     written triage_result.json) can emit its own TRIAGE_DEFER outcome
     through the orchestrator and avoid double-transitions.
 
-    ``triage_classification``: when set to a value in
-    ``_NON_SUBSTRATE_CLASSIFICATIONS``, skips the defer entirely —
-    convert can't fix non-substrate problems, and a failed convert
-    kills the bundle before patch (which CAN address build-time
-    failures) gets a chance.
+    Triage's classification is intentionally NOT an input here: the
+    patch agent's ``apply_intent`` only operates on dops-converted
+    substrate, so convert is a prerequisite for any patch flow to
+    function, regardless of what kind of bug triage saw. See
+    [[project-convert-is-substrate-prerequisite]] in memory.
     """
     from dportsv3.agent.lifecycle import JobEvent
-
-    # Classification-shaped early exit. Runs before the chroot
-    # assess_dops call so we save the substrate probe too. Logged so
-    # the bypass is auditable from the activity feed.
-    if (triage_classification or "").lower() in _NON_SUBSTRATE_CLASSIFICATIONS:
-        try:
-            activity_log(
-                queue_root,
-                "triage_defer_skipped_non_substrate",
-                (
-                    f"skipping convert defer for {origin}: "
-                    f"classification={triage_classification} is not a "
-                    f"substrate-fixable problem"
-                ),
-                job_id=job_path.name,
-                extra={
-                    "origin": origin,
-                    "classification": triage_classification,
-                    "reason": "non_substrate_classification",
-                },
-            )
-        except Exception as exc:
-            log(queue_root, "WARN",
-                f"activity_log failed in classification skip: {exc}")
-        return None
 
     target = job.get("target") or os.environ.get(
         "DPORTSV3_TRACKER_TARGET", "",
@@ -3116,12 +3067,10 @@ def process_triage_job(
         # after the LLM + triage_result.json write. apply_lifecycle=False
         # so TriageStep emits TRIAGE_DEFER through its StepOutcome and
         # the orchestrator wrapper walks lifecycle once.
-        maybe_defer_to_convert=lambda *, queue_root, job, job_path, origin,
-        triage_classification=None: (
+        maybe_defer_to_convert=lambda *, queue_root, job, job_path, origin: (
             _maybe_defer_to_convert(
                 queue_root=queue_root, job=job, job_path=job_path,
                 origin=origin, apply_lifecycle=False,
-                triage_classification=triage_classification,
             )
         ),
     )
@@ -4014,55 +3963,6 @@ def _run_llm_conversion(
         custom_llm_provider=provider,
         on_event=dispatcher,
     )
-
-    # Item-3 terminal: agent emitted an Escalation Proof because the
-    # triage classification is non-substrate. No overlay was written
-    # (the prompt forbids put_file on this path), so there's nothing
-    # to roll back and nothing to verify. Write a ConvertResult with
-    # the escalation status + hint, then return a sentinel status the
-    # dispatcher detects to fire ESCALATE_MANUAL instead of
-    # CONVERT_GAVE_UP. This sets bundle.resolution='escalated_manual'
-    # which surfaces the Retry/Take-over operator actions.
-    if result.success and result.status == "escalated_by_agent":
-        proof = result.proof or {}
-        cls = str(proof.get("triage_classification") or "")
-        hint = str(proof.get("hint") or "")
-        reason = str(proof.get("reason") or "non_substrate_failure")
-        try:
-            activity_log(
-                queue_root, "convert_escalated_by_agent",
-                (
-                    f"convert agent escalated {origin}: "
-                    f"classification={cls or '?'}; {hint[:200]}"
-                ),
-                job_id=job_path.name,
-                extra={
-                    "origin": origin,
-                    "triage_classification": cls,
-                    "reason": reason,
-                    "hint": hint,
-                    "bundle_id": job.get("bundle_id"),
-                },
-            )
-        except Exception as exc:
-            log(queue_root, "WARN",
-                f"activity_log failed in convert escalate: {exc}")
-        _write_convert_phase_result(
-            bundle_id=job.get("bundle_id"),
-            status="escalated_by_agent",
-            reapply_ok=False,
-            reason_code=reason,
-            overlay_sha256=None,
-            files_removed=[],
-            diag_tail=(f"classification={cls}\nhint={hint}").strip() or None,
-            tokens_prompt=result.raw_result.usage.prompt_tokens,
-            tokens_completion=result.raw_result.usage.completion_tokens,
-            tokens_total=result.raw_result.usage.total_tokens,
-        )
-        return True, (
-            f"escalated_by_agent:classification={cls or 'unknown'}"
-        )
-
     if not result.success:
         # Rollback any port-subtree dirt the agent left behind. Without
         # this, an orphaned put_file'd overlay.dops persists in the
@@ -4869,30 +4769,7 @@ def process_job(
         origin_locked_exit = (
             success and status.startswith("origin_locked_by:")
         )
-        # Item-3 escalation exit: convert agent explicitly declined
-        # the work because triage's classification was non-substrate.
-        # Fire ESCALATE_MANUAL instead of CONVERT_OK so the bundle
-        # lands at resolution='escalated_manual' (per
-        # _EVENT_TO_RESOLUTION) rather than implying the conversion
-        # succeeded.
-        escalated_exit = (
-            success and status.startswith("escalated_by_agent:")
-        )
-        if escalated_exit:
-            escalate_detail = {
-                "status": status,
-                "bundle_id": job.get("bundle_id"),
-            }
-            _apply_transition(
-                job_path.name, JobEvent.ESCALATE_MANUAL,
-                detail=escalate_detail,
-            )
-            for s in sibling_paths:
-                _apply_transition(
-                    s.name, JobEvent.ESCALATE_MANUAL,
-                    detail=escalate_detail,
-                )
-        elif not origin_locked_exit:
+        if not origin_locked_exit:
             finish_event = (
                 JobEvent.CONVERT_OK if success else JobEvent.CONVERT_GAVE_UP
             )

@@ -731,30 +731,6 @@ existing semantics exactly. If a patch removes a `-Werror`, your dops
 op should remove `-Werror`. If a Makefile.DragonFly assigns
 `USES+=foo`, the dops op is `mk add USES foo`.
 
-## Stop early on non-substrate failures
-
-If your payload includes a `## Original build failure (from triage)`
-section AND its classification is one of:
-
-  `compile-error`, `configure-error`, `patch-error`, `plist-error`,
-  `missing-dep`, `fetch-error`
-
-then substrate conversion is the wrong fix. These are build-time
-problems — the patch agent (which can edit source / patches /
-Makefile) is the right tool, not you. Producing an overlay anyway
-fails at compose reapply on the unrelated layer and leaves operators
-with a dead bundle and no useful diagnosis.
-
-In that case, do NOT call `put_file` and do NOT emit a Conversion
-Proof. Instead, emit an **Escalation Proof** block (see "Response
-format" below) and stop. The runner detects the escalation, marks
-the bundle escalated-to-MANUAL, and surfaces the triage's
-suggested fix for an operator to act on.
-
-If the triage section is missing (operator-fired convert with no
-originating bundle) or the classification is `unknown` /
-substrate-related, proceed with the normal Procedure below.
-
 ## Domain classification + target directive
 
 Two decisions you have to make per unsupported item:
@@ -875,27 +851,6 @@ compose-side verification — see "Verification" below).
 
 The runner mechanically parses this block; the heading text and
 field names are contractual.
-
-### Escalation Proof (alternative terminal)
-
-If the "Stop early on non-substrate failures" rule above applies,
-emit this block INSTEAD of the Conversion Proof:
-
-```json
-{
-  "origin":                "category/portname",
-  "kind":                  "escalation",
-  "reason":                "non_substrate_failure",
-  "triage_classification": "plist-error",
-  "hint":                  "Triage suggested adding PLIST_SUB+=PYTHON_EXT_SUFFIX=... — patch agent is the right tool."
-}
-```
-
-`origin` and `reason` are required. `triage_classification` should
-echo the classification you read from the triage section. `hint`
-is one short sentence — operators read it to decide what to do
-next. The runner detects the `## Escalation Proof (JSON)` heading
-and routes the bundle to MANUAL with the hint attached.
 
 No branching, no git push, no PR. Conversion is a local rewrite.
 """
