@@ -320,3 +320,89 @@ def test_format_compose_overview_can_skip_special_section() -> None:
     lines = format_compose_overview(overview, include_special=False)
 
     assert lines == []
+
+
+def test_dops_failed_ops_carries_source_path():
+    """Step 37: dops_failed_ops rows expose source_path so the
+    convert handler's defer loop can identify which file the failing
+    op was operating on. Pinned because the field is a contractual
+    surface — runner._parse_compose_rejects scans the formatted
+    output for `diffs/X.diff` literals."""
+    payload = {
+        "ok": False,
+        "target": "@main",
+        "output_path": "/tmp/out",
+        "stages": [],
+        "ports": [
+            {
+                "origin": "lang/python311",
+                "mode": "dops",
+                "dops_failed_op_results": [
+                    {
+                        "id": "op-0001-patch-apply",
+                        "kind": "patch.apply",
+                        "target": "@main",
+                        "status": "failed",
+                        "message": "e_apply_patch_failed",
+                        "diagnostics": [
+                            {
+                                "severity": "error",
+                                "code": "E_APPLY_PATCH_FAILED",
+                                "message": "patching pkg-plist using Plan A...\nHunk #1 failed at 249.",
+                                "source_path": "/work/DeltaPorts/ports/lang/python311/diffs/pkg-plist.diff",
+                            }
+                        ],
+                    }
+                ],
+            }
+        ],
+    }
+    overview = build_compose_report_overview(payload, top=3)
+    rows = overview["dops_failed_ops"]
+    assert len(rows) == 1
+    assert rows[0]["source_path"] == (
+        "/work/DeltaPorts/ports/lang/python311/diffs/pkg-plist.diff"
+    )
+    lines = format_compose_overview(overview)
+    text = "\n".join(lines)
+    # The formatted line must carry the path so plain-text consumers
+    # (the patch-tool stdout that compose pipes through) can scan it.
+    assert "diffs/pkg-plist.diff" in text
+
+
+def test_dops_failed_ops_source_path_empty_when_absent():
+    """Non-patch op kinds may not carry a source_path. The field is
+    still present but empty; the formatter omits the trailing
+    [path] suffix in that case."""
+    payload = {
+        "ok": False,
+        "target": "@main",
+        "output_path": "/tmp/out",
+        "stages": [],
+        "ports": [
+            {
+                "origin": "x/y",
+                "mode": "dops",
+                "dops_failed_op_results": [
+                    {
+                        "id": "op-0001-mk-set",
+                        "kind": "mk.var.set",
+                        "target": "@main",
+                        "status": "failed",
+                        "message": "e_apply_failed",
+                        "diagnostics": [
+                            {"severity": "error", "code": "E_APPLY_FAILED",
+                             "message": "boom", "source_path": ""},
+                        ],
+                    }
+                ],
+            }
+        ],
+    }
+    overview = build_compose_report_overview(payload, top=3)
+    rows = overview["dops_failed_ops"]
+    assert rows[0]["source_path"] == ""
+    lines = format_compose_overview(overview)
+    text = "\n".join(lines)
+    # No path → no [ ] suffix
+    assert "[]" not in text

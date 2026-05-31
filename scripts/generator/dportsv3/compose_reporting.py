@@ -145,6 +145,14 @@ def build_compose_report_overview(
                 "kind": str(row.get("kind", "")),
                 "code": str(first_diag.get("code") or row.get("message", "")),
                 "message": str(first_diag.get("message", "")),
+                # Step 37: include the subject path so downstream
+                # consumers (e.g. the convert handler's defer loop)
+                # can identify which file the failing op was
+                # operating on. For patch.apply this is the diff
+                # file (e.g. diffs/pkg-plist.diff); for other op
+                # kinds it's the file the op was reading/writing.
+                # Empty when no source_path was attached.
+                "source_path": str(first_diag.get("source_path") or ""),
             })
 
     prune_stage = next(
@@ -268,9 +276,11 @@ def format_compose_overview(
         lines.append("dops_failed_ops:")
         for row in dops_failed:
             msg_suffix = f" — {row['message']}" if row.get("message") else ""
+            src = row.get("source_path") or ""
+            src_suffix = f" [{src}]" if src else ""
             lines.append(
-                f"  {row['origin']} {row['op_id']} ({row['kind']}): "
-                f"{row['code']}{msg_suffix}"
+                f"  {row['origin']} {row['op_id']} ({row['kind']}){src_suffix}"
+                f": {row['code']}{msg_suffix}"
             )
 
     stale = dict(overview.get("stale", {}))
