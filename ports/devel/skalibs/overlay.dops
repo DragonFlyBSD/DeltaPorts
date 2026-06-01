@@ -1,0 +1,6 @@
+target @any
+port devel/skalibs
+type port
+reason "agent edits via edit-intent DSL"
+
+mk add CFLAGS "-D__BSD_VISIBLE"
