@@ -744,6 +744,27 @@ def semantic_stage(
                 report.dops_failed_op_results.append(row.to_dict())
         stage.changed += apply_result.applied_ops
         stage.skipped += apply_result.skipped_ops
+        # Surface "every op was target-mismatched" as a stage warning.
+        # Per-op I_APPLY_TARGET_MISMATCH diagnostics live on
+        # op_results and don't bubble into stage-level output. Without
+        # a stage-level signal the agent sees `summary applied=0` with
+        # no warnings and misdiagnoses it as a compose bug instead of
+        # checking the overlay's `target` directive — burns budget
+        # chasing a non-existent failure. The fix is usually
+        # mechanical: change `target` to `@any` or scope it to the
+        # build target.
+        if (
+            apply_result.applied_ops == 0
+            and apply_result.skipped_ops > 0
+            and apply_result.failed_ops == 0
+        ):
+            stage.add_warning(
+                "I_COMPOSE_DOPS_ALL_OPS_SKIPPED",
+                f"{ctx.origin}: all {apply_result.skipped_ops} op(s) in "
+                f"overlay.dops skipped — `target` directive does not "
+                f"match build target {target!r}. Use `target @any` for "
+                f"target-agnostic edits or scope to this specific target."
+            )
         if not apply_result.ok:
             # Surface a per-op summary alongside the stage marker so
             # operators don't have to scroll through ports[] to find

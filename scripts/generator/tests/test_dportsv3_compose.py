@@ -75,6 +75,122 @@ def test_compose_dry_run_json_pipeline(tmp_path, capsys) -> None:
     assert not output.exists()
 
 
+def test_compose_warns_when_every_op_skipped_by_target_mismatch(
+    tmp_path, capsys,
+) -> None:
+    """Regression: when an overlay's `target` directive doesn't match
+    the build target, every op gets filtered with I_APPLY_TARGET_MISMATCH
+    at op-level — but those diagnostics don't surface in stage output.
+    The patch agent then reads `summary applied=0` and misdiagnoses
+    it as a compose bug (burned ~half-budget on 2026Q2 compile-error
+    bundles before this fix). Stage `apply_semantic_ops` must emit
+    a stage-level warning so the signal is visible in stdout_tail
+    and top_warning_codes.
+    """
+    freebsd = tmp_path / "freebsd"
+    delta = tmp_path / "delta"
+    output = tmp_path / "out"
+
+    (freebsd / "devel" / "a").mkdir(parents=True)
+    (freebsd / "devel" / "a" / "Makefile").write_text("VAR= old\n")
+    freebsd.mkdir(parents=True, exist_ok=True)
+    _run(["git", "init"], freebsd)
+    _run(["git", "checkout", "-b", "2026Q2"], freebsd)
+
+    # Overlay scoped to @main but compose targets @2026Q2 — mismatch.
+    (delta / "ports" / "devel" / "a").mkdir(parents=True)
+    (delta / "ports" / "devel" / "a" / "overlay.dops").write_text(
+        'target @main\nport devel/a\ntype port\nmk set VAR "new"\n'
+    )
+
+    code = main(
+        [
+            "compose",
+            "--target",
+            "@2026Q2",
+            "--output",
+            str(output),
+            "--delta-root",
+            str(delta),
+            "--freebsd-root",
+            str(freebsd),
+            "--oracle-profile",
+            "off",
+            "--json",
+        ]
+    )
+    out = capsys.readouterr()
+
+    assert code == 0
+    payload = json.loads(out.out)
+    assert payload["ok"] is True
+
+    sem = next(
+        s for s in payload["stages"] if s["name"] == "apply_semantic_ops"
+    )
+    assert any(
+        "I_COMPOSE_DOPS_ALL_OPS_SKIPPED" in warning
+        for warning in sem["warnings"]
+    ), sem["warnings"]
+    # Op was skipped, not applied.
+    port = payload["ports"][0]
+    assert port["origin"] == "devel/a"
+    assert port["applied_ops"] == 0
+    assert port["skipped_ops"] == 1
+
+
+def test_compose_no_skip_warning_when_some_ops_apply(tmp_path, capsys) -> None:
+    """Counter-case: multi-target overlay where some ops apply and
+    some are skipped should NOT emit the warning. Only the
+    "all ops skipped" condition signals the dead-overlay bug.
+    """
+    freebsd = tmp_path / "freebsd"
+    delta = tmp_path / "delta"
+    output = tmp_path / "out"
+
+    (freebsd / "devel" / "a").mkdir(parents=True)
+    (freebsd / "devel" / "a" / "Makefile").write_text("VAR= old\n")
+    freebsd.mkdir(parents=True, exist_ok=True)
+    _run(["git", "init"], freebsd)
+    _run(["git", "checkout", "-b", "2026Q2"], freebsd)
+
+    # Two ops: one @any (applies), one @main (skipped at @2026Q2).
+    (delta / "ports" / "devel" / "a").mkdir(parents=True)
+    (delta / "ports" / "devel" / "a" / "overlay.dops").write_text(
+        "port devel/a\ntype port\n"
+        'target @any\nmk set VAR "any-applied"\n'
+        'target @main\nmk set OTHER "main-only"\n'
+    )
+
+    code = main(
+        [
+            "compose",
+            "--target",
+            "@2026Q2",
+            "--output",
+            str(output),
+            "--delta-root",
+            str(delta),
+            "--freebsd-root",
+            str(freebsd),
+            "--oracle-profile",
+            "off",
+            "--json",
+        ]
+    )
+    out = capsys.readouterr()
+
+    assert code == 0
+    payload = json.loads(out.out)
+    sem = next(
+        s for s in payload["stages"] if s["name"] == "apply_semantic_ops"
+    )
+    assert not any(
+        "I_COMPOSE_DOPS_ALL_OPS_SKIPPED" in warning
+        for warning in sem["warnings"]
+    ), sem["warnings"]
+
+
 def test_compose_seed_excludes_top_level_metadata_files(tmp_path, capsys) -> None:
     freebsd = tmp_path / "freebsd"
     delta = tmp_path / "delta"
