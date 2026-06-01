@@ -1,0 +1,6 @@
+target @any
+port devel/libuv
+type port
+reason "DragonFly: suppress FreeBSD-specific source file additions when DragonFly is also detected by autotools (upstream already adds BSD sources under DRAGONFLY_TRUE, so the FREEBSD_TRUE additions cause duplicate definitions)"
+
+file materialize dragonfly/patch-Makefile.in -> dragonfly/patch-Makefile.in
