@@ -72,6 +72,7 @@ def run(
     timeout: int = 120,
     max_snippet_rounds: int | None = None,
     on_event=None,
+    session_dump=None,
 ) -> TriageResult:
     """Run the triage flow end-to-end for one bundle.
 
@@ -142,6 +143,19 @@ def run(
                 "content": snippets.format_for_prompt(bundle_dir, files),
             }
         )
+
+    # Append the last assistant turn so the dump reflects the full
+    # conversation (the loop only appends mid-round, leaves the
+    # final response un-appended because we don't iterate again).
+    if response_text:
+        messages.append({"role": "assistant", "content": response_text})
+    if session_dump is not None:
+        try:
+            session_dump(1, messages)
+        except Exception:
+            # session_dump failures are best-effort; they log
+            # internally.
+            pass
 
     classification, confidence = _parse(response_text)
     return TriageResult(

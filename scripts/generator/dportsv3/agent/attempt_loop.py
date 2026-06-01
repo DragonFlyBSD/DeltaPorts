@@ -114,6 +114,7 @@ def run(
     proof_parser=None,
     is_success=None,
     prior_attempt_summary=None,
+    session_dump=None,
 ) -> PatchResult:
     """Run the patch flow for one bundle, returning a structured PatchResult.
 
@@ -197,6 +198,20 @@ def run(
         total_usage.add(attempt_usage)
         prev_text = response.text or ""
         final_text = prev_text
+
+        # Optional full-session dump (gated by DP_HARNESS_DUMP_SESSION
+        # at the callback's construction site). messages is the final
+        # state of this attempt's conversation; the callback persists
+        # it to the bundle. Best-effort: any failure inside the
+        # callback is swallowed so the loop never derails.
+        if session_dump is not None:
+            try:
+                session_dump(attempt_idx, messages)
+            except Exception as exc:
+                log.warning(
+                    "attempt_loop: session_dump failed on attempt %d: %s",
+                    attempt_idx, exc,
+                )
 
         # Step 20: the success criterion is configurable. Patch
         # uses _parse_rebuild_proof + proof.rebuild_ok==True;

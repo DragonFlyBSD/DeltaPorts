@@ -4176,12 +4176,18 @@ def _run_llm_conversion(
         summarize_tool_call=_summarize_tool_call,
     )
 
+    from dportsv3.agent import session_dump as _sd  # noqa: PLC0415
     result = convert_mod.run(
         payload,
         tier=tier, env=env, model=model,
         api_base=api_base, api_key=api_key,
         custom_llm_provider=provider,
         on_event=dispatcher,
+        session_dump=_sd.make_dumper(
+            bundle_id=job.get("bundle_id"),
+            job_id=job_path.name,
+            put_artifact=artifact_store_put,
+        ),
     )
     if not result.success:
         # Rollback any port-subtree dirt the agent left behind. Without

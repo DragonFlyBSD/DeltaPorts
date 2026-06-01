@@ -19,6 +19,7 @@ def run(
     max_tool_turns: int = 30,
     on_event=None,
     origin: str | None = None,
+    session_dump=None,
 ) -> PatchResult:
     """Run the patch agent for one bundle. Returns the PatchResult.
 
@@ -78,6 +79,7 @@ def run(
         system_prompt=system_prompt,
         tool_whitelist=tools.patch_tool_names(),
         prior_attempt_summary=prior_summary,
+        session_dump=session_dump,
     )
 
 

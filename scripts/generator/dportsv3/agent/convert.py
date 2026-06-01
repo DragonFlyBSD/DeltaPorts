@@ -343,6 +343,7 @@ def run(
     timeout: int = 600,
     max_tool_turns: int = 30,
     on_event=None,
+    session_dump=None,
 ) -> ConvertResult:
     """Drive the attempt_loop with the CONVERT_SYSTEM prompt.
 
@@ -395,6 +396,7 @@ def run(
         agent_flow="convert",
         proof_parser=parse_conversion_proof,
         is_success=_convert_is_success,
+        session_dump=session_dump,
     )
 
     proof = parse_conversion_proof(raw.final_text or "")

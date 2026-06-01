@@ -373,6 +373,8 @@ class TriageStep:
             )
 
         start = time.time()
+        from dportsv3.agent import session_dump as _sd  # noqa: PLC0415
+        from dportsv3.agent.runner import artifact_store_put  # noqa: PLC0415
         try:
             result = harness_triage.run(
                 payload,
@@ -384,6 +386,11 @@ class TriageStep:
                 timeout=timeout,
                 max_snippet_rounds=max_snippet_rounds,
                 on_event=_triage_event,
+                session_dump=_sd.make_dumper(
+                    bundle_id=ctx.bundle_id or job.get("bundle_id"),
+                    job_id=ctx.job_id,
+                    put_artifact=artifact_store_put,
+                ),
             )
         except Exception as exc:
             services.activity_log(
@@ -972,6 +979,8 @@ class PatchAttemptStep:
         )
 
         start = time.time()
+        from dportsv3.agent import session_dump as _sd  # noqa: PLC0415
+        from dportsv3.agent.runner import artifact_store_put  # noqa: PLC0415
         try:
             result = harness_patch.run(
                 payload,
@@ -984,6 +993,11 @@ class PatchAttemptStep:
                 timeout=timeout,
                 on_event=dispatcher,
                 origin=origin,
+                session_dump=_sd.make_dumper(
+                    bundle_id=ctx.bundle_id or job.get("bundle_id"),
+                    job_id=ctx.job_id,
+                    put_artifact=artifact_store_put,
+                ),
             )
         except Exception as exc:
             services.activity_log(
