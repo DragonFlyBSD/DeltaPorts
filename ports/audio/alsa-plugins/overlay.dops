@@ -1,0 +1,7 @@
+target @any
+port audio/alsa-plugins
+type port
+reason "auto-converted from Makefile.DragonFly"
+
+mk set OPTIONS_DEFAULT ""
+text replace-once file files/patch-oss_pcm__oss.c from "static int oss_hw_constraint(snd_pcm_oss_t *oss)\n {\n+#ifdef __FreeBSD__" to "static int oss_hw_constraint(snd_pcm_oss_t *oss)\n {\n+#if defined(__FreeBSD__) || defined(__DragonFly__)"
