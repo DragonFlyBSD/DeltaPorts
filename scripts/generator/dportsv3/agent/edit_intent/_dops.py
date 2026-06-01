@@ -666,10 +666,20 @@ def _append_overlay(t, intent_type: str, statements: Iterable[str],
 def _initial_overlay_header(t) -> str:
     """Minimal header for a freshly-created overlay.dops.
 
-    Matches the convention emitted by ``migration.convert``.
+    ``target @any`` matches every env's compose target. The prior
+    default `@main` was inherited from an early convert convention
+    and made the overlay silently dead on every env whose target
+    != @main: compose's apply.py:296 filters ops whose scope isn't
+    in ``{"@any", target}`` and marks them ``status="skipped"`` with
+    ``I_APPLY_TARGET_MISMATCH``. The summary line then reads
+    ``applied=0``, and the agent (correctly observing nothing
+    changed) chases a non-existent compose bug instead of the real
+    failure. Convert hit this on archivers/liblz4 2026-05-26 and
+    flipped to @any (commits d71f605c206 + 47846e7a392); the
+    edit-intent translator's twin default was missed at the time.
     """
     return (
-        f"target @main\n"
+        f"target @any\n"
         f"port {t.origin}\n"
         f"type port\n"
         f"reason \"agent edits via edit-intent DSL\"\n"
