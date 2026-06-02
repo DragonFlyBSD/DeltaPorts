@@ -791,15 +791,28 @@ def _split_user_prompt_sections(content: str) -> list[dict[str, Any]]:
     return out
 
 
-def _parse_session_records(path: Path) -> list[dict[str, Any]]:
+def _parse_session_records(
+    path: Path, *, gzipped: bool | None = None,
+) -> list[dict[str, Any]]:
     """Decompress (if needed) + parse a session JSONL into records.
+
+    ``gzipped`` overrides the path-suffix sniff. Required for the
+    blob-backend storage: ``_resolve_artifact_path`` returns the
+    content-addressed path under ``blobstore/objects/sha256/aa/bb/<sha>``
+    with NO extension, so ``path.suffix`` doesn't carry the ``.gz``
+    marker even though the file IS gzip-compressed. Callers that have
+    the relpath should pass ``gzipped=relpath.endswith('.gz')``
+    explicitly. When None, fall back to the path-suffix sniff (works
+    for fs-backend artifacts whose fs_path preserves the extension).
 
     Returns the raw message list. Bad lines are skipped (lenient parse)
     so a partial dump still renders. Raises OSError on read failures —
     callers should catch and surface as the rendering error.
     """
     import gzip as _gzip  # noqa: PLC0415
-    if path.suffix == ".gz":
+    if gzipped is None:
+        gzipped = path.suffix == ".gz"
+    if gzipped:
         opener: Any = lambda p: _gzip.open(p, "rt", encoding="utf-8")
     else:
         opener = lambda p: open(p, encoding="utf-8")
@@ -1003,7 +1016,12 @@ def _session_view_data(
     error: str | None = None
     items: list[dict[str, Any]] = []
     try:
-        records = _parse_session_records(path)
+        # Use the relpath suffix to decide compression — the resolved
+        # on-disk path is content-addressed for blob-backend artifacts
+        # and won't carry the .gz extension.
+        records = _parse_session_records(
+            path, gzipped=relpath.endswith(".gz"),
+        )
         items = _structure_session_turns(records)
     except OSError as exc:
         error = f"failed to read session: {exc}"

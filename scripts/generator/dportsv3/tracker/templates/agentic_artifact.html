@@ -36,6 +36,12 @@
     .diff-del { background: #fef2f2; }
     .diff-del .content { color: #991b1b; }
     .diff-context .content { color: #1f2937; }
+    /* Meta lines (diff --git, index abc..def, \ No newline at EOF, and any
+       pre-hunk prologue) don't carry line numbers. Single-column layout
+       so they sit flush at the left margin instead of being inset 100px
+       by empty ln-old / ln-new gutter cells. */
+    .diff-line.diff-meta { grid-template-columns: 1fr; padding: 0 14px; }
+    .diff-line.diff-meta .ln-old, .diff-line.diff-meta .ln-new { display: none; }
     .diff-meta .content { color: #6b7280; font-style: italic; }
   </style>
 </head>

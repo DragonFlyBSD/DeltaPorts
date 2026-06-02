@@ -38,6 +38,10 @@
     .diff-del { background:#fef2f2; }
     .diff-del .content { color:#991b1b; }
     .diff-context .content { color:#1f2937; }
+    /* Meta lines (diff --git, index ..., \ No newline at EOF, prologue):
+       single-column layout so they sit flush at the left margin. */
+    .diff-line.diff-meta { grid-template-columns:1fr; padding:0 14px; }
+    .diff-line.diff-meta .ln-old, .diff-line.diff-meta .ln-new { display:none; }
     .diff-meta .content { color:#6b7280; font-style:italic; }
     @media (max-width: 900px) { .artifact-reader { grid-template-columns:1fr; } }
   </style>

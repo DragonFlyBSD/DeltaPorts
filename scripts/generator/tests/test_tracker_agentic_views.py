@@ -702,6 +702,49 @@ def test_session_view_404_on_missing(client: TestClient) -> None:
     assert resp.status_code == 404
 
 
+def test_parse_session_records_blob_backend_path(tmp_path) -> None:
+    """Regression: when the artifact is stored via the blob backend
+    (content-addressed under blobstore/objects/sha256/aa/bb/<sha>),
+    the resolved on-disk path has NO ``.gz`` extension even though
+    the file IS gzip-compressed. _parse_session_records must accept
+    an explicit ``gzipped`` hint from the caller (who has the relpath)
+    rather than relying on path.suffix."""
+    import gzip as _gzip
+    from dportsv3.tracker.server import _parse_session_records
+
+    # Write a real gzip file under a no-extension path (simulates blob storage).
+    blob_path = tmp_path / "ab" / "cd" / "abcdef0123456789"
+    blob_path.parent.mkdir(parents=True)
+    rec = {"role": "system", "content": "hello"}
+    with _gzip.open(blob_path, "wt", encoding="utf-8") as fh:
+        fh.write(json.dumps(rec) + "\n")
+
+    # Pre-fix path.suffix is "" so the default-sniff path would try
+    # UTF-8-decoding gzip bytes. gzipped=True must override.
+    records = _parse_session_records(blob_path, gzipped=True)
+    assert len(records) == 1 and records[0]["role"] == "system"
+
+
+def test_render_diff_meta_lines_use_single_column_layout() -> None:
+    """``diff --git`` / ``index ...`` / ``\\ No newline at end of file``
+    rows must not inherit the line-number gutter columns — they should
+    sit flush at the left margin. Verified by checking the rendered
+    class list: meta rows carry .diff-meta, and the template's CSS
+    targets that class for a single-column layout. We check the CSS
+    is present in the artifact template, since CSS rendering is hard
+    to assert on inline."""
+    from pathlib import Path
+    css_dir = Path(__file__).parent.parent / "dportsv3" / "tracker" / "templates"
+    for tpl in ("agentic_artifact.html", "agentic_bundle.html"):
+        body = (css_dir / tpl).read_text()
+        # Single-column override is present and targets .diff-meta.
+        assert ".diff-line.diff-meta" in body
+        assert "grid-template-columns" in body  # base rule still there
+        # ln-old / ln-new are hidden on meta rows.
+        assert ".diff-line.diff-meta .ln-old" in body
+        assert "display:none" in body or "display: none" in body
+
+
 def test_is_session_relpath_matches_pattern() -> None:
     from dportsv3.tracker.server import _is_session_relpath
     assert _is_session_relpath("analysis/sessions/foo.jsonl.gz")
