@@ -580,6 +580,47 @@ def test_process_convert_job_reapply_fail(
     assert "dops parse error" in status
 
 
+def test_summarize_compose_failure_prefers_structured_report():
+    # When --json compose output is available, the failure summary
+    # must come from the parsed report's first failing stage's first
+    # error — not from last-line scraping of stdout_tail, which on
+    # JSON output picks the closing `}` of the document and produces
+    # the misleading `reapply failed: rc=2 '}'` status.
+    report = {
+        "stages": [
+            {"name": "preflight_validate", "success": True, "errors": []},
+            {
+                "name": "apply_semantic_ops",
+                "success": False,
+                "errors": [
+                    "E_COMPOSE_APPLY_FAILED: devel/libunistring: 1 op(s) "
+                    "failed [op-0001-mk-target-set(mk.target.set)="
+                    "E_APPLY_PARSE_FAILED]"
+                ],
+            },
+        ],
+        "summary": {"errors": 1},
+    }
+    # diag is the raw JSON text — last non-empty line is `}`.
+    diag = '{\n  "stages": [],\n  "summary": {}\n}'
+    out = runner_mod._summarize_compose_failure(report, diag)
+    assert "E_APPLY_PARSE_FAILED" in out
+    assert out != "}"
+
+
+def test_summarize_compose_failure_falls_back_to_text_when_no_report():
+    # Older bundles (or any case where --json output didn't parse)
+    # carry report=None. The text-scrape fallback must still produce
+    # the meaningful error line and skip the compose footer.
+    diag = (
+        "compose: dops parse error at line 3\n"
+        "done\n"
+        "modes: dops=1 compat=0\n"
+    )
+    out = runner_mod._summarize_compose_failure(None, diag)
+    assert "dops parse error at line 3" in out
+
+
 def test_verify_failure_rolls_back_env_and_logs_activity(
     tmp_path: Path, monkeypatch,
 ) -> None:

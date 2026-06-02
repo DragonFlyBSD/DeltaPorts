@@ -5132,25 +5132,52 @@ def _verify_conversion(job: dict, origin: str) -> tuple[bool, str]:
     stderr_tail = (mat.get("stderr_tail") or "").strip()
     stdout_tail = (mat.get("stdout_tail") or "").strip()
     diag = stderr_tail or stdout_tail or "(no output)"
-    # Surface the last meaningful line. Compose always ends with its
-    # summary footer ("done", "modes: dops=N", "hint: …", "stale: …"),
-    # so the naive "last non-empty line" picks the footer instead of
-    # the actual error. Skip footer prefixes and try again; fall back
-    # to the unfiltered last line if everything looks like footer.
-    _FOOTER_PREFIXES = ("modes:", "hint:", "stale:")
-    def _is_footer(ln: str) -> bool:
-        s = ln.strip()
-        return s == "done" or any(s.startswith(p) for p in _FOOTER_PREFIXES)
-    lines = [ln.strip() for ln in diag.splitlines() if ln.strip()]
-    last_line = next(
-        (ln for ln in reversed(lines) if not _is_footer(ln)),
-        lines[-1] if lines else "(no output)",
-    )
+    summary = _summarize_compose_failure(mat.get("report"), diag)
     return _fail(
-        f"reapply failed: rc={mat.get('rc')!r} {last_line[:300]!r}",
+        f"reapply failed: rc={mat.get('rc')!r} {summary!r}",
         "reapply_failed",
         extra={"rc": mat.get("rc"), "diag_tail": diag[-2048:]},
     )
+
+
+# `materialize_dports_with_report` parses compose's --json output and
+# exposes it at `mat["report"]`. When present, the first error of the
+# first failing stage names the actual failure (e.g.
+# `E_COMPOSE_APPLY_FAILED: devel/libunistring: 1 op(s) failed
+# [op-0001-mk-target-set(mk.target.set)=E_APPLY_PARSE_FAILED]`).
+# Without this path we fall back to last-non-empty-line scraping of
+# stdout_tail, which on JSON output picks the closing `}` of the
+# report document and surfaces it as the failure cause.
+_COMPOSE_FOOTER_PREFIXES = ("modes:", "hint:", "stale:")
+
+
+def _summarize_compose_failure(report, diag: str) -> str:
+    if isinstance(report, dict):
+        for stage in report.get("stages") or []:
+            if stage.get("success"):
+                continue
+            errors = stage.get("errors") or []
+            if errors:
+                return str(errors[0])[:300]
+        summary = report.get("summary") or {}
+        if summary.get("errors"):
+            return f"{summary.get('errors')} stage error(s); see diag_tail"
+    # No structured report (older compose, JSON parse failed): fall
+    # back to text-tail scraping with footer suppression. Keeps
+    # behavior on bundles whose build host predates the --json path.
+    def _is_footer(ln: str) -> bool:
+        s = ln.strip()
+        return s == "done" or any(
+            s.startswith(p) for p in _COMPOSE_FOOTER_PREFIXES
+        )
+    lines = [ln.strip() for ln in diag.splitlines() if ln.strip()]
+    if not lines:
+        return "(no output)"
+    last_line = next(
+        (ln for ln in reversed(lines) if not _is_footer(ln)),
+        lines[-1],
+    )
+    return last_line[:300]
 
 
 def process_job(
