@@ -8,7 +8,15 @@ import re
 
 from dportsv3.engine.models import Diagnostic, SourceSpan
 
-_ASSIGN_RE = re.compile(r"^\s*([A-Za-z0-9_.$(){}\-/]+)\s*(\+=|\?=|:=|!=|=)\s*(.*)$")
+# A trailing '+' is allowed in the variable name only when it is NOT
+# immediately followed by '=' — otherwise `CXXFLAGS+= -Wall` would
+# silently re-bind to (name=`CXXFLAGS+`, op=`=`) instead of the append
+# form. The libunistring shape `LICENSE_FILE_LGPL3+ = path` (FreeBSD
+# license-tag-with-`+` idiom — `bsd.licenses.mk`) needs the space
+# before `=`; the lookahead `(?!=)` is what disambiguates the two.
+_ASSIGN_RE = re.compile(
+    r"^\s*([A-Za-z0-9_.$(){}\-/]+(?:\+(?!=))?)\s*(\+=|\?=|:=|!=|=)\s*(.*)$"
+)
 _TARGET_RE = re.compile(r"^\s*([^\s:#][^:]*)\s*:\s*(.*)$")
 
 

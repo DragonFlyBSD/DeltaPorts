@@ -102,6 +102,40 @@ def test_render_preserves_input_exactly() -> None:
     assert render_makefile(result.document) == text
 
 
+def test_assignment_name_with_trailing_plus_is_parsed() -> None:
+    # FreeBSD license-tag-with-`+` idiom (`bsd.licenses.mk`): the
+    # variable name itself ends in `+` (the literal tag character of
+    # GPLv2+/GPLv3+/LGPL3+/AGPL3+ licenses), and the assignment uses
+    # `<name>+ = value` — a space before `=` disambiguates from `+=`.
+    # 292 upstream FreeBSD ports use this shape; before this was
+    # parsed, every `mk.*` op (and the deterministic converter) blew
+    # up at compose time with E_APPLY_PARSE_FAILED on those ports.
+    text = "LICENSE_FILE_LGPL3+ =\t${WRKSRC}/COPYING.LIB\n"
+    result = parse_makefile_cst(text)
+    assert result.ok, [d.message for d in result.diagnostics]
+    assert isinstance(result.document.nodes[0], AssignmentNode)
+    node = result.document.nodes[0]
+    assert node.name == "LICENSE_FILE_LGPL3+"
+    assert node.operator == "="
+    assert node.value == "${WRKSRC}/COPYING.LIB"
+
+
+def test_plus_equals_still_parses_as_append_not_trailing_plus() -> None:
+    # Regression guard: a naive fix that just adds `+` to the
+    # name-char class silently re-binds `CXXFLAGS+= -Wall` to
+    # (name=`CXXFLAGS+`, op=`=`). The negative lookahead in
+    # `_ASSIGN_RE` prevents that — `+` joins the name only when not
+    # immediately followed by `=`.
+    text = "CXXFLAGS+= -Wall\n"
+    result = parse_makefile_cst(text)
+    assert result.ok
+    node = result.document.nodes[0]
+    assert isinstance(node, AssignmentNode)
+    assert node.name == "CXXFLAGS"
+    assert node.operator == "+="
+    assert node.value == "-Wall"
+
+
 def test_node_spans_present_and_stable() -> None:
     text = read_text_fixture("makefile/simple.mk")
     result = parse_makefile_cst(text)
