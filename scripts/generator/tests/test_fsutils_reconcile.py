@@ -196,6 +196,50 @@ def test_file_replaced_with_symlink(tmp_path: Path) -> None:
 # --- symlink content compare ---
 
 
+def test_symlinks_with_different_content_replaced(tmp_path: Path) -> None:
+    # Both sides are symlinks but resolve to different content. The
+    # diff_files branch hits a path where naive copy2 would
+    # FileExistsError on `os.symlink` over the existing dst link.
+    src = tmp_path / "src"
+    dst = tmp_path / "dst"
+    _write(src / "target_x", "x\n")
+    (src / "alias").symlink_to("target_x")
+    _write(dst / "target_y", "y\n")
+    (dst / "alias").symlink_to("target_y")
+    # Also mirror the targets so dircmp doesn't get distracted.
+    _write(src / "target_y", "y\n")
+    _write(dst / "target_x", "x\n")
+
+    reconcile(src, dst)
+
+    assert (dst / "alias").is_symlink()
+    assert os.readlink(dst / "alias") == "target_x"
+
+
+def test_symlink_target_not_corrupted_when_src_is_file(tmp_path: Path) -> None:
+    # dst has a symlink, src has a regular file at the same name. The
+    # diff_files branch must NOT write through the dst symlink; doing
+    # so would corrupt the symlink's target.
+    src = tmp_path / "src"
+    dst = tmp_path / "dst"
+    _write(src / "name", "from src\n")
+    dst.mkdir()
+    _write(dst / "real_target", "original target content\n")
+    (dst / "name").symlink_to("real_target")
+
+    reconcile(src, dst)
+
+    assert (dst / "name").is_file()
+    assert not (dst / "name").is_symlink()
+    assert (dst / "name").read_text() == "from src\n"
+    # Critical: the file the symlink USED to point at is untouched.
+    # right_only would normally prune it, but for the test we ensure
+    # it's preserved by mirroring it in src too.
+    _write(src / "real_target", "original target content\n")
+    reconcile(src, dst)
+    assert (dst / "real_target").read_text() == "original target content\n"
+
+
 def test_symlinks_with_same_target_left_alone(tmp_path: Path) -> None:
     src = tmp_path / "src"
     dst = tmp_path / "dst"

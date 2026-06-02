@@ -116,12 +116,17 @@ def _copy_fresh(src: Path, dst: Path) -> None:
 
 
 def _replace_file(src: Path, dst: Path) -> None:
-    # `cmpfiles` classifies symlink-vs-file pairs into `diff_files`
-    # (their resolved content differs), so we land here for type
-    # mismatches too — `copy2(follow_symlinks=False)` can't overwrite
-    # a regular file with a symlink without an explicit unlink first.
-    # For plain file-vs-file the unlink is redundant but cheap.
-    if src.is_symlink() != dst.is_symlink():
+    # `cmpfiles(shallow=False)` resolves both sides via `open(...)`,
+    # so symlinks land in `diff_files` whenever the resolved content
+    # differs — including (a) symlink-vs-file, (b) file-vs-symlink,
+    # and (c) symlink-vs-symlink with different targets. All three
+    # break `copy2(follow_symlinks=False)`: case (a)/(c) fail
+    # `os.symlink(... existing dst)` with FileExistsError; case (b)
+    # silently follows dst's symlink and corrupts whatever it
+    # pointed at. Unlink dst first whenever either side is a
+    # symlink — for the plain file-vs-file hot path the check is
+    # cheap and avoids the bug surface entirely.
+    if src.is_symlink() or dst.is_symlink():
         try:
             dst.unlink()
         except FileNotFoundError:
