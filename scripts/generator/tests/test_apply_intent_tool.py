@@ -130,9 +130,12 @@ class TestApplyIntentHappy:
         monkeypatch.setattr(worker, "assess_dops",
                             lambda e, o: _stub_assess(state="converted",
                                                      action="proceed_triage"))
+        # Target is a non-dragonfly in-port file (replace_in_patch
+        # refuses dragonfly/ targets — patch files are output
+        # artifacts, not edit targets).
         result = worker.apply_intent("test-env", "devel/foo", {
             "type": "replace_in_patch",
-            "target": "dragonfly/patch-foo.c",
+            "target": "files/extra-config.in",
             "find": "OLD", "replace": "NEW",
         })
         assert result["ok"] is True
@@ -143,7 +146,7 @@ class TestApplyIntentHappy:
         # Correct dops grammar: `text replace-once file <path> from "X" to "Y"`
         # (no dots, no named-arg syntax). The prior `text.replace_once`
         # form was invalid and corrupted overlays.
-        assert "text replace-once file dragonfly/patch-foo.c" in overlay.read_text()
+        assert "text replace-once file files/extra-config.in" in overlay.read_text()
 
 
 # --------------------------------------------------------------------

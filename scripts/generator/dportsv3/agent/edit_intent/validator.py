@@ -159,6 +159,20 @@ def _check_semantics(intent_obj, raw: dict) -> None:
       ``devel_gperf-20260526-064013Z``). ``replace_in_patch`` is
       strictly for hunks inside patch files; edits to the DSL go
       through ``change_makefile`` / ``drop_patch`` / ``add_patch``.
+
+    - ``replace_in_patch`` whose ``target`` starts with
+      ``dragonfly/``: patch files are output artifacts produced by
+      ``add_patch`` (or ``add_patch from_dupe=true``). Editing a
+      diff in place to nudge line numbers or context produces a
+      patch that lies about its own bytes — every text edit shifts
+      the hunk body but not the hunk header, and partial edits drift
+      arbitrarily. The correct recovery from a failing/drifted
+      patch is ``drop_patch`` + ``add_patch`` (with a corrected
+      inline diff) or ``add_patch from_dupe=true`` (regenerate from
+      a fresh WRKSRC edit). Observed driving the
+      devel_jwasm-20260602-204312Z anti-pattern: malformed inline
+      diff → drop_patch → add_patch refused (orphan file) →
+      replace_in_patch loop → broken overlay.
     """
     intent_type = getattr(intent_obj, "type", None) or raw.get("type")
     if intent_type == "replace_in_patch":
@@ -175,5 +189,20 @@ def _check_semantics(intent_obj, raw: dict) -> None:
                 f"line use drop_patch (extended in this codebase to "
                 f"match both forms); to add an arbitrary file use "
                 f"add_file.",
+                intent=raw,
+            )
+        if target.startswith("dragonfly/"):
+            raise IntentError(
+                f"replace_in_patch refuses target={target!r}: patch "
+                f"files under dragonfly/ are output artifacts, not "
+                f"edit targets. Text-editing a diff to nudge context "
+                f"or line numbers produces a patch that lies — the "
+                f"hunk body shifts but the hunk header does not, and "
+                f"every subsequent compose/apply silently corrupts. "
+                f"To fix a failing or drifted patch: use drop_patch "
+                f"+ add_patch (with a corrected inline diff), or "
+                f"add_patch with from_dupe=true (regenerate the diff "
+                f"from a fresh WRKSRC edit via the genpatch flow). "
+                f"Never replace_in_patch a dragonfly/ file.",
                 intent=raw,
             )

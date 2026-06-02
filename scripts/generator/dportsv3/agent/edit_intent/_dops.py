@@ -127,8 +127,14 @@ def drop_patch(t, intent: DropPatch):
         )
     paths_changed = [str(overlay.relative_to(t.workspace))]
     before_state: dict[Path, str | None] = {overlay: before_overlay}
-    # For materialized patches, also delete the patch file itself.
-    if shape == "file_materialize":
+    # Delete the patch file on disk for BOTH install shapes. Symmetric
+    # cleanup: dropping the install directive without dropping the file
+    # leaves an orphan that blocks a subsequent add_patch with
+    # "patch already exists" (devel_jwasm-20260602-204312Z trap). The
+    # rationale that justifies deletion for file_materialize — "the
+    # patch bytes would still sit on disk and confuse the next person
+    # to read the port" — applies identically to patch_apply.
+    if shape in ("file_materialize", "patch_apply"):
         if patch_file.is_file():
             try:
                 patch_file.unlink()

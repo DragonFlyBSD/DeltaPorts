@@ -214,9 +214,16 @@ def test_creation_then_modification_in_sequence(env_not_in_scope, monkeypatch):
     port is dops-mode and modification intents should work on it.
 
     Simulates the realistic flow: agent adds a patch on a fresh
-    port, then immediately wants to update it via replace_in_patch.
-    Between the two calls, the stub assess_dops must flip from
-    not_in_scope → converted to reflect the substrate change.
+    port, then immediately wants to make a follow-up edit (here, a
+    change_makefile). Between the two calls, the stub assess_dops
+    must flip from not_in_scope → converted to reflect the substrate
+    change.
+
+    Note: replace_in_patch on a dragonfly/ target is refused by the
+    validator — patch files are output artifacts; to update a patch
+    use drop_patch + add_patch, not replace_in_patch. The follow-up
+    here is change_makefile so the test exercises the substrate-gate
+    flip without depending on the dragonfly/ refusal rule.
     """
     state = {"value": "not_in_scope"}
     monkeypatch.setattr(
@@ -235,12 +242,14 @@ def test_creation_then_modification_in_sequence(env_not_in_scope, monkeypatch):
     state["value"] = "converted"
 
     r2 = worker.apply_intent("test-env", "devel/foo", {
-        "type": "replace_in_patch",
-        "target": "dragonfly/patch-src_foo.c",
-        "find": "-x", "replace": "-z",
+        "type": "change_makefile",
+        "path": "Makefile",
+        "key": "USES",
+        "value": "pkgconfig",
+        "op": "append",
     })
     assert r2["ok"] is True, r2
-    assert r2["intent_type"] == "replace_in_patch"
+    assert r2["intent_type"] == "change_makefile"
 
 
 # ---------------------------------------------------------------------

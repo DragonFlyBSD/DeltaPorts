@@ -2,65 +2,74 @@
 triggers:
   intents: [replace_in_patch]
   flows: [patch]
-tags: [drift-fix, hunks]
+tags: [text-replace, in-port-files]
 priority: 50
 ---
 
-# replace_in_patch — fix a drifted hunk inside an existing patch
+# replace_in_patch — single-occurrence text edit on a non-patch in-port file
 
 ## When to use
 
-Single-line drift inside `dragonfly/patch-*` against the upstream
-source: a context line changed upstream, a function name moved, an
-ifdef guard shifted by one tab. The patch still represents the
-right logical change; one line in the file no longer matches.
+A file in the port subtree (under `ports/<origin>/`) that is NOT a
+patch needs a small literal-text substitution: e.g. tweaking a
+`pkg-descr` line, fixing a stray reference in `files/extra-config.in`,
+adjusting a port-local resource file that has no dedicated edit
+intent.
 
-Do **not** use when:
-- The patch is structurally obsolete → `drop_patch`.
-- Whole hunks need rewriting → `drop_patch` + `add_patch`.
-- The change is inside a `mk target set` heredoc body in
-  `overlay.dops` → `replace_in_dops_block`.
+The translator appends a `text replace-once file <target> from "X"
+to "Y"` statement to `overlay.dops`; compose performs the
+substitution on the materialized file at compose time.
 
-## Multi-hunk drift in the same patch
+## Do NOT use for patch files
 
-When `dsynth_log` reports `N out of M hunks failed` against one
-patch file, identify **every** drifted hunk before emitting any
-intent. Apply-build-diagnose-apply per hunk burns 10+ turns
-rediagnosing what one careful read catches.
+**The validator refuses any `target` starting with `dragonfly/`.**
+Patch files are output artifacts produced by `add_patch`. Editing
+a diff in place to nudge line numbers or context produces a patch
+that lies about its own bytes — the hunk body shifts but the hunk
+header does not, and the result silently corrupts at compose or
+dsynth-apply time.
 
-Procedure:
+If a patch is failing, drifted, or otherwise wrong, the correct
+recovery is in `intent-add_patch.md` under "Recovering from a
+failed `add_patch`":
 
-1. `get_file` the failing `dragonfly/patch-*` once.
-2. `grep` each hunk's context lines against the extracted upstream
-   source in one pass.
-3. For each drifted hunk, emit one `replace_in_patch` intent.
-4. `materialize_dports` + `dsynth_build` once at the end.
+1. `drop_patch(target=dragonfly/patch-…, reason=…)` — removes both
+   the install directive and the on-disk file.
+2. `add_patch(target=dragonfly/patch-…, diff=<corrected diff>)`
+   — or `from_dupe=true` to regenerate from a WRKSRC edit.
+
+This was the anti-pattern that broke `devel_jwasm` in June 2026:
+a malformed `add_patch` was followed by `replace_in_patch` calls to
+"fix" the bad diff, producing a series of `text replace-once` ops
+against a file that was never staged in the compose tree. Every
+subsequent `materialize_dports` failed with `E_APPLY_MISSING_SUBJECT`.
+
+## Also do NOT use for .dops files
+
+The validator refuses any `target` ending in `.dops`. Edits to the
+DSL go through `change_makefile`, `drop_patch`, `add_patch`, or
+`replace_in_dops_block` (for heredoc bodies inside `mk target set`).
 
 ## Example
-
-Given a patch hunk whose context line shifted from
-`if (foo->bar == 0)` to `if (foo->bar == NULL)` upstream:
 
 ```json
 {
   "type": "replace_in_patch",
-  "target": "dragonfly/patch-src_foo.c",
-  "find": "if (foo->bar == 0)",
-  "replace": "if (foo->bar == NULL)"
+  "target": "files/extra-config.in",
+  "find": "platform=linux",
+  "replace": "platform=dragonfly"
 }
 ```
 
-The translator appends a `text replace-once` statement to
-`overlay.dops`; compose applies it at materialize time. The patch
-file itself is not edited in place — the dops statement does the
-substitution when the patch is staged.
-
 ## Failure modes the executor refuses
 
-- `find` string not present in the target file → `ok=false`. Most
-  often a sign the find string itself contains drift relative to
-  the on-disk patch; re-read the patch and grep for the actual
-  line.
+- `target` starts with `dragonfly/` → `IntentError` at validation
+  time. Use `drop_patch` + `add_patch` instead.
+- `target` ends with `.dops` → `IntentError` at validation time.
+  Use the appropriate DSL-edit intent.
+- `find` string not present in the target file at compose time →
+  `E_APPLY_MISSING_MATCH`. Re-read the target via `get_file` and
+  grep for the actual line.
 - `find == replace` (no-op) → `ok=false`. If you meant to confirm
   a prior intent landed, check the substrate via `get_file`; don't
   re-emit.

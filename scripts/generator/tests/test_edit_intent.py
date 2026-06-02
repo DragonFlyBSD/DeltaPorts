@@ -99,7 +99,7 @@ class TestParseIntent:
     def test_replace_in_patch_with_defaults(self):
         intent = parse_intent({
             "type": "replace_in_patch",
-            "target": "dragonfly/patch-foo.c",
+            "target": "files/extra-config.in",
             "find": "OLD", "replace": "NEW",
         })
         assert intent.occurrence == 1
@@ -126,14 +126,39 @@ class TestParseIntent:
                 "find": "x", "replace": "y",
             })
 
-    def test_replace_in_patch_allows_patch_targets(self):
-        """Non-.dops targets (the intended use case) still validate."""
+    def test_replace_in_patch_refuses_dragonfly_target(self):
+        """Patch files under dragonfly/ are output artifacts, not edit
+        targets. Text-editing a diff produces a patch that lies about
+        its own bytes (devel_jwasm-20260602-204312Z anti-pattern).
+        Correct recovery from a failing patch is drop_patch + add_patch
+        (with corrected diff) or add_patch from_dupe=true."""
+        with pytest.raises(IntentError, match="refuses target"):
+            parse_intent({
+                "type": "replace_in_patch",
+                "target": "dragonfly/patch-src_foo.c",
+                "find": "x", "replace": "y",
+            })
+
+    def test_replace_in_patch_refuses_any_dragonfly_subpath(self):
+        """Refusal is path-prefix based; nested dragonfly/ targets also
+        rejected."""
+        with pytest.raises(IntentError, match="refuses target"):
+            parse_intent({
+                "type": "replace_in_patch",
+                "target": "dragonfly/extra/patch-x.c",
+                "find": "x", "replace": "y",
+            })
+
+    def test_replace_in_patch_allows_non_dragonfly_targets(self):
+        """Targets outside dragonfly/ and not ending in .dops still
+        validate — replace_in_patch is reserved for in-port files
+        that have no dedicated edit intent."""
         intent = parse_intent({
             "type": "replace_in_patch",
-            "target": "dragonfly/patch-lib_getopt.c",
+            "target": "files/extra-config.in",
             "find": "OLD", "replace": "NEW",
         })
-        assert intent.target == "dragonfly/patch-lib_getopt.c"
+        assert intent.target == "files/extra-config.in"
 
     def test_add_patch_anyof_requires_diff_or_dupe(self):
         with pytest.raises(IntentError, match="failed schema"):
@@ -190,7 +215,7 @@ class TestDopsRenderers:
     def test_replace_in_patch_emits_dops_statement(self, t):
         result = t.apply({
             "type": "replace_in_patch",
-            "target": "dragonfly/patch-foo.c",
+            "target": "files/extra-config.in",
             "find": "OLD", "replace": "NEW",
         })
         assert result.ok is True
@@ -200,7 +225,7 @@ class TestDopsRenderers:
         # Correct dops grammar: `text replace-once file <path> from "X" to "Y"`.
         # The prior form `text.replace_once file=...` was invalid
         # (engine parser rejects dots + named args).
-        assert "text replace-once file dragonfly/patch-foo.c" in contents
+        assert "text replace-once file files/extra-config.in" in contents
         assert 'from "OLD"' in contents
         assert 'to "NEW"' in contents
         # Negative: the broken form must not appear.
@@ -271,6 +296,54 @@ class TestDopsRenderers:
         # paths_changed names both the overlay AND the deleted file.
         assert any("overlay.dops" in p for p in result.paths_changed)
         assert any("patch-lib_getopt.c" in p for p in result.paths_changed)
+
+    def test_drop_patch_removes_patch_apply_and_deletes_file(self, t):
+        """Symmetric to file_materialize cleanup: dropping a
+        `patch apply` install directive must also delete the patch
+        file on disk. Without this symmetry, a previous `add_patch`
+        leaves an orphan that blocks the next `add_patch` with
+        'patch already exists' (devel_jwasm-20260602-204312Z trap)."""
+        patch_file = t.port_path("dragonfly/patch-src_H_memalloc.h")
+        patch_file.parent.mkdir(parents=True, exist_ok=True)
+        patch_file.write_text("--- a\n+++ b\n@@ -1 +1 @@\n-x\n+y\n")
+        overlay = t.port_path("overlay.dops")
+        overlay.write_text(
+            "target @any\nport devel/foo\ntype port\n"
+            'reason "x"\n\n'
+            "patch apply dragonfly/patch-src_H_memalloc.h\n"
+            "patch apply dragonfly/patch-keep.c\n"
+        )
+        result = t.apply({
+            "type": "drop_patch",
+            "target": "dragonfly/patch-src_H_memalloc.h",
+            "reason": "diff was malformed; will re-add",
+        })
+        assert result.ok is True, result.error
+        new = overlay.read_text()
+        assert "patch-src_H_memalloc.h" not in new
+        assert "patch-keep.c" in new
+        # File deleted on disk so subsequent add_patch is not blocked.
+        assert not patch_file.exists()
+        assert any("overlay.dops" in p for p in result.paths_changed)
+        assert any("patch-src_H_memalloc.h" in p for p in result.paths_changed)
+
+    def test_drop_patch_patch_apply_without_file_on_disk_still_ok(self, t):
+        """If the install directive exists but the file is missing
+        (e.g. someone hand-deleted it), drop_patch must still succeed
+        — the directive removal is the primary effect; file deletion
+        is best-effort cleanup."""
+        overlay = t.port_path("overlay.dops")
+        overlay.write_text(
+            "target @any\nport devel/foo\n"
+            "patch apply dragonfly/patch-missing.c\n"
+        )
+        result = t.apply({
+            "type": "drop_patch",
+            "target": "dragonfly/patch-missing.c",
+            "reason": "cleanup",
+        })
+        assert result.ok is True, result.error
+        assert "patch-missing.c" not in overlay.read_text()
 
     def test_drop_patch_only_matches_patch_shaped_file_materialize(self, t):
         """`file materialize` for non-patch destinations (e.g. source

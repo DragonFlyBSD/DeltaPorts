@@ -16,7 +16,11 @@ overlay doesn't yet carry anything addressing it.
 
 Do **not** use when:
 - A logically-similar patch already exists and a single hunk
-  drifted → `replace_in_patch`.
+  drifted → `drop_patch` + `add_patch` with a corrected diff
+  (or `add_patch from_dupe=true` to regenerate from a fresh
+  WRKSRC edit). Patch files are output artifacts; do not edit
+  them in place — see "Recovering from a failed `add_patch`"
+  below.
 - The whole-file replacement is in scope and the existing patch is
   obsolete → `drop_patch` + `add_patch` in sequence.
 
@@ -66,17 +70,47 @@ workflow for non-trivial source patches:
 It is NOT:
 - An investigation tool ("let me snapshot before reading")
 - A way to take a "before" picture for diffing
-- A tool for modifying an **existing** dragonfly/patch-* (use
-  `replace_in_patch` instead)
+- A tool for modifying an **existing** dragonfly/patch-* — see
+  "Recovering from a failed `add_patch`" below; the path is
+  `drop_patch` + `add_patch`, never an in-place text edit on the
+  diff itself.
 
 A `dupe` call without a follow-up `add_patch(from_dupe=true)` in
 the same attempt is wasted work and a strong signal you've reached
 for the wrong tool.
 
+## Recovering from a failed `add_patch`
+
+When `add_patch` succeeds but `materialize_dports` then rejects the
+diff (`E_APPLY_PATCH_FAILED` with "malformed patch", wrong hunk
+count, line-number mismatch, etc.), the patch file on disk is
+broken and the only correct recovery is:
+
+1. `drop_patch(target=…, reason=…)` — removes both the install
+   directive from `overlay.dops` AND the broken patch file from
+   disk. (As of 2026-06, drop_patch deletes the file for both
+   install shapes — `patch apply` and `file materialize` —
+   symmetrically.)
+2. `add_patch(target=…, diff=<corrected diff>)` — with the
+   hunk header line counts fixed and the body verified by
+   inspection.
+3. Or: `add_patch(target=…, from_dupe=true)` — edit WRKSRC,
+   run `genpatch`, let the engine pick up the regenerated diff.
+
+**Do not** reach for `replace_in_patch` to nudge a broken diff. The
+validator refuses any `replace_in_patch` whose target starts with
+`dragonfly/` — patch files are output artifacts. Text-editing a
+diff to fix line numbers shifts the hunk body but not the hunk
+header, and the result is a patch that lies about its own bytes.
+This anti-pattern was observed driving `devel_jwasm` into a state
+where every `materialize_dports` failed with `E_APPLY_MISSING_SUBJECT`.
+
 ## Failure modes
 
-- Target already exists → `ok=false`. Use `replace_in_patch` to
-  modify it, or `drop_patch` + `add_patch` to replace it.
+- Target already exists → `ok=false`. The previous `add_patch`
+  is still installed in `overlay.dops` (otherwise `drop_patch` would
+  have deleted both the file and the directive). Use `drop_patch`
+  to clean state, then `add_patch` again.
 - `from_dupe=true` but no matching `patch-*` file in WRKSRC →
   `ok=false`. Did `genpatch` actually run, and did `extract` run
   before it so WRKSRC was populated? Check `genpatch`'s return —

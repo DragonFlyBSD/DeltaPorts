@@ -99,7 +99,30 @@ When generating a diff for the DeltaPorts overlay, the path format is:
 
 Note: This creates a NEW file containing the patch content.
 
-**Agent guidance (patch jobs):** Do NOT output diff text or write patch files directly. Use the `dports_*` tools (`dupe`/`genpatch`/`install_patches`) to generate one `patch-*` file per source file under `dragonfly/`.
+**Agent guidance — intent flow:**
+
+Patch files under `dragonfly/` are output artifacts. The only
+intents that touch them are:
+
+- `add_patch(target=dragonfly/patch-…, diff=…)` — write a new patch
+  with an inline diff. Best for small changes you can produce by
+  hand.
+- `add_patch(target=dragonfly/patch-…, from_dupe=true)` — regenerate
+  the diff from a fresh WRKSRC edit via `extract` + `dupe` +
+  `put_file` + `genpatch`. Use for non-trivial changes where a
+  diff is easier produced by editing the file than by writing the
+  diff by hand.
+- `drop_patch(target=dragonfly/patch-…, reason=…)` — remove an
+  install directive AND delete the on-disk file. Symmetric for
+  both `patch apply` and `file materialize` install shapes.
+
+**Never** use `replace_in_patch` against a `dragonfly/` target —
+the validator refuses it. Patch files are not edit targets; nudging
+context lines or hunk headers in place produces a patch that lies
+about its own bytes. If a patch is wrong or drifted, the correct
+recovery is `drop_patch` + `add_patch` (with corrected diff) or
+`add_patch from_dupe=true`. See `intent-add_patch.md` under
+"Recovering from a failed `add_patch`" for the full sequence.
 
 ## Examples
 - `net/hostapd`: Missing `IFM_IEEE80211_VHT5G` symbol - wrapped in `#if defined()` guard
