@@ -49,6 +49,16 @@ For simple cases where a preprocessor define suffices:
 CFLAGS+=	-DMISSING_SYMBOL=0
 ```
 
+**Namespace caveat.** Only define identifiers in the *user namespace*
+(no leading underscore-underscore prefix). `__`-prefix names like
+`__BSD_VISIBLE`, `__POSIX_VISIBLE`, `__USE_BSD` are reserved for the
+libc implementation (C standard §7.1.3); defining them from user
+CFLAGS works by accident on the libc you tested with but is
+non-portable and can collide with future libc changes. For the
+specific case of "BSD type names invisible under POSIX flags" use
+`_BSD_SOURCE` (user-facing) or drop the restricting POSIX flag —
+see `error-bsd-types-visibility.md`.
+
 ### Option 3: Disable feature via OPTIONS
 
 If the problematic code is behind an option:

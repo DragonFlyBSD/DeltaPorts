@@ -45,6 +45,17 @@ clang-versus-gcc landscape apply.
    binary, or fails on `--whole-archive` placement. Patch the
    link line via `LDFLAGS` overrides.
 
+6. **BSD type names invisible under strict POSIX flags.**
+   Symptom: `error: unknown type name 'u_short' | 'u_int' |
+   'caddr_t'` from inside a DragonFly system header, with build
+   command carrying `-D_POSIX_C_SOURCE=...` and/or
+   `-D_XOPEN_SOURCE=...`. See `error-bsd-types-visibility.md`
+   for the diagnosis chain and ranked fixes. **Never** reach for
+   `-D__BSD_VISIBLE` (or any `__`-prefixed feature-test macro) —
+   those are libc internals and live in the C-standard reserved
+   namespace. Use the user-facing `_BSD_SOURCE` or, better,
+   remove the restricting POSIX flag from upstream's Makefile.
+
 ## Quick wins
 
 - `CFLAGS+=-fcommon` to restore pre-clang-15 behavior for
