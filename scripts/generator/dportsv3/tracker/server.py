@@ -121,6 +121,7 @@ if (
     QueryType = _fastapi.Query
     RequestType = _fastapi.Request
     HTMLResponseType = _responses.HTMLResponse
+    RedirectResponseType = _responses.RedirectResponse
     StaticFilesType = _staticfiles.StaticFiles
     Jinja2TemplatesType = _templating.Jinja2Templates
     FileResponseType = _responses.FileResponse
@@ -156,6 +157,7 @@ else:
     QueryType = _missing_query
     RequestType = _MissingRequest
     HTMLResponseType = _MissingHTMLResponse
+    RedirectResponseType = _MissingHTMLResponse
     StaticFilesType = _MissingStaticFiles
     Jinja2TemplatesType = _MissingTemplates
     FileResponseType = _MissingHTMLResponse
@@ -735,6 +737,313 @@ def _artifact_view_data(
     }
 
 
+# ---------------------------------------------------------------------------
+# Session dump rendering (Phase 2: replace gzip-octet-stream download with a
+# structured per-turn view of LLM message transcripts).
+# ---------------------------------------------------------------------------
+
+# Match a session-dump artifact: analysis/sessions/<filename>.jsonl[.gz]
+_SESSION_RELPATH_RE = re.compile(
+    r"^analysis/sessions/[^/]+\.jsonl(\.gz)?$"
+)
+
+# Split user prompt into ``## heading`` sections so the byte-budget
+# of each section is visible. Headings start at column 0.
+_SECTION_HEADING_RE = re.compile(r"^##\s+(.+)$", re.MULTILINE)
+
+
+def _is_session_relpath(relpath: str) -> bool:
+    """True if ``relpath`` points at a JSONL session dump under
+    analysis/sessions/. Both .jsonl and .jsonl.gz match."""
+    return bool(_SESSION_RELPATH_RE.match(relpath))
+
+
+def _split_user_prompt_sections(content: str) -> list[dict[str, Any]]:
+    """Break a user prompt into ``## heading`` sections with byte counts.
+
+    Returns a list of ``{name, bytes, body}`` dicts in document order.
+    The portion before the first heading (the "Automation Context" preamble
+    in practice) is returned under name="(preamble)". Sections are
+    intentionally returned with their body so the template can preview
+    each one collapsed. Splitting on ``re.split`` with capture preserves
+    headings + their bodies in alternating positions.
+    """
+    if not content:
+        return []
+    parts = re.split(r"(?m)^##\s+(.+)$", content)
+    out: list[dict[str, Any]] = []
+    # parts[0] is the preamble, then pairs of (heading, body)
+    preamble = parts[0]
+    if preamble.strip():
+        out.append({
+            "name": "(preamble)",
+            "bytes": len(preamble),
+            "body": preamble,
+        })
+    for i in range(1, len(parts), 2):
+        name = parts[i].strip()
+        body = parts[i + 1] if i + 1 < len(parts) else ""
+        out.append({
+            "name": name,
+            "bytes": len(body),
+            "body": body,
+        })
+    return out
+
+
+def _parse_session_records(path: Path) -> list[dict[str, Any]]:
+    """Decompress (if needed) + parse a session JSONL into records.
+
+    Returns the raw message list. Bad lines are skipped (lenient parse)
+    so a partial dump still renders. Raises OSError on read failures —
+    callers should catch and surface as the rendering error.
+    """
+    import gzip as _gzip  # noqa: PLC0415
+    if path.suffix == ".gz":
+        opener: Any = lambda p: _gzip.open(p, "rt", encoding="utf-8")
+    else:
+        opener = lambda p: open(p, encoding="utf-8")
+    records: list[dict[str, Any]] = []
+    with opener(path) as fh:
+        for line in fh:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                records.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+    return records
+
+
+def _summarize_tool_result(content: str) -> dict[str, Any]:
+    """Extract the most operator-relevant fields from a tool result.
+
+    Tool results are JSON-stringified worker return dicts. The template
+    wants a quick at-a-glance summary (ok pill, key fields, error
+    excerpt) before the operator decides to expand the full content.
+
+    Specific tools whose return shape is well-known get hand-picked
+    headline fields:
+      - materialize_dports: stdout_tail's `summary: applied=N skipped=M`
+        line surfaced raw (incl. any I_COMPOSE_DOPS_ALL_OPS_SKIPPED
+        warning), since misreading this drives the visibility-ghost
+        failure mode.
+      - dsynth_build: rc + the log_hint path.
+      - apply_intent: intent_type + paths_changed count + presence of
+        substrate_diff (size only; the diff itself is in the raw body).
+      - intent_reference: intent_type + count of playbooks matched.
+    All others surface generic ok/error fields.
+    """
+    try:
+        data = json.loads(content)
+    except (json.JSONDecodeError, ValueError):
+        return {"ok": None, "headline": content[:200]}
+    if not isinstance(data, dict):
+        return {"ok": None, "headline": str(data)[:200]}
+    summary: dict[str, Any] = {"ok": data.get("ok"), "headline": ""}
+    err = data.get("error")
+    if err:
+        summary["error"] = str(err)[:300]
+    # Heuristic dispatch by which keys are present.
+    if "stdout_tail" in data and "summary:" in (data.get("stdout_tail") or ""):
+        # materialize_dports / extract. Scan the full tail so BOTH
+        # the `summary:` headline AND any `top_warning_codes:` row
+        # are captured; don't break on the first match.
+        for line in (data["stdout_tail"] or "").splitlines():
+            ls = line.lstrip()
+            if ls.startswith("summary:"):
+                summary["headline"] = ls
+            elif ls.startswith("top_warning_codes:"):
+                # operators need to see compose hints (esp.
+                # I_COMPOSE_DOPS_ALL_OPS_SKIPPED which fires on
+                # dead overlays per Phase 1 stage warning).
+                summary["warnings_line"] = ls
+    if "intent_type" in data:
+        # apply_intent / intent_reference
+        bits = [str(data["intent_type"])]
+        if "paths_changed" in data:
+            bits.append(f"paths_changed={len(data.get('paths_changed') or [])}")
+        if "substrate_diff" in data and data.get("substrate_diff"):
+            bits.append(f"diff={len(data['substrate_diff'])}B")
+        if "playbooks" in data and isinstance(data["playbooks"], list):
+            bits.append(f"playbooks={len(data['playbooks'])}")
+        if "mode" in data:
+            bits.append(f"mode={data['mode']}")
+        summary["headline"] = " ".join(bits)
+    if "rc" in data and "log_path" in data:
+        # dsynth_build / dsynth_log
+        summary["headline"] = (
+            f"rc={data['rc']} log={data.get('log_path', '')}"
+        )
+    if "tail" in data and "log_path" in data:
+        # dsynth_log specifically
+        summary["headline"] = f"log_tail {len(data.get('tail') or '')}B"
+    if "rebuild_ok" in data:
+        summary["headline"] = f"rebuild_ok={data['rebuild_ok']} " + summary.get("headline", "")
+    if "wrksrc" in data:
+        # extract
+        summary["headline"] = f"wrksrc={data['wrksrc']}"
+    return summary
+
+
+def _structure_session_turns(
+    records: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Group raw message records into chronological assistant-turn cards.
+
+    Each output entry is one of:
+    - ``{"kind": "system", "content": str, "bytes": int}``
+    - ``{"kind": "user", "content": str, "bytes": int, "sections": [...]}``
+        — ``sections`` is _split_user_prompt_sections output. Per-turn
+        for context (multiple user records can appear, one per attempt).
+    - ``{"kind": "assistant", "turn": int, "content": str,
+         "reasoning_content": str, "tool_calls": [{name, args}, ...]}``
+    - ``{"kind": "tool", "tool_call_id": str|None,
+         "tool_name": str|None, "raw_content": str, "summary": {...}}``
+        — ``tool_name`` is best-effort: matched back from the preceding
+        assistant's tool_calls list by ``tool_call_id``.
+
+    The output preserves the original record order; turn numbers count
+    assistant records and are 1-indexed.
+    """
+    out: list[dict[str, Any]] = []
+    # Track pending tool_calls (id -> name) from the most-recent assistant
+    # so when their tool results arrive we can tag them with the call name.
+    pending_calls: dict[str, str] = {}
+    asst_turn = 0
+    for rec in records:
+        role = rec.get("role")
+        if role == "system":
+            out.append({
+                "kind": "system",
+                "content": rec.get("content") or "",
+                "bytes": len(rec.get("content") or ""),
+            })
+        elif role == "user":
+            content = rec.get("content") or ""
+            out.append({
+                "kind": "user",
+                "content": content,
+                "bytes": len(content),
+                "sections": _split_user_prompt_sections(content),
+            })
+        elif role == "assistant":
+            asst_turn += 1
+            calls = []
+            pending_calls = {}
+            for tc in (rec.get("tool_calls") or []):
+                try:
+                    fn = tc.get("function") or {}
+                    name = fn.get("name") or "?"
+                    raw_args = fn.get("arguments") or "{}"
+                    try:
+                        parsed_args = json.loads(raw_args)
+                        args_preview = json.dumps(parsed_args, sort_keys=True)[:300]
+                    except (json.JSONDecodeError, ValueError):
+                        parsed_args = None
+                        args_preview = raw_args[:300]
+                    tcid = tc.get("id") or ""
+                    if tcid:
+                        pending_calls[tcid] = name
+                    calls.append({
+                        "id": tcid,
+                        "name": name,
+                        "args_preview": args_preview,
+                        "args_raw": raw_args,
+                    })
+                except Exception:
+                    calls.append({
+                        "id": "",
+                        "name": "?",
+                        "args_preview": "(unparseable)",
+                        "args_raw": "",
+                    })
+            content = rec.get("content") or ""
+            reasoning = rec.get("reasoning_content") or ""
+            out.append({
+                "kind": "assistant",
+                "turn": asst_turn,
+                "content": content,
+                "content_bytes": len(content),
+                "reasoning_content": reasoning,
+                "reasoning_bytes": len(reasoning),
+                "tool_calls": calls,
+            })
+        elif role == "tool":
+            tcid = rec.get("tool_call_id") or ""
+            tname = pending_calls.get(tcid) if tcid else None
+            raw_content = rec.get("content") or ""
+            out.append({
+                "kind": "tool",
+                "tool_call_id": tcid,
+                "tool_name": tname,
+                "raw_content": raw_content,
+                "bytes": len(raw_content),
+                "summary": _summarize_tool_result(raw_content),
+            })
+        # Other roles (none expected) are dropped.
+    return out
+
+
+def _session_view_data(
+    artifact_root: Path,
+    bundle_id: str,
+    relpath: str,
+    ref: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Build the template context for the session dump viewer.
+
+    Returns ``None`` when the artifact file is missing. Otherwise a
+    dict the template renders directly.
+    """
+    path = _resolve_artifact_path(artifact_root, ref)
+    if path is None or not path.exists():
+        return None
+    error: str | None = None
+    items: list[dict[str, Any]] = []
+    try:
+        records = _parse_session_records(path)
+        items = _structure_session_turns(records)
+    except OSError as exc:
+        error = f"failed to read session: {exc}"
+    except Exception as exc:  # noqa: BLE001 — surface to template
+        error = f"failed to parse session: {exc}"
+    # Aggregate metrics for the top-of-page header.
+    n_turns = sum(1 for it in items if it["kind"] == "assistant")
+    n_tools = sum(1 for it in items if it["kind"] == "tool")
+    n_users = sum(1 for it in items if it["kind"] == "user")
+    sys_bytes = sum(it["bytes"] for it in items if it["kind"] == "system")
+    user_bytes = sum(it["bytes"] for it in items if it["kind"] == "user")
+    reasoning_bytes = sum(
+        it["reasoning_bytes"] for it in items if it["kind"] == "assistant"
+    )
+    tool_bytes = sum(it["bytes"] for it in items if it["kind"] == "tool")
+    return {
+        "bundle_id": bundle_id,
+        "relpath": relpath,
+        "ref": ref,
+        "filename": Path(relpath).name,
+        "size": path.stat().st_size,
+        # Renamed from "items" because Jinja2 attribute access on
+        # dicts uses getattr first and finds the dict.items() builtin
+        # method before falling through to the key — so `session.items`
+        # in a template returns the bound method, not the list.
+        "entries": items,
+        "n_turns": n_turns,
+        "n_tools": n_tools,
+        "n_users": n_users,
+        "system_bytes": sys_bytes,
+        "user_bytes": user_bytes,
+        "reasoning_bytes": reasoning_bytes,
+        "tool_bytes": tool_bytes,
+        "error": error,
+    }
+
+
+# ---------------------------------------------------------------------------
+
+
 _DEFAULT_ARTIFACT_PRIORITY = (
     # Operator-facing summaries first — these are what the operator
     # wants to land on when they open a bundle.
@@ -854,6 +1163,7 @@ def create_app(db_path: str | Path) -> Any:
     HTTPException = cast(Any, HTTPExceptionType)
     Query = cast(Any, QueryType)
     HTMLResponse = cast(Any, HTMLResponseType)
+    RedirectResponse = cast(Any, RedirectResponseType)
     StaticFiles = cast(Any, StaticFilesType)
     Jinja2Templates = cast(Any, Jinja2TemplatesType)
     FileResponse = cast(Any, FileResponseType)
@@ -3088,6 +3398,20 @@ def create_app(db_path: str | Path) -> Any:
         bundle_id: str,
         relpath: str,
     ) -> Any:
+        # Session dumps under analysis/sessions/ get the structured
+        # viewer instead of the default text/octet-stream renderer.
+        # Redirect rather than re-route so the canonical URL for a
+        # session is /sessions/<filename>, not /artifacts/...jsonl.gz.
+        if _is_session_relpath(relpath):
+            filename = Path(relpath).name
+            return RedirectResponse(
+                url=str(request.url_for(
+                    "agentic_bundle_session_view",
+                    bundle_id=bundle_id,
+                    filename=filename,
+                )),
+                status_code=302,
+            )
         with _conn() as conn:
             bundle = get_bundle(conn, bundle_id)
             ref = get_artifact_ref(conn, bundle_id, relpath)
@@ -3102,6 +3426,42 @@ def create_app(db_path: str | Path) -> Any:
             request,
             "agentic_artifact.html",
             {"title": relpath, "bundle": bundle, "artifact": artifact},
+        )
+
+    @app.get(
+        "/agentic/bundles/{bundle_id}/sessions/{filename}",
+        response_class=HTMLResponse,
+        name="agentic_bundle_session_view",
+    )
+    def agentic_bundle_session_view(
+        request: RequestType,
+        bundle_id: str,
+        filename: str,
+    ) -> Any:
+        """Structured per-turn viewer for analysis/sessions/*.jsonl[.gz]
+        — replaces the gzip-octet-stream download with a per-message
+        rendering: collapsible system + user prompts (with section
+        breakdown), chronological assistant-turn cards with
+        reasoning_content + tool_calls + tool results, and a right-rail
+        TOC. The relpath is always under analysis/sessions/ — we accept
+        only the filename in the URL to keep links short."""
+        relpath = f"analysis/sessions/{filename}"
+        with _conn() as conn:
+            bundle = get_bundle(conn, bundle_id)
+            ref = get_artifact_ref(conn, bundle_id, relpath)
+        if bundle is None:
+            raise HTTPException(status_code=404, detail=f"Unknown bundle: {bundle_id}")
+        if ref is None:
+            raise HTTPException(status_code=404, detail="Unknown session artifact")
+        session = _session_view_data(
+            app.state.artifact_root, bundle_id, relpath, ref,
+        )
+        if session is None:
+            raise HTTPException(status_code=404, detail="Session file missing")
+        return templates.TemplateResponse(
+            request,
+            "agentic_session.html",
+            {"title": filename, "bundle": bundle, "session": session},
         )
 
     @app.get("/agentic/jobs", response_class=HTMLResponse)

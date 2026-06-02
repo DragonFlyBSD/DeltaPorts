@@ -52,6 +52,51 @@ def seeded_state_db(tmp_path: Path) -> Path:
     json_path.write_text('{"status":"budget-exhausted","attempts":[1]}', encoding="utf-8")
     gzip_path = tmp_path / "full.log.gz"
     gzip_path.write_bytes(b"\x1f\x8bcompressed")
+    # Phase 2: session dump fixture. Hand-build a tiny but
+    # structurally-faithful JSONL transcript:
+    #   - system prompt
+    #   - initial user prompt with two ## sections, one of which is
+    #     intentionally >10KB so the "bloat" highlighting fires
+    #   - one assistant turn with reasoning_content + a tool_call
+    #     containing literal HTML to verify XSS escape
+    #   - one tool result with materialize_dports-shaped content so
+    #     the headline summarizer fires
+    import gzip as _gzip  # noqa: PLC0415
+    session_path = tmp_path / "20260601-foo-patch.job.attempt1.jsonl.gz"
+    user_prompt = (
+        "## Automation Context\n- one\n\n"
+        "## Build Errors\n" + ("error line\n" * 1500) + "\n"
+        "## Port Files\nsmall\n"
+    )
+    rec_system = {"role": "system", "content": "you are a patch agent\n"}
+    rec_user = {"role": "user", "content": user_prompt}
+    rec_assistant = {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": "thinking <script>alert(1)</script>",
+        "tool_calls": [{
+            "id": "call_abc",
+            "function": {
+                "name": "materialize_dports",
+                "arguments": '{"origin": "devel/foo"}',
+            },
+        }],
+    }
+    rec_tool = {
+        "role": "tool",
+        "tool_call_id": "call_abc",
+        "content": json.dumps({
+            "ok": True,
+            "stdout_tail": (
+                "Compose succeeded\n"
+                "[ok] apply_semantic_ops: changed=1 skipped=0\n"
+                "summary: ports=1 ops=1 applied=1 fallback=0 errors=0\n"
+            ),
+        }),
+    }
+    with _gzip.open(session_path, "wt", encoding="utf-8") as fh:
+        for rec in (rec_system, rec_user, rec_assistant, rec_tool):
+            fh.write(json.dumps(rec) + "\n")
     handoff_path = tmp_path / "manual_handoff.md"
     handoff_path.write_text(
         "## What we tried\n\n- **Origin:** `devel/manual`\n"
@@ -90,6 +135,9 @@ def seeded_state_db(tmp_path: Path) -> Path:
             ("b-q2-foo", "logs/full.log.gz", str(gzip_path), "gzip", gzip_path.stat().st_size, now),
             ("b-q2-foo", "analysis/tool_trace.jsonl", str(trace_path), "text", trace_path.stat().st_size, now),
             ("b-q2-foo", "logs/missing.txt", str(tmp_path / "missing.txt"), "text", 0, now),
+            ("b-q2-foo", "analysis/sessions/" + session_path.name,
+             str(session_path), "gzip",
+             session_path.stat().st_size, now),
             ("b-q2-manual", "analysis/manual_handoff.md", str(handoff_path), "text", handoff_path.stat().st_size, now),
         ],
     )
@@ -576,6 +624,130 @@ def test_artifact_media_type_content_sniff(tmp_path):
     binary.write_bytes(b"\x00\x01\x02\x03" * 50)
     media, inline = _artifact_media_type("looks-bin", None, fs_path=binary)
     assert media == "application/octet-stream" and not inline
+
+
+def test_session_view_renders_structure(client: TestClient) -> None:
+    """Session viewer route returns 200 and the rendered HTML contains
+    the per-role pills, byte badges, and tool headline summary."""
+    resp = client.get(
+        "/agentic/bundles/b-q2-foo/sessions/20260601-foo-patch.job.attempt1.jsonl.gz"
+    )
+    assert resp.status_code == 200
+    body = resp.text
+    # Role pills present.
+    assert "pill-system" in body
+    assert "pill-user" in body
+    assert "pill-assistant" in body
+    assert "pill-tool" in body
+    # Assistant turn 1 anchor.
+    assert "turn 1" in body
+    # Tool name carried back from tool_call_id.
+    assert "materialize_dports" in body
+    # Headline summarizer fired and included the compose summary line.
+    assert "applied=1" in body
+
+
+def test_session_view_user_prompt_section_breakdown(
+    client: TestClient,
+) -> None:
+    """The per-section user-prompt breakdown table fires and flags the
+    >10KB section as bloat."""
+    resp = client.get(
+        "/agentic/bundles/b-q2-foo/sessions/20260601-foo-patch.job.attempt1.jsonl.gz"
+    )
+    assert resp.status_code == 200
+    body = resp.text
+    assert "user-prompt-sections" in body
+    # Section names rendered.
+    assert "Build Errors" in body
+    assert "Port Files" in body
+    # The Build Errors section is >10KB so the bloat class fires.
+    assert 'class="bloat"' in body
+
+
+def test_session_view_escapes_reasoning_html(client: TestClient) -> None:
+    """reasoning_content containing literal HTML (e.g. ``<script>``)
+    must be escaped — no XSS via a malicious model output."""
+    resp = client.get(
+        "/agentic/bundles/b-q2-foo/sessions/20260601-foo-patch.job.attempt1.jsonl.gz"
+    )
+    assert resp.status_code == 200
+    body = resp.text
+    # Raw <script> tag must NOT appear inline.
+    assert "<script>alert(1)" not in body
+    # Escaped form must appear.
+    assert "&lt;script&gt;alert(1)&lt;/script&gt;" in body
+
+
+def test_artifact_route_redirects_session_to_viewer(
+    client: TestClient,
+) -> None:
+    """Hitting the generic /artifacts/...jsonl.gz path for a session
+    redirects to the structured viewer route — keeps existing links
+    working without surprising operators with an octet-stream download."""
+    resp = client.get(
+        "/agentic/bundles/b-q2-foo/artifacts/analysis/sessions/20260601-foo-patch.job.attempt1.jsonl.gz",
+        follow_redirects=False,
+    )
+    assert resp.status_code == 302
+    assert "/sessions/20260601-foo-patch.job.attempt1.jsonl.gz" in (
+        resp.headers.get("location", "")
+    )
+
+
+def test_session_view_404_on_missing(client: TestClient) -> None:
+    resp = client.get(
+        "/agentic/bundles/b-q2-foo/sessions/does-not-exist.jsonl.gz"
+    )
+    assert resp.status_code == 404
+
+
+def test_is_session_relpath_matches_pattern() -> None:
+    from dportsv3.tracker.server import _is_session_relpath
+    assert _is_session_relpath("analysis/sessions/foo.jsonl.gz")
+    assert _is_session_relpath("analysis/sessions/foo.jsonl")
+    assert not _is_session_relpath("analysis/changes.diff")
+    assert not _is_session_relpath("logs/foo.jsonl.gz")
+    # No deeper subdirectories — we match only one path component.
+    assert not _is_session_relpath("analysis/sessions/sub/foo.jsonl.gz")
+
+
+def test_split_user_prompt_sections_handles_preamble() -> None:
+    """Content before the first ## heading is captured under '(preamble)'.
+    Headings that aren't at column 0 are not split (so a nested ## inside
+    a code block doesn't accidentally start a new section)."""
+    from dportsv3.tracker.server import _split_user_prompt_sections
+    md = (
+        "preamble line\nanother\n"
+        "## Section A\nbody a\n"
+        "## Section B\nbody b\n"
+    )
+    secs = _split_user_prompt_sections(md)
+    assert secs[0]["name"] == "(preamble)"
+    assert secs[1]["name"] == "Section A"
+    assert secs[2]["name"] == "Section B"
+    assert secs[1]["bytes"] > 0
+    assert secs[2]["bytes"] > 0
+
+
+def test_summarize_tool_result_materialize_headline() -> None:
+    """materialize_dports tool result's `summary:` line is hoisted to
+    the headline so the operator sees applied=N at a glance."""
+    from dportsv3.tracker.server import _summarize_tool_result
+    raw = json.dumps({
+        "ok": True,
+        "stdout_tail": (
+            "Compose succeeded\n"
+            "[ok] apply_semantic_ops: changed=2 skipped=0\n"
+            "summary: ports=1 ops=2 applied=2 fallback=0 errors=0\n"
+            "top_warning_codes: I_COMPOSE_MODE_DOPS_SUPPRESSES_COMPAT=1\n"
+        ),
+    })
+    s = _summarize_tool_result(raw)
+    assert s["ok"] is True
+    assert "applied=2" in s["headline"]
+    # The warning line is captured separately for highlighting.
+    assert "I_COMPOSE_MODE_DOPS_SUPPRESSES_COMPAT" in s["warnings_line"]
 
 
 def test_view_agentic_artifact_json_pretty_printed(client: TestClient) -> None:

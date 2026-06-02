@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ session.filename }} — DeltaPorts Tracker</title>
+  <link href="{{ request.url_for('static', path='progress.css') }}" type="text/css" rel="stylesheet">
+  <link rel="icon" type="image/png" href="{{ request.url_for('static', path='favicon.png') }}">
+  <style>
+    .session-layout { display: grid; grid-template-columns: 1fr 240px; gap: 16px; align-items: start; }
+    @media (max-width: 900px) { .session-layout { grid-template-columns: 1fr; } }
+    .session-toc { position: sticky; top: 12px; max-height: calc(100vh - 24px); overflow-y: auto; font-size: 11px; border: 1px solid var(--border, #d8dee9); border-radius: 6px; padding: 8px 10px; background: var(--panel-bg, #f8fafc); }
+    .session-toc a { display: block; padding: 2px 0; text-decoration: none; color: var(--text, #1f2937); }
+    .session-toc a:hover { text-decoration: underline; }
+    .session-toc .toc-tool-name { font-family: ui-monospace, monospace; color: #6366f1; }
+    .session-toc .toc-bytes { color: var(--text-dim, #9ca3af); float: right; }
+    .session-toc .toc-section-label { color: var(--text-dim, #6b7280); text-transform: uppercase; font-size: 10px; letter-spacing: 0.05em; margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--border, #e5e7eb); }
+    .session-toc .toc-section-label:first-child { margin-top: 0; padding-top: 0; border-top: none; }
+    .turn-card { border: 1px solid var(--border, #d8dee9); border-radius: 6px; margin-bottom: 10px; padding: 10px 14px; background: #fff; }
+    .turn-card.role-system { background: #fdfdfd; }
+    .turn-card.role-user { background: #fbfaff; }
+    .turn-card.role-assistant { background: #ffffff; }
+    .turn-card.role-tool { background: #fafafa; }
+    .turn-header { display: flex; align-items: baseline; gap: 12px; font-size: 12px; color: var(--text-dim, #6b7280); margin-bottom: 6px; }
+    .turn-id { font-family: ui-monospace, monospace; color: var(--text, #1f2937); font-weight: 600; }
+    .turn-role-pill { font-size: 10px; padding: 1px 6px; border-radius: 8px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
+    .pill-system { background: #e5e7eb; color: #374151; }
+    .pill-user { background: #ede9fe; color: #5b21b6; }
+    .pill-assistant { background: #dbeafe; color: #1e40af; }
+    .pill-tool { background: #fef3c7; color: #92400e; }
+    .turn-byte-badge { color: var(--text-dim, #9ca3af); font-size: 11px; font-family: ui-monospace, monospace; }
+    .reasoning-block { margin-top: 8px; }
+    .reasoning-block > summary { cursor: pointer; color: var(--text-dim, #6b7280); font-size: 11px; user-select: none; }
+    .reasoning-block > summary:hover { color: var(--text, #1f2937); }
+    .reasoning-content { white-space: pre-wrap; font: 11px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: #f5f3ff; border-left: 3px solid #a78bfa; padding: 8px 12px; margin-top: 6px; max-height: 50vh; overflow-y: auto; }
+    .assistant-text { margin-top: 8px; white-space: pre-wrap; font-size: 13px; line-height: 1.5; }
+    .tool-calls { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
+    .tool-call { display: grid; grid-template-columns: max-content 1fr; gap: 8px; font-family: ui-monospace, monospace; font-size: 11px; align-items: baseline; }
+    .tool-call .tool-call-name { color: #6366f1; font-weight: 600; }
+    .tool-call .tool-call-args { color: var(--text, #1f2937); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tool-summary { font-family: ui-monospace, monospace; font-size: 11px; margin-top: 6px; padding: 4px 8px; background: var(--panel-bg, #f8fafc); border-radius: 4px; }
+    .tool-summary.has-error { background: #fef2f2; color: #991b1b; }
+    .tool-summary .headline { white-space: pre-wrap; }
+    .tool-summary .warning-line { color: #b45309; font-weight: 600; margin-top: 2px; }
+    .tool-raw { margin-top: 6px; }
+    .tool-raw > summary { cursor: pointer; color: var(--text-dim, #6b7280); font-size: 11px; user-select: none; }
+    .tool-raw-content { white-space: pre-wrap; font: 11px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: var(--panel-bg, #f8fafc); border: 1px solid var(--border, #e5e7eb); border-radius: 4px; padding: 8px 10px; margin-top: 6px; max-height: 60vh; overflow-y: auto; }
+    .user-prompt-sections { margin-top: 8px; font-size: 11px; border-collapse: collapse; width: 100%; }
+    .user-prompt-sections th, .user-prompt-sections td { border: 1px solid var(--border, #e5e7eb); padding: 4px 8px; text-align: left; }
+    .user-prompt-sections th { background: var(--panel-bg, #f8fafc); font-weight: 600; }
+    .user-prompt-sections td.byte-cell { text-align: right; font-family: ui-monospace, monospace; }
+    .user-prompt-sections tr.bloat td { background: #fef3c7; }
+    .user-prompt-sections tr.bloat td.byte-cell { color: #92400e; font-weight: 600; }
+    .system-content, .user-content { white-space: pre-wrap; font: 11px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: var(--panel-bg, #f8fafc); border: 1px solid var(--border, #e5e7eb); border-radius: 4px; padding: 8px 10px; margin-top: 8px; max-height: 60vh; overflow-y: auto; }
+    .meta-bar { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin: 12px 0; }
+    .meta-cell { padding: 8px 12px; background: var(--panel-bg, #f8fafc); border: 1px solid var(--border, #e5e7eb); border-radius: 6px; }
+    .meta-label { font-size: 10px; color: var(--text-dim, #6b7280); text-transform: uppercase; letter-spacing: 0.05em; }
+    .meta-value { font-size: 16px; font-weight: 600; font-family: ui-monospace, monospace; }
+    .session-error { padding: 12px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; color: #991b1b; margin-bottom: 12px; }
+  </style>
+</head>
+<body>
+  {% with nav_crumbs = [
+      {"label": "Agentic", "url": request.url_for('agentic_index')},
+      {"label": "Bundles", "url": request.url_for('agentic_bundles')},
+      {"label": bundle.bundle_id, "url": request.url_for('agentic_bundle_detail', bundle_id=bundle.bundle_id)},
+      {"label": "sessions"},
+      {"label": session.filename}
+  ] %}
+    {% include "_tracker_nav.html" %}
+  {% endwith %}
+
+  <div class="tracker-page">
+    <h1>{{ session.filename }}</h1>
+    <div class="tracker-card" style="font-size:12px;">
+      <div><strong>Bundle:</strong> <a href="{{ request.url_for('agentic_bundle_detail', bundle_id=bundle.bundle_id) }}">{{ bundle.bundle_id }}</a></div>
+      <div><strong>Origin:</strong> {{ bundle.origin }}{% if bundle.flavor %} @ {{ bundle.flavor }}{% endif %}</div>
+      <div><strong>Path:</strong> <code>{{ session.relpath }}</code></div>
+      <div><a href="/api/bundles/{{ bundle.bundle_id }}/artifacts/{{ session.relpath }}">Download raw .jsonl.gz</a></div>
+    </div>
+
+    {% if session.error %}
+      <div class="session-error">{{ session.error }}</div>
+    {% endif %}
+
+    <div class="meta-bar">
+      <div class="meta-cell">
+        <div class="meta-label">Assistant turns</div>
+        <div class="meta-value">{{ session.n_turns }}</div>
+      </div>
+      <div class="meta-cell">
+        <div class="meta-label">Tool results</div>
+        <div class="meta-value">{{ session.n_tools }}</div>
+      </div>
+      <div class="meta-cell">
+        <div class="meta-label">System bytes</div>
+        <div class="meta-value">{{ '{:,}'.format(session.system_bytes) }}</div>
+      </div>
+      <div class="meta-cell">
+        <div class="meta-label">User bytes</div>
+        <div class="meta-value">{{ '{:,}'.format(session.user_bytes) }}</div>
+      </div>
+      <div class="meta-cell">
+        <div class="meta-label">Reasoning bytes</div>
+        <div class="meta-value">{{ '{:,}'.format(session.reasoning_bytes) }}</div>
+      </div>
+      <div class="meta-cell">
+        <div class="meta-label">Tool result bytes</div>
+        <div class="meta-value">{{ '{:,}'.format(session.tool_bytes) }}</div>
+      </div>
+    </div>
+
+    <div class="session-layout">
+      <div class="session-body">
+        {% for item in session.entries %}
+          {% if item.kind == 'system' %}
+            <details class="turn-card role-system" id="t-{{ loop.index }}">
+              <summary class="turn-header">
+                <span class="turn-role-pill pill-system">system</span>
+                <span class="turn-id">prompt</span>
+                <span class="turn-byte-badge">{{ '{:,}'.format(item.bytes) }} bytes</span>
+                <span style="color:var(--text-dim);">click to expand</span>
+              </summary>
+              <pre class="system-content">{{ item.content }}</pre>
+            </details>
+          {% elif item.kind == 'user' %}
+            <details class="turn-card role-user" id="t-{{ loop.index }}"
+                     {% if loop.first or item.bytes < 5000 %}open{% endif %}>
+              <summary class="turn-header">
+                <span class="turn-role-pill pill-user">user</span>
+                <span class="turn-id">message</span>
+                <span class="turn-byte-badge">{{ '{:,}'.format(item.bytes) }} bytes</span>
+              </summary>
+              {% if item.sections %}
+                <table class="user-prompt-sections">
+                  <thead>
+                    <tr><th>Section</th><th>Bytes</th></tr>
+                  </thead>
+                  <tbody>
+                    {% for sec in item.sections %}
+                      <tr {% if sec.bytes > 10000 %}class="bloat"{% endif %}>
+                        <td>{% if sec.name == '(preamble)' %}<em>(preamble)</em>{% else %}<code>## {{ sec.name }}</code>{% endif %}</td>
+                        <td class="byte-cell">{{ '{:,}'.format(sec.bytes) }}</td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              {% endif %}
+              <details style="margin-top:8px;">
+                <summary style="cursor:pointer;color:var(--text-dim);font-size:11px;">show full content</summary>
+                <pre class="user-content">{{ item.content }}</pre>
+              </details>
+            </details>
+          {% elif item.kind == 'assistant' %}
+            <div class="turn-card role-assistant" id="t-{{ loop.index }}">
+              <div class="turn-header">
+                <span class="turn-role-pill pill-assistant">assistant</span>
+                <span class="turn-id">turn {{ item.turn }}</span>
+                {% if item.reasoning_bytes %}
+                  <span class="turn-byte-badge">reasoning: {{ '{:,}'.format(item.reasoning_bytes) }}B</span>
+                {% endif %}
+                {% if item.content_bytes %}
+                  <span class="turn-byte-badge">text: {{ '{:,}'.format(item.content_bytes) }}B</span>
+                {% endif %}
+                {% if item.tool_calls %}
+                  <span class="turn-byte-badge">tools: {{ item.tool_calls | length }}</span>
+                {% endif %}
+              </div>
+              {% if item.reasoning_content %}
+                <details class="reasoning-block">
+                  <summary>reasoning_content ({{ '{:,}'.format(item.reasoning_bytes) }}B)</summary>
+                  <pre class="reasoning-content">{{ item.reasoning_content }}</pre>
+                </details>
+              {% endif %}
+              {% if item.content %}
+                <div class="assistant-text">{{ item.content }}</div>
+              {% endif %}
+              {% if item.tool_calls %}
+                <div class="tool-calls">
+                  {% for tc in item.tool_calls %}
+                    <div class="tool-call">
+                      <span class="tool-call-name">{{ tc.name }}</span>
+                      <span class="tool-call-args" title="{{ tc.args_preview }}">{{ tc.args_preview }}</span>
+                    </div>
+                  {% endfor %}
+                </div>
+              {% endif %}
+            </div>
+          {% elif item.kind == 'tool' %}
+            <div class="turn-card role-tool" id="t-{{ loop.index }}">
+              <div class="turn-header">
+                <span class="turn-role-pill pill-tool">tool</span>
+                <span class="turn-id">{% if item.tool_name %}{{ item.tool_name }}{% else %}result{% endif %}</span>
+                {% if item.summary.ok is sameas true %}
+                  <span class="stat-pill built" style="font-size:10px;">ok</span>
+                {% elif item.summary.ok is sameas false %}
+                  <span class="stat-pill failed" style="font-size:10px;">fail</span>
+                {% endif %}
+                <span class="turn-byte-badge">{{ '{:,}'.format(item.bytes) }} bytes</span>
+              </div>
+              {% if item.summary.headline or item.summary.error %}
+                <div class="tool-summary {% if item.summary.error %}has-error{% endif %}">
+                  {% if item.summary.error %}
+                    <div class="headline">error: {{ item.summary.error }}</div>
+                  {% endif %}
+                  {% if item.summary.headline %}
+                    <div class="headline">{{ item.summary.headline }}</div>
+                  {% endif %}
+                  {% if item.summary.warnings_line %}
+                    <div class="warning-line">{{ item.summary.warnings_line }}</div>
+                  {% endif %}
+                </div>
+              {% endif %}
+              <details class="tool-raw">
+                <summary>raw result ({{ '{:,}'.format(item.bytes) }}B)</summary>
+                <pre class="tool-raw-content">{{ item.raw_content }}</pre>
+              </details>
+            </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+      <nav class="session-toc">
+        <div class="toc-section-label">Prompts</div>
+        {% for item in session.entries if item.kind in ('system', 'user') %}
+          <a href="#t-{{ loop.index0 + 1 }}">
+            {{ item.kind }}
+            <span class="toc-bytes">{{ '{:,}'.format(item.bytes) }}B</span>
+          </a>
+        {% endfor %}
+        <div class="toc-section-label">Turns</div>
+        {% for item in session.entries if item.kind == 'assistant' %}
+          {% set anchor_idx = loop.index0 %}
+          {# find the absolute index of this assistant in session.entries #}
+          {% set ns = namespace(abs_idx=0) %}
+          {% for x in session.entries %}
+            {% if x.kind == 'assistant' %}
+              {% if x.turn == item.turn %}{% set ns.abs_idx = loop.index %}{% endif %}
+            {% endif %}
+          {% endfor %}
+          <a href="#t-{{ ns.abs_idx }}">
+            T{{ item.turn }}
+            {% if item.tool_calls %}
+              <span class="toc-tool-name">
+                {{ item.tool_calls[0].name }}{% if item.tool_calls | length > 1 %}+{{ item.tool_calls | length - 1 }}{% endif %}
+              </span>
+            {% endif %}
+            <span class="toc-bytes">{{ '{:,}'.format(item.reasoning_bytes) }}B</span>
+          </a>
+        {% endfor %}
+      </nav>
+    </div>
+  </div>
+</body>
+</html>

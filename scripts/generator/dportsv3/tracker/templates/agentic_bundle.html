@@ -765,8 +765,19 @@
           <thead><tr><th>Path</th><th>Size</th><th>Raw</th></tr></thead>
           <tbody>
             {% for a in bundle.artifacts %}
+            {# Session dumps under analysis/sessions/ get the structured
+               viewer (Phase 2). Other artifacts stay inline-previewed
+               on this page via the ?artifact= query param. #}
+            {% set is_session = a.relpath.startswith('analysis/sessions/') and a.relpath.endswith(('.jsonl', '.jsonl.gz')) %}
             <tr {% if a.relpath == selected_artifact_relpath %}class="artifact-selected"{% endif %}>
-              <td><a href="{{ request.url_for('agentic_bundle_detail', bundle_id=bundle.bundle_id) }}?artifact={{ a.relpath | urlencode }}">{{ a.relpath }}</a></td>
+              <td>
+                {% if is_session %}
+                  <a href="{{ request.url_for('agentic_bundle_session_view', bundle_id=bundle.bundle_id, filename=a.relpath.rsplit('/', 1)[-1]) }}">{{ a.relpath }}</a>
+                  <span style="color:var(--text-dim);font-size:10px;margin-left:6px;">session</span>
+                {% else %}
+                  <a href="{{ request.url_for('agentic_bundle_detail', bundle_id=bundle.bundle_id) }}?artifact={{ a.relpath | urlencode }}">{{ a.relpath }}</a>
+                {% endif %}
+              </td>
               <td>{{ a.size if a.size is not none else '—' }}</td>
               <td><a href="/api/bundles/{{ bundle.bundle_id }}/artifacts/{{ a.relpath }}">raw</a></td>
             </tr>
