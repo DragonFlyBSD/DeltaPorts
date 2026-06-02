@@ -1323,6 +1323,21 @@ def create_app(db_path: str | Path) -> Any:
     if static_dir.exists():
         app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
+    # Content-hash cache-buster for progress.css. Without this, when
+    # we change rules in the file (e.g. extracting the diff renderer's
+    # styles in 2.5a), browsers keep serving the previous version from
+    # cache — so the new HTML structure looks unstyled until the
+    # operator hard-refreshes. Compute the hash once at startup
+    # (template responses can read it as ``static_v`` then). Falls back
+    # to "0" if the file isn't present so dev / packaging variants
+    # don't break.
+    import hashlib as _hashlib  # noqa: PLC0415
+    _static_v = "0"
+    _css_path = static_dir / "progress.css"
+    if _css_path.is_file():
+        _static_v = _hashlib.sha256(_css_path.read_bytes()).hexdigest()[:10]
+    templates.env.globals["static_v"] = _static_v
+
     @app.on_event("startup")
     def _startup() -> None:
         conn = init_db(app.state.db_path)

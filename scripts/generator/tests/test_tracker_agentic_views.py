@@ -762,6 +762,18 @@ def test_session_view_404_on_missing(client: TestClient) -> None:
     assert resp.status_code == 404
 
 
+def test_progress_css_link_carries_cache_buster(client: TestClient) -> None:
+    """progress.css link tag must include a content-hash ``?v=...``
+    query string so a browser that cached the old CSS picks up a new
+    one whenever the file changes. Regression for the
+    diff-renderer-looks-unstyled case observed after 2.5a CSS extract."""
+    import re
+    resp = client.get("/agentic")
+    assert resp.status_code == 200
+    m = re.search(r"progress\.css\?v=([0-9a-f]{6,})", resp.text)
+    assert m is not None, "no cache-busting ?v=... on progress.css link"
+
+
 def test_session_view_attaches_cumulative_tokens(client: TestClient) -> None:
     """When ``analysis/tool_trace.jsonl`` carries ``llm_turn`` events
     matching the session's attempt, the viewer joins per-turn

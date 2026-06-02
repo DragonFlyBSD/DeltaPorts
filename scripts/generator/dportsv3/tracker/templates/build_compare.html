@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Build compare — DeltaPorts Tracker</title>
-  <link href="{{ request.url_for('static', path='progress.css') }}" type="text/css" rel="stylesheet">
+  <link href="{{ request.url_for('static', path='progress.css') }}?v={{ static_v }}" type="text/css" rel="stylesheet">
   <link rel="icon" type="image/png" href="{{ request.url_for('static', path='favicon.png') }}">
   <style>
     details.compare-section { background: var(--bg-card); border: 1px solid var(--amber-border); border-radius: 4px; margin-bottom: 8px; }
