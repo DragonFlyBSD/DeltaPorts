@@ -229,3 +229,61 @@ If P0a (target @main → @any) and P0b (honest summary) both land:
 - **alsa-plugins**: already wasn't a target-mismatch case; would still need the 16 KB patch read. P4 (smaller dsynth_log) might save enough for the agent to finish before budget exhaustion.
 
 In short: **one-line fix (P0a) likely unblocks 60-70% of compile-error patch failures on the 2026Q2 build line.**
+
+---
+
+# Ongoing findings from later bundle walks
+
+Bundles analyzed after the initial cohort. Each entry: the bundle ID, what failure mode it surfaced, and what would actually help. New entries appended at the bottom; the same fix may show up under multiple bundles when the evidence reinforces it.
+
+## `lang/python311` (`lang_python311-20260601-222113Z`)
+
+Triage class: `plist-error`. Pipeline: triage → convert (succeeded) → triage again (re-classify against converted substrate) → patch. Patch run burned **1.24M tokens, 20 turns, 0 intents emitted, 0 dsynth_build calls** — pure analysis paralysis on the deferred-from-convert pkg-plist diff.
+
+**Not** a target-mismatch case (the recent P0a/P0b fixes don't apply here — the overlay already existed from convert, agent never reached materialize-after-intent).
+
+Highest-leverage observations:
+
+1. **Trim the "Port Files" section of the patch agent's user prompt.** On this run it was **48,700 bytes** out of a 96,707-byte user prompt — half the static cost, ~12K tokens re-shipped per turn × 20 turns ≈ 240K tokens. The agent has `get_file` and pulled files on demand anyway; inlining everything pre-emptively pays for files the agent never reads. Worst on ports with many `files/patch-*` and a giant pkg-plist (python311's pkg-plist alone is 533 KB). The build-time cost scales with the port's file count, not with what the agent actually needs.
+
+2. **Hard turn-budget gate for pure investigation.** Prompt currently says "if you're 4+ tool calls in without an intent you're drifting" (line 471) but there's no enforcement. The agent went to 25+ tool calls / 0 intents. A genuine gate: after N tool calls, the next turn MUST be `apply_intent` or `Rebuild Status: gave-up`. Soft warnings don't fire on the kind of port where analysis is genuinely complex — which is exactly when the rule is most needed.
+
+3. **Require at least one `dsynth_build` before budget exhaustion.** The agent never tested anything. Even a wrong intent → build → log would have given ground truth and broken the analysis loop. Pair with #2: "before you can emit `Rebuild Status: gave-up`, you must have run dsynth_build at least once."
+
+4. **Clarify or enforce the `/work/DPorts` directory rule.** Prompt says "you may NOT read from /work/DPorts" (line 590) but the agent read it 5 times. The "DPorts/DeltaPorts/compose root" naming triad blurs together. Either (a) make the worker refuse `grep`/`get_file` against `/work/DPorts/<origin>/...` with a hint pointing at the compose root, or (b) drop the warning if `DPorts` content actually matches current state in practice (it did in this env — DPorts pkg-plist had the current DragonFly overlay applied). The current warning isn't load-bearing in either direction.
+
+5. **Plist-error / deferred-from-convert verdict-first nudge.** When the payload includes a `## Deferred from Convert` section, prime the agent toward verdict-first action: "Your FIRST intent should be a verdict (`dropped` for obsolete parts, `add_patch`/`replace_in_patch` for regenerated parts). Don't investigate the framework-level cause of why upstream changed — just emit the verdicts and let dsynth tell you what's still broken." The agent in this run knew about the verdicts (the prompt mentions them) but treated the investigation as a prerequisite to the verdict.
+
+None of these are P0 — the P0a/P0b shipped fixes were the right call for the dominant compile-error class. These are a different failure cluster that the prompt's discipline rules and prompt-bloat profile need to handle separately. Worth picking up if more plist-error / deferred-from-convert bundles repeat the pattern.
+
+## Failure-mode catalog (running)
+
+A short index of the *classes* of failure observed so far, with which fix landed (or didn't):
+
+| failure mode | first seen | leverage fix | status |
+|---|---|---|---|
+| Target-mismatch ghost (`target @main` default + misleading `applied=0` summary) | skalibs / libfyaml / gnome_subr 20260601 | P0a (`_dops.py` `@any`), P0b (compose stage warning) | **shipped** |
+| Substrate damage from prior agents (e.g. recursive `mk set OPTIONS_DEFAULT`) | alsa-plugins | needs prior-agent dops correctness checks | open |
+| Large-patch porting cost (>16 KB inline patch reads + intent returns) | alsa-plugins | likely needs incremental patch construction primitive | open |
+| Multi-file fix gap (same bug in N headers, agent only sees first) | libfyaml | possibly "after build fails, grep extracted source for symptom across full wrksrc" | open |
+| No-WRKSRC port can't be patched via intents | gnome_subr | needs text-edit-port-Makefile intent | open |
+| `dupe`/`genpatch` returns HOST path, validator rejects it | skalibs / libfyaml | fix `worker.py:2389` to return `/work/...` path | open |
+| Schema rejection not learned across attempts | gnome_subr (drop_patch `target` field) | move prior-intent-summary to top of failure-context message | open |
+| Analysis paralysis (0 intents, 0 builds, full budget burned) | python311 | hard turn-budget gate + mandatory dsynth_build before give-up | open |
+| Static-prompt bloat on multi-file ports (Port Files section) | python311 | trim "Port Files" from user prompt; agent has get_file | open |
+| Convert agent hits validate_dops parse error and gives up | net-snmp | small budget + no retry on parse fix | open |
+
+## Method note: what to check on each new bundle
+
+After every walked bundle, the questions to answer (added here so future walks don't drift):
+
+1. Did the agent's first `apply_intent` arrive within ~5 tool calls of session start? If not, why — and would a hard gate have helped?
+2. After the first `apply_intent`, did `materialize_dports` show `applied=N>0`? If 0, is `I_COMPOSE_DOPS_ALL_OPS_SKIPPED` warning in the stage line? If not, why not (regression of P0a, or a new class of skip)?
+3. After the first `dsynth_build`, did the agent verify by grepping the extracted source for the original error symptom? Or did it jump to "compose bug" / "patch didn't apply"?
+4. How many intents were emitted in total? How many built? Ratio sane?
+5. If a second attempt fired, did its first turn reflect the prior intent log (no re-submitting failed intent types)?
+6. Total tokens broken into: static prompt × N turns, reasoning_content carry, tool result carry, completion. Which line item dominates?
+7. Any reads of `/work/DPorts/...`? `/work/obj/...` hand-constructed paths? `/xports/...` chroot-internal paths leaking host paths?
+
+If a finding is a one-off (one bundle, plausibly idiosyncratic), note it but don't generalize. If two bundles in different categories repeat it, promote to the failure-mode catalog above with a proposed fix.
+
