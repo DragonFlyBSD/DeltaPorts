@@ -116,6 +116,43 @@ means you do NOT need to pre-check whether the upstream Makefile
 defines the variable before appending. Just append; the executor
 handles both cases.
 
+The executor handles three shapes of existing assignment, all
+transparently:
+
+- **No prior assignment** → creates `VAR= token` at the top of the
+  Makefile (before the first `.include`/target).
+- **One prior assignment, single line** → appends the token in place,
+  preserving the original operator (`=`, `+=`, `?=`, etc.). `USES+=
+  cmake` plus `op=append value=ssl` stays `USES+= cmake ssl`.
+- **One prior assignment with line-continuation `\`, or multiple
+  prior assignments** → leaves all existing lines untouched and
+  appends a fresh `VAR+= token` line at the top insertion point.
+  `make` flattens it into the accumulated value at evaluation time,
+  so insertion position doesn't change the resulting value.
+
+If the new token is already present in any matched assignment, the
+op is a no-op (`mk-token-exists`); idempotent retries are safe.
+
+## append adds; it does NOT override
+
+`op: "append"` is for adding a **new** token to a list variable. It
+is NOT a way to change the *value* of an existing key inside a
+key-valued list like `PLIST_SUB`, `SUB_LIST`, `MAKE_ENV`.
+
+Concretely: if upstream has `PLIST_SUB= OSMAJOR=${OSVERSION:...}`
+and you append `PLIST_SUB+= OSMAJOR=${OSREL:R}`, both entries land
+in the flattened `PLIST_SUB`. The framework then builds a sed
+expression list with `-e s!%%OSMAJOR%%!.../g` repeated twice, and
+**sed processes `-e` flags first-match-wins**: the first
+substitution replaces every `%%OSMAJOR%%` occurrence, and the
+second `-e` has nothing left to match. Result: the upstream
+(broken) value silently wins; your "override" is dead code.
+
+For genuine "change an existing key's value" cases there is no
+`change_makefile` op today — you need a precision Makefile edit
+(future `replace_in_makefile` intent) or a patch on the generated
+Makefile.
+
 ## The `path` field
 
 `path` is the Makefile-relative filename inside the port subtree.
@@ -180,6 +217,9 @@ grep into `Mk/` is a few hundred and usually answers the question.
   unset. If upstream stopped setting the variable between releases,
   the unset becomes a no-op and you may safely drop the intent
   on the next iteration.
-- Ambiguous match (multiple assignments to the same variable) →
-  `ok=false` with `E_APPLY_AMBIGUOUS_MATCH`. Resolve by editing
-  the source overlay manually or escalating.
+- Ambiguous match (multiple assignments to the same variable) on
+  `op: "set"`, `"unset"`, or `"remove"` → `ok=false` with
+  `E_APPLY_AMBIGUOUS_MATCH`. The executor refuses to pick one of
+  several upstream assignments to rewrite. Resolve by editing the
+  source overlay manually or escalating. (`op: "append"` does
+  NOT refuse on multi-assignment — see "append semantics" above.)

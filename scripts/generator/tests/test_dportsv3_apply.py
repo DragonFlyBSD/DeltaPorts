@@ -473,6 +473,193 @@ def test_apply_plan_mk_var_token_add_appends_when_subject_present(tmp_path: Path
     assert "USES= cmake ssl" in makefile.read_text()
 
 
+def test_apply_plan_mk_var_token_add_preserves_plus_equals_operator(
+    tmp_path: Path,
+) -> None:
+    """Single-match append must preserve the original operator. Pre-fix
+    code rewrote `+=` lines as `=`, which silently changed semantics
+    when the assignment lived inside an `.if` block or relied on `+=`
+    accumulation across multiple files."""
+    makefile = tmp_path / "Makefile"
+    makefile.write_text("PORTNAME= sample\nUSES+= cmake\ndo-build:\n\t@true\n")
+    plan = Plan(
+        port="category/name",
+        ops=[
+            PlanOp(
+                id="op-1",
+                target="@main",
+                kind="mk.var.token_add",
+                payload={"name": "USES", "value": "ssl"},
+            )
+        ],
+    )
+
+    result = apply_plan(
+        plan,
+        port_root=tmp_path,
+        target="@main",
+        dry_run=False,
+        oracle_profile="off",
+    )
+
+    assert result.ok
+    assert result.op_results[0].message == "mk-token-added"
+    assert "USES+= cmake ssl" in makefile.read_text()
+    assert "USES= cmake" not in makefile.read_text()
+
+
+def test_apply_plan_mk_var_token_add_preserves_question_equals_operator(
+    tmp_path: Path,
+) -> None:
+    makefile = tmp_path / "Makefile"
+    makefile.write_text("PORTNAME= sample\nUSES?= cmake\ndo-build:\n\t@true\n")
+    plan = Plan(
+        port="category/name",
+        ops=[
+            PlanOp(
+                id="op-1",
+                target="@main",
+                kind="mk.var.token_add",
+                payload={"name": "USES", "value": "ssl"},
+            )
+        ],
+    )
+
+    result = apply_plan(
+        plan,
+        port_root=tmp_path,
+        target="@main",
+        dry_run=False,
+        oracle_profile="off",
+    )
+
+    assert result.ok
+    assert "USES?= cmake ssl" in makefile.read_text()
+
+
+def test_apply_plan_mk_var_token_add_multi_assignment_appends_new_line(
+    tmp_path: Path,
+) -> None:
+    """When multiple assignments to the same name exist, the executor
+    must not pick one to rewrite (semantics differ across `.if`
+    branches and operator mixes). Instead it appends a fresh `+=`
+    line, which `make` flattens at evaluation time."""
+    makefile = tmp_path / "Makefile"
+    original = (
+        "PORTNAME= sample\n"
+        "PLIST_SUB= ABI=foo\n"
+        "PLIST_SUB+= OSMAJOR=10\n"
+        ".include <bsd.port.mk>\n"
+    )
+    makefile.write_text(original)
+    plan = Plan(
+        port="category/name",
+        ops=[
+            PlanOp(
+                id="op-1",
+                target="@main",
+                kind="mk.var.token_add",
+                payload={"name": "PLIST_SUB", "value": "NEWKEY=val"},
+            )
+        ],
+    )
+
+    result = apply_plan(
+        plan,
+        port_root=tmp_path,
+        target="@main",
+        dry_run=False,
+        oracle_profile="off",
+    )
+
+    assert result.ok
+    assert result.op_results[0].message == "mk-token-added"
+    contents = makefile.read_text()
+    assert "PLIST_SUB= ABI=foo\n" in contents
+    assert "PLIST_SUB+= OSMAJOR=10\n" in contents
+    assert "PLIST_SUB+= NEWKEY=val\n" in contents
+
+
+def test_apply_plan_mk_var_token_add_multi_assignment_token_already_present(
+    tmp_path: Path,
+) -> None:
+    makefile = tmp_path / "Makefile"
+    original = (
+        "PORTNAME= sample\n"
+        "PLIST_SUB= ABI=foo\n"
+        "PLIST_SUB+= OSMAJOR=10\n"
+        ".include <bsd.port.mk>\n"
+    )
+    makefile.write_text(original)
+    plan = Plan(
+        port="category/name",
+        ops=[
+            PlanOp(
+                id="op-1",
+                target="@main",
+                kind="mk.var.token_add",
+                payload={"name": "PLIST_SUB", "value": "OSMAJOR=10"},
+            )
+        ],
+    )
+
+    result = apply_plan(
+        plan,
+        port_root=tmp_path,
+        target="@main",
+        dry_run=False,
+        oracle_profile="off",
+    )
+
+    assert result.ok
+    assert result.op_results[0].message == "mk-token-exists"
+    assert makefile.read_text() == original
+
+
+def test_apply_plan_mk_var_token_add_continued_assignment_appends_new_line(
+    tmp_path: Path,
+) -> None:
+    """A single matched assignment that uses line continuation must not
+    be rewritten in place — the `\\` would survive as a literal token
+    when splitting the value. Falls through to the append-new-line
+    branch, leaving the original continued block intact."""
+    makefile = tmp_path / "Makefile"
+    original = (
+        "PORTNAME= sample\n"
+        "PLIST_SUB= ABI=foo \\\n"
+        "           OSMAJOR=10\n"
+        ".include <bsd.port.mk>\n"
+    )
+    makefile.write_text(original)
+    plan = Plan(
+        port="category/name",
+        ops=[
+            PlanOp(
+                id="op-1",
+                target="@main",
+                kind="mk.var.token_add",
+                payload={"name": "PLIST_SUB", "value": "NEWKEY=val"},
+            )
+        ],
+    )
+
+    result = apply_plan(
+        plan,
+        port_root=tmp_path,
+        target="@main",
+        dry_run=False,
+        oracle_profile="off",
+    )
+
+    assert result.ok
+    assert result.op_results[0].message == "mk-token-added"
+    contents = makefile.read_text()
+    assert "PLIST_SUB= ABI=foo \\\n           OSMAJOR=10\n" in contents
+    assert "PLIST_SUB+= NEWKEY=val\n" in contents
+    # Original continued assignment must not have been collapsed.
+    assert " \\ " not in contents
+
+
 def test_apply_plan_mk_var_set_creates_before_first_include(tmp_path: Path) -> None:
     makefile = tmp_path / "Makefile"
     makefile.write_text("PORTNAME= sample\n.include <bsd.port.post.mk>\n")

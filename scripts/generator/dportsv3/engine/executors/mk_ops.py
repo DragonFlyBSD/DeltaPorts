@@ -196,13 +196,6 @@ def exec_mk_var_token_add(
 
     text, document = loaded
     intent = token_add(document, name, value)
-    if intent.ambiguous:
-        return _failed_row(
-            op,
-            code="E_APPLY_AMBIGUOUS_MATCH",
-            message=f"multiple assignments found for {name}",
-            source_path=path,
-        )
 
     if not intent.node_indices:
         # No existing assignment. Mirror make's `+=` semantics:
@@ -236,18 +229,59 @@ def exec_mk_var_token_add(
         txn.stage_write(path, updated)
         return _success_row(op, "mk-token-created")
 
-    node = document.nodes[intent.node_indices[0]]
-    tokens = [tok for tok in node.value.split() if tok]
-    if value in tokens:
-        return _success_row(op, "mk-token-exists")
-    tokens.append(value)
-    replacement = f"{name}= {' '.join(tokens)}"
-    updated = _replace_line_range(
-        text,
-        start=node.span.line_start,
-        end=node.span.line_end,
-        new_lines=[replacement],
-    )
+    # In-place token append is only safe when there's exactly one
+    # match AND the assignment is not continued (single physical line).
+    # Rewriting a continued assignment as one flat line would either
+    # (a) embed the original `\` line-continuations as literal tokens,
+    # corrupting the value, or (b) require us to reconstruct the
+    # continuation cosmetics, which we don't try to do.
+    if len(intent.node_indices) == 1:
+        node = document.nodes[intent.node_indices[0]]
+        if not node.continued:
+            tokens = [tok for tok in node.value.split() if tok]
+            if value in tokens:
+                return _success_row(op, "mk-token-exists")
+            tokens.append(value)
+            # Preserve the original operator (`=`, `+=`, `?=`, `:=`,
+            # `!=`). Flattening to `=` would silently change semantics
+            # when the original assignment is inside an `.if` block or
+            # relies on `?=` deferred-default behavior.
+            replacement = f"{node.name}{node.operator} {' '.join(tokens)}"
+            updated = _replace_line_range(
+                text,
+                start=node.span.line_start,
+                end=node.span.line_end,
+                new_lines=[replacement],
+            )
+            txn.stage_write(path, updated)
+            return _success_row(op, "mk-token-added")
+
+    # Fall through: continued single assignment, or multiple
+    # assignments. Don't try to rewrite an existing line — instead
+    # leave all matches intact and append a new `+=` line, which
+    # `make` flattens into the accumulated value at evaluation time.
+    for idx in intent.node_indices:
+        existing = document.nodes[idx]
+        if value in existing.value.split():
+            return _success_row(op, "mk-token-exists")
+
+    replacement = f"{name}+= {value}"
+    insert_before = _mk_var_set_insert_line(document)
+    if insert_before is None:
+        line_count = len(text.splitlines(keepends=False))
+        updated = _replace_line_range(
+            text,
+            start=line_count + 1,
+            end=line_count,
+            new_lines=[replacement],
+        )
+    else:
+        updated = _replace_line_range(
+            text,
+            start=insert_before,
+            end=insert_before - 1,
+            new_lines=[replacement],
+        )
     txn.stage_write(path, updated)
     return _success_row(op, "mk-token-added")
 
