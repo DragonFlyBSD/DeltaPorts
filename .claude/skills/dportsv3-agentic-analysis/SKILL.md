@@ -83,11 +83,86 @@ All under `/api/bundles/<bundle-id>/artifacts/`:
 | `analysis/patch.md` | Agent's narrative of what it did and why. |
 | `analysis/patch_audit.json` | Status, model, token usage, attempts breakdown. |
 | `analysis/rebuild_proof.json` | `rebuild_ok` + build command — the success gate. |
-| `analysis/tool_trace.jsonl` | Per-turn tool calls. Where you find inefficiencies. |
+| `analysis/tool_trace.jsonl` | Per-turn tool calls + their results, lifecycle events (`attempt_start`, `llm_turn`, `tool_call`, `attempt_end`, `token_budget_exhausted`). Cheap inefficiency scan. **Does NOT contain assistant message text or `reasoning_content`** — for that, read the session dumps below. |
+| `analysis/sessions/*.jsonl.gz` | **Full LLM message transcripts** (one file per attempt per job). The single most informative artifact: every assistant turn's `content` + `reasoning_content`, every `tool_calls` entry with full arguments, every tool result message the model actually received. Read these when tool_trace.jsonl isn't enough — i.e. whenever you need to understand *why* the agent did what it did, not just what tools fired. Available only when `DP_HARNESS_DUMP_SESSION` was on at run time. See below for record structure + parsing. |
 | `analysis/changes.diff` | The diff operators would land. **Empty diff with `rebuild_ok=true` is always a bug** (legacy flow). In intent flow this is derived from `intent_log.json`. |
 | `analysis/intent_log.json` | **Canonical record of an intent-flow patch attempt** (Step 25). Schema: `{schema_version, origin, target, mode_at_apply, baseline_commit, intents: [{seq, intent, applied_at, ok, substrate_diff, error}]}`. Present iff the agent used the intent DSL. When present, this — not `changes.diff` — is the source of truth verify-fix replays. |
 | `analysis/proposed_fix.md` | Operator-facing summary the tracker generates. |
 | `port/Makefile`, `port/distinfo`, `port/pkg-plist` | Snapshot of the port at failure time. |
+
+### LLM session dumps — structure and parsing
+
+Each `analysis/sessions/<timestamp>-<target>-<origin>-<pid>[-<role>].job.attempt<N>.jsonl.gz` is the complete `messages` array as it stood at the end of one tool_loop attempt. The filename embeds:
+
+- the role suffix: `-convert`, `-patch`, or no suffix for triage
+- attempt number: `attempt1`, `attempt2` (patch can retry, convert/triage are single-attempt)
+
+Decompressed: one JSON object per line, each a message in the LLM-API shape:
+
+```json
+{"role": "system", "content": "<system prompt verbatim>"}
+{"role": "user", "content": "<initial task payload, plus any failure-context message inserted at attempt N>1>"}
+{"role": "assistant", "content": "<text>", "reasoning_content": "<deepseek thinking>", "tool_calls": [...]}
+{"role": "tool", "content": "<JSON tool result>", "tool_call_id": "..."}
+```
+
+What each role tells you:
+
+- **system (record 0):** the exact prompt the agent saw. Verify any prompt-rule reference (e.g. "the agent went to /work/DPorts despite the prompt saying not to") by grepping the system content.
+- **user (record 1):** the assembled payload. **Always check `len(content)`** — anything >50KB warrants a section-by-section breakdown by `## heading`. Common offenders: `## Build Errors` (dsynth log tail), `## Port Files` (every file under port/ inlined), `## Agent Playbooks` (matched playbook content).
+- **user (record 2+, attempt 2+ only):** the failure-context message from `attempt_loop._failure_context_message` (worker.py-side). Contains the prior attempt's response tail + the intent log summary. If the agent re-submits an intent that already failed in attempt 1, this is where the lesson was shipped — verify it's being read.
+- **assistant:** the agent's per-turn output. Three fields you care about:
+  - `content` (text the model wrote) — usually small except in the final "## Patch Log / ## Rebuild Proof" turn.
+  - `reasoning_content` (deepseek thinking-mode output) — often the largest single field. **Carried on every subsequent turn** per deepseek's contract, so accumulates quadratically. A 13KB single-turn reasoning blob is ~3K tokens × every remaining turn.
+  - `tool_calls` — array of `{id, function: {name, arguments}}`. The arguments are JSON-stringified; parse before inspecting.
+- **tool:** the JSON result the model received. Contents match what `worker.py` returned: `{ok, ...}`. For materialize_dports: `stdout_tail` is what the agent reads to decide the apply landed. For intent_reference: `{schema, playbooks}`. For apply_intent: `{ok, intent_type, paths_changed, substrate_diff, error, mode}`.
+
+Fetch + decompress in the same shell pipeline as the rest:
+
+```sh
+BID=<bundle-id>
+"$DPORTSV3" tracker get-bundle "$BID" --jobs --json | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+for a in d.get('artifacts',[]):
+    if 'sessions/' in a['relpath']:
+        print(a['relpath'])
+" | while read rel; do
+    out="$(basename "$rel")"
+    "$DPORTSV3" tracker fetch-artifact "$BID" "$rel" > "$out" 2>/dev/null
+    gunzip -k "$out"   # keep both .gz and decompressed
+done
+```
+
+Walking a session (Python, one-shot):
+
+```python
+import json
+recs = [json.loads(l) for l in open('<file>.jsonl') if l.strip()]
+print(f"records={len(recs)} system={len(recs[0]['content'])}B user={len(recs[1]['content'])}B")
+for i, r in enumerate(recs):
+    if r['role'] in ('system','user'): continue
+    if r['role'] == 'assistant':
+        tcs = [t['function']['name'] for t in (r.get('tool_calls') or [])]
+        rc = r.get('reasoning_content') or ''
+        print(f"#{i} ASST text={len(r.get('content') or '')}B reason={len(rc)}B tools={tcs}")
+        # show big reasoning blobs
+        if len(rc) > 1000:
+            print(f"  R: {rc[:400].replace(chr(10),' ')!r}...")
+    elif r['role'] == 'tool':
+        try:
+            d = json.loads(r['content']); ok = d.get('ok')
+        except Exception:
+            ok = None
+        print(f"#{i} TOOL ok={ok} sz={len(r['content'])}B")
+```
+
+When tool_trace.jsonl is enough vs. when you need session dumps:
+
+- **tool_trace alone suffices for:** "which tools fired in what order", "did the agent call dsynth_log after build failure", "how many intents were applied", basic efficiency scan.
+- **Need session dumps for:** "why did the agent go down path X" (reasoning_content), "what did the agent actually observe in the materialize summary" (full tool result content vs. trace's truncated keys), "did the agent see the failure-context message between attempts" (user-record-2 in attempt 2), "what was the static prompt's exact text" (system record). Anything that requires understanding the agent's mental model needs the session dump.
+
+A session dump may not exist for older bundles or bundles run without `DP_HARNESS_DUMP_SESSION=1`. The text format of `analysis/tool_trace.jsonl` is always present and is the fallback.
 
 **Bulk-fetch the bundle in ONE shell command, not N small calls.**
 
@@ -234,36 +309,89 @@ Two attachment paths to keep straight when analyzing a bundle:
 
 For each bundle, work through these questions and write the report against them. Skip ones that don't apply, but say so.
 
-### 1. Triage correctness
+### 1. Pipeline shape
+
+Before drilling into per-job correctness, sketch the pipeline. The canonical flows are:
+
+- Patch only (no convert needed): triage → patch. One triage session.
+- Convert-then-patch: triage → convert → triage (re-classifies against the converted substrate) → patch. **Two triage sessions** is expected here, not a bug.
+- Convert only (substrate-only fix): triage → convert. No patch session.
+- Convert failed: triage → convert (gave up / budget). No patch session.
+
+List every job that ran with `dportsv3 tracker get-bundle <id> --jobs --json`. The `jobs` array carries each job's type, state, retire_reason. Two triages with identical classifications is normal (convert didn't change the failure shape); two triages with *different* classifications is a substrate change worth narrating.
+
+### 2. Triage correctness
 - Does the classification match what `logs/errors.txt` actually shows? (e.g. a fetch failure misclassified as compile-error is a triage bug.)
 - Is the confidence appropriate?
 - Did snippet rounds happen, and were they useful? (Look for `snippets/round_N/` artifacts.)
+- If two triage rounds ran (pre-convert + post-convert), did classifications change between them? If yes, note why — typically the convert promoted compat→dops which changes the substrate's failure expression.
+- Record each triage's token usage; the second triage often duplicates the first when convert didn't change failure shape (cheap re-run, expected).
 
-### 2. Patch correctness
+### 3. Convert correctness (if a convert job ran)
+- Status from `analysis/convert_result.json`: `verified` / `failed` / `no_conversion_proof_block`. `reapply_ok=true` means convert produced a valid overlay that compose accepts.
+- **Verify `target @any` in the produced overlay.** Read `analysis/changes.diff` or grep the env's `overlay.dops` for the header. Anything other than `target @any` is a regression of the post-2026-05-26 fix (commits `d71f605c206` + `47846e7a392` for convert, `b01b7d4e9b3` for the patch agent's intent translator). `@main` in a fresh overlay means every op will silently skip at compose against `@2026Q2` (per `engine/apply.py:296-313`).
+- Deferred patches: list `deferred_patches` from convert_result. Each entry says what the dropped framework patch was DOING (intent, not authority). The downstream patch agent should emit a `deferred_verdicts` entry for each one — verify it does.
+- Tokens, attempts. Convert's budget is tighter than patch's; a convert that hit `budget-exhausted` after one validate_dops parse error is a known weak spot.
+
+### 4. Patch correctness
 - Did the agent reach `rebuild_ok=true`?
 - Does the **fix actually fix the root cause**, or did it bypass the problem? (E.g. removing a patch the agent declared obsolete vs. actually adapting it — both may produce `rebuild_ok=true`, but only one is right. Cross-check `patch.md`'s reasoning against the upstream code it read.)
 - For dops-mode ports: did the agent edit `overlay.dops` (correct) or `dragonfly/*` files directly (wrong, edits will be clobbered)?
 - For compat-mode ports (legacy flow): did the agent run `install_patches` after `genpatch`?
 - **Intent flow:** does the intent sequence make sense? Did the agent escalate when blocked (e.g. on `intent_log_full`, `substrate_invariant`, `transaction_mode_drift`) or did it keep retrying? Did it pick the right intent type for the fix shape (e.g. `drop_patch` for an obsolete patch, not a no-op `replace_in_patch`)?
+- **Turn-to-first-apply_intent.** Count tool turns from session start to the first `apply_intent` (or note 0 if none emitted). Floor on a clean dops success appears to be ~13-15 turns (3 opening + ~6 investigation + 2-5 intent_reference). Values >20 suggest over-exploration; 0 means the agent never committed to a hypothesis (paralysis — flag).
+- **Self-correction.** Count intents emitted and later explicitly reversed within the same attempt — `drop_patch` immediately after an `add_patch` for the same target, etc. One self-correction per run is healthy (the agent learned from compose/build feedback). Many self-corrections suggest the agent is thrashing; zero self-corrections paired with `budget-exhausted` may mean the agent never tried anything concrete enough to fail informatively.
+- **Pre-emptive `intent_reference` batching.** Count intent_reference calls for types the agent never invoked. Each unused reference is ~3-6KB of context carry for no gain. The discipline rule says "call before each new intent type" — it does not sanction fetching types you haven't committed to.
 
-### 3. Output contract
+### 5. Path discipline (scan tool calls)
+- Reads of `/work/DPorts/<origin>/...`? Per `prompts.py PATCH_INTENT_SYSTEM` the agent may NOT read from this path — it's the LOCK ROOT, last-known-good, will disagree with extract output. Reading it isn't immediately catastrophic (often the lock root content happens to match current state) but reflects the agent confusing the directory layout. Note every occurrence.
+- Reads of `/xports/...` or any other chroot-internal path that isn't under `/work/`? Tools fail with `ValueError: path must be under /work` (worker.py:163-178). One occurrence = honest mistake; multiple = the agent didn't read the build log's path notation correctly.
+- Hand-constructed `/work/obj/<origin>/...` paths that didn't come from `extract`'s `wrksrc` field? The prompt explicitly forbids constructing these. Compare against `extract`'s `wrksrc` return value.
+- Host-side path leaks: tools returning host paths (e.g. `/root/.cache/dports-dev/...`) that the agent then passes to chroot-path-expecting tools. `genpatch`'s `output_dir` return was a known case (worker.py:2389).
+
+### 6. Materialize cycle signal (P0a/P0b regression check)
+For every `materialize_dports` call (each attempt typically has 1-3), check the `summary:` line in `stdout_tail`:
+
+- `applied=N>0` — ops actually applied to the compose tree. Healthy.
+- `applied=0` with `skipped>0` — ops were filtered by target mismatch. **Expect the `I_COMPOSE_DOPS_ALL_OPS_SKIPPED` warning in the same stage line** (per the P0b commit `663a8eae819`). If the warning is present, surface it; the agent should see it too. If `applied=0 skipped>0` but the warning is absent, that's a regression of P0b.
+- `applied=0` with `errors>0` — at least one op failed (parser, executor error). Distinct from skipping; check `dops_failed_op_results` in compose report.
+- `applied=N>0` and `skipped=0` on a freshly-created overlay confirms P0a is functioning (the intent translator's `_initial_overlay_header` is emitting `target @any` per commit `b01b7d4e9b3`).
+
+If you see `target @main` in any agent-emitted overlay.dops, that's a P0a regression — flag immediately.
+
+### 7. Build verification (after dsynth_build)
+- After `dsynth_build` returns `rebuild_ok=true`, did the agent verify by grepping the extracted source for the original error symptom, or rely on the tool exit code alone? For deterministic failures (linker duplicate symbol, missing-include compile error), trusting exit code is fine. For symptom classes where multiple bug sites can produce the same error (e.g. `__result` undefined in N headers), grep-the-symptom catches incomplete fixes.
+- After `dsynth_build` failed, did `dsynth_log` immediately follow? The prompt says to call it immediately on build failure. If the agent went back to exploring instead, that's a discipline regression.
+- Did the agent run `dsynth_build` at least once? `budget-exhausted` with zero build calls is the worst possible signal — the agent never tested anything, never learned from substrate feedback, just analyzed.
+
+### 8. Output contract
 - Is `analysis/changes.diff` non-empty when `rebuild_ok=true`?
 - Does `proposed_fix.md` give the operator a usable recipe?
 - Does the diff actually match what `patch.md` says was changed?
 
-### 4. Efficiency
-- Token usage vs. tier budget — was the loop expensive relative to the fix size?
+### 9. Efficiency — quantitative breakdown
+Don't say "the loop was expensive". Break it down:
+
+- **Static prompt cost.** Sizes of `messages[0]` (system) + `messages[1]` (initial user). Multiply by turn count for the per-turn ceiling. On a clean ASSIST run this is typically 35-50% of total tokens; on bloated cases (>50KB user prompt) it dominates.
+- **User prompt composition.** When the user prompt is >50KB, break it by `## section` heading and flag oversized sections (>10KB) the agent never read via subsequent tool calls. Common offender: `## Port Files` which inlines every file under port/; the agent has `get_file` and can pull on demand.
+- **Reasoning_content accumulation.** Sum `reasoning_content` byte sizes across all assistant turns. Note single-turn outliers (>5KB is a "thinking hard" turn — fine on hard ports, suspicious on simple ones). Deepseek thinking-mode requires reasoning_content carry on every subsequent turn, so this accumulates quadratically; a 13KB single-turn reasoning blob is ~3KB tokens × N remaining turns = N×3KB of additional prompt.
+- **Tool result carry.** Identify the top-3 biggest tool returns by byte size. Each `dsynth_log` is ~10-16KB, each `intent_reference` is ~3-6KB. A 16KB result carried across 10 subsequent turns is ~40K tokens.
+- **Completion.** Usually small unless the agent wrote a long Patch Log.
+- **Sum the per-turn prompt sizes** (from the `llm_turn` activity events if present, or estimate as static + cumulative reasoning + cumulative tool results). Compare to `patch_result.tokens_total` — a big discrepancy may indicate the trace is missing entries.
+
+Other efficiency checks:
 - Redundant tool calls — e.g. multiple `emit_diff` calls in a row, or `materialize_dports` called twice when once would do.
 - Did the agent re-read files it had already read?
 - Did it call tools with the wrong args (e.g. passing origin where relpath was expected)?
 
-### 5. Playbook coverage (Step 27)
+### 10. Playbook coverage (Step 27)
 - Did `playbooks_selected` fire for each role this bundle ran? (triage always; patch if it reached patch; convert if it's a convert bundle.)
 - Does `included` look right for the bundle's classification + detected toolchains? Empty `included` on a port with recognized USES= is a red flag — investigate.
 - For each distinct `intent_type` the agent emitted, was there a preceding `intent_reference(intent_type=X)` tool call in the trace? Skipping it is a discipline regression worth a note.
 - Does the `skipped_sample` reveal a likely-buggy entry (e.g. a `toolchain-cmake.md` skipped with `toolchains:no-overlap-with-['cmake']` when the port's Makefile clearly has `USES=cmake`)? That points at `detect_toolchains()` not seeing the Makefile.
+- Caveat: the text-format `playbooks_selected` activity row only shows counts (`included=N skipped=M`), not filenames. To verify which entries fired you may need raw activity event payloads; if unavailable, treat the count as black-box and note the gap.
 
-### 6. Lifecycle hygiene
+### 11. Lifecycle hygiene
 - Was this port previously bundled? (Scan `/agentic` for older timestamps.) If so, did the loop converge or thrash?
 - If MANUAL tier: was the classification one that should have been AUTO/ASSIST?
 
@@ -287,6 +415,12 @@ Patterns seen in the wild. When you see a new one, append it here and flag it in
 - **Knowledge gap: `.for`-parsed Makefile list variables and value-with-spaces.** Variables like `BINARY_ALIAS`, `MAKE_ENV`, `PLIST_SUB` are iterated by `.for var1 var2 in ${VAR}` which tokenizes on whitespace and expects N words per row. A value with an embedded space (e.g. `BINARY_ALIAS=gmd5sum=md5 -r`) produces the compose error `Wrong number of words (N) in .for substitution list with M variables`. No current playbook or prompt warns about this; the agent typically misdiagnoses by toggling flags rather than escaping the value or switching to a wrapper script. Worth adding a "value tokenization" note to `intent-change_makefile.md` and/or a new `error-for-substitution-list.md`.
 - **Attempt-boundary amnesia.** When attempt 1 fails on a specific value and attempt 2 receives a fresh context, the agent sometimes re-emits the exact same intent that already failed in attempt 1's first turn. Suggests the attempt-2 system prompt's "prior failures" section either doesn't carry the intent sequence in a form the model attends to, or the model treats attempt boundaries as a hard reset. Confirmed in `databases_redis-20260526-205826Z`: seq 0 (attempt 1) and seq 2 (attempt 2) emit identical `change_makefile(BINARY_ALIAS=gmd5sum=md5 -r)` intents.
 - **Premature `materialize_dports` on the consumer origin before the provider overlay is activated.** When a port uses `MASTERDIR` (or otherwise shares compose artifacts with a sibling origin), the agent sometimes materializes the *consumer* origin immediately after writing the dops overlay for the *provider*, before materializing the provider itself. Compose runs against the wrong origin, shows `modes: compat=1`, and the wasted call is only caught because the agent then self-corrects with a second call to the right origin. Seen in `multimedia_v4l_compat-20260523-101601Z` turn 13: agent wrote `overlay.dops` for `multimedia/libv4l`, then materialized `multimedia/v4l_compat` (the consumer), got compat-mode compose, then re-materialized `multimedia/libv4l`. Prompt should steer the agent to always `materialize_dports` the origin that owns `overlay.dops` first; the MASTERDIR consumer can ride the shared compose artifacts.
+- **Target-mismatch ghost (`target @main` in fresh overlay → all ops silently skipped).** When the patch agent's intent translator emits a fresh `overlay.dops`, the header used to default to `target @main` (`_dops.py:672` pre-fix). Compose runs against `@2026Q2` (or whatever the env's build target is); per `engine/apply.py:296-313` every op with `target=@main` is filtered with `status="skipped"` and an `info`-level `I_APPLY_TARGET_MISMATCH` diagnostic that didn't bubble to stage output. The `summary applied=0` reads as "patch didn't take" and the agent typically diagnoses it as a compose bug, burning ~600K tokens chasing the ghost. **Fixed by commits `b01b7d4e9b3` (default `target @any`) + `663a8eae819` (compose stage warning `I_COMPOSE_DOPS_ALL_OPS_SKIPPED`).** When analyzing a bundle: verify the fresh overlay has `target @any` and that the warning fires on any dead overlay. Confirmed in skalibs / libfyaml / gnome_subr 20260601 bundles.
+- **Intent-flow: `add_patch` for a wrksrc-only target ships the wrong overlay shape.** When the patch's target file lives inside the distfile (`Makefile.in`, `configure`, `src/*.c`, source headers — anything not in the port subtree), `add_patch` writes the patch file correctly but inserts `patch apply <path>` into `overlay.dops`. That directive applies at compose time against `port_root` (the compose tree), where the target file doesn't yet exist. Compose fails with `E_COMPOSE_APPLY_FAILED / No file to patch`. Correct shape: `add_file kind=materialize` (which emits `file materialize <path> -> <path>` so bsd.port.mk applies the patch during do-patch against wrksrc). Agent typically self-corrects in 2-3 turns, costing ~2 intents + 1 failed materialize. Worth flagging in `intent_reference(add_patch)` to prevent the detour. Confirmed in `devel_libuv-20260601-222117Z` seq 2→3→4.
+- **`drop_patch` leaves the patch file orphaned on disk.** Removes the overlay reference (the `patch apply` or `file materialize` line) but doesn't delete the file under `dragonfly/`. A subsequent `add_patch` with the same target then fails with "patch already exists" (seen on older skalibs). Workaround the agent sometimes finds: `add_file kind=materialize source=<orphaned path>` re-wires the existing file without re-writing it. Real fix: `drop_patch` should also delete the file, or expose `also_remove_file`. Confirmed in `devel_libuv-20260601-222117Z` turn 45.
+- **Analysis paralysis — 0 intents emitted, 0 dsynth_build calls, full ASSIST budget consumed.** Agent investigates indefinitely without committing a hypothesis. Often correlated with: (a) a complex `## Deferred from Convert` section that invites verdict-first investigation, (b) a port class where the agent can't easily map the bug to an intent type, (c) the prompt's "4+ tool calls without an intent = drifting" rule failing to fire (it's soft, no enforcement). The agent never gets concrete substrate feedback because it never tested anything. Reasoning_content can hit 50K+ chars total across the session. Confirmed in `lang_python311-20260601-222113Z`. Flag: count of `apply_intent` calls and count of `dsynth_build` calls; both zero with `budget-exhausted` is the signature.
+- **Static-prompt bloat from `## Port Files` section.** The runner inlines every file under `port/<origin>/` into the user prompt regardless of whether the agent will read it. On ports with many `files/patch-*` + a giant pkg-plist (python311's was 533KB; the inlined section was 48KB of a 96KB user prompt), this section can dominate the static prompt and re-ship 10-12K tokens per turn for files the agent never queries. The agent has `get_file` and can pull on demand; pre-emptive inlining pays a quadratic cost. Confirmed in `lang_python311-20260601-222113Z`.
+- **Pre-emptive `intent_reference` batching.** Agent fetches references for multiple intent types upfront (3-5 calls) before committing to any. Even on a successful run, typically 2-3 of those types are never invoked. Each unused reference is 3-6KB of context carry. The discipline rule says "call before each new intent type" — it doesn't sanction speculative pre-fetching. Confirmed in `devel_libuv-20260601-222117Z` turns 22-28: 5 intent_reference calls, 3 never used.
 
 ## Report shape
 
@@ -298,10 +432,25 @@ Produce something like this (markdown, no fluff):
 ## Summary
 <2-3 sentences: what the agent tried to do, did it land, is the result trustworthy>
 
+## Pipeline
+<which jobs ran, in order, with state>
+- triage-1: <classification> (<tokens>)
+- convert: <status> (<tokens>)        ← if convert ran
+- triage-2: <classification> (<tokens>) ← if convert ran; same/different from triage-1?
+- patch: <status>, attempts=N (<tokens>)
+
 ## Triage
 - Classification: <X> (confidence: <Y>) — <assessment: correct / questionable / wrong>
 - Root cause as stated: <quote>
 - Actual root cause from logs: <if different>
+- Round changes: <if 2 triages, same/different conclusion, why>
+
+## Convert (if convert ran)
+- Status: <verified / failed / no-op>
+- reapply_ok: <true / false>
+- Overlay target directive: <@any (correct) / @main (REGRESSION of b01b7d4e9b3) / other>
+- Deferred patches: <count> [<paths>]
+- Tokens: <prompt / completion / total>
 
 ## Patch
 - Status: <success / needs-help / budget-exhausted>
@@ -314,6 +463,25 @@ Produce something like this (markdown, no fluff):
 - Fix narrative: <what patch.md claims>
 - Fix verdict: <is the fix real?>
 
+## Per-bundle metrics
+- Turn-to-first-apply_intent: <N> (floor ~13-15 on clean dops success; 0 = paralysis)
+- Intents emitted: <N> / Intents reversed mid-attempt: <M> (self-correction count)
+- intent_reference calls: <N> / for types never invoked: <K> (pre-emptive batching cost)
+- dsynth_build calls: <N> (must be ≥1 for any meaningful run)
+- After dsynth_build success/fail, verification approach: <tool exit code only / grep extracted source for symptom / no build run>
+
+## Materialize signal (P0a/P0b regression check)
+- materialize_dports calls: <N>
+- Each call's summary: <applied=N skipped=M errors=K, warnings present>
+- I_COMPOSE_DOPS_ALL_OPS_SKIPPED: <absent on every materialize (healthy) / present on N calls (overlay target mismatch)>
+- Any fresh overlay with `target @main`? <yes/no> (yes = P0a regression — flag immediately)
+
+## Path discipline
+- /work/DPorts/<origin> reads: <count> (forbidden; lock root)
+- /xports/ or other non-/work paths passed to chroot tools: <count>
+- Hand-constructed /work/obj paths not derived from extract.wrksrc: <count>
+- Host-side path leaks (e.g. genpatch output_dir confusion): <count>
+
 ## Output contract
 - changes.diff: <bytes> — <ok / empty-bug / mismatched>
 - intent_log.json (intent flow): <N intents, M ok> — <canonical / canonical_log_broken / missing>
@@ -323,7 +491,14 @@ Produce something like this (markdown, no fluff):
 - Triage: included=<list or "—">, skipped=<count> — <looks right / suspicious / missing event>
 - Patch: included=<list or "—">, skipped=<count> — <…>
 - Convert (if convert bundle): included=<list>, skipped=<count> — <…>
-- `intent_reference` discipline: <every intent type preceded by ref / N skips: …>
+- `intent_reference` discipline: <every emitted intent type preceded by ref / N skips: …>
+
+## Token shape
+- Static prompt (system + user): <bytes> ≈ <tokens>/turn × <N> turns = <subtotal>
+- User prompt composition (if >50KB): break down by `## section`, flag sections >10KB the agent never read
+- Reasoning_content cumulative: <chars>; single-turn outliers >5KB: <list>
+- Top-3 biggest tool returns: <name, bytes>
+- Estimated breakdown by source vs. actual total from `patch_result`: <static/reasoning/tool_carry/completion percentages>
 
 ## Inefficiencies
 - <bullets>
@@ -339,7 +514,7 @@ Produce something like this (markdown, no fluff):
 - <anything this analysis surfaced that this SKILL.md should have warned about>
 ```
 
-Keep it terse. The operator skims this.
+Keep it terse. The operator skims this. Per-bundle metrics + materialize signal + path discipline are the *minimum* data set — every bundle gets these even when nothing surprising shows up, so we can spot drift over time.
 
 ## Delegating to a subagent
 
