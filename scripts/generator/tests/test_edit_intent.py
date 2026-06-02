@@ -511,10 +511,16 @@ class TestDopsRenderers:
         assert "mk unset FOO\n" in overlay_text + "\n"  # exact line
         assert "ignored-by-translator" not in overlay_text
 
-    def test_change_makefile_unset_strips_prior_mk_set(self, t):
-        """unset-after-set on the same key should leave only the
-        ``mk unset`` line — the prior ``mk set`` is scrubbed so the
-        overlay doesn't carry a contradictory set+unset pair."""
+    def test_change_makefile_unset_preserves_prior_mk_set(self, t):
+        """unset-after-set on the same key keeps BOTH lines in the
+        overlay. The engine processes ops in order with last-wins,
+        so set-then-unset produces the right end state (FOO is set
+        then deleted from the composed Makefile). Scrubbing the
+        prior set would leave only ``mk unset FOO`` which fails at
+        compose with ``assignment not found`` when upstream doesn't
+        define FOO either — turning a logically-correct sequence
+        into a compose error. The aesthetic concern of carrying
+        both lines on disk is dominated by the correctness gain."""
         r1 = t.apply({
             "type": "change_makefile", "path": "Makefile",
             "key": "BAR", "value": "old", "op": "set",
@@ -526,9 +532,14 @@ class TestDopsRenderers:
         })
         assert r2.ok is True
         overlay_text = t.port_path("overlay.dops").read_text()
-        # Prior mk set is gone, only the unset remains.
-        assert "mk set BAR" not in overlay_text
+        # Both lines remain — the engine handles ordering.
+        assert 'mk set BAR "old"' in overlay_text
         assert "mk unset BAR" in overlay_text
+        # And specifically: unset comes AFTER set (the order the
+        # engine planner relies on for last-wins semantics).
+        set_pos = overlay_text.index('mk set BAR "old"')
+        unset_pos = overlay_text.index("mk unset BAR")
+        assert set_pos < unset_pos
 
     def test_change_makefile_rejects_op_unset_with_required_value(self):
         """Negative: set/append/remove still require value. Schema

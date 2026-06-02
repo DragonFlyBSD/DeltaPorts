@@ -401,18 +401,23 @@ def change_makefile(t, intent: ChangeMakefile):
     "last wins." Stripping keeps the substrate clean and makes a
     re-emit a true replace. ``op=append`` / ``op=remove`` keep the
     plain-append behavior — multiple ``mk add`` / ``mk remove`` for
-    the same key are semantically distinct (list operations). For
-    ``op=unset`` we strip any prior ``mk set <KEY>`` for the same
-    key too, since unset-after-set in the same overlay would be a
-    contradictory pair on disk (functionally last-wins delete, but
-    semantically clearer to remove both lines).
+    the same key are semantically distinct (list operations).
+
+    ``op=unset`` is plain-append too, deliberately NOT scrubbing
+    any prior ``mk set <KEY>`` from the overlay. Reason: the engine
+    processes ops in order, so a set-then-unset pair on the same
+    key produces the right end state (set runs, FOO=bar lands in
+    the composed Makefile; unset finds FOO in the file and deletes
+    it; net: FOO not present). Scrubbing the prior set would leave
+    only ``mk unset FOO`` on disk — which fails at compose time
+    with ``assignment not found`` if upstream doesn't define FOO
+    either (a variable the agent invented in a prior intent). The
+    aesthetic concern of carrying both lines is dominated by the
+    correctness gain.
     """
     if intent.op == "unset":
         stmt = f"mk unset {intent.key}"
-        # Drop any previous `mk set <KEY>` so the overlay doesn't
-        # carry both set and unset for the same variable.
-        strip = _strip_existing_mk_set(intent.key)
-        return _append_overlay(t, "change_makefile", [stmt], prefilter=strip)
+        return _append_overlay(t, "change_makefile", [stmt])
     action = {"set": "set", "append": "add", "remove": "remove"}[intent.op]
     stmt = f"mk {action} {intent.key} {_quote_dops_string(intent.value)}"
     strip = _strip_existing_mk_set(intent.key) if intent.op == "set" else None

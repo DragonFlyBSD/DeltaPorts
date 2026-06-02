@@ -175,13 +175,17 @@ references them.
 Edit a Makefile variable.
 
 **Required:** `path` (relpath, e.g. `Makefile.DragonFly` or
-`Makefile`), `key` (var name), `value` (string),
-`op` (`"set"` | `"append"` | `"remove"`).
+`Makefile`), `key` (var name),
+`op` (`"set"` | `"append"` | `"remove"` | `"unset"`). `value` is
+required for set/append/remove and optional (ignored) for unset.
 
 **Compat render:** parse the Makefile, apply the op, write back.
 **Dops render:** emit
-`mk.var.set { var=<key>, value=<value> }` (or `.append` / `.remove`)
-into `overlay.dops`.
+`mk set <KEY> "<value>"` (or `mk add` / `mk remove` / `mk unset`)
+into `overlay.dops`. `mk unset <KEY>` deletes the variable's
+assignment line from the composed Makefile at compose time —
+symmetric inverse of `mk set`, used to drop an upstream
+assignment that's wrong for our target.
 
 **Expected diff:** single-file Makefile modification (compat);
 single-line dops addition (dops).
