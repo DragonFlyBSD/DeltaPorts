@@ -1,0 +1,9 @@
+target @any
+port devel/libunistring
+type port
+reason "auto-converted from Makefile.DragonFly"
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e '/= EOWNERDEAD/d' -e '/= ENOTRECOVERABLE/d' \
+		${WRKSRC}/tests/test-errno-h.c
+MK1
