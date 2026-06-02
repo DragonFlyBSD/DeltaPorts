@@ -747,6 +747,12 @@ _SESSION_RELPATH_RE = re.compile(
     r"^analysis/sessions/[^/]+\.jsonl(\.gz)?$"
 )
 
+# Parse the attempt number from a session filename. Convention:
+# ``<ts>-<target>-<origin>-<pid>[-<role>].job.attempt<N>.jsonl[.gz]``.
+# We only need the N to filter tool_trace events for this session's
+# attempt — the rest of the components are documentary.
+_SESSION_ATTEMPT_RE = re.compile(r"\.attempt(\d+)\.jsonl(?:\.gz)?$")
+
 # Split user prompt into ``## heading`` sections so the byte-budget
 # of each section is visible. Headings start at column 0.
 _SECTION_HEADING_RE = re.compile(r"^##\s+(.+)$", re.MULTILINE)
@@ -829,24 +835,114 @@ def _parse_session_records(
     return records
 
 
-def _summarize_tool_result(content: str) -> dict[str, Any]:
+# Per-tool summarizers. Each function takes the parsed result dict and
+# a summary dict to mutate. Kept small and explicit — the previous
+# heuristic chain was order-sensitive because tool return shapes
+# overlap on incidental keys (e.g. extract carries stdout_tail + wrksrc;
+# dsynth_log carries rc + log_path + tail). Per-tool dispatch keyed on
+# the calling tool's name removes the overwrite footgun.
+
+def _summary_materialize_dports(
+    data: dict[str, Any], summary: dict[str, Any],
+) -> None:
+    """materialize_dports / reapply output. The ``summary: applied=N``
+    line is the operator's most-load-bearing signal (misreading it
+    drives the visibility-ghost failure mode). Both the summary line
+    and any ``top_warning_codes:`` row are captured."""
+    tail = data.get("stdout_tail") or ""
+    for line in tail.splitlines():
+        ls = line.lstrip()
+        if ls.startswith("summary:"):
+            summary["headline"] = ls
+        elif ls.startswith("top_warning_codes:"):
+            summary["warnings_line"] = ls
+
+
+def _summary_extract(
+    data: dict[str, Any], summary: dict[str, Any],
+) -> None:
+    """extract — surface the wrksrc so the operator knows where the
+    extracted source landed."""
+    if data.get("wrksrc"):
+        summary["headline"] = f"wrksrc={data['wrksrc']}"
+
+
+def _summary_dsynth_build(
+    data: dict[str, Any], summary: dict[str, Any],
+) -> None:
+    """dsynth_build — rebuild_ok + rc + log path."""
+    bits: list[str] = []
+    if "rebuild_ok" in data:
+        bits.append(f"rebuild_ok={data['rebuild_ok']}")
+    if "rc" in data:
+        bits.append(f"rc={data['rc']}")
+    if data.get("log_path"):
+        bits.append(f"log={data['log_path']}")
+    if bits:
+        summary["headline"] = " ".join(bits)
+
+
+def _summary_dsynth_log(
+    data: dict[str, Any], summary: dict[str, Any],
+) -> None:
+    """dsynth_log — log_path + size of the tail payload."""
+    tail = data.get("tail") or ""
+    summary["headline"] = f"log_tail {len(tail)}B"
+
+
+def _summary_apply_intent(
+    data: dict[str, Any], summary: dict[str, Any],
+) -> None:
+    """apply_intent — intent_type + paths_changed count + diff size
+    + mode."""
+    bits = [str(data.get("intent_type") or "?")]
+    if "paths_changed" in data:
+        bits.append(
+            f"paths_changed={len(data.get('paths_changed') or [])}"
+        )
+    if data.get("substrate_diff"):
+        bits.append(f"diff={len(data['substrate_diff'])}B")
+    if "mode" in data:
+        bits.append(f"mode={data['mode']}")
+    summary["headline"] = " ".join(bits)
+
+
+def _summary_intent_reference(
+    data: dict[str, Any], summary: dict[str, Any],
+) -> None:
+    """intent_reference — intent_type + count of matched playbook
+    entries. The full schema sits in the raw collapsible."""
+    bits = [str(data.get("intent_type") or "?")]
+    if isinstance(data.get("playbooks"), list):
+        bits.append(f"playbooks={len(data['playbooks'])}")
+    summary["headline"] = " ".join(bits)
+
+
+_TOOL_SUMMARIZERS: dict[str, Any] = {
+    "materialize_dports": _summary_materialize_dports,
+    "materialize_dports_with_report": _summary_materialize_dports,
+    "extract": _summary_extract,
+    "dsynth_build": _summary_dsynth_build,
+    "dsynth_log": _summary_dsynth_log,
+    "apply_intent": _summary_apply_intent,
+    "intent_reference": _summary_intent_reference,
+}
+
+
+def _summarize_tool_result(
+    content: str, *, tool_name: str | None = None,
+) -> dict[str, Any]:
     """Extract the most operator-relevant fields from a tool result.
 
     Tool results are JSON-stringified worker return dicts. The template
     wants a quick at-a-glance summary (ok pill, key fields, error
     excerpt) before the operator decides to expand the full content.
 
-    Specific tools whose return shape is well-known get hand-picked
-    headline fields:
-      - materialize_dports: stdout_tail's `summary: applied=N skipped=M`
-        line surfaced raw (incl. any I_COMPOSE_DOPS_ALL_OPS_SKIPPED
-        warning), since misreading this drives the visibility-ghost
-        failure mode.
-      - dsynth_build: rc + the log_hint path.
-      - apply_intent: intent_type + paths_changed count + presence of
-        substrate_diff (size only; the diff itself is in the raw body).
-      - intent_reference: intent_type + count of playbooks matched.
-    All others surface generic ok/error fields.
+    Dispatch keyed on ``tool_name`` (matched back via tool_call_id
+    during structuring). When ``tool_name`` is unknown or None the
+    summary degrades to just ``ok`` + ``error`` — the raw collapsible
+    on the card still carries the full content, so no information is
+    lost; only the at-a-glance headline is empty.
     """
     try:
         data = json.loads(content)
@@ -858,45 +954,9 @@ def _summarize_tool_result(content: str) -> dict[str, Any]:
     err = data.get("error")
     if err:
         summary["error"] = str(err)[:300]
-    # Heuristic dispatch by which keys are present.
-    if "stdout_tail" in data and "summary:" in (data.get("stdout_tail") or ""):
-        # materialize_dports / extract. Scan the full tail so BOTH
-        # the `summary:` headline AND any `top_warning_codes:` row
-        # are captured; don't break on the first match.
-        for line in (data["stdout_tail"] or "").splitlines():
-            ls = line.lstrip()
-            if ls.startswith("summary:"):
-                summary["headline"] = ls
-            elif ls.startswith("top_warning_codes:"):
-                # operators need to see compose hints (esp.
-                # I_COMPOSE_DOPS_ALL_OPS_SKIPPED which fires on
-                # dead overlays per Phase 1 stage warning).
-                summary["warnings_line"] = ls
-    if "intent_type" in data:
-        # apply_intent / intent_reference
-        bits = [str(data["intent_type"])]
-        if "paths_changed" in data:
-            bits.append(f"paths_changed={len(data.get('paths_changed') or [])}")
-        if "substrate_diff" in data and data.get("substrate_diff"):
-            bits.append(f"diff={len(data['substrate_diff'])}B")
-        if "playbooks" in data and isinstance(data["playbooks"], list):
-            bits.append(f"playbooks={len(data['playbooks'])}")
-        if "mode" in data:
-            bits.append(f"mode={data['mode']}")
-        summary["headline"] = " ".join(bits)
-    if "rc" in data and "log_path" in data:
-        # dsynth_build / dsynth_log
-        summary["headline"] = (
-            f"rc={data['rc']} log={data.get('log_path', '')}"
-        )
-    if "tail" in data and "log_path" in data:
-        # dsynth_log specifically
-        summary["headline"] = f"log_tail {len(data.get('tail') or '')}B"
-    if "rebuild_ok" in data:
-        summary["headline"] = f"rebuild_ok={data['rebuild_ok']} " + summary.get("headline", "")
-    if "wrksrc" in data:
-        # extract
-        summary["headline"] = f"wrksrc={data['wrksrc']}"
+    summarizer = _TOOL_SUMMARIZERS.get(tool_name or "")
+    if summarizer is not None:
+        summarizer(data, summary)
     return summary
 
 
@@ -993,9 +1053,48 @@ def _structure_session_turns(
                 "tool_name": tname,
                 "raw_content": raw_content,
                 "bytes": len(raw_content),
-                "summary": _summarize_tool_result(raw_content),
+                "summary": _summarize_tool_result(
+                    raw_content, tool_name=tname,
+                ),
             })
         # Other roles (none expected) are dropped.
+    return out
+
+
+def _build_cumulative_token_map(
+    tool_trace: list[dict[str, Any]], attempt: int | None,
+) -> dict[int, dict[str, int]]:
+    """Index ``llm_turn`` events from a tool_trace into a turn→tokens
+    map for the given attempt.
+
+    The runner emits one ``llm_turn`` per assistant message; events
+    carry ``prompt_tokens``, ``completion_tokens``, ``total_tokens``,
+    and the runner-summed ``cumulative_total_tokens``. Returning a
+    dict keyed on the 1-indexed turn number lets the session viewer
+    surface "where did the budget bleed?" without re-summing.
+
+    ``attempt=None`` returns an empty map — without an attempt number
+    parsed from the session filename we can't filter unambiguously.
+    """
+    if attempt is None:
+        return {}
+    out: dict[int, dict[str, int]] = {}
+    for ev in tool_trace:
+        if ev.get("type") != "llm_turn":
+            continue
+        if int(ev.get("attempt") or 0) != attempt:
+            continue
+        turn = ev.get("turn")
+        if not isinstance(turn, int):
+            continue
+        out[turn] = {
+            "prompt_tokens": int(ev.get("prompt_tokens") or 0),
+            "completion_tokens": int(ev.get("completion_tokens") or 0),
+            "total_tokens": int(ev.get("total_tokens") or 0),
+            "cumulative_total_tokens": int(
+                ev.get("cumulative_total_tokens") or 0
+            ),
+        }
     return out
 
 
@@ -1004,11 +1103,19 @@ def _session_view_data(
     bundle_id: str,
     relpath: str,
     ref: dict[str, Any],
+    *,
+    tool_trace_ref: dict[str, Any] | None = None,
 ) -> dict[str, Any] | None:
     """Build the template context for the session dump viewer.
 
     Returns ``None`` when the artifact file is missing. Otherwise a
     dict the template renders directly.
+
+    ``tool_trace_ref`` (optional) is the artifact_refs row for
+    ``analysis/tool_trace.jsonl`` on the same bundle. When provided
+    and the session's attempt number is parseable from the filename,
+    per-turn cumulative token counts are joined onto each assistant
+    item so the TOC can surface budget-bleed turns.
     """
     path = _resolve_artifact_path(artifact_root, ref)
     if path is None or not path.exists():
@@ -1027,6 +1134,21 @@ def _session_view_data(
         error = f"failed to read session: {exc}"
     except Exception as exc:  # noqa: BLE001 — surface to template
         error = f"failed to parse session: {exc}"
+
+    # Join per-turn token totals from tool_trace.jsonl on (attempt, turn).
+    attempt_match = _SESSION_ATTEMPT_RE.search(Path(relpath).name)
+    attempt_num = int(attempt_match.group(1)) if attempt_match else None
+    if tool_trace_ref is not None:
+        tool_trace = _load_tool_trace(artifact_root, tool_trace_ref)
+        token_map = _build_cumulative_token_map(tool_trace, attempt_num)
+        for it in items:
+            if it["kind"] == "assistant":
+                tokens = token_map.get(it["turn"])
+                if tokens:
+                    it["cumulative_total_tokens"] = (
+                        tokens["cumulative_total_tokens"]
+                    )
+                    it["prompt_tokens"] = tokens["prompt_tokens"]
     # Aggregate metrics for the top-of-page header.
     n_turns = sum(1 for it in items if it["kind"] == "assistant")
     n_tools = sum(1 for it in items if it["kind"] == "tool")
@@ -1043,6 +1165,7 @@ def _session_view_data(
         "ref": ref,
         "filename": Path(relpath).name,
         "size": path.stat().st_size,
+        "attempt": attempt_num,
         # Renamed from "items" because Jinja2 attribute access on
         # dicts uses getattr first and finds the dict.items() builtin
         # method before falling through to the key — so `session.items`
@@ -3467,12 +3590,18 @@ def create_app(db_path: str | Path) -> Any:
         with _conn() as conn:
             bundle = get_bundle(conn, bundle_id)
             ref = get_artifact_ref(conn, bundle_id, relpath)
+            # tool_trace.jsonl is what carries per-turn token counts;
+            # join the session's assistant turns to its llm_turn events.
+            tool_trace_ref = get_artifact_ref(
+                conn, bundle_id, "analysis/tool_trace.jsonl",
+            )
         if bundle is None:
             raise HTTPException(status_code=404, detail=f"Unknown bundle: {bundle_id}")
         if ref is None:
             raise HTTPException(status_code=404, detail="Unknown session artifact")
         session = _session_view_data(
             app.state.artifact_root, bundle_id, relpath, ref,
+            tool_trace_ref=tool_trace_ref,
         )
         if session is None:
             raise HTTPException(status_code=404, detail="Session file missing")

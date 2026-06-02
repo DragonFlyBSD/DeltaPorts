@@ -57,6 +57,19 @@
     .meta-label { font-size: 10px; color: var(--text-dim, #6b7280); text-transform: uppercase; letter-spacing: 0.05em; }
     .meta-value { font-size: 16px; font-weight: 600; font-family: ui-monospace, monospace; }
     .session-error { padding: 12px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; color: #991b1b; margin-bottom: 12px; }
+    /* Inline anchor target for #tool-<call_id> jumps from an assistant
+       turn's tool_calls. Stays out of the visual layout. */
+    .anchor-marker { display: inline-block; height: 0; width: 0; overflow: hidden; }
+    /* Brief highlight on the card the operator just jumped to so the
+       eye can find the target after the hash navigation. */
+    .turn-card:target,
+    .turn-card:has(> .anchor-marker:target) {
+      outline: 2px solid #6366f1;
+      outline-offset: 2px;
+    }
+    /* Make the linked tool_call name visually distinct from plain text. */
+    .tool-call .tool-call-name[href] { text-decoration: none; }
+    .tool-call .tool-call-name[href]:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
@@ -156,6 +169,16 @@
               <div class="turn-header">
                 <span class="turn-role-pill pill-assistant">assistant</span>
                 <span class="turn-id">turn {{ item.turn }}</span>
+                {% if item.cumulative_total_tokens is defined %}
+                  <span class="turn-byte-badge" title="cumulative tokens through this turn">
+                    Σ {{ '{:,}'.format(item.cumulative_total_tokens) }} tok
+                  </span>
+                {% endif %}
+                {% if item.prompt_tokens is defined and item.prompt_tokens %}
+                  <span class="turn-byte-badge" title="prompt tokens this turn">
+                    p: {{ '{:,}'.format(item.prompt_tokens) }}
+                  </span>
+                {% endif %}
                 {% if item.reasoning_bytes %}
                   <span class="turn-byte-badge">reasoning: {{ '{:,}'.format(item.reasoning_bytes) }}B</span>
                 {% endif %}
@@ -179,7 +202,17 @@
                 <div class="tool-calls">
                   {% for tc in item.tool_calls %}
                     <div class="tool-call">
-                      <span class="tool-call-name">{{ tc.name }}</span>
+                      {# Anchor link to this call's result. tc.id matches
+                         the tool record's tool_call_id (LiteLLM-shape
+                         id like ``call_abc123``); when present we
+                         render as a jump link, otherwise plain text
+                         so degraded session dumps without ids still
+                         display cleanly. #}
+                      {% if tc.id %}
+                        <a class="tool-call-name" href="#tool-{{ tc.id }}">{{ tc.name }}</a>
+                      {% else %}
+                        <span class="tool-call-name">{{ tc.name }}</span>
+                      {% endif %}
                       <span class="tool-call-args" title="{{ tc.args_preview }}">{{ tc.args_preview }}</span>
                     </div>
                   {% endfor %}
@@ -188,6 +221,13 @@
             </div>
           {% elif item.kind == 'tool' %}
             <div class="turn-card role-tool" id="t-{{ loop.index }}">
+              {# Secondary anchor target for #tool-<call_id> jumps from
+                 the assistant turn that emitted this call. Empty span
+                 stays out of the visual layout while giving the back-
+                 reference a stable hash to land on. #}
+              {% if item.tool_call_id %}
+                <span id="tool-{{ item.tool_call_id }}" class="anchor-marker"></span>
+              {% endif %}
               <div class="turn-header">
                 <span class="turn-role-pill pill-tool">tool</span>
                 <span class="turn-id">{% if item.tool_name %}{{ item.tool_name }}{% else %}result{% endif %}</span>
@@ -244,7 +284,13 @@
                 {{ item.tool_calls[0].name }}{% if item.tool_calls | length > 1 %}+{{ item.tool_calls | length - 1 }}{% endif %}
               </span>
             {% endif %}
-            <span class="toc-bytes">{{ '{:,}'.format(item.reasoning_bytes) }}B</span>
+            {% if item.cumulative_total_tokens is defined %}
+              <span class="toc-bytes" title="cumulative tokens">
+                Σ{{ '{:,}'.format(item.cumulative_total_tokens) }}
+              </span>
+            {% else %}
+              <span class="toc-bytes">{{ '{:,}'.format(item.reasoning_bytes) }}B</span>
+            {% endif %}
           </a>
         {% endfor %}
       </nav>

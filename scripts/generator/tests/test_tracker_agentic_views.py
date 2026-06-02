@@ -34,8 +34,14 @@ def seeded_state_db(tmp_path: Path) -> Path:
 
     now = _now()
     trace_path = tmp_path / "tool_trace.jsonl"
+    # 2.5d: include llm_turn events so the session viewer can join
+    # per-turn cumulative token counts onto the assistant cards.
     trace_path.write_text(
         json.dumps({"type": "attempt_start", "attempt": 1, "tokens_used_so_far": 0, "budget": 1000}) + "\n"
+        + json.dumps({"type": "llm_turn", "attempt": 1, "turn": 1,
+                       "prompt_tokens": 800, "completion_tokens": 50,
+                       "total_tokens": 850, "cumulative_total_tokens": 850,
+                       "tools_requested": ["materialize_dports"]}) + "\n"
         + json.dumps({"type": "tool_call", "attempt": 1, "turn": 1, "tool": "dsynth_build", "args": {"origin": "devel/foo"}, "result": {"ok": False}, "duration_ms": 42}) + "\n"
         + json.dumps({"type": "attempt_end", "attempt": 1, "rebuild_ok": False, "tokens": 500}) + "\n"
     )
@@ -580,6 +586,60 @@ def test_render_diff_escapes_html():
     assert "&lt;script&gt;" in out
 
 
+def test_render_diff_multi_file():
+    """Two distinct files in one diff produce stat ``2 files`` and
+    each ``---``/``+++`` pair opens a fresh ``diff-file`` block."""
+    from dportsv3.tracker.server import _render_diff
+    d = (
+        "--- a/foo\n+++ b/foo\n@@ -1,1 +1,1 @@\n-a\n+b\n"
+        "--- a/bar\n+++ b/bar\n@@ -1,1 +1,1 @@\n-c\n+d\n"
+    )
+    out = _render_diff(d)
+    assert "2 files" in out
+    assert out.count('<div class="diff-file">') == 2
+    # Both add lines visible.
+    assert out.count('class="diff-line diff-add"') == 2
+
+
+def test_render_diff_empty_input():
+    """Empty string in → renderer outputs a 0-file stat and no
+    file/hunk blocks. Operator-friendly degraded path."""
+    from dportsv3.tracker.server import _render_diff
+    out = _render_diff("")
+    assert "0 files" in out
+    assert "diff-file" not in out  # neither file blocks nor headers
+    assert "diff-hunk" not in out
+
+
+def test_render_diff_hunk_only_no_headers():
+    """Some artifacts carry just hunk content (no ``--- a/foo`` /
+    ``+++ b/foo`` preamble). The renderer must still emit the hunk
+    body — auto-opening a virtual file rather than dropping content."""
+    from dportsv3.tracker.server import _render_diff
+    out = _render_diff(
+        "@@ -1,2 +1,2 @@\n kept\n-removed\n+added\n"
+    )
+    assert "1 file" in out
+    assert "diff-hunk" in out
+    assert "diff-add" in out and "diff-del" in out
+
+
+def test_render_diff_no_newline_marker():
+    """``\\ No newline at end of file`` lines from git's unified-diff
+    output are valid meta rows — they shouldn't bump line counters
+    or trip the line-number gutter."""
+    from dportsv3.tracker.server import _render_diff
+    out = _render_diff(
+        "--- a/x\n+++ b/x\n@@ -1,1 +1,1 @@\n-old\n+new\n"
+        "\\ No newline at end of file\n"
+    )
+    # Stat counts only the +/- lines, not the meta row.
+    assert "+1" in out and "-1" in out
+    # The marker is rendered as a diff-meta row.
+    assert "No newline at end of file" in out
+    assert 'class="diff-line diff-meta"' in out
+
+
 def test_is_diff_path_recognizes_patch_convention():
     """FreeBSD ports' ``patch-*`` filename convention triggers the diff
     renderer regardless of trailing extension."""
@@ -702,6 +762,67 @@ def test_session_view_404_on_missing(client: TestClient) -> None:
     assert resp.status_code == 404
 
 
+def test_session_view_attaches_cumulative_tokens(client: TestClient) -> None:
+    """When ``analysis/tool_trace.jsonl`` carries ``llm_turn`` events
+    matching the session's attempt, the viewer joins per-turn
+    cumulative_total_tokens onto each assistant card so the TOC can
+    surface budget-bleed turns. The fixture's llm_turn for turn 1
+    carries cumulative=850; the assistant card and TOC entry should
+    both display it."""
+    resp = client.get(
+        "/agentic/bundles/b-q2-foo/sessions/20260601-foo-patch.job.attempt1.jsonl.gz"
+    )
+    assert resp.status_code == 200
+    body = resp.text
+    # Greek sigma + thousands-separated value renders in BOTH the turn
+    # card header and the TOC entry.
+    assert "Σ 850 tok" in body
+    assert "Σ850" in body  # compact form in TOC
+    # Per-turn prompt-tokens badge.
+    assert "p: 800" in body
+
+
+def test_build_cumulative_token_map_filters_by_attempt() -> None:
+    """The map joiner filters tool_trace events to a specific attempt
+    number — a second-attempt llm_turn shouldn't bleed into the first
+    attempt's session view (and vice versa)."""
+    from dportsv3.tracker.server import _build_cumulative_token_map
+    trace = [
+        {"type": "llm_turn", "attempt": 1, "turn": 1,
+         "prompt_tokens": 100, "completion_tokens": 10,
+         "total_tokens": 110, "cumulative_total_tokens": 110},
+        {"type": "llm_turn", "attempt": 2, "turn": 1,
+         "prompt_tokens": 200, "completion_tokens": 20,
+         "total_tokens": 220, "cumulative_total_tokens": 220},
+        {"type": "tool_call", "attempt": 1, "turn": 1, "tool": "x"},
+    ]
+    m1 = _build_cumulative_token_map(trace, attempt=1)
+    assert m1 == {1: {
+        "prompt_tokens": 100, "completion_tokens": 10,
+        "total_tokens": 110, "cumulative_total_tokens": 110,
+    }}
+    m2 = _build_cumulative_token_map(trace, attempt=2)
+    assert m2[1]["cumulative_total_tokens"] == 220
+    # No attempt → empty map (can't unambiguously filter).
+    assert _build_cumulative_token_map(trace, attempt=None) == {}
+
+
+def test_session_view_tool_call_anchors(client: TestClient) -> None:
+    """Assistant ``tool_calls`` should render as ``<a href="#tool-<id>">``
+    links and the matching tool-result card carries an ``<span
+    id="tool-<id>">`` anchor marker. Operators can jump from a multi-
+    call assistant turn to a specific result card."""
+    resp = client.get(
+        "/agentic/bundles/b-q2-foo/sessions/20260601-foo-patch.job.attempt1.jsonl.gz"
+    )
+    assert resp.status_code == 200
+    body = resp.text
+    # The fixture uses tool_call_id "call_abc". Both the assistant
+    # link and the tool result's anchor span must reference it.
+    assert 'href="#tool-call_abc"' in body
+    assert 'id="tool-call_abc"' in body
+
+
 def test_parse_session_records_blob_backend_path(tmp_path) -> None:
     """Regression: when the artifact is stored via the blob backend
     (content-addressed under blobstore/objects/sha256/aa/bb/<sha>),
@@ -728,21 +849,19 @@ def test_parse_session_records_blob_backend_path(tmp_path) -> None:
 def test_render_diff_meta_lines_use_single_column_layout() -> None:
     """``diff --git`` / ``index ...`` / ``\\ No newline at end of file``
     rows must not inherit the line-number gutter columns — they should
-    sit flush at the left margin. Verified by checking the rendered
-    class list: meta rows carry .diff-meta, and the template's CSS
-    targets that class for a single-column layout. We check the CSS
-    is present in the artifact template, since CSS rendering is hard
-    to assert on inline."""
+    sit flush at the left margin. The .diff-line.diff-meta override
+    lives in the shared progress.css (2.5a moved the rules out of the
+    per-template <style> blocks); this test pins the relevant rules
+    so a future cleanup of progress.css doesn't silently regress the
+    visual alignment."""
     from pathlib import Path
-    css_dir = Path(__file__).parent.parent / "dportsv3" / "tracker" / "templates"
-    for tpl in ("agentic_artifact.html", "agentic_bundle.html"):
-        body = (css_dir / tpl).read_text()
-        # Single-column override is present and targets .diff-meta.
-        assert ".diff-line.diff-meta" in body
-        assert "grid-template-columns" in body  # base rule still there
-        # ln-old / ln-new are hidden on meta rows.
-        assert ".diff-line.diff-meta .ln-old" in body
-        assert "display:none" in body or "display: none" in body
+    css = (
+        Path(__file__).parent.parent
+        / "dportsv3" / "tracker" / "static" / "progress.css"
+    ).read_text()
+    assert ".diff-line.diff-meta" in css
+    assert ".diff-line.diff-meta .ln-old" in css
+    assert "display: none" in css or "display:none" in css
 
 
 def test_is_session_relpath_matches_pattern() -> None:
@@ -775,7 +894,10 @@ def test_split_user_prompt_sections_handles_preamble() -> None:
 
 def test_summarize_tool_result_materialize_headline() -> None:
     """materialize_dports tool result's `summary:` line is hoisted to
-    the headline so the operator sees applied=N at a glance."""
+    the headline so the operator sees applied=N at a glance. Dispatch
+    is keyed on ``tool_name`` after the 2.5e refactor — the same raw
+    payload routed under a different tool_name would NOT pick up the
+    materialize summarizer."""
     from dportsv3.tracker.server import _summarize_tool_result
     raw = json.dumps({
         "ok": True,
@@ -786,11 +908,77 @@ def test_summarize_tool_result_materialize_headline() -> None:
             "top_warning_codes: I_COMPOSE_MODE_DOPS_SUPPRESSES_COMPAT=1\n"
         ),
     })
-    s = _summarize_tool_result(raw)
+    s = _summarize_tool_result(raw, tool_name="materialize_dports")
     assert s["ok"] is True
     assert "applied=2" in s["headline"]
     # The warning line is captured separately for highlighting.
     assert "I_COMPOSE_MODE_DOPS_SUPPRESSES_COMPAT" in s["warnings_line"]
+
+
+def test_summarize_tool_result_unknown_tool_degrades_gracefully() -> None:
+    """Without a tool_name match the summary keeps ok+error but skips
+    the headline. The raw content is still accessible in the card's
+    collapsible — no information loss, just no at-a-glance headline."""
+    from dportsv3.tracker.server import _summarize_tool_result
+    raw = json.dumps({
+        "ok": False, "error": "boom",
+        "stdout_tail": "summary: ports=1 ops=1 applied=1 errors=0\n",
+    })
+    s = _summarize_tool_result(raw, tool_name="some_unknown_tool")
+    assert s["ok"] is False
+    assert s.get("error") == "boom"
+    # No headline computed for unknown tools.
+    assert s["headline"] == ""
+
+
+def test_summarize_tool_result_apply_intent() -> None:
+    """apply_intent shows intent_type + paths_changed count + diff
+    size + mode. Diff size only fires when substrate_diff is non-empty."""
+    from dportsv3.tracker.server import _summarize_tool_result
+    raw = json.dumps({
+        "ok": True, "intent_type": "drop_patch",
+        "paths_changed": ["a", "b"],
+        "substrate_diff": "x" * 1082,
+        "mode": "dops",
+    })
+    s = _summarize_tool_result(raw, tool_name="apply_intent")
+    assert s["headline"] == "drop_patch paths_changed=2 diff=1082B mode=dops"
+
+
+def test_summarize_tool_result_intent_reference() -> None:
+    """intent_reference shows intent_type + count of matched playbooks."""
+    from dportsv3.tracker.server import _summarize_tool_result
+    raw = json.dumps({
+        "ok": True, "intent_type": "replace_in_dops_block",
+        "schema": {"...": "..."},
+        "playbooks": [{"name": "a"}, {"name": "b"}, {"name": "c"}],
+    })
+    s = _summarize_tool_result(raw, tool_name="intent_reference")
+    assert s["headline"] == "replace_in_dops_block playbooks=3"
+
+
+def test_summarize_tool_result_extract_does_not_overwrite_materialize() -> None:
+    """Regression for the 2.5e order-sensitivity footgun. Pre-refactor
+    the heuristic chain would, for a result carrying both stdout_tail
+    summary AND a wrksrc field, overwrite the materialize headline
+    with ``wrksrc=...``. With per-tool dispatch this can't happen
+    because we route on the tool name, not on key shape — verify by
+    feeding a payload that has BOTH fields under tool_name=extract:
+    extract's summarizer takes wrksrc; the materialize summary line
+    in stdout_tail is correctly ignored."""
+    from dportsv3.tracker.server import _summarize_tool_result
+    raw = json.dumps({
+        "ok": True,
+        "wrksrc": "/work/obj/devel/foo/foo-1.0",
+        "stdout_tail": "summary: ports=1 ops=1 applied=1 errors=0\n",
+    })
+    # Under extract: only wrksrc is shown — no leak from stdout_tail.
+    se = _summarize_tool_result(raw, tool_name="extract")
+    assert "wrksrc=/work/obj/devel/foo/foo-1.0" == se["headline"]
+    # Under materialize: stdout_tail summary is shown — no leak from wrksrc.
+    sm = _summarize_tool_result(raw, tool_name="materialize_dports")
+    assert "applied=1" in sm["headline"]
+    assert "wrksrc=" not in sm["headline"]
 
 
 def test_view_agentic_artifact_json_pretty_printed(client: TestClient) -> None:

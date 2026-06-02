@@ -15,34 +15,8 @@
     .artifact-markdown h2, .artifact-markdown h3, .artifact-markdown h4 { margin:16px 0 8px; }
     .artifact-markdown p { margin:8px 0; }
     .artifact-markdown ul { margin:8px 0 8px 22px; padding:0; }
-    .artifact-table { border-collapse:collapse; margin:12px 0; font-size:12px; }
-    .artifact-table th, .artifact-table td { border:1px solid var(--border, #d8dee9); padding:4px 10px; vertical-align:top; }
-    .artifact-table th { background:var(--panel-bg, #f8fafc); text-align:left; }
-    .artifact-table tbody tr:nth-child(2n) { background:rgba(0,0,0,0.02); }
-    /* Diff renderer */
-    .diff-view { font:12px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background:var(--panel-bg, #f8fafc); border:1px solid var(--border, #d8dee9); border-radius:6px; padding:0; overflow-x:auto; max-height:70vh; }
-    .diff-stat { padding:8px 14px; border-bottom:1px solid var(--border, #d8dee9); color:var(--text-dim, #6b7280); font-size:12px; background:var(--panel-bg, #f8fafc); }
-    .diff-stat-add { color:#15803d; font-weight:600; }
-    .diff-stat-del { color:#b91c1c; font-weight:600; }
-    .diff-file { border-bottom:1px solid var(--border, #d8dee9); }
-    .diff-file:last-child { border-bottom:none; }
-    .diff-file-header { padding:4px 14px; color:var(--text-dim, #6b7280); white-space:pre; }
-    .diff-path-old, .diff-path-new { background:var(--panel-bg, #f8fafc); }
-    .diff-hunk { background:#fff; }
-    .diff-hunk-header { padding:2px 14px; color:#6366f1; background:#eef2ff; white-space:pre; }
-    .diff-line { display:grid; grid-template-columns:50px 50px 1fr; align-items:baseline; }
-    .diff-line .ln-old, .diff-line .ln-new { color:#9ca3af; text-align:right; padding:0 8px; user-select:none; font-size:11px; }
-    .diff-line .content { white-space:pre; padding-right:14px; }
-    .diff-add { background:#ecfdf5; }
-    .diff-add .content { color:#065f46; }
-    .diff-del { background:#fef2f2; }
-    .diff-del .content { color:#991b1b; }
-    .diff-context .content { color:#1f2937; }
-    /* Meta lines (diff --git, index ..., \ No newline at EOF, prologue):
-       single-column layout so they sit flush at the left margin. */
-    .diff-line.diff-meta { grid-template-columns:1fr; padding:0 14px; }
-    .diff-line.diff-meta .ln-old, .diff-line.diff-meta .ln-new { display:none; }
-    .diff-meta .content { color:#6b7280; font-style:italic; }
+    /* Shared artifact-preview rules (.artifact-table + .diff-* family)
+       live in progress.css. Bundle-page-only rules stay below. */
     @media (max-width: 900px) { .artifact-reader { grid-template-columns:1fr; } }
   </style>
 </head>
