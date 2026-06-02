@@ -1,0 +1,6 @@
+target @any
+port sysutils/gnome_subr
+type port
+reason "agent edits via edit-intent DSL"
+
+mk unset LICENSE_FILE
