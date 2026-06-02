@@ -256,6 +256,27 @@ Highest-leverage observations:
 
 None of these are P0 — the P0a/P0b shipped fixes were the right call for the dominant compile-error class. These are a different failure cluster that the prompt's discipline rules and prompt-bloat profile need to handle separately. Worth picking up if more plist-error / deferred-from-convert bundles repeat the pattern.
 
+## `devel/libuv` (`devel_libuv-20260601-222117Z`) — successful counterexample
+
+Triage class: `compile-error`. Pipeline: triage → convert (clean, no deferred patches) → patch. Patch run **succeeded in one attempt**: 5 intents emitted, 1 build, `rebuild_ok=true`, ~956K tokens across 24 turns. First success bundle walked with both P0a and P0b shipped — confirms target-mismatch ghost is closed.
+
+What success looks like, calibrated:
+
+1. **Turn-to-first-apply_intent: 15.** Three opening turns (env_verify / materialize / extract) + ~6 investigation turns (overlay/Makefile.in reads, FREEBSD_TRUE/DRAGONFLY_TRUE greps) + a 5-call `intent_reference` batch + 1 final Makefile.in read for hunk context. Higher than the prompt's "drifting at 4+" hint, but the run worked. Successful runs apparently navigate by domain feedback only — the meta-discipline rules ("you're drifting") do not fire on the cases where they'd be useful, because successful agents don't notice them and stuck agents don't either.
+
+2. **Self-correction is the actual signal of health.** At turn 36 the agent emitted `add_patch(target=dragonfly/patch-Makefile.in)` with an inline diff, which produces the wrong overlay shape — `patch apply` instead of `file materialize`. Materialize at turn 38 failed with `E_COMPOSE_APPLY_FAILED / No file to patch`. Turn 40 reasoning (6,723 chars) recovered: *"the patch install shape (`patch apply`) tries to apply at compose time before the source is extracted. Makefile.in needs `file materialize` instead."* The agent dropped the bad intent, switched to `add_file kind=materialize` reusing the orphaned patch file, materialized cleanly, built clean. **This is the structural difference between this success and python311's failure**: libuv committed an intent → got concrete substrate feedback → had something specific to reason about → recovered. python311's agent never committed anything → never got feedback → never recovered. The hypothesis "agent paralysis = no concrete signal to anchor on" now has a paired comparison.
+
+3. **P0a/P0b confirmed working.** First materialize (turn 5, pre-edit) shows `applied=2, modes: dops=1` — the convert-produced overlay is live and target-matching. No `I_COMPOSE_DOPS_ALL_OPS_SKIPPED` warning anywhere in the session. Convert's overlay header read `target @any`. Intent translator's substrate_diffs at turns 32+ append to the existing overlay rather than creating a new one, so the P0a default isn't exercised on this bundle — but if it ever regressed, P0b would have surfaced it loudly on the post-edit materialize.
+
+4. **Budget headroom is tight.** Used 956K of the 1.2M ASSIST budget — ~250K cushion. A second wrong-shape intent or one more `intent_reference` round would have eaten it. Successful runs on non-trivial ports aren't comfortably under budget; they're barely under budget. Worth knowing when reasoning about which interventions are safe to skip.
+
+5. **Pre-emptive intent_reference batching is real, even on a clean run.** The agent fetched 5 references (`replace_in_dops_block`, `drop_patch`, `add_patch`, `change_makefile`, `replace_in_patch`) before emitting any intent. Used 3 of the 5; the other 3 are ~12-15K bytes of context carry for no gain (cumulative quadratic cost: ~30-50K tokens by session end). The discipline rule in the prompt says "call before each new intent type" — successful agents read this as license to bulk-fetch upfront. Worth a prompt nudge: "fetch per-type immediately before use, not speculatively."
+
+Two distinct intent-flow bugs surfaced and are now in the failure-mode catalog:
+
+- `add_patch` ships `patch apply` overlay shape regardless of target file's location. Wrong when the target lives in wrksrc (Makefile.in, configure, source code) — should ship `file materialize` instead. Costs a 2-intent detour per occurrence.
+- `drop_patch` removes the overlay reference but leaves the patch file on disk. Subsequent `add_patch` for the same target fails with "patch already exists". The agent worked around it via `add_file source=<orphan path>` — clever but fragile.
+
 ## Failure-mode catalog (running)
 
 A short index of the *classes* of failure observed so far, with which fix landed (or didn't):
@@ -272,6 +293,9 @@ A short index of the *classes* of failure observed so far, with which fix landed
 | Analysis paralysis (0 intents, 0 builds, full budget burned) | python311 | hard turn-budget gate + mandatory dsynth_build before give-up | open |
 | Static-prompt bloat on multi-file ports (Port Files section) | python311 | trim "Port Files" from user prompt; agent has get_file | open |
 | Convert agent hits validate_dops parse error and gives up | net-snmp | small budget + no retry on parse fix | open |
+| `add_patch` for wrksrc-only target ships `patch apply` (should be `file materialize`) | libuv | distinguish in `intent_reference(add_patch)` and/or in translator | open |
+| `drop_patch` removes overlay ref but leaves patch file orphaned | libuv (and old skalibs) | delete the file, or expose `also_remove_file` flag | open |
+| Pre-emptive `intent_reference` batching (fetch types never used) | libuv | prompt nudge: fetch per-type immediately before use, not speculatively | open |
 
 ## Method note: what to check on each new bundle
 
