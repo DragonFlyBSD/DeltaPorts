@@ -6,12 +6,13 @@ tags: [mk-var, USES, CFLAGS]
 priority: 50
 ---
 
-# change_makefile — set / append / remove a Makefile variable
+# change_makefile — set / append / remove / unset a Makefile variable
 
 ## When to use
 
 The port's Makefile needs a variable assignment changed: add a
-USES module, append a CFLAGS flag, drop a stray definition. The
+USES module, append a CFLAGS flag, drop a stray definition,
+**delete an upstream assignment that's wrong for our target**. The
 intent records the change in `overlay.dops` as an `mk` directive;
 compose applies it against the materialized Makefile at
 materialize time.
@@ -24,7 +25,7 @@ Do **not** use when:
 - The "Makefile" you want to edit is actually a patch file under
   `dragonfly/` → use `replace_in_patch`.
 
-## The three `op` values
+## The four `op` values
 
 ```json
 {
@@ -47,7 +48,64 @@ Do **not** use when:
 - **`op: "remove"`** — emits `mk remove VAR "value"`. Removes the
   token from a list assignment. The variable MUST exist (executor
   refuses with `assignment not found` otherwise); `remove` is for
-  taking something OUT of a list, not for unsetting the variable.
+  taking something OUT of a list, NOT for deleting the variable.
+- **`op: "unset"`** — emits `mk unset VAR`. **Deletes the variable's
+  entire assignment line from the composed Makefile**, including
+  whatever upstream FreeBSD had. Symmetric inverse of `set`:
+  - `mk set FOO "bar"` finds upstream's `FOO=...` line and replaces it
+  - `mk unset FOO` finds upstream's `FOO=...` line and deletes it
+  - The `value` field is ignored on unset (and may be omitted from
+    the wire payload; the JSON-schema makes it optional for this op).
+
+  Use `unset` when the fix is "this upstream-set variable must not be
+  present on DragonFly" — e.g. `LICENSE_FILE=${PORTSDIR}/COPYRIGHT`
+  references a file absent from our tree, and the BSD2CLAUSE license
+  template makes the assignment unnecessary anyway.
+
+## When to pick unset vs set-to-empty vs add_patch
+
+For "the upstream assigns a variable that shouldn't be present":
+
+- **`op: "unset"`** is the right answer almost always — clean, atomic,
+  single dops line, no patch file, no risk of accidentally leaving
+  `FOO=` in the Makefile (which is NOT equivalent to FOO not being
+  defined: some framework code does `.if defined(FOO)` and an empty
+  string still counts as defined).
+- **`op: "set"` with an empty value** is almost never what you want.
+  It writes `FOO= ` to the Makefile, which keeps `.if defined(FOO)`
+  true. If you accidentally pick this for the LICENSE_FILE case,
+  the framework still tries to read the empty path and fails.
+- **`add_patch` with a unified diff deleting the line** also works
+  but is heavier — a whole patch file plus a `patch apply` directive
+  for what is structurally a single-variable edit. Reserve `add_patch`
+  for cases where the change spans multiple variables, recipes, or
+  isn't expressible as a single `mk` op.
+
+## Worked example — drop an upstream assignment
+
+A port that fails with `Missing license file for BSD2CLAUSE in
+/xports/COPYRIGHT` because upstream FreeBSD set
+`LICENSE_FILE=${PORTSDIR}/COPYRIGHT` and that file doesn't exist
+on DragonFly:
+
+```json
+{
+  "type": "change_makefile",
+  "path": "Makefile",
+  "key": "LICENSE_FILE",
+  "op": "unset"
+}
+```
+
+Produces, in `overlay.dops`:
+
+```
+mk unset LICENSE_FILE
+```
+
+At compose time, the executor deletes the `LICENSE_FILE=...` line
+from the composed Makefile. The license-check then uses the
+BSD2CLAUSE template default and the build proceeds.
 
 ## append semantics — create-or-append
 
@@ -108,12 +166,20 @@ grep into `Mk/` is a few hundred and usually answers the question.
 
 ## Failure modes
 
-- `op: "remove"` against an undefined variable → `ok=false`. Make
-  the assignment exist via `op: "set"` first, or just leave it
-  alone if removal is best-effort.
+- `op: "remove"` against an undefined variable → `ok=false`,
+  `assignment not found`. If your goal is to make the variable
+  go away entirely, you wanted `op: "unset"`, not `"remove"`.
+  If you wanted to drop a token from a list and the list doesn't
+  exist, the change is a no-op — leave it alone.
 - `op: "remove"` of a token not present in the list → executor
   surfaces `token not found`. Idempotent retry is fine; check the
   substrate via `get_file overlay.dops` before re-emitting.
+- `op: "unset"` against an undefined variable → `ok=false`,
+  `assignment not found`. Strict behavior — the variable must
+  actually be assigned somewhere in the composed Makefile to be
+  unset. If upstream stopped setting the variable between releases,
+  the unset becomes a no-op and you may safely drop the intent
+  on the next iteration.
 - Ambiguous match (multiple assignments to the same variable) →
   `ok=false` with `E_APPLY_AMBIGUOUS_MATCH`. Resolve by editing
   the source overlay manually or escalating.

@@ -72,12 +72,21 @@ class AddFile:
 
 @dataclass(frozen=True)
 class ChangeMakefile:
-    """Edit a Makefile variable (§3.2.5)."""
+    """Edit a Makefile variable (§3.2.5).
+
+    ``op=unset`` deletes the variable's assignment from the
+    composed Makefile (symmetric inverse of ``mk set``). The
+    ``value`` field is ignored on unset; defaulting it to the
+    empty string lets parse_intent accept payloads that omit
+    ``value`` for unset (JSON-schema enforces presence for the
+    other ops). Field order keeps ``op`` last so the defaulted
+    ``value`` is still keyword-compatible with the wire format.
+    """
     type: Literal["change_makefile"]
     path: str             # relpath, e.g. "Makefile.DragonFly" or "Makefile"
     key: str              # var name
-    value: str
-    op: Literal["set", "append", "remove"]
+    op: Literal["set", "append", "remove", "unset"]
+    value: str = ""       # ignored when op="unset"
 
 
 @dataclass(frozen=True)

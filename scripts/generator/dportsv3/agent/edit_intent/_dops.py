@@ -376,16 +376,20 @@ def _quote_dops_string(s: str) -> str:
 
 
 def change_makefile(t, intent: ChangeMakefile):
-    """``mk <action> VAR "value"`` per the dops grammar.
+    """``mk <action> VAR ["value"]`` per the dops grammar.
 
     The previous form (``mk.var.set var=K value=V``, dot-separated
     with named args) was invented — the actual engine parser at
     ``engine/parser.py:343`` expects space-separated tokens
     ``mk set|unset|add|remove VAR "value"``. The intent's ``op``
-    field uses ``set`` / ``append`` / ``remove``; ``append`` maps
-    to dops ``add`` (the parser's name for "append to a list-shaped
-    variable"). ``set`` takes a quoted STRING value; ``add`` /
-    ``remove`` take a token (we quote them too for safety).
+    field uses ``set`` / ``append`` / ``remove`` / ``unset``;
+    ``append`` maps to dops ``add`` (the parser's name for "append
+    to a list-shaped variable"). ``set`` takes a quoted STRING
+    value; ``add`` / ``remove`` take a token (quoted for safety).
+    ``unset`` takes NO value — it emits ``mk unset VAR`` and the
+    engine deletes the variable's assignment line from the composed
+    Makefile (symmetric inverse of ``mk set``, useful for dropping
+    an upstream assignment that's wrong for our target).
 
     For ``op=set``: any pre-existing ``mk set <KEY>`` line for the
     same key is stripped before the new statement is appended. The
@@ -397,8 +401,18 @@ def change_makefile(t, intent: ChangeMakefile):
     "last wins." Stripping keeps the substrate clean and makes a
     re-emit a true replace. ``op=append`` / ``op=remove`` keep the
     plain-append behavior — multiple ``mk add`` / ``mk remove`` for
-    the same key are semantically distinct (list operations).
+    the same key are semantically distinct (list operations). For
+    ``op=unset`` we strip any prior ``mk set <KEY>`` for the same
+    key too, since unset-after-set in the same overlay would be a
+    contradictory pair on disk (functionally last-wins delete, but
+    semantically clearer to remove both lines).
     """
+    if intent.op == "unset":
+        stmt = f"mk unset {intent.key}"
+        # Drop any previous `mk set <KEY>` so the overlay doesn't
+        # carry both set and unset for the same variable.
+        strip = _strip_existing_mk_set(intent.key)
+        return _append_overlay(t, "change_makefile", [stmt], prefilter=strip)
     action = {"set": "set", "append": "add", "remove": "remove"}[intent.op]
     stmt = f"mk {action} {intent.key} {_quote_dops_string(intent.value)}"
     strip = _strip_existing_mk_set(intent.key) if intent.op == "set" else None

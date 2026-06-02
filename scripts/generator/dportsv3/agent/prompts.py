@@ -517,7 +517,9 @@ The seven intent types you can emit:
   `from_dupe=true` after the dupe/genpatch flow)
 - `add_file` — add a port-local resource or materialize a file
   already present in the overlay
-- `change_makefile` — set / append / remove a Makefile variable
+- `change_makefile` — set / append / remove / unset a Makefile variable
+  (`unset` deletes upstream's assignment line — symmetric inverse
+  of `set`; use for "this variable must not be present on DragonFly")
 - `bump_portrevision` — increment PORTREVISION
 - `replace_in_dops_block` — edit text inside an `mk target` heredoc
   body in `overlay.dops` (the only intent that reaches heredocs)

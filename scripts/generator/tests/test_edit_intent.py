@@ -479,6 +479,74 @@ class TestDopsRenderers:
             f"full overlay:\n{overlay_text}"
         )
 
+    def test_change_makefile_unset_emits_mk_unset(self, t):
+        """op=unset emits the dops ``mk unset KEY`` statement and
+        accepts a payload that omits ``value`` entirely (the JSON
+        schema marks it optional for this op)."""
+        result = t.apply({
+            "type": "change_makefile",
+            "path": "Makefile",
+            "key": "LICENSE_FILE",
+            "op": "unset",
+        })
+        assert result.ok is True, result.error
+        overlay_text = t.port_path("overlay.dops").read_text()
+        assert "mk unset LICENSE_FILE" in overlay_text
+        # No stray quoted-value tail (mk unset takes no value).
+        assert "mk unset LICENSE_FILE \"" not in overlay_text
+
+    def test_change_makefile_unset_ignores_value_when_provided(self, t):
+        """An LLM passing ``value`` alongside ``op: "unset"`` should
+        still produce a value-less ``mk unset`` statement — the
+        translator ignores ``value`` on unset."""
+        result = t.apply({
+            "type": "change_makefile",
+            "path": "Makefile",
+            "key": "FOO",
+            "value": "ignored-by-translator",
+            "op": "unset",
+        })
+        assert result.ok is True
+        overlay_text = t.port_path("overlay.dops").read_text()
+        assert "mk unset FOO\n" in overlay_text + "\n"  # exact line
+        assert "ignored-by-translator" not in overlay_text
+
+    def test_change_makefile_unset_strips_prior_mk_set(self, t):
+        """unset-after-set on the same key should leave only the
+        ``mk unset`` line — the prior ``mk set`` is scrubbed so the
+        overlay doesn't carry a contradictory set+unset pair."""
+        r1 = t.apply({
+            "type": "change_makefile", "path": "Makefile",
+            "key": "BAR", "value": "old", "op": "set",
+        })
+        assert r1.ok is True
+        r2 = t.apply({
+            "type": "change_makefile", "path": "Makefile",
+            "key": "BAR", "op": "unset",
+        })
+        assert r2.ok is True
+        overlay_text = t.port_path("overlay.dops").read_text()
+        # Prior mk set is gone, only the unset remains.
+        assert "mk set BAR" not in overlay_text
+        assert "mk unset BAR" in overlay_text
+
+    def test_change_makefile_rejects_op_unset_with_required_value(self):
+        """Negative: set/append/remove still require value. Schema
+        enforces this via an allOf if/then so set/append/remove
+        keep their original strictness while unset is permissive."""
+        from dportsv3.agent.edit_intent import parse_intent, IntentError
+        # value-less set must fail
+        for op in ("set", "append", "remove"):
+            try:
+                parse_intent({
+                    "type": "change_makefile", "path": "Makefile",
+                    "key": "X", "op": op,
+                })
+            except IntentError as exc:
+                assert "value" in str(exc), f"{op}: {exc}"
+            else:
+                raise AssertionError(f"{op} without value should have failed schema")
+
     def test_change_makefile_set_op_preserves_other_mk_set_keys(self, t):
         """Scrubbing for one key must NOT touch mk set lines for other keys."""
         t.apply({

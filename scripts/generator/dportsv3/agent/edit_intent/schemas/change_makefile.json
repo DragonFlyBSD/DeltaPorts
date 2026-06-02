@@ -1,9 +1,9 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "change_makefile",
-  "description": "Edit a Makefile variable (set/append/remove).",
+  "description": "Edit a Makefile variable (set/append/remove/unset).",
   "type": "object",
-  "required": ["type", "path", "key", "value", "op"],
+  "required": ["type", "path", "key", "op"],
   "additionalProperties": false,
   "properties": {
     "type": {"const": "change_makefile"},
@@ -13,7 +13,14 @@
             "pattern": "^[A-Z_][A-Z0-9_]*$",
             "description": "Make variable name (upper-case + underscore + digits)"},
     "value": {"type": "string",
-              "description": "Value (or token to remove)"},
-    "op": {"enum": ["set", "append", "remove"]}
-  }
+              "description": "Value (or token to remove). Required for set/append/remove; ignored for unset."},
+    "op": {"enum": ["set", "append", "remove", "unset"],
+           "description": "set: assign/overwrite; append: add token (creates if absent); remove: delete token from list; unset: delete the entire variable assignment from the composed Makefile (use this to drop an upstream assignment that's wrong for our target — symmetric inverse of set)."}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"op": {"enum": ["set", "append", "remove"]}}},
+      "then": {"required": ["value"]}
+    }
+  ]
 }
