@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import shutil
+import tempfile
 from datetime import datetime
 from pathlib import Path
 import re
@@ -27,6 +29,7 @@ from dportsv3.compose_stages import (
 )
 from dportsv3.engine.api import apply_dsl, build_plan
 from dportsv3.engine.oracle import normalize_oracle_profile
+from dportsv3.fsutils import reconcile
 
 
 def _record_stage(
@@ -115,6 +118,76 @@ def run_compose(
         result.finished_at = datetime.now()
         return result
 
+    # Full-compose scratch indirection. dsynth's port-change detector
+    # (subs.c::crcDirTree) folds mtime+size+path per file; rewriting
+    # bit-identical content still bumps mtime and force-rebuilds the
+    # package. Composing into a scratch tree and reconciling onto the
+    # live output preserves mtime when content matches, so a no-change
+    # recompose is a true filesystem no-op and dsynth stays quiet.
+    # Scratch only applies to full composes — incremental composes
+    # are explicit per-port operator actions where rebuilding the
+    # selected ports is expected.
+    final_output = output_path
+    scratch_parent: Path | None = None
+    scratch_root: Path | None = None
+    use_scratch = not dry_run and not incremental
+    if use_scratch:
+        # mkdtemp first, BEFORE try, so the cleanup path knows about
+        # the parent dir even if the mkdir below raises. Anything
+        # inside the try is then safe to fail — finally will still
+        # `rmtree(scratch_parent)`.
+        scratch_parent = Path(tempfile.mkdtemp(prefix="dportsv3-compose-"))
+
+    try:
+        if scratch_parent is not None:
+            scratch_root = scratch_parent / "tree"
+            scratch_root.mkdir(parents=True, exist_ok=True)
+            output_path = scratch_root  # downstream stages write here
+        return _run_stages(
+            target=target,
+            target_branch=target_branch,
+            output_path=output_path,
+            final_output=final_output,
+            scratch_root=scratch_root,
+            delta_root=delta_root,
+            freebsd_root=freebsd_root,
+            lock_source=lock_source,
+            requested_origins=requested_origins,
+            incremental=incremental,
+            dry_run=dry_run,
+            strict=strict,
+            replace_output=replace_output,
+            prune_stale_overlays=prune_stale_overlays,
+            normalized_oracle_profile=normalized_oracle_profile,
+            result=result,
+        )
+    finally:
+        if scratch_parent is not None:
+            shutil.rmtree(scratch_parent, ignore_errors=True)
+
+
+def _run_stages(
+    *,
+    target: str,
+    target_branch: str,
+    output_path: Path,
+    final_output: Path,
+    scratch_root: Path | None,
+    delta_root: Path,
+    freebsd_root: Path,
+    lock_source: Path,
+    requested_origins: list[str],
+    incremental: bool,
+    dry_run: bool,
+    strict: bool,
+    replace_output: bool,
+    prune_stale_overlays: bool,
+    normalized_oracle_profile: str,
+    result: ComposeResult,
+) -> ComposeResult:
+    """Stage chain — extracted so the orchestrator's scratch cleanup
+    fires on every exit, including the strict-mode early returns and
+    the incremental-seed-fail early return."""
     stage_seed = seed_stage(
         freebsd_root=freebsd_root,
         output_path=output_path,
@@ -215,9 +288,36 @@ def run_compose(
     )
     result.add_stage(stage_finalize)
 
+    if scratch_root is not None:
+        result.add_stage(
+            _reconcile_to_live(scratch_root=scratch_root, final_output=final_output)
+        )
+
     result.ports = [reports[key] for key in sorted(reports.keys())]
     result.finished_at = datetime.now()
     return result
+
+
+def _reconcile_to_live(*, scratch_root: Path, final_output: Path) -> ComposeStageResult:
+    """Push the scratch tree onto the live output via the content-
+    aware ``reconcile`` primitive — files whose content matches what
+    live already had keep their previous mtime, so dsynth's per-file
+    CRC stays stable and no spurious rebuilds are triggered."""
+    stage = ComposeStageResult(name="reconcile_output", started_at=datetime.now())
+    final_output.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        if not final_output.exists():
+            # First-ever compose into this path — nothing to reconcile
+            # against, just rename scratch in place. copytree because
+            # rename across filesystems isn't guaranteed.
+            shutil.copytree(scratch_root, final_output, symlinks=True)
+        else:
+            reconcile(scratch_root, final_output)
+        stage.changed = 1
+    except Exception as exc:
+        stage.add_error("E_COMPOSE_RECONCILE_FAILED", str(exc))
+    stage.finished_at = datetime.now()
+    return stage
 
 
 __all__ = [

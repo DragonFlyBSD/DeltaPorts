@@ -60,6 +60,8 @@ def test_compose_dry_run_json_pipeline(tmp_path, capsys) -> None:
     assert payload["ok"] is True
     assert payload["summary"]["report_version"] == "v1"
     stage_names = [stage["name"] for stage in payload["stages"]]
+    # dry_run compose skips scratch indirection (no live writes), so
+    # no reconcile_output stage.
     assert stage_names == [
         "seed_output",
         "apply_special",
@@ -282,6 +284,7 @@ def test_compose_preflight_reports_stale_port_and_continues_non_strict(
         "apply_compat_ops",
         "apply_system_replacements",
         "finalize_tree",
+        "reconcile_output",
     ]
     preflight = next(
         stage for stage in payload["stages"] if stage["name"] == "preflight_validate"
