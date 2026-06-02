@@ -458,6 +458,126 @@ def test_markdown_inline_code_blocks_backticks_from_being_bolded():
     assert "<strong>literal</strong>" not in out
 
 
+def test_markdown_renders_github_table():
+    """GitHub-style ``| col | col |`` + ``|---|---|`` rows produce
+    a ``<table>`` with ``<thead>`` + ``<tbody>``. Cell contents are
+    HTML-escaped and inline-rendered (bold + code work in cells)."""
+    from dportsv3.tracker.server import _render_markdown
+    md = (
+        "| Status | Tokens |\n"
+        "|--------|-------:|\n"
+        "| **ok** | `1234` |\n"
+    )
+    out = _render_markdown(md)
+    assert "<table class=\"artifact-table\">" in out
+    assert "<thead>" in out and "<tbody>" in out
+    assert "<th>Status</th>" in out
+    assert 'style="text-align:right;"' in out  # second column right-aligned
+    assert "<strong>ok</strong>" in out
+    assert "<code>1234</code>" in out
+
+
+def test_markdown_table_xss_escape():
+    """Cell contents containing HTML-special chars stay escaped."""
+    from dportsv3.tracker.server import _render_markdown
+    md = "| A | B |\n|---|---|\n| <script>x</script> | safe |\n"
+    out = _render_markdown(md)
+    assert "<script>x</script>" not in out
+    assert "&lt;script&gt;" in out
+
+
+def test_markdown_lonely_pipe_does_not_start_table():
+    """A line beginning with `|` but with no separator on the next
+    line stays in paragraph context — protects prose with literal
+    pipes from being misclassified as a malformed table."""
+    from dportsv3.tracker.server import _render_markdown
+    out = _render_markdown(
+        "Paragraph one.\n"
+        "| not a table because no separator |\n"
+        "Still paragraph.\n"
+    )
+    assert "<table" not in out
+
+
+def test_render_diff_basic():
+    """Unified diff is parsed into colored line rows with hunk
+    headers and a top-of-file stat."""
+    from dportsv3.tracker.server import _render_diff
+    diff = (
+        "--- a/foo\n"
+        "+++ b/foo\n"
+        "@@ -1,2 +1,2 @@\n"
+        " kept\n"
+        "-removed\n"
+        "+added\n"
+    )
+    out = _render_diff(diff)
+    assert '<div class="diff-view">' in out
+    assert '<div class="diff-stat">1 file, ' in out
+    assert "diff-stat-add\">+1</span>" in out
+    assert "diff-stat-del\">-1</span>" in out
+    assert "diff-add" in out
+    assert "diff-del" in out
+    assert "diff-hunk-header" in out
+
+
+def test_render_diff_escapes_html():
+    """Diff content is HTML-escaped so file contents like ``<script>``
+    can't break out of the renderer."""
+    from dportsv3.tracker.server import _render_diff
+    out = _render_diff(
+        "--- a/x\n+++ b/x\n@@ -1,1 +1,1 @@\n-<script>alert(1)</script>\n+ok\n"
+    )
+    assert "<script>alert(1)" not in out
+    assert "&lt;script&gt;" in out
+
+
+def test_is_diff_path_recognizes_patch_convention():
+    """FreeBSD ports' ``patch-*`` filename convention triggers the diff
+    renderer regardless of trailing extension."""
+    from dportsv3.tracker.server import _is_diff_path
+    assert _is_diff_path("analysis/changes.diff")
+    assert _is_diff_path("foo.rej")
+    assert _is_diff_path("foo.patch")
+    assert _is_diff_path("port/files/patch-Makefile.pre.in")
+    assert _is_diff_path("port/dragonfly/patch-src_main.c")
+    assert not _is_diff_path("analysis/triage.md")
+    assert not _is_diff_path("port/Makefile.DragonFly")
+
+
+def test_artifact_media_type_makefile_variants():
+    """``Makefile.DragonFly`` / ``Makefile.am`` / ``pkg-plist.amd64``
+    render inline as text/plain. Pre-fix these were octet-stream
+    because their ``suffix`` is the variant tag, not ``.txt``."""
+    from dportsv3.tracker.server import _artifact_media_type
+    media, inline = _artifact_media_type("port/Makefile.DragonFly", None)
+    assert media == "text/plain; charset=utf-8" and inline
+    media, inline = _artifact_media_type("port/Makefile.am", None)
+    assert media == "text/plain; charset=utf-8" and inline
+    media, inline = _artifact_media_type("port/pkg-plist.amd64", None)
+    assert media == "text/plain; charset=utf-8" and inline
+    media, inline = _artifact_media_type("port/files/patch-foo.c", None)
+    assert media == "text/plain; charset=utf-8" and inline
+    # Unknown extension without fs_path → still octet-stream
+    media, inline = _artifact_media_type("foo.weird", None)
+    assert media == "application/octet-stream" and not inline
+
+
+def test_artifact_media_type_content_sniff(tmp_path):
+    """When name+extension don't match, fall back to a content sniff
+    on the on-disk file."""
+    from dportsv3.tracker.server import _artifact_media_type
+    text = tmp_path / "looks-text"
+    text.write_text("hello world\n")
+    media, inline = _artifact_media_type("looks-text", None, fs_path=text)
+    assert media == "text/plain; charset=utf-8" and inline
+
+    binary = tmp_path / "looks-bin"
+    binary.write_bytes(b"\x00\x01\x02\x03" * 50)
+    media, inline = _artifact_media_type("looks-bin", None, fs_path=binary)
+    assert media == "application/octet-stream" and not inline
+
+
 def test_view_agentic_artifact_json_pretty_printed(client: TestClient) -> None:
     resp = client.get("/agentic/bundles/b-q2-foo/artifacts/analysis/patch_audit.json")
     assert resp.status_code == 200
