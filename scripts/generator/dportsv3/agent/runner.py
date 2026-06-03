@@ -3825,6 +3825,18 @@ def process_patch_job(
         job_type="patch",
     )
 
+    # Step 38a: record the env's compose target so worker.apply_intent
+    # can thread it into the Translator. Renderers consume it from
+    # Step 38b onwards; pre-38b it's stored but unused.
+    # Guard env=None so an unresolvable env doesn't stash a junk entry
+    # under the None key (worker.apply_intent's miss-fallback is the
+    # same `None`, so behavior is unchanged either way — but a clean
+    # cache makes debugging easier).
+    from dportsv3.agent import worker as _worker  # noqa: PLC0415
+    _38a_env = resolve_env(job)
+    if _38a_env:
+        _worker.set_env_target(_38a_env, job.get("target") or None)
+
     # Seed queue_root + job_id into job so payload-build telemetry
     # (`playbooks_selected` activity row) can find them. See the same
     # comment in process_triage_job.
@@ -3948,6 +3960,11 @@ def process_convert_job(
         env=env_name, bundle_id=job.get("bundle_id") or None,
         job_type="convert",
     )
+
+    # Step 38a: record the env's compose target so worker.apply_intent
+    # can thread it into the Translator. Renderers consume it from
+    # Step 38b onwards; pre-38b it's stored but unused.
+    worker.set_env_target(env_name, job.get("target") or None)
 
     # Classification (and everything downstream) reads the dev-env's
     # writable overlay via worker.classify_dops → dev-env exec →

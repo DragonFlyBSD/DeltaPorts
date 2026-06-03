@@ -966,6 +966,34 @@ def peek_wrksrc(env: str, origin: str) -> str | None:
     return _WRKSRC_CACHE.get((env, origin))
 
 
+# Step 38a: per-env compose-target cache. The runner populates this
+# at attempt start (process_patch_job / process_convert_job) from
+# job["target"] so `worker.apply_intent` can thread it down to the
+# Translator without changing the LLM-visible tool signature
+# (apply_intent stays `(origin, intent)` from the agent's view). Empty
+# value (None or "") is the @any default, matching pre-38a behavior.
+_TARGET_CACHE: dict[str, str | None] = {}
+
+
+def set_env_target(env: str, target: str | None) -> None:
+    """Record the env's compose target for downstream apply_intent calls.
+
+    Called by the runner at attempt start. Subsequent
+    ``apply_intent(env, ...)`` invocations read this value and thread
+    it into the Translator, which Step 38b's renderers consume to
+    emit per-target-scoped statements. Pre-38b: stored but unused.
+    """
+    _TARGET_CACHE[env] = target
+
+
+def peek_env_target(env: str) -> str | None:
+    """Non-destructive read of the cached compose target for `env`.
+
+    Returns None on cache miss (no target set → fall back to @any).
+    """
+    return _TARGET_CACHE.get(env)
+
+
 def probe_overlay_facts(env: str, origin: str):
     """Collect raw overlay facts from inside the dev-env chroot."""
     from dportsv3.agent.overlay_state import (  # noqa: PLC0415
@@ -1956,6 +1984,7 @@ def apply_intent(
     translator = Translator(
         workspace, origin, mode,
         wrksrc=_WRKSRC_CACHE.get((env, origin)),
+        target=_TARGET_CACHE.get(env),
     )
     result = translator.apply(intent)
 

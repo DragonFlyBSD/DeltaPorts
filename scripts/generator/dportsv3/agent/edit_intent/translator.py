@@ -65,6 +65,7 @@ class Translator:
     def __init__(self, workspace: Path, origin: str, mode: Mode,
                  *,
                  wrksrc: str | None = None,
+                 target: str | None = None,
                  git: Callable[..., subprocess.CompletedProcess] | None = None):
         if mode != "dops":
             raise ValueError(
@@ -81,6 +82,13 @@ class Translator:
         # (and tests) that don't have a wrksrc fall back to the
         # workspace-relative `.genpatch-out` lookup.
         self.wrksrc = wrksrc
+        # `target` is the env's compose target (e.g. `@2026Q2`, `@any`,
+        # `@main`). Step 38a plumbing: stored on the translator so
+        # downstream renderers (Step 38b) can emit per-target-scoped
+        # statements without each having to consult the runner. Optional
+        # for backward compatibility — renderers ignore it pre-38b,
+        # and tests that don't exercise scope can leave it None.
+        self.target = target
         self.port_dir = self.workspace / "ports" / origin
         # subprocess.run shim — tests inject a fake.
         self._git = git or _real_git
