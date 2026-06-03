@@ -1,4 +1,4 @@
-"""Step 38a — target-scope plumbing through the intent layer.
+"""Step 38a + 38b — target-scope plumbing through the intent layer.
 
 The dops engine has supported per-target scoping end-to-end since the
 grammar landed, but the intent layer ignored the dimension entirely —
@@ -6,14 +6,20 @@ the Translator constructor took no target, no schema carried scope,
 every renderer appended at EOF under whatever the file's last
 `target @X` directive was (in practice always `target @any`).
 
-Step 38a is the minimum-viable plumbing: the Translator gains an
-optional `target` kwarg, `worker` keeps a per-env target cache the
-runner populates at attempt start (`runner.process_patch_job` /
-`process_convert_job`), and `worker.apply_intent` threads the
-cached value into the Translator at construction time. Renderers
-ignore `t.target` until Step 38b wires the scope vocabulary; this
-file pins the storage-and-routing surface so 38b can build on it
-without re-litigating the plumbing.
+Step 38a (covered below): the Translator gains an optional `target`
+kwarg, `worker` keeps a per-env target cache the runner populates at
+attempt start (`runner.process_patch_job` / `process_convert_job`),
+and `worker.apply_intent` threads the cached value into the
+Translator at construction time.
+
+Step 38b (covered below): `_ensure_target_scope(overlay_text, scope,
+statements)` placement helper. Pure function — takes overlay text +
+resolved scope + statements, returns new overlay text with the
+statements placed under the matching `target <scope>` section
+(creating a new section at EOF if no match). Renderers will consume
+the helper from 38d onward; this file pins the helper's behavior
+standalone so the renderer integration can build on it without
+re-litigating placement rules.
 """
 
 from __future__ import annotations
@@ -22,6 +28,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from dportsv3.agent import worker
+from dportsv3.agent.edit_intent._dops import _ensure_target_scope
 from dportsv3.agent.edit_intent.translator import Translator
 
 
@@ -213,3 +220,226 @@ def test_apply_intent_falls_back_to_none_when_cache_empty(
         )
 
     assert captured["target"] is None
+
+
+# ---------------------------------------------------------------------
+# Step 38b — _ensure_target_scope placement helper
+# ---------------------------------------------------------------------
+
+
+_HEADER = (
+    "target @any\n"
+    "port devel/foo\n"
+    "type port\n"
+    'reason "x"\n'
+    "\n"
+)
+
+
+def test_helper_appends_to_existing_any_section() -> None:
+    """The common case today: overlay has only `@any`. Helper appends
+    statements at the tail of the @any section."""
+    overlay = _HEADER + 'mk set USES "tar:xz"\n'
+    result = _ensure_target_scope(overlay, "@any", ["mk add USES ssl"])
+    assert result == (
+        _HEADER
+        + 'mk set USES "tar:xz"\n'
+        + "mk add USES ssl\n"
+    )
+
+
+def test_helper_creates_new_q_section_at_eof() -> None:
+    """No @Q section exists; helper appends a fresh `target @Q` block
+    at EOF, preceded by a blank-line separator."""
+    overlay = _HEADER + 'mk set USES "tar:xz"\n'
+    result = _ensure_target_scope(overlay, "@2026Q2", ["mk add CFLAGS -fA"])
+    assert result == (
+        _HEADER
+        + 'mk set USES "tar:xz"\n'
+        + "\n"
+        + "target @2026Q2\n"
+        + "mk add CFLAGS -fA\n"
+    )
+
+
+def test_helper_appends_into_existing_q_section() -> None:
+    """When the @Q section already exists, statements append at its
+    tail. Blank-line separator stays attached to the next section
+    (if any) or EOF."""
+    overlay = (
+        _HEADER
+        + 'mk set USES "tar:xz"\n'
+        + "\n"
+        + "target @2026Q2\n"
+        + "mk add CFLAGS -fA\n"
+    )
+    result = _ensure_target_scope(overlay, "@2026Q2", ['mk set LDFLAGS "-lfoo"'])
+    assert result == (
+        _HEADER
+        + 'mk set USES "tar:xz"\n'
+        + "\n"
+        + "target @2026Q2\n"
+        + "mk add CFLAGS -fA\n"
+        + 'mk set LDFLAGS "-lfoo"\n'
+    )
+
+
+def test_helper_any_insert_preserves_blank_before_next_q() -> None:
+    """Inserting into @any with a @Q section after: the blank-line
+    separator stays attached to the @Q block, not orphaned at the
+    end of the @any insertion."""
+    overlay = (
+        _HEADER
+        + 'mk set USES "tar:xz"\n'
+        + "\n"
+        + "target @2026Q2\n"
+        + "mk add CFLAGS -fA\n"
+    )
+    result = _ensure_target_scope(overlay, "@any", ["mk add EXTRA -f"])
+    assert result == (
+        _HEADER
+        + 'mk set USES "tar:xz"\n'
+        + "mk add EXTRA -f\n"
+        + "\n"
+        + "target @2026Q2\n"
+        + "mk add CFLAGS -fA\n"
+    )
+
+
+def test_helper_match_in_middle_section_keeps_neighbors_intact() -> None:
+    """Three sections (@any, @2026Q2, @2026Q3); helper inserts into
+    the middle one without disturbing the others."""
+    overlay = (
+        _HEADER
+        + 'mk set USES "tar:xz"\n'
+        + "\n"
+        + "target @2026Q2\n"
+        + "mk add A B\n"
+        + "\n"
+        + "target @2026Q3\n"
+        + "mk add C D\n"
+    )
+    result = _ensure_target_scope(overlay, "@2026Q2", ['mk set Z "w"'])
+    assert result == (
+        _HEADER
+        + 'mk set USES "tar:xz"\n'
+        + "\n"
+        + "target @2026Q2\n"
+        + "mk add A B\n"
+        + 'mk set Z "w"\n'
+        + "\n"
+        + "target @2026Q3\n"
+        + "mk add C D\n"
+    )
+
+
+def test_helper_multiple_statements_in_one_call() -> None:
+    """Statements list with N entries lands all of them under the
+    matching section in order."""
+    overlay = _HEADER + 'mk set USES "tar:xz"\n'
+    result = _ensure_target_scope(
+        overlay, "@any",
+        ["mk add USES ssl", 'mk set LICENSE "BSD2CLAUSE"', "mk add CFLAGS -fA"],
+    )
+    assert result == (
+        _HEADER
+        + 'mk set USES "tar:xz"\n'
+        + "mk add USES ssl\n"
+        + 'mk set LICENSE "BSD2CLAUSE"\n'
+        + "mk add CFLAGS -fA\n"
+    )
+
+
+def test_helper_no_match_with_empty_statements_emits_nothing() -> None:
+    """Issue A guard: empty statements + no matching section must
+    NOT emit a bare `target @X` directive. The overlay should be
+    returned essentially unchanged."""
+    overlay = _HEADER + 'mk set USES "tar:xz"\n'
+    result = _ensure_target_scope(overlay, "@2026Q2", [])
+    assert result == overlay
+
+
+def test_helper_match_with_empty_statements_is_noop() -> None:
+    """Empty statements list against a matching section: also a no-op
+    (helper appends nothing, returns the overlay unchanged)."""
+    overlay = _HEADER + 'mk set USES "tar:xz"\n'
+    result = _ensure_target_scope(overlay, "@any", [])
+    assert result == overlay
+
+
+def test_helper_preserves_trailing_newline() -> None:
+    """If input ends with newline, output ends with newline. Convention
+    matches `_append_overlay`."""
+    overlay = _HEADER + 'mk set USES "tar:xz"\n'
+    assert overlay.endswith("\n")
+    result = _ensure_target_scope(overlay, "@any", ["mk add USES ssl"])
+    assert result.endswith("\n")
+
+
+def test_helper_normalizes_missing_trailing_newline() -> None:
+    """Input without trailing newline gets one in the output —
+    matches the existing `_append_overlay` normalization, which
+    convert + worker both rely on."""
+    overlay = _HEADER + 'mk set USES "tar:xz"'  # no trailing nl
+    result = _ensure_target_scope(overlay, "@any", ["mk add USES ssl"])
+    assert result.endswith("\n")
+
+
+def test_helper_rstrips_statement_trailing_whitespace() -> None:
+    """Caller may pass statements with stray trailing whitespace
+    (e.g. `mk add X  ` from sloppy formatting); helper normalizes
+    to a single trailing newline per statement."""
+    overlay = _HEADER
+    result = _ensure_target_scope(overlay, "@any", ["mk add USES ssl   "])
+    assert "mk add USES ssl\n" in result
+    assert "mk add USES ssl   " not in result
+
+
+def test_helper_does_not_match_comma_separated_targets() -> None:
+    """Documented limitation: a `target @2026Q4,@2026Q1` directive
+    in the overlay is NOT matched even if scope is `@2026Q4`. Helper
+    treats it as a distinct (unmatched) section and appends a new
+    `target @2026Q4` block at EOF.
+
+    The intent flow never emits multi-target directives, so this
+    only matters for hand-edited overlays. Pinning the behavior
+    here so 38c knows what to address if the gap surfaces."""
+    overlay = (
+        _HEADER
+        + "target @2026Q4,@2026Q1\n"
+        + "mk add A B\n"
+    )
+    result = _ensure_target_scope(overlay, "@2026Q4", ["mk add C D"])
+    # New section appended at EOF, comma-separated directive untouched.
+    assert "target @2026Q4,@2026Q1\nmk add A B" in result
+    assert result.rstrip().endswith("target @2026Q4\nmk add C D")
+
+
+def test_helper_idempotency_within_section() -> None:
+    """Two consecutive calls with the same statements append both
+    times — the helper has no dedup logic, by design. The
+    no-implicit-cleanup principle (from the intent gaps plan) is
+    upheld: cleanup is the caller's explicit responsibility."""
+    overlay = _HEADER
+    once = _ensure_target_scope(overlay, "@any", ["mk add USES ssl"])
+    twice = _ensure_target_scope(once, "@any", ["mk add USES ssl"])
+    assert twice.count("mk add USES ssl") == 2
+
+
+def test_helper_output_parses_through_engine() -> None:
+    """End-to-end: the helper's output must round-trip through the
+    dops parser. Catches any grammar drift in the placement logic
+    (e.g. accidentally emitting `target @X` without a newline,
+    mis-quoting, etc.)."""
+    from dportsv3.engine.api import parse_dsl
+
+    overlay = _HEADER + 'mk set USES "tar:xz"\n'
+    result = _ensure_target_scope(
+        overlay, "@2026Q2",
+        ["mk add CFLAGS -fA", 'mk set LDFLAGS "-lfoo"'],
+    )
+    parsed = parse_dsl(result)
+    assert parsed.ok, (
+        f"helper output did not parse: "
+        f"{[d.code for d in parsed.diagnostics]}"
+    )

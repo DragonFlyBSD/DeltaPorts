@@ -712,6 +712,104 @@ def _initial_overlay_header(t) -> str:
     )
 
 
+def _ensure_target_scope(
+    overlay_text: str, scope: str, statements: list[str],
+) -> str:
+    """Append statements under the ``target <scope>`` section.
+
+    ``scope`` must be a resolved engine-valid scope string (e.g.
+    ``"@any"``, ``"@main"``, ``"@2026Q2"``). The caller — typically an
+    intent renderer in Step 38d — resolves the agent-facing
+    ``"@current"`` alias to ``translator.target`` before invocation;
+    this helper does not know about the alias.
+
+    Placement rules:
+
+    - If a ``target <scope>`` directive already exists in the overlay,
+      ``statements`` are appended at the tail of its section (right
+      before the next ``target`` directive, or EOF). Trailing blank
+      lines inside the section are skipped so the blank-line
+      separator stays attached to the next ``target`` block.
+    - If no matching directive exists, a fresh
+      ``target <scope>\\n<statements>`` block is appended at EOF,
+      preceded by a single blank line for visual separation.
+
+    Step 38c will add a renderer-side guard that refuses writes which
+    would violate the ``@any-first`` structural invariant. This helper
+    assumes a well-formed input and places statements without
+    rearranging existing sections.
+
+    Known limitations (deferred to 38c if they surface):
+
+    - Exact-string match on the target directive's scope token. A
+      comma-separated multi-target directive (``target @2026Q4,@2026Q1``)
+      is not matched even if ``scope`` is one of the targets.
+      Convert-produced overlays use single scopes; the intent flow
+      never emits multi-target directives.
+    - Line-based scan, not AST. A ``target ...`` substring that
+      appears inside a ``mk target set NAME <<TAG ... TAG`` heredoc
+      body would currently false-match. The renderers don't emit
+      ``target`` directives inside heredoc bodies; this isn't
+      reachable in practice with today's intent surface.
+    """
+    has_trailing_nl = overlay_text.endswith("\n")
+    lines = overlay_text.split("\n")
+    if has_trailing_nl and lines and lines[-1] == "":
+        lines.pop()
+
+    # Locate `target <scope>` directives via a simple line-based scan.
+    # The dops grammar puts ``target`` at column 0 (no leading
+    # whitespace), but we tolerate ``\s+target`` for robustness against
+    # operator-edited files.
+    target_positions: list[tuple[int, str]] = []
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if not stripped.startswith("target "):
+            continue
+        scope_str = stripped[len("target "):].strip()
+        if scope_str:
+            target_positions.append((i, scope_str))
+
+    # Locate the section matching `scope` (exact-string match).
+    matching_section_idx: int | None = None
+    for idx, (_line_no, t) in enumerate(target_positions):
+        if t == scope:
+            matching_section_idx = idx
+            break
+
+    statement_lines = [s.rstrip() for s in statements]
+
+    if matching_section_idx is not None:
+        # Section exists. Insert at its tail, walking back past blank
+        # lines so the separator stays attached to the next block.
+        if matching_section_idx + 1 < len(target_positions):
+            insert_pos = target_positions[matching_section_idx + 1][0]
+        else:
+            insert_pos = len(lines)
+        while insert_pos > 0 and lines[insert_pos - 1].strip() == "":
+            insert_pos -= 1
+        new_lines = lines[:insert_pos] + statement_lines + lines[insert_pos:]
+    elif not statement_lines:
+        # No matching section AND nothing to insert — emit no directive.
+        # Prevents a buggy renderer with edge-case logic from silently
+        # appending bare ``target @X`` lines (valid grammar, but
+        # operationally useless and visual noise in the overlay).
+        new_lines = list(lines)
+    else:
+        # No matching section. Append a fresh block at EOF, preceded
+        # by a blank-line separator.
+        new_lines = list(lines)
+        if new_lines and new_lines[-1].strip() != "":
+            new_lines.append("")
+        new_lines.append(f"target {scope}")
+        new_lines.extend(statement_lines)
+
+    result = "\n".join(new_lines)
+    if has_trailing_nl or new_lines:
+        result += "\n"
+    return result
+
+
 def _stmt_text_replace_once(target: str, find: str, replace: str) -> str:
     """Serialize a ``text replace-once`` statement per the dops grammar.
 
