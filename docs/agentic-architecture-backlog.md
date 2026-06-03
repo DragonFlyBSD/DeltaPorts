@@ -4190,3 +4190,260 @@ playbook, ~200 tests.
   verdicts back into the framework layer. Out of scope; the patch
   agent operates on dops substrate only, so regenerated diffs live
   in `overlay.dops` `patch.apply` blocks, not back in `diffs/`.
+
+### Step 38 — target-scope plumbing for the intent layer — pending
+
+The engine fully supports per-target scoping. The semantic pass tracks
+`current_targets` as it walks statements (`semantic.py:358-440`). The
+compose layer filters ops by `{@any, target}` (`apply.py:296`).
+Multi-target overlay fixtures + tests exist
+(`fixtures/dportsv3/valid/multi_target.dops`,
+`test_dportsv3_semantic.py:96`). And the runner already knows the env
+target per build (`runner.py:5030` reads `job["target"]`).
+
+But the intent layer ignores the dimension entirely. The Translator
+constructor (`translator.py:65`) takes `(workspace, origin, mode)` —
+no target. Every renderer's `_append_overlay` lands at EOF with no
+scope awareness. No intent schema carries scope information. The
+existing strip-prefilter (`_dops.py:441` `_strip_existing_mk_set`) is
+scope-blind — a latent bug that will corrupt the substrate the moment
+any multi-target overlay touches a re-emitted `mk set`.
+
+The result: even though the runner knows it's building on `@2026Q2`,
+the agent has no way to emit a fix scoped to `@2026Q2`. Every
+patch-agent edit goes into the `@any` block by default. Build-line-
+specific deprecations cannot be expressed.
+
+#### Goal
+
+After Step 38, the patch agent can emit intents with a small scope
+vocabulary (`@any` for universal, `@current` for this-build-only).
+The renderer resolves `@current` from the env target, places ops to
+maintain an `@any-first` structural invariant on `overlay.dops`, and
+the engine's "specific overrides general" semantics emerge naturally
+from declaration order without the agent having to reason about
+ordering.
+
+The latent strip-prefilter bug is closed in the same pass by removing
+the prefilter outright (Step 38 follows the "no implicit cleanup"
+principle from the [intent gaps plan](intent-surface-gaps-plan.md)).
+
+#### Sub-steps
+
+**38a — Translator gets the env target.**
+
+`Translator.__init__` grows a `target` parameter (default `None` for
+backward-compat). Every caller — `worker.apply_intent`, the test
+harness — passes the env target through. When the runner constructs a
+Translator, it reads `job["target"]` (already available at
+`runner.py:5030`) and threads it down. Renderers gain access via
+`t.target`.
+
+This is the minimum-viable plumbing. ~30 LOC across `translator.py` +
+callers; no behavior change yet (renderers ignore `t.target` until
+38b).
+
+**38b — scope vocabulary + `_ensure_target_scope` placement helper.**
+
+Two engine-valid scope values exposed to the agent:
+
+- `@any` (default) — applies universally on every build.
+- `@current` — resolves at apply time to `t.target` (e.g. `@2026Q2`).
+  The agent never types a literal `@YYYYQX`.
+
+New helper `_dops.py::_ensure_target_scope(overlay_text, scope) ->
+(new_text, insertion_point)`:
+
+- Parse the overlay into sections by `target @X` directives.
+- For `@any`: locate (or create) the `@any` section at the head of
+  the operation portion (right after the header directives).
+- For a resolved `@Q`: locate (or create) the `@Q` section. Always
+  placed AFTER all `@any` ops.
+- Return the modified text and the line index where the caller should
+  append its statement.
+
+The helper is the single source of truth for placement. Every
+renderer calls it.
+
+**38c — structural invariant: `@any` first, `@Q` sections after.**
+
+The renderer enforces this on every write. The invariant:
+
+```
+target @any
+<all @any-scoped ops>
+
+target @2026Q2      (optional)
+<all @2026Q2-scoped ops>
+
+target @2026Q3      (optional)
+<all @2026Q3-scoped ops>
+
+... etc.
+```
+
+Why this matters: the engine applies ops in declaration order,
+filtered by scope. With `@any` first, `@Q` ops always run **after**
+matching `@any` ops on a `@Q` build, so `@Q` overrides `@any`. This
+is the "specific overrides general" intuition the agent expects.
+Without the invariant, an `@any` op accidentally placed after a `@Q`
+op would silently override it on the `@Q` build.
+
+The invariant is the renderer's responsibility. If an existing
+overlay violates it (e.g. legacy convert output, hand-edited file),
+the renderer **refuses** the write with an actionable error pointing
+at the malformed section. Auto-repair would be sneaky and surprising.
+
+**38d — existing intent schemas grow an optional `scope` field.**
+
+Seven intents: `replace_in_patch`, `drop_patch`, `add_patch`,
+`add_file`, `change_makefile`, `bump_portrevision`,
+`replace_in_dops_block`.
+
+Each schema gains:
+
+```json
+"scope": {
+  "enum": ["@any", "@current"],
+  "default": "@any"
+}
+```
+
+Renderers inspect `intent.scope`, resolve `@current` via `t.target`,
+and call `_ensure_target_scope` before appending their statement.
+
+Backward-compatible: omitting `scope` defaults to `@any`, matching
+today's implicit behavior.
+
+**38e — remove the strip-prefilter entirely.**
+
+`_strip_existing_mk_set` in `_dops.py:441` is deleted. Its single
+caller (`change_makefile op=set`) appends unconditionally. Re-emitting
+`op=set FOO "x"` produces a second `mk set FOO "x"` line; the engine
+processes ops in declaration order and the second `mk set` wins on
+both `@any` and the current target. Substrate carries redundant lines
+but compose output is correct.
+
+This closes the scope-blind bug (there's no prefilter to be blind).
+It also aligns the renderer with the "no implicit cleanup" principle
+in [intent-surface-gaps-plan.md](intent-surface-gaps-plan.md) — every
+intent does exactly one thing, predictably. If the agent wants to
+clean up a redundant `mk set` from the overlay, it uses an explicit
+delete intent (Family A in the gaps plan), not implicit prefiltering.
+
+**38f — `get_effective_overlay` tool.**
+
+New agent tool. Given `origin`, returns the ops effective for the
+current build target — filtered + ordered as the engine would apply
+them, with scope tags on each op. Filtered-out ops listed separately.
+
+This lets the agent reason about effective state without having to
+mentally apply scope filtering to the raw overlay file every time it
+reads. With multi-target overlays in production, this becomes nearly
+essential; without it, agents will systematically misread mixed-scope
+files.
+
+Schema (rough):
+
+```
+get_effective_overlay(origin) -> {
+  target: "@2026Q2",
+  effective_ops: [
+    {kind: "mk.var.set", scope: "@any", line: 6, ...},
+    {kind: "mk.var.token_add", scope: "@2026Q2", line: 12, ...}
+  ],
+  filtered_out: [
+    {kind: "...", scope: "@2026Q3", line: 18, ...}
+  ]
+}
+```
+
+**38g — playbook + prompt updates.**
+
+- Each of the 7 intent playbooks gains a "Scoping" section with the
+  rule: "universal fix → omit `scope` or set `@any`; build-line-
+  specific fix → `@current`."
+- `prompts.py:510-525` adds a one-paragraph note: scope is a cross-
+  cutting capability; default is `@any`; use `@current` for build-
+  specific fixes.
+- New `intent-scoping.md` cross-cutting playbook explaining the model
+  in one place.
+
+**38h — tests.**
+
+- Translator-target plumbing: constructor accepts target; renderers
+  can read it.
+- `_ensure_target_scope` placement: empty overlay, overlay with only
+  `@any`, overlay with `@any + @Q`, overlay with multiple `@Q`
+  sections.
+- Structural invariant enforcement: refuse writes that would produce
+  `@Q` before `@any` for the same key; reject on overlays that
+  already violate the invariant.
+- Each renderer with each scope value (`@any`, `@current`): round-
+  trip through the engine parser and verify scope is preserved.
+- Strip-prefilter removal regression: re-emitting `op=set` produces
+  two `mk set` lines (intentional; documents the new behavior).
+- `get_effective_overlay`: filtering works; ordering preserved;
+  filtered_out list correct.
+
+#### LOC estimate
+
+- 38a constructor + plumbing: ~50
+- 38b scope helper: ~80
+- 38c invariant enforcement: ~50
+- 38d schema updates × 7 intents: ~40 (mostly JSON)
+- 38e strip-prefilter removal: ~10 (mostly deletion)
+- 38f effective-overlay tool: ~120
+- 38g playbook + prompt: ~600 words content, ~30 LOC for prompt
+- 38h tests: ~250
+
+~600 LOC + content. Most of the surface is the helper + tests; the
+schema + plumbing is small.
+
+#### Order
+
+38a → 38b → 38c → 38d → 38e → 38f → 38h → 38g. Plumbing and helper
+first (no behavior change yet); structural invariant + schema updates
+next so scope is wired through; strip-prefilter removal after that to
+close the latent bug; effective-overlay tool to round out the agent's
+reading surface; tests and docs last so they reflect the landed
+behavior.
+
+#### Why not earlier
+
+Convert produces `@any`-only overlays today. The multi-target
+capability has been engine-supported but unused at the intent layer
+since the dops engine landed. Doing this work pre-emptively would
+have been speculation about a use case that didn't exist. The recent
+intent-surface gap analysis
+([docs/intent-surface-gaps.md](intent-surface-gaps.md)) surfaced the
+first concrete need: agents have to be able to express build-line-
+specific fixes without overscoping to `@any`. Now the work has a
+concrete trigger.
+
+#### Dependencies
+
+- **Hard**: nothing — the engine already supports target scoping
+  end-to-end (parser, semantic pass, apply layer).
+- **Soft**: the Family A delete intents in
+  [intent-surface-gaps-plan.md](intent-surface-gaps-plan.md)
+  (`drop_file`, `drop_target_block`, `drop_dops_directive`). Those
+  should be designed with scope-awareness from day one if Step 38
+  ships first — saves a v2 of each schema later.
+- **Coupling**: Step 38 closes the latent `_strip_existing_mk_set`
+  bug in passing. Without Step 38, that bug stays latent (no
+  production overlay uses multi-target today, but the day one does —
+  silent corruption).
+
+#### Relationship to intent-surface-gaps
+
+The [intent-surface-gaps plan](intent-surface-gaps-plan.md) (Family A
+delete intents, Family B missing-directive intents) is **content** —
+what the agent can express. Step 38 is **substrate plumbing** — how
+those expressions are placed in the overlay. They're independent but
+compatible: any new intent landed in either plan should consume
+`scope` via the same field added in 38d.
+
+Recommended sequencing: **Step 38 lands first**, then Family A delete
+intents inherit scope from day one. The reverse (Family A first, then
+retrofit scope) means rewriting every delete intent's renderer.
