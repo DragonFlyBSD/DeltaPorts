@@ -663,6 +663,16 @@ def _append_overlay(t, intent_type: str, statements: Iterable[str],
     existed = overlay.is_file()
     before_overlay = overlay.read_text() if existed else None
     original = before_overlay if existed else _initial_overlay_header(t)
+    # Step 38c: refuse writes when the existing overlay already
+    # violates the @any-first invariant. No auto-repair — the
+    # operator must resolve the malformed layout deliberately. Clean
+    # overlays (which includes every convert output and every
+    # `_initial_overlay_header`-seeded file) pass the check trivially.
+    invariant_err = _check_target_scope_order(original)
+    if invariant_err is not None:
+        return EditResult(
+            ok=False, intent_type=intent_type, error=invariant_err,
+        )
     new = prefilter(original) if prefilter is not None else original
     if not new.endswith("\n"):
         new += "\n"
@@ -710,6 +720,71 @@ def _initial_overlay_header(t) -> str:
         f"reason \"agent edits via edit-intent DSL\"\n"
         f"\n"
     )
+
+
+def _check_target_scope_order(overlay_text: str) -> str | None:
+    """Walk `target` directives top-to-bottom and verify the
+    `@any`-first structural invariant.
+
+    Returns ``None`` if the invariant holds (the common case). Returns
+    an actionable error message string if a ``target @any`` directive
+    appears after a non-``@any`` directive — that ordering inverts
+    "specific overrides general" semantics because the engine applies
+    ops in declaration order, and the late ``@any`` op runs *after*
+    matching ``@Q`` ops on a ``@Q`` build.
+
+    The checker is intentionally narrow:
+
+    - Multiple consecutive ``target @any`` directives are redundant
+      but not a violation (the engine treats them as a no-op
+      re-bind).
+    - Ordering between ``@Q`` directives doesn't matter (no conflict
+      — each ``@Q`` filters to a different build), so no constraint.
+    - Comma-separated multi-target directives are treated as
+      ``@Q``-equivalent if they don't contain ``@any``; the engine
+      rejects mixing ``@any`` with explicit selectors at semantic
+      time, so we don't have to handle that case here.
+    - Overlays with no ``target`` directive at all default to
+      ``@any`` per ``semantic.py:358``; no violation possible.
+
+    Step 38c's design choice: never auto-repair. If an overlay
+    already violates the invariant (operator hand-edit, legacy
+    convert output, etc.), the renderer refuses with this error so
+    the operator can fix it deliberately rather than have the
+    engine silently propagate a corrupted layout.
+    """
+    seen_non_any: tuple[int, str] | None = None
+    for i, line in enumerate(overlay_text.splitlines(), start=1):
+        stripped = line.strip()
+        if not stripped.startswith("target "):
+            continue
+        scope_str = stripped[len("target "):].strip()
+        if not scope_str:
+            continue
+        # Comma-separated multi-target: split and inspect each token.
+        # If `@any` appears, the engine itself rejects mixing — we
+        # match that classification here by treating it as @any.
+        scopes = [s.strip() for s in scope_str.split(",")]
+        is_any_only = scopes == ["@any"]
+        if is_any_only:
+            if seen_non_any is not None:
+                prev_line, prev_scope = seen_non_any
+                return (
+                    f"overlay.dops violates the @any-first invariant: "
+                    f"`target @any` at line {i} appears after "
+                    f"`target {prev_scope}` at line {prev_line}. The "
+                    f"engine applies ops in declaration order; an "
+                    f"@any op placed after a @Q section silently "
+                    f"overrides @Q on that build. Resolve by editing "
+                    f"overlay.dops manually (move @any directives + "
+                    f"their ops to precede any non-@any sections), or "
+                    f"re-run `dportsv3 dev-env reset-port` to start "
+                    f"fresh."
+                )
+        else:
+            if seen_non_any is None:
+                seen_non_any = (i, scope_str)
+    return None
 
 
 def _ensure_target_scope(

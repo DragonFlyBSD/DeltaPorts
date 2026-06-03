@@ -28,7 +28,10 @@ from pathlib import Path
 from unittest.mock import patch
 
 from dportsv3.agent import worker
-from dportsv3.agent.edit_intent._dops import _ensure_target_scope
+from dportsv3.agent.edit_intent._dops import (
+    _check_target_scope_order,
+    _ensure_target_scope,
+)
 from dportsv3.agent.edit_intent.translator import Translator
 
 
@@ -443,3 +446,241 @@ def test_helper_output_parses_through_engine() -> None:
         f"helper output did not parse: "
         f"{[d.code for d in parsed.diagnostics]}"
     )
+
+
+# ---------------------------------------------------------------------
+# Step 38c — _check_target_scope_order invariant checker
+# ---------------------------------------------------------------------
+
+
+def test_checker_clean_any_only_returns_none() -> None:
+    """The common case today: overlays produced by convert and the
+    initial header are @any-only. Invariant holds trivially."""
+    overlay = _HEADER + 'mk set USES "tar:xz"\n'
+    assert _check_target_scope_order(overlay) is None
+
+
+def test_checker_clean_any_then_q_returns_none() -> None:
+    """The shape Step 38d will produce: @any first, then @Q sections.
+    Engine declaration order makes @Q override @any naturally."""
+    overlay = (
+        _HEADER
+        + 'mk set USES "tar:xz"\n'
+        + "\n"
+        + "target @2026Q2\n"
+        + 'mk set USES "tar:lzma"\n'
+    )
+    assert _check_target_scope_order(overlay) is None
+
+
+def test_checker_flags_any_after_q() -> None:
+    """The actual violation: a `target @any` directive following any
+    non-@any directive. The error message names both lines so the
+    operator can locate the malformed section."""
+    overlay = (
+        "target @2026Q2\n"
+        "mk add A B\n"
+        "\n"
+        "target @any\n"
+        'mk set USES "tar:xz"\n'
+    )
+    err = _check_target_scope_order(overlay)
+    assert err is not None
+    assert "line 4" in err
+    assert "@2026Q2" in err
+    assert "line 1" in err
+
+
+def test_checker_header_only_returns_none() -> None:
+    """Single `target @any` in the header — the seeded state — passes."""
+    assert _check_target_scope_order(_HEADER) is None
+
+
+def test_checker_empty_overlay_returns_none() -> None:
+    """Empty overlay text has no directives → no violations possible."""
+    assert _check_target_scope_order("") is None
+
+
+def test_checker_no_target_directive_returns_none() -> None:
+    """Engine defaults to `@any` when no `target` directive exists
+    (semantic.py:358). Implicit-@any overlays are clean."""
+    overlay = 'mk set USES "tar:xz"\n'
+    assert _check_target_scope_order(overlay) is None
+
+
+def test_checker_multiple_consecutive_any_returns_none() -> None:
+    """Redundant but legal: the engine treats consecutive `target @any`
+    as no-op re-bindings."""
+    overlay = (
+        "target @any\n"
+        "target @any\n"
+        'mk set USES "tar:xz"\n'
+    )
+    assert _check_target_scope_order(overlay) is None
+
+
+def test_checker_multiple_q_sections_in_any_order_returns_none() -> None:
+    """No ordering constraint between @Q sections — they don't conflict
+    (each filters to a different build)."""
+    overlay = (
+        _HEADER
+        + "target @2026Q3\n"
+        + "mk add A B\n"
+        + "\n"
+        + "target @2026Q2\n"
+        + "mk add C D\n"
+    )
+    assert _check_target_scope_order(overlay) is None
+
+
+def test_checker_target_main_only_returns_none() -> None:
+    """A legitimate (if unusual) @main-only overlay: no @any to follow
+    a non-@any directive, so the invariant trivially holds."""
+    overlay = (
+        "target @main\n"
+        "port devel/foo\n"
+        'mk set USES "tar:xz"\n'
+    )
+    assert _check_target_scope_order(overlay) is None
+
+
+def test_checker_tolerates_leading_whitespace() -> None:
+    """Indented `target` directives (unusual but possible from
+    operator hand-edits) are still recognized."""
+    overlay = (
+        "    target @2026Q2\n"
+        "    mk add A B\n"
+        "\n"
+        "  target @any\n"
+        'mk set USES "tar:xz"\n'
+    )
+    err = _check_target_scope_order(overlay)
+    assert err is not None
+    assert "@2026Q2" in err
+
+
+def test_checker_ignores_comment_lines() -> None:
+    """`# target @2026Q2` is a comment, not a directive."""
+    overlay = (
+        "target @any\n"
+        "# target @2026Q2 — this is a comment, not a directive\n"
+        "mk set X \"Y\"\n"
+    )
+    assert _check_target_scope_order(overlay) is None
+
+
+def test_checker_comma_separated_q_is_non_any() -> None:
+    """A `target @2026Q4,@2026Q1` directive is treated as non-@any
+    (the engine itself would reject mixing with @any). If a later
+    `target @any` appears, that's a violation."""
+    overlay = (
+        "target @2026Q4,@2026Q1\n"
+        "mk add A B\n"
+        "\n"
+        "target @any\n"
+        'mk set USES "tar:xz"\n'
+    )
+    err = _check_target_scope_order(overlay)
+    assert err is not None
+    assert "@2026Q4,@2026Q1" in err
+
+
+def test_checker_returns_first_violation_only() -> None:
+    """When multiple violations exist, the checker reports the FIRST
+    one and stops. The operator fixes that and re-runs to surface the
+    next, rather than getting a flood of related diagnostics."""
+    overlay = (
+        "target @2026Q2\n"
+        "mk add A\n"
+        "target @any\n"
+        "mk set X \"Y\"\n"
+        "target @2026Q3\n"
+        "mk add B\n"
+        "target @any\n"
+        "mk set Z \"W\"\n"
+    )
+    err = _check_target_scope_order(overlay)
+    assert err is not None
+    # Names the first violation (line 3 = @any after line 1 = @2026Q2).
+    assert "line 3" in err
+    assert "line 1" in err
+    # The second violation (line 7) is not mentioned.
+    assert "line 7" not in err
+
+
+# ---------------------------------------------------------------------
+# Step 38c — _append_overlay gate integration
+# ---------------------------------------------------------------------
+
+
+def _make_translator_with_overlay(tmp_path: Path, overlay_text: str) -> Translator:
+    """Spin up a Translator pointing at a port whose overlay.dops
+    already contains `overlay_text`. Used to drive the
+    `_append_overlay` gate from outside the helper level."""
+    workspace = tmp_path / "ws"
+    workspace.mkdir()
+    port_dir = workspace / "ports" / "devel" / "foo"
+    port_dir.mkdir(parents=True)
+    (port_dir / "overlay.dops").write_text(overlay_text)
+    return Translator(workspace, "devel/foo", "dops")
+
+
+def test_append_overlay_gate_refuses_violating_overlay(tmp_path: Path) -> None:
+    """End-to-end: a renderer attempting to write into an overlay
+    that already violates the invariant gets `ok=False` with the
+    checker's error message. The substrate is untouched."""
+    bad = (
+        "target @2026Q2\n"
+        "mk add A B\n"
+        "\n"
+        "target @any\n"
+        "port devel/foo\n"
+    )
+    t = _make_translator_with_overlay(tmp_path, bad)
+
+    # Use bump_portrevision as the test vehicle — the simplest
+    # renderer that calls _append_overlay.
+    result = t.apply({"type": "bump_portrevision"})
+
+    assert result.ok is False
+    assert "@any-first invariant" in (result.error or "")
+    # Substrate untouched.
+    assert (
+        (tmp_path / "ws" / "ports" / "devel" / "foo" / "overlay.dops").read_text()
+        == bad
+    )
+
+
+def test_append_overlay_gate_passes_clean_overlay(tmp_path: Path) -> None:
+    """Regression: clean overlays continue to accept writes. The gate
+    must NOT false-positive on convert-shaped output."""
+    clean = (
+        _HEADER
+        + 'mk set USES "tar:xz"\n'
+        + "\n"
+        + "target @2026Q2\n"
+        + "mk add CFLAGS -fA\n"
+    )
+    t = _make_translator_with_overlay(tmp_path, clean)
+
+    result = t.apply({"type": "bump_portrevision"})
+
+    assert result.ok is True, result.error
+    # Substrate was modified (the PORTREVISION write landed).
+    written = (
+        tmp_path / "ws" / "ports" / "devel" / "foo" / "overlay.dops"
+    ).read_text()
+    assert "mk set PORTREVISION" in written
+
+
+def test_append_overlay_gate_passes_fresh_overlay(tmp_path: Path) -> None:
+    """Regression: when no overlay.dops exists yet, the seeded header
+    is invariant-clean. The gate must allow the very first write."""
+    workspace = tmp_path / "ws"
+    workspace.mkdir()
+    (workspace / "ports" / "devel" / "foo").mkdir(parents=True)
+    t = Translator(workspace, "devel/foo", "dops")
+
+    result = t.apply({"type": "bump_portrevision"})
+
+    assert result.ok is True, result.error
