@@ -6,6 +6,8 @@
   "required": ["type"],
   "additionalProperties": false,
   "properties": {
-    "type": {"const": "bump_portrevision"}
+    "type": {"const": "bump_portrevision"},
+    "scope": {"enum": ["@any", "@current"], "default": "@any",
+              "description": "Target build line for this op. '@any' (default) applies universally on every build. '@current' resolves to the env's current target at apply time. NOTE: PORTREVISION is part of the port's package identity; scoping a bump to one build line is rarely correct. Use @any unless you have a specific reason."}
   }
 }

@@ -12,7 +12,9 @@
     "diff": {"type": ["string", "null"],
              "description": "Full unified-diff content"},
     "from_dupe": {"type": "boolean", "default": false,
-                  "description": "If true, translator picks the most recent file matching target's basename from the env's genpatch output dir"}
+                  "description": "If true, translator picks the most recent file matching target's basename from the env's genpatch output dir"},
+    "scope": {"enum": ["@any", "@current"], "default": "@any",
+              "description": "Target build line for this op. '@any' (default) applies universally on every build. '@current' resolves to the env's current target at apply time — use for build-line-specific fixes. Never type literal '@2026Q2'; the runner injects t.target."}
   },
   "anyOf": [
     {"required": ["diff"], "properties": {"diff": {"type": "string", "minLength": 1}}},

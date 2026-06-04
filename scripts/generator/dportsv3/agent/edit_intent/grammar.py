@@ -32,6 +32,7 @@ class ReplaceInPatch:
     find: str
     replace: str
     occurrence: int = 1   # 1-based; which match to replace if find is non-unique
+    scope: Literal["@any", "@current"] = "@any"  # Step 38d-4
 
 
 @dataclass(frozen=True)
@@ -54,6 +55,7 @@ class AddPatch:
     target: str
     diff: str | None = None
     from_dupe: bool = False
+    scope: Literal["@any", "@current"] = "@any"  # Step 38d-4
 
 
 @dataclass(frozen=True)
@@ -68,6 +70,7 @@ class AddFile:
     kind: Literal["resource", "materialize"]
     content: str | None = None
     source: str | None = None
+    scope: Literal["@any", "@current"] = "@any"  # Step 38d-4
 
 
 @dataclass(frozen=True)
@@ -87,12 +90,14 @@ class ChangeMakefile:
     key: str              # var name
     op: Literal["set", "append", "remove", "unset"]
     value: str = ""       # ignored when op="unset"
+    scope: Literal["@any", "@current"] = "@any"  # Step 38d-4
 
 
 @dataclass(frozen=True)
 class BumpPortrevision:
     """Increment PORTREVISION (§3.2.6)."""
     type: Literal["bump_portrevision"]
+    scope: Literal["@any", "@current"] = "@any"  # Step 38d-4
 
 
 @dataclass(frozen=True)

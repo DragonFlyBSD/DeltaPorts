@@ -1078,3 +1078,168 @@ def test_append_overlay_scope_arg_does_not_break_existing_callers(
     assert r.ok, r.error
     written = t.port_path("overlay.dops").read_text()
     assert "mk set PORTREVISION" in written
+
+
+# ---------------------------------------------------------------------
+# Step 38d-4 + 38d-5 — schema + dataclass scope field
+# ---------------------------------------------------------------------
+
+
+# (intent_type, valid-payload-without-scope) tuples for the 5 intents
+# that gained the scope field in 38d-4. Used as parametrize sources
+# below to avoid copy-paste across 5 intent types.
+_SCOPE_BEARING_INTENTS = [
+    (
+        "replace_in_patch",
+        {"target": "files/extra-config.in", "find": "OLD", "replace": "NEW"},
+    ),
+    (
+        "add_patch",
+        {
+            "target": "dragonfly/patch-src_x.c",
+            "diff": "--- a\n+++ b\n@@ -1 +1 @@\n-x\n+y\n",
+        },
+    ),
+    (
+        "add_file",
+        {"dest": "files/x", "kind": "resource", "content": "hello"},
+    ),
+    (
+        "change_makefile",
+        {"path": "Makefile", "key": "USES", "op": "set", "value": "cmake"},
+    ),
+    (
+        "bump_portrevision",
+        {},
+    ),
+]
+
+
+def test_scope_omitted_defaults_to_any() -> None:
+    """38d-5 dataclass default: omitting `scope` from the wire payload
+    yields `intent.scope == "@any"` after parse. JSON Schema's
+    `default` field is informational only (jsonschema.validate doesn't
+    inject); the dataclass default is what actually fires."""
+    import pytest as _pytest  # noqa: F401
+    from dportsv3.agent.edit_intent.validator import parse_intent
+
+    for intent_type, extra in _SCOPE_BEARING_INTENTS:
+        intent = parse_intent({"type": intent_type, **extra})
+        assert intent.scope == "@any", (
+            f"{intent_type} default scope should be @any, got "
+            f"{intent.scope!r}"
+        )
+
+
+def test_scope_explicit_any_parses() -> None:
+    """Explicit `scope='@any'` passes the schema enum and lands in
+    the dataclass field."""
+    from dportsv3.agent.edit_intent.validator import parse_intent
+
+    for intent_type, extra in _SCOPE_BEARING_INTENTS:
+        intent = parse_intent({"type": intent_type, "scope": "@any", **extra})
+        assert intent.scope == "@any"
+
+
+def test_scope_explicit_current_parses() -> None:
+    """Explicit `scope='@current'` passes the schema enum and lands
+    in the dataclass field. Resolution to a concrete @YYYYQX
+    happens later in `_append_overlay` (38d-3), not at parse."""
+    from dportsv3.agent.edit_intent.validator import parse_intent
+
+    for intent_type, extra in _SCOPE_BEARING_INTENTS:
+        intent = parse_intent(
+            {"type": intent_type, "scope": "@current", **extra},
+        )
+        assert intent.scope == "@current"
+
+
+def test_scope_rejects_literal_quarter() -> None:
+    """38d's locked decision: the agent vocabulary is @any/@current
+    only. A literal @YYYYQX in the payload is refused at validation
+    time. The runner injects t.target on the renderer side; the
+    agent never names the target directly."""
+    import pytest
+    from dportsv3.agent.edit_intent.validator import IntentError, parse_intent
+
+    for intent_type, extra in _SCOPE_BEARING_INTENTS:
+        with pytest.raises(IntentError, match="enum|@2026Q2"):
+            parse_intent(
+                {"type": intent_type, "scope": "@2026Q2", **extra},
+            )
+
+
+def test_scope_rejects_invalid_values() -> None:
+    """Schema enum is exhaustive — null, empty string, and miscased
+    variants all refuse. (Refusal mode is JSON Schema's enum
+    diagnostic; we don't assert on the exact message.)"""
+    import pytest
+    from dportsv3.agent.edit_intent.validator import IntentError, parse_intent
+
+    bad_scopes = ["", "@", "@CURRENT", "current", "@any "]
+    for intent_type, extra in _SCOPE_BEARING_INTENTS:
+        for bad in bad_scopes:
+            with pytest.raises(IntentError):
+                parse_intent(
+                    {"type": intent_type, "scope": bad, **extra},
+                )
+
+
+def test_drop_patch_rejects_scope_field() -> None:
+    """drop_patch operates on a named entity (the patch path) — there's
+    only one of any given patch. Scope is irrelevant; the schema
+    rejects the field via `additionalProperties: false`."""
+    import pytest
+    from dportsv3.agent.edit_intent.validator import IntentError, parse_intent
+
+    with pytest.raises(IntentError):
+        parse_intent({
+            "type": "drop_patch",
+            "target": "dragonfly/patch-x.c",
+            "reason": "obsolete",
+            "scope": "@any",   # not allowed
+        })
+
+
+def test_replace_in_dops_block_rejects_scope_field() -> None:
+    """replace_in_dops_block operates on a named heredoc block —
+    block-name-collision-across-scopes is a separate gap, not 38d's
+    concern. The schema rejects `scope` via `additionalProperties:
+    false`."""
+    import pytest
+    from dportsv3.agent.edit_intent.validator import IntentError, parse_intent
+
+    with pytest.raises(IntentError):
+        parse_intent({
+            "type": "replace_in_dops_block",
+            "block_name": "dfly-patch",
+            "find": "old",
+            "replace": "new",
+            "scope": "@any",   # not allowed
+        })
+
+
+def test_schema_for_surfaces_scope_field() -> None:
+    """The `intent_reference` tool returns the JSON schema for a
+    given intent type. Agents read the schema to pick up field
+    shapes including scope. Verify the field appears in each
+    scope-bearing intent's schema."""
+    from dportsv3.agent.edit_intent.validator import schema_for
+
+    for intent_type, _extra in _SCOPE_BEARING_INTENTS:
+        s = schema_for(intent_type)
+        assert "scope" in s["properties"], (
+            f"{intent_type} schema must expose `scope` in properties"
+        )
+        scope_def = s["properties"]["scope"]
+        assert scope_def["enum"] == ["@any", "@current"]
+        assert scope_def["default"] == "@any"
+
+
+def test_schema_for_drop_patch_does_not_include_scope() -> None:
+    """drop_patch's schema does NOT carry scope — verifies the
+    asymmetric coverage (5 of 7 intents have scope, 2 do not)."""
+    from dportsv3.agent.edit_intent.validator import schema_for
+
+    assert "scope" not in schema_for("drop_patch")["properties"]
+    assert "scope" not in schema_for("replace_in_dops_block")["properties"]

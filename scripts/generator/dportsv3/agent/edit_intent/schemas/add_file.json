@@ -13,7 +13,9 @@
     "content": {"type": ["string", "null"],
                 "description": "File content. Required iff kind=resource."},
     "source": {"type": ["string", "null"],
-               "description": "Source path in the dragonfly tree. Required iff kind=materialize."}
+               "description": "Source path in the dragonfly tree. Required iff kind=materialize."},
+    "scope": {"enum": ["@any", "@current"], "default": "@any",
+              "description": "Target build line for this op. '@any' (default) applies universally on every build. '@current' resolves to the env's current target at apply time — use for build-line-specific fixes. Never type literal '@2026Q2'; the runner injects t.target."}
   },
   "allOf": [
     {
