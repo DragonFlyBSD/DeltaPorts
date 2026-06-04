@@ -1030,40 +1030,6 @@ def test_append_overlay_invariant_gate_runs_before_scope_resolution(
     assert "set_env_target" not in (r.error or "")
 
 
-def test_append_overlay_scope_with_prefilter(tmp_path: Path) -> None:
-    """When both `scope` and `prefilter` are passed, the prefilter
-    still applies before placement. Documents that the two
-    parameters compose. (Becomes moot once 38e removes the only
-    existing prefilter, but the dispatch ordering must be right.)"""
-    from dportsv3.agent.edit_intent._dops import _append_overlay
-
-    t = _make_seeded_translator(tmp_path)
-    # Seed an overlay with an existing `mk set USES` line.
-    t.port_path("overlay.dops").write_text(
-        "target @any\nport devel/foo\n\n"
-        'mk set USES "old"\n'
-    )
-
-    # Prefilter that strips the existing `mk set USES` line.
-    def _strip_uses(text: str) -> str:
-        return "\n".join(
-            line for line in text.split("\n")
-            if "mk set USES" not in line
-        )
-
-    r = _append_overlay(
-        t, "change_makefile",
-        ['mk set USES "new"'],
-        prefilter=_strip_uses,
-        scope="@any",
-    )
-
-    assert r.ok, r.error
-    written = t.port_path("overlay.dops").read_text()
-    assert 'mk set USES "old"' not in written
-    assert 'mk set USES "new"' in written
-
-
 def test_append_overlay_scope_arg_does_not_break_existing_callers(
     tmp_path: Path,
 ) -> None:

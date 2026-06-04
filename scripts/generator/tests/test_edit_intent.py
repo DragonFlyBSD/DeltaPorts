@@ -513,17 +513,24 @@ class TestDopsRenderers:
         overlay_text = t.port_path("overlay.dops").read_text()
         assert 'mk set CFG "a\\"b\\\\c"' in overlay_text
 
-    def test_change_makefile_set_op_replaces_prior_mk_set_for_same_key(self, t):
-        """Two sequential set-ops for the same key must collapse to
-        one `mk set KEY ...` line in overlay.dops, not accumulate.
+    def test_change_makefile_set_op_re_emits_accumulate(self, t):
+        """Step 38e: sequential set-ops for the same key accumulate as
+        separate ``mk set KEY ...`` lines on disk. The engine processes
+        them in declaration order (last-wins) so the composed Makefile
+        gets the final value — functionally correct — but the substrate
+        carries every re-emit.
 
-        Regression for the redis smoke-test finding: three sequential
-        `change_makefile(op=set)` intents on BINARY_ALIAS produced
-        three additive `mk set BINARY_ALIAS "..."` lines (all ok=True),
-        and the agent rationalized the result as "last wins."
-        Functionally equivalent under the engine planner (last write
-        wins) but the substrate accumulates dead lines and the diff
-        grows unboundedly across re-edits.
+        Pre-38e, an implicit prefilter (``_strip_existing_mk_set``)
+        scrubbed prior ``mk set KEY`` lines before appending each new
+        one. The prefilter was removed for two reasons: it was
+        scope-blind (would have corrupted multi-target overlays once
+        38d enabled per-target emission) and it baked cross-intent
+        state mutation into a renderer's body, violating the "each
+        intent does exactly one thing" principle.
+
+        Cleanup of redundant lines is the agent's explicit
+        responsibility via the Family A delete intents (see
+        docs/intent-surface-gaps-plan.md).
         """
         r1 = t.apply({
             "type": "change_makefile", "path": "Makefile",
@@ -542,13 +549,20 @@ class TestDopsRenderers:
         assert r3.ok is True
 
         overlay_text = t.port_path("overlay.dops").read_text()
-        # Exactly one mk-set line for this key, with the last value.
         mk_set_lines = [
             line for line in overlay_text.splitlines()
             if line.strip().startswith("mk set BINARY_ALIAS")
         ]
-        assert mk_set_lines == ['mk set BINARY_ALIAS "gmd5sum=md5 -r"'], (
-            f"expected one collapsed mk set line, got: {mk_set_lines!r}\n"
+        # All three emissions land as separate lines, in order. The
+        # engine plays them sequentially and the last write wins at
+        # compose time.
+        assert mk_set_lines == [
+            'mk set BINARY_ALIAS "gmd5sum=md5 -r"',
+            'mk set BINARY_ALIAS "gmd5sum=md5"',
+            'mk set BINARY_ALIAS "gmd5sum=md5 -r"',
+        ], (
+            f"expected three accumulated mk set lines, got: "
+            f"{mk_set_lines!r}\n"
             f"full overlay:\n{overlay_text}"
         )
 
@@ -631,8 +645,12 @@ class TestDopsRenderers:
             else:
                 raise AssertionError(f"{op} without value should have failed schema")
 
-    def test_change_makefile_set_op_preserves_other_mk_set_keys(self, t):
-        """Scrubbing for one key must NOT touch mk set lines for other keys."""
+    def test_change_makefile_set_op_does_not_touch_unrelated_keys(self, t):
+        """Step 38e: each ``op=set`` emission lands as a single line
+        and never touches lines from prior intents — including ones
+        for different keys (which would have been even more wrong
+        than the same-key prefilter behavior, but the same principle
+        applies: no cross-intent state mutation in the renderer)."""
         t.apply({
             "type": "change_makefile", "path": "Makefile",
             "key": "FOO", "value": "v1", "op": "set",
@@ -646,11 +664,12 @@ class TestDopsRenderers:
             "key": "FOO", "value": "v3", "op": "set",
         })
         overlay_text = t.port_path("overlay.dops").read_text()
-        assert 'mk set FOO "v3"' in overlay_text
+        # All three lines coexist; BAR is untouched by FOO emissions.
+        assert 'mk set FOO "v1"' in overlay_text
         assert 'mk set BAR "v2"' in overlay_text
-        # FOO's old value must be gone, but only one FOO line remains.
-        assert overlay_text.count("mk set FOO") == 1
-        assert 'mk set FOO "v1"' not in overlay_text
+        assert 'mk set FOO "v3"' in overlay_text
+        assert overlay_text.count("mk set FOO") == 2
+        assert overlay_text.count("mk set BAR") == 1
 
     def test_change_makefile_append_op_still_accumulates(self, t):
         """`append` op (mk add) is a list op — repeated calls must
@@ -667,10 +686,17 @@ class TestDopsRenderers:
         assert 'mk add USES "ssl"' in overlay_text
         assert 'mk add USES "cmake"' in overlay_text
 
-    def test_change_makefile_set_op_does_not_strip_mk_target_set(self, t):
-        """`mk target set NAME` is a distinct form (3 tokens before
-        name vs 2 for mk set VAR). Scrubbing for VAR=FOO must not
-        touch `mk target set FOO ...`."""
+    def test_change_makefile_set_op_does_not_touch_mk_target_set(self, t):
+        """`mk target set NAME` (3 tokens before name) is a distinct
+        directive from `mk set VAR` (2 tokens). A change_makefile
+        ``op=set`` emission for VAR=FOO must not interfere with an
+        existing `mk target set FOO <<TAG ... TAG` heredoc block —
+        same key name, completely different op.
+
+        Pre-38e this guarded the prefilter regex; post-38e there is no
+        prefilter to confuse, but the same property must hold by
+        construction (the renderer only emits its own statement, it
+        doesn't inspect or rewrite existing lines)."""
         overlay = t.port_path("overlay.dops")
         overlay.parent.mkdir(parents=True, exist_ok=True)
         overlay.write_text(

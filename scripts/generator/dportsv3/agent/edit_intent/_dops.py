@@ -13,7 +13,6 @@ Per design §11.
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 from typing import Iterable
 
@@ -398,62 +397,28 @@ def change_makefile(t, intent: ChangeMakefile):
     Makefile (symmetric inverse of ``mk set``, useful for dropping
     an upstream assignment that's wrong for our target).
 
-    For ``op=set``: any pre-existing ``mk set <KEY>`` line for the
-    same key is stripped before the new statement is appended. The
-    engine renders multiple ``mk set`` for one key as sequential
-    ``mk.var.set`` ops (last-wins), so the on-disk form was
-    redundant but functionally correct — the bug was that the agent
-    would re-emit ``set`` intents while iterating, accumulating dead
-    lines in ``overlay.dops`` and then rationalizing the result as
-    "last wins." Stripping keeps the substrate clean and makes a
-    re-emit a true replace. ``op=append`` / ``op=remove`` keep the
-    plain-append behavior — multiple ``mk add`` / ``mk remove`` for
-    the same key are semantically distinct (list operations).
-
-    ``op=unset`` is plain-append too, deliberately NOT scrubbing
-    any prior ``mk set <KEY>`` from the overlay. Reason: the engine
-    processes ops in order, so a set-then-unset pair on the same
-    key produces the right end state (set runs, FOO=bar lands in
-    the composed Makefile; unset finds FOO in the file and deletes
-    it; net: FOO not present). Scrubbing the prior set would leave
-    only ``mk unset FOO`` on disk — which fails at compose time
-    with ``assignment not found`` if upstream doesn't define FOO
-    either (a variable the agent invented in a prior intent). The
-    aesthetic concern of carrying both lines is dominated by the
-    correctness gain.
+    Each ``op`` emits a single line and never touches lines from
+    prior intents. Re-emitting ``op=set FOO "x"`` twice produces
+    two ``mk set FOO "x"`` lines on disk; the engine plays both in
+    declaration order (last-wins) and the composed Makefile is
+    correct. Cleanup of redundant lines is the agent's explicit
+    responsibility via the Family A delete intents
+    (intent-surface-gaps-plan.md) — no implicit prefilter does it
+    here. Step 38e removed the pre-existing
+    ``_strip_existing_mk_set`` prefilter for two reasons: (1) it
+    was scope-blind and would have corrupted multi-target overlays
+    once 38d enabled per-target emission, and (2) it baked
+    cross-intent state mutation into a renderer's body, violating
+    the "each intent does exactly one thing" principle.
     """
     if intent.op == "unset":
         stmt = f"mk unset {intent.key}"
-        return _append_overlay(
-            t, "change_makefile", [stmt], scope=intent.scope,
-        )
-    action = {"set": "set", "append": "add", "remove": "remove"}[intent.op]
-    stmt = f"mk {action} {intent.key} {_quote_dops_string(intent.value)}"
-    strip = _strip_existing_mk_set(intent.key) if intent.op == "set" else None
+    else:
+        action = {"set": "set", "append": "add", "remove": "remove"}[intent.op]
+        stmt = f"mk {action} {intent.key} {_quote_dops_string(intent.value)}"
     return _append_overlay(
-        t, "change_makefile", [stmt], prefilter=strip, scope=intent.scope,
+        t, "change_makefile", [stmt], scope=intent.scope,
     )
-
-
-def _strip_existing_mk_set(key: str):
-    """Build a text-prefilter that removes ``mk set <key> ...`` lines.
-
-    Matches at top-level only (no leading word other than ``mk``)
-    with the action token ``set`` and the exact key. ``mk target
-    set NAME ...`` is distinct (3 tokens before the name) and won't
-    match.
-    """
-    pat = re.compile(rf"^\s*mk\s+set\s+{re.escape(key)}(\s+|$)")
-
-    def _filter(text: str) -> str:
-        kept: list[str] = []
-        for line in text.split("\n"):
-            if pat.match(line):
-                continue
-            kept.append(line)
-        return "\n".join(kept)
-
-    return _filter
 
 
 def replace_in_dops_block(t, intent: ReplaceInDopsBlock):
@@ -654,23 +619,18 @@ def bump_portrevision(t, intent: BumpPortrevision):
 
 
 def _append_overlay(t, intent_type: str, statements: Iterable[str],
-                    prefilter=None, scope: str | None = None):
+                    scope: str | None = None):
     """Append one or more dops statements to ports/<origin>/overlay.dops.
 
     Creates the file with a minimal header if it didn't already
     exist. Returns an EditResult with the diff scoped to overlay.dops.
 
-    ``prefilter`` is an optional ``str -> str`` callable applied to
-    the original overlay text before the new statements are
-    appended. Used by ``change_makefile`` op=set to strip prior
-    ``mk set <KEY>`` lines for the same key.
-
     ``scope`` is Step 38d-3's hook for target-scoped emission:
 
-    - ``None`` (default): existing dumb-append behavior — statements
-      land at EOF under whatever the file's most recent ``target``
-      directive was. Backward-compatible for callers that don't yet
-      pass scope (renderers pre-38d-6).
+    - ``None`` (default): dumb-append at EOF under whatever the
+      file's most recent ``target`` directive was. Post-38d-6 every
+      renderer passes an explicit scope, so this path is only
+      exercised by ad-hoc test invocations; kept for that reason.
     - ``"@current"``: resolves to ``t.target`` at apply time. If
       ``t.target`` is None or empty, the call is refused with an
       actionable error pointing at the runner's responsibility to
@@ -680,8 +640,7 @@ def _append_overlay(t, intent_type: str, statements: Iterable[str],
 
     When scope is provided (post-resolution), the function dispatches
     through ``_ensure_target_scope`` instead of the dumb-append loop.
-    Invariant checking (Step 38c) and prefilter application still run
-    first.
+    Invariant checking (Step 38c) runs first regardless.
     """
     from .translator import EditResult
     overlay = t.port_path(_DOPS_FILE)
@@ -735,7 +694,7 @@ def _append_overlay(t, intent_type: str, statements: Iterable[str],
                     f"@any, @main, or @YYYYQ[1-4])"
                 ),
             )
-    new = prefilter(original) if prefilter is not None else original
+    new = original
     if resolved_scope is None:
         # Backward-compatible dumb-append path. Pre-38d-6 renderers
         # land here; their statements end up under whatever the
