@@ -105,6 +105,17 @@ header, and the result is a patch that lies about its own bytes.
 This anti-pattern was observed driving `devel_jwasm` into a state
 where every `materialize_dports` failed with `E_APPLY_MISSING_SUBJECT`.
 
+## Scoping
+
+Accepts an optional `scope` field: `"@any"` (default — patch
+installs on every build line) or `"@current"` (patch installs only
+on the build line you're running on). Use `@current` when upstream
+source structure differs between quarterly snapshots and the patch
+only makes sense against the version present on this build. Most
+patches are universal — DragonFly-vs-FreeBSD differences usually
+apply everywhere — so default to `@any`. See `intent-scoping.md`
+for the cross-cutting rules.
+
 ## Failure modes
 
 - Target already exists → `ok=false`. The previous `add_patch`

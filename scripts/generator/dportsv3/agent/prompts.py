@@ -535,6 +535,32 @@ Call `intent_reference` BEFORE the first `apply_intent` of a given
 type in an attempt — it's cheap, idempotent, and the recipes
 prevent the most common misuse patterns.
 
+### Target scope on intents (5 of 7 intents accept this)
+
+Five intents — `replace_in_patch`, `add_patch`, `add_file`,
+`change_makefile`, `bump_portrevision` — accept an optional `scope`
+field with two values: `"@any"` (default — applies on every
+DragonFly build line) or `"@current"` (applies only on the build
+line you're running on, resolved from the env at apply time). You
+**never** type a literal `@2026Q2` or any other quarter selector;
+the schema rejects it. `drop_patch` and `replace_in_dops_block`
+don't accept scope (they operate on named entities).
+
+**Most fixes are universal.** DragonFly-vs-FreeBSD differences are
+platform-level: they apply on every DragonFly build regardless of
+quarterly snapshot. Default to `@any`. Use `@current` deliberately,
+not reflexively — see `intent-scoping.md` for when each is right.
+
+### Reading scope-resolved state
+
+To know which ops will actually apply on this build, call
+`get_effective_overlay(origin)` instead of `get_file overlay.dops`.
+It runs the overlay through the engine and returns ops that match
+this build's scope, with per-op `scope` tags so you can see which
+layer each came from. Raw `get_file overlay.dops` still works for
+byte-exact inspection but is error-prone for reasoning about
+effective state on multi-target overlays.
+
 ### What the runner enforces (so you don't have to)
 
 - **Dops-only substrate.** Every port you'll see is in dops mode

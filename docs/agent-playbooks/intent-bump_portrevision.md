@@ -42,6 +42,17 @@ that lands behavior changes. Bumping first and then realizing the
 behavior change doesn't actually work creates a stray revision the
 operator has to walk back.
 
+## Scoping
+
+Accepts an optional `scope` field, but: **PORTREVISION is part of
+the port's package identity, so scoping a bump to one build line
+is rarely correct.** A bump scoped to `@current` only affects the
+package name on that one build line; other build lines would still
+ship the un-bumped package, which usually isn't what you want.
+Default to `@any` (the schema default) and only override if you
+have a very specific reason. See `intent-scoping.md` for the
+cross-cutting rules.
+
 ## Failure modes
 
 `bump_portrevision` doesn't fail at the intent layer — it always

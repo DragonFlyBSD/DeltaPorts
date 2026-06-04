@@ -61,6 +61,16 @@ DSL go through `change_makefile`, `drop_patch`, `add_patch`, or
 }
 ```
 
+## Scoping
+
+Accepts an optional `scope` field: `"@any"` (default — substitution
+applies on every build line) or `"@current"` (substitution applies
+only on the build line you're running on). For most in-port-file
+edits, `@any` is the right answer because the underlying file shape
+is identical across build lines. Use `@current` only when the
+substitution itself is build-line-specific. See
+`intent-scoping.md` for the cross-cutting rules.
+
 ## Failure modes the executor refuses
 
 - `target` starts with `dragonfly/` → `IntentError` at validation

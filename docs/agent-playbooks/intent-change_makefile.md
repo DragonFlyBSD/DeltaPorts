@@ -153,6 +153,35 @@ For genuine "change an existing key's value" cases there is no
 (future `replace_in_makefile` intent) or a patch on the generated
 Makefile.
 
+## Scoping
+
+Accepts an optional `scope` field: `"@any"` (default — the variable
+edit applies on every build line) or `"@current"` (applies only on
+the build line you're running on). Reach for `@current` only when
+the fix is genuinely build-line-specific — e.g. a USES value
+deprecated between quarterly snapshots that older build lines still
+need. DragonFly-vs-FreeBSD differences in Makefile assignments are
+universal; default to `@any`. See `intent-scoping.md` for the
+cross-cutting rules.
+
+### One operator-visible behavior note for `op=set`
+
+Re-emitting `op=set` for the same key accumulates lines on disk.
+The composed Makefile is still correct (the engine plays ops in
+declaration order, last-wins), but `overlay.dops` carries every
+re-emission. This changed with Step 38e — pre-38e an implicit
+prefilter scrubbed prior `mk set KEY` lines; the prefilter was
+removed because it was scope-blind and would have corrupted
+multi-target overlays. Until an explicit "delete a prior mk set
+line" intent lands (tracked in
+`docs/intent-surface-gaps-plan.md`), repeated `op=set` produces
+visible substrate noise that doesn't affect correctness.
+
+`op=append` and `op=remove` have always accumulated (multiple
+`mk add` / `mk remove` are semantically distinct list operations);
+38e didn't change those. `op=unset` is also unchanged — it has
+always been plain-append.
+
 ## The `path` field
 
 `path` is the Makefile-relative filename inside the port subtree.

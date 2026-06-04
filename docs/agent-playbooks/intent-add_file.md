@@ -56,6 +56,16 @@ you want compose to materialize it into the build tree.
 The translator emits a `file materialize <source> -> <dest>`
 directive in `overlay.dops`.
 
+## Scoping
+
+Accepts an optional `scope` field: `"@any"` (default — file installs
+on every build line) or `"@current"` (file installs only on the
+build line you're running on). Use `@current` when the file is
+genuinely build-line-specific (a config snippet that only makes
+sense against this snapshot's framework, etc.). Most port-local
+resources are universal — default to `@any`. See
+`intent-scoping.md` for the cross-cutting rules.
+
 ## Path safety
 
 All `dest` values must be port-subtree relpaths — no `..`, no
