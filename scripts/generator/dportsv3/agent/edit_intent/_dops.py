@@ -855,14 +855,22 @@ def _ensure_target_scope(
     statement_lines = [s.rstrip() for s in statements]
 
     if matching_section_idx is not None:
-        # Section exists. Insert at its tail, walking back past blank
-        # lines so the separator stays attached to the next block.
+        # Section exists.
         if matching_section_idx + 1 < len(target_positions):
+            # Next-section case: insert before the following `target`
+            # directive, walking back past blank lines so the
+            # separator stays attached to the next block.
             insert_pos = target_positions[matching_section_idx + 1][0]
+            while insert_pos > 0 and lines[insert_pos - 1].strip() == "":
+                insert_pos -= 1
         else:
+            # EOF case: append at end. Do NOT walk back blanks — the
+            # trailing blank line from `_initial_overlay_header`
+            # (between port/type/reason metadata and the first
+            # operation) must be preserved. Walking back would eat
+            # that separator on the first statement added to a
+            # fresh overlay (38d-1 fix).
             insert_pos = len(lines)
-        while insert_pos > 0 and lines[insert_pos - 1].strip() == "":
-            insert_pos -= 1
         new_lines = lines[:insert_pos] + statement_lines + lines[insert_pos:]
     elif not statement_lines:
         # No matching section AND nothing to insert — emit no directive.
@@ -870,6 +878,18 @@ def _ensure_target_scope(
         # appending bare ``target @X`` lines (valid grammar, but
         # operationally useless and visual noise in the overlay).
         new_lines = list(lines)
+    elif scope == "@any" and target_positions:
+        # @any-no-match with existing non-@any sections: a legacy or
+        # operator-hand-edited overlay has e.g. `target @main` as its
+        # first directive but no `target @any`. Appending @any at EOF
+        # would land it after the @Q sections, violating the
+        # @any-first invariant and silently overriding @Q on @Q
+        # builds. Instead insert a fresh @any block at the top of the
+        # operations, just before the first existing `target`
+        # directive (38d-2 fix).
+        insert_pos = target_positions[0][0]
+        block = [f"target {scope}"] + statement_lines + [""]
+        new_lines = lines[:insert_pos] + block + lines[insert_pos:]
     else:
         # No matching section. Append a fresh block at EOF, preceded
         # by a blank-line separator.

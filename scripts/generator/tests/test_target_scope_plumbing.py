@@ -684,3 +684,152 @@ def test_append_overlay_gate_passes_fresh_overlay(tmp_path: Path) -> None:
     result = t.apply({"type": "bump_portrevision"})
 
     assert result.ok is True, result.error
+
+
+# ---------------------------------------------------------------------
+# Step 38d-1 — fresh-header blank-line preservation
+# ---------------------------------------------------------------------
+
+
+def test_helper_preserves_header_blank_on_first_statement() -> None:
+    """Regression caught during 38d planning re-review: routing the
+    first statement on a fresh header through `_ensure_target_scope`
+    must preserve the blank line between port/type/reason metadata
+    and the operation. The pre-38d walk-back-blanks logic ate that
+    blank because it ran unconditionally on the EOF case."""
+    result = _ensure_target_scope(_HEADER, "@any", ['mk set USES "tar:xz"'])
+    assert result == _HEADER + 'mk set USES "tar:xz"\n'
+    # Explicit check on the blank line — survives between
+    # `reason "x"` and the first `mk set`.
+    assert '\n\nmk set USES "tar:xz"' in result
+
+
+def test_helper_at_eof_does_not_walk_back_blanks() -> None:
+    """38d-1 precise behavior: at EOF the helper appends without
+    walking back blanks. (In the next-target case it does walk back,
+    so the separator stays attached to the next block — covered by
+    `test_helper_any_insert_preserves_blank_before_next_q`.)"""
+    overlay = (
+        "target @any\n"
+        "port devel/foo\n"
+        "\n"
+        "mk set X \"Y\"\n"
+        "\n"
+    )
+    result = _ensure_target_scope(overlay, "@any", ["mk add Z"])
+    # Blank line between port and first stmt preserved; trailing
+    # blank before EOF also preserved (it was there in input).
+    assert (
+        result
+        == "target @any\nport devel/foo\n\nmk set X \"Y\"\n\nmk add Z\n"
+    )
+
+
+# ---------------------------------------------------------------------
+# Step 38d-2 — legacy @any-no-match places at top of operations
+# ---------------------------------------------------------------------
+
+
+def test_helper_legacy_main_only_inserts_any_at_top() -> None:
+    """A legacy or operator-hand-edited overlay has `target @main` as
+    its first directive but no `target @any`. An @any op via the
+    helper must NOT append at EOF (would violate the @any-first
+    invariant); instead it inserts a fresh `target @any` block at
+    the very top, just before the existing directive."""
+    legacy = (
+        "target @main\n"
+        "port devel/foo\n"
+        "type port\n"
+        'mk set X "Y"\n'
+    )
+    result = _ensure_target_scope(legacy, "@any", ["mk add USES ssl"])
+    assert result == (
+        "target @any\n"
+        "mk add USES ssl\n"
+        "\n"
+        "target @main\n"
+        "port devel/foo\n"
+        "type port\n"
+        'mk set X "Y"\n'
+    )
+
+
+def test_helper_legacy_multi_q_inserts_any_at_top() -> None:
+    """Same shape with multiple existing @Q sections — @any still
+    lands at the very top, before the first @Q directive."""
+    legacy = (
+        "target @2026Q2\n"
+        "mk add A B\n"
+        "\n"
+        "target @2026Q3\n"
+        "mk add C D\n"
+    )
+    result = _ensure_target_scope(legacy, "@any", ['mk set USES "tar:xz"'])
+    assert result == (
+        "target @any\n"
+        'mk set USES "tar:xz"\n'
+        "\n"
+        "target @2026Q2\n"
+        "mk add A B\n"
+        "\n"
+        "target @2026Q3\n"
+        "mk add C D\n"
+    )
+
+
+def test_helper_legacy_fix_output_passes_invariant_check() -> None:
+    """End-to-end: the @any-at-top placement must satisfy the
+    @any-first invariant that the checker (38c) enforces. Without
+    this, the next intent's gate would refuse on the helper's own
+    output."""
+    legacy = (
+        "target @main\n"
+        "port devel/foo\n"
+        'mk set X "Y"\n'
+    )
+    result = _ensure_target_scope(legacy, "@any", ["mk add Z"])
+    assert _check_target_scope_order(result) is None
+
+
+def test_helper_legacy_fix_output_parses_through_engine() -> None:
+    """The reformatted overlay must round-trip through the dops parser.
+    Catches any grammar drift in the new insertion path."""
+    from dportsv3.engine.api import parse_dsl
+
+    legacy = (
+        "target @main\n"
+        "port devel/foo\n"
+        "type port\n"
+        'mk set X "Y"\n'
+    )
+    result = _ensure_target_scope(legacy, "@any", ["mk add USES ssl"])
+    parsed = parse_dsl(result)
+    assert parsed.ok, (
+        f"38d-2 helper output did not parse: "
+        f"{[d.code for d in parsed.diagnostics]}"
+    )
+
+
+def test_helper_legacy_fix_skipped_when_statements_empty() -> None:
+    """The empty-statements guard (Issue A from 38b review) takes
+    precedence over the legacy @any-no-match path. Helper returns
+    the overlay unchanged rather than emitting an empty @any block."""
+    legacy = (
+        "target @main\n"
+        'mk set X "Y"\n'
+    )
+    result = _ensure_target_scope(legacy, "@any", [])
+    assert result == legacy
+
+
+def test_helper_no_directive_overlay_falls_back_to_eof_append() -> None:
+    """Edge case: an overlay with NO target directive at all (engine
+    treats this as implicit @any). The @any-no-match-at-top path
+    requires `target_positions` to be non-empty, so this falls
+    through to the generic EOF-append branch."""
+    no_directive = 'port devel/foo\nmk set X "Y"\n'
+    result = _ensure_target_scope(no_directive, "@any", ["mk add Z"])
+    # Generic EOF-append behavior: adds a `target @any` block at EOF
+    # (preceded by blank separator). Not invariant-violating because
+    # there are no @Q sections to come after.
+    assert "target @any\nmk add Z" in result
