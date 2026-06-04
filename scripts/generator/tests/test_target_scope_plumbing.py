@@ -833,3 +833,248 @@ def test_helper_no_directive_overlay_falls_back_to_eof_append() -> None:
     # (preceded by blank separator). Not invariant-violating because
     # there are no @Q sections to come after.
     assert "target @any\nmk add Z" in result
+
+
+# ---------------------------------------------------------------------
+# Step 38d-3 — `_append_overlay` scope arg + @current resolution
+# ---------------------------------------------------------------------
+
+
+def _make_seeded_translator(
+    tmp_path: Path, target: str | None = None,
+) -> Translator:
+    """Build a Translator pointing at a port whose workspace is git-
+    initialized (needed for `diff_from_before` in EditResult). The
+    overlay.dops is NOT pre-created — the first _append_overlay call
+    will seed it via `_initial_overlay_header`."""
+    import subprocess
+    ws = tmp_path / "ws"
+    ws.mkdir()
+    subprocess.run(["git", "-C", str(ws), "init", "-q"], check=True)
+    subprocess.run(
+        ["git", "-C", str(ws), "config", "user.email", "t@t"], check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(ws), "config", "user.name", "t"], check=True,
+    )
+    (ws / "README").write_text("baseline\n")
+    subprocess.run(["git", "-C", str(ws), "add", "README"], check=True)
+    subprocess.run(
+        ["git", "-C", str(ws), "commit", "-qm", "init"], check=True,
+    )
+    (ws / "ports" / "devel" / "foo").mkdir(parents=True)
+    return Translator(ws, "devel/foo", "dops", target=target)
+
+
+def test_append_overlay_scope_none_is_backward_compat(tmp_path: Path) -> None:
+    """`scope=None` (the default) must preserve the pre-38d-3
+    dumb-append behavior. The 5 existing renderers all pass this
+    shape today; they continue working without modification."""
+    from dportsv3.agent.edit_intent._dops import _append_overlay
+
+    t = _make_seeded_translator(tmp_path)
+    r = _append_overlay(t, "change_makefile", ['mk set USES "tar:xz"'])
+
+    assert r.ok, r.error
+    written = t.port_path("overlay.dops").read_text()
+    # Header was seeded; stmt landed under the @any section.
+    assert "target @any\n" in written
+    assert 'mk set USES "tar:xz"\n' in written
+
+
+def test_append_overlay_scope_any_routes_through_helper(tmp_path: Path) -> None:
+    """Explicit `scope='@any'` is the same effect as None on a fresh
+    overlay — both produce a statement under the header's @any
+    section. (Internally, scope='@any' takes the helper path.)"""
+    from dportsv3.agent.edit_intent._dops import _append_overlay
+
+    t = _make_seeded_translator(tmp_path)
+    r = _append_overlay(
+        t, "change_makefile", ['mk add USES ssl'], scope="@any",
+    )
+
+    assert r.ok, r.error
+    written = t.port_path("overlay.dops").read_text()
+    assert "target @any" in written
+    assert "mk add USES ssl" in written
+    # No spurious `target @any` re-emission (helper found the section
+    # in the seeded header).
+    assert written.count("target @any\n") == 1
+
+
+def test_append_overlay_scope_explicit_q_creates_new_section(
+    tmp_path: Path,
+) -> None:
+    """`scope='@2026Q2'` on a fresh overlay routes through the helper
+    and creates a fresh `target @2026Q2` block after the header's
+    @any section."""
+    from dportsv3.agent.edit_intent._dops import _append_overlay
+
+    t = _make_seeded_translator(tmp_path)
+    r = _append_overlay(
+        t, "change_makefile", ["mk add CFLAGS -fA"], scope="@2026Q2",
+    )
+
+    assert r.ok, r.error
+    written = t.port_path("overlay.dops").read_text()
+    # @any section (from header) precedes the new @2026Q2 section.
+    any_pos = written.index("target @any")
+    q_pos = written.index("target @2026Q2")
+    assert any_pos < q_pos, written
+    assert "mk add CFLAGS -fA" in written
+    # The @any-first invariant holds.
+    from dportsv3.agent.edit_intent._dops import _check_target_scope_order
+    assert _check_target_scope_order(written) is None
+
+
+def test_append_overlay_scope_current_resolves_from_t_target(
+    tmp_path: Path,
+) -> None:
+    """`scope='@current'` must resolve from `t.target` at apply time.
+    A Translator built with target='@2026Q2' translates the agent's
+    @current request into a literal `target @2026Q2` block."""
+    from dportsv3.agent.edit_intent._dops import _append_overlay
+
+    t = _make_seeded_translator(tmp_path, target="@2026Q2")
+    r = _append_overlay(
+        t, "change_makefile", ["mk add CFLAGS -fA"], scope="@current",
+    )
+
+    assert r.ok, r.error
+    written = t.port_path("overlay.dops").read_text()
+    # The resolved scope landed in the substrate, NOT the literal
+    # `@current` (which is engine-grammar-invalid).
+    assert "target @2026Q2" in written
+    assert "@current" not in written
+
+
+def test_append_overlay_scope_current_refuses_when_target_none(
+    tmp_path: Path,
+) -> None:
+    """If the agent requests `@current` but the runner failed to
+    populate the env-target cache (`t.target is None`), the call is
+    refused with a specific error pointing at the runner-side bug.
+    This is the surfacing path for "caller forgot set_env_target"."""
+    from dportsv3.agent.edit_intent._dops import _append_overlay
+
+    t = _make_seeded_translator(tmp_path, target=None)
+    r = _append_overlay(
+        t, "change_makefile", ["mk add CFLAGS -fA"], scope="@current",
+    )
+
+    assert r.ok is False
+    assert "@current" in (r.error or "")
+    assert "set_env_target" in (r.error or "")
+    # Substrate untouched.
+    assert not t.port_path("overlay.dops").exists()
+
+
+def test_append_overlay_scope_current_refuses_when_target_empty_string(
+    tmp_path: Path,
+) -> None:
+    """`t.target == ""` is the same as None for resolution purposes
+    (an empty string is falsy in the cache layer too). Same refusal."""
+    from dportsv3.agent.edit_intent._dops import _append_overlay
+
+    t = _make_seeded_translator(tmp_path, target="")
+    r = _append_overlay(
+        t, "change_makefile", ["mk add CFLAGS -fA"], scope="@current",
+    )
+
+    assert r.ok is False
+    assert "@current" in (r.error or "")
+
+
+def test_append_overlay_invalid_scope_refused(tmp_path: Path) -> None:
+    """Malformed scope strings (typos, hand-constructed values that
+    don't match the engine grammar) refuse with a clear error
+    naming the expected forms."""
+    from dportsv3.agent.edit_intent._dops import _append_overlay
+
+    t = _make_seeded_translator(tmp_path)
+    r = _append_overlay(
+        t, "change_makefile", ["mk add X"], scope="@bogus",
+    )
+
+    assert r.ok is False
+    assert "invalid scope" in (r.error or "")
+    assert "@any, @main, or @YYYYQ" in (r.error or "")
+    assert not t.port_path("overlay.dops").exists()
+
+
+def test_append_overlay_invariant_gate_runs_before_scope_resolution(
+    tmp_path: Path,
+) -> None:
+    """Order matters: if the existing overlay is malformed (38c
+    violation), the gate refuses BEFORE scope resolution runs. A
+    scope-specific error would obscure the underlying file-layout
+    problem."""
+    from dportsv3.agent.edit_intent._dops import _append_overlay
+
+    t = _make_seeded_translator(tmp_path)
+    # Hand-write a malformed overlay (@any-after-@Q).
+    t.port_path("overlay.dops").write_text(
+        "target @2026Q2\nmk add A\ntarget @any\nport devel/foo\n"
+    )
+
+    # Call with scope=@current, but t.target is None — would normally
+    # refuse with the @current error. Invariant violation should
+    # take precedence.
+    r = _append_overlay(
+        t, "change_makefile", ["mk add X"], scope="@current",
+    )
+
+    assert r.ok is False
+    assert "@any-first invariant" in (r.error or "")
+    # The @current error should NOT appear — gate fired first.
+    assert "set_env_target" not in (r.error or "")
+
+
+def test_append_overlay_scope_with_prefilter(tmp_path: Path) -> None:
+    """When both `scope` and `prefilter` are passed, the prefilter
+    still applies before placement. Documents that the two
+    parameters compose. (Becomes moot once 38e removes the only
+    existing prefilter, but the dispatch ordering must be right.)"""
+    from dportsv3.agent.edit_intent._dops import _append_overlay
+
+    t = _make_seeded_translator(tmp_path)
+    # Seed an overlay with an existing `mk set USES` line.
+    t.port_path("overlay.dops").write_text(
+        "target @any\nport devel/foo\n\n"
+        'mk set USES "old"\n'
+    )
+
+    # Prefilter that strips the existing `mk set USES` line.
+    def _strip_uses(text: str) -> str:
+        return "\n".join(
+            line for line in text.split("\n")
+            if "mk set USES" not in line
+        )
+
+    r = _append_overlay(
+        t, "change_makefile",
+        ['mk set USES "new"'],
+        prefilter=_strip_uses,
+        scope="@any",
+    )
+
+    assert r.ok, r.error
+    written = t.port_path("overlay.dops").read_text()
+    assert 'mk set USES "old"' not in written
+    assert 'mk set USES "new"' in written
+
+
+def test_append_overlay_scope_arg_does_not_break_existing_callers(
+    tmp_path: Path,
+) -> None:
+    """The 5 existing renderers (replace_in_patch, add_patch,
+    add_file, change_makefile, bump_portrevision) call
+    _append_overlay without `scope`. End-to-end through a Translator
+    + bump_portrevision intent: the unchanged dumb-append path still
+    works."""
+    t = _make_seeded_translator(tmp_path)
+    r = t.apply({"type": "bump_portrevision"})
+
+    assert r.ok, r.error
+    written = t.port_path("overlay.dops").read_text()
+    assert "mk set PORTREVISION" in written

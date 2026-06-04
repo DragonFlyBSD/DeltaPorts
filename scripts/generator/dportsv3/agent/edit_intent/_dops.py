@@ -647,7 +647,7 @@ def bump_portrevision(t, intent: BumpPortrevision):
 
 
 def _append_overlay(t, intent_type: str, statements: Iterable[str],
-                    prefilter=None):
+                    prefilter=None, scope: str | None = None):
     """Append one or more dops statements to ports/<origin>/overlay.dops.
 
     Creates the file with a minimal header if it didn't already
@@ -657,6 +657,24 @@ def _append_overlay(t, intent_type: str, statements: Iterable[str],
     the original overlay text before the new statements are
     appended. Used by ``change_makefile`` op=set to strip prior
     ``mk set <KEY>`` lines for the same key.
+
+    ``scope`` is Step 38d-3's hook for target-scoped emission:
+
+    - ``None`` (default): existing dumb-append behavior — statements
+      land at EOF under whatever the file's most recent ``target``
+      directive was. Backward-compatible for callers that don't yet
+      pass scope (renderers pre-38d-6).
+    - ``"@current"``: resolves to ``t.target`` at apply time. If
+      ``t.target`` is None or empty, the call is refused with an
+      actionable error pointing at the runner's responsibility to
+      populate the env-target cache (Step 38a).
+    - ``"@any"`` / ``"@main"`` / ``"@YYYYQ[1-4]"``: literal scope
+      passed through to ``_ensure_target_scope`` for placement.
+
+    When scope is provided (post-resolution), the function dispatches
+    through ``_ensure_target_scope`` instead of the dumb-append loop.
+    Invariant checking (Step 38c) and prefilter application still run
+    first.
     """
     from .translator import EditResult
     overlay = t.port_path(_DOPS_FILE)
@@ -673,11 +691,58 @@ def _append_overlay(t, intent_type: str, statements: Iterable[str],
         return EditResult(
             ok=False, intent_type=intent_type, error=invariant_err,
         )
+    # Step 38d-3: scope resolution. Translate the agent-facing
+    # ``@current`` alias to the concrete ``@YYYYQX`` from
+    # ``t.target`` (populated by the runner via
+    # ``worker.set_env_target``). Refuse on inconsistencies rather
+    # than silently falling back to ``@any`` — a missing cache
+    # entry is a runner-side bug we want to surface, not paper over.
+    resolved_scope: str | None = None
+    if scope is not None:
+        if scope == "@current":
+            if not t.target:
+                return EditResult(
+                    ok=False, intent_type=intent_type,
+                    error=(
+                        f"intent requested scope=@current but the "
+                        f"runner did not populate an env target "
+                        f"(t.target is empty). This indicates a "
+                        f"calling-context bug: the cache should be "
+                        f"set at job start by "
+                        f"worker.set_env_target. Retrying will not "
+                        f"help — escalate."
+                    ),
+                )
+            resolved_scope = t.target
+        else:
+            resolved_scope = scope
+        # Validate against the engine's grammar so a malformed scope
+        # never reaches the substrate (catches typos in schema enums
+        # and ad-hoc callers that hand-construct scope strings).
+        from dportsv3.common.validation import is_scoped_target  # noqa: PLC0415
+        if not is_scoped_target(resolved_scope):
+            return EditResult(
+                ok=False, intent_type=intent_type,
+                error=(
+                    f"invalid scope: {resolved_scope!r} (expected "
+                    f"@any, @main, or @YYYYQ[1-4])"
+                ),
+            )
     new = prefilter(original) if prefilter is not None else original
-    if not new.endswith("\n"):
-        new += "\n"
-    for stmt in statements:
-        new += stmt.rstrip() + "\n"
+    if resolved_scope is None:
+        # Backward-compatible dumb-append path. Pre-38d-6 renderers
+        # land here; their statements end up under whatever the
+        # file's last `target` directive was — in practice always
+        # `target @any` from `_initial_overlay_header`.
+        if not new.endswith("\n"):
+            new += "\n"
+        for stmt in statements:
+            new += stmt.rstrip() + "\n"
+    else:
+        # Scope-aware placement via 38b's helper. Handles section
+        # location, blank-line preservation, and the legacy
+        # @any-no-match case (38d-2).
+        new = _ensure_target_scope(new, resolved_scope, list(statements))
     try:
         overlay.parent.mkdir(parents=True, exist_ok=True)
         overlay.write_text(new)
