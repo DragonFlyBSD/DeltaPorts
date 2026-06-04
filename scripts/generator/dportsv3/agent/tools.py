@@ -167,6 +167,26 @@ _TOOLS: list[dict] = [
           "list every known type via the error response's "
           "known_intent_types field.",
           {"intent_type": _STR}, ["intent_type"]),
+    # Step 38f: scope-filtered view of overlay.dops. Use INSTEAD of
+    # `get_file overlay.dops` when reasoning about what compose will
+    # actually apply on the current build — the raw file lists ops
+    # for every target, and on multi-target overlays manual
+    # scope-filtering is error-prone.
+    _tool("get_effective_overlay",
+          "Return the dops ops effective for the current build "
+          "target. Reads ports/<origin>/overlay.dops, parses via the "
+          "engine, filters by the env's target, and returns "
+          "structured ops in declaration order with scope tags. "
+          "Result fields: `target` (env's compose target), "
+          "`effective_ops` (list of {id, kind, target, ...payload} — "
+          "what the engine WILL apply), `filtered_out` (same shape "
+          "plus `reason` — ops scoped to other build lines). On a "
+          "port with no overlay.dops, returns ok=True with empty "
+          "lists. Use INSTEAD of `get_file overlay.dops` when "
+          "reasoning about what compose will apply; the raw file "
+          "lists ops for every target and manual scope-filtering is "
+          "error-prone on multi-target overlays.",
+          {"origin": _STR}, ["origin"]),
 ]
 
 

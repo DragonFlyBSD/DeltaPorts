@@ -1459,3 +1459,238 @@ def test_replace_in_dops_block_unaffected_by_38d_6(tmp_path: Path) -> None:
     written = t.port_path("overlay.dops").read_text()
     assert "@echo new" in written
     assert "@echo old" not in written
+
+
+# ---------------------------------------------------------------------
+# Step 38f — get_effective_overlay agent tool
+# ---------------------------------------------------------------------
+
+
+def _seed_workspace(tmp_path: Path) -> Path:
+    """Create a tmp workspace with a `ports/devel/foo/` skeleton ready
+    to host an overlay.dops. Returns the workspace root (used to
+    monkeypatch `env_paths`)."""
+    root = tmp_path / "ws"
+    root.mkdir()
+    (root / "ports" / "devel" / "foo").mkdir(parents=True)
+    return root
+
+
+def _stub_env_paths(monkeypatch, root: Path) -> None:
+    """Point `worker.env_paths(env)` at our synthetic workspace so
+    `get_effective_overlay` reads from the test fixture."""
+    class _FakePaths:
+        def __init__(self, r):
+            self.deltaports = r
+    monkeypatch.setattr(worker, "env_paths", lambda env: _FakePaths(root))
+
+
+def test_get_effective_overlay_no_target_cached_refuses(tmp_path: Path) -> None:
+    """38f's `@current`-style refusal: when the runner failed to call
+    `set_env_target`, the tool surfaces a calling-context-bug error
+    instead of silently falling back."""
+    worker._TARGET_CACHE.clear()
+    r = worker.get_effective_overlay("never-seen-env", "devel/foo")
+    assert r["ok"] is False
+    assert "no compose target cached" in r["error"]
+    assert "set_env_target" in r["error"]
+
+
+def test_get_effective_overlay_workspace_missing_refuses(
+    tmp_path: Path, monkeypatch,
+) -> None:
+    """A non-existent env workspace refuses cleanly rather than
+    returning empty lists. Mirrors `apply_intent`'s shape."""
+    worker._TARGET_CACHE.clear()
+    worker.set_env_target("test", "@2026Q2")
+    _stub_env_paths(monkeypatch, tmp_path / "does-not-exist")
+    r = worker.get_effective_overlay("test", "devel/foo")
+    assert r["ok"] is False
+    assert "workspace does not exist" in r["error"]
+
+
+def test_get_effective_overlay_no_overlay_file_returns_empty(
+    tmp_path: Path, monkeypatch,
+) -> None:
+    """On a port that's never had agent edits, `overlay.dops` doesn't
+    exist yet. That's a legitimate state — empty result, not error."""
+    worker._TARGET_CACHE.clear()
+    worker.set_env_target("test", "@2026Q2")
+    root = _seed_workspace(tmp_path)
+    _stub_env_paths(monkeypatch, root)
+
+    r = worker.get_effective_overlay("test", "devel/foo")
+    assert r["ok"] is True
+    assert r["target"] == "@2026Q2"
+    assert r["effective_ops"] == []
+    assert r["filtered_out"] == []
+    assert r["overlay_path"].endswith("overlay.dops")
+
+
+def test_get_effective_overlay_any_only_overlay(
+    tmp_path: Path, monkeypatch,
+) -> None:
+    """All ops scoped to @any → all in effective_ops; nothing filtered.
+    The common case today."""
+    worker._TARGET_CACHE.clear()
+    worker.set_env_target("test", "@2026Q2")
+    root = _seed_workspace(tmp_path)
+    _stub_env_paths(monkeypatch, root)
+    (root / "ports" / "devel" / "foo" / "overlay.dops").write_text(
+        'target @any\nport devel/foo\ntype port\nreason "x"\n\n'
+        'mk add USES "pkgconfig"\n'
+        'mk set LICENSE "BSD2CLAUSE"\n'
+    )
+
+    r = worker.get_effective_overlay("test", "devel/foo")
+    assert r["ok"] is True
+    kinds = [op["kind"] for op in r["effective_ops"]]
+    assert "mk.var.token_add" in kinds
+    assert "mk.var.set" in kinds
+    for op in r["effective_ops"]:
+        assert op["scope"] == "@any"
+    assert r["filtered_out"] == []
+
+
+def test_get_effective_overlay_mixed_scope_partitions_correctly(
+    tmp_path: Path, monkeypatch,
+) -> None:
+    """The core feature: a multi-target overlay produces
+    effective_ops (@any + env target) and filtered_out (other
+    targets, with reasons). Order is declaration order."""
+    worker._TARGET_CACHE.clear()
+    worker.set_env_target("test", "@2026Q2")
+    root = _seed_workspace(tmp_path)
+    _stub_env_paths(monkeypatch, root)
+    (root / "ports" / "devel" / "foo" / "overlay.dops").write_text(
+        'target @any\nport devel/foo\ntype port\nreason "x"\n\n'
+        'mk add USES "pkgconfig"\n'
+        '\n'
+        'target @2026Q2\n'
+        'mk set USES "cmake"\n'
+        '\n'
+        'target @2026Q3\n'
+        'mk set USES "meson"\n'
+    )
+
+    r = worker.get_effective_overlay("test", "devel/foo")
+    assert r["ok"] is True
+    assert r["target"] == "@2026Q2"
+
+    # Effective ops: @any first, then @2026Q2.
+    eff_scopes = [op["scope"] for op in r["effective_ops"]]
+    assert eff_scopes == ["@any", "@2026Q2"]
+    # Values preserved.
+    eff_values = [op.get("value") for op in r["effective_ops"]]
+    assert "pkgconfig" in eff_values
+    assert "cmake" in eff_values
+
+    # Filtered: the @2026Q3 op with a reason.
+    assert len(r["filtered_out"]) == 1
+    fop = r["filtered_out"][0]
+    assert fop["scope"] == "@2026Q3"
+    assert fop["value"] == "meson"
+    assert "@2026Q3" in fop["reason"]
+    assert "@2026Q2" in fop["reason"]
+
+
+def test_get_effective_overlay_target_field_distinct_from_op_scope(
+    tmp_path: Path, monkeypatch,
+) -> None:
+    """The agent-facing response carefully separates the env's build
+    target (top-level `target`) from each op's binding scope
+    (per-op `scope`). Confirms the alias from PlanOp.target →
+    response `scope`."""
+    worker._TARGET_CACHE.clear()
+    worker.set_env_target("test", "@2026Q3")
+    root = _seed_workspace(tmp_path)
+    _stub_env_paths(monkeypatch, root)
+    (root / "ports" / "devel" / "foo" / "overlay.dops").write_text(
+        'target @any\nport devel/foo\ntype port\nreason "x"\n\n'
+        'mk add USES "ssl"\n'
+    )
+
+    r = worker.get_effective_overlay("test", "devel/foo")
+    assert r["target"] == "@2026Q3"   # env's build target
+    assert r["effective_ops"][0]["scope"] == "@any"
+    # No `target` key on op dicts — `target` would collide with
+    # the response's top-level meaning.
+    assert "target" not in r["effective_ops"][0]
+
+
+def test_get_effective_overlay_malformed_overlay_refuses(
+    tmp_path: Path, monkeypatch,
+) -> None:
+    """An overlay that fails parse/semantic refuses with the engine's
+    first diagnostic. Lets the agent see the file is broken rather
+    than getting silently empty results."""
+    worker._TARGET_CACHE.clear()
+    worker.set_env_target("test", "@2026Q2")
+    root = _seed_workspace(tmp_path)
+    _stub_env_paths(monkeypatch, root)
+    # Invalid: `mk` without an action.
+    (root / "ports" / "devel" / "foo" / "overlay.dops").write_text(
+        "target @any\nmk\n"
+    )
+
+    r = worker.get_effective_overlay("test", "devel/foo")
+    assert r["ok"] is False
+    assert "engine refused" in r["error"]
+
+
+def test_get_effective_overlay_target_field_in_no_overlay_branch(
+    tmp_path: Path, monkeypatch,
+) -> None:
+    """Even on the empty-overlay path, the `target` field is populated
+    — agents can see which build the empty result is for."""
+    worker._TARGET_CACHE.clear()
+    worker.set_env_target("test", "@2026Q4")
+    root = _seed_workspace(tmp_path)
+    _stub_env_paths(monkeypatch, root)
+    r = worker.get_effective_overlay("test", "devel/foo")
+    assert r["target"] == "@2026Q4"
+
+
+def test_get_effective_overlay_tool_registered() -> None:
+    """The dispatcher exposes the tool so the LLM can call it via
+    `get_effective_overlay(origin=...)`. End-to-end through
+    `tools.dispatch` confirms registration + routing."""
+    from dportsv3.agent import tools
+
+    assert "get_effective_overlay" in tools.names()
+    # Verify dispatch path with a deliberate refusal (no target
+    # cached) so we don't have to stand up an env.
+    worker._TARGET_CACHE.clear()
+    r = tools.dispatch(
+        "get_effective_overlay",
+        {"origin": "devel/foo"},
+        env="never-seen-env",
+    )
+    assert r["ok"] is False
+    assert "no compose target cached" in r["error"]
+
+
+def test_get_effective_overlay_filtered_out_includes_op_payload(
+    tmp_path: Path, monkeypatch,
+) -> None:
+    """Filtered ops carry their full payload (so the agent can still
+    inspect what's out there for other build lines) in addition to
+    the `reason` string."""
+    worker._TARGET_CACHE.clear()
+    worker.set_env_target("test", "@2026Q2")
+    root = _seed_workspace(tmp_path)
+    _stub_env_paths(monkeypatch, root)
+    (root / "ports" / "devel" / "foo" / "overlay.dops").write_text(
+        'target @any\nport devel/foo\ntype port\nreason "x"\n\n'
+        'target @2026Q3\n'
+        'mk set USES "meson"\n'
+    )
+
+    r = worker.get_effective_overlay("test", "devel/foo")
+    assert len(r["filtered_out"]) == 1
+    fop = r["filtered_out"][0]
+    # Full payload, scope, kind, AND reason.
+    assert fop["kind"] == "mk.var.set"
+    assert fop["scope"] == "@2026Q3"
+    assert fop.get("value") == "meson"
+    assert "reason" in fop

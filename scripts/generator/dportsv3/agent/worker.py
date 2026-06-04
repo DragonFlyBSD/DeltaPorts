@@ -994,6 +994,133 @@ def peek_env_target(env: str) -> str | None:
     return _TARGET_CACHE.get(env)
 
 
+def get_effective_overlay(env: str, origin: str) -> dict:
+    """Return the scope-filtered, ordered ops effective for the env's
+    build target — Step 38f's agent-visible read surface.
+
+    Today the agent reads ``overlay.dops`` via ``get_file`` and has to
+    mentally apply scope filtering: walk top-to-bottom tracking the
+    active ``target @X`` directive, keep ops whose scope is ``@any``
+    or matches the env's target, drop the rest. With multi-target
+    overlays enabled by 38d this gets error-prone fast. This function
+    externalizes the work into a tool — feed it origin, get back
+    structured ops the engine would actually apply.
+
+    Returns a dict with::
+
+        {
+            "ok": True,
+            "target": "<env target>",
+            "effective_ops": [<PlanOp dict>, ...],
+            "filtered_out": [<PlanOp dict + reason>, ...],
+            "overlay_path": "ports/<origin>/overlay.dops",
+        }
+
+    Or on failure::
+
+        {"ok": False, "error": "<actionable message>"}
+
+    Failure modes:
+
+    - Env target not in the cache (runner didn't call
+      ``set_env_target``) → refuse with a calling-context-bug
+      message. Same surfacing as ``_append_overlay``'s @current path.
+    - Overlay parses but fails semantic checks (operator hand-edit,
+      invalid scope, etc.) → refuse with the engine's first diagnostic.
+    - Overlay parses but emits no scoped ops → return empty lists.
+
+    On a port with no ``overlay.dops`` (a fresh port that's never had
+    agent edits), ``ok=True`` with empty lists — not an error.
+    """
+    from dportsv3.engine.api import build_plan  # noqa: PLC0415
+
+    target = peek_env_target(env)
+    if not target:
+        return {
+            "ok": False,
+            "error": (
+                f"env {env!r} has no compose target cached "
+                f"(t.target is unset). This indicates a calling-context "
+                f"bug: the cache should be populated at job start by "
+                f"worker.set_env_target. Retrying will not help — "
+                f"escalate."
+            ),
+        }
+
+    paths = env_paths(env)
+    workspace = paths.deltaports
+    if not workspace.is_dir():
+        return {
+            "ok": False,
+            "error": (
+                f"env workspace does not exist: {workspace}. "
+                f"Verify the env is set up before reading overlay state."
+            ),
+        }
+
+    overlay_path = workspace / "ports" / origin / "overlay.dops"
+    overlay_relpath = str(overlay_path.relative_to(workspace))
+
+    if not overlay_path.is_file():
+        return {
+            "ok": True,
+            "target": target,
+            "effective_ops": [],
+            "filtered_out": [],
+            "overlay_path": overlay_relpath,
+        }
+
+    try:
+        text = overlay_path.read_text()
+    except OSError as exc:
+        return {
+            "ok": False,
+            "error": f"read failed for {overlay_relpath}: {exc}",
+        }
+
+    plan_result = build_plan(text, source_path=overlay_path)
+    if not plan_result.ok or plan_result.plan is None:
+        # Surface the first engine diagnostic verbatim.
+        first = (
+            plan_result.diagnostics[0] if plan_result.diagnostics else None
+        )
+        msg = (
+            f"engine refused {overlay_relpath}: {first.code}: {first.message}"
+            if first
+            else f"engine refused {overlay_relpath} (no diagnostic returned)"
+        )
+        return {"ok": False, "error": msg}
+
+    effective: list[dict] = []
+    filtered: list[dict] = []
+    for op in plan_result.plan.ops:
+        op_dict = op.to_dict()
+        # Rename per-op `target` → `scope` for the agent-facing
+        # response. PlanOp.target IS the scope the op is bound to,
+        # but the top-level `target` field in this dict already means
+        # "the env's build target" — two different meanings need
+        # two different names. Throughout Step 38 we've used `scope`
+        # for the per-op layer; align the response shape.
+        op_dict["scope"] = op_dict.pop("target")
+        if op.target in ("@any", target):
+            effective.append(op_dict)
+        else:
+            filtered.append({
+                **op_dict,
+                "reason": (
+                    f"scope {op.target} does not match env target {target}"
+                ),
+            })
+
+    return {
+        "ok": True,
+        "target": target,
+        "effective_ops": effective,
+        "filtered_out": filtered,
+        "overlay_path": overlay_relpath,
+    }
+
+
 def probe_overlay_facts(env: str, origin: str):
     """Collect raw overlay facts from inside the dev-env chroot."""
     from dportsv3.agent.overlay_state import (  # noqa: PLC0415
