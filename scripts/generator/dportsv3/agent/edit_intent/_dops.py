@@ -56,7 +56,7 @@ def replace_in_patch(t, intent: ReplaceInPatch):
             ok=False, intent_type="replace_in_patch", error=str(exc),
         )
     stmt = _stmt_text_replace_once(intent.target, intent.find, intent.replace)
-    return _append_overlay(t, "replace_in_patch", [stmt])
+    return _append_overlay(t, "replace_in_patch", [stmt], scope=intent.scope)
 
 
 def drop_patch(t, intent: DropPatch):
@@ -248,7 +248,8 @@ def add_patch(t, intent: AddPatch):
         )
     # Now append the dops directive that installs it.
     stmt_result = _append_overlay(t, "add_patch",
-                                  [f"patch apply {intent.target}"])
+                                  [f"patch apply {intent.target}"],
+                                  scope=intent.scope)
     if not stmt_result.ok:
         # Roll back the file write so the half-applied state doesn't
         # confuse the next intent.
@@ -331,7 +332,7 @@ def add_file(t, intent: AddFile):
         # `file copy <src> -> <dst>` per the dops grammar (arrow
         # token between operands, no dots, no named args).
         stmt = f"file copy {intent.dest} -> {intent.dest}"
-        stmt_result = _append_overlay(t, "add_file", [stmt])
+        stmt_result = _append_overlay(t, "add_file", [stmt], scope=intent.scope)
         if not stmt_result.ok:
             try:
                 target.unlink()
@@ -351,7 +352,7 @@ def add_file(t, intent: AddFile):
     if intent.kind == "materialize":
         # `file materialize <src> -> <dst>` per the dops grammar.
         stmt = f"file materialize {intent.source} -> {intent.dest}"
-        return _append_overlay(t, "add_file", [stmt])
+        return _append_overlay(t, "add_file", [stmt], scope=intent.scope)
     return EditResult(
         ok=False, intent_type="add_file",
         error=f"unknown kind: {intent.kind!r}",
@@ -423,11 +424,15 @@ def change_makefile(t, intent: ChangeMakefile):
     """
     if intent.op == "unset":
         stmt = f"mk unset {intent.key}"
-        return _append_overlay(t, "change_makefile", [stmt])
+        return _append_overlay(
+            t, "change_makefile", [stmt], scope=intent.scope,
+        )
     action = {"set": "set", "append": "add", "remove": "remove"}[intent.op]
     stmt = f"mk {action} {intent.key} {_quote_dops_string(intent.value)}"
     strip = _strip_existing_mk_set(intent.key) if intent.op == "set" else None
-    return _append_overlay(t, "change_makefile", [stmt], prefilter=strip)
+    return _append_overlay(
+        t, "change_makefile", [stmt], prefilter=strip, scope=intent.scope,
+    )
 
 
 def _strip_existing_mk_set(key: str):
@@ -638,7 +643,9 @@ def bump_portrevision(t, intent: BumpPortrevision):
     """
     from .translator import EditResult
     stmt = 'mk set PORTREVISION "1"'
-    return _append_overlay(t, "bump_portrevision", [stmt])
+    return _append_overlay(
+        t, "bump_portrevision", [stmt], scope=intent.scope,
+    )
 
 
 # --------------------------------------------------------------------

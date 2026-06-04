@@ -849,7 +849,7 @@ def _make_seeded_translator(
     will seed it via `_initial_overlay_header`."""
     import subprocess
     ws = tmp_path / "ws"
-    ws.mkdir()
+    ws.mkdir(parents=True)
     subprocess.run(["git", "-C", str(ws), "init", "-q"], check=True)
     subprocess.run(
         ["git", "-C", str(ws), "config", "user.email", "t@t"], check=True,
@@ -1243,3 +1243,253 @@ def test_schema_for_drop_patch_does_not_include_scope() -> None:
 
     assert "scope" not in schema_for("drop_patch")["properties"]
     assert "scope" not in schema_for("replace_in_dops_block")["properties"]
+
+
+# ---------------------------------------------------------------------
+# Step 38d-6 — renderers wire intent.scope into _append_overlay
+# ---------------------------------------------------------------------
+
+
+# Per-renderer test fixtures. Each tuple is (intent_type, payload_extra,
+# stmt_substring-that-should-appear-in-the-emitted-overlay-line). The
+# stmt substring matches the dops grammar emission for the intent.
+_SCOPE_RENDERER_FIXTURES = [
+    (
+        "replace_in_patch",
+        {"target": "files/extra-config.in", "find": "OLD", "replace": "NEW"},
+        "text replace-once file files/extra-config.in",
+    ),
+    (
+        "add_patch",
+        {
+            "target": "dragonfly/patch-src_x.c",
+            "diff": "--- a\n+++ b\n@@ -1 +1 @@\n-x\n+y\n",
+        },
+        "patch apply dragonfly/patch-src_x.c",
+    ),
+    (
+        "add_file",
+        {"dest": "files/extra-config.in", "kind": "resource", "content": "hi"},
+        "file copy files/extra-config.in",
+    ),
+    (
+        "change_makefile",
+        {"path": "Makefile", "key": "USES", "op": "append", "value": "pkgconfig"},
+        'mk add USES "pkgconfig"',
+    ),
+    (
+        "bump_portrevision",
+        {},
+        "mk set PORTREVISION",
+    ),
+]
+
+
+# ---- Backward-compat per call site ----------------------------------
+
+
+def test_renderer_default_scope_lands_in_any_section(tmp_path: Path) -> None:
+    """Default scope (omitted in payload, dataclass fills @any) on a
+    fresh overlay: each renderer's statement lands inside the @any
+    section, preserving the header blank-line separator. Pre-38d-6
+    behavior used dumb-append; post-38d-6 routes through the helper
+    with byte-identical output on clean overlays."""
+    for intent_type, extra, stmt_substring in _SCOPE_RENDERER_FIXTURES:
+        t = _make_seeded_translator(tmp_path / intent_type)
+        r = t.apply({"type": intent_type, **extra})
+        assert r.ok, (intent_type, r.error)
+        written = t.port_path("overlay.dops").read_text()
+        # Statement landed under the @any section.
+        assert stmt_substring in written, (intent_type, written)
+        # No spurious target directive — no @Q section emitted.
+        assert written.count("target @") == 1, written
+        # The header blank-line separator (between `reason "..."` and
+        # the first statement) is preserved.
+        assert "\n\n" in written, written
+
+
+def test_renderer_explicit_any_matches_default(tmp_path: Path) -> None:
+    """Explicit `scope='@any'` produces the same substrate as omitting
+    `scope` (the dataclass default). Confirms the agent has two
+    equivalent ways to express "universal fix": omit or explicit."""
+    for intent_type, extra, _stmt in _SCOPE_RENDERER_FIXTURES:
+        # Build two parallel ports — one with omitted scope, one with
+        # explicit @any. Diffs should match.
+        t_omitted = _make_seeded_translator(tmp_path / f"{intent_type}_omit")
+        t_explicit = _make_seeded_translator(tmp_path / f"{intent_type}_any")
+        r1 = t_omitted.apply({"type": intent_type, **extra})
+        r2 = t_explicit.apply({"type": intent_type, "scope": "@any", **extra})
+        assert r1.ok and r2.ok, (intent_type, r1.error, r2.error)
+        assert (
+            t_omitted.port_path("overlay.dops").read_text()
+            == t_explicit.port_path("overlay.dops").read_text()
+        )
+
+
+def test_change_makefile_unset_branch_passes_scope(tmp_path: Path) -> None:
+    """The change_makefile renderer has TWO _append_overlay call
+    sites — one for op=unset, one for set/append/remove. Both got
+    wired. Verifies the unset branch."""
+    t = _make_seeded_translator(tmp_path, target="@2026Q2")
+    r = t.apply({
+        "type": "change_makefile", "path": "Makefile", "key": "USES",
+        "op": "unset", "scope": "@current",
+    })
+    assert r.ok, r.error
+    written = t.port_path("overlay.dops").read_text()
+    assert "target @2026Q2" in written
+    assert "mk unset USES" in written
+
+
+def test_add_file_materialize_branch_passes_scope(tmp_path: Path) -> None:
+    """The add_file renderer has TWO _append_overlay call sites —
+    one for kind=resource (writes a file + emits `file copy`), one
+    for kind=materialize (just emits `file materialize`). Both got
+    wired. Verifies the materialize branch."""
+    t = _make_seeded_translator(tmp_path, target="@2026Q3")
+    r = t.apply({
+        "type": "add_file",
+        "dest": "dragonfly/patch-foo",
+        "kind": "materialize",
+        "source": "dragonfly/patch-foo",
+        "scope": "@current",
+    })
+    assert r.ok, r.error
+    written = t.port_path("overlay.dops").read_text()
+    assert "target @2026Q3" in written
+    assert "file materialize dragonfly/patch-foo -> dragonfly/patch-foo" in written
+
+
+# ---- End-to-end @current resolution per intent ---------------------
+
+
+def test_renderer_current_scope_resolves_to_t_target(tmp_path: Path) -> None:
+    """`scope=@current` resolves to `t.target` at apply time and the
+    statement lands under a fresh `target @2026Q2` section. The
+    agent-facing `@current` literal never appears in the substrate
+    (engine grammar wouldn't accept it)."""
+    for intent_type, extra, stmt_substring in _SCOPE_RENDERER_FIXTURES:
+        t = _make_seeded_translator(tmp_path / intent_type, target="@2026Q2")
+        r = t.apply({"type": intent_type, "scope": "@current", **extra})
+        assert r.ok, (intent_type, r.error)
+        written = t.port_path("overlay.dops").read_text()
+        assert "target @2026Q2" in written, (intent_type, written)
+        assert stmt_substring in written, (intent_type, written)
+        # Statement appears AFTER the @2026Q2 directive (in the new
+        # section), not under @any.
+        q_pos = written.index("target @2026Q2")
+        stmt_pos = written.index(stmt_substring)
+        assert q_pos < stmt_pos, (intent_type, written)
+        # `@current` literal never reaches the substrate.
+        assert "@current" not in written, (intent_type, written)
+
+
+# ---- @current with no t.target refused per intent -------------------
+
+
+def test_renderer_current_refused_when_t_target_none(tmp_path: Path) -> None:
+    """When the agent requests `@current` but the runner failed to
+    populate `t.target` (cache miss), the call refuses with the 38d-3
+    error. Substrate untouched. Each renderer must propagate this
+    refusal cleanly (no half-applied state)."""
+    for intent_type, extra, _stmt in _SCOPE_RENDERER_FIXTURES:
+        t = _make_seeded_translator(tmp_path / intent_type)  # target=None
+        r = t.apply({"type": intent_type, "scope": "@current", **extra})
+        assert r.ok is False, (intent_type, r)
+        assert "@current" in (r.error or ""), (intent_type, r.error)
+        assert "set_env_target" in (r.error or ""), (intent_type, r.error)
+
+
+# ---- Side-effect rollback on scope refusal --------------------------
+
+
+def test_add_patch_rollback_on_scope_refusal(tmp_path: Path) -> None:
+    """add_patch writes the patch file BEFORE calling _append_overlay.
+    If the overlay write refuses (e.g. @current with no t.target),
+    the existing rollback path must delete the patch file. No
+    orphan side-effects from a scope refusal."""
+    t = _make_seeded_translator(tmp_path)  # target=None
+    patch_path = t.port_path("dragonfly/patch-foo.c")
+
+    r = t.apply({
+        "type": "add_patch",
+        "target": "dragonfly/patch-foo.c",
+        "diff": "--- a\n+++ b\n@@ -1 +1 @@\n-x\n+y\n",
+        "scope": "@current",
+    })
+
+    assert r.ok is False
+    # The patch file was written but then rolled back.
+    assert not patch_path.exists(), "add_patch left an orphan patch file"
+
+
+def test_add_file_resource_rollback_on_scope_refusal(tmp_path: Path) -> None:
+    """add_file kind=resource also writes the resource file before
+    calling _append_overlay. Same rollback expectation as add_patch
+    on scope refusal."""
+    t = _make_seeded_translator(tmp_path)  # target=None
+    resource_path = t.port_path("files/extra-config.in")
+
+    r = t.apply({
+        "type": "add_file",
+        "dest": "files/extra-config.in",
+        "kind": "resource",
+        "content": "hello",
+        "scope": "@current",
+    })
+
+    assert r.ok is False
+    assert not resource_path.exists(), "add_file left an orphan resource file"
+
+
+# ---- drop_patch and replace_in_dops_block regression ----------------
+
+
+def test_drop_patch_unaffected_by_38d_6(tmp_path: Path) -> None:
+    """drop_patch operates on a named patch — no scope field on the
+    intent, no scope handling in the renderer (it bypasses
+    _append_overlay entirely). 38d-6 must leave it unchanged."""
+    t = _make_seeded_translator(tmp_path)
+    # Seed an overlay with a patch apply directive to drop.
+    t.port_path("overlay.dops").write_text(
+        "target @any\n"
+        "port devel/foo\n"
+        "\n"
+        "patch apply dragonfly/patch-old.c\n"
+    )
+    # Also create the patch file on disk so drop_patch can delete it.
+    patch_file = t.port_path("dragonfly/patch-old.c")
+    patch_file.parent.mkdir(parents=True, exist_ok=True)
+    patch_file.write_text("dummy")
+
+    r = t.apply({
+        "type": "drop_patch",
+        "target": "dragonfly/patch-old.c",
+        "reason": "obsolete",
+    })
+    assert r.ok, r.error
+    assert "patch apply dragonfly/patch-old.c" not in (
+        t.port_path("overlay.dops").read_text()
+    )
+
+
+def test_replace_in_dops_block_unaffected_by_38d_6(tmp_path: Path) -> None:
+    """replace_in_dops_block bypasses _append_overlay. No scope field
+    on the intent. 38d-6 leaves it unchanged."""
+    t = _make_seeded_translator(tmp_path)
+    t.port_path("overlay.dops").write_text(
+        "target @any\nport devel/foo\n\n"
+        "mk target set dfly-patch <<MK\n"
+        "\t@echo old\n"
+        "MK\n"
+    )
+    r = t.apply({
+        "type": "replace_in_dops_block",
+        "block_name": "dfly-patch",
+        "find": "@echo old",
+        "replace": "@echo new",
+    })
+    assert r.ok, r.error
+    written = t.port_path("overlay.dops").read_text()
+    assert "@echo new" in written
+    assert "@echo old" not in written
