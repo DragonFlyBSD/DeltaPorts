@@ -1741,6 +1741,45 @@ def test_drop_mk_directive_removes_add_line(tmp_path: Path) -> None:
     assert 'mk set GNU_CONFIGURE "yes"' in written
 
 
+def test_drop_mk_directive_matches_unquoted_on_disk_form(
+    tmp_path: Path,
+) -> None:
+    """Regression: convert emits whitespace-free `mk add` values
+    bare (`mk add USES alias`), while change_makefile/drop emit the
+    quoted form. The engine treats both identically, so the matcher
+    must too — matching by parsed token value, not byte spelling.
+    Before the fix, `drop_mk_directive(value="alias")` reconstructed
+    `mk add USES "alias"` and missed the bare on-disk line, forcing
+    the agent into an add+remove counter-directive thrash."""
+    t = _make_seeded_translator(tmp_path)
+    _seed_overlay(t, "mk add USES alias\nmk set GNU_CONFIGURE \"yes\"\n")
+    r = t.apply({
+        "type": "drop_mk_directive", "kind": "add",
+        "key": "USES", "value": "alias",
+    })
+    assert r.ok, r.error
+    written = t.port_path("overlay.dops").read_text()
+    assert "mk add USES alias" not in written
+    assert 'mk set GNU_CONFIGURE "yes"' in written
+
+
+def test_drop_mk_directive_matches_line_with_on_missing_clause(
+    tmp_path: Path,
+) -> None:
+    """A directive carrying a trailing `on-missing` clause parses to an
+    MkOpNode whose `token` still equals the value — the clause lands in
+    its own AST field. The parser-based matcher matches on action/var/
+    token and removes the whole line, clause included."""
+    t = _make_seeded_translator(tmp_path)
+    _seed_overlay(t, "mk add USES alias on-missing error\n")
+    r = t.apply({
+        "type": "drop_mk_directive", "kind": "add",
+        "key": "USES", "value": "alias",
+    })
+    assert r.ok, r.error
+    assert "USES" not in t.port_path("overlay.dops").read_text()
+
+
 def test_drop_mk_directive_removes_unset_line(tmp_path: Path) -> None:
     t = _make_seeded_translator(tmp_path)
     _seed_overlay(t, "mk unset LICENSE_FILE\n")

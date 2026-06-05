@@ -382,6 +382,45 @@ def _quote_dops_string(s: str) -> str:
     return "".join(out)
 
 
+def _mk_directive_matches(line: str, kind: str, key: str, value: str | None) -> bool:
+    """True iff ``line`` parses to an ``mk <kind> <key> [...]`` directive
+    matching the drop intent — compared on the parsed ``MkOpNode``, not
+    on byte spelling.
+
+    Defers to the engine parser as the single source of truth. The
+    on-disk value form is incidental: convert emits whitespace-free
+    values bare (``mk add USES alias``, migration/convert.py) while
+    ``change_makefile`` quotes them (``mk add USES "alias"``); the
+    parser decodes both to the same ``token`` field, so this matcher
+    treats them identically — which is the whole point, since the
+    engine does too. A trailing ``on-missing`` clause lands in its own
+    AST field and is correctly ignored here.
+
+    Match rules by ``kind`` mirror the renderers' semantics:
+    - ``add`` / ``remove`` → ``var`` and ``token`` must both match.
+    - ``set`` → ``var`` matches; the value is ignored (an agent
+      shouldn't have to echo the exact on-disk value to drop a set).
+    - ``unset`` → ``var`` matches (no value to compare).
+    """
+    from dportsv3.engine.api import parse_dsl  # noqa: PLC0415
+    from dportsv3.engine.ast import MkOpNode  # noqa: PLC0415
+
+    result = parse_dsl(line)
+    if not result.ok or result.ast is None:
+        return False
+    stmts = result.ast.statements
+    if len(stmts) != 1:
+        return False
+    node = stmts[0]
+    if not isinstance(node, MkOpNode):
+        return False
+    if node.action != kind or node.var != key:
+        return False
+    if kind in ("add", "remove"):
+        return node.token == value
+    return True  # set (value ignored) / unset (no value)
+
+
 def change_makefile(t, intent: ChangeMakefile):
     """``mk <action> VAR ["value"]`` per the dops grammar.
 
@@ -505,26 +544,16 @@ def drop_mk_directive(t, intent: DropMkDirective):
         return scope_err
 
     if intent.kind == "unset":
-        needle = f"mk unset {intent.key}"
-        shape_desc = needle
-
-        def _matches(s: str) -> bool:
-            return s == needle
+        shape_desc = f"mk unset {intent.key}"
     elif intent.kind == "set":
-        prefix = f"mk set {intent.key}"
-        shape_desc = f"{prefix} ..."
-
-        def _matches(s: str) -> bool:
-            return s == prefix or s.startswith(prefix + " ")
+        shape_desc = f"mk set {intent.key} ..."
     else:  # add / remove
-        line = (
-            f"mk {intent.kind} {intent.key} "
-            f"{_quote_dops_string(intent.value)}"
-        )
-        shape_desc = line
+        shape_desc = f"mk {intent.kind} {intent.key} {intent.value}"
 
-        def _matches(s: str) -> bool:
-            return s == line
+    def _matches(s: str) -> bool:
+        return _mk_directive_matches(
+            s, intent.kind, intent.key, intent.value,
+        )
 
     new, count = _strip_scoped_line(
         before_overlay, resolved_scope, _matches,
