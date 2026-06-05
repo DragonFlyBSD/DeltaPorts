@@ -5,44 +5,58 @@ surface and the dops directive grammar. Used as implementation tracker.
 
 ## Problem statement
 
-The patch agent's intent surface is **constructive-heavy and corrective-thin**.
-Most intents create or append; very few modify or delete. Out of 23 distinct
-dops directive shapes the engine understands, only **1** has fully-symmetric
-create+delete intent coverage. **13** have no intent at all. **20** have no
-delete path from `overlay.dops`.
+The patch agent's intent surface was historically **constructive-heavy and
+corrective-thin**. Step 39 (Family A delete intents) closed the worst of it.
+Out of 23 distinct dops directive shapes the engine understands, **7** now
+have fully-symmetric create+delete intent coverage (was 1), **8** have no
+intent at all, and **14** still have no delete path from `overlay.dops`.
 
-When the agent needs to undo, surgically remove, or restructure something —
-its own prior output, a convert artifact, an upstream wrong-for-DragonFly
-assignment — its only move is to append a counter-op or reach for a
-heavyweight workaround. Either choice accumulates dead-weight in
-`overlay.dops` or produces the wrong shape of fix.
+> **Design note — explicit deletes, not self-stripping.** The original
+> version of this plan (Phase 1, Family A) closed the corrective gap by
+> making create/delete pairs *self-strip*: re-emitting `op=set` scrubbed the
+> prior `mk set` line, `op=remove` would cancel a matching `mk add`, etc.
+> **Step 38e reversed that premise.** Implicit prefilters were scope-blind
+> and could corrupt multi-target overlays, so `_strip_existing_mk_set` was
+> removed and the project adopted "each intent does one thing, no implicit
+> cleanup." The corrective gap was instead closed by **explicit** delete
+> intents (`drop_mk_directive`, `drop_file`, `drop_target_block` — Step 39),
+> which are scope-aware and hard-refuse on zero/ambiguous matches. Re-emitting
+> `op=set` now accumulates lines (last-wins at compose time); the old line is
+> removed deliberately via `drop_mk_directive`, never automatically.
 
-The shape of the gaps suggests the intent surface was built outward from
-the convert agent's needs (lots of CREATE, one-shot direction). The patch
-agent's needs are inverse: tweak, undo, surgically remove. That asymmetry
-is not reflected in the intent set.
+When the agent needs to undo or surgically remove its own prior output or a
+convert artifact, it now reaches for the matching `drop_*` intent. What
+remains thin is **conditional control flow** (`mk disable-if`/`replace-if`),
+**compose-time file removal** (`file remove`), and **target-heredoc
+creation** — Family B, tracked below and as Step 40 in the architecture
+backlog.
 
 ---
 
 ## Reference: intent → dops mapping
 
-Canonical list. 7 intent types total. Source: `grammar.py:16-24` +
-`_dops.py` renderer bodies.
+Canonical list. 10 intent types total. Source: `grammar.py` `INTENT_TYPES` +
+`_dops.py` renderer bodies. Post-38e there are **no strip-prefilters** — every
+renderer appends or deletes exactly what it names; nothing is scrubbed
+implicitly.
 
-| Intent | Emits into `overlay.dops` | Strip-prefilter | Side effect on disk |
+| Intent | Emits into / removes from `overlay.dops` | Match / refuse | Side effect on disk |
 |---|---|---|---|
-| `add_file` (kind=resource) | `file copy <dest> -> <dest>` | none | writes file under `ports/<origin>/<dest>` |
-| `add_file` (kind=materialize) | `file materialize <src> -> <dst>` | none | — |
-| `add_patch` (inline) | `patch apply <target>` | refuses if file exists | writes patch under `ports/<origin>/<target>` |
-| `add_patch` (from_dupe=true) | `patch apply <target>` | refuses if file exists | reads from WRKSRC genpatch, writes patch |
-| `bump_portrevision` | `mk set PORTREVISION "1"` | **none** (creates duplicates on re-emit) | — |
-| `change_makefile` op=set | `mk set VAR "value"` | strips prior `mk set VAR ...` | — |
-| `change_makefile` op=append | `mk add VAR "value"` | none | — |
-| `change_makefile` op=remove | `mk remove VAR "value"` | none (does NOT strip `mk add VAR value`) | — |
-| `change_makefile` op=unset | `mk unset VAR` | none (does NOT strip `mk set/add VAR ...`) | — |
-| `drop_patch` | strips `patch apply <target>` OR `file materialize ... -> <target>` (only `dragonfly/patch-*` shape on `file materialize`) | match-and-strip on both shapes | deletes patch file on disk (both shapes) |
-| `replace_in_dops_block` | edits body of `mk target set/append <name> <<TAG ... TAG` | n/a (in-place body edit) | — |
-| `replace_in_patch` (non-dragonfly, non-`.dops` only) | `text replace-once file <target> from "X" to "Y"` | none | — |
+| `add_file` (kind=resource) | appends `file copy <dest> -> <dest>` | — | writes file under `ports/<origin>/<dest>` |
+| `add_file` (kind=materialize) | appends `file materialize <src> -> <dst>` | — | — |
+| `add_patch` (inline) | appends `patch apply <target>` | refuses if file exists | writes patch under `ports/<origin>/<target>` |
+| `add_patch` (from_dupe=true) | appends `patch apply <target>` | refuses if file exists | reads from WRKSRC genpatch, writes patch |
+| `bump_portrevision` | appends `mk set PORTREVISION "1"` | none (re-emit accumulates; delete via `drop_mk_directive`) | — |
+| `change_makefile` op=set | appends `mk set VAR "value"` | none (re-emit accumulates, last-wins) | — |
+| `change_makefile` op=append | appends `mk add VAR "value"` | — | — |
+| `change_makefile` op=remove | appends `mk remove VAR "value"` | — | — |
+| `change_makefile` op=unset | appends `mk unset VAR` | — | — |
+| `drop_mk_directive` | removes one `mk set/unset/add/remove VAR` line | scope-aware; refuses on zero or ambiguous match | — |
+| `drop_file` | removes a non-patch `file copy`/`file materialize ... -> <target>` line | refuses on `dragonfly/patch-*` (use `drop_patch`); zero/ambiguous | deletes the materialized file if present |
+| `drop_patch` | removes `patch apply <target>` OR patch-shaped `file materialize` | match on both `dragonfly/patch-*` shapes | deletes patch file on disk |
+| `drop_target_block` | removes a whole `mk target set/append NAME <<TAG ... TAG` block | scope-aware; refuses on zero/ambiguous; refuses on corrupt (unbounded) heredoc | — |
+| `replace_in_dops_block` | edits body of `mk target set/append <name> <<TAG ... TAG` | in-place body edit | — |
+| `replace_in_patch` (non-dragonfly, non-`.dops` only) | appends `text replace-once file <target> from "X" to "Y"` | — | — |
 
 ---
 
@@ -61,19 +75,19 @@ Legend: ✅ = supported, ⚠️ = partial / awkward, ❌ = **no intent**.
 | 3  | `type port` | ⚠️ convert-only | ❌ | ❌ | header |
 | 4  | `reason "..."` | ⚠️ convert-only | ❌ | ❌ | header |
 | 5  | `maintainer "..."` | ⚠️ convert-only | ❌ | ❌ | optional header |
-| 6  | `mk set VAR "v"` | ✅ change_makefile op=set | ✅ re-emit auto-strips | ❌ | no intent to delete a `mk set` line outright |
-| 7  | `mk unset VAR` | ✅ change_makefile op=unset | ❌ (re-emit appends) | ❌ | no intent to delete |
-| 8  | `mk add VAR tok` | ✅ change_makefile op=append | ❌ | ❌ | `op=remove` appends a counter-op, doesn't strip |
-| 9  | `mk remove VAR tok` | ✅ change_makefile op=remove | ❌ | ❌ | no intent to delete |
+| 6  | `mk set VAR "v"` | ✅ change_makefile op=set | ⚠️ re-emit appends (last-wins, accumulates post-38e) | ✅ drop_mk_directive kind=set | delete the prior line explicitly; no auto-strip |
+| 7  | `mk unset VAR` | ✅ change_makefile op=unset | ❌ (re-emit appends) | ✅ drop_mk_directive kind=unset | |
+| 8  | `mk add VAR tok` | ✅ change_makefile op=append | ❌ | ✅ drop_mk_directive kind=add (matches key+token) | `op=remove` appends a counter-op; drop removes the line |
+| 9  | `mk remove VAR tok` | ✅ change_makefile op=remove | ❌ | ✅ drop_mk_directive kind=remove (matches key+token) | |
 | 10 | `mk disable-if condition "X" [contains "Y"]` | ❌ | ❌ | ❌ | cannot disable upstream `.if` blocks |
 | 11 | `mk replace-if from "X" to "Y" [contains "Z"]` | ❌ | ❌ | ❌ | cannot rewrite upstream conditions |
 | 12 | `mk block set condition "X" <<TAG ... TAG` | ❌ | ❌ | ❌ | conditional heredocs — `replace_in_dops_block` does NOT cover this shape |
-| 13 | `mk target set NAME <<TAG ... TAG` | ❌ (convert-only) | ✅ replace_in_dops_block | ❌ | cannot delete a target heredoc |
-| 14 | `mk target append NAME <<TAG ... TAG` | ❌ | ✅ replace_in_dops_block | ❌ | playbook doesn't mention modify, but the code supports it |
+| 13 | `mk target set NAME <<TAG ... TAG` | ❌ (convert-only) | ✅ replace_in_dops_block | ✅ drop_target_block | create still convert-only (B3) |
+| 14 | `mk target append NAME <<TAG ... TAG` | ❌ | ✅ replace_in_dops_block | ✅ drop_target_block | create still convert-only (B3) |
 | 15 | `mk target remove NAME` (Makefile-level target deletion, no body) | ❌ | n/a | ❌ | distinct from deleting the `mk target set` heredoc itself |
 | 16 | `mk target rename OLD -> NEW` | ❌ | n/a | ❌ | no intent at all |
-| 17 | `file copy SRC -> DST` | ✅ add_file kind=resource | ❌ | ⚠️ drop_patch only for `dragonfly/patch-*` destinations | non-patch file copies cannot be removed |
-| 18 | `file materialize SRC -> DST` | ✅ add_file kind=materialize | ❌ | ⚠️ drop_patch only for `dragonfly/patch-*` destinations | non-patch materializes cannot be removed |
+| 17 | `file copy SRC -> DST` | ✅ add_file kind=resource | ❌ | ✅ drop_file (non-patch) / drop_patch (`dragonfly/patch-*`) | partitioned by destination shape |
+| 18 | `file materialize SRC -> DST` | ✅ add_file kind=materialize | ❌ | ✅ drop_file (non-patch) / drop_patch (`dragonfly/patch-*`) | partitioned by destination shape |
 | 19 | `file remove PATH` | ❌ | ❌ | ❌ | agent cannot tell compose to remove a file |
 | 20 | `text line-remove file P exact "X"` | ❌ | ❌ | ❌ | no intent |
 | 21 | `text line-insert-after file P anchor "X" line "Y"` | ❌ | ❌ | ❌ | no intent |
@@ -82,72 +96,80 @@ Legend: ✅ = supported, ⚠️ = partial / awkward, ❌ = **no intent**.
 
 ### Counts
 
-- **Directives with NO intent at all** (Create + Modify + Delete all ❌, headers excluded): 10, 11, 12, 15, 16, 19, 20, 21 — **8 of 18 non-header rows**.
-- **Directives with NO delete intent**: rows 1–22 except 23 (and partial for 17, 18) — **20 of 23**.
-- **Fully agent-manageable directives** (Create + Delete): only row 23. **1 of 23**.
+- **Directives with NO intent at all** (Create + Modify + Delete all ❌, headers excluded): 10, 11, 12, 15, 16, 19, 20, 21 — **8 of 18 non-header rows** (unchanged by Step 39; these are Family B/header territory).
+- **Directives with NO delete intent**: all rows except 6, 7, 8, 9, 13, 14, 17, 18, 23 — **14 of 23** (was 20 before Step 39).
+- **Fully agent-manageable directives** (Create + Delete both ✅): rows 6, 7, 8, 9, 17, 18, 23 — **7 of 23** (was 1). Rows 13/14 have delete but create is still convert-only (Family B3).
 
 ---
 
 ## Systemic gaps by shape
 
-### Shape A — no general "delete a dops line" intent
+### Shape A — `mk` directive deletes — **CLOSED by Step 39 (`drop_mk_directive`)**
 
-Every `mk` directive lacks a delete path. The agent can only add counter-ops:
+Every `mk set/unset/add/remove` line now has an explicit, scope-aware delete
+path. The agent stops a counter-op accumulating by deleting the original line:
 
-| Want to undo… | Best available today | Result on disk |
+| Want to undo… | Move today | Result on disk |
 |---|---|---|
-| `mk set VAR "x"` | nothing (op=unset emits a new line) | both lines stay |
-| `mk unset VAR` | nothing | line stays forever |
-| `mk add VAR tok` | `op=remove` appends `mk remove` | add + remove pair |
-| `mk remove VAR tok` | nothing | line stays forever |
+| `mk set VAR "x"` | `drop_mk_directive kind=set key=VAR` | the `mk set` line is removed |
+| `mk unset VAR` | `drop_mk_directive kind=unset key=VAR` | the `mk unset` line is removed |
+| `mk add VAR tok` | `drop_mk_directive kind=add key=VAR value=tok` | the `mk add` line is removed (no counter-op) |
+| `mk remove VAR tok` | `drop_mk_directive kind=remove key=VAR value=tok` | the `mk remove` line is removed |
 
-Every `change_makefile` op except `op=set` is append-only at the substrate
-level. Composed Makefile may come out right; overlay accumulates dead-weight.
+`change_makefile` renderers are still append-only (each emits exactly one line,
+last-wins at compose) — but the substrate no longer has to accumulate, because
+deletion is now an explicit intent rather than an implicit prefilter.
 
 ### Shape B — entire directive families have no intent at all
 
 | Family | Directives | Why it matters |
 |---|---|---|
 | Conditional control flow | `mk disable-if`, `mk replace-if`, `mk block set` (rows 10, 11, 12) | Cannot disable an upstream `.if defined(X)` block or rewrite `.if ${OPSYS} == FreeBSD`. Agent reaches for `add_patch` to source-patch the Makefile — heavyweight and wrong shape. |
-| Target heredocs | `mk target set` create, `mk target append` create, `mk target remove`, `mk target rename` (rows 13–16) | Convert can produce target heredocs; agent can edit bodies but cannot delete the whole block, create a new one, or rename. |
+| Target heredocs | `mk target set`/`append` **create** (rows 13–14), `mk target remove` (15), `mk target rename` (16) | Convert can produce target heredocs; agent can edit bodies (`replace_in_dops_block`) and now delete whole blocks (`drop_target_block`, Step 39), but still cannot create a new one (B3), drop a Makefile target by name (B4), or rename (B5). |
 | Compose-time file deletion | `file remove` (row 19) | Cannot tell compose to remove a file from the materialized tree (e.g. an upstream test fixture that breaks on DragonFly). |
 | Line-level text editing | `text line-remove`, `text line-insert-after` (rows 20, 21) | Only line-level op the agent has is `text replace-once` via `replace_in_patch`. |
 
-### Shape C — asymmetric coverage
+### Shape C — asymmetric coverage — **largely CLOSED by Step 39**
 
-- `add_patch` ↔ `drop_patch` is the only fully-symmetric create/delete pair.
-- `add_file` has no `drop_file` counterpart (drop_patch covers only patch-shaped paths).
-- `bump_portrevision` lacks a strip-prefilter — re-emit creates duplicates.
+- `add_patch` ↔ `drop_patch` (existing) and `add_file` ↔ `drop_file` (Step 39)
+  are now symmetric create/delete pairs, partitioned by destination shape
+  (`dragonfly/patch-*` → drop_patch, everything else → drop_file).
+- `change_makefile` ↔ `drop_mk_directive` is symmetric across all four kinds.
+- Remaining asymmetry: target heredocs have delete (`drop_target_block`) but
+  no agent-side create (still convert-only — Family B3, `add_target_block`).
+- `bump_portrevision` re-emit still accumulates (no auto-strip, by design
+  post-38e); delete a stale `mk set PORTREVISION` via `drop_mk_directive`.
 
 ### Shape D — heredoc bodies are read-modify-write only
 
 `replace_in_dops_block` can edit text inside `mk target set/append` heredocs
-but cannot create the heredoc, cannot delete it, doesn't cover `mk block
-set condition` heredocs.
+and `drop_target_block` (Step 39) can now delete the whole block — but the
+agent still cannot *create* a `mk target` heredoc (Family B3) and nothing
+covers `mk block set condition` heredocs (Family B2).
 
 ---
 
 ## Concrete scenarios the agent cannot express
 
-These all surface as "agent thrash" or "agent emits a workaround that
-happens to compose correctly but leaves substrate dirty":
+Step 39 closed the delete-side scenarios (a convert-produced target heredoc
+that's no longer needed → `drop_target_block`; a wrong `mk add` → `drop_mk_directive`;
+a stray non-patch `file copy`/`file materialize` → `drop_file`). What remains
+are the Family B create/control-flow shapes, which still surface as "agent
+thrash" or a workaround that composes correctly but leaves substrate dirty:
 
-1. Convert produced a target heredoc (e.g. `dfly-patch:`) that's no longer
-   needed → no way to delete it. Best the agent can do is gut the body
-   to `@true` via `replace_in_dops_block`, leaving an empty target on disk.
-2. A prior `mk add USES <tok>` is now wrong → only available move is to
-   append `mk remove USES "<tok>"`. Add+remove pair persists on disk.
-3. Convert emitted a `file copy ports/<origin>/files/extra.c -> files/extra.c`
-   that should be removed → no intent. `drop_patch` refuses non-patch paths.
-4. Upstream Makefile has `.if defined(NLS)` that should be disabled on
+1. Upstream Makefile has `.if defined(NLS)` that should be disabled on
    DragonFly → no intent for `mk disable-if`. Agent reaches for `add_patch`
    (heavyweight and wrong shape — the framework has a dedicated directive).
-5. Agent wants to add a new `dfly-patch:` target heredoc to overlay.dops
-   → no intent. Convert-only territory.
-6. Agent wants to delete a previously-emitted `file materialize` line for
-   a generated file → no intent.
-7. Agent needs a single-line removal inside a patched Makefile (no
+   → Family B1 (`change_condition`).
+2. Agent wants to add a new `dfly-patch:` target heredoc to overlay.dops
+   → no agent-side create. Convert-only territory. → Family B3
+   (`add_target_block`).
+3. Agent wants compose to remove a file from the materialized tree (an
+   upstream test fixture that breaks on DragonFly) → no `file remove`
+   intent. → Family B6 (`remove_file_at_compose`).
+4. Agent needs a single-line removal inside a patched Makefile (no
    replacement, just delete) → no intent for `text line-remove`.
+   → Family B7 (`edit_line`).
 
 ---
 
@@ -156,58 +178,31 @@ happens to compose correctly but leaves substrate dirty":
 Ordered by leverage (highest first). Each item is independently landable.
 Mark `[x]` when committed.
 
-### Family A — symmetric create/delete and self-stripping (low blast radius)
+### Family A — explicit deletes — **SHIPPED (Step 39)**
 
-Extend existing intent renderers so create/delete pairs cancel out cleanly
-in the substrate. No new intent surface. Each item is a `_dops.py` change
-+ test.
+> **History.** Family A was originally specced as *self-stripping* (A1/A2/A3:
+> make create/delete pairs auto-cancel in the substrate). **Step 38e reversed
+> that approach** — implicit prefilters were scope-blind and corrupted
+> multi-target overlays, so the self-strip mechanism was removed and the
+> project adopted "no implicit cleanup." Family A was re-solved with *explicit*
+> scope-aware delete intents:
 
-- [ ] **A1: `change_makefile op=remove` self-strips matching `mk add VAR <value>`**
-  - When `op=remove` is called and overlay has a matching `mk add VAR value`
-    line, strip the `mk add` and emit nothing. If no match, fall back to
-    current behavior (append `mk remove`).
-  - Closes the dmidecode shape. Symmetric with how `op=set` already strips
-    prior `mk set` via `_strip_existing_mk_set`.
-  - Files: `_dops.py::change_makefile`, new helper `_strip_existing_mk_add`.
-  - Tests: positive (strip), negative (no match → fallback), preserved
-    (existing op=remove behavior on upstream-defined tokens).
+- [x] **`drop_mk_directive`** (replaces A1/A2/A3) — removes one
+  `mk set/unset/add/remove VAR` line; `set`/`unset` match by key, `add`/`remove`
+  match key + token; scope-aware; hard-refuses on zero or ambiguous match.
+  Shipped Step 39a (`bfb6ae8bcde`).
+- [x] **A4 → `drop_file`** — removes a non-patch `file copy`/`file materialize`
+  line and deletes the materialized file; refuses `dragonfly/patch-*` (routes
+  to `drop_patch`). Decision: **option 2** (separate intent, keeps names
+  accurate). Shipped Step 39b (`ff9bf706b53`).
+- [x] **A5 → `drop_target_block`** — removes a whole `mk target set/append NAME`
+  heredoc (open through close); scope-aware; refuses on zero/ambiguous/corrupt.
+  Shipped Step 39c (`4830bc9342d`). Playbooks + prompt wiring: Step 39d
+  (`a1b67fd40cc`).
 
-- [ ] **A2: `change_makefile op=unset` self-strips matching `mk set VAR ...` and `mk add VAR ...`**
-  - When `op=unset` is called and overlay has matching `mk set VAR ...`
-    or `mk add VAR ...` lines, strip them. Emit `mk unset` only if the
-    variable is also defined upstream (no way to detect — so always emit
-    as a backstop; engine handles no-op gracefully).
-  - Note: the existing renderer doc deliberately keeps `op=unset`
-    plain-append (line 412-422) because of the agent-invented-variable
-    case. Re-examine: does the rationale still hold if we self-strip
-    only matching `mk set/add` for the SAME key emitted earlier in this
-    same overlay? Need to think through this carefully before landing.
-
-- [ ] **A3: `bump_portrevision` strips prior `mk set PORTREVISION ...` like op=set does**
-  - Currently re-emit creates duplicate `mk set PORTREVISION` lines.
-  - One-line fix: pass `_strip_existing_mk_set("PORTREVISION")` to
-    `_append_overlay`.
-  - Files: `_dops.py::bump_portrevision`.
-
-- [ ] **A4: `drop_patch` (or new `drop_file`) handles non-patch file copy/materialize**
-  - Today drop_patch refuses targets not matching `dragonfly/patch-*` for
-    the `file materialize` shape.
-  - Two options:
-    1. Extend `drop_patch` to handle any `file copy` / `file materialize`
-       destination (loosen the looks-like-patch guard). Same intent name
-       but broader meaning.
-    2. New `drop_file` intent for non-patch destinations; keep `drop_patch`
-       patch-shaped.
-  - Decision: pick one. Option 1 is fewer intents; option 2 is cleaner naming.
-  - Files: `_dops.py::drop_patch` + possibly new schema + grammar entry.
-
-- [ ] **A5: `drop_target_block` for `mk target set/append` heredocs**
-  - New intent. Matcher reuses `replace_in_dops_block`'s block-finder.
-  - Strips the open line, body, close line. Returns `ok=False` if block
-    not found (consistent with drop_patch shape).
-  - Files: new schema, grammar entry, `_dops.py` renderer.
-  - Tests: positive (existing `mk target set X <<TAG ... TAG` → gone),
-    not-found, multiple blocks of same name (refuse or strip first?).
+The old A1/A2/A3 self-strip items and Decision Q4 (op=unset self-strip
+semantics) are **abandoned by design** — re-emit accumulates, deletion is
+explicit. See the architecture backlog Step 38e/39 for the full record.
 
 ### Family B — missing directive intents (higher cost per item)
 
@@ -271,31 +266,27 @@ agent surface today.
 
 After each Family A or B item lands, update the relevant playbook:
 
-- [ ] `intent-change_makefile.md` — document op=remove self-stripping (A1),
-  op=unset self-stripping (A2), and that `mk add … mk remove` add+remove
-  pairs are no longer produced.
-- [ ] `intent-bump_portrevision.md` (if it exists; create if not) — note
-  that re-emission is idempotent (A3).
-- [ ] `intent-drop_patch.md` or new `intent-drop_file.md` — scope (A4).
-- [ ] New `intent-drop_target_block.md` (A5), `intent-change_condition.md`
-  (B1), `intent-add_block.md` (B2), `intent-add_target_block.md` (B3),
-  etc.
+- [x] `intent-change_makefile.md` — cross-links to `drop_mk_directive` for
+  deleting a prior line; notes re-emit accumulates (last-wins), no auto-strip.
+- [x] `intent-drop_mk_directive.md` (new, Step 39d).
+- [x] `intent-drop_file.md` (new, Step 39d) — path-partition vs `drop_patch`.
+- [x] `intent-drop_target_block.md` (new, Step 39d).
+- [ ] Family B (when landed): `intent-change_condition.md` (B1),
+  `intent-add_block.md` (B2), `intent-add_target_block.md` (B3), etc.
 
 ---
 
-## Decision points (resolve before starting any item)
+## Decision points
 
-1. **Scope of this push** — Family A only (minimum viable correctness),
-   Family B only (close the worst no-tool gaps), or both?
-2. **Naming convention** — keep the `add_X` / `drop_X` symmetry (A4 →
-   `drop_file`, A5 → `drop_target_block`), or adopt a verb taxonomy
-   (`create_X`, `delete_X`, `edit_X`)?
-3. **`drop_patch` generalization (A4 option 1) vs new `drop_file`
-   (A4 option 2)** — extending `drop_patch` to non-patch paths blurs its
-   name; a new `drop_file` is cleaner but adds an intent.
-4. **`op=unset` self-strip semantics (A2)** — the existing renderer
-   deliberately keeps it plain-append per `_dops.py:412-422`. Re-examine
-   whether the rationale still holds for "same-overlay set+unset" case;
-   document the decision either way.
-5. **Family C now or later** — write the door but don't open it (skip
-   for now), or land C1 instead of B1–B7 (single bigger change)?
+Family A decisions are all resolved (see history above). Remaining:
+
+1. ~~Scope of this push~~ — **resolved**: Family A shipped (Step 39);
+   Family B is next (Step 40).
+2. **Naming convention** — **resolved**: kept the `add_X` / `drop_X`
+   symmetry (`drop_file`, `drop_target_block`, `drop_mk_directive`).
+3. ~~`drop_patch` generalization vs new `drop_file`~~ — **resolved**:
+   separate `drop_file`, partitioned by `dragonfly/patch-*`.
+4. ~~`op=unset` self-strip semantics~~ — **moot post-38e**: no renderer
+   self-strips; deletion is explicit via `drop_mk_directive`.
+5. **Family C now or later** — **deferred** behind a 41a re-evaluation
+   gate (see architecture backlog Step 41); land Family B specifics first.

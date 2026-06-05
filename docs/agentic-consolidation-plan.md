@@ -40,6 +40,33 @@ bottom. One-line summary:
   exposure) added pending; 33–34 are trigger-gated on the
   public-exposure decision.
 
+### Update (2026-06-05) — edit-intent surface thread
+
+The edit-intent work (Step 25) has continued in the architecture
+backlog as a series of surface-hardening steps. Shipped since the
+2026-05-28 snapshot:
+
+- **Step 36** — typed phase results (`PhaseResult` contract).
+- **Step 37** — compose-time patch drift: handler-side defer +
+  patch-side relevance pass.
+- **Step 38** — target-scope plumbing for the intent layer
+  (`@any`/`@current`, `get_effective_overlay`).
+- **Step 39** — Family A delete intents: `drop_mk_directive`,
+  `drop_file`, `drop_target_block` + playbooks/prompt
+  (`bfb6ae8bcde`, `ff9bf706b53`, `4830bc9342d`, `a1b67fd40cc`). The
+  patch agent can now create *and* delete every Family A substrate
+  shape.
+
+**Next on this thread:** Step 40 (Family B missing-directive
+intents — `change_condition`, `add_target_block`,
+`remove_file_at_compose`, plus 40d which fixes the latent
+scope-blindness in `replace_in_dops_block`). Step 41 (Family C
+generalized `edit_overlay`) remains deferred behind a 41a
+re-evaluation gate. See the
+[architecture backlog](agentic-architecture-backlog.md) Steps 38–41
+for the detailed records. This thread runs alongside the
+26/32/21 hardening order below — it does not reorder it.
+
 
 ## Current priority order (as of 2026-05-28)
 

@@ -4448,7 +4448,21 @@ Recommended sequencing: **Step 38 lands first**, then Family A delete
 intents inherit scope from day one. The reverse (Family A first, then
 retrofit scope) means rewriting every delete intent's renderer.
 
-### Step 39 — intent surface gap closure: Family A delete intents — pending
+### Step 39 — intent surface gap closure: Family A delete intents — shipped
+
+**Shipped 2026-06-05.** Three scope-aware delete intents plus their
+playbook/prompt surface, each its own commit:
+
+- 39a `drop_mk_directive` — `bfb6ae8bcde`
+- 39b `drop_file` — `ff9bf706b53`
+- 39c `drop_target_block` — `4830bc9342d`
+- 39d playbooks + prompt wiring — `a1b67fd40cc`
+
+The two playbook-coverage gate tests
+(`test_every_intent_type_has_a_playbook`,
+`test_intent_reference_attaches_every_intent_playbook`) are green; the
+agent can now select all three deletes. The design record below is
+retained as-shipped.
 
 After Step 38 the agent has full target-scope capability end-to-end —
 it can emit per-build or universal fixes, read the engine's
@@ -4492,7 +4506,7 @@ matching Step 38e's "no implicit cleanup" principle.
 
 #### Sub-steps
 
-**39a — ``drop_mk_directive`` intent.**
+**39a — ``drop_mk_directive`` intent.** (shipped — `bfb6ae8bcde`)
 
 Single discriminated intent covering all four ``mk var`` ops:
 
@@ -4524,7 +4538,7 @@ Closes the dmidecode-shape thrash: agent that previously emitted
 ``drop_mk_directive(kind=add, key=USES, value=alias)`` and the
 prior line is gone from disk.
 
-**39b — ``drop_file`` intent.**
+**39b — ``drop_file`` intent.** (shipped — `ff9bf706b53`)
 
 ```json
 {
@@ -4547,7 +4561,7 @@ Deletes the on-disk resource file in the resource case (mirrors
 ``drop_patch``'s file deletion for ``file_materialize`` shape).
 ``reason`` field required, same as ``drop_patch``.
 
-**39c — ``drop_target_block`` intent.**
+**39c — ``drop_target_block`` intent.** (shipped — `4830bc9342d`)
 
 ```json
 {
@@ -4585,7 +4599,7 @@ scope-accepting list alongside ``drop_mk_directive`` and
 > can silently edit the wrong block. Carried to Step 40d, which reuses
 > the same scope-filtered block-finder.
 
-**39d — playbook + prompt updates.**
+**39d — playbook + prompt updates.** (shipped — `a1b67fd40cc`)
 
 - New playbooks ``intent-drop_mk_directive.md``,
   ``intent-drop_file.md``, ``intent-drop_target_block.md``. Each
@@ -4599,9 +4613,14 @@ scope-accepting list alongside ``drop_mk_directive`` and
 - Update ``intent-scoping.md``: ``drop_mk_directive``,
   ``drop_file``, and ``drop_target_block`` all accept scope (add
   to the scope-accepting list).
-- Update ``prompts.py`` PATCH_INTENT_SYSTEM: bump the intent type
-  list from "seven" to "ten", mention the three new delete
-  intents in the inline list.
+- Update ``prompts.py`` PATCH_INTENT_SYSTEM: intent type list
+  "seven" → "ten" (deletes grouped as the symmetric inverses), and
+  scope coverage "5 of 7" → "8 of 10" (the three deletes accept
+  scope; only ``drop_patch`` and ``replace_in_dops_block`` don't).
+- As-shipped extra: closed a test gap — the three deletes were
+  absent from ``_SCOPE_BEARING_INTENTS`` in
+  ``test_target_scope_plumbing.py``, so their ``scope`` field went
+  unchecked by ``test_schema_for_surfaces_scope_field``; added.
 
 #### Sub-step boundaries and ordering
 
