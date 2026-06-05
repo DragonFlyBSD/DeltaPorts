@@ -38,7 +38,24 @@ The intent's `block_name` matches the second token of `mk target
 <action> <name> <<TAG`. Action can be `set`, `append`, or
 `remove`. The body runs until a line matching exactly `TAG` (the
 heredoc closing tag, typically `MK`, `MK1`, etc. — chosen by the
-producer). Tag quoting (`<<'MK'`) is tolerated.
+producer). Tag quoting (`<<'MK'`) is tolerated. The match is filtered
+by `scope` (see Scoping); exactly one block must match.
+
+## Scoping
+
+Accepts an optional `scope` field: `"@any"` (default — searches the
+universal/prologue section) or `"@current"` (the build line you're
+running on, resolved from the env). You never type a literal quarter
+selector.
+
+Scope matters here specifically: the engine **allows the same block
+name under different sections** (a `post-patch` block under `@any` and
+another under a quarterly target are both legal). The locator filters
+by the resolved scope, so a scoped edit reaches the block in that
+section and leaves same-name blocks in other sections untouched. If two
+blocks share a name *within the same scope*, the edit refuses as
+ambiguous — disambiguate via scope or hand-edit. See
+`intent-scoping.md`.
 
 ## Fix-broken-line pattern
 
@@ -90,8 +107,10 @@ verbatim; you control the formatting.
 
 ## Failure modes the executor refuses
 
-- `block_name` not found → `ok=false` with the names of any
-  similarly-named blocks in the overlay.
+- `block_name` not found under the resolved scope → `ok=false`. No
+  block by that name in that section; check the exact name and scope.
+- More than one block matches under the scope → `ok=false`, ambiguous;
+  disambiguate via `scope` or hand-edit.
 - `find` string not present in the body → `ok=false`. Check the
   exact body content via `get_file overlay.dops` first.
 - `find == replace` (no-op) → `ok=false`. If you meant to confirm

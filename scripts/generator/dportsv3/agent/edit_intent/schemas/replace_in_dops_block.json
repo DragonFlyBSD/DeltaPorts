@@ -22,6 +22,11 @@
     "occurrence": {
       "type": "integer", "minimum": 1, "default": 1,
       "description": "Which match to replace if find is non-unique inside the block (1-based)."
+    },
+    "scope": {
+      "enum": ["@any", "@current"],
+      "default": "@any",
+      "description": "Which target section the block lives under. `@any` (default) matches the unscoped/prologue section; `@current` resolves to the build line's target. The block must match exactly one block under this scope — same-name blocks under other sections are not touched."
     }
   }
 }

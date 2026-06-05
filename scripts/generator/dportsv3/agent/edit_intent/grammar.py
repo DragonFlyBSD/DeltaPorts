@@ -123,6 +123,7 @@ class ReplaceInDopsBlock:
     find: str
     replace: str
     occurrence: int = 1
+    scope: Literal["@any", "@current"] = "@any"  # Step 42c
 
 
 @dataclass(frozen=True)

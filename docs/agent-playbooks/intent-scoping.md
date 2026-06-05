@@ -19,21 +19,21 @@ Most intent types accept an optional `scope` field with two values:
   target. **You never type a literal `@2026Q2` or any other quarter
   selector.** The schema rejects it.
 
-The only intents that do **not** accept `scope` are `drop_patch` and
-`replace_in_dops_block`. Both operate on named entities (a specific
-patch path, a specific heredoc block) where scope wouldn't add
-expressiveness; the schemas refuse the field outright via
+The only intent that does **not** accept `scope` is `drop_patch`. It
+operates on a named entity (a specific patch path) where scope wouldn't
+add expressiveness; the schema refuses the field outright via
 `additionalProperties: false`.
 
-### Scope as a disambiguation lever for deletes
+### Scope as a disambiguation lever for deletes and block edits
 
 For the delete intents — `drop_mk_directive`, `drop_file`,
-`drop_target_block` — `scope` does double duty. It narrows the
-*search* to one section, which is also how you resolve an ambiguous
-match: if the same line / install directive / block name exists under
-both `@any` and a quarterly section, an unscoped delete sees a match
-in each and refuses; the scoped delete targets exactly one. When a
-delete refuses as "ambiguous," reach for `scope` before hand-editing.
+`drop_target_block` — and `replace_in_dops_block`, `scope` does double
+duty. It narrows the *search* to one section, which is also how you
+resolve an ambiguous match: if the same line / install directive /
+block name exists under both `@any` and a quarterly section, an
+unscoped op sees a match in each and refuses; the scoped op targets
+exactly one. When one of these refuses as "ambiguous," reach for
+`scope` before hand-editing.
 
 ## When to use `@current`
 

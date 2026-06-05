@@ -718,7 +718,7 @@ class TestDopsRenderers:
         (e.g. archivers/liblz4 dfly-patch with sed commands)."""
         overlay = t.port_path("overlay.dops")
         overlay.write_text(
-            "port devel/foo\ntype port\ntarget @main\n"
+            "port devel/foo\ntype port\ntarget @any\n"
             'reason "test"\n\n'
             "mk target set dfly-patch <<'MK1'\n"
             "\t${REINPLACE_CMD} 's|GNU FreeBSD|GNU FreeBSD DragonFly|' \\\n"
@@ -742,7 +742,7 @@ class TestDopsRenderers:
     def test_replace_in_dops_block_refuses_when_block_missing(self, t):
         overlay = t.port_path("overlay.dops")
         overlay.write_text(
-            "port devel/foo\ntype port\ntarget @main\n"
+            "port devel/foo\ntype port\ntarget @any\n"
             'reason "test"\n\n'
             "mk target set post-extract <<'MK'\n\techo x\nMK\n"
         )
@@ -757,7 +757,7 @@ class TestDopsRenderers:
     def test_replace_in_dops_block_refuses_when_find_absent(self, t):
         overlay = t.port_path("overlay.dops")
         overlay.write_text(
-            "port devel/foo\ntype port\ntarget @main\n"
+            "port devel/foo\ntype port\ntarget @any\n"
             'reason "test"\n\n'
             "mk target set foo <<'MK'\n\tline-a\n\tline-b\nMK\n"
         )
@@ -774,7 +774,7 @@ class TestDopsRenderers:
         don't blindly edit through the end of file."""
         overlay = t.port_path("overlay.dops")
         overlay.write_text(
-            "port devel/foo\ntype port\ntarget @main\n"
+            "port devel/foo\ntype port\ntarget @any\n"
             'reason "test"\n\n'
             "mk target set foo <<'MK'\n\tline-a\n"
             # no closing MK
@@ -790,7 +790,7 @@ class TestDopsRenderers:
     def test_replace_in_dops_block_occurrence_picks_nth(self, t):
         overlay = t.port_path("overlay.dops")
         overlay.write_text(
-            "port devel/foo\ntype port\ntarget @main\n"
+            "port devel/foo\ntype port\ntarget @any\n"
             'reason "test"\n\n'
             "mk target set foo <<'MK'\n"
             "\tdupe-target dupe-target dupe-target\n"
@@ -813,7 +813,7 @@ class TestDopsRenderers:
         target block; the renderer must only edit inside."""
         overlay = t.port_path("overlay.dops")
         overlay.write_text(
-            "port devel/foo\ntype port\ntarget @main\n"
+            "port devel/foo\ntype port\ntarget @any\n"
             'reason "test"\n\n'
             "patch apply dragonfly/some.c\n"
             "# OUTSIDE: ${WRKSRC}/../../Makefile mentioned here\n"
@@ -844,7 +844,7 @@ class TestDopsRenderers:
         prior intents landed without re-emitting."""
         overlay = t.port_path("overlay.dops")
         overlay.write_text(
-            "port devel/foo\ntype port\ntarget @main\n"
+            "port devel/foo\ntype port\ntarget @any\n"
             'reason "test"\n\n'
             "mk target set foo <<'MK'\n\tline-a\n\tline-b\nMK\n"
         )

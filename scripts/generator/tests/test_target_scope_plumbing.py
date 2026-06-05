@@ -1094,6 +1094,10 @@ _SCOPE_BEARING_INTENTS = [
         "add_dops",
         {"dops": 'mk set FOO "bar"'},
     ),
+    (
+        "replace_in_dops_block",
+        {"block_name": "dfly-patch", "find": "old", "replace": "new"},
+    ),
 ]
 
 
@@ -1183,24 +1187,6 @@ def test_drop_patch_rejects_scope_field() -> None:
         })
 
 
-def test_replace_in_dops_block_rejects_scope_field() -> None:
-    """replace_in_dops_block operates on a named heredoc block —
-    block-name-collision-across-scopes is a separate gap, not 38d's
-    concern. The schema rejects `scope` via `additionalProperties:
-    false`."""
-    import pytest
-    from dportsv3.agent.edit_intent.validator import IntentError, parse_intent
-
-    with pytest.raises(IntentError):
-        parse_intent({
-            "type": "replace_in_dops_block",
-            "block_name": "dfly-patch",
-            "find": "old",
-            "replace": "new",
-            "scope": "@any",   # not allowed
-        })
-
-
 def test_schema_for_surfaces_scope_field() -> None:
     """The `intent_reference` tool returns the JSON schema for a
     given intent type. Agents read the schema to pick up field
@@ -1220,11 +1206,10 @@ def test_schema_for_surfaces_scope_field() -> None:
 
 def test_schema_for_drop_patch_does_not_include_scope() -> None:
     """drop_patch's schema does NOT carry scope — verifies the
-    asymmetric coverage (9 of 11 intents have scope, 2 do not)."""
+    asymmetric coverage (10 of 11 intents have scope, 1 does not)."""
     from dportsv3.agent.edit_intent.validator import schema_for
 
     assert "scope" not in schema_for("drop_patch")["properties"]
-    assert "scope" not in schema_for("replace_in_dops_block")["properties"]
 
 
 # ---------------------------------------------------------------------
@@ -1456,8 +1441,11 @@ def test_drop_patch_unaffected_by_38d_6(tmp_path: Path) -> None:
 
 
 def test_replace_in_dops_block_unaffected_by_38d_6(tmp_path: Path) -> None:
-    """replace_in_dops_block bypasses _append_overlay. No scope field
-    on the intent. 38d-6 leaves it unchanged."""
+    """replace_in_dops_block edits a heredoc body in place — it
+    bypasses _append_overlay, so the 38d-6 append-placement wiring
+    doesn't touch it. With scope omitted it defaults to @any and finds
+    the @any-section block. (Scope-aware matching arrived in Step 42c;
+    see the scope-filtering tests below.)"""
     t = _make_seeded_translator(tmp_path)
     t.port_path("overlay.dops").write_text(
         "target @any\nport devel/foo\n\n"
@@ -2257,8 +2245,8 @@ def test_drop_target_block_ambiguous_refuses_and_leaves_substrate(
 
 def test_drop_target_block_scope_filters_to_section(tmp_path: Path) -> None:
     """Same block name under @any and @2026Q2: dropping @any leaves the
-    @2026Q2 block intact. This is the property replace_in_dops_block
-    lacks (its scope-blindness is parked for Step 40d)."""
+    @2026Q2 block intact. replace_in_dops_block has the matching
+    property since Step 42c — see its scope-filtering test."""
     t = _make_seeded_translator(tmp_path)
     t.port_path("overlay.dops").write_text(
         "target @any\n"
@@ -2373,3 +2361,130 @@ def test_drop_target_block_roundtrips_through_engine(tmp_path: Path) -> None:
     })
     assert r.ok, r.error
     assert parse_dsl(t.port_path("overlay.dops").read_text()).ok
+
+
+# ---------------------------------------------------------------------
+# Step 42c — replace_in_dops_block is scope-aware (mirrors
+# drop_target_block: exact-scope match, refuse on 0/>1)
+# ---------------------------------------------------------------------
+
+
+def _seed_two_section_blocks(t: Translator) -> None:
+    """Overlay with a same-named heredoc block under both @any and
+    @2026Q2, each with a distinguishable body line."""
+    t.port_path("overlay.dops").write_text(
+        "target @any\n"
+        "port devel/foo\n"
+        "type port\n"
+        'reason "x"\n'
+        "\n"
+        "mk target set dfly-patch <<MK\n"
+        "\t@echo any-body\n"
+        "MK\n"
+        "\n"
+        "target @2026Q2\n"
+        "mk target set dfly-patch <<MK\n"
+        "\t@echo q2-body\n"
+        "MK\n"
+    )
+
+
+def test_replace_in_dops_block_scope_filters_to_section(
+    tmp_path: Path,
+) -> None:
+    """Same block name under @any and @2026Q2: editing @any touches
+    only the @any block, leaving the @2026Q2 body intact."""
+    t = _make_seeded_translator(tmp_path)
+    _seed_two_section_blocks(t)
+    r = t.apply({
+        "type": "replace_in_dops_block", "block_name": "dfly-patch",
+        "find": "any-body", "replace": "any-EDITED", "scope": "@any",
+    })
+    assert r.ok, r.error
+    written = t.port_path("overlay.dops").read_text()
+    assert "any-EDITED" in written
+    assert "q2-body" in written          # @2026Q2 block untouched
+    assert "any-body" not in written
+
+
+def test_replace_in_dops_block_current_resolves_to_t_target(
+    tmp_path: Path,
+) -> None:
+    """scope=@current resolves to t.target and edits only that
+    section's block."""
+    t = _make_seeded_translator(tmp_path, target="@2026Q2")
+    _seed_two_section_blocks(t)
+    r = t.apply({
+        "type": "replace_in_dops_block", "block_name": "dfly-patch",
+        "find": "q2-body", "replace": "q2-EDITED", "scope": "@current",
+    })
+    assert r.ok, r.error
+    written = t.port_path("overlay.dops").read_text()
+    assert "q2-EDITED" in written
+    assert "any-body" in written          # @any block untouched
+    assert "q2-body" not in written
+
+
+def test_replace_in_dops_block_other_section_not_found(
+    tmp_path: Path,
+) -> None:
+    """A block that exists only under @2026Q2 is NOT found under the
+    default @any scope — refuse cleanly rather than first-matching it
+    (the scope-blindness bug 42c fixes)."""
+    t = _make_seeded_translator(tmp_path)
+    t.port_path("overlay.dops").write_text(
+        "target @any\n"
+        "port devel/foo\n"
+        "type port\n"
+        'reason "x"\n'
+        "\n"
+        "target @2026Q2\n"
+        "mk target set dfly-patch <<MK\n"
+        "\t@echo q2-only\n"
+        "MK\n"
+    )
+    before = t.port_path("overlay.dops").read_text()
+    r = t.apply({
+        "type": "replace_in_dops_block", "block_name": "dfly-patch",
+        "find": "q2-only", "replace": "EDITED",
+    })
+    assert r.ok is False
+    assert "under scope @any" in (r.error or "")
+    assert t.port_path("overlay.dops").read_text() == before
+
+
+def test_replace_in_dops_block_ambiguous_within_scope_refuses(
+    tmp_path: Path,
+) -> None:
+    """Two same-name blocks under the SAME scope → refuse as ambiguous,
+    substrate untouched."""
+    t = _make_seeded_translator(tmp_path)
+    _seed_overlay(
+        t,
+        "mk target set dfly-patch <<MK\n\t@echo a\nMK\n"
+        "mk target append dfly-patch <<MK\n\t@echo b\nMK\n",
+    )
+    before = t.port_path("overlay.dops").read_text()
+    r = t.apply({
+        "type": "replace_in_dops_block", "block_name": "dfly-patch",
+        "find": "@echo", "replace": "@true",
+    })
+    assert r.ok is False
+    assert "ambiguous" in (r.error or "")
+    assert t.port_path("overlay.dops").read_text() == before
+
+
+def test_replace_in_dops_block_current_refused_when_no_target(
+    tmp_path: Path,
+) -> None:
+    """scope=@current with no env target is a calling-context bug —
+    refuse with an escalate hint, don't widen to @any."""
+    t = _make_seeded_translator(tmp_path)  # target=None
+    _seed_overlay(t, "mk target set dfly-patch <<MK\n\t@echo a\nMK\n")
+    r = t.apply({
+        "type": "replace_in_dops_block", "block_name": "dfly-patch",
+        "find": "@echo a", "replace": "@echo b", "scope": "@current",
+    })
+    assert r.ok is False
+    assert "@current" in (r.error or "")
+    assert "escalate" in (r.error or "")

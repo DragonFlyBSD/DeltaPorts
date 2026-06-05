@@ -911,7 +911,8 @@ def replace_in_dops_block(t, intent: ReplaceInDopsBlock):
     chosen by the convert agent — typically ``MK``, ``MK1``, etc.).
 
     Refusals (ok=False):
-    - block not found by name
+    - block not found by name under the requested scope
+    - more than one block matches under the scope (ambiguous)
     - find string not present in the block body
     - occurrence requested exceeds matches
     - block body is unbounded (no closing tag) — corrupt overlay
@@ -939,10 +940,38 @@ def replace_in_dops_block(t, intent: ReplaceInDopsBlock):
             ok=False, intent_type="replace_in_dops_block",
             error=f"{_DOPS_FILE} does not exist; nothing to edit",
         )
-    text = overlay.read_text()
-    before_overlay = text
-    new_text, found, why = _replace_in_mk_target_block(
-        text, intent.block_name, intent.find, intent.replace,
+    before_overlay = overlay.read_text()
+    resolved_scope, scope_err = _resolve_drop_scope(
+        t, intent.scope, "replace_in_dops_block",
+    )
+    if scope_err is not None:
+        return scope_err
+    extents, err = _find_mk_target_blocks(
+        before_overlay, intent.block_name, resolved_scope,
+    )
+    if err:
+        return EditResult(
+            ok=False, intent_type="replace_in_dops_block", error=err,
+        )
+    if len(extents) == 0:
+        return EditResult(
+            ok=False, intent_type="replace_in_dops_block",
+            error=(
+                f"no `mk target set/append {intent.block_name} <<...` block "
+                f"found in {_DOPS_FILE} under scope {resolved_scope}"
+            ),
+        )
+    if len(extents) > 1:
+        return EditResult(
+            ok=False, intent_type="replace_in_dops_block",
+            error=(
+                f"{len(extents)} `mk target ... {intent.block_name}` blocks "
+                f"match under scope {resolved_scope}; ambiguous — refusing. "
+                f"Disambiguate via scope or edit {_DOPS_FILE} manually."
+            ),
+        )
+    new_text, found, why = _replace_in_block_extent(
+        before_overlay, extents[0], intent.find, intent.replace,
         intent.occurrence,
     )
     if not found:
@@ -964,81 +993,28 @@ def replace_in_dops_block(t, intent: ReplaceInDopsBlock):
     )
 
 
-def _replace_in_mk_target_block(
-    text: str, block_name: str, find: str, replace: str,
+def _replace_in_block_extent(
+    text: str, extent: tuple[int, int], find: str, replace: str,
     occurrence: int,
 ) -> tuple[str, bool, str]:
-    """Replace ``find`` with ``replace`` inside the body of the
-    ``mk target set|append|remove|rename <block_name>`` heredoc
-    block.
+    """Replace ``find`` with ``replace`` inside the body of the heredoc
+    block delimited by ``extent``.
 
-    Returns (new_text, found, reason). ``found`` is True on
-    success; reason is empty. On failure, ``new_text`` equals the
-    input and ``reason`` names the specific shape problem so the
-    agent can react.
+    ``extent`` is an ``(open_idx, close_idx)`` inclusive line-index pair
+    as returned by ``_find_mk_target_blocks`` (indices into
+    ``text.splitlines()``). Those indices are valid against
+    ``splitlines(keepends=True)`` too — same split boundaries, same
+    count — so the body is reconstructed losslessly from the keepends
+    form. The body is the lines strictly between the opener and the tag.
 
-    Heredoc body extraction is tag-based: ``<<TAG`` opens, a line
-    matching exactly ``TAG`` closes. Tabs/spaces around the tag
-    are tolerated on the open form (``mk target set foo <<MK``);
-    the close line is checked stripped.
+    Returns ``(new_text, found, reason)``. ``found`` is True on success
+    and ``reason`` is empty; on failure ``new_text`` equals the input
+    and ``reason`` names the shape problem.
     """
+    open_idx, close_idx = extent
     lines = text.splitlines(keepends=True)
-    open_idx: int | None = None
-    tag: str | None = None
-    for i, line in enumerate(lines):
-        stripped = line.strip()
-        # `mk target <action> <block_name> ...` shape.
-        # Tolerate `set`, `append`, `remove`, `rename` after `mk target`.
-        if not stripped.startswith("mk target "):
-            continue
-        rest = stripped[len("mk target "):]
-        # Expect: <action> <name> ... <<TAG
-        parts = rest.split(None, 2)
-        if len(parts) < 2:
-            continue
-        # rename has a different shape: `rename <old> -> <new>`. Not
-        # our concern — it doesn't have a body.
-        if parts[0] == "rename":
-            continue
-        if parts[1] != block_name:
-            continue
-        # Find the heredoc tag — token after `<<`.
-        heredoc_pos = stripped.find("<<")
-        if heredoc_pos < 0:
-            # Block without a body (single-line variant); no body
-            # to edit.
-            continue
-        tag_part = stripped[heredoc_pos + 2:].strip()
-        # Allow quoted ('<<'TAG') and unquoted (<<TAG). Strip one
-        # outer pair of single quotes if present.
-        if tag_part.startswith("'") and tag_part.endswith("'") and len(tag_part) >= 2:
-            tag_part = tag_part[1:-1]
-        if not tag_part:
-            continue
-        open_idx = i
-        tag = tag_part
-        break
-    if open_idx is None or tag is None:
-        return (text, False, (
-            f"no `mk target set/append/remove {block_name} <<...` "
-            f"heredoc block found in overlay.dops"
-        ))
-    # Find the close line.
-    close_idx: int | None = None
-    for j in range(open_idx + 1, len(lines)):
-        if lines[j].strip() == tag:
-            close_idx = j
-            break
-    if close_idx is None:
-        return (text, False, (
-            f"heredoc block {block_name!r} opens with <<{tag} but "
-            f"has no closing line — overlay.dops is corrupt"
-        ))
-    # Body is lines (open_idx+1, close_idx) exclusive of the tag
-    # lines.
     body_lines = lines[open_idx + 1:close_idx]
     body = "".join(body_lines)
-    # Replace nth occurrence in body.
     matches = []
     start = 0
     while True:
@@ -1049,14 +1025,12 @@ def _replace_in_mk_target_block(
         start = pos + 1
     if not matches:
         return (text, False, (
-            f"find string not present in block {block_name!r}: "
-            f"{find[:80]!r}"
+            f"find string not present in block body: {find[:80]!r}"
         ))
     if occurrence < 1 or occurrence > len(matches):
         return (text, False, (
-            f"occurrence {occurrence} requested but block "
-            f"{block_name!r} has {len(matches)} match(es) of "
-            f"{find[:40]!r}"
+            f"occurrence {occurrence} requested but block body has "
+            f"{len(matches)} match(es) of {find[:40]!r}"
         ))
     pos = matches[occurrence - 1]
     new_body = body[:pos] + replace + body[pos + len(find):]
@@ -1086,9 +1060,7 @@ def _find_mk_target_blocks(
     different ``target`` sections (no duplicate-name check in
     ``semantic.py``), so only blocks whose enclosing section scope
     equals ``scope`` are returned. Section/heredoc tracking mirrors
-    ``_strip_scoped_line``; the open-line parse and tag extraction
-    mirror ``_replace_in_mk_target_block``. ``rename`` is skipped (it
-    has no body).
+    ``_strip_scoped_line``. ``rename`` is skipped (it has no body).
     """
     lines = text.splitlines()
     n = len(lines)

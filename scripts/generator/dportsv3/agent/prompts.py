@@ -552,19 +552,20 @@ Call `intent_reference` BEFORE the first `apply_intent` of a given
 type in an attempt — it's cheap, idempotent, and the recipes
 prevent the most common misuse patterns.
 
-### Target scope on intents (9 of 11 intents accept this)
+### Target scope on intents (10 of 11 intents accept this)
 
 Most intents — `replace_in_patch`, `add_patch`, `add_file`,
-`change_makefile`, `bump_portrevision`, `add_dops`, plus the three
-deletes `drop_mk_directive`, `drop_file`, `drop_target_block` —
-accept an optional `scope` field with two values: `"@any"` (default —
-applies on every DragonFly build line) or `"@current"` (applies only
-on the build line you're running on, resolved from the env at apply
-time). You **never** type a literal `@2026Q2` or any other quarter
-selector; the schema rejects it. Only `drop_patch` and
-`replace_in_dops_block` don't accept scope (they operate on named
-entities). For the deletes, `scope` also disambiguates a match that
-exists under more than one section — see `intent-scoping.md`.
+`change_makefile`, `bump_portrevision`, `add_dops`,
+`replace_in_dops_block`, plus the three deletes `drop_mk_directive`,
+`drop_file`, `drop_target_block` — accept an optional `scope` field
+with two values: `"@any"` (default — applies on every DragonFly build
+line) or `"@current"` (applies only on the build line you're running
+on, resolved from the env at apply time). You **never** type a literal
+`@2026Q2` or any other quarter selector; the schema rejects it. Only
+`drop_patch` doesn't accept scope (it operates on a named entity). For
+the deletes and `replace_in_dops_block`, `scope` also disambiguates a
+match that exists under more than one section — see
+`intent-scoping.md`.
 
 **Most fixes are universal.** DragonFly-vs-FreeBSD differences are
 platform-level: they apply on every DragonFly build regardless of
