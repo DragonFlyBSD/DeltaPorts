@@ -4578,11 +4578,12 @@ Closes the heredoc-deletion gap. 39c lands the actual intent and
 scope-accepting list alongside ``drop_mk_directive`` and
 ``drop_file``.
 
-> **Latent issue (out of Step 39 scope, worth a future fix):**
+> **Latent issue (out of Step 39 scope — fixed in Step 40d):**
 > existing ``replace_in_dops_block`` matches the *first* block by
 > name and has no scope awareness. With same-name blocks across
 > scopes now confirmed legal at the engine layer, ``replace_in_dops_block``
-> can silently edit the wrong block. Track separately.
+> can silently edit the wrong block. Carried to Step 40d, which reuses
+> the same scope-filtered block-finder.
 
 **39d — playbook + prompt updates.**
 
@@ -4714,3 +4715,103 @@ Family B (missing-directive intents) for the next push.
   ever needing some of these deletes (e.g., a convert pass that
   doesn't emit stale ``file copy`` lines in the first place).
   Out of scope for the patch-agent intent surface work.
+
+### Step 40 — intent surface gap closure: Family B missing-directive intents — pending (skeleton)
+
+Step 39 closes the symmetric-*delete* gaps (the agent can now remove
+substrate it can create). Family B is the next class: dops directive
+shapes the engine understands but that have **no intent surface at
+all** — the agent can neither create nor delete them, so today it
+reaches for a heavyweight `add_patch` to source-patch the upstream
+Makefile when the engine had a clean directive all along.
+
+Each sub-step is an independently-landable new intent, scope-aware
+from day one (inherits Step 38's plumbing), same
+`implement → review → chat → tests → commit` cycle.
+
+#### Sub-steps (ordered by leverage)
+
+- **40a — `change_condition`** (`mk disable-if` / `mk replace-if`).
+  Highest-leverage Family B item. Discriminated `mode:
+  "disable" | "replace"`. Redirects the agent from "source-patch the
+  upstream `.if` block" to a first-class conditional-control intent.
+  Cross-cutting playbook sweep: `error-dragonfly-source-patches.md`,
+  `error-bsd-types-visibility.md`, `toolchain-c.md`, `intent-add_patch.md`
+  all currently recommend `add_patch` for `.if` edits — redirect.
+- **40b — `add_target_block`** (`mk target set/append NAME <<TAG ... TAG`).
+  Symmetric create for Step 39c's `drop_target_block`. Lets the agent
+  introduce a new `dfly-patch:`/`pre-build:` target without convert
+  involvement. Auto-picks heredoc tag (`MK<N>`) if unspecified.
+- **40c — `remove_file_at_compose`** (`file remove PATH`). Tells
+  compose to delete a file from the materialized tree regardless of
+  how it got there. Distinct from Step 39b's `drop_file` (which
+  removes a `file copy`/`file materialize` *line*); completes the
+  add_file ↔ drop_file ↔ remove_file_at_compose lifecycle.
+- **40d — `replace_in_dops_block` scope-awareness fix** (latent bug,
+  carried from Step 39). Existing `replace_in_dops_block` matches the
+  *first* block by name and is scope-blind. With same-name target
+  blocks across scopes now confirmed legal at the engine layer
+  (`semantic.py:163-172` has no duplicate-name check — verified via
+  `build_plan`), this intent can silently edit the wrong block. Add
+  the standard `["@any", "@current"]` scope field; apply the scope
+  filter before the name match; refuse if name+scope still matches
+  multiple blocks. Lands here (not Step 39) because it reuses the
+  same scope-filtered block-finder that 40b/Step-39c exercise.
+- **40e — lower-priority remainder** (pick per observed bundle need,
+  not batched): `add_block` (`mk block set condition <<TAG`),
+  `drop_target_makefile` (`mk target remove NAME` — compose-side, vs
+  39c's overlay-side), `rename_target` (`mk target rename OLD -> NEW`),
+  `edit_line` (`text line-remove` / `text line-insert-after`).
+- **40f — playbooks + prompt** for each landed intent.
+
+#### Dependencies
+
+- **Hard**: Step 38 (scope plumbing). 40b/40d reuse the scope-filtered
+  block-finder.
+- **Soft**: Step 39. Family B is independent of Family A and can land
+  in parallel, but 40d's block-finder is cleanest after 39c proves the
+  scope-aware heredoc matcher.
+
+#### What Step 40 does NOT do
+
+- Header directive editability (target/port/type/reason/maintainer) —
+  convert owns these; no agent need observed.
+- Family C generalized `edit_overlay` — Step 41.
+- Engine grammar changes — Family B stays within the existing grammar.
+
+> Detailed per-item work breakdown lives in
+> `docs/intent-surface-gaps-plan.md` Phases 3–6 (B1/B3/B6 and the
+> Phase-6 remainder). This backlog entry is the step-level skeleton;
+> the gap-plan is the implementation checklist.
+
+### Step 41 — intent surface gap closure: Family C generalized edit_overlay — deferred
+
+The most general option: a single `edit_overlay(action,
+directive_kind, key, …)` dispatcher that subsumes the per-directive
+create/delete intents behind one generic surface.
+
+**Status: deferred by decision.** Families A (Step 39) and B (Step 40)
+are more legible and lower-risk — each specific intent carries its own
+schema, validation, and playbook, which the patch agent reasons about
+far better than a generic dispatcher. Family C only lands if, after
+Step 40, there remain visible gaps that a generic surface would close
+*more cleanly* than yet another specific intent.
+
+#### Sub-steps (skeleton)
+
+- **41a — re-evaluation gate.** After Step 40 lands, audit remaining
+  uncovered directive shapes in `docs/intent-surface-gaps.md`. If the
+  long tail is small and each shape is rare, prefer specific intents
+  and close Step 41 as won't-do. Only proceed if the tail is large
+  enough that a generic dispatcher pays for its added agent-reasoning
+  cost.
+- **41b — `edit_overlay` dispatcher** (only if 41a says go). Generic
+  `action × directive_kind × key` surface with per-kind validation.
+  Scope-aware via the same Step 38 field.
+
+#### Dependencies
+
+- **Hard**: Steps 38, 39, 40 — Family C is the explicit fallback for
+  whatever those leave uncovered.
+
+> Tracked as Phase 7 / C1 in `docs/intent-surface-gaps-plan.md`.
