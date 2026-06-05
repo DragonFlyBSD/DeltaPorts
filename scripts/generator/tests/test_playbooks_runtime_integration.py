@@ -269,7 +269,7 @@ def test_build_patch_payload_telemetry_silent_when_queue_root_absent(
 
 
 # -----------------------------------------------------------------
-# Smoke: every intent-* playbook is reachable via intent_reference
+# Payload assembly: flow/toolchain playbooks attach correctly
 # -----------------------------------------------------------------
 
 
@@ -347,21 +347,3 @@ def test_build_patch_payload_attaches_detected_toolchain_playbook(
     # toolchain-autoconf.md should NOT fire (the Makefile didn't
     # declare autoreconf or GNU_CONFIGURE).
     assert "Autoconf — usual suspects" not in payload
-
-
-def test_intent_reference_attaches_every_intent_playbook():
-    """Round-trip: for each intent type in INTENT_TYPES, calling
-    intent_reference returns the schema AND at least one playbook
-    whose triggers.intents declares that type. Catches a future
-    intent being added without its recipe being wired."""
-    from dportsv3.agent import worker
-    from dportsv3.agent.edit_intent import INTENT_TYPES
-
-    for intent_type in INTENT_TYPES:
-        result = worker.intent_reference("test-env", intent_type)
-        assert result["ok"] is True, (intent_type, result)
-        assert result["schema"]["title"] == intent_type
-        assert len(result["playbooks"]) >= 1, (
-            f"intent_type={intent_type} has no matching playbook in the "
-            f"live catalog; add docs/agent-playbooks/intent-{intent_type}.md"
-        )

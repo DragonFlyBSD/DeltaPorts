@@ -64,7 +64,6 @@ def run(
     on_event=None,
     attempt_idx: int = 1,
     tool_whitelist: set[str] | frozenset[str] | None = None,
-    agent_flow: str = "patch",
 ) -> tuple[Response, Usage]:
     """Drive the LLM through tool calls until it returns text-only.
 
@@ -182,7 +181,6 @@ def run(
             else:
                 result = tools.dispatch(
                     call.name, call.arguments, env=env,
-                    agent_flow=agent_flow,
                 )
             duration_ms = int((time.monotonic() - t0) * 1000)
             if on_event is not None:

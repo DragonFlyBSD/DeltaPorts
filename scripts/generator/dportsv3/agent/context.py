@@ -806,9 +806,9 @@ class DeferredFromConvertSection:
                 "Three outcomes per patch:"
             ),
             (
-                "- `regenerated` — the intent still applies; emit a "
-                "fresh intent (`add_patch` / `replace_in_patch` / etc.) "
-                "that achieves it against current upstream."
+                "- `regenerated` — the intent still applies; edit "
+                "`overlay.dops` directly to achieve it against current "
+                "upstream."
             ),
             (
                 "- `dropped` — the intent is no longer relevant (e.g. "

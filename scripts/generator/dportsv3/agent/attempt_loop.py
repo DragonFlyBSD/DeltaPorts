@@ -67,26 +67,13 @@ def _parse_rebuild_proof(text: str) -> dict | None:
     return proof
 
 
-def _failure_context_message(attempt_idx: int, prev_text: str,
-                             prior_summary: str | None = None) -> dict:
-    """Build the user message that nudges the LLM into a retry.
-
-    ``prior_summary``, when supplied, is appended verbatim under a
-    "Prior-attempt actions" header. Patch flow uses this to surface
-    the prior attempt's intent log so the agent doesn't re-emit an
-    intent that already failed (attempt-boundary amnesia).
-    """
+def _failure_context_message(attempt_idx: int, prev_text: str) -> dict:
+    """Build the user message that nudges the LLM into a retry."""
     snippet = prev_text[-2000:] if len(prev_text) > 2000 else prev_text
     parts = [
         f"Previous attempt #{attempt_idx} did not succeed.\n",
         f"Tail of your prior response:\n```\n{snippet}\n```\n",
     ]
-    if prior_summary:
-        parts.append(
-            "Prior-attempt actions (canonical record; the tail above is "
-            "narrative, this is what actually happened):\n"
-            f"{prior_summary}\n"
-        )
     parts.append(
         "Inspect what went wrong, adjust your approach, and try again. "
         "If you've tried the same idea twice and it failed both times, "
@@ -110,10 +97,8 @@ def run(
     on_event=None,
     system_prompt: str | None = None,
     tool_whitelist: set[str] | frozenset[str] | None = None,
-    agent_flow: str = "patch",
     proof_parser=None,
     is_success=None,
-    prior_attempt_summary=None,
     session_dump=None,
 ) -> PatchResult:
     """Run the patch flow for one bundle, returning a structured PatchResult.
@@ -141,14 +126,8 @@ def run(
         if attempt_idx == 1:
             messages = list(base_messages)
         else:
-            summary = None
-            if prior_attempt_summary is not None:
-                try:
-                    summary = prior_attempt_summary()
-                except Exception:
-                    summary = None
             messages = list(base_messages) + [
-                _failure_context_message(attempt_idx - 1, prev_text, summary)
+                _failure_context_message(attempt_idx - 1, prev_text)
             ]
 
         # Remaining tokens this attempt is allowed to consume.
@@ -193,7 +172,6 @@ def run(
             on_event=on_event,
             attempt_idx=attempt_idx,
             tool_whitelist=tool_whitelist,
-            agent_flow=agent_flow,
         )
         total_usage.add(attempt_usage)
         prev_text = response.text or ""

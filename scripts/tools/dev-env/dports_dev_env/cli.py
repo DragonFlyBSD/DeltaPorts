@@ -124,15 +124,7 @@ def build_parser() -> argparse.ArgumentParser:
     ab.add_argument(
         "--diff", default=None,
         help="Path on host to a unified diff to apply against "
-             "the env's DeltaPorts overlay before building "
-             "(legacy; prefer --intent-log)",
-    )
-    ab.add_argument(
-        "--intent-log", dest="intent_log", default=None,
-        help="Path on host to a Step 25e intent log "
-             "(analysis/intent_log.json). Each intent is replayed "
-             "via the translator — drift-free, no git apply. "
-             "Mutually exclusive with --diff.",
+             "the env's DeltaPorts overlay before building",
     )
     ab.add_argument(
         "--json", action="store_true",
@@ -285,10 +277,8 @@ def apply_and_build(
     origin: str,
     *,
     diff_path: str | None = None,
-    intent_log_path: str | None = None,
 ) -> dict:
-    """Substrate primitive for fix verification (Step 11b Slice 1 +
-    Step 25e intent-log replay).
+    """Substrate primitive for fix verification (Step 11b Slice 1).
 
     In-process function — the public callable that the verify-fix
     orchestrator and any future in-process consumer use directly,
@@ -296,23 +286,15 @@ def apply_and_build(
     ``cmd_apply_and_build`` just unwraps argparse.Namespace and
     prints; the real work lives here.
 
-    Two replay modes, mutually exclusive:
+    When ``diff_path`` is given, applies the unified diff with
+    ``git apply --3way`` against the env's DeltaPorts overlay before
+    building. Then runs ``reapply ORIGIN`` to re-materialize the
+    DPorts tree and ``dbuild ORIGIN`` (dsynth). Captures combined
+    dsynth output to a log file under writable.
 
-    - ``diff_path``: legacy. Applies the unified diff with
-      ``git apply --3way`` (which has known issues with new-file
-      diffs against drifted envs — see Step 25e bandages-retired).
-    - ``intent_log_path``: Step 25e. Loads the
-      ``analysis/intent_log.json`` shape, replays each intent via
-      the in-process Translator, drift-free. Preferred when a
-      bundle has both artifacts.
-
-    Then runs ``reapply ORIGIN`` to re-materialize the DPorts tree
-    and ``dbuild ORIGIN`` (dsynth). Captures combined dsynth output
-    to a log file under writable.
-
-    Returns a dict with: ok, env, origin, applied_diff_sha256
-    (legacy mode) or intents_applied (intent mode), apply_exit,
-    reapply_exit, dsynth_exit, log_path, stderr_tail, replay_mode.
+    Returns a dict with: ok, env, origin, applied_diff_sha256,
+    apply_exit, reapply_exit, dsynth_exit, log_path, stderr_tail,
+    replay_mode.
     """
     import hashlib
     import json
@@ -344,37 +326,22 @@ def apply_and_build(
         "log_path": None,
         "stderr_tail": None,
         "replay_mode": None,
-        "intents_applied": None,
-        "intents_in_log": None,
     }
 
-    if diff_path is not None and intent_log_path is not None:
-        raise UsageError(
-            "apply-and-build: pass either --diff OR --intent-log, not both"
-        )
+    result["replay_mode"] = "diff" if diff_path is not None else "none"
 
-    # Intent-log replay (Step 25e). Takes precedence — drift-free,
-    # validator-protected, no git apply at all. The translator
-    # operates in-process against the env's writable DeltaPorts
-    # overlay (no chroot exec needed; the writable layer is the
-    # same physical filesystem the chroot sees).
-    if intent_log_path is not None:
-        intent_host = Path(intent_log_path).expanduser().resolve()
-        if not intent_host.is_file():
-            raise UsageError(
-                f"--intent-log: file not found: {intent_host}"
-            )
-        result["replay_mode"] = "intent_log"
+    # Diff-mode pre-replay dirty check. `git apply --3way` onto a
+    # dirty ports/<origin>/ would silently merge stale env state with
+    # the candidate fix, making the verify verdict meaningless.
+    # Normally the fresh verify branch guarantees cleanliness, but
+    # this is the explicit invariant + a clear failure mode if it
+    # isn't. Placed BEFORE the cleanup try/finally so a refusal never
+    # resets the operator's own uncommitted state.
+    if diff_path is not None:
         workspace = writable_root / "work" / "DeltaPorts"
-
-        # Step 25g pre-replay assertion: refuse if the port subtree
-        # has uncommitted changes. Replaying intents against a dirty
-        # working tree produces undefined results; better to surface
-        # the conflict than silently merge. Operator escape hatch:
-        # `dportsv3 dev-env reset-port ENV ORIGIN` or `git stash`.
         dirty = _port_dirty_paths(workspace, origin)
         if dirty:
-            tail = (f"intent-log replay refused: ports/{origin}/ has "
+            tail = (f"diff replay refused: ports/{origin}/ has "
                     f"uncommitted changes:\n  "
                     + "\n  ".join(dirty)
                     + "\nrun `dportsv3 dev-env reset-port ENV ORIGIN` "
@@ -385,49 +352,19 @@ def apply_and_build(
             sys.stderr.write(tail + "\n")
             return result
 
-    else:
-        result["replay_mode"] = "diff" if diff_path is not None else "none"
-
-        # Diff-mode pre-replay dirty check, mirroring the intent-log
-        # one above. `git apply --3way` onto a dirty ports/<origin>/
-        # would silently merge stale env state with the candidate fix,
-        # making the verify verdict meaningless. Normally the fresh
-        # verify branch guarantees cleanliness, but this is the
-        # explicit invariant + a clear failure mode if it isn't.
-        # Placed BEFORE the cleanup try/finally so a refusal never
-        # resets the operator's own uncommitted state.
-        if diff_path is not None:
-            workspace = writable_root / "work" / "DeltaPorts"
-            dirty = _port_dirty_paths(workspace, origin)
-            if dirty:
-                tail = (f"diff replay refused: ports/{origin}/ has "
-                        f"uncommitted changes:\n  "
-                        + "\n  ".join(dirty)
-                        + "\nrun `dportsv3 dev-env reset-port ENV ORIGIN` "
-                        "or `git stash` first")
-                result["apply_exit"] = 1
-                result["stderr_tail"] = tail[-2000:]
-                result["dirty_paths"] = dirty
-                sys.stderr.write(tail + "\n")
-                return result
-
-    # Step 25g post-build cleanup: for intent-log mode, the substrate
-    # edits to ports/<origin>/ MUST be reset before we return, so the
-    # next verify run starts from a clean baseline. Review #1 fix:
-    # this runs in a finally block so it fires on every exit path —
-    # replay failure, diff-apply failure, reapply failure, build
-    # success, build failure. The prior shape had three early returns
-    # that bypassed cleanup and left ports/<origin>/ drifted, which
-    # broke the next attempt's pre-replay clean check.
+    # Post-build cleanup: the substrate edits to ports/<origin>/ MUST
+    # be reset before we return, so the next verify run starts from a
+    # clean baseline. Runs in a finally block so it fires on every
+    # exit path — diff-apply failure, reapply failure, build success,
+    # build failure.
     #
-    # Q1 follow-up: also ``make clean`` against the per-origin
-    # compose root so the WRKDIR under ``$WRKDIRPREFIX/<origin>/`` is
-    # wiped along with any ``.orig`` files / extracted-source edits
-    # the prior run left behind. Mirrors the same cleanup the agent's
-    # ``worker.reset_port`` does for patch + convert jobs (commit
-    # a3c7b2ca44c). Without this, a second verify on the same env
-    # sees stale WRKSRC and ``make extract`` no-ops against polluted
-    # state.
+    # Also ``make clean`` against the per-origin compose root so the
+    # WRKDIR under ``$WRKDIRPREFIX/<origin>/`` is wiped along with any
+    # ``.orig`` files / extracted-source edits the prior run left
+    # behind. Mirrors the same cleanup the agent's
+    # ``worker.reset_port`` does for patch + convert jobs. Without
+    # this, a second verify on the same env sees stale WRKSRC and
+    # ``make extract`` no-ops against polluted state.
     #
     # The two stages stay in this function rather than calling
     # ``worker.reset_port`` because apply-and-build is a separate
@@ -436,14 +373,6 @@ def apply_and_build(
     # cleanup logic is small enough to duplicate; the shape is
     # parallel to worker.reset_port so the two stay easy to keep
     # in sync.
-    #
-    # Runs for both paths. The intent-log path always needed it
-    # (25g); the diff path was historically exempted, but post
-    # verify-fix Slice 5 `--diff` is the *only* verify path, so
-    # exempting it just left ports/<origin>/ and the WRKDIR dirty
-    # after every verify (operator-visible drift on the env's
-    # working tree). No caller relies on the leave-drift behavior
-    # any more.
     def _post_build_cleanup() -> None:
         rel = f"ports/{origin}"
         # Reset ONLY ports/<origin> back to HEAD. `git apply --3way`
@@ -505,19 +434,7 @@ def apply_and_build(
             result["stderr_tail"] = (existing + warn)[-2000:]
 
     try:
-        if intent_log_path is not None:
-            rc, applied_count, total_count, err = _replay_intent_log(
-                intent_host, workspace, origin,
-            )
-            result["apply_exit"] = rc
-            result["intents_applied"] = applied_count
-            result["intents_in_log"] = total_count
-            if rc != 0:
-                result["stderr_tail"] = (err or "")[-2000:]
-                sys.stderr.write(err or "")
-                return result
-
-        # 1. Apply diff (optional, legacy path). Run through the chroot
+        # 1. Apply diff (optional). Run through the chroot
         #    so the substrate sees its own filesystem — host and chroot
         #    share the physical writable layer, but going through
         #    `chroot exec` keeps the operator memory rule honest
@@ -640,130 +557,6 @@ def _port_dirty_paths(workspace: Path, origin: str) -> list[str]:
     return out
 
 
-def _git_head(workspace: Path) -> str:
-    """Return ``git -C <workspace> rev-parse HEAD`` or ''."""
-    import subprocess as _sp
-    try:
-        p = _sp.run(
-            ["git", "-C", str(workspace), "rev-parse", "HEAD"],
-            capture_output=True, text=True, check=False,
-        )
-        if p.returncode == 0:
-            return (p.stdout or "").strip()
-    except Exception:
-        pass
-    return ""
-
-
-def _replay_intent_log(
-    intent_log_path: Path, workspace: Path, origin: str,
-) -> tuple[int, int, int, str]:
-    """Replay an intent log against a workspace (Step 25e).
-
-    Loads ``analysis/intent_log.json``, walks its intents in order,
-    and applies each via the dev-env's in-process Translator. The
-    translator's mode is resolved from the log's
-    ``mode_at_apply`` field — the assumption is the operator-
-    chosen verify env is at the same git HEAD as the original
-    apply baseline.
-
-    Returns (rc, applied_count, total_intents, stderr_blob). rc=0
-    means every intent applied cleanly. The first failure short-
-    circuits and returns its error in stderr_blob. total_intents
-    is the count of entries in the input log — operators can
-    distinguish "applied 2 of 5 (rc=1)" from "applied 5 of 5
-    (rc=0)" or "applied 0 of 3 (all ok=False, rc=0)".
-
-    Implementation note: this function imports the
-    ``dportsv3.agent.edit_intent`` package directly. Adding it to
-    sys.path is the caller's responsibility — in production, the
-    runner already has the generator package importable; in
-    tests, the test harness arranges path.
-    """
-    import json
-    import sys as _sys
-    from pathlib import Path as _Path
-
-    # Add scripts/generator to sys.path so we can import the
-    # edit-intent library. The dev-env tools and the generator
-    # share a repo root; locate it relative to this file.
-    here = _Path(__file__).resolve()
-    candidates = [
-        here.parents[3] / "generator",  # scripts/generator
-    ]
-    for cand in candidates:
-        if cand.is_dir() and str(cand) not in _sys.path:
-            _sys.path.insert(0, str(cand))
-
-    try:
-        from dportsv3.agent.edit_intent import (  # noqa: PLC0415
-            IntentError, Translator, parse_intent,
-        )
-    except ImportError as exc:
-        return (1, 0, 0,
-                f"intent-log replay requires dportsv3.agent.edit_intent: "
-                f"{exc}")
-
-    try:
-        doc = json.loads(intent_log_path.read_text())
-    except Exception as exc:
-        return (1, 0, 0, f"intent log JSON parse failed: {exc}")
-
-    entries = doc.get("intents") or []
-    total = len(entries)
-
-    if doc.get("origin") != origin:
-        return (1, 0, total,
-                f"intent log origin {doc.get('origin')!r} does not match "
-                f"requested origin {origin!r}")
-
-    # Design §8 step 2: assert baseline_commit matches the env's
-    # git HEAD before replay. Mismatch means the env has drifted
-    # from the agent's apply baseline; replay's results would be
-    # against a different starting state. Refuse rather than
-    # silently produce a verdict the operator can't trust.
-    baseline = doc.get("baseline_commit") or ""
-    head = _git_head(workspace)
-    if baseline and head and baseline != head:
-        return (1, 0, total,
-                f"intent log baseline_commit {baseline[:12]} does not "
-                f"match env HEAD {head[:12]}; refusing replay to avoid "
-                f"drift. Update the env (dportsv3 dev-env update) so "
-                f"its DeltaPorts checkout matches the agent's baseline.")
-    # Empty baseline (older logs or git resolution failure during
-    # apply) is allowed through — the operator opted-in by triggering
-    # verify against this bundle. Logged for forensics.
-    if not baseline:
-        sys.stderr.write(
-            "intent log has no baseline_commit; replay will proceed "
-            "but drift cannot be detected\n"
-        )
-
-    mode = doc.get("mode_at_apply", "compat")
-    if mode not in ("compat", "dops", "convert"):
-        return (1, 0, total, f"unknown mode_at_apply: {mode!r}")
-
-    translator = Translator(workspace, origin, mode)
-    applied = 0
-    for entry in entries:
-        intent_dict = entry.get("intent") or entry  # backward-compat
-        # Skip ok=False entries from the original run — they did
-        # nothing then, replaying them would emit phantom failures.
-        if entry.get("ok") is False:
-            continue
-        try:
-            result = translator.apply(intent_dict)
-        except IntentError as exc:
-            return (1, applied, total,
-                    f"intent[{applied}] validation: {exc}")
-        if not result.ok:
-            return (1, applied, total,
-                    f"intent[{applied}] ({result.intent_type}) failed: "
-                    f"{result.error}")
-        applied += 1
-    return (0, applied, total, "")
-
-
 def cmd_reset_port(args: argparse.Namespace) -> int:
     """CLI for ``dportsv3 dev-env reset-port`` (Step 25g).
 
@@ -835,7 +628,6 @@ def cmd_apply_and_build(args: argparse.Namespace) -> int:
     result = apply_and_build(
         args.name, args.origin,
         diff_path=args.diff,
-        intent_log_path=getattr(args, "intent_log", None),
     )
     if args.json:
         # Include stderr_tail when a stage failed — the verify-fix

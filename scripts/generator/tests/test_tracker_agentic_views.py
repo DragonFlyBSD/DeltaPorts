@@ -943,32 +943,6 @@ def test_summarize_tool_result_unknown_tool_degrades_gracefully() -> None:
     assert s["headline"] == ""
 
 
-def test_summarize_tool_result_apply_intent() -> None:
-    """apply_intent shows intent_type + paths_changed count + diff
-    size + mode. Diff size only fires when substrate_diff is non-empty."""
-    from dportsv3.tracker.server import _summarize_tool_result
-    raw = json.dumps({
-        "ok": True, "intent_type": "drop_patch",
-        "paths_changed": ["a", "b"],
-        "substrate_diff": "x" * 1082,
-        "mode": "dops",
-    })
-    s = _summarize_tool_result(raw, tool_name="apply_intent")
-    assert s["headline"] == "drop_patch paths_changed=2 diff=1082B mode=dops"
-
-
-def test_summarize_tool_result_intent_reference() -> None:
-    """intent_reference shows intent_type + count of matched playbooks."""
-    from dportsv3.tracker.server import _summarize_tool_result
-    raw = json.dumps({
-        "ok": True, "intent_type": "replace_in_dops_block",
-        "schema": {"...": "..."},
-        "playbooks": [{"name": "a"}, {"name": "b"}, {"name": "c"}],
-    })
-    s = _summarize_tool_result(raw, tool_name="intent_reference")
-    assert s["headline"] == "replace_in_dops_block playbooks=3"
-
-
 def test_summarize_tool_result_extract_does_not_overwrite_materialize() -> None:
     """Regression for the 2.5e order-sensitivity footgun. Pre-refactor
     the heuristic chain would, for a result carrying both stdout_tail

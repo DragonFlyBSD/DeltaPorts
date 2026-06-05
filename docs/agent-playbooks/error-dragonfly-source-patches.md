@@ -99,30 +99,27 @@ When generating a diff for the DeltaPorts overlay, the path format is:
 
 Note: This creates a NEW file containing the patch content.
 
-**Agent guidance — intent flow:**
+**Agent guidance — patch flow:**
 
-Patch files under `dragonfly/` are output artifacts. The only
-intents that touch them are:
+Patch files under `dragonfly/` are output artifacts. Two ways to
+introduce one, both ending in a `file materialize dragonfly/patch-…
+-> dragonfly/patch-…` line in `overlay.dops` so the build's
+`do-patch` applies it:
 
-- `add_patch(target=dragonfly/patch-…, diff=…)` — write a new patch
-  with an inline diff. Best for small changes you can produce by
-  hand.
-- `add_patch(target=dragonfly/patch-…, from_dupe=true)` — regenerate
-  the diff from a fresh WRKSRC edit via `extract` + `dupe` +
-  `put_file` + `genpatch`. Use for non-trivial changes where a
-  diff is easier produced by editing the file than by writing the
-  diff by hand.
-- `drop_patch(target=dragonfly/patch-…, reason=…)` — remove an
-  install directive AND delete the on-disk file. Symmetric for
-  both `patch apply` and `file materialize` install shapes.
+- **Inline diff** — for a small change you can write by hand from
+  prior `get_file` reads, stage the patch and add the materialize
+  line.
+- **From a WRKSRC edit** — for non-trivial changes, `extract` +
+  `dupe` + `put_file` (edit the source) + `genpatch` +
+  `install_patches`, then add the materialize line. Editing the file
+  is easier than hand-writing the diff.
 
-**Never** use `replace_in_patch` against a `dragonfly/` target —
-the validator refuses it. Patch files are not edit targets; nudging
-context lines or hunk headers in place produces a patch that lies
-about its own bytes. If a patch is wrong or drifted, the correct
-recovery is `drop_patch` + `add_patch` (with corrected diff) or
-`add_patch from_dupe=true`. See `intent-add_patch.md` under
-"Recovering from a failed `add_patch`" for the full sequence.
+**Never** text-edit a `dragonfly/` patch in place — nudging context
+lines or hunk headers shifts the hunk body but not its header,
+producing a patch that lies about its own bytes. If a patch is wrong
+or drifted, remove its install line from `overlay.dops` and
+regenerate. See `flow-patch.md` (the static-patch workflow and
+"Recovering from a broken patch") for the full sequence.
 
 ## Examples
 - `net/hostapd`: Missing `IFM_IEEE80211_VHT5G` symbol - wrapped in `#if defined()` guard

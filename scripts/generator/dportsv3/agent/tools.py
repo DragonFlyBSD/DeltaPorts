@@ -133,40 +133,6 @@ _TOOLS: list[dict] = [
           "put_file; if not ok, fix the offending line(s) and call again. "
           "Only emit the Conversion Proof after a clean validate_dops.",
           {"origin": _STR}, ["origin"]),
-    # Step 25c: edit-intent tools. Opt-in via DP_HARNESS_PATCH_USE_INTENT
-    # — gated in patch_tool_names() below so the prompt rewrite (25d)
-    # can stage independently. Schemas always live in the registry
-    # (so `dispatch()` works for unit tests + future operator-driven
-    # invocations); whether the patch LLM sees them is the gate.
-    _tool("apply_intent",
-          "Apply one declarative edit intent (Step 25 grammar). The "
-          "translator validates the intent against its JSON schema, "
-          "renders it into substrate ops (compat or dops, resolved "
-          "from the port's current overlay state), and applies them "
-          "atomically. Returns paths_changed + substrate_diff. Refuses "
-          "intents that violate the half-migration invariant or land "
-          "on not_in_scope ports. Call `intent_reference(<type>)` for "
-          "the per-type schema if you need to look up syntax.",
-          {"origin": _STR,
-           "intent": {"type": "object",
-                      "description": "Intent body as a JSON object with "
-                                     "a 'type' field selecting the variant "
-                                     "(replace_in_patch, drop_patch, "
-                                     "add_patch, add_file, change_makefile, "
-                                     "bump_portrevision).",
-                      "additionalProperties": True}},
-          ["origin", "intent"]),
-    _tool("intent_reference",
-          "Return the JSON schema for one intent type PLUS any "
-          "matching playbook recipes from docs/agent-playbooks/ that "
-          "declare this intent in their frontmatter triggers. Read-only "
-          "lookup — use this before each `apply_intent` call to pick "
-          "up the exact field shape AND any recipe patterns for the "
-          "intent (e.g. how to extend an `mk target set` heredoc body "
-          "via `replace_in_dops_block`). Pass an unknown intent_type to "
-          "list every known type via the error response's "
-          "known_intent_types field.",
-          {"intent_type": _STR}, ["intent_type"]),
     # Step 38f: scope-filtered view of overlay.dops. Use INSTEAD of
     # `get_file overlay.dops` when reasoning about what compose will
     # actually apply on the current build — the raw file lists ops
@@ -240,109 +206,19 @@ CONVERT_TOOL_NAMES: frozenset[str] = frozenset({
 })
 
 
-# Step 25c: edit-intent tools are gated behind
-# DP_HARNESS_PATCH_USE_INTENT so 25c can land without disturbing
-# the production patch agent's behavior. Once 25d (prompt swap)
-# ships, the gate retires and intents become the default.
-_INTENT_TOOL_NAMES: frozenset[str] = frozenset({
-    "apply_intent",
-    "intent_reference",
-})
-
-
-def patch_use_intent_enabled() -> bool:
-    """Read the ``DP_HARNESS_PATCH_USE_INTENT`` gate.
-
-    Truthy values: ``1`` ``true`` ``yes`` ``on`` (case-insensitive).
-    Anything else (including unset / empty) means OFF — default
-    production behavior, no intent tools, no 25g lifecycle hooks.
-
-    Shared helper so the gate is checked the same way everywhere
-    (tool registry filter, patch-flow lifecycle wiring in 25d-1,
-    future 25d-2 prompt selector).
-    """
-    import os as _os  # noqa: PLC0415
-    return (_os.environ.get("DP_HARNESS_PATCH_USE_INTENT") or "").lower() \
-        in ("1", "true", "yes", "on")
-
-
-# Step 25d-2: patch-subtree write tools the LLM no longer sees on
-# the intent path. Convert agent still needs them; only the patch
-# agent's visible surface shrinks. (Tools stay in the registry so
-# dispatch() works for tests + future operator-driven invocations.)
-#
-# Note ``put_file`` is NOT in this set — the new prompt still
-# references it for WRKSRC writes in the dupe/genpatch flow. A
-# worker-side guardrail (worker._reject_intent_path_put_file)
-# rejects port-subtree puts when the intent gate is on so the
-# "use apply_intent instead" constraint is enforced at the
-# substrate boundary, not just by prompt convention.
-_LEGACY_WRITE_TOOL_NAMES: frozenset[str] = frozenset({
-    "install_patches",   # folded into apply_intent{add_patch,from_dupe}
-    "emit_diff",         # intent log IS the diff; no post-hoc capture
-    "validate_dops",     # translator validates dops statements
-    "dops_reference",    # intent_reference replaces it for patch
-})
-
-
 def patch_tool_names() -> frozenset[str]:
-    """Patch-agent's tool list, gated by ``DP_HARNESS_PATCH_USE_INTENT``
-    (:func:`patch_use_intent_enabled`).
+    """The patch agent's tool list.
 
-    Default (gate OFF): all current patch tools EXCEPT the intent
-    tools (``apply_intent`` / ``intent_reference``). Behavior
-    identical to pre-Step-25 production — the legacy ``PATCH_SYSTEM``
-    prompt expects ``put_file`` / ``install_patches`` / ``emit_diff``
-    / ``validate_dops`` / ``dops_reference``.
-
-    Gate ON: intent-only surface. The legacy write tools
-    (_LEGACY_WRITE_TOOL_NAMES) are dropped; ``apply_intent`` and
-    ``intent_reference`` are exposed. The new ``PATCH_INTENT_SYSTEM``
-    prompt is written against this surface. ``put_file`` is still
-    callable for paths outside ``ports/<origin>/`` (WRKSRC for the
-    dupe/genpatch flow) — the worker's path guard handles that
-    boundary, not the registry.
-
-    NOTE: this method removes ``put_file`` entirely from the
-    visible surface on the intent path. WRKSRC writes via
-    ``put_file`` are still possible via the *registry* (and via
-    direct ``dispatch()`` calls), they're just not in the LLM's
-    visible tool list. If smoke testing shows the agent needs
-    ``put_file`` for the dupe flow even on the intent path, move
-    ``put_file`` out of _LEGACY_WRITE_TOOL_NAMES and rely on the
-    worker's path-guardrails alone.
+    The patch agent edits ``ports/<origin>/overlay.dops`` directly in
+    dops DSL — the same surface the convert agent uses (``put_file`` +
+    ``validate_dops`` + ``dops_reference``, reading with ``grep`` /
+    ``get_file``) — plus the build-loop tools convert doesn't need
+    (``extract`` / ``dupe`` / ``genpatch`` / ``install_patches`` /
+    ``dsynth_build`` / ``dsynth_log`` / ``materialize_dports``) and the
+    read-only ``emit_diff`` / ``get_effective_overlay`` views. All of
+    these live in the registry, so this is just the full tool set.
     """
-    all_names = set(names())
-    if patch_use_intent_enabled():
-        return frozenset(all_names - _LEGACY_WRITE_TOOL_NAMES)
-    return frozenset(all_names - _INTENT_TOOL_NAMES)
-
-
-# -----------------------------------------------------------------------------
-# Active-agent-flow context
-# -----------------------------------------------------------------------------
-#
-# Worker-side guardrails (e.g. worker._reject_intent_path_put_file) need
-# to know which agent is calling so they can refuse patch-agent writes
-# while allowing convert-agent writes to the same path. The dispatcher
-# sets this contextvar for the duration of one tool call; workers read
-# it without taking an import on tool_loop/patch/convert.
-import contextvars as _contextvars  # noqa: E402
-
-_ACTIVE_FLOW: _contextvars.ContextVar[str] = _contextvars.ContextVar(
-    "dportsv3_active_agent_flow", default="patch",
-)
-
-
-def active_agent_flow() -> str:
-    """Return the agent flow currently dispatching a tool call.
-
-    One of ``"patch"`` | ``"convert"``. Defaults to ``"patch"`` when
-    no dispatcher has set it (covers ad-hoc test/operator
-    invocations of ``dispatch()`` — the stricter guards fire,
-    which is the safer default).
-    """
-    return _ACTIVE_FLOW.get()
+    return frozenset(names())
 
 
 # -----------------------------------------------------------------------------
@@ -350,8 +226,7 @@ def active_agent_flow() -> str:
 # -----------------------------------------------------------------------------
 
 
-def dispatch(name: str, arguments: dict | None, *, env: str,
-             agent_flow: str = "patch") -> dict:
+def dispatch(name: str, arguments: dict | None, *, env: str) -> dict:
     """Invoke the tool ``name`` with ``arguments`` (env bound by caller).
 
     Worker exceptions are caught and surfaced as
@@ -392,26 +267,14 @@ def dispatch(name: str, arguments: dict | None, *, env: str,
     if missing:
         return {"ok": False, "error": f"tool {name}: missing required argument(s): {missing}"}
 
-    if agent_flow not in ("patch", "convert"):
+    try:
+        result = handler(env, **args)
+    except Exception as exc:  # noqa: BLE001 — intentional broad catch; surface to LLM
         return {
             "ok": False,
-            "error": (
-                f"tools.dispatch: invalid agent_flow={agent_flow!r}; "
-                f"must be 'patch' or 'convert'"
-            ),
+            "error": f"{type(exc).__name__}: {exc}",
+            "traceback": traceback.format_exc(limit=4),
         }
-    flow_token = _ACTIVE_FLOW.set(agent_flow)
-    try:
-        try:
-            result = handler(env, **args)
-        except Exception as exc:  # noqa: BLE001 — intentional broad catch; surface to LLM
-            return {
-                "ok": False,
-                "error": f"{type(exc).__name__}: {exc}",
-                "traceback": traceback.format_exc(limit=4),
-            }
-    finally:
-        _ACTIVE_FLOW.reset(flow_token)
 
     # Workers already return {ok: bool, ...} or raise; if a worker returned
     # something else (e.g. dict without 'ok'), pass through unchanged.

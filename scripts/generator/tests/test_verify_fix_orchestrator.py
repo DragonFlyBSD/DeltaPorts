@@ -52,9 +52,8 @@ def _stub_get_bundle(bundle_id: str = "b-1", origin: str = "devel/foo",
 
 
 def _stub_get_diff(diff_bytes: bytes):
-    """Stub that serves changes.diff. Slice 5 retired the
-    intent_log preference; the orchestrator now always fetches
-    changes.diff (the branch-vs-base canonical artifact)."""
+    """Stub that serves changes.diff. The orchestrator always
+    fetches changes.diff (the branch-vs-base canonical artifact)."""
     def _get_bytes(url: str, timeout: int = 20):
         assert "/artifacts/analysis/changes.diff" in url
         return diff_bytes

@@ -890,42 +890,12 @@ def _summary_dsynth_log(
     summary["headline"] = f"log_tail {len(tail)}B"
 
 
-def _summary_apply_intent(
-    data: dict[str, Any], summary: dict[str, Any],
-) -> None:
-    """apply_intent — intent_type + paths_changed count + diff size
-    + mode."""
-    bits = [str(data.get("intent_type") or "?")]
-    if "paths_changed" in data:
-        bits.append(
-            f"paths_changed={len(data.get('paths_changed') or [])}"
-        )
-    if data.get("substrate_diff"):
-        bits.append(f"diff={len(data['substrate_diff'])}B")
-    if "mode" in data:
-        bits.append(f"mode={data['mode']}")
-    summary["headline"] = " ".join(bits)
-
-
-def _summary_intent_reference(
-    data: dict[str, Any], summary: dict[str, Any],
-) -> None:
-    """intent_reference — intent_type + count of matched playbook
-    entries. The full schema sits in the raw collapsible."""
-    bits = [str(data.get("intent_type") or "?")]
-    if isinstance(data.get("playbooks"), list):
-        bits.append(f"playbooks={len(data['playbooks'])}")
-    summary["headline"] = " ".join(bits)
-
-
 _TOOL_SUMMARIZERS: dict[str, Any] = {
     "materialize_dports": _summary_materialize_dports,
     "materialize_dports_with_report": _summary_materialize_dports,
     "extract": _summary_extract,
     "dsynth_build": _summary_dsynth_build,
     "dsynth_log": _summary_dsynth_log,
-    "apply_intent": _summary_apply_intent,
-    "intent_reference": _summary_intent_reference,
 }
 
 
@@ -1261,31 +1231,6 @@ def _load_tool_trace(artifact_root: Path, ref: dict[str, Any] | None) -> list[di
     except OSError:
         return []
     return events
-
-
-def _load_intent_log(
-    artifact_root: Path, ref: dict[str, Any] | None,
-) -> dict[str, Any] | None:
-    """Step 25f: load and parse analysis/intent_log.json for the
-    bundle detail page's "Intent sequence" card.
-
-    Returns the full document on success (the template iterates
-    intents[].intent + intents[].substrate_diff). Returns None for
-    missing / malformed / non-dict artifacts so the template's
-    `{% if intent_log %}` short-circuits cleanly. Pre-Step-25
-    bundles + bundles where the patch agent didn't use the intent
-    flow simply skip this rendering.
-    """
-    if ref is None:
-        return None
-    path = _resolve_artifact_path(artifact_root, ref)
-    if path is None or not path.exists():
-        return None
-    try:
-        doc = json.loads(path.read_text(errors="replace"))
-    except (OSError, ValueError):
-        return None
-    return doc if isinstance(doc, dict) else None
 
 
 def create_app(db_path: str | Path) -> Any:
@@ -3340,7 +3285,6 @@ def create_app(db_path: str | Path) -> Any:
         with _conn() as conn:
             bundle = get_bundle(conn, bundle_id)
             tool_trace_ref = get_artifact_ref(conn, bundle_id, "analysis/tool_trace.jsonl")
-            intent_log_ref = get_artifact_ref(conn, bundle_id, "analysis/intent_log.json")
             selected_relpath = artifact or (_default_artifact_relpath(bundle) if bundle else None)
             selected_ref = (
                 get_artifact_ref(conn, bundle_id, selected_relpath)
@@ -3398,7 +3342,6 @@ def create_app(db_path: str | Path) -> Any:
         if selected_relpath and selected_artifact is None:
             raise HTTPException(status_code=404, detail="Artifact file missing")
         tool_trace = _load_tool_trace(app.state.artifact_root, tool_trace_ref)
-        intent_log = _load_intent_log(app.state.artifact_root, intent_log_ref)
         # Step 11c: operator-action button matrix. Buttons show on
         # any bundle whose agent has finished (resolution=
         # 'agent_fixed') and the operator hasn't decided yet
@@ -3536,7 +3479,6 @@ def create_app(db_path: str | Path) -> Any:
                 "title": bundle_id,
                 "bundle": bundle,
                 "tool_trace": tool_trace,
-                "intent_log": intent_log,
                 "selected_artifact": selected_artifact,
                 "selected_artifact_relpath": selected_relpath,
                 "prior_attempts": prior_attempts,

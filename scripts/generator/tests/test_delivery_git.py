@@ -172,8 +172,8 @@ def test_apply_diff_with_new_file_lands_in_commit(clone):
     created files so they make it into the commit. Pre-fix the
     `--index` flag was missing and commit_diff's `git add -u`
     only caught modifications, silently dropping new files (the
-    load-bearing case for add_patch / add_file intents producing
-    a fresh dragonfly/patch-* file)."""
+    load-bearing case for the agent's edits producing a fresh
+    dragonfly/patch-* file)."""
     prepare_clean_branch(
         clone, base_branch="master", branch_name="feature/newfile",
     )

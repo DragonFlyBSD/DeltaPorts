@@ -46,7 +46,7 @@ def test_dsynth_refused_without_prior_materialize(monkeypatch):
 
 def test_dsynth_refused_when_substrate_changed_since_materialize(monkeypatch):
     """Baseline recorded but the port subtree's content hash has
-    changed since (agent edited substrate via apply_intent etc.).
+    changed since (agent edited overlay.dops etc.).
     Compose tree on disk is stale → refuse, ask for re-materialize."""
     monkeypatch.setattr(worker, "_exec", _fake_exec_returning(0))
     monkeypatch.setattr(worker, "_dsynth_log_path", lambda o: "/tmp/log")

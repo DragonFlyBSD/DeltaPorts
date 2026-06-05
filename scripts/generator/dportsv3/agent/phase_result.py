@@ -130,12 +130,11 @@ class DeferredVerdict:
     """Step 37-3: per-patch outcome from the patch agent's relevance
     pass on a ``DeferredPatch``. One of three verdicts:
 
-    - ``regenerated``: agent emitted a fresh intent (add_patch /
-      replace_in_patch / change_makefile / etc.) that achieves the
-      same semantic intent against current upstream.
+    - ``regenerated``: agent edited overlay.dops directly to achieve
+      the same semantic intent against current upstream.
     - ``dropped``: agent verified the patch is no longer relevant
       (e.g. upstream already removed the lines it was targeting);
-      no edit emitted; ``intents_emitted`` is empty.
+      no edit emitted.
     - ``escalated``: agent couldn't determine relevance or how to
       regenerate; bundle should be operator-actionable for this
       specific patch (other deferred patches may still resolve).
@@ -144,7 +143,6 @@ class DeferredVerdict:
     path: str                   # diffs/pkg-plist.diff (matches DeferredPatch.path)
     verdict: str                # "regenerated" | "dropped" | "escalated"
     rationale: str              # one-sentence operator-readable reason
-    intents_emitted: list[str]  # intent types emitted for this patch (empty for dropped/escalated)
 
 
 @dataclass(frozen=True)
@@ -154,7 +152,6 @@ class PatchResult:
     rebuild_ok: bool
     status: str
     attempts: int
-    intents_applied: int
     tokens_prompt: int
     tokens_completion: int
     tokens_total: int
@@ -162,7 +159,7 @@ class PatchResult:
     # relevance pass. Empty when convert didn't defer any patches OR
     # the agent didn't emit a Patch Plan with this field. Patch agent
     # is taught to emit one entry per ConvertResult.deferred_patches
-    # element via prompt clause in PATCH_INTENT_SYSTEM.
+    # element via prompt clause in PATCH_SYSTEM.
     deferred_verdicts: list[DeferredVerdict] = field(default_factory=list)
     # Step 37-3: schema bumped because deferred_verdicts is a new
     # nested-dataclass field. Legacy v1 readers degrade to None.

@@ -3,7 +3,7 @@
 Covers:
 - frontmatter parser (YAML-subset, list values, defaults, malformed)
 - entry parsing (title extraction, body separation, est_tokens)
-- selector (role / classification / intents / toolchains / convert_phase)
+- selector (role / classification / toolchains / convert_phase)
 - budget gate (priority-aware drop)
 - find_playbooks_dir walking up ancestors to locate the docs/ dir
 """
@@ -102,24 +102,24 @@ def test_list_entries_parses_frontmatter_and_skips_readme_template(tmp_path):
         "---\n"
         "# Title X\n\nBody X\n"
     )
-    _write(tmp_path, "intent-y.md",
+    _write(tmp_path, "tool-y.md",
         "---\n"
         "triggers:\n"
-        "  intents: [replace_in_dops_block]\n"
+        "  toolchains: [gmake]\n"
         "  flows: [patch]\n"
         "---\n"
         "# Title Y\n\nBody Y\n"
     )
     entries = list_entries(tmp_path)
     names = sorted(e.path.name for e in entries)
-    assert names == ["error-x.md", "intent-y.md"]
+    assert names == ["error-x.md", "tool-y.md"]
     by_name = {e.path.name: e for e in entries}
     assert by_name["error-x.md"].title == "Title X"
     assert by_name["error-x.md"].priority == 80
     assert by_name["error-x.md"].triggers.classifications == ("compile-error",)
     assert by_name["error-x.md"].triggers.flows == ("triage", "patch")
-    assert by_name["intent-y.md"].triggers.intents == ("replace_in_dops_block",)
-    assert by_name["intent-y.md"].triggers.flows == ("patch",)
+    assert by_name["tool-y.md"].triggers.toolchains == ("gmake",)
+    assert by_name["tool-y.md"].triggers.flows == ("patch",)
 
 
 def test_list_entries_handles_missing_dir():
@@ -137,10 +137,10 @@ def test_entry_without_frontmatter_gets_default_flows(tmp_path):
 
 
 def test_entry_title_falls_back_to_filename_stem_when_no_h1(tmp_path):
-    _write(tmp_path, "intent-z.md", "no headers here\njust prose.\n")
+    _write(tmp_path, "note-z.md", "no headers here\njust prose.\n")
     entries = list_entries(tmp_path)
     assert len(entries) == 1
-    assert entries[0].title == "intent-z"
+    assert entries[0].title == "note-z"
 
 
 # ----- selector -------------------------------------------------------
@@ -157,14 +157,14 @@ def _fixture_dir(tmp_path: Path) -> Path:
         "---\n"
         "# Plist\n\nplist body\n"
     )
-    _write(tmp_path, "intent-rin.md",
+    _write(tmp_path, "lowprio-gmake.md",
         "---\n"
         "triggers:\n"
-        "  intents: [replace_in_dops_block]\n"
+        "  toolchains: [gmake]\n"
         "  flows: [patch]\n"
         "priority: 50\n"
         "---\n"
-        "# Replace-in-dops\n\nrid body\n"
+        "# Gmake-lowprio\n\nrid body\n"
     )
     _write(tmp_path, "convert-target.md",
         "---\n"
@@ -193,8 +193,8 @@ def test_selector_classification_filter(tmp_path):
     assert "error-plist.md" in result.included
     # No toolchain context → autoconf entry skipped.
     assert "toolchain-autoconf.md" not in result.included
-    # No intent context → intent entry skipped.
-    assert "intent-rin.md" not in result.included
+    # No toolchain context → the gmake entry is skipped too.
+    assert "lowprio-gmake.md" not in result.included
     # Wrong flow for convert entry.
     assert "convert-target.md" not in result.included
     skipped_names = {name for name, _ in result.skipped}
@@ -211,15 +211,7 @@ def test_selector_flow_gate(tmp_path):
     )
     assert "convert-target.md" in result_with_phase.included
     # Patch entries don't leak into convert.
-    assert "intent-rin.md" not in result_with_phase.included
-
-
-def test_selector_intent_overlap(tmp_path):
-    d = _fixture_dir(tmp_path)
-    result = load_playbooks(
-        d, role="patch", intents=["replace_in_dops_block"],
-    )
-    assert "intent-rin.md" in result.included
+    assert "lowprio-gmake.md" not in result_with_phase.included
 
 
 def test_selector_toolchain_overlap(tmp_path):
@@ -228,44 +220,44 @@ def test_selector_toolchain_overlap(tmp_path):
         d, role="patch", toolchains=["autoconf"],
     )
     assert "toolchain-autoconf.md" in result.included
-    # No intent → intent entry still skipped.
-    assert "intent-rin.md" not in result.included
+    # gmake not in context → the gmake entry stays skipped.
+    assert "lowprio-gmake.md" not in result.included
 
 
 def test_selector_priority_order_in_output(tmp_path):
     d = _fixture_dir(tmp_path)
-    # patch flow + classification matches plist (prio 100). Add intent
-    # context to also pull intent-rin (prio 50). intent-rin should come
-    # first in the rendered text by lower-priority-first rule.
+    # patch flow + classification matches plist (prio 100). Add toolchain
+    # context to also pull lowprio-gmake (prio 50). The gmake entry should
+    # come first in the rendered text by lower-priority-first rule.
     result = load_playbooks(
         d, role="patch", classification="plist-error",
-        intents=["replace_in_dops_block"],
+        toolchains=["gmake"],
     )
-    assert "intent-rin.md" in result.included
+    assert "lowprio-gmake.md" in result.included
     assert "error-plist.md" in result.included
-    # intent-rin (prio 50) appears earlier in text than error-plist (prio 100).
-    assert result.text.index("Replace-in-dops") < result.text.index("Plist")
+    # lowprio-gmake (prio 50) appears earlier in text than error-plist (prio 100).
+    assert result.text.index("Gmake-lowprio") < result.text.index("Plist")
 
 
 def test_selector_budget_gate_drops_lowest_priority(tmp_path):
     d = _fixture_dir(tmp_path)
-    # Tight budget that fits only ONE entry. intent-rin (prio 50) wins
+    # Tight budget that fits only ONE entry. lowprio-gmake (prio 50) wins
     # over toolchain-autoconf (prio 60). Bodies are ~7 and ~6 est_tokens
     # respectively, so a budget of 8 fits the first but not the second.
     result = load_playbooks(
-        d, role="patch", intents=["replace_in_dops_block"],
-        toolchains=["autoconf"], budget_tokens=8,
+        d, role="patch",
+        toolchains=["gmake", "autoconf"], budget_tokens=8,
     )
-    assert result.included == ("intent-rin.md",)
+    assert result.included == ("lowprio-gmake.md",)
     dropped = {name for name, reason in result.skipped if reason.startswith("budget:")}
     assert "toolchain-autoconf.md" in dropped
 
 
 def test_selector_empty_result_returns_empty_text(tmp_path):
-    _write(tmp_path, "intent-x.md",
+    _write(tmp_path, "unmatched.md",
         "---\n"
         "triggers:\n"
-        "  intents: [some_other_intent]\n"
+        "  toolchains: [some_other_toolchain]\n"
         "  flows: [patch]\n"
         "---\n"
         "# X\n\nbody\n"
@@ -354,26 +346,3 @@ def test_detect_toolchains_unreadable_makefile_does_not_raise(tmp_path):
     (port / "configure.ac").write_text("AC_INIT([x],[1])\n")
     tags = detect_toolchains(port)
     assert "autoconf" in tags
-
-
-def test_every_intent_type_has_a_playbook():
-    """Step 27d contract: each intent type declared in
-    edit_intent.INTENT_TYPES must have a corresponding intent-*.md
-    playbook tagged with `intents: [<type>]`. Guards against an
-    intent being added later without a matching recipe — every new
-    intent type should ship with its usage recipe."""
-    from dportsv3.agent.edit_intent import INTENT_TYPES
-    located = find_playbooks_dir()
-    assert located is not None
-    entries = list_entries(located)
-    intent_coverage: dict[str, list[str]] = {t: [] for t in INTENT_TYPES}
-    for e in entries:
-        for t in e.triggers.intents:
-            if t in intent_coverage:
-                intent_coverage[t].append(e.path.name)
-    missing = [t for t, files in intent_coverage.items() if not files]
-    assert not missing, (
-        f"Intent types lack a playbook entry tagged with their type "
-        f"in triggers.intents: {missing}. Every intent should ship "
-        f"with a usage recipe in docs/agent-playbooks/intent-<type>.md"
-    )

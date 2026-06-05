@@ -123,6 +123,64 @@ def test_put_file_allows_compose_lookalike(env_dir):
     assert res.get("ok") is not False
 
 
+# --- put_file refuses Makefile.DragonFly on a dops port -------------------
+
+
+def test_put_file_refuses_makefile_dragonfly_when_overlay_present(env_dir):
+    """Writing Makefile.DragonFly next to an existing overlay.dops
+    produces the half-migrated state assess_dops rejects. The guard
+    fires at the put_file boundary so the patch agent — which edits
+    overlay.dops free-hand — sees a structured refusal."""
+    from dportsv3.agent import worker
+    port = env_dir / "work" / "DeltaPorts" / "ports" / "devel" / "foo"
+    port.mkdir(parents=True)
+    (port / "overlay.dops").write_text(
+        'port devel/foo\ntype port\ntarget @any\nreason "x"\n'
+    )
+    res = worker.put_file(
+        "env",
+        "/work/DeltaPorts/ports/devel/foo/Makefile.DragonFly",
+        "USES=ssl\n",
+    )
+    assert res["ok"] is False
+    assert res["blocked_by"] == "dragonfly_on_dops_port"
+    assert "mk` directives" in res["error"]
+    # The file is NOT created.
+    assert not (port / "Makefile.DragonFly").exists()
+
+
+def test_put_file_allows_makefile_dragonfly_without_overlay(env_dir):
+    """No overlay.dops yet → the port isn't a dops port, so a
+    Makefile.DragonFly write is the legitimate compat shape. Allowed."""
+    from dportsv3.agent import worker
+    port = env_dir / "work" / "DeltaPorts" / "ports" / "devel" / "bar"
+    port.mkdir(parents=True)
+    res = worker.put_file(
+        "env",
+        "/work/DeltaPorts/ports/devel/bar/Makefile.DragonFly",
+        "USES=ssl\n",
+    )
+    assert res.get("ok") is not False
+    assert (port / "Makefile.DragonFly").is_file()
+
+
+def test_put_file_allows_non_dragonfly_file_on_dops_port(env_dir):
+    """The guard is scoped to Makefile.DragonFly* — other writes into a
+    dops port (e.g. a dragonfly/ patch) are untouched by it."""
+    from dportsv3.agent import worker
+    port = env_dir / "work" / "DeltaPorts" / "ports" / "devel" / "baz"
+    port.mkdir(parents=True)
+    (port / "overlay.dops").write_text(
+        'port devel/baz\ntype port\ntarget @any\nreason "x"\n'
+    )
+    res = worker.put_file(
+        "env",
+        "/work/DeltaPorts/ports/devel/baz/dragonfly/patch-x",
+        "@@ -1 +1 @@\n",
+    )
+    assert res.get("ok") is not False
+
+
 # --- list_dir / grep refuse dsynth scaffolding ----------------------------
 
 

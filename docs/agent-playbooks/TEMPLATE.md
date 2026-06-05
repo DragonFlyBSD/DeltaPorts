@@ -1,12 +1,9 @@
 ---
-# Frontmatter is forward-looking — ignored at load time today,
-# honored by Step 27b's selector. Set the triggers that describe
-# WHEN this entry should be attached to a payload. Empty list =
-# wildcard for that axis. Empty `triggers` block as a whole = always
-# loaded (use sparingly).
+# The selector attaches this entry to a payload when its triggers
+# match. Empty list = wildcard for that axis. Empty `triggers` block
+# as a whole = always loaded (use sparingly).
 triggers:
   classifications: []      # e.g. [patch-error, compile-error]; from triage
-  intents: []              # e.g. [replace_in_dops_block]; from patch-flow tool surface
   toolchains: []           # e.g. [autoconf, cmake]; from port toolchain detection
   convert_phases: []       # e.g. [picking_target]; for convert agent
   flows: [triage, patch]   # which agent roles can see this entry
@@ -19,26 +16,23 @@ priority: 100              # smaller = drop later under budget; default 100
 <!--
 File naming: <category>-<short-slug>.md
   error-*       reactive build-error patterns
-  intent-*      patch-flow intent usage recipes
+  flow-*        flow-level procedures for an agent role
   convert-*     convert-agent procedures
   toolchain-*   port toolchain "usual suspects" playbooks
 
 Keep entries focused: one pattern per file, ~100 lines max.
 
-Pick ONE primary trigger axis per entry. An entry that declares
-BOTH `triggers.classifications` AND `triggers.intents` will
-attach via the system payload (load_playbooks) AND show up in
-intent_reference results — double-attach. Pick the axis that
-best matches WHEN the agent needs this knowledge:
+Pick the trigger axis that best matches WHEN the agent needs this
+knowledge:
 
   - error-*       primary axis: classifications
-  - intent-*      primary axis: intents
+  - flow-*        primary axis: flows
   - convert-*     primary axis: convert_phases + flows=[convert]
   - toolchain-*   primary axis: toolchains
 -->
 
 ## Pattern
-- `<exact error message, intent name, or detection signal>`
+- `<exact error message, directive, or detection signal>`
 - `<another variant>`
 
 ## Cause

@@ -96,6 +96,12 @@ def queue_env(tmp_path, monkeypatch):
 
     monkeypatch.setattr(worker, "env_paths", lambda env: _Paths())
 
+    # The patch preflight (steps.py §5.1) refuses to start unless the
+    # port subtree is clean. Stub it healthy — these tests exercise
+    # the orchestrator event chain, not the clean-tree guard.
+    monkeypatch.setattr(worker, "assert_port_clean",
+                        lambda env, origin: {"ok": True})
+
     # Stub a healthy env so the gate doesn't pause + decide() proceeds.
     from dportsv3.agent import health as health_mod
     monkeypatch.setattr(

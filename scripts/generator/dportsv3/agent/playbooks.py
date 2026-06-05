@@ -2,9 +2,8 @@
 
 Parses ``docs/agent-playbooks/*.md`` entries with YAML-subset
 frontmatter, selects entries by per-job context (flow + classification
-+ intent surface + toolchain + convert phase), and renders the
-selected entries into a markdown block for inclusion in the agent's
-payload.
++ toolchain + convert phase), and renders the selected entries into a
+markdown block for inclusion in the agent's payload.
 
 Replaces the legacy ``load_kedb`` bulk-load. Alpha-mode hard cutover:
 entries without a frontmatter ``flows:`` declaration default to
@@ -19,7 +18,6 @@ Frontmatter shape:
     ---
     triggers:
       classifications: [patch-error, compile-error]
-      intents: [replace_in_dops_block]
       toolchains: [autoconf]
       convert_phases: [picking_target]
       flows: [triage, patch]
@@ -66,7 +64,6 @@ class PlaybookTriggers:
     ``flows: [convert]``.
     """
     classifications: tuple[str, ...] = ()
-    intents: tuple[str, ...] = ()
     toolchains: tuple[str, ...] = ()
     convert_phases: tuple[str, ...] = ()
     flows: tuple[str, ...] = _FLOWS_DEFAULT
@@ -197,7 +194,6 @@ def _parse_entry(path: Path) -> PlaybookEntry | None:
     flows = _parse_inline_list(triggers_raw.get("flows", ""))
     triggers = PlaybookTriggers(
         classifications=_parse_inline_list(triggers_raw.get("classifications", "")),
-        intents=_parse_inline_list(triggers_raw.get("intents", "")),
         toolchains=_parse_inline_list(triggers_raw.get("toolchains", "")),
         convert_phases=_parse_inline_list(triggers_raw.get("convert_phases", "")),
         flows=flows if flows else _FLOWS_DEFAULT,
@@ -370,7 +366,6 @@ def list_entries(playbooks_dir: Path | None) -> list[PlaybookEntry]:
 def _matches(entry: PlaybookEntry, *,
              role: str,
              classification: str | None,
-             intents: set[str],
              toolchains: set[str],
              convert_phases: set[str]) -> tuple[bool, str]:
     """Trigger check. Returns (matched, reason_if_skipped)."""
@@ -383,8 +378,6 @@ def _matches(entry: PlaybookEntry, *,
                 f"classification:{classification!r}-not-in-"
                 f"{list(t.classifications)}"
             )
-    if t.intents and not (intents & set(t.intents)):
-        return False, f"intents:no-overlap-with-{list(t.intents)}"
     if t.toolchains and not (toolchains & set(t.toolchains)):
         return False, f"toolchains:no-overlap-with-{list(t.toolchains)}"
     if t.convert_phases and not (convert_phases & set(t.convert_phases)):
@@ -399,7 +392,6 @@ def load_playbooks(
     *,
     role: str,
     classification: str | None = None,
-    intents: Iterable[str] = (),
     toolchains: Iterable[str] = (),
     convert_phases: Iterable[str] = (),
     budget_tokens: int = 0,
@@ -422,7 +414,6 @@ def load_playbooks(
     treats that as "no playbooks section in the payload."
     """
     entries = list_entries(playbooks_dir)
-    intents_set = set(intents)
     toolchains_set = set(toolchains)
     phases_set = set(convert_phases)
 
@@ -431,7 +422,7 @@ def load_playbooks(
     for e in entries:
         ok, reason = _matches(
             e, role=role, classification=classification,
-            intents=intents_set, toolchains=toolchains_set,
+            toolchains=toolchains_set,
             convert_phases=phases_set,
         )
         if ok:

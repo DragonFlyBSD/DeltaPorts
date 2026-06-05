@@ -589,7 +589,7 @@ def test_circuit_breaker_ignores_convert_from_other_bundle(
     """The bug this fixes: a convert that succeeded for a *different*
     bundle of the same origin must NOT trip the breaker. The port is
     still auto_safe_pending for THIS bundle, so triage must defer and
-    enqueue a convert — not fall through to patch (whose intents are
+    enqueue a convert — not fall through to patch (whose edits are
     all substrate-gated and would dead-end)."""
     from dportsv3.agent.runner import _maybe_defer_to_convert, enqueue_convert_job
 

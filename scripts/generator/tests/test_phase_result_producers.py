@@ -111,15 +111,13 @@ def test_triage_producer_writes_typed_result(disk_bundle):
 def test_patch_producer_writes_typed_result(disk_bundle):
     """``_write_patch_audit_harness`` must persist a typed
     PatchResult alongside the existing rebuild_proof.json /
-    patch_audit.json. ``intents_applied`` lands at 0 here;
-    ``_write_intent_log_harness`` backfills it after draining
-    (covered by the intent-count test below)."""
+    patch_audit.json."""
     from dportsv3.agent.runner import _write_patch_audit_harness
 
     patch_loop_result = SimpleNamespace(
         status="success",
         final_text=(
-            "## Patch Summary\nThree intents applied.\n\n"
+            "## Patch Summary\nEdits applied.\n\n"
             "## Rebuild Proof (JSON)\n```json\n"
             '{"rebuild_ok": true, "origin": "devel/foo"}\n```\n'
         ),
@@ -140,62 +138,9 @@ def test_patch_producer_writes_typed_result(disk_bundle):
     assert loaded.rebuild_ok is True
     assert loaded.status == "success"
     assert loaded.attempts == 2
-    assert loaded.intents_applied == 0  # backfilled later by intent_log
     assert loaded.tokens_prompt == 120_000
     assert loaded.tokens_completion == 8_000
     assert loaded.tokens_total == 128_000
-
-
-def test_intent_log_backfills_patch_result_intents_applied(disk_bundle):
-    """``_write_intent_log_harness`` runs after the patch audit
-    harness; once the drain produces N intents, the typed
-    PatchResult's ``intents_applied`` must be updated in place so
-    downstream consumers see the real count instead of the 0
-    placeholder the audit harness writes."""
-    import importlib
-    from dportsv3.agent.runner import (
-        _write_patch_audit_harness,
-        _write_intent_log_harness,
-    )
-
-    patch_loop_result = SimpleNamespace(
-        status="success",
-        final_text="## Patch Summary\nok\n",
-        usage=_usage(prompt=10, completion=1, total=11),
-        attempts=[SimpleNamespace(attempt=1, tokens=11, rebuild_ok=True)],
-        proof={"rebuild_ok": True},
-    )
-    _write_patch_audit_harness(
-        disk_bundle, None, patch_loop_result, "test-model",
-    )
-    assert load_phase_result(
-        disk_bundle, None, "patch", PatchResult,
-    ).intents_applied == 0
-
-    # Stub worker.drain_intent_log to return a log carrying 5 intents.
-    # The intent_log harness only reads ``.intents`` length and
-    # ``.to_json()`` for the body; the simplest stand-in suffices.
-    fake_log = SimpleNamespace(
-        intents=[{"seq": i, "type": "noop"} for i in range(5)],
-        to_json=lambda: json.dumps({"intents": [{"seq": i} for i in range(5)]}),
-    )
-
-    import dportsv3.agent.worker as worker_mod
-    orig_drain = getattr(worker_mod, "drain_intent_log", None)
-    try:
-        worker_mod.drain_intent_log = lambda env, origin: fake_log
-        _write_intent_log_harness(
-            disk_bundle, None, env="test-env", origin="devel/foo",
-        )
-    finally:
-        if orig_drain is not None:
-            worker_mod.drain_intent_log = orig_drain
-
-    loaded = load_phase_result(disk_bundle, None, "patch", PatchResult)
-    assert loaded.intents_applied == 5
-    # And the other fields stayed put.
-    assert loaded.rebuild_ok is True
-    assert loaded.tokens_total == 11
 
 
 # ---------------------------------------------------------------------

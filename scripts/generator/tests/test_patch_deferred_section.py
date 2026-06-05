@@ -116,7 +116,7 @@ def test_section_renders_each_deferred_patch(saved_store):
     assert "```diff" in out
     assert "+++ pkg-plist" in out
     # The relevance-pass instructions appear (the prompt's
-    # complementary "what to do" rule lives in PATCH_INTENT_SYSTEM;
+    # complementary "what to do" rule lives in PATCH_SYSTEM;
     # the section itself frames the task too).
     assert "regenerated" in out
     assert "dropped" in out
@@ -187,13 +187,11 @@ def test_parse_patch_plan_extracts_deferred_verdicts():
         + json.dumps({
             "origin": "lang/python311",
             "summary": "regenerated one deferred patch",
-            "intents_emitted": ["add_patch"],
             "tools_used": ["get_file"],
             "deferred_verdicts": [{
                 "path": "diffs/pkg-plist.diff",
                 "verdict": "regenerated",
                 "rationale": "lines moved; new hunks at 254",
-                "intents_emitted": ["add_patch"],
             }],
         }, indent=2)
         + "\n```\n\n"
@@ -225,7 +223,6 @@ def test_patch_result_round_trips_deferred_verdicts(saved_store):
         rebuild_ok=False,
         status="needs-help",
         attempts=1,
-        intents_applied=1,
         tokens_prompt=1000,
         tokens_completion=500,
         tokens_total=1500,
@@ -234,7 +231,6 @@ def test_patch_result_round_trips_deferred_verdicts(saved_store):
                 path="diffs/pkg-plist.diff",
                 verdict="dropped",
                 rationale="upstream removed those lines",
-                intents_emitted=[],
             ),
         ],
     )
@@ -257,8 +253,7 @@ def test_patch_result_invalid_verdict_strings_dropped_at_write(saved_store):
     too many moving parts for this test)."""
     plan = {
         "deferred_verdicts": [
-            {"path": "x", "verdict": "regenerated", "rationale": "ok",
-             "intents_emitted": ["add_patch"]},
+            {"path": "x", "verdict": "regenerated", "rationale": "ok"},
             # Missing path
             {"verdict": "dropped"},
             # Bad verdict value
@@ -360,7 +355,7 @@ def _plan_text(verdicts):
         "## Patch Plan (JSON)\n"
         "```json\n"
         + json.dumps({
-            "origin": "x/y", "summary": "s", "intents_emitted": [],
+            "origin": "x/y", "summary": "s",
             "tools_used": [],
             "deferred_verdicts": verdicts,
         }, indent=2)
@@ -388,14 +383,12 @@ def test_resolver_uses_agent_verdict_when_provided(saved_store):
     )
     plan = _plan_text([{
         "path": "diffs/a.diff", "verdict": "regenerated",
-        "rationale": "lines moved; emitted add_patch",
-        "intents_emitted": ["add_patch"],
+        "rationale": "lines moved; regenerated in overlay.dops",
     }])
     out = _resolve_deferred_verdicts_for_patch(None, "b2", plan)
     assert len(out) == 1
     assert out[0].path == "diffs/a.diff"
     assert out[0].verdict == "regenerated"
-    assert out[0].intents_emitted == ["add_patch"]
 
 
 def test_resolver_synthesizes_missing_verdict(saved_store):
@@ -409,7 +402,6 @@ def test_resolver_synthesizes_missing_verdict(saved_store):
     plan = _plan_text([{
         "path": "diffs/a.diff", "verdict": "dropped",
         "rationale": "upstream removed lines",
-        "intents_emitted": [],
     }])
     out = _resolve_deferred_verdicts_for_patch(None, "b3", plan)
     assert [v.path for v in out] == ["diffs/a.diff", "diffs/b.diff"]
@@ -488,7 +480,6 @@ def _setup_diffs_tree(tmp_path: Path, files: dict[str, str]):
 def _verdict(path, verdict, rationale="."):
     return DeferredVerdict(
         path=path, verdict=verdict, rationale=rationale,
-        intents_emitted=[],
     )
 
 

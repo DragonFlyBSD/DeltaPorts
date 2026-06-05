@@ -1635,9 +1635,7 @@ def build_patch_payload(
     # Patch flow: classification is known from the prior triage in
     # this bundle. Step 36-5 reads it from the typed
     # ``TriageResult`` written by ``_write_triage_audit_harness``
-    # rather than regex-parsing ``analysis/triage.md``. Intent
-    # triggers fire at intent_reference time (Step 27c) — not in the
-    # system payload — so we pass an empty intent set here.
+    # rather than regex-parsing ``analysis/triage.md``.
     triage_classification: str | None = None
     try:
         from dportsv3.agent.phase_result import (  # noqa: PLC0415
@@ -2007,7 +2005,7 @@ def _bundle_convert_succeeded(bundle_id: str | None) -> str | None:
     false-positives when a *second* failure bundle for the same port lands
     inside the window — it matches the neighbor bundle's convert and
     suppresses a convert this bundle legitimately needs, sending an
-    unconverted port straight to a patch flow whose every intent is
+    unconverted port straight to a patch flow whose every edit is
     substrate-gated. A bundle has one origin and one target, so bundle_id
     alone identifies the episode.
     """
@@ -2769,8 +2767,8 @@ def _maybe_defer_to_convert(
     through the orchestrator and avoid double-transitions.
 
     Triage's classification is intentionally NOT an input here: the
-    patch agent's ``apply_intent`` only operates on dops-converted
-    substrate, so convert is a prerequisite for any patch flow to
+    patch agent edits ``overlay.dops`` directly, so convert (which
+    produces that substrate) is a prerequisite for any patch flow to
     function, regardless of what kind of bug triage saw. See
     [[project-convert-is-substrate-prerequisite]] in memory.
     """
@@ -3241,7 +3239,7 @@ def cleanup_resolved_deferred_patches(
     malformed verdict that tries to escape the port subtree.
 
     Best-effort: missing files / IO failures log a warning and
-    continue. The agent's intent application already happened; this
+    continue. The agent's overlay.dops edits already happened; this
     is post-hoc tree hygiene, not load-bearing.
     """
     if not verdicts:
@@ -3387,17 +3385,12 @@ def _resolve_deferred_verdicts_for_patch(
                 path=expected,
                 verdict="escalated",
                 rationale="no verdict provided by patch agent",
-                intents_emitted=[],
             ))
             continue
-        intents = entry.get("intents_emitted") or []
-        if not isinstance(intents, list):
-            intents = []
         out.append(DeferredVerdict(
             path=expected,
             verdict=str(entry["verdict"]).strip().lower(),
             rationale=str(entry.get("rationale") or ""),
-            intents_emitted=[str(x) for x in intents if isinstance(x, str)],
         ))
     return out
 
@@ -3470,9 +3463,7 @@ def _write_patch_audit_harness(
     # Step 36-3: typed PatchResult for downstream phases / future
     # tracker UI. patch_audit.json + rebuild_proof.json stay (verify
     # and existing UI consume them); this writes the typed contract
-    # alongside. intents_applied=0 here — the canonical source for
-    # intent counts is analysis/intent_log.json (Step 25e, written
-    # by _write_intent_log_harness).
+    # alongside.
     from dataclasses import asdict  # noqa: PLC0415
     from dportsv3.agent.phase_result import (  # noqa: PLC0415
         PatchResult as _PatchResultTyped, write_phase_result,
@@ -3489,7 +3480,6 @@ def _write_patch_audit_harness(
         rebuild_ok=bool(proof_payload.get("rebuild_ok")),
         status=result.status,
         attempts=len(result.attempts),
-        intents_applied=0,
         tokens_prompt=result.usage.prompt_tokens,
         tokens_completion=result.usage.completion_tokens,
         tokens_total=result.usage.total_tokens,
@@ -3502,123 +3492,6 @@ def _write_patch_audit_harness(
         out.write_bytes(
             (json.dumps(asdict(typed), indent=2) + "\n").encode("utf-8")
         )
-
-
-def _write_intent_log_harness(
-    bundle_dir: Path | None,
-    bundle_id: str | None,
-    env: str,
-    origin: str,
-) -> None:
-    """Drain the worker-side per-(env, origin) intent log into the
-    bundle as ``analysis/intent_log.json`` (Step 25e).
-
-    Called alongside ``_write_patch_audit_harness`` at PATCH_OK and
-    PATCH_GAVE_UP. The log is what makes verify-fix's intent-replay
-    possible (no diff apply needed; the translator re-renders each
-    intent against a clean baseline).
-
-    Best-effort: a missing log just means apply_intent wasn't used
-    this run (the patch agent was still on the legacy edit surface).
-    Silent skip in that case.
-
-    On serialization failure, drops a tombstone
-    ``analysis/intent_log.json.error`` carrying the exception
-    message + intent count we had, AND fires an
-    ``intent_log_serialize_failed`` activity_log row so the
-    operator sees the loss in the tracker UI rather than only in
-    runner stderr. The bundle's verify-fix flow will then fall
-    back to ``analysis/changes.diff`` (per the orchestrator's
-    legacy-fallback path).
-    """
-    from dportsv3.agent import worker as _worker  # noqa: PLC0415
-
-    log = _worker.drain_intent_log(env, origin)
-    if log is None:
-        return
-    try:
-        body = (log.to_json() + "\n").encode("utf-8")
-    except Exception as exc:
-        intent_count = len(getattr(log, "intents", []) or [])
-        tomb = json.dumps({
-            "error": f"{type(exc).__name__}: {exc}",
-            "origin": origin,
-            "intent_count_at_failure": intent_count,
-            "note": (
-                "Intent log serialization failed. The bundle's "
-                "verify-fix will fall back to analysis/changes.diff "
-                "(legacy path)."
-            ),
-        }, indent=2).encode("utf-8") + b"\n"
-        if bundle_id:
-            artifact_store_put(
-                bundle_id, "analysis/intent_log.json.error", tomb, "json",
-            )
-        elif bundle_dir is not None:
-            out = bundle_dir / "analysis" / "intent_log.json.error"
-            out.parent.mkdir(parents=True, exist_ok=True)
-            out.write_bytes(tomb)
-        log_fn = log  # name reuse safety
-        try:
-            queue_root = (bundle_dir.parent
-                          if bundle_dir is not None else Path("."))
-            activity_log(
-                queue_root,
-                "intent_log_serialize_failed",
-                (f"intent_log.json serialization failed for "
-                 f"{origin} ({intent_count} entries); fell back "
-                 f"to changes.diff"),
-                extra={
-                    "origin": origin,
-                    "intent_count_at_failure": intent_count,
-                    "error": f"{type(exc).__name__}: {exc}",
-                },
-            )
-        except Exception:
-            # activity_log infra failure shouldn't mask the
-            # serialization error.
-            pass
-        print(
-            f"Warning: intent_log serialize failed for {origin}: {exc}",
-            file=sys.stderr,
-        )
-        return
-    if bundle_id:
-        artifact_store_put(bundle_id, "analysis/intent_log.json", body, "json")
-    else:
-        out = bundle_dir / "analysis" / "intent_log.json"
-        out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_bytes(body)
-
-    # Step 36-3 follow-up: backfill PatchResult.intents_applied now
-    # that the intent log has been drained and the count is known.
-    # _write_patch_audit_harness runs first and writes the typed
-    # patch_result.json with intents_applied=0 because the drain
-    # hasn't happened yet; this rewrites that field in place. Local
-    # read-modify-write rather than reshaping the producer signature
-    # to thread env/origin through. Best-effort: failures are
-    # swallowed (the canonical intent count remains in
-    # intent_log.json).
-    try:
-        intent_count = len(getattr(log, "intents", []) or [])
-    except Exception:
-        return
-    relpath = "analysis/patch_result.json"
-    try:
-        raw = read_bundle_text(bundle_dir, bundle_id, relpath)
-        if not raw:
-            return
-        doc = json.loads(raw)
-        if doc.get("intents_applied") == intent_count:
-            return
-        doc["intents_applied"] = intent_count
-        updated = (json.dumps(doc, indent=2) + "\n").encode("utf-8")
-        if bundle_id:
-            artifact_store_put(bundle_id, relpath, updated, "json")
-        elif bundle_dir is not None:
-            (bundle_dir / relpath).write_bytes(updated)
-    except Exception:
-        pass
 
 
 def _write_changes_diff(bundle_dir: Path | None, bundle_id: str | None, env: str, origin: str) -> None:
@@ -3825,13 +3698,12 @@ def process_patch_job(
         job_type="patch",
     )
 
-    # Step 38a: record the env's compose target so worker.apply_intent
-    # can thread it into the Translator. Renderers consume it from
-    # Step 38b onwards; pre-38b it's stored but unused.
+    # Step 38a: record the env's compose target so get_effective_overlay
+    # can scope-filter overlay.dops by the build line the env targets.
     # Guard env=None so an unresolvable env doesn't stash a junk entry
-    # under the None key (worker.apply_intent's miss-fallback is the
-    # same `None`, so behavior is unchanged either way — but a clean
-    # cache makes debugging easier).
+    # under the None key (the cache miss-fallback is the same `None`,
+    # so behavior is unchanged either way — but a clean cache makes
+    # debugging easier).
     from dportsv3.agent import worker as _worker  # noqa: PLC0415
     _38a_env = resolve_env(job)
     if _38a_env:
@@ -3868,7 +3740,6 @@ def process_patch_job(
         write_patch_audit=_write_patch_audit_harness,
         write_tool_trace=_write_tool_trace,
         write_changes_diff=_write_changes_diff,
-        write_intent_log=_write_intent_log_harness,
         looks_env_suspicious=_looks_env_suspicious,
         invalidate_health_cache=invalidate_health_cache,
         cached_health_broken=_cached_health_broken,
@@ -3961,9 +3832,8 @@ def process_convert_job(
         job_type="convert",
     )
 
-    # Step 38a: record the env's compose target so worker.apply_intent
-    # can thread it into the Translator. Renderers consume it from
-    # Step 38b onwards; pre-38b it's stored but unused.
+    # Step 38a: record the env's compose target so get_effective_overlay
+    # can scope-filter overlay.dops by the build line the env targets.
     worker.set_env_target(env_name, job.get("target") or None)
 
     # Classification (and everything downstream) reads the dev-env's
@@ -4233,7 +4103,7 @@ def _run_llm_conversion(
     # Handler-side cleanup: act on files_removed from the agent's
     # Conversion Proof. The CONVERT_SYSTEM prompt explicitly delegates
     # legacy-file deletion to the handler (the agent has no tool to
-    # remove port-subtree files; apply_intent is patch-flow). Without
+    # remove port-subtree files). Without
     # this loop the LLM convert path produces a half-migrated
     # substrate (overlay.dops + Makefile.DragonFly together) that
     # poisons every subsequent patch job with substrate_invariant.
@@ -4668,8 +4538,8 @@ def _apply_files_removed(
     CONVERT_SYSTEM tells the agent: "note the files that should be
     removed in `files_removed` — the handler will finalize the
     cleanup". This is that finalization. The agent has no port-
-    subtree delete tool of its own (would clash with the patch-flow
-    apply_intent gate); the handler is the only place this can land.
+    subtree delete tool of its own; the handler is the only place
+    this can land.
 
     Path safety: each entry must be a relpath under
     ports/<origin>/. Absolute paths, ``..`` segments, the freshly-
@@ -4735,8 +4605,8 @@ def _apply_files_removed(
                 skipped.append({"path": raw, "reason": mismatch})
                 continue
         if not target.exists():
-            # Idempotent: missing target is fine; the agent's intent
-            # was "this should not be present", which it isn't.
+            # Idempotent: missing target is fine; the agent asked for
+            # "this should not be present", which it isn't.
             removed.append(rel)
             continue
         try:

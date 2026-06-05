@@ -4917,471 +4917,130 @@ Step 40, there remain visible gaps that a generic surface would close
 > resolve the fork once (see Step 42's decision gate), don't build
 > both.
 
-### Step 42 — delete the intent layer; the patch agent edits `overlay.dops` directly in dops DSL — 42a/b/c shipped (now superseded as the target); 42d (delete the intents) + 42e (flow playbook) pending (chosen over Step 40)
+### Step 42 — delete the intent layer; the patch agent edits `overlay.dops` directly in dops DSL
 
-> **FINAL REQUIREMENT (2026-06-05):** the per-directive intents MUST GO.
-> The patch agent edits `overlay.dops` free-hand in dops syntax, exactly
-> like the convert agent, guarded only by the generic `check_dsl` +
-> `assess_dops` gates. No migration. See **42d** for the plan. The
-> analysis below (the "earns structure" audit, the bucket table, the
-> add/scoped-op framing) is **prior reasoning** that argued for keeping
-> structured intents — it is retained for context but is **superseded**
-> by 42d: nothing is kept.
+> **FINAL REQUIREMENT (2026-06-05):** the per-directive intent layer MUST
+> GO. The patch agent edits `overlay.dops` free-hand in dops syntax,
+> exactly like the convert agent, guarded only by the generic
+> `validate_dops` (`check_dsl`) + `assess_dops` gates. **No migration** —
+> intents are never replayed (`changes.diff` is the canonical payload),
+> so this is a straight deletion + tool swap, not a deprecation cycle.
 
-**This is a counter-proposal to Step 40, not an addition to it.**
-Steps 39/40/41 all assume the intent surface should track the dops
-*grammar* — one intent (or one dispatcher arm) per directive shape,
-which is why `docs/intent-surface-gaps.md` exists as a coverage
-matrix and why every new engine directive owes a new intent +
-schema + renderer + playbook + prompt line. Step 42 rejects that
-premise: model the intent surface by **operation**, not by
-**directive**, and let the engine parser own the grammar.
+This replaces the entire `apply_intent` → `Translator.apply` →
+per-intent `_dops.py` renderer stack. The patch agent gets convert's
+edit surface (`put_file` + `validate_dops` + `dops_reference`, reading
+with `grep`/`get_file`) and writes dops lines/blocks itself. 42a/b/c
+(the `add_dops` fold + the private `_delete_scoped`/scoped-replace
+plumbing) are deleted along with everything else — the structured-intent
+design they belonged to is gone.
 
-#### The thesis (from the for/against analysis)
+#### Guardrails (generic, grammar-free — convert already runs all three)
 
-The case *for* intents reduces to one thing — **guardrails for the
-agent**. The case *against* reduces to one inefficiency —
-**re-implementing the engine grammar** as a parallel intent
-grammar. These are not in tension, because guardrails and grammar
-live at different layers. The current design couples them by
-putting one intent per directive; that coupling *is* the tax.
+1. **`validate_dops` / `check_dsl`** (`engine/api.py`) on every write —
+   engine parse + semantics, `line:column` + `E_*` codes the LLM reacts
+   to. Note (verified 2026-06-05): `check_dsl` does **no** path-safety —
+   it accepts `file materialize x -> ../../etc/passwd` clean.
+2. **`assess_dops`** substrate gate at the worker boundary
+   (`worker.assess_dops` → `overlay_state.assess_overlay`) — shared with
+   convert (`runner.py:2816`); flags the half-migrated (compat + dops)
+   state. **Stays.**
+3. **`_resolve_path`** at compose (`apply_common.py:47`) — the real
+   path-escape backstop; rejects absolute/escaping operands with
+   `E_APPLY_INVALID_PATH`. This is why direct free-hand dops editing is
+   safe even though `check_dsl` isn't path-aware.
 
-Decompose the guardrails and the coupling dissolves:
+#### The coupling that *forces* intents today (must die)
 
-- **Tier 1 — generic guardrails, zero per-directive cost.** Syntax
-  validity, per-edit diff capture, and the no-contradictory-
-  substrate / no-clobber-path precondition. None need to know which
-  directive is written. Proof they are grammar-free: the **convert
-  agent already has all three** while editing `overlay.dops`
-  free-hand — `validate_dops` (line/col/`E_*` errors the LLM reacts
-  to), the proof, and the worker-boundary `assess_dops` gate. That
-  last guardrail — the biggest historical free-edit failure,
-  contradictory compat+dops substrate — is enforced by *no intent
-  renderer at all*; it is a precondition the convert-as-prerequisite
-  gate already owns.
-- **Tier 2 — operation-aware guardrails.** Scope discipline
-  (`@any`/`@current`), refuse-on-ambiguity, "already referenced."
-  These need structure — but structure around the **operation**
-  (add / scoped-delete / scoped-modify), not the directive. Deleting
-  an `mk set`, a `file copy`, or a `target` heredoc is the *same*
-  guardrail: parse existing dops, match the selector, refuse on zero
-  or >1. One delete operation, not three delete intents.
+`worker._reject_intent_path_put_file` (`worker.py:193`, called from
+`put_file` at `worker.py:583`): when `DP_HARNESS_PATCH_USE_INTENT` is
+on and the caller is the patch flow, it **refuses** any `put_file` to
+`/work/DeltaPorts/ports/<origin>/` and tells the agent to use
+`apply_intent` instead. That is the hard runtime block. Everything else
+(the `patch_tool_names()` gate branch, `PATCH_INTENT_SYSTEM`, the
+intent-log accumulator) is scaffolding around it.
 
-#### Why the free-edit evidence supports this
+#### Ordered cut (leaf consumers → core; the package stays importable and convert keeps working after every numbered step)
 
-Every free-edit failure in the Step 25 bandages record clusters by
-edit *kind*, not by agent:
+1. **Tool surface (`tools.py`).** Delete the `apply_intent` +
+   `intent_reference` schemas (141–169), `_INTENT_TOOL_NAMES`,
+   `_LEGACY_WRITE_TOOL_NAMES`, and `patch_use_intent_enabled`.
+   `patch_tool_names()` collapses to one flat set with no gate branch:
+   convert's 7 (`env_verify`, `list_dir`, `get_file`, `grep`,
+   `put_file`, `dops_reference`, `validate_dops`) + `get_effective_overlay`
+   + `emit_diff` + build-loop (`materialize_dports`, `extract`, `dupe`,
+   `genpatch`, `install_patches`, `dsynth_build`, `dsynth_log`).
+2. **Prompt (`prompts.py`).** Delete `PATCH_INTENT_SYSTEM` (~450–700).
+   Rewrite the live `PATCH_SYSTEM` to direct `overlay.dops` editing:
+   read with `grep`/`get_file`, write with `put_file`, validate with
+   `validate_dops`, look up syntax via `dops_reference` — mirroring the
+   convert prompt. Fix the stray intent reference at `prompts.py:24`.
+3. **Worker (`worker.py`).** Delete `_reject_intent_path_put_file`
+   (193) + its call (583) — *the force-intents block*. Delete
+   `apply_intent` (1917), `intent_reference` (2221), the intent-log
+   accumulator (`_INTENT_LOGS`, `_intent_log_key`, `_ensure_intent_log`,
+   `drain_intent_log`, `peek_intent_log`, 1278–1348), and the
+   half-migration/`_CREATION_INTENTS` state-machine comments that exist
+   only for `apply_intent`. **Relocate** the `Makefile.DragonFly`-on-a-
+   dops-port refusal (currently `_dops.py:301`) into a `put_file` guard:
+   refuse a `Makefile.DragonFly*` write when `overlay.dops` already
+   exists for that origin (`assess_overlay` already classifies the mixed
+   state — this is the early-fail ergonomic). Keep `assess_dops` /
+   `classify_dops` / `record_target` (shared, convert-used).
+4. **Patch flow (`patch.py`).** Drop the gate branch (54–96): one
+   prompt, one tool set, no `peek_intent_log` priming.
+5. **Per-attempt preflight (`steps.py`).** Make the `intent_flow`
+   branch (914–960) unconditional — the pre-job `assert_port_clean`
+   check was good and applies to the direct-edit flow too; just drop the
+   `if intent_flow` guard. Remove the `apply_intent` activity-row
+   special-case (135–143) and the drain at 1038.
+6. **Runner (`runner.py`).** Drop the `drain_intent_log` →
+   `analysis/intent_log.json` bundle wiring (3521–3536). Keep
+   `record_target` (3828/3964 — still needed for `get_effective_overlay`
+   compose-target scoping). Rewrite the intent-referencing comments at
+   2772/4236/4672.
+7. **Tracker (`tracker/server.py`).** Delete `_summary_apply_intent` /
+   `_summary_intent_reference` and their registry rows (893–928).
+8. **Delete the package.** `dportsv3/agent/edit_intent/` (translator,
+   `_dops.py`, `_compat.py`, grammar, validator, log, `schemas/*.json`)
+   + its `__init__` exports.
+9. **Verify, then test.** *Before* writing any new test, probe the real
+   path: write an `overlay.dops` through the patch path
+   (`put_file` → `validate_dops` → compose), confirm a path-escape
+   operand still dies at `_resolve_path` (`E_APPLY_INVALID_PATH`), and
+   confirm a `Makefile.DragonFly` + `overlay.dops` write trips the
+   relocated guard. Delete the intent-targeted suites
+   (`test_edit_intent.py`, the renderer/translator/scope-plumbing tests
+   asserting intent behavior). Then add the thin coverage for the new
+   surface.
 
-- *Wrong substrate/path* (compat vs dops, clobber-prone path,
-  contradictory files) — **already eliminated** by convert-as-
-  prerequisite + the `assess_dops` gate; the patch agent only ever
-  sees clean dops now. Not an intent-renderer guarantee.
-- *Wrong scope on an existing line* — the delete/modify problem the
-  scope-aware operations solve.
+Order rationale: 1→2 remove the LLM-visible surface; 3→7 remove the
+runtime/plumbing that referenced it; 8 deletes the now-orphaned package;
+9 verifies. The tree imports cleanly after each numbered step.
 
-There is **no incident of a free agent fumbling an additive
-directive** (a stray `mk set`); appends are what LLMs do reliably,
-and the engine parser already guards their syntax. The agent's
-*content* mistake when free — reaching for a heavyweight source-
-patch instead of a semantic op — is a prompt/playbook fix
-(`error-prefer-dops-over-static-patches`), not something a bespoke
-`add_*` intent prevents (a bad-but-valid `add_patch` is just as
-emittable as a bad `put_file`).
+#### Open decision (deferred, does not block the cutover)
 
-#### The design
+`str_replace` surgical-edit tool. The edit-tool robustness survey
+(2026-06-05) said add it alongside whole-file `put_file` to dodge the
+windowed-`get_file` truncation trap on large overlays. **Deferred to a
+42 follow-up:** `put_file` + `validate_dops` is the proven-robust
+primary and is exactly convert's surface. Ship the deletion first; add
+`str_replace` only if smoke testing shows truncation pain.
 
-One generic additive surface + the *already-shipped* scoped
-structured intents, replacing the 13-and-growing **additive**
-directive intents. **Revised 2026-06-05:** the original framing
-("one generic add + *two* scoped operations") was wrong on the
-scoped side and is corrected below.
+#### Dependencies / supersedes
 
-- **`add_dops` (generic).** Agent supplies an engine-validated dops
-  line (or heredoc); the layer parses it with the engine parser,
-  refuses on syntax/`E_*`, captures the diff, appends. No directive
-  modeling. Already inherits the shared `@any`-first invariant check
-  (`_append_overlay`, _dops.py:1082 / Step 38c) that every renderer
-  routes through today. Subsumes the *pure-line additive* intents.
-- **No `delete_scoped` public operation.** A scoped delete cannot be
-  a flat, grammar-free op the way `add_dops` is: a delete must
-  *locate existing structure*, and the three shapes have genuinely
-  different selectors — `drop_mk_directive` needs *any-value* `mk`
-  matching, `drop_target_block` selects a heredoc *by name* (the
-  agent can't retype the body), `drop_file` selects by install
-  *target* and unlinks a disk file. A single op would just be those
-  three selectors under a tagged-union trenchcoat — no real
-  collapse. The three Step 39 deletes already share one private
-  skeleton (`_delete_scoped`, _dops.py:605) and one scope resolver
-  (`_resolve_drop_scope`, _dops.py:567); that is where the
-  consolidation belongs and where it already lives. They **stay as
-  three public structured intents.**
-- **No `replace_scoped` public operation.** Folding `replace_in_patch`
-  into it was a category error: `replace_in_patch` does *not*
-  select-and-edit existing structure — it *appends* a
-  `text replace-once …` directive (a pure additive line; see the
-  fold below). That leaves `replace_in_dops_block` as the sole
-  member, so "`replace_scoped`" would be a no-op rename.
-  `replace_in_dops_block` **stays as-is** — it earns structure
-  (heredoc-body edit with block-name + occurrence selection +
-  no-op refusal) and is already scope-aware (42c).
+- **Hard**: Steps 38 (scope plumbing) and 39 (the scoped deletes).
+- **Replaces**: Step 40 (additive-grammar growth — `add_dops` would have
+  covered it, but the whole intent surface is gone now) and Step 41.
+  Step 39's deletes are deleted with the rest of the intent layer.
+- `docs/intent-surface-gaps.md` / `docs/intent-surface-gaps-plan.md`
+  retire entirely — they are written around the grow-the-grammar path.
 
-#### The "earns structure" test (from a full renderer audit)
+#### 42e — flow playbook (separable, can land before or after the cut)
 
-The first cut of this step assumed almost everything collapses. A
-renderer-by-renderer audit (`edit_intent/_dops.py`) corrected that:
-an intent **earns a bespoke structured surface when it does
-something the agent cannot safely express as a raw dops line** —
-specifically when it **touches disk beyond the line, computes a
-value, or selects-and-edits existing structure.** Everything else
-is just a line. The audit findings:
-
-- **`add_patch`** (_dops.py:208) — stages the patch file on disk +
-  `from_dupe` genpatch lookup + transactional rollback, *then*
-  appends `patch apply`. Two coupled actions. **Stays structured.**
-- **`add_file{resource}`** (_dops.py:315) — writes content to the
-  port tree + appends `file copy`. Two actions. **Stays structured.**
-  Its `materialize` variant is a pure line → **generic.** (`add_file`
-  splits internally.)
-- **`drop_patch`** (_dops.py:62) — *not* a pure scoped-line strip:
-  it deletes the referenced patch file on disk **and** handles two
-  substrate shapes (`patch apply` vs `file materialize`). A generic
-  `delete_scoped` would strip the line and orphan the patch bytes.
-  **Stays structured** — the delete-side twin of `add_patch`.
-- **`bump_portrevision`** (_dops.py:1032) — *latent* high-value: the
-  stub emits `"1"` today, but the correct shape reads the current
-  `PORTREVISION` and emits `n+1` — a derived value the agent gets
-  wrong by hand (it doesn't reliably know the current value).
-  Keeping it structured gives the increment logic a home. **Stays
-  structured.**
-- **`replace_in_dops_block`** (_dops.py:895) — surgical heredoc-body
-  edit with block-name + occurrence selection + no-op (find==replace)
-  refusal; scope-aware since 42c. Selects and edits existing
-  structure, so it cannot be expressed as a raw `add_dops` line.
-  **Stays structured** as itself (no `replace_scoped` rename).
-- **`replace_in_patch`** (_dops.py:35) — despite the "replace" name,
-  it does *not* select-and-edit existing structure: it **appends** a
-  `text replace-once file <t> from "X" to "Y"` directive via
-  `_append_overlay`. Append-only, no intent-time disk write. Its only
-  value over raw `add_dops` is an *early* port-subtree escape check on
-  `target` — and that escape is already caught at compose by the
-  engine's `_resolve_path` (`apply_common.py:47`,
-  `E_APPLY_INVALID_PATH`), so the renderer check is defense-in-depth /
-  fail-early ergonomics, not the security backstop. **Folds into
-  `add_dops`.**
-- **`drop_mk_directive` / `drop_file` / `drop_target_block`**
-  (_dops.py:686/743/842) — scoped deletes that locate existing
-  structure under `@any`/`@current` and refuse on 0/>1. Each has a
-  selector the others don't share (any-value `mk` match; install-target
-  match **plus a disk unlink** on `drop_file`; heredoc-by-name). They
-  already share one private skeleton (`_delete_scoped`, _dops.py:605).
-  **Stay structured** — a public `delete_scoped` would only re-expose
-  these three selectors as a tagged union (no real collapse).
-- **`change_makefile`** (_dops.py:415) — high-traffic; its schema
-  pins `key` to `^[A-Z_][A-Z0-9_]*$` *before* render. **Optional
-  holdout** — keep if the earlier, field-precise error is worth one
-  bespoke intent for the busiest directive; otherwise fold to
-  `add_dops`.
-
-#### Bucket assignment (post-audit)
-
-| Bucket | Intents |
-|---|---|
-| **stays structured (deletes — earn structure, already scope-aware)** | `drop_mk_directive`, `drop_file`, `drop_target_block` |
-| **stays structured (scoped edit / file-stagers / derived value)** | `add_patch`, `add_file{resource}`, `drop_patch`, `bump_portrevision`, `replace_in_dops_block` |
-| **stays structured (high-traffic holdout, reimplemented *on* `add_dops`)** | `change_makefile` |
-| **folds into `add_dops` (generic)** | `add_file{materialize}`, `replace_in_patch`, `change_condition`, `add_target_block`, `remove_file_at_compose`, `add_block`, `rename_target`, `edit_line` |
-
-So the honest collapse is **not "~10 → 3" and not "~10 → 1 add + 2
-scoped ops."** It is: **the unbounded *additive* per-directive
-grammar (Family B + the two append-only intents
-`add_file{materialize}` and `replace_in_patch`) collapses into one
-generic `add_dops`; everything that *selects existing structure* or
-*touches disk at intent-time* stays as the structured intents it
-already is.** The win that holds: **all of Family B folds into
-`add_dops` for free**, the per-directive coverage matrix stops
-growing, and the additive treadmill ends. The scoped/structured
-intents were never the treadmill — they earn structure (side
-effects, named-entity selection, smart increment, read-modify-write)
-and are left in place. Net public surface: **11 → 9** (only
-`replace_in_patch` and `add_file{materialize}` retire as distinct
-surfaces).
-
-#### Semantic guardrails that must relocate (not vanish)
-
-Two refusals live in renderers today but are not about the directive
-grammar; under the generic path they must move deliberately, or a
-proven guardrail is lost:
-
-- **`add_file`'s `Makefile.DragonFly` refusal** (_dops.py:301) —
-  blocks the self-induced half-migration deadlock. This is really a
-  **tier-1 substrate-invariant** check; relocate to the worker
-  boundary (`assess_dops`), not a renderer.
-- **The `@any`-first invariant** (_dops.py:1082) — already generic
-  in `_append_overlay`; `add_dops` inherits it free. Evidence *for*
-  the proposal: the shared append path already guards placement.
-- **Path-subtree escape on folded operands** (verified 2026-06-05) —
-  `check_dsl` does **no** path-safety: it accepts
-  `file materialize x -> ../../etc/passwd` and `text replace-once file
-  ../escape.c …` clean. The real backstop is the **engine apply
-  layer**: `exec_file_copy` / `exec_file_materialize` /
-  `exec_text_replace_once` / patch-apply all route operands through
-  `_resolve_path` (`apply_common.py:47`), which rejects absolute /
-  escaping paths with `E_APPLY_INVALID_PATH`. So folding the
-  *append-only* path-bearing intents (`add_file{materialize}`,
-  `replace_in_patch`) into `add_dops` is **safe** — neither writes
-  disk at intent-time, and the deferred operand is guarded at compose.
-  The only loss is an immediate intent refusal becomes a compose-time
-  `E_APPLY_INVALID_PATH` (the "weaker early validation on adds"
-  tradeoff this step already accepts). **Does not apply to**
-  `add_file{resource}` / `add_patch`: those `write_text` at
-  intent-time, so their `port_path()` guard must fire *then* — which
-  is exactly why they stay structured and are **not** folded.
-
-#### Why this scales: engine extensions are automatically compatible
-
-The intent layer does not carry a private copy of the grammar — it
-validates by round-tripping emitted text through the real engine
-parser (`dportsv3.engine.api.parse_dsl`, used as "the single source
-of truth" at `_dops.py:390,405`; `_matches_mk_drop` at
-`_dops.py:386` even matches on the parsed `MkOpNode`, not on text).
-That delegation is what makes the operation set fixed-size while the
-grammar grows:
-
-- **`add_dops` — fully automatic.** It emits a raw dops line/block
-  and validates via `parse_dsl`. The moment the engine learns a new
-  directive (`mk new-thing …`), `add_dops` can emit it with **zero
-  intent-layer change** — it never modeled the directive, it passes
-  text through and lets the engine accept or reject. This is the
-  Step 40 tax inverted: Family B is literally "the engine supports
-  `disable-if`/`replace-if`/`target set` but no intent emits them";
-  under Step 42 that backlog *empties itself* the day the engine
-  parses each form.
-- **The scoped deletes / `replace_in_dops_block` — automatic up to the
-  selector.** They must *locate* the target, and that match model is
-  itself engine-parsed, so a new *variant* of an existing directive
-  kind is locatable for free. A genuinely novel *structural shape*
-  costs a one-time touch to the relevant scoped intent — not
-  one-intent-per-directive. (These stay structured; not folded.)
-- **Structured holdouts** (`add_patch`, `bump_portrevision`,
-  `drop_patch`) don't track engine directives at all, so this
-  question doesn't apply to them.
-
-Net: the additive growth direction — where ~all of Family B's
-per-directive tax lives — becomes free; scoped edits cost an
-occasional one-time touch; nothing scales per-directive.
-
-#### Implementation shape: plain cutover, no migration
-
-There is **no migration step**, and not by choice of discipline —
-there's nothing to migrate. Intents are never replayed: `changes.diff`
-is the canonical replay/delivery payload (`verify_fix.py:200-212`
-states this explicitly — pre-slice-5 it replayed `intent_log.json`,
-that was retired). `intent_log.json` is a per-attempt **audit
-record** only; the tracker just renders whatever `type` strings are
-in it (`tracker/server.py:1266`), so historical bundles with the old
-catalog keep displaying and replaying fine regardless of the new
-surface. Therefore the work is a hard swap, not a deprecation cycle:
-
-- **Delete**: the per-directive schemas, `_dops` renderers, grammar
-  registrations, and `intent-*.md` playbooks that fold into the
-  three operations.
-- **Add**: `add_dops` + `delete_scoped` + `replace_scoped` (the last
-  two refactored *behind* the shipped Step 39 deletes), plus the
-  structured holdouts kept as-is.
-- **Rewrite once**: the `PATCH_INTENT_SYSTEM` intent list and the
-  relocated tier-1 `Makefile.DragonFly` guardrail.
-
-No `convert_to_dops`-style compat shim, no per-intent deprecation
-window. The coupling is wide (the 4-way schema/renderer/grammar/
-playbook symmetry per intent) but shallow — `validator.py` is
-already generic and the dispatcher is a flat table, so removal is
-deleting a row in each place, nothing computes against the *set*.
-
-#### Sub-steps (ordered for safe landing)
-
-**Status (2026-06-05, re-scoped): 42a/b/c shipped; 42d (the additive
-fold) + 42e (flow playbook) pending.** The structural win — the
-*additive* per-directive treadmill ending — landed in **42a**:
-`add_dops` validates by round-tripping through the engine parser, so
-any additive directive the grammar grows is emittable with zero
-intent-layer change. **42b and 42c landed only as internal plumbing,
-not public surface:** 42b extracted the private `_delete_scoped`
-skeleton *behind* the three Step 39 deletes (they stayed three public
-intents), and 42c made `replace_in_dops_block` scope-aware *as
-itself* (no public `replace_scoped`). That plumbing is correct and
-**stays** — the re-scope (below) confirms those scoped intents *should*
-remain public/structured, so 42b/c were the right shape, just
-mislabeled as steps toward ops that we now deliberately do **not**
-build. **42d is no longer won't-do:** the additive fold (the one real
-collapse) is back in scope. The earlier "42d won't-do" reasoning
-conflated the additive fold (worth doing — kills the Family B
-treadmill at the surface, not just internally) with the bogus
-scoped-op collapse (correctly dropped).
-
-Each of 42a–c was a self-contained unit that landed *additively*
-(removed nothing), so the live patch surface kept working throughout.
-**42d is the single irreversible cutover** — it deletes the two
-folded append-only intents and reroutes `change_makefile` internally.
-
-- **42a — `add_dops`** (the generic additive surface, lands first) —
-  **shipped — `f89145ff348`.**
-  New `schemas/add_dops.json` (fields: `dops` raw text, standard
-  `scope`), `AddDops` dataclass + registration, dispatcher entry,
-  and a renderer that wraps the existing `_append_overlay`
-  (`_dops.py:1048` — already does scope resolution, the @any-first
-  invariant at 1082, placement, write, rollback, diff). **The one
-  net-new piece**: the append path does *not* validate via the
-  engine today (renderers emit known-good lines), so `add_dops` must
-  run `check_dsl` (`engine/api.py:38`) on the *whole resulting
-  overlay* before commit and roll back on parser/semantic failure.
-  This is where the auto-compat-with-engine-growth property comes
-  from. **Second net-new piece**: harden `_ensure_target_scope`'s
-  section scan against heredoc bodies. That scan is line-based
-  (`_dops.py:1298-1304` — `stripped.startswith("target ")`) and its
-  own known-limitation note (1282-1286) flags that a `target ...`
-  line *inside* an `mk target set NAME <<TAG ... TAG` heredoc body
-  false-matches as a section header — declared "not reachable with
-  today's intent surface" because renderers control heredoc bodies.
-  `add_dops` is the first caller that can write *arbitrary* heredoc
-  bodies, so it makes that case reachable: a recipe line stripping to
-  `target X` would be mistaken for a real section directive and
-  misplace the next append. Fix: skip lines inside heredoc bodies
-  while scanning (track `<<TAG`/`TAG` open/close), or make the scan
-  AST-aware via the engine parser. One-time hardening of the
-  placement scanner, not per-directive work. (Note: *placing* a
-  heredoc being added is already fine — pass the whole block as a
-  single `statements` element with embedded newlines and it splices
-  in at one position as a unit; `rstrip()` doesn't touch internal
-  newlines.) Tests: parse (schema), render (raw line appended under
-  the right scope), heredoc block placed as a unit, **section scan
-  ignores a `target`-prefixed line inside an existing heredoc body**,
-  the new whole-overlay validation refusal (malformed dops rolls back
-  cleanly), round-trip (engine re-parses what we emitted), scope
-  placement (@any vs @current). Playbook + one-line prompt entry.
-  Removes nothing — `change_makefile`, `add_file{materialize}`, and
-  Family B all *could* now route through `add_dops`, but the bespoke
-  intents still exist.
-- **42b — `delete_scoped`** — **shipped — `079dc6a9215`.** Generalize the three shipped Step 39
-  deletes (`drop_mk_directive`, `drop_file`, `drop_target_block`)
-  behind one scoped-delete operation, reusing the existing
-  `_resolve_drop_scope` (`_dops.py:456`) and `_strip_scoped_line`
-  (`_dops.py:562`). Behavior-preserving refactor: the three deletes
-  become thin callers of `delete_scoped` (or the op subsumes them
-  outright). Tests mirror the Step 39 delete tests against the
-  unified op. `drop_file`'s coupled on-disk file deletion is
-  preserved (it's why `drop_file` "earns structure" on the delete
-  side — the op must keep that branch).
-- **42c — `replace_scoped`** — **shipped — `05ee2eddae4`.** Generalize `replace_in_dops_block`
-  (`_dops.py:793`) into the scoped-replace op, folding in **40d**'s
-  scope-blindness fix (add the `["@any","@current"]` filter before
-  the block-name match; refuse if name+scope still matches multiple
-  blocks). This is the only place a latent bug is fixed rather than
-  preserved. Tests: existing heredoc-body replace, plus the new
-  scope-disambiguation and multi-match-refusal cases.
-- **42d — delete the intent layer; the patch agent edits
-  `overlay.dops` directly in dops DSL** — **pending (the real
-  requirement, 2026-06-05).** Every per-directive intent goes. The
-  patch agent edits `overlay.dops` free-hand in dops syntax, exactly
-  as the convert agent already does. There is **no migration** — intents
-  are never replayed (`changes.diff` is the canonical payload), so this
-  is a straight deletion + tool swap.
-
-  - **Delete the whole intent surface:** all `intent-*` schemas,
-    dataclasses, dispatcher rows, `_dops.py` renderers, and
-    `intent-*.md` playbooks. `apply_intent` and the per-directive
-    grammar are removed.
-  - **Give the patch agent direct dops-edit tools** — read
-    `overlay.dops`, write/replace its text. Same capability convert
-    has. The agent writes dops lines/blocks itself following the DSL.
-  - **Guardrails are generic and grammar-free** (convert already runs
-    all three): `check_dsl` (engine parse + semantics) on every write,
-    rejecting on `E_*`; the `assess_dops` substrate gate at the worker
-    boundary; path-escape enforced at compose by `_resolve_path`
-    (`apply_common.py:47`). No per-directive renderer guards remain.
-  - **Patch-file bytes on disk:** the agent writes the `.diff` with the
-    same generic file-write capability, then writes `patch apply <t>`
-    into `overlay.dops` itself. The genpatch/extract production flow is
-    tooling, not an intent.
-  - **Prompt:** `PATCH_INTENT_SYSTEM` is replaced by direct-edit
-    guidance — write dops, validate, fix on `E_*` — mirroring the
-    convert agent's dops-authoring prompt.
-
-- **42e — extract flow-level content from intent playbooks into a
-  `flow-patch.md` playbook** (separable; can land before or after 42d). The
-  `extract→dupe→put_file→genpatch→add_patch` workflow, the "`dupe` is
-  only step 1" anti-pattern, and the failed-`add_patch` recovery path
-  are *flow*-level knowledge the agent needs *before* it picks an
-  intent — but today they live in `intent-add_patch.md` (and leak into
-  `intent-replace_in_patch.md`, `intent-add_dops.md`, and
-  `error-dragonfly-source-patches.md`), surfaced only on an
-  `intent_reference("add_patch")` call. Audit every `intent-*.md` for
-  flow-level content; move it into a new `flow-patch.md`
-  (frontmatter `triggers: {flows: [patch]}`, *no* `intents:` axis, so
-  it surfaces for the whole patch flow regardless of which intent is
-  loaded — confirmed by `playbooks._matches`: empty `intents` axis is
-  a wildcard). Leave each `intent-*.md` as purely its own fields +
-  failure modes. This both re-homes the mis-placed content *and*
-  trims the (lazily-surfaced, otherwise-justified) intent playbooks
-  toward their lean form. Cost: not free to move — the content has to
-  be deduped across the four current homes and rewritten as one
-  coherent flow narrative. No code change; playbook + selection-test
-  only. The structured holdouts' *field* docs are never touched.
-
-#### What this makes mutually exclusive
-
-- **Step 40 becomes won't-do.** Each Family B item (`change_condition`,
-  `add_target_block`, `remove_file_at_compose`, the 40e remainder) is
-  an additive directive that `add_dops` covers for free. The only
-  Family B item that survives is **40d** (scope-aware block edit) —
-  already **shipped as 42c** inside the existing `replace_in_dops_block`
-  intent (no separate `replace_scoped` op).
-- **Step 41 is subsumed.** 41's `edit_overlay` keeps `directive_kind`
-  as a parameter; Step 42 removes directive modeling from the
-  *additive* path entirely. 41a's "specific vs generic" gate becomes
-  the Step 40-vs-42 fork below.
-- **Step 39 stays as-is** (already shipped); its three deletes stay
-  as three public structured intents. 42b refactored them onto a
-  shared *private* skeleton (`_delete_scoped`) — that is the whole of
-  the "delete consolidation," and no public `delete_scoped` op is
-  built (a scoped delete can't be flat; see the design section).
-
-#### Costs (honest)
-
-- **Content guidance migrates.** The `intent-add_patch.md` /
-  `intent-add_file.md` playbooks carry workflow knowledge (the
-  `dupe`/`genpatch` flow, `from_dupe`). That moves to **flow**
-  playbooks (about the patch workflow) rather than per-intent
-  playbooks. Better home, but not free to move.
-- **Weaker early validation on adds.** A per-intent JSON schema
-  catches a malformed intent before render with a field-precise
-  error; `add_dops` leans on `validate_dops`'s parser errors
-  instead. Mostly equivalent (the parser already emits
-  line/col/`E_*`), but the failure surfaces one step later.
-- **The agent now writes a dops line, not a structured field set.**
-  This is exactly what convert does today, so it is proven viable —
-  but it does push a sliver of grammar knowledge back to the patch
-  agent (it reads the quickref). The bet is that an LLM handles that
-  fine for *appends* (where it never failed free-hand) while the
-  layer keeps the structure exactly where free-hand failed (scope).
-
-#### Decision gate (resolve before Step 40 or 41)
-
-This step and Step 40 are the two answers to one question: **should
-the intent surface track the grammar (40, grow bespoke intents) or
-the operation set (42, collapse to three operations + generic
-add)?** 41a was implicitly this gate, scheduled *after* Step 40.
-Step 42 argues to pull the gate *forward* — decide before paying
-Family B's per-directive tax, since adopting 42 makes most of
-Family B unnecessary. Pick one path; do not build Family B and then
-retire it.
-
-#### Dependencies
-
-- **Hard**: Steps 38 (scope plumbing) and 39 (the deletes that
-  prototype `delete_scoped`).
-- **Replaces**: Step 40 (except 40d, which folds in) and Step 41.
-
-> Not yet reflected in `docs/intent-surface-gaps-plan.md` — that
-> plan is written around the grow-the-grammar (Family B) path. If
-> Step 42 is chosen, the gap-plan and the coverage matrix both
-> retire rather than shrink.
+Flow-level patch knowledge (the `extract→dupe→put_file→genpatch`
+workflow, the "`dupe` is only step 1" anti-pattern, failed-patch
+recovery) lives today inside `intent-*.md` playbooks, surfaced only on
+an `intent_reference` call. With those playbooks deleted, that content
+must move into a `flow-patch.md` playbook (frontmatter
+`triggers: {flows: [patch]}`, no `intents:` axis, so it surfaces for the
+whole patch flow). Playbook + selection-test only, no code change.

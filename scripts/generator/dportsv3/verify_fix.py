@@ -134,12 +134,9 @@ def _default_apply_and_build(env_name: str, origin: str,
     helper keeps verify-fix consistent with the rest of the agent
     stack and inherits the production-tested resolution path.
 
-    Slice 5 retired the intent_log_path branch from the
-    orchestrator. The ``dportsv3 dev-env apply-and-build``
-    subcommand still accepts ``--intent-log`` for direct
-    operator use, but verify-fix always uses ``--diff`` with the
-    bundle's ``analysis/changes.diff`` (the branch-vs-base
-    canonical artifact).
+    Verify-fix always uses ``--diff`` with the bundle's
+    ``analysis/changes.diff`` (the branch-vs-base canonical
+    artifact).
     """
     from dportsv3.agent.worker import _run_dportsv3  # noqa: PLC0415
 
@@ -197,19 +194,9 @@ def run_verify_fix(
             f"bundle {bundle_id!r} has no origin field; cannot verify"
         )
 
-    # Step 30 slice 5: changes.diff is the canonical replay payload.
-    # Pre-slice-5 this code preferred intent_log.json (drift-free
-    # via translator replay) and fell back to changes.diff for
-    # pre-Step-25 bundles. That model broke on converted bundles —
-    # intent_log's baseline_commit references the convert commit on
-    # bundle/<id>, which slice 4 drops at patch end; the resulting
-    # mismatch refused replay. changes.diff (now base-relative per
-    # slice 5) carries the full convert+patch chain and replays
-    # cleanly against a fresh checkout off base.
-    #
-    # intent_log.json stays in the bundle as the per-intent audit
-    # trail (what the agent emitted, attempt-by-attempt). It just
-    # isn't the replay payload anymore.
+    # changes.diff is the canonical replay payload: base-relative,
+    # carrying the full convert+patch chain, so it replays cleanly
+    # against a fresh checkout off base.
     diff_url = (
         f"{base}/api/bundles/{urllib.parse.quote(bundle_id)}"
         f"/artifacts/{urllib.parse.quote(DIFF_RELPATH, safe='/')}"

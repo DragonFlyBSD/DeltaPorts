@@ -131,17 +131,6 @@ class PatchEventDispatcher:
                 duration_ms=ev.get("duration_ms"),
                 extra=extra,
             )
-            # Step 25f: rich per-intent telemetry. Fires alongside
-            # the generic tool:apply_intent row whenever the agent
-            # calls apply_intent. The extra payload follows the
-            # design §13.5 contract: type + target + ok +
-            # substrate_diff_sha256 + bytes; inline the diff iff
-            # it's ≤ 4 KB so the operator can read it in the
-            # activity row without opening intent_log.json. Large
-            # diffs are sha-only here and live in full in the
-            # bundle artifact.
-            if ev.get("tool") == "apply_intent" and isinstance(res, dict):
-                self._emit_intent_applied(args, res, ev)
         elif et == "attempt_end":
             self.activity_log(
                 self.queue_root, "attempt_end",
@@ -166,67 +155,6 @@ class PatchEventDispatcher:
                 job_id=self.job_id,
                 extra={k: v for k, v in ev.items() if k != "type"},
             )
-
-    # Step 25f telemetry helper. Inlined here (rather than as a
-    # free function) because it shares self.activity_log + self.
-    # queue_root + self.job_id and the rate is bounded by intent
-    # count per attempt — no perf reason to factor out.
-    _INTENT_INLINE_DIFF_LIMIT = 4096  # design §13.5
-
-    def _emit_intent_applied(
-        self, args: dict, res: dict, ev: dict,
-    ) -> None:
-        import hashlib  # noqa: PLC0415
-        intent = (args.get("intent") or {}) if isinstance(args, dict) else {}
-        substrate_diff = res.get("substrate_diff") or ""
-        diff_bytes = len(substrate_diff.encode("utf-8"))
-        sha = hashlib.sha256(substrate_diff.encode("utf-8")).hexdigest() \
-            if substrate_diff else ""
-        # Find the natural "target" field on the intent — varies
-        # by type (target / dest / path / nothing for
-        # bump_portrevision). Operator wants ONE name in the
-        # summary; "target" is the conventional one.
-        intent_target = (
-            intent.get("target")
-            or intent.get("dest")
-            or intent.get("path")
-            or ""
-        )
-        intent_type = intent.get("type") or res.get("intent_type") or ""
-        ok = bool(res.get("ok"))
-        extra = {
-            "intent_type": intent_type,
-            "intent_target": intent_target,
-            "ok": ok,
-            "mode": res.get("mode"),
-            "substrate_diff_sha256": sha,
-            "substrate_diff_bytes": diff_bytes,
-            "attempt": ev.get("attempt"),
-            "turn": ev.get("turn"),
-        }
-        if diff_bytes <= self._INTENT_INLINE_DIFF_LIMIT and substrate_diff:
-            extra["substrate_diff"] = substrate_diff
-        # Surface failure-mode flags so the operator can react
-        # without spelunking patch.md.
-        for flag in ("blocked_by", "intent_log_full", "error",
-                     "invariant_violations", "unmigrated_artifacts",
-                     "transaction_mode", "current_mode"):
-            if flag in res:
-                extra[flag] = res[flag]
-        verdict = "OK" if ok else "FAIL"
-        summary = (
-            f"intent {intent_type} {verdict}"
-            + (f" target={intent_target}" if intent_target else "")
-            + (f" ({diff_bytes}B diff)" if diff_bytes else "")
-        )
-        try:
-            self.activity_log(
-                self.queue_root, "intent_applied", summary,
-                job_id=self.job_id, extra=extra,
-            )
-        except Exception:
-            # Never let telemetry failure derail a tool call.
-            pass
 
 
 @dataclass
@@ -742,11 +670,6 @@ class PatchServices:
     load_port_history: Callable[..., Any]
     write_manual_handoff: Callable[..., Any] | None = None
     write_proposed_fix: Callable[..., Any] | None = None
-    # Step 25e: drain the worker-side intent log into the bundle as
-    # analysis/intent_log.json. Optional so older PatchServices
-    # constructions don't need updating; the runner injects the
-    # harness implementation.
-    write_intent_log: Callable[..., Any] | None = None
 
 
 @dataclass
@@ -911,62 +834,55 @@ class PatchAttemptStep:
             extra={"agent": "dports-patch", "model": model, "tier": tier.name},
         )
 
-        # Step 25d-1: pre-job clean assertion (intent-flow gate).
-        # When DP_HARNESS_PATCH_USE_INTENT is on, refuse to start a
-        # patch job if ports/<origin>/ has leftover edits from a
-        # prior run. Replay/diff capture both depend on a clean
-        # baseline; starting from a dirty state silently mixes
-        # accumulated state into the bundle's record. Operator
-        # escape: `dportsv3 dev-env reset-port ENV ORIGIN`.
-        from dportsv3.agent import tools as _tools  # noqa: PLC0415
-        intent_flow = _tools.patch_use_intent_enabled()
-        if intent_flow:
-            from dportsv3.agent import worker as _worker  # noqa: PLC0415
-            # Review #3 fix: design §5.1 makes the pre-job clean
-            # check a HARD rule — "if not clean, BEGIN aborts". A
-            # failure of the check itself (chroot not mounted, env
-            # gone, subprocess raised) means we DON'T KNOW if the
-            # port is clean, so the safe answer is refuse, not
-            # proceed. The prior shape swallowed the exception and
-            # set clean={ok: True}, which let patch jobs start
-            # against unknown-state envs.
-            try:
-                clean = _worker.assert_port_clean(env, origin)
-            except Exception as exc:
-                msg = (
-                    f"patch refused: assert_port_clean({origin}) "
-                    f"raised — env state is unknown so we can't "
-                    f"safely start a patch transaction. Resolve "
-                    f"the env (verify chroot is mounted, run "
-                    f"`dportsv3 dev-env status {env}`) and retry. "
-                    f"Underlying error: {str(exc)[:300]}"
-                )
-                services.activity_log(
-                    queue_root, "patch_preflight_error",
-                    msg, job_id=ctx.job_id,
-                    extra={"origin": origin, "error": str(exc)[:500]},
-                )
-                services.write_error_note(job_path, msg)
-                return _err(msg, services, job_path,
-                            JobEvent.PATCH_GAVE_UP)
-            if not clean.get("ok"):
-                dirty = clean.get("dirty_paths") or []
-                msg = (
-                    f"patch refused: ports/{origin}/ has "
-                    f"{len(dirty)} uncommitted change(s) from a "
-                    f"prior run; resolve before starting a new "
-                    f"patch transaction. Run "
-                    f"`dportsv3 dev-env reset-port {env} {origin}` "
-                    f"or `git stash` in the env."
-                )
-                services.activity_log(
-                    queue_root, "patch_preflight_dirty",
-                    msg, job_id=ctx.job_id,
-                    extra={"origin": origin, "dirty_paths": dirty[:20]},
-                )
-                services.write_error_note(job_path, msg)
-                return _err(msg, services, job_path,
-                            JobEvent.PATCH_GAVE_UP)
+        # Pre-job clean assertion: refuse to start a patch job if
+        # ports/<origin>/ has leftover edits from a prior run.
+        # Diff capture depends on a clean baseline; starting from a
+        # dirty state silently mixes accumulated state into the
+        # bundle's changes.diff. Operator escape:
+        # `dportsv3 dev-env reset-port ENV ORIGIN`.
+        from dportsv3.agent import worker as _worker  # noqa: PLC0415
+        # design §5.1 makes the pre-job clean check a HARD rule —
+        # "if not clean, BEGIN aborts". A failure of the check
+        # itself (chroot not mounted, env gone, subprocess raised)
+        # means we DON'T KNOW if the port is clean, so the safe
+        # answer is refuse, not proceed.
+        try:
+            clean = _worker.assert_port_clean(env, origin)
+        except Exception as exc:
+            msg = (
+                f"patch refused: assert_port_clean({origin}) "
+                f"raised — env state is unknown so we can't "
+                f"safely start a patch transaction. Resolve "
+                f"the env (verify chroot is mounted, run "
+                f"`dportsv3 dev-env status {env}`) and retry. "
+                f"Underlying error: {str(exc)[:300]}"
+            )
+            services.activity_log(
+                queue_root, "patch_preflight_error",
+                msg, job_id=ctx.job_id,
+                extra={"origin": origin, "error": str(exc)[:500]},
+            )
+            services.write_error_note(job_path, msg)
+            return _err(msg, services, job_path,
+                        JobEvent.PATCH_GAVE_UP)
+        if not clean.get("ok"):
+            dirty = clean.get("dirty_paths") or []
+            msg = (
+                f"patch refused: ports/{origin}/ has "
+                f"{len(dirty)} uncommitted change(s) from a "
+                f"prior run; resolve before starting a new "
+                f"patch transaction. Run "
+                f"`dportsv3 dev-env reset-port {env} {origin}` "
+                f"or `git stash` in the env."
+            )
+            services.activity_log(
+                queue_root, "patch_preflight_dirty",
+                msg, job_id=ctx.job_id,
+                extra={"origin": origin, "dirty_paths": dirty[:20]},
+            )
+            services.write_error_note(job_path, msg)
+            return _err(msg, services, job_path,
+                        JobEvent.PATCH_GAVE_UP)
 
         dispatcher = PatchEventDispatcher(
             queue_root=queue_root,
@@ -1033,47 +949,38 @@ class PatchAttemptStep:
         # canonical artifact for delivery + verify + operator
         # recipe.
         services.write_changes_diff(ctx.bundle_dir, bundle_id, env, origin)
-        if services.write_intent_log is not None:
-            # Step 25e: drain the per-(env, origin) intent log into
-            # analysis/intent_log.json. No-op when apply_intent
-            # wasn't used this run (legacy patch-agent surface).
-            services.write_intent_log(
-                ctx.bundle_dir, bundle_id, env, origin,
-            )
         services.activity_log(
             queue_root, "write_output",
             f"Wrote harness patch outputs for {origin}",
             job_id=ctx.job_id,
         )
 
-        # Step 25d-1: post-job workspace reset (intent-flow gate).
-        # The intent log is the canonical record; the env's port
-        # subtree no longer needs to carry the agent's edits. Reset
-        # to git HEAD so the next patch job (or operator inspection)
-        # starts from a clean baseline. Mirrors apply-and-build's
-        # post-build cleanup. Best-effort: a reset failure surfaces
-        # as an activity row but doesn't affect the patch outcome.
-        if intent_flow:
-            from dportsv3.agent import worker as _worker  # noqa: PLC0415
-            try:
-                reset = _worker.reset_port(env, origin)
-            except Exception as exc:
-                reset = {"ok": False, "error": str(exc)[:200]}
-            if not reset.get("ok"):
-                services.activity_log(
-                    queue_root, "patch_post_reset_failed",
-                    f"reset_port failed for {origin} after patch "
-                    f"({reset.get('error', 'unknown')[:200]}); env "
-                    f"may have leftover edits — next patch will "
-                    f"refuse via preflight",
-                    job_id=ctx.job_id,
-                )
-            else:
-                services.activity_log(
-                    queue_root, "patch_post_reset",
-                    f"reset ports/{origin}/ to baseline after patch",
-                    job_id=ctx.job_id,
-                )
+        # Post-job workspace reset. changes.diff is the canonical
+        # record; the env's port subtree no longer needs to carry
+        # the agent's edits. Reset to git HEAD so the next patch job
+        # (or operator inspection) starts from a clean baseline that
+        # the pre-job preflight will accept. Best-effort: a reset
+        # failure surfaces as an activity row but doesn't affect the
+        # patch outcome.
+        try:
+            reset = _worker.reset_port(env, origin)
+        except Exception as exc:
+            reset = {"ok": False, "error": str(exc)[:200]}
+        if not reset.get("ok"):
+            services.activity_log(
+                queue_root, "patch_post_reset_failed",
+                f"reset_port failed for {origin} after patch "
+                f"({reset.get('error', 'unknown')[:200]}); env "
+                f"may have leftover edits — next patch will "
+                f"refuse via preflight",
+                job_id=ctx.job_id,
+            )
+        else:
+            services.activity_log(
+                queue_root, "patch_post_reset",
+                f"reset ports/{origin}/ to baseline after patch",
+                job_id=ctx.job_id,
+            )
 
         # If the cached health probe shows broken, the env poisoned
         # the result — ENV_BROKEN overrides whatever the LLM said.
@@ -1103,7 +1010,7 @@ class PatchAttemptStep:
             # Step 37 #4-fix: clean up the framework diff files
             # whose verdicts resolved to regenerated/dropped — they
             # were dead weight once the agent landed alternate
-            # intents (or proved they weren't needed). Runs only on
+            # edits (or proved they weren't needed). Runs only on
             # the rebuild_ok=true path because failure-path drops
             # are speculative.
             if verdicts:

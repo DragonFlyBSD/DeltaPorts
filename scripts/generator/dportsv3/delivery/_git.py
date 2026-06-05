@@ -235,8 +235,8 @@ def apply_diff(clone_dir: Path, diff_text: str) -> None:
     applies, including registering newly-created files. Without
     it the downstream ``commit_diff`` would only catch
     modifications to already-tracked files via ``git add -u`` and
-    silently drop NEW files (e.g. dragonfly/patch-* created by an
-    add_patch intent).
+    silently drop NEW files (e.g. dragonfly/patch-* created by
+    the agent's edits).
 
     Raises ``GitApplyConflict`` if the diff doesn't apply cleanly
     (probably the operator's clone has drifted from the bundle's
@@ -291,7 +291,7 @@ def commit_diff(
 
     Pre-11d-3-fix this ran ``git add -u`` to stage tracked-file
     modifications, but that pattern silently dropped new files
-    (the load-bearing case for add_patch / add_file intents).
+    (the load-bearing case for newly-created patch/overlay files).
     Now relies on apply_diff's ``--index`` to populate the index
     correctly, so add isn't needed.
     """

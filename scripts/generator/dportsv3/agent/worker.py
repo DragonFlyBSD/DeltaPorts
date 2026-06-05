@@ -190,56 +190,44 @@ def _sha256(data: bytes) -> str:
 # -----------------------------------------------------------------------------
 
 
-def _reject_intent_path_put_file(chroot_path: str) -> dict | None:
-    """Step 25d-2: when the intent gate is on, refuse PATCH-agent
-    ``put_file`` writes to ``/work/DeltaPorts/ports/<origin>/`` —
-    those edits belong in the intent log, not in a bypass write.
+def _reject_dragonfly_on_dops_port(env: str, chroot_path: str) -> dict | None:
+    """Refuse a ``put_file`` that creates ``Makefile.DragonFly*`` in a
+    port that already carries an ``overlay.dops``.
 
-    The agent's prompt (``PATCH_INTENT_SYSTEM``) says exactly this,
-    but agents drift. Enforcing at the substrate boundary turns
-    "the agent ignored the prompt" into "the agent saw an error
-    result and retried correctly". The WRKSRC case
-    (``/work/obj/<origin>/work/...``, used by the dupe/genpatch
-    flow) is unaffected — only port-subtree writes are gated.
+    A Makefile.DragonFly written next to an overlay.dops produces the
+    half-migrated state (compat + dops together) that ``assess_dops``
+    classifies as inconsistent — the port then jams every later compose.
+    The patch agent edits overlay.dops free-hand, so the guard lives
+    at the write boundary. The fix is to express the
+    Makefile.DragonFly-shaped variable edits as ``mk`` directives in
+    overlay.dops instead.
 
-    **Convert-agent calls are NOT gated.** The convert agent's
-    whole job is to write ``ports/<origin>/overlay.dops`` directly;
-    blocking it would break ``needs_judgment`` conversions. The
-    dispatcher sets ``tools.active_agent_flow()`` to ``"convert"``
-    for convert calls and ``"patch"`` for patch calls.
-
-    Off when the gate is off (legacy flow needs port-subtree
-    put_file). Returns None when the path is allowed.
+    Returns None (allowed) when the path is not a Makefile.DragonFly in
+    a port subtree, or when no overlay.dops exists yet for that port.
     """
-    # Convert agent has a legitimate need to write the overlay.
-    # tools is the source-of-truth for the active flow; if the
-    # import cycle bites, the contextvar default is "patch" which
-    # is the conservative answer (guard fires).
-    from dportsv3.agent import tools as _tools  # noqa: PLC0415
-    if _tools.active_agent_flow() == "convert":
-        return None
-    # Gate off → no restriction. Read the env directly to dodge
-    # any further import-cycle risk; matches the truthy convention
-    # in tools.patch_use_intent_enabled.
-    flag = (os.environ.get("DP_HARNESS_PATCH_USE_INTENT") or "").lower()
-    if flag not in ("1", "true", "yes", "on"):
-        return None
     if not chroot_path.startswith("/work/DeltaPorts/ports/"):
+        return None
+    head, _, basename = chroot_path.rpartition("/")
+    if not basename.startswith("Makefile.DragonFly"):
+        return None
+    sibling = f"{head}/overlay.dops"
+    try:
+        overlay_host = _resolve_chroot_path(env_paths(env), sibling)
+    except Exception:  # noqa: BLE001 — env not resolvable → don't block
+        return None
+    if not overlay_host.is_file():
         return None
     return {
         "ok": False,
         "error": (
-            f"put_file rejected: {chroot_path!r} is under "
-            f"/work/DeltaPorts/ports/<origin>/. With the intent "
-            f"flow enabled, port-subtree edits must go through "
-            f"apply_intent so they land in the intent log "
-            f"(analysis/intent_log.json). Use the appropriate "
-            f"intent type: replace_in_patch / drop_patch / "
-            f"add_patch / add_file / change_makefile. Call "
-            f"intent_reference(<type>) for the schema."
+            f"put_file rejected: creating {chroot_path!r} in a port that "
+            f"already has overlay.dops would produce a half-migrated "
+            f"state (Makefile.DragonFly + overlay.dops together) that "
+            f"assess_dops rejects. Express the Makefile.DragonFly edit "
+            f"as `mk` directives in overlay.dops instead."
         ),
         "path": chroot_path,
-        "blocked_by": "intent_gate_port_subtree_write",
+        "blocked_by": "dragonfly_on_dops_port",
     }
 
 
@@ -580,7 +568,7 @@ def put_file(
     refused = _reject_dports_write(path)
     if refused is not None:
         return refused
-    refused = _reject_intent_path_put_file(path)
+    refused = _reject_dragonfly_on_dops_port(env, path)
     if refused is not None:
         return refused
     refused = _reject_orphan_dops_write(path)
@@ -651,15 +639,15 @@ def _git_diff_against_base(
     Combines committed deltas on the current bundle branch
     (convert's overlay.dops creation, files-removed deletions,
     etc.) with the agent's uncommitted working-tree edits (patch
-    agent's add_patch / change_makefile output). ``--intent-to-add``
+    agent's overlay.dops edits). ``--intent-to-add``
     handles freshly-created files; the trailing reset returns the
     index to its prior state.
 
     Use case: ``analysis/delivery.diff`` — the artifact the
     Accept-delivery path sends to the configured provider. Unlike
-    ``changes.diff`` (HEAD-relative, audit + intent-replay focus),
-    this is "everything since upstream" and is therefore the
-    correct shape for an upstream PR.
+    ``changes.diff`` (HEAD-relative, audit focus), this is
+    "everything since upstream" and is therefore the correct
+    shape for an upstream PR.
     """
     repo = str(repo_dir)
     subprocess.run(
@@ -944,9 +932,7 @@ WRKDIRPREFIX = "/work/obj"
 
 # Per-(env, origin) WRKSRC cache, populated by `extract()` and read
 # by `genpatch()` (to invoke the script from the right cwd with a
-# WRKSRC-relative arg) and `apply_intent` (to pass into the
-# Translator so `_resolve_from_dupe` knows where to look for the
-# patch file genpatch produced).
+# WRKSRC-relative arg).
 #
 # Stays at module scope because the worker is otherwise stateless;
 # entries live for the runner process's lifetime. A worker restart
@@ -961,27 +947,24 @@ def peek_wrksrc(env: str, origin: str) -> str | None:
     """Non-destructive read of the cached WRKSRC for (env, origin).
 
     Returns None if extract hasn't run yet for this pair (cache miss
-    is the legacy fallback signal for genpatch and apply_intent).
+    is the legacy fallback signal for genpatch).
     """
     return _WRKSRC_CACHE.get((env, origin))
 
 
 # Step 38a: per-env compose-target cache. The runner populates this
 # at attempt start (process_patch_job / process_convert_job) from
-# job["target"] so `worker.apply_intent` can thread it down to the
-# Translator without changing the LLM-visible tool signature
-# (apply_intent stays `(origin, intent)` from the agent's view). Empty
-# value (None or "") is the @any default, matching pre-38a behavior.
+# job["target"] so `get_effective_overlay` can scope-filter the
+# overlay against the env's build target. Empty value (None or "")
+# is the @any default.
 _TARGET_CACHE: dict[str, str | None] = {}
 
 
 def set_env_target(env: str, target: str | None) -> None:
-    """Record the env's compose target for downstream apply_intent calls.
+    """Record the env's compose target for downstream target-scoped
+    reads (``get_effective_overlay``).
 
-    Called by the runner at attempt start. Subsequent
-    ``apply_intent(env, ...)`` invocations read this value and thread
-    it into the Translator, which Step 38b's renderers consume to
-    emit per-target-scoped statements. Pre-38b: stored but unused.
+    Called by the runner at attempt start.
     """
     _TARGET_CACHE[env] = target
 
@@ -1237,115 +1220,6 @@ def classify_dops(env: str, origin: str) -> str:
     but file checks happen against the env's view, not the host clone.
     """
     return assess_dops(env, origin).state
-
-
-# Map from classify_dops state → translator mode.
-#
-# Step C: the patch agent operates ONLY on dops-converted substrate.
-# Non-converted states (auto_safe_pending, needs_judgment) are
-# handled upstream by the triage→convert deferral; if a port somehow
-# reaches apply_intent in those states, the substrate is in an
-# unexpected shape and the agent must escalate rather than fall
-# back to compat-mode editing (the prior behavior corrupted overlays
-# on convert-produced heredocs).
-#
-# `not_in_scope` is the special case: the port has no overlay yet,
-# but creation intents (see `_CREATION_INTENTS` below) can bootstrap
-# one as a byproduct of their first write — `_append_overlay`
-# synthesizes `_initial_overlay_header` if the file is absent.
-# Modification intents on `not_in_scope` still refuse because they
-# presuppose existing substrate to edit.
-_STATE_TO_MODE: dict[str, str] = {
-    "converted": "dops",
-}
-
-
-# Intents that create new substrate. These are allowed on
-# `not_in_scope` ports because their substrate writes naturally
-# bootstrap overlay.dops with a minimal header via
-# `_append_overlay`'s `_initial_overlay_header` fallback. After the
-# first creation intent lands, the port re-classifies to dops-mode
-# and subsequent intents (including modification ones) work
-# normally on the converted substrate.
-_CREATION_INTENTS: frozenset[str] = frozenset({
-    "add_patch",
-    "add_file",
-    "change_makefile",
-    "bump_portrevision",
-})
-
-
-# Per-(env, origin) intent log accumulator (Step 25e).
-#
-# Stays at module scope because the worker is stateless otherwise;
-# the runner is the only caller and drains the log at PATCH_OK /
-# PATCH_GAVE_UP via `drain_intent_log`. A runner restart between
-# apply_intent calls and the drain forfeits the log — that matches
-# the existing convention for in-flight state (job is reaped on
-# restart anyway).
-_INTENT_LOGS: dict[tuple[str, str], "object"] = {}
-
-
-def _intent_log_key(env: str, origin: str) -> tuple[str, str]:
-    return (env, origin)
-
-
-def _ensure_intent_log(env: str, origin: str, mode: str):
-    from dportsv3.agent.edit_intent import IntentLog  # noqa: PLC0415
-    key = _intent_log_key(env, origin)
-    log = _INTENT_LOGS.get(key)
-    if log is None:
-        log = IntentLog(
-            origin=origin,
-            target=os.environ.get("DPORTSV3_TRACKER_TARGET", ""),
-            mode_at_apply=mode,
-            baseline_commit=_resolve_baseline_commit(env),
-        )
-        _INTENT_LOGS[key] = log
-    return log
-
-
-def _resolve_baseline_commit(env: str) -> str:
-    """Resolve HEAD of the env's DeltaPorts checkout via dev-env exec.
-
-    Best-effort: failure returns empty string. The intent log stores
-    this so verify-fix can refuse replay against a drifted baseline
-    (design §8 step 2). Cheap to compute once per job (cached in
-    IntentLog).
-    """
-    try:
-        p = _exec(env, "/bin/sh", "-c", "git -C /work/DeltaPorts rev-parse HEAD",
-                  cwd="/work/DeltaPorts")
-        if p.returncode == 0:
-            return (p.stdout or "").strip()
-    except Exception:
-        pass
-    return ""
-
-
-def drain_intent_log(env: str, origin: str):
-    """Return + clear the in-memory intent log for one (env, origin).
-
-    Runner calls this at PATCH_OK / PATCH_GAVE_UP to serialize the
-    log into the bundle as ``analysis/intent_log.json``. Returns
-    None if no apply_intent calls landed for this pair this run.
-    """
-    key = _intent_log_key(env, origin)
-    return _INTENT_LOGS.pop(key, None)
-
-
-def peek_intent_log(env: str, origin: str):
-    """Non-destructive read of the in-memory intent log for one
-    (env, origin). Returns the live IntentLog object (mutations
-    visible to subsequent reads) or None if no apply_intent calls
-    have landed yet.
-
-    Used between patch attempts to summarize prior-attempt intents
-    into the failure-context message so the agent doesn't blindly
-    re-emit an intent that already failed in attempt 1 (the
-    attempt-boundary amnesia symptom observed on databases/redis).
-    """
-    return _INTENT_LOGS.get(_intent_log_key(env, origin))
 
 
 import shlex  # noqa: E402 — needed by assert_port_clean / reset_port
@@ -1914,390 +1788,6 @@ def commit_port_changes(
     }
 
 
-def apply_intent(
-    env: str, origin: str, intent: dict | str,
-) -> dict:
-    """Apply one edit intent (Step 25c).
-
-    Mode is resolved per-call from the current substrate state via
-    :func:`assess_dops`. The Translator does the actual work; this
-    wrapper produces a tool-result-shaped dict for the LLM.
-
-    The caller (typically the patch agent's tool loop) passes the
-    raw intent dict; ``parse_intent`` validates it against the
-    JSON schema, then ``Translator.apply`` renders + applies it
-    against the env's writable overlay.
-
-    Three guard layers run before the Translator is constructed:
-
-    1. **Substrate invariant.** ``assess_dops.action ==
-       'surface_invariant'`` means the env's port subtree is in a
-       half-migrated state (overlay.dops + Makefile.DragonFly).
-       Refused; operator must resolve.
-    2. **Valid mode.** ``not_in_scope`` / ``stale`` ports can't be
-       intent targets — the patch agent should escalate rather
-       than scaffold a port via intents.
-    3. **Transaction mode-drift.** Once an IntentLog exists for
-       this (env, origin), subsequent calls must resolve to the
-       same mode the log was started with. A stray write in one
-       intent that flips the substrate state would otherwise
-       silently mix flavors in a single log; the guard refuses
-       and points the operator at ``dportsv3 dev-env reset-port``.
-
-    A fresh Translator is built per call. The Translator itself
-    is stateless across calls; the IntentLog accumulator is the
-    only cross-call state (per-(env, origin), drained at PATCH_OK /
-    PATCH_GAVE_UP by the runner).
-    """
-    from dportsv3.agent.edit_intent import Translator  # noqa: PLC0415
-
-    paths = env_paths(env)
-    workspace = paths.deltaports
-    if not workspace.is_dir():
-        return _exec_result(
-            1, "", f"workspace not found: {workspace}",
-            error="env not provisioned for apply_intent",
-        )
-
-    # Resolve mode from current substrate via the shared overlay
-    # assessment (the same abstraction surface_invariant lives in).
-    # We get more than just the state string: assessment.action
-    # tells us if the substrate itself is already in a half-
-    # migrated state (overlay.dops + Makefile.DragonFly together),
-    # in which case we refuse to start any intent transaction —
-    # the operator needs to resolve the corruption first.
-    assessment = assess_dops(env, origin)
-    state = assessment.state
-    if assessment.action == "surface_invariant":
-        return {
-            "ok": False,
-            "error": (
-                f"apply_intent refused: substrate is in a half-migrated "
-                f"state for {origin}: {assessment.invariant_violations!r}. "
-                f"Resolve the legacy artifacts before applying intents."
-            ),
-            "blocked_by": "substrate_invariant",
-            "invariant_violations": list(assessment.invariant_violations),
-            "unmigrated_artifacts": list(assessment.unmigrated_artifacts),
-        }
-    mode = _STATE_TO_MODE.get(state)
-    if mode is None:
-        # Extract the intent type once for the not_in_scope bootstrap
-        # decision below. Intents arrive as dict (typical) or str
-        # (rare JSON-string form from older callers); both are
-        # normalized later, but for the gate we just need the type.
-        if isinstance(intent, dict):
-            intent_type = str(intent.get("type") or "")
-        else:
-            try:
-                import json as _json  # noqa: PLC0415
-                intent_type = str(_json.loads(intent).get("type") or "")
-            except Exception:
-                intent_type = ""
-
-        # Bootstrap-on-first-write: `not_in_scope` ports have no
-        # overlay yet, but creation intents naturally produce one
-        # via `_append_overlay`'s header fallback. Let them through
-        # in dops mode so the first patch / file / makefile change
-        # also scaffolds the dragonfly substrate.
-        if state == "not_in_scope" and intent_type in _CREATION_INTENTS:
-            mode = "dops"
-        else:
-            # Two distinct refusal shapes so the agent's escalation
-            # decision is informed by what's actually missing:
-            # - not_in_scope + modification intent: there's nothing
-            #   to modify; pointer to the creation intents.
-            # - auto_safe_pending / needs_judgment / stale: substrate
-            #   needs convert first (triage routing bug if we got here).
-            if state == "not_in_scope":
-                error = (
-                    f"apply_intent refused: intent {intent_type!r} "
-                    f"expects existing dops substrate (a "
-                    f"dragonfly/patch-* to modify, an `mk target` "
-                    f"heredoc block, etc.) but port {origin} is "
-                    f"not_in_scope — no overlay exists yet. Use "
-                    f"add_patch / add_file / change_makefile / "
-                    f"bump_portrevision to scaffold the overlay "
-                    f"first, or escalate MANUAL."
-                )
-            else:
-                error = (
-                    f"apply_intent refused: overlay state {state!r} "
-                    f"for {origin} is not a valid intent target — "
-                    f"the patch agent operates only on dops-"
-                    f"converted substrate. If state is "
-                    f"auto_safe_pending or needs_judgment, triage "
-                    f"should have routed this through convert "
-                    f"first. Escalate to MANUAL — no fallback to "
-                    f"compat-mode editing exists."
-                )
-            return {
-                "ok": False,
-                "error": error,
-                "blocked_by": f"state:{state}",
-            }
-
-    # Look up the IntentLog for this (env, origin) FIRST so we can
-    # apply the mode-drift guard before mutating any substrate.
-    # The log's mode_at_apply is snapshotted at construction (the
-    # first apply_intent call for this transaction); subsequent
-    # calls that resolve to a different mode are refused. Without
-    # this guard a single transaction could mix compat + dops
-    # writes if the agent's first compat intent caused enough
-    # substrate change to flip classify_dops between calls (e.g.
-    # writing a stray overlay.dops would make the next call see
-    # state='converted' and run in dops mode).
-    existing_log = _INTENT_LOGS.get(_intent_log_key(env, origin))
-    if existing_log is not None and existing_log.mode_at_apply != mode:
-        return {
-            "ok": False,
-            "error": (
-                f"apply_intent refused: transaction mode-drift. "
-                f"This (env, origin) transaction started in "
-                f"{existing_log.mode_at_apply!r} mode but the current "
-                f"substrate now resolves to {mode!r}. Reset the port "
-                f"subtree (`dportsv3 dev-env reset-port ENV ORIGIN`) "
-                f"to start a fresh transaction."
-            ),
-            "blocked_by": "transaction_mode_drift",
-            "transaction_mode": existing_log.mode_at_apply,
-            "current_mode": mode,
-        }
-
-    # Step 25g review #2 fix: keep substrate and log in sync. The
-    # cap check runs in two phases so we catch BOTH the cheap
-    # failures (count + intent payload) before doing substrate
-    # work, AND the expensive ones (large generated diff bytes —
-    # dops overlay rewrites, from_dupe payloads, replace_in_patch
-    # against big patch files) by re-checking against the real
-    # substrate_diff after apply. On post-apply overflow we revert
-    # the substrate edit and refuse, so the canonical-log
-    # invariant (every substrate change has a log row) holds.
-    log = _ensure_intent_log(env, origin, mode)
-    # Normalize: dict in, dict back out for the log entry.
-    log_entry_intent: dict[str, Any]
-    if isinstance(intent, dict):
-        log_entry_intent = intent
-    else:
-        try:
-            import json as _json  # noqa: PLC0415
-            log_entry_intent = _json.loads(intent)
-        except Exception:
-            log_entry_intent = {"raw": str(intent)[:500]}
-
-    # Phase 1 — pre-apply: counts + intent-payload bytes only.
-    overflow = log.would_overflow(log_entry_intent)
-    if overflow is not None:
-        return {
-            "ok": False,
-            "intent_type": (log_entry_intent.get("type") or "unknown"),
-            "paths_changed": [],
-            "substrate_diff": "",
-            "error": (
-                f"intent log full: {overflow}. Substrate left "
-                f"unchanged. The patch agent should escalate to "
-                f"MANUAL rather than continue."
-            ),
-            "mode": mode,
-            "intent_log_full": True,
-            "intent_log_full_reason": overflow,
-        }
-
-    # Thread the cached WRKSRC (populated by `extract()` earlier in
-    # the agent's turn) so `add_patch(from_dupe=True)`'s lookup can
-    # find the patch genpatch produced in WRKSRC. Cache miss is
-    # fine — the lookup falls back to the legacy workspace-relative
-    # `.genpatch-out` path.
-    translator = Translator(
-        workspace, origin, mode,
-        wrksrc=_WRKSRC_CACHE.get((env, origin)),
-        target=_TARGET_CACHE.get(env),
-    )
-    result = translator.apply(intent)
-
-    # Phase 2 — post-apply: re-check with the REAL substrate_diff.
-    # Only meaningful when apply succeeded (failed applies have an
-    # empty substrate_diff so the pre-apply check already covered
-    # them). If overflow, revert the substrate before refusing.
-    if result.ok:
-        overflow = log.would_overflow(
-            log_entry_intent, substrate_diff=result.substrate_diff,
-        )
-        if overflow is not None:
-            revert_err = _revert_workspace_paths(
-                workspace, result.paths_changed,
-            )
-            if revert_err is not None:
-                # Revert itself failed — the substrate is now in an
-                # unknown state. Surface as canonical_log_broken so
-                # the operator notices; this should be near-impossible
-                # but we don't want a silent corruption.
-                return {
-                    "ok": False,
-                    "intent_type": result.intent_type,
-                    "paths_changed": result.paths_changed,
-                    "substrate_diff": result.substrate_diff,
-                    "error": (
-                        f"intent log full ({overflow}) AND revert "
-                        f"failed: {revert_err}. Substrate in "
-                        f"unknown state; bundle should not be "
-                        f"verified. Reset the port subtree via "
-                        f"`dportsv3 dev-env reset-port ENV ORIGIN`."
-                    ),
-                    "mode": mode,
-                    "intent_log_full": True,
-                    "intent_log_full_reason": overflow,
-                    "canonical_log_broken": True,
-                }
-            return {
-                "ok": False,
-                "intent_type": result.intent_type,
-                "paths_changed": [],
-                "substrate_diff": "",
-                "error": (
-                    f"intent log full: {overflow}. Substrate "
-                    f"reverted. The patch agent should escalate "
-                    f"to MANUAL rather than continue."
-                ),
-                "mode": mode,
-                "intent_log_full": True,
-                "intent_log_full_reason": overflow,
-            }
-
-    # Both caps cleared (or apply failed with empty diff). Append.
-    log.append(
-        log_entry_intent,
-        ok=result.ok,
-        substrate_diff=result.substrate_diff,
-        error=result.error,
-    )
-
-    return {
-        "ok": result.ok,
-        "intent_type": result.intent_type,
-        "paths_changed": result.paths_changed,
-        "substrate_diff": result.substrate_diff,
-        "error": result.error,
-        "mode": mode,
-    }
-
-
-def _revert_workspace_paths(
-    workspace: Path, paths: list[str],
-) -> str | None:
-    """Revert ``paths`` in ``workspace`` to HEAD via git. Returns
-    ``None`` on success or a one-line error message on failure.
-
-    Used to undo a substrate edit when the post-apply log-cap check
-    fires — restores the canonical-log invariant by ensuring no
-    substrate change happens without a matching log row. ``git
-    checkout HEAD --`` reverts tracked-file edits; ``git clean
-    -fd --`` removes new files the renderer created.
-    """
-    if not paths:
-        return None
-    import subprocess as _sp  # noqa: PLC0415
-    try:
-        co = _sp.run(
-            ["git", "-C", str(workspace), "checkout", "HEAD", "--", *paths],
-            capture_output=True, text=True, check=False,
-        )
-        # checkout on a new file (not in HEAD) returns nonzero with
-        # "pathspec did not match" — that's fine, `clean` handles it.
-        cl = _sp.run(
-            ["git", "-C", str(workspace), "clean", "-fd", "--", *paths],
-            capture_output=True, text=True, check=False,
-        )
-        if cl.returncode != 0:
-            return (
-                f"git clean rc={cl.returncode}: "
-                f"{(cl.stderr or '').strip()[:200]}"
-            )
-        return None
-    except Exception as exc:
-        return f"revert raised: {exc!s}"[:300]
-
-
-def intent_reference(env: str, intent_type: str) -> dict:
-    """Return the JSON schema + matching playbook recipes for one
-    intent type (Step 25c / Step 27c).
-
-    The result carries:
-
-    - ``schema`` (from ``grammar.py`` via ``edit_intent.schema_for``) —
-      the canonical field shape. Always present on success.
-    - ``playbooks`` — a list of ``intent-*.md`` entries from
-      ``docs/agent-playbooks/`` whose frontmatter declares this
-      intent in ``triggers.intents``. Empty list if none match
-      (the common case until Step 27d fills the catalog).
-
-    Pulling recipe content on demand via this tool keeps the base
-    patch payload small — intent-tagged playbooks do NOT appear in
-    the system payload (the patch-flow ``load_playbooks`` call
-    passes ``intents=()``). The agent calls ``intent_reference``
-    before ``apply_intent``; the recipe lands in conversation
-    context only for the intent types the agent actually uses.
-
-    Read-only — env arg is unused but kept for tool-dispatch shape.
-    """
-    from dportsv3.agent.edit_intent import (  # noqa: PLC0415
-        IntentError, schema_for, INTENT_TYPES,
-    )
-    from dportsv3.agent.playbooks import (  # noqa: PLC0415
-        find_playbooks_dir, list_entries,
-    )
-
-    try:
-        schema = schema_for(intent_type)
-    except IntentError as exc:
-        return {
-            "ok": False,
-            "error": str(exc),
-            "known_intent_types": list(INTENT_TYPES),
-        }
-
-    # Collect matching intent-tagged playbooks. We don't go through
-    # load_playbooks() here because that function applies the full
-    # role/classification gate (geared to payload-build context);
-    # intent_reference's question is narrower: "does any entry
-    # declare this intent in its triggers.intents?" An entry can
-    # legitimately scope flows=[patch] but appear here regardless of
-    # whether the caller "is" in patch flow — the agent reaches for
-    # this tool from the patch loop, so flow is implied. The two
-    # lookup paths (load_playbooks vs this direct filter) share the
-    # entry model and frontmatter parser but apply different gate
-    # rules; if those rules ever need to converge, fold this loop
-    # into a shared "select_by_intent" helper in playbooks.py.
-    playbooks: list[dict] = []
-    try:
-        pdir = find_playbooks_dir()
-        if pdir is not None:
-            for entry in list_entries(pdir):
-                if intent_type in entry.triggers.intents:
-                    playbooks.append({
-                        "path": entry.path.name,
-                        "title": entry.title,
-                        "tags": list(entry.tags),
-                        "priority": entry.priority,
-                        "body": entry.body,
-                    })
-            playbooks.sort(key=lambda p: (p["priority"], p["path"]))
-    except (OSError, ValueError):
-        # Filesystem missing/unreadable, or a malformed entry
-        # surfaced through the parser. intent_reference must not
-        # fail just because the playbook tree is missing — fall
-        # back to schema-only. Any other exception propagates so
-        # real bugs aren't silently masked.
-        playbooks = []
-
-    return {
-        "ok": True,
-        "intent_type": intent_type,
-        "schema": schema,
-        "playbooks": playbooks,
-    }
-
-
 def validate_dops(env: str, origin: str) -> dict:
     """Run ``dportsv3 dsl check`` against the port's overlay.dops.
 
@@ -2413,9 +1903,7 @@ def extract(env: str, origin: str) -> dict:
     wrksrc = lines[1] if len(lines) > 1 else ""
     # Cache WRKSRC so genpatch() can invoke the script from the
     # right cwd with a WRKSRC-relative arg (producing clean
-    # patch-<rel> filenames), and apply_intent can pass WRKSRC into
-    # the Translator so `_resolve_from_dupe` can find the patch
-    # file genpatch produced.
+    # patch-<rel> filenames).
     if wrksrc:
         _WRKSRC_CACHE[(env, origin)] = wrksrc
     summary = (
@@ -2456,13 +1944,11 @@ def genpatch(env: str, path: str) -> dict:
        arg. The wrapper does this when `_WRKSRC_CACHE` has a wrksrc
        entry whose prefix `path` starts with.
 
-    Two staging conventions, one per flow:
+    Two staging conventions, depending on cache state:
 
-    - Intent flow (cache hit): patch lands in WRKSRC with a clean
-      WRKSRC-relative encoded name. `_resolve_from_dupe` walks
-      WRKSRC to find it when the Translator carries the matching
-      wrksrc (see `apply_intent`).
-    - Legacy install_patches flow (cache miss): patch lands in
+    - Cache hit: patch lands in WRKSRC with a clean WRKSRC-relative
+      encoded name.
+    - install_patches flow (cache miss): patch lands in
       `/work/genpatch-out/` with a full-path-encoded filename.
       `install_patches` copies from there into the port's
       `dragonfly/` subtree by basename, so the encoded filename is
@@ -2492,7 +1978,7 @@ def genpatch(env: str, path: str) -> dict:
     genpatch_out = paths.writable / "work" / "genpatch-out"
 
     if matched_wrksrc is not None:
-        # Cache hit — intent-flow staging.
+        # Cache hit — resolve the file's path relative to WRKSRC.
         relpath = (
             "" if path == matched_wrksrc
             else path[len(matched_wrksrc) + 1:]

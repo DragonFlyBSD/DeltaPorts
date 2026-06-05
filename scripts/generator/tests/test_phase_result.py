@@ -100,7 +100,6 @@ def test_patch_result_round_trip(fake_store):
         rebuild_ok=True,
         status="success",
         attempts=2,
-        intents_applied=4,
         tokens_prompt=120_000,
         tokens_completion=10_000,
         tokens_total=130_000,
@@ -184,7 +183,6 @@ def test_missing_schema_version_treated_as_mismatch(fake_store):
 def test_unknown_field_at_same_version_ignored(fake_store):
     payload = asdict(PatchResult(
         rebuild_ok=True, status="success", attempts=1,
-        intents_applied=0,
         tokens_prompt=8, tokens_completion=2, tokens_total=10,
     ))
     payload["future_field"] = "ignored"

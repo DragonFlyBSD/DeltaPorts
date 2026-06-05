@@ -5,10 +5,7 @@ The skalibs bundle surfaced two compounding bugs in the legacy
 when WORKTREE isn't set, and the filename derivation encodes the
 full chroot path when called with an absolute arg. Fix: cache
 WRKSRC from `extract()`, then have `genpatch()` cd into WRKSRC
-and pass a relative arg (clean filename, lands in WRKSRC); have
-`apply_intent` thread the same WRKSRC into the Translator so
-`add_patch(from_dupe=True)`'s lookup finds the patch where
-genpatch produced it.
+and pass a relative arg (clean filename, lands in WRKSRC).
 """
 
 from __future__ import annotations
@@ -20,7 +17,6 @@ from types import SimpleNamespace
 import pytest
 
 from dportsv3.agent import worker
-from dportsv3.agent.edit_intent import _dops
 
 
 def _make_workspace(tmp_path: Path) -> Path:
@@ -200,82 +196,3 @@ def test_genpatch_cache_hit_matches_on_path_prefix_only(
     assert result["wrksrc"] == "/work/obj/devel/bar/bar-2.0"
     assert result["origin"] == "devel/bar"
     worker._WRKSRC_CACHE.clear()
-
-
-# ---------------------------------------------------------------------
-# from_dupe lookup walks WRKSRC when Translator.wrksrc is set
-# ---------------------------------------------------------------------
-
-
-def test_resolve_from_dupe_finds_patch_in_wrksrc(tmp_path):
-    """When the Translator carries a wrksrc, `_resolve_from_dupe`
-    walks it for `patch-<basename>` and returns the content."""
-    ws = _make_workspace(tmp_path)
-    wrksrc = tmp_path / "obj" / "devel" / "foo" / "foo-1.0"
-    wrksrc.mkdir(parents=True)
-    # genpatch produced a patch file in WRKSRC root.
-    patch = wrksrc / "patch-src_include_foo.h"
-    patch.write_text("--- src/include/foo.h.orig\n+++ src/include/foo.h\n")
-
-    # Build a Translator-like object with the wrksrc attribute.
-    t = SimpleNamespace(
-        workspace=ws,
-        wrksrc=str(wrksrc),
-    )
-    content = _dops._resolve_from_dupe(
-        t, "dragonfly/patch-src_include_foo.h",
-    )
-    assert content is not None
-    assert "+++ src/include/foo.h" in content
-
-
-def test_resolve_from_dupe_falls_back_to_workspace_when_no_wrksrc(tmp_path):
-    """Legacy / test-fixture path: no wrksrc → walks
-    workspace/.genpatch-out (existing behavior preserved)."""
-    ws = _make_workspace(tmp_path)
-    out = ws / ".genpatch-out"
-    out.mkdir()
-    (out / "patch-foo.c").write_text("legacy content\n")
-
-    t = SimpleNamespace(workspace=ws, wrksrc=None)
-    content = _dops._resolve_from_dupe(t, "dragonfly/patch-foo.c")
-    assert content == "legacy content\n"
-
-
-def test_resolve_from_dupe_wrksrc_miss_falls_back(tmp_path):
-    """wrksrc set but no patch-<basename> found there → still
-    fall back to workspace lookup. Avoids a half-configured cache
-    breaking tests that pre-stage patches at workspace locations."""
-    ws = _make_workspace(tmp_path)
-    wrksrc = tmp_path / "empty-wrksrc"
-    wrksrc.mkdir()
-    out = ws / ".genpatch-out"
-    out.mkdir()
-    (out / "patch-foo.c").write_text("from workspace\n")
-
-    t = SimpleNamespace(workspace=ws, wrksrc=str(wrksrc))
-    content = _dops._resolve_from_dupe(t, "dragonfly/patch-foo.c")
-    assert content == "from workspace\n"
-
-
-def test_resolve_from_dupe_wrksrc_only_returns_patch_files(tmp_path):
-    """Defensive: rglob in WRKSRC matches all files with the
-    basename, but only files starting with `patch-` are accepted as
-    genpatch output. A non-patch file with the same basename should
-    NOT be picked up."""
-    ws = _make_workspace(tmp_path)
-    wrksrc = tmp_path / "wrksrc"
-    wrksrc.mkdir()
-    # Decoy: a file with the right basename but not patch-prefixed.
-    (wrksrc / "patch-x.c").write_text("a real patch\n")
-    (wrksrc / "decoy" / "patch-x.c").parent.mkdir()
-    # Add ANOTHER non-patch-prefixed file with the basename to make
-    # sure rglob doesn't pick it.
-    sub = wrksrc / "sub"
-    sub.mkdir()
-    (sub / "unrelated-patch-x.c").write_text("not the patch\n")
-
-    t = SimpleNamespace(workspace=ws, wrksrc=str(wrksrc))
-    content = _dops._resolve_from_dupe(t, "dragonfly/patch-x.c")
-    # Only the patch-* prefixed file should match.
-    assert content == "a real patch\n"

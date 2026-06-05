@@ -313,24 +313,6 @@ def test_non_json_output_is_one_line_summary(fake_env, monkeypatch) -> None:
 # --- Q1 follow-up: post-build cleanup wipes substrate + WRKDIR -------------
 
 
-def _write_intent_log(tmp_path: Path, origin: str = "devel/foo") -> Path:
-    """Minimal valid intent-log file. Replay validates
-    ``doc["origin"] == origin``; an empty ``baseline_commit``
-    bypasses the env-HEAD drift check (which would otherwise
-    require a real git repo in the fake env). Zero intents
-    means the replay loop runs once with nothing to apply and
-    returns ok=0 — the substrate is unchanged but cleanup still
-    fires."""
-    p = tmp_path / "intent_log.json"
-    p.write_text(
-        '{"origin": "' + origin + '", '
-        '"baseline_commit": "", '
-        '"mode_at_apply": "dops", '
-        '"intents": []}\n'
-    )
-    return p
-
-
 def _post_build_calls(calls: list[dict]) -> list[list[str]]:
     """Pick out the runner.run invocations that look like the
     post-build cleanup shell commands. Both stages route through
@@ -345,51 +327,6 @@ def _post_build_calls(calls: list[dict]) -> list[list[str]]:
         ):
             out.append(argv)
     return out
-
-
-def test_intent_log_path_runs_substrate_reset_then_make_clean(
-    fake_env, monkeypatch, tmp_path,
-) -> None:
-    """Q1 follow-up: post-build cleanup for the intent-log path
-    runs the substrate reset AND ``make clean``. Without the
-    second stage, /work/obj/<origin>/ carries stale extracted
-    source into the next verify run on the same env."""
-    from dports_dev_env.cli import apply_and_build
-
-    intent_log = _write_intent_log(tmp_path)
-
-    # Both stages succeed; runner.outcomes is empty so the default
-    # rc=0 is returned for every runner.run call.
-    apply_and_build(
-        fake_env.env_name, "devel/foo",
-        intent_log_path=str(intent_log),
-    )
-
-    shell_calls = _post_build_calls(fake_env.calls)
-    # Find the cleanup commands by content. The substrate reset
-    # carries `git reset -q --`; the WRKDIR clean carries
-    # `make` + `WRKDIRPREFIX`.
-    substrate = [
-        c[2] for c in shell_calls if "git reset -q --" in c[2]
-    ]
-    wrkdir = [
-        c[2] for c in shell_calls
-        if "WRKDIRPREFIX=/work/obj" in c[2] and "clean" in c[2]
-    ]
-    assert substrate, "substrate reset command not observed"
-    assert wrkdir, "WRKDIR make clean command not observed"
-    # Substrate reset comes before the WRKDIR wipe — if substrate
-    # fails the WRKDIR wipe is skipped, so this ordering matters.
-    assert (
-        fake_env.calls.index(
-            next(c for c in fake_env.calls
-                 if "git reset -q --" in (c["argv"][2] if len(c["argv"]) > 2 else ""))
-        )
-        < fake_env.calls.index(
-            next(c for c in fake_env.calls
-                 if "WRKDIRPREFIX=/work/obj" in (c["argv"][2] if len(c["argv"]) > 2 else ""))
-        )
-    )
 
 
 def test_diff_path_runs_post_build_cleanup(
@@ -424,13 +361,15 @@ def test_make_clean_skipped_when_substrate_reset_fails(
     from dports_dev_env.cli import apply_and_build
     import subprocess as _sp
 
-    intent_log = _write_intent_log(tmp_path)
+    diff = tmp_path / "fix.diff"
+    diff.write_text("--- a/x\n+++ b/x\n@@ -1 +1 @@\n-1\n+2\n")
 
     # Queue outcomes so the substrate reset fails. The runner
-    # consumes outcomes from a list, in order — earlier reapply +
-    # dtest stages consume the first two, then the substrate
-    # cleanup gets rc=1.
+    # consumes outcomes from a list, in order — earlier apply +
+    # reapply + dtest stages consume the first ones, then the
+    # substrate cleanup gets rc=1.
     fake_env.runner.outcomes = [
+        _sp.CompletedProcess([], 0, "", ""),     # diff apply
         _sp.CompletedProcess([], 0, "", ""),     # reapply
         _sp.CompletedProcess([], 0, "", ""),     # dsynth (dtest)
         _sp.CompletedProcess(                    # substrate reset → fails
@@ -440,7 +379,7 @@ def test_make_clean_skipped_when_substrate_reset_fails(
 
     apply_and_build(
         fake_env.env_name, "devel/foo",
-        intent_log_path=str(intent_log),
+        diff_path=str(diff),
     )
 
     shell_calls = _post_build_calls(fake_env.calls)
