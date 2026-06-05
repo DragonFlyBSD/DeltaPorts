@@ -4191,7 +4191,7 @@ playbook, ~200 tests.
   agent operates on dops substrate only, so regenerated diffs live
   in `overlay.dops` `patch.apply` blocks, not back in `diffs/`.
 
-### Step 38 — target-scope plumbing for the intent layer — pending
+### Step 38 — target-scope plumbing for the intent layer — shipped
 
 The engine fully supports per-target scoping. The semantic pass tracks
 `current_targets` as it walks statements (`semantic.py:358-440`). The
@@ -4447,3 +4447,270 @@ compatible: any new intent landed in either plan should consume
 Recommended sequencing: **Step 38 lands first**, then Family A delete
 intents inherit scope from day one. The reverse (Family A first, then
 retrofit scope) means rewriting every delete intent's renderer.
+
+### Step 39 — intent surface gap closure: Family A delete intents — pending
+
+After Step 38 the agent has full target-scope capability end-to-end —
+it can emit per-build or universal fixes, read the engine's
+effective view via ``get_effective_overlay``, and has playbook +
+prompt guidance on when to reach for each. But of the 23 distinct
+dops directive shapes the engine understands, only ``patch apply``
+has fully-symmetric create+delete intent coverage (``add_patch`` ↔
+``drop_patch``). The other 22 are create-heavy: the agent can
+construct most directive shapes but cannot remove them.
+
+The consequence is a recurring shape across agent bundles: an agent
+correctly identifies that a substrate line should be gone, has no
+intent to express that, and reaches for a workaround that either
+accumulates dead-weight in ``overlay.dops`` (emit a counter-op on
+top of the line it can't remove) or corrupts the substrate (reach
+for a heavyweight ``add_patch`` to source-patch a directive the
+engine could have handled cleanly).
+
+Step 39 closes the Family A delete intents that map directly to
+observed agent workarounds. Three new intents, all scope-aware
+from day one (consuming Step 38's plumbing).
+
+#### Goal
+
+After Step 39, the agent can explicitly delete:
+
+- A specific ``mk set/unset/add/remove VAR`` line in
+  ``overlay.dops`` (the dmidecode-shape thrash where re-emitting a
+  ``mk add`` produces an add+remove pair on disk).
+- A non-patch ``file copy`` / ``file materialize`` install
+  directive (the "convert emitted a stale resource I want gone"
+  shape).
+- An ``mk target set`` / ``mk target append`` heredoc block (the
+  "convert produced a ``dfly-patch:`` target that's no longer
+  needed" shape — today the agent can only gut the body to
+  ``@true`` via ``replace_in_dops_block``, leaving an empty target
+  on disk).
+
+Cleanup of redundant substrate becomes explicit and per-intent,
+matching Step 38e's "no implicit cleanup" principle.
+
+#### Sub-steps
+
+**39a — ``drop_mk_directive`` intent.**
+
+Single discriminated intent covering all four ``mk var`` ops:
+
+```json
+{
+  "type": "drop_mk_directive",
+  "kind": "set" | "unset" | "add" | "remove",
+  "key": "USES",
+  "value": "alias",
+  "scope": "@any"
+}
+```
+
+Schema: ``kind`` discriminator selects which dops line shape to
+match. ``key`` is the variable name. ``value`` is required for
+``kind=add`` and ``kind=remove`` (must match the line's token);
+ignored for ``kind=set`` and ``kind=unset``. ``scope`` is optional
+with the standard ``["@any", "@current"]`` enum from Step 38d.
+
+Renderer locates the matching dops line in ``overlay.dops`` (scope
+filter applied first when ``scope`` is specified). If exactly one
+match, the line is removed. Refuses if zero matches (operator must
+verify the line existed). Refuses if multiple matches at the same
+scope (ambiguous; agent must add more discrimination via
+``scope``).
+
+Closes the dmidecode-shape thrash: agent that previously emitted
+``mk add USES alias`` and then realized it was wrong now emits
+``drop_mk_directive(kind=add, key=USES, value=alias)`` and the
+prior line is gone from disk.
+
+**39b — ``drop_file`` intent.**
+
+```json
+{
+  "type": "drop_file",
+  "target": "files/extra-config.in",
+  "reason": "stale convert output — file removed in 1.50.0",
+  "scope": "@any"
+}
+```
+
+Removes a ``file copy SRC -> <target>`` or ``file materialize SRC -> <target>``
+directive from ``overlay.dops``. Distinct from ``drop_patch``
+which already covers patch-shaped destinations (``dragonfly/patch-*``);
+``drop_file`` handles everything else (port-local resources, generated
+files, etc.). Schemas mutually exclusive: ``drop_patch`` refuses
+non-``dragonfly/patch-*`` paths; ``drop_file`` refuses
+``dragonfly/patch-*`` paths.
+
+Deletes the on-disk resource file in the resource case (mirrors
+``drop_patch``'s file deletion for ``file_materialize`` shape).
+``reason`` field required, same as ``drop_patch``.
+
+**39c — ``drop_target_block`` intent.**
+
+```json
+{
+  "type": "drop_target_block",
+  "block_name": "dfly-patch",
+  "reason": "no longer needed after upstream 2.0 fixed file paths",
+  "scope": "@any"
+}
+```
+
+Removes an ``mk target set NAME <<TAG ... TAG`` or ``mk target append
+NAME <<TAG ... TAG`` heredoc block from ``overlay.dops`` — the
+whole block, open line through closing tag inclusive. **Accepts
+``scope``** (standard ``["@any", "@current"]`` enum from Step 38d):
+verified that the engine does NOT reject same-name target blocks
+across scopes — ``build_plan`` on an overlay with two ``mk target
+set dfly-patch`` blocks under different ``target`` directives
+returns ``ok=True`` with two ops (``semantic.py:163-172`` validates
+only name/heredoc_tag/recipe non-None; the ``E_SEM_DUPLICATE_*``
+checks exist only for PORT/TYPE/REASON/MAINTAINER). So ``block_name``
+alone does NOT uniquely identify the block when the same target
+appears in multiple scopes; the scope filter is applied first, then
+the name match within that scope. Refuses if the name+scope pair
+still matches multiple blocks. ``reason`` field required.
+
+Closes the heredoc-deletion gap. 39c lands the actual intent and
+``intent-scoping.md`` moves ``drop_target_block`` into the
+scope-accepting list alongside ``drop_mk_directive`` and
+``drop_file``.
+
+> **Latent issue (out of Step 39 scope, worth a future fix):**
+> existing ``replace_in_dops_block`` matches the *first* block by
+> name and has no scope awareness. With same-name blocks across
+> scopes now confirmed legal at the engine layer, ``replace_in_dops_block``
+> can silently edit the wrong block. Track separately.
+
+**39d — playbook + prompt updates.**
+
+- New playbooks ``intent-drop_mk_directive.md``,
+  ``intent-drop_file.md``, ``intent-drop_target_block.md``. Each
+  with When-to-use / Don't-use-when / shape / scoping / failure
+  modes, matching the existing per-intent playbook structure.
+- Update ``intent-change_makefile.md``: the Step 38e
+  accumulation-after-re-emit paragraph now points at
+  ``drop_mk_directive`` as the explicit cleanup path. Closes the
+  38e gap that was tracked as "future intent" in the playbook
+  text.
+- Update ``intent-scoping.md``: ``drop_mk_directive``,
+  ``drop_file``, and ``drop_target_block`` all accept scope (add
+  to the scope-accepting list).
+- Update ``prompts.py`` PATCH_INTENT_SYSTEM: bump the intent type
+  list from "seven" to "ten", mention the three new delete
+  intents in the inline list.
+
+#### Sub-step boundaries and ordering
+
+Each of 39a/39b/39c is independently landable. Order matches
+expected agent payoff:
+
+```
+39a (drop_mk_directive) → 39b (drop_file) → 39c (drop_target_block) → 39d (playbooks + prompt)
+```
+
+39a first because it directly closes the dmidecode-shape thrash
+that's been observed multiple times. 39b second because it's
+mechanically simplest (extends the existing ``drop_patch`` shape
+with a path-prefix discriminator). 39c last among the engine
+changes because it's the most complex matcher (multi-line heredoc
+extent extraction). 39d bundled at the end so the playbook
+updates reflect the full new surface in one commit.
+
+Per the per-phase rewrite rule, the companion plan doc
+``docs/intent-surface-gaps-plan.md`` rewrites as items land — same
+lifecycle as Step 38.
+
+#### LOC estimate
+
+- 39a renderer + helper + schema + dataclass: ~80
+- 39b renderer + schema + dataclass: ~50
+- 39c renderer + schema + dataclass (multi-line heredoc matcher
+  reuses 38c+38d-2 helpers): ~70
+- 39d playbooks + prompt: 0 LOC + ~1500 words content
+
+Total ~200 LOC + ~250 lines of tests (per Step 38's test floor
+of 4 per new intent, 3 per modified).
+
+#### Order
+
+```
+39a implement → review → chat → tests → commit
+39b implement → review → chat → tests → commit
+39c implement → review → chat → tests → commit
+39d playbooks + prompt → review → chat → commit
+```
+
+Same cycle as Step 38. Each sub-step is its own commit.
+
+#### Why not earlier
+
+Pre-Step-38 the new delete intents would have been scope-blind,
+matching the latent ``_strip_existing_mk_set`` bug we removed in
+38e. Landing Family A delete intents before Step 38 would have
+either (a) baked scope-blindness into every new intent's renderer,
+requiring a v2 later, or (b) blocked on the same scope-foundation
+work Step 38 ended up doing — without the benefit of having the
+foundation already proven through Step 38's 86 dedicated tests.
+
+Now the substrate is sound: scope plumbing through Translator
+(38a), placement helper (38b), invariant gate (38c), schema
+pattern (38d), prefilter removal (38e), agent-readable filtered
+view (38f), playbook + prompt guidance (38g). Step 39 builds on
+this foundation; every new delete intent inherits scope-awareness
+via the same ``scope`` field added in 38d-4, the same renderer
+dispatch in ``_append_overlay`` (38d-3), the same
+``get_effective_overlay`` for verification (38f).
+
+#### Dependencies
+
+- **Hard**: Step 38. Every new intent consumes the ``scope`` field
+  pattern, the ``_append_overlay`` scope dispatch, the placement
+  helper, and the invariant gate. None of the Family A intents
+  would work cleanly without that foundation.
+- **Soft**: Family B missing-directive intents (``change_condition``
+  for ``mk disable-if``/``mk replace-if``, ``add_target_block`` for
+  heredoc creation, ``remove_file_at_compose`` for ``file
+  remove``, etc.). Independent of Step 39 and can land in parallel
+  or after.
+
+#### Relationship to intent-surface-gaps docs
+
+The reference matrix at ``docs/intent-surface-gaps.md`` records
+the 23 directives × CRUD coverage. After Step 39, the rows for
+``mk set``, ``mk unset``, ``mk add``, ``mk remove`` get a ✅ in
+the Delete column (39a). The rows for ``file copy`` and ``file
+materialize`` get a ✅ in the Delete column for non-patch paths
+(39b). The row for ``mk target set/append`` heredocs gets a ✅
+in the Delete column (39c).
+
+After Step 39 the matrix counts shift:
+- Directives with no delete intent: 20 of 23 → **14 of 23** (-6).
+- Fully agent-manageable directives (Create + Delete): 1 of 23
+  → **3 of 23** (counting drop_mk_directive symmetric with
+  change_makefile, drop_file symmetric with add_file resource,
+  drop_target_block symmetric pending the future add_target_block
+  in Family B).
+
+The companion plan ``docs/intent-surface-gaps-plan.md`` rewrites
+to remove the Family A items as they land, then narrows to
+Family B (missing-directive intents) for the next push.
+
+#### What Step 39 does NOT do
+
+- **Family B intents** (``change_condition``, ``add_block``,
+  ``add_target_block``, ``drop_target_makefile``, ``rename_target``,
+  ``remove_file_at_compose``, ``edit_line``). These close
+  directive families with no agent surface at all; separate effort
+  from Step 39's symmetric-delete focus.
+- **Family C generalized ``edit_overlay``**. Still deferred per
+  the gap-plan's locked decisions.
+- **``add_patch`` upsert semantics**. Adjacent but not Family A
+  proper; the current ``drop_patch`` + ``add_patch`` pattern
+  works. Defer.
+- **Convert-side improvements** that would prevent the agent from
+  ever needing some of these deletes (e.g., a convert pass that
+  doesn't emit stale ``file copy`` lines in the first place).
+  Out of scope for the patch-agent intent surface work.

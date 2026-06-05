@@ -114,17 +114,24 @@ First introduction of new intent types in this push.
 
 - [ ] **A5 — `drop_target_block` intent for `mk target set/append` heredocs**
   - **Schema**: `schemas/drop_target_block.json` — fields: `block_name`,
-    `reason`.
-  - **Grammar**: new `DropTargetBlock` dataclass; register.
-  - **Renderer**: `_dops.py::drop_target_block`. Reuse
+    `reason`, `scope` (standard `["@any", "@current"]` enum, default
+    `@any`).
+  - **Grammar**: new `DropTargetBlock` dataclass with
+    `scope: Literal["@any", "@current"] = "@any"`; register.
+  - **Renderer**: `_dops.py::drop_target_block`. Apply the scope filter
+    first (verified: the engine accepts same-name `mk target set` blocks
+    across different scopes — `build_plan` returns ok=True with two ops;
+    `semantic.py:163-172` has no duplicate-name check), then reuse
     `_replace_in_mk_target_block`'s block-finder to locate the open line
-    + heredoc tag + close line. Strip the entire block (open through
-    close, inclusive). Return ok=False if block not found, with the
-    same diagnostic shape as drop_patch.
+    + heredoc tag + close line within that scope. Strip the entire block
+    (open through close, inclusive). Return ok=False if block not found.
+    Refuse if name+scope still matches multiple blocks (ambiguous).
   - **Translator**: dispatcher entry.
   - **Tests**: positive (mk target set block removed entirely),
-    positive (mk target append block removed), not-found, multiple
-    blocks of same name (strip first or refuse — pick).
+    positive (mk target append block removed), not-found,
+    scope-filtered removal (same name in two scopes — only the
+    targeted scope's block stripped), ambiguous (multiple same-name
+    blocks at same scope → refuse).
   - **Playbook**: new `intent-drop_target_block.md` — when to use
     (convert produced a target heredoc that's no longer needed),
     distinction from B4 (drop_target_makefile, future).
