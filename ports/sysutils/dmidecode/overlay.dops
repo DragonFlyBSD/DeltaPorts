@@ -1,0 +1,4 @@
+target @any
+port sysutils/dmidecode
+type port
+reason "auto-converted from Makefile.DragonFly"
