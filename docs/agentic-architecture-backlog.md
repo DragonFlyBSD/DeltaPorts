@@ -5128,6 +5128,62 @@ playbook symmetry per intent) but shallow — `validator.py` is
 already generic and the dispatcher is a flat table, so removal is
 deleting a row in each place, nothing computes against the *set*.
 
+#### Sub-steps (ordered for safe landing)
+
+Each of 42a–c is a self-contained engine+tests+playbook+prompt unit
+that lands *additively* (removes nothing), so the live patch surface
+keeps working throughout. 42d is the single irreversible cutover and
+lands last, only after a–c are proven on real ports.
+
+- **42a — `add_dops`** (the generic additive surface, lands first).
+  New `schemas/add_dops.json` (fields: `dops` raw text, standard
+  `scope`), `AddDops` dataclass + registration, dispatcher entry,
+  and a renderer that wraps the existing `_append_overlay`
+  (`_dops.py:1048` — already does scope resolution, the @any-first
+  invariant at 1082, placement, write, rollback, diff). **The one
+  net-new piece**: the append path does *not* validate via the
+  engine today (renderers emit known-good lines), so `add_dops` must
+  run `check_dsl` (`engine/api.py:38`) on the *whole resulting
+  overlay* before commit and roll back on parser/semantic failure.
+  This is where the auto-compat-with-engine-growth property comes
+  from. Tests: parse (schema), render (raw line appended under the
+  right scope), the new whole-overlay validation refusal (malformed
+  dops rolls back cleanly), round-trip (engine re-parses what we
+  emitted), scope placement (@any vs @current). Playbook +
+  one-line prompt entry. Removes nothing — `change_makefile`,
+  `add_file{materialize}`, and Family B all *could* now route
+  through `add_dops`, but the bespoke intents still exist.
+- **42b — `delete_scoped`**. Generalize the three shipped Step 39
+  deletes (`drop_mk_directive`, `drop_file`, `drop_target_block`)
+  behind one scoped-delete operation, reusing the existing
+  `_resolve_drop_scope` (`_dops.py:456`) and `_strip_scoped_line`
+  (`_dops.py:562`). Behavior-preserving refactor: the three deletes
+  become thin callers of `delete_scoped` (or the op subsumes them
+  outright). Tests mirror the Step 39 delete tests against the
+  unified op. `drop_file`'s coupled on-disk file deletion is
+  preserved (it's why `drop_file` "earns structure" on the delete
+  side — the op must keep that branch).
+- **42c — `replace_scoped`**. Generalize `replace_in_dops_block`
+  (`_dops.py:793`) into the scoped-replace op, folding in **40d**'s
+  scope-blindness fix (add the `["@any","@current"]` filter before
+  the block-name match; refuse if name+scope still matches multiple
+  blocks). This is the only place a latent bug is fixed rather than
+  preserved. Tests: existing heredoc-body replace, plus the new
+  scope-disambiguation and multi-match-refusal cases.
+- **42d — the collapse (irreversible; lands last)**. Delete the
+  folded intents' schemas, renderers, grammar registrations
+  (`INTENT_TYPES` / `Intent` union / `INTENT_DATACLASSES`), and
+  `intent-*.md` playbooks. Relocate `add_file`'s `Makefile.DragonFly`
+  refusal (`_dops.py:301`) to the tier-1 worker boundary
+  (`assess_dops`) — it is the *only* orphaned guardrail (the
+  `validator.py` `_check_semantics` refusals ride with
+  `replace_in_patch`, which stays). Rewrite the `PATCH_INTENT_SYSTEM`
+  intent list once (`prompts.py:508`). Move the `dupe`/`genpatch`
+  workflow guidance out of the per-intent playbooks into flow
+  playbooks. The structured holdouts (`add_patch`,
+  `add_file{resource}`, `drop_patch`, `bump_portrevision`,
+  `replace_in_patch`) are never touched.
+
 #### What this makes mutually exclusive
 
 - **Step 40 becomes won't-do.** Each Family B item (`change_condition`,
