@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Iterable
 
 from .grammar import (
-    AddFile, AddPatch, BumpPortrevision, ChangeMakefile,
+    AddDops, AddFile, AddPatch, BumpPortrevision, ChangeMakefile,
     DropFile, DropMkDirective, DropPatch, DropTargetBlock,
     ReplaceInDopsBlock, ReplaceInPatch,
 )
@@ -459,6 +459,109 @@ def change_makefile(t, intent: ChangeMakefile):
     return _append_overlay(
         t, "change_makefile", [stmt], scope=intent.scope,
     )
+
+
+def add_dops(t, intent: AddDops):
+    """Append one raw dops statement, validated against the engine.
+
+    The generic additive surface (Step 42a). Unlike the bespoke
+    renderers — which construct known-good lines from typed fields —
+    ``add_dops`` accepts arbitrary agent-authored dops text, so it
+    cannot trust the result. Two things follow:
+
+    1. The payload is appended as a *single* unit (one element in the
+       ``statements`` list), so a multi-line heredoc block lands
+       intact at one position. ``_ensure_target_scope`` splices it in
+       without splitting on its internal newlines. One or more
+       statements are accepted (a heredoc is itself multi-line);
+       prefer one statement per call so each is rolled back
+       independently, but a multi-statement payload is safe — the
+       whole append is atomic.
+    2. After placement, the *whole resulting overlay* is validated
+       with ``check_dsl`` (grammar + context-free semantics). On any
+       diagnostic the overlay is rolled back to its prior bytes and
+       the intent fails — no partially-applied raw text reaches the
+       substrate.
+
+    This is the property that lets the intent layer track the
+    fixed-size operation set rather than the growing engine grammar:
+    a new directive is emittable here the day the engine parses it,
+    with no schema/renderer/grammar change.
+    """
+    from .translator import EditResult
+    from dportsv3.engine.api import check_dsl  # noqa: PLC0415
+    overlay = t.port_path(_DOPS_FILE)
+    before = overlay.read_text() if overlay.is_file() else None
+
+    result = _append_overlay(t, "add_dops", [intent.dops], scope=intent.scope)
+    if not result.ok:
+        return result
+
+    new_text = overlay.read_text()
+    check = check_dsl(new_text, source_path=Path(_DOPS_FILE))
+    if not check.ok:
+        # Roll back: restore prior bytes, or remove the file if this
+        # intent created it (header + the bad statement).
+        if before is None:
+            try:
+                overlay.unlink()
+            except OSError:
+                pass
+        else:
+            try:
+                overlay.write_text(before)
+            except OSError:
+                pass
+        # Disambiguate the agent's statement from a pre-existing
+        # broken overlay. check_dsl validates the *whole* document, so
+        # a document-level invariant already violated before this edit
+        # (duplicate header directive, missing port) would otherwise
+        # blame a statement that is itself fine. Only re-check on the
+        # failure path; the fresh-file case (before is None) is always
+        # the agent's content.
+        if before is not None and not check_dsl(
+            before, source_path=Path(_DOPS_FILE)
+        ).ok:
+            return EditResult(
+                ok=False, intent_type="add_dops",
+                error=(
+                    f"overlay.dops was already invalid before this "
+                    f"add_dops (pre-existing breakage — escalate, do "
+                    f"not retry the statement): "
+                    f"{_format_dops_diagnostics(check.diagnostics)}"
+                ),
+            )
+        return EditResult(
+            ok=False, intent_type="add_dops",
+            error=(
+                f"add_dops produced an invalid overlay; statement "
+                f"rejected by the engine: {_format_dops_diagnostics(check.diagnostics)}"
+            ),
+        )
+    return result
+
+
+def _format_dops_diagnostics(diags) -> str:
+    """One-line summary of engine diagnostics for an intent error.
+
+    Surfaces the first few error-severity diagnostics with their
+    ``E_*`` code and line/col so the agent can locate the problem in
+    the dops it just emitted.
+    """
+    parts: list[str] = []
+    for d in diags:
+        if getattr(d, "severity", "error") != "error":
+            continue
+        loc = ""
+        if getattr(d, "line", None) is not None:
+            loc = f" (line {d.line}"
+            if getattr(d, "column", None) is not None:
+                loc += f", col {d.column}"
+            loc += ")"
+        parts.append(f"{d.code}: {d.message}{loc}")
+        if len(parts) >= 3:
+            break
+    return "; ".join(parts) if parts else "no diagnostic detail"
 
 
 def _resolve_drop_scope(t, scope, intent_type):
@@ -1245,6 +1348,29 @@ def _check_target_scope_order(overlay_text: str) -> str | None:
     return None
 
 
+def _heredoc_open_tag(line: str) -> str | None:
+    """Return the heredoc tag if ``line`` opens an ``mk ... <<'TAG'`` block.
+
+    Dops heredoc openers end the line with ``<<'TAG'`` (quoted tag,
+    per ``engine/lexer.py:_lex_heredoc``), e.g.
+    ``mk target set NAME <<'MK1'``. The matching terminator is a line
+    holding the bare tag (``MK1``). Anchoring to the line-final
+    ``<<'…'`` excludes a stray ``<<`` inside a quoted value, so no
+    regex/parser is needed.
+    """
+    s = line.rstrip()
+    idx = s.rfind("<<'")
+    if idx == -1:
+        return None
+    rest = s[idx + 3:]
+    if not rest.endswith("'"):
+        return None
+    tag = rest[:-1]
+    if tag and not any(c.isspace() for c in tag):
+        return tag
+    return None
+
+
 def _ensure_target_scope(
     overlay_text: str, scope: str, statements: list[str],
 ) -> str:
@@ -1279,23 +1405,41 @@ def _ensure_target_scope(
       is not matched even if ``scope`` is one of the targets.
       Convert-produced overlays use single scopes; the intent flow
       never emits multi-target directives.
-    - Line-based scan, not AST. A ``target ...`` substring that
-      appears inside a ``mk target set NAME <<TAG ... TAG`` heredoc
-      body would currently false-match. The renderers don't emit
-      ``target`` directives inside heredoc bodies; this isn't
-      reachable in practice with today's intent surface.
+    - Line-based scan, not AST — but heredoc bodies are skipped
+      (Step 42a): the scan tracks ``<<TAG`` open / ``TAG`` close so a
+      ``target ...`` line inside an ``mk target set NAME <<TAG ... TAG``
+      body does not false-match as a section header. This matters
+      once ``add_dops`` lets the agent author arbitrary heredoc
+      bodies.
     """
     has_trailing_nl = overlay_text.endswith("\n")
     lines = overlay_text.split("\n")
     if has_trailing_nl and lines and lines[-1] == "":
         lines.pop()
 
-    # Locate `target <scope>` directives via a simple line-based scan.
-    # The dops grammar puts ``target`` at column 0 (no leading
-    # whitespace), but we tolerate ``\s+target`` for robustness against
-    # operator-edited files.
+    # Locate `target <scope>` directives via a line-based scan that
+    # skips heredoc bodies. The dops grammar puts ``target`` at column
+    # 0 (no leading whitespace), but we tolerate ``\s+target`` for
+    # robustness against operator-edited files.
+    #
+    # Heredoc skip (Step 42a): an ``mk target set NAME <<TAG`` block's
+    # body can contain arbitrary text — and once ``add_dops`` lets the
+    # agent author heredoc bodies directly, a body line stripping to
+    # ``target X`` would false-match as a section header and misplace
+    # the next append. Track the open/close tag and ignore body lines.
     target_positions: list[tuple[int, str]] = []
+    heredoc_tag: str | None = None
     for i, line in enumerate(lines):
+        if heredoc_tag is not None:
+            # Terminator is an exact bare-tag line (engine matches
+            # ``line_text == tag``, no surrounding whitespace).
+            if line == heredoc_tag:
+                heredoc_tag = None
+            continue
+        open_tag = _heredoc_open_tag(line)
+        if open_tag is not None:
+            heredoc_tag = open_tag
+            continue
         stripped = line.strip()
         if not stripped.startswith("target "):
             continue

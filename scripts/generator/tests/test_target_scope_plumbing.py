@@ -1090,6 +1090,10 @@ _SCOPE_BEARING_INTENTS = [
         "drop_target_block",
         {"block_name": "do-build", "reason": "obsolete"},
     ),
+    (
+        "add_dops",
+        {"dops": 'mk set FOO "bar"'},
+    ),
 ]
 
 
@@ -1216,7 +1220,7 @@ def test_schema_for_surfaces_scope_field() -> None:
 
 def test_schema_for_drop_patch_does_not_include_scope() -> None:
     """drop_patch's schema does NOT carry scope — verifies the
-    asymmetric coverage (8 of 10 intents have scope, 2 do not)."""
+    asymmetric coverage (9 of 11 intents have scope, 2 do not)."""
     from dportsv3.agent.edit_intent.validator import schema_for
 
     assert "scope" not in schema_for("drop_patch")["properties"]

@@ -24,6 +24,7 @@ INTENT_TYPES: tuple[str, ...] = (
     "drop_mk_directive",
     "drop_file",
     "drop_target_block",
+    "add_dops",
 )
 
 
@@ -184,6 +185,30 @@ class DropTargetBlock:
     scope: Literal["@any", "@current"] = "@any"  # Step 38d-4
 
 
+@dataclass(frozen=True)
+class AddDops:
+    """Append a raw dops statement to overlay.dops (Step 42a).
+
+    The generic additive surface: rather than a bespoke intent per
+    directive, the agent supplies one dops statement (a single line
+    or a complete heredoc block) and the renderer validates the
+    *whole resulting overlay* against the engine grammar
+    (``check_dsl``) before commit, rolling back on any diagnostic.
+    This is what makes the intent layer track the fixed-size
+    operation set instead of the growing directive grammar: a new
+    engine directive is emittable through ``add_dops`` the day the
+    engine parses it, with no intent-layer change.
+
+    ``dops`` is one statement. A heredoc block is passed as a single
+    string with embedded newlines (it is appended as one unit). Emit
+    one ``add_dops`` per statement so each is validated and rolled
+    back independently.
+    """
+    type: Literal["add_dops"]
+    dops: str
+    scope: Literal["@any", "@current"] = "@any"  # Step 38d-4
+
+
 Intent = Union[
     ReplaceInPatch,
     DropPatch,
@@ -195,6 +220,7 @@ Intent = Union[
     DropMkDirective,
     DropFile,
     DropTargetBlock,
+    AddDops,
 ]
 
 
@@ -211,4 +237,5 @@ INTENT_DATACLASSES: dict[str, type] = {
     "drop_mk_directive":     DropMkDirective,
     "drop_file":             DropFile,
     "drop_target_block":     DropTargetBlock,
+    "add_dops":              AddDops,
 }

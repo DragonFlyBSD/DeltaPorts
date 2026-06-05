@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "add_dops",
+  "description": "Append a raw dops statement (a single line or a whole heredoc block) to overlay.dops. The statement is validated against the engine grammar after placement; a malformed statement is rolled back. Use this for any additive directive that has no bespoke intent (conditional control, target heredocs, file directives, etc.).",
+  "type": "object",
+  "required": ["type", "dops"],
+  "additionalProperties": false,
+  "properties": {
+    "type": {"const": "add_dops"},
+    "dops": {"type": "string", "minLength": 1,
+             "description": "A dops statement in engine grammar: a single line ('mk set FOO \"bar\"') or a complete heredoc block ('mk target set NAME <<'MK1'\\n...\\nMK1'). Prefer one statement per call so each is validated and rolled back independently; a multi-statement payload is accepted (the whole append is atomic) but loses that granularity."},
+    "scope": {"enum": ["@any", "@current"], "default": "@any",
+              "description": "Target build line for this statement. '@any' (default) applies universally on every build. '@current' resolves to the env's current target at apply time. Never type literal '@2026Q2'; the runner injects t.target."}
+  }
+}

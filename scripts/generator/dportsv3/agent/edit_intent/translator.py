@@ -34,6 +34,7 @@ from pathlib import Path
 from typing import Any, Callable, Literal
 
 from .grammar import (
+    AddDops,
     AddFile,
     AddPatch,
     BumpPortrevision,
@@ -173,6 +174,8 @@ class Translator:
             return lambda i: _mod.drop_file(self, i)
         if isinstance(intent, DropTargetBlock):
             return lambda i: _mod.drop_target_block(self, i)
+        if isinstance(intent, AddDops):
+            return lambda i: _mod.add_dops(self, i)
         return lambda i: EditResult(
             ok=False, intent_type=getattr(i, "type", "unknown"),
             error=f"no renderer for intent: {i!r}",

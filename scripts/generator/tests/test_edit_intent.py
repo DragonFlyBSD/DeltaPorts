@@ -21,7 +21,7 @@ from typing import Any
 import pytest
 
 from dportsv3.agent.edit_intent import (
-    AddFile, AddPatch, BumpPortrevision, ChangeMakefile, DropPatch,
+    AddDops, AddFile, AddPatch, BumpPortrevision, ChangeMakefile, DropPatch,
     EditResult, IntentError, IntentLog, ReplaceInPatch, Translator,
     parse_intent, schema_for,
 )
@@ -1061,3 +1061,187 @@ class TestFromDupe:
         })
         assert result.ok is False
         assert "no file matching basename" in result.error
+
+
+# --------------------------------------------------------------------
+# Step 42a — add_dops (generic additive surface)
+# --------------------------------------------------------------------
+
+
+class TestAddDops:
+
+    @pytest.fixture
+    def t(self, tmp_path):
+        ws = _make_workspace(tmp_path)
+        return Translator(ws, "devel/foo", "dops")
+
+    # ----- schema / parse -------------------------------------------
+
+    def test_parse_round_trips(self):
+        intent = parse_intent({
+            "type": "add_dops",
+            "dops": 'mk set FOO "bar"',
+            "scope": "@any",
+        })
+        assert isinstance(intent, AddDops)
+        assert intent.dops == 'mk set FOO "bar"'
+        assert intent.scope == "@any"
+
+    def test_parse_defaults_scope_any(self):
+        intent = parse_intent({"type": "add_dops", "dops": 'mk set A "1"'})
+        assert intent.scope == "@any"
+
+    def test_parse_requires_dops(self):
+        with pytest.raises(IntentError):
+            parse_intent({"type": "add_dops", "scope": "@any"})
+
+    def test_parse_rejects_empty_dops(self):
+        with pytest.raises(IntentError):
+            parse_intent({"type": "add_dops", "dops": ""})
+
+    def test_schema_available(self):
+        schema = schema_for("add_dops")
+        assert schema["properties"]["type"]["const"] == "add_dops"
+
+    # ----- render ----------------------------------------------------
+
+    def test_appends_raw_line(self, t):
+        result = t.apply({"type": "add_dops", "dops": 'mk set FOO "bar"'})
+        assert result.ok is True
+        overlay = t.port_path("overlay.dops")
+        assert 'mk set FOO "bar"' in overlay.read_text()
+        assert any("overlay.dops" in p for p in result.paths_changed)
+
+    def test_round_trips_through_engine(self, t):
+        """What add_dops emits must re-parse cleanly (the validation
+        gate guarantees this; assert it explicitly)."""
+        from dportsv3.engine.api import check_dsl
+        t.apply({"type": "add_dops", "dops": 'mk set FOO "bar"'})
+        overlay_text = t.port_path("overlay.dops").read_text()
+        assert check_dsl(overlay_text).ok is True
+
+    def test_heredoc_block_placed_as_unit(self, t):
+        block = (
+            "mk target set dfly-patch <<'MK1'\n"
+            "@${REINPLACE_CMD} -e s/a/b/ file\n"
+            "MK1"
+        )
+        result = t.apply({"type": "add_dops", "dops": block})
+        assert result.ok is True
+        overlay_text = t.port_path("overlay.dops").read_text()
+        assert "mk target set dfly-patch <<'MK1'" in overlay_text
+        assert "@${REINPLACE_CMD} -e s/a/b/ file" in overlay_text
+        # Closing tag is on its own line, intact.
+        assert "\nMK1\n" in overlay_text
+
+    def test_scan_ignores_target_line_inside_heredoc_body(self, t):
+        """A heredoc body line stripping to `target ...` must not be
+        mistaken for a `target <scope>` section header when placing a
+        later op — otherwise the next append lands in the wrong spot."""
+        block = (
+            "mk target set recipe <<'MK1'\n"
+            "target all is not a section header\n"
+            "MK1"
+        )
+        assert t.apply({"type": "add_dops", "dops": block}).ok is True
+        # Now add a @current op: a fresh `target @2026Q2` section must
+        # be created. If the body's `target ` line false-matched as an
+        # existing section, placement would be wrong / refused.
+        t.target = "@2026Q2"
+        result = t.apply({"type": "add_dops", "dops": 'mk set BAZ "q"',
+                          "scope": "@current"})
+        assert result.ok is True
+        overlay_text = t.port_path("overlay.dops").read_text()
+        assert "target @2026Q2" in overlay_text
+        assert 'mk set BAZ "q"' in overlay_text
+
+    # ----- scope placement ------------------------------------------
+
+    def test_scope_any_lands_in_any_section(self, t):
+        t.apply({"type": "add_dops", "dops": 'mk set A "1"', "scope": "@any"})
+        overlay_text = t.port_path("overlay.dops").read_text()
+        any_idx = overlay_text.index("target @any")
+        assert overlay_text.index('mk set A "1"') > any_idx
+
+    def test_scope_current_creates_target_section(self, tmp_path):
+        ws = _make_workspace(tmp_path)
+        t = Translator(ws, "devel/foo", "dops", target="@2026Q2")
+        result = t.apply({"type": "add_dops", "dops": 'mk set A "1"',
+                          "scope": "@current"})
+        assert result.ok is True
+        overlay_text = t.port_path("overlay.dops").read_text()
+        assert "target @2026Q2" in overlay_text
+
+    def test_scope_current_refused_without_env_target(self, t):
+        # fixture `t` has no target set.
+        result = t.apply({"type": "add_dops", "dops": 'mk set A "1"',
+                          "scope": "@current"})
+        assert result.ok is False
+        assert "@current" in result.error
+
+    # ----- validation + rollback ------------------------------------
+
+    def test_invalid_dops_rolled_back(self, t):
+        # Seed a valid overlay first.
+        t.apply({"type": "add_dops", "dops": 'mk set FOO "bar"'})
+        overlay = t.port_path("overlay.dops")
+        before = overlay.read_text()
+        result = t.apply({"type": "add_dops", "dops": "this is not valid dops"})
+        assert result.ok is False
+        assert "rejected by the engine" in result.error
+        assert overlay.read_text() == before  # rolled back to prior bytes
+
+    def test_invalid_dops_on_fresh_overlay_removes_file(self, t):
+        overlay = t.port_path("overlay.dops")
+        assert not overlay.exists()
+        result = t.apply({"type": "add_dops", "dops": "garbage !!"})
+        assert result.ok is False
+        # The intent created the file (header + bad line); rollback
+        # removes it entirely rather than leaving a header-only stub.
+        assert not overlay.exists()
+
+    def test_error_surfaces_engine_diagnostic_code(self, t):
+        result = t.apply({"type": "add_dops", "dops": "garbage !!"})
+        assert result.ok is False
+        assert "E_" in result.error  # an engine E_* code is included
+
+    def test_preexisting_breakage_reported_distinctly(self, t):
+        """A valid statement onto an already-invalid overlay must not
+        be blamed; the agent should be told to escalate, not retry."""
+        overlay = t.port_path("overlay.dops")
+        overlay.parent.mkdir(parents=True, exist_ok=True)
+        # Duplicate `port` directive — a document-level invariant
+        # violation that predates this edit.
+        overlay.write_text(
+            "target @any\nport devel/foo\nport devel/foo\n"
+            'type port\nreason "x"\n\nmk set A "1"\n'
+        )
+        result = t.apply({"type": "add_dops", "dops": 'mk set FOO "bar"'})
+        assert result.ok is False
+        assert "pre-existing" in result.error
+        assert "escalate" in result.error
+        # Overlay not further corrupted by the rollback.
+        assert overlay.read_text().count("port devel/foo") == 2
+
+    # ----- multi-statement (allowed, atomic) ------------------------
+
+    def test_multi_statement_payload_applies_atomically(self, t):
+        result = t.apply({
+            "type": "add_dops",
+            "dops": 'mk set A "1"\nmk set B "2"',
+        })
+        assert result.ok is True
+        overlay_text = t.port_path("overlay.dops").read_text()
+        assert overlay_text.count("mk set") == 2
+
+    def test_multi_statement_with_one_invalid_rolls_back_all(self, t):
+        t.apply({"type": "add_dops", "dops": 'mk set FOO "bar"'})
+        overlay = t.port_path("overlay.dops")
+        before = overlay.read_text()
+        result = t.apply({
+            "type": "add_dops",
+            "dops": 'mk set A "1"\nthis line is broken',
+        })
+        assert result.ok is False
+        # Neither statement landed — the whole append is atomic.
+        assert overlay.read_text() == before

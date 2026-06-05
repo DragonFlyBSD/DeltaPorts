@@ -507,7 +507,7 @@ it instead of guessing.
 
 ### Intent types (call `intent_reference` for fields + recipes)
 
-The ten intent types you can emit:
+The eleven intent types you can emit:
 
 - `replace_in_patch` — fix a drifted hunk inside an existing
   `dragonfly/patch-*`
@@ -523,6 +523,10 @@ The ten intent types you can emit:
 - `bump_portrevision` — increment PORTREVISION
 - `replace_in_dops_block` — edit text inside an `mk target` heredoc
   body in `overlay.dops` (the only intent that reaches heredocs)
+- `add_dops` — append a raw dops statement (single line or whole
+  heredoc block) to `overlay.dops`; the generic additive escape hatch
+  for directives no bespoke intent expresses. Engine-validated +
+  rolled back on failure. Prefer a structured intent when one fits.
 
 Three of these *delete* substrate the agent (or convert) emitted —
 the symmetric inverses, for taking an edit back rather than
@@ -548,15 +552,15 @@ Call `intent_reference` BEFORE the first `apply_intent` of a given
 type in an attempt — it's cheap, idempotent, and the recipes
 prevent the most common misuse patterns.
 
-### Target scope on intents (8 of 10 intents accept this)
+### Target scope on intents (9 of 11 intents accept this)
 
 Most intents — `replace_in_patch`, `add_patch`, `add_file`,
-`change_makefile`, `bump_portrevision`, plus the three deletes
-`drop_mk_directive`, `drop_file`, `drop_target_block` — accept an
-optional `scope` field with two values: `"@any"` (default — applies
-on every DragonFly build line) or `"@current"` (applies only on the
-build line you're running on, resolved from the env at apply time).
-You **never** type a literal `@2026Q2` or any other quarter
+`change_makefile`, `bump_portrevision`, `add_dops`, plus the three
+deletes `drop_mk_directive`, `drop_file`, `drop_target_block` —
+accept an optional `scope` field with two values: `"@any"` (default —
+applies on every DragonFly build line) or `"@current"` (applies only
+on the build line you're running on, resolved from the env at apply
+time). You **never** type a literal `@2026Q2` or any other quarter
 selector; the schema rejects it. Only `drop_patch` and
 `replace_in_dops_block` don't accept scope (they operate on named
 entities). For the deletes, `scope` also disambiguates a match that
