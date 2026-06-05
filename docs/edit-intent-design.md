@@ -1,11 +1,27 @@
 # Edit-intent DSL — design (Step 25a)
 
-> **Status: draft for review (2026-05-25).** Normative for the
-> Step 25b implementation. Sections marked **DECISION** below have
-> default answers; the operator can override before 25b starts.
+> **Status: shipped — dops-only (updated 2026-06-05).** This started
+> as the normative spec for Step 25b and was written dual-mode (one
+> intent rendering to *either* a compat file edit *or* a dops
+> statement). **It shipped narrowed to dops-only.** A later
+> consolidation ("Step C") removed compat-mode rendering and the
+> `convert_to_dops` intent entirely: convert now runs as a hard
+> prerequisite (the patch agent only ever sees dops-converted
+> substrate), so the translator has a single mode. This document has
+> been reconciled to that reality — the dual-mode framing, the
+> "Compat render:" lines, and `convert_to_dops` are gone. Git history
+> carries the original dual-mode draft if needed.
 >
-> Cross-reference: `docs/agentic-architecture-backlog.md` Step 25,
-> `docs/agentic-loop-brittleness-brief.md`, `docs/dsl-v0.md`
+> The canonical, machine-readable intent catalog is the per-intent
+> JSON schemas under
+> `dportsv3/agent/edit_intent/schemas/` and the coverage matrix in
+> `docs/intent-surface-gaps.md`. This doc is the *architecture* record
+> (state model, transactions, workspace lifecycle, replay); it does
+> not re-spec every intent field.
+>
+> Cross-reference: `docs/agentic-architecture-backlog.md` Step 25
+> (shipped) + Steps 39/40 (intent catalog growth),
+> `docs/intent-surface-gaps.md` (catalog matrix), `docs/dsl-v0.md`
 > (the substrate dops grammar).
 
 ## 1. Purpose
@@ -18,14 +34,20 @@ half-migrations, verify drift, partial-staging leaks).
 
 This document specifies a small DSL the patch agent emits instead
 of file writes, a translator that renders each intent into the
-right substrate edit (compat or dops), a transactional execution
-model that bounds workspace state, and an intent log that becomes
-the canonical artifact replacing `analysis/changes.diff` as the
-authoritative record of a patch attempt.
+dops substrate (an `overlay.dops` statement and any companion
+patch file), a transactional execution model that bounds workspace
+state, and an intent log that becomes the canonical artifact
+replacing `analysis/changes.diff` as the authoritative record of a
+patch attempt.
 
-The design is normative for Step 25b implementation. If 25b finds
-a case the design doesn't cover, the design is wrong; revise here
-first.
+> **Why dops-only.** The original design rendered to *either* compat
+> (`Makefile.DragonFly` + `dragonfly/patch-*`) *or* dops, so the
+> patch agent could stay substrate-agnostic. In practice the loop
+> made convert a hard prerequisite — every port is converted to dops
+> before the patch agent touches it — so the compat render path was
+> dead weight and was removed (Step C). The patch agent's edit
+> surface is uniformly dops; `worker.apply_intent` refuses any
+> non-converted substrate before the translator is even constructed.
 
 ## 2. Two-tier state model
 
@@ -79,10 +101,21 @@ JSON, not a custom grammar, on purpose: the LLM emits JSON
 natively; one round of validation rather than a parser; trivial
 to round-trip through the bundle and the tracker UI.
 
-### 3.2 Intent types (v0)
+### 3.2 Intent types
 
-Seven types. Each spec: required fields, optional fields, compat
-rendering, dops rendering, expected diff shape.
+The v0 design specced six patch-agent types plus a convert-only
+`convert_to_dops`. The shipped catalog dropped `convert_to_dops`
+(convert no longer uses an intent — see §6) and grew to **ten**
+patch-agent types: the original six below, plus `replace_in_dops_block`
+(heredoc-body edits) and the three Step-39 symmetric deletes
+(`drop_mk_directive`, `drop_file`, `drop_target_block`). The six
+specs below are kept as the architectural illustration; for the
+full, current, field-exact catalog see the JSON schemas under
+`dportsv3/agent/edit_intent/schemas/` and the intent→dops reference
+table in `docs/intent-surface-gaps.md`.
+
+Each spec below: required fields, optional fields, dops rendering,
+expected diff shape.
 
 #### 3.2.1 `replace_in_patch`
 
@@ -94,14 +127,10 @@ shape (a context line drifted, a function name changed upstream).
 **Optional:** `occurrence` (int, default 1; which match to
 replace if `find` is non-unique).
 
-**Compat render:** read `ports/<origin>/<target>`, replace
-the Nth occurrence of `find` with `replace`, write back. Refuse
-(intent error) if `find` not found, or if `occurrence` exceeds
-match count.
-
 **Dops render:** emit
 `text.replace_once { file=<target>, from=<find>, to=<replace> }`
-into `overlay.dops`.
+into `overlay.dops`. Refuse (intent error) if `find` not found, or
+if `occurrence` exceeds match count.
 
 **Expected diff shape:** single-file modification, two-line
 hunk (find/replace) at minimum.
@@ -114,12 +143,12 @@ Declare an existing patch obsolete and remove it.
 `patch apply` statement reference), `reason` (string, will land
 in the intent log + commit message).
 
-**Compat render:** delete `ports/<origin>/<target>`.
 **Dops render:** remove the corresponding
-`patch apply <target>` statement from `overlay.dops`.
+`patch apply <target>` statement from `overlay.dops` and delete the
+on-disk patch file.
 
-**Expected diff:** single-file deletion (compat) or single-line
-`overlay.dops` modification (dops).
+**Expected diff:** single-line `overlay.dops` modification plus the
+patch-file deletion.
 
 #### 3.2.3 `add_patch`
 
@@ -133,8 +162,6 @@ captured via `dupe` + `genpatch`; the diff field will be
 populated by the runner, agent supplies `target` + `from_dupe`
 only).
 
-**Compat render:** write the diff to
-`ports/<origin>/<target>`.
 **Dops render:** write the diff to
 `ports/<origin>/<target>` AND emit `patch apply <target>` into
 `overlay.dops`.
@@ -143,8 +170,8 @@ only).
 current upstream source (the translator runs `patch --dry-run`
 during application).
 
-**Expected diff:** new file creation (compat) plus possibly a
-single-line `overlay.dops` addition (dops).
+**Expected diff:** new patch-file creation plus a single-line
+`overlay.dops` addition.
 
 #### 3.2.4 `add_file`
 
@@ -157,38 +184,34 @@ DragonFly source tree.
 **Required iff kind=materialize:** `source` (relpath in
 DragonFly source tree).
 
-**Compat render:** write content directly to `dest`; for
-`materialize`, copy from the source tree into the dragonfly/
-subdir.
+**Dops render:** for `resource`, write content to
+`ports/<origin>/<dest>` and emit
+`file.copy { from=<dest>, to=<dest> }` into `overlay.dops`; for
+`materialize`, emit `file.materialize { from=<source>, to=<dest> }`
+(dops references the source, no content written directly).
 
-**Dops render:** emit
-`file.copy { from=<source>, to=<dest> }` or
-`file.materialize { from=<source>, to=<dest> }` into
-`overlay.dops`. Don't write file contents directly — dops
-references them.
-
-**Expected diff:** new file creation (compat); single-line
-`overlay.dops` addition (dops).
+**Expected diff:** single-line `overlay.dops` addition (plus the
+resource file for `kind=resource`).
 
 #### 3.2.5 `change_makefile`
 
 Edit a Makefile variable.
 
-**Required:** `path` (relpath, e.g. `Makefile.DragonFly` or
-`Makefile`), `key` (var name),
+**Required:** `path` (relpath, e.g. `Makefile`), `key` (var name),
 `op` (`"set"` | `"append"` | `"remove"` | `"unset"`). `value` is
 required for set/append/remove and optional (ignored) for unset.
 
-**Compat render:** parse the Makefile, apply the op, write back.
 **Dops render:** emit
 `mk set <KEY> "<value>"` (or `mk add` / `mk remove` / `mk unset`)
 into `overlay.dops`. `mk unset <KEY>` deletes the variable's
 assignment line from the composed Makefile at compose time —
 symmetric inverse of `mk set`, used to drop an upstream
-assignment that's wrong for our target.
+assignment that's wrong for our target. Re-emitting `set` for the
+same key accumulates lines (last-wins at compose, no implicit
+strip post-38e); delete a prior line explicitly with
+`drop_mk_directive`.
 
-**Expected diff:** single-file Makefile modification (compat);
-single-line dops addition (dops).
+**Expected diff:** single-line dops addition.
 
 #### 3.2.6 `bump_portrevision`
 
@@ -197,31 +220,30 @@ content change beyond the Makefile bump.
 
 **Required:** none beyond intent presence.
 
-**Compat render:** edit the Makefile's `PORTREVISION` line
-(insert if missing).
 **Dops render:** emit
 `mk.var.set { var=PORTREVISION, value=<n+1> }`.
 
-**Expected diff:** single-line Makefile modification.
+**Expected diff:** single-line dops addition.
 
-#### 3.2.7 `convert_to_dops` (convert-only; see §6.2)
+#### 3.2.7 Later additions (shipped, not in the v0 spec)
 
-Lift a compat port to dops. Restricted to the convert agent; the
-patch agent cannot emit this intent. Declared here so the grammar
-is closed.
+Four intents joined the catalog after v0; they are dops-only like
+the rest. Field shapes live in the schemas + gap matrix (§3.2
+intro):
 
-**Required:** none beyond intent presence (the convert agent
-runs against one origin at a time).
+- `replace_in_dops_block` — edit text inside an `mk target
+  set/append NAME <<TAG ... TAG` heredoc body.
+- `drop_mk_directive` — remove one `mk set/unset/add/remove VAR`
+  line (symmetric inverse of `change_makefile`; Step 39a).
+- `drop_file` — remove a non-patch `file copy`/`file materialize`
+  line and delete the on-disk file (inverse of `add_file`;
+  Step 39b).
+- `drop_target_block` — remove a whole `mk target` heredoc block
+  (Step 39c).
 
-**Compat render:** N/A (mode is "this intent migrates compat to
-dops").
-**Dops render:** generate `overlay.dops` from the existing
-`Makefile.DragonFly` (deterministic translation via the existing
-`migration.convert` machinery), then delete the source files.
-
-**Expected diff:** new `overlay.dops` creation + deletion of
-`Makefile.DragonFly` and any other legacy artifacts in one atomic
-intent.
+The convert-only `convert_to_dops` intent that v0 declared here was
+**removed**. Convert does not use the intent layer — it authors
+`overlay.dops` directly via `put_file` (see §6).
 
 ### 3.3 Reserved for v1+
 
@@ -239,8 +261,11 @@ These come up in design discussion but are deferred:
 Each agent run is one transaction. The lifecycle:
 
 ```
-BEGIN  → translator constructed for (env, origin); mode resolved
-       │   from classify_dops. Workspace expected clean (assertion).
+BEGIN  → translator constructed for (env, origin), mode="dops".
+       │   worker.apply_intent gates on assess_dops first: a
+       │   non-converted or half-migrated substrate is refused
+       │   before the translator exists. Workspace expected clean
+       │   (assertion).
        ▼
 EMIT   → agent calls apply_intent(intent_json) N times. Each call:
        │     1. validator.check(intent, current_state)
@@ -330,7 +355,7 @@ dportsv3 dev-env apply-and-build ENV ORIGIN [--intent-log PATH] [--json]
 `--intent-log` replaces today's `--diff`. The flow:
 
 1. Assert workspace clean (§5.1).
-2. Resolve translator mode from `classify_dops`.
+2. Construct the translator (mode="dops").
 3. Replay every intent in the log via `translator.apply()`.
 4. Run `reapply` + `dbuild`.
 5. Reset workspace.
@@ -349,60 +374,30 @@ Equivalent to the post-job reset, manually invoked. Useful when
 the operator was experimenting in the env and wants to drop
 their work without rebuilding the env.
 
-## 6. The convert exception
+## 6. Convert is outside the intent layer
 
 Convert's output (`overlay.dops`) is meant to **persist** across
-jobs: triage immediately depends on the converted state. Two
-candidate designs were on the table; this section makes the call.
+jobs: triage immediately depends on the converted state. The patch
+agent's workspace-reset discipline (§5) does not apply to convert.
 
-### 6.1 Design (a) — commit to local branch
+The v0 design proposed expressing convert as a `convert_to_dops`
+intent transaction (so cleanup semantics would be uniform). **That
+is not what shipped.** Convert authors `overlay.dops` directly via
+substrate-level tools (`put_file`, the deterministic
+`migration.convert` machinery), not through `apply_intent`. The
+intent layer is the *patch* agent's surface only. Consequences:
 
-Convert runs as a normal intent transaction (the
-`convert_to_dops` intent of §3.2.7) but its post-job behavior is
-different:
+- There is no `convert_to_dops` intent (removed; see §3.2.7).
+- Convert's output persists in the env checkout; the patch agent's
+  post-job reset (§5.2) is scoped to patch/verify jobs and never
+  runs against a convert job.
+- The patch agent never sees a compat port: `worker.apply_intent`
+  refuses any substrate that isn't already dops-converted (§9.3),
+  so convert running first is a hard precondition, not a mode the
+  translator selects between.
 
-1. Apply the intent (write `overlay.dops`, delete legacy files).
-2. Capture the intent log to the bundle.
-3. `git commit -m "convert: <origin>"` on a local branch
-   `agent/convert/<origin>` in the env's checkout.
-4. Reset back to that branch (so the convert artifacts persist).
-5. Subsequent jobs see git HEAD = the post-convert state.
-
-**Pros:** convert is just another intent transaction. Cleanup
-semantics are uniform. The operator promotes by merging
-`agent/convert/<origin>` into their main clone (or a PR
-branch).
-
-**Cons:** auto-commits inside the env's checkout. If the
-operator was on a different branch, this surprises them.
-Requires the env's checkout to be on a writable branch; some
-operators may have it on a detached HEAD pointing at a tag.
-
-### 6.2 Design (b) — convert is special-cased
-
-Convert applies its intent but the post-job reset is **skipped**
-for `convert_to_dops` intent transactions specifically. The
-ephemeral state persists in the workspace until a future job's
-cleanup or operator reset.
-
-**Pros:** no auto-commits. Minimal change to convert behavior.
-**Cons:** one operation is exempted from the clean-workspace
-invariant, which weakens the guarantee. Subsequent triage runs
-see ephemeral state from convert as "baseline-ish" — same
-ambiguity the current system has.
-
-### 6.3 **DECISION (default):** Design (a)
-
-Auto-commits to a dedicated `agent/convert/<origin>` branch are
-operationally honest (the operator can `git log
-agent/convert/*` to see what landed) and preserve the
-clean-workspace invariant. Detached-HEAD envs get an explicit
-error at convert time pointing the operator to run
-`dportsv3 dev-env update` to attach to a branch.
-
-If the operator overrides this decision before 25b, switch to
-(b). The translator code surface is similar; the difference is
-in the convert job's COMMIT path.
+Operator promotion of converted state happens through the normal
+convert-job delivery path, independent of the intent log.
 
 ## 7. Intent log format
 
@@ -413,7 +408,7 @@ in the convert job's COMMIT path.
   "schema_version": 1,
   "origin": "devel/gperf",
   "target": "@2026Q2",
-  "mode_at_apply": "compat",
+  "mode_at_apply": "dops",
   "baseline_commit": "abc123...",
   "intents": [
     {"seq": 0, "intent": {"type": "drop_patch", ...},
@@ -432,8 +427,9 @@ Notes:
   evolution.
 - `baseline_commit` is the git commit the intents were applied
   against. Verify cross-checks before replay.
-- `mode_at_apply` is recorded for forensics (was the port compat
-  or dops at intent time?).
+- `mode_at_apply` is always `"dops"` post-Step-C; the field is
+  retained for forensics and log-format stability (older logs may
+  carry other values).
 - `substrate_diff` per intent is the actual diff that intent
   produced. This is what `analysis/changes.diff` is computed
   from at bundle-view time (concatenation in order).
@@ -454,9 +450,7 @@ def verify_replay(env_name: str, intent_log: dict) -> VerifyResult:
     if head != intent_log["baseline_commit"]:
         return VerifyResult(ok=False, reason="baseline_mismatch", ...)
 
-    # 3. Construct translator (mode may differ from mode_at_apply
-    #    if the port has been converted since — that's the agent's
-    #    intent, replay it).
+    # 3. Construct translator (mode is always dops post-Step-C).
     translator = Translator(env_name, intent_log["origin"])
 
     # 4. Replay every intent.
@@ -531,42 +525,34 @@ Validation runs at BOTH intent-emit time (the agent calls
   `replace_in_patch`; `occurrence` must not exceed match count.
 - `add_patch.diff` must be syntactically valid unified diff.
 
-### 9.2 Mode-sensitive
+### 9.2 Intent-specific (dops)
 
-Compat mode:
-
-- `drop_patch` target must exist.
-- `add_patch` target must NOT exist.
-- `add_file` dest must NOT exist (for kind=resource).
-- `change_makefile` path must exist; `op=remove` key must be
-  present in the file.
-
-Dops mode:
+All intents render to `overlay.dops` substrate ops:
 
 - `drop_patch` target must be referenced by a `patch apply`
   statement in current `overlay.dops`.
 - `add_patch` target must NOT already be referenced.
 - `change_makefile.path` must equal `Makefile.DragonFly` or
   `Makefile`; the resulting `mk.*` op must be parseable.
+- `drop_mk_directive` / `drop_file` / `drop_target_block` must
+  match exactly one scoped overlay line; zero or ambiguous
+  matches are a hard refusal (Step 39 scope discipline).
 
 ### 9.3 The half-migration invariant (load-bearing)
 
-A single intent log MUST NOT contain intents that imply *both*
-modes. Specifically:
+The substrate a port presents must be fully dops, not half. A
+port MUST NOT carry a legacy `Makefile.DragonFly` *and* an
+`overlay.dops` at the same time — the agent would be editing a
+substrate that compose only partly honors.
 
-- No log can write to `overlay.dops` (any dops-mode intent) AND
-  also write a `Makefile.DragonFly` (compat-mode intent on a
-  Makefile path).
-- No log can contain a `convert_to_dops` intent AND any
-  compat-mode intent.
-
-Today's `multimedia/v4l_compat` incident — agent emitted both —
-fails this check at the second intent's `apply_intent` call. The
-log is rejected; the agent gets an explicit error and can
-re-think.
-
-This replaces today's `surface_invariant` runtime check at
-*next-triage* time. Validation moves to write time.
+This is enforced at the worker boundary, not in the log: before
+constructing the Translator, `worker.apply_intent` calls
+`assess_dops`, and a half-migrated port returns
+`action='surface_invariant'` — the patch agent is held off until
+convert finishes authoring the overlay. Because convert is a hard
+prerequisite (the patch agent only ever sees dops-converted
+substrate), the intent log itself is always single-mode by
+construction; there is no `convert_to_dops` intent to mix in.
 
 ## 10. Tool surface boundary
 
@@ -594,21 +580,28 @@ After Step 25 (recap from `docs/agentic-architecture-backlog.md`):
 grammar spec on demand — the patch prompt cites it instead of
 inlining the full grammar.
 
-## 11. Compat ↔ dops translation table (canonical reference)
+## 11. Intent → dops rendering (canonical reference)
 
 For each intent type, the canonical rendering. The translator is
 deterministic: same intent + same baseline ⇒ same substrate ops.
+All intents render to `overlay.dops`; there is no compat column
+post-Step-C. This table is illustrative — the per-intent JSON
+schemas under `dportsv3/agent/edit_intent/schemas/` and the
+coverage matrix in `docs/intent-surface-gaps.md` are canonical.
 
-| Intent | Compat | Dops |
-|---|---|---|
-| `replace_in_patch` | sed/Python in-place replace on `ports/<origin>/<target>` | append `text.replace_once { file, from, to }` to `overlay.dops` |
-| `drop_patch` | `unlink ports/<origin>/<target>` | remove `patch apply <target>` line from `overlay.dops` |
-| `add_patch` | write diff to `ports/<origin>/<target>` | write diff to `ports/<origin>/<target>` + append `patch apply <target>` to `overlay.dops` |
-| `add_file{resource}` | write content to `ports/<origin>/<dest>` | append `file.copy { from=<staged>, to=<dest> }` to `overlay.dops`; content goes in `ports/<origin>/<dest>` |
-| `add_file{materialize}` | `cp <source>` into `ports/<origin>/<dest>` | append `file.materialize { from=<source>, to=<dest> }` to `overlay.dops` |
-| `change_makefile` | parse + rewrite `<path>` | append `mk.var.{op} { var, value }` to `overlay.dops` |
-| `bump_portrevision` | edit `PORTREVISION` line in Makefile | append `mk.var.set { var=PORTREVISION, value=<n+1> }` to `overlay.dops` |
-| `convert_to_dops` | n/a (mode would already be dops; reject as invalid) | run the deterministic Makefile.DragonFly → overlay.dops translator (existing `migration.convert.convert_record`), then delete legacy files |
+| Intent | Dops rendering |
+|---|---|
+| `replace_in_patch` | append `text.replace_once { file, from, to }` to `overlay.dops` |
+| `drop_patch` | remove `patch apply <target>` line from `overlay.dops` |
+| `add_patch` | write diff to `ports/<origin>/<target>` + append `patch apply <target>` to `overlay.dops` |
+| `add_file{resource}` | append `file.copy { from=<staged>, to=<dest> }` to `overlay.dops`; content goes in `ports/<origin>/<dest>` |
+| `add_file{materialize}` | append `file.materialize { from=<source>, to=<dest> }` to `overlay.dops` |
+| `change_makefile` | append `mk.var.{op} { var, value }` to `overlay.dops` (re-emit accumulates, last-wins at compose) |
+| `bump_portrevision` | append `mk.var.set { var=PORTREVISION, value=<n+1> }` to `overlay.dops` |
+| `replace_in_dops_block` | rewrite a heredoc block body in `overlay.dops` |
+| `drop_mk_directive` | remove a scoped `mk.*` line from `overlay.dops` |
+| `drop_file` | remove a scoped `file.copy`/`file.materialize` line from `overlay.dops` |
+| `drop_target_block` | remove a scoped target heredoc from `overlay.dops` |
 
 ## 12. Rollout
 
@@ -641,12 +634,12 @@ review, the legacy path retires (call it 25h, post-shipment).
 
 ### 12.3 Convert agent migration
 
-Convert keeps its substrate-level tools (per §10). The
-`convert_to_dops` intent in §3.2.7 is *also* available for
-convert; its translator branch calls the same
-`migration.convert.convert_record` machinery. This lets the
-convert agent later be rewritten on intents without changing
-behavior.
+Convert keeps its substrate-level tools (per §10) and authors
+`overlay.dops` directly via `put_file` / `validate_dops` /
+`emit_diff`. It is outside the intent layer (§6); there is no
+`convert_to_dops` intent. The deterministic
+`migration.convert.convert_record` machinery remains available to
+convert as a substrate-level helper, not as an intent.
 
 ## 13. Resolved questions (decisions for 25b)
 
@@ -666,7 +659,9 @@ tool can return them verbatim.
 The schemas live next to the grammar dataclasses:
 `dportsv3/agent/edit_intent/schemas/{replace_in_patch,drop_patch,
 add_patch,add_file,change_makefile,bump_portrevision,
-convert_to_dops}.json`.
+replace_in_dops_block,drop_mk_directive,drop_file,
+drop_target_block}.json`. (`convert_to_dops` was dropped at
+Step C — convert authors `overlay.dops` directly.)
 
 ### 13.2 Intent log size cap — 100 intents, 1 MB total
 
@@ -697,8 +692,8 @@ the translator looks in `<env>/writable/work/<wrksrc>/.genpatch-out/`
 (or wherever genpatch deposits patches in the env) for the
 file whose basename matches `target`'s basename, picking the
 most recently modified one if multiple match. The captured
-content goes into `target` (compat) or gets referenced from
-`overlay.dops` (dops).
+content is written to `ports/<origin>/<target>` and referenced
+from `overlay.dops` via a `patch apply` line.
 
 Refuses with explicit error if no matching file exists in the
 genpatch output dir.
@@ -741,8 +736,6 @@ while making the common case (small diffs from
 
 ## 14. Bandages retired (cross-reference)
 
-## 14. Bandages retired (cross-reference)
-
 From `agentic-architecture-backlog.md` Step 25's "Bandages this
 step retires" table. The design above structurally eliminates
 each:
@@ -750,12 +743,12 @@ each:
 | Bandage | Where in this design |
 |---|---|
 | `_git_diff_with_untracked` | §7 (intent log replaces post-hoc diff capture) |
-| `convert_record.mk_path.unlink()` + circuit breaker | §3.2.7 (`convert_to_dops` intent is atomic) |
+| `convert_record.mk_path.unlink()` + circuit breaker | convert-side, outside the intent layer (§6) |
 | `overlay_state` unification | §5 (workspace assertions remove dual-substrate ambiguity) |
-| `surface_invariant` runtime check | §9.3 (validator at write time) |
+| `surface_invariant` runtime check | §9.3 (enforced at the worker boundary via `assess_dops`) |
 | `_lookup_bundle_target` | unrelated — stays |
 | Verify-fix subprocess gymnastics | §8 (verify replays intents, no subprocess to dev-env apply) |
 | `git apply --3way` staging leak | §8 (no `git apply`) |
 | Env state accumulation | §5 (post-job reset) |
-| `Makefile.DragonFly + overlay.dops` half-migration | §9.3 (validator rejects mixed-mode logs) |
+| `Makefile.DragonFly + overlay.dops` half-migration | §9.3 (worker-boundary `assess_dops` gate) |
 | `process_verify_requests` reconciler | unrelated — stays |

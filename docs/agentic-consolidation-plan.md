@@ -29,9 +29,12 @@ bottom. One-line summary:
   per-bundle branch isolation — is in place.
 - **Next:** 32 (job model — JobSpec/JobRecord + claim-time abandon
   guard, migration-free) alongside 26 items 1–4 (lifecycle
-  hardening) → 25 (edit-intent DSL) → 24 (prompts/quickref) → 16
-  (UX) → refactor + abstraction backlog. 11d-4 (GitLab/Gitea)
-  on-demand only.
+  hardening) → 16 (UX) → refactor + abstraction backlog. 11d-4
+  (GitLab/Gitea) on-demand only. Step 25 (edit-intent DSL)
+  **shipped** (dops-only; its surface work continues as Steps 40–41
+  on the edit-intent thread above). Step 24 (prompts/quickref)
+  **shipped** by absorption into Step 27 — the quickref↔engine audit
+  is clean; see the Step 24 record.
 - **New steps since last edit:** Step 28 (failed-bundle action
   matrix), Step 29 (context-aware re-triage), Step 30 (per-bundle
   branch isolation), all shipped; plus Q1/Q2/config-split folded
@@ -42,9 +45,15 @@ bottom. One-line summary:
 
 ### Update (2026-06-05) — edit-intent surface thread
 
-The edit-intent work (Step 25) has continued in the architecture
-backlog as a series of surface-hardening steps. Shipped since the
-2026-05-28 snapshot:
+**Step 25's core shipped** — but dops-only, not as the dual-mode
+v0 design specced. A "Step C" consolidation removed compat-mode
+rendering and the `convert_to_dops` intent; the translator is
+`Mode = Literal["dops"]`, convert is a hard prerequisite enforced
+at the worker boundary (`assess_dops`), and the catalog is ten
+dops-only intents. The backlog Step 25 record now carries the
+Step-C note; `docs/edit-intent-design.md` is reconciled to
+dops-only. The thread has since continued as surface-hardening
+steps. Shipped since the 2026-05-28 snapshot:
 
 - **Step 36** — typed phase results (`PhaseResult` contract).
 - **Step 37** — compose-time patch drift: handler-side defer +
@@ -57,15 +66,24 @@ backlog as a series of surface-hardening steps. Shipped since the
   patch agent can now create *and* delete every Family A substrate
   shape.
 
-**Next on this thread:** Step 40 (Family B missing-directive
-intents — `change_condition`, `add_target_block`,
-`remove_file_at_compose`, plus 40d which fixes the latent
-scope-blindness in `replace_in_dops_block`). Step 41 (Family C
-generalized `edit_overlay`) remains deferred behind a 41a
-re-evaluation gate. See the
-[architecture backlog](agentic-architecture-backlog.md) Steps 38–41
-for the detailed records. This thread runs alongside the
-26/32/21 hardening order below — it does not reorder it.
+**Next on this thread — a fork to resolve first.** The pending
+work is *one of two mutually-exclusive paths*, not a sequence:
+- **Step 40** (Family B) — grow one bespoke intent per missing
+  directive (`change_condition`, `add_target_block`,
+  `remove_file_at_compose`, + 40d's scope-blindness fix). The
+  grow-the-grammar path; Step 41 (Family C generic `edit_overlay`)
+  sits behind it as a 41a-gated fallback.
+- **Step 42** — collapse the additive intents into a single generic
+  `add_dops` + keep only operation-level scoped intents
+  (`delete_scoped`, `replace_scoped`). The shrink-the-surface path;
+  makes most of Family B unnecessary and retires the coverage
+  matrix rather than shrinking it.
+
+These are two answers to one question (track the *grammar* or the
+*operation set*?). Decide the fork before paying Family B's
+per-directive tax. See [architecture backlog](agentic-architecture-backlog.md)
+Steps 38–42. This thread runs alongside the 26/32/21 hardening
+order below — it does not reorder it.
 
 
 ## Current priority order (as of 2026-05-28)
@@ -119,14 +137,18 @@ Pending, in recommended order:
    bugs live. Items 1+4 add columns (hard dep on Step 21 to avoid a
    second migration); items 5–9 are pure FSM cleanups and can
    interleave whenever.
-4. **25** — edit-intent DSL. Architectural; design (25a) first.
-   The structural answer to the empty-diff / edit-surface class of
-   bug. Can develop in parallel with anything once 25a is approved.
-5. **24** — prompts/quickref consolidation. Cheap, no behavior
-   change. Folds in the stale-`delivery.diff`-comment cleanup noted
-   under Step 30. Before 25d's prompt rewrite so it isn't against a
-   messy baseline. What remains is the structural `dops_quickref.md`
-   audit against the engine source-of-truth.
+4. **25** — edit-intent DSL. **Shipped** (dops-only; see the
+   2026-06-05 update above and the Step 25 record in the
+   architecture backlog). The structural answer to the empty-diff /
+   edit-surface class of bug. Surface work continues as Steps 40–41.
+5. **24** — prompts/quickref consolidation. **Shipped** by
+   absorption into Step 27 (the structural pass) — `CONVERT_SYSTEM`
+   already points to the attached quickref rather than embedding
+   syntax, and the quickref↔engine audit comes up clean (no missing
+   or stale ops). See the Step 24 record. One residual: a
+   triplicated patch-domain rule, left as a judgment call, not a
+   task. (The stale-`delivery.diff`-comment cleanup once filed here
+   folds into Step 30's surface.)
 6. **16** — UX review (dashboard live-refresh + the rest).
 7. **23 → 22** — execution layer then steps.py refactor. 23 first
    so 22's phase-helper extraction lands against the consolidated
