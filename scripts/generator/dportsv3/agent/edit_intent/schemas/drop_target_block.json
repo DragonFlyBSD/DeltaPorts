@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "drop_target_block",
+  "description": "Remove an entire `mk target set/append NAME <<TAG ... TAG` heredoc block from overlay.dops (block-level delete; symmetric for add_target_block). For line-level `mk` directives use drop_mk_directive; to edit inside a block body use replace_in_dops_block.",
+  "type": "object",
+  "required": ["type", "block_name", "reason"],
+  "additionalProperties": false,
+  "properties": {
+    "type": {"const": "drop_target_block"},
+    "block_name": {"type": "string", "minLength": 1,
+                   "description": "The target name on the `mk target set/append <name> <<TAG` opening line."},
+    "reason": {"type": "string", "minLength": 1,
+               "description": "Why this target block is obsolete — lands in the intent log and the operator commit message"},
+    "scope": {"enum": ["@any", "@current"], "default": "@any",
+              "description": "Build-line section to search. '@any' (default) targets the universal section. '@current' resolves to the env's current target at apply time. Never type literal '@2026Q2'; the runner injects t.target."}
+  }
+}

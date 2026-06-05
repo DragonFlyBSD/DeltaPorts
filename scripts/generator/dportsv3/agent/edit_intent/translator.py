@@ -40,6 +40,7 @@ from .grammar import (
     ChangeMakefile,
     DropFile,
     DropMkDirective,
+    DropTargetBlock,
     DropPatch,
     Intent,
     ReplaceInDopsBlock,
@@ -170,6 +171,8 @@ class Translator:
             return lambda i: _mod.drop_mk_directive(self, i)
         if isinstance(intent, DropFile):
             return lambda i: _mod.drop_file(self, i)
+        if isinstance(intent, DropTargetBlock):
+            return lambda i: _mod.drop_target_block(self, i)
         return lambda i: EditResult(
             ok=False, intent_type=getattr(i, "type", "unknown"),
             error=f"no renderer for intent: {i!r}",

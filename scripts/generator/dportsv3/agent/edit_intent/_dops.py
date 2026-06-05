@@ -18,8 +18,8 @@ from typing import Iterable
 
 from .grammar import (
     AddFile, AddPatch, BumpPortrevision, ChangeMakefile,
-    DropFile, DropMkDirective, DropPatch, ReplaceInDopsBlock,
-    ReplaceInPatch,
+    DropFile, DropMkDirective, DropPatch, DropTargetBlock,
+    ReplaceInDopsBlock, ReplaceInPatch,
 )
 from .validator import IntentError
 
@@ -673,6 +673,89 @@ def drop_file(t, intent: DropFile):
     )
 
 
+def drop_target_block(t, intent: DropTargetBlock):
+    """Remove an entire ``mk target set|append <name> <<TAG ... TAG``
+    heredoc block from overlay.dops (Step 39c).
+
+    Block-level delete. Where ``drop_mk_directive`` strips a single
+    ``mk`` line and ``replace_in_dops_block`` edits *inside* a body,
+    this removes the whole block — opening line, body, and closing
+    tag. Closes the gap where convert produces a structurally valid
+    but semantically wrong target recipe that should be removed
+    wholesale rather than patched line-by-line.
+
+    Scope-filtered: the engine accepts same-name blocks under
+    different ``target`` sections, so the locator considers only
+    blocks whose enclosing scope equals the resolved ``scope``
+    (``@current`` resolves to ``t.target``). Adjacent blank lines are
+    left untouched (no implicit cleanup — cosmetic blanks don't affect
+    compose).
+
+    Refusals (``ok=False``): overlay missing, ``scope=@current`` with
+    no env target, invalid scope, corrupt overlay (a matching block
+    opens but never closes), zero matches (the block not existing
+    signals the agent's model is wrong — don't silently no-op), or
+    multiple matches at the same scope (ambiguous; disambiguate via
+    scope or hand-edit).
+    """
+    from .translator import EditResult
+    overlay = t.port_path(_DOPS_FILE)
+    if not overlay.is_file():
+        return EditResult(
+            ok=False, intent_type="drop_target_block",
+            error=f"{_DOPS_FILE} does not exist; nothing to remove from",
+        )
+    before_overlay = overlay.read_text()
+
+    resolved_scope, scope_err = _resolve_drop_scope(
+        t, intent.scope, "drop_target_block",
+    )
+    if scope_err is not None:
+        return scope_err
+
+    extents, err = _find_mk_target_blocks(
+        before_overlay, intent.block_name, resolved_scope,
+    )
+    if err:
+        return EditResult(
+            ok=False, intent_type="drop_target_block", error=err,
+        )
+    if len(extents) == 0:
+        return EditResult(
+            ok=False, intent_type="drop_target_block",
+            error=(
+                f"no `mk target set/append {intent.block_name} <<...` block "
+                f"found in {_DOPS_FILE} under scope {resolved_scope}"
+            ),
+        )
+    if len(extents) > 1:
+        return EditResult(
+            ok=False, intent_type="drop_target_block",
+            error=(
+                f"{len(extents)} `mk target ... {intent.block_name}` blocks "
+                f"match under scope {resolved_scope}; ambiguous — refusing. "
+                f"Disambiguate via scope or edit {_DOPS_FILE} manually."
+            ),
+        )
+    open_idx, close_idx = extents[0]
+    lines = before_overlay.splitlines()
+    kept = lines[:open_idx] + lines[close_idx + 1:]
+    suffix = "\n" if before_overlay.endswith("\n") else ""
+    new = "\n".join(kept) + suffix
+    try:
+        overlay.write_text(new)
+    except OSError as exc:
+        return EditResult(
+            ok=False, intent_type="drop_target_block",
+            error=f"write failed for {_DOPS_FILE}: {exc}",
+        )
+    return EditResult(
+        ok=True, intent_type="drop_target_block",
+        paths_changed=[str(overlay.relative_to(t.workspace))],
+        substrate_diff=t.diff_from_before({overlay: before_overlay}),
+    )
+
+
 def replace_in_dops_block(t, intent: ReplaceInDopsBlock):
     """Edit text inside an ``mk target set <name>`` heredoc body.
 
@@ -847,6 +930,69 @@ def _replace_in_mk_target_block(
         + "".join(lines[close_idx:])
     )
     return (new_text, True, "")
+
+
+def _find_mk_target_blocks(
+    text: str, block_name: str, scope: str,
+) -> tuple[list[tuple[int, int]], str]:
+    """Locate every ``mk target set|append <block_name> <<TAG ... TAG``
+    block within the ``scope`` section.
+
+    Returns ``(extents, error)``. ``extents`` is a list of
+    ``(open_idx, close_idx)`` inclusive line-index pairs into
+    ``text.splitlines()`` — one per matching block, in document order.
+    ``error`` is a non-empty string only when the overlay is
+    structurally corrupt (a heredoc opens but never closes); on a clean
+    parse it is ``""`` regardless of match count, leaving the
+    zero/one/many decision to the caller.
+
+    Scope-aware by design: the engine accepts same-name blocks under
+    different ``target`` sections (no duplicate-name check in
+    ``semantic.py``), so only blocks whose enclosing section scope
+    equals ``scope`` are returned. Section/heredoc tracking mirrors
+    ``_strip_scoped_line``; the open-line parse and tag extraction
+    mirror ``_replace_in_mk_target_block``. ``rename`` is skipped (it
+    has no body).
+    """
+    lines = text.splitlines()
+    n = len(lines)
+    extents: list[tuple[int, int]] = []
+    current_scope = "@any"
+    i = 0
+    while i < n:
+        stripped = lines[i].strip()
+        if stripped.startswith("target "):
+            tok = stripped[len("target "):].strip()
+            if tok:
+                current_scope = tok
+            i += 1
+            continue
+        if stripped.startswith("mk target ") and "<<" in stripped:
+            rest = stripped[len("mk target "):]
+            parts = rest.split(None, 2)
+            tag = stripped.split("<<", 1)[1].strip().strip("'\"")
+            close_idx: int | None = None
+            if tag:
+                for j in range(i + 1, n):
+                    if lines[j].strip() == tag:
+                        close_idx = j
+                        break
+            if close_idx is None:
+                return [], (
+                    f"heredoc block opens at line {i + 1} (<<{tag}) but has "
+                    f"no closing line in {_DOPS_FILE} — overlay is corrupt"
+                )
+            if (
+                len(parts) >= 2
+                and parts[0] != "rename"
+                and parts[1] == block_name
+                and current_scope == scope
+            ):
+                extents.append((i, close_idx))
+            i = close_idx + 1
+            continue
+        i += 1
+    return extents, ""
 
 
 def bump_portrevision(t, intent: BumpPortrevision):

@@ -23,6 +23,7 @@ INTENT_TYPES: tuple[str, ...] = (
     "replace_in_dops_block",
     "drop_mk_directive",
     "drop_file",
+    "drop_target_block",
 )
 
 
@@ -162,6 +163,27 @@ class DropFile:
     scope: Literal["@any", "@current"] = "@any"  # Step 38d-4
 
 
+@dataclass(frozen=True)
+class DropTargetBlock:
+    """Remove an entire ``mk target set|append <name> <<TAG ... TAG``
+    heredoc block from overlay.dops (Step 39c).
+
+    Block-level delete. Distinct from its neighbours:
+    ``drop_mk_directive`` removes a single ``mk`` line;
+    ``replace_in_dops_block`` edits *inside* a block body;
+    ``drop_target_block`` removes the whole block (open line, body,
+    close tag). Closes the gap where convert produced a structurally
+    valid but semantically wrong target recipe that should be removed
+    rather than patched line-by-line. Scope-aware: the engine accepts
+    same-name blocks across different ``target`` sections, so the
+    match is filtered by ``scope`` before removal.
+    """
+    type: Literal["drop_target_block"]
+    block_name: str
+    reason: str
+    scope: Literal["@any", "@current"] = "@any"  # Step 38d-4
+
+
 Intent = Union[
     ReplaceInPatch,
     DropPatch,
@@ -172,6 +194,7 @@ Intent = Union[
     ReplaceInDopsBlock,
     DropMkDirective,
     DropFile,
+    DropTargetBlock,
 ]
 
 
@@ -187,4 +210,5 @@ INTENT_DATACLASSES: dict[str, type] = {
     "replace_in_dops_block": ReplaceInDopsBlock,
     "drop_mk_directive":     DropMkDirective,
     "drop_file":             DropFile,
+    "drop_target_block":     DropTargetBlock,
 }

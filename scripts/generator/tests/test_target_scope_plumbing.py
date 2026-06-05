@@ -2121,3 +2121,200 @@ def test_drop_file_roundtrips_add_file_resource(tmp_path: Path) -> None:
     assert "file copy" not in after
     assert not (t.port_dir / "files" / "pkg-message.dragonfly").exists()
     assert parse_dsl(after).ok
+
+
+# --- drop_target_block (Step 39c) ---------------------------------------
+
+def test_drop_target_block_removes_set_block(tmp_path: Path) -> None:
+    """A whole `mk target set NAME <<TAG ... TAG` block is removed —
+    open line, body, and close tag — leaving unrelated lines intact."""
+    t = _make_seeded_translator(tmp_path)
+    _seed_overlay(
+        t,
+        "mk target set do-build <<MK\n"
+        "\tcd ${WRKSRC} && make\n"
+        "MK\n"
+        'mk set CFLAGS "-O2"\n',
+    )
+    r = t.apply({
+        "type": "drop_target_block", "block_name": "do-build",
+        "reason": "obsolete recipe",
+    })
+    assert r.ok, r.error
+    written = t.port_path("overlay.dops").read_text()
+    assert "mk target set do-build" not in written
+    assert "cd ${WRKSRC} && make" not in written
+    assert "MK" not in written
+    # Unrelated line survives.
+    assert 'mk set CFLAGS "-O2"' in written
+
+
+def test_drop_target_block_removes_append_block(tmp_path: Path) -> None:
+    """`append`-action blocks are matched too, not just `set`."""
+    t = _make_seeded_translator(tmp_path)
+    _seed_overlay(
+        t,
+        "mk target append post-install <<MK\n"
+        "\t${RM} ${STAGEDIR}/junk\n"
+        "MK\n",
+    )
+    r = t.apply({
+        "type": "drop_target_block", "block_name": "post-install",
+        "reason": "x",
+    })
+    assert r.ok, r.error
+    assert "post-install" not in t.port_path("overlay.dops").read_text()
+
+
+def test_drop_target_block_zero_match_refuses(tmp_path: Path) -> None:
+    """A block name that doesn't exist signals the agent's model is
+    wrong — refuse rather than silently no-op."""
+    t = _make_seeded_translator(tmp_path)
+    _seed_overlay(t, "mk target set do-build <<MK\n\tmake\nMK\n")
+    r = t.apply({
+        "type": "drop_target_block", "block_name": "do-install",
+        "reason": "x",
+    })
+    assert r.ok is False
+    assert "no `mk target set/append do-install" in (r.error or "")
+
+
+def test_drop_target_block_ambiguous_refuses_and_leaves_substrate(
+    tmp_path: Path,
+) -> None:
+    """Two same-name blocks at the same scope → hard refuse, substrate
+    untouched (no partial removal)."""
+    t = _make_seeded_translator(tmp_path)
+    _seed_overlay(
+        t,
+        "mk target set do-build <<MK\n\ta\nMK\n"
+        "mk target append do-build <<MK\n\tb\nMK\n",
+    )
+    before = t.port_path("overlay.dops").read_text()
+    r = t.apply({
+        "type": "drop_target_block", "block_name": "do-build",
+        "reason": "x",
+    })
+    assert r.ok is False
+    assert "ambiguous" in (r.error or "")
+    assert t.port_path("overlay.dops").read_text() == before
+
+
+def test_drop_target_block_scope_filters_to_section(tmp_path: Path) -> None:
+    """Same block name under @any and @2026Q2: dropping @any leaves the
+    @2026Q2 block intact. This is the property replace_in_dops_block
+    lacks (its scope-blindness is parked for Step 40d)."""
+    t = _make_seeded_translator(tmp_path)
+    t.port_path("overlay.dops").write_text(
+        "target @any\n"
+        "port devel/foo\n"
+        "type port\n"
+        'reason "x"\n'
+        "\n"
+        "mk target set do-build <<MK\n"
+        "\tmake\n"
+        "MK\n"
+        "\n"
+        "target @2026Q2\n"
+        "mk target set do-build <<MK\n"
+        "\tgmake\n"
+        "MK\n"
+    )
+    r = t.apply({
+        "type": "drop_target_block", "block_name": "do-build",
+        "reason": "x", "scope": "@any",
+    })
+    assert r.ok, r.error
+    written = t.port_path("overlay.dops").read_text()
+    # Only the @2026Q2 block survives.
+    assert written.count("mk target set do-build") == 1
+    assert "gmake" in written
+    assert "make\n" not in written.split("target @2026Q2")[0]
+
+
+def test_drop_target_block_current_resolves_to_t_target(
+    tmp_path: Path,
+) -> None:
+    t = _make_seeded_translator(tmp_path, target="@2026Q2")
+    t.port_path("overlay.dops").write_text(
+        "target @any\n"
+        "port devel/foo\n"
+        "type port\n"
+        'reason "x"\n'
+        "\n"
+        "mk target set do-build <<MK\n"
+        "\tmake\n"
+        "MK\n"
+        "\n"
+        "target @2026Q2\n"
+        "mk target set do-build <<MK\n"
+        "\tgmake\n"
+        "MK\n"
+    )
+    r = t.apply({
+        "type": "drop_target_block", "block_name": "do-build",
+        "reason": "x", "scope": "@current",
+    })
+    assert r.ok, r.error
+    written = t.port_path("overlay.dops").read_text()
+    # The @2026Q2 block went; the @any one stays.
+    assert written.count("mk target set do-build") == 1
+    assert "make" in written.split("target @2026Q2")[0]
+    assert "gmake" not in written
+
+
+def test_drop_target_block_current_refused_when_no_target(
+    tmp_path: Path,
+) -> None:
+    t = _make_seeded_translator(tmp_path)  # target=None
+    _seed_overlay(t, "mk target set do-build <<MK\n\tmake\nMK\n")
+    r = t.apply({
+        "type": "drop_target_block", "block_name": "do-build",
+        "reason": "x", "scope": "@current",
+    })
+    assert r.ok is False
+    assert "@current" in (r.error or "")
+    assert "escalate" in (r.error or "")
+
+
+def test_drop_target_block_no_overlay_refuses(tmp_path: Path) -> None:
+    t = _make_seeded_translator(tmp_path)  # overlay.dops not created
+    r = t.apply({
+        "type": "drop_target_block", "block_name": "do-build",
+        "reason": "x",
+    })
+    assert r.ok is False
+    assert "does not exist" in (r.error or "")
+
+
+def test_drop_target_block_unbounded_block_refuses(tmp_path: Path) -> None:
+    """A heredoc that opens but never closes is a corrupt overlay —
+    refuse rather than removing to EOF on a guess."""
+    t = _make_seeded_translator(tmp_path)
+    _seed_overlay(t, "mk target set do-build <<MK\n\tmake with no close tag\n")
+    r = t.apply({
+        "type": "drop_target_block", "block_name": "do-build",
+        "reason": "x",
+    })
+    assert r.ok is False
+    assert "corrupt" in (r.error or "")
+
+
+def test_drop_target_block_roundtrips_through_engine(tmp_path: Path) -> None:
+    """After removing a block the remaining overlay parses cleanly."""
+    from dportsv3.engine.api import parse_dsl
+
+    t = _make_seeded_translator(tmp_path)
+    _seed_overlay(
+        t,
+        "mk target set do-build <<MK\n"
+        "\tcd ${WRKSRC} && make\n"
+        "MK\n"
+        'mk set CFLAGS "-O2"\n',
+    )
+    r = t.apply({
+        "type": "drop_target_block", "block_name": "do-build",
+        "reason": "x",
+    })
+    assert r.ok, r.error
+    assert parse_dsl(t.port_path("overlay.dops").read_text()).ok
