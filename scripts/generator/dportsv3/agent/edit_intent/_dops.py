@@ -602,6 +602,87 @@ def _resolve_drop_scope(t, scope, intent_type):
     return resolved, None
 
 
+def _delete_scoped(t, intent_type, scope, locate, zero_error, ambiguous_error,
+                   *, side_effect=None):
+    """Shared scoped-delete skeleton for the Family A deletes (Step 42b).
+
+    ``drop_mk_directive``, ``drop_file``, and ``drop_target_block`` are
+    one operation — locate existing structure under a resolved scope,
+    refuse on zero or >1 matches, write, capture the per-intent diff.
+    This helper owns that skeleton; each caller supplies only what
+    differs (the locator, the refusal wording, an optional on-disk
+    side effect).
+
+    Parameters:
+      ``locate(before_overlay, resolved_scope) -> (new_text, count, err)``
+        ``count`` is the number of matches found; ``err`` is a hard
+        error (e.g. a corrupt overlay whose block never closes) that
+        short-circuits with ok=False before the zero/ambiguous checks.
+        ``new_text`` is consulted only when ``count == 1``.
+      ``zero_error(resolved_scope) -> str`` /
+      ``ambiguous_error(resolved_scope, count) -> str``
+        Build the refusal messages — they name the directive shape, so
+        the wording is caller-owned.
+      ``side_effect(before_overlay) -> EditResult | (paths, before_state)``
+        Optional, runs AFTER the overlay write on a unique match. Return
+        an ``EditResult`` to signal a failure the side effect has
+        already rolled back (``drop_file`` restores the overlay before
+        returning), or ``(extra_paths, extra_before_state)`` to extend
+        the success result with a coupled on-disk change.
+
+    The caller is responsible for any pre-checks that need their own
+    context (``drop_file``'s ``dragonfly/patch-*`` routing refusal runs
+    before this helper).
+    """
+    from .translator import EditResult
+    overlay = t.port_path(_DOPS_FILE)
+    if not overlay.is_file():
+        return EditResult(
+            ok=False, intent_type=intent_type,
+            error=f"{_DOPS_FILE} does not exist; nothing to remove from",
+        )
+    before_overlay = overlay.read_text()
+
+    resolved_scope, scope_err = _resolve_drop_scope(t, scope, intent_type)
+    if scope_err is not None:
+        return scope_err
+
+    new, count, err = locate(before_overlay, resolved_scope)
+    if err:
+        return EditResult(ok=False, intent_type=intent_type, error=err)
+    if count == 0:
+        return EditResult(
+            ok=False, intent_type=intent_type,
+            error=zero_error(resolved_scope),
+        )
+    if count > 1:
+        return EditResult(
+            ok=False, intent_type=intent_type,
+            error=ambiguous_error(resolved_scope, count),
+        )
+    try:
+        overlay.write_text(new)
+    except OSError as exc:
+        return EditResult(
+            ok=False, intent_type=intent_type,
+            error=f"write failed for {_DOPS_FILE}: {exc}",
+        )
+    paths_changed = [str(overlay.relative_to(t.workspace))]
+    before_state: dict[Path, str | None] = {overlay: before_overlay}
+    if side_effect is not None:
+        res = side_effect(before_overlay)
+        if isinstance(res, EditResult):
+            return res
+        extra_paths, extra_before = res
+        paths_changed.extend(extra_paths)
+        before_state.update(extra_before)
+    return EditResult(
+        ok=True, intent_type=intent_type,
+        paths_changed=paths_changed,
+        substrate_diff=t.diff_from_before(before_state),
+    )
+
+
 def drop_mk_directive(t, intent: DropMkDirective):
     """Remove a single ``mk set/unset/add/remove VAR`` line from
     overlay.dops (Step 39a).
@@ -631,21 +712,6 @@ def drop_mk_directive(t, intent: DropMkDirective):
     scope or hand-edit). No implicit invariant repair — this renderer
     only removes lines, never reorders sections.
     """
-    from .translator import EditResult
-    overlay = t.port_path(_DOPS_FILE)
-    if not overlay.is_file():
-        return EditResult(
-            ok=False, intent_type="drop_mk_directive",
-            error=f"{_DOPS_FILE} does not exist; nothing to remove from",
-        )
-    before_overlay = overlay.read_text()
-
-    resolved_scope, scope_err = _resolve_drop_scope(
-        t, intent.scope, "drop_mk_directive",
-    )
-    if scope_err is not None:
-        return scope_err
-
     if intent.kind == "unset":
         shape_desc = f"mk unset {intent.key}"
     elif intent.kind == "set":
@@ -658,37 +724,19 @@ def drop_mk_directive(t, intent: DropMkDirective):
             s, intent.kind, intent.key, intent.value,
         )
 
-    new, count = _strip_scoped_line(
-        before_overlay, resolved_scope, _matches,
-    )
-    if count == 0:
-        return EditResult(
-            ok=False, intent_type="drop_mk_directive",
-            error=(
-                f"no `{shape_desc}` line found in {_DOPS_FILE} under "
-                f"scope {resolved_scope}"
-            ),
-        )
-    if count > 1:
-        return EditResult(
-            ok=False, intent_type="drop_mk_directive",
-            error=(
-                f"{count} `{shape_desc}` lines match under scope "
-                f"{resolved_scope}; ambiguous — refusing. Disambiguate "
-                f"via scope or edit {_DOPS_FILE} manually."
-            ),
-        )
-    try:
-        overlay.write_text(new)
-    except OSError as exc:
-        return EditResult(
-            ok=False, intent_type="drop_mk_directive",
-            error=f"write failed for {_DOPS_FILE}: {exc}",
-        )
-    return EditResult(
-        ok=True, intent_type="drop_mk_directive",
-        paths_changed=[str(overlay.relative_to(t.workspace))],
-        substrate_diff=t.diff_from_before({overlay: before_overlay}),
+    def _locate(before: str, scope: str):
+        new, count = _strip_scoped_line(before, scope, _matches)
+        return new, count, None
+
+    return _delete_scoped(
+        t, "drop_mk_directive", intent.scope, _locate,
+        zero_error=lambda sc: (
+            f"no `{shape_desc}` line found in {_DOPS_FILE} under scope {sc}"
+        ),
+        ambiguous_error=lambda sc, n: (
+            f"{n} `{shape_desc}` lines match under scope {sc}; ambiguous — "
+            f"refusing. Disambiguate via scope or edit {_DOPS_FILE} manually."
+        ),
     )
 
 
@@ -731,19 +779,6 @@ def drop_file(t, intent: DropFile):
                 f"Use drop_patch to remove a patch install."
             ),
         )
-    overlay = t.port_path(_DOPS_FILE)
-    if not overlay.is_file():
-        return EditResult(
-            ok=False, intent_type="drop_file",
-            error=f"{_DOPS_FILE} does not exist; nothing to remove from",
-        )
-    before_overlay = overlay.read_text()
-
-    resolved_scope, scope_err = _resolve_drop_scope(
-        t, intent.scope, "drop_file",
-    )
-    if scope_err is not None:
-        return scope_err
 
     def _matches(s: str) -> bool:
         for verb in ("file copy ", "file materialize "):
@@ -755,53 +790,52 @@ def drop_file(t, intent: DropFile):
                         return True
         return False
 
-    new, count = _strip_scoped_line(before_overlay, resolved_scope, _matches)
-    if count == 0:
-        return EditResult(
-            ok=False, intent_type="drop_file",
-            error=(
-                f"no `file copy ... -> {intent.target}` or "
-                f"`file materialize ... -> {intent.target}` line found in "
-                f"{_DOPS_FILE} under scope {resolved_scope}"
-            ),
-        )
-    if count > 1:
-        return EditResult(
-            ok=False, intent_type="drop_file",
-            error=(
-                f"{count} install directives for {intent.target!r} match "
-                f"under scope {resolved_scope}; ambiguous — refusing. "
-                f"Disambiguate via scope or edit {_DOPS_FILE} manually."
-            ),
-        )
+    def _locate(before: str, scope: str):
+        new, count = _strip_scoped_line(before, scope, _matches)
+        return new, count, None
+
+    # Resolve the resource path up front: t.port_path raises IntentError
+    # on a path-escaping target, and that refusal must land before any
+    # overlay write (the side effect runs post-write) so a bad target
+    # never leaves a half-stripped overlay.
     resource = t.port_path(intent.target)
-    before_resource = resource.read_text() if resource.is_file() else None
-    try:
-        overlay.write_text(new)
-    except OSError as exc:
-        return EditResult(
-            ok=False, intent_type="drop_file",
-            error=f"write failed for {_DOPS_FILE}: {exc}",
-        )
-    paths_changed = [str(overlay.relative_to(t.workspace))]
-    before_state: dict[Path, str | None] = {overlay: before_overlay}
-    if before_resource is not None:
+
+    def _side_effect(before_overlay: str):
+        # Delete the coupled on-disk resource so a later add_file isn't
+        # blocked by orphaned bytes; roll the overlay strip back if the
+        # unlink fails so no half-applied state survives.
+        overlay = t.port_path(_DOPS_FILE)
+        before_resource = resource.read_text() if resource.is_file() else None
+        if before_resource is None:
+            return [], {}
         try:
             resource.unlink()
         except OSError as exc:
-            overlay.write_text(before_overlay)  # roll back the line strip
+            overlay.write_text(before_overlay)
             return EditResult(
                 ok=False, intent_type="drop_file",
                 error=(
                     f"could not delete resource file {intent.target}: {exc}"
                 ),
             )
-        paths_changed.append(str(resource.relative_to(t.workspace)))
-        before_state[resource] = before_resource
-    return EditResult(
-        ok=True, intent_type="drop_file",
-        paths_changed=paths_changed,
-        substrate_diff=t.diff_from_before(before_state),
+        return (
+            [str(resource.relative_to(t.workspace))],
+            {resource: before_resource},
+        )
+
+    return _delete_scoped(
+        t, "drop_file", intent.scope, _locate,
+        zero_error=lambda sc: (
+            f"no `file copy ... -> {intent.target}` or "
+            f"`file materialize ... -> {intent.target}` line found in "
+            f"{_DOPS_FILE} under scope {sc}"
+        ),
+        ambiguous_error=lambda sc, n: (
+            f"{n} install directives for {intent.target!r} match under scope "
+            f"{sc}; ambiguous — refusing. Disambiguate via scope or edit "
+            f"{_DOPS_FILE} manually."
+        ),
+        side_effect=_side_effect,
     )
 
 
@@ -830,61 +864,31 @@ def drop_target_block(t, intent: DropTargetBlock):
     multiple matches at the same scope (ambiguous; disambiguate via
     scope or hand-edit).
     """
-    from .translator import EditResult
-    overlay = t.port_path(_DOPS_FILE)
-    if not overlay.is_file():
-        return EditResult(
-            ok=False, intent_type="drop_target_block",
-            error=f"{_DOPS_FILE} does not exist; nothing to remove from",
+    def _locate(before: str, scope: str):
+        extents, err = _find_mk_target_blocks(
+            before, intent.block_name, scope,
         )
-    before_overlay = overlay.read_text()
+        if err:
+            return None, 0, err
+        if len(extents) != 1:
+            return None, len(extents), None
+        open_idx, close_idx = extents[0]
+        lines = before.splitlines()
+        kept = lines[:open_idx] + lines[close_idx + 1:]
+        suffix = "\n" if before.endswith("\n") else ""
+        return "\n".join(kept) + suffix, 1, None
 
-    resolved_scope, scope_err = _resolve_drop_scope(
-        t, intent.scope, "drop_target_block",
-    )
-    if scope_err is not None:
-        return scope_err
-
-    extents, err = _find_mk_target_blocks(
-        before_overlay, intent.block_name, resolved_scope,
-    )
-    if err:
-        return EditResult(
-            ok=False, intent_type="drop_target_block", error=err,
-        )
-    if len(extents) == 0:
-        return EditResult(
-            ok=False, intent_type="drop_target_block",
-            error=(
-                f"no `mk target set/append {intent.block_name} <<...` block "
-                f"found in {_DOPS_FILE} under scope {resolved_scope}"
-            ),
-        )
-    if len(extents) > 1:
-        return EditResult(
-            ok=False, intent_type="drop_target_block",
-            error=(
-                f"{len(extents)} `mk target ... {intent.block_name}` blocks "
-                f"match under scope {resolved_scope}; ambiguous — refusing. "
-                f"Disambiguate via scope or edit {_DOPS_FILE} manually."
-            ),
-        )
-    open_idx, close_idx = extents[0]
-    lines = before_overlay.splitlines()
-    kept = lines[:open_idx] + lines[close_idx + 1:]
-    suffix = "\n" if before_overlay.endswith("\n") else ""
-    new = "\n".join(kept) + suffix
-    try:
-        overlay.write_text(new)
-    except OSError as exc:
-        return EditResult(
-            ok=False, intent_type="drop_target_block",
-            error=f"write failed for {_DOPS_FILE}: {exc}",
-        )
-    return EditResult(
-        ok=True, intent_type="drop_target_block",
-        paths_changed=[str(overlay.relative_to(t.workspace))],
-        substrate_diff=t.diff_from_before({overlay: before_overlay}),
+    return _delete_scoped(
+        t, "drop_target_block", intent.scope, _locate,
+        zero_error=lambda sc: (
+            f"no `mk target set/append {intent.block_name} <<...` block "
+            f"found in {_DOPS_FILE} under scope {sc}"
+        ),
+        ambiguous_error=lambda sc, n: (
+            f"{n} `mk target ... {intent.block_name}` blocks match under "
+            f"scope {sc}; ambiguous — refusing. Disambiguate via scope or "
+            f"edit {_DOPS_FILE} manually."
+        ),
     )
 
 
