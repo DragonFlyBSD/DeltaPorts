@@ -528,11 +528,12 @@ def test_dops_state_persisted_to_bundle_row(
 def test_circuit_breaker_blocks_redefer_after_recent_convert_done(
     tmp_path: Path, monkeypatch, state_db,
 ) -> None:
-    """Recurrence guard: if a convert for (origin, target) already
-    reached DONE but classify still says auto_safe_pending,
+    """Recurrence guard: if THIS bundle's convert already reached DONE
+    but classify still says auto_safe_pending,
     `_maybe_defer_to_convert` must NOT re-enqueue another convert
     (which would loop the runner). It returns None and lets triage
-    proceed instead."""
+    proceed instead. The breaker is scoped to bundle_id — a convert
+    from a different bundle for the same origin must NOT trip it."""
     from dportsv3.agent.runner import _maybe_defer_to_convert, enqueue_convert_job
 
     repo = _make_repo(tmp_path)
@@ -545,25 +546,30 @@ def test_circuit_breaker_blocks_redefer_after_recent_convert_done(
     monkeypatch.setenv("DP_HARNESS_REPO_ROOT", str(repo))
     queue_root = _make_queue(tmp_path)
 
-    # Stage a recent done convert for this origin/target.
+    bundle_id = "devel_looper-20260605-000000Z"
+    # Stage a done convert that belongs to THIS bundle.
     convert_path = enqueue_convert_job(
         queue_root, origin="devel/looper", target="@main",
-        profile="main", requested_by="operator",
+        profile="main", requested_by="operator", bundle_id=bundle_id,
     )
     cid = convert_path.name
     lifecycle_apply(state_db, cid, JobEvent.CLAIM)
     lifecycle_apply(state_db, cid, JobEvent.CONVERT_START)
     lifecycle_apply(state_db, cid, JobEvent.CONVERT_OK)
     state_db.execute(
-        "UPDATE jobs SET type = 'convert', origin = ?, target = ? WHERE job_id = ?",
-        ("devel/looper", "@main", cid),
+        "UPDATE jobs SET type = 'convert', origin = ?, target = ?, "
+        "bundle_id = ? WHERE job_id = ?",
+        ("devel/looper", "@main", bundle_id, cid),
     )
 
     job_path = queue_root / "pending" / "triage-loop.job"
     job_path.write_text("type=triage\norigin=devel/looper\n")
     _bootstrap_triage_job(state_db, queue_root, job_path.name)
 
-    job = {"origin": "devel/looper", "target": "@main", "profile": "main"}
+    job = {
+        "origin": "devel/looper", "target": "@main",
+        "profile": "main", "bundle_id": bundle_id,
+    }
     result = _maybe_defer_to_convert(
         queue_root=queue_root, job=job, job_path=job_path,
         origin="devel/looper",
@@ -575,4 +581,59 @@ def test_circuit_breaker_blocks_redefer_after_recent_convert_done(
         p for p in queue_root.glob("pending/*-convert.job") if p.name != cid
     ]
     assert open_converts == [], "no new convert should be enqueued"
+
+
+def test_circuit_breaker_ignores_convert_from_other_bundle(
+    tmp_path: Path, monkeypatch, state_db,
+) -> None:
+    """The bug this fixes: a convert that succeeded for a *different*
+    bundle of the same origin must NOT trip the breaker. The port is
+    still auto_safe_pending for THIS bundle, so triage must defer and
+    enqueue a convert — not fall through to patch (whose intents are
+    all substrate-gated and would dead-end)."""
+    from dportsv3.agent.runner import _maybe_defer_to_convert, enqueue_convert_job
+
+    repo = _make_repo(tmp_path)
+    port = _make_port(repo, "devel/looper")
+    (port / "Makefile.DragonFly").write_text(
+        'USES+= ssl\ndfly-patch:\n\t${REINPLACE_CMD} -e "s/a/b/" file\n'
+    )
+    monkeypatch.setenv("DP_HARNESS_REPO_ROOT", str(repo))
+    queue_root = _make_queue(tmp_path)
+
+    # A done convert belonging to a PRIOR, different bundle.
+    convert_path = enqueue_convert_job(
+        queue_root, origin="devel/looper", target="@main",
+        profile="main", requested_by="operator",
+        bundle_id="devel_looper-OTHER-bundle",
+    )
+    cid = convert_path.name
+    lifecycle_apply(state_db, cid, JobEvent.CLAIM)
+    lifecycle_apply(state_db, cid, JobEvent.CONVERT_START)
+    lifecycle_apply(state_db, cid, JobEvent.CONVERT_OK)
+    state_db.execute(
+        "UPDATE jobs SET type = 'convert', origin = ?, target = ?, "
+        "bundle_id = ? WHERE job_id = ?",
+        ("devel/looper", "@main", "devel_looper-OTHER-bundle", cid),
+    )
+
+    job_path = queue_root / "pending" / "triage-loop.job"
+    job_path.write_text("type=triage\norigin=devel/looper\n")
+    _bootstrap_triage_job(state_db, queue_root, job_path.name)
+
+    # This triage belongs to a NEW bundle that has no convert of its own.
+    job = {
+        "origin": "devel/looper", "target": "@main",
+        "profile": "main", "bundle_id": "devel_looper-THIS-bundle",
+    }
+    result = _maybe_defer_to_convert(
+        queue_root=queue_root, job=job, job_path=job_path,
+        origin="devel/looper",
+    )
+
+    # The breaker must NOT fire: triage defers to convert instead of
+    # falling through to patch. (The other bundle's done convert is
+    # invisible to the bundle-scoped query.)
+    assert result is not None, "should defer to convert, not fall through"
+    assert "deferred_for_convert" in result[1]
 

@@ -1993,35 +1993,35 @@ def _resume_deferred_triage(
     return new_path.name
 
 
-def _recent_successful_convert(
-    origin: str, target: str, window_seconds: int = 600,
-) -> str | None:
-    """Return job_id of a convert for (origin, target) that reached DONE
-    within ``window_seconds``, else None.
+def _bundle_convert_succeeded(bundle_id: str | None) -> str | None:
+    """Return job_id of a convert for THIS bundle that reached DONE, else None.
 
-    Used as a circuit breaker in `_maybe_defer_to_convert`: if a convert
-    just succeeded for this origin but classify still says "needs
-    conversion", the defer→convert→resume cycle is stuck (the convert
-    cannot move the port out of `auto_safe_pending` for some reason).
-    Refusing to re-defer breaks the loop and lets triage run with the
-    state-as-is so the operator sees the bug instead of a runaway queue.
+    Circuit breaker for `_maybe_defer_to_convert`: if this bundle already
+    had a convert succeed yet classify still says the substrate needs
+    conversion, the defer→convert→resume cycle is stuck for this episode
+    (convert can't move the port out of `auto_safe_pending`). Refusing to
+    re-defer breaks the loop.
+
+    Scoped to ``bundle_id``, NOT to (origin, target) within a time window:
+    the loop the breaker guards is intra-bundle. A port-scoped time window
+    false-positives when a *second* failure bundle for the same port lands
+    inside the window — it matches the neighbor bundle's convert and
+    suppresses a convert this bundle legitimately needs, sending an
+    unconverted port straight to a patch flow whose every intent is
+    substrate-gated. A bundle has one origin and one target, so bundle_id
+    alone identifies the episode.
     """
     global _state_db_conn
-    if _state_db_conn is None:
+    if _state_db_conn is None or not bundle_id:
         return None
-    cutoff = (
-        datetime.now(timezone.utc) - timedelta(seconds=window_seconds)
-    ).strftime("%Y-%m-%dT%H:%M:%SZ")
     try:
         row = _state_db_conn.execute(
             """SELECT job_id FROM jobs
                WHERE type = 'convert'
                  AND state = 'done'
-                 AND origin = ?
-                 AND (target = ? OR (? = '' AND (target IS NULL OR target = '')))
-                 AND last_seen_at >= ?
+                 AND bundle_id = ?
                ORDER BY last_seen_at DESC LIMIT 1""",
-            (origin, target, target, cutoff),
+            (bundle_id,),
         ).fetchone()
     except sqlite3.Error:
         return None
@@ -2879,23 +2879,23 @@ def _maybe_defer_to_convert(
         # needed". Let triage run.
         return None
 
-    recent_done = _recent_successful_convert(origin, target)
-    if recent_done is not None:
+    prior_convert = _bundle_convert_succeeded(bundle_id)
+    if prior_convert is not None:
         log(queue_root, "WARN",
             f"refusing to re-defer triage for {origin!r}: convert "
-            f"{recent_done} already succeeded but classify still says "
-            f"{state!r}; proceeding with triage to surface the bug")
+            f"{prior_convert} already succeeded for this bundle but classify "
+            f"still says {state!r}; proceeding with triage to surface the bug")
         try:
             activity_log(
                 queue_root,
                 "triage_defer_circuit_break",
                 (
-                    f"convert {recent_done} succeeded but classify still "
-                    f"{state}; proceeding with triage"
+                    f"convert {prior_convert} succeeded for this bundle but "
+                    f"classify still {state}; proceeding with triage"
                 ),
                 job_id=job_path.name,
                 extra={
-                    "recent_convert_job_id": recent_done,
+                    "recent_convert_job_id": prior_convert,
                     "dops_state": state,
                     "assessment": assessment.to_log_dict(),
                 },
