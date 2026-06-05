@@ -22,6 +22,7 @@ INTENT_TYPES: tuple[str, ...] = (
     "bump_portrevision",
     "replace_in_dops_block",
     "drop_mk_directive",
+    "drop_file",
 )
 
 
@@ -142,6 +143,25 @@ class DropMkDirective:
     scope: Literal["@any", "@current"] = "@any"  # Step 38d-4
 
 
+@dataclass(frozen=True)
+class DropFile:
+    """Remove a ``file copy`` / ``file materialize`` install directive
+    from overlay.dops (Step 39b).
+
+    Symmetric delete for ``add_file``. Distinct from ``drop_patch``,
+    which owns patch-shaped destinations (``dragonfly/patch-*``):
+    ``drop_file`` handles everything else (port-local resources,
+    generated files) and refuses ``dragonfly/patch-*`` targets so the
+    two intents never overlap. Deletes the on-disk resource file too,
+    mirroring ``drop_patch`` — dropping only the directive would
+    orphan bytes that block a later ``add_file``.
+    """
+    type: Literal["drop_file"]
+    target: str           # the `-> <target>` destination relpath
+    reason: str
+    scope: Literal["@any", "@current"] = "@any"  # Step 38d-4
+
+
 Intent = Union[
     ReplaceInPatch,
     DropPatch,
@@ -151,6 +171,7 @@ Intent = Union[
     BumpPortrevision,
     ReplaceInDopsBlock,
     DropMkDirective,
+    DropFile,
 ]
 
 
@@ -165,4 +186,5 @@ INTENT_DATACLASSES: dict[str, type] = {
     "bump_portrevision":     BumpPortrevision,
     "replace_in_dops_block": ReplaceInDopsBlock,
     "drop_mk_directive":     DropMkDirective,
+    "drop_file":             DropFile,
 }

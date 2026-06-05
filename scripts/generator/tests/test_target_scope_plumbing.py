@@ -1948,3 +1948,176 @@ def test_drop_mk_directive_add_requires_value_schema() -> None:
         raise AssertionError("expected schema refusal for add without value")
     except Exception as exc:  # IntentError
         assert "value" in str(exc).lower() or "required" in str(exc).lower()
+
+
+# ---------------------------------------------------------------------
+# Step 39b — drop_file renderer
+# ---------------------------------------------------------------------
+
+
+def test_drop_file_removes_copy_and_deletes_resource(tmp_path: Path) -> None:
+    """`file copy` (kind=resource) install: the directive line is
+    stripped AND the on-disk resource under ports/<origin>/ deleted."""
+    t = _make_seeded_translator(tmp_path)
+    (t.port_dir / "files").mkdir(parents=True)
+    (t.port_dir / "files" / "m.dragonfly").write_text("hi\n")
+    _seed_overlay(t, "file copy files/m.dragonfly -> files/m.dragonfly\n")
+    r = t.apply({
+        "type": "drop_file", "target": "files/m.dragonfly", "reason": "stale",
+    })
+    assert r.ok, r.error
+    assert "file copy" not in t.port_path("overlay.dops").read_text()
+    assert not (t.port_dir / "files" / "m.dragonfly").exists()
+    # The deleted resource is reported, not just the overlay.
+    assert "ports/devel/foo/files/m.dragonfly" in r.paths_changed
+
+
+def test_drop_file_removes_materialize_no_ondisk_file(tmp_path: Path) -> None:
+    """`file materialize ... -> <dest>` where the dest is a build-tree
+    path (not a port-subtree file): line stripped, no unlink attempted,
+    only the overlay reported."""
+    t = _make_seeded_translator(tmp_path)
+    _seed_overlay(t, "file materialize dragonfly/extra.h -> include/extra.h\n")
+    r = t.apply({
+        "type": "drop_file", "target": "include/extra.h", "reason": "stale",
+    })
+    assert r.ok, r.error
+    assert "file materialize" not in t.port_path("overlay.dops").read_text()
+    assert r.paths_changed == ["ports/devel/foo/overlay.dops"]
+
+
+def test_drop_file_refuses_patch_shaped_target(tmp_path: Path) -> None:
+    """Patch-shaped destinations are owned by drop_patch; drop_file
+    refuses them so the two intents never overlap."""
+    t = _make_seeded_translator(tmp_path)
+    _seed_overlay(
+        t, "file materialize dragonfly/patch-foo -> dragonfly/patch-foo\n",
+    )
+    r = t.apply({
+        "type": "drop_file", "target": "dragonfly/patch-foo", "reason": "x",
+    })
+    assert r.ok is False
+    assert "drop_patch" in (r.error or "")
+    # Substrate untouched.
+    assert "patch-foo" in t.port_path("overlay.dops").read_text()
+
+
+def test_drop_file_zero_match_refuses(tmp_path: Path) -> None:
+    t = _make_seeded_translator(tmp_path)
+    _seed_overlay(t, "file copy files/a -> files/a\n")
+    r = t.apply({
+        "type": "drop_file", "target": "files/missing", "reason": "x",
+    })
+    assert r.ok is False
+    assert "files/missing" in (r.error or "")
+
+
+def test_drop_file_ambiguous_refuses_and_leaves_substrate(
+    tmp_path: Path,
+) -> None:
+    t = _make_seeded_translator(tmp_path)
+    _seed_overlay(
+        t,
+        "file copy files/a -> files/a\n"
+        "file materialize src -> files/a\n",
+    )
+    full_before = t.port_path("overlay.dops").read_text()
+    r = t.apply({
+        "type": "drop_file", "target": "files/a", "reason": "x",
+    })
+    assert r.ok is False
+    assert "ambiguous" in (r.error or "")
+    assert t.port_path("overlay.dops").read_text() == full_before
+
+
+def test_drop_file_scope_filters_to_section(tmp_path: Path) -> None:
+    t = _make_seeded_translator(tmp_path)
+    t.port_path("overlay.dops").write_text(
+        "target @any\n"
+        "port devel/foo\n"
+        "type port\n"
+        'reason "x"\n'
+        "\n"
+        "file copy files/a -> files/a\n"
+        "\n"
+        "target @2026Q2\n"
+        "file copy files/a -> files/a\n"
+    )
+    r = t.apply({
+        "type": "drop_file", "target": "files/a", "reason": "x",
+        "scope": "@any",
+    })
+    assert r.ok, r.error
+    written = t.port_path("overlay.dops").read_text()
+    assert written.count("file copy files/a -> files/a") == 1
+    assert written.index("file copy") > written.index("target @2026Q2")
+
+
+def test_drop_file_current_resolves_to_t_target(tmp_path: Path) -> None:
+    t = _make_seeded_translator(tmp_path, target="@2026Q2")
+    t.port_path("overlay.dops").write_text(
+        "target @any\n"
+        "port devel/foo\n"
+        "type port\n"
+        'reason "x"\n'
+        "\n"
+        "file copy files/a -> files/a\n"
+        "\n"
+        "target @2026Q2\n"
+        "file copy files/a -> files/a\n"
+    )
+    r = t.apply({
+        "type": "drop_file", "target": "files/a", "reason": "x",
+        "scope": "@current",
+    })
+    assert r.ok, r.error
+    written = t.port_path("overlay.dops").read_text()
+    assert written.count("file copy files/a -> files/a") == 1
+    assert "file copy files/a -> files/a" in written.split("target @2026Q2")[0]
+    assert "@current" not in written
+
+
+def test_drop_file_current_refused_when_no_target(tmp_path: Path) -> None:
+    t = _make_seeded_translator(tmp_path)  # target=None
+    _seed_overlay(t, "file copy files/a -> files/a\n")
+    r = t.apply({
+        "type": "drop_file", "target": "files/a", "reason": "x",
+        "scope": "@current",
+    })
+    assert r.ok is False
+    assert "@current" in (r.error or "")
+    assert "escalate" in (r.error or "")
+
+
+def test_drop_file_no_overlay_refuses(tmp_path: Path) -> None:
+    t = _make_seeded_translator(tmp_path)  # overlay.dops not created
+    r = t.apply({
+        "type": "drop_file", "target": "files/a", "reason": "x",
+    })
+    assert r.ok is False
+    assert "does not exist" in (r.error or "")
+
+
+def test_drop_file_roundtrips_add_file_resource(tmp_path: Path) -> None:
+    """End-to-end: add_file kind=resource writes a file + emits
+    `file copy`; a matching drop_file removes both, and the overlay
+    parses through the engine afterward."""
+    from dportsv3.engine.api import parse_dsl
+
+    t = _make_seeded_translator(tmp_path)
+    t.apply({
+        "type": "add_file", "dest": "files/pkg-message.dragonfly",
+        "kind": "resource", "content": "hello\n",
+    })
+    assert (t.port_dir / "files" / "pkg-message.dragonfly").is_file()
+    assert "file copy" in t.port_path("overlay.dops").read_text()
+
+    r = t.apply({
+        "type": "drop_file", "target": "files/pkg-message.dragonfly",
+        "reason": "obsolete",
+    })
+    assert r.ok, r.error
+    after = t.port_path("overlay.dops").read_text()
+    assert "file copy" not in after
+    assert not (t.port_dir / "files" / "pkg-message.dragonfly").exists()
+    assert parse_dsl(after).ok

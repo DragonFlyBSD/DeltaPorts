@@ -18,7 +18,8 @@ from typing import Iterable
 
 from .grammar import (
     AddFile, AddPatch, BumpPortrevision, ChangeMakefile,
-    DropMkDirective, DropPatch, ReplaceInDopsBlock, ReplaceInPatch,
+    DropFile, DropMkDirective, DropPatch, ReplaceInDopsBlock,
+    ReplaceInPatch,
 )
 from .validator import IntentError
 
@@ -421,6 +422,44 @@ def change_makefile(t, intent: ChangeMakefile):
     )
 
 
+def _resolve_drop_scope(t, scope, intent_type):
+    """Resolve a delete-renderer's scope.
+
+    Returns ``(resolved_scope, None)`` on success or
+    ``(None, EditResult)`` carrying an ``ok=False`` refusal. Shared by
+    the Family A delete renderers. ``@current`` resolves to
+    ``t.target`` (refused when empty — a runner-side bug we surface
+    rather than silently widening to ``@any``); literal scopes are
+    validated against the engine grammar. Mirrors the resolution block
+    in ``_append_overlay`` but returns a refusal instead of writing.
+    """
+    from .translator import EditResult
+    if scope == "@current":
+        if not t.target:
+            return None, EditResult(
+                ok=False, intent_type=intent_type,
+                error=(
+                    "intent requested scope=@current but the runner did "
+                    "not populate an env target (t.target is empty). This "
+                    "is a calling-context bug; retrying will not help — "
+                    "escalate."
+                ),
+            )
+        resolved = t.target
+    else:
+        resolved = scope
+    from dportsv3.common.validation import is_scoped_target  # noqa: PLC0415
+    if not is_scoped_target(resolved):
+        return None, EditResult(
+            ok=False, intent_type=intent_type,
+            error=(
+                f"invalid scope: {resolved!r} (expected @any, @main, or "
+                f"@YYYYQ[1-4])"
+            ),
+        )
+    return resolved, None
+
+
 def drop_mk_directive(t, intent: DropMkDirective):
     """Remove a single ``mk set/unset/add/remove VAR`` line from
     overlay.dops (Step 39a).
@@ -459,32 +498,11 @@ def drop_mk_directive(t, intent: DropMkDirective):
         )
     before_overlay = overlay.read_text()
 
-    # Scope resolution mirrors _append_overlay: agent-facing
-    # ``@current`` → concrete ``t.target``; refuse on a missing cache
-    # entry rather than silently widening to @any.
-    if intent.scope == "@current":
-        if not t.target:
-            return EditResult(
-                ok=False, intent_type="drop_mk_directive",
-                error=(
-                    "intent requested scope=@current but the runner did "
-                    "not populate an env target (t.target is empty). This "
-                    "is a calling-context bug; retrying will not help — "
-                    "escalate."
-                ),
-            )
-        resolved_scope = t.target
-    else:
-        resolved_scope = intent.scope
-    from dportsv3.common.validation import is_scoped_target  # noqa: PLC0415
-    if not is_scoped_target(resolved_scope):
-        return EditResult(
-            ok=False, intent_type="drop_mk_directive",
-            error=(
-                f"invalid scope: {resolved_scope!r} (expected @any, "
-                f"@main, or @YYYYQ[1-4])"
-            ),
-        )
+    resolved_scope, scope_err = _resolve_drop_scope(
+        t, intent.scope, "drop_mk_directive",
+    )
+    if scope_err is not None:
+        return scope_err
 
     if intent.kind == "unset":
         needle = f"mk unset {intent.key}"
@@ -508,7 +526,7 @@ def drop_mk_directive(t, intent: DropMkDirective):
         def _matches(s: str) -> bool:
             return s == line
 
-    new, count = _strip_scoped_mk_line(
+    new, count = _strip_scoped_line(
         before_overlay, resolved_scope, _matches,
     )
     if count == 0:
@@ -539,6 +557,119 @@ def drop_mk_directive(t, intent: DropMkDirective):
         ok=True, intent_type="drop_mk_directive",
         paths_changed=[str(overlay.relative_to(t.workspace))],
         substrate_diff=t.diff_from_before({overlay: before_overlay}),
+    )
+
+
+def drop_file(t, intent: DropFile):
+    """Remove a ``file copy`` / ``file materialize`` install directive
+    for ``intent.target`` from overlay.dops (Step 39b).
+
+    Symmetric delete for ``add_file``. Matches either install shape
+    the grammar emits, scope-filtered:
+
+    - ``file copy <src> -> <target>`` (add_file kind=resource)
+    - ``file materialize <src> -> <target>`` (add_file kind=materialize)
+
+    Non-overlapping with ``drop_patch``: patch-shaped destinations
+    (``dragonfly/patch-*``) are refused here and routed to
+    ``drop_patch`` (which already matches ``patch apply`` and
+    ``file materialize ... -> dragonfly/patch-*``). Keeping the two
+    intents path-partitioned gives the agent a clean rule: patch →
+    drop_patch, anything else → drop_file.
+
+    On a unique match the directive line is stripped AND the on-disk
+    file at ``ports/<origin>/<target>`` is deleted — mirroring
+    ``drop_patch``. Dropping only the directive would orphan bytes
+    that block a later ``add_file`` with "already exists." A delete
+    failure rolls the overlay edit back so no half-applied state
+    survives.
+
+    Refusals (``ok=False``): overlay missing, ``dragonfly/patch-*``
+    target (use drop_patch), ``scope=@current`` with no env target,
+    invalid scope, zero matches, or multiple matches at the same
+    scope (ambiguous).
+    """
+    from .translator import EditResult
+    if intent.target.startswith("dragonfly/patch-"):
+        return EditResult(
+            ok=False, intent_type="drop_file",
+            error=(
+                f"drop_file refuses target={intent.target!r}: patch-shaped "
+                f"destinations (dragonfly/patch-*) are owned by drop_patch. "
+                f"Use drop_patch to remove a patch install."
+            ),
+        )
+    overlay = t.port_path(_DOPS_FILE)
+    if not overlay.is_file():
+        return EditResult(
+            ok=False, intent_type="drop_file",
+            error=f"{_DOPS_FILE} does not exist; nothing to remove from",
+        )
+    before_overlay = overlay.read_text()
+
+    resolved_scope, scope_err = _resolve_drop_scope(
+        t, intent.scope, "drop_file",
+    )
+    if scope_err is not None:
+        return scope_err
+
+    def _matches(s: str) -> bool:
+        for verb in ("file copy ", "file materialize "):
+            if s.startswith(verb):
+                _, _, rest = s.partition(verb)
+                if "->" in rest:
+                    _src, _, dest = rest.partition("->")
+                    if dest.strip() == intent.target:
+                        return True
+        return False
+
+    new, count = _strip_scoped_line(before_overlay, resolved_scope, _matches)
+    if count == 0:
+        return EditResult(
+            ok=False, intent_type="drop_file",
+            error=(
+                f"no `file copy ... -> {intent.target}` or "
+                f"`file materialize ... -> {intent.target}` line found in "
+                f"{_DOPS_FILE} under scope {resolved_scope}"
+            ),
+        )
+    if count > 1:
+        return EditResult(
+            ok=False, intent_type="drop_file",
+            error=(
+                f"{count} install directives for {intent.target!r} match "
+                f"under scope {resolved_scope}; ambiguous — refusing. "
+                f"Disambiguate via scope or edit {_DOPS_FILE} manually."
+            ),
+        )
+    resource = t.port_path(intent.target)
+    before_resource = resource.read_text() if resource.is_file() else None
+    try:
+        overlay.write_text(new)
+    except OSError as exc:
+        return EditResult(
+            ok=False, intent_type="drop_file",
+            error=f"write failed for {_DOPS_FILE}: {exc}",
+        )
+    paths_changed = [str(overlay.relative_to(t.workspace))]
+    before_state: dict[Path, str | None] = {overlay: before_overlay}
+    if before_resource is not None:
+        try:
+            resource.unlink()
+        except OSError as exc:
+            overlay.write_text(before_overlay)  # roll back the line strip
+            return EditResult(
+                ok=False, intent_type="drop_file",
+                error=(
+                    f"could not delete resource file {intent.target}: {exc}"
+                ),
+            )
+        paths_changed.append(str(resource.relative_to(t.workspace)))
+        before_state[resource] = before_resource
+    return EditResult(
+        ok=True, intent_type="drop_file",
+        paths_changed=paths_changed,
+        substrate_diff=t.diff_from_before(before_state),
     )
 
 
@@ -1119,21 +1250,24 @@ def _strip_patch_apply_stmt(text: str, target: str) -> tuple[str, bool, str]:
     return ("\n".join(out) + suffix, removed, shape)
 
 
-def _strip_scoped_mk_line(text, scope, matches):
-    """Remove lines satisfying ``matches`` within the ``scope`` section.
+def _strip_scoped_line(text, scope, predicate):
+    """Remove top-level lines satisfying ``predicate`` within the
+    ``scope`` section.
 
-    Walks ``text`` tracking the current ``target`` section (default
-    ``@any`` per ``semantic.py:358`` for the prologue before any
-    directive) and heredoc state. A line is removed only when all hold:
+    Shared by the Family A delete renderers (``drop_mk_directive``,
+    ``drop_file``). Walks ``text`` tracking the current ``target``
+    section (default ``@any`` per ``semantic.py:358`` for the prologue
+    before any directive) and heredoc state. A line is removed only
+    when all hold:
 
     - the current section's scope token exactly equals ``scope``
       (exact-string match, same limitation as ``_ensure_target_scope``:
       comma-separated multi-target directives don't match a single
       scope), AND
     - the line is NOT inside an ``mk target set/append NAME <<TAG``
-      heredoc body (recipe text must never be matched as an ``mk``
+      heredoc body (recipe text must never be matched as a top-level
       directive), AND
-    - ``matches(stripped_line)`` is True.
+    - ``predicate(stripped_line)`` is True.
 
     Returns ``(new_text, removed_count)``. ``removed_count`` lets the
     caller distinguish zero-match (refuse), unique-match (apply), and
@@ -1161,7 +1295,7 @@ def _strip_scoped_mk_line(text, scope, matches):
             heredoc_tag = tag or None
             out.append(line)
             continue
-        if current_scope == scope and matches(stripped):
+        if current_scope == scope and predicate(stripped):
             removed += 1
             continue
         out.append(line)
