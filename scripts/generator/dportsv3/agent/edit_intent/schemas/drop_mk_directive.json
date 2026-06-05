@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "drop_mk_directive",
+  "description": "Remove a single `mk set/unset/add/remove VAR` line from overlay.dops (symmetric delete for change_makefile).",
+  "type": "object",
+  "required": ["type", "kind", "key"],
+  "additionalProperties": false,
+  "properties": {
+    "type": {"const": "drop_mk_directive"},
+    "kind": {"enum": ["set", "unset", "add", "remove"],
+             "description": "Which dops line shape to match and remove. 'set'/'unset' match by key alone; 'add'/'remove' match key + token value."},
+    "key": {"type": "string", "minLength": 1,
+            "pattern": "^[A-Z_][A-Z0-9_]*$",
+            "description": "Make variable name (upper-case + underscore + digits)"},
+    "value": {"type": "string",
+              "description": "The token value of the line to remove. Required for add/remove (must match the line's token); ignored for set/unset."},
+    "scope": {"enum": ["@any", "@current"], "default": "@any",
+              "description": "Build-line section to search. '@any' (default) targets the universal section. '@current' resolves to the env's current target at apply time. Never type literal '@2026Q2'; the runner injects t.target."}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"kind": {"enum": ["add", "remove"]}}},
+      "then": {"required": ["value"]}
+    }
+  ]
+}

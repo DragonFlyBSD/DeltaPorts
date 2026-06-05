@@ -38,6 +38,7 @@ from .grammar import (
     AddPatch,
     BumpPortrevision,
     ChangeMakefile,
+    DropMkDirective,
     DropPatch,
     Intent,
     ReplaceInDopsBlock,
@@ -164,6 +165,8 @@ class Translator:
             return lambda i: _mod.bump_portrevision(self, i)
         if isinstance(intent, ReplaceInDopsBlock):
             return lambda i: _mod.replace_in_dops_block(self, i)
+        if isinstance(intent, DropMkDirective):
+            return lambda i: _mod.drop_mk_directive(self, i)
         return lambda i: EditResult(
             ok=False, intent_type=getattr(i, "type", "unknown"),
             error=f"no renderer for intent: {i!r}",

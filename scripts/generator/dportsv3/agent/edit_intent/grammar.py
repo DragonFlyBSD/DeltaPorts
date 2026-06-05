@@ -21,6 +21,7 @@ INTENT_TYPES: tuple[str, ...] = (
     "change_makefile",
     "bump_portrevision",
     "replace_in_dops_block",
+    "drop_mk_directive",
 )
 
 
@@ -121,6 +122,26 @@ class ReplaceInDopsBlock:
     occurrence: int = 1
 
 
+@dataclass(frozen=True)
+class DropMkDirective:
+    """Remove a single ``mk set/unset/add/remove VAR`` line from
+    overlay.dops (Step 39a).
+
+    Symmetric delete for ``change_makefile``: where that intent
+    *emits* an ``mk`` line, this one *removes* the matching line.
+    ``kind`` selects the dops line shape; ``value`` is required for
+    ``add`` / ``remove`` (must match the line's token) and ignored
+    for ``set`` / ``unset`` (which match by ``key`` alone). The
+    scope filter is applied before the match so the agent can
+    target a specific build line's section.
+    """
+    type: Literal["drop_mk_directive"]
+    kind: Literal["set", "unset", "add", "remove"]
+    key: str
+    value: str = ""   # required for add/remove; ignored for set/unset
+    scope: Literal["@any", "@current"] = "@any"  # Step 38d-4
+
+
 Intent = Union[
     ReplaceInPatch,
     DropPatch,
@@ -129,6 +150,7 @@ Intent = Union[
     ChangeMakefile,
     BumpPortrevision,
     ReplaceInDopsBlock,
+    DropMkDirective,
 ]
 
 
@@ -142,4 +164,5 @@ INTENT_DATACLASSES: dict[str, type] = {
     "change_makefile":       ChangeMakefile,
     "bump_portrevision":     BumpPortrevision,
     "replace_in_dops_block": ReplaceInDopsBlock,
+    "drop_mk_directive":     DropMkDirective,
 }

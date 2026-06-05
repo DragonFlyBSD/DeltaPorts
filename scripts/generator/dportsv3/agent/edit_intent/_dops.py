@@ -18,7 +18,7 @@ from typing import Iterable
 
 from .grammar import (
     AddFile, AddPatch, BumpPortrevision, ChangeMakefile,
-    DropPatch, ReplaceInDopsBlock, ReplaceInPatch,
+    DropMkDirective, DropPatch, ReplaceInDopsBlock, ReplaceInPatch,
 )
 from .validator import IntentError
 
@@ -418,6 +418,127 @@ def change_makefile(t, intent: ChangeMakefile):
         stmt = f"mk {action} {intent.key} {_quote_dops_string(intent.value)}"
     return _append_overlay(
         t, "change_makefile", [stmt], scope=intent.scope,
+    )
+
+
+def drop_mk_directive(t, intent: DropMkDirective):
+    """Remove a single ``mk set/unset/add/remove VAR`` line from
+    overlay.dops (Step 39a).
+
+    Symmetric delete for ``change_makefile``: that renderer appends an
+    ``mk`` line; this one strips the matching line. Closes the
+    accumulate-then-counter-op thrash where an agent emits an
+    ``mk add`` (via ``change_makefile op=append``) and, realizing it
+    was wrong, had no way to take it back — leaving an add+remove pair
+    on disk. Now it emits ``drop_mk_directive(kind=add, ...)`` and the
+    prior line is gone.
+
+    The match is scope-filtered: only lines under the resolved
+    ``scope`` section are considered (``@current`` resolves to
+    ``t.target``). Line-shape matching by ``kind``:
+
+    - ``unset`` → exact ``mk unset KEY`` (``value`` ignored)
+    - ``set``   → ``mk set KEY`` with any value (``value`` ignored)
+    - ``add`` / ``remove`` → exact ``mk <kind> KEY "<value>"`` (the
+      ``value`` token must match, quoted the same way
+      ``change_makefile`` emits it)
+
+    Refusals (``ok=False``): overlay missing, ``scope=@current`` with
+    no env target, invalid scope, zero matches (the line not existing
+    signals the agent's model is wrong — don't silently no-op), or
+    multiple matches at the same scope (ambiguous; disambiguate via
+    scope or hand-edit). No implicit invariant repair — this renderer
+    only removes lines, never reorders sections.
+    """
+    from .translator import EditResult
+    overlay = t.port_path(_DOPS_FILE)
+    if not overlay.is_file():
+        return EditResult(
+            ok=False, intent_type="drop_mk_directive",
+            error=f"{_DOPS_FILE} does not exist; nothing to remove from",
+        )
+    before_overlay = overlay.read_text()
+
+    # Scope resolution mirrors _append_overlay: agent-facing
+    # ``@current`` → concrete ``t.target``; refuse on a missing cache
+    # entry rather than silently widening to @any.
+    if intent.scope == "@current":
+        if not t.target:
+            return EditResult(
+                ok=False, intent_type="drop_mk_directive",
+                error=(
+                    "intent requested scope=@current but the runner did "
+                    "not populate an env target (t.target is empty). This "
+                    "is a calling-context bug; retrying will not help — "
+                    "escalate."
+                ),
+            )
+        resolved_scope = t.target
+    else:
+        resolved_scope = intent.scope
+    from dportsv3.common.validation import is_scoped_target  # noqa: PLC0415
+    if not is_scoped_target(resolved_scope):
+        return EditResult(
+            ok=False, intent_type="drop_mk_directive",
+            error=(
+                f"invalid scope: {resolved_scope!r} (expected @any, "
+                f"@main, or @YYYYQ[1-4])"
+            ),
+        )
+
+    if intent.kind == "unset":
+        needle = f"mk unset {intent.key}"
+        shape_desc = needle
+
+        def _matches(s: str) -> bool:
+            return s == needle
+    elif intent.kind == "set":
+        prefix = f"mk set {intent.key}"
+        shape_desc = f"{prefix} ..."
+
+        def _matches(s: str) -> bool:
+            return s == prefix or s.startswith(prefix + " ")
+    else:  # add / remove
+        line = (
+            f"mk {intent.kind} {intent.key} "
+            f"{_quote_dops_string(intent.value)}"
+        )
+        shape_desc = line
+
+        def _matches(s: str) -> bool:
+            return s == line
+
+    new, count = _strip_scoped_mk_line(
+        before_overlay, resolved_scope, _matches,
+    )
+    if count == 0:
+        return EditResult(
+            ok=False, intent_type="drop_mk_directive",
+            error=(
+                f"no `{shape_desc}` line found in {_DOPS_FILE} under "
+                f"scope {resolved_scope}"
+            ),
+        )
+    if count > 1:
+        return EditResult(
+            ok=False, intent_type="drop_mk_directive",
+            error=(
+                f"{count} `{shape_desc}` lines match under scope "
+                f"{resolved_scope}; ambiguous — refusing. Disambiguate "
+                f"via scope or edit {_DOPS_FILE} manually."
+            ),
+        )
+    try:
+        overlay.write_text(new)
+    except OSError as exc:
+        return EditResult(
+            ok=False, intent_type="drop_mk_directive",
+            error=f"write failed for {_DOPS_FILE}: {exc}",
+        )
+    return EditResult(
+        ok=True, intent_type="drop_mk_directive",
+        paths_changed=[str(overlay.relative_to(t.workspace))],
+        substrate_diff=t.diff_from_before({overlay: before_overlay}),
     )
 
 
@@ -996,3 +1117,53 @@ def _strip_patch_apply_stmt(text: str, target: str) -> tuple[str, bool, str]:
         out.append(line)
     suffix = "\n" if text.endswith("\n") else ""
     return ("\n".join(out) + suffix, removed, shape)
+
+
+def _strip_scoped_mk_line(text, scope, matches):
+    """Remove lines satisfying ``matches`` within the ``scope`` section.
+
+    Walks ``text`` tracking the current ``target`` section (default
+    ``@any`` per ``semantic.py:358`` for the prologue before any
+    directive) and heredoc state. A line is removed only when all hold:
+
+    - the current section's scope token exactly equals ``scope``
+      (exact-string match, same limitation as ``_ensure_target_scope``:
+      comma-separated multi-target directives don't match a single
+      scope), AND
+    - the line is NOT inside an ``mk target set/append NAME <<TAG``
+      heredoc body (recipe text must never be matched as an ``mk``
+      directive), AND
+    - ``matches(stripped_line)`` is True.
+
+    Returns ``(new_text, removed_count)``. ``removed_count`` lets the
+    caller distinguish zero-match (refuse), unique-match (apply), and
+    ambiguous multi-match (refuse) without re-scanning.
+    """
+    out: list[str] = []
+    removed = 0
+    current_scope = "@any"
+    heredoc_tag: str | None = None
+    for line in text.splitlines():
+        stripped = line.strip()
+        if heredoc_tag is not None:
+            if stripped == heredoc_tag:
+                heredoc_tag = None
+            out.append(line)
+            continue
+        if stripped.startswith("target "):
+            tok = stripped[len("target "):].strip()
+            if tok:
+                current_scope = tok
+            out.append(line)
+            continue
+        if stripped.startswith("mk target ") and "<<" in stripped:
+            tag = stripped.split("<<", 1)[1].strip().strip("'\"")
+            heredoc_tag = tag or None
+            out.append(line)
+            continue
+        if current_scope == scope and matches(stripped):
+            removed += 1
+            continue
+        out.append(line)
+    suffix = "\n" if text.endswith("\n") else ""
+    return ("\n".join(out) + suffix, removed)

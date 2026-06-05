@@ -1694,3 +1694,257 @@ def test_get_effective_overlay_filtered_out_includes_op_payload(
     assert fop["scope"] == "@2026Q3"
     assert fop.get("value") == "meson"
     assert "reason" in fop
+
+
+# ---------------------------------------------------------------------
+# Step 39a — drop_mk_directive renderer
+# ---------------------------------------------------------------------
+
+
+def _seed_overlay(t: Translator, body: str) -> None:
+    """Write an overlay.dops with the standard @any header + `body`."""
+    t.port_path("overlay.dops").write_text(
+        "target @any\n"
+        "port devel/foo\n"
+        "type port\n"
+        'reason "x"\n'
+        "\n"
+        + body
+    )
+
+
+def test_drop_mk_directive_removes_add_line(tmp_path: Path) -> None:
+    """The core dmidecode case: an `mk add` the agent regrets is
+    removed cleanly, leaving no add+remove residue."""
+    t = _make_seeded_translator(tmp_path)
+    _seed_overlay(t, 'mk add USES "alias"\nmk set GNU_CONFIGURE "yes"\n')
+    r = t.apply({
+        "type": "drop_mk_directive", "kind": "add",
+        "key": "USES", "value": "alias",
+    })
+    assert r.ok, r.error
+    written = t.port_path("overlay.dops").read_text()
+    assert 'mk add USES "alias"' not in written
+    # Unrelated line untouched.
+    assert 'mk set GNU_CONFIGURE "yes"' in written
+
+
+def test_drop_mk_directive_removes_unset_line(tmp_path: Path) -> None:
+    t = _make_seeded_translator(tmp_path)
+    _seed_overlay(t, "mk unset LICENSE_FILE\n")
+    r = t.apply({
+        "type": "drop_mk_directive", "kind": "unset", "key": "LICENSE_FILE",
+    })
+    assert r.ok, r.error
+    assert "mk unset LICENSE_FILE" not in t.port_path("overlay.dops").read_text()
+
+
+def test_drop_mk_directive_set_matches_by_key_ignoring_value(
+    tmp_path: Path,
+) -> None:
+    """`kind=set` matches on the key alone — the `value` field is
+    ignored (and may be omitted), so the agent doesn't have to echo
+    the exact on-disk value to remove a set line."""
+    t = _make_seeded_translator(tmp_path)
+    _seed_overlay(t, 'mk set PORTREVISION "1"\n')
+    r = t.apply({
+        "type": "drop_mk_directive", "kind": "set", "key": "PORTREVISION",
+    })
+    assert r.ok, r.error
+    assert "PORTREVISION" not in t.port_path("overlay.dops").read_text()
+
+
+def test_drop_mk_directive_set_prefix_is_key_boundary_safe(
+    tmp_path: Path,
+) -> None:
+    """`kind=set key=USE` must NOT strip `mk set USES ...` — the key
+    match is whole-token, not a substring prefix."""
+    t = _make_seeded_translator(tmp_path)
+    _seed_overlay(t, 'mk set USES "tar:xz"\n')
+    r = t.apply({
+        "type": "drop_mk_directive", "kind": "set", "key": "USE",
+    })
+    assert r.ok is False
+    assert "no `" in (r.error or "")
+    # USES line survives.
+    assert 'mk set USES "tar:xz"' in t.port_path("overlay.dops").read_text()
+
+
+def test_drop_mk_directive_zero_match_refuses(tmp_path: Path) -> None:
+    """A line that doesn't exist is a signal the agent's model is
+    wrong — refuse rather than silently no-op."""
+    t = _make_seeded_translator(tmp_path)
+    _seed_overlay(t, 'mk add USES "alias"\n')
+    r = t.apply({
+        "type": "drop_mk_directive", "kind": "unset", "key": "NOPE",
+    })
+    assert r.ok is False
+    assert "no `mk unset NOPE`" in (r.error or "")
+
+
+def test_drop_mk_directive_ambiguous_refuses_and_leaves_substrate(
+    tmp_path: Path,
+) -> None:
+    """Two matching lines at the same scope → hard refuse, substrate
+    untouched (no partial removal)."""
+    t = _make_seeded_translator(tmp_path)
+    before = 'mk add USES "alias"\nmk add USES "alias"\n'
+    _seed_overlay(t, before)
+    full_before = t.port_path("overlay.dops").read_text()
+    r = t.apply({
+        "type": "drop_mk_directive", "kind": "add",
+        "key": "USES", "value": "alias",
+    })
+    assert r.ok is False
+    assert "ambiguous" in (r.error or "")
+    # Nothing removed.
+    assert t.port_path("overlay.dops").read_text() == full_before
+
+
+def test_drop_mk_directive_scope_filters_to_section(tmp_path: Path) -> None:
+    """The same line under @any and @2026Q2: dropping @any leaves the
+    @2026Q2 instance intact."""
+    t = _make_seeded_translator(tmp_path)
+    t.port_path("overlay.dops").write_text(
+        "target @any\n"
+        "port devel/foo\n"
+        "type port\n"
+        'reason "x"\n'
+        "\n"
+        'mk add USES "alias"\n'
+        "\n"
+        "target @2026Q2\n"
+        'mk add USES "alias"\n'
+    )
+    r = t.apply({
+        "type": "drop_mk_directive", "kind": "add",
+        "key": "USES", "value": "alias", "scope": "@any",
+    })
+    assert r.ok, r.error
+    written = t.port_path("overlay.dops").read_text()
+    # Exactly one occurrence remains — the @2026Q2 one.
+    assert written.count('mk add USES "alias"') == 1
+    q_pos = written.index("target @2026Q2")
+    assert written.index('mk add USES "alias"') > q_pos
+
+
+def test_drop_mk_directive_current_resolves_to_t_target(
+    tmp_path: Path,
+) -> None:
+    """`scope=@current` resolves to `t.target` and only strips within
+    that build line's section."""
+    t = _make_seeded_translator(tmp_path, target="@2026Q2")
+    t.port_path("overlay.dops").write_text(
+        "target @any\n"
+        "port devel/foo\n"
+        "type port\n"
+        'reason "x"\n'
+        "\n"
+        'mk add USES "alias"\n'
+        "\n"
+        "target @2026Q2\n"
+        'mk add USES "alias"\n'
+    )
+    r = t.apply({
+        "type": "drop_mk_directive", "kind": "add",
+        "key": "USES", "value": "alias", "scope": "@current",
+    })
+    assert r.ok, r.error
+    written = t.port_path("overlay.dops").read_text()
+    # The @any instance survives; only @2026Q2's was stripped.
+    assert written.count('mk add USES "alias"') == 1
+    any_section = written.split("target @2026Q2")[0]
+    assert 'mk add USES "alias"' in any_section
+    assert "@current" not in written
+
+
+def test_drop_mk_directive_current_refused_when_no_target(
+    tmp_path: Path,
+) -> None:
+    t = _make_seeded_translator(tmp_path)  # target=None
+    _seed_overlay(t, 'mk add USES "alias"\n')
+    r = t.apply({
+        "type": "drop_mk_directive", "kind": "add",
+        "key": "USES", "value": "alias", "scope": "@current",
+    })
+    assert r.ok is False
+    assert "@current" in (r.error or "")
+    assert "escalate" in (r.error or "")
+
+
+def test_drop_mk_directive_skips_heredoc_body(tmp_path: Path) -> None:
+    """A decoy `mk add USES "alias"` line inside an `mk target set`
+    heredoc body must NOT be matched — only top-level directives."""
+    t = _make_seeded_translator(tmp_path)
+    t.port_path("overlay.dops").write_text(
+        "target @any\n"
+        "port devel/foo\n"
+        "type port\n"
+        'reason "x"\n'
+        "\n"
+        "mk target set dfly-patch <<MK\n"
+        '\tmk add USES "alias"\n'
+        "MK\n"
+    )
+    full_before = t.port_path("overlay.dops").read_text()
+    r = t.apply({
+        "type": "drop_mk_directive", "kind": "add",
+        "key": "USES", "value": "alias",
+    })
+    # No top-level match → refuse, heredoc body untouched.
+    assert r.ok is False
+    assert t.port_path("overlay.dops").read_text() == full_before
+
+
+def test_drop_mk_directive_no_overlay_refuses(tmp_path: Path) -> None:
+    t = _make_seeded_translator(tmp_path)  # overlay.dops not created
+    r = t.apply({
+        "type": "drop_mk_directive", "kind": "unset", "key": "FOO",
+    })
+    assert r.ok is False
+    assert "does not exist" in (r.error or "")
+
+
+def test_drop_mk_directive_roundtrips_change_makefile(tmp_path: Path) -> None:
+    """End-to-end: a `change_makefile op=append` then a matching
+    `drop_mk_directive(kind=add)` leaves the overlay byte-identical to
+    the pre-append state (no residue), and the result parses through
+    the engine."""
+    from dportsv3.engine.api import parse_dsl
+
+    t = _make_seeded_translator(tmp_path)
+    # First append seeds the overlay header + the line.
+    t.apply({
+        "type": "change_makefile", "path": "Makefile", "key": "USES",
+        "op": "append", "value": "alias",
+    })
+    after_add = t.port_path("overlay.dops").read_text()
+    assert 'mk add USES "alias"' in after_add
+
+    r = t.apply({
+        "type": "drop_mk_directive", "kind": "add",
+        "key": "USES", "value": "alias",
+    })
+    assert r.ok, r.error
+    after_drop = t.port_path("overlay.dops").read_text()
+    assert 'mk add USES "alias"' not in after_drop
+    assert parse_dsl(after_drop).ok
+
+
+def test_drop_mk_directive_add_requires_value_schema() -> None:
+    """Schema gate: kind=add/remove must carry `value`."""
+    from dportsv3.agent.edit_intent.validator import parse_intent
+    from dportsv3.agent.edit_intent.grammar import DropMkDirective
+
+    ok = parse_intent({
+        "type": "drop_mk_directive", "kind": "add",
+        "key": "USES", "value": "alias",
+    })
+    assert isinstance(ok, DropMkDirective)
+    try:
+        parse_intent({
+            "type": "drop_mk_directive", "kind": "add", "key": "USES",
+        })
+        raise AssertionError("expected schema refusal for add without value")
+    except Exception as exc:  # IntentError
+        assert "value" in str(exc).lower() or "required" in str(exc).lower()
