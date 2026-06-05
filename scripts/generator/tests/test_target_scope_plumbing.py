@@ -1078,6 +1078,18 @@ _SCOPE_BEARING_INTENTS = [
         "bump_portrevision",
         {},
     ),
+    (
+        "drop_mk_directive",
+        {"kind": "unset", "key": "LICENSE_FILE"},
+    ),
+    (
+        "drop_file",
+        {"target": "files/x", "reason": "obsolete"},
+    ),
+    (
+        "drop_target_block",
+        {"block_name": "do-build", "reason": "obsolete"},
+    ),
 ]
 
 
@@ -1204,7 +1216,7 @@ def test_schema_for_surfaces_scope_field() -> None:
 
 def test_schema_for_drop_patch_does_not_include_scope() -> None:
     """drop_patch's schema does NOT carry scope — verifies the
-    asymmetric coverage (5 of 7 intents have scope, 2 do not)."""
+    asymmetric coverage (8 of 10 intents have scope, 2 do not)."""
     from dportsv3.agent.edit_intent.validator import schema_for
 
     assert "scope" not in schema_for("drop_patch")["properties"]

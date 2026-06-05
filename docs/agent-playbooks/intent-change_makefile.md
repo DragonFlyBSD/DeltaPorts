@@ -172,10 +172,11 @@ declaration order, last-wins), but `overlay.dops` carries every
 re-emission. This changed with Step 38e — pre-38e an implicit
 prefilter scrubbed prior `mk set KEY` lines; the prefilter was
 removed because it was scope-blind and would have corrupted
-multi-target overlays. Until an explicit "delete a prior mk set
-line" intent lands (tracked in
-`docs/intent-surface-gaps-plan.md`), repeated `op=set` produces
-visible substrate noise that doesn't affect correctness.
+multi-target overlays. To remove a stray or superseded `mk` line
+explicitly, use **`drop_mk_directive`** (the symmetric inverse of
+this intent — see `intent-drop_mk_directive.md`). It deletes one
+matching line, scope-filtered, and refuses on zero or ambiguous
+matches; the composed Makefile stays correct either way.
 
 `op=append` and `op=remove` have always accumulated (multiple
 `mk add` / `mk remove` are semantically distinct list operations);

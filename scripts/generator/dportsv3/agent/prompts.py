@@ -507,7 +507,7 @@ it instead of guessing.
 
 ### Intent types (call `intent_reference` for fields + recipes)
 
-The seven intent types you can emit:
+The ten intent types you can emit:
 
 - `replace_in_patch` — fix a drifted hunk inside an existing
   `dragonfly/patch-*`
@@ -524,6 +524,19 @@ The seven intent types you can emit:
 - `replace_in_dops_block` — edit text inside an `mk target` heredoc
   body in `overlay.dops` (the only intent that reaches heredocs)
 
+Three of these *delete* substrate the agent (or convert) emitted —
+the symmetric inverses, for taking an edit back rather than
+countering it with another op:
+
+- `drop_mk_directive` — remove a single `mk set/unset/add/remove VAR`
+  line (inverse of `change_makefile`)
+- `drop_file` — remove a `file copy` / `file materialize` install
+  directive and delete the on-disk file (inverse of `add_file`;
+  patch-shaped destinations go through `drop_patch`)
+- `drop_target_block` — remove a whole `mk target set/append NAME
+  <<TAG ... TAG` heredoc block (block-level; `replace_in_dops_block`
+  edits *inside* a body, this removes the whole block)
+
 For exact field shape AND usage recipes, call
 `intent_reference(intent_type=X)`. The result carries:
 - the JSON schema (canonical field shape)
@@ -535,16 +548,19 @@ Call `intent_reference` BEFORE the first `apply_intent` of a given
 type in an attempt — it's cheap, idempotent, and the recipes
 prevent the most common misuse patterns.
 
-### Target scope on intents (5 of 7 intents accept this)
+### Target scope on intents (8 of 10 intents accept this)
 
-Five intents — `replace_in_patch`, `add_patch`, `add_file`,
-`change_makefile`, `bump_portrevision` — accept an optional `scope`
-field with two values: `"@any"` (default — applies on every
-DragonFly build line) or `"@current"` (applies only on the build
-line you're running on, resolved from the env at apply time). You
-**never** type a literal `@2026Q2` or any other quarter selector;
-the schema rejects it. `drop_patch` and `replace_in_dops_block`
-don't accept scope (they operate on named entities).
+Most intents — `replace_in_patch`, `add_patch`, `add_file`,
+`change_makefile`, `bump_portrevision`, plus the three deletes
+`drop_mk_directive`, `drop_file`, `drop_target_block` — accept an
+optional `scope` field with two values: `"@any"` (default — applies
+on every DragonFly build line) or `"@current"` (applies only on the
+build line you're running on, resolved from the env at apply time).
+You **never** type a literal `@2026Q2` or any other quarter
+selector; the schema rejects it. Only `drop_patch` and
+`replace_in_dops_block` don't accept scope (they operate on named
+entities). For the deletes, `scope` also disambiguates a match that
+exists under more than one section — see `intent-scoping.md`.
 
 **Most fixes are universal.** DragonFly-vs-FreeBSD differences are
 platform-level: they apply on every DragonFly build regardless of

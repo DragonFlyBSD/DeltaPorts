@@ -9,8 +9,7 @@ priority: 60
 
 ## The two-value vocabulary
 
-Five of the seven intent types accept an optional `scope` field with
-two values:
+Most intent types accept an optional `scope` field with two values:
 
 - **`scope: "@any"`** (default — applies on every DragonFly build line).
   Omit the field or set it explicitly; the result is the same.
@@ -20,11 +19,21 @@ two values:
   target. **You never type a literal `@2026Q2` or any other quarter
   selector.** The schema rejects it.
 
-The two intents that do **not** accept `scope` are `drop_patch` and
+The only intents that do **not** accept `scope` are `drop_patch` and
 `replace_in_dops_block`. Both operate on named entities (a specific
 patch path, a specific heredoc block) where scope wouldn't add
 expressiveness; the schemas refuse the field outright via
 `additionalProperties: false`.
+
+### Scope as a disambiguation lever for deletes
+
+For the delete intents — `drop_mk_directive`, `drop_file`,
+`drop_target_block` — `scope` does double duty. It narrows the
+*search* to one section, which is also how you resolve an ambiguous
+match: if the same line / install directive / block name exists under
+both `@any` and a quarterly section, an unscoped delete sees a match
+in each and refuses; the scoped delete targets exactly one. When a
+delete refuses as "ambiguous," reach for `scope` before hand-editing.
 
 ## When to use `@current`
 
@@ -150,8 +159,7 @@ would have corrupted multi-target overlays. The composed Makefile
 is still correct (the engine plays ops in declaration order,
 last-wins), but the substrate carries every re-emission.
 
-Today there's no intent that *explicitly* deletes a prior `mk set`
-line; cleanup is a known gap tracked in
-`docs/intent-surface-gaps-plan.md` under Family A. Until it lands,
-re-emitting `op=set` produces visible substrate noise that doesn't
-affect correctness.
+To delete a prior `mk set` line explicitly, use `drop_mk_directive`
+(see `intent-drop_mk_directive.md`). Re-emitting `op=set` still
+produces visible substrate noise, but it doesn't affect correctness,
+and the noise is now removable rather than permanent.
