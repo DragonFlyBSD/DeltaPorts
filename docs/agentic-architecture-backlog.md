@@ -5146,13 +5146,32 @@ lands last, only after a–c are proven on real ports.
   run `check_dsl` (`engine/api.py:38`) on the *whole resulting
   overlay* before commit and roll back on parser/semantic failure.
   This is where the auto-compat-with-engine-growth property comes
-  from. Tests: parse (schema), render (raw line appended under the
-  right scope), the new whole-overlay validation refusal (malformed
-  dops rolls back cleanly), round-trip (engine re-parses what we
-  emitted), scope placement (@any vs @current). Playbook +
-  one-line prompt entry. Removes nothing — `change_makefile`,
-  `add_file{materialize}`, and Family B all *could* now route
-  through `add_dops`, but the bespoke intents still exist.
+  from. **Second net-new piece**: harden `_ensure_target_scope`'s
+  section scan against heredoc bodies. That scan is line-based
+  (`_dops.py:1298-1304` — `stripped.startswith("target ")`) and its
+  own known-limitation note (1282-1286) flags that a `target ...`
+  line *inside* an `mk target set NAME <<TAG ... TAG` heredoc body
+  false-matches as a section header — declared "not reachable with
+  today's intent surface" because renderers control heredoc bodies.
+  `add_dops` is the first caller that can write *arbitrary* heredoc
+  bodies, so it makes that case reachable: a recipe line stripping to
+  `target X` would be mistaken for a real section directive and
+  misplace the next append. Fix: skip lines inside heredoc bodies
+  while scanning (track `<<TAG`/`TAG` open/close), or make the scan
+  AST-aware via the engine parser. One-time hardening of the
+  placement scanner, not per-directive work. (Note: *placing* a
+  heredoc being added is already fine — pass the whole block as a
+  single `statements` element with embedded newlines and it splices
+  in at one position as a unit; `rstrip()` doesn't touch internal
+  newlines.) Tests: parse (schema), render (raw line appended under
+  the right scope), heredoc block placed as a unit, **section scan
+  ignores a `target`-prefixed line inside an existing heredoc body**,
+  the new whole-overlay validation refusal (malformed dops rolls back
+  cleanly), round-trip (engine re-parses what we emitted), scope
+  placement (@any vs @current). Playbook + one-line prompt entry.
+  Removes nothing — `change_makefile`, `add_file{materialize}`, and
+  Family B all *could* now route through `add_dops`, but the bespoke
+  intents still exist.
 - **42b — `delete_scoped`**. Generalize the three shipped Step 39
   deletes (`drop_mk_directive`, `drop_file`, `drop_target_block`)
   behind one scoped-delete operation, reusing the existing
