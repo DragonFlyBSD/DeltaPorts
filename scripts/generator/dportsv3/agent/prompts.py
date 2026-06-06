@@ -20,7 +20,7 @@ This module holds STRUCTURAL prompt content only:
 Pattern-shaped content does NOT live here. It lives in
 ``docs/agent-playbooks/`` as tagged markdown:
 
-- Patch-flow procedures (the extract→dupe→genpatch workflow, dops
+- Patch-flow procedures (the make_extract→make_patch→dupe→genpatch workflow, dops
   editing recipes) → ``flow-patch.md`` (pulled at payload-build time
   via ``flows: [patch]``)
 - Per-classification error fixes → ``error-*.md`` (pulled at
@@ -158,7 +158,7 @@ debugging tarpit that burns whole budgets.
 - `/work/artifacts/compose/<target>/<origin>/`
     **COMPOSE ROOT**: what `materialize_dports` outputs.
     `freebsd-ports + DeltaPorts overlay` composed for `<target>`.
-    THIS is what dsynth builds and what `extract` targets. Wiped and
+    THIS is what dsynth builds and what `make_extract` targets. Wiped and
     regenerated on every `materialize_dports`. Read-only output;
     `put_file` here is refused by the worker.
 
@@ -170,10 +170,10 @@ patch-error failures: the dragonfly/patch-* files were written
 against the lock-root version and don't apply cleanly to the
 composed-root version after an upstream bump.
 
-The agent's `extract` tool ALWAYS targets the compose root (right
+The agent's `make_extract` tool ALWAYS targets the compose root (right
 tree). Don't second-guess it by `list_dir`-ing `/work/DPorts/<origin>/`
 to "verify" — that's the lock root, it can and will disagree with
-extract's output, and following it leads to chasing the wrong
+make_extract's output, and following it leads to chasing the wrong
 version.
 
 ## MANDATORY OPENING PROCEDURE (do these in order, every patch attempt)
@@ -210,10 +210,10 @@ path' AND you intend to write `overlay.dops`)*. Returns the dops
 quick-reference (~2KB). Call ONCE per patch attempt. Do not call
 again on later turns; it doesn't change.
 
-**Step 5 — `materialize_dports(origin)` then `extract(origin)`**.
+**Step 5 — `materialize_dports(origin)` then `make_extract(origin)`**.
 These produce the buildable tree + extracted source for THIS port.
 
-**If `extract` returns `ok: false`, STOP.** You cannot apply patches
+**If `make_extract` returns `ok: false`, STOP.** You cannot apply patches
 to source that doesn't exist. Extract failure means one of:
 
 - the port's distfile is missing or can't be fetched (`fetch-error`),
@@ -235,12 +235,12 @@ after that — do NOT continue tool calls. The manual handoff this
 produces will route the operator to the right surface (deltaports
 overlay, distfile cache, dependency port).
 
-**Step 6 — store and use `extract`'s wrksrc**. The `extract` tool's
+**Step 6 — store and use `make_extract`'s wrksrc**. The `make_extract` tool's
 response contains a `wrksrc` field — bsd.port.mk's authoritative
 answer to where the source lives **right now**.
 
 ```
-extract(origin) → {
+make_extract(origin) → {
    ok: true,
    wrksrc: "<authoritative absolute path>",   ← USE THIS PATH
    wrkdir: "<parent of wrksrc>",
@@ -251,7 +251,7 @@ extract(origin) → {
 **Mandatory pattern for source inspection from this point on:**
 
 - Every `get_file`, `list_dir`, `grep` you do on the extracted
-  source MUST use the path from `extract.wrksrc`.
+  source MUST use the path from `make_extract.wrksrc`.
 - You may NOT construct paths of the form
   `/work/obj/<origin>/<name>-<version>/`. That path is wrong (the
   obj tree nests source under `work/` and may also contain stale
@@ -260,7 +260,7 @@ extract(origin) → {
   That's the lock root — last-known-good versions, NOT what was
   just extracted.
 
-If `extract.wrksrc` is empty or its contents don't match what triage
+If `make_extract.wrksrc` is empty or its contents don't match what triage
 described, that's the signal to surface — don't paper over it by
 guessing. Stop and report what you see.
 
@@ -319,10 +319,10 @@ Triage occasionally cites paths under `/work/dsynth/build/...` or
 `/work/obj/<origin>/<name>-<version>/` that don't actually exist or
 are stale. Treat triage's path as a *hint*, not a fact:
 
-1. **Always cross-check against `extract.wrksrc`.** That's ground
+1. **Always cross-check against `make_extract.wrksrc`.** That's ground
    truth.
 2. **If wrksrc differs from triage's path:** trust wrksrc. Triage
-   doesn't have the extract tool's output.
+   doesn't have the make_extract tool's output.
 3. **Only consider 'remove the static patch entirely'** when the
    patch logic genuinely no longer applies anywhere in the current
    source. Don't reach for it as a first move; most patch-error
@@ -360,12 +360,21 @@ In all cases, edit `/work/DeltaPorts/ports/<origin>/` and let
    concurrent edits.
 
    For generating new patches against the extracted source:
-     - `extract(origin)` to fetch + extract into WRKSRC
+     - `make_extract(origin)` to fetch + extract into WRKSRC
+       (PRISTINE upstream — `do-patch` has NOT run yet)
+     - `make_patch(origin)` **if** the file you're patching is also
+       modified by a FreeBSD `files/patch-*` (or by an existing
+       `dragonfly/*` patch). This runs `do-patch`: applies `files/*`
+       then `dragonfly/*`, so the next `dupe` snapshots the real
+       build-time state. Skip it only when the target file is
+       untouched by any framework patch (pristine == build state).
      - `dupe(/work/DPorts/<origin>/work/.../file.c)` to snapshot the
-       original
+       baseline (post-`do-patch` if you ran make_patch, else pristine)
      - `put_file` to edit the source file inside WRKSRC
      - `genpatch(<same path>)` to produce a unified diff in
-       /work/genpatch-out/
+       /work/genpatch-out/. Because genpatch diffs against the dupe
+       baseline, the hunk context matches what `do-patch` sees at
+       build time — your `dragonfly/` patch applies cleanly.
      - `install_patches(origin)` to copy patches into DeltaPorts
 
    When the edit lands in `overlay.dops`, write the dops lines with
@@ -491,9 +500,10 @@ error|warn|noop` modifier, and worked examples.
 ## Procedure
 
 You operate inside the dev-env, on the DeltaPorts overlay tree at
-`/work/DeltaPorts/ports/<origin>/`. **Do not** call `extract`,
-`dsynth_build`, `dupe`, `genpatch`, or `install_patches` — those
-are patch-loop tools and are not available to you. Your scope is
+`/work/DeltaPorts/ports/<origin>/`. **Do not** call `make_extract`,
+`make_patch`, `dsynth_build`, `dupe`, `genpatch`, or
+`install_patches` — those are patch-loop tools and are not available
+to you. Your scope is
 the overlay tree only; the upstream source is none of your business.
 
 **All paths you pass to tools start with `/work/`** — that's the

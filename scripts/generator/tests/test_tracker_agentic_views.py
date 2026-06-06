@@ -949,8 +949,8 @@ def test_summarize_tool_result_extract_does_not_overwrite_materialize() -> None:
     summary AND a wrksrc field, overwrite the materialize headline
     with ``wrksrc=...``. With per-tool dispatch this can't happen
     because we route on the tool name, not on key shape — verify by
-    feeding a payload that has BOTH fields under tool_name=extract:
-    extract's summarizer takes wrksrc; the materialize summary line
+    feeding a payload that has BOTH fields under tool_name=make_extract:
+    make_extract's summarizer takes wrksrc; the materialize summary line
     in stdout_tail is correctly ignored."""
     from dportsv3.tracker.server import _summarize_tool_result
     raw = json.dumps({
@@ -958,13 +958,33 @@ def test_summarize_tool_result_extract_does_not_overwrite_materialize() -> None:
         "wrksrc": "/work/obj/devel/foo/foo-1.0",
         "stdout_tail": "summary: ports=1 ops=1 applied=1 errors=0\n",
     })
-    # Under extract: only wrksrc is shown — no leak from stdout_tail.
-    se = _summarize_tool_result(raw, tool_name="extract")
+    # Under make_extract: only wrksrc is shown — no leak from stdout_tail.
+    se = _summarize_tool_result(raw, tool_name="make_extract")
     assert "wrksrc=/work/obj/devel/foo/foo-1.0" == se["headline"]
     # Under materialize: stdout_tail summary is shown — no leak from wrksrc.
     sm = _summarize_tool_result(raw, tool_name="materialize_dports")
     assert "applied=1" in sm["headline"]
     assert "wrksrc=" not in sm["headline"]
+
+
+def test_summarize_tool_result_make_patch_surfaces_reject() -> None:
+    """The operator card for a failed make_patch must surface the
+    rejecting-patch line at a glance, not just an ok=False pill — that
+    line is how an operator sees which patch drifted."""
+    from dportsv3.tracker.server import _summarize_tool_result
+    ok_raw = json.dumps({"ok": True, "stdout_tail": "===>  Patching\n"})
+    ok = _summarize_tool_result(ok_raw, tool_name="make_patch")
+    assert ok["ok"] is True
+    assert "do-patch applied" in ok["headline"]
+
+    fail_raw = json.dumps({
+        "ok": False,
+        "stdout_tail": "Hunk #2 failed at 412.\n",
+        "stderr_tail": "*** Error code 1\n",
+    })
+    fail = _summarize_tool_result(fail_raw, tool_name="make_patch")
+    assert fail["ok"] is False
+    assert "Error code 1" in fail["headline"] or "Hunk #2" in fail["headline"]
 
 
 def test_view_agentic_artifact_json_pretty_printed(client: TestClient) -> None:

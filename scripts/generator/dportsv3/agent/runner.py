@@ -3142,7 +3142,7 @@ def _summarize_tool_call(tool: str, args: dict, result: dict) -> str:
         path = args.get('path', '')
         size = len((args.get('content') or ''))
         return f"{path} ({size} bytes){ok_tag}{suffix}"
-    if tool == "extract":
+    if tool in ("make_extract", "make_patch"):
         return f"origin={args.get('origin', '')}{ok_tag}"
     if tool in ("dupe", "genpatch"):
         return f"path={args.get('path', '')}{ok_tag}"

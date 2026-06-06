@@ -91,10 +91,22 @@ _TOOLS: list[dict] = [
           ["pattern", "path"]),
     _tool("materialize_dports",
           "Propagate DeltaPorts edits into the buildable DPorts tree for one origin. "
-          "Call after put_file/install_patches edits and before extract/dsynth_build.",
+          "Call after put_file/install_patches edits and before make_extract/dsynth_build.",
           {"origin": _STR}, ["origin"]),
-    _tool("extract",
-          "Run `make extract` for a port (after materialize_dports). Returns wrkdir + wrksrc.",
+    _tool("make_extract",
+          "Run `make extract` for a port (after materialize_dports): unpacks the "
+          "distfile into WRKSRC. PRISTINE upstream — no patches applied. Returns "
+          "wrkdir + wrksrc. Use when reading original source or generating a patch "
+          "against vanilla upstream. To patch a file that FreeBSD's files/patch-* "
+          "also modifies, follow this with make_patch first.",
+          {"origin": _STR}, ["origin"]),
+    _tool("make_patch",
+          "Run `make patch` for a port (after materialize_dports + make_extract): "
+          "the do-patch phase make_extract skips. Applies files/patch-* then "
+          "dragonfly/* into WRKSRC, leaving it in the real build-time state. Call "
+          "BEFORE dupe/genpatch when authoring a dragonfly/ patch that must sit on "
+          "top of files/ modifications, so genpatch's baseline matches what the "
+          "build sees. On failure, stdout_tail names the rejecting patch.",
           {"origin": _STR}, ["origin"]),
     _tool("dupe",
           "Snapshot a WRKSRC file with a .orig backup so genpatch can later diff against it.",
@@ -173,9 +185,9 @@ def schemas(only: set[str] | None = None) -> list[dict]:
 
     With ``only`` set, restrict the returned schemas to that name
     set — used by the convert flow (Step 20) to drop build-loop
-    tools (``extract``, ``dsynth_build``, ``dupe``, ``genpatch``,
-    ``install_patches``) it doesn't need, which prevents the model
-    from going on source-exploration tangents.
+    tools (``make_extract``, ``make_patch``, ``dsynth_build``,
+    ``dupe``, ``genpatch``, ``install_patches``) it doesn't need,
+    which prevents the model from going on source-exploration tangents.
     """
     if only is None:
         return list(_TOOLS)
@@ -188,7 +200,8 @@ def names() -> list[str]:
 
 # Tools the convert flow needs. Deliberately omits the build-loop
 # tools that turn out to be tar pits for a port-overlay rewriter:
-# extract / dsynth_build / dupe / genpatch / install_patches.
+# make_extract / make_patch / dsynth_build / dupe / genpatch /
+# install_patches.
 #
 # materialize_dports is ALSO excluded — it's the verification step
 # the *handler* runs after the agent emits the proof. If the agent
@@ -213,8 +226,9 @@ def patch_tool_names() -> frozenset[str]:
     dops DSL — the same surface the convert agent uses (``put_file`` +
     ``validate_dops`` + ``dops_reference``, reading with ``grep`` /
     ``get_file``) — plus the build-loop tools convert doesn't need
-    (``extract`` / ``dupe`` / ``genpatch`` / ``install_patches`` /
-    ``dsynth_build`` / ``dsynth_log`` / ``materialize_dports``) and the
+    (``make_extract`` / ``make_patch`` / ``dupe`` / ``genpatch`` /
+    ``install_patches`` / ``dsynth_build`` / ``dsynth_log`` /
+    ``materialize_dports``) and the
     read-only ``emit_diff`` / ``get_effective_overlay`` views. All of
     these live in the registry, so this is just the full tool set.
     """

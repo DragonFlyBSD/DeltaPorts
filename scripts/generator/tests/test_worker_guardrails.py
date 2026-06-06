@@ -264,7 +264,7 @@ def test_patch_prompt_tells_agent_to_use_extract_wrksrc():
 
 
 def test_extract_targets_compose_root_via_sh(monkeypatch):
-    """worker.extract must invoke make against ``$DPORTS_COMPOSE_ROOT``
+    """worker.make_extract must invoke make against ``$DPORTS_COMPOSE_ROOT``
     (the materialized port tree for this target), NOT ``/work/DPorts/``
     (the lock root with stale versions). Uses sh -c so the env var
     is expanded in-chroot."""
@@ -287,7 +287,7 @@ def test_extract_targets_compose_root_via_sh(monkeypatch):
         )
 
     monkeypatch.setattr(worker, "_exec", fake_exec)
-    res = worker.extract("env", "devel/libuv")
+    res = worker.make_extract("env", "devel/libuv")
     assert res["wrksrc"] == "/work/obj/work/libuv-1.52.0"
 
     # Both invocations must shell out so $DPORTS_COMPOSE_ROOT expands.
@@ -319,10 +319,79 @@ def test_extract_summary_warns_against_lock_root(monkeypatch):
         )
 
     monkeypatch.setattr(worker, "_exec", fake_exec)
-    res = worker.extract("env", "devel/foo")
+    res = worker.make_extract("env", "devel/foo")
     assert "/work/DPorts" in res["summary"]   # mentions the wrong path
     assert "lock root" in res["summary"]      # by name
     assert res["wrksrc"] in res["summary"]    # and the right path
+
+
+def test_make_patch_runs_patch_target_against_compose_root(monkeypatch):
+    """worker.make_patch must run the `patch` make target (do-patch,
+    NOT extract) against ``$DPORTS_COMPOSE_ROOT`` via sh -c. do-patch is
+    what applies files/patch-* then dragonfly/* into WRKSRC; running it
+    against the lock root (/work/DPorts) would patch stale versions."""
+    from dportsv3.agent import worker
+    import subprocess
+
+    captured = []
+
+    def fake_exec(env, *argv, **kw):
+        captured.append(argv)
+        return subprocess.CompletedProcess(
+            args=argv, returncode=0, stdout="===>  Patching for foo-1.0\n",
+            stderr="",
+        )
+
+    monkeypatch.setattr(worker, "_exec", fake_exec)
+    res = worker.make_patch("env", "devel/foo")
+    assert res["ok"] is True
+
+    # Single shell-out (no -V query like make_extract needs).
+    assert len(captured) == 1
+    call = captured[0]
+    assert call[0] == "/bin/sh" and call[1] == "-c"
+    payload = call[2]
+    # The `patch` target, batched, against the compose root — not extract,
+    # not a hardcoded lock-root path.
+    assert "BATCH=yes patch" in payload
+    assert "$DPORTS_COMPOSE_ROOT" in payload
+    assert "/work/DPorts" not in payload
+    # Success summary must tell the agent the tree is now build-state so
+    # it knows dupe/genpatch will baseline correctly.
+    assert "dupe" in res["summary"]
+
+
+def test_make_patch_failure_surfaces_rejecting_patch(monkeypatch):
+    """On a do-patch reject, make_patch must report ok=False, preserve
+    the patch tool's `Hunk #N ... FAILED` output (so the agent sees
+    WHICH patch rejected), and warn against duping the now half-patched
+    WRKSRC — a stale .orig baseline would poison genpatch."""
+    from dportsv3.agent import worker
+    import subprocess
+
+    reject_out = (
+        "===>  Patching for foo-1.0\n"
+        "===>  Applying dragonfly patches for foo-1.0\n"
+        "1 out of 3 hunks failed--saving rejects to file src/foo.c.rej\n"
+        "Hunk #2 failed at 412.\n"
+    )
+
+    def fake_exec(env, *argv, **kw):
+        return subprocess.CompletedProcess(
+            args=argv, returncode=1, stdout=reject_out,
+            stderr="*** Error code 1\n",
+        )
+
+    monkeypatch.setattr(worker, "_exec", fake_exec)
+    res = worker.make_patch("env", "devel/foo")
+
+    assert res["ok"] is False
+    assert res["rc"] == 1
+    # The rejecting-patch detail survives into the tails the agent reads.
+    assert "Hunk #2 failed at 412." in res["stdout_tail"]
+    # Summary steers the agent away from a poisoned baseline.
+    assert "half-patched" in res["summary"]
+    assert "do NOT dupe" in res["summary"] or "do not dupe" in res["summary"].lower()
 
 
 # --- dops_reference (on-demand tool) -----------------------------------------

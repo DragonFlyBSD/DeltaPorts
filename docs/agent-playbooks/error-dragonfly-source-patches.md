@@ -73,9 +73,13 @@ When creating DragonFly patches, be aware that:
 
 1. **FreeBSD patches apply first**: If `files/patch-foo` exists and modifies the
    same file, your line numbers must account for those changes
-   
-2. **Check the intermediate state**: The source your patch applies to is AFTER
-   FreeBSD patches but BEFORE DragonFly patches
+
+2. **Get the intermediate state for free**: The source your patch applies to is
+   AFTER FreeBSD patches but BEFORE DragonFly patches. Rather than account for
+   `files/*` line shifts by hand, run `make_patch(origin)` after `make_extract` —
+   it runs `do-patch` (applies `files/*` then `dragonfly/*`), so WRKSRC is already
+   in that intermediate state. `dupe` then snapshots it and `genpatch` produces a
+   diff with correct post-`files/*` context.
 
 3. **Use enough context**: Include 3+ context lines to handle minor line shifts
 
@@ -109,10 +113,12 @@ introduce one, both ending in a `file materialize dragonfly/patch-…
 - **Inline diff** — for a small change you can write by hand from
   prior `get_file` reads, stage the patch and add the materialize
   line.
-- **From a WRKSRC edit** — for non-trivial changes, `extract` +
-  `dupe` + `put_file` (edit the source) + `genpatch` +
-  `install_patches`, then add the materialize line. Editing the file
-  is easier than hand-writing the diff.
+- **From a WRKSRC edit** — for non-trivial changes, `make_extract` +
+  (`make_patch` if a `files/patch-*` also touches the file) + `dupe` +
+  `put_file` (edit the source) + `genpatch` + `install_patches`, then
+  add the materialize line. Editing the file is easier than
+  hand-writing the diff. See `flow-patch.md` for why `make_patch`
+  matters when layering on top of FreeBSD `files/*` patches.
 
 **Never** text-edit a `dragonfly/` patch in place — nudging context
 lines or hunk headers shifts the hunk body but not its header,

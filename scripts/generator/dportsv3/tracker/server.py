@@ -858,13 +858,29 @@ def _summary_materialize_dports(
             summary["warnings_line"] = ls
 
 
-def _summary_extract(
+def _summary_make_extract(
     data: dict[str, Any], summary: dict[str, Any],
 ) -> None:
-    """extract — surface the wrksrc so the operator knows where the
-    extracted source landed."""
+    """make_extract — surface the wrksrc so the operator knows where
+    the extracted source landed."""
     if data.get("wrksrc"):
         summary["headline"] = f"wrksrc={data['wrksrc']}"
+
+
+def _summary_make_patch(
+    data: dict[str, Any], summary: dict[str, Any],
+) -> None:
+    """make_patch — do-patch ran; surface ok + the first stderr/stdout
+    line so a rejecting patch is visible at a glance."""
+    if data.get("ok"):
+        summary["headline"] = "do-patch applied (files/* + dragonfly/*)"
+        return
+    for key in ("stderr_tail", "stdout_tail"):
+        for line in (data.get(key) or "").splitlines():
+            line = line.strip()
+            if line:
+                summary["headline"] = f"patch failed: {line[:160]}"
+                return
 
 
 def _summary_dsynth_build(
@@ -893,7 +909,8 @@ def _summary_dsynth_log(
 _TOOL_SUMMARIZERS: dict[str, Any] = {
     "materialize_dports": _summary_materialize_dports,
     "materialize_dports_with_report": _summary_materialize_dports,
-    "extract": _summary_extract,
+    "make_extract": _summary_make_extract,
+    "make_patch": _summary_make_patch,
     "dsynth_build": _summary_dsynth_build,
     "dsynth_log": _summary_dsynth_log,
 }

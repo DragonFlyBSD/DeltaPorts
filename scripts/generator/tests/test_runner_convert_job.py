@@ -828,12 +828,12 @@ def test_apply_files_removed_noop_when_field_missing(
 
 
 def test_convert_tool_whitelist_blocks_build_tools() -> None:
-    """Defense-in-depth: even if a future change ships extract /
+    """Defense-in-depth: even if a future change ships make_extract /
     dsynth_build schemas to convert by mistake, the tool_loop's
     whitelist check refuses them at dispatch time."""
     from dportsv3.agent.tools import CONVERT_TOOL_NAMES, names
-    forbidden = {"extract", "dsynth_build", "dupe", "genpatch",
-                 "install_patches"}
+    forbidden = {"make_extract", "make_patch", "dsynth_build", "dupe",
+                 "genpatch", "install_patches"}
     for f in forbidden:
         assert f in names(), f"tool {f!r} should exist for patch flow"
         assert f not in CONVERT_TOOL_NAMES, (

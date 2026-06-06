@@ -198,21 +198,37 @@ quickref's "Two kinds of patches".)
 For a non-trivial source change, edit the source and let the engine
 produce the diff rather than hand-writing one:
 
-1. `extract(origin)` — populates WRKSRC; use the returned `wrksrc` path
-   for all reads from here on.
-2. `dupe(<wrksrc>/path/to/file.c)` — snapshots a `.orig` and exposes the
-   file for editing.
-3. `put_file <wrksrc>/path/to/file.c <new content>` — edit it.
+1. `make_extract(origin)` — populates WRKSRC; use the returned `wrksrc`
+   path for all reads from here on. This is `do-extract` only: the
+   distfile is unpacked **pristine**, no patches applied.
+2. `make_patch(origin)` — **run this when the file you're about to edit
+   is also touched by a FreeBSD `files/patch-*` (or an existing
+   `dragonfly/*` patch).** It runs `do-patch`, which applies `files/*`
+   then `dragonfly/*` in order, leaving WRKSRC in the real build-time
+   state. `dragonfly/*` patches apply **after** `files/*` at build time,
+   so your new patch's context must reflect the post-`files/*` source —
+   not pristine upstream. Skip this step only when the target file is
+   untouched by any framework patch (pristine == build state). The
+   broken `dragonfly/*` patch you're regenerating has already been
+   dropped from `overlay.dops` by convert's defer pass, so `do-patch`
+   won't choke on it. On failure, the rejecting patch is named in the
+   tool's `stdout_tail`.
+3. `dupe(<wrksrc>/path/to/file.c)` — snapshots a `.orig` and exposes the
+   file for editing. **Dupe AFTER make_patch** so the baseline is the
+   post-`do-patch` state — that baseline is what genpatch diffs against.
+4. `put_file <wrksrc>/path/to/file.c <new content>` — edit it.
    `put_file` to a WRKSRC path is allowed; to `ports/<origin>/` it is
    not — edit the overlay there, not the extracted source.
-4. `genpatch(<same path>)` — runs `diff -u` between `.orig` and current,
+5. `genpatch(<same path>)` — runs `diff -u` between `.orig` and current,
    depositing a WRKSRC-relative `patch-*` file. (It picks up WRKSRC from
-   the prior `extract` automatically.)
-5. `install_patches(origin)` — copies the generated patch into
+   the prior `make_extract` automatically.) Because the `.orig` baseline
+   is post-`do-patch`, the hunk context matches what `do-patch` sees at
+   build time and the patch applies cleanly.
+6. `install_patches(origin)` — copies the generated patch into
    `ports/<origin>/dragonfly/`, then add the `file materialize` line to
    `overlay.dops` so compose stages it.
 
-**`dupe` is only step 1 of this flow.** It exists solely to support
+**`dupe` is only one step of this flow.** It exists solely to support
 patch generation — it is not an investigation tool, not a "before"
 snapshot for reading, and not a way to edit an existing
 `dragonfly/patch-*`. A `dupe` with no follow-up `genpatch`/

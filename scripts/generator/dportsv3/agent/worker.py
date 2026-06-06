@@ -930,16 +930,16 @@ def materialize_dports_with_report(env: str, origin: str) -> dict:
 WRKDIRPREFIX = "/work/obj"
 
 
-# Per-(env, origin) WRKSRC cache, populated by `extract()` and read
-# by `genpatch()` (to invoke the script from the right cwd with a
+# Per-(env, origin) WRKSRC cache, populated by `make_extract()` and
+# read by `genpatch()` (to invoke the script from the right cwd with a
 # WRKSRC-relative arg).
 #
 # Stays at module scope because the worker is otherwise stateless;
 # entries live for the runner process's lifetime. A worker restart
 # between extract and a downstream call empties the cache — those
 # downstream calls then fall back to legacy behavior. The patch
-# agent's per-attempt opening procedure already calls extract first,
-# so the cache is repopulated naturally on the next attempt.
+# agent's per-attempt opening procedure already calls make_extract
+# first, so the cache is repopulated naturally on the next attempt.
 _WRKSRC_CACHE: dict[tuple[str, str], str] = {}
 
 
@@ -1289,7 +1289,7 @@ def reset_port(env: str, origin: str) -> dict:
     compose root for ``<origin>`` to remove the WRKDIR under
     ``$WRKDIRPREFIX/<origin>/<version>/`` along with any
     ``.orig`` files / agent edits the prior job left in WRKSRC.
-    Without this, the next job's ``extract()`` is a no-op
+    Without this, the next job's ``make_extract()`` is a no-op
     (``make extract`` sees an existing WRKDIR and skips), the
     agent's ``get_file`` reads polluted source, and ``genpatch``
     diffs against stale ``.orig`` baselines.
@@ -1855,7 +1855,7 @@ def dops_reference(env: str) -> dict:
     }
 
 
-def extract(env: str, origin: str) -> dict:
+def make_extract(env: str, origin: str) -> dict:
     """Run ``make extract`` against the **compose root** —
     ``$DPORTS_COMPOSE_ROOT`` (= ``/work/artifacts/compose/<target>``).
 
@@ -1917,6 +1917,61 @@ def extract(env: str, origin: str) -> dict:
     return _exec_result(0, p.stdout, p.stderr,
                         origin=origin, wrkdir=wrkdir, wrksrc=wrksrc,
                         summary=summary)
+
+
+def make_patch(env: str, origin: str) -> dict:
+    """Run ``make patch`` against the **compose root** — the
+    ``do-patch`` phase that ``make_extract`` deliberately does NOT run.
+
+    ``make_extract`` only unpacks the distfile; WRKSRC is pristine
+    upstream afterward. ``do-patch`` is what applies ``files/patch-*``
+    (the FreeBSD framework patches) and then the port's
+    ``dragonfly/*`` patches, in that order, leaving WRKSRC in the
+    actual state dsynth builds from.
+
+    Call this AFTER ``materialize_dports(origin)`` + ``make_extract(
+    origin)`` and BEFORE ``dupe``/``genpatch`` when you are authoring a
+    new ``dragonfly/`` patch that must sit on top of ``files/``
+    modifications: ``dupe`` snapshots the file's post-``do-patch``
+    state, so ``genpatch``'s baseline matches what ``do-patch`` will
+    see at build time. Without it, ``dupe`` would snapshot pristine
+    upstream and the generated hunk's context would not match the
+    build-time tree, rejecting at ``dsynth_build``.
+
+    Same target/env model as ``make_extract``: compose root,
+    ``WRKDIRPREFIX=/work/obj``. On failure the per-patch reject
+    (``Hunk #N ... FAILED``) is in stdout/stderr — surfaced in the
+    tails so the caller can see WHICH patch rejected without a
+    separate log read. ``do-patch`` writes a ``.patch_done`` cookie
+    and is a no-op on re-run; run it once per extract.
+    """
+    patch_cmd = (
+        'set -e; '
+        f'cd "$DPORTS_COMPOSE_ROOT/{origin}"; '
+        f'make PORTSDIR="$DPORTS_COMPOSE_ROOT" '
+        f'     WRKDIRPREFIX="{WRKDIRPREFIX}" '
+        f'     BATCH=yes patch'
+    )
+    p = _exec(env, "/bin/sh", "-c", patch_cmd)
+    if p.returncode != 0:
+        return _exec_result(
+            p.returncode, p.stdout, p.stderr, origin=origin,
+            summary=(
+                f"`make patch` FAILED for {origin}. A framework "
+                f"(files/patch-*) or dragonfly/* patch rejected — see "
+                f"stdout_tail/stderr_tail for the `Hunk #N ... FAILED` "
+                f"line identifying which patch. WRKSRC is now "
+                f"half-patched; do NOT dupe/genpatch against it."
+            ),
+        )
+    return _exec_result(
+        0, p.stdout, p.stderr, origin=origin,
+        summary=(
+            f"Patched {origin}: applied files/patch-* then dragonfly/* "
+            f"into WRKSRC. WRKSRC now matches the build-time tree — "
+            f"safe to dupe/edit/genpatch a new dragonfly patch on top."
+        ),
+    )
 
 
 def dupe(env: str, path: str) -> dict:
