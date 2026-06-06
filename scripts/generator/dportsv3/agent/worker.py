@@ -1275,36 +1275,58 @@ def assert_port_clean(env: str, origin: str) -> dict:
 
 
 def reset_port(env: str, origin: str) -> dict:
-    """Step 25g: reset the env's ``ports/<origin>/`` subtree to
-    git HEAD AND wipe the per-origin WRKDIR under ``/work/obj/``,
-    so the next job starts from a pristine substrate AND from
-    pristine upstream source.
+    """Step 25g: wipe the per-origin WRKDIR, reset the env's
+    ``ports/<origin>/`` subtree to git HEAD, and re-materialize the
+    compose tree from that baseline — so the next job starts from a
+    pristine WRKDIR, a pristine substrate, and a baseline-derived
+    composed tree.
 
-    The substrate reset is::
+    Stages, in order:
 
-        git checkout HEAD -- ports/<origin>
-        git clean -fd ports/<origin>
+    1. Best-effort ``make clean`` against the compose root to
+       remove the WRKDIR under ``$WRKDIRPREFIX/<origin>/<version>/``
+       along with any ``.orig`` files / agent edits the prior job
+       left in WRKSRC. Runs first because the agent's edits to the
+       substrate haven't been undone yet — so the in-tree Makefile
+       (or any .DragonFly fragments) still reflects the patched
+       state ``make clean`` was authored against.
 
-    Plus a best-effort ``make clean`` invocation against the
-    compose root for ``<origin>`` to remove the WRKDIR under
-    ``$WRKDIRPREFIX/<origin>/<version>/`` along with any
-    ``.orig`` files / agent edits the prior job left in WRKSRC.
-    Without this, the next job's ``make_extract()`` is a no-op
-    (``make extract`` sees an existing WRKDIR and skips), the
-    agent's ``get_file`` reads polluted source, and ``genpatch``
-    diffs against stale ``.orig`` baselines.
+    2. Substrate reset (load-bearing)::
 
-    Cache hygiene: drop ``_WRKSRC_CACHE`` and ``_MATERIALIZE_STATE``
-    entries for ``(env, origin)`` so any code path that holds a
-    cached path/hash sees the cache miss and re-derives.
+           git checkout HEAD -- ports/<origin>
+           git clean -fd ports/<origin>
 
-    The substrate-reset stage is load-bearing; ``make clean``
-    failure surfaces as ``workdir_clean_*`` keys in the result
-    but does not flip ``ok`` to false. Callers can inspect
-    ``workdir_clean_ok`` if they want to act on it.
+    3. ``reapply <origin>`` — regenerate
+       ``/work/artifacts/compose/<target>/<origin>/`` from the
+       now-reset substrate. Without this, the compose tree still
+       carries whatever the agent's last reapply produced from its
+       patched substrate, and any later read (operator verify, next
+       attempt's first ``get_file``) starts against stale output.
+
+       Best-effort: a reapply failure here means baseline HEAD
+       itself doesn't compose cleanly — which was already the
+       state when we started, so it isn't a regression caused by
+       reset. Surfaces as ``reapply_ok``/``reapply_error`` for
+       diagnosis but does not flip ``ok``.
+
+    Cache hygiene: ``_clean_port_workdir`` drops ``_WRKSRC_CACHE``
+    and ``_MATERIALIZE_STATE`` entries for ``(env, origin)`` so any
+    code path that holds a cached path/hash sees the cache miss and
+    re-derives.
+
+    Stage 2 is the only load-bearing stage — its failure flips
+    ``ok`` to false. Stages 1 and 3 are best-effort; their
+    failures surface as ``workdir_clean_*`` / ``reapply_*`` keys
+    in the result.
     """
     rel = f"ports/{origin}"
-    # Run both substrate commands; capture combined output.
+
+    # 1. Best-effort WRKDIR cleanup — runs against the still-patched
+    # substrate (the in-tree Makefile/.DragonFly is what ``make clean``
+    # was authored against). ok stays True even on failure.
+    workdir = _clean_port_workdir(env, origin)
+
+    # 2. Substrate reset — load-bearing.
     cmd = (
         f"cd /work/DeltaPorts && "
         f"git checkout HEAD -- {shlex.quote(rel)} && "
@@ -1312,21 +1334,25 @@ def reset_port(env: str, origin: str) -> dict:
     )
     p = _exec(env, "/bin/sh", "-c", cmd, cwd="/work/DeltaPorts")
     out = (p.stdout or "")
-    err = (p.stderr or "")
     if p.returncode != 0:
         return _exec_result(
-            p.returncode, out, err,
+            p.returncode, out, (p.stderr or ""),
             error=f"reset_port failed for {rel}",
         )
 
-    # Best-effort WRKDIR cleanup — ok stays True even on failure.
-    workdir = _clean_port_workdir(env, origin)
+    # 3. Re-materialize the compose tree from the now-reset substrate.
+    # Best-effort: a failure here reflects baseline state we didn't
+    # cause and shouldn't mask as a reset failure.
+    rp = _exec(env, "reapply", origin)
+    reapply_ok = (rp.returncode == 0)
+
     result = {
         "ok": True,
         "origin": origin,
         "paths_changed": [rel],
         "stdout_tail": out[-1024:],
         "workdir_clean_ok": bool(workdir.get("ok")),
+        "reapply_ok": reapply_ok,
     }
     if not workdir.get("ok"):
         # Surface diagnosis without flipping the overall result.
@@ -1336,13 +1362,19 @@ def reset_port(env: str, origin: str) -> dict:
         result["workdir_clean_error"] = (
             workdir.get("stderr_tail") or workdir.get("error", "")
         )[:300]
+    if not reapply_ok:
+        result["reapply_error"] = (
+            (rp.stderr or "") or (rp.stdout or "")
+        )[-300:]
     return result
 
 
 def _clean_port_workdir(env: str, origin: str) -> dict:
     """Best-effort ``make clean`` for ``<origin>``'s WRKDIR + cache
-    invalidation. Used by :func:`reset_port` as a post-substrate
-    cleanup step.
+    invalidation. Used by :func:`reset_port` as the first stage —
+    runs against the still-patched substrate so the in-tree Makefile
+    (which the existing WRKDIR was authored against) is still
+    present.
 
     Runs ``make clean`` against ``$DPORTS_COMPOSE_ROOT/<origin>``
     with ``WRKDIRPREFIX=/work/obj`` so the per-origin WRKDIR
