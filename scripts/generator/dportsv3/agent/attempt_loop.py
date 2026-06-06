@@ -159,7 +159,7 @@ def run(
             except Exception:
                 pass
 
-        response, attempt_usage = tool_loop.run(
+        response, attempt_usage, rebuild_ok_seen = tool_loop.run(
             messages,
             model=model,
             env=env,
@@ -202,6 +202,26 @@ def run(
         )
         proof = _parse(prev_text)
         rebuild_ok = bool(_ok(proof))
+
+        # Proof-block orphan rescue: the LLM may have run out of budget
+        # before it could emit ``## Rebuild Proof (JSON)``, even though
+        # a ``dsynth_build`` tool call already returned rebuild_ok=true
+        # earlier in the attempt. Lift the success from the structured
+        # tool result and synthesize a minimal proof dict so downstream
+        # writes ``proposed_fix.md`` (the success artifact) instead of
+        # ``manual_handoff.md`` (the escalation artifact). Gated on the
+        # default success predicate — convert's custom is_success keys
+        # on different fields, so the rebuild_ok signal is meaningless
+        # there.
+        if not rebuild_ok and rebuild_ok_seen and is_success is None:
+            log.info(
+                "attempt_loop: rebuild_ok=true seen via tool result but no "
+                "proof block in assistant text; synthesizing proof for "
+                "attempt %d",
+                attempt_idx,
+            )
+            proof = {"rebuild_ok": True, "source": "tool_result"}
+            rebuild_ok = True
 
         attempts.append(
             AttemptInfo(

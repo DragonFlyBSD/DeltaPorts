@@ -23,6 +23,13 @@ from .llm import Response, Usage
 log = logging.getLogger(__name__)
 
 
+# Grace tokens granted after a tool call returned ``rebuild_ok=True``.
+# Lets the LLM emit its closing ``## Rebuild Proof (JSON)`` + ``## Patch
+# Log`` blocks without busting the attempt budget the moment the build
+# went green. Sized to cover the closing turns, not a fresh build cycle.
+GRACE_TOKENS_AFTER_REBUILD_OK = 100_000
+
+
 def _assistant_message_from(response: Response) -> dict:
     """Reconstruct the assistant message dict that produced ``response``.
 
@@ -64,15 +71,17 @@ def run(
     on_event=None,
     attempt_idx: int = 1,
     tool_whitelist: set[str] | frozenset[str] | None = None,
-) -> tuple[Response, Usage]:
+) -> tuple[Response, Usage, bool]:
     """Drive the LLM through tool calls until it returns text-only.
 
     ``messages`` is mutated to include each assistant + tool turn for
     the duration of the loop. ``env`` is the dev-env name; every tool
     call is bound to it.
 
-    Returns the final text-only ``Response`` and the cumulative
-    ``Usage`` across all turns.
+    Returns ``(response, usage, rebuild_ok_seen)``: the final text-only
+    ``Response``, cumulative ``Usage`` across all turns, and a flag set
+    when any tool result in this attempt carried ``rebuild_ok=True``
+    (the structured success signal from ``dsynth_build``).
 
     Two safety caps:
     - ``max_turns``: stop after this many LLM round-trips even if the
@@ -80,19 +89,27 @@ def run(
     - ``max_tokens``: stop when cumulative usage reaches this many
       tokens. 0 (the default) disables the check — the caller is
       expected to pass the remaining attempt-level budget when one
-      exists.
+      exists. Once ``rebuild_ok_seen`` flips to True the cap is
+      extended by ``GRACE_TOKENS_AFTER_REBUILD_OK`` so the closing
+      turns (proof block + patch log) have room to land.
     """
     total = Usage()
     tool_schemas = tools.schemas(only=tool_whitelist)
     final: Response | None = None
+    rebuild_ok_seen = False
+
+    def _effective_cap() -> int:
+        # Grace only kicks in once a tool result has signalled
+        # ``rebuild_ok=True``; before that, the budget is the budget.
+        return max_tokens + (GRACE_TOKENS_AFTER_REBUILD_OK if rebuild_ok_seen else 0)
 
     for turn in range(1, max_turns + 1):
-        if max_tokens and total.total_tokens >= max_tokens:
+        if max_tokens and total.total_tokens >= _effective_cap():
             log.warning(
                 "tool_loop: token budget exhausted on turn %d (%d >= %d)",
-                turn, total.total_tokens, max_tokens,
+                turn, total.total_tokens, _effective_cap(),
             )
-            return (final if final is not None else Response(text="")), total
+            return (final if final is not None else Response(text="")), total, rebuild_ok_seen
 
         response = llm.complete(
             messages,
@@ -129,11 +146,11 @@ def run(
             except Exception:
                 pass  # callback must never break the loop
 
-        if max_tokens and total.total_tokens >= max_tokens:
+        if max_tokens and total.total_tokens >= _effective_cap():
             log.warning(
                 "tool_loop: token budget exhausted after turn %d (%d >= %d); "
                 "stopping before tool dispatch",
-                turn, total.total_tokens, max_tokens,
+                turn, total.total_tokens, _effective_cap(),
             )
             if on_event is not None:
                 try:
@@ -142,17 +159,18 @@ def run(
                         "attempt": attempt_idx,
                         "turn": turn,
                         "tokens": total.total_tokens,
-                        "budget": max_tokens,
+                        "budget": _effective_cap(),
                         "phase": "after_llm_turn",
                         "tools_skipped": tools_requested,
+                        "rebuild_ok_seen": rebuild_ok_seen,
                     })
                 except Exception:
                     pass
-            return response, total
+            return response, total, rebuild_ok_seen
 
         if not response.tool_calls:
             log.debug("tool_loop: turn %d returned text-only, stopping", turn)
-            return response, total
+            return response, total, rebuild_ok_seen
 
         log.debug(
             "tool_loop: turn %d issued %d tool call(s): %s",
@@ -183,6 +201,33 @@ def run(
                     call.name, call.arguments, env=env,
                 )
             duration_ms = int((time.monotonic() - t0) * 1000)
+            # The success signal is the dsynth_build tool returning
+            # ``rebuild_ok=True``. Lifting it from the structured tool
+            # result (rather than waiting for the LLM to restate it in
+            # a ## Rebuild Proof block) lets us extend the budget for
+            # the closing turns without trusting LLM text shape.
+            if (
+                not rebuild_ok_seen
+                and isinstance(result, dict)
+                and result.get("rebuild_ok") is True
+            ):
+                rebuild_ok_seen = True
+                log.info(
+                    "tool_loop: rebuild_ok=True observed on turn %d via %s; "
+                    "extending cap by %d grace tokens",
+                    turn, call.name, GRACE_TOKENS_AFTER_REBUILD_OK,
+                )
+                if on_event is not None:
+                    try:
+                        on_event({
+                            "type": "rebuild_ok_seen",
+                            "attempt": attempt_idx,
+                            "turn": turn,
+                            "tool": call.name,
+                            "grace_tokens": GRACE_TOKENS_AFTER_REBUILD_OK,
+                        })
+                    except Exception:
+                        pass
             if on_event is not None:
                 try:
                     on_event({
@@ -207,4 +252,4 @@ def run(
     log.warning(
         "tool_loop: hit max_turns=%d without a text-only response", max_turns
     )
-    return (final if final is not None else Response(text="")), total
+    return (final if final is not None else Response(text="")), total, rebuild_ok_seen

@@ -61,7 +61,7 @@ def test_tool_loop_emits_llm_turn_with_full_breakdown(monkeypatch):
 
     events: list[dict] = []
 
-    response, usage = tool_loop.run(
+    response, usage, _rebuild_ok_seen = tool_loop.run(
         messages=[{"role": "user", "content": "hi"}],
         env="testenv",
         model="fake",
@@ -111,7 +111,7 @@ def test_tool_loop_emits_llm_turn_even_if_callback_raises(monkeypatch):
         raise RuntimeError("intentional")
 
     # Must not raise.
-    response, usage = tool_loop.run(
+    response, usage, _rebuild_ok_seen = tool_loop.run(
         messages=[{"role": "user", "content": "x"}],
         env="testenv", model="fake", attempt_idx=1,
         on_event=bad_callback,

@@ -64,7 +64,7 @@ def main() -> int:
         {"role": "user", "content": "Go."},
     ]
 
-    final, usage = tool_loop.run(
+    final, usage, _rebuild_ok_seen = tool_loop.run(
         messages,
         model=model,
         env=env,
