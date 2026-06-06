@@ -358,15 +358,22 @@ def apply_and_build(
     # exit path — diff-apply failure, reapply failure, build success,
     # build failure.
     #
-    # Also ``make clean`` against the per-origin compose root so the
-    # WRKDIR under ``$WRKDIRPREFIX/<origin>/`` is wiped along with any
-    # ``.orig`` files / extracted-source edits the prior run left
-    # behind. Mirrors the same cleanup the agent's
-    # ``worker.reset_port`` does for patch + convert jobs. Without
-    # this, a second verify on the same env sees stale WRKSRC and
-    # ``make extract`` no-ops against polluted state.
+    # Three stages, matching ``worker.reset_port``'s shape:
+    #   1. ``make clean`` against the per-origin compose root — wipes
+    #      the WRKDIR under ``$WRKDIRPREFIX/<origin>/`` along with
+    #      ``.orig`` files / extracted-source edits dtest left behind.
+    #      Runs first against the still-patched substrate (its in-tree
+    #      Makefile is what the existing WRKDIR was authored against).
+    #   2. Substrate reset (load-bearing) — restore ports/<origin>/ to
+    #      HEAD. Three-step shape because ``git apply --3way`` indexed
+    #      the verify diff.
+    #   3. ``reapply`` against the now-reset substrate so
+    #      ``/work/artifacts/compose/<target>/<origin>/`` reflects HEAD
+    #      rather than the verify-applied state. Without this, the next
+    #      verify (or operator inspection of the env) starts against
+    #      stale compose output.
     #
-    # The two stages stay in this function rather than calling
+    # All three stages stay in this function rather than calling
     # ``worker.reset_port`` because apply-and-build is a separate
     # package from the generator: importing across the boundary
     # would couple dev-env to the agent loop unnecessarily. The
@@ -375,7 +382,30 @@ def apply_and_build(
     # in sync.
     def _post_build_cleanup() -> None:
         rel = f"ports/{origin}"
-        # Reset ONLY ports/<origin> back to HEAD. `git apply --3way`
+
+        # 1. Best-effort WRKDIR wipe. Failure surfaces as a warning in
+        # stderr_tail but does not flip the result; runs first so the
+        # in-tree Makefile reflects the patched state make clean was
+        # authored against.
+        wrkdir_cleanup = runner.run(
+            ["/bin/sh", "-c",
+             'cd "$DPORTS_COMPOSE_ROOT/' + origin + '" && '
+             'make PORTSDIR="$DPORTS_COMPOSE_ROOT" '
+             'WRKDIRPREFIX=/work/obj BATCH=yes clean', "_"],
+            env=env, capture_output=True,
+        )
+        if wrkdir_cleanup.returncode != 0:
+            warn = (
+                f"\n[Q1 post-build WRKDIR clean failed: "
+                f"rc={wrkdir_cleanup.returncode}; /work/obj/{origin}/ "
+                f"may carry stale extracted source into the next "
+                f"verify run]\n"
+                + (wrkdir_cleanup.stderr or "")[-512:]
+            )
+            existing = result.get("stderr_tail") or ""
+            result["stderr_tail"] = (existing + warn)[-2000:]
+
+        # 2. Reset ONLY ports/<origin> back to HEAD. `git apply --3way`
         # implies --index, so the applied diff (incl. brand-new files
         # like overlay.dops) is STAGED — a plain `git checkout HEAD --`
         # + `git clean` can't remove a staged new file, so it leaked
@@ -383,15 +413,15 @@ def apply_and_build(
         # scoped steps cover every shape without a whole-tree reset
         # (which could discard unrelated changes if verify ever ran on
         # the wrong branch):
-        #   1. `git reset -- <rel>`     unstages everything under rel
-        #      (staged-new files become untracked; staged deletions/
-        #      mods become unstaged).
-        #   2. `git checkout -- <rel>`  reverts the now-unstaged tracked
-        #      mods/deletions back to HEAD. Tolerate a pathspec
-        #      no-match (a brand-new port dir absent from HEAD) with
-        #      `|| true`.
-        #   3. `git clean -fd -- <rel>` removes the leftover untracked
-        #      files (the formerly-staged new files from step 1).
+        #   2a. `git reset -- <rel>`     unstages everything under rel
+        #       (staged-new files become untracked; staged deletions/
+        #       mods become unstaged).
+        #   2b. `git checkout -- <rel>`  reverts the now-unstaged tracked
+        #       mods/deletions back to HEAD. Tolerate a pathspec
+        #       no-match (a brand-new port dir absent from HEAD) with
+        #       `|| true`.
+        #   2c. `git clean -fd -- <rel>` removes the leftover untracked
+        #       files (the formerly-staged new files from 2a).
         cleanup = runner.run(
             ["/bin/sh", "-c",
              f"cd /work/DeltaPorts && "
@@ -410,25 +440,28 @@ def apply_and_build(
             existing = result.get("stderr_tail") or ""
             result["stderr_tail"] = (existing + warn)[-2000:]
             # Substrate reset is load-bearing — if it failed, skip
-            # the WRKDIR wipe so we don't compound the diagnosis.
+            # the reapply so we don't compose against a half-reset
+            # substrate.
             return
 
-        # Best-effort WRKDIR wipe. Failure surfaces as a warning in
-        # stderr_tail but does not flip the result.
-        wrkdir_cleanup = runner.run(
+        # 3. Re-materialize the compose tree from the now-reset
+        # substrate. Best-effort: a failure here means baseline HEAD
+        # itself doesn't compose cleanly — that was the state when
+        # verify started, so it isn't a regression we should mask as
+        # a cleanup failure.
+        reapply_cleanup = runner.run(
             ["/bin/sh", "-c",
-             'cd "$DPORTS_COMPOSE_ROOT/' + origin + '" && '
-             'make PORTSDIR="$DPORTS_COMPOSE_ROOT" '
-             'WRKDIRPREFIX=/work/obj BATCH=yes clean', "_"],
+             f"cd /work/DeltaPorts && reapply {shlex.quote(origin)}",
+             "_"],
             env=env, capture_output=True,
         )
-        if wrkdir_cleanup.returncode != 0:
+        if reapply_cleanup.returncode != 0:
             warn = (
-                f"\n[Q1 post-build WRKDIR clean failed: "
-                f"rc={wrkdir_cleanup.returncode}; /work/obj/{origin}/ "
-                f"may carry stale extracted source into the next "
-                f"verify run]\n"
-                + (wrkdir_cleanup.stderr or "")[-512:]
+                f"\n[post-build reapply failed: "
+                f"rc={reapply_cleanup.returncode}; baseline HEAD may "
+                f"not compose cleanly — compose tree carries verify "
+                f"state]\n"
+                + (reapply_cleanup.stderr or "")[-512:]
             )
             existing = result.get("stderr_tail") or ""
             result["stderr_tail"] = (existing + warn)[-2000:]

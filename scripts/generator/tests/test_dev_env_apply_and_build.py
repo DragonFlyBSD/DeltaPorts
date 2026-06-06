@@ -147,9 +147,10 @@ def test_no_diff_happy_path_returns_zero(fake_env, monkeypatch) -> None:
     assert result["dsynth_exit"] == 0
     assert result["applied_diff_sha256"] is None
     assert "apply-and-build-devel_foo.log" in result["log_path"]
-    # reapply + dtest, then post-build cleanup (substrate reset +
-    # WRKDIR clean) which now runs for every path.
-    assert len(fake_env.calls) == 4
+    # reapply + dtest, then post-build cleanup (WRKDIR clean +
+    # substrate reset + baseline reapply) which now runs for every
+    # path.
+    assert len(fake_env.calls) == 5
     reapply_argv = " ".join(fake_env.calls[0]["argv"])
     dtest_argv = " ".join(fake_env.calls[1]["argv"])
     assert "reapply devel/foo" in reapply_argv
@@ -172,8 +173,9 @@ def test_diff_path_is_staged_into_writable_and_applied(fake_env, monkeypatch, tm
                                    diff=str(diff), json=True))
 
     assert rc == 0
-    # apply, reapply, dtest, then post-build cleanup (2 calls).
-    assert len(fake_env.calls) == 5
+    # apply, reapply, dtest, then post-build cleanup (3 calls:
+    # WRKDIR wipe + substrate reset + baseline reapply).
+    assert len(fake_env.calls) == 6
     apply_argv = " ".join(fake_env.calls[0]["argv"])
     assert "git apply --3way" in apply_argv
     assert "/work/.apply-and-build.diff" in apply_argv
@@ -231,11 +233,15 @@ def test_diff_apply_failure_short_circuits(fake_env, monkeypatch, tmp_path) -> N
     assert result["reapply_exit"] is None
     assert result["dsynth_exit"] is None
     assert result["ok"] is False
-    # apply failed → reapply + dtest skipped. Post-build cleanup
-    # still runs in the finally, but the build stages don't.
+    # apply failed → build-stage reapply + dtest skipped. Post-build
+    # cleanup still runs in the finally; its baseline reapply IS
+    # expected, so we count occurrences rather than asserting absence
+    # (the build-stage and cleanup-stage reapplies produce identical
+    # argv).
     all_argv = [" ".join(c["argv"]) for c in fake_env.calls]
     assert any("git apply --3way" in a for a in all_argv)
-    assert not any("reapply devel/foo" in a for a in all_argv)
+    reapply_calls = [a for a in all_argv if "reapply devel/foo" in a]
+    assert len(reapply_calls) == 1  # only the cleanup-stage reapply
     assert not any("dtest devel/foo" in a for a in all_argv)
     # sha256 still recorded so the orchestrator can dedupe.
     assert result["applied_diff_sha256"] is not None
@@ -352,12 +358,13 @@ def test_diff_path_runs_post_build_cleanup(
     )
 
 
-def test_make_clean_skipped_when_substrate_reset_fails(
+def test_baseline_reapply_skipped_when_substrate_reset_fails(
     fake_env, monkeypatch, tmp_path,
 ) -> None:
     """Substrate reset failure should not cascade — skip the
-    WRKDIR wipe and surface the substrate-reset stderr to the
-    operator. Matches worker.reset_port's ordering."""
+    baseline reapply (would compose against a half-reset substrate)
+    and surface the substrate-reset stderr to the operator. Matches
+    worker.reset_port's ordering."""
     from dports_dev_env.cli import apply_and_build
     import subprocess as _sp
 
@@ -366,12 +373,13 @@ def test_make_clean_skipped_when_substrate_reset_fails(
 
     # Queue outcomes so the substrate reset fails. The runner
     # consumes outcomes from a list, in order — earlier apply +
-    # reapply + dtest stages consume the first ones, then the
-    # substrate cleanup gets rc=1.
+    # reapply + dtest + WRKDIR-wipe stages consume the first ones,
+    # then the substrate reset gets rc=1.
     fake_env.runner.outcomes = [
         _sp.CompletedProcess([], 0, "", ""),     # diff apply
         _sp.CompletedProcess([], 0, "", ""),     # reapply
         _sp.CompletedProcess([], 0, "", ""),     # dsynth (dtest)
+        _sp.CompletedProcess([], 0, "", ""),     # WRKDIR wipe
         _sp.CompletedProcess(                    # substrate reset → fails
             [], 1, "", "fatal: not a git repository",
         ),
@@ -384,8 +392,58 @@ def test_make_clean_skipped_when_substrate_reset_fails(
 
     shell_calls = _post_build_calls(fake_env.calls)
     assert any("git reset -q --" in c[2] for c in shell_calls)
-    # WRKDIR wipe must not fire when substrate reset failed.
-    assert not any(
+    # WRKDIR wipe ran (before substrate reset).
+    assert any(
         "WRKDIRPREFIX=/work/obj" in c[2] and "clean" in c[2]
         for c in shell_calls
     )
+    # Baseline reapply must NOT fire when substrate reset failed —
+    # otherwise we'd compose against a half-reset substrate. Look
+    # for the cleanup-stage reapply specifically (the build-stage
+    # `reapply devel/foo` ran before the failure).
+    cleanup_reapplies = [
+        c for c in shell_calls
+        if "reapply devel/foo" in c[2]
+        and "git reset" not in c[2]
+        and "git checkout" not in c[2]
+    ]
+    # The first match is the build-stage reapply; the cleanup-stage
+    # reapply would be a second one. Substrate-reset failure → only
+    # the build-stage occurrence is present.
+    assert len(cleanup_reapplies) == 1
+
+
+def test_cleanup_reapply_failure_does_not_flip_ok(
+    fake_env, monkeypatch,
+) -> None:
+    """Cleanup-stage ``reapply`` failure means baseline HEAD itself
+    doesn't compose — that was the state when verify started, so it
+    isn't a regression we should mask as a cleanup failure. Surface
+    it as a warning in ``stderr_tail`` but don't flip ``ok``."""
+    from dports_dev_env.cli import apply_and_build
+    import subprocess as _sp
+
+    # No-diff path: 5 chroot calls — reapply (build), dtest, WRKDIR
+    # wipe, substrate reset, cleanup reapply. Make the last one fail
+    # while everything before it succeeds.
+    fake_env.runner.outcomes = [
+        _sp.CompletedProcess([], 0, "", ""),     # reapply (build)
+        _sp.CompletedProcess([], 0, "", ""),     # dtest
+        _sp.CompletedProcess([], 0, "", ""),     # WRKDIR wipe
+        _sp.CompletedProcess([], 0, "", ""),     # substrate reset
+        _sp.CompletedProcess(                    # cleanup reapply → fails
+            [], 2, "", "compose: E_COMPOSE_APPLY_FAILED on ports/devel/foo",
+        ),
+    ]
+
+    result = apply_and_build(fake_env.env_name, "devel/foo")
+
+    # Build phases all succeeded → ok stays True. Cleanup-reapply
+    # failure is informational.
+    assert result["ok"] is True
+    assert result["dsynth_exit"] == 0
+    # Warning surfaced in stderr_tail with the failure-mode tag and
+    # the underlying reapply stderr.
+    tail = result.get("stderr_tail") or ""
+    assert "post-build reapply failed" in tail
+    assert "E_COMPOSE_APPLY_FAILED" in tail
