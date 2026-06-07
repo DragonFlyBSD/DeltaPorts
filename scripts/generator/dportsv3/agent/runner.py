@@ -5214,6 +5214,22 @@ def process_job(
                 job_type="convert",
                 reason="convert_failure",
             )
+            # H2: emit the operator handoff on convert failure. The patch
+            # path writes manual_handoff.md on every terminal escalation;
+            # the convert path didn't, so convert_gave_up bundles left the
+            # operator with a resolution string and no explanation. Single
+            # funnel — all process_convert_job failure returns land here.
+            # Best-effort (the writer swallows its own errors); a convert
+            # job with no bundle is a harmless no-op. The origin-locked
+            # skip has success=True, so it never reaches this branch.
+            _write_manual_handoff(
+                bundle_dir, job.get("bundle_id"),
+                origin=job.get("origin", ""),
+                target=job.get("target", "") or "",
+                reason="convert_gave_up",
+                reason_detail=status,
+                run_id=job.get("run_id") or None,
+            )
         # Step 28-extra: when process_convert_job short-circuits via
         # SKIP_ORIGIN_LOCKED (operator took over the (target, origin)
         # before this convert ran), the job is already at DEAD with
