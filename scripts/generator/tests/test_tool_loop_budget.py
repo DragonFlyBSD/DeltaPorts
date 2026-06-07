@@ -147,3 +147,52 @@ def test_attempt_loop_synthesizes_proof_on_orphan(monkeypatch) -> None:
     assert result.status == "success"
     assert result.proof == {"rebuild_ok": True, "source": "tool_result"}
     assert result.attempts[-1].rebuild_ok is True
+
+
+def test_usage_billable_excludes_cached_tokens() -> None:
+    """billable = uncached prompt + completion; cached re-billed prefix
+    doesn't count, and cached > prompt clamps to 0 (never negative)."""
+    from dportsv3.agent.llm import Usage
+
+    assert Usage(prompt_tokens=100, completion_tokens=20).billable_tokens == 120
+    assert Usage(prompt_tokens=100, completion_tokens=20,
+                 cached_tokens=80).billable_tokens == 40
+    # cached exceeding prompt clamps the prompt term at 0
+    assert Usage(prompt_tokens=50, completion_tokens=10,
+                 cached_tokens=80).billable_tokens == 10
+
+    a = Usage(prompt_tokens=100, completion_tokens=10, total_tokens=110, cached_tokens=70)
+    a.add(Usage(prompt_tokens=200, completion_tokens=20, total_tokens=220, cached_tokens=180))
+    assert a.cached_tokens == 250
+    assert a.billable_tokens == max(0, 300 - 250) + 30  # 80
+
+
+def test_tool_loop_does_not_exhaust_when_prompt_is_cached(monkeypatch) -> None:
+    """Same total tokens as the exhaustion case, but mostly cache reads:
+    billable stays under budget, so the turn is NOT cut and its tool runs.
+    (Under the old total-token gate this would have exhausted.)"""
+    from dportsv3.agent import llm, tool_loop, tools
+
+    def fake_complete(*args, **kwargs):
+        return llm.Response(
+            text="",
+            tool_calls=[llm.ToolCall(id="tc-1", name="env_verify", arguments={})],
+            # total=110 would trip a budget of 100; billable=(90-85)+20=25 does not
+            usage=llm.Usage(prompt_tokens=90, completion_tokens=20,
+                            total_tokens=110, cached_tokens=85),
+        )
+
+    dispatched: list[str] = []
+    monkeypatch.setattr(llm, "complete", fake_complete)
+    monkeypatch.setattr(tools, "dispatch",
+                        lambda name, arguments, *, env: dispatched.append(name) or {"ok": True})
+
+    events: list[dict] = []
+    tool_loop.run(
+        [{"role": "user", "content": "x"}],
+        model="test-model", env="test-env",
+        max_tokens=100, max_turns=1, on_event=events.append,
+    )
+
+    assert dispatched == ["env_verify"]  # not cut before dispatch
+    assert [e for e in events if e.get("type") == "token_budget_exhausted"] == []

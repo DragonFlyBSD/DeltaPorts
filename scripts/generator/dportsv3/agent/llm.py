@@ -14,11 +14,24 @@ class Usage:
     prompt_tokens: int = 0
     completion_tokens: int = 0
     total_tokens: int = 0
+    # Cache-read (re-billed prefix) tokens, normalized by litellm across
+    # providers as usage.prompt_tokens_details.cached_tokens (e.g. DeepSeek
+    # prompt_cache_hit_tokens). Defaults 0 → if a provider/run reports no
+    # cache hit, billable_tokens == total and budgeting is unchanged.
+    cached_tokens: int = 0
 
     def add(self, other: "Usage") -> None:
         self.prompt_tokens += other.prompt_tokens
         self.completion_tokens += other.completion_tokens
         self.total_tokens += other.total_tokens
+        self.cached_tokens += other.cached_tokens
+
+    @property
+    def billable_tokens(self) -> int:
+        """New (non-cached) work: uncached prompt + completion. The
+        per-attempt budget gates on this so re-sending a cached prefix
+        every turn doesn't exhaust the budget for no real work."""
+        return max(0, self.prompt_tokens - self.cached_tokens) + self.completion_tokens
 
 
 @dataclass
@@ -108,6 +121,11 @@ def complete(
         usage.prompt_tokens = getattr(raw_usage, "prompt_tokens", 0) or 0
         usage.completion_tokens = getattr(raw_usage, "completion_tokens", 0) or 0
         usage.total_tokens = getattr(raw_usage, "total_tokens", 0) or 0
+        # litellm normalizes cache-read tokens here across providers
+        # (DeepSeek prompt_cache_hit_tokens, Anthropic cache_read_input_tokens,
+        # OpenAI cached_tokens). May be absent/None → 0.
+        details = getattr(raw_usage, "prompt_tokens_details", None)
+        usage.cached_tokens = (getattr(details, "cached_tokens", 0) or 0) if details else 0
 
     # Some thinking-mode providers (DeepSeek's v4-* models, certain
     # OpenAI-compat relays) expose intermediate chain-of-thought as

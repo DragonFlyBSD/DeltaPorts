@@ -104,10 +104,10 @@ def run(
         return max_tokens + (GRACE_TOKENS_AFTER_REBUILD_OK if rebuild_ok_seen else 0)
 
     for turn in range(1, max_turns + 1):
-        if max_tokens and total.total_tokens >= _effective_cap():
+        if max_tokens and total.billable_tokens >= _effective_cap():
             log.warning(
-                "tool_loop: token budget exhausted on turn %d (%d >= %d)",
-                turn, total.total_tokens, _effective_cap(),
+                "tool_loop: token budget exhausted on turn %d (%d >= %d billable)",
+                turn, total.billable_tokens, _effective_cap(),
             )
             return (final if final is not None else Response(text="")), total, rebuild_ok_seen
 
@@ -139,18 +139,21 @@ def run(
                     "prompt_tokens": response.usage.prompt_tokens,
                     "completion_tokens": response.usage.completion_tokens,
                     "total_tokens": response.usage.total_tokens,
+                    "cached_tokens": response.usage.cached_tokens,
+                    "billable_tokens": response.usage.billable_tokens,
                     "tools_requested": tools_requested,
                     "text_only": not response.tool_calls,
                     "cumulative_total_tokens": total.total_tokens,
+                    "cumulative_billable_tokens": total.billable_tokens,
                 })
             except Exception:
                 pass  # callback must never break the loop
 
-        if max_tokens and total.total_tokens >= _effective_cap():
+        if max_tokens and total.billable_tokens >= _effective_cap():
             log.warning(
-                "tool_loop: token budget exhausted after turn %d (%d >= %d); "
+                "tool_loop: token budget exhausted after turn %d (%d >= %d billable); "
                 "stopping before tool dispatch",
-                turn, total.total_tokens, _effective_cap(),
+                turn, total.billable_tokens, _effective_cap(),
             )
             if on_event is not None:
                 try:
@@ -158,7 +161,7 @@ def run(
                         "type": "token_budget_exhausted",
                         "attempt": attempt_idx,
                         "turn": turn,
-                        "tokens": total.total_tokens,
+                        "tokens": total.billable_tokens,
                         "budget": _effective_cap(),
                         "phase": "after_llm_turn",
                         "tools_skipped": tools_requested,

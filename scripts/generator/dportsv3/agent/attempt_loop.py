@@ -131,10 +131,12 @@ def run(
             ]
 
         # Remaining tokens this attempt is allowed to consume.
-        remaining = (budget - total_usage.total_tokens) if budget else 0
+        # Budget on billable (uncached) tokens, not total — re-sending a
+        # cached prefix every turn shouldn't burn the budget for no new work.
+        remaining = (budget - total_usage.billable_tokens) if budget else 0
         log.info(
-            "attempt_loop: starting attempt %d/%d (tokens used so far: %d / %d, remaining %d)",
-            attempt_idx, iterations, total_usage.total_tokens, budget, remaining,
+            "attempt_loop: starting attempt %d/%d (billable used so far: %d / %d, remaining %d)",
+            attempt_idx, iterations, total_usage.billable_tokens, budget, remaining,
         )
 
         if budget and remaining <= 0:
@@ -254,10 +256,10 @@ def run(
                 proof=winning_proof,
             )
 
-        if budget and total_usage.total_tokens >= budget:
+        if budget and total_usage.billable_tokens >= budget:
             log.warning(
-                "attempt_loop: budget exhausted after attempt %d (%d >= %d)",
-                attempt_idx, total_usage.total_tokens, budget,
+                "attempt_loop: budget exhausted after attempt %d (%d >= %d billable)",
+                attempt_idx, total_usage.billable_tokens, budget,
             )
             return PatchResult(
                 status="budget-exhausted",
