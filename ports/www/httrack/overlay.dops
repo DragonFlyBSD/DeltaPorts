@@ -1,0 +1,9 @@
+target @any
+port www/httrack
+type port
+reason "auto-converted from Makefile.DragonFly"
+
+mk add CONFIGURE_ENV ac_cv_type_sa_family_t=yes
+mk add USES localbase
+
+file materialize dragonfly/patch-minizip__ioapi.c -> dragonfly/patch-minizip__ioapi.c
