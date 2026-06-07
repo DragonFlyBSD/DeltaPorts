@@ -1,0 +1,17 @@
+target @any
+port multimedia/dvb-apps
+type port
+reason "DragonFly compatibility: suppress alias USES, fix FreeBSD-only type guards, and DragonFly-specific patches"
+
+mk set PERL5_NO_ALIAS "1"
+
+mk target append post-patch <<'MK1'
+	@${REINPLACE_CMD} -e 's,#ifdef __FreeBSD__,#if defined(__FreeBSD__) || defined(__DragonFly__),' \
+		${WRKSRC}/include/dmx.h \
+		${WRKSRC}/include/frontend.h \
+		${WRKSRC}/util/av7110_loadkeys/av7110_loadkeys.c \
+		${WRKSRC}/util/dib3000-watch/dib-i2c.h
+MK1
+
+file materialize dragonfly/patch-lib_libucsi_endianops.h -> dragonfly/patch-lib_libucsi_endianops.h
+file materialize dragonfly/patch-util_atsc__epg_Makefile -> dragonfly/patch-util_atsc__epg_Makefile
