@@ -3519,7 +3519,10 @@ def _write_changes_diff(bundle_dir: Path | None, bundle_id: str | None, env: str
     try:
         from dportsv3.agent import worker  # type: ignore[import-not-found]
         paths = worker.env_paths(env)
-        rel = f"ports/{origin}"
+        # Whole-tree (not ports/<origin>) so fixes that correctly land
+        # outside the bundle origin — e.g. a slave port whose patch lives
+        # in the master's PATCHDIR — are captured instead of vanishing.
+        rel = "."
         base = worker._resolve_bundle_base_branch(env)
         p = worker._git_diff_against_base(paths.deltaports, base, rel)
         diff_bytes = p.stdout.encode("utf-8")

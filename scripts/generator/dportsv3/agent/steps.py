@@ -955,6 +955,21 @@ class PatchAttemptStep:
             job_id=ctx.job_id,
         )
 
+        # C1: capture the resulting dops state BEFORE the workspace reset
+        # below wipes the agent's edits. The success gate requires the
+        # port to have reached a valid 'converted' overlay — rebuild_ok
+        # alone accepts compat writes (Makefile.DragonFly / bare
+        # dragonfly/*) that build but don't advance the dops migration.
+        try:
+            ctx.state["post_patch_dops_state"] = _worker.classify_dops(env, origin)
+        except Exception as exc:
+            ctx.state["post_patch_dops_state"] = None
+            services.activity_log(
+                queue_root, "patch_post_classify_failed",
+                f"classify_dops failed for {origin} after patch: {str(exc)[:200]}",
+                job_id=ctx.job_id,
+            )
+
         # Post-job workspace reset. changes.diff is the canonical
         # record; the env's port subtree no longer needs to carry
         # the agent's edits. Reset to git HEAD so the next patch job
@@ -993,6 +1008,32 @@ class PatchAttemptStep:
 
         status_l = (result.status or "").lower()
         if result.status == "success":
+            # C1: rebuild_ok is necessary but not sufficient — the port
+            # must also have reached a 'converted' dops state. A build
+            # that passed via compat artifacts (Makefile.DragonFly / bare
+            # dragonfly/*) is not a dops fix; route it to MANUAL with the
+            # diff attached rather than stamping agent_fixed.
+            post_state = ctx.state.get("post_patch_dops_state")
+            if post_state != "converted":
+                _try_write_handoff(
+                    services, ctx, origin,
+                    reason="patch_non_dops_substrate",
+                    reason_detail=(
+                        f"build passed but port dops_state={post_state!r} "
+                        f"(expected 'converted'); fix likely written as "
+                        f"compat artifacts instead of overlay.dops"
+                    ),
+                    patch_result=result,
+                )
+                return StepOutcome(
+                    status="success",
+                    next_event=JobEvent.ESCALATE_MANUAL,
+                    detail={
+                        "status_str": "non_dops_substrate",
+                        "patch_status": result.status,
+                        "post_patch_dops_state": post_state,
+                    },
+                )
             # Step 37-4: rebuild_ok=true is necessary but not sufficient
             # for full agent_fixed. The resolver computes the canonical
             # verdicts list, synthesizing "escalated: no verdict

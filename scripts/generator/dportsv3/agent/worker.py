@@ -1326,18 +1326,23 @@ def reset_port(env: str, origin: str) -> dict:
     # was authored against). ok stays True even on failure.
     workdir = _clean_port_workdir(env, origin)
 
-    # 2. Substrate reset — load-bearing.
+    # 2. Substrate reset — load-bearing. Whole-tree (not just
+    # ports/<origin>) so writes that escaped the origin subtree — e.g.
+    # a slave port whose patch landed in the master's PATCHDIR, or a
+    # prior failed attempt's leftovers — are rolled back too. Without
+    # this, those edits persist in the shared checkout and poison the
+    # next job's classify/compose.
     cmd = (
-        f"cd /work/DeltaPorts && "
-        f"git checkout HEAD -- {shlex.quote(rel)} && "
-        f"git clean -fd -- {shlex.quote(rel)}"
+        "cd /work/DeltaPorts && "
+        "git checkout HEAD -- . && "
+        "git clean -fd"
     )
     p = _exec(env, "/bin/sh", "-c", cmd, cwd="/work/DeltaPorts")
     out = (p.stdout or "")
     if p.returncode != 0:
         return _exec_result(
             p.returncode, out, (p.stderr or ""),
-            error=f"reset_port failed for {rel}",
+            error="reset_port failed (whole-tree checkout/clean)",
         )
 
     # 3. Re-materialize the compose tree from the now-reset substrate.
@@ -1349,7 +1354,7 @@ def reset_port(env: str, origin: str) -> dict:
     result = {
         "ok": True,
         "origin": origin,
-        "paths_changed": [rel],
+        "paths_changed": ["."],
         "stdout_tail": out[-1024:],
         "workdir_clean_ok": bool(workdir.get("ok")),
         "reapply_ok": reapply_ok,
