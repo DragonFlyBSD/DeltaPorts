@@ -1,0 +1,6 @@
+target @any
+port net/openslp
+type port
+reason "Add __DragonFly__ to the ifaddrs.h include guard in common/slp_socket.h"
+
+file materialize dragonfly/patch-common_slp__socket.h -> dragonfly/patch-common_slp__socket.h
