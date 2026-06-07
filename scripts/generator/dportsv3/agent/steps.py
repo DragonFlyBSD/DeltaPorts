@@ -1074,6 +1074,7 @@ class PatchAttemptStep:
                 cleanup_resolved_deferred_patches(
                     env=env, origin=origin, verdicts=verdicts,
                     queue_root=queue_root, job_id=ctx.job_id,
+                    bundle_dir=ctx.bundle_dir, bundle_id=bundle_id,
                 )
             escalated_paths = [
                 v.path for v in verdicts if v.verdict == "escalated"

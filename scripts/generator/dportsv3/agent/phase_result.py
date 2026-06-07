@@ -87,19 +87,31 @@ class TriageResult:
 
 @dataclass(frozen=True)
 class DeferredPatch:
-    """Step 37-2: rich context for a framework `diffs/*.diff` the
-    handler dropped from overlay.dops to get compose reapply through.
-    Intended for the patch agent's later relevance pass — INTENT not
-    authority. The agent reads ``original_content`` to figure out what
-    the patch was doing semantically, then decides per
-    ``target_file`` whether the intent is still relevant against
-    current upstream.
+    """Rich context for an overlay.dops op the handler dropped to get
+    compose reapply through. Intended for the patch agent's later
+    relevance pass — INTENT not authority. The agent reads
+    ``original_content`` to figure out what the op was doing
+    semantically, then decides per ``target_file`` whether the intent
+    is still relevant against current upstream.
+
+    Two shapes:
+    - File-backed (``patch.apply``): ``backing_file`` is the
+      ``diffs/*.diff`` whose ``patch apply`` line was dropped;
+      ``original_content`` is that diff's text. The file lingers on
+      disk and ``cleanup_resolved_deferred_patches`` removes it once
+      the agent resolves the verdict.
+    - Inline (``mk.var.set``, ``text.replace_once``, …):
+      ``backing_file`` is None — the op lived only as overlay.dops
+      source, so there is nothing on disk to clean up.
+      ``original_content`` is the dropped overlay.dops line(s) and
+      ``path`` is a synthetic ``op:<sha1>`` identity key.
     """
 
-    path: str               # e.g. "diffs/pkg-plist.diff"
-    target_file: str        # the file the patch was modifying (pkg-plist)
-    original_content: str   # full diff text, capped at 16 KB
-    reject_summary: str     # "Hunks #1 #3 #4 failed at 249, 2929, 2972"
+    path: str               # diffs/pkg-plist.diff, or "op:<sha1>" for inline ops
+    target_file: str        # the file the op was modifying (Makefile, pkg-plist)
+    original_content: str   # diff text or dropped overlay.dops source, capped 16 KB
+    reject_summary: str     # "Hunks #1 #3 #4 failed at …" or the apply error
+    backing_file: str | None = None  # diffs/*.diff to clean up, or None (inline op)
 
 
 @dataclass(frozen=True)

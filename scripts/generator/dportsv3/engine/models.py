@@ -83,6 +83,7 @@ class PlanOp:
     target: str
     kind: str
     payload: dict[str, Any] = field(default_factory=dict)
+    span: SourceSpan | None = None
 
     def to_dict(self) -> dict[str, Any]:
         data: dict[str, Any] = {

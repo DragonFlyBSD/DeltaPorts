@@ -440,6 +440,7 @@ def compile_plan(
                 target=scoped.target,
                 kind=kind,
                 payload=payload,
+                span=scoped.operation.span,
             )
         )
 

@@ -220,6 +220,66 @@ def test_process_convert_job_auto_safe_port(
     assert "port devel/auto-safe" in dops
 
 
+def test_process_convert_job_defers_only_op_to_empty_overlay(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """A deterministic convert whose only op can't apply (ambiguous
+    mk.var.set) defers it: the op is dropped, leaving a header-only
+    overlay that composes. Convert SUCCEEDS — the effective-ops-empty
+    guard is bypassed because the dropped op is recorded as intent —
+    so the retriage->patch flow can re-author it. Without the bypass
+    this returned (False, 'effective_ops_empty') and patch never ran."""
+    repo = _make_repo(tmp_path)
+    port = _make_port(repo, "devel/defer-empty")
+    (port / "Makefile.DragonFly").write_text("FOO=bar\n")
+    monkeypatch.setenv("DP_HARNESS_REPO_ROOT", str(repo))
+    monkeypatch.setattr(runner_mod, "_CLI_ENV_DEFAULT", "test-env")
+
+    from dportsv3.agent import worker
+    calls = {"n": 0}
+
+    def fake_report(env, origin):  # noqa: ARG001
+        calls["n"] += 1
+        if calls["n"] == 1:
+            # First compose: the only op (mk set FOO) is ambiguous.
+            return {
+                "ok": False, "rc": 2, "stdout_tail": "", "stderr_tail": "",
+                "report": {"ok": False, "ports": [{
+                    "origin": origin,
+                    "dops_failed_op_results": [{
+                        "id": "op-0001-mk-var-set",
+                        "kind": "mk.var.set",
+                        "diagnostics": [{
+                            "severity": "error",
+                            "code": "E_APPLY_AMBIGUOUS_MATCH",
+                            "source_path": f"/x/ports/{origin}/Makefile",
+                            "message": "multiple assignments found for FOO",
+                        }],
+                    }],
+                }]},
+            }
+        # After the drop the overlay is header-only and composes.
+        return {"ok": True, "rc": 0, "report": None}
+
+    monkeypatch.setattr(worker, "materialize_dports_with_report", fake_report)
+    monkeypatch.setattr(worker, "commit_port_changes",
+                        lambda env, origin, message: {"ok": True,
+                                                       "committed": True,
+                                                       "origin": origin,
+                                                       "paths_changed": []})
+
+    success, status = process_convert_job(
+        queue_root=tmp_path / "queue",
+        job_path=tmp_path / "queue" / "x.job",
+        sibling_paths=[],
+        job={"origin": "devel/defer-empty", "target": "@2026Q2"},
+    )
+    assert success, f"expected success, got status={status!r}"
+    dops = (port / "overlay.dops").read_text()
+    assert "port devel/defer-empty" in dops   # header kept
+    assert "mk set FOO" not in dops           # the only op was deferred
+
+
 def test_process_convert_job_needs_judgment_without_env(
     tmp_path: Path, monkeypatch
 ) -> None:

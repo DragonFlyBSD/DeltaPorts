@@ -93,12 +93,15 @@ def test_section_renders_each_deferred_patch(saved_store):
                     "-removed line\n"
                 ),
                 reject_summary="Hunks #1 #3 failed at 249, 2929",
+                backing_file="diffs/pkg-plist.diff",
             ),
+            # Inline op (no file on disk): rendered as `text`, not `diff`.
             DeferredPatch(
-                path="diffs/Makefile.diff",
+                path="op:abc123def456",
                 target_file="Makefile",
-                original_content="--- Makefile.orig\n+++ Makefile\n",
-                reject_summary="Hunks #1 failed at 50",
+                original_content='mk set CFLAGS "-O2"\n',
+                reject_summary="multiple assignments found for CFLAGS",
+                backing_file=None,
             ),
         ],
     ))
@@ -107,14 +110,16 @@ def test_section_renders_each_deferred_patch(saved_store):
     out = DeferredFromConvertSection().render(ctx)
     assert out is not None
     assert "## Deferred from Convert" in out
-    # Each entry surfaces with its routing tuple.
+    # Each entry surfaces with its identifier + target tuple.
     assert "### diffs/pkg-plist.diff → pkg-plist" in out
-    assert "### diffs/Makefile.diff → Makefile" in out
+    assert "### op:abc123def456 → Makefile" in out
     # Reject summary is rendered verbatim.
     assert "Hunks #1 #3 failed at 249, 2929" in out
-    # Diff content is fenced as diff for the agent's reading.
+    # File-backed entry → diff fence; inline entry → text fence.
     assert "```diff" in out
+    assert "```text" in out
     assert "+++ pkg-plist" in out
+    assert 'mk set CFLAGS' in out
     # The relevance-pass instructions appear (the prompt's
     # complementary "what to do" rule lives in PATCH_SYSTEM;
     # the section itself frames the task too).
@@ -483,7 +488,23 @@ def _verdict(path, verdict, rationale="."):
     )
 
 
-def test_cleanup_removes_regenerated_and_dropped(tmp_path, monkeypatch):
+def _write_convert_backing(bundle_id, entries):
+    """Persist a ConvertResult whose deferred_patches map each
+    verdict path → backing_file, so cleanup can resolve what's on
+    disk. ``entries`` is a list of (path, backing_file)."""
+    write_phase_result(bundle_id, "convert", ConvertResult(
+        status="verified", reapply_ok=True, reason_code=None,
+        overlay_sha256="x", files_removed=[], diag_tail=None,
+        tokens_prompt=0, tokens_completion=0, tokens_total=0,
+        deferred_patches=[
+            DeferredPatch(path=p, target_file="t", original_content="c",
+                          reject_summary="r", backing_file=bf)
+            for p, bf in entries
+        ],
+    ))
+
+
+def test_cleanup_removes_regenerated_and_dropped(tmp_path, monkeypatch, saved_store):
     deltaports, diffs_dir = _setup_diffs_tree(
         tmp_path,
         {"a.diff": "a", "b.diff": "b", "c.diff": "c"},
@@ -491,6 +512,11 @@ def test_cleanup_removes_regenerated_and_dropped(tmp_path, monkeypatch):
     from dportsv3.agent import worker as _w
     monkeypatch.setattr(_w, "env_paths",
                         lambda env: _CleanupPaths(deltaports))
+    _write_convert_backing("b-clean", [
+        ("diffs/a.diff", "diffs/a.diff"),
+        ("diffs/b.diff", "diffs/b.diff"),
+        ("diffs/c.diff", "diffs/c.diff"),
+    ])
     queue_root = tmp_path / "queue"
     queue_root.mkdir()
     verdicts = [
@@ -500,7 +526,7 @@ def test_cleanup_removes_regenerated_and_dropped(tmp_path, monkeypatch):
     ]
     deleted = cleanup_resolved_deferred_patches(
         env="t", origin="lang/foo", verdicts=verdicts,
-        queue_root=queue_root, job_id="j-1",
+        queue_root=queue_root, job_id="j-1", bundle_id="b-clean",
     )
     assert sorted(deleted) == ["diffs/a.diff", "diffs/b.diff"]
     assert (diffs_dir / "c.diff").exists()
@@ -508,22 +534,42 @@ def test_cleanup_removes_regenerated_and_dropped(tmp_path, monkeypatch):
     assert not (diffs_dir / "b.diff").exists()
 
 
-def test_cleanup_silent_on_missing_file(tmp_path, monkeypatch):
+def test_cleanup_skips_inline_op_with_no_backing_file(tmp_path, monkeypatch, saved_store):
+    """An inline-op deferral (backing_file=None) has nothing on disk;
+    its resolved verdict must not delete anything."""
+    deltaports, diffs_dir = _setup_diffs_tree(tmp_path, {"a.diff": "a"})
+    from dportsv3.agent import worker as _w
+    monkeypatch.setattr(_w, "env_paths",
+                        lambda env: _CleanupPaths(deltaports))
+    _write_convert_backing("b-inline", [("op:abc123", None)])
+    queue_root = tmp_path / "queue"
+    queue_root.mkdir()
+    deleted = cleanup_resolved_deferred_patches(
+        env="t", origin="lang/foo",
+        verdicts=[_verdict("op:abc123", "regenerated")],
+        queue_root=queue_root, job_id="j-1", bundle_id="b-inline",
+    )
+    assert deleted == []
+    assert (diffs_dir / "a.diff").exists()  # untouched
+
+
+def test_cleanup_silent_on_missing_file(tmp_path, monkeypatch, saved_store):
     deltaports, _ = _setup_diffs_tree(tmp_path, {})
     from dportsv3.agent import worker as _w
     monkeypatch.setattr(_w, "env_paths",
                         lambda env: _CleanupPaths(deltaports))
+    _write_convert_backing("b-missing", [("diffs/a.diff", "diffs/a.diff")])
     queue_root = tmp_path / "queue"
     queue_root.mkdir()
-    verdicts = [_verdict("diffs/a.diff", "dropped")]
     deleted = cleanup_resolved_deferred_patches(
-        env="t", origin="lang/foo", verdicts=verdicts,
-        queue_root=queue_root, job_id="j-1",
+        env="t", origin="lang/foo",
+        verdicts=[_verdict("diffs/a.diff", "dropped")],
+        queue_root=queue_root, job_id="j-1", bundle_id="b-missing",
     )
     assert deleted == []
 
 
-def test_cleanup_refuses_path_escape(tmp_path, monkeypatch):
+def test_cleanup_refuses_path_escape(tmp_path, monkeypatch, saved_store):
     deltaports, diffs_dir = _setup_diffs_tree(
         tmp_path,
         {"keep.diff": "keep"},
@@ -534,16 +580,21 @@ def test_cleanup_refuses_path_escape(tmp_path, monkeypatch):
     from dportsv3.agent import worker as _w
     monkeypatch.setattr(_w, "env_paths",
                         lambda env: _CleanupPaths(deltaports))
+    # backing_file carries the escape attempts; the path-safety guard
+    # in cleanup must refuse each.
+    _write_convert_backing("b-escape", [
+        ("p1", "diffs/../../../outside-the-port.diff"),
+        ("p2", "/etc/passwd"),
+    ])
     queue_root = tmp_path / "queue"
     queue_root.mkdir()
     verdicts = [
-        _verdict("diffs/../../../outside-the-port.diff", "dropped"),
-        _verdict("/etc/passwd", "dropped"),
-        _verdict("dragonfly/patch-foo", "dropped"),
+        _verdict("p1", "dropped"),
+        _verdict("p2", "dropped"),
     ]
     deleted = cleanup_resolved_deferred_patches(
         env="t", origin="lang/foo", verdicts=verdicts,
-        queue_root=queue_root, job_id="j-1",
+        queue_root=queue_root, job_id="j-1", bundle_id="b-escape",
     )
     assert deleted == []
     assert (diffs_dir / "keep.diff").exists()

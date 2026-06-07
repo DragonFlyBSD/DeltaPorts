@@ -794,13 +794,15 @@ class DeferredFromConvertSection:
             "## Deferred from Convert",
             (
                 "Convert produced a valid overlay.dops but dropped the "
-                "framework patches listed below — compose rejected each "
-                "one's hunks against current upstream. Treat each entry "
-                "as INTENT (what the patch was doing) rather than "
-                "AUTHORITY (the literal diff). For each one, decide "
-                "whether the original intent is still relevant against "
-                "the current upstream tree, then emit a per-patch "
-                "verdict in your Patch Plan's `deferred_verdicts` field."
+                "operations listed below — compose rejected each against "
+                "the current upstream tree (a framework patch whose hunks "
+                "no longer apply, or an inline op that couldn't be placed). "
+                "Treat each entry as INTENT (what the op was doing) rather "
+                "than AUTHORITY (the literal text). For each one, decide "
+                "whether the original intent is still relevant against the "
+                "current upstream tree, then emit a per-op verdict in your "
+                "Patch Plan's `deferred_verdicts` field, keyed by the "
+                "identifier shown in each entry's heading."
             ),
             (
                 "Three outcomes per patch:"
@@ -828,11 +830,12 @@ class DeferredFromConvertSection:
                     content[: self.max_diff_chars]
                     + f"\n[... truncated to {self.max_diff_chars} chars ...]\n"
                 )
+            fence = "diff" if dp.backing_file else "text"
             lines.extend([
                 f"### {dp.path} → {dp.target_file}",
                 f"Reject summary: {dp.reject_summary}",
                 "Original content:",
-                "```diff",
+                f"```{fence}",
                 content,
                 "```",
                 "",

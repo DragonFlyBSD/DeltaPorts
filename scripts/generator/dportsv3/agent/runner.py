@@ -3227,16 +3227,24 @@ def cleanup_resolved_deferred_patches(
     verdicts: list,
     queue_root: Path,
     job_id: str | None,
+    bundle_dir: Path | None = None,
+    bundle_id: str | None = None,
 ) -> list[str]:
-    """Delete the framework ``diffs/*.diff`` files corresponding to
-    ``regenerated`` / ``dropped`` verdicts. Returns the list of
-    paths actually deleted. ``escalated`` paths are left in place so
-    the operator can inspect / restore them.
+    """Delete the framework diff files backing ``regenerated`` /
+    ``dropped`` verdicts. Returns the list of paths actually deleted.
+    ``escalated`` paths are left in place so the operator can inspect
+    / restore them.
 
-    Path safety: only files under ``ports/<origin>/diffs/`` are
-    eligible. Anything else (absolute paths, ``..`` segments, paths
-    outside diffs/) is skipped with a warning — defends against a
-    malformed verdict that tries to escape the port subtree.
+    Only file-backed deferrals are eligible: each verdict is matched
+    to its originating ``DeferredPatch`` (by path) and cleaned up via
+    that entry's ``backing_file``. Inline-op deferrals carry
+    ``backing_file=None`` — the op lived only as overlay.dops source,
+    already removed during deferral, so there is nothing on disk to
+    delete and they are skipped.
+
+    Path safety: ``backing_file`` must be a relative path that
+    resolves inside ``ports/<origin>/`` — defends against a malformed
+    entry trying to escape the port subtree.
 
     Best-effort: missing files / IO failures log a warning and
     continue. The agent's overlay.dops edits already happened; this
@@ -3244,6 +3252,7 @@ def cleanup_resolved_deferred_patches(
     """
     if not verdicts:
         return []
+    backing_by_path = _deferred_backing_files(bundle_dir, bundle_id)
     try:
         from dportsv3.agent import worker  # noqa: PLC0415
         paths = worker.env_paths(env)
@@ -3253,38 +3262,34 @@ def cleanup_resolved_deferred_patches(
             f"failed: {exc}")
         return []
     port_dir = paths.deltaports / "ports" / origin
-    diffs_dir = (port_dir / "diffs").resolve()
+    port_root = port_dir.resolve()
 
     deleted: list[str] = []
     for v in verdicts:
         verdict = getattr(v, "verdict", None)
-        rel = getattr(v, "path", None)
-        if not isinstance(rel, str) or not isinstance(verdict, str):
+        vpath = getattr(v, "path", None)
+        if not isinstance(vpath, str) or not isinstance(verdict, str):
             continue
         if verdict not in _CLEANUP_VERDICTS:
             continue
-        # Path-safety: must be a relative path under diffs/ that
-        # resolves inside the port's diffs/ subtree.
-        if rel.startswith("/") or ".." in Path(rel).parts:
+        backing = backing_by_path.get(vpath)
+        if not backing:
+            # Inline-op deferral (backing_file=None) or unknown path:
+            # nothing on disk to remove.
+            continue
+        # Path-safety: backing_file must resolve inside the port dir.
+        if backing.startswith("/") or ".." in Path(backing).parts:
             log(queue_root, "WARN",
                 f"cleanup_resolved_deferred_patches: refusing "
-                f"unsafe path {rel!r}")
+                f"unsafe backing_file {backing!r}")
             continue
-        if not rel.startswith("diffs/"):
-            # Convert only ever defers diffs/*.diff today. A verdict
-            # for some other path is suspicious — skip rather than
-            # delete random files.
-            log(queue_root, "WARN",
-                f"cleanup_resolved_deferred_patches: ignoring "
-                f"non-diffs/ path {rel!r}")
-            continue
-        candidate = (port_dir / rel).resolve()
+        candidate = (port_dir / backing).resolve()
         try:
-            candidate.relative_to(diffs_dir)
+            candidate.relative_to(port_root)
         except ValueError:
             log(queue_root, "WARN",
-                f"cleanup_resolved_deferred_patches: {rel!r} resolved "
-                f"outside diffs/; skip")
+                f"cleanup_resolved_deferred_patches: {backing!r} resolved "
+                f"outside port dir; skip")
             continue
         if not candidate.is_file():
             # Already gone (operator cleaned up, or convert never
@@ -3294,19 +3299,19 @@ def cleanup_resolved_deferred_patches(
             candidate.unlink()
         except OSError as exc:
             log(queue_root, "WARN",
-                f"cleanup_resolved_deferred_patches: unlink {rel} "
+                f"cleanup_resolved_deferred_patches: unlink {backing} "
                 f"failed: {exc}")
             continue
-        deleted.append(rel)
+        deleted.append(backing)
         try:
             activity_log(
                 queue_root, "convert_deferred_cleanup",
-                f"removed orphan framework patch {rel} for {origin} "
+                f"removed orphan framework patch {backing} for {origin} "
                 f"(verdict={verdict})",
                 job_id=job_id,
                 extra={
                     "origin": origin,
-                    "path": rel,
+                    "path": backing,
                     "verdict": verdict,
                 },
             )
@@ -3314,6 +3319,24 @@ def cleanup_resolved_deferred_patches(
             log(queue_root, "WARN",
                 f"activity_log failed in deferred_cleanup: {exc}")
     return deleted
+
+
+def _deferred_backing_files(
+    bundle_dir: Path | None, bundle_id: str | None,
+) -> dict[str, str | None]:
+    """Map ``DeferredPatch.path → backing_file`` from the convert
+    phase result, so cleanup knows which verdicts have a file on disk
+    to remove. Returns ``{}`` if no convert result is available."""
+    from dportsv3.agent.phase_result import (  # noqa: PLC0415
+        ConvertResult, load_phase_result,
+    )
+    try:
+        cr = load_phase_result(bundle_dir, bundle_id, "convert", ConvertResult)
+    except Exception:
+        return {}
+    if cr is None or not cr.deferred_patches:
+        return {}
+    return {dp.path: dp.backing_file for dp in cr.deferred_patches}
 
 
 def _resolve_deferred_verdicts_for_patch(
@@ -4200,65 +4223,86 @@ _HUNK_FAILED_DETAIL_RE = re.compile(
 _DEFERRED_PATCH_CONTENT_CAP = 16 * 1024  # bytes
 
 
-def _failed_patch_diags(
+def _failed_ops(
     report: dict | None, origin: str,
-) -> list[tuple[str, str]]:
-    """Return ``[(diff_path, patch_message), ...]`` for each
-    rejecting ``patch.apply`` op in compose's ``--json`` structured
-    report. ``diff_path`` is relative to ``ports/<origin>/`` so it
-    matches overlay.dops's ``patch apply <path>`` form;
-    ``patch_message`` is the failing op's first diagnostic message
-    (the patch tool's stdout, used to build a reject summary).
+) -> list[tuple[str, str, str, str]]:
+    """Return ``[(op_id, kind, target_rel, message), ...]`` for every
+    failing dops op in compose's ``--json`` structured report, in
+    report order.
 
-    Returns ``[]`` when the report is missing, malformed, or
-    contains no patch.apply failures.
+    - ``op_id`` is the plan op id (e.g. ``op-0002-text-replace_once``);
+      used to locate the op's source span in overlay.dops via a fresh
+      ``build_plan`` (op ids are a pure function of overlay content, so
+      they match the ids compose emitted — see
+      ``_drop_op_from_overlay_file``).
+    - ``kind`` is the op kind (``patch.apply`` / ``mk.var.set`` /
+      ``text.replace_once`` / …).
+    - ``target_rel`` is the op's target file relative to
+      ``ports/<origin>/`` (the ``diffs/*.diff`` for ``patch.apply``,
+      else the Makefile/source the op edits).
+    - ``message`` is the failing op's first diagnostic message.
+
+    Returns ``[]`` when the report is missing/malformed or has no
+    failing ops. Generalizes the former patch.apply-only candidate
+    finder: the drop-and-defer loop now degrades on any un-applyable
+    op, not just rejecting framework patches.
     """
     if not isinstance(report, dict):
         return []
     suffix = f"ports/{origin}/"
-    out: list[tuple[str, str]] = []
-    seen: set[str] = set()
+    out: list[tuple[str, str, str, str]] = []
     for port in report.get("ports") or []:
         if not isinstance(port, dict) or port.get("origin") != origin:
             continue
         for row in port.get("dops_failed_op_results") or []:
-            if not isinstance(row, dict) or row.get("kind") != "patch.apply":
+            if not isinstance(row, dict):
                 continue
+            op_id = str(row.get("id") or "")
+            if not op_id:
+                continue
+            kind = str(row.get("kind") or "")
             diags = row.get("diagnostics") or []
-            if not diags or not isinstance(diags[0], dict):
-                continue
-            src = str(diags[0].get("source_path") or "")
-            if not src:
-                continue
+            first = diags[0] if diags and isinstance(diags[0], dict) else {}
+            src = str(first.get("source_path") or "")
             idx = src.find(suffix)
-            rel = src[idx + len(suffix):] if idx >= 0 else src
-            if not rel or rel in seen:
-                continue
-            seen.add(rel)
-            out.append((rel, str(diags[0].get("message") or "")))
+            target_rel = src[idx + len(suffix):] if idx >= 0 else src
+            out.append((op_id, kind, target_rel, str(first.get("message") or "")))
     return out
 
 
-def _drop_patch_apply_from_overlay(text: str, path: str) -> tuple[str, bool]:
-    """Remove the ``patch apply <path>`` line from ``overlay.dops``
-    contents. Returns ``(new_text, dropped)``; ``dropped`` is False
-    iff no matching line was found (caller can stop retrying).
+def _drop_op_span(
+    text: str, op_id: str, source_path: Path | None = None,
+) -> tuple[str, str | None]:
+    """Remove the op whose plan id is ``op_id`` from ``overlay.dops``
+    contents by re-planning and splicing out its source span. Returns
+    ``(new_text, dropped_source)``; ``dropped_source`` is None (and
+    ``new_text`` unchanged) when the overlay won't plan, the op id
+    isn't found, or it carries no span.
 
-    Conservative match: strips leading whitespace, requires the
-    literal ``patch apply`` token followed by the path. Doesn't
-    re-parse dops — this is a single-line removal that preserves
-    indentation, comments, and other ops.
+    Span-based removal is uniform across op kinds (``mk.var.set``,
+    ``text.replace_once``, ``patch.apply``, …) and handles multi-line
+    heredoc/block ops, because the parser records a block-spanning
+    span. Re-planning here is safe: the failure was at apply time, so
+    the overlay parses + plans cleanly, and op ids are a pure function
+    of overlay content (target scoping is resolved before id
+    assignment) — so the id from compose's report matches this fresh
+    plan over the same file.
     """
-    needle = f"patch apply {path}"
-    out_lines: list[str] = []
-    dropped = False
-    for line in text.splitlines(keepends=True):
-        stripped = line.strip()
-        if not dropped and stripped == needle:
-            dropped = True
-            continue
-        out_lines.append(line)
-    return "".join(out_lines), dropped
+    from dportsv3.engine.api import build_plan  # noqa: PLC0415
+
+    planned = build_plan(text, source_path)
+    if planned.plan is None:
+        return text, None
+    op = next((o for o in planned.plan.ops if o.id == op_id), None)
+    if op is None or op.span is None:
+        return text, None
+    lines = text.splitlines(keepends=True)
+    start = op.span.line_start - 1
+    end = op.span.line_end  # 1-based inclusive → exclusive slice bound
+    if start < 0 or end > len(lines) or start >= end:
+        return text, None
+    dropped = "".join(lines[start:end])
+    return "".join(lines[:start] + lines[end:]), dropped
 
 
 def _read_diff_content(env: str, origin: str, path: str) -> str:
@@ -4322,32 +4366,33 @@ def _extract_reject_summary(diag: str, diff_path: str) -> str:
     return msg
 
 
-def _drop_patch_apply_from_overlay_file(
-    env: str, origin: str, path: str,
-) -> bool:
-    """Read ``overlay.dops``, drop the ``patch apply <path>`` line,
-    write back. Returns True iff the file was found AND a line was
-    actually removed."""
+def _drop_op_from_overlay_file(
+    env: str, origin: str, op_id: str,
+) -> str | None:
+    """Read ``overlay.dops``, drop the op identified by ``op_id``,
+    write back. Returns the dropped source text (the overlay.dops
+    line(s) removed) on success, or None when the overlay is missing,
+    won't plan, or the op/span can't be located."""
     try:
         from dportsv3.agent import worker  # noqa: PLC0415
         paths = worker.env_paths(env)
     except Exception:
-        return False
+        return None
     overlay = paths.deltaports / "ports" / origin / "overlay.dops"
     if not overlay.is_file():
-        return False
+        return None
     try:
         text = overlay.read_text()
     except OSError:
-        return False
-    new_text, dropped = _drop_patch_apply_from_overlay(text, path)
-    if not dropped:
-        return False
+        return None
+    new_text, dropped = _drop_op_span(text, op_id, overlay)
+    if dropped is None:
+        return None
     try:
         overlay.write_text(new_text)
     except OSError:
-        return False
-    return True
+        return None
+    return dropped
 
 
 def _materialize_with_defer_retry(
@@ -4359,15 +4404,19 @@ def _materialize_with_defer_retry(
     max_drops: int,
 ) -> tuple[dict, list]:
     """Wrap ``worker.materialize_dports`` with a bounded
-    drop-and-retry loop. On compose failure carrying hunk-reject
-    shape, identify which ``diffs/*.diff`` failed, capture its
-    content + target file + reject summary BEFORE dropping the
-    overlay reference, retry compose. Returns ``(final mat dict,
-    list[DeferredPatch])``.
+    drop-and-retry loop. On compose failure, identify the first
+    un-applyable dops op, capture its intent (the dropped overlay.dops
+    source, plus the diff text for framework ``patch.apply`` ops),
+    drop the op from overlay.dops, and retry compose. Returns
+    ``(final mat dict, list[DeferredPatch])``.
 
-    Drops are capped at ``max_drops`` and we never drop the same path
-    twice. The first non-hunk-reject failure exits the loop with the
-    failure dict — caller's existing `_fail()` path handles the rest.
+    Drops are capped at ``max_drops``. Each drop physically removes
+    the op, so the next compose can't re-report it; progress is
+    additionally guarded by a content key (stable across the op-id
+    renumbering a drop causes) — a key seen twice means the drop
+    didn't stick, so we bail rather than spin. The first failure with
+    no locatable op exits the loop with the failure dict — caller's
+    ``_fail()`` path handles the rest.
     """
     from dportsv3.agent import worker  # noqa: PLC0415
     from dportsv3.agent.phase_result import DeferredPatch  # noqa: PLC0415
@@ -4378,27 +4427,48 @@ def _materialize_with_defer_retry(
         mat = worker.materialize_dports_with_report(env, origin)
         if mat.get("ok"):
             return mat, deferred
-        diags = _failed_patch_diags(mat.get("report"), origin)
-        next_drop = next(((p, m) for p, m in diags if p not in seen), None)
-        if next_drop is None:
+        failing = _failed_ops(mat.get("report"), origin)
+        if not failing:
             _log_defer_skipped(queue_root, job_id, origin, attempt, mat, deferred)
             return mat, deferred
         if attempt >= max_drops:
             return mat, deferred  # cap reached
-        path, msg = next_drop
-        # Capture context BEFORE the overlay edit so the snapshot is
-        # tied to the failure that triggered the drop.
-        content = _read_diff_content(env, origin, path)
-        dp = DeferredPatch(
-            path=path,
-            target_file=_infer_target_file_from_diff(content, fallback=path),
-            original_content=content[:_DEFERRED_PATCH_CONTENT_CAP],
-            reject_summary=_extract_reject_summary(msg, path),
-        )
-        if not _drop_patch_apply_from_overlay_file(env, origin, path):
-            return mat, deferred  # overlay missing / line absent / write failed
+        op_id, kind, target_rel, msg = failing[0]
+        # Drop the op (uniform span-based removal); returns the
+        # overlay.dops source that was removed, which is both the
+        # inline-op intent and a renumber-stable progress key.
+        dropped = _drop_op_from_overlay_file(env, origin, op_id)
+        if dropped is None:
+            return mat, deferred  # op/span not locatable; let _fail handle it
+        if kind == "patch.apply":
+            # File-backed: keep the diff on disk as intent;
+            # cleanup removes it once the patch agent resolves the
+            # verdict. Identity + content come from the diff file.
+            content = _read_diff_content(env, origin, target_rel)
+            dp = DeferredPatch(
+                path=target_rel,
+                target_file=_infer_target_file_from_diff(content, fallback=target_rel),
+                original_content=content[:_DEFERRED_PATCH_CONTENT_CAP],
+                reject_summary=_extract_reject_summary(msg, target_rel),
+                backing_file=target_rel,
+            )
+            key = target_rel
+        else:
+            # Inline op: no file on disk. The dropped overlay.dops
+            # source IS the intent; identity is a content hash so it's
+            # stable regardless of op-id renumbering.
+            key = "op:" + hashlib.sha1(dropped.encode("utf-8")).hexdigest()[:12]
+            dp = DeferredPatch(
+                path=key,
+                target_file=target_rel or kind,
+                original_content=dropped[:_DEFERRED_PATCH_CONTENT_CAP],
+                reject_summary=msg or f"{kind} failed to apply",
+                backing_file=None,
+            )
+        if key in seen:
+            return mat, deferred  # drop didn't stick; avoid spinning
+        seen.add(key)
         deferred.append(dp)
-        seen.add(path)
         _log_defer_dropped(queue_root, job_id, origin, attempt, max_drops,
                            dp, deferred)
     return mat, deferred
@@ -4434,7 +4504,7 @@ def _log_defer_dropped(queue_root, job_id, origin, attempt, max_drops, dp,
     try:
         activity_log(
             queue_root, "convert_patch_deferred",
-            f"deferred framework patch {dp.path} for {origin} "
+            f"deferred op {dp.path} for {origin} "
             f"(attempt {attempt + 1}/{max_drops}): {dp.reject_summary}",
             job_id=job_id,
             extra={
@@ -4937,14 +5007,14 @@ def _verify_conversion(
         )
         return False, status
 
-    # Step 37-1: framework-patch drift recovery. On the typical
-    # hunk-reject failure (compose tried to apply a `diffs/*.diff`
-    # whose context drifted off upstream), drop that `patch apply`
-    # line from overlay.dops and retry compose. Cap at
-    # DP_HARNESS_CONVERT_MAX_DROPS (default 3) so a port with many
-    # bad patches still bails cleanly. Dropped paths become
-    # `deferred_patches` on the typed ConvertResult — intent for the
-    # patch agent's later relevance pass.
+    # Drop-and-retry recovery. On compose failure, drop the first
+    # un-applyable overlay.dops op and retry: a framework `patch.apply`
+    # whose hunks drifted off upstream, or an inline op (mk.var.set /
+    # text.replace_once / …) that couldn't be placed. Cap at
+    # DP_HARNESS_CONVERT_MAX_DROPS (default 3) so a port with many bad
+    # ops still bails cleanly. Dropped ops become `deferred_patches` on
+    # the typed ConvertResult — intent for the patch agent's later
+    # relevance pass.
     max_drops = int(os.environ.get("DP_HARNESS_CONVERT_MAX_DROPS", "3"))
     mat, deferred_patches = _materialize_with_defer_retry(
         env, origin,
@@ -4976,8 +5046,14 @@ def _verify_conversion(
         # declared `target @main`, env was `@2026Q2`, every op
         # silently skipped).
         env_target = job.get("target") or ""
+        # `deferred_patches` also bypasses the dead-overlay guard: when
+        # the defer loop dropped every (or the only) failing op, the
+        # overlay is intentionally emptied with the dropped ops recorded
+        # as intent — the post-convert retriage→patch authors them. This
+        # is the same shape as the empty-overlay bootstrap, so treat it
+        # the same rather than failing it as "silently dead."
         eff = (
-            None if allow_empty_overlay
+            None if (allow_empty_overlay or deferred_patches)
             else _check_overlay_effective_ops(env, origin, env_target)
         )
         if eff is not None:  # None means "ok"; non-None is the error
