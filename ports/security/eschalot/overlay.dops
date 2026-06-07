@@ -1,0 +1,6 @@
+target @any
+port security/eschalot
+type port
+reason "auto-converted from Makefile.DragonFly"
+
+mk add CFLAGS "-I${OPENSSLINC} -L${OPENSSLLIB} -DNEED_HTOBE32"
