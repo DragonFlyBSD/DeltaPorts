@@ -175,6 +175,10 @@ def test_patch_success_full_chain(queue_env, tmp_path, monkeypatch):
     bdir = _make_bundle_dir(tmp_path)
     monkeypatch.setattr(patch_module, "run",
                         lambda *a, **kw: _StubPatchResult(status="success"))
+    # C1: the success gate requires classify_dops == "converted"; the real
+    # probe can't run in the test chroot, so stub it for the success chain.
+    from dportsv3.agent import worker as _worker
+    monkeypatch.setattr(_worker, "classify_dops", lambda env, origin: "converted")
 
     job_path = _drop_patch_job(queue_env, job_id="job-patch-1.job", bundle_dir=bdir)
     inflight = _claim(queue_env, job_path)
@@ -248,6 +252,9 @@ def test_patch_sibling_fan_out(queue_env, tmp_path, monkeypatch):
     bdir = _make_bundle_dir(tmp_path)
     monkeypatch.setattr(patch_module, "run",
                         lambda *a, **kw: _StubPatchResult(status="success"))
+    # C1: success gate requires classify_dops == "converted" (see above).
+    from dportsv3.agent import worker as _worker
+    monkeypatch.setattr(_worker, "classify_dops", lambda env, origin: "converted")
 
     lead_path = _drop_patch_job(queue_env, job_id="lead.job", bundle_dir=bdir)
     sib_path = _drop_patch_job(queue_env, job_id="sib.job", bundle_dir=bdir)

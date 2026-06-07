@@ -89,14 +89,17 @@ def test_reset_port_runs_clean_then_substrate_then_reapply(monkeypatch):
     assert result["ok"] is True
     assert result["workdir_clean_ok"] is True
     assert result["reapply_ok"] is True
-    assert result["paths_changed"] == ["ports/devel/foo"]
+    # C2: substrate reset is whole-tree, so leftovers outside the origin
+    # subtree (failed-run dirt, slave→master writes) are rolled back too.
+    assert result["paths_changed"] == ["."]
     # Three invocations in the documented order: clean (runs
     # against the still-patched substrate), then substrate reset,
     # then reapply (against the now-reset baseline).
     assert len(calls) == 3
     assert "make " in calls[0][-1]
     assert "WRKDIRPREFIX=" in calls[0][-1]
-    assert "git checkout HEAD -- ports/devel/foo" in calls[1][-1]
+    assert "git checkout HEAD -- ." in calls[1][-1]
+    assert "git clean -fd" in calls[1][-1]
     assert calls[2][0] == "reapply"
     assert calls[2][1] == "devel/foo"
 

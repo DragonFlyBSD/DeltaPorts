@@ -79,7 +79,9 @@ def test_changes_diff_is_branch_vs_base(tmp_path, monkeypatch):
     assert captured == {
         "repo": deltaports,
         "base": "main",
-        "rel": "ports/devel/foo",
+        # C3: whole-tree, not ports/<origin> — captures fixes that land
+        # outside the bundle origin (e.g. a slave's master PATCHDIR).
+        "rel": ".",
     }
 
 
