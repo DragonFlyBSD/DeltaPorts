@@ -1,0 +1,13 @@
+target @any
+port devel/jetbrains-pty4j
+type port
+reason "Normalise library arch path (x86_64 -> x86-64) and install libpty.so for DragonFly"
+
+mk set PLATFORM_ARCH "${ARCH:S/amd64/x86-64/:S/x86_64/x86-64/:S/powerpc64le/ppc64le/}"
+
+mk target set do-install <<'MK'
+	${MKDIR} ${STAGEDIR}${DATADIR}/${ARCH}
+	${INSTALL_LIB} \
+		${WRKSRC}/os/freebsd/${PLATFORM_ARCH}/libpty.so \
+		${STAGEDIR}${DATADIR}/${ARCH}
+MK
