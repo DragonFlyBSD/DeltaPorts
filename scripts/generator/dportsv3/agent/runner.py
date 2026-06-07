@@ -3400,6 +3400,7 @@ def _write_patch_audit_harness(
     bundle_id: str | None,
     result,  # dportsv3.agent.attempt_loop.PatchResult
     model: str,
+    origin: str = "",
 ) -> None:
     """Write harness-side outputs to the bundle: patch.md, rebuild_proof.json,
     changes.diff (host-side git diff in the env), and patch_audit.json."""
@@ -3434,6 +3435,14 @@ def _write_patch_audit_harness(
             "attempts": len(result.attempts),
             "synthetic": True,
         }
+    # Code-owned metadata: the LLM has no clock and copies the prompt's
+    # example (proofs carried the literal example timestamp). Only
+    # rebuild_ok is the agent's to assert; stamp the rest authoritatively.
+    proof_payload["timestamp_utc"] = datetime.now(timezone.utc).isoformat()
+    if origin:
+        proof_payload["origin"] = origin
+        proof_payload["dsynth_profile"] = "DragonFly"
+        proof_payload["build_command"] = f"dsynth -p DragonFly build {origin}"
     proof_bytes = (json.dumps(proof_payload, indent=2) + "\n").encode("utf-8")
     if bundle_id:
         artifact_store_put(bundle_id, "analysis/rebuild_proof.json", proof_bytes, "json")

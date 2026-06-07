@@ -704,7 +704,7 @@ class PatchAttemptStep:
 
       - read_bundle_text(bundle_dir, bundle_id, relpath) -> str | None
       - write_error_note(job_path, msg) -> None
-      - write_patch_audit(bundle_dir, bundle_id, result, model) -> None
+      - write_patch_audit(bundle_dir, bundle_id, result, model, origin) -> None
       - write_tool_trace(bundle_dir, bundle_id, trace_events) -> None
       - write_changes_diff(bundle_dir, bundle_id, env, origin) -> None
       - looks_env_suspicious(result: dict) -> bool
@@ -958,7 +958,7 @@ class PatchAttemptStep:
         ctx.state["trace_events"] = list(dispatcher.trace_events)
 
         # Persist outputs.
-        services.write_patch_audit(ctx.bundle_dir, bundle_id, result, model)
+        services.write_patch_audit(ctx.bundle_dir, bundle_id, result, model, origin)
         services.write_tool_trace(ctx.bundle_dir, bundle_id, dispatcher.trace_events)
         # Step 30 slice 5: changes.diff is now branch-vs-base
         # (the former delivery.diff shape) and is the single

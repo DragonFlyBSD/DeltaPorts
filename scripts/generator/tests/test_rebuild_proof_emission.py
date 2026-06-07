@@ -59,34 +59,50 @@ def test_needs_help_emits_synthetic_rebuild_proof(tmp_path: Path):
     assert proof["synthetic"] is True
 
 
-def test_success_writes_real_proof_verbatim(tmp_path: Path):
+def test_success_proof_keeps_verdict_stamps_metadata(tmp_path: Path):
+    """M1: only rebuild_ok comes from the LLM. The harness stamps
+    origin/profile/build_command/timestamp from real data, overriding
+    whatever the model authored (it has no clock and copied the prompt's
+    example timestamp)."""
+    from datetime import datetime
     bundle = tmp_path / "bundle"
     bundle.mkdir()
-    real = {"rebuild_ok": True, "build_command": "make", "extra": "value"}
+    # LLM-authored metadata is bogus — the literal prompt example.
+    real = {"rebuild_ok": True, "build_command": "make",
+            "timestamp_utc": "2026-05-18T20:00:00Z", "extra": "value"}
     runner_mod._write_patch_audit_harness(
         bundle, None, _result("success", proof=real), model="m",
+        origin="cat/port",
     )
     proof = json.loads(
         (bundle / "analysis" / "rebuild_proof.json").read_text()
     )
-    # Real proof preserved; no synthetic flag.
-    assert proof == real
+    assert proof["rebuild_ok"] is True       # the agent's verdict survives
+    assert proof["extra"] == "value"         # non-owned fields survive
     assert "synthetic" not in proof
+    # code-owned metadata overrides the LLM's fabrications
+    assert proof["origin"] == "cat/port"
+    assert proof["dsynth_profile"] == "DragonFly"
+    assert proof["build_command"] == "dsynth -p DragonFly build cat/port"
+    assert proof["timestamp_utc"] != "2026-05-18T20:00:00Z"  # not the example
+    datetime.fromisoformat(proof["timestamp_utc"])           # real, parseable
 
 
-def test_terminal_with_partial_proof_uses_real_proof(tmp_path: Path):
-    """If the LLM emitted a Rebuild Proof block (e.g. with
-    rebuild_ok=false) on its final attempt, result.proof carries it
-    and we should write THAT verbatim rather than synthesizing."""
+def test_terminal_partial_proof_keeps_verdict_stamps_metadata(tmp_path: Path):
+    """A partial proof (rebuild_ok=false) keeps its verdict + non-owned
+    fields, but the harness still stamps the code-owned metadata."""
     bundle = tmp_path / "bundle"
     bundle.mkdir()
     partial = {"rebuild_ok": False, "build_command": "make", "stage": "build"}
     runner_mod._write_patch_audit_harness(
         bundle, None,
         _result("budget-exhausted", proof=partial),
-        model="m",
+        model="m", origin="cat/port",
     )
     proof = json.loads(
         (bundle / "analysis" / "rebuild_proof.json").read_text()
     )
-    assert proof == partial
+    assert proof["rebuild_ok"] is False                  # verdict preserved
+    assert proof["stage"] == "build"                     # non-owned preserved
+    assert proof["build_command"] == "dsynth -p DragonFly build cat/port"
+    assert "timestamp_utc" in proof
