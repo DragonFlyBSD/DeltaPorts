@@ -60,15 +60,17 @@ def test_needs_help_emits_synthetic_rebuild_proof(tmp_path: Path):
 
 
 def test_success_proof_keeps_verdict_stamps_metadata(tmp_path: Path):
-    """M1: only rebuild_ok comes from the LLM. The harness stamps
-    origin/profile/build_command/timestamp from real data, overriding
-    whatever the model authored (it has no clock and copied the prompt's
-    example timestamp)."""
+    """M1: only rebuild_ok comes from the LLM. The harness stamps the
+    timestamp + origin from real data and drops fabricated metadata it
+    can't get authoritatively (the dsynth profile is the chroot's
+    $DPORTS_DSYNTH_PROFILE, not knowable here — don't replace one guess
+    with another)."""
     from datetime import datetime
     bundle = tmp_path / "bundle"
     bundle.mkdir()
     # LLM-authored metadata is bogus — the literal prompt example.
     real = {"rebuild_ok": True, "build_command": "make",
+            "dsynth_profile": "DragonFly",
             "timestamp_utc": "2026-05-18T20:00:00Z", "extra": "value"}
     runner_mod._write_patch_audit_harness(
         bundle, None, _result("success", proof=real), model="m",
@@ -80,17 +82,19 @@ def test_success_proof_keeps_verdict_stamps_metadata(tmp_path: Path):
     assert proof["rebuild_ok"] is True       # the agent's verdict survives
     assert proof["extra"] == "value"         # non-owned fields survive
     assert "synthetic" not in proof
-    # code-owned metadata overrides the LLM's fabrications
-    assert proof["origin"] == "cat/port"
-    assert proof["dsynth_profile"] == "DragonFly"
-    assert proof["build_command"] == "dsynth -p DragonFly build cat/port"
+    assert proof["origin"] == "cat/port"     # code-stamped
     assert proof["timestamp_utc"] != "2026-05-18T20:00:00Z"  # not the example
     datetime.fromisoformat(proof["timestamp_utc"])           # real, parseable
+    # build_command = the real env-var-templated form (not "make", not a
+    # hardcoded profile); standalone fabricated profile field dropped
+    assert proof["build_command"] == 'dsynth -S -y -p "$DPORTS_DSYNTH_PROFILE" build cat/port'
+    assert "dsynth_profile" not in proof
 
 
 def test_terminal_partial_proof_keeps_verdict_stamps_metadata(tmp_path: Path):
     """A partial proof (rebuild_ok=false) keeps its verdict + non-owned
-    fields, but the harness still stamps the code-owned metadata."""
+    fields; the harness stamps timestamp/origin and drops fabricated
+    profile/command."""
     bundle = tmp_path / "bundle"
     bundle.mkdir()
     partial = {"rebuild_ok": False, "build_command": "make", "stage": "build"}
@@ -104,5 +108,7 @@ def test_terminal_partial_proof_keeps_verdict_stamps_metadata(tmp_path: Path):
     )
     assert proof["rebuild_ok"] is False                  # verdict preserved
     assert proof["stage"] == "build"                     # non-owned preserved
-    assert proof["build_command"] == "dsynth -p DragonFly build cat/port"
+    assert proof["origin"] == "cat/port"
+    # LLM's "make" replaced by the real templated command
+    assert proof["build_command"] == 'dsynth -S -y -p "$DPORTS_DSYNTH_PROFILE" build cat/port'
     assert "timestamp_utc" in proof

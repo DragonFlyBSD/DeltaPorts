@@ -3438,11 +3438,19 @@ def _write_patch_audit_harness(
     # Code-owned metadata: the LLM has no clock and copies the prompt's
     # example (proofs carried the literal example timestamp). Only
     # rebuild_ok is the agent's to assert; stamp the rest authoritatively.
+    # The real build command is the env-var-templated form that
+    # worker.dsynth_build actually runs (and that proposed_fix gives the
+    # operator) — the profile is the chroot's $DPORTS_DSYNTH_PROFILE, left
+    # unexpanded so the value is honest and runnable, not a hardcoded guess.
     proof_payload["timestamp_utc"] = datetime.now(timezone.utc).isoformat()
     if origin:
         proof_payload["origin"] = origin
-        proof_payload["dsynth_profile"] = "DragonFly"
-        proof_payload["build_command"] = f"dsynth -p DragonFly build {origin}"
+        proof_payload["build_command"] = (
+            f'dsynth -S -y -p "$DPORTS_DSYNTH_PROFILE" build {origin}'
+        )
+    # Drop any standalone fabricated profile field; the profile is the env
+    # var embedded in build_command, not a guessable concrete name here.
+    proof_payload.pop("dsynth_profile", None)
     proof_bytes = (json.dumps(proof_payload, indent=2) + "\n").encode("utf-8")
     if bundle_id:
         artifact_store_put(bundle_id, "analysis/rebuild_proof.json", proof_bytes, "json")

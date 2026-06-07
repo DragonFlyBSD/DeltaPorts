@@ -449,8 +449,8 @@ The `Rebuild Proof (JSON)` block is **mandatory** in your final
 response. It is parsed mechanically. `rebuild_ok` must be `true` only
 if `dsynth_build` returned `rebuild_ok=true` in your most recent call.
 Otherwise it must be `false`. Emit **only** `rebuild_ok` — the harness
-stamps the origin, build command, profile, and timestamp from real data
-(don't author those; you have no clock).
+stamps the origin, build command, and timestamp from real data (don't
+author metadata; you have no clock).
 
 No branching, no git push, no PR. Local rebuild proof only.
 """
