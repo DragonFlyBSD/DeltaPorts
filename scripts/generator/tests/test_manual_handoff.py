@@ -122,6 +122,25 @@ def test_render_includes_reason_detail_when_present():
     assert "- **Detail:** harness raised: connection reset" in out
 
 
+def test_triage_failed_reason_registered():
+    """M4: REASON_TRIAGE_FAILED must be a known reason with a label."""
+    assert mh.REASON_TRIAGE_FAILED == "triage_failed"
+    assert mh.REASON_TRIAGE_FAILED in mh.VALID_REASONS
+    assert mh.REASON_TRIAGE_FAILED in mh._REASON_LABELS
+
+
+def test_render_triage_failed_points_at_infra():
+    out = mh.render_handoff(_ctx(
+        reason=mh.REASON_TRIAGE_FAILED,
+        reason_detail="Harness triage failed: connection refused",
+    ))
+    assert "triage failed to run" in out                 # label
+    assert "never reached a routing decision" in out      # guidance
+    assert "infrastructure" in out
+    # The failure detail is surfaced in both the header and the question.
+    assert "connection refused" in out
+
+
 def test_render_omits_empty_sections():
     """A bare ctx with only origin+reason set should render header +
     operator question, nothing else."""

@@ -226,6 +226,14 @@ _EVENT_TO_RESOLUTION: dict[JobEvent, str] = {
     JobEvent.PATCH_BUDGET_OUT: "agent_budget_exhausted",
     JobEvent.ESCALATE_MANUAL:  "escalated_manual",
     JobEvent.CONVERT_GAVE_UP:  "convert_gave_up",
+    # A triage that couldn't run to a routing decision (bundle
+    # materialization, LLM call, policy load, or orchestrator
+    # precheck failed) terminates the job at DEAD/triage_failed.
+    # Without a resolution the bundle sits at resolution=NULL and
+    # can_retry/can_take_over evaluate False — invisible to the
+    # operator. Distinct from agent_gave_up: triage failing usually
+    # signals infra (LLM/bundle/env), not "the agent tried and lost."
+    JobEvent.TRIAGE_FAIL:      "triage_failed",
 }
 
 _INFLIGHT_STATES: tuple[JobState, ...] = (

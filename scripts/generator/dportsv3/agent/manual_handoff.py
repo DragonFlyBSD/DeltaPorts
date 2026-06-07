@@ -45,6 +45,10 @@ REASON_PATCH_GAVE_UP = "patch_gave_up"
 # the operator can review the escalated subset; the patch agent's
 # regenerated / dropped verdicts are recorded on PatchResult.
 REASON_PATCH_ESCALATED_VERDICTS = "patch_escalated_verdicts"
+# M4: triage terminated without reaching a routing decision (bundle
+# materialization / LLM call / policy load / orchestrator precheck
+# failed). Usually an infra signal, not an agent give-up.
+REASON_TRIAGE_FAILED = "triage_failed"
 
 VALID_REASONS = frozenset({
     REASON_MANUAL_TIER,
@@ -52,6 +56,7 @@ VALID_REASONS = frozenset({
     REASON_PATCH_BUDGET,
     REASON_PATCH_GAVE_UP,
     REASON_PATCH_ESCALATED_VERDICTS,
+    REASON_TRIAGE_FAILED,
 })
 
 _REASON_LABELS = {
@@ -61,6 +66,7 @@ _REASON_LABELS = {
     REASON_PATCH_GAVE_UP: "patch agent gave up",
     REASON_PATCH_ESCALATED_VERDICTS:
         "patch fixed build but escalated deferred patches",
+    REASON_TRIAGE_FAILED: "triage failed to run",
 }
 
 
@@ -238,6 +244,15 @@ def _question(ctx: HandoffCtx) -> str:
             "For example: a known good FreeBSD-side fix, a specific file to "
             "look at, or an instruction to convert a static patch to a "
             "semantic `dops` / `REINPLACE_CMD` operation."
+        )
+    if ctx.reason == REASON_TRIAGE_FAILED:
+        detail = (ctx.reason_detail or "").strip()
+        detail_line = f" Failure: {detail}." if detail else ""
+        return (
+            "Triage never reached a routing decision — it failed before "
+            f"classifying the build.{detail_line} This usually points at "
+            "infrastructure (LLM endpoint, bundle artifacts, or the dev-env) "
+            "rather than the port itself. Check the env/endpoint, then retry."
         )
     return "Provide context for the agent to retry."
 

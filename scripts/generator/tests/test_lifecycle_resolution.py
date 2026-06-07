@@ -103,6 +103,31 @@ def test_escalate_manual_sets_escalated_manual(conn):
     assert _resolution(conn, "b-1") == "escalated_manual"
 
 
+def test_triage_fail_sets_triage_failed(conn):
+    """M4: a triage that terminates via TRIAGE_FAIL propagates
+    resolution=triage_failed so the stranded bundle becomes
+    retry/take-over actionable instead of sitting at resolution=NULL."""
+    _seed_bundle(conn)
+    _drive(
+        conn, "job-5",
+        JobEvent.CLAIM, JobEvent.TRIAGE_START, JobEvent.TRIAGE_FAIL,
+        bundle_id="b-1",
+    )
+    assert _resolution(conn, "b-1") == "triage_failed"
+
+
+def test_triage_fail_without_bundle_id_is_skipped(conn):
+    """The synthesized orchestrator-halt path fires TRIAGE_FAIL with
+    no bundle_id — that must not touch any bundle row."""
+    _seed_bundle(conn)
+    _drive(
+        conn, "job-6",
+        JobEvent.CLAIM, JobEvent.TRIAGE_START, JobEvent.TRIAGE_FAIL,
+        # bundle_id omitted
+    )
+    assert _resolution(conn, "b-1") is None
+
+
 # --- non-effecting paths ---------------------------------------------------
 
 

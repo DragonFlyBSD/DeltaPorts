@@ -3074,11 +3074,31 @@ def process_triage_job(
     )
 
     result = Orchestrator().run(ctx, [TriageStep()])
-    return _finish_orchestrator_run(
+    success, status = _finish_orchestrator_run(
         result, step_name="triage",
         sibling_paths=sibling_paths,
         failure_event="triage_fail",
     )
+    if not success:
+        # M4: a triage that terminates via TRIAGE_FAIL (bundle
+        # materialization, LLM call, policy load, or orchestrator
+        # halt) otherwise leaves the operator with
+        # resolution=triage_failed but no explanation artifact. Mirror
+        # the convert (H2) and patch handoff writes so every terminal
+        # failure carries a manual_handoff. The escalate-manual and
+        # convert-defer paths return success=True (and write their own
+        # handoff / continue), so they never reach here. Lead bundle
+        # only, matching the convert-failure funnel. Best-effort: the
+        # writer swallows its own errors.
+        _write_manual_handoff(
+            bundle_dir, job.get("bundle_id"),
+            origin=origin,
+            target=job.get("target", "") or "",
+            reason="triage_failed",
+            reason_detail=status,
+            run_id=job.get("run_id") or None,
+        )
+    return success, status
 def _summarize_tool_call(tool: str, args: dict, result: dict) -> str:
     """One-line summary of a tool invocation for the activity log.
 
