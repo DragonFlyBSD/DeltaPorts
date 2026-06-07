@@ -3762,6 +3762,27 @@ def process_patch_job(
     )
 
 
+def _bootstrap_empty_overlay(port_dir: Path, origin: str) -> None:
+    """Step 44: write a deterministic header-only ``overlay.dops`` for a
+    port that has no DragonFly delta to translate.
+
+    Every field is derived from facts we already have — no LLM, no
+    source, no build. ``target @any`` (broadest scope; an operator or
+    the patch agent can narrow it), ``port`` from the origin, ``type
+    port`` as the default when nothing specifies otherwise, and a
+    provenance ``reason``. The body is intentionally empty: the
+    subsequent retriage -> patch flow fills it with the actual fix.
+    """
+    body = (
+        "target @any\n"
+        f"port {origin}\n"
+        "type port\n"
+        'reason "bootstrapped: no prior DragonFly delta; '
+        'overlay opened for patch"\n'
+    )
+    (port_dir / "overlay.dops").write_text(body)
+
+
 def process_convert_job(
     queue_root: Path,
     job_path: Path,
@@ -3860,7 +3881,19 @@ def process_convert_job(
         # is already reached.
         return True, "already converted"
     if state == "not_in_scope":
-        return False, "port not in dops scope (no overlay artifacts)"
+        # Step 44: a port with no DragonFly delta. If the dir exists,
+        # bootstrap an empty overlay.dops header (deterministic — there
+        # is nothing to translate) so the port classifies `converted`
+        # and the retriage -> patch flow can fill the body. Convert does
+        # not fix; it just opens the substrate. Verify via reapply (no
+        # build — _verify_conversion only checks compose acceptance, which
+        # a header-only overlay passes as a no-op). A missing dir has
+        # nothing convert can do.
+        port_dir = repo_root / "ports" / origin
+        if not port_dir.is_dir():
+            return False, "port not in dops scope (port directory missing)"
+        _bootstrap_empty_overlay(port_dir, origin)
+        return _verify_conversion(job, origin, allow_empty_overlay=True)
     if state == "stale":
         return False, "port marked stale"
 
@@ -4775,8 +4808,16 @@ def _check_overlay_effective_ops(
     )
 
 
-def _verify_conversion(job: dict, origin: str) -> tuple[bool, str]:
+def _verify_conversion(
+    job: dict, origin: str, *, allow_empty_overlay: bool = False,
+) -> tuple[bool, str]:
     """Step 20e — verify a fresh conversion via compose (``reapply``).
+
+    ``allow_empty_overlay`` (Step 44): skip the "dead overlay" refusal
+    for an intentionally op-less overlay — the bootstrap header written
+    for an empty-scope port has zero ops by design (patch fills the body
+    later). The reapply check and the env commit (convert→patch handoff)
+    still run.
 
     The convert agent's job is to produce a valid ``overlay.dops``.
     The correct validation is "does compose accept it?" — i.e. can
@@ -4918,7 +4959,10 @@ def _verify_conversion(job: dict, origin: str) -> tuple[bool, str]:
         # declared `target @main`, env was `@2026Q2`, every op
         # silently skipped).
         env_target = job.get("target") or ""
-        eff = _check_overlay_effective_ops(env, origin, env_target)
+        eff = (
+            None if allow_empty_overlay
+            else _check_overlay_effective_ops(env, origin, env_target)
+        )
         if eff is not None:  # None means "ok"; non-None is the error
             return _fail(
                 f"conversion verified but overlay is dead on this env: {eff}",

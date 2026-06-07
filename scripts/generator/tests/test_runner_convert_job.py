@@ -872,15 +872,12 @@ def test_process_convert_job_requires_dev_env(
     assert "no dev-env resolved" in status
 
 
-def test_process_convert_job_not_in_scope(
+def test_process_convert_job_missing_port_dir(
     tmp_path: Path, monkeypatch
 ) -> None:
-    """Port with no overlay artifacts at all → handler refuses
-    with a clear status. This shouldn't happen via the triage hook
-    once 20d lands (classify gates the enqueue), but guards
-    against operator-enqueued nonsense."""
-    repo = _make_repo(tmp_path)
-    _make_port(repo, "devel/nothing")
+    """Step 44: no port directory at all → nothing to bootstrap; the
+    handler refuses with a clear status."""
+    repo = _make_repo(tmp_path)  # devel/ghost dir intentionally absent
     monkeypatch.setenv("DP_HARNESS_REPO_ROOT", str(repo))
     monkeypatch.setattr(runner_mod, "_CLI_ENV_DEFAULT", "test-env")
 
@@ -888,7 +885,53 @@ def test_process_convert_job_not_in_scope(
         queue_root=tmp_path / "queue",
         job_path=tmp_path / "queue" / "x.job",
         sibling_paths=[],
-        job={"origin": "devel/nothing", "target": "@main"},
+        job={"origin": "devel/ghost", "target": "@main"},
     )
     assert not success
-    assert "not in dops scope" in status
+    assert "port directory missing" in status
+
+
+def test_process_convert_job_bootstraps_empty_scope(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """Step 44: a port dir that exists but has no DragonFly delta gets a
+    deterministic header-only overlay.dops, then verifies via reapply
+    (no build). Convert opens the substrate; patch fills the body."""
+    repo = _make_repo(tmp_path)
+    port = _make_port(repo, "devel/bare")
+    monkeypatch.setenv("DP_HARNESS_REPO_ROOT", str(repo))
+    monkeypatch.setattr(runner_mod, "_CLI_ENV_DEFAULT", "test-env")
+
+    from dportsv3.agent import worker
+    monkeypatch.setattr(worker, "materialize_dports",
+                        lambda env, origin: {"ok": True, "rc": 0})
+    monkeypatch.setattr(worker, "materialize_dports_with_report",
+                        lambda env, origin: {"ok": True, "rc": 0, "report": None})
+    monkeypatch.setattr(
+        worker, "dsynth_build",
+        lambda env, origin: pytest.fail(
+            "dsynth_build called from bootstrap convert — verification is "
+            "reapply (compose) only"
+        ),
+    )
+    monkeypatch.setattr(
+        worker, "commit_port_changes",
+        lambda env, origin, message: {
+            "ok": True, "committed": True, "origin": origin,
+            "paths_changed": [f"ports/{origin}"]},
+    )
+
+    success, status = process_convert_job(
+        queue_root=tmp_path / "queue",
+        job_path=tmp_path / "queue" / "x.job",
+        sibling_paths=[],
+        job={"origin": "devel/bare", "target": "@main"},
+    )
+    assert success, status
+    overlay = port / "overlay.dops"
+    assert overlay.exists()
+    text = overlay.read_text()
+    assert "target @any" in text
+    assert "port devel/bare" in text
+    assert "type port" in text
+    assert "reason " in text

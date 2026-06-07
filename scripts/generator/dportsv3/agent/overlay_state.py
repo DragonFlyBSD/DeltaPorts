@@ -184,12 +184,26 @@ def assess_overlay(facts: OverlayFacts) -> OverlayAssessment:
         + (("newport/",) if facts.newport else ())
     )
 
-    if not facts.port_exists or not (facts.overlay_dops or compat_artifacts):
+    if not facts.port_exists:
+        # No port directory at all — nothing convert can do. Let triage
+        # proceed (it will surface the missing-port problem).
         return OverlayAssessment(
             state="not_in_scope",
             action="proceed_triage",
+            rules=(OverlayRuleResult("port_missing"),),
+            reasons=("port directory does not exist",),
+        )
+    if not (facts.overlay_dops or compat_artifacts):
+        # Port exists but carries no DragonFly delta. Route through
+        # convert so it can bootstrap an empty overlay.dops header
+        # (deterministic — there is nothing to translate). The port then
+        # classifies `converted` and the retriage -> patch flow fills the
+        # body. Convert never fixes; it just opens the substrate.
+        return OverlayAssessment(
+            state="not_in_scope",
+            action="defer_to_convert",
             rules=(OverlayRuleResult("no_overlay_artifacts"),),
-            reasons=("no overlay artifacts detected",),
+            reasons=("no overlay artifacts; bootstrap empty overlay via convert",),
         )
 
     if facts.overlay_dops:

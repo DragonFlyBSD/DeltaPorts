@@ -243,11 +243,12 @@ def test_no_defer_for_converted_port(tmp_path: Path, monkeypatch, state_db) -> N
     assert result is None
 
 
-def test_no_defer_for_not_in_scope_port(
+def test_defer_for_empty_scope_port(
     tmp_path: Path, monkeypatch, state_db
 ) -> None:
-    """Port has no overlay artifacts at all → not in scope; the
-    triage flow handles it as usual."""
+    """Step 44: a port dir that exists but carries no DragonFly delta
+    now defers to convert, which bootstraps an empty overlay.dops so
+    the retriage -> patch flow has a substrate to fill."""
     repo = _make_repo(tmp_path)
     _make_port(repo, "devel/plain")
     monkeypatch.setenv("DP_HARNESS_REPO_ROOT", str(repo))
@@ -257,6 +258,25 @@ def test_no_defer_for_not_in_scope_port(
         job={"origin": "devel/plain", "target": "@main"},
         job_path=Path("/tmp/x.job"),
         origin="devel/plain",
+    )
+    assert result is not None
+    _success, status = result
+    assert "deferred_for_convert" in status
+
+
+def test_no_defer_for_missing_port_dir(
+    tmp_path: Path, monkeypatch, state_db
+) -> None:
+    """Step 44: a port with no directory at all has nothing convert can
+    bootstrap — triage proceeds as usual (no defer)."""
+    repo = _make_repo(tmp_path)  # ports/ exists, but devel/ghost does not
+    monkeypatch.setenv("DP_HARNESS_REPO_ROOT", str(repo))
+
+    result = _maybe_defer_to_convert(
+        queue_root=_make_queue(tmp_path),
+        job={"origin": "devel/ghost", "target": "@main"},
+        job_path=Path("/tmp/x.job"),
+        origin="devel/ghost",
     )
     assert result is None
 
