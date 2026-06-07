@@ -24,6 +24,8 @@ import json
 from dataclasses import asdict, dataclass, field, fields
 from typing import Any, TypeVar
 
+from .policy import Confidence
+
 
 __all__ = [
     "TriageResult",
@@ -70,7 +72,7 @@ class TriageResult:
     """What triage classified about a bundle's failure."""
 
     classification: str
-    confidence: str
+    confidence: Confidence
     root_cause: str
     evidence_excerpt: str
     error_signature: str | None

@@ -9,8 +9,12 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal
 
-CONFIDENCE_ORDER = ["low", "medium", "high"]
+# Triage confidence is a closed vocabulary, shared by the producer
+# (triage parses/stores it) and the consumer (tier_for floors on it).
+Confidence = Literal["low", "medium", "high"]
+CONFIDENCE_ORDER: list[Confidence] = ["low", "medium", "high"]
 
 
 @dataclass

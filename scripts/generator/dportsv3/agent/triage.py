@@ -22,31 +22,46 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from . import llm, prompts, snippets
+from .policy import Confidence
 
 
 @dataclass
 class TriageResult:
     text: str  # final response text
     classification: str
-    confidence: str
+    confidence: Confidence
     snippet_rounds: int = 0
     usage: llm.Usage = field(default_factory=llm.Usage)
 
 
 _CLASSIFICATION_RE = re.compile(r"^##\s*Classification\s*\n+([^\n#]+)", re.MULTILINE)
 _CONFIDENCE_RE = re.compile(r"^##\s*Confidence\s*\n+([^\n#]+)", re.MULTILINE)
+_CONFIDENCE_LEAD_RE = re.compile(r"(high|medium|low)\b")
 _SNIPPET_SECTION_RE = re.compile(
     r"^##\s*Snippet Requests\s*\n", re.MULTILINE
 )
 
 
-def _parse(text: str) -> tuple[str, str]:
+def _normalize_confidence(raw: str) -> Confidence:
+    """Coerce the captured Confidence line to the enum.
+
+    The agent is told to emit exactly one of high/medium/low, but may
+    disobey and append prose ("high — because ..."). Take the leading
+    enum word; a non-conforming value falls back to ``low`` (conservative
+    — a prose value used to silently fail the policy floor and downgrade
+    the tier to MANUAL; ``low`` is explicit rather than accidental).
+    """
+    m = _CONFIDENCE_LEAD_RE.match(raw.strip().lower())
+    return m.group(1) if m else "low"  # type: ignore[return-value]
+
+
+def _parse(text: str) -> tuple[str, Confidence]:
     classification = ""
-    confidence = ""
+    confidence: Confidence = "low"
     if m := _CLASSIFICATION_RE.search(text):
         classification = m.group(1).strip().lower()
     if m := _CONFIDENCE_RE.search(text):
-        confidence = m.group(1).strip().lower()
+        confidence = _normalize_confidence(m.group(1))
     return classification, confidence
 
 

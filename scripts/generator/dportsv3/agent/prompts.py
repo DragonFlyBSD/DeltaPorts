@@ -89,7 +89,8 @@ One of: dragonfly-specific, freebsd-upstream, generic
 Concrete DeltaPorts-style fix plan.
 
 ## Confidence
-One of: high, medium, low
+Exactly one word — `high`, `medium`, or `low`. Nothing else on this line:
+no explanation, no punctuation, no dash.
 
 ## Notes
 Optional.
