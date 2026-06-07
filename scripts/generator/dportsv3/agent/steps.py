@@ -353,7 +353,23 @@ class TriageStep:
         # service callback runs with apply_lifecycle=False; we emit
         # TRIAGE_DEFER through StepOutcome so the orchestrator
         # wrapper walks lifecycle once.
-        if services.maybe_defer_to_convert is not None:
+        # Resolve env once (needed for the slave probe here, the defer
+        # skip below, and env_health in decide()). Slave ports can't be
+        # auto-fixed by the per-origin dops pipeline, so refuse them to
+        # MANUAL *before* the convert-defer — otherwise a slave takes a
+        # pointless bootstrap/convert detour and is only refused on
+        # retriage. Fail-open: probe errors treat the port as non-slave.
+        from dportsv3.agent import runner as _runner  # noqa: PLC0415
+        runner_env_name = _runner.resolve_env(job) or ""
+        is_slave = False
+        if runner_env_name:
+            try:
+                from dportsv3.agent import worker as _worker  # noqa: PLC0415
+                is_slave = _worker.is_slave_port(runner_env_name, origin)
+            except Exception:
+                is_slave = False
+
+        if not is_slave and services.maybe_defer_to_convert is not None:
             try:
                 deferred = services.maybe_defer_to_convert(
                     queue_root=queue_root, job=job, job_path=job_path,
@@ -404,26 +420,14 @@ class TriageStep:
         target_value = job.get("target", "") or ""
         history = services.load_port_history(target_value, origin, window_hours)
 
+        # env + is_slave were resolved above (before the convert-defer).
         env_health = None
-        from dportsv3.agent import runner as _runner  # noqa: PLC0415
-        runner_env_name = _runner.resolve_env(job) or ""
         if runner_env_name:
             health_ttl = int(os.environ.get("DP_HARNESS_HEALTH_CACHE_SECONDS", "60"))
             try:
                 env_health = services.probe_health_cached(runner_env_name, health_ttl)
             except Exception:
                 env_health = None
-
-        # Slave ports can't be auto-fixed by the per-origin dops pipeline
-        # (the fix usually belongs in the master); refuse ASSIST and route
-        # to MANUAL. Fail-open: probe errors return False.
-        is_slave = False
-        if runner_env_name:
-            try:
-                from dportsv3.agent import worker as _worker  # noqa: PLC0415
-                is_slave = _worker.is_slave_port(runner_env_name, origin)
-            except Exception:
-                is_slave = False
 
         dec = decide(
             classification=result.classification,
