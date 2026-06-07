@@ -1,0 +1,13 @@
+target @any
+port shells/yash
+type port
+reason "DragonFly needs ncurses USES and OS detection in configure"
+
+mk add USES ncurses
+
+file materialize dragonfly/patch-common.h -> dragonfly/patch-common.h
+
+mk target set post-extract <<'MK'
+	@${REINPLACE_CMD} -e '/case "$${ostype}"/,/esac/ s,freebsd),freebsd|dragonfly),' \
+		${WRKSRC}/configure
+MK
