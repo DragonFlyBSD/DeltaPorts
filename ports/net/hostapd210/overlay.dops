@@ -1,0 +1,6 @@
+target @any
+port net/hostapd210
+type port
+reason "Avoid ether_sprintf clash with DragonFly system header in src/drivers/driver_bsd.c"
+
+file materialize dragonfly/patch-src_drivers_driver__bsd_ether_sprintf -> dragonfly/patch-src_drivers_driver__bsd_ether_sprintf

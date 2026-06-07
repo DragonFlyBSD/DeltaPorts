@@ -1,0 +1,14 @@
+--- src/drivers/driver_bsd.c.orig
++++ src/drivers/driver_bsd.c
+@@ -917,7 +917,12 @@ static int bsd_sta_deauth(void *priv, const u8 *own_addr, const u8 *addr,
+ 			  u16 reason_code);
+ 
+ static const char *
++/* Avoid clash with DragonFly system header */
++#ifdef __DragonFly__
++#define ether_sprintf bsd_ether_sprintf
++#endif
++
+ ether_sprintf(const u8 *addr)
+ {
+ 	static char buf[sizeof(MACSTR)];
