@@ -1,0 +1,6 @@
+target @any
+port archivers/arc
+type port
+reason "DragonFly has timelocal(); disable the tmclock fallback in arcdos.c"
+
+file materialize dragonfly/patch-arcdos.c -> dragonfly/patch-arcdos.c
