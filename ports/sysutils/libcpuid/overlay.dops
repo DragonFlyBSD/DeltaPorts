@@ -1,0 +1,4 @@
+port sysutils/libcpuid
+type port
+target @any
+reason "DragonFly support already upstreamed in libcpuid-0.8.1; patch obsolete"
