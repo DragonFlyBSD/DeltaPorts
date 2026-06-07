@@ -1,0 +1,6 @@
+target @any
+port lang/erlang-runtime28
+type port
+reason "DragonFly lacks IPPROTO_SCTP in <netinet/in.h>; define it to the IANA protocol number (132)"
+
+mk add CFLAGS "-DIPPROTO_SCTP=132"
