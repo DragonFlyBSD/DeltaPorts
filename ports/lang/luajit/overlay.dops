@@ -1,0 +1,5 @@
+port lang/luajit
+type port
+target @any
+reason "DragonFly-specific memory allocation adjustments for pre-5.5 compat: MAP_TRYFIXED, rlimit handling, region-start tuning. Upstream 2.1.0.20260304 has restructured lj_alloc.c with probing allocator; most old hunks are obsolete. Retaining only the rlimit hack for DragonFly >= 5.5 if needed."
+
