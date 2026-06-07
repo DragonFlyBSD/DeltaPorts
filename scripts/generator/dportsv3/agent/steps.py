@@ -414,12 +414,24 @@ class TriageStep:
             except Exception:
                 env_health = None
 
+        # Slave ports can't be auto-fixed by the per-origin dops pipeline
+        # (the fix usually belongs in the master); refuse ASSIST and route
+        # to MANUAL. Fail-open: probe errors return False.
+        is_slave = False
+        if runner_env_name:
+            try:
+                from dportsv3.agent import worker as _worker  # noqa: PLC0415
+                is_slave = _worker.is_slave_port(runner_env_name, origin)
+            except Exception:
+                is_slave = False
+
         dec = decide(
             classification=result.classification,
             confidence=result.confidence,
             history=history,
             env_health=env_health,
             policy=pol,
+            is_slave=is_slave,
             max_attempts=max_attempts,
             window_hours=window_hours,
             bundle_backstop=bundle_backstop,

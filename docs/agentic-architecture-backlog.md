@@ -2178,3 +2178,32 @@ Step 40, there remain visible gaps that a generic surface would close
 > resolve the fork once (see Step 42's decision gate), don't build
 > both.
 
+### Step 43 — master/slave-aware dops support — pending
+
+The whole dops pipeline (classify, compose, diff, routing) is
+per-origin and has no `MASTERDIR` model. A slave port's fix usually
+belongs in the master's `PATCHDIR`/`overlay.dops`, which the per-origin
+flow can neither author nor verify: `classify_dops(slave)` reads the
+slave dir and returns `not_in_scope`, and compose materializes per
+origin so a master-located overlay wouldn't apply to a slave build.
+
+Interim (shipped): triage refuses ASSIST on slave ports and routes
+them to MANUAL (`decision.decide(is_slave=...)` + `worker.is_slave_port`,
+which detects an explicit `MASTERDIR=` assignment in the composed
+Makefile). Safe but blunt — it over-escalates the slave-*local* fixes
+the agent could otherwise express in the slave's own `overlay.dops`.
+
+Proper fix to scope here:
+- Resolve `MASTERDIR` authoritatively (`make -V MASTERDIR`).
+- Decide overlay ownership: a master `overlay.dops` affects *all*
+  slaves of that master — is a per-slave failure the right trigger?
+- Make classify fall back to / union the master's artifacts, and
+  confirm compose materializes a master overlay for slave builds (or
+  decide slave-local overlays are the contract instead).
+- Only then relax the interim MANUAL refusal.
+
+#### Dependencies
+
+- Builds on the per-origin classify/compose; touches `overlay_state`,
+  `compose_discovery`/`plan_types`, and `decision`.
+

@@ -1374,6 +1374,32 @@ def reset_port(env: str, origin: str) -> dict:
     return result
 
 
+def is_slave_port(env: str, origin: str) -> bool:
+    """True if ``origin`` is a slave port (its Makefile sets ``MASTERDIR``).
+
+    Detected from the composed port Makefile rather than ``make -V
+    MASTERDIR`` to avoid invoking the ports framework: a slave's own
+    Makefile carries an explicit ``MASTERDIR=`` assignment (the standard
+    slave convention), and non-slaves never do. A bare ``MASTERDIR``
+    *mention* (e.g. ``.include "${MASTERDIR}/Makefile"``) is not enough —
+    we key on the assignment at line start.
+
+    Fail-open: any probe error (no cached target, missing Makefile,
+    grep error) returns False, so a hiccup never wrongly escalates a
+    normal port to MANUAL.
+    """
+    target = peek_env_target(env) or ""
+    if not target:
+        return False
+    mk = f"/work/artifacts/compose/{target}/{origin}/Makefile"
+    p = _exec(
+        env, "/bin/sh", "-c",
+        f"grep -qE '^MASTERDIR[[:space:]]*[?:]?=' {shlex.quote(mk)}",
+        cwd="/work/DeltaPorts",
+    )
+    return p.returncode == 0
+
+
 def _clean_port_workdir(env: str, origin: str) -> dict:
     """Best-effort ``make clean`` for ``<origin>``'s WRKDIR + cache
     invalidation. Used by :func:`reset_port` as the first stage —

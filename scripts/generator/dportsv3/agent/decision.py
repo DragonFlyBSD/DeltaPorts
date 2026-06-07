@@ -242,6 +242,7 @@ def decide(
     env_health,                  # dportsv3.agent.health.EnvHealth | None
     policy: Policy,
     *,
+    is_slave: bool = False,
     max_attempts: int = DEFAULT_MAX_ATTEMPTS,
     window_hours: int = DEFAULT_WINDOW_HOURS,
     bundle_backstop: int = DEFAULT_BUNDLE_BACKSTOP,
@@ -281,6 +282,22 @@ def decide(
             reason="env_broken: deferring decision until health is ready",
             extra={
                 "env_health_status": "broken",
+                "classification": classification,
+                "confidence": confidence,
+            },
+        )
+
+    # (1b) Slave-port short-circuit. The dops pipeline has no master/slave
+    # model: a slave's fix usually belongs in the master's PATCHDIR/overlay,
+    # which the per-origin classify/compose can neither author nor verify.
+    # Until that lands (backlog), refuse ASSIST and hand off to an operator.
+    if is_slave:
+        return Decision(
+            action="escalate_manual",
+            tier=_manual_tier(policy),
+            reason="slave_port_unsupported: inherits from master; no master-aware dops support",
+            extra={
+                "is_slave": True,
                 "classification": classification,
                 "confidence": confidence,
             },
