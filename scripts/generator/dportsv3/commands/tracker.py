@@ -14,6 +14,7 @@ from typing import Any
 from dportsv3.common.io import emit_json
 from dportsv3.tracker.client import (
     compare_builds,
+    download_bundle,
     enqueue_ports,
     fetch_artifact,
     finish_build,
@@ -70,6 +71,8 @@ def cmd_tracker(args: Namespace) -> int:
         return _cmd_get_activity(args)
     if action == "fetch-artifact":
         return _cmd_fetch_artifact(args)
+    if action == "download-bundle":
+        return _cmd_download_bundle(args)
 
     print(f"Unknown tracker action: {action}", file=sys.stderr)
     return 1
@@ -417,6 +420,22 @@ def _cmd_get_activity(args: Namespace) -> int:
             message = row.get("message", "")
             ts = row.get("ts", row.get("created_at", "-"))
             print(f"{ts}  {stage:<24}  {message}")
+    return 0
+
+
+def _cmd_download_bundle(args: Namespace) -> int:
+    bundle_id = str(args.bundle_id)
+    out = Path(args.out) if getattr(args, "out", None) else Path("bundles") / bundle_id
+    try:
+        server = _resolve_server_url(args)
+        result = download_bundle(server, bundle_id, out)
+    except RuntimeError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+    print(
+        f"Wrote {result['artifact_count']} artifacts "
+        f"({result['bytes']} bytes) to {result['out_dir']}"
+    )
     return 0
 
 

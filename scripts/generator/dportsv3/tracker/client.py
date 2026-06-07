@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import Any
 from urllib import error, parse, request
 
@@ -287,6 +288,48 @@ def fetch_artifact(
             f"Tracker connection failed for artifact "
             f"{bundle_id}/{relpath}: {exc.reason}"
         ) from exc
+
+
+def download_bundle(
+    server_url: str, bundle_id: str, out_dir: Path,
+) -> dict[str, Any]:
+    """Materialize one bundle's full contents to ``out_dir``.
+
+    Writes ``meta.json`` (bundle row + jobs as returned by
+    ``GET /api/bundles/{id}?include=jobs``) and then every artifact
+    listed under ``artifacts`` into its ``relpath`` under ``out_dir``.
+
+    The result is a self-contained directory an analyzer agent can
+    point at without further tracker queries.
+
+    Returns ``{"bundle_id", "out_dir", "artifact_count", "bytes"}``.
+    """
+    import json as _json
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    meta = get_bundle(server_url, bundle_id, include_jobs=True)
+    (out_dir / "meta.json").write_text(
+        _json.dumps(meta, indent=2, default=str),
+        encoding="utf-8",
+    )
+
+    artifacts = meta.get("artifacts") or []
+    total_bytes = 0
+    for art in artifacts:
+        relpath = art.get("relpath")
+        if not relpath:
+            continue
+        data = fetch_artifact(server_url, bundle_id, relpath)
+        dest = out_dir / relpath
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(data)
+        total_bytes += len(data)
+    return {
+        "bundle_id": bundle_id,
+        "out_dir": str(out_dir),
+        "artifact_count": len(artifacts),
+        "bytes": total_bytes,
+    }
 
 
 def _request_json(

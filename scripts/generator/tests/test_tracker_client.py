@@ -234,3 +234,60 @@ def test_get_bundle_without_include_jobs_omits_query(monkeypatch):
     monkeypatch.setattr(client.request, "urlopen", _fake)
     client.get_bundle("http://t", "b-1")
     assert "include" not in captured["url"]
+
+
+def test_download_bundle_writes_meta_and_artifacts(monkeypatch, tmp_path):
+    """``download_bundle`` should fetch the bundle detail (with jobs),
+    write ``meta.json``, then materialize every artifact under its
+    relpath inside the out dir."""
+    import json as _json
+
+    # First call is the bundle detail (urlopen called with a Request).
+    # Subsequent calls are fetch_artifact (urlopen called with a URL str).
+    meta_payload = {
+        "bundle_id": "b-1",
+        "origin": "devel/foo",
+        "jobs": [{"job_id": "j-1"}],
+        "artifacts": [
+            {"relpath": "analysis/triage.md", "size": 5},
+            {"relpath": "logs/errors.txt", "size": 6},
+            {"relpath": "analysis/sessions/x.jsonl.gz", "size": 7},
+        ],
+    }
+    bytes_by_relpath = {
+        "analysis/triage.md": b"hello",
+        "logs/errors.txt": b"errors",
+        "analysis/sessions/x.jsonl.gz": b"gz-raw\n",
+    }
+    calls: list[str] = []
+
+    def _fake(arg):
+        if hasattr(arg, "full_url"):
+            calls.append(arg.full_url)
+            return _FakeResponse(_json.dumps(meta_payload))
+        calls.append(arg)
+        # arg is the artifact URL; pick relpath off the tail.
+        for rel, payload in bytes_by_relpath.items():
+            if arg.endswith("/artifacts/" + rel):
+                return _FakeResponse(payload.decode("utf-8", errors="replace"))
+        raise AssertionError(f"unexpected url {arg!r}")
+
+    monkeypatch.setattr(client.request, "urlopen", _fake)
+
+    out = tmp_path / "b-1"
+    result = client.download_bundle("http://t", "b-1", out)
+
+    assert result == {
+        "bundle_id": "b-1",
+        "out_dir": str(out),
+        "artifact_count": 3,
+        "bytes": sum(len(v) for v in bytes_by_relpath.values()),
+    }
+    meta = _json.loads((out / "meta.json").read_text())
+    assert meta["bundle_id"] == "b-1"
+    assert meta["jobs"] == [{"job_id": "j-1"}]
+    assert (out / "analysis/triage.md").read_bytes() == b"hello"
+    assert (out / "logs/errors.txt").read_bytes() == b"errors"
+    assert (out / "analysis/sessions/x.jsonl.gz").read_bytes() == b"gz-raw\n"
+    # First call must be the bundle detail with include=jobs.
+    assert "include=jobs" in calls[0]

@@ -602,6 +602,18 @@ def _register_tracker_parser(subparsers: argparse._SubParsersAction) -> None:
     )
     fetch_artifact_p.add_argument("--server", type=str)
 
+    download_bundle_p = tracker_sub.add_parser(
+        "download-bundle",
+        help="Materialize one bundle's full contents (meta.json + all "
+             "artifacts) into a local directory for offline analysis",
+    )
+    download_bundle_p.add_argument("bundle_id", type=str)
+    download_bundle_p.add_argument(
+        "--out", type=str, default=None,
+        help="Output directory (default: ./bundles/<bundle_id>)",
+    )
+    download_bundle_p.add_argument("--server", type=str)
+
 
 def _register_artifact_store_parser(subparsers: argparse._SubParsersAction) -> None:
     """Register artifact-store command (serves bundles into state.db).
