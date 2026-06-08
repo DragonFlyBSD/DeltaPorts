@@ -192,6 +192,55 @@ def test_token_usage_tolerates_invalid_extra_json(seeded):
     assert out["prompt_tokens"] == 86_000
 
 
+def test_token_usage_pre_h4_rows_degrade_billable_to_total(seeded):
+    """The seeded rows predate H4 (no cached_tokens). cached must be 0
+    and billable must fall back to total — never under-report cost on
+    old jobs."""
+    conn = sqlite3.connect(str(seeded))
+    conn.row_factory = sqlite3.Row
+    out = token_usage_for_job(conn, "job-active")
+    assert out["cached_tokens"] == 0
+    assert out["billable_tokens"] == out["total_tokens"] == 87_350
+
+
+def test_token_usage_aggregates_cached_and_billable(seeded):
+    """H4 rows carry cached_tokens; the card sums cached and derives
+    billable = (prompt - cached) + completion (the real cost)."""
+    conn = sqlite3.connect(str(seeded))
+    conn.row_factory = sqlite3.Row
+    conn.execute(
+        """INSERT INTO jobs
+           (job_id, state, type, origin, flavor, bundle_dir,
+            created_ts_utc, path, last_seen_at, target)
+           VALUES ('job-h4', 'patching', 'patch', 'databases/redis74', '', '',
+                   ?, '', ?, '@2026Q2')""",
+        (_now(), _now()),
+    )
+    # Two cache-dominated turns (the redis74 shape): huge prompt, almost
+    # all cached, tiny real cost.
+    for turn, (p, c, cached) in enumerate(
+        [(92915, 107, 92672), (90000, 200, 89500)], start=1
+    ):
+        conn.execute(
+            """INSERT INTO activity_log
+               (ts, job_id, stage, message, extra_json)
+               VALUES (?, 'job-h4', 'llm_turn', 'x', ?)""",
+            (_now(), json.dumps({
+                "attempt": 1, "turn": turn,
+                "prompt_tokens": p, "completion_tokens": c,
+                "total_tokens": p + c, "cached_tokens": cached,
+            })),
+        )
+    conn.commit()
+    out = token_usage_for_job(conn, "job-h4")
+    assert out["prompt_tokens"] == 182_915
+    assert out["completion_tokens"] == 307
+    assert out["total_tokens"] == 183_222
+    assert out["cached_tokens"] == 182_172
+    # (92915-92672) + (90000-89500) + 307 = 243 + 500 + 307 = 1050.
+    assert out["billable_tokens"] == 1_050
+
+
 # --- activity_for_job since_id cursor ---------------------------------------
 
 

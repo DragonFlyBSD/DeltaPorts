@@ -19,7 +19,14 @@
 {% set sort_p = (a.extra.prompt_tokens or 0) if is_llm_turn and a.extra is mapping else -1 %}
 {% set sort_c = (a.extra.completion_tokens or 0) if is_llm_turn and a.extra is mapping else -1 %}
 {% set sort_t = (a.extra.total_tokens or 0) if is_llm_turn and a.extra is mapping else -1 %}
-{% set sort_cum = (a.extra.cumulative_total_tokens or 0) if is_llm_turn and a.extra is mapping else -1 %}
+{# Cum column tracks cumulative *billable* (real running cost), not the
+   re-billed cumulative total. Pre-H4 rows lack it → fall back to the
+   total so old jobs don't read 0. #}
+{% set cum_billable = (a.extra.cumulative_billable_tokens
+    if (a.extra.cumulative_billable_tokens is defined
+        and a.extra.cumulative_billable_tokens is not none)
+    else a.extra.cumulative_total_tokens) if a.extra is mapping else none %}
+{% set sort_cum = (cum_billable or 0) if is_llm_turn and a.extra is mapping else -1 %}
 {% if is_attempt_start %}{% set row_class = 'activity-attempt-start' %}
 {% elif is_attempt_end %}{% set row_class = 'activity-attempt-end' %}
 {% elif is_decision %}{% set row_class = 'activity-decision' %}
@@ -38,7 +45,7 @@
     <td class="tok">{{ '{:,}'.format(a.extra.prompt_tokens or 0) }}</td>
     <td class="tok">{{ '{:,}'.format(a.extra.completion_tokens or 0) }}</td>
     <td class="tok">{{ '{:,}'.format(a.extra.total_tokens or 0) }}</td>
-    <td class="tok">{{ '{:,}'.format(a.extra.cumulative_total_tokens or 0) }}</td>
+    <td class="tok">{{ '{:,}'.format(cum_billable or 0) }}</td>
     <td class="tool-list">
       {% if a.extra.tools_requested %}
         → {{ a.extra.tools_requested|join(', ') }}

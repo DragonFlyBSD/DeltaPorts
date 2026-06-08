@@ -148,6 +148,8 @@ def test_patch_dispatcher_routes_llm_turn_to_activity_log():
         "attempt": 2, "turn": 5,
         "prompt_tokens": 8000, "completion_tokens": 250,
         "total_tokens": 8250, "cumulative_total_tokens": 425000,
+        "cached_tokens": 7800, "billable_tokens": 450,
+        "cumulative_billable_tokens": 12000,
         "tools_requested": ["get_file", "list_dir"],
         "text_only": False,
     })
@@ -158,13 +160,16 @@ def test_patch_dispatcher_routes_llm_turn_to_activity_log():
     assert "A2.T5" in msg
     assert "in=8000" in msg
     assert "out=250" in msg
-    assert "total=8250" in msg
-    assert "cumulative=425000" in msg
+    # Real-cost numbers headline the row, not the re-billed total.
+    assert "cached=7800" in msg
+    assert "billable=450" in msg
+    assert "cum_billable=12000" in msg
     assert "get_file" in msg or "list_dir" in msg
     # Raw event payload preserved in extra for analytics.
     extra = rows[0]["extra"]
     assert extra["prompt_tokens"] == 8000
     assert extra["completion_tokens"] == 250
+    assert extra["billable_tokens"] == 450
 
 
 def test_patch_dispatcher_marks_text_only_turns():

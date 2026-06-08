@@ -155,7 +155,16 @@ def run(
                     "type": "attempt_start",
                     "attempt": attempt_idx,
                     "iterations": iterations,
-                    "tokens_used_so_far": total_usage.total_tokens,
+                    # `tokens_used_so_far` is the number the budget gate
+                    # actually enforces on (billable = uncached prompt +
+                    # completion). Reporting total here made the display
+                    # show the re-billed cached prefix (millions) while
+                    # the gate compared billable (thousands) — alarming
+                    # and wrong. Carry total + cached alongside for the
+                    # UI breakdown.
+                    "tokens_used_so_far": total_usage.billable_tokens,
+                    "total_tokens_so_far": total_usage.total_tokens,
+                    "cached_tokens_so_far": total_usage.cached_tokens,
                     "budget": budget,
                 })
             except Exception:

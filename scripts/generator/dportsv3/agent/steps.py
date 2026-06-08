@@ -144,13 +144,25 @@ class PatchEventDispatcher:
             # dominates because conversation history compounds with
             # every tool result; this row makes that visible.
             tools_str = ",".join(ev.get("tools_requested") or []) or "(text-only)"
+            # billable/cumulative-billable are the real-cost numbers
+            # (uncached prompt + completion). Fall back to total for any
+            # pre-H4 event that didn't carry them, so the row never
+            # prints "None".
+            cached = ev.get("cached_tokens") or 0
+            billable = ev.get("billable_tokens")
+            if billable is None:
+                billable = ev.get("total_tokens") or 0
+            cum_billable = ev.get("cumulative_billable_tokens")
+            if cum_billable is None:
+                cum_billable = ev.get("cumulative_total_tokens") or 0
             self.activity_log(
                 self.queue_root, "llm_turn",
                 f"A{ev.get('attempt')}.T{ev.get('turn')} "
                 f"in={ev.get('prompt_tokens')} "
+                f"(cached={cached}) "
                 f"out={ev.get('completion_tokens')} "
-                f"total={ev.get('total_tokens')} "
-                f"cumulative={ev.get('cumulative_total_tokens')} "
+                f"billable={billable} "
+                f"cum_billable={cum_billable} "
                 f"→ {tools_str}",
                 job_id=self.job_id,
                 extra={k: v for k, v in ev.items() if k != "type"},

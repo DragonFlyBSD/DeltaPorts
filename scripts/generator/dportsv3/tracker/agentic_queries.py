@@ -537,12 +537,15 @@ def token_usage_for_job(
             "prompt_tokens": 0,
             "completion_tokens": 0,
             "total_tokens": 0,
+            "cached_tokens": 0,
+            "billable_tokens": 0,
             "llm_turns": 0,
             "largest_turn": None,
         }
     prompt_sum = 0
     completion_sum = 0
     total_sum = 0
+    cached_sum = 0
     largest: dict[str, Any] | None = None
     for row in rows:
         raw = row[0] if not hasattr(row, "keys") else row["extra_json"]
@@ -557,9 +560,13 @@ def token_usage_for_job(
         p = int(extra.get("prompt_tokens") or 0)
         c = int(extra.get("completion_tokens") or 0)
         t = int(extra.get("total_tokens") or 0)
+        # cached_tokens is absent on pre-H4 rows → treated as 0, so
+        # billable degrades to total (the old, conservative number).
+        cached = int(extra.get("cached_tokens") or 0)
         prompt_sum += p
         completion_sum += c
         total_sum += t
+        cached_sum += cached
         if largest is None or p > largest["prompt_tokens"]:
             largest = {
                 "turn": extra.get("turn"),
@@ -569,11 +576,17 @@ def token_usage_for_job(
                 "total_tokens": t,
                 "tools_requested": extra.get("tools_requested") or [],
             }
+    # billable = uncached prompt + completion (what the budget enforces
+    # on and what the run actually costs). Clamp the prompt-minus-cached
+    # term at 0 to defend against any provider over-reporting cached.
+    billable_sum = max(0, prompt_sum - cached_sum) + completion_sum
     return {
         "has_data": True,
         "prompt_tokens": prompt_sum,
         "completion_tokens": completion_sum,
         "total_tokens": total_sum,
+        "cached_tokens": cached_sum,
+        "billable_tokens": billable_sum,
         "llm_turns": len(rows),
         "largest_turn": largest,
     }
