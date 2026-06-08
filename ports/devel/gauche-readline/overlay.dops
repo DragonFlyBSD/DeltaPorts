@@ -1,0 +1,5 @@
+target @any
+port devel/gauche-readline
+type port
+reason "absorb diffs/Makefile.diff into dops (Step 47 Phase 2)"
+mk set GAUCHE_LIBDIR "share/gauche/site/lib"

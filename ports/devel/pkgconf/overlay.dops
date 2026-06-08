@@ -1,0 +1,5 @@
+target @any
+port devel/pkgconf
+type port
+reason "absorb diffs/Makefile.diff into dops (Step 47 Phase 2)"
+mk set PORTEPOCH "2"

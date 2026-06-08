@@ -18,11 +18,23 @@ from __future__ import annotations
 import argparse
 import sys
 import tempfile
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from dportsv3.compose import run_compose
 from dportsv3.fsutils import diff_tree
+
+
+def makefile_whitespace_normalizer(rel: str, text: str) -> str:
+    """Content-exact normalizer for the Makefile absorption phase:
+    collapse intra-line whitespace runs to single spaces in the
+    composed ``Makefile`` (tab-vs-space around ``=`` is meaningless to
+    make), byte-exact for every other file. Order-preserving — a
+    relocated line still counts as a difference."""
+    if Path(rel).name != "Makefile":
+        return text
+    return "\n".join(" ".join(line.split()) for line in text.splitlines())
 
 
 @dataclass
@@ -88,11 +100,14 @@ def check_parity(
     candidate_root: Path,
     freebsd_root: Path,
     lock_root: Path | None = None,
+    normalize: Callable[[str, str], str] | None = None,
 ) -> ParityResult:
     """Compose ``origin`` from both roots and compare the port subtree.
 
     ``equal`` is True only when both composes succeed and the composed
-    ``<origin>`` subtrees are byte-identical."""
+    ``<origin>`` subtrees match. With ``normalize=None`` the match is
+    byte-exact; pass ``makefile_whitespace_normalizer`` for the
+    content-exact Makefile-absorption gate."""
     with (
         tempfile.TemporaryDirectory(prefix="dp-parity-base-") as bdir,
         tempfile.TemporaryDirectory(prefix="dp-parity-cand-") as cdir,
@@ -123,7 +138,9 @@ def check_parity(
                 error="compose failed (see compose report)",
             )
 
-        diffs = diff_tree(Path(bdir) / origin, Path(cdir) / origin)
+        diffs = diff_tree(
+            Path(bdir) / origin, Path(cdir) / origin, normalize=normalize
+        )
         return ParityResult(
             origin=origin,
             target=target,

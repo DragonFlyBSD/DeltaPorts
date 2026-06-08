@@ -1,0 +1,5 @@
+target @any
+port net/ipdecap
+type port
+reason "absorb diffs/Makefile.diff into dops (Step 47 Phase 2)"
+mk set LIB_DEPENDS "libpcap.so.1:net/libpcap	# require ports libpcap"

@@ -1,0 +1,5 @@
+target @any
+port games/fortunate
+type port
+reason "absorb diffs/Makefile.diff into dops (Step 47 Phase 2)"
+mk set MASTER_SITES "https://broken_for_developer_mode.z/"

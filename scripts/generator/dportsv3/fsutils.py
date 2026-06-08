@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import shutil
+from collections.abc import Callable
 from filecmp import cmpfiles, dircmp
 from pathlib import Path
 
@@ -26,7 +27,12 @@ class _DeepDircmp(dircmp):
         self.same_files, self.diff_files, self.funny_files = same, diff, funny
 
 
-def diff_tree(left: Path, right: Path) -> list[tuple[str, str]]:
+def diff_tree(
+    left: Path,
+    right: Path,
+    *,
+    normalize: Callable[[str, str], str] | None = None,
+) -> list[tuple[str, str]]:
     """Content-aware recursive comparison of two trees.
 
     Returns ``(classification, relpath)`` pairs for every entry that is
@@ -39,6 +45,13 @@ def diff_tree(left: Path, right: Path) -> list[tuple[str, str]]:
       with ``shallow=False``, so mtime/size alone never count).
     - ``funny`` — type mismatch or unreadable on one side.
 
+    ``normalize(relpath, text) -> text`` optionally relaxes the content
+    comparison: a file flagged byte-different is re-checked after
+    normalizing both sides, and dropped if equal. Used by the Makefile
+    absorption phase to accept whitespace-only divergence in the
+    ``Makefile`` while staying byte-exact for every other file. A file
+    that can't be read as text (or normalize raises) stays a difference.
+
     Reuses ``_DeepDircmp`` so classification is content-based, matching
     ``reconcile``. Used by the compose-parity oracle (one side composed
     from the baseline tree, the other from the candidate tree)."""
@@ -48,21 +61,47 @@ def diff_tree(left: Path, right: Path) -> list[tuple[str, str]]:
         if left.is_dir() != right.is_dir():
             out.append(("only_left" if left.is_dir() else "only_right", "."))
         return out
-    _diff_pair(_DeepDircmp(str(left), str(right)), Path(), out)
+    _diff_pair(_DeepDircmp(str(left), str(right)), Path(), left, right, normalize, out)
     return out
 
 
-def _diff_pair(cmp: dircmp, rel: Path, out: list[tuple[str, str]]) -> None:
+def _content_equal_after_normalize(
+    rel: str,
+    left_file: Path,
+    right_file: Path,
+    normalize: Callable[[str, str], str],
+) -> bool:
+    try:
+        lt = left_file.read_text()
+        rt = right_file.read_text()
+    except (OSError, UnicodeDecodeError):
+        return False
+    return normalize(rel, lt) == normalize(rel, rt)
+
+
+def _diff_pair(
+    cmp: dircmp,
+    rel: Path,
+    left: Path,
+    right: Path,
+    normalize: Callable[[str, str], str] | None,
+    out: list[tuple[str, str]],
+) -> None:
     for name in sorted(cmp.left_only):
         out.append(("only_left", str(rel / name)))
     for name in sorted(cmp.right_only):
         out.append(("only_right", str(rel / name)))
     for name in sorted(cmp.diff_files):
-        out.append(("content", str(rel / name)))
+        relpath = str(rel / name)
+        if normalize is not None and _content_equal_after_normalize(
+            relpath, left / name, right / name, normalize
+        ):
+            continue
+        out.append(("content", relpath))
     for name in sorted({*cmp.common_funny, *cmp.funny_files}):
         out.append(("funny", str(rel / name)))
     for name, sub in sorted(cmp.subdirs.items()):
-        _diff_pair(sub, rel / name, out)
+        _diff_pair(sub, rel / name, left / name, right / name, normalize, out)
 
 
 def copy_tree(src: Path, dst: Path) -> None:

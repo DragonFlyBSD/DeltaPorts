@@ -1,0 +1,5 @@
+target @any
+port databases/powerarchitect
+type port
+reason "absorb diffs/Makefile.diff into dops (Step 47 Phase 2)"
+mk set MYSQL_JDBC_RUN_DEPENDS "${JAVALIBDIR}/mysql-connector-java.jar:databases/mysql-connector-j"

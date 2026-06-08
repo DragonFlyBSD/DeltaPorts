@@ -1,0 +1,6 @@
+target @any
+port editors/fileobj
+type port
+reason "absorb diffs/Makefile.diff into dops (Step 47 Phase 2)"
+mk add USES gettext-runtime
+mk remove USE_PYTHON optsuffix
