@@ -2872,9 +2872,17 @@ def _maybe_defer_to_convert(
             log(queue_root, "WARN", f"activity_log failed in invariant-break: {exc}")
         return None
 
-    if assessment.action != "defer_to_convert":
-        # converted / stale / not_in_scope all mean "no conversion
-        # needed". Let triage run.
+    if assessment.action != "defer_to_convert" and state != "not_in_scope":
+        # `converted` / `stale` mean "no conversion needed" — let triage
+        # run. `not_in_scope` is the exception: we only reach assess
+        # because this port produced a build failure, so it exists
+        # upstream even when it has NO DeltaPorts overlay directory at
+        # all (assess reports action=proceed_triage for that — it can't
+        # see upstream). Route it to convert anyway so convert bootstraps
+        # a header overlay (creating the dir if absent); the port then
+        # classifies `converted` and retriage -> patch fills the body.
+        # A port that's genuinely absent upstream won't survive
+        # compose/patch and escalates with a handoff. (Option A.)
         return None
 
     prior_convert = _bundle_convert_succeeded(bundle_id)
@@ -3854,6 +3862,10 @@ def _bootstrap_empty_overlay(port_dir: Path, origin: str) -> None:
         'reason "bootstrapped: no prior DragonFly delta; '
         'overlay opened for patch"\n'
     )
+    # The DeltaPorts overlay dir may not exist for a pure-upstream port
+    # that has never carried DragonFly delta — create it so the header
+    # can be written (Option A).
+    port_dir.mkdir(parents=True, exist_ok=True)
     (port_dir / "overlay.dops").write_text(body)
 
 
@@ -3955,17 +3967,17 @@ def process_convert_job(
         # is already reached.
         return True, "already converted"
     if state == "not_in_scope":
-        # Step 44: a port with no DragonFly delta. If the dir exists,
-        # bootstrap an empty overlay.dops header (deterministic — there
-        # is nothing to translate) so the port classifies `converted`
-        # and the retriage -> patch flow can fill the body. Convert does
-        # not fix; it just opens the substrate. Verify via reapply (no
-        # build — _verify_conversion only checks compose acceptance, which
-        # a header-only overlay passes as a no-op). A missing dir has
-        # nothing convert can do.
+        # Step 44 / Option A: a port with no DragonFly delta. Bootstrap a
+        # header-only overlay.dops (deterministic — nothing to translate)
+        # so the port classifies `converted` and the retriage -> patch
+        # flow fills the body. The DeltaPorts overlay dir may not exist
+        # yet (pure-upstream port that's never had delta);
+        # _bootstrap_empty_overlay creates it. We reach here only because
+        # the port produced a build failure, so it exists upstream — a
+        # genuinely-absent port's header overlay won't survive
+        # compose/patch and escalates with a handoff. Verify via reapply
+        # (no build — a header-only overlay passes as a no-op).
         port_dir = repo_root / "ports" / origin
-        if not port_dir.is_dir():
-            return False, "port not in dops scope (port directory missing)"
         _bootstrap_empty_overlay(port_dir, origin)
         return _verify_conversion(job, origin, allow_empty_overlay=True)
     if state == "stale":

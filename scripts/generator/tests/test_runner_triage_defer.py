@@ -264,11 +264,14 @@ def test_defer_for_empty_scope_port(
     assert "deferred_for_convert" in status
 
 
-def test_no_defer_for_missing_port_dir(
+def test_defer_for_missing_port_dir(
     tmp_path: Path, monkeypatch, state_db
 ) -> None:
-    """Step 44: a port with no directory at all has nothing convert can
-    bootstrap — triage proceeds as usual (no defer)."""
+    """Option A: a port with no DeltaPorts overlay directory still
+    defers to convert. We only reach here because the port produced a
+    build failure, so it exists upstream — convert bootstraps a header
+    overlay (creating the dir). A genuinely-absent port's overlay won't
+    survive compose/patch and escalates later with a handoff."""
     repo = _make_repo(tmp_path)  # ports/ exists, but devel/ghost does not
     monkeypatch.setenv("DP_HARNESS_REPO_ROOT", str(repo))
 
@@ -278,7 +281,9 @@ def test_no_defer_for_missing_port_dir(
         job_path=Path("/tmp/x.job"),
         origin="devel/ghost",
     )
-    assert result is None
+    assert result is not None
+    _success, status = result
+    assert "deferred_for_convert" in status
 
 
 def test_missing_env_logs_dops_assessment_skip(

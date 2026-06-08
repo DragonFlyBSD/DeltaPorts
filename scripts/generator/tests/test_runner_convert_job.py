@@ -932,14 +932,28 @@ def test_process_convert_job_requires_dev_env(
     assert "no dev-env resolved" in status
 
 
-def test_process_convert_job_missing_port_dir(
+def test_process_convert_job_bootstraps_when_dir_absent(
     tmp_path: Path, monkeypatch
 ) -> None:
-    """Step 44: no port directory at all → nothing to bootstrap; the
-    handler refuses with a clear status."""
+    """Option A: a pure-upstream port with no DeltaPorts overlay dir
+    still gets bootstrapped — convert creates the dir + header overlay
+    and verifies via reapply. (We're here because the port failed to
+    build, so it exists upstream.)"""
     repo = _make_repo(tmp_path)  # devel/ghost dir intentionally absent
     monkeypatch.setenv("DP_HARNESS_REPO_ROOT", str(repo))
     monkeypatch.setattr(runner_mod, "_CLI_ENV_DEFAULT", "test-env")
+
+    from dportsv3.agent import worker
+    monkeypatch.setattr(worker, "materialize_dports",
+                        lambda env, origin: {"ok": True, "rc": 0})
+    monkeypatch.setattr(worker, "materialize_dports_with_report",
+                        lambda env, origin: {"ok": True, "rc": 0, "report": None})
+    monkeypatch.setattr(
+        worker, "commit_port_changes",
+        lambda env, origin, message: {
+            "ok": True, "committed": True, "origin": origin,
+            "paths_changed": [f"ports/{origin}"]},
+    )
 
     success, status = process_convert_job(
         queue_root=tmp_path / "queue",
@@ -947,8 +961,10 @@ def test_process_convert_job_missing_port_dir(
         sibling_paths=[],
         job={"origin": "devel/ghost", "target": "@main"},
     )
-    assert not success
-    assert "port directory missing" in status
+    assert success, status
+    overlay = repo / "ports" / "devel" / "ghost" / "overlay.dops"
+    assert overlay.exists()  # dir + header created from nothing
+    assert "port devel/ghost" in overlay.read_text()
 
 
 def test_process_convert_job_bootstraps_empty_scope(
