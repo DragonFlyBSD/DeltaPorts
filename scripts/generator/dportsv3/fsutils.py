@@ -26,6 +26,45 @@ class _DeepDircmp(dircmp):
         self.same_files, self.diff_files, self.funny_files = same, diff, funny
 
 
+def diff_tree(left: Path, right: Path) -> list[tuple[str, str]]:
+    """Content-aware recursive comparison of two trees.
+
+    Returns ``(classification, relpath)`` pairs for every entry that is
+    not byte-identical between ``left`` and ``right``. An empty list
+    means the trees are equal. Classifications:
+
+    - ``only_left`` — present in ``left``, absent in ``right``.
+    - ``only_right`` — present in ``right``, absent in ``left``.
+    - ``content`` — present on both sides, content differs (compared
+      with ``shallow=False``, so mtime/size alone never count).
+    - ``funny`` — type mismatch or unreadable on one side.
+
+    Reuses ``_DeepDircmp`` so classification is content-based, matching
+    ``reconcile``. Used by the compose-parity oracle (one side composed
+    from the baseline tree, the other from the candidate tree)."""
+    left, right = Path(left), Path(right)
+    out: list[tuple[str, str]] = []
+    if not left.is_dir() or not right.is_dir():
+        if left.is_dir() != right.is_dir():
+            out.append(("only_left" if left.is_dir() else "only_right", "."))
+        return out
+    _diff_pair(_DeepDircmp(str(left), str(right)), Path(), out)
+    return out
+
+
+def _diff_pair(cmp: dircmp, rel: Path, out: list[tuple[str, str]]) -> None:
+    for name in sorted(cmp.left_only):
+        out.append(("only_left", str(rel / name)))
+    for name in sorted(cmp.right_only):
+        out.append(("only_right", str(rel / name)))
+    for name in sorted(cmp.diff_files):
+        out.append(("content", str(rel / name)))
+    for name in sorted({*cmp.common_funny, *cmp.funny_files}):
+        out.append(("funny", str(rel / name)))
+    for name, sub in sorted(cmp.subdirs.items()):
+        _diff_pair(sub, rel / name, out)
+
+
 def copy_tree(src: Path, dst: Path) -> None:
     """Copy one directory tree to destination path."""
     if dst.exists():
