@@ -1,0 +1,5 @@
+target @any
+port security/md5deep
+type port
+reason "absorb diffs/REMOVE into dops (Step 47 Phase 1)"
+file remove files/patch-src_hash.cpp on-missing noop

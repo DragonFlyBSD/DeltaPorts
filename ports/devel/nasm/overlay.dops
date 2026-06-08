@@ -1,0 +1,5 @@
+target @any
+port devel/nasm
+type port
+reason "absorb diffs/REMOVE into dops (Step 47 Phase 1)"
+file remove files/patch-output_outelf.c on-missing noop

@@ -1,0 +1,5 @@
+target @any
+port math/mate-calc
+type port
+reason "absorb diffs/REMOVE into dops (Step 47 Phase 1)"
+file remove files/patch-src_mate-calc-cmd.c on-missing noop
