@@ -2207,3 +2207,257 @@ Proper fix to scope here:
 - Builds on the per-origin classify/compose; touches `overlay_state`,
   `compose_discovery`/`plan_types`, and `decision`.
 
+### Step 44 — route empty-scope ports through convert (deterministic header bootstrap) — pending
+
+**Problem.** A port with no DeltaPorts delta classifies `not_in_scope`
+and *skips convert*, going straight to patch. The patch agent then faces
+a port with no `overlay.dops` at all — it has to *create* the overlay
+from nothing, which is the failure mode (durable-fix rate from a blank
+port is ~0). The fix it falls back to (writing `Makefile.DragonFly` /
+`dragonfly/*` compat artifacts) is now correctly rejected by the C1
+success gate (`classify_dops == "converted"` required).
+
+**Idea — convert produces the substrate, patch fills the body.** Convert
+never fixes; it is the phase that produces `overlay.dops`. For a normal
+port it translates *existing compat* → overlay. For a `not_in_scope`
+port it translates *nothing* → an `overlay.dops` whose **header is
+deterministically derived from facts convert already has**, and whose
+body is empty for patch to fill:
+
+```
+target @any
+port <origin>
+type port
+reason "bootstrapped: no prior DragonFly delta; overlay opened for patch"
+```
+
+No LLM, no source, no build, no patch tools — pure translation, the
+convert agent's existing job. The port then classifies `converted`, and
+the **existing** retriage → patch flow runs: patch fixes the build
+failure on a port that now *has* an overlay to edit (its documented
+"file exists → add ops" path instead of "create from blank"). The whole
+pipeline becomes uniform: every port goes convert → retriage → patch.
+
+This needs **no convert role/prompt/tool change** — convert stays a
+translator; it just stops skipping these ports and emits the header.
+
+**Verified current behaviour (the wiring to change):**
+
+- `overlay_state.assess` returns `not_in_scope` / `action="proceed_triage"`
+  for *both* sub-cases (missing dir, exists-but-empty); the
+  distinguishing fact `OverlayFacts.port_exists` is available but not
+  surfaced.
+- `runner._maybe_defer_to_convert` defers only on
+  `action == "defer_to_convert"`; `not_in_scope` falls through to patch.
+- `runner.process_convert_job` hard-bails: `if state == "not_in_scope":
+  return False, "port not in dops scope"`.
+- `dops._scan_one_port` returns `None` for exists-but-empty too.
+- Convert success already triggers `_resume_deferred_triage`
+  (`runner.py:5258`) → retriage → patch.
+
+**Mechanical changes (small, deterministic):**
+
+1. Surface `port_exists`; route exists-but-empty as `defer_to_convert`
+   (missing-dir stays an error/no-op).
+2. In `process_convert_job`, replace the `not_in_scope` bail (for the
+   exists case) with: write the 4-field header `overlay.dops` (header
+   fields from `job` origin/target + `type port` default + synthesized
+   reason), return success → `CONVERT_OK`.
+3. Handle `_scan_one_port` returning `None` for the empty port (the
+   bootstrap path doesn't need a migration record at all).
+
+**Known residual risk (not a blocker).** Filling the *body* still falls
+to patch, and patch authoring ops onto a header-only overlay is
+unproven (every observed patch-authored dops success started from a
+convert-provided overlay that already had real ops). But this is
+strictly better than today — patch hits its "file exists → add ops"
+path instead of "create from blank," and the pipeline is uniform. Real
+yield still depends on H4 (budget/payload).
+
+**Dependencies / ordering.**
+
+- **H2 (convert-fail writes `manual_handoff.md`) — done.** Prerequisite,
+  since more traffic now flows through convert.
+- Composes with Step 43 (slave refusal): slaves → MANUAL before convert;
+  remaining empty-scope ports → convert.
+
+#### Touchpoints
+
+- `overlay_state`, `runner._maybe_defer_to_convert`,
+  `runner.process_convert_job`, `dops._scan_one_port`. No convert
+  agent/prompt changes.
+
+
+### Step 46 — runner concurrency: parallel triage, serialized mutation per env — pending
+
+**Problem.** The queue runner is a single serial loop: claim one job
+batch → process it fully → claim the next (`runner.main`,
+`claim_next_job_batch` → `process_job`). Everything runs one-at-a-time,
+including triage. But triage is **read-only and LLM-bound** — it reads
+the bundle and calls the model to classify; it does not touch
+`overlay.dops`, does not materialize/compose, does not build. So a
+triage job spends almost all its wall-clock waiting on the LLM, and
+serializing those wastes throughput for no resource reason.
+
+**The real constraint is narrower than the loop implies.** Convert and
+patch mutate the shared writable `/work/DeltaPorts` checkout and run
+compose/dsynth, which hold a host-level lock (the `_gate_blocked()`
+dsynth gate). Two of them against the same dev-env would stomp each
+other's overlay edits and compose output — the same hazard the C2
+contamination fix addressed, but concurrent. So convert/patch **must**
+serialize per dev-env. Triage carries no such constraint.
+
+**Two independent levers (not mutually exclusive):**
+
+1. **Triage-phase concurrency.** Run a small worker pool / async lane
+   for the classify calls. The claim is already atomic via the
+   lifecycle `CLAIM` transition (`BEGIN IMMEDIATE`), so concurrent
+   workers won't double-claim. Bounded by LLM rate limits and
+   serialized `state.db` writes (WAL: concurrent reads, single writer).
+   Win is real but capped — it only speeds the read-only phase; jobs
+   still funnel into a single serialized convert/patch lane per env.
+
+2. **Scale across dev-envs.** Run one runner per independent env; each
+   has its own writable checkout + dsynth lock, so *everything*
+   parallelizes without touching the per-env mutation path. This is the
+   lower-risk throughput win (no concurrency bugs in the substrate
+   mutation code) and overlaps with Step 17 (remote runners). Cost is N
+   envs to provision/maintain.
+
+**Recommended shape.** Treat the loop as: a parallel triage stage
+(pool/async, env-agnostic) feeding a per-env serialized convert/patch
+lane. Horizontal scaling across envs (lever 2) is the bigger and safer
+win; triage-pool concurrency (lever 1) is cheap but buys less than it
+looks, because the expensive phases stay serial per env regardless.
+
+#### Touchpoints
+
+- `runner.main` (the serial `while True` claim/process loop),
+  `claim_next_job_batch`, `process_job`, the `_gate_blocked()` dsynth
+  gate, and the per-env writable-checkout assumption in convert/patch.
+- Overlaps with Step 17 (remote runners + auth) for the multi-env path.
+
+
+### Step 47 — absorb `diffs/` into dops: lane convergence by relationship-to-upstream — pending
+
+**Problem.** There is no uniform handling for the legacy `diffs/`
+overlay lane. The deterministic converter absorbs only the root
+`Makefile.DragonFly` fragment → `mk` ops; the entire `diffs/*.diff`
+family is still applied by the compat / script-parity path and kept on
+disk as opaque unified diffs. The result is three disconnected worlds
+for the same kind of change (raw diff applied by compat, an unused
+`patch.apply` DSL primitive, and a handful of hand/LLM-migrated ports
+that re-expressed pieces as `mk` / `text` / `file remove` ops). Two
+artifact classes are intrinsically special: a line-oriented manifest
+and a checksum file. Raw-diff handling is also the single largest source
+of `patch.apply` rejects feeding the Step 37 defer/repair machinery —
+big manifests plus upstream context drift → hunk rejects → defer →
+patch agent churn.
+
+Current `diffs/` inventory (shape + volume, tree-wide):
+
+| Artifact | Count | Relationship | Landing |
+|---|---|---|---|
+| `Makefile.diff` | ~183 | modificative | `mk.*` ops (apply → CST-diff vs upstream → emit) |
+| `pkg-plist.diff` | ~75 | modificative | `plist { + − }` set-delta (new op) |
+| `REMOVE` | ~27 | modificative | `file remove` |
+| `distinfo.diff` | ~11 | modificative | `distinfo { + ~ − }` set-delta, inline hashes (new op) |
+| `pkg-message.diff` | ~9 | modificative | `text` ops / materialize |
+| `*.in.diff` / misc text patch | ~12 | modificative, unstructured | explicit `patch apply`, body inlined, file deleted |
+
+The additive `dragonfly/` lane (~1797 ports: `patch-*`, `XFAIL`,
+`extra-*`) is **already** absorbed uniformly via `file materialize`
+and is not a problem to solve — it is the model the modificative side
+should converge *toward*, not away from.
+
+**Organizing principle — choose the lane by relationship to upstream,
+not by file type.**
+
+- **Additive** (upstream does not have the file: DragonFly's own
+  software patchset, extra payloads): the honest representation is a
+  **whole file**. Lands as `file materialize`. Nothing to track because
+  upstream doesn't carry it.
+- **Modificative** (upstream provides the file; DragonFly changes it:
+  Makefile, pkg-plist, distinfo, pkg-message): the **delta is the
+  intent** and tracking upstream matters. Lands as a **typed delta op**.
+
+This rule quarantines the only irreducible case — a *modificative*
+patch against a *free-form text* file (a template, an autotools input).
+Whole-file materialize would fork it (loses upstream tracking); a typed
+op has no structure to target. That residue (~12 files) keeps a real
+`patch apply`, with the diff body inlined into `overlay.dops` so the
+`diffs/` file still disappears and there is one source of truth.
+
+**Two new op kinds (both set-deltas, one mental model).**
+
+- `plist { + <entry> ; - <entry> }` — membership delta against the
+  upstream pkg-plist. Compose computes `final = upstream ∪ adds −
+  removes`, re-sorted per plist conventions. Order-independent,
+  idempotent, merges cleanly with upstream churn (the property raw plist
+  diffs lack). Executor owns `@sample`/`@dir`/`@comment` handling. A
+  small set of ports where `@`-directive *ordering* is load-bearing can
+  fall back to `text.line_*`; the parity gate identifies them.
+- `distinfo { + <distfile> … ; ~ <distfile> … ; - <distfile> }` —
+  same shape with a *change* verb. `+` adds a distfile upstream lacks,
+  `~` overrides upstream's entry, `-` drops one. **Hashes are declared
+  inline** as data (`sha256=… size=…`) on `+`/`~` entries — fully
+  offline/deterministic, no compose-time distfile fetch. distinfo is
+  downstream of its `Makefile.diff` (version/site changes drive it), so
+  it absorbs **after** the Makefile delta.
+
+**Convention-driven additive lane (with explicit override).**
+
+- **Default:** compose auto-materializes everything under `dragonfly/`
+  (and any additive residue) — the lane *is* the instruction, zero ops.
+  This drops thousands of boilerplate `file materialize` ops tree-wide.
+- **Explicit still honored:** `file materialize dragonfly/X -> dst`
+  keeps working (some dops already rely on it). The convention **skips
+  any file an explicit op already claims** — explicit wins, no
+  double-apply. An explicit op is idempotent with the convention when it
+  restates the default, and meaningful when it does something the
+  convention cannot: a custom `dst`, target-scoping
+  (`@main` / `@YYYYQ[N]`), or ordering.
+
+**Definition of done — per-port parity gate.** A port flips only when
+compose output **with compat applying `diffs/`** is byte-equal to
+compose output **with the dops absorption**, on every supported target.
+That diff-of-compose-outputs is the regression oracle and lets the
+deterministic converter + LLM tail run per-port and self-verify, exactly
+like the existing migration waves. No port flips until parity is green;
+`diffs/` is deleted only after.
+
+**Conversion mechanics.** Reuse the established model: deterministic
+translator for the structured subset, LLM tail for the rest.
+`Makefile.diff` → apply to upstream Makefile, run the existing
+`makefile_cst` differ between upstream and post-state, emit `mk.*` ops
+(structured subset) with the LLM handling conditionals/targets.
+`pkg-plist.diff` / `distinfo.diff` → mechanical parse of the unified
+diff's `+`/`-` lines into set-delta entries. `REMOVE` → one `file
+remove` per path.
+
+**Suggested sequencing.**
+
+1. `REMOVE` → `file remove` — trivial, and the slice that builds the
+   parity-gate harness everything else rides on.
+2. `Makefile.diff` → `mk` ops (reuse CST differ).
+3. `pkg-plist.diff` → `plist` set-delta (new op).
+4. `*.in.diff` text residue → inline `patch apply` / materialize by
+   provenance.
+5. `distinfo.diff` → `distinfo` set-delta (last; depends on step 2).
+
+End state: `dragonfly/` survives as a convention-driven additive lane
+with no diffs, `diffs/` disappears, and `overlay.dops` carries typed
+modificative deltas plus a small handful of inline patches.
+
+#### Touchpoints
+
+- `engine/`: new `plist` / `distinfo` AST nodes + parser + planner
+  mappings + executors; lexer for the set-delta block grammar.
+- `compose_*`: the convention-driven `dragonfly/` auto-materialize with
+  explicit-op skip; the `plist`/`distinfo` set-delta application against
+  upstream; retirement of the compat `diffs/` path per migrated port.
+- `migration/convert.py`: deterministic `diffs/*.diff` → ops translators
+  (currently only handles `Makefile.DragonFly`); LLM tail in
+  `agent/convert.py`.
+- Parity-gate harness (compose-output before/after) as the per-port
+  definition of done.

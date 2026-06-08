@@ -2871,3 +2871,130 @@ must move into a `flow-patch.md` playbook (frontmatter
 `triggers: {flows: [patch]}`, no `intents:` axis, so it surfaces for the
 whole patch flow). Playbook + selection-test only, no code change.
 
+
+### Step 45 — agentic-loop failure-analysis remediation — shipped
+
+> A structured analysis of a large agentic run (triage → convert →
+> patch, dozens of bundles) surfaced a cluster of correctness,
+> observability, and quality issues across the loop. This step is the
+> umbrella record for the remediation: each fix landed in its own
+> commit; the explicit *accept* / *reject* decisions are recorded here
+> too so the reasoning isn't lost. Problem shapes are described below;
+> the per-incident detail lives in the referenced commits.
+
+#### Critical — silent false results / state corruption that compounds
+
+- **C1 — success gate accepted compat writes as `agent_fixed`.** Patch
+  success keyed on `rebuild_ok` alone; nothing checked the diff touched
+  `overlay.dops`. A run that wrote legacy compat artifacts
+  (`Makefile.DragonFly`, `dragonfly/*`) instead of a dops fix was
+  stamped fixed. Now success requires the post-patch dops state to be
+  `converted`; otherwise → ESCALATE_MANUAL.
+  (`5c8e28e435e`, test-debt follow-up `98d81871075`)
+- **C2 — no rollback on failed runs poisoned the shared checkout.**
+  Budget-exhausted / dead runs left partial writes in the working tree,
+  corrupting the next run's classification + compose. Non-success
+  terminals now reset the whole tree (`git checkout HEAD -- . && git
+  clean -fd`). (`5c8e28e435e`)
+- **C3 — origin-scoped diff / classification was blind to
+  master/slave.** Slave-port runs write into the master dir; an
+  origin-scoped diff recorded nothing and classification ran on the
+  slave, hiding both the work and the contamination. Diff + reset are
+  now whole-tree; slave ports are refused to MANUAL via an `is_slave`
+  gate (deep master-aware dops support deferred to Step 43).
+  (`5c8e28e435e`, `97df2f45de5`, `992f60c97b6`)
+
+#### High — zero/low yield, operators blind
+
+- **H1 — `not_in_scope` ports authored compat from nothing.** A port
+  with no DragonFly delta skipped convert and asked patch to *create*
+  an overlay from a blank port (≈0 durable-fix rate). Convert now
+  bootstraps a deterministic header overlay for empty-scope ports so
+  they classify `converted` and the retriage → patch flow fills the
+  body (Step 44 wiring). (`2bc4cbeb0f1`, slave defer-skip
+  `992f60c97b6`)
+- **H2 — `convert_gave_up` wrote no operator handoff.** The convert
+  terminal lacked the `manual_handoff.md` write the patch path had, so
+  convert failures left a resolution string and no explanation. Handoff
+  now emitted at the convert-failure funnel. (`fd96ccb0f72`)
+- **H4 — budget ceiling routinely hit.** Budgets summed cumulative
+  `total_tokens`, re-billing the re-sent history every turn (no caching
+  benefit). Budgets now count *billable* tokens (`max(0, prompt −
+  cached) + completion`), reading the provider-normalized
+  `cached_tokens`; degrades safely to 0. Covers patch and convert.
+  (`9ecaa62b6ea`)
+- **H3 — unfixable-by-port failures mis-tiered — ACCEPTED.** The only
+  genuinely-unfixable signature in scope was missing kernel sources
+  (kmod), which is an environment-provisioning concern; MANUAL is
+  already the correct routing, so no brittle per-signature guard was
+  added.
+- **H6 (framework `USES=` divergence) — REJECTED as out of scope.** A
+  removed/changed FreeBSD framework feature (e.g. a deleted `Uses/`
+  module the DragonFly `Mk` no longer implements) is *framework
+  divergence*, not a port bug and not an agentic-loop concern. It must
+  be reconciled at the compose/framework boundary *before* a port is
+  built — never discovered per-port at build time and patched by the
+  LLM. Any agent-layer fix (playbook / tier-rule / prompt) is wrong by
+  construction. The loop's only correct involvement is to recognize
+  framework divergence and refuse it.
+
+#### Medium — correctness / observability degraded but bounded
+
+- **M1 — `rebuild_proof.json` metadata was LLM-fabricated.** The model
+  has no clock and copied the prompt's literal example
+  timestamp/command. Only `rebuild_ok` now comes from the agent; the
+  harness code-stamps timestamp/origin and the real env-var-templated
+  build command at write time. (`fd4dcab5601`, `0cefdc7e536`)
+- **M2 — triage tier nondeterminism.** Prose in the `confidence` field
+  (`"high — …"`) silently failed the policy enum floor and cascaded to
+  MANUAL. Confidence is now a real enum end-to-end (prompt + parser
+  coercion + `Literal` type). (`ab01575cac1`)
+- **M3 — convert emitted ops that compile but don't apply.** The
+  drop-and-retry recovery only handled rejecting framework
+  `patch.apply` ops; inline ops that failed reapply
+  (`E_APPLY_AMBIGUOUS_MATCH`, `E_APPLY_MISSING_SUBJECT`) hard-failed
+  convert, so those ports never reached the patch agent. Generalized:
+  `PlanOp` carries its source span, the defer loop drops the first
+  failing op of *any* kind by span, records it as deferred intent, and
+  (when the overlay empties) bypasses the dead-overlay guard so the
+  retriage → patch flow authors the body. `DeferredPatch` gained
+  `backing_file` so cleanup distinguishes file-backed from inline
+  deferrals. (`38c15454e13`)
+- **M4 — a failed triage stranded the bundle.** A triage terminating
+  via `TRIAGE_FAIL` (bundle materialization / LLM call / policy load)
+  retired the job but left the bundle at `resolution=NULL` with no
+  handoff — invisible to retry/take-over and unexplained. `TRIAGE_FAIL`
+  now propagates `resolution=triage_failed` and the triage tail writes
+  a handoff pointing at infra. (`bd30135e972`)
+- **M5 — MANUAL-escalation bucket audit — ACCEPTED.** Reviewed the full
+  MANUAL bucket against primary data; it mostly clears. Prose-confidence
+  cascades are OBE (fixed by M2). `missing-dep → MANUAL` is a defensible
+  policy choice (auto-fixing a missing dependency is unsafe).
+  `unknown` + low-confidence → MANUAL is correct by design.
+  Checksum/distinfo fetch failures route to MANUAL and *should* stay
+  there: auto-regenerating distinfo blindly accepts whatever distfile
+  is on the mirror, defeating the integrity check it exists to enforce
+  (same principle as H3/H6 — don't auto-fix the thing meant to need
+  judgment). Handoff content spot-checked as correct. One low-priority
+  ergonomics item noted (not a correctness bug): a driver family that
+  fails identically across many slaved ports emits many near-duplicate
+  handoffs that could collapse into one family handoff.
+
+#### Out-of-scope items recorded during this work
+
+- **Slave-port deep dops support** → Step 43 (current behavior: refuse
+  to MANUAL).
+- **Orchestrator-halt resolution gap**: the synthesized `TRIAGE_FAIL` /
+  `PATCH_GAVE_UP` paths (orchestrator precheck/halt, no `bundle_id` in
+  the transition detail) still don't propagate a resolution — a
+  pre-existing gap shared across the triage and patch terminals. The
+  handoff is still written. Left as a follow-up.
+
+#### Deferred low-priority cleanups (not yet done)
+
+- **L1 — patch agent occasionally writes compat-era `STATUS` files** in
+  its output. Cleanliness only; the C1 gate already prevents these from
+  counting as a successful dops fix.
+- **L2 — `error_signature` is non-discriminating**: a single hash is
+  shared across the large majority of bundles, so it's useless for
+  dedup / routing. Wants a more selective signature derivation.
