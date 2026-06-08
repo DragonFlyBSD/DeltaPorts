@@ -382,6 +382,47 @@ def test_resolver_returns_empty_when_no_convert_result(saved_store):
     assert out == []
 
 
+def test_resolver_accepts_dict_keyed_verdicts(saved_store):
+    """LLMs often emit `deferred_verdicts` as a dict keyed by the op
+    identifier instead of the documented array. Accept it: fold the key
+    in as `path`. Regression for the false-MANUAL bug where dict-shaped
+    verdicts were silently dropped and synthesized as escalated despite
+    a correct, build-passing fix."""
+    write_phase_result(
+        "b-dict", "convert",
+        _convert_with_deferred(["op:abc123", "op:def456"]),
+    )
+    plan = _plan_text({
+        "op:abc123": {"verdict": "regenerated", "rationale": "still applies"},
+        "op:def456": {"verdict": "dropped", "rationale": "upstream removed it"},
+    })
+    out = _resolve_deferred_verdicts_for_patch(None, "b-dict", plan)
+    by = {v.path: v.verdict for v in out}
+    assert by == {"op:abc123": "regenerated", "op:def456": "dropped"}
+    assert not any(v.verdict == "escalated" for v in out)
+
+
+def test_resolver_dict_key_wins_over_nested_path(saved_store):
+    """When the dict value also carries its own (different) `path` —
+    agents sometimes put the target file there — the dict KEY (the op
+    identifier) is authoritative and must win, else the verdict won't
+    match the convert-deferred op id and gets falsely escalated."""
+    write_phase_result(
+        "b-dict2", "convert", _convert_with_deferred(["op:e9e9e1"]),
+    )
+    plan = _plan_text({
+        "op:e9e9e1": {
+            "path": "/work/artifacts/.../Makefile",  # mislabeled target
+            "verdict": "dropped",
+            "rationale": "duplicate of upstream assignment",
+        },
+    })
+    out = _resolve_deferred_verdicts_for_patch(None, "b-dict2", plan)
+    assert len(out) == 1
+    assert out[0].path == "op:e9e9e1"
+    assert out[0].verdict == "dropped"
+
+
 def test_resolver_uses_agent_verdict_when_provided(saved_store):
     write_phase_result(
         "b2", "convert", _convert_with_deferred(["diffs/a.diff"]),

@@ -3404,9 +3404,23 @@ def _resolve_deferred_verdicts_for_patch(
 
     expected_paths = [dp.path for dp in cr.deferred_patches]
     plan = _parse_patch_plan(plan_text or "") or {}
-    raw_entries = plan.get("deferred_verdicts")
-    if not isinstance(raw_entries, list):
-        raw_entries = []
+    raw = plan.get("deferred_verdicts")
+    # The prompt asks for a JSON array, but LLMs frequently emit a dict
+    # keyed by the op identifier instead ({"op:abc": {"verdict": ...}}).
+    # Accept both rather than silently dropping a correct verdict set and
+    # synthesizing spurious "escalated" verdicts (which strands a real fix
+    # as MANUAL). For the dict form, fold the key in as `path` when the
+    # entry omits it.
+    raw_entries: list = []
+    if isinstance(raw, list):
+        raw_entries = raw
+    elif isinstance(raw, dict):
+        for key, val in raw.items():
+            if isinstance(val, dict):
+                # The dict KEY is the op identifier and is authoritative;
+                # agents sometimes also put a (different) target path in a
+                # nested "path" field, so the key must win over it.
+                raw_entries.append({**val, "path": key})
 
     # Index by path (first valid entry wins; agent isn't supposed to
     # repeat paths but if it does, take the first sensible one).

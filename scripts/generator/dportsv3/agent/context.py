@@ -800,9 +800,19 @@ class DeferredFromConvertSection:
                 "Treat each entry as INTENT (what the op was doing) rather "
                 "than AUTHORITY (the literal text). For each one, decide "
                 "whether the original intent is still relevant against the "
-                "current upstream tree, then emit a per-op verdict in your "
-                "Patch Plan's `deferred_verdicts` field, keyed by the "
-                "identifier shown in each entry's heading."
+                "current upstream tree, then record a verdict in your "
+                "Patch Plan's `deferred_verdicts` field. That field MUST be "
+                "a JSON **array** of objects, one per entry, each with "
+                "`path` (the identifier shown in the entry's heading), "
+                "`verdict`, and `rationale` — for example:"
+            ),
+            (
+                "```json\n"
+                '"deferred_verdicts": [\n'
+                '  {"path": "<identifier>", "verdict": "regenerated", '
+                '"rationale": "..."}\n'
+                "]\n"
+                "```"
             ),
             (
                 "Three outcomes per patch:"
