@@ -9,7 +9,13 @@ migration run, not here.
 
 from __future__ import annotations
 
-from dportsv3.migration.absorb_makefile import hunk_to_mk_ops, parse_hunks
+from pathlib import Path
+
+from dportsv3.migration.absorb_makefile import (
+    absorb_makefile,
+    hunk_to_mk_ops,
+    parse_hunks,
+)
 from dportsv3.migration.parity import makefile_whitespace_normalizer as wsnorm
 
 
@@ -78,3 +84,30 @@ def test_whitespace_normalizer_collapses_only_makefile():
     assert wsnorm("Makefile", "A=\tx  y\n") == "A= x y"
     # non-Makefile passes through untouched
     assert wsnorm("pkg-plist", "a\t b\n") == "a\t b\n"
+
+
+def test_escalation_emits_deferred_patch_and_does_not_mutate(tmp_path: Path):
+    port = tmp_path / "ports" / "ports-mgmt" / "thing"
+    (port / "diffs").mkdir(parents=True)
+    # a recipe hunk → non-deterministic → escalate
+    diff = (
+        "--- Makefile.orig\n+++ Makefile\n@@ -1,2 +1,2 @@\n do-configure:\n"
+        "-\t./configure\n+\t${SETENV} ./configure\n"
+    )
+    (port / "diffs" / "Makefile.diff").write_text(diff)
+    upstream = tmp_path / "up" / "Makefile"
+    upstream.parent.mkdir(parents=True)
+    upstream.write_text("do-configure:\n\t./configure\n")
+
+    result = absorb_makefile(port, origin="ports-mgmt/thing", upstream_makefile=upstream)
+
+    assert result.escalated and result.ok
+    dp = result.deferred
+    assert dp is not None
+    assert dp.path == "diffs/Makefile.diff"
+    assert dp.target_file == "Makefile"
+    assert dp.backing_file == "diffs/Makefile.diff"
+    assert dp.original_content == diff
+    # escalation must not mutate the port
+    assert (port / "diffs" / "Makefile.diff").is_file()
+    assert not (port / "overlay.dops").exists()

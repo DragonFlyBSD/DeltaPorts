@@ -29,11 +29,13 @@ import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from dportsv3.agent.phase_result import DeferredPatch
 from dportsv3.engine.api import apply_dsl
 from dportsv3.migration.parity import check_parity, makefile_whitespace_normalizer
 
 _VAR_RE = re.compile(r"^([+-])\s*([A-Za-z_][A-Za-z0-9_]*)([+:!?]?=)(.*)$")
 _REASON = "absorb diffs/Makefile.diff into dops (Step 47 Phase 2)"
+_DEFERRED_CONTENT_CAP = 16 * 1024  # bytes — matches the convert deferred-patch cap
 
 
 @dataclass
@@ -44,7 +46,31 @@ class AbsorbMakefileResult:
     escalated: bool = False
     escalate_reason: str | None = None
     unhandled_hunks: list[str] = field(default_factory=list)
+    deferred: DeferredPatch | None = None
     error: str | None = None
+
+
+def _make_deferred(port_dir: Path, reason: str) -> DeferredPatch:
+    """Build the patch-agent handoff for an escalated Makefile.diff —
+    a ``DeferredPatch`` (the shape the agent's convert-deferred relevance
+    pass already consumes). ``original_content`` is the raw diff (capped),
+    ``backing_file`` the diff to clean up once the agent regenerates."""
+    diff_path = port_dir / "diffs" / "Makefile.diff"
+    content = diff_path.read_text()[:_DEFERRED_CONTENT_CAP] if diff_path.is_file() else ""
+    return DeferredPatch(
+        path="diffs/Makefile.diff",
+        target_file="Makefile",
+        original_content=content,
+        reject_summary=reason,
+        backing_file="diffs/Makefile.diff",
+    )
+
+
+def _escalate(origin: str, port_dir: Path, reason: str, **kw) -> AbsorbMakefileResult:
+    return AbsorbMakefileResult(
+        origin=origin, ok=True, escalated=True, escalate_reason=reason,
+        deferred=_make_deferred(port_dir, reason), **kw,
+    )
 
 
 def parse_hunks(diff_text: str) -> list[list[str]]:
@@ -159,23 +185,23 @@ def absorb_makefile(
     for hunk in hunks:
         hunk_ops = hunk_to_mk_ops(hunk)
         if hunk_ops is None:
-            return AbsorbMakefileResult(
-                origin=origin, ok=True, escalated=True,
-                escalate_reason="non-deterministic hunk (recipe/conditional/insertion/mixed)",
+            return _escalate(
+                origin, port_dir,
+                "non-deterministic hunk (recipe/conditional/insertion/mixed)",
                 unhandled_hunks=["\n".join(hunk)],
             )
         ops.extend(hunk_ops)
 
     goal = _patch_result(upstream_makefile, diff_path)
     if goal is None:
-        return AbsorbMakefileResult(
-            origin=origin, ok=True, escalated=True,
-            escalate_reason="Makefile.diff rejects against current upstream (drift)",
+        return _escalate(
+            origin, port_dir,
+            "Makefile.diff rejects against current upstream (drift)",
         )
     if not _ops_reproduce(upstream_makefile, origin, ops, goal):
-        return AbsorbMakefileResult(
-            origin=origin, ok=True, escalated=True,
-            escalate_reason="emitted ops don't reproduce patch result (content-exact)",
+        return _escalate(
+            origin, port_dir,
+            "emitted ops don't reproduce patch result (content-exact)",
             unhandled_hunks=["\n".join(h) for h in hunks],
         )
 
@@ -230,9 +256,9 @@ def absorb_makefile_gated(
                 normalize=makefile_whitespace_normalizer,
             )
             if not parity.equal:
-                return AbsorbMakefileResult(
-                    origin=origin, ok=True, escalated=True,
-                    escalate_reason=f"compose parity failed on {target}: "
+                return _escalate(
+                    origin, src_port,
+                    f"compose parity failed on {target}: "
                     + ", ".join(parity.differences or [parity.error or "?"]),
                     ops=result.ops,
                 )
