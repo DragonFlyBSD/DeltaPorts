@@ -1,0 +1,6 @@
+port devel/frink
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add MAKE_ENV "NOMAN=yes NO_WERROR=yes"

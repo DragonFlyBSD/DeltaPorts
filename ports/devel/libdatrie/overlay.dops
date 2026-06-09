@@ -1,0 +1,7 @@
+port devel/libdatrie
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CONFIGURE_ENV "ICONV_LIBS=-liconv"
+mk add LIB_DEPENDS "libcharset.so:converters/libiconv"

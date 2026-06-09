@@ -1,3 +1,0 @@
-
-RUN_DEPENDS:=	${RUN_DEPENDS:N*lsof}
-BROKEN=	missing XATTR

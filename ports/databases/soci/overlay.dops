@@ -1,0 +1,6 @@
+port databases/soci
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CMAKE_ARGS "-DCMAKE_CXX_STANDARD=11"

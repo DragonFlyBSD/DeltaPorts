@@ -1,0 +1,10 @@
+port devel/cvswrap
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "alias"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@sys/types.h@sys/param.h@g' \
+		${WRKSRC}/cvswrap.c
+MK1

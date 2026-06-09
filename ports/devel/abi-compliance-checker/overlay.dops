@@ -1,0 +1,17 @@
+port devel/abi-compliance-checker
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "localbase:ldflags"
+mk add BUILD_DEPENDS "eu-readelf:devel/elfutils"
+mk add LIB_DEPENDS "libelf.so:devel/libelf"
+mk add CFLAGS "-I${LOCALBASE}/include/libelf"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@FreeBSD@DragonFly@g' \
+		${WRKSRC}/vdumper/Makefile
+	${REINPLACE_CMD} -e 's@freebsd|@&dragonfly|@g' \
+		${WRKSRC}/checker/modules/Internals/Basic.pm \
+		${WRKSRC}/checker/modules/Internals/CallConv.pm \
+		${WRKSRC}/checker/modules/Internals/SysCheck.pm
+MK1

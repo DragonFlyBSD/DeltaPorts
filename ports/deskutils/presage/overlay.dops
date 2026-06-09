@@ -1,0 +1,12 @@
+port deskutils/presage
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "ncurses"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@-lcurses@-lncurses@g' \
+		${WRKSRC}/configure \
+		${WRKSRC}/src/tools/Makefile.am \
+		${WRKSRC}/src/tools/Makefile.in
+MK1

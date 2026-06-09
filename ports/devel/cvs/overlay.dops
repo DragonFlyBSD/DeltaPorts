@@ -1,0 +1,12 @@
+port devel/cvs
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set IGNORE "FreeBSD specific"
+mk add MAKE_ENV "MK_KERBEROS_SUPPORT=no"
+mk target set post-extract <<'MK1'
+	@${REINPLACE_CMD} -e '/^__FBSDID/d' ${WRKDIR}/call/cvs/src/classify.c
+	@${REINPLACE_CMD} -e 's|-lgnuregex||' \
+		${WRKDIR}/call/cvs-build/cvs/Makefile
+MK1

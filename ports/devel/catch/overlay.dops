@@ -1,0 +1,7 @@
+port devel/catch
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "python:build"
+mk add CMAKE_ARGS "-DCATCH_ENABLE_WERROR:BOOL=OFF"

@@ -1,0 +1,6 @@
+port devel/kdev-php
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "gmake"

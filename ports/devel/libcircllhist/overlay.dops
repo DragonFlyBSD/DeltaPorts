@@ -1,0 +1,10 @@
+port devel/libcircllhist
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add OPTIONS_EXCLUDE "DOCS"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@\(\*-\*-freebsd\*\))@\1|*-*-dragonfly*)@g' \
+		${WRKSRC}/configure.ac
+MK1

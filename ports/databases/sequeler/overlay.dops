@@ -1,0 +1,8 @@
+port databases/sequeler
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${CHMOD} +x ${WRKSRC}/build-aux/meson_post_install.py
+MK1

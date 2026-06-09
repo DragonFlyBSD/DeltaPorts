@@ -1,0 +1,10 @@
+port devel/kf6-kcmutils
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "gmake"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's/^.*\- name: FreeBSD/&\n    - name: DragonFly/g' \
+		${WRKSRC}/metainfo.yaml
+MK1

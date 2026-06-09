@@ -1,0 +1,7 @@
+port devel/grantlee5
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add LDFLAGS "-pthread # sorry"
+mk set USE_CXXSTD "gnu++11"

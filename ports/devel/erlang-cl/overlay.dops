@@ -1,0 +1,11 @@
+port devel/erlang-cl
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e "s|freebsd|dragonfly|g" \
+		${WRKSRC}/rebar.config
+	${REINPLACE_CMD} -e "s|FreeBSD|DragonFly|g" \
+		${WRKSRC}/c_src/Makefile
+MK1

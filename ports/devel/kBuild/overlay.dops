@@ -1,0 +1,6 @@
+port devel/kBuild
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set KBUILD_ARCH "${MACHINE_ARCH:S/i386/x86/:S/x86_64/amd64/}"

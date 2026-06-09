@@ -1,0 +1,7 @@
+port databases/redis62
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CFLAGS "-I/usr/local/include"
+mk add LDFLAGS "-L/usr/local/lib"

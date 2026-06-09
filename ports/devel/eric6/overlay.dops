@@ -1,0 +1,10 @@
+port devel/eric6
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-install <<'MK1'
+	${REINPLACE_CMD} -e 's@devel/eric6/stage@devel/eric6/out@g' \
+		${STAGEDIR}${DATADIR}/eric6install.json
+	${RM} -fv ${STAGEDIR}${DATADIR}/eric6install.json.bak
+MK1

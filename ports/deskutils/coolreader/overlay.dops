@@ -1,0 +1,10 @@
+port deskutils/coolreader
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "pkgconfig"
+mk target set dfly-install <<'MK1'
+	${RM} -rfv ${STAGEDIR}${PREFIX}/share/cr3/hyph/obsolete
+MK1
+mk set IGNORE "unmaintained, please request fixing to users mailing list"

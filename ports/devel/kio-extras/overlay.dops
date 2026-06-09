@@ -1,0 +1,7 @@
+port devel/kio-extras
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+mk add LDFLAGS "-lpthread"

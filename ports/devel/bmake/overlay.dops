@@ -1,0 +1,12 @@
+port devel/bmake
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add DEV_WARNING "\"Tests are skipped because a chdir test fails, requires investigation.\""
+mk target set dfly-patch <<'MK1'
+	# Beware the whitespaces in the sed command, there are
+	# tab literals.
+	${REINPLACE_CMD} -e 's/^	Bmake test/	echo TESTS SKIPPED/' \
+			 ${WRKSRC}/boot-strap
+MK1

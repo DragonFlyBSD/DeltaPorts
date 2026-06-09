@@ -1,0 +1,7 @@
+port devel/hpx
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "alias fortran"
+mk set DFLY_UNMAINTAINED "yes"

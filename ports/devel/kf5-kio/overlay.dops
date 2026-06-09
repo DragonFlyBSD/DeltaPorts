@@ -1,0 +1,14 @@
+port devel/kf5-kio
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "gmake"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@FreeBSD@DragonFly@g' \
+			 -e '/HAVE_SYS_EXTATTR_H/s@sys/extattr.h@&__z@g' \
+		${WRKSRC}/src/ioslaves/file/ConfigureChecks.cmake \
+		${WRKSRC}/cmake/FindACL.cmake
+	${REINPLACE_CMD} -e 's/^.*\- name: FreeBSD/&\n    - name: DragonFly/g' \
+		${WRKSRC}/metainfo.yaml
+MK1

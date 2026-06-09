@@ -1,2 +1,0 @@
-IGNORE=	contains Linux binaries
-RUN_DEPENDS:=	${RUN_DEPENDS:Nlsof*}

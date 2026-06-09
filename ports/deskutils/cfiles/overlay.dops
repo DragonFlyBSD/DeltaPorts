@@ -1,0 +1,8 @@
+port deskutils/cfiles
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "ncurses pkgconfig"
+mk add CFLAGS "-L${LOCALBASE}/lib"
+mk set MAKE_ARGS "${MAKE_ARGS:NNCURSES*}"

@@ -1,0 +1,6 @@
+port devel/bsdowl
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CONFIGURE_ARGS "ac_cv_prog_has_bmake=yes"

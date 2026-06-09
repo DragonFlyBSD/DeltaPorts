@@ -1,0 +1,5 @@
+port deskutils/plasma6-xdg-desktop-portal-kde
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+

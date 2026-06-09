@@ -1,0 +1,9 @@
+port deskutils/recoll
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@ifdef REAL_GCC@&__z@g' \
+		${WRKSRC}/common/conf_post.h
+MK1

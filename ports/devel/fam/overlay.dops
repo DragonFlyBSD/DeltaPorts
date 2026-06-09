@@ -1,0 +1,11 @@
+port devel/fam
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "alias"
+mk set BROKEN "missing timer_delete timer_create"
+mk target set post-configure <<'MK1'
+	${REINPLACE_CMD} -e '/MNT_UNION/d'	\
+		${WRKSRC}/fam/mntent_compat.c++
+MK1

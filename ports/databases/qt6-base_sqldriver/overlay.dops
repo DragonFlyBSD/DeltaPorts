@@ -1,0 +1,5 @@
+port databases/qt6-base_sqldriver
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+

@@ -1,0 +1,7 @@
+port devel/jetbrains-clion
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set IGNORE "contains Linux binaries"
+mk set RUN_DEPENDS "${RUN_DEPENDS:Nlsof*}"

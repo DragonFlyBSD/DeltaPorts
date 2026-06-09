@@ -1,0 +1,6 @@
+port deskutils/qownnotes
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CFLAGS "-Wno-deprecated-declarations"

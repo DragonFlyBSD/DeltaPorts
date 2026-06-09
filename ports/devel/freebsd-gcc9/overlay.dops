@@ -1,0 +1,8 @@
+port devel/freebsd-gcc9
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set BUILD_DEPENDS ""
+mk set RUN_DEPENDS ""
+mk set IGNORE "FreeBSD specific"

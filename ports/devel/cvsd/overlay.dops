@@ -1,0 +1,7 @@
+port devel/cvsd
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set BUILD_DEPENDS ""
+mk set RUN_DEPENDS ""

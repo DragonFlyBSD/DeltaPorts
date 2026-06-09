@@ -1,0 +1,6 @@
+port devel/cppurses
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CMAKE_ARGS "-DCURSES_INCLUDE_PATH=STR:\"${LOCALBASE}/include/ncurses\""

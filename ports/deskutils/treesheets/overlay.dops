@@ -1,0 +1,7 @@
+port deskutils/treesheets
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "gmake"
+mk set IGNORE "unmaintained, please request fixing to users mailing list"

@@ -1,0 +1,11 @@
+port devel/codeblocks
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set USE_CXXSTD "c++0x"
+mk add USES "alias"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@!(defined(__clang__) && __has_feature(cxx_nullptr))@ __cplusplus < 201103L @' \
+		${WRKSRC}/src/include/prep.h
+MK1

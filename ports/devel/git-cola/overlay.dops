@@ -1,0 +1,18 @@
+port devel/git-cola
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USE_PYTHON "autoplist distutils"
+mk set DFLY_PLIST "${WRKSRC}/pkg-plist"
+mk set PLIST "${DFLY_PLIST}"
+mk target set dfly-patch <<'MK1'
+	${TOUCH} ${DFLY_PLIST}
+	${REINPLACE_CMD} -e "/icons\/dark', '\*\.png'/d" \
+			 -e "/icons', '\*\.png'/d" \
+		${WRKSRC}/setup.py
+
+MK1
+mk target set dfly-install <<'MK2'
+	${MKDIR} ${STAGEDIR}${DATADIR}/icons/dark
+MK2

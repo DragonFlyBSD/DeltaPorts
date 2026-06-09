@@ -1,0 +1,6 @@
+port devel/libdwarf
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add LIB_DEPENDS "libelf.so.0:devel/libelf"

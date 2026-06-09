@@ -1,0 +1,6 @@
+port devel/gcc-arm-embedded
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set IGNORE "fails after 75 minutes with 'no space left on device' error"

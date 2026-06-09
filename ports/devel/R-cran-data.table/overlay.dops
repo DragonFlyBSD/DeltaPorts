@@ -1,0 +1,6 @@
+port devel/R-cran-data.table
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add NO_ARCH_IGNORE "data_table.so"

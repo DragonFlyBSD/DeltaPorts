@@ -1,0 +1,8 @@
+port databases/mroonga
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add BUILD_DEPENDS "bison>=0:devel/bison"
+mk add BUILD_DEPENDS "cmake>=0:devel/cmake"
+mk set IGNORE "unmaintained, please request fixing to users mailing list"

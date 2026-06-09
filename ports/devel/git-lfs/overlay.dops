@@ -1,0 +1,6 @@
+port devel/git-lfs
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add MANPAGES_BUILD_DEPENDS "groff:textproc/groff"

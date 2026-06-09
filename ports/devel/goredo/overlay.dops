@@ -1,0 +1,6 @@
+port devel/goredo
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add EXTRACT_DEPENDS "zstd>0:archivers/zstd"

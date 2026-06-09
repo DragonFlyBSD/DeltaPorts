@@ -1,0 +1,7 @@
+port devel/glade
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add LDFLAGS "-lm"
+mk add BINARY_ALIAS "python3=${PYTHON_CMD}"

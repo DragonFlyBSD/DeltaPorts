@@ -1,0 +1,6 @@
+port databases/pgpool-II-43
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "alias"

@@ -1,0 +1,9 @@
+port devel/kf5-knewstuff
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's/^.*\- name: FreeBSD/&\n    - name: DragonFly/g' \
+		${WRKSRC}/metainfo.yaml
+MK1

@@ -1,0 +1,11 @@
+port devel/git-cinnabar
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add BUILD_DEPENDS "xmlto>=0:textproc/xmlto"
+mk add BUILD_DEPENDS "asciidoc>=0:textproc/asciidoc"
+mk add BUILD_DEPENDS "asciidoctor:textproc/rubygem-asciidoctor"
+mk add BUILD_DEPENDS "autoconf>=0:devel/autoconf"
+mk add BUILD_DEPENDS "automake>=0:devel/automake"
+mk add BUILD_DEPENDS "gettext-tools>=0:devel/gettext-tools"
