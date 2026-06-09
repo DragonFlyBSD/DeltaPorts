@@ -273,6 +273,16 @@ def parse_makefile_cst(
             )
             continue
 
+        # BSD make permits whitespace between the leading '.' and the
+        # directive keyword (".  if", ".    elif" are valid — common in
+        # slave-port `.if ${_SLAVE_PORT}` ladders and indented conditional
+        # nests). Normalize so the keyword checks below see ".if"/".elif"/
+        # etc.; raw_lines keep the original spacing for rendering. Without
+        # this, ".  if ${X} == y" falls through to the assignment fallback
+        # (its "==" contains "=") and raises E_MKPARSE_INVALID_ASSIGNMENT.
+        if logical_stripped.startswith("."):
+            logical_stripped = "." + logical_stripped[1:].lstrip()
+
         if logical_stripped.startswith(".if"):
             condition = logical_stripped[3:].strip()
             nodes.append(

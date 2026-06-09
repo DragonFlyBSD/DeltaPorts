@@ -145,3 +145,31 @@ def test_node_spans_present_and_stable() -> None:
     assert first.span.line_start == 1
     assert first.span.column_start == 1
     assert first.span.line_end == 1
+
+
+def test_dot_directive_whitespace_after_dot() -> None:
+    # BSD make allows whitespace between the leading '.' and the keyword
+    # (".  if", ".    elif", indented nests, slave-port ladders). These
+    # must parse as directives, not fall through to E_MKPARSE_INVALID_
+    # ASSIGNMENT because their condition contains "==".
+    text = (
+        ".  if ${_SLAVE_PORT} == glib\n"
+        "USES=\tfoo\n"
+        ".    elif ${ARCHDEF} == \"NONE\"\n"
+        "USES=\tbar\n"
+        ". else\n"
+        "USES=\tbaz\n"
+        ".  endif\n"
+    )
+    result = parse_makefile_cst(text)
+    assert result.diagnostics == []
+    kinds = [type(n).__name__ for n in result.document.nodes]
+    assert kinds.count("DirectiveIfNode") == 1
+    assert kinds.count("DirectiveElifNode") == 1
+    assert kinds.count("DirectiveElseNode") == 1
+    assert kinds.count("DirectiveEndifNode") == 1
+    # condition strips the dot+whitespace+keyword, leaving just the expr
+    ifnode = next(n for n in result.document.nodes if type(n).__name__ == "DirectiveIfNode")
+    assert ifnode.condition == "${_SLAVE_PORT} == glib"
+    # rendering is lossless — original spacing preserved
+    assert render_makefile(result.document) == text
