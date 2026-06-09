@@ -1,0 +1,7 @@
+port sysutils/u-boot-imx-serial-loader
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-imx__usb.c -> dragonfly/patch-imx__usb.c
+file materialize dragonfly/patch-portable.h -> dragonfly/patch-portable.h

@@ -1,0 +1,7 @@
+port sysutils/logrotate
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-config.c -> dragonfly/patch-config.c
+file materialize dragonfly/patch-logrotate.c -> dragonfly/patch-logrotate.c

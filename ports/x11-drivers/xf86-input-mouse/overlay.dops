@@ -1,0 +1,7 @@
+port x11-drivers/xf86-input-mouse
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CFLAGS "-Wno-array-bounds"
+file materialize dragonfly/patch-src_bsd__mouse.c -> dragonfly/patch-src_bsd__mouse.c

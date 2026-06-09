@@ -1,0 +1,7 @@
+port www/py-pafy
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-pafy_backend__youtube__dl.py -> dragonfly/patch-pafy_backend__youtube__dl.py
+file materialize dragonfly/patch-pafy_pafy.py -> dragonfly/patch-pafy_pafy.py

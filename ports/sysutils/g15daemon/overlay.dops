@@ -1,0 +1,11 @@
+port sysutils/g15daemon
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@FreeBSD@DragonFly@g' \
+		${WRKSRC}/libg15daemon_client/g15daemon_net.c \
+		${WRKSRC}/plugins/g15_plugin_net.c
+MK1
+file materialize dragonfly/patch-configure -> dragonfly/patch-configure

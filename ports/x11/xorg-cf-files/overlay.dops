@@ -1,0 +1,6 @@
+port x11/xorg-cf-files
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-DragonFly.cf -> dragonfly/patch-DragonFly.cf

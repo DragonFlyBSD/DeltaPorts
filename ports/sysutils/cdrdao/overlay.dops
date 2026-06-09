@@ -1,0 +1,10 @@
+port sysutils/cdrdao
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@<cam/@<bus/cam/@g' \
+		${WRKSRC}/dao/ScsiIf-freebsd-cam.cc
+MK1
+file materialize dragonfly/patch-configure.ac -> dragonfly/patch-configure.ac

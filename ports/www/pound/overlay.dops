@@ -1,0 +1,14 @@
+port www/pound
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NDSAPARAM}"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e "s@openssl dhparam@${LOCALBASE}/bin/&@g" \
+		${WRKSRC}/Makefile.in
+MK1
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-config.h -> dragonfly/patch-config.h
+file materialize dragonfly/patch-pound.h -> dragonfly/patch-pound.h
+file materialize dragonfly/patch-svc.c -> dragonfly/patch-svc.c

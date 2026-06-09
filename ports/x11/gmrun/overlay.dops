@@ -1,0 +1,10 @@
+port x11/gmrun
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set DFLY_UNMAINTAINED "yes"
+file materialize dragonfly/patch-src_ci__string.h -> dragonfly/patch-src_ci__string.h
+file materialize dragonfly/patch-src_gtkcompletionline.cc -> dragonfly/patch-src_gtkcompletionline.cc
+file materialize dragonfly/patch-src_main.cc -> dragonfly/patch-src_main.cc
+file materialize dragonfly/patch-src_prefs.cc -> dragonfly/patch-src_prefs.cc

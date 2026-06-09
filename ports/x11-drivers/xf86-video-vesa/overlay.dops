@@ -1,0 +1,6 @@
+port x11-drivers/xf86-video-vesa
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-src_vesa.c -> dragonfly/patch-src_vesa.c

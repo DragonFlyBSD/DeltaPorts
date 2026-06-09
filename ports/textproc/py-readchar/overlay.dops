@@ -1,0 +1,6 @@
+port textproc/py-readchar
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-readchar_readchar.py -> dragonfly/patch-readchar_readchar.py

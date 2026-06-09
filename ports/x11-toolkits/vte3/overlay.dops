@@ -1,0 +1,9 @@
+port x11-toolkits/vte3
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+file materialize dragonfly/patch-meson.build -> dragonfly/patch-meson.build
+file materialize dragonfly/patch-src_missing.cc -> dragonfly/patch-src_missing.cc
+file materialize dragonfly/patch-src_vte.cc -> dragonfly/patch-src_vte.cc

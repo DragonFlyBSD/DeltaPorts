@@ -1,0 +1,7 @@
+port www/sogo2
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set DFLY_ALLOW_FOREIGN_BINARIES "yes"
+file materialize dragonfly/patch-SoObjects_SOGo_NSData+Crypto.m -> dragonfly/patch-SoObjects_SOGo_NSData+Crypto.m

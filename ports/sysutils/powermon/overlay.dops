@@ -1,0 +1,11 @@
+port sysutils/powermon
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@lnncursesw@lncursesw@' \
+		${WRKSRC}/Makefile
+MK1
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-Makefile -> dragonfly/patch-Makefile

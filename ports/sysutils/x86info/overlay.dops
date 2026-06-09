@@ -1,0 +1,8 @@
+port sysutils/x86info
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-cpuid-freebsd.c -> dragonfly/patch-cpuid-freebsd.c
+file materialize dragonfly/patch-lsmsr_lsmsr.c -> dragonfly/patch-lsmsr_lsmsr.c
+file materialize dragonfly/patch-rdmsr-freebsd.c -> dragonfly/patch-rdmsr-freebsd.c

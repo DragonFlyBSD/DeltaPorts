@@ -1,0 +1,6 @@
+port x11/wmdrawer
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-wmdrawer.c -> dragonfly/patch-wmdrawer.c

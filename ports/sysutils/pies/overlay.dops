@@ -1,0 +1,7 @@
+port sysutils/pies
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-src_sysvinit.c -> dragonfly/patch-src_sysvinit.c
+file materialize dragonfly/patch-src_utmp.c -> dragonfly/patch-src_utmp.c

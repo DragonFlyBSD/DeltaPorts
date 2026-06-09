@@ -1,0 +1,7 @@
+port security/yara
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set USES "${USES:Nalias}"
+file materialize dragonfly/patch-libyara_proc_linux.c -> dragonfly/patch-libyara_proc_linux.c

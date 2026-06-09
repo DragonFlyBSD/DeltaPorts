@@ -1,0 +1,8 @@
+port www/webfs
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-GNUmakefile -> dragonfly/patch-GNUmakefile
+file materialize dragonfly/patch-ls.c -> dragonfly/patch-ls.c
+file materialize dragonfly/patch-response.c -> dragonfly/patch-response.c

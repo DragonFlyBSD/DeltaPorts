@@ -1,0 +1,7 @@
+port sysutils/consul
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-logging_logfile__bsd.go -> dragonfly/patch-logging_logfile__bsd.go
+file materialize dragonfly/patch-vendor_github.com_keybase_go-ps_process__dragonfly.go -> dragonfly/patch-vendor_github.com_keybase_go-ps_process__dragonfly.go

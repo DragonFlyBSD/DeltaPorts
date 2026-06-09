@@ -1,0 +1,7 @@
+port textproc/zxing-cpp
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+file materialize dragonfly/patch-core_src_Utf.cpp -> dragonfly/patch-core_src_Utf.cpp

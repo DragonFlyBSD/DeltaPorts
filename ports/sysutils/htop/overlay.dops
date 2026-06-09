@@ -1,0 +1,9 @@
+port sysutils/htop
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set MAINTAINER "ddegroot@talon.nl"
+mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NLSOF}"
+file materialize dragonfly/patch-dragonflybsd_DragonFlyBSDProcessTable.c -> dragonfly/patch-dragonflybsd_DragonFlyBSDProcessTable.c
+file materialize dragonfly/patch-dragonflybsd_Platform.c -> dragonfly/patch-dragonflybsd_Platform.c

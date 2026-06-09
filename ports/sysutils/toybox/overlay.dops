@@ -1,0 +1,10 @@
+port sysutils/toybox
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-kconfig_freebsd__miniconfig -> dragonfly/patch-kconfig_freebsd__miniconfig
+file materialize dragonfly/patch-lib_portability.c -> dragonfly/patch-lib_portability.c
+file materialize dragonfly/patch-lib_portability.h -> dragonfly/patch-lib_portability.h
+file materialize dragonfly/patch-toys_other_fsync.c -> dragonfly/patch-toys_other_fsync.c

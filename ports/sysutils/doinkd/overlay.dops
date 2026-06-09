@@ -1,0 +1,9 @@
+port sysutils/doinkd
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-doinkd.c -> dragonfly/patch-doinkd.c
+file materialize dragonfly/patch-doinkd.h -> dragonfly/patch-doinkd.h
+file materialize dragonfly/patch-warn.c -> dragonfly/patch-warn.c
+file materialize dragonfly/patch-xlock__check.c -> dragonfly/patch-xlock__check.c

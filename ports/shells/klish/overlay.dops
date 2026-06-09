@@ -1,0 +1,6 @@
+port shells/klish
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-clish_shell_shell__execute.c -> dragonfly/patch-clish_shell_shell__execute.c

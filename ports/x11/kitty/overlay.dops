@@ -1,0 +1,10 @@
+port x11/kitty
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-glfw_wl__init.c -> dragonfly/patch-glfw_wl__init.c
+file materialize dragonfly/patch-kitty_threading.h -> dragonfly/patch-kitty_threading.h
+file materialize dragonfly/patch-launcher.c -> dragonfly/patch-launcher.c
+file materialize dragonfly/patch-setup.py -> dragonfly/patch-setup.py

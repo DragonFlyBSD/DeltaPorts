@@ -1,0 +1,8 @@
+port textproc/po4a
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add MAKE_ENV "LC_ALL=en_US.UTF-8"
+file materialize dragonfly/patch-lib_Locale_Po4a_Common.pm -> dragonfly/patch-lib_Locale_Po4a_Common.pm
+file materialize dragonfly/patch-lib_Locale_Po4a_Sgml.pm -> dragonfly/patch-lib_Locale_Po4a_Sgml.pm

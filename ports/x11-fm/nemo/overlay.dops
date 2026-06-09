@@ -1,0 +1,7 @@
+port x11-fm/nemo
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-src_nemo-desktop-main.c -> dragonfly/patch-src_nemo-desktop-main.c
+file materialize dragonfly/patch-src_nemo-main.c -> dragonfly/patch-src_nemo-main.c

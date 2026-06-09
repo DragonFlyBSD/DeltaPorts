@@ -1,0 +1,6 @@
+port sysutils/utcount
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-bin_count__client.c -> dragonfly/patch-bin_count__client.c

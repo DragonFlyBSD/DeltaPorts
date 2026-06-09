@@ -1,0 +1,6 @@
+port x11/x3270
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-c3270_screen.c -> dragonfly/patch-c3270_screen.c

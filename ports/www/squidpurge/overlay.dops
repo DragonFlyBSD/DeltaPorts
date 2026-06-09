@@ -1,0 +1,7 @@
+port www/squidpurge
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-Makefile -> dragonfly/patch-Makefile
+file materialize dragonfly/patch-purge.cc -> dragonfly/patch-purge.cc

@@ -1,0 +1,7 @@
+port x11/libfm-qt
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add LDFLAGS "-lpthread"
+file materialize dragonfly/patch-src_CMakeLists.txt -> dragonfly/patch-src_CMakeLists.txt

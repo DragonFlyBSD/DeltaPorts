@@ -1,0 +1,8 @@
+port sysutils/tmux-mem-cpu-load
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set DFLY_UNMAINTAINED "yes"
+file materialize dragonfly/patch-CMakeLists.txt -> dragonfly/patch-CMakeLists.txt
+file materialize dragonfly/patch-common_cpu.h -> dragonfly/patch-common_cpu.h

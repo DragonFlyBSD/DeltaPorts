@@ -1,0 +1,7 @@
+port sysutils/dupd
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CFLAGS "-DDIRENT_HAS_TYPE -L${LOCALBASE}/lib"
+file materialize dragonfly/patch-src_utils.h -> dragonfly/patch-src_utils.h

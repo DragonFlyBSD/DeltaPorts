@@ -1,0 +1,10 @@
+port shells/wcd
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	@${REINPLACE_CMD} -e 's|/usr/local|${LOCALBASE}|' \
+		${WRKSRC}/src/Makefile
+MK1
+file materialize dragonfly/patch-src_Makefile -> dragonfly/patch-src_Makefile

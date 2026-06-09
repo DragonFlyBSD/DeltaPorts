@@ -1,0 +1,6 @@
+port shells/ksh93
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-src_lib_libast_std_endian.h -> dragonfly/patch-src_lib_libast_std_endian.h

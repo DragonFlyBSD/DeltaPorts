@@ -1,0 +1,10 @@
+port www/minio-client
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-cmd_client-fs_dragonfly.go -> dragonfly/patch-cmd_client-fs_dragonfly.go
+file materialize dragonfly/patch-pkg_disk_stat_dragonfly.go -> dragonfly/patch-pkg_disk_stat_dragonfly.go
+file materialize dragonfly/patch-vendor_github.com_containerd_console_console__unix.go -> dragonfly/patch-vendor_github.com_containerd_console_console__unix.go
+file materialize dragonfly/patch-vendor_github.com_containerd_console_pty__unix.go -> dragonfly/patch-vendor_github.com_containerd_console_pty__unix.go
+file materialize dragonfly/patch-vendor_github.com_containerd_console_tc__dragonfly__cgo.go -> dragonfly/patch-vendor_github.com_containerd_console_tc__dragonfly__cgo.go

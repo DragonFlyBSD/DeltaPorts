@@ -1,0 +1,6 @@
+port sysutils/isc-cron
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-database.c -> dragonfly/patch-database.c

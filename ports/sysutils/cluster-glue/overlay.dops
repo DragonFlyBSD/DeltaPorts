@@ -1,0 +1,6 @@
+port sysutils/cluster-glue
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-lib_clplumbing_setproctitle.c -> dragonfly/patch-lib_clplumbing_setproctitle.c

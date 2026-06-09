@@ -1,0 +1,6 @@
+port www/yaws
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-scripts_regular-install -> dragonfly/patch-scripts_regular-install

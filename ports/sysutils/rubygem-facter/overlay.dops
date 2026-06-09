@@ -1,0 +1,6 @@
+port sysutils/rubygem-facter
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-lib_facter_framework_detector_os__detector.rb -> dragonfly/patch-lib_facter_framework_detector_os__detector.rb

@@ -1,0 +1,9 @@
+port sysutils/gdisk
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set DFLY_UNMAINTAINED "yes"
+file materialize dragonfly/patch-diskio-unix.cc -> dragonfly/patch-diskio-unix.cc
+file materialize dragonfly/patch-diskio.h -> dragonfly/patch-diskio.h
+file materialize dragonfly/patch-support.h -> dragonfly/patch-support.h

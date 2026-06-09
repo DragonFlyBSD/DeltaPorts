@@ -1,0 +1,7 @@
+port x11-toolkits/wlroots017
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-render_gles2_renderer.c -> dragonfly/patch-render_gles2_renderer.c
+file materialize dragonfly/patch-render_vulkan_vulkan.c -> dragonfly/patch-render_vulkan_vulkan.c

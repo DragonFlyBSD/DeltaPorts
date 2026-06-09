@@ -1,0 +1,28 @@
+port www/nginx
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "gmake"
+mk add NJS_LIB_DEPENDS "libpcre.so:devel/pcre"
+mk target set post-patch-NJS-on <<'MK1'
+	(cd ${WRKSRC_njs} && ${PATCH} ${PATCH_ARGS} < ${DFLY_PATCHDIR}/extra-auto_openssl.diff)
+	(cd ${WRKSRC_njs} && ${PATCH} ${PATCH_ARGS} < ${DFLY_PATCHDIR}/extra-njs-cli.diff)
+
+MK1
+mk target set pre-patch-MODSECURITY-on <<'MK2'
+	-${REINPLACE_CMD} -e 's|\*-\*-freebsd\*|*-*-dragonfly*|' \
+		${WRKSRC_MODSECURITY}/configure
+
+MK2
+mk target set pre-patch-HTTP_ZIP-on <<'MK3'
+	-${REINPLACE_CMD} -e 's@\(defined(__OpenBSD__)\)@(\1 || defined(__FreeBSD__) || defined(__DragonFly__))@g' \
+		${WRKSRC_mod_zip}/ngx_http_zip_endian.h
+
+MK3
+mk target set pre-patch-NAXSI-on <<'MK4'
+	-${REINPLACE_CMD} -e 's@__FreeBSD__@__DragonFly__@g' \
+		${WRKSRC_naxsi}/naxsi_src/naxsi_net.h
+MK4
+file materialize dragonfly/extra-auto_openssl.diff -> dragonfly/extra-auto_openssl.diff
+file materialize dragonfly/extra-njs-cli.diff -> dragonfly/extra-njs-cli.diff

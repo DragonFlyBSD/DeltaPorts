@@ -1,0 +1,7 @@
+port sysutils/libg15render
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "localbase:ldflags"
+file materialize dragonfly/patch-pixel.c -> dragonfly/patch-pixel.c

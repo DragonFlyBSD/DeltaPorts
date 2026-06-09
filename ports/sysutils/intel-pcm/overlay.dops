@@ -1,0 +1,7 @@
+port sysutils/intel-pcm
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add PLIST_FILES "sbin/c_example.x sbin/c_example_shlib.x"
+file materialize dragonfly/patch-dashboard.cpp -> dragonfly/patch-dashboard.cpp

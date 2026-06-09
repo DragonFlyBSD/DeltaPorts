@@ -1,0 +1,11 @@
+port sysutils/k3b
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@<cam/@<bus/cam/@g' \
+		${WRKSRC}/libk3bdevice/k3bscsicommand_bsd.cpp \
+		${WRKSRC}/libk3bdevice/k3bdevicemanager.cpp
+MK1
+file materialize dragonfly/patch-libk3bdevice_CMakeLists.txt -> dragonfly/patch-libk3bdevice_CMakeLists.txt

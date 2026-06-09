@@ -1,0 +1,14 @@
+port sysutils/plasma5-libksysguard
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CXXFLAGS "-pthread"
+mk add BUILD_DEPENDS "cxxfs_gcc8>0:misc/cxxfs_gcc8"
+mk add CXXFLAGS "-isystem ${LOCALBASE}/cxxfs_gcc8"
+mk add LDFLAGS "-L${LOCALBASE}/cxxfs_gcc8"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's,ZLIB::ZLIB,& stdc++fs,g' \
+		${WRKSRC}/processcore/CMakeLists.txt
+MK1
+file materialize dragonfly/patch-processcore_processes__dragonfly__p.cpp -> dragonfly/patch-processcore_processes__dragonfly__p.cpp

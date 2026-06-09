@@ -1,0 +1,17 @@
+port sysutils/nomad
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/XFAIL -> dragonfly/XFAIL
+file materialize dragonfly/patch-client_allocdir_fs__dragonfly.go -> dragonfly/patch-client_allocdir_fs__dragonfly.go
+file materialize dragonfly/patch-command_agent_host_dragonfly.go -> dragonfly/patch-command_agent_host_dragonfly.go
+file materialize dragonfly/patch-command_agent_host_unix.go -> dragonfly/patch-command_agent_host_unix.go
+file materialize dragonfly/patch-drivers_docker_driver_dragonfly.go -> dragonfly/patch-drivers_docker_driver_dragonfly.go
+file materialize dragonfly/patch-helper_freeport_ephemeral__dragonfly.go -> dragonfly/patch-helper_freeport_ephemeral__dragonfly.go
+file materialize dragonfly/patch-vendor_github.com_docker_docker_pkg_system_stat__dragonfly.go -> dragonfly/patch-vendor_github.com_docker_docker_pkg_system_stat__dragonfly.go
+file materialize dragonfly/patch-vendor_github.com_docker_docker_pkg_term_termios__bsd.go -> dragonfly/patch-vendor_github.com_docker_docker_pkg_term_termios__bsd.go
+file materialize dragonfly/patch-vendor_github.com_hashicorp_consul-template_signals_signals__unix.go -> dragonfly/patch-vendor_github.com_hashicorp_consul-template_signals_signals__unix.go
+file materialize dragonfly/patch-vendor_github.com_keybase_go-ps_process__dragonfly.go -> dragonfly/patch-vendor_github.com_keybase_go-ps_process__dragonfly.go
+file materialize dragonfly/patch-vendor_github.com_shirou_gopsutil_internal_common_common__dragonfly.go -> dragonfly/patch-vendor_github.com_shirou_gopsutil_internal_common_common__dragonfly.go
+file materialize dragonfly/patch-vendor_github.com_shirou_gopsutil_mem_mem__dragonfly.go -> dragonfly/patch-vendor_github.com_shirou_gopsutil_mem_mem__dragonfly.go

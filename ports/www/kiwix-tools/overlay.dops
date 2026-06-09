@@ -1,0 +1,7 @@
+port www/kiwix-tools
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "localbase:ldflags"
+file materialize dragonfly/patch-meson.build -> dragonfly/patch-meson.build

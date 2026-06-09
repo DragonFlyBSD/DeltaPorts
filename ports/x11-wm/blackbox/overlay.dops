@@ -1,0 +1,15 @@
+port x11-wm/blackbox
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "libtool"
+file materialize dragonfly/patch-lib_Image.cc -> dragonfly/patch-lib_Image.cc
+file materialize dragonfly/patch-lib_Resource.cc -> dragonfly/patch-lib_Resource.cc
+file materialize dragonfly/patch-lib_XDG.cc -> dragonfly/patch-lib_XDG.cc
+file materialize dragonfly/patch-src_BackboxResource.cc -> dragonfly/patch-src_BackboxResource.cc
+file materialize dragonfly/patch-src_Screen.cc -> dragonfly/patch-src_Screen.cc
+file materialize dragonfly/patch-src_ScreenResource.cc -> dragonfly/patch-src_ScreenResource.cc
+file materialize dragonfly/patch-src_blackbox.cc -> dragonfly/patch-src_blackbox.cc
+file materialize dragonfly/patch-src_main.cc -> dragonfly/patch-src_main.cc
+file materialize dragonfly/patch-util_bsetroot.cc -> dragonfly/patch-util_bsetroot.cc

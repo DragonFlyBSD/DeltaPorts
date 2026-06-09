@@ -1,0 +1,8 @@
+port sysutils/istio
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/XFAIL -> dragonfly/XFAIL
+file materialize dragonfly/patch-vendor_github.com_howeyc_fsnotify_fsnotify_bsd.go -> dragonfly/patch-vendor_github.com_howeyc_fsnotify_fsnotify_bsd.go
+file materialize dragonfly/patch-vendor_github.com_howeyc_fsnotify_fsnotify_open_bsd.go -> dragonfly/patch-vendor_github.com_howeyc_fsnotify_fsnotify_open_bsd.go

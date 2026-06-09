@@ -1,0 +1,11 @@
+port sysutils/rocr
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "localbase"
+mk add LIB_DEPENDS "libelf.so:devel/libelf"
+file materialize dragonfly/patch-src_core_runtime_amd__aql__queue.cpp -> dragonfly/patch-src_core_runtime_amd__aql__queue.cpp
+file materialize dragonfly/patch-src_core_util_bsd_os__bsd.cpp -> dragonfly/patch-src_core_util_bsd_os__bsd.cpp
+file materialize dragonfly/patch-src_core_util_os.h -> dragonfly/patch-src_core_util_os.h
+file materialize dragonfly/patch-src_libamdhsacode_amd__elf__image.cpp -> dragonfly/patch-src_libamdhsacode_amd__elf__image.cpp

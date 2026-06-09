@@ -1,0 +1,11 @@
+port sysutils/incron
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${GREP} -q clearenv /usr/include/stdlib.h || \
+		${REINPLACE_CMD} -e 's@__DragonFly__@&z@g' \
+		${WRKSRC}/usertable.cpp
+MK1
+file materialize dragonfly/patch-usertable.cpp -> dragonfly/patch-usertable.cpp

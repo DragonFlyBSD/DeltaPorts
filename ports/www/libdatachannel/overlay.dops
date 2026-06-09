@@ -1,0 +1,6 @@
+port www/libdatachannel
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-cmsg_align -> dragonfly/patch-cmsg_align

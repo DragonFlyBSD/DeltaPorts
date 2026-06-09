@@ -1,0 +1,8 @@
+port x11-drivers/xf86-input-vmmouse
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CONFIGURE_ARGS "--with-hal-callouts-dir=${PREFIX}/libexec/hal/scripts"
+mk set DFLY_UNMAINTAINED "yes"
+file materialize dragonfly/patch-configure -> dragonfly/patch-configure

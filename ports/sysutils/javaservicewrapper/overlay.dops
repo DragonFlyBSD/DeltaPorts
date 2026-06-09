@@ -1,0 +1,12 @@
+port sysutils/javaservicewrapper
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${LN} -sv ${WRKSRC}/src/c/Makefile-freebsd-x86-64.gmake \
+		  ${WRKSRC}/src/c/Makefile-dragonfly-x86-64.gmake
+MK1
+file materialize dragonfly/patch-build-tests.xml -> dragonfly/patch-build-tests.xml
+file materialize dragonfly/patch-build.xml -> dragonfly/patch-build.xml
+file materialize dragonfly/patch-src_bin_App.sh.in -> dragonfly/patch-src_bin_App.sh.in

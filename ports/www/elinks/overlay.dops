@@ -1,0 +1,7 @@
+port www/elinks
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CFLAGS "-Wno-pointer-sign"
+file materialize dragonfly/patch-src_osdep_unix_bsd.c -> dragonfly/patch-src_osdep_unix_bsd.c

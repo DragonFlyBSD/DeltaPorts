@@ -1,0 +1,7 @@
+port x11-toolkits/qt6-declarative
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-src_3rdparty_masm_wtf_Platform.h -> dragonfly/patch-src_3rdparty_masm_wtf_Platform.h
+file materialize dragonfly/patch-src_qml_jit_qv4assemblercommon__p.h -> dragonfly/patch-src_qml_jit_qv4assemblercommon__p.h

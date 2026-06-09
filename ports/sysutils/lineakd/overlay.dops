@@ -1,0 +1,11 @@
+port sysutils/lineakd
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "alias"
+mk set USE_CXXSTD "c++98"
+file materialize dragonfly/patch-lineak_cdromctrl.h -> dragonfly/patch-lineak_cdromctrl.h
+file materialize dragonfly/patch-lineak_loader.h -> dragonfly/patch-lineak_loader.h
+file materialize dragonfly/patch-lineak_pluginmanager.h -> dragonfly/patch-lineak_pluginmanager.h
+file materialize dragonfly/patch-lineak_xmgr.h -> dragonfly/patch-lineak_xmgr.h

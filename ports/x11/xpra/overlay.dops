@@ -1,0 +1,13 @@
+port x11/xpra
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "localbase:ldflags"
+mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NGSTREAMER}"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@FREEBSD@DRAGONFLY@g' \
+		${WRKSRC}/setup.py
+MK1
+mk set DFLY_UNMAINTAINED "yes"
+file materialize dragonfly/patch-xpra_os__util.py -> dragonfly/patch-xpra_os__util.py

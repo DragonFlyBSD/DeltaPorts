@@ -1,0 +1,7 @@
+port x11-wm/hikari
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CFLAGS "-DHIKARI_USE_COMPAT_QUEUE"
+file materialize dragonfly/patch-Makefile -> dragonfly/patch-Makefile

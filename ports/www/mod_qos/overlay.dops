@@ -1,0 +1,7 @@
+port www/mod_qos
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-mod_qos.c -> dragonfly/patch-mod_qos.c

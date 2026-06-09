@@ -1,0 +1,8 @@
+port textproc/sonic
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add MAKE_ENV "LIBCLANG_PATH=${LOCALBASE}/llvm${LLVM_DEFAULT}/lib"
+mk set USES "${USES:S/cargo/cargo:extra/}"
+file materialize dragonfly/XFAIL -> dragonfly/XFAIL

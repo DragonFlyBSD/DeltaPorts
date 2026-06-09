@@ -1,0 +1,6 @@
+port x11-wm/xfce4-session
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-xfce4-session_xfsm-shutdown-fallback.c -> dragonfly/patch-xfce4-session_xfsm-shutdown-fallback.c

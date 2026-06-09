@@ -1,0 +1,11 @@
+port www/node18
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-deps_v8_src_base_platform_platform-freebsd.cc -> dragonfly/patch-deps_v8_src_base_platform_platform-freebsd.cc
+file materialize dragonfly/patch-deps_v8_src_base_platform_platform-posix.cc -> dragonfly/patch-deps_v8_src_base_platform_platform-posix.cc
+file materialize dragonfly/patch-deps_v8_src_trap-handler_handler-inside-posix.cc -> dragonfly/patch-deps_v8_src_trap-handler_handler-inside-posix.cc
+file materialize dragonfly/patch-deps_v8_src_trap-handler_handler-inside-posix.h -> dragonfly/patch-deps_v8_src_trap-handler_handler-inside-posix.h
+file materialize dragonfly/patch-deps_v8_src_trap-handler_trap-handler.h -> dragonfly/patch-deps_v8_src_trap-handler_trap-handler.h
+file materialize dragonfly/patch-src_large__pages_node__large__page.cc -> dragonfly/patch-src_large__pages_node__large__page.cc

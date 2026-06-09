@@ -1,0 +1,6 @@
+port x11-toolkits/redkite
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-tools_rkpng2c.c -> dragonfly/patch-tools_rkpng2c.c

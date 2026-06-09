@@ -1,0 +1,16 @@
+port sysutils/bulk_extractor
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add BUILD_DEPENDS "cxxfs_gcc8>0:misc/cxxfs_gcc8"
+mk add CXXFLAGS "-isystem ${LOCALBASE}/cxxfs_gcc8"
+mk add LDFLAGS "-L${LOCALBASE}/cxxfs_gcc8"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@HAVE_EXIV2@&__z@g' \
+			 -e 's@-lexiv2@& -lstdc++fs@g' \
+		${WRKSRC}/configure
+MK1
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-src_be13__api_dfxml__cpp_src_dfxml__writer.h -> dragonfly/patch-src_be13__api_dfxml__cpp_src_dfxml__writer.h
+file materialize dragonfly/patch-src_scan__exiv2.cpp -> dragonfly/patch-src_scan__exiv2.cpp

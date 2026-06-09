@@ -1,0 +1,11 @@
+port x11-wm/plasma6-kwin
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's|FreeBSD|DragonFly|g' \
+		${WRKSRC}/src/utils/CMakeLists.txt
+MK1
+file materialize dragonfly/patch-src_core_syncobjtimeline.cpp -> dragonfly/patch-src_core_syncobjtimeline.cpp
+file materialize dragonfly/patch-src_utils_ramfile.cpp -> dragonfly/patch-src_utils_ramfile.cpp

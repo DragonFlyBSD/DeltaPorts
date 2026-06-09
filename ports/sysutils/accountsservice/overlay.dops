@@ -1,0 +1,11 @@
+port sysutils/accountsservice
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add LIB_DEPENDS "libffi.so:devel/libffi libpcre.so:devel/pcre libiconv.so:converters/libiconv"
+mk add USES "iconv python:3.8+,build"
+mk set BINARY_ALIAS "python3.8=${PYTHON_CMD}"
+file materialize dragonfly/patch-meson.build -> dragonfly/patch-meson.build
+file materialize dragonfly/patch-meson_post_install.py -> dragonfly/patch-meson_post_install.py
+file materialize dragonfly/patch-src_wtmp-helper.c -> dragonfly/patch-src_wtmp-helper.c

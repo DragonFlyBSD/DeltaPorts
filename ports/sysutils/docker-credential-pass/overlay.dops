@@ -1,0 +1,10 @@
+port sysutils/docker-credential-pass
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set pre-build-script <<'MK1'
+	${LN} -s ${GO_WRKSRC}/pass/cmd/main_linux.go ${GO_WRKSRC}/pass/cmd/main_dragonfly.go
+	${LN} -s ${GO_WRKSRC}/pass/pass_linux.go ${GO_WRKSRC}/pass/pass_dragonfly.go
+MK1
+file materialize dragonfly/XFAIL -> dragonfly/XFAIL

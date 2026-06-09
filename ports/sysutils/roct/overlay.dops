@@ -1,0 +1,12 @@
+port sysutils/roct
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CFLAGS "-DMAP_NORESERVE=0"
+file materialize dragonfly/patch-include_hsakmttypes.h -> dragonfly/patch-include_hsakmttypes.h
+file materialize dragonfly/patch-include_linux_kfd__ioctl.h -> dragonfly/patch-include_linux_kfd__ioctl.h
+file materialize dragonfly/patch-src_fmm.c -> dragonfly/patch-src_fmm.c
+file materialize dragonfly/patch-src_fmm.h -> dragonfly/patch-src_fmm.h
+file materialize dragonfly/patch-src_libhsakmt.h -> dragonfly/patch-src_libhsakmt.h
+file materialize dragonfly/patch-src_topology.c -> dragonfly/patch-src_topology.c

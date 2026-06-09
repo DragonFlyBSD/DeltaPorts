@@ -1,0 +1,7 @@
+port sysutils/p5-BSD-Sysctl
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-Makefile.PL -> dragonfly/patch-Makefile.PL
+file materialize dragonfly/patch-Sysctl.xs -> dragonfly/patch-Sysctl.xs

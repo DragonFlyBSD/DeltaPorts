@@ -1,0 +1,8 @@
+port sysutils/ttyd
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "localbase:ldflags"
+mk set DFLY_UNMAINTAINED "yes"
+file materialize dragonfly/patch-src_terminal.c -> dragonfly/patch-src_terminal.c

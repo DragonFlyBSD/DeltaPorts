@@ -1,0 +1,6 @@
+port x11/mate-desktop
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-libmate-desktop_mate-languages.c -> dragonfly/patch-libmate-desktop_mate-languages.c

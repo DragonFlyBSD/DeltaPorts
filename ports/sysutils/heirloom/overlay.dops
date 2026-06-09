@@ -1,0 +1,9 @@
+port sysutils/heirloom
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-libcommon___utmpx.h -> dragonfly/patch-libcommon___utmpx.h
+file materialize dragonfly/patch-libcommon_utmpx.c -> dragonfly/patch-libcommon_utmpx.c
+file materialize dragonfly/patch-priocntl_Makefile.mk -> dragonfly/patch-priocntl_Makefile.mk
+file materialize dragonfly/patch-ps_ps.c -> dragonfly/patch-ps_ps.c

@@ -1,0 +1,9 @@
+port x11/sddm
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-src_common_Constants.h.in -> dragonfly/patch-src_common_Constants.h.in
+file materialize dragonfly/patch-src_daemon_CMakeLists.txt -> dragonfly/patch-src_daemon_CMakeLists.txt
+file materialize dragonfly/patch-src_helper_CMakeLists.txt -> dragonfly/patch-src_helper_CMakeLists.txt

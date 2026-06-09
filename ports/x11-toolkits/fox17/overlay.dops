@@ -1,0 +1,9 @@
+port x11-toolkits/fox17
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-include_fxdefs.h -> dragonfly/patch-include_fxdefs.h
+file materialize dragonfly/patch-include_xincs.h -> dragonfly/patch-include_xincs.h
+file materialize dragonfly/patch-lib_FXSystemTime.cpp -> dragonfly/patch-lib_FXSystemTime.cpp
+file materialize dragonfly/patch-lib_FXThread.cpp -> dragonfly/patch-lib_FXThread.cpp

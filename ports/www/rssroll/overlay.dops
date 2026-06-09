@@ -1,0 +1,18 @@
+port www/rssroll
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "ssl"
+mk add CFLAGS "-I${OPENSSLINC}"
+mk add LDFLAGS "-L${OPENSSLLIB}"
+mk add CFLAGS "-Wno-stringop-overflow"
+mk target set dfly-patch <<'MK1'
+	-${REINPLACE_CMD} -e '/SUBDIR/s@ test@@g'	\
+		${WRKSRC_libcez}/Makefile
+	${REINPLACE_CMD} -e '/SUBDIR/s@ tests@@g'	\
+			 -e '/SUBDIR_TARGETS/d'	\
+		${WRKSRC}/Makefile
+MK1
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-src_Makefile -> dragonfly/patch-src_Makefile

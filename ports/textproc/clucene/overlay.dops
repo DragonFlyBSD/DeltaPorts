@@ -1,0 +1,11 @@
+port textproc/clucene
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set USE_CLANG_FALLBACK "default"
+mk target set pre-patch <<'MK1'
+	${ECHO_CMD} 'SET(CMAKE_NO_BUILTIN_CHRPATH OFF CACHE BOOL "" FORCE)' \
+	>> ${WRKSRC}/CMakeLists.txt
+MK1
+file materialize dragonfly/patch-src_shared_cmake_MacroCheckGccVisibility.cmake -> dragonfly/patch-src_shared_cmake_MacroCheckGccVisibility.cmake

@@ -1,0 +1,10 @@
+port sysutils/packer
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set BUILD_DEPENDS "ca_root_nss>=0:security/ca_root_nss"
+file materialize dragonfly/patch-command_config__file__unix.go -> dragonfly/patch-command_config__file__unix.go
+file materialize dragonfly/patch-vendor_github.com_hashicorp_packer-plugin-sdk_packer_cache__config__unix.go -> dragonfly/patch-vendor_github.com_hashicorp_packer-plugin-sdk_packer_cache__config__unix.go
+file materialize dragonfly/patch-vendor_github.com_hashicorp_packer-plugin-sdk_pathing_config__file__unix.go -> dragonfly/patch-vendor_github.com_hashicorp_packer-plugin-sdk_pathing_config__file__unix.go
+file materialize dragonfly/patch-vendor_github.com_mattn_go-isatty_isatty__bsd.go -> dragonfly/patch-vendor_github.com_mattn_go-isatty_isatty__bsd.go

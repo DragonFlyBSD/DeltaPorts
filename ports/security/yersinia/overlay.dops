@@ -1,0 +1,10 @@
+port security/yersinia
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CFLAGS "-Wno-deprecated-declarations -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast -Wno-int-conversion"
+file materialize dragonfly/patch-configure.ac -> dragonfly/patch-configure.ac
+file materialize dragonfly/patch-src_ncurses-callbacks.h -> dragonfly/patch-src_ncurses-callbacks.h
+file materialize dragonfly/patch-src_ncurses-interface.h -> dragonfly/patch-src_ncurses-interface.h
+file materialize dragonfly/patch-src_yersinia.c -> dragonfly/patch-src_yersinia.c

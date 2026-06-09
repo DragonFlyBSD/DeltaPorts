@@ -1,0 +1,12 @@
+port x11/fbpanel
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CFLAGS "-Wno-deprecated-declarations"
+file materialize dragonfly/patch-plugins_battery_battery.c -> dragonfly/patch-plugins_battery_battery.c
+file materialize dragonfly/patch-plugins_chart_chart.c -> dragonfly/patch-plugins_chart_chart.c
+file materialize dragonfly/patch-plugins_cpu_cpu.c -> dragonfly/patch-plugins_cpu_cpu.c
+file materialize dragonfly/patch-plugins_mem_mem.c -> dragonfly/patch-plugins_mem_mem.c
+file materialize dragonfly/patch-plugins_net_net.c -> dragonfly/patch-plugins_net_net.c
+file materialize dragonfly/patch-plugins_volume_volume.c -> dragonfly/patch-plugins_volume_volume.c

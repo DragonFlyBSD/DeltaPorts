@@ -1,0 +1,9 @@
+port textproc/the_silver_searcher
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "alias"
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-src_scandir.c -> dragonfly/patch-src_scandir.c
+file materialize dragonfly/patch-src_zfile.c -> dragonfly/patch-src_zfile.c

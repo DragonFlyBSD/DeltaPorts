@@ -1,0 +1,11 @@
+port sysutils/seatd
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CFLAGS "-DSIGRTMIN=50 -DSIGRTMAX=54"
+file materialize dragonfly/patch-common_drm.c -> dragonfly/patch-common_drm.c
+file materialize dragonfly/patch-common_evdev.c -> dragonfly/patch-common_evdev.c
+file materialize dragonfly/patch-common_terminal.c -> dragonfly/patch-common_terminal.c
+file materialize dragonfly/patch-libseat_backend_consolekit2.c -> dragonfly/patch-libseat_backend_consolekit2.c
+file materialize dragonfly/patch-seatd_client.c -> dragonfly/patch-seatd_client.c

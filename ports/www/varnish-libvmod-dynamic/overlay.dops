@@ -1,0 +1,7 @@
+port www/varnish-libvmod-dynamic
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CFLAGS "-Wno-deprecated-declarations"
+file materialize dragonfly/patch-src_dyn__resolver__getdns.c -> dragonfly/patch-src_dyn__resolver__getdns.c

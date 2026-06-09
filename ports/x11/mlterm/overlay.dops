@@ -1,0 +1,6 @@
+port x11/mlterm
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-baselib_src_bl__pty__streams.c -> dragonfly/patch-baselib_src_bl__pty__streams.c

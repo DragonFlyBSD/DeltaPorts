@@ -1,0 +1,10 @@
+port www/epiphany
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${CHMOD} ${BINMODE} ${WRKSRC}/post_install.py
+MK1
+file materialize dragonfly/patch-lib_contrib_gnome-languages.c -> dragonfly/patch-lib_contrib_gnome-languages.c
+file materialize dragonfly/patch-lib_ephy-sync-utils.c -> dragonfly/patch-lib_ephy-sync-utils.c

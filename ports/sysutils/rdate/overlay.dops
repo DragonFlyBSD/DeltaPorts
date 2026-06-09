@@ -1,0 +1,8 @@
+port sysutils/rdate
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set CFLAGS "${CFLAGS:N-DNO_UTIL:N-D__dead=}"
+mk add CFLAGS "-D__dead=__dead2"
+file materialize dragonfly/patch-rdate.c -> dragonfly/patch-rdate.c

@@ -1,0 +1,6 @@
+port sysutils/ucspi-proxy
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-tcp-connect.c -> dragonfly/patch-tcp-connect.c

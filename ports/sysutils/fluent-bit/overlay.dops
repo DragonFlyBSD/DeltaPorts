@@ -1,0 +1,12 @@
+port sysutils/fluent-bit
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e '/#define LJ_TARGET_HAS_GETENTROPY/s@1@0@g' \
+		${WRKSRC}/lib/luajit-*/src/lj_prng.c
+MK1
+file materialize dragonfly/patch-include_fluent-bit_flb__endian.h -> dragonfly/patch-include_fluent-bit_flb__endian.h
+file materialize dragonfly/patch-lib_chunkio_deps_crc32_crc32.c -> dragonfly/patch-lib_chunkio_deps_crc32_crc32.c
+file materialize dragonfly/patch-lib_monkey_plugins_liana_liana.c -> dragonfly/patch-lib_monkey_plugins_liana_liana.c

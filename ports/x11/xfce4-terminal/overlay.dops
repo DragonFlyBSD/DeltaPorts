@@ -1,0 +1,7 @@
+port x11/xfce4-terminal
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set MESON_ARGS "-Dlibutempter=disabled"
+file materialize dragonfly/patch-meson.build -> dragonfly/patch-meson.build

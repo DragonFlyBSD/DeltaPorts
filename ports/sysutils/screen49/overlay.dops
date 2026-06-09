@@ -1,0 +1,9 @@
+port sysutils/screen49
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add LDFLAGS "-lkvm"
+file materialize dragonfly/patch-configure.ac -> dragonfly/patch-configure.ac
+file materialize dragonfly/patch-misc.c -> dragonfly/patch-misc.c
+file materialize dragonfly/patch-os.h -> dragonfly/patch-os.h

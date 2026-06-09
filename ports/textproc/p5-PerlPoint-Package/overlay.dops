@@ -1,0 +1,7 @@
+port textproc/p5-PerlPoint-Package
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-lib_PerlPoint_Parser.pm -> dragonfly/patch-lib_PerlPoint_Parser.pm
+file materialize dragonfly/patch-ppParser.yp -> dragonfly/patch-ppParser.yp

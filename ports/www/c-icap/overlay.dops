@@ -1,0 +1,9 @@
+port www/c-icap
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CFLAGS "-Wno-int-conversion"
+file materialize dragonfly/patch-log.c -> dragonfly/patch-log.c
+file materialize dragonfly/patch-mpmt_server.c -> dragonfly/patch-mpmt_server.c
+file materialize dragonfly/patch-tests_test_base64.c -> dragonfly/patch-tests_test_base64.c

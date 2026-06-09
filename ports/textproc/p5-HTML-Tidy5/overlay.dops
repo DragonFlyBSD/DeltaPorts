@@ -1,0 +1,6 @@
+port textproc/p5-HTML-Tidy5
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-Makefile.PL -> dragonfly/patch-Makefile.PL

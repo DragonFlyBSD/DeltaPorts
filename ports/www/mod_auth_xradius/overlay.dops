@@ -1,0 +1,11 @@
+port www/mod_auth_xradius
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "ssl"
+mk add CFLAGS "-I${OPENSSLINC} -DWITH_SSL"
+mk add LDFLAGS "-L${OPENSSLLIB} -lcrypto"
+file materialize dragonfly/patch-libradius_md5c.c -> dragonfly/patch-libradius_md5c.c
+file materialize dragonfly/patch-libradius_porting.h -> dragonfly/patch-libradius_porting.h
+file materialize dragonfly/patch-libradius_radlib.c -> dragonfly/patch-libradius_radlib.c

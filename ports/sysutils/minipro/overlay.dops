@@ -1,0 +1,13 @@
+port sysutils/minipro
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set MAKE_JOBS_UNSAFE "yes"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e ' s|clang|gcc|g'  \
+		${WRKSRC}/Makefile
+MK1
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-minipro.c -> dragonfly/patch-minipro.c
+file materialize dragonfly/patch-tl866a.c -> dragonfly/patch-tl866a.c

@@ -1,0 +1,7 @@
+port sysutils/bsdinfo
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-bsdinfo-xterm-256.c -> dragonfly/patch-bsdinfo-xterm-256.c
+file materialize dragonfly/patch-bsdinfo.c -> dragonfly/patch-bsdinfo.c

@@ -1,0 +1,6 @@
+port sysutils/dsbsu
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-lib_libdsbsu.c -> dragonfly/patch-lib_libdsbsu.c

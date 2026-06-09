@@ -1,0 +1,22 @@
+port x11-wm/enlightenment
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set LIB_DEPENDS "${LIB_DEPENDS:Nlibpulse*}"
+file materialize dragonfly/patch-meson.build -> dragonfly/patch-meson.build
+file materialize dragonfly/patch-src_bin_e.h -> dragonfly/patch-src_bin_e.h
+file materialize dragonfly/patch-src_bin_e__ckpasswd__main.c -> dragonfly/patch-src_bin_e__ckpasswd__main.c
+file materialize dragonfly/patch-src_bin_e__desklock.c -> dragonfly/patch-src_bin_e__desklock.c
+file materialize dragonfly/patch-src_bin_e__util__suid.h -> dragonfly/patch-src_bin_e__util__suid.h
+file materialize dragonfly/patch-src_bin_meson.build -> dragonfly/patch-src_bin_meson.build
+file materialize dragonfly/patch-src_bin_system_e__system.h -> dragonfly/patch-src_bin_system_e__system.h
+file materialize dragonfly/patch-src_bin_system_e__system__backlight.c -> dragonfly/patch-src_bin_system_e__system__backlight.c
+file materialize dragonfly/patch-src_bin_system_e__system__cpufreq.c -> dragonfly/patch-src_bin_system_e__system__cpufreq.c
+file materialize dragonfly/patch-src_bin_system_e__system__power.c -> dragonfly/patch-src_bin_system_e__system__power.c
+file materialize dragonfly/patch-src_bin_system_e__system__storage.c -> dragonfly/patch-src_bin_system_e__system__storage.c
+file materialize dragonfly/patch-src_modules_sysinfo_cpuclock_cpuclock.h -> dragonfly/patch-src_modules_sysinfo_cpuclock_cpuclock.h
+file materialize dragonfly/patch-src_modules_sysinfo_meson.build -> dragonfly/patch-src_modules_sysinfo_meson.build
+file materialize dragonfly/patch-src_modules_wizard_page__090.c -> dragonfly/patch-src_modules_wizard_page__090.c
+file materialize dragonfly/patch-src_modules_wizard_page__100.c -> dragonfly/patch-src_modules_wizard_page__100.c
+file materialize dragonfly/patch-src_modules_wizard_page__120.c -> dragonfly/patch-src_modules_wizard_page__120.c

@@ -1,0 +1,7 @@
+port x11-toolkits/wmapp
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-wmapp.cc -> dragonfly/patch-wmapp.cc
+file materialize dragonfly/patch-wmwindow.cc -> dragonfly/patch-wmwindow.cc

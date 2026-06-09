@@ -1,0 +1,7 @@
+port sysutils/restic
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set DFLY_UNMAINTAINED "yes"
+file materialize dragonfly/patch-internal_restic_node_dragonfly.go -> dragonfly/patch-internal_restic_node_dragonfly.go

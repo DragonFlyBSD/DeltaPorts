@@ -1,0 +1,7 @@
+port sysutils/rsyslog8
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-grammar_lexer.l -> dragonfly/patch-grammar_lexer.l
+file materialize dragonfly/patch-tools_omusrmsg.c -> dragonfly/patch-tools_omusrmsg.c

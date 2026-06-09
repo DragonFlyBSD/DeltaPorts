@@ -1,0 +1,27 @@
+port sysutils/py-psutil
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-psutil___init__.py -> dragonfly/patch-psutil___init__.py
+file materialize dragonfly/patch-psutil___psbsd.py -> dragonfly/patch-psutil___psbsd.py
+file materialize dragonfly/patch-psutil___psutil__bsd.c -> dragonfly/patch-psutil___psutil__bsd.c
+file materialize dragonfly/patch-psutil__common.py -> dragonfly/patch-psutil__common.py
+file materialize dragonfly/patch-psutil__psutil_common.c -> dragonfly/patch-psutil__psutil_common.c
+file materialize dragonfly/patch-psutil_arch_bsd_proc.c -> dragonfly/patch-psutil_arch_bsd_proc.c
+file materialize dragonfly/patch-psutil_arch_bsd_sys.c -> dragonfly/patch-psutil_arch_bsd_sys.c
+file materialize dragonfly/patch-psutil_arch_dragonfly_cpu.c -> dragonfly/patch-psutil_arch_dragonfly_cpu.c
+file materialize dragonfly/patch-psutil_arch_dragonfly_cpu.h -> dragonfly/patch-psutil_arch_dragonfly_cpu.h
+file materialize dragonfly/patch-psutil_arch_dragonfly_disk.c -> dragonfly/patch-psutil_arch_dragonfly_disk.c
+file materialize dragonfly/patch-psutil_arch_dragonfly_disk.h -> dragonfly/patch-psutil_arch_dragonfly_disk.h
+file materialize dragonfly/patch-psutil_arch_dragonfly_mem.c -> dragonfly/patch-psutil_arch_dragonfly_mem.c
+file materialize dragonfly/patch-psutil_arch_dragonfly_mem.h -> dragonfly/patch-psutil_arch_dragonfly_mem.h
+file materialize dragonfly/patch-psutil_arch_dragonfly_proc.c -> dragonfly/patch-psutil_arch_dragonfly_proc.c
+file materialize dragonfly/patch-psutil_arch_dragonfly_proc.h -> dragonfly/patch-psutil_arch_dragonfly_proc.h
+file materialize dragonfly/patch-psutil_arch_dragonfly_proc_socks.h -> dragonfly/patch-psutil_arch_dragonfly_proc_socks.h
+file materialize dragonfly/patch-psutil_arch_dragonfly_sensors.c -> dragonfly/patch-psutil_arch_dragonfly_sensors.c
+file materialize dragonfly/patch-psutil_arch_dragonfly_sensors.h -> dragonfly/patch-psutil_arch_dragonfly_sensors.h
+file materialize dragonfly/patch-psutil_arch_dragonfly_sys_socks.c -> dragonfly/patch-psutil_arch_dragonfly_sys_socks.c
+file materialize dragonfly/patch-psutil_arch_dragonfly_sys_socks.h -> dragonfly/patch-psutil_arch_dragonfly_sys_socks.h
+file materialize dragonfly/patch-psutil_tests_test_system.py -> dragonfly/patch-psutil_tests_test_system.py
+file materialize dragonfly/patch-setup.py -> dragonfly/patch-setup.py

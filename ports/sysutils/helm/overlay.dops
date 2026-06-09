@@ -1,0 +1,8 @@
+port sysutils/helm
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-vendor_github.com_containerd_containerd_content_local_store_unix.go -> dragonfly/patch-vendor_github.com_containerd_containerd_content_local_store_unix.go
+file materialize dragonfly/patch-vendor_github.com_moby_term_termios__bsd.go -> dragonfly/patch-vendor_github.com_moby_term_termios__bsd.go
+file materialize dragonfly/patch-vendor_github.com_moby_term_termios__nonbsd.go -> dragonfly/patch-vendor_github.com_moby_term_termios__nonbsd.go

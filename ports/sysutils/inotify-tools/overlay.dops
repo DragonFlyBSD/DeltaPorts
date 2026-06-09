@@ -1,0 +1,7 @@
+port sysutils/inotify-tools
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-libinotifytools_src_inotifytools.cpp -> dragonfly/patch-libinotifytools_src_inotifytools.cpp
+file materialize dragonfly/patch-src_common.h -> dragonfly/patch-src_common.h

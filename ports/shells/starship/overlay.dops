@@ -1,0 +1,7 @@
+port shells/starship
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set USES "${USES:S/cargo/cargo:extra/}"
+file materialize dragonfly/XFAIL -> dragonfly/XFAIL

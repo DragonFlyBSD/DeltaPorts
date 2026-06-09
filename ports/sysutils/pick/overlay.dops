@@ -1,0 +1,7 @@
+port sysutils/pick
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CPPFLAGS "${CFLAGS}"
+file materialize dragonfly/patch-configure -> dragonfly/patch-configure

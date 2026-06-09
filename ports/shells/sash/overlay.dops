@@ -1,0 +1,15 @@
+port shells/sash
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "alias"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@<ufs/ufs/@<vfs/ufs/@g' \
+			 -e 's@<isofs/@<vfs/isofs/@g' \
+			 -e 's@<fs/msdosfs/@<vfs/msdosfs/@g' \
+			 -e 's@<fs/ntfs/@<vfs/ntfs/@g' \
+			 -e '/#include <vfs\/ufs\/extattr.h>/d' \
+		${WRKSRC}/cmds.c
+MK1
+file materialize dragonfly/patch-cmds.c -> dragonfly/patch-cmds.c

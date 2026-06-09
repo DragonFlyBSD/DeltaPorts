@@ -1,0 +1,7 @@
+port sysutils/zidrav
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CFLAGS "-Wno-narrowing"
+file materialize dragonfly/patch-core.h -> dragonfly/patch-core.h

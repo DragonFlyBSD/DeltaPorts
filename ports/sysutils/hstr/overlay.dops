@@ -1,0 +1,7 @@
+port sysutils/hstr
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-src_include_hstr.h -> dragonfly/patch-src_include_hstr.h
+file materialize dragonfly/patch-src_include_hstr__curses.h -> dragonfly/patch-src_include_hstr__curses.h

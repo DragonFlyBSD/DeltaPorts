@@ -1,0 +1,10 @@
+port www/websh
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CPPFLAGS "-Wno-error"
+file materialize dragonfly/patch-configure.in -> dragonfly/patch-configure.in
+file materialize dragonfly/patch-generic_filelock.h -> dragonfly/patch-generic_filelock.h
+file materialize dragonfly/patch-tests_msc.test -> dragonfly/patch-tests_msc.test
+file materialize dragonfly/unix_tcl.m4 -> dragonfly/unix_tcl.m4

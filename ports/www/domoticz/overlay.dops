@@ -1,0 +1,9 @@
+port www/domoticz
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-CMakeLists.txt -> dragonfly/patch-CMakeLists.txt
+file materialize dragonfly/patch-main_Helper.cpp -> dragonfly/patch-main_Helper.cpp
+file materialize dragonfly/patch-main_domoticz.cpp -> dragonfly/patch-main_domoticz.cpp
+file materialize dragonfly/patch-main_stdafx.h -> dragonfly/patch-main_stdafx.h

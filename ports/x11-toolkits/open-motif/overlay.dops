@@ -1,0 +1,12 @@
+port x11-toolkits/open-motif
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add LIB_DEPENDS "libexpat.so:textproc/expat2"
+mk add CFLAGS "-I${PREFIX}/include/freetype2"
+mk add LDFLAGS "-L${PREFIX}/lib -lXft -lfontconfig -lexpat ${ICONV_LIB}"
+file materialize dragonfly/patch-clients_uil_UilDefI.h -> dragonfly/patch-clients_uil_UilDefI.h
+file materialize dragonfly/patch-config_util_makestrs.c -> dragonfly/patch-config_util_makestrs.c
+file materialize dragonfly/patch-demos_unsupported_xmform_xmform.c -> dragonfly/patch-demos_unsupported_xmform_xmform.c
+file materialize dragonfly/patch-lib_Xm_XpmI.h -> dragonfly/patch-lib_Xm_XpmI.h

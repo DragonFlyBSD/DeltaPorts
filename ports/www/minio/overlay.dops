@@ -1,0 +1,13 @@
+port www/minio
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/XFAIL -> dragonfly/XFAIL
+file materialize dragonfly/patch-cmd_os-dirent__fileino.go -> dragonfly/patch-cmd_os-dirent__fileino.go
+file materialize dragonfly/patch-cmd_os-dirent__namelen__bsd.go -> dragonfly/patch-cmd_os-dirent__namelen__bsd.go
+file materialize dragonfly/patch-cmd_os-readdir__unix.go -> dragonfly/patch-cmd_os-readdir__unix.go
+file materialize dragonfly/patch-pkg_disk_stat_bsd.go -> dragonfly/patch-pkg_disk_stat_bsd.go
+file materialize dragonfly/patch-vendor_github.com_shirou_gopsutil_host_host__dragonfly.go -> dragonfly/patch-vendor_github.com_shirou_gopsutil_host_host__dragonfly.go
+file materialize dragonfly/patch-vendor_github.com_shirou_gopsutil_host_host__fallback.go -> dragonfly/patch-vendor_github.com_shirou_gopsutil_host_host__fallback.go
+file materialize dragonfly/patch-vendor_github.com_shirou_gopsutil_host_host__posix.go -> dragonfly/patch-vendor_github.com_shirou_gopsutil_host_host__posix.go

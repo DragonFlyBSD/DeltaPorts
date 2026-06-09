@@ -1,0 +1,10 @@
+port sysutils/mfid
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@dev/mfi/@dev/raid/mfi/@g'	\
+		${WRKSRC}/mfid.c
+MK1
+file materialize dragonfly/patch-mfid.c -> dragonfly/patch-mfid.c

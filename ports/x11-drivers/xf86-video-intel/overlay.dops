@@ -1,0 +1,9 @@
+port x11-drivers/xf86-video-intel
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set OPTIONS_DEFAULT "SNA"
+file materialize dragonfly/patch-src_intel__device.c -> dragonfly/patch-src_intel__device.c
+file materialize dragonfly/patch-src_sna_kgem.c -> dragonfly/patch-src_sna_kgem.c
+file materialize dragonfly/patch-src_sna_sna__video.c -> dragonfly/patch-src_sna_sna__video.c

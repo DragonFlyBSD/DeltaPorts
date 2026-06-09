@@ -1,0 +1,10 @@
+port textproc/groonga
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@Wbad-function-cast@&__z@g' \
+		${WRKSRC}/configure
+MK1
+file materialize dragonfly/patch-LibreSSL -> dragonfly/patch-LibreSSL

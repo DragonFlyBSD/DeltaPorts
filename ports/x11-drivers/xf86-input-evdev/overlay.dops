@@ -1,0 +1,7 @@
+port x11-drivers/xf86-input-evdev
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set RUN_DEPENDS "${RUN_DEPENDS:Nwebcamd*}"
+file materialize dragonfly/patch-src_evdev.h -> dragonfly/patch-src_evdev.h

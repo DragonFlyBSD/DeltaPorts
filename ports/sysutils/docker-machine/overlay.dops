@@ -1,0 +1,9 @@
+port sysutils/docker-machine
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-drivers_virtualbox_virtualbox_dragonfly.go -> dragonfly/patch-drivers_virtualbox_virtualbox_dragonfly.go
+file materialize dragonfly/patch-libmachine_crashreport_os_dragonfly.go -> dragonfly/patch-libmachine_crashreport_os_dragonfly.go
+file materialize dragonfly/patch-vendor_github.com_bugsnag_osext_osext_procfs.go -> dragonfly/patch-vendor_github.com_bugsnag_osext_osext_procfs.go
+file materialize dragonfly/patch-vendor_github.com_docker_docker_pkg_term_termios_bsd.go -> dragonfly/patch-vendor_github.com_docker_docker_pkg_term_termios_bsd.go

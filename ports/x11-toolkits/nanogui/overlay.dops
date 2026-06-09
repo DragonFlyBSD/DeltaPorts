@@ -1,0 +1,9 @@
+port x11-toolkits/nanogui
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "localbase"
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-CMakeLists.txt -> dragonfly/patch-CMakeLists.txt
+file materialize dragonfly/patch-ext_coro_coro.c -> dragonfly/patch-ext_coro_coro.c

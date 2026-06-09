@@ -1,0 +1,7 @@
+port textproc/humanzip
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-humanunzip.cpp -> dragonfly/patch-humanunzip.cpp
+file materialize dragonfly/patch-humanzip.cpp -> dragonfly/patch-humanzip.cpp

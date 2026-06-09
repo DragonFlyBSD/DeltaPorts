@@ -1,0 +1,8 @@
+port sysutils/ldapvi
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-common.h -> dragonfly/patch-common.h
+file materialize dragonfly/patch-error.c -> dragonfly/patch-error.c
+file materialize dragonfly/patch-port.c -> dragonfly/patch-port.c

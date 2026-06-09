@@ -1,0 +1,7 @@
+port sysutils/kubectl
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-vendor_github.com_moby_term_termios_bsd.go -> dragonfly/patch-vendor_github.com_moby_term_termios_bsd.go
+file materialize dragonfly/patch-vendor_github.com_moby_term_termios_nonbsd.go -> dragonfly/patch-vendor_github.com_moby_term_termios_nonbsd.go

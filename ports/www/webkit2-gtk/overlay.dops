@@ -1,0 +1,17 @@
+port www/webkit2-gtk
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+mk add LIB_DEPENDS "libepoll-shim.so:devel/libepoll-shim"
+mk add CFLAGS "-I${LOCALBASE}/include/libepoll-shim"
+mk add LDFLAGS "-lepoll-shim"
+file materialize dragonfly/patch-Source_ThirdParty_ANGLE_src_common_SimpleMutex.h -> dragonfly/patch-Source_ThirdParty_ANGLE_src_common_SimpleMutex.h
+file materialize dragonfly/patch-Source_ThirdParty_ANGLE_src_common_platform.h -> dragonfly/patch-Source_ThirdParty_ANGLE_src_common_platform.h
+file materialize dragonfly/patch-Source_ThirdParty_skia_src_ports_SkMemory__malloc.cpp -> dragonfly/patch-Source_ThirdParty_skia_src_ports_SkMemory__malloc.cpp
+file materialize dragonfly/patch-Source_WTF_icu_unicode_platform.h -> dragonfly/patch-Source_WTF_icu_unicode_platform.h
+file materialize dragonfly/patch-Source_WTF_wtf_PlatformGTK.cmake -> dragonfly/patch-Source_WTF_wtf_PlatformGTK.cmake
+file materialize dragonfly/patch-Source_WTF_wtf_posix_FileSystemPOSIX.cpp -> dragonfly/patch-Source_WTF_wtf_posix_FileSystemPOSIX.cpp
+file materialize dragonfly/patch-Source_WTF_wtf_unix_MemoryPressureHandlerUnix.cpp -> dragonfly/patch-Source_WTF_wtf_unix_MemoryPressureHandlerUnix.cpp
+file materialize dragonfly/patch-Source_bmalloc_bmalloc_AvailableMemory.cpp -> dragonfly/patch-Source_bmalloc_bmalloc_AvailableMemory.cpp

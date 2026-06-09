@@ -1,0 +1,6 @@
+port www/jesred
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-ip_list.c -> dragonfly/patch-ip_list.c

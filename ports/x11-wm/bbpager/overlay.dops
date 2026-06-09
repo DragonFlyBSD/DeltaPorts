@@ -1,0 +1,8 @@
+port x11-wm/bbpager
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-src_Baseresource.cxx -> dragonfly/patch-src_Baseresource.cxx
+file materialize dragonfly/patch-src_main.cxx -> dragonfly/patch-src_main.cxx
+file materialize dragonfly/patch-src_resource.cxx -> dragonfly/patch-src_resource.cxx

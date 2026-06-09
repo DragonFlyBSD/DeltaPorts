@@ -1,0 +1,16 @@
+port www/rubygem-passenger
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	cands=`grep -rl __FreeBSD__ ${WRKSRC}`; \
+	${REINPLACE_CMD} 's|__FreeBSD__|__DragonFly__|g' $${cands}
+
+MK1
+mk target set dfly-install <<'MK2'
+	${RM} -fv ${STAGEDIR}${PREFIX}/bin/passenger-install-apache2-module
+	${RM} -fv ${STAGEDIR}${PREFIX}/bin/passenger-install-nginx-module
+MK2
+file materialize dragonfly/patch-src_ruby__supportlib_phusion__passenger_platform__info_openssl.rb -> dragonfly/patch-src_ruby__supportlib_phusion__passenger_platform__info_openssl.rb
+file materialize dragonfly/patch-src_ruby__supportlib_phusion__passenger_platform__info_operating__system.rb -> dragonfly/patch-src_ruby__supportlib_phusion__passenger_platform__info_operating__system.rb

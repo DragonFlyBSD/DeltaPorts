@@ -1,0 +1,8 @@
+port x11-toolkits/qtermwidget
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CFLAGS "-DHAVE_UTMPX -DHAVE_UPDWTMPX -DHAVE_LOGINX"
+file materialize dragonfly/patch-CMakeLists.txt -> dragonfly/patch-CMakeLists.txt
+file materialize dragonfly/patch-lib_kpty.cpp -> dragonfly/patch-lib_kpty.cpp

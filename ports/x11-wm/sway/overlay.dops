@@ -1,0 +1,7 @@
+port x11-wm/sway
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NBASU}"
+file materialize dragonfly/patch-common_loop.c -> dragonfly/patch-common_loop.c
