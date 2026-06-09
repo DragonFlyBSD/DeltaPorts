@@ -1,0 +1,6 @@
+port net/nss-pam-ldapd
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CONFIGURE_ARGS "--with-nss-flavour=freebsd"

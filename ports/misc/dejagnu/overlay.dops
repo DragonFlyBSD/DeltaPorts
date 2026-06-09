@@ -1,0 +1,8 @@
+port misc/dejagnu
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e "s|300|20|" ${WRKSRC}/config/unix.exp
+MK1

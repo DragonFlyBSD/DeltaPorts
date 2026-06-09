@@ -1,0 +1,11 @@
+port multimedia/webcamoid
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set LIB_DEPENDS "${LIB_DEPENDS:Nlibpulse*}"
+mk set PLIST "${WRKDIR}/pulseless-plist"
+mk target set dfly-patch <<'MK1'
+	${CAT} ${.CURDIR}/pkg-plist | ${SED} -e '/pulseaudio/d' > ${PLIST}
+MK1
+mk set IGNORE "unmaintained, please request fixing to users mailing list"

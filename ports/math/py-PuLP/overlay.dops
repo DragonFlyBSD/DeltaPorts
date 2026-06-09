@@ -1,0 +1,15 @@
+port math/py-PuLP
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${CP} ${WRKSRC}/pulp/pulp.cfg.freebsd ${WRKSRC}/pulp/pulp.cfg.dragonfly
+	${REINPLACE_CMD} -e 's@freebsd@dragonfly@g' \
+		${WRKSRC}/pulp/apis/core.py
+	${REINPLACE_CMD} -e '/pulp.cfg./s@linux@dragonfly@g' \
+			 -e "s,'pulp\.solverdir\.cbc\.linux.*,,g" -e '/cbc.win/d' \
+		${WRKSRC}/setup.py
+	${REINPLACE_CMD} -e "s,osx,dragonfly,g" \
+		${WRKSRC}/PuLP.egg-info/SOURCES.txt
+MK1

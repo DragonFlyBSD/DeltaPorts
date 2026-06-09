@@ -1,0 +1,6 @@
+port misc/getopt
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CONFIGURE_ARGS "--disable-lscpu ac_cv_type_cpu_set_t=no"

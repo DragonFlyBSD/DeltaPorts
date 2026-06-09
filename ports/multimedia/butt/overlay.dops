@@ -1,0 +1,9 @@
+port multimedia/butt
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's/freebsd\*/freebsd*|dragonfly*/g' \
+		${WRKSRC}/configure.ac
+MK1

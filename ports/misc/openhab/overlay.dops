@@ -1,0 +1,6 @@
+port misc/openhab
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add PLIST_FILES "\"@dir libexec/openhab/runtime/system/org/ops4j/pax/logging/pax-logging-logback\""

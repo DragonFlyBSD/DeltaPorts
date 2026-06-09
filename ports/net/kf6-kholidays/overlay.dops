@@ -1,0 +1,5 @@
+port net/kf6-kholidays
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+

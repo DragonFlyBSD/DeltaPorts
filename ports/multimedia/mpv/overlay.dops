@@ -1,0 +1,9 @@
+port multimedia/mpv
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@\(\.stop_screensaver = \)1@\10@g'	\
+		${WRKSRC}/options/options.c
+MK1

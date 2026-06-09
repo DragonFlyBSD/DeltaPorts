@@ -1,0 +1,7 @@
+port net/boinc-client
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add OPTIONS_EXCLUDE "LINUX"
+mk set USE_CXXSTD "c++11"

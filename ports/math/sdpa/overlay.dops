@@ -1,0 +1,7 @@
+port math/sdpa
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CXXFLAGS "-Wno-catch-value"
+mk set IGNORE "unmaintained, please request fixing to users mailing list"

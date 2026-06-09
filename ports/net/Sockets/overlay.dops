@@ -1,0 +1,6 @@
+port net/Sockets
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add LDFLAGS "-L${OPENSSLLIB} -lcrypto"

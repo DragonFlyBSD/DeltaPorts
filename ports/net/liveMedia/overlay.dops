@@ -1,0 +1,15 @@
+port net/liveMedia
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set CONFIGURE_ARGS "fixed-dragonfly"
+mk target set dfly-patch <<'MK1'
+	${CP} ${WRKSRC}/config.fixed-freebsd ${WRKSRC}/config.fixed-dragonfly
+	${REINPLACE_CMD} -e 's/(INCLUDES)/& -I\/usr\/local\/include /' ${WRKSRC}/config.fixed-dragonfly
+	${REINPLACE_CMD} -e "s@LIBRARY_LINK_OPTS)@& -L${LOCALBASE}/lib -lcrypto@g" \
+		${WRKSRC}/liveMedia/Makefile.tail
+
+MK1
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+mk add CXXFLAGS "-DNO_STD_LIB=1"

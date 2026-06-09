@@ -1,0 +1,6 @@
+port net/imapproxy
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CONFIGURE_ARGS "--host=$(CONFIGURE_TARGET}"

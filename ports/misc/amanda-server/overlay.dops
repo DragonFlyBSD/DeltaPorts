@@ -1,0 +1,10 @@
+port misc/amanda-server
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set PAT "--help={target,optimizers,warnings,undocumented,params,c}"
+mk set REP "--help=target --help=optimizers --help=warnings --help=undocumented --help=params --help=c"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's|${PAT}|${REP}|' ${WRKSRC}/configure
+MK1

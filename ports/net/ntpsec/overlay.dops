@@ -1,0 +1,11 @@
+port net/ntpsec
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "pkgconfig"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e '/decodenetnum, Services/s@RUN_TEST_CASE@//&@g' \
+			 -e '/decodenetnum, IPv4AddressWithPort2/s@RUN_TEST_CASE@//&@g' \
+		${WRKSRC}/tests/libntp/decodenetnum.c
+MK1

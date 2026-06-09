@@ -1,0 +1,6 @@
+port net/libdmapsharing
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add LDFLAGS "-lm"

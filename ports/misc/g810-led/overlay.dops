@@ -1,0 +1,6 @@
+port misc/g810-led
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "localbase:ldflags"

@@ -1,0 +1,7 @@
+port misc/nn-insight
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set USE_CLANG_FALLBACK "default"
+mk set IGNORE "unmaintained, please request fixing to users mailing list"

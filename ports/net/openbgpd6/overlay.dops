@@ -1,0 +1,9 @@
+port net/openbgpd6
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@fparseln@fsmthstmh@g' \
+		${WRKSRC}/include/util.h
+MK1

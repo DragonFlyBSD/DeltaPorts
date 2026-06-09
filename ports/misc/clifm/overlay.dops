@@ -1,0 +1,16 @@
+port misc/clifm
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "alias"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@FreeBSD@DragonFly@g' \
+		${WRKSRC}/Makefile
+	${REINPLACE_CMD} -e '/define _ACL_OK/d' \
+		${WRKSRC}/src/checks.c
+	${REINPLACE_CMD} -e '/HAVE_ST_BIRTHTIME/s@__BSD_VISIBLE@&__z@g' \
+		${WRKSRC}/src/listing.c \
+		${WRKSRC}/src/properties.c
+MK1
+mk set IGNORE "unmaintained, please request fixing to users mailing list"

@@ -1,0 +1,9 @@
+port misc/xplr
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@define LJ_TARGET_HAS_GETENTROPY@& 0 //@g' \
+		${WRKSRC}/cargo-crates/luajit-src*/luajit2/src/lj_prng.c
+MK1

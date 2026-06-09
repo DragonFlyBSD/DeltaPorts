@@ -1,0 +1,6 @@
+port net/mopd
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set IGNORE "not useful (netboot DEC machines)"

@@ -1,0 +1,6 @@
+port net/openmdns
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add MAKE_ENV "CWARNFLAGS=-fcommon"

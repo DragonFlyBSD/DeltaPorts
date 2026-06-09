@@ -1,0 +1,8 @@
+port multimedia/totem
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${CHMOD} +x ${WRKSRC}/meson_compile_python.py
+MK1

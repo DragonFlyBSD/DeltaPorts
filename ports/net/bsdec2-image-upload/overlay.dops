@@ -1,0 +1,6 @@
+port net/bsdec2-image-upload
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CFLAGS "-Wno-error=clobbered"

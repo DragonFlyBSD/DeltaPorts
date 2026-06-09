@@ -1,0 +1,6 @@
+port net/asterisk-g72x
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set FLAVORS "${FLAVORS:Nasterisk16}"

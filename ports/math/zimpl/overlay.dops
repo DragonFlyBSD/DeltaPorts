@@ -1,0 +1,9 @@
+port math/zimpl
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set MAKE_JOBS_UNSAFE "yes"
+mk target set dfly-patch <<'MK1'
+	${CP} ${WRKSRC}/make/make.freebsd.x86_64.gnu.opt ${WRKSRC}/make/make.dragonfly.x86_64.gnu.opt
+MK1

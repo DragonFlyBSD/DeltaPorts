@@ -1,0 +1,12 @@
+port math/tblis
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CONFIGURE_ARGS "CC=gcc"
+mk add BUILD_DEPENDS "cxx_atomics_pic>0:misc/cxx_atomics_pic"
+mk add LDFLAGS "-L${LOCALBASE}/cxx_atomics_pic -latomic_pic"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@haswell,knl/@haswell/@g' \
+		${WRKSRC}/configure
+MK1

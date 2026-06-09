@@ -1,0 +1,6 @@
+port misc/far2l
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set BROKEN "missing malloc_np.h"

@@ -1,0 +1,12 @@
+port net/hsflowd
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set IGNORE "needs df support: readCpuCounters.c:59:14: error: 'struct kinfo_proc' has no member named 'kp_proc'"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} \
+		-e '/PLATFORM=/d' \
+		-e 's|src/..PLATFORM|src/FreeBSD|' \
+		${WRKSRC}/Makefile
+MK1

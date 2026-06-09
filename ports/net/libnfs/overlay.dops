@@ -1,0 +1,10 @@
+port net/libnfs
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set MAKE_JOBS_UNSAFE "yes"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's/__FreeBSD__/__DragonFly__/' \
+		${WRKSRC}/lib/socket.c
+MK1

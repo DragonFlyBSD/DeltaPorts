@@ -1,0 +1,6 @@
+port math/suitesparse-paru
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"

@@ -1,0 +1,10 @@
+port multimedia/ustreamer
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's|strerror_l(error, locale)|strerror(error)|' \
+		${WRKSRC}/src/libs/tools.h
+MK1
+mk set DFLY_UNMAINTAINED "yes"

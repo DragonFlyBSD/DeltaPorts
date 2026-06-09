@@ -1,0 +1,6 @@
+port math/py-graphillion
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CFLAGS "-std=gnu++98"

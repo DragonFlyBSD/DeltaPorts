@@ -1,0 +1,9 @@
+port net/mpich
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+mk set LIB_DEPENDS "${LIB_DEPENDS:Nlibfabric.so*}"
+mk set CONFIGURE_ARGS "${CONFIGURE_ARGS:N--with-libfabric*} --with-device=ch3:nemesis"
+mk set LIB_DEPENDS "${LIB_DEPENDS:Nlibslurm.so*}"

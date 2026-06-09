@@ -1,0 +1,10 @@
+port net/nbd-server
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@_XOPEN_SOURCE@&___@g' \
+		${WRKSRC}/nbd-server.c
+
+MK1

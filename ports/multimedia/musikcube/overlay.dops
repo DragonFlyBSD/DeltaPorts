@@ -1,0 +1,11 @@
+port multimedia/musikcube
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "alias"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e '/MATCHES/s@\(FreeBSD\)"@\1|DragonFly"@g'	\
+		${WRKSRC}/src/musikcube/CMakeLists.txt	\
+		${WRKSRC}/CMakeLists.txt
+MK1

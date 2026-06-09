@@ -1,0 +1,12 @@
+port misc/libsweep-lidar
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "alias"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@\(MATCHES "FreeBSD\)"@\1|DragonFly"@g' \
+			 -e 's@-Weverything@-Wall -Wextra@g' \
+		${WRKSRC}/libsweep/CMakeLists.txt \
+		${WRKSRC}/libsweep/examples/CMakeLists.txt
+MK1

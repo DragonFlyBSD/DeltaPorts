@@ -1,0 +1,7 @@
+port multimedia/qt6-multimedia
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add OPTIONS_EXCLUDE "PULSEAUDIO"
+mk add OPTIONS_DEFAULT "ALSA"

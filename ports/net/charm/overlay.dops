@@ -1,0 +1,6 @@
+port net/charm
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set IGNORE "Build it outside ports framework"

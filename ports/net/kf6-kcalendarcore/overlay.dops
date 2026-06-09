@@ -1,0 +1,11 @@
+port net/kf6-kcalendarcore
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's/[[:<:]]isinf[[:>:]]/std::isinf/g'        \
+		-e 's/[[:<:]]isnan[[:>:]]/std::isnan/g'        \
+		-e 's/std::std::/std::/g'                      \
+		${WRKSRC}/src/incidence.cpp
+MK1

@@ -1,0 +1,6 @@
+port misc/dynomite
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set BROKEN "old OpenSSL interfaces"

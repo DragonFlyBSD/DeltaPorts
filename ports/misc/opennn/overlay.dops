@@ -1,0 +1,7 @@
+port misc/opennn
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set LDFLAGS "${LDFLAGS:N-lomp} -fopenmp"
+mk set IGNORE "unmaintained, please request fixing to users mailing list"

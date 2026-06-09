@@ -1,0 +1,6 @@
+port multimedia/dvdstyler
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add LDFLAGS "-L${LOCALBASE}/lib -ljpeg"
