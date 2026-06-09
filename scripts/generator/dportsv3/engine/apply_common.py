@@ -256,6 +256,14 @@ def _materialize_staged_tree(port_root: Path, txn: FileTransaction) -> Path:
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(content)
 
+    for path, data in txn.staged_byte_writes().items():
+        rel = _rel_under_root(path, port_root)
+        if rel is None:
+            continue
+        target = temp_root / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(data)
+
     for path in txn.staged_removes():
         rel = _rel_under_root(path, port_root)
         if rel is None:

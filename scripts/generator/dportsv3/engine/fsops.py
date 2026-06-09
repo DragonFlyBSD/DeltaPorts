@@ -47,6 +47,9 @@ class FileTransaction:
     def staged_writes(self) -> dict[Path, str]:
         return dict(self._writes)
 
+    def staged_byte_writes(self) -> dict[Path, bytes]:
+        return dict(self._writes_bytes)
+
     def staged_removes(self) -> set[Path]:
         return set(self._removes)
 
@@ -54,7 +57,10 @@ class FileTransaction:
         before: str | None
         try:
             before = path.read_text()
-        except FileNotFoundError:
+        except (FileNotFoundError, UnicodeDecodeError):
+            # UnicodeDecodeError: a byte-staged (file.materialize) path
+            # whose dest exists but isn't UTF-8 — there's no text "before"
+            # to diff against. Treat as absent for the text-diff preview.
             before = None
 
         if path in self._writes:
