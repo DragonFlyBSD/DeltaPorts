@@ -1,0 +1,7 @@
+port net/rpki-client
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "localbase:ldflags"
+mk set IGNORE "unmaintained, please request fixing to users mailing list"

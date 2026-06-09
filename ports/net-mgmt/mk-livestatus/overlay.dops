@@ -1,0 +1,10 @@
+port net-mgmt/mk-livestatus
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@-static-libstdc++@@g'	\
+		${WRKSRC}/src/Makefile.am		\
+		${WRKSRC}/src/Makefile.in
+MK1

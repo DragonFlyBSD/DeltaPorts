@@ -1,0 +1,7 @@
+port net/rubygem-epp-client-rgp
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set USE_RUBY "yes"
+mk set DFLY_UNMAINTAINED "yes"

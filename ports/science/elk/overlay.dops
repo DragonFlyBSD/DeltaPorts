@@ -1,0 +1,11 @@
+port science/elk
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NMPI}"
+mk set LDFLAGS "${LDFLAGS:N*libgcc_s.so}"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e "/F90/s@ -o @ -L${LOCALBASE}/lib &@g" \
+		${WRKSRC}/src/Makefile
+MK1

@@ -1,0 +1,11 @@
+port ports-mgmt/portconfig
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "ncurses"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@ncursesw@ncurses@g' \
+			 -e 's@tinfow@tinfo@g' -e 's@formw@form@g' \
+		${WRKSRC}/Makefile
+MK1

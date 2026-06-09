@@ -1,0 +1,6 @@
+port net-mgmt/ipv6mon
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "alias"

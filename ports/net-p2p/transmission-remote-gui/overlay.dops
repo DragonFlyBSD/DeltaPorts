@@ -1,0 +1,6 @@
+port net-p2p/transmission-remote-gui
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USE_FPC "chm"

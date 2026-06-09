@@ -1,0 +1,6 @@
+port ports-mgmt/pkg_jail
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set IGNORE "bad way to manage jail packages (use synth)"

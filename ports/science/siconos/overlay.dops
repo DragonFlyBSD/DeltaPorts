@@ -1,0 +1,6 @@
+port science/siconos
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CFLAGS "-DRTLD_DEEPBIND=0"

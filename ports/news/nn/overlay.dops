@@ -1,0 +1,16 @@
+port news/nn
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "alias ncurses"
+mk add MAKE_ARGS "CPP=\"${CC} -E -P\""
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@-ltermcap@-lncurses@g'	\
+		${WRKSRC}/conf/s-freebsd.h
+	${REINPLACE_CMD} -e '/extern int      errno/d'	\
+		${WRKSRC}/account.c			\
+		${WRKSRC}/global.c			\
+		${WRKSRC}/global.h			\
+		${WRKSRC}/execute.c
+MK1

@@ -1,0 +1,6 @@
+port ports-mgmt/synth
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set USES "${USES:Nncurses*}"

@@ -1,0 +1,10 @@
+port net-im/toxext
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CMAKE_OFF "REPORT_COVERAGE"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e '/-fsanitize=address/d' \
+		${WRKSRC}/test/CMakeLists.txt
+MK1

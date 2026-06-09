@@ -1,0 +1,7 @@
+port science/massxpert
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set MAKE_JOBS_UNSAFE "yes"
+mk set IGNORE "unmaintained, please request fixing to users mailing list"

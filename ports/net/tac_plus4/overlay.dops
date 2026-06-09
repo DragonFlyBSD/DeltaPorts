@@ -1,0 +1,6 @@
+port net/tac_plus4
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set BROKEN "pam libopie"

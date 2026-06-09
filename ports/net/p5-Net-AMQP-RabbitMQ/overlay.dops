@@ -1,0 +1,6 @@
+port net/p5-Net-AMQP-RabbitMQ
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "ssl localbase:ldflags"

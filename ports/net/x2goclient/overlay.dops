@@ -1,0 +1,6 @@
+port net/x2goclient
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add LIB_DEPENDS "libkrb5.so:security/krb5"

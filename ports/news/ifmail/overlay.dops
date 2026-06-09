@@ -1,0 +1,11 @@
+port news/ifmail
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "alias"
+mk set IGNORE "touches base system \"updating /etc/services\""
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@-lgnuregex@-lcompat@g'	\
+		${WRKSRC}/CONFIG
+MK1

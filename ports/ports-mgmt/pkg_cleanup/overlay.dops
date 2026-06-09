@@ -1,0 +1,10 @@
+port ports-mgmt/pkg_cleanup
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "ncurses"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e "s@if __FreeBSD_version@if 0 //@g"	\
+		${WRKSRC}/pkg_cleanup.c
+MK1

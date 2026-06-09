@@ -1,0 +1,12 @@
+port science/orthanc-dicomweb
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "alias"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's,"FreeBSD","DragonFly",g' \
+		${WRKSRC}/ThirdPartyDownloads/Orthanc-*/OrthancFramework/Resources/CMake/*.cmake \
+		${WRKSRC}/Resources/Orthanc/CMake/Compiler.cmake \
+		${WRKSRC}/Resources/Orthanc/Plugins/OrthancPluginsExports.cmake
+MK1

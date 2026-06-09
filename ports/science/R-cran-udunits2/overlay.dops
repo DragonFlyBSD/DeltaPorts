@@ -1,0 +1,10 @@
+port science/R-cran-udunits2
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CONFIGURE_ARGS "ac_cv_lib_udunits2_ut_read_xml=yes"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@\(ac_cv_lib_udunits2_ut_read_xml=\)no@\1yes@g' \
+		${WRKSRC}/configure
+MK1

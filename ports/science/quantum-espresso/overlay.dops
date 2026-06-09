@@ -1,0 +1,13 @@
+port science/quantum-espresso
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set LIB_DEPENDS "${LIB_DEPENDS:Nlibmpich*}"
+mk add CONFIGURE_ARGS "--disable-parallel FC=gfortran${_GCC_VER}"
+mk set BINARY_ALIAS "${BINARY_ALIAS:Ncpp*} gfortran=gfortran${_GCC_VER}"
+mk set LDFLAGS "${LDFLAGS:N*gfortran.so} -L${LOCALBASE}/lib/gcc${_GCC_VER} -lgfortran"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e "s@gfortran g95@gfortran gfortran${_GCC_VER} g95@g" \
+		${WRKSRC}/install/configure
+MK1

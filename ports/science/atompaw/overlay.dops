@@ -1,0 +1,6 @@
+port science/atompaw
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add FCFLAGS "-L${LOCALBASE}/lib"

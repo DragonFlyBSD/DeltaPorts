@@ -1,0 +1,6 @@
+port science/siesta
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set BINARY_ALIAS "gfortran=gfortran$(_GCC_VER)"

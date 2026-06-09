@@ -1,0 +1,12 @@
+port science/frontistr
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set USES "${USES:Nmpi}"
+mk set LIB_DEPENDS "${LIB_DEPENDS:Nlibscalapack*}"
+mk add OPTIONS_EXCLUDE "DOCS"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e '/target_link_libraries(hecm/s@)@ compat)@g' \
+		${WRKSRC}/hecmw1/CMakeLists.txt
+MK1

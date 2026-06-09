@@ -1,0 +1,7 @@
+port net/pichi
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CXXFLAGS "-Wno-error=pedantic"
+mk set DFLY_UNMAINTAINED "yes"

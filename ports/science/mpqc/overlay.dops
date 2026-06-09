@@ -1,0 +1,7 @@
+port science/mpqc
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CXXFLAGS "-fpermissive"
+mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NDOXYGEN:NMPI}"

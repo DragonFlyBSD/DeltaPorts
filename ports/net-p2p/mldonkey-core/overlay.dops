@@ -1,0 +1,6 @@
+port net-p2p/mldonkey-core
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add LDFLAGS "-L${LOCALBASE}/lib -lpng"

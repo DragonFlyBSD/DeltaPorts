@@ -1,0 +1,20 @@
+port science/elmerfem
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "localbase:ldflags"
+mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NGUI:NOCC}"
+mk set LIB_DEPENDS "${LIB_DEPENDS:Nlibmpich*:Nlibparpack.so*}"
+mk add CMAKE_OFF "WITH_MPI"
+mk set DFLY_PLIST "${WRKSRC}/pkg-plist"
+mk set PLIST "${DFLY_PLIST}"
+mk target set dfly-patch <<'MK1'
+	${CP} -v ${.CURDIR:H}/elmerfem/pkg-plist ${DFLY_PLIST}
+	${REINPLACE_CMD} -e '/ElmerSolver_mpi/d' ${DFLY_PLIST}
+	${REINPLACE_CMD} -e 's@-DUSE_ARPACK@&__z@g' \
+		${WRKSRC}/CMakeLists.txt
+	${REINPLACE_CMD} -e 's@binio arpack@binio@g' \
+		${WRKSRC}/fem/src/CMakeLists.txt
+MK1
+mk set IGNORE "unmaintained, please request fixing to users mailing list"

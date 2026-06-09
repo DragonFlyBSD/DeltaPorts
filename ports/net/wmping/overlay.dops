@@ -1,0 +1,8 @@
+port net/wmping
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set pre-patch <<'MK1'
+	${REINPLACE_CMD} -e 's/freebsd\*/freebsd*|dragonfly*/g' ${WRKSRC}/configure
+MK1

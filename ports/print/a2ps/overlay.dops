@@ -1,0 +1,6 @@
+port print/a2ps
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set USE_CSTD "gnu99"

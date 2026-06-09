@@ -1,0 +1,11 @@
+port science/py-scikit-sparse
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+mk set NO_CCACHE "yes"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's/readlink -f/readlink/g' \
+		${WRKSRC}/setup.py
+MK1

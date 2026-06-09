@@ -1,0 +1,10 @@
+port net/sngrep
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@ncursesw@ncurses@g' -e 's@menuw@menu@g' \
+			 -e 's@panelw@panel@g' -e 's@formw@form@g' \
+		${WRKSRC}/configure.ac
+MK1

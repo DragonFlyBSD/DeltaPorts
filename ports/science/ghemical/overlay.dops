@@ -1,0 +1,8 @@
+port science/ghemical
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "localbase"
+mk set CXXFLAGS "${CXXFLAGS:N-Wno-c++11*} -Wno-narrowing -Wno-write-strings"
+mk set DFLY_UNMAINTAINED "yes"

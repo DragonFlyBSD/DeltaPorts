@@ -1,0 +1,6 @@
+port science/gtamsanalyzer
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CFLAGS "-Wno-int-conversion"

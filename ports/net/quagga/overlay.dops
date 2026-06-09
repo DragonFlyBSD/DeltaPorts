@@ -1,0 +1,6 @@
+port net/quagga
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CPPFLAGS "-DHAVE_BSD_STRUCT_IP_MREQ_HACK"

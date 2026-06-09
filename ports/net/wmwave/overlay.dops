@@ -1,0 +1,9 @@
+port net/wmwave
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@net80211/@netproto/802_11/@g'	\
+		${WRKSRC}/wmwave.c
+MK1

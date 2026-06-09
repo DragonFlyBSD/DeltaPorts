@@ -1,0 +1,7 @@
+port print/tex-luatex
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set USE_CXXSTD "c++11"
+mk set DFLY_ALLOW_FOREIGN_BINARIES "yes"

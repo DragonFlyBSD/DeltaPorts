@@ -1,0 +1,6 @@
+port ports-mgmt/pkg_replace
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set IGNORE "unwanted replacement for portupgrade and portmaster"

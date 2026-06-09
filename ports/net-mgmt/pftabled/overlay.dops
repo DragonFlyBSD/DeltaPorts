@@ -1,0 +1,10 @@
+port net-mgmt/pftabled
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@net/pfvar.h@net/pf/pfvar.h@g'	\
+		${WRKSRC}/configure				\
+		${WRKSRC}/pftabled.c
+MK1

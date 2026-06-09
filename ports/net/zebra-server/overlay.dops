@@ -1,0 +1,9 @@
+port net/zebra-server
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e '/libidzebra_2_0_la_LINK) -rpath/s/$$/ $$(YAZLALIB)/g'	\
+		${WRKSRC}/index/Makefile.in
+MK1

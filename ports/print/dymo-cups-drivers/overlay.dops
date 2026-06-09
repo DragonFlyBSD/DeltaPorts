@@ -1,0 +1,7 @@
+port print/dymo-cups-drivers
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CONFIGURE_ENV "LDVER=ld.bfd"
+mk add LDFLAGS "-pthread"

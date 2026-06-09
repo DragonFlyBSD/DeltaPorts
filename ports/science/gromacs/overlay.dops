@@ -1,0 +1,7 @@
+port science/gromacs
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set LIB_DEPENDS "${LIB_DEPENDSLNlibhwloc}"
+mk set DFLY_UNMAINTAINED "yes"

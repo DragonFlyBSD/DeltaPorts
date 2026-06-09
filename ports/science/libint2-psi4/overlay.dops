@@ -1,0 +1,6 @@
+port science/libint2-psi4
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set DFLY_UNMAINTAINED "yes"

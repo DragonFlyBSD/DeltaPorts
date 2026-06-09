@@ -1,0 +1,22 @@
+port net/yate
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set MAKE_JOBS_UNSAFE "yes"
+mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NSCTP}"
+mk add OPTIONS_EXCLUDE "SCTP"
+mk add LDFLAGS "-L${LOCALBASE}/lib"
+mk add CFLAGS "-I${LOCALBASE}/include"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@\(x\*BSD\))@\1|xDragonFly)@g'	\
+		${WRKSRC}/configure.ac
+	${REINPLACE_CMD} -e 's@defined[ ]*(\(__FreeBSD__\))@(defined(\1)||defined(__DragonFly__))@g'	\
+		${WRKSRC}/configure.ac			\
+		${WRKSRC}/modules/client/alsachan.cpp	\
+		${WRKSRC}/modules/client/osschan.cpp	\
+		${WRKSRC}/modules/server/cpuload.cpp	\
+		${WRKSRC}/engine/Mutex.cpp		\
+		${WRKSRC}/yateclass.h
+MK1
+mk set DFLY_UNMAINTAINED "yes"

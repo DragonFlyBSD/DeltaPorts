@@ -1,0 +1,6 @@
+port net/wmnd
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CONFIGURE_ARGS "--enable-drivers=freebsd_sysctl"

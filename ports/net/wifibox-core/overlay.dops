@@ -1,0 +1,6 @@
+port net/wifibox-core
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set IGNORE "too FreeBSD specific"

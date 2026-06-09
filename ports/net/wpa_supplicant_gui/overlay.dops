@@ -1,0 +1,17 @@
+port net/wpa_supplicant_gui
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CONFIGURE_ENV "QMAKESPEC=${QMAKESPEC}"
+mk set ALL_TARGET "wpa_gui-qt4-build"
+mk add CFLAGS "-Dfdatasync=fsync"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@wpa_gui-qt4:@wpa_gui-qt4-build:@g' \
+		${WRKSRC}/Makefile
+
+MK1
+mk target set dfly-configure <<'MK2'
+	(cd ${WRKSRC} && ${SETENV} ${CONFIGURE_ENV} ${LRELEASE} wpa_gui-qt4/wpa_gui.pro)
+
+MK2

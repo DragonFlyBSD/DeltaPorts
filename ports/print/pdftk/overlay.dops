@@ -1,0 +1,6 @@
+port print/pdftk
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set _GCC_PORT "gcc48"

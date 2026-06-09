@@ -1,0 +1,7 @@
+port net-p2p/qbittorrent
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add LDFLAGS "${EXECINFO_LDFLAGS} -lexecinfo"
+mk set DFLY_UNMAINTAINED "yes"

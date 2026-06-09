@@ -1,0 +1,11 @@
+port net-mgmt/bpft
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@net/ppp_defs\.h@net/ppp_layer/ppp_defs.h@g'	\
+		${WRKSRC}/lib/interfaces.c
+	${REINPLACE_CMD} -e "s@-lcurses -ltermcap@-L${LOCALBASE}/lib -lncurses@g"	\
+		${WRKSRC}/Makefile
+MK1

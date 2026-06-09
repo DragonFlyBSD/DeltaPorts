@@ -1,0 +1,6 @@
+port science/qbox
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set LDFLAGS "${LDFLAGS:N*libgcc_s.so:N-Wl,-rpath*}"

@@ -1,0 +1,7 @@
+port science/berkeleygw
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set BINARY_ALIAS "${BINARY_ALIAS:Ngcc*}"
+mk add MAKE_ARGS "FREEBSD_GCC_DEFAULT=gcc FCPP=\"cpp -C\""

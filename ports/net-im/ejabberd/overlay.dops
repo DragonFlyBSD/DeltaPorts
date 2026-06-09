@@ -1,0 +1,7 @@
+port net-im/ejabberd
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add LDFLAGS "-L${LOCALBASE}/lib"
+mk add CFLAGS "-I${LOCALBASE}/include"

@@ -1,0 +1,6 @@
+port net/rclone-browser
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CXXFLAGS "-Wno-error=deprecated-declarations"

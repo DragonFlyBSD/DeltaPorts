@@ -1,0 +1,6 @@
+port science/py-PyNE
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set BROKEN "compile time resources hog"
