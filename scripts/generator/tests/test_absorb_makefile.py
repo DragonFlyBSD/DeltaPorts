@@ -26,14 +26,14 @@ def _hunks(diff: str):
 def test_token_add_emits_mk_add():
     diff = "--- Makefile.orig\n+++ Makefile\n@@ -1,1 +1,1 @@\n-USE_GNOME=\tgtk20\n+USE_GNOME=\tgtk20 gdkpixbufextra\n"
     ops = hunk_to_mk_ops(_hunks(diff)[0])
-    assert ops == ["mk add USE_GNOME gdkpixbufextra"]
+    assert ops == ['mk add USE_GNOME "gdkpixbufextra"']
 
 
 def test_trailing_token_remove_emits_mk_remove():
     # removal of a trailing token → mk remove
     diff = "--- a\n+++ b\n@@ -1,1 +1,1 @@\n-USE_PYTHON=\tpy3kplist optsuffix\n+USE_PYTHON=\tpy3kplist\n"
     ops = hunk_to_mk_ops(_hunks(diff)[0])
-    assert ops == ["mk remove USE_PYTHON optsuffix"]
+    assert ops == ['mk remove USE_PYTHON "optsuffix"']
 
 
 def test_nonsuffix_token_change_falls_back_to_mk_set():

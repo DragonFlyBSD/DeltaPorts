@@ -31,6 +31,7 @@ from pathlib import Path
 
 from dportsv3.agent.phase_result import DeferredPatch
 from dportsv3.engine.api import apply_dsl
+from dportsv3.migration.convert import _quote
 from dportsv3.migration.parity import check_parity, makefile_whitespace_normalizer
 
 _VAR_RE = re.compile(r"^([+-])\s*([A-Za-z_][A-Za-z0-9_]*)([+:!?]?=)(.*)$")
@@ -121,11 +122,11 @@ def hunk_to_mk_ops(hunk: list[str]) -> list[str] | None:
         old = rm.group(4).split()
         new = am.group(4).split()
         if len(new) > len(old) and new[: len(old)] == old:
-            ops.extend(f"mk add {var} {tok}" for tok in new[len(old):])
+            ops.extend(f"mk add {var} {_quote(tok)}" for tok in new[len(old):])
         elif len(new) < len(old) and old[: len(new)] == new:
-            ops.extend(f"mk remove {var} {tok}" for tok in old[len(new):])
+            ops.extend(f"mk remove {var} {_quote(tok)}" for tok in old[len(new):])
         else:
-            ops.append(f'mk set {var} "{am.group(4).strip()}"')
+            ops.append(f"mk set {var} {_quote(am.group(4).strip())}")
     return ops
 
 
