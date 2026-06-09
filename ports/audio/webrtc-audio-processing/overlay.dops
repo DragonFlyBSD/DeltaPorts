@@ -1,0 +1,6 @@
+port audio/webrtc-audio-processing
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-webrtc_modules_audio__processing_aec3_reverb__model__estimator.h -> dragonfly/patch-webrtc_modules_audio__processing_aec3_reverb__model__estimator.h

@@ -1,0 +1,7 @@
+port audio/faust
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CXXFLAGS "-DCPP_BUILD"
+file materialize dragonfly/patch-architecture_faust_dsp_timed-dsp.h -> dragonfly/patch-architecture_faust_dsp_timed-dsp.h

@@ -1,0 +1,7 @@
+port archivers/pixz
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CONFIGURE_ARGS "LZMA_CFLAGS=\"-I/usr/include\" LZMA_LIBS=\"-llzma\""
+file materialize dragonfly/patch-src_endian.c -> dragonfly/patch-src_endian.c

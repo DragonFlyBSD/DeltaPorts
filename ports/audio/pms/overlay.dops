@@ -1,0 +1,7 @@
+port audio/pms
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-src_pms.cpp -> dragonfly/patch-src_pms.cpp
+file materialize dragonfly/patch-src_pms.h -> dragonfly/patch-src_pms.h

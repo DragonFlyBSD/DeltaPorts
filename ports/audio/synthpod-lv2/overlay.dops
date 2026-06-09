@@ -1,0 +1,11 @@
+port audio/synthpod-lv2
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add X11_USES "gl"
+mk add X11_USE "GL=gl"
+mk set DFLY_UNMAINTAINED "yes"
+file materialize dragonfly/patch-plugins_synthpod__common__nk.c -> dragonfly/patch-plugins_synthpod__common__nk.c
+file materialize dragonfly/patch-sandbox__ui.lv2_sandbox__master.h -> dragonfly/patch-sandbox__ui.lv2_sandbox__master.h
+file materialize dragonfly/patch-sandbox__ui.lv2_sandbox__slave.h -> dragonfly/patch-sandbox__ui.lv2_sandbox__slave.h

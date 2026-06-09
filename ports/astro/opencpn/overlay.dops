@@ -1,0 +1,8 @@
+port astro/opencpn
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "alias"
+mk add CFLAGS "-DSIGRTMIN=50 -DSIGRTMAX=54"
+file materialize dragonfly/patch-src_OCP__DataStreamInput__Thread.cpp -> dragonfly/patch-src_OCP__DataStreamInput__Thread.cpp

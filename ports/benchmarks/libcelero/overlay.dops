@@ -1,0 +1,7 @@
+port benchmarks/libcelero
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "ncurses"
+file materialize dragonfly/patch-include_celero_Utilities.h -> dragonfly/patch-include_celero_Utilities.h

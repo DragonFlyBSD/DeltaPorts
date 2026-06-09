@@ -1,0 +1,7 @@
+port astro/kstars
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-kstars_fitsviewer_fitssepdetector.cpp -> dragonfly/patch-kstars_fitsviewer_fitssepdetector.cpp

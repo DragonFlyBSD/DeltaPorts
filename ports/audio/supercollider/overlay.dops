@@ -1,0 +1,16 @@
+port audio/supercollider
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@ifdef \(__FreeBSD__\)@if defined(\1) || defined(__DragonFly__)@' \
+		${WRKSRC}/server/supernova/server/main.cpp
+	${REINPLACE_CMD} -e '/target_link_libraries( libsupernova atomic )/d' \
+		${WRKSRC}/server/supernova/CMakeLists.txt
+MK1
+file materialize dragonfly/patch-common_SC__Filesystem__unix.cpp -> dragonfly/patch-common_SC__Filesystem__unix.cpp
+file materialize dragonfly/patch-external__libraries_hidapi_CMakeLists.txt -> dragonfly/patch-external__libraries_hidapi_CMakeLists.txt
+file materialize dragonfly/patch-external__libraries_hidapi_libusb_CMakeLists.txt -> dragonfly/patch-external__libraries_hidapi_libusb_CMakeLists.txt
+file materialize dragonfly/patch-include_common_SC__Endian.h -> dragonfly/patch-include_common_SC__Endian.h
+file materialize dragonfly/patch-lang_LangSource_PyrMathSupport.cpp -> dragonfly/patch-lang_LangSource_PyrMathSupport.cpp

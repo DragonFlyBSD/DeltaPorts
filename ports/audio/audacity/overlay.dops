@@ -1,0 +1,14 @@
+port audio/audacity
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "localbase:ldflags"
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-cext.h -> dragonfly/patch-cext.h
+file materialize dragonfly/patch-cmake-proxies_cmake-modules_AudacityDependencies.cmake -> dragonfly/patch-cmake-proxies_cmake-modules_AudacityDependencies.cmake
+file materialize dragonfly/patch-cmake-proxies_cmake-modules_conan.cmake -> dragonfly/patch-cmake-proxies_cmake-modules_conan.cmake
+file materialize dragonfly/patch-lib-src_libnyquist_nyquist_xlisp_xlisp.h -> dragonfly/patch-lib-src_libnyquist_nyquist_xlisp_xlisp.h
+file materialize dragonfly/patch-lib-src_libvamp_Makefile.in -> dragonfly/patch-lib-src_libvamp_Makefile.in
+file materialize dragonfly/patch-lib-src_portsmf_allegro.h -> dragonfly/patch-lib-src_portsmf_allegro.h
+file materialize dragonfly/patch-src_CMakeLists.txt -> dragonfly/patch-src_CMakeLists.txt

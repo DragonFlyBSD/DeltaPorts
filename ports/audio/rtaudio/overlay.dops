@@ -1,0 +1,7 @@
+port audio/rtaudio
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NPULSEAUDIO} OSS"
+file materialize dragonfly/patch-configure.ac -> dragonfly/patch-configure.ac

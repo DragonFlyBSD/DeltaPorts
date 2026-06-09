@@ -1,0 +1,7 @@
+port audio/orbit-lv2
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-netatom.lv2_netatom.lv2_endian.h -> dragonfly/patch-netatom.lv2_netatom.lv2_endian.h

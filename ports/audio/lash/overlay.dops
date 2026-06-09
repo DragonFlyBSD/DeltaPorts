@@ -1,0 +1,7 @@
+port audio/lash
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-liblash_comm.c -> dragonfly/patch-liblash_comm.c
+file materialize dragonfly/patch-liblash_socket.c -> dragonfly/patch-liblash_socket.c

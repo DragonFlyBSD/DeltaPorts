@@ -1,0 +1,7 @@
+port benchmarks/smhasher
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-Platform.cpp -> dragonfly/patch-Platform.cpp
+file materialize dragonfly/patch-Platform.h -> dragonfly/patch-Platform.h

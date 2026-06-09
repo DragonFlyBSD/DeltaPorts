@@ -1,0 +1,7 @@
+port audio/spectmorph
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set DFLY_UNMAINTAINED "yes"
+file materialize dragonfly/patch-lib_smutils.hh -> dragonfly/patch-lib_smutils.hh

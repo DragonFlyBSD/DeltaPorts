@@ -1,0 +1,21 @@
+port audio/geonkick-lv2
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add BUILD_DEPENDS "cxxfs_gcc8>0:misc/cxxfs_gcc8"
+mk add CXXFLAGS "-isystem ${LOCALBASE}/cxxfs_gcc8"
+mk add LDFLAGS "-L${LOCALBASE}/cxxfs_gcc8"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e '/lstdc++fs/s@^#@@g' \
+		${WRKSRC}/plugin/lv2/CMakeLists.txt \
+		${WRKSRC}/standalone/CMakeLists.txt
+	${REINPLACE_CMD} -e 's@FreeBSD@DragonFly@g' \
+		${WRKSRC}/redkite/CMakeLists.txt
+MK1
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-src_GeonkickConfig.cpp -> dragonfly/patch-src_GeonkickConfig.cpp
+file materialize dragonfly/patch-src_envelope.cpp -> dragonfly/patch-src_envelope.cpp
+file materialize dragonfly/patch-src_geonkick__api.cpp -> dragonfly/patch-src_geonkick__api.cpp
+file materialize dragonfly/patch-src_limiter.cpp -> dragonfly/patch-src_limiter.cpp
+file materialize dragonfly/patch-src_top__bar.cpp -> dragonfly/patch-src_top__bar.cpp

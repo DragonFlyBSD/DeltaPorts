@@ -1,0 +1,11 @@
+port astro/cfitsio
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e "/SHLIB_LD}/s/$$/ -lz/g"	\
+		${WRKSRC}/Makefile.in
+MK1
+file materialize dragonfly/patch-configure -> dragonfly/patch-configure
+file materialize dragonfly/patch-utilities_smem.c -> dragonfly/patch-utilities_smem.c

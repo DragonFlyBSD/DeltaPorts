@@ -1,0 +1,9 @@
+port audio/musepack
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-common_tags.c -> dragonfly/patch-common_tags.c
+file materialize dragonfly/patch-libmpcdec_Makefile.am -> dragonfly/patch-libmpcdec_Makefile.am
+file materialize dragonfly/patch-mpcenc_keyboard.c -> dragonfly/patch-mpcenc_keyboard.c
+file materialize dragonfly/patch-mpcenc_mpcenc.h -> dragonfly/patch-mpcenc_mpcenc.h

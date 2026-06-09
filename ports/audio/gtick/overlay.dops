@@ -1,0 +1,14 @@
+port audio/gtick
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set LIB_DEPENDS "${LIB_DEPENDS:Nlibpulse*}"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@libpulse-simple@@' \
+		${WRKSRC}/configure
+MK1
+file materialize dragonfly/patch-src_dsp.c -> dragonfly/patch-src_dsp.c
+file materialize dragonfly/patch-src_dsp.h -> dragonfly/patch-src_dsp.h
+file materialize dragonfly/patch-src_globals.h -> dragonfly/patch-src_globals.h
+file materialize dragonfly/patch-src_gtkoptions.c -> dragonfly/patch-src_gtkoptions.c

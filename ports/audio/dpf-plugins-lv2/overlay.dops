@@ -1,0 +1,7 @@
+port audio/dpf-plugins-lv2
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-dpf_dgl_src_Window.cpp -> dragonfly/patch-dpf_dgl_src_Window.cpp
+file materialize dragonfly/patch-plugins_common_gen__dsp_genlib.cpp -> dragonfly/patch-plugins_common_gen__dsp_genlib.cpp

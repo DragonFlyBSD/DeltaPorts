@@ -1,0 +1,12 @@
+port audio/jack
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-common_JackAudioAdapterFactory.cpp -> dragonfly/patch-common_JackAudioAdapterFactory.cpp
+file materialize dragonfly/patch-common_wscript -> dragonfly/patch-common_wscript
+file materialize dragonfly/patch-dbus_sigsegv.c -> dragonfly/patch-dbus_sigsegv.c
+file materialize dragonfly/patch-dbus_wscript -> dragonfly/patch-dbus_wscript
+file materialize dragonfly/patch-tests_wscript -> dragonfly/patch-tests_wscript
+file materialize dragonfly/patch-waflib_Tools_c_config.py -> dragonfly/patch-waflib_Tools_c_config.py
+file materialize dragonfly/patch-wscript -> dragonfly/patch-wscript

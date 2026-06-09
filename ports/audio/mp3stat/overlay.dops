@@ -1,0 +1,9 @@
+port audio/mp3stat
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-base.cpp -> dragonfly/patch-base.cpp
+file materialize dragonfly/patch-plugit.cpp -> dragonfly/patch-plugit.cpp
+file materialize dragonfly/patch-ui_console_cli.cpp -> dragonfly/patch-ui_console_cli.cpp
+file materialize dragonfly/patch-ui_gtk_gtk2_ui.cpp -> dragonfly/patch-ui_gtk_gtk2_ui.cpp

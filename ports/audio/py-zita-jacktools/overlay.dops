@@ -1,0 +1,7 @@
+port audio/py-zita-jacktools
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set DFLY_UNMAINTAINED "yes"
+file materialize dragonfly/patch-source_posixthr.h -> dragonfly/patch-source_posixthr.h

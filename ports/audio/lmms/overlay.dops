@@ -1,0 +1,7 @@
+port audio/lmms
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-cmake_modules_DetectMachine.cmake -> dragonfly/patch-cmake_modules_DetectMachine.cmake
+file materialize dragonfly/patch-src_3rdparty_rpmalloc_rpmalloc_rpmalloc_malloc.c -> dragonfly/patch-src_3rdparty_rpmalloc_rpmalloc_rpmalloc_malloc.c

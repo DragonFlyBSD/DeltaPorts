@@ -1,0 +1,6 @@
+port archivers/minizip
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-ioapi.h -> dragonfly/patch-ioapi.h

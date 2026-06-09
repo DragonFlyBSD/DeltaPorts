@@ -1,0 +1,6 @@
+port audio/rezound
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-config_platform_bsd.h -> dragonfly/patch-config_platform_bsd.h

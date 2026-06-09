@@ -1,0 +1,12 @@
+port audio/mixxx
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set USES "${USES:Nninja} gmake"
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-cmake_modules_FindLibUSB.cmake -> dragonfly/patch-cmake_modules_FindLibUSB.cmake
+file materialize dragonfly/patch-lib_benchmark_src_sysinfo.cc -> dragonfly/patch-lib_benchmark_src_sysinfo.cc
+file materialize dragonfly/patch-lib_kaitai_kaitaistream.cpp -> dragonfly/patch-lib_kaitai_kaitaistream.cpp
+file materialize dragonfly/patch-lib_libshout-idjc_CMakeLists.txt -> dragonfly/patch-lib_libshout-idjc_CMakeLists.txt
+file materialize dragonfly/patch-src_util_versionstore.cpp -> dragonfly/patch-src_util_versionstore.cpp

@@ -1,0 +1,6 @@
+port archivers/c-blosc2
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-tests_test__common.h -> dragonfly/patch-tests_test__common.h

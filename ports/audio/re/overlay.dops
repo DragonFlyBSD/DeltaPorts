@@ -1,0 +1,6 @@
+port audio/re
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-cmake_re-config.cmake -> dragonfly/patch-cmake_re-config.cmake

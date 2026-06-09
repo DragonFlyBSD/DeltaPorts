@@ -1,0 +1,8 @@
+port archivers/zstd
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set BINARY_ALIAS ""
+file materialize dragonfly/patch-lib_libzstd.mk -> dragonfly/patch-lib_libzstd.mk
+file materialize dragonfly/patch-programs_Makefile -> dragonfly/patch-programs_Makefile

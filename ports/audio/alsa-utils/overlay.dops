@@ -1,0 +1,11 @@
+port audio/alsa-utils
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set GNU_CONFIGURE_MANPREFIX "${PREFIX}/share"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@NCURSESLIBSUFFIX="w"@NCURSESLIBSUFFIX=""@g' \
+		${WRKSRC}/configure
+MK1
+file materialize dragonfly/patch-axfer_container.h -> dragonfly/patch-axfer_container.h

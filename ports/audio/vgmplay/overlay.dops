@@ -1,0 +1,7 @@
+port audio/vgmplay
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set DFLY_UNMAINTAINED "yes"
+file materialize dragonfly/patch-Stream.c -> dragonfly/patch-Stream.c

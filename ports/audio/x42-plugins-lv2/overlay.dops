@@ -1,0 +1,8 @@
+port audio/x42-plugins-lv2
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "alias"
+file materialize dragonfly/patch-meters.lv2_Makefile -> dragonfly/patch-meters.lv2_Makefile
+file materialize dragonfly/patch-tuna.lv2_Makefile -> dragonfly/patch-tuna.lv2_Makefile

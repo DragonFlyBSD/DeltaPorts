@@ -1,0 +1,7 @@
+port benchmarks/uperf
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CONFIGURE_ARGS "--with-ssl-includes=${OPENSSLINC} --with-ssl-libs=${OPENSSLLIB}"
+file materialize dragonfly/patch-configure -> dragonfly/patch-configure

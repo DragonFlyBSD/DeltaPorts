@@ -1,0 +1,15 @@
+port audio/surge-synthesizer-lv2
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add BUILD_DEPENDS "cxxfs_gcc8>0:misc/cxxfs_gcc8"
+mk add CXXFLAGS "-isystem ${LOCALBASE}/cxxfs_gcc8"
+mk add LDFLAGS "-L${LOCALBASE}/cxxfs_gcc8"
+mk add CMAKE_ARGS "-DCMAKE_REQUIRED_LIBRARIES=stdc++fs"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@surge::filesystem@& stdc++fs@g' \
+		${WRKSRC}/CMakeLists.txt
+MK1
+file materialize dragonfly/patch-src_common_dsp_MSEGModulationHelper.cpp -> dragonfly/patch-src_common_dsp_MSEGModulationHelper.cpp
+file materialize dragonfly/patch-src_common_gui_MSEGEditor.cpp -> dragonfly/patch-src_common_gui_MSEGEditor.cpp

@@ -1,0 +1,8 @@
+port astro/gpsd
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add LDFLAGS "-lm"
+mk add MAKE_ENV "LINKFLAGS=\"${LDFLAGS}\""
+file materialize dragonfly/patch-SConscript -> dragonfly/patch-SConscript

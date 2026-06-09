@@ -1,0 +1,7 @@
+port audio/clunk
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-clunk_hrtf.cpp -> dragonfly/patch-clunk_hrtf.cpp
+file materialize dragonfly/patch-clunk_source.cpp -> dragonfly/patch-clunk_source.cpp

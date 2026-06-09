@@ -1,0 +1,6 @@
+port audio/jack_ghero
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-jack_ghero.c -> dragonfly/patch-jack_ghero.c
