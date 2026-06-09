@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 from dportsv3.engine.apply_common import (
     _failed_row,
     _load_makefile,
@@ -31,6 +33,17 @@ from dportsv3.engine.makefile_rewrite import (
     unset_var,
 )
 from dportsv3.engine.models import ApplyContext, ApplyOpResult, PlanOp
+
+
+def _value_references_var(value: str, name: str) -> bool:
+    """True when `value` expands `name` — `${name}`, `${name:mod}`, `$(name)`.
+
+    A self-referential value cannot be a plain `=` assignment (bmake reports
+    "Variable X is recursive" and aborts), nor an in-place `:=` rewrite (the
+    immediate expansion would see an as-yet-undefined value). It must be an
+    appended `:=` line, reproducing the trailing Makefile.DragonFly fragment.
+    """
+    return bool(re.search(r"\$[{(]" + re.escape(name) + r"[):}]", value))
 
 
 def _mk_var_set_insert_line(document) -> int | None:
@@ -78,6 +91,32 @@ def exec_mk_var_set(
         )
 
     text, document = loaded
+
+    if _value_references_var(value, name):
+        # Self-referential set (e.g. OPTIONS_DEFAULT:= ${OPTIONS_DEFAULT:NSTUNNEL}).
+        # Don't rewrite the upstream assignment in place — that produces a
+        # recursive `=` (fatal: "Variable X is recursive") or, with `:=`, an
+        # expansion of an as-yet-undefined value. Reproduce the original
+        # trailing Makefile.DragonFly fragment: append an immediate `:=`
+        # assignment at the end of the port Makefile body so it expands the
+        # fully-accumulated upstream value.
+        replacement = f"{name}:= {value}"
+        insert_before = _insert_before_last_include_line(document)
+        if insert_before is None:
+            line_count = len(text.splitlines(keepends=False))
+            updated = _replace_line_range(
+                text, start=line_count + 1, end=line_count, new_lines=[replacement]
+            )
+        else:
+            updated = _replace_line_range(
+                text,
+                start=insert_before,
+                end=insert_before - 1,
+                new_lines=[replacement],
+            )
+        txn.stage_write(path, updated)
+        return _success_row(op, "mk-var-set-selfref")
+
     intent = set_var(document, name, value)
     if intent.ambiguous:
         return _failed_row(
