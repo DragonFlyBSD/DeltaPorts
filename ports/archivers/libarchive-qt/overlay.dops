@@ -1,6 +1,6 @@
-target @any
 port archivers/libarchive-qt
 type port
 reason "auto-converted from Makefile.DragonFly"
+target @any
 
 mk add USES "libarchive localbase:ldflags"

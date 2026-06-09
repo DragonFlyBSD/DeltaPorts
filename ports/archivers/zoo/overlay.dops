@@ -1,7 +1,7 @@
-target @any
 port archivers/zoo
 type port
 reason "auto-converted from Makefile.DragonFly"
+target @any
 
 mk add CFLAGS "-D__OpenBSD__"
 mk target set dfly-patch <<'MK1'

@@ -1,6 +1,6 @@
-target @any
 port archivers/xarchiver
 type port
 reason "auto-converted from Makefile.DragonFly"
+target @any
 
 mk add USES "alias"

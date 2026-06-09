@@ -1,7 +1,7 @@
-target @any
 port archivers/mscompress
 type port
 reason "auto-converted from Makefile.DragonFly"
+target @any
 
 mk add USES "guessfix"
 mk set BROKEN "creates corrupted archives"

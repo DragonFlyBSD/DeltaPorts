@@ -1,6 +1,6 @@
-target @any
 port archivers/p5-Archive-Extract-Libarchive
 type port
 reason "auto-converted from Makefile.DragonFly"
+target @any
 
 mk set IGNORE "unmaintained, please request fixing to users mailing list"

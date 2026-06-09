@@ -99,10 +99,10 @@ def _render_dops(origin: str, ops: list[str]) -> str:
     # exactly that bug on archivers/liblz4 2026-05-26 (env @2026Q2,
     # every op skipped with I_APPLY_TARGET_MISMATCH).
     header = [
-        "target @any",
         f"port {origin}",
         "type port",
         'reason "auto-converted from Makefile.DragonFly"',
+        "target @any",
         "",
     ]
     return "\n".join(header + ops + [""])

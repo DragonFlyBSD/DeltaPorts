@@ -1,7 +1,7 @@
-target @any
 port archivers/dpkg
 type port
 reason "auto-converted from Makefile.DragonFly"
+target @any
 
 mk set CONFIGURE_ARGS "${CONFIGURE_ARGS:N--with-libmd} --with-libmd=no"
 mk add CONFIGURE_ENV "ac_cv_header_md5_h=no"

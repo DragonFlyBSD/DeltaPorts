@@ -1,6 +1,6 @@
-target @any
 port accessibility/at-spi2-core
 type port
 reason "auto-converted from Makefile.DragonFly"
+target @any
 
 mk add CFLAGS "-D_XOPEN_SOURCE=700"
