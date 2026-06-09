@@ -1,0 +1,6 @@
+port devel/libublio
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set PLIST_SUB "${PLIST_SUB:NPROFLIB*} PROFLIB=\"@comment \""

@@ -1,0 +1,7 @@
+port editors/ecrire
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "localbase:ldflags"
+mk add NLS_LDFLAGS "-lintl"

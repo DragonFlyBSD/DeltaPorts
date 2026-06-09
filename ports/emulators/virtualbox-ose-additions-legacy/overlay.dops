@@ -1,0 +1,6 @@
+port emulators/virtualbox-ose-additions-legacy
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set IGNORE "FreeBSD-specific (and requires 32-bit support)"

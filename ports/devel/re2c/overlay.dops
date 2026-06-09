@@ -1,0 +1,6 @@
+port devel/re2c
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set USES "${USES:Npython*} python"

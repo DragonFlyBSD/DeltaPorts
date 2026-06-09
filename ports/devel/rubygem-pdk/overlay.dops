@@ -1,0 +1,10 @@
+port devel/rubygem-pdk
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e '/diff-lcs>/s@"=@">=@g' \
+			 -e '/json_pure>/s@~>@>=@g' \
+		${WRKSRC}/pdk.gemspec
+MK1

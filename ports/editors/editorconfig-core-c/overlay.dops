@@ -1,0 +1,12 @@
+port editors/editorconfig-core-c
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set BUILD_DEPENDS "${BUILD_DEPENDS:Ndoxygen*}"
+mk set DFLY_PLIST "${WRKSRC}/pkg-plist"
+mk set PLIST "${DFLY_PLIST}"
+mk target set dfly-patch <<'MK1'
+	${CP} -v ${.CURDIR:H}/editorconfig-core-c/pkg-plist ${DFLY_PLIST}
+	${REINPLACE_CMD} -e '/man\/man/d' ${DFLY_PLIST}
+MK1

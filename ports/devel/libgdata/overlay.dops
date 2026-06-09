@@ -1,0 +1,6 @@
+port devel/libgdata
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add LIB_DEPENDS "libgnome-keyring.so:security/libgnome-keyring"

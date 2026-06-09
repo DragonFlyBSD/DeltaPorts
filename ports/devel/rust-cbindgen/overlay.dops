@@ -1,0 +1,6 @@
+port devel/rust-cbindgen
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set USES "${USES:S/cargo/cargo:extra/}"

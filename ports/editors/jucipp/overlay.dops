@@ -1,0 +1,6 @@
+port editors/jucipp
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add LDFLAGS "-L${LOCALBASE}/lib"

@@ -1,0 +1,6 @@
+port emulators/xzx
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set IGNORE "Too big of a mess, skip it."

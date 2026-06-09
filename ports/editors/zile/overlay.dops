@@ -1,0 +1,7 @@
+port editors/zile
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set LDFLAGS "-L${LOCALBASE}/lib"
+mk set IGNORE "unmaintained, please request fixing to users mailing list"

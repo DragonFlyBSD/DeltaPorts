@@ -1,0 +1,7 @@
+port editors/bpatch
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "ncurses"
+mk add CFLAGS "-L${LOCALBASE}/lib"

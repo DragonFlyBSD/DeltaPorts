@@ -1,0 +1,12 @@
+port emulators/tnylpo
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "localbase ncurses"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's,<curses.h>,<ncurses/ncurses.h>,g' \
+		${WRKSRC}/screen.c
+	${REINPLACE_CMD} -e 's@FreeBSD@DragonFly@g' \
+		${WRKSRC}/makefile
+MK1

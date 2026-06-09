@@ -1,0 +1,6 @@
+port devel/rubygem-oj
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set LIB_DEPENDS "${LIB_DEPENDS:Nlibunwind.so\\:devel\\/libunwind}"

@@ -1,0 +1,14 @@
+port devel/qtcreator
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CFLAGS "-Dfdatasync=fsync"
+mk set PLIST "${WRKDIR}/qtcreator-plist"
+mk target set dfly-patch <<'MK1'
+	${CAT} ${.CURDIR}/pkg-plist | ${SED} -e '/utils-internal-asyncjob/d' > ${PLIST}
+	${REINPLACE_CMD} -e "s@[[:<:]]T_RESERVED[[:>:]]@T_GLRESERVED@g"	\
+		${WRKSRC}/src/libs/glsl/glsllexer.cpp			\
+		${WRKSRC}/src/libs/glsl/glslparsertable_p.h		\
+		${WRKSRC}/src/plugins/glsleditor/glslhighlighter.cpp
+MK1

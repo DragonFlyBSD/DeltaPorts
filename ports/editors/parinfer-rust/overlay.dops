@@ -1,0 +1,8 @@
+port editors/parinfer-rust
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add MAKE_ENV "LIBCLANG_PATH=${LOCALBASE}/llvm${LLVM_DEFAULT}/lib"
+mk set USES "${USES:S/cargo/cargo:extra/}"
+mk set IGNORE "unmaintained, please request fixing to users mailing list"

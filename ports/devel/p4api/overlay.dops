@@ -1,0 +1,6 @@
+port devel/p4api
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set IGNORE "requires freebsd-specific devel/p4 makefile"

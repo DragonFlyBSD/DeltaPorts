@@ -1,0 +1,9 @@
+port devel/stringencoders
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CFLAGS "-Wno-unused-but-set-variable"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e '/EXTRACFLAGS/s/-Werror[[:>:]]//g'	${WRKSRC}/configure
+MK1

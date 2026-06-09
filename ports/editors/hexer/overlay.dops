@@ -1,0 +1,10 @@
+port editors/hexer
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "ncurses"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@-lcurses@-lncurses@'	\
+		${WRKSRC}/Makefile
+MK1

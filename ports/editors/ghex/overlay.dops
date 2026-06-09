@@ -1,0 +1,7 @@
+port editors/ghex
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "shebangfix python"
+mk add SHEBANG_FILES "meson_post_install.py"

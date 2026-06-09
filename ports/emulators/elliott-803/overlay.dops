@@ -1,0 +1,18 @@
+port emulators/elliott-803
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "ncurses"
+mk add CFLAGS "-Wno-format -Wno-unused-but-set-variable"
+mk add LDFLAGS "-pthread"
+mk target set dfly-patch <<'MK1'
+	${AWK} '{gsub(/\316/,"a"); gsub(/\265/,"b")}1' \
+		${WRKSRC}/emulator/cpu/fpu_test.c > ${WRKSRC}/temp.c
+	${MV} ${WRKSRC}/temp.c ${WRKSRC}/emulator/cpu/fpu_test.c
+	${REINPLACE_CMD} -e 's@<curses.h>@<ncurses/ncurses.h>@g' \
+		${WRKSRC}/emulator/emulator.c
+	${REINPLACE_CMD} -e 's@-lthr @@g' -e "s@-lcursesw@${LDFLAGS} -lncurses@g" \
+			 -e "s@ -Wall @& ${CFLAGS}@g" \
+		${WRKSRC}/emulator/Makefile
+MK1

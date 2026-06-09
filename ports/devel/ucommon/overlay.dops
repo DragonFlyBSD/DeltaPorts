@@ -1,0 +1,10 @@
+port devel/ucommon
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "alias:11"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@STREQUAL "FreeBSD"@MATCHES "^(FreeBSD|DragonFly)$$"@g'	\
+		${WRKSRC}/CMakeLists.txt
+MK1

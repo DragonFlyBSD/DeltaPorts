@@ -1,0 +1,6 @@
+port devel/newfile
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add BUILD_DEPENDS "bash:shells/bash"

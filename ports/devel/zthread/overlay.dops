@@ -1,0 +1,7 @@
+port devel/zthread
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "ltmainfix"
+mk set BROKEN "needs porting"

@@ -1,0 +1,7 @@
+port editors/mg
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CFLAGS "-DSLIST_FOREACH_SAFE=SLIST_FOREACH_MUTABLE"
+mk set DFLY_UNMAINTAINED "yes"

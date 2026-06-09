@@ -1,0 +1,7 @@
+port dns/knot-resolver
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "alias"
+mk add PLIST_FILES "lib/knot-resolver/debug_opensslkeylog.so"

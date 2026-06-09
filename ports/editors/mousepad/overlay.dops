@@ -1,0 +1,6 @@
+port editors/mousepad
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add LIB_DEPENDS "libpolkit-gobject-1.so:sysutils/polkit"

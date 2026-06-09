@@ -1,0 +1,6 @@
+port emulators/fmsx
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set IGNORE "Very hard to get built, skip for now."

@@ -1,0 +1,6 @@
+port editors/openoffice-4
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set IGNORE "not supported on DragonFly, do not bother to download distfile"

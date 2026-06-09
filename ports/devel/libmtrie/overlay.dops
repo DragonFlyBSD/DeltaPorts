@@ -1,0 +1,6 @@
+port devel/libmtrie
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set PLIST_SUB "${PLIST_SUB:NHURR*} HURRRR=\"@comment \""

@@ -1,0 +1,9 @@
+port dns/encrypted-dns-server
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@-fuse-ld=lld@@g' \
+		${WRKSRC}/cargo-crates/libsodium-sys-stable-*/build.rs
+MK1

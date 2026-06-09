@@ -1,0 +1,10 @@
+port devel/py-xattr
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's|FreeBSD|DragonFly|' \
+		${WRKSRC}/setup.py \
+		${WRKSRC}/xattr/lib_build.c
+MK1

@@ -1,0 +1,6 @@
+port editors/jed
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "alias"

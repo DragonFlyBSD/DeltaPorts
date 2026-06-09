@@ -1,0 +1,6 @@
+port devel/libmpcbdm
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set IGNORE "Only available for i386 -m32"

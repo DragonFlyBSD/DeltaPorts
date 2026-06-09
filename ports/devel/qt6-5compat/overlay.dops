@@ -1,0 +1,5 @@
+port devel/qt6-5compat
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+

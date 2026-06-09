@@ -1,0 +1,8 @@
+port dns/mDNSResponder_nss
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set IGNORE "FreeBSD specific (nsswitch)"
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+mk set DFLY_UNMAINTAINED "yes"

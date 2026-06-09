@@ -1,2 +1,0 @@
-USES+=	ssl
-BROKEN=  fp->_cookie

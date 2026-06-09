@@ -1,0 +1,10 @@
+port emulators/pcem
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@\(\*-\*-freebsd\*\))@\1|*-*-dragonfly*)@g' \
+		${WRKSRC}/configure.ac
+MK1
+mk set DFLY_UNMAINTAINED "yes"

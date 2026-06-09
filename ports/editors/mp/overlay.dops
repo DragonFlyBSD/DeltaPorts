@@ -1,0 +1,7 @@
+port editors/mp
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "localbase:ldflags"
+mk add CFLAGS "-DCONFOPT_WGET_WCH"

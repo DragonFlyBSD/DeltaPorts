@@ -1,0 +1,6 @@
+port devel/rubygem-prometheus-client-mmap
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add GEM_ENV "LIBCLANG_PATH=${LOCALBASE}/llvm${LLVM_DEFAULT}/lib"

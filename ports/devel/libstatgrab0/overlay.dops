@@ -1,0 +1,6 @@
+port devel/libstatgrab0
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set BROKEN "bad FP port"

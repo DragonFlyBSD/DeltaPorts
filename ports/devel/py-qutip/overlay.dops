@@ -1,0 +1,6 @@
+port devel/py-qutip
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set USES "${USES:Npython} python:3.6+"

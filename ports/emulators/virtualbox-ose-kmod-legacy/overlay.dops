@@ -1,0 +1,6 @@
+port emulators/virtualbox-ose-kmod-legacy
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set IGNORE "FreeBSD specific kmod"

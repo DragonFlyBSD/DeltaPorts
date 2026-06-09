@@ -1,0 +1,9 @@
+port editors/dte
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@-lcurses@-lncurses@'	\
+		${WRKSRC}/mk/build.mk
+MK1

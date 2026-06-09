@@ -1,0 +1,6 @@
+port devel/simavr
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set IGNORE "heavy patches, Atmel avr simulator"

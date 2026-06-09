@@ -1,0 +1,14 @@
+port devel/libsigrok
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "alias"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@_POSIX_C_SOURCE@&___@g' \
+		${WRKSRC}/config.h.in
+	${REINPLACE_CMD} -e 's@_XOPEN_SOURCE@&___@g' \
+		${WRKSRC}/bindings/cxx/classes.cpp \
+		${WRKSRC}/src/std.c \
+		${WRKSRC}/src/strutil.c
+MK1

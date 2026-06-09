@@ -1,0 +1,9 @@
+port editors/teco
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e "s@define ptrdiff_t int@include <stddef.h>@g"	\
+		${WRKSRC}/src/zport.h
+MK1

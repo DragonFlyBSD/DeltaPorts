@@ -1,0 +1,6 @@
+port emulators/winetricks
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set IGNORE "Useless without WINE"

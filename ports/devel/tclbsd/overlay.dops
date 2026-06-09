@@ -1,0 +1,8 @@
+port devel/tclbsd
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set run-autotools-fixup <<'MK1'
+	${REINPLACE_CMD} -e 's/FreeBSD-\*/FreeBSD-*|DragonFly-*/g' ${WRKSRC}/configure
+MK1

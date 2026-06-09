@@ -1,0 +1,6 @@
+port emulators/wine
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set IGNORE "has never built on DragonFly, block to avoid wasting CPU cycles"

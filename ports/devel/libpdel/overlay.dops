@@ -1,0 +1,7 @@
+port devel/libpdel
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "ssl"
+mk set BROKEN "fp->_cookie"

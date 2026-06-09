@@ -1,0 +1,6 @@
+port devel/py-hidraw
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set BROKEN "missing dev/hid/hidraw.h"

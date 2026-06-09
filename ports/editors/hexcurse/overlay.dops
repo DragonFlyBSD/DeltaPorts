@@ -1,0 +1,7 @@
+port editors/hexcurse
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CFLAGS "-Wno-format -Wno-implicit-fallthrough"
+mk add CFLAGS "-Wno-stringop-truncation -Wno-stringop-overflow"

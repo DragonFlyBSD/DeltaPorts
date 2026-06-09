@@ -1,0 +1,6 @@
+port devel/zapcc
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set IGNORE "bundles old clang-5 version"

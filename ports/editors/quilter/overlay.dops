@@ -1,0 +1,8 @@
+port editors/quilter
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${CHMOD} +x ${WRKSRC}/meson/post_install.py
+MK1

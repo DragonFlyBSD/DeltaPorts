@@ -1,0 +1,7 @@
+port dns/dnsdist
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "alias"
+mk set LDFLAGS "${LDFLAGS:N-latomic}"

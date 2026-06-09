@@ -1,0 +1,6 @@
+port devel/rubygem-aws-crt
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set IGNORE "unmaintained, please request fixing to users mailing list"

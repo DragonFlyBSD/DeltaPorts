@@ -1,0 +1,9 @@
+port devel/poxml
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e '/add_subdirectory(tests)/d' \
+		${WRKSRC}/CMakeLists.txt
+MK1

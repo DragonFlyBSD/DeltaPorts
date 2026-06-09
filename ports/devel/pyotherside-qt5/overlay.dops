@@ -1,0 +1,6 @@
+port devel/pyotherside-qt5
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USE_QT "declarative-test"

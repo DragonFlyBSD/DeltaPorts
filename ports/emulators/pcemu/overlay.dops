@@ -1,0 +1,6 @@
+port emulators/pcemu
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set IGNORE "Very FreeBSD specific port. Skip for now."

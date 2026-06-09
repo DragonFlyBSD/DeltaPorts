@@ -1,0 +1,6 @@
+port devel/sfml1
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set IGNORE "only useful for motogp"

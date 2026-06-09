@@ -1,0 +1,6 @@
+port emulators/sameboy
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CFLAGS "-Wno-maybe-uninitialized"

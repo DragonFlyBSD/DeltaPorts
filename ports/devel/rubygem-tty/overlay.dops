@@ -1,0 +1,9 @@
+port devel/rubygem-tty
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e '/tty-command>/s@0.9.0@0.10.0@g' \
+		${WRKSRC}/tty.gemspec
+MK1

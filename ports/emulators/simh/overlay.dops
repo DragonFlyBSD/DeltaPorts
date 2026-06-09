@@ -1,0 +1,6 @@
+port emulators/simh
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add MAKE_ENV "LDVER=ld.bfd"

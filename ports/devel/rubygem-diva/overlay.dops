@@ -1,0 +1,9 @@
+port devel/rubygem-diva
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e '/addressable>/s,"< 2.8","<= 2.8.0",g' \
+		${WRKSRC}/diva.gemspec
+MK1
