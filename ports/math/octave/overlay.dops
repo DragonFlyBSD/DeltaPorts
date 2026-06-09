@@ -1,0 +1,10 @@
+port math/octave
+type port
+reason "auto-converted from compat (fragment + diffs/)"
+target @any
+
+file materialize dragonfly/patch-libgnu_cdefs.h -> dragonfly/patch-libgnu_cdefs.h
+file materialize dragonfly/patch-libgnu_signal.in.h -> dragonfly/patch-libgnu_signal.in.h
+file materialize dragonfly/patch-libinterp_corefcn_sysdep.cc -> dragonfly/patch-libinterp_corefcn_sysdep.cc
+mk set GNU_HOST "${CONFIGURE_TARGET}"
+file remove files/patch-libinterp_corefcn_sysdep.cc on-missing noop

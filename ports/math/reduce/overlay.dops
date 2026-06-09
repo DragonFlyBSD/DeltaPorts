@@ -1,0 +1,19 @@
+port math/reduce
+type port
+reason "auto-converted from compat (fragment + diffs/)"
+target @any
+
+mk add BUILD_DEPENDS "cxxfs_gcc8>0:misc/cxxfs_gcc8"
+mk add CXXFLAGS "-isystem ${LOCALBASE}/cxxfs_gcc8"
+mk add LDFLAGS "-L${LOCALBASE}/cxxfs_gcc8"
+mk target set dfly-patch <<'MK1'
+	 ${REINPLACE_CMD} -e 's@\(defined(__FreeBSD__)\)@(\1 || defined(__DragonFly__))@g' \
+		${WRKSRC}/libraries/libedit-20140620-3.1/src/chartype.h \
+		${WRKSRC}/libraries/libffi/src/dlmalloc.c \
+		${WRKSRC}/csl/fox/src/FXDir.cpp \
+		${WRKSRC}/csl/fox/src/FXDate.cpp \
+		${WRKSRC}/csl/fox/src/FXSystem.cpp
+MK1
+mk set USES "autoreconf:build libtool gmake pkgconfig ncurses jpeg xorg"
+mk set CPPFLAGS "`pkg-config freetype2 --cflags`"
+mk set LDFLAGS "`pkg-config freetype2 --libs`"

@@ -1,0 +1,8 @@
+port devel/avr-libc
+type port
+reason "auto-converted from compat (fragment + diffs/)"
+target @any
+
+file materialize dragonfly/patch-config.guess -> dragonfly/patch-config.guess
+file materialize dragonfly/patch-config.sub -> dragonfly/patch-config.sub
+mk set CONFIGURE_ARGS "--build=${CONFIGURE_TARGET} --host=avr --prefix=${PREFIX}"

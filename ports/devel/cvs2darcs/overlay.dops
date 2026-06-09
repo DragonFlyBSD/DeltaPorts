@@ -1,0 +1,6 @@
+port devel/cvs2darcs
+type port
+reason "auto-converted from compat (fragment + diffs/)"
+target @any
+
+mk set BUILD_DEPENDS "\\"

@@ -1,0 +1,7 @@
+port games/doomlegacy
+type port
+reason "auto-converted from compat (fragment + diffs/)"
+target @any
+
+mk set DFLY_UNMAINTAINED "yes"
+mk set USES "gl alias gmake sdl tar:bzip2"

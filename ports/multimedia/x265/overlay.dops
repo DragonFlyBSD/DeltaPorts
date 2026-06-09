@@ -1,0 +1,12 @@
+port multimedia/x265
+type port
+reason "auto-converted from compat (fragment + diffs/)"
+target @any
+
+mk set USES "${USES:Ncmake} cmake:noninja"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e "s,-DARCH_X86_64=1 ,& -w-macro-params-legacy ,g" \
+		${WRKSRC}/cmake/CMakeASM_NASMInformation.cmake
+MK1
+mk set EXTRACT_AFTER_ARGS "--exclude compat --strip-components=1"
+file remove files/patch-md5 on-missing noop

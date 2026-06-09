@@ -1,0 +1,9 @@
+port devel/p5-Curses
+type port
+reason "auto-converted from compat (fragment + diffs/)"
+target @any
+
+mk set USES "ncurses perl5 shebangfix"
+mk set CONFIGURE_ENV "CURSES_CFLAGS=\"${CFLAGS:M-I*} -I${WRKSRC}/usr/include/ncurses\""
+mk set NCURSESW_CONFIGURE_ENV "CURSES_LDFLAGS=\"${LDFLAGS:M-L*} -L/usr/lib/ -lncursesw\" \\"
+mk set NCURSESW_CONFIGURE_ENV_OFF "CURSES_LDFLAGS=\"${LDFLAGS:M-L*} -L/usr/lib/ -lncurses\""

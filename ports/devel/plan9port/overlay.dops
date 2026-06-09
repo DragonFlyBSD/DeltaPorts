@@ -1,0 +1,17 @@
+port devel/plan9port
+type port
+reason "auto-converted from compat (fragment + diffs/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e '/sys\/termios.h/d' \
+		${WRKSRC}/src/cmd/9term/bsdpty.c \
+		${WRKSRC}/src/cmd/draw/mc.c \
+		${WRKSRC}/src/lib9/readcons.c
+
+MK1
+mk target set dfly-configure <<'MK2'
+	${REINPLACE_CMD} '/CC9=/d' ${WRKSRC}/LOCAL.config
+MK2
+file materialize dragonfly/patch-src_cmd_vbackup_mount-BSD.c -> dragonfly/patch-src_cmd_vbackup_mount-BSD.c
+mk set BUILD_DEPENDS "as:devel/binutils@native"

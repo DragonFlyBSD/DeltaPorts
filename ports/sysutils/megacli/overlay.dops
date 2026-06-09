@@ -1,0 +1,7 @@
+port sysutils/megacli
+type port
+reason "auto-converted from compat (fragment + diffs/)"
+target @any
+
+mk set IGNORE "This is FreeBSD binary"
+mk set MEGACLI_ARCH "MegaCli${ARCH:S/i386//:S/amd64/64/:S/x86_64/64/}"

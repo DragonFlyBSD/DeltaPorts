@@ -1,0 +1,12 @@
+port devel/ncurses
+type port
+reason "auto-converted from compat (fragment + diffs/)"
+target @any
+
+mk add CONFIGURE_ARGS "--includedir=${PREFIX}/include"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e '/includedir/s@include ]@includez ]@g' \
+		${WRKSRC}/misc/ncurses-config.in
+MK1
+file materialize dragonfly/patch-configure -> dragonfly/patch-configure
+file remove files/patch-configure on-missing noop

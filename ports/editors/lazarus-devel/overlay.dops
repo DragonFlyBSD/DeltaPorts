@@ -1,0 +1,14 @@
+port editors/lazarus-devel
+type port
+reason "auto-converted from compat (fragment + diffs/)"
+target @any
+
+file materialize dragonfly/patch-components_chmhelp_lhelp_Makefile -> dragonfly/patch-components_chmhelp_lhelp_Makefile
+file materialize dragonfly/patch-ide_Makefile -> dragonfly/patch-ide_Makefile
+file materialize dragonfly/patch-ide_initialsetupproc.pas -> dragonfly/patch-ide_initialsetupproc.pas
+file materialize dragonfly/patch-ide_packages_ideconfig_include_dragonfly_lazconf.inc -> dragonfly/patch-ide_packages_ideconfig_include_dragonfly_lazconf.inc
+file materialize dragonfly/patch-ide_packages_ideconfig_include_unix_lazbaseconf.inc -> dragonfly/patch-ide_packages_ideconfig_include_unix_lazbaseconf.inc
+file materialize dragonfly/patch-lcl_interfaces_qt5_cbindings_qt5.pas -> dragonfly/patch-lcl_interfaces_qt5_cbindings_qt5.pas
+file materialize dragonfly/patch-lcl_interfaces_qt5_qt56.pas -> dragonfly/patch-lcl_interfaces_qt5_qt56.pas
+mk set BUILD_DEPENDS "${LOCALBASE}/bin/as:devel/binutils@native"
+mk set RUN_DEPENDS "${LOCALBASE}/bin/as:devel/binutils@native \\"

@@ -1,0 +1,9 @@
+port devel/qt5-core
+type port
+reason "auto-converted from compat (fragment + diffs/)"
+target @any
+
+file materialize dragonfly/patch-src_3rdparty_forkfd_forkfd.c -> dragonfly/patch-src_3rdparty_forkfd_forkfd.c
+file materialize dragonfly/patch-src_3rdparty_sha3_brg__endian.h -> dragonfly/patch-src_3rdparty_sha3_brg__endian.h
+file materialize dragonfly/patch-src_corelib_io_qlockfile__unix.cpp -> dragonfly/patch-src_corelib_io_qlockfile__unix.cpp
+file remove files/patch-src_corelib_io_qlockfile__unix.cpp on-missing noop

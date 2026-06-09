@@ -1,0 +1,7 @@
+port science/octopus
+type port
+reason "auto-converted from compat (fragment + diffs/)"
+target @any
+
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+mk remove FCFLAGS "-fallow-invalid-boz"

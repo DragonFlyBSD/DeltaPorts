@@ -1,0 +1,11 @@
+port lang/gcc12-devel
+type port
+reason "auto-converted from compat (fragment + diffs/)"
+target @any
+
+file materialize dragonfly/patch-dwarf4 -> dragonfly/patch-dwarf4
+file materialize dragonfly/patch-gcc_configure -> dragonfly/patch-gcc_configure
+file materialize dragonfly/patch-gcc_ginclude_stddef.h -> dragonfly/patch-gcc_ginclude_stddef.h
+mk set BUILD_DEPENDS "${LOCALBASE}/bin/as:devel/binutils@native"
+mk set RUN_DEPENDS "${LOCALBASE}/bin/as:devel/binutils@native"
+file remove files/patch-gfortran-libgcc on-missing noop

@@ -1,0 +1,7 @@
+port lang/spidermonkey91
+type port
+reason "auto-converted from compat (fragment + diffs/)"
+target @any
+
+mk add USES "readline"
+mk set CONFIGURE_TARGET "x86_64-portbld-${OPSYS:tl}${OSREL}"

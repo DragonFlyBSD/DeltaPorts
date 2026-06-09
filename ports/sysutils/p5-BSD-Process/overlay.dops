@@ -1,0 +1,8 @@
+port sysutils/p5-BSD-Process
+type port
+reason "auto-converted from compat (fragment + diffs/)"
+target @any
+
+file materialize dragonfly/patch-Makefile.PL -> dragonfly/patch-Makefile.PL
+file materialize dragonfly/patch-Process.xs -> dragonfly/patch-Process.xs
+file remove files/patch-Process.xs on-missing noop

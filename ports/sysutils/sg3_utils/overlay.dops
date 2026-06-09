@@ -1,0 +1,13 @@
+port sysutils/sg3_utils
+type lock
+reason "auto-converted from compat (fragment + diffs/)"
+target @any
+
+mk add CONFIGURE_ARGS "--disable-scsistrings"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@<cam/@<bus/cam/@g' \
+		${WRKSRC}/lib/sg_pt_freebsd.c
+MK1
+file materialize dragonfly/patch-configure -> dragonfly/patch-configure
+file remove files/patch-lib_sg__pt__freebsd.c on-missing noop
+file remove files/patch-include_freebsd__nvme__ioctl.h on-missing noop

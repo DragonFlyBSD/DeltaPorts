@@ -1,0 +1,9 @@
+port sysutils/facter
+type port
+reason "auto-converted from compat (fragment + diffs/)"
+target @any
+
+file materialize dragonfly/patch-CMakeLists.txt -> dragonfly/patch-CMakeLists.txt
+file materialize dragonfly/patch-lib_CMakeLists.txt -> dragonfly/patch-lib_CMakeLists.txt
+file materialize dragonfly/patch-lib_src_facts_bsd_filesystem__resolver.cc -> dragonfly/patch-lib_src_facts_bsd_filesystem__resolver.cc
+file materialize dragonfly/patch-lib_src_facts_dragonfly_collection.cc -> dragonfly/patch-lib_src_facts_dragonfly_collection.cc

@@ -1,0 +1,9 @@
+port net/dtcpclient
+type port
+reason "auto-converted from compat (fragment + diffs/)"
+target @any
+
+mk add USES "ssl"
+mk add CFLAGS "-I${OPENSSLINC}"
+mk add LDFLAGS "-L${OPENSSLLIB}"
+file remove files/patch-Makefile on-missing noop

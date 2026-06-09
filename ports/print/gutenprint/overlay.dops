@@ -1,0 +1,9 @@
+port print/gutenprint
+type port
+reason "auto-converted from compat (fragment + diffs/)"
+target @any
+
+file materialize dragonfly/patch-configure -> dragonfly/patch-configure
+file remove files/patch-src_cups_commandtoepson.c on-missing noop
+file remove files/patch-src_cups_commandtocanon.c on-missing noop
+file remove files/patch-config.h.in on-missing noop
