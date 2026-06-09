@@ -1,0 +1,8 @@
+port lang/erlang
+type lock
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-lib_crypto_configure -> dragonfly/patch-lib_crypto_configure
+file materialize dragonfly/patch-lib_public__key_src_pubkey__os__cacerts.erl.txt -> dragonfly/patch-lib_public__key_src_pubkey__os__cacerts.erl.txt
+file materialize dragonfly/patch-make_configure -> dragonfly/patch-make_configure

@@ -1,0 +1,8 @@
+port emulators/mupen64plus-core
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set DFLY_PATCHDIR "${.CURDIR}/dragonfly"
+mk set IGNORE "No point in building this until every mupen64plus port builds"
+file materialize dragonfly/patch-source_mupen64plus-core_projects_unix_Makefile -> dragonfly/patch-source_mupen64plus-core_projects_unix_Makefile

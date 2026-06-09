@@ -1,0 +1,8 @@
+port graphics/xv
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set MANCOMPRESSED "no"
+file materialize dragonfly/patch-vdcomp.c -> dragonfly/patch-vdcomp.c
+file materialize dragonfly/patch-xv.h -> dragonfly/patch-xv.h

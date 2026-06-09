@@ -1,0 +1,9 @@
+port graphics/mandelbulber
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "gmake"
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-mandelbulber2_src_common__math.h -> dragonfly/patch-mandelbulber2_src_common__math.h
+file materialize dragonfly/patch-mandelbulber2_src_denoiser.cpp -> dragonfly/patch-mandelbulber2_src_denoiser.cpp

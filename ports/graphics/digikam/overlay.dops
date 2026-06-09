@@ -1,0 +1,17 @@
+port graphics/digikam
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NDOXYGEN}"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@ STREQUAL \(FreeBSD\)@ MATCHES "\1|DragonFly"@g'	\
+		${WRKSRC}/core/CMakeLists.txt					\
+		${WRKSRC}/core/app/DigikamCoreTarget.cmake			\
+		${WRKSRC}/core/showfoto/CMakeLists.txt				\
+		${WRKSRC}/core/tests/CMakeLists.txt
+MK1
+mk set DFLY_UNMAINTAINED "yes"
+file materialize dragonfly/patch-core_dplugins_generic_tools_mediaserver_upnpsdk_Neptune_Source_Core_NptConfig.h -> dragonfly/patch-core_dplugins_generic_tools_mediaserver_upnpsdk_Neptune_Source_Core_NptConfig.h
+file materialize dragonfly/patch-core_libs_pgfutils_libpgf_PGFplatform.h -> dragonfly/patch-core_libs_pgfutils_libpgf_PGFplatform.h
+file materialize dragonfly/patch-core_libs_rawengine_libraw_src_utils_utils__dcraw.cpp -> dragonfly/patch-core_libs_rawengine_libraw_src_utils_utils__dcraw.cpp

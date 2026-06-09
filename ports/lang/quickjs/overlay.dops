@@ -1,0 +1,13 @@
+port lang/quickjs
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@\(HOST_CC=\).*@\1gcc@g' -e 's@\([[:<:]]CC=\).*@\1gcc@g' \
+		${WRKSRC}/Makefile
+MK1
+file materialize dragonfly/patch-Makefile -> dragonfly/patch-Makefile
+file materialize dragonfly/patch-qjs.c -> dragonfly/patch-qjs.c
+file materialize dragonfly/patch-quickjs-libc.c -> dragonfly/patch-quickjs-libc.c
+file materialize dragonfly/patch-quickjs.c -> dragonfly/patch-quickjs.c

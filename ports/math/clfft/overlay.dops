@@ -1,0 +1,9 @@
+port math/clfft
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add PLIST_FILES "libdata/pkgconfig/clFFT.pc"
+file materialize dragonfly/patch-src_include_sharedLibrary.h -> dragonfly/patch-src_include_sharedLibrary.h
+file materialize dragonfly/patch-src_library_CMakeLists.txt -> dragonfly/patch-src_library_CMakeLists.txt
+file materialize dragonfly/patch-src_statTimer_statisticalTimer.CPU.h -> dragonfly/patch-src_statTimer_statisticalTimer.CPU.h

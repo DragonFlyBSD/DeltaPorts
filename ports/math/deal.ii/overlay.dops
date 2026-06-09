@@ -1,0 +1,8 @@
+port math/deal.ii
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set USES "${USES:Nblaslapack*}"
+file materialize dragonfly/XFAIL -> dragonfly/XFAIL
+file materialize dragonfly/patch-include_deal.II_base_std__cxx17_cmath.h -> dragonfly/patch-include_deal.II_base_std__cxx17_cmath.h

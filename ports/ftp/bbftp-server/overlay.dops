@@ -1,0 +1,18 @@
+port ftp/bbftp-server
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-bbftpd.c -> dragonfly/patch-bbftpd.c
+file materialize dragonfly/patch-bbftpd__crypt.c -> dragonfly/patch-bbftpd__crypt.c
+file materialize dragonfly/patch-bbftpd__list.c -> dragonfly/patch-bbftpd__list.c
+file materialize dragonfly/patch-bbftpd__message.c -> dragonfly/patch-bbftpd__message.c
+file materialize dragonfly/patch-bbftpd__readcontrol.c -> dragonfly/patch-bbftpd__readcontrol.c
+file materialize dragonfly/patch-bbftpd__retr.c -> dragonfly/patch-bbftpd__retr.c
+file materialize dragonfly/patch-bbftpd__signals.c -> dragonfly/patch-bbftpd__signals.c
+file materialize dragonfly/patch-bbftpd__utils.c -> dragonfly/patch-bbftpd__utils.c
+file materialize dragonfly/patch-changetodir.c -> dragonfly/patch-changetodir.c
+file materialize dragonfly/patch-createadir.c -> dragonfly/patch-createadir.c
+file materialize dragonfly/patch-sendafile.c -> dragonfly/patch-sendafile.c
+file materialize dragonfly/patch-signals__routines.c -> dragonfly/patch-signals__routines.c
+file materialize dragonfly/patch-storeafile.c -> dragonfly/patch-storeafile.c

@@ -1,0 +1,7 @@
+port mail/faces
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-compface_cmain.c -> dragonfly/patch-compface_cmain.c
+file materialize dragonfly/patch-compface_uncmain.c -> dragonfly/patch-compface_uncmain.c

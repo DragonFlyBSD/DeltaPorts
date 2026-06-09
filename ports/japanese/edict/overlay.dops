@@ -1,0 +1,9 @@
+port japanese/edict
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-xjdclient.c -> dragonfly/patch-xjdclient.c
+file materialize dragonfly/patch-xjdfrontend.c -> dragonfly/patch-xjdfrontend.c
+file materialize dragonfly/patch-xjdserver.c -> dragonfly/patch-xjdserver.c
+file materialize dragonfly/patch-xjdxgen.c -> dragonfly/patch-xjdxgen.c

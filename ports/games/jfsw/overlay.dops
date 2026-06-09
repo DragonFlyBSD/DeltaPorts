@@ -1,0 +1,8 @@
+port games/jfsw
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add MAKE_ENV "PLATFORM=BSD"
+mk set DFLY_UNMAINTAINED "yes"
+file materialize dragonfly/patch-jfbuild_src_mmulti.c -> dragonfly/patch-jfbuild_src_mmulti.c

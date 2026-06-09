@@ -1,0 +1,14 @@
+port games/freeminer
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set USE_CLANG_FALLBACK "default"
+file materialize dragonfly/patch-cmake_Modules_FindGettextLib.cmake -> dragonfly/patch-cmake_Modules_FindGettextLib.cmake
+file materialize dragonfly/patch-src_CMakeLists.txt -> dragonfly/patch-src_CMakeLists.txt
+file materialize dragonfly/patch-src_cguittfont_irrUString.h -> dragonfly/patch-src_cguittfont_irrUString.h
+file materialize dragonfly/patch-src_filesys.cpp -> dragonfly/patch-src_filesys.cpp
+file materialize dragonfly/patch-src_guiChatConsole.cpp -> dragonfly/patch-src_guiChatConsole.cpp
+file materialize dragonfly/patch-src_intlGUIEditBox.cpp -> dragonfly/patch-src_intlGUIEditBox.cpp
+file materialize dragonfly/patch-src_porting.cpp -> dragonfly/patch-src_porting.cpp
+file materialize dragonfly/patch-src_porting.h -> dragonfly/patch-src_porting.h

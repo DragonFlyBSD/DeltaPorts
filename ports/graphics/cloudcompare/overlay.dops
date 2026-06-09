@@ -1,0 +1,9 @@
+port graphics/cloudcompare
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+file materialize dragonfly/patch-plugins_core_Standard_qRANSAC__SD_extern_RANSAC__SD_GfxTL_FlatCopyVector.h -> dragonfly/patch-plugins_core_Standard_qRANSAC__SD_extern_RANSAC__SD_GfxTL_FlatCopyVector.h
+file materialize dragonfly/patch-plugins_core_Standard_qRANSAC__SD_extern_RANSAC__SD_GfxTL_KdTree.h -> dragonfly/patch-plugins_core_Standard_qRANSAC__SD_extern_RANSAC__SD_GfxTL_KdTree.h
+file materialize dragonfly/patch-plugins_core_Standard_qRANSAC__SD_extern_RANSAC__SD_MiscLib_AlignedAllocator.h -> dragonfly/patch-plugins_core_Standard_qRANSAC__SD_extern_RANSAC__SD_MiscLib_AlignedAllocator.h

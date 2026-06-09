@@ -1,0 +1,7 @@
+port mail/sma
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-init.c -> dragonfly/patch-init.c
+file materialize dragonfly/patch-utils.c -> dragonfly/patch-utils.c

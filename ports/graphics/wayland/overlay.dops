@@ -1,0 +1,13 @@
+port graphics/wayland
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-meson.build -> dragonfly/patch-meson.build
+file materialize dragonfly/patch-src_connection.c -> dragonfly/patch-src_connection.c
+file materialize dragonfly/patch-src_event-loop.c -> dragonfly/patch-src_event-loop.c
+file materialize dragonfly/patch-src_wayland-os.c -> dragonfly/patch-src_wayland-os.c
+file materialize dragonfly/patch-src_wayland-os.h -> dragonfly/patch-src_wayland-os.h
+file materialize dragonfly/patch-src_wayland-server.c -> dragonfly/patch-src_wayland-server.c
+file materialize dragonfly/patch-tests_os-wrappers-test.c -> dragonfly/patch-tests_os-wrappers-test.c
+file materialize dragonfly/patch-tests_test-runner.c -> dragonfly/patch-tests_test-runner.c

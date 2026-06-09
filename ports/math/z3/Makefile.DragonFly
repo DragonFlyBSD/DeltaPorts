@@ -1,3 +1,0 @@
-# zrj: disable OpenMP, propagates to libs
-CONFIGURE_ENV+=	USE_OPENMP=0
-MAKE_ENV+=	USE_OPENMP=0

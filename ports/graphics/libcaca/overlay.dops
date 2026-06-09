@@ -1,0 +1,9 @@
+port graphics/libcaca
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CFLAGS "-DHAVE_ARPA_INET_H"
+file materialize dragonfly/patch-caca_caca__stubs.h -> dragonfly/patch-caca_caca__stubs.h
+file materialize dragonfly/patch-caca_dither.c -> dragonfly/patch-caca_dither.c
+file materialize dragonfly/patch-examples_font.c -> dragonfly/patch-examples_font.c

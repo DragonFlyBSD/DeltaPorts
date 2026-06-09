@@ -1,0 +1,13 @@
+port games/quake2max
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@\(defined(__FreeBSD__)\)@(\1 || defined(__DragonFly__))@g'	\
+		${WRKSRC}/unix/cd_unix.c				\
+		${WRKSRC}/unix/qsh_unix.c				\
+		${WRKSRC}/unix/snd_unix.c
+MK1
+file materialize dragonfly/patch-Makefile -> dragonfly/patch-Makefile
+file materialize dragonfly/patch-unix_net__udp.c -> dragonfly/patch-unix_net__udp.c

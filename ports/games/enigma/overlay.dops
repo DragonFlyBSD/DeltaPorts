@@ -1,0 +1,16 @@
+port games/enigma
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set USE_CXXSTD "c++11"
+mk add CXXFLAGS "-Wno-deprecated-declarations"
+mk set BROKEN "segfaults: png images need to be recoded for use with png >= 1.6"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@\(defined (__FreeBSD__)\)@(\1 || defined(__DragonFly__))@g'	\
+		${WRKSRC}/lib-src/zipios++/src/directory.h		\
+		${WRKSRC}/lib-src/zipios++/src/directory.cpp
+MK1
+file materialize dragonfly/patch-lib-src__enigma-core__ecl_util.hh -> dragonfly/patch-lib-src__enigma-core__ecl_util.hh
+file materialize dragonfly/patch-src__Utf8ToXML.hh -> dragonfly/patch-src__Utf8ToXML.hh
+file materialize dragonfly/patch-src__file.hh -> dragonfly/patch-src__file.hh

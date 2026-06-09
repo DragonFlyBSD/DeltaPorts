@@ -1,0 +1,8 @@
+port graphics/jogl
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-gluegen_make_gluegen-cpptasks.xml -> dragonfly/patch-gluegen_make_gluegen-cpptasks.xml
+file materialize dragonfly/patch-gluegen_src_java_com_sun_gluegen_StructLayout.java -> dragonfly/patch-gluegen_src_java_com_sun_gluegen_StructLayout.java
+file materialize dragonfly/patch-jogl_src_native_jogl_JAWT__DrawingSurfaceInfo.c -> dragonfly/patch-jogl_src_native_jogl_JAWT__DrawingSurfaceInfo.c

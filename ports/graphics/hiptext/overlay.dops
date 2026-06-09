@@ -1,0 +1,13 @@
+port graphics/hiptext
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "pkgconfig"
+mk add CFLAGS "-L${LOCALBASE}/lib"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's,freetype-config,pkg-config freetype2,g' \
+		${WRKSRC}/Makefile
+MK1
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-artiste.cc -> dragonfly/patch-artiste.cc

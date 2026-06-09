@@ -1,0 +1,7 @@
+port games/neverball
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add LDFLAGS "-L${LOCALBASE}/lib -lintl"
+file materialize dragonfly/patch-Makefile -> dragonfly/patch-Makefile

@@ -1,0 +1,9 @@
+port ftp/proftpd
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CONFIGURE_ARGS "--disable-xattr"
+file materialize dragonfly/patch-lib__pr_fnmatch.c -> dragonfly/patch-lib__pr_fnmatch.c
+file materialize dragonfly/patch-libressl-compat -> dragonfly/patch-libressl-compat
+file materialize dragonfly/patch-src_wtmp.c -> dragonfly/patch-src_wtmp.c

@@ -1,6 +1,0 @@
-USE_GCC_VERSION=	${GCC_DEFAULT}
-
-# bmake not handling escaped spaces correctly?
-USES+=		gmake
-
-LDFLAGS+=	"-Wl,-z,origin"

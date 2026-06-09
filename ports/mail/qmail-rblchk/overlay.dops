@@ -1,0 +1,7 @@
+port mail/qmail-rblchk
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-error.h -> dragonfly/patch-error.h
+file materialize dragonfly/patch-find-systype.sh -> dragonfly/patch-find-systype.sh

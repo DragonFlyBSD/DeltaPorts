@@ -1,0 +1,6 @@
+port graphics/vulkan-tools
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-cube_CMakeLists.txt -> dragonfly/patch-cube_CMakeLists.txt

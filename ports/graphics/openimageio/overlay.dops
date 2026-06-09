@@ -1,0 +1,9 @@
+port graphics/openimageio
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CMAKE_ARGS "-DUSE_CPP11:BOOL=ON"
+file materialize dragonfly/patch-src_libutil_strutil.cpp -> dragonfly/patch-src_libutil_strutil.cpp
+file materialize dragonfly/patch-src_libutil_sysutil.cpp -> dragonfly/patch-src_libutil_sysutil.cpp
+file materialize dragonfly/patch-src_make_detectplatform.mk -> dragonfly/patch-src_make_detectplatform.mk

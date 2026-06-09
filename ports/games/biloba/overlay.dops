@@ -1,0 +1,6 @@
+port games/biloba
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-src_netops.c -> dragonfly/patch-src_netops.c

@@ -1,0 +1,7 @@
+port games/species
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set CFLAGS "-std=gnu++98"
+file materialize dragonfly/patch-reproduction.hpp -> dragonfly/patch-reproduction.hpp

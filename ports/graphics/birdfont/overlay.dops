@@ -1,0 +1,9 @@
+port graphics/birdfont
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-configure -> dragonfly/patch-configure
+file materialize dragonfly/patch-install.py -> dragonfly/patch-install.py
+file materialize dragonfly/patch-libbirdgems_fit__cubic.c -> dragonfly/patch-libbirdgems_fit__cubic.c

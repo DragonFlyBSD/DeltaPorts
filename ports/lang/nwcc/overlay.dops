@@ -1,0 +1,12 @@
+port lang/nwcc
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-cpp_archdefs.h -> dragonfly/patch-cpp_archdefs.h
+file materialize dragonfly/patch-cpp_misc.c -> dragonfly/patch-cpp_misc.c
+file materialize dragonfly/patch-cpp_system.c -> dragonfly/patch-cpp_system.c
+file materialize dragonfly/patch-driver.c -> dragonfly/patch-driver.c
+file materialize dragonfly/patch-inlineasm.c -> dragonfly/patch-inlineasm.c
+file materialize dragonfly/patch-misc.c -> dragonfly/patch-misc.c
+file materialize dragonfly/patch-test.sh -> dragonfly/patch-test.sh

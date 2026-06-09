@@ -1,0 +1,7 @@
+port lang/f2c
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set GUNZIP_CMD "gunzip -f"
+file materialize dragonfly/patch-libf2c_MAIN.c -> dragonfly/patch-libf2c_MAIN.c

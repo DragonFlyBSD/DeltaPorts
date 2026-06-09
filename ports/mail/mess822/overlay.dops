@@ -1,0 +1,10 @@
+port mail/mess822
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-cdb.h -> dragonfly/patch-cdb.h
+file materialize dragonfly/patch-error.h -> dragonfly/patch-error.h
+file materialize dragonfly/patch-find-systype.sh -> dragonfly/patch-find-systype.sh
+file materialize dragonfly/patch-readwrite.h -> dragonfly/patch-readwrite.h
+file materialize dragonfly/patch-seek.h -> dragonfly/patch-seek.h

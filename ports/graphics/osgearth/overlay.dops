@@ -1,0 +1,11 @@
+port graphics/osgearth
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-src_osgEarthDrivers_fastdxt_libdxt.cpp -> dragonfly/patch-src_osgEarthDrivers_fastdxt_libdxt.cpp
+file materialize dragonfly/patch-src_osgEarthDrivers_fastdxt_util.h -> dragonfly/patch-src_osgEarthDrivers_fastdxt_util.h
+file materialize dragonfly/patch-src_osgEarth_Endian -> dragonfly/patch-src_osgEarth_Endian
+file materialize dragonfly/patch-src_osgEarth_FileUtils.cpp -> dragonfly/patch-src_osgEarth_FileUtils.cpp
+file materialize dragonfly/patch-src_osgEarth_ThreadingUtils.cpp -> dragonfly/patch-src_osgEarth_ThreadingUtils.cpp

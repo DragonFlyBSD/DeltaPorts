@@ -1,0 +1,11 @@
+port games/gtkradiant
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "alias"
+mk add CFLAGS "-Wno-deprecated-declarations -Wno-int-to-pointer-cast"
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-SConstruct -> dragonfly/patch-SConstruct
+file materialize dragonfly/patch-libs_l__net_l__net__berkley.c -> dragonfly/patch-libs_l__net_l__net__berkley.c
+file materialize dragonfly/patch-libs_typesystem.h -> dragonfly/patch-libs_typesystem.h

@@ -1,0 +1,7 @@
+port graphics/podofo
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CMAKE_ARGS "-DPODOFO_HAVE_OPENSSL_1_1:BOOL=true"
+file materialize dragonfly/patch-src_base_PdfMemoryManagement.cpp -> dragonfly/patch-src_base_PdfMemoryManagement.cpp

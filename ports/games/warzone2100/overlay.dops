@@ -1,0 +1,8 @@
+port games/warzone2100
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-3rdparty_quickjs_qjs.c -> dragonfly/patch-3rdparty_quickjs_qjs.c
+file materialize dragonfly/patch-3rdparty_quickjs_quickjs.c -> dragonfly/patch-3rdparty_quickjs_quickjs.c

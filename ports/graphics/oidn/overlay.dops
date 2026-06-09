@@ -1,0 +1,11 @@
+port graphics/oidn
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set DFLY_UNMAINTAINED "yes"
+file materialize dragonfly/patch-common_platform.cpp -> dragonfly/patch-common_platform.cpp
+file materialize dragonfly/patch-common_thread.cpp -> dragonfly/patch-common_thread.cpp
+file materialize dragonfly/patch-common_thread.h -> dragonfly/patch-common_thread.h
+file materialize dragonfly/patch-mkl-dnn_src_common_memory__debug.cpp -> dragonfly/patch-mkl-dnn_src_common_memory__debug.cpp
+file materialize dragonfly/patch-mkl-dnn_src_common_utils.cpp -> dragonfly/patch-mkl-dnn_src_common_utils.cpp

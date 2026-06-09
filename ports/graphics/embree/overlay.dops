@@ -1,0 +1,13 @@
+port graphics/embree
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NTBB}"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@\(defined(__FreeBSD__)\)@(\1||defined(__DragonFly__))@g'	\
+		${WRKSRC}/common/math/math.h
+MK1
+file materialize dragonfly/patch-common_sys_platform.h -> dragonfly/patch-common_sys_platform.h
+file materialize dragonfly/patch-common_sys_sysinfo.cpp -> dragonfly/patch-common_sys_sysinfo.cpp
+file materialize dragonfly/patch-common_sys_thread.cpp -> dragonfly/patch-common_sys_thread.cpp

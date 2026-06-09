@@ -1,0 +1,8 @@
+port japanese/canna-server
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "alias"
+mk add CFLAGS "-D__FreeBSD_version=1300000"
+file materialize dragonfly/patch-canna_widedef.h -> dragonfly/patch-canna_widedef.h

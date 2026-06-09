@@ -1,0 +1,15 @@
+port games/openspades
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's/[[:<:]]isinf[[:>:]]/std::isinf/g'	\
+			 -e 's/[[:<:]]isnan[[:>:]]/std::isnan/g'	\
+			 -e 's/std::std::/std::/g'			\
+		${WRKSRC}/Sources/Client/Client_Input.cpp		\
+		${WRKSRC}/Sources/Client/Corpse.cpp			\
+		${WRKSRC}/Sources/Draw/SWMapRenderer.cpp
+MK1
+file materialize dragonfly/patch-Sources_AngelScript_source_as_memory.cpp -> dragonfly/patch-Sources_AngelScript_source_as_memory.cpp
+file materialize dragonfly/patch-Sources_ENet_unix.c -> dragonfly/patch-Sources_ENet_unix.c

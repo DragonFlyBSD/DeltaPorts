@@ -1,0 +1,14 @@
+port math/yices
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@freebsd@dragonfly@g' \
+		${WRKSRC}/src/Makefile \
+		${WRKSRC}/Makefile.build
+	${CP} -v ${WRKSRC}/etc/install-yices.freebsd \
+		 ${WRKSRC}/etc/install-yices.dragonfly
+MK1
+file materialize dragonfly/patch-autoconf_os -> dragonfly/patch-autoconf_os
+file materialize dragonfly/patch-src_utils_memsize.c -> dragonfly/patch-src_utils_memsize.c

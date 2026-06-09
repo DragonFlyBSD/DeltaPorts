@@ -1,0 +1,7 @@
+port games/xtrojka
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-scores.c -> dragonfly/patch-scores.c
+file materialize dragonfly/patch-slist.c -> dragonfly/patch-slist.c

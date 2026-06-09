@@ -1,0 +1,7 @@
+port ftp/pavuk
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CFLAGS "-Wno-unused-variable -Wno-int-to-pointer-cast -Wno-pointer-sign"
+file materialize dragonfly/patch-src_url.c -> dragonfly/patch-src_url.c

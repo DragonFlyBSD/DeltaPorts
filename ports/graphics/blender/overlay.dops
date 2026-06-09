@@ -1,0 +1,25 @@
+port graphics/blender
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add MAKE_ENV "OMP_NUM_THREADS=1"
+mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NPULSEAUDIO}"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's/\(HAVE_UNWIND_H \)./\10/' \
+		${WRKSRC}/extern/glog/src/config_freebsd.h
+	${REINPLACE_CMD} -e 's/[[:<:]]isinf[[:>:]]/std::isinf/g' \
+		-e 's@[[:<:]]isnan[[:>:]]@std::isnan@g' \
+		${WRKSRC}/source/blender/gpu/intern/gpu_matrix.cc
+
+MK1
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+file materialize dragonfly/patch-extern_Eigen3_Eigen_src_Core_util_Memory.h -> dragonfly/patch-extern_Eigen3_Eigen_src_Core_util_Memory.h
+file materialize dragonfly/patch-extern_glog_src_config.h -> dragonfly/patch-extern_glog_src_config.h
+file materialize dragonfly/patch-intern__guardedalloc__intern__mallocn_intern.h -> dragonfly/patch-intern__guardedalloc__intern__mallocn_intern.h
+file materialize dragonfly/patch-intern_cycles_util_util__aligned__malloc.cpp -> dragonfly/patch-intern_cycles_util_util__aligned__malloc.cpp
+file materialize dragonfly/patch-intern_guardedalloc_intern_mallocn.c -> dragonfly/patch-intern_guardedalloc_intern_mallocn.c
+file materialize dragonfly/patch-intern_libmv_libmv_base_aligned__malloc.cc -> dragonfly/patch-intern_libmv_libmv_base_aligned__malloc.cc
+file materialize dragonfly/patch-intern_libmv_libmv_numeric_numeric.h -> dragonfly/patch-intern_libmv_libmv_numeric_numeric.h
+file materialize dragonfly/patch-source_blender_blenlib_BLI_filereader.h -> dragonfly/patch-source_blender_blenlib_BLI_filereader.h
+file materialize dragonfly/patch-source_creator_creator.c -> dragonfly/patch-source_creator_creator.c

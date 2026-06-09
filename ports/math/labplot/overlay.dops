@@ -1,0 +1,13 @@
+port math/labplot
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set IGNORE "won't build in synth, v2.0.1 can't be updated to 2.3.0 due to EMC is QT5"
+file materialize dragonfly/patch-src_backend_analysis_StatisticsFilter.cpp -> dragonfly/patch-src_backend_analysis_StatisticsFilter.cpp
+file materialize dragonfly/patch-src_backend_core_AbstractColumn.cpp -> dragonfly/patch-src_backend_core_AbstractColumn.cpp
+file materialize dragonfly/patch-src_backend_core_datatypes_Double2DateTimeFilter.h -> dragonfly/patch-src_backend_core_datatypes_Double2DateTimeFilter.h
+file materialize dragonfly/patch-src_backend_core_datatypes_Double2DayOfWeekFilter.h -> dragonfly/patch-src_backend_core_datatypes_Double2DayOfWeekFilter.h
+file materialize dragonfly/patch-src_backend_core_datatypes_Double2MonthFilter.h -> dragonfly/patch-src_backend_core_datatypes_Double2MonthFilter.h
+file materialize dragonfly/patch-src_backend_core_datatypes_Double2StringFilter.h -> dragonfly/patch-src_backend_core_datatypes_Double2StringFilter.h
+file materialize dragonfly/patch-src_backend_worksheet_plots_cartesian_CartesianCoordinateSystem.cpp -> dragonfly/patch-src_backend_worksheet_plots_cartesian_CartesianCoordinateSystem.cpp

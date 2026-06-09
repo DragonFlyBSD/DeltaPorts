@@ -1,0 +1,10 @@
+port math/calc
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@FreeBSD@DragonFly@g' \
+		${WRKSRC}/Makefile
+MK1
+file materialize dragonfly/patch-Makefile.target -> dragonfly/patch-Makefile.target

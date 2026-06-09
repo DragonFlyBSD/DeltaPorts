@@ -1,0 +1,6 @@
+port lang/abcl
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-src_org_armedbear_lisp_Lisp.java -> dragonfly/patch-src_org_armedbear_lisp_Lisp.java

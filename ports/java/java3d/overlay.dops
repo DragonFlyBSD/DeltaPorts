@@ -1,0 +1,8 @@
+port java/java3d
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-j3d-core_build.xml -> dragonfly/patch-j3d-core_build.xml
+file materialize dragonfly/patch-j3d-core_src_native_build.xml -> dragonfly/patch-j3d-core_src_native_build.xml
+file materialize dragonfly/patch-j3d-core_src_native_ogl_build-dragonfly.xml -> dragonfly/patch-j3d-core_src_native_ogl_build-dragonfly.xml

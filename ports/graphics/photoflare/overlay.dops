@@ -1,0 +1,6 @@
+port graphics/photoflare
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-src_workers_filterworkermp.cpp -> dragonfly/patch-src_workers_filterworkermp.cpp

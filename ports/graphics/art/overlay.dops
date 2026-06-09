@@ -1,0 +1,10 @@
+port graphics/art
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e '/"atomic"/d' \
+		${WRKSRC}/rtgui/CMakeLists.txt
+MK1
+file materialize dragonfly/XFAIL -> dragonfly/XFAIL

@@ -1,0 +1,8 @@
+port ftp/bsdftpd-ssl
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "ncurses"
+mk add CFLAGS "-DSMALL"
+file materialize dragonfly/patch-ftpd_logwtmp.c -> dragonfly/patch-ftpd_logwtmp.c

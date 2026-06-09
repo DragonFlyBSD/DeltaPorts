@@ -1,0 +1,7 @@
+port lang/pfe
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set IGNORE "fails to link"
+file materialize dragonfly/patch-pfe_configure -> dragonfly/patch-pfe_configure

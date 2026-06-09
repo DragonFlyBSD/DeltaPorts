@@ -1,0 +1,8 @@
+port mail/xmail
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-callMail.c -> dragonfly/patch-callMail.c
+file materialize dragonfly/patch-callbacks.c -> dragonfly/patch-callbacks.c

@@ -1,0 +1,11 @@
+port games/trenchbroom
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "alias"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@\(Linux|FreeBSD\)@\1|DragonFly@g'	\
+		${WRKSRC}/cmake/TrenchBroomApp.cmake
+MK1
+file materialize dragonfly/patch-common_src_View_CellLayout.h -> dragonfly/patch-common_src_View_CellLayout.h

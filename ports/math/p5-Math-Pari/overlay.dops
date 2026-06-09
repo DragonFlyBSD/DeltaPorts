@@ -1,0 +1,11 @@
+port math/p5-Math-Pari
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-libPARI_gphelp -> dragonfly/patch-libPARI_gphelp
+file materialize dragonfly/patch-pari-2.3.5_config_arch-osname -> dragonfly/patch-pari-2.3.5_config_arch-osname
+file materialize dragonfly/patch-pari-2.3.5_config_get__archos -> dragonfly/patch-pari-2.3.5_config_get__archos
+file materialize dragonfly/patch-pari-2.3.5_config_get__dlld -> dragonfly/patch-pari-2.3.5_config_get__dlld
+file materialize dragonfly/patch-pari-2.3.5_config_get__fltk -> dragonfly/patch-pari-2.3.5_config_get__fltk
+file materialize dragonfly/patch-pari-2.3.5_config_get__ld -> dragonfly/patch-pari-2.3.5_config_get__ld

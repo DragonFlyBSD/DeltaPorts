@@ -1,0 +1,11 @@
+port games/zdoom
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "alias"
+file materialize dragonfly/patch-game-music-emu_CMakeLists.txt -> dragonfly/patch-game-music-emu_CMakeLists.txt
+file materialize dragonfly/patch-src_m__alloc.cpp -> dragonfly/patch-src_m__alloc.cpp
+file materialize dragonfly/patch-src_posix_sdl_hardware.cpp -> dragonfly/patch-src_posix_sdl_hardware.cpp
+file materialize dragonfly/patch-src_posix_sdl_sdlvideo.cpp -> dragonfly/patch-src_posix_sdl_sdlvideo.cpp
+file materialize dragonfly/patch-src_sound_music__midi__timidity.cpp -> dragonfly/patch-src_sound_music__midi__timidity.cpp

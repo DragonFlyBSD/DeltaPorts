@@ -1,0 +1,8 @@
+port math/libtommath
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NLTO}"
+file materialize dragonfly/patch-CMakeLists.txt -> dragonfly/patch-CMakeLists.txt
+file materialize dragonfly/patch-makefile_include.mk -> dragonfly/patch-makefile_include.mk

@@ -1,0 +1,12 @@
+port math/xlife++
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's/[[:<:]]isnan[[:>:]]/std::isnan/g' \
+			 -e 's/[[:<:]]isinf[[:>:]]/std::isinf/g' \
+		${WRKSRC}/src/mathsResources/specialFunctions/erfFunction.cpp
+MK1
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-src_mathsResources_specialFunctions_erfFunction.cpp -> dragonfly/patch-src_mathsResources_specialFunctions_erfFunction.cpp

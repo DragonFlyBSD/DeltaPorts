@@ -1,0 +1,8 @@
+port lang/guile2
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-lib_signal.in.h -> dragonfly/patch-lib_signal.in.h
+file materialize dragonfly/patch-libguile_filesys.c -> dragonfly/patch-libguile_filesys.c
+file materialize dragonfly/patch-libguile_threads.c -> dragonfly/patch-libguile_threads.c

@@ -1,0 +1,8 @@
+port games/quadra
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set USE_CXXSTD "c++11"
+file materialize dragonfly/patch-skelton_include_dict.h -> dragonfly/patch-skelton_include_dict.h
+file materialize dragonfly/patch-skelton_svgalib_video.cpp -> dragonfly/patch-skelton_svgalib_video.cpp

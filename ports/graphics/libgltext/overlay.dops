@@ -1,0 +1,7 @@
+port graphics/libgltext
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CONFIGURE_ARGS "CC=c++"
+file materialize dragonfly/patch-src_GLPixelGlyph.cpp -> dragonfly/patch-src_GLPixelGlyph.cpp

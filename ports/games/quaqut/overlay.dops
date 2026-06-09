@@ -1,0 +1,7 @@
+port games/quaqut
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "guessfix"
+file materialize dragonfly/patch-src_network.c -> dragonfly/patch-src_network.c

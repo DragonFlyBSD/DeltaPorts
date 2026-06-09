@@ -1,0 +1,10 @@
+port games/openjk
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-code_rd-vanilla_qgl.h -> dragonfly/patch-code_rd-vanilla_qgl.h
+file materialize dragonfly/patch-codemp_rd-dedicated_qgl.h -> dragonfly/patch-codemp_rd-dedicated_qgl.h
+file materialize dragonfly/patch-codemp_rd-vanilla_qgl.h -> dragonfly/patch-codemp_rd-vanilla_qgl.h
+file materialize dragonfly/patch-lib_minizip_include_minizip_ioapi.h -> dragonfly/patch-lib_minizip_include_minizip_ioapi.h
+file materialize dragonfly/patch-shared_qcommon_q__platform.h -> dragonfly/patch-shared_qcommon_q__platform.h

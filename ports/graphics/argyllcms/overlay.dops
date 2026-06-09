@@ -1,0 +1,9 @@
+port graphics/argyllcms
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-Jambase -> dragonfly/patch-Jambase
+file materialize dragonfly/patch-numlib_numsup.h -> dragonfly/patch-numlib_numsup.h
+file materialize dragonfly/patch-spectro_icoms__ux.c -> dragonfly/patch-spectro_icoms__ux.c
+file materialize dragonfly/patch-spectro_usbio__bsd.c -> dragonfly/patch-spectro_usbio__bsd.c

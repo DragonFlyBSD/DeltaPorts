@@ -1,0 +1,11 @@
+port graphics/grafx2
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "alias"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@FreeBSD@DragonFly@g' \
+		${WRKSRC}/Makefile
+MK1
+file materialize dragonfly/patch-ifformat.c -> dragonfly/patch-ifformat.c

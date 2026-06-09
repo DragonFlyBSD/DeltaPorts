@@ -1,0 +1,8 @@
+port graphics/engauge-digitizer
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "gmake"
+mk add BUILD_DEPENDS "bash:shells/bash"
+file materialize dragonfly/patch-help_build.bash -> dragonfly/patch-help_build.bash

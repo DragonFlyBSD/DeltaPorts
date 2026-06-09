@@ -1,0 +1,13 @@
+port games/freedoko
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "dos2unix"
+mk set DOS2UNIX_WRKSRC "${WRKSRC:H}"
+mk target set dfly-patch <<'MK1'
+	${LN} -sv ${WRKSRC}/logo.free.png ${WRKSRC}/logo.png
+	${REINPLACE_CMD} -e 's@FreeBSD@DragonFly@' \
+		${WRKSRC}/Makefile.os
+MK1
+file materialize dragonfly/patch-Makefile.os -> dragonfly/patch-Makefile.os

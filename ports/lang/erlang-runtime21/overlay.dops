@@ -1,0 +1,6 @@
+port lang/erlang-runtime21
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-erts_configure.in -> dragonfly/patch-erts_configure.in

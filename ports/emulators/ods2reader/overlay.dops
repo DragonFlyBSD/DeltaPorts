@@ -1,0 +1,6 @@
+port emulators/ods2reader
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-ods-2-reader.new.c -> dragonfly/patch-ods-2-reader.new.c

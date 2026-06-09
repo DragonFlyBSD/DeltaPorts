@@ -1,0 +1,10 @@
+port lang/ghc810
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/bootstrap-configure -> dragonfly/bootstrap-configure
+file materialize dragonfly/patch-libraries_Cabal_Cabal_Distribution_Simple_GHC.hs -> dragonfly/patch-libraries_Cabal_Cabal_Distribution_Simple_GHC.hs
+file materialize dragonfly/patch-libraries_base_base.cabal -> dragonfly/patch-libraries_base_base.cabal
+file materialize dragonfly/patch-libraries_base_configure.ac -> dragonfly/patch-libraries_base_configure.ac
+file materialize dragonfly/patch-rts_linker_Elf.c -> dragonfly/patch-rts_linker_Elf.c

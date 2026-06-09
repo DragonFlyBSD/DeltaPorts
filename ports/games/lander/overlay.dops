@@ -1,0 +1,11 @@
+port games/lander
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e '/using namespace std::tr1;/d' \
+		${WRKSRC}/src/Platform.hpp
+MK1
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-src_Asteroid.hpp -> dragonfly/patch-src_Asteroid.hpp

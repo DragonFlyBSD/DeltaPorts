@@ -1,0 +1,8 @@
+port graphics/panomatic
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-panomatic_tclap_MultiArg.h -> dragonfly/patch-panomatic_tclap_MultiArg.h
+file materialize dragonfly/patch-panomatic_tclap_ValueArg.h -> dragonfly/patch-panomatic_tclap_ValueArg.h
+file materialize dragonfly/patch-zthread_include_zthread_Config.h -> dragonfly/patch-zthread_include_zthread_Config.h

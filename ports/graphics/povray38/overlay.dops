@@ -1,0 +1,7 @@
+port graphics/povray38
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-source_base_types.h -> dragonfly/patch-source_base_types.h
+file materialize dragonfly/patch-unix_povconfig_syspovconfig.h -> dragonfly/patch-unix_povconfig_syspovconfig.h

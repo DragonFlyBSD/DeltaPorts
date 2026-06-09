@@ -1,0 +1,7 @@
+port math/py-pandas
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-pandas___libs_src_headers_cmath -> dragonfly/patch-pandas___libs_src_headers_cmath
+file materialize dragonfly/patch-pandas___libs_window_aggregations.pyx -> dragonfly/patch-pandas___libs_window_aggregations.pyx

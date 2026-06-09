@@ -1,0 +1,10 @@
+port math/cado-nfs
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set LIB_DEPENDS "${LIB_DEPENDS:Nlibhwloc*}"
+mk add PLIST_FILES "lib/cado-nfs-3.0.0/utils/antebuffer"
+file materialize dragonfly/patch-cado.h -> dragonfly/patch-cado.h
+file materialize dragonfly/patch-linalg_bwc_lingen__mat__types.hpp -> dragonfly/patch-linalg_bwc_lingen__mat__types.hpp
+file materialize dragonfly/patch-utils_select__mpi.h -> dragonfly/patch-utils_select__mpi.h

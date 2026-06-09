@@ -1,0 +1,8 @@
+port math/z3
+type lock
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CONFIGURE_ENV "USE_OPENMP=0"
+mk add MAKE_ENV "USE_OPENMP=0"
+file materialize dragonfly/patch-scripts_mk__util.py -> dragonfly/patch-scripts_mk__util.py

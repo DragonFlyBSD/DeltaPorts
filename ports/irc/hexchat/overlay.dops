@@ -1,0 +1,6 @@
+port irc/hexchat
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-plugins_sysinfo_meson.build -> dragonfly/patch-plugins_sysinfo_meson.build

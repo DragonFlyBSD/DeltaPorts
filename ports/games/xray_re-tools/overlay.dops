@@ -1,0 +1,16 @@
+port games/xray_re-tools
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@\(defined(__FreeBSD__)\)@(\1||defined(__DragonFly__))@g' \
+		${WRKSRC}/sources/xray_re/xr_types.h
+	${REINPLACE_CMD} -e 's@[[:<:]]__unused[[:>:]]@__unused_@g' \
+		${WRKSRC}/sources/xray_re/xr_blender.h \
+		${WRKSRC}/sources/xray_re/xr_ai_way.h
+	${REINPLACE_CMD} -e 's@_THROW_BAD_ALLOC@throw()@g' \
+		${WRKSRC}/sources/3rd-party/nvtt/nvcore/Memory.h
+MK1
+file materialize dragonfly/patch-sources_3rd-party_nvtt_nvcore_poshlib_posh.h -> dragonfly/patch-sources_3rd-party_nvtt_nvcore_poshlib_posh.h
+file materialize dragonfly/patch-sources_utils_converter_ogg__tools.cxx -> dragonfly/patch-sources_utils_converter_ogg__tools.cxx

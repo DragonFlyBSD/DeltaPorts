@@ -1,0 +1,7 @@
+port math/mfem
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set OPTIONS_DEFAULT "NOMPI"
+file materialize dragonfly/patch-general_tinyxml2.cpp -> dragonfly/patch-general_tinyxml2.cpp

@@ -1,0 +1,14 @@
+port games/fs2open
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "alias"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e '/MATCHES/s@\("FreeBSD\)"@\1|DragonFly"@g' \
+		${WRKSRC}/cmake/platforms.cmake
+	${REINPLACE_CMD} -e 's@HAVE_EXECINFO_H@do_not_use@g' \
+		${WRKSRC}/code/windows_stub/stubs.cpp
+MK1
+mk set DFLY_UNMAINTAINED "yes"
+file materialize dragonfly/patch-code_inetfile_cftp.h -> dragonfly/patch-code_inetfile_cftp.h

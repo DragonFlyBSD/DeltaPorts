@@ -1,0 +1,7 @@
+port math/dune-pdelab
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CMAKE_ARGS "-DMPI_C_COMPILER=\"${LOCALBASE}/mpi/openmpi/bin/mpicc\" -DMPI_CXX_COMPILER=\"${LOCALBASE}/mpi/openmpi/bin/mpicxx\" -DMPI_Fortran_COMPILER=\"${LOCALBASE}/mpi/openmpi/bin/mpifort\""
+file materialize dragonfly/patch-dune_pdelab_common_clock.cc -> dragonfly/patch-dune_pdelab_common_clock.cc

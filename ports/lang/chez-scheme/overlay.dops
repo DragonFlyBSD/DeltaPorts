@@ -1,0 +1,12 @@
+port lang/chez-scheme
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@-Werror @& -Wno-implicit-fallthrough @g' \
+		${WRKSRC}/c/Mf-a6fb
+MK1
+mk set DFLY_UNMAINTAINED "yes"
+file materialize dragonfly/patch-c_externs.h -> dragonfly/patch-c_externs.h
+file materialize dragonfly/patch-configure -> dragonfly/patch-configure

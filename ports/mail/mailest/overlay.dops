@@ -1,0 +1,7 @@
+port mail/mailest
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-compat.mk -> dragonfly/patch-compat.mk
+file materialize dragonfly/patch-mailestd.c -> dragonfly/patch-mailestd.c

@@ -1,0 +1,12 @@
+port mail/postfix-current
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "ssl"
+mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NBLACKLISTD}"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@define HAS_DEV_URANDOM@@g' \
+		${WRKSRC}/src/util/sys_defs.h
+MK1
+file materialize dragonfly/patch-makedefs -> dragonfly/patch-makedefs

@@ -1,0 +1,8 @@
+port games/r1q2
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "alias"
+file materialize dragonfly/patch-binaries_client_Makefile -> dragonfly/patch-binaries_client_Makefile
+file materialize dragonfly/patch-binaries_r1q2ded_Makefile -> dragonfly/patch-binaries_r1q2ded_Makefile

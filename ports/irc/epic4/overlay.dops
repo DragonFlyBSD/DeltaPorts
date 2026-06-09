@@ -1,0 +1,7 @@
+port irc/epic4
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-source_term.c -> dragonfly/patch-source_term.c
+file materialize dragonfly/patch-source_wserv.c -> dragonfly/patch-source_wserv.c

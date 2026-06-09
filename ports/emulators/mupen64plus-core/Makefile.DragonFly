@@ -1,2 +1,0 @@
-DFLY_PATCHDIR=	${.CURDIR}/dragonfly
-IGNORE= No point in building this until every mupen64plus port builds

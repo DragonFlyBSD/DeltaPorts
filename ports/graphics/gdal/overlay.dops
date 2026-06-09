@@ -1,0 +1,9 @@
+port graphics/gdal
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+file materialize dragonfly/patch-gdal.cmake -> dragonfly/patch-gdal.cmake
+file materialize dragonfly/patch-port_cpl__multiproc.cpp -> dragonfly/patch-port_cpl__multiproc.cpp
+file materialize dragonfly/patch-port_cpl__spawn.cpp -> dragonfly/patch-port_cpl__spawn.cpp

@@ -1,0 +1,6 @@
+port emulators/unicorn
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-qemu_include_qemu_bswap.h -> dragonfly/patch-qemu_include_qemu_bswap.h

@@ -1,0 +1,23 @@
+port graphics/qgis
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "alias"
+mk add BUILD_DEPENDS "cxxfs_gcc8>0:misc/cxxfs_gcc8"
+mk add CXXFLAGS "-isystem ${LOCALBASE}/cxxfs_gcc8"
+mk add LDFLAGS "-L${LOCALBASE}/cxxfs_gcc8"
+mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NGRASS}"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@STREQUAL "FreeBSD"@MATCHES "FreeBSD|DragonFly"@g' \
+		${WRKSRC}/cmake/FindGRASS.cmake \
+		${WRKSRC}/src/app/CMakeLists.txt
+	${REINPLACE_CMD} -e '/-lulog/d' \
+		${WRKSRC}/src/plugins/grass/CMakeLists.txt
+MK1
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-external_astyle_astyle__main.cpp -> dragonfly/patch-external_astyle_astyle__main.cpp
+file materialize dragonfly/patch-python_plugins_sagaprovider_SagaUtils.py -> dragonfly/patch-python_plugins_sagaprovider_SagaUtils.py
+file materialize dragonfly/patch-src_gui_plot_qgsplotrubberband.cpp -> dragonfly/patch-src_gui_plot_qgsplotrubberband.cpp
+file materialize dragonfly/patch-src_plugins_grass_qtermwidget_kpty.cpp -> dragonfly/patch-src_plugins_grass_qtermwidget_kpty.cpp
+file materialize dragonfly/patch-src_providers_pdal_CMakeLists.txt -> dragonfly/patch-src_providers_pdal_CMakeLists.txt

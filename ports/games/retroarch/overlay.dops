@@ -1,0 +1,13 @@
+port games/retroarch
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NPULSEAUDIO}"
+mk add V4L_BUILD_DEPENDS "${LOCALBASE}/include/linux/videodev2.h:multimedia/v4l_compat"
+mk set DFLY_UNMAINTAINED "yes"
+file materialize dragonfly/patch-input_drivers__hid_libusb__hid.c -> dragonfly/patch-input_drivers__hid_libusb__hid.c
+file materialize dragonfly/patch-input_drivers_udev__input.c -> dragonfly/patch-input_drivers_udev__input.c
+file materialize dragonfly/patch-input_input__keymaps.c -> dragonfly/patch-input_input__keymaps.c
+file materialize dragonfly/patch-qb_qb.system.sh -> dragonfly/patch-qb_qb.system.sh
+file materialize dragonfly/patch-tasks_task__autodetect__blissbox.c -> dragonfly/patch-tasks_task__autodetect__blissbox.c

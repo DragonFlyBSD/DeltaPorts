@@ -1,0 +1,9 @@
+port lang/erlang-runtime23
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-erts_aclocal.m4 -> dragonfly/patch-erts_aclocal.m4
+file materialize dragonfly/patch-lib_crypto_c__src_Makefile.in -> dragonfly/patch-lib_crypto_c__src_Makefile.in
+file materialize dragonfly/patch-lib_crypto_c__src_openssl__config.h -> dragonfly/patch-lib_crypto_c__src_openssl__config.h
+file materialize dragonfly/patch-make_output.mk.in -> dragonfly/patch-make_output.mk.in

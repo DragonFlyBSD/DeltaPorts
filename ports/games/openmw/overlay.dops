@@ -1,0 +1,13 @@
+port games/openmw
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "alias"
+mk add OPTIONS_EXCLUDE "DOCS"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@ki_flag@kp_flags@' \
+		${WRKSRC}/components/crashcatcher/crashcatcher.cpp
+MK1
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-components_misc_thread.cpp -> dragonfly/patch-components_misc_thread.cpp

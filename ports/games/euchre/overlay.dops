@@ -1,0 +1,7 @@
+port games/euchre
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-src_gui_callbacks.cpp -> dragonfly/patch-src_gui_callbacks.cpp
+file materialize dragonfly/patch-src_lib_Game.cpp -> dragonfly/patch-src_lib_Game.cpp

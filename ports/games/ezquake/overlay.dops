@@ -1,0 +1,8 @@
+port games/ezquake
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "alias"
+mk set IGNORE "various problems"
+file materialize dragonfly/patch-Makefile -> dragonfly/patch-Makefile

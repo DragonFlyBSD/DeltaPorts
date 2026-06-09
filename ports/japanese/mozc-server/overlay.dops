@@ -1,0 +1,23 @@
+port japanese/mozc-server
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's|freebsd|dragonfly|' \
+		${WRKSRC}/src/gyp/common.gypi
+	${REINPLACE_CMD} -e 's|OS_FREEBSD|OS_DRAGONFLY|' \
+		${WRKSRC}/src/gyp/common.gypi \
+		${WRKSRC}/src/base/thread.cc \
+		${WRKSRC}/src/base/logging.cc \
+		${WRKSRC}/src/base/mutex.cc \
+		${WRKSRC}/src/ipc/ipc_path_manager.cc \
+		${WRKSRC}/src/ipc/unix_ipc.cc \
+		${WRKSRC}/src/gui/about_dialog/about_dialog.cc \
+		${WRKSRC}/src/server/mozc_server.cc
+	${REINPLACE_CMD} -e 's|FreeBSD|DragonFly|' \
+		${WRKSRC}/src/build_tools/util.py
+MK1
+file materialize dragonfly/patch-src_base_flags.cc -> dragonfly/patch-src_base_flags.cc
+file materialize dragonfly/patch-src_gyp_common.gypi -> dragonfly/patch-src_gyp_common.gypi
+file materialize dragonfly/patch-src_prediction_zero__query__dict.h -> dragonfly/patch-src_prediction_zero__query__dict.h

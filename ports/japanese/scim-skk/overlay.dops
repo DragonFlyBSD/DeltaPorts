@@ -1,0 +1,6 @@
+port japanese/scim-skk
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-src_scim__skk__imengine__setup.cpp -> dragonfly/patch-src_scim__skk__imengine__setup.cpp

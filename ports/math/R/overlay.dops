@@ -1,0 +1,11 @@
+port math/R
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set CONFIGURE_ENV "${CONFIGURE_ENV:C/^ac_cv_have_decl.*//}"
+mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NOPENMP}"
+file materialize dragonfly/patch-m4_R.m4 -> dragonfly/patch-m4_R.m4
+file materialize dragonfly/patch-src_extra_intl_config.charset -> dragonfly/patch-src_extra_intl_config.charset
+file materialize dragonfly/patch-src_library_parallel_R_detectCores.R -> dragonfly/patch-src_library_parallel_R_detectCores.R
+file materialize dragonfly/patch-src_main_printutils.c -> dragonfly/patch-src_main_printutils.c

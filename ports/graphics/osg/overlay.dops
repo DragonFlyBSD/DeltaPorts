@@ -1,0 +1,7 @@
+port graphics/osg
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CXXFLAGS "-D__STDC_CONSTANT_MACROS=1"
+file materialize dragonfly/patch-src_OpenThreads_pthreads_PThread.cpp -> dragonfly/patch-src_OpenThreads_pthreads_PThread.cpp

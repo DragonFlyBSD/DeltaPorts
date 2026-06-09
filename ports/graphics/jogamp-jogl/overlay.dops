@@ -1,0 +1,14 @@
+port graphics/jogamp-jogl
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@BITS=32@BITS=64@g'	\
+			 -e "s@-fno-rtti@-isystem ${LOCALBASE}/include@g"	\
+		${BUILD_WRKSRC}/build-oculusvr.xml	\
+		${PATCH_WRKSRC}/gluegen/Makefile
+MK1
+file materialize dragonfly/patch-gluegen_make_gluegen-cpptasks-base.xml -> dragonfly/patch-gluegen_make_gluegen-cpptasks-base.xml
+file materialize dragonfly/patch-gluegen_src_java_jogamp_common_os_PlatformPropsImpl.java -> dragonfly/patch-gluegen_src_java_jogamp_common_os_PlatformPropsImpl.java
+file materialize dragonfly/patch-jogl_src_nativewindow_native_JAWT__DrawingSurfaceInfo.c -> dragonfly/patch-jogl_src_nativewindow_native_JAWT__DrawingSurfaceInfo.c

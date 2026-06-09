@@ -1,0 +1,9 @@
+port graphics/opencollada
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-COLLADABaseUtils_include_COLLADABUPlatform.h -> dragonfly/patch-COLLADABaseUtils_include_COLLADABUPlatform.h
+file materialize dragonfly/patch-COLLADABaseUtils_include_COLLADABUhash__map.h -> dragonfly/patch-COLLADABaseUtils_include_COLLADABUhash__map.h
+file materialize dragonfly/patch-common_libBuffer_include_CommonFWriteBufferFlusher.h -> dragonfly/patch-common_libBuffer_include_CommonFWriteBufferFlusher.h
+file materialize dragonfly/patch-common_libBuffer_src_CommonFWriteBufferFlusher.cpp -> dragonfly/patch-common_libBuffer_src_CommonFWriteBufferFlusher.cpp

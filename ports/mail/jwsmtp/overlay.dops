@@ -1,0 +1,7 @@
+port mail/jwsmtp
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-jwsmtp_demo2.cpp -> dragonfly/patch-jwsmtp_demo2.cpp
+file materialize dragonfly/patch-jwsmtp_jwsmtp_mailer.cpp -> dragonfly/patch-jwsmtp_jwsmtp_mailer.cpp

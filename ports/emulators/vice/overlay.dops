@@ -1,0 +1,13 @@
+port emulators/vice
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add BUILD_DEPENDS "gsed:textproc/gsed"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@[[:<:]]sed[[:>:]]@gsed@g' \
+		${WRKSRC}/doc/Makefile.in
+MK1
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-configure -> dragonfly/patch-configure
+file materialize dragonfly/patch-src_arch_shared_archdep__program__path.c -> dragonfly/patch-src_arch_shared_archdep__program__path.c

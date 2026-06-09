@@ -1,0 +1,22 @@
+port lang/squeak
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set LIB_DEPENDS "${LIB_DEPENDS:Nlibpulse*}"
+mk add LIB_DEPENDS "libdbus-1.so:devel/dbus"
+mk set PLIST "${WRKDIR}/pulseless-plist"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@__FreeBSD__@__DragonFly__@g' \
+		${WRKSRC}/Cross/plugins/SqueakFFIPrims/sqFFIPlugin.c \
+		${WRKSRC}/unix/plugins/CameraPlugin/sqCamera-linux.c
+	${RM} -rf "${WRKSRC}/unix/vm-sound-pulse"
+	${REINPLACE_CMD} -e '/"pulse"/d' \
+		${WRKSRC}/unix/vm/sqUnixMain.c
+	${REINPLACE_CMD} -e 's@pulseaudio --check@/usr/bin/false@g' \
+		${WRKSRC}/unix/cmake/squeak.in
+	${CAT} ${.CURDIR}/pkg-plist | ${SED} -e '/so.vm-sound-pulse/d' > ${PLIST}
+MK1
+file materialize dragonfly/patch-Cross_vm_sqVirtualMachine.c -> dragonfly/patch-Cross_vm_sqVirtualMachine.c
+file materialize dragonfly/patch-unix_cmake_config.guess -> dragonfly/patch-unix_cmake_config.guess
+file materialize dragonfly/patch-unix_cmake_config.sub -> dragonfly/patch-unix_cmake_config.sub

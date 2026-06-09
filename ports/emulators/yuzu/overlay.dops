@@ -1,0 +1,17 @@
+port emulators/yuzu
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NPULSEAUDIO:NJACK}"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@_XOPEN_SOURCE@&___@g' \
+		${WRKSRC}/externals/cubeb/src/cubeb_alsa.c
+	${REINPLACE_CMD} -e 's@_POSIX_SOURCE@&___@g' \
+		${WRKSRC}/externals/cubeb/src/cubeb_jack.cpp
+	${REINPLACE_CMD} -e 's@-Werror=redundant-move@@g' -e 's@-Werror=pessimizing-move@@g' \
+		${WRKSRC}/src/video_core/CMakeLists.txt
+MK1
+file materialize dragonfly/XFAIL -> dragonfly/XFAIL
+file materialize dragonfly/patch-externals_dynarmic_src_dynarmic_backend_x64_exception__handler__posix.cpp -> dragonfly/patch-externals_dynarmic_src_dynarmic_backend_x64_exception__handler__posix.cpp

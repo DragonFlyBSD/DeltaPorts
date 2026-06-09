@@ -1,0 +1,7 @@
+port games/battletanks
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-clunk_source.cpp -> dragonfly/patch-clunk_source.cpp
+file materialize dragonfly/patch-engine_sl08_sl08.py -> dragonfly/patch-engine_sl08_sl08.py

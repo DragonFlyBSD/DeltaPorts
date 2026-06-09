@@ -1,0 +1,13 @@
+port graphics/lightzone
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-lightcrafts_build.xml -> dragonfly/patch-lightcrafts_build.xml
+file materialize dragonfly/patch-lightcrafts_jnisrc_jni.mk -> dragonfly/patch-lightcrafts_jnisrc_jni.mk
+file materialize dragonfly/patch-lightcrafts_mk_executable.mk -> dragonfly/patch-lightcrafts_mk_executable.mk
+file materialize dragonfly/patch-lightcrafts_mk_platform.mk -> dragonfly/patch-lightcrafts_mk_platform.mk
+file materialize dragonfly/patch-lightcrafts_src_com_lightcrafts_platform_Platform.java -> dragonfly/patch-lightcrafts_src_com_lightcrafts_platform_Platform.java
+file materialize dragonfly/patch-linux_build.xml -> dragonfly/patch-linux_build.xml
+file materialize dragonfly/patch-linux_products_lightzone -> dragonfly/patch-linux_products_lightzone
+file materialize dragonfly/patch-linux_scripts_findmaxmem.sh -> dragonfly/patch-linux_scripts_findmaxmem.sh

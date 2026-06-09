@@ -1,0 +1,10 @@
+port games/openage
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-libopenage_CMakeLists.txt -> dragonfly/patch-libopenage_CMakeLists.txt
+file materialize dragonfly/patch-libopenage_error_handlers.cpp -> dragonfly/patch-libopenage_error_handlers.cpp
+file materialize dragonfly/patch-libopenage_util_os.cpp -> dragonfly/patch-libopenage_util_os.cpp
+file materialize dragonfly/patch-libopenage_util_pty.h -> dragonfly/patch-libopenage_util_pty.h
+file materialize dragonfly/patch-openage_default__dirs.py -> dragonfly/patch-openage_default__dirs.py

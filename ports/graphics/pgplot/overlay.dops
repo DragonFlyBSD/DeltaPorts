@@ -1,0 +1,10 @@
+port graphics/pgplot
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's,FreeBSD,DragonFly,g' \
+		${WRKSRC}/pgdispd/updatelgtitle.c
+MK1
+file materialize dragonfly/patch-pgdispd_proccom.c -> dragonfly/patch-pgdispd_proccom.c

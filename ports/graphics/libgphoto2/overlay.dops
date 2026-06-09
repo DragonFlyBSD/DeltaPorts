@@ -1,0 +1,18 @@
+port graphics/libgphoto2
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CONFIGURE_ARGS "--disable-serial"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@_POSIX_C_SOURCE@&___@g' \
+			 -e 's@_POSIX_SOURCE@&___@g' \
+		${WRKSRC}/libgphoto2/gphoto2-file.c \
+		${WRKSRC}/camlibs/kodak/dc120/library.c \
+		${WRKSRC}/camlibs/kodak/dc120/dc120.c \
+		${WRKSRC}/camlibs/panasonic/coolshot/library.c \
+		${WRKSRC}/camlibs/st2205/st2205.c
+	${REINPLACE_CMD} -e 's@machine/endian.h@sys/endian.h@g' \
+		${WRKSRC}/configure
+MK1
+file materialize dragonfly/patch-camlibs_st2205_st2205.c -> dragonfly/patch-camlibs_st2205_st2205.c

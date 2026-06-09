@@ -1,0 +1,7 @@
+port lang/ldc
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set IGNORE "needs a lot of DF-specific support"
+file materialize dragonfly/patch-dmd2_root_port.c -> dragonfly/patch-dmd2_root_port.c

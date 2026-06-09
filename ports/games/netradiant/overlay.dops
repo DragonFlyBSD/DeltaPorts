@@ -1,0 +1,19 @@
+port games/netradiant
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CFLAGS "-Wno-maybe-uninitialized -Wno-int-to-pointer-cast -Wno-pointer-sign"
+mk add CFLAGS "-Wno-implicit-fallthrough -Wno-cast-qual -Wno-sign-compare -Wno-format-overflow"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@\(Linux FreeBSD\)@\1 DragonFly@g'	\
+		${WRKSRC}/Makefile
+	${REINPLACE_CMD} -e 's@\(defined( __FreeBSD__ )\)@(\1 || defined(__DragonFly__))@g'	\
+		${WRKSRC}/radiant/url.cpp
+	${REINPLACE_CMD} -e 's@\(defined(__FreeBSD__)\)@(\1 || defined(__DragonFly__))@g'	\
+		${WRKSRC}/contrib/bobtoolz/misc.cpp
+	${REINPLACE_CMD} -e 's@\(defined ( __FreeBSD__ )\)@(\1 || defined(__DragonFly__))@g'	\
+		${WRKSRC}/radiant/mainframe.cpp				\
+		${WRKSRC}/radiant/watchbsp.cpp
+MK1
+file materialize dragonfly/patch-tools_quake2_qdata_heretic2_common_threads.c -> dragonfly/patch-tools_quake2_qdata_heretic2_common_threads.c

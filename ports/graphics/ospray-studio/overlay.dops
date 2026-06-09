@@ -1,0 +1,10 @@
+port graphics/ospray-studio
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add MAKE_ENV "LDVER=ld.bfd"
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-app_MainWindow.cpp -> dragonfly/patch-app_MainWindow.cpp
+file materialize dragonfly/patch-external_imguiFileDialog_ImGuiFileDialog.cpp -> dragonfly/patch-external_imguiFileDialog_ImGuiFileDialog.cpp
+file materialize dragonfly/patch-sg_importer_PCD.cpp -> dragonfly/patch-sg_importer_PCD.cpp

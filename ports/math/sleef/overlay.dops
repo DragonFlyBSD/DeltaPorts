@@ -1,0 +1,10 @@
+port math/sleef
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+file materialize dragonfly/patch-src_common_common.c -> dragonfly/patch-src_common_common.c
+file materialize dragonfly/patch-src_libm-tester_tester.c -> dragonfly/patch-src_libm-tester_tester.c
+file materialize dragonfly/patch-src_libm-tester_tester2sp.c -> dragonfly/patch-src_libm-tester_tester2sp.c
+file materialize dragonfly/patch-src_quad-tester_qtester.c -> dragonfly/patch-src_quad-tester_qtester.c

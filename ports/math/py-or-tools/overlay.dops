@@ -1,0 +1,21 @@
+port math/py-or-tools
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "localbase:ldflags"
+mk target set pre-configure <<'MK1'
+	@${MKDIR} ${BUILD_WRKSRC}
+	@${TOUCH} ${BUILD_WRKSRC}/build.ninja
+
+MK1
+mk target set dfly-patch <<'MK2'
+	${REINPLACE_CMD} -e '/COMMAND/s|protobuf::protoc|protoc -I${LOCALBASE}/include|' \
+		${WRKSRC}/cmake/python.cmake \
+		${WRKSRC}/cmake/java.cmake   \
+		${WRKSRC}/cmake/dotnet.cmake \
+		${WRKSRC}/cmake/cpp.cmake
+
+MK2
+file materialize dragonfly/patch-ortools_util_fp__utils.h -> dragonfly/patch-ortools_util_fp__utils.h
+file materialize dragonfly/patch-ortools_util_zvector.h -> dragonfly/patch-ortools_util_zvector.h

@@ -1,0 +1,9 @@
+port math/pari
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-config_arch-osname -> dragonfly/patch-config_arch-osname
+file materialize dragonfly/patch-config_get__archos -> dragonfly/patch-config_get__archos
+file materialize dragonfly/patch-config_get__dlld -> dragonfly/patch-config_get__dlld
+file materialize dragonfly/patch-config_get__ld -> dragonfly/patch-config_get__ld

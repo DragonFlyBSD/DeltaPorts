@@ -1,0 +1,6 @@
+port finance/py-ta-lib
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-setup.py -> dragonfly/patch-setup.py

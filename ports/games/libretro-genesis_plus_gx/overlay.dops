@@ -1,0 +1,11 @@
+port games/libretro-genesis_plus_gx
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@ -DBYTE_ORDER=LITTLE_ENDIAN@@g' \
+		${WRKSRC}/Makefile.libretro
+MK1
+file materialize dragonfly/patch-core_tremor_misc.h -> dragonfly/patch-core_tremor_misc.h
+file materialize dragonfly/patch-core_tremor_os.h -> dragonfly/patch-core_tremor_os.h

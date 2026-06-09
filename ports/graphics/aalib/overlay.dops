@@ -1,0 +1,8 @@
+port graphics/aalib
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-src_aacurses.c -> dragonfly/patch-src_aacurses.c
+file materialize dragonfly/patch-src_aafire.c -> dragonfly/patch-src_aafire.c
+file materialize dragonfly/patch-src_aalib.h -> dragonfly/patch-src_aalib.h

@@ -1,0 +1,7 @@
+port mail/sendmail-devel
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NBLACKLISTD}"
+file materialize dragonfly/patch-libsm_notify.c -> dragonfly/patch-libsm_notify.c

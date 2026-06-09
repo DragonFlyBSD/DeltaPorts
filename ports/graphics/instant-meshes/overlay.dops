@@ -1,0 +1,9 @@
+port graphics/instant-meshes
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "gmake"
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-ext_nanogui_CMakeLists.txt -> dragonfly/patch-ext_nanogui_CMakeLists.txt
+file materialize dragonfly/patch-ext_nanogui_ext_coro_coro.c -> dragonfly/patch-ext_nanogui_ext_coro_coro.c

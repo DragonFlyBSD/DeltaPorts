@@ -1,0 +1,8 @@
+port emulators/mgba
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NDEBUGGERS}"
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-src_third-party_zlib_contrib_minizip_ioapi.h -> dragonfly/patch-src_third-party_zlib_contrib_minizip_ioapi.h

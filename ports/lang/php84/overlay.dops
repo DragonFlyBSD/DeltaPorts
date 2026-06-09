@@ -1,0 +1,10 @@
+port lang/php84
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-TSRM_TSRM.c -> dragonfly/patch-TSRM_TSRM.c
+file materialize dragonfly/patch-TSRM_TSRM.h -> dragonfly/patch-TSRM_TSRM.h
+file materialize dragonfly/patch-ext_opcache_shared__alloc__shm.c -> dragonfly/patch-ext_opcache_shared__alloc__shm.c
+file materialize dragonfly/patch-sapi_fpm_fpm_fpm__unix.c -> dragonfly/patch-sapi_fpm_fpm_fpm__unix.c
+file materialize dragonfly/patch-sapi_litespeed_lsapilib.c -> dragonfly/patch-sapi_litespeed_lsapilib.c

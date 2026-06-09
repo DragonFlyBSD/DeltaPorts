@@ -1,0 +1,10 @@
+port math/clblas
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add PLIST_FILES "libdata/pkgconfig/clBLAS.pc"
+file materialize dragonfly/patch-src_CMakeLists.txt -> dragonfly/patch-src_CMakeLists.txt
+file materialize dragonfly/patch-src_library_CMakeLists.txt -> dragonfly/patch-src_library_CMakeLists.txt
+file materialize dragonfly/patch-src_library_tools_tune_fileio.h -> dragonfly/patch-src_library_tools_tune_fileio.h
+file materialize dragonfly/patch-src_samples_CMakeLists.pack -> dragonfly/patch-src_samples_CMakeLists.pack

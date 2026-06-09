@@ -1,0 +1,7 @@
+port games/openfodder
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-Source_Utils_SimplexIslands.hpp -> dragonfly/patch-Source_Utils_SimplexIslands.hpp
+file materialize dragonfly/patch-Source_Utils_duk__config.h -> dragonfly/patch-Source_Utils_duk__config.h

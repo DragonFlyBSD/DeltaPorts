@@ -1,0 +1,25 @@
+port emulators/qemu-devel
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "ncurses"
+mk add CONFIGURE_ARGS "--disable-netmap --disable-stack-protector --enable-curses"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e "/find_library/s@'iconv',@& dirs: '${LOCALBASE}/lib',@g" \
+			 -e "/dirs =/s@'/usr/include/ncursesw'@&, '${LOCALBASE}/include/ncurses', '${LOCALBASE}/lib'@g" \
+			 -e "s@'ncursesw', 'ncurses', 'cursesw', 'pdcurses'@'ncurses'@" \
+			 -e "s@dependency(curses_libname,@dependency('ncurses_xxx',@g" \
+			 -e "s@links(curses_test,@& args: '-DNCURSES_WIDECHAR',@g" \
+		${WRKSRC}/meson.build
+
+MK1
+mk target set dfly-install <<'MK2'
+	${TOUCH} ${STAGEDIR}${PREFIX}/bin/qemu-i386 ${STAGEDIR}${PREFIX}/bin/qemu-x86_64
+MK2
+file materialize dragonfly/patch-block.c -> dragonfly/patch-block.c
+file materialize dragonfly/patch-disas_libvixl_vixl_utils.h -> dragonfly/patch-disas_libvixl_vixl_utils.h
+file materialize dragonfly/patch-hw-ppc_newworld.c -> dragonfly/patch-hw-ppc_newworld.c
+file materialize dragonfly/patch-hw_ppc_mac__oldworld.c -> dragonfly/patch-hw_ppc_mac__oldworld.c
+file materialize dragonfly/patch-include_qemu_bswap.h -> dragonfly/patch-include_qemu_bswap.h
+file materialize dragonfly/patch-util_coroutine-ucontext.c -> dragonfly/patch-util_coroutine-ucontext.c

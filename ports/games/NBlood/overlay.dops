@@ -1,0 +1,9 @@
+port games/NBlood
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "localbase:ldflags"
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-Common.mak -> dragonfly/patch-Common.mak
+file materialize dragonfly/patch-source_build_src_baselayer.cpp -> dragonfly/patch-source_build_src_baselayer.cpp

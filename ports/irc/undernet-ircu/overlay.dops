@@ -1,0 +1,8 @@
+port irc/undernet-ircu
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-configure -> dragonfly/patch-configure
+file materialize dragonfly/patch-ircd_engine__select.c -> dragonfly/patch-ircd_engine__select.c
+file materialize dragonfly/patch-ircd_os__generic.c -> dragonfly/patch-ircd_os__generic.c

@@ -1,0 +1,14 @@
+port emulators/mesen
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add MAKE_ARGS "LTO=false MESENPLATFORM=x64 FSLIB="
+mk set MESEN_ARCH "x64"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@-lstdc++fs@@g' \
+		${WRKSRC}/makefile
+MK1
+file materialize dragonfly/patch-Core_SoundMixer.cpp -> dragonfly/patch-Core_SoundMixer.cpp
+file materialize dragonfly/patch-Linux___SdlSoundManager.cpp -> dragonfly/patch-Linux___SdlSoundManager.cpp
+file materialize dragonfly/patch-Utilities_Scale2x_scalebit.cpp -> dragonfly/patch-Utilities_Scale2x_scalebit.cpp

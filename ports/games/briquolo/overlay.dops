@@ -1,0 +1,9 @@
+port games/briquolo
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-src__MOGL__MOGL_EnsembleObjet.h -> dragonfly/patch-src__MOGL__MOGL_EnsembleObjet.h
+file materialize dragonfly/patch-src__MOGL__MOGL_GestionnaireObjet.h -> dragonfly/patch-src__MOGL__MOGL_GestionnaireObjet.h
+file materialize dragonfly/patch-src__MOGL__MOGL_Objet.h -> dragonfly/patch-src__MOGL__MOGL_Objet.h
+file materialize dragonfly/patch-src__MOGL__MOGL_Peau.h -> dragonfly/patch-src__MOGL__MOGL_Peau.h

@@ -1,0 +1,12 @@
+port lang/gauche
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "ssl"
+mk set BINARY_ALIAS "openssl=${LOCALBASE}/bin/openssl"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e '/rxmatch/s@OpenSSL@\\w+SSL@' \
+		${WRKSRC}/ext/tls/ssltest-mod.scm
+MK1
+file materialize dragonfly/patch-ext_tls_axTLS_ssl_os__port.h -> dragonfly/patch-ext_tls_axTLS_ssl_os__port.h

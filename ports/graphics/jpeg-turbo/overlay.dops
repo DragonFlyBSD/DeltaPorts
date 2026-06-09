@@ -1,0 +1,6 @@
+port graphics/jpeg-turbo
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-cmakescripts_GNUInstallDirs.cmake -> dragonfly/patch-cmakescripts_GNUInstallDirs.cmake

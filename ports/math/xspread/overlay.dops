@@ -1,0 +1,13 @@
+port math/xspread
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "ncurses"
+mk add MAKE_ENV "EXTRA_LDOPTIONS=\"-L${LOCALBASE}/lib\""
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@\(terminfo curses\)@\1 ncurses@g'	\
+		${WRKSRC}/configure
+MK1
+file materialize dragonfly/patch-interp.c -> dragonfly/patch-interp.c
+file materialize dragonfly/patch-psc.c -> dragonfly/patch-psc.c

@@ -1,0 +1,10 @@
+port games/lwjgl
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add MAKE_ENV "LDVER=ld.bfd"
+mk target set post-extract <<'MK1'
+	${REINPLACE_CMD} -e 's|"FreeBSD"|"DragonFlyBSD"|g' ${WRKSRC}/build.xml
+MK1
+file materialize dragonfly/patch-platform__build_bsd__ant_build.xml -> dragonfly/patch-platform__build_bsd__ant_build.xml

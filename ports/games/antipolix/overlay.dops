@@ -1,0 +1,19 @@
+port games/antipolix
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set DPMSG "${WRKDIR}/dports-message"
+mk set PKGMESSAGE "${DPMSG}"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@ifdef \(__FreeBSD__\)@if defined(\1)||defined(__DragonFly__)@g'	\
+		${WRKSRC}/client.c					\
+		${WRKSRC}/server.c					\
+		${WRKSRC}/creation.c					\
+		${WRKSRC}/messages.c
+	@${ECHO} "########################################################" >> ${DPMSG}
+	@${ECHO} '# Prepare: ".server_defaults" , ".motd" and ".players" #' >> ${DPMSG}
+	@${ECHO} "########################################################" >> ${DPMSG}
+MK1
+file materialize dragonfly/patch-game.c -> dragonfly/patch-game.c
+file materialize dragonfly/patch-messages.c -> dragonfly/patch-messages.c

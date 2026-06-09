@@ -1,0 +1,9 @@
+port games/freeorion
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-CMakeLists.txt -> dragonfly/patch-CMakeLists.txt
+file materialize dragonfly/patch-client_human_chmain.cpp -> dragonfly/patch-client_human_chmain.cpp
+file materialize dragonfly/patch-util_Directories.cpp -> dragonfly/patch-util_Directories.cpp

@@ -1,0 +1,14 @@
+port math/scilab
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CXXFLAGS "-fpermissive"
+file materialize dragonfly/patch-bin_scilab -> dragonfly/patch-bin_scilab
+file materialize dragonfly/patch-configure -> dragonfly/patch-configure
+file materialize dragonfly/patch-modules_ast_src_cpp_types_types__tools.cpp -> dragonfly/patch-modules_ast_src_cpp_types_types__tools.cpp
+file materialize dragonfly/patch-modules_core_includes_core__math.h -> dragonfly/patch-modules_core_includes_core__math.h
+file materialize dragonfly/patch-modules_core_src_c_getmemory.c -> dragonfly/patch-modules_core_src_c_getmemory.c
+file materialize dragonfly/patch-modules_core_src_c_signal__mgmt.c -> dragonfly/patch-modules_core_src_c_signal__mgmt.c
+file materialize dragonfly/patch-modules_fileio_includes_os__wfopen.h -> dragonfly/patch-modules_fileio_includes_os__wfopen.h
+file materialize dragonfly/patch-modules_sparse_includes_spConfig.h -> dragonfly/patch-modules_sparse_includes_spConfig.h

@@ -1,0 +1,8 @@
+port graphics/gimp-app
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CONFIGURE_ENV "LZMA_LIBS=\"-llzma\""
+mk add CONFIGURE_ENV "LZMA_CFLAGS=\"-DDUMMY\""
+file materialize dragonfly/patch-pdb_enumgen.pl -> dragonfly/patch-pdb_enumgen.pl

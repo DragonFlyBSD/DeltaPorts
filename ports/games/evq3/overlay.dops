@@ -1,0 +1,7 @@
+port games/evq3
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "alias"
+file materialize dragonfly/patch-Makefile -> dragonfly/patch-Makefile

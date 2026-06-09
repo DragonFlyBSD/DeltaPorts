@@ -1,0 +1,13 @@
+port mail/qmail-contrib
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${PATCH} -d ${WRKDF} -s <${DFLY_PATCHDIR}/extra-patch-error.h
+	${PATCH} -d ${WRKDF} -s <${DFLY_PATCHDIR}/extra-patch-find-systype.sh
+	${PATCH} -d ${WRKFF} -s <${DFLY_PATCHDIR}/extra-patch-error.h
+	${PATCH} -d ${WRKFF} -s <${DFLY_PATCHDIR}/extra-patch-find-systype.sh
+MK1
+file materialize dragonfly/extra-patch-error.h -> dragonfly/extra-patch-error.h
+file materialize dragonfly/extra-patch-find-systype.sh -> dragonfly/extra-patch-find-systype.sh

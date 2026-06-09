@@ -1,0 +1,12 @@
+port games/heretic
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@-I/usr/include/sys@@g'			\
+		${WRKSRC}/sndserv/Makefile
+	${REINPLACE_CMD} -e 's@\<soundcard.h\>@<sys/soundcard.h>@g'	\
+		${WRKSRC}/sndserv/linux.c
+MK1
+file materialize dragonfly/patch-musserv_musserver.h -> dragonfly/patch-musserv_musserver.h

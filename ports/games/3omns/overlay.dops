@@ -1,0 +1,6 @@
+port games/3omns
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-n3_proto.c -> dragonfly/patch-n3_proto.c

@@ -1,0 +1,7 @@
+port graphics/gegl
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add LDFLAGS "-lm"
+file materialize dragonfly/patch-gegl_gegl-config.c -> dragonfly/patch-gegl_gegl-config.c

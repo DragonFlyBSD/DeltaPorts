@@ -1,0 +1,6 @@
+port math/latte-integrale
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-code_latte_normalize_normalize.cpp -> dragonfly/patch-code_latte_normalize_normalize.cpp

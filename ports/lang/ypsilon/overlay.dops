@@ -1,0 +1,11 @@
+port lang/ypsilon
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-Makefile -> dragonfly/patch-Makefile
+file materialize dragonfly/patch-example_gtk_hello.scm -> dragonfly/patch-example_gtk_hello.scm
+file materialize dragonfly/patch-sitelib_ffi.scm -> dragonfly/patch-sitelib_ffi.scm
+file materialize dragonfly/patch-sitelib_ypsilon_ffi.scm -> dragonfly/patch-sitelib_ypsilon_ffi.scm
+file materialize dragonfly/patch-sitelib_ypsilon_gl.scm -> dragonfly/patch-sitelib_ypsilon_gl.scm
+file materialize dragonfly/patch-sitelib_ypsilon_glut.scm -> dragonfly/patch-sitelib_ypsilon_glut.scm

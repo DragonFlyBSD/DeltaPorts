@@ -1,0 +1,7 @@
+port ftp/smbftpd
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CFLAGS "-D__FreeBSD__=13 -D__FreeBSD_version=1300000"
+file materialize dragonfly/patch-cmd_cmd__passive.c -> dragonfly/patch-cmd_cmd__passive.c

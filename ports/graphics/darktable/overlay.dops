@@ -1,0 +1,9 @@
+port graphics/darktable
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set USE_GCC_VERSION "13"
+mk add LDFLAGS "-lexecinfo"
+file materialize dragonfly/patch-src_develop_openmp__maths.h -> dragonfly/patch-src_develop_openmp__maths.h
+file materialize dragonfly/patch-src_iop_rawdenoise.c -> dragonfly/patch-src_iop_rawdenoise.c

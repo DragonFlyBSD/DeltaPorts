@@ -1,0 +1,7 @@
+port irc/quirc
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CXXFLAGS "-Wno-write-strings"
+file materialize dragonfly/patch-support.h -> dragonfly/patch-support.h

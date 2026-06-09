@@ -1,0 +1,8 @@
+port graphics/libglvnd
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-meson.build -> dragonfly/patch-meson.build
+file materialize dragonfly/patch-src_GLdispatch_vnd-glapi_glapi.h -> dragonfly/patch-src_GLdispatch_vnd-glapi_glapi.h
+file materialize dragonfly/patch-src_GLdispatch_vnd-glapi_u__current__tls.c -> dragonfly/patch-src_GLdispatch_vnd-glapi_u__current__tls.c

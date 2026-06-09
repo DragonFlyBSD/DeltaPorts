@@ -1,0 +1,8 @@
+port emulators/mame
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-makefile -> dragonfly/patch-makefile
+file materialize dragonfly/patch-src_devices_cpu_mips_mips3.cpp -> dragonfly/patch-src_devices_cpu_mips_mips3.cpp
+file materialize dragonfly/patch-src_devices_cpu_mips_ps2vif1.cpp -> dragonfly/patch-src_devices_cpu_mips_ps2vif1.cpp

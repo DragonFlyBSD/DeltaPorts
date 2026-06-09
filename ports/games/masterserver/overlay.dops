@@ -1,0 +1,7 @@
+port games/masterserver
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-common.mk -> dragonfly/patch-common.mk
+file materialize dragonfly/patch-masterserver.c -> dragonfly/patch-masterserver.c

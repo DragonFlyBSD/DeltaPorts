@@ -1,0 +1,9 @@
+port graphics/sane-backends
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add LDFLAGS "-lcam -lsbuf -lz -lm"
+file materialize dragonfly/patch-backend_epsonds.c -> dragonfly/patch-backend_epsonds.c
+file materialize dragonfly/patch-sanei_sanei__scsi.c -> dragonfly/patch-sanei_sanei__scsi.c
+file materialize dragonfly/patch-sanei_sanei__usb.c -> dragonfly/patch-sanei_sanei__usb.c

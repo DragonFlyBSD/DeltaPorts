@@ -1,0 +1,16 @@
+port lang/gnustep-base
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set LLD_UNSAFE "yes\t# Needs linker to provide library search paths."
+mk target set dfly-install <<'MK1'
+	cd ${STAGEDIR}/${PREFIX}/GNUstep/System/Library/Libraries/ && \
+		${LN} -s libgnustep-base.so libgnustep-base.so.${DISTVERSION:R}
+MK1
+file materialize dragonfly/patch-Source_NSObject.m -> dragonfly/patch-Source_NSObject.m
+file materialize dragonfly/patch-Source_NSProcessInfo.m -> dragonfly/patch-Source_NSProcessInfo.m
+file materialize dragonfly/patch-Source_NSString.m -> dragonfly/patch-Source_NSString.m
+file materialize dragonfly/patch-Source_NSTask.m -> dragonfly/patch-Source_NSTask.m
+file materialize dragonfly/patch-Source_NSTimeZone.m -> dragonfly/patch-Source_NSTimeZone.m
+file materialize dragonfly/patch-configure -> dragonfly/patch-configure

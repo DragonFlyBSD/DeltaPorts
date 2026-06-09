@@ -1,0 +1,6 @@
+port games/xspacewarp
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-c_blackhole.hh -> dragonfly/patch-c_blackhole.hh

@@ -1,0 +1,8 @@
+port lang/erlang-runtime26
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set LDFLAGS "\"-L/usr/local/lib -rpath=/usr/local/lib -rpath,/usr/local/lib\""
+mk set USE_CLANG_FALLBACK "14"
+file materialize dragonfly/patch-lib_public__key_src_pubkey__os__cacerts.erl -> dragonfly/patch-lib_public__key_src_pubkey__os__cacerts.erl

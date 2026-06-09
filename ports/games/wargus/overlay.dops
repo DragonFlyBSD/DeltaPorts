@@ -1,0 +1,9 @@
+port games/wargus
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add BUILD_DEPENDS "cxxfs_gcc8>0:misc/cxxfs_gcc8"
+mk add CXXFLAGS "-isystem ${LOCALBASE}/cxxfs_gcc8"
+mk add LDFLAGS "-L${LOCALBASE}/cxxfs_gcc8"
+file materialize dragonfly/patch-rip__music__unix.cpp -> dragonfly/patch-rip__music__unix.cpp

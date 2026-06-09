@@ -1,0 +1,7 @@
+port japanese/scim-canna
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-src_canna_jrkanji.cpp -> dragonfly/patch-src_canna_jrkanji.cpp
+file materialize dragonfly/patch-src_scim_canna_imengine_setup.cpp -> dragonfly/patch-src_scim_canna_imengine_setup.cpp
