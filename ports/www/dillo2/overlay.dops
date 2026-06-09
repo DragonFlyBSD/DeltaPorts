@@ -1,0 +1,6 @@
+port www/dillo2
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set LDFLAGS "${LDFLAGS:N-lthr}"

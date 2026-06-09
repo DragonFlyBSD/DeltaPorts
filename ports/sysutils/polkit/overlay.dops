@@ -1,0 +1,8 @@
+port sysutils/polkit
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add LIB_DEPENDS "libxml2.so:textproc/libxml2"
+mk add USES "python:3.9+"
+mk set BINARY_ALIAS "python3=${PYTHON_CMD}"

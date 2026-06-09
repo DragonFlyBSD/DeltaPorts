@@ -1,0 +1,8 @@
+port sysutils/nix
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "alias"
+mk add CONFIGURE_ENV "LIBLZMA_CFLAGS=\"-I/usr/local\" LIBLZMA_LIBS=-llzma"
+mk set DFLY_UNMAINTAINED "yes"

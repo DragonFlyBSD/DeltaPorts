@@ -1,0 +1,8 @@
+port sysutils/rubygem-r10k
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-install <<'MK1'
+	${RM} -rfv ${STAGEDIR}${PREFIX}/${GEM_LIB_DIR}/spec/fixtures/unit/util/purgeable/managed_one
+MK1

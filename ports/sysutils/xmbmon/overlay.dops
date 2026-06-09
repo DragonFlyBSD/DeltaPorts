@@ -1,0 +1,6 @@
+port sysutils/xmbmon
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set IGNORE "assumes FreeBSD SMBUS implementation"

@@ -1,0 +1,6 @@
+port www/gopherus
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set BROKEN "needs FreeBSD dir/obj.o rules"

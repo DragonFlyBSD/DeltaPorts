@@ -1,0 +1,10 @@
+port sysutils/wmbluecpu
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@#if __FreeBSD_version > 500100@#if defined(__FreeBSD__) || defined(__DragonFly__)@g' \
+			 -e 's@<osreldate.h>@<sys/sysctl.h>@g' \
+		${WRKSRC}/cpu_freebsd.c
+MK1

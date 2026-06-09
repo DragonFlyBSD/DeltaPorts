@@ -1,0 +1,13 @@
+port sysutils/kpmcore
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add BUILD_DEPENDS "cxxfs_gcc8>0:misc/cxxfs_gcc8"
+mk add CXXFLAGS "-isystem ${LOCALBASE}/cxxfs_gcc8"
+mk add LDFLAGS "-L${LOCALBASE}/cxxfs_gcc8"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@PolkitQt5-1::Core@& stdc++fs@g' \
+		${WRKSRC}/src/util/CMakeLists.txt
+MK1
+mk set IGNORE "unmaintained, please request fixing to users mailing list"

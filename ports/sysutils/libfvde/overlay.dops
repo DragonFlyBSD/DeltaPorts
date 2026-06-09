@@ -1,0 +1,6 @@
+port sysutils/libfvde
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set IGNORE "requires libfuse"

@@ -1,0 +1,7 @@
+port www/mattermost-server
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add PLIST_FILES "%%WWWDIR%%/templates/cloud_trial_ended_email.html"
+mk set IGNORE "unmaintained, please request fixing to users mailing list"

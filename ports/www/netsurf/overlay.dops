@@ -1,0 +1,10 @@
+port www/netsurf
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@D_XOPEN_SOURCE@&__@g' \
+			 -e 's@D_POSIX_C_SOURCE@&__@g' \
+		${WRKSRC}/frontends/gtk/Makefile
+MK1

@@ -1,0 +1,6 @@
+port textproc/refdb
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "guessfix"

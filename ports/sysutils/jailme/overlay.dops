@@ -1,0 +1,6 @@
+port sysutils/jailme
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set IGNORE "Tailored to FreeBSD jails, will not build on DFLY"

@@ -1,0 +1,7 @@
+port www/jira-cli
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add PLIST_FILES "man/man7/jira-sprint-add.7.gz"
+mk set IGNORE "unmaintained, please request fixing to users mailing list"

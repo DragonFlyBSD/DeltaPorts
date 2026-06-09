@@ -1,0 +1,9 @@
+port textproc/rubygem-scss_lint
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e '/rake>/s@, "< 13"@@g' \
+		${WRKSRC}/scss_lint.gemspec
+MK1

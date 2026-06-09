@@ -1,0 +1,6 @@
+port sysutils/zeitgeist
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set LIB_DEPENDS "libdbus-1.so:devel/dbus"

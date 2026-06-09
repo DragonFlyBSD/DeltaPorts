@@ -1,0 +1,7 @@
+port sysutils/pacman
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CONFIGURE_ENV "LIBSSL_LIBS=\"-L${OPENSSLLIB} -lcrypto\""
+mk set DFLY_UNMAINTAINED "yes"

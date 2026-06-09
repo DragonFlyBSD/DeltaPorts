@@ -1,0 +1,6 @@
+port textproc/xsv-rs
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set USES "${USES:S/cargo/cargo:extra/}"

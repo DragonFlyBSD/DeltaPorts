@@ -1,0 +1,11 @@
+port www/mohawk
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CFLAGS "-L${LOCALBASE}/lib"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's/ -Werror[[:>:]]//g' ${WRKSRC}/Makefile
+	${REINPLACE_CMD} -e 's@-levent-2.0@-levent@g' \
+		${WRKSRC}/Makefile.inc
+MK1

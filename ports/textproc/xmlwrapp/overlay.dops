@@ -1,0 +1,8 @@
+port textproc/xmlwrapp
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CONFIGURE_ARGS "boost_cv_lib_version=\"1_72\""
+mk set CPPFLAGS "-I${LOCALBASE}/include ${CPPFLAGS}"
+mk set LDFLAGS "-L${LOCALBASE}/lib ${LDFLAGS}"

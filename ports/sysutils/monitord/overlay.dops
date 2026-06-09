@@ -1,0 +1,9 @@
+port sysutils/monitord
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@getdate@getdate0@g' \
+		${WRKSRC}/monitord.c ${WRKSRC}/monitord.h
+MK1

@@ -1,0 +1,10 @@
+port www/hs-postgrest
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@os(freebsd)@os(dragonfly)@g' \
+		${WRKSRC}/_cabal_deps/simple-sendfile-*/simple-sendfile.cabal \
+		${WRKSRC}/_cabal_deps/warp-*/warp.cabal
+MK1

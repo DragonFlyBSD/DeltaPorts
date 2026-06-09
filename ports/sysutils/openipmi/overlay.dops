@@ -1,0 +1,9 @@
+port sysutils/openipmi
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-configure <<'MK1'
+	${REINPLACE_CMD} 's|edit/readline/readline.h|readline/readline.h|' \
+		${WRKSRC}/sample/ipmi_serial_bmc_emu.c
+MK1

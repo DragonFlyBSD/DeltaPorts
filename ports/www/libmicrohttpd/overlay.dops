@@ -1,0 +1,10 @@
+port www/libmicrohttpd
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "makeinfo"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@_XOPEN_SOURCE@&__@g' -e 's@__BSD_VISIBLE@&__@g' \
+		${WRKSRC}/configure
+MK1

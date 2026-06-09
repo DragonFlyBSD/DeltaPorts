@@ -1,0 +1,9 @@
+port sysutils/udfclient
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@<cam/@<bus/cam/@g' \
+		${WRKSRC}/uscsilib_machdep.h
+MK1

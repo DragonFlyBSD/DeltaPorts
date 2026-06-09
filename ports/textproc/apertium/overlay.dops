@@ -1,0 +1,7 @@
+port textproc/apertium
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add MAKE_ENV "LDVER=ld.bfd"
+mk set DFLY_UNMAINTAINED "yes"

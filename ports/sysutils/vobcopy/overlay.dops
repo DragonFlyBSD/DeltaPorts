@@ -1,0 +1,6 @@
+port sysutils/vobcopy
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set IGNORE "messy port"

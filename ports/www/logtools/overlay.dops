@@ -1,0 +1,6 @@
+port www/logtools
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set USE_CXXSTD "c++11"

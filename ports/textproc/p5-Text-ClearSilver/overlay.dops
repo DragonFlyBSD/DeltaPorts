@@ -1,0 +1,6 @@
+port textproc/p5-Text-ClearSilver
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "guessfix"

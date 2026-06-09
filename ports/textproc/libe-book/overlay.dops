@@ -1,0 +1,10 @@
+port textproc/libe-book
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set DOCS_BUILD_DEPENDS ""
+mk add OPTIONS_EXCLUDE "DOCS"
+mk add CONFIGURE_ARGS "--without-docs"
+mk add LDFLAGS "-lz"
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"

@@ -1,0 +1,6 @@
+port sysutils/procenv
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set BROKEN "very hard to port"

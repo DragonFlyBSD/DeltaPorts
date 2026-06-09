@@ -1,0 +1,10 @@
+port sysutils/opencorsairlink
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add LDFLAGS "-lm"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@libusb_set_auto_detach_kernel_driver@666; //&@g' \
+		${WRKSRC}/logic/scan.c
+MK1

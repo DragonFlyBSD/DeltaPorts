@@ -1,0 +1,9 @@
+port sysutils/munin-node
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add RUN_DEPENDS "p5-IO-Socket-INET6>=0:net/p5-IO-Socket-INET6"
+mk target set dfly-install <<'MK1'
+	${RM} -vf ${STAGEDIR}${LOCALBASE}/man/man1/munin-*.bak.1
+MK1

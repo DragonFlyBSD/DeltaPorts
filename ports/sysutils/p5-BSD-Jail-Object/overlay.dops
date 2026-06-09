@@ -1,0 +1,6 @@
+port sysutils/p5-BSD-Jail-Object
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set IGNORE "JAIL v2 only"

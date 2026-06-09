@@ -1,0 +1,6 @@
+port sysutils/xorriso
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CONFIGURE_ARGS "--enable-pkgconfig-path=${LOCALBASE}/libdata/pkgconfig"

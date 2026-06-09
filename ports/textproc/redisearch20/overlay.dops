@@ -1,0 +1,6 @@
+port textproc/redisearch20
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "alias"

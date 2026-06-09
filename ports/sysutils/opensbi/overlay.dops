@@ -1,0 +1,6 @@
+port sysutils/opensbi
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set STRIP_CMD "echo"

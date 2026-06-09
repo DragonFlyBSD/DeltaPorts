@@ -1,0 +1,6 @@
+port www/hypermail
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set IGNORE "autoreconf fails (2.3.0)"

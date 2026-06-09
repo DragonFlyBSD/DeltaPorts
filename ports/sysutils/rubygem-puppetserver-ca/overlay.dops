@@ -1,0 +1,6 @@
+port sysutils/rubygem-puppetserver-ca
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set RUN_DEPENDS "facter:sysutils/facter"

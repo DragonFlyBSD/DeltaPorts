@@ -1,0 +1,6 @@
+port sysutils/swapd
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set IGNORE "rc scripts rely on /sbin/mdconfig"

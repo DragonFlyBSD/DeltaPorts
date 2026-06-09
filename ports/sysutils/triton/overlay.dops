@@ -1,0 +1,12 @@
+port sysutils/triton
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@FreeBSD@DragonFly@g' \
+		${WRKSRC}/src/scripts/extract_syscall.py \
+		${WRKSRC}/src/libtriton/includes/triton/syscalls.hpp \
+		${WRKSRC}/src/libtriton/CMakeLists.txt
+MK1
+mk set IGNORE "unmaintained, please request fixing to users mailing list"

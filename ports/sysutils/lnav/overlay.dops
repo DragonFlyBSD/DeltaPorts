@@ -1,0 +1,7 @@
+port sysutils/lnav
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "libarchive"
+mk set DFLY_UNMAINTAINED "yes"
