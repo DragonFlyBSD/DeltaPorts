@@ -1,0 +1,12 @@
+port devel/gcc-msp430-ti-toolchain
+type port
+reason "DragonFly: IGNORE manual build, disable-werror configure arg, MANUAL_PACKAGE_BUILD unless DPORTS_BUILDER"
+target @any
+
+mk set IGNORE "manual build only"
+mk add CONFIGURE_ARGS_COMMON "--disable-werror"
+mk block set condition "!defined(DPORTS_BUILDER)" <<'MK'
+MANUAL_PACKAGE_BUILD=	special use cases only
+MK
+file materialize dragonfly/patch-binutils-2.26_etc_texi2pod.pl -> dragonfly/patch-binutils-2.26_etc_texi2pod.pl
+file materialize dragonfly/patch-gdb-7.11_etc_texi2pod.pl -> dragonfly/patch-gdb-7.11_etc_texi2pod.pl

@@ -1,0 +1,20 @@
+port devel/hwloc
+type port
+reason "DragonFly: conditional PLIST_FILES add, DFLY_UNMAINTAINED, upstream-source patches"
+target @any
+
+mk block set condition "${DFLYVERSION} >= 400706" <<'MK'
+PLIST_FILES+=	include/hwloc/glibc-sched.h
+MK
+mk set DFLY_UNMAINTAINED "yes"
+file materialize dragonfly/patch-bind.c -> dragonfly/patch-bind.c
+file materialize dragonfly/patch-configure -> dragonfly/patch-configure
+file materialize dragonfly/patch-include-hwloc-rename.h -> dragonfly/patch-include-hwloc-rename.h
+file materialize dragonfly/patch-include-private-autogen-config.h.in -> dragonfly/patch-include-private-autogen-config.h.in
+file materialize dragonfly/patch-include-private-internal-components.h -> dragonfly/patch-include-private-internal-components.h
+file materialize dragonfly/patch-include-private-private.h -> dragonfly/patch-include-private-private.h
+file materialize dragonfly/patch-Makefile.am -> dragonfly/patch-Makefile.am
+file materialize dragonfly/patch-Makefile.in -> dragonfly/patch-Makefile.in
+file materialize dragonfly/patch-tests-ports-Makefile.am -> dragonfly/patch-tests-ports-Makefile.am
+file materialize dragonfly/patch-tests-ports-Makefile.in -> dragonfly/patch-tests-ports-Makefile.in
+file materialize dragonfly/patch-topology-dragonfly.c -> dragonfly/patch-topology-dragonfly.c

@@ -1,0 +1,13 @@
+port devel/qt5-qmake
+type port
+reason "DragonFly: add perl5/run deps, qmake.conf/qplatformdefs.h plist entries, dfly-install target"
+target @any
+
+mk add USES perl5
+mk add USE_PERL5 run
+mk add PLIST_FILES "${QT_MKSPECDIR_REL}/dragonfly-g++/qmake.conf"
+mk add PLIST_FILES "${QT_MKSPECDIR_REL}/dragonfly-g++/qplatformdefs.h"
+mk target set dfly-install <<'MK'
+	${CP} -a ${STAGEDIR}${LOCALBASE}/${QT_MKSPECDIR_REL}/freebsd-g++ \
+		 ${STAGEDIR}${LOCALBASE}/${QT_MKSPECDIR_REL}/dragonfly-g++
+MK

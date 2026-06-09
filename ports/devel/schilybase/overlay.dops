@@ -1,0 +1,12 @@
+port devel/schilybase
+type port
+reason "DragonFly: conditional OPTIONS_DEFAULT filter for cdrtools subport, dfly-patch CAM path fix"
+target @any
+
+mk block set condition "defined(BUILDING_NRELEASE_DPORTS) && ${PORTNAME} == \"cdrtools\"" <<'MK'
+OPTIONS_DEFAULT:=	${OPTIONS_DEFAULT:NLAME:NVORBIS}
+MK
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's@<cam/@<bus/cam/@g' \
+		${WRKSRC}/libscg/scsi-bsd.c
+MK

@@ -1,0 +1,6 @@
+port devel/libmtrie
+type port
+reason "DragonFly: filter HURR* from PLIST_SUB then add HURRRR=@comment"
+target @any
+
+mk eval PLIST_SUB "${PLIST_SUB:NHURR*} HURRRR=\"@comment \""

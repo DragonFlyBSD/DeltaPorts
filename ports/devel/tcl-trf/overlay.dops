@@ -1,0 +1,15 @@
+port devel/tcl-trf
+type port
+reason "DragonFly: ssl USES, OpenSSL include/lib flags, SHA1 shim and libmd dep for DFLYVERSION > 500700"
+target @any
+
+mk add USES ssl
+mk add CPPFLAGS "-I${OPENSSLINC}"
+mk add LDFLAGS "-L${OPENSSLLIB}"
+mk block set condition "${DFLYVERSION} > 500700" <<'MK'
+CPPFLAGS+=	-DSHA_Init=SHA1_Init -DSHA_Update=SHA1_Update -DSHA_Final=SHA1_Final
+LIB_DEPENDS+=	libmd.so:security/libmd
+MK
+file materialize dragonfly/patch-compat_tclLoadNone.c -> dragonfly/patch-compat_tclLoadNone.c
+file materialize dragonfly/patch-configure -> dragonfly/patch-configure
+file materialize dragonfly/patch-tclconfig_tcl.m4 -> dragonfly/patch-tclconfig_tcl.m4

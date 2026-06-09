@@ -1,0 +1,7 @@
+port devel/arachne-pnr
+type port
+reason "DragonFly: filter pessimizing-move from CFLAGS_gcc, upstream-source patch"
+target @any
+
+mk eval CFLAGS_gcc "${CFLAGS_gcc:N-Wno-error=pessimizing-move}"
+file materialize dragonfly/patch-src_util.cc -> dragonfly/patch-src_util.cc

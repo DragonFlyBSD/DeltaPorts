@@ -1,0 +1,40 @@
+port devel/libvirt
+type port
+reason "DragonFly: filter ZFS/add QEMU in OPTIONS_DEFAULT, shebang files, plist additions, fdatasync->fsync, meson.build patches"
+target @any
+
+mk add SHEBANG_FILES "tools/virt-qemu-sev-validate tools/virt-qemu-qmp-proxy"
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NZFS} QEMU"
+mk add PLIST_FILES "bin/virt-qemu-qmp-proxy"
+mk add PLIST_FILES "bin/virt-qemu-sev-validate"
+mk add PLIST_FILES "lib/sysusers.d/libvirt-qemu.conf"
+mk add PLIST_FILES "share/man/man1/virt-qemu-qmp-proxy.1.gz"
+mk add PLIST_FILES "share/man/man1/virt-qemu-sev-validate.1.gz"
+mk add PLIST_FILES "@dir /var/run/libvirt/qemu/passt"
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's|fdatasync|fsync|' \
+		${WRKSRC}/src/util/virfile.c
+	${REINPLACE_CMD} -e '/libvirt_no_warn_duplicate_libraries/d' \
+		${WRKSRC}/src/meson.build \
+		${WRKSRC}/tests/meson.build \
+		${WRKSRC}/tools/meson.build
+MK
+file materialize dragonfly/patch-meson.build -> dragonfly/patch-meson.build
+file materialize dragonfly/patch-src_conf_domain__conf.c -> dragonfly/patch-src_conf_domain__conf.c
+file materialize dragonfly/patch-src_conf_domain__conf.h -> dragonfly/patch-src_conf_domain__conf.h
+file materialize dragonfly/patch-src_qemu_qemu__capabilities.c -> dragonfly/patch-src_qemu_qemu__capabilities.c
+file materialize dragonfly/patch-src_qemu_qemu__capabilities.h -> dragonfly/patch-src_qemu_qemu__capabilities.h
+file materialize dragonfly/patch-src_qemu_qemu__command.c -> dragonfly/patch-src_qemu_qemu__command.c
+file materialize dragonfly/patch-src_qemu_qemu__monitor__json.c -> dragonfly/patch-src_qemu_qemu__monitor__json.c
+file materialize dragonfly/patch-src_qemu_qemu__monitor__json.h -> dragonfly/patch-src_qemu_qemu__monitor__json.h
+file materialize dragonfly/patch-src_qemu_qemu__monitor.c -> dragonfly/patch-src_qemu_qemu__monitor.c
+file materialize dragonfly/patch-src_qemu_qemu__monitor.h -> dragonfly/patch-src_qemu_qemu__monitor.h
+file materialize dragonfly/patch-src_qemu_qemu__process.c -> dragonfly/patch-src_qemu_qemu__process.c
+file materialize dragonfly/patch-src_security_security__dac.c -> dragonfly/patch-src_security_security__dac.c
+file materialize dragonfly/patch-src_security_security__util.c -> dragonfly/patch-src_security_security__util.c
+file materialize dragonfly/patch-src_storage_storage__util.c -> dragonfly/patch-src_storage_storage__util.c
+file materialize dragonfly/patch-src_util_virhostcpu.c -> dragonfly/patch-src_util_virhostcpu.c
+file materialize dragonfly/patch-src_util_virhostmem.c -> dragonfly/patch-src_util_virhostmem.c
+file materialize dragonfly/patch-src_util_virnetdevbridge.c -> dragonfly/patch-src_util_virnetdevbridge.c
+file materialize dragonfly/patch-src_util_virprocess.c -> dragonfly/patch-src_util_virprocess.c
+file materialize dragonfly/patch-src_vbox_vbox__XPCOMCGlue.c -> dragonfly/patch-src_vbox_vbox__XPCOMCGlue.c

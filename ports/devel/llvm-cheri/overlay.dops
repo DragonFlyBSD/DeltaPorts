@@ -1,0 +1,9 @@
+port devel/llvm-cheri
+type port
+reason "DragonFly: set MANUAL_PACKAGE_BUILD unless built by DPORTS_BUILDER"
+target @any
+
+mk set MANUAL_PACKAGE_BUILD "Useful only for Cherri devel."
+mk block set condition "defined(DPORTS_BUILDER)" <<'MK'
+.undef MANUAL_PACKAGE_BUILD
+MK

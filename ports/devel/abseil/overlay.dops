@@ -1,0 +1,12 @@
+port devel/abseil
+type port
+reason "DragonFly: pin LIBSUFX to hardcoded soversion (if 1 branch always taken), upstream-source patches"
+target @any
+
+mk add PLIST_SUB "LIBSUFX=2301.0.0"
+file materialize dragonfly/patch-absl_base_config.h -> dragonfly/patch-absl_base_config.h
+file materialize dragonfly/patch-absl_base_internal_sysinfo.cc -> dragonfly/patch-absl_base_internal_sysinfo.cc
+file materialize dragonfly/patch-absl_debugging_internal_vdso__support.cc -> dragonfly/patch-absl_debugging_internal_vdso__support.cc
+file materialize dragonfly/patch-absl_status_status.cc -> dragonfly/patch-absl_status_status.cc
+file materialize dragonfly/patch-absl_time_internal_cctz_src_time__zone__format.cc -> dragonfly/patch-absl_time_internal_cctz_src_time__zone__format.cc
+file materialize dragonfly/patch-absl_time_internal_cctz_src_time__zone__lookup__test.cc -> dragonfly/patch-absl_time_internal_cctz_src_time__zone__lookup__test.cc

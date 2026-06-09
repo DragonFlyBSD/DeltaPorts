@@ -1,0 +1,16 @@
+port devel/py-pyinstaller
+type port
+reason "DragonFly: allow foreign binaries when DEVELOPER defined, upstream-source patches"
+target @any
+
+mk block set condition "defined(DEVELOPER)" <<'MK'
+.MAKEFLAGS+=	DFLY_ALLOW_FOREIGN_BINARIES=yes
+DFLY_ALLOW_FOREIGN_BINARIES=yes
+MK
+file materialize dragonfly/patch-bootloader_src_main.c -> dragonfly/patch-bootloader_src_main.c
+file materialize dragonfly/patch-bootloader_src_pyi__archive.c -> dragonfly/patch-bootloader_src_pyi__archive.c
+file materialize dragonfly/patch-bootloader_src_pyi__launch.c -> dragonfly/patch-bootloader_src_pyi__launch.c
+file materialize dragonfly/patch-bootloader_src_pyi__path.c -> dragonfly/patch-bootloader_src_pyi__path.c
+file materialize dragonfly/patch-bootloader_src_pyi__pythonlib.c -> dragonfly/patch-bootloader_src_pyi__pythonlib.c
+file materialize dragonfly/patch-bootloader_wscript -> dragonfly/patch-bootloader_wscript
+file materialize dragonfly/patch-PyInstaller_compat.py -> dragonfly/patch-PyInstaller_compat.py

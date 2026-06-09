@@ -1,0 +1,9 @@
+port devel/jetbrains-phpstorm
+type port
+reason "DragonFly: remove lsof from RUN_DEPENDS, set MANUAL_PACKAGE_BUILD unless DPORTS_BUILDER"
+target @any
+
+mk eval RUN_DEPENDS "${RUN_DEPENDS:Nlsof*}"
+mk block set condition "!defined(DPORTS_BUILDER)" <<'MK'
+MANUAL_PACKAGE_BUILD=	huge (342M packaged)
+MK

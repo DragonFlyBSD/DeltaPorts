@@ -1,0 +1,7 @@
+port devel/simgear
+type port
+reason "DragonFly: clear LDFLAGS_gcc, add -lpthread to LDFLAGS"
+target @any
+
+mk set LDFLAGS_gcc ""
+mk add LDFLAGS -lpthread

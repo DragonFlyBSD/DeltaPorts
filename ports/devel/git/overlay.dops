@@ -1,12 +1,13 @@
-OPTIONS_DEFAULT:= ${OPTIONS_DEFAULT:NP4:NPERFORCE}
+port devel/git
+type port
+reason "DragonFly: filter P4/PERFORCE from OPTIONS_DEFAULT, exclude for lite flavor, dfly-install shebang fixes, Makefile.diff TAR fix"
+target @any
 
-# exclude ruby from nrelease
-.if ${FLAVOR:U} == lite
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NP4:NPERFORCE}"
+mk block set condition "${FLAVOR:U} == lite" <<'MK'
 OPTIONS_EXCLUDE+=	PERFORCE SUBTREE
-.endif
-
-# fix few shebangs for stage-qa in subports
-dfly-install:
+MK
+mk target set dfly-install <<'MK'
 .if ${SUBPORT:Mcvs}
 	${SED} -i '' -e "s@/usr/bin/perl@${LOCALBASE}/bin/perl@g" \
 		${STAGEDIR}${PREFIX}/bin/git-cvsserver \
@@ -18,3 +19,5 @@ dfly-install:
 	${SED} -i '' -e "s@/usr/bin/perl@${LOCALBASE}/bin/perl@g" \
 		${STAGEDIR}${PREFIX}/libexec/git-core/git-svn
 .endif
+MK
+patch apply diffs/Makefile.diff

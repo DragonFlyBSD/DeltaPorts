@@ -1,0 +1,9 @@
+port devel/py-tables
+type port
+reason "DragonFly: add Z_HAVE_UNISTD_H to CFLAGS, mark py27 flavor BROKEN"
+target @any
+
+mk add CFLAGS -DZ_HAVE_UNISTD_H
+mk block set condition "defined(FLAVOR) && ${FLAVOR:Mpy27}" <<'MK'
+BROKEN=	py27 pending removal
+MK

@@ -1,0 +1,24 @@
+port devel/cmake-core
+type port
+reason "DragonFly: libarchive USES, configure args, QA_ENV, conditional ncurses path fix, Makefile.diff drop jsoncpp dep"
+target @any
+
+mk add USES libarchive
+mk add CONFIGURE_ARGS "--no-system-jsoncpp"
+mk add CONFIGURE_ARGS "--bootstrap-system-libuv"
+mk set QA_ENV "IGNORE_QA_baselibs=1"
+mk block set condition "exists(/usr/lib/priv/libprivate_ncursesw.so)" <<'MK'
+dfly-patch:
+	${REINPLACE_CMD} -e "s@CYGWIN@true@g" \
+		${WRKSRC}/Modules/FindCurses.cmake
+	${REINPLACE_CMD} -e "s@<form.h>@<ncurses/form.h>@g" \
+		${WRKSRC}/Source/CursesDialog/ccmake.cxx \
+		${WRKSRC}/Source/CursesDialog/cmCursesStandardIncludes.h
+MK
+patch apply diffs/Makefile.diff
+file materialize dragonfly/patch-Modules_CMakeFortranCompilerId.F.in -> dragonfly/patch-Modules_CMakeFortranCompilerId.F.in
+file materialize dragonfly/patch-Modules_CMakePlatformId.h.in -> dragonfly/patch-Modules_CMakePlatformId.h.in
+file materialize dragonfly/patch-Modules_GNUInstallDirs.cmake -> dragonfly/patch-Modules_GNUInstallDirs.cmake
+file materialize dragonfly/patch-Source_kwsys_ProcessUNIX.c -> dragonfly/patch-Source_kwsys_ProcessUNIX.c
+file materialize dragonfly/patch-Source_Modules_CMakeBuildUtilities.cmake -> dragonfly/patch-Source_Modules_CMakeBuildUtilities.cmake
+file materialize dragonfly/patch-Utilities_cmcurl_CMakeLists.txt -> dragonfly/patch-Utilities_cmcurl_CMakeLists.txt
