@@ -1,9 +1,0 @@
-port lang/gcc13
-type port
-reason "auto-converted from compat (fragment + diffs/)"
-target @any
-
-file materialize dragonfly/patch-gcc_configure -> dragonfly/patch-gcc_configure
-file materialize dragonfly/patch-gcc_defaults.h -> dragonfly/patch-gcc_defaults.h
-mk set BUILD_DEPENDS "${LOCALBASE}/bin/as:devel/binutils@native"
-mk set RUN_DEPENDS "${LOCALBASE}/bin/as:devel/binutils@native"

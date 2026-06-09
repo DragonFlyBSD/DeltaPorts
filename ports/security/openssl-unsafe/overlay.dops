@@ -1,9 +1,0 @@
-port security/openssl-unsafe
-type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
-target @any
-
-mk add OPTIONS_EXCLUDE "SCTP"
-mk set CONFIGURE_ARGS "${CONFIGURE_ARGS:Nsctp}"
-mk set CFLAGS "${CFLAGS:N-Werror:N-Qunused-arguments}"
-file materialize dragonfly/patch-config -> dragonfly/patch-config

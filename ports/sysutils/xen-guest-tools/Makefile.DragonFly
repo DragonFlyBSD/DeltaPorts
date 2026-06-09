@@ -1,0 +1,12 @@
+# Requires kernel support
+BROKEN= requires kernel support
+
+# We don't have Clang in base. We don't have Xen DomU support
+MAKE_ENV:= ${MAKE_ENV:Nclang=y:NFREEBSD_PORT=y}
+
+# Use curses from ports
+USES+= ncurses
+
+dfly-patch:
+	${CP} ${WRKSRC}/config/FreeBSD.mk \
+		${WRKSRC}/config/DragonFly.mk
