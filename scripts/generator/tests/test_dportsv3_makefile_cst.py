@@ -173,3 +173,21 @@ def test_dot_directive_whitespace_after_dot() -> None:
     assert ifnode.condition == "${_SLAVE_PORT} == glib"
     # rendering is lossless — original spacing preserved
     assert render_makefile(result.document) == text
+
+
+def test_unmodeled_dot_directive_is_raw_not_assignment() -> None:
+    # dot-directives we don't model (.undef, .MAKEFLAGS, .for, ...) must
+    # be preserved as raw lines, never raise E_MKPARSE_INVALID_ASSIGNMENT
+    # even when they contain '=' (.undef FOO= bar, .MAKEFLAGS: X=y).
+    text = (
+        "PORTNAME=\tfoo\n"
+        ".undef WITHOUT_DOCS=\ttrue\n"
+        '.MAKEFLAGS:\tWITH="${OPTIONS_DEFINE}" EXCLUDE=\n'
+        "USES=\tgmake\n"
+    )
+    result = parse_makefile_cst(text)
+    assert result.diagnostics == []
+    assert render_makefile(result.document) == text
+    # the two real assignments still parse as assignments
+    assigns = [n for n in result.document.nodes if isinstance(n, AssignmentNode)]
+    assert {a.name for a in assigns} == {"PORTNAME", "USES"}

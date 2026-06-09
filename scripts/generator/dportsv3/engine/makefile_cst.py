@@ -367,6 +367,24 @@ def parse_makefile_cst(
             )
             continue
 
+        # Any other dot-prefixed line is a make directive / special target
+        # we don't model semantically (.undef, .MAKEFLAGS, .for/.endfor,
+        # .export, .warning, .error, .sinclude, .info, ...). Preserve it
+        # verbatim as a raw line — NEVER treat it as a (broken) assignment,
+        # even though it may contain '=' (e.g. `.undef FOO= bar`,
+        # `.MAKEFLAGS: WITH="..."`). Without this, such lines hit the
+        # assignment fallback and raise E_MKPARSE_INVALID_ASSIGNMENT.
+        if logical_stripped.startswith("."):
+            nodes.append(
+                _make_raw_node(
+                    group=group,
+                    line_start=line_start,
+                    line_end=line_end,
+                    line_lengths=line_lengths,
+                )
+            )
+            continue
+
         assignment = _ASSIGN_RE.match(first_line)
         if assignment:
             name, operator, first_value = assignment.groups()
