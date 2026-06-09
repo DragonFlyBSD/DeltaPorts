@@ -1,0 +1,9 @@
+port biology/ncbi-entrez-direct
+type port
+reason "use DragonFly binaries instead of FreeBSD in do-install and plist"
+target @any
+
+text replace-once file Makefile from "	${INSTALL_PROGRAM} ${WRKSRC}/cmd/*.FreeBSD ${STAGEDIR}${PREFIX}/bin" to "	${INSTALL_PROGRAM} ${WRKSRC}/cmd/*.DragonFly ${STAGEDIR}${PREFIX}/bin"
+text replace-once file pkg-plist from "bin/rchive.FreeBSD" to "bin/rchive.DragonFly"
+text replace-once file pkg-plist from "bin/transmute.FreeBSD" to "bin/transmute.DragonFly"
+text replace-once file pkg-plist from "bin/xtract.FreeBSD" to "bin/xtract.DragonFly"

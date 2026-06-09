@@ -1,0 +1,11 @@
+port devel/critcl
+type port
+reason "strip debug in dfly-install; replace freebsd platform paths with dragonfly in plist"
+target @any
+
+mk target set dfly-install <<'MK'
+	${STRIP_CMD} --strip-debug ${STAGEDIR}${PREFIX}/lib/critcl_callback1/dragonfly-x86_64/callback.so
+MK
+
+text replace-once file pkg-plist from "lib/critcl_callback%%TCL_SUFFIX%%-1.1/freebsd-%%ARCH%%/callback.so" to "lib/critcl_callback%%TCL_SUFFIX%%-1.1/dragonfly-%%ARCH%%/callback.so"
+text replace-once file pkg-plist from "lib/critcl_md5c%%TCL_SUFFIX%%-0.12/freebsd-%%ARCH%%/md5c.so" to "lib/critcl_md5c%%TCL_SUFFIX%%-0.12/dragonfly-%%ARCH%%/md5c.so"

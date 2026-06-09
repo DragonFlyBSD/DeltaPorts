@@ -1,0 +1,6 @@
+port audio/fabla2-lv2
+type port
+reason "patch files/mntent_compat.c++ to guard MNT_UNION with ifdef"
+target @any
+
+patch apply diffs/files_mntent__compat.diff

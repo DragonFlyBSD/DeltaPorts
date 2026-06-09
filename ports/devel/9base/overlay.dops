@@ -1,0 +1,11 @@
+port devel/9base
+type port
+reason "replace pkg-message content; dragonfly upstream patches"
+target @any
+
+patch apply diffs/pkg-message.diff
+
+file materialize dragonfly/patch-lib9_dirfwstat.c -> dragonfly/patch-lib9_dirfwstat.c
+file materialize dragonfly/patch-lib9_dirread.c -> dragonfly/patch-lib9_dirread.c
+file materialize dragonfly/patch-lib9_readcons.c -> dragonfly/patch-lib9_readcons.c
+file materialize dragonfly/patch-lib9_u.h -> dragonfly/patch-lib9_u.h

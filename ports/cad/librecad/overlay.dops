@@ -1,0 +1,8 @@
+port cad/librecad
+type port
+reason "remove untranslated .qm locale files from plist; dragonfly upstream patches"
+target @any
+
+patch apply diffs/pkg-plist.diff
+
+file materialize dragonfly/patch-scripts_postprocess-unix.sh -> dragonfly/patch-scripts_postprocess-unix.sh

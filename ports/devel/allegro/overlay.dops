@@ -1,0 +1,9 @@
+port devel/allegro
+type port
+reason "remove ALSA from default options; undefine WITH_DEBUG"
+target @any
+
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NALSA}"
+mk unset WITH_DEBUG on-missing noop
+
+file materialize dragonfly/patch-src_unix_usystem.c -> dragonfly/patch-src_unix_usystem.c
