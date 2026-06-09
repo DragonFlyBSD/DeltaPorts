@@ -1,0 +1,6 @@
+port japanese/sj3-lib
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add PLIST_FILES "lib/libsj3lib.so.1.21"

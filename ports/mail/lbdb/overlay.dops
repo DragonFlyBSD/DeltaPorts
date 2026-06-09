@@ -1,0 +1,6 @@
+port mail/lbdb
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CONFIGURE_ARGS "ac_cv_path_TAC=NONE"

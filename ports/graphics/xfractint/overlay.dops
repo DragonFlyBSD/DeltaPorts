@@ -1,0 +1,12 @@
+port graphics/xfractint
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@FreeBSD@DragonFly@g' \
+		${WRKSRC}/common/prompts2.c \
+		${WRKSRC}/headers/port.h \
+		${WRKSRC}/unix/general.c \
+		${WRKSRC}/unix/unixscr.c
+MK1

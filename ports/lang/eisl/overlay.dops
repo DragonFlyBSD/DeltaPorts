@@ -1,0 +1,16 @@
+port lang/eisl
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set USES "${USES:Nncurses*} ncurses"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@<curses.h>@<ncurses.h>@g' \
+		${WRKSRC}/edlis.c \
+		${WRKSRC}/main.c \
+		${WRKSRC}/term.h \
+		${WRKSRC}/library/virtty.lsp
+	${REINPLACE_CMD} -e 's@FreeBSD@DragonFly@g' \
+		${WRKSRC}/function.c
+MK1
+mk set IGNORE "unmaintained, please request fixing to users mailing list"

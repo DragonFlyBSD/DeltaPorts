@@ -1,0 +1,7 @@
+port lang/erlang-runtime25
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set LDFLAGS "\"-L/usr/local/lib -rpath=/usr/local/lib -rpath,/usr/local/lib\""
+mk set USE_CLANG_FALLBACK "14"

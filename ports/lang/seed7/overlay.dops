@@ -1,0 +1,16 @@
+port lang/seed7
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "localbase:ldflags ncurses"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@SYSTEM_CONSOLE_LIBS@&___@g' \
+		${WRKSRC}/chkccomp.c
+	${REINPLACE_CMD} -e '/SYSTEM_CONSOLE_LIBS/d' \
+		${WRKSRC}/cmd_rtl.c
+	${REINPLACE_CMD} -e "/define CC_FLAGS/s@-fdata-sections@& -I${LOCALBASE}/include@g" \
+			 -e "s@^SYSTEM_LIBS =@& -L${LOCALBASE}/lib -lncurses@g" \
+		${WRKSRC}/mk_freebsd.mk
+MK1
+mk set IGNORE "unmaintained, please request fixing to users mailing list"

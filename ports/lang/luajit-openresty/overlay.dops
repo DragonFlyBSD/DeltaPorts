@@ -1,0 +1,6 @@
+port lang/luajit-openresty
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add MAKE_ARGS "XCFLAGS=-DLJ_TARGET_HAS_GETENTROPY=0"

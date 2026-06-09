@@ -1,0 +1,9 @@
+port graphics/togl
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e '/MAKE_SHARED_LIB=/s/"$$/ -lc"/g' \
+		${WRKSRC}/configure
+MK1

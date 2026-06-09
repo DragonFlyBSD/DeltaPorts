@@ -1,0 +1,6 @@
+port mail/cyrus-imapd38
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set DFLY_UNMAINTAINED "yes"

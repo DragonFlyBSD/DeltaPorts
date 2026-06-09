@@ -1,0 +1,6 @@
+port math/eval
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set IGNORE "segfaults on help(?? or ?)"

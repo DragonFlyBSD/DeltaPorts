@@ -1,0 +1,8 @@
+port lang/fpc-source
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-install <<'MK1'
+	${RM} -f ${STAGEDIR}${DATADIR}/.git*
+MK1

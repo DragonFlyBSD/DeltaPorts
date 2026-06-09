@@ -1,0 +1,7 @@
+port math/blaze
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set BUILD_DEPENDS "${BUILD_DEPENDS:Nopenmp*}"
+mk set RUN_DEPENDS "${RUN_DEPENDS:Nopenmp*}"

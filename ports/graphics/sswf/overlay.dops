@@ -1,0 +1,6 @@
+port graphics/sswf
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CXXFLAGS "-fpermissive"

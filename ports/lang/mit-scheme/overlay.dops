@@ -1,0 +1,6 @@
+port lang/mit-scheme
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set BUILD_DEPENDS "${BUILD_DEPENDS:N*binutils}"

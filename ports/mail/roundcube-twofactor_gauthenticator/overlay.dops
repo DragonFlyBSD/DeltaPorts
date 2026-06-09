@@ -1,0 +1,6 @@
+port mail/roundcube-twofactor_gauthenticator
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set DFLY_UNMAINTAINED "yes"

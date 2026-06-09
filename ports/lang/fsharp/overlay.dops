@@ -1,0 +1,6 @@
+port lang/fsharp
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set BROKEN "Stack overflow in FSharp.Core.Unittests.fsproj"

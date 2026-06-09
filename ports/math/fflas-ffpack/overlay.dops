@@ -1,0 +1,6 @@
+port math/fflas-ffpack
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CONFIGURE_ARGS "--with-blas-libs=\"-L${LOCALBASE}/lib -lopenblas\""

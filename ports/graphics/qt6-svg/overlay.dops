@@ -1,0 +1,5 @@
+port graphics/qt6-svg
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+

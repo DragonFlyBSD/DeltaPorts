@@ -1,0 +1,7 @@
+port lang/snobol4
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CONFIGURE_ARGS "--mandir=${MANPREFIX}/man"
+mk set DFLY_UNMAINTAINED "yes"

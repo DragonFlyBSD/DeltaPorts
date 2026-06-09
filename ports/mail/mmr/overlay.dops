@@ -1,0 +1,12 @@
+port mail/mmr
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CXXFLAGS "-Imd5"
+mk set LIBS "${LIBS:N-lmd}"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@tempfile.o@& md5/libmd5.a@g' \
+			 -e 's@^:@md5/libmd5.a:@g' \
+		${WRKSRC}/Makefile
+MK1

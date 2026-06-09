@@ -1,0 +1,6 @@
+port math/octave-forge-communications
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "localbase:ldflags"

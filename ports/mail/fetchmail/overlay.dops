@@ -1,0 +1,7 @@
+port mail/fetchmail
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NGSSAPI_BASE} GSSAPI_MIT"
+mk set CONFIGURE_ARGS "${CONFIGURE_ARGS:N--enable-opie} ac_cv_header_opie_h=no"

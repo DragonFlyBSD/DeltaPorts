@@ -1,0 +1,13 @@
+port math/dieharder
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@-DLITTLE_ENDIAN@-DBRG_LITTLE_ENDIAN@g' \
+		${WRKSRC}/libdieharder/Makefile.in \
+		${WRKSRC}/libdieharder/Makefile.am \
+		${WRKSRC}/libdieharder/Makefile
+	${REINPLACE_CMD} -e 's@[[:<:]]LITTLE_ENDIAN[[:>:]]@BRG_LITTLE_ENDIAN@g' \
+		${WRKSRC}/include/dieharder/brg_endian.h
+MK1

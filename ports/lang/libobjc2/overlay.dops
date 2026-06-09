@@ -1,0 +1,11 @@
+port lang/libobjc2
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CXXFLAGS "-nostdlib++ -stdlib=libc++ -I${LOCALBASE}/include"
+mk add CXXFLAGS "-cxx-isystem ${LOCALBASE}/llvm${LLVM_DEFAULT}/libcxx/include/c++/v1"
+mk add LDFLAGS "-L /lib -L${LOCALBASE}/llvm${LLVM_DEFAULT}/libcxx/lib/c++ -L /usr/lib -lpthread"
+mk add LIB_DIRS "${PREFIX}/llvm${LLVM_DEFAULT}/libcxx/lib"
+mk add LIB_DEPENDS "libc++.so.1:devel/libcxx${LLVM_DEFAULT}"
+mk add MAKE_ENV "LDVER=ld.bfd"

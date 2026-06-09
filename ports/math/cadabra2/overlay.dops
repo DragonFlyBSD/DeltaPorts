@@ -1,0 +1,7 @@
+port math/cadabra2
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add LDFLAGS "-pthread"
+mk set DFLY_UNMAINTAINED "yes"

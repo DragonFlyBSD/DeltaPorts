@@ -1,0 +1,6 @@
+port lang/polyml
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CXXFLAGS "-Wno-narrowing"

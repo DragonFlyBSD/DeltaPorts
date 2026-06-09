@@ -1,0 +1,10 @@
+port math/hs-Agda
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	mv ${WRKSRC}/${PORTNAME}.cabal ${WRKSRC}/${PORTNAME}.cabal.orig
+	awk '{print; if (tolower($$1) == "executable") {print "    extra-libraries: m"}}' \
+		${WRKSRC}/${PORTNAME}.cabal.orig > ${WRKSRC}/${PORTNAME}.cabal
+MK1

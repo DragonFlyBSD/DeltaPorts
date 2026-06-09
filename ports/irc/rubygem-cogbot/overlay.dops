@@ -1,0 +1,12 @@
+port irc/rubygem-cogbot
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e '/twitter/s@~>@>=@g'	\
+			 -e '/json/s@~>@>=@g'	\
+			 -e '/daemon/s@~>@>=@g'	\
+		${WRKSRC}/cogbot.gemspec
+MK1
+mk set IGNORE "unmaintained, please request fixing to users mailing list"

@@ -1,0 +1,6 @@
+port irc/bitchx
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CFLAGS "-Wno-pointer-sign -Wno-incompatible-pointer-types"

@@ -1,0 +1,6 @@
+port japanese/man-doc
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set IGNORE "FreeBSD specific"

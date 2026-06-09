@@ -1,0 +1,7 @@
+port graphics/viewnior
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "python"
+mk set BINARY_ALIAS "python3=${PYTHON_CMD}"

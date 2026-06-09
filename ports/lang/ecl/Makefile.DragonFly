@@ -1,4 +1,0 @@
-# This locks up during build, at least on DragonFly 4.1
-# regardless of gcc47 or gcc50
-
-IGNORE=	locks up during build

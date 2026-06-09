@@ -1,0 +1,17 @@
+port math/gh-bc
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CONFIGURE_ARGS "-N #--disable-nls"
+mk set DFLY_PLIST "${WRKSRC}/pkg-plist"
+mk set PLIST "${DFLY_PLIST}"
+mk target set dfly-patch <<'MK1'
+	${CP} -v ${.CURDIR:H}/gh-bc/pkg-plist ${DFLY_PLIST}
+	${REINPLACE_CMD} -e '/share\/nls\//d' ${DFLY_PLIST}
+
+MK1
+mk target set dfly-install <<'MK2'
+	${RM} -rfv ${STAGEDIR}${LOCALBASE}/share/nls
+MK2
+mk set IGNORE "unmaintained, please request fixing to users mailing list"

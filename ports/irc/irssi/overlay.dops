@@ -1,0 +1,6 @@
+port irc/irssi
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set CAPSICUM_MESON_NO "with-capsicum"

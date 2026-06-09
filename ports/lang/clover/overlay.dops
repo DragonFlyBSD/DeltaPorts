@@ -1,0 +1,14 @@
+port lang/clover
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add BUILD_DEPENDS "clang-mesa>0:lang/clang-mesa"
+mk add RUN_DEPENDS "clang-mesa>0:lang/clang-mesa"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e "s@'vl/vl_decoder.h',@& 'vl/vl_decoder.c',@g" \
+			 -e "s@'vl/vl_video_buffer.h',@& 'vl/vl_video_buffer.c',@g" \
+		${WRKSRC}/src/gallium/auxiliary/meson.build
+	${REINPLACE_CMD} -e "s@[[:<:]]clang-cpp[[:>:]]@clang-cpp-mesa@g" \
+		${WRKSRC}/src/gallium/targets/opencl/meson.build
+MK1

@@ -1,0 +1,9 @@
+port math/librsb
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} s/enable_optimize=no/enable_optimize=yes/ \
+		${WRKSRC}/configure
+MK1

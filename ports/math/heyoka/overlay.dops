@@ -1,0 +1,6 @@
+port math/heyoka
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set USE_CLANG_FALLBACK "12"

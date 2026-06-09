@@ -1,0 +1,6 @@
+port graphics/xbmbrowser
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CFLAGS "-DMAXNAMLEN=255"

@@ -1,0 +1,8 @@
+port mail/enma
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add MAKE_ENV "LDVER=ld.bfd"
+mk add LDFLAGS "-lcrypto"
+mk add CFLAGS "-Wno-unused-parameter"

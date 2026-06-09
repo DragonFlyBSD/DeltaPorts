@@ -1,0 +1,13 @@
+port lang/solidity
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set USE_CLANG_FALLBACK "default"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e '/add_compile_options(-Werror)/d'	\
+		${WRKSRC}/cmake/EthCompilerSettings.cmake
+	${REINPLACE_CMD} -e '/add_compile_options(-Qunused-arguments)/d' \
+		${WRKSRC}/cmake/EthCompilerSettings.cmake
+MK1
+mk set IGNORE "unmaintained, please request fixing to users mailing list"

@@ -1,0 +1,7 @@
+port irc/ircd-hybrid
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add PLIST_FILES "%%DATADIR%%-%%PORTVERSION%%/ircd-hybrid/help/monitor"
+mk set DFLY_UNMAINTAINED "yes"

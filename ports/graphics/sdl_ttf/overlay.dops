@@ -1,0 +1,6 @@
+port graphics/sdl_ttf
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add LDFLAGS "-lm"

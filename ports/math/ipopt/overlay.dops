@@ -1,0 +1,8 @@
+port math/ipopt
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set EXTRACT_CMD "tar"
+mk set DOCS_ALL_TARGET "${DOCS_ALL_TARGET:Ndoxydoc}"
+mk set DOCS_BUILD_DEPENDS ""

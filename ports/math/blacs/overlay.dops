@@ -1,0 +1,6 @@
+port math/blacs
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add FFLAGS "-L${LOCALBASE}/lib"

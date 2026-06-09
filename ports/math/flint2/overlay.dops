@@ -1,0 +1,6 @@
+port math/flint2
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "python:2.7,build"

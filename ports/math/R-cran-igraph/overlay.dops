@@ -1,0 +1,7 @@
+port math/R-cran-igraph
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set GNU_CONFIGURE "yes"
+mk add LDFLAGS "-L${LOCALBASE}/lib"

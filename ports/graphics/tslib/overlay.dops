@@ -1,0 +1,6 @@
+port graphics/tslib
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set BROKEN "missing dev/misc/evdev/uinput.h"

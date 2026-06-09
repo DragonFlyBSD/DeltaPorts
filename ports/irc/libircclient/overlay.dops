@@ -1,0 +1,6 @@
+port irc/libircclient
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "ssl localbase"

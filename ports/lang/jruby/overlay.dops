@@ -1,0 +1,6 @@
+port lang/jruby
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set IGNORE "contains FreeBSD binaries"

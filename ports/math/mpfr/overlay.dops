@@ -1,0 +1,7 @@
+port math/mpfr
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add PATCH_DEPENDS "gpatch:devel/patch"
+mk set PATCH "${LOCALBASE}/bin/gpatch"

@@ -1,0 +1,6 @@
+port java/openjfx14
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set BROKEN "tries to use static nonpic libdstc++.a for libjfxmedia.so"

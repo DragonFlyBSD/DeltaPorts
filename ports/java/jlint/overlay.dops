@@ -1,0 +1,10 @@
+port java/jlint
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CXXFLAGS "-c -Wall -g -Wno-narrowing"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e '/CPP/s@CFLAGS)@CXXFLAGS)@g'	\
+		${WRKSRC}/Makefile
+MK1

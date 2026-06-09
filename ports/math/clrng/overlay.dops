@@ -1,0 +1,11 @@
+port math/clrng
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's/-pedantic-errors //g'	\
+		${WRKSRC}/src/CMakeLists.txt
+
+MK1
+mk add PLIST_FILES "libdata/pkgconfig/clRNG.pc"

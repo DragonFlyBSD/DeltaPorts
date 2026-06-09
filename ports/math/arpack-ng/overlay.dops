@@ -1,0 +1,17 @@
+port math/arpack-ng
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add OPTIONS_DEFINE "MPI"
+mk set OPTIONS_SUB "yes"
+mk set LIB_DEPENDS "${LIB_DEPENDS:Nlibmpich*}"
+mk add CONFIGURE_ARGS "--disable-mpi"
+mk set DFLY_PLIST "${WRKSRC}/pkg-plist"
+mk set PLIST "${DFLY_PLIST}"
+mk add MPI_LIB_DEPENDS "libmpich.so:net/mpich"
+mk add MPI_CONFIGURE_ENABLE "mpi"
+mk target set dfly-patch <<'MK1'
+	${CP} -v ${.CURDIR:H}/arpack-ng/pkg-plist ${DFLY_PLIST}
+	${REINPLACE_CMD} -e '/parpack/s,^,%%MPI%%,g' ${DFLY_PLIST}
+MK1

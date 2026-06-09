@@ -1,0 +1,6 @@
+port lang/libhx
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set BROKEN "missing SO_DOMAIN/SO_PROTOCOL"

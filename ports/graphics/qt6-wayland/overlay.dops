@@ -1,0 +1,9 @@
+port graphics/qt6-wayland
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's|FREEBSD|DRAGONFLY|g' \
+		${WRKSRC}/CMakeLists.txt
+MK1

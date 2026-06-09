@@ -1,0 +1,10 @@
+port lang/squirrel
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e "/-shared -o/s/$$/ -lm/g"	\
+		${WRKSRC}/sqstdlib/Makefile	\
+		${WRKSRC}/squirrel/Makefile
+MK1

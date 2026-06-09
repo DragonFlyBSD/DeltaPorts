@@ -1,0 +1,6 @@
+port lang/purescript
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add MAKE_ENV "PATH=${WRKSRC}/dist-newstyle/build/${CABAL_ARCH}-dragonfly/ghc-8.6.5/happy-${HAPPY_VERSION}/build/happy/:${PATH}"

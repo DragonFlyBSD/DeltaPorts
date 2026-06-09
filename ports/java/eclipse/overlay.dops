@@ -1,0 +1,7 @@
+port java/eclipse
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set MAVEN_ECLIPSE "-Dnative=gtk.freebsd.amd64 -Dmaven.repo.local=${WRKDIR}/eclipse-maven-repo-${PORTVERSION} -DforceContextQualifier=v${ECLIPSE_TSTAMP}"
+mk set ECLIPSE_RESULT "eclipse.platform.releng.tychoeclipsebuilder/eclipse.platform.repository/target/products/org.eclipse.sdk.ide-freebsd.gtk.amd64.tar.gz"

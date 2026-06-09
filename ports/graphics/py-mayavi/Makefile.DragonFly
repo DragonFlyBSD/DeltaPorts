@@ -1,1 +1,0 @@
-BROKEN= tries to open xcb display while building

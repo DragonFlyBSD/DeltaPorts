@@ -1,0 +1,6 @@
+port lang/yorick
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CFLAGS "-DNO_EXP10"
