@@ -1,0 +1,11 @@
+port net/wireguard-go
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-conn_mark__default.go -> dragonfly/patch-conn_mark__default.go
+file materialize dragonfly/patch-conn_mark__unix.go -> dragonfly/patch-conn_mark__unix.go
+file materialize dragonfly/patch-ipc_uapi__bsd.go -> dragonfly/patch-ipc_uapi__bsd.go
+file materialize dragonfly/patch-ipc_uapi__unix.go -> dragonfly/patch-ipc_uapi__unix.go
+file materialize dragonfly/patch-tun_operateonfd.go -> dragonfly/patch-tun_operateonfd.go
+file materialize dragonfly/patch-tun_tun__dragonfly.go -> dragonfly/patch-tun_tun__dragonfly.go

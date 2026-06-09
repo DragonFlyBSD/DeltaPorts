@@ -1,0 +1,9 @@
+port misc/hotkeys
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CFLAGS "-DHAVE_LOCALE_H"
+mk add CFLAGS "-Wno-unused-function -Wno-incompatible-pointer-types -Wno-pointer-sign"
+file materialize dragonfly/patch-src_fixVMware.c -> dragonfly/patch-src_fixVMware.c
+file materialize dragonfly/patch-src_hotkeys.c -> dragonfly/patch-src_hotkeys.c

@@ -1,0 +1,8 @@
+port security/doas
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-compat_closefrom.c -> dragonfly/patch-compat_closefrom.c
+file materialize dragonfly/patch-compat_compat.h -> dragonfly/patch-compat_compat.h
+file materialize dragonfly/patch-doas.c -> dragonfly/patch-doas.c

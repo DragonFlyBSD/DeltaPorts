@@ -1,0 +1,17 @@
+port security/openvas
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "alias"
+mk add PLIST_FILES "\"@dir /var/lib\""
+file materialize dragonfly/patch-misc_ftp__funcs.h -> dragonfly/patch-misc_ftp__funcs.h
+file materialize dragonfly/patch-misc_network.c -> dragonfly/patch-misc_network.c
+file materialize dragonfly/patch-misc_pcap.c -> dragonfly/patch-misc_pcap.c
+file materialize dragonfly/patch-misc_pcap__openvas.h -> dragonfly/patch-misc_pcap__openvas.h
+file materialize dragonfly/patch-nasl_capture__packet.c -> dragonfly/patch-nasl_capture__packet.c
+file materialize dragonfly/patch-nasl_nasl__packet__forgery.c -> dragonfly/patch-nasl_nasl__packet__forgery.c
+file materialize dragonfly/patch-nasl_nasl__packet__forgery__v6.c -> dragonfly/patch-nasl_nasl__packet__forgery__v6.c
+file materialize dragonfly/patch-nasl_nasl__raw.h -> dragonfly/patch-nasl_nasl__raw.h
+file materialize dragonfly/patch-nasl_proto.h -> dragonfly/patch-nasl_proto.h
+file materialize dragonfly/patch-src_CMakeLists.txt -> dragonfly/patch-src_CMakeLists.txt

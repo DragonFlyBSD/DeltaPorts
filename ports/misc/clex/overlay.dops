@@ -1,0 +1,7 @@
+port misc/clex
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-src_clexheaders.h -> dragonfly/patch-src_clexheaders.h

@@ -1,0 +1,10 @@
+port net-im/gloox
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@\<string\>@<cstring>@g'		\
+		${WRKSRC}/src/dns.h
+MK1
+file materialize dragonfly/patch-src_connectionsocks5proxy.cpp -> dragonfly/patch-src_connectionsocks5proxy.cpp

@@ -1,0 +1,7 @@
+port science/simlib
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-src_process.cc -> dragonfly/patch-src_process.cc
+file materialize dragonfly/patch-src_simlib.h -> dragonfly/patch-src_simlib.h

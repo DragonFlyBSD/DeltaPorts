@@ -1,0 +1,6 @@
+port net/zsync
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-libzsync_sha1.c -> dragonfly/patch-libzsync_sha1.c

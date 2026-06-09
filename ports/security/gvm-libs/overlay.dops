@@ -1,0 +1,15 @@
+port security/gvm-libs
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set BUILD_DEPENDS "${BUILD_DEPENDS:Ndoxygen*}"
+mk set RUN_DEPENDS "${RUN_DEPENDS:Ndoxygen*}"
+mk add PLIST_FILES "\"@dir /var/run/gvm\""
+file materialize dragonfly/patch-base_hosts.c -> dragonfly/patch-base_hosts.c
+file materialize dragonfly/patch-base_networking.h -> dragonfly/patch-base_networking.h
+file materialize dragonfly/patch-base_proctitle.c -> dragonfly/patch-base_proctitle.c
+file materialize dragonfly/patch-boreas_ping.c -> dragonfly/patch-boreas_ping.c
+file materialize dragonfly/patch-util_passwordbasedauthentication.c -> dragonfly/patch-util_passwordbasedauthentication.c
+file materialize dragonfly/patch-util_passwordbasedauthentication.h -> dragonfly/patch-util_passwordbasedauthentication.h
+file materialize dragonfly/patch-util_serverutils.h -> dragonfly/patch-util_serverutils.h

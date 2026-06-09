@@ -1,0 +1,7 @@
+port net/gnome-connections
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-src_meson.build -> dragonfly/patch-src_meson.build
+file materialize dragonfly/patch-src_vnc-connection.vala -> dragonfly/patch-src_vnc-connection.vala

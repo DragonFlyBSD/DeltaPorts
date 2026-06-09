@@ -1,0 +1,7 @@
+port net/libpaho-mqtt3
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-src_SHA1.c -> dragonfly/patch-src_SHA1.c
+file materialize dragonfly/patch-src_Websocket.c -> dragonfly/patch-src_Websocket.c

@@ -1,0 +1,13 @@
+port net-im/prosody
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "gettext-runtime"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e "s@[[:<:]]openssl[[:>:]]@${LOCALBASE}/bin/openssl@" \
+			 -e "s@${LOCALBASE}/bin/openssl.cnf@openssl.cnf@" \
+		${WRKSRC}/certs/makefile ${WRKSRC}/certs/GNUmakefile \
+		${WRKSRC}/util/openssl.lua
+MK1
+file materialize dragonfly/patch-util-src_pposix.c -> dragonfly/patch-util-src_pposix.c

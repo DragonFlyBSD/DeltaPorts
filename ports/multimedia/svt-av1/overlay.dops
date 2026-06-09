@@ -1,0 +1,6 @@
+port multimedia/svt-av1
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-third__party_cpuinfo_CMakeLists.txt -> dragonfly/patch-third__party_cpuinfo_CMakeLists.txt

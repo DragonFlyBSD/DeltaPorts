@@ -1,0 +1,7 @@
+port ports-mgmt/portmaster
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set IGNORE "does not support FLAVORS"
+file materialize dragonfly/patch-postmaster -> dragonfly/patch-postmaster

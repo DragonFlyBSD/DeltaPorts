@@ -1,0 +1,8 @@
+port net-p2p/c-lightning
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add MAKE_ENV "LDVER=ld.bfd"
+file materialize dragonfly/patch-ccan_ccan_endian_endian.h -> dragonfly/patch-ccan_ccan_endian_endian.h
+file materialize dragonfly/patch-ccan_tools_configurator_configurator.c -> dragonfly/patch-ccan_tools_configurator_configurator.c

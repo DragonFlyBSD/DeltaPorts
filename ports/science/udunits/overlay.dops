@@ -1,0 +1,6 @@
+port science/udunits
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-lib_xml.c -> dragonfly/patch-lib_xml.c

@@ -1,0 +1,13 @@
+port net-mgmt/kismet
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "ncurses"
+mk add EXTRA_PATCHES "${FILESDIR}/extra-patch-restricted-plugin-ptw_aircrack-crypto.cc"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's/freebsd\*/freebsd*|dragonfly*/g' \
+		${WRKSRC}/configure
+MK1
+file materialize dragonfly/patch-packetsource_bsdrt.cc -> dragonfly/patch-packetsource_bsdrt.cc
+file materialize dragonfly/patch-util.cc -> dragonfly/patch-util.cc

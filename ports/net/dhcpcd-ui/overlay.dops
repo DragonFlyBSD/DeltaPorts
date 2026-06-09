@@ -1,0 +1,13 @@
+port net/dhcpcd-ui
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "ncurses"
+mk add CFLAGS "-DTAILQ_FOREACH_SAFE=TAILQ_FOREACH_MUTABLE"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e "/XCC/s@-lcurses@-L${LOCALBASE}/lib -lncurses@g"	\
+			 -e "/LIB_CURSES/s@-lcurses@\"-L${LOCALBASE}/lib -lncurses\"@g"	\
+		${WRKSRC}/configure
+MK1
+file materialize dragonfly/patch-src_dhcpcd-curses_queue.h -> dragonfly/patch-src_dhcpcd-curses_queue.h

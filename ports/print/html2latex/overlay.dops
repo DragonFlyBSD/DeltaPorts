@@ -1,0 +1,7 @@
+port print/html2latex
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-HTMLparse.c -> dragonfly/patch-HTMLparse.c
+file materialize dragonfly/patch-html2latex.c -> dragonfly/patch-html2latex.c

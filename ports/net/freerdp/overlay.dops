@@ -1,0 +1,18 @@
+port net/freerdp
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${RM} -fr ${WRKSRC}/channels/urbdrc
+
+MK1
+mk target set post-configure <<'MK2'
+	${REINPLACE_CMD} -e '/MNT_UNION/d' \
+		${WRKSRC}/channels/rdpdr/client/mntent_compat.c
+MK2
+file materialize dragonfly/patch-CMakeLists.txt -> dragonfly/patch-CMakeLists.txt
+file materialize dragonfly/patch-libfreerdp_core_tcp.c -> dragonfly/patch-libfreerdp_core_tcp.c
+file materialize dragonfly/patch-uwac_libuwac_uwac-os.c -> dragonfly/patch-uwac_libuwac_uwac-os.c
+file materialize dragonfly/patch-winpr_include_winpr_winsock.h -> dragonfly/patch-winpr_include_winpr_winsock.h
+file materialize dragonfly/patch-winpr_libwinpr_winsock_winsock.c -> dragonfly/patch-winpr_libwinpr_winsock_winsock.c

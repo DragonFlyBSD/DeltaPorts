@@ -1,0 +1,7 @@
+port net/cloud-init
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add SHEBANG_FILES "tools/hook-hotplug"
+file materialize dragonfly/patch-setup.py -> dragonfly/patch-setup.py

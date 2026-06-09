@@ -1,0 +1,7 @@
+port multimedia/x264
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-common_cpu.c -> dragonfly/patch-common_cpu.c
+file materialize dragonfly/patch-configure -> dragonfly/patch-configure

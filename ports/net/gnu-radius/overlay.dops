@@ -1,0 +1,11 @@
+port net/gnu-radius
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-client_pam__radius_pam__radius.c -> dragonfly/patch-client_pam__radius_pam__radius.c
+file materialize dragonfly/patch-lib_ascend.c -> dragonfly/patch-lib_ascend.c
+file materialize dragonfly/patch-lib_cryptpass.c -> dragonfly/patch-lib_cryptpass.c
+file materialize dragonfly/patch-lib_slist.c -> dragonfly/patch-lib_slist.c
+file materialize dragonfly/patch-radiusd_version.c -> dragonfly/patch-radiusd_version.c
+file materialize dragonfly/patch-radwho_radwho.c -> dragonfly/patch-radwho_radwho.c

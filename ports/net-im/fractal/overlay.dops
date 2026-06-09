@@ -1,0 +1,7 @@
+port net-im/fractal
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-vendor_getrandom_src_util__libc.rs -> dragonfly/patch-vendor_getrandom_src_util__libc.rs
+file materialize dragonfly/patch-vendor_libc_src_unix_bsd_freebsdlike_dragonfly_mod.rs -> dragonfly/patch-vendor_libc_src_unix_bsd_freebsdlike_dragonfly_mod.rs

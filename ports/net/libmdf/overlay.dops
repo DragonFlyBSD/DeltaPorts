@@ -1,0 +1,9 @@
+port net/libmdf
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CFLAGS "-I${OPENSSLINC}"
+mk add CPPFLAGS "-I${OPENSSLINC}"
+mk add LDFLAGS "-L${OPENSSLLIB}"
+file materialize dragonfly/patch-src_common.c -> dragonfly/patch-src_common.c

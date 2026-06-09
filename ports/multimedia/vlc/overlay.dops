@@ -1,0 +1,7 @@
+port multimedia/vlc
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set USES "${USES:Nelfctl}"
+file materialize dragonfly/patch-modules_opus__header.h -> dragonfly/patch-modules_opus__header.h

@@ -1,0 +1,8 @@
+port security/clamav
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-CMakeLists.txt -> dragonfly/patch-CMakeLists.txt
+file materialize dragonfly/patch-libclamav_clamav.h -> dragonfly/patch-libclamav_clamav.h
+file materialize dragonfly/patch-libclamunrar_os.hpp -> dragonfly/patch-libclamunrar_os.hpp

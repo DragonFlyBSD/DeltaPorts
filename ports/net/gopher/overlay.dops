@@ -1,0 +1,13 @@
+port net/gopher
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "ncurses"
+mk add CONFIGURE_ENV "ac_cv_lib_ncurses_main=yes"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@curses@ncurses@g'				\
+			 -e "/LIBS/s@\(-lncurses\)@-L${LOCALBASE}/lib \1@g"	\
+		${WRKSRC}/configure
+MK1
+file materialize dragonfly/patch-object_GSgopherobj.c -> dragonfly/patch-object_GSgopherobj.c

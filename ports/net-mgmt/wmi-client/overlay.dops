@@ -1,0 +1,6 @@
+port net-mgmt/wmi-client
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-Samba_source_winexe_winexe.c -> dragonfly/patch-Samba_source_winexe_winexe.c

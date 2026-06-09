@@ -1,0 +1,21 @@
+port multimedia/handbrake
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "alias"
+mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NMFX}"
+mk add CFLAGS "-DSYS_FREEBSD"
+mk target set dfly-patch <<'MK1'
+	${LN} -v ${WRKSRC}/make/variant/gnu.defs		\
+		 ${WRKSRC}/make/variant/dragonfly.defs
+MK1
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-contrib_libbluray_P01-dragonfly-configure.patch -> dragonfly/patch-contrib_libbluray_P01-dragonfly-configure.patch
+file materialize dragonfly/patch-contrib_libbluray_P02-dragonfly-configure.patch -> dragonfly/patch-contrib_libbluray_P02-dragonfly-configure.patch
+file materialize dragonfly/patch-contrib_libbluray_module.defs -> dragonfly/patch-contrib_libbluray_module.defs
+file materialize dragonfly/patch-gtk_configure.ac -> dragonfly/patch-gtk_configure.ac
+file materialize dragonfly/patch-libhb_module.defs -> dragonfly/patch-libhb_module.defs
+file materialize dragonfly/patch-make_configure.py -> dragonfly/patch-make_configure.py
+file materialize dragonfly/patch-make_include_main.defs -> dragonfly/patch-make_include_main.defs
+file materialize dragonfly/patch-test_module.defs -> dragonfly/patch-test_module.defs

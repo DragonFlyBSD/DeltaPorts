@@ -1,0 +1,6 @@
+port net/rinetd
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-rinetd.c -> dragonfly/patch-rinetd.c

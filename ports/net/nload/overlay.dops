@@ -1,0 +1,7 @@
+port net/nload
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "autoreconf"
+file materialize dragonfly/patch-configure.in -> dragonfly/patch-configure.in

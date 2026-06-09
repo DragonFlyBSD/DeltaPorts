@@ -1,0 +1,13 @@
+port net/libwebsockets
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CFLAGS "-I${OPENSSLINC}"
+mk add LDFLAGS "-L${OPENSSLLIB}"
+mk add OPENSSL_CMAKE_BOOL "LWS_HAVE_HMAC_CTX_new LWS_HAVE_EVP_MD_CTX_free LWS_HAVE_SSL_EXTRA_CHAIN_CERTS"
+file materialize dragonfly/patch-include_libwebsockets.h -> dragonfly/patch-include_libwebsockets.h
+file materialize dragonfly/patch-lib_CMakeLists.txt -> dragonfly/patch-lib_CMakeLists.txt
+file materialize dragonfly/patch-lib_plat_unix_private-lib-plat-unix.h -> dragonfly/patch-lib_plat_unix_private-lib-plat-unix.h
+file materialize dragonfly/patch-lib_plat_unix_unix-socket.c -> dragonfly/patch-lib_plat_unix_unix-socket.c
+file materialize dragonfly/patch-lib_plat_unix_unix-spawn.c -> dragonfly/patch-lib_plat_unix_unix-spawn.c

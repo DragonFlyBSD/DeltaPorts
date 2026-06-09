@@ -1,0 +1,9 @@
+port security/krb5-121
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-config_shlib.conf -> dragonfly/patch-config_shlib.conf
+file materialize dragonfly/patch-lib_crypto_builtin_aes_brg__endian.h -> dragonfly/patch-lib_crypto_builtin_aes_brg__endian.h
+file materialize dragonfly/patch-lib_rpc_svc__tcp.c -> dragonfly/patch-lib_rpc_svc__tcp.c
+file materialize dragonfly/patch-lib_rpc_svc__udp.c -> dragonfly/patch-lib_rpc_svc__udp.c

@@ -1,0 +1,9 @@
+port multimedia/mencoder
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's|binary.ver|disable|' ${WRKSRC}/configure
+MK1
+file materialize dragonfly/patch-stream_tvi__bsdbt848.c -> dragonfly/patch-stream_tvi__bsdbt848.c

@@ -1,0 +1,8 @@
+port security/medusa
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CFLAGS "-Wno-stringop-overflow"
+file materialize dragonfly/patch-src_medusa-net.c -> dragonfly/patch-src_medusa-net.c
+file materialize dragonfly/patch-src_medusa-trace.c -> dragonfly/patch-src_medusa-trace.c

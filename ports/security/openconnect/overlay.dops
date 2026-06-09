@@ -1,0 +1,8 @@
+port security/openconnect
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NGSSAPI}"
+file materialize dragonfly/patch-openconnect-internal.h -> dragonfly/patch-openconnect-internal.h
+file materialize dragonfly/patch-openssl-dtls.c -> dragonfly/patch-openssl-dtls.c

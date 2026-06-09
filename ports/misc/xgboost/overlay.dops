@@ -1,0 +1,7 @@
+port misc/xgboost
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set BROKEN "missing SO_DOMAIN/SO_PROTOCOL"
+file materialize dragonfly/patch-rabit_include_rabit_internal_utils.h -> dragonfly/patch-rabit_include_rabit_internal_utils.h

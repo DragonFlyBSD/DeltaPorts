@@ -1,0 +1,8 @@
+port net/parpd
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CFLAGS "-DSLIST_FOREACH_SAFE=SLIST_FOREACH_MUTABLE"
+mk add CFLAGS "-DTAILQ_FOREACH_SAFE=TAILQ_FOREACH_MUTABLE"
+file materialize dragonfly/patch-bpf.c -> dragonfly/patch-bpf.c

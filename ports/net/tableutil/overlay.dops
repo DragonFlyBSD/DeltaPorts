@@ -1,0 +1,6 @@
+port net/tableutil
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-table_fileop.c -> dragonfly/patch-table_fileop.c

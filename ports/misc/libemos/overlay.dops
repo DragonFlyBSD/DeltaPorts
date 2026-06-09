@@ -1,0 +1,14 @@
+port misc/libemos
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set LDFLAGS "-L${LOCALBASE}/lib ${LDFLAGS}"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@[[:<:]]LITTLE_ENDIAN[[:>:]]@EMOS_LITTLE_ENDIAN@g' \
+		${WRKSRC}/CMakeLists.txt
+	${FIND} ${WRKSRC}/gribex -type f | ${XARGS} ${GREP} -l "LITTLE_ENDIAN" | ${XARGS} \
+		${REINPLACE_CMD} -e 's@[[:<:]]LITTLE_ENDIAN[[:>:]]@EMOS_LITTLE_ENDIAN@g'
+MK1
+file materialize dragonfly/patch-cmake_ecbuild__append__to__rpath.cmake -> dragonfly/patch-cmake_ecbuild__append__to__rpath.cmake
+file materialize dragonfly/patch-cmake_ecbuild__check__os.cmake -> dragonfly/patch-cmake_ecbuild__check__os.cmake

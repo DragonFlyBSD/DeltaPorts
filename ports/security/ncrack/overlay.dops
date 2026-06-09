@@ -1,0 +1,8 @@
+port security/ncrack
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CXXFLAGS "-fpermissive"
+file materialize dragonfly/patch-output.h -> dragonfly/patch-output.h
+file materialize dragonfly/patch-portable__endian.h -> dragonfly/patch-portable__endian.h

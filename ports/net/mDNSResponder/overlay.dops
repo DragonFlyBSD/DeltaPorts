@@ -1,0 +1,9 @@
+port net/mDNSResponder
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CFLAGS "-Wno-expansion-to-defined"
+file materialize dragonfly/patch-mDNSPosix_Makefile -> dragonfly/patch-mDNSPosix_Makefile
+file materialize dragonfly/patch-mDNSShared_CommonServices.h -> dragonfly/patch-mDNSShared_CommonServices.h
+file materialize dragonfly/patch-mDNSShared_utilities_misc__utilities.h -> dragonfly/patch-mDNSShared_utilities_misc__utilities.h

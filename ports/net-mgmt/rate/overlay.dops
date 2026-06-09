@@ -1,0 +1,9 @@
+port net-mgmt/rate
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-iphash.c -> dragonfly/patch-iphash.c
+file materialize dragonfly/patch-process.c -> dragonfly/patch-process.c
+file materialize dragonfly/patch-save.c -> dragonfly/patch-save.c
+file materialize dragonfly/patch-streams.h -> dragonfly/patch-streams.h

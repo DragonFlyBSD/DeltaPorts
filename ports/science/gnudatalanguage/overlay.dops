@@ -1,0 +1,10 @@
+port science/gnudatalanguage
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set USE_CXXSTD "c++11"
+file materialize dragonfly/patch-src__basic_fun.cpp -> dragonfly/patch-src__basic_fun.cpp
+file materialize dragonfly/patch-src_file.cpp -> dragonfly/patch-src_file.cpp
+file materialize dragonfly/patch-src_saverestore.cpp -> dragonfly/patch-src_saverestore.cpp
+file materialize dragonfly/patch-src_ssrfpack.c -> dragonfly/patch-src_ssrfpack.c

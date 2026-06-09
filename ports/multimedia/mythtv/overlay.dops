@@ -1,0 +1,49 @@
+port multimedia/mythtv
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set IGNORE "fails to patch on DFly"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@-lthr@@g'			\
+		${WRKSRC}/libs/libmythbase/libmythbase.pro
+	${REINPLACE_CMD} -e 's@SIGRTMIN@50@g'			\
+		${WRKSRC}/libs/libmythbase/signalhandling.cpp	\
+		${WRKSRC}/programs/mythavtest/main.cpp		\
+		${WRKSRC}/programs/mythbackend/main.cpp		\
+		${WRKSRC}/programs/mythccextractor/main.cpp	\
+		${WRKSRC}/programs/mythcommflag/main.cpp	\
+		${WRKSRC}/programs/mythfilldatabase/main.cpp	\
+		${WRKSRC}/programs/mythfrontend/main.cpp	\
+		${WRKSRC}/programs/mythjobqueue/main.cpp	\
+		${WRKSRC}/programs/mythlcdserver/main.cpp	\
+		${WRKSRC}/programs/mythlogserver/main.cpp	\
+		${WRKSRC}/programs/mythmediaserver/main.cpp	\
+		${WRKSRC}/programs/mythmetadatalookup/main.cpp	\
+		${WRKSRC}/programs/mythpreviewgen/main.cpp	\
+		${WRKSRC}/programs/mythscreenwizard/main.cpp	\
+		${WRKSRC}/programs/mythshutdown/main.cpp	\
+		${WRKSRC}/programs/mythtranscode/main.cpp	\
+		${WRKSRC}/programs/mythtv-setup/main.cpp	\
+		${WRKSRC}/programs/mythutil/main.cpp		\
+		${WRKSRC}/programs/mythwelcome/main.cpp
+MK1
+file materialize dragonfly/patch-configure -> dragonfly/patch-configure
+file materialize dragonfly/patch-external_FFmpeg_configure -> dragonfly/patch-external_FFmpeg_configure
+file materialize dragonfly/patch-libs_libmyth_mediamonitor-unix.cpp -> dragonfly/patch-libs_libmyth_mediamonitor-unix.cpp
+file materialize dragonfly/patch-libs_libmythbase_logging.cpp -> dragonfly/patch-libs_libmythbase_logging.cpp
+file materialize dragonfly/patch-libs_libmythbase_loggingserver.cpp -> dragonfly/patch-libs_libmythbase_loggingserver.cpp
+file materialize dragonfly/patch-libs_libmythbase_mythcdrom.cpp -> dragonfly/patch-libs_libmythbase_mythcdrom.cpp
+file materialize dragonfly/patch-libs_libmythbase_mythcorecontext.cpp -> dragonfly/patch-libs_libmythbase_mythcorecontext.cpp
+file materialize dragonfly/patch-libs_libmythbase_mythmiscutil.cpp -> dragonfly/patch-libs_libmythbase_mythmiscutil.cpp
+file materialize dragonfly/patch-libs_libmythdvdnav_dvdread_bswap.h -> dragonfly/patch-libs_libmythdvdnav_dvdread_bswap.h
+file materialize dragonfly/patch-libs_libmythdvdnav_dvdread_dvd_reader.c -> dragonfly/patch-libs_libmythdvdnav_dvdread_dvd_reader.c
+file materialize dragonfly/patch-libs_libmythfreemheg_Programs.cpp -> dragonfly/patch-libs_libmythfreemheg_Programs.cpp
+file materialize dragonfly/patch-libs_libmythprotoserver_requesthandler_fileserverutil.cpp -> dragonfly/patch-libs_libmythprotoserver_requesthandler_fileserverutil.cpp
+file materialize dragonfly/patch-libs_libmythtv_recorders_dvbdev_dvbci.cpp -> dragonfly/patch-libs_libmythtv_recorders_dvbdev_dvbci.cpp
+file materialize dragonfly/patch-libs_libmythtv_recorders_mpegrecorder.cpp -> dragonfly/patch-libs_libmythtv_recorders_mpegrecorder.cpp
+file materialize dragonfly/patch-libs_libmythtv_yuv2rgb.cpp -> dragonfly/patch-libs_libmythtv_yuv2rgb.cpp
+file materialize dragonfly/patch-libs_libmythupnp_httprequest.cpp -> dragonfly/patch-libs_libmythupnp_httprequest.cpp
+file materialize dragonfly/patch-libs_libmythupnp_mmulticastsocketdevice.h -> dragonfly/patch-libs_libmythupnp_mmulticastsocketdevice.h
+file materialize dragonfly/patch-mythplugins_mytharchive_mytharchivehelper_main.cpp -> dragonfly/patch-mythplugins_mytharchive_mytharchivehelper_main.cpp
+file materialize dragonfly/patch-programs_mythbackend_backendutil.cpp -> dragonfly/patch-programs_mythbackend_backendutil.cpp

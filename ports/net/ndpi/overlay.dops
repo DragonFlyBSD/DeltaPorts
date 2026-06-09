@@ -1,0 +1,17 @@
+port net/ndpi
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "gmake"
+mk add CONFIGURE_ARGS "--disable-dependency-tracking"
+mk set DFLY_UNMAINTAINED "yes"
+file materialize dragonfly/patch-src_include_ndpi__define.h.in -> dragonfly/patch-src_include_ndpi__define.h.in
+file materialize dragonfly/patch-src_include_ndpi__includes.h -> dragonfly/patch-src_include_ndpi__includes.h
+file materialize dragonfly/patch-src_include_ndpi__unix.h -> dragonfly/patch-src_include_ndpi__unix.h
+file materialize dragonfly/patch-src_lib_ndpi__community__id.c -> dragonfly/patch-src_lib_ndpi__community__id.c
+file materialize dragonfly/patch-src_lib_ndpi__main.c -> dragonfly/patch-src_lib_ndpi__main.c
+file materialize dragonfly/patch-src_lib_ndpi__serializer.c -> dragonfly/patch-src_lib_ndpi__serializer.c
+file materialize dragonfly/patch-src_lib_ndpi__utils.c -> dragonfly/patch-src_lib_ndpi__utils.c
+file materialize dragonfly/patch-src_lib_protocols_quic.c -> dragonfly/patch-src_lib_protocols_quic.c
+file materialize dragonfly/patch-src_lib_third__party_src_roaring.cc -> dragonfly/patch-src_lib_third__party_src_roaring.cc

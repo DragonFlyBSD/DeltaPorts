@@ -1,0 +1,6 @@
+port security/clamsmtp
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-common_smtppass.c -> dragonfly/patch-common_smtppass.c

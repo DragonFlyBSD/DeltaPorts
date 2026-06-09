@@ -1,0 +1,6 @@
+port security/vault
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-vendor_github.com_hashicorp_consul-template_signals_signals_unix.go -> dragonfly/patch-vendor_github.com_hashicorp_consul-template_signals_signals_unix.go

@@ -1,0 +1,7 @@
+port net/vinagre
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NRDP}"
+file materialize dragonfly/patch-vinagre_pty__open.c -> dragonfly/patch-vinagre_pty__open.c

@@ -1,0 +1,16 @@
+port net/zerotier
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set BUILD_DEPENDS "${BUILD_DEPENDS:N*binutils}"
+mk add SUB_LIST "ZEROTIER_SYSLOG=\"-s debug -T zerotier\""
+mk add SUB_LIST "ZEROTIER_IF_TAP=\"if_tap\""
+file materialize dragonfly/patch-Makefile -> dragonfly/patch-Makefile
+file materialize dragonfly/patch-ext_prometheus-cpp-lite-1.0_core_include_prometheus_text__serializer.h -> dragonfly/patch-ext_prometheus-cpp-lite-1.0_core_include_prometheus_text__serializer.h
+file materialize dragonfly/patch-include_ZeroTierDebug.h -> dragonfly/patch-include_ZeroTierDebug.h
+file materialize dragonfly/patch-node_Constants.hpp -> dragonfly/patch-node_Constants.hpp
+file materialize dragonfly/patch-osdep_BSDEthernetTap.cpp -> dragonfly/patch-osdep_BSDEthernetTap.cpp
+file materialize dragonfly/patch-osdep_EthernetTap.cpp -> dragonfly/patch-osdep_EthernetTap.cpp
+file materialize dragonfly/patch-osdep_freebsd__getifmaddrs.c -> dragonfly/patch-osdep_freebsd__getifmaddrs.c
+file materialize dragonfly/patch-osdep_freebsd__getifmaddrs.h -> dragonfly/patch-osdep_freebsd__getifmaddrs.h

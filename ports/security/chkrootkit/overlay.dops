@@ -1,0 +1,11 @@
+port security/chkrootkit
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "alias:11"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@FreeBSD@DragonFly@g' \
+		${WRKSRC}/chkrootkit
+MK1
+file materialize dragonfly/patch-chkdirs.c -> dragonfly/patch-chkdirs.c

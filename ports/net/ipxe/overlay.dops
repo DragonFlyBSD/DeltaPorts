@@ -1,0 +1,6 @@
+port net/ipxe
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-util_elf2efi.c -> dragonfly/patch-util_elf2efi.c

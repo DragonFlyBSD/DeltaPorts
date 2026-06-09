@@ -1,0 +1,11 @@
+port net-mgmt/pandorafms_server
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-Makefile.PL -> dragonfly/patch-Makefile.PL
+file materialize dragonfly/patch-lib_PandoraFMS_Tool.pm -> dragonfly/patch-lib_PandoraFMS_Tool.pm
+file materialize dragonfly/patch-pandora_server_installer -> dragonfly/patch-pandora_server_installer
+file materialize dragonfly/patch-util_recon_scripts_ipmi_recon.pl -> dragonfly/patch-util_recon_scripts_ipmi_recon.pl
+file materialize dragonfly/patch-util_recon_scripts_snmp_recon.pl -> dragonfly/patch-util_recon_scripts_snmp_recon.pl
+file materialize dragonfly/patch-util_recon_scripts_wmi_recon.pl -> dragonfly/patch-util_recon_scripts_wmi_recon.pl

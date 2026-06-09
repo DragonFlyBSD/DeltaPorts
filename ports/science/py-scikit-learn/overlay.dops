@@ -1,0 +1,11 @@
+port science/py-scikit-learn
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set post-configure <<'MK1'
+	${REINPLACE_CMD} -e 's,isnan,std::isnan,g' \
+		${WRKSRC}/sklearn/preprocessing/_target_encoder_fast.cpp \
+		${WRKSRC}/sklearn/tree/_tree.cpp
+MK1
+file materialize dragonfly/patch-sklearn_utils_fixes.py -> dragonfly/patch-sklearn_utils_fixes.py

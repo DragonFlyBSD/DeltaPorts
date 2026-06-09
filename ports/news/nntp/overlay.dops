@@ -1,0 +1,13 @@
+port news/nntp
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "alias"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e "s@getline@get_line@" ${WRKSRC}/xmit/nntpxmit.c
+MK1
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-server_netaux.c -> dragonfly/patch-server_netaux.c
+file materialize dragonfly/patch-xfer_nntpxfer.c -> dragonfly/patch-xfer_nntpxfer.c
+file materialize dragonfly/patch-xmit_remote.c -> dragonfly/patch-xmit_remote.c

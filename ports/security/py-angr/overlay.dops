@@ -1,0 +1,7 @@
+port security/py-angr
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-native_Makefile -> dragonfly/patch-native_Makefile
+file materialize dragonfly/patch-native_log.c -> dragonfly/patch-native_log.c

@@ -1,0 +1,11 @@
+port net-mgmt/pandorafms_console
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-include_ajax_events.php -> dragonfly/patch-include_ajax_events.php
+file materialize dragonfly/patch-include_functions.php -> dragonfly/patch-include_functions.php
+file materialize dragonfly/patch-include_functions_snmp.php -> dragonfly/patch-include_functions_snmp.php
+file materialize dragonfly/patch-include_functions_snmp_browser.php -> dragonfly/patch-include_functions_snmp_browser.php
+file materialize dragonfly/patch-install.php -> dragonfly/patch-install.php
+file materialize dragonfly/patch-pandora_console_install -> dragonfly/patch-pandora_console_install

@@ -1,0 +1,13 @@
+port multimedia/gpac-libgpac
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-configure -> dragonfly/patch-configure
+file materialize dragonfly/patch-include_gpac_Remotery.h -> dragonfly/patch-include_gpac_Remotery.h
+file materialize dragonfly/patch-src_filters_in__pipe.c -> dragonfly/patch-src_filters_in__pipe.c
+file materialize dragonfly/patch-src_filters_out__pipe.c -> dragonfly/patch-src_filters_out__pipe.c
+file materialize dragonfly/patch-src_filters_reframe__img.c -> dragonfly/patch-src_filters_reframe__img.c
+file materialize dragonfly/patch-src_quickjs_quickjs.c -> dragonfly/patch-src_quickjs_quickjs.c
+file materialize dragonfly/patch-src_utils_dlmalloc.c -> dragonfly/patch-src_utils_dlmalloc.c
+file materialize dragonfly/patch-src_utils_os__divers.c -> dragonfly/patch-src_utils_os__divers.c

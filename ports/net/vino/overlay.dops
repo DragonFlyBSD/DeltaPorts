@@ -1,0 +1,6 @@
+port net/vino
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-server_libvncserver_rfb_rfb.h -> dragonfly/patch-server_libvncserver_rfb_rfb.h

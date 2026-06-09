@@ -1,0 +1,18 @@
+port security/keybase
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-client_platform__specific__ctl__commands__other.go -> dragonfly/patch-client_platform__specific__ctl__commands__other.go
+file materialize dragonfly/patch-install_install__unix.go -> dragonfly/patch-install_install__unix.go
+file materialize dragonfly/patch-install_stop__nix.go -> dragonfly/patch-install_stop__nix.go
+file materialize dragonfly/patch-kbfs_libkbfs_disk__limits__unix.go -> dragonfly/patch-kbfs_libkbfs_disk__limits__unix.go
+file materialize dragonfly/patch-kbfs_stderrutils_dup__stderr__nix.go -> dragonfly/patch-kbfs_stderrutils_dup__stderr__nix.go
+file materialize dragonfly/patch-logger_redirect__stderr__nix.go -> dragonfly/patch-logger_redirect__stderr__nix.go
+file materialize dragonfly/patch-vendor_bazil.org_fuse_error__dragonfly.go -> dragonfly/patch-vendor_bazil.org_fuse_error__dragonfly.go
+file materialize dragonfly/patch-vendor_bazil.org_fuse_fuse__dragonfly.go -> dragonfly/patch-vendor_bazil.org_fuse_fuse__dragonfly.go
+file materialize dragonfly/patch-vendor_bazil.org_fuse_fuse__kernel__dragonfly.go -> dragonfly/patch-vendor_bazil.org_fuse_fuse__kernel__dragonfly.go
+file materialize dragonfly/patch-vendor_bazil.org_fuse_mount__dragonfly.go -> dragonfly/patch-vendor_bazil.org_fuse_mount__dragonfly.go
+file materialize dragonfly/patch-vendor_bazil.org_fuse_options__dragonfly.go -> dragonfly/patch-vendor_bazil.org_fuse_options__dragonfly.go
+file materialize dragonfly/patch-vendor_github.com_keybase_go-ps_process__dragonfly.go -> dragonfly/patch-vendor_github.com_keybase_go-ps_process__dragonfly.go
+file materialize dragonfly/patch-vendor_gopkg.in_src-d_go-git.v4_worktree__bsd.go -> dragonfly/patch-vendor_gopkg.in_src-d_go-git.v4_worktree__bsd.go

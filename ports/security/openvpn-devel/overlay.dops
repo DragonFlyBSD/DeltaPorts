@@ -1,0 +1,6 @@
+port security/openvpn-devel
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-src_openvpn_tun.c -> dragonfly/patch-src_openvpn_tun.c

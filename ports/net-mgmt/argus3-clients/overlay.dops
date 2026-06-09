@@ -1,0 +1,7 @@
+port net-mgmt/argus3-clients
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "alias"
+file materialize dragonfly/patch-include_argus__compat.h -> dragonfly/patch-include_argus__compat.h

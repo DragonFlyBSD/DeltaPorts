@@ -1,0 +1,10 @@
+port net/u6rd
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@<net/if_tun.h>@<net/tun/if_tun.h>@g' \
+		${WRKSRC}/configure ${WRKSRC}/tun_bsd.c
+MK1
+file materialize dragonfly/patch-main.c -> dragonfly/patch-main.c

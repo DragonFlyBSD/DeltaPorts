@@ -1,0 +1,10 @@
+port net/pjsip
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e "/app=libilbccodec .*subst /s/$$/ ILBC_LDFLAGS=-lm/"	\
+		${WRKSRC}/third_party/build/ilbc/Makefile
+MK1
+file materialize dragonfly/patch-aconfigure -> dragonfly/patch-aconfigure

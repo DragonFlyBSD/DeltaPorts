@@ -1,0 +1,11 @@
+port news/newsfetch
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-getopt.c -> dragonfly/patch-getopt.c
+file materialize dragonfly/patch-net.c -> dragonfly/patch-net.c
+file materialize dragonfly/patch-newsfetch.c -> dragonfly/patch-newsfetch.c
+file materialize dragonfly/patch-nntp.c -> dragonfly/patch-nntp.c
+file materialize dragonfly/patch-opt.c -> dragonfly/patch-opt.c
+file materialize dragonfly/patch-util.c -> dragonfly/patch-util.c

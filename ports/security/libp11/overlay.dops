@@ -1,0 +1,9 @@
+port security/libp11
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set DFLY_UNMAINTAINED "yes"
+file materialize dragonfly/patch-src_p11__atfork.c -> dragonfly/patch-src_p11__atfork.c
+file materialize dragonfly/patch-src_p11__pkey.c -> dragonfly/patch-src_p11__pkey.c
+file materialize dragonfly/patch-src_p11__rsa.c -> dragonfly/patch-src_p11__rsa.c

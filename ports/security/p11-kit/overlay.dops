@@ -1,0 +1,7 @@
+port security/p11-kit
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-common_compat.c -> dragonfly/patch-common_compat.c
+file materialize dragonfly/patch-common_message.c -> dragonfly/patch-common_message.c

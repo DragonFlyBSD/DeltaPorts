@@ -1,0 +1,15 @@
+port security/suricata
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NNETMAP}"
+mk add LDFLAGS "-lm"
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-src_threads.h -> dragonfly/patch-src_threads.h
+file materialize dragonfly/patch-src_tm-threads.c -> dragonfly/patch-src_tm-threads.c
+file materialize dragonfly/patch-src_unix-manager.c -> dragonfly/patch-src_unix-manager.c
+file materialize dragonfly/patch-src_util-byte.h -> dragonfly/patch-src_util-byte.h
+file materialize dragonfly/patch-src_util-fmemopen.c -> dragonfly/patch-src_util-fmemopen.c
+file materialize dragonfly/patch-src_util-fmemopen.h -> dragonfly/patch-src_util-fmemopen.h
+file materialize dragonfly/patch-src_util-ioctl.c -> dragonfly/patch-src_util-ioctl.c

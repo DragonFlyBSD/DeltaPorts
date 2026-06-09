@@ -1,0 +1,8 @@
+port multimedia/libcec
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-src_libcec_adapter_Pulse-Eight_USBCECAdapterDetection.cpp -> dragonfly/patch-src_libcec_adapter_Pulse-Eight_USBCECAdapterDetection.cpp
+file materialize dragonfly/patch-src_libcec_cmake_CheckPlatformSupport.cmake -> dragonfly/patch-src_libcec_cmake_CheckPlatformSupport.cmake
+file materialize dragonfly/patch-src_libcec_platform_posix_serialport.cpp -> dragonfly/patch-src_libcec_platform_posix_serialport.cpp

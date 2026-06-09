@@ -1,0 +1,23 @@
+port net/kamailio
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NSCTP}"
+mk add MAKE_ARGS "SCTP=0 LOCALBASE=${LOCALBASE}"
+mk add PLIST_FILES "lib/kamailio/libprint.so.1.2"
+mk add PLIST_FILES "lib/kamailio/libsrdb1.so.1.0 lib/kamailio/libsrdb2.so.1.0"
+mk add PLIST_FILES "lib/kamailio/libtrie.so.1.0"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@clang@gcc@g' \
+			 -e 's@"-ldl"@-ldl -lm@g' \
+		${WRKSRC}/src/Makefile.defs
+	${REINPLACE_CMD} -e "s@LIBS = @& -L${LOCALBASE}/lib @g" \
+		${WRKSRC}/src/modules/db_mysql/Makefile
+MK1
+mk set DFLY_UNMAINTAINED "yes"
+file materialize dragonfly/patch-src_Makefile.defs -> dragonfly/patch-src_Makefile.defs
+file materialize dragonfly/patch-src_modules_tls_tls__bio.c -> dragonfly/patch-src_modules_tls_tls__bio.c
+file materialize dragonfly/patch-src_modules_tls_tls__mod.c -> dragonfly/patch-src_modules_tls_tls__mod.c
+file materialize dragonfly/patch-src_modules_tls_tls__rand.c -> dragonfly/patch-src_modules_tls_tls__rand.c
+file materialize dragonfly/patch-src_modules_tls_tls__rand.h -> dragonfly/patch-src_modules_tls_tls__rand.h

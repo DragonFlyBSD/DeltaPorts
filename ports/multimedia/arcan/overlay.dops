@@ -1,0 +1,7 @@
+port multimedia/arcan
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "alias"
+file materialize dragonfly/patch-platform_posix_random.c -> dragonfly/patch-platform_posix_random.c

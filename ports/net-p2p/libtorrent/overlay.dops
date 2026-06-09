@@ -1,0 +1,6 @@
+port net-p2p/libtorrent
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-src_net_socket__fd.cc -> dragonfly/patch-src_net_socket__fd.cc

@@ -1,0 +1,6 @@
+port security/gnupg-pkcs11-scd
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-gnupg-pkcs11-scd_common.c -> dragonfly/patch-gnupg-pkcs11-scd_common.c

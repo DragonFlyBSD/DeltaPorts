@@ -1,0 +1,6 @@
+port multimedia/kodi-addon-pvr.hts
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-lib_libhts_net__posix.c -> dragonfly/patch-lib_libhts_net__posix.c

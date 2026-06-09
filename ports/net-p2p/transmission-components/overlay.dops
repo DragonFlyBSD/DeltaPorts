@@ -1,0 +1,6 @@
+port net-p2p/transmission-components
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-utils_CMakeLists.txt -> dragonfly/patch-utils_CMakeLists.txt

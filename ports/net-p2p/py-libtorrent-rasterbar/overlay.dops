@@ -1,0 +1,7 @@
+port net-p2p/py-libtorrent-rasterbar
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set BINARY_ALIAS "b2=${DFLY_FILESDIR}/b2"
+file materialize dragonfly/b2 -> dragonfly/b2

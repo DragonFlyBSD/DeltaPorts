@@ -1,0 +1,12 @@
+port security/klee
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-lib_Core_Executor.cpp -> dragonfly/patch-lib_Core_Executor.cpp
+file materialize dragonfly/patch-runtime_POSIX_fd.h -> dragonfly/patch-runtime_POSIX_fd.h
+file materialize dragonfly/patch-tools_gen-bout_gen-bout.cpp -> dragonfly/patch-tools_gen-bout_gen-bout.cpp
+file materialize dragonfly/patch-tools_gen-random-bout_gen-random-bout.cpp -> dragonfly/patch-tools_gen-random-bout_gen-random-bout.cpp
+file materialize dragonfly/patch-tools_klee-replay_file-creator.c -> dragonfly/patch-tools_klee-replay_file-creator.c
+file materialize dragonfly/patch-tools_klee-replay_klee-replay.c -> dragonfly/patch-tools_klee-replay_klee-replay.c

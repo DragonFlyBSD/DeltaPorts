@@ -1,0 +1,8 @@
+port multimedia/audacious-plugins
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NPULSEAUDIO}"
+file materialize dragonfly/patch-src_gio_gio.cc -> dragonfly/patch-src_gio_gio.cc
+file materialize dragonfly/patch-src_neon_neon.cc -> dragonfly/patch-src_neon_neon.cc

@@ -1,0 +1,8 @@
+port misc/thrill
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-extlib_tlx_tlx_math_bswap.hpp -> dragonfly/patch-extlib_tlx_tlx_math_bswap.hpp
+file materialize dragonfly/patch-thrill_mem_malloc__tracker.cpp -> dragonfly/patch-thrill_mem_malloc__tracker.cpp
+file materialize dragonfly/patch-thrill_net_tcp_socket.cpp -> dragonfly/patch-thrill_net_tcp_socket.cpp

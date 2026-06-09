@@ -1,0 +1,7 @@
+port security/strongswan
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set BROKEN "requires IPSEC"
+file materialize dragonfly/patch-src_libstrongswan_networking_tun__device.c -> dragonfly/patch-src_libstrongswan_networking_tun__device.c

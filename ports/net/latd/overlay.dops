@@ -1,0 +1,7 @@
+port net/latd
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-dn_endian.h -> dragonfly/patch-dn_endian.h
+file materialize dragonfly/patch-server.cc -> dragonfly/patch-server.cc

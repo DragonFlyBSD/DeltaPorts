@@ -1,0 +1,9 @@
+port security/opencryptoki
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CONFIGURE_ARGS "--enable-locks"
+file materialize dragonfly/patch-usr_lib_common_lock__btree.c -> dragonfly/patch-usr_lib_common_lock__btree.c
+file materialize dragonfly/patch-usr_lib_soft__stdll_soft__specific.c -> dragonfly/patch-usr_lib_soft__stdll_soft__specific.c
+file materialize dragonfly/patch-usr_sbin_pkcsslotd_log.c -> dragonfly/patch-usr_sbin_pkcsslotd_log.c

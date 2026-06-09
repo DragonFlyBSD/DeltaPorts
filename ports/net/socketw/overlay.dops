@@ -1,0 +1,7 @@
+port net/socketw
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-src_sw_base.cxx -> dragonfly/patch-src_sw_base.cxx
+file materialize dragonfly/patch-src_sw_base.h -> dragonfly/patch-src_sw_base.h

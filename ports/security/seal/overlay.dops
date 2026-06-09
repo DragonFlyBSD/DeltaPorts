@@ -1,0 +1,6 @@
+port security/seal
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-native_src_seal_util_defines.h -> dragonfly/patch-native_src_seal_util_defines.h

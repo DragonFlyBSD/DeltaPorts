@@ -1,0 +1,13 @@
+port multimedia/opentoonz
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@<sys/dir\.h>@<dirent.h>@g' \
+		${WRKSRC}/toonz/sources/common/tsystem/tpluginmanager.cpp \
+		${WRKSRC}/toonz/sources/common/tsystem/tsystempd.cpp \
+		${WRKSRC}/toonz/sources/toonzfarm/tnzcore_stuff/tsystem.cpp
+MK1
+file materialize dragonfly/patch-toonz_sources_common_tsystem_tsystempd.cpp -> dragonfly/patch-toonz_sources_common_tsystem_tsystempd.cpp
+file materialize dragonfly/patch-toonz_sources_toonzfarm_tfarm_ttcpipserver.cpp -> dragonfly/patch-toonz_sources_toonzfarm_tfarm_ttcpipserver.cpp

@@ -1,0 +1,24 @@
+port multimedia/pipewire
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add LDFLAGS "-L${LOCALBASE}/lib -ltinfo -lncurses"
+mk add BUILD_DEPENDS "libstdthreads>0:misc/libstdthreads"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@freebsd@dragonfly@g' \
+		${WRKSRC}/src/pipewire/meson.build \
+		${WRKSRC}/meson.build
+MK1
+file materialize dragonfly/patch-pipewire-alsa_alsa-plugins_pcm__pipewire.c -> dragonfly/patch-pipewire-alsa_alsa-plugins_pcm__pipewire.c
+file materialize dragonfly/patch-spa_plugins_alsa_alsa-pcm.c -> dragonfly/patch-spa_plugins_alsa_alsa-pcm.c
+file materialize dragonfly/patch-spa_plugins_support_logger.c -> dragonfly/patch-spa_plugins_support_logger.c
+file materialize dragonfly/patch-spa_plugins_support_loop.c -> dragonfly/patch-spa_plugins_support_loop.c
+file materialize dragonfly/patch-src_modules_module-protocol-pulse_message-handler.c -> dragonfly/patch-src_modules_module-protocol-pulse_message-handler.c
+file materialize dragonfly/patch-src_modules_module-rt.c -> dragonfly/patch-src_modules_module-rt.c
+file materialize dragonfly/patch-src_modules_network-utils.h -> dragonfly/patch-src_modules_network-utils.h
+file materialize dragonfly/patch-src_pipewire_conf.c -> dragonfly/patch-src_pipewire_conf.c
+file materialize dragonfly/patch-src_pipewire_impl-node.c -> dragonfly/patch-src_pipewire_impl-node.c
+file materialize dragonfly/patch-src_pipewire_mem.c -> dragonfly/patch-src_pipewire_mem.c
+file materialize dragonfly/patch-src_pipewire_pipewire.c -> dragonfly/patch-src_pipewire_pipewire.c
+file materialize dragonfly/patch-src_pipewire_private.h -> dragonfly/patch-src_pipewire_private.h

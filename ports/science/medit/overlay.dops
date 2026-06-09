@@ -1,0 +1,7 @@
+port science/medit
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set EXTRACT_CMD "tar"
+file materialize dragonfly/patch-makefile -> dragonfly/patch-makefile

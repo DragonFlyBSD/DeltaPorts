@@ -1,0 +1,6 @@
+port net/sofia-sip
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-libsofia_sip_ua_tport_ws.h -> dragonfly/patch-libsofia_sip_ua_tport_ws.h

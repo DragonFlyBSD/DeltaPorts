@@ -1,0 +1,7 @@
+port security/pecl-crypto
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "ssl"
+file materialize dragonfly/patch-crypto__base64.c -> dragonfly/patch-crypto__base64.c

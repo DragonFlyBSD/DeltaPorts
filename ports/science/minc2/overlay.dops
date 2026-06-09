@@ -1,0 +1,7 @@
+port science/minc2
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-conversion_ecattominc_machine__indep.c -> dragonfly/patch-conversion_ecattominc_machine__indep.c
+file materialize dragonfly/patch-conversion_minctoecat_machine__indep.c -> dragonfly/patch-conversion_minctoecat_machine__indep.c

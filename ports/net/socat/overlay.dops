@@ -1,0 +1,7 @@
+port net/socat
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-compat.h -> dragonfly/patch-compat.h
+file materialize dragonfly/patch-filan.c -> dragonfly/patch-filan.c

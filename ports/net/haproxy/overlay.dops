@@ -1,0 +1,11 @@
+port net/haproxy
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set MAKE_ARGS "${MAKE_ARGS:NUSE_CPU_AFF*}"
+file materialize dragonfly/patch-include_haproxy_global.h -> dragonfly/patch-include_haproxy_global.h
+file materialize dragonfly/patch-src_haproxy.c -> dragonfly/patch-src_haproxy.c
+file materialize dragonfly/patch-src_hpack-tbl.c -> dragonfly/patch-src_hpack-tbl.c
+file materialize dragonfly/patch-src_protocol.c -> dragonfly/patch-src_protocol.c
+file materialize dragonfly/patch-src_tcp__sample.c -> dragonfly/patch-src_tcp__sample.c

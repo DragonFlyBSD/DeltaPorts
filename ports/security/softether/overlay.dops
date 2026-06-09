@@ -1,0 +1,11 @@
+port security/softether
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-libressl-compat -> dragonfly/patch-libressl-compat
+file materialize dragonfly/patch-src_Mayaqua_Kernel.c -> dragonfly/patch-src_Mayaqua_Kernel.c
+file materialize dragonfly/patch-src_Mayaqua_Kernel.h -> dragonfly/patch-src_Mayaqua_Kernel.h
+file materialize dragonfly/patch-src_Mayaqua_Object.h -> dragonfly/patch-src_Mayaqua_Object.h
+file materialize dragonfly/patch-src_Mayaqua_Unix.c -> dragonfly/patch-src_Mayaqua_Unix.c
+file materialize dragonfly/patch-src_Mayaqua_Unix.h -> dragonfly/patch-src_Mayaqua_Unix.h

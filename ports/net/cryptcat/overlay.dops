@@ -1,0 +1,7 @@
+port net/cryptcat
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-netcat.c -> dragonfly/patch-netcat.c
+file materialize dragonfly/patch-twofish2.cc -> dragonfly/patch-twofish2.cc

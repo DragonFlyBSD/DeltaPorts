@@ -1,0 +1,11 @@
+port net/packter-agent
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-src_pt__ip.c -> dragonfly/patch-src_pt__ip.c
+file materialize dragonfly/patch-src_pt__ip6.c -> dragonfly/patch-src_pt__ip6.c
+file materialize dragonfly/patch-src_pt__netflow.c -> dragonfly/patch-src_pt__netflow.c
+file materialize dragonfly/patch-src_pt__tcp.c -> dragonfly/patch-src_pt__tcp.c
+file materialize dragonfly/patch-src_pt__thmon.c -> dragonfly/patch-src_pt__thmon.c
+file materialize dragonfly/patch-src_pt__udp.c -> dragonfly/patch-src_pt__udp.c

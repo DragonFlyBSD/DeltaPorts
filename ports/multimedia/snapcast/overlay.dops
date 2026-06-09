@@ -1,0 +1,12 @@
+port multimedia/snapcast
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set CLIENT_LIB_DEPENDS "${CLIENT_LIB_DEPENDS:Nlibpulse*}"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@FreeBSD@DragonFly@g' \
+		${WRKSRC}/CMakeLists.txt
+MK1
+mk set DFLY_UNMAINTAINED "yes"
+file materialize dragonfly/patch-common_utils.hpp -> dragonfly/patch-common_utils.hpp

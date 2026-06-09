@@ -1,0 +1,7 @@
+port security/wpa_supplicant
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-src_l2__packet_l2__packet__freebsd.c -> dragonfly/patch-src_l2__packet_l2__packet__freebsd.c
+file materialize dragonfly/patch-src_wps_wps__upnp.c -> dragonfly/patch-src_wps_wps__upnp.c

@@ -1,0 +1,15 @@
+port multimedia/lives
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NPULSEAUDIO}"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@FreeBSD@DragonFly@g' \
+		${WRKSRC}/lives-plugins/plugins/decoders/asf_decoder.c \
+		${WRKSRC}/lives-plugins/plugins/decoders/mpegts_decoder.c
+MK1
+file materialize dragonfly/patch-lives-plugins_plugins_decoders_decplugin.h -> dragonfly/patch-lives-plugins_plugins_decoders_decplugin.h
+file materialize dragonfly/patch-src_machinestate.c -> dragonfly/patch-src_machinestate.c
+file materialize dragonfly/patch-src_main.h -> dragonfly/patch-src_main.h
+file materialize dragonfly/patch-src_mainwindow.h -> dragonfly/patch-src_mainwindow.h

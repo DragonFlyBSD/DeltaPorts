@@ -1,0 +1,12 @@
+port security/hashcat
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add MAKE_ARGS "CXXLIB=\"-lstdc++\""
+mk add LDFLAGS "-L${LOCALBASE}/lib"
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-src_Makefile -> dragonfly/patch-src_Makefile
+file materialize dragonfly/patch-src_affinity.c -> dragonfly/patch-src_affinity.c
+file materialize dragonfly/patch-src_folder.c -> dragonfly/patch-src_folder.c
+file materialize dragonfly/patch-src_terminal.c -> dragonfly/patch-src_terminal.c

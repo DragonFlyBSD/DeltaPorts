@@ -1,0 +1,8 @@
+port misc/mxnet
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CMAKE_ARGS "-DUSE_F16C:BOOL=OFF"
+mk add CMAKE_ARGS "-DUSE_INTGEMM:BOOL=OFF"
+file materialize dragonfly/patch-include_mshadow_packet-inl.h -> dragonfly/patch-include_mshadow_packet-inl.h

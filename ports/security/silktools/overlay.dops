@@ -1,0 +1,6 @@
+port security/silktools
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-src_rwipfix_rwsilk2ipfix.c -> dragonfly/patch-src_rwipfix_rwsilk2ipfix.c

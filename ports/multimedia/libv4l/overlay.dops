@@ -1,0 +1,13 @@
+port multimedia/libv4l
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-contrib_freebsd_include_linux_input.h -> dragonfly/patch-contrib_freebsd_include_linux_input.h
+file materialize dragonfly/patch-lib_include_libdvbv5_descriptors.h -> dragonfly/patch-lib_include_libdvbv5_descriptors.h
+file materialize dragonfly/patch-lib_include_libv4l1-videodev.h -> dragonfly/patch-lib_include_libv4l1-videodev.h
+file materialize dragonfly/patch-lib_include_libv4lconvert.h -> dragonfly/patch-lib_include_libv4lconvert.h
+file materialize dragonfly/patch-lib_libv4lconvert_libv4lsyscall-priv.h -> dragonfly/patch-lib_libv4lconvert_libv4lsyscall-priv.h
+file materialize dragonfly/patch-utils_dvb_dvbv5-daemon.c -> dragonfly/patch-utils_dvb_dvbv5-daemon.c
+file materialize dragonfly/patch-utils_v4l2-compliance_v4l2-compliance.h -> dragonfly/patch-utils_v4l2-compliance_v4l2-compliance.h
+file materialize dragonfly/patch-utils_v4l2-ctl_v4l2-ctl-overlay.cpp -> dragonfly/patch-utils_v4l2-ctl_v4l2-ctl-overlay.cpp

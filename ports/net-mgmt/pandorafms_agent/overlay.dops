@@ -1,0 +1,12 @@
+port net-mgmt/pandorafms_agent
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${LN} -sv ${WRKSRC}/FreeBSD ${WRKSRC}/DragonFly
+MK1
+file materialize dragonfly/patch-pandora_agent -> dragonfly/patch-pandora_agent
+file materialize dragonfly/patch-pandora_agent_installer -> dragonfly/patch-pandora_agent_installer
+file materialize dragonfly/patch-plugins_files_indir -> dragonfly/patch-plugins_files_indir
+file materialize dragonfly/patch-plugins_pandora_update -> dragonfly/patch-plugins_pandora_update

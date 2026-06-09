@@ -1,0 +1,8 @@
+port security/openconnect-gui
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "gmake"
+mk set MAKE_JOBS_UNSAFE "yes"
+file materialize dragonfly/patch-src_vpninfo.h -> dragonfly/patch-src_vpninfo.h

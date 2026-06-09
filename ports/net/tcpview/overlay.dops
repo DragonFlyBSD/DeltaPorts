@@ -1,0 +1,29 @@
+port net/tcpview
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@<nfs/@<vfs/nfs/@g' \
+			 -e 's@<fs/nfs/@<vfs/nfs/@g' \
+		${WRKSRC}/detail-udp.c \
+		${WRKSRC}/nametoaddr.c \
+		${WRKSRC}/print-nfs.c \
+		${WRKSRC}/print-udp.c
+	${REINPLACE_CMD} -e 's@index@index_@g' \
+		${WRKSRC}/detail-domain.c
+MK1
+file materialize dragonfly/patch-bgp.c -> dragonfly/patch-bgp.c
+file materialize dragonfly/patch-capture.c -> dragonfly/patch-capture.c
+file materialize dragonfly/patch-detail-domain.c -> dragonfly/patch-detail-domain.c
+file materialize dragonfly/patch-detail-icmp.c -> dragonfly/patch-detail-icmp.c
+file materialize dragonfly/patch-generic.c -> dragonfly/patch-generic.c
+file materialize dragonfly/patch-getservent.c -> dragonfly/patch-getservent.c
+file materialize dragonfly/patch-hex.c -> dragonfly/patch-hex.c
+file materialize dragonfly/patch-interface.h -> dragonfly/patch-interface.h
+file materialize dragonfly/patch-mdtype -> dragonfly/patch-mdtype
+file materialize dragonfly/patch-ostype.awk -> dragonfly/patch-ostype.awk
+file materialize dragonfly/patch-print-icmp.c -> dragonfly/patch-print-icmp.c
+file materialize dragonfly/patch-print.c -> dragonfly/patch-print.c
+file materialize dragonfly/patch-savefile.h -> dragonfly/patch-savefile.h
+file materialize dragonfly/patch-telnet.c -> dragonfly/patch-telnet.c

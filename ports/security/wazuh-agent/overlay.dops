@@ -1,0 +1,13 @@
+port security/wazuh-agent
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set OPTIONS_EXCLUDE "INOTIFY"
+file materialize dragonfly/patch-src_Makefile -> dragonfly/patch-src_Makefile
+file materialize dragonfly/patch-src_data__provider_CMakeLists.txt -> dragonfly/patch-src_data__provider_CMakeLists.txt
+file materialize dragonfly/patch-src_data__provider_tests_CMakeLists.txt -> dragonfly/patch-src_data__provider_tests_CMakeLists.txt
+file materialize dragonfly/patch-src_data__provider_testtool_CMakeLists.txt -> dragonfly/patch-src_data__provider_testtool_CMakeLists.txt
+file materialize dragonfly/patch-src_headers_fs__op.h -> dragonfly/patch-src_headers_fs__op.h
+file materialize dragonfly/patch-src_headers_shared.h -> dragonfly/patch-src_headers_shared.h
+file materialize dragonfly/patch-src_wazuh__modules_syscollector_testtool_CMakeLists.txt -> dragonfly/patch-src_wazuh__modules_syscollector_testtool_CMakeLists.txt

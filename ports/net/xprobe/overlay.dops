@@ -1,0 +1,7 @@
+port net/xprobe
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CFLAGS "-Wno-array-bounds -Wno-write-strings"
+file materialize dragonfly/patch-src_target.cc -> dragonfly/patch-src_target.cc

@@ -1,0 +1,7 @@
+port net-mgmt/pmacct
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CFLAGS "-Wno-format-truncation -Wno-stringop-truncation -Wno-maybe-uninitialized"
+file materialize dragonfly/patch-src_tee__plugin_tee__plugin.c -> dragonfly/patch-src_tee__plugin_tee__plugin.c

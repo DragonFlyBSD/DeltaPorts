@@ -1,0 +1,13 @@
+port net/arataga
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CXXFLAGS "-Wno-deprecated-declarations -Wno-unused-variable -Wno-unused-parameter"
+mk add BUILD_DEPENDS "cxxfs_gcc8>0:misc/cxxfs_gcc8"
+mk add CXXFLAGS "-isystem ${LOCALBASE}/cxxfs_gcc8"
+mk add LDFLAGS "-L${LOCALBASE}/cxxfs_gcc8"
+mk add MAKE_ARGS "LIBS=\"-lpthread $(LOCALBASE)/lib/libso.5.7.2.5.so -lfmt -lhttp_parser -lstdc++fs\""
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-restinio_impl_sendfile__operation__posix.ipp -> dragonfly/patch-restinio_impl_sendfile__operation__posix.ipp
+file materialize dragonfly/patch-restinio_sendfile__defs__posix.hpp -> dragonfly/patch-restinio_sendfile__defs__posix.hpp

@@ -1,0 +1,6 @@
+port print/pdflib
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-libs_pdflib_p__document.c -> dragonfly/patch-libs_pdflib_p__document.c

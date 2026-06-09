@@ -1,0 +1,7 @@
+port news/husky
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-huskylib_huskylib_compiler.h -> dragonfly/patch-huskylib_huskylib_compiler.h
+file materialize dragonfly/patch-huskylib_huskylib_typesize.h -> dragonfly/patch-huskylib_huskylib_typesize.h

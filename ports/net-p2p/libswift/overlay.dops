@@ -1,0 +1,7 @@
+port net-p2p/libswift
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-Makefile -> dragonfly/patch-Makefile
+file materialize dragonfly/patch-livesig.cpp -> dragonfly/patch-livesig.cpp

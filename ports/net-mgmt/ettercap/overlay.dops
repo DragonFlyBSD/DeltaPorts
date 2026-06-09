@@ -1,0 +1,7 @@
+port net-mgmt/ettercap
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-cmake_Modules_EttercapOSTest.cmake -> dragonfly/patch-cmake_Modules_EttercapOSTest.cmake
+file materialize dragonfly/patch-libressl-compat -> dragonfly/patch-libressl-compat

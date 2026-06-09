@@ -1,0 +1,7 @@
+port net/libusrsctp
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CFLAGS "-Wno-format-truncation"
+file materialize dragonfly/patch-usrsctplib_netinet_sctp__os__userspace.h -> dragonfly/patch-usrsctplib_netinet_sctp__os__userspace.h

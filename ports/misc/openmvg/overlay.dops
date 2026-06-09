@@ -1,0 +1,6 @@
+port misc/openmvg
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-nonFree_sift_CMakeLists.txt -> dragonfly/patch-nonFree_sift_CMakeLists.txt

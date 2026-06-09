@@ -1,0 +1,8 @@
+port net/czmq
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add LIBS "-pthread"
+file materialize dragonfly/patch-configure.ac -> dragonfly/patch-configure.ac
+file materialize dragonfly/patch-include_czmq__prelude.h -> dragonfly/patch-include_czmq__prelude.h

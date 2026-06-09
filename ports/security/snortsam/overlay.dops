@@ -1,0 +1,9 @@
+port security/snortsam
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-makesnortsam.sh -> dragonfly/patch-makesnortsam.sh
+file materialize dragonfly/patch-src_Makefile -> dragonfly/patch-src_Makefile
+file materialize dragonfly/patch-src_ssp__pf.h -> dragonfly/patch-src_ssp__pf.h
+file materialize dragonfly/patch-src_ssp__pf2.h -> dragonfly/patch-src_ssp__pf2.h

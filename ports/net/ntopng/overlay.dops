@@ -1,0 +1,14 @@
+port net/ntopng
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "alias libedit"
+mk set BROKEN "needs porting to DragonFly"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e "s@-ledit@-L${LOCALBASE}/lib -ledit@" \
+		${WRKSRC}/third-party/lua-*/src/Makefile
+MK1
+file materialize dragonfly/patch-src_CommunityIdFlowHash.cpp -> dragonfly/patch-src_CommunityIdFlowHash.cpp
+file materialize dragonfly/patch-src_NetworkInterface.cpp -> dragonfly/patch-src_NetworkInterface.cpp
+file materialize dragonfly/patch-third-party_mongoose_mongoose.c -> dragonfly/patch-third-party_mongoose_mongoose.c

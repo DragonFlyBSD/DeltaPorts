@@ -1,0 +1,6 @@
+port security/p5-Digest-Hashcash
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-Hashcash.xs -> dragonfly/patch-Hashcash.xs

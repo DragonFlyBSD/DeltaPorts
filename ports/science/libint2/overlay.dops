@@ -1,0 +1,8 @@
+port science/libint2
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add MAKE_ENV "LDVER=ld.bfd"
+mk set DFLY_UNMAINTAINED "yes"
+file materialize dragonfly/patch-lib_autoconf_ax__boost__base.m4 -> dragonfly/patch-lib_autoconf_ax__boost__base.m4

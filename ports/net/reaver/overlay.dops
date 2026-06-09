@@ -1,0 +1,8 @@
+port net/reaver
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-iface.c -> dragonfly/patch-iface.c
+file materialize dragonfly/patch-utils_os__internal.c -> dragonfly/patch-utils_os__internal.c
+file materialize dragonfly/patch-utils_os__unix.c -> dragonfly/patch-utils_os__unix.c

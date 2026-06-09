@@ -1,0 +1,13 @@
+port science/orthanc
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-OrthancFramework_Resources_CMake_Compiler.cmake -> dragonfly/patch-OrthancFramework_Resources_CMake_Compiler.cmake
+file materialize dragonfly/patch-OrthancFramework_Resources_ThirdParty_minizip_ioapi.h -> dragonfly/patch-OrthancFramework_Resources_ThirdParty_minizip_ioapi.h
+file materialize dragonfly/patch-OrthancFramework_Sources_Endianness.h -> dragonfly/patch-OrthancFramework_Sources_Endianness.h
+file materialize dragonfly/patch-OrthancFramework_Sources_SharedLibrary.cpp -> dragonfly/patch-OrthancFramework_Sources_SharedLibrary.cpp
+file materialize dragonfly/patch-OrthancFramework_Sources_SystemToolbox.cpp -> dragonfly/patch-OrthancFramework_Sources_SystemToolbox.cpp
+file materialize dragonfly/patch-OrthancFramework_UnitTestsSources_FrameworkTests.cpp -> dragonfly/patch-OrthancFramework_UnitTestsSources_FrameworkTests.cpp
+file materialize dragonfly/patch-OrthancServer_Plugins_Engine_PluginsManager.cpp -> dragonfly/patch-OrthancServer_Plugins_Engine_PluginsManager.cpp
+file materialize dragonfly/patch-OrthancServer_UnitTestsSources_PluginsTests.cpp -> dragonfly/patch-OrthancServer_UnitTestsSources_PluginsTests.cpp

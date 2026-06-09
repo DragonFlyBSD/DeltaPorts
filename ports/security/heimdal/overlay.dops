@@ -1,0 +1,10 @@
+port security/heimdal
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-cf_auth-modules.m4 -> dragonfly/patch-cf_auth-modules.m4
+file materialize dragonfly/patch-cf_pthreads.m4 -> dragonfly/patch-cf_pthreads.m4
+file materialize dragonfly/patch-configure -> dragonfly/patch-configure
+file materialize dragonfly/patch-lib_kafs_Makefile.am -> dragonfly/patch-lib_kafs_Makefile.am
+file materialize dragonfly/patch-lib_kafs_Makefile.in -> dragonfly/patch-lib_kafs_Makefile.in

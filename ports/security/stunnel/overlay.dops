@@ -1,0 +1,9 @@
+port security/stunnel
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-src_common.h -> dragonfly/patch-src_common.h
+file materialize dragonfly/patch-src_ctx.c -> dragonfly/patch-src_ctx.c
+file materialize dragonfly/patch-src_prototypes.h -> dragonfly/patch-src_prototypes.h
+file materialize dragonfly/patch-src_verify.c -> dragonfly/patch-src_verify.c

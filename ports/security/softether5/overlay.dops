@@ -1,0 +1,10 @@
+port security/softether5
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "alias"
+mk add CFLAGS "-DUNIX_BSD"
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-src_Mayaqua_Network.c -> dragonfly/patch-src_Mayaqua_Network.c
+file materialize dragonfly/patch-src_Mayaqua_Network.h -> dragonfly/patch-src_Mayaqua_Network.h

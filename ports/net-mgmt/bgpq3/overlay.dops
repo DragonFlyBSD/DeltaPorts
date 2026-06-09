@@ -1,0 +1,7 @@
+port net-mgmt/bgpq3
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-bgpq_expander.c -> dragonfly/patch-bgpq_expander.c
+file materialize dragonfly/patch-sx_slentry.h -> dragonfly/patch-sx_slentry.h

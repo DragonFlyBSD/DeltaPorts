@@ -1,0 +1,14 @@
+port science/mbdyn
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@#include "ac/sys_sysinfo.h"@extern "C" { int get_nprocs_conf(void); int get_nprocs(void); }@g' \
+		${WRKSRC}/mbdyn/base/invsolver.cc \
+		${WRKSRC}/mbdyn/base/readlinsol.cc \
+		${WRKSRC}/mbdyn/base/rtsolver.cc \
+		${WRKSRC}/mbdyn/base/solver.cc
+MK1
+file materialize dragonfly/patch-mbdyn_base_solver.cc -> dragonfly/patch-mbdyn_base_solver.cc
+file materialize dragonfly/patch-mbdyn_mbdyn.h -> dragonfly/patch-mbdyn_mbdyn.h

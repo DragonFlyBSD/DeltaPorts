@@ -1,0 +1,7 @@
+port net/fspd
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CFLAGS "-Wno-misleading-indentation"
+file materialize dragonfly/patch-server_file.c -> dragonfly/patch-server_file.c

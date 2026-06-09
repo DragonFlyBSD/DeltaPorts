@@ -1,0 +1,8 @@
+port security/ADMsmb
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-client.c -> dragonfly/patch-client.c
+file materialize dragonfly/patch-includes.h -> dragonfly/patch-includes.h
+file materialize dragonfly/patch-md4.c -> dragonfly/patch-md4.c

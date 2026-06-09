@@ -1,0 +1,7 @@
+port net/isc-dhcp44-server
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "localbase"
+file materialize dragonfly/patch-doc_examples_dhcpd-dhcpv6.conf -> dragonfly/patch-doc_examples_dhcpd-dhcpv6.conf

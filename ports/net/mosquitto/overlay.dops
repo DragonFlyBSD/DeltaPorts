@@ -1,0 +1,7 @@
+port net/mosquitto
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-config.h -> dragonfly/patch-config.h
+file materialize dragonfly/patch-lib_socks__mosq.c -> dragonfly/patch-lib_socks__mosq.c

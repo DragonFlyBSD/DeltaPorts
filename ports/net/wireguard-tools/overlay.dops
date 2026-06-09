@@ -1,0 +1,6 @@
+port net/wireguard-tools
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-wg-quick_dragonfly.bash -> dragonfly/patch-wg-quick_dragonfly.bash

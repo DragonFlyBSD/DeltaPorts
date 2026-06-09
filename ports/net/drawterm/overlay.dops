@@ -1,0 +1,7 @@
+port net/drawterm
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set DFLY_UNMAINTAINED "yes"
+file materialize dragonfly/patch-include_dtos.h -> dragonfly/patch-include_dtos.h

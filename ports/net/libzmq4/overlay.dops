@@ -1,0 +1,7 @@
+port net/libzmq4
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set OPTIONS_EXCLUDE "PGM"
+file materialize dragonfly/patch-configure -> dragonfly/patch-configure

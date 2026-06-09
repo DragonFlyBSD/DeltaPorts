@@ -1,0 +1,10 @@
+port news/rntrack
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-hpp_constant.hpp -> dragonfly/patch-hpp_constant.hpp
+file materialize dragonfly/patch-smapi_h_UNIX.h -> dragonfly/patch-smapi_h_UNIX.h
+file materialize dragonfly/patch-smapi_h_compiler.h -> dragonfly/patch-smapi_h_compiler.h
+file materialize dragonfly/patch-smapi_h_typesize.h -> dragonfly/patch-smapi_h_typesize.h
+file materialize dragonfly/patch-src_utils.cpp -> dragonfly/patch-src_utils.cpp

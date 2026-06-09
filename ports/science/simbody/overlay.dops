@@ -1,0 +1,8 @@
+port science/simbody
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-SimTKcommon_src_ParallelExecutor.cpp -> dragonfly/patch-SimTKcommon_src_ParallelExecutor.cpp
+file materialize dragonfly/patch-SimTKmath_Optimizers_src_IpOpt_IpTimedTask.hpp -> dragonfly/patch-SimTKmath_Optimizers_src_IpOpt_IpTimedTask.hpp
+file materialize dragonfly/patch-SimTKmath_Optimizers_src_IpOpt_IpTimingStatistics.hpp -> dragonfly/patch-SimTKmath_Optimizers_src_IpOpt_IpTimingStatistics.hpp

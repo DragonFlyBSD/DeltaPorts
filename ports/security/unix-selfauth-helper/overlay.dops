@@ -1,0 +1,13 @@
+port security/unix-selfauth-helper
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add PLIST_SUB "PREFIX=${PREFIX}"
+mk target set dfly-install <<'MK1'
+	# PLIST_SUB not picking this up, why?
+	${REINPLACE_CMD} -e 's,%%PREFIX%%,${PREFIX},g' \
+		${WRKSRC}/unix-selfauth.in
+	${INSTALL_DATA} ${WRKSRC}/unix-selfauth.in ${STAGEDIR}${PREFIX}/etc/pam.d/unix-selfauth
+MK1
+file materialize dragonfly/patch-Makefile -> dragonfly/patch-Makefile

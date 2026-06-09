@@ -1,0 +1,9 @@
+port net/tacacs
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set OPTIONS_DEFAULT "${OPTIONS_DEFEAULT:NSCTP}"
+mk add MAKE_ARGS "INCDIR_SSL=${OPENSSLINC} LIBDIR_SSL=${OPENSSLLIB}"
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-misc_sysconf.h -> dragonfly/patch-misc_sysconf.h

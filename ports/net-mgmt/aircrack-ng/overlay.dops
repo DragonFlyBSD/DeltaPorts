@@ -1,0 +1,10 @@
+port net-mgmt/aircrack-ng
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "alias"
+mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NHWLOC}"
+file materialize dragonfly/patch-src_aircrack-osdep_radiotap_radiotap.c -> dragonfly/patch-src_aircrack-osdep_radiotap_radiotap.c
+file materialize dragonfly/patch-src_aircrack-util_cpuset__pthread.c -> dragonfly/patch-src_aircrack-util_cpuset__pthread.c
+file materialize dragonfly/patch-src_airserv-ng.c -> dragonfly/patch-src_airserv-ng.c

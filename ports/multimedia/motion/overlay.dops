@@ -1,0 +1,9 @@
+port multimedia/motion
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set OPTIONS_EXCLUDE "PWCBSD"
+mk add CFLAGS "-DOLD_BKTR"
+mk set DFLY_UNMAINTAINED "yes"
+file materialize dragonfly/patch-rotate.c -> dragonfly/patch-rotate.c

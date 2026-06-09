@@ -1,0 +1,7 @@
+port multimedia/assimp
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-code_Common_DefaultIOStream.cpp -> dragonfly/patch-code_Common_DefaultIOStream.cpp
+file materialize dragonfly/patch-contrib_unzip_ioapi.h -> dragonfly/patch-contrib_unzip_ioapi.h

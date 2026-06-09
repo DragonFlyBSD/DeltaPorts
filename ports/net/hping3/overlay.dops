@@ -1,0 +1,10 @@
+port net/hping3
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-ars.c -> dragonfly/patch-ars.c
+file materialize dragonfly/patch-getifname.c -> dragonfly/patch-getifname.c
+file materialize dragonfly/patch-hping2.h -> dragonfly/patch-hping2.h
+file materialize dragonfly/patch-libpcap_stuff.c -> dragonfly/patch-libpcap_stuff.c
+file materialize dragonfly/patch-strlcpy.c -> dragonfly/patch-strlcpy.c

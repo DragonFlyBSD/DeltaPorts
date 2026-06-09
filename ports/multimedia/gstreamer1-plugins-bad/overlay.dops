@@ -1,0 +1,7 @@
+port multimedia/gstreamer1-plugins-bad
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-ext_sctp_usrsctp_meson.build -> dragonfly/patch-ext_sctp_usrsctp_meson.build
+file materialize dragonfly/patch-ext_sctp_usrsctp_usrsctplib_netinet_sctp__os__userspace.h -> dragonfly/patch-ext_sctp_usrsctp_usrsctplib_netinet_sctp__os__userspace.h

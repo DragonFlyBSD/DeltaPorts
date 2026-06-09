@@ -1,0 +1,9 @@
+port security/sslscan
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-Makefile -> dragonfly/patch-Makefile
+file materialize dragonfly/patch-sslscan.c -> dragonfly/patch-sslscan.c
+file materialize dragonfly/patch-sslscan.h -> dragonfly/patch-sslscan.h

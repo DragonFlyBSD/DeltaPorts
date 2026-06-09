@@ -1,0 +1,14 @@
+port misc/xtar
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-Xbr_XbrCB.c -> dragonfly/patch-Xbr_XbrCB.c
+file materialize dragonfly/patch-Xbr_XbrGfx.c -> dragonfly/patch-Xbr_XbrGfx.c
+file materialize dragonfly/patch-Xbr_XbrList.c -> dragonfly/patch-Xbr_XbrList.c
+file materialize dragonfly/patch-Xbr_XbrMenu.c -> dragonfly/patch-Xbr_XbrMenu.c
+file materialize dragonfly/patch-common_cdefs.h -> dragonfly/patch-common_cdefs.h
+file materialize dragonfly/patch-common_file.c -> dragonfly/patch-common_file.c
+file materialize dragonfly/patch-common_pipe.c -> dragonfly/patch-common_pipe.c
+file materialize dragonfly/patch-common_regexpr.c -> dragonfly/patch-common_regexpr.c
+file materialize dragonfly/patch-common_stat.c -> dragonfly/patch-common_stat.c

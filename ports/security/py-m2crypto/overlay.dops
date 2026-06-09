@@ -1,0 +1,8 @@
+port security/py-m2crypto
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-SWIG___bio.i -> dragonfly/patch-SWIG___bio.i
+file materialize dragonfly/patch-SWIG___lib11__compat.i -> dragonfly/patch-SWIG___lib11__compat.i
+file materialize dragonfly/patch-SWIG___m2crypto.i -> dragonfly/patch-SWIG___m2crypto.i

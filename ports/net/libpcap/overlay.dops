@@ -1,0 +1,7 @@
+port net/libpcap
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CONFIGURE_ARGS "--disable-netmap"
+file materialize dragonfly/patch-pcap-bpf.c -> dragonfly/patch-pcap-bpf.c

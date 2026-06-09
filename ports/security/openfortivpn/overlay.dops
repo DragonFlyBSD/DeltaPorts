@@ -1,0 +1,17 @@
+port security/openfortivpn
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "gmake"
+mk add CFLAGS "-I${OPENSSLINC}"
+mk add LDFLAGS "-L${OPENSSLLIB}"
+mk set PKGMESSAGE "${DFLY_FILESDIR}/pkg-message"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@xFreeBSD@xDragonFly@g' \
+		${WRKSRC}/configure.ac
+	${REINPLACE_CMD} -e 's@rtentry@rtentry_ofvpn@g' \
+			 -e 's@rt_use@rt_use_ofvpn@g' \
+		${WRKSRC}/src/ipv4.h ${WRKSRC}/src/ipv4.c
+MK1
+file materialize dragonfly/pkg-message -> dragonfly/pkg-message

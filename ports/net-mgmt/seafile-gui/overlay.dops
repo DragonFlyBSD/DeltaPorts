@@ -1,0 +1,7 @@
+port net-mgmt/seafile-gui
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set DFLY_UNMAINTAINED "yes"
+file materialize dragonfly/patch-libressl-compat -> dragonfly/patch-libressl-compat

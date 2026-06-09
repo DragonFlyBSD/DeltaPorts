@@ -1,0 +1,7 @@
+port misc/py-xgboost
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-python-package_setup.py -> dragonfly/patch-python-package_setup.py
+file materialize dragonfly/patch-python-package_xgboost_libpath.py -> dragonfly/patch-python-package_xgboost_libpath.py

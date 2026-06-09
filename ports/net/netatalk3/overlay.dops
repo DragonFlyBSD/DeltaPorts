@@ -1,0 +1,12 @@
+port net/netatalk3
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add OPTIONS_EXCLUDE "KERBEROS"
+mk add CONFIGURE_ARGS "--with-lockfile=/var/spool/lock/netatalk"
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-bin_ad_ad__cp.c -> dragonfly/patch-bin_ad_ad__cp.c
+file materialize dragonfly/patch-include_atalk_standards.h -> dragonfly/patch-include_atalk_standards.h
+file materialize dragonfly/patch-libevent_buffer.c -> dragonfly/patch-libevent_buffer.c
+file materialize dragonfly/patch-libevent_kqueue.c -> dragonfly/patch-libevent_kqueue.c

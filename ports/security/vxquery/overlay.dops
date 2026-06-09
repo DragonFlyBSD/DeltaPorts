@@ -1,0 +1,6 @@
+port security/vxquery
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-vxquery.cc -> dragonfly/patch-vxquery.cc

@@ -1,0 +1,10 @@
+port net-p2p/litecoin
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set DFLY_UNMAINTAINED "yes"
+file materialize dragonfly/patch-configure.ac -> dragonfly/patch-configure.ac
+file materialize dragonfly/patch-src_crypto_scrypt.cpp -> dragonfly/patch-src_crypto_scrypt.cpp
+file materialize dragonfly/patch-src_crypto_scrypt.h -> dragonfly/patch-src_crypto_scrypt.h
+file materialize dragonfly/patch-src_leveldb_build__detect__platform -> dragonfly/patch-src_leveldb_build__detect__platform

@@ -1,0 +1,7 @@
+port security/s2n-tls
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-tls_s2n__ktls__io.c -> dragonfly/patch-tls_s2n__ktls__io.c
+file materialize dragonfly/patch-utils_s2n__fork__detection__features.h -> dragonfly/patch-utils_s2n__fork__detection__features.h

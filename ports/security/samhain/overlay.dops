@@ -1,0 +1,15 @@
+port security/samhain
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NDNMALLOC}"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@-Werror -Wno-invalid-source-encoding@& -Wfoo@g' \
+		${WRKSRC}/configure
+	${REINPLACE_CMD} -e 's@-D__BSD_VISIBLE=1@@g' \
+		${WRKSRC}/Makefile.in
+	${REINPLACE_CMD} -e 's@_XOPEN_SOURCE@&___@g' \
+		${WRKSRC}/src/slib.c
+MK1
+file materialize dragonfly/patch-configure -> dragonfly/patch-configure

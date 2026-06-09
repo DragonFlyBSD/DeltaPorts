@@ -1,0 +1,9 @@
+port net/pacemaker2
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-configure.ac -> dragonfly/patch-configure.ac
+file materialize dragonfly/patch-extra_resources_SysInfo.in -> dragonfly/patch-extra_resources_SysInfo.in
+file materialize dragonfly/patch-extra_resources_ping -> dragonfly/patch-extra_resources_ping
+file materialize dragonfly/patch-lib_common_watchdog.c -> dragonfly/patch-lib_common_watchdog.c

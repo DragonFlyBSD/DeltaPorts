@@ -1,0 +1,8 @@
+port net-p2p/jigdo
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set DFLY_UNMAINTAINED "yes"
+file materialize dragonfly/patch-src_util_md5sum.hh -> dragonfly/patch-src_util_md5sum.hh
+file materialize dragonfly/patch-src_util_string.hh -> dragonfly/patch-src_util_string.hh

@@ -1,0 +1,10 @@
+port net/norm
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-protolib_include_protoSocket.h -> dragonfly/patch-protolib_include_protoSocket.h
+file materialize dragonfly/patch-protolib_include_protoTree.h -> dragonfly/patch-protolib_include_protoTree.h
+file materialize dragonfly/patch-protolib_setup.py -> dragonfly/patch-protolib_setup.py
+file materialize dragonfly/patch-protolib_wscript -> dragonfly/patch-protolib_wscript
+file materialize dragonfly/patch-wscript -> dragonfly/patch-wscript

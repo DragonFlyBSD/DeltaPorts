@@ -1,0 +1,18 @@
+port science/code_saturne
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set OPTIONS_SUB "yes"
+mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NBATCH:NHYPRE:NMPI:NMPICH:NMUMPS:NPARMETIS:NPETSC:NBLAS:NSCOTCH}"
+mk add OPTIONS_EXCLUDE "DOCS"
+mk set CFLAGS "${CFLAGS:N-D__XSI_VISIBLE*}"
+mk set DFLY_PLIST "${WRKSRC}/pkg-plist"
+mk set PLIST "${DFLY_PLIST}"
+mk target set dfly-patch <<'MK1'
+	${CP} -v ${.CURDIR:H}/code_saturne/pkg-plist ${DFLY_PLIST}
+	${REINPLACE_CMD} -e '/\/ple\//d' ${DFLY_PLIST}
+	${REINPLACE_CMD} -e '/#define _POSIX_C_SOURCE/d' \
+		${WRKSRC}/src/base/cs_timer.c
+MK1
+file materialize dragonfly/patch-src_base_cs__system__info.c -> dragonfly/patch-src_base_cs__system__info.c

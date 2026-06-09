@@ -1,0 +1,14 @@
+port science/py-scipy
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add BUILD_DEPENDS "libstdthreads>0:misc/libstdthreads"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's/[[:<:]]isinf[[:>:]]/std::isinf/g' \
+		-e 's@[[:<:]]isnan[[:>:]]@std::isnan@g' \
+		${WRKSRC}/scipy/special/boost_special_functions.h \
+		${WRKSRC}/scipy/special/Faddeeva.cc
+MK1
+file materialize dragonfly/patch-scipy_spatial___ckdtree.pyx -> dragonfly/patch-scipy_spatial___ckdtree.pyx
+file materialize dragonfly/patch-scipy_special_wright.cc -> dragonfly/patch-scipy_special_wright.cc

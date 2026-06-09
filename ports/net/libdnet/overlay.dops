@@ -1,0 +1,7 @@
+port net/libdnet
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CONFIGURE_ENV "ac_cv_header_net_pfvar_h=yes ac_cv_header_net_if_tun_h=yes"
+file materialize dragonfly/patch-src_fw-pf.c -> dragonfly/patch-src_fw-pf.c

@@ -1,0 +1,12 @@
+port security/tpm2-tss
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-configure -> dragonfly/patch-configure
+file materialize dragonfly/patch-src_tss2-esys_esys__crypto__ossl.c -> dragonfly/patch-src_tss2-esys_esys__crypto__ossl.c
+file materialize dragonfly/patch-src_tss2-fapi_fapi__crypto.c -> dragonfly/patch-src_tss2-fapi_fapi__crypto.c
+file materialize dragonfly/patch-src_tss2-fapi_ifapi__io.c -> dragonfly/patch-src_tss2-fapi_ifapi__io.c
+file materialize dragonfly/patch-src_tss2-tcti_tcti-cmd.c -> dragonfly/patch-src_tss2-tcti_tcti-cmd.c
+file materialize dragonfly/patch-src_tss2-tcti_tcti-pcap-builder.c -> dragonfly/patch-src_tss2-tcti_tcti-pcap-builder.c
+file materialize dragonfly/patch-src_util_tss2__endian.h -> dragonfly/patch-src_util_tss2__endian.h

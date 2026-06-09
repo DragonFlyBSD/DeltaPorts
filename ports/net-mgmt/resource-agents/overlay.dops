@@ -1,0 +1,13 @@
+port net-mgmt/resource-agents
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CONFIGURE_ARGS "ac_cv_header_netinet_icmp6_h=no"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's/-Werror[[:>:]]//g' ${WRKSRC}/configure.ac
+MK1
+file materialize dragonfly/patch-configure.ac -> dragonfly/patch-configure.ac
+file materialize dragonfly/patch-heartbeat_IPaddr -> dragonfly/patch-heartbeat_IPaddr
+file materialize dragonfly/patch-heartbeat_IPsrcaddr -> dragonfly/patch-heartbeat_IPsrcaddr
+file materialize dragonfly/patch-tools_storage__mon.c -> dragonfly/patch-tools_storage__mon.c
