@@ -1,0 +1,6 @@
+port biology/diamond
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-src_util_system_system.cpp -> dragonfly/patch-src_util_system_system.cpp

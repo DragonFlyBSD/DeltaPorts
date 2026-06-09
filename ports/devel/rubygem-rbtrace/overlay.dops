@@ -1,0 +1,7 @@
+port devel/rubygem-rbtrace
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-ext_extconf.rb -> dragonfly/patch-ext_extconf.rb
+file materialize dragonfly/patch-ext_rbtrace.c -> dragonfly/patch-ext_rbtrace.c

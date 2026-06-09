@@ -1,0 +1,7 @@
+port devel/ninja
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-configure.py -> dragonfly/patch-configure.py
+file materialize dragonfly/patch-src_util.cc -> dragonfly/patch-src_util.cc

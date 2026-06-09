@@ -1,0 +1,7 @@
+port devel/wasm3
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-CMakeLists.txt -> dragonfly/patch-CMakeLists.txt
+file materialize dragonfly/patch-source_m3__api__wasi.c -> dragonfly/patch-source_m3__api__wasi.c

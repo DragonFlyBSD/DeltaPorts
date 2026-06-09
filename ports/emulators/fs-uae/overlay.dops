@@ -1,0 +1,6 @@
+port emulators/fs-uae
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-manymouse_x11__xinput2.c -> dragonfly/patch-manymouse_x11__xinput2.c

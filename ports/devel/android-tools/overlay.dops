@@ -1,0 +1,31 @@
+port devel/android-tools
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+mk add MAKE_ENV "CWARNFLAGS=-fcommon"
+file materialize dragonfly/patch-vendor_adb_sysdeps.h -> dragonfly/patch-vendor_adb_sysdeps.h
+file materialize dragonfly/patch-vendor_base_libs_androidfw_ApkAssets.cpp -> dragonfly/patch-vendor_base_libs_androidfw_ApkAssets.cpp
+file materialize dragonfly/patch-vendor_base_libs_androidfw_Asset.cpp -> dragonfly/patch-vendor_base_libs_androidfw_Asset.cpp
+file materialize dragonfly/patch-vendor_base_libs_androidfw_ObbFile.cpp -> dragonfly/patch-vendor_base_libs_androidfw_ObbFile.cpp
+file materialize dragonfly/patch-vendor_core_libsparse_append2simg.cpp -> dragonfly/patch-vendor_core_libsparse_append2simg.cpp
+file materialize dragonfly/patch-vendor_core_libsparse_img2simg.cpp -> dragonfly/patch-vendor_core_libsparse_img2simg.cpp
+file materialize dragonfly/patch-vendor_core_libsparse_output__file.cpp -> dragonfly/patch-vendor_core_libsparse_output__file.cpp
+file materialize dragonfly/patch-vendor_core_libsparse_sparse__read.cpp -> dragonfly/patch-vendor_core_libsparse_sparse__read.cpp
+file materialize dragonfly/patch-vendor_core_libutils_FileMap.cpp -> dragonfly/patch-vendor_core_libutils_FileMap.cpp
+file materialize dragonfly/patch-vendor_core_libutils_include_utils_Errors.h -> dragonfly/patch-vendor_core_libutils_include_utils_Errors.h
+file materialize dragonfly/patch-vendor_core_libutils_include_utils_FileMap.h -> dragonfly/patch-vendor_core_libutils_include_utils_FileMap.h
+file materialize dragonfly/patch-vendor_e2fsprogs_lib_blkid_devname.c -> dragonfly/patch-vendor_e2fsprogs_lib_blkid_devname.c
+file materialize dragonfly/patch-vendor_e2fsprogs_lib_blkid_devno.c -> dragonfly/patch-vendor_e2fsprogs_lib_blkid_devno.c
+file materialize dragonfly/patch-vendor_e2fsprogs_lib_ext2fs_inline.c -> dragonfly/patch-vendor_e2fsprogs_lib_ext2fs_inline.c
+file materialize dragonfly/patch-vendor_e2fsprogs_lib_ext2fs_ismounted.c -> dragonfly/patch-vendor_e2fsprogs_lib_ext2fs_ismounted.c
+file materialize dragonfly/patch-vendor_e2fsprogs_misc_create__inode.c -> dragonfly/patch-vendor_e2fsprogs_misc_create__inode.c
+file materialize dragonfly/patch-vendor_e2fsprogs_misc_mk__hugefiles.c -> dragonfly/patch-vendor_e2fsprogs_misc_mk__hugefiles.c
+file materialize dragonfly/patch-vendor_extras_ext4__utils_ext4__utils.cpp -> dragonfly/patch-vendor_extras_ext4__utils_ext4__utils.cpp
+file materialize dragonfly/patch-vendor_extras_ext4__utils_include_ext4__utils_ext4__utils.h -> dragonfly/patch-vendor_extras_ext4__utils_include_ext4__utils_ext4__utils.h
+file materialize dragonfly/patch-vendor_libbase_file.cpp -> dragonfly/patch-vendor_libbase_file.cpp
+file materialize dragonfly/patch-vendor_libbase_include_android-base_endian.h -> dragonfly/patch-vendor_libbase_include_android-base_endian.h
+file materialize dragonfly/patch-vendor_libbase_include_android-base_off64__t.h -> dragonfly/patch-vendor_libbase_include_android-base_off64__t.h
+file materialize dragonfly/patch-vendor_libziparchive_zip__archive.cc -> dragonfly/patch-vendor_libziparchive_zip__archive.cc
+file materialize dragonfly/patch-vendor_logging_liblog_logprint.cpp -> dragonfly/patch-vendor_logging_liblog_logprint.cpp

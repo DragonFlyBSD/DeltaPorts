@@ -1,0 +1,10 @@
+port deskutils/cairo-dock-plugins
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-Dbus_src_CMakeLists.txt -> dragonfly/patch-Dbus_src_CMakeLists.txt
+file materialize dragonfly/patch-Dbus_src_applet-dbus.c -> dragonfly/patch-Dbus_src_applet-dbus.c
+file materialize dragonfly/patch-Sound-Effects_src_applet-sound.c -> dragonfly/patch-Sound-Effects_src_applet-sound.c
+file materialize dragonfly/patch-netspeed_src_applet-netspeed.c -> dragonfly/patch-netspeed_src_applet-netspeed.c
+file materialize dragonfly/patch-shortcuts_src_applet-disk-usage.c -> dragonfly/patch-shortcuts_src_applet-disk-usage.c

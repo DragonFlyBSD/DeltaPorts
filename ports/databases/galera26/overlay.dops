@@ -1,0 +1,33 @@
+port databases/galera26
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set BUILD_DEPENDS "${BUILD_DEPENDS:N*binutils}"
+mk set USE_CLANG_FALLBACK "default"
+mk add MAKE_ARGS "strict_build_flags=0"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@\(defined(__FreeBSD__)\)@(\1 || defined(__DragonFly__))@g'       \
+		${WRKSRC}/asio/asio/detail/config.hpp   \
+		${WRKSRC}/asio/asio/detail/impl/socket_ops.ipp  \
+		${WRKSRC}/asio/asio/impl/error_code.ipp \
+		${WRKSRC}/galerautils/src/gu_errno.h    \
+		${WRKSRC}/galerautils/src/gu_limits.c   \
+		${WRKSRC}/galerautils/src/gu_limits.h   \
+		${WRKSRC}/galerautils/src/gu_mmap.cpp   \
+		${WRKSRC}/galerautils/src/gu_resolver.cpp       \
+		${WRKSRC}/galerautils/src/gu_system.h
+MK1
+file materialize dragonfly/patch-CMakeLists.txt -> dragonfly/patch-CMakeLists.txt
+file materialize dragonfly/patch-SConstruct -> dragonfly/patch-SConstruct
+file materialize dragonfly/patch-galerautils_src_gu__arch.h -> dragonfly/patch-galerautils_src_gu__arch.h
+file materialize dragonfly/patch-galerautils_src_gu__asio.hpp -> dragonfly/patch-galerautils_src_gu__asio.hpp
+file materialize dragonfly/patch-galerautils_src_gu__asio__socket__util.hpp -> dragonfly/patch-galerautils_src_gu__asio__socket__util.hpp
+file materialize dragonfly/patch-galerautils_src_gu__asio__stream__react.cpp -> dragonfly/patch-galerautils_src_gu__asio__stream__react.cpp
+file materialize dragonfly/patch-galerautils_src_gu__asio__stream__react.hpp -> dragonfly/patch-galerautils_src_gu__asio__stream__react.hpp
+file materialize dragonfly/patch-galerautils_src_gu__fdesc.cpp -> dragonfly/patch-galerautils_src_gu__fdesc.cpp
+file materialize dragonfly/patch-galerautils_tests_gu__asio__test.cpp -> dragonfly/patch-galerautils_tests_gu__asio__test.cpp
+file materialize dragonfly/patch-garb_CMakeLists.txt -> dragonfly/patch-garb_CMakeLists.txt
+file materialize dragonfly/patch-gcache_src_gcache__page.cpp -> dragonfly/patch-gcache_src_gcache__page.cpp
+file materialize dragonfly/patch-gcomm_src_asio__tcp.cpp -> dragonfly/patch-gcomm_src_asio__tcp.cpp
+file materialize dragonfly/patch-gcomm_src_asio__udp.hpp -> dragonfly/patch-gcomm_src_asio__udp.hpp

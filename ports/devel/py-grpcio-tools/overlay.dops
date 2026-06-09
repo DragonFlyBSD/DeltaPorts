@@ -1,0 +1,18 @@
+port devel/py-grpcio-tools
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's|FreeBSD|DragonFly|' \
+		${WRKSRC}/third_party/abseil-cpp/absl/debugging/internal/elf_mem_image.h \
+		${WRKSRC}/third_party/abseil-cpp/absl/debugging/internal/vdso_support.cc \
+		${WRKSRC}/third_party/abseil-cpp/absl/debugging/symbolize_elf.inc \
+		${WRKSRC}/third_party/abseil-cpp/absl/base/config.h \
+		${WRKSRC}/third_party/abseil-cpp/absl/base/internal/endian.h \
+		${WRKSRC}/third_party/abseil-cpp/absl/base/internal/sysinfo.cc \
+		${WRKSRC}/third_party/abseil-cpp/absl/base/internal/raw_logging.cc \
+		${WRKSRC}/third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_format.cc
+MK1
+file materialize dragonfly/patch-setup.py -> dragonfly/patch-setup.py
+file materialize dragonfly/patch-third__party_abseil-cpp_absl_status_status.cc -> dragonfly/patch-third__party_abseil-cpp_absl_status_status.cc

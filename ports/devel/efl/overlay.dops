@@ -1,0 +1,16 @@
+port devel/efl
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NPULSEAUDIO}"
+file materialize dragonfly/patch-event -> dragonfly/patch-event
+file materialize dragonfly/patch-meson.build -> dragonfly/patch-meson.build
+file materialize dragonfly/patch-src_lib_ecore_Ecore.h -> dragonfly/patch-src_lib_ecore_Ecore.h
+file materialize dragonfly/patch-src_lib_ecore_Efl__Core.h -> dragonfly/patch-src_lib_ecore_Efl__Core.h
+file materialize dragonfly/patch-src_lib_ecore__con_efl__net__server__unix.c -> dragonfly/patch-src_lib_ecore__con_efl__net__server__unix.c
+file materialize dragonfly/patch-src_lib_ecore_ecore__exe__posix.c -> dragonfly/patch-src_lib_ecore_ecore__exe__posix.c
+file materialize dragonfly/patch-src_lib_ecore_efl__core__proc__env.c -> dragonfly/patch-src_lib_ecore_efl__core__proc__env.c
+file materialize dragonfly/patch-src_lib_ecore_efl__exe.c -> dragonfly/patch-src_lib_ecore_efl__exe.c
+file materialize dragonfly/patch-src_lib_eina_eina__file__posix.c -> dragonfly/patch-src_lib_eina_eina__file__posix.c
+file materialize dragonfly/patch-src_lib_eina_eina_debug_bt.c -> dragonfly/patch-src_lib_eina_eina_debug_bt.c

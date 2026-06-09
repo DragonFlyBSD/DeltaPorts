@@ -1,0 +1,7 @@
+port devel/dmlc-core
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-include_dmlc_build__config__default.h -> dragonfly/patch-include_dmlc_build__config__default.h
+file materialize dragonfly/patch-include_dmlc_endian.h -> dragonfly/patch-include_dmlc_endian.h

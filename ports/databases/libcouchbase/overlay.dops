@@ -1,0 +1,8 @@
+port databases/libcouchbase
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-CMakeLists.txt -> dragonfly/patch-CMakeLists.txt
+file materialize dragonfly/patch-src_lcbio_ioutils.cc -> dragonfly/patch-src_lcbio_ioutils.cc
+file materialize dragonfly/patch-tools_cbc-proxy.cc -> dragonfly/patch-tools_cbc-proxy.cc

@@ -1,0 +1,8 @@
+port emulators/hercules
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "alias"
+mk add CFLAGS "-Wno-implicit-fallthrough -Wno-cast-function-type"
+file materialize dragonfly/patch-configure -> dragonfly/patch-configure

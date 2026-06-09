@@ -1,0 +1,8 @@
+port editors/biew
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-biewlib_sysdep_generic___config.h -> dragonfly/patch-biewlib_sysdep_generic___config.h
+file materialize dragonfly/patch-biewlib_sysdep_ia16_endian.h -> dragonfly/patch-biewlib_sysdep_ia16_endian.h
+file materialize dragonfly/patch-biewlib_sysdep_x86_64_stdint.h -> dragonfly/patch-biewlib_sysdep_x86_64_stdint.h

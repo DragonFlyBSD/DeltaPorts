@@ -1,0 +1,7 @@
+port deskutils/syncthingtray
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-syncthingprocess.cpp -> dragonfly/patch-syncthingprocess.cpp

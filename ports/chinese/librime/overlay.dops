@@ -1,0 +1,8 @@
+port chinese/librime
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+file materialize dragonfly/patch-src_rime_gear_script__translator.cc -> dragonfly/patch-src_rime_gear_script__translator.cc
+file materialize dragonfly/patch-src_rime_gear_table__translator.cc -> dragonfly/patch-src_rime_gear_table__translator.cc

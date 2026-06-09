@@ -1,0 +1,19 @@
+port converters/wkhtmltopdf
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "alias"
+mk add CXXFLAGS "-Wno-expansion-to-defined -Wno-class-memaccess"
+mk add CXXFLAGS "-fpermissive -Wno-unused-local-typedefs"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@\(FreeBSD:\*\))@\1|DragonFly:*)@g'	\
+			 -e 's@\(5\*\|4\*\|3.4\*\)@8*|\1@g'     \
+		${WRKSRC}/../qt-5db36ec/configure
+MK1
+file materialize dragonfly/patch-src_network_ssl_qsslcertificate.cpp -> dragonfly/patch-src_network_ssl_qsslcertificate.cpp
+file materialize dragonfly/patch-src_network_ssl_qsslkey.cpp -> dragonfly/patch-src_network_ssl_qsslkey.cpp
+file materialize dragonfly/patch-src_network_ssl_qsslsocket__openssl.cpp -> dragonfly/patch-src_network_ssl_qsslsocket__openssl.cpp
+file materialize dragonfly/patch-src_network_ssl_qsslsocket__openssl__p.h -> dragonfly/patch-src_network_ssl_qsslsocket__openssl__p.h
+file materialize dragonfly/patch-src_network_ssl_qsslsocket__openssl__symbols.cpp -> dragonfly/patch-src_network_ssl_qsslsocket__openssl__symbols.cpp
+file materialize dragonfly/patch-src_network_ssl_qsslsocket__openssl__symbols__p.h -> dragonfly/patch-src_network_ssl_qsslsocket__openssl__symbols__p.h

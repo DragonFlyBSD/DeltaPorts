@@ -1,0 +1,10 @@
+port dns/powerdns-recursor
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CFLAGS "-Wno-nonnull -Wno-uninitialized"
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-iputils.hh -> dragonfly/patch-iputils.hh
+file materialize dragonfly/patch-kqueuemplexer.cc -> dragonfly/patch-kqueuemplexer.cc
+file materialize dragonfly/patch-misc.cc -> dragonfly/patch-misc.cc

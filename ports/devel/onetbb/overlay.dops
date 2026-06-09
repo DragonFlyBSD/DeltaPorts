@@ -1,0 +1,29 @@
+port devel/onetbb
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set LIB_DEPENDS "${LIB_DEPENDS:Nlibhwloc*}"
+mk set DFLY_PLIST "${WRKSRC}/pkg-plist"
+mk set PLIST "${DFLY_PLIST}"
+mk target set dfly-patch <<'MK1'
+	${CP} -v ${.CURDIR:H}/onetbb/pkg-plist ${DFLY_PLIST}
+	${REINPLACE_CMD} -e '/libtbbbind/d' ${DFLY_PLIST}
+MK1
+file materialize dragonfly/patch-CMakeLists.txt -> dragonfly/patch-CMakeLists.txt
+file materialize dragonfly/patch-examples_parallel__for_tachyon_src_types.hpp -> dragonfly/patch-examples_parallel__for_tachyon_src_types.hpp
+file materialize dragonfly/patch-src_tbb_allocator.cpp -> dragonfly/patch-src_tbb_allocator.cpp
+file materialize dragonfly/patch-src_tbb_misc.h -> dragonfly/patch-src_tbb_misc.h
+file materialize dragonfly/patch-src_tbb_misc__ex.cpp -> dragonfly/patch-src_tbb_misc__ex.cpp
+file materialize dragonfly/patch-src_tbb_rml__tbb.cpp -> dragonfly/patch-src_tbb_rml__tbb.cpp
+file materialize dragonfly/patch-src_tbb_tools__api_ittnotify.h -> dragonfly/patch-src_tbb_tools__api_ittnotify.h
+file materialize dragonfly/patch-src_tbb_tools__api_ittnotify__config.h -> dragonfly/patch-src_tbb_tools__api_ittnotify__config.h
+file materialize dragonfly/patch-src_tbb_tools__api_legacy_ittnotify.h -> dragonfly/patch-src_tbb_tools__api_legacy_ittnotify.h
+file materialize dragonfly/patch-src_tbbmalloc_MapMemory.h -> dragonfly/patch-src_tbbmalloc_MapMemory.h
+file materialize dragonfly/patch-src_tbbmalloc_frontend.cpp -> dragonfly/patch-src_tbbmalloc_frontend.cpp
+file materialize dragonfly/patch-src_tbbmalloc_tbbmalloc.cpp -> dragonfly/patch-src_tbbmalloc_tbbmalloc.cpp
+file materialize dragonfly/patch-src_tbbmalloc_tbbmalloc__internal.h -> dragonfly/patch-src_tbbmalloc_tbbmalloc__internal.h
+file materialize dragonfly/patch-test_CMakeLists.txt -> dragonfly/patch-test_CMakeLists.txt
+file materialize dragonfly/patch-test_common_memory__usage.h -> dragonfly/patch-test_common_memory__usage.h
+file materialize dragonfly/patch-test_common_utils__concurrency__limit.h -> dragonfly/patch-test_common_utils__concurrency__limit.h
+file materialize dragonfly/patch-test_common_utils__dynamic__libs.h -> dragonfly/patch-test_common_utils__dynamic__libs.h

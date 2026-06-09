@@ -1,0 +1,9 @@
+port devel/thrift-c_glib
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-lib_c__glib_src_thrift_c__glib_transport_thrift__socket.c -> dragonfly/patch-lib_c__glib_src_thrift_c__glib_transport_thrift__socket.c
+file materialize dragonfly/patch-lib_c__glib_test_testcompactprotocol.c -> dragonfly/patch-lib_c__glib_test_testcompactprotocol.c
+file materialize dragonfly/patch-lib_c__glib_test_testthriftcompactreadcheck.c -> dragonfly/patch-lib_c__glib_test_testthriftcompactreadcheck.c
+file materialize dragonfly/patch-lib_cpp_src_thrift_transport_TSocket.cpp -> dragonfly/patch-lib_cpp_src_thrift_transport_TSocket.cpp

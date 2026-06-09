@@ -1,0 +1,10 @@
+port devel/grpc
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CMAKE_ARGS "-DBENCHMARK_USE_LIBCXX=OFF"
+file materialize dragonfly/patch-include_grpc_event__engine_port.h -> dragonfly/patch-include_grpc_event__engine_port.h
+file materialize dragonfly/patch-include_grpc_support_port__platform.h -> dragonfly/patch-include_grpc_support_port__platform.h
+file materialize dragonfly/patch-src_core_lib_iomgr_port.h -> dragonfly/patch-src_core_lib_iomgr_port.h
+file materialize dragonfly/patch-src_core_util_posix_directory__reader.cc -> dragonfly/patch-src_core_util_posix_directory__reader.cc

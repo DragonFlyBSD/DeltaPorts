@@ -1,0 +1,6 @@
+port emulators/almostti
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-EMULib_Unix_SndUnix.c -> dragonfly/patch-EMULib_Unix_SndUnix.c

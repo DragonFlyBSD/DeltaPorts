@@ -1,0 +1,12 @@
+port devel/libgnt
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "ncurses"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@include/ncursesw@include/ncurses@g' \
+			 -e "/ncurses_sys_prefix/s@'/usr'@'${LOCALBASE}'@g" \
+		${WRKSRC}/meson.build
+MK1
+file materialize dragonfly/patch-gntmain.c -> dragonfly/patch-gntmain.c

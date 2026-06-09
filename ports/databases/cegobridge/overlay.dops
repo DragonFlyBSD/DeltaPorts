@@ -1,0 +1,9 @@
+port databases/cegobridge
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-src_MySQLFormater.cc -> dragonfly/patch-src_MySQLFormater.cc
+file materialize dragonfly/patch-src_OracleFormater.cc -> dragonfly/patch-src_OracleFormater.cc
+file materialize dragonfly/patch-src_PostgresFormater.cc -> dragonfly/patch-src_PostgresFormater.cc

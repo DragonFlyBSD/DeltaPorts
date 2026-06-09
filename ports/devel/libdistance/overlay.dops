@@ -1,0 +1,10 @@
+port devel/libdistance
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set post-install <<'MK1'
+	(cd ${STAGEDIR}${PREFIX}/lib && ${LN} -s libdistance.a libdistance_p.a)
+	(cd ${STAGEDIR}${PREFIX}/lib && ${LN} -s libdistance_wrap.a libdistance_wrap_p.a)
+MK1
+file materialize dragonfly/patch-bloom.c -> dragonfly/patch-bloom.c

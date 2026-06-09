@@ -1,0 +1,7 @@
+port devel/libgusb
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-gusb_gusb-bos-descriptor-private.h -> dragonfly/patch-gusb_gusb-bos-descriptor-private.h
+file materialize dragonfly/patch-gusb_gusb-device.c -> dragonfly/patch-gusb_gusb-device.c

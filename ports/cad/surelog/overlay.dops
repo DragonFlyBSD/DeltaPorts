@@ -1,0 +1,20 @@
+port cad/surelog
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set BROKEN "compile time hog"
+mk add CMAKE_ARGS "-DNO_TCMALLOC=On"
+mk add BUILD_DEPENDS "cxxfs_gcc8>0:misc/cxxfs_gcc8"
+mk add CXXFLAGS "-isystem ${LOCALBASE}/cxxfs_gcc8"
+mk add LDFLAGS "-L${LOCALBASE}/cxxfs_gcc8"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@PRIVATE pthread@& stdc++fs@g' \
+		${WRKSRC}/CMakeLists.txt
+	${REINPLACE_CMD} -e 's@DT_UNKNOWN@&__z@g' \
+		${WRKSRC}/third_party/UHDM/third_party/capnproto/c++/ekam-provider/c++header/kj/filesystem-disk-unix.c++
+	${REINPLACE_CMD} -e 's@-O3@-O1@g' \
+		${WRKSRC}/third_party/UHDM/CMakeLists.txt \
+		${WRKSRC}/CMakeLists.txt
+MK1
+file materialize dragonfly/patch-src_DesignCompile_CompileExpression.cpp -> dragonfly/patch-src_DesignCompile_CompileExpression.cpp

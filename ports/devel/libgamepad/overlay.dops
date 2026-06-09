@@ -1,0 +1,14 @@
+port devel/libgamepad
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set DFLY_UNMAINTAINED "yes"
+file materialize dragonfly/patch-gamepad.c -> dragonfly/patch-gamepad.c
+file materialize dragonfly/patch-gamepad.h -> dragonfly/patch-gamepad.h
+file materialize dragonfly/patch-gamepad_analog.c -> dragonfly/patch-gamepad_analog.c
+file materialize dragonfly/patch-gamepad_analog.h -> dragonfly/patch-gamepad_analog.h
+file materialize dragonfly/patch-gamepad_libhid.c -> dragonfly/patch-gamepad_libhid.c
+file materialize dragonfly/patch-gamepad_libhid.h -> dragonfly/patch-gamepad_libhid.h
+file materialize dragonfly/patch-gamepad_usbhid.c -> dragonfly/patch-gamepad_usbhid.c
+file materialize dragonfly/patch-gamepad_usbhid.h -> dragonfly/patch-gamepad_usbhid.h

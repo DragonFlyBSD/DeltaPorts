@@ -1,0 +1,8 @@
+port devel/jsl
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "dos2unix"
+mk add DOS2UNIX_FILES "fdlibm/k_standard.c"
+file materialize dragonfly/patch-fdlibm_k_standard.c -> dragonfly/patch-fdlibm_k_standard.c

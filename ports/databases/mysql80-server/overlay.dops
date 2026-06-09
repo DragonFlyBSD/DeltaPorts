@@ -1,0 +1,25 @@
+port databases/mysql80-server
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "alias"
+mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NSASLCLIENT}"
+mk set CMAKE_ARGS "${CMAKE_ARGS:N-DWITH_AUTHENTICATION_FIDO*} -DWITHOUT_FIDO=1"
+mk set LIB_DEPENDS "${LIB_DEPENDS:Nlibfido2.so*}"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@test_stdx_io_file_handle.cc@@g' \
+		${WRKSRC}/router/src/harness/tests/CMakeLists.txt
+MK1
+file materialize dragonfly/patch-CMakeLists.txt -> dragonfly/patch-CMakeLists.txt
+file materialize dragonfly/patch-extra_abseil_abseil-cpp-20230802.1_absl_status_status.cc -> dragonfly/patch-extra_abseil_abseil-cpp-20230802.1_absl_status_status.cc
+file materialize dragonfly/patch-extra_abseil_abseil-cpp-20230802.1_absl_time_internal_cctz_src_time__zone__format.cc -> dragonfly/patch-extra_abseil_abseil-cpp-20230802.1_absl_time_internal_cctz_src_time__zone__format.cc
+file materialize dragonfly/patch-libmysql_CMakeLists.txt -> dragonfly/patch-libmysql_CMakeLists.txt
+file materialize dragonfly/patch-mysys_stacktrace.cc -> dragonfly/patch-mysys_stacktrace.cc
+file materialize dragonfly/patch-router_src_harness_include_mysql_harness_tty.h -> dragonfly/patch-router_src_harness_include_mysql_harness_tty.h
+file materialize dragonfly/patch-router_src_harness_src_stdx_io_file__handle.cc -> dragonfly/patch-router_src_harness_src_stdx_io_file__handle.cc
+file materialize dragonfly/patch-router_src_io_src_.._include_mysqlrouter_thread__affinity.h -> dragonfly/patch-router_src_io_src_.._include_mysqlrouter_thread__affinity.h
+file materialize dragonfly/patch-router_src_io_src_thread__affinity.cc -> dragonfly/patch-router_src_io_src_thread__affinity.cc
+file materialize dragonfly/patch-scripts_CMakeLists.txt -> dragonfly/patch-scripts_CMakeLists.txt
+file materialize dragonfly/patch-sql_CMakeLists.txt -> dragonfly/patch-sql_CMakeLists.txt
+file materialize dragonfly/patch-sql_resourcegroups_platform_thread__attrs__api__freebsd.cc -> dragonfly/patch-sql_resourcegroups_platform_thread__attrs__api__freebsd.cc

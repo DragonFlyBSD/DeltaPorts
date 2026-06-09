@@ -1,0 +1,27 @@
+port devel/arm-none-eabi-newlib
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-newlib_libc_stdlib_strtol.c -> dragonfly/patch-newlib_libc_stdlib_strtol.c
+file materialize dragonfly/patch-newlib_libc_stdlib_strtoll_r.c -> dragonfly/patch-newlib_libc_stdlib_strtoll_r.c
+file materialize dragonfly/patch-newlib_libc_stdlib_strtoul.c -> dragonfly/patch-newlib_libc_stdlib_strtoul.c
+file materialize dragonfly/patch-newlib_libc_stdlib_strtoull_r.c -> dragonfly/patch-newlib_libc_stdlib_strtoull_r.c
+file materialize dragonfly/patch-newlib_libc_stdlib_wcstol.c -> dragonfly/patch-newlib_libc_stdlib_wcstol.c
+file materialize dragonfly/patch-newlib_libc_stdlib_wcstoll_r.c -> dragonfly/patch-newlib_libc_stdlib_wcstoll_r.c
+file materialize dragonfly/patch-newlib_libc_stdlib_wcstoul.c -> dragonfly/patch-newlib_libc_stdlib_wcstoul.c
+file materialize dragonfly/patch-newlib_libc_stdlib_wcstoull_r.c -> dragonfly/patch-newlib_libc_stdlib_wcstoull_r.c
+file materialize dragonfly/patch-newlib_libc_string_memccpy.c -> dragonfly/patch-newlib_libc_string_memccpy.c
+file materialize dragonfly/patch-newlib_libc_string_memchr.c -> dragonfly/patch-newlib_libc_string_memchr.c
+file materialize dragonfly/patch-newlib_libc_string_memrchr.c -> dragonfly/patch-newlib_libc_string_memrchr.c
+file materialize dragonfly/patch-newlib_libc_string_rawmemchr.c -> dragonfly/patch-newlib_libc_string_rawmemchr.c
+file materialize dragonfly/patch-newlib_libc_string_stpcpy.c -> dragonfly/patch-newlib_libc_string_stpcpy.c
+file materialize dragonfly/patch-newlib_libc_string_stpncpy.c -> dragonfly/patch-newlib_libc_string_stpncpy.c
+file materialize dragonfly/patch-newlib_libc_string_strcat.c -> dragonfly/patch-newlib_libc_string_strcat.c
+file materialize dragonfly/patch-newlib_libc_string_strchr.c -> dragonfly/patch-newlib_libc_string_strchr.c
+file materialize dragonfly/patch-newlib_libc_string_strcmp.c -> dragonfly/patch-newlib_libc_string_strcmp.c
+file materialize dragonfly/patch-newlib_libc_string_strcpy.c -> dragonfly/patch-newlib_libc_string_strcpy.c
+file materialize dragonfly/patch-newlib_libc_string_strlen.c -> dragonfly/patch-newlib_libc_string_strlen.c
+file materialize dragonfly/patch-newlib_libc_string_strncat.c -> dragonfly/patch-newlib_libc_string_strncat.c
+file materialize dragonfly/patch-newlib_libc_string_strncmp.c -> dragonfly/patch-newlib_libc_string_strncmp.c
+file materialize dragonfly/patch-newlib_libc_string_strncpy.c -> dragonfly/patch-newlib_libc_string_strncpy.c

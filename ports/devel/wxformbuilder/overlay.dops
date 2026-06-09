@@ -1,0 +1,12 @@
+port devel/wxformbuilder
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e "s@\(defined(__FreeBSD__)\)@(\1||defined(__DragonFly__))@g"	\
+		${WRKSRC}/sdk/premake/src/os.c	\
+		${WRKSRC}/sdk/premake/src/os.h
+MK1
+file materialize dragonfly/patch-build_premake_4.3_src_host_premake.h -> dragonfly/patch-build_premake_4.3_src_host_premake.h
+file materialize dragonfly/patch-create_build_files4.sh -> dragonfly/patch-create_build_files4.sh

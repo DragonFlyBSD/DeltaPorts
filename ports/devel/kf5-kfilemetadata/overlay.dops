@@ -1,0 +1,10 @@
+port devel/kf5-kfilemetadata
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's/^.*\- name: FreeBSD/&\n    - name: DragonFly/g' \
+		${WRKSRC}/metainfo.yaml
+MK1
+file materialize dragonfly/patch-src_xattr__p.h -> dragonfly/patch-src_xattr__p.h

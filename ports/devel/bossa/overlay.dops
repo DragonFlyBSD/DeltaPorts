@@ -1,0 +1,7 @@
+port devel/bossa
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-Makefile -> dragonfly/patch-Makefile
+file materialize dragonfly/patch-src_PortFactory.h -> dragonfly/patch-src_PortFactory.h

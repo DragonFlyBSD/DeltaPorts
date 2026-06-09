@@ -1,0 +1,11 @@
+port devel/juce
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-extras_NetworkGraphicsDemo_Source_SlaveComponent.h -> dragonfly/patch-extras_NetworkGraphicsDemo_Source_SlaveComponent.h
+file materialize dragonfly/patch-modules_juce__core_native_juce__linux__Files.cpp -> dragonfly/patch-modules_juce__core_native_juce__linux__Files.cpp
+file materialize dragonfly/patch-modules_juce__core_native_juce__linux__Network.cpp -> dragonfly/patch-modules_juce__core_native_juce__linux__Network.cpp
+file materialize dragonfly/patch-modules_juce__core_native_juce__linux__SystemStats.cpp -> dragonfly/patch-modules_juce__core_native_juce__linux__SystemStats.cpp
+file materialize dragonfly/patch-modules_juce__core_system_juce__TargetPlatform.h -> dragonfly/patch-modules_juce__core_system_juce__TargetPlatform.h
+file materialize dragonfly/patch-vst3_sdk -> dragonfly/patch-vst3_sdk

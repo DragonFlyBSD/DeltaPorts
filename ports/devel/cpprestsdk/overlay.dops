@@ -1,0 +1,8 @@
+port devel/cpprestsdk
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set CXXFLAGS "${CXXFLAGS:N-Wno-c11-extensions}"
+mk add CXXFLAGS "-Wno-error=conversion -Wno-format-truncation -Wno-format-overflow"
+file materialize dragonfly/patch-tests_common_UnitTestpp_config.h -> dragonfly/patch-tests_common_UnitTestpp_config.h

@@ -1,0 +1,11 @@
+port biology/ncbi-toolkit
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${LN} -sv ${WRKSRC}/platform/freebsd.ncbi.mk	\
+		  ${WRKSRC}/platform/dragonfly.ncbi.mk
+MK1
+file materialize dragonfly/patch-make_makeallchives -> dragonfly/patch-make_makeallchives
+file materialize dragonfly/patch-make_makedis.csh -> dragonfly/patch-make_makedis.csh

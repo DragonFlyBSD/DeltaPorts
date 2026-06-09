@@ -1,0 +1,9 @@
+port devel/p5-PkgConfig
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-lib_PkgConfig.pm -> dragonfly/patch-lib_PkgConfig.pm
+file materialize dragonfly/patch-script_pkg-config -> dragonfly/patch-script_pkg-config
+file materialize dragonfly/patch-script_pkg-config.pl -> dragonfly/patch-script_pkg-config.pl
+file materialize dragonfly/patch-script_ppkg-config -> dragonfly/patch-script_ppkg-config

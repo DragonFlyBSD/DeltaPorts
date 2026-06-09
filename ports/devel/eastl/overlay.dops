@@ -1,0 +1,6 @@
+port devel/eastl
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-test_packages_EABase_include_Common_EABase_config_eaplatform.h -> dragonfly/patch-test_packages_EABase_include_Common_EABase_config_eaplatform.h

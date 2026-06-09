@@ -1,0 +1,6 @@
+port databases/p5-Tie-LevelDB
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-port_port__posix.h -> dragonfly/patch-port_port__posix.h

@@ -1,0 +1,7 @@
+port devel/etcd
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-Godeps___workspace_src_github.com_bgentry_speakeasy_speakeasy__unix.go -> dragonfly/patch-Godeps___workspace_src_github.com_bgentry_speakeasy_speakeasy__unix.go
+file materialize dragonfly/patch-storage_backend_boltoption__dragonfly.go -> dragonfly/patch-storage_backend_boltoption__dragonfly.go

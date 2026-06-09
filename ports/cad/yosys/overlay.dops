@@ -1,0 +1,16 @@
+port cad/yosys
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "localbase:ldflags"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@FreeBSD@DragonFly@g' \
+		${WRKSRC}/Makefile
+MK1
+file materialize dragonfly/patch-kernel_driver.cc -> dragonfly/patch-kernel_driver.cc
+file materialize dragonfly/patch-kernel_log.cc -> dragonfly/patch-kernel_log.cc
+file materialize dragonfly/patch-kernel_log.h -> dragonfly/patch-kernel_log.h
+file materialize dragonfly/patch-kernel_yosys.cc -> dragonfly/patch-kernel_yosys.cc
+file materialize dragonfly/patch-libs_minisat_System.cc -> dragonfly/patch-libs_minisat_System.cc
+file materialize dragonfly/patch-passes_cmds_cover.cc -> dragonfly/patch-passes_cmds_cover.cc

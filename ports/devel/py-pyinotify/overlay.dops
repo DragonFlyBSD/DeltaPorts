@@ -1,0 +1,8 @@
+port devel/py-pyinotify
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-python2_pyinotify.py -> dragonfly/patch-python2_pyinotify.py
+file materialize dragonfly/patch-python3_pyinotify.py -> dragonfly/patch-python3_pyinotify.py
+file materialize dragonfly/patch-setup.py -> dragonfly/patch-setup.py

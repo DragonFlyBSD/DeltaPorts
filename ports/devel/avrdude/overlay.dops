@@ -1,0 +1,7 @@
+port devel/avrdude
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add PLIST_FILES "share/man/man1/avrdude.1.gz"
+file materialize dragonfly/patch-CMakeLists.txt -> dragonfly/patch-CMakeLists.txt

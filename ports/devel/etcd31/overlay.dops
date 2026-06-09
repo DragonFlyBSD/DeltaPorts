@@ -1,0 +1,6 @@
+port devel/etcd31
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-cmd_vendor_github.com_bgentry_speakeasy_speakeasy_unix.go -> dragonfly/patch-cmd_vendor_github.com_bgentry_speakeasy_speakeasy_unix.go

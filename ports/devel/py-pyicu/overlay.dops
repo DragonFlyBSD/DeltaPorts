@@ -1,0 +1,7 @@
+port devel/py-pyicu
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set USE_CXXSTD "gnu++11"
+file materialize dragonfly/patch-setup.py -> dragonfly/patch-setup.py

@@ -1,0 +1,6 @@
+port devel/cpu_features
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-include_cpu__features__macros.h -> dragonfly/patch-include_cpu__features__macros.h

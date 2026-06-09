@@ -1,0 +1,8 @@
+port devel/thrift-cpp
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-lib_cpp_src_thrift_transport_SocketCommon.cpp -> dragonfly/patch-lib_cpp_src_thrift_transport_SocketCommon.cpp
+file materialize dragonfly/patch-lib_cpp_src_thrift_transport_TSSLSocket.h -> dragonfly/patch-lib_cpp_src_thrift_transport_TSSLSocket.h
+file materialize dragonfly/patch-lib_cpp_src_thrift_transport_TSocket.cpp -> dragonfly/patch-lib_cpp_src_thrift_transport_TSocket.cpp

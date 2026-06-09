@@ -1,0 +1,15 @@
+port benchmarks/wrk
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-Makefile -> dragonfly/patch-Makefile
+file materialize dragonfly/patch-ae.c -> dragonfly/patch-ae.c
+file materialize dragonfly/patch-ae.h -> dragonfly/patch-ae.h
+file materialize dragonfly/patch-ae_epoll.c -> dragonfly/patch-ae_epoll.c
+file materialize dragonfly/patch-ae_evport.c -> dragonfly/patch-ae_evport.c
+file materialize dragonfly/patch-ae_kqueue.c -> dragonfly/patch-ae_kqueue.c
+file materialize dragonfly/patch-ae_select.c -> dragonfly/patch-ae_select.c
+file materialize dragonfly/patch-config.h -> dragonfly/patch-config.h
+file materialize dragonfly/patch-wrk.c -> dragonfly/patch-wrk.c
+file materialize dragonfly/patch-wrk.h -> dragonfly/patch-wrk.h

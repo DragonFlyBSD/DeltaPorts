@@ -1,0 +1,13 @@
+port devel/libzim
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@freebsd@dragonfly@' \
+		${WRKSRC}/meson.build \
+		${WRKSRC}/src/meson.build
+
+MK1
+file materialize dragonfly/patch-src_file_reader.cpp -> dragonfly/patch-src_file_reader.cpp
+file materialize dragonfly/patch-src_fs__unix.cpp -> dragonfly/patch-src_fs__unix.cpp

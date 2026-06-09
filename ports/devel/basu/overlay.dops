@@ -1,0 +1,18 @@
+port devel/basu
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-src_basic_alloc-util.h -> dragonfly/patch-src_basic_alloc-util.h
+file materialize dragonfly/patch-src_basic_macro.h -> dragonfly/patch-src_basic_macro.h
+file materialize dragonfly/patch-src_basic_memfd-util.c -> dragonfly/patch-src_basic_memfd-util.c
+file materialize dragonfly/patch-src_basic_missing.h -> dragonfly/patch-src_basic_missing.h
+file materialize dragonfly/patch-src_basic_parse-util.c -> dragonfly/patch-src_basic_parse-util.c
+file materialize dragonfly/patch-src_basic_socket-util.c -> dragonfly/patch-src_basic_socket-util.c
+file materialize dragonfly/patch-src_basic_socket-util.h -> dragonfly/patch-src_basic_socket-util.h
+file materialize dragonfly/patch-src_basic_unaligned.h -> dragonfly/patch-src_basic_unaligned.h
+file materialize dragonfly/patch-src_libsystemd_sd-bus_bus-gvariant.c -> dragonfly/patch-src_libsystemd_sd-bus_bus-gvariant.c
+file materialize dragonfly/patch-src_libsystemd_sd-bus_bus-message.h -> dragonfly/patch-src_libsystemd_sd-bus_bus-message.h
+file materialize dragonfly/patch-src_libsystemd_sd-bus_bus-protocol.h -> dragonfly/patch-src_libsystemd_sd-bus_bus-protocol.h
+file materialize dragonfly/patch-src_libsystemd_sd-bus_bus-socket.c -> dragonfly/patch-src_libsystemd_sd-bus_bus-socket.c
+file materialize dragonfly/patch-src_test_tests.c -> dragonfly/patch-src_test_tests.c

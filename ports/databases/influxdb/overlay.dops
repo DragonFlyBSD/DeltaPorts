@@ -1,0 +1,8 @@
+port databases/influxdb
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-src_github.com_pkg_term_termios_pty__dragonfly.go -> dragonfly/patch-src_github.com_pkg_term_termios_pty__dragonfly.go
+file materialize dragonfly/patch-vendor_github.com_pkg_term_termios_pty__dragonfly.go -> dragonfly/patch-vendor_github.com_pkg_term_termios_pty__dragonfly.go
+file materialize dragonfly/patch-vendor_github.com_pkg_term_termios_termios__bsd.go -> dragonfly/patch-vendor_github.com_pkg_term_termios_termios__bsd.go

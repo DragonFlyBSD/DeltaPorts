@@ -1,0 +1,7 @@
+port devel/glog
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-src_glog_platform.h -> dragonfly/patch-src_glog_platform.h
+file materialize dragonfly/patch-src_logging.cc -> dragonfly/patch-src_logging.cc

@@ -1,0 +1,7 @@
+port devel/stlink
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-cmake_modules_Findlibusb.cmake -> dragonfly/patch-cmake_modules_Findlibusb.cmake
+file materialize dragonfly/patch-src_stlink-lib_libusb__settings.h -> dragonfly/patch-src_stlink-lib_libusb__settings.h

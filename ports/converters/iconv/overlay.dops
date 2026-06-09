@@ -1,0 +1,8 @@
+port converters/iconv
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-ces.c -> dragonfly/patch-ces.c
+file materialize dragonfly/patch-lib_ccs.c -> dragonfly/patch-lib_ccs.c
+file materialize dragonfly/patch-util_iconv.c -> dragonfly/patch-util_iconv.c

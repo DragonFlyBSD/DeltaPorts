@@ -1,0 +1,24 @@
+port devel/bazel
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set BROKEN "needs porting"
+file materialize dragonfly/patch-scripts_bootstrap_buildenv.sh -> dragonfly/patch-scripts_bootstrap_buildenv.sh
+file materialize dragonfly/patch-src_BUILD -> dragonfly/patch-src_BUILD
+file materialize dragonfly/patch-src_conditions_BUILD -> dragonfly/patch-src_conditions_BUILD
+file materialize dragonfly/patch-src_main_cpp_BUILD -> dragonfly/patch-src_main_cpp_BUILD
+file materialize dragonfly/patch-src_main_cpp_blaze__util__dragonfly.cc -> dragonfly/patch-src_main_cpp_blaze__util__dragonfly.cc
+file materialize dragonfly/patch-src_main_java_com_google_devtools_build_lib_analysis_ShellConfiguration.java -> dragonfly/patch-src_main_java_com_google_devtools_build_lib_analysis_ShellConfiguration.java
+file materialize dragonfly/patch-src_main_java_com_google_devtools_build_lib_analysis_config_AutoCpuConverter.java -> dragonfly/patch-src_main_java_com_google_devtools_build_lib_analysis_config_AutoCpuConverter.java
+file materialize dragonfly/patch-src_main_java_com_google_devtools_build_lib_util_OS.java -> dragonfly/patch-src_main_java_com_google_devtools_build_lib_util_OS.java
+file materialize dragonfly/patch-src_main_native_BUILD -> dragonfly/patch-src_main_native_BUILD
+file materialize dragonfly/patch-src_main_native_unix__jni.h -> dragonfly/patch-src_main_native_unix__jni.h
+file materialize dragonfly/patch-src_main_native_unix__jni__dragonfly.cc -> dragonfly/patch-src_main_native_unix__jni__dragonfly.cc
+file materialize dragonfly/patch-src_main_tools_BUILD -> dragonfly/patch-src_main_tools_BUILD
+file materialize dragonfly/patch-src_main_tools_jdk.BUILD -> dragonfly/patch-src_main_tools_jdk.BUILD
+file materialize dragonfly/patch-src_tools_singlejar_diag.h -> dragonfly/patch-src_tools_singlejar_diag.h
+file materialize dragonfly/patch-src_tools_singlejar_zip__headers.h -> dragonfly/patch-src_tools_singlejar_zip__headers.h
+file materialize dragonfly/patch-third__party_grpc_include_grpc_impl_codegen_port__platform.h -> dragonfly/patch-third__party_grpc_include_grpc_impl_codegen_port__platform.h
+file materialize dragonfly/patch-tools_cpp_lib__cc__configure.bzl -> dragonfly/patch-tools_cpp_lib__cc__configure.bzl
+file materialize dragonfly/patch-tools_jdk_BUILD -> dragonfly/patch-tools_jdk_BUILD

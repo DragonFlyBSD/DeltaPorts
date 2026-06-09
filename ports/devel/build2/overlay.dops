@@ -1,0 +1,8 @@
+port devel/build2
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-build2_libbuild2_cc_compile-rule.cxx -> dragonfly/patch-build2_libbuild2_cc_compile-rule.cxx
+file materialize dragonfly/patch-libbutl_libbutl_buildfile -> dragonfly/patch-libbutl_libbutl_buildfile
+file materialize dragonfly/patch-libbutl_tests_backtrace_testscript -> dragonfly/patch-libbutl_tests_backtrace_testscript

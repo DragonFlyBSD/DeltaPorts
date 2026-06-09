@@ -1,0 +1,7 @@
+port devel/ignition-common
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set DFLY_UNMAINTAINED "yes"
+file materialize dragonfly/patch-src_Time.cc -> dragonfly/patch-src_Time.cc

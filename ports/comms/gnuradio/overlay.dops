@@ -1,0 +1,16 @@
+port comms/gnuradio
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set BUILD_DEPENDS "${BUILD_DEPENDS:Ndoxygen*}"
+mk set RUN_DEPENDS "${RUN_DEPENDS:Ndoxygen*}"
+mk add LDFLAGS "-L${LOCALBASE}/lib"
+mk set CPP "cpp"
+mk set CC "cc"
+mk set CXX "c++"
+file materialize dragonfly/patch-CMakeLists.txt -> dragonfly/patch-CMakeLists.txt
+file materialize dragonfly/patch-gnuradio-runtime_include_gnuradio_high__res__timer.h -> dragonfly/patch-gnuradio-runtime_include_gnuradio_high__res__timer.h
+file materialize dragonfly/patch-gnuradio-runtime_lib_thread_thread.cc -> dragonfly/patch-gnuradio-runtime_lib_thread_thread.cc
+file materialize dragonfly/patch-gr-vocoder_lib_gsm__fr__decode__ps__impl.h -> dragonfly/patch-gr-vocoder_lib_gsm__fr__decode__ps__impl.h
+file materialize dragonfly/patch-gr-vocoder_lib_gsm__fr__encode__sp__impl.h -> dragonfly/patch-gr-vocoder_lib_gsm__fr__encode__sp__impl.h

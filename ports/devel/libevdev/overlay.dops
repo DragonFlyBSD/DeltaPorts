@@ -1,0 +1,14 @@
+port devel/libevdev
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${CP} -r ${WRKSRC}/include/linux/freebsd \
+	      ${WRKSRC}/include/linux/dragonfly
+MK1
+file materialize dragonfly/patch-include_linux_input.h -> dragonfly/patch-include_linux_input.h
+file materialize dragonfly/patch-include_linux_uinput.h -> dragonfly/patch-include_linux_uinput.h
+file materialize dragonfly/patch-libevdev_libevdev-uinput.c -> dragonfly/patch-libevdev_libevdev-uinput.c
+file materialize dragonfly/patch-tools_mouse-dpi-tool.c -> dragonfly/patch-tools_mouse-dpi-tool.c
+file materialize dragonfly/patch-tools_touchpad-edge-detector.c -> dragonfly/patch-tools_touchpad-edge-detector.c

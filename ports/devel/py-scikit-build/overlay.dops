@@ -1,0 +1,7 @@
+port devel/py-scikit-build
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-skbuild_platform__specifics_platform__factory.py -> dragonfly/patch-skbuild_platform__specifics_platform__factory.py
+file materialize dragonfly/patch-tests_test__platform.py -> dragonfly/patch-tests_test__platform.py

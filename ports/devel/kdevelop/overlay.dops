@@ -1,0 +1,7 @@
+port devel/kdevelop
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "gmake"
+file materialize dragonfly/patch-kdevplatform_cmake_modules_KDevPlatformMacros.cmake -> dragonfly/patch-kdevplatform_cmake_modules_KDevPlatformMacros.cmake

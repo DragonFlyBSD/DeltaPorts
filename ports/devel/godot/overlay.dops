@@ -1,0 +1,13 @@
+port devel/godot
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "alias"
+mk set USE_CLANG_FALLBACK "default"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@CRASH_HANDLER_ENABLED 1@NOCRASH@g' \
+		${WRKSRC}/platform/x11/crash_handler_x11.cpp
+MK1
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-platform_x11_detect.py -> dragonfly/patch-platform_x11_detect.py

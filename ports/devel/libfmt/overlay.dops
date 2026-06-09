@@ -1,0 +1,6 @@
+port devel/libfmt
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-include_fmt_os.h -> dragonfly/patch-include_fmt_os.h

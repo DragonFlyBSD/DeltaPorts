@@ -1,0 +1,7 @@
+port emulators/joytran
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CFLAGS "-Wno-unused-but-set-variable"
+file materialize dragonfly/patch-src_generate__events.c -> dragonfly/patch-src_generate__events.c

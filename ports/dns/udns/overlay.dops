@@ -1,0 +1,6 @@
+port dns/udns
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-rblcheck.c -> dragonfly/patch-rblcheck.c

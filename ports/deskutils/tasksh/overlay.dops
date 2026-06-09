@@ -1,0 +1,9 @@
+port deskutils/tasksh
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set DFLY_UNMAINTAINED "yes"
+file materialize dragonfly/patch-CMakeLists.txt -> dragonfly/patch-CMakeLists.txt
+file materialize dragonfly/patch-src_libshared_src_FS.cpp -> dragonfly/patch-src_libshared_src_FS.cpp
+file materialize dragonfly/patch-src_libshared_src_shared.cpp -> dragonfly/patch-src_libshared_src_shared.cpp

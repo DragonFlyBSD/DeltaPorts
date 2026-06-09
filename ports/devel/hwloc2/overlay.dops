@@ -1,0 +1,15 @@
+port devel/hwloc2
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-configure -> dragonfly/patch-configure
+file materialize dragonfly/patch-hwloc_Makefile.am -> dragonfly/patch-hwloc_Makefile.am
+file materialize dragonfly/patch-hwloc_Makefile.in -> dragonfly/patch-hwloc_Makefile.in
+file materialize dragonfly/patch-hwloc_bind.c -> dragonfly/patch-hwloc_bind.c
+file materialize dragonfly/patch-hwloc_topology-dragonfly.c -> dragonfly/patch-hwloc_topology-dragonfly.c
+file materialize dragonfly/patch-include_hwloc_rename.h -> dragonfly/patch-include_hwloc_rename.h
+file materialize dragonfly/patch-include_private_autogen_config.h.in -> dragonfly/patch-include_private_autogen_config.h.in
+file materialize dragonfly/patch-include_private_internal-components.h -> dragonfly/patch-include_private_internal-components.h
+file materialize dragonfly/patch-include_private_private.h -> dragonfly/patch-include_private_private.h
+file materialize dragonfly/patch-tests_hwloc_hwloc__backends.c -> dragonfly/patch-tests_hwloc_hwloc__backends.c

@@ -1,0 +1,12 @@
+port editors/rehex
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@define wxLUA_USE_wxAcceleratorTable@& 0 //@g' \
+		${WRKSRC}/wxLua/modules/wxbind/setup/wxluasetup.h
+MK1
+mk set DFLY_UNMAINTAINED "yes"
+file materialize dragonfly/patch-Makefile -> dragonfly/patch-Makefile
+file materialize dragonfly/patch-include_portable__endian.h -> dragonfly/patch-include_portable__endian.h

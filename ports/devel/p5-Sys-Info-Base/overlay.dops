@@ -1,0 +1,6 @@
+port devel/p5-Sys-Info-Base
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-lib_Sys_Info_Constants.pm -> dragonfly/patch-lib_Sys_Info_Constants.pm

@@ -1,0 +1,7 @@
+port devel/ccache
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add MEMCACHED_EXTRA_PATCHES "${FILESDIR}/../dragonfly/extra-memcached-configure.ac"
+file materialize dragonfly/extra-memcached-configure.ac -> dragonfly/extra-memcached-configure.ac

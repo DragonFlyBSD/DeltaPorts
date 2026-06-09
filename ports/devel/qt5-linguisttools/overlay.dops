@@ -1,0 +1,11 @@
+port devel/qt5-linguisttools
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e "s@dragonfly-g++@${QMAKESPEC}@g" \
+			 -e "s@QT_LIBDIR@${QT_LIBDIR}@g" \
+		${WRKSRC}/src/linguist/shared/qmakeevaluator.cpp
+MK1
+file materialize dragonfly/patch-src_linguist_shared_qmakeevaluator.cpp -> dragonfly/patch-src_linguist_shared_qmakeevaluator.cpp

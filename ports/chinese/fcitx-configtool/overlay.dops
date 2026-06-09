@@ -1,0 +1,7 @@
+port chinese/fcitx-configtool
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-gtk3_gdm-languages.c -> dragonfly/patch-gtk3_gdm-languages.c
+file materialize dragonfly/patch-gtk_gdm-languages.c -> dragonfly/patch-gtk_gdm-languages.c

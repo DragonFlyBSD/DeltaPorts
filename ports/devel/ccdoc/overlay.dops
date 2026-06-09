@@ -1,0 +1,12 @@
+port devel/ccdoc
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set USE_CXXSTD "c++98"
+file materialize dragonfly/patch-database.cc -> dragonfly/patch-database.cc
+file materialize dragonfly/patch-phase1_scanner.cc -> dragonfly/patch-phase1_scanner.cc
+file materialize dragonfly/patch-phase1_scanner_doc.cc -> dragonfly/patch-phase1_scanner_doc.cc
+file materialize dragonfly/patch-phase3_html.cc -> dragonfly/patch-phase3_html.cc
+file materialize dragonfly/patch-statement.cc -> dragonfly/patch-statement.cc
+file materialize dragonfly/patch-switches.cc -> dragonfly/patch-switches.cc

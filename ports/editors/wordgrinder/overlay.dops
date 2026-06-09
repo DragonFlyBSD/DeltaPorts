@@ -1,0 +1,6 @@
+port editors/wordgrinder
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-key_event -> dragonfly/patch-key_event

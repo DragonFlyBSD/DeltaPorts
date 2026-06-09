@@ -1,0 +1,6 @@
+port databases/pecl-memcache
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-src_memcache__binary__protocol.c -> dragonfly/patch-src_memcache__binary__protocol.c

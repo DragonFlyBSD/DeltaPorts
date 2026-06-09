@@ -1,0 +1,16 @@
+port cad/PrusaSlicer
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "alias"
+mk add CXXFLAGS "-Wno-return-type -Wno-ignored-attributes"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@ STREQUAL "\(FreeBSD\)"@ MATCHES "\1|DragonFly"@g' \
+		${WRKSRC}/src/hidapi/CMakeLists.txt
+MK1
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-CMakeLists.txt -> dragonfly/patch-CMakeLists.txt
+file materialize dragonfly/patch-src_avrdude_libavrdude.h -> dragonfly/patch-src_avrdude_libavrdude.h
+file materialize dragonfly/patch-src_hidapi_libusb_hid.c -> dragonfly/patch-src_hidapi_libusb_hid.c
+file materialize dragonfly/patch-src_slic3r_CMakeLists.txt -> dragonfly/patch-src_slic3r_CMakeLists.txt

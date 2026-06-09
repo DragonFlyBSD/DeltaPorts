@@ -1,0 +1,11 @@
+port comms/direwolf
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set DFLY_UNMAINTAINED "yes"
+file materialize dragonfly/patch-CMakeLists.txt -> dragonfly/patch-CMakeLists.txt
+file materialize dragonfly/patch-src_cm108.c -> dragonfly/patch-src_cm108.c
+file materialize dragonfly/patch-src_decode__aprs.c -> dragonfly/patch-src_decode__aprs.c
+file materialize dragonfly/patch-src_direwolf.h -> dragonfly/patch-src_direwolf.h
+file materialize dragonfly/patch-src_recv.c -> dragonfly/patch-src_recv.c

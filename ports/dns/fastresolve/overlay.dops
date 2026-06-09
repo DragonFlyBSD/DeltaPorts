@@ -1,0 +1,6 @@
+port dns/fastresolve
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-dns-terror_getline.c -> dragonfly/patch-dns-terror_getline.c

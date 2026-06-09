@@ -1,0 +1,6 @@
+port editors/aee
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-create.mk.aee -> dragonfly/patch-create.mk.aee

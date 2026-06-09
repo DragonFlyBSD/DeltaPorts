@@ -1,0 +1,11 @@
+port devel/roboctl
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-Commands_Vexctl_vexctl_cmd.h -> dragonfly/patch-Commands_Vexctl_vexctl_cmd.h
+file materialize dragonfly/patch-Libs_C_rct.c -> dragonfly/patch-Libs_C_rct.c
+file materialize dragonfly/patch-Libs_C_rct_machdep.h -> dragonfly/patch-Libs_C_rct_machdep.h
+file materialize dragonfly/patch-Libs_C_strings.c -> dragonfly/patch-Libs_C_strings.c
+file materialize dragonfly/patch-Libs_C_usb.c -> dragonfly/patch-Libs_C_usb.c
+file materialize dragonfly/patch-Scripts_lego_bluetooth_config -> dragonfly/patch-Scripts_lego_bluetooth_config

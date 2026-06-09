@@ -1,0 +1,8 @@
+port dns/powerdns
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set DFLY_UNMAINTAINED "yes"
+file materialize dragonfly/patch-pdns_dns.hh -> dragonfly/patch-pdns_dns.hh
+file materialize dragonfly/patch-pdns_iputils.hh -> dragonfly/patch-pdns_iputils.hh

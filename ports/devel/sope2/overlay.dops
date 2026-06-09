@@ -1,0 +1,11 @@
+port devel/sope2
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set BROKEN "build freezes"
+file materialize dragonfly/patch-sope-core_NGExtensions_GNUmakefile.preamble -> dragonfly/patch-sope-core_NGExtensions_GNUmakefile.preamble
+file materialize dragonfly/patch-sope-core_NGStreams_NGInternetSocketAddress.m -> dragonfly/patch-sope-core_NGStreams_NGInternetSocketAddress.m
+file materialize dragonfly/patch-sope-core_NGStreams_NGLocalSocketAddress.m -> dragonfly/patch-sope-core_NGStreams_NGLocalSocketAddress.m
+file materialize dragonfly/patch-sope-core_NGStreams_NGLocalSocketDomain.m -> dragonfly/patch-sope-core_NGStreams_NGLocalSocketDomain.m
+file materialize dragonfly/patch-sope-core_NGStreams_configure -> dragonfly/patch-sope-core_NGStreams_configure

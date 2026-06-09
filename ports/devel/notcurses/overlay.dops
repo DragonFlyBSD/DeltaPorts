@@ -1,0 +1,13 @@
+port devel/notcurses
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add BUILD_DEPENDS "cxxfs_gcc8>0:misc/cxxfs_gcc8"
+mk add CXXFLAGS "-isystem ${LOCALBASE}/cxxfs_gcc8"
+mk add LDFLAGS "-L${LOCALBASE}/cxxfs_gcc8"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} 's@tarGET_Link_libraries(ncls@& PUBLIC -lstdc++fs@g' \
+		${WRKSRC}/CMakeLists.txt
+MK1
+file materialize dragonfly/patch-src_compat_compat.c -> dragonfly/patch-src_compat_compat.c

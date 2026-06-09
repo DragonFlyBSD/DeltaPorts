@@ -1,0 +1,6 @@
+port emulators/anese
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-thirdparty_headeronly_cfgpath.h -> dragonfly/patch-thirdparty_headeronly_cfgpath.h

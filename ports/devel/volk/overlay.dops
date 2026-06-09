@@ -1,0 +1,10 @@
+port devel/volk
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add LIB_DEPENDS "libboost_system.so:devel/boost-libs"
+mk add BUILD_DEPENDS "cxxfs_gcc8>0:misc/cxxfs_gcc8"
+mk add CXXFLAGS "-isystem ${LOCALBASE}/cxxfs_gcc8"
+mk add LDFLAGS "-L${LOCALBASE}/cxxfs_gcc8"
+file materialize dragonfly/patch-include_volk_volk__common.h -> dragonfly/patch-include_volk_volk__common.h

@@ -1,0 +1,8 @@
+port devel/glrparser
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-glr_glrGrammar.h -> dragonfly/patch-glr_glrGrammar.h
+file materialize dragonfly/patch-samples_basic.cc -> dragonfly/patch-samples_basic.cc
+file materialize dragonfly/patch-samples_glrparse.cc -> dragonfly/patch-samples_glrparse.cc

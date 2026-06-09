@@ -1,0 +1,7 @@
+port devel/p5-Sys-Info-Driver-BSD
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-SPEC -> dragonfly/patch-SPEC
+file materialize dragonfly/patch-lib_Sys_Info_Driver_BSD_OS.pm -> dragonfly/patch-lib_Sys_Info_Driver_BSD_OS.pm

@@ -1,0 +1,11 @@
+port cad/cvc
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e "s@-lreadline @-L${LOCALBASE}/lib &@g" \
+			 -e 's@-lcurses@-lncurses@g' \
+		${WRKSRC}/src/Makefile.am
+MK1
+file materialize dragonfly/patch-src_mmap__file__pool.cpp -> dragonfly/patch-src_mmap__file__pool.cpp

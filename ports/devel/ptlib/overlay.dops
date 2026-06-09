@@ -1,0 +1,14 @@
+port devel/ptlib
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set BSDVIDEO_BROKEN "bsdvideo plugin doesn't build on DragonFly"
+mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NBSDVIDEO}"
+mk add CFLAGS "-Wno-deprecated-declarations"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@STDCXXFLAGS)@& -fpermissive@g' \
+		${WRKSRC}/make/common.mak
+MK1
+file materialize dragonfly/patch-configure -> dragonfly/patch-configure
+file materialize dragonfly/patch-include_ptlib_thread.h -> dragonfly/patch-include_ptlib_thread.h

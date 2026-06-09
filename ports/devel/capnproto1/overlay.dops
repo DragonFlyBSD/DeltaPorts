@@ -1,0 +1,11 @@
+port devel/capnproto1
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+mk add CONFIGURE_ARGS "--without-fibers"
+mk add CXXFLAGS "-I${OPENSSLINC} -L${OPENSSLLIB}"
+file materialize dragonfly/patch-c++_src_kj_async.h -> dragonfly/patch-c++_src_kj_async.h
+file materialize dragonfly/patch-src_kj_async-io-unix.c++ -> dragonfly/patch-src_kj_async-io-unix.c++
+file materialize dragonfly/patch-src_kj_filesystem-disk-unix.c++ -> dragonfly/patch-src_kj_filesystem-disk-unix.c++

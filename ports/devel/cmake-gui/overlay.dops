@@ -1,0 +1,7 @@
+port devel/cmake-gui
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set DFLY_UNMAINTAINED "yes"
+file materialize dragonfly/patch-Source_cmSystemTools.cxx -> dragonfly/patch-Source_cmSystemTools.cxx

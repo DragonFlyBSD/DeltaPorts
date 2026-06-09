@@ -1,0 +1,7 @@
+port devel/benchmark
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CXXFLAGS "-Wno-stringop-truncation"
+file materialize dragonfly/patch-src_internal__macros.h -> dragonfly/patch-src_internal__macros.h

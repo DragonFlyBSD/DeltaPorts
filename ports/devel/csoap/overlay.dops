@@ -1,0 +1,6 @@
+port devel/csoap
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-nanohttp_nanohttp-socket.c -> dragonfly/patch-nanohttp_nanohttp-socket.c

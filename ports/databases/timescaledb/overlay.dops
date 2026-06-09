@@ -1,0 +1,8 @@
+port databases/timescaledb
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "localbase:ldflags"
+file materialize dragonfly/patch-src_build-defs.cmake -> dragonfly/patch-src_build-defs.cmake
+file materialize dragonfly/patch-tsl_src_build-defs.cmake -> dragonfly/patch-tsl_src_build-defs.cmake

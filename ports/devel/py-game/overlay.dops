@@ -1,0 +1,7 @@
+port devel/py-game
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-buildconfig_config__unix.py -> dragonfly/patch-buildconfig_config__unix.py
+file materialize dragonfly/patch-src__c_camera.h -> dragonfly/patch-src__c_camera.h

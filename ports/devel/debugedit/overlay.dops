@@ -1,0 +1,8 @@
+port devel/debugedit
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add LIB_DEPENDS "libelf.so:devel/libelf"
+mk add CFLAGS "-I${LOCALBASE}/include/libelf -L${LOCALBASE}/lib"
+file materialize dragonfly/patch-debugedit.c -> dragonfly/patch-debugedit.c

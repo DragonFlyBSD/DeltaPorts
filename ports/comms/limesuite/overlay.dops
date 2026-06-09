@@ -1,0 +1,13 @@
+port comms/limesuite
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "localbase:ldflags"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@"FreeBSD@&|DragonFly@g' \
+		${WRKSRC}/cmake/Modules/Findlibusb-1.0.cmake
+MK1
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-Desktop_CMakeLists.txt -> dragonfly/patch-Desktop_CMakeLists.txt
+file materialize dragonfly/patch-src_ConnectionRemote_ConnectionRemote.cpp -> dragonfly/patch-src_ConnectionRemote_ConnectionRemote.cpp

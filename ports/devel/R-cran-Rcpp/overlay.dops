@@ -1,0 +1,6 @@
+port devel/R-cran-Rcpp
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-inst_include_Rcpp_Benchmark_Timer.h -> dragonfly/patch-inst_include_Rcpp_Benchmark_Timer.h

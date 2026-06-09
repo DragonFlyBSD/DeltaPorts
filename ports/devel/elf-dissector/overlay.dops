@@ -1,0 +1,33 @@
+port devel/elf-dissector
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "localbase:ldflags"
+mk add BUILD_DEPENDS "bsdelf>0:devel/bsdelf"
+mk add CMAKE_ARGS "-DDwarf_INCLUDE_DIR=${LOCALBASE}/bsdelf/include"
+mk add CMAKE_ARGS "-DDwarf_LIBRARY=${LOCALBASE}/bsdelf/lib/libdwarf.a"
+mk add CMAKE_ARGS "-DElf_LIBRARY=${LOCALBASE}/bsdelf/lib/libelf.a"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@FreeBSD@DragonFly@g' \
+			 -e "s@Dwarf::Dwarf@& ${LOCALBASE}/bsdelf/lib/libelf.a@g" \
+			 -e "s@Binutils::Iberty Binutils::Opcodes@Binutils::Opcodes Binutils::Iberty@g" \
+		${WRKSRC}/src/lib/CMakeLists.txt \
+		${WRKSRC}/src/ui/CMakeLists.txt \
+		${WRKSRC}/tests/auto/CMakeLists.txt
+MK1
+file materialize dragonfly/patch-src_lib_disassmbler_disassembler.cpp -> dragonfly/patch-src_lib_disassmbler_disassembler.cpp
+file materialize dragonfly/patch-src_lib_dwarf_dwarfinfo.cpp -> dragonfly/patch-src_lib_dwarf_dwarfinfo.cpp
+file materialize dragonfly/patch-src_lib_elf_elffile.cpp -> dragonfly/patch-src_lib_elf_elffile.cpp
+file materialize dragonfly/patch-src_lib_elf_elfnoteentry.cpp -> dragonfly/patch-src_lib_elf_elfnoteentry.cpp
+file materialize dragonfly/patch-src_lib_elf_elfnotesection.cpp -> dragonfly/patch-src_lib_elf_elfnotesection.cpp
+file materialize dragonfly/patch-src_lib_elf_elfpltentry.cpp -> dragonfly/patch-src_lib_elf_elfpltentry.cpp
+file materialize dragonfly/patch-src_lib_printers_dynamicsectionprinter.cpp -> dragonfly/patch-src_lib_printers_dynamicsectionprinter.cpp
+file materialize dragonfly/patch-src_lib_printers_elfprinter.cpp -> dragonfly/patch-src_lib_printers_elfprinter.cpp
+file materialize dragonfly/patch-src_lib_printers_notesectionprinter.cpp -> dragonfly/patch-src_lib_printers_notesectionprinter.cpp
+file materialize dragonfly/patch-src_lib_printers_relocationprinter.cpp -> dragonfly/patch-src_lib_printers_relocationprinter.cpp
+file materialize dragonfly/patch-src_ui_elfmodel_datavisitor.cpp -> dragonfly/patch-src_ui_elfmodel_datavisitor.cpp
+file materialize dragonfly/patch-src_ui_elfmodel_elfmodel.cpp -> dragonfly/patch-src_ui_elfmodel_elfmodel.cpp
+file materialize dragonfly/patch-src_ui_elfmodel_indexvisitor.cpp -> dragonfly/patch-src_ui_elfmodel_indexvisitor.cpp
+file materialize dragonfly/patch-src_ui_elfmodel_parentvisitor.cpp -> dragonfly/patch-src_ui_elfmodel_parentvisitor.cpp
+file materialize dragonfly/patch-src_ui_elfmodel_rowcountvisitor.cpp -> dragonfly/patch-src_ui_elfmodel_rowcountvisitor.cpp

@@ -1,0 +1,7 @@
+port editors/imhex
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/XFAIL -> dragonfly/XFAIL
+file materialize dragonfly/patch-plugins_libimhex_source_helpers_paths.cpp -> dragonfly/patch-plugins_libimhex_source_helpers_paths.cpp

@@ -1,0 +1,9 @@
+port databases/redis-devel
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CFLAGS "-I/usr/local/include"
+mk add LDFLAGS "-L/usr/local/lib"
+mk set DFLY_UNMAINTAINED "yes"
+file materialize dragonfly/patch-src-config.h -> dragonfly/patch-src-config.h

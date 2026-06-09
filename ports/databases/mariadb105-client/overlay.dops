@@ -1,0 +1,7 @@
+port databases/mariadb105-client
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-client_mysql.cc -> dragonfly/patch-client_mysql.cc
+file materialize dragonfly/patch-scripts_CMakeLists.txt -> dragonfly/patch-scripts_CMakeLists.txt

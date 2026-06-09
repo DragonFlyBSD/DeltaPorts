@@ -1,0 +1,7 @@
+port devel/protobuf
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add MAKE_ENV "LDVER=ld.bfd"
+file materialize dragonfly/patch-src_google_protobuf_compiler_command__line__interface.cc -> dragonfly/patch-src_google_protobuf_compiler_command__line__interface.cc

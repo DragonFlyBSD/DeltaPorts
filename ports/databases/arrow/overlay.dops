@@ -1,0 +1,9 @@
+port databases/arrow
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+mk add USES "alias"
+mk add CMAKE_OFF "ARROW_JEMALLOC"
+file materialize dragonfly/patch-cpp_src_arrow_compute_kernels_vector__pairwise.cc -> dragonfly/patch-cpp_src_arrow_compute_kernels_vector__pairwise.cc

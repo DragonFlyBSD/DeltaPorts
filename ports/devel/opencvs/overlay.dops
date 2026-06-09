@@ -1,0 +1,13 @@
+port devel/opencvs
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add MAKE_ENV "CWARNFLAGS=-fcommon"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e '/LDADD/s@-lmd@@g' \
+		${WRKSRC}/Makefile
+MK1
+file materialize dragonfly/patch-file.c -> dragonfly/patch-file.c
+file materialize dragonfly/patch-file.h -> dragonfly/patch-file.h
+file materialize dragonfly/patch-update.c -> dragonfly/patch-update.c

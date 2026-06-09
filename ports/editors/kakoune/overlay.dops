@@ -1,0 +1,8 @@
+port editors/kakoune
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "pkgconfig"
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+file materialize dragonfly/patch-Makefile -> dragonfly/patch-Makefile

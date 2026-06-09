@@ -1,0 +1,7 @@
+port devel/libqb
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-configure -> dragonfly/patch-configure
+file materialize dragonfly/patch-lib_ipc__setup.c -> dragonfly/patch-lib_ipc__setup.c

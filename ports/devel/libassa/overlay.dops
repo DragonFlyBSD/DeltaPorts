@@ -1,0 +1,8 @@
+port devel/libassa
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-assa_GenServer.cpp -> dragonfly/patch-assa_GenServer.cpp
+file materialize dragonfly/patch-assa_Handlers.h -> dragonfly/patch-assa_Handlers.h
+file materialize dragonfly/patch-assa_Socket.cpp -> dragonfly/patch-assa_Socket.cpp

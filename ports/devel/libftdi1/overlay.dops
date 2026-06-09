@@ -1,0 +1,6 @@
+port devel/libftdi1
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-src_ftdi.c -> dragonfly/patch-src_ftdi.c

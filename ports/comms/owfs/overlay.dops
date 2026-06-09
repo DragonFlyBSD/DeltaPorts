@@ -1,0 +1,8 @@
+port comms/owfs
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "autoreconf"
+mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NOWFS}"
+file materialize dragonfly/patch-configure.ac -> dragonfly/patch-configure.ac

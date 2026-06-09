@@ -1,0 +1,9 @@
+port databases/redis
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add MAKE_ENV "OPENSSL_PREFIX=${LOCALBASE}"
+file materialize dragonfly/patch-deps_hiredis_Makefile -> dragonfly/patch-deps_hiredis_Makefile
+file materialize dragonfly/patch-src_Makefile -> dragonfly/patch-src_Makefile
+file materialize dragonfly/patch-src_zmalloc.h -> dragonfly/patch-src_zmalloc.h

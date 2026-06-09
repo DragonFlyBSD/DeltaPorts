@@ -1,0 +1,8 @@
+port comms/acfax
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-Directory.h -> dragonfly/patch-Directory.h
+file materialize dragonfly/patch-RegExp.c -> dragonfly/patch-RegExp.c
+file materialize dragonfly/patch-mod__demod.c -> dragonfly/patch-mod__demod.c

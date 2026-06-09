@@ -1,0 +1,6 @@
+port databases/couchdb3
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-src_couch_rebar.config.script -> dragonfly/patch-src_couch_rebar.config.script

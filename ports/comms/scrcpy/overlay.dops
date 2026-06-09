@@ -1,0 +1,8 @@
+port comms/scrcpy
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-app_src_usb_usb.c -> dragonfly/patch-app_src_usb_usb.c
+file materialize dragonfly/patch-app_src_version.c -> dragonfly/patch-app_src_version.c

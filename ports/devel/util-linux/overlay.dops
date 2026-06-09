@@ -1,0 +1,30 @@
+port devel/util-linux
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CONFIGURE_ARGS "--disable-login --disable-last --disable-utmpdump"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@sched\.h@&__@g' \
+		${WRKSRC}/configure.ac
+
+MK1
+mk target set dfly-install <<'MK2'
+	${RM} -fv ${STAGEDIR}${LOCALBASE}/bin/ionice
+	${RM} -fv ${STAGEDIR}${LOCALBASE}/bin/su
+	${RM} -fv ${STAGEDIR}${LOCALBASE}/man/man1/ionice.1
+	${RM} -fv ${STAGEDIR}${LOCALBASE}/man/man1/runuser.1
+	${RM} -fv ${STAGEDIR}${LOCALBASE}/man/man1/su.1
+	${RM} -fv ${STAGEDIR}${LOCALBASE}/man/man8/agetty.8
+	${RM} -fv ${STAGEDIR}${LOCALBASE}/sbin/agetty
+	${RM} -fv ${STAGEDIR}${LOCALBASE}/sbin/runuser
+	${RM} -fv ${STAGEDIR}${LOCALBASE}/share/bash-completion/completions/ionice
+	${RM} -fv ${STAGEDIR}${LOCALBASE}/share/bash-completion/completions/runuser
+	${RM} -fv ${STAGEDIR}${LOCALBASE}/share/bash-completion/completions/su
+MK2
+file materialize dragonfly/patch-configure.ac -> dragonfly/patch-configure.ac
+file materialize dragonfly/patch-disk-utils_cfdisk.c -> dragonfly/patch-disk-utils_cfdisk.c
+file materialize dragonfly/patch-include_bitops.h -> dragonfly/patch-include_bitops.h
+file materialize dragonfly/patch-include_cpuset.h -> dragonfly/patch-include_cpuset.h
+file materialize dragonfly/patch-term-utils_agetty.c -> dragonfly/patch-term-utils_agetty.c
+file materialize dragonfly/patch-term-utils_ttymsg.c -> dragonfly/patch-term-utils_ttymsg.c

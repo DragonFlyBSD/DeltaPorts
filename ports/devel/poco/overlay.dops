@@ -1,0 +1,9 @@
+port devel/poco
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-Foundation_CMakeLists.txt -> dragonfly/patch-Foundation_CMakeLists.txt
+file materialize dragonfly/patch-Foundation_include_Poco_Platform.h -> dragonfly/patch-Foundation_include_Poco_Platform.h
+file materialize dragonfly/patch-Foundation_src_Timezone__UNIX.cpp -> dragonfly/patch-Foundation_src_Timezone__UNIX.cpp
+file materialize dragonfly/patch-Net_src_SocketImpl.cpp -> dragonfly/patch-Net_src_SocketImpl.cpp

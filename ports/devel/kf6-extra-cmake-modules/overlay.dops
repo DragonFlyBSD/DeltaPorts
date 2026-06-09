@@ -1,0 +1,11 @@
+port devel/kf6-extra-cmake-modules
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's/^.*\- name: FreeBSD/&\n    - name: DragonFly/g' \
+		${WRKSRC}/metainfo.yaml
+MK1
+file materialize dragonfly/patch-kde-modules_KDEMetaInfoPlatformCheck.cmake -> dragonfly/patch-kde-modules_KDEMetaInfoPlatformCheck.cmake
+file materialize dragonfly/patch-modules_ECMGeneratePkgConfigFile.cmake -> dragonfly/patch-modules_ECMGeneratePkgConfigFile.cmake

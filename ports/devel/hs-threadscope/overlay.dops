@@ -1,0 +1,18 @@
+port devel/hs-threadscope
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	mv ${WRKSRC}/${PORTNAME}.cabal ${WRKSRC}/${PORTNAME}.cabal.orig
+	awk '{print; if (tolower($$1) == "executable") {print "    extra-libraries: m"}}' \
+		${WRKSRC}/${PORTNAME}.cabal.orig > ${WRKSRC}/${PORTNAME}.cabal
+	${REINPLACE_CMD} -e 's@\(\|\| os(freebsd)\)@\1 || os(dragonfly)@g' \
+			 -e 's@-D_Nonnull=@& -D_Bool=int @g' \
+		${WRKSRC}/_cabal_deps/cairo-*/cairo.cabal \
+		${WRKSRC}/_cabal_deps/glib-*/glib.cabal \
+		${WRKSRC}/_cabal_deps/gtk-*/gtk.cabal \
+		${WRKSRC}/_cabal_deps/pango-*/pango.cabal
+MK1
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-__thread_in_CAST.hs -> dragonfly/patch-__thread_in_CAST.hs

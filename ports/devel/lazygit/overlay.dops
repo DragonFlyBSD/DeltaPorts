@@ -1,0 +1,8 @@
+port devel/lazygit
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set DFLY_UNMAINTAINED "yes"
+file materialize dragonfly/patch-vendor_github.com_OpenPeeDeeP_xdg_xdg__bsd.go -> dragonfly/patch-vendor_github.com_OpenPeeDeeP_xdg_xdg__bsd.go
+file materialize dragonfly/patch-vendor_github.com_cloudfoundry_jibber_jabber_jibber_jabber_unix.go -> dragonfly/patch-vendor_github.com_cloudfoundry_jibber_jabber_jibber_jabber_unix.go

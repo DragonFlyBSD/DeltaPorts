@@ -1,0 +1,10 @@
+port devel/glib20
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-gio_gunixmount.c -> dragonfly/patch-gio_gunixmount.c
+file materialize dragonfly/patch-gio_gunixmounts.c -> dragonfly/patch-gio_gunixmounts.c
+file materialize dragonfly/patch-gio_gunixvolume.c -> dragonfly/patch-gio_gunixvolume.c
+file materialize dragonfly/patch-gio_meson.build -> dragonfly/patch-gio_meson.build
+file materialize dragonfly/patch-gmodule_gmodule-dl.c -> dragonfly/patch-gmodule_gmodule-dl.c

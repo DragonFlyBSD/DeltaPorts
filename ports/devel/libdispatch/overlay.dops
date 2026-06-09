@@ -1,0 +1,16 @@
+port devel/libdispatch
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set USE_CLANG_FALLBACK "default"
+file materialize dragonfly/patch-CMakeLists.txt -> dragonfly/patch-CMakeLists.txt
+file materialize dragonfly/patch-src_event_event__internal.h -> dragonfly/patch-src_event_event__internal.h
+file materialize dragonfly/patch-src_event_event__kevent.c -> dragonfly/patch-src_event_event__kevent.c
+file materialize dragonfly/patch-src_queue.c -> dragonfly/patch-src_queue.c
+file materialize dragonfly/patch-src_shims_lock.c -> dragonfly/patch-src_shims_lock.c
+file materialize dragonfly/patch-src_shims_lock.h -> dragonfly/patch-src_shims_lock.h
+file materialize dragonfly/patch-src_stdatomic.h -> dragonfly/patch-src_stdatomic.h
+file materialize dragonfly/patch-src_transform.c -> dragonfly/patch-src_transform.c
+file materialize dragonfly/patch-tests_dispatch__io__net.c -> dragonfly/patch-tests_dispatch__io__net.c
+file materialize dragonfly/patch-tests_dispatch__test.h -> dragonfly/patch-tests_dispatch__test.h

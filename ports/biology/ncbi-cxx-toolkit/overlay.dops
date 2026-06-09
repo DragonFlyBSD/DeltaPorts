@@ -1,0 +1,18 @@
+port biology/ncbi-cxx-toolkit
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-include_ctools_ctransition_ncbimem.hpp -> dragonfly/patch-include_ctools_ctransition_ncbimem.hpp
+file materialize dragonfly/patch-scripts_common_common.sh -> dragonfly/patch-scripts_common_common.sh
+file materialize dragonfly/patch-src_build-system_configure -> dragonfly/patch-src_build-system_configure
+file materialize dragonfly/patch-src_cgi_user__agent.cpp -> dragonfly/patch-src_cgi_user__agent.cpp
+file materialize dragonfly/patch-src_corelib_ncbifile.cpp -> dragonfly/patch-src_corelib_ncbifile.cpp
+file materialize dragonfly/patch-src_corelib_test_test__ncbi__system.sh -> dragonfly/patch-src_corelib_test_test__ncbi__system.sh
+file materialize dragonfly/patch-src_dbapi_driver_ftds100_freetds_tds_net.c -> dragonfly/patch-src_dbapi_driver_ftds100_freetds_tds_net.c
+file materialize dragonfly/patch-src_dbapi_driver_ftds95_freetds_tds_net.c -> dragonfly/patch-src_dbapi_driver_ftds95_freetds_tds_net.c
+file materialize dragonfly/patch-src_objects_valid_Makefile.valid.lib -> dragonfly/patch-src_objects_valid_Makefile.valid.lib
+file materialize dragonfly/patch-src_util_checksum_cityhash_city.cc -> dragonfly/patch-src_util_checksum_cityhash_city.cc
+file materialize dragonfly/patch-src_util_checksum_farmhash_farmhash.h -> dragonfly/patch-src_util_checksum_farmhash_farmhash.h
+file materialize dragonfly/patch-src_util_lmdb_mdb.c -> dragonfly/patch-src_util_lmdb_mdb.c

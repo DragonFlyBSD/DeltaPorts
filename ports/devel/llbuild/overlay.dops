@@ -1,0 +1,20 @@
+port devel/llbuild
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "ncurses"
+mk set USE_CLANG_FALLBACK "default"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@[[:<:]]curses[[:>:]]@ncurses@'	\
+		${WRKSRC}/products/llbuild/CMakeLists.txt	\
+		${WRKSRC}/products/libllbuild/CMakeLists.txt	\
+		${WRKSRC}/products/swift-build-tool/CMakeLists.txt \
+		${WRKSRC}/unittests/Core/CMakeLists.txt		\
+		${WRKSRC}/unittests/Basic/CMakeLists.txt	\
+		${WRKSRC}/unittests/BuildSystem/CMakeLists.txt	\
+		${WRKSRC}/unittests/Ninja/CMakeLists.txt
+MK1
+file materialize dragonfly/patch-CMakeLists.txt -> dragonfly/patch-CMakeLists.txt
+file materialize dragonfly/patch-lib_Basic_CMakeLists.txt -> dragonfly/patch-lib_Basic_CMakeLists.txt
+file materialize dragonfly/patch-lib_llvm_Support_CMakeLists.txt -> dragonfly/patch-lib_llvm_Support_CMakeLists.txt

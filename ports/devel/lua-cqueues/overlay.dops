@@ -1,0 +1,7 @@
+port devel/lua-cqueues
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "localbase:ldflags"
+file materialize dragonfly/patch-src_lib_dns.c -> dragonfly/patch-src_lib_dns.c

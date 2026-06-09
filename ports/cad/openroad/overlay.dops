@@ -1,0 +1,15 @@
+port cad/openroad
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add BUILD_DEPENDS "cxxfs_gcc8>0:misc/cxxfs_gcc8"
+mk add CXXFLAGS "-isystem ${LOCALBASE}/cxxfs_gcc8"
+mk add LDFLAGS "-L${LOCALBASE}/cxxfs_gcc8"
+mk target set dfly-patch <<'MK1'
+	${MKDIR} ${BUILD_WRKSRC}
+	${TOUCH} ${BUILD_WRKSRC}/build.ninja
+MK1
+file materialize dragonfly/patch-src_cts_src_TechChar.cpp -> dragonfly/patch-src_cts_src_TechChar.cpp
+file materialize dragonfly/patch-src_replace_src_graphics.cpp -> dragonfly/patch-src_replace_src_graphics.cpp
+file materialize dragonfly/patch-src_sta_search_Power.cc -> dragonfly/patch-src_sta_search_Power.cc

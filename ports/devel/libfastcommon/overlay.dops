@@ -1,0 +1,7 @@
+port devel/libfastcommon
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-make.sh -> dragonfly/patch-make.sh
+file materialize dragonfly/patch-src_system__info.c -> dragonfly/patch-src_system__info.c

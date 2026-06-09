@@ -1,0 +1,9 @@
+port dns/knot3
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-src_contrib_net.c -> dragonfly/patch-src_contrib_net.c
+file materialize dragonfly/patch-src_libknot_endian.h -> dragonfly/patch-src_libknot_endian.h
+file materialize dragonfly/patch-src_utils_common_netio.c -> dragonfly/patch-src_utils_common_netio.c

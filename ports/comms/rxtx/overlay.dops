@@ -1,0 +1,8 @@
+port comms/rxtx
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "alias"
+mk set ARCH "amd64"
+file materialize dragonfly/patch-src_ParallelImp.c -> dragonfly/patch-src_ParallelImp.c

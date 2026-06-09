@@ -1,0 +1,9 @@
+port deskutils/gworkspace
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e '/SYS_STATVFS/d' ${WRKSRC}/FSNode/config.h.in
+MK1
+file materialize dragonfly/patch-FSNode_GNUmakefile -> dragonfly/patch-FSNode_GNUmakefile

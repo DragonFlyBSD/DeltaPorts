@@ -1,0 +1,7 @@
+port devel/intel-graphics-compiler
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-SPIRV-Tools_CMakeLists.txt -> dragonfly/patch-SPIRV-Tools_CMakeLists.txt
+file materialize dragonfly/patch-visa_SpillManagerGMRF.cpp -> dragonfly/patch-visa_SpillManagerGMRF.cpp

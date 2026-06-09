@@ -1,0 +1,11 @@
+port devel/hapy
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set USE_CXXSTD "c++98"
+file materialize dragonfly/patch-doc_calc.cc -> dragonfly/patch-doc_calc.cc
+file materialize dragonfly/patch-doc_calci.cc -> dragonfly/patch-doc_calci.cc
+file materialize dragonfly/patch-src_Assert.cc -> dragonfly/patch-src_Assert.cc
+file materialize dragonfly/patch-src_RuleBase.cc -> dragonfly/patch-src_RuleBase.cc
+file materialize dragonfly/patch-src_SizeCalc.cc -> dragonfly/patch-src_SizeCalc.cc

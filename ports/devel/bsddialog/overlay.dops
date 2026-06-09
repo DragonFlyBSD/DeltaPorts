@@ -1,0 +1,16 @@
+port devel/bsddialog
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "ncurses"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@-fstack-protector-strong -Qunused-arguments@-Wno-implicit-fallthrough@g' \
+		${WRKSRC}/lib/Makefile
+	${REINPLACE_CMD} -e 's@-Werror@@g' \
+			 -e 's@-ltinfow@-ltinfo@g' \
+		${WRKSRC}/Makefile \
+		${WRKSRC}/utility/Makefile
+		
+MK1
+file materialize dragonfly/patch-lib_Makefile -> dragonfly/patch-lib_Makefile

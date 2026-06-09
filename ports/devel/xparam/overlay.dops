@@ -1,0 +1,13 @@
+port devel/xparam
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-lib_antlr_antlr_CharScanner.hpp -> dragonfly/patch-lib_antlr_antlr_CharScanner.hpp
+file materialize dragonfly/patch-lib_antlr_src_CharScanner.cpp -> dragonfly/patch-lib_antlr_src_CharScanner.cpp
+file materialize dragonfly/patch-lib_antlr_src_Parser.cpp -> dragonfly/patch-lib_antlr_src_Parser.cpp
+file materialize dragonfly/patch-lib_antlr_src_TreeParser.cpp -> dragonfly/patch-lib_antlr_src_TreeParser.cpp
+file materialize dragonfly/patch-lib_sources_xp__loader.cpp -> dragonfly/patch-lib_sources_xp__loader.cpp
+file materialize dragonfly/patch-lib_sources_xpv_tentative.cpp -> dragonfly/patch-lib_sources_xpv_tentative.cpp
+file materialize dragonfly/patch-lib_xparam_xp_raw_bytes.h -> dragonfly/patch-lib_xparam_xp_raw_bytes.h
+file materialize dragonfly/patch-lib_xparam_xpv_reg_macros.h -> dragonfly/patch-lib_xparam_xpv_reg_macros.h

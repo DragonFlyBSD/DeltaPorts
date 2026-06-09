@@ -1,0 +1,22 @@
+port comms/qsstv
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set LIB_DEPENDS "${LIB_DEPENDS:Nlibpulse*}"
+mk target set dfly-patch <<'MK1'
+	${RM} -f ${WRKSRC}/sound/soundpulse.*
+	${REINPLACE_CMD} -e 's@-lpulse-simple@@g' -e 's@-lpulse@@g' \
+			  -e 's@sound/soundpulse.cpp@@g' \
+			  -e 's@sound/soundpulse.h@@g' \
+		${WRKSRC}/qsstv.pro
+	${REINPLACE_CMD} -e '/<malloc\.h>/d' \
+		${WRKSRC}/drmrx/channeldecode.cpp \
+		${WRKSRC}/drmrx/deinterleaver.cpp \
+		${WRKSRC}/drmrx/getmode.cpp \
+		${WRKSRC}/drmrx/mkfacmap.cpp \
+		${WRKSRC}/drmrx/mkmscmap.cpp \
+		${WRKSRC}/drmrx/psdcmean.cpp \
+		${WRKSRC}/drmrx/psdmean.cpp
+MK1
+file materialize dragonfly/patch-mainwindow.cpp -> dragonfly/patch-mainwindow.cpp

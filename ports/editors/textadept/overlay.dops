@@ -1,0 +1,13 @@
+port editors/textadept
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "ncurses"
+mk target set dfly-patch <<'MK1'
+	${CP} -v ${WRKSRC}/src/cdk/menu.h ${WRKSRC}/src/cdk/cdkmenu.h
+	${REINPLACE_CMD} -e 's,<menu.h>,<cdkmenu.h>,g' \
+		${WRKSRC}/src/cdk/cdk.h
+MK1
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-src_textadept.c -> dragonfly/patch-src_textadept.c

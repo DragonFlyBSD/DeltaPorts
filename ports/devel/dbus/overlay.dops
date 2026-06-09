@@ -1,0 +1,7 @@
+port devel/dbus
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-dbus_dbus-sysdeps-unix.c -> dragonfly/patch-dbus_dbus-sysdeps-unix.c
+file materialize dragonfly/patch-tools_dbus-launch.c -> dragonfly/patch-tools_dbus-launch.c

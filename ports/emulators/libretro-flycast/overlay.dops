@@ -1,0 +1,9 @@
+port emulators/libretro-flycast
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+file materialize dragonfly/patch-core_deps_miniupnpc_CMakeLists.txt -> dragonfly/patch-core_deps_miniupnpc_CMakeLists.txt
+file materialize dragonfly/patch-core_deps_miniupnpc_src_minissdpc.c -> dragonfly/patch-core_deps_miniupnpc_src_minissdpc.c
+file materialize dragonfly/patch-core_network_net__platform.h -> dragonfly/patch-core_network_net__platform.h

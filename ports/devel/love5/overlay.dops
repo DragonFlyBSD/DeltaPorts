@@ -1,0 +1,7 @@
+port devel/love5
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-src_liblove_include_love_File.h -> dragonfly/patch-src_liblove_include_love_File.h
+file materialize dragonfly/patch-src_opengl_ImageFont.h -> dragonfly/patch-src_opengl_ImageFont.h

@@ -1,0 +1,6 @@
+port devel/cpp-netlib
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-http_test_server.hpp -> dragonfly/patch-http_test_server.hpp

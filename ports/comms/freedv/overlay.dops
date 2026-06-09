@@ -1,0 +1,9 @@
+port comms/freedv
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add LDFLAGS "-fopenmp"
+mk set USE_CXXSTD "c++11"
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-src_dlg__ptt.cpp -> dragonfly/patch-src_dlg__ptt.cpp

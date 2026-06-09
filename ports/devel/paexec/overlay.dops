@@ -1,0 +1,7 @@
+port devel/paexec
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add MAKE_ENV "WARNS=0"
+file materialize dragonfly/patch-paexec_tasks.c -> dragonfly/patch-paexec_tasks.c

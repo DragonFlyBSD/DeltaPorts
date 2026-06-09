@@ -1,0 +1,9 @@
+port devel/open-beagle
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-PACC_Math_Vector.hpp -> dragonfly/patch-PACC_Math_Vector.hpp
+file materialize dragonfly/patch-PACC_Socket_Cafe.cpp -> dragonfly/patch-PACC_Socket_Cafe.cpp
+file materialize dragonfly/patch-PACC_Util_Assert.hpp -> dragonfly/patch-PACC_Util_Assert.hpp
+file materialize dragonfly/patch-PACC_Util_Tokenizer.cpp -> dragonfly/patch-PACC_Util_Tokenizer.cpp

@@ -1,0 +1,7 @@
+port devel/dragon
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-samples_gxmain-master.cc -> dragonfly/patch-samples_gxmain-master.cc
+file materialize dragonfly/patch-src_Main.cc -> dragonfly/patch-src_Main.cc

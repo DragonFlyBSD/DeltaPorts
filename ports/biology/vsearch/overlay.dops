@@ -1,0 +1,8 @@
+port biology/vsearch
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set DFLY_UNMAINTAINED "yes"
+file materialize dragonfly/patch-src_city.cc -> dragonfly/patch-src_city.cc
+file materialize dragonfly/patch-src_vsearch.h -> dragonfly/patch-src_vsearch.h

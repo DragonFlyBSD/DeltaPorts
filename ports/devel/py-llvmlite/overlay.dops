@@ -1,0 +1,7 @@
+port devel/py-llvmlite
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-ffi_Makefile.freebsd -> dragonfly/patch-ffi_Makefile.freebsd
+file materialize dragonfly/patch-ffi_build.py -> dragonfly/patch-ffi_build.py

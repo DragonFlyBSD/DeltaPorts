@@ -1,0 +1,18 @@
+port dns/yadifa
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "alias"
+mk add CONFIGURE_ARGS "--with-openssl=${OPENSSLBASE}"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@CCVER@&___@g' \
+			 -e 's@-DHAVE_CONFIG_H@& -D__FreeBSD__=9@g' \
+			 -e 's@FreeBSD)@FreeBSD|DragonFly)@g' \
+			 -e 's@defined __FreeBSD__@& || defined __DragonFly__@g' \
+		${WRKSRC}/configure
+MK1
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-lib_dnscore_src_random.c -> dragonfly/patch-lib_dnscore_src_random.c
+file materialize dragonfly/patch-sbin_yadifad_server-rv.c -> dragonfly/patch-sbin_yadifad_server-rv.c
+file materialize dragonfly/patch-sbin_yadifad_server-sm.c -> dragonfly/patch-sbin_yadifad_server-sm.c

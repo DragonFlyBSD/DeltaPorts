@@ -1,0 +1,14 @@
+port devel/check
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add CONFIGURE_ENV "ac_cv_lib_rt_clock_gettime__timer_create__timer_settime__timer_delete=no"
+mk target set post-extract <<'MK1'
+	@${REINPLACE_CMD} -e 's|timer_create|generic_timer_create|g' \
+	    ${WRKSRC}/lib/libcompat.h \
+	    ${WRKSRC}/lib/timer_create.c \
+	    ${WRKSRC}/src/check_run.c \
+	    ${WRKSRC}/src/check.c
+MK1
+file materialize dragonfly/patch-lib_snprintf.c -> dragonfly/patch-lib_snprintf.c

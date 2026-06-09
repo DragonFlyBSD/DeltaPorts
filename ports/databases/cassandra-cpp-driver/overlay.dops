@@ -1,0 +1,7 @@
+port databases/cassandra-cpp-driver
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-src_random.cpp -> dragonfly/patch-src_random.cpp
+file materialize dragonfly/patch-src_third__party_minizip_ioapi.h -> dragonfly/patch-src_third__party_minizip_ioapi.h

@@ -1,0 +1,9 @@
+port editors/texmacs
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-plugins_r_src_tm__r.c -> dragonfly/patch-plugins_r_src_tm__r.c
+file materialize dragonfly/patch-src_System_Link_pipe__link.cpp -> dragonfly/patch-src_System_Link_pipe__link.cpp
+file materialize dragonfly/patch-src_System_Link_socket__notifier.cpp -> dragonfly/patch-src_System_Link_socket__notifier.cpp
+file materialize dragonfly/patch-src_System_Misc_fast__alloc.hpp -> dragonfly/patch-src_System_Misc_fast__alloc.hpp

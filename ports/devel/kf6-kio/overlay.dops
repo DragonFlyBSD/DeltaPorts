@@ -1,0 +1,13 @@
+port devel/kf6-kio
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "gmake"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's/^.*\- name: FreeBSD/&\n    - name: DragonFly/g' \
+		${WRKSRC}/metainfo.yaml
+	${REINPLACE_CMD} -e 's,Q_OS_FREEBSD,Q_OS_DRAGONFLY,g' \
+		${WRKSRC}/src/gui/openfilemanagerwindowjob_p.h
+MK1
+file materialize dragonfly/patch-src_kioworkers_file_file__unix.cpp -> dragonfly/patch-src_kioworkers_file_file__unix.cpp

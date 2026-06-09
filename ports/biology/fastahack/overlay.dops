@@ -1,0 +1,6 @@
+port biology/fastahack
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-LargeFileSupport.h -> dragonfly/patch-LargeFileSupport.h

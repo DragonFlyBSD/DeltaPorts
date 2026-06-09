@@ -1,0 +1,7 @@
+port devel/libubox
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-uloop.h -> dragonfly/patch-uloop.h
+file materialize dragonfly/patch-utils.h -> dragonfly/patch-utils.h

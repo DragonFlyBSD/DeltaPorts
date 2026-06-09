@@ -1,0 +1,7 @@
+port comms/librs232
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-rs232.c -> dragonfly/patch-rs232.c
+file materialize dragonfly/patch-rs232.h -> dragonfly/patch-rs232.h

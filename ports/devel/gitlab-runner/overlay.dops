@@ -1,0 +1,10 @@
+port devel/gitlab-runner
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-commands_config__unix.go -> dragonfly/patch-commands_config__unix.go
+file materialize dragonfly/patch-helpers_archives_zip__extra__unix.go -> dragonfly/patch-helpers_archives_zip__extra__unix.go
+file materialize dragonfly/patch-vendor_github.com_docker_docker_client_client__unix.go -> dragonfly/patch-vendor_github.com_docker_docker_client_client__unix.go
+file materialize dragonfly/patch-vendor_github.com_moby_term_termios_bsd.go -> dragonfly/patch-vendor_github.com_moby_term_termios_bsd.go
+file materialize dragonfly/patch-vendor_github.com_moby_term_termios_nonbsd.go -> dragonfly/patch-vendor_github.com_moby_term_termios_nonbsd.go

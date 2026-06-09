@@ -1,0 +1,10 @@
+port emulators/dps8m
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add USES "alias localbase:ldflags"
+mk add MAKE_ARGS "ROUND_ROBIN=1"
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-src_dps8_dps8__cpu.h -> dragonfly/patch-src_dps8_dps8__cpu.h
+file materialize dragonfly/patch-src_dps8_dps8__math.c -> dragonfly/patch-src_dps8_dps8__math.c

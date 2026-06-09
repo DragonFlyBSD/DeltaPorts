@@ -1,0 +1,6 @@
+port editors/abiword
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-src_af_util_xp_ut__endian.h -> dragonfly/patch-src_af_util_xp_ut__endian.h

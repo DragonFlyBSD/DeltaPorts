@@ -1,0 +1,6 @@
+port devel/astyle
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-src_astyle__main.cpp -> dragonfly/patch-src_astyle__main.cpp

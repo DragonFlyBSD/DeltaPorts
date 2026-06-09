@@ -1,0 +1,7 @@
+port emulators/libretro-kronos
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+file materialize dragonfly/patch-yabause_src_core_m68k_Counter.cpp -> dragonfly/patch-yabause_src_core_m68k_Counter.cpp

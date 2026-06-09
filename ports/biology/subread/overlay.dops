@@ -1,0 +1,13 @@
+port biology/subread
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-HelperFunctions.c -> dragonfly/patch-HelperFunctions.c
+file materialize dragonfly/patch-gene-algorithms.c -> dragonfly/patch-gene-algorithms.c
+file materialize dragonfly/patch-input-files.c -> dragonfly/patch-input-files.c
+file materialize dragonfly/patch-long-hashtable.c -> dragonfly/patch-long-hashtable.c
+file materialize dragonfly/patch-longread-one_LRMsorted-hashtable.c -> dragonfly/patch-longread-one_LRMsorted-hashtable.c
+file materialize dragonfly/patch-longread-one_longread-mapping.c -> dragonfly/patch-longread-one_longread-mapping.c
+file materialize dragonfly/patch-sorted-hashtable.c -> dragonfly/patch-sorted-hashtable.c
+file materialize dragonfly/patch-subread.h -> dragonfly/patch-subread.h

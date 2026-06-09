@@ -1,0 +1,17 @@
+port devel/nspr
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add PLIST_FILES "include/nspr/md/_dragonfly.cfg"
+file materialize dragonfly/patch-configure -> dragonfly/patch-configure
+file materialize dragonfly/patch-nsprpub_pr_include_md___dragonfly.h -> dragonfly/patch-nsprpub_pr_include_md___dragonfly.h
+file materialize dragonfly/patch-pr_include_md___dragonfly.cfg -> dragonfly/patch-pr_include_md___dragonfly.cfg
+file materialize dragonfly/patch-pr_include_md___freebsd.h -> dragonfly/patch-pr_include_md___freebsd.h
+file materialize dragonfly/patch-pr_include_md___pth.h -> dragonfly/patch-pr_include_md___pth.h
+file materialize dragonfly/patch-pr_include_md_prosdep.h -> dragonfly/patch-pr_include_md_prosdep.h
+file materialize dragonfly/patch-pr_src_md_unix_uxrng.c -> dragonfly/patch-pr_src_md_unix_uxrng.c
+file materialize dragonfly/patch-pr_src_misc_prnetdb.c -> dragonfly/patch-pr_src_misc_prnetdb.c
+file materialize dragonfly/patch-pr_src_pthreads_ptio.c -> dragonfly/patch-pr_src_pthreads_ptio.c
+file materialize dragonfly/patch-pr_src_pthreads_ptsynch.c -> dragonfly/patch-pr_src_pthreads_ptsynch.c
+file materialize dragonfly/patch-pr_tests_Makefile.in -> dragonfly/patch-pr_tests_Makefile.in

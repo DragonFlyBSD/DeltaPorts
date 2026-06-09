@@ -1,0 +1,6 @@
+port emulators/fuse-utils
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-compat_unix_osname.c -> dragonfly/patch-compat_unix_osname.c

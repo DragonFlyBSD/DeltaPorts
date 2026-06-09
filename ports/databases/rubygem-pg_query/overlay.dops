@@ -1,0 +1,6 @@
+port databases/rubygem-pg_query
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-ext_pg__query_include_postgres_pg__config.h -> dragonfly/patch-ext_pg__query_include_postgres_pg__config.h

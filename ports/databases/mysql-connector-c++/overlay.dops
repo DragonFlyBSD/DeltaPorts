@@ -1,0 +1,8 @@
+port databases/mysql-connector-c++
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk add LDFLAGS "-L${LOCALBASE}/lib"
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+file materialize dragonfly/patch-FindMySQL.cmake -> dragonfly/patch-FindMySQL.cmake

@@ -1,0 +1,11 @@
+port devel/ccls
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set LIB_DEPENDS "${LIB_DEPENDS:Nlibclang*} libclang.so:devel/llvm${LLVM_DEFAULT}"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e "/CLANG_EXECUTABLE/s@ clang)@ clang${LLVM_DEFAULT})@g" \
+		${WRKSRC}/CMakeLists.txt
+MK1
+file materialize dragonfly/patch-CMakeLists.txt -> dragonfly/patch-CMakeLists.txt

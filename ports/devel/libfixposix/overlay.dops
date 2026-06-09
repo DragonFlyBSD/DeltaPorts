@@ -1,0 +1,7 @@
+port devel/libfixposix
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-src_lib_ioctl.c -> dragonfly/patch-src_lib_ioctl.c
+file materialize dragonfly/patch-src_lib_spawnattr.c -> dragonfly/patch-src_lib_spawnattr.c

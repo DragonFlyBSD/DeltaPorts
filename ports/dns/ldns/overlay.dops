@@ -1,0 +1,7 @@
+port dns/ldns
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NEXAMPLES}"
+file materialize dragonfly/patch-Makefile.in -> dragonfly/patch-Makefile.in

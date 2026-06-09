@@ -1,0 +1,7 @@
+port devel/lua-posix
+type port
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+target @any
+
+file materialize dragonfly/patch-build-aux_luke -> dragonfly/patch-build-aux_luke
+file materialize dragonfly/patch-lukefile -> dragonfly/patch-lukefile
