@@ -311,6 +311,32 @@ def test_cli_inventory_classify_convert_batch_policy_progress(
     assert dashboard_payload["gates"]["policy_pass"] is False
 
 
+def test_converter_self_referential_assignment_emits_mk_eval(tmp_path: Path) -> None:
+    """A self-referential assignment (`VAR:= ${VAR:mod}`) is the BSD filter/
+    transform idiom, not a literal self-set. `mk set` would render a fatal
+    recursive `=`; the converter emits `mk eval` (verbatim immediate `:=`
+    append) for any modifier. Non-self-referential values stay `mk set`."""
+    from dportsv3.engine.api import parse_dsl
+    from dportsv3.migration.convert import _parse_makefile_dragonfly, _render_dops
+
+    mk = tmp_path / "Makefile.DragonFly"
+    mk.write_text(
+        "OPTIONS_DEFAULT:=\t${OPTIONS_DEFAULT:NSTUNNEL}\n"
+        "USES:=\t${USES:S/cargo/cargo:extra/}\n"
+        "LDFLAGS:=\t-L${LOCALBASE}/lib ${LDFLAGS}\n"
+        "USE_GCC_VERSION=\t${GCC_DEFAULT}\n"
+    )
+    ops, errors = _parse_makefile_dragonfly(mk)
+
+    assert errors == []
+    assert 'mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NSTUNNEL}"' in ops
+    assert 'mk eval USES "${USES:S/cargo/cargo:extra/}"' in ops
+    assert 'mk eval LDFLAGS "-L${LOCALBASE}/lib ${LDFLAGS}"' in ops
+    # references a DIFFERENT variable -> not self-referential -> mk set
+    assert 'mk set USE_GCC_VERSION "${GCC_DEFAULT}"' in ops
+    assert parse_dsl(_render_dops("devel/x", ops), Path("overlay.dops")).ok
+
+
 def test_converter_quotes_special_char_plus_assign(tmp_path: Path) -> None:
     """Regression: `+=` values with non-word chars (`>`, `:`, embedded
     `"`) must be emitted as quoted `mk add` tokens, not bare — a bare

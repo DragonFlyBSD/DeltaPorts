@@ -3,5 +3,5 @@ type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
-mk set LDFLAGS "${LDFLAGS:N-lgnuregex} -lintl"
+mk eval LDFLAGS "${LDFLAGS:N-lgnuregex} -lintl"
 file materialize dragonfly/patch-pan_tasks_socket.cc -> dragonfly/patch-pan_tasks_socket.cc

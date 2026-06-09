@@ -117,6 +117,60 @@ def exec_mk_var_set(
     return _success_row(op, "mk-var-set")
 
 
+def exec_mk_var_eval(
+    op: PlanOp, context: ApplyContext, txn: FileTransaction
+) -> ApplyOpResult:
+    # Append a verbatim immediate (`:=`) assignment at the end of the port
+    # Makefile body, reproducing a trailing Makefile.DragonFly fragment. This
+    # is the faithful representation of a self-referential assignment
+    # (`VAR:= ${VAR:S/a/b/}`, `${VAR:N...}`, prepend, etc.): immediate
+    # expansion sees the fully-accumulated upstream value, and unlike `mk set`
+    # it never rewrites the upstream line (which would make `=` recursive).
+    # The op TYPE declares the intent — the executor does not inspect value.
+    name = op.payload.get("name")
+    value = op.payload.get("value")
+    if not isinstance(name, str) or not isinstance(value, str):
+        return _failed_row(
+            op,
+            code="E_APPLY_INVALID_OPERATION",
+            message="mk.var.eval requires name and value",
+        )
+
+    try:
+        path = _resolve_path(context.port_root, None, default="Makefile")
+    except ValueError as exc:
+        return _failed_row(
+            op,
+            code="E_APPLY_INVALID_PATH",
+            message=str(exc),
+            source_path=context.port_root,
+        )
+
+    loaded = _load_makefile(txn, path)
+    if loaded is None:
+        return _missing_row(
+            op,
+            policy=_on_missing(op),
+            message="Makefile does not exist",
+            source_path=path,
+        )
+
+    text, document = loaded
+    replacement = f"{name}:= {value}"
+    insert_before = _insert_before_last_include_line(document)
+    if insert_before is None:
+        line_count = len(text.splitlines(keepends=False))
+        updated = _replace_line_range(
+            text, start=line_count + 1, end=line_count, new_lines=[replacement]
+        )
+    else:
+        updated = _replace_line_range(
+            text, start=insert_before, end=insert_before - 1, new_lines=[replacement]
+        )
+    txn.stage_write(path, updated)
+    return _success_row(op, "mk-var-eval")
+
+
 def exec_mk_var_unset(
     op: PlanOp, context: ApplyContext, txn: FileTransaction
 ) -> ApplyOpResult:

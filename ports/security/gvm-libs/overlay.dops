@@ -3,8 +3,8 @@ type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
-mk set BUILD_DEPENDS "${BUILD_DEPENDS:Ndoxygen*}"
-mk set RUN_DEPENDS "${RUN_DEPENDS:Ndoxygen*}"
+mk eval BUILD_DEPENDS "${BUILD_DEPENDS:Ndoxygen*}"
+mk eval RUN_DEPENDS "${RUN_DEPENDS:Ndoxygen*}"
 mk add PLIST_FILES "\"@dir /var/run/gvm\""
 file materialize dragonfly/patch-base_hosts.c -> dragonfly/patch-base_hosts.c
 file materialize dragonfly/patch-base_networking.h -> dragonfly/patch-base_networking.h

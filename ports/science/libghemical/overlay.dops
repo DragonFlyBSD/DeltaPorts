@@ -3,5 +3,5 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set BUILD_DEPENDS "${BUILD_DEPENDS:N*binutils}"
-mk set CONFIGURE_ENV "${CONFIGURE_ENV:NLD_PRELOAD*}"
+mk eval BUILD_DEPENDS "${BUILD_DEPENDS:N*binutils}"
+mk eval CONFIGURE_ENV "${CONFIGURE_ENV:NLD_PRELOAD*}"

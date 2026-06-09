@@ -3,7 +3,7 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set BUILD_DEPENDS "${BUILD_DEPENDS:Ndoxygen*}"
+mk eval BUILD_DEPENDS "${BUILD_DEPENDS:Ndoxygen*}"
 mk set DFLY_PLIST "${WRKSRC}/pkg-plist"
 mk set PLIST "${DFLY_PLIST}"
 mk target set dfly-patch <<'MK1'

@@ -4,7 +4,7 @@ reason "auto-converted from Makefile.DragonFly"
 target @any
 
 mk set BROKEN "missing Elf64_Lib in elf.h"
-mk set LIB_DEPENDS "${LIB_DEPENDS:N*elfutils}"
+mk eval LIB_DEPENDS "${LIB_DEPENDS:N*elfutils}"
 mk add BUILD_DEPENDS "elfutils>0:devel/elfutils"
 mk add RUN_DEPENDS "elfutils>0:devel/elfutils"
 mk add CFLAGS "-I${LOCALBASE}/include/elfutils -I${LOCALBASE}/include"

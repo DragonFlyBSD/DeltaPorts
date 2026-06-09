@@ -3,7 +3,7 @@ type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
-mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NDSAPARAM}"
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NDSAPARAM}"
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e "s@openssl dhparam@${LOCALBASE}/bin/&@g" \
 		${WRKSRC}/Makefile.in

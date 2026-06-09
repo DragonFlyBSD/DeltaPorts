@@ -7,7 +7,7 @@ mk add USES "alias"
 mk add BUILD_DEPENDS "cxxfs_gcc8>0:misc/cxxfs_gcc8"
 mk add CXXFLAGS "-isystem ${LOCALBASE}/cxxfs_gcc8"
 mk add LDFLAGS "-L${LOCALBASE}/cxxfs_gcc8"
-mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NGRASS}"
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NGRASS}"
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@STREQUAL "FreeBSD"@MATCHES "FreeBSD|DragonFly"@g' \
 		${WRKSRC}/cmake/FindGRASS.cmake \

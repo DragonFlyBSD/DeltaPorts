@@ -3,5 +3,5 @@ type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
-mk set USES "${USES:Nninja} gmake"
+mk eval USES "${USES:Nninja} gmake"
 file materialize dragonfly/patch-stellarsolver_stellarsolver.cpp -> dragonfly/patch-stellarsolver_stellarsolver.cpp

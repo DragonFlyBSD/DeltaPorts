@@ -3,7 +3,7 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set USE_KDE "${USE_KDE:Nwayland}"
+mk eval USE_KDE "${USE_KDE:Nwayland}"
 mk add USES "gmake"
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's/^.*\- name: FreeBSD/&\n    - name: DragonFly/g' \

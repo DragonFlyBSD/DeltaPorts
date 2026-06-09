@@ -4,4 +4,4 @@ reason "auto-converted from Makefile.DragonFly"
 target @any
 
 mk add OPTIONS_EXCLUDE "SCTP"
-mk set CFLAGS "${CFLAGS:N-Werror:N-Qunused-arguments}"
+mk eval CFLAGS "${CFLAGS:N-Werror:N-Qunused-arguments}"

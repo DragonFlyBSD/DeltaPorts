@@ -3,6 +3,6 @@ type port
 reason "auto-converted from compat (fragment + diffs/)"
 target @any
 
-mk set LIBS "${LIBS:N-lmd}"
+mk eval LIBS "${LIBS:N-lmd}"
 file remove files/patch-src__Makefile.in on-missing noop
 file remove files/patch-src__miscencdec.c on-missing noop

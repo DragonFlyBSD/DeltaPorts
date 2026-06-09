@@ -3,7 +3,7 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NOPENMP}"
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NOPENMP}"
 mk set _LTO_FLAGS ""
 mk set _AR "ar"
 mk set _RANLIB "ranlib"

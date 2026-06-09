@@ -3,8 +3,8 @@ type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
-mk set USES "${USES:Nssl}"
-mk set LIB_DEPENDS "${LIB_DEPENDS:Nlibtls*}"
+mk eval USES "${USES:Nssl}"
+mk eval LIB_DEPENDS "${LIB_DEPENDS:Nlibtls*}"
 mk add BUILD_DEPENDS "libressl-static>0:security/libressl-static"
 mk add CFLAGS "-I${LOCALBASE}/libressl-static/include"
 mk set LDFLAGS "-L${LOCALBASE}/libressl-static/lib -ltls -lssl -lcrypto"

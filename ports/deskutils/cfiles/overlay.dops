@@ -5,4 +5,4 @@ target @any
 
 mk add USES "ncurses pkgconfig"
 mk add CFLAGS "-L${LOCALBASE}/lib"
-mk set MAKE_ARGS "${MAKE_ARGS:NNCURSES*}"
+mk eval MAKE_ARGS "${MAKE_ARGS:NNCURSES*}"

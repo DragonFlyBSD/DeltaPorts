@@ -3,7 +3,7 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set LDFLAGS "${LDFLAGS:N-lroken}"
+mk eval LDFLAGS "${LDFLAGS:N-lroken}"
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e '/roken.h/d'	\
 		${WRKSRC}/dupmerge.c

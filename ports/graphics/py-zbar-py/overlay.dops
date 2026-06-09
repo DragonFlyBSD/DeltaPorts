@@ -3,5 +3,5 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set LIB_DEPENDS "${LIB_DEPENDS:Nlibzbar.so\\:graphics\\/zbar}"
+mk eval LIB_DEPENDS "${LIB_DEPENDS:Nlibzbar.so\\:graphics\\/zbar}"
 mk add LDFLAGS "${ICONV_LIB}"

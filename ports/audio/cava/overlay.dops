@@ -4,5 +4,5 @@ reason "auto-converted from Makefile.DragonFly"
 target @any
 
 mk add USES "alias"
-mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NPULSEAUDIO}"
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NPULSEAUDIO}"
 mk set DFLY_UNMAINTAINED "yes"

@@ -4,4 +4,4 @@ reason "auto-converted from Makefile.DragonFly"
 target @any
 
 mk add USES "ncurses"
-mk set LIB_DEPENDS "${LIB_DEPENDS:Nlibpulse*}"
+mk eval LIB_DEPENDS "${LIB_DEPENDS:Nlibpulse*}"

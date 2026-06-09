@@ -3,4 +3,4 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set CFLAGS "${CFLAGS:N-Wno-error-narrowing} -Wno-narrowing"
+mk eval CFLAGS "${CFLAGS:N-Wno-error-narrowing} -Wno-narrowing"

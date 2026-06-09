@@ -3,7 +3,7 @@ type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
-mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NNETMAP}"
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NNETMAP}"
 mk add LDFLAGS "-lm"
 mk set IGNORE "unmaintained, please request fixing to users mailing list"
 file materialize dragonfly/patch-src_threads.h -> dragonfly/patch-src_threads.h

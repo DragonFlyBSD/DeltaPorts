@@ -5,7 +5,7 @@ target @any
 
 mk add OPTIONS_DEFINE "MPI"
 mk set OPTIONS_SUB "yes"
-mk set LIB_DEPENDS "${LIB_DEPENDS:Nlibmpich*}"
+mk eval LIB_DEPENDS "${LIB_DEPENDS:Nlibmpich*}"
 mk add CONFIGURE_ARGS "--disable-mpi"
 mk set DFLY_PLIST "${WRKSRC}/pkg-plist"
 mk set PLIST "${DFLY_PLIST}"

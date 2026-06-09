@@ -4,7 +4,7 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
 mk set BSDVIDEO_BROKEN "bsdvideo plugin doesn't build on DragonFly"
-mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NBSDVIDEO}"
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NBSDVIDEO}"
 mk add CFLAGS "-Wno-deprecated-declarations"
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@STDCXXFLAGS)@& -fpermissive@g' \

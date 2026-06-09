@@ -3,8 +3,8 @@ type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
-mk set BUILD_DEPENDS "${BUILD_DEPENDS:Ndoxygen*}"
-mk set RUN_DEPENDS "${RUN_DEPENDS:Ndoxygen*}"
+mk eval BUILD_DEPENDS "${BUILD_DEPENDS:Ndoxygen*}"
+mk eval RUN_DEPENDS "${RUN_DEPENDS:Ndoxygen*}"
 mk add PLIST_FILES "\"@dir /var/lib\""
 file materialize dragonfly/patch-src_manage__migrators.c -> dragonfly/patch-src_manage__migrators.c
 file materialize dragonfly/patch-src_utils.c -> dragonfly/patch-src_utils.c

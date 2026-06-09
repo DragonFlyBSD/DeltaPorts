@@ -3,7 +3,7 @@ type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
-mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NCLANG}"
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NCLANG}"
 mk target set dfly-install <<'MK1'
 	${TOUCH} ${STAGEDIR}${LOCALBASE}/libexec/gnome-builder-clang
 	${TOUCH} ${STAGEDIR}${LOCALBASE}/share/glib-2.0/schemas/org.gnome.builder.clang.gschema.xml

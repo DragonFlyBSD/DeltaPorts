@@ -3,7 +3,7 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NGSSAPI_BASE:NTP_IPF} GSSAPI_MIT"
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NGSSAPI_BASE:NTP_IPF} GSSAPI_MIT"
 mk add CONFIGURE_ARGS "ac_cv_require_wno_deprecated_register=no"
 mk add CFLAGS "-Wno-stringop-truncation"
 mk add CXXFLAGS "-Wno-error"

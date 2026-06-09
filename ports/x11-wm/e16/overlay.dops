@@ -3,6 +3,6 @@ type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
-mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NPULSEAUDIO} SNDIO"
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NPULSEAUDIO} SNDIO"
 mk add LIB_DEPENDS "libdbus-1.so:devel/dbus"
 file materialize dragonfly/patch-eesh_main.c -> dragonfly/patch-eesh_main.c

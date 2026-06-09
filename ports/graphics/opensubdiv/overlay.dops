@@ -4,6 +4,6 @@ reason "auto-converted from Makefile.DragonFly"
 target @any
 
 mk add USES "python:3.7+,build"
-mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NTBB}"
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NTBB}"
 mk add OPTIONS_EXCLUDE "DOCS"
 mk add CMAKE_BOOL_OFF "NO_DOC"

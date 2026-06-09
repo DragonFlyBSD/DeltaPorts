@@ -3,4 +3,4 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set LDFLAGS "-L${LOCALBASE}/lib ${LDFLAGS}"
+mk eval LDFLAGS "-L${LOCALBASE}/lib ${LDFLAGS}"

@@ -3,7 +3,7 @@ type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
-mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NPULSEAUDIO}"
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NPULSEAUDIO}"
 file materialize dragonfly/patch-event -> dragonfly/patch-event
 file materialize dragonfly/patch-meson.build -> dragonfly/patch-meson.build
 file materialize dragonfly/patch-src_lib_ecore_Ecore.h -> dragonfly/patch-src_lib_ecore_Ecore.h

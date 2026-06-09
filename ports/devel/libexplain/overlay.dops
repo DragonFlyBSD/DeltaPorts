@@ -3,5 +3,5 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set RUN_DEPENDS "${RUN_DEPENDS:N*lsof}"
+mk eval RUN_DEPENDS "${RUN_DEPENDS:N*lsof}"
 mk set BROKEN "missing XATTR"

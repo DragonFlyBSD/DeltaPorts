@@ -4,8 +4,8 @@ reason "auto-converted from Makefile.DragonFly"
 target @any
 
 mk add USES "localbase:ldflags"
-mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NGUI:NOCC}"
-mk set LIB_DEPENDS "${LIB_DEPENDS:Nlibmpich*:Nlibparpack.so*}"
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NGUI:NOCC}"
+mk eval LIB_DEPENDS "${LIB_DEPENDS:Nlibmpich*:Nlibparpack.so*}"
 mk add CMAKE_OFF "WITH_MPI"
 mk set DFLY_PLIST "${WRKSRC}/pkg-plist"
 mk set PLIST "${DFLY_PLIST}"

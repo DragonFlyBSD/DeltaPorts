@@ -3,5 +3,5 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NMPI}"
-mk set LDFLAGS "-L${LOCALBASE}/lib ${LDFLAGS:N/usr/local/lib/libomp.so:N-lomp}"
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NMPI}"
+mk eval LDFLAGS "-L${LOCALBASE}/lib ${LDFLAGS:N/usr/local/lib/libomp.so:N-lomp}"

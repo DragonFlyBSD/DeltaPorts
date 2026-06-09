@@ -33,6 +33,7 @@ from dportsv3.engine.executors.mk_ops import (
     exec_mk_target_remove,
     exec_mk_target_rename,
     exec_mk_target_set,
+    exec_mk_var_eval,
     exec_mk_var_set,
     exec_mk_var_token_add,
     exec_mk_var_token_remove,
@@ -139,6 +140,7 @@ def _exec_patch_apply(
 def _known_registry() -> dict[str, Executor]:
     return {
         "mk.var.set": exec_mk_var_set,
+        "mk.var.eval": exec_mk_var_eval,
         "mk.var.unset": exec_mk_var_unset,
         "mk.var.token_add": exec_mk_var_token_add,
         "mk.var.token_remove": exec_mk_var_token_remove,

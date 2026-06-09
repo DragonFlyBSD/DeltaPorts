@@ -4,7 +4,7 @@ reason "auto-converted from Makefile.DragonFly"
 target @any
 
 mk add BUILD_DEPENDS "libstdthreads>0:misc/libstdthreads"
-mk set USES "${USES:N*flang} fortran"
+mk eval USES "${USES:N*flang} fortran"
 mk set BINARY_ALIAS "flang=gfortran8"
 mk add LDFLAGS "-Wl,-rpath=/usr/local/lib/gcc8 -L/usr/local/lib/gcc8"
 mk target set dfly-patch <<'MK1'

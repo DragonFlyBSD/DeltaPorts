@@ -3,4 +3,4 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set BINARY_ALIAS "${BINARY_ALIAS:Ngfortran=*} gfortran=gfortran${_GCC_VER}"
+mk eval BINARY_ALIAS "${BINARY_ALIAS:Ngfortran=*} gfortran=gfortran${_GCC_VER}"

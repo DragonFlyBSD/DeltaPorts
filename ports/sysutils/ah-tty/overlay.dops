@@ -3,7 +3,7 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set PLIST_FILES "${PLIST_FILES:Nbin/ah-tty.static}"
+mk eval PLIST_FILES "${PLIST_FILES:Nbin/ah-tty.static}"
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e '/bin_PROGRAMS/s@ah-tty.static@@g'	\
 		${WRKSRC}/Makefile.in

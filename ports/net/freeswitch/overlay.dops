@@ -4,7 +4,7 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
 mk add BUILD_DEPENDS "yasm:devel/yasm"
-mk set CFLAGS "${CFLAGS:N-W*} -Wno-stringop-truncation -Wno-stringop-overflow -Wno-format-truncation"
+mk eval CFLAGS "${CFLAGS:N-W*} -Wno-stringop-truncation -Wno-stringop-overflow -Wno-format-truncation"
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's|asm|__asm|' \
 		${WRKSRC}/libs/srtp/crypto/include/datatypes.h

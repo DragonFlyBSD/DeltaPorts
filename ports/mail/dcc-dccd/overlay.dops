@@ -4,8 +4,8 @@ reason "auto-converted from Makefile.DragonFly"
 target @any
 
 mk add USES "gmake"
-mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NDCCM}"
-mk set CONFIGURE_ARGS "${CONFIGURE_ARGS:N--without-DCC-MD5:N--with-installroot=*}"
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NDCCM}"
+mk eval CONFIGURE_ARGS "${CONFIGURE_ARGS:N--without-DCC-MD5:N--with-installroot=*}"
 mk add CONFIGURE_ARGS "--with-installroot=\\$${${DESTDIRNAME}}"
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@lock_open.c@& md5.c@' \

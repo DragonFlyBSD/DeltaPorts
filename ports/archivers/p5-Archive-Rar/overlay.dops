@@ -3,5 +3,5 @@ type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
-mk set RUN_DEPENDS "${RUN_DEPENDS:Nrar*}"
+mk eval RUN_DEPENDS "${RUN_DEPENDS:Nrar*}"
 file materialize dragonfly/patch-Makefile.PL -> dragonfly/patch-Makefile.PL

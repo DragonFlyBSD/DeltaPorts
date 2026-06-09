@@ -3,4 +3,4 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set LDFLAGS "${LDFLAGS:N-lmd}"
+mk eval LDFLAGS "${LDFLAGS:N-lmd}"

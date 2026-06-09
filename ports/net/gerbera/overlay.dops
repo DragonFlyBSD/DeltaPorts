@@ -6,4 +6,4 @@ target @any
 mk add BUILD_DEPENDS "cxxfs_gcc8>0:misc/cxxfs_gcc8"
 mk add CXXFLAGS "-isystem ${LOCALBASE}/cxxfs_gcc8"
 mk add LDFLAGS "-L${LOCALBASE}/cxxfs_gcc8"
-mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NLIBNPUPNP} LIBUPNP"
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NLIBNPUPNP} LIBUPNP"

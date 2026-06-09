@@ -3,4 +3,4 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set CFLAGS "${CFLAGS:N-Qunused-arguments}"
+mk eval CFLAGS "${CFLAGS:N-Qunused-arguments}"

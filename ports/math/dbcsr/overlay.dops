@@ -4,7 +4,7 @@ reason "auto-converted from Makefile.DragonFly"
 target @any
 
 mk add USES "pkgconfig"
-mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NMPI:NC_API}"
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NMPI:NC_API}"
 mk target set dfly-install <<'MK1'
 	${TOUCH} ${STAGEDIR}${LOCALBASE}/include/dbcsr_tensor.h
 MK1

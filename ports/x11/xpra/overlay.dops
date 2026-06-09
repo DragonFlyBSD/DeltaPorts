@@ -4,7 +4,7 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
 mk add USES "localbase:ldflags"
-mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NGSTREAMER}"
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NGSTREAMER}"
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@FREEBSD@DRAGONFLY@g' \
 		${WRKSRC}/setup.py

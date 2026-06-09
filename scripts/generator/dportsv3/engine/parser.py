@@ -329,7 +329,7 @@ class _Parser:
             self._sync_line()
             return None
 
-        if action.value in {"set", "unset", "add", "remove"}:
+        if action.value in {"set", "unset", "add", "remove", "eval"}:
             return self._parse_mk_var_op(start, action.value)
         if action.value in {"disable-if", "replace-if"}:
             return self._parse_mk_block_op(start, action.value)
@@ -340,7 +340,7 @@ class _Parser:
 
         self._error(
             "E_PARSE_UNEXPECTED_TOKEN",
-            "unexpected mk action; expected set|unset|add|remove|disable-if|replace-if|block|target",
+            "unexpected mk action; expected set|eval|unset|add|remove|disable-if|replace-if|block|target",
             action,
         )
         self._sync_line()
@@ -398,8 +398,8 @@ class _Parser:
         token: str | None = None
         end_span = var.span
 
-        if action == "set":
-            value_tok = self._expect_string("after 'mk set <VAR>'")
+        if action in {"set", "eval"}:
+            value_tok = self._expect_string(f"after 'mk {action} <VAR>'")
             if value_tok is None:
                 self._sync_line()
                 return None

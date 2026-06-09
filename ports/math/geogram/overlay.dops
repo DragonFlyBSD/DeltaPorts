@@ -3,7 +3,7 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set CMAKE_ARGS "${CMAKE_ARGS:N-DVORPALINE_PLATFORM*} -DVORPALINE_PLATFORM:STRING=DragonFly"
+mk eval CMAKE_ARGS "${CMAKE_ARGS:N-DVORPALINE_PLATFORM*} -DVORPALINE_PLATFORM:STRING=DragonFly"
 mk target set dfly-patch <<'MK1'
 	${MKDIR} ${WRKSRC}/cmake/platforms/DragonFly
 	${CP} -v ${WRKSRC}/cmake/platforms/FreeBSD-clang.cmake \

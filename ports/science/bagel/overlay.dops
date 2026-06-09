@@ -3,5 +3,5 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NMPI:NSCALAPACK:NSMITH}"
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NMPI:NSCALAPACK:NSMITH}"
 mk set DFLY_UNMAINTAINED "yes"

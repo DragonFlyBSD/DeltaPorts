@@ -4,9 +4,9 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
 mk add CMAKE_ARGS "-DLAPACK_LIBRARIES:STRING=\"-L${LOCALBASE}/lib -llapack -lblas\""
-mk set LIB_DEPENDS "${LIB_DEPENDS:Nlibmpich*:Nlibtcmalloc*}"
+mk eval LIB_DEPENDS "${LIB_DEPENDS:Nlibmpich*:Nlibtcmalloc*}"
 mk add CMAKE_OFF "ENABLE_MPI ENABLE_MKL ENABLE_ACML ENABLE_GPERFTOOLS ENABLE_TCMALLOC_MINIMAL"
-mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NTBB}"
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NTBB}"
 file materialize dragonfly/patch-src_madness_world_hardware.h -> dragonfly/patch-src_madness_world_hardware.h
 file materialize dragonfly/patch-src_madness_world_stubmpi.h -> dragonfly/patch-src_madness_world_stubmpi.h
 file materialize dragonfly/patch-src_madness_world_thread.cc -> dragonfly/patch-src_madness_world_thread.cc

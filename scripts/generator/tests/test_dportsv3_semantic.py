@@ -154,6 +154,16 @@ def test_block_set_on_missing_is_rejected() -> None:
     assert any(d.code == "E_SEM_INVALID_OPERATION_STATE" for d in analyzed.diagnostics)
 
 
+def test_mk_eval_accepts_value_and_rejects_on_missing() -> None:
+    base = "target @main\nport category/name\n"
+    ok = check_dsl(base + 'mk eval USES "${USES:S/cargo/cargo:extra/}"\n')
+    assert ok.ok
+    # eval always appends; there is no subject that can be missing
+    bad = check_dsl(base + 'mk eval USES "x" on-missing noop\n')
+    assert not bad.ok
+    assert any(d.code == "E_SEM_INVALID_OPERATION_STATE" for d in bad.diagnostics)
+
+
 def test_materialize_wildcards_are_rejected() -> None:
     text = (
         "target @main\n"

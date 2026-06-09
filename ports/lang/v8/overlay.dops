@@ -3,7 +3,7 @@ type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
-mk set BUILD_DEPENDS "${BUILD_DEPENDS:N*binutils}"
+mk eval BUILD_DEPENDS "${BUILD_DEPENDS:N*binutils}"
 mk add GN_ARGS "v8_enable_i18n_support=false"
 mk add GN_ARGS "use_lld=false is_clang=false"
 file materialize dragonfly/patch-build_build__config.h -> dragonfly/patch-build_build__config.h

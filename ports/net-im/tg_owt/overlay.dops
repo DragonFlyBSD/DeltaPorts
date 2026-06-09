@@ -6,7 +6,7 @@ target @any
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"
 mk add USES "xorg"
 mk add USE_XORG "x11 xtst"
-mk set BUILD_DEPENDS "${BUILD_DEPENDS:Npulseaudio*}"
+mk eval BUILD_DEPENDS "${BUILD_DEPENDS:Npulseaudio*}"
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e '/pulse/d' \
 		-e '/WEBRTC_ENABLE_LINUX_PULSE/d' \

@@ -3,6 +3,6 @@ type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
-mk set CONFIGURE_ARGS "${CONFIGURE_ARGS:N--enable-utempter}"
+mk eval CONFIGURE_ARGS "${CONFIGURE_ARGS:N--enable-utempter}"
 mk add USES "ncurses:port"
 file materialize dragonfly/patch-osdep -> dragonfly/patch-osdep

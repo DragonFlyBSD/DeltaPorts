@@ -8,7 +8,7 @@ mk add BUILD_DEPENDS "cxxfs_gcc8>0:misc/cxxfs_gcc8"
 mk add CXXFLAGS "-isystem ${LOCALBASE}/cxxfs_gcc8"
 mk add LDFLAGS "-L${LOCALBASE}/cxxfs_gcc8"
 mk add LIBS "-lstdc++fs"
-mk set LIB_DEPENDS "${LIB_DEPENDS:Nlibpulse*}"
+mk eval LIB_DEPENDS "${LIB_DEPENDS:Nlibpulse*}"
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@-D__LINUX_PULSE__@-D__LINUX_ALSA__@g' \
 			 -e 's@-lpulse-simple -lpulse@@g' \

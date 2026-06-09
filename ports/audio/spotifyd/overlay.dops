@@ -3,6 +3,6 @@ type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
-mk set USES "${USES:S/cargo/cargo:extra/}"
+mk eval USES "${USES:S/cargo/cargo:extra/}"
 mk set DFLY_UNMAINTAINED "yes"
 file materialize dragonfly/patch-src_utils.rs -> dragonfly/patch-src_utils.rs

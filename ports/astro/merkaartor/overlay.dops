@@ -3,5 +3,5 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set OPTIONS_DEFINE "${OPTIONS_DEFINE:NNLS}"
+mk eval OPTIONS_DEFINE "${OPTIONS_DEFINE:NNLS}"
 mk set PLIST_SUB "NLS=\"@comment \""

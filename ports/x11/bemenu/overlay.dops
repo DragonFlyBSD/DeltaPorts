@@ -5,7 +5,7 @@ target @any
 
 mk add USES "gmake"
 mk set MAKEFILE "GNUmakefile"
-mk set OPTIONS_MULTI_BACKEND "${OPTIONS_MULTI_BACKEND:NWAYLAND}"
+mk eval OPTIONS_MULTI_BACKEND "${OPTIONS_MULTI_BACKEND:NWAYLAND}"
 mk add PLIST_SUB "WAYLAND=\"@comment \""
 mk add CFLAGS "-fPIC"
 mk target set dfly-patch <<'MK1'

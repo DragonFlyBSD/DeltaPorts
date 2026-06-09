@@ -4,7 +4,7 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
 mk add USES "alias"
-mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NMFX}"
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NMFX}"
 mk add CFLAGS "-DSYS_FREEBSD"
 mk target set dfly-patch <<'MK1'
 	${LN} -v ${WRKSRC}/make/variant/gnu.defs		\

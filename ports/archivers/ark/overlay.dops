@@ -3,4 +3,4 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set RAR_RUN_DEPENDS "${RAR_RUN_DEPENDS:Nrar*}"
+mk eval RAR_RUN_DEPENDS "${RAR_RUN_DEPENDS:Nrar*}"

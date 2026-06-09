@@ -3,9 +3,9 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set BINARY_ALIAS "${BINARY_ALIAS:Ngfortran*} gfortran=gfortran${_GCC_VER}"
-mk set LIB_DEPENDS "${LIB_DEPENDS:Nlibmpich*}"
-mk set ALL_TARGET "${ALL_TARGET:Nmpi}"
+mk eval BINARY_ALIAS "${BINARY_ALIAS:Ngfortran*} gfortran=gfortran${_GCC_VER}"
+mk eval LIB_DEPENDS "${LIB_DEPENDS:Nlibmpich*}"
+mk eval ALL_TARGET "${ALL_TARGET:Nmpi}"
 mk target set dfly-build <<'MK1'
 	${CP} -v ${WRKSRC}/md ${WRKSRC}/mdp
 MK1

@@ -3,7 +3,7 @@ type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
-mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NACL}"
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NACL}"
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"
 file materialize dragonfly/extra-gls_lisp_dired.el -> dragonfly/extra-gls_lisp_dired.el
 file materialize dragonfly/extra-ls_lisp_dired.el -> dragonfly/extra-ls_lisp_dired.el

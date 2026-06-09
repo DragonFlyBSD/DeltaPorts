@@ -3,4 +3,4 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set USES "${USES:Nninja} gmake"
+mk eval USES "${USES:Nninja} gmake"

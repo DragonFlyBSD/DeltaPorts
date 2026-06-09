@@ -3,7 +3,7 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set RUN_DEPENDS "${RUN_DEPENDS:N*bsdisks} openbsdisks2:sysutils/openbsdisks2"
+mk eval RUN_DEPENDS "${RUN_DEPENDS:N*bsdisks} openbsdisks2:sysutils/openbsdisks2"
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's/^.*\- name: FreeBSD/&\n    - name: DragonFly/g' \
 		${WRKSRC}/metainfo.yaml

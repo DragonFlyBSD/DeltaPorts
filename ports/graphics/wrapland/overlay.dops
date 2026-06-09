@@ -4,6 +4,6 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
 mk set USE_CLANG_FALLBACK "default"
-mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NDOXYGEN}"
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NDOXYGEN}"
 file materialize dragonfly/patch-server_output.cpp -> dragonfly/patch-server_output.cpp
 file materialize dragonfly/patch-server_seat.cpp -> dragonfly/patch-server_seat.cpp

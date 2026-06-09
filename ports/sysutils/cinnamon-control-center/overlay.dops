@@ -3,5 +3,5 @@ type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
-mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NONLINEACCOUNTS:NWACOM}"
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NONLINEACCOUNTS:NWACOM}"
 file materialize dragonfly/patch-panels_common_gdm-languages.h -> dragonfly/patch-panels_common_gdm-languages.h

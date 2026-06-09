@@ -4,9 +4,9 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
 mk set OPTIONS_SUB "yes"
-mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NBATCH:NHYPRE:NMPI:NMPICH:NMUMPS:NPARMETIS:NPETSC:NBLAS:NSCOTCH}"
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NBATCH:NHYPRE:NMPI:NMPICH:NMUMPS:NPARMETIS:NPETSC:NBLAS:NSCOTCH}"
 mk add OPTIONS_EXCLUDE "DOCS"
-mk set CFLAGS "${CFLAGS:N-D__XSI_VISIBLE*}"
+mk eval CFLAGS "${CFLAGS:N-D__XSI_VISIBLE*}"
 mk set DFLY_PLIST "${WRKSRC}/pkg-plist"
 mk set PLIST "${DFLY_PLIST}"
 mk target set dfly-patch <<'MK1'

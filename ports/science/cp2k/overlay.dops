@@ -3,4 +3,4 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set MAKE_ARGS "${MAKE_ARGS:NFC*:NCC*:NLD*} FC=gfortran8 LD=gfortran8"
+mk eval MAKE_ARGS "${MAKE_ARGS:NFC*:NCC*:NLD*} FC=gfortran8 LD=gfortran8"

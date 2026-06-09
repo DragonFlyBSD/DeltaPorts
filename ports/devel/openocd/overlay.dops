@@ -4,7 +4,7 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
 mk add USES "alias"
-mk set CFLAGS "${CFLAGS:N-Wno-error=unused-command-line-argument}"
+mk eval CFLAGS "${CFLAGS:N-Wno-error=unused-command-line-argument}"
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@<dev/ppbus/ppi\.h>@<dev/misc/ppi/ppi.h>@g'	\
 			 -e 's@<dev/ppbus/ppbconf\.h>@<bus/ppbus/ppbconf.h>@g'	\

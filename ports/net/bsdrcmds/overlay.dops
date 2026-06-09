@@ -3,4 +3,4 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NLIBBLACKLIST}"
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NLIBBLACKLIST}"

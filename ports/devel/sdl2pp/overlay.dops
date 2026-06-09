@@ -3,7 +3,7 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set CXXFLAGS "${CXXFLAGS:N-D_GLIBCXX_USE_C99}"
+mk eval CXXFLAGS "${CXXFLAGS:N-D_GLIBCXX_USE_C99}"
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@\[deprecated\]@[gnu::deprecated]@g'	\
 		${WRKSRC}/SDL2pp/Config.hh.in

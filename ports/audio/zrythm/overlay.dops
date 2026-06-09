@@ -3,5 +3,5 @@ type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
-mk set LIB_DEPENDS "${LIB_DEPENDS:Nlibpulse*}"
+mk eval LIB_DEPENDS "${LIB_DEPENDS:Nlibpulse*}"
 file materialize dragonfly/patch-meson.build -> dragonfly/patch-meson.build

@@ -4,7 +4,7 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
 mk add MAKE_ENV "OMP_NUM_THREADS=1"
-mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NPULSEAUDIO}"
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NPULSEAUDIO}"
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's/\(HAVE_UNWIND_H \)./\10/' \
 		${WRKSRC}/extern/glog/src/config_freebsd.h

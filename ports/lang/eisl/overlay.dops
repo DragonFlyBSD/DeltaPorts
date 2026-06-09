@@ -3,7 +3,7 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set USES "${USES:Nncurses*} ncurses"
+mk eval USES "${USES:Nncurses*} ncurses"
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@<curses.h>@<ncurses.h>@g' \
 		${WRKSRC}/edlis.c \

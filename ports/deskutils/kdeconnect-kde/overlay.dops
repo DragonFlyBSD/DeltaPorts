@@ -3,7 +3,7 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set LIB_DEPENDS "${LIB_DEPENDS:NlibKF5PulseAudioQt*}"
+mk eval LIB_DEPENDS "${LIB_DEPENDS:NlibKF5PulseAudioQt*}"
 mk set DFLY_PLIST "${WRKSRC}/pkg-plist"
 mk set PLIST "${DFLY_PLIST}"
 mk target set dfly-patch <<'MK1'

@@ -3,4 +3,4 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set LDFLAGS "${LDFLAGS:N-lcrypto} -L${OPENSSLLIB} -lcrypto"
+mk eval LDFLAGS "${LDFLAGS:N-lcrypto} -L${OPENSSLLIB} -lcrypto"

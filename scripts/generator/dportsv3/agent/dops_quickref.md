@@ -33,6 +33,15 @@ mk unset  USES_BROKEN_ON_DRAGONFLY
 mk add    USES libtool
 mk remove USES gmake
 
+# Self-referential / immediate assignment — appends a verbatim `:=` line at
+# the end of the port Makefile body (reproduces a trailing Makefile.DragonFly
+# fragment). Use this — NOT `mk set` — whenever the value expands the same
+# variable, for ANY bmake modifier (`:N`/`:M` filter, `:S`/`:C` substitute,
+# prepend, append). `mk set VAR "${VAR:...}"` renders a fatal recursive `=`.
+mk eval   OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NSTUNNEL}"
+mk eval   USES "${USES:S/cargo/cargo:extra/}"
+mk eval   LDFLAGS "-L${LOCALBASE}/lib ${LDFLAGS}"
+
 # Optional behavior when the var isn't found:
 mk set FOO "bar" on-missing error    # default: fail if not found
 mk set FOO "bar" on-missing warn     # warn + insert new

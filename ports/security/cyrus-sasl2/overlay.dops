@@ -4,7 +4,7 @@ reason "auto-converted from Makefile.DragonFly"
 target @any
 
 mk set MAKE_JOBS_UNSAFE "yes"
-mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NOTP} SSL"
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NOTP} SSL"
 mk add USES "ssl"
 mk add CONFIGURE_ARGS "--with-openssl=${OPENSSLBASE}"
 mk add CFLAGS "-I${OPENSSLINC}"

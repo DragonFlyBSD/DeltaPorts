@@ -376,6 +376,68 @@ def test_apply_plan_mk_var_set_applies(tmp_path: Path) -> None:
     assert makefile.read_text() == "PORTNAME= updated\n"
 
 
+def test_apply_plan_mk_var_eval_appends_immediate_before_include(
+    tmp_path: Path,
+) -> None:
+    # mk eval appends a verbatim immediate `:=` line before the final include,
+    # reproducing a trailing Makefile.DragonFly fragment. Upstream assignment
+    # is left intact, so the self-reference expands the accumulated value and
+    # is NOT recursive (unlike a `mk set` rewrite, which would render `=`).
+    makefile = tmp_path / "Makefile"
+    makefile.write_text(
+        "OPTIONS_DEFAULT= STUNNEL\n\n.include <bsd.port.mk>\n"
+    )
+    plan = Plan(
+        port="category/name",
+        ops=[
+            PlanOp(
+                id="op-1",
+                target="@main",
+                kind="mk.var.eval",
+                payload={
+                    "name": "OPTIONS_DEFAULT",
+                    "value": "${OPTIONS_DEFAULT:NSTUNNEL}",
+                },
+            )
+        ],
+    )
+
+    result = apply_plan(
+        plan, port_root=tmp_path, target="@main", dry_run=False, oracle_profile="off"
+    )
+
+    assert result.ok
+    assert makefile.read_text() == (
+        "OPTIONS_DEFAULT= STUNNEL\n"
+        "\n"
+        "OPTIONS_DEFAULT:= ${OPTIONS_DEFAULT:NSTUNNEL}\n"
+        ".include <bsd.port.mk>\n"
+    )
+
+
+def test_apply_plan_mk_var_eval_appends_at_eof_without_include(tmp_path: Path) -> None:
+    makefile = tmp_path / "Makefile"
+    makefile.write_text("USES= cargo\n")
+    plan = Plan(
+        port="category/name",
+        ops=[
+            PlanOp(
+                id="op-1",
+                target="@main",
+                kind="mk.var.eval",
+                payload={"name": "USES", "value": "${USES:S/cargo/cargo:extra/}"},
+            )
+        ],
+    )
+
+    result = apply_plan(
+        plan, port_root=tmp_path, target="@main", dry_run=False, oracle_profile="off"
+    )
+
+    assert result.ok
+    assert makefile.read_text() == "USES= cargo\nUSES:= ${USES:S/cargo/cargo:extra/}\n"
+
+
 def test_apply_plan_mk_var_set_creates_before_first_target(tmp_path: Path) -> None:
     makefile = tmp_path / "Makefile"
     makefile.write_text("PORTNAME= sample\ndo-build:\n\t@true\n")

@@ -100,12 +100,12 @@ def _validate_operation(
     diagnostics: list[Diagnostic] = []
 
     if isinstance(op, MkOpNode):
-        if op.action == "set":
+        if op.action in {"set", "eval"}:
             if op.var is None or op.value is None:
                 diagnostics.append(
                     _diag(
                         "E_SEM_INVALID_OPERATION_STATE",
-                        "mk set requires var and value",
+                        f"mk {op.action} requires var and value",
                         op.span,
                         source_path,
                     )
@@ -201,6 +201,7 @@ def _validate_operation(
             )
 
         on_missing_allowed = op.action not in {
+            "eval",
             "block-set",
             "target-set",
             "target-append",

@@ -18,6 +18,11 @@ def _quote(value: str) -> str:
     return f'"{escaped}"'
 
 
+def _references_var(value: str, name: str) -> bool:
+    """True when `value` expands `name` — `${name}`, `${name:mod}`, `$(name)`."""
+    return bool(re.search(r"\$[{(]" + re.escape(name) + r"[):}]", value))
+
+
 def _parse_makefile_dragonfly(path: Path) -> tuple[list[str], list[str]]:
     """Return generated dops ops and unsupported reasons."""
     try:
@@ -52,7 +57,14 @@ def _parse_makefile_dragonfly(path: Path) -> tuple[list[str], list[str]]:
             op = assign.group(2)
             value = assign.group(3).strip()
             if op in {"=", "?=", ":=", "!="}:
-                ops.append(f"mk set {name} {_quote(value)}")
+                if _references_var(value, name):
+                    # Self-referential assignment (`VAR:= ${VAR:mod}`,
+                    # prepend, etc.). A plain `mk set` would render a fatal
+                    # recursive `=`; emit `mk eval`, which appends a verbatim
+                    # immediate `:=` line — faithful for every bmake modifier.
+                    ops.append(f"mk eval {name} {_quote(value)}")
+                else:
+                    ops.append(f"mk set {name} {_quote(value)}")
             elif op == "+=":
                 if value:
                     # Always quote — `mk add` accepts a STRING token, and a

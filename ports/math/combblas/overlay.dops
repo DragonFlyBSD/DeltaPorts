@@ -4,4 +4,4 @@ reason "auto-converted from Makefile.DragonFly"
 target @any
 
 mk add USES "fortran"
-mk set RUN_DEPENDS "${RUN_DEPENDS:N*gcc${GCC_DEFAULT}}"
+mk eval RUN_DEPENDS "${RUN_DEPENDS:N*gcc${GCC_DEFAULT}}"
