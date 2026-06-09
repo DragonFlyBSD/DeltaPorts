@@ -1,0 +1,6 @@
+port games/qnetwalk
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set QMAKEFLAGS "QMAKE_LFLAGS=\"-L${LOCALBASE}/lib -lSDL-1.2\""

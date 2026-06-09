@@ -1,0 +1,9 @@
+port games/tremulous
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "alias"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's|freebsd|dragonfly|' ${BUILD_WRKSRC}/Makefile
+MK1

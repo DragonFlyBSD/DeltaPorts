@@ -1,0 +1,7 @@
+port graphics/nvidia-texture-tools
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CFLAGS "-lpthread"
+mk set DFLY_UNMAINTAINED "yes"

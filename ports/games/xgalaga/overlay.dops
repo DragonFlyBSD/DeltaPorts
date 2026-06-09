@@ -1,0 +1,6 @@
+port games/xgalaga
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CONFIGURE_ARGS "ac_cv_build=x86_64-unknown-dragonfly4"

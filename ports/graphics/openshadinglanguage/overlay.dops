@@ -1,0 +1,12 @@
+port graphics/openshadinglanguage
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CXXFLAGS "-Wno-format-overflow"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's/-Werror[[:>:]]//g'	\
+		${WRKSRC}/CMakeLists.txt
+	${REINPLACE_CMD} -e '/add_definitions ("-Werror")/d' \
+		${WRKSRC}/src/cmake/compiler.cmake
+MK1

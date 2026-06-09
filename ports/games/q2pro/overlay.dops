@@ -1,0 +1,6 @@
+port games/q2pro
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "alias"

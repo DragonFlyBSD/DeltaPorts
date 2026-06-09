@@ -1,0 +1,6 @@
+port ftp/gftp
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set BROKEN "needs d_reclen"

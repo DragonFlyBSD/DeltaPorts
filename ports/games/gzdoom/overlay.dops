@@ -1,0 +1,6 @@
+port games/gzdoom
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set BROKEN "relies on malloc_usable_size()"

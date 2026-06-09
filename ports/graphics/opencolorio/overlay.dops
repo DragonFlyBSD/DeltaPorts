@@ -1,0 +1,9 @@
+port graphics/opencolorio
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add BUILD_DEPENDS "git>0:devel/git"
+mk target set dfly-install <<'MK1'
+	${RM} -rfv ${STAGEDIR}/${WRKDIRPREFIX}
+MK1

@@ -1,0 +1,10 @@
+port graphics/glew
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USE_XORG "xt sm ice"
+mk target set pre-build <<'MK1'
+	cp ${WRKSRC}/config/Makefile.freebsd \
+	   ${WRKSRC}/config/Makefile.dragonfly
+MK1

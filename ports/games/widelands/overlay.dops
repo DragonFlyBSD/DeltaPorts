@@ -1,0 +1,15 @@
+port games/widelands
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@\(defined (__FreeBSD__)\)@(\1 || defined(__DragonFly__))@g'	\
+		${WRKSRC}/src/io/filesystem/disk_filesystem.cc
+	${REINPLACE_CMD} -e 's@\(defined(__FreeBSD__)\)@(\1 || defined(__DragonFly__))@g'	\
+		${WRKSRC}/src/wlapplication.cc
+	${REINPLACE_CMD} -e 's@"\(FreeBSD\)"@"\1|DragonFly"@g'		\
+			 -e '/-Werror=uninitialized/d'			\
+		${WRKSRC}/CMakeLists.txt				\
+		${WRKSRC}/src/CMakeLists.txt
+MK1

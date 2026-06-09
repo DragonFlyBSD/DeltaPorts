@@ -1,0 +1,9 @@
+port games/libretro-mame2003
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e "s@-D_XOPEN_SOURCE@&__@g" \
+		${WRKSRC}/Makefile
+MK1

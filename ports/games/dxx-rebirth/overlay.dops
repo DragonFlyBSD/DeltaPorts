@@ -1,0 +1,11 @@
+port games/dxx-rebirth
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set BUILD_DEPENDS "${BUILD_DEPENDS:N*binutils}"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@freebsd@dragonfly@' \
+		${WRKSRC}/SConstruct
+MK1
+mk set IGNORE "unmaintained, please request fixing to users mailing list"

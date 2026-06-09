@@ -1,0 +1,9 @@
+port graphics/photivo
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e '/APPVERSION/s@compiled at@tarball version" ) #@g' \
+		${WRKSRC}/CMakeLists.txt
+MK1

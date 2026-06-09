@@ -1,0 +1,6 @@
+port games/regoth
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set BROKEN "dirty port"

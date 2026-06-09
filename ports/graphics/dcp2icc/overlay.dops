@@ -1,0 +1,8 @@
+port graphics/dcp2icc
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "alias"
+mk set EXTRACT_DEPENDS "${UNZIP_CMD}:archivers/unzip"
+mk set UNZIP_NATIVE_CMD "${UNZIP_CMD}"

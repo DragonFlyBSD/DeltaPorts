@@ -1,0 +1,12 @@
+port graphics/libprojectm
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NPULSEAUDIO} JACK"
+mk target set dfly-install <<'MK1'
+	${INSTALL_DATA} ${WRKSRC}/src/projectM-qt/images/icons/prjm16-transparent.svg \
+		${STAGEDIR}${PREFIX}/share/pixmaps
+
+MK1
+mk add PLIST_FILES "share/pixmaps/prjm16-transparent.svg"

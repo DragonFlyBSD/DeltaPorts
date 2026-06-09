@@ -1,0 +1,11 @@
+port games/devilutionX
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@D_POSIX_C_SOURCE@&___@g' \
+			 -e 's@STREQUAL FreeBSD@MATCHES "FreeBSD|DragonFly"@g' \
+		${WRKSRC}/CMakeLists.txt
+MK1
+mk set IGNORE "unmaintained, please request fixing to users mailing list"

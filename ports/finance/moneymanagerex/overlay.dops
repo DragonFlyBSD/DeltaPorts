@@ -1,0 +1,6 @@
+port finance/moneymanagerex
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add LIB_DEPENDS "libboost_system.so:devel/boost-libs"

@@ -1,0 +1,10 @@
+port graphics/gdtclft
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set MAKEFILE "${WRKSRC}/Makefile.bsd"
+mk target set dfly-patch <<'MK1'
+	${CP} -f ${FILESDIR}/Makefile.bsd ${WRKSRC}/Makefile.bsd
+	${REINPLACE_CMD} -e 's|include/gd|include|g' ${WRKSRC}/Makefile.bsd
+MK1

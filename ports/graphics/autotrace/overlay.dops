@@ -1,0 +1,9 @@
+port graphics/autotrace
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e "/LINK) -rpath/s/$$/ -lm/g"	\
+		${WRKSRC}/Makefile.in
+MK1

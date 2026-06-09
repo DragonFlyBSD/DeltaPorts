@@ -1,0 +1,17 @@
+port graphics/opencv
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CMAKE_OFF "WITH_IPP BUILD_IPP_IW"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's|__FreeBSD__|__DragonFly__|' \
+		${WRKSRC}/3rdparty/ittnotify/src/ittnotify/ittnotify_config.h \
+		${WRKSRC}/modules/dnn/src/vkcom/vulkan/vk_loader.cpp \
+		${WRKSRC}/modules/videoio/src/backend_plugin.cpp \
+		${WRKSRC}/modules/core/src/parallel.cpp \
+		${WRKSRC}/modules/core/src/utils/filesystem.cpp \
+		${WRKSRC}/modules/core/include/opencv2/core/utils/filesystem.private.hpp \
+		${WRKSRC}/modules/core/include/opencv2/core/utils/plugin_loader.private.hpp \
+		${WRKSRC}/modules/core/src/system.cpp
+MK1

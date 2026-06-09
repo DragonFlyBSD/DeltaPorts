@@ -1,0 +1,10 @@
+port games/fishsupper
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set USE_CXXSTD "c++11"
+mk add CXXFLAGS "-fpermissive # 'constexpr' needed for in-class init of static member"
+mk target set dfly-extract <<'MK1'
+	${REINPLACE_CMD} -e 's,<tr1/memory>,<memory>,g' ${WRKSRC}/src/*.h ${WRKSRC}/src/*.cpp
+MK1

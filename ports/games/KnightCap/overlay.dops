@@ -1,0 +1,9 @@
+port games/KnightCap
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@ifdef \(__FreeBSD__\)@if defined(\1)||defined(__DragonFly__)@g'	\
+		${WRKSRC}/knightcap.c
+MK1

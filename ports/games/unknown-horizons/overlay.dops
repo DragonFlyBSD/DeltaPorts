@@ -1,0 +1,6 @@
+port games/unknown-horizons
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set IGNORE "it starts but the UI freezes a few seconds later (DF)"

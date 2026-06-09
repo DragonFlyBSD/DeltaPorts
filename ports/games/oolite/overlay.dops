@@ -1,0 +1,6 @@
+port games/oolite
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set IGNORE "too FreeBSD specific"

@@ -1,0 +1,6 @@
+port graphics/mesa-libs
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add MESON_ARGS "-Dmicrosoft-clc=disabled"

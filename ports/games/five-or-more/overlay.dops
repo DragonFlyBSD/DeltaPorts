@@ -1,0 +1,7 @@
+port games/five-or-more
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "python:3.4+,build shebangfix"
+mk add SHEBANG_FILES "meson_post_install.py"

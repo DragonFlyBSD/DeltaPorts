@@ -1,0 +1,7 @@
+port graphics/glslang
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "python:build"
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"

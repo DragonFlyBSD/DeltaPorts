@@ -1,0 +1,10 @@
+port graphics/anttweakbar
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@FreeBSD@DragonFly@g' \
+		${WRKSRC}/LoadOGLCore.h \
+		${WRKSRC}/TwPrecomp.h
+MK1

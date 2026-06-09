@@ -1,0 +1,6 @@
+port graphics/gcolor2
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "ltmainfix"

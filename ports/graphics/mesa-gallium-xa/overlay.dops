@@ -1,0 +1,6 @@
+port graphics/mesa-gallium-xa
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add MESON_ARGS "-Dmicrosoft-clc=disabled"

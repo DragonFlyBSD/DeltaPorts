@@ -1,0 +1,6 @@
+port games/aestats
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set IGNORE "no multilib -m32 support"

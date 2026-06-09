@@ -1,0 +1,7 @@
+port games/flyhard
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set USE_CXXSTD "gnu++11"
+mk add CXXFLAGS "-Wno-narrowing"

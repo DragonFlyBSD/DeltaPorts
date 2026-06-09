@@ -1,0 +1,6 @@
+port games/warmux
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CPPFLAGS "-std=gnu++98"

@@ -1,0 +1,9 @@
+port graphics/klatexformula
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} '/CMAKE_SYSTEM_NAME STREQUAL/s,FreeBSD,DragonFly,' \
+		${WRKSRC}/src/klftools/CMakeLists.txt
+MK1

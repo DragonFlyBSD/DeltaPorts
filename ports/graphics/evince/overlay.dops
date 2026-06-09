@@ -1,0 +1,6 @@
+port graphics/evince
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "python:3.4+,build shebangfix"

@@ -1,0 +1,9 @@
+port graphics/ogre3d
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add OPTIONS_EXCLUDE "DOCS"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e '/latomic/d' ${WRKSRC}/OgreMain/CMakeLists.txt
+MK1

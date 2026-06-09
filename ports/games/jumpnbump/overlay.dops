@@ -1,0 +1,6 @@
+port games/jumpnbump
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set MAKE_JOBS_UNSAFE "yes"

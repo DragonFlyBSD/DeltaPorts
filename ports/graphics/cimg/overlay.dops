@@ -1,0 +1,11 @@
+port graphics/cimg
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CPPFLAGS "-std=c++11"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@CCVER@CxxVER@g'				\
+		${WRKSRC}/examples/Makefile
+MK1
+mk set IGNORE "unmaintained, please request fixing to users mailing list"

@@ -1,0 +1,11 @@
+port ftp/ftpsesame
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@<net/pfvar.h>@<net/pf/pfvar.h>@g' \
+			 -e 's@<net/ppp_defs.h>@<net/ppp_layer/ppp_defs.h>@g' \
+		${WRKSRC}/ftpsesame.c ${WRKSRC}/filter.c ${WRKSRC}/state.c
+MK1
+mk set IGNORE "unmaintained, please request fixing to users mailing list"

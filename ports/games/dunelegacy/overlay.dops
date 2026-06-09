@@ -1,0 +1,10 @@
+port games/dunelegacy
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "alias"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@CXXFLAGS="-O3 @CXXFLAGS="-O3 -std=gnu++11 @g'	\
+		${WRKSRC}/configure.ac
+MK1

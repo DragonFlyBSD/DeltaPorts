@@ -1,0 +1,6 @@
+port graphics/dia
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add LDFLAGS "-L${LOCALBASE}/lib -lgmodule-2.0"

@@ -1,0 +1,9 @@
+port games/ace-of-penguins
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e '/libcards_la_LIBADD/s@=@= -lm @' \
+		${WRKSRC}/lib/Makefile.in
+MK1

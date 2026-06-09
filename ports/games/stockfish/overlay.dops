@@ -1,0 +1,12 @@
+port games/stockfish
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "gmake"
+mk set LDFLAGS "${LDFLAGS:N-fuse-ld*}"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@CXX=g++.*@CXX=g++@g' \
+			 -e 's@-flto=jobserver@@g' \
+		${WRKSRC}/Makefile
+MK1

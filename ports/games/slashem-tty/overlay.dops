@@ -1,0 +1,6 @@
+port games/slashem-tty
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set BROKEN "crashes"

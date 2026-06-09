@@ -1,0 +1,10 @@
+port games/tmatrix
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "ncurses"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e "s@-Wall @& -I${LOCALBASE}/include/ncurses -I${LOCALBASE}/include -L${LOCALBASE}/lib @g" \
+		${WRKSRC}/CMakeLists.txt
+MK1

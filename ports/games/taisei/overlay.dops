@@ -1,0 +1,9 @@
+port games/taisei
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e '/200809/s@_POSIX_C_SOURCE@&___@g' \
+		${WRKSRC}/src/util/compat.h
+MK1

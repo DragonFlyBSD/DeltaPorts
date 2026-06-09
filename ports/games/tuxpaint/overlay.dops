@@ -1,0 +1,11 @@
+port games/tuxpaint
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set pre-configure <<'MK1'
+	${MKDIR} ${WRKSRC}/trans
+	${REINPLACE_CMD} -e 's|sed -r|sed -E|g' \
+		${WRKSRC}/Makefile ${WRKSRC}/findbad
+	
+MK1

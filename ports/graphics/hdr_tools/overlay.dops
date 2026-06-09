@@ -1,0 +1,6 @@
+port graphics/hdr_tools
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CXXFLAGS "-DNDEBUG"

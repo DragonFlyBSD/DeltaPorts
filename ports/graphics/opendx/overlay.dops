@@ -1,0 +1,8 @@
+port graphics/opendx
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set MAKE_JOBS_UNSAFE "yes"
+mk add CXXFLAGS "-Wno-narrowing -fpermissive"
+mk set USE_CXXSTD "c++11"

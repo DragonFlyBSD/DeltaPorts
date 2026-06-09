@@ -1,0 +1,18 @@
+port graphics/bsd-plotutils
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "ncurses"
+mk set DFLY_PLIST "${WRKSRC}/pkg-plist"
+mk set PLIST "${DFLY_PLIST}"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e "s@-ltermcap@-ltinfo@"	\
+		${WRKSRC}/libplot/dumb/Makefile
+	${REINPLACE_CMD} -e "s@-lcurses@-lncurses@"	\
+		${WRKSRC}/libplot/crt/Makefile
+	${CP} -v ${.CURDIR:H}/bsd-plotutils/pkg-plist ${DFLY_PLIST}
+	${REINPLACE_CMD} -e '/_p.a/d' ${DFLY_PLIST}
+
+MK1
+mk add MAKE_ENV "CWARNFLAGS=-fcommon"

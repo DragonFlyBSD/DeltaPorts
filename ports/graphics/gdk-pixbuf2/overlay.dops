@@ -1,0 +1,9 @@
+port graphics/gdk-pixbuf2
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	# Make the scripts executable
+	${CHMOD} ${BINMODE} ${WRKSRC}/build-aux/gen-*.py
+MK1

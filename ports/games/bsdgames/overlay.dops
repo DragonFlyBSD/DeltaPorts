@@ -1,0 +1,6 @@
+port games/bsdgames
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set IGNORE "Part of DragonFly base system"

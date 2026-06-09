@@ -1,0 +1,12 @@
+port games/gnushogi
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "ncurses localbase:ldflags"
+mk add CONFIGURE_ARGS "--with-curses=yes"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@-ltermcap@-ltinfo@g' \
+			 -e 's@lcurses@lncurses@g' \
+		${WRKSRC}/configure
+MK1

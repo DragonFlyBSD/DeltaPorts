@@ -1,0 +1,7 @@
+port games/simutrans
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set CXXFLAGS "-Wno-c++11-narrowing"
+mk set USE_CLANG_FALLBACK "default"

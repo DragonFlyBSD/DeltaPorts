@@ -1,0 +1,9 @@
+port graphics/blend2d
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@\(BLEND2D_NO_STDCXX\) 1@\1 0@g' \
+		${WRKSRC}/CMakeLists.txt
+MK1

@@ -1,0 +1,12 @@
+port games/hs-scroll
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "ncurses"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e "s@\(-DHSNCURSES_NARROW_HEADER\)@\1 -DNCURSES_INTERNALS ${CFLAGS} @g" \
+			 -e 's@\(\|\| os(freebsd)\)@\1 || os(dragonfly)@g' \
+			 -e 's@ncursesw@ncurses@g' -e 's@panelw@panel@g' \
+		${WRKSRC}/_cabal_deps/ncurses-0.2.16/ncurses.cabal
+MK1

@@ -1,0 +1,10 @@
+port graphics/openexr
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+mk set DOCS_BUILD_DEPENDS ""
+mk set DOCS_CMAKE_BOOL "${DOCS_CMAKE_BOOL:N*} DOCSz"
+mk add CMAKE_ARGS "-DDOCS:BOOL=false"
+mk add OPTIONS_EXCLUDE "DOCS"

@@ -1,0 +1,8 @@
+port graphics/lensfun
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set pre-configure <<'MK1'
+	cd ${WRKSRC} && ${RM} -r tools/makedep
+MK1

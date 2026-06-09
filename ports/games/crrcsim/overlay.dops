@@ -1,0 +1,7 @@
+port games/crrcsim
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "alias"
+mk set USE_CXXSTD "gnu++98"
