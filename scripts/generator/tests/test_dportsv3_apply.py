@@ -1260,6 +1260,30 @@ def test_apply_dsl_materialize_uses_overlay_source_root(tmp_path: Path) -> None:
     assert (port_root / "dragonfly" / "patch-a").read_text() == "patch-content\n"
 
 
+def test_apply_dsl_materialize_preserves_non_utf8_bytes(tmp_path: Path) -> None:
+    # file.materialize is a verbatim byte copy — a Latin-1 patch with a
+    # 0xa0 byte must not blow up the UTF-8 text path (the po4a failure).
+    overlay_dir = tmp_path / "delta" / "ports" / "category" / "name"
+    (overlay_dir / "dragonfly").mkdir(parents=True)
+    raw = b"diff with \xa0 latin1 nbsp\n"
+    (overlay_dir / "dragonfly" / "patch-b").write_bytes(raw)
+
+    port_root = tmp_path / "port"
+    port_root.mkdir()
+    result = apply_dsl(
+        "target @main\nport category/name\n"
+        "file materialize dragonfly/patch-b -> dragonfly/patch-b\n",
+        source_path=overlay_dir / "overlay.dops",
+        port_root=port_root,
+        target="@main",
+        dry_run=False,
+        oracle_profile="off",
+    )
+
+    assert result.ok
+    assert (port_root / "dragonfly" / "patch-b").read_bytes() == raw
+
+
 def test_apply_plan_dry_run_diff_preserves_files(tmp_path: Path) -> None:
     makefile = tmp_path / "Makefile"
     makefile.write_text("VAR= old\n")

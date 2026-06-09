@@ -76,8 +76,12 @@ def exec_file_materialize(
             source_path=context.port_root,
         )
 
+    # Verbatim byte copy — a materialized source (e.g. a dragonfly/ patch)
+    # may not be valid UTF-8 (Latin-1 bytes like 0xa0), and even when it
+    # is, this is a file COPY, not a text edit, so bytes are the right
+    # model (no decode/re-encode round-trip).
     try:
-        content = src_path.read_text()
+        data = src_path.read_bytes()
     except FileNotFoundError:
         return _failed_row(
             op,
@@ -86,7 +90,7 @@ def exec_file_materialize(
             source_path=src_path,
         )
 
-    txn.stage_write(dst_path, content)
+    txn.stage_write_bytes(dst_path, data)
     return _success_row(op, "materialized")
 
 
