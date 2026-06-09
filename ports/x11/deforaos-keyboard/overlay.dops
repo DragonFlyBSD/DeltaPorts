@@ -1,0 +1,6 @@
+port x11/deforaos-keyboard
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add LDFLAGS "-L${LOCALBASE}/lib -lintl"

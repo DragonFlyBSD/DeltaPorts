@@ -1,0 +1,6 @@
+port www/squidclamav
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "libarchive"

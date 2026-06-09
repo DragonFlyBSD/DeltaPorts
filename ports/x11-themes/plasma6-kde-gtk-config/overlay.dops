@@ -1,0 +1,5 @@
+port x11-themes/plasma6-kde-gtk-config
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+

@@ -1,0 +1,9 @@
+port www/rubygem-selenium-webdriver
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set post-stage <<'MK1'
+	${RM} -rf ${STAGEDIR}/usr/local/lib/ruby/gems/3.1/gems/selenium-webdriver-${PORTVERSION}/bin
+	${RM} -rf ${STAGEDIR}/usr/local/lib/ruby/gems/3.2/gems/selenium-webdriver-${PORTVERSION}/bin/linux
+MK1

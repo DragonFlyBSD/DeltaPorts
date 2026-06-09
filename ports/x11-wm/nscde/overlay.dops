@@ -1,0 +1,14 @@
+port x11-wm/nscde
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NKSH2020} ASTKSH"
+mk set ASTKSH_RUN_DEPENDS "${ASTKSH_RUN_DEPENDS:N*ast-ksh93} ksh93:shells/ast-ksh"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@clang@cc@g' \
+		${WRKSRC}/src/colorpicker/Makefile \
+		${WRKSRC}/src/pclock-*/src/Makefile \
+		${WRKSRC}/src/XOverrideFontCursor/Makefile
+MK1
+mk set IGNORE "unmaintained, please request fixing to users mailing list"

@@ -1,0 +1,21 @@
+port x11/bemenu
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "gmake"
+mk set MAKEFILE "GNUmakefile"
+mk set OPTIONS_MULTI_BACKEND "${OPTIONS_MULTI_BACKEND:NWAYLAND}"
+mk add PLIST_SUB "WAYLAND=\"@comment \""
+mk add CFLAGS "-fPIC"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e "/renderers/s@bemenu-renderer-wayland.so@@g" \
+			 -e "/install-renderers/s@install-wayland@@g" \
+		${WRKSRC}/GNUmakefile
+
+MK1
+mk target set dfly-install <<'MK2'
+	ln -fv ${STAGEDIR}${PREFIX}/share/man/man1/bemenu.1 \
+	       ${STAGEDIR}${PREFIX}/share/man/man1/bemenu-run.1
+MK2
+mk set DFLY_UNMAINTAINED "yes"

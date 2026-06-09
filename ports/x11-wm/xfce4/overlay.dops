@@ -1,0 +1,6 @@
+port x11-wm/xfce4
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add RUN_DEPENDS "dragonfly-wallpapers>0:x11-themes/dragonfly-wallpapers"

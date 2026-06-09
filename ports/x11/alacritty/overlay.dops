@@ -1,0 +1,7 @@
+port x11/alacritty
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set USES "${USES:S/cargo/cargo:extra/}"
+mk set DFLY_UNMAINTAINED "yes"

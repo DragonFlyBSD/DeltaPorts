@@ -1,0 +1,20 @@
+port www/thirtybees
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-install <<'MK1'
+	${RMDIR} ${STAGEDIR}${WWWDIR}/modules/blockcustomerprivacy
+	${RMDIR} ${STAGEDIR}${WWWDIR}/modules/blocklink
+	${RMDIR} ${STAGEDIR}${WWWDIR}/modules/blockpermanentlinks
+	${RMDIR} ${STAGEDIR}${WWWDIR}/modules/blockreinsurance
+	${RMDIR} ${STAGEDIR}${WWWDIR}/modules/blocksharefb
+	${RMDIR} ${STAGEDIR}${WWWDIR}/modules/crossselling
+	${RMDIR} ${STAGEDIR}${WWWDIR}/modules/ecbexchange
+	${RMDIR} ${STAGEDIR}${WWWDIR}/modules/productscategory
+	${RMDIR} ${STAGEDIR}${WWWDIR}/modules/producttooltip
+	${RMDIR} ${STAGEDIR}${WWWDIR}/modules/sendtoafriend
+	${RMDIR} ${STAGEDIR}${WWWDIR}/modules/trackingfront
+	${RMDIR} ${STAGEDIR}${WWWDIR}/modules/vatnumber
+MK1
+mk set IGNORE "unmaintained, please request fixing to users mailing list"

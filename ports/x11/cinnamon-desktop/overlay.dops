@@ -1,0 +1,14 @@
+port x11/cinnamon-desktop
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set LIB_DEPENDS "${LIB_DEPENDS:Nlibpulse*}"
+mk add OPTIONS_DEFAULT "ALSA"
+mk set PLIST "${WRKDIR}/pulseless-plist"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e '/pulse/d' -e '/libcvc/d' \
+		${WRKSRC}/meson.build
+	${RM} -rf ${WRKSRC}/libcvc
+	${CAT} ${.CURDIR}/pkg-plist | ${SED} -e '/libcvc/d' -e '/Cvc/d' -e '/cvc.pc/d' > ${PLIST}
+MK1

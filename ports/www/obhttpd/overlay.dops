@@ -1,0 +1,14 @@
+port www/obhttpd
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@-lprocstat@@g' \
+		${WRKSRC}/src/usr.sbin/httpd/Makefile
+	-${REINPLACE_CMD} -e 's/TAILQ_FOREACH_SAFE/TAILQ_FOREACH_MUTABLE/g' \
+		${WRKSRC}/src/usr.sbin/httpd/server.c \
+		${WRKSRC}/src/usr.sbin/httpd/logger.c \
+		${WRKSRC}/src/usr.sbin/httpd/parse.y
+MK1
+mk set IGNORE "unmaintained, please request fixing to users mailing list"

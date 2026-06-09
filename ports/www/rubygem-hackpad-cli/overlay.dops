@@ -1,0 +1,9 @@
+port www/rubygem-hackpad-cli
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e '/reverse_markdown>/s@~>@>=@g' \
+		${WRKSRC}/hackpad-cli.gemspec
+MK1

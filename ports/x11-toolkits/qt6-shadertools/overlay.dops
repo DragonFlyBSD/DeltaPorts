@@ -1,0 +1,5 @@
+port x11-toolkits/qt6-shadertools
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+

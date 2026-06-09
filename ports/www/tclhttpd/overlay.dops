@@ -1,0 +1,6 @@
+port www/tclhttpd
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CFLAGS "-Wformat=0"

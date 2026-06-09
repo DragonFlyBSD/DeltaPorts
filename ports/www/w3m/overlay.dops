@@ -1,0 +1,8 @@
+port www/w3m
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set INLINE_IMAGE_CONFIGURE_ON "${INLINE_IMAGE_CONFIGURE_ON:S/fb,x11/x11/}"
+mk add USES "ncurses"
+mk add LDFLAGS "-L${LOCALBASE}/lib"

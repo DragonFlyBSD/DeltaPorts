@@ -1,0 +1,6 @@
+port x11/nvidia-driver
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set IGNORE "nvidia driver not supported on DragonFly"

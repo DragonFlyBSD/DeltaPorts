@@ -1,0 +1,7 @@
+port x11/nxcomp
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "alias"
+mk add CONFIGURE_ARGS "nxconf_cv_freebsd=yes"

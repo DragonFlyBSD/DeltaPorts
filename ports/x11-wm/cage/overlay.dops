@@ -1,0 +1,11 @@
+port x11-wm/cage
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CFLAGS "-Wno-error=format-extra-args"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@c_std=c11@c_std=gnu11@g' \
+		${WRKSRC}/meson.build
+MK1
+mk set IGNORE "unmaintained, please request fixing to users mailing list"

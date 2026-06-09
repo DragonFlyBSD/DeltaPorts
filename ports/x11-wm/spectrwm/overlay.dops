@@ -1,0 +1,10 @@
+port x11-wm/spectrwm
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CFLAGS "-DTAILQ_FOREACH_SAFE=TAILQ_FOREACH_MUTABLE"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@\(defined(__FreeBSD__)\)@(\1 || defined(__DragonFly__))@g' \
+		${WRKSRC}/spectrwm.c
+MK1

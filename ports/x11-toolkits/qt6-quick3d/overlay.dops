@@ -1,0 +1,5 @@
+port x11-toolkits/qt6-quick3d
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+

@@ -1,0 +1,6 @@
+port x11/cool-retro-term
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CXXFLAGS "-DHAVE_OS_DRAGONFLYBSD"

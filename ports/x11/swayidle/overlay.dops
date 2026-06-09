@@ -1,0 +1,7 @@
+port x11/swayidle
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NBASU}"
+mk add CFLAGS "-Wno-error=return-type"

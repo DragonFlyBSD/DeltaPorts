@@ -1,0 +1,8 @@
+port x11-toolkits/tkdnd
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's/FreeBSD-\*/FreeBSD-*|DragonFly-*/g' ${WRKSRC}/configure
+MK1

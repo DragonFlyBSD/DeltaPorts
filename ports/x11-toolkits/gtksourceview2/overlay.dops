@@ -1,0 +1,6 @@
+port x11-toolkits/gtksourceview2
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set USE_GNOME "${USE_GNOME:Ngconf2}"

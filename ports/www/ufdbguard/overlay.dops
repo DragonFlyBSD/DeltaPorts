@@ -1,0 +1,19 @@
+port www/ufdbguard
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CFLAGS "-Dfdatasync=fsync"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e '/FLAGS/s@-D_XOPEN_SOURCE=600@@g' \
+		${WRKSRC}/configure ${WRKSRC}/src/Makefile.in
+	${REINPLACE_CMD} -e 's@_XOPEN_SOURCE@&___@g' \
+		${WRKSRC}/src/rwtest.c \
+		${WRKSRC}/src/sg.h.in \
+		${WRKSRC}/src/ufdb.h.in
+
+MK1
+mk target set dfly-install <<'MK2'
+	${RMDIR} ${STAGEDIR}/etc/urlfilterdb
+MK2
+mk set DFLY_UNMAINTAINED "yes"

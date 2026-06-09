@@ -1,0 +1,7 @@
+port x11-fonts/fcft
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "localbase:ldflags"
+mk add LIB_DEPENDS "libstdthreads.so:misc/libstdthreads"

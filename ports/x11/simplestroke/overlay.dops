@@ -1,0 +1,10 @@
+port x11/simplestroke
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add LIB_DEPENDS "libmd.so:security/libmd"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e "s@-lmd@-I${LOCALBASE}/include -L${LOCALBASE}/lib &@g" \
+		${WRKSRC}/configure
+MK1

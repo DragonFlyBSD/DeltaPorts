@@ -1,0 +1,12 @@
+port x11/virtualgl
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e "s@FreeBSD@DragonFly@g" \
+		${WRKSRC}/server/vglserver_config \
+		${WRKSRC}/server/fakerconfig.cpp \
+		${WRKSRC}/server/CMakeLists.txt \
+		${WRKSRC}/CMakeLists.txt
+MK1

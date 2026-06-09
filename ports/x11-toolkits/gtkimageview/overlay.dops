@@ -1,0 +1,6 @@
+port x11-toolkits/gtkimageview
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add LDFLAGS "-lm"

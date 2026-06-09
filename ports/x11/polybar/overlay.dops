@@ -1,0 +1,14 @@
+port x11/polybar
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NPULSEAUDIO} ALSA"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@STREQUAL "FreeBSD"@MATCHES "FreeBSD|DragonFly"@g' \
+		${WRKSRC}/cmake/libpoly.cmake \
+		${WRKSRC}/cmake/cxx.cmake
+	${REINPLACE_CMD} -e 's@ifndef \(__FreeBSD__\)@if !defined(\1) \&\& !defined(__DragonFly__)@g' \
+		${WRKSRC}/include/adapters/alsa/generic.hpp
+MK1
+mk set DFLY_UNMAINTAINED "yes"

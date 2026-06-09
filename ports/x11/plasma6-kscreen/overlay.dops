@@ -1,0 +1,5 @@
+port x11/plasma6-kscreen
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+

@@ -1,0 +1,7 @@
+port x11-fm/librfm
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CONFIGURE_ARGS "--with-pkglibdata"
+mk set MAKE_JOBS_UNSAFE "yes"

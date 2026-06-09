@@ -1,0 +1,8 @@
+port www/ulfius
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-install <<'MK1'
+	${RM} -fv ${STAGEDIR}${PREFIX}/man/man1/uwsc.1
+MK1

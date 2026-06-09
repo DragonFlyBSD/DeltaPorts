@@ -1,0 +1,6 @@
+port x11/xfce4-goodies
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NTASKMANAGER}"

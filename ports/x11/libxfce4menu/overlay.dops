@@ -1,0 +1,6 @@
+port x11/libxfce4menu
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add LIB_DEPENDS "libdbus-glib-1.so:devel/dbus-glib"

@@ -1,0 +1,10 @@
+port www/tdom
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set pre-patch <<'MK1'
+	${REINPLACE_CMD} -e 's/FreeBSD-\*/FreeBSD-*|DragonFly-*/g' \
+		${WRKSRC}/configure
+MK1
+mk set DFLY_UNMAINTAINED "yes"
