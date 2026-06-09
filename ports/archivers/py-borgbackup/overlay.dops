@@ -1,0 +1,6 @@
+target @any
+port archivers/py-borgbackup
+type port
+reason "auto-converted from Makefile.DragonFly"
+
+mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NFUSE}"

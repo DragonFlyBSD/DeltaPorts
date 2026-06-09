@@ -1,0 +1,9 @@
+target @any
+port archivers/snappy
+type port
+reason "auto-converted from Makefile.DragonFly"
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's|FreeBSD|DragonFly|g' \
+		${WRKSRC}/CMakeLists.txt
+MK1

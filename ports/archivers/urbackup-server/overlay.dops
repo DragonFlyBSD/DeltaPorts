@@ -1,0 +1,6 @@
+target @any
+port archivers/urbackup-server
+type port
+reason "auto-converted from Makefile.DragonFly"
+
+mk set BROKEN "missing XATTR"

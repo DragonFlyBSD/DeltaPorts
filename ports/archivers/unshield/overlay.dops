@@ -1,0 +1,6 @@
+target @any
+port archivers/unshield
+type port
+reason "auto-converted from Makefile.DragonFly"
+
+mk add CFLAGS "-I${OPENSSLINC} -I${LOCALBASE}/include"

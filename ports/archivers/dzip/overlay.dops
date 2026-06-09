@@ -1,0 +1,6 @@
+target @any
+port archivers/dzip
+type port
+reason "auto-converted from Makefile.DragonFly"
+
+mk add USES "gmake"

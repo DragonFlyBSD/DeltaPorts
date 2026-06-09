@@ -1,0 +1,6 @@
+target @any
+port archivers/ark
+type port
+reason "auto-converted from Makefile.DragonFly"
+
+mk set RAR_RUN_DEPENDS "${RAR_RUN_DEPENDS:Nrar*}"

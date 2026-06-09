@@ -1,0 +1,6 @@
+target @any
+port archivers/p5-Compress-LZ4
+type port
+reason "auto-converted from Makefile.DragonFly"
+
+mk set MAKE_JOBS_UNSAFE "yes"

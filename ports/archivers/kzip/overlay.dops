@@ -1,0 +1,6 @@
+target @any
+port archivers/kzip
+type port
+reason "auto-converted from Makefile.DragonFly"
+
+mk set IGNORE "FreeBSD specific binary port"

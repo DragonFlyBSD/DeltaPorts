@@ -1,0 +1,10 @@
+target @any
+port archivers/zoo
+type port
+reason "auto-converted from Makefile.DragonFly"
+
+mk add CFLAGS "-D__OpenBSD__"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@/varargs.h@/stdarg.h@g'	\
+		${WRKSRC}/makefile
+MK1

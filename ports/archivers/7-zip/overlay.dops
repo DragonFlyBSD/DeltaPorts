@@ -1,0 +1,18 @@
+target @any
+port archivers/7-zip
+type port
+reason "auto-converted from Makefile.DragonFly"
+
+mk set MAKE_JOBS_UNSAFE "yes"
+mk add MAKE_ARGS "CC=cc CXX=c++"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@clang@gcc@g' \
+		${WRKSRC}/CPP/7zip/cmpl_clang.mak
+	${REINPLACE_CMD} -e 's@-Waddress-of-packed-member@-Wformat@g' \
+		${WRKSRC}/C/warn_gcc.mak \
+		${WRKSRC}/CPP/7zip/warn_gcc.mak
+
+MK1
+mk target set dfly-build <<'MK2'
+	${LN} -sv ${BUILD_WRKSRC}/b/g ${BUILD_WRKSRC}/b/c
+MK2

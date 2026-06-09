@@ -1,0 +1,6 @@
+target @any
+port archivers/py-pyminizip
+type port
+reason "auto-converted from Makefile.DragonFly"
+
+mk set DFLY_UNMAINTAINED "yes"

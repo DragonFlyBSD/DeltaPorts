@@ -1,0 +1,17 @@
+target @any
+port archivers/peazip
+type port
+reason "auto-converted from Makefile.DragonFly"
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@FREEBSD@DRAGONFLY@g' \
+		${WRKSRC}/dev/pea_utils.pas \
+		${WRKSRC}/dev/peach.pas \
+		${WRKSRC}/dev/list_utils.pas \
+		${WRKSRC}/dev/unit_gwrap.pas \
+		${WRKSRC}/dev/unit_pea.pas \
+		${WRKSRC}/dev/unit3.pas \
+		${WRKSRC}/dev/unit8.pas
+	${REINPLACE_CMD} -e 's@FreeBSD@DragonFly@g' \
+		${WRKSRC}/dev/list_utils.pas
+MK1

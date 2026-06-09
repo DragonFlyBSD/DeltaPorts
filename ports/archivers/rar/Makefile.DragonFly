@@ -1,4 +1,0 @@
-BROKEN= BLOB does not work on DragonFly
-
-# Dummy value avoid broken shell messages
-HAVE_COMPAT_IA32_KERN=yes

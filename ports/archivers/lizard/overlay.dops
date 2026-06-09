@@ -1,0 +1,7 @@
+target @any
+port archivers/lizard
+type port
+reason "auto-converted from Makefile.DragonFly"
+
+mk set MAKE_JOBS_UNSAFE "yes"
+mk set DFLY_UNMAINTAINED "yes"

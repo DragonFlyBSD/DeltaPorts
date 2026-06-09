@@ -1,0 +1,6 @@
+target @any
+port archivers/unarchiver
+type port
+reason "auto-converted from Makefile.DragonFly"
+
+mk set IGNORE "objc and crashes"

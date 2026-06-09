@@ -1,0 +1,6 @@
+target @any
+port archivers/nevada-toolset
+type port
+reason "auto-converted from Makefile.DragonFly"
+
+mk set IGNORE "unmaintained, please request fixing to users mailing list"

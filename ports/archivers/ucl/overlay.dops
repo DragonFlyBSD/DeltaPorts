@@ -1,0 +1,6 @@
+target @any
+port archivers/ucl
+type port
+reason "auto-converted from Makefile.DragonFly"
+
+mk add CPPFLAGS "-std=c90"

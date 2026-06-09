@@ -1,0 +1,6 @@
+target @any
+port accessibility/speech-dispatcher
+type port
+reason "auto-converted from Makefile.DragonFly"
+
+mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NPULSEAUDIO} AO ALSA"

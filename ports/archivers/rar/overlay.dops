@@ -1,0 +1,7 @@
+target @any
+port archivers/rar
+type port
+reason "auto-converted from Makefile.DragonFly"
+
+mk set BROKEN "BLOB does not work on DragonFly"
+mk set HAVE_COMPAT_IA32_KERN "yes"
