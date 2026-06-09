@@ -1,0 +1,6 @@
+port cad/gplcver
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add MAKE_ENV "ARCHFLGS=-D__FreeBSD__"

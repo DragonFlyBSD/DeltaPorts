@@ -1,0 +1,7 @@
+port cad/openscad
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CFLAGS "-Wno-deprecated-declarations -Wno-unused-variable"
+mk set IGNORE "unmaintained, please request fixing to users mailing list"

@@ -1,0 +1,6 @@
+port chinese/FreeWnn-server
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set CPP "cpp -P"

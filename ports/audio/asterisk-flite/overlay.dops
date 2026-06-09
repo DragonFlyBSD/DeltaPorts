@@ -1,0 +1,6 @@
+port audio/asterisk-flite
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set FLAVORS "${FLAVORS:Nasterisk16}"

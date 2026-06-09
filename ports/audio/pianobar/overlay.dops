@@ -1,0 +1,8 @@
+port audio/pianobar
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add MAKE_ARGS "CC=\"${CC}\" PREFIX=\"${PREFIX}\""
+mk add CFLAGS "-I${LOCALBASE}/include -std=c99"
+mk add LDFLAGS "-L${LOCALBASE}/lib"

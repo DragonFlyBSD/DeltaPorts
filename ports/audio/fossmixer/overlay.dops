@@ -1,0 +1,11 @@
+port audio/fossmixer
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "alias"
+mk set LIB_DEPENDS "${LIB_DEPENDS:Nlibpulse*}"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@ -Wall@ -Wall -D__FreeBSD__=9@g' \
+		${WRKSRC}/configure
+MK1

@@ -1,0 +1,9 @@
+port audio/swh-lv2
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set PLIST "${WRKDIR}/dfly-plist"
+mk target set dfly-patch <<'MK1'
+	${CAT} ${.CURDIR}/pkg-plist | ${SED} -e 's@FreeBSD@DragonFly@g' > ${PLIST}
+MK1

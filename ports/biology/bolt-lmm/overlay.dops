@@ -1,0 +1,10 @@
+port biology/bolt-lmm
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add MAKE_ARGS "LLAPACK=\"-lopenblas\""
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@ -lgfortran@@g' \
+		${WRKSRC}/src/Makefile
+MK1

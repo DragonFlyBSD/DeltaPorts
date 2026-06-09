@@ -1,0 +1,6 @@
+port audio/aften
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CFLAGS "-Wno-cast-function-type -Wno-implicit-fallthrough"

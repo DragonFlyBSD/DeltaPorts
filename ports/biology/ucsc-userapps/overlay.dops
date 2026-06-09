@@ -1,0 +1,11 @@
+port biology/ucsc-userapps
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+mk add USES "localbase:ldflags"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@FreeBSD@DragonFly@g' \
+		${WRKSRC}/kent/src/inc/common.mk-IGNORE=   unmaintained, please request fixing to users mailing list
+MK1

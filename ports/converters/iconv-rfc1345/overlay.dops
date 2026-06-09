@@ -1,0 +1,6 @@
+port converters/iconv-rfc1345
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add PLIST_FILES "@comment\\ share/iconv/charset.aliases"

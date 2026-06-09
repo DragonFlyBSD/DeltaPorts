@@ -1,0 +1,9 @@
+port databases/casstcl
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set pre-configure <<'MK1'
+	${REINPLACE_CMD} -e 's/FreeBSD-\*/FreeBSD-*|DragonFly-*/g' \
+		${WRKSRC}/tclconfig/tcl.m4
+MK1

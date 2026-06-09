@@ -1,0 +1,7 @@
+port benchmarks/postal
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CFLAGS "-std=c++98"
+mk set IGNORE "unmaintained, please request fixing to users mailing list"

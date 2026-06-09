@@ -1,0 +1,7 @@
+port audio/cli-visualizer
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "ncurses"
+mk set LIB_DEPENDS "${LIB_DEPENDS:Nlibpulse*}"

@@ -1,0 +1,6 @@
+port cad/kicad
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set IGNORE "cad/kicad-devel is the modern development; use it instead"

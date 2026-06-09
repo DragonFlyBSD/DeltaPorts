@@ -1,0 +1,7 @@
+port audio/pavucontrol
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set LIB_DEPENDS "${LIB_DEPENDS:Nlibpulse*}"
+mk set BROKEN "uses pulseaudio"

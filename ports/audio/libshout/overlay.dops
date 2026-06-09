@@ -1,0 +1,6 @@
+port audio/libshout
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set LDFLAGS "${LDFLAGS:N-lcrypto} -L${OPENSSLLIB} -lcrypto"

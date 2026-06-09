@@ -1,0 +1,9 @@
+port audio/fluidsynth
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set pre-patch <<'MK1'
+	${ECHO_CMD} 'SET(CMAKE_NO_BUILTIN_CHRPATH OFF CACHE BOOL "" FORCE)' \
+	>> ${WRKSRC}/CMakeLists.txt
+MK1

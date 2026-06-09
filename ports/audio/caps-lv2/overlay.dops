@@ -1,0 +1,9 @@
+port audio/caps-lv2
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@\(defined(__FreeBSD__)\)@(\1||defined(__DragonFly__))@g' \
+		${WRKSRC}/dsp/v4f_IIR2.h
+MK1

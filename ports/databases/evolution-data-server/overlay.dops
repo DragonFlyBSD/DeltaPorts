@@ -1,0 +1,7 @@
+port databases/evolution-data-server
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add BUILD_DEPENDS "krb5-config:security/krb5"
+mk add RUN_DEPENDS "krb5-config:security/krb5"

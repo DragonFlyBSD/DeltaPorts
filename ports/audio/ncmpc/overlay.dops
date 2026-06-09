@@ -1,0 +1,7 @@
+port audio/ncmpc
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add MESON_ARGS "-Dcurses=ncurses"
+mk set IGNORE "unmaintained, please request fixing to users mailing list"

@@ -1,0 +1,10 @@
+port audio/zplugins-lv2
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@freebsd@dragonfly@g' \
+		${WRKSRC}/meson.build \
+		${WRKSRC}/plugins/meson.build
+MK1

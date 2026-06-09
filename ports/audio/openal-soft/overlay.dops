@@ -1,0 +1,7 @@
+port audio/openal-soft
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+mk add USES "gmake"

@@ -1,0 +1,6 @@
+port astro/py-astropy
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CFLAGS "-DHAVE_MEMMOVE"

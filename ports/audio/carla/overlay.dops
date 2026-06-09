@@ -1,0 +1,13 @@
+port audio/carla
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "alias"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@FreeBSD@DragonFly@g' \
+		${WRKSRC}/source/includes/CarlaDefines.h \
+		${WRKSRC}/source/modules/AppConfig.h \
+		${WRKSRC}/source/modules/audio_decoder/minimp3_ex.h \
+		${WRKSRC}/source/modules/juce_core/system/juce_TargetPlatform.h
+MK1

@@ -1,0 +1,10 @@
+port comms/birda
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add MAKE_ENV "CWARNFLAGS=-fcommon"
+mk target set dfly-install <<'MK1'
+	${RM} -rfv ${STAGEDIR}${LOCALBASE}/man1
+	${INSTALL_MAN} ${WRKSRC}/*/*.1 ${STAGEDIR}${PREFIX}/man/man1/
+MK1

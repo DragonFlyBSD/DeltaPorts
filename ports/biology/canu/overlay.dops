@@ -1,0 +1,7 @@
+port biology/canu
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CFLAGS "-fopenmp"
+mk add LDFLAGS "-fopenmp"

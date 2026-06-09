@@ -1,0 +1,6 @@
+port audio/strawberry
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NPULSEAUDIO} ALSA"

@@ -1,0 +1,5 @@
+port audio/plasma6-kpipewire
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+

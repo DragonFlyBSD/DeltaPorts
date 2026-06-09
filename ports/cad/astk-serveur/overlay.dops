@@ -1,0 +1,12 @@
+port cad/astk-serveur
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-install <<'MK1'
+	-${RM} -v ${STAGEDIR}${PREFIX}/aster/ASTK/ASTK_SERV/share/codeaster/asrun/data/mpirun_template.bak
+	-${RM} -v ${STAGEDIR}${PREFIX}/aster/ASTK/ASTK_SERV/bin/parallel_cp.bak
+	-${RM} -v ${STAGEDIR}${PREFIX}/aster/ASTK/ASTK_SERV/bin/as_run.bak
+	-${RM} -v ${STAGEDIR}${PREFIX}/aster/ASTK/ASTK_CLIENT/bin/astk.bak
+	-${RM} -v ${STAGEDIR}${PREFIX}/aster/ASTK/ASTK_CLIENT/bin/bsf.bak
+MK1

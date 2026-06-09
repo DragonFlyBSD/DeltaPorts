@@ -1,0 +1,9 @@
+port audio/pavumeter
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set LIB_DEPENDS "${LIB_DEPENDS:Nlibpulse*}"
+mk set RUN_DEPENDS "${RUN_DEPENDS:N*pulseaudio}"
+mk set BUILD_DEPENDS "${BUILD_DEPENDS:N*pulseaudio}"
+mk set BROKEN "uses pulseaudio"

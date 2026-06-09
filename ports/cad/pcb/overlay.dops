@@ -1,0 +1,10 @@
+port cad/pcb
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add BUILD_DEPENDS "gsed:textproc/gsed"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@[[:<:]]sed[[:>:]]@gsed@g' \
+		${WRKSRC}/src/Makefile.in
+MK1

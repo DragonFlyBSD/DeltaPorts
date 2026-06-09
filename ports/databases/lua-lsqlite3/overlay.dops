@@ -1,0 +1,6 @@
+port databases/lua-lsqlite3
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set CFLAGS "${CFLAGS:N-Qunused-arguments}"

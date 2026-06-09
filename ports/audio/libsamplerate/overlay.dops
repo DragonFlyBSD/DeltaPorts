@@ -1,0 +1,6 @@
+port audio/libsamplerate
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add LDFLAGS "-L${PREFIX}/lib"

@@ -1,0 +1,10 @@
+port biology/p5-Bio-SCF
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CFLAGS "-Wundef"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e '/-DLITTLE_ENDIAN/d' \
+		${WRKSRC}/Makefile.PL
+MK1

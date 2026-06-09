@@ -1,0 +1,6 @@
+port converters/p5-Storable-AMF
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set IGNORE "locks with base gcc50 (builds with ports gcc 4.9 though)"

@@ -1,0 +1,9 @@
+port audio/libgig
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's|__FreeBSD__|__DragonFly__|' \
+		${WRKSRC}/src/Akai.h
+MK1

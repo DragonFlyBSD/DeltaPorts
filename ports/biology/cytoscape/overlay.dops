@@ -1,0 +1,6 @@
+port biology/cytoscape
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set BROKEN "Build failure: Can't connect to X11 window server using ':0.0'"

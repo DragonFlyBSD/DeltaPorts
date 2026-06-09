@@ -1,0 +1,15 @@
+port comms/unixcw
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "alias"
+mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NPULSEAUDIO}"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@curses@ncurses@' \
+		${WRKSRC}/configure.ac
+	${REINPLACE_CMD} -e 's@lcurses@lncurses@g' \
+		${WRKSRC}/configure \
+		${WRKSRC}/src/cwcp/Makefile.am \
+		${WRKSRC}/src/cwcp/Makefile.in
+MK1

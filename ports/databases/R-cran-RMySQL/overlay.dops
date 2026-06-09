@@ -1,0 +1,8 @@
+port databases/R-cran-RMySQL
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add RARGS "--with-mysql-inc=${LOCALBASE}/include/mysql"
+mk add RARGS "--with-mysql-lib=${LOCALBASE}/lib/mysql"
+mk add R_POSTCMD_INSTALL_OPTIONS "--configure-args='${RARGS}'"

@@ -1,0 +1,6 @@
+port audio/jack-keyboard
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add LDFLAGS "-L${LOCALBASE}/lib -lgthread-2.0"

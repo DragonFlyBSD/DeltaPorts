@@ -1,3 +1,0 @@
-# restrict to ports gcc/gcc47 because this locks up on gcc 5.0!
-
-IGNORE=		locks with base gcc50 (builds with ports gcc 4.9 though)

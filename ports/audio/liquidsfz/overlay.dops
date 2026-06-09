@@ -1,0 +1,9 @@
+port audio/liquidsfz
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add BUILD_DEPENDS "cxxfs_gcc8>0:misc/cxxfs_gcc8"
+mk add CXXFLAGS "-isystem ${LOCALBASE}/cxxfs_gcc8"
+mk add LDFLAGS "-L${LOCALBASE}/cxxfs_gcc8 -lstdc++fs"
+mk set IGNORE "unmaintained, please request fixing to users mailing list"

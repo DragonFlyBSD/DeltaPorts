@@ -1,0 +1,6 @@
+port astro/starplot
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set USE_CXXSTD "c++98"

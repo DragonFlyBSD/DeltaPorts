@@ -1,0 +1,6 @@
+port audio/beep
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set IGNORE "no /dev/speaker (4) support"

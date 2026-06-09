@@ -1,0 +1,15 @@
+port cad/brlcad
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set BROKEN "beyond repair"
+mk add USES "alias"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@_POSIX_C_SOURCE@&___@g' \
+			 -e 's@_XOPEN_SOURCE@&___@g' \
+		${WRKSRC}/CMakeLists.txt \
+		${WRKSRC}/src/other/gdal/ogr/ogrsf_frmts/geojson/libjson/CMakeLists.txt
+	${REINPLACE_CMD} -e 's@"Wl,--no-undefined"@""@g' \
+		${WRKSRC}/src/other/gdal/CMakeLists.txt
+MK1

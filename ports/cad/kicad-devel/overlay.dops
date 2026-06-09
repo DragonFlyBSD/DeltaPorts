@@ -1,0 +1,13 @@
+port cad/kicad-devel
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+mk add USES "localbase:ldflags"
+mk add CXXFLAGS "-Wno-deprecated-declarations -fext-numeric-literals"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's|__FreeBSD__|__DragonFly__|' \
+		${WRKSRC}/kicad/kicad.cpp \
+		${WRKSRC}/thirdparty/libcontext/libcontext.h
+MK1

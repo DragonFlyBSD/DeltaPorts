@@ -1,0 +1,12 @@
+port audio/libcoverart
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set USE_CXXSTD "gnu++11"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@-Werror @ @g' \
+		${WRKSRC}/examples/CMakeLists.txt \
+		${WRKSRC}/src/CMakeLists.txt \
+		${WRKSRC}/tests/CMakeLists.txt
+MK1

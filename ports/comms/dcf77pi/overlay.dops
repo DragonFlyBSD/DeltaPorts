@@ -1,0 +1,6 @@
+port comms/dcf77pi
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set IGNORE "not useful on DF (Rasbery Pi)"

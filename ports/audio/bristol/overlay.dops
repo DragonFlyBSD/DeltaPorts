@@ -1,0 +1,10 @@
+port audio/bristol
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "alias"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@FreeBSDx@DragonFlyx@g'	\
+		${WRKSRC}/bin/startBristol.in
+MK1

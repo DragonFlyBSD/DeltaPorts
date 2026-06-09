@@ -1,0 +1,7 @@
+port databases/db5
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set MUTARCH "${ARCH:S/i386/x86/}"
+mk add CONFIGURE_ARGS "--with-mutex=${MUTARCH}/gcc-assembly"

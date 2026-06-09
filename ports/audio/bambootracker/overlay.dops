@@ -1,0 +1,10 @@
+port audio/bambootracker
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NPULSEAUDIO} ALSA"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@-pedantic -pedantic-errors@@g' \
+		${WRKSRC}/BambooTracker/BambooTracker.pro
+MK1

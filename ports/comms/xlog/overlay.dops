@@ -1,0 +1,10 @@
+port comms/xlog
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CFLAGS "-Wno-error=restrict"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@ FILPATHLEN@ HAMLIB_FILPATHLEN@g' \
+		${WRKSRC}/src/hamlib-utils.c
+MK1

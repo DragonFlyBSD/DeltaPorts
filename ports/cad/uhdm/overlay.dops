@@ -1,0 +1,11 @@
+port cad/uhdm
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set BROKEN "compile time hog"
+mk add USES "python:3.6+,build"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@DT_UNKNOWN@&__z@g' \
+		${WRKSRC}/third_party/capnproto/c++/src/kj/filesystem-disk-unix.c++
+MK1

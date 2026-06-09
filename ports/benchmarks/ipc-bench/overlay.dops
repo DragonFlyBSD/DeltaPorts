@@ -1,0 +1,6 @@
+port benchmarks/ipc-bench
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set DFLY_UNMAINTAINED "yes"

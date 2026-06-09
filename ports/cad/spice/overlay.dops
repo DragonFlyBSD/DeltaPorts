@@ -1,0 +1,6 @@
+port cad/spice
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set IGNORE "lots of issues: termcap,stdlib,errno,timezone"

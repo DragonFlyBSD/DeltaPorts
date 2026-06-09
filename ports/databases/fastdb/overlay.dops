@@ -1,0 +1,11 @@
+port databases/fastdb
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "alias"
+mk add CXXFLAGS "-fpermissive"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@freebsd@dragonfly@g' \
+		${WRKSRC}/makefile
+MK1

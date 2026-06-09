@@ -1,0 +1,6 @@
+port audio/libmysofa
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CMAKE_ARGS "-DCODE_COVERAGE:BOOL=OFF"

@@ -1,0 +1,10 @@
+port cad/ktechlab
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "alias"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e '/-fsanitize=/d' \
+		${WRKSRC}/CMakeLists.txt
+MK1

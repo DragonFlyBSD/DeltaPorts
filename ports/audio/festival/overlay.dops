@@ -1,0 +1,7 @@
+port audio/festival
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "ncurses"
+mk add CONFIGURE_ARGS "ac_cv_lib_ncurses_tputs=yes"

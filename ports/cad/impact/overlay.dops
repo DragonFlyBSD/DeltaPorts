@@ -1,0 +1,11 @@
+port cad/impact
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-install <<'MK1'
+	${RM} -rfv ${STAGEDIR}${LOCALBASE}/share/java/Impact/lib_j3d/linux_*
+	${RM} -rfv ${STAGEDIR}${LOCALBASE}/share/java/Impact/lib_j3d/solaris_*
+	${RM} -rfv ${STAGEDIR}${LOCALBASE}/share/java/Impact/lib_j3d/windows_*
+	${RM} -fv ${STAGEDIR}${LOCALBASE}/share/java/Impact/lib/lib*.so
+MK1

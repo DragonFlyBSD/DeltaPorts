@@ -1,0 +1,8 @@
+port audio/opusfile
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set post-stage <<'MK1'
+	${RM} ${STAGEDIR}${DOCSDIR}/COPYING
+MK1

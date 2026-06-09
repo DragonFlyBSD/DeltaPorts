@@ -1,0 +1,10 @@
+port converters/hs-aeson-pretty
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	mv ${WRKSRC}/${PORTNAME}.cabal ${WRKSRC}/${PORTNAME}.cabal.orig
+	awk '{print; if ($$1 == "executable") {print "    extra-libraries: m"}}' \
+		${WRKSRC}/${PORTNAME}.cabal.orig > ${WRKSRC}/${PORTNAME}.cabal
+MK1
