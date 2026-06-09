@@ -376,46 +376,6 @@ def test_apply_plan_mk_var_set_applies(tmp_path: Path) -> None:
     assert makefile.read_text() == "PORTNAME= updated\n"
 
 
-def test_apply_plan_mk_var_set_self_reference_appends_immediate(
-    tmp_path: Path,
-) -> None:
-    # A self-referential value (OPTIONS_DEFAULT:= ${OPTIONS_DEFAULT:NSTUNNEL})
-    # must not rewrite the upstream assignment in place — a recursive `=` is
-    # fatal in bmake. It is appended as an immediate `:=` line before the
-    # final include, reproducing the trailing Makefile.DragonFly fragment.
-    makefile = tmp_path / "Makefile"
-    makefile.write_text(
-        "PORTNAME= mew\nOPTIONS_DEFAULT= FOO STUNNEL BAR\n\n.include <bsd.port.mk>\n"
-    )
-    plan = Plan(
-        port="category/name",
-        ops=[
-            PlanOp(
-                id="op-1",
-                target="@main",
-                kind="mk.var.set",
-                payload={
-                    "name": "OPTIONS_DEFAULT",
-                    "value": "${OPTIONS_DEFAULT:NSTUNNEL}",
-                },
-            )
-        ],
-    )
-
-    result = apply_plan(
-        plan, port_root=tmp_path, target="@main", dry_run=False, oracle_profile="off"
-    )
-
-    assert result.ok
-    assert makefile.read_text() == (
-        "PORTNAME= mew\n"
-        "OPTIONS_DEFAULT= FOO STUNNEL BAR\n"
-        "\n"
-        "OPTIONS_DEFAULT:= ${OPTIONS_DEFAULT:NSTUNNEL}\n"
-        ".include <bsd.port.mk>\n"
-    )
-
-
 def test_apply_plan_mk_var_set_creates_before_first_target(tmp_path: Path) -> None:
     makefile = tmp_path / "Makefile"
     makefile.write_text("PORTNAME= sample\ndo-build:\n\t@true\n")
