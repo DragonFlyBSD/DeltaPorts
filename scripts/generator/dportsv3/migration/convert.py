@@ -55,8 +55,12 @@ def _parse_makefile_dragonfly(path: Path) -> tuple[list[str], list[str]]:
                 ops.append(f"mk set {name} {_quote(value)}")
             elif op == "+=":
                 if value:
-                    token = value if re.match(r"^[^\s]+$", value) else _quote(value)
-                    ops.append(f"mk add {name} {token}")
+                    # Always quote — `mk add` accepts a STRING token, and a
+                    # bare token can carry chars that aren't valid unquoted
+                    # DSL words (`>`, `:`, embedded `"` — e.g. dependency
+                    # specs `foo>0:cat/foo`, `-DX:STRING="y"`), which the
+                    # lexer rejects. Quoting is what `mk set` already does.
+                    ops.append(f"mk add {name} {_quote(value)}")
             else:
                 errors.append(f"unsupported_assignment_op:{op}")
             continue

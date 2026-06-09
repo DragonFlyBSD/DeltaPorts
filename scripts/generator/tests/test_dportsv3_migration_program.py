@@ -311,6 +311,28 @@ def test_cli_inventory_classify_convert_batch_policy_progress(
     assert dashboard_payload["gates"]["policy_pass"] is False
 
 
+def test_converter_quotes_special_char_plus_assign(tmp_path: Path) -> None:
+    """Regression: `+=` values with non-word chars (`>`, `:`, embedded
+    `"`) must be emitted as quoted `mk add` tokens, not bare — a bare
+    token with those chars produces unparseable dops
+    (E_PARSE_EXPECTED_NEWLINE / E_PARSE_UNEXPECTED_CHAR)."""
+    from dportsv3.engine.api import parse_dsl
+    from dportsv3.migration.convert import _parse_makefile_dragonfly, _render_dops
+
+    mk = tmp_path / "Makefile.DragonFly"
+    mk.write_text(
+        "BUILD_DEPENDS+= cxxfs_gcc8>0:misc/cxxfs_gcc8\n"
+        'CMAKE_ARGS+= -DUSER_LIBS:STRING="stdc++fs"\n'
+    )
+    ops, errors = _parse_makefile_dragonfly(mk)
+
+    assert errors == []
+    assert 'mk add BUILD_DEPENDS "cxxfs_gcc8>0:misc/cxxfs_gcc8"' in ops
+    assert 'mk add CMAKE_ARGS "-DUSER_LIBS:STRING=\\"stdc++fs\\""' in ops
+    # the rendered overlay must parse cleanly
+    assert parse_dsl(_render_dops("devel/x", ops), Path("overlay.dops")).ok
+
+
 def test_extract_touched_origins_helper_is_deterministic() -> None:
     changed_paths = [
         "ports/devel/tool/overlay.dops",

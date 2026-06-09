@@ -47,7 +47,7 @@ def test_payload_surfaces_deterministic_ops_and_unsupported(tmp_path: Path) -> N
     )
     # Deterministic ops section names the op the parser produced.
     assert "Deterministic ops already produced" in payload
-    assert "mk add USES pkgconfig" in payload
+    assert 'mk add USES "pkgconfig"' in payload
     # Unsupported items section names the parser's reason.
     assert "Unsupported items" in payload
     assert "conditional_block_present" in payload
