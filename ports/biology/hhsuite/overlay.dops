@@ -1,0 +1,23 @@
+port biology/hhsuite
+type port
+reason "force MPI cmake args and patch CMakeLists to remove find_package(MPI)"
+target @any
+
+mk add CMAKE_ARGS "-DMPI:BOOL:CACHED=true -DHAVE_MPI:BOOL:CACHED=true -DMPI_FOUND:BOOL:CACHED=true"
+mk add CMAKE_ARGS "-DMPI_C_FOUND:BOOL:CACHED=true -DMPI_CXX_FOUND:BOOL:CACHED=true"
+mk add CMAKE_ARGS "-DMPI_C:STR:CACHED=mpicc -DMPI_CXX:STR:CACHED=mpicxx"
+mk add CMAKE_ARGS "-DMPI_INCLUDE_PATH:STR:CACHED=${LOCALBASE}/mpi/openmpi/include"
+mk add CMAKE_ARGS "-DMPI_C_COMPILE_FLAGS:STR:CACHED=-I${LOCALBASE}/mpi/openmpi/include"
+mk add CMAKE_ARGS "-DMPI_CXX_COMPILE_FLAGS:STR:CACHED=-I${LOCALBASE}/mpi/openmpi/include"
+mk add CMAKE_ARGS "-DMPI_CXX_LINK_FLAGS:STR:CACHED=-Wl,-rpath,${LOCALBASE}/mpi/openmpi/lib -L${LOCALBASE}/mpi/openmpi/lib -lmpi_cxx -lmpi"
+
+mk set DFLY_UNMAINTAINED "yes"
+
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e '/find_package(MPI QUIET)/d' -e '/find_package(MPI)/d' \
+		${WRKSRC}/src/CMakeLists.txt \
+		${WRKSRC}/lib/ffindex/src/CMakeLists.txt \
+		${WRKSRC}/lib/ffindex/src/mpq/CMakeLists.txt
+MK
+
+file materialize dragonfly/patch-environ -> dragonfly/patch-environ

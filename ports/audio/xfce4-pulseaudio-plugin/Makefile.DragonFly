@@ -1,5 +1,0 @@
-
-# no pulse
-LIB_DEPENDS:=	${LIB_DEPENDS:Nlibpulse*}
-RUN_DEPENDS:=	${RUN_DEPENDS:Npavucontrol*}
-BROKEN= uses pulseaudio

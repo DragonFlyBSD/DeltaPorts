@@ -1,0 +1,14 @@
+port audio/libopenshot-audio
+type port
+reason "exclude DOCS option, disable doxygen/python cmake deps, materialize DragonFly patches"
+target @any
+
+mk add OPTIONS_EXCLUDE "DOCS"
+mk add CMAKE_BOOL_OFF "CMAKE_DISABLE_FIND_PACKAGE_Doxygen"
+mk add CMAKE_BOOL_OFF "CMAKE_DISABLE_FIND_PACKAGE_PythonInterp"
+
+file materialize dragonfly/patch-JuceLibraryCode_modules_juce__core_containers_juce__ArrayBase.h -> dragonfly/patch-JuceLibraryCode_modules_juce__core_containers_juce__ArrayBase.h
+file materialize dragonfly/patch-JuceLibraryCode_modules_juce__core_memory_juce__Memory.h -> dragonfly/patch-JuceLibraryCode_modules_juce__core_memory_juce__Memory.h
+file materialize dragonfly/patch-JuceLibraryCode_modules_juce__core_native_juce__posix__SharedCode.h -> dragonfly/patch-JuceLibraryCode_modules_juce__core_native_juce__posix__SharedCode.h
+file materialize dragonfly/patch-JuceLibraryCode_modules_juce__core_system_juce__TargetPlatform.h -> dragonfly/patch-JuceLibraryCode_modules_juce__core_system_juce__TargetPlatform.h
+file materialize dragonfly/patch-JuceLibraryCode_modules_juce__core_text_juce__CharPointer__UTF8.h -> dragonfly/patch-JuceLibraryCode_modules_juce__core_text_juce__CharPointer__UTF8.h

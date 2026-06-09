@@ -1,0 +1,8 @@
+port audio/xfce4-pulseaudio-plugin
+type port
+reason "remove pulseaudio deps and mark broken on DragonFly"
+target @any
+
+mk eval LIB_DEPENDS "${LIB_DEPENDS:Nlibpulse*}"
+mk eval RUN_DEPENDS "${RUN_DEPENDS:Npavucontrol*}"
+mk set BROKEN "uses pulseaudio"

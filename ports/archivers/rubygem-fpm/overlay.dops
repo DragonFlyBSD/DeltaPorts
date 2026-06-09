@@ -1,0 +1,8 @@
+port archivers/rubygem-fpm
+type port
+reason "use plain sed as REINPLACE_CMD when DEVELOPER is defined"
+target @any
+
+mk block set condition "defined(DEVELOPER)" <<'MK'
+REINPLACE_CMD:=	${SED} ${REINPLACE_ARGS}
+MK

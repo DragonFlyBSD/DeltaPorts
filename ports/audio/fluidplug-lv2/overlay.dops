@@ -1,0 +1,8 @@
+port audio/fluidplug-lv2
+type port
+reason "guard MANUAL_PACKAGE_BUILD behind DPORTS_BUILDER check"
+target @any
+
+mk block set condition "!defined(DPORTS_BUILDER)" <<'MK'
+MANUAL_PACKAGE_BUILD=	huge (331M packaged)
+MK

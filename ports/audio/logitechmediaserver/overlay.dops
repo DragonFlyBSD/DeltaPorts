@@ -1,0 +1,19 @@
+port audio/logitechmediaserver
+type port
+reason "mark broken, add CFLAGS warnings suppression, patch vendor build script via dfly-patch target"
+target @any
+
+mk set IGNORE "bundled jpeg-turbo-lib doesn't have dragonfly support in configure script"
+
+mk add CFLAGS "-Wno-deprecated-declarations"
+mk add CFLAGS "-Wno-unused-but-set-variable"
+mk add CFLAGS "-Wno-enum-compare"
+mk add CFLAGS "-Wno-switch"
+
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} \
+		-e "s|amd64-freebsd|x86_64-dragonfly|g" \
+		-e "s|FreeBSD|DragonFly|" \
+		-e "s| --cc=clang||" \
+		${WRKSRC_vendor}/CPAN/buildme.sh
+MK

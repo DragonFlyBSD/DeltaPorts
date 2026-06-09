@@ -1,0 +1,45 @@
+port audio/drumstick
+type port
+reason "use alsa backend, remove pulseaudio, add alsa plist files"
+target @any
+
+mk add USES "localbase:ldflags"
+
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NPULSEAUDIO}"
+
+mk add LIB_DEPENDS "libasound.so:audio/alsa-lib"
+mk add RUN_DEPENDS "${LOCALBASE}/lib/alsa-lib/libasound_module_pcm_oss.so:audio/alsa-plugins"
+mk add RUN_DEPENDS "alsa-lib>=1.1.1_1:audio/alsa-lib"
+
+mk add PLIST_FILES "bin/drumstick-drumgrid"
+mk add PLIST_FILES "bin/drumstick-dumpmid"
+mk add PLIST_FILES "bin/drumstick-guiplayer"
+mk add PLIST_FILES "bin/drumstick-metronome"
+mk add PLIST_FILES "bin/drumstick-playsmf"
+mk add PLIST_FILES "bin/drumstick-sysinfo"
+mk add PLIST_FILES "include/drumstick/alsaclient.h"
+mk add PLIST_FILES "include/drumstick/alsaevent.h"
+mk add PLIST_FILES "include/drumstick/alsaport.h"
+mk add PLIST_FILES "include/drumstick/alsaqueue.h"
+mk add PLIST_FILES "include/drumstick/alsatimer.h"
+mk add PLIST_FILES "include/drumstick/playthread.h"
+mk add PLIST_FILES "include/drumstick/sequencererror.h"
+mk add PLIST_FILES "include/drumstick/subscription.h"
+mk add PLIST_FILES "lib/cmake/drumstick/drumstick-alsa-config-version.cmake"
+mk add PLIST_FILES "lib/cmake/drumstick/drumstick-alsa-config.cmake"
+mk add PLIST_FILES "lib/cmake/drumstick/drumstick-alsa-targets-%%CMAKE_BUILD_TYPE%%.cmake"
+mk add PLIST_FILES "lib/cmake/drumstick/drumstick-alsa-targets.cmake"
+mk add PLIST_FILES "lib/drumstick2/libdrumstick-rt-alsa-in.so"
+mk add PLIST_FILES "lib/drumstick2/libdrumstick-rt-alsa-out.so"
+mk add PLIST_FILES "lib/libdrumstick-alsa.so"
+mk add PLIST_FILES "lib/libdrumstick-alsa.so.2"
+mk add PLIST_FILES "lib/libdrumstick-alsa.so.2.5.0"
+mk add PLIST_FILES "share/applications/drumstick-drumgrid.desktop"
+mk add PLIST_FILES "share/applications/drumstick-guiplayer.desktop"
+mk add PLIST_FILES "%%DATADIR%%/drumstick-drumgrid_en.qm"
+mk add PLIST_FILES "%%DATADIR%%/drumstick-drumgrid_es.qm"
+mk add PLIST_FILES "%%DATADIR%%/drumstick-guiplayer_cs.qm"
+mk add PLIST_FILES "%%DATADIR%%/drumstick-guiplayer_es.qm"
+mk add PLIST_FILES "%%DATADIR%%/drumstick-guiplayer_ru.qm"
+
+file materialize dragonfly/patch-CMakeLists.txt -> dragonfly/patch-CMakeLists.txt

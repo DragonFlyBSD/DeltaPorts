@@ -1,0 +1,6 @@
+port arabic/arabtex
+type port
+reason "remove LICENSE variable not applicable on DragonFly"
+target @any
+
+mk unset LICENSE

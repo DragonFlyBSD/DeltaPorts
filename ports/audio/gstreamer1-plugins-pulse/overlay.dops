@@ -1,0 +1,6 @@
+port audio/gstreamer1-plugins-pulse
+type port
+reason "mark broken: uses pulseaudio which is not supported on DragonFly"
+target @any
+
+mk set BROKEN "uses pulseaudio"

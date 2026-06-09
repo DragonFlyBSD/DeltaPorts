@@ -1,0 +1,8 @@
+port audio/xfce4-mixer
+type port
+reason "remove PULSEAUDIO from OPTIONS_DEFAULT when flavor is full"
+target @any
+
+mk block set condition "${FLAVOR} == full" <<'MK'
+OPTIONS_DEFAULT:=	${OPTIONS_DEFAULT:NPULSEAUDIO}
+MK

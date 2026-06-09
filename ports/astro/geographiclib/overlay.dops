@@ -1,0 +1,6 @@
+port astro/geographiclib
+type port
+reason "remove DOXYGEN from OPTIONS_DEFAULT"
+target @any
+
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NDOXYGEN}"

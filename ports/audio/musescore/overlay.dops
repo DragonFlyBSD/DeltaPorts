@@ -1,0 +1,6 @@
+port audio/musescore
+type port
+reason "remove WEBENGINE from OPTIONS_DEFAULT_x86_64 on DragonFly"
+target @any
+
+mk eval OPTIONS_DEFAULT_x86_64 "${OPTIONS_DEFAULT_x86_64:NWEBENGINE}"

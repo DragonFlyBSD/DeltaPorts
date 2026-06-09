@@ -1,0 +1,10 @@
+port biology/plink
+type port
+reason "add warning suppression flags and remove -lthr LDFLAGS on DragonFly"
+target @any
+
+mk add CFLAGS "-Wno-stringop-truncation"
+mk add CFLAGS "-Wno-stringop-overflow"
+mk add LDFLAGS "-pthread"
+
+patch apply diffs/Makefile.diff

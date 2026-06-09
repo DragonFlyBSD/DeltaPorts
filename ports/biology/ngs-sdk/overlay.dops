@@ -1,0 +1,16 @@
+port biology/ngs-sdk
+type port
+reason "use bsd/gcc build args, patch konfigure.perl for DragonFly, fix install path"
+target @any
+
+mk add MAKE_ARGS "OS=bsd"
+mk add MAKE_ARGS "TOOLS=gcc"
+
+patch apply diffs/Makefile.diff
+
+mk target set dfly-patch <<'MK'
+	${RM} -f ${WRKSRC}/interfaces/os/bsd/endian.h
+	${REINPLACE_CMD} -e 's@freebsd@dragonfly@g' \
+			 -e "/TOOLS =/s@'clang'@'gcc'@g" \
+		${WRKSRC}/ngs-*/setup/konfigure.perl
+MK

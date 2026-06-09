@@ -1,0 +1,15 @@
+port biology/ncbi-blast+
+type port
+reason "add local lib configure args, remove -latomic LDFLAGS, materialize DragonFly patches"
+target @any
+
+mk add CONFIGURE_ARGS "--with-lmdb=${LOCALBASE} --with-lzo=${LOCALBASE} --with-sqlite3=${LOCALBASE}"
+
+patch apply diffs/Makefile.diff
+
+file materialize dragonfly/patch-scripts_common_common.sh -> dragonfly/patch-scripts_common_common.sh
+file materialize dragonfly/patch-src_build-system_configure -> dragonfly/patch-src_build-system_configure
+file materialize dragonfly/patch-src_corelib_ncbifile.cpp -> dragonfly/patch-src_corelib_ncbifile.cpp
+file materialize dragonfly/patch-src_util_checksum_cityhash_city.cc -> dragonfly/patch-src_util_checksum_cityhash_city.cc
+file materialize dragonfly/patch-src_util_compress_api_miniz_miniz__zip.c -> dragonfly/patch-src_util_compress_api_miniz_miniz__zip.c
+file materialize dragonfly/patch-src_util_lmdb_mdb.c -> dragonfly/patch-src_util_lmdb_mdb.c

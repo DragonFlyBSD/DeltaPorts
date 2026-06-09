@@ -1,0 +1,6 @@
+port audio/gula-plugins-lv2
+type port
+reason "remove -fbracket-depth* flag from CXXFLAGS not supported on DragonFly"
+target @any
+
+mk eval CXXFLAGS "${CXXFLAGS:N-fbracket-depth*}"

@@ -1,0 +1,15 @@
+port audio/din
+type port
+reason "remove -lthr from LIBS, add IGNORE and extra PLIST_FILES for DragonFly"
+target @any
+
+mk eval LIBS "${LIBS:N-lthr}"
+
+text replace-once file Makefile from "LIBS+=\t\t-L${LOCALBASE}/lib -ltcl${TCL_SHLIB_VER} -lthr -ljack" to "LIBS+=\t\t-L${LOCALBASE}/lib -ltcl${TCL_SHLIB_VER} -ljack" on-missing noop
+
+mk add PLIST_FILES "%%DATADIR%%/factory/dummy.crv"
+mk add PLIST_FILES "%%DATADIR%%/factory/gravmod.crv"
+mk add PLIST_FILES "%%DATADIR%%/factory/gravmod.ed"
+mk add PLIST_FILES "%%DATADIR%%/factory/spinners"
+
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
