@@ -1,0 +1,8 @@
+port databases/libmemcached
+type port
+reason "set configure env vars and suppress terminate warning"
+target @any
+
+mk add CONFIGURE_ENV "ac_cv_msg_nosignal=yes"
+mk add CONFIGURE_ENV "ac_cv_msg_dontwait=yes"
+mk add CXXFLAGS -Wno-terminate

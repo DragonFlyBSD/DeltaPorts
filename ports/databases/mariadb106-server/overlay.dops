@@ -1,0 +1,17 @@
+port databases/mariadb106-server
+type port
+reason "add gettext-runtime; switch GSSAPI; remove Java jars in dfly-install; dragonfly patches"
+target @any
+
+mk add USES gettext-runtime
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NGSSAPI_BASE}"
+mk add OPTIONS_DEFAULT GSSAPI_MIT
+
+mk target set dfly-install <<'MK'
+	${RM} ${STAGEDIR}${DATADIR}/JavaWrappers.jar
+	${RM} ${STAGEDIR}${DATADIR}/JdbcInterface.jar
+MK
+
+file materialize dragonfly/patch-client_mysql.cc -> dragonfly/patch-client_mysql.cc
+file materialize dragonfly/patch-include_my__pthread.h -> dragonfly/patch-include_my__pthread.h
+file materialize dragonfly/patch-scripts_CMakeLists.txt -> dragonfly/patch-scripts_CMakeLists.txt

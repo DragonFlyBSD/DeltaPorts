@@ -1,0 +1,15 @@
+port comms/wsjtx
+type port
+reason "patch bundled hamlib tarball to comment out libusb call; dragonfly XFAIL marker"
+target @any
+
+mk block set condition "!target(dfly-patch)" <<'MK'
+dfly-patch:
+	${ECHO} '--- hamlib/src/usb_port.c.orig' >> ${WRKSRC}/hamlib.patch
+	${ECHO} '+++ hamlib/src/usb_port.c' >> ${WRKSRC}/hamlib.patch
+	${ECHO} '@@ -297 +297 @@' >> ${WRKSRC}/hamlib.patch
+	${ECHO} '-    (void)libusb_set_auto_detach_kernel_driver(udh, port->parm.usb.iface);' >> ${WRKSRC}/hamlib.patch
+	${ECHO} '+//    (void)libusb_set_auto_detach_kernel_driver(udh, port->parm.usb.iface);' >> ${WRKSRC}/hamlib.patch
+MK
+
+file materialize dragonfly/XFAIL -> dragonfly/XFAIL

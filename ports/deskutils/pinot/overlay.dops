@@ -1,0 +1,6 @@
+port deskutils/pinot
+type port
+reason "switch xpdf dep to poppler-utils; remove pdftotext path reinplace"
+target @any
+
+patch apply diffs/Makefile.diff

@@ -1,0 +1,7 @@
+port devel/agar
+type port
+reason "mark port as unmaintained; remove objc_warnings header from plist"
+target @any
+
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+text line-remove file pkg-plist exact "include/agar/agar/config/have_objc_warnings.h" on-missing noop

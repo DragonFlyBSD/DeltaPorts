@@ -1,0 +1,6 @@
+port databases/sqlite3
+type port
+reason "remove HAVE_FDATASYNC from CPPFLAGS (not available on DragonFly)"
+target @any
+
+text line-remove file Makefile exact "		-DHAVE_FDATASYNC=1 \\" on-missing noop

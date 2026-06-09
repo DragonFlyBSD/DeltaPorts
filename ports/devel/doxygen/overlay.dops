@@ -1,0 +1,12 @@
+port devel/doxygen
+type port
+reason "add localbase ldflags, libmd dep; remove libmd5 extract arg and stale patches"
+target @any
+
+mk add USES "localbase:ldflags"
+mk add LIB_DEPENDS "libmd.so:security/libmd"
+text line-remove file Makefile exact "EXTRACT_AFTER_ARGS=	--exclude '*/libmd5'" on-missing noop
+file remove files/patch-CMakeLists.txt on-missing noop
+file remove files/patch-src_CMakeLists.txt on-missing noop
+file materialize dragonfly/patch-CMakeLists.txt -> dragonfly/patch-CMakeLists.txt
+file materialize dragonfly/patch-src_CMakeLists.txt -> dragonfly/patch-src_CMakeLists.txt

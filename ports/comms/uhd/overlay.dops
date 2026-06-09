@@ -1,0 +1,22 @@
+port comms/uhd
+type port
+reason "remove -latomic; add numpy dep; add orphan plist files; mark unmaintained"
+target @any
+
+mk eval LDFLAGS_gcc "${LDFLAGS_gcc:N-latomic}"
+mk add CMAKE_ARGS "-DENABLE_PYTHON_API:STRING=\"ON\""
+mk add BUILD_DEPENDS "${PYTHON_PKGNAMEPREFIX}numpy>=1.4.1,1:math/py-numpy@${PY_FLAVOR}"
+mk add RUN_DEPENDS "${PYTHON_PKGNAMEPREFIX}numpy>=1.4.1,1:math/py-numpy@${PY_FLAVOR}"
+mk add PLIST_FILES "%%DATADIR%%/examples/python/benchmark_rate.py"
+mk add PLIST_FILES "%%DATADIR%%/examples/python/curses_fft.py"
+mk add PLIST_FILES "%%DATADIR%%/examples/python/rx_to_file.py"
+mk add PLIST_FILES "%%DATADIR%%/examples/python/tx_waveforms.py"
+mk add PLIST_FILES "%%DATADIR%%/examples/python/usrp_power_meter.py"
+mk add PLIST_FILES "%%DATADIR%%/tests/pychdr_parse_test.py"
+mk add PLIST_FILES "%%DATADIR%%/tests/pyranges_test.py"
+mk add PLIST_FILES "%%DATADIR%%/tests/verify_fbs_test.py"
+mk set DFLY_UNMAINTAINED "yes"
+
+file materialize dragonfly/patch-host_cmake_Modules_FindLIBUSB.cmake -> dragonfly/patch-host_cmake_Modules_FindLIBUSB.cmake
+file materialize dragonfly/patch-host_include_uhd_config.h -> dragonfly/patch-host_include_uhd_config.h
+file materialize dragonfly/patch-host_include_uhd_config.hpp -> dragonfly/patch-host_include_uhd_config.hpp

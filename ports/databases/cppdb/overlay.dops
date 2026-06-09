@@ -1,0 +1,6 @@
+port databases/cppdb
+type port
+reason "remove ninja from USES to work around relink issue"
+target @any
+
+mk eval USES "${USES:Nninja}"

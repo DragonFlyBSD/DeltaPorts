@@ -1,0 +1,6 @@
+port deskutils/gnome-contacts
+type port
+reason "remove CHEESE from x86_64 default options"
+target @any
+
+mk eval OPTIONS_DEFAULT_x86_64 "${OPTIONS_DEFAULT_x86_64:NCHEESE}"

@@ -1,0 +1,8 @@
+port cad/kicad-library-packages3d-devel
+type port
+reason "flag huge build for non-builder environments"
+target @any
+
+mk block set condition "!defined(DPORTS_BUILDER)" <<'MK'
+MANUAL_PACKAGE_BUILD=	huge
+MK

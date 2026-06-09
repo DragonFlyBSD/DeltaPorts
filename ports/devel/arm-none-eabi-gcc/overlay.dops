@@ -1,0 +1,20 @@
+port devel/arm-none-eabi-gcc
+type port
+reason "add README to plist; remove include-fixed headers in dfly-install; fix plist"
+target @any
+
+mk add PLIST_FILES "lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/include-fixed/README"
+
+mk target set dfly-install <<'MK'
+	${RM} -v ${STAGEDIR}${LOCALBASE}/lib/gcc/${GCC_TARGET}/${PORTVERSION}/include-fixed/*.h
+MK
+
+text line-remove file pkg-plist exact "lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/include-fixed/README" on-missing noop
+text line-remove file pkg-plist exact "lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/include-fixed/limits.h" on-missing noop
+text line-remove file pkg-plist exact "lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/include-fixed/stddef.h" on-missing noop
+text line-remove file pkg-plist exact "lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/include-fixed/stdio.h" on-missing noop
+text line-remove file pkg-plist exact "lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/include-fixed/stdlib.h" on-missing noop
+text line-remove file pkg-plist exact "lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/include-fixed/sys/types.h" on-missing noop
+text line-remove file pkg-plist exact "lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/include-fixed/syslimits.h" on-missing noop
+text line-remove file pkg-plist exact "lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/include-fixed/unistd.h" on-missing noop
+text line-remove file pkg-plist exact "lib/gcc/%%GCC_TARGET%%/%%GCC_VERSION%%/include-fixed/wchar.h" on-missing noop

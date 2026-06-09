@@ -1,0 +1,6 @@
+port cad/ldraw
+type port
+reason "add models/ dir copy to do-install target"
+target @any
+
+patch apply diffs/Makefile.diff

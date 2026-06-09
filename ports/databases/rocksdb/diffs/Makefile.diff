@@ -1,4 +1,0 @@
---- Makefile.orig	2022-01-13 04:20:51 UTC
-+++ Makefile
-@@ -16 +15,0 @@
--BROKEN_DragonFly=	does not build on DragonFly BSD using GCC with -Werror

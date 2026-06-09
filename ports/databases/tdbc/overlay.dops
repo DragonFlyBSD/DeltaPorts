@@ -1,0 +1,6 @@
+port databases/tdbc
+type port
+reason "add DragonFly to FreeBSD configure glob in do-configure loop"
+target @any
+
+patch apply diffs/Makefile.diff

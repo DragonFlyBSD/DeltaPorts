@@ -1,0 +1,6 @@
+port audio/nas
+type port
+reason "add libaudio.so.2.4 to plist"
+target @any
+
+text line-insert-after file pkg-plist anchor "lib/libaudio.so.2" line "lib/libaudio.so.2.4" on-missing noop

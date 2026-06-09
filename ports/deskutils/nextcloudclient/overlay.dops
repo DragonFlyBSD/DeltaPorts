@@ -1,0 +1,21 @@
+port deskutils/nextcloudclient
+type port
+reason "add localbase ldflags; disable WEBENGINE; add gcc; patch CMakeLists.txt; dragonfly patches"
+target @any
+
+mk add USES "localbase:ldflags"
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NWEBENGINE}"
+mk eval OPTIONS_DEFAULT_x86_64 "${OPTIONS_DEFAULT_x86_64:NWEBENGINE}"
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e '/find_package/s@(OpenSSL 1.1 REQUIRED )@(OpenSSL REQUIRED )@g' \
+		${WRKSRC}/CMakeLists.txt
+MK
+
+mk add CMAKE_ARGS "-DCMAKE_INSTALL_MANDIR:STRING=share/man"
+
+file materialize dragonfly/patch-cmake_modules_DefinePlatformDefaults.cmake -> dragonfly/patch-cmake_modules_DefinePlatformDefaults.cmake
+file materialize dragonfly/patch-libressl-compat -> dragonfly/patch-libressl-compat
+file materialize dragonfly/patch-src_cmd_CMakeLists.txt -> dragonfly/patch-src_cmd_CMakeLists.txt
+file materialize dragonfly/patch-src_gui_CMakeLists.txt -> dragonfly/patch-src_gui_CMakeLists.txt

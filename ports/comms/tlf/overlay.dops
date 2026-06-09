@@ -1,0 +1,14 @@
+port comms/tlf
+type port
+reason "add orphan plist files and mark unmaintained; dragonfly upstream patches"
+target @any
+
+mk add PLIST_FILES "%%PORTDOCS%%%%DOCSDIR%%/Xresources"
+mk add PLIST_FILES "%%DATADIR%%/cwops.txt"
+mk add PLIST_FILES "%%DATADIR%%/ok_om.txt"
+mk add PLIST_FILES "%%DATADIR%%/okommults"
+mk add PLIST_FILES "%%DATADIR%%/rules/cwops_mini_cwt"
+mk add PLIST_FILES "%%DATADIR%%/rules/okom"
+mk set DFLY_UNMAINTAINED "yes"
+
+file materialize dragonfly/patch-src_sockserv.c -> dragonfly/patch-src_sockserv.c

@@ -1,0 +1,54 @@
+port devel/bazel5
+type port
+reason "copy DragonFly extra files into wrksrc; clean .orig files; dragonfly patches"
+target @any
+
+mk target set dfly-patch <<'MK'
+	@${CP} ${DFLY_FILESDIR}/extra-absl_base_config.h \
+	       ${DFLY_FILESDIR}/extra-absl_debugging_internal_vdso_support.cc \
+		${WRKSRC}/third_party/py/abseil/
+	@${CP} ${DFLY_FILESDIR}/extra-include_grpc_impl_codegen_port__platform.h \
+	       ${DFLY_FILESDIR}/extra-include_grpc_event__engine_port.h \
+	       ${DFLY_FILESDIR}/extra-src_core_lib_iomgr_port.h \
+		${WRKSRC}/third_party/grpc
+MK
+
+patch apply diffs/Makefile.diff
+
+file materialize dragonfly/extra-absl_base_config.h -> dragonfly/extra-absl_base_config.h
+file materialize dragonfly/extra-absl_debugging_internal_vdso_support.cc -> dragonfly/extra-absl_debugging_internal_vdso_support.cc
+file materialize dragonfly/extra-include_grpc_event__engine_port.h -> dragonfly/extra-include_grpc_event__engine_port.h
+file materialize dragonfly/extra-include_grpc_impl_codegen_port__platform.h -> dragonfly/extra-include_grpc_impl_codegen_port__platform.h
+file materialize dragonfly/extra-src_core_lib_iomgr_port.h -> dragonfly/extra-src_core_lib_iomgr_port.h
+file materialize dragonfly/patch-distdir__deps.bzl -> dragonfly/patch-distdir__deps.bzl
+file materialize dragonfly/patch-platforms_os_BUILD -> dragonfly/patch-platforms_os_BUILD
+file materialize dragonfly/patch-scripts_packages_BUILD -> dragonfly/patch-scripts_packages_BUILD
+file materialize dragonfly/patch-src_BUILD -> dragonfly/patch-src_BUILD
+file materialize dragonfly/patch-src_conditions_BUILD -> dragonfly/patch-src_conditions_BUILD
+file materialize dragonfly/patch-src_conditions_BUILD.tools -> dragonfly/patch-src_conditions_BUILD.tools
+file materialize dragonfly/patch-src_main_cpp_blaze__util__bsd.cc -> dragonfly/patch-src_main_cpp_blaze__util__bsd.cc
+file materialize dragonfly/patch-src_main_cpp_BUILD -> dragonfly/patch-src_main_cpp_BUILD
+file materialize dragonfly/patch-src_main_java_com_google_devtools_build_lib_analysis_config_AutoCpuConverter.java -> dragonfly/patch-src_main_java_com_google_devtools_build_lib_analysis_config_AutoCpuConverter.java
+file materialize dragonfly/patch-src_main_java_com_google_devtools_build_lib_analysis_ShellConfiguration.java -> dragonfly/patch-src_main_java_com_google_devtools_build_lib_analysis_ShellConfiguration.java
+file materialize dragonfly/patch-src_main_java_com_google_devtools_build_lib_bazel_repository_LocalConfigPlatformFunction.java -> dragonfly/patch-src_main_java_com_google_devtools_build_lib_bazel_repository_LocalConfigPlatformFunction.java
+file materialize dragonfly/patch-src_main_java_com_google_devtools_build_lib_jni_JniLoader.java -> dragonfly/patch-src_main_java_com_google_devtools_build_lib_jni_JniLoader.java
+file materialize dragonfly/patch-src_main_java_com_google_devtools_build_lib_runtime_ConfigExpander.java -> dragonfly/patch-src_main_java_com_google_devtools_build_lib_runtime_ConfigExpander.java
+file materialize dragonfly/patch-src_main_java_com_google_devtools_build_lib_util_OS.java -> dragonfly/patch-src_main_java_com_google_devtools_build_lib_util_OS.java
+file materialize dragonfly/patch-src_main_native_BUILD -> dragonfly/patch-src_main_native_BUILD
+file materialize dragonfly/patch-src_main_native_unix__jni__bsd.cc -> dragonfly/patch-src_main_native_unix__jni__bsd.cc
+file materialize dragonfly/patch-src_main_native_unix__jni.h -> dragonfly/patch-src_main_native_unix__jni.h
+file materialize dragonfly/patch-src_main_tools_BUILD -> dragonfly/patch-src_main_tools_BUILD
+file materialize dragonfly/patch-src_test_java_com_google_devtools_build_lib_bazel_repository_LocalConfigPlatformFunctionTest.java -> dragonfly/patch-src_test_java_com_google_devtools_build_lib_bazel_repository_LocalConfigPlatformFunctionTest.java
+file materialize dragonfly/patch-src_tools_singlejar_diag.h -> dragonfly/patch-src_tools_singlejar_diag.h
+file materialize dragonfly/patch-src_tools_singlejar_mapped__file__posix.inc -> dragonfly/patch-src_tools_singlejar_mapped__file__posix.inc
+file materialize dragonfly/patch-src_tools_singlejar_zip__headers.h -> dragonfly/patch-src_tools_singlejar_zip__headers.h
+file materialize dragonfly/patch-tools_cpp_bsd__cc__toolchain__config.bzl -> dragonfly/patch-tools_cpp_bsd__cc__toolchain__config.bzl
+file materialize dragonfly/patch-tools_cpp_BUILD.static.bsd -> dragonfly/patch-tools_cpp_BUILD.static.bsd
+file materialize dragonfly/patch-tools_cpp_cc__configure.bzl -> dragonfly/patch-tools_cpp_cc__configure.bzl
+file materialize dragonfly/patch-tools_cpp_cc__toolchain__config.bzl -> dragonfly/patch-tools_cpp_cc__toolchain__config.bzl
+file materialize dragonfly/patch-tools_cpp_lib__cc__configure.bzl -> dragonfly/patch-tools_cpp_lib__cc__configure.bzl
+file materialize dragonfly/patch-tools_jdk_BUILD.java__tools -> dragonfly/patch-tools_jdk_BUILD.java__tools
+file materialize dragonfly/patch-tools_jdk_BUILD.tools -> dragonfly/patch-tools_jdk_BUILD.tools
+file materialize dragonfly/patch-tools_jdk_jdk.BUILD -> dragonfly/patch-tools_jdk_jdk.BUILD
+file materialize dragonfly/patch-tools_platforms_BUILD -> dragonfly/patch-tools_platforms_BUILD
+file materialize dragonfly/patch-tools_platforms_BUILD.tools -> dragonfly/patch-tools_platforms_BUILD.tools

@@ -1,0 +1,6 @@
+port devel/avr-gcc
+type port
+reason "remove ldconfig entry from plist (not applicable on DragonFly)"
+target @any
+
+text line-remove file pkg-plist exact "libdata/ldconfig/avr-gcc" on-missing noop

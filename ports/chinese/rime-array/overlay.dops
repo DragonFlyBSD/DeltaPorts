@@ -1,0 +1,12 @@
+port chinese/rime-array
+type port
+reason "add orphan plist files for rime-array data"
+target @any
+
+mk add PLIST_FILES share/rime-data/array30_emoji.dict.yaml
+mk add PLIST_FILES share/rime-data/array30_main.dict.yaml
+mk add PLIST_FILES share/rime-data/array30_phrases.dict.yaml
+mk add PLIST_FILES share/rime-data/array30_query.dict.yaml
+mk add PLIST_FILES share/rime-data/array30_query.schema.yaml
+mk add PLIST_FILES share/rime-data/array30_wsymbols.dict.yaml
+mk add PLIST_FILES share/rime-data/array30_wsymbols.schema.yaml

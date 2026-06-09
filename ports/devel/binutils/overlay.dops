@@ -1,0 +1,19 @@
+port devel/binutils
+type port
+reason "apply dragonfly extra config files via dfly-patch; add lib-path configure arg; dragonfly patches"
+target @any
+
+mk target set dfly-patch <<'MK'
+	(cd ${WRKSRC} && ${PATCH} ${PATCH_ARGS} < ${DFLY_PATCHDIR}/extra-ld_configure.tgt)
+	(cd ${WRKSRC} && ${PATCH} ${PATCH_ARGS} < ${DFLY_PATCHDIR}/extra-gas_configure)
+	(cd ${WRKSRC} && ${PATCH} ${PATCH_ARGS} < ${DFLY_PATCHDIR}/extra-config.bfd)
+MK
+
+patch apply diffs/Makefile.diff
+
+file materialize dragonfly/extra-config.bfd -> dragonfly/extra-config.bfd
+file materialize dragonfly/extra-gas_configure -> dragonfly/extra-gas_configure
+file materialize dragonfly/extra-ld_configure.tgt -> dragonfly/extra-ld_configure.tgt
+file materialize dragonfly/patch-bfd_config.bfd -> dragonfly/patch-bfd_config.bfd
+file materialize dragonfly/patch-bfd_elfxx-x86.c -> dragonfly/patch-bfd_elfxx-x86.c
+file materialize dragonfly/patch-gold_x86__64.cc -> dragonfly/patch-gold_x86__64.cc

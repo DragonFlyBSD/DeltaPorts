@@ -1,0 +1,7 @@
+port databases/mysql80-client
+type port
+reason "remove fido and oci client plugins from plist"
+target @any
+
+text line-remove file pkg-plist exact "lib/mysql/plugin/authentication_fido_client.so" on-missing noop
+text line-remove file pkg-plist exact "lib/mysql/plugin/authentication_oci_client.so" on-missing noop

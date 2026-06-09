@@ -1,0 +1,12 @@
+port databases/rocksdb
+type port
+reason "suppress warnings; remove BROKEN_DragonFly; dragonfly upstream patches"
+target @any
+
+mk add CFLAGS -Wno-error=unused-parameter
+mk add CXXFLAGS -Wno-unused-variable
+mk set DFLY_UNMAINTAINED "yes"
+text line-remove file Makefile exact "BROKEN_DragonFly=	does not build on DragonFly BSD using GCC with -Werror" on-missing noop
+
+file materialize dragonfly/patch-env_env__test.cc -> dragonfly/patch-env_env__test.cc
+file materialize dragonfly/patch-env_io__posix.h -> dragonfly/patch-env_io__posix.h
