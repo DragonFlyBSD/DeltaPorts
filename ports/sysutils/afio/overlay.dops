@@ -1,0 +1,7 @@
+port sysutils/afio
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "alias"
+mk add CFLAGS "-DMAXNAMLEN=255"

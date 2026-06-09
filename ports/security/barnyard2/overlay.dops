@@ -1,0 +1,6 @@
+port security/barnyard2
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CFLAGS "-Wno-misleading-indentation"

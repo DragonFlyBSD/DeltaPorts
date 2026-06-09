@@ -1,0 +1,6 @@
+port security/binwalk
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CONFIGURE_ENV "LIBS=-lz"

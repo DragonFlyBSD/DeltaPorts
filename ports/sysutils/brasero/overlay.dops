@@ -1,0 +1,10 @@
+port sysutils/brasero
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add LIB_DEPENDS "libltdl.so:devel/libltdl"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@<cam/@<bus/cam/@g' \
+		${WRKSRC}/libbrasero-media/scsi-cam.c
+MK1

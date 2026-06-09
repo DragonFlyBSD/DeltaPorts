@@ -1,0 +1,7 @@
+port security/pam_mkhomedir
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add LDFLAGS "-lpam"
+mk add PLIST_FILES "lib/libpam_mkhomedir.a"

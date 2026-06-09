@@ -1,2 +1,0 @@
-MAKE_JOBS_UNSAFE=yes
-BROKEN=	pending java update

@@ -1,0 +1,10 @@
+port science/wannier90
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e "s@LDOPTS =@LDOPTS = -L${LOCALBASE}/lib @g" \
+			 -e "/F90 =/s@gfortran.*@${FC}@g" \
+		${WRKSRC}/config/make.inc.gfort
+MK1

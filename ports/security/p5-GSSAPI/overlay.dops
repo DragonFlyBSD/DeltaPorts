@@ -1,0 +1,7 @@
+port security/p5-GSSAPI
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set OPTIONS_EXCLUDE "GSSAPI_BASE"
+mk set OPTIONS_DEFAULT "GSSAPI_MIT"

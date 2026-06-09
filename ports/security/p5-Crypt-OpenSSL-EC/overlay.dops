@@ -1,0 +1,6 @@
+port security/p5-Crypt-OpenSSL-EC
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "localbase"

@@ -1,0 +1,9 @@
+port security/libdecaf
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set MAKE_JOBS_UNSAFE "yes"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's/-Werror[[:>:]]//g' ${WRKSRC}/Makefile
+MK1

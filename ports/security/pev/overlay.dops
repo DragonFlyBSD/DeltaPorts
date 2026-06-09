@@ -1,0 +1,12 @@
+port security/pev
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "alias"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@FreeBSD@DragonFly@g'	\
+		${WRKSRC}/src/plugins/Makefile \
+		${WRKSRC}/lib/libpe/Makefile \
+		${WRKSRC}/lib/libpe/Makefile
+MK1

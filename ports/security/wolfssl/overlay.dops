@@ -1,0 +1,6 @@
+port security/wolfssl
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add PLIST_SUB "PORTDOCS=\"@comment \""

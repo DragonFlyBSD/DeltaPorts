@@ -1,0 +1,6 @@
+port security/pam_krb5
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set OPTIONS_DEFAULT "HEIMDAL_PORT"

@@ -1,0 +1,18 @@
+port sysutils/cinnamon-settings-daemon
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NSMARTCARD:NWACOM}"
+mk set LIB_DEPENDS "${LIB_DEPENDS:Nlibpulse*}"
+mk set PLIST "${WRKDIR}/pulseless-plist"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e '/pulse/d' -e '/cvc/d' ${WRKSRC}/meson.build
+	${REINPLACE_CMD} -e '/sound/d' -e '/media-keys/d' ${WRKSRC}/plugins/meson.build
+	${RM} -r ${WRKSRC}/plugins/media-keys
+	${RM} -r ${WRKSRC}/plugins/sound
+	${CAT} ${.CURDIR}/pkg-plist | ${SED} -e '/bin\/csd-media-keys/d' -e '/bin\/csd-sound/d' \
+		-e '/media-keys\.desktop/d' -e '/sound\.desktop/d' \
+		-e '/daemon\/csd-media-keys/d' -e '/daemon\/csd-sound/d' \
+		-e '/libexec\/csd-media-keys/d' -e '/libexec\/csd-sound/d' > ${PLIST}
+MK1

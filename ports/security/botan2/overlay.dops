@@ -1,0 +1,9 @@
+port security/botan2
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@-Wzero-as-null-pointer-constant@@g' \
+		${WRKSRC}/src/build-data/cc/gcc.txt
+MK1

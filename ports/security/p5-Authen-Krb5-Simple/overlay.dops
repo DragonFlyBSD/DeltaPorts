@@ -1,0 +1,7 @@
+port security/p5-Authen-Krb5-Simple
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set OPTIONS_EXCLUDE "GSSAPI_BASE"
+mk add OPTIONS_DEFAULT "GSSAPI_MIT"

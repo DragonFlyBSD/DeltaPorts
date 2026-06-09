@@ -1,0 +1,10 @@
+port security/expiretable
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CFLAGS "-D_KERNEL_STRUCTURES"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@<net/pfvar.h>@<net/pf/pfvar.h>@g' \
+		${WRKSRC}/ioctl_helpers.h
+MK1

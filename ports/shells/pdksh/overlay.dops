@@ -1,0 +1,6 @@
+port shells/pdksh
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CPP "-P"

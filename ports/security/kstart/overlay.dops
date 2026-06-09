@@ -1,0 +1,6 @@
+port security/kstart
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add LIB_DEPENDS "libgssapi_krb5.so:security/krb5"

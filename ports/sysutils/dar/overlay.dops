@@ -1,0 +1,6 @@
+port sysutils/dar
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add LIB_DEPENDS "libelf.so:devel/libelf"

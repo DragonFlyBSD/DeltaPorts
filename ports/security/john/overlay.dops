@@ -1,0 +1,11 @@
+port security/john
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@CPP -P@CC -E -P@'	\
+		${WRKSRC}/configure
+	${REINPLACE_CMD} -e 's@MAYBE_INLINE_BODY void@void@'	\
+		${WRKSRC}/MD5_std.c
+MK1

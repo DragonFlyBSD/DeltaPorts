@@ -1,0 +1,6 @@
+port sysutils/3dm
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set IGNORE "contains FreeBSD binaries"

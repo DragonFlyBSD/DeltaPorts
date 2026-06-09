@@ -1,0 +1,6 @@
+port security/cyrus-sasl2-gssapi
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set OPTIONS_DEFAULT "GSSAPI_MIT"

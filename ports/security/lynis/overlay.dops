@@ -1,0 +1,6 @@
+port security/lynis
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set RUN_DEPENDS "${RUN_DEPENDS:Nlsof*}"

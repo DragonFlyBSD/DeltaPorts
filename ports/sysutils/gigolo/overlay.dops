@@ -1,0 +1,6 @@
+port sysutils/gigolo
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set USES "${USES:Nfuse}"

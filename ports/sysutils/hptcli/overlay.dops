@@ -1,0 +1,6 @@
+port sysutils/hptcli
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set IGNORE "This is FreeBSD binary"

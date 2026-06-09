@@ -1,0 +1,6 @@
+port security/gcr
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CFLAGS "-Wno-deprecated-declarations"

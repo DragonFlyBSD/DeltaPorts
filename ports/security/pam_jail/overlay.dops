@@ -1,0 +1,6 @@
+port security/pam_jail
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set IGNORE "FreeBSD specific (jail v2)"

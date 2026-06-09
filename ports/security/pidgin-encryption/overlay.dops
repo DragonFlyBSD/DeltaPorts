@@ -1,0 +1,6 @@
+port security/pidgin-encryption
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add LDFLAGS "-pthread"

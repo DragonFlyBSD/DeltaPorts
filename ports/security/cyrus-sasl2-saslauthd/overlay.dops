@@ -1,0 +1,6 @@
+port security/cyrus-sasl2-saslauthd
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "libtool"

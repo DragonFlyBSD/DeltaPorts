@@ -1,0 +1,6 @@
+port security/libprelude
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CPP "-P"

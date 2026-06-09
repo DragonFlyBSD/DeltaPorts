@@ -1,0 +1,11 @@
+port sysutils/dateutils
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CFLAGS "-D__BSD_VISIBLE"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e "s@\(D_XOPEN_SOURCE\)=700@\1=600@g"	\
+		${WRKSRC}/build-aux/Makefile.in	\
+		${WRKSRC}/build-aux/yuck.am	# for vfork visibility
+MK1

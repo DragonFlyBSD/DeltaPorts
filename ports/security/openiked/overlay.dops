@@ -1,0 +1,6 @@
+port security/openiked
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set BROKEN "missing IPSEC_DIR_INBOUND"

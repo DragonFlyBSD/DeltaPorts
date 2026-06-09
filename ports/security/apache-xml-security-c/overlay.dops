@@ -1,0 +1,7 @@
+port security/apache-xml-security-c
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CPPFLAGS "-I${OPENSSLINC}"
+mk add LDFLAGS "-L${OPENSSLLIB}"

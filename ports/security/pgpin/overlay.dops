@@ -1,0 +1,6 @@
+port security/pgpin
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set ALL_TARGET "freebsd-amd64 OS_CFLAGS=\"${CFLAGS}\""

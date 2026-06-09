@@ -1,4 +1,0 @@
-BROKEN= various issues
-
-MAKE_ARGS+=	CFLAGS_OPT="-D__WORDSIZE=64"
-CFLAGS+=	-D__WORDSIZE=64

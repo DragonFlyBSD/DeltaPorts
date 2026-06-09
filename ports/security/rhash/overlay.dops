@@ -1,0 +1,8 @@
+port security/rhash
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "ssl"
+mk add CFLAGS "-I${OPENSSLINC}"
+mk add LDFLAGS "-L${OPENSSLLIB}"

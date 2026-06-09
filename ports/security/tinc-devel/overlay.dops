@@ -1,0 +1,6 @@
+port security/tinc-devel
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add USES "ncurses"

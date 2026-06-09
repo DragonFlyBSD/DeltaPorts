@@ -1,0 +1,6 @@
+port security/openbsm
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set IGNORE "FreeBSD specific (libbsm.h)"

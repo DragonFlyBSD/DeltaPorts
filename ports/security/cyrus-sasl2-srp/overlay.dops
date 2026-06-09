@@ -1,0 +1,12 @@
+port security/cyrus-sasl2-srp
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set MAKE_JOBS_UNSAFE "yes"
+mk add USES "ssl"
+mk add OPTIONS_DEFAULT "SSL"
+mk add OPTIONS_DEFINE "SSL"
+mk add CONFIGURE_ARGS "--with-openssl=${OPENSSLBASE}"
+mk add CFLAGS "-I${OPENSSLINC}"
+mk add LDFLAGS "-L${OPENSSLLIB}"

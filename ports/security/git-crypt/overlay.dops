@@ -1,0 +1,7 @@
+port security/git-crypt
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CFLAGS "-I${OPENSSLINC}"
+mk set DFLY_UNMAINTAINED "yes"

@@ -1,0 +1,6 @@
+port sysutils/hdrecover
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CFLAGS "-D__FreeBSD_cc_version=400201"

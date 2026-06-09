@@ -1,0 +1,7 @@
+port security/putty
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk set OPTIONS_EXCLUDE "GSSAPI_BASE"
+mk set OPTIONS_DEFAULT "GTK3 GSSAPI_MIT"

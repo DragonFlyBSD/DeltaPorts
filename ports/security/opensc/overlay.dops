@@ -1,0 +1,6 @@
+port security/opensc
+type port
+reason "auto-converted from Makefile.DragonFly"
+target @any
+
+mk add CFLAGS "-Wno-unused-but-set-variable"
