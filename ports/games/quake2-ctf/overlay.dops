@@ -1,0 +1,12 @@
+port games/quake2-ctf
+type port
+reason "do-extract recipe changes: tar flag and unzip args"
+target @any
+
+mk target set do-extract <<'MK'
+	@${MKDIR} ${WRKDIR}
+	@${TAR} -xzf ${DISTDIR}/${DIST_SUBDIR}/${CTF_SRC} -C ${WRKDIR} \
+		--include "${CTF_SRC:S/.tar.gz//}/src/ctf/*"
+	@${UNZIP_CMD} -qo -d ${WRKDIR}/ctf \
+		${DISTDIR}/${DIST_SUBDIR}/${CTF_DATA} -x *.dll *.ico
+MK

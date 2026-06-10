@@ -1,0 +1,8 @@
+port graphics/py-h3
+type port
+reason "BROKEN for py27 flavor pending removal"
+target @any
+
+mk block set condition "defined(FLAVOR) && ${FLAVOR:Mpy27}" <<'MK'
+BROKEN= py27 pending removal
+MK

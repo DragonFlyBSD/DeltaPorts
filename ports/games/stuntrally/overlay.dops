@@ -1,0 +1,9 @@
+port games/stuntrally
+type port
+reason "package size guard and alias uses"
+target @any
+
+mk block set condition "!defined(DPORTS_BUILDER)" <<'MK'
+MANUAL_PACKAGE_BUILD=   ~892MM package (too big for mirrors)
+MK
+mk add USES alias

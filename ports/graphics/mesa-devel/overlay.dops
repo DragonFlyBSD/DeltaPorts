@@ -1,0 +1,11 @@
+port graphics/mesa-devel
+type port
+reason "clear OPTIONS_EXCLUDE_DragonFly and add dragonfly source patches"
+target @any
+
+mk set OPTIONS_EXCLUDE_DragonFly ""
+
+file materialize dragonfly/patch-src_amd_vulkan_radv__device.c -> dragonfly/patch-src_amd_vulkan_radv__device.c
+file materialize dragonfly/patch-src_util_futex.h -> dragonfly/patch-src_util_futex.h
+file materialize dragonfly/patch-src_util_os__misc.c -> dragonfly/patch-src_util_os__misc.c
+file materialize dragonfly/patch-src_util_u__thread.h -> dragonfly/patch-src_util_u__thread.h

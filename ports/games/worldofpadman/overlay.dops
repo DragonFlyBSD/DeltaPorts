@@ -1,0 +1,16 @@
+port games/worldofpadman
+type port
+reason "package size guard, dfly-patch target, and dragonfly source patches"
+target @any
+
+mk block set condition "!defined(DPORTS_BUILDER)" <<'MK'
+MANUAL_PACKAGE_BUILD=	~660M package (too big for mirrors)
+MK
+
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's@freebsd@dragonfly@gi' \
+		${WRKSRC}/Makefile
+MK
+
+file materialize dragonfly/patch-code_qcommon_q__platform.h -> dragonfly/patch-code_qcommon_q__platform.h
+file materialize dragonfly/patch-code_qcommon_vm__x86.c -> dragonfly/patch-code_qcommon_vm__x86.c

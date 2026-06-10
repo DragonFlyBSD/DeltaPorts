@@ -1,0 +1,6 @@
+port graphics/pfstools
+type port
+reason "remove FreeBSD-specific -lthr linker flag"
+target @any
+
+text line-remove file Makefile exact "LDFLAGS+=	-lthr" on-missing noop

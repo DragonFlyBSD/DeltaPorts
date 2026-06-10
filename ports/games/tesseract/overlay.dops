@@ -1,0 +1,16 @@
+port games/tesseract
+type port
+reason "conditional run-depends strip and package message target"
+target @any
+
+mk set DPMSG "${WRKDIR}/dports-message"
+
+mk block set condition "!defined(DPORTS_BUILDER) && defined(PACKAGE_BUILDING)" <<'MK'
+RUN_DEPENDS:=	${RUN_DEPENDS:N*tesseract-data}
+PKGMESSAGE=	${DPMSG}
+
+dfly-patch:
+	@${ECHO} "#######################################################" >> ${DPMSG}
+	@${ECHO} "# Build games/tesseract-data from source to play this #" >> ${DPMSG}
+	@${ECHO} "#######################################################" >> ${DPMSG}
+MK

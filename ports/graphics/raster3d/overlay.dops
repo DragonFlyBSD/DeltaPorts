@@ -1,0 +1,6 @@
+port graphics/raster3d
+type port
+reason "remove FreeBSD-specific -fallow-invalid-boz fortran flag"
+target @any
+
+text line-remove file Makefile exact "FFLAGS+=	-fallow-invalid-boz" on-missing noop

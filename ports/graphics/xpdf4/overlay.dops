@@ -1,0 +1,6 @@
+port graphics/xpdf4
+type port
+reason "patch files/patch-xpdf-qt_XpdfWidgetPrint.cc to add DragonFly support"
+target @any
+
+patch apply diffs/patch1.diff

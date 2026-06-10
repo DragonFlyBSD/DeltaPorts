@@ -1,0 +1,8 @@
+port graphics/libfpx
+type port
+reason "MAKE_ENV CWARNFLAGS and patch files/Makefile.bsd for CXXFLAGS filter"
+target @any
+
+mk add MAKE_ENV CWARNFLAGS=-fcommon
+
+patch apply diffs/Makefile.bsd.diff

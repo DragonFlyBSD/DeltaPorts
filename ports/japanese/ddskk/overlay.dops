@@ -1,0 +1,8 @@
+port japanese/ddskk
+type port
+reason "BROKEN for devel_full and devel_nox flavors"
+target @any
+
+mk block set condition "${FLAVOR:U} == devel_full || ${FLAVOR:U} == devel_nox" <<'MK'
+BROKEN= Extraneous text at end of command line
+MK

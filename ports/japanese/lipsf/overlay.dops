@@ -1,0 +1,18 @@
+port japanese/lipsf
+type port
+reason "alias/ncurses uses, CFLAGS additions, dfly-patch target with DFLYVERSION guard"
+target @any
+
+mk add USES alias
+mk add USES ncurses
+mk add CFLAGS -DMAXNAMLEN=255
+mk add CFLAGS -DUSETERMINFO
+
+mk target set dfly-patch <<'MK'
+.if ${DFLYVERSION} > 400501
+	${REINPLACE_CMD} -e 's@LDFLAGS[[:space:]]=@LDFLAGS +=@g'	\
+		${WRKSRC}/Makefile.in
+	${REINPLACE_CMD} -e 's@-lcurses@-lncurses@g'	\
+		${WRKSRC}/machine.h
+.endif
+MK

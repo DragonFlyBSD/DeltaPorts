@@ -1,0 +1,11 @@
+port graphics/pcl-pointclouds
+type port
+reason "MAKE_ENV LDVER, remove libpcap dependency, materialize dragonfly patch"
+target @any
+
+mk add MAKE_ENV LDVER=ld.bfd
+
+text replace-once file Makefile from "		liblz4.so:archivers/liblz4 \\" to "		liblz4.so:archivers/liblz4"
+text line-remove file Makefile exact "		libpcap.so:net/libpcap" on-missing noop
+
+file materialize dragonfly/patch-common_include_pcl_pcl__macros.h -> dragonfly/patch-common_include_pcl_pcl__macros.h

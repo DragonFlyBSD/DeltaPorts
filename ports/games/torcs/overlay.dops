@@ -1,0 +1,18 @@
+port games/torcs
+type port
+reason "package size guard, reinplace isinf/isnan, and dragonfly source patches"
+target @any
+
+mk block set condition "!defined(DPORTS_BUILDER)" <<'MK'
+MANUAL_PACKAGE_BUILD=	323M package (too big for mirrors)
+MK
+
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's/[[:<:]]isinf[[:>:]]/std::isinf/g'	\
+			 -e 's/[[:<:]]isnan[[:>:]]/std::isnan/g'	\
+		${WRKSRC}/src/libs/learning/policy.cpp			\
+		${WRKSRC}/src/drivers/olethros/driver.cpp
+MK
+
+file materialize dragonfly/patch-src_libs_tgfclient_guifont.cpp -> dragonfly/patch-src_libs_tgfclient_guifont.cpp
+file materialize dragonfly/patch-src_modules_simu_simuv2_SOLID-2.0_src_C_api.cpp -> dragonfly/patch-src_modules_simu_simuv2_SOLID-2.0_src_C_api.cpp

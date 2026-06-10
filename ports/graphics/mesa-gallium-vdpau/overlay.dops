@@ -1,0 +1,8 @@
+port graphics/mesa-gallium-vdpau
+type port
+reason "MESON_ARGS microsoft-clc disabled and pkg-plist eglextchromium addition"
+target @any
+
+mk add MESON_ARGS -Dmicrosoft-clc=disabled
+
+patch apply diffs/pkg-plist.diff

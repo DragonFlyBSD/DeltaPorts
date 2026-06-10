@@ -1,0 +1,8 @@
+port japanese/font-ricty
+type port
+reason "FORCE_PACKAGE when DPORTS_BUILDER is defined"
+target @any
+
+mk block set condition "defined(DPORTS_BUILDER)" <<'MK'
+FORCE_PACKAGE=yes
+MK

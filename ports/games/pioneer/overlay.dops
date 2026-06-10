@@ -1,0 +1,9 @@
+port games/pioneer
+type port
+reason "package size guard and unmaintained marker"
+target @any
+
+mk block set condition "!defined(DPORTS_BUILDER)" <<'MK'
+MANUAL_PACKAGE_BUILD=	huge (300M packaged)
+MK
+mk set IGNORE "unmaintained, please request fixing to users mailing list"

@@ -1,0 +1,8 @@
+port games/redeclipse-data
+type port
+reason "package size guard for mirrors"
+target @any
+
+mk block set condition "!defined(DPORTS_BUILDER)" <<'MK'
+MANUAL_PACKAGE_BUILD=	766M package (too big for mirrors)
+MK

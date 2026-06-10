@@ -1,0 +1,9 @@
+port graphics/geomorph
+type port
+reason "allow foreign binaries flag when DEVELOPER is defined"
+target @any
+
+mk block set condition "defined(DEVELOPER)" <<'MK'
+.MAKEFLAGS+=	DFLY_ALLOW_FOREIGN_BINARIES=yes
+DFLY_ALLOW_FOREIGN_BINARIES=yes
+MK

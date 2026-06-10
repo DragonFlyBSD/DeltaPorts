@@ -1,0 +1,10 @@
+port games/ufoai-data
+type port
+reason "package size guard and PLIST path fix"
+target @any
+
+mk block set condition "!defined(DPORTS_BUILDER)" <<'MK'
+MANUAL_PACKAGE_BUILD=	1.0G package (too big for mirrors)
+MK
+
+text replace-once file Makefile from "PLIST=		${WRKDIR}/pkg-plist" to "PLIST=		${WRKSRC}/pkg-plist"

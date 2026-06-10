@@ -1,0 +1,10 @@
+port graphics/giflib
+type port
+reason "MAKE_ENV LDVER and DFLYVERSION-gated CFLAGS filter"
+target @any
+
+mk add MAKE_ENV LDVER=ld.bfd
+
+mk block set condition "${DFLYVERSION} < 500505" <<'MK'
+CFLAGS:=	${CFLAGS:N-DHAVE_REALLOCARRAY}
+MK

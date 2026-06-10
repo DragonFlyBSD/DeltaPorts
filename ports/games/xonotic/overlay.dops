@@ -1,0 +1,11 @@
+port games/xonotic
+type port
+reason "package size guard and dragonfly source patches"
+target @any
+
+mk block set condition "!defined(DPORTS_BUILDER)" <<'MK'
+MANUAL_PACKAGE_BUILD=	867M package (too big for mirrors)
+MK
+
+file materialize dragonfly/patch-source_darkplaces_makefile -> dragonfly/patch-source_darkplaces_makefile
+file materialize dragonfly/patch-source_darkplaces_sys__linux.c -> dragonfly/patch-source_darkplaces_sys__linux.c

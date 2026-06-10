@@ -1,0 +1,12 @@
+port graphics/libosmesa
+type lock
+reason "osmesa classic meson args, pkg message, and opengl=false meson arg change"
+target @any
+
+mk add MESON_ARGS -Dosmesa=classic
+mk add MESON_ARGS -Dmicrosoft-clc=disabled
+mk set PKGMESSAGE "${.CURDIR}/dragonfly/pkg-mess"
+
+text replace-once file Makefile from "		-Dopengl=true \\" to "		-Dopengl=false \\"
+
+file materialize dragonfly/pkg-mess -> dragonfly/pkg-mess

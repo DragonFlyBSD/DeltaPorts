@@ -1,0 +1,8 @@
+port games/quake3-ut
+type port
+reason "package size guard for mirrors"
+target @any
+
+mk block set condition "!defined(DPORTS_BUILDER)" <<'MK'
+MANUAL_PACKAGE_BUILD=	huge (438M packaged)
+MK

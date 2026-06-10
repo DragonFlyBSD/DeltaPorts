@@ -1,0 +1,8 @@
+port games/urbanterror-data
+type port
+reason "package size guard for mirrors"
+target @any
+
+mk block set condition "!defined(DPORTS_BUILDER)" <<'MK'
+MANUAL_PACKAGE_BUILD=	1.7G package (too big for mirrors)
+MK

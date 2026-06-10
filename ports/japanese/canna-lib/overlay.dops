@@ -1,0 +1,18 @@
+port japanese/canna-lib
+type port
+reason "post-patch reinplace FreeBSD->DragonFly, pkg-plist .so.1.2 versioned symlinks"
+target @any
+
+mk target set post-patch <<'MK'
+	@${REINPLACE_CMD} -e 's|__FreeBSD|__DragonFly|g' \
+		-e 's|500000|300000|g' \
+		${WRKSRC}/canna/widedef.h \
+		${WRKSRC}/canna/protodefs.h \
+		${WRKSRC}/ccustom/lex.l \
+		${WRKSRC}/ccustom/ccustom.c
+MK
+
+text line-insert-after file pkg-plist anchor "lib/libRKC.so.1" line "lib/libRKC.so.1.2" on-missing noop
+text line-insert-after file pkg-plist anchor "lib/libRKC16.so.1" line "lib/libRKC16.so.1.2" on-missing noop
+text line-insert-after file pkg-plist anchor "lib/libcanna.so.1" line "lib/libcanna.so.1.2" on-missing noop
+text line-insert-after file pkg-plist anchor "lib/libcanna16.so.1" line "lib/libcanna16.so.1.2" on-missing noop

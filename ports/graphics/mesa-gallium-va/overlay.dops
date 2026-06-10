@@ -1,0 +1,10 @@
+port graphics/mesa-gallium-va
+type port
+reason "MESON_ARGS gallium-drivers and pkg-plist eglextchromium comment addition"
+target @any
+
+mk add MESON_ARGS -Dmicrosoft-clc=disabled
+
+text replace-once file Makefile from "MESON_ARGS+=	-Dvideo-codecs=\"vc1dec,h264dec,h264enc,h265dec,h265enc,av1dec,av1enc,vp9dec\" \\" to "MESON_ARGS+=	-Dgallium-drivers=\"radeonsi,r600\" \\"
+
+patch apply diffs/pkg-plist.diff

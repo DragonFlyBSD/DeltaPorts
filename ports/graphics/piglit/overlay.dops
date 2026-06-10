@@ -1,0 +1,17 @@
+port graphics/piglit
+type port
+reason "package size guard, unmaintained marker, and dragonfly source patches"
+target @any
+
+mk block set condition "!defined(DPORTS_BUILDER)" <<'MK'
+MANUAL_PACKAGE_BUILD=	lots of small files
+MK
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+
+file materialize dragonfly/patch-CMakeLists.txt -> dragonfly/patch-CMakeLists.txt
+file materialize dragonfly/patch-tests_egl_spec_egl__chromium__sync__control_egl__chromium__sync__control.c -> dragonfly/patch-tests_egl_spec_egl__chromium__sync__control_egl__chromium__sync__control.c
+file materialize dragonfly/patch-tests_spec_ext__external__objects_vk.c -> dragonfly/patch-tests_spec_ext__external__objects_vk.c
+file materialize dragonfly/patch-tests_spec_nv__copy__depth__to__color_nv__copy__depth__to__color.c -> dragonfly/patch-tests_spec_nv__copy__depth__to__color_nv__copy__depth__to__color.c
+file materialize dragonfly/patch-tests_util_CMakeLists.txt -> dragonfly/patch-tests_util_CMakeLists.txt
+file materialize dragonfly/patch-tests_util_piglit-framework-gl.c -> dragonfly/patch-tests_util_piglit-framework-gl.c
+file materialize dragonfly/patch-tests_util_piglit-util.c -> dragonfly/patch-tests_util_piglit-util.c

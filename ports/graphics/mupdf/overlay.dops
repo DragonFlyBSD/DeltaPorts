@@ -1,0 +1,17 @@
+port graphics/mupdf
+type port
+reason "freetype/jpeg/etc include and linker flags, pre-configure reinplace"
+target @any
+
+mk add CFLAGS "-I${LOCALBASE}/include/freetype2"
+mk add LDFLAGS -lz
+mk add LDFLAGS "-L${LOCALBASE}/lib"
+mk add LDFLAGS -lfreetype
+mk add LDFLAGS -ljpeg
+mk add LDFLAGS -lopenjp2
+mk add LDFLAGS -ljbig2dec
+
+mk target set pre-configure <<'MK'
+	${REINPLACE_CMD} -e 's|FreeBSD|DragonFly|' -e 's|-lthr|-lpthread|'	\
+		${WRKSRC}/Makerules
+MK

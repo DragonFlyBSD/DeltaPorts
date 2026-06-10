@@ -1,0 +1,12 @@
+port games/scummvm-tools
+type port
+reason "DFLY_UNMAINTAINED, RUN_DEPENDS rewrite, and dragonfly source patch"
+target @any
+
+mk set DFLY_UNMAINTAINED "yes"
+
+mk set RUN_DEPENDS "lame:audio/lame"
+mk add RUN_DEPENDS "flac:audio/flac"
+mk add RUN_DEPENDS "oggenc:audio/vorbis-tools"
+
+file materialize dragonfly/patch-configure -> dragonfly/patch-configure

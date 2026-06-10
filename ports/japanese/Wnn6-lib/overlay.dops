@@ -1,0 +1,15 @@
+port japanese/Wnn6-lib
+type port
+reason "pkg-plist: add libwnn6.so.2.0 versioned symlink; materialize dragonfly patches"
+target @any
+
+text line-insert-after file pkg-plist anchor "lib/libwnn6.so.2" line "lib/libwnn6.so.2.0" on-missing noop
+
+file materialize dragonfly/patch-Wnn_etc_msg.c -> dragonfly/patch-Wnn_etc_msg.c
+file materialize dragonfly/patch-Wnn_etc_serverdefs.c -> dragonfly/patch-Wnn_etc_serverdefs.c
+file materialize dragonfly/patch-Wnn_etc_yincoding.c -> dragonfly/patch-Wnn_etc_yincoding.c
+file materialize dragonfly/patch-Wnn_jlib_jl.c -> dragonfly/patch-Wnn_jlib_jl.c
+file materialize dragonfly/patch-Wnn_jlib_js.c -> dragonfly/patch-Wnn_jlib_js.c
+file materialize dragonfly/patch-Wnn_jlib_wnnerrmsg.c -> dragonfly/patch-Wnn_jlib_wnnerrmsg.c
+file materialize dragonfly/patch-Wnn_romkan_rk__bltinfn.c -> dragonfly/patch-Wnn_romkan_rk__bltinfn.c
+file materialize dragonfly/patch-Wnn_romkan_rk__modread.c -> dragonfly/patch-Wnn_romkan_rk__modread.c

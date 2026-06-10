@@ -1,0 +1,10 @@
+port games/supertuxkart
+type port
+reason "package size guard, localbase ldflags, and unmaintained marker"
+target @any
+
+mk block set condition "!defined(DPORTS_BUILDER)" <<'MK'
+MANUAL_PACKAGE_BUILD=	405M package (too big for mirrors)
+MK
+mk add LDFLAGS "-L${LOCALBASE}/lib"
+mk set IGNORE "unmaintained, please request fixing to users mailing list"

@@ -1,0 +1,22 @@
+port graphics/jbig2dec
+type port
+reason "ssl uses, libcrypto ldflags, fake FILESDIR, dfly-patch target, plus Makefile.diff removals"
+target @any
+
+mk add USES ssl
+mk add USES autoreconf
+mk add LDFLAGS "-L${OPENSSLLIB}"
+mk add LDFLAGS -lcrypto
+mk set FILESDIR "${.CURDIR}/does-not-exist"
+
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e "s@-lmd[[:>:]]@-lcrypto@g" \
+		${WRKSRC}/Makefile.am
+MK
+
+text line-remove file Makefile exact "LDFLAGS+=	-lmd" on-missing noop
+
+mk target remove post-patch on-missing noop
+
+file materialize dragonfly/patch-jbig2dec.c -> dragonfly/patch-jbig2dec.c
+file materialize dragonfly/patch-sha1.c -> dragonfly/patch-sha1.c

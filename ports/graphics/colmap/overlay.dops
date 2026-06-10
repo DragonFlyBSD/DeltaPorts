@@ -1,0 +1,7 @@
+port graphics/colmap
+type port
+reason "fix build dep: add python build uses and rewrite sphinx_rtd_theme dep"
+target @any
+
+mk add USES "python:3.6+,build"
+mk eval DOCS_BUILD_DEPENDS "${DOCS_BUILD_DEPENDS:N*py-sphinx_rtd_theme} ${PYTHON_PKGNAMEPREFIX}sphinx_rtd_theme>0:textproc/py-sphinx_rtd_theme@${PY_FLAVOR}"

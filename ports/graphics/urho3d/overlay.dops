@@ -1,0 +1,11 @@
+port graphics/urho3d
+type port
+reason "unmaintained marker and dragonfly source patches"
+target @any
+
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+
+text replace-once file pkg-plist from "@dir include/Urho3D/Precompiled.h.pch" to "@dir include/Urho3D/Precompiled.h.gch"
+
+file materialize dragonfly/patch-Source_ThirdParty_AngelScript_source_as__memory.cpp -> dragonfly/patch-Source_ThirdParty_AngelScript_source_as__memory.cpp
+file materialize dragonfly/patch-Source_ThirdParty_SDL_src_cpuinfo_SDL__cpuinfo.c -> dragonfly/patch-Source_ThirdParty_SDL_src_cpuinfo_SDL__cpuinfo.c
