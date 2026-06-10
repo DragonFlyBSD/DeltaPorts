@@ -1,0 +1,12 @@
+port games/bloodfrontier
+type port
+reason "disable narrowing warning, manual package build guard, materialize dragonfly patch"
+target @any
+
+mk add CXXFLAGS -Wno-narrowing
+
+mk block set condition "!defined(DPORTS_BUILDER)" <<'MK'
+MANUAL_PACKAGE_BUILD=	380M package (too big for mirrors)
+MK
+
+file materialize dragonfly/patch-src_enet_unix.c -> dragonfly/patch-src_enet_unix.c

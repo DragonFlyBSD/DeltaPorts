@@ -1,0 +1,8 @@
+port games/flightgear-data
+type port
+reason "mark as manual package build (too large for mirrors)"
+target @any
+
+mk block set condition "!defined(DPORTS_BUILDER)" <<'MK'
+MANUAL_PACKAGE_BUILD=	1.1G package (too big for mirrors)
+MK

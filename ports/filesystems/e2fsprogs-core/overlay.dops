@@ -1,0 +1,24 @@
+port filesystems/e2fsprogs-core
+type port
+reason "BSD visible flag, disable tests, add libelf dep, fix e2fsck pthread/link, dragonfly patches"
+target @any
+
+mk add CFLAGS -D__BSD_VISIBLE
+
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NSMALLTESTS} NOTESTS"
+
+mk add USES "localbase:ldargs"
+
+mk add LIB_DEPENDS "libelf.so.0:devel/libelf"
+
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's@HAVE_PTHREAD[[:>:]]@&__@g' \
+		${WRKSRC}/lib/ext2fs/rw_bitmaps.c
+	${REINPLACE_CMD} -e '/ -o e2fsck /s@ALL_LDFLAGS@&__@g' \
+		${WRKSRC}/e2fsck/Makefile.in
+MK
+
+patch apply diffs/Makefile.diff
+
+file materialize dragonfly/patch-lib_ext2fs_getsize.c -> dragonfly/patch-lib_ext2fs_getsize.c
+file materialize dragonfly/patch-lib_ext2fs_unix__io.c -> dragonfly/patch-lib_ext2fs_unix__io.c

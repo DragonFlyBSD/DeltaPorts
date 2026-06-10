@@ -1,0 +1,9 @@
+port emulators/tiemu3
+type port
+reason "add dragonfly*) to bsd platform detection in configure"
+target @any
+
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's@\(\*-\*-\*bsd\*\))@\1|*-*-dragonfly*)@g'	\
+		${WRKSRC}/configure
+MK

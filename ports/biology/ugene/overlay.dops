@@ -1,0 +1,11 @@
+port biology/ugene
+type port
+reason "remove umuscle plugin from plist; materialize dragonfly patches"
+target @any
+
+text line-remove file pkg-plist exact "lib/ugene/plugins/libumuscle.so" on-missing noop
+text line-remove file pkg-plist exact "lib/ugene/plugins/umuscle.license" on-missing noop
+text line-remove file pkg-plist exact "lib/ugene/plugins/umuscle.plugin" on-missing noop
+
+file materialize dragonfly/patch-src_libs__3rdparty_QSpec_src_drivers_GTMouseDriverLinux.cpp -> dragonfly/patch-src_libs__3rdparty_QSpec_src_drivers_GTMouseDriverLinux.cpp
+file materialize dragonfly/patch-ugene.pro -> dragonfly/patch-ugene.pro

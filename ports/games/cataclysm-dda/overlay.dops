@@ -1,0 +1,23 @@
+port games/cataclysm-dda
+type port
+reason "BSD=1 make arg, disable -Werror, fix ncursesw config call, materialize dragonfly patches"
+target @any
+
+mk block set condition "!defined(_INCLUDE_GAMES_CATACLYSM__DDA_MK)" <<'MK'
+_INCLUDE_GAMES_CATACLYSM__DDA_MK=     yes
+
+CXXFLAGS+= -Wno-deprecated-declarations
+
+MAKE_ARGS+=		BSD=1
+NLS_MAKE_ARGS_ON=	LOCALIZE=1
+
+dfly-patch:
+	${REINPLACE_CMD} -e "s@ncursesw5-config@ncursesw6-config@g" \
+			 -e 's/-Werror[[:>:]]//g' \
+		${WRKSRC}/Makefile
+MK
+
+mk set DFLY_UNMAINTAINED "yes"
+
+file materialize dragonfly/patch-CMakeLists.txt -> dragonfly/patch-CMakeLists.txt
+file materialize dragonfly/patch-Makefile -> dragonfly/patch-Makefile

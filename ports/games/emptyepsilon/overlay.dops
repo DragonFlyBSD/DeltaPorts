@@ -1,0 +1,23 @@
+port games/emptyepsilon
+type port
+reason "add pthread/cxxfs_gcc8 deps, disable LTO, fix bswap and OS detection, materialize patches"
+target @any
+
+mk add LDFLAGS -pthread
+
+mk add BUILD_DEPENDS "cxxfs_gcc8>0:misc/cxxfs_gcc8"
+mk add CXXFLAGS "-isystem ${LOCALBASE}/cxxfs_gcc8"
+mk add LDFLAGS "-L${LOCALBASE}/cxxfs_gcc8"
+
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's@-O3 -flto@-O3@g' \
+		${WRKSRC}/CMakeLists.txt
+	${REINPLACE_CMD} -e 's|bswap32_|bswap32|g' \
+                ${WRKSRC_sproton}/src/i18n.cpp
+	${REINPLACE_CMD} -e 's@__FreeBSD__@__DragonFly__@g' \
+                ${WRKSRC_sproton}/src/clipboard.cpp
+MK
+
+file materialize dragonfly/patch-src_pathPlanner.cpp -> dragonfly/patch-src_pathPlanner.cpp
+file materialize dragonfly/patch-src_screenComponents_selfDestructIndicator.cpp -> dragonfly/patch-src_screenComponents_selfDestructIndicator.cpp
+file materialize dragonfly/patch-src_spaceObjects_playerSpaceship.cpp -> dragonfly/patch-src_spaceObjects_playerSpaceship.cpp

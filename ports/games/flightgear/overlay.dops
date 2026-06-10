@@ -1,0 +1,32 @@
+port games/flightgear
+type port
+reason "add pthread, strip flightgear-data dep when packaging, DragonFly CMake detection fixes"
+target @any
+
+mk add LDFLAGS -lpthread
+mk set DPMSG "${WRKDIR}/dports-message"
+
+mk block set condition "!defined(DPORTS_BUILDER) && defined(PACKAGE_BUILDING)" <<'MK'
+RUN_DEPENDS:=	${RUN_DEPENDS:N*flightgear-data}
+PKGMESSAGE=	${DPMSG}
+MK
+
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e '/MATCHES/s@\(FreeBSD\)"@\1|DragonFly"@g'	\
+			 -e 's@MATCHES "Linux|FreeBSD|OpenBSD@&|DragonFly@g' \
+		${WRKSRC}/CMakeModules/SetupFGFSLibraries.cmake		\
+		${WRKSRC}/CMakeLists.txt				\
+		${WRKSRC}/src/Main/CMakeLists.txt
+	-${REINPLACE_CMD} -e '/MATCHES/s@\(FreeBSD\)"@\1|DragonFly"@g'	\
+		${WRKSRC}/CMakeLists.txt.c++20
+	${ECHO_MSG} 'target_link_libraries(fgfs "-L/usr/local/lib -lX11")' >> \
+		${WRKSRC}/src/Main/CMakeLists.txt
+.if !defined(DPORTS_BUILDER) && defined(PACKAGE_BUILDING)
+	@${CP} ${.CURDIR}/pkg-message ${DPMSG}
+	@${ECHO} "########################################################" >> ${DPMSG}
+	@${ECHO} "# Build games/flightgear-data from source to play this #" >> ${DPMSG}
+	@${ECHO} "########################################################" >> ${DPMSG}
+.endif
+MK
+
+file materialize dragonfly/patch-3rdparty_joystick_jsNone.cxx -> dragonfly/patch-3rdparty_joystick_jsNone.cxx

@@ -1,0 +1,9 @@
+port filesystems/gvfs
+type port
+reason "remove bsdisks/lsof from RUN_DEPENDS (unavailable on DragonFly); materialize dragonfly patch"
+target @any
+
+text line-remove file Makefile exact "RUN_DEPENDS=	bsdisks>0:sysutils/bsdisks \\" on-missing noop
+text line-remove file Makefile exact "		lsof:sysutils/lsof" on-missing noop
+
+file materialize dragonfly/patch-meson.build -> dragonfly/patch-meson.build

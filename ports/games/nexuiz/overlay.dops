@@ -1,0 +1,17 @@
+port games/nexuiz
+type port
+reason "manual package build guard + EXTRACT_CMD->UNZIP_CMD fix + materialize dragonfly patches"
+target @any
+
+mk block set condition "!defined(DPORTS_BUILDER)" <<'MK'
+MANUAL_PACKAGE_BUILD=	879M package (too big for mirrors)
+MK
+
+patch apply diffs/Makefile.diff
+
+file materialize dragonfly/patch-sources__darkplaces__BSDmakefile -> dragonfly/patch-sources__darkplaces__BSDmakefile
+file materialize dragonfly/patch-sources__darkplaces__cd_bsd.c -> dragonfly/patch-sources__darkplaces__cd_bsd.c
+file materialize dragonfly/patch-sources__darkplaces__common.h -> dragonfly/patch-sources__darkplaces__common.h
+file materialize dragonfly/patch-sources__darkplaces__makefile -> dragonfly/patch-sources__darkplaces__makefile
+file materialize dragonfly/patch-sources__darkplaces__quakedef.h -> dragonfly/patch-sources__darkplaces__quakedef.h
+file materialize dragonfly/patch-sources__darkplaces__sys_shared.c -> dragonfly/patch-sources__darkplaces__sys_shared.c

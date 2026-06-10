@@ -1,0 +1,8 @@
+port games/frogatto
+type port
+reason "mark as manual package build (too large for mirrors)"
+target @any
+
+mk block set condition "!defined(DPORTS_BUILDER)" <<'MK'
+MANUAL_PACKAGE_BUILD=	huge (430M packaged)
+MK

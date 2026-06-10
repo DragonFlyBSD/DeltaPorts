@@ -1,0 +1,18 @@
+port games/alienarena
+type port
+reason "strip alienarena-data from RUN_DEPENDS when package building without builder; mark unmaintained"
+target @any
+
+mk set DPMSG "${WRKDIR}/dports-message"
+
+mk block set condition "!defined(DPORTS_BUILDER) && defined(PACKAGE_BUILDING)" <<'MK'
+RUN_DEPENDS:=	${RUN_DEPENDS:N*alienarena-data}
+PKGMESSAGE=	${DPMSG}
+
+dfly-patch:
+	@${ECHO} "########################################################" >> ${DPMSG}
+	@${ECHO} "# Build games/alienarena-data from source to play this #" >> ${DPMSG}
+	@${ECHO} "########################################################" >> ${DPMSG}
+MK
+
+mk set DFLY_UNMAINTAINED "yes"

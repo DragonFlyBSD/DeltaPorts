@@ -1,0 +1,6 @@
+port filesystems/fusefs-libs3
+type port
+reason "replace IGNORE with EXTRA_PATCHES for DragonFly FUSE support"
+target @any
+
+text replace-once file Makefile from "IGNORE=	fusefs has not been implemented on DragonFly" to "EXTRA_PATCHES=	${FILESDIR}/extra-patch-test_meson.build"

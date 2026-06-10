@@ -1,0 +1,6 @@
+port games/megaglest
+type port
+reason "add DragonFly OS detection substitution to post-patch target"
+target @any
+
+patch apply diffs/Makefile.diff

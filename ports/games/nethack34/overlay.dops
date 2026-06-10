@@ -1,0 +1,7 @@
+port games/nethack34
+type port
+reason "set perm file mode to 664 in plist"
+target @any
+
+text line-insert-after file pkg-plist anchor "%%DATADIR%%/oracles" line "@mode 664" on-missing noop
+text line-insert-after file pkg-plist anchor "%%DATADIR%%/perm" line "@mode" on-missing noop

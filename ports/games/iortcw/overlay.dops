@@ -1,0 +1,16 @@
+port games/iortcw
+type port
+reason "fix arch-specific binary names in plist to x86_64; materialize dragonfly patches"
+target @any
+
+text replace-once file pkg-plist from "%%MP%%%%WOLFDIR%%/iowolfded.%%ARCH%%" to "%%MP%%%%WOLFDIR%%/iowolfded.x86_64"
+text replace-once file pkg-plist from "%%MP%%%%WOLFDIR%%/iowolfmp.%%ARCH%%" to "%%MP%%%%WOLFDIR%%/iowolfmp.x86_64"
+text replace-once file pkg-plist from "%%SP%%%%WOLFDIR%%/iowolfsp.%%ARCH%%" to "%%SP%%%%WOLFDIR%%/iowolfsp.x86_64"
+text replace-once file pkg-plist from "%%SP%%%%WOLFDIR%%/iowolfspded.%%ARCH%%" to "%%SP%%%%WOLFDIR%%/iowolfspded.x86_64"
+
+file materialize dragonfly/patch-MP_code_qcommon_q__platform.h -> dragonfly/patch-MP_code_qcommon_q__platform.h
+file materialize dragonfly/patch-MP_code_zlib-1.2.11_ioapi.h -> dragonfly/patch-MP_code_zlib-1.2.11_ioapi.h
+file materialize dragonfly/patch-MP_Makefile -> dragonfly/patch-MP_Makefile
+file materialize dragonfly/patch-SP_code_qcommon_q__platform.h -> dragonfly/patch-SP_code_qcommon_q__platform.h
+file materialize dragonfly/patch-SP_code_zlib-1.2.11_ioapi.h -> dragonfly/patch-SP_code_zlib-1.2.11_ioapi.h
+file materialize dragonfly/patch-SP_Makefile -> dragonfly/patch-SP_Makefile

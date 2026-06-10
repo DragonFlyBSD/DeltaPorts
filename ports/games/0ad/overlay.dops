@@ -1,0 +1,11 @@
+port games/0ad
+type lock
+reason "manual package build guard + alias USES + MAKE env"
+target @any
+
+mk block set condition "!defined(DPORTS_BUILDER)" <<'MK'
+MANUAL_PACKAGE_BUILD=	570M package (too big for mirrors)
+MK
+
+mk add USES alias
+mk add MAKE_ENV "MAKE=${MAKE_CMD}"

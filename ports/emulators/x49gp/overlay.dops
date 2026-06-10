@@ -1,0 +1,8 @@
+port emulators/x49gp
+type port
+reason "fix do-build to use subshell instead of cd+make (avoids MAKELEVEL/MAKEFLAGS issues)"
+target @any
+
+patch apply diffs/Makefile.diff
+
+file materialize dragonfly/patch-qemu_qemu-git_bswap.h -> dragonfly/patch-qemu_qemu-git_bswap.h

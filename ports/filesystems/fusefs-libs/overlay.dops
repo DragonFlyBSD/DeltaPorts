@@ -1,0 +1,13 @@
+port filesystems/fusefs-libs
+type port
+reason "enable FUSE on DragonFly (remove IGNORE_DragonFly); materialize dragonfly patches"
+target @any
+
+text line-remove file Makefile exact "IGNORE_DragonFly=	fusefs has not been implemented on DragonFly" on-missing noop
+
+file materialize dragonfly/patch-configure.ac -> dragonfly/patch-configure.ac
+file materialize dragonfly/patch-include_fuse__compat.h -> dragonfly/patch-include_fuse__compat.h
+file materialize dragonfly/patch-include_fuse__lowlevel__compat.h -> dragonfly/patch-include_fuse__lowlevel__compat.h
+file materialize dragonfly/patch-lib_fuse__lowlevel.c -> dragonfly/patch-lib_fuse__lowlevel.c
+file materialize dragonfly/patch-lib_fuse.c -> dragonfly/patch-lib_fuse.c
+file materialize dragonfly/patch-lib_helper.c -> dragonfly/patch-lib_helper.c

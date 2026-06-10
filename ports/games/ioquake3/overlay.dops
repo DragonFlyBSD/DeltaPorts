@@ -1,0 +1,43 @@
+port games/ioquake3
+type port
+reason "set freebsd compile platform, PORTNAME-based RUN_DEPENDS strips, DragonFly source patches"
+target @any
+
+mk add MAKE_ARGS "COMPILE_PLATFORM=freebsd"
+
+mk set DPMSG "${WRKDIR}/dports-message"
+
+mk block set condition "!defined(DPORTS_BUILDER) && defined(PACKAGE_BUILDING) && ${PORTNAME:Miourbanterror*}" <<'MK'
+RUN_DEPENDS:=	${RUN_DEPENDS:N*urbanterror-data}
+PKGMESSAGE=	${DPMSG}
+MK
+
+mk block set condition "!defined(DPORTS_BUILDER) && defined(PACKAGE_BUILDING) && ${PORTNAME:Mopenarena*}" <<'MK'
+RUN_DEPENDS:=	${RUN_DEPENDS:N*openarena-data}
+PKGMESSAGE=	${DPMSG}
+MK
+
+mk target set dfly-patch <<'MK'
+	-${REINPLACE_CMD} -e 's@#ifndef MACOS_X@#if \!defined(MACOS_X) || \!defined(__DragonFly__)@g'	\
+		${WRKSRC}/code/tools/lcc/cpp/unix.c
+	-${REINPLACE_CMD} -e 's/-DMAP_ANONYMOUS=MAP_ANON//g' -e 's/-O2/-O1/g' ${WRKSRC}/Makefile
+.if !defined(DPORTS_BUILDER) && defined(PACKAGE_BUILDING) && ${PORTNAME:Miourbanterror*}
+.  if exists(${.CURDIR}/pkg-message)
+	@${CP} ${.CURDIR}/pkg-message ${DPMSG}
+.  endif
+	@${ECHO} "#########################################################" >> ${DPMSG}
+	@${ECHO} "# Build games/urbanterror-data from source to play this #" >> ${DPMSG}
+	@${ECHO} "#########################################################" >> ${DPMSG}
+.endif
+.if !defined(DPORTS_BUILDER) && defined(PACKAGE_BUILDING) && ${PORTNAME:Mopenarena*}
+.  if exists(${.CURDIR}/pkg-message)
+	@${CP} ${.CURDIR}/pkg-message ${DPMSG}
+.  endif
+	@${ECHO} "#######################################################" >> ${DPMSG}
+	@${ECHO} "# Build games/openarena-data from source to play this #" >> ${DPMSG}
+	@${ECHO} "#######################################################" >> ${DPMSG}
+.endif
+MK
+
+file materialize dragonfly/patch-code_qcommon_q__platform.h -> dragonfly/patch-code_qcommon_q__platform.h
+file materialize dragonfly/patch-code_qcommon_vm__x86.c -> dragonfly/patch-code_qcommon_vm__x86.c

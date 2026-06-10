@@ -1,0 +1,16 @@
+port games/flightgear-mb339-pan
+type port
+reason "strip flightgear-data from RUN_DEPENDS when package building without builder"
+target @any
+
+mk set DPMSG "${WRKDIR}/dports-message"
+
+mk block set condition "!defined(DPORTS_BUILDER) && defined(PACKAGE_BUILDING)" <<'MK'
+RUN_DEPENDS:=	${RUN_DEPENDS:N*flightgear-data}
+PKGMESSAGE=	${DPMSG}
+
+dfly-patch:
+	@${ECHO} "########################################################" >> ${DPMSG}
+	@${ECHO} "# Build games/flightgear-data from source to play this #" >> ${DPMSG}
+	@${ECHO} "########################################################" >> ${DPMSG}
+MK

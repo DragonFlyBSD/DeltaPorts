@@ -1,0 +1,6 @@
+port games/gnome-games
+type port
+reason "remove aisleriot from RUN_DEPENDS (unavailable on DragonFly)"
+target @any
+
+text line-remove file Makefile exact "		aisleriot>=0:games/aisleriot \\" on-missing noop
