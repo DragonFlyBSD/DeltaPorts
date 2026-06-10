@@ -1,0 +1,18 @@
+port devel/llvm11
+type port
+reason "disable LLDB/OPENMP; fix gcc version in dfly-patch; remove ld symlink; binutils@native"
+target @any
+
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NLLDB:NOPENMP}"
+mk eval OPTIONS_DEFAULT_x86_64 "${OPTIONS_DEFAULT_x86_64:NCOMPILER_RT:NOPENMP}"
+
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's|gcc50|gcc80|g' -e 's|5.0"|8.0"|' \
+		${WRKSRC}/tools/clang/lib/Driver/ToolChains/DragonFly.cpp \
+		${WRKSRC}/tools/clang/lib/Frontend/InitHeaderSearch.cpp
+MK
+
+file remove files/clang/patch-fformat_extensions.diff on-missing noop
+
+patch apply diffs/Makefile.diff
+patch apply diffs/pkg-plist.diff

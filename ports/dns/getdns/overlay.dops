@@ -1,0 +1,7 @@
+port dns/getdns
+type port
+reason "mark libressl as broken SSL"
+target @any
+
+mk set BROKEN_SSL "libressl"
+mk set BROKEN_SSL_REASON_libressl "configure explicitly states that"

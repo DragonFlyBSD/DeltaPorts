@@ -1,0 +1,17 @@
+port editors/emacs
+type port
+reason "add GNULS option; disable ACL; set CFLAGS; use GCC_DEFAULT; materialize dragonfly patches"
+target @any
+
+mk add OPTIONS_DEFINE GNULS
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NACL} GNULS"
+
+mk set GNULS_DESC "Use gnu ls 'gls' for --dired flag support"
+mk set GNULS_RUN_DEPENDS "gls:sysutils/coreutils"
+mk set CFLAGS "-D__STDC_WANT_IEC_60559_BFP_EXT__"
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+
+file materialize dragonfly/patch-lib_ieee754.in.h -> dragonfly/patch-lib_ieee754.in.h
+file materialize dragonfly/patch-lisp_dired.el -> dragonfly/patch-lisp_dired.el
+file materialize dragonfly/patch-src_process.h -> dragonfly/patch-src_process.h

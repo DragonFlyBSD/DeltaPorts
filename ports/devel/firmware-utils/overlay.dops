@@ -1,0 +1,11 @@
+port devel/firmware-utils
+type port
+reason "files/Makefile LDFLAGS fix via patch apply; dragonfly patches for firmware tools"
+target @any
+
+patch apply diffs/files_Makefile.diff
+
+file materialize dragonfly/patch-dgfirmware.c -> dragonfly/patch-dgfirmware.c
+file materialize dragonfly/patch-mkplanexfw.c -> dragonfly/patch-mkplanexfw.c
+file materialize dragonfly/patch-spw303v.c -> dragonfly/patch-spw303v.c
+file materialize dragonfly/patch-wrt400n.c -> dragonfly/patch-wrt400n.c

@@ -1,0 +1,6 @@
+port devel/riscv64-none-elf-gcc
+type port
+reason "remove include-fixed/ files from pkg-plist"
+target @any
+
+patch apply diffs/pkg-plist.diff

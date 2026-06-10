@@ -1,0 +1,7 @@
+port devel/jech-dht
+type port
+reason "replace post-build/post-install make invocations with MAKE_ARGS NO_WERROR; remove dht-example from plist"
+target @any
+
+patch apply diffs/Makefile.diff
+patch apply diffs/pkg-plist.diff

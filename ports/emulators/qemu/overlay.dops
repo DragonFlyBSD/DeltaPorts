@@ -1,0 +1,58 @@
+port emulators/qemu
+type port
+reason "shebangfix/ncurses USES; SPICE option; libslirp dep; CONFIGURE_ARGS; flavor-conditional ops; dfly-patch/install"
+target @any
+
+mk add USES "shebangfix"
+mk add SHEBANG_FILES "scripts/signrom.py"
+
+mk add USES "ncurses"
+
+mk add OPTIONS_DEFINE "SPICE"
+
+mk set SPICE_DESC "SPICE protocol support"
+mk set SPICE_LIB_DEPENDS "libspice-server.so:devel/libspice-server"
+mk set SPICE_BUILD_DEPENDS "spice-protocol>0:devel/spice-protocol"
+mk set SPICE_CONFIGURE_ON "--enable-spice"
+mk set SPICE_CONFIGURE_OFF "--disable-spice"
+
+mk add LIB_DEPENDS "libslirp.so:net/libslirp"
+mk add CONFIGURE_ARGS "--disable-netmap"
+mk add CONFIGURE_ARGS "--disable-stack-protector"
+mk add CONFIGURE_ARGS "--enable-curses"
+
+mk add LIB_DIRS "${LOCALBASE}/lib/elfutils"
+
+mk block set condition "${FLAVOR:U} == default || ${FLAVOR:U} == nox11" <<'MK'
+OPTIONS_DEFAULT+=	SPICE
+OPTIONS_DEFAULT+=	X86_TARGETS
+X86_TARGETS_CONFIGURE_ON:=	--target-list='i386-softmmu x86_64-softmmu'
+MK
+
+file materialize dragonfly/patch-block.c -> dragonfly/patch-block.c
+file materialize dragonfly/patch-hw_ppc_mac__oldworld.c -> dragonfly/patch-hw_ppc_mac__oldworld.c
+file materialize dragonfly/patch-hw-ppc_newworld.c -> dragonfly/patch-hw-ppc_newworld.c
+file materialize dragonfly/patch-meson.build -> dragonfly/patch-meson.build
+file materialize dragonfly/patch-util_coroutine-ucontext.c -> dragonfly/patch-util_coroutine-ucontext.c
+file materialize dragonfly/patch-util_meson.build -> dragonfly/patch-util_meson.build
+
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e "/find_library/s@'iconv',@& dirs: '${LOCALBASE}/lib',@g" \
+			 -e "/dirs =/s@'/usr/include/ncursesw'@&, '${LOCALBASE}/include/ncurses', '${LOCALBASE}/lib'@g" \
+			 -e "s@'ncursesw', 'ncurses', 'cursesw', 'pdcurses'@'ncurses'@" \
+			 -e "s@dependency(curses_libname,@dependency('ncurses_xxx',@g" \
+			 -e "s@links(curses_test,@& args: '-DNCURSES_WIDECHAR',@g" \
+		${WRKSRC}/meson.build
+	${REINPLACE_CMD} -e "s,-j1,-j${MAKE_JOBS_NUMBER},g" \
+		${WRKSRC}/Makefile
+MK
+
+mk target set dfly-install <<'MK'
+.if ${FLAVOR:U} != tools && ${FLAVOR:U} != guestagent
+	${TOUCH} ${STAGEDIR}${PREFIX}/bin/qemu-i386 \
+		${STAGEDIR}${PREFIX}/bin/qemu-x86_64 \
+		${STAGEDIR}${PREFIX}/bin/qemu-arm
+.endif
+MK
+
+patch apply diffs/Makefile.diff

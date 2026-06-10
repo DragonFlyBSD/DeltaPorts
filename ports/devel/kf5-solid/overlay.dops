@@ -1,0 +1,11 @@
+port devel/kf5-solid
+type port
+reason "remove bsdisks RUN_DEPENDS; add metainfo.yaml DragonFly entry in dfly-patch"
+target @any
+
+patch apply diffs/Makefile.diff
+
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's/^.*\- name: FreeBSD/&\n    - name: DragonFly/g' \
+		${WRKSRC}/metainfo.yaml
+MK

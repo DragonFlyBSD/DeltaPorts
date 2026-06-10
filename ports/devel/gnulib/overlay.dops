@@ -1,0 +1,6 @@
+port devel/gnulib
+type port
+reason "remove makeinfo path substitution from post-patch reinplace"
+target @any
+
+patch apply diffs/Makefile.diff

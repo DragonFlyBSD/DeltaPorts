@@ -1,0 +1,6 @@
+port devel/qt5
+type port
+reason "exclude qdoc from USE_QT to avoid hard dep on devel/llvmXY"
+target @any
+
+patch apply diffs/Makefile.diff

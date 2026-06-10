@@ -1,0 +1,11 @@
+port emulators/ppsspp
+type port
+reason "conditional do-install for LIBRETRO slave; mark unmaintained"
+target @any
+
+mk block set condition "defined(OPTIONS_SLAVE) && ${OPTIONS_SLAVE:MLIBRETRO}" <<'MK'
+do-install:
+
+MK
+
+mk set IGNORE "unmaintained, please request fixing to users mailing list"

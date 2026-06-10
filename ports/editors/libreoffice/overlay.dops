@@ -1,0 +1,58 @@
+port editors/libreoffice
+type port
+reason "USE_GCC=13; filter elfctl; disable JAVA/Firebird; CONFIGURE_ARGS; dfly-patch with .for loops; dragonfly patches"
+target @any
+
+mk set USE_GCC_VERSION "13"
+
+mk eval USES "${USES:Nelfctl}"
+
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NJAVA}"
+
+mk add CONFIGURE_ARGS "--disable-firebird-sdbc"
+
+mk add CONFIGURE_ARGS "--with-os-version=${DFLYVERSION}"
+mk add CONFIGURE_ARGS "--with-vendor=\"DragonFly dports\""
+
+patch apply diffs/Makefile.diff
+
+file remove files/patch-bridges_source_cpp__uno_gcc3__linux__x86-64_except.cxx on-missing noop
+
+file materialize dragonfly/patch-configure -> dragonfly/patch-configure
+file materialize dragonfly/patch-external_pdfium_Library__pdfium.mk -> dragonfly/patch-external_pdfium_Library__pdfium.mk
+file materialize dragonfly/patch-external_pdfium_pdfium-dragonfly.patch -> dragonfly/patch-external_pdfium_pdfium-dragonfly.patch
+file materialize dragonfly/patch-external_skia_dragonfly-skia-01.patch.0 -> dragonfly/patch-external_skia_dragonfly-skia-01.patch.0
+file materialize dragonfly/patch-external_skia_UnpackedTarball__skia.mk -> dragonfly/patch-external_skia_UnpackedTarball__skia.mk
+file materialize dragonfly/patch-include_LibreOfficeKit_LibreOfficeKitInit.h -> dragonfly/patch-include_LibreOfficeKit_LibreOfficeKitInit.h
+file materialize dragonfly/patch-jvmfwk_Package__rcfiles.mk -> dragonfly/patch-jvmfwk_Package__rcfiles.mk
+file materialize dragonfly/patch-odk_config_configure.pl -> dragonfly/patch-odk_config_configure.pl
+file materialize dragonfly/patch-sal_osl_unx_process.cxx -> dragonfly/patch-sal_osl_unx_process.cxx
+file materialize dragonfly/patch-sal_osl_unx_thread.cxx -> dragonfly/patch-sal_osl_unx_thread.cxx
+file materialize dragonfly/patch-sal_osl_unx_uunxapi.cxx -> dragonfly/patch-sal_osl_unx_uunxapi.cxx
+file materialize dragonfly/patch-slideshow_source_engine_box2dtools.cxx -> dragonfly/patch-slideshow_source_engine_box2dtools.cxx
+file materialize dragonfly/patch-solenv_gbuild_platform_DRAGONFLY__X86__64__GCC.mk -> dragonfly/patch-solenv_gbuild_platform_DRAGONFLY__X86__64__GCC.mk
+file materialize dragonfly/patch-soltools_mkdepend_imakemdep.h -> dragonfly/patch-soltools_mkdepend_imakemdep.h
+file materialize dragonfly/patch-sw_source_core_bastyp_calc.cxx -> dragonfly/patch-sw_source_core_bastyp_calc.cxx
+file materialize dragonfly/patch-vcl_source_app_svapp.cxx -> dragonfly/patch-vcl_source_app_svapp.cxx
+file materialize dragonfly/patch-vcl_source_window_window2.cxx -> dragonfly/patch-vcl_source_window_window2.cxx
+file materialize dragonfly/pdfium-build__config.patch -> dragonfly/pdfium-build__config.patch
+
+mk target set dfly-patch <<'MK'
+	${CP} -v ${DFLY_FILESDIR}/pdfium-build__config.patch ${WRKSRC}/external/pdfium
+	${REINPLACE_CMD} -e 's,pdfium_patches += pdfium-bsd.patch,& pdfium-build__config.patch ,g' \
+		${WRKSRC}/external/pdfium/UnpackedTarball_pdfium.mk
+	${REINPLACE_CMD} -e 's|$$ENV{TMPDIR};|"${WRKDIR}";|' \
+		${WRKSRC}/solenv/bin/ooinstall
+	(cd ${WRKSRC} && ${REINPLACE_CMD} -e 's|FREEBSD|DRAGONFLY|' \
+		${REPLACE_LIST})
+.for F in ${REPLACE_LIST}
+	@/usr/bin/cmp -s ${WRKSRC:Q}/${F} ${WRKSRC:Q}/${F}.bak && \
+		echo "${F} was not altered" || /usr/bin/true
+.endfor
+	(cd ${WRKSRC} && \
+		${REINPLACE_CMD} -e 's|%BSD|DRAGONFLY|' ${PERCENT_BSD_LIST})
+.for F in ${PERCENT_BSD_LIST}
+	@/usr/bin/cmp -s ${WRKSRC:Q}/${F} ${WRKSRC:Q}/${F}.bak && \
+		echo "${F} was not altered" || /usr/bin/true
+.endfor
+MK

@@ -1,0 +1,11 @@
+port editors/encryptpad
+type port
+reason "dragonfly patches for build system and portability; Makefile.diff for build deps"
+target @any
+
+patch apply diffs/Makefile.diff
+
+file materialize dragonfly/patch-deps_makefiles_build.mak -> dragonfly/patch-deps_makefiles_build.mak
+file materialize dragonfly/patch-deps_makefiles_platform.mak -> dragonfly/patch-deps_makefiles_platform.mak
+file materialize dragonfly/patch-deps_plog_include_plog_Util.h -> dragonfly/patch-deps_plog_include_plog_Util.h
+file materialize dragonfly/patch-deps_stlplus_portability_build.cpp -> dragonfly/patch-deps_stlplus_portability_build.cpp

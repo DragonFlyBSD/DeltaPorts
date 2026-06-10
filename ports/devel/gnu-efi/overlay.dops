@@ -1,0 +1,6 @@
+port devel/gnu-efi
+type port
+reason "rename amd64 plist tokens to x86_64 and fix lds filename"
+target @any
+
+patch apply diffs/pkg-plist.diff

@@ -1,0 +1,59 @@
+port devel/elfutils
+type port
+reason "add BUILD_DEPENDS, CFLAGS/LDFLAGS; dfly-patch/install targets; move headers/libs to elfutils subdir"
+target @any
+
+mk add BUILD_DEPENDS "gnustat:sysutils/coreutils"
+mk add BUILD_DEPENDS "bash>0:shells/bash"
+mk add CFLAGS "-Wno-error=cast-function-type -O1"
+mk add LDFLAGS "-Wl,-rpath,${LOCALBASE}/lib/elfutils"
+
+mk set DPMSG "${WRKDIR}/dports-message"
+mk set PKGMESSAGE "${DPMSG}"
+
+file materialize dragonfly/patch-lib_eu-config.h -> dragonfly/patch-lib_eu-config.h
+file materialize dragonfly/patch-libelf_elf.h -> dragonfly/patch-libelf_elf.h
+file materialize dragonfly/patch-src_ar.c -> dragonfly/patch-src_ar.c
+file materialize dragonfly/patch-src_elflint.c -> dragonfly/patch-src_elflint.c
+file materialize dragonfly/patch-src_readelf.c -> dragonfly/patch-src_readelf.c
+file materialize dragonfly/patch-src_string.c -> dragonfly/patch-src_string.c
+file materialize dragonfly/patch-tests_saridx.c -> dragonfly/patch-tests_saridx.c
+
+mk target set dfly-patch <<'MK'
+	@${ECHO} "[" > ${DPMSG}
+	@${ECHO} "{ type: install" >> ${DPMSG}
+	@${ECHO} "  message: <<EOM" >> ${DPMSG}
+	@${ECHO} "To use this port add:" >> ${DPMSG}
+	@${ECHO} "  CFLAGS+= -I${LOCALBASE}/include/elfutils" >> ${DPMSG}
+	@${ECHO} "           -I${LOCALBASE}/include" >> ${DPMSG}
+	@${ECHO} "  LDFLAGS+= -L${LOCALBASE}/lib/elfutils" >> ${DPMSG}
+	@${ECHO} "            -Wl,-rpath,${LOCALBASE}/lib/elfutils" >> ${DPMSG}
+	@${ECHO} "EOM" >> ${DPMSG}
+	@${ECHO} "}" >> ${DPMSG}
+	@${ECHO} "]" >> ${DPMSG}
+	${REINPLACE_CMD} -e "s@Libs: @&-L${LOCALBASE}/lib/elfutils -Wl,-rpath,${LOCALBASE}/lib/elfutils @g" \
+			 -e "s@Cflags: @&-I${LOCALBASE}/include/elfutils @g" \
+			 -e '/Requires: libelf =/d' \
+		${WRKSRC}/config/libelf.pc.in ${WRKSRC}/config/libdw.pc.in
+	${REINPLACE_CMD} -e 's@dwarfcfi_LDADD =@& $$(libeu) @g' \
+			 -e 's@next_cfi_LDADD =@& $$(libeu) @g' \
+		${WRKSRC}/tests/Makefile.am
+	${REINPLACE_CMD} -e 's@wc --lines@wc -l@g' \
+		${WRKSRC}/tests/run-strip-test.sh
+	${REINPLACE_CMD} -e 's@ /bin/sh@/usr/local/bin/bash@g' \
+			 -e 's@ /bin/bash@/usr/local/bin/bash@g' \
+			 -e 's@stat -c@gnustat -c@g' \
+		${WRKSRC}/tests/*.sh
+MK
+
+mk target set dfly-install <<'MK'
+	${MV} -v ${STAGEDIR}${PREFIX}/include/*.h \
+		${STAGEDIR}${PREFIX}/include/elfutils/
+	${MKDIR} ${STAGEDIR}${PREFIX}/lib/elfutils
+	${MV} -v ${STAGEDIR}${PREFIX}/lib/lib* \
+		${STAGEDIR}${PREFIX}/lib/elfutils/
+	${MV} -v ${STAGEDIR}${PREFIX}/libdata/pkgconfig/libelf.pc \
+		${STAGEDIR}${PREFIX}/libdata/pkgconfig/elfutils.pc
+MK
+
+patch apply diffs/pkg-plist.diff

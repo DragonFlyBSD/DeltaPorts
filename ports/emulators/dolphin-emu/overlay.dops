@@ -1,0 +1,28 @@
+port emulators/dolphin-emu
+type port
+reason "replace pulseaudio with alsa; dfly-patch for cubeb/jack _XOPEN_SOURCE; mark unmaintained"
+target @any
+
+mk add USES "alias localbase:ldflags"
+
+mk eval LIB_DEPENDS "${LIB_DEPENDS:Nlibpulse*}"
+
+mk add LIB_DEPENDS "libasound.so:audio/alsa-lib"
+mk add RUN_DEPENDS "${LOCALBASE}/lib/alsa-lib/libasound_module_pcm_oss.so:audio/alsa-plugins"
+mk add RUN_DEPENDS "alsa-lib>=1.1.1_1:audio/alsa-lib"
+
+mk add CMAKE_ARGS "-DENABLE_ALSA:BOOL=ON"
+mk add CMAKE_ARGS "-DENABLE_PULSEAUDIO:BOOL=OFF"
+
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+
+file materialize dragonfly/patch-CMakeLists.txt -> dragonfly/patch-CMakeLists.txt
+file materialize dragonfly/patch-Source_Core_Common_MemoryUtil.cpp -> dragonfly/patch-Source_Core_Common_MemoryUtil.cpp
+file materialize dragonfly/patch-Source_Core_DiscIO_DriveBlob.cpp -> dragonfly/patch-Source_Core_DiscIO_DriveBlob.cpp
+
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's@_XOPEN_SOURCE@&___@g' \
+		${WRKSRC}/Externals/cubeb/src/cubeb_alsa.c
+	${REINPLACE_CMD} -e 's@_POSIX_SOURCE@&___@g' \
+		${WRKSRC}/Externals/cubeb/src/cubeb_jack.cpp
+MK

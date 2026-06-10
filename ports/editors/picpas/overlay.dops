@@ -1,0 +1,11 @@
+port editors/picpas
+type port
+reason "dfly-patch to lowercase dragonfly in sources; do-install uses OPSYS:tl binary name"
+target @any
+
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's@freebsd@dragonfly@g' \
+		${WRKSRC}/Source/Globales.pas
+MK
+
+patch apply diffs/Makefile.diff

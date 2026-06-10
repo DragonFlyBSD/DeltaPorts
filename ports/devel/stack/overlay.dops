@@ -1,0 +1,9 @@
+port devel/stack
+type port
+reason "filter lang/gcc from RUN_DEPENDS; mark unmaintained; fix libncursesw dep to be FreeBSD-only"
+target @any
+
+mk eval RUN_DEPENDS "${RUN_DEPENDS:N*lang/gcc}"
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+
+patch apply diffs/Makefile.diff

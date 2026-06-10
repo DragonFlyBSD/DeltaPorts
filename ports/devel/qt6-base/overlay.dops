@@ -1,0 +1,30 @@
+port devel/qt6-base
+type port
+reason "add QT_MKSPECDIR plist files; post-extract mkdir; remove plist entry and files patch; dragonfly patches"
+target @any
+
+mk add PLIST_FILES "%%QT_MKSPECDIR%%/dragonfly-g++/qmake.conf"
+mk add PLIST_FILES "%%QT_MKSPECDIR%%/dragonfly-g++/qplatformdefs.h"
+
+mk target set post-extract <<'MK'
+	${MKDIR} ${WRKSRC}/dragonfly-g++
+MK
+
+file remove files/patch-src_corelib_io_qlockfile__unix.cpp on-missing noop
+
+file materialize dragonfly/patch-cmake_QtFlagHandlingHelpers.cmake -> dragonfly/patch-cmake_QtFlagHandlingHelpers.cmake
+file materialize dragonfly/patch-cmake_QtMkspecHelpers.cmake -> dragonfly/patch-cmake_QtMkspecHelpers.cmake
+file materialize dragonfly/patch-cmake_QtPlatformSupport.cmake -> dragonfly/patch-cmake_QtPlatformSupport.cmake
+file materialize dragonfly/patch-cmake_QtRpathHelpers.cmake -> dragonfly/patch-cmake_QtRpathHelpers.cmake
+file materialize dragonfly/patch-mkspecs_dragonfly-g++_qmake.conf -> dragonfly/patch-mkspecs_dragonfly-g++_qmake.conf
+file materialize dragonfly/patch-mkspecs_dragonfly-g++_qplatformdefs.h -> dragonfly/patch-mkspecs_dragonfly-g++_qplatformdefs.h
+file materialize dragonfly/patch-src_corelib_CMakeLists.txt -> dragonfly/patch-src_corelib_CMakeLists.txt
+file materialize dragonfly/patch-src_corelib_global_qsystemdetection.h -> dragonfly/patch-src_corelib_global_qsystemdetection.h
+file materialize dragonfly/patch-src_corelib_io_qlockfile__unix.cpp -> dragonfly/patch-src_corelib_io_qlockfile__unix.cpp
+file materialize dragonfly/patch-src_corelib_plugin_qelfparser__p.cpp -> dragonfly/patch-src_corelib_plugin_qelfparser__p.cpp
+file materialize dragonfly/patch-src_corelib_thread_qthread__unix.cpp -> dragonfly/patch-src_corelib_thread_qthread__unix.cpp
+file materialize dragonfly/patch-src_gui_configure.cmake -> dragonfly/patch-src_gui_configure.cmake
+file materialize dragonfly/patch-util_cmake_condition__simplifier.py -> dragonfly/patch-util_cmake_condition__simplifier.py
+file materialize dragonfly/patch-util_cmake_helper.py -> dragonfly/patch-util_cmake_helper.py
+
+patch apply diffs/pkg-plist.diff

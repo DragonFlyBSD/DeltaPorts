@@ -1,0 +1,9 @@
+port editors/neovim
+type port
+reason "add CMAKE_ARGS to skip build rpath and disable jemalloc; materialize dragonfly patch"
+target @any
+
+mk add CMAKE_ARGS "-DCMAKE_SKIP_BUILD_RPATH:BOOL=YES"
+mk add CMAKE_ARGS "-DENABLE_JEMALLOC:BOOL=NO"
+
+file materialize dragonfly/patch-src_nvim_os_proc.c -> dragonfly/patch-src_nvim_os_proc.c

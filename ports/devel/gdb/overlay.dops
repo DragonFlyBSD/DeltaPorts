@@ -1,0 +1,42 @@
+port devel/gdb
+type port
+reason "filter warning options; set CONFIGURE_TARGET for DragonFly; dfly-patch copies dragonfly files"
+target @any
+
+mk eval CFLAGS "${CFLAGS:N-Wno-unknown-warning-option}"
+mk add CXXFLAGS "-fpermissive"
+
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NKGDB}"
+mk eval CONFIGURE_TARGET "x86_64-portbld-${OPSYS:tl}${OSREL}"
+
+mk set KGDB_BROKEN "KGDB support not ready yet"
+
+file materialize dragonfly/amd64-dfly-nat.c -> dragonfly/amd64-dfly-nat.c
+file materialize dragonfly/amd64-dfly-tdep.c -> dragonfly/amd64-dfly-tdep.c
+file materialize dragonfly/dfly-nat.c -> dragonfly/dfly-nat.c
+file materialize dragonfly/dfly-nat.h -> dragonfly/dfly-nat.h
+file materialize dragonfly/dfly-tdep.c -> dragonfly/dfly-tdep.c
+file materialize dragonfly/dfly-tdep.h -> dragonfly/dfly-tdep.h
+file materialize dragonfly/extrapatch-kgdb -> dragonfly/extrapatch-kgdb
+file materialize dragonfly/i386-dfly-tdep.c -> dragonfly/i386-dfly-tdep.c
+file materialize dragonfly/patch-bfd_config.bfd -> dragonfly/patch-bfd_config.bfd
+file materialize dragonfly/patch-gdb_amd64-tdep.h -> dragonfly/patch-gdb_amd64-tdep.h
+file materialize dragonfly/patch-gdb_bsd-kvm.c -> dragonfly/patch-gdb_bsd-kvm.c
+file materialize dragonfly/patch-gdb_configure.host -> dragonfly/patch-gdb_configure.host
+file materialize dragonfly/patch-gdb_configure.nat -> dragonfly/patch-gdb_configure.nat
+file materialize dragonfly/patch-gdb_configure.tgt -> dragonfly/patch-gdb_configure.tgt
+file materialize dragonfly/patch-gdb_i386-bsd-nat.c -> dragonfly/patch-gdb_i386-bsd-nat.c
+file materialize dragonfly/patch-gdb_i386-tdep.h -> dragonfly/patch-gdb_i386-tdep.h
+file materialize dragonfly/patch-gdb_Makefile.in -> dragonfly/patch-gdb_Makefile.in
+file materialize dragonfly/patch-gdb_osabi.c -> dragonfly/patch-gdb_osabi.c
+file materialize dragonfly/patch-gdb_osabi.h -> dragonfly/patch-gdb_osabi.h
+file materialize dragonfly/patch-include_elf_common.h -> dragonfly/patch-include_elf_common.h
+
+mk target set dfly-patch <<'MK'
+	${CP} ${DFLY_FILESDIR}/dfly-tdep.* ${WRKSRC}/gdb/
+	${CP} ${DFLY_FILESDIR}/dfly-nat.* ${WRKSRC}/gdb/
+	${CP} ${DFLY_FILESDIR}/i386* ${WRKSRC}/gdb/
+	${CP} ${DFLY_FILESDIR}/amd64* ${WRKSRC}/gdb/
+MK
+
+patch apply diffs/Makefile.diff

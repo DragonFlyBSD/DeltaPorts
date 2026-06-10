@@ -1,0 +1,12 @@
+port devel/jna
+type port
+reason "add x86_64 ANT_ARCH mapping; use dragonflybsd jar; add -Werror removal in dfly-patch"
+target @any
+
+patch apply diffs/Makefile.diff
+
+file materialize dragonfly/patch-native_Makefile -> dragonfly/patch-native_Makefile
+
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's/-Werror //g' ${WRKSRC}/native/Makefile
+MK

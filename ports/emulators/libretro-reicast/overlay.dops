@@ -1,0 +1,11 @@
+port emulators/libretro-reicast
+type port
+reason "use GCC_DEFAULT; remove pulseaudio dep; materialize dragonfly patches"
+target @any
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+
+patch apply diffs/Makefile.diff
+
+file materialize dragonfly/patch-libswirl_hw_modem_picoppp.cpp -> dragonfly/patch-libswirl_hw_modem_picoppp.cpp
+file materialize dragonfly/patch-libswirl_linux_common.cpp -> dragonfly/patch-libswirl_linux_common.cpp

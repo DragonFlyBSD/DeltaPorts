@@ -1,0 +1,8 @@
+port editors/xcoral
+type port
+reason "mark broken (missing gnu/regex.h); remove -lgnuregex and post-patch reinplace via Makefile.diff"
+target @any
+
+mk set BROKEN "missing gnu/regex.h"
+
+patch apply diffs/Makefile.diff

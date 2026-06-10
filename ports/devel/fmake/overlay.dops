@@ -1,0 +1,10 @@
+port devel/fmake
+type port
+reason "fmake has .for loop in pre-build-script; escalated to dops via mk target set"
+target @any
+
+mk target set post-patch <<'MK'
+.for F in cond job make suff proc dir main buf targ shell hash parse str util var for arch
+	@${REINPLACE_CMD} -e '/^__FBSDID/d' ${WRKSRC}/${F}.c
+.endfor
+MK

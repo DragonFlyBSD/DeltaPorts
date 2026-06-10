@@ -1,0 +1,9 @@
+port editors/pluma-plugins
+type port
+reason "add libtool USES; mark unmaintained; remove .la files from plist"
+target @any
+
+mk add USES libtool
+mk set DFLY_UNMAINTAINED "yes"
+
+patch apply diffs/pkg-plist.diff

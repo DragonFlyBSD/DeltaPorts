@@ -1,0 +1,6 @@
+port devel/plasma6-kwrited
+type port
+reason "replace kded plugin plist entry with standalone bin and autostart desktop file"
+target @any
+
+patch apply diffs/pkg-plist.diff
