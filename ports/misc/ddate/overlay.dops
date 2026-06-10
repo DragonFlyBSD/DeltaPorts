@@ -1,0 +1,10 @@
+port misc/ddate
+type port
+reason "add gettext/localbase USES, LDFLAGS=-lintl, disable ncurses configure, add LDFLAGS to do-build"
+target @any
+
+mk add USES gettext
+mk add USES localbase:ldflags
+mk add LDFLAGS -lintl
+mk add CONFIGURE_ARGS --without-ncurses
+patch apply diffs/Makefile.diff

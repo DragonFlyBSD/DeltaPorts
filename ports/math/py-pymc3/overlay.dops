@@ -1,0 +1,8 @@
+port math/py-pymc3
+type port
+reason "override WRKSRC for specific DISTVERSION 3.11.4"
+target @any
+
+mk block set condition "${DISTVERSION} == 3.11.4" <<'MK'
+WRKSRC:=	${WRKDIR}/pymc-3.11.4
+MK

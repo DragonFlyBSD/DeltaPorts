@@ -1,0 +1,11 @@
+port net/guacamole-server
+type port
+reason "strip PULSEAUDIO option, add dfly-patch to remove -Werror from Makefile.am files"
+target @any
+
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NPULSEAUDIO}"
+mk target set dfly-patch <<'MK'
+	${FIND} ${WRKSRC} -name Makefile.am | ${XARGS} \
+		${GREP} -rl "\-Werror " | ${XARGS} \
+		${REINPLACE_CMD} -e 's/-Werror //g'
+MK

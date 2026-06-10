@@ -1,0 +1,7 @@
+port mail/rmilter
+type port
+reason "unset WITH_SENDMAIL_BASE and add -Wno-implicit-fallthrough to CFLAGS"
+target @any
+
+mk unset WITH_SENDMAIL_BASE
+mk add CFLAGS -Wno-implicit-fallthrough

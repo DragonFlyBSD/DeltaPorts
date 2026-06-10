@@ -1,0 +1,6 @@
+port multimedia/mlt7-glaxnimate
+type port
+reason "add USE_GCC_VERSION for GCC_DEFAULT to ensure correct compiler"
+target @any
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"

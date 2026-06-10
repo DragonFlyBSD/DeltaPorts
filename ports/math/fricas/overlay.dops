@@ -1,0 +1,6 @@
+port math/fricas
+type port
+reason "add new algebra files to pkg-plist via patch apply"
+target @any
+
+patch apply diffs/pkg-plist.diff

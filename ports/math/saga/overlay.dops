@@ -1,0 +1,6 @@
+port math/saga
+type port
+reason "remove -lgomp reinplace from post-patch to avoid libomp vs libgomp confusion"
+target @any
+
+patch apply diffs/Makefile.diff

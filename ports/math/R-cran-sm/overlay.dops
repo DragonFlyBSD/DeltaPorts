@@ -1,0 +1,6 @@
+port math/R-cran-sm
+type port
+reason "remove BROKEN_x86_64 marker so the port can build on x86_64"
+target @any
+
+mk unset BROKEN_x86_64 on-missing noop

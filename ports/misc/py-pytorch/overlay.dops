@@ -1,0 +1,25 @@
+port misc/py-pytorch
+type port
+reason "set IGNORE, add clang binary aliases, CXXFLAGS, LDFLAGS, LIB_DIRS dep, materialize dragonfly patches"
+target @any
+
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+mk set USE_CLANG_FALLBACK "default"
+mk add BINARY_ALIAS "cpp=${LOCALBASE}/bin/clang-cpp${LLVM_DEFAULT}"
+mk add BINARY_ALIAS "cc=${LOCALBASE}/bin/clang${LLVM_DEFAULT}"
+mk add BINARY_ALIAS "c++=${LOCALBASE}/bin/clang++${LLVM_DEFAULT}"
+mk add BINARY_ALIAS "ar=${LOCALBASE}/bin/llvm-ar${LLVM_DEFAULT}"
+mk add BINARY_ALIAS "nm=${LOCALBASE}/bin/llvm-nm${LLVM_DEFAULT}"
+mk add CXXFLAGS -nostdlib++
+mk add CXXFLAGS -nostdinc++
+mk add CXXFLAGS "-I${LOCALBASE}/include"
+mk add CXXFLAGS "-I${LOCALBASE}/include/cxxrt"
+mk add CXXFLAGS "-cxx-isystem ${LOCALBASE}/llvm${LLVM_DEFAULT}/libcxx/include/c++/v1"
+mk set LDFLAGS "-L /usr/lib -L${LOCALBASE}/llvm${LLVM_DEFAULT}/libcxx/lib/c++ -L /lib"
+mk add LIB_DIRS "${PREFIX}/llvm${LLVM_DEFAULT}/libcxx/lib"
+mk add LIB_DEPENDS "libc++.so.1:devel/libcxx${LLVM_DEFAULT}"
+file materialize dragonfly/patch-third__party_cpuinfo_CMakeLists.txt -> dragonfly/patch-third__party_cpuinfo_CMakeLists.txt
+file materialize dragonfly/patch-third__party_ittapi_src_ittnotify_ittnotify__config.h -> dragonfly/patch-third__party_ittapi_src_ittnotify_ittnotify__config.h
+file materialize dragonfly/patch-third__party_ittapi_src_ittnotify_ittnotify__static.c -> dragonfly/patch-third__party_ittapi_src_ittnotify_ittnotify__static.c
+file materialize dragonfly/patch-third__party_ittapi_src_ittnotify_jitprofiling.c -> dragonfly/patch-third__party_ittapi_src_ittnotify_jitprofiling.c
+file materialize dragonfly/patch-third__party_tbb_src_tbb_tools__api_ittnotify__config.h -> dragonfly/patch-third__party_tbb_src_tbb_tools__api_ittnotify__config.h

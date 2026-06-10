@@ -1,0 +1,6 @@
+port math/fftw3
+type port
+reason "replace USE_GCC with USES+=fortran and explicit CC/CXX/CPP/CFLAGS for quad flavor"
+target @any
+
+patch apply diffs/Makefile.diff

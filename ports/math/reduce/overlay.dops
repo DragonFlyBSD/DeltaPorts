@@ -1,0 +1,17 @@
+port math/reduce
+type port
+reason "add cxxfs_gcc8 build dep, set CXXFLAGS/LDFLAGS, add dfly-patch reinplace for DragonFly, update USES and freetype configure flags"
+target @any
+
+mk add BUILD_DEPENDS "cxxfs_gcc8>0:misc/cxxfs_gcc8"
+mk add CXXFLAGS "-isystem ${LOCALBASE}/cxxfs_gcc8"
+mk add LDFLAGS "-L${LOCALBASE}/cxxfs_gcc8"
+mk target set dfly-patch <<'MK'
+	 ${REINPLACE_CMD} -e 's@\(defined(__FreeBSD__)\)@(\1 || defined(__DragonFly__))@g' \
+		${WRKSRC}/libraries/libedit-20140620-3.1/src/chartype.h \
+		${WRKSRC}/libraries/libffi/src/dlmalloc.c \
+		${WRKSRC}/csl/fox/src/FXDir.cpp \
+		${WRKSRC}/csl/fox/src/FXDate.cpp \
+		${WRKSRC}/csl/fox/src/FXSystem.cpp
+MK
+patch apply diffs/Makefile.diff

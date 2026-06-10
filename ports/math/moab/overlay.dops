@@ -1,0 +1,6 @@
+port math/moab
+type port
+reason "strip MPI from OPTIONS_DEFAULT (the .if 1 block; .else branch is dead)"
+target @any
+
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NMPI}"

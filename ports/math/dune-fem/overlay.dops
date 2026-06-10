@@ -1,0 +1,11 @@
+port math/dune-fem
+type port
+reason "add dfly-install target to create keepme if doxygen/tabs.css absent, materialize dragonfly patch"
+target @any
+
+mk target set dfly-install <<'MK'
+.if !exists(${STAGEDIR}${DOCSDIR}/doxygen/tabs.css)
+	${TOUCH} ${STAGEDIR}${DOCSDIR}/doxygen/.keepme
+.endif
+MK
+file materialize dragonfly/patch-dune_fem_quadrature_caching_twistutility.cc -> dragonfly/patch-dune_fem_quadrature_caching_twistutility.cc

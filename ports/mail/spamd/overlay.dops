@@ -1,0 +1,22 @@
+port mail/spamd
+type port
+reason "cp sha1hl compat header, add libmd dep for newer DFLYVERSION, apply framework file diffs, materialize dragonfly patches"
+target @any
+
+mk target set dfly-patch <<'MK'
+	${CP} ${DFLY_FILESDIR}/sha1hl_compat.h ${WRKSRC}/spamd
+MK
+mk block set condition "${DFLYVERSION} > 500700" <<'MK'
+LIB_DEPENDS+=	libmd.so:security/libmd
+MK
+patch apply diffs/files_pkg-message.in.diff
+patch apply diffs/patch-obspamd.in.diff
+patch apply diffs/patch-obspamlogd.in.diff
+file materialize dragonfly/patch-spamd_grey.c -> dragonfly/patch-spamd_grey.c
+file materialize dragonfly/patch-spamd_grey.h -> dragonfly/patch-spamd_grey.h
+file materialize dragonfly/patch-spamd_spamd.c -> dragonfly/patch-spamd_spamd.c
+file materialize dragonfly/patch-spamd_sync.c -> dragonfly/patch-spamd_sync.c
+file materialize dragonfly/patch-spamd-setup_spamd-setup.c -> dragonfly/patch-spamd-setup_spamd-setup.c
+file materialize dragonfly/patch-spamdb_spamdb.c -> dragonfly/patch-spamdb_spamdb.c
+file materialize dragonfly/patch-spamlogd_spamlogd.c -> dragonfly/patch-spamlogd_spamlogd.c
+file materialize dragonfly/sha1hl_compat.h -> dragonfly/sha1hl_compat.h

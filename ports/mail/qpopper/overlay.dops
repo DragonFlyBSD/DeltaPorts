@@ -1,0 +1,13 @@
+port mail/qpopper
+type port
+reason "add CFLAGS, remove -lmd from LIBS, remove stale files, materialize dragonfly patches"
+target @any
+
+mk add CFLAGS -DOPENSSL_NO_SSL2
+patch apply diffs/Makefile.diff
+file remove files/patch-popper__hmac.c on-missing noop
+file remove files/patch-popper__scram.c on-missing noop
+file materialize dragonfly/patch-popper_pop__rpop.c -> dragonfly/patch-popper_pop__rpop.c
+file materialize dragonfly/patch-popper_pop__tls__openssl.c -> dragonfly/patch-popper_pop__tls__openssl.c
+file materialize dragonfly/patch-popper_pop__xmit.c -> dragonfly/patch-popper_pop__xmit.c
+file materialize dragonfly/patch-qd_agent_callback.c -> dragonfly/patch-qd_agent_callback.c

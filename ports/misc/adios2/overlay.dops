@@ -1,0 +1,12 @@
+port misc/adios2
+type port
+reason "strip libfabric/mpi deps, add MPI option scaffolding, set IGNORE, apply plist MPI gating"
+target @any
+
+mk eval LIB_DEPENDS "${LIB_DEPENDS:Nlibfabric*:Nlibmpi*}"
+mk add OPTIONS_DEFINE MPI
+mk add MPI_LIB_DEPENDS "libfabric.so:net/libfabric"
+mk add MPI_LIB_DEPENDS "libmpi.so:net/openmpi"
+mk add PLIST_SUB "MPI=@comment "
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+patch apply diffs/pkg-plist.diff

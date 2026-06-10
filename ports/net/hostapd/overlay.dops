@@ -1,0 +1,12 @@
+port net/hostapd
+type port
+reason "add pkg-message SUB_FILES, conditionally use RC subr, apply framework file diffs, materialize dragonfly patch"
+target @any
+
+mk add SUB_FILES pkg-message
+mk block set condition "!exists(/etc/rc.d/hostapd)" <<'MK'
+USE_RC_SUBR=	hostapd
+MK
+patch apply diffs/files_hostapd.in.diff
+patch apply diffs/files_pkg-message.in.diff
+file materialize dragonfly/patch-src_drivers_driver__bsd.c -> dragonfly/patch-src_drivers_driver__bsd.c

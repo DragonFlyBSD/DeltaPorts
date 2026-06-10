@@ -1,0 +1,6 @@
+port multimedia/gstreamer1-plugins-good
+type port
+reason "remove tests plugin from GOOD_GST_ENABLED_PLUGINS list"
+target @any
+
+patch apply diffs/Makefile.diff

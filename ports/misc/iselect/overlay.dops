@@ -1,0 +1,10 @@
+port misc/iselect
+type port
+reason "set slang configure args for newer DragonFly versions"
+target @any
+
+mk block set condition "${DFLYVERSION} > 400501" <<'MK'
+SLANG_USES_OFF=		ncurses
+SLANG_CONFIGURE_OFF=	--with-incdir=${LOCALBASE}/include	\
+			--with-libdir=${LOCALBASE}/lib
+MK

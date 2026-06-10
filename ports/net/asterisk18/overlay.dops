@@ -1,0 +1,10 @@
+port net/asterisk18
+type port
+reason "strip SPANDSP from OPTIONS_DEFAULT, clear OPTIONS_DEFAULT_x86_64, materialize dragonfly patches"
+target @any
+
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NSPANDSP:N} BASE BACKTRACE XMPP"
+mk set OPTIONS_DEFAULT_x86_64 ""
+file materialize dragonfly/patch-configure -> dragonfly/patch-configure
+file materialize dragonfly/patch-main_Makefile -> dragonfly/patch-main_Makefile
+file materialize dragonfly/patch-utils_db1-ast_include_db.h -> dragonfly/patch-utils_db1-ast_include_db.h

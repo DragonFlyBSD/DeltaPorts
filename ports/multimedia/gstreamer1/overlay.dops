@@ -1,0 +1,9 @@
+port multimedia/gstreamer1
+type port
+reason "strip LIBUNWIND from OPTIONS_DEFAULT_x86_64, remove gst-ptp-helper from plist, materialize dragonfly patches"
+target @any
+
+mk eval OPTIONS_DEFAULT_x86_64 "${OPTIONS_DEFAULT_x86_64:NLIBUNWIND}"
+patch apply diffs/pkg-plist.diff
+file materialize dragonfly/patch-libs_gst_check_libcheck_check__run.c -> dragonfly/patch-libs_gst_check_libcheck_check__run.c
+file materialize dragonfly/patch-meson.build -> dragonfly/patch-meson.build

@@ -1,0 +1,6 @@
+port mail/popa3d
+type port
+reason "simplify CFDIR to always use LOCALBASE path, drop .if/.else/.endif block"
+target @any
+
+patch apply diffs/Makefile.diff

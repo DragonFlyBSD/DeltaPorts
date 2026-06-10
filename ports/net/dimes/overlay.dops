@@ -1,0 +1,6 @@
+port net/dimes
+type port
+reason "disable linux-jdk dependency and mark port as IGNORE"
+target @any
+
+patch apply diffs/Makefile.diff

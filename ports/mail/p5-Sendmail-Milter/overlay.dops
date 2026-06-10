@@ -1,0 +1,10 @@
+port mail/p5-Sendmail-Milter
+type port
+reason "include bsd.milter.mk and run dfly-patch reinplace on Makefile.PL"
+target @any
+
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e "s@/usr/lib@${LOCALBASE}/lib@g" \
+			 -e "s@/usr/include@${LOCALBASE}/include@g" \
+		${WRKSRC}/Makefile.PL
+MK

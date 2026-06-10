@@ -1,0 +1,10 @@
+port math/singular
+type port
+reason "add libexec entries for p_Procs shared libs to pkg-plist, comment on omalloc, materialize dragonfly patches"
+target @any
+
+patch apply diffs/pkg-plist.diff
+file materialize dragonfly/patch-kernel_combinatorics_hilb.cc -> dragonfly/patch-kernel_combinatorics_hilb.cc
+file materialize dragonfly/patch-m4_p-procs.m4 -> dragonfly/patch-m4_p-procs.m4
+file materialize dragonfly/patch-omalloc_omMallocSystem.h -> dragonfly/patch-omalloc_omMallocSystem.h
+file materialize dragonfly/patch-ppcc_gclib_dlmalloc.c -> dragonfly/patch-ppcc_gclib_dlmalloc.c

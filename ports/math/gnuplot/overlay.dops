@@ -1,0 +1,8 @@
+port math/gnuplot
+type port
+reason "disable wxwidgets/wx and add --disable-wxwidgets configure flag"
+target @any
+
+mk add CONFIGURE_ARGS --disable-wxwidgets
+mk add CONFIGURE_ARGS --without-wx
+mk unset USE_WX

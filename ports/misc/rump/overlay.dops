@@ -1,0 +1,12 @@
+port misc/rump
+type port
+reason "add virtif plist entries, guard FreeBSD-specific CWARNFLAGS, add NOGCCERROR to do-build, materialize dragonfly patch"
+target @any
+
+mk add PLIST_FILES lib/librumpnet_virtif.a
+mk add PLIST_FILES lib/librumpnet_virtif.so
+mk add PLIST_FILES lib/librumpnet_virtif.so.0
+mk add PLIST_FILES lib/librumpnet_virtif.so.0.0
+mk add PLIST_FILES lib/librumpnet_virtif_pic.a
+patch apply diffs/Makefile.diff
+file materialize dragonfly/patch-src_sys_rump_net_lib_libshmif_shmif__user.c -> dragonfly/patch-src_sys_rump_net_lib_libshmif_shmif__user.c

@@ -1,0 +1,9 @@
+port mail/smfsav
+type port
+reason "add libmilter build dep via mk block when mfapi.h is absent"
+target @any
+
+mk block set condition "!exists( /usr/include/libmilter/mfapi.h )" <<'MK'
+USES+= localbase:ldflags
+BUILD_DEPENDS+= ${LOCALBASE}/include/libmilter/mfapi.h:mail/libmilter
+MK

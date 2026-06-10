@@ -1,0 +1,8 @@
+port math/coq
+type port
+reason "disable IDE option and fix pkg-plist to gate lang files on %%IDE%% token"
+target @any
+
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NIDE}"
+patch apply diffs/pkg-plist.diff
+file materialize dragonfly/patch-configure.ml -> dragonfly/patch-configure.ml

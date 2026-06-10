@@ -1,0 +1,6 @@
+port misc/amanda-perl-wrapper
+type port
+reason "replace dynamic libthr detection with hardcoded DragonFly thread lib path"
+target @any
+
+patch apply diffs/Makefile.diff

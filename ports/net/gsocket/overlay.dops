@@ -1,0 +1,7 @@
+port net/gsocket
+type port
+reason "mark libressl as broken SSL with reason"
+target @any
+
+mk set BROKEN_SSL "libressl"
+mk set BROKEN_SSL_REASON_libressl "port requires openssl/srp.h"

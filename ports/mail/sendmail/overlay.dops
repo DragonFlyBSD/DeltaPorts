@@ -1,0 +1,7 @@
+port mail/sendmail
+type port
+reason "strip BLACKLISTD from OPTIONS_DEFAULT, add DragonFly-specific pkg-message"
+target @any
+
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NBLACKLISTD}"
+patch apply diffs/pkg-message.diff

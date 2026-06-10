@@ -1,0 +1,7 @@
+port misc/opennn
+type port
+reason "strip -lomp from LDFLAGS and add -fopenmp, set IGNORE for unmaintained"
+target @any
+
+mk eval LDFLAGS "${LDFLAGS:N-lomp} -fopenmp"
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
