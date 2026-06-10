@@ -1,0 +1,7 @@
+port mail/lmtp2nntp
+type port
+reason "DragonFly: add pcre and popt lib dependencies"
+target @any
+
+mk add LIB_DEPENDS "libpcre.so:devel/pcre"
+mk add LIB_DEPENDS "libpopt.so:devel/popt"

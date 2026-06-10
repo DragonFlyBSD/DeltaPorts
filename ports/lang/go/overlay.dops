@@ -1,0 +1,11 @@
+port lang/go
+type port
+reason "DragonFly: add bootstrap site, DEVELOPER/DPORTS_BUILDER guards"
+target @any
+
+mk add MASTER_SITES "https://leaf.dragonflybsd.org/~tuxillo/archive/go/:bootstrap"
+
+mk block set condition "defined(DEVELOPER)" <<'MK'
+.MAKEFLAGS+=	DFLY_ALLOW_FOREIGN_BINARIES=yes
+DFLY_ALLOW_FOREIGN_BINARIES=yes
+MK

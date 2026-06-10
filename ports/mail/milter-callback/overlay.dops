@@ -1,0 +1,10 @@
+port mail/milter-callback
+type port
+reason "DragonFly: conditional BUILD_DEPENDS, filter -lthr from LDFLAGS"
+target @any
+
+mk block set condition "!exists( /usr/include/libmilter/mfapi.h )" <<'MK'
+BUILD_DEPENDS+=	${LOCALBASE}/include/libmilter/mfapi.h:mail/libmilter
+MK
+
+mk eval LDFLAGS "${LDFLAGS:N-lthr}"

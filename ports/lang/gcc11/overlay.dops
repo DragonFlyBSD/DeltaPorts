@@ -1,0 +1,19 @@
+port lang/gcc11
+type port
+reason "DragonFly: amd64->x86_64 arch fixes, remove d-lang, add ISO_Fortran_binding.h, plist"
+target @any
+
+patch apply diffs/Makefile.diff
+
+file remove files/patch-gfortran-libgcc on-missing noop
+
+text line-remove file pkg-plist exact "bin/%%GNU_HOST%%-gdc%%SUFFIX%%" on-missing noop
+text line-remove file pkg-plist exact "bin/gdc%%SUFFIX%%" on-missing noop
+text line-remove file pkg-plist exact "share/man/man1/gdc%%SUFFIX%%.1.gz" on-missing noop
+
+text line-insert-after file pkg-plist anchor "share/gcc-%%GCC_VERSION%%/python/libstdcxx/v6/xmethods.py" line "include/gcc%%SUFFIX%%/ISO_Fortran_binding.h" on-missing noop
+
+file materialize dragonfly/patch-dwarf4 -> dragonfly/patch-dwarf4
+file materialize dragonfly/patch-gcc_configure -> dragonfly/patch-gcc_configure
+file materialize dragonfly/patch-gcc_ginclude_stddef.h -> dragonfly/patch-gcc_ginclude_stddef.h
+

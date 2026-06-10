@@ -1,0 +1,11 @@
+port mail/exim
+type port
+reason "DragonFly: copy FreeBSD OS files to DragonFly in dfly-patch"
+target @any
+
+mk target set dfly-patch <<'MK'
+	(cd ${WRKSRC}/OS && \
+		${CP} os.h-FreeBSD os.h-DragonFly && \
+		${CP} os.c-FreeBSD os.c-DragonFly && \
+		${CP} Makefile-FreeBSD Makefile-DragonFly)
+MK

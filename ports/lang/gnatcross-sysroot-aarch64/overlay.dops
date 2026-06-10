@@ -1,0 +1,17 @@
+port lang/gnatcross-sysroot-aarch64
+type port
+reason "DragonFly: BROKEN, MANUAL_PACKAGE_BUILD, DEVELOPER foreign-binary flag"
+target @any
+
+mk set BROKEN "FreeBSD ports broken"
+
+mk block set condition "!defined(DPORTS_BUILDER)" <<'MK'
+MANUAL_PACKAGE_BUILD= intended for cross testing only
+MK
+
+mk block set condition "defined(DEVELOPER)" <<'MK'
+.MAKEFLAGS+=	DFLY_ALLOW_FOREIGN_BINARIES=yes
+DFLY_ALLOW_FOREIGN_BINARIES=yes
+MK
+
+patch apply diffs/Makefile.diff

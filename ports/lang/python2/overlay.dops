@@ -1,0 +1,6 @@
+port lang/python2
+type port
+reason "DragonFly: remove FreeBSD-only DEPRECATED/EXPIRATION_DATE lines"
+target @any
+
+patch apply diffs/Makefile.diff

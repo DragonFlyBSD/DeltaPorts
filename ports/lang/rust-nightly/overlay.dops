@@ -1,0 +1,6 @@
+port lang/rust-nightly
+type port
+reason "DragonFly: mark BROKEN missing dragonfly bootstrap"
+target @any
+
+mk set BROKEN "missing dragonfly bootstrap"

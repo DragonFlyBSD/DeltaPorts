@@ -1,0 +1,35 @@
+port java/openjdk20
+type port
+reason "DragonFly: build args, configure flags, FreeBSD gcc block guard, upstream patches"
+target @any
+
+mk add MAKE_ARGS "CONF_CHECK=ignore"
+mk add CONFIGURE_ARGS "--with-stdc++lib=dynamic"
+
+patch apply diffs/Makefile.diff
+patch apply diffs/pkg-message.diff
+
+file materialize dragonfly/patch-make_autoconf_flags-cflags.m4 -> dragonfly/patch-make_autoconf_flags-cflags.m4
+file materialize dragonfly/patch-make_autoconf_platform.m4 -> dragonfly/patch-make_autoconf_platform.m4
+file materialize dragonfly/patch-make_modules_jdk.sctp_Java.gmk -> dragonfly/patch-make_modules_jdk.sctp_Java.gmk
+file materialize dragonfly/patch-make_modules_jdk.sctp_Lib.gmk -> dragonfly/patch-make_modules_jdk.sctp_Lib.gmk
+file materialize dragonfly/patch-src_hotspot_os__cpu_bsd__x86_os__bsd__x86.cpp -> dragonfly/patch-src_hotspot_os__cpu_bsd__x86_os__bsd__x86.cpp
+file materialize dragonfly/patch-src_hotspot_os_bsd_os__bsd.cpp -> dragonfly/patch-src_hotspot_os_bsd_os__bsd.cpp
+file materialize dragonfly/patch-src_hotspot_os_bsd_os__perf__bsd.cpp -> dragonfly/patch-src_hotspot_os_bsd_os__perf__bsd.cpp
+file materialize dragonfly/patch-src_hotspot_share_utilities_macros.hpp -> dragonfly/patch-src_hotspot_share_utilities_macros.hpp
+file materialize dragonfly/patch-src_java.base_bsd_native_libjava_ProcessHandleImpl__bsd.c -> dragonfly/patch-src_java.base_bsd_native_libjava_ProcessHandleImpl__bsd.c
+file materialize dragonfly/patch-src_java.base_unix_native_libjava_childproc.c -> dragonfly/patch-src_java.base_unix_native_libjava_childproc.c
+file materialize dragonfly/patch-src_java.base_unix_native_libjava_java__props__md.c -> dragonfly/patch-src_java.base_unix_native_libjava_java__props__md.c
+file materialize dragonfly/patch-src_java.base_unix_native_libjli_java__md.c -> dragonfly/patch-src_java.base_unix_native_libjli_java__md.c
+file materialize dragonfly/patch-src_java.base_unix_native_libnet_net__util__md.c -> dragonfly/patch-src_java.base_unix_native_libnet_net__util__md.c
+file materialize dragonfly/patch-src_java.base_unix_native_libnet_NetworkInterface.c -> dragonfly/patch-src_java.base_unix_native_libnet_NetworkInterface.c
+file materialize dragonfly/patch-src_java.base_unix_native_libnio_ch_Net.c -> dragonfly/patch-src_java.base_unix_native_libnio_ch_Net.c
+file materialize dragonfly/patch-src_jdk.hotspot.agent_bsd_native_libsaproc_BsdDebuggerLocal.cpp -> dragonfly/patch-src_jdk.hotspot.agent_bsd_native_libsaproc_BsdDebuggerLocal.cpp
+file materialize dragonfly/patch-src_jdk.hotspot.agent_bsd_native_libsaproc_libproc__impl.c -> dragonfly/patch-src_jdk.hotspot.agent_bsd_native_libsaproc_libproc__impl.c
+file materialize dragonfly/patch-src_jdk.hotspot.agent_bsd_native_libsaproc_libproc__impl.h -> dragonfly/patch-src_jdk.hotspot.agent_bsd_native_libsaproc_libproc__impl.h
+file materialize dragonfly/patch-src_jdk.hotspot.agent_bsd_native_libsaproc_libproc.h -> dragonfly/patch-src_jdk.hotspot.agent_bsd_native_libsaproc_libproc.h
+file materialize dragonfly/patch-src_jdk.hotspot.agent_bsd_native_libsaproc_ps__core.c -> dragonfly/patch-src_jdk.hotspot.agent_bsd_native_libsaproc_ps__core.c
+file materialize dragonfly/patch-src_jdk.hotspot.agent_bsd_native_libsaproc_ps__proc.c -> dragonfly/patch-src_jdk.hotspot.agent_bsd_native_libsaproc_ps__proc.c
+file materialize dragonfly/patch-src_jdk.hotspot.agent_share_classes_sun_jvm_hotspot_utilities_PlatformInfo.java -> dragonfly/patch-src_jdk.hotspot.agent_share_classes_sun_jvm_hotspot_utilities_PlatformInfo.java
+file materialize dragonfly/patch-src_jdk.management_bsd_native_libmanagement__ext_UnixOperatingSystem.c -> dragonfly/patch-src_jdk.management_bsd_native_libmanagement__ext_UnixOperatingSystem.c
+file materialize dragonfly/patch-src_jdk.management_unix_native_libmanagement__ext_OperatingSystemImpl.c -> dragonfly/patch-src_jdk.management_unix_native_libmanagement__ext_OperatingSystemImpl.c

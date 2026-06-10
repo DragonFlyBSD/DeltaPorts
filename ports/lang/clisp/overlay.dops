@@ -1,0 +1,17 @@
+port lang/clisp
+type port
+reason "DragonFly: USES alias, LDFLAGS adjustments, version-conditional patch"
+target @any
+
+mk add USES alias
+
+mk add LDFLAGS "-pthread"
+mk set LDFLAGS_gcc ""
+
+mk block set condition "${DFLYVERSION} < 500902" <<'MK'
+dfly-patch:
+	${REINPLACE_CMD} -e 's@HAVE_DECL_GETDATE_ERR@&__@g' \
+		${WRKSRC}/modules/syscalls/calls.c
+MK
+
+file materialize dragonfly/patch-src_makemake.in -> dragonfly/patch-src_makemake.in

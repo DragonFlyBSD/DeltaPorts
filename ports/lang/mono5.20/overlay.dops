@@ -1,0 +1,26 @@
+port lang/mono5.20
+type port
+reason "DragonFly: USES self-ref filter, alias/localbase, iconv/charset deps"
+target @any
+
+mk eval USES "${USES:Nelfctl}"
+mk add USES alias
+mk add USES localbase
+
+mk set DFLY_ALLOW_REMAKE "increases chances of building exponentially"
+
+mk add LIB_DEPENDS "libcharset.so:converters/libiconv"
+
+mk add CONFIGURE_ARGS "ac_cv_header_localcharset_h=yes"
+mk add CONFIGURE_ARGS "ac_cv_lib_charset_locale_charset=yes"
+
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's@LIBS+="-liconv -lcharset"@LIBS="-liconv -lcharset $$LIBS"@g' \
+		${WRKSRC}/configure ${WRKSRC}/configure.ac
+MK
+
+file materialize dragonfly/patch-configure.ac -> dragonfly/patch-configure.ac
+file materialize dragonfly/patch-libgc_configure.ac -> dragonfly/patch-libgc_configure.ac
+file materialize dragonfly/patch-mcs_class_System_System_Platform.cs -> dragonfly/patch-mcs_class_System_System_Platform.cs
+file materialize dragonfly/patch-mono_metadata_w32process-unix-bsd.c -> dragonfly/patch-mono_metadata_w32process-unix-bsd.c
+file materialize dragonfly/patch-mono_utils_mono-proclib.c -> dragonfly/patch-mono_utils_mono-proclib.c

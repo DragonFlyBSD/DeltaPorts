@@ -1,0 +1,14 @@
+port lang/python39
+type port
+reason "DragonFly: DFLYVERSION for OSMAJOR, EXPAT option, dfly-patch, plist rename"
+target @any
+
+patch apply diffs/Makefile.diff
+
+text replace-once file pkg-plist from "%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata_%%ABI%%_freebsd%%OSMAJOR%%_%%PYTHON_EXT_SUFFIX%%.opt-1.pyc" to "%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata_%%ABI%%_dragonfly%%OSMAJOR%%_%%PYTHON_EXT_SUFFIX%%.opt-1.pyc"
+text replace-once file pkg-plist from "%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata_%%ABI%%_freebsd%%OSMAJOR%%_%%PYTHON_EXT_SUFFIX%%.opt-2.pyc" to "%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata_%%ABI%%_dragonfly%%OSMAJOR%%_%%PYTHON_EXT_SUFFIX%%.opt-2.pyc"
+text replace-once file pkg-plist from "%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata_%%ABI%%_freebsd%%OSMAJOR%%_%%PYTHON_EXT_SUFFIX%%.pyc" to "%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata_%%ABI%%_dragonfly%%OSMAJOR%%_%%PYTHON_EXT_SUFFIX%%.pyc"
+text replace-once file pkg-plist from "%%PYTHON_LIBDIR%%/_sysconfigdata_%%ABI%%_freebsd%%OSMAJOR%%_.py" to "%%PYTHON_LIBDIR%%/_sysconfigdata_%%ABI%%_dragonfly%%OSMAJOR%%_.py"
+
+file materialize dragonfly/patch-Modules_ossaudiodev.c -> dragonfly/patch-Modules_ossaudiodev.c
+file materialize dragonfly/patch-setup.py -> dragonfly/patch-setup.py

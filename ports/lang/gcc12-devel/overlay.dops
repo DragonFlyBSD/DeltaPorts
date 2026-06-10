@@ -1,0 +1,12 @@
+port lang/gcc12-devel
+type port
+reason "DragonFly: binutils@native dep fix, remove gfortran-libgcc patch"
+target @any
+
+patch apply diffs/Makefile.diff
+
+file remove files/patch-gfortran-libgcc on-missing noop
+
+file materialize dragonfly/patch-dwarf4 -> dragonfly/patch-dwarf4
+file materialize dragonfly/patch-gcc_configure -> dragonfly/patch-gcc_configure
+file materialize dragonfly/patch-gcc_ginclude_stddef.h -> dragonfly/patch-gcc_ginclude_stddef.h
