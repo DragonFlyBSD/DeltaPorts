@@ -1,0 +1,6 @@
+port net/openldap25-server
+type port
+reason "remove SMBPWD from OPTIONS_DEFAULT (no heimdal in DragonFly base)"
+target @any
+
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NSMBPWD}"

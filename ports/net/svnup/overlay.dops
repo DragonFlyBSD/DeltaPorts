@@ -1,0 +1,9 @@
+port net/svnup
+type port
+reason "add libmd dependency for newer DragonFly; materialize dragonfly patch"
+target @any
+
+file materialize dragonfly/patch-svnup.c -> dragonfly/patch-svnup.c
+mk block set condition "${DFLYVERSION} > 500700" <<'MK'
+LIB_DEPENDS+=	libmd.so:security/libmd
+MK

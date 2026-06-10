@@ -1,0 +1,7 @@
+port net/p5-Net-ext
+type port
+reason "add PLIST_FILES to avoid orphans"
+target @any
+
+mk add PLIST_FILES "%%SITE_ARCH%%/attrs.pm"
+mk add PLIST_FILES "%%PERL5_MAN3%%/attrs.3.gz"

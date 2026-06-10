@@ -1,0 +1,6 @@
+port net/mosh
+type port
+reason "disable utempter dependency and set configure arg"
+target @any
+
+mk set CONFIGURE_ARGS "--without-utempter"

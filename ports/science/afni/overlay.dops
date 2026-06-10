@@ -1,0 +1,16 @@
+port science/afni
+type port
+reason "add alias USES; materialize dragonfly patches"
+target @any
+
+mk add USES alias
+file materialize dragonfly/patch-mri__nwarp.c -> dragonfly/patch-mri__nwarp.c
+file materialize dragonfly/patch-prf__common__circular.c -> dragonfly/patch-prf__common__circular.c
+file materialize dragonfly/patch-ptaylor_3dTrackID.c -> dragonfly/patch-ptaylor_3dTrackID.c
+mk block set condition "!defined(DPORTS_BUILDER)" <<'MK'
+MANUAL_PACKAGE_BUILD=	421M package (too big for mirrors)
+MK
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's@amd64@x86_64@g'	\
+		${WRKSRC}/Makefile
+MK

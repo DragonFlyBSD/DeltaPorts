@@ -1,0 +1,17 @@
+port net-mgmt/collectd5
+type port
+reason "filter unsupported configure args; remove zfs/disk/ipstats/tcpconns plist entries; materialize dragonfly patches"
+target @any
+
+mk eval CONFIGURE_ARGS "${CONFIGURE_ARGS:N--enable-zfs_arc}"
+mk eval CONFIGURE_ARGS "${CONFIGURE_ARGS:N--enable-disk}"
+mk eval CONFIGURE_ARGS "${CONFIGURE_ARGS:N--enable-ipstats}"
+mk eval CONFIGURE_ARGS "${CONFIGURE_ARGS:N--enable-tcpconns}"
+file materialize dragonfly/patch-configure.ac -> dragonfly/patch-configure.ac
+file materialize dragonfly/patch-src_cpu.c -> dragonfly/patch-src_cpu.c
+file materialize dragonfly/patch-src_pf.c -> dragonfly/patch-src_pf.c
+file materialize dragonfly/patch-src_processes.c -> dragonfly/patch-src_processes.c
+text line-remove file pkg-plist exact "lib/collectd/disk.so" on-missing noop
+text line-remove file pkg-plist exact "lib/collectd/ipstats.so" on-missing noop
+text line-remove file pkg-plist exact "lib/collectd/tcpconns.so" on-missing noop
+text line-remove file pkg-plist exact "lib/collectd/zfs_arc.so" on-missing noop

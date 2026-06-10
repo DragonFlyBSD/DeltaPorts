@@ -1,0 +1,8 @@
+port net/openmpi
+type port
+reason "remove SLURM from OPTIONS_DEFAULT; remove shortfloat plist lines"
+target @any
+
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NSLURM}"
+text line-remove file pkg-plist exact "%%SHORTFLOAT%%%%MPIDIR%%/include/openmpi/mpiext/mpiext_shortfloat_c.h" on-missing noop
+text line-remove file pkg-plist exact "%%SHORTFLOAT%%%%MPIDIR%%/include/openmpi/mpiext/mpiext_shortfloat_mpifh.h" on-missing noop

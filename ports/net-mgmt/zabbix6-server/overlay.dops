@@ -1,0 +1,24 @@
+port net-mgmt/zabbix6-server
+type port
+reason "add autoreconf; add CURL typecheck workaround; openssl flags conditional; pre-patch target; materialize dragonfly patches"
+target @any
+
+mk add USES autoreconf
+mk add CFLAGS "-DCURL_DISABLE_TYPECHECK"
+mk block set condition "${ZABBIX_BUILD} != java" <<'MK'
+CFLAGS+=        -I${OPENSSLINC}
+LDFLAGS+=       -L${OPENSSLLIB}
+MK
+file materialize dragonfly/patch-configure.ac -> dragonfly/patch-configure.ac
+file materialize dragonfly/patch-src_libs_zbxsysinfo_dragonfly_proc.c -> dragonfly/patch-src_libs_zbxsysinfo_dragonfly_proc.c
+file materialize dragonfly/patch-src_libs_zbxsysinfo_Makefile.am -> dragonfly/patch-src_libs_zbxsysinfo_Makefile.am
+file materialize dragonfly/patch-src_zabbix__agent_Makefile.am -> dragonfly/patch-src_zabbix__agent_Makefile.am
+file materialize dragonfly/patch-src_zabbix__proxy_Makefile.am -> dragonfly/patch-src_zabbix__proxy_Makefile.am
+mk target set pre-patch <<'MK'
+	${CP} -rv ${WRKSRC}/src/libs/zbxsysinfo/freebsd \
+	      ${WRKSRC}/src/libs/zbxsysinfo/dragonfly
+	${MV} -v ${WRKSRC}/src/libs/zbxsysinfo/dragonfly/freebsd.c \
+		${WRKSRC}/src/libs/zbxsysinfo/dragonfly/dragonfly.c
+	${REINPLACE_CMD} -e 's|freebsd|dragonfly|g' \
+		${WRKSRC}/src/libs/zbxsysinfo/dragonfly/Makefile.am
+MK

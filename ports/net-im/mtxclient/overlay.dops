@@ -1,0 +1,10 @@
+port net-im/mtxclient
+type port
+reason "use GCC default, add -lstdc++fs, set ssl breakage flags"
+target @any
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+mk add LDFLAGS -lstdc++fs
+mk set BROKEN_SSL "libressl"
+mk set BROKEN_SSL_REASON_libressl "port requires openssl/kdf.h"
+mk set DFLY_UNMAINTAINED "yes"

@@ -1,0 +1,11 @@
+port net/serviio
+type port
+reason "add PLIST_FILES and dfly-install target to create placeholder dir in developer builds"
+target @any
+
+mk block set condition "defined(DEVELOPER)" <<'MK'
+PLIST_FILES+=	%%JAVAJARDIR%%/serviio/plugins/...
+
+dfly-install:
+	${TOUCH} ${STAGEDIR}${JAVAJARDIR}/serviio/plugins/...
+MK

@@ -1,0 +1,20 @@
+port net/samba416
+type port
+reason "add ncurses; adjust OPTIONS_DEFAULT; remove libsunacl and zfsacl; materialize dragonfly patches"
+target @any
+
+mk add USES ncurses
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NQUOTAS:NGSSAPI_BUILTIN} GSSAPI_MIT"
+file materialize dragonfly/patch-libcli_http_http.c -> dragonfly/patch-libcli_http_http.c
+file materialize dragonfly/patch-nsswitch_wscript__build -> dragonfly/patch-nsswitch_wscript__build
+file materialize dragonfly/patch-source3_modules_vfs_cap.c -> dragonfly/patch-source3_modules_vfs_cap.c
+file materialize dragonfly/patch-source3_smbd_pysmbd.c -> dragonfly/patch-source3_smbd_pysmbd.c
+file materialize dragonfly/patch-wscript -> dragonfly/patch-wscript
+text line-remove file Makefile exact "LIB_DEPENDS+=			libsunacl.so:sysutils/libsunacl" on-missing noop
+text replace-once file Makefile from "			--with-acl-support \\" to "			--without-acl-support \\"
+text replace-once file Makefile from "			vfs_widelinks vfs_worm vfs_xattr_tdb vfs_zfsacl" to "			vfs_widelinks vfs_worm vfs_xattr_tdb"
+text line-remove file pkg-plist exact "share/man/man8/vfs_zfsacl.8.gz" on-missing noop
+mk block set condition "defined(DEVELOPER)" <<'MK'
+dfly-build:
+	${RM} -v ${LOCALBASE}/lib/python3.7/site-packages/__pycache__/tevent.cpython-37.pyc
+MK

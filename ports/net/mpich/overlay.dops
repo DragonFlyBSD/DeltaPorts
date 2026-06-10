@@ -1,0 +1,9 @@
+port net/mpich
+type port
+reason "use GCC default; filter libfabric and slurm from deps; set ch3:nemesis device"
+target @any
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+mk eval LIB_DEPENDS "${LIB_DEPENDS:Nlibfabric.so*}"
+mk eval CONFIGURE_ARGS "${CONFIGURE_ARGS:N--with-libfabric*} --with-device=ch3:nemesis"
+mk eval LIB_DEPENDS "${LIB_DEPENDS:Nlibslurm.so*}"

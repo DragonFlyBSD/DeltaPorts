@@ -1,0 +1,13 @@
+port net/udt
+type port
+reason "add ssl USES; set openssl flags; add libmd dep on newer DragonFly; fix post-build app compile"
+target @any
+
+mk add USES ssl
+mk add CFLAGS "-I${OPENSSLINC}"
+mk add LDFLAGS "-L${OPENSSLLIB}"
+mk add CXXFLAGS "-Wno-error=catch-value"
+mk block set condition "${DFLYVERSION} > 500700" <<'MK'
+LIB_DEPENDS+=	libmd.so:security/libmd
+MK
+patch apply diffs/Makefile.diff

@@ -1,0 +1,7 @@
+port net/netembryo
+type port
+reason "remove SCTP from OPTIONS_DEFAULT and remove OPTIONS_EXCLUDE_DragonFly"
+target @any
+
+text replace-once file Makefile from "OPTIONS_DEFAULT=	OPENSSL SCTP" to "OPTIONS_DEFAULT=	OPENSSL "
+text line-remove file Makefile exact "OPTIONS_EXCLUDE_DragonFly=	SCTP" on-missing noop

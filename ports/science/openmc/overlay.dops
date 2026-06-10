@@ -1,0 +1,6 @@
+port science/openmc
+type port
+reason "remove MPI from OPTIONS_DEFAULT"
+target @any
+
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NMPI}"

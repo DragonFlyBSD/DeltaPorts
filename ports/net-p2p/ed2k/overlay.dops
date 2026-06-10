@@ -1,0 +1,10 @@
+port net-p2p/ed2k
+type port
+reason "add openssl includes/libs and libmd dependency for newer DragonFly"
+target @any
+
+mk add CFLAGS "-I${OPENSSLINC}"
+mk add LDFLAGS "-L${OPENSSLLIB}"
+mk block set condition "${DFLYVERSION} > 500700" <<'MK'
+LIB_DEPENDS+=	libmd.so:security/libmd
+MK

@@ -1,0 +1,8 @@
+port net/mvfst
+type port
+reason "add PLIST_FILES to fix orphans"
+target @any
+
+mk add PLIST_FILES "include/quic/client/connector/QuicConnector.h"
+mk add PLIST_FILES "include/quic/common/MonitoredObject.h"
+mk add PLIST_FILES "include/quic/state/QuicStreamPrioritiesObserver.h"

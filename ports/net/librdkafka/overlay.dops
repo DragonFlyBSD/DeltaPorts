@@ -1,0 +1,11 @@
+port net/librdkafka
+type port
+reason "add alias USES and extra lib/build depends"
+target @any
+
+mk add USES alias
+mk add LIB_DEPENDS "libnghttp2.so:www/libnghttp2"
+mk add LIB_DEPENDS "libssh2.so:security/libssh2"
+mk add LIB_DEPENDS "libpsl.so:dns/libpsl"
+mk add LIB_DEPENDS "libidn2.so:dns/libidn2"
+mk add LIB_DEPENDS "libunistring.so:devel/libunistring"

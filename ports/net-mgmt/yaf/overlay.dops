@@ -1,0 +1,6 @@
+port net-mgmt/yaf
+type port
+reason "remove libpcap from LIB_DEPENDS"
+target @any
+
+text line-remove file Makefile exact "		libpcap.so:net/libpcap \\" on-missing noop

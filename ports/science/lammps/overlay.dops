@@ -1,0 +1,13 @@
+port science/lammps
+type port
+reason "add execinfo ldflags; filter hwloc and MPI; fix plist with dfly-install"
+target @any
+
+mk add LDFLAGS -lexecinfo
+mk eval LIB_DEPENDS "${LIB_DEPENDS:Nlibhwloc*}"
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NMPI*}"
+mk eval CMAKE_ON "${CMAKE_ON:NPKG_MPIIO:NPKG_LATBOLTZ}"
+mk target set dfly-install <<'MK'
+	${MKDIR} ${STAGEDIR}${LOCALBASE}/include/lammps/mpi
+	${TOUCH} ${STAGEDIR}${LOCALBASE}/include/lammps/mpi/mpi.h
+MK

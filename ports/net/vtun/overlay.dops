@@ -1,0 +1,7 @@
+port net/vtun
+type port
+reason "filter ssl-head from CONFIGURE_ARGS; set blowfish/ssl header paths"
+target @any
+
+mk eval CONFIGURE_ARGS "${CONFIGURE_ARGS:N--with-ssl-head*} \\\n\t--with-blowfish-headers=${OPENSSLINC}/openssl \\\n\t--with-ssl-headers=${OPENSSLINC}/openssl"
+patch apply diffs/Makefile.diff

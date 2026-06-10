@@ -1,0 +1,14 @@
+port science/chrono
+type port
+reason "add alias USES; filter mpi and related options; set broken flags; ignore port"
+target @any
+
+mk add USES alias
+mk eval BUILD_DEPENDS "${BUILD_DEPENDS:Nopenmpi*}"
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NCASCADE:NIRRLICHT:NMUMPS:NSYNCHRONO:NVEHICLE}"
+mk set CASCADE_BROKEN "needs mpi"
+mk set IRRLICHT_BROKEN "needs cascade"
+mk set MUMPS_BROKEN "implicit mpi"
+mk set SYNCHRONO_BROKEN "needs mpi"
+mk set VEHICLE_BROKEN "needs mpi"
+mk set IGNORE "unmaintained, please request fixing to users mailing list"

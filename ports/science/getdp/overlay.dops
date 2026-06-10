@@ -1,0 +1,6 @@
+port science/getdp
+type port
+reason "use _GCC_VER instead of GCC_DEFAULT in conditional for FFLAGS"
+target @any
+
+patch apply diffs/Makefile.diff

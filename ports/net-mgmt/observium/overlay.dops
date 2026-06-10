@@ -1,0 +1,6 @@
+port net-mgmt/observium
+type port
+reason "exclude LIBVIRT option on DragonFly"
+target @any
+
+mk set OPTIONS_EXCLUDE_DragonFly "LIBVIRT"

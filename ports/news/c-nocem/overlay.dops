@@ -1,0 +1,6 @@
+port news/c-nocem
+type port
+reason "fix post-patch reinplace to use full STAGEDIR path"
+target @any
+
+patch apply diffs/Makefile.diff

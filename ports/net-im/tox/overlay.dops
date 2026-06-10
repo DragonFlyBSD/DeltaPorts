@@ -1,0 +1,6 @@
+port net-im/tox
+type port
+reason "set SODIUM_CONFIGURE_ON paths"
+target @any
+
+mk set SODIUM_CONFIGURE_ON "--with-libsodium-libs=${LOCALBASE}/lib \\\n\t\t\t--with-libsodium-headers=${LOCALBASE}/include"

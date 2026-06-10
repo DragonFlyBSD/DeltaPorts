@@ -1,0 +1,12 @@
+port print/texlive-full
+type port
+reason "unbundle docs option in package builds; dfly-patch for amd64->x86_64"
+target @any
+
+mk block set condition "!defined(DPORTS_BUILDER) && defined(PACKAGE_BUILDING)" <<'MK'
+OPTIONS_DEFINE:=	${OPTIONS_DEFINE:NDOCS}
+MK
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's@amd64@x86_64@g'	\
+		${WRKSRC}/Makefile
+MK

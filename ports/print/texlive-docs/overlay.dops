@@ -1,0 +1,8 @@
+port print/texlive-docs
+type port
+reason "mark as manual package build when not building for dports builder"
+target @any
+
+mk block set condition "!defined(DPORTS_BUILDER)" <<'MK'
+MANUAL_PACKAGE_BUILD=	1.1G package (too big for mirrors)
+MK

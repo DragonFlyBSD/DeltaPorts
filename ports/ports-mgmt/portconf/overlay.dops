@@ -1,0 +1,6 @@
+port ports-mgmt/portconf
+type port
+reason "fix pkg-install to use /usr/dports instead of /usr/ports"
+target @any
+
+patch apply diffs/pkg-install.diff

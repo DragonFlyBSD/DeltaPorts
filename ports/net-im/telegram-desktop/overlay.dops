@@ -1,0 +1,32 @@
+port net-im/telegram-desktop
+type port
+reason "add openssl/gmake/ninja; filter pulseaudio from BUILD_DEPENDS; materialize dragonfly patches; apply Makefile diff"
+target @any
+
+mk add CFLAGS "-I${OPENSSLINC}"
+mk add CXXFLAGS "-DWITHOUT_PULSE"
+mk add USES gmake
+mk add USES ninja
+mk eval BUILD_DEPENDS "${BUILD_DEPENDS:Npulseaudio*} autoconf>0:devel/autoconf"
+file materialize dragonfly/patch-Telegram_cmake_lib__tgvoip.cmake -> dragonfly/patch-Telegram_cmake_lib__tgvoip.cmake
+file materialize dragonfly/patch-Telegram_CMakeLists.txt -> dragonfly/patch-Telegram_CMakeLists.txt
+file materialize dragonfly/patch-Telegram_lib__base_base_qt_qt__compare.h -> dragonfly/patch-Telegram_lib__base_base_qt_qt__compare.h
+file materialize dragonfly/patch-Telegram_lib__webview_webview_webview__data__stream__memory.cpp -> dragonfly/patch-Telegram_lib__webview_webview_webview__data__stream__memory.cpp
+file materialize dragonfly/patch-Telegram_ThirdParty_dispatch_CMakeLists.txt -> dragonfly/patch-Telegram_ThirdParty_dispatch_CMakeLists.txt
+file materialize dragonfly/patch-Telegram_ThirdParty_dispatch_dispatch_base.h -> dragonfly/patch-Telegram_ThirdParty_dispatch_dispatch_base.h
+file materialize dragonfly/patch-Telegram_ThirdParty_dispatch_os_generic__unix__base.h -> dragonfly/patch-Telegram_ThirdParty_dispatch_os_generic__unix__base.h
+file materialize dragonfly/patch-Telegram_ThirdParty_dispatch_private_private.h -> dragonfly/patch-Telegram_ThirdParty_dispatch_private_private.h
+file materialize dragonfly/patch-Telegram_ThirdParty_dispatch_private_queue__private.h -> dragonfly/patch-Telegram_ThirdParty_dispatch_private_queue__private.h
+file materialize dragonfly/patch-Telegram_ThirdParty_dispatch_src_queue.c -> dragonfly/patch-Telegram_ThirdParty_dispatch_src_queue.c
+file materialize dragonfly/patch-Telegram_ThirdParty_dispatch_src_shims_hw__config.h -> dragonfly/patch-Telegram_ThirdParty_dispatch_src_shims_hw__config.h
+file materialize dragonfly/patch-Telegram_ThirdParty_dispatch_src_transform.c -> dragonfly/patch-Telegram_ThirdParty_dispatch_src_transform.c
+file materialize dragonfly/patch-Telegram_ThirdParty_libtgvoip_audio_AudioInput.cpp -> dragonfly/patch-Telegram_ThirdParty_libtgvoip_audio_AudioInput.cpp
+file materialize dragonfly/patch-Telegram_ThirdParty_libtgvoip_audio_AudioIO.cpp -> dragonfly/patch-Telegram_ThirdParty_libtgvoip_audio_AudioIO.cpp
+file materialize dragonfly/patch-Telegram_ThirdParty_libtgvoip_audio_AudioOutput.cpp -> dragonfly/patch-Telegram_ThirdParty_libtgvoip_audio_AudioOutput.cpp
+file materialize dragonfly/patch-Telegram_ThirdParty_libtgvoip_threading.h -> dragonfly/patch-Telegram_ThirdParty_libtgvoip_threading.h
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e '/pkg_check_modules(PULSE/d' \
+			 -e '/PULSE_INCLUDE_DIRS/d' \
+		${WRKSRC}/Telegram/cmake/lib_tgvoip.cmake
+MK
+patch apply diffs/Makefile.diff

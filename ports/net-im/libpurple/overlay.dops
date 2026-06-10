@@ -1,0 +1,14 @@
+port net-im/libpurple
+type port
+reason "add ca_root_nss deps, ssl-certs path, filter VV option, add pthread; materialize dragonfly patch"
+target @any
+
+file materialize dragonfly/patch-libpurple_mediamanager.c -> dragonfly/patch-libpurple_mediamanager.c
+mk add BUILD_DEPENDS "ca_root_nss>0:security/ca_root_nss"
+mk add RUN_DEPENDS "ca_root_nss>0:security/ca_root_nss"
+mk add CONFIGURE_ARGS "--with-system-ssl-certs=/etc/ssl"
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NVV}"
+mk add LDFLAGS -lpthread
+mk block set condition "defined(WITH_CONSOLEUI)" <<'MK'
+OPTIONS_DEFAULT+= NCURSES
+MK

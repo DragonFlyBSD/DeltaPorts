@@ -1,0 +1,15 @@
+port net/megacmd
+type port
+reason "add cxxfs_gcc8 build dep; materialize dragonfly patches; add dbus-uuidgen message"
+target @any
+
+mk add BUILD_DEPENDS "cxxfs_gcc8>0:misc/cxxfs_gcc8"
+mk add CXXFLAGS "-isystem ${LOCALBASE}/cxxfs_gcc8"
+mk add LDFLAGS "-L${LOCALBASE}/cxxfs_gcc8"
+file materialize dragonfly/patch-libressl-compat -> dragonfly/patch-libressl-compat
+file materialize dragonfly/patch-Makefile.am -> dragonfly/patch-Makefile.am
+file materialize dragonfly/patch-sdk_include_mega_http.h -> dragonfly/patch-sdk_include_mega_http.h
+file materialize dragonfly/patch-sdk_include_mega_posix_megafs.h -> dragonfly/patch-sdk_include_mega_posix_megafs.h
+file materialize dragonfly/patch-sdk_Makefile.am -> dragonfly/patch-sdk_Makefile.am
+file materialize dragonfly/patch-src_megacmdshell_megacmdshellcommunications.cpp -> dragonfly/patch-src_megacmdshell_megacmdshellcommunications.cpp
+patch apply diffs/pkg-message.diff

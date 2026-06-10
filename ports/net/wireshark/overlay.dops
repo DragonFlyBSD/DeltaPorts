@@ -1,0 +1,13 @@
+port net/wireshark
+type port
+reason "add alias and gmake USES; swap GSSAPI_BASE for GSSAPI_MIT; materialize dragonfly patches; fix post-install-DEVELOPMENT-on recipe"
+target @any
+
+mk add USES alias
+mk add USES gmake
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NGSSAPI_BASE} GSSAPI_MIT"
+file materialize dragonfly/patch-cmakeconfig.h.in -> dragonfly/patch-cmakeconfig.h.in
+file materialize dragonfly/patch-CMakeLists.txt -> dragonfly/patch-CMakeLists.txt
+mk target set post-install-DEVELOPMENT-on <<'MK'
+	cd ${INSTALL_WRKSRC} && DESTDIR=/construction/net/wireshark/stage ${SETENV} ${MAKE_ENV} ${FAKEROOT} ${CMAKE_BIN} ${CMAKE_ARGS} -DCOMPONENT=Development -P cmake_install.cmake
+MK

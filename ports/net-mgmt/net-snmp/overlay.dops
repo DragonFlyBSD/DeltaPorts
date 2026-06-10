@@ -1,0 +1,27 @@
+port net-mgmt/net-snmp
+type port
+reason "add ncurses; add NOLIBPKG option; set make env and configure args; filter libpkg; dfly-patch recipe; materialize dragonfly files"
+target @any
+
+mk add USES ncurses
+mk add OPTIONS_DEFAULT NOLIBPKG
+mk add MAKE_ENV "OPSYS=${OPSYS}"
+mk add MAKE_ENV "MIB_SYSTEM_LIBS=-lkinfo"
+mk add CONFIGURE_ARGS "--with-out-mib-modules=sctp-mib"
+mk add CONFIGURE_ARGS "ac_cv_IFNET_NEEDS_KERNEL=no"
+mk eval LIB_DEPENDS "${LIB_DEPENDS:Nlibpkg.so*}"
+mk add CONFIGURE_ARGS "ac_cv_header_pkg_h=no"
+mk add CONFIGURE_ARGS "netsnmp_cv_func_pkg_init_LIBS=no"
+mk eval CONFIGURE_ARGS "${CONFIGURE_ARGS:N--without-kmem-usage}"
+file materialize dragonfly/cpu_dragonfly.c -> dragonfly/cpu_dragonfly.c
+file materialize dragonfly/patch-agent_kernel.c -> dragonfly/patch-agent_kernel.c
+file materialize dragonfly/patch-agent_mibgroup_mibII_ipv6.c -> dragonfly/patch-agent_mibgroup_mibII_ipv6.c
+patch apply diffs/Makefile.diff
+mk target set dfly-patch <<'MK'
+	cp ${DFLY_FILESDIR}/cpu_dragonfly.c \
+	   ${WRKSRC}/agent/mibgroup/hardware/cpu/cpu_nlist.c
+	${REINPLACE_CMD} -e 's@unset ac_cv_header_pkg_h@@g' \
+		${WRKSRC}/configure
+	${REINPLACE_CMD} -e 's@-lpkg@@g' \
+		${WRKSRC}/agent/Makefile.in
+MK
