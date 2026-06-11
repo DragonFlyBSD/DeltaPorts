@@ -2463,7 +2463,7 @@ modificative deltas plus a small handful of inline patches.
   definition of done.
 
 
-### Step 48 — standalone mass compat→dops conversion (retire runtime convert) — migration done (99.2%); cutover A–B pending
+### Step 48 — standalone mass compat→dops conversion (retire runtime convert) — migration done (99.2%); cutover A+B shipped; C (delete machinery) + dport-typing pending
 
 **Goal.** Convert the **entire** compat surface to dops in one offline
 program, so the runtime `convert` phase can be retired and the loop
@@ -2557,7 +2557,8 @@ are dual-use dops sources (`patch apply` / `file materialize` / type=dport
 `newport/`) and stay writable; blocking them would break dops authoring.
 Reads stay allowed. *Risk ~0; freezes the Makefile-class residue.*
 
-**B — Replace defer-to-convert with deterministic bootstrap + abort.**
+**B — Replace defer-to-convert with deterministic bootstrap + abort.
+[SHIPPED — `789b5e2d795` (decision core) + `44bb4a763c3` (wiring)]**
 The convert agent's only non-LLM role was bootstrapping a header overlay so
 the port becomes dops and patch can fill the body. Pull that into the runner
 (deterministic) and drop `agent/convert.py`. At a build failure with no
@@ -2580,18 +2581,37 @@ table (bootstrap for clean/dport, MANUAL for non-dport compat). The authoring
 lock (A) guarantees the "non-dport compat" branch only ever sees the known
 frozen residue.
 
-**C — Delete the convert machinery (dead code after B).** `runner.py`: the
-`job_type == "convert"` dispatch (5373) + dry-run branch (5325),
-`process_convert_job` (3872), `enqueue_convert_job` (2058),
-`_maybe_defer_to_convert` (2743), and the deferred-resume trio
-`_resume_deferred_triage` (1900) / `_bundle_convert_succeeded` (1994) /
-`_find_active_convert_job` (2031). Delete `agent/convert.py` and its imports
-in `runner.py`/`attempt_loop.py`/`tools.py`/`prompts.py` (`CONVERT_SYSTEM`,
-`CONVERT_TOOL_NAMES`). `worker.assess_dops`/`classify_dops` (1196/1222):
-keep as the `agent classify-dops` diagnostic, drop only the routing caller.
-Remove/rewrite the convert test suite (`test_agent_convert`,
-`test_convert_*`, `test_lifecycle_convert`, `test_runner_convert_*`,
-`test_skip_check_patch_convert`, `test_patch_deferred_section`).
+**C — Delete the convert machinery (dead code after B). [PENDING — own pass]**
+~900 lines of now-inert code, deferred to a focused session (the full suite is
+the guardrail; rushing a deletion this size in the live 5,500-line runner risks
+the patch/triage flow). After B nothing calls any of it, so it's harmless to
+leave meanwhile. Mapped pure-convert functions in `runner.py` (delete
+bottom-up to keep line numbers stable):
+
+- `_apply_files_removed` 4830–4937
+- `_run_llm_conversion` 4151–4400 (+ its convert-only helpers — `_verify_conversion`,
+  the Conversion-Proof writers — verify callers with grep before deleting)
+- `process_convert_job` 4001–4150
+- `_maybe_defer_to_convert` 2871–3101 (now superseded by `_ensure_overlay_or_abort`)
+- `enqueue_convert_job` 2058–2134
+- `_find_active_convert_job` 2031–2057
+- `_bundle_convert_succeeded` 1994–2030
+- `_resume_deferred_triage` 1900–1993
+
+Plus: the `job_type == "convert"` dispatch + dry-run branches in `process_job`
+(~5454, ~5502) and the `CONVERT_START/OK/GAVE_UP` lifecycle firing; convert-only
+refs (comments) in the kept shared functions (`process_patch_job`,
+`_checkout_bundle_branch_for_job`, `main`). Delete `agent/convert.py`,
+`prompts.CONVERT_SYSTEM`, `tools.CONVERT_TOOL_NAMES` (the shared `attempt_loop`
+stays — its convert refs are docstrings). Keep `worker.assess_dops`/
+`classify_dops` as the `agent classify-dops` diagnostic. Lifecycle enum values
+`CONVERT_*` (lifecycle.py): leave as inert history (removing risks replay of old
+`job_events` rows). Delete the convert test suite: `test_agent_convert`,
+`test_convert_effective_ops_check`, `test_convert_payload_includes_triage`,
+`test_convert_status_type`, `test_lifecycle_convert`, `test_runner_convert_job`,
+`test_runner_convert_defer`, `test_runner_triage_defer` (tests the dead
+`_maybe_defer_to_convert`), and the convert parts of `test_skip_check_patch_convert`
+/ `test_patch_deferred_section` / `test_step28_followups`.
 
 **D — Docs + invariants.** CLAUDE.md agent-package map (`convert.py` gone)
 and the "convert is a substrate prerequisite" invariant; this Step 48 entry;
