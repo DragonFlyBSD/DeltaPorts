@@ -2461,3 +2461,152 @@ modificative deltas plus a small handful of inline patches.
   `agent/convert.py`.
 - Parity-gate harness (compose-output before/after) as the per-port
   definition of done.
+
+
+### Step 48 — standalone mass compat→dops conversion (retire runtime convert) — migration done (99.2%); cutover A–B pending
+
+**Goal.** Convert the **entire** compat surface to dops in one offline
+program, so the runtime `convert` phase can be retired and the loop
+operates dops-only. This is the prerequisite that lets us reframe Step
+47 around the *steady state* instead of a compat→dops transition.
+
+**Scale (measured).** 36 ports are already dops; **~4,940 are pure
+compat** (no overlay.dops):
+
+| compat artifact | ports |
+|---|---|
+| `Makefile.DragonFly` | 3,893 |
+| `dragonfly/` | 1,784 |
+| `diffs/` | 252 |
+
+The mass is the *most* automatable: `Makefile.DragonFly` is exactly what
+the existing deterministic converter already handles, and `dragonfly/`
+is mechanical `file materialize`. The fiddly `diffs/` family (252) is
+the small slice (Step 47's domain).
+
+**Reuse, don't rebuild.** The migration machinery already exists:
+`migration/convert.py` (`convert_record`, deterministic
+`Makefile.DragonFly → mk`), `migration/batch.py` (`run_batch`),
+`migration/{inventory,classify,waves,progress,dashboard}.py`, and the
+`migrate` CLI (`inventory`/`classify`/`convert`/`batch`/`wave-plan`/
+`wave-report`). The convert logic can run **standalone in batch** and
+**emit a per-port judgement** (converted, or escalate-with-reason for
+the parts it can't do deterministically — e.g. plist additions). The
+per-port definition of done is the **Step 47 Phase 0 compose-parity
+gate** (already built): a port flips only when it composes byte-/content-
+identical.
+
+**Shape.**
+1. **Deterministic mass-convert** (gate-verified, no LLM): drive
+   `migrate batch` over waves — `Makefile.DragonFly → mk`,
+   `dragonfly/ → materialize`, `diffs` removals/replaces. Clears the
+   majority. Each port: gate green → flip; else → judgement record.
+2. **Agent-assisted tail** (one-time, host-side): feed the escalation
+   judgements to the convert/patch agent for the non-deterministic
+   remainder (`agent/convert.py` driven offline, or as enqueued jobs).
+3. **Residue → manual / zero** and **lock dops-only authoring**: extend
+   the existing `Makefile.DragonFly` write-refusal (`worker.py`) to *all*
+   compat artifacts, so nothing new enters compat.
+
+**Cutover dependency.** Retiring runtime `convert` (its own follow-up:
+drop `convert.py` job path, `agent/convert.py`, `assess_dops` routing,
+the convert→patch deferred-patch handoff) requires the migration to
+reach ~100% — or accept a small manual residue *plus* the dops-only
+authoring lock so the residue can't grow. Everything before the cutover
+is reversible; the cutover is the one-way gate.
+
+#### Status (2026-06-11)
+
+- **Mass migration: done.** ~4,486 deterministic + ~394 agent-tail (11
+  batches + a rework pass) → **4,916 dops / 39 compat (99.2%)**. Validated
+  on the live 2026Q2 compose: of ~4,736 dops overlays composed, **0 of the
+  migration's conversions fail** (the lone `dops_failed_op`, `ftp/curl`, is
+  a pre-existing ambiguous `OPTIONS_DEFAULT`, not from this work).
+- Shipped alongside: the **`mk eval`** DSL op (self-referential / immediate
+  `:=` overrides — the recursive-`=` class), full-upstream-port verification
+  against the real quarterly tree, and a hardened `dops-convert` skill+agent.
+- **The 39 residue** is maintainer-territory, not mechanical: `distinfo.diff`
+  bootstrap checksums (go/rust/ghc/sbcl/fpc), stale `Makefile.diff`/
+  `pkg-plist.diff` that fail to apply even on 2026Q2 (chromium, llvm12–17,
+  openjdk8/17/21, smartmontools, vagrant…), `.for` loops (netbeans), a
+  5000-line plist rename (ghc92), plus python27 / bareos-server / libosmesa.
+
+So we take the "accept residue + authoring lock" path. The cutover splits
+into two gates by the residue:
+
+| piece | gated on | doable now |
+|---|---|---|
+| authoring lock (`worker.py`) | nothing | **yes** |
+| drop runtime `convert` (runner + `agent/convert.py`) | authoring lock | **yes** |
+| retire `compat.py` + `apply_compat_ops` stage | **zero compat ports** | no (the 39) |
+
+#### Cutover — achievable-now plan (A → D)
+
+The mode fork is one line: `compose_discovery.py:189`
+`mode = "dops" if overlay.dops exists else "compat"`. Retiring compat means
+making that branch unreachable, then deleting it — blocked on the 39. The
+two reachable phases:
+
+**A — Authoring lock (`worker.py`).** Add `_reject_compat_artifact_write`
+to the `put_file` reject chain (`worker.py:568`). Refuse writes under
+`ports/<cat>/<port>/` to `Makefile.DragonFly*`, `diffs/**`, `dragonfly/**`,
+`newport/**`. Supersedes `_reject_dragonfly_on_dops_port` (`worker.py:193`,
+which only fired when an overlay already existed) — delete it and its call.
+Reads (`list_dir`/`grep`) stay allowed for residue ports. Tests: a compat
+write is refused even with no overlay; `overlay.dops` writes still pass.
+*Risk ~0; freezes the residue.*
+
+**B — Sever convert routing (the behavioral flip).** Set the service
+callback `maybe_defer_to_convert = None` at its construction site; the
+orchestrator already handles None (`steps.py:384`), so triage falls through
+to `decide()`. No new convert jobs are enqueued. **Behavior change to sign
+off:** a build failure on a residue compat port now goes triage → patch →
+(no `overlay.dops`) → manual handoff instead of auto-convert — correct for
+maintainer-territory ports, but confirm `patch.py`/`process_patch_job`
+escalates cleanly on a missing overlay (else add an early MANUAL guard in
+the compat-mode triage path). Retires the invariant
+`convert-is-substrate-prerequisite` (it exists only for compat ports).
+Tests: `test_runner_triage_defer`/`test_runner_convert_defer` flip to
+"no defer; compat port → manual". *Reversible: re-wire the callback.*
+
+**C — Delete the convert machinery (dead code after B).** `runner.py`: the
+`job_type == "convert"` dispatch (5373) + dry-run branch (5325),
+`process_convert_job` (3872), `enqueue_convert_job` (2058),
+`_maybe_defer_to_convert` (2743), and the deferred-resume trio
+`_resume_deferred_triage` (1900) / `_bundle_convert_succeeded` (1994) /
+`_find_active_convert_job` (2031). Delete `agent/convert.py` and its imports
+in `runner.py`/`attempt_loop.py`/`tools.py`/`prompts.py` (`CONVERT_SYSTEM`,
+`CONVERT_TOOL_NAMES`). `worker.assess_dops`/`classify_dops` (1196/1222):
+keep as the `agent classify-dops` diagnostic, drop only the routing caller.
+Remove/rewrite the convert test suite (`test_agent_convert`,
+`test_convert_*`, `test_lifecycle_convert`, `test_runner_convert_*`,
+`test_skip_check_patch_convert`, `test_patch_deferred_section`).
+
+**D — Docs + invariants.** CLAUDE.md agent-package map (`convert.py` gone)
+and the "convert is a substrate prerequisite" invariant; this Step 48 entry;
+the `convert-is-substrate-prerequisite` memory.
+
+**Out of scope (blocked on the 39):** `compat.py`, `apply_compat_ops`
+(`compose_stages.py:804`), the `compose_discovery.py:189` fork, and
+`migration/convert.py` + `migrate convert` CLI.
+
+**Relationship to Step 47.** Step 47 stays the `diffs/`-absorption work
+(Phases 0–2 shipped). After Step 48 completes the mass migration, **Step
+47 is reframed** away from compat→dops transition and toward the
+steady-state dops-only plist/file-edit interface (e.g. `mk add
+PLIST_FILES` for additions — order-free — and `text.line_*` for
+removals/rewrites), including a rewrite of `docs/agent-playbooks/
+error-plist-mismatch.md`, which currently points the agent at compat
+artifacts (`Makefile.DragonFly PLIST_FILES+=`, `diffs/pkg-plist.diff`)
+that fail on dops ports.
+
+#### Touchpoints
+
+- `migration/{convert,batch,inventory,classify,waves}.py` + `migrate`
+  CLI (drive standalone, in waves).
+- Step 47 Phase 0 parity gate (`migration/parity.py`) as the per-port
+  definition of done.
+- `agent/convert.py` for the offline LLM tail.
+- `worker.py` write-boundary refusal (extend to all compat artifacts).
+- Follow-up cutover: `convert.py`, `agent/convert.py`, `assess_dops`
+  routing, deferred-patch handoff, eventually `compat.py`.
