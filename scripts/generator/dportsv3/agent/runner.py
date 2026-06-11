@@ -2740,6 +2740,134 @@ def _maybe_skip_locked_origin(
     return True, f"origin_locked_by:{locked_bundle}"
 
 
+_BOOTSTRAP_REASON = (
+    "Step 48 bootstrap: deterministic header; patch authors the body"
+)
+
+
+def _read_status_type(env_name: str, origin: str) -> str | None:
+    """Lowercased STATUS token (port/dport/mask/lock) for a port in the
+    dev-env, or None when STATUS is absent/empty."""
+    from dportsv3.agent import worker
+    try:
+        p = worker._exec(
+            env_name, "/bin/sh", "-c",
+            'head -1 "$DELTAPORTS_ROOT/ports/$1/STATUS" 2>/dev/null',
+            "_", origin,
+        )
+    except Exception:
+        return None
+    token = (p.stdout or "").strip().split()[:1]
+    if not token:
+        return None
+    lowered = token[0].lower()
+    return lowered if lowered in {"port", "dport", "mask", "lock"} else None
+
+
+def _ensure_overlay_or_abort(
+    *,
+    queue_root: Path,
+    job: dict,
+    job_path: Path,
+    origin: str,
+) -> tuple[str, str] | None:
+    """Step 48 cutover (Phase B): replace defer-to-convert with a
+    deterministic bootstrap-or-abort at a build failure.
+
+    Returns ``None`` to let triage proceed to patch (the port already has
+    an ``overlay.dops``, or one was just bootstrapped), or
+    ``("abort", reason)`` to route the triage to a manual handoff (the port
+    carries non-dport compat artifacts that need a real conversion).
+
+    The convert *agent* is gone: bootstrapping a header overlay is
+    deterministic, and the patch agent authors the body. See
+    [[project-convert-is-substrate-prerequisite]] (retired).
+    """
+    from dportsv3.agent import worker
+    from dportsv3.agent.overlay_state import bootstrap_decision
+
+    env_resolution = resolve_env_or_reason(job)
+    env_name = env_resolution.env
+    if not env_name:
+        log(queue_root, "WARN",
+            f"no dev-env resolved for {origin!r} "
+            f"({env_resolution.refusal_reason}); proceeding with triage")
+        return None
+
+    try:
+        facts = worker.probe_overlay_facts(env_name, origin)
+    except Exception as exc:
+        log(queue_root, "WARN",
+            f"probe_overlay_facts({origin!r}) failed: {exc}; proceeding")
+        return None
+
+    status_type = _read_status_type(env_name, origin)
+    decision = bootstrap_decision(facts, status_type)
+
+    if decision.action == "proceed":
+        return None
+
+    if decision.action == "abort":
+        try:
+            activity_log(
+                queue_root, "triage_compat_abort",
+                (
+                    f"{origin}: non-dport compat artifacts need offline "
+                    f"conversion; escalating to manual ({decision.reason})"
+                ),
+                job_id=job_path.name,
+                extra={"origin": origin, "reason": decision.reason},
+            )
+        except Exception as exc:
+            log(queue_root, "WARN", f"activity_log failed in compat-abort: {exc}")
+        return "abort", decision.reason
+
+    # bootstrap: write a header overlay so the port becomes dops; patch
+    # authors the body. Drop STATUS when the header now carries the type.
+    header = (
+        f"port {origin}\n"
+        f"type {decision.overlay_type}\n"
+        f'reason "{_BOOTSTRAP_REASON}"\n'
+        f"target @any\n"
+    )
+    overlay_path = f"/work/DeltaPorts/ports/{origin}/overlay.dops"
+    res = worker.put_file(env_name, overlay_path, header)
+    if res.get("ok") is False:
+        log(queue_root, "WARN",
+            f"bootstrap put_file failed for {origin!r}: "
+            f"{res.get('error', '')[:200]}; escalating to manual")
+        return "abort", "bootstrap_write_failed"
+
+    if decision.remove_status:
+        try:
+            worker._exec(
+                env_name, "/bin/sh", "-c",
+                'rm -f "$DELTAPORTS_ROOT/ports/$1/STATUS"', "_", origin,
+            )
+        except Exception as exc:
+            log(queue_root, "WARN",
+                f"failed to remove STATUS for {origin!r}: {exc}")
+
+    try:
+        activity_log(
+            queue_root, "triage_overlay_bootstrapped",
+            (
+                f"{origin}: bootstrapped type={decision.overlay_type} header "
+                f"overlay ({decision.reason}); proceeding to patch"
+            ),
+            job_id=job_path.name,
+            extra={
+                "origin": origin,
+                "overlay_type": decision.overlay_type,
+                "removed_status": decision.remove_status,
+                "reason": decision.reason,
+            },
+        )
+    except Exception as exc:
+        log(queue_root, "WARN", f"activity_log failed in bootstrap: {exc}")
+    return None
+
+
 def _maybe_defer_to_convert(
     *,
     queue_root: Path,
@@ -3069,14 +3197,15 @@ def process_triage_job(
         log=log,
         activity_log=activity_log,
         write_manual_handoff=_write_manual_handoff,
-        # Step 36 follow-up: substrate defer runs INSIDE TriageStep,
-        # after the LLM + triage_result.json write. apply_lifecycle=False
-        # so TriageStep emits TRIAGE_DEFER through its StepOutcome and
-        # the orchestrator wrapper walks lifecycle once.
-        maybe_defer_to_convert=lambda *, queue_root, job, job_path, origin: (
-            _maybe_defer_to_convert(
+        # Step 48 cutover (Phase B): the substrate check runs INSIDE
+        # TriageStep, after the LLM + triage_result.json write. It no
+        # longer defers to a convert agent — it deterministically
+        # bootstraps a header overlay (→ patch authors the body) or
+        # aborts to a manual handoff for non-dport compat residue.
+        ensure_overlay_or_abort=lambda *, queue_root, job, job_path, origin: (
+            _ensure_overlay_or_abort(
                 queue_root=queue_root, job=job, job_path=job_path,
-                origin=origin, apply_lifecycle=False,
+                origin=origin,
             )
         ),
     )

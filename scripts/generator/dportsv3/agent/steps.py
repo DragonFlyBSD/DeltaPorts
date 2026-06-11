@@ -184,14 +184,14 @@ class TriageServices:
     log: Callable[..., Any]
     activity_log: Callable[..., Any]
     write_manual_handoff: Callable[..., Any] | None = None
-    # Step 36 follow-up: substrate-defer hook called AFTER the LLM
-    # has classified and ``write_triage_audit`` has persisted the
-    # typed TriageResult. Returns ``(success, status_str)`` if the
-    # bundle should defer to convert, or None to proceed with the
-    # normal post-triage decision tree. The runner-side
-    # implementation skips its own lifecycle walk; TriageStep emits
-    # TRIAGE_DEFER via the returned StepOutcome.
-    maybe_defer_to_convert: Callable[..., Any] | None = None
+    # Step 48 cutover (Phase B): substrate hook called AFTER the LLM has
+    # classified and ``write_triage_audit`` persisted the TriageResult.
+    # Deterministically ensures an ``overlay.dops`` exists (bootstraps a
+    # header for new/dport ports) or returns ``("abort", reason)`` for
+    # non-dport compat residue that needs offline conversion. Returns None
+    # to proceed to the normal post-triage decision tree (overlay present
+    # or just bootstrapped). Replaces the old defer-to-convert hook.
+    ensure_overlay_or_abort: Callable[..., Any] | None = None
 
 
 @dataclass
@@ -381,34 +381,46 @@ class TriageStep:
             except Exception:
                 is_slave = False
 
-        if not is_slave and services.maybe_defer_to_convert is not None:
+        if not is_slave and services.ensure_overlay_or_abort is not None:
             try:
-                deferred = services.maybe_defer_to_convert(
+                outcome = services.ensure_overlay_or_abort(
                     queue_root=queue_root, job=job, job_path=job_path,
                     origin=origin,
                 )
             except Exception as exc:
-                # Defer-check is best-effort: a failure here just
-                # means we fall through to the normal triage decision
-                # tree (no defer). The runner-side helper already
-                # logs its own warnings via ``log``/``activity_log``;
-                # don't re-raise.
+                # Best-effort: a failure here falls through to the normal
+                # triage decision tree. The runner-side helper logs its
+                # own warnings; don't re-raise.
                 services.activity_log(
-                    queue_root, "triage_defer_check_failed",
-                    f"substrate defer check failed for {origin}: "
+                    queue_root, "triage_ensure_overlay_failed",
+                    f"ensure-overlay check failed for {origin}: "
                     f"{exc!s}"[:240],
                     job_id=ctx.job_id,
                 )
-                deferred = None
-            if deferred is not None:
-                status_str = (
-                    deferred[1] if isinstance(deferred, tuple)
-                    and len(deferred) >= 2 else "deferred_for_convert"
-                )
+                outcome = None
+            if isinstance(outcome, tuple) and outcome and outcome[0] == "abort":
+                # Non-dport compat residue: patch can't convert it, and a
+                # stub overlay would suppress the compat path. Hand off to
+                # a human (manual_handoff + ESCALATE_MANUAL → ESCALATED).
+                reason_detail = outcome[1] if len(outcome) >= 2 else ""
+                if services.write_manual_handoff is not None:
+                    try:
+                        services.write_manual_handoff(
+                            bundle_dir,
+                            bundle_id or (bundle_dir.name if bundle_dir else None),
+                            origin=origin,
+                            target=job.get("target", "") or "",
+                            reason="compat_needs_conversion",
+                            reason_detail=reason_detail,
+                            run_id=job.get("run_id") or None,
+                        )
+                    except Exception:
+                        pass
                 return StepOutcome(
                     status="success",
-                    next_event=JobEvent.TRIAGE_DEFER,
-                    detail={"status_str": status_str},
+                    next_event=JobEvent.TRIAGE_OK,
+                    extra_events=[JobEvent.ESCALATE_MANUAL],
+                    detail={"status_str": "compat_needs_conversion"},
                 )
 
         # ----- decide() -----
