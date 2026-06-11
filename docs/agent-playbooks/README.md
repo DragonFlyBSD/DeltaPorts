@@ -1,17 +1,16 @@
 # Agent Playbooks
 
 This directory holds the agent's knowledge library — markdown entries
-covering known error patterns, patch-flow procedures, convert-phase
-procedures, and port-toolchain conventions. The runner attaches
-relevant entries to triage / patch / convert payloads.
+covering known error patterns, patch-flow procedures, and port-toolchain
+conventions. The runner attaches relevant entries to triage / patch
+payloads.
 
 Successor to the original "Known Errors Database" (KEDB). The scope
 broadened past errors-only as the agent loop matured: patch-flow
-procedures (editing `overlay.dops`, the static-patch workflow),
-convert-phase decisions (target directive picking, domain
-classification), and toolchain-shaped patterns (autoconf, cmake, …)
-all live here too. See `docs/agentic-architecture-backlog.md` Step 27
-for the design rationale.
+procedures (editing `overlay.dops`, the static-patch workflow, the
+deferred-patch relevance pass) and toolchain-shaped patterns (autoconf,
+cmake, …) live here too. See `docs/agentic-architecture-backlog.md`
+Step 27 for the design rationale.
 
 ## Categories (filename prefix)
 
@@ -23,14 +22,10 @@ Self-describing on `ls`:
 - **`flow-*.md`** — flow-level procedures for a whole agent role.
   The patch agent edits `ports/<origin>/overlay.dops` free-hand in
   dops DSL, so its procedures (the put_file→validate_dops loop, `mk`
-  directive traps, scoping, the static-patch workflow, recovery)
-  live in one entry. Triggered by `flows`.
-  *Example:* `flow-patch.md`.
-- **`convert-*.md`** — convert agent procedures. Decision trees for
-  the LLM convert path: target directive picking, framework vs
-  upstream-source classification. Triggered by convert phase.
-  *Examples:* `convert-target-directive.md`,
-  `convert-classify-patch-domain.md`.
+  directive traps, scoping, the static-patch workflow, the
+  deferred-patch relevance pass, recovery) live here. Triggered by
+  `flows`.
+  *Examples:* `flow-patch.md`, `flow-deferred-patch-relevance.md`.
 - **`toolchain-*.md`** — proactive port-shape playbooks for the
   triage agent. The "usual suspects" for a recognized build system.
   Triggered by mechanical toolchain detection on the port.
@@ -40,14 +35,13 @@ Self-describing on `ls`:
 
 The runner runs each entry's frontmatter triggers through a
 deterministic selector (`dportsv3/agent/playbooks.py`) and attaches
-only the matching entries to a given triage / patch / convert
-payload. `README.md` and `TEMPLATE.md` are excluded. A per-payload
-token budget gates entries by priority (lower priority drops first).
+only the matching entries to a given triage / patch payload.
+`README.md` and `TEMPLATE.md` are excluded. A per-payload token budget
+gates entries by priority (lower priority drops first).
 
 An entry matches the `flows` axis against the agent role and narrows
-on `classifications` (from triage), `toolchains` (from mechanical
-port detection), and `convert_phases` (convert agent). Empty list on
-an axis = wildcard for that axis.
+on `classifications` (from triage) and `toolchains` (from mechanical
+port detection). Empty list on an axis = wildcard for that axis.
 
 ## Frontmatter
 
@@ -58,7 +52,6 @@ Every entry carries the frontmatter shape below.
 triggers:
   classifications: []      # from triage; empty = any
   toolchains: []           # from mechanical port detection
-  convert_phases: []       # convert-agent procedure steps
   flows: [triage, patch]   # which agent roles see this entry
 tags: []                   # operator-facing labels, no selector logic
 priority: 100              # lower = drop later under budget; default 100

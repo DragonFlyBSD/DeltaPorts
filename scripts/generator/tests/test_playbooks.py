@@ -166,14 +166,13 @@ def _fixture_dir(tmp_path: Path) -> Path:
         "---\n"
         "# Gmake-lowprio\n\nrid body\n"
     )
-    _write(tmp_path, "convert-target.md",
+    _write(tmp_path, "triage-only.md",
         "---\n"
         "triggers:\n"
-        "  convert_phases: [picking_target]\n"
-        "  flows: [convert]\n"
+        "  flows: [triage]\n"
         "priority: 100\n"
         "---\n"
-        "# Convert target\n\ntarget body\n"
+        "# Triage only\n\ntriage body\n"
     )
     _write(tmp_path, "toolchain-autoconf.md",
         "---\n"
@@ -195,23 +194,21 @@ def test_selector_classification_filter(tmp_path):
     assert "toolchain-autoconf.md" not in result.included
     # No toolchain context → the gmake entry is skipped too.
     assert "lowprio-gmake.md" not in result.included
-    # Wrong flow for convert entry.
-    assert "convert-target.md" not in result.included
+    # Wrong flow for the triage-only entry.
+    assert "triage-only.md" not in result.included
     skipped_names = {name for name, _ in result.skipped}
-    assert "convert-target.md" in skipped_names
+    assert "triage-only.md" in skipped_names
 
 
 def test_selector_flow_gate(tmp_path):
     d = _fixture_dir(tmp_path)
-    result = load_playbooks(d, role="convert")
-    # Only entries whose flows include `convert` may fire.
-    assert "convert-target.md" not in result.included  # needs phase
-    result_with_phase = load_playbooks(
-        d, role="convert", convert_phases=["picking_target"],
-    )
-    assert "convert-target.md" in result_with_phase.included
-    # Patch entries don't leak into convert.
-    assert "lowprio-gmake.md" not in result_with_phase.included
+    # A triage-only entry fires for triage but not patch.
+    triage = load_playbooks(d, role="triage")
+    assert "triage-only.md" in triage.included
+    patch = load_playbooks(d, role="patch")
+    assert "triage-only.md" not in patch.included
+    skipped_names = {name for name, _ in patch.skipped}
+    assert "triage-only.md" in skipped_names
 
 
 def test_selector_toolchain_overlap(tmp_path):

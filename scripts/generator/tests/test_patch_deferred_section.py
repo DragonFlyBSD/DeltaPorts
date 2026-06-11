@@ -281,10 +281,9 @@ def test_patch_result_invalid_verdict_strings_dropped_at_write(saved_store):
 
 
 def test_playbook_entry_is_discoverable_for_plist_error_patch_flow():
-    """The new convert-deferred-patch-relevance.md should attach to
-    patch payloads on plist-error classifications. Smoke test
-    against load_playbooks so a future trigger drift breaks the
-    test."""
+    """The deferred-patch relevance playbook should attach to patch
+    payloads on plist-error classifications. Smoke test against
+    load_playbooks so a future trigger drift breaks the test."""
     from dportsv3.agent.playbooks import find_playbooks_dir, load_playbooks
     pb_dir = find_playbooks_dir()
     assert pb_dir is not None, "playbooks dir not found in this checkout"
@@ -293,7 +292,7 @@ def test_playbook_entry_is_discoverable_for_plist_error_patch_flow():
         classification="plist-error",
         toolchains=[],
     )
-    assert "convert-deferred-patch-relevance.md" in sel.included, (
+    assert "flow-deferred-patch-relevance.md" in sel.included, (
         f"expected the deferred-patch playbook in patch+plist-error "
         f"selection, got: {sel.included}"
     )
@@ -309,7 +308,7 @@ def test_playbook_not_attached_to_unrelated_classifications():
         classification="missing-dep",
         toolchains=[],
     )
-    assert "convert-deferred-patch-relevance.md" not in sel.included
+    assert "flow-deferred-patch-relevance.md" not in sel.included
 
 
 def test_manual_handoff_reason_for_escalated_verdicts_registered():

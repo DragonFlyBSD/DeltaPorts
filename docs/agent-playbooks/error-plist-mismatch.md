@@ -6,112 +6,86 @@ tags: [check-plist, pkg-plist]
 priority: 100
 ---
 
-# Known Issue: check-plist phase failures (Orphaned / Missing files)
+# check-plist failures (Orphaned / Missing files)
 
 ## Pattern
-- `Error: Orphaned: <path>`
-- `Error: Missing: <path>`
+- `Error: Orphaned: <path>` — installed in `STAGEDIR` but not listed
+- `Error: Missing: <path>` — listed but not installed
+- `Error: Orphaned: @dir /some/path` — absolute path in plist
 - `===> Error: Plist issues found.`
-- Stage succeeds but `check-plist` phase fails
-
-Common variants:
-- `Error: Orphaned: /man/man8/foo.8.gz` (file installed but not in plist)
-- `Error: Missing: man/man8/foo.8.gz` (plist expects file but not installed)
-- `Error: Orphaned: @dir /some/path` (absolute path in plist causes mismatch)
+- Stage succeeds, then `check-plist` fails
 
 ## Cause
-The `check-plist` phase compares files actually installed in `STAGEDIR` against entries in `pkg-plist` (or `PLIST_FILES`). Mismatches occur when:
+`check-plist` compares files actually installed in `STAGEDIR` against the
+plist entries (`pkg-plist`, or `PLIST_FILES` in the Makefile). On
+DragonFly, build-config / option / platform differences make the
+installed set diverge from FreeBSD:
 
-1. **Orphaned**: A file is installed but not listed in the plist (DragonFly builds extra files, or upstream plist is incomplete)
-2. **Missing**: A file is listed in plist but not installed (DragonFly build skips some files, or upstream plist has stale entries)
-3. **Path mismatch**: Absolute paths like `/etc/...` in plist vs relative `etc/...` expected by the framework
+1. **Orphaned** — a file is installed but not listed (DragonFly builds an
+   extra file, or upstream's plist is incomplete).
+2. **Missing** — a file is listed but not installed (DragonFly skips it,
+   or upstream's plist has a stale entry).
+3. **Path mismatch** — absolute `/etc/...` in the plist vs relative
+   `etc/...` the framework expects.
 
-On DragonFlyBSD, differences in build configuration, enabled options, or platform-specific code paths can cause the installed file set to differ from FreeBSD.
+## Fix — edit `overlay.dops`, never `Makefile.DragonFly`
 
-## Fix
+You author dops ops only. `Makefile.DragonFly` authoring is refused
+(authoring lock), and an `overlay.dops` suppresses the compat path, so a
+`diffs/pkg-plist.diff` on a dops port is dead. The two plist surfaces:
 
-### Option 1: Single or few missing plist entries → `PLIST_FILES+=` in Makefile.DragonFly
+- **Port lists files in `pkg-plist`** → edit `pkg-plist` with `text`
+  ops (most ports).
+- **Port lists files via `PLIST_FILES` in the Makefile** → use `mk add`.
 
-For **Orphaned** errors (file exists but not in plist), add the missing entry:
+### Orphaned — add the entry
 
-```makefile
-# ports/<cat>/<port>/Makefile.DragonFly
-PLIST_FILES+=	man/man8/foo.8.gz
+`pkg-plist` port — insert after a stable neighbor line:
+```dops
+text line-insert-after file pkg-plist \
+     anchor "man/man8/foo.8.gz" \
+     line   "man/man8/bar.8.gz"
 ```
 
-For multiple related entries:
-```makefile
-PLIST_FILES+=	libexec/nut/microsol-apc \
-		man/man8/microsol-apc.8.gz
+`PLIST_FILES` port — append the token:
+```dops
+mk add PLIST_FILES "man/man8/bar.8.gz"
+```
+`mk add` mirrors `+=` (idempotent). For a directory entry, the value is
+`@dir <path>` (e.g. `mk add PLIST_FILES "@dir /boot/firmware"`).
+
+### Missing — remove the stale entry
+
+Only after confirming (via the build log / `grep`) that the file
+genuinely isn't installed on DragonFly and shouldn't be:
+```dops
+text line-remove file pkg-plist exact "lib/foo/legacy.so"
+```
+If the file *should* install but doesn't, that's a build problem, not a
+plist problem — fix the build, don't delete the entry.
+
+### Path mismatch — rewrite the line
+
+```dops
+text replace-once file pkg-plist \
+     from "@dir /etc/X11/xrdp" \
+     to   "@dir etc/X11/xrdp"
 ```
 
-This is the preferred fix when only a small number of files need to be added.
+### Many changes at once
 
-### Option 2: Multiple changes or removals → `diffs/pkg-plist.diff`
-
-For complex plist changes (many additions, removals, or path rewrites), create a unified diff:
-
-```diff
-# ports/<cat>/<port>/diffs/pkg-plist.diff
---- pkg-plist.orig	2023-01-02 19:50:10.000000000 +0100
-+++ pkg-plist	2023-01-02 19:50:37.000000000 +0100
-@@ -1,5 +1,5 @@
--@dir /etc/X11/xrdp
--/etc/X11/xrdp/xorg.conf
-+@dir etc/X11/xrdp
-+etc/X11/xrdp/xorg.conf
- lib/xorg/modules/drivers/xrdpdev_drv.so
+When a single `pkg-plist` needs many additions/removals/rewrites, a
+re-cut diff is cleaner than a wall of `text` ops:
+```dops
+patch apply diffs/pkg-plist.diff
 ```
+(`patch apply` is valid for `diffs/*` framework files — NOT for
+`dragonfly/*`, which must be `file materialize`d.)
 
-Use this approach when:
-- Multiple lines need to be added or removed
-- Absolute paths need to be converted to relative paths
-- Upstream plist has stale entries that should be removed
+## Don't reach for install-phase hacks
 
-### Important: Avoid overriding FreeBSD-only make targets
-
-Do NOT override standard targets like `do-install`, `post-install`, `pre-install` in `Makefile.DragonFly` — these can conflict with the FreeBSD port's own definitions.
-
-Instead, use DeltaPorts-specific hooks:
-- `dfly-patch:` — runs after `post-patch`
-- `dfly-configure:` — runs after `post-configure`
-- `dfly-build:` — runs after `post-build`
-- `dfly-install:` — runs after `post-install` (for cleanup/fixups only)
-
-For plist issues specifically, prefer `PLIST_FILES+=` or `diffs/pkg-plist.diff` over install-phase hacks.
-
-## Examples
-
-### Adding missing files via PLIST_FILES
-- `sysutils/nut-devel`: Fixed orphaned files (commit `8ffa24d43d6`)
-  ```makefile
-  PLIST_FILES+=	libexec/nut/microsol-apc \
-  		man/man8/microsol-apc.8.gz
-  ```
-
-- `www/jira-cli`: Added missing manpage
-  ```makefile
-  PLIST_FILES+=	man/man7/jira-sprint-add.7.gz
-  ```
-
-- `sysutils/cpu-microcode-intel`: Added directory entry (commit `440707d6763`)
-  ```makefile
-  PLIST_FILES+=	"@dir /boot/firmware"
-  ```
-
-### Patching pkg-plist via diffs/
-- `x11-drivers/xorgxrdp`: Fixed absolute paths in plist
-  ```diff
-  -@dir /etc/X11/xrdp
-  +@dir etc/X11/xrdp
-  ```
-
-- `net/freeswitch`: Added missing module (commit `2e2d6b59d43`)
-  ```diff
-  +lib/freeswitch/mod/mod_av.so
-  ```
-
-- `graphics/qt5-3d`: Added multiple missing cmake/plugin files (commit `9e2be93e20d`)
-
-### Removing stale overlay entries
-- `x11/cinnamon`: Removed `Makefile.DragonFly` that was adding obsolete plist entries (commit `e2753b339e6`)
+Don't add `do-install` / `post-install` recipe overrides to fix a plist
+mismatch. If a genuine post-install fixup is unavoidable, express it as a
+dops recipe op — `mk target set post-install <<'TAG' … TAG'` — not a
+compat `dfly-install:` target. For plain orphaned/missing/path issues,
+the `text` / `mk add PLIST_FILES` ops above are the right tools.

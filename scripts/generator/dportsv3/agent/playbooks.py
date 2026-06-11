@@ -2,8 +2,8 @@
 
 Parses ``docs/agent-playbooks/*.md`` entries with YAML-subset
 frontmatter, selects entries by per-job context (flow + classification
-+ toolchain + convert phase), and renders the selected entries into a
-markdown block for inclusion in the agent's payload.
++ toolchain), and renders the selected entries into a markdown block
+for inclusion in the agent's payload.
 
 Replaces the legacy ``load_kedb`` bulk-load. Alpha-mode hard cutover:
 entries without a frontmatter ``flows:`` declaration default to
@@ -19,7 +19,6 @@ Frontmatter shape:
     triggers:
       classifications: [patch-error, compile-error]
       toolchains: [autoconf]
-      convert_phases: [picking_target]
       flows: [triage, patch]
     tags: [heredoc]
     priority: 100
@@ -59,13 +58,10 @@ class PlaybookTriggers:
 
     Empty tuple on any axis = wildcard for that axis (entry matches
     regardless of the context's value for that field). ``flows``
-    defaults to ``("triage", "patch")`` when the frontmatter omits
-    it — convert entries must opt in explicitly via
-    ``flows: [convert]``.
+    defaults to ``("triage", "patch")`` when the frontmatter omits it.
     """
     classifications: tuple[str, ...] = ()
     toolchains: tuple[str, ...] = ()
-    convert_phases: tuple[str, ...] = ()
     flows: tuple[str, ...] = _FLOWS_DEFAULT
 
 
@@ -195,7 +191,6 @@ def _parse_entry(path: Path) -> PlaybookEntry | None:
     triggers = PlaybookTriggers(
         classifications=_parse_inline_list(triggers_raw.get("classifications", "")),
         toolchains=_parse_inline_list(triggers_raw.get("toolchains", "")),
-        convert_phases=_parse_inline_list(triggers_raw.get("convert_phases", "")),
         flows=flows if flows else _FLOWS_DEFAULT,
     )
     tags = _parse_inline_list(fm.get("tags", "") if isinstance(fm.get("tags"), str) else "")
@@ -366,8 +361,7 @@ def list_entries(playbooks_dir: Path | None) -> list[PlaybookEntry]:
 def _matches(entry: PlaybookEntry, *,
              role: str,
              classification: str | None,
-             toolchains: set[str],
-             convert_phases: set[str]) -> tuple[bool, str]:
+             toolchains: set[str]) -> tuple[bool, str]:
     """Trigger check. Returns (matched, reason_if_skipped)."""
     t = entry.triggers
     if role not in t.flows:
@@ -380,10 +374,6 @@ def _matches(entry: PlaybookEntry, *,
             )
     if t.toolchains and not (toolchains & set(t.toolchains)):
         return False, f"toolchains:no-overlap-with-{list(t.toolchains)}"
-    if t.convert_phases and not (convert_phases & set(t.convert_phases)):
-        return False, (
-            f"convert_phases:no-overlap-with-{list(t.convert_phases)}"
-        )
     return True, ""
 
 
@@ -393,12 +383,11 @@ def load_playbooks(
     role: str,
     classification: str | None = None,
     toolchains: Iterable[str] = (),
-    convert_phases: Iterable[str] = (),
     budget_tokens: int = 0,
 ) -> SelectionResult:
     """Select and render playbook entries for the given context.
 
-    ``role`` is one of ``triage`` / ``patch`` / ``convert`` and is
+    ``role`` is one of ``triage`` / ``patch`` and is
     matched against each entry's ``triggers.flows``. Other arguments
     are AND'd against their respective trigger axes (within an axis,
     any overlap counts as a match; an empty trigger axis on the entry
@@ -415,7 +404,6 @@ def load_playbooks(
     """
     entries = list_entries(playbooks_dir)
     toolchains_set = set(toolchains)
-    phases_set = set(convert_phases)
 
     included: list[PlaybookEntry] = []
     skipped: list[tuple[str, str]] = []
@@ -423,7 +411,6 @@ def load_playbooks(
         ok, reason = _matches(
             e, role=role, classification=classification,
             toolchains=toolchains_set,
-            convert_phases=phases_set,
         )
         if ok:
             included.append(e)

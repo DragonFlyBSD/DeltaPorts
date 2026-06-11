@@ -5,7 +5,6 @@
 triggers:
   classifications: []      # e.g. [patch-error, compile-error]; from triage
   toolchains: []           # e.g. [autoconf, cmake]; from port toolchain detection
-  convert_phases: []       # e.g. [picking_target]; for convert agent
   flows: [triage, patch]   # which agent roles can see this entry
 tags: []                   # operator-facing labels; no selector logic
 priority: 100              # smaller = drop later under budget; default 100
@@ -17,7 +16,6 @@ priority: 100              # smaller = drop later under budget; default 100
 File naming: <category>-<short-slug>.md
   error-*       reactive build-error patterns
   flow-*        flow-level procedures for an agent role
-  convert-*     convert-agent procedures
   toolchain-*   port toolchain "usual suspects" playbooks
 
 Keep entries focused: one pattern per file, ~100 lines max.
@@ -27,7 +25,6 @@ knowledge:
 
   - error-*       primary axis: classifications
   - flow-*        primary axis: flows
-  - convert-*     primary axis: convert_phases + flows=[convert]
   - toolchain-*   primary axis: toolchains
 -->
 

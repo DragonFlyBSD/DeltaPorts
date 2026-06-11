@@ -208,11 +208,11 @@ produce the diff rather than hand-writing one:
    state. `dragonfly/*` patches apply **after** `files/*` at build time,
    so your new patch's context must reflect the post-`files/*` source —
    not pristine upstream. Skip this step only when the target file is
-   untouched by any framework patch (pristine == build state). The
-   broken `dragonfly/*` patch you're regenerating has already been
-   dropped from `overlay.dops` by convert's defer pass, so `do-patch`
-   won't choke on it. On failure, the rejecting patch is named in the
-   tool's `stdout_tail`.
+   untouched by any framework patch (pristine == build state). If a
+   broken `dragonfly/*` patch you're regenerating was already dropped
+   from `overlay.dops` (the deferred-patch channel removes a rejecting
+   patch to get compose green), `do-patch` won't choke on it. On
+   failure, the rejecting patch is named in the tool's `stdout_tail`.
 3. `dupe(<wrksrc>/path/to/file.c)` — snapshots a `.orig` and exposes the
    file for editing. **Dupe AFTER make_patch** so the baseline is the
    post-`do-patch` state — that baseline is what genpatch diffs against.

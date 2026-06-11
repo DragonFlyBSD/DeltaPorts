@@ -1,7 +1,7 @@
 ---
 triggers:
-  classifications: []      # wildcard — cross-cutting guidance, attach to every triage/patch/convert payload
-  flows: [triage, patch, convert]
+  classifications: []      # wildcard — cross-cutting guidance, attach to every triage/patch payload
+  flows: [triage, patch]
 tags: [dops, static-patch, version-bump]
 priority: 50
 ---
