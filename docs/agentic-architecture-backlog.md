@@ -2547,14 +2547,15 @@ The mode fork is one line: `compose_discovery.py:189`
 making that branch unreachable, then deleting it — blocked on the 39. The
 two reachable phases:
 
-**A — Authoring lock (`worker.py`).** Add `_reject_compat_artifact_write`
-to the `put_file` reject chain (`worker.py:568`). Refuse writes under
-`ports/<cat>/<port>/` to `Makefile.DragonFly*`, `diffs/**`, `dragonfly/**`,
-`newport/**`. Supersedes `_reject_dragonfly_on_dops_port` (`worker.py:193`,
-which only fired when an overlay already existed) — delete it and its call.
-Reads (`list_dir`/`grep`) stay allowed for residue ports. Tests: a compat
-write is refused even with no overlay; `overlay.dops` writes still pass.
-*Risk ~0; freezes the residue.*
+**A — Authoring lock (`worker.py`). [SHIPPED — `c269fa46e1e`]** Make the
+`Makefile.DragonFly` `put_file` refusal **unconditional**: the pre-cutover
+guard (`_reject_dragonfly_on_dops_port`) only fired when an `overlay.dops`
+already existed; `_reject_makefile_dragonfly_authoring` now refuses ANY new
+`Makefile.DragonFly*` under `ports/`, so the residue can't grow.
+**Scope: `Makefile.DragonFly` only** — `diffs/`, `dragonfly/` and `newport/`
+are dual-use dops sources (`patch apply` / `file materialize` / type=dport
+`newport/`) and stay writable; blocking them would break dops authoring.
+Reads stay allowed. *Risk ~0; freezes the Makefile-class residue.*
 
 **B — Sever convert routing (the behavioral flip).** Set the service
 callback `maybe_defer_to_convert = None` at its construction site; the
@@ -2586,9 +2587,38 @@ Remove/rewrite the convert test suite (`test_agent_convert`,
 and the "convert is a substrate prerequisite" invariant; this Step 48 entry;
 the `convert-is-substrate-prerequisite` memory.
 
-**Out of scope (blocked on the 39):** `compat.py`, `apply_compat_ops`
+**Out of scope (blocked on the residue):** `compat.py`, `apply_compat_ops`
 (`compose_stages.py:804`), the `compose_discovery.py:189` fork, and
 `migration/convert.py` + `migrate convert` CLI.
+
+#### Open bug — dport/mask/lock typing (residue undercount)
+
+The "39 residue" counts only the Makefile-class ports (`Makefile.DragonFly`/
+`diffs`/`dragonfly`). It **missed the dport class**: a `dport` is a
+DragonFly-only port with no FreeBSD upstream — `newport/` holds its entire
+source, and `type=dport` materializes by copying `newport/` wholesale
+(`plan_types.py`; `type=port` instead *requires* an upstream and errors
+without one). Findings:
+
+- **74 pure dports** (`newport/` only, `STATUS=DPORT`, no overlay) are still
+  compat — never converted (the deterministic translator only handles
+  `Makefile.DragonFly`). Their correct dops form is a **header-only
+  `type dport`** overlay (no ops; `newport/` is the whole port).
+- **13 dops overlays mis-typed `type port`** despite having `newport/` +
+  `STATUS=DPORT` (elftoolchain, efivar-bsd, libtacplus, wminet, pam_ssh,
+  whowatch, mkimg, weston, libdrm, …). The deterministic converter
+  **always renders `type port`** and documents this as wrong for
+  DPORT/MASK/LOCK, leaving `STATUS` as a review flag (`convert.py:132–138`).
+  They compose today only because those upstreams happen to exist / aren't
+  exercised on Q2; with `type=port` and no upstream they'd hit
+  `missing_port_error`.
+
+So the **true compat residue ≈ 113** (39 Makefile-class + 74 dport-class).
+Fix (own follow-up, part of the retire-`compat.py` gate): emit
+`type dport`/`type mask`/`type lock` per `STATUS` in the converter; re-type
+the 13; write header-only `type dport` overlays for the 74. The dops compose
+path already materializes type=dport (`compose_stages.py:677`), so no engine
+work — just correct authoring.
 
 **Relationship to Step 47.** Step 47 stays the `diffs/`-absorption work
 (Phases 0–2 shipped). After Step 48 completes the mass migration, **Step
