@@ -2463,7 +2463,7 @@ modificative deltas plus a small handful of inline patches.
   definition of done.
 
 
-### Step 48 — standalone mass compat→dops conversion (retire runtime convert) — migration done (99.2%); cutover A+B + dport-typing shipped; C (delete machinery) + D (docs) pending
+### Step 48 — standalone mass compat→dops conversion (retire runtime convert) — DONE (achievable-now scope): migration 99.2%, cutover A+B+C1+D + dport-typing shipped; C2 skipped (→Step 47); only compat.py retirement remains (gated on residue→0)
 
 **Goal.** Convert the **entire** compat surface to dops in one offline
 program, so the runtime `convert` phase can be retired and the loop
@@ -2536,11 +2536,11 @@ is reversible; the cutover is the one-way gate.
 So we take the "accept residue + authoring lock" path. The cutover splits
 into two gates by the residue:
 
-| piece | gated on | doable now |
+| piece | gated on | status |
 |---|---|---|
-| authoring lock (`worker.py`) | nothing | **yes** |
-| drop runtime `convert` (runner + `agent/convert.py`) | authoring lock | **yes** |
-| retire `compat.py` + `apply_compat_ops` stage | **zero compat ports** | no (the 39) |
+| authoring lock (`worker.py`) | nothing | **shipped (A)** |
+| drop runtime `convert` (runner + `agent/convert.py`) | authoring lock | **shipped (B + C1)** |
+| retire `compat.py` + `apply_compat_ops` stage | **zero compat ports** | blocked (the ~40 residue) |
 
 #### Cutover — achievable-now plan (A → D)
 
@@ -2584,41 +2584,52 @@ table (bootstrap for clean/dport, MANUAL for non-dport compat). The authoring
 lock (A) guarantees the "non-dport compat" branch only ever sees the known
 frozen residue.
 
-**C — Delete the convert machinery (dead code after B). [PENDING — own pass]**
-~900 lines of now-inert code, deferred to a focused session (the full suite is
-the guardrail; rushing a deletion this size in the live 5,500-line runner risks
-the patch/triage flow). After B nothing calls any of it, so it's harmless to
-leave meanwhile. Mapped pure-convert functions in `runner.py` (delete
-bottom-up to keep line numbers stable):
+**C1 — Delete the convert *producer* (dead code after B). [SHIPPED — `be9000d4098`]**
+The deletion was bigger than the original ~900-line / 8-function estimate: a
+call-graph trace showed the defer-on-reject op materializer
+(`_materialize_with_defer_retry` and its op-editing helpers) was *also*
+convert-only (reached only via `_verify_conversion`, never by patch). The
+convert code formed **3 contiguous blocks** (1900–2134, 2871–3101, 3976–5355)
+plus the dispatch — not interspersed with kept code — so a bottom-up block
+delete was clean. Removed: the `job_type == "convert"` dispatch (+ dry-run
+branch), ~20 convert-only `runner.py` functions, `agent/convert.py`,
+`prompts.CONVERT_SYSTEM`, `tools.CONVERT_TOOL_NAMES`, and the convert test suite
+(7 modules + the convert cases in `test_phase_result_producers` /
+`test_playbooks_runtime_integration` / `test_step28_followups`). `runner.py`:
+6052 → 4102 lines. Full suite green (1511). **Kept:** lifecycle `CONVERT_*`
+enums (inert history — removing risks replay of old `job_events` rows); the
+offline tooling was preserved first in `e022f4aa468` (`mass_convert.py` +
+`dops-convert` skill/agent) for git-log recoverability.
 
-- `_apply_files_removed` 4830–4937
-- `_run_llm_conversion` 4151–4400 (+ its convert-only helpers — `_verify_conversion`,
-  the Conversion-Proof writers — verify callers with grep before deleting)
-- `process_convert_job` 4001–4150
-- `_maybe_defer_to_convert` 2871–3101 (now superseded by `_ensure_overlay_or_abort`)
-- `enqueue_convert_job` 2058–2134
-- `_find_active_convert_job` 2031–2057
-- `_bundle_convert_succeeded` 1994–2030
-- `_resume_deferred_triage` 1900–1993
+**C2 — Delete the deferred-patch *consumer*. [SKIPPED — folded into Step 47]**
+The convert→patch deferred-patch handoff (see below) survives on the patch side
+as `_resolve_deferred_verdicts_for_patch` / `cleanup_resolved_deferred_patches`
+(runner) + the `deferred_from_convert` payload section (context.py), reading the
+`ConvertResult`/`DeferredPatch` schema. Without a producer these degrade to
+no-ops — but they are **not** convert-only: `migration/absorb_makefile.py`
+(Step 47 Phase 2) constructs `DeferredPatch` for its *own* escalations, so the
+schema and the patch-side relevance pass are the live landing pad for Step 47's
+`diffs/Makefile.diff` absorption. Ripping out the consumer would be surgery in
+the live patch success path (`steps.py`) for zero functional gain and would not
+even erase the schema. Decision: leave it; Step 47 owns any future change.
 
-Plus: the `job_type == "convert"` dispatch + dry-run branches in `process_job`
-(~5454, ~5502) and the `CONVERT_START/OK/GAVE_UP` lifecycle firing; convert-only
-refs (comments) in the kept shared functions (`process_patch_job`,
-`_checkout_bundle_branch_for_job`, `main`). Delete `agent/convert.py`,
-`prompts.CONVERT_SYSTEM`, `tools.CONVERT_TOOL_NAMES` (the shared `attempt_loop`
-stays — its convert refs are docstrings). Keep `worker.assess_dops`/
-`classify_dops` as the `agent classify-dops` diagnostic. Lifecycle enum values
-`CONVERT_*` (lifecycle.py): leave as inert history (removing risks replay of old
-`job_events` rows). Delete the convert test suite: `test_agent_convert`,
-`test_convert_effective_ops_check`, `test_convert_payload_includes_triage`,
-`test_convert_status_type`, `test_lifecycle_convert`, `test_runner_convert_job`,
-`test_runner_convert_defer`, `test_runner_triage_defer` (tests the dead
-`_maybe_defer_to_convert`), and the convert parts of `test_skip_check_patch_convert`
-/ `test_patch_deferred_section` / `test_step28_followups`.
+> **The deferred-patch path (for reference).** Convert validated a freshly
+> authored overlay by reapplying via compose; when a `patch apply` op (a
+> `diffs/*.diff`) or inline op failed to apply against current upstream, the
+> handler *dropped* that op to get compose green and recorded it as a
+> `DeferredPatch` (original diff text, target file, reject summary, backing
+> file) on `ConvertResult.deferred_patches`. The follow-up patch agent read
+> those as INTENT and emitted a `DeferredVerdict` per patch —
+> `regenerated` / `dropped` / `escalated` — then `cleanup_resolved_deferred_patches`
+> removed resolved backing files. It was a partial-conversion recovery channel;
+> `absorb_makefile` reuses the same shape for Step 47.
 
-**D — Docs + invariants.** CLAUDE.md agent-package map (`convert.py` gone)
-and the "convert is a substrate prerequisite" invariant; this Step 48 entry;
-the `convert-is-substrate-prerequisite` memory.
+**D — Docs + invariants. [SHIPPED — `50f4e7f21cb`]** CLAUDE.md agent-package map
+(`agent/convert.py` bullet dropped; runner drives triage/patch; data-flow
+diagram shows triage bootstrapping `overlay.dops` or aborting; the "convert is a
+substrate prerequisite" invariant replaced with bootstrap-or-abort;
+`migration/convert.py` clarified as kept + STATUS-typed). The
+`convert-is-substrate-prerequisite` memory was already retired in a prior pass.
 
 **Out of scope (blocked on the residue):** `compat.py`, `apply_compat_ops`
 (`compose_stages.py:804`), the `compose_discovery.py:189` fork, and
