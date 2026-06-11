@@ -1,0 +1,26 @@
+port sysutils/u-boot-master
+type port
+reason "sopine-spi mkimg dep, ssl/pkgconfig USES, dfly-patch for openssl/fsync, DPORTS_BUILDER default board"
+target @any
+
+mk block set condition "${MODEL:Msopine-spi}" <<'MK'
+BUILD_DEPENDS+=	mkimg:sysutils/mkimg
+MK
+
+mk add USES ssl
+mk add USES pkgconfig
+
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e "s@-DUSE_HOSTCC@-I${LOCALBASE}/include &@g" \
+		${WRKSRC}/tools/Makefile
+	${REINPLACE_CMD} -e "s@HOSTCC)@& -I${WRKSRC}/scripts/dtc/libfdt@g" \
+			 -e 's@--quiet@@g' \
+		${WRKSRC}/scripts/dtc/pylibfdt/Makefile
+	${REINPLACE_CMD} -e "s@fdatasync@fsync@g" \
+		${WRKSRC}/tools/mkimage.c
+MK
+
+patch apply diffs/Makefile.diff
+
+file materialize dragonfly/patch-include_compiler.h -> dragonfly/patch-include_compiler.h
+file materialize dragonfly/patch-lib_bch.c -> dragonfly/patch-lib_bch.c

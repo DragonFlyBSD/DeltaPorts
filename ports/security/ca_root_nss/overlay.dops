@@ -1,0 +1,7 @@
+port security/ca_root_nss
+type port
+reason "remove certctl rehash postexec/postunexec from pkg-plist"
+target @any
+
+text line-remove file pkg-plist exact "@postexec certctl rehash" on-missing noop
+text line-remove file pkg-plist exact "@postunexec certctl rehash" on-missing noop

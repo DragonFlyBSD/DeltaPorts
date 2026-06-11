@@ -1,0 +1,8 @@
+port security/hitch
+type port
+reason "mark BROKEN_SSL for libressl, unmaintained"
+target @any
+
+mk set BROKEN_SSL "libressl"
+mk set BROKEN_SSL_REASON_libressl "port requires SSL_CTX_set1_verify_cert_store()"
+mk set DFLY_UNMAINTAINED "yes"

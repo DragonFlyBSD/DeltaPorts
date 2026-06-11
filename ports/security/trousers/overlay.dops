@@ -1,0 +1,10 @@
+port security/trousers
+type port
+reason "add -Wno-unused-variable to CFLAGS, patch tcsd.in rc script, dragonfly source patches"
+target @any
+
+mk add CFLAGS -Wno-unused-variable
+patch apply diffs/files_tcsd.in.diff
+
+file materialize dragonfly/patch-src_include_trousers__types.h -> dragonfly/patch-src_include_trousers__types.h
+file materialize dragonfly/patch-src_tspi_ps_tspps.c -> dragonfly/patch-src_tspi_ps_tspps.c

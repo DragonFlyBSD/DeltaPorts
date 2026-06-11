@@ -1,0 +1,8 @@
+port security/gpgme
+type port
+reason "set LDVER=ld.bfd for qt5 slavepor to work around libgcc_pic.a+ld.gold+pthread issue"
+target @any
+
+mk block set condition "defined(SLAVEPORT) && ${SLAVEPORT} == \"qt5\"" <<'MK'
+CONFIGURE_ENV+=	LDVER=ld.bfd
+MK

@@ -1,0 +1,13 @@
+port sysutils/libdisplay-info
+type port
+reason "add C11 standard and warning suppression flags, remove POSIX_C_SOURCE from meson.build"
+target @any
+
+mk add CFLAGS -std=c11
+mk add CFLAGS -Wno-conversion
+mk add CFLAGS -Wno-maybe-uninitialized
+
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e '/POSIX_C_SOURCE/d' \
+		${WRKSRC}/meson.build
+MK

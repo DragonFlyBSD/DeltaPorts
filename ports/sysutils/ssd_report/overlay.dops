@@ -1,0 +1,6 @@
+port sysutils/ssd_report
+type port
+reason "limit FLAVORS to smartmontools only (smart flavor disabled)"
+target @any
+
+patch apply diffs/Makefile.diff

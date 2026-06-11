@@ -1,0 +1,9 @@
+port sysutils/cpdup
+type port
+reason "add localbase:ldflags and libmd dependency for DragonFly >= 5.7"
+target @any
+
+mk block set condition "${DFLYVERSION} > 500700" <<'MK'
+USES+=	localbase:ldflags
+LIB_DEPENDS+=	libmd.so:security/libmd
+MK

@@ -1,0 +1,7 @@
+port sysutils/tlsdate
+type port
+reason "mark BROKEN_SSL for libressl"
+target @any
+
+mk set BROKEN_SSL "libressl"
+mk set BROKEN_SSL_REASON_libressl "port requires TLS_ST_CR_SRVR_HELLO"

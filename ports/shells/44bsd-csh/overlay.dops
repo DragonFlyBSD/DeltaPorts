@@ -1,0 +1,8 @@
+port shells/44bsd-csh
+type port
+reason "add MAXNAMLEN CFLAGS, set CWARNFLAGS, simplify install (remove docs build)"
+target @any
+
+mk add CFLAGS -DMAXNAMLEN=255
+mk add MAKE_ENV "CWARNFLAGS=-fcommon"
+patch apply diffs/Makefile.diff

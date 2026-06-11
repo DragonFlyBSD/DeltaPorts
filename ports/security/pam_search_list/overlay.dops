@@ -1,0 +1,4 @@
+port security/pam_search_list
+type port
+reason "no DragonFly-specific changes needed"
+target @any

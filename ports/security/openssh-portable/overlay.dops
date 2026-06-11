@@ -1,0 +1,17 @@
+port security/openssh-portable
+type port
+reason "disable libutil/stackprotect, add mit flavor, dragonfly sshd.c patch, unmaintained"
+target @any
+
+mk add CONFIGURE_ARGS --disable-libutil
+mk add CONFIGURE_ARGS --without-stackprotect
+mk add FLAVORS mit
+mk set mit_PKGNAMESUFFIX "-portable-mit"
+
+mk block set condition "${FLAVOR:U} == mit" <<'MK'
+OPTIONS_DEFAULT+=	MIT
+MK
+
+mk set DFLY_UNMAINTAINED "yes"
+
+file materialize dragonfly/patch-sshd.c -> dragonfly/patch-sshd.c

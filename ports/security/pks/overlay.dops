@@ -1,0 +1,12 @@
+port security/pks
+type port
+reason "version-conditional ssl override to use libressl-static, IGNORE unmaintained"
+target @any
+
+mk block set condition "${PORTVERSION} == 0.9.6.20040312" <<'MK'
+USES:=	${USES:Nssl}
+BUILD_DEPENDS+=	libressl-static>0:security/libressl-static
+CONFIGURE_ARGS+= --with-openssl=${LOCALBASE}/libressl-static
+MK
+
+mk set IGNORE "unmaintained, please request fixing to users mailing list"

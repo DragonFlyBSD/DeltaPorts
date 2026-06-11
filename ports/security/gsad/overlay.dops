@@ -1,0 +1,6 @@
+port security/gsad
+type port
+reason "add alias to USES, add /var/run/gvm dir to plist in post-install"
+target @any
+
+patch apply diffs/Makefile.diff

@@ -1,0 +1,10 @@
+port security/rubygem-metasploit_payloads-mettle
+type port
+reason "DEVELOPER guard for foreign binary allowlist"
+target @any
+
+mk block set condition "defined(DEVELOPER)" <<'MK'
+.MAKEFLAGS+=	DFLY_ALLOW_FOREIGN_BINARIES=yes
+DFLY_ALLOW_FOREIGN_BINARIES=yes
+NO_ARCH_IGNORE+=	mettle sniffer
+MK

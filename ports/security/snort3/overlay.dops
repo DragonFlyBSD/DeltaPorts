@@ -1,0 +1,11 @@
+port security/snort3
+type port
+reason "libpcap.so versioned dep, dragonfly source patches"
+target @any
+
+text replace-once file Makefile from "		libpcap.so:net/libpcap \\" to "		libpcap.so.1:net/libpcap \\"
+
+file materialize dragonfly/patch-src_loggers_alert__unixsock.cc -> dragonfly/patch-src_loggers_alert__unixsock.cc
+file materialize dragonfly/patch-src_memory_memory__cap.cc -> dragonfly/patch-src_memory_memory__cap.cc
+file materialize dragonfly/patch-src_network__inspectors_appid_service__plugins_service__rpc.cc -> dragonfly/patch-src_network__inspectors_appid_service__plugins_service__rpc.cc
+file materialize dragonfly/patch-src_utils_endian.h -> dragonfly/patch-src_utils_endian.h

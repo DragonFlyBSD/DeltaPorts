@@ -1,0 +1,6 @@
+port security/acme.sh
+type port
+reason "replace RLN with LN -sf in do-install-EXAMPLES-on recipe"
+target @any
+
+patch apply diffs/Makefile.diff

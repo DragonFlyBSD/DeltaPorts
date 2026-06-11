@@ -1,0 +1,6 @@
+port security/openssh-askpass
+type port
+reason "patch files/Makefile.in to fix SRCS, LDFLAGS, and remove redundant dep"
+target @any
+
+patch apply diffs/Makefile.in.diff

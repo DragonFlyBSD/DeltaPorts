@@ -1,0 +1,12 @@
+port sysutils/nut-devel
+type port
+reason "add ltdl include/lib paths, fix --with-ltdl to --with-libltdl, unmaintained, dragonfly libusb patch"
+target @any
+
+mk add CONFIGURE_ARGS "--with-libltdl-includes=-I${PREFIX}/include"
+mk add CONFIGURE_ARGS "--with-libltdl-libs=-L${PREFIX}/lib"
+mk set DFLY_UNMAINTAINED "yes"
+
+text replace-once file Makefile from "		--with-ltdl --with-nut-scanner \\" to "		--with-libltdl --with-nut-scanner \\"
+
+file materialize dragonfly/patch-drivers_libusb1.c -> dragonfly/patch-drivers_libusb1.c

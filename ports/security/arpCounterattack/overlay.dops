@@ -1,0 +1,6 @@
+port security/arpCounterattack
+type port
+reason "remove libpcap.so dependency from LIB_DEPENDS"
+target @any
+
+patch apply diffs/Makefile.diff

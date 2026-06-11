@@ -1,0 +1,18 @@
+port security/nss
+type port
+reason "dfly-patch to remove -Werror, patch nss-config.in and nss.pc.in for rpath, dragonfly coreconf patches"
+target @any
+
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e '/WARNING_CFLAGS += -Werror/d' \
+		${WRKSRC}/coreconf/Werror.mk
+MK
+
+patch apply diffs/nss-config.in.diff
+patch apply diffs/nss.pc.in.diff
+
+file materialize dragonfly/patch-coreconf_arch.mk -> dragonfly/patch-coreconf_arch.mk
+file materialize dragonfly/patch-coreconf_config.mk -> dragonfly/patch-coreconf_config.mk
+file materialize dragonfly/patch-coreconf_DragonFly.mk -> dragonfly/patch-coreconf_DragonFly.mk
+file materialize dragonfly/patch-coreconf_location.mk -> dragonfly/patch-coreconf_location.mk
+file materialize dragonfly/patch-lib_freebl_Makefile -> dragonfly/patch-lib_freebl_Makefile

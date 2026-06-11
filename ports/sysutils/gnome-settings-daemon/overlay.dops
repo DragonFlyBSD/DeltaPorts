@@ -1,0 +1,22 @@
+port sysutils/gnome-settings-daemon
+type port
+reason "filter OPTIONS/LIB_DEPENDS (no pulse/smartcard), dfly-patch removes sound/media-keys, remove from plist"
+target @any
+
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NSMARTCARD}"
+mk eval LIB_DEPENDS "${LIB_DEPENDS:Nlibpulse*}"
+
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e "/libpulse_mainloop_glib_dep/d" \
+		${WRKSRC}/meson.build
+	${REINPLACE_CMD} -e "/sound/d" -e "/media-keys/d" \
+		${WRKSRC}/plugins/meson.build
+	${CHMOD} +x ${WRKSRC}/gnome-settings-daemon/codegen.py
+MK
+
+text line-remove file pkg-plist exact "etc/xdg/autostart/org.gnome.SettingsDaemon.MediaKeys.desktop" on-missing noop
+text line-remove file pkg-plist exact "etc/xdg/autostart/org.gnome.SettingsDaemon.Sound.desktop" on-missing noop
+text line-remove file pkg-plist exact "libexec/gsd-media-keys" on-missing noop
+text line-remove file pkg-plist exact "libexec/gsd-sound" on-missing noop
+
+file materialize dragonfly/patch-meson.build -> dragonfly/patch-meson.build

@@ -1,0 +1,16 @@
+port shells/anongitssh
+type port
+reason "add -Wno-format-truncation, dfly-patch for DragonFly compat, remove @shell plist entry"
+target @any
+
+mk add CFLAGS -Wno-format-truncation
+
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's@\(defined(__FreeBSD__)\)@(\1 || defined(__DragonFly__))@g' \
+		${WRKSRC}/anongitssh.c
+	${REINPLACE_CMD} -e 's@-Wmissing-variable-declarations@@g' \
+			 -e 's@-Wthread-safety@@g' -e 's@-Qunused-arguments@@g' \
+		${WRKSRC}/Makefile
+MK
+
+text line-remove file pkg-plist exact "@shell libexec/anongitssh" on-missing noop

@@ -1,0 +1,8 @@
+port science/quantum-espresso-pseudopotentials
+type port
+reason "MANUAL_PACKAGE_BUILD guard for large package"
+target @any
+
+mk block set condition "!defined(DPORTS_BUILDER)" <<'MK'
+MANUAL_PACKAGE_BUILD=	719M package (too big for mirrors)
+MK

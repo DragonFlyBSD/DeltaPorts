@@ -1,0 +1,11 @@
+port security/openssl
+type port
+reason "exclude SCTP, filter CFLAGS werror/unused-args, disable devcryptoeng, remove devcrypto from plist"
+target @any
+
+mk add OPTIONS_EXCLUDE SCTP
+mk eval CFLAGS "${CFLAGS:N-Werror:N-Qunused-arguments}"
+mk add CONFIGURE_ARGS no-devcryptoeng
+
+patch apply diffs/Makefile.diff
+text line-remove file pkg-plist exact "%%SHARED%%lib/engines-%%SHLIBVER%%/devcrypto.so" on-missing noop

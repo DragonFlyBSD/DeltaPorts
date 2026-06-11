@@ -1,0 +1,14 @@
+port sysutils/symon
+type port
+reason "dfly-patch for ufs header paths, append DragonFly platform setup to post-patch"
+target @any
+
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's@<ufs/ufs/@<vfs/ufs/@g' \
+			 -e 's@<ufs/ffs/@<vfs/ufs/@g' \
+		${WRKSRC}/platform/DragonFly/sm_df.c
+MK
+
+patch apply diffs/Makefile.diff
+
+file materialize dragonfly/patch-conf.diff -> dragonfly/patch-conf.diff

@@ -1,0 +1,8 @@
+port security/snort
+type port
+reason "add -Wno-unused-variable to CFLAGS, add dir plist entry, libpcap.so versioned dep"
+target @any
+
+mk add CFLAGS -Wno-unused-variable
+mk add PLIST_FILES "@dir /var/log/snort"
+text replace-once file Makefile from "		libpcap.so:net/libpcap" to "		libpcap.so.1:net/libpcap"

@@ -1,0 +1,16 @@
+port sysutils/consolekit2
+type port
+reason "disable FreeBSD-only post-install .for loop, remove scripts from plist, dragonfly udev patch"
+target @any
+
+patch apply diffs/Makefile.diff
+
+text line-remove file pkg-plist exact "lib/ConsoleKit/scripts/ck-get-x11-display-device" on-missing noop
+text line-remove file pkg-plist exact "lib/ConsoleKit/scripts/ck-get-x11-server-pid" on-missing noop
+text line-remove file pkg-plist exact "@sample lib/ConsoleKit/scripts/ck-system-hibernate.sample" on-missing noop
+text line-remove file pkg-plist exact "@sample lib/ConsoleKit/scripts/ck-system-hybridsleep.sample" on-missing noop
+text line-remove file pkg-plist exact "@sample lib/ConsoleKit/scripts/ck-system-restart.sample" on-missing noop
+text line-remove file pkg-plist exact "@sample lib/ConsoleKit/scripts/ck-system-stop.sample" on-missing noop
+text line-remove file pkg-plist exact "@sample lib/ConsoleKit/scripts/ck-system-suspend.sample" on-missing noop
+
+file materialize dragonfly/patch-src_ck-device-udev.c -> dragonfly/patch-src_ck-device-udev.c

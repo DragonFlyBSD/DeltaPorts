@@ -1,0 +1,16 @@
+port sysutils/u-boot-tools
+type port
+reason "add pkgconfig, dfly-patch for openssl include and fsync, remove libressl broken markers"
+target @any
+
+mk add USES pkgconfig
+
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e "s@-fomit-frame-pointer@& -I${OPENSSLINC}@g" \
+		${WRKSRC}/Makefile
+	${REINPLACE_CMD} -e 's@fdatasync@fsync@g' \
+		${WRKSRC}/tools/mkimage.c
+MK
+
+text line-remove file Makefile exact "BROKEN_SSL=	libressl" on-missing noop
+text line-remove file Makefile exact "BROKEN_SSL_REASON_libressl=	not supported by the upstream" on-missing noop

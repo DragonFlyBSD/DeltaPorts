@@ -1,0 +1,7 @@
+port security/pam_pkcs11
+type port
+reason "mark BROKEN_SSL for libressl"
+target @any
+
+mk set BROKEN_SSL "libressl"
+mk set BROKEN_SSL_REASON_libressl "port requires ECDSA_SIG_get0_r()"

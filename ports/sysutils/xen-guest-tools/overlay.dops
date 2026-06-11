@@ -1,0 +1,13 @@
+port sysutils/xen-guest-tools
+type port
+reason "mark broken (no Xen DomU), filter MAKE_ENV, add ncurses, dfly-patch copies FreeBSD.mk"
+target @any
+
+mk set BROKEN "requires kernel support"
+mk eval MAKE_ENV "${MAKE_ENV:Nclang=y:NFREEBSD_PORT=y}"
+mk add USES ncurses
+
+mk target set dfly-patch <<'MK'
+	${CP} ${WRKSRC}/config/FreeBSD.mk \
+		${WRKSRC}/config/DragonFly.mk
+MK

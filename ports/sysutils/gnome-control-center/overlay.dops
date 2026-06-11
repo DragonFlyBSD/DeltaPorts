@@ -1,0 +1,26 @@
+port sysutils/gnome-control-center
+type port
+reason "MIT gssapi, filter OPTIONS/LIB_DEPENDS (no pulse), dfly-patch removes sound panel, remove sound plist entries"
+target @any
+
+mk add USES "gssapi:mit"
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NCHEESE}"
+mk eval LIB_DEPENDS "${LIB_DEPENDS:Nlibpulse*}"
+
+mk target set dfly-patch <<'MK'
+	${RM} -r ${WRKSRC}/panels/sound
+	${RM} -r ${WRKSRC}/subprojects/gvc
+	${REINPLACE_CMD} -e "/pulse/d" ${WRKSRC}/meson.build
+	${REINPLACE_CMD} -e "/'sound'/d" ${WRKSRC}/panels/meson.build
+	${REINPLACE_CMD} -e "/sound/d" ${WRKSRC}/shell/cc-panel-list.c
+	${REINPLACE_CMD} -e "/sound/d" ${WRKSRC}/shell/cc-panel-loader.c
+MK
+
+text line-remove file pkg-plist exact "share/applications/gnome-sound-panel.desktop" on-missing noop
+text line-remove file pkg-plist exact "share/icons/hicolor/scalable/apps/org.gnome.Settings-sound-symbolic.svg" on-missing noop
+text line-remove file pkg-plist exact "share/sounds/gnome/default/alerts/click.ogg" on-missing noop
+text line-remove file pkg-plist exact "share/sounds/gnome/default/alerts/hum.ogg" on-missing noop
+text line-remove file pkg-plist exact "share/sounds/gnome/default/alerts/string.ogg" on-missing noop
+text line-remove file pkg-plist exact "share/sounds/gnome/default/alerts/swing.ogg" on-missing noop
+
+file materialize dragonfly/patch-meson.build -> dragonfly/patch-meson.build
