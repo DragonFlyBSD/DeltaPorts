@@ -1,0 +1,11 @@
+--- Makefile.orig	2020-11-09 11:56:19 UTC
++++ Makefile
+@@ -28,7 +28,7 @@ MESON_ARGS+=	-Ddri-drivers="" \
+ 		-Dgallium-nine=false \
+ 		-Dgles1=disabled \
+ 		-Dgles2=disabled \
+-		-Dopengl=true \
++		-Dopengl=false \
+ 		-Dglx=disabled \
+ 		-Degl=disabled \
+ 		-Dgbm=disabled \
