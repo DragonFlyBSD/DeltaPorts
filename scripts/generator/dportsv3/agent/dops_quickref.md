@@ -13,7 +13,7 @@ the minimal subset patch agents need 90% of the time.
 ```dops
 # overlay.dops at ports/<category>/<name>/overlay.dops
 port <category>/<name>
-type port
+type port                    # port | dport (newport/ IS the whole port — header only) | mask | lock
 target @any                  # or @main, @2026Q2, @2026Q1, etc.
 reason "<one-line why this overlay exists>"
 
@@ -200,39 +200,32 @@ branches).
 | Framework patch logic that doesn't reduce to mk/text | `patch apply diffs/X.diff` (only for `diffs/`, not `dragonfly/`) |
 | Upstream-source patch (anything under `dragonfly/`) | `file materialize dragonfly/X -> dragonfly/X` (stage, do NOT patch) |
 
-## Conversion workflow (when overlay.dops doesn't exist yet)
+## Choosing ops by artifact domain
 
-1. List `/work/DeltaPorts/ports/<origin>/` and identify the compat
-   artifacts: `Makefile.DragonFly[.<target>]`, `diffs/*.diff`,
-   `dragonfly/patch-*` files, and any `newport/`.
-2. Classify each artifact by **domain** first (see "Two kinds of
-   patches" above), THEN by complexity:
+You always start from an existing `overlay.dops` — either one already in
+the tree, or a freshly bootstrapped header (`type port`/`dport`) you fill
+in. The same op-selection applies whether you're authoring a thin overlay
+or regenerating a deferred `diffs/Makefile.diff` patch. Pick by the patch's
+**domain** (see "Two kinds of patches" above), then by complexity:
 
-   **Framework patches (`Makefile.DragonFly`, `diffs/*.diff`):**
-   - Single-line/few-line substitution → `text replace-once` or
-     `mk set/add/remove`.
-   - OS-detection `.if` block → `mk replace-if` / `mk disable-if`
-     / `mk block set`.
-   - Recipe addition/override → `mk target set/append`.
-   - Genuinely complex (multi-hunk, conditional logic) → fall back
-     to `patch apply diffs/X.diff` (engine applies against
-     compose-materialized framework files in `port_root` — works).
+**Framework patches (`Makefile.DragonFly`, `diffs/*.diff`):**
+- Single-line/few-line substitution → `text replace-once` or
+  `mk set/add/remove`.
+- OS-detection `.if` block → `mk replace-if` / `mk disable-if`
+  / `mk block set`.
+- Recipe addition/override → `mk target set/append`.
+- Genuinely complex (multi-hunk, conditional logic) → fall back
+  to `patch apply diffs/X.diff` (engine applies against
+  compose-materialized framework files in `port_root` — works).
 
-   **Upstream-source patches (`dragonfly/*`):**
-   - Simple bounded substitution → consider rewriting as
-     `mk target set post-extract` with `REINPLACE_CMD`, which is
-     more durable than a static patch against generated files.
-   - Otherwise → `file materialize dragonfly/X -> dragonfly/X`. ALWAYS
-     stage; NEVER `patch apply` for these. `bsd.port.mk`'s
-     `do-patch` will apply them at build time.
+**Upstream-source patches (`dragonfly/*`):**
+- Simple bounded substitution → consider rewriting as
+  `mk target set post-extract` with `REINPLACE_CMD`, which is
+  more durable than a static patch against generated files.
+- Otherwise → `file materialize dragonfly/X -> dragonfly/X`. ALWAYS
+  stage; NEVER `patch apply` for these. `bsd.port.mk`'s
+  `do-patch` will apply them at build time.
 
-3. Write `/work/DeltaPorts/ports/<origin>/overlay.dops` with the
-   equivalent ops.
-4. For any artifact you migrated to a semantic op, delete the
-   redundant compat file from the overlay (`put_file` with empty
-   content is not enough — use the worker's file-removal path if
-   exposed, or note the cleanup in your Conversion Proof so the
-   handler can finalize it).
-5. **Do not run a build.** Verification is the handler's job and
-   runs as `reapply` (compose), not `dsynth_build`. Your task ends
-   with the rewrite + the Conversion Proof block.
+A `type dport` port needs no body ops at all unless you're fixing a
+specific build failure — `newport/` is the complete port; the header
+alone composes it.
