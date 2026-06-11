@@ -1,0 +1,7 @@
+port science/openbabel
+type port
+reason "override USE_CXXSTD to c++11 for DragonFly"
+target @any
+
+# USE_CXXSTD is defined twice in upstream; use mk eval to append unconditional override
+mk eval USE_CXXSTD "c++11"

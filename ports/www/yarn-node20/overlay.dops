@@ -1,0 +1,15 @@
+port www/yarn-node20
+type port
+reason "DragonFly: add DragonFly) to Linux OS detection in post-patch"
+target @any
+
+# This is a MASTERDIR slave; its post-patch comes from yarn-node24.
+# Override the entire post-patch to add DragonFly to the Linux OS detection.
+mk target set post-patch <<'MK'
+	@${RM} ${WRKSRC}/bin/*.cmd
+	@${REINPLACE_CMD} -i '' \
+		-e 's|"installationMethod": "tar"|"installationMethod": "pkg"|g' \
+		${WRKSRC}/package.json
+	@${REINPLACE_CMD} -i '' -e 's%Linux)%Linux|FreeBSD|DragonFly)%g' \
+		${WRKSRC}/bin/yarn
+MK

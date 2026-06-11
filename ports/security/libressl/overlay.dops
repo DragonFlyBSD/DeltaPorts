@@ -1,0 +1,12 @@
+port security/libressl
+type port
+reason "DragonFly: mark unmaintained; remove -pthread from LDFLAGS"
+target @any
+
+mk set DFLY_UNMAINTAINED "yes"
+
+# The diffs/Makefile.diff wraps LDFLAGS+= -pthread in .if 0 to disable it;
+# LDFLAGS has only one assignment in upstream, so mk remove is unambiguous
+mk remove LDFLAGS "-pthread"
+
+file materialize dragonfly/patch-configure -> dragonfly/patch-configure

@@ -1,0 +1,9 @@
+port mail/batv-milter
+type port
+reason "conditionally add sendmail BUILD_DEPENDS and CFLAGS if system milter header absent"
+target @any
+
+mk block set condition "!exists(/usr/include/libmilter/mfapi.h)" <<'MK'
+BUILD_DEPENDS+=	${LOCALBASE}/include/libmilter/mfapi.h:mail/sendmail
+CFLAGS+=	-I${LOCALBASE}/include
+MK

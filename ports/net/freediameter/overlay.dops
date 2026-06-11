@@ -1,0 +1,8 @@
+port net/freediameter
+type port
+reason "disable SCTP on DragonFly; replace CMAKE_ARGS to add DISABLE_SCTP"
+target @any
+
+# CMAKE_ARGS has two assignments (= and +=) so mk set is ambiguous;
+# use mk eval to append an unconditional override with only the DragonFly value
+mk eval CMAKE_ARGS "-DDISABLE_SCTP:BOOL=ON"

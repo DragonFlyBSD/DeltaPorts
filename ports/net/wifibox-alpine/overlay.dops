@@ -1,0 +1,7 @@
+port net/wifibox-alpine
+type port
+reason "disable dynamic Linux64 kmod detection; set _LINUX64_KMOD to empty"
+target @any
+
+# Replace the shell-expansion assignment with a static empty value
+mk set _LINUX64_KMOD ""

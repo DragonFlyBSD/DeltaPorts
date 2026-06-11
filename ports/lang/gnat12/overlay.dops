@@ -1,0 +1,26 @@
+port lang/gnat12
+type port
+reason "disable NLS; add LIB_DIR_32 override; plist: remove LIB32 s-mmap/mmauni/mmosin, add dragonfly config headers"
+target @any
+
+mk add CONFIGURE_ARGS "--disable-nls"
+
+# LIB_DIR_32 is set inside arch-conditional blocks; add an unconditional
+# override via patch apply (diff adds a new standalone line, not editing existing)
+patch apply diffs/Makefile.diff
+
+text line-remove file pkg-plist exact "%%LIB32%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/32/adainclude/s-mmap.adb" on-missing noop
+text line-remove file pkg-plist exact "%%LIB32%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/32/adainclude/s-mmap.ads" on-missing noop
+text line-remove file pkg-plist exact "%%LIB32%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/32/adainclude/s-mmauni.ads" on-missing noop
+text line-remove file pkg-plist exact "%%LIB32%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/32/adainclude/s-mmosin.adb" on-missing noop
+text line-remove file pkg-plist exact "%%LIB32%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/32/adainclude/s-mmosin.ads" on-missing noop
+
+text line-insert-after file pkg-plist \
+    anchor "%%AARCH64%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/plugin/include/config/aarch64/biarchlp64.h" \
+    line "gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/plugin/include/config/dragonfly-stdint.h" on-missing noop
+text line-insert-after file pkg-plist \
+    anchor "gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/plugin/include/config/dragonfly-stdint.h" \
+    line "gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/plugin/include/config/dragonfly.h" on-missing noop
+text line-insert-after file pkg-plist \
+    anchor "gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/plugin/include/config/dragonfly.h" \
+    line "gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/plugin/include/config/i386/dragonfly.h" on-missing noop

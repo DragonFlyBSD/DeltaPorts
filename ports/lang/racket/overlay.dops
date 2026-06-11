@@ -1,0 +1,15 @@
+port lang/racket
+type port
+reason "set CHEZ_MACHTYPE to DragonFly amd64 value; remove BROKEN; materialize dragonfly patches"
+target @any
+
+# CHEZ_MACHTYPE is defined 7 times under arch-conditional blocks;
+# use mk eval to append an unconditional immediate override
+mk eval CHEZ_MACHTYPE "ta6fb"
+
+# BROKEN is present in some upstream revisions; remove it on DragonFly
+text line-remove file Makefile exact "BROKEN=\t\tFails to build, expand-elf: cannot move SHT_PROGBITS section" on-missing noop
+
+file materialize dragonfly/patch-src_ChezScheme_zlib_contrib_minizip_ioapi.h -> dragonfly/patch-src_ChezScheme_zlib_contrib_minizip_ioapi.h
+file materialize dragonfly/patch-src_cs_c_configure -> dragonfly/patch-src_cs_c_configure
+file materialize dragonfly/patch-src_rktio_rktio__cpu.c -> dragonfly/patch-src_rktio_rktio__cpu.c

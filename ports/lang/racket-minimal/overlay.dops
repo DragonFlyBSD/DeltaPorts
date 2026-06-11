@@ -1,0 +1,12 @@
+port lang/racket-minimal
+type port
+reason "set CHEZ_MACHTYPE to DragonFly amd64 value; share dragonfly patches from lang/racket"
+target @any
+
+# CHEZ_MACHTYPE is defined 7 times under arch-conditional blocks;
+# use mk eval to append an unconditional immediate override
+mk eval CHEZ_MACHTYPE "ta6fb"
+
+# DFLY_PATCHDIR points to lang/racket/dragonfly; the patches are shared.
+# Use mk eval to override DFLY_PATCHDIR to point at the correct path.
+mk eval DFLY_PATCHDIR "${.CURDIR:H}/racket/dragonfly"

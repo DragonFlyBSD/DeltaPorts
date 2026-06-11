@@ -1,0 +1,19 @@
+port science/nwchem
+type port
+reason "override BINARY_ALIAS for DragonFly toolchain; add dfly-patch to fix -i8/-i4 flags"
+target @any
+
+# BINARY_ALIAS has two assignments (= and +=) so mk set is ambiguous;
+# use mk eval to append an unconditional override
+mk eval BINARY_ALIAS "gcc=${CC} gfortran=gfortran${_GCC_VER} make=gmake"
+
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's|\-i8|\-fdefault-integer-8|' \
+		-e 's|\-i4||' \
+		${WRKSRC}/NWints/simint/simint.txt \
+		${WRKSRC}/config/makefile.h \
+		${WRKSRC}/config/makefile-legacy.h \
+		${WRKSRC}/peigs/DEFS.release \
+		${WRKSRC}/../contrib/openmp_tests/dgemm/GNUmakefile \
+		${WRKSRC}/../contrib/mov2asc/Makefile
+MK

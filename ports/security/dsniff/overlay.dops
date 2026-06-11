@@ -1,0 +1,40 @@
+port security/dsniff
+type port
+reason "DragonFly: disable FreeBSD/openssl-unsafe block; use bundled ssl path; add USES ssl override and dfly-patch; materialize dragonfly patches"
+target @any
+
+# The upstream has:
+#   .if ${OPSYS} == FreeBSD || ${SSL_DEFAULT} == openssl
+#     BUILD_DEPENDS+= openssl-unsafe ...
+#   .else
+#     BROKEN_SSL= openssl
+#   .endif
+# For DragonFly (DISTVERSION==2.4b1), we want the .else branch active.
+# Use mk replace-if to set the condition to 0, keeping .else/.endif balanced.
+mk replace-if from "${OPSYS} == FreeBSD || ${SSL_DEFAULT} == openssl" to "0"
+
+# Override ssl USES and add libressl-static when DISTVERSION==2.4b1
+mk block set condition "${DISTVERSION} == \"2.4b1\"" <<'MK'
+USES:=	${USES:Nssl}
+BUILD_DEPENDS+=	libressl-static>0:security/libressl-static
+CFLAGS+=	-I${LOCALBASE}/libressl-static/include
+LDFLAGS+=	-L${LOCALBASE}/libressl-static/lib
+CONFIGURE_ARGS+= --with-openssl=${LOCALBASE}/libressl-static
+.else
+USES+=	ssl
+MK
+
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e "s@-lmd@-L${LOCALBASE}/lib -lcrypto@g" \
+		${WRKSRC}/Makefile.in
+MK
+
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+
+file materialize dragonfly/patch-arp.c -> dragonfly/patch-arp.c
+file materialize dragonfly/patch-buf.c -> dragonfly/patch-buf.c
+file materialize dragonfly/patch-decode__aim.c -> dragonfly/patch-decode__aim.c
+file materialize dragonfly/patch-decode__pptp.c -> dragonfly/patch-decode__pptp.c
+file materialize dragonfly/patch-decode__tds.c -> dragonfly/patch-decode__tds.c
+file materialize dragonfly/patch-decode__vrrp.c -> dragonfly/patch-decode__vrrp.c
+file materialize dragonfly/patch-record.c -> dragonfly/patch-record.c

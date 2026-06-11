@@ -1,19 +1,39 @@
+port security/afl++
+type port
+reason "DragonFly: remove llvm flavor, override toolchain vars, add GCC plugin include, add dfly-patch"
+target @any
 
-USES+=	localbase:ldflags
+mk add USES "localbase:ldflags"
 
-FLAVORS:=	${FLAVORS:Nllvm}
+# FLAVORS has one assignment; mk eval removes llvm flavor
+mk eval FLAVORS "${FLAVORS:Nllvm}"
 
-BUILD_DEPENDS:=	gmp>0:math/gmp ginstall:sysutils/coreutils
+# BUILD_DEPENDS has one assignment; mk set replaces it entirely
+mk set BUILD_DEPENDS "gmp>0:math/gmp ginstall:sysutils/coreutils"
+
+# RUN_DEPENDS not defined upstream; use mk block set to add it
+mk block set condition "1" <<'MK'
 RUN_DEPENDS:=	gmp>0:math/gmp
-MAKE_ARGS:=	GCC=gcc GXX=g++
-CFLAGS:=	-I/usr/lib/gcc80/plugin
+MK
 
-dfly-patch:
+# MAKE_ARGS has two assignments (= and +=); use mk eval to override
+mk eval MAKE_ARGS "GCC=gcc GXX=g++"
+
+# CFLAGS not defined in upstream; use mk block set to add
+mk block set condition "1" <<'MK'
+CFLAGS:=	-I/usr/lib/gcc80/plugin
+MK
+
+mk set DFLY_UNMAINTAINED "yes"
+
+mk target set dfly-patch <<'MK'
 	${REINPLACE_CMD} '/alt_cc/ s,"gcc${GCC_DEFAULT:S/-devel$//}","gcc",' \
 		${WRKSRC}/src/afl-cc.c
 	${REINPLACE_CMD} -e 's@ifndef AFL_NO_X86@ifdef AFL_X86z@g' \
 		${WRKSRC}/GNUmakefile
+MK
 
+mk block set condition "1" <<'MK'
 PLIST_FILES+=	bin/afl-analyze bin/afl-c++ bin/afl-cc bin/afl-clang bin/afl-clang++ \
 		bin/afl-cmin bin/afl-cmin.bash bin/afl-fuzz bin/afl-g++ bin/afl-gcc \
 		bin/afl-gotcpu bin/afl-network-client bin/afl-network-server bin/afl-plot \
@@ -72,4 +92,4 @@ PLIST_FILES+=	bin/afl-analyze bin/afl-c++ bin/afl-cc bin/afl-clang bin/afl-clang
 		share/man/man8/afl-g++-fast.8.gz share/man/man8/afl-gcc-fast.8.gz share/man/man8/afl-gotcpu.8.gz \
 		share/man/man8/afl-plot.8.gz share/man/man8/afl-showmap.8.gz share/man/man8/afl-system-config.8.gz \
 		share/man/man8/afl-tmin.8.gz share/man/man8/afl-whatsup.8.gz
-DFLY_UNMAINTAINED= yes
+MK

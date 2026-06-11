@@ -1,0 +1,24 @@
+port lang/python310
+type port
+reason "replace OSVERSION with DFLYVERSION in PLIST_SUB; fix sysconfigdata pkg-plist lines to use %%PYTHON_TAG%%"
+target @any
+
+text replace-once file Makefile \
+    from "			OSMAJOR=${OSVERSION:C/([0-9]*)[0-9]{5}/\\1/}		# For plat-freebsd* in pkg-plist. https://bugs.python.org/issue19554" \
+    to   "			OSMAJOR=${DFLYVERSION:C/([0-9]*)[0-9]{5}/\\1/}		# For plat-freebsd* in pkg-plist. https://bugs.python.org/issue19554"
+
+text replace-once file pkg-plist \
+    from "%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata_%%ABI%%_freebsd%%OSMAJOR%%_%%PYTHON_TAG%%.opt-1.pyc" \
+    to   "%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata_%%ABI%%_dragonfly%%OSMAJOR%%_%%PYTHON_TAG%%.opt-1.pyc"
+text replace-once file pkg-plist \
+    from "%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata_%%ABI%%_freebsd%%OSMAJOR%%_%%PYTHON_TAG%%.opt-2.pyc" \
+    to   "%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata_%%ABI%%_dragonfly%%OSMAJOR%%_%%PYTHON_TAG%%.opt-2.pyc"
+text replace-once file pkg-plist \
+    from "%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata_%%ABI%%_freebsd%%OSMAJOR%%_%%PYTHON_TAG%%.pyc" \
+    to   "%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata_%%ABI%%_dragonfly%%OSMAJOR%%_%%PYTHON_TAG%%.pyc"
+text replace-once file pkg-plist \
+    from "%%PYTHON_LIBDIR%%/_sysconfigdata_%%ABI%%_freebsd%%OSMAJOR%%_.py" \
+    to   "%%PYTHON_LIBDIR%%/_sysconfigdata_%%ABI%%_dragonfly%%OSMAJOR%%_.py"
+
+file materialize dragonfly/patch-Modules_ossaudiodev.c -> dragonfly/patch-Modules_ossaudiodev.c
+file materialize dragonfly/patch-setup.py -> dragonfly/patch-setup.py
