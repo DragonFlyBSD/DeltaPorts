@@ -64,7 +64,7 @@ On import, installs a `tokenizers` stub for DragonFly (broken
 `py311-tokenizers.so`) so `litellm` imports cleanly.
 
 - `runner.py` — agent-queue-runner main: claims dsynth failure jobs and
-  drives them through the triage/convert/patch flow.
+  drives them through the triage/patch flow.
 - `worker.py` — host-side filesystem ops + chroot `dev-env exec` —
   these are the **tool bodies** the LLM ultimately invokes.
 - `tools.py` — OpenAI-style tool registry (name → fn + JSON schema)
@@ -74,8 +74,6 @@ On import, installs a `tokenizers` stub for DragonFly (broken
   (each attempt starts fresh from `[system, user]`; failure context
   appended between attempts).
 - `triage.py` — single-turn LLM call with iterative snippet rounds.
-- `convert.py` — LLM tool loop for the dops-conversion job type
-  (handles the tail the deterministic translator can't).
 - `patch.py` — thin wrapper around `attempt_loop` for the patch flow.
 - `llm.py` — `litellm` wrapper with normalized response shape.
 - `prompts.py` — system prompts (loop scaffolding, tool surface).
@@ -144,7 +142,10 @@ inside the agent loop.
 - `inventory.py` — scans `ports/` into raw migration records.
 - `classify.py` — buckets records by migration class.
 - `convert.py` — single-origin legacy→`overlay.dops` translator
-  (deterministic path; LLM tail handled by `agent/convert.py`).
+  (deterministic path; derives `type` from STATUS — `dport`/`mask`
+  render header-only, `lock` is left for manual). The LLM tail was
+  offline tooling (`mass_convert.py` + the `dops-convert` skill), not a
+  runtime agent.
 - `batch.py` — wave-scoped batch driver around `convert_record`.
 - `policy.py` — forward-migration policy evaluator (`policy-check`).
 - `progress.py` — completion-threshold evaluator.
@@ -188,7 +189,7 @@ dsynth build failure ──► artifact-store (state.db, single writer)
                               └─► agent.runner (claims jobs)
                                        │
                                        ├─► triage  ──► triage_result.json
-                                       ├─► convert ──► (overlay.dops adoption)
+                                       │      (bootstrap overlay.dops, or abort to manual)
                                        └─► patch   ──► proposed_fix.md
                                                           │
                                        operator Accept ──► delivery.orchestrator
@@ -200,9 +201,12 @@ dsynth build failure ──► artifact-store (state.db, single writer)
 
 - **One writer for `state.db`**: `artifact_store.py`. Tracker reads +
   writes via that file under WAL; schema in `db/schema.py`.
-- **Compose is a substrate prerequisite for patch** — assess_dops is the
-  only routing input; never skip / defer / escalate convert based on
-  triage classification.
+- **Triage bootstraps the dops substrate or aborts** — at a failure with
+  no `overlay.dops`, the runner (`_ensure_overlay_or_abort` →
+  `overlay_state.bootstrap_decision`) deterministically writes a header
+  overlay (`type port`/`dport` per STATUS) so patch can author the body,
+  or aborts to manual when non-dport compat artifacts are present. There
+  is no runtime convert agent (Step 48 cutover deleted it).
 - **Patch agent edits `overlay.dops` directly** (Step 42 deleted the
   edit-intent layer).
 - **Each attempt is a fresh `[system, user]` conversation** — prior
