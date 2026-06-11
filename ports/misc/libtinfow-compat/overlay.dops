@@ -1,0 +1,4 @@
+port misc/libtinfow-compat
+type dport
+reason "DragonFly-only port; source in newport/"
+target @any

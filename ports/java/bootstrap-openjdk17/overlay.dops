@@ -1,0 +1,4 @@
+port java/bootstrap-openjdk17
+type dport
+reason "DragonFly-only port; source in newport/"
+target @any

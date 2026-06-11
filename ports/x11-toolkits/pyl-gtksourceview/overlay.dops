@@ -1,0 +1,4 @@
+port x11-toolkits/pyl-gtksourceview
+type dport
+reason "DragonFly-only port; source in newport/"
+target @any

@@ -1,7 +1,4 @@
 port graphics/libdrm
-type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+type dport
+reason "DragonFly-only port; source in newport/"
 target @any
-
-file materialize dragonfly/patch-tests_nouveau_threaded.c -> dragonfly/patch-tests_nouveau_threaded.c
-file materialize dragonfly/patch-xf86drm.c -> dragonfly/patch-xf86drm.c

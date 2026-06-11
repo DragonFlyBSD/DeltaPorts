@@ -1,8 +1,4 @@
 port graphics/kmscube
-type port
-reason "auto-converted from Makefile.DragonFly"
+type dport
+reason "DragonFly-only port; source in newport/"
 target @any
-
-mk set IGNORE "unmaintained, please request fixing to users mailing list"
-mk set IGNORE "unmaintained, please request fixing to users mailing list"
-mk set DFLY_UNMAINTAINED "yes"

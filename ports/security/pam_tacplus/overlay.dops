@@ -1,0 +1,4 @@
+port security/pam_tacplus
+type dport
+reason "DragonFly-only port; source in newport/"
+target @any

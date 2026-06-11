@@ -1,0 +1,4 @@
+port sysutils/rubygem-vagrant-libvirt
+type dport
+reason "DragonFly-only port; source in newport/"
+target @any

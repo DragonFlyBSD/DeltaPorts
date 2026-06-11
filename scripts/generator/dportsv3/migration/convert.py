@@ -98,7 +98,13 @@ def _parse_makefile_dragonfly(path: Path) -> tuple[list[str], list[str]]:
     return ops, errors
 
 
-def _render_dops(origin: str, ops: list[str]) -> str:
+def _render_dops(
+    origin: str,
+    ops: list[str],
+    *,
+    port_type: str = "port",
+    reason: str = "auto-converted from Makefile.DragonFly",
+) -> str:
     # `target @any`: the deterministic translator only runs on ports
     # whose source is an UNSCOPED Makefile.DragonFly (the classifier
     # in overlay_state.assess_overlay refuses to mark a port
@@ -112,12 +118,37 @@ def _render_dops(origin: str, ops: list[str]) -> str:
     # every op skipped with I_APPLY_TARGET_MISMATCH).
     header = [
         f"port {origin}",
-        "type port",
-        'reason "auto-converted from Makefile.DragonFly"',
+        f"type {port_type}",
+        f'reason "{reason}"',
         "target @any",
         "",
     ]
     return "\n".join(header + ops + [""])
+
+
+def _detect_port_type(port_path: Path) -> str:
+    """Resolve a port's plan type the way compat does (STATUS token, then
+    a ``newport/`` directory). Returns ``port``/``dport``/``mask``/``lock``.
+
+    The deterministic translator historically rendered ``type port`` for
+    every record, which silently mis-typed DragonFly-only ports: compat
+    sources a ``dport`` wholly from ``newport/`` and ignores
+    ``Makefile.DragonFly`` entirely, so translating that dead file into
+    ops produced overlays that diverged from the working compat output.
+    """
+    status_file = port_path / "STATUS"
+    if status_file.is_file():
+        try:
+            lines = status_file.read_text().splitlines()
+        except OSError:
+            lines = []
+        if lines:
+            token = lines[0].strip().split()[0].upper() if lines[0].strip() else ""
+            if token in {"PORT", "MASK", "DPORT", "LOCK"}:
+                return token.lower()
+    if (port_path / "newport").is_dir():
+        return "dport"
+    return "port"
 
 
 def _drop_legacy_status(port_path: Path) -> None:
@@ -221,6 +252,47 @@ def convert_record(
             mk_path.unlink()
         if not dry_run:
             _drop_legacy_status(port_path)
+        return result
+
+    port_type = _detect_port_type(port_path)
+    if port_type in {"dport", "mask"}:
+        # DragonFly-only / masked port: the plan type alone is the whole
+        # overlay — compat sources a dport wholly from `newport/` and a
+        # mask removes the port, ignoring `Makefile.DragonFly` in both
+        # cases. Emit a header-only overlay of the correct type rather
+        # than translating the dead legacy file into bogus ops.
+        reason = (
+            "DragonFly-only port; source in newport/"
+            if port_type == "dport"
+            else "masked on DragonFly"
+        )
+        source = _render_dops(origin, [], port_type=port_type, reason=reason)
+        parsed = parse_dsl(source, dops_path)
+        checked = check_dsl(source, dops_path)
+        planned = build_plan(source, dops_path)
+        result["parse_ok"] = parsed.ok
+        result["check_ok"] = checked.ok
+        result["plan_ok"] = planned.ok
+        result["deterministic_ok"] = planned.ok
+        result["errors"] = [
+            d.code
+            for d in parsed.diagnostics + checked.diagnostics + planned.diagnostics
+        ]
+        if parsed.ok and checked.ok and planned.ok:
+            result["status"] = "converted"
+            if not dry_run:
+                dops_path.write_text(source)
+                if mk_path.exists():
+                    mk_path.unlink()
+                (port_path / "STATUS").unlink(missing_ok=True)
+        else:
+            result["status"] = "failed"
+        return result
+    if port_type == "lock":
+        # Lock ports pin a version in STATUS and source from the lock
+        # tree — not a deterministic translation; leave for manual review.
+        result["status"] = "blocked"
+        result["errors"].append("lock_needs_manual")
         return result
 
     if not mk_path.exists():

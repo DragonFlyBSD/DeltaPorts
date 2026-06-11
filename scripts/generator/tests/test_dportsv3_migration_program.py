@@ -132,11 +132,11 @@ def test_converter_drops_default_status(tmp_path: Path) -> None:
     assert not (port / "STATUS").exists()
 
 
-def test_converter_keeps_nondefault_status(tmp_path: Path) -> None:
-    """The deterministic translator always renders `type port`. If
-    STATUS declares MASK/DPORT/LOCK, deleting it would silently switch
-    the port's role to `port`, so STATUS is retained — the surviving
-    file surfaces the (wrong) `type port` half-migration for review."""
+def test_converter_types_mask_from_status_and_drops_it(tmp_path: Path) -> None:
+    """A `MASK` STATUS means the port is removed on DragonFly — compat
+    ignores Makefile.DragonFly for masks. The converter renders a
+    header-only `type mask` overlay (no translated ops) and drops the
+    now-redundant STATUS."""
     repo = _make_repo(tmp_path)
     port = repo / "ports" / "devel" / "tool"
     (port / "STATUS").write_text("MASK\nLast success: 1.0\n")
@@ -146,8 +146,51 @@ def test_converter_keeps_nondefault_status(tmp_path: Path) -> None:
     result = convert_record(record, repo_root=repo, dry_run=False)
 
     assert result["status"] == "converted"
-    assert (port / "overlay.dops").exists()
+    overlay = port / "overlay.dops"
+    assert overlay.exists()
+    assert "type mask" in overlay.read_text()
     assert not (port / "Makefile.DragonFly").exists()
+    assert not (port / "STATUS").exists()
+
+
+def test_converter_types_dport_from_status_header_only(tmp_path: Path) -> None:
+    """A `DPORT` STATUS means the port is DragonFly-only — compat sources
+    it wholly from newport/ and never applies Makefile.DragonFly. The
+    converter renders a header-only `type dport` overlay (the dead legacy
+    file is NOT translated into ops) and drops STATUS."""
+    repo = _make_repo(tmp_path)
+    port = repo / "ports" / "devel" / "tool"
+    (port / "STATUS").write_text("DPORT\nLast success: 1.0\n")
+    classified = classify_inventory(scan_inventory(repo))
+    record = next(row for row in classified if row["origin"] == "devel/tool")
+
+    result = convert_record(record, repo_root=repo, dry_run=False)
+
+    assert result["status"] == "converted"
+    text = (port / "overlay.dops").read_text()
+    assert "type dport" in text
+    # The Makefile.DragonFly body (USES+=ssl, BROKEN, dfly-patch) must NOT
+    # leak into ops — a dport's source is newport/, not translated ops.
+    assert "mk " not in text and "file " not in text
+    assert not (port / "Makefile.DragonFly").exists()
+    assert not (port / "STATUS").exists()
+
+
+def test_converter_blocks_lock_for_manual(tmp_path: Path) -> None:
+    """LOCK pins a version in STATUS and sources from the lock tree — not
+    a deterministic translation; the converter leaves it for manual review
+    rather than mis-typing or dropping the version-bearing STATUS."""
+    repo = _make_repo(tmp_path)
+    port = repo / "ports" / "devel" / "tool"
+    (port / "STATUS").write_text("LOCK\nLast success: 1.0\n")
+    classified = classify_inventory(scan_inventory(repo))
+    record = next(row for row in classified if row["origin"] == "devel/tool")
+
+    result = convert_record(record, repo_root=repo, dry_run=False)
+
+    assert result["status"] == "blocked"
+    assert "lock_needs_manual" in result["errors"]
+    assert not (port / "overlay.dops").exists()
     assert (port / "STATUS").exists()
 
 

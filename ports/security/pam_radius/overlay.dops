@@ -1,0 +1,4 @@
+port security/pam_radius
+type dport
+reason "DragonFly-only port; source in newport/"
+target @any

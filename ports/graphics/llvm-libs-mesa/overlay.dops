@@ -1,0 +1,4 @@
+port graphics/llvm-libs-mesa
+type dport
+reason "DragonFly-only port; source in newport/"
+target @any

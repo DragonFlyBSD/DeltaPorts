@@ -1,0 +1,4 @@
+port security/php74-hash
+type dport
+reason "DragonFly-only port; source in newport/"
+target @any

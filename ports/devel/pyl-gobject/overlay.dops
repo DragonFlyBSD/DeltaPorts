@@ -1,0 +1,4 @@
+port devel/pyl-gobject
+type dport
+reason "DragonFly-only port; source in newport/"
+target @any

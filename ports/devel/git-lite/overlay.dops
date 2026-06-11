@@ -1,0 +1,4 @@
+port devel/git-lite
+type dport
+reason "DragonFly-only port; source in newport/"
+target @any

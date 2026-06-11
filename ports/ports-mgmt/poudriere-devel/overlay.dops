@@ -1,0 +1,4 @@
+port ports-mgmt/poudriere-devel
+type dport
+reason "DragonFly-only port; source in newport/"
+target @any

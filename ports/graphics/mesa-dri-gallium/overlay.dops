@@ -1,0 +1,4 @@
+port graphics/mesa-dri-gallium
+type dport
+reason "DragonFly-only port; source in newport/"
+target @any

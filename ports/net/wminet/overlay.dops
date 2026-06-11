@@ -1,6 +1,4 @@
 port net/wminet
-type port
-reason "auto-converted from Makefile.DragonFly"
+type dport
+reason "DragonFly-only port; source in newport/"
 target @any
-
-mk set DFLY_UNMAINTAINED "yes"

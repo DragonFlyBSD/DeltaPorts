@@ -1,0 +1,4 @@
+port misc/cxx_atomics_pic
+type dport
+reason "DragonFly-only port; source in newport/"
+target @any

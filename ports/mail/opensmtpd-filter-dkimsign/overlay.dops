@@ -1,0 +1,4 @@
+port mail/opensmtpd-filter-dkimsign
+type dport
+reason "DragonFly-only port; source in newport/"
+target @any
