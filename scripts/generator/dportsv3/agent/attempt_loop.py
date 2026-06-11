@@ -103,10 +103,9 @@ def run(
 ) -> PatchResult:
     """Run the patch flow for one bundle, returning a structured PatchResult.
 
-    ``system_prompt`` defaults to ``prompts.PATCH_SYSTEM``. Step 20b's
-    convert flow passes ``prompts.CONVERT_SYSTEM`` so the same
-    attempt-loop / tool-loop infrastructure drives the conversion
-    agent without forking the engine.
+    ``system_prompt`` defaults to ``prompts.PATCH_SYSTEM`` and can be
+    overridden by callers that reuse the same attempt-loop / tool-loop
+    infrastructure with a different system prompt.
     """
     base_messages = [
         {"role": "system", "content": system_prompt or prompts.PATCH_SYSTEM},

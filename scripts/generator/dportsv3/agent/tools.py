@@ -198,27 +198,6 @@ def names() -> list[str]:
     return [spec["function"]["name"] for spec in _TOOLS]
 
 
-# Tools the convert flow needs. Deliberately omits the build-loop
-# tools that turn out to be tar pits for a port-overlay rewriter:
-# make_extract / make_patch / dsynth_build / dupe / genpatch /
-# install_patches.
-#
-# materialize_dports is ALSO excluded — it's the verification step
-# the *handler* runs after the agent emits the proof. If the agent
-# can call it, the resulting compose output at
-# /work/artifacts/compose/.../ becomes another tree the agent
-# wanders into.
-CONVERT_TOOL_NAMES: frozenset[str] = frozenset({
-    "env_verify",
-    "list_dir",
-    "get_file",
-    "put_file",
-    "grep",
-    "dops_reference",
-    "validate_dops",
-})
-
-
 def patch_tool_names() -> frozenset[str]:
     """The patch agent's tool list.
 
