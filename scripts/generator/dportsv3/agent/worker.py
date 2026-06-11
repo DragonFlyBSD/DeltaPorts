@@ -190,44 +190,41 @@ def _sha256(data: bytes) -> str:
 # -----------------------------------------------------------------------------
 
 
-def _reject_dragonfly_on_dops_port(env: str, chroot_path: str) -> dict | None:
-    """Refuse a ``put_file`` that creates ``Makefile.DragonFly*`` in a
-    port that already carries an ``overlay.dops``.
+def _reject_makefile_dragonfly_authoring(chroot_path: str) -> dict | None:
+    """Refuse any ``put_file`` that creates/edits ``Makefile.DragonFly*``
+    under ``ports/`` — the Step 48 dops-only authoring lock.
 
-    A Makefile.DragonFly written next to an overlay.dops produces the
-    half-migrated state (compat + dops together) that ``assess_dops``
-    classifies as inconsistent — the port then jams every later compose.
-    The patch agent edits overlay.dops free-hand, so the guard lives
-    at the write boundary. The fix is to express the
-    Makefile.DragonFly-shaped variable edits as ``mk`` directives in
-    overlay.dops instead.
+    ``Makefile.DragonFly`` is the one compat artifact with no role in dops
+    authoring: its variable/target/conditional edits are expressed as ``mk``
+    directives in ``overlay.dops``. Refusing new ones **unconditionally**
+    (not just when an ``overlay.dops`` already exists, as the pre-cutover
+    guard did) freezes the un-migrated compat residue so it cannot grow —
+    nothing new enters compat. It also still prevents the half-migrated
+    state (``Makefile.DragonFly`` + ``overlay.dops`` together) that
+    ``assess_dops`` rejects.
 
-    Returns None (allowed) when the path is not a Makefile.DragonFly in
-    a port subtree, or when no overlay.dops exists yet for that port.
+    ``diffs/``, ``dragonfly/`` and ``newport/`` are intentionally NOT
+    blocked — they are dops sources too (``patch apply diffs/X``,
+    ``file materialize dragonfly/X``, type=dport ``newport/``).
+
+    Returns None (allowed) when the path is not a ``Makefile.DragonFly``
+    in a port subtree.
     """
     if not chroot_path.startswith("/work/DeltaPorts/ports/"):
         return None
-    head, _, basename = chroot_path.rpartition("/")
+    basename = chroot_path.rpartition("/")[2]
     if not basename.startswith("Makefile.DragonFly"):
-        return None
-    sibling = f"{head}/overlay.dops"
-    try:
-        overlay_host = _resolve_chroot_path(env_paths(env), sibling)
-    except Exception:  # noqa: BLE001 — env not resolvable → don't block
-        return None
-    if not overlay_host.is_file():
         return None
     return {
         "ok": False,
         "error": (
-            f"put_file rejected: creating {chroot_path!r} in a port that "
-            f"already has overlay.dops would produce a half-migrated "
-            f"state (Makefile.DragonFly + overlay.dops together) that "
-            f"assess_dops rejects. Express the Makefile.DragonFly edit "
-            f"as `mk` directives in overlay.dops instead."
+            f"put_file rejected: {chroot_path!r} — DeltaPorts authoring is "
+            f"dops-only (Step 48 cutover). New Makefile.DragonFly files are "
+            f"not allowed; express the variable/target/conditional edit as "
+            f"`mk` directives in overlay.dops instead."
         ),
         "path": chroot_path,
-        "blocked_by": "dragonfly_on_dops_port",
+        "blocked_by": "compat_makefile_authoring_lock",
     }
 
 
@@ -568,7 +565,7 @@ def put_file(
     refused = _reject_dports_write(path)
     if refused is not None:
         return refused
-    refused = _reject_dragonfly_on_dops_port(env, path)
+    refused = _reject_makefile_dragonfly_authoring(path)
     if refused is not None:
         return refused
     refused = _reject_orphan_dops_write(path)

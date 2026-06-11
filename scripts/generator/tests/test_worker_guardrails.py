@@ -123,14 +123,14 @@ def test_put_file_allows_compose_lookalike(env_dir):
     assert res.get("ok") is not False
 
 
-# --- put_file refuses Makefile.DragonFly on a dops port -------------------
+# --- put_file refuses Makefile.DragonFly (dops-only authoring lock) --------
 
 
 def test_put_file_refuses_makefile_dragonfly_when_overlay_present(env_dir):
-    """Writing Makefile.DragonFly next to an existing overlay.dops
-    produces the half-migrated state assess_dops rejects. The guard
-    fires at the put_file boundary so the patch agent — which edits
-    overlay.dops free-hand — sees a structured refusal."""
+    """Makefile.DragonFly next to an existing overlay.dops is refused
+    (half-migrated state). The guard fires at the put_file boundary so the
+    patch agent — which edits overlay.dops free-hand — sees a structured
+    refusal."""
     from dportsv3.agent import worker
     port = env_dir / "work" / "DeltaPorts" / "ports" / "devel" / "foo"
     port.mkdir(parents=True)
@@ -143,15 +143,16 @@ def test_put_file_refuses_makefile_dragonfly_when_overlay_present(env_dir):
         "USES=ssl\n",
     )
     assert res["ok"] is False
-    assert res["blocked_by"] == "dragonfly_on_dops_port"
+    assert res["blocked_by"] == "compat_makefile_authoring_lock"
     assert "mk` directives" in res["error"]
     # The file is NOT created.
     assert not (port / "Makefile.DragonFly").exists()
 
 
-def test_put_file_allows_makefile_dragonfly_without_overlay(env_dir):
-    """No overlay.dops yet → the port isn't a dops port, so a
-    Makefile.DragonFly write is the legitimate compat shape. Allowed."""
+def test_put_file_refuses_makefile_dragonfly_without_overlay(env_dir):
+    """Step 48 dops-only authoring lock: a Makefile.DragonFly write is
+    refused UNCONDITIONALLY — even on a port with no overlay.dops — so the
+    un-migrated compat residue can't grow. (Pre-cutover this was allowed.)"""
     from dportsv3.agent import worker
     port = env_dir / "work" / "DeltaPorts" / "ports" / "devel" / "bar"
     port.mkdir(parents=True)
@@ -160,8 +161,19 @@ def test_put_file_allows_makefile_dragonfly_without_overlay(env_dir):
         "/work/DeltaPorts/ports/devel/bar/Makefile.DragonFly",
         "USES=ssl\n",
     )
-    assert res.get("ok") is not False
-    assert (port / "Makefile.DragonFly").is_file()
+    assert res["ok"] is False
+    assert res["blocked_by"] == "compat_makefile_authoring_lock"
+    assert not (port / "Makefile.DragonFly").exists()
+
+
+def test_put_file_allows_dragonfly_and_diffs_sources(env_dir):
+    """diffs/ and dragonfly/ are dual-use dops sources (patch apply /
+    file materialize) — the authoring lock must NOT block them."""
+    from dportsv3.agent import worker
+    base = "/work/DeltaPorts/ports/devel/baz"
+    for rel in ("dragonfly/patch-x", "diffs/Makefile.diff"):
+        res = worker.put_file("env", f"{base}/{rel}", "@@ -1 +1 @@\n")
+        assert res.get("ok") is not False, rel
 
 
 def test_put_file_allows_non_dragonfly_file_on_dops_port(env_dir):
