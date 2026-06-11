@@ -2463,7 +2463,7 @@ modificative deltas plus a small handful of inline patches.
   definition of done.
 
 
-### Step 48 — standalone mass compat→dops conversion (retire runtime convert) — migration done (99.2%); cutover A+B shipped; C (delete machinery) + dport-typing pending
+### Step 48 — standalone mass compat→dops conversion (retire runtime convert) — migration done (99.2%); cutover A+B + dport-typing shipped; C (delete machinery) + D (docs) pending
 
 **Goal.** Convert the **entire** compat surface to dops in one offline
 program, so the runtime `convert` phase can be retired and the loop
@@ -2518,7 +2518,9 @@ is reversible; the cutover is the one-way gate.
 #### Status (2026-06-11)
 
 - **Mass migration: done.** ~4,486 deterministic + ~394 agent-tail (11
-  batches + a rework pass) → **4,916 dops / 39 compat (99.2%)**. Validated
+  batches + a rework pass) → **4,916 dops / 39 compat (99.2%)**; the
+  dport-typing fix (`2faf951d6f0`) then added **74 header-only `type dport`**
+  overlays → **~4,990 dops / ~40 compat**. Validated
   on the live 2026Q2 compose: of ~4,736 dops overlays composed, **0 of the
   migration's conversions fail** (the lone `dops_failed_op`, `ftp/curl`, is
   a pre-existing ambiguous `OPTIONS_DEFAULT`, not from this work).
@@ -2572,9 +2574,10 @@ routes on the port's state:
 | no overlay, `newport/` present (dport) | **bootstrap `type dport` header, remove `STATUS`** → patch tweaks it (newport is a complete port; the overlay header now carries the type, so STATUS is redundant — compat detected dport via `newport/`, not STATUS) |
 | no overlay, non-dport compat artifacts (`Makefile.DragonFly`/`diffs`/`dragonfly`) | **ABORT → human.** Patch can't convert these (a stub overlay would flip the port to dops-mode and suppress the compat path, `I_COMPOSE_MODE_DOPS_SUPPRESSES_COMPAT`); full absorption is the offline tooling's job |
 
-The bootstrap **must pick `type` from `STATUS`** (`dport`/`mask`/`lock`),
-which makes the **dport-typing fix a Phase-B prerequisite**, not just cleanup.
-Retires the `convert-is-substrate-prerequisite` invariant (it existed only to
+The bootstrap **picks `type` from `STATUS`** (`dport`/`mask`/`lock`) — the
+**dport-typing fix (shipped, `2faf951d6f0`)** made the converter and bootstrap
+type-correct (see resolved section below). Retires the
+`convert-is-substrate-prerequisite` invariant (it existed only to
 gate compat ports into convert). Tests:
 `test_runner_triage_defer`/`test_runner_convert_defer` flip to assert the
 table (bootstrap for clean/dport, MANUAL for non-dport compat). The authoring
@@ -2621,34 +2624,31 @@ the `convert-is-substrate-prerequisite` memory.
 (`compose_stages.py:804`), the `compose_discovery.py:189` fork, and
 `migration/convert.py` + `migrate convert` CLI.
 
-#### Open bug — dport/mask/lock typing (residue undercount)
+#### dport/mask/lock typing — RESOLVED (`2faf951d6f0`)
 
-The "39 residue" counts only the Makefile-class ports (`Makefile.DragonFly`/
-`diffs`/`dragonfly`). It **missed the dport class**: a `dport` is a
-DragonFly-only port with no FreeBSD upstream — `newport/` holds its entire
-source, and `type=dport` materializes by copying `newport/` wholesale
-(`plan_types.py`; `type=port` instead *requires* an upstream and errors
-without one). Findings:
+The "39 residue" originally counted only the Makefile-class ports
+(`Makefile.DragonFly`/`diffs`/`dragonfly`) and **missed the dport class**: a
+`dport` is a DragonFly-only port whose entire source is `newport/`, and
+`type=dport` materializes by copying `newport/` wholesale (`plan_types.py`,
+exactly as compat's dport branch did — copy newport, ignore Makefile.DragonFly).
+The deterministic converter always rendered `type port`, which mis-typed these.
 
-- **74 pure dports** (`newport/` only, `STATUS=DPORT`, no overlay) are still
-  compat — never converted (the deterministic translator only handles
-  `Makefile.DragonFly`). Their correct dops form is a **header-only
-  `type dport`** overlay (no ops; `newport/` is the whole port).
-- **13 dops overlays mis-typed `type port`** despite having `newport/` +
-  `STATUS=DPORT` (elftoolchain, efivar-bsd, libtacplus, wminet, pam_ssh,
-  whowatch, mkimg, weston, libdrm, …). The deterministic converter
-  **always renders `type port`** and documents this as wrong for
-  DPORT/MASK/LOCK, leaving `STATUS` as a review flag (`convert.py:132–138`).
-  They compose today only because those upstreams happen to exist / aren't
-  exercised on Q2; with `type=port` and no upstream they'd hit
-  `missing_port_error`.
+What was fixed:
+- **Converter** (`migration/convert.py`): `_detect_port_type` mirrors compat's
+  precedence (STATUS token → `newport/` → port); `dport`/`mask` now render a
+  **header-only correct-type overlay** and drop STATUS instead of translating
+  the dead `Makefile.DragonFly` into bogus ops; `lock` → blocked
+  (`lock_needs_manual`, version-bearing STATUS preserved).
+- **Tree (87 overlays):** re-typed **13** mis-typed `type port` overlays to
+  header-only `type dport` (stripping invented `DFLY_UNMAINTAINED`/`IGNORE`/
+  `file materialize` ops that compat never applied to dports); wrote header-only
+  `type dport` for **74** pure dports; removed 86 redundant STATUS files.
+- **Skipped `graphics/libosmesa`** — `STATUS=LOCK` with `Makefile.DragonFly`
+  inside `newport/`; stays compat residue (manual).
 
-So the **true compat residue ≈ 113** (39 Makefile-class + 74 dport-class).
-Fix (own follow-up, part of the retire-`compat.py` gate): emit
-`type dport`/`type mask`/`type lock` per `STATUS` in the converter; re-type
-the 13; write header-only `type dport` overlays for the 74. The dops compose
-path already materializes type=dport (`compose_stages.py:677`), so no engine
-work — just correct authoring.
+Verified: all 87 origins compose `type=dport, mode=dops, 0 errors` against real
+2026Q2; full suite green. **Residue now ≈ 40** (39 Makefile-class + libosmesa);
+the dport class is cleared.
 
 **Relationship to Step 47.** Step 47 stays the `diffs/`-absorption work
 (Phases 0–2 shipped). After Step 48 completes the mass migration, **Step
