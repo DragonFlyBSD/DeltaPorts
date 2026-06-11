@@ -1,0 +1,6 @@
+port www/amphetadesk
+type port
+reason "use -n 1 instead of -n 10 in xargs calls for DragonFly compatibility"
+target @any
+
+patch apply diffs/Makefile.diff

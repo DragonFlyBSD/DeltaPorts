@@ -1,0 +1,38 @@
+port www/tor-browser
+type port
+reason "DragonFly-specific tor-browser build: PULSEAUDIO/LTO filter, MOZ_OPTIONS, CXXFLAGS, BINARY_ALIAS, dfly-patch"
+target @any
+
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NPULSEAUDIO}"
+mk eval OPTIONS_DEFAULT_x86_64 "${OPTIONS_DEFAULT_x86_64:NLTO}"
+
+mk add MOZ_OPTIONS --disable-webrtc
+mk add MOZ_OPTIONS "--with-clang-path=${LOCALBASE}/llvm${LLVM_DEFAULT}/bin/clang"
+mk add MOZ_OPTIONS "--with-libclang-path=${LOCALBASE}/llvm${LLVM_DEFAULT}/lib"
+mk add CXXFLAGS -Wno-multistatement-macros
+mk add CXXFLAGS -Wno-class-memaccess
+
+mk set BINARY_ALIAS "clang=${LOCALBASE}/llvm${LLVM_DEFAULT}/bin/clang clang++=${LOCALBASE}/llvm${LLVM_DEFAULT}/bin/clang++ wasm-ld=${LOCALBASE}/llvm${LLVM_DEFAULT}/bin/wasm-ld"
+
+mk target set dfly-patch <<'MK'
+	# disable SCTP
+	${REINPLACE_CMD} -e 's|MOZ_SCTP|MOZ_DISABLE_SCTP|' \
+		${WRKSRC}/netwerk/moz.build
+	(cd ${WRKSRC}/gfx/angle/checkout/src/compiler/translator && \
+		${REINPLACE_CMD} -e 's|<math.h>|<cmath>|' \
+		InfoSink.h IntermNode.cpp)
+	${REINPLACE_CMD} -e 's@_XOPEN_SOURCE@&___@g' \
+		${WRKSRC}/media/libcubeb/src/cubeb_alsa.c
+	${REINPLACE_CMD} -e 's@_POSIX_SOURCE@&___@g' \
+		${WRKSRC}/media/libcubeb/src/cubeb_jack.cpp
+	${REINPLACE_CMD} -e 's@gtk+-wayland@&z@g' \
+		${WRKSRC}/toolkit/moz.configure
+MK
+
+file materialize dragonfly/patch-config_system-headers.mozbuild -> dragonfly/patch-config_system-headers.mozbuild
+file materialize dragonfly/patch-dom_webtransport_api_WebTransportDatagramDuplexStream.cpp -> dragonfly/patch-dom_webtransport_api_WebTransportDatagramDuplexStream.cpp
+file materialize dragonfly/patch-gfx_skia_skia_src_base_SkContainers.cpp -> dragonfly/patch-gfx_skia_skia_src_base_SkContainers.cpp
+file materialize dragonfly/patch-ipc_chromium_src_base_shared__memory__posix.cc -> dragonfly/patch-ipc_chromium_src_base_shared__memory__posix.cc
+file materialize dragonfly/patch-js_src_old-configure.in -> dragonfly/patch-js_src_old-configure.in
+file materialize dragonfly/patch-media_libcubeb_src_cubeb__jack.cpp -> dragonfly/patch-media_libcubeb_src_cubeb__jack.cpp
+file materialize dragonfly/patch-third__party_libwebrtc_build_build__config.h -> dragonfly/patch-third__party_libwebrtc_build_build__config.h

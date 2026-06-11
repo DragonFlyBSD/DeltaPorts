@@ -1,0 +1,9 @@
+port www/h2o
+type port
+reason "fix h2o rc script configtest to pass env; add DragonFly source patches"
+target @any
+
+patch apply diffs/files_h2o.in.diff
+
+file materialize dragonfly/patch-lib_common_socket_evloop.c.h -> dragonfly/patch-lib_common_socket_evloop.c.h
+file materialize dragonfly/patch-src_main.c -> dragonfly/patch-src_main.c

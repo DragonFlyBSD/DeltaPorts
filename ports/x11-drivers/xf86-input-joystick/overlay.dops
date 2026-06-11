@@ -1,0 +1,20 @@
+port x11-drivers/xf86-input-joystick
+type port
+reason "add autoreconf/pathfix/pkgconfig USES; conditional usbhid path fix for DragonFly >= 3.7"
+target @any
+
+mk add USES autoreconf
+mk add USES pathfix
+mk add USES pkgconfig
+mk set PATHFIX_MAKEFILEIN "Makefile.am"
+
+mk target set pre-configure <<'MK'
+.if ${DFLYVERSION} >= 300703
+	${REINPLACE_CMD} -e 's|bus/usb/usbhid|bus/u4b/usbhid|g' \
+		${WRKSRC}/configure.ac
+.endif
+MK
+
+file materialize dragonfly/patch-config.h.in -> dragonfly/patch-config.h.in
+file materialize dragonfly/patch-configure.ac -> dragonfly/patch-configure.ac
+file materialize dragonfly/patch-src_backend__bsd.c -> dragonfly/patch-src_backend__bsd.c

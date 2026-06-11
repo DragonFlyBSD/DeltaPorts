@@ -1,0 +1,6 @@
+port www/glassfish4
+type port
+reason "add PKGNAMESUFFIX=4 to distinguish glassfish4 package"
+target @any
+
+mk set PKGNAMESUFFIX "4"

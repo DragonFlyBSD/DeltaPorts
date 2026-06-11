@@ -1,0 +1,14 @@
+port x11-servers/xorg-server
+type port
+reason "DragonFly xorg-server: Makefile changes, remove stale patch file, materialize DragonFly patches"
+target @any
+
+patch apply diffs/Makefile.diff
+
+file remove files/patch-hw_xfree86_xorg-wrapper.c on-missing noop
+
+file materialize dragonfly/patch-config_udev.c -> dragonfly/patch-config_udev.c
+file materialize dragonfly/patch-hw_xfree86_common_xf86AutoConfig.c -> dragonfly/patch-hw_xfree86_common_xf86AutoConfig.c
+file materialize dragonfly/patch-hw_xfree86_drivers_modesetting_driver.c -> dragonfly/patch-hw_xfree86_drivers_modesetting_driver.c
+file materialize dragonfly/patch-hw_xfree86_os-support_meson.build -> dragonfly/patch-hw_xfree86_os-support_meson.build
+file materialize dragonfly/patch-hw_xfree86_xorg-wrapper.c -> dragonfly/patch-hw_xfree86_xorg-wrapper.c

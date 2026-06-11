@@ -1,0 +1,7 @@
+port textproc/libtranslate
+type port
+reason "add orphan plist files for DragonFly static module libs"
+target @any
+
+mk add PLIST_FILES lib/libtranslate/modules/generic.a
+mk add PLIST_FILES lib/libtranslate/modules/talkfilters.a

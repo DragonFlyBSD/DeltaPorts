@@ -1,0 +1,8 @@
+port textproc/rxp
+type port
+reason "suppress spurious compiler warnings when building rxp"
+target @any
+
+mk add CFLAGS -Wno-error=empty-body
+mk add CFLAGS -Wno-error=nonnull
+mk add CFLAGS -Wno-error=unused-but-set-variable

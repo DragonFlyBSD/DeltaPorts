@@ -1,0 +1,6 @@
+port www/nginx-full
+type port
+reason "filter unsupported OPTIONS and add GSSAPI_MIT for DragonFly"
+target @any
+
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NCLOJURE:NMODSECURITY:NPASSENGER:NFASTDFS:NDRIZZLE} GSSAPI_MIT"

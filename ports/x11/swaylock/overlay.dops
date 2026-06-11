@@ -1,0 +1,15 @@
+port x11/swaylock
+type port
+reason "conditional dfly-patch for swaylock-effects SSE2 fix; IGNORE unmaintained"
+target @any
+
+mk set IGNORE "unmaintained, please request fixing to users mailing list"
+
+mk block set condition "defined(PKGNAMESUFFIX) && ${PKGNAMESUFFIX:M-effects}" <<'MK'
+dfly-patch:
+	${REINPLACE_CMD} -e 's@#ifdef __SSE2__@#if defined(__SSE2__) \&\& __GNUC__ \!= 8@g' \
+		${WRKSRC}/fade.c
+MK
+
+file materialize dragonfly/patch-meson.build -> dragonfly/patch-meson.build
+file materialize dragonfly/patch-render.c -> dragonfly/patch-render.c

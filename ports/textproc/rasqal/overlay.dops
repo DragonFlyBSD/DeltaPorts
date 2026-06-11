@@ -1,0 +1,11 @@
+port textproc/rasqal
+type port
+reason "add iconv USES and additional LIB_DEPENDS on DragonFly"
+target @any
+
+mk add USES iconv
+mk add LIB_DEPENDS "libcurl.so:ftp/curl"
+mk add LIB_DEPENDS "libicuuc.so:devel/icu"
+mk add LIB_DEPENDS "libxml2.so:textproc/libxml2"
+mk add LIB_DEPENDS "libxslt.so:textproc/libxslt"
+mk add LIB_DEPENDS "libyajl.so:devel/yajl"

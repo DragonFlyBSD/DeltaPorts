@@ -1,0 +1,6 @@
+port textproc/jade
+type port
+reason "add -fno-lifetime-dse CXXFLAG for gcc crash workaround"
+target @any
+
+mk add CXXFLAGS -fno-lifetime-dse

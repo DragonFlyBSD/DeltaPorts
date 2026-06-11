@@ -1,0 +1,7 @@
+port textproc/tinyxml
+type port
+reason "link with c++ for blender compatibility; rename LIB_CXX to LIB in files/Makefile"
+target @any
+
+mk add MAKE_ENV "CC_LINK=c++"
+patch apply diffs/files_Makefile.diff

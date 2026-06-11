@@ -1,0 +1,8 @@
+port textproc/uim
+type port
+reason "add orphan plist file for qt5 slave build"
+target @any
+
+mk block set condition "defined(UIM_SLAVE) && ${PKGNAMESUFFIX:M-qt5}" <<'MK'
+PLIST_FILES+=	share/kservices5/plasma-applet-com.github.uim.status.desktop
+MK

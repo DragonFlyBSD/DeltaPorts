@@ -1,0 +1,6 @@
+port x11-drivers/xorg-drivers
+type port
+reason "rename amd64 to x86_64 arch vars; remove libinput; fix arch conditional"
+target @any
+
+patch apply diffs/Makefile.diff

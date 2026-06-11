@@ -1,0 +1,7 @@
+port x11/gnustep-app
+type port
+reason "remove unavailable cenon and fortunate run dependencies on DragonFly"
+target @any
+
+mk remove RUN_DEPENDS "cenon>0:graphics/cenon"
+mk remove RUN_DEPENDS "fortunate>0:games/fortunate"

@@ -1,0 +1,9 @@
+port textproc/rubygem-dartsass
+type port
+reason "allow foreign binaries when DEVELOPER is set"
+target @any
+
+mk block set condition "defined(DEVELOPER)" <<'MK'
+.MAKEFLAGS+=    DFLY_ALLOW_FOREIGN_BINARIES=yes
+DFLY_ALLOW_FOREIGN_BINARIES=yes
+MK

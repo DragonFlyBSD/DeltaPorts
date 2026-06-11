@@ -1,0 +1,9 @@
+port x11-toolkits/rubygem-gtk2
+type port
+reason "relax gem version constraint from = to >= in gemspec"
+target @any
+
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e '/= 3.4.3/s@"=@">=@g' \
+                ${WRKSRC}/gtk2.gemspec
+MK

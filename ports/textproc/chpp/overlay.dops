@@ -1,0 +1,6 @@
+port textproc/chpp
+type port
+reason "remove FreeBSD-specific post-extract/post-patch steps; simplify sed in post-patch"
+target @any
+
+patch apply diffs/Makefile.diff

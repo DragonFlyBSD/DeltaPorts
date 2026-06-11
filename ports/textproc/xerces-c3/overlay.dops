@@ -1,0 +1,6 @@
+port textproc/xerces-c3
+type port
+reason "restrict gcc MUTEXMGR selection to FreeBSD only"
+target @any
+
+mk replace-if from "${CHOSEN_COMPILER_TYPE} == gcc" to "${CHOSEN_COMPILER_TYPE} == gcc && ${OPSYS} == FreeBSD"

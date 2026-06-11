@@ -1,0 +1,6 @@
+port x11-wm/compiz
+type port
+reason "remove nvidia-settings run dependency (no nvidia support on DragonFly)"
+target @any
+
+mk eval RUN_DEPENDS "${RUN_DEPENDS:Nnvidia-settings*}"

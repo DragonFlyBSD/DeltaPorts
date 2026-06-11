@@ -1,0 +1,6 @@
+port www/apache24
+type port
+reason "report DragonFly as platform string instead of FreeBSD"
+target @any
+
+text replace-once file Makefile from "${REINPLACE_CMD} -e 's,\" PLATFORM \",FreeBSD,' ${WRKSRC}/server/core.c" to "${REINPLACE_CMD} -e 's,\" PLATFORM \",DragonFly,' ${WRKSRC}/server/core.c"

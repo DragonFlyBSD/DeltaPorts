@@ -1,0 +1,18 @@
+port x11-toolkits/gnustep-gui
+type port
+reason "DragonFly gnustep-gui: LLD_UNSAFE, extra LIB_DEPENDS, ADDITIONAL_LIB_DIRS, dfly-install symlink fix"
+target @any
+
+mk set LLD_UNSAFE "yes"
+
+mk add LIB_DEPENDS "libxml2.so:textproc/libxml2"
+mk add LIB_DEPENDS "libxslt.so:textproc/libxslt"
+
+mk add ADDITIONAL_LIB_DIRS "-L${LOCALBASE}/libs"
+
+mk target set dfly-install <<'MK'
+	cd ${STAGEDIR}/${PREFIX}/GNUstep/System/Library/Libraries/ && \
+		${LN} -s libgnustep-gui.so libgnustep-gui.so.0
+MK
+
+file materialize dragonfly/patch-configure -> dragonfly/patch-configure

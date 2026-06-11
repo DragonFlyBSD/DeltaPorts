@@ -1,0 +1,6 @@
+port textproc/en-hunspell
+type port
+reason "remove COPY hardlink option not supported on DragonFly"
+target @any
+
+text line-remove file Makefile exact "COPY=		-lh	# Use hardlinks rather than copies under stage/" on-missing noop

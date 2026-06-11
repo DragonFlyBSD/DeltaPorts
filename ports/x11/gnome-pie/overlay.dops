@@ -1,0 +1,8 @@
+port x11/gnome-pie
+type port
+reason "use plain sed for REINPLACE_CMD when DEVELOPER is defined"
+target @any
+
+mk block set condition "defined(DEVELOPER)" <<'MK'
+REINPLACE_CMD:= ${SED} ${REINPLACE_ARGS}
+MK

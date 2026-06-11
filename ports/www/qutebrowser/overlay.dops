@@ -1,0 +1,7 @@
+port www/qutebrowser
+type port
+reason "disable WEBENGINE and ADBLOCK options on DragonFly"
+target @any
+
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NWEBENGINE:NADBLOCK}"
+mk eval OPTIONS_DEFAULT_x86_64 "${OPTIONS_DEFAULT_x86_64:NWEBENGINE:NADBLOCK}"

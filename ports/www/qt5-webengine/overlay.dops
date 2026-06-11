@@ -1,0 +1,88 @@
+port www/qt5-webengine
+type port
+reason "DragonFly qt5-webengine: remove FreeBSD binutils/brandelf, add dfly-patch target, materialize DragonFly patches"
+target @any
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+mk add USES "localbase:ldflags"
+
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e '/"cxxrt"/d' \
+		${WRKSRC}/src/3rdparty/chromium/third_party/blink/renderer/platform/BUILD.gn
+	${REINPLACE_CMD} -e '/-fgnu-inline-asm/d' \
+		${WRKSRC}/src/3rdparty/chromium/sandbox/linux/BUILD.gn
+	${RM} -rf ${WRKSRC}/src/3rdparty/chromium/third_party/tcmalloc
+	${REINPLACE_CMD} -e '/use_system_libwebp/d' ${WRKSRC}/src/buildtools/config/linux.pri
+	${ECHO} 'include(linux.pri)' > ${WRKSRC}/src/buildtools/config/dragonfly.pri
+	${ECHO} "gn_args += enable_basic_printing=true enable_print_preview=true use_dbus=true use_udev=false extra_ldflags=\"-L${LOCALBASE}/lib\"" >> ${WRKSRC}/src/buildtools/config/dragonfly.pri
+	${REINPLACE_CMD} -e 's@freebsd.pri@dragonfly.pri@g' \
+		${WRKSRC}/mkspecs/features/functions.prf
+	${CP} ${WRKSRC}/src/3rdparty/chromium/base/process/process_handle_freebsd.cc \
+		${WRKSRC}/src/3rdparty/chromium/base/process/process_handle_dragonfly.cc
+	${CP} ${WRKSRC}/src/3rdparty/chromium/base/process/process_iterator_freebsd.cc \
+		${WRKSRC}/src/3rdparty/chromium/base/process/process_iterator_dragonfly.cc
+	${CP} ${WRKSRC}/src/3rdparty/chromium/base/process/process_metrics_freebsd.cc \
+		${WRKSRC}/src/3rdparty/chromium/base/process/process_metrics_dragonfly.cc
+	${CP} ${WRKSRC}/src/3rdparty/chromium/base/system/sys_info_freebsd.cc \
+		${WRKSRC}/src/3rdparty/chromium/base/system/sys_info_dragonfly.cc
+	${REINPLACE_CMD} -e '/#pragma GCC diagnostic ignored "-Wthread-safety-analysis/d' \
+		${WRKSRC}/src/3rdparty/chromium/base/synchronization/lock_impl.h \
+		${WRKSRC}/src/3rdparty/chromium/third_party/webrtc/rtc_base/third_party/sigslot/sigslot.h
+MK
+
+patch apply diffs/Makefile.diff
+
+file materialize dragonfly/patch-mkspecs_features_functions.prf -> dragonfly/patch-mkspecs_features_functions.prf
+file materialize dragonfly/patch-src_3rdparty_chromium_base_allocator_allocator__shim__default__dispatch__to__glibc.cc -> dragonfly/patch-src_3rdparty_chromium_base_allocator_allocator__shim__default__dispatch__to__glibc.cc
+file materialize dragonfly/patch-src_3rdparty_chromium_base_allocator_partition__allocator_partition__alloc__constants.h -> dragonfly/patch-src_3rdparty_chromium_base_allocator_partition__allocator_partition__alloc__constants.h
+file materialize dragonfly/patch-src_3rdparty_chromium_base_BUILD.gn -> dragonfly/patch-src_3rdparty_chromium_base_BUILD.gn
+file materialize dragonfly/patch-src_3rdparty_chromium_base_debug_debugger__posix.cc -> dragonfly/patch-src_3rdparty_chromium_base_debug_debugger__posix.cc
+file materialize dragonfly/patch-src_3rdparty_chromium_base_debug_proc__maps__linux.cc -> dragonfly/patch-src_3rdparty_chromium_base_debug_proc__maps__linux.cc
+file materialize dragonfly/patch-src_3rdparty_chromium_base_files_file__path__watcher__kqueue.h -> dragonfly/patch-src_3rdparty_chromium_base_files_file__path__watcher__kqueue.h
+file materialize dragonfly/patch-src_3rdparty_chromium_base_posix_unix__domain__socket.cc -> dragonfly/patch-src_3rdparty_chromium_base_posix_unix__domain__socket.cc
+file materialize dragonfly/patch-src_3rdparty_chromium_base_process_internal__linux.h -> dragonfly/patch-src_3rdparty_chromium_base_process_internal__linux.h
+file materialize dragonfly/patch-src_3rdparty_chromium_base_process_process__handle__freebsd.cc -> dragonfly/patch-src_3rdparty_chromium_base_process_process__handle__freebsd.cc
+file materialize dragonfly/patch-src_3rdparty_chromium_base_process_process__iterator__freebsd.cc -> dragonfly/patch-src_3rdparty_chromium_base_process_process__iterator__freebsd.cc
+file materialize dragonfly/patch-src_3rdparty_chromium_base_process_process__metrics__freebsd.cc -> dragonfly/patch-src_3rdparty_chromium_base_process_process__metrics__freebsd.cc
+file materialize dragonfly/patch-src_3rdparty_chromium_base_process_process__metrics__posix.cc -> dragonfly/patch-src_3rdparty_chromium_base_process_process__metrics__posix.cc
+file materialize dragonfly/patch-src_3rdparty_chromium_base_profiler_register__context.h -> dragonfly/patch-src_3rdparty_chromium_base_profiler_register__context.h
+file materialize dragonfly/patch-src_3rdparty_chromium_base_profiler_thread__delegate__posix.cc -> dragonfly/patch-src_3rdparty_chromium_base_profiler_thread__delegate__posix.cc
+file materialize dragonfly/patch-src_3rdparty_chromium_base_task_sequence__manager_task__queue__impl.cc -> dragonfly/patch-src_3rdparty_chromium_base_task_sequence__manager_task__queue__impl.cc
+file materialize dragonfly/patch-src_3rdparty_chromium_base_third__party_libevent_event-config.h -> dragonfly/patch-src_3rdparty_chromium_base_third__party_libevent_event-config.h
+file materialize dragonfly/patch-src_3rdparty_chromium_base_third__party_libevent_kqueue.c -> dragonfly/patch-src_3rdparty_chromium_base_third__party_libevent_kqueue.c
+file materialize dragonfly/patch-src_3rdparty_chromium_build_build__config.h -> dragonfly/patch-src_3rdparty_chromium_build_build__config.h
+file materialize dragonfly/patch-src_3rdparty_chromium_build_config_BUILDCONFIG.gn -> dragonfly/patch-src_3rdparty_chromium_build_config_BUILDCONFIG.gn
+file materialize dragonfly/patch-src_3rdparty_chromium_build_config_compiler_BUILD.gn -> dragonfly/patch-src_3rdparty_chromium_build_config_compiler_BUILD.gn
+file materialize dragonfly/patch-src_3rdparty_chromium_build_config_linux_pkg__config.gni -> dragonfly/patch-src_3rdparty_chromium_build_config_linux_pkg__config.gni
+file materialize dragonfly/patch-src_3rdparty_chromium_build_config_linux_pkg-config.py -> dragonfly/patch-src_3rdparty_chromium_build_config_linux_pkg-config.py
+file materialize dragonfly/patch-src_3rdparty_chromium_mojo_public_cpp_platform_named__platform__channel__posix.cc -> dragonfly/patch-src_3rdparty_chromium_mojo_public_cpp_platform_named__platform__channel__posix.cc
+file materialize dragonfly/patch-src_3rdparty_chromium_net_socket_udp__socket__posix.h -> dragonfly/patch-src_3rdparty_chromium_net_socket_udp__socket__posix.h
+file materialize dragonfly/patch-src_3rdparty_chromium_skia_ext_platform__canvas.h -> dragonfly/patch-src_3rdparty_chromium_skia_ext_platform__canvas.h
+file materialize dragonfly/patch-src_3rdparty_chromium_third__party_abseil-cpp_absl_base_config.h -> dragonfly/patch-src_3rdparty_chromium_third__party_abseil-cpp_absl_base_config.h
+file materialize dragonfly/patch-src_3rdparty_chromium_third__party_angle_third__party_vulkan-loader_src_loader_loader.c -> dragonfly/patch-src_3rdparty_chromium_third__party_angle_third__party_vulkan-loader_src_loader_loader.c
+file materialize dragonfly/patch-src_3rdparty_chromium_third__party_angle_third__party_vulkan-loader_src_loader_vk__loader__platform.h -> dragonfly/patch-src_3rdparty_chromium_third__party_angle_third__party_vulkan-loader_src_loader_vk__loader__platform.h
+file materialize dragonfly/patch-src_3rdparty_chromium_third__party_blink_renderer_bindings_scripts_bind__gen_style__format.py -> dragonfly/patch-src_3rdparty_chromium_third__party_blink_renderer_bindings_scripts_bind__gen_style__format.py
+file materialize dragonfly/patch-src_3rdparty_chromium_third__party_breakpad_breakpad_src_build_common.gypi -> dragonfly/patch-src_3rdparty_chromium_third__party_breakpad_breakpad_src_build_common.gypi
+file materialize dragonfly/patch-src_3rdparty_chromium_third__party_pdfium_fxjs_cjs__publicmethods.cpp -> dragonfly/patch-src_3rdparty_chromium_third__party_pdfium_fxjs_cjs__publicmethods.cpp
+file materialize dragonfly/patch-src_3rdparty_chromium_third__party_perfetto_buildtools_BUILD.gn -> dragonfly/patch-src_3rdparty_chromium_third__party_perfetto_buildtools_BUILD.gn
+file materialize dragonfly/patch-src_3rdparty_chromium_third__party_perfetto_include_perfetto_base_build__config.h -> dragonfly/patch-src_3rdparty_chromium_third__party_perfetto_include_perfetto_base_build__config.h
+file materialize dragonfly/patch-src_3rdparty_chromium_third__party_perfetto_include_perfetto_base_time.h -> dragonfly/patch-src_3rdparty_chromium_third__party_perfetto_include_perfetto_base_time.h
+file materialize dragonfly/patch-src_3rdparty_chromium_third__party_perfetto_include_perfetto_ext_base_event__fd.h -> dragonfly/patch-src_3rdparty_chromium_third__party_perfetto_include_perfetto_ext_base_event__fd.h
+file materialize dragonfly/patch-src_3rdparty_chromium_third__party_perfetto_src_base_file__utils.cc -> dragonfly/patch-src_3rdparty_chromium_third__party_perfetto_src_base_file__utils.cc
+file materialize dragonfly/patch-src_3rdparty_chromium_third__party_sqlite_BUILD.gn -> dragonfly/patch-src_3rdparty_chromium_third__party_sqlite_BUILD.gn
+file materialize dragonfly/patch-src_3rdparty_chromium_third__party_usrsctp_BUILD.gn -> dragonfly/patch-src_3rdparty_chromium_third__party_usrsctp_BUILD.gn
+file materialize dragonfly/patch-src_3rdparty_chromium_third__party_usrsctp_usrsctplib_usrsctplib_netinet_sctp__os__userspace.h -> dragonfly/patch-src_3rdparty_chromium_third__party_usrsctp_usrsctplib_usrsctplib_netinet_sctp__os__userspace.h
+file materialize dragonfly/patch-src_3rdparty_chromium_third__party_webrtc_modules_audio__processing_aec3_reverb__model__estimator.h -> dragonfly/patch-src_3rdparty_chromium_third__party_webrtc_modules_audio__processing_aec3_reverb__model__estimator.h
+file materialize dragonfly/patch-src_3rdparty_chromium_third__party_webrtc_rtc__base_platform__thread__types.cc -> dragonfly/patch-src_3rdparty_chromium_third__party_webrtc_rtc__base_platform__thread__types.cc
+file materialize dragonfly/patch-src_3rdparty_chromium_tools_grit_grit_node_base.py -> dragonfly/patch-src_3rdparty_chromium_tools_grit_grit_node_base.py
+file materialize dragonfly/patch-src_3rdparty_chromium_v8_src_api_api.cc -> dragonfly/patch-src_3rdparty_chromium_v8_src_api_api.cc
+file materialize dragonfly/patch-src_3rdparty_chromium_v8_src_base_platform_platform-freebsd.cc -> dragonfly/patch-src_3rdparty_chromium_v8_src_base_platform_platform-freebsd.cc
+file materialize dragonfly/patch-src_3rdparty_chromium_v8_src_base_platform_platform-posix.cc -> dragonfly/patch-src_3rdparty_chromium_v8_src_base_platform_platform-posix.cc
+file materialize dragonfly/patch-src_3rdparty_chromium_v8_src_d8_d8-posix.cc -> dragonfly/patch-src_3rdparty_chromium_v8_src_d8_d8-posix.cc
+file materialize dragonfly/patch-src_3rdparty_chromium_v8_src_trap-handler_handler-inside-posix.cc -> dragonfly/patch-src_3rdparty_chromium_v8_src_trap-handler_handler-inside-posix.cc
+file materialize dragonfly/patch-src_3rdparty_chromium_v8_src_trap-handler_handler-inside-posix.h -> dragonfly/patch-src_3rdparty_chromium_v8_src_trap-handler_handler-inside-posix.h
+file materialize dragonfly/patch-src_3rdparty_chromium_v8_src_trap-handler_trap-handler.h -> dragonfly/patch-src_3rdparty_chromium_v8_src_trap-handler_trap-handler.h
+file materialize dragonfly/patch-src_3rdparty_gn_base_files_file__posix.cc -> dragonfly/patch-src_3rdparty_gn_base_files_file__posix.cc
+file materialize dragonfly/patch-src_3rdparty_gn_build_gen.py -> dragonfly/patch-src_3rdparty_gn_build_gen.py
+file materialize dragonfly/patch-src_3rdparty_gn_util_build__config.h -> dragonfly/patch-src_3rdparty_gn_util_build__config.h
+file materialize dragonfly/patch-src_3rdparty_gn_util_exe__path.cc -> dragonfly/patch-src_3rdparty_gn_util_exe__path.cc

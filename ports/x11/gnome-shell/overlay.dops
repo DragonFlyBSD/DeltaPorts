@@ -1,0 +1,19 @@
+port x11/gnome-shell
+type port
+reason "remove pulseaudio dep; remove gvc plist entries; dfly-patch removes gvc subproject"
+target @any
+
+mk eval LIB_DEPENDS "${LIB_DEPENDS:Nlibpulse*}"
+
+mk target set dfly-patch <<'MK'
+	${RM} -r ${WRKSRC}/subprojects/gvc
+	${REINPLACE_CMD} -e "/libgvc_gir/d" ${WRKSRC}/src/meson.build
+MK
+
+text line-remove file pkg-plist exact "lib/gnome-shell/Gvc-1.0.typelib" on-missing noop
+text line-remove file pkg-plist exact "lib/gnome-shell/libgvc.so" on-missing noop
+text line-remove file pkg-plist exact "%%DATADIR%%/Gvc-1.0.gir" on-missing noop
+
+file materialize dragonfly/patch-meson.build -> dragonfly/patch-meson.build
+file materialize dragonfly/patch-src_meson.build -> dragonfly/patch-src_meson.build
+file materialize dragonfly/patch-src_shell-global.c -> dragonfly/patch-src_shell-global.c

@@ -1,0 +1,10 @@
+port www/ot-recorder
+type port
+reason "use cc instead of clang in config.mk; add warning flags"
+target @any
+
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's@clang@cc@g' \
+			 -e "s@CFLAGS += @& -Wno-stringop-overflow -Wno-format-truncation -Wno-maybe-uninitialized @g" \
+		${WRKSRC}/config.mk
+MK

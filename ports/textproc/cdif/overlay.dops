@@ -1,0 +1,6 @@
+port textproc/cdif
+type port
+reason "remove fdescfs note from pkg-descr"
+target @any
+
+patch apply diffs/pkg-descr.diff

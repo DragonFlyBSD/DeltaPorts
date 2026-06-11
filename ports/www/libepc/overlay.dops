@@ -1,0 +1,9 @@
+port www/libepc
+type port
+reason "patch GCC pragma in example to avoid bad MF patching for removed base-gcc"
+target @any
+
+mk target set dfly-extract <<'MK'
+	${REINPLACE_CMD} -e '/#pragma/s@GCC diagnostic@GCC  diagnostic@g' \
+                ${WRKSRC}/examples/simple-publisher.c
+MK
