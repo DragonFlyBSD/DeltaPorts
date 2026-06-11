@@ -2557,18 +2557,28 @@ are dual-use dops sources (`patch apply` / `file materialize` / type=dport
 `newport/`) and stay writable; blocking them would break dops authoring.
 Reads stay allowed. *Risk ~0; freezes the Makefile-class residue.*
 
-**B — Sever convert routing (the behavioral flip).** Set the service
-callback `maybe_defer_to_convert = None` at its construction site; the
-orchestrator already handles None (`steps.py:384`), so triage falls through
-to `decide()`. No new convert jobs are enqueued. **Behavior change to sign
-off:** a build failure on a residue compat port now goes triage → patch →
-(no `overlay.dops`) → manual handoff instead of auto-convert — correct for
-maintainer-territory ports, but confirm `patch.py`/`process_patch_job`
-escalates cleanly on a missing overlay (else add an early MANUAL guard in
-the compat-mode triage path). Retires the invariant
-`convert-is-substrate-prerequisite` (it exists only for compat ports).
-Tests: `test_runner_triage_defer`/`test_runner_convert_defer` flip to
-"no defer; compat port → manual". *Reversible: re-wire the callback.*
+**B — Replace defer-to-convert with deterministic bootstrap + abort.**
+The convert agent's only non-LLM role was bootstrapping a header overlay so
+the port becomes dops and patch can fill the body. Pull that into the runner
+(deterministic) and drop `agent/convert.py`. At a build failure with no
+`overlay.dops`, the runner (`_maybe_defer_to_convert` → `ensure_overlay_or_abort`)
+routes on the port's state:
+
+| state | action |
+|---|---|
+| `overlay.dops` exists | **patch** (normal dops fix) |
+| no overlay, no compat artifacts (new / pure-upstream port) | **bootstrap `type port` header** → patch authors the fix |
+| no overlay, `newport/` present (dport) | **bootstrap `type dport` header, remove `STATUS`** → patch tweaks it (newport is a complete port; the overlay header now carries the type, so STATUS is redundant — compat detected dport via `newport/`, not STATUS) |
+| no overlay, non-dport compat artifacts (`Makefile.DragonFly`/`diffs`/`dragonfly`) | **ABORT → human.** Patch can't convert these (a stub overlay would flip the port to dops-mode and suppress the compat path, `I_COMPOSE_MODE_DOPS_SUPPRESSES_COMPAT`); full absorption is the offline tooling's job |
+
+The bootstrap **must pick `type` from `STATUS`** (`dport`/`mask`/`lock`),
+which makes the **dport-typing fix a Phase-B prerequisite**, not just cleanup.
+Retires the `convert-is-substrate-prerequisite` invariant (it existed only to
+gate compat ports into convert). Tests:
+`test_runner_triage_defer`/`test_runner_convert_defer` flip to assert the
+table (bootstrap for clean/dport, MANUAL for non-dport compat). The authoring
+lock (A) guarantees the "non-dport compat" branch only ever sees the known
+frozen residue.
 
 **C — Delete the convert machinery (dead code after B).** `runner.py`: the
 `job_type == "convert"` dispatch (5373) + dry-run branch (5325),
