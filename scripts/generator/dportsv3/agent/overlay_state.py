@@ -46,6 +46,70 @@ class OverlayFacts:
 
 
 @dataclass(frozen=True)
+class BootstrapDecision:
+    """Step 48 cutover (Phase B): what the runner does at a build failure
+    for a port that has no ``overlay.dops`` yet. Replaces defer-to-convert.
+
+    - ``proceed``: an overlay already exists — go straight to patch.
+    - ``bootstrap``: deterministically write a header overlay of
+      ``overlay_type`` (and drop ``STATUS`` if ``remove_status``), then
+      patch authors the body.
+    - ``abort``: hand off to a human — the port carries non-dport compat
+      artifacts (``Makefile.DragonFly``/``diffs``/``dragonfly``) that need
+      a real conversion; a stub overlay would suppress the compat path.
+    """
+
+    action: str  # "proceed" | "bootstrap" | "abort"
+    overlay_type: str | None = None  # bootstrap: port|dport|lock
+    remove_status: bool = False
+    reason: str = ""
+
+
+def bootstrap_decision(
+    facts: "OverlayFacts", status_type: str | None
+) -> BootstrapDecision:
+    """Map overlay facts + STATUS-declared type to the Phase-B routing.
+
+    ``status_type`` is the lowercased STATUS token (``port``/``dport``/
+    ``mask``/``lock``) or None when absent.
+    """
+    if facts.overlay_dops:
+        return BootstrapDecision("proceed", reason="overlay_present")
+
+    # Non-dport compat artifacts need real absorption — patch can't, and a
+    # stub overlay would flip the port to dops-mode and drop them.
+    if (
+        facts.makefile_dragonfly
+        or facts.targeted_makefile_dragonfly
+        or facts.dragonfly_files
+        or facts.diff_files
+    ):
+        return BootstrapDecision("abort", reason="nondport_compat_artifacts")
+
+    # A pure dport: newport/ is the whole port — declare type=dport, drop
+    # the now-redundant STATUS (the header carries the type).
+    if facts.newport:
+        return BootstrapDecision(
+            "bootstrap", overlay_type="dport", remove_status=True,
+            reason="dport_newport",
+        )
+
+    # A masked port shouldn't reach a build failure (it's removed); never
+    # auto-author a mask overlay.
+    if status_type == "mask":
+        return BootstrapDecision("abort", reason="status_mask")
+
+    if status_type == "lock":
+        return BootstrapDecision(
+            "bootstrap", overlay_type="lock", remove_status=True,
+            reason="status_lock",
+        )
+
+    # New / pure-upstream port needing DragonFly work for the first time.
+    return BootstrapDecision("bootstrap", overlay_type="port", reason="new_port")
+
+
+@dataclass(frozen=True)
 class OverlayRuleResult:
     code: str
     severity: str = "info"
