@@ -3,4 +3,8 @@ type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
-file materialize dragonfly/patch-mesonbuild_environment.py -> dragonfly/patch-mesonbuild_environment.py
+mk target set post-extract <<'MK1'
+	@${REINPLACE_CMD} -e 's/elif mesonlib\.is_freebsd() or mesonlib\.is_netbsd() or mesonlib\.is_openbsd() or mesonlib\.is_qnx() or mesonlib\.is_aix():/elif mesonlib.is_freebsd() or mesonlib.is_netbsd() or mesonlib.is_openbsd() or mesonlib.is_qnx() or mesonlib.is_aix() or mesonlib.is_dragonflybsd():/' \
+		-e 's/elif mesonlib\.is_freebsd() or mesonlib\.is_netbsd() or mesonlib\.is_openbsd() or mesonlib\.is_aix():/elif mesonlib.is_freebsd() or mesonlib.is_netbsd() or mesonlib.is_openbsd() or mesonlib.is_aix() or mesonlib.is_dragonflybsd():/' \
+		${WRKSRC}/mesonbuild/envconfig.py
+MK1
