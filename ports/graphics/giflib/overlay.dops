@@ -3,6 +3,7 @@ type port
 reason "MAKE_ENV LDVER and DFLYVERSION-gated CFLAGS filter"
 target @any
 
+mk ensure-include bsd.port.options.mk
 mk add MAKE_ENV LDVER=ld.bfd
 
 mk block set condition "${DFLYVERSION} < 500505" <<'MK'

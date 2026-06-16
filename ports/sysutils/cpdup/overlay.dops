@@ -3,6 +3,7 @@ type port
 reason "add localbase:ldflags and libmd dependency for DragonFly >= 5.7"
 target @any
 
+mk ensure-include bsd.port.options.mk
 mk block set condition "${DFLYVERSION} > 500700" <<'MK'
 USES+=	localbase:ldflags
 LIB_DEPENDS+=	libmd.so:security/libmd

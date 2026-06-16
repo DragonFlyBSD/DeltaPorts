@@ -3,6 +3,7 @@ type port
 reason "DragonFly: conditional PLIST_FILES add, DFLY_UNMAINTAINED, upstream-source patches"
 target @any
 
+mk ensure-include bsd.port.options.mk
 mk block set condition "${DFLYVERSION} >= 400706" <<'MK'
 PLIST_FILES+=	include/hwloc/glibc-sched.h
 MK

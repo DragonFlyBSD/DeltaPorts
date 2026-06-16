@@ -3,6 +3,7 @@ type port
 reason "add ssl USES; set openssl flags; add libmd dep on newer DragonFly; fix post-build app compile"
 target @any
 
+mk ensure-include bsd.port.options.mk
 mk add USES ssl
 mk add CFLAGS "-I${OPENSSLINC}"
 mk add LDFLAGS "-L${OPENSSLLIB}"

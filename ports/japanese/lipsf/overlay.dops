@@ -3,6 +3,7 @@ type port
 reason "alias/ncurses uses, CFLAGS additions, dfly-patch target with DFLYVERSION guard"
 target @any
 
+mk ensure-include bsd.port.options.mk
 mk add USES alias
 mk add USES ncurses
 mk add CFLAGS -DMAXNAMLEN=255
