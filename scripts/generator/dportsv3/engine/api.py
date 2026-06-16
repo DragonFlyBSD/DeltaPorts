@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import cast
 
+from dportsv3.engine import emit as emit
 from dportsv3.engine.ast import AstDocument
 from dportsv3.engine.apply import apply_plan
 from dportsv3.engine.lexer import lex_dsl
