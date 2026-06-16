@@ -1,6 +1,6 @@
 ---
 name: dportsv3-agentic-analysis
-description: Analyze how the DeltaPorts agentic loop (triage → patch → convert) handled a given port. Use when the user says "analyze port X" or "analyze the agentic run for X". Produces a structured report covering correctness, efficiency, and bugs against the current code's expected behavior. This skill is constantly improving — when you spot a new failure mode or expected-behavior gap, note it at the end of the report under "Skill update suggestions" so it can be folded back in.
+description: Analyze how the DeltaPorts agentic loop (triage → patch; convert retired in Step 48 — archived bundles may still show it) handled a given port. Use when the user says "analyze port X" or "analyze the agentic run for X". Produces a structured report covering correctness, efficiency, and bugs against the current code's expected behavior. This skill is constantly improving — when you spot a new failure mode or expected-behavior gap, note it at the end of the report under "Skill update suggestions" so it can be folded back in.
 ---
 
 # DeltaPorts agentic analysis
@@ -202,18 +202,18 @@ This section is what the agent *should* be doing if the code is working. Update 
 - A failure bundle is written by the dsynth hook. The runner enqueues a triage job.
 - Triage job runs `dportsv3.agent.triage.run` — single LLM call (no tools), may do up to `DP_HARNESS_MAX_SNIPPET_ROUNDS` (default 5) snippet-extractor rounds.
 - Triage emits `classification`, `confidence`, root-cause text. `config/agentic-policy.json` resolves a tier (AUTO / ASSIST / MANUAL).
-- Routing is driven by `assess_dops` (the substrate gate), **not** by triage classification — convert is a substrate prerequisite for patch and is never skipped/deferred/escalated based on classification.
-- AUTO/ASSIST → auto-enqueue patch (and convert first, if substrate isn't dops). MANUAL → stop.
+- Routing is driven by `assess_dops` (the substrate gate), **not** by triage classification. At a failure with no `overlay.dops`, the runner (`_ensure_overlay_or_abort` → `overlay_state.bootstrap_decision`) deterministically writes a header overlay (`type port`/`dport` per STATUS) so patch can author the body, or aborts to MANUAL when non-dport compat artifacts are present. (Step 48 deleted the runtime *convert agent* — there is no longer a convert job; older bundles may still show one.)
+- AUTO/ASSIST → auto-enqueue patch (after the deterministic bootstrap, if substrate wasn't already dops). MANUAL → stop.
 - Patch job runs `dportsv3.agent.patch.run` → `attempt_loop.run` up to `tier.max_iterations` attempts, each driving a `tool_loop` until the LLM stops requesting tools.
-- Success gate: `rebuild_proof.json` parsed from the LLM's `## Rebuild Proof (JSON)` block with `rebuild_ok=true`. Convert jobs additionally require `validate_dops_ok=true`.
+- Success gate: `rebuild_proof.json` parsed from the LLM's `## Rebuild Proof (JSON)` block with `rebuild_ok=true`.
 
 ### Tool surface
 
-There is **one** patch-agent tool surface (Step 42 deleted the edit-intent layer). The patch agent edits `ports/<origin>/overlay.dops` directly in dops DSL — the same surface convert uses (`put_file` + `validate_dops` + `dops_reference`, reading with `grep` / `get_file`) — plus the build-loop tools convert doesn't need (`extract`, `dupe`, `genpatch`, `install_patches`, `dsynth_build`, `dsynth_log`, `materialize_dports`) and the read-only views `emit_diff` and `get_effective_overlay`. System prompt: `prompts.PATCH_SYSTEM`. Tool list: `tools.patch_tool_names()` (returns the full registry).
-
-Convert agent: `env_verify`, `list_dir`, `get_file`, `put_file`, `grep`, `dops_reference`, `validate_dops`. Build-loop tools are deliberately excluded so the model doesn't wander into source exploration. System prompt: `prompts.CONVERT_SYSTEM`. Tool list: `tools.CONVERT_TOOL_NAMES`.
+There is **one** patch-agent tool surface (Step 42 deleted the edit-intent layer). The patch agent edits `ports/<origin>/overlay.dops` directly in dops DSL (`put_file` + `validate_dops` + `dops_reference`, reading with `grep` / `get_file`), plus the build-loop tools (`extract`, `dupe`, `genpatch`, `install_patches`, `dsynth_build`, `dsynth_log`, `materialize_dports`) and the read-only views `emit_diff` and `get_effective_overlay`. System prompt: `prompts.PATCH_SYSTEM`. Tool list: `tools.patch_tool_names()` (returns the full registry).
 
 Triage agent has no tools — single-turn LLM call with snippet rounds. System prompt: `prompts.TRIAGE_SYSTEM`.
+
+(Historical bundles only: a separate *convert agent* existed pre-Step-48 with its own tool surface + `prompts.CONVERT_SYSTEM`; both are deleted. When analyzing an archived convert bundle, judge it against that retired contract, not current code.)
 
 Check `dportsv3/agent/tools.py` and `dportsv3/agent/prompts.py` directly if uncertain.
 
@@ -225,9 +225,9 @@ Check `dportsv3/agent/tools.py` and `dportsv3/agent/prompts.py` directly if unce
 
 ### Substrate / mode handling
 
-Patch operates ONLY on dops-converted substrate (Step C, commit `0b7ed09fc26` onward, reinforced by Step 42). Compat-shaped ports (`Makefile.DragonFly` + `dragonfly/patch-*` without `overlay.dops`) get converted by the convert agent first; if convert hasn't produced a dops overlay, patch refuses with `blocked_by: state:<state>` and the runner escalates to MANUAL.
+Patch operates ONLY on dops substrate (Step C, commit `0b7ed09fc26` onward, reinforced by Step 42). For a port with no `overlay.dops`, the runner deterministically bootstraps a header overlay (clean / `newport` dport) so patch can author the body, or aborts to MANUAL when non-dport compat artifacts (`Makefile.DragonFly`/`diffs/`/`dragonfly/`) are present — full absorption of those is the offline tooling's job, not the loop's. (Pre-Step-48 this was a runtime convert job; it's gone.)
 
-The `put_file` boundary refuses any write to a dops port's `Makefile.DragonFly` (relocated there from the old intent translator). Half-migrated substrate (both `Makefile.DragonFly` AND `overlay.dops` present) is detected by `assess_dops` and routed back to convert.
+The `put_file` boundary refuses any write to a `Makefile.DragonFly` (unconditional since the Step 48 authoring lock). A port that still has compat artifacts and no overlay is aborted to MANUAL, not "routed to convert."
 
 ### dops grammar (what `overlay.dops` looks like)
 

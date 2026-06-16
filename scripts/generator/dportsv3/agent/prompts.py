@@ -1,4 +1,4 @@
-"""System prompts for the triage, patch, and convert agents.
+"""System prompts for the triage and patch agents.
 
 This module holds STRUCTURAL prompt content only:
 
@@ -12,8 +12,8 @@ This module holds STRUCTURAL prompt content only:
   runner's parsers depend on — the typed ``TriageResult`` producer
   in ``runner._write_triage_audit_harness`` extracts Classification
   / Confidence / Root Cause / Evidence from the agent's markdown,
-  and the rebuild_proof / conversion_proof JSON extractors in
-  ``attempt_loop`` / ``convert`` consume the LLM's terminal blocks).
+  and the rebuild_proof JSON extractor in ``attempt_loop`` consumes
+  the LLM's terminal block).
 - Discipline rules (truthfulness, when to stop, when to give up,
   no commits/push/PR).
 
@@ -25,9 +25,6 @@ Pattern-shaped content does NOT live here. It lives in
   via ``flows: [patch]``)
 - Per-classification error fixes → ``error-*.md`` (pulled at
   payload-build time via classification triggers)
-- Convert-agent procedures (domain classification, target directive
-  picking) → ``convert-*.md`` (pulled at payload-build time via
-  ``flows: [convert]``)
 - Per-toolchain "usual suspects" → ``toolchain-*.md`` (pulled via
   ``toolchains:`` triggers — pending Step 19a's ``detect()``)
 

@@ -10,12 +10,14 @@ priority: 100
 
 ## When this applies
 
-Your payload includes a `## Deferred from Convert` section. The
-deferred-patch channel ran compose against an overlay and rejected one
-or more framework patches (typically `diffs/*.diff` files whose hunks no
-longer match current upstream). Compose succeeded after dropping them;
-you were handed a partial overlay plus the list of dropped patches to
-evaluate. If no such section is present, this entry does not apply.
+Your payload includes a `## Deferred from Convert` section (the header is
+historical — the channel is now fed by the offline `diffs/` absorption pass,
+not the retired convert agent; the schema is unchanged). The deferred-patch
+channel ran compose against an overlay and rejected one or more framework
+patches (typically `diffs/*.diff` files whose hunks no longer match current
+upstream). Compose succeeded after dropping them; you were handed a partial
+overlay plus the list of dropped patches to evaluate. If no such section is
+present, this entry does not apply.
 
 Each entry in the section carries:
 
