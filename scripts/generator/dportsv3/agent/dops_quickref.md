@@ -205,10 +205,14 @@ automatically when there's no `overlay.dops`. Under dops mode that
 auto-copy is suppressed (see `I_COMPOSE_MODE_DOPS_SUPPRESSES_COMPAT`),
 so the dops must declare the staging explicitly.
 
-If a `dragonfly/*` patch is simple enough — e.g. one OS-detection
-substitution — prefer rewriting it as a `mk target` recipe with
-`REINPLACE_CMD` in `post-extract`, which is more durable than a
-static patch against generated files.
+Prefer a `REINPLACE_CMD` recipe over a static patch ONLY when the target is a
+GENERATED file (`Makefile.in`, `configure`) — there, patching the generated
+output is brittle. For a hand-written upstream source file (`.c`, `.h`, …) a
+static patch is the robust form (it fails loudly if it stops matching, where a
+whole-line `REINPLACE` sed silently no-ops). **Do not rewrite a `dragonfly/*`
+patch that already applies** — and note that deleting its `file materialize`
+line strands the patch file (the runner reconciles such orphans, but the churn
+buys nothing).
 
 ## On-missing modifiers
 
@@ -249,12 +253,13 @@ or regenerating a deferred `diffs/Makefile.diff` patch. Pick by the patch's
   compose-materialized framework files in `port_root` — works).
 
 **Upstream-source patches (`dragonfly/*`):**
-- Simple bounded substitution → consider rewriting as
-  `mk target set post-extract` with `REINPLACE_CMD`, which is
-  more durable than a static patch against generated files.
-- Otherwise → `file materialize dragonfly/X -> dragonfly/X`. ALWAYS
-  stage; NEVER `patch apply` for these. `bsd.port.mk`'s
-  `do-patch` will apply them at build time.
+- Default → `file materialize dragonfly/X -> dragonfly/X`. ALWAYS stage;
+  NEVER `patch apply` for these. `bsd.port.mk`'s `do-patch` applies them at
+  build time. A static patch against a hand-written source file is robust;
+  keep a working one — don't rewrite it into a `REINPLACE`.
+- A `REINPLACE_CMD` recipe is preferable ONLY for GENERATED targets
+  (`Makefile.in`/`configure`), or when a static patch keeps breaking on
+  upstream bumps.
 
 A `type dport` port needs no body ops at all unless you're fixing a
 specific build failure — `newport/` is the complete port; the header

@@ -90,13 +90,15 @@ When to prefer this:
 - The substitution is contextual enough that a one-line `from→to`
   uniquely identifies the target line.
 
-Pair with **removing the original static patch file**:
+Pair with **removing the patch from the overlay** — delete its
+`file materialize dragonfly/patch-<file> -> …` line so the dops op replaces it.
+You have no file-delete tool and don't need one (and don't `git rm` — no git in
+the loop): the runner reconciles the now-orphaned `dragonfly/patch-<file>`,
+deleting it as part of the captured fix.
 
-```sh
-git rm ports/<origin>/dragonfly/patch-<file>
-```
-
-The dops operation replaces it.
+Reminder: this applies because the target is a **generated** file. For a
+hand-written source file (`.c`/`.h`), keep the static patch — don't rewrite a
+working `file materialize` into a `REINPLACE`.
 
 ### Option 2 (preferred for upstream source) — patch the *source*, not the output
 

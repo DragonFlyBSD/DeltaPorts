@@ -272,9 +272,11 @@ re-validate:
 
 When you remove a directive, do it as one focused `put_file` rewrite and
 re-validate; don't try to counter a wrong op with a second op when
-deleting the line is cleaner. The runner reconciles orphaned on-disk
-artifacts at delivery time, so you don't need a file-delete primitive to
-leave the substrate correct.
+deleting the line is cleaner. You have no file-delete primitive and don't
+need one: on a successful fix the runner reconciles orphaned `dragonfly/` /
+`diffs/` source artifacts — it deletes any file no longer referenced by the
+overlay (a removed `file materialize` / `patch apply` line) before capturing
+the diff, so the removal is part of the delivered fix.
 
 ## Bumping PORTREVISION
 
