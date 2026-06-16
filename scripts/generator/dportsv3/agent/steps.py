@@ -984,6 +984,33 @@ class PatchAttemptStep:
         # Persist outputs.
         services.write_patch_audit(ctx.bundle_dir, bundle_id, result, model, origin)
         services.write_tool_trace(ctx.bundle_dir, bundle_id, dispatcher.trace_events)
+        # On success, before the diff is captured: delete source artifacts the
+        # final overlay no longer references (a removed `file materialize` /
+        # `patch apply` line strands its dragonfly//diffs/ file — inert in dops
+        # mode, but dead substrate, and the agent has no delete primitive). The
+        # removal lands in changes.diff and so flows to delivery. Best-effort.
+        if (result.status or "").lower() == "success":
+            try:
+                from dportsv3.agent import worker as _worker  # noqa: PLC0415
+                from dportsv3.agent.reconcile import (  # noqa: PLC0415
+                    reconcile_orphaned_artifacts,
+                )
+
+                port_dir = _worker.env_paths(env).deltaports / "ports" / origin
+                removed = reconcile_orphaned_artifacts(port_dir)
+                if removed:
+                    services.activity_log(
+                        queue_root, "reconcile_orphans",
+                        f"removed {len(removed)} orphaned source artifact(s) "
+                        f"for {origin}: {', '.join(removed[:5])}",
+                        job_id=ctx.job_id,
+                    )
+            except Exception as exc:  # noqa: BLE001
+                services.log(
+                    queue_root, "WARN",
+                    f"orphan reconcile failed for {origin}: {exc}",
+                )
+
         # Step 30 slice 5: changes.diff is now branch-vs-base
         # (the former delivery.diff shape) and is the single
         # canonical artifact for delivery + verify + operator
