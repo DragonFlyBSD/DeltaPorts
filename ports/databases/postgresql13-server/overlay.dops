@@ -5,10 +5,7 @@ target @any
 
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NLLVM}"
 mk add CONFIGURE_ARGS "--with-template=freebsd"
-mk block set condition "${OPSYS} == DragonFly" <<'MK'
-PG_UID!=		grep -E '^pgsql:' ${PORTSDIR}/GIDs | \
-			awk -F ':' '{print $$3}'; echo
-MK
+mk shell PG_UID "grep -E '^pgsql:' ${PORTSDIR}/GIDs | awk -F ':' '{print $$3}'; echo"
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NICU}"
 
 mk target set dfly-configure <<'MK'
