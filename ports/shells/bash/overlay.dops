@@ -1,10 +1,13 @@
 port shells/bash
 type port
-reason "add ncurses, set TERMCAP_LIB, update pkg-message for DragonFly, dragonfly readline patch"
+reason "add ncurses, set TERMCAP_LIB, update pkg-message for DragonFly, dragonfly readline terminal fix"
 target @any
 
 mk add USES ncurses
 mk add MAKE_ARGS "TERMCAP_LIB=-ltinfo"
 patch apply diffs/files_pkg-message.in.diff
 
-file materialize dragonfly/patch-lib_readline_terminal.c -> dragonfly/patch-lib_readline_terminal.c
+mk target append post-patch <<'MK'
+	@${REINPLACE_CMD} -e 's#dumbterm = STREQ (term, "dumb") || STREQ (term, "vt52") || STREQ (term, "adm3a");#dumbterm = STREQ (term, "dumb") || STREQ (term, "vt52") || STREQ (term, "adm3a") || STREQ (term, "cons25");#' \
+		${WRKSRC}/lib/readline/terminal.c
+MK
