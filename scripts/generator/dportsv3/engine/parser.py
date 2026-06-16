@@ -337,14 +337,28 @@ class _Parser:
             return self._parse_mk_block_set_op(start)
         if action.value == "target":
             return self._parse_mk_target_op(start)
+        if action.value == "ensure-include":
+            return self._parse_mk_ensure_include(start)
 
         self._error(
             "E_PARSE_UNEXPECTED_TOKEN",
-            "unexpected mk action; expected set|eval|shell|unset|add|remove|disable-if|replace-if|block|target",
+            "unexpected mk action; expected set|eval|shell|unset|add|remove|disable-if|replace-if|block|target|ensure-include",
             action,
         )
         self._sync_line()
         return None
+
+    def _parse_mk_ensure_include(self, start: Token) -> MkOpNode | None:
+        name = self._expect_word("after 'mk ensure-include'")
+        if name is None:
+            self._sync_line()
+            return None
+        self._finish_statement()
+        return MkOpNode(
+            span=_join_span(start.span, name.span),
+            action="ensure-include",
+            include=name.value,
+        )
 
     def _parse_mk_block_set_op(self, start: Token) -> MkOpNode | None:
         if self._expect_word_value("set", "after 'mk block'") is None:

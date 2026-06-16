@@ -65,6 +65,7 @@ class MkOpNode(AstNode):
     heredoc_tag: str | None = None
     recipe: str | None = None
     on_missing: str | None = None
+    include: str | None = None
 
 
 @dataclass(frozen=True)

@@ -245,6 +245,62 @@ def exec_mk_var_shell(
     return _success_row(op, "mk-var-shell")
 
 
+def exec_mk_ensure_include(
+    op: PlanOp, context: ApplyContext, txn: FileTransaction
+) -> ApplyOpResult:
+    # Idempotently ensure the port Makefile carries `.include <NAME>`, inserted
+    # before the terminal include. Used to give a terminal-only port the
+    # framework-var-defining `bsd.port.options.mk` so a following
+    # `${DFLYVERSION}`/`${OPSYS}` conditional resolves. Dumb by design — it
+    # matches the exact include name; the author only emits it where needed
+    # (pre-sandwiched ports already define the vars and don't get it).
+    name = op.payload.get("name")
+    if not isinstance(name, str) or not name:
+        return _failed_row(
+            op,
+            code="E_APPLY_INVALID_OPERATION",
+            message="mk.include.ensure requires an include name",
+        )
+
+    try:
+        path = _resolve_path(context.port_root, None, default="Makefile")
+    except ValueError as exc:
+        return _failed_row(
+            op,
+            code="E_APPLY_INVALID_PATH",
+            message=str(exc),
+            source_path=context.port_root,
+        )
+
+    loaded = _load_makefile(txn, path)
+    if loaded is None:
+        return _missing_row(
+            op,
+            policy=_on_missing(op),
+            message="Makefile does not exist",
+            source_path=path,
+        )
+
+    text, document = loaded
+    for node in document.nodes:
+        if isinstance(node, IncludeNode) and name in node.include:
+            return _success_row(op, "mk-include-present")
+
+    directive = f".include <{name}>"
+    insert_before = _insert_before_last_include_line(document)
+    if insert_before is None:
+        updated = text
+        if updated and not updated.endswith(("\n", "\r\n")):
+            updated += "\n"
+        updated += directive + "\n"
+    else:
+        updated = _replace_line_range(
+            text, start=insert_before, end=insert_before - 1, new_lines=[directive]
+        )
+    txn.stage_write(path, updated)
+    return _success_row(op, "mk-include-ensured")
+
+
 def exec_mk_var_unset(
     op: PlanOp, context: ApplyContext, txn: FileTransaction
 ) -> ApplyOpResult:

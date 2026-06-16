@@ -160,6 +160,16 @@ def _validate_operation(
                         source_path,
                     )
                 )
+        elif op.action == "ensure-include":
+            if op.include is None:
+                diagnostics.append(
+                    _diag(
+                        "E_SEM_INVALID_OPERATION_STATE",
+                        "mk ensure-include requires an include name",
+                        op.span,
+                        source_path,
+                    )
+                )
         elif op.action in {"target-set", "target-append"}:
             if op.name is None or op.heredoc_tag is None or op.recipe is None:
                 diagnostics.append(
@@ -206,6 +216,7 @@ def _validate_operation(
             "block-set",
             "target-set",
             "target-append",
+            "ensure-include",
         }
         diagnostics.extend(
             _validate_on_missing(

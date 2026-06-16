@@ -108,6 +108,23 @@ def _map_operation(
                 diagnostics,
             )
 
+        if op.action == "ensure-include":
+            if op.include is None:
+                diagnostics.append(
+                    _diag(
+                        "E_PLAN_INVALID_OPERATION",
+                        "mk ensure-include requires an include name",
+                        op.span,
+                        source_path,
+                    )
+                )
+                return None, {}, diagnostics
+            return (
+                "mk.include.ensure",
+                {"name": op.include},
+                diagnostics,
+            )
+
         if op.action == "unset":
             if op.var is None:
                 diagnostics.append(

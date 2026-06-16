@@ -132,6 +132,12 @@ def test_mk_target_set_round_trip() -> None:
     assert op["recipe"] == ["\tcmd one", "\tcmd two"]
 
 
+def test_mk_ensure_include_round_trip() -> None:
+    op = _one_op(emit.mk_ensure_include("bsd.port.options.mk"))
+    assert op["kind"] == "mk.include.ensure"
+    assert op["name"] == "bsd.port.options.mk"
+
+
 def test_mk_target_remove_and_rename() -> None:
     assert _one_op(emit.mk_target_remove("post-install", on_missing="noop"))["kind"] == (
         "mk.target.remove"

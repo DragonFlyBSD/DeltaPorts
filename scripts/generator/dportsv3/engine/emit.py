@@ -154,6 +154,10 @@ def mk_target_append(name: str, recipe: str | Sequence[str]) -> str:
     return f"mk target append {name} <<'{tag}'\n{body}\n{tag}"
 
 
+def mk_ensure_include(name: str) -> str:
+    return f"mk ensure-include {name}"
+
+
 def mk_target_remove(name: str, *, on_missing: str | None = None) -> str:
     return f"mk target remove {name}{_on_missing(on_missing)}"
 

@@ -574,6 +574,64 @@ def test_apply_plan_mk_var_token_remove_handles_continued_assignment(
     assert "\\" not in out.split(".include")[0]
 
 
+def test_apply_plan_mk_ensure_include_inserts_before_terminal_include(
+    tmp_path: Path,
+) -> None:
+    """`mk ensure-include` gives a terminal-only port the framework-var-
+    defining `bsd.port.options.mk`, inserted above the terminal include so a
+    following `${DFLYVERSION}`/`${OPSYS}` conditional resolves."""
+    makefile = tmp_path / "Makefile"
+    makefile.write_text("PORTNAME= sample\n\n.include <bsd.port.mk>\n")
+    plan = Plan(
+        port="category/name",
+        ops=[
+            PlanOp(
+                id="op-1",
+                target="@main",
+                kind="mk.include.ensure",
+                payload={"name": "bsd.port.options.mk"},
+            )
+        ],
+    )
+
+    result = apply_plan(
+        plan, port_root=tmp_path, target="@main", dry_run=False, oracle_profile="off",
+    )
+
+    assert result.ok, [d.code for d in result.op_results[0].diagnostics]
+    assert result.op_results[0].message == "mk-include-ensured"
+    out = makefile.read_text()
+    assert ".include <bsd.port.options.mk>" in out
+    assert out.index("bsd.port.options.mk") < out.index("<bsd.port.mk>")
+
+
+def test_apply_plan_mk_ensure_include_idempotent_when_present(tmp_path: Path) -> None:
+    """No-op when the include is already present — no duplicate."""
+    makefile = tmp_path / "Makefile"
+    makefile.write_text(
+        "PORTNAME= sample\n.include <bsd.port.options.mk>\n.include <bsd.port.mk>\n"
+    )
+    plan = Plan(
+        port="category/name",
+        ops=[
+            PlanOp(
+                id="op-1",
+                target="@main",
+                kind="mk.include.ensure",
+                payload={"name": "bsd.port.options.mk"},
+            )
+        ],
+    )
+
+    result = apply_plan(
+        plan, port_root=tmp_path, target="@main", dry_run=False, oracle_profile="off",
+    )
+
+    assert result.ok
+    assert result.op_results[0].message == "mk-include-present"
+    assert makefile.read_text().count("bsd.port.options.mk") == 1
+
+
 def test_apply_plan_mk_var_token_add_preserves_plus_equals_operator(
     tmp_path: Path,
 ) -> None:
