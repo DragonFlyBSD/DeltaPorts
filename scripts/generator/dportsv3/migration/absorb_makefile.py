@@ -98,6 +98,12 @@ def hunk_to_mk_ops(hunk: list[str]) -> list[str] | None:
         return None  # pure insertion → placement risk → escalate
     if not all(_VAR_RE.match(line) for line in (*rem, *add)):
         return None  # touches non-variable lines → escalate
+    # A continued assignment (value ends in '\') spills onto context lines the
+    # hunk view excludes, so the +/- lines under-represent the real value.
+    # Collapsing them here drops the continuation (the bug that rendered a lone
+    # 'mk set VAR "\\"'); reconstructing from partial context is unsafe → escalate.
+    if any(_VAR_RE.match(line).group(4).rstrip().endswith("\\") for line in (*rem, *add)):
+        return None
 
     rem_by: dict[str, re.Match] = {}
     add_by: dict[str, re.Match] = {}
