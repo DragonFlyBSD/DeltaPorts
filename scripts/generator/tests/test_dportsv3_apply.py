@@ -535,6 +535,45 @@ def test_apply_plan_mk_var_token_add_appends_when_subject_present(tmp_path: Path
     assert "USES= cmake ssl" in makefile.read_text()
 
 
+def test_apply_plan_mk_var_token_remove_handles_continued_assignment(
+    tmp_path: Path,
+) -> None:
+    """`mk remove` on a `\\`-continued multi-line assignment must drop the
+    token without turning the line-continuation backslashes into literal
+    tokens (the bug that rendered `RUN_DEPENDS= a \\ b \\ c`). The value
+    flattens to one clean line and the original operator is preserved."""
+    makefile = tmp_path / "Makefile"
+    makefile.write_text(
+        "PORTNAME= sample\n"
+        "RUN_DEPENDS=\ta>0:cat/a \\\n"
+        "\t\tb>0:cat/b \\\n"
+        "\t\tc>0:cat/c\n"
+        ".include <bsd.port.mk>\n"
+    )
+    plan = Plan(
+        port="category/name",
+        ops=[
+            PlanOp(
+                id="op-1",
+                target="@main",
+                kind="mk.var.token_remove",
+                payload={"name": "RUN_DEPENDS", "value": "b>0:cat/b"},
+            )
+        ],
+    )
+
+    result = apply_plan(
+        plan, port_root=tmp_path, target="@main", dry_run=False, oracle_profile="off",
+    )
+
+    assert result.ok, [d.code for d in result.op_results[0].diagnostics]
+    out = makefile.read_text()
+    assert "RUN_DEPENDS= a>0:cat/a c>0:cat/c\n" in out
+    assert "b>0:cat/b" not in out
+    # No stray continuation backslashes leaked into the rewritten assignment.
+    assert "\\" not in out.split(".include")[0]
+
+
 def test_apply_plan_mk_var_token_add_preserves_plus_equals_operator(
     tmp_path: Path,
 ) -> None:

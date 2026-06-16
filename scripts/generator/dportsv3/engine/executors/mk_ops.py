@@ -48,6 +48,26 @@ def _insert_before_last_include_line(document) -> int | None:
     return insert_before
 
 
+def _logical_tokens(value: str) -> list[str]:
+    """Split an assignment value into tokens, treating ``\\`` line
+    continuations as joins rather than literal tokens.
+
+    A CST ``AssignmentNode`` value for a *continued* assignment carries the
+    physical lines joined by ``\\n`` with each non-final line still ending in
+    ``\\``. A naive ``value.split()`` turns those backslashes (and any blank
+    continuation lines) into bogus tokens, which then corrupt the value when
+    the assignment is rewritten flat. Strip the trailing ``\\`` per physical
+    line before tokenizing.
+    """
+    tokens: list[str] = []
+    for line in value.splitlines():
+        stripped = line.strip()
+        if stripped.endswith("\\"):
+            stripped = stripped[:-1]
+        tokens.extend(stripped.split())
+    return tokens
+
+
 def exec_mk_var_set(
     op: PlanOp, context: ApplyContext, txn: FileTransaction
 ) -> ApplyOpResult:
@@ -438,13 +458,16 @@ def exec_mk_var_token_remove(
         )
 
     node = document.nodes[intent.node_indices[0]]
-    tokens = [tok for tok in node.value.split() if tok]
+    # Continuation-aware: a continued assignment's value embeds `\` markers
+    # that a plain .split() would turn into literal tokens (corrupting the
+    # rewrite). Preserve the original operator rather than forcing `=`.
+    tokens = _logical_tokens(node.value)
     if value not in tokens:
         return _missing_row(
             op, policy=policy, message=f"token not found: {value}", source_path=path
         )
     tokens = [tok for tok in tokens if tok != value]
-    replacement = f"{name}= {' '.join(tokens)}" if tokens else ""
+    replacement = f"{node.name}{node.operator} {' '.join(tokens)}" if tokens else ""
     new_lines = [replacement] if replacement else []
     updated = _replace_line_range(
         text,
