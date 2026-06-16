@@ -56,7 +56,13 @@ def _parse_makefile_dragonfly(path: Path) -> tuple[list[str], list[str]]:
             name = assign.group(1)
             op = assign.group(2)
             value = assign.group(3).strip()
-            if op in {"=", "?=", ":=", "!="}:
+            if op == "!=":
+                # Shell-immediate assignment: `VAR!= cmd` runs the command at
+                # parse time and assigns its output. Neither `mk set` (`=`,
+                # recursive) nor `mk eval` (`:=`, make-expansion, no shell) is
+                # faithful — emit `mk shell`, the dedicated `!=` op.
+                ops.append(f"mk shell {name} {_quote(value)}")
+            elif op in {"=", "?=", ":="}:
                 if _references_var(value, name):
                     # Self-referential assignment (`VAR:= ${VAR:mod}`,
                     # prepend, etc.). A plain `mk set` would render a fatal

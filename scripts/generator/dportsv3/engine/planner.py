@@ -91,6 +91,23 @@ def _map_operation(
                 diagnostics,
             )
 
+        if op.action == "shell":
+            if op.var is None or op.value is None:
+                diagnostics.append(
+                    _diag(
+                        "E_PLAN_INVALID_OPERATION",
+                        "mk shell requires var and value",
+                        op.span,
+                        source_path,
+                    )
+                )
+                return None, {}, diagnostics
+            return (
+                "mk.var.shell",
+                {"name": op.var, "value": op.value},
+                diagnostics,
+            )
+
         if op.action == "unset":
             if op.var is None:
                 diagnostics.append(

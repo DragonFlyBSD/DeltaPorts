@@ -100,7 +100,7 @@ def _validate_operation(
     diagnostics: list[Diagnostic] = []
 
     if isinstance(op, MkOpNode):
-        if op.action in {"set", "eval"}:
+        if op.action in {"set", "eval", "shell"}:
             if op.var is None or op.value is None:
                 diagnostics.append(
                     _diag(
@@ -202,6 +202,7 @@ def _validate_operation(
 
         on_missing_allowed = op.action not in {
             "eval",
+            "shell",
             "block-set",
             "target-set",
             "target-append",
