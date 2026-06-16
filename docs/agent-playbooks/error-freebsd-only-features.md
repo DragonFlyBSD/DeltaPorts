@@ -30,15 +30,16 @@ FreeBSD base system includes several facilities that do not exist in DragonFlyBS
 
 When a port has an OPTION that enables these features (often ON by default in FreeBSD ports), the build fails on DragonFly because the headers/libraries are missing.
 
-## Fix
+## Fix — author `overlay.dops` (never `Makefile.DragonFly`, which is refused)
 
-### Option 1: Disable the option in Makefile.DragonFly (Preferred)
+### Option 1: Disable the option (Preferred)
 
-If the port defines an OPTION for the feature, disable it by default on DragonFly using the `:N` pattern to remove from OPTIONS_DEFAULT:
+If the port defines an OPTION for the feature, drop it from `OPTIONS_DEFAULT`
+with the `:N` filter. It's a self-referential `:=` → use **`mk eval`** (a plain
+`mk set` would render a fatal recursive `=`):
 
-```makefile
-# ports/category/portname/Makefile.DragonFly
-OPTIONS_DEFAULT:=	${OPTIONS_DEFAULT:NLIBBLACKLIST}
+```dops
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NLIBBLACKLIST}"
 ```
 
 The `:N` modifier removes matching items from the list. Common option names:
@@ -53,37 +54,37 @@ The `:N` modifier removes matching items from the list. Common option names:
 | udev/libudev | `UDEV` |
 | systemd/basu | `BASU`, `SYSTEMD` |
 
-Multiple options can be disabled in one line:
+Multiple options in one filter:
 
-```makefile
-OPTIONS_DEFAULT:=	${OPTIONS_DEFAULT:NPULSEAUDIO:NUDEV}
+```dops
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NPULSEAUDIO:NUDEV}"
 ```
 
 ### Option 2: Add replacement option (when alternative exists)
 
-Sometimes DragonFly has an alternative. Use `:N` to remove the bad option and append the good one:
+Filter out the bad option and append the good one in the same immediate value:
 
-```makefile
+```dops
 # Remove MIT krb5 from base, use port instead
-OPTIONS_DEFAULT:=	${OPTIONS_DEFAULT:NGSSAPI_BASE} GSSAPI_MIT
-```
-
-```makefile
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NGSSAPI_BASE} GSSAPI_MIT"
 # Use ALSA instead of PulseAudio
-OPTIONS_DEFAULT:=	${OPTIONS_DEFAULT:NPULSEAUDIO} ALSA
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NPULSEAUDIO} ALSA"
 ```
 
 ### Option 3: Patch source to make feature optional (Last Resort)
 
-If the port hardcodes the feature without an OPTION, create `diffs/patch-*.diff` to wrap the code in `#ifdef` guards or remove the problematic includes.
+If the port hardcodes the feature without an OPTION, stage a DragonFly source
+patch under `dragonfly/` (`file materialize dragonfly/patch-X -> dragonfly/patch-X`)
+that wraps the code in `#ifdef` guards or drops the problematic includes — never
+`patch apply` a `dragonfly/*` patch (no extracted source at compose time).
 
-## Examples
-- `net/bsdrcmds`: `OPTIONS_DEFAULT:= ${OPTIONS_DEFAULT:NLIBBLACKLIST}` - disables blacklistd support
-- `www/bozohttpd`: `OPTIONS_DEFAULT:= ${OPTIONS_DEFAULT:NBLACKLIST}` - same pattern, different option name
-- `security/sudo`: `OPTIONS_DEFAULT:= ${OPTIONS_DEFAULT:NAUDIT}` - disables BSM audit
-- `net/yate`: `OPTIONS_DEFAULT:= ${OPTIONS_DEFAULT:NSCTP}` - disables SCTP protocol support
-- `x11/waybar`: `OPTIONS_DEFAULT:= ${OPTIONS_DEFAULT:NPULSEAUDIO:NUDEV}` - disables multiple missing features
-- `x11-wm/sway`: `OPTIONS_DEFAULT:= ${OPTIONS_DEFAULT:NBASU}` - disables systemd/basu integration
+## Examples (the `OPTIONS_DEFAULT:NFOO` filter → `mk eval`)
+- `net/bsdrcmds`: `mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NLIBBLACKLIST}"` — disables blacklistd
+- `www/bozohttpd`: `mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NBLACKLIST}"` — same pattern, different option name
+- `security/sudo`: `mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NAUDIT}"` — disables BSM audit
+- `net/yate`: `mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NSCTP}"` — disables SCTP
+- `x11/waybar`: `mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NPULSEAUDIO:NUDEV}"` — disables multiple
+- `x11-wm/sway`: `mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NBASU}"` — disables systemd/basu
 
 ## Triage Classification
 This error type is **patchable** when:

@@ -41,12 +41,12 @@ Create a patch file at `ports/<category>/<port>/dragonfly/patch-<description>`:
 - The patch file goes in `dragonfly/` NOT `files/` (that's for FreeBSD patches)
 - DragonFly patches apply AFTER FreeBSD `files/patch-*` files
 
-### Option 2: Makefile.DragonFly with CFLAGS
+### Option 2: Add a CFLAG via `overlay.dops`
 
-For simple cases where a preprocessor define suffices:
+For simple cases where a preprocessor define suffices (`CFLAGS+= …` → `mk add`):
 
-```makefile
-CFLAGS+=	-DMISSING_SYMBOL=0
+```dops
+mk add CFLAGS "-DMISSING_SYMBOL=0"
 ```
 
 **Namespace caveat.** Only define identifiers in the *user namespace*
@@ -61,10 +61,10 @@ see `error-bsd-types-visibility.md`.
 
 ### Option 3: Disable feature via OPTIONS
 
-If the problematic code is behind an option:
+If the problematic code is behind an option (self-ref `:=` → `mk eval`):
 
-```makefile
-OPTIONS_DEFAULT:=	${OPTIONS_DEFAULT:NPROBLEMATIC_OPTION}
+```dops
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NPROBLEMATIC_OPTION}"
 ```
 
 ## Line Number Considerations

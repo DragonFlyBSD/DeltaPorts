@@ -115,7 +115,8 @@ their generated outputs.
 ```
 
 Then either rely on `USES= autoreconf` (upstream conventions) or add
-an explicit `pre-configure` step in `Makefile.DragonFly`.
+an explicit `pre-configure` step in `overlay.dops`
+(`mk target set pre-configure <<'MK' … MK`).
 
 ### Option 3 (last resort) — regenerate the static patch
 

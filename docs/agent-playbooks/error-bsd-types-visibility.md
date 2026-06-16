@@ -90,14 +90,8 @@ the canonical user-facing escape hatch — `<sys/cdefs.h>` recognizes
 it and re-enables BSD-namespace declarations without disturbing
 the existing POSIX-conformance code paths.
 
-```json
-{
-  "type": "change_makefile",
-  "path": "Makefile.DragonFly",
-  "key": "CFLAGS",
-  "value": "-D_BSD_SOURCE",
-  "op": "append"
-}
+```dops
+mk add CFLAGS "-D_BSD_SOURCE"
 ```
 
 `_BSD_SOURCE` is the API. `__BSD_VISIBLE` is the implementation.
