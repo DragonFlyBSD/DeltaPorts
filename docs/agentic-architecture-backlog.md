@@ -2681,3 +2681,142 @@ that fail on dops ports.
 - `worker.py` write-boundary refusal (extend to all compat artifacts).
 - Follow-up cutover: `convert.py`, `agent/convert.py`, `assess_dops`
   routing, deferred-patch handoff, eventually `compat.py`.
+
+### Step 49 — engine dops serializer (emit symmetric to parse) + migrate hand-rolled producers — pending
+
+**Goal.** The engine is a one-way street: it *parses* dops
+(`text → lex → parse → AST → plan → apply`) but has **no serializer** —
+nothing turns an op back into `.dops` text. So every producer that needs
+to *write* dops hand-builds `mk …` strings with f-strings. Add an
+engine-side emitter that is the single authority for op syntax, value
+quoting, and header format, then migrate the scattered producers onto it.
+
+**Why this exists now (audit — verified against the code paths).** "Stuff
+in convert.py" is a symptom: the translator must author dops, and the
+engine never offered a writer, so each producer reinvented the syntax.
+Confirmed scattered emitters:
+
+| producer | emits | notes |
+|---|---|---|
+| `migration/convert.py` | `mk set/eval/shell/add` + header | `_render_dops`; header order `port/type/reason/target` |
+| `migration/absorb_makefile.py` | `mk set/add/remove` + header | `_bootstrap_overlay`; header order `target/port/type/reason`; imports `_quote` from convert; no `!=`/`?=` awareness |
+| `migration/absorb_remove.py` | `file remove … on-missing` + header | same header order as absorb_makefile |
+| `agent/runner.py` (`_ensure_overlay_or_abort`, ~L2592) | header-only bootstrap | a **fourth** inline header f-string; `overlay_state.py` only *decides* (returns `BootstrapDecision`), it does not emit |
+| `mass_convert.py` | `file materialize` / `file remove` (L54/L119) inline; **calls** `convert_record`/`hunk_to_mk_ops` for mk | hybrid: mk emission inherits 49b, file-op f-strings are its own |
+
+Concrete proof there is no shared contract: **four distinct header builders
+with at least two different field orders** — `convert.py` emits
+`port/type/reason/target`; the `absorb_*` pair and the runner bootstrap
+diverge from it. This asymmetry is *why* the recent `!=`→`=` silent
+mis-render existed (the op-string choice was unverified) and why fixing it
+(`mk shell`, `d3fc41388dd`) had to be made in `convert.py` **alone** —
+`absorb_makefile` did not inherit it.
+
+**Op surface (verified).** The deterministic producers emit **`mk` ops +
+`file materialize`/`file remove`** (with `on-missing`). `text.line_*` and
+`patch apply` are authored only by the *freeform* patch agent, so they sit
+in 49c (validation), not the 49a core.
+
+**Shape.** Builder functions, not a generic `emit_op(spec)` — the producers
+author from raw values (var name, src/dst), not from AST nodes (which carry
+a required `span`) or `PlanOp`s (planner *output*). Typed builders match how
+producers actually work and make the op list one discoverable surface:
+
+```
+engine/emit.py  (inverse of the parser; the one place op syntax + _quote live)
+    mk_set(name, value)            -> str        mk_shell(name, value)   -> str
+    mk_eval(name, value)           -> str        mk_add(name, token)     -> str
+    mk_block_set(cond, recipe, *, contains=None) -> str   ...target_set, etc.
+    file_materialize(src, dst)     -> str        file_remove(path, *, on_missing) -> str
+    header(port, type, reason, target) -> str    overlay(meta, ops)      -> str
+
+round-trip invariant (PLAN-level, span-free — AST nodes carry spans so
+AST equality can't hold; heredoc-tag/whitespace cosmetics also normalize
+away in the plan):
+    build_plan(overlay(meta, ops)).plan.to_dict() == expected_plan
+```
+
+The operator→op mapping (`=`→set, `:=`→eval, `!=`→shell, `+=`→add) and
+`_quote` move *into* the emitter, so adding an op is one engine change all
+producers inherit, instead of "edit convert.py and hope absorb agrees."
+
+#### Sub-steps
+
+**49a — build the serializer in the engine.** Implement the builder
+functions above (resolved: typed builders, *not* a generic op-spec
+data-model — producers hold raw values, and reusing `MkOpNode` would force
+a synthetic `span`). Cover the surface the deterministic producers actually
+emit: `mk set/eval/shell/add/remove/unset`, `mk block-set`, `mk target-*`,
+`file materialize`, `file remove` (with `on-missing`). Centralize `_quote`
+here and delete the migration copy. Round-trip property test at the
+**plan** level (span-free): `build_plan(overlay(meta, ops)).plan.to_dict()`
+equals the expected normalized plan, over the full op corpus. LOC: ~150 +
+~120 tests.
+
+**49b — migrate the producers onto it (the de-dup).** This is the "move the
+f-strings out" work you asked about — and the bulk of the value. Replace the
+hand-built strings + the four divergent header builders in: `convert.py`
+(`_render_dops`, `_parse_makefile_dragonfly`), `absorb_makefile.py`
+(`hunk_to_mk_ops`, `_bootstrap_overlay`), `absorb_remove.py`,
+`runner.py::_ensure_overlay_or_abort` (~L2592), and `mass_convert.py`'s own
+`file materialize`/`file remove` strings (L54/L119). One header format, one
+quoting path, one op mapping. LOC: net ~-150 (deletes more than it adds).
+
+**49c — validate/normalize the freeform producer through the emitter.** The
+patch agent authors `overlay.dops` bodies free-hand (and emits `text.line_*`
+/ `patch apply` ops the deterministic producers never touch). It can't be
+*replaced* by the emitter, but its output can be **round-tripped**
+(`parse → re-emit canonical`) before commit, so a malformed or non-canonical
+overlay is caught/normalized at the boundary. Extending 49a's coverage to
+`text.*`/`patch` ops is the prerequisite. Optional, lower priority. LOC:
+~50 (+ the text/patch builders if not done in 49a).
+
+**49d — fold in the `?=`/`:=` fidelity gap.** The emitter is the natural
+home to close the operator mis-renders the `mk shell` pass left behind:
+`convert.py` still routes `?=` and non-self-ref `:=` → `mk set` (→`=`),
+silently changing semantics. Decide here whether `?=` warrants its own op
+(à la `mk shell` for `!=`) or a faithful render, and land it once in the
+emitter. LOC: ~40 + tests.
+
+#### LOC estimate
+
+~360 net new (serializer + tests + `?=` op) minus ~150 deleted from the
+producers ≈ **~210 net**, concentrated in one new engine module.
+
+#### Order
+
+49a → 49b → 49d → 49c. Serializer first (nothing migrates without it);
+deterministic producers second (the payoff — single source of truth);
+`?=`/`:=` fidelity third (cheap once the mapping is centralized); freeform
+validation last (optional hardening).
+
+#### Dependencies
+
+- **Hard:** none. The `mk shell` op (`d3fc41388dd`) already exists for the
+  emitter to render.
+- **Soft / synergy:** this is the enabling half of the **fidelity-oracle**
+  direction — a serializer makes `parse(emit(op)) == op` a testable
+  invariant and gives the round-trip/compose-parity gate one canonical
+  authoring surface to verify, rather than five.
+
+#### Why not earlier
+
+During the Step 48 mass-convert the producers were few and the conversion
+was a one-time push; hand-rolled strings were tolerable and shipping the
+migration mattered more than the abstraction. Now that (a) the op set is
+*growing* (`mk shell`, a likely `?=` op) and (b) we have **observed silent
+divergence** between producers (the `!=` fix that reached only one of
+three), the missing serializer has crossed from latent to load-bearing —
+exactly the "missing abstraction, not a missing feature" shape of Steps
+21–23.
+
+#### Touchpoints
+
+- New `engine/emit.py` (+ tests); `engine/api.py` re-export.
+- `migration/convert.py` (`_render_dops`, `_parse_makefile_dragonfly`),
+  `migration/absorb_makefile.py` (`hunk_to_mk_ops`, `_bootstrap_overlay`),
+  `migration/absorb_remove.py` — migrate emission; delete the `_quote` copy.
+- `agent/runner.py::_ensure_overlay_or_abort` (~L2592) — the bootstrap
+  header writer (`overlay_state.py` only decides, not emits).
+- `mass_convert.py` — its inline `file materialize`/`file remove` (49b);
+  patch-agent free-hand overlay authoring (49c round-trip).
