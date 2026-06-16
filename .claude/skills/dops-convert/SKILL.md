@@ -70,19 +70,24 @@ target @any
 ## Op grammar (authoritative: scripts/generator/dportsv3/agent/dops_quickref.md)
 
 ```dops
-# variables
-mk set   VAR "value"          # always quote the value
-mk eval  VAR "${VAR:mod}"     # self-referential / immediate `:=` (see below)
-mk add   VAR token            # quote tokens with >,:,",spaces
+# variables  (source operator -> op: = ->set, := ->eval, != ->shell, += ->add)
+mk set   VAR "value"          # `=`  — always quote the value
+mk eval  VAR "${VAR:mod}"     # `:=` — immediate / self-referential (see below)
+mk shell VAR "cmd ${X}"       # `!=` — shell command substitution
+mk add   VAR token            # `+=` — quote tokens with >,:,",spaces
 mk remove VAR token
 mk unset VAR
+# `?=` has NO faithful op -> escalate (do not render as `mk set`)
 
 # conditionals
-mk disable-if condition "${OPSYS} == FreeBSD"
-mk replace-if from "${OPSYS} == FreeBSD" to "${OPSYS} == DragonFly"
-mk block set condition "${OPSYS} == DragonFly" <<'MK'
-	CFLAGS+=	-DSHIM
+mk disable-if condition "${OPSYS} == FreeBSD"                      # edits an EXISTING upstream .if
+mk replace-if from "${OPSYS} == FreeBSD" to "${OPSYS} == DragonFly" # edits an EXISTING upstream .if
+mk block set condition "${DFLYVERSION} >= 400706" <<'MK'           # INSERTS a new .if (runtime guard)
+	PLIST_FILES+=	include/foo/bar.h
 MK
+# framework-var (${DFLYVERSION}/${OPSYS}/${OSVERSION}) condition inserted into a
+# terminal-only port? emit `mk ensure-include bsd.port.options.mk` FIRST (below)
+mk ensure-include bsd.port.options.mk
 
 # recipes
 mk target set post-extract <<'MK'
@@ -111,11 +116,21 @@ Most ops accept `on-missing error|warn|noop` (default `error`). Use
 ## Per-artifact conversion recipes
 
 **`Makefile.DragonFly`** (the fragment — its lines are appended to the port Makefile):
-- `VAR= x` / `VAR?= x` / `VAR:= x` → `mk set VAR "x"`
+- `VAR= x` → `mk set VAR "x"`
+- `VAR:= x` → `mk eval VAR "x"` (immediate — see self-referential note below)
+- `VAR!= cmd` → `mk shell VAR "cmd"` (shell command substitution)
+- `VAR?= x` → **escalate** — no faithful op. `mk set` would override an upstream
+  value the `?=` default was meant to defer to.
 - `VAR+= a b` → `mk add VAR a` + `mk add VAR b` (or `mk add VAR "a b"`)
 - `.undef VAR` → `mk unset VAR`
 - `.if COND ... .endif` block → `mk block set condition "COND" <<'MK' ... MK`,
-  or `mk replace-if` / `mk disable-if` if it edits an existing upstream `.if`
+  or `mk replace-if` / `mk disable-if` if it edits an existing upstream `.if`.
+  **If COND references a framework var (`${DFLYVERSION}`/`${OPSYS}`/`${OSVERSION}`)
+  and the port is terminal-only** (only `.include <bsd.port.mk>`), emit
+  `mk ensure-include bsd.port.options.mk` *before* the block, else it fails with
+  `Variable "DFLYVERSION" is undefined`. And never *invent* an
+  `${OPSYS} == DragonFly` guard — the composed tree is DragonFly-only, so emit
+  DragonFly content unconditionally.
 - **Named pattern — `.if !defined(DPORTS_BUILDER)` guard** (very common):
   `.if !defined(DPORTS_BUILDER)` / `MANUAL_PACKAGE_BUILD= ...` / `.endif`
   → `mk block set condition "!defined(DPORTS_BUILDER)" <<'MK'` …body… `MK`

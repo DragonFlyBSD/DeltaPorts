@@ -33,14 +33,22 @@ mk unset  USES_BROKEN_ON_DRAGONFLY
 mk add    USES libtool
 mk remove USES gmake
 
-# Self-referential / immediate assignment — appends a verbatim `:=` line at
-# the end of the port Makefile body (reproduces a trailing Makefile.DragonFly
-# fragment). Use this — NOT `mk set` — whenever the value expands the same
-# variable, for ANY bmake modifier (`:N`/`:M` filter, `:S`/`:C` substitute,
-# prepend, append). `mk set VAR "${VAR:...}"` renders a fatal recursive `=`.
+# Immediate assignment (`:=`) — appends a verbatim `:=` line at the end of the
+# port Makefile body. Use for ANY `:=` source assignment, and ALWAYS for a
+# self-referential value (`${VAR:mod}` — `:N`/`:M` filter, `:S`/`:C` substitute,
+# prepend, append), where `mk set VAR "${VAR:...}"` renders a fatal recursive `=`.
 mk eval   OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NSTUNNEL}"
 mk eval   USES "${USES:S/cargo/cargo:extra/}"
 mk eval   LDFLAGS "-L${LOCALBASE}/lib ${LDFLAGS}"
+
+# Shell assignment (`!=`) — appends a `VAR!= cmd` line. The faithful op for a
+# command-substitution assignment; neither mk set (`=`) nor mk eval (`:=`) runs
+# a shell.
+mk shell  PG_UID "grep -E '^pgsql:' ${PORTSDIR}/GIDs | awk -F ':' '{print $$3}'"
+
+# Operator mapping (source -> op): `=`->mk set, `:=`->mk eval, `!=`->mk shell,
+# `+=`->mk add. `?=` has NO faithful op — escalate it (mk set would override an
+# upstream value the default was meant to defer to).
 
 # Optional behavior when the var isn't found:
 mk set FOO "bar" on-missing error    # default: fail if not found
@@ -58,15 +66,37 @@ mk disable-if condition "${OPSYS} == FreeBSD"
 mk replace-if from "${OPSYS} == FreeBSD" \
               to   "${OPSYS} == FreeBSD || ${OPSYS} == DragonFly"
 
-# Insert/replace a whole .if ... .endif region.
-mk block set condition "${OPSYS} == DragonFly" <<'MK'
-	CFLAGS+=	-DNEEDS_DRAGONFLY_SHIM
-	LDFLAGS+=	-lcompat
+# Insert/replace a whole .if ... .endif region (here a runtime version guard).
+mk block set condition "${DFLYVERSION} >= 500700" <<'MK'
+	LIB_DEPENDS+=	libmd.so:security/libmd
 MK
 ```
 
 `contains "<anchor>"` filters candidates by substring when the same
 condition appears more than once.
+
+**Framework-var conditionals need their vars defined first.** If you INSERT a
+new `.if` whose condition references a framework var (`${DFLYVERSION}`,
+`${OPSYS}`, `${OSVERSION}`, `${OSREL}`) into a *terminal-only* port (one whose
+only include is `.include <bsd.port.mk>`), the inlined `.if` is parsed before
+the framework defines that var → `Variable "DFLYVERSION" is undefined`. Emit
+`mk ensure-include bsd.port.options.mk` **before** the block; it idempotently
+inserts `.include <bsd.port.options.mk>` above the terminal include, so the
+options section (which defines those vars) runs first:
+
+```dops
+mk ensure-include bsd.port.options.mk
+mk block set condition "${DFLYVERSION} >= 400706" <<'MK'
+	PLIST_FILES+=	include/foo/bar.h
+MK
+```
+
+(No-op if the port already includes `bsd.port.options.mk`/`bsd.port.pre.mk`.)
+
+**Do NOT invent an `${OPSYS} == DragonFly` guard** around unconditional
+DragonFly content. The composed tree is DragonFly-only, so the guard is
+redundant — and placed before the framework include it fails with
+`Variable "OPSYS" is undefined`. Emit the content unconditionally.
 
 ## Make target / recipe ops
 

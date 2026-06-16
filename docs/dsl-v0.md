@@ -139,6 +139,8 @@ on_missing        = "on-missing" ("error" | "warn" | "noop") ;
 
 ```text
 mk set <VAR> "<value>" [on-missing error|warn|noop]
+mk eval <VAR> "<value>"
+mk shell <VAR> "<value>"
 mk unset <VAR> [on-missing error|warn|noop]
 mk add <VAR> <token> [on-missing error|warn|noop]
 mk remove <VAR> <token> [on-missing error|warn|noop]
@@ -151,7 +153,22 @@ mk remove <VAR> <token> [on-missing error|warn|noop]
   before the first target or `.include`, whichever appears first
 - if `<VAR>` exists more than once, fail with an ambiguous-match error
 
+`mk eval` renders an immediate `<VAR>:= <value>` line appended before the last
+`.include`. It is the faithful op for an immediate (`:=`) source assignment —
+including any self-referential value (`${VAR:mod}`), where `mk set`'s recursive
+`=` would be fatal. `on-missing` is not allowed (it always appends).
+
+`mk shell` renders a shell `<VAR>!= <value>` line appended before the last
+`.include` — the faithful op for a `!=` (command-substitution) assignment.
+`mk set` (`=`) and `mk eval` (`:=`) do not run a shell; only `mk shell` does.
+`on-missing` is not allowed (it always appends).
+
 `mk add` and `mk remove` still require an existing assignment.
+
+Operator mapping (source assignment → op): `=` → `mk set`; `:=` → `mk eval`;
+`!=` → `mk shell`; `+=` → `mk add`. `?=` (conditional default) has no faithful
+op — it must be escalated, never rendered as `mk set` (which would override an
+upstream value the default was meant to defer to).
 
 ### Makefile conditional/block ops
 
@@ -196,6 +213,20 @@ mk target rename <old> -> <new> [on-missing ...]
 - if `<name>` does not exist, insert a new target block before the last
   `.include` line when present, else append at EOF
 - if `<name>` exists more than once, fail with an ambiguous-match error
+
+### Makefile include ops
+
+```text
+mk ensure-include <name>
+```
+
+`mk ensure-include` idempotently ensures `.include <<name>>` is present,
+inserted before the last `.include` line (no-op if already present). Its use:
+give a terminal-only port (one that only has `.include <bsd.port.mk>`) the
+framework-var-defining `bsd.port.options.mk` *before* a `${DFLYVERSION}`/
+`${OPSYS}` conditional, so the `.if` resolves instead of failing with
+`Variable "DFLYVERSION" is undefined`. Emit it before the conditional;
+placement of the conditional then follows from operation order.
 
 ### File/text ops
 
@@ -261,12 +292,15 @@ Determinism:
   order
 - mapping of forms to operation kinds:
   - `mk set` -> `mk.var.set`
+  - `mk eval` -> `mk.var.eval`
+  - `mk shell` -> `mk.var.shell`
   - `mk unset` -> `mk.var.unset`
   - `mk add` -> `mk.var.token_add`
   - `mk remove` -> `mk.var.token_remove`
   - `mk disable-if` -> `mk.block.disable`
   - `mk replace-if` -> `mk.block.replace_condition`
   - `mk block set` -> `mk.block.set`
+  - `mk ensure-include` -> `mk.include.ensure`
   - `mk target set|append|remove|rename` -> `mk.target.*`
   - `file copy|materialize|remove` -> `file.copy|file.materialize|file.remove`
   - `text ...` -> `text.*`
