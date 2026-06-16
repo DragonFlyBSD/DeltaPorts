@@ -55,11 +55,16 @@ def _parse_makefile_dragonfly(path: Path) -> tuple[list[str], list[str]]:
                 # only `mk shell` is faithful (`mk set`=recursive `=`,
                 # `mk eval`=`:=` make-expansion with no shell).
                 ops.append(emit.mk_shell(name, value))
-            elif op in {"=", "?=", ":="}:
+            elif op == ":=":
+                # Immediate-expansion assignment. `mk eval` renders `:=`
+                # verbatim — faithful whether or not the value is
+                # self-referential; rendering `=` instead would change
+                # immediacy (and be recursive for self-refs).
+                ops.append(emit.mk_eval(name, value))
+            elif op == "=":
                 if _references_var(value, name):
-                    # Self-referential (`VAR:= ${VAR:mod}`, prepend): `mk eval`
-                    # appends a verbatim immediate `:=` line — faithful for
-                    # every bmake modifier; a plain `=` would be recursive.
+                    # Self-referential `=` is recursive in make; emit the
+                    # immediate `:=` form to avoid infinite expansion.
                     ops.append(emit.mk_eval(name, value))
                 else:
                     ops.append(emit.mk_set(name, value))
@@ -67,6 +72,10 @@ def _parse_makefile_dragonfly(path: Path) -> tuple[list[str], list[str]]:
                 if value:
                     ops.append(emit.mk_add(name, value))
             else:
+                # `?=` (conditional default) has no faithful scalar op:
+                # `mk set` would rewrite an upstream value the `?=` was meant
+                # to defer to (override vs no-op). Escalate rather than
+                # silently mis-render; add a dedicated op only if it appears.
                 errors.append(f"unsupported_assignment_op:{op}")
             continue
 
