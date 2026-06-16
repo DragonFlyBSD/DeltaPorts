@@ -21,6 +21,7 @@ import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from dportsv3.engine import emit
 from dportsv3.migration.parity import check_parity
 
 _REASON = "absorb diffs/REMOVE into dops (Step 47 Phase 1)"
@@ -82,13 +83,9 @@ def _resolve_type(port_dir: Path) -> str:
 
 
 def _render_bootstrap_overlay(origin: str, port_dir: Path, ops: list[str]) -> str:
-    header = [
-        "target @any",
-        f"port {origin}",
-        f"type {_resolve_type(port_dir)}",
-        f'reason "{_REASON}"',
-    ]
-    return "\n".join([*header, *ops]) + "\n"
+    return emit.overlay(
+        emit.header(port=origin, type=_resolve_type(port_dir), reason=_REASON), ops
+    )
 
 
 def absorb_remove(port_dir: Path, *, origin: str) -> AbsorbResult:
@@ -104,7 +101,7 @@ def absorb_remove(port_dir: Path, *, origin: str) -> AbsorbResult:
     for entry in entries:
         (safe if _is_safe_relative(entry) else unsafe).append(entry)
 
-    ops = [f"file remove {entry} on-missing noop" for entry in safe]
+    ops = [emit.file_remove(entry, on_missing="noop") for entry in safe]
 
     overlay = port_dir / "overlay.dops"
     overlay_created = not overlay.exists()

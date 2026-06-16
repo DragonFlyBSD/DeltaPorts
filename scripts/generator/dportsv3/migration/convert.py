@@ -6,16 +6,11 @@ import re
 from pathlib import Path
 from typing import Any
 
+from dportsv3.engine import emit
 from dportsv3.engine.api import build_plan, check_dsl, parse_dsl
 
 _ASSIGN_RE = re.compile(r"^([A-Z0-9_]+)\s*(\+?=|\?=|:=|!=)\s*(.*)$")
 _TARGET_LINE_RE = re.compile(r"^([A-Za-z0-9_.-]+):\s*$")
-
-
-def _quote(value: str) -> str:
-    escaped = value.replace("\\", "\\\\").replace('"', '\\"')
-    escaped = escaped.replace("\t", "\\t").replace("\n", "\\n")
-    return f'"{escaped}"'
 
 
 def _references_var(value: str, name: str) -> bool:
@@ -33,7 +28,6 @@ def _parse_makefile_dragonfly(path: Path) -> tuple[list[str], list[str]]:
     ops: list[str] = []
     errors: list[str] = []
     i = 0
-    heredoc_index = 0
 
     while i < len(lines):
         raw = lines[i]
@@ -57,28 +51,21 @@ def _parse_makefile_dragonfly(path: Path) -> tuple[list[str], list[str]]:
             op = assign.group(2)
             value = assign.group(3).strip()
             if op == "!=":
-                # Shell-immediate assignment: `VAR!= cmd` runs the command at
-                # parse time and assigns its output. Neither `mk set` (`=`,
-                # recursive) nor `mk eval` (`:=`, make-expansion, no shell) is
-                # faithful — emit `mk shell`, the dedicated `!=` op.
-                ops.append(f"mk shell {name} {_quote(value)}")
+                # `VAR!= cmd` runs the command at parse time (shell-immediate);
+                # only `mk shell` is faithful (`mk set`=recursive `=`,
+                # `mk eval`=`:=` make-expansion with no shell).
+                ops.append(emit.mk_shell(name, value))
             elif op in {"=", "?=", ":="}:
                 if _references_var(value, name):
-                    # Self-referential assignment (`VAR:= ${VAR:mod}`,
-                    # prepend, etc.). A plain `mk set` would render a fatal
-                    # recursive `=`; emit `mk eval`, which appends a verbatim
-                    # immediate `:=` line — faithful for every bmake modifier.
-                    ops.append(f"mk eval {name} {_quote(value)}")
+                    # Self-referential (`VAR:= ${VAR:mod}`, prepend): `mk eval`
+                    # appends a verbatim immediate `:=` line — faithful for
+                    # every bmake modifier; a plain `=` would be recursive.
+                    ops.append(emit.mk_eval(name, value))
                 else:
-                    ops.append(f"mk set {name} {_quote(value)}")
+                    ops.append(emit.mk_set(name, value))
             elif op == "+=":
                 if value:
-                    # Always quote — `mk add` accepts a STRING token, and a
-                    # bare token can carry chars that aren't valid unquoted
-                    # DSL words (`>`, `:`, embedded `"` — e.g. dependency
-                    # specs `foo>0:cat/foo`, `-DX:STRING="y"`), which the
-                    # lexer rejects. Quoting is what `mk set` already does.
-                    ops.append(f"mk add {name} {_quote(value)}")
+                    ops.append(emit.mk_add(name, value))
             else:
                 errors.append(f"unsupported_assignment_op:{op}")
             continue
@@ -92,11 +79,7 @@ def _parse_makefile_dragonfly(path: Path) -> tuple[list[str], list[str]]:
             ):
                 recipe.append(lines[i])
                 i += 1
-            heredoc_index += 1
-            tag = f"MK{heredoc_index}"
-            ops.append(f"mk target set {target_name} <<'{tag}'")
-            ops.extend(recipe)
-            ops.append(tag)
+            ops.append(emit.mk_target_set(target_name, recipe))
             continue
 
         errors.append(f"unsupported_line:{line}")
@@ -111,25 +94,15 @@ def _render_dops(
     port_type: str = "port",
     reason: str = "auto-converted from Makefile.DragonFly",
 ) -> str:
-    # `target @any`: the deterministic translator only runs on ports
-    # whose source is an UNSCOPED Makefile.DragonFly (the classifier
-    # in overlay_state.assess_overlay refuses to mark a port
-    # auto_safe_pending if a `Makefile.DragonFly.@xxx` variant exists
-    # — those need judgment, not deterministic conversion). An
-    # unscoped legacy artifact is target-agnostic by definition; the
-    # dops translation must preserve that semantic, otherwise the
-    # converted overlay is silently dead on every env whose target
-    # ≠ the hardcoded scope. The prior hardcoded `@main` caused
-    # exactly that bug on archivers/liblz4 2026-05-26 (env @2026Q2,
-    # every op skipped with I_APPLY_TARGET_MISMATCH).
-    header = [
-        f"port {origin}",
-        f"type {port_type}",
-        f'reason "{reason}"',
-        "target @any",
-        "",
-    ]
-    return "\n".join(header + ops + [""])
+    # target defaults to @any: the deterministic translator only runs on
+    # ports whose source is an UNSCOPED Makefile.DragonFly (the classifier
+    # refuses auto_safe_pending when a `Makefile.DragonFly.@xxx` variant
+    # exists — those need judgment). An unscoped legacy artifact is
+    # target-agnostic; pinning a scope here would leave the overlay silently
+    # dead on every env whose target differs (the `@main` bug on liblz4).
+    return emit.overlay(
+        emit.header(port=origin, type=port_type, reason=reason), ops
+    )
 
 
 def _detect_port_type(port_path: Path) -> str:

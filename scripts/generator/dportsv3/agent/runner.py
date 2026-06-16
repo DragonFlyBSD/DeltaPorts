@@ -59,6 +59,7 @@ from pathlib import Path
 # load. Other lifecycle uses stay function-local per this file's
 # convention, but this one backs a module-level constant.
 from dportsv3.agent.lifecycle import ACTIVE_WORK_STATE_VALUES
+from dportsv3.engine import emit
 
 
 class _VerifyBranchUnavailable(Exception):
@@ -2588,11 +2589,11 @@ def _ensure_overlay_or_abort(
 
     # bootstrap: write a header overlay so the port becomes dops; patch
     # authors the body. Drop STATUS when the header now carries the type.
-    header = (
-        f"port {origin}\n"
-        f"type {decision.overlay_type}\n"
-        f'reason "{_BOOTSTRAP_REASON}"\n'
-        f"target @any\n"
+    header = emit.overlay(
+        emit.header(
+            port=origin, type=decision.overlay_type, reason=_BOOTSTRAP_REASON
+        ),
+        [],
     )
     overlay_path = f"/work/DeltaPorts/ports/{origin}/overlay.dops"
     res = worker.put_file(env_name, overlay_path, header)

@@ -31,6 +31,7 @@ import sys
 from pathlib import Path
 
 from dportsv3.agent.convert import read_status_port_type
+from dportsv3.engine import emit
 from dportsv3.engine.api import build_plan, check_dsl, parse_dsl
 from dportsv3.migration.convert import (
     _drop_legacy_status,
@@ -51,7 +52,7 @@ def _dragonfly_materialize_ops(port_dir: Path) -> tuple[list[str], str | None]:
         if parts and parts[0].startswith("@"):
             return [], "target-scoped dragonfly payload"
         rel = f.relative_to(port_dir).as_posix()
-        ops.append(f"file materialize {rel} -> {rel}")
+        ops.append(emit.file_materialize(rel, rel))
     return ops, None
 
 
@@ -61,12 +62,8 @@ def _diff_file_names(port_dir: Path) -> list[str]:
 
 
 def _render_and_validate(origin: str, port_dir: Path, reason: str, ops: list[str]):
-    from dportsv3.migration.convert import _quote  # noqa: PLC0415,F401 (parity w/ converter)
     ptype = read_status_port_type(port_dir) or "port"
-    src = "\n".join([
-        f"port {origin}", f"type {ptype}", f'reason "{reason}"', "target @any", "",
-        *ops, "",
-    ])
+    src = emit.overlay(emit.header(port=origin, type=ptype, reason=reason), ops)
     ok = (parse_dsl(src, port_dir / "overlay.dops").ok
           and check_dsl(src, port_dir / "overlay.dops").ok
           and build_plan(src, port_dir / "overlay.dops").ok)
@@ -116,7 +113,7 @@ def convert_neither(origin: str, repo: Path, dry_run: bool) -> dict:
     if rm.is_file():
         for entry in _read_remove_entries(port_dir):
             if _is_safe_relative(entry):
-                ops.append(f"file remove {entry} on-missing noop")
+                ops.append(emit.file_remove(entry, on_missing="noop"))
     if not ops:
         return {"origin": origin, "verdict": "blocked", "reason": ["no ops produced"]}
 
