@@ -26,16 +26,19 @@ priority: 50
 DeltaPorts overlays FreeBSD ports. When FreeBSD bumps a port's
 `DISTVERSION`, `materialize_dports` picks up the new upstream Makefile
 and distinfo automatically — but the DragonFly-specific patches under
-`ports/<origin>/dragonfly/` do not update themselves. If the patch
-targets a file that upstream regenerates between versions
-(e.g. `Makefile.in` produced by `automake`, `configure` produced by
-`autoconf`, anything autotools), the hunk context shifts on every
-upstream bump and the patch fails.
+`ports/<origin>/dragonfly/` do not update themselves. The patch fails when
+upstream changes the lines it targets. Two distinct shapes:
 
-This is a recurring failure mode. The cheap fix is to regenerate the
-patch against the new context (works once, breaks again on the next
-bump). The durable fix is to express the intent as a `dops`
-operation that survives upstream churn.
+- **Generated-file decay** — the patch targets a file autotools regenerates
+  (`Makefile.in`, `configure`). The context shifts on *every* bump; these
+  decay constantly.
+- **Source drift** — the patch targets a hand-written source file (`.c`/`.h`)
+  and upstream happened to edit the same line this release. A one-time drift,
+  not constant decay.
+
+The durable fix differs by shape — that's what Step 1 decides. Do not assume
+"static patch failed ⇒ convert to a dops substitution"; that's right for
+generated files and wrong (fragile) for hand-written source.
 
 ## Fix
 
@@ -47,91 +50,74 @@ get_file /work/DeltaPorts/ports/<origin>/overlay.dops
 
 - **Yes** → the port is dops-managed. Add new operations to the
   existing file; follow the existing style.
-- **No** → the port is still on static patches. The durable fix is
-  conversion (Option 1 below); the throwaway fix is regeneration
-  (Option 3). Prefer conversion when the patch logic reduces to a
-  dops op.
+- **No** → the port is still on static patches.
 
 If you're about to write an `overlay.dops` and you don't have the
 syntax memorized, call `dops_reference()` **once** to get the
-condensed quick-reference. Don't call it on later turns — the
-reference doesn't change between attempts.
+condensed quick-reference.
 
-### Option 1 (preferred for autotools-generated files) — convert to dops
+### Step 1 — what does the failing patch target? (decide this FIRST)
 
-If the failing patch's target file is *generated* (configure,
-Makefile.in, libtool m4 outputs, etc.) and the change is conceptually
-a small textual substitution, express it as a dops `text` or
-`mk replace-if` operation against the *generated output*, applied at
-`pre-configure` or `post-patch` time.
+This single question determines the approach. Look at the file the patch
+modifies — **not** at "static patch failed, so convert to dops". Picking the op
+before classifying the target is the #1 mistake here (it produces a fragile
+`REINPLACE` for a source patch that just needed re-cutting).
+
+- **Hand-written source** — `.c`, `.h`, a hand-maintained `Makefile`, or the
+  autotools *sources* `Makefile.am` / `configure.ac`. The static patch is the
+  **correct, durable form**; it failed only because upstream edited the same
+  lines (a one-time drift, not per-bump decay). → **Re-cut the patch** (next
+  section), KEEP the `file materialize`. **Do NOT** convert it to a `REINPLACE`
+  / `text replace-once`: a whole-line substitution **silently no-ops** the next
+  time that line changes, dropping the DragonFly fix with no build error. A
+  re-cut patch instead **fails loudly** on the next drift. (This is exactly the
+  `lib/readline/terminal.c` case — re-cut it, do not REINPLACE it.)
+- **Generated file** — `configure`, `Makefile.in`, libtool m4 output: anything
+  autotools regenerates at build time. Patching the generated output is brittle
+  (it decays on *every* bump). → Convert to a dops op (Option A) or patch the
+  autotools *source* (Option B).
+
+### Re-cut a drifted source patch (the hand-written-source branch)
+
+1. `make_extract`; use `wrksrc` from its response (don't guess from
+   `DISTVERSION` — the obj tree has stale leftovers).
+2. `grep` the new upstream file for the same logical change site.
+3. Edit the file in `WRKSRC`, `genpatch`, write the refreshed patch back under
+   `dragonfly/`, and **keep** the `file materialize` line. Done — the patch
+   applies cleanly now and surfaces loudly the next time it drifts.
+
+### Option A (GENERATED-file target only) — convert to dops
+
+The change is a small textual substitution on a *generated* file. Express it as
+a dops `text` / `mk replace-if` op against the generated output, run at
+`pre-configure` / `post-patch`:
 
 ```dops
-# overlay.dops
-port devel/libuv
-type port
-target @any
-reason "DragonFly needs FreeBSD case-matches to include dragonfly too"
-
 # Instead of dragonfly/patch-Makefile.in (regenerated every upstream bump),
-# express the same logical change as a substitution that runs at build time
-# regardless of how upstream regenerated the file:
-
+# express the same logical change as a build-time substitution:
 text replace-once file ${WRKSRC}/Makefile.in \
     from "freebsd*)" \
     to   "freebsd*|dragonfly*)"
 ```
 
-When to prefer this:
-
-- The patch logic is a small number of substitutions on lines that
-  reliably exist across versions (OS detection, platform conditionals).
-- The target file is generated (likely to regenerate on upstream
-  release).
-- The substitution is contextual enough that a one-line `from→to`
-  uniquely identifies the target line.
-
 Pair with **removing the patch from the overlay** — delete its
-`file materialize dragonfly/patch-<file> -> …` line so the dops op replaces it.
-You have no file-delete tool and don't need one (and don't `git rm` — no git in
-the loop): the runner reconciles the now-orphaned `dragonfly/patch-<file>`,
-deleting it as part of the captured fix.
+`file materialize dragonfly/patch-<file> -> …` line. You have no file-delete
+tool and don't need one (and don't `git rm` — no git in the loop): the runner
+reconciles the now-orphaned `dragonfly/patch-<file>`, deleting it as part of
+the captured fix.
 
-Reminder: this applies because the target is a **generated** file. For a
-hand-written source file (`.c`/`.h`), keep the static patch — don't rewrite a
-working `file materialize` into a `REINPLACE`.
+### Option B (GENERATED-file target) — patch the autotools *source*
 
-### Option 2 (preferred for upstream source) — patch the *source*, not the output
+Patch `Makefile.am` (generates `Makefile.in`) or `configure.ac` (generates
+`configure`) instead of the output — the source changes less often, so the
+patch survives bumps. Then rely on `USES= autoreconf` or add a `pre-configure`
+step (`mk target set pre-configure <<'MK' … MK`).
 
-If the change is conceptually against `Makefile.am` (which generates
-`Makefile.in`) or `configure.ac` (which generates `configure`),
-patch the *source* and add a re-generation step. The patch survives
-upstream bumps because the source files change less frequently than
-their generated outputs.
+### Option C (last resort) — regenerate the static patch as-is
 
-```diff
---- Makefile.am.orig
-+++ Makefile.am
-@@ -10,7 +10,7 @@
--if FREEBSD
-+if FREEBSD_OR_DRAGONFLY
-```
-
-Then either rely on `USES= autoreconf` (upstream conventions) or add
-an explicit `pre-configure` step in `overlay.dops`
-(`mk target set pre-configure <<'MK' … MK`).
-
-### Option 3 (last resort) — regenerate the static patch
-
-Only when neither dops nor source-side patching is feasible:
-
-1. Use `wrksrc` from the `extract` tool's response (do not guess
-   the path from `DISTVERSION` — the obj tree contains stale leftovers
-   from prior builds).
-2. Read the new upstream file, locate the same logical change, and
-   regenerate the patch with the new context.
-3. **Accept that this will break again on the next upstream bump.**
-   Note in the commit message that this is a regenerate-only fix and
-   that a dops conversion is the durable alternative.
+Only when none of the above fits. Re-cut against the new context (as in the
+re-cut section), and note in the commit message that it's a regenerate-only fix
+likely to break on the next bump.
 
 ## When NOT to convert
 
