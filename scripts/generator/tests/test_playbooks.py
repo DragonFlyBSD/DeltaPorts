@@ -250,6 +250,22 @@ def test_selector_budget_gate_drops_lowest_priority(tmp_path):
     assert "toolchain-autoconf.md" in dropped
 
 
+def test_selector_strips_body_h1_to_avoid_double_title(tmp_path):
+    """A playbook body that opens with its own `# Title` must render the title
+    once — the selector emits `### {title}` above the body, so a leftover body
+    H1 would print it twice in the payload."""
+    _write(tmp_path, "dup.md",
+        "---\n"
+        "triggers:\n"
+        "  flows: [patch]\n"
+        "---\n"
+        "# Dup Title\n\nthe body text.\n")
+    result = load_playbooks(tmp_path, role="patch")
+    assert "dup.md" in result.included
+    assert result.text.count("Dup Title") == 1
+    assert "the body text." in result.text
+
+
 def test_selector_empty_result_returns_empty_text(tmp_path):
     _write(tmp_path, "unmatched.md",
         "---\n"

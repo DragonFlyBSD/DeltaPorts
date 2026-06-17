@@ -177,6 +177,26 @@ def _extract_title(body: str, fallback: str) -> str:
     return fallback
 
 
+def _strip_leading_h1(body: str) -> str:
+    """Drop the body's own top-level ``# Title`` line (and one following blank).
+
+    The selector re-emits the title as ``### {title}`` above the body, so a
+    body that opens with its own ``# Title`` H1 renders the title twice in the
+    payload. Strip that leading H1; leave all deeper headings intact.
+    """
+    lines = body.splitlines()
+    for i, line in enumerate(lines):
+        if not line.strip():
+            continue
+        if line.lstrip().startswith("# "):
+            j = i + 1
+            if j < len(lines) and not lines[j].strip():
+                j += 1
+            return "\n".join(lines[:i] + lines[j:])
+        break  # first non-blank line isn't an H1 — nothing to strip
+    return body
+
+
 def _parse_entry(path: Path) -> PlaybookEntry | None:
     """Read + parse one markdown file. Returns None on I/O error."""
     try:
@@ -203,6 +223,7 @@ def _parse_entry(path: Path) -> PlaybookEntry | None:
         except (TypeError, ValueError):
             priority = 100
     title = _extract_title(body, path.stem)
+    body = _strip_leading_h1(body)
     return PlaybookEntry(
         path=path,
         title=title,
@@ -210,8 +231,10 @@ def _parse_entry(path: Path) -> PlaybookEntry | None:
         triggers=triggers,
         tags=tags,
         priority=priority,
-        # Rough estimate; sufficient for budget gate. ~4 chars/token.
-        est_tokens=max(1, len(body) // 4),
+        # Rough estimate; sufficient for budget gate. ~4 chars/token. Count the
+        # *rendered* form (`### {title}` + body) so stripping the body's H1
+        # doesn't undercount the still-rendered title.
+        est_tokens=max(1, len(f"### {title}\n{body}") // 4),
     )
 
 
