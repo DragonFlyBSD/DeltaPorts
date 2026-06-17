@@ -210,9 +210,9 @@ GENERATED file (`Makefile.in`, `configure`) — there, patching the generated
 output is brittle. For a hand-written upstream source file (`.c`, `.h`, …) a
 static patch is the robust form (it fails loudly if it stops matching, where a
 whole-line `REINPLACE` sed silently no-ops). **Do not rewrite a `dragonfly/*`
-patch that already applies** — and note that deleting its `file materialize`
-line strands the patch file (the runner reconciles such orphans, but the churn
-buys nothing).
+patch that already applies.** If such a patch **drifted** (stopped applying
+after an upstream bump), **re-cut it** with `genpatch` and keep the
+`file materialize` — don't convert it to a `REINPLACE`.
 
 ## On-missing modifiers
 
@@ -257,9 +257,13 @@ or regenerating a deferred `diffs/Makefile.diff` patch. Pick by the patch's
   NEVER `patch apply` for these. `bsd.port.mk`'s `do-patch` applies them at
   build time. A static patch against a hand-written source file is robust;
   keep a working one — don't rewrite it into a `REINPLACE`.
-- A `REINPLACE_CMD` recipe is preferable ONLY for GENERATED targets
-  (`Makefile.in`/`configure`), or when a static patch keeps breaking on
-  upstream bumps.
+- If a source patch **drifted** (stopped applying because upstream changed
+  the file), **re-cut it** — `make_extract` → edit the file in `WRKSRC` →
+  `genpatch` → keep the `file materialize`. A re-cut patch fails loudly on the
+  next drift; do NOT convert it to a `REINPLACE` (a whole-line sed silently
+  no-ops the next time the line changes, dropping the fix with no error).
+- A `REINPLACE_CMD` recipe is for GENERATED targets only
+  (`Makefile.in`/`configure`).
 
 A `type dport` port needs no body ops at all unless you're fixing a
 specific build failure — `newport/` is the complete port; the header
