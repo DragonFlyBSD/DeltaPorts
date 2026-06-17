@@ -77,7 +77,11 @@ One of: compile-error, configure-error, patch-error, plist-error, missing-dep, f
 One of: dragonfly-specific, freebsd-upstream, generic
 
 ## Root Cause
-1-3 sentences.
+1-3 sentences. State the cause of THIS failure definitively from the evidence
+in the log. Do NOT narrate prior agent attempts or hedge with "either ... or
+..." — this text becomes the pull request's "Problem" section, so it must read
+as a clean, confident diagnosis. If you genuinely can't tell, say what single
+fact would disambiguate rather than guessing.
 
 ## Evidence
 - Quote exact log lines from errors.txt that support the root cause.
@@ -418,6 +422,14 @@ In all cases, edit `/work/DeltaPorts/ports/<origin>/` and let
 
 When you finish (success or give-up), end your response with these
 sections in this order:
+
+## Patch Summary
+1-2 sentences for a human reviewer: what was actually wrong and what you
+changed (and why). This text becomes the pull request's "Fix" section, so be
+concrete and specific to THIS port — not "automated fix for the build
+failure". Example: "bash-5.3.9 moved the `dumbterm` line in
+`lib/readline/terminal.c`, so the static patch no longer applied; re-cut it
+against current upstream so cons25 is still treated as a dumb terminal."
 
 ## Patch Log
 Brief narrative of what you tried (one sentence per tool sequence).
