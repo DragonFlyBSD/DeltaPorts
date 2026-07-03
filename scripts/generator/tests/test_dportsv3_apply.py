@@ -1772,3 +1772,55 @@ def test_apply_plan_ci_unavailable_oracle_fails_without_strict(
     assert not result.ok
     assert result.oracle_failures == 1
     assert any(d.code == "E_APPLY_ORACLE_UNAVAILABLE" for d in result.diagnostics)
+
+
+def test_apply_plan_local_unavailable_oracle_warning_keeps_ok(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """A clean apply stays ok=True when the only diagnostic is a
+    warning-severity oracle skip (bmake unavailable under the local profile).
+
+    Regression: ``ok = not diagnostics and ...`` used to treat any diagnostic
+    -- including a warning -- as failure, so every dops port mis-reported
+    E_COMPOSE_APPLY_FAILED on hosts without bmake.
+    """
+    makefile = tmp_path / "Makefile"
+    makefile.write_text("VAR= old\n")
+    plan = Plan(
+        port="category/name",
+        ops=[
+            PlanOp(
+                id="op-1",
+                target="@main",
+                kind="mk.var.set",
+                payload={"name": "VAR", "value": "new"},
+            )
+        ],
+    )
+
+    monkeypatch.setattr(
+        "dportsv3.engine.apply.run_bmake_oracle",
+        lambda *_args, **_kwargs: OracleResult(
+            ok=True,
+            profile="local",
+            checks_run=0,
+            warnings=["bmake not found in PATH"],
+            unavailable=True,
+            skipped=True,
+        ),
+    )
+
+    result = apply_plan(
+        plan,
+        port_root=tmp_path,
+        target="@main",
+        dry_run=True,
+        strict=False,
+        oracle_profile="local",
+    )
+
+    assert result.failed_ops == 0
+    assert result.error_count == 0
+    assert result.warning_count == 1
+    assert any(d.code == "W_APPLY_ORACLE_SKIPPED" for d in result.diagnostics)
+    assert result.ok
