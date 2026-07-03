@@ -518,7 +518,8 @@ def apply_plan(
             oracle_skipped=oracle_skipped,
         )
 
-    ok = not diagnostics and all(row.status != "failed" for row in op_results)
+    has_error = any(d.severity == "error" for d in diagnostics)
+    ok = not has_error and all(row.status != "failed" for row in op_results)
     return ApplyResult(
         ok=ok,
         context=context,
