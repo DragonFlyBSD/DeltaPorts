@@ -45,6 +45,5 @@ file remove files/patch-src_Makefile.autosetup on-missing noop
 # materialize DragonFly build-time patch lane assets
 file materialize dragonfly/df-latest.conf.sample -> dragonfly/df-latest.conf.sample
 file materialize dragonfly/patch-auto.def.c -> dragonfly/patch-auto.def.c
-file materialize dragonfly/patch-external_libcurl_curl__config.h -> dragonfly/patch-external_libcurl_curl__config.h
 file materialize dragonfly/patch-libpkg_lua__scripts.c -> dragonfly/patch-libpkg_lua__scripts.c
 file materialize dragonfly/patch-libpkg_scripts.c -> dragonfly/patch-libpkg_scripts.c
