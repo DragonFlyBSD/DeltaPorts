@@ -1,0 +1,141 @@
+--- config.site.orig	2018-03-19 16:45:27 UTC
++++ config.site
+@@ -53,8 +53,6 @@
+ : ${ac_cv_header_minix_config_h=no}
+ : ${ac_cv_header_net_if_h=yes}
+ : ${ac_cv_header_net_if_media_h=yes}
+-: ${ac_cv_header_net_if_tap_h=yes}
+-: ${ac_cv_header_net_if_tun_h=yes}
+ : ${ac_cv_header_netdb_h=yes}
+ : ${ac_cv_header_netinet_in_h=yes}
+ : ${ac_cv_header_paths_h=yes}
+@@ -63,7 +61,6 @@
+ : ${ac_cv_header_pwd_h=yes}
+ : ${ac_cv_header_readpassphrase_h=yes}
+ : ${ac_cv_header_resolv_h=yes}
+-: ${ac_cv_header_rpc_types_h=yes}
+ : ${ac_cv_header_sched_h=yes}
+ : ${ac_cv_header_search_h=yes}
+ : ${ac_cv_header_security_pam_appl_h=yes}
+@@ -78,7 +75,6 @@
+ : ${ac_cv_header_stdlib_h=yes}
+ : ${ac_cv_header_string_h=yes}
+ : ${ac_cv_header_strings_h=yes}
+-: ${ac_cv_header_sys_acl_h=yes}
+ : ${ac_cv_header_sys_cdefs_h=yes}
+ : ${ac_cv_header_sys_dir_h=yes}
+ : ${ac_cv_header_sys_fcntl_h=yes}
+@@ -109,7 +105,6 @@
+ : ${ac_cv_header_unistd_h=yes}
+ : ${ac_cv_header_utime_h=yes}
+ : ${ac_cv_header_utmpx_h=yes}
+-: ${ac_cv_header_utmp_h=no}
+ : ${ac_cv_header_vis_h=yes}
+ : ${ac_cv_header_wchar_h=yes}
+ : ${ac_cv_header_wctype_h=yes}
+@@ -124,24 +119,6 @@
+ : ${ac_cv_header_random_h=no}
+ : ${ac_cv_header_vfork_h=no}
+ 
+-: ${gl_cv_have_raw_decl_strchrnul=yes}
+-: ${gl_cv_have_raw_decl_memcpy=no}
+-: ${gl_cv_have_raw_decl_memmem=yes}
+-: ${gl_cv_have_raw_decl_memrchr=yes}
+-: ${gl_cv_have_raw_decl_rawmemchr=yes}
+-: ${gl_cv_have_raw_decl_stpcpy=yes}
+-: ${gl_cv_have_raw_decl_stpncpy=yes}
+-: ${gl_cv_have_raw_decl_strcasestr=yes}
+-: ${gl_cv_have_raw_decl_strdup=yes}
+-: ${gl_cv_have_raw_decl_strncat=yes}
+-: ${gl_cv_have_raw_decl_strndup=yes}
+-: ${gl_cv_have_raw_decl_strnlen=yes}
+-: ${gl_cv_have_raw_decl_strpbrk=yes}
+-: ${gl_cv_have_raw_decl_strsep=yes}
+-: ${gl_cv_have_raw_decl_strsignal=yes}
+-: ${gl_cv_have_raw_decl_strtok_r=yes}
+-: ${gl_cv_have_raw_decl_strverscmp=no}
+-
+ # Type
+ : ${ac_cv_c_int16_t=yes}
+ : ${ac_cv_c_int32_t=yes}
+@@ -237,10 +214,6 @@
+ : ${gl_cv_sys_struct_timespec_in_time_h=yes}
+ : ${gl_cv_sys_struct_timeval=yes}
+ 
+-: ${ac_cv_func_strchrnul=yes}
+-: ${ac_cv_func_uselocale=yes}
+-: ${ac_cv_func_newlocale=yes}
+-
+ # Functions
+ : ${ac_cv_func___b64_ntop=yes}
+ : ${ac_cv_func___b64_pton=yes}
+@@ -251,16 +224,6 @@
+ : ${ac_cv_func_abs=yes}
+ : ${ac_cv_func_accept=yes}
+ : ${ac_cv_func_accept4=yes}
+-: ${ac_cv_func_acl_create_entry_np=yes}
+-: ${ac_cv_func_acl_delete_def_file=yes}
+-: ${ac_cv_func_acl_delete_fd_np=yes}
+-: ${ac_cv_func_acl_delete_file_np=yes}
+-: ${ac_cv_func_acl_free=yes}
+-: ${ac_cv_func_acl_from_text=yes}
+-: ${ac_cv_func_acl_get_fd=yes}
+-: ${ac_cv_func_acl_get_file=yes}
+-: ${ac_cv_func_acl_set_fd=yes}
+-: ${ac_cv_func_acl_set_file=yes}
+ : ${ac_cv_func_alarm=yes}
+ : ${ac_cv_func_alloca=yes}
+ : ${ac_cv_func_alphasort=yes}
+@@ -336,7 +299,6 @@
+ : ${ac_cv_func_getpeereid=yes}
+ : ${ac_cv_func_getpgid=yes}
+ : ${ac_cv_func_getpgrp=yes}
+-: ${ac_cv_func_getpgrp_void=yes}
+ : ${ac_cv_func_getpid=yes}
+ : ${ac_cv_func_getrlimit=yes}
+ : ${ac_cv_func_getrusage=yes}
+@@ -391,7 +353,6 @@
+ : ${ac_cv_func_mktemps=yes}
+ : ${ac_cv_func_mlock=yes}
+ : ${ac_cv_func_mmap=yes}
+-: ${ac_cv_func_mmap_fixed_mapped=yes}
+ : ${ac_cv_func_mprotect=yes}
+ : ${ac_cv_func_munlock=yes}
+ : ${ac_cv_func_munmap=yes}
+@@ -547,14 +508,6 @@
+ : ${ac_cv_func_vprintf=yes}
+ : ${ac_cv_func_vsnprintf=yes}
+ : ${ac_cv_func_vsprintf=yes}
+-: ${ac_cv_func_waitpid=yes}
+-: ${ac_cv_func_wait=yes}
+-: ${ac_cv_func_waitid=yes}
+-: ${ac_cv_func_wait2=yes}
+-: ${ac_cv_func_wait3=yes}
+-: ${ac_cv_func_wait3_rusage=yes}
+-: ${ac_cv_func_wait4=yes}
+-: ${ac_cv_func_wait6=yes}
+ : ${ac_cv_func_warn=yes}
+ : ${ac_cv_func_warnx=yes}
+ : ${ac_cv_func_wcrtomb=yes}
+@@ -569,21 +522,6 @@
+ : ${ac_cv_func_yp_match=yes}
+ 
+ # misc utx
+-: ${ac_cv_func_endutxent=yes}
+-: ${ac_cv_func_getutxent=yes}
+-: ${ac_cv_func_getutxid=yes}
+-: ${ac_cv_func_getutxline=yes}
+-: ${ac_cv_func_getutxuser=yes}
+-: ${ac_cv_func_pututxline=yes}
+-: ${ac_cv_func_setutxdb=yes}
+-: ${ac_cv_func_setutxent=yes}
+-: ${ac_cv_func_endutent=no}
+-: ${ac_cv_func_getutent=no}
+-: ${ac_cv_func_getutid=no}
+-: ${ac_cv_func_getutline=no}
+-: ${ac_cv_func_pututline=no}
+-: ${ac_cv_func_setutent=no}
+-: ${ac_cv_func_utmpname=no}
+ 
+ # non existing functions
+ : ${ac_cv_func_argz_count=no}

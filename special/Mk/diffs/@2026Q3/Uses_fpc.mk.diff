@@ -1,0 +1,25 @@
+--- Uses/fpc.mk.orig	Tue Apr  1 17:39:47 2025
++++ Uses/fpc.mk	Tue Apr
+@@ -42,7 +42,7 @@ IGNORE=	incompatible fpc ${FPC_CURRENT_VER} compiler, 
+ 
+ .  if ${ARCH} == "i386"
+ PPNAME=			ppc386
+-.  elif ${ARCH} == "amd64"
++.  elif ${ARCH} == "x86_64"
+ PPNAME=			ppcx64
+ .  elif ${ARCH} == "aarch64"
+ PPNAME=			ppca64
+@@ -56,11 +56,11 @@ FPC_DEVELSUFFIX=	-devel
+ FPC_DEVELSUFFIX=	#
+ .  endif
+ 
+-BUILD_DEPENDS+=		${LOCALBASE}/bin/as:devel/binutils \
++BUILD_DEPENDS+=		${LOCALBASE}/bin/as:devel/binutils@native \
+ 			${LOCALBASE}/lib/fpc/${FPC_VER}/${PPNAME}:lang/fpc${FPC_DEVELSUFFIX}
+ 
+ .  if ${fpc_ARGS:Mrun}
+-RUN_DEPENDS+=		${LOCALBASE}/bin/as:devel/binutils \
++RUN_DEPENDS+=		${LOCALBASE}/bin/as:devel/binutils@native \
+ 			${LOCALBASE}/lib/fpc/${FPC_VER}/${PPNAME}:lang/fpc${FPC_DEVELSUFFIX}
+ .  endif
+ 
