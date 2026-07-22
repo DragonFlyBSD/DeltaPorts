@@ -518,7 +518,12 @@ def apply_plan(
             oracle_skipped=oracle_skipped,
         )
 
-    ok = not diagnostics and all(row.status != "failed" for row in op_results)
+    # Only error-severity diagnostics fail the apply. Warnings (e.g. a
+    # skipped/unavailable oracle under the `local` profile) are best-effort
+    # signals and must not mark an otherwise-clean apply as failed.
+    ok = not any(d.severity == "error" for d in diagnostics) and all(
+        row.status != "failed" for row in op_results
+    )
     return ApplyResult(
         ok=ok,
         context=context,
