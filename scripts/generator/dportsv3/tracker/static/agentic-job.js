@@ -295,3 +295,37 @@
     });
   }
 })();
+
+// --- Abandon job (mark dead) ---
+(function () {
+  var btn = document.getElementById("abandon-btn");
+  if (!btn) return;
+  var flash = document.getElementById("abandon-flash");
+  btn.addEventListener("click", async function () {
+    var msg = "Abandon job " + btn.dataset.jobId + " (state="
+      + btn.dataset.state + ")? It will be marked dead with "
+      + "retire_reason='abandoned' and never picked up again.";
+    if (!confirm(msg)) return;
+    btn.disabled = true;
+    try {
+      var resp = await fetch(
+        "/api/jobs/" + encodeURIComponent(btn.dataset.jobId) + "/abandon",
+        {method: "POST", headers: {"Content-Type": "application/json"}}
+      );
+      var data = await resp.json().catch(function () { return {}; });
+      if (resp.ok) {
+        flash.textContent = "Abandoned. Refreshing…";
+        flash.style.color = "green";
+        setTimeout(function () { window.location.reload(); }, 700);
+      } else {
+        flash.textContent = (data.detail || ("HTTP " + resp.status));
+        flash.style.color = "var(--c-fail, #c00)";
+        btn.disabled = false;
+      }
+    } catch (err) {
+      flash.textContent = "Network error: " + err;
+      flash.style.color = "var(--c-fail, #c00)";
+      btn.disabled = false;
+    }
+  });
+})();
