@@ -1,0 +1,89 @@
+    {% if activity %}
+    <h2>Activity
+      <span id="activity-count" style="font-size:11px;color:var(--text-dim);font-weight:normal;">
+        ({{ activity|length }} of last {{ limit }})
+      </span>
+    </h2>
+    {# Step 9b: filter pills (server-side) + sort affordance (client). #}
+    <div class="filter-bar" style="font-size:12px;margin-bottom:8px;display:flex;gap:18px;align-items:center;flex-wrap:wrap;">
+      <span>
+        Filter:
+        {% set base = "?limit=" ~ limit %}
+        <a href="{{ base }}" class="filter-pill{% if not stage_filter %} active{% endif %}">all</a>
+        ·
+        <a href="{{ base }}&stage_filter=llm_turn" class="filter-pill{% if stage_filter == 'llm_turn' %} active{% endif %}">llm_turn only</a>
+        ·
+        <a href="{{ base }}&stage_filter=tool" class="filter-pill{% if stage_filter == 'tool' %} active{% endif %}">tool calls only</a>
+      </span>
+      <form method="get" style="margin:0;">
+        {% if stage_filter %}<input type="hidden" name="stage_filter" value="{{ stage_filter }}">{% endif %}
+        Show
+        <select name="limit" onchange="this.form.submit()">
+          {% for n in limit_options %}
+          <option value="{{ n }}" {% if n == limit %}selected{% endif %}>{{ n }}</option>
+          {% endfor %}
+        </select>
+        events
+      </form>
+      <span id="sort-state" style="color:var(--text-dim);">
+        Sort: <strong id="sort-label">chronological</strong>
+        <a href="#" id="sort-reset" style="display:none;">[reset]</a>
+      </span>
+    </div>
+    <style>
+      .filter-pill { text-decoration: none; padding: 1px 6px; border-radius: 3px;
+                     color: var(--text-dim); }
+      .filter-pill.active { background: var(--c-info-bg, #e0e8f8);
+                            color: var(--text, #000); font-weight: 600; }
+      .activity-table th.sortable { cursor: pointer; user-select: none; }
+      .activity-table th.sortable:hover { color: var(--c-link, #06f); }
+      .activity-table th.sort-asc::after { content: " ▲"; font-size: 10px; }
+      .activity-table th.sort-desc::after { content: " ▼"; font-size: 10px; }
+      /* Per-stage row styling. Shared between the server-rendered
+         rows (_activity_row.html sets the class) and the live-refresh
+         JS (renderRow() sets the same class). Pre-class history: the
+         server template used inline styles which the JS path never
+         replicated, so live-appended rows looked unstyled until full
+         page reload. */
+      tr.activity-attempt-start { background: var(--c-info-bg, #f0f4ff);
+                                  font-weight: 600; }
+      tr.activity-attempt-end   { background: var(--c-success-bg, #f0fff4);
+                                  font-weight: 600; }
+      tr.activity-decision      { background: var(--c-meta-bg, #f2eeff); }
+      tr.activity-tool          { font-family: ui-monospace, monospace;
+                                  font-size: 11px; }
+      .tool-diagnostic > summary { cursor: pointer;
+                                   color: var(--c-fail, #c00); }
+      .tool-diagnostic pre       { margin: 4px 0; padding: 6px;
+                                   background: var(--panel-bg, #f8fafc);
+                                   border: 1px solid var(--border, #d8dee9);
+                                   border-radius: 4px;
+                                   white-space: pre-wrap;
+                                   max-height: 300px; overflow: auto; }
+      .tool-error                { color: var(--c-fail, #c00); }
+      .decision-meta             { margin-top: 4px; font-size: 11px;
+                                   color: var(--text-dim); }
+    </style>
+    {# Step 9a column layout: structured token columns next to the message. #}
+    <table class="tracker-table activity-table" id="activity-table">
+      <thead>
+        <tr>
+          <th>When</th>
+          <th>Stage</th>
+          <th>Dur (ms)</th>
+          <th class="tok sortable" data-sort="prompt">Prompt</th>
+          <th class="tok sortable" data-sort="completion">Compl</th>
+          <th class="tok sortable" data-sort="total">Total</th>
+          <th class="tok sortable" data-sort="cumulative" title="Cumulative billable (uncached) tokens — the real running cost">Cum (billable)</th>
+          <th>Message / tools</th>
+        </tr>
+      </thead>
+      <tbody id="activity-tbody">
+        {% for a in activity %}
+        {% include "_activity_row.html" %}
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">No activity recorded for this job.</div>
+    {% endif %}

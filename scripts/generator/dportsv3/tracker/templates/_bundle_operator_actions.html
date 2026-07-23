@@ -1,0 +1,171 @@
+    <div class="tracker-card" style="margin-top:8px;">
+      <strong style="font-size:12px;">Operator actions</strong>
+      <div class="btn-group" style="margin-top:6px;">
+        {# Step 11c Verify — agent_fixed lane uses it to verify an
+           agent-produced fix; Step 28e extends it to operator_owned
+           so an operator's manual fix can be verified too. Same
+           endpoint, same dispatch. #}
+        {% if operator_actions.can_verify %}
+        {# Env picker replaces the old JS prompt(). The <select>
+           is populated server-side from env_health and the active
+           env is pre-selected; operator just clicks Verify. When
+           no envs are known the button stays disabled with a
+           tooltip explaining what's missing. #}
+        <span style="display:inline-flex;gap:4px;align-items:center;">
+          <button id="op-verify" type="button" class="btn btn-success"
+                  data-bundle="{{ bundle.bundle_id }}"
+                  {% if not operator_actions.verify_envs %}
+                  disabled
+                  title="No dev-envs registered with the tracker. Provision one with `dportsv3 dev-env create ...` first."
+                  {% endif %}>
+            Verify
+          </button>
+          <select id="op-verify-env"
+                  style="font-size:12px;padding:3px 6px;"
+                  {% if not operator_actions.verify_envs %}disabled{% endif %}
+                  title="Dev-env to run the verify build in">
+            {% if not operator_actions.verify_envs %}
+            <option value="">(no envs)</option>
+            {% else %}
+              {% for env_name in operator_actions.verify_envs %}
+              <option value="{{ env_name }}"
+                      {% if env_name == operator_actions.verify_default_env %}selected{% endif %}>
+                {{ env_name }}
+              </option>
+              {% endfor %}
+            {% endif %}
+          </select>
+        </span>
+        {% endif %}
+        {# Step 11c Accept — agent_fixed lane renders it disabled
+           before verification (so the operator sees the path);
+           28e follow-up extends it to operator_owned once verified
+           so manual fixes can be terminalized. Reject stays
+           agent_fixed-only — see show_11c_group block below. #}
+        {% if operator_actions.show_accept_button %}
+        <button id="op-accept" type="button" class="btn btn-success"
+                data-bundle="{{ bundle.bundle_id }}"
+                {% if not operator_actions.can_accept %}disabled title="Accept requires verification_status='verified'"{% endif %}>
+          Accept
+        </button>
+        {% endif %}
+        {# Step 11c Reject — agent_fixed lane only. TERMINAL "this
+           fix is wrong, stop": records a reason and stops; it does
+           NOT re-triage. To try again with feedback, use "Retry with
+           context" below (now surfaced on agent_fixed too). Reject is
+           agent-fix-specific — it doesn't apply to an operator's
+           manual fix. #}
+        {% if operator_actions.show_11c_group %}
+        <button id="op-reject" type="button" class="btn btn-danger"
+                data-bundle="{{ bundle.bundle_id }}"
+                title="Terminal: reject this fix and stop (records a reason; does not re-triage)"
+                {% if not operator_actions.can_reject %}disabled{% endif %}>
+          Reject
+        </button>
+        {% endif %}
+        {# Step 28a: Take over — operator stakes (target, origin)
+           so the runner stops competing with the manual work. Only
+           shown on failure-shaped bundles; the success-side matrix
+           above is unaffected. #}
+        {% if operator_actions.can_take_over %}
+        <button id="op-take-over" type="button" class="btn"
+                data-bundle="{{ bundle.bundle_id }}"
+                title="Stake this (target, origin) — runner stops auto-processing it until un-skipped">
+          Take over
+        </button>
+        {% endif %}
+        {# Step 28b: Discard — operator decides this bundle (and
+           optionally the whole port) isn't worth pursuing right now.
+           Terminal. Shown on failure-shaped resolutions AND on
+           operator_owned (an operator can give up on a manual
+           attempt). #}
+        {% if operator_actions.can_discard %}
+        <button id="op-discard" type="button" class="btn btn-danger"
+                data-bundle="{{ bundle.bundle_id }}"
+                title="Mark this bundle resolved as discarded (terminal); optionally lock the (target, origin) from future auto-processing">
+          Discard
+        </button>
+        {% endif %}
+        {# Step 28c: Retry with context — operator hands the bundle
+           back to the loop with a hint. Plants the same DB rows the
+           manual-queue context-submit path plants, so the runner's
+           existing retry loop picks it up. Resolution moves to
+           retry_requested (transient) until the runner enqueues.
+           Uses a <details>-based inline form (textarea) instead of
+           the single-line prompt() the other actions use — operator
+           context is typically multi-line and the prompt() box
+           wasn't usable for that. #}
+        {% if operator_actions.can_retry %}
+        <button id="op-retry" type="button" class="btn"
+                data-bundle="{{ bundle.bundle_id }}"
+                title="Hand this bundle back to the agent loop with operator context">
+          Retry with context
+        </button>
+        {% endif %}
+        {# Step 28e: Release — operator stops staking the bundle's
+           (target, origin) and hands it back to the loop without
+           terminalizing. Surfaces only on operator_owned. The
+           bundle's resolution clears to NULL; if this bundle owns
+           the skip lock, the lock clears too. taken_over_* columns
+           are preserved as forensics. #}
+        {% if operator_actions.can_release %}
+        <button id="op-release" type="button" class="btn btn-ghost"
+                data-bundle="{{ bundle.bundle_id }}"
+                title="Stop staking this bundle — hand it back to the agent loop">
+          Release
+        </button>
+        {% endif %}
+        {# Step 28d: Reopen — undo a terminal accept/reject/discard.
+           Gated behind a confirm() modal in JS since it's a true
+           undo of an operator decision. If the prior state was
+           discarded and this bundle owns the open origin skip lock,
+           the lock is also cleared. #}
+        {% if operator_actions.can_reopen %}
+        <button id="op-reopen" type="button" class="btn btn-ghost"
+                data-bundle="{{ bundle.bundle_id }}"
+                title="Undo the terminal accept/reject/discard so the bundle is actionable again">
+          Reopen
+        </button>
+        {% endif %}
+        <span id="op-status" style="color:var(--text-dim);font-size:11px;"></span>
+      </div>
+      {# Step 28c (revised): inline form for the Retry context. The
+         original implementation used a JS prompt() which only
+         supports a single line of input — operator context is
+         typically multi-line and the single-line modal was clunky.
+         The form is hidden by default and revealed when the Retry
+         button is clicked. Cancel hides it again; Send posts to
+         /api/bundles/{id}/retry. #}
+      {% if operator_actions.can_retry %}
+      <div id="op-retry-form"
+           data-bundle="{{ bundle.bundle_id }}"
+           style="display:none;margin-top:10px;">
+        <label style="display:block;font-size:11px;color:var(--text-dim);margin-bottom:4px;">
+          Operator context (required; max 8000 chars). The agent will
+          see this verbatim in the next triage's ## User Context
+          section.
+        </label>
+        <textarea id="op-retry-text" rows="6"
+                  maxlength="8000"
+                  style="width:100%;font:12px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;padding:6px;box-sizing:border-box;"
+                  placeholder="What should the next triage know? Paste error excerpts, point at upstream fixes, suggest a different angle..."></textarea>
+        <div style="margin-top:6px;display:flex;gap:8px;align-items:center;">
+          {# IDs deliberately NOT prefixed `op-` so the generic
+             `button[id^="op-"]` action-dispatch loop below skips
+             them. The retry-form has its own send/cancel handlers. #}
+          <button id="retry-form-send" type="button" class="btn btn-success"
+                  style="font-size:12px;padding:4px 10px;">
+            Send retry
+          </button>
+          <button id="retry-form-cancel" type="button" class="btn btn-ghost"
+                  style="font-size:12px;padding:4px 10px;">
+            Cancel
+          </button>
+          <span id="retry-form-charcount"
+                style="color:var(--text-dim);font-size:11px;">
+            0 / 8000
+          </span>
+        </div>
+      </div>
+      {% endif %}
+    </div>

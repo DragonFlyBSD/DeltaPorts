@@ -1,0 +1,90 @@
+    {# Step 9: artifact shortcut rail. Operator-canonical files
+       surface as labeled pills at the top, with the long full list
+       further down. Pills appear only for artifacts that actually
+       exist on this bundle. #}
+    {% set artifact_paths = bundle.artifacts | map(attribute='relpath') | list %}
+    {% set rail = [
+        ('analysis/proposed_fix.md',  'Proposed fix',  'built'),
+        ('analysis/manual_handoff.md','Manual handoff','skipped'),
+        ('analysis/triage.md',         'Triage',         'total'),
+        ('analysis/patch.md',          'Patch',          'total'),
+        ('analysis/patch_audit.json',  'Patch audit',    'total'),
+        ('analysis/changes.diff',      'Changes diff',   'total'),
+        ('analysis/tool_trace.jsonl',  'Tool trace',     'total'),
+        ('analysis/rebuild_proof.json','Rebuild proof',  'total'),
+        ('logs/errors.txt',            'Errors log',     'failed'),
+        ('logs/full.log.gz',           'Full log (.gz)', 'total'),
+        ('meta.txt',                   'meta.txt',       'total'),
+    ] %}
+    {% set visible_rail = rail | selectattr(0, 'in', artifact_paths) | list %}
+    {% if visible_rail %}
+    <h2>Quick links</h2>
+    <div class="artifact-rail" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;">
+      {% for relpath, label, pill_class in visible_rail %}
+      <a href="{{ request.url_for('agentic_bundle_detail', bundle_id=bundle.bundle_id) }}?artifact={{ relpath | urlencode }}"
+         class="stat-pill {{ pill_class }}"
+         style="text-decoration:none;font-size:11px;padding:3px 8px;">
+        {{ label }}
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <h2>Artifacts</h2>
+    {% if bundle.artifacts %}
+    <div class="artifact-reader">
+      <div>
+        <table class="tracker-table">
+          <thead><tr><th>Path</th><th>Size</th><th>Raw</th></tr></thead>
+          <tbody>
+            {% for a in bundle.artifacts %}
+            {# Session dumps under analysis/sessions/ get the structured
+               viewer (Phase 2). Other artifacts stay inline-previewed
+               on this page via the ?artifact= query param. #}
+            {% set is_session = a.relpath.startswith('analysis/sessions/') and a.relpath.endswith(('.jsonl', '.jsonl.gz')) %}
+            <tr {% if a.relpath == selected_artifact_relpath %}class="artifact-selected"{% endif %}>
+              <td>
+                {% if is_session %}
+                  <a href="{{ request.url_for('agentic_bundle_session_view', bundle_id=bundle.bundle_id, filename=a.relpath.rsplit('/', 1)[-1]) }}">{{ a.relpath }}</a>
+                  <span style="color:var(--text-dim);font-size:10px;margin-left:6px;">session</span>
+                {% else %}
+                  <a href="{{ request.url_for('agentic_bundle_detail', bundle_id=bundle.bundle_id) }}?artifact={{ a.relpath | urlencode }}">{{ a.relpath }}</a>
+                {% endif %}
+              </td>
+              <td>{{ a.size if a.size is not none else '—' }}</td>
+              <td><a href="/api/bundles/{{ bundle.bundle_id }}/artifacts/{{ a.relpath }}">raw</a></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div>
+        {% if selected_artifact %}
+        <div class="tracker-card" style="font-size:12px;">
+          <strong>{{ selected_artifact.relpath }}</strong>
+          <div style="color:var(--text-dim);margin-top:4px;">{{ selected_artifact.media_type }} · {{ selected_artifact.size if selected_artifact.size is not none else '—' }} bytes · {{ selected_artifact.ref.backend }}</div>
+          <div class="artifact-actions">
+            <a href="/api/bundles/{{ bundle.bundle_id }}/artifacts/{{ selected_artifact.relpath }}">raw</a>
+            <a href="{{ request.url_for('agentic_bundle_artifact_view', bundle_id=bundle.bundle_id, relpath=selected_artifact.relpath) }}">open full page</a>
+          </div>
+          {% if selected_artifact.error %}
+          <div style="color:var(--c-fail, #c00);">{{ selected_artifact.error }}</div>
+          {% endif %}
+          {% if selected_artifact.render_kind == 'markdown' %}
+          <div class="artifact-markdown">{{ selected_artifact.content | safe }}</div>
+          {% elif selected_artifact.render_kind == 'diff' %}
+          {{ selected_artifact.content | safe }}
+          {% elif selected_artifact.inline %}
+          <pre class="artifact-content">{{ selected_artifact.content }}</pre>
+          {% else %}
+          <div class="empty-state">This artifact is {{ selected_artifact.media_type }} and is available as a raw download.</div>
+          {% endif %}
+        </div>
+        {% else %}
+        <div class="empty-state">Select an artifact to preview it here.</div>
+        {% endif %}
+      </div>
+    </div>
+    {% else %}
+    <div class="empty-state">No artifacts recorded for this bundle.</div>
+    {% endif %}

@@ -1,0 +1,72 @@
+    {% if token_usage and token_usage.has_data %}
+    {# Step 9a: token-cost summary card. Aggregated from llm_turn rows in activity_log. #}
+    <h2>Token usage</h2>
+    {% set total = token_usage.total_tokens %}
+    {% set p = token_usage.prompt_tokens %}
+    {% set c = token_usage.completion_tokens %}
+    {% set cached = token_usage.cached_tokens %}
+    {% set billable = token_usage.billable_tokens %}
+    {# cached <= prompt by definition; clamp defensively against any
+       provider over-report so the pie slices never go negative. #}
+    {% set uncached = [p - cached, 0]|max %}
+    {# Distribution slices of `total` for the pie: cached prompt,
+       uncached prompt, completion. They sum to total. #}
+    {% set piesum = total or 1 %}
+    {% set cpct = 100 * cached / piesum %}
+    {% set upct = 100 * (cached + uncached) / piesum %}
+    <div class="token-flex">
+      <div class="token-pie"
+           style="background: conic-gradient(
+             #7aa2c0 0 {{ '%0.2f' % cpct }}%,
+             #d08770 {{ '%0.2f' % cpct }}% {{ '%0.2f' % upct }}%,
+             #a3be8c {{ '%0.2f' % upct }}% 100%);"
+           title="cached {{ '{:,}'.format(cached) }} · uncached prompt {{ '{:,}'.format(uncached) }} · completion {{ '{:,}'.format(c) }}"></div>
+      <ul class="token-legend">
+        <li><span class="swatch tok-cached"></span>Cached prompt — {{ '{:,}'.format(cached) }}{% if total %} ({{ '%0.1f' % (100 * cached / total) }}%){% endif %}</li>
+        <li><span class="swatch tok-uncached"></span>Uncached prompt — {{ '{:,}'.format(uncached) }}{% if total %} ({{ '%0.1f' % (100 * uncached / total) }}%){% endif %}</li>
+        <li><span class="swatch tok-compl"></span>Completion — {{ '{:,}'.format(c) }}{% if total %} ({{ '%0.1f' % (100 * c / total) }}%){% endif %}</li>
+      </ul>
+    </div>
+    <table class="tracker-card token-card">
+      <tr class="row-billable" style="border-bottom:1px solid var(--border, #d8dee9);">
+        <th style="text-align:left;">Billable (real cost)</th>
+        <td class="num"><strong>{{ '{:,}'.format(billable) }}</strong></td>
+        <td class="pct">uncached prompt + completion</td>
+      </tr>
+      <tr>
+        <th style="text-align:left;color:var(--text-dim);">Prompt</th>
+        <td class="num">{{ '{:,}'.format(p) }}</td>
+        <td class="pct">{% if total %}{{ '%0.1f' % (100 * p / total) }}%{% endif %}</td>
+      </tr>
+      <tr>
+        <th style="text-align:left;color:var(--text-dim);">&nbsp;&nbsp;↳ cached</th>
+        <td class="num">{{ '{:,}'.format(cached) }}</td>
+        <td class="pct">{% if p %}{{ '%0.1f' % (100 * cached / p) }}% of prompt{% endif %}</td>
+      </tr>
+      <tr>
+        <th style="text-align:left;color:var(--text-dim);">Completion</th>
+        <td class="num">{{ '{:,}'.format(c) }}</td>
+        <td class="pct">{% if total %}{{ '%0.1f' % (100 * c / total) }}%{% endif %}</td>
+      </tr>
+      <tr style="border-top:1px solid var(--border, #d8dee9);">
+        <th style="text-align:left;color:var(--text-dim);">Total (incl. re-billed cache)</th>
+        <td class="num">{{ '{:,}'.format(total) }}</td>
+        <td></td>
+      </tr>
+      <tr>
+        <th style="text-align:left;color:var(--text-dim);">LLM turns</th>
+        <td class="num">{{ token_usage.llm_turns }}</td>
+        <td></td>
+      </tr>
+      {% if token_usage.largest_turn %}
+      {% set lt = token_usage.largest_turn %}
+      <tr>
+        <th style="text-align:left;color:var(--text-dim);">Largest turn</th>
+        <td colspan="2" class="pct">
+          A{{ lt.attempt }}.T{{ lt.turn }} — prompt {{ '{:,}'.format(lt.prompt_tokens) }}
+          {% if lt.tools_requested %}(after {{ lt.tools_requested|join(', ') }}){% endif %}
+        </td>
+      </tr>
+      {% endif %}
+    </table>
+    {% endif %}

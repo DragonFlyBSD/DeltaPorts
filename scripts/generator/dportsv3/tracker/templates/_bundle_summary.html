@@ -1,0 +1,38 @@
+{% from "_macros.html" import resolution_pill, verification_pill %}
+    <div class="tracker-card">
+      <table style="font-size:12px;">
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Origin</th><td>{{ bundle.origin }}{% if bundle.flavor %} @ {{ bundle.flavor }}{% endif %}</td></tr>
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Target</th><td>{{ bundle.target or '—' }}</td></tr>
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Result</th><td><span class="stat-pill {% if bundle.result == 'fail' or bundle.result == 'failure' %}failed{% else %}built{% endif %}">{{ bundle.result }}</span></td></tr>
+        {% if bundle.resolution %}
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Resolution</th><td>
+          {{ resolution_pill(bundle.resolution) }}
+        </td></tr>
+        {% endif %}
+        {% if bundle.verification_status %}
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Verification</th><td>
+          {{ verification_pill(bundle.verification_status) }}
+          {% if bundle.verification_at %}
+            <span style="color:var(--text-dim);font-size:11px;">at {{ bundle.verification_at }}</span>
+          {% endif %}
+        </td></tr>
+        {% endif %}
+        {% if dops_state %}
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">dops</th><td>
+          {% if dops_state == 'converted' %}
+            <span class="stat-pill built">converted</span>
+          {% elif dops_state == 'auto_safe_pending' %}
+            <span class="stat-pill skipped">auto-safe pending</span>
+          {% elif dops_state == 'needs_judgment' %}
+            <span class="stat-pill skipped">needs LLM judgment</span>
+          {% elif dops_state == 'not_in_scope' %}
+            <span style="color:var(--text-dim);">not in scope</span>
+          {% else %}
+            {{ dops_state }}
+          {% endif %}
+        </td></tr>
+        {% endif %}
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Timestamp</th><td>{{ bundle.ts_utc }}</td></tr>
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Run</th><td>{% if bundle.run_id %}<a href="{{ request.url_for('agentic_run_detail', run_id=bundle.run_id) }}">{{ bundle.run_id }}</a>{% else %}—{% endif %}</td></tr>
+      </table>
+    </div>

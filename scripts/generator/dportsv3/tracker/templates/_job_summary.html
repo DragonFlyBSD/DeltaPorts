@@ -1,0 +1,62 @@
+    <div class="tracker-card">
+      <table style="font-size:12px;">
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">State</th><td>{{ job.state }}</td></tr>
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Retire reason</th><td>{{ job.retire_reason or '—' }}</td></tr>
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Last transition</th><td>{{ job.last_transition_at or '—' }}</td></tr>
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Type</th><td>{{ job.type or '—' }}</td></tr>
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Origin</th><td>{{ job.origin or '—' }}{% if job.flavor %} @ {{ job.flavor }}{% endif %}</td></tr>
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Target</th><td>{{ job.target or '—' }}</td></tr>
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Created</th><td>{{ job.created_ts_utc or '—' }}</td></tr>
+        {% if attempt_summary %}
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Recent attempts</th><td>{{ attempt_summary.recent_failures }}/{{ attempt_summary.max_attempts }} failures in last {{ attempt_summary.window_hours }}h{% if attempt_summary.last_attempt_at %} (last {{ attempt_summary.last_attempt_at }}){% endif %}</td></tr>
+        {% endif %}
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Bundle dir</th><td>{{ job.bundle_dir or '—' }}</td></tr>
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Path</th><td>{{ job.path or '—' }}</td></tr>
+        {% if job.last_error %}
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;vertical-align:top;">Last error</th><td><pre style="margin:0;padding:8px;background:var(--c-failed-bg);color:var(--c-failed);white-space:pre-wrap;">{{ job.last_error }}</pre></td></tr>
+        {% endif %}
+      </table>
+      {% if is_active %}
+      <div style="margin-top:12px;">
+        <button type="button" id="abandon-btn" class="btn btn-danger"
+                data-job-id="{{ job.job_id }}"
+                data-state="{{ job.state }}">
+          Abandon job (mark dead)
+        </button>
+        <span id="abandon-flash" style="margin-left:10px;"></span>
+      </div>
+      <script>
+        (function () {
+          var btn = document.getElementById("abandon-btn");
+          var flash = document.getElementById("abandon-flash");
+          btn.addEventListener("click", async function () {
+            var msg = "Abandon job " + btn.dataset.jobId + " (state="
+              + btn.dataset.state + ")? It will be marked dead with "
+              + "retire_reason='abandoned' and never picked up again.";
+            if (!confirm(msg)) return;
+            btn.disabled = true;
+            try {
+              var resp = await fetch(
+                "/api/jobs/" + encodeURIComponent(btn.dataset.jobId) + "/abandon",
+                {method: "POST", headers: {"Content-Type": "application/json"}}
+              );
+              var data = await resp.json().catch(function () { return {}; });
+              if (resp.ok) {
+                flash.textContent = "Abandoned. Refreshing…";
+                flash.style.color = "green";
+                setTimeout(function () { window.location.reload(); }, 700);
+              } else {
+                flash.textContent = (data.detail || ("HTTP " + resp.status));
+                flash.style.color = "var(--c-fail, #c00)";
+                btn.disabled = false;
+              }
+            } catch (err) {
+              flash.textContent = "Network error: " + err;
+              flash.style.color = "var(--c-fail, #c00)";
+              btn.disabled = false;
+            }
+          });
+        })();
+      </script>
+      {% endif %}
+    </div>
