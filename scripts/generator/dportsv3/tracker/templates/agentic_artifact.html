@@ -1,11 +1,6 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{{ artifact.relpath }} — DeltaPorts Tracker</title>
-  <link href="{{ request.url_for('static', path='progress.css') }}?v={{ static_v }}" type="text/css" rel="stylesheet">
-  <link rel="icon" type="image/png" href="{{ request.url_for('static', path='favicon.png') }}">
+{% extends "_base.html" %}
+{% block title %}{{ artifact.relpath }} — DeltaPorts Tracker{% endblock %}
+{% block head_extra %}
   <style>
     /* Per-page-only rules. Shared artifact-preview rules
        (.artifact-table + .diff-* family) live in progress.css. */
@@ -16,8 +11,8 @@
     .artifact-markdown p { margin:8px 0; }
     .artifact-markdown ul { margin:8px 0 8px 22px; padding:0; }
   </style>
-</head>
-<body>
+{% endblock %}
+{% block body %}
   {% with nav_crumbs = [{"label": "Agentic", "url": request.url_for('agentic_index')}, {"label": "Bundles", "url": request.url_for('agentic_bundles')}, {"label": bundle.bundle_id, "url": request.url_for('agentic_bundle_detail', bundle_id=bundle.bundle_id)}, {"label": artifact.relpath}] %}
     {% include "_tracker_nav.html" %}
   {% endwith %}
@@ -54,5 +49,4 @@
       </div>
     {% endif %}
   </div>
-</body>
-</html>
+{% endblock %}

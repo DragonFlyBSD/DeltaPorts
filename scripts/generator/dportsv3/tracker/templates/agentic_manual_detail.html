@@ -1,11 +1,6 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Manual: {{ request_row.origin }} — DeltaPorts Tracker</title>
-  <link href="{{ request.url_for('static', path='progress.css') }}?v={{ static_v }}" type="text/css" rel="stylesheet">
-  <link rel="icon" type="image/png" href="{{ request.url_for('static', path='favicon.png') }}">
+{% extends "_base.html" %}
+{% block title %}Manual: {{ request_row.origin }} — DeltaPorts Tracker{% endblock %}
+{% block head_extra %}
   <style>
     .artifact-content { white-space: pre-wrap; overflow-x: auto; font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: var(--panel-bg, #f8fafc); border: 1px solid var(--border, #d8dee9); border-radius: 6px; padding: 14px; }
     .artifact-markdown { font-size:13px; line-height:1.5; }
@@ -19,8 +14,8 @@
     .manual-flash.ok { background:#e6f4ea; border:1px solid #34a853; }
     .manual-flash.err { background:#fde7e7; border:1px solid #c00; }
   </style>
-</head>
-<body>
+{% endblock %}
+{% block body %}
   {% with nav_crumbs = [
       {"label": "Agentic", "url": request.url_for('agentic_index')},
       {"label": "Manual Queue", "url": request.url_for('agentic_manual_list')},
@@ -231,5 +226,4 @@
       })();
     </script>
   </div>
-</body>
-</html>
+{% endblock %}

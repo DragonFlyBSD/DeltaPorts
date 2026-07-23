@@ -1,14 +1,7 @@
+{% extends "_base.html" %}
 {% from "_macros.html" import resolution_pill, verification_pill, job_state_pill %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Agentic — DeltaPorts Tracker</title>
-  <link href="{{ request.url_for('static', path='progress.css') }}?v={{ static_v }}" type="text/css" rel="stylesheet">
-  <link rel="icon" type="image/png" href="{{ request.url_for('static', path='favicon.png') }}">
-</head>
-<body>
+{% block title %}Agentic — DeltaPorts Tracker{% endblock %}
+{% block body %}
   {% with nav_crumbs = [{"label": "Agentic"}] %}{% include "_tracker_nav.html" %}{% endwith %}
 
   <div class="tracker-page">
@@ -174,5 +167,4 @@
       <a href="{{ request.url_for('agentic_manual_list') }}">Manual queue</a>
     </p>
   </div>
-</body>
-</html>
+{% endblock %}

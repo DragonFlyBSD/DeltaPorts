@@ -1,11 +1,6 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{{ job.job_id }} — DeltaPorts Tracker</title>
-  <link href="{{ request.url_for('static', path='progress.css') }}?v={{ static_v }}" type="text/css" rel="stylesheet">
-  <link rel="icon" type="image/png" href="{{ request.url_for('static', path='favicon.png') }}">
+{% extends "_base.html" %}
+{% block title %}{{ job.job_id }} — DeltaPorts Tracker{% endblock %}
+{% block head_extra %}
   <style>
     .token-card { font-size: 12px; margin: 12px 0; }
     .token-card td { padding-right: 16px; }
@@ -33,8 +28,8 @@
     .new-row { animation: fade-in 1.2s ease-out; }
     @keyframes fade-in { from { background: #fffae0; } to { background: transparent; } }
   </style>
-</head>
-<body>
+{% endblock %}
+{% block body %}
   {% with nav_crumbs = [{"label": "Agentic", "url": request.url_for('agentic_index')}, {"label": "Jobs", "url": request.url_for('agentic_jobs')}, {"label": job.job_id}] %}
     {% include "_tracker_nav.html" %}
   {% endwith %}
@@ -643,5 +638,4 @@
       }
     })();
   </script>
-</body>
-</html>
+{% endblock %}

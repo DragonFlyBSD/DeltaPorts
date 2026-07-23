@@ -1,14 +1,7 @@
+{% extends "_base.html" %}
 {% from "_macros.html" import job_state_pill %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Jobs — DeltaPorts Tracker</title>
-  <link href="{{ request.url_for('static', path='progress.css') }}?v={{ static_v }}" type="text/css" rel="stylesheet">
-  <link rel="icon" type="image/png" href="{{ request.url_for('static', path='favicon.png') }}">
-</head>
-<body>
+{% block title %}Jobs — DeltaPorts Tracker{% endblock %}
+{% block body %}
   {% with nav_crumbs = [{"label": "Agentic", "url": request.url_for('agentic_index')}, {"label": "Jobs"}] %}
     {% include "_tracker_nav.html" %}
   {% endwith %}
@@ -42,5 +35,4 @@
       </tbody>
     </table>
   </div>
-</body>
-</html>
+{% endblock %}
