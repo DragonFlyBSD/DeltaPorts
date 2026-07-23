@@ -213,7 +213,8 @@ def test_bundle_detail_renders_verification_failed_pill(client, seeded_db):
     )
     body = client.get("/agentic/bundles/b-failed").text
     assert ">Verification<" in body
-    assert "verification failed" in body
+    # Phase 3: verification pill standardized to the list-view label.
+    assert ">failed<" in body
 
 
 def test_bundle_detail_omits_verification_row_when_unset(client):

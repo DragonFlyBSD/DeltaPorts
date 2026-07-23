@@ -1,3 +1,4 @@
+{% from "_macros.html" import job_state_pill %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -27,15 +28,7 @@
         <tr>
           <td><a href="{{ request.url_for('agentic_job_detail', job_id=j.job_id) }}">{{ j.job_id }}</a></td>
           <td>
-            {% set cls = {
-                'queued':'ignored',
-                'claimed':'skipped','triaging':'skipped','triaged':'skipped',
-                'patching':'skipped','verifying':'skipped',
-                'converting':'skipped',
-                'done':'built',
-                'dead':'failed','escalated':'skipped'
-            }.get(j.state,'total') %}
-            <span class="stat-pill {{ cls }}">{{ j.state }}</span>
+            {{ job_state_pill(j.state) }}
           </td>
           <td>{{ j.retire_reason or '—' }}</td>
           <td>{{ j.type or '—' }}</td>

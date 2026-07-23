@@ -1,3 +1,4 @@
+{% from "_macros.html" import resolution_pill, verification_pill, job_state_pill %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -134,28 +135,8 @@
           <td>{{ b.origin }}</td>
           <td>{{ b.target or '—' }}</td>
           <td><span class="stat-pill {% if b.result == 'fail' or b.result == 'failure' %}failed{% else %}built{% endif %}">{{ b.result }}</span></td>
-          <td>
-            {% if b.resolution == 'agent_fixed' %}
-              <span class="stat-pill built">agent fixed</span>
-            {% elif b.resolution == 'agent_gave_up' %}
-              <span class="stat-pill failed">agent gave up</span>
-            {% elif b.resolution == 'agent_budget_exhausted' %}
-              <span class="stat-pill failed">budget out</span>
-            {% elif b.resolution == 'escalated_manual' %}
-              <span class="stat-pill skipped">escalated</span>
-            {% else %}
-              —
-            {% endif %}
-          </td>
-          <td>
-            {% if b.verification_status == 'verified' %}
-              <span class="stat-pill built">verified</span>
-            {% elif b.verification_status == 'verification_failed' %}
-              <span class="stat-pill failed">failed</span>
-            {% else %}
-              —
-            {% endif %}
-          </td>
+          <td>{{ resolution_pill(b.resolution) }}</td>
+          <td>{{ verification_pill(b.verification_status) }}</td>
         </tr>
         {% else %}
         <tr><td colspan="6" style="color:var(--text-dim);">No bundles yet.</td></tr>
@@ -172,12 +153,7 @@
         <tr>
           <td><a href="{{ request.url_for('agentic_job_detail', job_id=j.job_id) }}">{{ j.job_id }}</a></td>
           <td>
-            {% set cls = {
-              'queued':'ignored',
-              'claimed':'skipped','triaging':'skipped','triaged':'skipped','patching':'skipped','verifying':'skipped','converting':'skipped','verifying_fix':'skipped',
-              'done':'built','dead':'failed','escalated':'skipped'
-            }.get(j.state,'total') %}
-            <span class="stat-pill {{ cls }}">{{ j.state }}</span>
+            {{ job_state_pill(j.state) }}
           </td>
           <td>{{ j.retire_reason or '—' }}</td>
           <td>{{ j.origin or '—' }}</td>

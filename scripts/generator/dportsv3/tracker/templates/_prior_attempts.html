@@ -1,3 +1,4 @@
+{% from "_macros.html" import resolution_pill %}
 {# Step 9 — recent bundles for this (origin, target). Rendered on
    both the bundle detail page (excluding the bundle being viewed)
    and the job detail page. Compact table; the operator gets a
@@ -34,17 +35,7 @@
         </span>
       </td>
       <td>
-        {% if b.resolution == 'agent_fixed' %}
-          <span class="stat-pill built">agent fixed</span>
-        {% elif b.resolution == 'agent_gave_up' %}
-          <span class="stat-pill failed">agent gave up</span>
-        {% elif b.resolution == 'agent_budget_exhausted' %}
-          <span class="stat-pill failed">budget out</span>
-        {% elif b.resolution == 'escalated_manual' %}
-          <span class="stat-pill skipped">escalated</span>
-        {% else %}
-          —
-        {% endif %}
+        {{ resolution_pill(b.resolution) }}
       </td>
       <td>
         {% if b.run_id %}

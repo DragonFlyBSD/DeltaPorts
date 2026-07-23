@@ -1,3 +1,4 @@
+{% from "_macros.html" import resolution_pill, verification_pill %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -49,28 +50,12 @@
         <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Result</th><td><span class="stat-pill {% if bundle.result == 'fail' or bundle.result == 'failure' %}failed{% else %}built{% endif %}">{{ bundle.result }}</span></td></tr>
         {% if bundle.resolution %}
         <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Resolution</th><td>
-          {% if bundle.resolution == 'agent_fixed' %}
-            <span class="stat-pill built">agent fixed</span>
-          {% elif bundle.resolution == 'agent_gave_up' %}
-            <span class="stat-pill failed">agent gave up</span>
-          {% elif bundle.resolution == 'agent_budget_exhausted' %}
-            <span class="stat-pill failed">budget exhausted</span>
-          {% elif bundle.resolution == 'escalated_manual' %}
-            <span class="stat-pill skipped">escalated manual</span>
-          {% else %}
-            {{ bundle.resolution }}
-          {% endif %}
+          {{ resolution_pill(bundle.resolution) }}
         </td></tr>
         {% endif %}
         {% if bundle.verification_status %}
         <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Verification</th><td>
-          {% if bundle.verification_status == 'verified' %}
-            <span class="stat-pill built">verified</span>
-          {% elif bundle.verification_status == 'verification_failed' %}
-            <span class="stat-pill failed">verification failed</span>
-          {% else %}
-            {{ bundle.verification_status }}
-          {% endif %}
+          {{ verification_pill(bundle.verification_status) }}
           {% if bundle.verification_at %}
             <span style="color:var(--text-dim);font-size:11px;">at {{ bundle.verification_at }}</span>
           {% endif %}
