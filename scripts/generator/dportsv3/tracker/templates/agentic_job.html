@@ -114,5 +114,7 @@
     {% include "_job_activity.html" %}
   </div>
 
-  {% include "_job_scripts.html" %}
+{% endblock %}
+{% block scripts %}
+  <script src="{{ request.url_for('static', path='agentic-job.js') }}?v={{ static_v }}" defer></script>
 {% endblock %}
