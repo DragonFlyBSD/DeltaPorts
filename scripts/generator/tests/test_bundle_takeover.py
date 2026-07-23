@@ -203,8 +203,8 @@ def test_take_over_409_when_race_loses_to_concurrent_insert(
     conn.commit()
     conn.close()
 
-    import dportsv3.tracker.server as server_mod
-    monkeypatch.setattr(server_mod, "is_origin_skipped", lambda *a, **kw: None)
+    import dportsv3.tracker.routes.bundle_actions as bundle_actions
+    monkeypatch.setattr(bundle_actions, "is_origin_skipped", lambda *a, **kw: None)
 
     resp = client.post("/api/bundles/b-budget/take-over", json={})
     assert resp.status_code == 409
