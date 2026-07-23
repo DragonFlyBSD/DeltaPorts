@@ -14,6 +14,7 @@ from importlib import util as importlib_util
 from pathlib import Path
 from typing import Any, cast
 
+from dportsv3.tracker import fix_state
 from dportsv3.tracker.progress_adapter import (
     run_history_chunk,
     run_summary,
@@ -1998,7 +1999,9 @@ def create_app(db_path: str | Path) -> Any:
             raise HTTPException(
                 status_code=404, detail=f"Unknown bundle: {bundle_id}",
             )
-        if row.get("resolution") in ("accepted", "rejected"):
+        if not fix_state.action_allowed(
+            "verify", row.get("resolution"), row.get("verification_status")
+        ):
             raise HTTPException(
                 status_code=409,
                 detail=(
@@ -2261,15 +2264,18 @@ def create_app(db_path: str | Path) -> Any:
             raise HTTPException(
                 status_code=404, detail=f"Unknown bundle: {bundle_id}",
             )
-        if row.get("resolution") in ("accepted", "rejected", "discarded"):
-            raise HTTPException(
-                status_code=409,
-                detail=(
-                    f"Cannot accept bundle in terminal state "
-                    f"{row.get('resolution')!r}"
-                ),
-            )
-        if row.get("verification_status") != "verified":
+        if not fix_state.action_allowed(
+            "accept", row.get("resolution"), row.get("verification_status")
+        ):
+            # Gate denied — pick the specific reason for the message.
+            if row.get("resolution") in fix_state.TERMINAL_RESOLUTIONS:
+                raise HTTPException(
+                    status_code=409,
+                    detail=(
+                        f"Cannot accept bundle in terminal state "
+                        f"{row.get('resolution')!r}"
+                    ),
+                )
             raise HTTPException(
                 status_code=409,
                 detail=(
@@ -2451,7 +2457,9 @@ def create_app(db_path: str | Path) -> Any:
             raise HTTPException(
                 status_code=404, detail=f"Unknown bundle: {bundle_id}",
             )
-        if row.get("resolution") in ("accepted", "rejected", "discarded"):
+        if not fix_state.action_allowed(
+            "reject", row.get("resolution"), row.get("verification_status")
+        ):
             raise HTTPException(
                 status_code=409,
                 detail=(
@@ -2534,29 +2542,26 @@ def create_app(db_path: str | Path) -> Any:
             raise HTTPException(
                 status_code=404, detail=f"Unknown bundle: {bundle_id}",
             )
+        # Take-over is meaningful only on failure-shaped (or fresh)
+        # bundles — success-shaped ones use the Accept/Reject surface.
         current_resolution = row.get("resolution")
-        if current_resolution in ("accepted", "rejected", "discarded"):
-            raise HTTPException(
-                status_code=409,
-                detail=(
-                    f"Cannot take over bundle in terminal state "
-                    f"{current_resolution!r}"
-                ),
-            )
-        if current_resolution == "operator_owned":
-            raise HTTPException(
-                status_code=409,
-                detail="Bundle is already operator_owned",
-            )
-        # The take-over is meaningful only on failure-shaped bundles.
-        # Success-shaped ones (agent_fixed) have Step 11c's
-        # Accept/Reject as the appropriate operator action surface;
-        # a takeover there would muddle the resolution lane.
-        allowed_from = {
-            "agent_budget_exhausted", "agent_gave_up",
-            "escalated_manual", "convert_gave_up", None,
-        }
-        if current_resolution not in allowed_from:
+        if not fix_state.action_allowed(
+            "take-over", current_resolution, row.get("verification_status")
+        ):
+            # Gate denied — specific message per reason.
+            if current_resolution in fix_state.TERMINAL_RESOLUTIONS:
+                raise HTTPException(
+                    status_code=409,
+                    detail=(
+                        f"Cannot take over bundle in terminal state "
+                        f"{current_resolution!r}"
+                    ),
+                )
+            if current_resolution == "operator_owned":
+                raise HTTPException(
+                    status_code=409,
+                    detail="Bundle is already operator_owned",
+                )
             raise HTTPException(
                 status_code=409,
                 detail=(
@@ -2718,20 +2723,18 @@ def create_app(db_path: str | Path) -> Any:
                 status_code=404, detail=f"Unknown bundle: {bundle_id}",
             )
         current_resolution = row.get("resolution")
-        if current_resolution in ("accepted", "rejected", "discarded"):
-            raise HTTPException(
-                status_code=409,
-                detail=(
-                    f"Cannot discard bundle in terminal state "
-                    f"{current_resolution!r}"
-                ),
-            )
-        allowed_from = {
-            "agent_budget_exhausted", "agent_gave_up",
-            "escalated_manual", "convert_gave_up",
-            "operator_owned", None,
-        }
-        if current_resolution not in allowed_from:
+        if not fix_state.action_allowed(
+            "discard", current_resolution, row.get("verification_status")
+        ):
+            # Gate denied — specific message per reason.
+            if current_resolution in fix_state.TERMINAL_RESOLUTIONS:
+                raise HTTPException(
+                    status_code=409,
+                    detail=(
+                        f"Cannot discard bundle in terminal state "
+                        f"{current_resolution!r}"
+                    ),
+                )
             raise HTTPException(
                 status_code=409,
                 detail=(
@@ -2904,7 +2907,9 @@ def create_app(db_path: str | Path) -> Any:
                 status_code=404, detail=f"Unknown bundle: {bundle_id}",
             )
         current_resolution = row.get("resolution")
-        if current_resolution in ("accepted", "rejected", "discarded"):
+        if not fix_state.action_allowed(
+            "retry", current_resolution, row.get("verification_status")
+        ):
             raise HTTPException(
                 status_code=409,
                 detail=(
@@ -3059,7 +3064,9 @@ def create_app(db_path: str | Path) -> Any:
             raise HTTPException(
                 status_code=404, detail=f"Unknown bundle: {bundle_id}",
             )
-        if row.get("resolution") != "operator_owned":
+        if not fix_state.action_allowed(
+            "release", row.get("resolution"), row.get("verification_status")
+        ):
             raise HTTPException(
                 status_code=409,
                 detail=(
@@ -3188,7 +3195,9 @@ def create_app(db_path: str | Path) -> Any:
                 status_code=404, detail=f"Unknown bundle: {bundle_id}",
             )
         prior = row.get("resolution")
-        if prior not in ("accepted", "rejected", "discarded"):
+        if not fix_state.action_allowed(
+            "reopen", prior, row.get("verification_status")
+        ):
             raise HTTPException(
                 status_code=409,
                 detail=(
@@ -3601,7 +3610,6 @@ def create_app(db_path: str | Path) -> Any:
         # The policy (and the authoritative endpoint gate) lives in
         # fix_state — one place, tested, instead of the former inline
         # matrix. See that module for the allowed-vs-surface split.
-        from dportsv3.tracker import fix_state  # noqa: PLC0415
         acts = fix_state.bundle_actions(bundle)
         # Env picker for the Verify button — a live DB read, so it stays
         # here rather than in the pure policy. Populate only when Verify
