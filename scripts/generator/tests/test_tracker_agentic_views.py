@@ -476,7 +476,7 @@ def test_markdown_inline_bold_and_code_rendered():
     <strong> / <code> rather than literal asterisks and backticks.
     Surfaced by the manual_handoff.md viewer where every bullet uses
     both styles."""
-    from dportsv3.tracker.server import _render_markdown
+    from dportsv3.tracker.render import render_markdown as _render_markdown
     md = (
         "- **Origin:** `devel/readline`\n"
         "- **Reason:** retry cap reached\n"
@@ -496,7 +496,7 @@ def test_markdown_inline_bold_and_code_rendered():
 def test_markdown_inline_does_not_break_html_escape():
     """Bold/code containing HTML-special chars stay escaped — no XSS
     via, e.g., ``**<script>**`` markdown."""
-    from dportsv3.tracker.server import _render_markdown
+    from dportsv3.tracker.render import render_markdown as _render_markdown
     out = _render_markdown("- **<script>** and `<img src=x>`\n")
     assert "<script>" not in out  # raw tag would be a vuln
     assert "<strong>&lt;script&gt;</strong>" in out
@@ -506,7 +506,7 @@ def test_markdown_inline_does_not_break_html_escape():
 def test_markdown_inline_code_blocks_backticks_from_being_bolded():
     """`**not bold**` inside backticks stays literal — the order of
     application protects it."""
-    from dportsv3.tracker.server import _render_markdown
+    from dportsv3.tracker.render import render_markdown as _render_markdown
     out = _render_markdown("Try `**literal**` here.\n")
     assert "<code>**literal**</code>" in out
     assert "<strong>literal</strong>" not in out
@@ -516,7 +516,7 @@ def test_markdown_renders_github_table():
     """GitHub-style ``| col | col |`` + ``|---|---|`` rows produce
     a ``<table>`` with ``<thead>`` + ``<tbody>``. Cell contents are
     HTML-escaped and inline-rendered (bold + code work in cells)."""
-    from dportsv3.tracker.server import _render_markdown
+    from dportsv3.tracker.render import render_markdown as _render_markdown
     md = (
         "| Status | Tokens |\n"
         "|--------|-------:|\n"
@@ -533,7 +533,7 @@ def test_markdown_renders_github_table():
 
 def test_markdown_table_xss_escape():
     """Cell contents containing HTML-special chars stay escaped."""
-    from dportsv3.tracker.server import _render_markdown
+    from dportsv3.tracker.render import render_markdown as _render_markdown
     md = "| A | B |\n|---|---|\n| <script>x</script> | safe |\n"
     out = _render_markdown(md)
     assert "<script>x</script>" not in out
@@ -544,7 +544,7 @@ def test_markdown_lonely_pipe_does_not_start_table():
     """A line beginning with `|` but with no separator on the next
     line stays in paragraph context — protects prose with literal
     pipes from being misclassified as a malformed table."""
-    from dportsv3.tracker.server import _render_markdown
+    from dportsv3.tracker.render import render_markdown as _render_markdown
     out = _render_markdown(
         "Paragraph one.\n"
         "| not a table because no separator |\n"
@@ -556,7 +556,7 @@ def test_markdown_lonely_pipe_does_not_start_table():
 def test_render_diff_basic():
     """Unified diff is parsed into colored line rows with hunk
     headers and a top-of-file stat."""
-    from dportsv3.tracker.server import _render_diff
+    from dportsv3.tracker.render import render_diff as _render_diff
     diff = (
         "--- a/foo\n"
         "+++ b/foo\n"
@@ -578,7 +578,7 @@ def test_render_diff_basic():
 def test_render_diff_escapes_html():
     """Diff content is HTML-escaped so file contents like ``<script>``
     can't break out of the renderer."""
-    from dportsv3.tracker.server import _render_diff
+    from dportsv3.tracker.render import render_diff as _render_diff
     out = _render_diff(
         "--- a/x\n+++ b/x\n@@ -1,1 +1,1 @@\n-<script>alert(1)</script>\n+ok\n"
     )
@@ -589,7 +589,7 @@ def test_render_diff_escapes_html():
 def test_render_diff_multi_file():
     """Two distinct files in one diff produce stat ``2 files`` and
     each ``---``/``+++`` pair opens a fresh ``diff-file`` block."""
-    from dportsv3.tracker.server import _render_diff
+    from dportsv3.tracker.render import render_diff as _render_diff
     d = (
         "--- a/foo\n+++ b/foo\n@@ -1,1 +1,1 @@\n-a\n+b\n"
         "--- a/bar\n+++ b/bar\n@@ -1,1 +1,1 @@\n-c\n+d\n"
@@ -604,7 +604,7 @@ def test_render_diff_multi_file():
 def test_render_diff_empty_input():
     """Empty string in → renderer outputs a 0-file stat and no
     file/hunk blocks. Operator-friendly degraded path."""
-    from dportsv3.tracker.server import _render_diff
+    from dportsv3.tracker.render import render_diff as _render_diff
     out = _render_diff("")
     assert "0 files" in out
     assert "diff-file" not in out  # neither file blocks nor headers
@@ -615,7 +615,7 @@ def test_render_diff_hunk_only_no_headers():
     """Some artifacts carry just hunk content (no ``--- a/foo`` /
     ``+++ b/foo`` preamble). The renderer must still emit the hunk
     body — auto-opening a virtual file rather than dropping content."""
-    from dportsv3.tracker.server import _render_diff
+    from dportsv3.tracker.render import render_diff as _render_diff
     out = _render_diff(
         "@@ -1,2 +1,2 @@\n kept\n-removed\n+added\n"
     )
@@ -628,7 +628,7 @@ def test_render_diff_no_newline_marker():
     """``\\ No newline at end of file`` lines from git's unified-diff
     output are valid meta rows — they shouldn't bump line counters
     or trip the line-number gutter."""
-    from dportsv3.tracker.server import _render_diff
+    from dportsv3.tracker.render import render_diff as _render_diff
     out = _render_diff(
         "--- a/x\n+++ b/x\n@@ -1,1 +1,1 @@\n-old\n+new\n"
         "\\ No newline at end of file\n"
@@ -643,7 +643,7 @@ def test_render_diff_no_newline_marker():
 def test_is_diff_path_recognizes_patch_convention():
     """FreeBSD ports' ``patch-*`` filename convention triggers the diff
     renderer regardless of trailing extension."""
-    from dportsv3.tracker.server import _is_diff_path
+    from dportsv3.tracker.render.text import _is_diff_path
     assert _is_diff_path("analysis/changes.diff")
     assert _is_diff_path("foo.rej")
     assert _is_diff_path("foo.patch")
@@ -657,7 +657,7 @@ def test_artifact_media_type_makefile_variants():
     """``Makefile.DragonFly`` / ``Makefile.am`` / ``pkg-plist.amd64``
     render inline as text/plain. Pre-fix these were octet-stream
     because their ``suffix`` is the variant tag, not ``.txt``."""
-    from dportsv3.tracker.server import _artifact_media_type
+    from dportsv3.tracker.render import artifact_media_type as _artifact_media_type
     media, inline = _artifact_media_type("port/Makefile.DragonFly", None)
     assert media == "text/plain; charset=utf-8" and inline
     media, inline = _artifact_media_type("port/Makefile.am", None)
@@ -674,7 +674,7 @@ def test_artifact_media_type_makefile_variants():
 def test_artifact_media_type_content_sniff(tmp_path):
     """When name+extension don't match, fall back to a content sniff
     on the on-disk file."""
-    from dportsv3.tracker.server import _artifact_media_type
+    from dportsv3.tracker.render import artifact_media_type as _artifact_media_type
     text = tmp_path / "looks-text"
     text.write_text("hello world\n")
     media, inline = _artifact_media_type("looks-text", None, fs_path=text)
@@ -798,7 +798,7 @@ def test_build_cumulative_token_map_filters_by_attempt() -> None:
     """The map joiner filters tool_trace events to a specific attempt
     number — a second-attempt llm_turn shouldn't bleed into the first
     attempt's session view (and vice versa)."""
-    from dportsv3.tracker.server import _build_cumulative_token_map
+    from dportsv3.tracker.render.sessions import _build_cumulative_token_map
     trace = [
         {"type": "llm_turn", "attempt": 1, "turn": 1,
          "prompt_tokens": 100, "completion_tokens": 10,
@@ -843,7 +843,7 @@ def test_parse_session_records_blob_backend_path(tmp_path) -> None:
     an explicit ``gzipped`` hint from the caller (who has the relpath)
     rather than relying on path.suffix."""
     import gzip as _gzip
-    from dportsv3.tracker.server import _parse_session_records
+    from dportsv3.tracker.render import parse_session_records as _parse_session_records
 
     # Write a real gzip file under a no-extension path (simulates blob storage).
     blob_path = tmp_path / "ab" / "cd" / "abcdef0123456789"
@@ -877,7 +877,7 @@ def test_render_diff_meta_lines_use_single_column_layout() -> None:
 
 
 def test_is_session_relpath_matches_pattern() -> None:
-    from dportsv3.tracker.server import _is_session_relpath
+    from dportsv3.tracker.render import is_session_relpath as _is_session_relpath
     assert _is_session_relpath("analysis/sessions/foo.jsonl.gz")
     assert _is_session_relpath("analysis/sessions/foo.jsonl")
     assert not _is_session_relpath("analysis/changes.diff")
@@ -890,7 +890,7 @@ def test_split_user_prompt_sections_handles_preamble() -> None:
     """Content before the first ## heading is captured under '(preamble)'.
     Headings that aren't at column 0 are not split (so a nested ## inside
     a code block doesn't accidentally start a new section)."""
-    from dportsv3.tracker.server import _split_user_prompt_sections
+    from dportsv3.tracker.render.sessions import _split_user_prompt_sections
     md = (
         "preamble line\nanother\n"
         "## Section A\nbody a\n"
@@ -910,7 +910,7 @@ def test_summarize_tool_result_materialize_headline() -> None:
     is keyed on ``tool_name`` after the 2.5e refactor — the same raw
     payload routed under a different tool_name would NOT pick up the
     materialize summarizer."""
-    from dportsv3.tracker.server import _summarize_tool_result
+    from dportsv3.tracker.render.sessions import _summarize_tool_result
     raw = json.dumps({
         "ok": True,
         "stdout_tail": (
@@ -931,7 +931,7 @@ def test_summarize_tool_result_unknown_tool_degrades_gracefully() -> None:
     """Without a tool_name match the summary keeps ok+error but skips
     the headline. The raw content is still accessible in the card's
     collapsible — no information loss, just no at-a-glance headline."""
-    from dportsv3.tracker.server import _summarize_tool_result
+    from dportsv3.tracker.render.sessions import _summarize_tool_result
     raw = json.dumps({
         "ok": False, "error": "boom",
         "stdout_tail": "summary: ports=1 ops=1 applied=1 errors=0\n",
@@ -952,7 +952,7 @@ def test_summarize_tool_result_extract_does_not_overwrite_materialize() -> None:
     feeding a payload that has BOTH fields under tool_name=make_extract:
     make_extract's summarizer takes wrksrc; the materialize summary line
     in stdout_tail is correctly ignored."""
-    from dportsv3.tracker.server import _summarize_tool_result
+    from dportsv3.tracker.render.sessions import _summarize_tool_result
     raw = json.dumps({
         "ok": True,
         "wrksrc": "/work/obj/devel/foo/foo-1.0",
@@ -971,7 +971,7 @@ def test_summarize_tool_result_make_patch_surfaces_reject() -> None:
     """The operator card for a failed make_patch must surface the
     rejecting-patch line at a glance, not just an ok=False pill — that
     line is how an operator sees which patch drifted."""
-    from dportsv3.tracker.server import _summarize_tool_result
+    from dportsv3.tracker.render.sessions import _summarize_tool_result
     ok_raw = json.dumps({"ok": True, "stdout_tail": "===>  Patching\n"})
     ok = _summarize_tool_result(ok_raw, tool_name="make_patch")
     assert ok["ok"] is True
