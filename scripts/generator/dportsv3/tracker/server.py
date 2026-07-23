@@ -835,6 +835,90 @@ def _parse_session_records(
     return records
 
 
+# ---------------------------------------------------------------------------
+# Fix-review chat (operator Q&A about a completed fix)
+#
+# A completed fix is reviewed from its **frozen bundle artifacts** — the
+# diff, triage, proposed_fix, errors, and the agent's session dump — not
+# a live env (the agent's tools read a shared quarterly chroot that has
+# moved on from this fix). The message assembly lives in
+# ``dportsv3.agent.fix_chat`` (pure, unit-testable); this layer only
+# resolves creds, reads artifacts from the store, and makes the tools-off
+# ``llm.complete`` call. Model creds come from DP_HARNESS_CHAT_* on the
+# tracker process — deliberately separate from the runner's triage/patch
+# creds so the two surfaces are configured independently.
+# ---------------------------------------------------------------------------
+
+
+def _chat_llm_config() -> dict[str, Any] | None:
+    """Resolve the chat model config from ``DP_HARNESS_CHAT_*`` env.
+
+    Returns ``None`` when ``DP_HARNESS_CHAT_MODEL`` is unset — this is the
+    feature gate. Callers treat ``None`` as "chat disabled" (503 on the
+    endpoint, hidden panel in the UI). The other three vars mirror the
+    runner's per-flow config: ``*_API_KEY``, ``*_API_BASE`` (custom
+    endpoint), ``*_PROVIDER`` (force litellm's provider code path).
+    """
+    model = os.environ.get("DP_HARNESS_CHAT_MODEL", "").strip()
+    if not model:
+        return None
+
+    def _clean(name: str) -> str | None:
+        v = os.environ.get(name, "").strip()
+        return v or None
+
+    try:
+        timeout = int(os.environ.get("DP_HARNESS_CHAT_TIMEOUT", "120") or "120")
+    except ValueError:
+        timeout = 120
+    # Bound the assembled artifact+transcript context. Default suits a
+    # modern 128K-context model; operators on a smaller-context chat
+    # model can shrink it. Assembly + the default live in fix_chat.
+    from dportsv3.agent import fix_chat  # noqa: PLC0415
+    try:
+        context_cap = int(
+            os.environ.get("DP_HARNESS_CHAT_CONTEXT_CAP", "")
+            or fix_chat.DEFAULT_CONTEXT_CAP
+        )
+    except ValueError:
+        context_cap = fix_chat.DEFAULT_CONTEXT_CAP
+    return {
+        "model": model,
+        "api_key": _clean("DP_HARNESS_CHAT_API_KEY"),
+        "api_base": _clean("DP_HARNESS_CHAT_API_BASE"),
+        "custom_llm_provider": _clean("DP_HARNESS_CHAT_PROVIDER"),
+        "timeout": timeout,
+        "context_cap": max(8 * 1024, context_cap),
+    }
+
+
+def _pick_default_session_relpath(bundle: dict[str, Any]) -> str | None:
+    """Choose which session dump seeds the chat for ``bundle``.
+
+    Prefers the last (highest-attempt) *patch* session — that's the
+    attempt that produced the accepted fix and holds the reasoning an
+    operator asks "why" about. Falls back to any session dump (e.g. a
+    triage-only bundle) when no patch session exists. Returns ``None``
+    when the bundle carries no session dump at all (the run had
+    ``DP_HARNESS_DUMP_SESSION`` off).
+    """
+    sessions = [
+        str(a.get("relpath"))
+        for a in (bundle.get("artifacts") or [])
+        if a.get("relpath") and _is_session_relpath(str(a.get("relpath")))
+    ]
+    if not sessions:
+        return None
+
+    def _attempt(relpath: str) -> int:
+        m = _SESSION_ATTEMPT_RE.search(Path(relpath).name)
+        return int(m.group(1)) if m else 0
+
+    patch = [s for s in sessions if "-patch." in Path(s).name]
+    pool = patch or sessions
+    return max(pool, key=_attempt)
+
+
 # Per-tool summarizers. Each function takes the parsed result dict and
 # a summary dict to mutate. Kept small and explicit — the previous
 # heuristic chain was order-sensitive because tool return shapes
@@ -1636,6 +1720,155 @@ def create_app(db_path: str | Path) -> Any:
             if "jobs" in includes:
                 row["jobs"] = list_jobs_for_bundle(conn, bundle_id)
         return row
+
+    @app.post("/api/bundles/{bundle_id}/chat")
+    def api_bundle_chat(
+        bundle_id: str, body: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Operator Q&A about a completed fix (tools-off).
+
+        Seeds a fresh LLM call with this bundle's **frozen artifacts** —
+        the diff, triage, proposed_fix, errors, and the agent's session
+        dump — assembled by ``fix_chat.build_chat_messages``, then carries
+        the operator's chat turns. The original agent process is gone;
+        this "chats with" a fresh model given the record the job produced.
+        No tools are passed — pure explanation, nothing re-run or re-read
+        from a live tree.
+
+        Body::
+
+            {
+              "messages": [{"role":"user"|"assistant","content":str}, ...],
+              "session_relpath": "<optional override>"
+            }
+
+        ``messages`` is the full client-held chat history ending with the
+        operator's newest question; nothing is persisted server-side
+        (v1 is ephemeral). Returns ``{ok, reply, session_relpath,
+        artifacts_included, session_truncated, usage}``.
+
+        Gated by ``DP_HARNESS_CHAT_MODEL``: 503 when unset.
+        """
+        cfg = _chat_llm_config()
+        if cfg is None:
+            raise HTTPException(
+                status_code=503,
+                detail="chat is disabled: set DP_HARNESS_CHAT_MODEL on the "
+                       "tracker process to enable fix-review chat",
+            )
+
+        raw = body.get("messages")
+        if not isinstance(raw, list) or not raw:
+            raise HTTPException(
+                status_code=400,
+                detail="body must include a non-empty 'messages' list",
+            )
+        chat_turns: list[dict[str, str]] = []
+        for m in raw:
+            if not isinstance(m, dict):
+                continue
+            role = m.get("role")
+            content = m.get("content")
+            if (role in ("user", "assistant")
+                    and isinstance(content, str) and content.strip()):
+                chat_turns.append({"role": role, "content": content})
+        if not chat_turns or chat_turns[-1]["role"] != "user":
+            raise HTTPException(
+                status_code=400,
+                detail="'messages' must be user/assistant turns ending "
+                       "with a user turn",
+            )
+
+        with _conn() as conn:
+            bundle = get_bundle(conn, bundle_id)
+        if bundle is None:
+            raise HTTPException(
+                status_code=404, detail=f"Unknown bundle: {bundle_id}",
+            )
+        override = body.get("session_relpath")
+        session_relpath = (
+            str(override).strip() if override else None
+        ) or _pick_default_session_relpath(bundle)
+        if session_relpath and not _is_session_relpath(session_relpath):
+            raise HTTPException(
+                status_code=400,
+                detail=f"not a session artifact: {session_relpath}",
+            )
+        if not session_relpath and not (bundle.get("artifacts") or []):
+            raise HTTPException(
+                status_code=404,
+                detail="this bundle has no artifacts to chat about",
+            )
+
+        # Reader over THIS bundle's artifacts only: the bundle row
+        # carries each artifact's ref fields (backend/sha256/fs_path), so
+        # we resolve + read from the store with no extra DB round-trips
+        # and no path escape (an unknown relpath simply returns None).
+        artifacts_by_relpath = {
+            str(a.get("relpath")): a
+            for a in (bundle.get("artifacts") or [])
+            if a.get("relpath")
+        }
+
+        def _read_artifact_text(relpath: str) -> str | None:
+            ref = artifacts_by_relpath.get(relpath)
+            if ref is None:
+                return None
+            p = _resolve_artifact_path(app.state.artifact_root, ref)
+            if p is None or not p.exists():
+                return None
+            gz = relpath.endswith(".gz") or ref.get("kind") == "gzip"
+            try:
+                if gz:
+                    import gzip as _gzip  # noqa: PLC0415
+                    with _gzip.open(p, "rt", encoding="utf-8",
+                                    errors="replace") as fh:
+                        return fh.read()
+                return p.read_text(errors="replace")
+            except OSError:
+                return None
+
+        from dportsv3.agent import fix_chat  # noqa: PLC0415
+        messages, assembled = fix_chat.build_chat_messages(
+            bundle_meta=bundle,
+            read_artifact=_read_artifact_text,
+            session_relpath=session_relpath,
+            chat_turns=chat_turns,
+            cap=cfg["context_cap"],
+        )
+
+        try:
+            from dportsv3.agent import llm  # noqa: PLC0415
+            resp = llm.complete(
+                messages,
+                model=cfg["model"],
+                api_base=cfg["api_base"],
+                api_key=cfg["api_key"],
+                custom_llm_provider=cfg["custom_llm_provider"],
+                timeout=cfg["timeout"],
+            )
+        except Exception as exc:  # noqa: BLE001 — surface as 502
+            _LOG.warning(
+                "bundle chat: llm.complete failed (bundle=%s): %s",
+                bundle_id, exc,
+            )
+            raise HTTPException(
+                status_code=502, detail=f"chat model error: {exc}",
+            )
+
+        return {
+            "ok": True,
+            "bundle_id": bundle_id,
+            "session_relpath": session_relpath,
+            "artifacts_included": assembled["artifacts_included"],
+            "session_truncated": assembled["session_truncated"],
+            "reply": resp.text or "",
+            "usage": {
+                "prompt_tokens": resp.usage.prompt_tokens,
+                "completion_tokens": resp.usage.completion_tokens,
+                "total_tokens": resp.usage.total_tokens,
+            },
+        }
 
     @app.post("/api/bundles/{bundle_id}/verification")
     def api_bundle_verification(
@@ -3489,6 +3722,14 @@ def create_app(db_path: str | Path) -> Any:
             "verify_envs": verify_envs,
             "verify_default_env": verify_default_env,
         }
+        # Fix-review chat: only offer the panel when the tracker has a
+        # chat model configured (DP_HARNESS_CHAT_MODEL) AND this bundle
+        # carries a session dump to seed it. Both must hold or the panel
+        # is hidden — no dead UI.
+        chat_session_relpath = _pick_default_session_relpath(bundle)
+        chat_enabled = (
+            _chat_llm_config() is not None and chat_session_relpath is not None
+        )
         return templates.TemplateResponse(
             request,
             "agentic_bundle.html",
@@ -3504,6 +3745,8 @@ def create_app(db_path: str | Path) -> Any:
                 "operator_actions": operator_actions,
                 "delivery_request": delivery_request,
                 "bundle_activity": bundle_activity,
+                "chat_enabled": chat_enabled,
+                "chat_session_relpath": chat_session_relpath,
             },
         )
 

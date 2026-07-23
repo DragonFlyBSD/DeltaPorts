@@ -18,6 +18,15 @@
     /* Shared artifact-preview rules (.artifact-table + .diff-* family)
        live in progress.css. Bundle-page-only rules stay below. */
     @media (max-width: 900px) { .artifact-reader { grid-template-columns:1fr; } }
+    /* Fix-review chat panel */
+    .chat-log { display:flex; flex-direction:column; gap:10px; max-height:52vh; overflow-y:auto; padding:4px 2px; }
+    .chat-msg { max-width:82%; padding:9px 12px; border-radius:10px; font-size:13px; line-height:1.5; white-space:pre-wrap; word-wrap:break-word; }
+    .chat-msg.user { align-self:flex-end; background:var(--c-info-bg, #f0f4ff); border:1px solid var(--border, #d8dee9); }
+    .chat-msg.assistant { align-self:flex-start; background:var(--panel-bg, #f8fafc); border:1px solid var(--border, #d8dee9); }
+    .chat-msg.error { align-self:flex-start; background:var(--c-fail-bg, #fff0f0); border:1px solid var(--c-fail, #c00); color:var(--c-fail, #c00); }
+    .chat-role { font-size:10px; text-transform:uppercase; letter-spacing:.04em; color:var(--text-dim); margin-bottom:3px; }
+    .chat-input-row { display:flex; gap:8px; margin-top:10px; align-items:flex-end; }
+    .chat-input-row textarea { flex:1; min-height:44px; max-height:160px; resize:vertical; font:13px/1.45 inherit; padding:8px 10px; border:1px solid var(--border, #d8dee9); border-radius:6px; box-sizing:border-box; }
   </style>
 </head>
 <body>
@@ -698,6 +707,103 @@
           setTimeout(() => location.reload(), 400);
         });
       }
+    })();
+    </script>
+    {% endif %}
+
+    {% if chat_enabled %}
+    {# Fix-review chat: talk to a fresh model seeded with the agent's
+       saved session for this fix. Tools-off Q&A; nothing persisted. #}
+    <h2>Chat about this fix</h2>
+    <div class="tracker-card">
+      <div style="color:var(--text-dim);font-size:11px;margin-bottom:8px;">
+        Ask the agent why it made this fix. Grounded in this bundle's
+        artifacts (diff, triage, errors, session). Read-only — no tools,
+        no rebuild. This conversation isn't saved.
+      </div>
+      <div id="chat-log" class="chat-log"></div>
+      <div class="chat-input-row">
+        <textarea id="chat-input" placeholder="Ask why the agent chose this fix… (Enter to send, Shift+Enter for newline)"></textarea>
+        <button type="button" id="chat-send" class="btn btn-success">Send</button>
+      </div>
+      <div id="chat-status" style="font-size:11px;color:var(--text-dim);margin-top:6px;">&nbsp;</div>
+    </div>
+    <script>
+    (function () {
+      const bundleId = {{ bundle.bundle_id | tojson }};
+      const sessionRelpath = {{ chat_session_relpath | tojson }};
+      const logEl = document.getElementById('chat-log');
+      const inputEl = document.getElementById('chat-input');
+      const sendBtn = document.getElementById('chat-send');
+      const statusEl = document.getElementById('chat-status');
+      // Client-held history — this is the full record we re-POST each
+      // turn (server persists nothing).
+      const history = [];
+
+      function addMsg(role, content) {
+        const wrap = document.createElement('div');
+        wrap.className = 'chat-msg ' + role;
+        const label = document.createElement('div');
+        label.className = 'chat-role';
+        label.textContent = role === 'user' ? 'you'
+          : (role === 'error' ? 'error' : 'agent');
+        const body = document.createElement('div');
+        body.textContent = content;
+        wrap.appendChild(label);
+        wrap.appendChild(body);
+        logEl.appendChild(wrap);
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+
+      async function send() {
+        const text = inputEl.value.trim();
+        if (!text) { return; }
+        inputEl.value = '';
+        addMsg('user', text);
+        history.push({role: 'user', content: text});
+        sendBtn.disabled = true;
+        inputEl.disabled = true;
+        statusEl.textContent = 'thinking…';
+        let resp, data;
+        try {
+          resp = await fetch(
+            '/api/bundles/' + encodeURIComponent(bundleId) + '/chat',
+            {method: 'POST',
+             headers: {'Content-Type': 'application/json'},
+             body: JSON.stringify({messages: history, session_relpath: sessionRelpath})}
+          );
+          data = await resp.json();
+        } catch (exc) {
+          addMsg('error', 'request failed: ' + exc);
+          history.pop();  // let the operator retry the same question
+          statusEl.textContent = '';
+          sendBtn.disabled = false; inputEl.disabled = false; inputEl.focus();
+          return;
+        }
+        if (!resp.ok) {
+          addMsg('error', (data && data.detail) ? data.detail : ('error ' + resp.status));
+          history.pop();
+          statusEl.textContent = '';
+          sendBtn.disabled = false; inputEl.disabled = false; inputEl.focus();
+          return;
+        }
+        const reply = data.reply || '(empty reply)';
+        addMsg('assistant', reply);
+        history.push({role: 'assistant', content: reply});
+        const u = data.usage || {};
+        const consulted = (data.artifacts_included || []).length
+          ? (' · consulted: ' + data.artifacts_included.join(', '))
+          : '';
+        statusEl.textContent = (u.total_tokens
+          ? ('last turn: ' + u.total_tokens.toLocaleString() + ' tokens')
+          : '') + consulted;
+        sendBtn.disabled = false; inputEl.disabled = false; inputEl.focus();
+      }
+
+      sendBtn.addEventListener('click', send);
+      inputEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+      });
     })();
     </script>
     {% endif %}
