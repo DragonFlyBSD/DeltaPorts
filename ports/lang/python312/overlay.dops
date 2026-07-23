@@ -1,0 +1,32 @@
+port lang/python312
+type port
+reason "DragonFly: OPTIONS_EXCLUDE LTO, plist sysconfigdata/module adjustments"
+target @any
+
+# LTO on DragonFly routes configure into the clang -flto=thin / llvm-ar path
+# (llvm-ar is not installed); disabling LTO avoids that branch entirely and
+# makes the FreeBSD files/patch-configure "|cc" hack a non-issue.
+mk add OPTIONS_EXCLUDE "LTO"
+
+# The sysconfigdata module is named for the real platform (dragonfly), not
+# freebsd; substitute the platform so the plist can name it correctly below.
+mk add PLIST_SUB "PYTHON_PLATFORM=dragonfly${OSREL:R}"
+
+# Drop the FreeBSD-named sysconfigdata plist entries (the build produces the
+# dragonfly-named files, keeping them under their real runtime-lookup name).
+text line-remove file pkg-plist exact "%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata_%%ABI%%_freebsd%%OSMAJOR%%_%%PYTHON_TAG%%.opt-1.pyc" on-missing noop
+text line-remove file pkg-plist exact "%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata_%%ABI%%_freebsd%%OSMAJOR%%_%%PYTHON_TAG%%.opt-2.pyc" on-missing noop
+text line-remove file pkg-plist exact "%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata_%%ABI%%_freebsd%%OSMAJOR%%_%%PYTHON_TAG%%.pyc" on-missing noop
+text line-remove file pkg-plist exact "%%PYTHON_LIBDIR%%/_sysconfigdata_%%ABI%%_freebsd%%OSMAJOR%%_.py" on-missing noop
+
+# Add the DragonFly-named sysconfigdata plist entries.
+text line-insert-after file pkg-plist anchor "share/man/man1/python%%PYTHON_VER%%.1.gz" line "%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata__%%PYTHON_PLATFORM%%_%%PYTHON_TAG%%.opt-1.pyc" on-missing noop
+text line-insert-after file pkg-plist anchor "%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata__%%PYTHON_PLATFORM%%_%%PYTHON_TAG%%.opt-1.pyc" line "%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata__%%PYTHON_PLATFORM%%_%%PYTHON_TAG%%.opt-2.pyc" on-missing noop
+text line-insert-after file pkg-plist anchor "%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata__%%PYTHON_PLATFORM%%_%%PYTHON_TAG%%.opt-2.pyc" line "%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata__%%PYTHON_PLATFORM%%_%%PYTHON_TAG%%.pyc" on-missing noop
+text line-insert-after file pkg-plist anchor "%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata__%%PYTHON_PLATFORM%%_%%PYTHON_TAG%%.pyc" line "%%PYTHON_LIBDIR%%/_sysconfigdata__%%PYTHON_PLATFORM%%_.py" on-missing noop
+
+# _crypt and _curses_panel do not build on DragonFly (configure marks them
+# missing). Drop their plist entries rather than stubbing empty .so files.
+# spwd has no lib-dynload plist entry in this port, so nothing to do there.
+text line-remove file pkg-plist exact "%%PYTHON_LIBDIR%%/lib-dynload/_crypt%%PYTHON_TAG%%%%ABI%%.so" on-missing noop
+text line-remove file pkg-plist exact "%%PYTHON_LIBDIR%%/lib-dynload/_curses_panel%%PYTHON_TAG%%%%ABI%%.so" on-missing noop
