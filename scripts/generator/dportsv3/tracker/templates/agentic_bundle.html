@@ -37,6 +37,13 @@
 
   <div class="tracker-page">
     <h1>{{ bundle.bundle_id }}</h1>
+    <script>
+      window.DP_BUNDLE = {
+        bundleId: {{ bundle.bundle_id | tojson }},
+        verificationStatus: {{ bundle.verification_status | tojson }},
+        chatSessionRelpath: {% if chat_enabled %}{{ chat_session_relpath | tojson }}{% else %}null{% endif %}
+      };
+    </script>
 
     {% include "_bundle_summary.html" %}
 
@@ -50,7 +57,6 @@
     {% include "_bundle_operator_actions.html" %}
     {% include "_bundle_delivery.html" %}
     {% include "_bundle_operator_activity.html" %}
-    {% include "_bundle_operator_js.html" %}
     {% endif %}
 
     {% include "_bundle_chat.html" %}
@@ -123,4 +129,7 @@
     </table>
     {% endif %}
   </div>
+{% endblock %}
+{% block scripts %}
+  <script src="{{ request.url_for('static', path='agentic-bundle.js') }}?v={{ static_v }}" defer></script>
 {% endblock %}

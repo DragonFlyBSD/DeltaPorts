@@ -391,8 +391,11 @@ def test_ui_buttons_use_data_attributes_not_onclick(client):
         assert 'data-bundle="b-agent-fixed"' in match.group(0), (
             f"button op-{action} missing data-bundle"
         )
-    # The script block sets up listeners via addEventListener.
-    assert "addEventListener('click'" in body
+    # The page loads the externalized operator-action script, which wires
+    # the click listeners (they moved out of an inline <script> block).
+    assert "agentic-bundle.js" in body
+    js = client.get("/static/agentic-bundle.js").text
+    assert "addEventListener('click'" in js
 
 
 def test_ui_bundle_without_resolution_hides_buttons(client, seeded_db, tmp_path):

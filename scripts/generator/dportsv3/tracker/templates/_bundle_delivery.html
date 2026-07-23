@@ -80,52 +80,6 @@
         <span id="op-delivery-status"
               style="color:var(--text-dim);font-size:11px;"></span>
       </div>
-      <script>
-        (function () {
-          const statusEl = document.getElementById('op-delivery-status');
-          async function dpMarkStatus(newStatus, bundleId) {
-            const note = prompt(
-              'Optional note (short context for the audit log; can be empty):',
-              ''
-            );
-            if (note === null) { return; }  // explicit cancel
-            const body = {status: newStatus};
-            if (note) { body.note = note; }
-            statusEl.textContent = 'updating…';
-            const merged = document.getElementById('op-mark-merged');
-            const closed = document.getElementById('op-mark-closed');
-            merged.disabled = true; closed.disabled = true;
-            let resp, data;
-            try {
-              resp = await fetch(
-                '/api/bundles/' + encodeURIComponent(bundleId) +
-                '/delivery/status',
-                {method: 'POST',
-                 headers: {'Content-Type': 'application/json'},
-                 body: JSON.stringify(body)}
-              );
-              data = await resp.json();
-            } catch (exc) {
-              statusEl.textContent = 'error: ' + exc;
-              merged.disabled = false; closed.disabled = false;
-              return;
-            }
-            if (!resp.ok) {
-              statusEl.textContent = 'error: ' + (data.detail || resp.status);
-              merged.disabled = false; closed.disabled = false;
-              return;
-            }
-            statusEl.textContent = newStatus + ' — reloading';
-            setTimeout(() => location.reload(), 400);
-          }
-          document.getElementById('op-mark-merged').addEventListener(
-            'click', (e) => dpMarkStatus('merged', e.target.dataset.bundle)
-          );
-          document.getElementById('op-mark-closed').addEventListener(
-            'click', (e) => dpMarkStatus('closed', e.target.dataset.bundle)
-          );
-        })();
-      </script>
       {% endif %}
     </div>
     {% endif %}
