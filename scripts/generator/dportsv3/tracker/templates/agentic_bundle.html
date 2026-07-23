@@ -24,6 +24,11 @@
     .chat-msg.user { align-self:flex-end; background:var(--c-info-bg, #f0f4ff); border:1px solid var(--border, #d8dee9); }
     .chat-msg.assistant { align-self:flex-start; background:var(--panel-bg, #f8fafc); border:1px solid var(--border, #d8dee9); }
     .chat-msg.error { align-self:flex-start; background:var(--c-fail-bg, #fff0f0); border:1px solid var(--c-fail, #c00); color:var(--c-fail, #c00); }
+    /* Rendered-markdown replies: cancel the bubble's pre-wrap and trim
+       the outer block margins so the bubble hugs its content. */
+    .chat-msg .artifact-markdown { white-space:normal; }
+    .chat-msg .artifact-markdown > :first-child { margin-top:0; }
+    .chat-msg .artifact-markdown > :last-child { margin-bottom:0; }
     .chat-role { font-size:10px; text-transform:uppercase; letter-spacing:.04em; color:var(--text-dim); margin-bottom:3px; }
     .chat-input-row { display:flex; gap:8px; margin-top:10px; align-items:flex-end; }
     .chat-input-row textarea { flex:1; min-height:44px; max-height:160px; resize:vertical; font:13px/1.45 inherit; padding:8px 10px; border:1px solid var(--border, #d8dee9); border-radius:6px; box-sizing:border-box; }
@@ -740,7 +745,7 @@
       // turn (server persists nothing).
       const history = [];
 
-      function addMsg(role, content) {
+      function addMsg(role, content, html) {
         const wrap = document.createElement('div');
         wrap.className = 'chat-msg ' + role;
         const label = document.createElement('div');
@@ -748,7 +753,15 @@
         label.textContent = role === 'user' ? 'you'
           : (role === 'error' ? 'error' : 'agent');
         const body = document.createElement('div');
-        body.textContent = content;
+        // Assistant replies come pre-rendered (server-side, escaped) so
+        // Markdown shows properly; user/error text is inserted as plain
+        // text — never render operator input as HTML.
+        if (role === 'assistant' && html) {
+          body.className = 'artifact-markdown';
+          body.innerHTML = html;
+        } else {
+          body.textContent = content;
+        }
         wrap.appendChild(label);
         wrap.appendChild(body);
         logEl.appendChild(wrap);
@@ -788,7 +801,7 @@
           return;
         }
         const reply = data.reply || '(empty reply)';
-        addMsg('assistant', reply);
+        addMsg('assistant', reply, data.reply_html);
         history.push({role: 'assistant', content: reply});
         const u = data.usage || {};
         const consulted = (data.artifacts_included || []).length

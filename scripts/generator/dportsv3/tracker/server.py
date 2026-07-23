@@ -1863,6 +1863,11 @@ def create_app(db_path: str | Path) -> Any:
             "artifacts_included": assembled["artifacts_included"],
             "session_truncated": assembled["session_truncated"],
             "reply": resp.text or "",
+            # Server-rendered so the panel reuses the same Markdown subset
+            # (headings/lists/code/tables) the artifact previews use,
+            # rather than shipping a JS renderer. _render_markdown escapes
+            # all content, so this is innerHTML-safe.
+            "reply_html": _render_markdown(resp.text or ""),
             "usage": {
                 "prompt_tokens": resp.usage.prompt_tokens,
                 "completion_tokens": resp.usage.completion_tokens,
