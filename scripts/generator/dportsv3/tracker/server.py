@@ -3597,97 +3597,19 @@ def create_app(db_path: str | Path) -> Any:
         if selected_relpath and selected_artifact is None:
             raise HTTPException(status_code=404, detail="Artifact file missing")
         tool_trace = _load_tool_trace(app.state.artifact_root, tool_trace_ref)
-        # Step 11c: operator-action button matrix. Buttons show on
-        # any bundle whose agent has finished (resolution=
-        # 'agent_fixed') and the operator hasn't decided yet
-        # (accepted/rejected are terminal). Verify is the gate:
-        # Accept is enabled only when verification_status='verified'.
-        # Reject is always enabled on the non-terminal cases — the
-        # operator can refuse without verifying for obviously-wrong
-        # fixes.
-        resolution = (bundle.get("resolution") if bundle else None)
-        actionable = resolution == "agent_fixed"
-        # Step 28a: take-over action shows on failure-shaped
-        # resolutions. The endpoint itself also accepts a NULL
-        # resolution (a CLI user can stake a fresh bundle before
-        # the loop touches it), but the UI surfacing is narrower —
-        # surfacing it on a brand-new bundle that hasn't yet been
-        # triaged would be racy and visually noisy. Terminal
-        # states (accepted/rejected/discarded) and already-
-        # operator_owned exclude it.
-        failure_resolutions = {
-            "agent_budget_exhausted",
-            "agent_gave_up",
-            "escalated_manual",
-            "convert_gave_up",
-        }
-        can_take_over = (
-            bundle is not None
-            and resolution in failure_resolutions
-            and bool(bundle.get("target"))
-            and bool(bundle.get("origin"))
-        )
-        # Step 28b: discard surfaces on the same failure-shaped
-        # resolutions as take-over, AND on operator_owned (operator
-        # stakes a bundle then decides to drop it). Terminal states
-        # (accepted/rejected/discarded) exclude it.
-        can_discard = (
-            bundle is not None
-            and resolution in (failure_resolutions | {"operator_owned"})
-        )
-        # Step 28c: retry-with-context surfaces wherever discard does
-        # (failure resolutions + operator_owned) AND on agent_fixed —
-        # the "this verified fix is wrong, try again with my feedback"
-        # path. Reject stays the separate *terminal* "wrong, stop"
-        # action on agent_fixed; retry is "wrong, re-triage with
-        # context". (Discard deliberately does NOT extend to
-        # agent_fixed, so can_retry is no longer just can_discard.)
-        can_retry = (
-            bundle is not None
-            and resolution in (
-                failure_resolutions | {"operator_owned", "agent_fixed"}
-            )
-        )
-        # Step 28d: reopen-from-terminal undoes an accept/reject/
-        # discard. Rare; the only state where the button surfaces.
-        can_reopen = resolution in ("accepted", "rejected", "discarded")
-        # Step 28e: operator_owned bundles get the Verify button —
-        # an operator who manually fixed something wants to verify
-        # the build before moving on. Reuses 11c's verify endpoint
-        # as-is.
-        verify_eligible = actionable or (resolution == "operator_owned")
-        # Step 28e follow-up: Accept also surfaces on operator_owned
-        # once verification_status='verified'. The flow operators
-        # want is "take over → fix manually → Verify → Accept";
-        # without this gate the Verify ran but Accept stayed
-        # disabled, dead-ending the manual-fix path. Reject stays
-        # agent_fixed-only — its semantics (enqueue new triage with
-        # rejection reason as user_context) make sense only for
-        # rejecting an agent-produced fix.
-        # Step 28e: release surfaces only on operator_owned — it's
-        # the operator's "I'm done staking this, hand back to the
-        # loop" action.
-        can_release = resolution == "operator_owned"
-        can_accept = (
-            verify_eligible
-            and bundle.get("verification_status") == "verified"
-        )
-        # Accept renders whenever it's contextually relevant: on the
-        # agent_fixed lane (where 11c renders it disabled-before-verify
-        # so the operator sees the path) AND on operator_owned-verified
-        # (the manual-fix terminalization). Reject stays gated to
-        # show_11c_group — its semantics (re-triage with rejection
-        # reason as user_context) make sense only on agent_fixed.
-        show_accept_button = actionable or can_accept
-        # Env picker for the Verify button — replaces the old JS
-        # prompt() which forced operators to remember the env name
-        # by hand. Populate from env_health (the tracker's known
-        # set of dev-envs) and default-select the active env. Skip
-        # the lookup when Verify isn't even eligible — keeps the
-        # accept-only / terminal lanes cheap.
+        # Operator-action surface: which buttons this page shows/enables.
+        # The policy (and the authoritative endpoint gate) lives in
+        # fix_state — one place, tested, instead of the former inline
+        # matrix. See that module for the allowed-vs-surface split.
+        from dportsv3.tracker import fix_state  # noqa: PLC0415
+        acts = fix_state.bundle_actions(bundle)
+        # Env picker for the Verify button — a live DB read, so it stays
+        # here rather than in the pure policy. Populate only when Verify
+        # is eligible; default-select the active env, falling back to the
+        # first known env when the active one is cleared/decommissioned.
         verify_envs: list[str] = []
         verify_default_env: str | None = None
-        if verify_eligible:
+        if acts["can_verify"]:
             with _conn() as _envs_conn:
                 verify_envs = [
                     str(r.get("env"))
@@ -3695,35 +3617,16 @@ def create_app(db_path: str | Path) -> Any:
                     if r.get("env")
                 ]
                 verify_default_env = get_active_env(_envs_conn)
-            # If the active env isn't in the health list (cleared,
-            # decommissioned), fall back to the first env. None
-            # stays None when no envs are known at all.
             if (
                 verify_default_env is not None
                 and verify_default_env not in verify_envs
             ):
-                verify_default_env = (
-                    verify_envs[0] if verify_envs else None
-                )
+                verify_default_env = verify_envs[0] if verify_envs else None
             elif verify_default_env is None and verify_envs:
                 verify_default_env = verify_envs[0]
 
         operator_actions = {
-            "show": (actionable or can_take_over or can_discard
-                     or can_retry or can_reopen or can_release),
-            # show_11c_group still gates Reject; Accept moved to its
-            # own flag (show_accept_button) so it can surface on
-            # operator_owned-verified without dragging Reject along.
-            "show_11c_group": actionable,
-            "show_accept_button": show_accept_button,
-            "can_verify": verify_eligible,
-            "can_accept": can_accept,
-            "can_reject": actionable,
-            "can_take_over": can_take_over,
-            "can_discard": can_discard,
-            "can_retry": can_retry,
-            "can_reopen": can_reopen,
-            "can_release": can_release,
+            **acts,
             "verify_envs": verify_envs,
             "verify_default_env": verify_default_env,
         }
