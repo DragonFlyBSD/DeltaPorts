@@ -1243,7 +1243,8 @@ def assert_port_clean(env: str, origin: str) -> dict:
     rel = f"ports/{origin}"
     p = _exec(
         env, "/bin/sh", "-c",
-        f"cd /work/DeltaPorts && git status --porcelain -- {shlex.quote(rel)}",
+        f"cd /work/DeltaPorts && git status --porcelain "
+        f"--untracked-files=all -- {shlex.quote(rel)}",
         cwd="/work/DeltaPorts",
     )
     if p.returncode != 0:
@@ -1253,22 +1254,29 @@ def assert_port_clean(env: str, origin: str) -> dict:
         )
     raw = (p.stdout or "").rstrip("\n")
     if not raw:
-        return {"ok": True, "dirty_paths": []}
-    # Each porcelain line: "XY path" (X=index, Y=worktree, then
-    # space, then path). Take the path; for renames git emits
-    # "old -> new" — we keep the new side.
+        return {"ok": True, "dirty_paths": [], "untracked_only": True}
+    # Each porcelain line: "XY path" (X=index, Y=worktree, a space,
+    # then the path). "??" is untracked. Keep the status code so
+    # callers can tell a freshly bootstrapped (untracked) overlay
+    # baseline apart from leftover tracked edits from a prior run.
+    # For renames git emits "old -> new" — we keep the new side.
     dirty: list[str] = []
+    untracked_only = True
     for line in raw.splitlines():
-        line = line.lstrip()
-        if " " in line:
-            _, _, rest = line.partition(" ")
-            path = rest.strip()
-            if "->" in path:
-                path = path.split("->", 1)[1].strip()
-            dirty.append(path)
-        elif line:
-            dirty.append(line)
-    return {"ok": False, "dirty_paths": dirty}
+        if not line:
+            continue
+        status = line[:2]
+        if status != "??":
+            untracked_only = False
+        path = line[3:].strip() if len(line) > 3 else line[2:].strip()
+        if "->" in path:
+            path = path.split("->", 1)[1].strip()
+        dirty.append(path)
+    return {
+        "ok": False,
+        "dirty_paths": dirty,
+        "untracked_only": untracked_only,
+    }
 
 
 def reset_port(env: str, origin: str) -> dict:
@@ -1792,26 +1800,29 @@ def drop_verify_branch(
 
 
 def commit_port_changes(
-    env: str, origin: str, message: str,
+    env: str, origin: str, message: str, paths: str | None = None,
 ) -> dict:
-    """Commit any working-tree changes under ``ports/<origin>/`` to
-    the env's git, so the next job's preflight sees a clean HEAD.
+    """Commit working-tree changes under ``ports/<origin>/`` (or a
+    narrower ``paths`` subpath) to the env's git, so the next job's
+    preflight sees a clean HEAD.
 
-    Stopgap for the convert→patch handoff (Step 26 will replace this
-    with per-attempt branches). The convert agent's ``put_file``
-    landing of ``overlay.dops`` produces an untracked file in the
-    env's writable layer; without this commit the patch job that the
-    runner auto-enqueues right after immediately hits
-    ``patch_preflight_dirty`` and dies.
+    Used for the triage-bootstrap → patch handoff: triage's ``put_file``
+    landing of ``overlay.dops`` produces an untracked file in the env's
+    writable layer; without this commit the patch job hits
+    ``patch_preflight_dirty`` and dies. Pass ``paths`` (e.g.
+    ``ports/<origin>/overlay.dops``) to commit ONLY that path — the
+    caller is responsible for having verified nothing else under the
+    port should be swept in. Defaults to the whole ``ports/<origin>/``
+    subtree.
 
-    No-op when ``ports/<origin>/`` is already clean (no diff, no
-    untracked). The commit author is set to a dportsv3-managed
-    identity so operator-authored commits stay distinguishable.
+    No-op when the target is already clean (no diff, no untracked). The
+    commit author is set to a dportsv3-managed identity so
+    operator-authored commits stay distinguishable.
 
     Returns the standard worker result dict. ``committed: bool``
     distinguishes "committed N files" from "nothing to commit".
     """
-    rel = f"ports/{origin}"
+    rel = paths or f"ports/{origin}"
     # `git add -A` picks up tracked-modified, deleted, AND untracked
     # files. `git diff --cached --quiet` returns non-zero when the
     # index has staged changes — that's our signal to commit.

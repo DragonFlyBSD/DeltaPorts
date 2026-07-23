@@ -905,6 +905,41 @@ class PatchAttemptStep:
             services.write_error_note(job_path, msg)
             return _err(msg, services, job_path,
                         JobEvent.PATCH_GAVE_UP)
+        # Triage bootstraps a header `overlay.dops` for a new/dops-less
+        # port (runner._ensure_overlay_or_abort) — an *untracked* file
+        # that git status flags as dirty. That is the intended patch
+        # baseline, not leftover cruft, so absorb it onto the bundle
+        # branch (making it show up in the branch-vs-base changes.diff)
+        # and proceed. Restores the convert-era commit_port_changes
+        # handoff the Step 48 cutover dropped when it moved bootstrap
+        # into triage.
+        #
+        # Absorb ONLY when the bootstrapped `overlay.dops` is the *sole*
+        # dirty path AND it is untracked. Any other dirty path — a
+        # tracked-modified overlay (a leftover edit), stray untracked
+        # cruft from a prior run, a materialize artifact — falls through
+        # to the refusal below and is never silently committed into the
+        # bundle. Commit only the overlay path, not the whole subtree.
+        overlay_rel = f"ports/{origin}/overlay.dops"
+        if (
+            not clean.get("ok")
+            and clean.get("untracked_only")
+            and clean.get("dirty_paths") == [overlay_rel]
+        ):
+            committed = _worker.commit_port_changes(
+                env, origin,
+                f"bootstrap: overlay.dops baseline for {origin}",
+                paths=overlay_rel,
+            )
+            if committed.get("ok"):
+                services.activity_log(
+                    queue_root, "patch_preflight_absorbed_bootstrap",
+                    f"absorbed untracked overlay.dops baseline for "
+                    f"{origin} onto the bundle branch before patch",
+                    job_id=ctx.job_id,
+                    extra={"origin": origin},
+                )
+                clean = _worker.assert_port_clean(env, origin)
         if not clean.get("ok"):
             dirty = clean.get("dirty_paths") or []
             msg = (
