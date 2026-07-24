@@ -1,60 +1,87 @@
 {% extends "_base.html" %}
-{% from "_macros.html" import status_pill, job_state_pill %}
+{% from "_macros.html" import status_pill, pill %}
 {% block title %}Agentic — DeltaPorts Tracker{% endblock %}
 {% block body %}
   {% with nav_crumbs = [{"label": "Agentic"}] %}{% include "_tracker_nav.html" %}{% endwith %}
 
   <div class="tracker-page">
-    <h1>Agentic</h1>
-    <p class="lede">Failure bundles, jobs, and runner state across targets.</p>
+    <h1>Agentic worklist</h1>
+    <p class="lede">
+      Failure fixes that need you, in the order to act on them.
+      <a href="{{ request.url_for('agentic_bundles') }}">All bundles &rarr;</a>
+    </p>
 
-    <div class="target-grid">
-      <div class="tracker-card">
-        <div style="color:var(--text-dim);font-size:11px;">Bundles</div>
-        <div style="font-size:22px;font-weight:600;">{{ status.bundles }}</div>
-      </div>
-      <div class="tracker-card">
-        <div style="color:var(--text-dim);font-size:11px;">Runs</div>
-        <div style="font-size:22px;font-weight:600;">{{ status.runs }}</div>
-      </div>
-      <div class="tracker-card">
-        <div style="color:var(--text-dim);font-size:11px;">Jobs pending / inflight</div>
-        <div style="font-size:22px;font-weight:600;">{{ status.jobs.pending }} / {{ status.jobs.inflight }}</div>
-      </div>
-      <div class="tracker-card">
-        <div style="color:var(--text-dim);font-size:11px;">Jobs done / dead / escalated</div>
-        <div style="font-size:22px;font-weight:600;">{{ status.jobs.done }} / {{ status.jobs.dead }} / {{ status.jobs.escalated }}</div>
-      </div>
-      <div class="tracker-card"
-           {% if status.manual_pending %}style="border-color:#d68b00;background:#fff7e6;"{% endif %}>
-        <div style="color:var(--text-dim);font-size:11px;">Pending manual</div>
-        <div style="font-size:22px;font-weight:600;">
-          {% if status.manual_pending %}
-            <a href="{{ request.url_for('agentic_manual_list') }}"
-               style="color:#b56b00;text-decoration:none;">
-              {{ status.manual_pending }} →
-            </a>
-          {% else %}
-            0
-          {% endif %}
-        </div>
-      </div>
-      {# Step 20f — convert-job progress. Open count is the operator's
-         load signal; done/dead/escalated trail behind. #}
-      <div class="tracker-card"
-           {% if status.convert and status.convert.open %}style="border-color:#3b82f6;"{% endif %}>
-        <div style="color:var(--text-dim);font-size:11px;">Convert open / done / dead</div>
-        <div style="font-size:22px;font-weight:600;">
-          {% if status.convert %}
-            {{ status.convert.open }} / {{ status.convert.done }} / {{ status.convert.dead }}
-          {% else %}
-            0 / 0 / 0
-          {% endif %}
-        </div>
-      </div>
+    {# Top glance: actionable bucket counts (jump links) + operational badges. #}
+    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0 20px;">
+      {% for key, label, cls in worklist_sections if key != 'done' %}
+      <a href="#wl-{{ key }}" class="stat-pill {{ cls }}"
+         style="text-decoration:none;font-size:12px;padding:4px 10px;"
+         title="Jump to {{ label }}">{{ label }}: {{ worklist[key]|length }}</a>
+      {% endfor %}
+      <span style="color:var(--text-dim);font-size:12px;margin-left:6px;">
+        runner: {{ status.jobs.inflight }} in flight
+        (<a href="{{ request.url_for('agentic_jobs') }}">jobs</a>)
+      </span>
+      {% if status.manual_pending %}
+      <a href="{{ request.url_for('agentic_manual_list') }}" class="stat-pill skipped"
+         style="text-decoration:none;font-size:12px;padding:4px 10px;"
+         title="Bundles handed to the manual queue">manual: {{ status.manual_pending }}</a>
+      {% endif %}
     </div>
 
-    <h2>Environment health</h2>
+    {# Actionable sections, highest priority first. #}
+    {% for key, label, cls in worklist_sections if key != 'done' %}
+    {% set rows = worklist[key] %}
+    <h2 id="wl-{{ key }}" style="margin-top:22px;">
+      {{ label }}
+      <span style="font-size:12px;color:var(--text-dim);font-weight:normal;">({{ rows|length }})</span>
+    </h2>
+    {% if rows %}
+    <table class="tracker-table">
+      <thead><tr><th>Bundle</th><th>Origin</th><th>Flavor</th><th>Target</th><th>Status</th><th>When</th></tr></thead>
+      <tbody>
+        {% for b in rows %}
+        <tr>
+          <td><a href="{{ request.url_for('agentic_bundle_detail', bundle_id=b.bundle_id) }}">{{ b.bundle_id }}</a></td>
+          <td>{{ b.origin }}</td>
+          <td>{{ b.flavor or '—' }}</td>
+          <td>{{ b.target or '—' }}</td>
+          <td>{{ status_pill(b) }}</td>
+          <td>{{ b.ts_utc }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state" style="font-size:12px;">Nothing here.</div>
+    {% endif %}
+    {% endfor %}
+
+    {# Recently resolved — collapsed archive, not a working section. #}
+    {% set done = worklist['done'] %}
+    {% if done %}
+    <details style="margin-top:22px;">
+      <summary style="cursor:pointer;font-size:15px;font-weight:600;">
+        Recently resolved <span style="color:var(--text-dim);font-weight:normal;">({{ done|length }})</span>
+      </summary>
+      <table class="tracker-table" style="margin-top:8px;">
+        <thead><tr><th>Bundle</th><th>Origin</th><th>Target</th><th>Status</th><th>When</th></tr></thead>
+        <tbody>
+          {% for b in done[:20] %}
+          <tr>
+            <td><a href="{{ request.url_for('agentic_bundle_detail', bundle_id=b.bundle_id) }}">{{ b.bundle_id }}</a></td>
+            <td>{{ b.origin }}</td>
+            <td>{{ b.target or '—' }}</td>
+            <td>{{ status_pill(b) }}</td>
+            <td>{{ b.ts_utc }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </details>
+    {% endif %}
+
+    <h2 style="margin-top:26px;">Environment health</h2>
     <div class="env-active-banner">
       Active env (runner default + verify-fix fallback):
       <strong>{{ active_env or 'none — runner will auto-pick if exactly one env exists' }}</strong>
@@ -118,46 +145,8 @@
       });
     </script>
 
-    <h2>Recent bundles</h2>
-    <table class="tracker-table">
-      <thead><tr><th>Bundle</th><th>Origin</th><th>Target</th><th>Result</th><th>Status</th></tr></thead>
-      <tbody>
-        {% for b in recent_bundles %}
-        <tr>
-          <td><a href="{{ request.url_for('agentic_bundle_detail', bundle_id=b.bundle_id) }}">{{ b.bundle_id }}</a></td>
-          <td>{{ b.origin }}</td>
-          <td>{{ b.target or '—' }}</td>
-          <td><span class="stat-pill {% if b.result == 'fail' or b.result == 'failure' %}failed{% else %}built{% endif %}">{{ b.result }}</span></td>
-          <td>{{ status_pill(b) }}</td>
-        </tr>
-        {% else %}
-        <tr><td colspan="5" style="color:var(--text-dim);">No bundles yet.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    <p style="margin-top:8px;"><a href="{{ request.url_for('agentic_bundles') }}">All bundles &rarr;</a></p>
-
-    <h2>Recent jobs</h2>
-    <table class="tracker-table">
-      <thead><tr><th>Job</th><th>State</th><th>Retire reason</th><th>Origin</th><th>Target</th></tr></thead>
-      <tbody>
-        {% for j in recent_jobs %}
-        <tr>
-          <td><a href="{{ request.url_for('agentic_job_detail', job_id=j.job_id) }}">{{ j.job_id }}</a></td>
-          <td>
-            {{ job_state_pill(j.state) }}
-          </td>
-          <td>{{ j.retire_reason or '—' }}</td>
-          <td>{{ j.origin or '—' }}</td>
-          <td>{{ j.target or '—' }}</td>
-        </tr>
-        {% else %}
-        <tr><td colspan="5" style="color:var(--text-dim);">No jobs yet.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    <p style="margin-top:8px;">
-      <a href="{{ request.url_for('agentic_jobs') }}">All jobs &rarr;</a>
+    <p style="margin-top:22px;color:var(--text-dim);font-size:12px;">
+      <a href="{{ request.url_for('agentic_jobs') }}">All jobs</a>
       &nbsp;·&nbsp;
       <a href="{{ request.url_for('agentic_runner') }}">Runner status</a>
       &nbsp;·&nbsp;

@@ -222,3 +222,54 @@ def fix_status(bundle: dict[str, Any]) -> FixStatus:
     if state in _INFLIGHT_JOB_STATES:
         return FixStatus("in_progress", "in progress", "total")
     return FixStatus("unknown", "—", "total")
+
+
+# --- Worklist bucketing (Phase 6) --------------------------------------------
+
+# fix_status.key -> worklist bucket. Keys not listed (in_progress, unknown)
+# are runner-transient or untriaged and don't belong in the operator worklist.
+_WORKLIST_BUCKET: dict[str, str] = {
+    "verified": "ready",
+    "owned_verified": "ready",
+    "needs_review": "verify",
+    "verify_failed": "decide",
+    "agent_gave_up": "decide",
+    "budget_out": "decide",
+    "escalated": "decide",
+    "convert_gave_up": "decide",
+    "triage_failed": "decide",
+    "operator_owned": "owned",
+    "accepted": "done",
+    "rejected": "done",
+    "discarded": "done",
+}
+
+# Bucket key -> (heading, pill class) in display order. The landing renders
+# sections in this order; `done` is collapsed.
+WORKLIST_SECTIONS: tuple[tuple[str, str, str], ...] = (
+    ("ready", "Ready to accept", "built"),
+    ("verify", "Needs verify", "skipped"),
+    ("decide", "Needs a decision", "failed"),
+    ("owned", "You own", "total"),
+    ("done", "Recently resolved", "ignored"),
+)
+
+
+def build_worklist(
+    bundles: list[dict[str, Any]],
+) -> dict[str, list[dict[str, Any]]]:
+    """Group bundle rows into operator-workflow buckets by fix_status.
+
+    Returns a dict keyed by bucket (ready/verify/decide/owned/done); each
+    value holds that bucket's bundles in input order. Bundles projecting to
+    in_progress (runner working) or unknown (fresh/untriaged) are omitted —
+    they aren't operator-actionable from the landing.
+    """
+    buckets: dict[str, list[dict[str, Any]]] = {
+        key: [] for key, _label, _cls in WORKLIST_SECTIONS
+    }
+    for bundle in bundles:
+        bucket = _WORKLIST_BUCKET.get(fix_status(bundle).key)
+        if bucket:
+            buckets[bucket].append(bundle)
+    return buckets

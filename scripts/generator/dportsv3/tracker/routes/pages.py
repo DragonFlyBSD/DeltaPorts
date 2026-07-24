@@ -98,6 +98,12 @@ def register(app, ctx):
     @app.get("/agentic", response_class=HTMLResponse)
     def agentic_index(request: RequestType) -> Any:
         with _conn() as conn:
+            # The landing is a worklist: recent bundles bucketed by
+            # fix_status into what needs the operator. 500 is a generous
+            # window — older resolved bundles fall off the collapsed
+            # "recently resolved" tail, not the actionable sections.
+            bundles = list_bundles(conn, limit=500)
+            worklist = fix_state.build_worklist(bundles)
             return templates.TemplateResponse(
                 request,
                 "agentic_index.html",
@@ -106,8 +112,8 @@ def register(app, ctx):
                     "status": agentic_status(conn),
                     "env_health": env_health_statuses(conn),
                     "active_env": get_active_env(conn),
-                    "recent_bundles": list_bundles(conn, limit=10),
-                    "recent_jobs": list_jobs(conn, limit=10),
+                    "worklist": worklist,
+                    "worklist_sections": fix_state.WORKLIST_SECTIONS,
                 },
             )
 

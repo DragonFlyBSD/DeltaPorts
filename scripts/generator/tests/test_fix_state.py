@@ -172,3 +172,42 @@ def test_fix_status_pill_classes_are_known():
             assert fs.fix_status(
                 {"resolution": r, "verification_status": v}
             ).pill in known
+
+
+# --- Worklist bucketing (Phase 6) --------------------------------------------
+
+
+def test_build_worklist_buckets_by_fix_status():
+    bundles = [
+        {"bundle_id": "b1", "resolution": "agent_fixed",
+         "verification_status": "verified"},        # ready
+        {"bundle_id": "b2", "resolution": "agent_fixed"},          # verify
+        {"bundle_id": "b3", "resolution": "agent_gave_up"},        # decide
+        {"bundle_id": "b4", "resolution": "agent_budget_exhausted"},  # decide
+        {"bundle_id": "b5", "resolution": "operator_owned"},       # owned
+        {"bundle_id": "b6", "resolution": "accepted"},             # done
+        {"bundle_id": "b7", "resolution": "rejected"},             # done
+        {"bundle_id": "b8", "resolution": None},                   # omitted
+    ]
+    wl = fs.build_worklist(bundles)
+    assert [b["bundle_id"] for b in wl["ready"]] == ["b1"]
+    assert [b["bundle_id"] for b in wl["verify"]] == ["b2"]
+    assert [b["bundle_id"] for b in wl["decide"]] == ["b3", "b4"]
+    assert [b["bundle_id"] for b in wl["owned"]] == ["b5"]
+    assert [b["bundle_id"] for b in wl["done"]] == ["b6", "b7"]
+    # A NULL-resolution untriaged bundle isn't operator-actionable → omitted.
+    bucketed = {b["bundle_id"] for bucket in wl.values() for b in bucket}
+    assert "b8" not in bucketed
+
+
+def test_build_worklist_preserves_input_order():
+    bundles = [
+        {"bundle_id": "z", "resolution": "agent_gave_up"},
+        {"bundle_id": "a", "resolution": "agent_gave_up"},
+    ]
+    assert [b["bundle_id"] for b in fs.build_worklist(bundles)["decide"]] == ["z", "a"]
+
+
+def test_worklist_sections_cover_every_bucket():
+    section_keys = {k for k, _label, _cls in fs.WORKLIST_SECTIONS}
+    assert set(fs._WORKLIST_BUCKET.values()) <= section_keys

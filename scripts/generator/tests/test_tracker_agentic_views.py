@@ -269,22 +269,24 @@ def client(seeded_state_db: Path) -> TestClient:
 
 
 def test_view_agentic_index(client: TestClient) -> None:
+    """Phase 6: the landing is a worklist. Its actionable section headings
+    render regardless of data; env-health and the operational glances are
+    preserved. (Fixture bundles are untriaged → the buckets are empty, which
+    is exercised structurally here and by the bucketing tests.)"""
     resp = client.get("/agentic")
     assert resp.status_code == 200
     body = resp.text
-    assert "Agentic" in body
-    assert "b-q2-foo" in body
-    assert "job-q2-foo" in body
-    assert "Jobs done / dead / escalated" in body
-    assert "patch_gave_up" in body
+    assert "Agentic worklist" in body
+    assert "Ready to accept" in body
+    assert "Needs verify" in body
+    assert "Needs a decision" in body
+    # Runner in-flight glance + environment health preserved.
+    assert "in flight" in body
     assert "Environment health" in body
     assert "test-env" in body
     assert "fix python runtime" in body
-    # Counts panel
-    assert ">5<" in body or "5</div>" in body  # bundles count
-    # Step 9 — pending-manual count surfaces with a link out to the
-    # queue (fixture has one open user_context_requests row).
-    assert "Pending manual" in body
+    # Pending-manual chip links out to the queue (fixture has one open row).
+    assert "manual:" in body
     assert "/agentic/manual" in body
 
 
@@ -346,14 +348,23 @@ def test_view_agentic_bundle_detail_renders_artifact_rail(client: TestClient) ->
     assert "?artifact=logs/errors.txt" in body
 
 
-def test_view_agentic_index_shows_convert_card(client: TestClient) -> None:
-    """Step 20f: dashboard surfaces convert-job progress alongside the
-    existing pending-manual card. Fixture has no convert jobs so the
-    card reads '0 / 0 / 0' but must render."""
-    resp = client.get("/agentic")
-    assert resp.status_code == 200
-    body = resp.text
-    assert "Convert open / done / dead" in body
+def test_view_agentic_index_worklist_surfaces_resolved_bundle(
+    client: TestClient, seeded_state_db: Path,
+) -> None:
+    """A resolved bundle projects into the worklist and renders with its
+    fix_status pill (route -> build_worklist -> template wiring)."""
+    import sqlite3
+    conn = sqlite3.connect(str(seeded_state_db))
+    conn.execute(
+        "UPDATE bundles SET resolution = 'agent_fixed', "
+        "verification_status = 'verified' WHERE bundle_id = 'b-q2-foo'",
+    )
+    conn.commit()
+    conn.close()
+
+    body = client.get("/agentic").text
+    assert "b-q2-foo" in body      # now in the Ready-to-accept bucket
+    assert "verified" in body      # its projected status pill
 
 
 def test_view_agentic_bundle_detail_shows_dops_state(
