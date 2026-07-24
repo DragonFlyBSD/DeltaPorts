@@ -461,6 +461,7 @@ def register(app, ctx):
                 "title": job_id,
                 "job": job,
                 "activity": activity,
+                "activity_attempts": render.group_activity_by_attempt(activity),
                 "transitions": transitions,
                 "attempt_summary": attempt_summary,
                 "token_usage": token_usage,

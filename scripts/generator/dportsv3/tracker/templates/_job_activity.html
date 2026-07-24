@@ -1,10 +1,35 @@
     {% if activity %}
     <h2>Activity
       <span id="activity-count" style="font-size:11px;color:var(--text-dim);font-weight:normal;">
-        ({{ activity|length }} of last {{ limit }})
+        {% if job_is_active %}({{ activity|length }} of last {{ limit }}){% else %}(what each attempt did){% endif %}
       </span>
     </h2>
-    {# Step 9b: filter pills (server-side) + sort affordance (client). #}
+    <style>
+      /* Per-stage row styling — shared by the live flat view and the
+         attempt-grouped review view (both render _activity_row.html). */
+      tr.activity-attempt-start { background: var(--c-info-bg, #f0f4ff);
+                                  font-weight: 600; }
+      tr.activity-attempt-end   { background: var(--c-success-bg, #f0fff4);
+                                  font-weight: 600; }
+      tr.activity-decision      { background: var(--c-meta-bg, #f2eeff); }
+      tr.activity-tool          { font-family: ui-monospace, monospace;
+                                  font-size: 11px; }
+      .tool-diagnostic > summary { cursor: pointer;
+                                   color: var(--c-fail, #c00); }
+      .tool-diagnostic pre       { margin: 4px 0; padding: 6px;
+                                   background: var(--panel-bg, #f8fafc);
+                                   border: 1px solid var(--border, #d8dee9);
+                                   border-radius: 4px;
+                                   white-space: pre-wrap;
+                                   max-height: 300px; overflow: auto; }
+      .tool-error                { color: var(--c-fail, #c00); }
+      .decision-meta             { margin-top: 4px; font-size: 11px;
+                                   color: var(--text-dim); }
+    </style>
+
+    {% if job_is_active %}
+    {# Live view: watch a running job as a flat, newest-first stream that the
+       autorefresh JS prepends to. Filter + client sort apply here. #}
     <div class="filter-bar" style="font-size:12px;margin-bottom:8px;display:flex;gap:18px;align-items:center;flex-wrap:wrap;">
       <span>
         Filter:
@@ -39,32 +64,7 @@
       .activity-table th.sortable:hover { color: var(--c-link, #06f); }
       .activity-table th.sort-asc::after { content: " ▲"; font-size: 10px; }
       .activity-table th.sort-desc::after { content: " ▼"; font-size: 10px; }
-      /* Per-stage row styling. Shared between the server-rendered
-         rows (_activity_row.html sets the class) and the live-refresh
-         JS (renderRow() sets the same class). Pre-class history: the
-         server template used inline styles which the JS path never
-         replicated, so live-appended rows looked unstyled until full
-         page reload. */
-      tr.activity-attempt-start { background: var(--c-info-bg, #f0f4ff);
-                                  font-weight: 600; }
-      tr.activity-attempt-end   { background: var(--c-success-bg, #f0fff4);
-                                  font-weight: 600; }
-      tr.activity-decision      { background: var(--c-meta-bg, #f2eeff); }
-      tr.activity-tool          { font-family: ui-monospace, monospace;
-                                  font-size: 11px; }
-      .tool-diagnostic > summary { cursor: pointer;
-                                   color: var(--c-fail, #c00); }
-      .tool-diagnostic pre       { margin: 4px 0; padding: 6px;
-                                   background: var(--panel-bg, #f8fafc);
-                                   border: 1px solid var(--border, #d8dee9);
-                                   border-radius: 4px;
-                                   white-space: pre-wrap;
-                                   max-height: 300px; overflow: auto; }
-      .tool-error                { color: var(--c-fail, #c00); }
-      .decision-meta             { margin-top: 4px; font-size: 11px;
-                                   color: var(--text-dim); }
     </style>
-    {# Step 9a column layout: structured token columns next to the message. #}
     <table class="tracker-table activity-table" id="activity-table">
       <thead>
         <tr>
@@ -84,6 +84,48 @@
         {% endfor %}
       </tbody>
     </table>
+
+    {% else %}
+    {# Review view (terminal jobs): one collapsible block per attempt, with
+       its outcome + cost in the header. Failed/last attempt opens by default;
+       the others fold so "what did it do" is reading, not scrolling. #}
+    <style>
+      details.attempt-group { border: 1px solid var(--border, #d8dee9);
+                              border-radius: 6px; margin-bottom: 8px; }
+      details.attempt-group > summary { cursor: pointer; padding: 8px 12px;
+        font-size: 13px; user-select: none; display: flex; gap: 10px;
+        align-items: center; flex-wrap: wrap; }
+      details.attempt-group > summary::-webkit-details-marker { color: var(--text-dim); }
+      details.attempt-group[open] > summary { border-bottom: 1px solid var(--border, #d8dee9); }
+      details.attempt-group .muted { color: var(--text-dim); font-size: 11px; font-weight: normal; }
+      details.attempt-group table.activity-table { margin: 0; border: none; }
+    </style>
+    {% for g in activity_attempts %}
+    <details class="attempt-group"{% if g.open %} open{% endif %}>
+      <summary>
+        <strong>{{ g.label }}</strong>
+        {% if g.outcome %}<span class="stat-pill {{ g.outcome_cls }}">{{ g.outcome }}</span>{% endif %}
+        <span class="muted">{{ g.rows|length }} events{% if g.tokens %} · {{ '{:,}'.format(g.tokens) }} tokens{% endif %}{% if g.n_tools %} · {{ g.n_tools }} tool call{{ 's' if g.n_tools != 1 else '' }}{% endif %}</span>
+      </summary>
+      <table class="tracker-table activity-table">
+        <thead>
+          <tr>
+            <th>When</th><th>Stage</th><th>Dur (ms)</th>
+            <th class="tok">Prompt</th><th class="tok">Compl</th>
+            <th class="tok">Total</th><th class="tok">Cum (billable)</th>
+            <th>Message / tools</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in g.rows %}
+          {% include "_activity_row.html" %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </details>
+    {% endfor %}
+    {% endif %}
+
     {% else %}
     <div class="empty-state">No activity recorded for this job.</div>
     {% endif %}

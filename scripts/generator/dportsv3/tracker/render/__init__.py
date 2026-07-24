@@ -14,6 +14,7 @@ from .sessions import (
     parse_session_records,
     SESSION_ATTEMPT_RE,
 )
+from .activity import group_activity_by_attempt
 
 __all__ = [
     "render_markdown", "render_diff", "artifact_view_data",
@@ -21,4 +22,5 @@ __all__ = [
     "default_artifact_relpath", "load_tool_trace",
     "session_view_data", "is_session_relpath",
     "parse_session_records", "SESSION_ATTEMPT_RE",
+    "group_activity_by_attempt",
 ]
