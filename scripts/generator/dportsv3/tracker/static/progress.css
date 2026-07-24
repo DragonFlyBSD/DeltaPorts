@@ -1471,7 +1471,8 @@ a.wl-port:hover { color: var(--amber-dim); }
 .worklist .wl-tablecard table.tracker-table td { border-bottom: 1px solid var(--border); vertical-align: middle; }
 .worklist .wl-tablecard table.tracker-table tbody tr:last-child td { border-bottom: none; }
 .worklist .wl-tablecard table.tracker-table tbody tr:hover { background: #fffdf9; }
-.worklist .env-row-active { background: #fffaf2; }
+/* The active env is already marked by the green "active" pill in its
+   first cell — no need to also tint the whole row. */
 /* The status/check words become real pills (base .stat-pill carries no shape). */
 .worklist .wl-tablecard .stat-pill {
   display: inline-flex; align-items: center; margin: 1px 3px 1px 0;
