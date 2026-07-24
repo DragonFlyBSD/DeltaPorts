@@ -1317,6 +1317,14 @@ details.section-collapse > summary .muted {
 .worklist .wl-chip .n { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text); }
 .worklist .wl-chip.zero { color: var(--text-faint, #a8a091); }
 .worklist .wl-chip.zero .n { color: var(--text-faint, #a8a091); font-weight: 600; }
+/* Non-empty chips take their band's semantic colour (green ready / amber
+   verify / red decide / neutral owned) so the queue's shape reads at a
+   glance — matching each section's stripe + pills. */
+.worklist .wl-chip.active.built   { border-color: var(--c-built, #2a7a2a);   color: var(--c-built, #2a7a2a);   background: #f0f8f0; }
+.worklist .wl-chip.active.skipped { border-color: var(--c-skipped, #b36800); color: var(--c-skipped, #b36800); background: #fff8ee; }
+.worklist .wl-chip.active.failed  { border-color: var(--c-failed, #c03030);  color: var(--c-failed, #c03030);  background: #fdf2f2; }
+.worklist .wl-chip.active.total   { border-color: var(--border-strong, #d8d2c4); color: var(--text); background: #faf8f4; }
+.worklist .wl-chip.active .n { color: inherit; }
 
 /* Ops strip */
 .worklist .wl-ops {
@@ -1326,9 +1334,13 @@ details.section-collapse > summary .muted {
 }
 .worklist .wl-ops b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
 .worklist .wl-ops a { color: var(--amber-dim); text-decoration: none; }
-.worklist .wl-ops-item { display: inline-flex; align-items: center; }
+/* Block flex-item, NOT an inline-flex container — a flex container would
+   strip the whitespace between the label, the <b>count</b>, and the unit
+   ("Runner: 0 in flight"). Keep it a plain box so inline spacing survives;
+   the dot centers via vertical-align. */
+.worklist .wl-ops-item { white-space: nowrap; }
 .worklist .wl-ops-spacer { margin-left: auto; }
-.worklist .wl-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+.worklist .wl-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 6px; vertical-align: middle; position: relative; top: -1px; }
 .worklist .wl-dot.ok { background: var(--c-built, #2a7a2a); }
 .worklist .wl-dot.bad { background: var(--c-failed, #c03030); }
 

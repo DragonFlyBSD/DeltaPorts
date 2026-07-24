@@ -30,7 +30,7 @@
       {% endif %}
       <div class="wl-chips">
         {% for band in bands %}
-        <a href="#wl-{{ band.key }}" class="wl-chip{% if band.count %} active{% else %} zero{% endif %}">
+        <a href="#wl-{{ band.key }}" class="wl-chip {{ band.cls }}{% if band.count %} active{% else %} zero{% endif %}">
           <span>{{ band.label }}</span> <span class="n">{{ band.count }}</span>
         </a>
         {% endfor %}
