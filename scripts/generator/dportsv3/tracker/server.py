@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from dportsv3.tracker import fix_state
+from dportsv3.tracker import render
 from dportsv3.tracker.db import ActiveBuildError, init_db, open_db
 from dportsv3.tracker.routes import (
     _common,
@@ -82,6 +83,8 @@ def create_app(db_path: str | Path) -> Any:
     # render one status pill instead of reconciling resolution +
     # verification_status + job.state by eye.
     templates.env.globals["fix_status"] = fix_state.fix_status
+    # Compact relative ages ("18m ago") for the worklist queue rows.
+    templates.env.filters["relative_age"] = render.relative_age
 
     @app.on_event("startup")
     def _startup() -> None:

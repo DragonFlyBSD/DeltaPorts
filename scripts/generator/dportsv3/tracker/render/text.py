@@ -512,3 +512,40 @@ def highlight_log(raw: str) -> str:
         else:
             out.append(line)
     return "\n".join(out)
+
+
+# --- Relative timestamps for the worklist queue -----------------------
+from datetime import datetime, timezone  # noqa: E402
+
+
+def relative_age(ts_iso: str | None, now: datetime | None = None) -> str:
+    """Render an ISO timestamp as a compact relative age ("18m ago",
+    "2h ago", "yesterday", "3d ago") for scannable queue rows. The
+    absolute value goes in a title/tooltip at the call site. Unparseable
+    input passes through unchanged; empty input renders as an em dash."""
+    if not ts_iso:
+        return "—"
+    try:
+        dt = datetime.fromisoformat(str(ts_iso).replace("Z", "+00:00"))
+    except ValueError:
+        return str(ts_iso)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    now = now or datetime.now(timezone.utc)
+    secs = (now - dt).total_seconds()
+    if secs < 90:
+        return "just now"
+    mins = secs / 60
+    if mins < 60:
+        return f"{int(round(mins))}m ago"
+    hrs = mins / 60
+    if hrs < 24:
+        return f"{int(hrs)}h ago"
+    days = hrs / 24
+    if days < 2:
+        return "yesterday"
+    if days < 14:
+        return f"{int(days)}d ago"
+    if days < 60:
+        return f"{int(days / 7)}w ago"
+    return dt.strftime("%Y-%m-%d")

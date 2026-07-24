@@ -211,3 +211,39 @@ def test_build_worklist_preserves_input_order():
 def test_worklist_sections_cover_every_bucket():
     section_keys = {k for k, _label, _cls in fs.WORKLIST_SECTIONS}
     assert set(fs._WORKLIST_BUCKET.values()) <= section_keys
+
+
+def test_group_band_by_origin_dedups_and_rolls_up():
+    band = [
+        {"bundle_id": "p-1", "origin": "lang/python312",
+         "ts_utc": "2026-07-23T00:30:00Z", "resolution": "triage_failed"},
+        {"bundle_id": "p-2", "origin": "lang/python312",
+         "ts_utc": "2026-07-23T11:36:00Z", "resolution": "agent_gave_up"},
+        {"bundle_id": "p-3", "origin": "lang/python312",
+         "ts_utc": "2026-07-23T00:32:00Z", "resolution": "agent_gave_up"},
+        {"bundle_id": "q-1", "origin": "ftp/curl",
+         "ts_utc": "2026-07-23T14:00:00Z", "resolution": "agent_gave_up"},
+    ]
+    groups = fs.group_band_by_origin(band)
+    # Two ports; systemic (higher count) first.
+    assert [g["origin"] for g in groups] == ["lang/python312", "ftp/curl"]
+    lang, curl = groups
+    assert lang["count"] == 3 and lang["is_group"] and lang["recurring"]
+    assert curl["count"] == 1 and not curl["is_group"] and not curl["recurring"]
+    # Attempts newest-first (11:36 > 00:32 > 00:30); latest is p-2.
+    assert [b["bundle_id"] for b in lang["attempts"]] == ["p-2", "p-3", "p-1"]
+    assert lang["latest"]["bundle_id"] == "p-2"
+    # Rollup counts each distinct status label.
+    rollup = {r["label"]: r["n"] for r in lang["rollup"]}
+    assert rollup == {"agent gave up": 2, "triage failed": 1}
+
+
+def test_group_band_by_origin_orders_ties_by_recency():
+    band = [
+        {"bundle_id": "old", "origin": "a/a", "ts_utc": "2026-07-01T00:00:00Z",
+         "resolution": "agent_gave_up"},
+        {"bundle_id": "new", "origin": "b/b", "ts_utc": "2026-07-20T00:00:00Z",
+         "resolution": "agent_gave_up"},
+    ]
+    # Same count (1 each) → most-recent origin first.
+    assert [g["origin"] for g in fs.group_band_by_origin(band)] == ["b/b", "a/a"]

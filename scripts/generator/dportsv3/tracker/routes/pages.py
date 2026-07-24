@@ -105,6 +105,21 @@ def register(app, ctx):
             # "recently resolved" tail, not the actionable sections.
             bundles = list_bundles(conn, limit=500)
             worklist = fix_state.build_worklist(bundles)
+            # Each actionable band, deduped by port origin (recurring
+            # failures collapse into one counted, expandable row).
+            bands = [
+                {
+                    "key": key,
+                    "label": label,
+                    "cls": cls,
+                    "count": len(worklist[key]),
+                    "groups": fix_state.group_band_by_origin(worklist[key]),
+                }
+                for key, label, cls in fix_state.WORKLIST_SECTIONS
+                if key != "done"
+            ]
+            focus_count = sum(b["count"] for b in bands)
+            done_groups = fix_state.group_band_by_origin(worklist["done"])
             return templates.TemplateResponse(
                 request,
                 "agentic_index.html",
@@ -113,8 +128,9 @@ def register(app, ctx):
                     "status": agentic_status(conn),
                     "env_health": env_health_statuses(conn),
                     "active_env": get_active_env(conn),
-                    "worklist": worklist,
-                    "worklist_sections": fix_state.WORKLIST_SECTIONS,
+                    "bands": bands,
+                    "focus_count": focus_count,
+                    "done_groups": done_groups,
                 },
             )
 

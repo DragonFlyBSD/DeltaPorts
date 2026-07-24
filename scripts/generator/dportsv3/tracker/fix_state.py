@@ -273,3 +273,63 @@ def build_worklist(
         if bucket:
             buckets[bucket].append(bundle)
     return buckets
+
+
+# Count at which a port's repeated failures read as systemic, not a
+# one-off — earns the "recurring" tag and floats to the top of its band.
+_RECURRING_THRESHOLD = 3
+
+
+def group_band_by_origin(
+    bundles: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Dedup one worklist band by port origin (the Sentry model).
+
+    Bundles for the same origin collapse into one group carrying a
+    ``count``, a status ``rollup`` (each distinct fix_status label with
+    its occurrence count), and the ``attempts`` newest-first. A group of
+    one renders as a plain row; ``>1`` is expandable. Groups sort
+    systemic-first (highest count) then most-recent, so a port failing
+    over and over is the loudest thing in the band instead of N
+    look-alike rows burying the signal.
+    """
+    by_origin: dict[str, list[dict[str, Any]]] = {}
+    order: list[str] = []
+    for b in bundles:
+        origin = b.get("origin") or "—"
+        if origin not in by_origin:
+            by_origin[origin] = []
+            order.append(origin)
+        by_origin[origin].append(b)
+
+    groups: list[dict[str, Any]] = []
+    for origin in order:
+        attempts = sorted(
+            by_origin[origin],
+            key=lambda b: (b.get("ts_utc") or ""),
+            reverse=True,
+        )
+        rollup: list[dict[str, Any]] = []
+        seen: dict[str, dict[str, Any]] = {}
+        for b in attempts:
+            s = fix_status(b)
+            entry = seen.get(s.label)
+            if entry is None:
+                entry = {"label": s.label, "cls": s.pill, "n": 0}
+                seen[s.label] = entry
+                rollup.append(entry)
+            entry["n"] += 1
+        count = len(attempts)
+        groups.append({
+            "origin": origin,
+            "count": count,
+            "is_group": count > 1,
+            "recurring": count >= _RECURRING_THRESHOLD,
+            "latest": attempts[0],
+            "latest_ts": attempts[0].get("ts_utc") or "",
+            "attempts": attempts,
+            "rollup": rollup,
+        })
+    # Systemic first (highest count), then most-recent failure.
+    groups.sort(key=lambda g: (g["count"], g["latest_ts"]), reverse=True)
+    return groups

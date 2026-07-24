@@ -1,94 +1,163 @@
 {% extends "_base.html" %}
-{% from "_macros.html" import status_pill, pill %}
 {% block title %}Agentic — DeltaPorts Tracker{% endblock %}
 {% block body %}
   {% with nav_crumbs = [{"label": "Agentic"}] %}{% include "_tracker_nav.html" %}{% endwith %}
   {% include "_agentic_subnav.html" %}
 
-  <div class="tracker-page">
+  {# Per-band primary action: label + button style. Buttons link to the
+     (latest attempt's) bundle detail, where the action executes. #}
+  {% set band_action = {
+      'ready':  ('Accept',        'wl-btn-accept'),
+      'verify': ('Verify',        'wl-btn-verify'),
+      'decide': ('Retry latest…', 'wl-btn-decide'),
+      'owned':  ('Open',          'wl-btn-take'),
+  } %}
+
+  <div class="tracker-page worklist">
     <h1>Agentic worklist</h1>
     <p class="lede">
-      Failure fixes that need you, in the order to act on them.
+      Failure fixes that need you, most urgent first.
       <a href="{{ request.url_for('agentic_bundles') }}">All bundles &rarr;</a>
     </p>
 
-    {# Top glance: actionable bucket counts (jump links) + operational badges. #}
-    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0 20px;">
-      {% for key, label, cls in worklist_sections if key != 'done' %}
-      <a href="#wl-{{ key }}" class="stat-pill {{ cls }}"
-         style="text-decoration:none;font-size:12px;padding:4px 10px;"
-         title="Jump to {{ label }}">{{ label }}: {{ worklist[key]|length }}</a>
-      {% endfor %}
-      <span style="color:var(--text-dim);font-size:12px;margin-left:6px;">
-        runner: {{ status.jobs.inflight }} in flight
-        (<a href="{{ request.url_for('agentic_jobs') }}">jobs</a>)
-      </span>
-      {% if status.manual_pending %}
-      <a href="{{ request.url_for('agentic_manual_list') }}" class="stat-pill skipped"
-         style="text-decoration:none;font-size:12px;padding:4px 10px;"
-         title="Bundles handed to the manual queue">manual: {{ status.manual_pending }}</a>
+    {# Focus header: one number + action-named jump chips. #}
+    <div class="wl-focus">
+      {% if focus_count %}
+      <span class="wl-focus-num">{{ focus_count }}</span>
+      <span class="wl-focus-cap">need<br>you</span>
+      {% else %}
+      <span class="wl-clear">✓ Nothing needs you right now</span>
       {% endif %}
-      {% set env_broken = env_health | selectattr('status', 'equalto', 'broken') | list %}
-      {% if env_broken %}
-      <a href="#env-health" class="stat-pill failed"
-         style="text-decoration:none;font-size:12px;padding:4px 10px;"
-         title="A dev-env probe is broken — verify builds will fail">⚠ env broken: {{ env_broken|length }}</a>
-      {% endif %}
+      <div class="wl-chips">
+        {% for band in bands %}
+        <a href="#wl-{{ band.key }}" class="wl-chip{% if band.count %} active{% else %} zero{% endif %}">
+          <span>{{ band.label }}</span> <span class="n">{{ band.count }}</span>
+        </a>
+        {% endfor %}
+      </div>
     </div>
 
-    {# Actionable sections, highest priority first. #}
-    {% for key, label, cls in worklist_sections if key != 'done' %}
-    {% set rows = worklist[key] %}
-    <h2 id="wl-{{ key }}" style="margin-top:22px;">
-      {{ label }}
-      <span style="font-size:12px;color:var(--text-dim);font-weight:normal;">({{ rows|length }})</span>
-    </h2>
-    {% if rows %}
-    <table class="tracker-table">
-      <thead><tr><th>Bundle</th><th>Origin</th><th>Flavor</th><th>Target</th><th>Status</th><th>When</th></tr></thead>
-      <tbody>
-        {% for b in rows %}
-        <tr>
-          <td><a href="{{ request.url_for('agentic_bundle_detail', bundle_id=b.bundle_id) }}">{{ b.bundle_id }}</a></td>
-          <td>{{ b.origin }}</td>
-          <td>{{ b.flavor or '—' }}</td>
-          <td>{{ b.target or '—' }}</td>
-          <td>{{ status_pill(b) }}</td>
-          <td>{{ b.ts_utc }}</td>
-        </tr>
+    {# Ops status strip: quiet in steady state, red only when broken. #}
+    {% set env_broken = env_health | selectattr('status', 'equalto', 'broken') | list %}
+    <div class="wl-ops">
+      <span class="wl-ops-item"><span class="wl-dot ok"></span>Runner: <b>{{ status.jobs.inflight }}</b> in flight</span>
+      <span class="wl-ops-item">Manual queue:
+        {% if status.manual_pending %}<a href="{{ request.url_for('agentic_manual_list') }}"><b>{{ status.manual_pending }}</b></a>{% else %}<b>0</b>{% endif %}
+      </span>
+      <span class="wl-ops-item">
+        {% if env_broken %}<a href="#env-health"><span class="wl-dot bad"></span>Env: <b>{{ env_broken|length }} broken</b></a>
+        {% else %}<span class="wl-dot ok"></span>Env <b>{{ active_env or 'auto' }}</b>: ready{% endif %}
+      </span>
+      <span class="wl-ops-spacer"></span>
+      <a href="{{ request.url_for('agentic_jobs') }}">jobs</a> ·
+      <a href="{{ request.url_for('agentic_activity') }}">activity</a>
+    </div>
+
+    {# Actionable bands, highest-urgency first. #}
+    {% for band in bands %}
+    {% set action = band_action.get(band.key, ('Open', 'wl-btn-take')) %}
+    {% if band.count %}
+    <section class="wl-band" id="wl-{{ band.key }}">
+      <div class="wl-band-head">
+        <h2>{{ band.label }}</h2>
+        <span class="wl-band-meta">{{ band.count }}{% if band.groups|length != band.count %} across {{ band.groups|length }} port{{ 's' if band.groups|length != 1 else '' }}{% endif %}</span>
+      </div>
+      <div class="wl-list">
+        {% for g in band.groups %}
+        {% if g.is_group %}
+        {# Grouped: recurring failures of one port, expandable. #}
+        <div class="wl-group" id="grp-{{ band.key }}-{{ loop.index }}">
+          <div class="wl-row {{ band.key }}" onclick="wlToggle(this.parentElement)">
+            <span class="wl-stripe"></span>
+            <button type="button" class="wl-chev" aria-label="Expand attempts">›</button>
+            <div class="wl-ident">
+              <span class="wl-port">{{ g.origin }}</span>
+              <span class="wl-x">×{{ g.count }}</span>
+              {% if g.recurring %}<span class="wl-recur" title="Failing repeatedly — likely systemic">recurring</span>{% endif %}
+            </div>
+            <div class="wl-rollup">
+              {% for r in g.rollup %}
+              <span class="wl-pill {{ r.cls }} sm">{{ r.label }}{% if r.n > 1 %} ×{{ r.n }}{% endif %}</span>
+              {% endfor %}
+            </div>
+            <div class="wl-mid">
+              <span class="wl-age" title="last failure {{ g.latest_ts }}">last {{ g.latest_ts | relative_age }}</span>
+            </div>
+            <div class="wl-actions">
+              <a class="wl-btn {{ action[1] }}" href="{{ request.url_for('agentic_bundle_detail', bundle_id=g.latest.bundle_id) }}" onclick="event.stopPropagation()">{{ action[0] }}</a>
+            </div>
+          </div>
+          <div class="wl-children">
+            {% for b in g.attempts %}
+            {% set s = fix_status(b) %}
+            <a class="wl-child" href="{{ request.url_for('agentic_bundle_detail', bundle_id=b.bundle_id) }}">
+              <span class="wl-cid">{{ b.bundle_id }}</span>
+              <span class="wl-cmid">
+                <span class="wl-pill {{ s.cls }} sm">{{ s.label }}</span>
+                <span class="wl-age" title="{{ b.ts_utc }}">{{ b.ts_utc | relative_age }}</span>
+              </span>
+              <span class="wl-copen">open →</span>
+            </a>
+            {% endfor %}
+          </div>
+        </div>
+        {% else %}
+        {# Single attempt: a plain row. #}
+        {% set b = g.latest %}
+        {% set s = fix_status(b) %}
+        <div class="wl-row {{ band.key }}">
+          <span class="wl-stripe"></span>
+          <span class="wl-chev leaf">›</span>
+          <div class="wl-ident">
+            <a class="wl-port" href="{{ request.url_for('agentic_bundle_detail', bundle_id=b.bundle_id) }}">{{ g.origin }}</a>
+            <span class="wl-subid">{{ b.bundle_id }}</span>
+          </div>
+          <div class="wl-mid">
+            <span class="wl-pill {{ s.cls }}">{{ s.label }}</span>
+            <span class="wl-age" title="{{ b.ts_utc }}">{{ b.ts_utc | relative_age }}</span>
+          </div>
+          <div class="wl-actions">
+            <a class="wl-btn {{ action[1] }}" href="{{ request.url_for('agentic_bundle_detail', bundle_id=b.bundle_id) }}">{{ action[0] }}</a>
+          </div>
+        </div>
+        {% endif %}
         {% endfor %}
-      </tbody>
-    </table>
+      </div>
+    </section>
     {% else %}
-    <div class="empty-state" style="font-size:12px;">Nothing here.</div>
+    {# Empty band: one thin line, not a card. #}
+    <div class="wl-empty" id="wl-{{ band.key }}"><span class="lbl">{{ band.label }}</span> · 0</div>
     {% endif %}
     {% endfor %}
 
-    {# Recently resolved — collapsed archive, not a working section. #}
-    {% set done = worklist['done'] %}
-    {% if done %}
-    <details style="margin-top:22px;">
-      <summary style="cursor:pointer;font-size:15px;font-weight:600;">
-        Recently resolved <span style="color:var(--text-dim);font-weight:normal;">({{ done|length }})</span>
-      </summary>
-      <table class="tracker-table" style="margin-top:8px;">
-        <thead><tr><th>Bundle</th><th>Origin</th><th>Target</th><th>Status</th><th>When</th></tr></thead>
-        <tbody>
-          {% for b in done[:20] %}
-          <tr>
-            <td><a href="{{ request.url_for('agentic_bundle_detail', bundle_id=b.bundle_id) }}">{{ b.bundle_id }}</a></td>
-            <td>{{ b.origin }}</td>
-            <td>{{ b.target or '—' }}</td>
-            <td>{{ status_pill(b) }}</td>
-            <td>{{ b.ts_utc }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+    {# Recently resolved — collapsed archive. #}
+    {% if done_groups %}
+    <details class="wl-archive">
+      <summary>Recently resolved · {{ done_groups | sum(attribute='count') }}</summary>
+      <div class="wl-list" style="margin-top:8px;">
+        {% for g in done_groups %}
+        {% for b in g.attempts %}
+        {% set s = fix_status(b) %}
+        <div class="wl-row resolved">
+          <span class="wl-stripe"></span>
+          <span class="wl-chev leaf">›</span>
+          <div class="wl-ident">
+            <a class="wl-port" href="{{ request.url_for('agentic_bundle_detail', bundle_id=b.bundle_id) }}">{{ b.origin }}</a>
+            <span class="wl-subid">{{ b.bundle_id }}</span>
+          </div>
+          <div class="wl-mid">
+            <span class="wl-pill {{ s.cls }}">{{ s.label }}</span>
+            <span class="wl-age" title="{{ b.ts_utc }}">{{ b.ts_utc | relative_age }}</span>
+          </div>
+          <div class="wl-actions"></div>
+        </div>
+        {% endfor %}
+        {% endfor %}
+      </div>
     </details>
     {% endif %}
 
-    <h2 id="env-health" style="margin-top:26px;">Environment health</h2>
+    <h2 id="env-health" style="margin-top:30px;">Environment health</h2>
     <div class="env-active-banner">
       Active env (runner default + verify-fix fallback):
       <strong>{{ active_env or 'none — runner will auto-pick if exactly one env exists' }}</strong>
@@ -136,21 +205,6 @@
     {% else %}
     <div class="empty-state">No environment health probes recorded yet.</div>
     {% endif %}
-    <script>
-      document.querySelectorAll('.env-set-btn').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-          var name = btn.dataset.env || null;
-          fetch('/api/config/active-env', {
-            method: 'PUT',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({name: name}),
-          }).then(function(r) {
-            if (r.ok) { window.location.reload(); }
-            else { alert('Failed to set active env: HTTP ' + r.status); }
-          }).catch(function(e) { alert('Failed to set active env: ' + e); });
-        });
-      });
-    </script>
 
     <p style="margin-top:22px;color:var(--text-dim);font-size:12px;">
       Drill-downs:
@@ -159,4 +213,22 @@
       <a href="{{ request.url_for('agentic_activity') }}">Activity log</a>
     </p>
   </div>
+{% endblock %}
+{% block scripts %}
+  <script>
+    function wlToggle(group) { group.classList.toggle('open'); }
+    document.querySelectorAll('.env-set-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var name = btn.dataset.env || null;
+        fetch('/api/config/active-env', {
+          method: 'PUT',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({name: name}),
+        }).then(function (r) {
+          if (r.ok) { window.location.reload(); }
+          else { alert('Failed to set active env: HTTP ' + r.status); }
+        }).catch(function (e) { alert('Failed to set active env: ' + e); });
+      });
+    });
+  </script>
 {% endblock %}

@@ -285,9 +285,50 @@ def test_view_agentic_index(client: TestClient) -> None:
     assert "Environment health" in body
     assert "test-env" in body
     assert "fix python runtime" in body
-    # Pending-manual chip links out to the queue (fixture has one open row).
-    assert "manual:" in body
+    # Pending-manual count in the ops strip links out to the queue
+    # (fixture has one open row).
+    assert "Manual queue" in body
     assert "/agentic/manual" in body
+
+
+def test_view_agentic_index_dedups_recurring_port(
+    client: TestClient, seeded_state_db: Path,
+) -> None:
+    """Redesign: a port that fails repeatedly collapses into ONE counted,
+    expandable row in its band, not N look-alike rows. Three devel/foo
+    bundles in 'needs a decision' → one ×3 recurring group."""
+    import sqlite3
+    conn = sqlite3.connect(str(seeded_state_db))
+    for bid, ts in (
+        ("b-q2-foo", "2026-07-23T11:00:00Z"),
+        ("b-q2-foo-retry", "2026-07-23T09:00:00Z"),
+        ("b-main-foo", "2026-07-23T08:00:00Z"),
+    ):
+        conn.execute(
+            "UPDATE bundles SET resolution = 'agent_gave_up', "
+            "origin = 'devel/foo', ts_utc = ? WHERE bundle_id = ?",
+            (ts, bid),
+        )
+    conn.commit()
+    conn.close()
+
+    body = client.get("/agentic").text
+    # One grouped row with a count badge + recurring tag, expandable.
+    assert "devel/foo" in body
+    assert "×3" in body
+    assert "recurring" in body
+    assert "wl-group" in body
+    # Each attempt is still reachable inside the expand.
+    for bid in ("b-q2-foo", "b-q2-foo-retry", "b-main-foo"):
+        assert bid in body
+
+
+def test_view_agentic_index_empty_bands_are_thin_lines(client: TestClient) -> None:
+    """Zero-count bands collapse to a one-line marker, not a big card."""
+    body = client.get("/agentic").text
+    assert "wl-empty" in body
+    # The band label still appears (so the operator sees the zero).
+    assert "Needs verify" in body
 
 
 def test_view_agentic_bundles_filter(client: TestClient) -> None:

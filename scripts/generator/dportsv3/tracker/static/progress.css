@@ -1284,3 +1284,155 @@ details.section-collapse > summary .muted {
   width: 6px; height: 6px; border-radius: 50%;
   background: currentColor; opacity: .85; flex: none;
 }
+
+/* ══ Agentic worklist (redesign) ═══════════════════════════════════════
+   Triage queue: a focus header, a quiet ops strip, and action bands whose
+   rows dedup by port (recurring failures collapse into one counted,
+   expandable row). All scoped under .worklist so the generic names don't
+   leak into other pages. */
+
+.worklist .lede a { color: var(--amber-dim); }
+
+/* Focus header: one number + action-named jump chips */
+.worklist .wl-focus {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  padding: 14px 18px; margin: 14px 0 10px;
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(60,50,30,.04), 0 5px 18px rgba(60,50,30,.045);
+}
+.worklist .wl-focus-num {
+  font-size: 40px; font-weight: 720; line-height: 1; letter-spacing: -.03em;
+  font-variant-numeric: tabular-nums;
+}
+.worklist .wl-focus-cap { font-size: 12px; color: var(--text-dim); line-height: 1.15; margin-left: -6px; }
+.worklist .wl-clear { font-size: 16px; font-weight: 600; color: var(--c-built, #2a7a2a); }
+.worklist .wl-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-left: auto; }
+.worklist .wl-chip {
+  display: inline-flex; align-items: center; gap: 7px; text-decoration: none;
+  font-size: 12px; padding: 5px 11px; border-radius: 999px;
+  border: 1px solid var(--border-strong, #d8d2c4); color: var(--text-dim); background: var(--bg-card);
+}
+.worklist .wl-chip:hover { border-color: var(--amber-border); }
+.worklist .wl-chip.active { border-color: var(--amber, #c47000); color: var(--text); font-weight: 600; background: #fffaf2; }
+.worklist .wl-chip .n { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text); }
+.worklist .wl-chip.zero { color: var(--text-faint, #a8a091); }
+.worklist .wl-chip.zero .n { color: var(--text-faint, #a8a091); font-weight: 600; }
+
+/* Ops strip */
+.worklist .wl-ops {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px 20px;
+  padding: 8px 18px; margin-bottom: 26px; font-size: 12px; color: var(--text-dim);
+  border: 1px solid var(--border); border-radius: 10px; background: var(--bg-sunk, #f2efe8);
+}
+.worklist .wl-ops b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+.worklist .wl-ops a { color: var(--amber-dim); text-decoration: none; }
+.worklist .wl-ops-item { display: inline-flex; align-items: center; }
+.worklist .wl-ops-spacer { margin-left: auto; }
+.worklist .wl-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+.worklist .wl-dot.ok { background: var(--c-built, #2a7a2a); }
+.worklist .wl-dot.bad { background: var(--c-failed, #c03030); }
+
+/* Bands */
+.worklist .wl-band { margin-bottom: 20px; }
+.worklist .wl-band-head { display: flex; align-items: baseline; gap: 10px; margin: 0 2px 8px; }
+.worklist .wl-band-head h2 { font-size: 14px; font-weight: 680; margin: 0; }
+.worklist .wl-band-meta { font-size: 12px; color: var(--text-dim); font-weight: normal; }
+.worklist .wl-list {
+  border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+  background: var(--bg-card); box-shadow: 0 1px 2px rgba(60,50,30,.03);
+}
+.worklist .wl-empty {
+  padding: 9px 16px; margin-bottom: 12px; font-size: 12.5px; color: var(--text-faint, #a8a091);
+  border: 1px solid var(--border); border-radius: 8px;
+}
+.worklist .wl-empty .lbl { font-weight: 600; color: var(--text-dim); }
+
+/* Row */
+.worklist .wl-row {
+  display: grid; grid-template-columns: 3px 20px 1fr auto auto;
+  align-items: center; gap: 0 12px; padding: 11px 16px 11px 0;
+  border-top: 1px solid var(--border); position: relative;
+}
+.worklist .wl-list > .wl-row:first-child,
+.worklist .wl-list > .wl-group:first-child .wl-row { border-top: none; }
+.worklist .wl-row:hover { background: #fffdf9; }
+.worklist .wl-stripe { grid-column: 1; align-self: stretch; }
+.worklist .wl-row.decide .wl-stripe { background: var(--c-failed, #c03030); }
+.worklist .wl-row.ready  .wl-stripe { background: var(--c-built, #2a7a2a); }
+.worklist .wl-row.verify .wl-stripe { background: var(--c-skipped, #b36800); }
+.worklist .wl-row.owned  .wl-stripe { background: var(--text-dim); }
+.worklist .wl-row.resolved .wl-stripe { background: var(--border-strong, #d8d2c4); }
+.worklist .wl-group > .wl-row { cursor: pointer; }
+
+.worklist .wl-chev {
+  grid-column: 2; justify-self: center; background: none; border: none; padding: 0;
+  color: var(--text-dim); font-size: 15px; line-height: 1; width: 16px; height: 16px;
+  cursor: pointer; transition: transform .12s ease;
+}
+.worklist .wl-group.open .wl-chev { transform: rotate(90deg); }
+.worklist .wl-chev.leaf { visibility: hidden; }
+
+.worklist .wl-ident { grid-column: 3; display: flex; align-items: center; gap: 9px; flex-wrap: wrap; min-width: 0; }
+.worklist .wl-port { font-size: 14px; font-weight: 600; color: var(--text); text-decoration: none; }
+a.wl-port:hover { color: var(--amber-dim); }
+.worklist .wl-x {
+  font-size: 11px; font-weight: 700; color: var(--c-failed, #c03030);
+  background: var(--c-failed-bg, #fdeaea); border-radius: 999px; padding: 1px 8px;
+  font-variant-numeric: tabular-nums;
+}
+.worklist .wl-recur {
+  font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+  color: var(--c-failed, #c03030); border: 1px solid var(--c-failed, #c03030);
+  border-radius: 4px; padding: 0 4px; opacity: .8;
+}
+.worklist .wl-subid { font-family: var(--mono, ui-monospace, monospace); font-size: 11px; color: var(--text-faint, #a8a091); }
+
+.worklist .wl-rollup { grid-column: 3; grid-row: 2; display: flex; gap: 6px; flex-wrap: wrap; margin-top: 5px; }
+.worklist .wl-mid { grid-column: 4; display: flex; align-items: center; gap: 14px; justify-self: end; }
+.worklist .wl-age { font-size: 12px; color: var(--text-dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.worklist .wl-pill {
+  display: inline-flex; align-items: center; font-size: 11px; font-weight: 600;
+  padding: 2px 9px; border-radius: 999px; white-space: nowrap;
+}
+.worklist .wl-pill.sm { padding: 1px 8px; font-size: 10.5px; }
+.worklist .wl-pill.built   { background: var(--c-built-bg, #ecf7ec);  color: var(--c-built, #2a7a2a); }
+.worklist .wl-pill.failed  { background: var(--c-failed-bg, #fdeaea); color: var(--c-failed, #c03030); }
+.worklist .wl-pill.skipped { background: var(--c-skipped-bg, #fff5e6); color: var(--c-skipped, #b36800); }
+.worklist .wl-pill.total   { background: var(--c-neutral-bg, #eeebe4); color: var(--text); }
+
+/* Row primary action */
+.worklist .wl-actions { grid-column: 5; display: flex; align-items: center; gap: 6px; justify-self: end; }
+.worklist .wl-btn {
+  font-size: 12px; font-weight: 600; text-decoration: none; cursor: pointer;
+  border-radius: 7px; padding: 5px 13px; white-space: nowrap; border: 1px solid transparent;
+}
+.worklist .wl-btn-accept { background: var(--c-built, #2a7a2a); color: #fff; }
+.worklist .wl-btn-accept:hover { background: #236523; }
+.worklist .wl-btn-verify { background: var(--c-skipped, #b36800); color: #fff; }
+.worklist .wl-btn-decide { background: var(--bg-card); color: var(--amber-dim); border-color: var(--amber-border); }
+.worklist .wl-btn-decide:hover { background: #fffaf2; }
+.worklist .wl-btn-take { background: var(--bg-card); color: var(--text-dim); border-color: var(--border-strong, #d8d2c4); }
+
+/* Expanded per-attempt children */
+.worklist .wl-children { display: none; background: var(--bg-sunk, #f2efe8); border-top: 1px solid var(--border); }
+.worklist .wl-group.open .wl-children { display: block; }
+.worklist .wl-child {
+  display: grid; grid-template-columns: 20px 1fr auto auto; align-items: center; gap: 0 12px;
+  padding: 8px 16px 8px 0; border-top: 1px solid var(--border); text-decoration: none; color: inherit;
+}
+.worklist .wl-child:first-child { border-top: none; }
+.worklist .wl-child:hover { background: #f6f2ea; }
+.worklist .wl-cid { grid-column: 2; font-family: var(--mono, ui-monospace, monospace); font-size: 12px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.worklist .wl-cmid { grid-column: 3; display: flex; align-items: center; gap: 12px; justify-self: end; }
+.worklist .wl-copen { grid-column: 4; font-size: 11px; color: var(--amber-dim); font-weight: 600; justify-self: end; }
+
+/* Archive */
+.worklist details.wl-archive { margin-top: 22px; }
+.worklist details.wl-archive > summary {
+  cursor: pointer; font-size: 13px; font-weight: 600; color: var(--text-dim);
+  list-style: none; display: flex; align-items: center; gap: 7px;
+}
+.worklist details.wl-archive > summary::-webkit-details-marker { display: none; }
+.worklist details.wl-archive > summary::before { content: "▸"; color: var(--text-faint, #a8a091); font-size: 11px; }
+.worklist details.wl-archive[open] > summary::before { content: "▾"; }
