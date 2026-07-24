@@ -58,10 +58,8 @@
 
     {% include "_job_summary.html" %}
 
-    {% include "_job_token_usage.html" %}
-
-    {% include "_prior_attempts.html" %}
-
+    {# Handoff + the phase story (transitions, activity) come first; the
+       token-cost analytics collapse below. #}
     {% if handoff %}
     <h2>Manual handoff
       <span style="font-size:11px;color:var(--text-dim);font-weight:normal;">
@@ -113,6 +111,10 @@
     {% endif %}
 
     {% include "_job_activity.html" %}
+
+    {% include "_job_token_usage.html" %}
+
+    {% include "_prior_attempts.html" %}
   </div>
 
 {% endblock %}

@@ -5,12 +5,11 @@
    one-glance sense of "is this the 3rd attempt with budget
    exhausted, or is this a fresh failure?". #}
 {% if prior_attempts %}
-<h2>Prior attempts for this origin
-  <span style="font-size:11px;color:var(--text-dim);font-weight:normal;">
-    ({{ prior_attempts | length }} of last 10)
-  </span>
-</h2>
-<table class="tracker-table" style="font-size:12px;">
+<details class="section-collapse">
+  <summary>Prior attempts for this origin
+    <span class="muted">({{ prior_attempts | length }} of last 10)</span>
+  </summary>
+<table class="tracker-table" style="font-size:12px;margin-top:8px;">
   <thead>
     <tr>
       <th>Bundle</th>
@@ -46,4 +45,5 @@
     {% endfor %}
   </tbody>
 </table>
+</details>
 {% endif %}

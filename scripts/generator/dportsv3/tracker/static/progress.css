@@ -1074,3 +1074,18 @@ button.btn:disabled {
   font-weight: 600;
   border-bottom: 2px solid var(--amber, #d68b00);
 }
+
+/* Collapsible secondary sections on the detail pages (Phase 6 polish).
+   The <summary> stands in for the section's <h2>. */
+details.section-collapse { margin-top: 20px; }
+details.section-collapse > summary {
+  cursor: pointer;
+  font-size: 17px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  user-select: none;
+}
+details.section-collapse > summary:hover { color: var(--c-link, #06f); }
+details.section-collapse > summary .muted {
+  font-size: 12px; font-weight: normal; color: var(--text-dim, #6b7280);
+}

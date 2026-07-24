@@ -59,39 +59,19 @@
     {% include "_bundle_operator_activity.html" %}
     {% endif %}
 
-    {% include "_bundle_jobs.html" %}
+    {# What the fix changed comes first — the diff/proposed_fix live here. #}
+    {% include "_bundle_artifacts.html" %}
 
     {% include "_bundle_chat.html" %}
 
-    {% include "_bundle_artifacts.html" %}
-
-    {% if port_token_usage and port_token_usage.has_data %}
-    <h2>Lifetime token cost for this port
-      <span style="font-size:11px;color:var(--text-dim);font-weight:normal;">
-        ({{ port_token_usage.jobs }} job(s), {{ port_token_usage.llm_turns }} LLM turn(s))
-      </span>
-    </h2>
-    <div class="target-grid" style="margin-bottom:14px;">
-      <div class="tracker-card">
-        <div style="color:var(--text-dim);font-size:11px;">Prompt</div>
-        <div style="font-size:18px;font-weight:600;">{{ '{:,}'.format(port_token_usage.prompt_tokens) }}</div>
-      </div>
-      <div class="tracker-card">
-        <div style="color:var(--text-dim);font-size:11px;">Completion</div>
-        <div style="font-size:18px;font-weight:600;">{{ '{:,}'.format(port_token_usage.completion_tokens) }}</div>
-      </div>
-      <div class="tracker-card">
-        <div style="color:var(--text-dim);font-size:11px;">Total</div>
-        <div style="font-size:18px;font-weight:600;">{{ '{:,}'.format(port_token_usage.total_tokens) }}</div>
-      </div>
-    </div>
-    {% endif %}
+    {% include "_bundle_jobs.html" %}
 
     {% include "_prior_attempts.html" %}
 
     {% if tool_trace %}
-    <h2>Tool trace</h2>
-    <table class="tracker-table">
+    <details class="section-collapse">
+    <summary>Tool trace <span class="muted">({{ tool_trace|length }} events)</span></summary>
+    <table class="tracker-table" style="margin-top:8px;">
       <thead><tr><th>Attempt</th><th>Turn</th><th>Event</th><th>Tool</th><th>Status</th><th>Duration</th><th>Summary</th></tr></thead>
       <tbody>
         {% for ev in tool_trace %}
@@ -129,6 +109,29 @@
         {% endfor %}
       </tbody>
     </table>
+    </details>
+    {% endif %}
+
+    {% if port_token_usage and port_token_usage.has_data %}
+    <details class="section-collapse">
+    <summary>Lifetime token cost for this port
+      <span class="muted">({{ port_token_usage.jobs }} job(s), {{ port_token_usage.llm_turns }} LLM turn(s))</span>
+    </summary>
+    <div class="target-grid" style="margin:8px 0 14px;">
+      <div class="tracker-card">
+        <div style="color:var(--text-dim);font-size:11px;">Prompt</div>
+        <div style="font-size:18px;font-weight:600;">{{ '{:,}'.format(port_token_usage.prompt_tokens) }}</div>
+      </div>
+      <div class="tracker-card">
+        <div style="color:var(--text-dim);font-size:11px;">Completion</div>
+        <div style="font-size:18px;font-weight:600;">{{ '{:,}'.format(port_token_usage.completion_tokens) }}</div>
+      </div>
+      <div class="tracker-card">
+        <div style="color:var(--text-dim);font-size:11px;">Total</div>
+        <div style="font-size:18px;font-weight:600;">{{ '{:,}'.format(port_token_usage.total_tokens) }}</div>
+      </div>
+    </div>
+    </details>
     {% endif %}
   </div>
 {% endblock %}
