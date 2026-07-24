@@ -117,6 +117,34 @@ def client(seeded):
 # --- token_usage_for_job aggregator -----------------------------------------
 
 
+def test_activity_fragment_returns_rendered_rows(client):
+    """The live feed streams server-rendered _activity_row.html markup
+    (one render path), a cursor, and the job state to stop on terminal."""
+    r = client.get("/api/jobs/job-active/activity-fragment?since_id=0")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["job_state"] == "patching"
+    assert body["count"] == 6  # job-active's rows only (job-other excluded)
+    assert body["since_id"] > 0
+    # Rendered HTML rows, not JSON — and the shared template's tool fan-out.
+    assert body["html"].count("<tr") == 6
+    assert "get_file" in body["html"]
+    # Cursor: re-poll past the max yields nothing new.
+    r2 = client.get(
+        f"/api/jobs/job-active/activity-fragment?since_id={body['since_id']}"
+    )
+    assert r2.json()["count"] == 0
+    assert r2.json()["html"] == ""
+
+
+def test_activity_fragment_respects_stage_filter(client):
+    body = client.get(
+        "/api/jobs/job-active/activity-fragment?since_id=0&stage_filter=llm_turn"
+    ).json()
+    assert body["count"] == 3  # three llm_turn rows
+    assert body["html"].count("<tr") == 3
+
+
 def test_token_usage_sums_only_llm_turn_rows(seeded):
     conn = sqlite3.connect(str(seeded))
     conn.row_factory = sqlite3.Row

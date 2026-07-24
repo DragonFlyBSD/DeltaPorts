@@ -3,6 +3,9 @@
 // file is a no-op on idle jobs or jobs without an activity table.
 
 // --- Live activity refresh (active jobs only) ---
+// Streams new activity rows as SERVER-RENDERED fragments (one render path,
+// shared with the initial page render via _activity_row.html) and lets the
+// shared dpLive helper own the poll loop / pause / stop.
 (function () {
   var indicator = document.getElementById("live-indicator");
   if (!indicator) return;
@@ -15,220 +18,71 @@
   var lastUpdateEl = indicator.querySelector(".last-update");
   var statusText = indicator.querySelector(".status-text");
   var pauseLink = document.getElementById("pause-toggle");
-  var pollMs = 3000;
-  var paused = false;
-  var timer = null;
-
-  // States that terminate polling.
   var TERMINAL = ["done", "dead", "escalated"];
 
   function fmtAgo(ts) {
     var seconds = Math.round((Date.now() - ts) / 1000);
     if (seconds < 5) return "just now";
     if (seconds < 60) return seconds + "s ago";
-    var m = Math.floor(seconds / 60);
-    return m + "m ago";
+    return Math.floor(seconds / 60) + "m ago";
   }
 
-  // Escape a string for safe innerHTML insertion. Used everywhere
-  // user-content goes into innerHTML (messages, error fields,
-  // stderr_tail, etc.) — without this, an apostrophe in an error
-  // string could break the page or worse.
-  function esc(s) {
-    if (s == null) return "";
-    return String(s)
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#39;");
-  }
-
-  // Stage → class lookup mirrors _activity_row.html's row_class
-  // logic. CSS for these classes lives in this file's <style>
-  // block so server-rendered and JS-rendered rows match.
-  function rowClassFor(stage) {
-    if (stage === "attempt_start") return "activity-attempt-start";
-    if (stage === "attempt_end")   return "activity-attempt-end";
-    if (stage === "decision")      return "activity-decision";
-    if (stage && stage.indexOf("tool:") === 0) return "activity-tool";
-    return "";
-  }
-
-  // Build the "extra info" markup that lands inside the message
-  // column for non-llm_turn rows. Mirrors the is_decision and
-  // is_tool-and-not-ok blocks in _activity_row.html so live-
-  // appended decision rows and failed-tool rows look the same as
-  // their server-rendered counterparts (the user-visible
-  // "show diagnostic" toggle in particular).
-  function extraInfoHTML(stage, extra) {
-    var parts = [];
-    if (stage === "decision" && extra && typeof extra === "object") {
-      var meta =
-        "action=" + esc(extra.action || "—") +
-        " · tier=" + esc(extra.tier || "—");
-      if (extra.classification) meta += " · class=" + esc(extra.classification);
-      if (extra.confidence) meta += " · confidence=" + esc(extra.confidence);
-      if (extra.recent_failures !== undefined) {
-        meta += " · failures=" + esc(extra.recent_failures)
-              + "/" + esc(extra.max_attempts || "?");
-      }
-      if (extra.original_tier) meta += " · original=" + esc(extra.original_tier);
-      parts.push('<div class="decision-meta">' + meta + "</div>");
-    }
-    if (stage && stage.indexOf("tool:") === 0
-        && extra && extra.ok === false
-        && (extra.stderr_tail || extra.stdout_tail || extra.error)) {
-      var diag = '<details class="tool-diagnostic" style="margin-top:4px;font-size:11px;">';
-      diag += "<summary>show diagnostic";
-      if (extra.rc !== undefined) diag += " (rc=" + esc(extra.rc) + ")";
-      diag += "</summary>";
-      if (extra.error) {
-        diag += '<div class="tool-error">error: ' + esc(extra.error) + "</div>";
-      }
-      if (extra.stderr_tail) {
-        diag += "<pre>" + esc(extra.stderr_tail) + "</pre>";
-      } else if (extra.stdout_tail) {
-        diag += "<pre>" + esc(extra.stdout_tail) + "</pre>";
-      }
-      diag += "</details>";
-      parts.push(diag);
-    }
-    // Non-tool failure rows (convert_verify_failed,
-    // commit_port_changes_failed, patch_preflight_*, etc.) carry
-    // their diagnostic in extra.diag_tail / stderr_tail / stdout_tail.
-    // Mirror the server-side _activity_row.html block.
-    var isTool = stage && stage.indexOf("tool:") === 0;
-    var isLLMTurn = stage === "llm_turn";
-    if (!isTool && !isLLMTurn && extra
-        && (extra.diag_tail || extra.stderr_tail
-            || extra.stdout_tail || extra.error)) {
-      var diag2 = '<details class="tool-diagnostic" style="margin-top:4px;font-size:11px;">';
-      diag2 += "<summary>show diagnostic";
-      if (extra.rc !== undefined) diag2 += " (rc=" + esc(extra.rc) + ")";
-      diag2 += "</summary>";
-      if (extra.error) {
-        diag2 += '<div class="tool-error">error: ' + esc(extra.error) + "</div>";
-      }
-      if (extra.diag_tail) {
-        diag2 += "<pre>" + esc(extra.diag_tail) + "</pre>";
-      } else if (extra.stderr_tail) {
-        diag2 += "<pre>" + esc(extra.stderr_tail) + "</pre>";
-      } else if (extra.stdout_tail) {
-        diag2 += "<pre>" + esc(extra.stdout_tail) + "</pre>";
-      }
-      diag2 += "</details>";
-      parts.push(diag2);
-    }
-    return parts.join("");
-  }
-
-  function renderRow(a) {
-    // Mirror _activity_row.html shape. Server-side is canonical;
-    // this is the live-prepend fallback for new rows.
-    var tr = document.createElement("tr");
-    var stage = a.stage || "—";
-    var extra = a.extra || {};
-    var isLLMTurn = stage === "llm_turn";
-    // Per-stage CSS class drives the row's background / font.
-    // "new-row" stays as an additional class so live-fade
-    // animations (if any are added later) can target it.
-    tr.className = ("new-row " + rowClassFor(stage)).trim();
-    var p = isLLMTurn ? (extra.prompt_tokens || 0).toLocaleString() : "";
-    var c = isLLMTurn ? (extra.completion_tokens || 0).toLocaleString() : "";
-    var t = isLLMTurn ? (extra.total_tokens || 0).toLocaleString() : "";
-    // Cum column = cumulative billable; pre-H4 rows fall back to total.
-    var cumBillable = (extra.cumulative_billable_tokens != null)
-      ? extra.cumulative_billable_tokens
-      : (extra.cumulative_total_tokens || 0);
-    var cum = isLLMTurn ? cumBillable.toLocaleString() : "";
-    var messageCell;
-    if (isLLMTurn) {
-      messageCell = (extra.tools_requested && extra.tools_requested.length)
-                      ? "→ " + extra.tools_requested.map(esc).join(", ")
-                      : (extra.text_only
-                          ? "(text-only final response)"
-                          : esc(a.message || "—"));
-    } else {
-      messageCell = esc(a.message || "—") + extraInfoHTML(stage, extra);
-    }
-    tr.innerHTML =
-      '<td style="white-space:nowrap;">' + esc(a.ts || "") + "</td>" +
-      "<td>" + esc(stage) + "</td>" +
-      "<td>" + (a.duration_ms == null ? "—" : esc(a.duration_ms)) + "</td>" +
-      '<td class="tok' + (isLLMTurn ? "" : " tok-empty") + '">' + (p || "·") + "</td>" +
-      '<td class="tok' + (isLLMTurn ? "" : " tok-empty") + '">' + (c || "·") + "</td>" +
-      '<td class="tok' + (isLLMTurn ? "" : " tok-empty") + '">' + (t || "·") + "</td>" +
-      '<td class="tok' + (isLLMTurn ? "" : " tok-empty") + '">' + (cum || "·") + "</td>" +
-      '<td' + (isLLMTurn ? ' class="tool-list"' : "") + ">" + messageCell + "</td>";
-    return tr;
-  }
-
-  async function poll() {
-    if (document.hidden || paused) {
-      schedule();
-      return;
-    }
-    try {
-      var url = "/api/activity?job_id=" + encodeURIComponent(jobId)
-                + "&since_id=" + sinceId + "&limit=200";
-      if (stageFilter) {
-        url += "&stage_filter=" + encodeURIComponent(stageFilter);
-      }
-      var resp = await fetch(url);
-      if (resp.ok) {
-        var rows = await resp.json();
-        if (rows && rows.length) {
-          // Server returns oldest-first when since_id > 0; the
-          // activity table is newest-first, so we prepend each
-          // in reverse to make the newest land at the top.
-          rows.forEach(function (a) {
-            if (a.id && a.id > sinceId) sinceId = a.id;
-            tbody.insertBefore(renderRow(a), tbody.firstChild);
-          });
-          if (countEl) {
-            var current = tbody.querySelectorAll("tr").length;
-            countEl.textContent = "(" + current + " rows, " + rows.length + " new)";
-          }
-        }
-        if (lastUpdateEl) lastUpdateEl.textContent = fmtAgo(Date.now());
-      }
-    } catch (err) { /* network blip, try again next tick */ }
-    // Re-fetch the job state to detect terminal transitions.
-    try {
-      var jobResp = await fetch("/api/jobs/" + encodeURIComponent(jobId));
-      if (jobResp.ok) {
-        var job = await jobResp.json();
-        if (TERMINAL.indexOf(job.state) >= 0) {
-          indicator.classList.remove("active");
-          if (statusText) statusText.textContent = "idle (" + job.state + ")";
-          if (pauseLink) pauseLink.style.display = "none";
-          return;  // stop polling
+  var poller = window.dpLive({
+    intervalMs: 3000,
+    url: function () {
+      var u = "/api/jobs/" + encodeURIComponent(jobId)
+            + "/activity-fragment?since_id=" + sinceId;
+      if (stageFilter) u += "&stage_filter=" + encodeURIComponent(stageFilter);
+      return u;
+    },
+    onData: function (data) {
+      if (data.html) {
+        // Rows arrive oldest-first; inserting each at the top makes the
+        // newest land highest, matching the newest-first static table.
+        var frag = document.createElement("tbody");
+        frag.innerHTML = data.html;
+        Array.prototype.forEach.call(frag.querySelectorAll("tr"), function (tr) {
+          tr.classList.add("new-row");
+          tbody.insertBefore(tr, tbody.firstChild);
+        });
+        if (data.since_id) sinceId = data.since_id;
+        if (countEl && data.count) {
+          countEl.textContent = "(" + tbody.querySelectorAll("tr").length
+            + " rows, " + data.count + " new)";
         }
       }
-    } catch (err) { /* swallow */ }
-    schedule();
-  }
-
-  function schedule() { timer = setTimeout(poll, pollMs); }
+      if (lastUpdateEl) lastUpdateEl.textContent = fmtAgo(Date.now());
+      if (TERMINAL.indexOf(data.job_state) >= 0) {
+        indicator.classList.remove("active");
+        if (statusText) statusText.textContent = "idle (" + data.job_state + ")";
+        if (pauseLink) pauseLink.style.display = "none";
+        return "stop";
+      }
+    },
+  });
 
   document.addEventListener("visibilitychange", function () {
-    if (!document.hidden && statusText) statusText.textContent = "live";
+    if (!document.hidden && statusText && !poller.isPaused()) {
+      statusText.textContent = "live";
+    }
   });
 
   if (pauseLink) {
     pauseLink.addEventListener("click", function (ev) {
       ev.preventDefault();
-      paused = !paused;
-      pauseLink.textContent = paused ? "[resume]" : "[pause]";
-      if (statusText) statusText.textContent = paused ? "paused" : "live";
-      if (!paused) poll();
+      if (poller.isPaused()) {
+        poller.resume();
+        pauseLink.textContent = "[pause]";
+        if (statusText) statusText.textContent = "live";
+      } else {
+        poller.pause();
+        pauseLink.textContent = "[resume]";
+        if (statusText) statusText.textContent = "paused";
+      }
     });
   }
 
-  // Kick off the loop after a short delay so initial render
-  // finishes first.
-  schedule();
+  poller.start(3000);
 })();
 
 // --- Client-side column sort ---

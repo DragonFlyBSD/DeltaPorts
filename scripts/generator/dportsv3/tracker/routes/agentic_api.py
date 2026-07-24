@@ -36,6 +36,7 @@ from dportsv3.tracker.routes._common import (
 
 def register(app, ctx):
     _conn = ctx.conn
+    templates = ctx.templates
 
     @app.get("/api/agentic-status")
     def api_agentic_status() -> dict[str, Any]:
@@ -66,6 +67,36 @@ def register(app, ctx):
                     stage_filter=stage_filter,
                 )
             return recent_activity(conn, limit=limit, target=target)
+
+    @app.get("/api/jobs/{job_id}/activity-fragment")
+    def api_job_activity_fragment(
+        job_id: str,
+        since_id: int = Query(default=0, ge=0),
+        stage_filter: str | None = None,
+    ) -> dict[str, Any]:
+        """Server-rendered activity rows since a cursor, for the live feed.
+
+        Returns the same ``_activity_row.html`` markup the initial page
+        render uses — one render path, no client-side row duplication.
+        ``html`` is oldest-first (the caller inserts each at the top so the
+        newest lands highest). ``job_state`` lets the client stop polling
+        when the job reaches a terminal state without a second request.
+        """
+        row_tmpl = templates.env.get_template("_activity_row.html")
+        with _conn() as conn:
+            rows = activity_for_job(
+                conn, job_id, limit=200, since_id=since_id,
+                stage_filter=stage_filter,
+            )
+            job = get_job(conn, job_id)
+        html = "".join(row_tmpl.render(a=row) for row in rows)
+        max_id = max((int(r["id"]) for r in rows if r.get("id")), default=since_id)
+        return {
+            "html": html,
+            "since_id": max_id,
+            "job_state": (job or {}).get("state"),
+            "count": len(rows),
+        }
 
     @app.get("/api/runner-status")
     def api_runner_status() -> dict[str, Any]:
