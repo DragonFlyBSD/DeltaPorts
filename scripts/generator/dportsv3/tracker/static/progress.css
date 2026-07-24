@@ -1436,3 +1436,32 @@ a.wl-port:hover { color: var(--amber-dim); }
 .worklist details.wl-archive > summary::-webkit-details-marker { display: none; }
 .worklist details.wl-archive > summary::before { content: "▸"; color: var(--text-faint, #a8a091); font-size: 11px; }
 .worklist details.wl-archive[open] > summary::before { content: "▾"; }
+
+/* Environment health section — bring it into the worklist card language
+   instead of the bare table it inherited. */
+.worklist #env-health { font-size: 15px; font-weight: 680; margin-top: 30px; margin-bottom: 10px; }
+.worklist .env-active-banner {
+  padding: 11px 16px; margin-bottom: 12px;
+  background: var(--bg-sunk, #f2efe8); border: 1px solid var(--border); border-radius: 10px;
+  font-size: 12.5px;
+}
+.worklist .env-active-banner strong { color: var(--text); }
+.worklist .wl-tablecard {
+  border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+  background: var(--bg-card); box-shadow: 0 1px 2px rgba(60,50,30,.03);
+}
+.worklist .wl-tablecard table.tracker-table { border: none; }
+.worklist .wl-tablecard table.tracker-table th {
+  background: var(--bg-sunk, #f2efe8); color: var(--text-dim);
+  font-weight: 600; border-bottom: 1px solid var(--border);
+  font-size: 11px; letter-spacing: .02em;
+}
+.worklist .wl-tablecard table.tracker-table td { border-bottom: 1px solid var(--border); vertical-align: middle; }
+.worklist .wl-tablecard table.tracker-table tbody tr:last-child td { border-bottom: none; }
+.worklist .wl-tablecard table.tracker-table tbody tr:hover { background: #fffdf9; }
+.worklist .env-row-active { background: #fffaf2; }
+/* The status/check words become real pills (base .stat-pill carries no shape). */
+.worklist .wl-tablecard .stat-pill {
+  display: inline-flex; align-items: center; margin: 1px 3px 1px 0;
+  padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 600;
+}

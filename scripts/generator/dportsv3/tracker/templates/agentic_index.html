@@ -170,6 +170,7 @@
       </div>
     </div>
     {% if env_health %}
+    <div class="wl-tablecard">
     <table class="tracker-table">
       <thead><tr><th>Active</th><th>Env</th><th>Status</th><th>Probed</th><th>Operator action</th><th>Checks</th></tr></thead>
       <tbody>
@@ -202,6 +203,7 @@
         {% endfor %}
       </tbody>
     </table>
+    </div>
     {% else %}
     <div class="empty-state">No environment health probes recorded yet.</div>
     {% endif %}
