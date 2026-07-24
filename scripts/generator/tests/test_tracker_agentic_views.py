@@ -364,6 +364,25 @@ def test_agentic_subnav_present_and_highlights_current(client: TestClient) -> No
     assert re.search(r'<a[^>]*class="active"[^>]*>Bundles</a>', bundles_body)
 
 
+def test_view_agentic_bundle_detail_links_to_its_jobs(
+    client: TestClient, seeded_state_db: Path,
+) -> None:
+    """The bundle detail lists the jobs spawned for it, each linking to the
+    job detail where the phase-by-phase activity lives — the drill-down a
+    worklist bundle needs to inspect what triage/patch/verify did."""
+    import sqlite3
+    conn = sqlite3.connect(str(seeded_state_db))
+    conn.execute(
+        "UPDATE jobs SET bundle_id = 'b-q2-foo' WHERE job_id = 'job-q2-foo'",
+    )
+    conn.commit()
+    conn.close()
+
+    body = client.get("/agentic/bundles/b-q2-foo").text
+    assert "job-q2-foo" in body
+    assert "/agentic/jobs/job-q2-foo" in body
+
+
 def test_view_agentic_index_worklist_surfaces_resolved_bundle(
     client: TestClient, seeded_state_db: Path,
 ) -> None:

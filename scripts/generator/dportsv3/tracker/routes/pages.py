@@ -28,6 +28,7 @@ from dportsv3.tracker.agentic_queries import (
     latest_review_request_for_bundle,
     list_bundles,
     list_jobs,
+    list_jobs_for_bundle,
     list_manual_requests,
     list_port_bundles,
     port_attempt_summary,
@@ -148,6 +149,7 @@ def register(app, ctx):
     ) -> Any:
         with _conn() as conn:
             bundle = get_bundle(conn, bundle_id)
+            bundle_jobs = list_jobs_for_bundle(conn, bundle_id)
             tool_trace_ref = get_artifact_ref(conn, bundle_id, "analysis/tool_trace.jsonl")
             selected_relpath = artifact or (render.default_artifact_relpath(bundle) if bundle else None)
             selected_ref = (
@@ -252,6 +254,7 @@ def register(app, ctx):
             {
                 "title": bundle_id,
                 "bundle": bundle,
+                "bundle_jobs": bundle_jobs,
                 "tool_trace": tool_trace,
                 "selected_artifact": selected_artifact,
                 "selected_artifact_relpath": selected_relpath,
