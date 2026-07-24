@@ -6,22 +6,13 @@
 <span class="stat-pill {{ cls }}"{% if title %} title="{{ title }}"{% endif %}>{{ label }}</span>
 {%- endmacro -%}
 
-{#- bundles.resolution -> pill. Canonical labels = the 3-template
-    majority; the bundle-detail page was the lone outlier. Unhandled
-    resolutions render as an em dash (unchanged). -#}
-{%- macro resolution_pill(resolution) -%}
-{%- if resolution == 'agent_fixed' -%}{{ pill('built', 'agent fixed') }}
-{%- elif resolution == 'agent_gave_up' -%}{{ pill('failed', 'agent gave up') }}
-{%- elif resolution == 'agent_budget_exhausted' -%}{{ pill('failed', 'budget out') }}
-{%- elif resolution == 'escalated_manual' -%}{{ pill('skipped', 'escalated') }}
-{%- else -%}—{%- endif -%}
-{%- endmacro -%}
-
-{#- bundles.verification_status -> pill. -#}
-{%- macro verification_pill(v) -%}
-{%- if v == 'verified' -%}{{ pill('built', 'verified') }}
-{%- elif v == 'verification_failed' -%}{{ pill('failed', 'failed') }}
-{%- else -%}—{%- endif -%}
+{#- One bundle -> one status pill via the fix_status projection (Phase 6).
+    Folds resolution + verification_status + job.state into a single
+    operator-facing status, replacing the two-column resolution/verified
+    reconcile. `fix_status` is registered as a Jinja global in create_app. -#}
+{%- macro status_pill(bundle) -%}
+{%- set s = fix_status(bundle) -%}
+{{ pill(s.pill, s.label, s.key) }}
 {%- endmacro -%}
 
 {#- jobs.state -> pill. Centralizes the state->class map (was inline in

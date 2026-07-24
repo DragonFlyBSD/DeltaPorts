@@ -1,4 +1,4 @@
-{% from "_macros.html" import resolution_pill %}
+{% from "_macros.html" import status_pill %}
 {# Step 9 — recent bundles for this (origin, target). Rendered on
    both the bundle detail page (excluding the bundle being viewed)
    and the job detail page. Compact table; the operator gets a
@@ -16,7 +16,7 @@
       <th>Bundle</th>
       <th>When</th>
       <th>Result</th>
-      <th>Resolution</th>
+      <th>Status</th>
       <th>Run</th>
     </tr>
   </thead>
@@ -35,7 +35,7 @@
         </span>
       </td>
       <td>
-        {{ resolution_pill(b.resolution) }}
+        {{ status_pill(b) }}
       </td>
       <td>
         {% if b.run_id %}

@@ -1,19 +1,14 @@
-{% from "_macros.html" import resolution_pill, verification_pill %}
+{% from "_macros.html" import status_pill %}
     <div class="tracker-card">
       <table style="font-size:12px;">
         <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Origin</th><td>{{ bundle.origin }}{% if bundle.flavor %} @ {{ bundle.flavor }}{% endif %}</td></tr>
         <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Target</th><td>{{ bundle.target or '—' }}</td></tr>
         <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Result</th><td><span class="stat-pill {% if bundle.result == 'fail' or bundle.result == 'failure' %}failed{% else %}built{% endif %}">{{ bundle.result }}</span></td></tr>
-        {% if bundle.resolution %}
-        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Resolution</th><td>
-          {{ resolution_pill(bundle.resolution) }}
-        </td></tr>
-        {% endif %}
-        {% if bundle.verification_status %}
-        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Verification</th><td>
-          {{ verification_pill(bundle.verification_status) }}
+        {% if bundle.resolution or bundle.verification_status %}
+        <tr><th style="text-align:left;color:var(--text-dim);padding-right:12px;">Status</th><td>
+          {{ status_pill(bundle) }}
           {% if bundle.verification_at %}
-            <span style="color:var(--text-dim);font-size:11px;">at {{ bundle.verification_at }}</span>
+            <span style="color:var(--text-dim);font-size:11px;">verified at {{ bundle.verification_at }}</span>
           {% endif %}
         </td></tr>
         {% endif %}

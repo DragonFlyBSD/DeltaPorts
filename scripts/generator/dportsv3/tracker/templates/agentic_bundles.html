@@ -1,5 +1,5 @@
 {% extends "_base.html" %}
-{% from "_macros.html" import resolution_pill, verification_pill %}
+{% from "_macros.html" import status_pill %}
 {% block title %}Bundles — DeltaPorts Tracker{% endblock %}
 {% block body %}
   {% with nav_crumbs = [{"label": "Agentic", "url": request.url_for('agentic_index')}, {"label": "Bundles"}] %}
@@ -14,7 +14,7 @@
 
     <table class="tracker-table">
       <thead>
-        <tr><th>Bundle</th><th>Origin</th><th>Flavor</th><th>Target</th><th>Result</th><th>Resolution</th><th>Verified</th><th>When</th><th>Run</th></tr>
+        <tr><th>Bundle</th><th>Origin</th><th>Flavor</th><th>Target</th><th>Result</th><th>Status</th><th>When</th><th>Run</th></tr>
       </thead>
       <tbody>
         {% for b in bundles %}
@@ -24,13 +24,12 @@
           <td>{{ b.flavor or '—' }}</td>
           <td>{{ b.target or '—' }}</td>
           <td><span class="stat-pill {% if b.result == 'fail' or b.result == 'failure' %}failed{% else %}built{% endif %}">{{ b.result }}</span></td>
-          <td>{{ resolution_pill(b.resolution) }}</td>
-          <td>{{ verification_pill(b.verification_status) }}</td>
+          <td>{{ status_pill(b) }}</td>
           <td>{{ b.ts_utc }}</td>
           <td>{% if b.run_id %}<a href="{{ request.url_for('agentic_run_detail', run_id=b.run_id) }}">{{ b.run_id }}</a>{% else %}—{% endif %}</td>
         </tr>
         {% else %}
-        <tr><td colspan="9" style="color:var(--text-dim);">No bundles match this filter.</td></tr>
+        <tr><td colspan="8" style="color:var(--text-dim);">No bundles match this filter.</td></tr>
         {% endfor %}
       </tbody>
     </table>

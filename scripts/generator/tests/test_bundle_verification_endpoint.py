@@ -67,6 +67,18 @@ def _bundle_row(db_path: Path, bundle_id: str) -> sqlite3.Row:
     return row
 
 
+def _set_resolution(db_path: Path, bundle_id: str, resolution: str) -> None:
+    """Verification only projects to a status on a fixed bundle — set the
+    resolution the real flow would have set before an operator verifies."""
+    conn = sqlite3.connect(str(db_path))
+    conn.execute(
+        "UPDATE bundles SET resolution = ? WHERE bundle_id = ?",
+        (resolution, bundle_id),
+    )
+    conn.commit()
+    conn.close()
+
+
 def test_post_verification_happy_path_verified(client, seeded_db):
     resp = client.post(
         "/api/bundles/b-verified/verification",
@@ -196,38 +208,50 @@ def test_post_verification_emits_event(client, seeded_db):
 # ---------------------------------------------------------------------------
 
 
-def test_bundle_detail_renders_verified_pill(client, seeded_db):
+def test_bundle_detail_renders_verified_status(client, seeded_db):
+    # Phase 6: resolution + verification fold into one fix_status pill.
+    _set_resolution(seeded_db, "b-verified", "agent_fixed")
     client.post(
         "/api/bundles/b-verified/verification",
         json={"ok": True, "applied_diff_sha256": "a" * 64},
     )
     body = client.get("/agentic/bundles/b-verified").text
-    assert ">Verification<" in body
+    assert ">Status<" in body
     assert "verified" in body
 
 
-def test_bundle_detail_renders_verification_failed_pill(client, seeded_db):
+def test_bundle_detail_renders_verify_failed_status(client, seeded_db):
+    _set_resolution(seeded_db, "b-failed", "agent_fixed")
     client.post(
         "/api/bundles/b-failed/verification",
         json={"ok": False, "applied_diff_sha256": "b" * 64},
     )
     body = client.get("/agentic/bundles/b-failed").text
-    assert ">Verification<" in body
-    # Phase 3: verification pill standardized to the list-view label.
-    assert ">failed<" in body
+    assert ">Status<" in body
+    assert "verify failed" in body  # projected fix_status label
 
 
-def test_bundle_detail_omits_verification_row_when_unset(client):
-    """Pre-Step-11b bundles should render unchanged."""
+def test_bundle_detail_omits_status_row_when_unset(client, seeded_db):
+    """A fresh, untriaged bundle (no resolution, no verification) shows no
+    status row in its summary."""
+    # Unique origin → no prior attempts (that table also has a Status
+    # column), so the only Status header that could appear is the summary's.
+    conn = sqlite3.connect(str(seeded_db))
+    conn.execute(
+        "UPDATE bundles SET origin = 'devel/solo' WHERE bundle_id = 'b-verified'"
+    )
+    conn.commit()
+    conn.close()
     body = client.get("/agentic/bundles/b-verified").text
-    assert ">Verification<" not in body
+    assert ">Status<" not in body
 
 
-def test_bundle_list_renders_verified_column(client, seeded_db):
+def test_bundle_list_renders_status_column(client, seeded_db):
+    _set_resolution(seeded_db, "b-verified", "agent_fixed")
     client.post(
         "/api/bundles/b-verified/verification",
         json={"ok": True, "applied_diff_sha256": "a" * 64},
     )
     body = client.get("/agentic/bundles").text
-    assert ">Verified<" in body  # column header
+    assert ">Status<" in body  # column header
     assert "verified" in body

@@ -1,5 +1,5 @@
 {% extends "_base.html" %}
-{% from "_macros.html" import resolution_pill, verification_pill, job_state_pill %}
+{% from "_macros.html" import status_pill, job_state_pill %}
 {% block title %}Agentic — DeltaPorts Tracker{% endblock %}
 {% block body %}
   {% with nav_crumbs = [{"label": "Agentic"}] %}{% include "_tracker_nav.html" %}{% endwith %}
@@ -120,7 +120,7 @@
 
     <h2>Recent bundles</h2>
     <table class="tracker-table">
-      <thead><tr><th>Bundle</th><th>Origin</th><th>Target</th><th>Result</th><th>Resolution</th><th>Verified</th></tr></thead>
+      <thead><tr><th>Bundle</th><th>Origin</th><th>Target</th><th>Result</th><th>Status</th></tr></thead>
       <tbody>
         {% for b in recent_bundles %}
         <tr>
@@ -128,11 +128,10 @@
           <td>{{ b.origin }}</td>
           <td>{{ b.target or '—' }}</td>
           <td><span class="stat-pill {% if b.result == 'fail' or b.result == 'failure' %}failed{% else %}built{% endif %}">{{ b.result }}</span></td>
-          <td>{{ resolution_pill(b.resolution) }}</td>
-          <td>{{ verification_pill(b.verification_status) }}</td>
+          <td>{{ status_pill(b) }}</td>
         </tr>
         {% else %}
-        <tr><td colspan="6" style="color:var(--text-dim);">No bundles yet.</td></tr>
+        <tr><td colspan="5" style="color:var(--text-dim);">No bundles yet.</td></tr>
         {% endfor %}
       </tbody>
     </table>

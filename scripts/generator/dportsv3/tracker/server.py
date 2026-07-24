@@ -15,6 +15,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
+from dportsv3.tracker import fix_state
 from dportsv3.tracker.db import ActiveBuildError, init_db, open_db
 from dportsv3.tracker.routes import (
     _common,
@@ -77,6 +78,10 @@ def create_app(db_path: str | Path) -> Any:
     if _css_path.is_file():
         _static_v = _hashlib.sha256(_css_path.read_bytes()).hexdigest()[:10]
     templates.env.globals["static_v"] = _static_v
+    # The single operator-facing status projection. Templates call it to
+    # render one status pill instead of reconciling resolution +
+    # verification_status + job.state by eye.
+    templates.env.globals["fix_status"] = fix_state.fix_status
 
     @app.on_event("startup")
     def _startup() -> None:
