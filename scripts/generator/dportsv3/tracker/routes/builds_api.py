@@ -2,14 +2,42 @@
 
 from __future__ import annotations
 
-from dportsv3.tracker.routes._common import *  # noqa: F401,F403
-from dportsv3.tracker.routes._common import _LOG  # noqa: F401
+from typing import Any
+
+from dportsv3.tracker.db import (
+    compare_builds,
+    create_build_run,
+    enqueue_ports,
+    finish_build_run,
+    get_build_results,
+    get_build_run,
+    get_diff,
+    get_failures,
+    get_port_status,
+    list_build_runs,
+    record_results,
+    update_port_status,
+)
+from dportsv3.tracker.models import (
+    BuildCompareOut,
+    BuildRunOut,
+    DiffOut,
+    EnqueueRequest,
+    EnqueueResponse,
+    FinishBuildRequest,
+    PortStatusOut,
+    RecordResultsRequest,
+    RecordResultsResponse,
+    StartBuildRequest,
+    StartBuildResponse,
+    UpdatePortStatusRequest,
+)
+from dportsv3.tracker.routes._common import Query
 
 
 def register(app, ctx):
     _conn = ctx.conn
     _raise_http_error = ctx.raise_http_error
-    templates = ctx.templates
 
     @app.post("/api/builds", response_model=StartBuildResponse)
     def start_build(payload: StartBuildRequest) -> dict[str, int]:

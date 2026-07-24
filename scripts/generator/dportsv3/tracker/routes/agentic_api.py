@@ -2,16 +2,40 @@
 
 from __future__ import annotations
 
-from dportsv3.tracker.routes._common import *  # noqa: F401,F403
-from dportsv3.tracker.routes._common import (  # noqa: F401
-    _LOG, _chat_llm_config, _pick_default_session_relpath,
+import sqlite3
+from typing import Any
+
+from dportsv3.tracker import (
+    fix_state,
+    render,
+)
+from dportsv3.tracker.agentic_queries import (
+    activity_for_job,
+    agentic_status,
+    env_health_statuses,
+    get_active_env,
+    get_bundle,
+    get_job,
+    get_run,
+    list_bundles,
+    list_jobs,
+    list_jobs_for_bundle,
+    list_runs,
+    recent_activity,
+    runner_status,
+    set_active_env,
+)
+from dportsv3.tracker.routes._common import (
+    HTTPException,
+    Query,
+    _LOG,
+    _chat_llm_config,
+    _pick_default_session_relpath,
 )
 
 
 def register(app, ctx):
     _conn = ctx.conn
-    _raise_http_error = ctx.raise_http_error
-    templates = ctx.templates
 
     @app.get("/api/agentic-status")
     def api_agentic_status() -> dict[str, Any]:

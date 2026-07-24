@@ -11,104 +11,21 @@ This module has no dependency on ``server`` (it is imported *by* both
 - ``RouteContext`` — the tiny struct ``create_app`` fills once and hands to each
   ``register(app, ctx)``.
 
-Route modules do ``from dportsv3.tracker.routes._common import *`` so their
-verbatim bodies keep resolving every name they used inside ``create_app``.
+Route modules import the FastAPI aliases / chat helpers explicitly from here;
+they pull queries, db, and models straight from their own modules.
 """
 
 from __future__ import annotations
 
 import importlib
-import json
 import logging
 import os
-import sqlite3
 from dataclasses import dataclass
 from importlib import util as importlib_util
 from pathlib import Path
 from typing import Any, Callable, cast
 
-from dportsv3.tracker import fix_state
 from dportsv3.tracker import render
-from dportsv3.tracker.progress_adapter import (
-    run_history_chunk,
-    run_summary,
-    target_history_chunk,
-    target_summary,
-)
-from dportsv3.tracker.agentic_queries import (
-    active_job_for_port,
-    activity_for_job,
-    agentic_status,
-    bundles_for_run,
-    discard_manual_request,
-    distinct_targets,
-    events_since,
-    env_health_statuses,
-    get_active_env,
-    set_active_env,
-    get_artifact_ref,
-    get_bundle,
-    get_job,
-    get_manual_request,
-    get_run,
-    clear_origin_skip,
-    is_origin_skipped,
-    job_events_for_job,
-    latest_review_request_for_bundle,
-    list_bundles,
-    update_review_request_status,
-    list_jobs,
-    list_jobs_for_bundle,
-    list_manual_requests,
-    list_port_bundles,
-    list_runs,
-    port_attempt_summary,
-    recent_activity,
-    recent_activity_for_bundle,
-    runner_status,
-    set_origin_skip,
-    token_usage_for_job,
-    token_usage_for_port,
-    upsert_user_context_text,
-)
-from dportsv3.tracker.db import (
-    ActiveBuildError,
-    compare_builds,
-    create_build_run,
-    enqueue_ports,
-    finish_build_run,
-    get_active_builds_summary,
-    get_build_results,
-    get_build_run,
-    get_diff,
-    get_failures,
-    get_port_history,
-    get_port_status,
-    get_target_summary,
-    init_db,
-    list_build_runs,
-    open_db,
-    record_results,
-    update_port_status,
-)
-from dportsv3.tracker.models import (
-    BuildCompareOut,
-    BuildRunOut,
-    DiffOut,
-    EnqueueRequest,
-    EnqueueResponse,
-    FinishBuildRequest,
-    ManualContextRequest,
-    ManualContextResponse,
-    ManualDiscardRequest,
-    ManualDiscardResponse,
-    PortStatusOut,
-    RecordResultsRequest,
-    RecordResultsResponse,
-    StartBuildRequest,
-    StartBuildResponse,
-    UpdatePortStatusRequest,
-)
 
 _LOG = logging.getLogger("dportsv3.tracker.server")
 

@@ -2,15 +2,77 @@
 
 from __future__ import annotations
 
-from dportsv3.tracker.routes._common import *  # noqa: F401,F403
-from dportsv3.tracker.routes._common import (  # noqa: F401
-    _LOG, _chat_llm_config, _pick_default_session_relpath,
+import os
+from pathlib import Path
+from typing import Any
+
+from dportsv3.tracker import (
+    fix_state,
+    render,
+)
+from dportsv3.tracker.agentic_queries import (
+    active_job_for_port,
+    activity_for_job,
+    agentic_status,
+    bundles_for_run,
+    discard_manual_request,
+    distinct_targets,
+    env_health_statuses,
+    get_active_env,
+    get_artifact_ref,
+    get_bundle,
+    get_job,
+    get_manual_request,
+    get_run,
+    job_events_for_job,
+    latest_review_request_for_bundle,
+    list_bundles,
+    list_jobs,
+    list_manual_requests,
+    list_port_bundles,
+    port_attempt_summary,
+    recent_activity,
+    recent_activity_for_bundle,
+    runner_status,
+    token_usage_for_job,
+    token_usage_for_port,
+    upsert_user_context_text,
+)
+from dportsv3.tracker.db import (
+    compare_builds,
+    get_active_builds_summary,
+    get_build_run,
+    get_diff,
+    get_port_history,
+    get_port_status,
+    get_target_summary,
+    list_build_runs,
+)
+from dportsv3.tracker.models import (
+    ManualContextRequest,
+    ManualContextResponse,
+    ManualDiscardRequest,
+    ManualDiscardResponse,
+)
+from dportsv3.tracker.progress_adapter import (
+    run_history_chunk,
+    run_summary,
+    target_history_chunk,
+    target_summary,
+)
+from dportsv3.tracker.routes._common import (
+    HTMLResponse,
+    HTTPException,
+    Query,
+    RedirectResponse,
+    RequestType,
+    _chat_llm_config,
+    _pick_default_session_relpath,
 )
 
 
 def register(app, ctx):
     _conn = ctx.conn
-    _raise_http_error = ctx.raise_http_error
     templates = ctx.templates
 
 

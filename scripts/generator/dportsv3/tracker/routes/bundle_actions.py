@@ -2,14 +2,38 @@
 
 from __future__ import annotations
 
-from dportsv3.tracker.routes._common import *  # noqa: F401,F403
-from dportsv3.tracker.routes._common import _LOG  # noqa: F401
+import json
+import sqlite3
+from pathlib import Path
+from typing import Any
+
+from dportsv3.tracker import (
+    fix_state,
+    render,
+)
+from dportsv3.tracker.agentic_queries import (
+    clear_origin_skip,
+    events_since,
+    get_artifact_ref,
+    get_bundle,
+    is_origin_skipped,
+    latest_review_request_for_bundle,
+    list_port_bundles,
+    set_origin_skip,
+    update_review_request_status,
+    upsert_user_context_text,
+)
+from dportsv3.tracker.routes._common import (
+    FileResponse,
+    HTTPException,
+    Query,
+    StreamingResponse,
+    _LOG,
+)
 
 
 def register(app, ctx):
     _conn = ctx.conn
-    _raise_http_error = ctx.raise_http_error
-    templates = ctx.templates
 
     def _activity_log(
         write_conn: sqlite3.Connection,
