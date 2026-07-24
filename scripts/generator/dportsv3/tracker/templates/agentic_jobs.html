@@ -1,16 +1,11 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Jobs — DeltaPorts Tracker</title>
-  <link href="{{ request.url_for('static', path='progress.css') }}?v={{ static_v }}" type="text/css" rel="stylesheet">
-  <link rel="icon" type="image/png" href="{{ request.url_for('static', path='favicon.png') }}">
-</head>
-<body>
+{% extends "_base.html" %}
+{% from "_macros.html" import job_state_pill %}
+{% block title %}Jobs — DeltaPorts Tracker{% endblock %}
+{% block body %}
   {% with nav_crumbs = [{"label": "Agentic", "url": request.url_for('agentic_index')}, {"label": "Jobs"}] %}
     {% include "_tracker_nav.html" %}
   {% endwith %}
+  {% include "_agentic_subnav.html" %}
 
   <div class="tracker-page">
     <h1>Jobs</h1>
@@ -27,15 +22,7 @@
         <tr>
           <td><a href="{{ request.url_for('agentic_job_detail', job_id=j.job_id) }}">{{ j.job_id }}</a></td>
           <td>
-            {% set cls = {
-                'queued':'ignored',
-                'claimed':'skipped','triaging':'skipped','triaged':'skipped',
-                'patching':'skipped','verifying':'skipped',
-                'converting':'skipped',
-                'done':'built',
-                'dead':'failed','escalated':'skipped'
-            }.get(j.state,'total') %}
-            <span class="stat-pill {{ cls }}">{{ j.state }}</span>
+            {{ job_state_pill(j.state) }}
           </td>
           <td>{{ j.retire_reason or '—' }}</td>
           <td>{{ j.type or '—' }}</td>
@@ -49,5 +36,4 @@
       </tbody>
     </table>
   </div>
-</body>
-</html>
+{% endblock %}

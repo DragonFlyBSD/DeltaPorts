@@ -1,0 +1,47 @@
+{# Artifact reader (redesign): a fixed-geometry list-detail split.
+   Left = one curated list grouped by role (Outcome / Reasoning /
+   Evidence / Logs), each row carrying its type badge + write time.
+   Right = a persistent header + an internally-scrolling body. The
+   frame is locked; only the body swaps when you pick an artifact —
+   in place via JS, or on reload when JS is off. #}
+    <h2>Artifacts</h2>
+    {% if bundle.artifacts %}
+    <div class="reader" id="artifact-reader"
+         data-fragment-url="{{ request.url_for('agentic_bundle_artifact_fragment', bundle_id=bundle.bundle_id) }}"
+         data-page-url="{{ request.url_for('agentic_bundle_detail', bundle_id=bundle.bundle_id) }}">
+      <div class="a-list" role="listbox" aria-label="Bundle artifacts">
+        {% for group in artifact_groups %}
+        <div class="a-group-label">{{ group.label }}</div>
+        {% for it in group.files %}
+        {% set written = (it.created_at or '')[:19] | replace('T', ' ') %}
+        {% if it.is_session %}
+        {# Session dumps open the structured viewer, not the inline reader. #}
+        <a class="a-row a-row-session" role="option"
+           href="{{ request.url_for('agentic_bundle_session_view', bundle_id=bundle.bundle_id, filename=it.name) }}">
+          <span class="a-name">{{ it.label }}</span>
+          <span class="a-type">{{ it.badge }}</span>
+          <span class="a-meta"><span>session</span></span>
+        </a>
+        {% else %}
+        <a class="a-row{% if it.relpath == selected_artifact_relpath %} selected{% endif %}"
+           role="option" data-relpath="{{ it.relpath }}"
+           href="{{ request.url_for('agentic_bundle_detail', bundle_id=bundle.bundle_id) }}?artifact={{ it.relpath | urlencode }}">
+          <span class="a-name">{{ it.label }}</span>
+          <span class="a-type">{{ it.badge }}</span>
+          <span class="a-meta">
+            {% if written %}<span class="a-when">{{ written[11:] }}</span>{% endif %}
+            <span>{{ it.size if it.size is not none else '—' }} B</span>
+          </span>
+        </a>
+        {% endif %}
+        {% endfor %}
+        {% endfor %}
+      </div>
+
+      <div class="a-detail" id="artifact-detail">
+        {% include "_artifact_detail.html" %}
+      </div>
+    </div>
+    {% else %}
+    <div class="empty-state">No artifacts recorded for this bundle.</div>
+    {% endif %}

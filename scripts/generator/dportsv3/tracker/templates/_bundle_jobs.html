@@ -1,0 +1,26 @@
+{% from "_macros.html" import job_state_pill %}
+{# Jobs the runner spawned for this bundle (triage, patch, convert, …). Each
+   links to the job detail, where the lifecycle transitions and the phase-by-
+   phase activity log (triage → decision → tool calls → attempt/verify) live —
+   the drill-down from a worklist bundle into "what each phase did". #}
+{% if bundle_jobs %}
+<h2>Jobs
+  <span style="font-size:11px;color:var(--text-dim);font-weight:normal;">
+    — open one to see its phase-by-phase activity (triage, patch, verify)
+  </span>
+</h2>
+<table class="tracker-table" style="font-size:12px;">
+  <thead><tr><th>Job</th><th>Type</th><th>State</th><th>Retire reason</th><th>Created</th></tr></thead>
+  <tbody>
+    {% for j in bundle_jobs %}
+    <tr>
+      <td><a href="{{ request.url_for('agentic_job_detail', job_id=j.job_id) }}">{{ j.job_id }}</a></td>
+      <td>{{ j.type or '—' }}</td>
+      <td>{{ job_state_pill(j.state) }}</td>
+      <td>{{ j.retire_reason or '—' }}</td>
+      <td style="white-space:nowrap;">{{ j.created_ts_utc or '—' }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}

@@ -269,23 +269,146 @@ def client(seeded_state_db: Path) -> TestClient:
 
 
 def test_view_agentic_index(client: TestClient) -> None:
+    """Phase 6: the landing is a worklist. Its actionable section headings
+    render regardless of data; env-health and the operational glances are
+    preserved. (Fixture bundles are untriaged → the buckets are empty, which
+    is exercised structurally here and by the bucketing tests.)"""
     resp = client.get("/agentic")
     assert resp.status_code == 200
     body = resp.text
-    assert "Agentic" in body
-    assert "b-q2-foo" in body
-    assert "job-q2-foo" in body
-    assert "Jobs done / dead / escalated" in body
-    assert "patch_gave_up" in body
+    assert "Agentic worklist" in body
+    assert "Ready to accept" in body
+    assert "Needs verify" in body
+    assert "Needs a decision" in body
+    # Runner in-flight glance + environment health preserved.
+    assert "in flight" in body
     assert "Environment health" in body
     assert "test-env" in body
     assert "fix python runtime" in body
-    # Counts panel
-    assert ">5<" in body or "5</div>" in body  # bundles count
-    # Step 9 — pending-manual count surfaces with a link out to the
-    # queue (fixture has one open user_context_requests row).
-    assert "Pending manual" in body
+    # Pending-manual count in the ops strip links out to the queue
+    # (fixture has one open row).
+    assert "Manual queue" in body
     assert "/agentic/manual" in body
+
+
+def test_view_agentic_index_dedups_recurring_port(
+    client: TestClient, seeded_state_db: Path,
+) -> None:
+    """Redesign: a port that fails repeatedly collapses into ONE counted,
+    expandable row in its band, not N look-alike rows. Three devel/foo
+    bundles in 'needs a decision' → one ×3 recurring group."""
+    import sqlite3
+    conn = sqlite3.connect(str(seeded_state_db))
+    for bid, ts in (
+        ("b-q2-foo", "2026-07-23T11:00:00Z"),
+        ("b-q2-foo-retry", "2026-07-23T09:00:00Z"),
+        ("b-main-foo", "2026-07-23T08:00:00Z"),
+    ):
+        conn.execute(
+            "UPDATE bundles SET resolution = 'agent_gave_up', "
+            "origin = 'devel/foo', ts_utc = ? WHERE bundle_id = ?",
+            (ts, bid),
+        )
+    conn.commit()
+    conn.close()
+
+    body = client.get("/agentic").text
+    # One grouped row with a count badge + recurring tag, expandable.
+    assert "devel/foo" in body
+    assert "×3" in body
+    assert "recurring" in body
+    assert "wl-group" in body
+    # Each attempt is still reachable inside the expand.
+    for bid in ("b-q2-foo", "b-q2-foo-retry", "b-main-foo"):
+        assert bid in body
+
+
+def test_view_agentic_index_empty_bands_are_thin_lines(client: TestClient) -> None:
+    """Zero-count bands collapse to a one-line marker, not a big card."""
+    body = client.get("/agentic").text
+    assert "wl-empty" in body
+    # The band label still appears (so the operator sees the zero).
+    assert "Needs verify" in body
+
+
+def _make_ready_with_open_pr(db_path: Path, bundle_id: str) -> None:
+    """Turn a fixture bundle into a verified agent fix (→ 'Ready to
+    accept') carrying an open GitHub delivery row — the shape the lazy
+    reconciler acts on."""
+    import sqlite3
+    from dportsv3.tracker.agentic_queries import insert_review_request
+    conn = sqlite3.connect(str(db_path))
+    conn.execute(
+        "UPDATE bundles SET resolution = 'agent_fixed', "
+        "verification_status = 'verified' WHERE bundle_id = ?",
+        (bundle_id,),
+    )
+    insert_review_request(
+        conn, bundle_id=bundle_id, provider="github", status="created",
+        provider_pr_id="1567", url="https://gh/pr/1567",
+        branch=f"agentic/{bundle_id}",
+    )
+    conn.commit()
+    conn.close()
+
+
+def _patch_probe_merged(monkeypatch) -> None:
+    from dportsv3.tracker import delivery_sync
+    monkeypatch.setattr(
+        delivery_sync, "_resolve_merge_probe",
+        lambda target: (lambda pr_id: {
+            "merged": True, "state": "closed", "url": "https://gh/pr/1567",
+        }),
+    )
+
+
+def test_detail_render_flips_merged_pr_terminal(
+    client: TestClient, seeded_state_db: Path, monkeypatch,
+) -> None:
+    """Opening a bundle whose PR merged upstream reconciles it to the
+    terminal 'merged' state on render — the page shows merged and drops
+    Accept/Reject rather than offering a duplicate re-Accept."""
+    _make_ready_with_open_pr(seeded_state_db, "b-q2-bar")
+    _patch_probe_merged(monkeypatch)
+
+    resp = client.get("/agentic/bundles/b-q2-bar")
+    assert resp.status_code == 200
+
+    import sqlite3
+    conn = sqlite3.connect(str(seeded_state_db))
+    conn.row_factory = sqlite3.Row
+    try:
+        row = conn.execute(
+            "SELECT resolution FROM bundles WHERE bundle_id = 'b-q2-bar'"
+        ).fetchone()
+    finally:
+        conn.close()
+    assert row["resolution"] == "merged"
+
+
+def test_index_render_flips_merged_pr_out_of_worklist(
+    client: TestClient, seeded_state_db: Path, monkeypatch,
+) -> None:
+    """A merged-upstream bundle drops out of 'Ready to accept' into the
+    collapsed 'recently resolved' archive on the worklist render, instead
+    of lingering as actionable."""
+    _make_ready_with_open_pr(seeded_state_db, "b-q2-bar")
+    _patch_probe_merged(monkeypatch)
+
+    body = client.get("/agentic").text
+    # It reconciled to terminal 'merged'...
+    import sqlite3
+    conn = sqlite3.connect(str(seeded_state_db))
+    conn.row_factory = sqlite3.Row
+    try:
+        row = conn.execute(
+            "SELECT resolution FROM bundles WHERE bundle_id = 'b-q2-bar'"
+        ).fetchone()
+    finally:
+        conn.close()
+    assert row["resolution"] == "merged"
+    # ...and shows in the collapsed archive, not as a ready-to-accept row.
+    assert "Recently resolved" in body
 
 
 def test_view_agentic_bundles_filter(client: TestClient) -> None:
@@ -310,50 +433,113 @@ def test_view_agentic_bundle_detail_lists_artifacts(client: TestClient) -> None:
     assert "Tool trace" in body
     assert "dsynth_build" in body
     assert "rebuild_ok=False" in body
-    # Link to artifact stream endpoint
-    assert "/api/bundles/b-q2-foo/artifacts/meta.txt" in body
+    # Rows link into the bundle detail with ?artifact=… (the no-JS path).
     assert "/agentic/bundles/b-q2-foo?artifact=meta.txt" in body
+    # Default preview prefers analysis/triage.md; the detail header carries
+    # the Raw + Open-full links for the *selected* artifact (per-row raw
+    # links are gone — the reader is one list + one detail pane).
+    assert "/api/bundles/b-q2-foo/artifacts/analysis/triage.md" in body
     assert "/agentic/bundles/b-q2-foo/artifacts/analysis/triage.md" in body
-    assert "raw" in body
-    # Default preview prefers analysis/triage.md over logs/errors.txt.
-    assert "patch-error" in body
+    assert ">Raw</a>" in body
+    # Default preview renders analysis/triage.md inline.
     assert "<h3>Classification</h3>" in body
 
 
-def test_view_agentic_bundle_detail_renders_artifact_rail(client: TestClient) -> None:
-    """Step 9 — operator-canonical files surface as a quick-links rail
-    above the full artifact table. Only artifacts that actually exist
-    on the bundle become pills.
+def test_view_agentic_bundle_detail_renders_grouped_list(client: TestClient) -> None:
+    """Redesign: artifacts render as ONE list grouped by role (Outcome /
+    Reasoning / Evidence / Logs), replacing the old quick-links rail +
+    alphabetical table. Empty groups drop out, so b-q2-foo — which has no
+    Outcome artifacts (no proposed_fix / manual_handoff / changes.diff) —
+    shows Reasoning / Evidence / Logs but not Outcome. Each row carries a
+    type badge; sessions link to the structured viewer.
 
     The fixture's b-q2-foo has meta.txt, logs/errors.txt,
     analysis/triage.md, analysis/patch_audit.json, logs/full.log.gz,
-    analysis/tool_trace.jsonl. It does NOT have proposed_fix.md or
-    manual_handoff.md, so those pills must be absent."""
+    analysis/tool_trace.jsonl, and a session dump."""
     resp = client.get("/agentic/bundles/b-q2-foo")
     assert resp.status_code == 200
     body = resp.text
-    assert "Quick links" in body
-    assert 'class="artifact-rail"' in body
-    # Present-artifact pills surface.
+    # The old rail is gone.
+    assert "Quick links" not in body
+    assert 'class="artifact-rail"' not in body
+    # The reader frame + in-place-swap wiring is present.
+    assert 'id="artifact-reader"' in body
+    assert "data-fragment-url" in body
+    # Group headers for non-empty groups; Outcome is empty here → dropped.
+    assert ">Reasoning<" in body
+    assert ">Evidence<" in body
+    assert ">Logs<" in body
+    assert ">Outcome<" not in body
+    # Friendly row labels for present artifacts.
     for label in ("Triage", "Patch audit", "Tool trace",
-                  "Errors log", "Full log (.gz)", "meta.txt"):
-        assert label in body, f"missing rail pill for {label!r}"
-    # Absent artifacts must NOT have pills (b-q2-foo doesn't have these).
+                  "Errors log", "Full log", "meta.txt"):
+        assert label in body, f"missing row for {label!r}"
+    # Type badges.
+    assert ">MD<" in body      # triage.md
+    assert ">JSON<" in body    # patch_audit.json
+    assert ">GZ<" in body      # full.log.gz
+    # Absent artifacts have no rows.
     assert "Proposed fix" not in body
     assert "Manual handoff" not in body
-    # Each pill links into the bundle detail with ?artifact=…
+    # Rows carry data-relpath (in-place swap) + a fallback href (no-JS).
+    assert 'data-relpath="analysis/triage.md"' in body
     assert "?artifact=analysis/triage.md" in body
     assert "?artifact=logs/errors.txt" in body
+    # Session rows link to the structured viewer, not the inline reader.
+    assert "/sessions/" in body
 
 
-def test_view_agentic_index_shows_convert_card(client: TestClient) -> None:
-    """Step 20f: dashboard surfaces convert-job progress alongside the
-    existing pending-manual card. Fixture has no convert jobs so the
-    card reads '0 / 0 / 0' but must render."""
-    resp = client.get("/agentic")
-    assert resp.status_code == 200
-    body = resp.text
-    assert "Convert open / done / dead" in body
+def test_agentic_subnav_present_and_highlights_current(client: TestClient) -> None:
+    """Phase 6: agentic pages carry a sub-nav with the primary destinations.
+    The active item is derived from the request path."""
+    import re
+    body = client.get("/agentic").text
+    assert 'id="agentic-subnav"' in body
+    for label in (">Worklist<", ">Bundles<", ">Jobs<", ">Runner<", ">Manual<"):
+        assert label in body
+    assert re.search(r'<a[^>]*class="active"[^>]*>Worklist</a>', body)
+
+    # On the bundles page the active item shifts to Bundles.
+    bundles_body = client.get("/agentic/bundles").text
+    assert re.search(r'<a[^>]*class="active"[^>]*>Bundles</a>', bundles_body)
+
+
+def test_view_agentic_bundle_detail_links_to_its_jobs(
+    client: TestClient, seeded_state_db: Path,
+) -> None:
+    """The bundle detail lists the jobs spawned for it, each linking to the
+    job detail where the phase-by-phase activity lives — the drill-down a
+    worklist bundle needs to inspect what triage/patch/verify did."""
+    import sqlite3
+    conn = sqlite3.connect(str(seeded_state_db))
+    conn.execute(
+        "UPDATE jobs SET bundle_id = 'b-q2-foo' WHERE job_id = 'job-q2-foo'",
+    )
+    conn.commit()
+    conn.close()
+
+    body = client.get("/agentic/bundles/b-q2-foo").text
+    assert "job-q2-foo" in body
+    assert "/agentic/jobs/job-q2-foo" in body
+
+
+def test_view_agentic_index_worklist_surfaces_resolved_bundle(
+    client: TestClient, seeded_state_db: Path,
+) -> None:
+    """A resolved bundle projects into the worklist and renders with its
+    fix_status pill (route -> build_worklist -> template wiring)."""
+    import sqlite3
+    conn = sqlite3.connect(str(seeded_state_db))
+    conn.execute(
+        "UPDATE bundles SET resolution = 'agent_fixed', "
+        "verification_status = 'verified' WHERE bundle_id = 'b-q2-foo'",
+    )
+    conn.commit()
+    conn.close()
+
+    body = client.get("/agentic").text
+    assert "b-q2-foo" in body      # now in the Ready-to-accept bucket
+    assert "verified" in body      # its projected status pill
 
 
 def test_view_agentic_bundle_detail_shows_dops_state(
@@ -447,11 +633,95 @@ def test_view_agentic_bundle_detail_selects_artifact_inline(client: TestClient) 
     resp = client.get("/agentic/bundles/b-q2-foo", params={"artifact": "meta.txt"})
     assert resp.status_code == 200
     assert "origin=devel/foo" in resp.text
-    assert "open full page" in resp.text
+    assert "Open full" in resp.text
 
 
 def test_view_agentic_bundle_detail_missing_selected_artifact_404(client: TestClient) -> None:
     assert client.get("/agentic/bundles/b-q2-foo", params={"artifact": "nope.txt"}).status_code == 404
+
+
+def test_artifact_fragment_renders_detail_pane_only(client: TestClient) -> None:
+    """The in-place-swap endpoint returns just the detail pane (header +
+    body) for one artifact — the same partial the full page includes — so
+    the reader can swap it without a reload. No page chrome (nav, the list
+    rail) comes back."""
+    resp = client.get(
+        "/agentic/bundles/b-q2-foo/artifact-fragment",
+        params={"artifact": "analysis/patch_audit.json"},
+    )
+    assert resp.status_code == 200
+    body = resp.text
+    # Detail-pane header for the requested artifact.
+    assert "analysis/patch_audit.json" in body
+    assert ">JSON<" in body
+    assert ">Raw</a>" in body
+    # It's a fragment: no full-page shell or the list rail.
+    assert "<html" not in body
+    assert 'id="artifact-reader"' not in body
+
+
+def test_artifact_fragment_download_fallback_holds_frame(client: TestClient) -> None:
+    """A gzip artifact can't render inline — the fragment returns a
+    consistent download card (never a bare empty stub), so the frame is
+    the same shape as any other artifact."""
+    resp = client.get(
+        "/agentic/bundles/b-q2-foo/artifact-fragment",
+        params={"artifact": "logs/full.log.gz"},
+    )
+    assert resp.status_code == 200
+    body = resp.text
+    assert "a-fallback" in body
+    assert "Download full.log.gz" in body
+
+
+def test_artifact_fragment_unknown_404(client: TestClient) -> None:
+    assert client.get(
+        "/agentic/bundles/b-q2-foo/artifact-fragment",
+        params={"artifact": "nope.txt"},
+    ).status_code == 404
+
+
+def test_artifact_fragment_json_is_syntax_highlighted(client: TestClient) -> None:
+    body = client.get(
+        "/agentic/bundles/b-q2-foo/artifact-fragment",
+        params={"artifact": "analysis/patch_audit.json"},
+    ).text
+    assert 'class="j-key"' in body
+    # Quotes are literal (not entity-escaped) so the tokenizer could run.
+    assert '"status"' in body
+
+
+def test_artifact_fragment_log_tints_error_lines(client: TestClient) -> None:
+    body = client.get(
+        "/agentic/bundles/b-q2-foo/artifact-fragment",
+        params={"artifact": "logs/errors.txt"},
+    ).text
+    assert 'class="lg-err"' in body
+
+
+def test_highlight_json_marks_keys_strings_numbers_bools() -> None:
+    from dportsv3.tracker.render.text import highlight_json
+    out = highlight_json('{\n  "n": 5,\n  "ok": true,\n  "s": "hi"\n}')
+    assert '<span class="j-key">"n"</span>' in out
+    assert '<span class="j-num">5</span>' in out
+    assert '<span class="j-bool">true</span>' in out
+    assert '<span class="j-str">"s"</span>' not in out  # "s" is a key
+    assert '<span class="j-key">"s"</span>' in out
+    assert '<span class="j-str">"hi"</span>' in out
+
+
+def test_highlight_json_escapes_html_in_strings() -> None:
+    from dportsv3.tracker.render.text import highlight_json
+    out = highlight_json('{\n  "x": "<script>"\n}')
+    assert "&lt;script&gt;" in out
+    assert "<script>" not in out
+
+
+def test_highlight_log_only_tints_error_lines() -> None:
+    from dportsv3.tracker.render.text import highlight_log
+    out = highlight_log("all good\nconfigure: error: boom\nfine")
+    assert '<span class="lg-err">configure: error: boom</span>' in out
+    assert "all good\n" in out  # non-error lines untouched
 
 
 def test_view_agentic_artifact_text_inline(client: TestClient) -> None:
@@ -476,7 +746,7 @@ def test_markdown_inline_bold_and_code_rendered():
     <strong> / <code> rather than literal asterisks and backticks.
     Surfaced by the manual_handoff.md viewer where every bullet uses
     both styles."""
-    from dportsv3.tracker.server import _render_markdown
+    from dportsv3.tracker.render import render_markdown as _render_markdown
     md = (
         "- **Origin:** `devel/readline`\n"
         "- **Reason:** retry cap reached\n"
@@ -496,7 +766,7 @@ def test_markdown_inline_bold_and_code_rendered():
 def test_markdown_inline_does_not_break_html_escape():
     """Bold/code containing HTML-special chars stay escaped — no XSS
     via, e.g., ``**<script>**`` markdown."""
-    from dportsv3.tracker.server import _render_markdown
+    from dportsv3.tracker.render import render_markdown as _render_markdown
     out = _render_markdown("- **<script>** and `<img src=x>`\n")
     assert "<script>" not in out  # raw tag would be a vuln
     assert "<strong>&lt;script&gt;</strong>" in out
@@ -506,7 +776,7 @@ def test_markdown_inline_does_not_break_html_escape():
 def test_markdown_inline_code_blocks_backticks_from_being_bolded():
     """`**not bold**` inside backticks stays literal — the order of
     application protects it."""
-    from dportsv3.tracker.server import _render_markdown
+    from dportsv3.tracker.render import render_markdown as _render_markdown
     out = _render_markdown("Try `**literal**` here.\n")
     assert "<code>**literal**</code>" in out
     assert "<strong>literal</strong>" not in out
@@ -516,7 +786,7 @@ def test_markdown_renders_github_table():
     """GitHub-style ``| col | col |`` + ``|---|---|`` rows produce
     a ``<table>`` with ``<thead>`` + ``<tbody>``. Cell contents are
     HTML-escaped and inline-rendered (bold + code work in cells)."""
-    from dportsv3.tracker.server import _render_markdown
+    from dportsv3.tracker.render import render_markdown as _render_markdown
     md = (
         "| Status | Tokens |\n"
         "|--------|-------:|\n"
@@ -533,7 +803,7 @@ def test_markdown_renders_github_table():
 
 def test_markdown_table_xss_escape():
     """Cell contents containing HTML-special chars stay escaped."""
-    from dportsv3.tracker.server import _render_markdown
+    from dportsv3.tracker.render import render_markdown as _render_markdown
     md = "| A | B |\n|---|---|\n| <script>x</script> | safe |\n"
     out = _render_markdown(md)
     assert "<script>x</script>" not in out
@@ -544,7 +814,7 @@ def test_markdown_lonely_pipe_does_not_start_table():
     """A line beginning with `|` but with no separator on the next
     line stays in paragraph context — protects prose with literal
     pipes from being misclassified as a malformed table."""
-    from dportsv3.tracker.server import _render_markdown
+    from dportsv3.tracker.render import render_markdown as _render_markdown
     out = _render_markdown(
         "Paragraph one.\n"
         "| not a table because no separator |\n"
@@ -556,7 +826,7 @@ def test_markdown_lonely_pipe_does_not_start_table():
 def test_render_diff_basic():
     """Unified diff is parsed into colored line rows with hunk
     headers and a top-of-file stat."""
-    from dportsv3.tracker.server import _render_diff
+    from dportsv3.tracker.render import render_diff as _render_diff
     diff = (
         "--- a/foo\n"
         "+++ b/foo\n"
@@ -578,7 +848,7 @@ def test_render_diff_basic():
 def test_render_diff_escapes_html():
     """Diff content is HTML-escaped so file contents like ``<script>``
     can't break out of the renderer."""
-    from dportsv3.tracker.server import _render_diff
+    from dportsv3.tracker.render import render_diff as _render_diff
     out = _render_diff(
         "--- a/x\n+++ b/x\n@@ -1,1 +1,1 @@\n-<script>alert(1)</script>\n+ok\n"
     )
@@ -589,7 +859,7 @@ def test_render_diff_escapes_html():
 def test_render_diff_multi_file():
     """Two distinct files in one diff produce stat ``2 files`` and
     each ``---``/``+++`` pair opens a fresh ``diff-file`` block."""
-    from dportsv3.tracker.server import _render_diff
+    from dportsv3.tracker.render import render_diff as _render_diff
     d = (
         "--- a/foo\n+++ b/foo\n@@ -1,1 +1,1 @@\n-a\n+b\n"
         "--- a/bar\n+++ b/bar\n@@ -1,1 +1,1 @@\n-c\n+d\n"
@@ -604,7 +874,7 @@ def test_render_diff_multi_file():
 def test_render_diff_empty_input():
     """Empty string in → renderer outputs a 0-file stat and no
     file/hunk blocks. Operator-friendly degraded path."""
-    from dportsv3.tracker.server import _render_diff
+    from dportsv3.tracker.render import render_diff as _render_diff
     out = _render_diff("")
     assert "0 files" in out
     assert "diff-file" not in out  # neither file blocks nor headers
@@ -615,7 +885,7 @@ def test_render_diff_hunk_only_no_headers():
     """Some artifacts carry just hunk content (no ``--- a/foo`` /
     ``+++ b/foo`` preamble). The renderer must still emit the hunk
     body — auto-opening a virtual file rather than dropping content."""
-    from dportsv3.tracker.server import _render_diff
+    from dportsv3.tracker.render import render_diff as _render_diff
     out = _render_diff(
         "@@ -1,2 +1,2 @@\n kept\n-removed\n+added\n"
     )
@@ -628,7 +898,7 @@ def test_render_diff_no_newline_marker():
     """``\\ No newline at end of file`` lines from git's unified-diff
     output are valid meta rows — they shouldn't bump line counters
     or trip the line-number gutter."""
-    from dportsv3.tracker.server import _render_diff
+    from dportsv3.tracker.render import render_diff as _render_diff
     out = _render_diff(
         "--- a/x\n+++ b/x\n@@ -1,1 +1,1 @@\n-old\n+new\n"
         "\\ No newline at end of file\n"
@@ -643,7 +913,7 @@ def test_render_diff_no_newline_marker():
 def test_is_diff_path_recognizes_patch_convention():
     """FreeBSD ports' ``patch-*`` filename convention triggers the diff
     renderer regardless of trailing extension."""
-    from dportsv3.tracker.server import _is_diff_path
+    from dportsv3.tracker.render.text import _is_diff_path
     assert _is_diff_path("analysis/changes.diff")
     assert _is_diff_path("foo.rej")
     assert _is_diff_path("foo.patch")
@@ -657,7 +927,7 @@ def test_artifact_media_type_makefile_variants():
     """``Makefile.DragonFly`` / ``Makefile.am`` / ``pkg-plist.amd64``
     render inline as text/plain. Pre-fix these were octet-stream
     because their ``suffix`` is the variant tag, not ``.txt``."""
-    from dportsv3.tracker.server import _artifact_media_type
+    from dportsv3.tracker.render import artifact_media_type as _artifact_media_type
     media, inline = _artifact_media_type("port/Makefile.DragonFly", None)
     assert media == "text/plain; charset=utf-8" and inline
     media, inline = _artifact_media_type("port/Makefile.am", None)
@@ -674,7 +944,7 @@ def test_artifact_media_type_makefile_variants():
 def test_artifact_media_type_content_sniff(tmp_path):
     """When name+extension don't match, fall back to a content sniff
     on the on-disk file."""
-    from dportsv3.tracker.server import _artifact_media_type
+    from dportsv3.tracker.render import artifact_media_type as _artifact_media_type
     text = tmp_path / "looks-text"
     text.write_text("hello world\n")
     media, inline = _artifact_media_type("looks-text", None, fs_path=text)
@@ -798,7 +1068,7 @@ def test_build_cumulative_token_map_filters_by_attempt() -> None:
     """The map joiner filters tool_trace events to a specific attempt
     number — a second-attempt llm_turn shouldn't bleed into the first
     attempt's session view (and vice versa)."""
-    from dportsv3.tracker.server import _build_cumulative_token_map
+    from dportsv3.tracker.render.sessions import _build_cumulative_token_map
     trace = [
         {"type": "llm_turn", "attempt": 1, "turn": 1,
          "prompt_tokens": 100, "completion_tokens": 10,
@@ -843,7 +1113,7 @@ def test_parse_session_records_blob_backend_path(tmp_path) -> None:
     an explicit ``gzipped`` hint from the caller (who has the relpath)
     rather than relying on path.suffix."""
     import gzip as _gzip
-    from dportsv3.tracker.server import _parse_session_records
+    from dportsv3.tracker.render import parse_session_records as _parse_session_records
 
     # Write a real gzip file under a no-extension path (simulates blob storage).
     blob_path = tmp_path / "ab" / "cd" / "abcdef0123456789"
@@ -877,7 +1147,7 @@ def test_render_diff_meta_lines_use_single_column_layout() -> None:
 
 
 def test_is_session_relpath_matches_pattern() -> None:
-    from dportsv3.tracker.server import _is_session_relpath
+    from dportsv3.tracker.render import is_session_relpath as _is_session_relpath
     assert _is_session_relpath("analysis/sessions/foo.jsonl.gz")
     assert _is_session_relpath("analysis/sessions/foo.jsonl")
     assert not _is_session_relpath("analysis/changes.diff")
@@ -890,7 +1160,7 @@ def test_split_user_prompt_sections_handles_preamble() -> None:
     """Content before the first ## heading is captured under '(preamble)'.
     Headings that aren't at column 0 are not split (so a nested ## inside
     a code block doesn't accidentally start a new section)."""
-    from dportsv3.tracker.server import _split_user_prompt_sections
+    from dportsv3.tracker.render.sessions import _split_user_prompt_sections
     md = (
         "preamble line\nanother\n"
         "## Section A\nbody a\n"
@@ -910,7 +1180,7 @@ def test_summarize_tool_result_materialize_headline() -> None:
     is keyed on ``tool_name`` after the 2.5e refactor — the same raw
     payload routed under a different tool_name would NOT pick up the
     materialize summarizer."""
-    from dportsv3.tracker.server import _summarize_tool_result
+    from dportsv3.tracker.render.sessions import _summarize_tool_result
     raw = json.dumps({
         "ok": True,
         "stdout_tail": (
@@ -931,7 +1201,7 @@ def test_summarize_tool_result_unknown_tool_degrades_gracefully() -> None:
     """Without a tool_name match the summary keeps ok+error but skips
     the headline. The raw content is still accessible in the card's
     collapsible — no information loss, just no at-a-glance headline."""
-    from dportsv3.tracker.server import _summarize_tool_result
+    from dportsv3.tracker.render.sessions import _summarize_tool_result
     raw = json.dumps({
         "ok": False, "error": "boom",
         "stdout_tail": "summary: ports=1 ops=1 applied=1 errors=0\n",
@@ -952,7 +1222,7 @@ def test_summarize_tool_result_extract_does_not_overwrite_materialize() -> None:
     feeding a payload that has BOTH fields under tool_name=make_extract:
     make_extract's summarizer takes wrksrc; the materialize summary line
     in stdout_tail is correctly ignored."""
-    from dportsv3.tracker.server import _summarize_tool_result
+    from dportsv3.tracker.render.sessions import _summarize_tool_result
     raw = json.dumps({
         "ok": True,
         "wrksrc": "/work/obj/devel/foo/foo-1.0",
@@ -971,7 +1241,7 @@ def test_summarize_tool_result_make_patch_surfaces_reject() -> None:
     """The operator card for a failed make_patch must surface the
     rejecting-patch line at a glance, not just an ok=False pill — that
     line is how an operator sees which patch drifted."""
-    from dportsv3.tracker.server import _summarize_tool_result
+    from dportsv3.tracker.render.sessions import _summarize_tool_result
     ok_raw = json.dumps({"ok": True, "stdout_tail": "===>  Patching\n"})
     ok = _summarize_tool_result(ok_raw, tool_name="make_patch")
     assert ok["ok"] is True
@@ -992,7 +1262,10 @@ def test_view_agentic_artifact_json_pretty_printed(client: TestClient) -> None:
     assert resp.status_code == 200
     assert "JSON" in resp.text
     assert "budget-exhausted" in resp.text
-    assert "&#34;status&#34;" in resp.text
+    # Syntax-highlighted: keys wrapped in j-key spans, quotes now literal
+    # inside the <pre> (no longer HTML-entity-escaped).
+    assert 'class="j-key"' in resp.text
+    assert '"status"' in resp.text
 
 
 def test_view_agentic_artifact_gzip_download_notice(client: TestClient) -> None:

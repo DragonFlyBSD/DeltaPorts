@@ -1,0 +1,22 @@
+{# Shared page shell for every full-page tracker template. Collapses the
+   <!DOCTYPE>/<head>/<link> boilerplate that was copy-pasted across ~18
+   templates. Children override:
+     title       — the <title> text (defaults to the bare tracker name)
+     head_extra  — per-page <style>/<meta>/<base>/<script src> in <head>
+     body        — everything inside <body> (nav include + page content)
+     scripts     — end-of-body <script> hooks (used from Phase 4c on) #}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}DeltaPorts Tracker{% endblock %}</title>
+  <link href="{{ request.url_for('static', path='progress.css') }}?v={{ static_v }}" type="text/css" rel="stylesheet">
+  <link rel="icon" type="image/png" href="{{ request.url_for('static', path='favicon.png') }}">
+  {% block head_extra %}{% endblock %}
+</head>
+<body>
+{% block body %}{% endblock %}
+{% block scripts %}{% endblock %}
+</body>
+</html>

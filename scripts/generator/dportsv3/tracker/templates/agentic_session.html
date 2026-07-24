@@ -1,11 +1,6 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{{ session.filename }} — DeltaPorts Tracker</title>
-  <link href="{{ request.url_for('static', path='progress.css') }}?v={{ static_v }}" type="text/css" rel="stylesheet">
-  <link rel="icon" type="image/png" href="{{ request.url_for('static', path='favicon.png') }}">
+{% extends "_base.html" %}
+{% block title %}{{ session.filename }} — DeltaPorts Tracker{% endblock %}
+{% block head_extra %}
   <style>
     .session-layout { display: grid; grid-template-columns: 1fr 240px; gap: 16px; align-items: start; }
     @media (max-width: 900px) { .session-layout { grid-template-columns: 1fr; } }
@@ -71,8 +66,8 @@
     .tool-call .tool-call-name[href] { text-decoration: none; }
     .tool-call .tool-call-name[href]:hover { text-decoration: underline; }
   </style>
-</head>
-<body>
+{% endblock %}
+{% block body %}
   {% with nav_crumbs = [
       {"label": "Agentic", "url": request.url_for('agentic_index')},
       {"label": "Bundles", "url": request.url_for('agentic_bundles')},
@@ -296,5 +291,4 @@
       </nav>
     </div>
   </div>
-</body>
-</html>
+{% endblock %}

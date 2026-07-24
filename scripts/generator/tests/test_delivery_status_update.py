@@ -137,6 +137,63 @@ def test_mark_status_without_note(client, deployment):
     assert latest["note"] is None
 
 
+def test_mark_merged_flips_bundle_resolution_terminal(client, deployment):
+    """A manual 'merged' means the PR landed upstream — the bundle is
+    terminally done, so its resolution flips to 'merged' (out of the
+    worklist, re-Accept blocked) with the prior snapshotted for reopen."""
+    conn = _open(deployment)
+    _seed_bundle(conn, "b-merge", resolution="accepted")
+    _seed_review_request(conn, "b-merge", status="created")
+    conn.commit()
+    conn.close()
+
+    resp = client.post(
+        "/api/bundles/b-merge/delivery/status",
+        json={"status": "merged"},
+    )
+    assert resp.status_code == 200, resp.text
+
+    conn = _open(deployment)
+    try:
+        row = conn.execute(
+            "SELECT resolution, pre_terminal_resolution FROM bundles "
+            "WHERE bundle_id = 'b-merge'"
+        ).fetchone()
+        merged_events = conn.execute(
+            "SELECT COUNT(*) AS n FROM events WHERE type = 'bundle_merged'"
+        ).fetchone()["n"]
+    finally:
+        conn.close()
+    assert row["resolution"] == "merged"
+    assert row["pre_terminal_resolution"] == "accepted"
+    assert merged_events == 1
+
+
+def test_mark_closed_does_not_change_bundle_resolution(client, deployment):
+    """A close (unmerged) is not a ship — the bundle's resolution is left
+    for the operator to decide, only the delivery row moves."""
+    conn = _open(deployment)
+    _seed_bundle(conn, "b-close", resolution="accepted")
+    _seed_review_request(conn, "b-close", status="created")
+    conn.commit()
+    conn.close()
+
+    resp = client.post(
+        "/api/bundles/b-close/delivery/status",
+        json={"status": "closed"},
+    )
+    assert resp.status_code == 200, resp.text
+
+    conn = _open(deployment)
+    try:
+        row = conn.execute(
+            "SELECT resolution FROM bundles WHERE bundle_id = 'b-close'"
+        ).fetchone()
+    finally:
+        conn.close()
+    assert row["resolution"] == "accepted"
+
+
 def test_mark_status_from_updated_state(client, deployment):
     """`updated` (idempotency state) can transition to merged/closed
     just like `created`."""

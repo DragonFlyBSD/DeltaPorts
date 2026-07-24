@@ -1,0 +1,56 @@
+{# Detail pane for the artifact reader: a persistent header bar + an
+   internally-scrolling body. Shared by the full bundle page and the
+   /artifact-fragment endpoint so the two never drift. The OUTER frame
+   (.a-detail geometry) lives in the parent; this partial only fills
+   header + body, so swapping it in place keeps the frame locked. #}
+{% if selected_artifact %}
+  {% set art = selected_artifact %}
+  {% set written = (art.ref.created_at or '')[:19] | replace('T', ' ') %}
+  <div class="a-detailhead">
+    <span class="dh-name">{{ art.relpath }}</span>
+    <span class="dh-meta">
+      <span>{{ art.badge }}</span>
+      <span class="midot">·</span>
+      <span>{{ art.size if art.size is not none else '—' }} B</span>
+      {% if written %}
+      <span class="midot">·</span>
+      <span>{{ written }} UTC</span>
+      {% endif %}
+    </span>
+    <span class="dh-actions">
+      <a class="dh-btn" href="/api/bundles/{{ art.bundle_id }}/artifacts/{{ art.relpath }}">Raw</a>
+      <a class="dh-btn" href="{{ request.url_for('agentic_bundle_artifact_view', bundle_id=art.bundle_id, relpath=art.relpath) }}">Open full</a>
+    </span>
+  </div>
+  <div class="a-body">
+    <div class="a-body-inner">
+      {% if art.error %}
+      <div class="artifact-error">{{ art.error }}</div>
+      {% endif %}
+      {% if art.render_kind == 'markdown' %}
+        <div class="artifact-markdown">{{ art.content | safe }}</div>
+      {% elif art.render_kind == 'diff' %}
+        {{ art.content | safe }}
+      {% elif art.render_kind in ('json', 'text') %}
+        <pre class="artifact-content">{% if art.content_html %}{{ art.content | safe }}{% else %}{{ art.content }}{% endif %}</pre>
+      {% else %}
+        {# Consistent fallback for un-previewable artifacts (binary, gz,
+           oversized): the frame holds, only the body becomes a download
+           card — never a collapsed stub. #}
+        <div class="a-fallback">
+          <div class="fb-glyph">{{ art.badge }}{% if art.size is not none %} · {{ art.size }} B{% endif %}</div>
+          <div class="fb-msg">
+            <strong>{{ art.filename }}</strong> is {{ art.media_type }} — not previewable inline.
+            Download or open the raw stream to read it.
+          </div>
+          <a class="dh-btn" href="/api/bundles/{{ art.bundle_id }}/artifacts/{{ art.relpath }}">Download {{ art.filename }}</a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+{% else %}
+  <div class="a-detailhead"><span class="dh-name">—</span></div>
+  <div class="a-body"><div class="a-body-inner">
+    <div class="empty-state">Select an artifact to preview it here.</div>
+  </div></div>
+{% endif %}

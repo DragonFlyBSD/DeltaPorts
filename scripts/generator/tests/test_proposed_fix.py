@@ -400,7 +400,7 @@ def test_proposed_fix_is_top_of_artifact_priority():
     """The bundle viewer should land on proposed_fix.md by default
     when it exists (and on manual_handoff.md otherwise). This is the
     UX hinge for the operator's first read."""
-    from dportsv3.tracker.server import _DEFAULT_ARTIFACT_PRIORITY
+    from dportsv3.tracker.render.artifacts import _DEFAULT_ARTIFACT_PRIORITY
     assert _DEFAULT_ARTIFACT_PRIORITY[0] == "analysis/proposed_fix.md"
     assert _DEFAULT_ARTIFACT_PRIORITY[1] == "analysis/manual_handoff.md"
     # Triage/patch come AFTER summaries — they're support material.

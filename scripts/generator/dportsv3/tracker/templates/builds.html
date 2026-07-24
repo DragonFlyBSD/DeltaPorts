@@ -1,13 +1,6 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Builds — DeltaPorts Tracker</title>
-  <link href="{{ request.url_for('static', path='progress.css') }}?v={{ static_v }}" type="text/css" rel="stylesheet">
-  <link rel="icon" type="image/png" href="{{ request.url_for('static', path='favicon.png') }}">
-</head>
-<body>
+{% extends "_base.html" %}
+{% block title %}Builds — DeltaPorts Tracker{% endblock %}
+{% block body %}
   {% with nav_crumbs = [{"label": "Builds"}] %}{% include "_tracker_nav.html" %}{% endwith %}
 
   <div class="tracker-page">
@@ -58,5 +51,4 @@
       </tbody>
     </table>
   </div>
-</body>
-</html>
+{% endblock %}

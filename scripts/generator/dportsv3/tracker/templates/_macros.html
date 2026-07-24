@@ -1,0 +1,29 @@
+{# Shared UI macros (Phase 3). One home for the status-pill rendering
+   that was copy-pasted (and had drifted) across the agentic templates.
+   Import per template: {% from "_macros.html" import status_pill %} #}
+
+{%- macro pill(cls, label, title='') -%}
+<span class="stat-pill {{ cls }}"{% if title %} title="{{ title }}"{% endif %}>{{ label }}</span>
+{%- endmacro -%}
+
+{#- One bundle -> one status pill via the fix_status projection (Phase 6).
+    Folds resolution + verification_status + job.state into a single
+    operator-facing status, replacing the two-column resolution/verified
+    reconcile. `fix_status` is registered as a Jinja global in create_app. -#}
+{%- macro status_pill(bundle) -%}
+{%- set s = fix_status(bundle) -%}
+<span class="stat-pill status-pill {{ s.pill }}"{% if s.key %} title="{{ s.key }}"{% endif %}><span class="pill-dot"></span>{{ s.label }}</span>
+{%- endmacro -%}
+
+{#- jobs.state -> pill. Centralizes the state->class map (was inline in
+    agentic_index + agentic_jobs). -#}
+{%- macro job_state_pill(state) -%}
+{%- set cls = {
+    'queued': 'ignored',
+    'claimed': 'skipped', 'triaging': 'skipped', 'triaged': 'skipped',
+    'patching': 'skipped', 'verifying': 'skipped', 'converting': 'skipped',
+    'verifying_fix': 'skipped',
+    'done': 'built', 'dead': 'failed', 'escalated': 'skipped',
+}.get(state, 'total') -%}
+{{ pill(cls, state) }}
+{%- endmacro -%}

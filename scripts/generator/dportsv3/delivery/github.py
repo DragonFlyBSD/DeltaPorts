@@ -244,6 +244,31 @@ class GitHubProvider:
                 scope_paths=git.changed_paths(diff_text),
             )
 
+    def pull_request_merge_state(
+        self, pr_number: str | int,
+    ) -> dict[str, Any]:
+        """Probe an open PR's upstream state for the lazy merge
+        reconciler (``tracker.delivery_sync``).
+
+        Returns ``{'merged': bool, 'state': 'open'|'closed',
+        'url': str|None}``. ``merged`` is GitHub's authoritative
+        merged flag; ``state`` distinguishes a merge (``closed`` +
+        ``merged=True``) from a plain close (``closed`` +
+        ``merged=False``). Raises ``DeliveryError`` (via the HTTP
+        wrapper) on transport/auth failure — the caller treats that
+        as "couldn't check, try again later", not "not merged".
+        """
+        http = self._http()
+        pr = http.get(
+            f"/repos/{self._owner}/{self._repo_name}/pulls/{pr_number}"
+        )
+        pr = pr if isinstance(pr, dict) else {}
+        return {
+            "merged": bool(pr.get("merged")),
+            "state": pr.get("state"),
+            "url": pr.get("html_url"),
+        }
+
     def _apply_labels_best_effort(
         self,
         http: DeliveryHttpClient,

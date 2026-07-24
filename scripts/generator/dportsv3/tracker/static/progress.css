@@ -10,6 +10,9 @@
   --amber-border: rgba(180, 100, 0, 0.22);
   --bg:           #f7f5f0;
   --bg-card:      #ffffff;
+  --bg-sunk:      #f2efe8;
+  --border:       #e4dfd4;
+  --border-strong:#d8d2c4;
   --text:         #1c1c1c;
   --text-dim:     #888070;
 
@@ -1050,4 +1053,428 @@ button.btn:disabled {
 .diff-meta .content {
   color: #6b7280;
   font-style: italic;
+}
+
+/* Syntax highlighting for JSON + log artifacts in the preview <pre>.
+   Semantic colours (not the amber accent): keys/meta, strings/ok,
+   numbers, and booleans/errors. */
+.artifact-content .j-key  { color: var(--c-meta, #6040b0); }
+.artifact-content .j-str  { color: var(--c-built, #2a7a2a); }
+.artifact-content .j-num  { color: var(--amber-dim, #a05800); }
+.artifact-content .j-bool { color: var(--c-failed, #c03030); }
+.artifact-content .lg-err { color: var(--c-failed, #c03030); }
+.artifact-content .lg-dim { color: var(--text-dim, #888070); }
+
+/* ── Artifact reader (redesign) ──────────────────────────────────────
+   Fixed-geometry list-detail split. The frame's size is a function of
+   the page, never of the selected artifact; all content-size variance
+   is absorbed by the body's internal scroll (.a-body), so clicking
+   between a 3-line diff and a 40k-line log never reflows the layout. */
+.reader {
+  display: grid;
+  grid-template-columns: 288px 1fr;
+  height: 588px;
+  border: 1px solid var(--border-strong, #d8d2c4);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--bg-card);
+  box-shadow: 0 1px 2px rgba(60, 50, 30, .04),
+              0 6px 22px rgba(60, 50, 30, .05);
+}
+
+/* left: one grouped list, its own scroll, subtly inset from the card */
+.reader .a-list {
+  border-right: 1px solid var(--border, #e4dfd4);
+  background: var(--bg-sunk, #f2efe8);
+  overflow-y: auto;
+  min-height: 0;
+  padding: 6px 0 10px;
+}
+.reader .a-group-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  padding: 14px 16px 5px;
+}
+.reader .a-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto;
+  gap: 1px 8px;
+  align-items: center;
+  padding: 7px 14px 8px;
+  cursor: pointer;
+  text-decoration: none;
+  border-left: 2px solid transparent;
+  color: var(--text);
+}
+.reader .a-row:hover { background: rgba(196, 112, 0, .06); }
+.reader .a-row.selected {
+  background: var(--bg-card);
+  border-left-color: var(--amber, #c47000);
+}
+.reader .a-row .a-name {
+  grid-column: 1; grid-row: 1;
+  font-size: 13px; font-weight: 550;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.reader .a-row.selected .a-name { color: var(--amber-dim, #a05800); }
+.reader .a-row .a-type {
+  grid-column: 2; grid-row: 1;
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 9px; font-weight: 700; letter-spacing: .04em;
+  color: var(--text-dim);
+  background: var(--c-neutral-bg, #eeebe4);
+  border-radius: 3px; padding: 1px 4px;
+}
+.reader .a-row .a-meta {
+  grid-column: 1 / -1; grid-row: 2;
+  font-size: 10.5px; color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  display: flex; gap: 8px;
+}
+.reader .a-row .a-meta .a-when { font-variant-numeric: tabular-nums; }
+
+/* right: fixed header + internally-scrolling body */
+/* min-height:0 is load-bearing: without it this grid item expands to its
+   content height and the reader's overflow:hidden clips it, so .a-body's
+   internal scroll never engages. With it, .a-detail is pinned to the
+   reader's fixed row and the 1fr body scrolls. */
+.reader .a-detail { display: grid; grid-template-rows: auto 1fr; min-width: 0; min-height: 0; }
+.reader .a-detailhead {
+  display: flex; align-items: center; gap: 8px 14px; flex-wrap: wrap;
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--border, #e4dfd4);
+  background: var(--bg-card);
+}
+.reader .a-detailhead .dh-name {
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 13px; font-weight: 600; color: var(--text);
+  overflow-wrap: anywhere;
+}
+.reader .a-detailhead .dh-meta {
+  font-size: 11px; color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
+}
+.reader .a-detailhead .dh-meta .midot { color: var(--border-strong, #d8d2c4); }
+.reader .a-detailhead .dh-actions { margin-left: auto; display: flex; gap: 6px; }
+.reader .dh-btn {
+  font-size: 11px; font-weight: 550; text-decoration: none;
+  color: var(--amber-dim, #a05800);
+  border: 1px solid var(--amber-border, rgba(180, 100, 0, .22));
+  border-radius: 5px; padding: 3px 9px; background: transparent;
+  white-space: nowrap;
+}
+.reader .dh-btn:hover { background: rgba(196, 112, 0, .07); }
+.reader .a-body {
+  overflow: auto;
+  background: var(--bg-card);
+  min-height: 0;
+}
+.reader .a-body-inner { padding: 18px 20px 26px; }
+.reader .artifact-error {
+  color: var(--c-failed, #c03030);
+  font-size: 12px; margin-bottom: 10px;
+}
+
+/* consistent fallback for un-previewable artifacts — the body becomes a
+   download card; the frame around it does not change. */
+.reader .a-fallback {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; text-align: center; gap: 12px;
+  min-height: 340px; color: var(--text-dim);
+}
+.reader .a-fallback .fb-glyph {
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 12px; font-weight: 700; letter-spacing: .06em;
+  color: var(--text-dim);
+  border: 1.5px solid var(--border-strong, #d8d2c4);
+  border-radius: 8px; padding: 14px 18px; background: var(--bg, #f7f5f0);
+}
+.reader .a-fallback .fb-msg { font-size: 13px; max-width: 42ch; line-height: 1.5; }
+.reader .a-fallback .fb-msg strong { color: var(--text); font-weight: 600; }
+.reader .a-fallback .dh-btn { font-size: 12px; padding: 6px 14px; border-radius: 6px; }
+
+@media (max-width: 760px) {
+  .reader { grid-template-columns: 1fr; height: auto; }
+  .reader .a-list {
+    max-height: 220px; border-right: none;
+    border-bottom: 1px solid var(--border, #e4dfd4);
+  }
+  .reader .a-body { max-height: 60vh; }
+}
+
+/* Agentic section sub-nav (Phase 6). Matches the tracker chrome; the
+   active destination gets an amber underline. */
+#agentic-subnav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  padding: 8px 16px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--border, #d8dee9);
+  background: var(--panel-bg, #f8fafc);
+}
+#agentic-subnav a {
+  text-decoration: none;
+  color: var(--text-dim, #6b7280);
+  padding: 2px 2px 4px;
+}
+#agentic-subnav a:hover { color: var(--text, #1f2937); }
+#agentic-subnav a.active {
+  color: var(--text, #1f2937);
+  font-weight: 600;
+  border-bottom: 2px solid var(--amber, #d68b00);
+}
+
+/* Collapsible secondary sections on the detail pages (Phase 6 polish).
+   The <summary> stands in for the section's <h2>. */
+details.section-collapse { margin-top: 20px; }
+details.section-collapse > summary {
+  cursor: pointer;
+  font-size: 17px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  user-select: none;
+}
+details.section-collapse > summary:hover { color: var(--c-link, #06f); }
+details.section-collapse > summary .muted {
+  font-size: 12px; font-weight: normal; color: var(--text-dim, #6b7280);
+}
+
+/* The bundle detail page reads as a composed column rather than a
+   full-bleed stretch — narrower than the data-table pages so the reader
+   and summary bar don't sprawl on wide monitors. */
+.tracker-page.bundle-page { max-width: 1180px; }
+
+/* Bundle summary bar: a single rounded strip of status + facts, sitting
+   above the artifact reader. Overrides .tracker-card's tight 4px corners
+   and lays the facts out as a flex row so the pills + labels align. */
+.bundle-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-size: 12.5px;
+}
+.bundle-header .k {
+  color: var(--text-dim, #6b7280); font-size: 10px; text-transform: uppercase;
+  letter-spacing: .05em; margin-right: 3px;
+}
+/* Facts pills (result / dops) inside the bar: small rounded pills. */
+.bundle-header .stat-pill:not(.status-pill) {
+  display: inline-flex; align-items: center;
+  padding: 2px 9px; border-radius: 999px;
+  font-size: 11px; font-weight: 600; white-space: nowrap;
+}
+
+/* Status pill (fix_status projection) — a full pill led by a state dot,
+   wherever it renders: worklist, bundles list, and this bar. */
+.status-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 10px; border-radius: 999px;
+  font-size: 11px; font-weight: 600; letter-spacing: .01em; white-space: nowrap;
+}
+.status-pill .pill-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: currentColor; opacity: .85; flex: none;
+}
+
+/* ══ Agentic worklist (redesign) ═══════════════════════════════════════
+   Triage queue: a focus header, a quiet ops strip, and action bands whose
+   rows dedup by port (recurring failures collapse into one counted,
+   expandable row). All scoped under .worklist so the generic names don't
+   leak into other pages. */
+
+.worklist .lede a { color: var(--amber-dim); }
+
+/* Focus header: one number + action-named jump chips */
+.worklist .wl-focus {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  padding: 14px 18px; margin: 14px 0 10px;
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(60,50,30,.04), 0 5px 18px rgba(60,50,30,.045);
+}
+.worklist .wl-focus-num {
+  font-size: 40px; font-weight: 720; line-height: 1; letter-spacing: -.03em;
+  font-variant-numeric: tabular-nums;
+}
+.worklist .wl-focus-cap { font-size: 12px; color: var(--text-dim); line-height: 1.15; margin-left: -6px; }
+.worklist .wl-clear { font-size: 16px; font-weight: 600; color: var(--c-built, #2a7a2a); }
+.worklist .wl-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-left: auto; }
+.worklist .wl-chip {
+  display: inline-flex; align-items: center; gap: 7px; text-decoration: none;
+  font-size: 12px; padding: 5px 11px; border-radius: 999px;
+  border: 1px solid var(--border-strong, #d8d2c4); color: var(--text-dim); background: var(--bg-card);
+}
+.worklist .wl-chip:hover { border-color: var(--amber-border); }
+.worklist .wl-chip.active { border-color: var(--amber, #c47000); color: var(--text); font-weight: 600; background: #fffaf2; }
+.worklist .wl-chip .n { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text); }
+.worklist .wl-chip.zero { color: var(--text-faint, #a8a091); }
+.worklist .wl-chip.zero .n { color: var(--text-faint, #a8a091); font-weight: 600; }
+/* Non-empty chips take their band's semantic colour (green ready / amber
+   verify / red decide / neutral owned) so the queue's shape reads at a
+   glance — matching each section's stripe + pills. */
+.worklist .wl-chip.active.built   { border-color: var(--c-built, #2a7a2a);   color: var(--c-built, #2a7a2a);   background: #f0f8f0; }
+.worklist .wl-chip.active.skipped { border-color: var(--c-skipped, #b36800); color: var(--c-skipped, #b36800); background: #fff8ee; }
+.worklist .wl-chip.active.failed  { border-color: var(--c-failed, #c03030);  color: var(--c-failed, #c03030);  background: #fdf2f2; }
+.worklist .wl-chip.active.total   { border-color: var(--border-strong, #d8d2c4); color: var(--text); background: #faf8f4; }
+.worklist .wl-chip.active .n { color: inherit; }
+
+/* Ops strip */
+.worklist .wl-ops {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px 20px;
+  padding: 8px 18px; margin-bottom: 26px; font-size: 12px; color: var(--text-dim);
+  border: 1px solid var(--border); border-radius: 10px; background: var(--bg-sunk, #f2efe8);
+}
+.worklist .wl-ops b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+.worklist .wl-ops a { color: var(--amber-dim); text-decoration: none; }
+/* Block flex-item, NOT an inline-flex container — a flex container would
+   strip the whitespace between the label, the <b>count</b>, and the unit
+   ("Runner: 0 in flight"). Keep it a plain box so inline spacing survives;
+   the dot centers via vertical-align. */
+.worklist .wl-ops-item { white-space: nowrap; }
+.worklist .wl-ops-spacer { margin-left: auto; }
+.worklist .wl-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 6px; vertical-align: middle; position: relative; top: -1px; }
+.worklist .wl-dot.ok { background: var(--c-built, #2a7a2a); }
+.worklist .wl-dot.bad { background: var(--c-failed, #c03030); }
+
+/* Bands */
+.worklist .wl-band { margin-bottom: 20px; }
+.worklist .wl-band-head { display: flex; align-items: baseline; gap: 10px; margin: 0 2px 8px; }
+.worklist .wl-band-head h2 { font-size: 14px; font-weight: 680; margin: 0; }
+.worklist .wl-band-meta { font-size: 12px; color: var(--text-dim); font-weight: normal; }
+.worklist .wl-list {
+  border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+  background: var(--bg-card); box-shadow: 0 1px 2px rgba(60,50,30,.03);
+}
+.worklist .wl-empty {
+  padding: 9px 16px; margin-bottom: 12px; font-size: 12.5px; color: var(--text-faint, #a8a091);
+  border: 1px solid var(--border); border-radius: 8px;
+}
+.worklist .wl-empty .lbl { font-weight: 600; color: var(--text-dim); }
+
+/* Row */
+.worklist .wl-row {
+  display: grid; grid-template-columns: 3px 20px 1fr auto auto;
+  align-items: center; gap: 0 12px; padding: 11px 16px 11px 0;
+  border-top: 1px solid var(--border); position: relative;
+}
+.worklist .wl-list > .wl-row:first-child,
+.worklist .wl-list > .wl-group:first-child .wl-row { border-top: none; }
+.worklist .wl-row:hover { background: #fffdf9; }
+.worklist .wl-stripe { grid-column: 1; align-self: stretch; }
+.worklist .wl-row.decide .wl-stripe { background: var(--c-failed, #c03030); }
+.worklist .wl-row.ready  .wl-stripe { background: var(--c-built, #2a7a2a); }
+.worklist .wl-row.verify .wl-stripe { background: var(--c-skipped, #b36800); }
+.worklist .wl-row.owned  .wl-stripe { background: var(--text-dim); }
+.worklist .wl-row.resolved .wl-stripe { background: var(--border-strong, #d8d2c4); }
+.worklist .wl-group > .wl-row { cursor: pointer; }
+
+.worklist .wl-chev {
+  grid-column: 2; justify-self: center; background: none; border: none; padding: 0;
+  color: var(--text-dim); font-size: 15px; line-height: 1; width: 16px; height: 16px;
+  cursor: pointer; transition: transform .12s ease;
+}
+.worklist .wl-group.open .wl-chev { transform: rotate(90deg); }
+.worklist .wl-chev.leaf { visibility: hidden; }
+
+.worklist .wl-ident { grid-column: 3; display: flex; align-items: center; gap: 9px; flex-wrap: wrap; min-width: 0; }
+.worklist .wl-port { font-size: 14px; font-weight: 600; color: var(--text); text-decoration: none; }
+a.wl-port:hover { color: var(--amber-dim); }
+.worklist .wl-x {
+  font-size: 11px; font-weight: 700; color: var(--c-failed, #c03030);
+  background: var(--c-failed-bg, #fdeaea); border-radius: 999px; padding: 1px 8px;
+  font-variant-numeric: tabular-nums;
+}
+.worklist .wl-recur {
+  font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+  color: var(--c-failed, #c03030); border: 1px solid var(--c-failed, #c03030);
+  border-radius: 4px; padding: 0 4px; opacity: .8;
+}
+.worklist .wl-subid { font-family: var(--mono, ui-monospace, monospace); font-size: 11px; color: var(--text-faint, #a8a091); }
+
+.worklist .wl-rollup { grid-column: 3; grid-row: 2; display: flex; gap: 6px; flex-wrap: wrap; margin-top: 5px; }
+.worklist .wl-mid { grid-column: 4; display: flex; align-items: center; gap: 14px; justify-self: end; }
+.worklist .wl-age { font-size: 12px; color: var(--text-dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.worklist .wl-pill {
+  display: inline-flex; align-items: center; font-size: 11px; font-weight: 600;
+  padding: 2px 9px; border-radius: 999px; white-space: nowrap;
+}
+.worklist .wl-pill.sm { padding: 1px 8px; font-size: 10.5px; }
+.worklist .wl-pill.built   { background: var(--c-built-bg, #ecf7ec);  color: var(--c-built, #2a7a2a); }
+.worklist .wl-pill.failed  { background: var(--c-failed-bg, #fdeaea); color: var(--c-failed, #c03030); }
+.worklist .wl-pill.skipped { background: var(--c-skipped-bg, #fff5e6); color: var(--c-skipped, #b36800); }
+.worklist .wl-pill.total   { background: var(--c-neutral-bg, #eeebe4); color: var(--text); }
+
+/* Row primary action */
+.worklist .wl-actions { grid-column: 5; display: flex; align-items: center; gap: 6px; justify-self: end; }
+.worklist .wl-btn {
+  font-size: 12px; font-weight: 600; text-decoration: none; cursor: pointer;
+  border-radius: 7px; padding: 5px 13px; white-space: nowrap; border: 1px solid transparent;
+}
+.worklist .wl-btn-accept { background: var(--c-built, #2a7a2a); color: #fff; }
+.worklist .wl-btn-accept:hover { background: #236523; }
+.worklist .wl-btn-verify { background: var(--c-skipped, #b36800); color: #fff; }
+.worklist .wl-btn-decide { background: var(--bg-card); color: var(--amber-dim); border-color: var(--amber-border); }
+.worklist .wl-btn-decide:hover { background: #fffaf2; }
+.worklist .wl-btn-take { background: var(--bg-card); color: var(--text-dim); border-color: var(--border-strong, #d8d2c4); }
+
+/* Expanded per-attempt children */
+.worklist .wl-children { display: none; background: var(--bg-sunk, #f2efe8); border-top: 1px solid var(--border); }
+.worklist .wl-group.open .wl-children { display: block; }
+.worklist .wl-child {
+  display: grid; grid-template-columns: 20px 1fr auto auto; align-items: center; gap: 0 12px;
+  padding: 8px 16px 8px 0; border-top: 1px solid var(--border); text-decoration: none; color: inherit;
+}
+.worklist .wl-child:first-child { border-top: none; }
+.worklist .wl-child:hover { background: #f6f2ea; }
+.worklist .wl-cid { grid-column: 2; font-family: var(--mono, ui-monospace, monospace); font-size: 12px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.worklist .wl-cmid { grid-column: 3; display: flex; align-items: center; gap: 12px; justify-self: end; }
+.worklist .wl-copen { grid-column: 4; font-size: 11px; color: var(--amber-dim); font-weight: 600; justify-self: end; }
+
+/* Archive */
+.worklist details.wl-archive { margin-top: 22px; }
+.worklist details.wl-archive > summary {
+  cursor: pointer; font-size: 13px; font-weight: 600; color: var(--text-dim);
+  list-style: none; display: flex; align-items: center; gap: 7px;
+}
+.worklist details.wl-archive > summary::-webkit-details-marker { display: none; }
+.worklist details.wl-archive > summary::before { content: "▸"; color: var(--text-faint, #a8a091); font-size: 11px; }
+.worklist details.wl-archive[open] > summary::before { content: "▾"; }
+
+/* Environment health section — bring it into the worklist card language
+   instead of the bare table it inherited. */
+.worklist #env-health { font-size: 15px; font-weight: 680; margin-top: 30px; margin-bottom: 10px; }
+.worklist .env-active-banner {
+  padding: 11px 16px; margin-bottom: 12px;
+  background: var(--bg-sunk, #f2efe8); border: 1px solid var(--border); border-radius: 10px;
+  font-size: 12.5px;
+}
+.worklist .env-active-banner strong { color: var(--text); }
+.worklist .wl-tablecard {
+  border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+  background: var(--bg-card); box-shadow: 0 1px 2px rgba(60,50,30,.03);
+}
+.worklist .wl-tablecard table.tracker-table { border: none; }
+.worklist .wl-tablecard table.tracker-table th {
+  background: var(--bg-sunk, #f2efe8); color: var(--text-dim);
+  font-weight: 600; border-bottom: 1px solid var(--border);
+  font-size: 11px; letter-spacing: .02em;
+}
+.worklist .wl-tablecard table.tracker-table td { border-bottom: 1px solid var(--border); vertical-align: middle; }
+.worklist .wl-tablecard table.tracker-table tbody tr:last-child td { border-bottom: none; }
+.worklist .wl-tablecard table.tracker-table tbody tr:hover { background: #fffdf9; }
+/* The active env is already marked by the green "active" pill in its
+   first cell — no need to also tint the whole row. */
+/* The status/check words become real pills (base .stat-pill carries no shape). */
+.worklist .wl-tablecard .stat-pill {
+  display: inline-flex; align-items: center; margin: 1px 3px 1px 0;
+  padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 600;
 }

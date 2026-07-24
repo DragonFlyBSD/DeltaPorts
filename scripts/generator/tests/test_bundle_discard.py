@@ -168,8 +168,8 @@ def test_discard_race_lost_still_succeeds_with_distinct_skip_action(
     conn.commit()
     conn.close()
 
-    import dportsv3.tracker.server as server_mod
-    monkeypatch.setattr(server_mod, "is_origin_skipped", lambda *a, **kw: None)
+    import dportsv3.tracker.routes.bundle_actions as bundle_actions
+    monkeypatch.setattr(bundle_actions, "is_origin_skipped", lambda *a, **kw: None)
 
     resp = client.post(
         "/api/bundles/b-budget/discard",

@@ -294,7 +294,8 @@ def test_post_context_origin_with_slash(client: TestClient) -> None:
 
 def test_agentic_index_links_to_manual_queue(client: TestClient) -> None:
     body = client.get("/agentic").text
-    assert "Manual queue" in body
+    # Phase 6: the landing links to the manual queue via the agentic sub-nav.
+    assert ">Manual</a>" in body
     assert "/agentic/manual" in body
 
 

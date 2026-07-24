@@ -1,19 +1,14 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Build compare — DeltaPorts Tracker</title>
-  <link href="{{ request.url_for('static', path='progress.css') }}?v={{ static_v }}" type="text/css" rel="stylesheet">
-  <link rel="icon" type="image/png" href="{{ request.url_for('static', path='favicon.png') }}">
+{% extends "_base.html" %}
+{% block title %}Build compare — DeltaPorts Tracker{% endblock %}
+{% block head_extra %}
   <style>
     details.compare-section { background: var(--bg-card); border: 1px solid var(--amber-border); border-radius: 4px; margin-bottom: 8px; }
     details.compare-section summary { cursor: pointer; padding: 8px 12px; font-weight: 600; color: var(--text); user-select: none; }
     details.compare-section summary::marker { color: var(--amber); }
     details.compare-section summary .count { color: var(--text-dim); font-weight: normal; margin-left: 6px; }
   </style>
-</head>
-<body>
+{% endblock %}
+{% block body %}
   {% with nav_crumbs = [{"label": "Builds", "url": request.url_for('dashboard_builds')}, {"label": "Compare"}] %}
     {% include "_tracker_nav.html" %}
   {% endwith %}
@@ -55,5 +50,4 @@
     </details>
     {% endfor %}
   </div>
-</body>
-</html>
+{% endblock %}
