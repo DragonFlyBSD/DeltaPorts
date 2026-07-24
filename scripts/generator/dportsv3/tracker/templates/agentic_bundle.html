@@ -45,8 +45,8 @@
       };
     </script>
 
-    {% include "_bundle_summary.html" %}
-
+    <div class="detail-layout">
+      <div class="detail-main">
     {# Step 11c: operator-action buttons. Verify is the gate; Accept
        is disabled until verification_status='verified'. Reject is
        always available on non-terminal agent_fixed bundles. The
@@ -112,6 +112,10 @@
     </details>
     {% endif %}
 
+      </div>
+      <aside class="detail-side">
+    {% include "_bundle_summary.html" %}
+
     {% if port_token_usage and port_token_usage.has_data %}
     <details class="section-collapse">
     <summary>Lifetime token cost for this port
@@ -133,6 +137,8 @@
     </div>
     </details>
     {% endif %}
+      </aside>
+    </div>
   </div>
 {% endblock %}
 {% block scripts %}

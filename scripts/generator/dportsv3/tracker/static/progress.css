@@ -1089,3 +1089,19 @@ details.section-collapse > summary:hover { color: var(--c-link, #06f); }
 details.section-collapse > summary .muted {
   font-size: 12px; font-weight: normal; color: var(--text-dim, #6b7280);
 }
+
+/* PR-style detail layout: wide main column (actions + diff + chat) beside a
+   sticky metadata rail (status facts, cost). Stacks on narrow screens.
+   minmax(0,1fr) lets wide tables/pre scroll instead of blowing out the grid. */
+.detail-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 22px;
+  align-items: start;
+}
+.detail-side { position: sticky; top: 12px; }
+.detail-side > :first-child { margin-top: 0; }
+@media (max-width: 1000px) {
+  .detail-layout { grid-template-columns: 1fr; }
+  .detail-side { position: static; }
+}
