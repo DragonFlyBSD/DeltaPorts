@@ -349,13 +349,12 @@ def test_view_agentic_bundle_detail_renders_artifact_rail(client: TestClient) ->
 
 
 def test_agentic_subnav_present_and_highlights_current(client: TestClient) -> None:
-    """Phase 6: agentic pages carry a sub-nav with the primary destinations;
-    run/job/activity are drill-downs and intentionally absent. The active
-    item is derived from the request path."""
+    """Phase 6: agentic pages carry a sub-nav with the primary destinations.
+    The active item is derived from the request path."""
     import re
     body = client.get("/agentic").text
     assert 'id="agentic-subnav"' in body
-    for label in (">Worklist<", ">Bundles<", ">Runner<", ">Manual<"):
+    for label in (">Worklist<", ">Bundles<", ">Jobs<", ">Runner<", ">Manual<"):
         assert label in body
     assert re.search(r'<a[^>]*class="active"[^>]*>Worklist</a>', body)
 

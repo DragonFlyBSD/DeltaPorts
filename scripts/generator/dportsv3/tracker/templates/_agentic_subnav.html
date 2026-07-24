@@ -6,6 +6,7 @@
 <div id="agentic-subnav">
   <a href="{{ request.url_for('agentic_index') }}"{% if _p == request.url_for('agentic_index').path %} class="active"{% endif %}>Worklist</a>
   <a href="{{ request.url_for('agentic_bundles') }}"{% if _p.startswith(request.url_for('agentic_bundles').path) %} class="active"{% endif %}>Bundles</a>
+  <a href="{{ request.url_for('agentic_jobs') }}"{% if _p.startswith(request.url_for('agentic_jobs').path) %} class="active"{% endif %}>Jobs</a>
   <a href="{{ request.url_for('agentic_runner') }}"{% if _p.startswith(request.url_for('agentic_runner').path) %} class="active"{% endif %}>Runner</a>
   <a href="{{ request.url_for('agentic_manual_list') }}"{% if _p.startswith(request.url_for('agentic_manual_list').path) %} class="active"{% endif %}>Manual</a>
 </div>
