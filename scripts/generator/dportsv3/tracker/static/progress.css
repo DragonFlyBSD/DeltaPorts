@@ -1051,3 +1051,26 @@ button.btn:disabled {
   color: #6b7280;
   font-style: italic;
 }
+
+/* Agentic section sub-nav (Phase 6). Matches the tracker chrome; the
+   active destination gets an amber underline. */
+#agentic-subnav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  padding: 8px 16px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--border, #d8dee9);
+  background: var(--panel-bg, #f8fafc);
+}
+#agentic-subnav a {
+  text-decoration: none;
+  color: var(--text-dim, #6b7280);
+  padding: 2px 2px 4px;
+}
+#agentic-subnav a:hover { color: var(--text, #1f2937); }
+#agentic-subnav a.active {
+  color: var(--text, #1f2937);
+  font-weight: 600;
+  border-bottom: 2px solid var(--amber, #d68b00);
+}

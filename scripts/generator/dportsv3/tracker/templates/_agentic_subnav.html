@@ -1,0 +1,11 @@
+{# Agentic section sub-nav — the primary operator destinations, shown below
+   the top nav on agentic pages. run / job / activity are drill-downs (reached
+   from a bundle or job), so they are intentionally not here. Active item is
+   derived from the request path (no per-route threading). #}
+{% set _p = request.url.path %}
+<div id="agentic-subnav">
+  <a href="{{ request.url_for('agentic_index') }}"{% if _p == request.url_for('agentic_index').path %} class="active"{% endif %}>Worklist</a>
+  <a href="{{ request.url_for('agentic_bundles') }}"{% if _p.startswith(request.url_for('agentic_bundles').path) %} class="active"{% endif %}>Bundles</a>
+  <a href="{{ request.url_for('agentic_runner') }}"{% if _p.startswith(request.url_for('agentic_runner').path) %} class="active"{% endif %}>Runner</a>
+  <a href="{{ request.url_for('agentic_manual_list') }}"{% if _p.startswith(request.url_for('agentic_manual_list').path) %} class="active"{% endif %}>Manual</a>
+</div>

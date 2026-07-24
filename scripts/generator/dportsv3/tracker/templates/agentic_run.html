@@ -4,6 +4,7 @@
   {% with nav_crumbs = [{"label": "Agentic", "url": request.url_for('agentic_index')}, {"label": run.run_id}] %}
     {% include "_tracker_nav.html" %}
   {% endwith %}
+  {% include "_agentic_subnav.html" %}
 
   <div class="tracker-page">
     <h1>{{ run.run_id }}</h1>

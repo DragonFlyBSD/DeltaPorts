@@ -1,5 +1,4 @@
 {% extends "_base.html" %}
-{% from "_macros.html" import resolution_pill, verification_pill %}
 {% block title %}{{ bundle.bundle_id }} — DeltaPorts Tracker{% endblock %}
 {% block head_extra %}
   <style>
@@ -34,6 +33,7 @@
   {% with nav_crumbs = [{"label": "Agentic", "url": request.url_for('agentic_index')}, {"label": "Bundles", "url": request.url_for('agentic_bundles')}, {"label": bundle.bundle_id}] %}
     {% include "_tracker_nav.html" %}
   {% endwith %}
+  {% include "_agentic_subnav.html" %}
 
   <div class="tracker-page">
     <h1>{{ bundle.bundle_id }}</h1>

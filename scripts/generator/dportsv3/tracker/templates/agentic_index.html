@@ -3,6 +3,7 @@
 {% block title %}Agentic — DeltaPorts Tracker{% endblock %}
 {% block body %}
   {% with nav_crumbs = [{"label": "Agentic"}] %}{% include "_tracker_nav.html" %}{% endwith %}
+  {% include "_agentic_subnav.html" %}
 
   <div class="tracker-page">
     <h1>Agentic worklist</h1>
@@ -26,6 +27,12 @@
       <a href="{{ request.url_for('agentic_manual_list') }}" class="stat-pill skipped"
          style="text-decoration:none;font-size:12px;padding:4px 10px;"
          title="Bundles handed to the manual queue">manual: {{ status.manual_pending }}</a>
+      {% endif %}
+      {% set env_broken = env_health | selectattr('status', 'equalto', 'broken') | list %}
+      {% if env_broken %}
+      <a href="#env-health" class="stat-pill failed"
+         style="text-decoration:none;font-size:12px;padding:4px 10px;"
+         title="A dev-env probe is broken — verify builds will fail">⚠ env broken: {{ env_broken|length }}</a>
       {% endif %}
     </div>
 
@@ -81,7 +88,7 @@
     </details>
     {% endif %}
 
-    <h2 style="margin-top:26px;">Environment health</h2>
+    <h2 id="env-health" style="margin-top:26px;">Environment health</h2>
     <div class="env-active-banner">
       Active env (runner default + verify-fix fallback):
       <strong>{{ active_env or 'none — runner will auto-pick if exactly one env exists' }}</strong>
@@ -146,13 +153,10 @@
     </script>
 
     <p style="margin-top:22px;color:var(--text-dim);font-size:12px;">
+      Drill-downs:
       <a href="{{ request.url_for('agentic_jobs') }}">All jobs</a>
       &nbsp;·&nbsp;
-      <a href="{{ request.url_for('agentic_runner') }}">Runner status</a>
-      &nbsp;·&nbsp;
       <a href="{{ request.url_for('agentic_activity') }}">Activity log</a>
-      &nbsp;·&nbsp;
-      <a href="{{ request.url_for('agentic_manual_list') }}">Manual queue</a>
     </p>
   </div>
 {% endblock %}
