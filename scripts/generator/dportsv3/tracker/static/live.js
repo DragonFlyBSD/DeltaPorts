@@ -10,7 +10,11 @@
 // about and test.
 (function () {
   window.dpLive = function (opts) {
+    // interval grows by backoffStep up to maxIntervalMs after each real
+    // fetch (opt-in; the activity/runner feeds keep a fixed cadence).
     var interval = opts.intervalMs || 3000;
+    var maxInterval = opts.maxIntervalMs || interval;
+    var backoffStep = opts.backoffStep || 0;
     var stopped = false;
     var paused = false;
     var timer = null;
@@ -39,6 +43,9 @@
         }
       } catch (e) {
         // transient network blip — just try again next tick
+      }
+      if (backoffStep && interval < maxInterval) {
+        interval = Math.min(interval + backoffStep, maxInterval);
       }
       schedule();
     }

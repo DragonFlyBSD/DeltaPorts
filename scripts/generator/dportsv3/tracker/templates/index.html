@@ -1,5 +1,4 @@
 {% extends "_base.html" %}
-{% block head_extra %}{% if refresh_seconds %}<meta http-equiv="refresh" content="{{ refresh_seconds }}">{% endif %}{% endblock %}
 {% block body %}
 
   {% include "_tracker_nav.html" %}
@@ -72,4 +71,21 @@
     {% endif %}
   </div>
 
+{% endblock %}
+{% block scripts %}
+{% if refresh_seconds %}
+  {# Active builds: refresh via the shared poller instead of a
+     <meta http-equiv="refresh"> — this one pauses while the tab is
+     hidden. dpLive is deferred, so it's ready by DOMContentLoaded. #}
+  <script src="{{ request.url_for('static', path='live.js') }}?v={{ static_v }}" defer></script>
+  <script>
+    window.addEventListener("DOMContentLoaded", function () {
+      window.dpLive({
+        intervalMs: {{ refresh_seconds }} * 1000,
+        url: function () { return "/api/health"; },
+        onData: function () { location.reload(); return "stop"; },
+      }).start({{ refresh_seconds }} * 1000);
+    });
+  </script>
+{% endif %}
 {% endblock %}

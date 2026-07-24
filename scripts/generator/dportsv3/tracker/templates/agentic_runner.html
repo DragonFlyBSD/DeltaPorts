@@ -33,70 +33,8 @@
     </div>
   </div>
 
-  <script>
-    // Step 16 — live refresh on the runner status page. Polls
-    // /api/runner-status every 4s and updates the cells in place.
-    // Matches the ●live / [pause] pattern from the job detail page.
-    (function () {
-      var indicator = document.getElementById("live-indicator");
-      var toggle = document.getElementById("live-toggle");
-      var paused = false;
-      var intervalId = null;
-      var INTERVAL_MS = 4000;
-
-      function setText(id, value) {
-        var el = document.getElementById(id);
-        if (el) el.textContent = value == null ? "—" : value;
-      }
-
-      function setJob(jobId) {
-        var el = document.getElementById("runner-job");
-        if (!el) return;
-        if (jobId) {
-          el.innerHTML = '<a href="/agentic/jobs/' + encodeURIComponent(jobId) + '">'
-            + jobId + '</a>';
-        } else {
-          el.textContent = "—";
-        }
-      }
-
-      async function refresh() {
-        if (paused) return;
-        try {
-          var resp = await fetch("/api/runner-status", {cache: "no-store"});
-          if (!resp.ok) return;
-          var d = await resp.json();
-          setText("runner-status", d.status);
-          setJob(d.job_id);
-          setText("runner-stage", d.current_stage);
-          setText("runner-started", d.started_at);
-          setText("runner-updated", d.updated_at);
-          var extra = document.getElementById("runner-extra");
-          if (extra && d.extra_json) extra.textContent = d.extra_json;
-        } catch (err) { /* swallow; next tick will retry */ }
-      }
-
-      // Drop/add `.active` to the live indicator so the shared
-      // CSS in progress.css turns the pulse on/off, instead of
-      // swapping unicode bullets inline. The dot + status-text
-      // children come from the static HTML — we only flip the
-      // text and the modifier class here.
-      var statusText = indicator.querySelector(".status-text");
-      toggle.addEventListener("click", function () {
-        paused = !paused;
-        if (paused) {
-          indicator.classList.remove("active");
-          if (statusText) statusText.textContent = "paused";
-          toggle.textContent = "[resume]";
-        } else {
-          indicator.classList.add("active");
-          if (statusText) statusText.textContent = "live";
-          toggle.textContent = "[pause]";
-          refresh();
-        }
-      });
-
-      intervalId = setInterval(refresh, INTERVAL_MS);
-    })();
-  </script>
+{% endblock %}
+{% block scripts %}
+  <script src="{{ request.url_for('static', path='live.js') }}?v={{ static_v }}" defer></script>
+  <script src="{{ request.url_for('static', path='agentic-runner.js') }}?v={{ static_v }}" defer></script>
 {% endblock %}

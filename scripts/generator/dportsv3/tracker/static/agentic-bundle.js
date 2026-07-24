@@ -172,15 +172,26 @@
     }
   }
 
-  async function pollForVerificationChange(bundleId) {
-    const start = Date.now();
+  function pollForVerificationChange(bundleId) {
+    // Verify runs on the runner (minutes); watch the bundle until its
+    // verification_status changes, then reload. Keeps watching even when
+    // the tab is hidden — the operator wants the verdict regardless.
+    const startedAt = Date.now();
     const maxMs = 30 * 60 * 1000;  // 30 min ceiling
-    let intervalMs = 5000;
-    while (Date.now() - start < maxMs) {
-      await new Promise(r => setTimeout(r, intervalMs));
-      try {
-        const r = await fetch('/api/bundles/' + encodeURIComponent(bundleId));
-        const d = await r.json();
+    window.dpLive({
+      intervalMs: 5000,
+      backoffStep: 2000,
+      maxIntervalMs: 15000,
+      pauseWhenHidden: false,
+      url: function () { return '/api/bundles/' + encodeURIComponent(bundleId); },
+      onData: function (d) {
+        if (Date.now() - startedAt >= maxMs) {
+          statusEl.textContent =
+            'verify still pending after 30 min — reload manually to check ' +
+            'runner logs / activity for errors';
+          allButtons().forEach(b => { b.disabled = false; });
+          return 'stop';
+        }
         if (d.verification_status &&
             d.verification_status !== initialVerificationStatus) {
           const verdict = d.verification_status === 'verified'
@@ -188,19 +199,10 @@
           statusEl.textContent =
             'verify ' + verdict + ' (' + d.verification_status + ') — reloading';
           setTimeout(() => location.reload(), 600);
-          return;
+          return 'stop';
         }
-      } catch (exc) {
-        // transient network blip — keep polling
-      }
-      // Back off slowly so long verifies don't hammer the tracker.
-      intervalMs = Math.min(intervalMs + 2000, 15000);
-    }
-    statusEl.textContent =
-      'verify still pending after 30 min — reload manually to check ' +
-      'runner logs / activity for errors';
-    // Re-enable buttons so the operator can react.
-    allButtons().forEach(b => { b.disabled = false; });
+      },
+    }).start(5000);
   }
 
   document.querySelectorAll('button[id^="op-"]').forEach(btn => {
