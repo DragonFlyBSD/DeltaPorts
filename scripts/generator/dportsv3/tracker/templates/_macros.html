@@ -1,6 +1,6 @@
 {# Shared UI macros (Phase 3). One home for the status-pill rendering
    that was copy-pasted (and had drifted) across the agentic templates.
-   Import per template: {% from "_macros.html" import resolution_pill %} #}
+   Import per template: {% from "_macros.html" import status_pill %} #}
 
 {%- macro pill(cls, label, title='') -%}
 <span class="stat-pill {{ cls }}"{% if title %} title="{{ title }}"{% endif %}>{{ label }}</span>
