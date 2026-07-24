@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from dportsv3.tracker import (
+    delivery_sync,
     fix_state,
     render,
 )
@@ -21,6 +22,7 @@ from dportsv3.tracker.agentic_queries import (
     get_active_env,
     get_artifact_ref,
     get_bundle,
+    open_delivery_bundle_ids,
     get_job,
     get_manual_request,
     get_run,
@@ -104,6 +106,24 @@ def register(app, ctx):
             # window — older resolved bundles fall off the collapsed
             # "recently resolved" tail, not the actionable sections.
             bundles = list_bundles(conn, limit=500)
+            # Lazy delivery reconcile: any bundle whose PR merged upstream
+            # is done — flip it terminal before bucketing so it drops out
+            # of the worklist instead of lingering as "ready to accept".
+            # Scoped to bundles that still have an open GitHub delivery
+            # row (a small set), and throttled inside the reconciler, so a
+            # steady-state render does zero network calls.
+            pollable = set(open_delivery_bundle_ids(conn, provider="github"))
+            if pollable:
+                for b in bundles:
+                    if b.get("bundle_id") not in pollable:
+                        continue
+                    new_status = delivery_sync.reconcile_bundle_delivery(
+                        db_path=app.state.db_path,
+                        bundle_id=b["bundle_id"],
+                        target=b.get("target"),
+                    )
+                    if new_status == "merged":
+                        b["resolution"] = "merged"
             worklist = fix_state.build_worklist(bundles)
             # Each actionable band, deduped by port origin (recurring
             # failures collapse into one counted, expandable row).
@@ -165,6 +185,19 @@ def register(app, ctx):
     ) -> Any:
         with _conn() as conn:
             bundle = get_bundle(conn, bundle_id)
+            # Lazy delivery reconcile: if this bundle's PR merged upstream,
+            # flip it terminal now so the page shows "merged" + drops
+            # Accept/Reject rather than offering a re-Accept that would
+            # spawn a duplicate PR. No-op (throttled) unless it has an open
+            # GitHub delivery row; re-read on a merge so the projection +
+            # action surface below reflect the new terminal state.
+            if bundle is not None:
+                _new_status = delivery_sync.reconcile_bundle_delivery(
+                    db_path=app.state.db_path, bundle_id=bundle_id,
+                    target=bundle.get("target"),
+                )
+                if _new_status == "merged":
+                    bundle = get_bundle(conn, bundle_id)
             bundle_jobs = list_jobs_for_bundle(conn, bundle_id)
             tool_trace_ref = get_artifact_ref(conn, bundle_id, "analysis/tool_trace.jsonl")
             selected_relpath = artifact or (render.default_artifact_relpath(bundle) if bundle else None)

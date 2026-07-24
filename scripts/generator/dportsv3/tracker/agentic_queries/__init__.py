@@ -62,6 +62,7 @@ from dportsv3.tracker.agentic_queries.review import (
     insert_review_request,
     latest_review_request_for_bundle,
     find_open_review_request,
+    open_delivery_bundle_ids,
     update_review_request_status,
 )
 
@@ -104,6 +105,7 @@ __all__ = [
     "clear_origin_skip",
     "insert_review_request",
     "latest_review_request_for_bundle",
+    "open_delivery_bundle_ids",
     "find_open_review_request",
     "update_review_request_status",
 ]

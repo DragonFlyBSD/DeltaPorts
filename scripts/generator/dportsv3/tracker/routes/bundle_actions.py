@@ -1405,6 +1405,20 @@ def register(app, ctx):
                 "new_status": status,
                 "note": note,
             })
+            # A merge means the code landed upstream — the bundle is
+            # terminally done. Flip its resolution so it leaves the
+            # worklist and can't be re-Accepted (which would open a
+            # duplicate PR). Same terminal state the lazy poll reaches;
+            # one shared writer keeps both paths in lockstep.
+            if status == "merged":
+                from dportsv3.tracker.delivery_sync import (  # noqa: PLC0415
+                    set_bundle_merged_resolution,
+                )
+                set_bundle_merged_resolution(
+                    write_conn, bundle_id,
+                    now_iso=datetime.now(timezone.utc).isoformat(),
+                    source="manual",
+                )
         finally:
             write_conn.close()
 

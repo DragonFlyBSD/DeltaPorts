@@ -118,6 +118,14 @@ On import, installs a `tokenizers` stub for DragonFly (broken
   read endpoints consumed by operators and the analyzer subagent.
 - `progress_adapter.py` — projects tracker rows into the
   `dsynth-progress` UI's `summary.json` + `<NN>_history.json` shape.
+- `fix_state.py` — bundle state projection (`fix_status`) + action
+  policy + worklist bucketing. `merged` is a terminal, dominant
+  resolution (a landed PR beats any local resolution).
+- `delivery_sync.py` — lazy, on-render reconciliation of a bundle's
+  upstream PR: polls GitHub (throttled by `last_synced_at`) and flips
+  the bundle to terminal `merged` on a merge. Shared
+  `set_bundle_merged_resolution` also serves the manual
+  `delivery/status` endpoint.
 - `client.py` — HTTP client helpers (`start_build`, `record_result`,
   etc.) used by build hooks.
 - `models.py` — pydantic request/response models.
@@ -133,7 +141,8 @@ inside the agent loop.
 - `orchestrator.py` — entry point invoked from the Accept endpoint.
 - `config.py` — loads `config/delivery.toml`.
 - `local_patch.py` — no-network outbox provider (default).
-- `github.py` — full GitHub PR provider (Step 11d-3).
+- `github.py` — full GitHub PR provider (Step 11d-3); also exposes
+  `pull_request_merge_state` for the tracker's lazy merge reconciler.
 - `_git.py` — subprocess git driver for clone operations.
 - `_http.py` — shared REST wrapper (token injection, retries) for
   network providers.

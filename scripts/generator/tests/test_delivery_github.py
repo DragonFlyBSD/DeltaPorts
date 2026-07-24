@@ -167,6 +167,36 @@ def test_http_carries_correct_headers():
 
 
 # ---------------------------------------------------------------------
+# pull_request_merge_state — the lazy reconciler's probe
+# ---------------------------------------------------------------------
+
+
+def test_merge_state_reports_merged():
+    http = _FakeHttp(get_responses=[
+        {"merged": True, "state": "closed", "html_url": "https://gh/pr/7"},
+    ])
+    state = _make_provider(http=http).pull_request_merge_state(7)
+    assert state == {"merged": True, "state": "closed", "url": "https://gh/pr/7"}
+    # Hit the single-PR endpoint, not the list search.
+    assert http.calls[0]["path"].endswith("/pulls/7")
+
+
+def test_merge_state_reports_open():
+    http = _FakeHttp(get_responses=[
+        {"merged": False, "state": "open", "html_url": "https://gh/pr/7"},
+    ])
+    state = _make_provider(http=http).pull_request_merge_state(7)
+    assert state["merged"] is False
+    assert state["state"] == "open"
+
+
+def test_merge_state_tolerates_non_dict_body():
+    http = _FakeHttp(get_responses=[None])
+    state = _make_provider(http=http).pull_request_merge_state(7)
+    assert state == {"merged": False, "state": None, "url": None}
+
+
+# ---------------------------------------------------------------------
 # Happy create path (no existing PR → POST)
 # ---------------------------------------------------------------------
 

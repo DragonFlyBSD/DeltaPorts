@@ -99,6 +99,33 @@ def find_open_review_request(
     return _maybe(row)
 
 
+def open_delivery_bundle_ids(
+    conn: sqlite3.Connection, *, provider: str | None = None,
+) -> list[str]:
+    """Distinct bundle ids whose latest delivery row is still open
+    (``created`` / ``updated``) — the candidate set for lazy merge
+    reconciliation. Optionally filtered to one provider.
+
+    "Latest row is open" (not "any open row exists") so a bundle
+    whose PR was already closed/merged out-of-band drops out even if
+    an older open row lingers. Keeps the index's per-render poll set
+    tight: only PRs that could still be sitting open upstream.
+    """
+    rows = conn.execute(
+        """SELECT r.bundle_id AS bundle_id
+           FROM bundle_review_requests r
+           JOIN (SELECT bundle_id, MAX(id) AS max_id
+                 FROM bundle_review_requests
+                 GROUP BY bundle_id) latest
+             ON r.bundle_id = latest.bundle_id AND r.id = latest.max_id
+           WHERE r.status IN ('created', 'updated')
+             AND (? IS NULL OR r.provider = ?)
+           ORDER BY r.bundle_id""",
+        (provider, provider),
+    ).fetchall()
+    return [str(_row_dict(r)["bundle_id"]) for r in rows]
+
+
 def update_review_request_status(
     conn: sqlite3.Connection, *,
     request_id: int,

@@ -331,6 +331,86 @@ def test_view_agentic_index_empty_bands_are_thin_lines(client: TestClient) -> No
     assert "Needs verify" in body
 
 
+def _make_ready_with_open_pr(db_path: Path, bundle_id: str) -> None:
+    """Turn a fixture bundle into a verified agent fix (→ 'Ready to
+    accept') carrying an open GitHub delivery row — the shape the lazy
+    reconciler acts on."""
+    import sqlite3
+    from dportsv3.tracker.agentic_queries import insert_review_request
+    conn = sqlite3.connect(str(db_path))
+    conn.execute(
+        "UPDATE bundles SET resolution = 'agent_fixed', "
+        "verification_status = 'verified' WHERE bundle_id = ?",
+        (bundle_id,),
+    )
+    insert_review_request(
+        conn, bundle_id=bundle_id, provider="github", status="created",
+        provider_pr_id="1567", url="https://gh/pr/1567",
+        branch=f"agentic/{bundle_id}",
+    )
+    conn.commit()
+    conn.close()
+
+
+def _patch_probe_merged(monkeypatch) -> None:
+    from dportsv3.tracker import delivery_sync
+    monkeypatch.setattr(
+        delivery_sync, "_resolve_merge_probe",
+        lambda target: (lambda pr_id: {
+            "merged": True, "state": "closed", "url": "https://gh/pr/1567",
+        }),
+    )
+
+
+def test_detail_render_flips_merged_pr_terminal(
+    client: TestClient, seeded_state_db: Path, monkeypatch,
+) -> None:
+    """Opening a bundle whose PR merged upstream reconciles it to the
+    terminal 'merged' state on render — the page shows merged and drops
+    Accept/Reject rather than offering a duplicate re-Accept."""
+    _make_ready_with_open_pr(seeded_state_db, "b-q2-bar")
+    _patch_probe_merged(monkeypatch)
+
+    resp = client.get("/agentic/bundles/b-q2-bar")
+    assert resp.status_code == 200
+
+    import sqlite3
+    conn = sqlite3.connect(str(seeded_state_db))
+    conn.row_factory = sqlite3.Row
+    try:
+        row = conn.execute(
+            "SELECT resolution FROM bundles WHERE bundle_id = 'b-q2-bar'"
+        ).fetchone()
+    finally:
+        conn.close()
+    assert row["resolution"] == "merged"
+
+
+def test_index_render_flips_merged_pr_out_of_worklist(
+    client: TestClient, seeded_state_db: Path, monkeypatch,
+) -> None:
+    """A merged-upstream bundle drops out of 'Ready to accept' into the
+    collapsed 'recently resolved' archive on the worklist render, instead
+    of lingering as actionable."""
+    _make_ready_with_open_pr(seeded_state_db, "b-q2-bar")
+    _patch_probe_merged(monkeypatch)
+
+    body = client.get("/agentic").text
+    # It reconciled to terminal 'merged'...
+    import sqlite3
+    conn = sqlite3.connect(str(seeded_state_db))
+    conn.row_factory = sqlite3.Row
+    try:
+        row = conn.execute(
+            "SELECT resolution FROM bundles WHERE bundle_id = 'b-q2-bar'"
+        ).fetchone()
+    finally:
+        conn.close()
+    assert row["resolution"] == "merged"
+    # ...and shows in the collapsed archive, not as a ready-to-accept row.
+    assert "Recently resolved" in body
+
+
 def test_view_agentic_bundles_filter(client: TestClient) -> None:
     all_resp = client.get("/agentic/bundles")
     assert all_resp.status_code == 200

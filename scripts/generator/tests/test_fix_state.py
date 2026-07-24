@@ -27,12 +27,13 @@ ALL_RESOLUTIONS = [
     "triage_failed",
     "operator_owned",
     "accepted",
+    "merged",
     "rejected",
     "discarded",
 ]
 ALL_VERIFICATION = [None, "verified", "verification_failed"]
 
-_TERMINAL = {"accepted", "rejected", "discarded"}
+_TERMINAL = {"accepted", "merged", "rejected", "discarded"}
 _FAILURE = {
     "agent_budget_exhausted", "agent_gave_up",
     "escalated_manual", "convert_gave_up",
@@ -152,11 +153,33 @@ def test_surface_is_subset_of_allowed():
     ("convert_gave_up", None, "convert_gave_up"),
     ("triage_failed", None, "triage_failed"),
     ("accepted", None, "accepted"),
+    ("merged", None, "merged"),
+    ("merged", "verified", "merged"),   # verification is irrelevant once merged
     ("rejected", None, "rejected"),
     ("discarded", None, "discarded"),
 ])
 def test_fix_status_resolution_keys(r, v, expected_key):
     assert fs.fix_status({"resolution": r, "verification_status": v}).key == expected_key
+
+
+def test_merged_is_terminal_done_and_reopen_only():
+    """A merged PR means the code shipped: terminal, in the `done`
+    bucket, and the only action left is reopen (no re-Accept that would
+    spawn a duplicate PR)."""
+    assert "merged" in fs.TERMINAL_RESOLUTIONS
+    assert fs._WORKLIST_BUCKET["merged"] == "done"
+    acts = fs.bundle_actions({
+        "resolution": "merged", "verification_status": "verified",
+        "target": "@2026Q3", "origin": "ftp/curl",
+    })
+    assert acts["can_accept"] is False
+    assert acts["can_reject"] is False
+    assert acts["can_retry"] is False
+    assert acts["can_verify"] is False
+    assert acts["can_reopen"] is True
+    # And the authoritative gate agrees: accept is refused, reopen allowed.
+    assert fs.action_allowed("accept", "merged", "verified") is False
+    assert fs.action_allowed("reopen", "merged", None) is True
 
 
 def test_fix_status_null_resolution_inflight_vs_unknown():

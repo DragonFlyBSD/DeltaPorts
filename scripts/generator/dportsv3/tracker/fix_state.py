@@ -53,9 +53,20 @@ RESOLUTION_REJECTED = "rejected"
 RESOLUTION_DISCARDED = "discarded"
 RESOLUTION_OPERATOR_OWNED = "operator_owned"
 
-# Terminal operator decisions — nothing acts on these except reopen.
+# Delivery-set resolution: the bundle's PR landed upstream. Set by the
+# lazy merge-reconciler (delivery_sync) or the manual delivery-status
+# endpoint. Dominant + terminal — a merged PR means the codebase already
+# changed, so there is nothing left to accept/reject/verify. Whatever the
+# resolution was (agent_fixed after a reopen, accepted, even rejected),
+# upstream reality wins.
+RESOLUTION_MERGED = "merged"
+
+# Terminal decisions — nothing acts on these except reopen.
 TERMINAL_RESOLUTIONS: frozenset[str] = frozenset(
-    {RESOLUTION_ACCEPTED, RESOLUTION_REJECTED, RESOLUTION_DISCARDED}
+    {
+        RESOLUTION_ACCEPTED, RESOLUTION_REJECTED,
+        RESOLUTION_DISCARDED, RESOLUTION_MERGED,
+    }
 )
 
 # "The agent tried and lost" outcomes — the take-over / discard / retry
@@ -185,6 +196,7 @@ _RESOLUTION_STATUS: dict[str, FixStatus] = {
     RESOLUTION_CONVERT_GAVE_UP: FixStatus("convert_gave_up", "convert gave up", "failed"),
     RESOLUTION_TRIAGE_FAILED: FixStatus("triage_failed", "triage failed", "failed"),
     RESOLUTION_ACCEPTED: FixStatus("accepted", "accepted", "built"),
+    RESOLUTION_MERGED: FixStatus("merged", "merged upstream", "built"),
     RESOLUTION_REJECTED: FixStatus("rejected", "rejected", "failed"),
     RESOLUTION_DISCARDED: FixStatus("discarded", "discarded", "skipped"),
 }
@@ -240,6 +252,7 @@ _WORKLIST_BUCKET: dict[str, str] = {
     "triage_failed": "decide",
     "operator_owned": "owned",
     "accepted": "done",
+    "merged": "done",
     "rejected": "done",
     "discarded": "done",
 }
