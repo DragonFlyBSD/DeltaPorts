@@ -258,6 +258,7 @@ def register(app, ctx):
                 "tool_trace": tool_trace,
                 "selected_artifact": selected_artifact,
                 "selected_artifact_relpath": selected_relpath,
+                "artifact_groups": render.group_artifacts(bundle),
                 "prior_attempts": prior_attempts,
                 "port_token_usage": port_token_usage,
                 "dops_state": dops_state,
@@ -267,6 +268,41 @@ def register(app, ctx):
                 "chat_enabled": chat_enabled,
                 "chat_session_relpath": chat_session_relpath,
             },
+        )
+
+    @app.get(
+        "/agentic/bundles/{bundle_id}/artifact-fragment",
+        response_class=HTMLResponse,
+        name="agentic_bundle_artifact_fragment",
+    )
+    def agentic_bundle_artifact_fragment(
+        request: RequestType,
+        bundle_id: str,
+        artifact: str,
+    ) -> Any:
+        """Render just the artifact reader's detail pane (header + body)
+        for one artifact, so the page can swap it in place without a
+        full reload. Returns the same `_artifact_detail.html` partial
+        the full page includes — one renderer, no drift. Sessions are
+        not inline-previewable; the reader links them straight to the
+        structured viewer, so they never reach this endpoint.
+        """
+        with _conn() as conn:
+            bundle = get_bundle(conn, bundle_id)
+            ref = get_artifact_ref(conn, bundle_id, artifact)
+        if bundle is None:
+            raise HTTPException(status_code=404, detail=f"Unknown bundle: {bundle_id}")
+        if ref is None:
+            raise HTTPException(status_code=404, detail="Unknown artifact")
+        selected_artifact = render.artifact_view_data(
+            app.state.artifact_root, bundle_id, artifact, ref,
+        )
+        if selected_artifact is None:
+            raise HTTPException(status_code=404, detail="Artifact file missing")
+        return templates.TemplateResponse(
+            request,
+            "_artifact_detail.html",
+            {"selected_artifact": selected_artifact},
         )
 
     @app.get("/agentic/bundles/{bundle_id}/artifacts/{relpath:path}", response_class=HTMLResponse)

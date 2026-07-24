@@ -147,6 +147,7 @@ def artifact_view_data(
         "content": content,
         "error": error,
         "filename": Path(relpath).name,
+        "badge": _type_badge(relpath),
         "size": path.stat().st_size if path.exists() else ref.get("size"),
     }
 
@@ -177,6 +178,117 @@ def default_artifact_relpath(bundle: dict[str, Any]) -> str | None:
         if candidate in relpath_set:
             return candidate
     return relpaths[0] if relpaths else None
+
+
+# The artifact reader's left rail: a single curated list grouped by the
+# role each file plays, most-relevant group first, most-relevant file
+# first within each group. Replaces the old alphabetical table + the
+# duplicate "quick links" rail. Entries are (relpath, label); anything
+# not listed here falls through to the trailing "Other" group.
+_ARTIFACT_CATALOG: tuple[tuple[str, tuple[tuple[str, str], ...]], ...] = (
+    ("Outcome", (
+        ("analysis/proposed_fix.md",   "Proposed fix"),
+        ("analysis/manual_handoff.md", "Manual handoff"),
+        ("analysis/changes.diff",      "Changes diff"),
+    )),
+    ("Reasoning", (
+        ("analysis/patch.md",  "Patch narrative"),
+        ("analysis/triage.md", "Triage"),
+    )),
+    ("Evidence", (
+        ("analysis/patch_audit.json",   "Patch audit"),
+        ("analysis/rebuild_proof.json", "Rebuild proof"),
+        ("analysis/tool_trace.jsonl",   "Tool trace"),
+    )),
+    ("Logs", (
+        ("logs/errors.txt",   "Errors log"),
+        ("logs/full.log.gz",  "Full log"),
+        ("meta.txt",          "meta.txt"),
+    )),
+)
+
+# suffix → short type badge shown on each row and in the detail header.
+_TYPE_BADGES: dict[str, str] = {
+    ".md": "MD", ".diff": "DIFF", ".patch": "DIFF", ".json": "JSON",
+    ".jsonl": "JSONL", ".gz": "GZ", ".txt": "TXT", ".log": "LOG",
+    ".dops": "DOPS",
+}
+
+
+def _type_badge(relpath: str) -> str:
+    name = Path(relpath).name
+    # Compound suffixes (.log.gz, .jsonl.gz) read by their outer intent.
+    if name.endswith(".jsonl") or name.endswith(".jsonl.gz"):
+        return "JSONL"
+    if name.endswith(".gz"):
+        return "GZ"
+    suffix = Path(relpath).suffix.lower()
+    return _TYPE_BADGES.get(suffix, (suffix[1:].upper() if suffix else "FILE"))
+
+
+def group_artifacts(bundle: dict[str, Any]) -> list[dict[str, Any]]:
+    """Project a bundle's artifacts into the reader's grouped left rail.
+
+    Returns a list of ``{"label": str, "items": [...]}`` groups in
+    catalog order, then a trailing "Other" group for anything not in
+    the catalog (e.g. session dumps, ad-hoc artifacts). Empty groups
+    are dropped. Only artifacts that actually exist on the bundle are
+    included — absence is legible by what's missing, not by dimmed
+    placeholder rows.
+
+    Each item carries what a row needs to render without a second
+    lookup: ``relpath``, ``name`` (basename), ``label`` (friendly),
+    ``badge`` (type), ``created_at`` (write time), ``size``, and
+    ``is_session`` (session dumps link to the structured viewer, not
+    the inline reader).
+    """
+    artifacts = bundle.get("artifacts") or []
+    by_relpath = {
+        str(a.get("relpath")): a for a in artifacts if a.get("relpath")
+    }
+
+    def _item(relpath: str, label: str | None) -> dict[str, Any]:
+        a = by_relpath[relpath]
+        name = Path(relpath).name
+        is_session = (
+            relpath.startswith("analysis/sessions/")
+            and (relpath.endswith(".jsonl") or relpath.endswith(".jsonl.gz"))
+        )
+        return {
+            "relpath": relpath,
+            "name": name,
+            "label": label or name,
+            "badge": _type_badge(relpath),
+            "created_at": a.get("created_at"),
+            "size": a.get("size"),
+            "is_session": is_session,
+        }
+
+    groups: list[dict[str, Any]] = []
+    claimed: set[str] = set()
+    for group_label, entries in _ARTIFACT_CATALOG:
+        files = []
+        for relpath, label in entries:
+            if relpath in by_relpath:
+                files.append(_item(relpath, label))
+                claimed.add(relpath)
+        if files:
+            # NB: key is "files", not "items" — Jinja's `group.items`
+            # would resolve to dict.items (a method), not the list.
+            groups.append({"label": group_label, "files": files})
+
+    # Anything not in the catalog — session dumps first (they're the
+    # most useful uncatalogued artifact), then the rest by relpath.
+    leftover = sorted(
+        r for r in by_relpath if r not in claimed
+    )
+    leftover.sort(key=lambda r: (not r.startswith("analysis/sessions/"), r))
+    if leftover:
+        groups.append({
+            "label": "Other",
+            "files": [_item(r, None) for r in leftover],
+        })
+    return groups
 
 
 

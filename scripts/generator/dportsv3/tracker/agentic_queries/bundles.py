@@ -60,7 +60,7 @@ def get_artifact_ref(
 ) -> dict[str, Any] | None:
     return _maybe(
         conn.execute(
-            """SELECT backend, sha256, fs_path, kind, size
+            """SELECT backend, sha256, fs_path, kind, size, created_at
                FROM artifact_refs
                WHERE bundle_id = ? AND relpath = ?""",
             (bundle_id, relpath),

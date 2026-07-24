@@ -453,3 +453,67 @@
   // lose it.
   restore();
 })();
+
+// --- Artifact reader: in-place detail swap ---
+// Progressive enhancement over the server-rendered reader. Rows are real
+// links (?artifact=...), so with JS off, clicking reloads the page as
+// before. With JS on, we fetch just the detail pane and swap it in place
+// so the frame never flashes — and push the URL so reload/back still work.
+(function () {
+  const reader = document.getElementById('artifact-reader');
+  if (!reader) { return; }
+  const detail = document.getElementById('artifact-detail');
+  const fragmentUrl = reader.getAttribute('data-fragment-url');
+  const pageUrl = reader.getAttribute('data-page-url');
+  if (!detail || !fragmentUrl || !pageUrl) { return; }
+
+  let loading = false;
+
+  async function show(relpath, push) {
+    if (loading) { return; }
+    loading = true;
+    reader.setAttribute('aria-busy', 'true');
+    try {
+      const url = fragmentUrl + '?artifact=' + encodeURIComponent(relpath);
+      const resp = await fetch(url, { headers: { 'X-Requested-With': 'fetch' } });
+      if (!resp.ok) { throw new Error('HTTP ' + resp.status); }
+      detail.innerHTML = await resp.text();
+      // Move selection highlight.
+      reader.querySelectorAll('.a-row.selected').forEach(
+        r => r.classList.remove('selected'));
+      const row = reader.querySelector('.a-row[data-relpath="' + cssEsc(relpath) + '"]');
+      if (row) { row.classList.add('selected'); }
+      detail.querySelector('.a-body') && (detail.querySelector('.a-body').scrollTop = 0);
+      if (push) {
+        history.pushState({ relpath },
+          '', pageUrl + '?artifact=' + encodeURIComponent(relpath));
+      }
+    } catch (err) {
+      // Fall back to a real navigation so the operator still gets there.
+      window.location = pageUrl + '?artifact=' + encodeURIComponent(relpath);
+    } finally {
+      loading = false;
+      reader.removeAttribute('aria-busy');
+    }
+  }
+
+  function cssEsc(s) {
+    return (window.CSS && CSS.escape) ? CSS.escape(s)
+      : s.replace(/["\\]/g, '\\$&');
+  }
+
+  reader.addEventListener('click', (e) => {
+    const row = e.target.closest('.a-row[data-relpath]');
+    // Only intercept inline-previewable rows; sessions (.a-row-session,
+    // no data-relpath) keep their normal link to the structured viewer.
+    if (!row || !reader.contains(row)) { return; }
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) { return; }
+    e.preventDefault();
+    show(row.getAttribute('data-relpath'), true);
+  });
+
+  window.addEventListener('popstate', (e) => {
+    const relpath = (e.state && e.state.relpath);
+    if (relpath) { show(relpath, false); }
+  });
+})();

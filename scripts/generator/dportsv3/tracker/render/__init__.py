@@ -6,6 +6,7 @@ from .artifacts import (
     artifact_media_type,
     resolve_artifact_path,
     default_artifact_relpath,
+    group_artifacts,
     load_tool_trace,
 )
 from .sessions import (
@@ -19,7 +20,7 @@ from .activity import group_activity_by_attempt
 __all__ = [
     "render_markdown", "render_diff", "artifact_view_data",
     "artifact_media_type", "resolve_artifact_path",
-    "default_artifact_relpath", "load_tool_trace",
+    "default_artifact_relpath", "group_artifacts", "load_tool_trace",
     "session_view_data", "is_session_relpath",
     "parse_session_records", "SESSION_ATTEMPT_RE",
     "group_activity_by_attempt",

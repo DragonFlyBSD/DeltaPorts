@@ -312,40 +312,60 @@ def test_view_agentic_bundle_detail_lists_artifacts(client: TestClient) -> None:
     assert "Tool trace" in body
     assert "dsynth_build" in body
     assert "rebuild_ok=False" in body
-    # Link to artifact stream endpoint
-    assert "/api/bundles/b-q2-foo/artifacts/meta.txt" in body
+    # Rows link into the bundle detail with ?artifact=… (the no-JS path).
     assert "/agentic/bundles/b-q2-foo?artifact=meta.txt" in body
+    # Default preview prefers analysis/triage.md; the detail header carries
+    # the Raw + Open-full links for the *selected* artifact (per-row raw
+    # links are gone — the reader is one list + one detail pane).
+    assert "/api/bundles/b-q2-foo/artifacts/analysis/triage.md" in body
     assert "/agentic/bundles/b-q2-foo/artifacts/analysis/triage.md" in body
-    assert "raw" in body
-    # Default preview prefers analysis/triage.md over logs/errors.txt.
-    assert "patch-error" in body
+    assert ">Raw</a>" in body
+    # Default preview renders analysis/triage.md inline.
     assert "<h3>Classification</h3>" in body
 
 
-def test_view_agentic_bundle_detail_renders_artifact_rail(client: TestClient) -> None:
-    """Step 9 — operator-canonical files surface as a quick-links rail
-    above the full artifact table. Only artifacts that actually exist
-    on the bundle become pills.
+def test_view_agentic_bundle_detail_renders_grouped_list(client: TestClient) -> None:
+    """Redesign: artifacts render as ONE list grouped by role (Outcome /
+    Reasoning / Evidence / Logs), replacing the old quick-links rail +
+    alphabetical table. Empty groups drop out, so b-q2-foo — which has no
+    Outcome artifacts (no proposed_fix / manual_handoff / changes.diff) —
+    shows Reasoning / Evidence / Logs but not Outcome. Each row carries a
+    type badge; sessions link to the structured viewer.
 
     The fixture's b-q2-foo has meta.txt, logs/errors.txt,
     analysis/triage.md, analysis/patch_audit.json, logs/full.log.gz,
-    analysis/tool_trace.jsonl. It does NOT have proposed_fix.md or
-    manual_handoff.md, so those pills must be absent."""
+    analysis/tool_trace.jsonl, and a session dump."""
     resp = client.get("/agentic/bundles/b-q2-foo")
     assert resp.status_code == 200
     body = resp.text
-    assert "Quick links" in body
-    assert 'class="artifact-rail"' in body
-    # Present-artifact pills surface.
+    # The old rail is gone.
+    assert "Quick links" not in body
+    assert 'class="artifact-rail"' not in body
+    # The reader frame + in-place-swap wiring is present.
+    assert 'id="artifact-reader"' in body
+    assert "data-fragment-url" in body
+    # Group headers for non-empty groups; Outcome is empty here → dropped.
+    assert ">Reasoning<" in body
+    assert ">Evidence<" in body
+    assert ">Logs<" in body
+    assert ">Outcome<" not in body
+    # Friendly row labels for present artifacts.
     for label in ("Triage", "Patch audit", "Tool trace",
-                  "Errors log", "Full log (.gz)", "meta.txt"):
-        assert label in body, f"missing rail pill for {label!r}"
-    # Absent artifacts must NOT have pills (b-q2-foo doesn't have these).
+                  "Errors log", "Full log", "meta.txt"):
+        assert label in body, f"missing row for {label!r}"
+    # Type badges.
+    assert ">MD<" in body      # triage.md
+    assert ">JSON<" in body    # patch_audit.json
+    assert ">GZ<" in body      # full.log.gz
+    # Absent artifacts have no rows.
     assert "Proposed fix" not in body
     assert "Manual handoff" not in body
-    # Each pill links into the bundle detail with ?artifact=…
+    # Rows carry data-relpath (in-place swap) + a fallback href (no-JS).
+    assert 'data-relpath="analysis/triage.md"' in body
     assert "?artifact=analysis/triage.md" in body
     assert "?artifact=logs/errors.txt" in body
+    # Session rows link to the structured viewer, not the inline reader.
+    assert "/sessions/" in body
 
 
 def test_agentic_subnav_present_and_highlights_current(client: TestClient) -> None:
@@ -492,11 +512,52 @@ def test_view_agentic_bundle_detail_selects_artifact_inline(client: TestClient) 
     resp = client.get("/agentic/bundles/b-q2-foo", params={"artifact": "meta.txt"})
     assert resp.status_code == 200
     assert "origin=devel/foo" in resp.text
-    assert "open full page" in resp.text
+    assert "Open full" in resp.text
 
 
 def test_view_agentic_bundle_detail_missing_selected_artifact_404(client: TestClient) -> None:
     assert client.get("/agentic/bundles/b-q2-foo", params={"artifact": "nope.txt"}).status_code == 404
+
+
+def test_artifact_fragment_renders_detail_pane_only(client: TestClient) -> None:
+    """The in-place-swap endpoint returns just the detail pane (header +
+    body) for one artifact — the same partial the full page includes — so
+    the reader can swap it without a reload. No page chrome (nav, the list
+    rail) comes back."""
+    resp = client.get(
+        "/agentic/bundles/b-q2-foo/artifact-fragment",
+        params={"artifact": "analysis/patch_audit.json"},
+    )
+    assert resp.status_code == 200
+    body = resp.text
+    # Detail-pane header for the requested artifact.
+    assert "analysis/patch_audit.json" in body
+    assert ">JSON<" in body
+    assert ">Raw</a>" in body
+    # It's a fragment: no full-page shell or the list rail.
+    assert "<html" not in body
+    assert 'id="artifact-reader"' not in body
+
+
+def test_artifact_fragment_download_fallback_holds_frame(client: TestClient) -> None:
+    """A gzip artifact can't render inline — the fragment returns a
+    consistent download card (never a bare empty stub), so the frame is
+    the same shape as any other artifact."""
+    resp = client.get(
+        "/agentic/bundles/b-q2-foo/artifact-fragment",
+        params={"artifact": "logs/full.log.gz"},
+    )
+    assert resp.status_code == 200
+    body = resp.text
+    assert "a-fallback" in body
+    assert "Download full.log.gz" in body
+
+
+def test_artifact_fragment_unknown_404(client: TestClient) -> None:
+    assert client.get(
+        "/agentic/bundles/b-q2-foo/artifact-fragment",
+        params={"artifact": "nope.txt"},
+    ).status_code == 404
 
 
 def test_view_agentic_artifact_text_inline(client: TestClient) -> None:

@@ -1052,6 +1052,141 @@ button.btn:disabled {
   font-style: italic;
 }
 
+/* ── Artifact reader (redesign) ──────────────────────────────────────
+   Fixed-geometry list-detail split. The frame's size is a function of
+   the page, never of the selected artifact; all content-size variance
+   is absorbed by the body's internal scroll (.a-body), so clicking
+   between a 3-line diff and a 40k-line log never reflows the layout. */
+.reader {
+  display: grid;
+  grid-template-columns: 288px 1fr;
+  height: 588px;
+  border: 1px solid var(--border-strong, #d8d2c4);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--bg-card);
+}
+
+/* left: one grouped list, its own scroll */
+.reader .a-list {
+  border-right: 1px solid var(--border, #e4dfd4);
+  background: var(--bg, #f7f5f0);
+  overflow-y: auto;
+  padding: 4px 0 10px;
+}
+.reader .a-group-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  padding: 14px 16px 5px;
+}
+.reader .a-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto;
+  gap: 1px 8px;
+  align-items: center;
+  padding: 7px 14px 8px;
+  cursor: pointer;
+  text-decoration: none;
+  border-left: 2px solid transparent;
+  color: var(--text);
+}
+.reader .a-row:hover { background: rgba(196, 112, 0, .06); }
+.reader .a-row.selected {
+  background: var(--bg-card);
+  border-left-color: var(--amber, #c47000);
+}
+.reader .a-row .a-name {
+  grid-column: 1; grid-row: 1;
+  font-size: 13px; font-weight: 550;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.reader .a-row.selected .a-name { color: var(--amber-dim, #a05800); }
+.reader .a-row .a-type {
+  grid-column: 2; grid-row: 1;
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 9px; font-weight: 700; letter-spacing: .04em;
+  color: var(--text-dim);
+  background: var(--c-neutral-bg, #eeebe4);
+  border-radius: 3px; padding: 1px 4px;
+}
+.reader .a-row .a-meta {
+  grid-column: 1 / -1; grid-row: 2;
+  font-size: 10.5px; color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  display: flex; gap: 8px;
+}
+.reader .a-row .a-meta .a-when { font-variant-numeric: tabular-nums; }
+
+/* right: fixed header + internally-scrolling body */
+.reader .a-detail { display: grid; grid-template-rows: auto 1fr; min-width: 0; }
+.reader .a-detailhead {
+  display: flex; align-items: center; gap: 8px 14px; flex-wrap: wrap;
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--border, #e4dfd4);
+  background: var(--bg-card);
+}
+.reader .a-detailhead .dh-name {
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 13px; font-weight: 600; color: var(--text);
+  overflow-wrap: anywhere;
+}
+.reader .a-detailhead .dh-meta {
+  font-size: 11px; color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
+}
+.reader .a-detailhead .dh-meta .midot { color: var(--border-strong, #d8d2c4); }
+.reader .a-detailhead .dh-actions { margin-left: auto; display: flex; gap: 6px; }
+.reader .dh-btn {
+  font-size: 11px; font-weight: 550; text-decoration: none;
+  color: var(--amber-dim, #a05800);
+  border: 1px solid var(--amber-border, rgba(180, 100, 0, .22));
+  border-radius: 5px; padding: 3px 9px; background: transparent;
+  white-space: nowrap;
+}
+.reader .dh-btn:hover { background: rgba(196, 112, 0, .07); }
+.reader .a-body {
+  overflow: auto;
+  background: var(--bg-card);
+  min-height: 0;
+}
+.reader .a-body-inner { padding: 16px 18px 24px; }
+.reader .artifact-error {
+  color: var(--c-failed, #c03030);
+  font-size: 12px; margin-bottom: 10px;
+}
+
+/* consistent fallback for un-previewable artifacts — the body becomes a
+   download card; the frame around it does not change. */
+.reader .a-fallback {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; text-align: center; gap: 12px;
+  min-height: 340px; color: var(--text-dim);
+}
+.reader .a-fallback .fb-glyph {
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 12px; font-weight: 700; letter-spacing: .06em;
+  color: var(--text-dim);
+  border: 1.5px solid var(--border-strong, #d8d2c4);
+  border-radius: 8px; padding: 14px 18px; background: var(--bg, #f7f5f0);
+}
+.reader .a-fallback .fb-msg { font-size: 13px; max-width: 42ch; line-height: 1.5; }
+.reader .a-fallback .fb-msg strong { color: var(--text); font-weight: 600; }
+.reader .a-fallback .dh-btn { font-size: 12px; padding: 6px 14px; border-radius: 6px; }
+
+@media (max-width: 760px) {
+  .reader { grid-template-columns: 1fr; height: auto; }
+  .reader .a-list {
+    max-height: 220px; border-right: none;
+    border-bottom: 1px solid var(--border, #e4dfd4);
+  }
+  .reader .a-body { max-height: 60vh; }
+}
+
 /* Agentic section sub-nav (Phase 6). Matches the tracker chrome; the
    active destination gets an amber underline. */
 #agentic-subnav {
