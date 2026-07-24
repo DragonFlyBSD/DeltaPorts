@@ -32,7 +32,7 @@
       {% elif art.render_kind == 'diff' %}
         {{ art.content | safe }}
       {% elif art.render_kind in ('json', 'text') %}
-        <pre class="artifact-content">{{ art.content }}</pre>
+        <pre class="artifact-content">{% if art.content_html %}{{ art.content | safe }}{% else %}{{ art.content }}{% endif %}</pre>
       {% else %}
         {# Consistent fallback for un-previewable artifacts (binary, gz,
            oversized): the frame holds, only the body becomes a download

@@ -1055,6 +1055,16 @@ button.btn:disabled {
   font-style: italic;
 }
 
+/* Syntax highlighting for JSON + log artifacts in the preview <pre>.
+   Semantic colours (not the amber accent): keys/meta, strings/ok,
+   numbers, and booleans/errors. */
+.artifact-content .j-key  { color: var(--c-meta, #6040b0); }
+.artifact-content .j-str  { color: var(--c-built, #2a7a2a); }
+.artifact-content .j-num  { color: var(--amber-dim, #a05800); }
+.artifact-content .j-bool { color: var(--c-failed, #c03030); }
+.artifact-content .lg-err { color: var(--c-failed, #c03030); }
+.artifact-content .lg-dim { color: var(--text-dim, #888070); }
+
 /* ── Artifact reader (redesign) ──────────────────────────────────────
    Fixed-geometry list-detail split. The frame's size is a function of
    the page, never of the selected artifact; all content-size variance
@@ -1077,6 +1087,7 @@ button.btn:disabled {
   border-right: 1px solid var(--border, #e4dfd4);
   background: var(--bg-sunk, #f2efe8);
   overflow-y: auto;
+  min-height: 0;
   padding: 6px 0 10px;
 }
 .reader .a-group-label {
@@ -1127,7 +1138,11 @@ button.btn:disabled {
 .reader .a-row .a-meta .a-when { font-variant-numeric: tabular-nums; }
 
 /* right: fixed header + internally-scrolling body */
-.reader .a-detail { display: grid; grid-template-rows: auto 1fr; min-width: 0; }
+/* min-height:0 is load-bearing: without it this grid item expands to its
+   content height and the reader's overflow:hidden clips it, so .a-body's
+   internal scroll never engages. With it, .a-detail is pinned to the
+   reader's fixed row and the 1fr body scrolls. */
+.reader .a-detail { display: grid; grid-template-rows: auto 1fr; min-width: 0; min-height: 0; }
 .reader .a-detailhead {
   display: flex; align-items: center; gap: 8px 14px; flex-wrap: wrap;
   padding: 11px 16px;
@@ -1229,6 +1244,11 @@ details.section-collapse > summary:hover { color: var(--c-link, #06f); }
 details.section-collapse > summary .muted {
   font-size: 12px; font-weight: normal; color: var(--text-dim, #6b7280);
 }
+
+/* The bundle detail page reads as a composed column rather than a
+   full-bleed stretch — narrower than the data-table pages so the reader
+   and summary bar don't sprawl on wide monitors. */
+.tracker-page.bundle-page { max-width: 1180px; }
 
 /* Bundle summary bar: a single rounded strip of status + facts, sitting
    above the artifact reader. Overrides .tracker-card's tight 4px corners

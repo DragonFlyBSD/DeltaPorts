@@ -457,3 +457,58 @@ def _is_diff_path(relpath: str) -> bool:
     if p.suffix.lower() in _DIFF_EXTENSIONS:
         return True
     return bool(_DIFF_NAME_PATTERN.match(p.name))
+
+
+# --- Syntax highlighting for the artifact reader's preview pane --------
+# Both return HTML-safe strings meant to sit inside a <pre> rendered with
+# ``| safe``. Escaping is done with quote=False so the JSON string
+# delimiters (") survive for the tokenizer; that's safe because the
+# output lands in <pre> text, where a bare " is not a metacharacter.
+
+_JSON_TOKEN = re.compile(r'("(?:\\.|[^"\\])*")(\s*:)?')
+_JSON_VALUE_LIT = re.compile(r'(:\s*)(-?\d+(?:\.\d+)?|true|false|null)\b')
+
+
+def highlight_json(pretty: str) -> str:
+    """Wrap a pretty-printed JSON document's keys, strings, numbers, and
+    literals in ``.j-*`` spans. Operates on already-``json.dumps``'d text
+    (2-space indent) — not a validator; malformed input degrades to
+    escaped-but-unhighlighted text rather than raising."""
+    esc = html.escape(pretty, quote=False)
+
+    def _tok(m: "re.Match[str]") -> str:
+        tok, colon = m.group(1), m.group(2)
+        if colon:  # a string immediately followed by ':' is a key
+            return f'<span class="j-key">{tok}</span>{colon}'
+        return f'<span class="j-str">{tok}</span>'
+
+    out = _JSON_TOKEN.sub(_tok, esc)
+
+    def _lit(m: "re.Match[str]") -> str:
+        pre, val = m.group(1), m.group(2)
+        cls = "j-num" if val[0].isdigit() or val[0] == "-" else "j-bool"
+        return f'{pre}<span class="{cls}">{val}</span>'
+
+    # Only value-position literals (after ':') — string values are already
+    # wrapped in spans, so this can't reach inside string contents.
+    return _JSON_VALUE_LIT.sub(_lit, out)
+
+
+_LOG_ERR = re.compile(
+    r"(?:error|fail(?:ed|ure|s)?|fatal|cannot|no such|not found|"
+    r"\*\*\* |Traceback)",
+    re.IGNORECASE,
+)
+
+
+def highlight_log(raw: str) -> str:
+    """Line-tint a plain-text log: lines that read like failures get an
+    ``.lg-err`` span. Deliberately light — one signal (errors), not a full
+    lexer — so large logs stay legible and cheap to render."""
+    out = []
+    for line in html.escape(raw, quote=False).split("\n"):
+        if _LOG_ERR.search(line):
+            out.append(f'<span class="lg-err">{line}</span>')
+        else:
+            out.append(line)
+    return "\n".join(out)

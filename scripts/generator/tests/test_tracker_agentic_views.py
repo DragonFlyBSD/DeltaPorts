@@ -560,6 +560,49 @@ def test_artifact_fragment_unknown_404(client: TestClient) -> None:
     ).status_code == 404
 
 
+def test_artifact_fragment_json_is_syntax_highlighted(client: TestClient) -> None:
+    body = client.get(
+        "/agentic/bundles/b-q2-foo/artifact-fragment",
+        params={"artifact": "analysis/patch_audit.json"},
+    ).text
+    assert 'class="j-key"' in body
+    # Quotes are literal (not entity-escaped) so the tokenizer could run.
+    assert '"status"' in body
+
+
+def test_artifact_fragment_log_tints_error_lines(client: TestClient) -> None:
+    body = client.get(
+        "/agentic/bundles/b-q2-foo/artifact-fragment",
+        params={"artifact": "logs/errors.txt"},
+    ).text
+    assert 'class="lg-err"' in body
+
+
+def test_highlight_json_marks_keys_strings_numbers_bools() -> None:
+    from dportsv3.tracker.render.text import highlight_json
+    out = highlight_json('{\n  "n": 5,\n  "ok": true,\n  "s": "hi"\n}')
+    assert '<span class="j-key">"n"</span>' in out
+    assert '<span class="j-num">5</span>' in out
+    assert '<span class="j-bool">true</span>' in out
+    assert '<span class="j-str">"s"</span>' not in out  # "s" is a key
+    assert '<span class="j-key">"s"</span>' in out
+    assert '<span class="j-str">"hi"</span>' in out
+
+
+def test_highlight_json_escapes_html_in_strings() -> None:
+    from dportsv3.tracker.render.text import highlight_json
+    out = highlight_json('{\n  "x": "<script>"\n}')
+    assert "&lt;script&gt;" in out
+    assert "<script>" not in out
+
+
+def test_highlight_log_only_tints_error_lines() -> None:
+    from dportsv3.tracker.render.text import highlight_log
+    out = highlight_log("all good\nconfigure: error: boom\nfine")
+    assert '<span class="lg-err">configure: error: boom</span>' in out
+    assert "all good\n" in out  # non-error lines untouched
+
+
 def test_view_agentic_artifact_text_inline(client: TestClient) -> None:
     resp = client.get("/agentic/bundles/b-q2-foo/artifacts/meta.txt")
     assert resp.status_code == 200
@@ -1098,7 +1141,10 @@ def test_view_agentic_artifact_json_pretty_printed(client: TestClient) -> None:
     assert resp.status_code == 200
     assert "JSON" in resp.text
     assert "budget-exhausted" in resp.text
-    assert "&#34;status&#34;" in resp.text
+    # Syntax-highlighted: keys wrapped in j-key spans, quotes now literal
+    # inside the <pre> (no longer HTML-entity-escaped).
+    assert 'class="j-key"' in resp.text
+    assert '"status"' in resp.text
 
 
 def test_view_agentic_artifact_gzip_download_notice(client: TestClient) -> None:

@@ -11,9 +11,22 @@ from typing import Any
 from .text import (
     render_markdown,
     render_diff,
+    highlight_json,
+    highlight_log,
     _looks_like_text,
     _is_diff_path,
 )
+
+
+def _is_log_relpath(relpath: str) -> bool:
+    """True for artifacts that read as build/agent logs — they get the
+    light error-line tinting rather than flat monospace."""
+    rp = relpath.lower()
+    return (
+        rp.startswith("logs/")
+        or rp.endswith(".log")
+        or rp.endswith(".jsonl")
+    )
 
 
 # Exact-match names always treated as text. Patterns below catch the
@@ -111,6 +124,10 @@ def artifact_view_data(
     content: str | None = None
     render_kind = "download"
     error: str | None = None
+    # True when `content` is pre-rendered HTML (markdown/diff already are;
+    # highlighted json/log join them). The template renders it `| safe`
+    # for the json/text branch instead of escaping.
+    content_html = False
     if inline:
         if is_markdown:
             render_kind = "markdown"
@@ -128,10 +145,17 @@ def artifact_view_data(
                 content = render_diff(raw)
             elif is_json:
                 try:
-                    content = json.dumps(json.loads(raw), indent=2, sort_keys=True)
+                    pretty = json.dumps(
+                        json.loads(raw), indent=2, sort_keys=True,
+                    )
+                    content = highlight_json(pretty)
+                    content_html = True
                 except ValueError as exc:
                     content = raw
                     error = f"invalid JSON: {exc}"
+            elif _is_log_relpath(relpath):
+                content = highlight_log(raw)
+                content_html = True
             else:
                 content = raw
         except OSError as exc:
@@ -145,6 +169,7 @@ def artifact_view_data(
         "inline": inline,
         "render_kind": render_kind,
         "content": content,
+        "content_html": content_html,
         "error": error,
         "filename": Path(relpath).name,
         "badge": _type_badge(relpath),

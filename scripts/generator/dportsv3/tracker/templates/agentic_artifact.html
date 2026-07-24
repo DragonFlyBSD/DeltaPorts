@@ -41,7 +41,7 @@
       {% elif artifact.render_kind == 'diff' %}
       {{ artifact.content | safe }}
       {% else %}
-      <pre class="artifact-content">{{ artifact.content }}</pre>
+      <pre class="artifact-content">{% if artifact.content_html %}{{ artifact.content | safe }}{% else %}{{ artifact.content }}{% endif %}</pre>
       {% endif %}
     {% else %}
       <div class="empty-state">
