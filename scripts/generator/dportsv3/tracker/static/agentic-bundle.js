@@ -336,9 +336,16 @@
   const inputEl = document.getElementById('chat-input');
   const sendBtn = document.getElementById('chat-send');
   const statusEl = document.getElementById('chat-status');
-  // Client-held history — this is the full record we re-POST each
-  // turn (server persists nothing).
+  // Client-held history, mirrored to localStorage keyed by bundle so a
+  // reload restores the conversation (the server persists nothing). The
+  // assistant entries also cache their server-rendered HTML so restore
+  // doesn't need to re-call the model.
+  const STORE_KEY = 'dp_chat_' + bundleId;
   const history = [];
+
+  function save() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(history)); } catch (e) {}
+  }
 
   function addMsg(role, content, html) {
     const wrap = document.createElement('div');
@@ -363,6 +370,17 @@
     logEl.scrollTop = logEl.scrollHeight;
   }
 
+  function restore() {
+    let saved;
+    try { saved = JSON.parse(localStorage.getItem(STORE_KEY) || '[]'); }
+    catch (e) { saved = []; }
+    if (!Array.isArray(saved)) { return; }
+    saved.forEach(function (m) {
+      addMsg(m.role, m.content, m.html);
+      history.push(m);
+    });
+  }
+
   async function send() {
     const text = inputEl.value.trim();
     if (!text) { return; }
@@ -378,7 +396,10 @@
         '/api/bundles/' + encodeURIComponent(bundleId) + '/chat',
         {method: 'POST',
          headers: {'Content-Type': 'application/json'},
-         body: JSON.stringify({messages: history, session_relpath: sessionRelpath})}
+         body: JSON.stringify({
+          messages: history.map(m => ({role: m.role, content: m.content})),
+          session_relpath: sessionRelpath,
+        })}
       );
       data = await resp.json();
     } catch (exc) {
@@ -397,7 +418,8 @@
     }
     const reply = data.reply || '(empty reply)';
     addMsg('assistant', reply, data.reply_html);
-    history.push({role: 'assistant', content: reply});
+    history.push({role: 'assistant', content: reply, html: data.reply_html});
+    save();
     const u = data.usage || {};
     const consulted = (data.artifacts_included || []).length
       ? (' · consulted: ' + data.artifacts_included.join(', '))
@@ -412,4 +434,22 @@
   inputEl.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
   });
+
+  const clearBtn = document.getElementById('chat-clear');
+  if (clearBtn) {
+    clearBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (!history.length) { return; }
+      if (!confirm('Clear this fix-review conversation?')) { return; }
+      try { localStorage.removeItem(STORE_KEY); } catch (err) {}
+      history.length = 0;
+      logEl.innerHTML = '';
+      statusEl.textContent = '';
+      inputEl.focus();
+    });
+  }
+
+  // Restore any saved conversation for this bundle so a reload doesn't
+  // lose it.
+  restore();
 })();

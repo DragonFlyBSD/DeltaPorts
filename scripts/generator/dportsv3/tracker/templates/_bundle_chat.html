@@ -1,12 +1,15 @@
     {% if chat_enabled %}
     {# Fix-review chat: talk to a fresh model seeded with the agent's
        saved session for this fix. Tools-off Q&A; nothing persisted. #}
-    <h2>Chat about this fix</h2>
+    <h2>Chat about this fix
+      <a href="#" id="chat-clear" style="font-size:11px;font-weight:normal;margin-left:8px;">[clear]</a>
+    </h2>
     <div class="tracker-card">
       <div style="color:var(--text-dim);font-size:11px;margin-bottom:8px;">
         Ask the agent why it made this fix. Grounded in this bundle's
         artifacts (diff, triage, errors, session). Read-only — no tools,
-        no rebuild. This conversation isn't saved.
+        no rebuild. Kept in this browser only (server saves nothing) — a
+        reload restores it; [clear] wipes it.
       </div>
       <div id="chat-log" class="chat-log"></div>
       <div class="chat-input-row">
