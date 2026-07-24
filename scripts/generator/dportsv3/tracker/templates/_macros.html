@@ -12,7 +12,7 @@
     reconcile. `fix_status` is registered as a Jinja global in create_app. -#}
 {%- macro status_pill(bundle) -%}
 {%- set s = fix_status(bundle) -%}
-{{ pill(s.pill, s.label, s.key) }}
+<span class="stat-pill status-pill {{ s.pill }}"{% if s.key %} title="{{ s.key }}"{% endif %}><span class="pill-dot"></span>{{ s.label }}</span>
 {%- endmacro -%}
 
 {#- jobs.state -> pill. Centralizes the state->class map (was inline in
