@@ -31,11 +31,6 @@ _SESSION_RELPATH_RE = re.compile(
 SESSION_ATTEMPT_RE = re.compile(r"\.attempt(\d+)\.jsonl(?:\.gz)?$")
 
 
-# Split user prompt into ``## heading`` sections so the byte-budget
-# of each section is visible. Headings start at column 0.
-_SECTION_HEADING_RE = re.compile(r"^##\s+(.+)$", re.MULTILINE)
-
-
 
 def is_session_relpath(relpath: str) -> bool:
     """True if ``relpath`` points at a JSONL session dump under

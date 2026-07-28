@@ -1,14 +1,13 @@
 """Shared SQLite schema for state.db.
 
-state.db is owned by ``artifact-store`` (the single writer). Tracker
-becomes a read-only consumer in Phase 4 step 4. Defining the schema
-here keeps both consumers in sync and makes integration tests easy
-(import + spin up against an in-memory DB).
+state.db is owned by ``artifact-store`` (the single writer); the tracker
+is a read+write consumer under WAL. Defining the schema here keeps both
+in sync and makes integration tests easy (import + spin up an in-memory
+DB).
 
-The tracker tables (``build_types``, ``build_runs``, ``build_results``,
-``port_status``) were folded in by Phase 4 step 1; until tracker.db
-retires (step 9) the equivalent definitions in
-``scripts/generator/dportsv3/tracker/db.py`` must stay identical.
+The DB is wiped, never migrated — so this is a single clean set of
+``CREATE`` statements, not a base schema plus a tail of ``ALTER``
+patches. Add a column by editing its table here.
 """
 
 from __future__ import annotations
@@ -16,7 +15,6 @@ from __future__ import annotations
 import sqlite3
 
 # Default build types seeded into the build_types table on first start.
-# Matches DEFAULT_BUILD_TYPES in dportsv3.tracker.db.
 DEFAULT_BUILD_TYPES: tuple[str, ...] = ("test", "release")
 
 # All CREATE TABLE / CREATE INDEX statements for state.db. Idempotent —
@@ -28,9 +26,44 @@ CREATE TABLE IF NOT EXISTS runs (
     path TEXT,
     ts_start TEXT,
     ts_end TEXT,
-    last_seen_at TEXT
+    last_seen_at TEXT,
+    build_run_id INTEGER,
+    target TEXT
 );
 
+-- Sentry-style issue: one fingerprinted problem grouping many
+-- occurrences (bundles). issue_key = short hash of
+-- (target, origin, fingerprint); every occurrence carries the same key.
+-- Lifecycle: unresolved -> resolved (a fix merged upstream) -> regressed
+-- (a new occurrence after resolve); muted silences surfacing AND
+-- auto-triage. The rollups (times_seen / first_seen / last_seen /
+-- latest_bundle_id) are denormalized so the issue list is one cheap
+-- read; the artifact-store is the sole writer (single-writer invariant).
+CREATE TABLE IF NOT EXISTS issues (
+    issue_key        TEXT PRIMARY KEY,
+    target           TEXT,
+    origin           TEXT NOT NULL,
+    fingerprint      TEXT,
+    state            TEXT NOT NULL DEFAULT 'unresolved',
+    times_seen       INTEGER NOT NULL DEFAULT 0,
+    first_seen_at    TEXT,
+    last_seen_at     TEXT,
+    latest_bundle_id TEXT,
+    resolved_at      TEXT,
+    regressed_at     TEXT,
+    muted_at         TEXT,
+    muted_by         TEXT,
+    reopened_at      TEXT,
+    reopened_by      TEXT,
+    updated_at       TEXT NOT NULL
+);
+
+-- Occurrence: one dsynth build failure and the agent's repair of it.
+-- issue_key links it to its fingerprinted issue (plain column + index,
+-- not a hard FK — mirrors jobs.bundle_id; the issue is find-or-created
+-- at ingest just before the occurrence is written). result is the raw
+-- hook verdict ('failure'); resolution carries the agent/operator
+-- disposition (agent_fixed / accepted / merged / rejected / ...).
 CREATE TABLE IF NOT EXISTS bundles (
     bundle_id TEXT PRIMARY KEY,
     run_id TEXT,
@@ -40,8 +73,34 @@ CREATE TABLE IF NOT EXISTS bundles (
     result TEXT,
     path TEXT,
     last_seen_at TEXT,
+    target TEXT,
+    issue_key TEXT,
+    -- normalized first-error fingerprint, computed at ingest (the issue key input)
+    error_signature TEXT,
+    -- agent/operator disposition; NULL = no disposition yet
     resolution TEXT,
-    error_signature TEXT
+    pre_terminal_resolution TEXT,
+    -- dops substrate assessment, written by the runner at triage time
+    dops_state TEXT,
+    -- independent fix verification (verify-fix orchestrator)
+    verification_status TEXT,
+    verification_at TEXT,
+    verification_applied_diff_sha256 TEXT,
+    -- operator accept / reject
+    accepted_at TEXT,
+    accepted_by TEXT,
+    rejected_at TEXT,
+    rejection_reason TEXT,
+    -- operator take-over (resolution='operator_owned')
+    taken_over_at TEXT,
+    taken_over_by TEXT,
+    -- operator discard (terminal)
+    discarded_at TEXT,
+    discard_reason TEXT,
+    -- terminal-state reopen forensics
+    reopened_at TEXT,
+    reopened_by TEXT,
+    reopened_from TEXT
 );
 
 CREATE TABLE IF NOT EXISTS jobs (
@@ -54,7 +113,12 @@ CREATE TABLE IF NOT EXISTS jobs (
     created_ts_utc TEXT,
     path TEXT,
     last_error TEXT,
-    last_seen_at TEXT
+    last_seen_at TEXT,
+    target TEXT,
+    last_transition_at TEXT,
+    retire_reason TEXT,
+    -- canonical relation to the occurrence it works on
+    bundle_id TEXT
 );
 
 CREATE TABLE IF NOT EXISTS artifacts (
@@ -126,11 +190,9 @@ CREATE TABLE IF NOT EXISTS user_context_requests (
     PRIMARY KEY (run_id, origin, bundle_id)
 );
 
--- Step 29b: append-only history of every operator-submitted
--- context for a (run_id, origin). user_context above carries
--- only the *current* row (overwritten on every submission);
--- this table preserves each round verbatim so manual_handoff.md
--- can render the full operator-side narrative.
+-- Append-only history of every operator-submitted context for a
+-- (run_id, origin). user_context above carries only the current row
+-- (overwritten each submission); this preserves each round verbatim.
 CREATE TABLE IF NOT EXISTS user_context_history (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     run_id TEXT NOT NULL,
@@ -159,9 +221,8 @@ CREATE TABLE IF NOT EXISTS artifact_refs (
     PRIMARY KEY (bundle_id, relpath)
 );
 
--- Phase 1 framework: typed job lifecycle. Every transition writes one row.
--- jobs.state holds the latest JobState value as a denormalized cache;
--- job_events is authoritative.
+-- Typed job lifecycle. Every transition writes one row; jobs.state is a
+-- denormalized cache of the latest, job_events is authoritative.
 CREATE TABLE IF NOT EXISTS job_events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     ts TEXT NOT NULL,
@@ -169,22 +230,121 @@ CREATE TABLE IF NOT EXISTS job_events (
     from_state TEXT,            -- NULL on initial HOOK_ENQUEUED
     to_state TEXT NOT NULL,
     event_name TEXT NOT NULL,   -- one of the JobEvent enum values
-    actor TEXT,                 -- free-form label: "hook", "runner",
-                                -- "runner-<pid>", "tests", etc.
+    actor TEXT,                 -- "hook", "runner", "runner-<pid>", "tests", ...
     detail_json TEXT
+);
+
+-- Operator-triggered verify: the tracker INSERTs a row, the runner polls
+-- and enqueues the verify job (keeps the tracker off the runner's queue
+-- filesystem). status: 'pending' | 'enqueued' | 'failed'.
+CREATE TABLE IF NOT EXISTS verify_requests (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    bundle_id       TEXT NOT NULL,
+    env             TEXT NOT NULL,
+    requested_by    TEXT NOT NULL DEFAULT 'operator',
+    requested_at    TEXT NOT NULL,
+    status          TEXT NOT NULL DEFAULT 'pending',
+    job_id          TEXT,
+    error           TEXT
+);
+
+-- Operator take-over / discard skip lock: subsequent dsynth hooks for a
+-- locked (target, origin) produce a tombstone instead of fresh triage.
+-- At most one OPEN lock per (target, origin); cleared rows are forensics.
+CREATE TABLE IF NOT EXISTS origin_skip_flags (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    target          TEXT NOT NULL,
+    origin          TEXT NOT NULL,
+    set_by          TEXT NOT NULL DEFAULT 'operator',
+    set_at          TEXT NOT NULL,
+    reason          TEXT NOT NULL,
+    bundle_id       TEXT,
+    cleared_at      TEXT,
+    cleared_by      TEXT
+);
+
+-- Per-bundle review-request tracking. Append-only; every delivery
+-- attempt writes a row. provider_pr_id is the upstream identifier
+-- (PR number / MR iid / outbox filename). status: created -> updated ->
+-- closed / merged / create_failed. The partial-unique index below keys
+-- one open delivery per (provider, branch) — branch encodes
+-- (origin, target, signature), so retries of one root cause roll onto
+-- one PR and a double-clicked Accept can't open two.
+CREATE TABLE IF NOT EXISTS bundle_review_requests (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    bundle_id       TEXT NOT NULL,
+    provider        TEXT NOT NULL,
+    provider_pr_id  TEXT,
+    url             TEXT,
+    branch          TEXT,
+    title           TEXT,
+    status          TEXT NOT NULL DEFAULT 'created',
+    created_at      TEXT NOT NULL,
+    last_synced_at  TEXT,
+    error           TEXT,
+    operator        TEXT,
+    error_signature TEXT,
+    note            TEXT,
+    diff_sha256     TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_events_id ON events(id);
 CREATE INDEX IF NOT EXISTS idx_job_events_job ON job_events(job_id, id);
 CREATE INDEX IF NOT EXISTS idx_activity_log_ts ON activity_log(ts);
+CREATE INDEX IF NOT EXISTS idx_activity_log_bundle
+    ON activity_log(bundle_id) WHERE bundle_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_env_health_status_status ON env_health_status(status);
 CREATE INDEX IF NOT EXISTS idx_user_context_updated ON user_context(updated_at);
-CREATE INDEX IF NOT EXISTS idx_user_context_requests_pending ON user_context_requests(status, requested_at);
-CREATE INDEX IF NOT EXISTS idx_user_context_history_lookup ON user_context_history(run_id, origin, context_rev);
+CREATE INDEX IF NOT EXISTS idx_user_context_requests_pending
+    ON user_context_requests(status, requested_at);
+CREATE INDEX IF NOT EXISTS idx_user_context_history_lookup
+    ON user_context_history(run_id, origin, context_rev);
 CREATE INDEX IF NOT EXISTS idx_artifact_refs_bundle ON artifact_refs(bundle_id);
 CREATE INDEX IF NOT EXISTS idx_artifact_refs_sha ON artifact_refs(sha256);
 
--- Phase 4 step 1: tracker schema folded into state.db.
+-- issues
+CREATE INDEX IF NOT EXISTS idx_issues_state ON issues(state);
+CREATE INDEX IF NOT EXISTS idx_issues_origin_target ON issues(origin, target);
+CREATE INDEX IF NOT EXISTS idx_issues_last_seen ON issues(last_seen_at);
+
+-- bundles
+CREATE INDEX IF NOT EXISTS idx_bundles_target ON bundles(target);
+CREATE INDEX IF NOT EXISTS idx_bundles_origin_target_seen
+    ON bundles(origin, target, last_seen_at);
+CREATE INDEX IF NOT EXISTS idx_bundles_resolution ON bundles(resolution);
+CREATE INDEX IF NOT EXISTS idx_bundles_signature_origin
+    ON bundles(origin, target, error_signature);
+CREATE INDEX IF NOT EXISTS idx_bundles_verification_status
+    ON bundles(verification_status);
+CREATE INDEX IF NOT EXISTS idx_bundles_issue_key ON bundles(issue_key);
+
+-- jobs
+CREATE INDEX IF NOT EXISTS idx_jobs_target ON jobs(target);
+CREATE INDEX IF NOT EXISTS idx_jobs_bundle_id ON jobs(bundle_id);
+
+-- runs
+CREATE INDEX IF NOT EXISTS idx_runs_target ON runs(target);
+
+-- verify_requests
+CREATE INDEX IF NOT EXISTS idx_verify_requests_status
+    ON verify_requests(status, requested_at);
+CREATE INDEX IF NOT EXISTS idx_verify_requests_bundle
+    ON verify_requests(bundle_id, requested_at);
+
+-- origin_skip_flags
+CREATE UNIQUE INDEX IF NOT EXISTS uq_origin_skip_flags_open
+    ON origin_skip_flags(target, origin) WHERE cleared_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_origin_skip_flags_lookup
+    ON origin_skip_flags(target, origin, cleared_at);
+
+-- bundle_review_requests
+CREATE INDEX IF NOT EXISTS idx_brr_bundle
+    ON bundle_review_requests(bundle_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_brr_open_branch
+    ON bundle_review_requests(provider, branch)
+    WHERE status NOT IN ('closed', 'merged', 'create_failed');
+
+-- Tracker tables (build tracking) folded into state.db.
 CREATE TABLE IF NOT EXISTS build_types (
     name TEXT PRIMARY KEY
 );
@@ -197,7 +357,8 @@ CREATE TABLE IF NOT EXISTS build_runs (
     finished_at TEXT,
     commit_sha TEXT,
     commit_branch TEXT,
-    commit_pushed_at TEXT
+    commit_pushed_at TEXT,
+    total_expected INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS build_results (
@@ -207,6 +368,7 @@ CREATE TABLE IF NOT EXISTS build_results (
     result TEXT NOT NULL,
     log_url TEXT,
     recorded_at TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'recorded',
     PRIMARY KEY (build_run_id, origin)
 );
 
@@ -241,241 +403,23 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_build_runs_active
     WHERE finished_at IS NULL;
 """
 
-# Idempotent ADD COLUMN migrations. Wrapped at call time because SQLite
-# raises OperationalError when the column already exists. Order matters
-# only insofar as they target their own tables — no cross-deps.
-MIGRATIONS: tuple[str, ...] = (
-    "ALTER TABLE build_results ADD COLUMN status TEXT NOT NULL DEFAULT 'recorded'",
-    "ALTER TABLE build_runs ADD COLUMN total_expected INTEGER",
-    "ALTER TABLE runs ADD COLUMN build_run_id INTEGER",
-    # Phase 4 step 5: target awareness on the agentic side. Nullable
-    # because pre-step-5 rows exist; new writes carry target.
-    "ALTER TABLE bundles ADD COLUMN target TEXT",
-    "ALTER TABLE jobs ADD COLUMN target TEXT",
-    "ALTER TABLE runs ADD COLUMN target TEXT",
-    "CREATE INDEX IF NOT EXISTS idx_bundles_target ON bundles(target)",
-    "CREATE INDEX IF NOT EXISTS idx_bundles_origin_target_seen "
-    "ON bundles(origin, target, last_seen_at)",
-    "CREATE INDEX IF NOT EXISTS idx_jobs_target ON jobs(target)",
-    "CREATE INDEX IF NOT EXISTS idx_runs_target ON runs(target)",
-    # Phase 1 framework: per-job transition forensics.
-    "ALTER TABLE jobs ADD COLUMN last_transition_at TEXT",
-    "ALTER TABLE jobs ADD COLUMN retire_reason TEXT",
-    # bundle_id FK: the canonical relation between jobs and bundles.
-    # Pre-2026-05-26 the relation was expressed via jobs.bundle_dir
-    # (a filesystem-path string), which list_jobs_for_bundle joined
-    # on with LIKE matching. Patch / verify enqueue paths never set
-    # bundle_dir, so any query "what jobs touched this bundle" was
-    # silently incomplete. Normalized FK + index now.
-    "ALTER TABLE jobs ADD COLUMN bundle_id TEXT",
-    "CREATE INDEX IF NOT EXISTS idx_jobs_bundle_id ON jobs(bundle_id)",
-    # Post-impl plan: agent-driven resolution propagation. The hook
-    # writes bundles.result='failure' at ingest; that never changes,
-    # even after the patch agent fixes the build. Resolution carries
-    # the agent's verdict: 'agent_fixed' on PATCH_OK,
-    # 'agent_gave_up' / 'agent_budget_exhausted' on terminal patch
-    # failures, 'escalated_manual' when triage routes to MANUAL.
-    # NULL = no agent disposition yet (typical for fresh bundles).
-    "ALTER TABLE bundles ADD COLUMN resolution TEXT",
-    "CREATE INDEX IF NOT EXISTS idx_bundles_resolution ON bundles(resolution)",
-    # Step 6: cached hash of the bundle's first error-line. Lazy-
-    # computed by the runner the first time the retry-cap query needs
-    # it; the hook itself doesn't write this so old bundles can still
-    # contribute. Stored as a short hex digest. NULL = not computed
-    # yet OR no errors.txt artifact available.
-    "ALTER TABLE bundles ADD COLUMN error_signature TEXT",
-    "CREATE INDEX IF NOT EXISTS idx_bundles_signature_origin "
-    "ON bundles(origin, target, error_signature)",
-    # Step 11b Slice 2: independent fix verification. The orchestrator
-    # (`dportsv3 verify-fix BUNDLE_ID`, Slice 3) provisions a fresh
-    # env, replays the bundle's analysis/changes.diff, runs
-    # dsynth_build, and POSTs the result back here. Three columns:
-    # - verification_status: 'verified' | 'verification_failed' | NULL
-    # - verification_at: ISO timestamp of last verification attempt
-    # - verification_applied_diff_sha256: sha256 of the diff that was
-    #   replayed; lets the UI dedupe re-verifications of the same fix
-    "ALTER TABLE bundles ADD COLUMN verification_status TEXT",
-    "ALTER TABLE bundles ADD COLUMN verification_at TEXT",
-    "ALTER TABLE bundles ADD COLUMN verification_applied_diff_sha256 TEXT",
-    "CREATE INDEX IF NOT EXISTS idx_bundles_verification_status "
-    "ON bundles(verification_status)",
-    # Step 11c: operator accept/reject decisions on agent-fixed
-    # bundles. Acceptance is gated on verification_status='verified'.
-    # accepted_by is intentionally NULL today (auth lands in Step 18).
-    "ALTER TABLE bundles ADD COLUMN accepted_at TEXT",
-    "ALTER TABLE bundles ADD COLUMN accepted_by TEXT",
-    "ALTER TABLE bundles ADD COLUMN rejected_at TEXT",
-    "ALTER TABLE bundles ADD COLUMN rejection_reason TEXT",
-    # Step 11c layer-violation cleanup: tracker used to call
-    # dops.classify() live on every bundle detail render, which
-    # required host-side DP_HARNESS_REPO_ROOT access — defeating
-    # the "tracker reads state.db, not the host filesystem" rule.
-    # The runner now writes dops_state at triage time (it has
-    # chroot access via worker.assess_dops); the tracker just reads
-    # the column. NULL for legacy rows where no triage ran post-
-    # this-change.
-    "ALTER TABLE bundles ADD COLUMN dops_state TEXT",
-    # Step 11c layer-violation cleanup: the operator-triggered
-    # /verify endpoint used to import dportsv3.agent.runner and
-    # write .job files directly into the queue. That couples the
-    # tracker to runner colocation (breaks Step 17 remote runners)
-    # and crosses the read-only boundary. Mirror the existing
-    # user_context_requests pattern instead: the tracker INSERTs a
-    # row here, the runner polls and enqueues the verify job.
-    # status: 'pending' | 'enqueued' | 'failed'.
-    """CREATE TABLE IF NOT EXISTS verify_requests (
-        id              INTEGER PRIMARY KEY AUTOINCREMENT,
-        bundle_id       TEXT NOT NULL,
-        env             TEXT NOT NULL,
-        requested_by    TEXT NOT NULL DEFAULT 'operator',
-        requested_at    TEXT NOT NULL,
-        status          TEXT NOT NULL DEFAULT 'pending',
-        job_id          TEXT,
-        error           TEXT
-    )""",
-    "CREATE INDEX IF NOT EXISTS idx_verify_requests_status "
-    "ON verify_requests(status, requested_at)",
-    "CREATE INDEX IF NOT EXISTS idx_verify_requests_bundle "
-    "ON verify_requests(bundle_id, requested_at)",
-    # Step 28a: operator take-over on failed bundles. The operator
-    # stakes a (target, origin) pair via POST /api/bundles/{id}/
-    # take-over; the bundle's resolution moves to 'operator_owned'
-    # (non-terminal — Verify/Accept from Step 11c can still fire)
-    # and a row lands in origin_skip_flags so subsequent dsynth
-    # hooks for the same (target, origin) produce a tombstone
-    # bundle instead of fresh triage. taken_over_by is freeform
-    # today; integrating with the auth model is Step 17 territory.
-    "ALTER TABLE bundles ADD COLUMN taken_over_at TEXT",
-    "ALTER TABLE bundles ADD COLUMN taken_over_by TEXT",
-    """CREATE TABLE IF NOT EXISTS origin_skip_flags (
-        id              INTEGER PRIMARY KEY AUTOINCREMENT,
-        target          TEXT NOT NULL,
-        origin          TEXT NOT NULL,
-        set_by          TEXT NOT NULL DEFAULT 'operator',
-        set_at          TEXT NOT NULL,
-        reason          TEXT NOT NULL,
-        bundle_id       TEXT,
-        cleared_at      TEXT,
-        cleared_by      TEXT
-    )""",
-    # Partial-unique index: at most one OPEN lock per (target, origin).
-    # Cleared rows accumulate as forensics and don't block re-locking.
-    "CREATE UNIQUE INDEX IF NOT EXISTS uq_origin_skip_flags_open "
-    "ON origin_skip_flags(target, origin) WHERE cleared_at IS NULL",
-    "CREATE INDEX IF NOT EXISTS idx_origin_skip_flags_lookup "
-    "ON origin_skip_flags(target, origin, cleared_at)",
-    # Step 28b: operator discard on failed (or operator-owned)
-    # bundles. resolution='discarded' is terminal — the operator
-    # has decided the bundle's underlying port isn't worth pursuing
-    # right now. discard_reason is required (an unexplained discard
-    # is uninformative); per-(target, origin) skip flag optional via
-    # the endpoint's skip_origin body field.
-    "ALTER TABLE bundles ADD COLUMN discarded_at TEXT",
-    "ALTER TABLE bundles ADD COLUMN discard_reason TEXT",
-    # Step 28d: terminal-state reopen override. Operator clears a
-    # terminal resolution (accepted/rejected/discarded) back to NULL
-    # so the bundle can be re-actioned. Rare — guarded behind a
-    # confirmation modal in the UI. Forensics columns are populated
-    # only on reopen; the prior terminal columns
-    # (accepted_at, rejected_at, discarded_*, taken_over_*) are
-    # preserved as historical record. reopened_from records which
-    # terminal state was being undone so the audit trail is
-    # self-explanatory without joining job_events.
-    "ALTER TABLE bundles ADD COLUMN reopened_at TEXT",
-    "ALTER TABLE bundles ADD COLUMN reopened_by TEXT",
-    "ALTER TABLE bundles ADD COLUMN reopened_from TEXT",
-    # Step 11d-1: per-bundle review-request tracking. Append-only;
-    # every delivery attempt writes a row. The bundle UI shows the
-    # most-recent row's status. Partial-unique index enforces "at
-    # most one open delivery per (provider, error_signature)" at
-    # the DB layer — a double-clicked Accept can't produce two
-    # open PRs. provider_pr_id is the upstream's identifier
-    # (PR number / MR iid / outbox filename). status moves
-    # 'created' → 'closed'/'merged' via operator action; future
-    # PR-status polling (out of scope for 11d) will keep it in
-    # sync with the upstream platform.
-    """CREATE TABLE IF NOT EXISTS bundle_review_requests (
-        id              INTEGER PRIMARY KEY AUTOINCREMENT,
-        bundle_id       TEXT NOT NULL,
-        provider        TEXT NOT NULL,
-        provider_pr_id  TEXT,
-        url             TEXT,
-        branch          TEXT,
-        title           TEXT,
-        status          TEXT NOT NULL DEFAULT 'created',
-        created_at      TEXT NOT NULL,
-        last_synced_at  TEXT,
-        error           TEXT,
-        operator        TEXT,
-        error_signature TEXT
-    )""",
-    "CREATE INDEX IF NOT EXISTS idx_brr_bundle "
-    "ON bundle_review_requests(bundle_id)",
-    # The original "one open row per (provider, error_signature)"
-    # index conflated unrelated ports whose first error line happened
-    # to match (signature is `sha256(first non-empty errors.txt line)`
-    # — origin-agnostic). Cross-port collisions on accept produced
-    # IntegrityError after the provider had already opened a PR
-    # upstream, leaving orphan PRs. Replaced by the per-branch index
-    # below: branch identity now encodes (origin, target, signature),
-    # so "one open row per branch" matches "one open PR per branch"
-    # at the provider, and signature aliasing within a port still
-    # rolls retries onto the same PR.
-    "DROP INDEX IF EXISTS uq_brr_open_signature",
-    "CREATE UNIQUE INDEX IF NOT EXISTS uq_brr_open_branch "
-    "ON bundle_review_requests(provider, branch) "
-    "WHERE status NOT IN ('closed', 'merged', 'create_failed')",
-    # Step 11d-5 follow-up (review): dedicated `note` column for
-    # operator annotations on manual status updates. Pre-fix the
-    # endpoint reused the `error` column with a "note: " prefix,
-    # which required the UI to disambiguate via string parsing.
-    # A separate column is cleaner; the migration runs once on
-    # init_db and ADD COLUMN defaults to NULL on existing rows.
-    "ALTER TABLE bundle_review_requests ADD COLUMN note TEXT",
-    # Step 11d-3 follow-up (review Finding 4): track the diff
-    # SHA delivered for each open row so re-Accept on identical
-    # content can skip the git pipeline + force-push and just
-    # patch the PR body. Without this, every re-Accept produces
-    # a fresh commit (timestamps differ) and adds noise to the
-    # upstream PR history.
-    "ALTER TABLE bundle_review_requests ADD COLUMN diff_sha256 TEXT",
-    # Visibility upgrade: tracker-side bundle_accepted +
-    # delivery_complete activity rows previously landed with
-    # job_id=NULL because they originate from an HTTP endpoint,
-    # not a runner job. That made them invisible on the bundle
-    # detail page (filtered by job_id) and dropped by
-    # `get-activity --target` (joins through jobs.job_id).
-    # Adding bundle_id lets the bundle page render
-    # bundle-scoped activity and lets future writers cross-
-    # reference rows to their bundle without parsing extra_json.
-    "ALTER TABLE activity_log ADD COLUMN bundle_id TEXT",
-    "CREATE INDEX IF NOT EXISTS idx_activity_log_bundle "
-    "ON activity_log(bundle_id) WHERE bundle_id IS NOT NULL",
-    # Reopen restore: terminal-state handlers (accept/reject/discard)
-    # snapshot the prior resolution here so reopen can restore the
-    # actionable state instead of nulling it. Without this the
-    # operator action gates (verify/accept/reject) — all keyed on
-    # resolution='agent_fixed' or 'operator_owned' — stay hidden
-    # after reopen, dead-ending the "undo my decision" flow. NULL on
-    # legacy rows; reopen falls back to NULL resolution (prior
-    # behavior) in that case.
-    "ALTER TABLE bundles ADD COLUMN pre_terminal_resolution TEXT",
-)
+# The DB is wiped, not migrated — every column lives in its CREATE above,
+# so there are no ADD COLUMN patches to apply. Kept as an (empty) hook so
+# init_db's shape is stable if a one-off backfill is ever needed.
+MIGRATIONS: tuple[str, ...] = ()
 
 
 def init_db(conn: sqlite3.Connection) -> None:
-    """Run schema + seeds + migrations on an open connection.
+    """Run schema + seeds on an open connection.
 
-    Called by artifact-store at startup. Tracker (read-only) doesn't
-    need this — it just opens the DB and queries. Sets PRAGMAs first
-    so the rest of the call inherits them.
+    Called by artifact-store at startup. Sets PRAGMAs first so the rest
+    of the call inherits them.
     """
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA busy_timeout=5000")
-    # Enforce FK constraints introduced by the tracker tables
-    # (build_results.build_run_id -> build_runs.id, etc.). The original
-    # artifact-store tables have no FKs, so the only impact is on
-    # writes to the folded-in tracker tables.
+    # Enforce FK constraints on the build_* tracker tables. The other
+    # cross-table references (jobs.bundle_id, bundles.issue_key) are
+    # plain indexed columns, not declared FKs, so they're unaffected.
     conn.execute("PRAGMA foreign_keys=ON")
     conn.executescript(SCHEMA)
     conn.executemany(

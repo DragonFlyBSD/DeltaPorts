@@ -37,6 +37,11 @@ loop, and operator-facing delivery of accepted fixes. Entry points:
   unchanged-content mtimes during reconcile).
 - `artifact_store.py` — HTTP service that is the **single writer** for
   `state.db` plus bundle blobs and full logs. Schema in `db/schema.py`.
+  On ingest it find-or-creates the occurrence's fingerprinted issue.
+- `fingerprint.py` — error-line normalization → `sha256[:16]` signature
+  and `(target, origin, fingerprint)` → issue key. One normalization
+  rule, shared by the artifact-store writer (issue find-or-create) and
+  the runner's sticky-signature check.
 - `verify_fix.py` — operator command (not in the agent loop) that
   glues `dev-env apply-and-build` to
   `POST /api/bundles/<id>/verification`.
@@ -108,19 +113,25 @@ On import, installs a `tokenizers` stub for DragonFly (broken
   escalates (MANUAL tier, retry cap, budget exhaustion, gave-up).
 - `session_dump.py` — optional gzipped-JSONL dump of LLM
   conversations (gated by `DP_HARNESS_DUMP_SESSION`).
-- `edit_intent/` — (deleted per Step 42 — patch agent now overlays
-  `overlay.dops` free-hand; this dir may still exist as a stub).
 
 ### `tracker/` — read+write consumer of `state.db`
 - `server.py` — FastAPI app factory.
 - `db.py` — SQLite helpers (WAL, single-writer-at-a-time).
-- `agentic_queries.py` — SQL for the bundles/jobs/activity/events
-  read endpoints consumed by operators and the analyzer subagent.
+- `agentic_queries/` — SQL for the bundles/jobs/activity/events read
+  endpoints (operators + the analyzer subagent). `issues.py` adds the
+  issue reads: `list_issues`, `get_issue`, `occurrences_for_issue`,
+  `issue_for_bundle`, and the `issues_with_occurrences` worklist feed.
 - `progress_adapter.py` — projects tracker rows into the
   `dsynth-progress` UI's `summary.json` + `<NN>_history.json` shape.
-- `fix_state.py` — bundle state projection (`fix_status`) + action
-  policy + worklist bucketing. `merged` is a terminal, dominant
+- `fix_state.py` — bundle/occurrence state projection (`fix_status`) +
+  action policy + `worklist_bucket`. `merged` is a terminal, dominant
   resolution (a landed PR beats any local resolution).
+- `issue_state.py` — issue-level projection layered on `fix_state`: the
+  lifecycle badge (unresolved/regressed/resolved/muted) × the actionable
+  occurrence's action band, plus systemic-first worklist bucketing.
+- `routes/issue_actions.py` — the `POST /api/issues/{key}/{mute |
+  unmute | resolve | reopen}` endpoints (gate → 404/409, each write
+  under one `BEGIN IMMEDIATE`).
 - `delivery_sync.py` — lazy, on-render reconciliation of a bundle's
   upstream PR: polls GitHub (throttled by `last_synced_at`) and flips
   the bundle to terminal `merged` on a merge. Shared
@@ -193,7 +204,8 @@ overlay.dops ──► engine (lex/parse/sema/plan) ──► apply ──► po
 freebsd upstream (+ lock) ──────────────────────► compose pipeline ──► output tree
 
 dsynth build failure ──► artifact-store (state.db, single writer)
-                              │
+                              │  find-or-creates the fingerprinted Issue;
+                              │  the occurrence keeps its bundle_id
                               ├─► tracker (read+write, HTTP API + UI)
                               └─► agent.runner (claims jobs)
                                        │
@@ -210,6 +222,15 @@ dsynth build failure ──► artifact-store (state.db, single writer)
 
 - **One writer for `state.db`**: `artifact_store.py`. Tracker reads +
   writes via that file under WAL; schema in `db/schema.py`.
+- **Issues are first-class + fingerprinted** — every occurrence (a
+  bundle, keyed by its unchanged `bundle_id`) belongs to an Issue that
+  the writer find-or-creates at ingest by `(target, origin,
+  fingerprint)`. Lifecycle: unresolved → resolved (on merge) →
+  regressed (a new occurrence after resolve) → muted. **Muting
+  suppresses both surfacing and auto-triage** — the runner
+  short-circuits auto-work for a muted issue's occurrences
+  (`_maybe_skip_muted_issue`). The end-to-end arc is pinned by
+  `tests/test_issue_lifecycle_arc.py`.
 - **Triage bootstraps the dops substrate or aborts** — at a failure with
   no `overlay.dops`, the runner (`_ensure_overlay_or_abort` →
   `overlay_state.bootstrap_decision`) deterministically writes a header

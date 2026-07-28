@@ -27,6 +27,15 @@ bundle_id="${bundle_id}-${ts}"
 
 tracker_load_config
 
+# Distill the failure log up front so the bundle upsert can carry the
+# errors text — the store fingerprints it at ingest to establish issue
+# identity the moment this occurrence is born.
+logfile=$(logfile_for_origin "$ORIGIN" "$FLAVOR")
+tmpdir=$(mktemp -d)
+# Best-effort: a distill failure must never cost us the bundle record.
+distill_log "$logfile" "$tmpdir" || true
+errors_txt="${tmpdir}/errors.txt"
+
 artifact_store bundle-upsert \
 	--run-id "${run_id}" \
 	--profile "${PROFILE}" \
@@ -35,7 +44,8 @@ artifact_store bundle-upsert \
 	--bundle-id "${bundle_id}" \
 	--origin "${origin_base}" \
 	--flavor "${FLAVOR}" \
-	--result "${RESULT}" >/dev/null
+	--result "${RESULT}" \
+	--errors-file "${errors_txt}" >/dev/null
 
 artifact_store put-blob --bundle-id "${bundle_id}" --relpath "meta.txt" --stdin <<EOF >/dev/null
  ts_utc=${ts}
@@ -55,7 +65,6 @@ artifact_store put-blob --bundle-id "${bundle_id}" --relpath "meta.txt" --stdin 
 EOF
 
 # Log capture
-logfile=$(logfile_for_origin "$ORIGIN" "$FLAVOR")
 artifact_store put-blob --bundle-id "${bundle_id}" --relpath "logfile.txt" --stdin <<EOF >/dev/null
 logfile=${logfile}
 EOF
@@ -82,11 +91,9 @@ if [ -d "${portdir}/files" ]; then
 	done
 fi
 
-# Distill to a bounded error bundle.
-tmpdir=$(mktemp -d)
-distill_log "$logfile" "$tmpdir"
-if [ -r "${tmpdir}/errors.txt" ]; then
-	artifact_store put-blob --bundle-id "${bundle_id}" --relpath "logs/errors.txt" --file "${tmpdir}/errors.txt" >/dev/null
+# Persist the (already-distilled) bounded error bundle.
+if [ -r "${errors_txt}" ]; then
+	artifact_store put-blob --bundle-id "${bundle_id}" --relpath "logs/errors.txt" --file "${errors_txt}" >/dev/null
 fi
 rm -rf "$tmpdir"
 

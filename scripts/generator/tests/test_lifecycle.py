@@ -118,7 +118,6 @@ def test_every_transition_in_table_is_reachable(tmp_path):
         JobState.TRIAGED:   [JobEvent.HOOK_ENQUEUED, JobEvent.CLAIM, JobEvent.TRIAGE_START, JobEvent.TRIAGE_OK],
         JobState.PATCHING:  [JobEvent.HOOK_ENQUEUED, JobEvent.CLAIM, JobEvent.TRIAGE_START, JobEvent.TRIAGE_OK, JobEvent.PATCH_START],
         JobState.VERIFYING: [JobEvent.HOOK_ENQUEUED, JobEvent.CLAIM, JobEvent.TRIAGE_START, JobEvent.TRIAGE_OK, JobEvent.PATCH_START, JobEvent.PATCH_OK],
-        JobState.CONVERTING: [JobEvent.HOOK_ENQUEUED, JobEvent.CLAIM, JobEvent.CONVERT_START],
         JobState.VERIFYING_FIX: [JobEvent.HOOK_ENQUEUED, JobEvent.CLAIM, JobEvent.VERIFY_FIX_START],
     }
 

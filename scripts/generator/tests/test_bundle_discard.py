@@ -57,7 +57,7 @@ def seeded_db(tmp_path: Path):
                    origin="devel/gaveup")
     _insert_bundle(c, "b-escalated", resolution="escalated_manual",
                    origin="devel/esc")
-    _insert_bundle(c, "b-convert-gave-up", resolution="convert_gave_up",
+    _insert_bundle(c, "b-gave-up-2", resolution="agent_gave_up",
                    origin="devel/conv")
     _insert_bundle(c, "b-owned", resolution="operator_owned",
                    origin="devel/owned")
@@ -100,7 +100,7 @@ def _row(db_path: Path, bid: str) -> sqlite3.Row:
     ("b-budget", "devel/budget"),
     ("b-gave-up", "devel/gaveup"),
     ("b-escalated", "devel/esc"),
-    ("b-convert-gave-up", "devel/conv"),
+    ("b-gave-up-2", "devel/conv"),
     ("b-owned", "devel/owned"),
 ])
 def test_discard_happy_path_opens_lock_by_default(
@@ -315,7 +315,7 @@ def test_reject_409_on_discarded(client):
 
 
 @pytest.mark.parametrize("bundle_id", [
-    "b-budget", "b-gave-up", "b-escalated", "b-convert-gave-up",
+    "b-budget", "b-gave-up", "b-escalated", "b-gave-up-2",
     "b-owned",
 ])
 def test_discard_button_renders_on_failure_or_operator_owned(client, bundle_id):

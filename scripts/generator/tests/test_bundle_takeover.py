@@ -60,7 +60,7 @@ def seeded_db(tmp_path: Path):
                    origin="devel/gaveup")
     _insert_bundle(c, "b-escalated", resolution="escalated_manual",
                    origin="devel/esc")
-    _insert_bundle(c, "b-convert-gave-up", resolution="convert_gave_up",
+    _insert_bundle(c, "b-gave-up-2", resolution="agent_gave_up",
                    origin="devel/conv")
     _insert_bundle(c, "b-agent-fixed", resolution="agent_fixed",
                    origin="devel/fixed")
@@ -103,7 +103,7 @@ def _row(db_path: Path, bid: str) -> sqlite3.Row:
     ("b-budget", "devel/budget"),
     ("b-gave-up", "devel/gaveup"),
     ("b-escalated", "devel/esc"),
-    ("b-convert-gave-up", "devel/conv"),
+    ("b-gave-up-2", "devel/conv"),
 ])
 def test_take_over_happy_path_from_failure_resolution(
     client, seeded_db, bundle_id, origin,

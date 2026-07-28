@@ -60,20 +60,21 @@
     <section class="wl-band" id="wl-{{ band.key }}">
       <div class="wl-band-head">
         <h2>{{ band.label }}</h2>
-        <span class="wl-band-meta">{{ band.count }}{% if band.groups|length != band.count %} across {{ band.groups|length }} port{{ 's' if band.groups|length != 1 else '' }}{% endif %}</span>
+        <span class="wl-band-meta">{{ band.count }} issue{{ 's' if band.count != 1 else '' }}</span>
       </div>
       <div class="wl-list">
         {% for g in band.groups %}
-        {% if g.is_group %}
-        {# Grouped: recurring failures of one port, expandable. #}
+        {% if g.count > 1 %}
+        {# An issue seen several times — expandable to its occurrences. #}
         <div class="wl-group" id="grp-{{ band.key }}-{{ loop.index }}">
           <div class="wl-row {{ band.key }}" onclick="wlToggle(this.parentElement)">
             <span class="wl-stripe"></span>
-            <button type="button" class="wl-chev" aria-label="Expand attempts">›</button>
+            <button type="button" class="wl-chev" aria-label="Expand occurrences">›</button>
             <div class="wl-ident">
               <span class="wl-port">{{ g.origin }}</span>
-              <span class="wl-x">×{{ g.count }}</span>
-              {% if g.recurring %}<span class="wl-recur" title="Failing repeatedly — likely systemic">recurring</span>{% endif %}
+              <span class="wl-x" title="seen {{ g.times_seen }} times">×{{ g.times_seen }}</span>
+              {% if g.regressed %}<span class="wl-recur" title="Fixed before — came back">regressed</span>
+              {% elif g.systemic %}<span class="wl-recur" title="Failing repeatedly — likely systemic">systemic</span>{% endif %}
             </div>
             <div class="wl-rollup">
               {% for r in g.rollup %}
@@ -88,7 +89,7 @@
             </div>
           </div>
           <div class="wl-children">
-            {% for b in g.attempts %}
+            {% for b in g.occurrences %}
             {% set s = fix_status(b) %}
             <a class="wl-child" href="{{ request.url_for('agentic_bundle_detail', bundle_id=b.bundle_id) }}">
               <span class="wl-cid">{{ b.bundle_id }}</span>
@@ -102,7 +103,7 @@
           </div>
         </div>
         {% else %}
-        {# Single attempt: a plain row. #}
+        {# A single-occurrence issue — a plain row. #}
         {% set b = g.latest %}
         {% set s = fix_status(b) %}
         <div class="wl-row {{ band.key }}">
@@ -110,6 +111,7 @@
           <span class="wl-chev leaf">›</span>
           <div class="wl-ident">
             <a class="wl-port" href="{{ request.url_for('agentic_bundle_detail', bundle_id=b.bundle_id) }}">{{ g.origin }}</a>
+            {% if g.regressed %}<span class="wl-recur" title="Fixed before — came back">regressed</span>{% endif %}
             <span class="wl-subid">{{ b.bundle_id }}</span>
           </div>
           <div class="wl-mid">
@@ -130,28 +132,49 @@
     {% endif %}
     {% endfor %}
 
-    {# Recently resolved — collapsed archive. #}
+    {# Resolved — collapsed archive, one row per issue. #}
     {% if done_groups %}
     <details class="wl-archive">
-      <summary>Recently resolved · {{ done_groups | sum(attribute='count') }}</summary>
+      <summary>Recently resolved · {{ done_groups | length }}</summary>
       <div class="wl-list" style="margin-top:8px;">
         {% for g in done_groups %}
-        {% for b in g.attempts %}
-        {% set s = fix_status(b) %}
         <div class="wl-row resolved">
           <span class="wl-stripe"></span>
           <span class="wl-chev leaf">›</span>
           <div class="wl-ident">
-            <a class="wl-port" href="{{ request.url_for('agentic_bundle_detail', bundle_id=b.bundle_id) }}">{{ b.origin }}</a>
-            <span class="wl-subid">{{ b.bundle_id }}</span>
+            <a class="wl-port" href="{{ request.url_for('agentic_bundle_detail', bundle_id=g.latest.bundle_id) }}">{{ g.origin }}</a>
+            {% if g.times_seen > 1 %}<span class="wl-x" title="seen {{ g.times_seen }} times">×{{ g.times_seen }}</span>{% endif %}
           </div>
           <div class="wl-mid">
-            <span class="wl-pill {{ s.cls }}">{{ s.label }}</span>
-            <span class="wl-age" title="{{ b.ts_utc }}">{{ b.ts_utc | relative_age }}</span>
+            <span class="wl-pill {{ g.status.pill }}">{{ g.status.label }}</span>
+            <span class="wl-age" title="{{ g.last_seen_at }}">{{ g.last_seen_at | relative_age }}</span>
           </div>
           <div class="wl-actions"></div>
         </div>
         {% endfor %}
+      </div>
+    </details>
+    {% endif %}
+
+    {# Muted — collapsed, discoverable. Unmute lives on the issue page. #}
+    {% if muted_groups %}
+    <details class="wl-archive">
+      <summary>Muted · {{ muted_groups | length }}</summary>
+      <div class="wl-list" style="margin-top:8px;">
+        {% for g in muted_groups %}
+        <div class="wl-row">
+          <span class="wl-stripe"></span>
+          <span class="wl-chev leaf">›</span>
+          <div class="wl-ident">
+            <a class="wl-port" href="{{ request.url_for('agentic_bundle_detail', bundle_id=g.latest.bundle_id) }}">{{ g.origin }}</a>
+            {% if g.times_seen > 1 %}<span class="wl-x" title="seen {{ g.times_seen }} times">×{{ g.times_seen }}</span>{% endif %}
+            <span class="wl-recur" title="Muted — no surfacing, no auto-triage">muted</span>
+          </div>
+          <div class="wl-mid">
+            <span class="wl-age" title="{{ g.last_seen_at }}">last {{ g.last_seen_at | relative_age }}</span>
+          </div>
+          <div class="wl-actions"></div>
+        </div>
         {% endfor %}
       </div>
     </details>

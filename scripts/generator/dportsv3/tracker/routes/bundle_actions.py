@@ -1380,45 +1380,57 @@ def register(app, ctx):
             isolation_level=None,
         )
         write_conn.row_factory = sqlite3.Row
+        write_conn.execute("PRAGMA busy_timeout=5000")
         try:
-            updated = update_review_request_status(
-                write_conn,
-                request_id=int(latest["id"]),
-                status=status,
-                note=note_text,
-            )
-            if not updated:
-                # The row vanished between latest_review_request_for_bundle
-                # and the UPDATE. Vanishingly rare; surface as 404.
-                raise HTTPException(
-                    status_code=404,
-                    detail=(
-                        f"Bundle {bundle_id!r} delivery row "
-                        f"disappeared mid-update"
-                    ),
+            # One transaction so the delivery-row update, the resolution
+            # flip, and the issue resolve either all land or none do — a
+            # crash between them must not strand a merged bundle with an
+            # unresolved issue. Mirrors the lazy poll path's discipline.
+            write_conn.execute("BEGIN IMMEDIATE")
+            try:
+                updated = update_review_request_status(
+                    write_conn,
+                    request_id=int(latest["id"]),
+                    status=status,
+                    note=note_text,
                 )
-            from dportsv3.artifact_store import emit_event  # noqa: PLC0415
-            emit_event(write_conn, "bundle_delivery_status_changed", {
-                "bundle_id": bundle_id,
-                "request_id": int(latest["id"]),
-                "prior_status": prior_status,
-                "new_status": status,
-                "note": note,
-            })
-            # A merge means the code landed upstream — the bundle is
-            # terminally done. Flip its resolution so it leaves the
-            # worklist and can't be re-Accepted (which would open a
-            # duplicate PR). Same terminal state the lazy poll reaches;
-            # one shared writer keeps both paths in lockstep.
-            if status == "merged":
-                from dportsv3.tracker.delivery_sync import (  # noqa: PLC0415
-                    set_bundle_merged_resolution,
-                )
-                set_bundle_merged_resolution(
-                    write_conn, bundle_id,
-                    now_iso=datetime.now(timezone.utc).isoformat(),
-                    source="manual",
-                )
+                if not updated:
+                    # The row vanished between latest_review_request_for_bundle
+                    # and the UPDATE. Vanishingly rare; surface as 404.
+                    raise HTTPException(
+                        status_code=404,
+                        detail=(
+                            f"Bundle {bundle_id!r} delivery row "
+                            f"disappeared mid-update"
+                        ),
+                    )
+                from dportsv3.artifact_store import emit_event  # noqa: PLC0415
+                emit_event(write_conn, "bundle_delivery_status_changed", {
+                    "bundle_id": bundle_id,
+                    "request_id": int(latest["id"]),
+                    "prior_status": prior_status,
+                    "new_status": status,
+                    "note": note,
+                })
+                # A merge means the code landed upstream — the bundle is
+                # terminally done. Flip its resolution so it leaves the
+                # worklist and can't be re-Accepted (which would open a
+                # duplicate PR). Same terminal state the lazy poll reaches;
+                # one shared writer keeps both paths in lockstep. This also
+                # resolves the bundle's issue (WS4).
+                if status == "merged":
+                    from dportsv3.tracker.delivery_sync import (  # noqa: PLC0415
+                        set_bundle_merged_resolution,
+                    )
+                    set_bundle_merged_resolution(
+                        write_conn, bundle_id,
+                        now_iso=datetime.now(timezone.utc).isoformat(),
+                        source="manual",
+                    )
+                write_conn.execute("COMMIT")
+            except Exception:
+                write_conn.execute("ROLLBACK")
+                raise
         finally:
             write_conn.close()
 

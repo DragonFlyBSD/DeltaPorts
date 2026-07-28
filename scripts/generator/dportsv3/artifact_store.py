@@ -51,6 +51,31 @@ def blob_path(root: Path, sha: str) -> Path:
     return root / "objects" / "sha256" / sha[0:2] / sha[2:4] / sha
 
 
+def _normalize_ts(raw: str | None) -> str | None:
+    """Canonicalize a hook timestamp to ISO-8601 UTC.
+
+    The dsynth hooks stamp the compact ``YYYYmmdd-HHMMSSZ`` form
+    (``hook_common.now_utc``), but the rest of the system speaks ISO —
+    the issue ``*_at`` timestamps, ``render.relative_age``, and the
+    unmute regression check (``ts_utc > resolved_at``) all assume it.
+    Storing the compact form raw left ``ts_utc`` lexicographically
+    incomparable with those ISO values. Normalize here, at the single
+    writer, so every timestamp column is one comparable format. Values
+    already ISO (tests, other clients) or otherwise unrecognized pass
+    through unchanged, so this is idempotent.
+    """
+    if not raw:
+        return raw
+    try:
+        return (
+            datetime.strptime(raw, "%Y%m%d-%H%M%SZ")
+            .replace(tzinfo=timezone.utc)
+            .isoformat()
+        )
+    except (ValueError, TypeError):
+        return raw
+
+
 class ArtifactStore:
     def __init__(self, logs_root: Path) -> None:
         self.logs_root = logs_root
@@ -76,10 +101,29 @@ class ArtifactStore:
         bundle_id = payload.get("bundle_id")
         origin = payload.get("origin")
         flavor = payload.get("flavor")
-        ts_utc = payload.get("ts_utc")
+        ts_utc = _normalize_ts(payload.get("ts_utc"))
         result = payload.get("result")
         target = payload.get("target")
+        # Fingerprint at ingest: prefer a caller-supplied signature, else
+        # derive it here from the distilled errors text. Computing it in
+        # the store keeps a single normalization rule (dportsv3.fingerprint,
+        # shared with the runner's sticky-signature check) and lets the
+        # stdlib-only hook client stay dumb.
+        error_signature = payload.get("error_signature") or None
+        if not error_signature:
+            errors_text = payload.get("errors_text")
+            if errors_text:
+                from dportsv3.fingerprint import compute_fingerprint
+                error_signature = compute_fingerprint(errors_text)
         now = datetime.now(timezone.utc).isoformat()
+
+        # The issue this occurrence belongs to: the fingerprinted problem
+        # keyed by (target, origin, fingerprint). Established at birth so
+        # the occurrence never hops issues later. Only meaningful with an
+        # origin (issues.origin is NOT NULL).
+        from dportsv3.fingerprint import issue_key as _issue_key
+        ikey = _issue_key(target, origin, error_signature) if origin else None
+        seen_ts = ts_utc or now
 
         with self._lock:
             if run_id:
@@ -93,9 +137,17 @@ class ArtifactStore:
                     (run_id, profile, target, ts_utc, now),
                 )
 
+            # A brand-new bundle_id is a new occurrence; a re-upsert (status
+            # touch) is not. Only new occurrences bump issue rollups, and
+            # issue_key is set once at birth — never rewritten on update
+            # (a signatureless touch would otherwise recompute a wrong key).
+            is_new_occurrence = self.conn.execute(
+                "SELECT 1 FROM bundles WHERE bundle_id = ?", (bundle_id,)
+            ).fetchone() is None
+
             self.conn.execute(
-                """INSERT INTO bundles (bundle_id, run_id, origin, flavor, ts_utc, result, target, path, last_seen_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?)
+                """INSERT INTO bundles (bundle_id, run_id, origin, flavor, ts_utc, result, target, error_signature, issue_key, path, last_seen_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)
                    ON CONFLICT(bundle_id) DO UPDATE SET
                      run_id=excluded.run_id,
                      origin=excluded.origin,
@@ -103,8 +155,10 @@ class ArtifactStore:
                      ts_utc=excluded.ts_utc,
                      result=excluded.result,
                      target=COALESCE(excluded.target, bundles.target),
+                     error_signature=COALESCE(excluded.error_signature, bundles.error_signature),
                      last_seen_at=excluded.last_seen_at""",
-                (bundle_id, run_id, origin, flavor, ts_utc, result, target, now),
+                (bundle_id, run_id, origin, flavor, ts_utc, result, target,
+                 error_signature, ikey, now),
             )
             emit_event(self.conn, "bundle_upserted", {
                 "bundle_id": bundle_id,
@@ -113,7 +167,72 @@ class ArtifactStore:
                 "result": result,
                 "target": target,
             })
+
+            if is_new_occurrence and ikey and origin:
+                self._upsert_issue_for_occurrence(
+                    issue_key=ikey, target=target, origin=origin,
+                    fingerprint=error_signature, bundle_id=bundle_id,
+                    seen_ts=seen_ts, now=now,
+                )
             self.conn.commit()
+
+    def _upsert_issue_for_occurrence(self, *, issue_key: str, target: str | None,
+                                     origin: str, fingerprint: str | None,
+                                     bundle_id: str, seen_ts: str, now: str) -> None:
+        """Find-or-create the issue for a **new** occurrence and roll it up.
+
+        First occurrence for a key creates the issue (``unresolved``,
+        ``times_seen=1``). A later occurrence bumps ``times_seen`` and, if
+        it is the newest by timestamp, advances ``last_seen_at`` +
+        ``latest_bundle_id``. State transitions on arrival:
+
+        - ``resolved`` → ``regressed`` (the fix came back) + ``issue_regressed``;
+        - ``muted`` stays ``muted`` (silent — no surfacing, no auto-triage);
+        - ``unresolved``/``regressed`` are unchanged.
+
+        Caller holds ``self._lock`` and owns the surrounding commit.
+        """
+        row = self.conn.execute(
+            "SELECT state, last_seen_at FROM issues WHERE issue_key = ?",
+            (issue_key,),
+        ).fetchone()
+        if row is None:
+            self.conn.execute(
+                """INSERT INTO issues
+                     (issue_key, target, origin, fingerprint, state, times_seen,
+                      first_seen_at, last_seen_at, latest_bundle_id, updated_at)
+                   VALUES (?, ?, ?, ?, 'unresolved', 1, ?, ?, ?, ?)""",
+                (issue_key, target, origin, fingerprint, seen_ts, seen_ts,
+                 bundle_id, now),
+            )
+            emit_event(self.conn, "issue_created", {
+                "issue_key": issue_key, "origin": origin,
+                "target": target, "bundle_id": bundle_id,
+            })
+            return
+
+        prev_last = row["last_seen_at"]
+        is_newest = prev_last is None or seen_ts >= prev_last
+        regressed = row["state"] == "resolved"
+        new_state = "regressed" if regressed else row["state"]
+        self.conn.execute(
+            """UPDATE issues SET
+                 times_seen = times_seen + 1,
+                 last_seen_at = CASE WHEN ? THEN ? ELSE last_seen_at END,
+                 latest_bundle_id = CASE WHEN ? THEN ? ELSE latest_bundle_id END,
+                 state = ?,
+                 regressed_at = CASE WHEN ? THEN ? ELSE regressed_at END,
+                 fingerprint = COALESCE(fingerprint, ?),
+                 updated_at = ?
+               WHERE issue_key = ?""",
+            (is_newest, seen_ts, is_newest, bundle_id, new_state,
+             regressed, now, fingerprint, now, issue_key),
+        )
+        if regressed:
+            emit_event(self.conn, "issue_regressed", {
+                "issue_key": issue_key, "origin": origin,
+                "target": target, "bundle_id": bundle_id,
+            })
 
     def apply_transition(self, payload: dict[str, Any]) -> dict[str, Any]:
         """Hook-side entry point for the lifecycle state machine.

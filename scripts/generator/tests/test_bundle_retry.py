@@ -64,7 +64,7 @@ def seeded_db(tmp_path: Path):
                    origin="devel/gaveup", run_id="run-gaveup")
     _insert_bundle(c, "b-escalated", resolution="escalated_manual",
                    origin="devel/esc", run_id="run-esc")
-    _insert_bundle(c, "b-convert-gave-up", resolution="convert_gave_up",
+    _insert_bundle(c, "b-gave-up-2", resolution="agent_gave_up",
                    origin="devel/conv", run_id="run-conv")
     _insert_bundle(c, "b-owned", resolution="operator_owned",
                    origin="devel/owned", run_id="run-owned")
@@ -145,7 +145,7 @@ def _history(db_path: Path, run_id: str, origin: str) -> list[sqlite3.Row]:
     ("b-budget", "run-budget", "devel/budget"),
     ("b-gave-up", "run-gaveup", "devel/gaveup"),
     ("b-escalated", "run-esc", "devel/esc"),
-    ("b-convert-gave-up", "run-conv", "devel/conv"),
+    ("b-gave-up-2", "run-conv", "devel/conv"),
     ("b-owned", "run-owned", "devel/owned"),
 ])
 def test_retry_plants_context_and_request(
@@ -381,7 +381,7 @@ def test_retry_409_when_missing_run_id(client):
 
 
 @pytest.mark.parametrize("bundle_id", [
-    "b-budget", "b-gave-up", "b-escalated", "b-convert-gave-up",
+    "b-budget", "b-gave-up", "b-escalated", "b-gave-up-2",
     "b-owned", "b-agent-fixed",
 ])
 def test_retry_button_renders_on_failure_operator_owned_or_agent_fixed(

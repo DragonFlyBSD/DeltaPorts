@@ -65,6 +65,13 @@ from dportsv3.tracker.agentic_queries.review import (
     open_delivery_bundle_ids,
     update_review_request_status,
 )
+from dportsv3.tracker.agentic_queries.issues import (
+    list_issues,
+    get_issue,
+    occurrences_for_issue,
+    issue_for_bundle,
+    issues_with_occurrences,
+)
 
 __all__ = [
     "_row_dict",
@@ -108,4 +115,9 @@ __all__ = [
     "open_delivery_bundle_ids",
     "find_open_review_request",
     "update_review_request_status",
+    "list_issues",
+    "get_issue",
+    "occurrences_for_issue",
+    "issue_for_bundle",
+    "issues_with_occurrences",
 ]

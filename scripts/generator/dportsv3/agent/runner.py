@@ -602,24 +602,17 @@ def _materialize_bundle(bundle_id: str, dest: Path) -> int:
 
 
 def _compute_error_signature(text: str | None) -> str | None:
-    """Return a stable short hex digest for the first non-empty line of
-    ``logs/errors.txt``. Used by Step 6's sticky-signature retry-cap
-    check. ``None`` if the text is missing/empty.
+    """Return the canonical fingerprint of ``logs/errors.txt`` (the
+    issue-identity primitive), or ``None`` if the text is missing/empty.
 
-    Stable across runs because the hook truncates errors.txt at 200KB
-    and writes deterministic content. The first non-empty line is
-    typically ``cc: error: ...`` or ``[hook] ports/...: build failed``;
-    same root cause → same line → same signature.
+    Thin delegate to :func:`dportsv3.fingerprint.compute_fingerprint` so
+    the runner's sticky-signature retry-cap check and the ingest hook
+    share one normalization rule — a fingerprint stamped at ingest must
+    equal the one the runner would compute, or the two would disagree on
+    what "the same failure" is. See that module for the canonicalization.
     """
-    if not text:
-        return None
-    import hashlib  # noqa: PLC0415 — local import, only on first triage
-    for raw in text.splitlines():
-        line = raw.strip()
-        if line:
-            return hashlib.sha256(line.encode("utf-8", errors="replace"))\
-                .hexdigest()[:16]
-    return None
+    from dportsv3.fingerprint import compute_fingerprint  # noqa: PLC0415
+    return compute_fingerprint(text)
 
 
 def _ensure_recent_signatures(target: str, origin: str, window_hours: int) -> None:
@@ -710,50 +703,6 @@ def read_bundle_text(bundle_dir: Path | None, bundle_id: str | None, relpath: st
         if data is not None:
             return data.decode("utf-8", errors="replace")
     return None
-
-
-def bundle_artifact_exists(bundle_dir: Path | None, bundle_id: str | None, relpath: str) -> bool:
-    if bundle_dir:
-        if (bundle_dir / relpath).exists():
-            return True
-    if bundle_id:
-        return relpath in bundle_artifact_list(bundle_id)
-    return False
-
-
-def run_cmd(cmd: list[str], cwd: Path | None = None) -> str:
-    env = os.environ.copy()
-    env["GIT_TERMINAL_PROMPT"] = "0"
-    result = subprocess.run(
-        cmd,
-        cwd=cwd,
-        text=True,
-        capture_output=True,
-        env=env,
-    )
-    if result.returncode != 0:
-        stderr = result.stderr.strip()
-        stdout = result.stdout.strip()
-        detail = stderr or stdout or "unknown error"
-        raise RuntimeError(f"command failed ({result.returncode}): {' '.join(cmd)}: {detail}")
-    return result.stdout
-
-
-
-def parse_meta_kv(bundle_dir: Path) -> dict:
-    """Parse bundle meta.txt into dict (legacy filesystem mode)."""
-    data = {}
-    meta_path = bundle_dir / "meta.txt"
-    if not meta_path.exists():
-        return data
-    try:
-        for line in meta_path.read_text().splitlines():
-            if "=" in line:
-                key, _, value = line.partition("=")
-                data[key.strip()] = value.strip()
-    except OSError:
-        pass
-    return data
 
 
 def get_run_profile(run_id: str) -> str:
@@ -2505,6 +2454,77 @@ def _maybe_skip_locked_origin(
     return True, f"origin_locked_by:{locked_bundle}"
 
 
+def _maybe_skip_muted_issue(
+    *,
+    queue_root: Path,
+    job: dict,
+    job_id: str,
+    sibling_paths: list[Path] | None,
+    origin: str,
+    job_type: str = "triage",
+) -> tuple[bool, str] | None:
+    """WS8: short-circuit a job when the operator has muted its issue.
+
+    Muting an issue means "stop bugging me AND stop spending agent budget
+    on it." This is the second half — the runner skips auto-work for a
+    muted issue's occurrences, mirroring the origin-lock skip: retire the
+    job DEAD with retire_reason='issue_muted', fan out to siblings, log
+    the bypass. The bundle row and the issue's rollups (bumped at ingest)
+    are left alone — only the triage/patch path short-circuits.
+
+    Returns None to proceed, or ``(True, status)`` to retire immediately.
+    Best-effort lookup — DB errors don't block the job.
+    """
+    from dportsv3.agent.lifecycle import JobEvent
+
+    if _state_db_conn is None:
+        return None
+    bundle_id = job.get("bundle_id")
+    if not bundle_id:
+        return None
+
+    try:
+        with _state_db_lock:
+            from dportsv3.tracker.agentic_queries import (  # noqa: PLC0415
+                issue_for_bundle,
+            )
+            issue = issue_for_bundle(_state_db_conn, bundle_id)
+    except sqlite3.Error as exc:
+        log(queue_root, "WARN",
+            f"mute lookup failed for {bundle_id}: {exc}; proceeding")
+        return None
+
+    if issue is None or issue.get("state") != "muted":
+        return None
+
+    issue_key = issue.get("issue_key") or "?"
+    muted_by = issue.get("muted_by") or "?"
+    activity_log(
+        queue_root, f"{job_type}_skipped_issue_muted",
+        f"{origin}: issue {issue_key} muted by {muted_by}; {job_type} skipped",
+        job_id=job_id,
+        extra={
+            "origin": origin,
+            "issue_key": issue_key,
+            "muted_by": muted_by,
+            "bundle_id": bundle_id,
+            "job_type": job_type,
+        },
+    )
+    detail = {
+        "skipped_because": "issue_muted",
+        "issue_key": issue_key,
+        "muted_by": muted_by,
+        "bundle_id": bundle_id,
+        "origin": origin,
+        "job_type": job_type,
+    }
+    _apply_transition(job_id, JobEvent.SKIP_ISSUE_MUTED, detail=detail)
+    for s in sibling_paths or ():
+        _apply_transition(s.name, JobEvent.SKIP_ISSUE_MUTED, detail=detail)
+    return True, f"issue_muted:{issue_key}"
+
+
 _BOOTSTRAP_REASON = (
     "Step 48 bootstrap: deterministic header; patch authors the body"
 )
@@ -2671,6 +2691,17 @@ def process_triage_job(
     # hook's failure record is unchanged; only the triage path
     # short-circuits.
     skipped = _maybe_skip_locked_origin(
+        queue_root=queue_root, job=job, job_id=job_id,
+        sibling_paths=sibling_paths, origin=origin,
+    )
+    if skipped is not None:
+        return skipped
+    # ---------------------------------------------------------------
+
+    # ---- WS8: muted-issue short-circuit ---------------------------
+    # If the operator muted this occurrence's issue, don't auto-triage
+    # it — muting suppresses surfacing AND agent budget.
+    skipped = _maybe_skip_muted_issue(
         queue_root=queue_root, job=job, job_id=job_id,
         sibling_paths=sibling_paths, origin=origin,
     )
@@ -2880,249 +2911,6 @@ def _write_tool_trace(
         out.write_bytes(data)
 
 
-# Step 37-3: extract the `## Patch Plan (JSON)` block from the
-# agent's final text. Mirrors attempt_loop._parse_rebuild_proof's
-# heading-based regex. Returns None when the block is absent or
-# the JSON doesn't parse cleanly — caller treats as "no plan, no
-# deferred_verdicts" (graceful degrade).
-_PATCH_PLAN_BLOCK_RE = re.compile(
-    r"##\s+Patch\s+Plan\s*\(JSON\).*?```(?:json)?\s*(.*?)```",
-    re.DOTALL | re.IGNORECASE,
-)
-
-
-def _parse_patch_plan(text: str) -> dict | None:
-    if not text:
-        return None
-    m = _PATCH_PLAN_BLOCK_RE.search(text)
-    if not m:
-        return None
-    try:
-        obj = json.loads(m.group(1).strip())
-    except (json.JSONDecodeError, TypeError):
-        return None
-    return obj if isinstance(obj, dict) else None
-
-
-_VALID_VERDICTS = frozenset({"regenerated", "dropped", "escalated"})
-# Step 37 #4-fix: verdicts whose resolution means the original
-# framework diff file is dead weight on disk. ``escalated`` is
-# excluded — operator may want to see/restore the original.
-_CLEANUP_VERDICTS = frozenset({"regenerated", "dropped"})
-
-
-def cleanup_resolved_deferred_patches(
-    *,
-    env: str,
-    origin: str,
-    verdicts: list,
-    queue_root: Path,
-    job_id: str | None,
-    bundle_dir: Path | None = None,
-    bundle_id: str | None = None,
-) -> list[str]:
-    """Delete the framework diff files backing ``regenerated`` /
-    ``dropped`` verdicts. Returns the list of paths actually deleted.
-    ``escalated`` paths are left in place so the operator can inspect
-    / restore them.
-
-    Only file-backed deferrals are eligible: each verdict is matched
-    to its originating ``DeferredPatch`` (by path) and cleaned up via
-    that entry's ``backing_file``. Inline-op deferrals carry
-    ``backing_file=None`` — the op lived only as overlay.dops source,
-    already removed during deferral, so there is nothing on disk to
-    delete and they are skipped.
-
-    Path safety: ``backing_file`` must be a relative path that
-    resolves inside ``ports/<origin>/`` — defends against a malformed
-    entry trying to escape the port subtree.
-
-    Best-effort: missing files / IO failures log a warning and
-    continue. The agent's overlay.dops edits already happened; this
-    is post-hoc tree hygiene, not load-bearing.
-    """
-    if not verdicts:
-        return []
-    backing_by_path = _deferred_backing_files(bundle_dir, bundle_id)
-    try:
-        from dportsv3.agent import worker  # noqa: PLC0415
-        paths = worker.env_paths(env)
-    except Exception as exc:
-        log(queue_root, "WARN",
-            f"cleanup_resolved_deferred_patches: env_paths({env!r}) "
-            f"failed: {exc}")
-        return []
-    port_dir = paths.deltaports / "ports" / origin
-    port_root = port_dir.resolve()
-
-    deleted: list[str] = []
-    for v in verdicts:
-        verdict = getattr(v, "verdict", None)
-        vpath = getattr(v, "path", None)
-        if not isinstance(vpath, str) or not isinstance(verdict, str):
-            continue
-        if verdict not in _CLEANUP_VERDICTS:
-            continue
-        backing = backing_by_path.get(vpath)
-        if not backing:
-            # Inline-op deferral (backing_file=None) or unknown path:
-            # nothing on disk to remove.
-            continue
-        # Path-safety: backing_file must resolve inside the port dir.
-        if backing.startswith("/") or ".." in Path(backing).parts:
-            log(queue_root, "WARN",
-                f"cleanup_resolved_deferred_patches: refusing "
-                f"unsafe backing_file {backing!r}")
-            continue
-        candidate = (port_dir / backing).resolve()
-        try:
-            candidate.relative_to(port_root)
-        except ValueError:
-            log(queue_root, "WARN",
-                f"cleanup_resolved_deferred_patches: {backing!r} resolved "
-                f"outside port dir; skip")
-            continue
-        if not candidate.is_file():
-            # Already gone (operator cleaned up, or convert never
-            # wrote it). Not an error; nothing to do.
-            continue
-        try:
-            candidate.unlink()
-        except OSError as exc:
-            log(queue_root, "WARN",
-                f"cleanup_resolved_deferred_patches: unlink {backing} "
-                f"failed: {exc}")
-            continue
-        deleted.append(backing)
-        try:
-            activity_log(
-                queue_root, "convert_deferred_cleanup",
-                f"removed orphan framework patch {backing} for {origin} "
-                f"(verdict={verdict})",
-                job_id=job_id,
-                extra={
-                    "origin": origin,
-                    "path": backing,
-                    "verdict": verdict,
-                },
-            )
-        except Exception as exc:
-            log(queue_root, "WARN",
-                f"activity_log failed in deferred_cleanup: {exc}")
-    return deleted
-
-
-def _deferred_backing_files(
-    bundle_dir: Path | None, bundle_id: str | None,
-) -> dict[str, str | None]:
-    """Map ``DeferredPatch.path → backing_file`` from the convert
-    phase result, so cleanup knows which verdicts have a file on disk
-    to remove. Returns ``{}`` if no convert result is available."""
-    from dportsv3.agent.phase_result import (  # noqa: PLC0415
-        ConvertResult, load_phase_result,
-    )
-    try:
-        cr = load_phase_result(bundle_dir, bundle_id, "convert", ConvertResult)
-    except Exception:
-        return {}
-    if cr is None or not cr.deferred_patches:
-        return {}
-    return {dp.path: dp.backing_file for dp in cr.deferred_patches}
-
-
-def _resolve_deferred_verdicts_for_patch(
-    bundle_dir: Path | None,
-    bundle_id: str | None,
-    plan_text: str,
-) -> list:
-    """Canonical per-deferred-patch verdict list, computed from the
-    originating convert bundle's ``ConvertResult.deferred_patches``
-    cross-referenced against the agent's ``Patch Plan (JSON)``'s
-    ``deferred_verdicts`` field.
-
-    For each path convert deferred:
-    - If the agent emitted a valid verdict (one of regenerated /
-      dropped / escalated) for that path: use it.
-    - Otherwise: synthesize an ``escalated`` verdict with rationale
-      ``"no verdict provided by patch agent"`` — closes the gap where
-      the agent ignored a deferred patch entirely, which would
-      otherwise let the bundle route to ``agent_fixed`` silently.
-
-    Plan entries for paths NOT in convert's deferred list are dropped
-    silently — the agent isn't allowed to invent verdicts for patches
-    it wasn't handed.
-
-    Returns ``[]`` when convert didn't defer anything (the normal
-    case for ports that compose cleanly). Callers should treat that
-    as "no verdict layer applies."
-    """
-    from dportsv3.agent.phase_result import (  # noqa: PLC0415
-        ConvertResult, DeferredVerdict, load_phase_result,
-    )
-
-    try:
-        cr = load_phase_result(
-            bundle_dir, bundle_id, "convert", ConvertResult,
-        )
-    except Exception:
-        # Schema mismatch / parse error → degrade as if no convert
-        # context existed. The patch agent never saw deferred
-        # patches in its payload either (DeferredFromConvertSection
-        # uses the same load + same except).
-        cr = None
-    if cr is None or not cr.deferred_patches:
-        return []
-
-    expected_paths = [dp.path for dp in cr.deferred_patches]
-    plan = _parse_patch_plan(plan_text or "") or {}
-    raw = plan.get("deferred_verdicts")
-    # The prompt asks for a JSON array, but LLMs frequently emit a dict
-    # keyed by the op identifier instead ({"op:abc": {"verdict": ...}}).
-    # Accept both rather than silently dropping a correct verdict set and
-    # synthesizing spurious "escalated" verdicts (which strands a real fix
-    # as MANUAL). For the dict form, fold the key in as `path` when the
-    # entry omits it.
-    raw_entries: list = []
-    if isinstance(raw, list):
-        raw_entries = raw
-    elif isinstance(raw, dict):
-        for key, val in raw.items():
-            if isinstance(val, dict):
-                # The dict KEY is the op identifier and is authoritative;
-                # agents sometimes also put a (different) target path in a
-                # nested "path" field, so the key must win over it.
-                raw_entries.append({**val, "path": key})
-
-    # Index by path (first valid entry wins; agent isn't supposed to
-    # repeat paths but if it does, take the first sensible one).
-    by_path: dict[str, dict] = {}
-    for entry in raw_entries:
-        if not isinstance(entry, dict):
-            continue
-        path = str(entry.get("path") or "").strip()
-        verdict = str(entry.get("verdict") or "").strip().lower()
-        if not path or verdict not in _VALID_VERDICTS:
-            continue
-        by_path.setdefault(path, entry)
-
-    out: list = []
-    for expected in expected_paths:
-        entry = by_path.get(expected)
-        if entry is None:
-            out.append(DeferredVerdict(
-                path=expected,
-                verdict="escalated",
-                rationale="no verdict provided by patch agent",
-            ))
-            continue
-        out.append(DeferredVerdict(
-            path=expected,
-            verdict=str(entry["verdict"]).strip().lower(),
-            rationale=str(entry.get("rationale") or ""),
-        ))
-    return out
-
-
 def _write_patch_audit_harness(
     bundle_dir: Path | None,
     bundle_id: str | None,
@@ -3213,14 +3001,6 @@ def _write_patch_audit_harness(
     from dportsv3.agent.phase_result import (  # noqa: PLC0415
         PatchResult as _PatchResultTyped, write_phase_result,
     )
-    # Step 37-3/37-4 fix-up: canonical verdicts come from the
-    # cross-reference resolver. Missing per-deferred-patch verdicts
-    # are synthesized as "escalated: no verdict provided" so the
-    # bundle never silently routes to agent_fixed when the agent
-    # ignored deferred work.
-    deferred_verdicts = _resolve_deferred_verdicts_for_patch(
-        bundle_dir, bundle_id, text,
-    )
     typed = _PatchResultTyped(
         rebuild_ok=bool(proof_payload.get("rebuild_ok")),
         status=result.status,
@@ -3228,7 +3008,6 @@ def _write_patch_audit_harness(
         tokens_prompt=result.usage.prompt_tokens,
         tokens_completion=result.usage.completion_tokens,
         tokens_total=result.usage.total_tokens,
-        deferred_verdicts=deferred_verdicts,
     )
     if bundle_id:
         write_phase_result(bundle_id, "patch", typed)
@@ -3435,6 +3214,16 @@ def process_patch_job(
         return skipped
     # ---------------------------------------------------------------
 
+    # ---- WS8: muted-issue short-circuit (mute may land mid-flight) --
+    skipped = _maybe_skip_muted_issue(
+        queue_root=queue_root, job=job, job_id=job_id,
+        sibling_paths=sibling_paths, origin=origin,
+        job_type="patch",
+    )
+    if skipped is not None:
+        return skipped
+    # ---------------------------------------------------------------
+
     # Step 30 slice 1: pin the patch's work to a per-bundle branch.
     # Reuses an existing bundle/<id> branch; creates a fresh one off
     # the env's base otherwise. Soft-fail by design (see
@@ -3504,35 +3293,6 @@ def process_patch_job(
         sibling_paths=sibling_paths,
         failure_event="patch_gave_up",
     )
-
-
-def _summarize_compose_failure(report, diag: str) -> str:
-    if isinstance(report, dict):
-        for stage in report.get("stages") or []:
-            if stage.get("success"):
-                continue
-            errors = stage.get("errors") or []
-            if errors:
-                return str(errors[0])[:300]
-        summary = report.get("summary") or {}
-        if summary.get("errors"):
-            return f"{summary.get('errors')} stage error(s); see diag_tail"
-    # No structured report (older compose, JSON parse failed): fall
-    # back to text-tail scraping with footer suppression. Keeps
-    # behavior on bundles whose build host predates the --json path.
-    def _is_footer(ln: str) -> bool:
-        s = ln.strip()
-        return s == "done" or any(
-            s.startswith(p) for p in _COMPOSE_FOOTER_PREFIXES
-        )
-    lines = [ln.strip() for ln in diag.splitlines() if ln.strip()]
-    if not lines:
-        return "(no output)"
-    last_line = next(
-        (ln for ln in reversed(lines) if not _is_footer(ln)),
-        lines[-1],
-    )
-    return last_line[:300]
 
 
 def process_job(
@@ -3969,25 +3729,14 @@ def main(argv: list[str] | None = None) -> int:
         patch_model = f"{triage_model} (fallback from triage)"
     else:
         patch_model = "<unset>"
-    # Convert flow falls back through the same chain (Step 20):
-    # DP_HARNESS_CONVERT_MODEL → PATCH → TRIAGE.
-    convert_model_env = os.environ.get("DP_HARNESS_CONVERT_MODEL")
-    if convert_model_env:
-        convert_model = convert_model_env
-    elif patch_model_env:
-        convert_model = f"{patch_model_env} (fallback from patch)"
-    elif triage_model != "<unset>":
-        convert_model = f"{triage_model} (fallback from triage)"
-    else:
-        convert_model = "<unset>"
     playbooks_info = str(playbooks_dir) if playbooks_dir else "none"
     log(queue_root, "INFO",
         f"starting runner (once={args.once}, dry_run={args.dry_run}, "
         f"triage_model={triage_model}, patch_model={patch_model}, "
-        f"convert_model={convert_model}, playbooks={playbooks_info})")
+        f"playbooks={playbooks_info})")
     activity_log(queue_root, "runner_start",
                  f"Runner started (triage={triage_model}, "
-                 f"patch={patch_model}, convert={convert_model})")
+                 f"patch={patch_model})")
     update_runner_status("idle", job_id=None, stage=None)
 
     # Runner-level dev-env for the health probe + dsynth-busy gate.

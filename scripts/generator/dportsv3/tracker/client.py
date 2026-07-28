@@ -138,28 +138,6 @@ def get_build(server_url: str, run_id: int) -> dict[str, Any]:
     return _request_json(server_url, f"/api/builds/{run_id}")
 
 
-def list_builds(
-    server_url: str,
-    *,
-    target: str | None = None,
-    build_type: str | None = None,
-    limit: int = 20,
-) -> list[dict[str, Any]]:
-    """Fetch recent build runs."""
-    payload = _request_json(
-        server_url,
-        "/api/builds",
-        query=_compact_query(
-            {
-                "target": target,
-                "build_type": build_type,
-                "limit": str(limit),
-            }
-        ),
-    )
-    return list(payload)
-
-
 def compare_builds(server_url: str, run_id_a: int, run_id_b: int) -> dict[str, Any]:
     """Fetch one build comparison payload."""
     return _request_json(

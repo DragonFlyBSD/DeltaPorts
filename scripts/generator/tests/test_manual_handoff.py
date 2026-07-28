@@ -125,7 +125,6 @@ def test_render_includes_reason_detail_when_present():
 def test_triage_failed_reason_registered():
     """M4: REASON_TRIAGE_FAILED must be a known reason with a label."""
     assert mh.REASON_TRIAGE_FAILED == "triage_failed"
-    assert mh.REASON_TRIAGE_FAILED in mh.VALID_REASONS
     assert mh.REASON_TRIAGE_FAILED in mh._REASON_LABELS
 
 

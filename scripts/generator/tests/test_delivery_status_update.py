@@ -169,6 +169,46 @@ def test_mark_merged_flips_bundle_resolution_terminal(client, deployment):
     assert merged_events == 1
 
 
+def test_mark_merged_resolves_linked_issue_via_endpoint(client, deployment):
+    """End-to-end through the real HTTP route: a manual 'merged' resolves
+    the bundle's issue too (WS4), atomically with the resolution flip."""
+    conn = _open(deployment)
+    _seed_bundle(conn, "b-iss", resolution="accepted")
+    _seed_review_request(conn, "b-iss", status="created")
+    now = _now()
+    conn.execute(
+        """INSERT INTO issues (issue_key, target, origin, fingerprint, state,
+              times_seen, first_seen_at, last_seen_at, updated_at)
+           VALUES ('iss-e2e', '@2026Q2', 'devel/foo', 'fp', 'unresolved',
+              1, ?, ?, ?)""",
+        (now, now, now),
+    )
+    conn.execute(
+        "UPDATE bundles SET issue_key = 'iss-e2e' WHERE bundle_id = 'b-iss'"
+    )
+    conn.commit()
+    conn.close()
+
+    resp = client.post(
+        "/api/bundles/b-iss/delivery/status",
+        json={"status": "merged"},
+    )
+    assert resp.status_code == 200, resp.text
+
+    conn = _open(deployment)
+    try:
+        issue = conn.execute(
+            "SELECT state FROM issues WHERE issue_key = 'iss-e2e'"
+        ).fetchone()
+        n = conn.execute(
+            "SELECT COUNT(*) AS n FROM events WHERE type = 'issue_resolved'"
+        ).fetchone()["n"]
+    finally:
+        conn.close()
+    assert issue["state"] == "resolved"
+    assert n == 1
+
+
 def test_mark_closed_does_not_change_bundle_resolution(client, deployment):
     """A close (unmerged) is not a ship — the bundle's resolution is left
     for the operator to decide, only the delivery row moves."""
