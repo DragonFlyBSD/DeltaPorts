@@ -35,28 +35,6 @@ def _make_workspace(tmp_path: Path) -> Path:
 
 
 # ---------------------------------------------------------------------
-# Cache + peek_wrksrc
-# ---------------------------------------------------------------------
-
-
-def test_peek_wrksrc_miss_returns_none():
-    worker._WRKSRC_CACHE.clear()
-    assert worker.peek_wrksrc("env-x", "devel/foo") is None
-
-
-def test_peek_wrksrc_hit_returns_cached_value():
-    worker._WRKSRC_CACHE.clear()
-    worker._WRKSRC_CACHE[("env-x", "devel/foo")] = "/work/obj/devel/foo/1.0"
-    try:
-        assert (
-            worker.peek_wrksrc("env-x", "devel/foo")
-            == "/work/obj/devel/foo/1.0"
-        )
-    finally:
-        worker._WRKSRC_CACHE.clear()
-
-
-# ---------------------------------------------------------------------
 # genpatch wrapper — cache-hit and cache-miss branches
 # ---------------------------------------------------------------------
 

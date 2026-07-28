@@ -379,6 +379,121 @@ def test_set_bundle_merged_resolution_unknown_bundle_is_noop(db_path):
 
 
 # ---------------------------------------------------------------------
+# WS4 — issue ↔ occurrence coupling (a merged occurrence resolves its issue)
+# ---------------------------------------------------------------------
+
+
+def _seed_issue(conn, issue_key, *, state="unresolved", origin="ftp/curl",
+                target="@2026Q3") -> None:
+    now = _now()
+    conn.execute(
+        """INSERT INTO issues (issue_key, target, origin, fingerprint, state,
+              times_seen, first_seen_at, last_seen_at, updated_at)
+           VALUES (?, ?, ?, 'fp', ?, 1, ?, ?, ?)""",
+        (issue_key, target, origin, state, now, now, now),
+    )
+    conn.commit()
+
+
+def _link_bundle_to_issue(conn, bundle_id, issue_key) -> None:
+    conn.execute(
+        "UPDATE bundles SET issue_key = ? WHERE bundle_id = ?",
+        (issue_key, bundle_id),
+    )
+    conn.commit()
+
+
+@pytest.mark.parametrize("start_state", ["unresolved", "regressed", "muted"])
+def test_merge_resolves_the_linked_issue(db_path, start_state):
+    """A merged occurrence resolves its issue regardless of the issue's
+    prior open state — the problem shipped."""
+    conn = _open(db_path)
+    _seed_bundle(conn, "b1", resolution="accepted")
+    _seed_issue(conn, "iss1", state=start_state)
+    _link_bundle_to_issue(conn, "b1", "iss1")
+    conn.close()
+
+    write = sqlite3.connect(str(db_path), isolation_level=None)
+    write.row_factory = sqlite3.Row
+    try:
+        delivery_sync.set_bundle_merged_resolution(
+            write, "b1", now_iso="2026-07-25T01:00:00Z", source="poll",
+        )
+    finally:
+        write.close()
+
+    conn = _open(db_path)
+    try:
+        issue = conn.execute(
+            "SELECT state, resolved_at FROM issues WHERE issue_key = 'iss1'"
+        ).fetchone()
+        resolved_events = conn.execute(
+            "SELECT COUNT(*) AS n FROM events WHERE type = 'issue_resolved'"
+        ).fetchone()["n"]
+    finally:
+        conn.close()
+    assert issue["state"] == "resolved"
+    assert issue["resolved_at"] == "2026-07-25T01:00:00Z"
+    assert resolved_events == 1
+
+
+def test_merge_resolve_is_idempotent_on_issue(db_path):
+    conn = _open(db_path)
+    _seed_bundle(conn, "b1", resolution="accepted")
+    _seed_issue(conn, "iss1", state="unresolved")
+    _link_bundle_to_issue(conn, "b1", "iss1")
+    conn.close()
+
+    write = sqlite3.connect(str(db_path), isolation_level=None)
+    write.row_factory = sqlite3.Row
+    try:
+        # First merge resolves; a second merge is a bundle no-op and must
+        # not re-resolve or emit a second issue_resolved.
+        delivery_sync.set_bundle_merged_resolution(
+            write, "b1", now_iso=_now(), source="poll")
+        delivery_sync.set_bundle_merged_resolution(
+            write, "b1", now_iso=_now(), source="poll")
+        # Directly re-invoking on an already-resolved issue is also a no-op.
+        assert delivery_sync.resolve_issue_for_bundle(
+            write, "b1", now_iso=_now(), source="poll") is None
+    finally:
+        write.close()
+
+    conn = _open(db_path)
+    try:
+        n = conn.execute(
+            "SELECT COUNT(*) AS n FROM events WHERE type = 'issue_resolved'"
+        ).fetchone()["n"]
+    finally:
+        conn.close()
+    assert n == 1
+
+
+def test_merge_of_bundle_without_issue_key_is_safe(db_path):
+    """A pre-issue / degenerate occurrence merges fine; no issue touched."""
+    conn = _open(db_path)
+    _seed_bundle(conn, "b1", resolution="accepted")  # issue_key stays NULL
+    conn.close()
+
+    write = sqlite3.connect(str(db_path), isolation_level=None)
+    write.row_factory = sqlite3.Row
+    try:
+        prior = delivery_sync.set_bundle_merged_resolution(
+            write, "b1", now_iso=_now(), source="poll")
+        assert prior == "accepted"  # bundle still merges
+        assert delivery_sync.resolve_issue_for_bundle(
+            write, "b1", now_iso=_now(), source="poll") is None
+    finally:
+        write.close()
+
+    conn = _open(db_path)
+    try:
+        assert conn.execute("SELECT COUNT(*) FROM issues").fetchone()[0] == 0
+    finally:
+        conn.close()
+
+
+# ---------------------------------------------------------------------
 # open_delivery_bundle_ids — the poll candidate set
 # ---------------------------------------------------------------------
 

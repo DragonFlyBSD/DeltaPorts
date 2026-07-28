@@ -9,6 +9,7 @@ from typing import Any
 from dportsv3.tracker import (
     delivery_sync,
     fix_state,
+    issue_state,
     render,
 )
 from dportsv3.tracker.agentic_queries import (
@@ -25,7 +26,11 @@ from dportsv3.tracker.agentic_queries import (
     open_delivery_bundle_ids,
     get_job,
     get_manual_request,
+    get_issue,
     get_run,
+    issue_for_bundle,
+    issues_with_occurrences,
+    list_issues,
     job_events_for_job,
     latest_review_request_for_bundle,
     list_bundles,
@@ -101,45 +106,39 @@ def register(app, ctx):
     @app.get("/agentic", response_class=HTMLResponse)
     def agentic_index(request: RequestType) -> Any:
         with _conn() as conn:
-            # The landing is a worklist: recent bundles bucketed by
-            # fix_status into what needs the operator. 500 is a generous
-            # window — older resolved bundles fall off the collapsed
-            # "recently resolved" tail, not the actionable sections.
-            bundles = list_bundles(conn, limit=500)
-            # Lazy delivery reconcile: any bundle whose PR merged upstream
-            # is done — flip it terminal before bucketing so it drops out
-            # of the worklist instead of lingering as "ready to accept".
-            # Scoped to bundles that still have an open GitHub delivery
-            # row (a small set), and throttled inside the reconciler, so a
-            # steady-state render does zero network calls.
-            pollable = set(open_delivery_bundle_ids(conn, provider="github"))
-            if pollable:
-                for b in bundles:
-                    if b.get("bundle_id") not in pollable:
-                        continue
-                    new_status = delivery_sync.reconcile_bundle_delivery(
-                        db_path=app.state.db_path,
-                        bundle_id=b["bundle_id"],
-                        target=b.get("target"),
-                    )
-                    if new_status == "merged":
-                        b["resolution"] = "merged"
-            worklist = fix_state.build_worklist(bundles)
-            # Each actionable band, deduped by port origin (recurring
-            # failures collapse into one counted, expandable row).
+            # Lazy delivery reconcile FIRST: a PR merged upstream resolves
+            # its issue (WS4). Run it before reading issues so their states
+            # are current this render. Scoped to bundles with an open
+            # GitHub delivery row (a small set) and throttled inside the
+            # reconciler, so a steady-state render does zero network calls.
+            # (SELECTs on this per-request connection are autocommit, so
+            # the read below sees the reconciler's committed writes.)
+            for bid in open_delivery_bundle_ids(conn, provider="github"):
+                row = conn.execute(
+                    "SELECT target FROM bundles WHERE bundle_id = ?", (bid,)
+                ).fetchone()
+                delivery_sync.reconcile_bundle_delivery(
+                    db_path=app.state.db_path, bundle_id=bid,
+                    target=row["target"] if row else None,
+                )
+            # The landing is an issue worklist: fingerprinted problems that
+            # need you, grouped and bucketed by their actionable occurrence.
+            # 500 is a generous window — resolved/muted issues live in the
+            # collapsed archives, not the actionable bands.
+            issues = issues_with_occurrences(conn, limit=500)
+            worklist = issue_state.build_issue_worklist(issues)
             bands = [
                 {
                     "key": key,
                     "label": label,
                     "cls": cls,
                     "count": len(worklist[key]),
-                    "groups": fix_state.group_band_by_origin(worklist[key]),
+                    "groups": worklist[key],
                 }
-                for key, label, cls in fix_state.WORKLIST_SECTIONS
-                if key != "done"
+                for key, label, cls in issue_state.ISSUE_WORKLIST_SECTIONS
+                if key not in ("done", "muted")
             ]
             focus_count = sum(b["count"] for b in bands)
-            done_groups = fix_state.group_band_by_origin(worklist["done"])
             return templates.TemplateResponse(
                 request,
                 "agentic_index.html",
@@ -150,7 +149,8 @@ def register(app, ctx):
                     "active_env": get_active_env(conn),
                     "bands": bands,
                     "focus_count": focus_count,
-                    "done_groups": done_groups,
+                    "done_groups": worklist["done"],
+                    "muted_groups": worklist["muted"],
                 },
             )
 
@@ -177,6 +177,51 @@ def register(app, ctx):
                 },
             )
 
+    @app.get("/agentic/issues", response_class=HTMLResponse)
+    def agentic_issues(
+        request: RequestType,
+        target: str | None = None,
+        state: str | None = None,
+    ) -> Any:
+        target_value = target or None
+        state_value = (state or "").strip() or None
+        states = [state_value] if state_value else None
+        with _conn() as conn:
+            return templates.TemplateResponse(
+                request,
+                "agentic_issues.html",
+                {
+                    "title": "Issues",
+                    "issues": list_issues(
+                        conn, target=target_value, states=states, limit=300
+                    ),
+                    "target_options": distinct_targets(conn),
+                    "selected_target": target_value,
+                    "selected_state": state_value,
+                },
+            )
+
+    @app.get("/agentic/issues/{issue_key}", response_class=HTMLResponse)
+    def agentic_issue_detail(request: RequestType, issue_key: str) -> Any:
+        with _conn() as conn:
+            issue = get_issue(conn, issue_key)
+            if issue is None:
+                raise HTTPException(
+                    status_code=404, detail=f"Unknown issue: {issue_key}"
+                )
+            group = issue_state.issue_group(
+                issue, issue.get("occurrences") or []
+            )
+            return templates.TemplateResponse(
+                request,
+                "agentic_issue.html",
+                {
+                    "title": issue.get("origin") or "Issue",
+                    "issue": issue,
+                    "group": group,
+                },
+            )
+
     @app.get("/agentic/bundles/{bundle_id}", response_class=HTMLResponse)
     def agentic_bundle_detail(
         request: RequestType,
@@ -198,6 +243,10 @@ def register(app, ctx):
                 )
                 if _new_status == "merged":
                     bundle = get_bundle(conn, bundle_id)
+            # WS9c: the issue this occurrence belongs to, so the page can
+            # frame itself as one event under its fingerprinted problem
+            # (breadcrumb up + sibling count). None on pre-issue rows.
+            issue = issue_for_bundle(conn, bundle_id) if bundle is not None else None
             bundle_jobs = list_jobs_for_bundle(conn, bundle_id)
             tool_trace_ref = get_artifact_ref(conn, bundle_id, "analysis/tool_trace.jsonl")
             selected_relpath = artifact or (render.default_artifact_relpath(bundle) if bundle else None)
@@ -303,6 +352,7 @@ def register(app, ctx):
             {
                 "title": bundle_id,
                 "bundle": bundle,
+                "issue": issue,
                 "bundle_jobs": bundle_jobs,
                 "tool_trace": tool_trace,
                 "selected_artifact": selected_artifact,

@@ -64,7 +64,6 @@ def _seed_job(conn, job_id, state, job_type):
 @pytest.mark.parametrize("job_type,expected_stage,from_state", [
     ("triage", "triage_skipped_origin_locked", "triaging"),
     ("patch", "patch_skipped_origin_locked", "patching"),
-    ("convert", "convert_skipped_origin_locked", "converting"),
 ])
 def test_skip_check_emits_per_job_type_stage_and_transitions(
     tmp_path, state_db, monkeypatch, job_type, expected_stage, from_state,
@@ -151,7 +150,7 @@ def test_skip_check_unlocked_origin_proceeds(tmp_path, state_db):
     original_activity = rm.activity_log
     _wire_runner(rm, state_db, activity_rows)
     try:
-        for jt in ("triage", "patch", "convert"):
+        for jt in ("triage", "patch"):
             outcome = runner_mod._maybe_skip_locked_origin(
                 queue_root=tmp_path,
                 job={"target": "@2026Q2"},

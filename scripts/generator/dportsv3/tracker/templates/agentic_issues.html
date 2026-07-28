@@ -1,0 +1,51 @@
+{% extends "_base.html" %}
+{% block title %}Issues — DeltaPorts Tracker{% endblock %}
+{% block body %}
+  {% with nav_crumbs = [{"label": "Agentic", "url": request.url_for('agentic_index')}, {"label": "Issues"}] %}
+    {% include "_tracker_nav.html" %}
+  {% endwith %}
+  {% include "_agentic_subnav.html" %}
+
+  <div class="tracker-page">
+    <h1>Issues</h1>
+    <p class="lede">Fingerprinted problems — every build failure grouped by root cause.</p>
+
+    {% set state_chips = [('', 'All'), ('unresolved', 'Open'), ('regressed', 'Regressed'), ('resolved', 'Resolved'), ('muted', 'Muted')] %}
+    <div class="issue-filter">
+      {% for val, label in state_chips %}
+      <a href="{{ request.url_for('agentic_issues') }}{% if val %}?state={{ val }}{% endif %}"
+         class="issue-chip{% if (selected_state or '') == val %} active{% endif %}">{{ label }}</a>
+      {% endfor %}
+    </div>
+
+    <table class="tracker-table">
+      <thead>
+        <tr><th>Issue</th><th>Target</th><th>State</th><th>Seen</th><th>First</th><th>Last</th></tr>
+      </thead>
+      <tbody>
+        {% for i in issues %}
+        {% set st = issue_status(i) %}
+        <tr>
+          <td><a href="{{ request.url_for('agentic_issue_detail', issue_key=i.issue_key) }}">{{ i.origin }}</a></td>
+          <td>{{ i.target or '—' }}</td>
+          <td><span class="stat-pill {{ st.pill }}">{{ st.label }}</span></td>
+          <td>×{{ i.times_seen }}</td>
+          <td title="{{ i.first_seen_at }}">{{ i.first_seen_at | relative_age if i.first_seen_at else '—' }}</td>
+          <td title="{{ i.last_seen_at }}">{{ i.last_seen_at | relative_age if i.last_seen_at else '—' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" style="color:var(--text-dim);">No issues match this filter.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <style>
+    .issue-filter { display:flex; gap:6px; margin:12px 0 18px; flex-wrap:wrap; }
+    .issue-chip {
+      font-size:12px; padding:4px 12px; border-radius:999px; text-decoration:none;
+      border:1px solid var(--border); color:var(--text-dim); background:var(--bg);
+    }
+    .issue-chip.active { color:var(--text); border-color:var(--text); font-weight:600; }
+  </style>
+{% endblock %}

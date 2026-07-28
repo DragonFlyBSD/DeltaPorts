@@ -291,12 +291,34 @@ def test_view_agentic_index(client: TestClient) -> None:
     assert "/agentic/manual" in body
 
 
-def test_view_agentic_index_dedups_recurring_port(
+def _link_issue(db_path, *, issue_key, target, origin, state, bundle_ids,
+                times_seen=None, first_seen=None, last_seen=None):
+    """Promote seeded bundles into one linked issue (the fingerprint
+    model). The real writer does this at ingest; the view tests seed
+    bundles directly, so we attach an issues row + issue_key here."""
+    import sqlite3
+    conn = sqlite3.connect(str(db_path))
+    conn.execute(
+        """INSERT OR REPLACE INTO issues
+             (issue_key, target, origin, fingerprint, state, times_seen,
+              first_seen_at, last_seen_at, updated_at)
+           VALUES (?, ?, ?, 'fp', ?, ?, ?, ?, ?)""",
+        (issue_key, target, origin, state, times_seen or len(bundle_ids),
+         first_seen or _now(), last_seen or _now(), _now()),
+    )
+    for bid in bundle_ids:
+        conn.execute("UPDATE bundles SET issue_key = ? WHERE bundle_id = ?",
+                     (issue_key, bid))
+    conn.commit()
+    conn.close()
+
+
+def test_view_agentic_index_groups_recurring_issue(
     client: TestClient, seeded_state_db: Path,
 ) -> None:
-    """Redesign: a port that fails repeatedly collapses into ONE counted,
-    expandable row in its band, not N look-alike rows. Three devel/foo
-    bundles in 'needs a decision' → one ×3 recurring group."""
+    """A fingerprinted problem seen repeatedly collapses into ONE counted,
+    expandable issue row, not N look-alike rows. Three devel/foo @2026Q2
+    occurrences of one issue → a ×3 systemic group, expandable to each."""
     import sqlite3
     conn = sqlite3.connect(str(seeded_state_db))
     for bid, ts in (
@@ -306,19 +328,24 @@ def test_view_agentic_index_dedups_recurring_port(
     ):
         conn.execute(
             "UPDATE bundles SET resolution = 'agent_gave_up', "
-            "origin = 'devel/foo', ts_utc = ? WHERE bundle_id = ?",
+            "origin = 'devel/foo', target = '@2026Q2', ts_utc = ? WHERE bundle_id = ?",
             (ts, bid),
         )
     conn.commit()
     conn.close()
+    _link_issue(
+        seeded_state_db, issue_key="iss-foo", target="@2026Q2",
+        origin="devel/foo", state="unresolved", times_seen=3,
+        bundle_ids=["b-q2-foo", "b-q2-foo-retry", "b-main-foo"],
+    )
 
     body = client.get("/agentic").text
-    # One grouped row with a count badge + recurring tag, expandable.
+    # One grouped issue row: ×3, systemic tag, expandable.
     assert "devel/foo" in body
     assert "×3" in body
-    assert "recurring" in body
+    assert "systemic" in body
     assert "wl-group" in body
-    # Each attempt is still reachable inside the expand.
+    # Each occurrence is still reachable inside the expand.
     for bid in ("b-q2-foo", "b-q2-foo-retry", "b-main-foo"):
         assert bid in body
 
@@ -393,21 +420,27 @@ def test_index_render_flips_merged_pr_out_of_worklist(
     collapsed 'recently resolved' archive on the worklist render, instead
     of lingering as actionable."""
     _make_ready_with_open_pr(seeded_state_db, "b-q2-bar")
+    _link_issue(seeded_state_db, issue_key="iss-bar", target="@2026Q2",
+                origin="devel/bar", state="unresolved", bundle_ids=["b-q2-bar"])
     _patch_probe_merged(monkeypatch)
 
     body = client.get("/agentic").text
-    # It reconciled to terminal 'merged'...
+    # It reconciled to terminal 'merged', and WS4 resolved its issue...
     import sqlite3
     conn = sqlite3.connect(str(seeded_state_db))
     conn.row_factory = sqlite3.Row
     try:
-        row = conn.execute(
+        bundle = conn.execute(
             "SELECT resolution FROM bundles WHERE bundle_id = 'b-q2-bar'"
+        ).fetchone()
+        issue = conn.execute(
+            "SELECT state FROM issues WHERE issue_key = 'iss-bar'"
         ).fetchone()
     finally:
         conn.close()
-    assert row["resolution"] == "merged"
-    # ...and shows in the collapsed archive, not as a ready-to-accept row.
+    assert bundle["resolution"] == "merged"
+    assert issue["state"] == "resolved"
+    # ...and the issue shows in the collapsed archive, not as ready-to-accept.
     assert "Recently resolved" in body
 
 
@@ -495,13 +528,14 @@ def test_agentic_subnav_present_and_highlights_current(client: TestClient) -> No
     import re
     body = client.get("/agentic").text
     assert 'id="agentic-subnav"' in body
-    for label in (">Worklist<", ">Bundles<", ">Jobs<", ">Runner<", ">Manual<"):
+    for label in (">Worklist<", ">Issues<", ">Occurrences<", ">Jobs<",
+                  ">Runner<", ">Manual<"):
         assert label in body
     assert re.search(r'<a[^>]*class="active"[^>]*>Worklist</a>', body)
 
-    # On the bundles page the active item shifts to Bundles.
-    bundles_body = client.get("/agentic/bundles").text
-    assert re.search(r'<a[^>]*class="active"[^>]*>Bundles</a>', bundles_body)
+    # On the issues page the active item shifts to Issues.
+    issues_body = client.get("/agentic/issues").text
+    assert re.search(r'<a[^>]*class="active"[^>]*>Issues</a>', issues_body)
 
 
 def test_view_agentic_bundle_detail_links_to_its_jobs(
@@ -523,11 +557,12 @@ def test_view_agentic_bundle_detail_links_to_its_jobs(
     assert "/agentic/jobs/job-q2-foo" in body
 
 
-def test_view_agentic_index_worklist_surfaces_resolved_bundle(
+def test_view_agentic_index_worklist_surfaces_verified_occurrence(
     client: TestClient, seeded_state_db: Path,
 ) -> None:
-    """A resolved bundle projects into the worklist and renders with its
-    fix_status pill (route -> build_worklist -> template wiring)."""
+    """A verified occurrence of an open issue projects into the worklist
+    Ready band with its fix_status pill (route -> build_issue_worklist ->
+    template wiring)."""
     import sqlite3
     conn = sqlite3.connect(str(seeded_state_db))
     conn.execute(
@@ -536,6 +571,8 @@ def test_view_agentic_index_worklist_surfaces_resolved_bundle(
     )
     conn.commit()
     conn.close()
+    _link_issue(seeded_state_db, issue_key="iss-foo-v", target="@2026Q2",
+                origin="devel/foo", state="unresolved", bundle_ids=["b-q2-foo"])
 
     body = client.get("/agentic").text
     assert "b-q2-foo" in body      # now in the Ready-to-accept bucket

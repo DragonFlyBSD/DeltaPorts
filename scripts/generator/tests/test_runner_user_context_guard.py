@@ -7,7 +7,7 @@ on top of a job that's already triaging/patching, producing duplicate
 work and noisy lifecycle events.
 
 Active states come from lifecycle.ACTIVE_WORK_STATES:
-queued, claimed, triaging, patching, converting, verifying,
+queued, claimed, triaging, patching, verifying,
 verifying_fix. `triaged` is deliberately NOT active (the triage job
 rests there after handing off to a spawned job — see the dedicated
 test below). Terminal states (done, dead, escalated) do NOT block.
@@ -109,7 +109,7 @@ def runner_db(tmp_path, monkeypatch):
 
 @pytest.mark.parametrize("blocking_state", [
     "queued", "claimed", "triaging", "patching", "verifying",
-    "converting", "verifying_fix",
+    "verifying_fix",
 ])
 def test_active_same_origin_job_blocks_retriage(runner_db, blocking_state):
     conn, queue_root, enqueued = runner_db

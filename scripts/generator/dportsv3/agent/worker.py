@@ -940,15 +940,6 @@ WRKDIRPREFIX = "/work/obj"
 _WRKSRC_CACHE: dict[tuple[str, str], str] = {}
 
 
-def peek_wrksrc(env: str, origin: str) -> str | None:
-    """Non-destructive read of the cached WRKSRC for (env, origin).
-
-    Returns None if extract hasn't run yet for this pair (cache miss
-    is the legacy fallback signal for genpatch).
-    """
-    return _WRKSRC_CACHE.get((env, origin))
-
-
 # Step 38a: per-env compose-target cache. The runner populates this
 # at attempt start (process_patch_job / process_convert_job) from
 # job["target"] so `get_effective_overlay` can scope-filter the

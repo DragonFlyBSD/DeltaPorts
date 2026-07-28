@@ -9,7 +9,6 @@ to the next LLM call.
 
 from __future__ import annotations
 
-import json
 import subprocess
 from pathlib import Path
 
@@ -70,14 +69,3 @@ def format_for_prompt(bundle_dir: Path, files: list[Path]) -> str:
         parts.append("```")
         parts.append("")
     return "\n".join(parts)
-
-
-def load_manifest(bundle_dir: Path, round_number: int) -> dict:
-    """Optional: read the round's manifest.json for audit/debug."""
-    manifest = bundle_dir / "analysis" / "snippets" / f"round_{round_number}" / "manifest.json"
-    if not manifest.is_file():
-        return {}
-    try:
-        return json.loads(manifest.read_text())
-    except (OSError, json.JSONDecodeError):
-        return {}

@@ -103,7 +103,60 @@ def set_bundle_merged_resolution(
         "prior_resolution": prior,
         "source": source,
     })
+    # A merged fix is exactly what resolves the issue: the problem shipped.
+    # Both merge paths (lazy poll + manual delivery/status) funnel through
+    # here, so the issue-level resolve lands once, in one place.
+    resolve_issue_for_bundle(write_conn, bundle_id, now_iso=now_iso, source=source)
     return prior
+
+
+def resolve_issue_for_bundle(
+    write_conn: sqlite3.Connection, bundle_id: str, *,
+    now_iso: str, source: str,
+) -> str | None:
+    """Move the issue this occurrence belongs to into ``resolved``.
+
+    A merged occurrence closes its fingerprinted problem. Idempotent and
+    defensive: no-op when the bundle has no ``issue_key`` (degenerate /
+    pre-issue occurrence) or the issue is already ``resolved``. A later
+    genuinely-new occurrence re-opens it via the WS3 regression path, so
+    resolving even a ``muted`` issue here is safe — the problem really is
+    gone until it recurs. Emits ``issue_resolved``. Returns the issue_key
+    when it transitioned, else None.
+
+    Runs on the caller's connection inside the caller's transaction — both
+    merge callers (the lazy poll and the manual delivery/status endpoint)
+    wrap the bundle-merge + issue-resolve in one ``BEGIN IMMEDIATE`` so a
+    crash between them can't strand a merged bundle with an open issue.
+    """
+    row = write_conn.execute(
+        "SELECT issue_key FROM bundles WHERE bundle_id = ?", (bundle_id,),
+    ).fetchone()
+    if row is None:
+        return None
+    issue_key = row["issue_key"] if isinstance(row, sqlite3.Row) else row[0]
+    if not issue_key:
+        return None
+    irow = write_conn.execute(
+        "SELECT state FROM issues WHERE issue_key = ?", (issue_key,),
+    ).fetchone()
+    if irow is None:
+        return None
+    state = irow["state"] if isinstance(irow, sqlite3.Row) else irow[0]
+    if state == "resolved":
+        return None
+    write_conn.execute(
+        "UPDATE issues SET state = 'resolved', resolved_at = ?, updated_at = ? "
+        "WHERE issue_key = ?",
+        (now_iso, now_iso, issue_key),
+    )
+    from dportsv3.artifact_store import emit_event  # noqa: PLC0415
+    emit_event(write_conn, "issue_resolved", {
+        "issue_key": issue_key,
+        "bundle_id": bundle_id,
+        "source": source,
+    })
+    return issue_key
 
 
 def _resolve_merge_probe(target: str | None) -> Callable[[str], dict[str, Any]] | None:

@@ -1136,55 +1136,6 @@ class PatchAttemptStep:
                         "post_patch_dops_state": post_state,
                     },
                 )
-            # Step 37-4: rebuild_ok=true is necessary but not sufficient
-            # for full agent_fixed. The resolver computes the canonical
-            # verdicts list, synthesizing "escalated: no verdict
-            # provided" for any deferred patch the agent ignored, so
-            # an agent that skipped its deferred work doesn't silently
-            # route to agent_fixed. Routing decision: ANY escalated
-            # verdict (real or synthesized) → MANUAL.
-            from dportsv3.agent.runner import (  # noqa: PLC0415
-                _resolve_deferred_verdicts_for_patch,
-                cleanup_resolved_deferred_patches,
-            )
-            verdicts = _resolve_deferred_verdicts_for_patch(
-                ctx.bundle_dir, bundle_id, result.final_text or "",
-            )
-            # Step 37 #4-fix: clean up the framework diff files
-            # whose verdicts resolved to regenerated/dropped — they
-            # were dead weight once the agent landed alternate
-            # edits (or proved they weren't needed). Runs only on
-            # the rebuild_ok=true path because failure-path drops
-            # are speculative.
-            if verdicts:
-                cleanup_resolved_deferred_patches(
-                    env=env, origin=origin, verdicts=verdicts,
-                    queue_root=queue_root, job_id=ctx.job_id,
-                    bundle_dir=ctx.bundle_dir, bundle_id=bundle_id,
-                )
-            escalated_paths = [
-                v.path for v in verdicts if v.verdict == "escalated"
-            ]
-            if escalated_paths:
-                _try_write_handoff(
-                    services, ctx, origin,
-                    reason="patch_escalated_verdicts",
-                    reason_detail=(
-                        f"rebuild ok but {len(escalated_paths)} deferred "
-                        f"patch(es) escalated: "
-                        f"{', '.join(escalated_paths[:5])}"
-                    ),
-                    patch_result=result,
-                )
-                return StepOutcome(
-                    status="success",
-                    next_event=JobEvent.ESCALATE_MANUAL,
-                    detail={
-                        "status_str": "escalated_verdicts",
-                        "patch_status": result.status,
-                        "escalated_paths": escalated_paths,
-                    },
-                )
             _try_write_proposed_fix(
                 services, ctx, origin,
                 model=model,

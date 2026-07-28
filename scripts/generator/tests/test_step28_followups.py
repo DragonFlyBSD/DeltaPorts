@@ -1,10 +1,5 @@
 """Step 28 follow-up findings from the final review pass.
 
-Finding 1: convert dispatcher's CONVERT_OK fired after a skip-locked
-process_convert_job exit raised IllegalTransition and triggered a
-pointless _resume_deferred_triage call. Fix: dispatcher detects the
-origin_locked_by: status sentinel and skips both.
-
 Finding 2: operator_owned bundles couldn't reach Accept after a
 successful Verify (UI gated Accept on actionable=agent_fixed). And
 even if they did via curl, accept would leave the origin_skip_flags

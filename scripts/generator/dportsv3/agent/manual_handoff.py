@@ -40,32 +40,16 @@ REASON_MANUAL_TIER = "manual_tier"
 REASON_RETRY_CAP = "retry_cap"
 REASON_PATCH_BUDGET = "patch_budget_exhausted"
 REASON_PATCH_GAVE_UP = "patch_gave_up"
-# Step 37-4: patch fixed the build (rebuild_ok=true) but punted on
-# one or more deferred patches from convert. Surfaces as MANUAL so
-# the operator can review the escalated subset; the patch agent's
-# regenerated / dropped verdicts are recorded on PatchResult.
-REASON_PATCH_ESCALATED_VERDICTS = "patch_escalated_verdicts"
 # M4: triage terminated without reaching a routing decision (bundle
 # materialization / LLM call / policy load / orchestrator precheck
 # failed). Usually an infra signal, not an agent give-up.
 REASON_TRIAGE_FAILED = "triage_failed"
-
-VALID_REASONS = frozenset({
-    REASON_MANUAL_TIER,
-    REASON_RETRY_CAP,
-    REASON_PATCH_BUDGET,
-    REASON_PATCH_GAVE_UP,
-    REASON_PATCH_ESCALATED_VERDICTS,
-    REASON_TRIAGE_FAILED,
-})
 
 _REASON_LABELS = {
     REASON_MANUAL_TIER:   "triage classified as MANUAL",
     REASON_RETRY_CAP:     "retry cap reached",
     REASON_PATCH_BUDGET:  "patch budget exhausted",
     REASON_PATCH_GAVE_UP: "patch agent gave up",
-    REASON_PATCH_ESCALATED_VERDICTS:
-        "patch fixed build but escalated deferred patches",
     REASON_TRIAGE_FAILED: "triage failed to run",
 }
 

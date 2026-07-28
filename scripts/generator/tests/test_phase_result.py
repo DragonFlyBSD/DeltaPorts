@@ -14,7 +14,6 @@ from dataclasses import asdict
 import pytest
 
 from dportsv3.agent.phase_result import (
-    ConvertResult,
     PatchResult,
     PhaseResultVersionMismatch,
     TriageResult,
@@ -74,24 +73,6 @@ def test_triage_result_round_trip(fake_store):
     write_phase_result("b1", "triage", original)
 
     loaded = load_phase_result(None, "b1", "triage", TriageResult)
-    assert loaded == original
-
-
-def test_convert_result_round_trip(fake_store):
-    original = ConvertResult(
-        status="reapply_failed",
-        reapply_ok=False,
-        reason_code="reapply_failed",
-        overlay_sha256="deadbeef" * 8,
-        files_removed=["STATUS", "Makefile.DragonFly"],
-        diag_tail="modes: dops=1\n",
-        tokens_prompt=35_000,
-        tokens_completion=7_000,
-        tokens_total=42_000,
-    )
-    write_phase_result("b1", "convert", original)
-
-    loaded = load_phase_result(None, "b1", "convert", ConvertResult)
     assert loaded == original
 
 

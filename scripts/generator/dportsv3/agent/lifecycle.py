@@ -35,10 +35,6 @@ class JobState(StrEnum):
     TRIAGED    = "triaged"
     PATCHING   = "patching"
     VERIFYING  = "verifying"
-    # Step 20: dops-conversion in progress. Parallel to TRIAGING /
-    # PATCHING — a convert job is its own type that lives entirely
-    # in this state until done/dead/escalated.
-    CONVERTING = "converting"
     # Step 11c: operator-triggered verification of a proposed fix
     # (separate from the inner VERIFYING state used by patch jobs).
     # A verify-fix job lives here from CLAIMED → VERIFY_FIX_START
@@ -71,17 +67,8 @@ class JobEvent(StrEnum):
     # audit history can tell "operator killed this" apart from
     # "runner restart reaped this".
     ABANDON          = "abandon"
-    # Step 20: dops-conversion job lifecycle. CONVERT_OK lands a
-    # converted port at DONE; CONVERT_GAVE_UP lands at DEAD with
-    # retire_reason='convert_failed'. The "needs_llm" sub-case (the
-    # deterministic converter bailed and 20b's LLM tool loop isn't
-    # implemented yet) reuses CONVERT_GAVE_UP with a distinct detail
-    # field; once 20b lands those will instead exercise the loop.
-    CONVERT_START    = "convert_start"
-    CONVERT_OK       = "convert_ok"
-    CONVERT_GAVE_UP  = "convert_gave_up"
-    # Step 11c: verify-fix job lifecycle. Mirrors the CONVERT_*
-    # shape. VERIFY_FIX_OK lands at DONE regardless of the
+    # Step 11c: verify-fix job lifecycle. VERIFY_FIX_OK lands at DONE
+    # regardless of the
     # underlying verification verdict — that lives on bundles.
     # verification_status, written by the orchestrator's POST to
     # /api/bundles/<id>/verification. VERIFY_FIX_GAVE_UP fires only
@@ -90,17 +77,13 @@ class JobEvent(StrEnum):
     VERIFY_FIX_START   = "verify_fix_start"
     VERIFY_FIX_OK      = "verify_fix_ok"
     VERIFY_FIX_GAVE_UP = "verify_fix_gave_up"
-    # Step 20d follow-up: when triage detects a port needs conversion
-    # it fires TRIAGE_DEFER (not ESCALATE_MANUAL) so the deferred
-    # triage doesn't pollute the operator's manual queue. The convert
-    # job carries the actual work; this triage is just parked.
-    TRIAGE_DEFER     = "triage_defer"
     # Step 28a: triage short-circuits when the operator has staked
     # the (target, origin) via take-over. Distinct from ABANDON
     # (Step 10b operator job-kill) so retire_reason='origin_locked'
     # stays separable from retire_reason='abandoned' in lineage
     # views and the manual queue.
     SKIP_ORIGIN_LOCKED = "skip_origin_locked"
+    SKIP_ISSUE_MUTED   = "skip_issue_muted"
 
 
 # (from_state, event) -> to_state. ``None`` as from_state means
@@ -133,18 +116,10 @@ TRANSITIONS: dict[tuple[JobState | None, JobEvent], JobState] = {
     (JobState.PATCHING,    JobEvent.ESCALATE_MANUAL):  JobState.ESCALATED,
     (JobState.VERIFYING,   JobEvent.VERIFY_FAIL):      JobState.DEAD,
 
-    # Step 20: convert-job happy path + failure.
-    (JobState.CLAIMED,     JobEvent.CONVERT_START):    JobState.CONVERTING,
-    (JobState.CONVERTING,  JobEvent.CONVERT_OK):       JobState.DONE,
-    (JobState.CONVERTING,  JobEvent.CONVERT_GAVE_UP):  JobState.DEAD,
-    (JobState.CONVERTING,  JobEvent.ESCALATE_MANUAL):  JobState.ESCALATED,
     # Step 11c: verify-fix-job happy path + failure.
     (JobState.CLAIMED,       JobEvent.VERIFY_FIX_START):   JobState.VERIFYING_FIX,
     (JobState.VERIFYING_FIX, JobEvent.VERIFY_FIX_OK):      JobState.DONE,
     (JobState.VERIFYING_FIX, JobEvent.VERIFY_FIX_GAVE_UP): JobState.DEAD,
-    # Step 20d: TRIAGE_DEFER lands at DEAD with a distinct retire
-    # reason so the manual queue is not polluted with parked triages.
-    (JobState.TRIAGING,    JobEvent.TRIAGE_DEFER):     JobState.DEAD,
 
     # env_broken can interrupt any active state
     (JobState.CLAIMED,     JobEvent.ENV_BROKEN):       JobState.DEAD,
@@ -152,7 +127,6 @@ TRANSITIONS: dict[tuple[JobState | None, JobEvent], JobState] = {
     (JobState.TRIAGED,     JobEvent.ENV_BROKEN):       JobState.DEAD,
     (JobState.PATCHING,    JobEvent.ENV_BROKEN):       JobState.DEAD,
     (JobState.VERIFYING,   JobEvent.ENV_BROKEN):       JobState.DEAD,
-    (JobState.CONVERTING,  JobEvent.ENV_BROKEN):       JobState.DEAD,
     (JobState.VERIFYING_FIX, JobEvent.ENV_BROKEN):     JobState.DEAD,
 
     # Startup orphan reap — same shape as env_broken but a distinct
@@ -162,7 +136,6 @@ TRANSITIONS: dict[tuple[JobState | None, JobEvent], JobState] = {
     (JobState.TRIAGED,     JobEvent.REAP_ORPHAN):      JobState.DEAD,
     (JobState.PATCHING,    JobEvent.REAP_ORPHAN):      JobState.DEAD,
     (JobState.VERIFYING,   JobEvent.REAP_ORPHAN):      JobState.DEAD,
-    (JobState.CONVERTING,  JobEvent.REAP_ORPHAN):      JobState.DEAD,
     (JobState.VERIFYING_FIX, JobEvent.REAP_ORPHAN):    JobState.DEAD,
     # Step 10a: QUEUED jobs can be reaped too, but ONLY by the
     # stricter ``reap_stale_queued`` helper — never by ``reap_orphans``
@@ -180,21 +153,28 @@ TRANSITIONS: dict[tuple[JobState | None, JobEvent], JobState] = {
     (JobState.TRIAGED,     JobEvent.ABANDON):          JobState.DEAD,
     (JobState.PATCHING,    JobEvent.ABANDON):          JobState.DEAD,
     (JobState.VERIFYING,   JobEvent.ABANDON):          JobState.DEAD,
-    (JobState.CONVERTING,  JobEvent.ABANDON):          JobState.DEAD,
     (JobState.VERIFYING_FIX, JobEvent.ABANDON):        JobState.DEAD,
 
     # Step 28a/28-extra: operator-owned origin short-circuit.
     # Permitted from every pre-terminal job state — the runner check
     # fires at process_<type>_job entry, so usually TRIAGING /
-    # PATCHING / CONVERTING. Covering CLAIMED/QUEUED is cheap
-    # defensive coverage if the check ever moves earlier. TRIAGED
-    # is included for completeness.
+    # PATCHING. Covering CLAIMED/QUEUED is cheap defensive coverage
+    # if the check ever moves earlier. TRIAGED is included for
+    # completeness.
     (JobState.QUEUED,      JobEvent.SKIP_ORIGIN_LOCKED): JobState.DEAD,
     (JobState.CLAIMED,     JobEvent.SKIP_ORIGIN_LOCKED): JobState.DEAD,
     (JobState.TRIAGING,    JobEvent.SKIP_ORIGIN_LOCKED): JobState.DEAD,
     (JobState.TRIAGED,     JobEvent.SKIP_ORIGIN_LOCKED): JobState.DEAD,
     (JobState.PATCHING,    JobEvent.SKIP_ORIGIN_LOCKED): JobState.DEAD,
-    (JobState.CONVERTING,  JobEvent.SKIP_ORIGIN_LOCKED): JobState.DEAD,
+
+    # WS8: muted-issue short-circuit — the runner skips auto-work for a
+    # muted issue's occurrences. Same shape as the origin-lock skip:
+    # permitted from every pre-terminal state, lands DEAD.
+    (JobState.QUEUED,      JobEvent.SKIP_ISSUE_MUTED): JobState.DEAD,
+    (JobState.CLAIMED,     JobEvent.SKIP_ISSUE_MUTED): JobState.DEAD,
+    (JobState.TRIAGING,    JobEvent.SKIP_ISSUE_MUTED): JobState.DEAD,
+    (JobState.TRIAGED,     JobEvent.SKIP_ISSUE_MUTED): JobState.DEAD,
+    (JobState.PATCHING,    JobEvent.SKIP_ISSUE_MUTED): JobState.DEAD,
 }
 
 
@@ -208,10 +188,9 @@ _TERMINAL_REASONS: dict[JobEvent, str] = {
     JobEvent.ENV_BROKEN:       "env_broken",
     JobEvent.REAP_ORPHAN:      "runner_restart",
     JobEvent.ABANDON:          "abandoned",
-    JobEvent.CONVERT_GAVE_UP:  "convert_failed",
     JobEvent.VERIFY_FIX_GAVE_UP: "verify_fix_failed",
-    JobEvent.TRIAGE_DEFER:     "deferred_for_convert",
     JobEvent.SKIP_ORIGIN_LOCKED: "origin_locked",
+    JobEvent.SKIP_ISSUE_MUTED: "issue_muted",
 }
 
 
@@ -225,7 +204,6 @@ _EVENT_TO_RESOLUTION: dict[JobEvent, str] = {
     JobEvent.PATCH_GAVE_UP:    "agent_gave_up",
     JobEvent.PATCH_BUDGET_OUT: "agent_budget_exhausted",
     JobEvent.ESCALATE_MANUAL:  "escalated_manual",
-    JobEvent.CONVERT_GAVE_UP:  "convert_gave_up",
     # A triage that couldn't run to a routing decision (bundle
     # materialization, LLM call, policy load, or orchestrator
     # precheck failed) terminates the job at DEAD/triage_failed.
@@ -242,7 +220,6 @@ _INFLIGHT_STATES: tuple[JobState, ...] = (
     JobState.TRIAGED,
     JobState.PATCHING,
     JobState.VERIFYING,
-    JobState.CONVERTING,
     JobState.VERIFYING_FIX,
 )
 
@@ -274,7 +251,6 @@ ACTIVE_WORK_STATES: tuple[JobState, ...] = (
     JobState.CLAIMED,
     JobState.TRIAGING,
     JobState.PATCHING,
-    JobState.CONVERTING,
     JobState.VERIFYING,
     JobState.VERIFYING_FIX,
 )

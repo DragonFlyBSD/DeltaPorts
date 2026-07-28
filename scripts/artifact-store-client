@@ -47,6 +47,15 @@ def cmd_bundle_upsert(args):
         "result": args.result,
         "target": args.target,
     }
+    # Ship the distilled errors text so the store can fingerprint the
+    # failure at ingest (issue identity). Best-effort: a missing/unreadable
+    # file just means no signature this pass.
+    if args.errors_file:
+        try:
+            with open(args.errors_file, "r", encoding="utf-8", errors="replace") as f:
+                payload["errors_text"] = f.read()
+        except OSError:
+            pass
     resp = request_json("POST", f"{args.url}/v1/bundles/upsert", payload)
     print(json.dumps(resp, indent=2))
 
@@ -120,6 +129,8 @@ def main():
     p_bundle.add_argument("--flavor", default="")
     p_bundle.add_argument("--result", default="")
     p_bundle.add_argument("--target", default="")
+    p_bundle.add_argument("--errors-file", default="",
+                          help="distilled errors.txt to fingerprint at ingest")
     p_bundle.set_defaults(func=cmd_bundle_upsert)
 
     p_blob = sub.add_parser("put-blob")

@@ -1,13 +1,11 @@
 """Typed inter-phase result contracts (Step 36).
 
-Each phase (triage / convert / patch) writes one canonical result per
+Each phase (triage / patch) writes one canonical result per
 bundle to ``analysis/<phase>_result.json`` matching a frozen dataclass
 with a ``schema_version`` first field. Downstream phases consume the
 typed object via :func:`load_phase_result` instead of re-parsing
 markdown — eliminates regex-fishing brittleness (triage prompt
-rewrites silently breaking patch's parser) and closes the asymmetric-
-coverage gap that left the convert flow blind to triage's
-classification.
+rewrites silently breaking patch's parser).
 
 Markdown artifacts (``analysis/<phase>.md``) stay as the
 human-readable surface. They are no longer the source of truth for
@@ -21,7 +19,7 @@ typed JSON is just a new relpath family.
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, dataclass, field, fields
+from dataclasses import asdict, dataclass, fields
 from typing import Any, TypeVar
 
 from .policy import Confidence
@@ -29,9 +27,7 @@ from .policy import Confidence
 
 __all__ = [
     "TriageResult",
-    "ConvertResult",
     "DeferredPatch",
-    "DeferredVerdict",
     "PatchResult",
     "PhaseResultVersionMismatch",
     "write_phase_result",
@@ -97,9 +93,7 @@ class DeferredPatch:
     Two shapes:
     - File-backed (``patch.apply``): ``backing_file`` is the
       ``diffs/*.diff`` whose ``patch apply`` line was dropped;
-      ``original_content`` is that diff's text. The file lingers on
-      disk and ``cleanup_resolved_deferred_patches`` removes it once
-      the agent resolves the verdict.
+      ``original_content`` is that diff's text.
     - Inline (``mk.var.set``, ``text.replace_once``, …):
       ``backing_file`` is None — the op lived only as overlay.dops
       source, so there is nothing on disk to clean up.
@@ -115,51 +109,6 @@ class DeferredPatch:
 
 
 @dataclass(frozen=True)
-class ConvertResult:
-    """What the convert phase produced + how the verifier judged it."""
-
-    status: str
-    reapply_ok: bool
-    reason_code: str | None
-    overlay_sha256: str | None
-    files_removed: list[str]
-    diag_tail: str | None
-    tokens_prompt: int
-    tokens_completion: int
-    tokens_total: int
-    # Step 37-2: typed list of framework patches the handler dropped
-    # from overlay.dops to get compose reapply to succeed. Each entry
-    # carries enough context for the patch agent's relevance pass to
-    # work without re-reading the bundle.
-    deferred_patches: list[DeferredPatch] = field(default_factory=list)
-    # Step 37-2: schema bumped because deferred_patches' element type
-    # changed from str to DeferredPatch. Legacy v1 readers degrade to
-    # None via PhaseResultVersionMismatch (per existing
-    # load_phase_result contract).
-    schema_version: int = 2
-
-
-@dataclass(frozen=True)
-class DeferredVerdict:
-    """Step 37-3: per-patch outcome from the patch agent's relevance
-    pass on a ``DeferredPatch``. One of three verdicts:
-
-    - ``regenerated``: agent edited overlay.dops directly to achieve
-      the same semantic intent against current upstream.
-    - ``dropped``: agent verified the patch is no longer relevant
-      (e.g. upstream already removed the lines it was targeting);
-      no edit emitted.
-    - ``escalated``: agent couldn't determine relevance or how to
-      regenerate; bundle should be operator-actionable for this
-      specific patch (other deferred patches may still resolve).
-    """
-
-    path: str                   # diffs/pkg-plist.diff (matches DeferredPatch.path)
-    verdict: str                # "regenerated" | "dropped" | "escalated"
-    rationale: str              # one-sentence operator-readable reason
-
-
-@dataclass(frozen=True)
 class PatchResult:
     """What the patch agent did and how the rebuild gate judged it."""
 
@@ -169,15 +118,7 @@ class PatchResult:
     tokens_prompt: int
     tokens_completion: int
     tokens_total: int
-    # Step 37-3: per-patch verdicts from the deferred-patches
-    # relevance pass. Empty when convert didn't defer any patches OR
-    # the agent didn't emit a Patch Plan with this field. Patch agent
-    # is taught to emit one entry per ConvertResult.deferred_patches
-    # element via prompt clause in PATCH_SYSTEM.
-    deferred_verdicts: list[DeferredVerdict] = field(default_factory=list)
-    # Step 37-3: schema bumped because deferred_verdicts is a new
-    # nested-dataclass field. Legacy v1 readers degrade to None.
-    schema_version: int = 2
+    schema_version: int = 1
 
 
 _T = TypeVar("_T")
@@ -252,20 +193,6 @@ def load_phase_result(
     # same-version-but-extra defensive only.)
     known = {f.name for f in fields(cls)}  # type: ignore[arg-type]
     kwargs = {k: v for k, v in payload.items() if k in known}
-
-    # Step 37-2/37-3: reconstruct nested phase-result dataclasses.
-    # Two classes carry nested lists; generalize on field type
-    # annotations if a third lands.
-    if cls is ConvertResult and "deferred_patches" in kwargs:
-        kwargs["deferred_patches"] = [
-            DeferredPatch(**dp) if isinstance(dp, dict) else dp
-            for dp in (kwargs.get("deferred_patches") or [])
-        ]
-    if cls is PatchResult and "deferred_verdicts" in kwargs:
-        kwargs["deferred_verdicts"] = [
-            DeferredVerdict(**dv) if isinstance(dv, dict) else dv
-            for dv in (kwargs.get("deferred_verdicts") or [])
-        ]
 
     return cls(**kwargs)  # type: ignore[call-arg]
 

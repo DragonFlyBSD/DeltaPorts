@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from dportsv3.tracker import fix_state
+from dportsv3.tracker import issue_state
 from dportsv3.tracker import render
 from dportsv3.tracker.db import ActiveBuildError, init_db, open_db
 from dportsv3.tracker.routes import (
@@ -23,6 +24,7 @@ from dportsv3.tracker.routes import (
     agentic_api,
     builds_api,
     bundle_actions,
+    issue_actions,
     pages,
 )
 from dportsv3.tracker.routes._common import (
@@ -83,6 +85,10 @@ def create_app(db_path: str | Path) -> Any:
     # render one status pill instead of reconciling resolution +
     # verification_status + job.state by eye.
     templates.env.globals["fix_status"] = fix_state.fix_status
+    # The issue-level projections: lifecycle badge + which issue-level
+    # controls to show (mute/unmute/resolve/reopen).
+    templates.env.globals["issue_status"] = issue_state.issue_status
+    templates.env.globals["issue_actions"] = issue_state.issue_actions
     # Compact relative ages ("18m ago") for the worklist queue rows.
     templates.env.filters["relative_age"] = render.relative_age
 
@@ -126,6 +132,7 @@ def create_app(db_path: str | Path) -> Any:
     builds_api.register(app, ctx)
     agentic_api.register(app, ctx)
     bundle_actions.register(app, ctx)
+    issue_actions.register(app, ctx)
     pages.register(app, ctx)
 
     return app

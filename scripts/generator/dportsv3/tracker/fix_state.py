@@ -44,7 +44,6 @@ RESOLUTION_AGENT_FIXED = "agent_fixed"
 RESOLUTION_AGENT_GAVE_UP = "agent_gave_up"
 RESOLUTION_AGENT_BUDGET = "agent_budget_exhausted"
 RESOLUTION_ESCALATED = "escalated_manual"
-RESOLUTION_CONVERT_GAVE_UP = "convert_gave_up"
 RESOLUTION_TRIAGE_FAILED = "triage_failed"
 
 # Operator-set resolutions (set by the tracker's POST endpoints).
@@ -77,7 +76,6 @@ FAILURE_RESOLUTIONS: frozenset[str] = frozenset(
         RESOLUTION_AGENT_BUDGET,
         RESOLUTION_AGENT_GAVE_UP,
         RESOLUTION_ESCALATED,
-        RESOLUTION_CONVERT_GAVE_UP,
     }
 )
 
@@ -193,7 +191,6 @@ _RESOLUTION_STATUS: dict[str, FixStatus] = {
     RESOLUTION_AGENT_GAVE_UP: FixStatus("agent_gave_up", "agent gave up", "failed"),
     RESOLUTION_AGENT_BUDGET: FixStatus("budget_out", "budget out", "failed"),
     RESOLUTION_ESCALATED: FixStatus("escalated", "escalated", "skipped"),
-    RESOLUTION_CONVERT_GAVE_UP: FixStatus("convert_gave_up", "convert gave up", "failed"),
     RESOLUTION_TRIAGE_FAILED: FixStatus("triage_failed", "triage failed", "failed"),
     RESOLUTION_ACCEPTED: FixStatus("accepted", "accepted", "built"),
     RESOLUTION_MERGED: FixStatus("merged", "merged upstream", "built"),
@@ -236,10 +233,14 @@ def fix_status(bundle: dict[str, Any]) -> FixStatus:
     return FixStatus("unknown", "—", "total")
 
 
-# --- Worklist bucketing (Phase 6) --------------------------------------------
+# --- Worklist bucketing ------------------------------------------------------
 
 # fix_status.key -> worklist bucket. Keys not listed (in_progress, unknown)
 # are runner-transient or untriaged and don't belong in the operator worklist.
+# Consumed by `worklist_bucket`, which the issue layer (issue_state) uses to
+# bucket an issue's actionable occurrence. The old bundle-level worklist
+# (build_worklist) and origin grouping (group_band_by_origin) were removed in
+# the Sentry-model cutover — the landing groups by fingerprinted issue now.
 _WORKLIST_BUCKET: dict[str, str] = {
     "verified": "ready",
     "owned_verified": "ready",
@@ -248,7 +249,6 @@ _WORKLIST_BUCKET: dict[str, str] = {
     "agent_gave_up": "decide",
     "budget_out": "decide",
     "escalated": "decide",
-    "convert_gave_up": "decide",
     "triage_failed": "decide",
     "operator_owned": "owned",
     "accepted": "done",
@@ -257,92 +257,13 @@ _WORKLIST_BUCKET: dict[str, str] = {
     "discarded": "done",
 }
 
-# Bucket key -> (heading, pill class) in display order. The landing renders
-# sections in this order; `done` is collapsed.
-WORKLIST_SECTIONS: tuple[tuple[str, str, str], ...] = (
-    ("ready", "Ready to accept", "built"),
-    ("verify", "Needs verify", "skipped"),
-    ("decide", "Needs a decision", "failed"),
-    ("owned", "You own", "total"),
-    ("done", "Recently resolved", "ignored"),
-)
 
+def worklist_bucket(bundle: dict[str, Any]) -> str | None:
+    """The worklist bucket for a single occurrence (ready/verify/decide/
+    owned/done), or None when it isn't operator-actionable (in_progress /
+    unknown).
 
-def build_worklist(
-    bundles: list[dict[str, Any]],
-) -> dict[str, list[dict[str, Any]]]:
-    """Group bundle rows into operator-workflow buckets by fix_status.
-
-    Returns a dict keyed by bucket (ready/verify/decide/owned/done); each
-    value holds that bucket's bundles in input order. Bundles projecting to
-    in_progress (runner working) or unknown (fresh/untriaged) are omitted —
-    they aren't operator-actionable from the landing.
+    The issue layer buckets an issue's *actionable occurrence* through this
+    exact mapping instead of re-deriving it.
     """
-    buckets: dict[str, list[dict[str, Any]]] = {
-        key: [] for key, _label, _cls in WORKLIST_SECTIONS
-    }
-    for bundle in bundles:
-        bucket = _WORKLIST_BUCKET.get(fix_status(bundle).key)
-        if bucket:
-            buckets[bucket].append(bundle)
-    return buckets
-
-
-# Count at which a port's repeated failures read as systemic, not a
-# one-off — earns the "recurring" tag and floats to the top of its band.
-_RECURRING_THRESHOLD = 3
-
-
-def group_band_by_origin(
-    bundles: list[dict[str, Any]],
-) -> list[dict[str, Any]]:
-    """Dedup one worklist band by port origin (the Sentry model).
-
-    Bundles for the same origin collapse into one group carrying a
-    ``count``, a status ``rollup`` (each distinct fix_status label with
-    its occurrence count), and the ``attempts`` newest-first. A group of
-    one renders as a plain row; ``>1`` is expandable. Groups sort
-    systemic-first (highest count) then most-recent, so a port failing
-    over and over is the loudest thing in the band instead of N
-    look-alike rows burying the signal.
-    """
-    by_origin: dict[str, list[dict[str, Any]]] = {}
-    order: list[str] = []
-    for b in bundles:
-        origin = b.get("origin") or "—"
-        if origin not in by_origin:
-            by_origin[origin] = []
-            order.append(origin)
-        by_origin[origin].append(b)
-
-    groups: list[dict[str, Any]] = []
-    for origin in order:
-        attempts = sorted(
-            by_origin[origin],
-            key=lambda b: (b.get("ts_utc") or ""),
-            reverse=True,
-        )
-        rollup: list[dict[str, Any]] = []
-        seen: dict[str, dict[str, Any]] = {}
-        for b in attempts:
-            s = fix_status(b)
-            entry = seen.get(s.label)
-            if entry is None:
-                entry = {"label": s.label, "cls": s.pill, "n": 0}
-                seen[s.label] = entry
-                rollup.append(entry)
-            entry["n"] += 1
-        count = len(attempts)
-        groups.append({
-            "origin": origin,
-            "count": count,
-            "is_group": count > 1,
-            "recurring": count >= _RECURRING_THRESHOLD,
-            "latest": attempts[0],
-            "latest_ts": attempts[0].get("ts_utc") or "",
-            "attempts": attempts,
-            "rollup": rollup,
-        })
-    # Systemic first (highest count), then most-recent failure.
-    groups.sort(key=lambda g: (g["count"], g["latest_ts"]), reverse=True)
-    return groups
+    return _WORKLIST_BUCKET.get(fix_status(bundle).key)

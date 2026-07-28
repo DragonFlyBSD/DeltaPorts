@@ -23,7 +23,6 @@ ALL_RESOLUTIONS = [
     "agent_gave_up",
     "agent_budget_exhausted",
     "escalated_manual",
-    "convert_gave_up",
     "triage_failed",
     "operator_owned",
     "accepted",
@@ -36,7 +35,7 @@ ALL_VERIFICATION = [None, "verified", "verification_failed"]
 _TERMINAL = {"accepted", "merged", "rejected", "discarded"}
 _FAILURE = {
     "agent_budget_exhausted", "agent_gave_up",
-    "escalated_manual", "convert_gave_up",
+    "escalated_manual",
 }
 
 
@@ -150,7 +149,6 @@ def test_surface_is_subset_of_allowed():
     ("agent_gave_up", None, "agent_gave_up"),
     ("agent_budget_exhausted", None, "budget_out"),
     ("escalated_manual", None, "escalated"),
-    ("convert_gave_up", None, "convert_gave_up"),
     ("triage_failed", None, "triage_failed"),
     ("accepted", None, "accepted"),
     ("merged", None, "merged"),
@@ -197,76 +195,27 @@ def test_fix_status_pill_classes_are_known():
             ).pill in known
 
 
-# --- Worklist bucketing (Phase 6) --------------------------------------------
+# --- Worklist bucketing ------------------------------------------------------
+# The old bundle-level worklist (build_worklist) and origin grouping
+# (group_band_by_origin) were removed in the Sentry-model cutover; the landing
+# now groups by fingerprinted issue (issue_state). What survives here is
+# worklist_bucket, the single-occurrence mapping the issue layer reuses.
 
 
-def test_build_worklist_buckets_by_fix_status():
-    bundles = [
-        {"bundle_id": "b1", "resolution": "agent_fixed",
-         "verification_status": "verified"},        # ready
-        {"bundle_id": "b2", "resolution": "agent_fixed"},          # verify
-        {"bundle_id": "b3", "resolution": "agent_gave_up"},        # decide
-        {"bundle_id": "b4", "resolution": "agent_budget_exhausted"},  # decide
-        {"bundle_id": "b5", "resolution": "operator_owned"},       # owned
-        {"bundle_id": "b6", "resolution": "accepted"},             # done
-        {"bundle_id": "b7", "resolution": "rejected"},             # done
-        {"bundle_id": "b8", "resolution": None},                   # omitted
-    ]
-    wl = fs.build_worklist(bundles)
-    assert [b["bundle_id"] for b in wl["ready"]] == ["b1"]
-    assert [b["bundle_id"] for b in wl["verify"]] == ["b2"]
-    assert [b["bundle_id"] for b in wl["decide"]] == ["b3", "b4"]
-    assert [b["bundle_id"] for b in wl["owned"]] == ["b5"]
-    assert [b["bundle_id"] for b in wl["done"]] == ["b6", "b7"]
-    # A NULL-resolution untriaged bundle isn't operator-actionable → omitted.
-    bucketed = {b["bundle_id"] for bucket in wl.values() for b in bucket}
-    assert "b8" not in bucketed
+@pytest.mark.parametrize("r,v,expected", [
+    ("agent_fixed", "verified", "ready"),
+    ("agent_fixed", None, "verify"),
+    ("agent_gave_up", None, "decide"),
+    ("operator_owned", None, "owned"),
+    ("merged", None, "done"),
+    (None, None, None),               # untriaged → not operator-actionable
+])
+def test_worklist_bucket(r, v, expected):
+    assert fs.worklist_bucket(
+        {"resolution": r, "verification_status": v}
+    ) == expected
 
 
-def test_build_worklist_preserves_input_order():
-    bundles = [
-        {"bundle_id": "z", "resolution": "agent_gave_up"},
-        {"bundle_id": "a", "resolution": "agent_gave_up"},
-    ]
-    assert [b["bundle_id"] for b in fs.build_worklist(bundles)["decide"]] == ["z", "a"]
-
-
-def test_worklist_sections_cover_every_bucket():
-    section_keys = {k for k, _label, _cls in fs.WORKLIST_SECTIONS}
-    assert set(fs._WORKLIST_BUCKET.values()) <= section_keys
-
-
-def test_group_band_by_origin_dedups_and_rolls_up():
-    band = [
-        {"bundle_id": "p-1", "origin": "lang/python312",
-         "ts_utc": "2026-07-23T00:30:00Z", "resolution": "triage_failed"},
-        {"bundle_id": "p-2", "origin": "lang/python312",
-         "ts_utc": "2026-07-23T11:36:00Z", "resolution": "agent_gave_up"},
-        {"bundle_id": "p-3", "origin": "lang/python312",
-         "ts_utc": "2026-07-23T00:32:00Z", "resolution": "agent_gave_up"},
-        {"bundle_id": "q-1", "origin": "ftp/curl",
-         "ts_utc": "2026-07-23T14:00:00Z", "resolution": "agent_gave_up"},
-    ]
-    groups = fs.group_band_by_origin(band)
-    # Two ports; systemic (higher count) first.
-    assert [g["origin"] for g in groups] == ["lang/python312", "ftp/curl"]
-    lang, curl = groups
-    assert lang["count"] == 3 and lang["is_group"] and lang["recurring"]
-    assert curl["count"] == 1 and not curl["is_group"] and not curl["recurring"]
-    # Attempts newest-first (11:36 > 00:32 > 00:30); latest is p-2.
-    assert [b["bundle_id"] for b in lang["attempts"]] == ["p-2", "p-3", "p-1"]
-    assert lang["latest"]["bundle_id"] == "p-2"
-    # Rollup counts each distinct status label.
-    rollup = {r["label"]: r["n"] for r in lang["rollup"]}
-    assert rollup == {"agent gave up": 2, "triage failed": 1}
-
-
-def test_group_band_by_origin_orders_ties_by_recency():
-    band = [
-        {"bundle_id": "old", "origin": "a/a", "ts_utc": "2026-07-01T00:00:00Z",
-         "resolution": "agent_gave_up"},
-        {"bundle_id": "new", "origin": "b/b", "ts_utc": "2026-07-20T00:00:00Z",
-         "resolution": "agent_gave_up"},
-    ]
-    # Same count (1 each) → most-recent origin first.
-    assert [g["origin"] for g in fs.group_band_by_origin(band)] == ["b/b", "a/a"]
+def test_worklist_bucket_inflight_is_none():
+    # A NULL-resolution bundle whose job is still working isn't actionable.
+    assert fs.worklist_bucket({"resolution": None, "state": "patching"}) is None
