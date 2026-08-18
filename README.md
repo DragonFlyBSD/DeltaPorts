@@ -4,19 +4,15 @@ This repository contains patches and files that overlay and modify the FreeBSD P
 
 > **Note:** This repository is not intended to be useful by itself. Scripts combine these overlays and patches to generate the final product.
 
-## dportsv3 CLI
+## Tooling
 
-From the repository root, use:
+The tooling that composes this overlay into a DPorts tree — the compose
+pipeline, the `overlay.dops` DSL, the build tracker, the chroot dev-env and the
+agentic build-failure repair loop — lives in its own repository, **Polytropos**.
+It reads this repository as an input.
 
-```bash
-./dportsv3 --help
-```
-
-The wrapper bootstraps `scripts/generator/.venv` automatically on first run and
-dispatches to the installed `dportsv3` console entrypoint.
-
-For a disposable DragonFly chroot development shell, use
-`./dportsv3 dev-env` and see `docs/dev-chroot-environment.md`.
+The shell scripts under `scripts/` are the earlier generation of that tooling
+and still live here.
 
 ## Organization
 
@@ -25,8 +21,6 @@ For a disposable DragonFly chroot development shell, use
 
 - **scripts/**  
   Shell scripts to generate the final DPorts repository, as well as a copy of the Tinderbox hooks.
-
-  Also includes `scripts/dsynth-hooks/` which provides dsynth hook scripts to capture a bounded, high-signal “evidence bundle” (distilled errors + port context) when a port fails to build.
 
 - **ports/**  
   Contains subdirectories corresponding to Ports categories (e.g., `audio`, `editors`, `devel`, etc.).

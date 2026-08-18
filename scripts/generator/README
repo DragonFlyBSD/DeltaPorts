@@ -1,19 +1,37 @@
-# DPorts Generator
+# DPorts Generator (shell)
 
-This directory now uses `dportsv3` as the active Python generator toolchain.
+The shell scripts in this directory generate a DPorts tree by merging the
+FreeBSD Ports Collection with the overlays in this repository. They are the
+earlier generation of the tooling and remain here as the ports-side scripts.
 
-## Primary CLI
+## Where the Python toolchain went
 
-```sh
-python -m dportsv3 --help
-python -m dportsv3 compose --help
-python -m dportsv3 migrate --help
-python -m dportsv3 dsl --help
-```
+The `dportsv3` Python package that used to live in this directory — the
+compose pipeline, the `overlay.dops` DSL and its engine, the migration
+program, the build tracker, the chroot dev-env manager and the agentic
+build-failure repair loop — now lives in its own repository, **Polytropos**.
 
-## Notes
+It was moved out because it had grown into a substantial piece of software in
+its own right, with its own release cycle, test suite and issue tracker, while
+this repository is a data repository: ports overlays and patches.
 
-- Legacy Python v2 `dports` package/entrypoint has been removed.
-- Legacy shell scripts remain in this directory for operational parity checks.
-- Packaging exports only `dportsv3` from `scripts/generator/pyproject.toml`.
-- Comprehensive usage guide: `docs/dportsv3-user-guide.md`.
+Polytropos reads this repository as an input. Point it at a checkout with
+`--delta-root`, or set `$DPORTS_DELTA_ROOT`.
+
+## What remains here
+
+| Script | Purpose |
+|---|---|
+| `merge.sh`, `merge-mk.sh` | merge FreeBSD ports with the DeltaPorts overlay |
+| `bulk_dports.sh`, `true_bulk_list.sh`, `ramo_*.sh` | bulk build list generation |
+| `dportsd`, `dports-daemon.sh` | the generator daemon |
+| `quicksync.sh`, `sync1.sh` | sync helpers |
+| `prune.sh`, `mask_NO_PACKAGE.sh` | tree maintenance |
+| `report_unbuilt.sh`, `never_tried.sh`, `stinkers.sh` | build reporting |
+| `generate_ports_INDEX.sh`, `category-makefiles.sh` | index and category Makefiles |
+| `rollingUPDATING.sh` | UPDATING entries |
+| `identify-custom-nobody.sh` | audit helper |
+
+`dports-default.conf` and `dports.toml.example` configure these scripts.
+
+See also `scripts/new-generator/`, a filter-phase based rewrite of `merge.sh`.

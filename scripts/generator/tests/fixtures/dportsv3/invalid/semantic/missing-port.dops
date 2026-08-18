@@ -1,2 +1,0 @@
-target @main
-mk set VAR "value"

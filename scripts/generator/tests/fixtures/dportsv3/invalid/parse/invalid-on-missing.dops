@@ -1,3 +1,0 @@
-target @main
-port category/name
-mk remove USES linux on-missing maybe
