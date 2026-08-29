@@ -3,6 +3,8 @@ type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
+mk add MAKE_ENV "LC_ALL=C"
+
 file materialize dragonfly/patch-gio_gunixmount.c -> dragonfly/patch-gio_gunixmount.c
 file materialize dragonfly/patch-gio_gunixmounts.c -> dragonfly/patch-gio_gunixmounts.c
 file materialize dragonfly/patch-gio_gunixvolume.c -> dragonfly/patch-gio_gunixvolume.c
