@@ -1,0 +1,14 @@
+bin/gdc
+@(root,wheel,755) bin/gdmd
+man/man1/gdc.1.gz
+@postexec if [ ! -f %%LOCALBASE%%/bin/gdc ]; then ln -s %%PREFIX%%/bin/gdc %%LOCALBASE%%/bin/gdc && touch %%PREFIX%%/.gdc-alt-linked ;fi
+@postexec if [ ! -f %%LOCALBASE%%/bin/gdmd ]; then ln -s %%PREFIX%%/bin/gdmd %%LOCALBASE%%/bin/gdmd && touch %%PREFIX%%/.gdmd-alt-linked ;fi
+@postexec if [ ! -f %%LOCALBASE%%/man/man1/gdc.1.gz ]; then ln -s %%PREFIX%%/man/man1/gdc.1.gz %%LOCALBASE%%/man/man1/gdc.1.gz && touch %%PREFIX%%/.man_gdc9-alt-linked ;fi
+@postexec if [ ! -f %%LOCALBASE%%/share/info/gdc.info ]; then ln -s %%PREFIX%%/share/info/gdc.info %%LOCALBASE%%/share/info/gdc.info && touch %%PREFIX%%/.share_info_gdc-alt-linked ;fi
+@postexec if type ccache-update-links >/dev/null 2>&1; then ccache-update-links -v; fi
+@preunexec if [ -f %%PREFIX%%/.gdc-alt-linked ]; then rm %%LOCALBASE%%/bin/gdc && rm %%PREFIX%%/.gdc-alt-linked;fi
+@preunexec if [ -f %%PREFIX%%/.gdmd-alt-linked ]; then rm %%LOCALBASE%%/bin/gdmd && rm %%PREFIX%%/.gdmd-alt-linked;fi
+@preunexec if [ -f %%PREFIX%%/.man_gdc9-alt-linked ]; then rm %%LOCALBASE%%/man/man1/gdc.1.gz && rm %%PREFIX%%/.man_gdc9-alt-linked;fi
+@preunexec if [ -f %%PREFIX%%/.share_info_gdc-alt-linked ]; then rm %%LOCALBASE%%/share/info/gdc.info && rm %%PREFIX%%/.share_info_gdc-alt-linked;fi
+@postunexec if type ccache-update-links >/dev/null 2>&1; then ccache-update-links -v; fi
+@comment Insert PLIST.lib here
