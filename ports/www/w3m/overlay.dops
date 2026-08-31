@@ -6,3 +6,6 @@ target @any
 mk eval INLINE_IMAGE_CONFIGURE_ON "${INLINE_IMAGE_CONFIGURE_ON:S/fb,x11/x11/}"
 mk add USES "ncurses"
 mk add LDFLAGS "-L${LOCALBASE}/lib"
+mk target append post-patch <<'MK'
+	@${REINPLACE_CMD} -e '/WARNINGS += -Wstring-compare/d' ${WRKSRC}/Makefile.in
+MK
