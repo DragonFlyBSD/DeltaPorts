@@ -1,15 +1,15 @@
---- Makefile.orig	2019-12-06 18:57:01 UTC
+--- Makefile.orig	2026-08-31 00:00:00 UTC
 +++ Makefile
-@@ -97,6 +97,7 @@ INFO=		as \
- .endif
+@@ -31,6 +31,7 @@
+ GNU_CONFIGURE=	yes
  
  CONFIGURE_ARGS+=	--disable-werror \
 +			--with-lib-path=/lib:/usr/lib \
  			--enable-deterministic-archives \
  			--with-sysroot=/ \
- 			--enable-x86-relax-relocations=no
-@@ -115,14 +116,6 @@ PLIST_SUB+=	GOLD=""
- PLIST_SUB+=	GOLD="@comment "
+ 			--enable-x86-relax-relocations=no \
+@@ -143,14 +144,6 @@
+ CONFIGURE_ARGS+=	--enable-new-dtags
  .endif
  
 -.if ${ARCH} == amd64
@@ -22,4 +22,4 @@
 -
  post-patch:
  	${REINPLACE_CMD} -e "s/-ldl//g" ${WRKSRC}/gold/testsuite/Makefile.in
- 
+ # Force the generation of man pages
