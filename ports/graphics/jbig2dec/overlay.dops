@@ -14,7 +14,7 @@ mk target set dfly-patch <<'MK'
 		${WRKSRC}/Makefile.am
 MK
 
-text line-remove file Makefile exact "LDFLAGS+=	-lmd" on-missing noop
+mk remove LDFLAGS "-lmd"
 
 mk target remove post-patch on-missing noop
 
