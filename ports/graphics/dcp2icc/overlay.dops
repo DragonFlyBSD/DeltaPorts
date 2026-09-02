@@ -3,6 +3,6 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk add USES "alias"
 mk set EXTRACT_DEPENDS "${UNZIP_CMD}:archivers/unzip"
 mk set UNZIP_NATIVE_CMD "${UNZIP_CMD}"
+file materialize dragonfly/patch-XMP-Toolkit-SDK-4.4.2_source_common_EndianUtils.hpp -> dragonfly/patch-XMP-Toolkit-SDK-4.4.2_source_common_EndianUtils.hpp
