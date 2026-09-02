@@ -3,4 +3,4 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk add USES "alias"
+file materialize dragonfly/patch-ipv6mon.c -> dragonfly/patch-ipv6mon.c
