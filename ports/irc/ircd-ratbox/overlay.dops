@@ -3,5 +3,13 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk add CFLAGS "-I${OPENSSLINC}"
+# USES=ssl carries -I${OPENSSLINC} in CPPFLAGS, but the hand-written
+# contrib compile rule (contrib/Makefile.in .c.lo) expands $(CFLAGS)
+# only -- never $(CPPFLAGS) -- so the OpenSSL include must ride in
+# CFLAGS, which configure substitutes into every subdir's @CFLAGS@,
+# on every architecture. Plain `mk add CFLAGS` only reached the
+# i386-only CFLAGS line, so gate it on the OPENSSL option instead.
 mk add LDFLAGS "-L${OPENSSLLIB}"
+mk block set condition "${PORT_OPTIONS:MOPENSSL}" <<'MK'
+CFLAGS+= -I${OPENSSLINC}
+MK
