@@ -1,0 +1,47 @@
+port shells/bash-completion
+type port
+target @any
+reason "DragonFly: gate FreeBSD-specific completions behind FREEBSD option"
+
+# On DragonFly, FREEBSD option should default to OFF since those
+# completions (freebsd-update, kldload, kldunload, pkg_*, port*)
+# are not installed on DragonFly. The pkg-plist entries are guarded
+# with %%FREEBSD%% so they are only packaged when the option is ON.
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NFREEBSD}"
+
+# Wrap FreeBSD-specific completion entries with %%FREEBSD%% guards
+text replace-once file pkg-plist \
+     from "%%DATADIR%%/completions/freebsd-update" \
+     to   "%%FREEBSD%%%%DATADIR%%/completions/freebsd-update"
+
+text replace-once file pkg-plist \
+     from "%%DATADIR%%/completions/kldload" \
+     to   "%%FREEBSD%%%%DATADIR%%/completions/kldload"
+
+text replace-once file pkg-plist \
+     from "%%DATADIR%%/completions/kldunload" \
+     to   "%%FREEBSD%%%%DATADIR%%/completions/kldunload"
+
+text replace-once file pkg-plist \
+     from "%%DATADIR%%/completions/pkg_deinstall" \
+     to   "%%FREEBSD%%%%DATADIR%%/completions/pkg_deinstall"
+
+text replace-once file pkg-plist \
+     from "%%DATADIR%%/completions/pkg_delete" \
+     to   "%%FREEBSD%%%%DATADIR%%/completions/pkg_delete"
+
+text replace-once file pkg-plist \
+     from "%%DATADIR%%/completions/pkg_info" \
+     to   "%%FREEBSD%%%%DATADIR%%/completions/pkg_info"
+
+text replace-once file pkg-plist \
+     from "%%DATADIR%%/completions/portinstall" \
+     to   "%%FREEBSD%%%%DATADIR%%/completions/portinstall"
+
+text replace-once file pkg-plist \
+     from "%%DATADIR%%/completions/portsnap" \
+     to   "%%FREEBSD%%%%DATADIR%%/completions/portsnap"
+
+text replace-once file pkg-plist \
+     from "%%DATADIR%%/completions/portupgrade" \
+     to   "%%FREEBSD%%%%DATADIR%%/completions/portupgrade"
