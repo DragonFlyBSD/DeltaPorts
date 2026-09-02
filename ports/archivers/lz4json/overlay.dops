@@ -1,0 +1,6 @@
+port archivers/lz4json
+type port
+target @any
+reason "FreeBSD files/patch-lz4jsoncat.c gates <sys/endian.h> behind __DragonFlyBSD__, which DragonFly does not define (it is __DragonFly__); add DragonFly to the guard so htole32 is declared"
+
+file materialize dragonfly/patch-lz4jsoncat.c -> dragonfly/patch-lz4jsoncat.c
