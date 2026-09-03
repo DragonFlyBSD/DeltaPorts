@@ -5,3 +5,5 @@ target @any
 
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"
 mk add USES "gmake"
+# GCC_DEFAULT on DragonFly (12) lacks <format> in libstdc++; use the bundled fmt
+file materialize dragonfly/patch-common_alformat.hpp -> dragonfly/patch-common_alformat.hpp
