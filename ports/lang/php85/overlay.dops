@@ -1,0 +1,5 @@
+port lang/php85
+type port
+reason "Step 48 bootstrap: deterministic header; patch authors the body"
+target @any
+file materialize dragonfly/patch-sapi_fpm_fpm_fpm__unix.c -> dragonfly/patch-sapi_fpm_fpm_fpm__unix.c
