@@ -1,0 +1,7 @@
+port textproc/libfyaml
+type port
+reason "Step 48 bootstrap: deterministic header; patch authors the body"
+target @any
+# DragonFly as(1) cannot assemble AVX512 vmovdqu emitted with -mavx512f -mavx512vl;
+# force the configure check to "no" so TARGET_HAS_AVX512 stays off (SSE2/SSE4.1/AVX2 intact).
+mk add CONFIGURE_ENV "ax_cv_check_cflags__Werror__mavx512f__mavx512vl=no"
