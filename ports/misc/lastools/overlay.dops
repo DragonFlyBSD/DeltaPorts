@@ -1,0 +1,21 @@
+port misc/lastools
+type port
+reason "dragonfly: base gcc 8.3 std::filesystem needs -lstdc++fs on every C++ link"
+target @any
+
+# Base gcc 8.3 on DragonFly does not ship libstdc++fs.a, so take the
+# extracted <filesystem> headers + libstdc++fs.a from misc/cxxfs_gcc8
+# (same recipe as deskutils/peaclock, cad/surelog, ...).
+mk add BUILD_DEPENDS "cxxfs_gcc8>0:misc/cxxfs_gcc8"
+mk add CXXFLAGS "-isystem ${LOCALBASE}/cxxfs_gcc8"
+mk add LDFLAGS "-L${LOCALBASE}/cxxfs_gcc8"
+
+# CMakeLists.txt in src/ links all 11 executables in one loop:
+#   target_link_libraries(${TARGET} LASlib ${CMAKE_DL_LIBS})
+# proj_loader.cpp (compiled into each) uses std::filesystem, which lives in
+# libstdc++fs.a on the base gcc 8.3 toolchain, so append stdc++fs last so the
+# archive is scanned after libLASlib.so and its fs symbols are pulled too.
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@CMAKE_DL_LIBS})@CMAKE_DL_LIBS} stdc++fs)@' ${WRKSRC}/src/CMakeLists.txt
+	${ECHO_CMD} 'target_link_libraries(LASlib stdc++fs)' >> ${WRKSRC}/LASlib/src/CMakeLists.txt
+MK1
