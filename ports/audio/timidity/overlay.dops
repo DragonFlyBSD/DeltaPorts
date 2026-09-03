@@ -1,0 +1,6 @@
+port audio/timidity
+type port
+reason "timidity is 1996 code whose FreeBSD port gates all its BSD compatibility (string.h selection, errno.h/endianness block in config.h, stdlib-vs-malloc.h, soundcard.h) behind #ifdef __FreeBSD__, which DragonFly's compiler does not define; define it so the maintained FreeBSD code path activates"
+target @any
+
+mk add CFLAGS "-D__FreeBSD__"
