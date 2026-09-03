@@ -3,4 +3,6 @@ type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
-file materialize dragonfly/patch-configure -> dragonfly/patch-configure
+mk target append post-patch <<'MK1'
+	@${REINPLACE_CMD} -e 's/bsd | haiku/bsd | dragonfly* | haiku/' ${WRKSRC}/configure
+MK1
