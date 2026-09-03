@@ -1,0 +1,6 @@
+port lang/php86
+type port
+reason "Guard FreeBSD-only procctl constants (PROC_TRACE_CTL, PROC_PDEATHSIG_CTL) absent on DragonFly"
+target @any
+file materialize dragonfly/patch-sapi_fpm_fpm_fpm__unix.c -> dragonfly/patch-sapi_fpm_fpm_fpm__unix.c
+file materialize dragonfly/patch-sapi_cli_php__cli__server.c -> dragonfly/patch-sapi_cli_php__cli__server.c
