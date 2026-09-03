@@ -4,4 +4,5 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
 mk eval LIB_DEPENDS "${LIB_DEPENDS:N*libunwind}"
+mk eval LIBS "${LIBS:N-lunwind}"
 file materialize dragonfly/patch-src_libc__override__gcc__and__weak.h -> dragonfly/patch-src_libc__override__gcc__and__weak.h
