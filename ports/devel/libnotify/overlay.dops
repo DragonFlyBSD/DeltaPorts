@@ -1,0 +1,5 @@
+port devel/libnotify
+type port
+reason "Step 48 bootstrap: deterministic header; patch authors the body"
+target @any
+file materialize dragonfly/patch-libnotify_launch-context.c -> dragonfly/patch-libnotify_launch-context.c
