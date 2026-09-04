@@ -1,0 +1,5 @@
+port x11/libei
+type port
+reason "Step 48 bootstrap: deterministic header; patch authors the body"
+target @any
+file materialize dragonfly/patch-src_libeis-socket.c -> dragonfly/patch-src_libeis-socket.c
