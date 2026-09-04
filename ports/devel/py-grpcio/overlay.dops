@@ -17,9 +17,7 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/third_party/abseil-cpp/absl/base/internal/sysinfo.cc \
 		${WRKSRC}/third_party/abseil-cpp/absl/base/internal/raw_logging.cc \
 		${WRKSRC}/include/grpc/impl/codegen/port_platform.h \
-		${WRKSRC}/third_party/cares/cares/test/gmock-*/gtest/gtest.h \
-		${WRKSRC}/third_party/zlib/contrib/minizip/ioapi.h \
-		${WRKSRC}/third_party/boringssl-with-bazel/src/include/openssl/base.h
+		${WRKSRC}/third_party/zlib/contrib/minizip/ioapi.h
 MK1
 file materialize dragonfly/patch-setup.py -> dragonfly/patch-setup.py
 file materialize dragonfly/patch-third__party_abseil-cpp_absl_status_status.cc -> dragonfly/patch-third__party_abseil-cpp_absl_status_status.cc
