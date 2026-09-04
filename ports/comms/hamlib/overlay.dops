@@ -1,0 +1,5 @@
+port comms/hamlib
+type port
+reason "DragonFly base -lusb lacks libusb-1.0 BOS/SuperSpeed helpers; gate rigtestlibusb to the stub main"
+target @any
+file materialize dragonfly/patch-tests_rigtestlibusb.c -> dragonfly/patch-tests_rigtestlibusb.c
