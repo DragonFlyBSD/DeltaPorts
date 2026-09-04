@@ -1,0 +1,5 @@
+port devel/hyprutils
+type port
+reason "needs C++23 headers <bit>, <format>, <print>, <expected>; base GCC 8.3 lacks them, GCC 13 lacks <print>, use GCC 14"
+target @any
+mk set USE_GCC_VERSION "14"
