@@ -4,3 +4,11 @@ reason "auto-converted from Makefile.DragonFly"
 target @any
 
 mk set KBUILD_ARCH "${MACHINE_ARCH:S/i386/x86/:S/x86_64/amd64/}"
+
+# Stage-2 kmk needs src/oldsed/config.h.dragonfly (see src/oldsed/Makefile.kmk),
+# but bootstrap.gmk only generates src/kmk/ and src/sed/ configs. Oldsed is
+# only built via checked-in configs, so provide the dragonfly one from the
+# freebsd one (closest BSD) before bootstrap runs.
+mk target append post-patch <<'MK1'
+	${CP} -f ${WRKSRC}/src/oldsed/config.h.freebsd ${WRKSRC}/src/oldsed/config.h.dragonfly
+MK1
