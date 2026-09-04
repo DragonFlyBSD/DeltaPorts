@@ -1,0 +1,6 @@
+port devel/libgnuregex
+type port
+reason "DragonFly lacks C23 stdckdint.h; guard ckd_* includes with builtin fallback"
+target @any
+file materialize dragonfly/patch-regex_internal.h -> dragonfly/patch-regex_internal.h
+file materialize dragonfly/patch-malloc_dynarray_resize.c -> dragonfly/patch-malloc_dynarray_resize.c
