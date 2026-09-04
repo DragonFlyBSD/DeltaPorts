@@ -3,6 +3,11 @@ type port
 reason "add openssl/gmake/ninja; filter pulseaudio from BUILD_DEPENDS; materialize dragonfly patches; apply Makefile diff"
 target @any
 
+mk remove LIB_DEPENDS "libdispatch.so:devel/libdispatch"
+mk remove USES "compiler:c++20-lang"
+mk remove LDFLAGS "-lBlocksRuntime"
+mk set USE_GCC_VERSION "13"
+
 mk add CFLAGS "-I${OPENSSLINC}"
 mk add CXXFLAGS "-DWITHOUT_PULSE"
 mk add USES gmake
@@ -29,4 +34,34 @@ mk target set dfly-patch <<'MK'
 			 -e '/PULSE_INCLUDE_DIRS/d' \
 		${WRKSRC}/Telegram/cmake/lib_tgvoip.cmake
 MK
-patch apply diffs/Makefile.diff
+# Was: patch apply diffs/Makefile.diff (5 hunks). Two stopped applying —
+# upstream added ThirdParty/TooManyCooks to the post-extract RM list, and
+# this overlay's own "mk add USES" edits the USES= line hunk 2 rewrites.
+# All five are expressible semantically; the diff's .include pre.mk/post.mk
+# sandwich is not needed, since USE_GCC_VERSION is set with a plain mk set
+# in every other overlay that uses it.
+# Keep the bundled dispatch/jemalloc/kcoreaddons: the devel/libdispatch
+# dependency is removed above, so their ThirdParty copies must survive.
+# NOTE: this restates upstream's RM list, so a new bundled component added
+# upstream will not be pruned until this block is refreshed.
+mk target set post-extract <<'MK'
+	# Some of the third-party components already built, and
+	# can be safely removed
+	${RM} -rf \
+		${WRKSRC}/Telegram/ThirdParty/GSL \
+		${WRKSRC}/Telegram/ThirdParty/QR \
+		${WRKSRC}/Telegram/ThirdParty/TooManyCooks \
+		${WRKSRC}/Telegram/ThirdParty/expected \
+		${WRKSRC}/Telegram/ThirdParty/fcitx5-qt \
+		${WRKSRC}/Telegram/ThirdParty/hime \
+		${WRKSRC}/Telegram/ThirdParty/hunspell \
+		${WRKSRC}/Telegram/ThirdParty/jimf \
+		${WRKSRC}/Telegram/ThirdParty/kimageformats \
+		${WRKSRC}/Telegram/ThirdParty/lz4 \
+		${WRKSRC}/Telegram/ThirdParty/minizip \
+		${WRKSRC}/Telegram/ThirdParty/plasma-wayland-protocols \
+		${WRKSRC}/Telegram/ThirdParty/range-v3 \
+		${WRKSRC}/Telegram/ThirdParty/wayland \
+		${WRKSRC}/Telegram/ThirdParty/wayland-protocols \
+		${WRKSRC}/Telegram/ThirdParty/xxHash
+MK

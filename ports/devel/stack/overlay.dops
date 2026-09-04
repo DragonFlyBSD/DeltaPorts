@@ -6,4 +6,12 @@ target @any
 mk eval RUN_DEPENDS "${RUN_DEPENDS:N*lang/gcc}"
 mk set IGNORE "unmaintained, please request fixing to users mailing list"
 
-patch apply diffs/Makefile.diff
+# Was: patch apply diffs/Makefile.diff, which rewrote
+#   .if ${ARCH} != powerpc64
+# to add an ${OPSYS} == FreeBSD guard, so misc/compat12x is not pulled
+# in on DragonFly. Upstream has since rewritten that condition to
+# .if !${ARCH:Mpowerpc64*}, so the hunk no longer applies. The composed
+# tree is DragonFly-only, so the FreeBSD guard is equivalent to
+# disabling the block outright.
+mk replace-if from "!${ARCH:Mpowerpc64*}" \
+              to   "${OPSYS} == FreeBSD && !${ARCH:Mpowerpc64*}"

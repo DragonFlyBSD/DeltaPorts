@@ -92,7 +92,13 @@ mk target set pre-build-script <<'MK'
 .endif
 MK
 
-patch apply diffs/Makefile.diff
+# Was: patch apply diffs/Makefile.diff, which only rewrote
+# devel/binutils -> devel/binutils@native in BUILD_DEPENDS/RUN_DEPENDS.
+# Its context drifted (upstream CONFLICTS gained lazarus-gtk3-devel and
+# RUN_DEPENDS lost ${PPNAME}), so the hunk stopped applying. Both vars
+# are ?= and have no faithful set op, so substitute in place instead.
+mk eval BUILD_DEPENDS "${BUILD_DEPENDS:S,devel/binutils,devel/binutils@native,g}"
+mk eval RUN_DEPENDS "${RUN_DEPENDS:S,devel/binutils,devel/binutils@native,g}"
 
 file materialize dragonfly/patch-components_chmhelp_lhelp -> dragonfly/patch-components_chmhelp_lhelp
 file materialize dragonfly/patch-ide_initialsetupproc.pas -> dragonfly/patch-ide_initialsetupproc.pas

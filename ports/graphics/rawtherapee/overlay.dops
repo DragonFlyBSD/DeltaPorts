@@ -4,6 +4,11 @@ reason "auto-converted from Makefile.DragonFly"
 target @any
 
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NOPENMP}"
-mk set _LTO_FLAGS ""
-mk set _AR "ar"
-mk set _RANLIB "ranlib"
+# _LTO_FLAGS/_AR/_RANLIB are each assigned twice upstream, in the
+# .if !empty(PORT_OPTIONS:MGCC) / .else branches, so mk set cannot pick
+# one and fails E_APPLY_AMBIGUOUS_MATCH. Append an override after both
+# instead: the uses at CMAKE_ARGS/CONFIGURE_ENV/BINARY_ALIAS are lazy
+# ${VAR} references, so the last assignment wins.
+mk eval _LTO_FLAGS ""
+mk eval _AR "ar"
+mk eval _RANLIB "ranlib"

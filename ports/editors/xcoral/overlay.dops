@@ -4,5 +4,5 @@ reason "mark broken (missing gnu/regex.h); remove -lgnuregex and post-patch rein
 target @any
 
 mk set BROKEN "missing gnu/regex.h"
-
-patch apply diffs/Makefile.diff
+mk remove LIBS "-lgnuregex"
+mk target remove post-patch
