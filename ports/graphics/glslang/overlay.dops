@@ -4,4 +4,9 @@ reason "auto-converted from Makefile.DragonFly"
 target @any
 
 mk add USES "python:build"
-mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+# Upstream sets USE_GCC_VERSION only inside the shared-flavor branch, so the
+# static flavor built with base GCC 8.3 (< 9 triggers -lstdc++fs, which
+# DragonFly lacks) and mismatched graphics/spirv-tools (built with
+# ${GCC_DEFAULT}). Force the same modern GCC unconditionally after the
+# flavor conditional so it wins for both flavors.
+text line-insert-after file Makefile anchor ".endif" line "USE_GCC_VERSION= ${GCC_DEFAULT}"
