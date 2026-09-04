@@ -4,3 +4,16 @@ reason "auto-converted from Makefile.DragonFly"
 target @any
 
 mk add USES "ssl"
+
+# FreeBSD files/patch-CMakeLists.txt splits hiredis_ssl into static+shared
+# but links only the shared lib against OpenSSL::SSL, so the static compile
+# of ssl.c misses -isystem /usr/local/include and fails on openssl/ssl.h.
+# Stage the missing link line into the FreeBSD patch so both targets carry
+# the OpenSSL usage requirements (added diff line keeps the patch valid).
+text line-insert-after file files/patch-CMakeLists.txt \
+     anchor "+    TARGET_LINK_LIBRARIES(hiredis_ssl_shared PRIVATE OpenSSL::SSL)" \
+     line   "+    TARGET_LINK_LIBRARIES(hiredis_ssl_static PRIVATE OpenSSL::SSL)"
+# Keep the unified-diff hunk header honest (+31 -> +32 lines after insert).
+text replace-once file files/patch-CMakeLists.txt \
+     from "@@ -159,28 +165,31 @@ IF(ENABLE_SSL)" \
+     to   "@@ -159,28 +165,32 @@ IF(ENABLE_SSL)"
