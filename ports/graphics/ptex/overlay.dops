@@ -5,3 +5,4 @@ target @any
 
 mk add OPTIONS_EXCLUDE "DOCS"
 file materialize dragonfly/patch-src_ptex_PtexPlatform.h -> dragonfly/patch-src_ptex_PtexPlatform.h
+file materialize dragonfly/patch-src_ptex_PtexWriter.cpp -> dragonfly/patch-src_ptex_PtexWriter.cpp
