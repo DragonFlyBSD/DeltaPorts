@@ -1,0 +1,6 @@
+port devel/gdcm
+type port
+reason "Step 48 bootstrap: deterministic header; patch authors the body"
+target @any
+file materialize dragonfly/patch-Utilities_socketxx_socket++_sockstream.h -> dragonfly/patch-Utilities_socketxx_socket++_sockstream.h
+file materialize dragonfly/patch-Source_MediaStorageAndFileFormat_gdcmFileStreamer.cxx -> dragonfly/patch-Source_MediaStorageAndFileFormat_gdcmFileStreamer.cxx
