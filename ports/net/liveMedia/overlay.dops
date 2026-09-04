@@ -5,7 +5,7 @@ target @any
 
 mk set CONFIGURE_ARGS "fixed-dragonfly"
 mk target set dfly-patch <<'MK1'
-	${CP} ${WRKSRC}/config.fixed-freebsd ${WRKSRC}/config.fixed-dragonfly
+	${CP} ${WRKSRC}/config.linux-with-shared-libraries ${WRKSRC}/config.fixed-dragonfly
 	${REINPLACE_CMD} -e 's/(INCLUDES)/& -I\/usr\/local\/include /' ${WRKSRC}/config.fixed-dragonfly
 	${REINPLACE_CMD} -e "s@LIBRARY_LINK_OPTS)@& -L${LOCALBASE}/lib -lcrypto@g" \
 		${WRKSRC}/liveMedia/Makefile.tail
