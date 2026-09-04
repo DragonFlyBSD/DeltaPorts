@@ -4,3 +4,5 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
 file materialize dragonfly/patch-src_libbson_CMakeLists.txt -> dragonfly/patch-src_libbson_CMakeLists.txt
+text line-remove file pkg-plist exact "%%PORTDOCS%%%%DOCSDIR%%/libbson/html/api.html"
+text line-remove file pkg-plist exact "%%PORTDOCS%%@dir %%DOCSDIR%%/libbson/html/index"
