@@ -5,4 +5,5 @@ target @any
 
 mk add CONFIGURE_ENV "USE_OPENMP=0"
 mk add MAKE_ENV "USE_OPENMP=0"
+mk add BUILD_DEPENDS "${PYTHON_PKGNAMEPREFIX}setuptools>=63:devel/py-setuptools@${PY_FLAVOR}"
 file materialize dragonfly/patch-scripts_mk__util.py -> dragonfly/patch-scripts_mk__util.py
