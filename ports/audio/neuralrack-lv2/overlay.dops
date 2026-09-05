@@ -1,0 +1,13 @@
+port audio/neuralrack-lv2
+type port
+reason "Fix Linux-only build wiring on DragonFly: TARGET for libxputty/cairo, modern gcc for C++20 <bit>, repair FreeBSD amd64 sed quote"
+target @any
+mk add MAKE_ENV "TARGET=Linux"
+mk add CFLAGS "-D_OS_UNIX_=1"
+mk add CXXFLAGS "-D_OS_UNIX_=1"
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+mk target set post-patch <<'MK1'
+	${REINPLACE_CMD} -e "s|x86_64/)|x86_64/')|" ${WRKSRC}/NeuralRack/makefile
+	${REINPLACE_CMD} -e 's/-flto=auto//g' -e 's/-fno-fat-lto-objects//g' -e 's/-fstrength-reduce//g' ${WRKSRC}/NeuralRack/makefile
+	${REINPLACE_CMD} -e 's/CFLAGS :=/CFLAGS +=/g' -e 's/ -02/ -O2/' ${WRKSRC}/NeuralRack/makefile
+MK1
