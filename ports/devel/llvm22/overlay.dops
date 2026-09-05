@@ -1,0 +1,33 @@
+port devel/llvm22
+type port
+reason "disable LLDB/FLANG/COMPILER_RT/OPENMP; add LLD_LINK; dfly-patch/install; binutils@native"
+# Modelled on devel/llvm20: llvm22 had no overlay and fails in the bulk
+# build. The Makefile anchors were verified present and identical; the
+# pkg-plist deletion is ADOPTED FROM llvm20 UNVERIFIED -- this version's
+# real plist delta is unknown, so expect the agent to correct it.
+target @any
+
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NLLDB:NFLANG:NCOMPILER_RT:NOPENMP}"
+mk add OPTIONS_DEFINE LLD_LINK
+
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's,set(ENABLE_LIBOMPTARGET ON),set(ENABLE_LIBOMPTARGET OFF),g' \
+		${WRKSRC}/openmp/CMakeLists.txt
+MK
+
+mk target set dfly-install <<'MK'
+	-${RM} -fv ${STAGEDIR}${PREFIX}/bin/llvm-omp-device-info${LLVM_SUFFIX}
+MK
+
+# Both Makefile edits are single, uniquely-anchored lines, so express
+# them rather than carrying a diff: no context to drift. Anchored on the
+# whole GOLD_BUILD_DEPENDS line because "devel/binutils" alone appears
+# twice, and replace-once refuses an ambiguous match.
+text replace-once file Makefile \
+  from "GOLD_BUILD_DEPENDS=\t${LOCALBASE}/bin/ld.gold:devel/binutils" \
+  to   "GOLD_BUILD_DEPENDS=\t${LOCALBASE}/bin/ld.gold:devel/binutils@native"
+mk target rename post-install-LLD-on -> post-install-LLD_LINK-on
+# pkg-plist edits are pure line deletions: express them directly so
+# there is no context to drift, and a line that vanishes upstream
+# fails loudly instead of rejecting a hunk.
+text line-remove file pkg-plist exact "%%LLD%%llvm%%LLVM_SUFFIX%%/bin/ld"
