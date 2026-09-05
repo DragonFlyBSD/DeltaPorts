@@ -3,12 +3,12 @@ type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
-mk add USES "alias"
-mk add CFLAGS "-D__FreeBSD_version=900001"
+mk add CFLAGS "-D__FreeBSD__ -D__FreeBSD_version=900001"
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@<cam/@<bus/cam/@g' \
 		${WRKSRC}/interface/low_interface.h
 MK1
 file materialize dragonfly/patch-interface_cdda__interface.h -> dragonfly/patch-interface_cdda__interface.h
+file materialize dragonfly/patch-interface_common__interface.c -> dragonfly/patch-interface_common__interface.c
 file materialize dragonfly/patch-interface_low__interface.h -> dragonfly/patch-interface_low__interface.h
 file materialize dragonfly/patch-interface_utils.h -> dragonfly/patch-interface_utils.h
