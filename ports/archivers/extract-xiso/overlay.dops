@@ -1,0 +1,7 @@
+port archivers/extract-xiso
+type port
+reason "extract-xiso.c platform blocks only cover FreeBSD; select the same definitions on DragonFly"
+
+target @any
+
+file materialize dragonfly/patch-extract-xiso.c -> dragonfly/patch-extract-xiso.c
