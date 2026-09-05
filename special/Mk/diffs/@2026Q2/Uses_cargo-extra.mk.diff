@@ -14,7 +14,7 @@
 +
 +# The patches live in a container port rather than beside lang/rust, so that
 +# adding one does not mean touching lang/rust and forcing a rust rebuild.
-+CARGO_EXTRA_PATCHDIR=	${PORTSDIR}/devel/cargo-crate-patches
++CARGO_EXTRA_PATCHDIR=	${PORTSDIR}/devel/cargo-crate-patches/files
 +
 +# Iterate over CARGO_CRATES and add to EXTRA_PATCHES patches to specific versions
 +# of that specific crate. CARGO_CRATES must already be populated -- see the
