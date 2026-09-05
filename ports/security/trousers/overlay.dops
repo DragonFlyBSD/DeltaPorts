@@ -8,3 +8,8 @@ patch apply diffs/files_tcsd.in.diff
 
 file materialize dragonfly/patch-src_include_trousers__types.h -> dragonfly/patch-src_include_trousers__types.h
 file materialize dragonfly/patch-src_tspi_ps_tspps.c -> dragonfly/patch-src_tspi_ps_tspps.c
+file materialize dragonfly/patch-src_tcs_rpc_tcstp_rpc.c -> dragonfly/patch-src_tcs_rpc_tcstp_rpc.c
+file materialize dragonfly/patch-src_tcsd_svrside.c -> dragonfly/patch-src_tcsd_svrside.c
+file materialize dragonfly/patch-src_tspi_tsp__tcsi__param.c -> dragonfly/patch-src_tspi_tsp__tcsi__param.c
+file materialize dragonfly/patch-src_tcsd_platform.c -> dragonfly/patch-src_tcsd_platform.c
+file materialize dragonfly/patch-src_include_linux_tpm.h -> dragonfly/patch-src_include_linux_tpm.h
