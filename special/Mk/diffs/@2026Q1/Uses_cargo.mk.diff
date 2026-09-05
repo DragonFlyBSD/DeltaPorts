@@ -1,6 +1,6 @@
---- Uses/cargo.mk.orig	2024-09-10 23:24:46 UTC
+--- Uses/cargo.mk.orig
 +++ Uses/cargo.mk
-@@ -3,16 +3,16 @@
+@@ -3,15 +3,15 @@
  #
  # Feature:	cargo
  # Usage:	USES=cargo
@@ -14,14 +14,28 @@
  
 -.  if !empty(cargo_ARGS)
 -IGNORE+=	USES=cargo takes no arguments
--.  endif
-+. if ${cargo_ARGS:Mextra}
-+.  include "${USESDIR}/cargo-extra.mk"
-+. endif
++.  if !empty(cargo_ARGS:Nextra)
++IGNORE+=	USES=cargo only takes the optional argument "extra"
+ .  endif
  
  .sinclude "${MASTERDIR}/Makefile.crates"
+@@ -20,6 +20,15 @@
+ # CARGO_CRATES will be downloaded from MASTER_SITE_CRATESIO.
+ CARGO_CRATES?=
  
-@@ -144,7 +144,7 @@ _CARGO_MSG=	"===>   Additional optimizat
++# DragonFly: per-crate patches. This must come after Makefile.crates and
++# the CARGO_CRATES default. cargo-extra.mk expands CARGO_CRATES in a .for
++# loop, which bmake evaluates at parse time, so including it any earlier
++# sees an empty list and silently adds nothing for every port that keeps
++# its crates in Makefile.crates.
++.  if ${cargo_ARGS:Mextra}
++.    include "${USESDIR}/cargo-extra.mk"
++.  endif
++
+ # List of features to build (space separated list).
+ # Use special token --no-default-features to disable default
+ # features by passing it to cargo build/install/test.
+@@ -152,7 +161,7 @@
  .  endif
  
  # Adjust -C target-cpu if -march/-mcpu is set by bsd.cpu.mk

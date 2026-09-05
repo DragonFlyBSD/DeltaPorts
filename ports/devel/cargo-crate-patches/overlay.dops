@@ -1,0 +1,4 @@
+port devel/cargo-crate-patches
+type dport
+reason "DragonFly-only container for the vendored cargo crate patches; CARGO_EXTRA_PATCHDIR points here instead of lang/rust/dragonfly"
+target @any
