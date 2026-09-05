@@ -1,0 +1,14 @@
+--- vendor/notify-8.2.0/Cargo.toml.orig	2025-04-01 00:00:00 UTC
++++ vendor/notify-8.2.0/Cargo.toml
+@@ -53,11 +53,11 @@ macos_kqueue = [
+ serde = ["notify-types/serde"]
+ serialization-compat-6 = ["notify-types/serialization-compat-6"]
+
+-[target."cfg(any(target_os=\"freebsd\", target_os=\"openbsd\", target_os = \"netbsd\", target_os = \"dragonflybsd\", target_os = \"ios\"))".dependencies.kqueue]
++[target."cfg(any(target_os=\"freebsd\", target_os=\"openbsd\", target_os = \"netbsd\", target_os = \"dragonfly\", target_os = \"ios\"))".dependencies.kqueue]
+ version = "1.1.1"
+
+-[target."cfg(any(target_os=\"freebsd\", target_os=\"openbsd\", target_os = \"netbsd\", target_os = \"dragonflybsd\", target_os = \"ios\"))".dependencies.mio]
++[target."cfg(any(target_os=\"freebsd\", target_os=\"openbsd\", target_os = \"netbsd\", target_os = \"dragonfly\", target_os = \"ios\"))".dependencies.mio]
+ version = "1.0"
+ features = ["os-ext"]

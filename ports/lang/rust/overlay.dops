@@ -1,0 +1,123 @@
+port lang/rust
+type port
+reason "DragonFly: allow OPSYS, point bootstrap at avalon, materialize the dragonfly patch lane and the shared cargo crate patches"
+target @any
+
+# --- diffs/Makefile.diff equivalent -------------------------------------
+mk replace-if from "${OPSYS} != FreeBSD" \
+              to   "${OPSYS} != FreeBSD && ${OPSYS} != DragonFly"
+
+# --- Makefile.DragonFly equivalent --------------------------------------
+# Bootstrap tarballs are self-hosted (no cross-build port exists for
+# DragonFly); avalon lays them out under <version>/ rather than the
+# <compiler_date>/ FreeBSD uses, so BOOTSTRAPS_DATE carries the version.
+# RUST_BOOTSTRAP_VERSION already defaults to 1.95.0 upstream.
+mk add MASTER_SITES "https://avalon.dragonflybsd.org/misc/distfiles/rust-bootstrap/:bootstrap"
+mk set BOOTSTRAPS_DATE "1.95.0"
+
+# ld.gold cannot link std into the rustc driver.
+mk add MAKE_ENV "LDVER=ld.bfd"
+# The stage0 rustc/cargo need their own shared libs plus base libgcc.
+mk add MAKE_ENV "LD_LIBRARY_PATH=${WRKDIR}/bootstrap/lib:/usr/lib/gcc80"
+
+# --- diffs/distinfo.diff equivalent -------------------------------------
+# Chained so each line anchors on the one inserted before it.
+text line-insert-after file distinfo \
+     anchor "SIZE (rust/rustc-1.96.1-src.tar.xz) = 241602032" \
+     line   "SHA256 (rust/1.95.0/rustc-1.95.0-x86_64-unknown-dragonfly.tar.xz) = 03693380bf72e839ff5d7c2b0e9626c48baebca08667bef197a5c9ac1adf3595"
+text line-insert-after file distinfo \
+     anchor "SHA256 (rust/1.95.0/rustc-1.95.0-x86_64-unknown-dragonfly.tar.xz) = 03693380bf72e839ff5d7c2b0e9626c48baebca08667bef197a5c9ac1adf3595" \
+     line   "SIZE (rust/1.95.0/rustc-1.95.0-x86_64-unknown-dragonfly.tar.xz) = 67955352"
+text line-insert-after file distinfo \
+     anchor "SIZE (rust/1.95.0/rustc-1.95.0-x86_64-unknown-dragonfly.tar.xz) = 67955352" \
+     line   "SHA256 (rust/1.95.0/rust-std-1.95.0-x86_64-unknown-dragonfly.tar.xz) = 98d3e167dff45e14bf34529dee6bab0d551b1a6045299e029d164786bc1a3ea8"
+text line-insert-after file distinfo \
+     anchor "SHA256 (rust/1.95.0/rust-std-1.95.0-x86_64-unknown-dragonfly.tar.xz) = 98d3e167dff45e14bf34529dee6bab0d551b1a6045299e029d164786bc1a3ea8" \
+     line   "SIZE (rust/1.95.0/rust-std-1.95.0-x86_64-unknown-dragonfly.tar.xz) = 24177544"
+text line-insert-after file distinfo \
+     anchor "SIZE (rust/1.95.0/rust-std-1.95.0-x86_64-unknown-dragonfly.tar.xz) = 24177544" \
+     line   "SHA256 (rust/1.95.0/cargo-1.95.0-x86_64-unknown-dragonfly.tar.xz) = 96f567a18864c3bcb577984409134edce661c625a99dcd186e3388da8e6b4faa"
+text line-insert-after file distinfo \
+     anchor "SHA256 (rust/1.95.0/cargo-1.95.0-x86_64-unknown-dragonfly.tar.xz) = 96f567a18864c3bcb577984409134edce661c625a99dcd186e3388da8e6b4faa" \
+     line   "SIZE (rust/1.95.0/cargo-1.95.0-x86_64-unknown-dragonfly.tar.xz) = 11309856"
+
+# --- dragonfly/ lane: DragonFly patches for the rust source tree --------
+# do-patch applies every dragonfly/patch-* via DFLY_PATCHDIR.
+file materialize dragonfly/patch-compiler_rustc_codegen_ssa_src_back_link.rs -> dragonfly/patch-compiler_rustc_codegen_ssa_src_back_link.rs
+file materialize dragonfly/patch-compiler_rustc_codegen_ssa_src_back_linker.rs -> dragonfly/patch-compiler_rustc_codegen_ssa_src_back_linker.rs
+file materialize dragonfly/patch-compiler_rustc_target_src_spec_targets_x86_64_unknown_dragonfly.rs -> dragonfly/patch-compiler_rustc_target_src_spec_targets_x86_64_unknown_dragonfly.rs
+file materialize dragonfly/patch-library_backtrace_src_symbolize_gimli.rs -> dragonfly/patch-library_backtrace_src_symbolize_gimli.rs
+file materialize dragonfly/patch-library_std_src_sys_io_error_unix.rs -> dragonfly/patch-library_std_src_sys_io_error_unix.rs
+file materialize dragonfly/patch-library_std_src_sys_io_mod.rs -> dragonfly/patch-library_std_src_sys_io_mod.rs
+file materialize dragonfly/patch-library_std_src_sys_pal_unix_futex.rs -> dragonfly/patch-library_std_src_sys_pal_unix_futex.rs
+file materialize dragonfly/patch-library_std_src_sys_pal_unix_stack_overflow.rs -> dragonfly/patch-library_std_src_sys_pal_unix_stack_overflow.rs
+file materialize dragonfly/patch-library_std_src_sys_thread_local_key_racy.rs -> dragonfly/patch-library_std_src_sys_thread_local_key_racy.rs
+file materialize dragonfly/patch-library_std_src_sys_thread_local_mod.rs -> dragonfly/patch-library_std_src_sys_thread_local_mod.rs
+file materialize dragonfly/patch-src_bootstrap_src_bin_main.rs -> dragonfly/patch-src_bootstrap_src_bin_main.rs
+file materialize dragonfly/patch-src_bootstrap_src_core_builder_mod.rs -> dragonfly/patch-src_bootstrap_src_core_builder_mod.rs
+file materialize dragonfly/patch-src_llvm-project_llvm_lib_Support_Unix_Path.inc -> dragonfly/patch-src_llvm-project_llvm_lib_Support_Unix_Path.inc
+file materialize dragonfly/patch-src_tools_rust-analyzer_crates_proc-macro-srv_src_dylib.rs -> dragonfly/patch-src_tools_rust-analyzer_crates_proc-macro-srv_src_dylib.rs
+file materialize dragonfly/patch-vendor_notify-8.2.0_Cargo.toml -> dragonfly/patch-vendor_notify-8.2.0_Cargo.toml
+
+# --- dragonfly/ lane: tree-wide cargo crate patches ---------------------
+# Mk/Uses/cargo-extra.mk sets CARGO_EXTRA_PATCHDIR=${PORTSDIR}/lang/rust/dragonfly
+# and pulls extra-<crate>-<version> into EXTRA_PATCHES for EVERY cargo port
+# in the tree, so these must keep composing even though lang/rust itself
+# never reads them. A new crate patch dropped here needs a line added below.
+file materialize dragonfly/extra-cpal-0.10.0 -> dragonfly/extra-cpal-0.10.0
+file materialize dragonfly/extra-get_if_addrs-0.5.3 -> dragonfly/extra-get_if_addrs-0.5.3
+file materialize dragonfly/extra-getrandom-0.1.12 -> dragonfly/extra-getrandom-0.1.12
+file materialize dragonfly/extra-getrandom-0.1.13 -> dragonfly/extra-getrandom-0.1.13
+file materialize dragonfly/extra-getrandom-0.1.14 -> dragonfly/extra-getrandom-0.1.14
+file materialize dragonfly/extra-glfw-0.34.0 -> dragonfly/extra-glfw-0.34.0
+file materialize dragonfly/extra-leveldb-sys-2.0.5 -> dragonfly/extra-leveldb-sys-2.0.5
+file materialize dragonfly/extra-libc-0.2.62 -> dragonfly/extra-libc-0.2.62
+file materialize dragonfly/extra-libc-0.2.65 -> dragonfly/extra-libc-0.2.65
+file materialize dragonfly/extra-libc-0.2.66 -> dragonfly/extra-libc-0.2.66
+file materialize dragonfly/extra-libc-0.2.67 -> dragonfly/extra-libc-0.2.67
+file materialize dragonfly/extra-libc-0.2.68 -> dragonfly/extra-libc-0.2.68
+file materialize dragonfly/extra-libc-0.2.69 -> dragonfly/extra-libc-0.2.69
+file materialize dragonfly/extra-libc-0.2.70 -> dragonfly/extra-libc-0.2.70
+file materialize dragonfly/extra-libc-0.2.71 -> dragonfly/extra-libc-0.2.71
+file materialize dragonfly/extra-libc-0.2.72 -> dragonfly/extra-libc-0.2.72
+file materialize dragonfly/extra-libc-0.2.73 -> dragonfly/extra-libc-0.2.73
+file materialize dragonfly/extra-libc-0.2.74 -> dragonfly/extra-libc-0.2.74
+file materialize dragonfly/extra-libc-0.2.76 -> dragonfly/extra-libc-0.2.76
+file materialize dragonfly/extra-librocksdb-sys-6.1.3 -> dragonfly/extra-librocksdb-sys-6.1.3
+file materialize dragonfly/extra-librocksdb-sys-6.6.4 -> dragonfly/extra-librocksdb-sys-6.6.4
+file materialize dragonfly/extra-librocksdb-sys-6.7.4 -> dragonfly/extra-librocksdb-sys-6.7.4
+file materialize dragonfly/extra-mio-0.7.0 -> dragonfly/extra-mio-0.7.0
+file materialize dragonfly/extra-mio-0.7.1 -> dragonfly/extra-mio-0.7.1
+file materialize dragonfly/extra-nix-0.10.0 -> dragonfly/extra-nix-0.10.0
+file materialize dragonfly/extra-nix-0.11.0 -> dragonfly/extra-nix-0.11.0
+file materialize dragonfly/extra-nix-0.12.1 -> dragonfly/extra-nix-0.12.1
+file materialize dragonfly/extra-nix-0.15.0 -> dragonfly/extra-nix-0.15.0
+file materialize dragonfly/extra-nix-0.16.1 -> dragonfly/extra-nix-0.16.1
+file materialize dragonfly/extra-nix-0.17.0 -> dragonfly/extra-nix-0.17.0
+file materialize dragonfly/extra-nix-0.18.0 -> dragonfly/extra-nix-0.18.0
+file materialize dragonfly/extra-openssl-0.10.20 -> dragonfly/extra-openssl-0.10.20
+file materialize dragonfly/extra-openssl-sys-0.9.43 -> dragonfly/extra-openssl-sys-0.9.43
+file materialize dragonfly/extra-openssl-sys-0.9.48 -> dragonfly/extra-openssl-sys-0.9.48
+file materialize dragonfly/extra-openssl-sys-0.9.49 -> dragonfly/extra-openssl-sys-0.9.49
+file materialize dragonfly/extra-openssl-sys-0.9.52 -> dragonfly/extra-openssl-sys-0.9.52
+file materialize dragonfly/extra-openssl-sys-0.9.53 -> dragonfly/extra-openssl-sys-0.9.53
+file materialize dragonfly/extra-openssl-sys-0.9.54 -> dragonfly/extra-openssl-sys-0.9.54
+file materialize dragonfly/extra-openssl-sys-0.9.55 -> dragonfly/extra-openssl-sys-0.9.55
+file materialize dragonfly/extra-openssl-sys-0.9.56 -> dragonfly/extra-openssl-sys-0.9.56
+file materialize dragonfly/extra-openssl-sys-0.9.58 -> dragonfly/extra-openssl-sys-0.9.58
+file materialize dragonfly/extra-openssl-sys-0.9.62 -> dragonfly/extra-openssl-sys-0.9.62
+file materialize dragonfly/extra-patch-src_libunwind_build.rs -> dragonfly/extra-patch-src_libunwind_build.rs
+file materialize dragonfly/extra-ring-0.16.11 -> dragonfly/extra-ring-0.16.11
+file materialize dragonfly/extra-ring-0.16.12 -> dragonfly/extra-ring-0.16.12
+file materialize dragonfly/extra-ring-0.16.13 -> dragonfly/extra-ring-0.16.13
+file materialize dragonfly/extra-ring-0.16.14 -> dragonfly/extra-ring-0.16.14
+file materialize dragonfly/extra-ring-0.16.15 -> dragonfly/extra-ring-0.16.15
+file materialize dragonfly/extra-ring-fork-dtool-0.16.13 -> dragonfly/extra-ring-fork-dtool-0.16.13
+file materialize dragonfly/extra-rlimit-0.4.0 -> dragonfly/extra-rlimit-0.4.0
+file materialize dragonfly/extra-rustls-native-certs-0.1.0 -> dragonfly/extra-rustls-native-certs-0.1.0
+file materialize dragonfly/extra-termios-0.2.2 -> dragonfly/extra-termios-0.2.2
+file materialize dragonfly/extra-webbrowser-0.5.2 -> dragonfly/extra-webbrowser-0.5.2
+file materialize dragonfly/extra-webbrowser-0.5.5 -> dragonfly/extra-webbrowser-0.5.5
+file materialize dragonfly/extra-winit-0.19.4 -> dragonfly/extra-winit-0.19.4
+file materialize dragonfly/extra-winit-0.19.5 -> dragonfly/extra-winit-0.19.5
+file materialize dragonfly/ring-0.16.11 -> dragonfly/ring-0.16.11
