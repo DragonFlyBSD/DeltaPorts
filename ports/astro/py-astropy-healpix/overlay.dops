@@ -1,0 +1,9 @@
+port astro/py-astropy-healpix
+type port
+reason "Step 48 bootstrap: deterministic header; patch authors the body"
+target @any
+# extension-helpers reads setup.cfg [bdist_wheel] py_limited_api=cp310 and
+# injects -DPy_LIMITED_API, under which NumPy 2.x PyArray_SimpleNew cannot
+# compile (PyTypeObject incomplete). Upstream's own free-threaded override
+# disables it via EXTENSION_HELPERS_PY_LIMITED_API="" — do the same here.
+mk add MAKE_ENV "EXTENSION_HELPERS_PY_LIMITED_API="
