@@ -1,0 +1,5 @@
+port astro/py-astropy-helpers
+type port
+reason "Step 48 bootstrap: deterministic header; patch authors the body"
+target @any
+file materialize dragonfly/patch-astropy__helpers_utils.py -> dragonfly/patch-astropy__helpers_utils.py
