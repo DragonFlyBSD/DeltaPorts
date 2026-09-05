@@ -1,0 +1,5 @@
+port audio/moony-lv2
+type port
+reason "Step 48 bootstrap: deterministic header; patch authors the body"
+target @any
+file materialize dragonfly/patch-subprojects_d2tk_src_base__pty.c -> dragonfly/patch-subprojects_d2tk_src_base__pty.c
