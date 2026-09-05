@@ -17,5 +17,15 @@ mk target set dfly-install <<'MK'
 	-${RM} -fv ${STAGEDIR}${PREFIX}/bin/llvm-omp-device-info${LLVM_SUFFIX}
 MK
 
-patch apply diffs/Makefile.diff
-patch apply diffs/pkg-plist.diff
+# Both Makefile edits are single, uniquely-anchored lines, so express
+# them rather than carrying a diff: no context to drift. Anchored on the
+# whole GOLD_BUILD_DEPENDS line because "devel/binutils" alone appears
+# twice, and replace-once refuses an ambiguous match.
+text replace-once file Makefile \
+  from "GOLD_BUILD_DEPENDS=\t${LOCALBASE}/bin/ld.gold:devel/binutils" \
+  to   "GOLD_BUILD_DEPENDS=\t${LOCALBASE}/bin/ld.gold:devel/binutils@native"
+mk target rename post-install-LLD-on -> post-install-LLD_LINK-on
+# pkg-plist edits are pure line deletions: express them directly so
+# there is no context to drift, and a line that vanishes upstream
+# fails loudly instead of rejecting a hunk.
+text line-remove file pkg-plist exact "%%LLD%%llvm%%LLVM_SUFFIX%%/bin/ld"
