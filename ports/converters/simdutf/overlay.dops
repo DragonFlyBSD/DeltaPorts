@@ -1,0 +1,5 @@
+port converters/simdutf
+type port
+reason "Build with modern GCC: base GCC 8.3 lacks working std::filesystem for tools (fastbase64/sutf); GCC 14 has it integrated"
+target @any
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
