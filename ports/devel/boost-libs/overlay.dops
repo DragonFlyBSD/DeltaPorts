@@ -1,0 +1,40 @@
+port devel/boost-libs
+type port
+reason "disable unsupported long-double math libraries and apply DragonFly source fixes"
+target @any
+
+mk target append post-install <<'MK'
+	${RM} -r ${STAGEDIR}${PREFIX}/lib/cmake/boost_math_c99l-*
+	${RM} -r ${STAGEDIR}${PREFIX}/lib/cmake/boost_math_tr1l-*
+	${RM} ${STAGEDIR}${PREFIX}/lib/libboost_math_tr1l.*
+	${RM} ${STAGEDIR}${PREFIX}/lib/libboost_math_c99l.*
+MK
+
+file remove files/patch-boost_config_compiler_clang.hpp on-missing noop
+
+text line-remove file pkg-plist exact "lib/cmake/boost_math_c99l-%%BOOST_SHARED_LIB_VER%%/boost_math_c99l-config-version.cmake"
+text line-remove file pkg-plist exact "lib/cmake/boost_math_c99l-%%BOOST_SHARED_LIB_VER%%/boost_math_c99l-config.cmake"
+text line-remove file pkg-plist exact "lib/cmake/boost_math_c99l-%%BOOST_SHARED_LIB_VER%%/libboost_math_c99l-variant-shared.cmake"
+text line-remove file pkg-plist exact "lib/cmake/boost_math_c99l-%%BOOST_SHARED_LIB_VER%%/libboost_math_c99l-variant-static.cmake"
+text line-remove file pkg-plist exact "lib/cmake/boost_math_tr1l-%%BOOST_SHARED_LIB_VER%%/boost_math_tr1l-config-version.cmake"
+text line-remove file pkg-plist exact "lib/cmake/boost_math_tr1l-%%BOOST_SHARED_LIB_VER%%/boost_math_tr1l-config.cmake"
+text line-remove file pkg-plist exact "lib/cmake/boost_math_tr1l-%%BOOST_SHARED_LIB_VER%%/libboost_math_tr1l-variant-shared.cmake"
+text line-remove file pkg-plist exact "lib/cmake/boost_math_tr1l-%%BOOST_SHARED_LIB_VER%%/libboost_math_tr1l-variant-static.cmake"
+text line-remove file pkg-plist exact "lib/libboost_math_c99l.a"
+text line-remove file pkg-plist exact "lib/libboost_math_c99l.so"
+text line-remove file pkg-plist exact "lib/libboost_math_c99l.so.%%BOOST_MAJOR_VER%%"
+text line-remove file pkg-plist exact "lib/libboost_math_c99l.so.%%BOOST_MAJOR_VER%%.%%BOOST_MINOR_VER%%"
+text line-remove file pkg-plist exact "lib/libboost_math_c99l.so.%%BOOST_SHARED_LIB_VER%%"
+text line-remove file pkg-plist exact "lib/libboost_math_tr1l.a"
+text line-remove file pkg-plist exact "lib/libboost_math_tr1l.so"
+text line-remove file pkg-plist exact "lib/libboost_math_tr1l.so.%%BOOST_MAJOR_VER%%"
+text line-remove file pkg-plist exact "lib/libboost_math_tr1l.so.%%BOOST_MAJOR_VER%%.%%BOOST_MINOR_VER%%"
+text line-remove file pkg-plist exact "lib/libboost_math_tr1l.so.%%BOOST_SHARED_LIB_VER%%"
+
+file materialize dragonfly/patch-boost_math_tools_config.hpp -> dragonfly/patch-boost_math_tools_config.hpp
+file materialize dragonfly/patch-boost_system_config.hpp -> dragonfly/patch-boost_system_config.hpp
+file materialize dragonfly/patch-boost_test_impl_execution__monitor.ipp -> dragonfly/patch-boost_test_impl_execution__monitor.ipp
+file materialize dragonfly/patch-libs_iostreams_src_lzma.cpp -> dragonfly/patch-libs_iostreams_src_lzma.cpp
+file materialize dragonfly/patch-libs_log_src_timestamp.cpp -> dragonfly/patch-libs_log_src_timestamp.cpp
+file materialize dragonfly/patch-libs_process_src_ext_env.cpp -> dragonfly/patch-libs_process_src_ext_env.cpp
+file materialize dragonfly/patch-libs_process_src_pid.cpp -> dragonfly/patch-libs_process_src_pid.cpp
