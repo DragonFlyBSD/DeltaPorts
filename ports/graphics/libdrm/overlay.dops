@@ -1,4 +1,7 @@
 port graphics/libdrm
-type dport
-reason "DragonFly-only port; source in newport/"
+type port
+reason "track upstream libdrm instead of the 2.4.101 newport; the DragonFly delta is one device-node check in xf86drm.c (the ETIME fix is upstream now, and upstream uses MESON_ARGS so the meson.mk IGNORE goes away)"
 target @any
+
+file materialize dragonfly/patch-tests_nouveau_threaded.c -> dragonfly/patch-tests_nouveau_threaded.c
+file materialize dragonfly/patch-xf86drm.c -> dragonfly/patch-xf86drm.c
