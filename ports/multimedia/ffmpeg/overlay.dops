@@ -3,4 +3,4 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk add OPTIONS_EXCLUDE "NVENC"
+mk set OPTIONS_EXCLUDE_DragonFly "NVENC"
