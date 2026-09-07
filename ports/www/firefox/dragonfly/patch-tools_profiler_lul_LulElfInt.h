@@ -1,6 +1,6 @@
---- mozglue/baseprofiler/lul/LulElfInt.h.orig	Mon Sep 23 18:00:08 2024
-+++ mozglue/baseprofiler/lul/LulElfInt.h	Tue Mar
-@@ -83,7 +83,7 @@
+--- tools/profiler/lul/LulElfInt.h.orig	2026-09-04 00:01:32 UTC
++++ tools/profiler/lul/LulElfInt.h
+@@ -79,7 +79,7 @@
  
  #endif
  

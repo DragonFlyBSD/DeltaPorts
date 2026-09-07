@@ -7,20 +7,43 @@ mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NPULSEAUDIO}"
 mk eval OPTIONS_DEFAULT_x86_64 "${OPTIONS_DEFAULT_x86_64:NLTO}"
 
 mk add MOZ_OPTIONS --disable-webrtc
-mk add MOZ_OPTIONS "--with-clang-path=${LOCALBASE}/llvm${LLVM_VERSION}/bin/clang"
-mk add MOZ_OPTIONS "--with-libclang-path=${LOCALBASE}/llvm${LLVM_VERSION}/lib"
+mk add MOZ_OPTIONS --without-wasm-sandboxed-libraries
+# --without-wasm-sandboxed-libraries makes --with-wasi-sysroot invalid
+# (configure dies with "not available in this configuration"), so strip the
+# upstream wasi-sysroot token.
+mk eval MOZ_OPTIONS "${MOZ_OPTIONS:N--with-wasi-sysroot*}"
+# NOTE: no --with-clang-path here: bindgen.configure dies with
+# "--with-clang-path is not valid when the target compiler is clang" once
+# CC below is clang. --with-libclang-path is still required for bindgen.
+# --with-libclang-path must track the same LLVM_PREFIX (bindgen needs it).
+mk add MOZ_OPTIONS "--with-libclang-path=${LLVM_PREFIX}/lib"
 mk add CXXFLAGS -Wno-multistatement-macros
 mk add CXXFLAGS -Wno-class-memaccess
+# clang++ here defaults to the base GCC 8 libstdc++ (no C++20 <version>
+# header); point the C++ frontend at llvm19's libc++ headers. (Link with the
+# default libstdc++: cargo's linker invocation inherits LDFLAGS, and lld has
+# no -lc++/-lc++abi there.)
+mk add CXXFLAGS "-stdlib=libc++"
 
 mk set BINARY_ALIAS "clang=${LOCALBASE}/llvm${LLVM_VERSION}/bin/clang clang++=${LOCALBASE}/llvm${LLVM_VERSION}/bin/clang++ wasm-ld=${LOCALBASE}/llvm${LLVM_VERSION}/bin/wasm-ld"
+
+# bsd.gecko.mk only switches CC/CXX to clang when exists(/usr/lib/libc++.so),
+# which is never true on DragonFly, leaving base GCC 8.3 which firefox
+# configure rejects ("Only GCC 10.1 or newer is supported"). Force clang via
+# LLVM_PREFIX (llvm.mk exports CC/CXX/CPP from it; don't hand-roll
+# ${LOCALBASE}/llvm${LLVM_VERSION} — llvm ports live at ${PREFIX}/llvm${VER}).
+mk set CC "${LLVM_PREFIX}/bin/clang"
+mk set CXX "${LLVM_PREFIX}/bin/clang++"
+mk set CPP "${LLVM_PREFIX}/bin/clang-cpp"
 
 mk target set dfly-patch <<'MK'
 	# disable SCTP
 	${REINPLACE_CMD} -e 's|MOZ_SCTP|MOZ_DISABLE_SCTP|' \
 		${WRKSRC}/netwerk/moz.build
-	(cd ${WRKSRC}/gfx/angle/checkout/src/compiler/translator && \
-		${REINPLACE_CMD} -e 's|<math.h>|<cmath>|' \
-		InfoSink.h IntermNode.cpp)
+	# ANGLE moved: gfx/angle/checkout/src/... -> third_party/angle/src/...
+	${REINPLACE_CMD} -e 's|<math.h>|<cmath>|' \
+		${WRKSRC}/third_party/angle/src/compiler/translator/InfoSink.h \
+		${WRKSRC}/third_party/angle/src/compiler/translator/IntermNode.cpp
 	${REINPLACE_CMD} -e 's@_XOPEN_SOURCE@&___@g' \
 		${WRKSRC}/media/libcubeb/src/cubeb_alsa.c
 	${REINPLACE_CMD} -e 's@_POSIX_SOURCE@&___@g' \
@@ -29,13 +52,18 @@ mk target set dfly-patch <<'MK'
 		${WRKSRC}/toolkit/moz.configure
 MK
 
+file materialize dragonfly/patch-dom_webserial_moz.build -> dragonfly/patch-dom_webserial_moz.build
 file materialize dragonfly/patch-dom_webtransport_api_WebTransportDatagramDuplexStream.cpp -> dragonfly/patch-dom_webtransport_api_WebTransportDatagramDuplexStream.cpp
+file materialize dragonfly/patch-hal_moz.build -> dragonfly/patch-hal_moz.build
 file materialize dragonfly/patch-image_imgFrame.h -> dragonfly/patch-image_imgFrame.h
 file materialize dragonfly/patch-media_libcubeb_src_cubeb__jack.cpp -> dragonfly/patch-media_libcubeb_src_cubeb__jack.cpp
-file materialize dragonfly/patch-mozglue_baseprofiler_core_PlatformMacros.h -> dragonfly/patch-mozglue_baseprofiler_core_PlatformMacros.h
-file materialize dragonfly/patch-mozglue_baseprofiler_lul_LulElfInt.h -> dragonfly/patch-mozglue_baseprofiler_lul_LulElfInt.h
-file materialize dragonfly/patch-third__party_libwebrtc_build_build__config.h -> dragonfly/patch-third__party_libwebrtc_build_build__config.h
-file materialize dragonfly/patch-third__party_rust_libc_src_unix_bsd_freebsdlike_dragonfly_mod.rs -> dragonfly/patch-third__party_rust_libc_src_unix_bsd_freebsdlike_dragonfly_mod.rs
-file materialize dragonfly/patch-third__party_rust_quinn-udp_src_unix.rs -> dragonfly/patch-third__party_rust_quinn-udp_src_unix.rs
+file materialize dragonfly/patch-mozglue_baseprofiler_moz.build -> dragonfly/patch-mozglue_baseprofiler_moz.build
+file materialize dragonfly/patch-mozglue_baseprofiler_public_ProfilerPlatformMacros.h -> dragonfly/patch-mozglue_baseprofiler_public_ProfilerPlatformMacros.h
+file materialize dragonfly/patch-netwerk_dns_moz.build -> dragonfly/patch-netwerk_dns_moz.build
+file materialize dragonfly/patch-third__party_angle_angle__common__gn_moz.build -> dragonfly/patch-third__party_angle_angle__common__gn_moz.build
+file materialize dragonfly/patch-third__party_angle_angle__program__version__id__gn_moz.build -> dragonfly/patch-third__party_angle_angle__program__version__id__gn_moz.build
+file materialize dragonfly/patch-third__party_sqlite3_src_moz.build -> dragonfly/patch-third__party_sqlite3_src_moz.build
+file materialize dragonfly/patch-tools_profiler_lul_LulElfInt.h -> dragonfly/patch-tools_profiler_lul_LulElfInt.h
+file materialize dragonfly/patch-tools_profiler_moz.build -> dragonfly/patch-tools_profiler_moz.build
 file materialize dragonfly/patch-toolkit_library_gen__buildid.py -> dragonfly/patch-toolkit_library_gen__buildid.py
 file materialize dragonfly/patch-toolkit_xre_nsAppRunner.cpp -> dragonfly/patch-toolkit_xre_nsAppRunner.cpp
