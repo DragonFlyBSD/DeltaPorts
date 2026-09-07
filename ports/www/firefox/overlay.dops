@@ -20,10 +20,68 @@ mk add MOZ_OPTIONS "--with-libclang-path=${LLVM_PREFIX}/lib"
 mk add CXXFLAGS -Wno-multistatement-macros
 mk add CXXFLAGS -Wno-class-memaccess
 # clang++ here defaults to the base GCC 8 libstdc++ (no C++20 <version>
-# header); point the C++ frontend at llvm19's libc++ headers. (Link with the
+# header); point the C++ frontend at the llvm libcxx headers (same headers
+# www/chromium and www/qt6-webengine use). Without the -cxx-isystem below,
+# -stdlib=libc++ leaves clang with no libc++ include dir on DragonFly, so
+# every TU fails in the generated stl_wrappers/system_wrappers on
+# `#include_next <new>` ('new' file not found). (Link with the
 # default libstdc++: cargo's linker invocation inherits LDFLAGS, and lld has
 # no -lc++/-lc++abi there.)
 mk add CXXFLAGS "-stdlib=libc++"
+mk add CXXFLAGS "-cxx-isystem ${LLVM_PREFIX}/libcxx/include/c++/v1"
+# Provide the libc++ headers above at build time (DragonFly-only dport).
+mk add BUILD_DEPENDS "${LOCALBASE}/llvm${LLVM_VERSION}/libcxx/include/c++/v1/new:devel/libcxx${LLVM_VERSION}"
+# Host build-script binaries (e.g. webrender's build-script-build) link the
+# default libstdc++: cc-rs emits `rustc-link-lib=stdc++` when CXXSTDLIB is
+# unset, the cargo-linker wrapper then links with clang++ without
+# -stdlib=libc++, so the binary DT_NEEDEDs base GCC 8's libstdc++.so.9 from
+# /usr/lib/gcc80. That dir is not on rtld's default search path, and cargo
+# replaces (not extends) LD_LIBRARY_PATH when executing build scripts, so an
+# env var cannot fix the exec-time `Shared object "libstdc++.so.9" not found`.
+# Bake the path in as RPATH instead: port LDFLAGS flow into
+# MOZ_CARGO_WRAP_LDFLAGS, which the wrapper appends to every cargo link.
+mk add LDFLAGS "-Wl,-rpath,/usr/lib/gcc80"
+# Bindgen (used by the gecko-profiler rust crate and others) runs libclang
+# with BINDGEN_CFLAGS, not CXXFLAGS, so it needs the same libc++ header path
+# or it dies on `#include <version>` in mfbt/Attributes.h. This later
+# CONFIGURE_ENV entry wins over upstream's ICU-only BINDGEN_CFLAGS, so the
+# -I${LOCALBASE}/include part is repeated here.
+mk add CONFIGURE_ENV "BINDGEN_CFLAGS=\"-I${LOCALBASE}/include -stdlib=libc++ -cxx-isystem ${LLVM_PREFIX}/libcxx/include/c++/v1\""
+
+# DragonFly's target triple has kernel "DragonFly", so mozilla's
+# build/moz.configure/init.configure never defines XP_FREEBSD here. But the
+# whole port assumes FreeBSD behavior (all of files/patch-*), and one
+# dragonfly patch (dom/webserial moz.build) already compiles
+# PosixSerialPlatformService.cpp on DragonFly — whose real GetInstanceImpl
+# then collides with the mock GetInstanceImpl in SerialPlatformService.cpp,
+# which files/patch-enable-webserial only excludes under XP_FREEBSD.
+# Teach target_is_freebsd about the DragonFly kernel so XP_FREEBSD is defined
+# here too: that excludes the mock, enables the XP_FREEBSD serial enumeration
+# (ttyU*/ttyu*, also correct on DragonFly, self-filtered by TIOCMGET probe),
+# and selects the FreeBSD branches for ffvpx getauxval and BSD major/minor —
+# both valid on DragonFly. (The XP_FREEBSD profiler thread-id branches need
+# <sys/thr.h>/thr_self, which DragonFly lacks; separate patches below give
+# those two files a pthread_self fallback.)
+file materialize dragonfly/patch-build_moz.configure_init.configure -> dragonfly/patch-build_moz.configure_init.configure
+# DragonFly has no <sys/thr.h>/thr_self, so inside the XP_FREEBSD profiler
+# thread-id branches (enabled here by the XP_FREEBSD define above) DragonFly
+# identifies the thread by its pthread pointer, which fits the FreeBSD `long`
+# ThreadIdType.
+file materialize dragonfly/patch-mozglue_baseprofiler_core_ProfilerUtils.cpp -> dragonfly/patch-mozglue_baseprofiler_core_ProfilerUtils.cpp
+file materialize dragonfly/patch-tools_profiler_core_ProfilerUtils.cpp -> dragonfly/patch-tools_profiler_core_ProfilerUtils.cpp
+# DragonFly's <sys/mman.h> has no MAP_NORESERVE (same as FreeBSD).
+file materialize dragonfly/patch-ipc_glue_SharedMemoryPlatform__posix.cpp -> dragonfly/patch-ipc_glue_SharedMemoryPlatform__posix.cpp
+# Abseil GetTID() fallback static_casts pthread_t (a pointer on DragonFly) to
+# pid_t; DragonFly provides pthread_getthreadid_np() like FreeBSD (same fix as
+# www/chromium, www/qt6-webengine, www/node*).
+file materialize dragonfly/patch-third__party_abseil-cpp_absl_base_internal_sysinfo.cc -> dragonfly/patch-third__party_abseil-cpp_absl_base_internal_sysinfo.cc
+# Abseil vdso_support.cc includes bare <syscall.h> (Linux-only); DragonFly has
+# no VDSO, so disable ABSL_HAVE_ELF_MEM_IMAGE there like www/chromium does.
+file materialize dragonfly/patch-third__party_abseil-cpp_absl_debugging_internal_elf__mem__image.h -> dragonfly/patch-third__party_abseil-cpp_absl_debugging_internal_elf__mem__image.h
+# _POSIX_C_SOURCE=202405L hides isascii() (needed by libc++ <istream>) on
+# DragonFly just as on FreeBSD; files/patch-toolkit_compontents_protobuf_*
+# only exempts __FreeBSD__.
+file materialize dragonfly/patch-toolkit_components_protobuf_src_google_protobuf_io_zero__copy__stream__impl.cc -> dragonfly/patch-toolkit_components_protobuf_src_google_protobuf_io_zero__copy__stream__impl.cc
 
 mk set BINARY_ALIAS "clang=${LOCALBASE}/llvm${LLVM_VERSION}/bin/clang clang++=${LOCALBASE}/llvm${LLVM_VERSION}/bin/clang++ wasm-ld=${LOCALBASE}/llvm${LLVM_VERSION}/bin/wasm-ld"
 
@@ -57,11 +115,15 @@ file materialize dragonfly/patch-dom_webtransport_api_WebTransportDatagramDuplex
 file materialize dragonfly/patch-hal_moz.build -> dragonfly/patch-hal_moz.build
 file materialize dragonfly/patch-image_imgFrame.h -> dragonfly/patch-image_imgFrame.h
 file materialize dragonfly/patch-media_libcubeb_src_cubeb__jack.cpp -> dragonfly/patch-media_libcubeb_src_cubeb__jack.cpp
+file materialize dragonfly/patch-mozglue_baseprofiler_core_shared-libraries-linux.cc -> dragonfly/patch-mozglue_baseprofiler_core_shared-libraries-linux.cc
 file materialize dragonfly/patch-mozglue_baseprofiler_moz.build -> dragonfly/patch-mozglue_baseprofiler_moz.build
 file materialize dragonfly/patch-mozglue_baseprofiler_public_ProfilerPlatformMacros.h -> dragonfly/patch-mozglue_baseprofiler_public_ProfilerPlatformMacros.h
 file materialize dragonfly/patch-netwerk_dns_moz.build -> dragonfly/patch-netwerk_dns_moz.build
 file materialize dragonfly/patch-third__party_angle_angle__common__gn_moz.build -> dragonfly/patch-third__party_angle_angle__common__gn_moz.build
 file materialize dragonfly/patch-third__party_angle_angle__program__version__id__gn_moz.build -> dragonfly/patch-third__party_angle_angle__program__version__id__gn_moz.build
+file materialize dragonfly/patch-third__party_rust_mtu_build.rs -> dragonfly/patch-third__party_rust_mtu_build.rs
+file materialize dragonfly/patch-third__party_rust_mtu_src_bsd.rs -> dragonfly/patch-third__party_rust_mtu_src_bsd.rs
+file materialize dragonfly/patch-third__party_rust_mtu_src_lib.rs -> dragonfly/patch-third__party_rust_mtu_src_lib.rs
 file materialize dragonfly/patch-third__party_sqlite3_src_moz.build -> dragonfly/patch-third__party_sqlite3_src_moz.build
 file materialize dragonfly/patch-tools_profiler_lul_LulElfInt.h -> dragonfly/patch-tools_profiler_lul_LulElfInt.h
 file materialize dragonfly/patch-tools_profiler_moz.build -> dragonfly/patch-tools_profiler_moz.build
