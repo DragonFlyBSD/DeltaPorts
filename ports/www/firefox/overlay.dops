@@ -42,10 +42,17 @@ mk add LIB_DEPENDS "libc++.so.1:devel/libcxx${LLVM_VERSION}"
 # ABSL_HAVE_MMAP, which upstream enables for FreeBSD but not DragonFly; both
 # have POSIX mmap, so extend the condition.
 file materialize dragonfly/patch-third__party_abseil-cpp_absl_base_config.h -> dragonfly/patch-third__party_abseil-cpp_absl_base_config.h
-# Upstream neutralizes libc++ NDK-r19+ _LIBCPP_HIDE_FROM_ABI (hidden visibility
-# on basic_string members, unusable from hidden-visibility shared links like
-# libxul) for Android only; the dport libc++19 used here needs the same
-# treatment on DragonFly (upstream's own fix, extended gate).
+# DragonFly's target triple has kernel "DragonFly", so -fvisibility=hidden is
+# never applied upstream (visibility_flags only lists Darwin/FreeBSD/OpenBSD
+# kernels) while dport libc++19 still marks basic_string append/insert/push_back
+# _LIBCPP_HIDE_FROM_ABI (hidden). Every TU then emits TU-local default-visibility
+# definitions, but the stl_wrappers around libc++ headers push default visibility
+# while objects inside static archives (libtranslator_gn.a, libgkrust.a, hunspell,
+# widget-gtk, protobuf TUs) reference the hidden declarations, so the libxul.so
+# link dies on undefined hidden symbols. Match the other BSD kernels here so the
+# TU-local definitions are hidden-visibility too and resolve link-side (same
+# approach as the dport libcxx19 __DragonFly__ defines; link-only change, no
+# header override possible since libc++ __config defines the macro unconditionally).
 file materialize dragonfly/patch-build_moz.configure_toolchain.configure -> dragonfly/patch-build_moz.configure_toolchain.configure
 # Host build-script binaries (e.g. webrender's build-script-build) link the
 # default libstdc++: cc-rs emits `rustc-link-lib=stdc++` when CXXSTDLIB is
