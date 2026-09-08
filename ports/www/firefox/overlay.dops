@@ -31,6 +31,22 @@ mk add CXXFLAGS "-stdlib=libc++"
 mk add CXXFLAGS "-cxx-isystem ${LLVM_PREFIX}/libcxx/include/c++/v1"
 # Provide the libc++ headers above at build time (DragonFly-only dport).
 mk add BUILD_DEPENDS "${LOCALBASE}/llvm${LLVM_VERSION}/libcxx/include/c++/v1/new:devel/libcxx${LLVM_VERSION}"
+# -stdlib=libc++ above makes every C++ link pass -lc++, so lld needs the
+# libcxx lib dir on its search path (same approach as www/qt6-webengine);
+# LIB_DEPENDS records the runtime dep (USE_LDCONFIG in devel/libcxx19 covers
+# loading). Target objects are compiled against libc++ headers, so they must
+# link libc++, not the default libstdc++.
+mk add LDFLAGS "-L${LLVM_PREFIX}/libcxx/lib"
+mk add LIB_DEPENDS "libc++.so.1:devel/libcxx${LLVM_VERSION}"
+# Abseil gates LowLevelAlloc/per-thread-sem (needed by libxul's mutex code) on
+# ABSL_HAVE_MMAP, which upstream enables for FreeBSD but not DragonFly; both
+# have POSIX mmap, so extend the condition.
+file materialize dragonfly/patch-third__party_abseil-cpp_absl_base_config.h -> dragonfly/patch-third__party_abseil-cpp_absl_base_config.h
+# Upstream neutralizes libc++ NDK-r19+ _LIBCPP_HIDE_FROM_ABI (hidden visibility
+# on basic_string members, unusable from hidden-visibility shared links like
+# libxul) for Android only; the dport libc++19 used here needs the same
+# treatment on DragonFly (upstream's own fix, extended gate).
+file materialize dragonfly/patch-build_moz.configure_toolchain.configure -> dragonfly/patch-build_moz.configure_toolchain.configure
 # Host build-script binaries (e.g. webrender's build-script-build) link the
 # default libstdc++: cc-rs emits `rustc-link-lib=stdc++` when CXXSTDLIB is
 # unset, the cargo-linker wrapper then links with clang++ without
@@ -82,6 +98,23 @@ file materialize dragonfly/patch-third__party_abseil-cpp_absl_debugging_internal
 # DragonFly just as on FreeBSD; files/patch-toolkit_compontents_protobuf_*
 # only exempts __FreeBSD__.
 file materialize dragonfly/patch-toolkit_components_protobuf_src_google_protobuf_io_zero__copy__stream__impl.cc -> dragonfly/patch-toolkit_components_protobuf_src_google_protobuf_io_zero__copy__stream__impl.cc
+# DragonFly lacks the Linux syscall shims (sys_mmap/sys_munmap) and the sized
+# Elf32_Nhdr/Elf64_Nhdr aliases that the Breakpad profiler TU (elfutils.cc via
+# elfutils.h/memory_allocator.h) expects: extend the existing __FreeBSD__
+# branches to __DragonFly__ and alias the note types to DragonFly's Elf_Note
+# (same layout; mirrors patch-mozglue_baseprofiler_core_shared-libraries-linux.cc).
+file materialize dragonfly/patch-toolkit_crashreporter_google-breakpad_src_common_memory__allocator.h -> dragonfly/patch-toolkit_crashreporter_google-breakpad_src_common_memory__allocator.h
+file materialize dragonfly/patch-toolkit_crashreporter_google-breakpad_src_common_linux_elfutils.h -> dragonfly/patch-toolkit_crashreporter_google-breakpad_src_common_linux_elfutils.h
+file materialize dragonfly/patch-toolkit_crashreporter_google-breakpad_src_common_linux_elfutils.cc -> dragonfly/patch-toolkit_crashreporter_google-breakpad_src_common_linux_elfutils.cc
+# Same FreeBSD equivalence for memory_mapped_file.cc: its body uses the LSS
+# sys_* shims and kernel_stat that DragonFly lacks; FreeBSD already stubs
+# Map/Unmap out here, so extend that stub to DragonFly (crashreporter path is
+# compiled only for interface reasons, same as on FreeBSD).
+file materialize dragonfly/patch-toolkit_crashreporter_google-breakpad_src_common_linux_memory__mapped__file.cc -> dragonfly/patch-toolkit_crashreporter_google-breakpad_src_common_linux_memory__mapped__file.cc
+# Same GP_OS_freebsd -> GP_OS_dragonfly widening for the LUL ELF-mapping helper
+# compiled on DragonFly: uses SharedLibraryInfo (already dragonfly-enabled via
+# shared-libraries-linux.cc), otherwise hits #error "Unknown platform".
+file materialize dragonfly/patch-tools_profiler_lul_platform-linux-lul.cpp -> dragonfly/patch-tools_profiler_lul_platform-linux-lul.cpp
 
 mk set BINARY_ALIAS "clang=${LOCALBASE}/llvm${LLVM_VERSION}/bin/clang clang++=${LOCALBASE}/llvm${LLVM_VERSION}/bin/clang++ wasm-ld=${LOCALBASE}/llvm${LLVM_VERSION}/bin/wasm-ld"
 

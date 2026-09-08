@@ -1,0 +1,14 @@
+--- build/moz.configure/toolchain.configure.intermediate	2026-09-07 20:37:50 UTC
++++ build/moz.configure/toolchain.configure
+@@ -2360,7 +2360,10 @@ set_config("COLOR_CFLAGS", color_cflags)
+ 
+ @depends(c_compiler, target)
+ def libcxx_override_visibility(c_compiler, target):
+-    if c_compiler.type == "clang" and target.os == "Android":
++    # DragonFly uses a dport libc++ >= 19 like Android's NDK r19+ libc++, whose
++    # _LIBCPP_HIDE_FROM_ABI marks basic_string members hidden (unusable from
++    # -fvisibility=hidden shared links); apply the same override as Android.
++    if c_compiler.type == "clang" and target.os in ("Android", "DragonFly"):
+         return namespace(
+             empty="",
+             hide_from_abi="__attribute__((__exclude_from_explicit_instantiation__))",
