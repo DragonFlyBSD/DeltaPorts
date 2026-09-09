@@ -1,16 +1,14 @@
-diff --git base/message_loop/message_pump_glib.cc base/message_loop/message_pump_glib.cc
-index 494c156f00db..804ba9762517 100644
---- base/message_loop/message_pump_glib.cc
+--- base/message_loop/message_pump_glib.cc.orig	2026-09-09 12:00:00 UTC
 +++ base/message_loop/message_pump_glib.cc
-@@ -7,6 +7,7 @@
+@@ -6,6 +6,7 @@
+ 
  #include <fcntl.h>
  #include <glib.h>
- #include <math.h>
 +#include <poll.h>
  
  #if BUILDFLAG(IS_BSD)
  #include <pthread.h>
-@@ -671,6 +672,14 @@ void MessagePumpGlib::HandleDispatch() {
+@@ -747,6 +748,14 @@
    }
  }
  

@@ -1,18 +1,15 @@
-diff --git third_party/abseil-cpp/absl/base/internal/raw_logging.cc third_party/abseil-cpp/absl/base/internal/raw_logging.cc
-index 35a08f0ac03f..e2e26dfed0cc 100644
---- third_party/abseil-cpp/absl/base/internal/raw_logging.cc
+--- third_party/abseil-cpp/absl/base/internal/raw_logging.cc.orig	2026-09-09 12:00:00 UTC
 +++ third_party/abseil-cpp/absl/base/internal/raw_logging.cc
-@@ -44,7 +44,8 @@
- #if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) || \
-     defined(__hexagon__) || defined(__Fuchsia__) ||                     \
-     defined(__native_client__) || defined(__OpenBSD__) ||               \
+@@ -43,7 +43,7 @@
+ // this, consider moving both to config.h instead.
+ #if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) ||     \
+     defined(__hexagon__) || defined(__Fuchsia__) || defined(__OpenBSD__) || \
 -    defined(__EMSCRIPTEN__) || defined(__ASYLO__)
-+    defined(__EMSCRIPTEN__) || defined(__ASYLO__) || \
-+    defined(__DragonFly__)
++    defined(__EMSCRIPTEN__) || defined(__ASYLO__) || defined(__DragonFly__)
  
  #include <unistd.h>
  
-@@ -57,7 +58,8 @@
+@@ -56,7 +56,8 @@
  // ABSL_HAVE_SYSCALL_WRITE is defined when the platform provides the syscall
  //   syscall(SYS_write, /*int*/ fd, /*char* */ buf, /*size_t*/ len);
  // for low level operations that want to avoid libc.

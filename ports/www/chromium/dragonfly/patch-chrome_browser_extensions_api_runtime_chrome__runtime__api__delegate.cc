@@ -1,13 +1,11 @@
-diff --git chrome/browser/extensions/api/runtime/chrome_runtime_api_delegate.cc chrome/browser/extensions/api/runtime/chrome_runtime_api_delegate.cc
-index b39405513b9e..d02005cfda0a 100644
---- chrome/browser/extensions/api/runtime/chrome_runtime_api_delegate.cc
+--- chrome/browser/extensions/api/runtime/chrome_runtime_api_delegate.cc.orig	2026-09-09 12:00:00 UTC
 +++ chrome/browser/extensions/api/runtime/chrome_runtime_api_delegate.cc
-@@ -291,6 +291,8 @@ bool ChromeRuntimeAPIDelegate::GetPlatformInfo(PlatformInfo* info) {
+@@ -371,6 +371,8 @@
      info->os = extensions::api::runtime::PlatformOs::kLinux;
-   } else if (strcmp(os, "freebsd") == 0) {
+   } else if (os == "freebsd") {
      info->os = extensions::api::runtime::PlatformOs::kLinux;
-+  } else if (strcmp(os, "dragonfly") == 0) {
++  } else if (os == "dragonfly") {
 +    info->os = extensions::api::runtime::PlatformOs::kLinux;
+   } else if (os == "android") {
+     info->os = extensions::api::runtime::PlatformOs::kAndroid;
    } else {
-     NOTREACHED() << "Platform not supported: " << os;
-   }
