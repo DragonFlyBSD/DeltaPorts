@@ -13,7 +13,8 @@ mk block set condition "!defined(GN_ONLY)" <<'MK'
 # XXX - This is a hack to force llvm to use libc++ C++ includes instead of base's gcc
 CXXFLAGS+=	-nostdlib++ -stdlib=libc++ -I${LOCALBASE}/include
 CXXFLAGS+=	-cxx-isystem ${LOCALBASE}/llvm${LLVM_DEFAULT}/libcxx/include/c++/v1
-LDFLAGS+=	-L /lib -L${LOCALBASE}/llvm${LLVM_DEFAULT}/libcxx/lib/c++ -L /usr/lib -lpthread
+LDFLAGS+=	-L${LOCALBASE}/llvm${LLVM_DEFAULT}/libcxx/lib -L /lib -L /usr/lib -lpthread
+LDFLAGS+=	-stdlib=libc++ -lc++ -lc++abi -Wl,-rpath,${LOCALBASE}/llvm${LLVM_DEFAULT}/libcxx/lib
 
 # Since FreeBSD has libc++ in base we need to rely on DPorts' libcxx
 LIB_DIRS+=	${PREFIX}/llvm${LLVM_DEFAULT}/libcxx/lib
@@ -24,6 +25,13 @@ LIB_DEPENDS+=  	libc++.so.1:devel/libcxx${LLVM_DEFAULT}
 
 # we don't support libcuse so no audio/virtual_oss
 RUN_DEPENDS:=	${RUN_DEPENDS:Nvirtual_oss*}
+# Cargo forwards every LDFLAGS token to rustc as -C link-args, but rustc on
+# DragonFly links with cc -fuse-ld=bfd (binutils 2.34), which rejects the
+# lld-only -Wl,--undefined-version that Uses/qt.mk puts in LDFLAGS for the
+# main (lld) link. Drop that one token from LDFLAGS for every consumer and
+# re-add it explicitly to the gn extra_ldflags below, which is the only
+# consumer that needs it (chrome.map version script under lld).
+LDFLAGS:=	${LDFLAGS:N-Wl,--undefined-version}
 MK
 
 mk target set dfly-patch <<'MK'
@@ -71,6 +79,10 @@ text replace-once file Makefile \
 # Upstream passes extra_cxxflags/extra_ldflags into gn but not extra_cflags,
 # so the C half of the tree never saw the port's CFLAGS.
 mk add    GN_ARGS "extra_cflags=\"${CFLAGS}\""
+# V8's sandbox build asserts use_safe_libcxx, which requires
+# use_custom_libcxx=true. DragonFly links the dport libc++ directly instead
+# (see below), so disable the V8 sandbox here rather than tripping the assert.
+mk add    GN_ARGS "v8_enable_sandbox=false"
 
 # The ld alias resolves to a path DragonFly does not provide; alias clang
 # instead so gn's toolchain probe finds a driver.
@@ -93,6 +105,11 @@ mk set FFMPEG_CDIR "${WRKSRC}/third_party/ffmpeg/chromium/config/${FFMPEG_BRAND}
 text replace-once file Makefile \
      from "scripts/build_ffmpeg.py freebsd ${FFMPEG_TARGET}" \
      to   "scripts/build_ffmpeg.py dragonfly ${FFMPEG_TARGET}"
+# LDFLAGS above lost -Wl,--undefined-version to the cargo filter; the main
+# lld link still wants it (see comment at the filter).
+text replace-once file Makefile \
+     from "extra_ldflags=\"${LDFLAGS}\"" \
+     to   "extra_ldflags=\"${LDFLAGS} -Wl,--undefined-version\""
 
 # The gn bootstrap runs its own compiler probes and does not inherit the
 # port's flags from CONFIGURE_ENV alone.
@@ -136,7 +153,7 @@ text replace-once file Makefile \
 # alternative wants /usr/lib/libkrb5.so, which base does not ship.
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NKERBEROS}"
 
-# 156 source patches, split out of the former
+# 158 source patches, split out of the former
 # monolithic dragonfly/patch-all. One materialize op each: the
 # file count and the op count must stay equal.
 file materialize dragonfly/patch-base_BUILD.gn -> dragonfly/patch-base_BUILD.gn
@@ -259,6 +276,7 @@ file materialize dragonfly/patch-tools_gn_bootstrap_bootstrap.py -> dragonfly/pa
 file materialize dragonfly/patch-tools_gn_build_gen.py -> dragonfly/patch-tools_gn_build_gen.py
 file materialize dragonfly/patch-tools_gn_src_base_files_file__posix.cc -> dragonfly/patch-tools_gn_src_base_files_file__posix.cc
 file materialize dragonfly/patch-tools_gn_src_gn_args.cc -> dragonfly/patch-tools_gn_src_gn_args.cc
+file materialize dragonfly/patch-tools_gn_src_gn_string__atom.cc -> dragonfly/patch-tools_gn_src_gn_string__atom.cc
 file materialize dragonfly/patch-tools_gn_src_gn_format__test__data_016.gn -> dragonfly/patch-tools_gn_src_gn_format__test__data_016.gn
 file materialize dragonfly/patch-tools_gn_src_gn_format__test__data_016.golden -> dragonfly/patch-tools_gn_src_gn_format__test__data_016.golden
 file materialize dragonfly/patch-tools_gn_src_util_build__config.h -> dragonfly/patch-tools_gn_src_util_build__config.h
@@ -266,6 +284,7 @@ file materialize dragonfly/patch-tools_gn_src_util_exe__path.cc -> dragonfly/pat
 file materialize dragonfly/patch-tools_grit_grit_node_base.py -> dragonfly/patch-tools_grit_grit_node_base.py
 file materialize dragonfly/patch-tools_json__schema__compiler_feature__compiler.py -> dragonfly/patch-tools_json__schema__compiler_feature__compiler.py
 file materialize dragonfly/patch-tools_variations_fieldtrial__to__struct.py -> dragonfly/patch-tools_variations_fieldtrial__to__struct.py
+file materialize dragonfly/patch-ui_webui_webui__features.gni -> dragonfly/patch-ui_webui_webui__features.gni
 file materialize dragonfly/patch-ui_base_x_x11__util.cc -> dragonfly/patch-ui_base_x_x11__util.cc
 file materialize dragonfly/patch-ui_events_keycodes_dom_keycode__converter.cc -> dragonfly/patch-ui_events_keycodes_dom_keycode__converter.cc
 file materialize dragonfly/patch-ui_events_keycodes_dom_keycode__converter.h -> dragonfly/patch-ui_events_keycodes_dom_keycode__converter.h
