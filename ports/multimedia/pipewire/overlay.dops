@@ -5,6 +5,7 @@ target @any
 
 mk add LDFLAGS "-L${LOCALBASE}/lib -ltinfo -lncurses"
 mk add BUILD_DEPENDS "libstdthreads>0:misc/libstdthreads"
+mk add MESON_ARGS "-Dexamples=disabled"
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@freebsd@dragonfly@g' \
 		${WRKSRC}/src/pipewire/meson.build \
@@ -14,6 +15,7 @@ file materialize dragonfly/patch-pipewire-alsa_alsa-plugins_pcm__pipewire.c -> d
 file materialize dragonfly/patch-spa_plugins_alsa_alsa-pcm.c -> dragonfly/patch-spa_plugins_alsa_alsa-pcm.c
 file materialize dragonfly/patch-spa_plugins_support_logger.c -> dragonfly/patch-spa_plugins_support_logger.c
 file materialize dragonfly/patch-spa_plugins_support_loop.c -> dragonfly/patch-spa_plugins_support_loop.c
+file materialize dragonfly/patch-src_gst_gstpipewiresrc.c -> dragonfly/patch-src_gst_gstpipewiresrc.c
 file materialize dragonfly/patch-src_modules_module-protocol-pulse_message-handler.c -> dragonfly/patch-src_modules_module-protocol-pulse_message-handler.c
 file materialize dragonfly/patch-src_modules_module-rt.c -> dragonfly/patch-src_modules_module-rt.c
 file materialize dragonfly/patch-src_modules_network-utils.h -> dragonfly/patch-src_modules_network-utils.h
