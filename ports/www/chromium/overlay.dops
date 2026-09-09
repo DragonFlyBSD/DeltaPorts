@@ -1,0 +1,289 @@
+port www/chromium
+type port
+reason "DragonFly chromium: libc++ toolchain via the libcxx dport, sandbox/ffmpeg/buildtools setup, GN arg overrides, 156 source patches. Last compat success was 137.0.7151.119."
+target @any
+
+# avoid PA for now
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NPULSEAUDIO}"
+
+# The GN bootstrap re-enters this Makefile with GN_ONLY set; these
+# only apply to the real build. Body transcribed from the former
+# Makefile.DragonFly.
+mk block set condition "!defined(GN_ONLY)" <<'MK'
+# XXX - This is a hack to force llvm to use libc++ C++ includes instead of base's gcc
+CXXFLAGS+=	-nostdlib++ -stdlib=libc++ -I${LOCALBASE}/include
+CXXFLAGS+=	-cxx-isystem ${LOCALBASE}/llvm${LLVM_DEFAULT}/libcxx/include/c++/v1
+LDFLAGS+=	-L /lib -L${LOCALBASE}/llvm${LLVM_DEFAULT}/libcxx/lib/c++ -L /usr/lib -lpthread
+
+# Since FreeBSD has libc++ in base we need to rely on DPorts' libcxx
+LIB_DIRS+=	${PREFIX}/llvm${LLVM_DEFAULT}/libcxx/lib
+LIB_DEPENDS+=  	libc++.so.1:devel/libcxx${LLVM_DEFAULT}
+
+# for C programs
+#CFLAGS+=	-I /usr/include
+
+# we don't support libcuse so no audio/virtual_oss
+RUN_DEPENDS:=	${RUN_DEPENDS:Nvirtual_oss*}
+
+# FreeBSD has kerberos in base but we don't
+KERBEROS_LIB_DEPENDS+=	libkrb5.so:security/krb5
+MK
+
+mk target set dfly-patch <<'MK'
+	# Sandbox stuff
+	@${MKDIR} ${WRKSRC}/sandbox/policy/dragonfly
+	@${CP} ${WRKSRC}/sandbox/policy/freebsd/sandbox_freebsd.h ${WRKSRC}/sandbox/policy/dragonfly/sandbox_dragonfly.h
+	@${CP} ${WRKSRC}/sandbox/policy/freebsd/sandbox_freebsd.cc ${WRKSRC}/sandbox/policy/dragonfly/sandbox_dragonfly.cc
+	${REINPLACE_CMD} -e "s|FreeBSD|DragonFly|g" \
+		-e "s|freebsd\/sandbox_freebsd.h|dragonfly\/sandbox_dragonfly.h|g" \
+		${WRKSRC}/sandbox/policy/dragonfly/sandbox_dragonfly.h \
+		${WRKSRC}/sandbox/policy/dragonfly/sandbox_dragonfly.cc \
+
+	# Chromium uses an unreleased version of FFmpeg, so configure it
+	${CP} -R \
+                ${WRKSRC}/third_party/ffmpeg/chromium/config/Chrome/linux/ \
+                ${WRKSRC}/third_party/ffmpeg/chromium/config/Chrome/dragonfly
+
+	# Setup buildtools/freebsd
+	@${MKDIR} ${WRKSRC}/buildtools/dragonfly
+	${LN} -sf ${WRKSRC}/buildtools/linux64/clang-format ${WRKSRC}/buildtools/dragonfly
+	${LN} -sf ${WRKSRC}/out/${BUILDTYPE}/gn ${WRKSRC}/buildtools/dragonfly
+
+	# XXX The correct solution is to pass variables to gn
+	# Use the current LLVM version by replacing the hardcoded one
+	${REINPLACE_CMD} -e "s|clang60|clang${LLVM_DEFAULT}|g" \
+		-e "s|clang\+\+60|clang++${LLVM_DEFAULT}|g" \
+		-e "s|llvm-ar|llvm-ar${LLVM_DEFAULT}|g" \
+		-e "s|llvm-nm|llvm-nm${LLVM_DEFAULT}|g" \
+		${WRKSRC}/build/toolchain/gcc_toolchain.gni
+MK
+
+# --- absorbed from the former diffs/Makefile.diff -----------------------
+# Six hunks, expressed as semantic ops so they survive an upstream bump
+# instead of drifting on line context.
+
+# DragonFly links the dport libc++ (devel/libcxx${LLVM_DEFAULT}) and base
+# libunwind, not chromium's bundled copies.
+# NB: GN_ARGS is assigned 3 times (lines 120/158/287 upstream), so
+# `mk remove` cannot tell which assignment to edit. The token values are
+# unique as text, so flip them in place.
+text replace-once file Makefile \
+     from "use_custom_libcxx=true" to "use_custom_libcxx=false"
+text replace-once file Makefile \
+     from "use_custom_libunwind=true" to "use_custom_libunwind=false"
+# Upstream passes extra_cxxflags/extra_ldflags into gn but not extra_cflags,
+# so the C half of the tree never saw the port's CFLAGS.
+mk add    GN_ARGS "extra_cflags=\"${CFLAGS}\""
+
+# The ld alias resolves to a path DragonFly does not provide; alias clang
+# instead so gn's toolchain probe finds a driver.
+# BINARY_ALIAS is assigned twice (112/252), so `mk remove` is ambiguous here
+# too; the alias line itself is unique.
+text replace-once file Makefile \
+     from "ld=${LOCALBASE}/bin/ld.lld${LLVM_DEFAULT}" \
+     to   "clang=${LOCALBASE}/bin/clang${LLVM_DEFAULT}"
+
+# DragonFly spells the 64-bit arch x86_64, not amd64, so the upstream
+# branch never fired and FFMPEG_TARGET/nasm were left unset.
+mk replace-if from "${ARCH} == amd64" to "${ARCH} == x86_64"
+
+# ffmpeg build/config dirs are named after the OS; upstream hardcodes
+# freebsd.
+mk set FFMPEG_BDIR "${WRKSRC}/third_party/ffmpeg/build.${FFMPEG_TARGET}.${OPSYS:tl}/${FFMPEG_BRAND}"
+mk set FFMPEG_CDIR "${WRKSRC}/third_party/ffmpeg/chromium/config/${FFMPEG_BRAND}/${OPSYS:tl}/${FFMPEG_TARGET}"
+
+# ffmpeg's own configure takes the OS name as a positional argument.
+text replace-once file Makefile \
+     from "scripts/build_ffmpeg.py freebsd ${FFMPEG_TARGET}" \
+     to   "scripts/build_ffmpeg.py dragonfly ${FFMPEG_TARGET}"
+
+# The gn bootstrap runs its own compiler probes and does not inherit the
+# port's flags from CONFIGURE_ENV alone.
+text replace-once file Makefile \
+     from "\t\tREADELF=${READELF} AR=${AR} NM=${NM} ${PYTHON_CMD} \\" \
+     to   "\t\tREADELF=${READELF} AR=${AR} NM=${NM} \\\n\t\tCFLAGS=\"${CFLAGS}\" CXXFLAGS=\"${CXXFLAGS}\" LDFLAGS=\"${LDFLAGS}\" \\\n\t\t${PYTHON_CMD} \\"
+
+# node and buildtools live under an OS-named directory. Each anchor is a
+# whole line: `buildtools/freebsd` alone appears 5 times and
+# text replace-once refuses an ambiguous match.
+text replace-once file Makefile \
+     from "@${MKDIR} ${WRKSRC}/third_party/node/freebsd/node-freebsd/bin" \
+     to   "@${MKDIR} ${WRKSRC}/third_party/node/${OPSYS:tl}/node-${OPSYS:tl}/bin"
+text replace-once file Makefile \
+     from "${LN} -sf ${LOCALBASE}/bin/node ${WRKSRC}/third_party/node/freebsd/node-freebsd/bin/node" \
+     to   "${LN} -sf ${LOCALBASE}/bin/node ${WRKSRC}/third_party/node/${OPSYS:tl}/node-${OPSYS:tl}/bin/node"
+# (the `# Setup buildtools/freebsd` comment is deliberately left alone:
+# dfly-patch's recipe carries the same string, so no anchor is unique, and
+# it has no functional effect.)
+text replace-once file Makefile \
+     from "@${MKDIR} ${WRKSRC}/buildtools/freebsd" \
+     to   "@${MKDIR} ${WRKSRC}/buildtools/${OPSYS:tl}"
+text replace-once file Makefile \
+     from "${LN} -sf ${WRKSRC}/buildtools/linux64/clang-format ${WRKSRC}/buildtools/freebsd" \
+     to   "${LN} -sf ${WRKSRC}/buildtools/linux64/clang-format ${WRKSRC}/buildtools/${OPSYS:tl}"
+text replace-once file Makefile \
+     from "${LN} -sf ${WRKSRC}/out/${BUILDTYPE}/gn ${WRKSRC}/buildtools/freebsd" \
+     to   "${LN} -sf ${WRKSRC}/out/${BUILDTYPE}/gn ${WRKSRC}/buildtools/${OPSYS:tl}"
+text replace-once file Makefile \
+     from "${LN} -sf /usr/bin/strip ${WRKSRC}/buildtools/freebsd/strip" \
+     to   "${LN} -sf /usr/bin/strip ${WRKSRC}/buildtools/${OPSYS:tl}/strip"
+
+# 156 source patches, split out of the former
+# monolithic dragonfly/patch-all. One materialize op each: the
+# file count and the op count must stay equal.
+file materialize dragonfly/patch-base_BUILD.gn -> dragonfly/patch-base_BUILD.gn
+file materialize dragonfly/patch-base_allocator_partition__allocator_src_partition__alloc_build__config.h -> dragonfly/patch-base_allocator_partition__allocator_src_partition__alloc_build__config.h
+file materialize dragonfly/patch-base_allocator_partition__allocator_src_partition__alloc_spinning__mutex.cc -> dragonfly/patch-base_allocator_partition__allocator_src_partition__alloc_spinning__mutex.cc
+file materialize dragonfly/patch-base_allocator_partition__allocator_src_partition__alloc_stack_stack.cc -> dragonfly/patch-base_allocator_partition__allocator_src_partition__alloc_stack_stack.cc
+file materialize dragonfly/patch-base_base__paths__posix.cc -> dragonfly/patch-base_base__paths__posix.cc
+file materialize dragonfly/patch-base_containers_to__value__list.h -> dragonfly/patch-base_containers_to__value__list.h
+file materialize dragonfly/patch-base_debug_debugger__posix.cc -> dragonfly/patch-base_debug_debugger__posix.cc
+file materialize dragonfly/patch-base_debug_proc__maps__linux.cc -> dragonfly/patch-base_debug_proc__maps__linux.cc
+file materialize dragonfly/patch-base_debug_stack__trace__posix.cc -> dragonfly/patch-base_debug_stack__trace__posix.cc
+file materialize dragonfly/patch-base_files_dir__reader__linux.h -> dragonfly/patch-base_files_dir__reader__linux.h
+file materialize dragonfly/patch-base_files_file__path__watcher__kqueue.h -> dragonfly/patch-base_files_file__path__watcher__kqueue.h
+file materialize dragonfly/patch-base_logging__unittest.cc -> dragonfly/patch-base_logging__unittest.cc
+file materialize dragonfly/patch-base_message__loop_message__loop__task__runner.cc -> dragonfly/patch-base_message__loop_message__loop__task__runner.cc
+file materialize dragonfly/patch-base_message__loop_message__pump__glib.cc -> dragonfly/patch-base_message__loop_message__pump__glib.cc
+file materialize dragonfly/patch-base_posix_can__lower__nice__to.cc -> dragonfly/patch-base_posix_can__lower__nice__to.cc
+file materialize dragonfly/patch-base_process_launch__posix.cc -> dragonfly/patch-base_process_launch__posix.cc
+file materialize dragonfly/patch-base_process_process__handle__freebsd.cc -> dragonfly/patch-base_process_process__handle__freebsd.cc
+file materialize dragonfly/patch-base_process_process__iterator.h -> dragonfly/patch-base_process_process__iterator.h
+file materialize dragonfly/patch-base_process_process__iterator__freebsd.cc -> dragonfly/patch-base_process_process__iterator__freebsd.cc
+file materialize dragonfly/patch-base_process_process__metrics__freebsd.cc -> dragonfly/patch-base_process_process__metrics__freebsd.cc
+file materialize dragonfly/patch-base_process_process__metrics__posix.cc -> dragonfly/patch-base_process_process__metrics__posix.cc
+file materialize dragonfly/patch-base_test_test__file__util__linux.cc -> dragonfly/patch-base_test_test__file__util__linux.cc
+file materialize dragonfly/patch-base_third__party_cityhash_city.cc -> dragonfly/patch-base_third__party_cityhash_city.cc
+file materialize dragonfly/patch-base_threading_platform__thread.h -> dragonfly/patch-base_threading_platform__thread.h
+file materialize dragonfly/patch-base_threading_platform__thread__internal__posix.h -> dragonfly/patch-base_threading_platform__thread__internal__posix.h
+file materialize dragonfly/patch-base_threading_platform__thread__posix.cc -> dragonfly/patch-base_threading_platform__thread__posix.cc
+file materialize dragonfly/patch-base_tracing_trace__time.cc -> dragonfly/patch-base_tracing_trace__time.cc
+file materialize dragonfly/patch-build_build__config.h -> dragonfly/patch-build_build__config.h
+file materialize dragonfly/patch-build_config_BUILDCONFIG.gn -> dragonfly/patch-build_config_BUILDCONFIG.gn
+file materialize dragonfly/patch-build_config_linux_pkg-config.py -> dragonfly/patch-build_config_linux_pkg-config.py
+file materialize dragonfly/patch-build_config_ozone.gni -> dragonfly/patch-build_config_ozone.gni
+file materialize dragonfly/patch-build_gn__run__binary.py -> dragonfly/patch-build_gn__run__binary.py
+file materialize dragonfly/patch-build_landmine__utils.py -> dragonfly/patch-build_landmine__utils.py
+file materialize dragonfly/patch-build_toolchain_dragonfly_BUILD.gn -> dragonfly/patch-build_toolchain_dragonfly_BUILD.gn
+file materialize dragonfly/patch-chrome_browser_extensions_api_runtime_chrome__runtime__api__delegate.cc -> dragonfly/patch-chrome_browser_extensions_api_runtime_chrome__runtime__api__delegate.cc
+file materialize dragonfly/patch-chrome_browser_flag__descriptions.cc -> dragonfly/patch-chrome_browser_flag__descriptions.cc
+file materialize dragonfly/patch-chrome_browser_resources_sandbox__internals_BUILD.gn -> dragonfly/patch-chrome_browser_resources_sandbox__internals_BUILD.gn
+file materialize dragonfly/patch-chrome_browser_resources_sandbox__internals_sandbox__internals.ts -> dragonfly/patch-chrome_browser_resources_sandbox__internals_sandbox__internals.ts
+file materialize dragonfly/patch-chrome_browser_ui_safety__hub_disruptive__notification__permissions__manager.h -> dragonfly/patch-chrome_browser_ui_safety__hub_disruptive__notification__permissions__manager.h
+file materialize dragonfly/patch-chrome_test_base_testing__browser__process.h -> dragonfly/patch-chrome_test_base_testing__browser__process.h
+file materialize dragonfly/patch-components_crash_core_app_chrome__crashpad__handler.cc -> dragonfly/patch-components_crash_core_app_chrome__crashpad__handler.cc
+file materialize dragonfly/patch-components_policy_core_common_cloud_cloud__policy__util.cc -> dragonfly/patch-components_policy_core_common_cloud_cloud__policy__util.cc
+file materialize dragonfly/patch-components_policy_core_common_policy__paths.cc -> dragonfly/patch-components_policy_core_common_policy__paths.cc
+file materialize dragonfly/patch-components_policy_tools_generate__policy__source.py -> dragonfly/patch-components_policy_tools_generate__policy__source.py
+file materialize dragonfly/patch-components_sync__device__info_local__device__info__util__linux.cc -> dragonfly/patch-components_sync__device__info_local__device__info__util__linux.cc
+file materialize dragonfly/patch-components_sync_base_sync__util.cc -> dragonfly/patch-components_sync_base_sync__util.cc
+file materialize dragonfly/patch-components_update__client_update__query__params.cc -> dragonfly/patch-components_update__client_update__query__params.cc
+file materialize dragonfly/patch-content_browser_service__host_utility__process__host.cc -> dragonfly/patch-content_browser_service__host_utility__process__host.cc
+file materialize dragonfly/patch-content_browser_tpcd__heuristics_opener__heuristic__utils.h -> dragonfly/patch-content_browser_tpcd__heuristics_opener__heuristic__utils.h
+file materialize dragonfly/patch-extensions_common_api_runtime.json -> dragonfly/patch-extensions_common_api_runtime.json
+file materialize dragonfly/patch-media_base_media__switches.cc -> dragonfly/patch-media_base_media__switches.cc
+file materialize dragonfly/patch-media_base_media__switches.h -> dragonfly/patch-media_base_media__switches.h
+file materialize dragonfly/patch-media_ffmpeg_scripts_build__ffmpeg.py -> dragonfly/patch-media_ffmpeg_scripts_build__ffmpeg.py
+file materialize dragonfly/patch-media_ffmpeg_scripts_robo__lib_config.py -> dragonfly/patch-media_ffmpeg_scripts_robo__lib_config.py
+file materialize dragonfly/patch-mojo_public_cpp_platform_socket__utils__posix.cc -> dragonfly/patch-mojo_public_cpp_platform_socket__utils__posix.cc
+file materialize dragonfly/patch-net_socket_udp__socket__posix.cc -> dragonfly/patch-net_socket_udp__socket__posix.cc
+file materialize dragonfly/patch-ppapi_tests_test__utils.h -> dragonfly/patch-ppapi_tests_test__utils.h
+file materialize dragonfly/patch-sandbox_policy_BUILD.gn -> dragonfly/patch-sandbox_policy_BUILD.gn
+file materialize dragonfly/patch-sandbox_policy_mojom_sandbox.mojom -> dragonfly/patch-sandbox_policy_mojom_sandbox.mojom
+file materialize dragonfly/patch-sandbox_policy_sandbox.h -> dragonfly/patch-sandbox_policy_sandbox.h
+file materialize dragonfly/patch-services_device_hid_BUILD.gn -> dragonfly/patch-services_device_hid_BUILD.gn
+file materialize dragonfly/patch-services_device_hid_hid__connection__freebsd.cc -> dragonfly/patch-services_device_hid_hid__connection__freebsd.cc
+file materialize dragonfly/patch-services_device_hid_hid__service.cc -> dragonfly/patch-services_device_hid_hid__service.cc
+file materialize dragonfly/patch-services_device_hid_hid__service__freebsd.cc -> dragonfly/patch-services_device_hid_hid__service__freebsd.cc
+file materialize dragonfly/patch-services_device_usb_BUILD.gn -> dragonfly/patch-services_device_usb_BUILD.gn
+file materialize dragonfly/patch-services_device_usb_usb__service.cc -> dragonfly/patch-services_device_usb_usb__service.cc
+file materialize dragonfly/patch-services_network_network__sandbox__hook__linux.h -> dragonfly/patch-services_network_network__sandbox__hook__linux.h
+file materialize dragonfly/patch-services_resource__coordinator_public_cpp_memory__instrumentation_os__metrics__bsd.cc -> dragonfly/patch-services_resource__coordinator_public_cpp_memory__instrumentation_os__metrics__bsd.cc
+file materialize dragonfly/patch-services_resource__coordinator_public_cpp_memory__instrumentation_os__metrics__linux.cc -> dragonfly/patch-services_resource__coordinator_public_cpp_memory__instrumentation_os__metrics__linux.cc
+file materialize dragonfly/patch-services_video__capture_public_mojom_video__capture__service.mojom -> dragonfly/patch-services_video__capture_public_mojom_video__capture__service.mojom
+file materialize dragonfly/patch-third__party_abseil-cpp_absl_base_config.h -> dragonfly/patch-third__party_abseil-cpp_absl_base_config.h
+file materialize dragonfly/patch-third__party_abseil-cpp_absl_base_internal_raw__logging.cc -> dragonfly/patch-third__party_abseil-cpp_absl_base_internal_raw__logging.cc
+file materialize dragonfly/patch-third__party_abseil-cpp_absl_base_internal_sysinfo.cc -> dragonfly/patch-third__party_abseil-cpp_absl_base_internal_sysinfo.cc
+file materialize dragonfly/patch-third__party_abseil-cpp_absl_debugging_internal_elf__mem__image.h -> dragonfly/patch-third__party_abseil-cpp_absl_debugging_internal_elf__mem__image.h
+file materialize dragonfly/patch-third__party_abseil-cpp_absl_debugging_internal_vdso__support.cc -> dragonfly/patch-third__party_abseil-cpp_absl_debugging_internal_vdso__support.cc
+file materialize dragonfly/patch-third__party_abseil-cpp_absl_strings_internal_str__format_output.h -> dragonfly/patch-third__party_abseil-cpp_absl_strings_internal_str__format_output.h
+file materialize dragonfly/patch-third__party_abseil-cpp_absl_time_internal_cctz_src_time__zone__format.cc -> dragonfly/patch-third__party_abseil-cpp_absl_time_internal_cctz_src_time__zone__format.cc
+file materialize dragonfly/patch-third__party_afl_src_afl-fuzz.c -> dragonfly/patch-third__party_afl_src_afl-fuzz.c
+file materialize dragonfly/patch-third__party_angle_src_common_platform.h -> dragonfly/patch-third__party_angle_src_common_platform.h
+file materialize dragonfly/patch-third__party_blink_renderer_bindings_scripts_bind__gen_style__format.py -> dragonfly/patch-third__party_blink_renderer_bindings_scripts_bind__gen_style__format.py
+file materialize dragonfly/patch-third__party_blink_renderer_platform_wtf_math__extras.h -> dragonfly/patch-third__party_blink_renderer_platform_wtf_math__extras.h
+file materialize dragonfly/patch-third__party_blink_renderer_platform_wtf_stack__util.cc -> dragonfly/patch-third__party_blink_renderer_platform_wtf_stack__util.cc
+file materialize dragonfly/patch-third__party_blink_renderer_platform_wtf_thread__specific.h -> dragonfly/patch-third__party_blink_renderer_platform_wtf_thread__specific.h
+file materialize dragonfly/patch-third__party_brotli_common_platform.h -> dragonfly/patch-third__party_brotli_common_platform.h
+file materialize dragonfly/patch-third__party_catapult_common_py__trace__event_py__trace__event_trace__time.py -> dragonfly/patch-third__party_catapult_common_py__trace__event_py__trace__event_trace__time.py
+file materialize dragonfly/patch-third__party_catapult_common_py__trace__event_py__trace__event_trace__time__unittest.py -> dragonfly/patch-third__party_catapult_common_py__trace__event_py__trace__event_trace__time__unittest.py
+file materialize dragonfly/patch-third__party_catapult_third__party_gsutil_third__party_monotonic_monotonic.py -> dragonfly/patch-third__party_catapult_third__party_gsutil_third__party_monotonic_monotonic.py
+file materialize dragonfly/patch-third__party_compiler-rt_src_lib_builtins_atomic.c -> dragonfly/patch-third__party_compiler-rt_src_lib_builtins_atomic.c
+file materialize dragonfly/patch-third__party_crashpad_crashpad_util_misc_capture__context.h -> dragonfly/patch-third__party_crashpad_crashpad_util_misc_capture__context.h
+file materialize dragonfly/patch-third__party_dav1d_libdav1d_include_stdatomic.h -> dragonfly/patch-third__party_dav1d_libdav1d_include_stdatomic.h
+file materialize dragonfly/patch-third__party_dawn_include_dawn_native_VulkanBackend.h -> dragonfly/patch-third__party_dawn_include_dawn_native_VulkanBackend.h
+file materialize dragonfly/patch-third__party_dawn_src_dawn_common_Platform.h -> dragonfly/patch-third__party_dawn_src_dawn_common_Platform.h
+file materialize dragonfly/patch-third__party_devtools-frontend_src_scripts_build_build__inspector__overlay.py -> dragonfly/patch-third__party_devtools-frontend_src_scripts_build_build__inspector__overlay.py
+file materialize dragonfly/patch-third__party_ffmpeg_BUILD.gn -> dragonfly/patch-third__party_ffmpeg_BUILD.gn
+file materialize dragonfly/patch-third__party_googletest_src_googletest_include_gtest_internal_gtest-port.h -> dragonfly/patch-third__party_googletest_src_googletest_include_gtest_internal_gtest-port.h
+file materialize dragonfly/patch-third__party_grpc_source_include_grpc_support_port__platform.h -> dragonfly/patch-third__party_grpc_source_include_grpc_support_port__platform.h
+file materialize dragonfly/patch-third__party_icu_source_common_unicode_platform.h -> dragonfly/patch-third__party_icu_source_common_unicode_platform.h
+file materialize dragonfly/patch-third__party_libFuzzer_src_afl_afl__driver.cpp -> dragonfly/patch-third__party_libFuzzer_src_afl_afl__driver.cpp
+file materialize dragonfly/patch-third__party_libdrm_src_xf86drmMode.c -> dragonfly/patch-third__party_libdrm_src_xf86drmMode.c
+file materialize dragonfly/patch-third__party_libphonenumber_dist_cpp_src_phonenumbers_base_memory_singleton.h -> dragonfly/patch-third__party_libphonenumber_dist_cpp_src_phonenumbers_base_memory_singleton.h
+file materialize dragonfly/patch-third__party_libphonenumber_dist_cpp_src_phonenumbers_base_synchronization_lock.h -> dragonfly/patch-third__party_libphonenumber_dist_cpp_src_phonenumbers_base_synchronization_lock.h
+file materialize dragonfly/patch-third__party_libphonenumber_dist_cpp_src_phonenumbers_base_thread__checker.h -> dragonfly/patch-third__party_libphonenumber_dist_cpp_src_phonenumbers_base_thread__checker.h
+file materialize dragonfly/patch-third__party_libpng_arm_filter__neon.S -> dragonfly/patch-third__party_libpng_arm_filter__neon.S
+file materialize dragonfly/patch-third__party_libsync_src_sync.c -> dragonfly/patch-third__party_libsync_src_sync.c
+file materialize dragonfly/patch-third__party_llvm_third-party_benchmark_src_internal__macros.h -> dragonfly/patch-third__party_llvm_third-party_benchmark_src_internal__macros.h
+file materialize dragonfly/patch-third__party_llvm_third-party_benchmark_src_sysinfo.cc -> dragonfly/patch-third__party_llvm_third-party_benchmark_src_sysinfo.cc
+file materialize dragonfly/patch-third__party_llvm_third-party_benchmark_src_timers.cc -> dragonfly/patch-third__party_llvm_third-party_benchmark_src_timers.cc
+file materialize dragonfly/patch-third__party_node_node.py -> dragonfly/patch-third__party_node_node.py
+file materialize dragonfly/patch-third__party_pdfium_fxjs_fx__date__helpers.cpp -> dragonfly/patch-third__party_pdfium_fxjs_fx__date__helpers.cpp
+file materialize dragonfly/patch-third__party_pdfium_fxjs_js__define.cpp -> dragonfly/patch-third__party_pdfium_fxjs_js__define.cpp
+file materialize dragonfly/patch-third__party_perfetto_include_perfetto_base_build__config.h -> dragonfly/patch-third__party_perfetto_include_perfetto_base_build__config.h
+file materialize dragonfly/patch-third__party_perfetto_include_perfetto_base_time.h -> dragonfly/patch-third__party_perfetto_include_perfetto_base_time.h
+file materialize dragonfly/patch-third__party_perfetto_src_base_file__utils.cc -> dragonfly/patch-third__party_perfetto_src_base_file__utils.cc
+file materialize dragonfly/patch-third__party_perfetto_src_base_unix__socket.cc -> dragonfly/patch-third__party_perfetto_src_base_unix__socket.cc
+file materialize dragonfly/patch-third__party_sqlite_BUILD.gn -> dragonfly/patch-third__party_sqlite_BUILD.gn
+file materialize dragonfly/patch-third__party_sqlite_src_amalgamation__dev_sqlite3.c -> dragonfly/patch-third__party_sqlite_src_amalgamation__dev_sqlite3.c
+file materialize dragonfly/patch-third__party_sqlite_src_amalgamation_sqlite3.c -> dragonfly/patch-third__party_sqlite_src_amalgamation_sqlite3.c
+file materialize dragonfly/patch-third__party_swiftshader_src_Reactor_Debug.cpp -> dragonfly/patch-third__party_swiftshader_src_Reactor_Debug.cpp
+file materialize dragonfly/patch-third__party_swiftshader_src_System_Configurator.cpp -> dragonfly/patch-third__party_swiftshader_src_System_Configurator.cpp
+file materialize dragonfly/patch-third__party_swiftshader_third__party_llvm-subzero_build_Linux_include_llvm_Config_config.h -> dragonfly/patch-third__party_swiftshader_third__party_llvm-subzero_build_Linux_include_llvm_Config_config.h
+file materialize dragonfly/patch-third__party_swiftshader_third__party_marl_src_memory.cpp -> dragonfly/patch-third__party_swiftshader_third__party_marl_src_memory.cpp
+file materialize dragonfly/patch-third__party_swiftshader_third__party_marl_src_thread.cpp -> dragonfly/patch-third__party_swiftshader_third__party_marl_src_thread.cpp
+file materialize dragonfly/patch-third__party_test__fonts_fontconfig_BUILD.gn -> dragonfly/patch-third__party_test__fonts_fontconfig_BUILD.gn
+file materialize dragonfly/patch-third__party_unrar_src_os.hpp -> dragonfly/patch-third__party_unrar_src_os.hpp
+file materialize dragonfly/patch-third__party_vulkan-loader_src_loader_vk__loader__platform.h -> dragonfly/patch-third__party_vulkan-loader_src_loader_vk__loader__platform.h
+file materialize dragonfly/patch-third__party_vulkan-validation-layers_src_layers_vulkan_generated_vk__function__pointers.cpp -> dragonfly/patch-third__party_vulkan-validation-layers_src_layers_vulkan_generated_vk__function__pointers.cpp
+file materialize dragonfly/patch-third__party_vulkan__memory__allocator_include_vk__mem__alloc.h -> dragonfly/patch-third__party_vulkan__memory__allocator_include_vk__mem__alloc.h
+file materialize dragonfly/patch-third__party_wayland_include_config.h -> dragonfly/patch-third__party_wayland_include_config.h
+file materialize dragonfly/patch-third__party_wayland_src_src_wayland-os.c -> dragonfly/patch-third__party_wayland_src_src_wayland-os.c
+file materialize dragonfly/patch-third__party_zlib_contrib_minizip_ioapi.h -> dragonfly/patch-third__party_zlib_contrib_minizip_ioapi.h
+file materialize dragonfly/patch-tools_gn_bootstrap_bootstrap.py -> dragonfly/patch-tools_gn_bootstrap_bootstrap.py
+file materialize dragonfly/patch-tools_gn_build_gen.py -> dragonfly/patch-tools_gn_build_gen.py
+file materialize dragonfly/patch-tools_gn_src_base_files_file__posix.cc -> dragonfly/patch-tools_gn_src_base_files_file__posix.cc
+file materialize dragonfly/patch-tools_gn_src_gn_args.cc -> dragonfly/patch-tools_gn_src_gn_args.cc
+file materialize dragonfly/patch-tools_gn_src_gn_format__test__data_016.gn -> dragonfly/patch-tools_gn_src_gn_format__test__data_016.gn
+file materialize dragonfly/patch-tools_gn_src_gn_format__test__data_016.golden -> dragonfly/patch-tools_gn_src_gn_format__test__data_016.golden
+file materialize dragonfly/patch-tools_gn_src_util_build__config.h -> dragonfly/patch-tools_gn_src_util_build__config.h
+file materialize dragonfly/patch-tools_gn_src_util_exe__path.cc -> dragonfly/patch-tools_gn_src_util_exe__path.cc
+file materialize dragonfly/patch-tools_grit_grit_node_base.py -> dragonfly/patch-tools_grit_grit_node_base.py
+file materialize dragonfly/patch-tools_json__schema__compiler_feature__compiler.py -> dragonfly/patch-tools_json__schema__compiler_feature__compiler.py
+file materialize dragonfly/patch-tools_variations_fieldtrial__to__struct.py -> dragonfly/patch-tools_variations_fieldtrial__to__struct.py
+file materialize dragonfly/patch-ui_base_x_x11__util.cc -> dragonfly/patch-ui_base_x_x11__util.cc
+file materialize dragonfly/patch-ui_events_keycodes_dom_keycode__converter.cc -> dragonfly/patch-ui_events_keycodes_dom_keycode__converter.cc
+file materialize dragonfly/patch-ui_events_keycodes_dom_keycode__converter.h -> dragonfly/patch-ui_events_keycodes_dom_keycode__converter.h
+file materialize dragonfly/patch-v8_BUILD.gn -> dragonfly/patch-v8_BUILD.gn
+file materialize dragonfly/patch-v8_src_api_api.cc -> dragonfly/patch-v8_src_api_api.cc
+file materialize dragonfly/patch-v8_src_base_platform_platform-freebsd.cc -> dragonfly/patch-v8_src_base_platform_platform-freebsd.cc
+file materialize dragonfly/patch-v8_src_base_platform_platform-posix.cc -> dragonfly/patch-v8_src_base_platform_platform-posix.cc
+file materialize dragonfly/patch-v8_src_base_sys-info.cc -> dragonfly/patch-v8_src_base_sys-info.cc
+file materialize dragonfly/patch-v8_src_base_utils_random-number-generator.cc -> dragonfly/patch-v8_src_base_utils_random-number-generator.cc
+file materialize dragonfly/patch-v8_src_d8_d8-posix.cc -> dragonfly/patch-v8_src_d8_d8-posix.cc
+file materialize dragonfly/patch-v8_src_libsampler_sampler.cc -> dragonfly/patch-v8_src_libsampler_sampler.cc
+file materialize dragonfly/patch-v8_src_trap-handler_handler-inside-posix.cc -> dragonfly/patch-v8_src_trap-handler_handler-inside-posix.cc
+file materialize dragonfly/patch-v8_src_trap-handler_handler-inside-posix.h -> dragonfly/patch-v8_src_trap-handler_handler-inside-posix.h
+file materialize dragonfly/patch-v8_src_trap-handler_trap-handler.h -> dragonfly/patch-v8_src_trap-handler_trap-handler.h
+file materialize dragonfly/patch-v8_tools_testrunner_local_utils.py -> dragonfly/patch-v8_tools_testrunner_local_utils.py

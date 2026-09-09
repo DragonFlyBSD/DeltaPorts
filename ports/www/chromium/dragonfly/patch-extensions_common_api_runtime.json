@@ -1,0 +1,12 @@
+diff --git extensions/common/api/runtime.json extensions/common/api/runtime.json
+index 39df24c74f31..56207dd96cd6 100644
+--- extensions/common/api/runtime.json
++++ extensions/common/api/runtime.json
+@@ -87,6 +87,7 @@
+             {"name": "linux", "description": "Specifies the Linux operating system."},
+             {"name": "openbsd", "description": "Specifies the OpenBSD operating system."},
+             {"name": "freebsd", "description": "Specifies the FreeBSD operating system."},
++            {"name": "dragonfly", "description": "Specifies the DragonFly BSD operating system."},
+             {"name": "fuchsia", "description": "Specifies the Fuchsia operating system."}
+         ]
+       },
