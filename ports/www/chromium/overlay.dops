@@ -153,6 +153,14 @@ text replace-once file Makefile \
 # alternative wants /usr/lib/libkrb5.so, which base does not ship.
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NKERBEROS}"
 
+# USES=cargo sets WITH_LTO=yes and our Features/lto.mk diff routes DragonFly
+# cargo ports into the raw -flto=thin branch, so every sub-build that links
+# with the default linker (base ld.gold, no LLVMgold plugin) gets bitcode it
+# cannot read -- the gn bootstrap, and the CMake probes of cargo crates like
+# libmimalloc-sys2. The port's own LTO option is off (use_thin_lto=false), so
+# the feature is forcing LTO the port did not ask for. Refuse it port-wide.
+mk set LTO_UNSAFE "yes" on-missing noop
+
 # 158 source patches, split out of the former
 # monolithic dragonfly/patch-all. One materialize op each: the
 # file count and the op count must stay equal.
