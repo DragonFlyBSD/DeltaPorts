@@ -128,6 +128,13 @@ text replace-once file Makefile \
      from "${LN} -sf /usr/bin/strip ${WRKSRC}/buildtools/freebsd/strip" \
      to   "${LN} -sf /usr/bin/strip ${WRKSRC}/buildtools/${OPSYS:tl}/strip"
 
+# dri.pc belongs to graphics/mesa-dri in the locked 21.3.9 mesa split;
+# mesa-libs @comments it out of its plist. Upstream chromium targets
+# mesa 26, where mesa-libs ships it.
+text replace-once file Makefile \
+     from "${LOCALBASE}/libdata/pkgconfig/dri.pc:graphics/mesa-libs" \
+     to   "${LOCALBASE}/libdata/pkgconfig/dri.pc:graphics/mesa-dri"
+
 # 156 source patches, split out of the former
 # monolithic dragonfly/patch-all. One materialize op each: the
 # file count and the op count must stay equal.
