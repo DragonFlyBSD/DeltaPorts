@@ -14,3 +14,4 @@ text line-remove file pkg-plist exact "@sample lib/ConsoleKit/scripts/ck-system-
 text line-remove file pkg-plist exact "@sample lib/ConsoleKit/scripts/ck-system-suspend.sample" on-missing noop
 
 file materialize dragonfly/patch-src_ck-device-udev.c -> dragonfly/patch-src_ck-device-udev.c
+file materialize dragonfly/patch-src_ck-sysdeps-unix.c -> dragonfly/patch-src_ck-sysdeps-unix.c
