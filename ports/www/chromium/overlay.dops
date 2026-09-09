@@ -24,9 +24,6 @@ LIB_DEPENDS+=  	libc++.so.1:devel/libcxx${LLVM_DEFAULT}
 
 # we don't support libcuse so no audio/virtual_oss
 RUN_DEPENDS:=	${RUN_DEPENDS:Nvirtual_oss*}
-
-# FreeBSD has kerberos in base but we don't
-KERBEROS_LIB_DEPENDS+=	libkrb5.so:security/krb5
 MK
 
 mk target set dfly-patch <<'MK'
@@ -101,7 +98,7 @@ text replace-once file Makefile \
 # port's flags from CONFIGURE_ENV alone.
 text replace-once file Makefile \
      from "\t\tREADELF=${READELF} AR=${AR} NM=${NM} ${PYTHON_CMD} \\" \
-     to   "\t\tREADELF=${READELF} AR=${AR} NM=${NM} \\\n\t\tCFLAGS=\"${CFLAGS}\" CXXFLAGS=\"${CXXFLAGS}\" LDFLAGS=\"${LDFLAGS}\" \\\n\t\t${PYTHON_CMD} \\"
+     to   "\t\tREADELF=${READELF} AR=${AR} NM=${NM} \\\n\t\tCFLAGS=\"${CFLAGS:N-flto*}\" CXXFLAGS=\"${CXXFLAGS:N-flto*}\" LDFLAGS=\"${LDFLAGS:N-flto*}\" \\\n\t\t${PYTHON_CMD} \\"
 
 # node and buildtools live under an OS-named directory. Each anchor is a
 # whole line: `buildtools/freebsd` alone appears 5 times and
@@ -134,6 +131,10 @@ text replace-once file Makefile \
 text replace-once file Makefile \
      from "${LOCALBASE}/libdata/pkgconfig/dri.pc:graphics/mesa-libs" \
      to   "${LOCALBASE}/libdata/pkgconfig/dri.pc:graphics/mesa-dri"
+
+# security/krb5 does not build shared on DragonFly and the HEIMDAL_BASE
+# alternative wants /usr/lib/libkrb5.so, which base does not ship.
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NKERBEROS}"
 
 # 156 source patches, split out of the former
 # monolithic dragonfly/patch-all. One materialize op each: the
