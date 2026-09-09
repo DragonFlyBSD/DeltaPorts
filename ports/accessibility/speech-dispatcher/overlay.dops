@@ -1,6 +1,13 @@
 port accessibility/speech-dispatcher
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "DragonFly: PULSEAUDIO off (audio/pulseaudio is BROKEN), AO+ALSA instead"
 target @any
 
-mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NPULSEAUDIO} AO ALSA"
+# The mk eval form of this filters OPTIONS_DEFAULT at the end of the
+# Makefile body -- after bsd.port.options.mk (line 94) has already
+# computed PORT_OPTIONS -- so PULSEAUDIO stayed on and libpulse.so
+# stayed in LIB_DEPENDS. See bead poly-cpd. Rewriting the upstream
+# assignment in place puts it back before the include, where it counts.
+text replace-once file Makefile \
+     from "OPTIONS_DEFAULT=	ESPEAK PULSEAUDIO" \
+     to   "OPTIONS_DEFAULT=	ESPEAK AO ALSA"
