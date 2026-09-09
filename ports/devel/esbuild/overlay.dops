@@ -1,0 +1,12 @@
+port devel/esbuild
+type port
+reason "DragonFly: CA bundle for go mod download during fetch"
+target @any
+
+# USES=go:modules fetches transitive modules with `go mod download`, and
+# Go uses its own trust store, not fetch(1)'s. crypto/x509/root_bsd.go
+# looks for /usr/local/share/certs/ca-root-nss.crt on DragonFly; without
+# it every proxy.golang.org request dies with "certificate signed by
+# unknown authority". go.mk puts the toolchain in FETCH_DEPENDS for the
+# same reason -- the fetch phase, not build, is what needs this.
+mk add FETCH_DEPENDS "${LOCALBASE}/share/certs/ca-root-nss.crt:security/ca_root_nss"
