@@ -1,6 +1,6 @@
 port graphics/mesa-libs
-type port
-reason "auto-converted from Makefile.DragonFly"
+type lock
+reason "version-locked at 21.3.9 with graphics/mesa-dri; clc disabled as fbsd ports do"
 target @any
 
 mk add MESON_ARGS "-Dmicrosoft-clc=disabled"
