@@ -5,5 +5,4 @@ target @any
 
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NWAYLAND}"
 file materialize dragonfly/patch-gdk_wayland_gdkseat-wayland.c -> dragonfly/patch-gdk_wayland_gdkseat-wayland.c
-file materialize dragonfly/patch-gtk_roaring_roaring.h -> dragonfly/patch-gtk_roaring_roaring.h
 file materialize dragonfly/patch-meson.build -> dragonfly/patch-meson.build
