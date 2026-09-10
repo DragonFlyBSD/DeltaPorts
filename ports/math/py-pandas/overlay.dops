@@ -5,3 +5,4 @@ target @any
 
 file materialize dragonfly/patch-pandas___libs_src_headers_cmath -> dragonfly/patch-pandas___libs_src_headers_cmath
 file materialize dragonfly/patch-pandas___libs_window_aggregations.pyx -> dragonfly/patch-pandas___libs_window_aggregations.pyx
+file materialize dragonfly/patch-pandas___libs_src_vendored_numpy_datetime_np__datetime.c -> dragonfly/patch-pandas___libs_src_vendored_numpy_datetime_np__datetime.c
