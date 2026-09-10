@@ -1,6 +1,6 @@
---- src/target.rs.orig	2022-08-14 11:03:56 UTC
-+++ src/target.rs
-@@ -499,6 +499,11 @@ impl Target {
+--- src/target/mod.rs.orig	2006-07-24 01:21:28 UTC
++++ src/target/mod.rs
+@@ -617,6 +617,11 @@ impl Target {
          self.os == Os::Linux
      }
  
@@ -10,5 +10,5 @@
 +    }
 +
      /// Returns true if the current platform is freebsd
+     #[inline]
      pub fn is_freebsd(&self) -> bool {
-         self.os == Os::FreeBsd
