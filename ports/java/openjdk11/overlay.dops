@@ -6,6 +6,8 @@ target @any
 mk add CONFIGURE_ARGS "--with-extra-cflags=\"-Wno-int-conversion\""
 mk add MAKE_ARGS "CONF_CHECK=ignore"
 mk add CONFIGURE_ARGS "--with-stdc++lib=dynamic"
+mk set BOOTSTRAPJDKDIR "${LOCALBASE}/bootstrap-openjdk11"
+mk add BUILD_DEPENDS "${LOCALBASE}/bootstrap-openjdk11/bin/javac:java/bootstrap-openjdk11"
 
 patch apply diffs/Makefile.diff
 
