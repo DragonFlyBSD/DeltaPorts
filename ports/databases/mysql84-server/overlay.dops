@@ -1,0 +1,21 @@
+port databases/mysql84-server
+type port
+reason "DragonFly: fix vendored abseil cctz _XOPEN_SOURCE visibility; build with modern GCC (base gcc80 lacks C++20); drop SASLCLIENT default (no Kerberos/GSSAPI dev libs on DragonFly, as in mysql80); rescan static archives for abseil reference cycles"
+target @any
+
+mk set USE_GCC_VERSION "13"
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NSASLCLIENT}"
+mk add LDFLAGS "-Wl,--start-group"
+
+file materialize dragonfly/patch-scripts_CMakeLists.txt -> dragonfly/patch-scripts_CMakeLists.txt
+file materialize dragonfly/patch-sql_CMakeLists.txt -> dragonfly/patch-sql_CMakeLists.txt
+file materialize dragonfly/patch-sql_resourcegroups_platform_thread__attrs__api__freebsd.cc -> dragonfly/patch-sql_resourcegroups_platform_thread__attrs__api__freebsd.cc
+file materialize dragonfly/patch-router_src_harness_include_mysql_harness_net__ts_impl_netif.h -> dragonfly/patch-router_src_harness_include_mysql_harness_net__ts_impl_netif.h
+file materialize dragonfly/patch-storage_innobase_include_detail_ut_large__page__alloc-linux.h -> dragonfly/patch-storage_innobase_include_detail_ut_large__page__alloc-linux.h
+file materialize dragonfly/patch-router_src_harness_src_stdx_io_file__handle.cc -> dragonfly/patch-router_src_harness_src_stdx_io_file__handle.cc
+file materialize dragonfly/patch-extra_abseil_abseil-cpp-20230802.1_absl_base_config.h -> dragonfly/patch-extra_abseil_abseil-cpp-20230802.1_absl_base_config.h
+file materialize dragonfly/patch-extra_abseil_abseil-cpp-20230802.1_absl_status_status.cc -> dragonfly/patch-extra_abseil_abseil-cpp-20230802.1_absl_status_status.cc
+file materialize dragonfly/patch-extra_abseil_abseil-cpp-20230802.1_absl_base_internal_sysinfo.cc -> dragonfly/patch-extra_abseil_abseil-cpp-20230802.1_absl_base_internal_sysinfo.cc
+file materialize dragonfly/patch-extra_abseil_abseil-cpp-20230802.1_absl_debugging_internal_vdso__support.cc -> dragonfly/patch-extra_abseil_abseil-cpp-20230802.1_absl_debugging_internal_vdso__support.cc
+file materialize dragonfly/patch-extra_abseil_abseil-cpp-20230802.1_absl_time_internal_cctz_src_time__zone__format.cc -> dragonfly/patch-extra_abseil_abseil-cpp-20230802.1_absl_time_internal_cctz_src_time__zone__format.cc
+file materialize dragonfly/patch-libmysql_CMakeLists.txt -> dragonfly/patch-libmysql_CMakeLists.txt
