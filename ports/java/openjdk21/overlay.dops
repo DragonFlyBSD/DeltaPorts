@@ -9,7 +9,6 @@ mk add MAKE_ARGS "CONF_CHECK=ignore"
 mk add CONFIGURE_ARGS "--with-stdc++lib=dynamic"
 
 patch apply diffs/Makefile.diff
-patch apply diffs/pkg-message.diff
 
 # --- bootstrap JDK ------------------------------------------------------
 # Upstream fetches a prebuilt *FreeBSD* JDK into ${WRKDIR}/boot-jdk
