@@ -1,0 +1,87 @@
+port java/openjdk25
+type port
+reason "DragonFly: boot from a DragonFly-native JDK on avalon, build args, and the BSD/DragonFly porting patch set"
+target @any
+
+# --- Makefile.DragonFly equivalent --------------------------------------
+# zrj: no idea why CONF_CHECK=ignore is needed.
+mk add MAKE_ARGS "CONF_CHECK=ignore"
+mk add CONFIGURE_ARGS "--with-stdc++lib=dynamic"
+
+# Upstream's compiler-selection and aarch64 blocks are FreeBSD-only: they
+# reach for USE_GCC/GCC_DEFAULT and clang warning flags that do not apply
+# here, and DragonFly has no aarch64. DPorts only ever builds on DragonFly,
+# so emptying both regions is equivalent to wrapping them in
+# .if ${OPSYS} == "FreeBSD". Emptying rather than disabling because the
+# first region has an .else branch that must go too.
+mk block set condition "${COMPILER_TYPE} == gcc" <<'MK'
+# DragonFly: upstream's gcc/clang flag selection is FreeBSD-only.
+MK
+mk block set condition "${ARCH} == aarch64" <<'MK'
+# DragonFly: no aarch64 here.
+MK
+
+# The JDK installs its JNI headers under include/<os>; nothing generates
+# an include/dragonfly, so clone it from include/freebsd before
+# COPYTREE_SHARE stages the image directory. Anchored on the do-install
+# MKDIR line so it lands before the copy, not appended after it.
+text line-insert-after file Makefile \
+     anchor "	@${MKDIR} ${STAGEDIR}${INSTALLDIR}" \
+     line   "	${CP} -rv ${JDK_IMAGEDIR}/include/freebsd ${JDK_IMAGEDIR}/include/dragonfly"
+
+# --- bootstrap JDK ------------------------------------------------------
+# Upstream fetches a prebuilt *FreeBSD* JDK into ${WRKDIR}/boot-jdk
+# (freebsd-ports D54683/D54731 replaced the old "build from the previous
+# version" chain with this). That binary is FreeBSD-branded ELF and dies
+# on DragonFly with `ELF binary type "9" not known` / Exec format error,
+# so point the :boot group at a DragonFly-native tarball instead and
+# leave BOOTSTRAPJDKDIR alone. Same shape as lang/rust.
+#
+# OpenJDK only accepts N-1 or N as a boot JDK (version-numbers.conf
+# DEFAULT_ACCEPTABLE_BOOT_VERSIONS), so 25 needs a native 24. freebsd-ports
+# deleted java/openjdk22, 23 and 24 once nothing depended on them, so the
+# chain was rebuilt here from the last commit before each removal:
+# 21 (native package) -> 22 -> 23 -> 24, each rung repackaged as a
+# boot-jdk/ tarball on avalon. The tarball is the DragonFly
+# openjdk24-24.0.2+12.2 package payload, re-rooted as boot-jdk/ to match
+# what upstream extracts.
+mk add MASTER_SITES "https://avalon.dragonflybsd.org/misc/distfiles/openjdk/:boot"
+mk set BOOTSTRAPJDKFILE "openjdk24-24.0.2+12.2.${JDK_ARCH}.tar.xz"
+
+# --- diffs/distinfo.diff equivalent -------------------------------------
+# Chained so each line anchors on the one inserted before it. The anchor is
+# upstream's own x86_64 bootstrap SIZE; if freebsd-ports bumps the bootstrap
+# this stops matching and compose fails loudly, which is the point - the
+# DragonFly tarball has to be revisited at the same time.
+text line-insert-after file distinfo \
+     anchor "SIZE (openjdk25-25.0.1+8.f.1.x86_64.tar.xz) = 191262784" \
+     line   "SHA256 (openjdk24-24.0.2+12.2.x86_64.tar.xz) = ffffaf82a094bafb352475fad981ddfe6a87a9324ea0e285f1afad6c3a436aa5"
+text line-insert-after file distinfo \
+     anchor "SHA256 (openjdk24-24.0.2+12.2.x86_64.tar.xz) = ffffaf82a094bafb352475fad981ddfe6a87a9324ea0e285f1afad6c3a436aa5" \
+     line   "SIZE (openjdk24-24.0.2+12.2.x86_64.tar.xz) = 188730088"
+
+# --- dragonfly/ patch set -----------------------------------------------
+file materialize dragonfly/patch-make_autoconf_flags-cflags.m4 -> dragonfly/patch-make_autoconf_flags-cflags.m4
+file materialize dragonfly/patch-make_autoconf_platform.m4 -> dragonfly/patch-make_autoconf_platform.m4
+file materialize dragonfly/patch-make_modules_jdk.sctp_Java.gmk -> dragonfly/patch-make_modules_jdk.sctp_Java.gmk
+file materialize dragonfly/patch-make_modules_jdk.sctp_Lib.gmk -> dragonfly/patch-make_modules_jdk.sctp_Lib.gmk
+file materialize dragonfly/patch-src_hotspot_os__cpu_bsd__x86_os__bsd__x86.cpp -> dragonfly/patch-src_hotspot_os__cpu_bsd__x86_os__bsd__x86.cpp
+file materialize dragonfly/patch-src_hotspot_os_bsd_os__bsd.cpp -> dragonfly/patch-src_hotspot_os_bsd_os__bsd.cpp
+file materialize dragonfly/patch-src_hotspot_os_bsd_os__perf__bsd.cpp -> dragonfly/patch-src_hotspot_os_bsd_os__perf__bsd.cpp
+file materialize dragonfly/patch-src_hotspot_share_utilities_macros.hpp -> dragonfly/patch-src_hotspot_share_utilities_macros.hpp
+file materialize dragonfly/patch-src_java.base_bsd_native_libjava_ProcessHandleImpl__bsd.c -> dragonfly/patch-src_java.base_bsd_native_libjava_ProcessHandleImpl__bsd.c
+file materialize dragonfly/patch-src_java.base_unix_native_libjava_childproc.c -> dragonfly/patch-src_java.base_unix_native_libjava_childproc.c
+file materialize dragonfly/patch-src_java.base_unix_native_libjava_java__props__md.c -> dragonfly/patch-src_java.base_unix_native_libjava_java__props__md.c
+file materialize dragonfly/patch-src_java.base_unix_native_libjli_java__md.c -> dragonfly/patch-src_java.base_unix_native_libjli_java__md.c
+file materialize dragonfly/patch-src_java.base_unix_native_libnet_net__util__md.c -> dragonfly/patch-src_java.base_unix_native_libnet_net__util__md.c
+file materialize dragonfly/patch-src_java.base_unix_native_libnet_NetworkInterface.c -> dragonfly/patch-src_java.base_unix_native_libnet_NetworkInterface.c
+file materialize dragonfly/patch-src_java.base_unix_native_libnio_ch_Net.c -> dragonfly/patch-src_java.base_unix_native_libnio_ch_Net.c
+file materialize dragonfly/patch-src_jdk.hotspot.agent_bsd_native_libsaproc_BsdDebuggerLocal.cpp -> dragonfly/patch-src_jdk.hotspot.agent_bsd_native_libsaproc_BsdDebuggerLocal.cpp
+file materialize dragonfly/patch-src_jdk.hotspot.agent_bsd_native_libsaproc_libproc__impl.c -> dragonfly/patch-src_jdk.hotspot.agent_bsd_native_libsaproc_libproc__impl.c
+file materialize dragonfly/patch-src_jdk.hotspot.agent_bsd_native_libsaproc_libproc__impl.h -> dragonfly/patch-src_jdk.hotspot.agent_bsd_native_libsaproc_libproc__impl.h
+file materialize dragonfly/patch-src_jdk.hotspot.agent_bsd_native_libsaproc_libproc.h -> dragonfly/patch-src_jdk.hotspot.agent_bsd_native_libsaproc_libproc.h
+file materialize dragonfly/patch-src_jdk.hotspot.agent_bsd_native_libsaproc_ps__core.c -> dragonfly/patch-src_jdk.hotspot.agent_bsd_native_libsaproc_ps__core.c
+file materialize dragonfly/patch-src_jdk.hotspot.agent_bsd_native_libsaproc_ps__proc.c -> dragonfly/patch-src_jdk.hotspot.agent_bsd_native_libsaproc_ps__proc.c
+file materialize dragonfly/patch-src_jdk.hotspot.agent_share_classes_sun_jvm_hotspot_utilities_PlatformInfo.java -> dragonfly/patch-src_jdk.hotspot.agent_share_classes_sun_jvm_hotspot_utilities_PlatformInfo.java
+file materialize dragonfly/patch-src_jdk.management_bsd_native_libmanagement__ext_UnixOperatingSystem.c -> dragonfly/patch-src_jdk.management_bsd_native_libmanagement__ext_UnixOperatingSystem.c
+file materialize dragonfly/patch-src_jdk.management_unix_native_libmanagement__ext_OperatingSystemImpl.c -> dragonfly/patch-src_jdk.management_unix_native_libmanagement__ext_OperatingSystemImpl.c
