@@ -1,0 +1,4 @@
+port graphics/mesa26-libs
+type dport
+target @any
+reason "Optional Mesa 26 libraries for nvgpu; keep the standard Mesa ports for existing DRM drivers"

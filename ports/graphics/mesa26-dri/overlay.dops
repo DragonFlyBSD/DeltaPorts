@@ -1,0 +1,34 @@
+port graphics/mesa26-dri
+type dport
+target @any
+reason "self-contained mesa 26.1.4 + NVK Vulkan for DragonFly nvkm. The @2026Q2 base is mesa 24.1.7, whose port skeleton differs across 24->26 (pkg-plist/options/patches), so ship the complete 26.1.4 port from newport/ (mesa26 delta composed against a mesa-26.1.3 base) rather than a version bump."
+
+file materialize newport/Makefile -> Makefile
+file materialize newport/Makefile.common -> Makefile.common
+file materialize newport/distinfo -> distinfo
+file materialize newport/pkg-descr -> pkg-descr
+file materialize newport/pkg-plist -> pkg-plist
+
+file materialize newport/files/01-freebsd.conf -> files/01-freebsd.conf
+file materialize newport/files/patch-include_renderdoc__app.h -> files/patch-include_renderdoc__app.h
+file materialize newport/files/patch-meson.build -> files/patch-meson.build
+file materialize newport/files/patch-src_gallium_drivers_llvmpipe_lp__rast__tri.c -> files/patch-src_gallium_drivers_llvmpipe_lp__rast__tri.c
+file materialize newport/files/patch-src_gallium_winsys_amdgpu_drm_amdgpu__bo.c -> files/patch-src_gallium_winsys_amdgpu_drm_amdgpu__bo.c
+file materialize newport/files/patch-src_intel_common_xe_intel__gem.c -> files/patch-src_intel_common_xe_intel__gem.c
+file materialize newport/files/patch-src_util_u__memory.h -> files/patch-src_util_u__memory.h
+file materialize newport/files/patch-src_vulkan_vram-report-limit-layer_vram__report__limit__layer.c -> files/patch-src_vulkan_vram-report-limit-layer_vram__report__limit__layer.c
+file materialize newport/files/patch-src_vulkan_wsi_wsi__common__wayland.c -> files/patch-src_vulkan_wsi_wsi__common__wayland.c
+file materialize newport/files/patch-userptr -> files/patch-userptr
+file materialize newport/files/pkg-message.in -> files/pkg-message.in
+
+file materialize newport/dragonfly/patch-meson.build -> dragonfly/patch-meson.build
+file materialize newport/dragonfly/patch-src_egl_main_eglglobals.c -> dragonfly/patch-src_egl_main_eglglobals.c
+file materialize newport/dragonfly/patch-src_gallium_drivers_zink_zink_batch.c -> dragonfly/patch-src_gallium_drivers_zink_zink_batch.c
+file materialize newport/dragonfly/patch-src_nouveau_vulkan_nvk_physical_device.c -> dragonfly/patch-src_nouveau_vulkan_nvk_physical_device.c
+file materialize newport/dragonfly/patch-src_nouveau_vulkan_nvk_wsi.c -> dragonfly/patch-src_nouveau_vulkan_nvk_wsi.c
+file materialize newport/dragonfly/patch-src_util_futex.c -> dragonfly/patch-src_util_futex.c
+file materialize newport/dragonfly/patch-src_util_futex.h -> dragonfly/patch-src_util_futex.h
+file materialize newport/dragonfly/patch-src_util_os_misc.c -> dragonfly/patch-src_util_os_misc.c
+file materialize newport/dragonfly/patch-src_util_u_thread.c -> dragonfly/patch-src_util_u_thread.c
+file materialize newport/dragonfly/patch-src_vulkan_wsi_wsi_common_drm.c -> dragonfly/patch-src_vulkan_wsi_wsi_common_drm.c
+file materialize newport/dragonfly/patch-src_vulkan_wsi_wsi_common_wayland.c -> dragonfly/patch-src_vulkan_wsi_wsi_common_wayland.c
