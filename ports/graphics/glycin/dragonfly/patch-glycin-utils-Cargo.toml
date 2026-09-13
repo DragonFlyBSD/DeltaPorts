@@ -1,0 +1,9 @@
+--- cargo-crates/glycin-utils-5.0.0-alpha/Cargo.toml.orig
++++ cargo-crates/glycin-utils-5.0.0-alpha/Cargo.toml
+@@ -110,6 +110,6 @@
+ version = "0.2.152"
+ 
+-[dependencies.libseccomp]
++[target.'cfg(target_os = "linux")'.dependencies.libseccomp]
+ version = "0.4.0"
+ optional = true

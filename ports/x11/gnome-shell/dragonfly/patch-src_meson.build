@@ -1,36 +1,10 @@
---- src/meson.build.intermediate	2020-11-14 16:49:52.000000000 +0000
+--- src/meson.build.orig
 +++ src/meson.build
-@@ -83,7 +83,7 @@ libshell_menu = library('gnome-shell-men
-   sources: libshell_menu_sources,
-   dependencies: [gio_dep, clutter_dep],
-   include_directories: conf_inc,
--  build_rpath: mutter_typelibdir,
-+  build_rpath: 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
-   install_rpath: mutter_typelibdir,
-   install_dir: pkglibdir,
-   install: true
-@@ -206,7 +206,7 @@ libshell = library('gnome-shell',
-   include_directories: [conf_inc, st_inc, include_directories('tray')],
-   c_args: gnome_shell_cflags,
-   link_with: [libtray],
--  build_rpath: mutter_typelibdir,
-+  build_rpath: 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
-   install_rpath: install_rpath,
-   install_dir: pkglibdir,
-   install: true
-@@ -247,7 +247,7 @@ executable('gnome-shell', 'main.c',
-   ],
-   dependencies: gnome_shell_deps + [libshell_dep, libst_dep, mutter_dep],
-   include_directories: [conf_inc, st_inc, include_directories('tray')],
--  build_rpath: mutter_typelibdir,
-+  build_rpath: 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
-   install_rpath: install_rpath,
-   install: true
- )
-@@ -274,5 +274,5 @@ executable('run-js-test', 'run-js-test.c
-   dependencies: [mutter_dep, gio_dep, gi_dep, gjs_dep],
-   include_directories: [conf_inc],
-   link_with: libshell,
--  build_rpath: mutter_typelibdir,
-+  build_rpath: 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
- )
+@@ -75,6 +75,7 @@
+   libsystemd_dep,
+   libpipewire_dep,
+   pango_dep,
++  epoll_shim_dep,
+ ]
+ 
+ if have_xwayland

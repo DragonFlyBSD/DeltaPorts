@@ -1,0 +1,46 @@
+#!/bin/sh
+
+case $2 in
+POST-INSTALL)
+	USER=gdm
+	GROUP=gdm
+	CHMOD=/bin/chmod
+	CHOWN=/usr/sbin/chown
+	MKDIR=/bin/mkdir
+
+	${MKDIR} -p /var/gdm
+	${MKDIR} -p /var/log/gdm
+	${CHMOD} 1770 /var/log/gdm
+	${CHOWN} ${USER}:${GROUP} /var/log/gdm
+	${CHOWN} -R root:${GROUP} /var/gdm
+	${CHMOD} 1770 /var/gdm
+	${MKDIR} -p /var/run/gdm/greeter
+	${CHOWN} root:${GROUP} /var/run/gdm
+	${CHMOD} -R 1777 /var/run/gdm
+	${MKDIR} -p /var/cache/gdm
+	${CHMOD} 1755 /var/cache/gdm
+	${CHOWN} root:${GROUP} /var/cache/gdm
+	${CHOWN} root:wheel ${PKG_PREFIX}/share/gdm
+	${CHMOD} 0755 ${PKG_PREFIX}/share/gdm
+
+	${MKDIR} -p ${PKG_PREFIX}/etc/gdm/Sessions
+	${MKDIR} -p ${PKG_PREFIX}/etc/dm/Sessions
+
+	# gdm 50 allocates the greeter session from a preallocated static
+	# user on systems without systemd-userdb (upstream's documented
+	# non-systemd path). Its throwaway home lives under
+	# /var/cache/gdm/<user> (-Ddyn-home-dir), created and wiped by the
+	# daemon per greeter session; the passwd home is never used.
+	# Both gdm users need the video group for the seatd socket.
+	if ! /usr/sbin/pw usershow gdm-greeter >/dev/null 2>&1; then
+		/usr/sbin/pw useradd gdm-greeter -g gdm 		    -c "GNOME Display Manager greeter" 		    -d /var/cache/gdm/gdm-greeter -s /usr/sbin/nologin
+	fi
+	/usr/sbin/pw groupmod video -m gdm >/dev/null 2>&1 || true
+	/usr/sbin/pw groupmod video -m gdm-greeter >/dev/null 2>&1 || true
+	# /dev/input/event* is root:input 0660; without it the greeter's mutter
+	# opens zero input devices (display alive, keyboard/mouse dead).
+	/usr/sbin/pw groupmod input -m gdm-greeter >/dev/null 2>&1 || true
+
+	exit 0
+	;;
+esac

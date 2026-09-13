@@ -1,0 +1,46 @@
+port x11/gnome-session
+type port
+target @any
+reason "gnome-session 42 -> 50.1 (GNOME 50), forked for DragonFly. GNOME 50 made systemd mandatory and deleted the non-systemd launch path; we set -Dsystemd=false, guard systemd usage behind ENABLE_SYSTEMD, and add a DragonFly init-worker (leader-dragonfly.c) that launches the session manager, the Wayland compositor and the gsd helpers directly. All base 47.0.1 patches are dropped."
+
+file materialize dragonfly/Makefile -> Makefile
+file materialize dragonfly/distinfo -> distinfo
+file materialize dragonfly/pkg-plist -> pkg-plist
+
+# The base FreeBSD port carries 47.0.1 ConsoleKit patches that do not apply to
+# the 50.1 codebase (main.c and gsm-autostart-app.c are gone, meson changed, etc).
+file remove files/patch-data_meson.build
+file remove files/patch-doc_man_gnome-session.1
+file remove files/patch-gnome-session_gsm-app.c
+file remove files/patch-gnome-session_gsm-autostart-app.c
+file remove files/patch-gnome-session_gsm-consolekit.c
+file remove files/patch-gnome-session_gsm-consolekit.h
+file remove files/patch-gnome-session_gsm-manager.c
+file remove files/patch-gnome-session_gsm-system.c
+file remove files/patch-gnome-session_gsm-systemd.c
+file remove files/patch-gnome-session_gsm-util.c
+file remove files/patch-gnome-session_gsm-util.h
+file remove files/patch-gnome-session_main.c
+file remove files/patch-gnome-session_meson.build
+file remove files/patch-meson.build
+file remove files/patch-meson__options.txt
+file remove files/patch-tools_meson.build
+
+# DragonFly non-systemd init-worker: leader-main execs this instead of the
+# systemd StartUnit worker. It launches gnome-session-service (manager),
+# gnome-shell (Wayland compositor) and the gnome-settings-daemon helpers.
+
+# systemd decoupling (ENABLE_SYSTEMD guards, -Dsystemd option) + launch model
+file materialize dragonfly/patch-gnome-session_gsm-manager.c -> files/patch-gnome-session_gsm-manager.c
+file materialize dragonfly/patch-gnome-session_gsm-system.c -> files/patch-gnome-session_gsm-system.c
+file materialize dragonfly/patch-gnome-session_leader-dragonfly.c -> files/patch-gnome-session_leader-dragonfly.c
+file materialize dragonfly/patch-gnome-session_meson.build -> files/patch-gnome-session_meson.build
+file materialize dragonfly/patch-meson.build -> files/patch-meson.build
+file materialize dragonfly/patch-meson__options.txt -> files/patch-meson__options.txt
+file materialize dragonfly/patch-tools_gnome-session-ctl.c -> files/patch-tools_gnome-session-ctl.c
+
+# GDM entry: run the session through the DragonFly wrapper shipped by x11/gdm
+# (environment + session services), and drop X-GDM-SessionRegisters -- the
+# forked gnome-session does not talk to GDM, gdm-wayland-session registers on
+# its behalf.
+file materialize dragonfly/patch-data_gnome.desktop.in.in -> files/patch-data_gnome.desktop.in.in

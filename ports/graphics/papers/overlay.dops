@@ -1,0 +1,10 @@
+port graphics/papers
+type port
+reason "Update Papers to GNOME 50.2"
+target @any
+
+mk set DISTVERSION "50.2"
+mk set PORTSCOUT "limit:^50\\."
+file materialize dragonfly/distinfo -> distinfo
+file materialize dragonfly/Makefile.crates -> Makefile.crates
+file materialize dragonfly/pkg-plist -> pkg-plist

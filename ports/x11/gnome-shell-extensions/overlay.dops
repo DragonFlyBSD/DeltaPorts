@@ -1,0 +1,13 @@
+port x11/gnome-shell-extensions
+type port
+reason "Update GNOME Shell Extensions to 50.2 and require the matching GNOME Shell 50 series"
+target @any
+
+mk unset PORTVERSION on-missing noop
+mk set DISTVERSION "50.2"
+mk set PORTSCOUT "limit:^50\\."
+mk eval RUN_DEPENDS "${RUN_DEPENDS:Ngnome-shell*} gnome-shell>=50.0:x11/gnome-shell"
+file materialize distinfo -> distinfo
+file materialize pkg-plist -> pkg-plist
+file materialize files/patch-data_meson.build -> files/patch-data_meson.build
+file materialize files/pkg-message.in -> files/pkg-message.in

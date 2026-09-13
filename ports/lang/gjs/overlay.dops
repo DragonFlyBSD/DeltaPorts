@@ -1,0 +1,7 @@
+port lang/gjs
+type port
+target @any
+reason "gjs 1.88.1 for gnome-shell 50 (mozjs-140)"
+
+file materialize dragonfly/Makefile -> Makefile
+file materialize dragonfly/distinfo -> distinfo

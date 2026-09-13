@@ -1,6 +1,18 @@
 port audio/espeak-ng
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "ronn is optional upstream; avoid an unrelated Ruby 3.3 build, and avoid re-stripping the upstream-stripped 0555 executable"
 target @any
 
 file materialize dragonfly/patch-configure.ac -> dragonfly/patch-configure.ac
+file materialize pkg-plist -> pkg-plist
+mk eval BUILD_DEPENDS "${BUILD_DEPENDS:Nronn*}"
+mk target set post-install <<'MK'
+	${MKDIR} ${STAGEDIR}${DOCSDIR}
+	cd ${WRKSRC}/docs && ${COPYTREE_SHARE} . ${STAGEDIR}${DOCSDIR}
+	@if [ -f ${STAGEDIR}${PREFIX}/share/man/man1/espeak-ng.1 ]; then \
+		${RLN} ${STAGEDIR}${PREFIX}/share/man/man1/espeak-ng.1 \
+			${STAGEDIR}${PREFIX}/share/man/man1/espeak.1; \
+	fi
+	${LN} -sf libespeak-ng.so ${STAGEDIR}${PREFIX}/lib/libespeak.so
+	${STRIP_CMD} ${STAGEDIR}${PREFIX}/lib/libespeak-ng.so*
+MK

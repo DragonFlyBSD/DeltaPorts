@@ -1,6 +1,8 @@
 port security/gnutls
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "auto-converted from Makefile.DragonFly; use DragonFly's flat ca_root_nss bundle"
 target @any
 
 mk add OPTIONS_EXCLUDE "KTLS"
+
+mk eval CONFIGURE_ARGS "${CONFIGURE_ARGS:N--with-default-trust-store-dir=*} --with-default-trust-store-file=/etc/ssl/cert.pem"

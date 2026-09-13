@@ -1,0 +1,6 @@
+port devel/py-pyproject-metadata
+type port
+target @any
+reason "Enable Python 3.12 flavor required by meson-python"
+
+file materialize dragonfly/Makefile -> Makefile

@@ -1,0 +1,11 @@
+port sysutils/localsearch
+type port
+target @any
+reason "localsearch 3.8.2 on DragonFly: enable the GStreamer media extractor for GNOME audio/image metadata; disable seccomp and landlock; sha256sum -> BSD /sbin/sha256 via BINARY_ALIAS; guard the libcue/disc-generic extractor on media handler != none; use kern.proc fallback when D-Bus cannot report a DragonFly service PID."
+
+file materialize dragonfly/Makefile -> Makefile
+file materialize dragonfly/pkg-plist -> pkg-plist
+file materialize dragonfly/patch-src_tracker-extract_meson.build -> files/patch-src_tracker-extract_meson.build
+file materialize dragonfly/patch-src_tracker_tracker-process.c -> files/patch-src_tracker_tracker-process.c
+file materialize dragonfly/patch-meson.build -> files/patch-meson.build
+file materialize dragonfly/patch-src_tracker-extract_tracker-extract-raw.c -> files/patch-src_tracker-extract_tracker-extract-raw.c

@@ -1,0 +1,6 @@
+port graphics/hdr_histogram
+type port
+target @any
+reason "hdr_endian.h lumped DragonFly with NetBSD/FreeBSD and remapped be16toh -> betoh16, but DragonFly sys/endian.h provides be16toh/be32toh/be64toh natively and has no betoh* spelling -> libhdr_histogram.so had undefined betoh16/32/64 that broke every downstream link (node24). Move DragonFly to the include-only OpenBSD branch"
+
+file materialize dragonfly/patch-src_hdr__endian.h -> files/patch-src_hdr__endian.h

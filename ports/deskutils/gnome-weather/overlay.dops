@@ -3,5 +3,12 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
+mk unset PORTVERSION on-missing noop
+mk set DISTVERSION "50.0"
+mk set PORTSCOUT "limit:^50\\."
+mk add BUILD_DEPENDS "tsc:lang/typescript"
 mk add USES "python:3.4+,build shebangfix"
 mk add SHEBANG_FILES "meson_post_install.py"
+file materialize distinfo -> distinfo
+file materialize pkg-plist -> pkg-plist
+file remove files/patch-src_app_locationRow.ui

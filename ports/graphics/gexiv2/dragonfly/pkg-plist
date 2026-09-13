@@ -1,0 +1,16 @@
+include/gexiv2-0.16/gexiv2/gexiv2-enums.h
+include/gexiv2-0.16/gexiv2/gexiv2-log.h
+include/gexiv2-0.16/gexiv2/gexiv2-metadata.h
+include/gexiv2-0.16/gexiv2/gexiv2-preview-image.h
+include/gexiv2-0.16/gexiv2/gexiv2-preview-properties.h
+include/gexiv2-0.16/gexiv2/gexiv2-startup.h
+include/gexiv2-0.16/gexiv2/gexiv2-version.h
+include/gexiv2-0.16/gexiv2/gexiv2.h
+lib/girepository-1.0/GExiv2-0.16.typelib
+lib/libgexiv2-0.16.so
+lib/libgexiv2-0.16.so.4
+lib/libgexiv2-0.16.so.4.16.1
+libdata/pkgconfig/gexiv2-0.16.pc
+share/gir-1.0/GExiv2-0.16.gir
+share/vala/vapi/gexiv2-0.16.deps
+share/vala/vapi/gexiv2-0.16.vapi

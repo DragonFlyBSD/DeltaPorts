@@ -1,0 +1,8 @@
+port graphics/gexiv2
+type port
+target @any
+reason "gexiv2 0.14.6 -> 0.16.1 (GNOME 50): nautilus 50 image-properties extension requires gexiv2-0.16; exiv2 0.28 already in place. New soversion 4, headers under gexiv2-0.16/, pc file gexiv2-0.16"
+
+file materialize dragonfly/Makefile -> Makefile
+file materialize dragonfly/distinfo -> distinfo
+file materialize dragonfly/pkg-plist -> pkg-plist

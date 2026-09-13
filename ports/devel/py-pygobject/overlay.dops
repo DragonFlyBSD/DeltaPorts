@@ -1,0 +1,6 @@
+port devel/py-pygobject
+type port
+target @any
+reason "Enable Python 3.12 flavor required by Showtime 50"
+
+file materialize dragonfly/Makefile -> Makefile

@@ -1,19 +1,37 @@
 port x11/gnome-shell
 type port
-reason "remove pulseaudio dep; remove gvc plist entries; dfly-patch removes gvc subproject"
 target @any
+reason "gnome-shell 50.2 for GNOME 50 on DragonFly (native Wayland via mutter path-beta); migrated compat -> dops on version bump"
 
-mk eval LIB_DEPENDS "${LIB_DEPENDS:Nlibpulse*}"
+file materialize dragonfly/Makefile -> Makefile
+file materialize dragonfly/distinfo -> distinfo
+file materialize dragonfly/pkg-plist -> pkg-plist
 
-mk target set dfly-patch <<'MK'
-	${RM} -r ${WRKSRC}/subprojects/gvc
-	${REINPLACE_CMD} -e "/libgvc_gir/d" ${WRKSRC}/src/meson.build
-MK
+# base FreeBSD patches that no longer apply to 50.2 (ConsoleKit session mgmt
+# is the wrong direction for our seatd/path-beta setup; the rest are cosmetic
+# or now upstream)
+file remove files/patch-js_misc_loginManager.js on-missing noop
 
-text line-remove file pkg-plist exact "lib/gnome-shell/Gvc-1.0.typelib" on-missing noop
-text line-remove file pkg-plist exact "lib/gnome-shell/libgvc.so" on-missing noop
-text line-remove file pkg-plist exact "%%DATADIR%%/Gvc-1.0.gir" on-missing noop
+# canLock() gates screenShield creation on haveSystemd() (/run/systemd/seats),
+# so on DragonFly (no logind) the greeter login dialog was never created and
+# the login screen showed only wallpaper. Also accept seatd (logind's seat
+# replacement here). haveSystemd() stays false -> Dummy LoginManager backend.
+file materialize dragonfly/patch-js_misc_loginManager.js -> files/patch-zz-dfly-js_misc_loginManager.js
+# Reauthentication on DragonFly has no logind Unlock signal.  Complete the
+# DummySessionProxy path so a successful PAM check deactivates screenShield.
+file materialize dragonfly/patch-js_gdm_util.js -> files/patch-zz-dfly-js_gdm_util.js
+file materialize dragonfly/patch-js_ui_screenShield.js -> files/patch-zz-dfly-js_ui_screenShield.js
+file remove files/patch-js_gdm_loginDialog.js on-missing noop
+file remove files/patch-js_ui_endSessionDialog.js on-missing noop
+file remove files/patch-js_ui_appDisplay.js on-missing noop
+file remove files/patch-js_ui_appFavorites.js on-missing noop
+file remove files/patch-data_gnome-shell-dbus-interfaces_gresource_xml on-missing noop
 
-file materialize dragonfly/patch-meson.build -> dragonfly/patch-meson.build
-file materialize dragonfly/patch-src_meson.build -> dragonfly/patch-src_meson.build
-file materialize dragonfly/patch-src_shell-global.c -> dragonfly/patch-src_shell-global.c
+# DragonFly build patches
+file materialize dragonfly/patch-meson.build -> files/patch-zz-dfly-meson.build
+file materialize dragonfly/patch-src_meson.build -> files/patch-zz-dfly-src_meson.build
+
+# quick-settings brightness race: without NetworkManager/Bluetooth the
+# async _setupIndicators() runs synchronously during panel construction,
+# before Main.brightnessManager exists -> null deref crashes the menu.
+file materialize dragonfly/patch-js_ui_panel.js -> files/patch-zz-dfly-js_ui_panel.js

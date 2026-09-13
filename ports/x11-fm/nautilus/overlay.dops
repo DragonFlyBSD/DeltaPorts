@@ -1,0 +1,9 @@
+port x11-fm/nautilus
+type port
+target @any
+reason "nautilus 47.6 -> 50.0 (GNOME 50). DragonFly: guard Linux-only autofs detection (sys/vfs.h/O_PATH/statfs.f_type); -Dextensions=false to avoid the gstreamer stack (drops media metadata in Properties); drop localsearch RUN_DEPENDS (full-text search deferred; it pulls gstreamer via the tracker miner)."
+
+file materialize dragonfly/Makefile -> Makefile
+file materialize dragonfly/distinfo -> distinfo
+file materialize dragonfly/pkg-plist -> pkg-plist
+file materialize dragonfly/patch-src_nautilus-file-utilities.c -> files/patch-src_nautilus-file-utilities.c

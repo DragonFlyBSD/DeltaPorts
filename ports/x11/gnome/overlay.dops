@@ -1,0 +1,6 @@
+port x11/gnome
+type port
+target @any
+reason "x11/gnome 47 -> 50 metaport; full and lite share the DragonFly GNOME 50 Wayland batch (gdm+session+shell+gsd+control-center+portal+PipeWire+WirePlumber+Orca+Nautilus+Sushi+console+zenity+fonts+backgrounds); full additionally includes each verified GNOME 50 application, beginning with Baobab, Calculator, Calendar, Characters, Maps, Font Viewer, Clocks, Epiphany, EOG, Weather, Text Editor, System Monitor, User Docs, Shell Extensions, Connections, and Showtime"
+
+file materialize dragonfly/Makefile -> Makefile

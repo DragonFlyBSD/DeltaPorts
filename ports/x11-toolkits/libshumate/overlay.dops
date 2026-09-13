@@ -1,0 +1,9 @@
+port x11-toolkits/libshumate
+type port
+reason "Update libshumate to 1.6.0 for GNOME Maps 50"
+target @any
+
+mk set DISTVERSION "1.6.0"
+mk set PORTSCOUT "limit:^1\\.6\\."
+file materialize distinfo -> distinfo
+file materialize pkg-plist -> pkg-plist

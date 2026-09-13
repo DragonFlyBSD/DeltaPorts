@@ -1,0 +1,42 @@
+--- src/meson.build.orig
++++ src/meson.build
+@@ -121,9 +121,16 @@
+   ]
+ endif
+ 
++if have_libseat
++  mutter_pkg_private_deps += [
++    libseat_dep,
++  ]
++endif
++
+ if have_native_backend
+   mutter_pkg_private_deps += [
+     libinput_dep,
++    epoll_shim_dep,
+     libgbm_dep,
+     xkbcommon_dep,
+   ]
+@@ -854,6 +861,13 @@
+   ]
+ endif
+ 
++if have_libseat
++  mutter_sources += [
++    'backends/meta-launcher-libseat.c',
++    'backends/meta-launcher.h',
++  ]
++endif
++
+ mutter_private_enum_sources = [
+   'core/window-private.h',
+ ]
+@@ -1155,7 +1169,7 @@
+   endif
+ endforeach
+ 
+-subdir('helpers')
++# The backlight helper (subdir helpers) is Linux-only; not built on DragonFly.
+ 
+ subdir('third_party')
+ 

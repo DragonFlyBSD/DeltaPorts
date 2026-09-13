@@ -1,6 +1,14 @@
 port deskutils/gnome-contacts
 type port
-reason "remove CHEESE from x86_64 default options"
+reason "Update GNOME Contacts to 50.0 for GNOME 50"
 target @any
 
 mk eval OPTIONS_DEFAULT_x86_64 "${OPTIONS_DEFAULT_x86_64:NCHEESE}"
+mk unset PORTVERSION on-missing noop
+mk set DISTVERSION "50.0"
+mk set DIST_SUBDIR "gnome"
+mk add BUILD_DEPENDS "blueprint-compiler>0:devel/blueprint-compiler"
+mk add LIB_DEPENDS "libglycin-2.so:graphics/glycin"
+mk set USE_GNOME "cairo evolutiondataserver3 gdkpixbuf gtk40 intlhack introspection:build libadwaita"
+file materialize dragonfly/distinfo -> distinfo
+file materialize dragonfly/pkg-plist -> pkg-plist

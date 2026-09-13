@@ -1,0 +1,10 @@
+port deskutils/gnome-font-viewer
+type port
+target @any
+reason "GNOME Font Viewer 50.0 matches the GNOME 50 desktop stack"
+
+mk unset PORTVERSION on-missing noop
+mk set DISTVERSION "50.0"
+mk set PORTSCOUT "limit:^50\\."
+file materialize distinfo -> distinfo
+file materialize pkg-plist -> pkg-plist

@@ -6,3 +6,10 @@ target @any
 mk add LIB_DEPENDS "libxml2.so:textproc/libxml2"
 mk add USES "python:3.9+"
 mk set BINARY_ALIAS "python3=${PYTHON_CMD}"
+
+# DragonFly uid resolution: polkit's Linux path parses /proc/<pid>/status
+# looking for a "Uid:" line that DragonFly procfs does not have, so every
+# CheckAuthorization failed. Ride the FreeBSD sysctl kern.proc.pid path
+# (identical call, DragonFly kinfo_proc field names: kp_uid/kp_start).
+# HAVE_DRAGONFLY comes free from meson's HAVE_<host_system> define.
+file materialize dragonfly/patch-src_polkit_polkitunixprocess.c -> files/patch-src_polkit_polkitunixprocess.c

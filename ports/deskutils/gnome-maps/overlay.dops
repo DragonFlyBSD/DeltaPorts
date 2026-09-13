@@ -1,6 +1,11 @@
 port deskutils/gnome-maps
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "Update GNOME Maps to 50.2 with libshumate 1.6"
 target @any
 
 mk add USES "python:3.4+,build shebangfix"
+mk set DISTVERSION "50.2"
+mk set PORTSCOUT "limit:^50\\."
+mk eval BUILD_DEPENDS "${BUILD_DEPENDS} blueprint-compiler>=0.19:devel/blueprint-compiler"
+file materialize distinfo -> distinfo
+file materialize pkg-plist -> pkg-plist

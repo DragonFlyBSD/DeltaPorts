@@ -1,26 +1,45 @@
 port multimedia/pipewire
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
+reason "pipewire on DragonFly: carried compat-era runtime patches (SPA alsa pcm, logger/loop, module-rt, pipewire core mem/conf) now applied from files/; freebsd->dragonfly REINPLACE folded into post-patch; ALSA backend enabled by default so audio reaches OSS /dev/dsp via alsa-lib+alsa-plugins"
 
 mk add LDFLAGS "-L${LOCALBASE}/lib -ltinfo -lncurses"
 mk add BUILD_DEPENDS "libstdthreads>0:misc/libstdthreads"
-mk add MESON_ARGS "-Dexamples=disabled"
-mk target set dfly-patch <<'MK1'
+mk add OPTIONS_DEFAULT ALSA
+
+# WirePlumber's OSS monitor now creates one node per kernel PCM device.  Do
+# not retain the legacy pcm.default sink: its generic ALSA map hides those
+# nodes and reports eight AUX channels to PulseAudio clients.
+mk eval ALSA_SUB_FILES "${ALSA_SUB_FILES:N10-alsa-default.conf}"
+mk target set post-install-ALSA-on <<'MK'
+	@${DO_NADA}
+MK
+
+# No V4L2 on DragonFly: drop the Linux-header build dep (its compat patches
+# do not apply) and disable the v4l2 SPA plugin.
+mk eval BUILD_DEPENDS "${BUILD_DEPENDS:Nv4l_compat*}"
+text replace-once file Makefile from "-D v4l2=enabled" to "-D v4l2=disabled"
+mk add MESON_ARGS "-D examples=disabled"
+text replace-once file pkg-plist from "lib/spa-0.2/v4l2/libspa-v4l2.so" to "@comment lib/spa-0.2/v4l2/libspa-v4l2.so"
+text replace-once file pkg-plist from "%%ALSA%%%%DATADIR%%/pipewire.conf.d/10-alsa-default.conf" to ""
+
+mk target append post-patch <<'MK'
 	${REINPLACE_CMD} -e 's@freebsd@dragonfly@g' \
 		${WRKSRC}/src/pipewire/meson.build \
 		${WRKSRC}/meson.build
-MK1
-file materialize dragonfly/patch-pipewire-alsa_alsa-plugins_pcm__pipewire.c -> dragonfly/patch-pipewire-alsa_alsa-plugins_pcm__pipewire.c
-file materialize dragonfly/patch-spa_plugins_alsa_alsa-pcm.c -> dragonfly/patch-spa_plugins_alsa_alsa-pcm.c
-file materialize dragonfly/patch-spa_plugins_support_logger.c -> dragonfly/patch-spa_plugins_support_logger.c
-file materialize dragonfly/patch-spa_plugins_support_loop.c -> dragonfly/patch-spa_plugins_support_loop.c
-file materialize dragonfly/patch-src_gst_gstpipewiresrc.c -> dragonfly/patch-src_gst_gstpipewiresrc.c
-file materialize dragonfly/patch-src_modules_module-protocol-pulse_message-handler.c -> dragonfly/patch-src_modules_module-protocol-pulse_message-handler.c
-file materialize dragonfly/patch-src_modules_module-rt.c -> dragonfly/patch-src_modules_module-rt.c
-file materialize dragonfly/patch-src_modules_network-utils.h -> dragonfly/patch-src_modules_network-utils.h
-file materialize dragonfly/patch-src_pipewire_conf.c -> dragonfly/patch-src_pipewire_conf.c
-file materialize dragonfly/patch-src_pipewire_impl-node.c -> dragonfly/patch-src_pipewire_impl-node.c
-file materialize dragonfly/patch-src_pipewire_mem.c -> dragonfly/patch-src_pipewire_mem.c
-file materialize dragonfly/patch-src_pipewire_pipewire.c -> dragonfly/patch-src_pipewire_pipewire.c
-file materialize dragonfly/patch-src_pipewire_private.h -> dragonfly/patch-src_pipewire_private.h
+MK
+
+file materialize dragonfly/patch-pipewire-alsa_alsa-plugins_pcm__pipewire.c -> files/patch-pipewire-alsa_alsa-plugins_pcm__pipewire.c
+file materialize dragonfly/patch-spa_plugins_alsa_alsa-pcm.c -> files/patch-spa_plugins_alsa_alsa-pcm.c
+file materialize dragonfly/patch-spa_plugins_support_logger.c -> files/patch-spa_plugins_support_logger.c
+file materialize dragonfly/patch-spa_plugins_support_loop.c -> files/patch-spa_plugins_support_loop.c
+file materialize dragonfly/patch-src_modules_module-protocol-pulse_message-handler.c -> files/patch-src_modules_module-protocol-pulse_message-handler.c
+file materialize dragonfly/patch-src_modules_module-rt.c -> files/patch-src_modules_module-rt.c
+file materialize dragonfly/patch-src_modules_network-utils.h -> files/patch-src_modules_network-utils.h
+file materialize dragonfly/patch-src_pipewire_conf.c -> files/patch-src_pipewire_conf.c
+file materialize dragonfly/patch-src_pipewire_impl-node.c -> files/patch-src_pipewire_impl-node.c
+file materialize dragonfly/patch-src_pipewire_mem.c -> files/patch-src_pipewire_mem.c
+file materialize dragonfly/patch-src_pipewire_pipewire.c -> files/patch-src_pipewire_pipewire.c
+file materialize dragonfly/patch-src_pipewire_private.h -> files/patch-src_pipewire_private.h
+file materialize dragonfly/patch-src_gst_gstpipewiresrc.c -> files/patch-src_gst_gstpipewiresrc.c
+file materialize dragonfly/patch-spa_plugins_support_system.c -> files/patch-spa_plugins_support_system.c

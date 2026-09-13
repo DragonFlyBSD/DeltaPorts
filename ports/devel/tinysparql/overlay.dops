@@ -1,0 +1,8 @@
+port devel/tinysparql
+type port
+target @any
+reason "DragonFly: drop the unconditional a2x (asciidoc) BUILD_DEPENDS and unset MANPAGES/DOCS options, so tinysparql (search backend for nautilus 50) builds without the asciidoc/gtk-doc man+doc toolchain."
+
+file materialize dragonfly/Makefile -> Makefile
+file materialize dragonfly/patch-src_libtinysparql_core_tracker-data-manager.c -> files/patch-src_libtinysparql_core_tracker-data-manager.c
+file materialize dragonfly/patch-src_libtinysparql_core_tracker-db-interface-sqlite.c -> files/patch-src_libtinysparql_core_tracker-db-interface-sqlite.c

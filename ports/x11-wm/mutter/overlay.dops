@@ -1,0 +1,34 @@
+port x11-wm/mutter
+type port
+target @any
+reason "mutter 50.2 for GNOME 50 on DragonFly (FreeBSD-parity increment: native_backend=false; libseat path-beta + meta-xwayland/clutter rebases follow)"
+
+file materialize dragonfly/Makefile -> Makefile
+file materialize dragonfly/distinfo -> distinfo
+file remove files/patch-da3ae7f0.patch
+file remove files/patch-clutter_clutter_clutter-frame-clock.c
+file remove files/patch-src_wayland_meta-xwayland.c
+file materialize dragonfly/patch-src_core_meta-context-main.c -> files/patch-src_core_meta-context-main.c
+file materialize dragonfly/patch-zz-libseat-meson.build -> files/patch-zz-libseat-meson.build
+file materialize dragonfly/patch-zz-libseat-src_meson.build -> files/patch-zz-libseat-src_meson.build
+file materialize dragonfly/patch-zz-libseat-src_backends_meta-launcher-libseat.c -> files/patch-zz-libseat-src_backends_meta-launcher-libseat.c
+file materialize dragonfly/patch-zz-libseat-src_backends_meta-launcher.h -> files/patch-zz-libseat-src_backends_meta-launcher.h
+file materialize dragonfly/patch-zz-libseat-src_backends_meta-backend.c -> files/patch-zz-libseat-src_backends_meta-backend.c
+file materialize dragonfly/patch-zz-libseat-src_backends_meta-backend-private.h -> files/patch-zz-libseat-src_backends_meta-backend-private.h
+file materialize dragonfly/patch-zz-libseat-src_backends_native_meta-device-pool.c -> files/patch-zz-libseat-src_backends_native_meta-device-pool.c
+file materialize dragonfly/patch-zz-libseat-src_backends_meta-backlight-sysfs.c -> files/patch-zz-libseat-src_backends_meta-backlight-sysfs.c
+file materialize dragonfly/patch-zz-libseat-src_backends_native_meta-seat-impl.c -> files/patch-zz-libseat-src_backends_native_meta-seat-impl.c
+file materialize dragonfly/patch-zz-libseat-src_third__party_renderdoc_renderdoc__app.h -> files/patch-zz-libseat-src_third__party_renderdoc_renderdoc__app.h
+file materialize dragonfly/patch-zz-libseat-src_core_meta-sealed-fd.c -> files/patch-zz-libseat-src_core_meta-sealed-fd.c
+file materialize dragonfly/patch-zz-libseat-src_core_window-private.h -> files/patch-zz-libseat-src_core_window-private.h
+file materialize dragonfly/patch-zz-libseat-config.h.meson -> files/patch-zz-libseat-config.h.meson
+file materialize dragonfly/patch-zz-libseat-src_backends_native_meta-kms-impl-device.c -> files/patch-zz-libseat-src_backends_native_meta-kms-impl-device.c
+file materialize dragonfly/patch-zz-libseat-src_backends_native_meta-thread.c -> files/patch-zz-libseat-src_backends_native_meta-thread.c
+file materialize dragonfly/pkg-plist -> pkg-plist
+file materialize dragonfly/patch-zz-libseat-src_backends_meta-udev.c -> files/patch-zz-libseat-src_backends_meta-udev.c
+file materialize dragonfly/patch-zz-libseat-src_wayland_meta-xwayland.c -> files/patch-zz-libseat-src_wayland_meta-xwayland.c
+file materialize dragonfly/patch-src_wayland_meta-wayland.c -> files/patch-src_wayland_meta-wayland.c
+file materialize dragonfly/patch-zz-libseat-src_backends_meta-stage-impl.c -> files/patch-zz-libseat-src_backends_meta-stage-impl.c
+file materialize dragonfly/patch-zz-libseat-src_wayland_meta-wayland-dma-buf.c -> files/patch-zz-libseat-src_wayland_meta-wayland-dma-buf.c
+file materialize dragonfly/patch-zz-libseat-src_backends_meta-screen-cast-stream-src.c -> files/patch-zz-libseat-src_backends_meta-screen-cast-stream-src.c
+file materialize dragonfly/patch-zz-libseat-src_third_party_meson.build -> files/patch-zz-libseat-src_third_party_meson.build

@@ -1,0 +1,6 @@
+port devel/googletest
+type port
+target @any
+reason "Rebuild with ports GCC 13 so this C++ library links libstdc++.so.6 instead of base gcc8 libstdc++.so.9. www/node24 is built with gcc13 (needs C++20); mixing it with .so.9 system deps loads two libstdc++ runtimes in one process and corrupts V8 Zone allocator (mksnapshot SIGSEGV). Unify all of node24 C++ deps on .so.6."
+
+mk set USE_GCC_VERSION "13"

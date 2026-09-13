@@ -3,11 +3,19 @@ type port
 reason "DragonFly-specific firefox build: PULSEAUDIO/LTO filter, MOZ_OPTIONS, CXXFLAGS, BINARY_ALIAS, dfly-patch"
 target @any
 
-mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NPULSEAUDIO}"
+# Inherit the Firefox release and its patches from the quarterly ports tree.
+mk add USES "llvm:min=17,noexport"
+
+mk add OPTIONS_DEFAULT "PULSEAUDIO"
 mk eval OPTIONS_DEFAULT_x86_64 "${OPTIONS_DEFAULT_x86_64:NLTO}"
 
 mk add MOZ_OPTIONS --disable-webrtc
+mk add MOZ_OPTIONS --enable-forkserver
 mk add MOZ_OPTIONS --without-wasm-sandboxed-libraries
+# Audio-session ordering must not dereference unavailable CLOCK_BOOTTIME uptime.
+file materialize dragonfly/patch-dom_media_mediacontrol_AudioSessionManager.cpp -> dragonfly/patch-dom_media_mediacontrol_AudioSessionManager.cpp
+# Keep about:support usable when an asynchronous diagnostic provider fails.
+file materialize dragonfly/patch-toolkit_modules_Troubleshoot.sys.mjs -> files/patch-toolkit_modules_Troubleshoot.sys.mjs
 # --without-wasm-sandboxed-libraries makes --with-wasi-sysroot invalid
 # (configure dies with "not available in this configuration"), so strip the
 # upstream wasi-sysroot token.
@@ -146,8 +154,6 @@ mk target set dfly-patch <<'MK'
 		${WRKSRC}/media/libcubeb/src/cubeb_alsa.c
 	${REINPLACE_CMD} -e 's@_POSIX_SOURCE@&___@g' \
 		${WRKSRC}/media/libcubeb/src/cubeb_jack.cpp
-	${REINPLACE_CMD} -e 's@gtk+-wayland@&z@g' \
-		${WRKSRC}/toolkit/moz.configure
 MK
 
 file materialize dragonfly/patch-dom_webserial_moz.build -> dragonfly/patch-dom_webserial_moz.build
@@ -168,4 +174,12 @@ file materialize dragonfly/patch-third__party_sqlite3_src_moz.build -> dragonfly
 file materialize dragonfly/patch-tools_profiler_lul_LulElfInt.h -> dragonfly/patch-tools_profiler_lul_LulElfInt.h
 file materialize dragonfly/patch-tools_profiler_moz.build -> dragonfly/patch-tools_profiler_moz.build
 file materialize dragonfly/patch-toolkit_library_gen__buildid.py -> dragonfly/patch-toolkit_library_gen__buildid.py
-file materialize dragonfly/patch-toolkit_xre_nsAppRunner.cpp -> dragonfly/patch-toolkit_xre_nsAppRunner.cpp
+file materialize dragonfly/patch-toolkit_moz.configure -> dragonfly/patch-toolkit_moz.configure
+file materialize dragonfly/dragonfly.js -> files/dragonfly.js
+file materialize dragonfly/firefox.sh -> files/firefox.sh
+mk target append post-install <<'MK'
+	${INSTALL_DATA} ${FILESDIR}/dragonfly.js \
+		${STAGEDIR}${PREFIX}/lib/firefox/defaults/pref/dragonfly.js
+	${RM} ${STAGEDIR}${PREFIX}/bin/firefox
+	${INSTALL_SCRIPT} ${FILESDIR}/firefox.sh ${STAGEDIR}${PREFIX}/bin/firefox
+MK

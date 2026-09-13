@@ -47,3 +47,5 @@ file materialize dragonfly/df-latest.conf.sample -> dragonfly/df-latest.conf.sam
 file materialize dragonfly/patch-auto.def.c -> dragonfly/patch-auto.def.c
 file materialize dragonfly/patch-libpkg_lua__scripts.c -> dragonfly/patch-libpkg_lua__scripts.c
 file materialize dragonfly/patch-libpkg_scripts.c -> dragonfly/patch-libpkg_scripts.c
+file materialize dragonfly/patch-libpkg_pkg__elf.c -> dragonfly/patch-libpkg_pkg__elf.c
+file materialize dragonfly/patch-libpkg_pkgbase.c -> dragonfly/patch-libpkg_pkgbase.c

@@ -1,8 +1,13 @@
 port x11-toolkits/gtk40
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
+reason "gtk4 4.22.4 (GNOME 50 companion; libadwaita 1.9 needs gtk4>=4.21.1). WAYLAND+X11 backends."
 
-mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NWAYLAND}"
+file materialize dragonfly/Makefile -> Makefile
+file materialize dragonfly/distinfo -> distinfo
+file materialize dragonfly/pkg-plist -> pkg-plist
 file materialize dragonfly/patch-gdk_wayland_gdkseat-wayland.c -> dragonfly/patch-gdk_wayland_gdkseat-wayland.c
 file materialize dragonfly/patch-meson.build -> dragonfly/patch-meson.build
+file materialize dragonfly/patch-gtk_gtkfilechoosernativeportal.c -> dragonfly/patch-gtk_gtkfilechoosernativeportal.c
+file materialize dragonfly/patch-gtk_gtkfilechooserwidget.c -> dragonfly/patch-gtk_gtkfilechooserwidget.c
+file materialize dragonfly/patch-gtk_gtkplacesview.c -> dragonfly/patch-gtk_gtkplacesview.c

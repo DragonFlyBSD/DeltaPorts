@@ -1,0 +1,10 @@
+port misc/gnome-user-docs
+type port
+reason "Update GNOME User Docs to the GNOME 50 release"
+target @any
+
+mk unset PORTVERSION on-missing noop
+mk set DISTVERSION "50.2"
+mk set PORTSCOUT "limit:^50\\."
+file materialize distinfo -> distinfo
+file materialize pkg-plist -> pkg-plist

@@ -1,0 +1,8 @@
+port deskutils/baobab
+type port
+target @any
+reason "Update Baobab to 50.0 for the GNOME 50 core applications"
+
+file materialize dragonfly/Makefile -> Makefile
+file materialize dragonfly/distinfo -> distinfo
+file materialize dragonfly/pkg-plist -> pkg-plist

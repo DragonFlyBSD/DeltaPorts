@@ -1,26 +1,21 @@
 port sysutils/gnome-control-center
 type port
-reason "MIT gssapi, filter OPTIONS/LIB_DEPENDS (no pulse), dfly-patch removes sound panel, remove sound plist entries"
 target @any
+reason "gnome-control-center 47.7 -> 50.3 (GNOME 50); migrated compat -> dops; sound/gvc restored via libpulse; needs system goa 3.54 + blueprint-compiler"
 
-mk add USES "gssapi:mit"
-mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NCHEESE}"
-mk eval LIB_DEPENDS "${LIB_DEPENDS:Nlibpulse*}"
+file materialize dragonfly/Makefile -> Makefile
+file materialize dragonfly/distinfo -> distinfo
+file materialize dragonfly/pkg-plist -> pkg-plist
 
-mk target set dfly-patch <<'MK'
-	${RM} -r ${WRKSRC}/panels/sound
-	${RM} -r ${WRKSRC}/subprojects/gvc
-	${REINPLACE_CMD} -e "/pulse/d" ${WRKSRC}/meson.build
-	${REINPLACE_CMD} -e "/'sound'/d" ${WRKSRC}/panels/meson.build
-	${REINPLACE_CMD} -e "/sound/d" ${WRKSRC}/shell/cc-panel-list.c
-	${REINPLACE_CMD} -e "/sound/d" ${WRKSRC}/shell/cc-panel-loader.c
-MK
+# base FreeBSD patches obsoleted by 50.3:
+#  - color login1->ConsoleKit: now drift-proof REINPLACE in post-patch
+#  - panels/meson.build sharing/wwan move: REINPLACE (new 'wellbeing' panel broke the context)
+#  - cc-about-page.ui hostname hide: 50.3 auto-hides when hostnamed absent (cc-hostname-entry.c)
+file remove files/patch-panels_color_cc-color-calibrate.c on-missing noop
+file remove files/patch-panels_meson.build on-missing noop
+file remove files/patch-panels_system_about_cc-about-page.ui on-missing noop
 
-text line-remove file pkg-plist exact "share/applications/gnome-sound-panel.desktop" on-missing noop
-text line-remove file pkg-plist exact "share/icons/hicolor/scalable/apps/org.gnome.Settings-sound-symbolic.svg" on-missing noop
-text line-remove file pkg-plist exact "share/sounds/gnome/default/alerts/click.ogg" on-missing noop
-text line-remove file pkg-plist exact "share/sounds/gnome/default/alerts/hum.ogg" on-missing noop
-text line-remove file pkg-plist exact "share/sounds/gnome/default/alerts/string.ogg" on-missing noop
-text line-remove file pkg-plist exact "share/sounds/gnome/default/alerts/swing.ogg" on-missing noop
-
-file materialize dragonfly/patch-meson.build -> dragonfly/patch-meson.build
+# system-details (About) FreeBSD OS detection: drop the get_os_build_id hunk
+# (that function was refactored away in 50.3); keep the other 5 __FreeBSD__ hunks
+file remove files/patch-panels_system_about_cc-system-details-window.c on-missing noop
+file materialize dragonfly/patch-panels_system_about_cc-system-details-window.c -> files/patch-panels_system_about_cc-system-details-window.c

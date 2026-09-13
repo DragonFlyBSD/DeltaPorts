@@ -1,0 +1,4 @@
+PORT
+Last attempt: 50.0
+Last success: 50.0
+Last validation: 2026-07-21 clean package/check-plist and installation passed after adding the GNOME 50 bg, el, it, and kk help files plus kw, ug, and uz translations to the DragonFly pkg-plist.

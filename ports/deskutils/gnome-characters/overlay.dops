@@ -1,0 +1,8 @@
+port deskutils/gnome-characters
+type port
+target @any
+reason "Update GNOME Characters to 50.0 for the GNOME 50 full desktop"
+
+file materialize dragonfly/Makefile -> Makefile
+file materialize dragonfly/distinfo -> distinfo
+file materialize dragonfly/pkg-plist -> pkg-plist

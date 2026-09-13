@@ -1,0 +1,6 @@
+port x11-toolkits/pangomm24
+type port
+target @any
+reason "Rebuild GNOME 50 C++ bindings with GCC 13"
+
+mk set USE_GCC_VERSION "13"

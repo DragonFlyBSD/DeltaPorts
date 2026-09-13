@@ -1,0 +1,4 @@
+port devel/glibmm26
+type dport
+target @any
+reason "GNOME 50 requires glibmm 2.88.1 with DragonFly GCC 13 and C++17 settings"

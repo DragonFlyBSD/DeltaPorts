@@ -1,0 +1,11 @@
+port math/gnome-calculator
+type port
+target @any
+reason "GNOME Calculator 50.0 matches the GNOME 50 desktop stack"
+
+mk unset PORTVERSION on-missing noop
+mk set DISTVERSION "50.0"
+mk set PORTSCOUT "limit:^50\\."
+mk add BUILD_DEPENDS "blueprint-compiler:devel/blueprint-compiler"
+file materialize distinfo -> distinfo
+file materialize pkg-plist -> pkg-plist

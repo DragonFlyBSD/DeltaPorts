@@ -30,3 +30,8 @@ text line-insert-after file pkg-plist anchor "%%PYTHON_LIBDIR%%/__pycache__/_sys
 # spwd has no lib-dynload plist entry in this port, so nothing to do there.
 text line-remove file pkg-plist exact "%%PYTHON_LIBDIR%%/lib-dynload/_crypt%%PYTHON_TAG%%%%ABI%%.so" on-missing noop
 text line-remove file pkg-plist exact "%%PYTHON_LIBDIR%%/lib-dynload/_curses_panel%%PYTHON_TAG%%%%ABI%%.so" on-missing noop
+
+file materialize dragonfly/Makefile -> Makefile
+file materialize dragonfly/pkg-plist -> pkg-plist
+file materialize dragonfly/files/patch-configure.ac -> files/patch-configure.ac
+file materialize dragonfly/files/patch-configure -> files/patch-configure

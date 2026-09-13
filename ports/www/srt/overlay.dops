@@ -1,6 +1,9 @@
 port www/srt
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "Update SRT to 1.5.6 for the FFmpeg closure and fix CVE-2026-55868 and CVE-2026-55869"
 target @any
 
+mk set DISTVERSION "1.5.6"
+file materialize dragonfly/distinfo -> distinfo
+file materialize dragonfly/pkg-plist -> pkg-plist
 file materialize dragonfly/patch-CMakeLists.txt -> dragonfly/patch-CMakeLists.txt

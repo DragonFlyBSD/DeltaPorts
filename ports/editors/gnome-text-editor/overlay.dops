@@ -1,0 +1,10 @@
+port editors/gnome-text-editor
+type port
+reason "Update GNOME Text Editor to the GNOME 50 release"
+target @any
+
+mk unset PORTVERSION on-missing noop
+mk set DISTVERSION "50.0"
+mk set PORTSCOUT "limit:^50\\."
+file materialize distinfo -> distinfo
+file materialize pkg-plist -> pkg-plist

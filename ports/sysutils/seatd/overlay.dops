@@ -9,3 +9,12 @@ file materialize dragonfly/patch-common_evdev.c -> dragonfly/patch-common_evdev.
 file materialize dragonfly/patch-common_terminal.c -> dragonfly/patch-common_terminal.c
 file materialize dragonfly/patch-libseat_backend_consolekit2.c -> dragonfly/patch-libseat_backend_consolekit2.c
 file materialize dragonfly/patch-seatd_client.c -> dragonfly/patch-seatd_client.c
+
+# VT-less seat handoff: hand the seat to a newly joining client (disable the
+# current active one). Needed for gdm greeter -> user session on DragonFly,
+# which has no VT/logind to coordinate the switch.
+file materialize dragonfly/patch-seatd_seat.c -> dragonfly/patch-seatd_seat.c
+
+# Ship the rc script as VT-less (SEATD_VTBOUND=0) so the greeter->session seat
+# handoff works together with the seat.c handoff patch above.
+file materialize dragonfly/seatd.in -> files/seatd.in

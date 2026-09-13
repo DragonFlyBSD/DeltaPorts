@@ -1,6 +1,13 @@
 port deskutils/xdg-desktop-portal
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "port xdg-desktop-portal 1.20.3 to DragonFly: shm-backed sealed fds (no memfd_create/F_SEAL, copy-on-receipt), O_PATH compat; pidfd degrades to pid at runtime"
 target @any
 
-mk set IGNORE "FreeBSD specific"
+file materialize dragonfly/patch-src_xdp-sealed-fd.c -> files/patch-src_xdp-sealed-fd.c
+file materialize dragonfly/patch-src_xdp-app-info.c -> files/patch-src_xdp-app-info.c
+file materialize dragonfly/patch-src_xdp-documents.c -> files/patch-src_xdp-documents.c
+file materialize dragonfly/patch-meson.build -> files/patch-meson.build
+file materialize dragonfly/patch-src_meson.build -> files/patch-src_meson.build
+file materialize dragonfly/patch-document-portal_document-portal.c -> files/patch-document-portal_document-portal.c
+file materialize dragonfly/patch-document-portal_document-portal-fuse.c -> files/patch-document-portal_document-portal-fuse.c
+file materialize dragonfly/patch-document-portal_file-transfer.c -> files/patch-document-portal_file-transfer.c

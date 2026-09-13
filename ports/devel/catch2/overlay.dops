@@ -1,0 +1,7 @@
+port devel/catch2
+type port
+target @any
+reason "Rebuild System Monitor test framework with GCC 13"
+
+mk set USE_GCC_VERSION "13"
+file materialize dragonfly/patch-src_catch2_internal_catch__console__colour.cpp -> files/patch-src_catch2_internal_catch__console__colour.cpp

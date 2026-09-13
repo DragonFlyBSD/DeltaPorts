@@ -1,0 +1,9 @@
+port mail/bogofilter
+type port
+reason "remove unsupported malloc attribute on DragonFly"
+target @any
+
+file materialize dragonfly/patch-src_xmalloc.h -> files/patch-src_xmalloc.h
+file materialize dragonfly/patch-src_xstrdup.h -> files/patch-src_xstrdup.h
+file materialize dragonfly/patch-src_mxcat.h -> files/patch-src_mxcat.h
+file materialize dragonfly/Makefile -> Makefile

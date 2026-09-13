@@ -3,4 +3,5 @@ type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
+file materialize dragonfly/Makefile -> Makefile
 file materialize dragonfly/patch-libportal_notification.c -> dragonfly/patch-libportal_notification.c

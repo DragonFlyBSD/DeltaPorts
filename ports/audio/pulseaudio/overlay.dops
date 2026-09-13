@@ -1,6 +1,21 @@
 port audio/pulseaudio
 type port
-reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set BROKEN "spins one cpu 100% and doesn't make any sound"
+mk add MESON_ARGS "-Ddaemon=false"
+mk add LDFLAGS "-L${LOCALBASE}/lib -lintl"
+file materialize dragonfly/pkg-plist -> pkg-plist
+reason "the pulseaudio daemon spins a cpu and makes no sound on DragonFly (the old compat overlay marked the whole port BROKEN for it), but the port is kept buildable for libpulse/libpulse-mainloop-glib: GNOME volume control (gvc in gnome-settings-daemon/gnome-shell) is a pulse-API client, served at runtime by pipewire-pulse, not the pulseaudio daemon"
+
+mk target append post-patch <<'MK'
+	${REINPLACE_CMD} -e 's,defined(__FreeBSD__) || defined(__FreeBSD_kernel__),defined(__FreeBSD__) || defined(__DragonFly__) || defined(__FreeBSD_kernel__),g' \
+		${WRKSRC}/src/pulsecore/iochannel.c
+	${REINPLACE_CMD} -e 's|va_arg(args, mode_t)|(mode_t) va_arg(args, int)|g' \
+		-e 's|int ioctl(int fd, int request, ...)|int ioctl(int fd, unsigned long request, ...)|' \
+		${WRKSRC}/src/utils/padsp.c
+MK
+
+
+# daemon=false installs only client.conf under etc/pulse; trim the
+# base post-install sample-rename loop accordingly.
+text replace-once file Makefile from ".for ii in default.pa daemon.conf client.conf system.pa" to ".for ii in client.conf"

@@ -1,0 +1,10 @@
+port audio/decibels
+type dport
+reason "Add GNOME Decibels 49.6.1 for the GNOME 50 application set"
+target @any
+
+file materialize newport/Makefile -> Makefile
+file materialize newport/distinfo -> distinfo
+file materialize newport/pkg-descr -> pkg-descr
+file materialize newport/pkg-plist -> pkg-plist
+file materialize newport/files/patch-src_window.ts -> files/patch-src_window.ts

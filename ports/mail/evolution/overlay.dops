@@ -5,3 +5,8 @@ target @any
 
 mk add RUN_DEPENDS "krb5-config:security/krb5"
 mk add BUILD_DEPENDS "krb5-config:security/krb5"
+mk set DISTVERSION "3.60.2"
+mk unset PORTREVISION
+file materialize dragonfly/distinfo -> distinfo
+
+file materialize dragonfly/pkg-plist -> pkg-plist

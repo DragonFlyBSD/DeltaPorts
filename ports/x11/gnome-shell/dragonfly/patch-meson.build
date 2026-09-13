@@ -1,22 +1,12 @@
---- meson.build.intermediate	2020-11-14 16:49:52.000000000 +0000
+--- meson.build.orig
 +++ meson.build
-@@ -229,19 +229,6 @@ config_h = configure_file(
+@@ -87,6 +87,9 @@
+ gnome_desktop_dep = dependency('gnome-desktop-4', version: gnome_desktop_req)
+ pango_dep = dependency('pango', version: pango_req)
  
- conf_inc = include_directories('.')
- 
--libgvc = subproject('gvc',
--  default_options: [
--    'package_name=' + meson.project_name(),
--    'package_version=' + meson.project_version(),
--    'pkgdatadir=' + pkgdatadir,
--    'pkglibdir=' + pkglibdir,
--    'static=false',
--    'introspection=true',
--    'alsa=false'
--  ]
--)
--libgvc_gir = libgvc.get_variable('libgvc_gir')
--
- libshew = subproject('shew',
-   default_options: [
-     'package_name=@0@'.format(meson.project_name()),
++# timerfd/epoll emulation (DragonFly) for shell-time-change-source.c
++epoll_shim_dep = dependency('epoll-shim')
++
+ have_fonts = mutter_dep.get_variable('have_fonts') == 'true'
+ have_xwayland = mutter_dep.get_variable('have_xwayland') == 'true'
+ if have_xwayland

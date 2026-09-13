@@ -19,4 +19,23 @@ text line-remove file pkg-plist exact "etc/xdg/autostart/org.gnome.SettingsDaemo
 text line-remove file pkg-plist exact "libexec/gsd-media-keys" on-missing noop
 text line-remove file pkg-plist exact "libexec/gsd-sound" on-missing noop
 
-file materialize dragonfly/patch-meson.build -> dragonfly/patch-meson.build
+
+file materialize dragonfly/Makefile -> Makefile
+file materialize dragonfly/distinfo -> distinfo
+file materialize dragonfly/pkg-plist -> pkg-plist
+# base FreeBSD patches that no longer apply to 50.1:
+#  - data patches: housekeeping/gschema edits now handled via plugins.meson disable
+#  - media-keys C patch: whole media-keys plugin is disabled (needs gvc/libpulse)
+file remove files/patch-data_meson.build
+file remove files/patch-data_org.gnome.settings-daemon.plugins.gschema.xml.in
+file remove files/patch-plugins_media-keys_gsd-media-keys-manager.c
+# DragonFly build patch: disable audio plugins (media-keys, sound) that hard-depend
+# on gvc/libpulse, plus datetime/sharing/housekeeping (systemd/elogind services)
+file remove files/patch-plugins_meson.build
+file materialize dragonfly/patch-plugins_meson.build -> files/patch-plugins_meson.build
+# DragonFly runtime patch: do not DPMS-blank the screen the instant the lock
+# screen activates (there is no logind session to blank for); let the normal
+# idle-delay timeout drive blanking so lock shows a grace period, not instant black.
+file materialize dragonfly/patch-plugins_power_gsd-power-manager.c -> files/patch-plugins_power_gsd-power-manager.c
+file materialize dragonfly/gsd-xsettings-wayland -> files/gsd-xsettings-wayland
+file materialize dragonfly/org.gnome.SettingsDaemon.XSettings.service -> files/org.gnome.SettingsDaemon.XSettings.service

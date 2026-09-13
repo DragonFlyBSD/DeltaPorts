@@ -1,0 +1,4 @@
+PORT
+Last attempt: 50.0
+Last success: 50.0
+Last validation: 2026-07-21 clean package/reinstall, check-plist and pkg check passed with GCC 13 and LTO disabled. Meson validate_metainfo, validate_desktop and unit_tests all passed. The installed binary directly links GCC 13 libstdc++.so.6; libstdc++.so.9 remains only in the transitive C ABI GTK/Pango dependency chain.

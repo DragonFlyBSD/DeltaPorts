@@ -1,0 +1,14 @@
+port multimedia/showtime
+type port
+target @any
+reason "Update Showtime to 50.0 and include the GTK4 GStreamer sink"
+
+file materialize dragonfly/distinfo -> distinfo
+file materialize dragonfly/pkg-plist -> pkg-plist
+file materialize dragonfly/files/patch-showtime_showtime.in -> files/patch-showtime_showtime.in
+file materialize dragonfly/files/patch-showtime_play.py -> files/patch-showtime_play.py
+mk set DISTVERSION "50.0"
+mk unset PORTREVISION
+mk set PORTSCOUT "limit:^50\\."
+mk set USES "desktop-file-utils gettext gnome gstreamer meson pkgconfig python:3.12+ tar:xz"
+mk set USE_GSTREAMER "assrender faad libav ogg opus plugins rust theora ttml vorbis vpx x264"

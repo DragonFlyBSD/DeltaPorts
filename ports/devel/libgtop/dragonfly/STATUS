@@ -1,0 +1,4 @@
+PORT
+Last attempt: 2.41.3
+Last success: 2.41.3
+Last validation: 2026-07-21 regenerated 18 DragonFly patches from 2.41.3 pristine/applied trees; clean package, reinstall, and pkg check passed. Memory, process-list, and CPU examples returned data; the memory collector no longer queries the absent v_laundry_count sysctl. Process enumeration can warn when a short-lived process exits during probing.

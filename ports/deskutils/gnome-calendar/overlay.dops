@@ -1,0 +1,10 @@
+port deskutils/gnome-calendar
+type port
+reason "Update GNOME Calendar to the GNOME 50 release and declare its Blueprint build tool"
+target @any
+
+mk unset PORTVERSION on-missing noop
+mk set DISTVERSION "50.0"
+mk eval BUILD_DEPENDS "${BUILD_DEPENDS} blueprint-compiler>=0.19:devel/blueprint-compiler"
+file materialize distinfo -> distinfo
+file materialize pkg-plist -> pkg-plist

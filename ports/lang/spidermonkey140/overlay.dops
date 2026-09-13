@@ -1,0 +1,6 @@
+port lang/spidermonkey140
+type port
+target @any
+reason "DragonFly target triple, bfd linker, XP_UNIX mozjs metadata, and ICU configure fix for SpiderMonkey 140"
+
+file materialize dragonfly/Makefile -> Makefile

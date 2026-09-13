@@ -1,0 +1,4 @@
+port devel/libgudev
+type dport
+target @any
+reason "GNOME 50 requires libgudev 238 while the Q3 base remains at 237"

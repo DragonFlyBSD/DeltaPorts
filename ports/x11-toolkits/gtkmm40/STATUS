@@ -1,0 +1,4 @@
+PORT
+Last attempt: 4.20.0
+Last success: 4.20.0
+Last validation: 2026-07-21 clean package/reinstall and pkg check passed; gtkmm-4.0 reports 4.20.0 and links libstdc++.so.6 from GCC 13. The GTK text stack remains a C ABI boundary and loads its base libstdc++.so.9 internally. Upstream GUI test targets are disabled by the port; a headless Gtk::Application construction exits because GTK requires a display, so no graphical runtime smoke was recorded.

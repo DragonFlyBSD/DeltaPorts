@@ -1,0 +1,4 @@
+PORT
+Last attempt: 50 shared GStreamer Pulse sink for PipeWire audio routing
+Last success: 50
+Last validation: 2026-07-24 clean full and lite packages/registers; both closures require gstreamer1-plugins-pulse-1.28.1; GNOME Music played through a pipewire-pulse stream, responded to the system volume control, and did not open /dev/dsp.

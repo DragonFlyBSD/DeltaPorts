@@ -1,0 +1,10 @@
+port x11-themes/gnome-backgrounds
+type port
+target @any
+reason "gnome-backgrounds 50.0 (GNOME 50); convert only JXL wallpapers to JPG while preserving SVG for the DragonFly glycin SVG loader"
+
+file materialize dragonfly/Makefile -> Makefile
+file materialize dragonfly/distinfo -> distinfo
+file materialize dragonfly/pkg-plist -> pkg-plist
+file materialize dragonfly/dfly-convert-wallpapers.sh -> files/dfly-convert-wallpapers.sh
+file materialize dragonfly/dfly-resize.py -> files/dfly-resize.py

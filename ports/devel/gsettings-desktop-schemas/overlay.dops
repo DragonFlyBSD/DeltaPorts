@@ -1,0 +1,8 @@
+port devel/gsettings-desktop-schemas
+type port
+target @any
+reason "gsettings-desktop-schemas 50.0 for gnome-shell 50"
+
+file materialize dragonfly/Makefile -> Makefile
+file materialize dragonfly/distinfo -> distinfo
+file materialize dragonfly/pkg-plist -> pkg-plist

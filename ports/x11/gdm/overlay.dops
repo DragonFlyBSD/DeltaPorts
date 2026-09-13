@@ -1,0 +1,70 @@
+port x11/gdm
+type port
+target @any
+reason "gdm 47.0 -> 50.1 (GNOME 50) for DragonFly: built against a null sd-login shim (no logind, no ConsoleKit; one static seat0, no session tracking -- seat/DRM handover is seatd/libseat's job inside mutter), VT juggling compiled out, session worker provisions XDG_RUNTIME_DIR=/tmp/runtime-<uid>. Wayland-only (x11-support=false). Autologin path first; greeter (needs gnome-shell rebuilt with libgdm) deferred. All base 47.0 X11/ConsoleKit patches dropped."
+
+file materialize dragonfly/Makefile -> Makefile
+file materialize dragonfly/distinfo -> distinfo
+file materialize dragonfly/pkg-plist -> pkg-plist
+
+# Stale 47.0 framework/source patches (X11 + ConsoleKit era); none apply to 50.1.
+file remove files/patch-build-aux_find-x-server.sh
+file remove files/patch-common_gdm-common.c
+file remove files/patch-common_gdm-common.h
+file remove files/patch-common_gdm-log.c
+file remove files/patch-daemon_gdm-display-access-file.c
+file remove files/patch-daemon_gdm-launch-environment.c
+file remove files/patch-daemon_gdm-local-display-factory.c
+file remove files/patch-daemon_gdm-manager.c
+file remove files/patch-daemon_gdm-server.c
+file remove files/patch-daemon_gdm-session-record.c
+file remove files/patch-daemon_gdm-session-worker-job.c
+file remove files/patch-daemon_gdm-session-worker.c
+file remove files/patch-daemon_gdm-session.c
+file remove files/patch-daemon_gdm-wayland-session.c
+file remove files/patch-daemon_gdm-x-session.c
+file remove files/patch-daemon_main.c
+file remove files/patch-daemon_meson.build
+file remove files/patch-data_PostSession.in
+file remove files/patch-data_gdm.conf-custom.in
+file remove files/patch-data_meson.build
+file remove files/patch-libgdm_gdm-sessions.c
+file remove files/patch-meson.build
+file remove files/patch-pam__gdm_pam__gdm.c
+file remove files/locale.conf.in
+
+# DragonFly 50.1 source patches
+file materialize dragonfly/patch-meson.build -> files/patch-meson.build
+file materialize dragonfly/patch-daemon_meson.build -> files/patch-daemon_meson.build
+file materialize dragonfly/patch-daemon_gdm-session-worker.c -> files/patch-daemon_gdm-session-worker.c
+file materialize dragonfly/patch-daemon_gdm-dynamic-user-store.c -> files/patch-daemon_gdm-dynamic-user-store.c
+file materialize dragonfly/patch-daemon_gdm-local-display-factory.c -> files/patch-daemon_gdm-local-display-factory.c
+file materialize dragonfly/patch-daemon_gdm-manager.c -> files/patch-daemon_gdm-manager.c
+file materialize dragonfly/patch-daemon_gdm-wayland-session.c -> files/patch-daemon_gdm-wayland-session.c
+file materialize dragonfly/patch-common_gdm-common.c -> files/patch-common_gdm-common.c
+file materialize dragonfly/patch-pam__gdm_pam__gdm.c -> files/patch-pam__gdm_pam__gdm.c
+
+# GDM session entry wrapper: environment (seatd, XDG, Wayland advertisement)
+# plus the session services start-gnome.sh used to launch, then exec
+# gnome-session. gnome-session's gnome.desktop points here (see the
+# x11/gnome-session delta).
+file materialize dragonfly/gnome-session-dragonfly -> files/gnome-session-dragonfly
+
+# Null sd-login/sd-daemon shim headers; post-extract copies them to
+# common/dragonfly-compat/systemd/ inside WRKSRC (patch(1) cannot create
+# directories, so these ship as plain files).
+file materialize dragonfly/dragonfly-sd-login.h -> files/dragonfly-sd-login.h
+file materialize dragonfly/dragonfly-sd-daemon.h -> files/dragonfly-sd-daemon.h
+
+# rc script (REQUIRE seatd, graceful stop) + PAM stacks without ConsoleKit
+file materialize dragonfly/gdm.in -> files/gdm.in
+file materialize dragonfly/gdm-autologin.in -> files/gdm-autologin.in
+file materialize dragonfly/gdm-password.in -> files/gdm-password.in
+
+# pkg-install: base script + preallocated gdm-greeter user (gdm 50's
+# documented non-systemd greeter path) and video-group membership for seatd.
+file materialize dragonfly/pkg-install -> pkg-install
+
+# Greeter session entry: drop X-GDM-SessionRegisters -- gdm-wayland-session
+# registers on the greeter's behalf, same as the user session.
+file materialize dragonfly/patch-data_gnome-greeter.desktop.in -> files/patch-data_gnome-greeter.desktop.in

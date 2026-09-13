@@ -1,0 +1,11 @@
+port x11/gnome-tour
+type dport
+reason "Add GNOME Tour 50.0"
+target @any
+
+file materialize newport/Makefile -> Makefile
+file materialize newport/pkg-descr -> pkg-descr
+file materialize dragonfly/pkg-plist -> pkg-plist
+file materialize dragonfly/distinfo -> distinfo
+file materialize dragonfly/patch-gettext-sys-build.rs -> files/patch-vendor_gettext-sys_build.rs
+file materialize dragonfly/patch-gettext-sys-checksum.json -> files/patch-vendor_gettext-sys_cargo-checksum.json

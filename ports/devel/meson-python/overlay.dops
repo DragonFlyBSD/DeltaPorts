@@ -1,0 +1,6 @@
+port devel/meson-python
+type port
+target @any
+reason "Enable Python 3.12 flavor required by PyGObject"
+
+file materialize dragonfly/Makefile -> Makefile

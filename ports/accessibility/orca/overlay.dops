@@ -1,0 +1,14 @@
+port accessibility/orca
+type port
+target @any
+reason "Orca 50 requires dasbus for its D-Bus remote controller interface; psutil is optional upstream"
+
+mk unset PORTVERSION on-missing noop
+mk set DISTVERSION "50.0.9"
+mk set PORTSCOUT "limit:^50\\."
+mk set BUILD_DEPENDS "${PYTHON_PKGNAMEPREFIX}atspi>0:accessibility/py-atspi@${PY_FLAVOR} ${PYTHON_PKGNAMEPREFIX}dasbus>0:devel/py-dasbus@${PY_FLAVOR} ${PYTHON_PKGNAMEPREFIX}speech-dispatcher>0:accessibility/py-speech-dispatcher@${PY_FLAVOR} itstool:textproc/itstool"
+mk set RUN_DEPENDS "${PYTHON_PKGNAMEPREFIX}dasbus>0:devel/py-dasbus@${PY_FLAVOR} ${PYTHON_PKGNAMEPREFIX}speech-dispatcher>0:accessibility/py-speech-dispatcher@${PY_FLAVOR} ${PYTHON_PKGNAMEPREFIX}atspi>0:accessibility/py-atspi@${PY_FLAVOR}"
+mk set USES "cpe gettext gnome localbase meson pkgconfig python:3.10+ tar:xz"
+file materialize distinfo -> distinfo
+file materialize pkg-plist -> pkg-plist
+file materialize files/patch-src_orca_sound.py -> files/patch-src_orca_sound.py

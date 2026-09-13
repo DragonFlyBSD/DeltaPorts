@@ -1,9 +1,13 @@
 port filesystems/gvfs
 type port
-reason "remove bsdisks/lsof from RUN_DEPENDS (unavailable on DragonFly); materialize dragonfly patch"
+reason "DragonFly: remove bsdisks/lsof and disable udisks2 volume monitor; materialize GNOME50 build patches"
 target @any
 
 text line-remove file Makefile exact "RUN_DEPENDS=	bsdisks>0:sysutils/bsdisks \\" on-missing noop
 text line-remove file Makefile exact "		lsof:sysutils/lsof" on-missing noop
 
 file materialize dragonfly/patch-meson.build -> dragonfly/patch-meson.build
+file materialize dragonfly/Makefile -> Makefile
+file materialize dragonfly/patch-daemon_org.gnome.system.smb.gschema.xml -> files/patch-daemon_org.gnome.system.smb.gschema.xml
+
+file materialize dragonfly/pkg-plist -> pkg-plist

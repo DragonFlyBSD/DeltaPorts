@@ -1,0 +1,6 @@
+port multimedia/gstreamer1-plugins-core
+type port
+target @any
+reason "exclude the DVD plugin set on DragonFly: libdvdcss hard-errors (#error DVD ioctls are unavailable on this system) because the kernel lacks the DVD ioctl interface; a52dec/dvdread/resindvd/dts are useless without it"
+
+mk set OPTIONS_EXCLUDE "DVD" on-missing noop

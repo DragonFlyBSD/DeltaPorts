@@ -1,6 +1,13 @@
 port net/freerdp3
 type port
-reason "auto-converted from Makefile.DragonFly"
 target @any
+reason "Build FreeRDP 3.31 core for GNOME Connections without standalone clients"
 
-mk set DFLY_UNMAINTAINED "yes"
+mk add OPTIONS_UNSET "AAD RDPECAM SDL2 SDL3 WAYLAND WEBVIEW X11"
+mk eval CMAKE_ON "${CMAKE_ON:NCHANNEL_URBDRC_CLIENT:NWITH_CLIENT_SDL_VERSIONED:NWITH_INSTALL_CLIENT_DESKTOP_FILES}"
+mk add CMAKE_OFF "CHANNEL_URBDRC_CLIENT WITH_CLIENT_SDL_VERSIONED WITH_INSTALL_CLIENT_DESKTOP_FILES"
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+
+text line-remove file pkg-plist exact "share/icons/hicolor/scalable/apps/FreeRDP.svg"
+
+file materialize dragonfly/files/patch-cmake_FindOSS.cmake -> files/patch-cmake_FindOSS.cmake
