@@ -15,4 +15,3 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_format.cc
 MK1
 file materialize dragonfly/patch-setup.py -> dragonfly/patch-setup.py
-file materialize dragonfly/patch-third__party_abseil-cpp_absl_status_status.cc -> dragonfly/patch-third__party_abseil-cpp_absl_status_status.cc
