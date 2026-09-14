@@ -1,0 +1,16 @@
+port math/dune-common
+type port
+reason "Step 48 bootstrap: deterministic header; patch authors the body"
+target @any
+# dune-common 2.11 requires C++20 (<concepts>, requires-clauses, <=>);
+# c++17-lang leaves base GCC 8 selected, so request C++20 via the
+# framework-supported USES mechanism.
+mk eval USES "${USES:S/c++17-lang/c++20-lang/}"
+# Base GCC 8 accepts -std=c++2a but its libstdc++ has no <concepts>;
+# use the DragonFly-supported mechanism to build with modern GCC.
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+# USES=fortran is stale: upstream no longer needs a Fortran compiler
+# (CHANGELOG: name mangling for BLAS/LAPACK is done without one; no
+# Fortran sources, cmake never probes Fortran). On DragonFly it expands
+# to a bare lang/gcc dep that stage-qa rejects; drop it.
+mk eval USES "${USES:Nfortran}"
