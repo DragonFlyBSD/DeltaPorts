@@ -14,7 +14,7 @@ mk target set dfly-patch <<'MK'
 	${RM} -rf ${WRKSRC}/src/3rdparty/chromium/third_party/tcmalloc
 	${REINPLACE_CMD} -e '/use_system_libwebp/d' ${WRKSRC}/src/buildtools/config/linux.pri
 	${ECHO} 'include(linux.pri)' > ${WRKSRC}/src/buildtools/config/dragonfly.pri
-	${ECHO} "gn_args += enable_basic_printing=true enable_print_preview=true use_dbus=true use_udev=false extra_ldflags=\"-L${LOCALBASE}/lib\"" >> ${WRKSRC}/src/buildtools/config/dragonfly.pri
+	${ECHO} 'gn_args += enable_basic_printing=true enable_print_preview=true use_dbus=true use_udev=false extra_ldflags=\"-L${LOCALBASE}/lib\"' >> ${WRKSRC}/src/buildtools/config/dragonfly.pri
 	${REINPLACE_CMD} -e 's@freebsd.pri@dragonfly.pri@g' \
 		${WRKSRC}/mkspecs/features/functions.prf
 	${CP} ${WRKSRC}/src/3rdparty/chromium/base/process/process_handle_freebsd.cc \
