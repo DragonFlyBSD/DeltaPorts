@@ -11,7 +11,6 @@ mk target set dfly-patch <<'MK'
 		${WRKSRC}/meson.build
 	${REINPLACE_CMD} -e "/sound/d" -e "/media-keys/d" \
 		${WRKSRC}/plugins/meson.build
-	${CHMOD} +x ${WRKSRC}/gnome-settings-daemon/codegen.py
 MK
 
 text line-remove file pkg-plist exact "etc/xdg/autostart/org.gnome.SettingsDaemon.MediaKeys.desktop" on-missing noop
