@@ -8,4 +8,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@-lmd[[:>:]]@@g' ${WRKSRC}/Makefile \
 		${WRKSRC}/server/Makefile ${WRKSRC}/src/Makefile
 MK1
-file materialize dragonfly/patch-src_sysdeps_dragonfly.c -> dragonfly/patch-src_sysdeps_dragonfly.c
