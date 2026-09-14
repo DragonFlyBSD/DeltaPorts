@@ -3,4 +3,4 @@ type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
-file materialize dragonfly/patch-igzip_igzip.c -> dragonfly/patch-igzip_igzip.c
+file materialize dragonfly/patch-include_unaligned.h -> dragonfly/patch-include_unaligned.h
