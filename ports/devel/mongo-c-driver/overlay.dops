@@ -5,5 +5,6 @@ target @any
 
 mk add CFLAGS "-DZ_HAVE_UNISTD_H"
 file materialize dragonfly/patch-CMakeLists.txt -> dragonfly/patch-CMakeLists.txt
-file materialize dragonfly/patch-build_cmake_FindResSearch.cmake -> dragonfly/patch-build_cmake_FindResSearch.cmake
 file materialize dragonfly/patch-src_libmongoc_src_mongoc_mongoc-counters-private.h -> dragonfly/patch-src_libmongoc_src_mongoc_mongoc-counters-private.h
+text line-remove file pkg-plist exact "%%PORTDOCS%%%%DOCSDIR%%/mongo-c-driver/html/api.html"
+text line-remove file pkg-plist exact "%%PORTDOCS%%@dir %%DOCSDIR%%/mongo-c-driver/html/index"
