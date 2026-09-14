@@ -1,9 +1,9 @@
 port lang/clisp
 type port
-reason "DragonFly: USES alias, LDFLAGS adjustments, version-conditional patch"
+reason "DragonFly: -D__FreeBSD__ flag (replaces removed USES=alias), LDFLAGS adjustments, version-conditional patch"
 target @any
 
-mk add USES alias
+mk add CFLAGS "-D__FreeBSD__=9"
 
 mk add LDFLAGS "-pthread"
 mk set LDFLAGS_gcc ""
