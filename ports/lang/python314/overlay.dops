@@ -1,0 +1,27 @@
+port lang/python314
+type port
+reason "DragonFly MACHDEP normalization plus companion DragonFly gaps for python 3.14"
+target @any
+# sys.platform decision: normalize MACHDEP dragonfly6 -> dragonfly in
+# configure/configure.ac, mirroring what upstream did for FreeBSD at 3.14.
+# This stops the platform string changing on every DragonFly major release.
+# 3.13 and below still report dragonfly6 because the framework expects the
+# versioned name there; do not backport this. Do not preset MACHDEP via
+# CONFIGURE_ENV: the if-test--z-MACHDEP block also sets ac_sys_system /
+# ac_sys_release used for define_xopen_source and DragonFly shared-library cases.
+# Verified in 3.14.7 WRKSRC: configure.ac/configure MACHDEP, MULTIARCH,
+# _PYTHREAD_NAME_MAXLEN; Python/thread_pthread.h THREAD_STACK_SIZE;
+# Python/gc_free_threading.c get_process_mem_usage; Lib/multiprocessing/util.py
+# _SUN_PATH_MAX (sun_path[104] on this builder); Modules/_hacl/Lib_Memzero0.c
+# explicit_bzero (configure finds explicit_bzero yes).
+file materialize dragonfly/patch-configure -> dragonfly/patch-configure
+file materialize dragonfly/patch-configure.ac -> dragonfly/patch-configure.ac
+file materialize dragonfly/patch-Python_thread__pthread.h -> dragonfly/patch-Python_thread__pthread.h
+file materialize dragonfly/patch-Python_gc__free__threading.c -> dragonfly/patch-Python_gc__free__threading.c
+file materialize dragonfly/patch-Lib_multiprocessing_util.py -> dragonfly/patch-Lib_multiprocessing_util.py
+file materialize dragonfly/patch-Modules___hacl_Lib__Memzero0.c -> dragonfly/patch-Modules___hacl_Lib__Memzero0.c
+text replace-once file pkg-plist from "%%PYTHON_BASELIBDIR%%%%THREAD%%/__pycache__/_sysconfigdata_%%THREAD%%%%ABI%%_freebsd_%%PYTHON_TAG%%.opt-1.pyc" to "%%PYTHON_BASELIBDIR%%%%THREAD%%/__pycache__/_sysconfigdata_%%THREAD%%%%ABI%%_%%PYTHON_PLATFORM%%_%%PYTHON_TAG%%.opt-1.pyc"
+text replace-once file pkg-plist from "%%PYTHON_BASELIBDIR%%%%THREAD%%/__pycache__/_sysconfigdata_%%THREAD%%%%ABI%%_freebsd_%%PYTHON_TAG%%.opt-2.pyc" to "%%PYTHON_BASELIBDIR%%%%THREAD%%/__pycache__/_sysconfigdata_%%THREAD%%%%ABI%%_%%PYTHON_PLATFORM%%_%%PYTHON_TAG%%.opt-2.pyc"
+text replace-once file pkg-plist from "%%PYTHON_BASELIBDIR%%%%THREAD%%/__pycache__/_sysconfigdata_%%THREAD%%%%ABI%%_freebsd_%%PYTHON_TAG%%.pyc" to "%%PYTHON_BASELIBDIR%%%%THREAD%%/__pycache__/_sysconfigdata_%%THREAD%%%%ABI%%_%%PYTHON_PLATFORM%%_%%PYTHON_TAG%%.pyc"
+text replace-once file pkg-plist from "%%PYTHON_BASELIBDIR%%%%THREAD%%/_sysconfig_vars_%%THREAD%%%%ABI%%_freebsd_.json" to "%%PYTHON_BASELIBDIR%%%%THREAD%%/_sysconfig_vars_%%THREAD%%%%ABI%%_%%PYTHON_PLATFORM%%_.json"
+text replace-once file pkg-plist from "%%PYTHON_BASELIBDIR%%%%THREAD%%/_sysconfigdata_%%THREAD%%%%ABI%%_freebsd_.py" to "%%PYTHON_BASELIBDIR%%%%THREAD%%/_sysconfigdata_%%THREAD%%%%ABI%%_%%PYTHON_PLATFORM%%_.py"
