@@ -3,6 +3,11 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
+# DragonFly cc (clang) does not recognize -fstrict-flex-arrays=3 or
+# -ftrivial-auto-var-init=zero (GCC 12+/Clang 18 hardening options);
+# strip them while keeping the rest of upstream hardening intact.
+mk eval CFLAGS "${CFLAGS:N-fstrict-flex-arrays=3:N-ftrivial-auto-var-init=zero}"
+
 mk target set post-configure <<'MK1'
 	${REINPLACE_CMD} -e 's|<net/pfvar.h>|<net/pf/pfvar.h>|' \
 		${WRKSRC}/src/tables.c
