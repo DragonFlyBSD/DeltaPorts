@@ -1,0 +1,16 @@
+port x11-toolkits/libXaw3d
+type port
+reason "Step 48 bootstrap: deterministic header; patch authors the body"
+target @any
+# Upstream xorg-macros enable selective -Werror=* (incl. -Werror=write-strings)
+# by default; Xaw3d assigns string literals to non-const Xt fields, so
+# -Wdiscarded-qualifiers aborts the build. Opt out of selective errors.
+mk add CONFIGURE_ARGS "--disable-selective-werror"
+# xorg-cat.mk injects -Werror=uninitialized into CFLAGS via the framework;
+# this legacy Xt codebase trips GCC's -Wmaybe-uninitialized heuristics in
+# several files (AsciiSrc.c, SimpleMenu.c, MultiSrc.c, XawIm.c, ...), so
+# demote it to a warning in the generated Makefiles after configure runs.
+mk target set post-configure <<'MK'
+	@${REINPLACE_CMD} -e 's/-Werror=uninitialized/-Wuninitialized/g' \
+		${WRKSRC}/src/Makefile ${WRKSRC}/include/Makefile
+MK
