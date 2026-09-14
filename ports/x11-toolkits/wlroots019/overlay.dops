@@ -1,0 +1,13 @@
+port x11-toolkits/wlroots019
+type port
+reason "Step 48 bootstrap: deterministic header; patch authors the body"
+target @any
+
+# render/drm_syncobj.c uses Linux-only ETIME (hidden under -std=c11
+# -D_POSIX_C_SOURCE=200809L on DragonFly); reuse the FreeBSD ETIMEDOUT
+# branch on DragonFly.
+file materialize dragonfly/patch-render_drm_syncobj.c -> dragonfly/patch-render_drm_syncobj.c
+file materialize dragonfly/patch-render_vulkan_vulkan.c -> dragonfly/patch-render_vulkan_vulkan.c
+# types/wlr_linux_dmabuf_v1.c: static_assert hidden by -D_POSIX_C_SOURCE on
+# DragonFly; alias to the C11 keyword _Static_assert.
+file materialize dragonfly/patch-types_wlr_linux_dmabuf_v1.c -> dragonfly/patch-types_wlr_linux_dmabuf_v1.c
