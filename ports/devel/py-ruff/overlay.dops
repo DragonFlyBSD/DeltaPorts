@@ -1,0 +1,10 @@
+port devel/py-ruff
+type port
+reason "Step 48 bootstrap: deterministic header; patch authors the body"
+target @any
+
+file materialize dragonfly/patch-cargo-crates_notify-8.2.0_Cargo.toml -> dragonfly/patch-cargo-crates_notify-8.2.0_Cargo.toml
+file materialize dragonfly/patch-crates_ruff_Cargo.toml -> dragonfly/patch-crates_ruff_Cargo.toml
+file materialize dragonfly/patch-crates_ruff_src_main.rs -> dragonfly/patch-crates_ruff_src_main.rs
+file materialize dragonfly/patch-crates_ty_Cargo.toml -> dragonfly/patch-crates_ty_Cargo.toml
+file materialize dragonfly/patch-crates_ty_src_main.rs -> dragonfly/patch-crates_ty_src_main.rs
