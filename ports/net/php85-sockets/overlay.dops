@@ -1,0 +1,6 @@
+port net/php85-sockets
+type port
+reason "Step 48 bootstrap: deterministic header; patch authors the body"
+target @any
+file materialize dragonfly/patch-sockets.stub.php -> dragonfly/patch-sockets.stub.php
+file materialize dragonfly/patch-sockets__arginfo.h -> dragonfly/patch-sockets__arginfo.h
