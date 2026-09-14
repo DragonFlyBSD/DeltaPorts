@@ -1,0 +1,6 @@
+port sysutils/localsearch
+type port
+reason "meson.build hard-requires GNU sha256sum, absent on BSD; allow missing + portable calculate-hash.sh"
+target @any
+file materialize dragonfly/patch-meson.build -> dragonfly/patch-meson.build
+file materialize dragonfly/patch-src_tracker-extract_calculate-hash.sh -> dragonfly/patch-src_tracker-extract_calculate-hash.sh
