@@ -1,0 +1,7 @@
+port devel/py-watchfiles
+type port
+reason "Step 48 bootstrap: deterministic header; patch authors the body"
+target @any
+mk target set post-patch <<'MK1'
+	@${REINPLACE_CMD} -e 's/dragonflybsd/dragonfly/g' ${WRKSRC}/cargo-crates/notify-*/Cargo.toml
+MK1
