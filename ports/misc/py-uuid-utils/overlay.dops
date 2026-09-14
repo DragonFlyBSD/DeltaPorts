@@ -1,0 +1,7 @@
+port misc/py-uuid-utils
+type port
+reason "DragonFly: mac_address 1.1.8 omits dragonfly from cfg gates, use FreeBSD backend"
+target @any
+file materialize dragonfly/patch-cargo-crates_mac_address-1.1.8_src_lib.rs -> dragonfly/patch-cargo-crates_mac_address-1.1.8_src_lib.rs
+file materialize dragonfly/patch-cargo-crates_mac_address-1.1.8_src_iter_mod.rs -> dragonfly/patch-cargo-crates_mac_address-1.1.8_src_iter_mod.rs
+file materialize dragonfly/patch-cargo-crates_mac_address-1.1.8_Cargo.toml -> dragonfly/patch-cargo-crates_mac_address-1.1.8_Cargo.toml
