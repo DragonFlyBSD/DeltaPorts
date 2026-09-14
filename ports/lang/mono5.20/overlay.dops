@@ -3,8 +3,8 @@ type port
 reason "DragonFly: USES self-ref filter, alias/localbase, iconv/charset deps"
 target @any
 
-mk eval USES "${USES:Nelfctl}"
-mk add USES alias
+mk remove USES "elfctl"
+mk unset ELF_FEATURES
 mk add USES localbase
 
 mk set DFLY_ALLOW_REMAKE "increases chances of building exponentially"
@@ -21,6 +21,12 @@ MK
 
 file materialize dragonfly/patch-configure.ac -> dragonfly/patch-configure.ac
 file materialize dragonfly/patch-libgc_configure.ac -> dragonfly/patch-libgc_configure.ac
+file materialize dragonfly/patch-libgc_include_private_gcconfig.h -> dragonfly/patch-libgc_include_private_gcconfig.h
 file materialize dragonfly/patch-mcs_class_System_System_Platform.cs -> dragonfly/patch-mcs_class_System_System_Platform.cs
 file materialize dragonfly/patch-mono_metadata_w32process-unix-bsd.c -> dragonfly/patch-mono_metadata_w32process-unix-bsd.c
 file materialize dragonfly/patch-mono_utils_mono-proclib.c -> dragonfly/patch-mono_utils_mono-proclib.c
+file materialize dragonfly/patch-mono_profiler_mprof-report.c -> dragonfly/patch-mono_profiler_mprof-report.c
+file materialize dragonfly/patch-mono_utils_mono-sigcontext.h -> dragonfly/patch-mono_utils_mono-sigcontext.h
+file materialize dragonfly/patch-mono_utils_mono-threads-freebsd.c -> dragonfly/patch-mono_utils_mono-threads-freebsd.c
+file materialize dragonfly/patch-support_mph.h -> dragonfly/patch-support_mph.h
+file materialize dragonfly/patch-support_sys-mman.c -> dragonfly/patch-support_sys-mman.c
