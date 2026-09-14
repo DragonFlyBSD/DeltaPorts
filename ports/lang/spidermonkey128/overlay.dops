@@ -1,0 +1,13 @@
+port lang/spidermonkey128
+type port
+reason "Step 48 bootstrap: deterministic header; patch authors the body"
+target @any
+
+# Mozilla configure aborts when --target kernel (FreeBSD) mismatches the
+# native compiler kernel (DragonFly). Use the OPSYS-derived triple so the
+# target kernel agrees with the host compiler (gdb precedent).
+mk eval CONFIGURE_TARGET "x86_64-portbld-${OPSYS:tl}${OSREL}"
+
+# DragonFly's default BFD linker (binutils234) rejects -Wl,--icf=safe, which
+# Mozilla's ICF probe enables and cargo-linker then feeds to every Rust link.
+mk add CONFIGURE_ARGS "--disable-icf"
