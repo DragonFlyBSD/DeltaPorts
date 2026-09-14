@@ -1,0 +1,4 @@
+port lang/python314t
+type port
+reason "slave of lang/python314; the DragonFly fix lives in the master's overlay"
+target @any
