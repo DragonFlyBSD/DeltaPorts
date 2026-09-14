@@ -4,3 +4,13 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
 file materialize dragonfly/patch-src_include_cdfdist.h -> dragonfly/patch-src_include_cdfdist.h
+
+# post-install used `find -executable`, a GNU/FreeBSD extension that
+# DragonFly's find(1) rejects ("unknown primary or operator"), aborting
+# stage. Select executables portably with -type f -perm +111 instead.
+mk target set post-install <<'MK1'
+	${SED} -i '' 's,${STAGEDIR},,g' ${STAGEDIR}${PREFIX}/bin/definitions.?
+	${RM} -f ${STAGEDIR}${PREFIX}/CDFLeapSeconds.txt
+	cd ${STAGEDIR}${PREFIX} && \
+		${FIND} bin/* lib/* -type f -perm +111 -exec ${STRIP_CMD} {} \;
+MK1
