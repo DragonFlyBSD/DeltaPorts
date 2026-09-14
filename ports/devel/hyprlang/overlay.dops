@@ -1,6 +1,6 @@
 port devel/hyprlang
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "needs C++23 <print> header; GCC_DEFAULT (12) libstdc++ predates it, use GCC 14"
 target @any
 
-mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+mk set USE_GCC_VERSION "14"
