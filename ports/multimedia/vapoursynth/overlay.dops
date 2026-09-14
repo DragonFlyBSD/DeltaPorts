@@ -3,4 +3,8 @@ type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+
 file materialize dragonfly/patch-src_core_simplefilters.cpp -> dragonfly/patch-src_core_simplefilters.cpp
+file materialize dragonfly/patch-src_vspipe_vsjson.cpp -> dragonfly/patch-src_vspipe_vsjson.cpp
+file materialize dragonfly/patch-src_vspipe_vspipe.cpp -> dragonfly/patch-src_vspipe_vspipe.cpp
