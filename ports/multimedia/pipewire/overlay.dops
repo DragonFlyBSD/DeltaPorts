@@ -1,26 +1,40 @@
 port multimedia/pipewire
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "pipewire on DragonFly: carried compat-era runtime patches (SPA alsa pcm, logger/loop, module-rt, pipewire core mem/conf) applied in the DragonFly patch lane; freebsd->dragonfly REINPLACE folded into post-patch; ALSA backend enabled by default so audio reaches OSS /dev/dsp via alsa-lib+alsa-plugins"
 target @any
 
 mk add LDFLAGS "-L${LOCALBASE}/lib -ltinfo -lncurses"
 mk add BUILD_DEPENDS "libstdthreads>0:misc/libstdthreads"
-mk add MESON_ARGS "-Dexamples=disabled"
-mk target set dfly-patch <<'MK1'
+mk add OPTIONS_DEFAULT ALSA
+mk eval ALSA_SUB_FILES "${ALSA_SUB_FILES:N10-alsa-default.conf}"
+mk target set post-install-ALSA-on <<'MK'
+	@${DO_NADA}
+MK
+mk eval BUILD_DEPENDS "${BUILD_DEPENDS:Nv4l_compat*}"
+text replace-once file Makefile from "-D v4l2=enabled" to "-D v4l2=disabled"
+mk add MESON_ARGS "-D examples=disabled"
+text replace-once file pkg-plist from "lib/spa-0.2/v4l2/libspa-v4l2.so" to "@comment lib/spa-0.2/v4l2/libspa-v4l2.so"
+text line-remove file pkg-plist exact "%%ALSA%%%%DATADIR%%/pipewire.conf.d/10-alsa-default.conf"
+mk target append post-patch <<'MK'
 	${REINPLACE_CMD} -e 's@freebsd@dragonfly@g' \
 		${WRKSRC}/src/pipewire/meson.build \
 		${WRKSRC}/meson.build
-MK1
+MK
 file materialize dragonfly/patch-pipewire-alsa_alsa-plugins_pcm__pipewire.c -> dragonfly/patch-pipewire-alsa_alsa-plugins_pcm__pipewire.c
 file materialize dragonfly/patch-spa_plugins_alsa_alsa-pcm.c -> dragonfly/patch-spa_plugins_alsa_alsa-pcm.c
 file materialize dragonfly/patch-spa_plugins_support_logger.c -> dragonfly/patch-spa_plugins_support_logger.c
 file materialize dragonfly/patch-spa_plugins_support_loop.c -> dragonfly/patch-spa_plugins_support_loop.c
-file materialize dragonfly/patch-src_gst_gstpipewiresrc.c -> dragonfly/patch-src_gst_gstpipewiresrc.c
 file materialize dragonfly/patch-src_modules_module-protocol-pulse_message-handler.c -> dragonfly/patch-src_modules_module-protocol-pulse_message-handler.c
+# Replaced by the carried, version-adjusted patch in the DragonFly lane.
+file remove files/patch-src_modules_module-rt.c
 file materialize dragonfly/patch-src_modules_module-rt.c -> dragonfly/patch-src_modules_module-rt.c
+# Replaced by the carried, version-adjusted patch in the DragonFly lane.
+file remove files/patch-src_modules_network-utils.h
 file materialize dragonfly/patch-src_modules_network-utils.h -> dragonfly/patch-src_modules_network-utils.h
 file materialize dragonfly/patch-src_pipewire_conf.c -> dragonfly/patch-src_pipewire_conf.c
 file materialize dragonfly/patch-src_pipewire_impl-node.c -> dragonfly/patch-src_pipewire_impl-node.c
 file materialize dragonfly/patch-src_pipewire_mem.c -> dragonfly/patch-src_pipewire_mem.c
 file materialize dragonfly/patch-src_pipewire_pipewire.c -> dragonfly/patch-src_pipewire_pipewire.c
 file materialize dragonfly/patch-src_pipewire_private.h -> dragonfly/patch-src_pipewire_private.h
+file materialize dragonfly/patch-src_gst_gstpipewiresrc.c -> dragonfly/patch-src_gst_gstpipewiresrc.c
+file materialize dragonfly/patch-spa_plugins_support_system.c -> dragonfly/patch-spa_plugins_support_system.c
