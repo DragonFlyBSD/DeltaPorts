@@ -1,0 +1,10 @@
+port deskutils/baobab
+type port
+reason "Update Baobab to 50.0 for the GNOME 50 core applications"
+target @any
+
+mk unset PORTVERSION
+mk set PORTSCOUT "limit:^50\\."
+mk set DISTVERSION "50.0"
+file materialize distinfo -> distinfo
+patch apply diffs/pkg-plist.diff
