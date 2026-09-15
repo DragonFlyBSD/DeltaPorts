@@ -1,7 +1,11 @@
 port net/gnome-connections
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "Update Connections to GNOME 50 with DragonFly VNC audio disabled"
 target @any
 
-file materialize dragonfly/patch-src_meson.build -> dragonfly/patch-src_meson.build
+mk unset PORTVERSION
+mk set DISTVERSION "50.0"
+patch apply diffs/pkg-plist.diff
+file materialize dragonfly/patch-meson.build -> dragonfly/patch-meson.build
 file materialize dragonfly/patch-src_vnc-connection.vala -> dragonfly/patch-src_vnc-connection.vala
+file materialize dragonfly/patch-src_ui_vnc-preferences.ui -> dragonfly/patch-src_ui_vnc-preferences.ui
