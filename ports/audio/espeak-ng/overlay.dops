@@ -1,6 +1,17 @@
 port audio/espeak-ng
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "Disable optional ronn-generated manpages deterministically, independent of installed build-host tools; retain documentation and avoid re-stripping the upstream-stripped executable"
 target @any
 
 file materialize dragonfly/patch-configure.ac -> dragonfly/patch-configure.ac
+text line-remove file pkg-plist exact "share/man/man1/espeak-ng.1.gz"
+text line-remove file pkg-plist exact "share/man/man1/espeak.1.gz"
+text line-remove file pkg-plist exact "share/man/man1/speak-ng.1.gz"
+mk eval BUILD_DEPENDS "${BUILD_DEPENDS:Nronn*}"
+mk add CONFIGURE_ENV "ac_cv_prog_RONN=no"
+mk target set post-install <<'MK'
+	${MKDIR} ${STAGEDIR}${DOCSDIR}
+	cd ${WRKSRC}/docs && ${COPYTREE_SHARE} . ${STAGEDIR}${DOCSDIR}
+	${LN} -sf libespeak-ng.so ${STAGEDIR}${PREFIX}/lib/libespeak.so
+	${STRIP_CMD} ${STAGEDIR}${PREFIX}/lib/libespeak-ng.so*
+MK
