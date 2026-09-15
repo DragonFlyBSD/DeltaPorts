@@ -1,0 +1,7 @@
+port devel/meson-python
+type port
+reason "Enable Python 3.12 flavor required by PyGObject"
+target @any
+
+mk set USE_PYTHON "allflavors autoplist concurrent cython_test pep517 pytest"
+mk set EXTRACT_CMD "env LANG=C.UTF-8 LC_ALL=C.UTF-8 ${TAR}"
