@@ -1,0 +1,111 @@
+--- pkg-plist.orig
++++ pkg-plist
+@@ -1,50 +1,44 @@
+-bin/gnome-extensions-app
+ bin/gnome-shell
+ bin/gnome-shell-test-tool
+ lib/gnome-shell/Gvc-1.0.typelib
+-lib/gnome-shell/Shell-15.typelib
+-lib/gnome-shell/St-15.typelib
++lib/gnome-shell/Shell-18.typelib
++lib/gnome-shell/St-18.typelib
+ lib/gnome-shell/girepository-1.0/Shew-0.typelib
+ lib/gnome-shell/libgnome-shell-menu.so
++lib/gnome-shell/libshell-18.so
++lib/gnome-shell/libshew-0.so
++lib/gnome-shell/libst-18.so
+ lib/gnome-shell/libgvc.so
+-lib/gnome-shell/libshell-15.so
+-lib/gnome-shell/libshew-0.so
+-lib/gnome-shell/libst-15.so
+ libexec/gnome-shell-calendar-server
+ libexec/gnome-shell-hotplug-sniffer
+ libexec/gnome-shell-perf-helper
+-share/applications/org.gnome.Extensions.desktop
+ share/applications/org.gnome.Shell.Extensions.desktop
+-share/applications/org.gnome.Shell.desktop
++share/dbus-1/interfaces/org.gnome.Shell.Brightness.xml
+ share/dbus-1/interfaces/org.gnome.Shell.Extensions.xml
+ share/dbus-1/interfaces/org.gnome.Shell.Introspect.xml
+ share/dbus-1/interfaces/org.gnome.Shell.PadOsd.xml
++share/dbus-1/interfaces/org.gnome.Shell.ScreenTime.xml
+ share/dbus-1/interfaces/org.gnome.Shell.Screencast.xml
+ share/dbus-1/interfaces/org.gnome.Shell.Screenshot.xml
+ share/dbus-1/interfaces/org.gnome.ShellSearchProvider.xml
+ share/dbus-1/interfaces/org.gnome.ShellSearchProvider2.xml
+-share/dbus-1/services/org.gnome.Extensions.service
+ share/dbus-1/services/org.gnome.ScreenSaver.service
+ share/dbus-1/services/org.gnome.Shell.CalendarServer.service
+ share/dbus-1/services/org.gnome.Shell.Extensions.service
+ share/dbus-1/services/org.gnome.Shell.HotplugSniffer.service
+ share/dbus-1/services/org.gnome.Shell.Notifications.service
+ share/dbus-1/services/org.gnome.Shell.Screencast.service
++share/desktop-directories/X-GNOME-Shell-System.directory
++share/desktop-directories/X-GNOME-Shell-Utilities.directory
+ %%PORTEXAMPLES%%%%EXAMPLESDIR%%/xprofile
+ share/gnome-control-center/keybindings/50-gnome-shell-launchers.xml
+ share/gnome-control-center/keybindings/50-gnome-shell-screenshots.xml
+ share/gnome-control-center/keybindings/50-gnome-shell-system.xml
+ %%DATADIR%%/Gvc-1.0.gir
+-%%DATADIR%%/Shell-15.gir
+-%%DATADIR%%/St-15.gir
+-%%DATADIR%%/gir-1.0/Shew-0.gir
+ %%DATADIR%%/gnome-shell-dbus-interfaces.gresource
+ %%DATADIR%%/gnome-shell-icons.gresource
+ %%DATADIR%%/gnome-shell-osk-layouts.gresource
+ %%DATADIR%%/gnome-shell-theme.gresource
+-%%DATADIR%%/org.gnome.Extensions
+-%%DATADIR%%/org.gnome.Extensions.data.gresource
+-%%DATADIR%%/org.gnome.Extensions.src.gresource
+ %%DATADIR%%/org.gnome.ScreenSaver
+ %%DATADIR%%/org.gnome.ScreenSaver.src.gresource
+ %%DATADIR%%/org.gnome.Shell.Extensions
+@@ -54,10 +48,7 @@
+ %%DATADIR%%/org.gnome.Shell.Screencast
+ %%DATADIR%%/org.gnome.Shell.Screencast.src.gresource
+ %%DATADIR%%/perf-background.xml
+-share/icons/hicolor/scalable/apps/org.gnome.Extensions.Devel.svg
+-share/icons/hicolor/scalable/apps/org.gnome.Extensions.svg
+ share/icons/hicolor/scalable/apps/org.gnome.Shell.Extensions.svg
+-share/icons/hicolor/symbolic/apps/org.gnome.Extensions-symbolic.svg
+ share/icons/hicolor/symbolic/apps/org.gnome.Shell.Extensions-symbolic.svg
+ share/locale/ab/LC_MESSAGES/gnome-shell.mo
+ share/locale/af/LC_MESSAGES/gnome-shell.mo
+@@ -66,6 +57,7 @@
+ share/locale/as/LC_MESSAGES/gnome-shell.mo
+ share/locale/ast/LC_MESSAGES/gnome-shell.mo
+ share/locale/be/LC_MESSAGES/gnome-shell.mo
++share/locale/be@latin/LC_MESSAGES/gnome-shell.mo
+ share/locale/bg/LC_MESSAGES/gnome-shell.mo
+ share/locale/bn/LC_MESSAGES/gnome-shell.mo
+ share/locale/bn_IN/LC_MESSAGES/gnome-shell.mo
+@@ -84,6 +76,7 @@
+ share/locale/eu/LC_MESSAGES/gnome-shell.mo
+ share/locale/fa/LC_MESSAGES/gnome-shell.mo
+ share/locale/fi/LC_MESSAGES/gnome-shell.mo
++share/locale/fo/LC_MESSAGES/gnome-shell.mo
+ share/locale/fr/LC_MESSAGES/gnome-shell.mo
+ share/locale/fur/LC_MESSAGES/gnome-shell.mo
+ share/locale/fy/LC_MESSAGES/gnome-shell.mo
+@@ -108,7 +101,9 @@
+ share/locale/kn/LC_MESSAGES/gnome-shell.mo
+ share/locale/ko/LC_MESSAGES/gnome-shell.mo
+ share/locale/ku/LC_MESSAGES/gnome-shell.mo
++share/locale/kw/LC_MESSAGES/gnome-shell.mo
+ share/locale/ky/LC_MESSAGES/gnome-shell.mo
++share/locale/lo/LC_MESSAGES/gnome-shell.mo
+ share/locale/lt/LC_MESSAGES/gnome-shell.mo
+ share/locale/lv/LC_MESSAGES/gnome-shell.mo
+ share/locale/mjw/LC_MESSAGES/gnome-shell.mo
+@@ -142,10 +137,9 @@
+ share/locale/tr/LC_MESSAGES/gnome-shell.mo
+ share/locale/ug/LC_MESSAGES/gnome-shell.mo
+ share/locale/uk/LC_MESSAGES/gnome-shell.mo
++share/locale/uz/LC_MESSAGES/gnome-shell.mo
+ share/locale/uz@cyrillic/LC_MESSAGES/gnome-shell.mo
+ share/locale/vi/LC_MESSAGES/gnome-shell.mo
+ share/locale/zh_CN/LC_MESSAGES/gnome-shell.mo
+ share/locale/zh_HK/LC_MESSAGES/gnome-shell.mo
+ share/locale/zh_TW/LC_MESSAGES/gnome-shell.mo
+-share/man/man1/gnome-shell.1.gz
+-share/metainfo/org.gnome.Extensions.metainfo.xml
