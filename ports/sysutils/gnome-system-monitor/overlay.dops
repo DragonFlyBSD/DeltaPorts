@@ -1,6 +1,14 @@
 port sysutils/gnome-system-monitor
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "Update GNOME System Monitor to 50.0 for GNOME 50"
 target @any
 
+mk unset PORTVERSION on-missing noop
+mk set DISTVERSION "50.0"
+mk set USE_GCC_VERSION "13"
+mk add BUILD_DEPENDS "catch2>0:devel/catch2"
 mk add USES "python:3.4+,build shebangfix"
+mk add MESON_ARGS "-Db_lto=false"
+file remove files/patch-src_openfiles.cpp
+file materialize distinfo -> distinfo
+patch apply diffs/pkg-plist.diff
