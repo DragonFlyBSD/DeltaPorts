@@ -1,3 +1,4 @@
 PORT
-Last attempt: 47.1
-Last success: 47.1
+Last attempt: 50.0 libsoup dependency origin repair
+Last success: 50.0 (compose, build, check-plist, package/reinstall)
+Last validation: recursive GNOME full closure resolves through devel/libsoup3
