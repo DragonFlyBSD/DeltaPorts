@@ -1,7 +1,16 @@
 port x11/zenity
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "zenity 3.44 (GTK3) -> 4.2.2 (GTK4, GNOME 50 era). Migrate compat -> dops; USE_GNOME gtk30 -> gtk40 + libadwaita; drop the removed libnotify meson option and (unused in 4.x) libnotify dep; -Dmanpage=false to avoid help2man; keep python BINARY_ALIAS."
 target @any
 
-mk add USES "python:3.8+,build"
-mk set BINARY_ALIAS "python3=${PYTHON_CMD}"
+mk unset PORTVERSION
+mk remove USE_GNOME "gtk30"
+mk add USE_GNOME "gtk40 libadwaita"
+mk add MESON_ARGS "-Dmanpage=false"
+mk unset OPTIONS_DEFINE
+mk unset OPTIONS_DEFAULT
+mk unset NOTIFY_LIB_DEPENDS
+mk unset NOTIFY_MESON_TRUE
+mk set DISTVERSION "4.2.2"
+file materialize distinfo -> distinfo
+patch apply diffs/pkg-plist.diff
