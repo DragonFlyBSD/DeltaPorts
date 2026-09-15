@@ -28,9 +28,10 @@ MK
 # an include/dragonfly, so clone it from include/freebsd before
 # COPYTREE_SHARE stages the image directory. Anchored on the do-install
 # MKDIR line so it lands before the copy, not appended after it.
+# Guarded: jre_headless/headless legacy images have no include/freebsd.
 text line-insert-after file Makefile \
      anchor "	@${MKDIR} ${STAGEDIR}${INSTALLDIR}" \
-     line   "	${CP} -rv ${JDK_IMAGEDIR}/include/freebsd ${JDK_IMAGEDIR}/include/dragonfly"
+     line   "	@if [ -d ${JDK_IMAGEDIR}/include/freebsd ]; then ${CP} -rv ${JDK_IMAGEDIR}/include/freebsd ${JDK_IMAGEDIR}/include/dragonfly; fi"
 
 # --- bootstrap JDK ------------------------------------------------------
 # Upstream fetches a prebuilt *FreeBSD* JDK into ${WRKDIR}/boot-jdk
