@@ -1,0 +1,140 @@
+--- pkg-plist.orig
++++ pkg-plist
+@@ -7,11 +7,10 @@
+ libexec/epiphany-search-provider
+ libexec/epiphany-webapp-provider
+ libexec/epiphany/ephy-profile-migrator
+-share/man/man1/epiphany.1.gz
+ share/applications/org.gnome.Epiphany.desktop
+ share/dbus-1/services/org.gnome.Epiphany.SearchProvider.service
+ share/dbus-1/services/org.gnome.Epiphany.WebAppProvider.service
+-%%DATADIR%%/default-bookmarks.rdf
++share/epiphany/default-bookmarks.rdf
+ share/gnome-shell/search-providers/org.gnome.Epiphany.SearchProvider.ini
+ share/help/C/epiphany/browse-local.page
+ share/help/C/epiphany/browse-private.page
+@@ -40,6 +39,33 @@
+ share/help/C/epiphany/pref-passwords.page
+ share/help/C/epiphany/prob-restore-closed-page.page
+ share/help/C/epiphany/proxy.page
++share/help/bg/epiphany/browse-local.page
++share/help/bg/epiphany/browse-private.page
++share/help/bg/epiphany/browse-tab.page
++share/help/bg/epiphany/browse-web.page
++share/help/bg/epiphany/browse-webapps-del.page
++share/help/bg/epiphany/browse-webapps.page
++share/help/bg/epiphany/cert.page
++share/help/bg/epiphany/cookies.xml
++share/help/bg/epiphany/data-cookies.page
++share/help/bg/epiphany/data-passwords.page
++share/help/bg/epiphany/data-personal-data.page
++share/help/bg/epiphany/history-delete.page
++share/help/bg/epiphany/history.page
++share/help/bg/epiphany/index.page
++share/help/bg/epiphany/introduction.page
++share/help/bg/epiphany/legal.xml
++share/help/bg/epiphany/media/epiphany-plain-3-36.png
++share/help/bg/epiphany/media/epiphany-private-3-36.png
++share/help/bg/epiphany/media/org.gnome.Epiphany.svg
++share/help/bg/epiphany/pref-cookies.page
++share/help/bg/epiphany/pref-css.page
++share/help/bg/epiphany/pref-downloads.page
++share/help/bg/epiphany/pref-font.page
++share/help/bg/epiphany/pref-mouse-gestures.page
++share/help/bg/epiphany/pref-passwords.page
++share/help/bg/epiphany/prob-restore-closed-page.page
++share/help/bg/epiphany/proxy.page
+ share/help/ca/epiphany/browse-local.page
+ share/help/ca/epiphany/browse-private.page
+ share/help/ca/epiphany/browse-tab.page
+@@ -391,6 +417,33 @@
+ share/help/it/epiphany/pref-passwords.page
+ share/help/it/epiphany/prob-restore-closed-page.page
+ share/help/it/epiphany/proxy.page
++share/help/kk/epiphany/browse-local.page
++share/help/kk/epiphany/browse-private.page
++share/help/kk/epiphany/browse-tab.page
++share/help/kk/epiphany/browse-web.page
++share/help/kk/epiphany/browse-webapps-del.page
++share/help/kk/epiphany/browse-webapps.page
++share/help/kk/epiphany/cert.page
++share/help/kk/epiphany/cookies.xml
++share/help/kk/epiphany/data-cookies.page
++share/help/kk/epiphany/data-passwords.page
++share/help/kk/epiphany/data-personal-data.page
++share/help/kk/epiphany/history-delete.page
++share/help/kk/epiphany/history.page
++share/help/kk/epiphany/index.page
++share/help/kk/epiphany/introduction.page
++share/help/kk/epiphany/legal.xml
++share/help/kk/epiphany/media/epiphany-plain-3-36.png
++share/help/kk/epiphany/media/epiphany-private-3-36.png
++share/help/kk/epiphany/media/org.gnome.Epiphany.svg
++share/help/kk/epiphany/pref-cookies.page
++share/help/kk/epiphany/pref-css.page
++share/help/kk/epiphany/pref-downloads.page
++share/help/kk/epiphany/pref-font.page
++share/help/kk/epiphany/pref-mouse-gestures.page
++share/help/kk/epiphany/pref-passwords.page
++share/help/kk/epiphany/prob-restore-closed-page.page
++share/help/kk/epiphany/proxy.page
+ share/help/ko/epiphany/browse-local.page
+ share/help/ko/epiphany/browse-private.page
+ share/help/ko/epiphany/browse-tab.page
+@@ -553,6 +606,33 @@
+ share/help/sl/epiphany/pref-passwords.page
+ share/help/sl/epiphany/prob-restore-closed-page.page
+ share/help/sl/epiphany/proxy.page
++share/help/sr/epiphany/browse-local.page
++share/help/sr/epiphany/browse-private.page
++share/help/sr/epiphany/browse-tab.page
++share/help/sr/epiphany/browse-web.page
++share/help/sr/epiphany/browse-webapps-del.page
++share/help/sr/epiphany/browse-webapps.page
++share/help/sr/epiphany/cert.page
++share/help/sr/epiphany/cookies.xml
++share/help/sr/epiphany/data-cookies.page
++share/help/sr/epiphany/data-passwords.page
++share/help/sr/epiphany/data-personal-data.page
++share/help/sr/epiphany/history-delete.page
++share/help/sr/epiphany/history.page
++share/help/sr/epiphany/index.page
++share/help/sr/epiphany/introduction.page
++share/help/sr/epiphany/legal.xml
++share/help/sr/epiphany/media/epiphany-plain-3-36.png
++share/help/sr/epiphany/media/epiphany-private-3-36.png
++share/help/sr/epiphany/media/org.gnome.Epiphany.svg
++share/help/sr/epiphany/pref-cookies.page
++share/help/sr/epiphany/pref-css.page
++share/help/sr/epiphany/pref-downloads.page
++share/help/sr/epiphany/pref-font.page
++share/help/sr/epiphany/pref-mouse-gestures.page
++share/help/sr/epiphany/pref-passwords.page
++share/help/sr/epiphany/prob-restore-closed-page.page
++share/help/sr/epiphany/proxy.page
+ share/help/sv/epiphany/browse-local.page
+ share/help/sv/epiphany/browse-private.page
+ share/help/sv/epiphany/browse-tab.page
+@@ -708,6 +788,7 @@
+ share/locale/hr/LC_MESSAGES/epiphany.mo
+ share/locale/hu/LC_MESSAGES/epiphany.mo
+ share/locale/hy/LC_MESSAGES/epiphany.mo
++share/locale/ia/LC_MESSAGES/epiphany.mo
+ share/locale/id/LC_MESSAGES/epiphany.mo
+ share/locale/ie/LC_MESSAGES/epiphany.mo
+ share/locale/ig/LC_MESSAGES/epiphany.mo
+@@ -732,6 +813,7 @@
+ share/locale/mn/LC_MESSAGES/epiphany.mo
+ share/locale/mr/LC_MESSAGES/epiphany.mo
+ share/locale/ms/LC_MESSAGES/epiphany.mo
++share/locale/my/LC_MESSAGES/epiphany.mo
+ share/locale/nb/LC_MESSAGES/epiphany.mo
+ share/locale/nds/LC_MESSAGES/epiphany.mo
+ share/locale/ne/LC_MESSAGES/epiphany.mo
+@@ -770,4 +852,5 @@
+ share/locale/zh_CN/LC_MESSAGES/epiphany.mo
+ share/locale/zh_HK/LC_MESSAGES/epiphany.mo
+ share/locale/zh_TW/LC_MESSAGES/epiphany.mo
+-share/metainfo/org.gnome.Epiphany.appdata.xml
++share/man/man1/epiphany.1.gz
++share/metainfo/org.gnome.Epiphany.metainfo.xml

@@ -1,0 +1,6 @@
+port audio/decibels
+type dport
+reason "Add GNOME Decibels 49.6.1 for the GNOME 50 application set"
+target @any
+
+file materialize dragonfly/patch-src_window.ts -> dragonfly/patch-src_window.ts

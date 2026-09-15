@@ -1,6 +1,6 @@
 port graphics/wayland
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "DragonFly Wayland runtime fixes for kqueue, pipe2 termination, OS wrappers and tests; inherit the FreeBSD version and apply source patches from the dragonfly lane"
 target @any
 
 file materialize dragonfly/patch-meson.build -> dragonfly/patch-meson.build
@@ -11,3 +11,4 @@ file materialize dragonfly/patch-src_wayland-os.h -> dragonfly/patch-src_wayland
 file materialize dragonfly/patch-src_wayland-server.c -> dragonfly/patch-src_wayland-server.c
 file materialize dragonfly/patch-tests_os-wrappers-test.c -> dragonfly/patch-tests_os-wrappers-test.c
 file materialize dragonfly/patch-tests_test-runner.c -> dragonfly/patch-tests_test-runner.c
+file materialize dragonfly/patch-tests_test-helpers.c -> dragonfly/patch-tests_test-helpers.c

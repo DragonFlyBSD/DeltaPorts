@@ -1,6 +1,6 @@
---- sysdeps/freebsd/procsegment.c.orig	2016-11-27 18:05:03 UTC
+--- sysdeps/freebsd/procsegment.c.orig
 +++ sysdeps/freebsd/procsegment.c
-@@ -67,8 +67,13 @@ glibtop_get_proc_segment_p (glibtop *ser
+@@ -67,8 +67,13 @@
  		return;
  	}
  

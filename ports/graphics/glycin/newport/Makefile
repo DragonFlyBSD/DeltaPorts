@@ -1,0 +1,385 @@
+PORTNAME=	glycin
+DISTVERSION=	2.2.alpha.5
+CATEGORIES=	graphics
+MASTER_SITES=	GNOME
+DIST_SUBDIR=	gnome
+DISTFILES=	${DISTNAME}${EXTRACT_SUFX}
+COMMENT=	Sandboxed image loading library (libglycin)
+WWW=		https://gitlab.gnome.org/GNOME/glycin
+
+LICENSE=	MPL20 LGPL21
+LICENSE_COMB=	dual
+
+BUILD_DEPENDS=	gsettings-desktop-schemas>0:devel/gsettings-desktop-schemas
+LIB_DEPENDS=	libfontconfig.so:x11-fonts/fontconfig \
+		liblcms2.so:graphics/lcms2 \
+		libcairo.so:graphics/cairo \
+		librsvg-2.so:graphics/librsvg2-rust
+
+USES=		cargo gnome meson pkgconfig tar:xz
+USE_GNOME=	glib20 gtk40 introspection:build
+
+# meson drives the build and invokes cargo itself (only for the crates it
+# needs, e.g. `cargo build -p libglycin`); building the whole workspace via
+# cargo.mk would fail on libglycin-rebind-sys, which pkg-config's the not yet
+# installed glycin-2. Same pattern as graphics/librsvg2-rust.
+CARGO_BUILD=	no
+CARGO_INSTALL=	no
+CARGO_TEST=	no
+CONFIGURE_ENV+=	${CARGO_ENV}
+MAKE_ENV+=	${CARGO_ENV}
+
+MESON_ARGS=	-Dglycin-loaders=true \
+		-Dloaders=glycin-image-rs,glycin-svg \
+		-Dlibglycin=true \
+		-Dlibglycin-gtk4=true \
+		-Dintrospection=true \
+		-Dvapi=false \
+		-Dtests=false \
+		-Dpython_tests=false \
+		-Dglycin-thumbnailer=false
+
+# The compatibility loaders are enabled for Loupe's glycin 3.x client. Their
+# DragonFly build runs directly without the Linux seccomp sandbox; the
+# instruction handler and Cargo dependency are patched accordingly.
+
+CARGO_CRATES=	adler2-2.0.1 \
+		ahash-0.8.12 \
+		aho-corasick-1.1.4 \
+		aliasable-0.1.3 \
+		alloca-0.4.0 \
+		allocator-api2-0.2.21 \
+		android_system_properties-0.1.5 \
+		anes-0.1.6 \
+		anstyle-1.0.14 \
+		approx-0.5.1 \
+		async-broadcast-0.7.2 \
+		async-channel-2.5.0 \
+		async-executor-1.14.0 \
+		async-fs-2.2.0 \
+		async-global-executor-3.1.0 \
+		async-io-2.6.0 \
+		async-lock-3.4.2 \
+		async-process-2.5.0 \
+		async-recursion-1.1.1 \
+		async-signal-0.2.14 \
+		async-task-4.7.1 \
+		async-trait-0.1.89 \
+		atomic-waker-1.1.2 \
+		autocfg-1.5.1 \
+		bit_field-0.10.3 \
+		bitflags-1.3.2 \
+		bitflags-2.13.0 \
+		bitreader-0.3.11 \
+		blocking-1.6.2 \
+		bon-3.9.3 \
+		bon-macros-3.9.3 \
+		bumpalo-3.20.3 \
+		bytemuck-1.25.0 \
+		byteorder-1.5.0 \
+		byteorder-lite-0.1.0 \
+		bytes-1.12.0 \
+		cairo-rs-0.22.0 \
+		cairo-sys-rs-0.22.0 \
+		cast-0.3.0 \
+		cc-1.2.65 \
+		cfg-expr-0.20.8 \
+		cfg-if-1.0.4 \
+		cfg_aliases-0.2.1 \
+		chrono-0.4.45 \
+		ciborium-0.2.2 \
+		ciborium-io-0.2.2 \
+		ciborium-ll-0.2.2 \
+		clap-4.6.1 \
+		clap_builder-4.6.0 \
+		clap_lex-1.1.0 \
+		color_quant-1.1.0 \
+		concurrent-queue-2.5.0 \
+		core-foundation-sys-0.8.7 \
+		crc32fast-1.5.0 \
+		criterion-0.8.2 \
+		criterion-plot-0.8.2 \
+		crossbeam-deque-0.8.6 \
+		crossbeam-epoch-0.9.18 \
+		crossbeam-utils-0.8.21 \
+		crunchy-0.2.4 \
+		darling-0.23.0 \
+		darling_core-0.23.0 \
+		darling_macro-0.23.0 \
+		defmt-1.1.0 \
+		defmt-macros-1.1.0 \
+		defmt-parser-1.0.0 \
+		dlib-0.5.3 \
+		dunce-1.0.5 \
+		either-1.16.0 \
+		encoding_rs-0.8.35 \
+		endi-1.1.1 \
+		enumflags2-0.7.12 \
+		enumflags2_derive-0.7.12 \
+		enumn-0.1.14 \
+		env_filter-2.0.0 \
+		env_logger-0.11.11 \
+		equivalent-1.0.2 \
+		errno-0.3.14 \
+		event-listener-5.4.1 \
+		event-listener-strategy-0.5.4 \
+		exr-1.74.0 \
+		fallible_collections-0.5.2 \
+		fastrand-2.4.1 \
+		fax-0.2.7 \
+		fdeflate-0.3.7 \
+		fearless_simd-0.4.1 \
+		find-msvc-tools-0.1.9 \
+		flate2-1.1.9 \
+		foreign-types-0.5.0 \
+		foreign-types-macros-0.2.3 \
+		foreign-types-shared-0.3.1 \
+		four-cc-0.4.0 \
+		futures-channel-0.3.32 \
+		futures-core-0.3.32 \
+		futures-executor-0.3.32 \
+		futures-io-0.3.32 \
+		futures-lite-2.6.1 \
+		futures-macro-0.3.32 \
+		futures-sink-0.3.32 \
+		futures-task-0.3.32 \
+		futures-timer-3.0.4 \
+		futures-util-0.3.32 \
+		gdk-pixbuf-0.22.0 \
+		gdk-pixbuf-sys-0.22.0 \
+		gdk4-0.11.2 \
+		gdk4-sys-0.11.2 \
+		getopts-0.2.24 \
+		getrandom-0.3.4 \
+		getrandom-0.4.3 \
+		gif-0.14.2 \
+		gio-0.22.6 \
+		gio-sys-0.22.0 \
+		gio-unix-0.22.6 \
+		gio-unix-sys-0.22.0 \
+		glib-0.22.7 \
+		glib-macros-0.22.6 \
+		glib-sys-0.22.6 \
+		glycin-4.0.0-alpha \
+		glycin-builtin-4.0.0-alpha \
+		glycin-common-2.0.0-alpha \
+		glycin-core-4.0.0-alpha \
+		glycin-external-4.0.0-alpha \
+		glycin-image-rs-2.2.0-alpha \
+		glycin-test-2.2.0-alpha \
+		glycin-utils-5.0.0-alpha \
+		gobject-sys-0.22.6 \
+		gufo-0.5.0-alpha \
+		gufo-common-2.0.0-alpha \
+		gufo-exif-0.5.0-alpha \
+		gufo-jpeg-0.5.0-alpha \
+		gufo-png-0.5.0-alpha \
+		gufo-svg-0.5.0-alpha \
+		gufo-tiff-0.5.0-alpha \
+		gufo-webp-0.5.0-alpha \
+		gufo-xmp-0.5.0-alpha \
+		half-2.7.1 \
+		hashbrown-0.14.5 \
+		hashbrown-0.17.1 \
+		hayro-jpeg2000-0.3.5 \
+		heck-0.4.1 \
+		heck-0.5.0 \
+		hermit-abi-0.5.2 \
+		hex-0.4.3 \
+		iana-time-zone-0.1.65 \
+		iana-time-zone-haiku-0.1.2 \
+		ident_case-1.0.1 \
+		image-0.25.10 \
+		image-extras-0.1.1 \
+		image-webp-0.2.4 \
+		indexmap-2.14.0 \
+		itertools-0.13.0 \
+		itoa-1.0.18 \
+		jiff-0.2.29 \
+		jiff-static-0.2.29 \
+		jobserver-0.1.34 \
+		jpeg-decoder-0.3.2 \
+		jpeg-encoder-0.7.0 \
+		jpegxl-rs-0.12.0+libjxl-0.11.1 \
+		jpegxl-sys-0.12.1+libjxl-0.11.2 \
+		js-sys-0.3.103 \
+		lazy_static-1.5.0 \
+		lcms2-6.1.1 \
+		lcms2-sys-4.0.6 \
+		lebe-0.5.3 \
+		libc-0.2.186 \
+		libheif-rs-2.7.0 \
+		libheif-sys-5.3.0+1.23.0 \
+		libloading-0.8.9 \
+		libopenraw-0.4.0-alpha.12 \
+		librsvg-rebind-0.3.0 \
+		librsvg-rebind-sys-0.3.0 \
+		libseccomp-0.4.0 \
+		libseccomp-sys-0.3.0 \
+		linux-raw-sys-0.12.1 \
+		log-0.4.33 \
+		matchers-0.2.0 \
+		matrixmultiply-0.3.10 \
+		memchr-2.8.2 \
+		memmap2-0.9.11 \
+		memoffset-0.9.1 \
+		miniz_oxide-0.8.9 \
+		miniz_oxide-0.9.1 \
+		mio-1.2.1 \
+		moxcms-0.8.1 \
+		multiversion-0.8.0 \
+		multiversion-macros-0.8.0 \
+		nalgebra-0.33.3 \
+		nalgebra-macros-0.2.2 \
+		nix-0.31.3 \
+		nu-ansi-term-0.50.3 \
+		num-bigint-0.4.6 \
+		num-complex-0.4.6 \
+		num-integer-0.1.46 \
+		num-rational-0.4.2 \
+		num-traits-0.2.19 \
+		num_enum-0.7.6 \
+		num_enum_derive-0.7.6 \
+		once_cell-1.21.4 \
+		oorandom-11.1.5 \
+		ordered-stream-0.2.0 \
+		ouroboros-0.18.5 \
+		ouroboros_macro-0.18.5 \
+		page_size-0.6.0 \
+		pango-0.22.6 \
+		pango-sys-0.22.0 \
+		parking-2.2.1 \
+		paste-1.0.15 \
+		pin-project-lite-0.2.17 \
+		piper-0.2.5 \
+		pkg-config-0.3.33 \
+		plotters-0.3.7 \
+		plotters-backend-0.3.7 \
+		plotters-svg-0.3.7 \
+		png-0.18.1 \
+		polling-3.11.0 \
+		portable-atomic-1.13.1 \
+		portable-atomic-util-0.2.7 \
+		prettyplease-0.2.37 \
+		proc-macro-crate-3.5.0 \
+		proc-macro-error-attr2-2.0.0 \
+		proc-macro-error2-2.0.1 \
+		proc-macro2-1.0.106 \
+		proc-macro2-diagnostics-0.10.1 \
+		pxfm-0.1.29 \
+		qoi-0.4.1 \
+		quick-error-2.0.1 \
+		quote-1.0.46 \
+		r-efi-5.3.0 \
+		r-efi-6.0.0 \
+		rawpointer-0.2.1 \
+		rayon-1.12.0 \
+		rayon-core-1.13.0 \
+		regex-1.12.4 \
+		regex-automata-0.4.14 \
+		regex-syntax-0.8.11 \
+		rmp-0.8.15 \
+		rmp-serde-1.3.1 \
+		rustix-1.1.4 \
+		rustversion-1.0.22 \
+		ryu-1.0.23 \
+		safe-transmute-0.11.3 \
+		safe_arch-0.7.4 \
+		same-file-1.0.6 \
+		serde-1.0.228 \
+		serde_core-1.0.228 \
+		serde_derive-1.0.228 \
+		serde_json-1.0.150 \
+		serde_repr-0.1.20 \
+		serde_spanned-1.1.1 \
+		serde_yaml_ng-0.10.0 \
+		sharded-slab-0.1.7 \
+		shell-words-1.1.1 \
+		shlex-2.0.1 \
+		signal-hook-registry-1.4.8 \
+		simba-0.9.1 \
+		simd-adler32-0.3.9 \
+		simple_logger-5.2.0 \
+		slab-0.4.12 \
+		smallvec-1.15.2 \
+		socket2-0.6.4 \
+		static_assertions-1.1.0 \
+		strsim-0.11.1 \
+		syn-2.0.118 \
+		system-deps-7.0.8 \
+		target-features-0.1.6 \
+		target-lexicon-0.13.5 \
+		tempfile-3.27.0 \
+		thiserror-2.0.18 \
+		thiserror-impl-2.0.18 \
+		thread_local-1.1.9 \
+		tiff-0.11.3 \
+		tinytemplate-1.2.1 \
+		tokio-1.52.3 \
+		tokio-stream-0.1.18 \
+		toml-1.1.2+spec-1.1.0 \
+		toml_datetime-1.1.1+spec-1.1.0 \
+		toml_edit-0.25.12+spec-1.1.0 \
+		toml_parser-1.1.2+spec-1.1.0 \
+		toml_writer-1.1.1+spec-1.1.0 \
+		tracing-0.1.44 \
+		tracing-attributes-0.1.31 \
+		tracing-core-0.1.36 \
+		tracing-log-0.2.0 \
+		tracing-subscriber-0.3.23 \
+		typenum-1.20.1 \
+		uds_windows-1.2.1 \
+		unicode-ident-1.0.24 \
+		unicode-width-0.2.2 \
+		unsafe-libyaml-0.2.11 \
+		uuid-1.23.4 \
+		valuable-0.1.1 \
+		vcpkg-0.2.15 \
+		version-compare-0.2.1 \
+		version_check-0.9.5 \
+		walkdir-2.5.0 \
+		wasi-0.11.1+wasi-snapshot-preview1 \
+		wasip2-1.0.4+wasi-0.2.12 \
+		wasm-bindgen-0.2.126 \
+		wasm-bindgen-macro-0.2.126 \
+		wasm-bindgen-macro-support-0.2.126 \
+		wasm-bindgen-shared-0.2.126 \
+		web-sys-0.3.103 \
+		weezl-0.1.12 \
+		wide-0.7.33 \
+		winapi-0.3.9 \
+		winapi-i686-pc-windows-gnu-0.4.0 \
+		winapi-util-0.1.11 \
+		winapi-x86_64-pc-windows-gnu-0.4.0 \
+		windows-core-0.62.2 \
+		windows-implement-0.60.2 \
+		windows-interface-0.59.3 \
+		windows-link-0.2.1 \
+		windows-result-0.4.1 \
+		windows-strings-0.5.1 \
+		windows-sys-0.61.2 \
+		winnow-1.0.3 \
+		wit-bindgen-0.57.1 \
+		xml-1.3.0 \
+		yansi-1.0.1 \
+		yeslogic-fontconfig-sys-6.0.1 \
+		zbus-5.16.0 \
+		zbus_macros-5.16.0 \
+		zbus_names-4.3.2 \
+		zerocopy-0.8.52 \
+		zerocopy-derive-0.8.52 \
+		zmij-1.0.21 \
+		zune-core-0.5.1 \
+		zune-inflate-0.2.54 \
+		zune-jpeg-0.5.15 \
+		zvariant-5.12.0 \
+		zvariant_derive-5.12.0 \
+		zvariant_utils-3.4.0
+
+# Patching vendored crates via files/ needs no checksum fixup: cargo.mk
+# already writes each crate's .cargo-checksum.json with an empty "files"
+# map, so cargo never verifies individual vendored files.
+post-patch:
+	${REINPLACE_CMD} '/libseccomp/d' ${WRKSRC}/libglycin/meson.build
+
+.include <bsd.port.mk>

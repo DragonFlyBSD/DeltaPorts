@@ -1,0 +1,13 @@
+--- Makefile.orig
++++ Makefile
+@@ -24,10 +24,5 @@
+ 
+ GLIB_SCHEMAS=	org.gnome.SessionManager.gschema.xml
+ 
+-# Avoid lots of warnings in gdm log
+-.for f in gnome-wayland.desktop.in.in gnome.desktop.in.in
+-	${REINPLACE_CMD} -e 's|/gnome-session|/gnome-session --disable-acceleration-check|g' \
+-		${WRKSRC}/data/${f}
+-.endfor 
+ 
+ .include <bsd.port.mk>

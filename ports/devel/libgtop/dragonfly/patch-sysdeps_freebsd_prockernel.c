@@ -1,6 +1,6 @@
---- sysdeps/freebsd/prockernel.c.orig	2016-11-27 18:05:03 UTC
+--- sysdeps/freebsd/prockernel.c.orig
 +++ sysdeps/freebsd/prockernel.c
-@@ -89,9 +89,14 @@ glibtop_get_proc_kernel_p (glibtop *serv
+@@ -89,9 +89,14 @@
  
  	glibtop_suid_leave (server);
  
@@ -15,7 +15,7 @@
  
  	buf->nwchan = (unsigned long) pinfo [0].PROC_WCHAN;
  
-@@ -105,6 +110,11 @@ glibtop_get_proc_kernel_p (glibtop *serv
+@@ -105,6 +110,11 @@
  		buf->wchan [0] = 0;
  	}
  
@@ -27,7 +27,7 @@
  	buf->k_flags = (unsigned long) pinfo [0].ki_flag;
  	buf->min_flt = (unsigned long) pinfo [0].ki_rusage.ru_minflt;
  	buf->maj_flt = (unsigned long) pinfo [0].ki_rusage.ru_majflt;
-@@ -112,6 +122,7 @@ glibtop_get_proc_kernel_p (glibtop *serv
+@@ -112,6 +122,7 @@
  	buf->cmin_flt = (unsigned long) buf->min_flt + pinfo [0].ki_rusage_ch.ru_minflt;
  	buf->cmaj_flt = (unsigned long) buf->maj_flt + pinfo [0].ki_rusage_ch.ru_majflt;
  #endif

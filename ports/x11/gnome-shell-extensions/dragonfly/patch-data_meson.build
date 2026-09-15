@@ -1,0 +1,18 @@
+--- data/meson.build.orig
++++ data/meson.build
+@@ -35,9 +35,11 @@
+ install_data(
+   'gnome-classic.session',
+   install_dir: sessiondir,
+ )
+ 
+-install_data(
+-  'gnome-classic.session.conf',
+-  install_dir: systemd_userunitdir / 'gnome-session@gnome-classic.target.d',
+-)
++if systemd_dep.found()
++  install_data(
++    'gnome-classic.session.conf',
++    install_dir: systemd_userunitdir / 'gnome-session@gnome-classic.target.d',
++  )
++endif

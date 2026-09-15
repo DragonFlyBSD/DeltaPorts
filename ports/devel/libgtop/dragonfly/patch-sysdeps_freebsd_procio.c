@@ -1,6 +1,6 @@
---- sysdeps/freebsd/procio.c.orig	2017-05-22 21:12:07 UTC
+--- sysdeps/freebsd/procio.c.orig
 +++ sysdeps/freebsd/procio.c
-@@ -74,7 +74,9 @@ glibtop_get_proc_io_p (glibtop *server,
+@@ -74,7 +74,9 @@
  
  	   FIXME: seems the blocksize is 1024 but ...
  	*/

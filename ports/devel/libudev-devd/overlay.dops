@@ -4,6 +4,9 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
 file materialize dragonfly/patch-meson.build -> dragonfly/patch-meson.build
+file materialize dragonfly/patch-udev-device.c -> dragonfly/patch-udev-device.c
+file materialize dragonfly/patch-libudev.h -> dragonfly/patch-libudev.h
 file materialize dragonfly/patch-udev-dev.c -> dragonfly/patch-udev-dev.c
 file materialize dragonfly/patch-udev-net.c -> dragonfly/patch-udev-net.c
 file materialize dragonfly/patch-utils.c -> dragonfly/patch-utils.c
+file materialize dragonfly/patch-udev-utils.c -> dragonfly/patch-udev-utils.c

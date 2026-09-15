@@ -1,0 +1,17 @@
+port deskutils/gnome-characters
+type port
+reason "Update GNOME Characters to 50.0 for the GNOME 50 full desktop"
+target @any
+
+mk unset PORTVERSION
+mk unset PORTREVISION
+mk set PORTSCOUT "limit:^50\\."
+mk remove USE_GNOME "gnomedesktop3"
+mk set DISTVERSION "50.0"
+file materialize distinfo -> distinfo
+text replace-once file pkg-plist from "share/metainfo/org.gnome.Characters.appdata.xml" to "share/metainfo/org.gnome.Characters.metainfo.xml"
+text line-insert-after file pkg-plist anchor "share/locale/uk/LC_MESSAGES/org.gnome.Characters.mo" line "share/locale/uz/LC_MESSAGES/org.gnome.Characters.mo"
+text line-insert-after file pkg-plist anchor "share/locale/tr/LC_MESSAGES/org.gnome.Characters.mo" line "share/locale/ug/LC_MESSAGES/org.gnome.Characters.mo"
+text line-insert-after file pkg-plist anchor "share/locale/ko/LC_MESSAGES/org.gnome.Characters.mo" line "share/locale/kw/LC_MESSAGES/org.gnome.Characters.mo"
+text line-insert-after file pkg-plist anchor "share/locale/hu/LC_MESSAGES/org.gnome.Characters.mo" line "share/locale/ia/LC_MESSAGES/org.gnome.Characters.mo"
+text line-insert-after file pkg-plist anchor "share/locale/ar/LC_MESSAGES/org.gnome.Characters.mo" line "share/locale/az/LC_MESSAGES/org.gnome.Characters.mo"

@@ -1,0 +1,1407 @@
+--- pkg-plist.orig
++++ pkg-plist
+@@ -290,6 +290,11 @@
+ share/help/C/gnome-help/mouse-touchpad-click.page
+ share/help/C/gnome-help/mouse-wakeup.page
+ share/help/C/gnome-help/mouse.page
++share/help/C/gnome-help/multitasking-app-switching.page
++share/help/C/gnome-help/multitasking-hot-corner.page
++share/help/C/gnome-help/multitasking-screen-edges.page
++share/help/C/gnome-help/multitasking-workspace-behavior.page
++share/help/C/gnome-help/multitasking.page
+ share/help/C/gnome-help/music-cantplay-drm.page
+ share/help/C/gnome-help/nautilus-behavior.page
+ share/help/C/gnome-help/nautilus-bookmarks-edit.page
+@@ -413,6 +418,7 @@
+ share/help/C/gnome-help/shell-lockscreen.page
+ share/help/C/gnome-help/shell-notifications.page
+ share/help/C/gnome-help/shell-overview.page
++share/help/C/gnome-help/shell-wellbeing.page
+ share/help/C/gnome-help/shell-windows-lost.page
+ share/help/C/gnome-help/shell-windows-maximize.page
+ share/help/C/gnome-help/shell-windows-states.page
+@@ -802,6 +808,11 @@
+ share/help/as/gnome-help/mouse-touchpad-click.page
+ share/help/as/gnome-help/mouse-wakeup.page
+ share/help/as/gnome-help/mouse.page
++share/help/as/gnome-help/multitasking-app-switching.page
++share/help/as/gnome-help/multitasking-hot-corner.page
++share/help/as/gnome-help/multitasking-screen-edges.page
++share/help/as/gnome-help/multitasking-workspace-behavior.page
++share/help/as/gnome-help/multitasking.page
+ share/help/as/gnome-help/music-cantplay-drm.page
+ share/help/as/gnome-help/nautilus-behavior.page
+ share/help/as/gnome-help/nautilus-bookmarks-edit.page
+@@ -925,6 +936,7 @@
+ share/help/as/gnome-help/shell-lockscreen.page
+ share/help/as/gnome-help/shell-notifications.page
+ share/help/as/gnome-help/shell-overview.page
++share/help/as/gnome-help/shell-wellbeing.page
+ share/help/as/gnome-help/shell-windows-lost.page
+ share/help/as/gnome-help/shell-windows-maximize.page
+ share/help/as/gnome-help/shell-windows-states.page
+@@ -1257,6 +1269,11 @@
+ share/help/ca/gnome-help/mouse-touchpad-click.page
+ share/help/ca/gnome-help/mouse-wakeup.page
+ share/help/ca/gnome-help/mouse.page
++share/help/ca/gnome-help/multitasking-app-switching.page
++share/help/ca/gnome-help/multitasking-hot-corner.page
++share/help/ca/gnome-help/multitasking-screen-edges.page
++share/help/ca/gnome-help/multitasking-workspace-behavior.page
++share/help/ca/gnome-help/multitasking.page
+ share/help/ca/gnome-help/music-cantplay-drm.page
+ share/help/ca/gnome-help/nautilus-behavior.page
+ share/help/ca/gnome-help/nautilus-bookmarks-edit.page
+@@ -1380,6 +1397,7 @@
+ share/help/ca/gnome-help/shell-lockscreen.page
+ share/help/ca/gnome-help/shell-notifications.page
+ share/help/ca/gnome-help/shell-overview.page
++share/help/ca/gnome-help/shell-wellbeing.page
+ share/help/ca/gnome-help/shell-windows-lost.page
+ share/help/ca/gnome-help/shell-windows-maximize.page
+ share/help/ca/gnome-help/shell-windows-states.page
+@@ -1769,6 +1787,11 @@
+ share/help/cs/gnome-help/mouse-touchpad-click.page
+ share/help/cs/gnome-help/mouse-wakeup.page
+ share/help/cs/gnome-help/mouse.page
++share/help/cs/gnome-help/multitasking-app-switching.page
++share/help/cs/gnome-help/multitasking-hot-corner.page
++share/help/cs/gnome-help/multitasking-screen-edges.page
++share/help/cs/gnome-help/multitasking-workspace-behavior.page
++share/help/cs/gnome-help/multitasking.page
+ share/help/cs/gnome-help/music-cantplay-drm.page
+ share/help/cs/gnome-help/nautilus-behavior.page
+ share/help/cs/gnome-help/nautilus-bookmarks-edit.page
+@@ -1892,6 +1915,7 @@
+ share/help/cs/gnome-help/shell-lockscreen.page
+ share/help/cs/gnome-help/shell-notifications.page
+ share/help/cs/gnome-help/shell-overview.page
++share/help/cs/gnome-help/shell-wellbeing.page
+ share/help/cs/gnome-help/shell-windows-lost.page
+ share/help/cs/gnome-help/shell-windows-maximize.page
+ share/help/cs/gnome-help/shell-windows-states.page
+@@ -2281,6 +2305,11 @@
+ share/help/da/gnome-help/mouse-touchpad-click.page
+ share/help/da/gnome-help/mouse-wakeup.page
+ share/help/da/gnome-help/mouse.page
++share/help/da/gnome-help/multitasking-app-switching.page
++share/help/da/gnome-help/multitasking-hot-corner.page
++share/help/da/gnome-help/multitasking-screen-edges.page
++share/help/da/gnome-help/multitasking-workspace-behavior.page
++share/help/da/gnome-help/multitasking.page
+ share/help/da/gnome-help/music-cantplay-drm.page
+ share/help/da/gnome-help/nautilus-behavior.page
+ share/help/da/gnome-help/nautilus-bookmarks-edit.page
+@@ -2404,6 +2433,7 @@
+ share/help/da/gnome-help/shell-lockscreen.page
+ share/help/da/gnome-help/shell-notifications.page
+ share/help/da/gnome-help/shell-overview.page
++share/help/da/gnome-help/shell-wellbeing.page
+ share/help/da/gnome-help/shell-windows-lost.page
+ share/help/da/gnome-help/shell-windows-maximize.page
+ share/help/da/gnome-help/shell-windows-states.page
+@@ -2736,6 +2766,11 @@
+ share/help/de/gnome-help/mouse-touchpad-click.page
+ share/help/de/gnome-help/mouse-wakeup.page
+ share/help/de/gnome-help/mouse.page
++share/help/de/gnome-help/multitasking-app-switching.page
++share/help/de/gnome-help/multitasking-hot-corner.page
++share/help/de/gnome-help/multitasking-screen-edges.page
++share/help/de/gnome-help/multitasking-workspace-behavior.page
++share/help/de/gnome-help/multitasking.page
+ share/help/de/gnome-help/music-cantplay-drm.page
+ share/help/de/gnome-help/nautilus-behavior.page
+ share/help/de/gnome-help/nautilus-bookmarks-edit.page
+@@ -2859,6 +2894,7 @@
+ share/help/de/gnome-help/shell-lockscreen.page
+ share/help/de/gnome-help/shell-notifications.page
+ share/help/de/gnome-help/shell-overview.page
++share/help/de/gnome-help/shell-wellbeing.page
+ share/help/de/gnome-help/shell-windows-lost.page
+ share/help/de/gnome-help/shell-windows-maximize.page
+ share/help/de/gnome-help/shell-windows-states.page
+@@ -3248,6 +3284,11 @@
+ share/help/el/gnome-help/mouse-touchpad-click.page
+ share/help/el/gnome-help/mouse-wakeup.page
+ share/help/el/gnome-help/mouse.page
++share/help/el/gnome-help/multitasking-app-switching.page
++share/help/el/gnome-help/multitasking-hot-corner.page
++share/help/el/gnome-help/multitasking-screen-edges.page
++share/help/el/gnome-help/multitasking-workspace-behavior.page
++share/help/el/gnome-help/multitasking.page
+ share/help/el/gnome-help/music-cantplay-drm.page
+ share/help/el/gnome-help/nautilus-behavior.page
+ share/help/el/gnome-help/nautilus-bookmarks-edit.page
+@@ -3371,6 +3412,7 @@
+ share/help/el/gnome-help/shell-lockscreen.page
+ share/help/el/gnome-help/shell-notifications.page
+ share/help/el/gnome-help/shell-overview.page
++share/help/el/gnome-help/shell-wellbeing.page
+ share/help/el/gnome-help/shell-windows-lost.page
+ share/help/el/gnome-help/shell-windows-maximize.page
+ share/help/el/gnome-help/shell-windows-states.page
+@@ -3703,6 +3745,11 @@
+ share/help/es/gnome-help/mouse-touchpad-click.page
+ share/help/es/gnome-help/mouse-wakeup.page
+ share/help/es/gnome-help/mouse.page
++share/help/es/gnome-help/multitasking-app-switching.page
++share/help/es/gnome-help/multitasking-hot-corner.page
++share/help/es/gnome-help/multitasking-screen-edges.page
++share/help/es/gnome-help/multitasking-workspace-behavior.page
++share/help/es/gnome-help/multitasking.page
+ share/help/es/gnome-help/music-cantplay-drm.page
+ share/help/es/gnome-help/nautilus-behavior.page
+ share/help/es/gnome-help/nautilus-bookmarks-edit.page
+@@ -3826,6 +3873,7 @@
+ share/help/es/gnome-help/shell-lockscreen.page
+ share/help/es/gnome-help/shell-notifications.page
+ share/help/es/gnome-help/shell-overview.page
++share/help/es/gnome-help/shell-wellbeing.page
+ share/help/es/gnome-help/shell-windows-lost.page
+ share/help/es/gnome-help/shell-windows-maximize.page
+ share/help/es/gnome-help/shell-windows-states.page
+@@ -4215,6 +4263,11 @@
+ share/help/eu/gnome-help/mouse-touchpad-click.page
+ share/help/eu/gnome-help/mouse-wakeup.page
+ share/help/eu/gnome-help/mouse.page
++share/help/eu/gnome-help/multitasking-app-switching.page
++share/help/eu/gnome-help/multitasking-hot-corner.page
++share/help/eu/gnome-help/multitasking-screen-edges.page
++share/help/eu/gnome-help/multitasking-workspace-behavior.page
++share/help/eu/gnome-help/multitasking.page
+ share/help/eu/gnome-help/music-cantplay-drm.page
+ share/help/eu/gnome-help/nautilus-behavior.page
+ share/help/eu/gnome-help/nautilus-bookmarks-edit.page
+@@ -4338,6 +4391,7 @@
+ share/help/eu/gnome-help/shell-lockscreen.page
+ share/help/eu/gnome-help/shell-notifications.page
+ share/help/eu/gnome-help/shell-overview.page
++share/help/eu/gnome-help/shell-wellbeing.page
+ share/help/eu/gnome-help/shell-windows-lost.page
+ share/help/eu/gnome-help/shell-windows-maximize.page
+ share/help/eu/gnome-help/shell-windows-states.page
+@@ -4727,6 +4781,11 @@
+ share/help/fa/gnome-help/mouse-touchpad-click.page
+ share/help/fa/gnome-help/mouse-wakeup.page
+ share/help/fa/gnome-help/mouse.page
++share/help/fa/gnome-help/multitasking-app-switching.page
++share/help/fa/gnome-help/multitasking-hot-corner.page
++share/help/fa/gnome-help/multitasking-screen-edges.page
++share/help/fa/gnome-help/multitasking-workspace-behavior.page
++share/help/fa/gnome-help/multitasking.page
+ share/help/fa/gnome-help/music-cantplay-drm.page
+ share/help/fa/gnome-help/nautilus-behavior.page
+ share/help/fa/gnome-help/nautilus-bookmarks-edit.page
+@@ -4850,6 +4909,7 @@
+ share/help/fa/gnome-help/shell-lockscreen.page
+ share/help/fa/gnome-help/shell-notifications.page
+ share/help/fa/gnome-help/shell-overview.page
++share/help/fa/gnome-help/shell-wellbeing.page
+ share/help/fa/gnome-help/shell-windows-lost.page
+ share/help/fa/gnome-help/shell-windows-maximize.page
+ share/help/fa/gnome-help/shell-windows-states.page
+@@ -5239,6 +5299,11 @@
+ share/help/fi/gnome-help/mouse-touchpad-click.page
+ share/help/fi/gnome-help/mouse-wakeup.page
+ share/help/fi/gnome-help/mouse.page
++share/help/fi/gnome-help/multitasking-app-switching.page
++share/help/fi/gnome-help/multitasking-hot-corner.page
++share/help/fi/gnome-help/multitasking-screen-edges.page
++share/help/fi/gnome-help/multitasking-workspace-behavior.page
++share/help/fi/gnome-help/multitasking.page
+ share/help/fi/gnome-help/music-cantplay-drm.page
+ share/help/fi/gnome-help/nautilus-behavior.page
+ share/help/fi/gnome-help/nautilus-bookmarks-edit.page
+@@ -5362,6 +5427,7 @@
+ share/help/fi/gnome-help/shell-lockscreen.page
+ share/help/fi/gnome-help/shell-notifications.page
+ share/help/fi/gnome-help/shell-overview.page
++share/help/fi/gnome-help/shell-wellbeing.page
+ share/help/fi/gnome-help/shell-windows-lost.page
+ share/help/fi/gnome-help/shell-windows-maximize.page
+ share/help/fi/gnome-help/shell-windows-states.page
+@@ -5694,6 +5760,11 @@
+ share/help/fr/gnome-help/mouse-touchpad-click.page
+ share/help/fr/gnome-help/mouse-wakeup.page
+ share/help/fr/gnome-help/mouse.page
++share/help/fr/gnome-help/multitasking-app-switching.page
++share/help/fr/gnome-help/multitasking-hot-corner.page
++share/help/fr/gnome-help/multitasking-screen-edges.page
++share/help/fr/gnome-help/multitasking-workspace-behavior.page
++share/help/fr/gnome-help/multitasking.page
+ share/help/fr/gnome-help/music-cantplay-drm.page
+ share/help/fr/gnome-help/nautilus-behavior.page
+ share/help/fr/gnome-help/nautilus-bookmarks-edit.page
+@@ -5817,6 +5888,7 @@
+ share/help/fr/gnome-help/shell-lockscreen.page
+ share/help/fr/gnome-help/shell-notifications.page
+ share/help/fr/gnome-help/shell-overview.page
++share/help/fr/gnome-help/shell-wellbeing.page
+ share/help/fr/gnome-help/shell-windows-lost.page
+ share/help/fr/gnome-help/shell-windows-maximize.page
+ share/help/fr/gnome-help/shell-windows-states.page
+@@ -6206,6 +6278,11 @@
+ share/help/gl/gnome-help/mouse-touchpad-click.page
+ share/help/gl/gnome-help/mouse-wakeup.page
+ share/help/gl/gnome-help/mouse.page
++share/help/gl/gnome-help/multitasking-app-switching.page
++share/help/gl/gnome-help/multitasking-hot-corner.page
++share/help/gl/gnome-help/multitasking-screen-edges.page
++share/help/gl/gnome-help/multitasking-workspace-behavior.page
++share/help/gl/gnome-help/multitasking.page
+ share/help/gl/gnome-help/music-cantplay-drm.page
+ share/help/gl/gnome-help/nautilus-behavior.page
+ share/help/gl/gnome-help/nautilus-bookmarks-edit.page
+@@ -6329,6 +6406,7 @@
+ share/help/gl/gnome-help/shell-lockscreen.page
+ share/help/gl/gnome-help/shell-notifications.page
+ share/help/gl/gnome-help/shell-overview.page
++share/help/gl/gnome-help/shell-wellbeing.page
+ share/help/gl/gnome-help/shell-windows-lost.page
+ share/help/gl/gnome-help/shell-windows-maximize.page
+ share/help/gl/gnome-help/shell-windows-states.page
+@@ -6718,6 +6796,11 @@
+ share/help/gu/gnome-help/mouse-touchpad-click.page
+ share/help/gu/gnome-help/mouse-wakeup.page
+ share/help/gu/gnome-help/mouse.page
++share/help/gu/gnome-help/multitasking-app-switching.page
++share/help/gu/gnome-help/multitasking-hot-corner.page
++share/help/gu/gnome-help/multitasking-screen-edges.page
++share/help/gu/gnome-help/multitasking-workspace-behavior.page
++share/help/gu/gnome-help/multitasking.page
+ share/help/gu/gnome-help/music-cantplay-drm.page
+ share/help/gu/gnome-help/nautilus-behavior.page
+ share/help/gu/gnome-help/nautilus-bookmarks-edit.page
+@@ -6841,6 +6924,7 @@
+ share/help/gu/gnome-help/shell-lockscreen.page
+ share/help/gu/gnome-help/shell-notifications.page
+ share/help/gu/gnome-help/shell-overview.page
++share/help/gu/gnome-help/shell-wellbeing.page
+ share/help/gu/gnome-help/shell-windows-lost.page
+ share/help/gu/gnome-help/shell-windows-maximize.page
+ share/help/gu/gnome-help/shell-windows-states.page
+@@ -7173,6 +7257,11 @@
+ share/help/he/gnome-help/mouse-touchpad-click.page
+ share/help/he/gnome-help/mouse-wakeup.page
+ share/help/he/gnome-help/mouse.page
++share/help/he/gnome-help/multitasking-app-switching.page
++share/help/he/gnome-help/multitasking-hot-corner.page
++share/help/he/gnome-help/multitasking-screen-edges.page
++share/help/he/gnome-help/multitasking-workspace-behavior.page
++share/help/he/gnome-help/multitasking.page
+ share/help/he/gnome-help/music-cantplay-drm.page
+ share/help/he/gnome-help/nautilus-behavior.page
+ share/help/he/gnome-help/nautilus-bookmarks-edit.page
+@@ -7296,6 +7385,7 @@
+ share/help/he/gnome-help/shell-lockscreen.page
+ share/help/he/gnome-help/shell-notifications.page
+ share/help/he/gnome-help/shell-overview.page
++share/help/he/gnome-help/shell-wellbeing.page
+ share/help/he/gnome-help/shell-windows-lost.page
+ share/help/he/gnome-help/shell-windows-maximize.page
+ share/help/he/gnome-help/shell-windows-states.page
+@@ -7628,6 +7718,11 @@
+ share/help/hi/gnome-help/mouse-touchpad-click.page
+ share/help/hi/gnome-help/mouse-wakeup.page
+ share/help/hi/gnome-help/mouse.page
++share/help/hi/gnome-help/multitasking-app-switching.page
++share/help/hi/gnome-help/multitasking-hot-corner.page
++share/help/hi/gnome-help/multitasking-screen-edges.page
++share/help/hi/gnome-help/multitasking-workspace-behavior.page
++share/help/hi/gnome-help/multitasking.page
+ share/help/hi/gnome-help/music-cantplay-drm.page
+ share/help/hi/gnome-help/nautilus-behavior.page
+ share/help/hi/gnome-help/nautilus-bookmarks-edit.page
+@@ -7751,6 +7846,7 @@
+ share/help/hi/gnome-help/shell-lockscreen.page
+ share/help/hi/gnome-help/shell-notifications.page
+ share/help/hi/gnome-help/shell-overview.page
++share/help/hi/gnome-help/shell-wellbeing.page
+ share/help/hi/gnome-help/shell-windows-lost.page
+ share/help/hi/gnome-help/shell-windows-maximize.page
+ share/help/hi/gnome-help/shell-windows-states.page
+@@ -8083,6 +8179,11 @@
+ share/help/hr/gnome-help/mouse-touchpad-click.page
+ share/help/hr/gnome-help/mouse-wakeup.page
+ share/help/hr/gnome-help/mouse.page
++share/help/hr/gnome-help/multitasking-app-switching.page
++share/help/hr/gnome-help/multitasking-hot-corner.page
++share/help/hr/gnome-help/multitasking-screen-edges.page
++share/help/hr/gnome-help/multitasking-workspace-behavior.page
++share/help/hr/gnome-help/multitasking.page
+ share/help/hr/gnome-help/music-cantplay-drm.page
+ share/help/hr/gnome-help/nautilus-behavior.page
+ share/help/hr/gnome-help/nautilus-bookmarks-edit.page
+@@ -8206,6 +8307,7 @@
+ share/help/hr/gnome-help/shell-lockscreen.page
+ share/help/hr/gnome-help/shell-notifications.page
+ share/help/hr/gnome-help/shell-overview.page
++share/help/hr/gnome-help/shell-wellbeing.page
+ share/help/hr/gnome-help/shell-windows-lost.page
+ share/help/hr/gnome-help/shell-windows-maximize.page
+ share/help/hr/gnome-help/shell-windows-states.page
+@@ -8595,6 +8697,11 @@
+ share/help/hu/gnome-help/mouse-touchpad-click.page
+ share/help/hu/gnome-help/mouse-wakeup.page
+ share/help/hu/gnome-help/mouse.page
++share/help/hu/gnome-help/multitasking-app-switching.page
++share/help/hu/gnome-help/multitasking-hot-corner.page
++share/help/hu/gnome-help/multitasking-screen-edges.page
++share/help/hu/gnome-help/multitasking-workspace-behavior.page
++share/help/hu/gnome-help/multitasking.page
+ share/help/hu/gnome-help/music-cantplay-drm.page
+ share/help/hu/gnome-help/nautilus-behavior.page
+ share/help/hu/gnome-help/nautilus-bookmarks-edit.page
+@@ -8718,6 +8825,7 @@
+ share/help/hu/gnome-help/shell-lockscreen.page
+ share/help/hu/gnome-help/shell-notifications.page
+ share/help/hu/gnome-help/shell-overview.page
++share/help/hu/gnome-help/shell-wellbeing.page
+ share/help/hu/gnome-help/shell-windows-lost.page
+ share/help/hu/gnome-help/shell-windows-maximize.page
+ share/help/hu/gnome-help/shell-windows-states.page
+@@ -9107,6 +9215,11 @@
+ share/help/id/gnome-help/mouse-touchpad-click.page
+ share/help/id/gnome-help/mouse-wakeup.page
+ share/help/id/gnome-help/mouse.page
++share/help/id/gnome-help/multitasking-app-switching.page
++share/help/id/gnome-help/multitasking-hot-corner.page
++share/help/id/gnome-help/multitasking-screen-edges.page
++share/help/id/gnome-help/multitasking-workspace-behavior.page
++share/help/id/gnome-help/multitasking.page
+ share/help/id/gnome-help/music-cantplay-drm.page
+ share/help/id/gnome-help/nautilus-behavior.page
+ share/help/id/gnome-help/nautilus-bookmarks-edit.page
+@@ -9230,6 +9343,7 @@
+ share/help/id/gnome-help/shell-lockscreen.page
+ share/help/id/gnome-help/shell-notifications.page
+ share/help/id/gnome-help/shell-overview.page
++share/help/id/gnome-help/shell-wellbeing.page
+ share/help/id/gnome-help/shell-windows-lost.page
+ share/help/id/gnome-help/shell-windows-maximize.page
+ share/help/id/gnome-help/shell-windows-states.page
+@@ -9619,6 +9733,11 @@
+ share/help/it/gnome-help/mouse-touchpad-click.page
+ share/help/it/gnome-help/mouse-wakeup.page
+ share/help/it/gnome-help/mouse.page
++share/help/it/gnome-help/multitasking-app-switching.page
++share/help/it/gnome-help/multitasking-hot-corner.page
++share/help/it/gnome-help/multitasking-screen-edges.page
++share/help/it/gnome-help/multitasking-workspace-behavior.page
++share/help/it/gnome-help/multitasking.page
+ share/help/it/gnome-help/music-cantplay-drm.page
+ share/help/it/gnome-help/nautilus-behavior.page
+ share/help/it/gnome-help/nautilus-bookmarks-edit.page
+@@ -9742,6 +9861,7 @@
+ share/help/it/gnome-help/shell-lockscreen.page
+ share/help/it/gnome-help/shell-notifications.page
+ share/help/it/gnome-help/shell-overview.page
++share/help/it/gnome-help/shell-wellbeing.page
+ share/help/it/gnome-help/shell-windows-lost.page
+ share/help/it/gnome-help/shell-windows-maximize.page
+ share/help/it/gnome-help/shell-windows-states.page
+@@ -10074,6 +10194,11 @@
+ share/help/ja/gnome-help/mouse-touchpad-click.page
+ share/help/ja/gnome-help/mouse-wakeup.page
+ share/help/ja/gnome-help/mouse.page
++share/help/ja/gnome-help/multitasking-app-switching.page
++share/help/ja/gnome-help/multitasking-hot-corner.page
++share/help/ja/gnome-help/multitasking-screen-edges.page
++share/help/ja/gnome-help/multitasking-workspace-behavior.page
++share/help/ja/gnome-help/multitasking.page
+ share/help/ja/gnome-help/music-cantplay-drm.page
+ share/help/ja/gnome-help/nautilus-behavior.page
+ share/help/ja/gnome-help/nautilus-bookmarks-edit.page
+@@ -10197,6 +10322,7 @@
+ share/help/ja/gnome-help/shell-lockscreen.page
+ share/help/ja/gnome-help/shell-notifications.page
+ share/help/ja/gnome-help/shell-overview.page
++share/help/ja/gnome-help/shell-wellbeing.page
+ share/help/ja/gnome-help/shell-windows-lost.page
+ share/help/ja/gnome-help/shell-windows-maximize.page
+ share/help/ja/gnome-help/shell-windows-states.page
+@@ -10237,6 +10363,524 @@
+ share/help/ja/gnome-help/wacom-stylus.page
+ share/help/ja/gnome-help/wacom-tablet-unknown.page
+ share/help/ja/gnome-help/wacom.page
++share/help/kk/gnome-help/a11y-bouncekeys.page
++share/help/kk/gnome-help/a11y-braille.page
++share/help/kk/gnome-help/a11y-contrast.page
++share/help/kk/gnome-help/a11y-dwellclick.page
++share/help/kk/gnome-help/a11y-font-size.page
++share/help/kk/gnome-help/a11y-icon.page
++share/help/kk/gnome-help/a11y-mag.page
++share/help/kk/gnome-help/a11y-right-click.page
++share/help/kk/gnome-help/a11y-screen-reader.page
++share/help/kk/gnome-help/a11y-slowkeys.page
++share/help/kk/gnome-help/a11y-stickykeys.page
++share/help/kk/gnome-help/a11y-visualalert.page
++share/help/kk/gnome-help/a11y.page
++share/help/kk/gnome-help/about-hardware.page
++share/help/kk/gnome-help/about-hostname.page
++share/help/kk/gnome-help/about-os.page
++share/help/kk/gnome-help/about-this-guide.page
++share/help/kk/gnome-help/about.page
++share/help/kk/gnome-help/accounts-add.page
++share/help/kk/gnome-help/accounts-disable-service.page
++share/help/kk/gnome-help/accounts-provider-not-available.page
++share/help/kk/gnome-help/accounts-remove.page
++share/help/kk/gnome-help/accounts-which-application.page
++share/help/kk/gnome-help/accounts-whyadd.page
++share/help/kk/gnome-help/accounts.page
++share/help/kk/gnome-help/backup-check.page
++share/help/kk/gnome-help/backup-frequency.page
++share/help/kk/gnome-help/backup-how.page
++share/help/kk/gnome-help/backup-restore.page
++share/help/kk/gnome-help/backup-thinkabout.page
++share/help/kk/gnome-help/backup-what.page
++share/help/kk/gnome-help/backup-where.page
++share/help/kk/gnome-help/backup-why.page
++share/help/kk/gnome-help/bluetooth-connect-device.page
++share/help/kk/gnome-help/bluetooth-device-specific-pairing.page
++share/help/kk/gnome-help/bluetooth-problem-connecting.page
++share/help/kk/gnome-help/bluetooth-remove-connection.page
++share/help/kk/gnome-help/bluetooth-send-file.page
++share/help/kk/gnome-help/bluetooth-turn-on-off.page
++share/help/kk/gnome-help/bluetooth-visibility.page
++share/help/kk/gnome-help/bluetooth.page
++share/help/kk/gnome-help/clock-calendar.page
++share/help/kk/gnome-help/clock-set.page
++share/help/kk/gnome-help/clock-timezone.page
++share/help/kk/gnome-help/clock-world.page
++share/help/kk/gnome-help/clock.page
++share/help/kk/gnome-help/color-assignprofiles.page
++share/help/kk/gnome-help/color-calibrate-camera.page
++share/help/kk/gnome-help/color-calibrate-printer.page
++share/help/kk/gnome-help/color-calibrate-scanner.page
++share/help/kk/gnome-help/color-calibrate-screen.page
++share/help/kk/gnome-help/color-calibrationcharacterization.page
++share/help/kk/gnome-help/color-calibrationdevices.page
++share/help/kk/gnome-help/color-calibrationtargets.page
++share/help/kk/gnome-help/color-canshareprofiles.page
++share/help/kk/gnome-help/color-gettingprofiles.page
++share/help/kk/gnome-help/color-howtoimport.page
++share/help/kk/gnome-help/color-missingvcgt.page
++share/help/kk/gnome-help/color-notifications.page
++share/help/kk/gnome-help/color-notspecifiededid.page
++share/help/kk/gnome-help/color-testing.page
++share/help/kk/gnome-help/color-whatisprofile.page
++share/help/kk/gnome-help/color-whatisspace.page
++share/help/kk/gnome-help/color-why-calibrate.page
++share/help/kk/gnome-help/color-whyimportant.page
++share/help/kk/gnome-help/color.page
++share/help/kk/gnome-help/contacts-add-remove.page
++share/help/kk/gnome-help/contacts-connect.page
++share/help/kk/gnome-help/contacts-edit-details.page
++share/help/kk/gnome-help/contacts-link-unlink.page
++share/help/kk/gnome-help/contacts-search.page
++share/help/kk/gnome-help/contacts-setup.page
++share/help/kk/gnome-help/contacts.page
++share/help/kk/gnome-help/disk-benchmark.page
++share/help/kk/gnome-help/disk-capacity.page
++share/help/kk/gnome-help/disk-check.page
++share/help/kk/gnome-help/disk-format.page
++share/help/kk/gnome-help/disk-partitions.page
++share/help/kk/gnome-help/disk-repair.page
++share/help/kk/gnome-help/disk-resize.page
++share/help/kk/gnome-help/disk.page
++share/help/kk/gnome-help/display-blank.page
++share/help/kk/gnome-help/display-brightness.page
++share/help/kk/gnome-help/display-dual-monitors.page
++share/help/kk/gnome-help/display-night-light.page
++share/help/kk/gnome-help/figures/bluetooth-active-symbolic.svg
++share/help/kk/gnome-help/figures/bluetooth-symbolic.svg
++share/help/kk/gnome-help/figures/camera-photo-symbolic.svg
++share/help/kk/gnome-help/figures/camera-video-symbolic.svg
++share/help/kk/gnome-help/figures/classic-topbar-accessibility.svg
++share/help/kk/gnome-help/figures/classic-topbar-airplane-mode.svg
++share/help/kk/gnome-help/figures/classic-topbar-audio-volume-muted.svg
++share/help/kk/gnome-help/figures/classic-topbar-audio-volume.svg
++share/help/kk/gnome-help/figures/classic-topbar-battery-charging.svg
++share/help/kk/gnome-help/figures/classic-topbar-battery-discharging.svg
++share/help/kk/gnome-help/figures/classic-topbar-battery-level-100-charged.svg
++share/help/kk/gnome-help/figures/classic-topbar-battery-level-100.svg
++share/help/kk/gnome-help/figures/classic-topbar-bluetooth-active.svg
++share/help/kk/gnome-help/figures/classic-topbar-find-location.svg
++share/help/kk/gnome-help/figures/classic-topbar-input-method.svg
++share/help/kk/gnome-help/figures/classic-topbar-media-record.svg
++share/help/kk/gnome-help/figures/classic-topbar-microphone-sensitivity-muted.svg
++share/help/kk/gnome-help/figures/classic-topbar-microphone-sensitivity.svg
++share/help/kk/gnome-help/figures/classic-topbar-network-cellular-acquiring.svg
++share/help/kk/gnome-help/figures/classic-topbar-network-cellular-connected.svg
++share/help/kk/gnome-help/figures/classic-topbar-network-cellular-signal-none.svg
++share/help/kk/gnome-help/figures/classic-topbar-network-cellular-signal.svg
++share/help/kk/gnome-help/figures/classic-topbar-network-vpn-acquiring.svg
++share/help/kk/gnome-help/figures/classic-topbar-network-vpn.svg
++share/help/kk/gnome-help/figures/classic-topbar-network-wired-acquiring.svg
++share/help/kk/gnome-help/figures/classic-topbar-network-wired-disconnected.svg
++share/help/kk/gnome-help/figures/classic-topbar-network-wired-no-route.svg
++share/help/kk/gnome-help/figures/classic-topbar-network-wired.svg
++share/help/kk/gnome-help/figures/classic-topbar-network-wireless-acquiring.svg
++share/help/kk/gnome-help/figures/classic-topbar-network-wireless-connected.svg
++share/help/kk/gnome-help/figures/classic-topbar-network-wireless-no-route.svg
++share/help/kk/gnome-help/figures/classic-topbar-network-wireless-signal-excellent.svg
++share/help/kk/gnome-help/figures/classic-topbar-network-wireless-signal-none.svg
++share/help/kk/gnome-help/figures/classic-topbar-network-wireless-signal.svg
++share/help/kk/gnome-help/figures/classic-topbar-night-light.svg
++share/help/kk/gnome-help/figures/classic-topbar-pointer.svg
++share/help/kk/gnome-help/figures/classic-topbar-screen-shared.svg
++share/help/kk/gnome-help/figures/classic-topbar-system-shutdown.svg
++share/help/kk/gnome-help/figures/classic-topbar-thunderbolt-acquiring.svg
++share/help/kk/gnome-help/figures/color-average.png
++share/help/kk/gnome-help/figures/color-camera.png
++share/help/kk/gnome-help/figures/color-display.png
++share/help/kk/gnome-help/figures/color-printer.png
++share/help/kk/gnome-help/figures/color-space.png
++share/help/kk/gnome-help/figures/display-dual-monitors.webm
++share/help/kk/gnome-help/figures/emblem-system-symbolic.svg
++share/help/kk/gnome-help/figures/emoji-flags-symbolic.svg
++share/help/kk/gnome-help/figures/gnome.svg
++share/help/kk/gnome-help/figures/go-down-symbolic.svg
++share/help/kk/gnome-help/figures/go-next-symbolic.svg
++share/help/kk/gnome-help/figures/input-keyboard-symbolic.png
++share/help/kk/gnome-help/figures/input-methods-switcher.png
++share/help/kk/gnome-help/figures/keyboard-key-calculator.svg
++share/help/kk/gnome-help/figures/keyboard-key-computer.svg
++share/help/kk/gnome-help/figures/keyboard-key-eject.svg
++share/help/kk/gnome-help/figures/keyboard-key-folder.svg
++share/help/kk/gnome-help/figures/keyboard-key-home.svg
++share/help/kk/gnome-help/figures/keyboard-key-mail.svg
++share/help/kk/gnome-help/figures/keyboard-key-media.svg
++share/help/kk/gnome-help/figures/keyboard-key-menu.svg
++share/help/kk/gnome-help/figures/keyboard-key-mute.svg
++share/help/kk/gnome-help/figures/keyboard-key-next.svg
++share/help/kk/gnome-help/figures/keyboard-key-pause.svg
++share/help/kk/gnome-help/figures/keyboard-key-play.svg
++share/help/kk/gnome-help/figures/keyboard-key-previous.svg
++share/help/kk/gnome-help/figures/keyboard-key-search.svg
++share/help/kk/gnome-help/figures/keyboard-key-stop.svg
++share/help/kk/gnome-help/figures/keyboard-key-voldown.svg
++share/help/kk/gnome-help/figures/keyboard-key-volup.svg
++share/help/kk/gnome-help/figures/keyboard-key-world.svg
++share/help/kk/gnome-help/figures/nautilus-folder-search-symbolic.svg
++share/help/kk/gnome-help/figures/nautilus-icons.png
++share/help/kk/gnome-help/figures/net-wired-ethernet-diagram.svg
++share/help/kk/gnome-help/figures/network-wired-symbolic.svg
++share/help/kk/gnome-help/figures/network-wireless-disabled-symbolic.svg
++share/help/kk/gnome-help/figures/printing-select.png
++share/help/kk/gnome-help/figures/ps-button.svg
++share/help/kk/gnome-help/figures/ps-create.svg
++share/help/kk/gnome-help/figures/rotation-allowed-symbolic.svg
++share/help/kk/gnome-help/figures/rotation-locked-symbolic.svg
++share/help/kk/gnome-help/figures/screenshot-tool.png
++share/help/kk/gnome-help/figures/shell-activities-dash.png
++share/help/kk/gnome-help/figures/shell-appts-classic.png
++share/help/kk/gnome-help/figures/shell-appts.png
++share/help/kk/gnome-help/figures/shell-exit-classic-expanded.png
++share/help/kk/gnome-help/figures/shell-exit-classic.png
++share/help/kk/gnome-help/figures/shell-exit-expanded.png
++share/help/kk/gnome-help/figures/shell-exit.png
++share/help/kk/gnome-help/figures/shell-top-bar-classic.png
++share/help/kk/gnome-help/figures/shell-top-bar.png
++share/help/kk/gnome-help/figures/shell-window-list-classic.png
++share/help/kk/gnome-help/figures/shell-workspaces.png
++share/help/kk/gnome-help/figures/system-lock-screen-symbolic.svg
++share/help/kk/gnome-help/figures/system-run-symbolic.svg
++share/help/kk/gnome-help/figures/system-shutdown-symbolic.svg
++share/help/kk/gnome-help/figures/tile-a11y.svg
++share/help/kk/gnome-help/figures/tile-files.svg
++share/help/kk/gnome-help/figures/tile-hardware.svg
++share/help/kk/gnome-help/figures/tile-help.svg
++share/help/kk/gnome-help/figures/tile-home.svg
++share/help/kk/gnome-help/figures/tile-media.svg
++share/help/kk/gnome-help/figures/tile-net.svg
++share/help/kk/gnome-help/figures/tile-settings.svg
++share/help/kk/gnome-help/figures/tile-tips.svg
++share/help/kk/gnome-help/figures/topbar-accessibility.svg
++share/help/kk/gnome-help/figures/topbar-airplane-mode.svg
++share/help/kk/gnome-help/figures/topbar-audio-volume-muted.svg
++share/help/kk/gnome-help/figures/topbar-audio-volume.svg
++share/help/kk/gnome-help/figures/topbar-battery-charging.svg
++share/help/kk/gnome-help/figures/topbar-battery-discharging.svg
++share/help/kk/gnome-help/figures/topbar-battery-level-100-charged.svg
++share/help/kk/gnome-help/figures/topbar-battery-level-100.svg
++share/help/kk/gnome-help/figures/topbar-bluetooth-active.svg
++share/help/kk/gnome-help/figures/topbar-find-location.svg
++share/help/kk/gnome-help/figures/topbar-input-method.svg
++share/help/kk/gnome-help/figures/topbar-media-record.svg
++share/help/kk/gnome-help/figures/topbar-microphone-sensitivity-muted.svg
++share/help/kk/gnome-help/figures/topbar-microphone-sensitivity.svg
++share/help/kk/gnome-help/figures/topbar-network-cellular-acquiring.svg
++share/help/kk/gnome-help/figures/topbar-network-cellular-connected.svg
++share/help/kk/gnome-help/figures/topbar-network-cellular-signal-none.svg
++share/help/kk/gnome-help/figures/topbar-network-cellular-signal.svg
++share/help/kk/gnome-help/figures/topbar-network-vpn-acquiring.svg
++share/help/kk/gnome-help/figures/topbar-network-vpn.svg
++share/help/kk/gnome-help/figures/topbar-network-wired-acquiring.svg
++share/help/kk/gnome-help/figures/topbar-network-wired-disconnected.svg
++share/help/kk/gnome-help/figures/topbar-network-wired-no-route.svg
++share/help/kk/gnome-help/figures/topbar-network-wired.svg
++share/help/kk/gnome-help/figures/topbar-network-wireless-acquiring.svg
++share/help/kk/gnome-help/figures/topbar-network-wireless-connected.svg
++share/help/kk/gnome-help/figures/topbar-network-wireless-no-route.svg
++share/help/kk/gnome-help/figures/topbar-network-wireless-signal-excellent.svg
++share/help/kk/gnome-help/figures/topbar-network-wireless-signal-none.svg
++share/help/kk/gnome-help/figures/topbar-network-wireless-signal.svg
++share/help/kk/gnome-help/figures/topbar-night-light.svg
++share/help/kk/gnome-help/figures/topbar-pointer.svg
++share/help/kk/gnome-help/figures/topbar-screen-shared.svg
++share/help/kk/gnome-help/figures/topbar-system-shutdown.svg
++share/help/kk/gnome-help/figures/topbar-thunderbolt-acquiring.svg
++share/help/kk/gnome-help/figures/touch-edge-scroll.svg
++share/help/kk/gnome-help/figures/touch-hold.svg
++share/help/kk/gnome-help/figures/touch-osk.svg
++share/help/kk/gnome-help/figures/touch-overview.svg
++share/help/kk/gnome-help/figures/touch-pinch-to-zoom.svg
++share/help/kk/gnome-help/figures/touch-rotate.svg
++share/help/kk/gnome-help/figures/touch-scroll.svg
++share/help/kk/gnome-help/figures/touch-tap.svg
++share/help/kk/gnome-help/figures/touch-unfullscreen.svg
++share/help/kk/gnome-help/figures/touch-workspaces.svg
++share/help/kk/gnome-help/figures/view-more-symbolic.svg
++share/help/kk/gnome-help/figures/yelp-icon-big.svg
++share/help/kk/gnome-help/files-autorun.page
++share/help/kk/gnome-help/files-browse.page
++share/help/kk/gnome-help/files-copy.page
++share/help/kk/gnome-help/files-delete.page
++share/help/kk/gnome-help/files-disc-write.page
++share/help/kk/gnome-help/files-hidden.page
++share/help/kk/gnome-help/files-lost.page
++share/help/kk/gnome-help/files-open.page
++share/help/kk/gnome-help/files-preview.page
++share/help/kk/gnome-help/files-recover.page
++share/help/kk/gnome-help/files-removedrive.page
++share/help/kk/gnome-help/files-rename-multiple.page
++share/help/kk/gnome-help/files-rename-music-metadata.page
++share/help/kk/gnome-help/files-rename.page
++share/help/kk/gnome-help/files-search.page
++share/help/kk/gnome-help/files-select.page
++share/help/kk/gnome-help/files-share.page
++share/help/kk/gnome-help/files-sort.page
++share/help/kk/gnome-help/files-templates.page
++share/help/kk/gnome-help/files-tilde.page
++share/help/kk/gnome-help/files.page
++share/help/kk/gnome-help/get-involved.page
++share/help/kk/gnome-help/gnome-classic.page
++share/help/kk/gnome-help/gnome-version.page
++share/help/kk/gnome-help/hardware-auth.page
++share/help/kk/gnome-help/hardware-cardreader.page
++share/help/kk/gnome-help/hardware-driver.page
++share/help/kk/gnome-help/hardware-problems-graphics.page
++share/help/kk/gnome-help/hardware.page
++share/help/kk/gnome-help/help-irc.page
++share/help/kk/gnome-help/help-matrix.page
++share/help/kk/gnome-help/index.page
++share/help/kk/gnome-help/keyboard-cursor-blink.page
++share/help/kk/gnome-help/keyboard-key-menu.page
++share/help/kk/gnome-help/keyboard-key-super.page
++share/help/kk/gnome-help/keyboard-layouts.page
++share/help/kk/gnome-help/keyboard-nav.page
++share/help/kk/gnome-help/keyboard-osk.page
++share/help/kk/gnome-help/keyboard-repeat-keys.page
++share/help/kk/gnome-help/keyboard-shortcuts-set.page
++share/help/kk/gnome-help/keyboard.page
++share/help/kk/gnome-help/legal.xml
++share/help/kk/gnome-help/look-background.page
++share/help/kk/gnome-help/look-display-fuzzy.page
++share/help/kk/gnome-help/look-resolution.page
++share/help/kk/gnome-help/media.page
++share/help/kk/gnome-help/more-help.page
++share/help/kk/gnome-help/mouse-doubleclick.page
++share/help/kk/gnome-help/mouse-lefthanded.page
++share/help/kk/gnome-help/mouse-middleclick.page
++share/help/kk/gnome-help/mouse-mousekeys.page
++share/help/kk/gnome-help/mouse-problem-notmoving.page
++share/help/kk/gnome-help/mouse-sensitivity.page
++share/help/kk/gnome-help/mouse-touchpad-click.page
++share/help/kk/gnome-help/mouse-wakeup.page
++share/help/kk/gnome-help/mouse.page
++share/help/kk/gnome-help/multitasking-app-switching.page
++share/help/kk/gnome-help/multitasking-hot-corner.page
++share/help/kk/gnome-help/multitasking-screen-edges.page
++share/help/kk/gnome-help/multitasking-workspace-behavior.page
++share/help/kk/gnome-help/multitasking.page
++share/help/kk/gnome-help/music-cantplay-drm.page
++share/help/kk/gnome-help/nautilus-behavior.page
++share/help/kk/gnome-help/nautilus-bookmarks-edit.page
++share/help/kk/gnome-help/nautilus-connect.page
++share/help/kk/gnome-help/nautilus-display.page
++share/help/kk/gnome-help/nautilus-file-properties-basic.page
++share/help/kk/gnome-help/nautilus-file-properties-permissions.page
++share/help/kk/gnome-help/nautilus-list.page
++share/help/kk/gnome-help/nautilus-prefs.page
++share/help/kk/gnome-help/nautilus-preview.page
++share/help/kk/gnome-help/nautilus-views.page
++share/help/kk/gnome-help/net-antivirus.page
++share/help/kk/gnome-help/net-browser.page
++share/help/kk/gnome-help/net-default-browser.page
++share/help/kk/gnome-help/net-default-email.page
++share/help/kk/gnome-help/net-email-virus.page
++share/help/kk/gnome-help/net-email.page
++share/help/kk/gnome-help/net-findip.page
++share/help/kk/gnome-help/net-firewall-on-off.page
++share/help/kk/gnome-help/net-firewall-ports.page
++share/help/kk/gnome-help/net-fixed-ip-address.page
++share/help/kk/gnome-help/net-general.page
++share/help/kk/gnome-help/net-macaddress.page
++share/help/kk/gnome-help/net-manual.page
++share/help/kk/gnome-help/net-mobile.page
++share/help/kk/gnome-help/net-othersconnect.page
++share/help/kk/gnome-help/net-othersedit.page
++share/help/kk/gnome-help/net-problem.page
++share/help/kk/gnome-help/net-proxy.page
++share/help/kk/gnome-help/net-security-tips.page
++share/help/kk/gnome-help/net-security.page
++share/help/kk/gnome-help/net-slow.page
++share/help/kk/gnome-help/net-vpn-connect.page
++share/help/kk/gnome-help/net-what-is-ip-address.page
++share/help/kk/gnome-help/net-wired-connect.page
++share/help/kk/gnome-help/net-wired.page
++share/help/kk/gnome-help/net-wireless-adhoc.page
++share/help/kk/gnome-help/net-wireless-airplane.page
++share/help/kk/gnome-help/net-wireless-connect.page
++share/help/kk/gnome-help/net-wireless-disconnecting.page
++share/help/kk/gnome-help/net-wireless-find.page
++share/help/kk/gnome-help/net-wireless-hidden.page
++share/help/kk/gnome-help/net-wireless-noconnection.page
++share/help/kk/gnome-help/net-wireless-troubleshooting-device-drivers.page
++share/help/kk/gnome-help/net-wireless-troubleshooting-hardware-check.page
++share/help/kk/gnome-help/net-wireless-troubleshooting-hardware-info.page
++share/help/kk/gnome-help/net-wireless-troubleshooting-initial-check.page
++share/help/kk/gnome-help/net-wireless-troubleshooting.page
++share/help/kk/gnome-help/net-wireless-wepwpa.page
++share/help/kk/gnome-help/net-wireless.page
++share/help/kk/gnome-help/net-wrongnetwork.page
++share/help/kk/gnome-help/net.page
++share/help/kk/gnome-help/parental-controls.page
++share/help/kk/gnome-help/power-autobrightness.page
++share/help/kk/gnome-help/power-autosuspend.page
++share/help/kk/gnome-help/power-batteryestimate.page
++share/help/kk/gnome-help/power-batterylife.page
++share/help/kk/gnome-help/power-batteryoptimal.page
++share/help/kk/gnome-help/power-batteryslow.page
++share/help/kk/gnome-help/power-batterywindows.page
++share/help/kk/gnome-help/power-closelid.page
++share/help/kk/gnome-help/power-constantfan.page
++share/help/kk/gnome-help/power-hotcomputer.page
++share/help/kk/gnome-help/power-lowpower.page
++share/help/kk/gnome-help/power-nowireless.page
++share/help/kk/gnome-help/power-othercountry.page
++share/help/kk/gnome-help/power-percentage.page
++share/help/kk/gnome-help/power-profile.page
++share/help/kk/gnome-help/power-status.page
++share/help/kk/gnome-help/power-suspend.page
++share/help/kk/gnome-help/power-suspendfail.page
++share/help/kk/gnome-help/power-whydim.page
++share/help/kk/gnome-help/power-willnotturnon.page
++share/help/kk/gnome-help/power-wireless.page
++share/help/kk/gnome-help/power.page
++share/help/kk/gnome-help/prefs-display.page
++share/help/kk/gnome-help/prefs-language.page
++share/help/kk/gnome-help/prefs-sharing.page
++share/help/kk/gnome-help/prefs.page
++share/help/kk/gnome-help/printing-2sided.page
++share/help/kk/gnome-help/printing-booklet-duplex.page
++share/help/kk/gnome-help/printing-booklet-singlesided.page
++share/help/kk/gnome-help/printing-booklet.page
++share/help/kk/gnome-help/printing-cancel-job.page
++share/help/kk/gnome-help/printing-differentsize.page
++share/help/kk/gnome-help/printing-envelopes.page
++share/help/kk/gnome-help/printing-inklevel.page
++share/help/kk/gnome-help/printing-name-location.page
++share/help/kk/gnome-help/printing-order.page
++share/help/kk/gnome-help/printing-paperjam.page
++share/help/kk/gnome-help/printing-select.page
++share/help/kk/gnome-help/printing-setup-default-printer.page
++share/help/kk/gnome-help/printing-setup.page
++share/help/kk/gnome-help/printing-streaks.page
++share/help/kk/gnome-help/printing-to-file.page
++share/help/kk/gnome-help/printing.page
++share/help/kk/gnome-help/privacy-history-recent-off.page
++share/help/kk/gnome-help/privacy-location.page
++share/help/kk/gnome-help/privacy-purge.page
++share/help/kk/gnome-help/privacy-screen-lock.page
++share/help/kk/gnome-help/privacy.page
++share/help/kk/gnome-help/quick-settings.page
++share/help/kk/gnome-help/remote-login.page
++share/help/kk/gnome-help/screen-shot-record.page
++share/help/kk/gnome-help/session-fingerprint.page
++share/help/kk/gnome-help/session-formats.page
++share/help/kk/gnome-help/session-language.page
++share/help/kk/gnome-help/session-screenlocks.page
++share/help/kk/gnome-help/sharing-bluetooth.page
++share/help/kk/gnome-help/sharing-desktop.page
++share/help/kk/gnome-help/sharing-media.page
++share/help/kk/gnome-help/sharing-personal.page
++share/help/kk/gnome-help/sharing-secure-shell.page
++share/help/kk/gnome-help/sharing.page
++share/help/kk/gnome-help/shell-apps-auto-start.page
++share/help/kk/gnome-help/shell-apps-favorites.page
++share/help/kk/gnome-help/shell-apps-open.page
++share/help/kk/gnome-help/shell-exit.page
++share/help/kk/gnome-help/shell-introduction.page
++share/help/kk/gnome-help/shell-keyboard-shortcuts.page
++share/help/kk/gnome-help/shell-lockscreen.page
++share/help/kk/gnome-help/shell-notifications.page
++share/help/kk/gnome-help/shell-overview.page
++share/help/kk/gnome-help/shell-wellbeing.page
++share/help/kk/gnome-help/shell-windows-lost.page
++share/help/kk/gnome-help/shell-windows-maximize.page
++share/help/kk/gnome-help/shell-windows-states.page
++share/help/kk/gnome-help/shell-windows-switching.page
++share/help/kk/gnome-help/shell-windows-tiled.page
++share/help/kk/gnome-help/shell-windows.page
++share/help/kk/gnome-help/shell-workspaces-movewindow.page
++share/help/kk/gnome-help/shell-workspaces-switch.page
++share/help/kk/gnome-help/shell-workspaces.page
++share/help/kk/gnome-help/sound-alert.page
++share/help/kk/gnome-help/sound-broken.page
++share/help/kk/gnome-help/sound-crackle.page
++share/help/kk/gnome-help/sound-nosound.page
++share/help/kk/gnome-help/sound-usemic.page
++share/help/kk/gnome-help/sound-usespeakers.page
++share/help/kk/gnome-help/sound-volume.page
++share/help/kk/gnome-help/status-icons.page
++share/help/kk/gnome-help/tips-specialchars.page
++share/help/kk/gnome-help/tips.page
++share/help/kk/gnome-help/touchscreen-gestures.page
++share/help/kk/gnome-help/translate.page
++share/help/kk/gnome-help/user-accounts.page
++share/help/kk/gnome-help/user-add.page
++share/help/kk/gnome-help/user-admin-change.page
++share/help/kk/gnome-help/user-admin-explain.page
++share/help/kk/gnome-help/user-admin-problems.page
++share/help/kk/gnome-help/user-autologin.page
++share/help/kk/gnome-help/user-changepassword.page
++share/help/kk/gnome-help/user-changepicture.page
++share/help/kk/gnome-help/user-delete.page
++share/help/kk/gnome-help/user-goodpassword.page
++share/help/kk/gnome-help/video-dvd.page
++share/help/kk/gnome-help/video-sending.page
++share/help/kk/gnome-help/wacom-left-handed.page
++share/help/kk/gnome-help/wacom-map-buttons.page
++share/help/kk/gnome-help/wacom-mode.page
++share/help/kk/gnome-help/wacom-multi-monitor.page
++share/help/kk/gnome-help/wacom-stylus.page
++share/help/kk/gnome-help/wacom-tablet-unknown.page
++share/help/kk/gnome-help/wacom.page
++share/help/kk/system-admin-guide/appearance.page
++share/help/kk/system-admin-guide/autostart-applications.page
++share/help/kk/system-admin-guide/backgrounds-extra.page
++share/help/kk/system-admin-guide/dconf-custom-defaults.page
++share/help/kk/system-admin-guide/dconf-keyfiles.page
++share/help/kk/system-admin-guide/dconf-lockdown.page
++share/help/kk/system-admin-guide/dconf-nfs-home.page
++share/help/kk/system-admin-guide/dconf-profiles.page
++share/help/kk/system-admin-guide/dconf-snippets.xml
++share/help/kk/system-admin-guide/dconf.page
++share/help/kk/system-admin-guide/desktop-background.page
++share/help/kk/system-admin-guide/desktop-favorite-applications.page
++share/help/kk/system-admin-guide/desktop-lockscreen.page
++share/help/kk/system-admin-guide/desktop-shield.page
++share/help/kk/system-admin-guide/extensions-enable.page
++share/help/kk/system-admin-guide/extensions-lockdown.page
++share/help/kk/system-admin-guide/extensions.page
++share/help/kk/system-admin-guide/fonts-user.page
++share/help/kk/system-admin-guide/fonts.page
++share/help/kk/system-admin-guide/gsettings-browse.page
++share/help/kk/system-admin-guide/index.page
++share/help/kk/system-admin-guide/keyboard-compose-key.page
++share/help/kk/system-admin-guide/keyboard-layout.page
++share/help/kk/system-admin-guide/legal.xml
++share/help/kk/system-admin-guide/lockdown-command-line.page
++share/help/kk/system-admin-guide/lockdown-file-saving.page
++share/help/kk/system-admin-guide/lockdown-logout.page
++share/help/kk/system-admin-guide/lockdown-online-accounts.page
++share/help/kk/system-admin-guide/lockdown-printing.page
++share/help/kk/system-admin-guide/lockdown-repartitioning.page
++share/help/kk/system-admin-guide/lockdown-single-app-mode.page
++share/help/kk/system-admin-guide/login-automatic.page
++share/help/kk/system-admin-guide/login-banner.page
++share/help/kk/system-admin-guide/login-enterprise.page
++share/help/kk/system-admin-guide/login-fingerprint.page
++share/help/kk/system-admin-guide/login-logo.page
++share/help/kk/system-admin-guide/login-userlist-disable.page
++share/help/kk/system-admin-guide/login.page
++share/help/kk/system-admin-guide/logout-automatic.page
++share/help/kk/system-admin-guide/mime-types-application-user.page
++share/help/kk/system-admin-guide/mime-types-application.page
++share/help/kk/system-admin-guide/mime-types-custom-user.page
++share/help/kk/system-admin-guide/mime-types-custom.page
++share/help/kk/system-admin-guide/mime-types.page
++share/help/kk/system-admin-guide/network-server-list.page
++share/help/kk/system-admin-guide/network-vpn.page
++share/help/kk/system-admin-guide/network.page
++share/help/kk/system-admin-guide/overrides.page
++share/help/kk/system-admin-guide/power-dim-screen.page
++share/help/kk/system-admin-guide/processes.page
++share/help/kk/system-admin-guide/session-custom.page
++share/help/kk/system-admin-guide/session-debug.page
++share/help/kk/system-admin-guide/session-user.page
++share/help/kk/system-admin-guide/setup.page
++share/help/kk/system-admin-guide/software.page
++share/help/kk/system-admin-guide/sundry.page
++share/help/kk/system-admin-guide/user-settings.page
+ share/help/kn/gnome-help/a11y-bouncekeys.page
+ share/help/kn/gnome-help/a11y-braille.page
+ share/help/kn/gnome-help/a11y-contrast.page
+@@ -10529,6 +11173,11 @@
+ share/help/kn/gnome-help/mouse-touchpad-click.page
+ share/help/kn/gnome-help/mouse-wakeup.page
+ share/help/kn/gnome-help/mouse.page
++share/help/kn/gnome-help/multitasking-app-switching.page
++share/help/kn/gnome-help/multitasking-hot-corner.page
++share/help/kn/gnome-help/multitasking-screen-edges.page
++share/help/kn/gnome-help/multitasking-workspace-behavior.page
++share/help/kn/gnome-help/multitasking.page
+ share/help/kn/gnome-help/music-cantplay-drm.page
+ share/help/kn/gnome-help/nautilus-behavior.page
+ share/help/kn/gnome-help/nautilus-bookmarks-edit.page
+@@ -10652,6 +11301,7 @@
+ share/help/kn/gnome-help/shell-lockscreen.page
+ share/help/kn/gnome-help/shell-notifications.page
+ share/help/kn/gnome-help/shell-overview.page
++share/help/kn/gnome-help/shell-wellbeing.page
+ share/help/kn/gnome-help/shell-windows-lost.page
+ share/help/kn/gnome-help/shell-windows-maximize.page
+ share/help/kn/gnome-help/shell-windows-states.page
+@@ -10984,6 +11634,11 @@
+ share/help/ko/gnome-help/mouse-touchpad-click.page
+ share/help/ko/gnome-help/mouse-wakeup.page
+ share/help/ko/gnome-help/mouse.page
++share/help/ko/gnome-help/multitasking-app-switching.page
++share/help/ko/gnome-help/multitasking-hot-corner.page
++share/help/ko/gnome-help/multitasking-screen-edges.page
++share/help/ko/gnome-help/multitasking-workspace-behavior.page
++share/help/ko/gnome-help/multitasking.page
+ share/help/ko/gnome-help/music-cantplay-drm.page
+ share/help/ko/gnome-help/nautilus-behavior.page
+ share/help/ko/gnome-help/nautilus-bookmarks-edit.page
+@@ -11107,6 +11762,7 @@
+ share/help/ko/gnome-help/shell-lockscreen.page
+ share/help/ko/gnome-help/shell-notifications.page
+ share/help/ko/gnome-help/shell-overview.page
++share/help/ko/gnome-help/shell-wellbeing.page
+ share/help/ko/gnome-help/shell-windows-lost.page
+ share/help/ko/gnome-help/shell-windows-maximize.page
+ share/help/ko/gnome-help/shell-windows-states.page
+@@ -11496,6 +12152,11 @@
+ share/help/lt/gnome-help/mouse-touchpad-click.page
+ share/help/lt/gnome-help/mouse-wakeup.page
+ share/help/lt/gnome-help/mouse.page
++share/help/lt/gnome-help/multitasking-app-switching.page
++share/help/lt/gnome-help/multitasking-hot-corner.page
++share/help/lt/gnome-help/multitasking-screen-edges.page
++share/help/lt/gnome-help/multitasking-workspace-behavior.page
++share/help/lt/gnome-help/multitasking.page
+ share/help/lt/gnome-help/music-cantplay-drm.page
+ share/help/lt/gnome-help/nautilus-behavior.page
+ share/help/lt/gnome-help/nautilus-bookmarks-edit.page
+@@ -11619,6 +12280,7 @@
+ share/help/lt/gnome-help/shell-lockscreen.page
+ share/help/lt/gnome-help/shell-notifications.page
+ share/help/lt/gnome-help/shell-overview.page
++share/help/lt/gnome-help/shell-wellbeing.page
+ share/help/lt/gnome-help/shell-windows-lost.page
+ share/help/lt/gnome-help/shell-windows-maximize.page
+ share/help/lt/gnome-help/shell-windows-states.page
+@@ -11951,6 +12613,11 @@
+ share/help/lv/gnome-help/mouse-touchpad-click.page
+ share/help/lv/gnome-help/mouse-wakeup.page
+ share/help/lv/gnome-help/mouse.page
++share/help/lv/gnome-help/multitasking-app-switching.page
++share/help/lv/gnome-help/multitasking-hot-corner.page
++share/help/lv/gnome-help/multitasking-screen-edges.page
++share/help/lv/gnome-help/multitasking-workspace-behavior.page
++share/help/lv/gnome-help/multitasking.page
+ share/help/lv/gnome-help/music-cantplay-drm.page
+ share/help/lv/gnome-help/nautilus-behavior.page
+ share/help/lv/gnome-help/nautilus-bookmarks-edit.page
+@@ -12074,6 +12741,7 @@
+ share/help/lv/gnome-help/shell-lockscreen.page
+ share/help/lv/gnome-help/shell-notifications.page
+ share/help/lv/gnome-help/shell-overview.page
++share/help/lv/gnome-help/shell-wellbeing.page
+ share/help/lv/gnome-help/shell-windows-lost.page
+ share/help/lv/gnome-help/shell-windows-maximize.page
+ share/help/lv/gnome-help/shell-windows-states.page
+@@ -12406,6 +13074,11 @@
+ share/help/mr/gnome-help/mouse-touchpad-click.page
+ share/help/mr/gnome-help/mouse-wakeup.page
+ share/help/mr/gnome-help/mouse.page
++share/help/mr/gnome-help/multitasking-app-switching.page
++share/help/mr/gnome-help/multitasking-hot-corner.page
++share/help/mr/gnome-help/multitasking-screen-edges.page
++share/help/mr/gnome-help/multitasking-workspace-behavior.page
++share/help/mr/gnome-help/multitasking.page
+ share/help/mr/gnome-help/music-cantplay-drm.page
+ share/help/mr/gnome-help/nautilus-behavior.page
+ share/help/mr/gnome-help/nautilus-bookmarks-edit.page
+@@ -12529,6 +13202,7 @@
+ share/help/mr/gnome-help/shell-lockscreen.page
+ share/help/mr/gnome-help/shell-notifications.page
+ share/help/mr/gnome-help/shell-overview.page
++share/help/mr/gnome-help/shell-wellbeing.page
+ share/help/mr/gnome-help/shell-windows-lost.page
+ share/help/mr/gnome-help/shell-windows-maximize.page
+ share/help/mr/gnome-help/shell-windows-states.page
+@@ -12861,6 +13535,11 @@
+ share/help/nl/gnome-help/mouse-touchpad-click.page
+ share/help/nl/gnome-help/mouse-wakeup.page
+ share/help/nl/gnome-help/mouse.page
++share/help/nl/gnome-help/multitasking-app-switching.page
++share/help/nl/gnome-help/multitasking-hot-corner.page
++share/help/nl/gnome-help/multitasking-screen-edges.page
++share/help/nl/gnome-help/multitasking-workspace-behavior.page
++share/help/nl/gnome-help/multitasking.page
+ share/help/nl/gnome-help/music-cantplay-drm.page
+ share/help/nl/gnome-help/nautilus-behavior.page
+ share/help/nl/gnome-help/nautilus-bookmarks-edit.page
+@@ -12984,6 +13663,7 @@
+ share/help/nl/gnome-help/shell-lockscreen.page
+ share/help/nl/gnome-help/shell-notifications.page
+ share/help/nl/gnome-help/shell-overview.page
++share/help/nl/gnome-help/shell-wellbeing.page
+ share/help/nl/gnome-help/shell-windows-lost.page
+ share/help/nl/gnome-help/shell-windows-maximize.page
+ share/help/nl/gnome-help/shell-windows-states.page
+@@ -13373,6 +14053,11 @@
+ share/help/pa/gnome-help/mouse-touchpad-click.page
+ share/help/pa/gnome-help/mouse-wakeup.page
+ share/help/pa/gnome-help/mouse.page
++share/help/pa/gnome-help/multitasking-app-switching.page
++share/help/pa/gnome-help/multitasking-hot-corner.page
++share/help/pa/gnome-help/multitasking-screen-edges.page
++share/help/pa/gnome-help/multitasking-workspace-behavior.page
++share/help/pa/gnome-help/multitasking.page
+ share/help/pa/gnome-help/music-cantplay-drm.page
+ share/help/pa/gnome-help/nautilus-behavior.page
+ share/help/pa/gnome-help/nautilus-bookmarks-edit.page
+@@ -13496,6 +14181,7 @@
+ share/help/pa/gnome-help/shell-lockscreen.page
+ share/help/pa/gnome-help/shell-notifications.page
+ share/help/pa/gnome-help/shell-overview.page
++share/help/pa/gnome-help/shell-wellbeing.page
+ share/help/pa/gnome-help/shell-windows-lost.page
+ share/help/pa/gnome-help/shell-windows-maximize.page
+ share/help/pa/gnome-help/shell-windows-states.page
+@@ -13828,6 +14514,11 @@
+ share/help/pl/gnome-help/mouse-touchpad-click.page
+ share/help/pl/gnome-help/mouse-wakeup.page
+ share/help/pl/gnome-help/mouse.page
++share/help/pl/gnome-help/multitasking-app-switching.page
++share/help/pl/gnome-help/multitasking-hot-corner.page
++share/help/pl/gnome-help/multitasking-screen-edges.page
++share/help/pl/gnome-help/multitasking-workspace-behavior.page
++share/help/pl/gnome-help/multitasking.page
+ share/help/pl/gnome-help/music-cantplay-drm.page
+ share/help/pl/gnome-help/nautilus-behavior.page
+ share/help/pl/gnome-help/nautilus-bookmarks-edit.page
+@@ -13951,6 +14642,7 @@
+ share/help/pl/gnome-help/shell-lockscreen.page
+ share/help/pl/gnome-help/shell-notifications.page
+ share/help/pl/gnome-help/shell-overview.page
++share/help/pl/gnome-help/shell-wellbeing.page
+ share/help/pl/gnome-help/shell-windows-lost.page
+ share/help/pl/gnome-help/shell-windows-maximize.page
+ share/help/pl/gnome-help/shell-windows-states.page
+@@ -14283,6 +14975,11 @@
+ share/help/pt/gnome-help/mouse-touchpad-click.page
+ share/help/pt/gnome-help/mouse-wakeup.page
+ share/help/pt/gnome-help/mouse.page
++share/help/pt/gnome-help/multitasking-app-switching.page
++share/help/pt/gnome-help/multitasking-hot-corner.page
++share/help/pt/gnome-help/multitasking-screen-edges.page
++share/help/pt/gnome-help/multitasking-workspace-behavior.page
++share/help/pt/gnome-help/multitasking.page
+ share/help/pt/gnome-help/music-cantplay-drm.page
+ share/help/pt/gnome-help/nautilus-behavior.page
+ share/help/pt/gnome-help/nautilus-bookmarks-edit.page
+@@ -14406,6 +15103,7 @@
+ share/help/pt/gnome-help/shell-lockscreen.page
+ share/help/pt/gnome-help/shell-notifications.page
+ share/help/pt/gnome-help/shell-overview.page
++share/help/pt/gnome-help/shell-wellbeing.page
+ share/help/pt/gnome-help/shell-windows-lost.page
+ share/help/pt/gnome-help/shell-windows-maximize.page
+ share/help/pt/gnome-help/shell-windows-states.page
+@@ -14738,6 +15436,11 @@
+ share/help/pt_BR/gnome-help/mouse-touchpad-click.page
+ share/help/pt_BR/gnome-help/mouse-wakeup.page
+ share/help/pt_BR/gnome-help/mouse.page
++share/help/pt_BR/gnome-help/multitasking-app-switching.page
++share/help/pt_BR/gnome-help/multitasking-hot-corner.page
++share/help/pt_BR/gnome-help/multitasking-screen-edges.page
++share/help/pt_BR/gnome-help/multitasking-workspace-behavior.page
++share/help/pt_BR/gnome-help/multitasking.page
+ share/help/pt_BR/gnome-help/music-cantplay-drm.page
+ share/help/pt_BR/gnome-help/nautilus-behavior.page
+ share/help/pt_BR/gnome-help/nautilus-bookmarks-edit.page
+@@ -14861,6 +15564,7 @@
+ share/help/pt_BR/gnome-help/shell-lockscreen.page
+ share/help/pt_BR/gnome-help/shell-notifications.page
+ share/help/pt_BR/gnome-help/shell-overview.page
++share/help/pt_BR/gnome-help/shell-wellbeing.page
+ share/help/pt_BR/gnome-help/shell-windows-lost.page
+ share/help/pt_BR/gnome-help/shell-windows-maximize.page
+ share/help/pt_BR/gnome-help/shell-windows-states.page
+@@ -15250,6 +15954,11 @@
+ share/help/ro/gnome-help/mouse-touchpad-click.page
+ share/help/ro/gnome-help/mouse-wakeup.page
+ share/help/ro/gnome-help/mouse.page
++share/help/ro/gnome-help/multitasking-app-switching.page
++share/help/ro/gnome-help/multitasking-hot-corner.page
++share/help/ro/gnome-help/multitasking-screen-edges.page
++share/help/ro/gnome-help/multitasking-workspace-behavior.page
++share/help/ro/gnome-help/multitasking.page
+ share/help/ro/gnome-help/music-cantplay-drm.page
+ share/help/ro/gnome-help/nautilus-behavior.page
+ share/help/ro/gnome-help/nautilus-bookmarks-edit.page
+@@ -15373,6 +16082,7 @@
+ share/help/ro/gnome-help/shell-lockscreen.page
+ share/help/ro/gnome-help/shell-notifications.page
+ share/help/ro/gnome-help/shell-overview.page
++share/help/ro/gnome-help/shell-wellbeing.page
+ share/help/ro/gnome-help/shell-windows-lost.page
+ share/help/ro/gnome-help/shell-windows-maximize.page
+ share/help/ro/gnome-help/shell-windows-states.page
+@@ -15705,6 +16415,11 @@
+ share/help/ru/gnome-help/mouse-touchpad-click.page
+ share/help/ru/gnome-help/mouse-wakeup.page
+ share/help/ru/gnome-help/mouse.page
++share/help/ru/gnome-help/multitasking-app-switching.page
++share/help/ru/gnome-help/multitasking-hot-corner.page
++share/help/ru/gnome-help/multitasking-screen-edges.page
++share/help/ru/gnome-help/multitasking-workspace-behavior.page
++share/help/ru/gnome-help/multitasking.page
+ share/help/ru/gnome-help/music-cantplay-drm.page
+ share/help/ru/gnome-help/nautilus-behavior.page
+ share/help/ru/gnome-help/nautilus-bookmarks-edit.page
+@@ -15828,6 +16543,7 @@
+ share/help/ru/gnome-help/shell-lockscreen.page
+ share/help/ru/gnome-help/shell-notifications.page
+ share/help/ru/gnome-help/shell-overview.page
++share/help/ru/gnome-help/shell-wellbeing.page
+ share/help/ru/gnome-help/shell-windows-lost.page
+ share/help/ru/gnome-help/shell-windows-maximize.page
+ share/help/ru/gnome-help/shell-windows-states.page
+@@ -16217,6 +16933,11 @@
+ share/help/sl/gnome-help/mouse-touchpad-click.page
+ share/help/sl/gnome-help/mouse-wakeup.page
+ share/help/sl/gnome-help/mouse.page
++share/help/sl/gnome-help/multitasking-app-switching.page
++share/help/sl/gnome-help/multitasking-hot-corner.page
++share/help/sl/gnome-help/multitasking-screen-edges.page
++share/help/sl/gnome-help/multitasking-workspace-behavior.page
++share/help/sl/gnome-help/multitasking.page
+ share/help/sl/gnome-help/music-cantplay-drm.page
+ share/help/sl/gnome-help/nautilus-behavior.page
+ share/help/sl/gnome-help/nautilus-bookmarks-edit.page
+@@ -16340,6 +17061,7 @@
+ share/help/sl/gnome-help/shell-lockscreen.page
+ share/help/sl/gnome-help/shell-notifications.page
+ share/help/sl/gnome-help/shell-overview.page
++share/help/sl/gnome-help/shell-wellbeing.page
+ share/help/sl/gnome-help/shell-windows-lost.page
+ share/help/sl/gnome-help/shell-windows-maximize.page
+ share/help/sl/gnome-help/shell-windows-states.page
+@@ -16672,6 +17394,11 @@
+ share/help/sr/gnome-help/mouse-touchpad-click.page
+ share/help/sr/gnome-help/mouse-wakeup.page
+ share/help/sr/gnome-help/mouse.page
++share/help/sr/gnome-help/multitasking-app-switching.page
++share/help/sr/gnome-help/multitasking-hot-corner.page
++share/help/sr/gnome-help/multitasking-screen-edges.page
++share/help/sr/gnome-help/multitasking-workspace-behavior.page
++share/help/sr/gnome-help/multitasking.page
+ share/help/sr/gnome-help/music-cantplay-drm.page
+ share/help/sr/gnome-help/nautilus-behavior.page
+ share/help/sr/gnome-help/nautilus-bookmarks-edit.page
+@@ -16795,6 +17522,7 @@
+ share/help/sr/gnome-help/shell-lockscreen.page
+ share/help/sr/gnome-help/shell-notifications.page
+ share/help/sr/gnome-help/shell-overview.page
++share/help/sr/gnome-help/shell-wellbeing.page
+ share/help/sr/gnome-help/shell-windows-lost.page
+ share/help/sr/gnome-help/shell-windows-maximize.page
+ share/help/sr/gnome-help/shell-windows-states.page
+@@ -17127,6 +17855,11 @@
+ share/help/sr@latin/gnome-help/mouse-touchpad-click.page
+ share/help/sr@latin/gnome-help/mouse-wakeup.page
+ share/help/sr@latin/gnome-help/mouse.page
++share/help/sr@latin/gnome-help/multitasking-app-switching.page
++share/help/sr@latin/gnome-help/multitasking-hot-corner.page
++share/help/sr@latin/gnome-help/multitasking-screen-edges.page
++share/help/sr@latin/gnome-help/multitasking-workspace-behavior.page
++share/help/sr@latin/gnome-help/multitasking.page
+ share/help/sr@latin/gnome-help/music-cantplay-drm.page
+ share/help/sr@latin/gnome-help/nautilus-behavior.page
+ share/help/sr@latin/gnome-help/nautilus-bookmarks-edit.page
+@@ -17250,6 +17983,7 @@
+ share/help/sr@latin/gnome-help/shell-lockscreen.page
+ share/help/sr@latin/gnome-help/shell-notifications.page
+ share/help/sr@latin/gnome-help/shell-overview.page
++share/help/sr@latin/gnome-help/shell-wellbeing.page
+ share/help/sr@latin/gnome-help/shell-windows-lost.page
+ share/help/sr@latin/gnome-help/shell-windows-maximize.page
+ share/help/sr@latin/gnome-help/shell-windows-states.page
+@@ -17582,6 +18316,11 @@
+ share/help/sv/gnome-help/mouse-touchpad-click.page
+ share/help/sv/gnome-help/mouse-wakeup.page
+ share/help/sv/gnome-help/mouse.page
++share/help/sv/gnome-help/multitasking-app-switching.page
++share/help/sv/gnome-help/multitasking-hot-corner.page
++share/help/sv/gnome-help/multitasking-screen-edges.page
++share/help/sv/gnome-help/multitasking-workspace-behavior.page
++share/help/sv/gnome-help/multitasking.page
+ share/help/sv/gnome-help/music-cantplay-drm.page
+ share/help/sv/gnome-help/nautilus-behavior.page
+ share/help/sv/gnome-help/nautilus-bookmarks-edit.page
+@@ -17705,6 +18444,7 @@
+ share/help/sv/gnome-help/shell-lockscreen.page
+ share/help/sv/gnome-help/shell-notifications.page
+ share/help/sv/gnome-help/shell-overview.page
++share/help/sv/gnome-help/shell-wellbeing.page
+ share/help/sv/gnome-help/shell-windows-lost.page
+ share/help/sv/gnome-help/shell-windows-maximize.page
+ share/help/sv/gnome-help/shell-windows-states.page
+@@ -18094,6 +18834,11 @@
+ share/help/ta/gnome-help/mouse-touchpad-click.page
+ share/help/ta/gnome-help/mouse-wakeup.page
+ share/help/ta/gnome-help/mouse.page
++share/help/ta/gnome-help/multitasking-app-switching.page
++share/help/ta/gnome-help/multitasking-hot-corner.page
++share/help/ta/gnome-help/multitasking-screen-edges.page
++share/help/ta/gnome-help/multitasking-workspace-behavior.page
++share/help/ta/gnome-help/multitasking.page
+ share/help/ta/gnome-help/music-cantplay-drm.page
+ share/help/ta/gnome-help/nautilus-behavior.page
+ share/help/ta/gnome-help/nautilus-bookmarks-edit.page
+@@ -18217,6 +18962,7 @@
+ share/help/ta/gnome-help/shell-lockscreen.page
+ share/help/ta/gnome-help/shell-notifications.page
+ share/help/ta/gnome-help/shell-overview.page
++share/help/ta/gnome-help/shell-wellbeing.page
+ share/help/ta/gnome-help/shell-windows-lost.page
+ share/help/ta/gnome-help/shell-windows-maximize.page
+ share/help/ta/gnome-help/shell-windows-states.page
+@@ -18549,6 +19295,11 @@
+ share/help/te/gnome-help/mouse-touchpad-click.page
+ share/help/te/gnome-help/mouse-wakeup.page
+ share/help/te/gnome-help/mouse.page
++share/help/te/gnome-help/multitasking-app-switching.page
++share/help/te/gnome-help/multitasking-hot-corner.page
++share/help/te/gnome-help/multitasking-screen-edges.page
++share/help/te/gnome-help/multitasking-workspace-behavior.page
++share/help/te/gnome-help/multitasking.page
+ share/help/te/gnome-help/music-cantplay-drm.page
+ share/help/te/gnome-help/nautilus-behavior.page
+ share/help/te/gnome-help/nautilus-bookmarks-edit.page
+@@ -18672,6 +19423,7 @@
+ share/help/te/gnome-help/shell-lockscreen.page
+ share/help/te/gnome-help/shell-notifications.page
+ share/help/te/gnome-help/shell-overview.page
++share/help/te/gnome-help/shell-wellbeing.page
+ share/help/te/gnome-help/shell-windows-lost.page
+ share/help/te/gnome-help/shell-windows-maximize.page
+ share/help/te/gnome-help/shell-windows-states.page
+@@ -19004,6 +19756,11 @@
+ share/help/th/gnome-help/mouse-touchpad-click.page
+ share/help/th/gnome-help/mouse-wakeup.page
+ share/help/th/gnome-help/mouse.page
++share/help/th/gnome-help/multitasking-app-switching.page
++share/help/th/gnome-help/multitasking-hot-corner.page
++share/help/th/gnome-help/multitasking-screen-edges.page
++share/help/th/gnome-help/multitasking-workspace-behavior.page
++share/help/th/gnome-help/multitasking.page
+ share/help/th/gnome-help/music-cantplay-drm.page
+ share/help/th/gnome-help/nautilus-behavior.page
+ share/help/th/gnome-help/nautilus-bookmarks-edit.page
+@@ -19127,6 +19884,7 @@
+ share/help/th/gnome-help/shell-lockscreen.page
+ share/help/th/gnome-help/shell-notifications.page
+ share/help/th/gnome-help/shell-overview.page
++share/help/th/gnome-help/shell-wellbeing.page
+ share/help/th/gnome-help/shell-windows-lost.page
+ share/help/th/gnome-help/shell-windows-maximize.page
+ share/help/th/gnome-help/shell-windows-states.page
+@@ -19459,6 +20217,11 @@
+ share/help/tr/gnome-help/mouse-touchpad-click.page
+ share/help/tr/gnome-help/mouse-wakeup.page
+ share/help/tr/gnome-help/mouse.page
++share/help/tr/gnome-help/multitasking-app-switching.page
++share/help/tr/gnome-help/multitasking-hot-corner.page
++share/help/tr/gnome-help/multitasking-screen-edges.page
++share/help/tr/gnome-help/multitasking-workspace-behavior.page
++share/help/tr/gnome-help/multitasking.page
+ share/help/tr/gnome-help/music-cantplay-drm.page
+ share/help/tr/gnome-help/nautilus-behavior.page
+ share/help/tr/gnome-help/nautilus-bookmarks-edit.page
+@@ -19582,6 +20345,7 @@
+ share/help/tr/gnome-help/shell-lockscreen.page
+ share/help/tr/gnome-help/shell-notifications.page
+ share/help/tr/gnome-help/shell-overview.page
++share/help/tr/gnome-help/shell-wellbeing.page
+ share/help/tr/gnome-help/shell-windows-lost.page
+ share/help/tr/gnome-help/shell-windows-maximize.page
+ share/help/tr/gnome-help/shell-windows-states.page
+@@ -19971,6 +20735,11 @@
+ share/help/uk/gnome-help/mouse-touchpad-click.page
+ share/help/uk/gnome-help/mouse-wakeup.page
+ share/help/uk/gnome-help/mouse.page
++share/help/uk/gnome-help/multitasking-app-switching.page
++share/help/uk/gnome-help/multitasking-hot-corner.page
++share/help/uk/gnome-help/multitasking-screen-edges.page
++share/help/uk/gnome-help/multitasking-workspace-behavior.page
++share/help/uk/gnome-help/multitasking.page
+ share/help/uk/gnome-help/music-cantplay-drm.page
+ share/help/uk/gnome-help/nautilus-behavior.page
+ share/help/uk/gnome-help/nautilus-bookmarks-edit.page
+@@ -20094,6 +20863,7 @@
+ share/help/uk/gnome-help/shell-lockscreen.page
+ share/help/uk/gnome-help/shell-notifications.page
+ share/help/uk/gnome-help/shell-overview.page
++share/help/uk/gnome-help/shell-wellbeing.page
+ share/help/uk/gnome-help/shell-windows-lost.page
+ share/help/uk/gnome-help/shell-windows-maximize.page
+ share/help/uk/gnome-help/shell-windows-states.page
+@@ -20483,6 +21253,11 @@
+ share/help/vi/gnome-help/mouse-touchpad-click.page
+ share/help/vi/gnome-help/mouse-wakeup.page
+ share/help/vi/gnome-help/mouse.page
++share/help/vi/gnome-help/multitasking-app-switching.page
++share/help/vi/gnome-help/multitasking-hot-corner.page
++share/help/vi/gnome-help/multitasking-screen-edges.page
++share/help/vi/gnome-help/multitasking-workspace-behavior.page
++share/help/vi/gnome-help/multitasking.page
+ share/help/vi/gnome-help/music-cantplay-drm.page
+ share/help/vi/gnome-help/nautilus-behavior.page
+ share/help/vi/gnome-help/nautilus-bookmarks-edit.page
+@@ -20606,6 +21381,7 @@
+ share/help/vi/gnome-help/shell-lockscreen.page
+ share/help/vi/gnome-help/shell-notifications.page
+ share/help/vi/gnome-help/shell-overview.page
++share/help/vi/gnome-help/shell-wellbeing.page
+ share/help/vi/gnome-help/shell-windows-lost.page
+ share/help/vi/gnome-help/shell-windows-maximize.page
+ share/help/vi/gnome-help/shell-windows-states.page
+@@ -20938,6 +21714,11 @@
+ share/help/zh_CN/gnome-help/mouse-touchpad-click.page
+ share/help/zh_CN/gnome-help/mouse-wakeup.page
+ share/help/zh_CN/gnome-help/mouse.page
++share/help/zh_CN/gnome-help/multitasking-app-switching.page
++share/help/zh_CN/gnome-help/multitasking-hot-corner.page
++share/help/zh_CN/gnome-help/multitasking-screen-edges.page
++share/help/zh_CN/gnome-help/multitasking-workspace-behavior.page
++share/help/zh_CN/gnome-help/multitasking.page
+ share/help/zh_CN/gnome-help/music-cantplay-drm.page
+ share/help/zh_CN/gnome-help/nautilus-behavior.page
+ share/help/zh_CN/gnome-help/nautilus-bookmarks-edit.page
+@@ -21061,6 +21842,7 @@
+ share/help/zh_CN/gnome-help/shell-lockscreen.page
+ share/help/zh_CN/gnome-help/shell-notifications.page
+ share/help/zh_CN/gnome-help/shell-overview.page
++share/help/zh_CN/gnome-help/shell-wellbeing.page
+ share/help/zh_CN/gnome-help/shell-windows-lost.page
+ share/help/zh_CN/gnome-help/shell-windows-maximize.page
+ share/help/zh_CN/gnome-help/shell-windows-states.page

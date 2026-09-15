@@ -1,0 +1,4 @@
+PORT
+Last attempt: 2.56.1
+Last success: 2.56.1
+Last validation: 2026-07-21 clean package/reinstall, pkg check, and a GCC 13 PangoCairo FontMap/Context/Layout smoke passed; libpangomm-2.48.so links libstdc++.so.6 from GCC 13. The Pango text stack remains a C ABI boundary and loads its base libstdc++.so.9 internally. Upstream declares no test targets.

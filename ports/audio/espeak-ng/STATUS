@@ -1,0 +1,4 @@
+PORT
+Last attempt: 1.52.0_1
+Last success: 1.52.0_1
+Last validation: 2026-07-20 clean package build passed without optional ronn; the speech engine and language data are packaged, while only ronn-generated manpages are omitted.

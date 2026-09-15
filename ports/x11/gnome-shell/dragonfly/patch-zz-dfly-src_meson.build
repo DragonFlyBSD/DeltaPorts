@@ -1,0 +1,10 @@
+--- src/meson.build.orig
++++ src/meson.build
+@@ -75,6 +75,7 @@
+   libsystemd_dep,
+   libpipewire_dep,
+   pango_dep,
++  epoll_shim_dep,
+ ]
+ 
+ if have_xwayland

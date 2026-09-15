@@ -1,0 +1,32 @@
+--- meson.build.orig	2026-07-04 14:08:37 UTC
++++ meson.build
+@@ -86,14 +86,21 @@ session_deps = [
+   dependency('gnome-desktop-4'),
+ ]
+ 
+-libsystemd_dep = dependency('libsystemd', version: '>= 209', required: true)
+-config_h.set('SYSTEMD_STRICT_ENV',
+-              libsystemd_dep.version().version_compare('< 248'))
+-
+-session_bin_deps = session_deps + [
+-  libsystemd_dep,
+-  dependency('gio-unix-2.0', version: glib_req_version),
+-]
++enable_systemd = get_option('systemd')
++if enable_systemd
++  config_h.set('ENABLE_SYSTEMD', 1)
++  libsystemd_dep = dependency('libsystemd', version: '>= 209', required: true)
++  config_h.set('SYSTEMD_STRICT_ENV',
++                libsystemd_dep.version().version_compare('< 248'))
++  session_bin_deps = session_deps + [
++    libsystemd_dep,
++    dependency('gio-unix-2.0', version: glib_req_version),
++  ]
++else
++  session_bin_deps = session_deps + [
++    dependency('gio-unix-2.0', version: glib_req_version),
++  ]
++endif
+ 
+ systemd_userunitdir = get_option('systemduserunitdir')
+ if systemd_userunitdir == ''
