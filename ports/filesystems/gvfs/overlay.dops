@@ -1,9 +1,22 @@
 port filesystems/gvfs
 type port
-reason "remove bsdisks/lsof from RUN_DEPENDS (unavailable on DragonFly); materialize dragonfly patch"
+reason "DragonFly: remove bsdisks/lsof and disable udisks2 volume monitor; materialize GNOME50 build patches"
 target @any
 
-text line-remove file Makefile exact "RUN_DEPENDS=	bsdisks>0:sysutils/bsdisks \\" on-missing noop
-text line-remove file Makefile exact "		lsof:sysutils/lsof" on-missing noop
-
 file materialize dragonfly/patch-meson.build -> dragonfly/patch-meson.build
+mk unset PORTREVISION
+mk remove LIB_DEPENDS "libudisks2.so:sysutils/libudisks"
+mk add MESON_ARGS "-Dudisks2=false"
+mk unset OPTIONS_RADIO
+mk unset OPTIONS_RADIO_BUSYCOMMAND
+mk set OPTIONS_DEFAULT "AVAHI BLURAY CDDA GPHOTO MTP NFS SMB"
+mk unset FUSER_DESC
+mk unset LSOF_DESC
+mk unset FUSER_MESON_ON
+mk unset LSOF_MESON_ON
+mk unset LSOF_RUN_DEPENDS
+text line-remove file Makefile exact "RUN_DEPENDS=\tbsdisks>0:sysutils/bsdisks"
+file materialize dragonfly/patch-daemon_org.gnome.system.smb.gschema.xml -> dragonfly/patch-daemon_org.gnome.system.smb.gschema.xml
+text line-remove file pkg-plist exact "%%DATADIR%%/remote-volume-monitors/udisks2.monitor"
+text line-remove file pkg-plist exact "share/dbus-1/services/org.gtk.vfs.UDisks2VolumeMonitor.service"
+text line-remove file pkg-plist exact "libexec/gvfs-udisks2-volume-monitor"
