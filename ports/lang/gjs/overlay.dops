@@ -1,0 +1,11 @@
+port lang/gjs
+type port
+reason "gjs 1.88.1 for gnome-shell 50 (mozjs-140)"
+target @any
+
+mk unset PORTVERSION
+mk remove LIB_DEPENDS "libmozjs-128.so:lang/spidermonkey128"
+mk add LIB_DEPENDS "libmozjs-140.so:lang/spidermonkey140"
+mk set DISTVERSION "1.88.1"
+mk set USE_GCC_VERSION "13"
+file materialize distinfo -> distinfo
