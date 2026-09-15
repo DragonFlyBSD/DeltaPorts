@@ -1,0 +1,19 @@
+port x11/gnome-shell-extensions
+type port
+reason "Update GNOME Shell Extensions to 50.2 and require the matching GNOME Shell 50 series"
+target @any
+
+mk unset PORTVERSION on-missing noop
+mk set DISTVERSION "50.2"
+mk set PORTSCOUT "limit:^50\\."
+mk eval RUN_DEPENDS "${RUN_DEPENDS:Ngnome-shell*} gnome-shell>=50.0:x11/gnome-shell"
+file materialize distinfo -> distinfo
+text line-remove file pkg-plist exact "share/xsessions/gnome-classic-xorg.desktop"
+text line-remove file pkg-plist exact "share/xsessions/gnome-classic.desktop"
+text line-remove file pkg-plist exact "share/wayland-sessions/gnome-classic-wayland.desktop"
+text line-insert-after file pkg-plist anchor "share/locale/hu/LC_MESSAGES/gnome-shell-extensions.mo" line "share/locale/ia/LC_MESSAGES/gnome-shell-extensions.mo"
+text line-insert-after file pkg-plist anchor "share/gnome-shell/extensions/workspace-indicator@gnome-shell-extensions.gcampax.github.com/workspaceIndicator.js" line "share/gnome-shell/extensions/workspace-indicator@gnome-shell-extensions.gcampax.github.com/workspacePrefs.js"
+text line-insert-after file pkg-plist anchor "share/gnome-shell/extensions/window-list@gnome-shell-extensions.gcampax.github.com/workspaceIndicator.js" line "share/gnome-shell/extensions/window-list@gnome-shell-extensions.gcampax.github.com/workspacePrefs.js"
+text replace-once file pkg-plist from "share/gnome-shell/extensions/apps-menu@gnome-shell-extensions.gcampax.github.com/extension.js" to "share/gnome-session/sessions/gnome-classic.session\nshare/gnome-shell/extensions/apps-menu@gnome-shell-extensions.gcampax.github.com/extension.js"
+file materialize dragonfly/patch-data_meson.build -> dragonfly/patch-data_meson.build
+file materialize dragonfly/pkg-message.in -> files/pkg-message.in

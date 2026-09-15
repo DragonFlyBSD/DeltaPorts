@@ -1,0 +1,8 @@
+[
+{ type: install
+  message: <<EOM
+GNOME Shell extensions are installed system-wide.
+Enable optional extensions through the GNOME Shell extension preferences.
+EOM
+}
+]
