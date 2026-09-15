@@ -1,0 +1,7 @@
+port x11/gnome-tour
+type dport
+reason "Add GNOME Tour 50.0"
+target @any
+
+file materialize dragonfly/patch-vendor_gettext-sys_build.rs -> dragonfly/patch-vendor_gettext-sys_build.rs
+file materialize dragonfly/patch-vendor_gettext-sys_cargo-checksum.json -> dragonfly/patch-vendor_gettext-sys_cargo-checksum.json
