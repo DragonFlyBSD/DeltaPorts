@@ -1,3 +1,7 @@
 PORT
-Last attempt: 42.0_7
-Last success: 42.0_7
+Last attempt: 50.1
+Last success: 50.1
+Last validation: 2026-07-23 build, package, reinstall, and rc stop/start passed.
+`service gdm stop` removes the GNOME session and its PipeWire/WirePlumber
+processes; `service gdm start` creates a fresh autologin session with PipeWire,
+pipewire-pulse, WirePlumber, and a working GDM status command.

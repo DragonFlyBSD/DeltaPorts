@@ -1,0 +1,40 @@
+--- meson.build.orig
++++ meson.build
+@@ -48,6 +48,9 @@
+   'security/pam_appl.h', 'PAM_BINARY_PROMPT',
+   dependencies: libpam_dep)
+ 
++# BSD: setusercontext(3)/logwtmp(3) live in libutil
++libutil_dep = cc.find_library('util', required: false)
++
+ glib_min_version = '2.68.0'
+ 
+ glib_dep = dependency('glib-2.0', version: '>=' + glib_min_version)
+@@ -70,7 +73,18 @@
+ # systemd
+ logind_provider = get_option('logind-provider')
+ systemd_dep = dependency('systemd', required: false)
+-if logind_provider == 'systemd'
++if host_machine.system() == 'dragonfly'
++  # DragonFly: no logind of any kind. Build against the null sd-login
++  # shim in common/dragonfly-compat, which answers every query as a
++  # loginless system with one static seat0. Seat/device handover is the
++  # job of seatd/libseat inside the session compositor, not the display
++  # manager.
++  logind_dep = declare_dependency(
++    include_directories: include_directories('common/dragonfly-compat'))
++  have_userdb = false
++  greeter_uid_min = 0
++  greeter_uid_max = 0
++elif logind_provider == 'systemd'
+   libsystemd_dep = dependency('libsystemd')
+   logind_dep = libsystemd_dep
+ 
+@@ -220,6 +234,7 @@
+ conf.set('HAVE_LOGOUT', cc.has_function('logout', args: '-lutil'))
+ conf.set('HAVE_LOGWTMP', cc.has_function('logwtmp', args: '-lutil'))
+ conf.set('HAVE_PAM_SYSLOG', have_pam_syslog)
++conf.set('HAVE_LOGINCAP', cc.has_header('login_cap.h') and libutil_dep.found())
+ conf.set('HAVE_KEYUTILS', keyutils_dep.found())
+ conf.set('SUPPORTS_PAM_EXTENSIONS', pam_extensions_supported)
+ conf.set('HAVE_SELINUX', libselinux_dep.found())
