@@ -1,0 +1,11 @@
+port x11/gnome-console
+type port
+reason "gnome-console 48.1 -> 50.0 (GNOME 50); FreeBSD tree lags. Plain dops bump; base kgx-pages patch still applies; vte-gtk4 present."
+target @any
+
+mk unset PORTVERSION
+mk set DISTVERSION "50.0"
+file materialize distinfo -> distinfo
+text line-insert-after file pkg-plist anchor "share/locale/ko/LC_MESSAGES/kgx.mo" line "share/locale/kw/LC_MESSAGES/kgx.mo"
+text line-insert-after file pkg-plist anchor "share/locale/hu/LC_MESSAGES/kgx.mo" line "share/locale/ia/LC_MESSAGES/kgx.mo"
+text line-insert-after file pkg-plist anchor "share/locale/ar/LC_MESSAGES/kgx.mo" line "share/locale/az/LC_MESSAGES/kgx.mo"
