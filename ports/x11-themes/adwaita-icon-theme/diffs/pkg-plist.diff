@@ -1,0 +1,124 @@
+--- pkg-plist.orig
++++ pkg-plist
+@@ -50,7 +50,9 @@
+ share/icons/Adwaita/16x16/places/user-desktop.png
+ share/icons/Adwaita/16x16/places/user-home.png
+ share/icons/Adwaita/16x16/places/user-trash.png
++share/icons/Adwaita/cursors/X_cursor
+ share/icons/Adwaita/cursors/alias
++share/icons/Adwaita/cursors/all-resize
+ share/icons/Adwaita/cursors/all-scroll
+ share/icons/Adwaita/cursors/arrow
+ share/icons/Adwaita/cursors/bd_double_arrow
+@@ -66,6 +68,7 @@
+ share/icons/Adwaita/cursors/crosshair
+ share/icons/Adwaita/cursors/default
+ share/icons/Adwaita/cursors/diamond_cross
++share/icons/Adwaita/cursors/dnd-ask
+ share/icons/Adwaita/cursors/dnd-move
+ share/icons/Adwaita/cursors/e-resize
+ share/icons/Adwaita/cursors/ew-resize
+@@ -181,7 +184,6 @@
+ share/icons/Adwaita/scalable/status/image-loading.svg
+ share/icons/Adwaita/scalable/status/image-missing.svg
+ share/icons/Adwaita/scalable/status/user-trash-full.svg
+-share/icons/Adwaita/symbolic-up-to-32/status/process-working-symbolic.svg
+ share/icons/Adwaita/symbolic/actions/action-unavailable-symbolic.svg
+ share/icons/Adwaita/symbolic/actions/address-book-new-symbolic.svg
+ share/icons/Adwaita/symbolic/actions/application-exit-rtl-symbolic.svg
+@@ -364,7 +366,6 @@
+ share/icons/Adwaita/symbolic/actions/zoom-in-symbolic.svg
+ share/icons/Adwaita/symbolic/actions/zoom-original-symbolic.svg
+ share/icons/Adwaita/symbolic/actions/zoom-out-symbolic.svg
+-share/icons/Adwaita/symbolic/apps/help-contents-symbolic.svg
+ share/icons/Adwaita/symbolic/categories/applications-engineering-symbolic.svg
+ share/icons/Adwaita/symbolic/categories/applications-games-symbolic.svg
+ share/icons/Adwaita/symbolic/categories/applications-graphics-symbolic.svg
+@@ -450,17 +451,6 @@
+ share/icons/Adwaita/symbolic/devices/video-display-symbolic.svg
+ share/icons/Adwaita/symbolic/devices/video-joined-displays-symbolic.svg
+ share/icons/Adwaita/symbolic/devices/video-single-display-symbolic.svg
+-share/icons/Adwaita/symbolic/emblems/emblem-default-symbolic.svg
+-share/icons/Adwaita/symbolic/emblems/emblem-documents-symbolic.svg
+-share/icons/Adwaita/symbolic/emblems/emblem-favorite-symbolic.svg
+-share/icons/Adwaita/symbolic/emblems/emblem-important-symbolic.svg
+-share/icons/Adwaita/symbolic/emblems/emblem-music-symbolic.svg
+-share/icons/Adwaita/symbolic/emblems/emblem-ok-symbolic.svg
+-share/icons/Adwaita/symbolic/emblems/emblem-photos-symbolic.svg
+-share/icons/Adwaita/symbolic/emblems/emblem-shared-symbolic.svg
+-share/icons/Adwaita/symbolic/emblems/emblem-synchronizing-symbolic.svg
+-share/icons/Adwaita/symbolic/emblems/emblem-system-symbolic.svg
+-share/icons/Adwaita/symbolic/emblems/emblem-videos-symbolic.svg
+ share/icons/Adwaita/symbolic/emotes/emote-love-symbolic.svg
+ share/icons/Adwaita/symbolic/emotes/face-angel-symbolic.svg
+ share/icons/Adwaita/symbolic/emotes/face-angry-symbolic.svg
+@@ -501,6 +491,8 @@
+ share/icons/Adwaita/symbolic/legacy/battery-good-charging-symbolic.svg
+ share/icons/Adwaita/symbolic/legacy/battery-good-symbolic.svg
+ share/icons/Adwaita/symbolic/legacy/battery-low-charging-symbolic.svg
++share/icons/Adwaita/symbolic/legacy/emblem-important-symbolic.svg
++share/icons/Adwaita/symbolic/legacy/emblem-system-symbolic.svg
+ share/icons/Adwaita/symbolic/legacy/gnome-power-manager-symbolic.svg
+ share/icons/Adwaita/symbolic/legacy/goa-panel-symbolic.svg
+ share/icons/Adwaita/symbolic/legacy/help-browser-symbolic.svg
+@@ -575,6 +567,7 @@
+ share/icons/Adwaita/symbolic/places/user-desktop-symbolic.svg
+ share/icons/Adwaita/symbolic/places/user-home-symbolic.svg
+ share/icons/Adwaita/symbolic/places/user-trash-symbolic.svg
++share/icons/Adwaita/symbolic/status/airplane-mode-disabled-symbolic.svg
+ share/icons/Adwaita/symbolic/status/airplane-mode-symbolic.svg
+ share/icons/Adwaita/symbolic/status/alarm-symbolic.svg
+ share/icons/Adwaita/symbolic/status/appointment-missed-symbolic.svg
+@@ -600,26 +593,37 @@
+ share/icons/Adwaita/symbolic/status/battery-action-symbolic.svg
+ share/icons/Adwaita/symbolic/status/battery-caution-symbolic.svg
+ share/icons/Adwaita/symbolic/status/battery-level-0-charging-symbolic.svg
++share/icons/Adwaita/symbolic/status/battery-level-0-plugged-in-symbolic.svg
+ share/icons/Adwaita/symbolic/status/battery-level-0-symbolic.svg
+ share/icons/Adwaita/symbolic/status/battery-level-10-charging-symbolic.svg
++share/icons/Adwaita/symbolic/status/battery-level-10-plugged-in-symbolic.svg
+ share/icons/Adwaita/symbolic/status/battery-level-10-symbolic.svg
+ share/icons/Adwaita/symbolic/status/battery-level-100-charged-symbolic.svg
++share/icons/Adwaita/symbolic/status/battery-level-100-plugged-in-symbolic.svg
+ share/icons/Adwaita/symbolic/status/battery-level-100-symbolic.svg
+ share/icons/Adwaita/symbolic/status/battery-level-20-charging-symbolic.svg
++share/icons/Adwaita/symbolic/status/battery-level-20-plugged-in-symbolic.svg
+ share/icons/Adwaita/symbolic/status/battery-level-20-symbolic.svg
+ share/icons/Adwaita/symbolic/status/battery-level-30-charging-symbolic.svg
++share/icons/Adwaita/symbolic/status/battery-level-30-plugged-in-symbolic.svg
+ share/icons/Adwaita/symbolic/status/battery-level-30-symbolic.svg
+ share/icons/Adwaita/symbolic/status/battery-level-40-charging-symbolic.svg
++share/icons/Adwaita/symbolic/status/battery-level-40-plugged-in-symbolic.svg
+ share/icons/Adwaita/symbolic/status/battery-level-40-symbolic.svg
+ share/icons/Adwaita/symbolic/status/battery-level-50-charging-symbolic.svg
++share/icons/Adwaita/symbolic/status/battery-level-50-plugged-in-symbolic.svg
+ share/icons/Adwaita/symbolic/status/battery-level-50-symbolic.svg
+ share/icons/Adwaita/symbolic/status/battery-level-60-charging-symbolic.svg
++share/icons/Adwaita/symbolic/status/battery-level-60-plugged-in-symbolic.svg
+ share/icons/Adwaita/symbolic/status/battery-level-60-symbolic.svg
+ share/icons/Adwaita/symbolic/status/battery-level-70-charging-symbolic.svg
++share/icons/Adwaita/symbolic/status/battery-level-70-plugged-in-symbolic.svg
+ share/icons/Adwaita/symbolic/status/battery-level-70-symbolic.svg
+ share/icons/Adwaita/symbolic/status/battery-level-80-charging-symbolic.svg
++share/icons/Adwaita/symbolic/status/battery-level-80-plugged-in-symbolic.svg
+ share/icons/Adwaita/symbolic/status/battery-level-80-symbolic.svg
+ share/icons/Adwaita/symbolic/status/battery-level-90-charging-symbolic.svg
++share/icons/Adwaita/symbolic/status/battery-level-90-plugged-in-symbolic.svg
+ share/icons/Adwaita/symbolic/status/battery-level-90-symbolic.svg
+ share/icons/Adwaita/symbolic/status/battery-low-symbolic.svg
+ share/icons/Adwaita/symbolic/status/battery-missing-symbolic.svg
+@@ -749,14 +753,8 @@
+ share/icons/Adwaita/symbolic/status/orientation-portrait-left-symbolic.svg
+ share/icons/Adwaita/symbolic/status/orientation-portrait-right-symbolic-rtl.svg
+ share/icons/Adwaita/symbolic/status/orientation-portrait-right-symbolic.svg
+-share/icons/Adwaita/symbolic/status/power-profile-balanced-rtl-symbolic.svg
+-share/icons/Adwaita/symbolic/status/power-profile-balanced-symbolic-rtl.svg
+ share/icons/Adwaita/symbolic/status/power-profile-balanced-symbolic.svg
+-share/icons/Adwaita/symbolic/status/power-profile-performance-rtl-symbolic.svg
+-share/icons/Adwaita/symbolic/status/power-profile-performance-symbolic-rtl.svg
+ share/icons/Adwaita/symbolic/status/power-profile-performance-symbolic.svg
+-share/icons/Adwaita/symbolic/status/power-profile-power-saver-rtl-symbolic.svg
+-share/icons/Adwaita/symbolic/status/power-profile-power-saver-symbolic-rtl.svg
+ share/icons/Adwaita/symbolic/status/power-profile-power-saver-symbolic.svg
+ share/icons/Adwaita/symbolic/status/printer-error-symbolic.svg
+ share/icons/Adwaita/symbolic/status/printer-printing-symbolic.svg
