@@ -1,0 +1,4 @@
+PORT
+Last attempt: 1.19.0
+Last success: 1.19.0
+Last validation: 2026-07-21 clean package/reinstall, pkg check, and a GCC 13 ImageSurface/Context smoke passed; libcairomm-1.16.so links libstdc++.so.6 from GCC 13. Upstream tests were not generated because the optional Boost unit-test framework is not installed.
