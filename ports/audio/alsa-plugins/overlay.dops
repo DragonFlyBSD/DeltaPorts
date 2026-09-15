@@ -1,7 +1,9 @@
 port audio/alsa-plugins
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "auto-converted from Makefile.DragonFly; DragonFly takes the FreeBSD OSS code paths in the oss plugin (DragonFly's OSS is FreeBSD-derived; the non-FreeBSD branch references a struct member the FreeBSD patch removed)"
 target @any
 
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NPULSEAUDIO}"
 file materialize dragonfly/patch-oss_pcm__oss.c -> dragonfly/patch-oss_pcm__oss.c
+file materialize dragonfly/patch-oss_50-oss.conf -> dragonfly/patch-oss_50-oss.conf
+file materialize dragonfly/patch-oss_ctl__oss.c -> dragonfly/patch-oss_ctl__oss.c
