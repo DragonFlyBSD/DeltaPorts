@@ -1,0 +1,383 @@
+--- pkg-plist.orig
++++ pkg-plist
+@@ -55,6 +55,9 @@
+ include/libadwaita-1/adw-shortcuts-dialog.h
+ include/libadwaita-1/adw-shortcuts-item.h
+ include/libadwaita-1/adw-shortcuts-section.h
++include/libadwaita-1/adw-sidebar-item.h
++include/libadwaita-1/adw-sidebar-section.h
++include/libadwaita-1/adw-sidebar.h
+ include/libadwaita-1/adw-spin-row.h
+ include/libadwaita-1/adw-spinner-paintable.h
+ include/libadwaita-1/adw-spinner.h
+@@ -79,6 +82,7 @@
+ include/libadwaita-1/adw-version.h
+ include/libadwaita-1/adw-view-stack.h
+ include/libadwaita-1/adw-view-switcher-bar.h
++include/libadwaita-1/adw-view-switcher-sidebar.h
+ include/libadwaita-1/adw-view-switcher-title.h
+ include/libadwaita-1/adw-view-switcher.h
+ include/libadwaita-1/adw-window-title.h
+@@ -141,12 +145,18 @@
+ %%PORTDOCS%%%%DOCSDIR%%-1/adaptive-multi-layout-narrow.png
+ %%PORTDOCS%%%%DOCSDIR%%-1/adaptive-multi-layout-wide-dark.png
+ %%PORTDOCS%%%%DOCSDIR%%-1/adaptive-multi-layout-wide.png
+-%%PORTDOCS%%%%DOCSDIR%%-1/adaptive-sidebar-narrow-1-dark.png
+-%%PORTDOCS%%%%DOCSDIR%%-1/adaptive-sidebar-narrow-1.png
+-%%PORTDOCS%%%%DOCSDIR%%-1/adaptive-sidebar-narrow-2-dark.png
+-%%PORTDOCS%%%%DOCSDIR%%-1/adaptive-sidebar-narrow-2.png
+-%%PORTDOCS%%%%DOCSDIR%%-1/adaptive-sidebar-wide-dark.png
+-%%PORTDOCS%%%%DOCSDIR%%-1/adaptive-sidebar-wide.png
++%%PORTDOCS%%%%DOCSDIR%%-1/adaptive-navigation-sidebar-narrow-1-dark.png
++%%PORTDOCS%%%%DOCSDIR%%-1/adaptive-navigation-sidebar-narrow-1.png
++%%PORTDOCS%%%%DOCSDIR%%-1/adaptive-navigation-sidebar-narrow-2-dark.png
++%%PORTDOCS%%%%DOCSDIR%%-1/adaptive-navigation-sidebar-narrow-2.png
++%%PORTDOCS%%%%DOCSDIR%%-1/adaptive-navigation-sidebar-wide-dark.png
++%%PORTDOCS%%%%DOCSDIR%%-1/adaptive-navigation-sidebar-wide.png
++%%PORTDOCS%%%%DOCSDIR%%-1/adaptive-overlay-sidebar-narrow-1-dark.png
++%%PORTDOCS%%%%DOCSDIR%%-1/adaptive-overlay-sidebar-narrow-1.png
++%%PORTDOCS%%%%DOCSDIR%%-1/adaptive-overlay-sidebar-narrow-2-dark.png
++%%PORTDOCS%%%%DOCSDIR%%-1/adaptive-overlay-sidebar-narrow-2.png
++%%PORTDOCS%%%%DOCSDIR%%-1/adaptive-overlay-sidebar-wide-dark.png
++%%PORTDOCS%%%%DOCSDIR%%-1/adaptive-overlay-sidebar-wide.png
+ %%PORTDOCS%%%%DOCSDIR%%-1/adaptive-tabs-narrow-1-dark.png
+ %%PORTDOCS%%%%DOCSDIR%%-1/adaptive-tabs-narrow-1.png
+ %%PORTDOCS%%%%DOCSDIR%%-1/adaptive-tabs-narrow-2-dark.png
+@@ -167,8 +177,10 @@
+ %%PORTDOCS%%%%DOCSDIR%%-1/adaptive-triple-pane-narrow-3.png
+ %%PORTDOCS%%%%DOCSDIR%%-1/adaptive-triple-pane-wide-dark.png
+ %%PORTDOCS%%%%DOCSDIR%%-1/adaptive-triple-pane-wide.png
+-%%PORTDOCS%%%%DOCSDIR%%-1/adaptive-utility-pane-narrow-dark.png
+-%%PORTDOCS%%%%DOCSDIR%%-1/adaptive-utility-pane-narrow.png
++%%PORTDOCS%%%%DOCSDIR%%-1/adaptive-utility-pane-narrow-1-dark.png
++%%PORTDOCS%%%%DOCSDIR%%-1/adaptive-utility-pane-narrow-1.png
++%%PORTDOCS%%%%DOCSDIR%%-1/adaptive-utility-pane-narrow-2-dark.png
++%%PORTDOCS%%%%DOCSDIR%%-1/adaptive-utility-pane-narrow-2.png
+ %%PORTDOCS%%%%DOCSDIR%%-1/adaptive-utility-pane-wide-dark.png
+ %%PORTDOCS%%%%DOCSDIR%%-1/adaptive-utility-pane-wide.png
+ %%PORTDOCS%%%%DOCSDIR%%-1/adaptive-view-switcher-narrow-dark.png
+@@ -224,6 +236,7 @@
+ %%PORTDOCS%%%%DOCSDIR%%-1/buttons-suggested-action-dark.png
+ %%PORTDOCS%%%%DOCSDIR%%-1/buttons-suggested-action.png
+ %%PORTDOCS%%%%DOCSDIR%%-1/callback.AnimationTargetFunc.html
++%%PORTDOCS%%%%DOCSDIR%%-1/callback.SidebarSectionCreateItemFunc.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/cards-dark.png
+ %%PORTDOCS%%%%DOCSDIR%%-1/cards.png
+ %%PORTDOCS%%%%DOCSDIR%%-1/carousel-dark.png
+@@ -277,6 +290,7 @@
+ %%PORTDOCS%%%%DOCSDIR%%-1/class.NavigationPage.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/class.NavigationSplitView.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/class.NavigationView.html
++%%PORTDOCS%%%%DOCSDIR%%-1/class.NoneAnimationTarget.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/class.OverlaySplitView.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/class.PasswordEntryRow.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/class.PreferencesDialog.html
+@@ -289,6 +303,9 @@
+ %%PORTDOCS%%%%DOCSDIR%%-1/class.ShortcutsDialog.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/class.ShortcutsItem.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/class.ShortcutsSection.html
++%%PORTDOCS%%%%DOCSDIR%%-1/class.Sidebar.html
++%%PORTDOCS%%%%DOCSDIR%%-1/class.SidebarItem.html
++%%PORTDOCS%%%%DOCSDIR%%-1/class.SidebarSection.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/class.SpinRow.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/class.Spinner.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/class.SpinnerPaintable.html
+@@ -316,6 +333,7 @@
+ %%PORTDOCS%%%%DOCSDIR%%-1/class.ViewStackPages.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/class.ViewSwitcher.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/class.ViewSwitcherBar.html
++%%PORTDOCS%%%%DOCSDIR%%-1/class.ViewSwitcherSidebar.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/class.ViewSwitcherTitle.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/class.Window.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/class.WindowTitle.html
+@@ -374,6 +392,7 @@
+ %%PORTDOCS%%%%DOCSDIR%%-1/ctor.NavigationPage.new_with_tag.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/ctor.NavigationSplitView.new.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/ctor.NavigationView.new.html
++%%PORTDOCS%%%%DOCSDIR%%-1/ctor.NoneAnimationTarget.new.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/ctor.OverlaySplitView.new.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/ctor.PasswordEntryRow.new.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/ctor.PreferencesDialog.new.html
+@@ -388,6 +407,9 @@
+ %%PORTDOCS%%%%DOCSDIR%%-1/ctor.ShortcutsItem.new.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/ctor.ShortcutsItem.new_from_action.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/ctor.ShortcutsSection.new.html
++%%PORTDOCS%%%%DOCSDIR%%-1/ctor.Sidebar.new.html
++%%PORTDOCS%%%%DOCSDIR%%-1/ctor.SidebarItem.new.html
++%%PORTDOCS%%%%DOCSDIR%%-1/ctor.SidebarSection.new.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/ctor.SpinRow.new.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/ctor.SpinRow.new_with_range.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/ctor.Spinner.new.html
+@@ -414,6 +436,7 @@
+ %%PORTDOCS%%%%DOCSDIR%%-1/ctor.ViewStack.new.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/ctor.ViewSwitcher.new.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/ctor.ViewSwitcherBar.new.html
++%%PORTDOCS%%%%DOCSDIR%%-1/ctor.ViewSwitcherSidebar.new.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/ctor.ViewSwitcherTitle.new.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/ctor.Window.new.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/ctor.WindowTitle.new.html
+@@ -452,6 +475,7 @@
+ %%PORTDOCS%%%%DOCSDIR%%-1/enum.NavigationDirection.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/enum.PackDirection.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/enum.ResponseAppearance.html
++%%PORTDOCS%%%%DOCSDIR%%-1/enum.SidebarMode.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/enum.SqueezerTransitionType.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/enum.ToastPriority.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/enum.ToolbarStyle.html
+@@ -519,6 +543,7 @@
+ %%PORTDOCS%%%%DOCSDIR%%-1/method.AboutDialog.add_legal_section.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/method.AboutDialog.add_link.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/method.AboutDialog.add_other_app.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.AboutDialog.get_appdata_resource_path.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/method.AboutDialog.get_application_icon.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/method.AboutDialog.get_application_name.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/method.AboutDialog.get_artists.html
+@@ -1172,6 +1197,65 @@
+ %%PORTDOCS%%%%DOCSDIR%%-1/method.ShortcutsSection.add.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/method.ShortcutsSection.get_title.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/method.ShortcutsSection.set_title.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.Sidebar.append.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.Sidebar.get_drop_preload.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.Sidebar.get_filter.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.Sidebar.get_item.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.Sidebar.get_items.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.Sidebar.get_menu_model.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.Sidebar.get_mode.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.Sidebar.get_placeholder.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.Sidebar.get_section.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.Sidebar.get_sections.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.Sidebar.get_selected.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.Sidebar.get_selected_item.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.Sidebar.insert.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.Sidebar.prepend.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.Sidebar.remove.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.Sidebar.remove_all.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.Sidebar.set_drop_preload.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.Sidebar.set_filter.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.Sidebar.set_menu_model.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.Sidebar.set_mode.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.Sidebar.set_placeholder.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.Sidebar.set_selected.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.Sidebar.setup_drop_target.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.SidebarItem.get_drag_motion_activate.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.SidebarItem.get_enabled.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.SidebarItem.get_icon_name.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.SidebarItem.get_icon_paintable.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.SidebarItem.get_index.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.SidebarItem.get_section.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.SidebarItem.get_section_index.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.SidebarItem.get_subtitle.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.SidebarItem.get_suffix.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.SidebarItem.get_title.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.SidebarItem.get_tooltip.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.SidebarItem.get_use_underline.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.SidebarItem.get_visible.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.SidebarItem.set_drag_motion_activate.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.SidebarItem.set_enabled.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.SidebarItem.set_icon_name.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.SidebarItem.set_icon_paintable.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.SidebarItem.set_subtitle.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.SidebarItem.set_suffix.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.SidebarItem.set_title.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.SidebarItem.set_tooltip.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.SidebarItem.set_use_underline.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.SidebarItem.set_visible.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.SidebarSection.append.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.SidebarSection.bind_model.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.SidebarSection.get_item.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.SidebarSection.get_items.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.SidebarSection.get_menu_model.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.SidebarSection.get_sidebar.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.SidebarSection.get_title.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.SidebarSection.insert.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.SidebarSection.prepend.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.SidebarSection.remove.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.SidebarSection.remove_all.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.SidebarSection.set_menu_model.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.SidebarSection.set_title.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/method.SpinRow.configure.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/method.SpinRow.get_adjustment.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/method.SpinRow.get_climb_rate.html
+@@ -1453,6 +1537,7 @@
+ %%PORTDOCS%%%%DOCSDIR%%-1/method.ToastOverlay.get_child.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/method.ToastOverlay.set_child.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/method.Toggle.get_child.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.Toggle.get_description.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/method.Toggle.get_enabled.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/method.Toggle.get_icon_name.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/method.Toggle.get_index.html
+@@ -1461,6 +1546,7 @@
+ %%PORTDOCS%%%%DOCSDIR%%-1/method.Toggle.get_tooltip.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/method.Toggle.get_use_underline.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/method.Toggle.set_child.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.Toggle.set_description.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/method.Toggle.set_enabled.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/method.Toggle.set_icon_name.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/method.Toggle.set_label.html
+@@ -1527,6 +1613,8 @@
+ %%PORTDOCS%%%%DOCSDIR%%-1/method.ViewStackPage.get_icon_name.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/method.ViewStackPage.get_name.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/method.ViewStackPage.get_needs_attention.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.ViewStackPage.get_section_title.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.ViewStackPage.get_starts_section.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/method.ViewStackPage.get_title.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/method.ViewStackPage.get_use_underline.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/method.ViewStackPage.get_visible.html
+@@ -1534,6 +1622,8 @@
+ %%PORTDOCS%%%%DOCSDIR%%-1/method.ViewStackPage.set_icon_name.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/method.ViewStackPage.set_name.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/method.ViewStackPage.set_needs_attention.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.ViewStackPage.set_section_title.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.ViewStackPage.set_starts_section.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/method.ViewStackPage.set_title.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/method.ViewStackPage.set_use_underline.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/method.ViewStackPage.set_visible.html
+@@ -1547,6 +1637,14 @@
+ %%PORTDOCS%%%%DOCSDIR%%-1/method.ViewSwitcherBar.get_stack.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/method.ViewSwitcherBar.set_reveal.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/method.ViewSwitcherBar.set_stack.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.ViewSwitcherSidebar.get_filter.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.ViewSwitcherSidebar.get_mode.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.ViewSwitcherSidebar.get_placeholder.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.ViewSwitcherSidebar.get_stack.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.ViewSwitcherSidebar.set_filter.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.ViewSwitcherSidebar.set_mode.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.ViewSwitcherSidebar.set_placeholder.html
++%%PORTDOCS%%%%DOCSDIR%%-1/method.ViewSwitcherSidebar.set_stack.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/method.ViewSwitcherTitle.get_stack.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/method.ViewSwitcherTitle.get_subtitle.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/method.ViewSwitcherTitle.get_title.html
+@@ -1665,6 +1763,7 @@
+ %%PORTDOCS%%%%DOCSDIR%%-1/preferences-window.png
+ %%PORTDOCS%%%%DOCSDIR%%-1/property-row-dark.png
+ %%PORTDOCS%%%%DOCSDIR%%-1/property-row.png
++%%PORTDOCS%%%%DOCSDIR%%-1/property.AboutDialog.appdata-resource-path.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/property.AboutDialog.application-icon.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/property.AboutDialog.application-name.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/property.AboutDialog.artists.html
+@@ -1817,6 +1916,8 @@
+ %%PORTDOCS%%%%DOCSDIR%%-1/property.EnumListItem.nick.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/property.EnumListItem.value.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/property.EnumListModel.enum-type.html
++%%PORTDOCS%%%%DOCSDIR%%-1/property.EnumListModel.item-type.html
++%%PORTDOCS%%%%DOCSDIR%%-1/property.EnumListModel.n-items.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/property.ExpanderRow.enable-expansion.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/property.ExpanderRow.expanded.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/property.ExpanderRow.icon-name.html
+@@ -1942,7 +2043,33 @@
+ %%PORTDOCS%%%%DOCSDIR%%-1/property.ShortcutsItem.direction.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/property.ShortcutsItem.subtitle.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/property.ShortcutsItem.title.html
++%%PORTDOCS%%%%DOCSDIR%%-1/property.ShortcutsSection.item-type.html
++%%PORTDOCS%%%%DOCSDIR%%-1/property.ShortcutsSection.n-items.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/property.ShortcutsSection.title.html
++%%PORTDOCS%%%%DOCSDIR%%-1/property.Sidebar.drop-preload.html
++%%PORTDOCS%%%%DOCSDIR%%-1/property.Sidebar.filter.html
++%%PORTDOCS%%%%DOCSDIR%%-1/property.Sidebar.items.html
++%%PORTDOCS%%%%DOCSDIR%%-1/property.Sidebar.menu-model.html
++%%PORTDOCS%%%%DOCSDIR%%-1/property.Sidebar.mode.html
++%%PORTDOCS%%%%DOCSDIR%%-1/property.Sidebar.placeholder.html
++%%PORTDOCS%%%%DOCSDIR%%-1/property.Sidebar.sections.html
++%%PORTDOCS%%%%DOCSDIR%%-1/property.Sidebar.selected-item.html
++%%PORTDOCS%%%%DOCSDIR%%-1/property.Sidebar.selected.html
++%%PORTDOCS%%%%DOCSDIR%%-1/property.SidebarItem.drag-motion-activate.html
++%%PORTDOCS%%%%DOCSDIR%%-1/property.SidebarItem.enabled.html
++%%PORTDOCS%%%%DOCSDIR%%-1/property.SidebarItem.icon-name.html
++%%PORTDOCS%%%%DOCSDIR%%-1/property.SidebarItem.icon-paintable.html
++%%PORTDOCS%%%%DOCSDIR%%-1/property.SidebarItem.section.html
++%%PORTDOCS%%%%DOCSDIR%%-1/property.SidebarItem.subtitle.html
++%%PORTDOCS%%%%DOCSDIR%%-1/property.SidebarItem.suffix.html
++%%PORTDOCS%%%%DOCSDIR%%-1/property.SidebarItem.title.html
++%%PORTDOCS%%%%DOCSDIR%%-1/property.SidebarItem.tooltip.html
++%%PORTDOCS%%%%DOCSDIR%%-1/property.SidebarItem.use-underline.html
++%%PORTDOCS%%%%DOCSDIR%%-1/property.SidebarItem.visible.html
++%%PORTDOCS%%%%DOCSDIR%%-1/property.SidebarSection.items.html
++%%PORTDOCS%%%%DOCSDIR%%-1/property.SidebarSection.menu-model.html
++%%PORTDOCS%%%%DOCSDIR%%-1/property.SidebarSection.sidebar.html
++%%PORTDOCS%%%%DOCSDIR%%-1/property.SidebarSection.title.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/property.SpinRow.adjustment.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/property.SpinRow.climb-rate.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/property.SpinRow.digits.html
+@@ -2070,6 +2197,7 @@
+ %%PORTDOCS%%%%DOCSDIR%%-1/property.Toast.use-markup.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/property.ToastOverlay.child.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/property.Toggle.child.html
++%%PORTDOCS%%%%DOCSDIR%%-1/property.Toggle.description.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/property.Toggle.enabled.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/property.Toggle.icon-name.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/property.Toggle.label.html
+@@ -2104,14 +2232,22 @@
+ %%PORTDOCS%%%%DOCSDIR%%-1/property.ViewStackPage.icon-name.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/property.ViewStackPage.name.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/property.ViewStackPage.needs-attention.html
++%%PORTDOCS%%%%DOCSDIR%%-1/property.ViewStackPage.section-title.html
++%%PORTDOCS%%%%DOCSDIR%%-1/property.ViewStackPage.starts-section.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/property.ViewStackPage.title.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/property.ViewStackPage.use-underline.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/property.ViewStackPage.visible.html
++%%PORTDOCS%%%%DOCSDIR%%-1/property.ViewStackPages.item-type.html
++%%PORTDOCS%%%%DOCSDIR%%-1/property.ViewStackPages.n-items.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/property.ViewStackPages.selected-page.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/property.ViewSwitcher.policy.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/property.ViewSwitcher.stack.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/property.ViewSwitcherBar.reveal.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/property.ViewSwitcherBar.stack.html
++%%PORTDOCS%%%%DOCSDIR%%-1/property.ViewSwitcherSidebar.filter.html
++%%PORTDOCS%%%%DOCSDIR%%-1/property.ViewSwitcherSidebar.mode.html
++%%PORTDOCS%%%%DOCSDIR%%-1/property.ViewSwitcherSidebar.placeholder.html
++%%PORTDOCS%%%%DOCSDIR%%-1/property.ViewSwitcherSidebar.stack.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/property.ViewSwitcherTitle.stack.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/property.ViewSwitcherTitle.subtitle.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/property.ViewSwitcherTitle.title-visible.html
+@@ -2173,6 +2309,12 @@
+ %%PORTDOCS%%%%DOCSDIR%%-1/shortcuts-dialog-example-dark.png
+ %%PORTDOCS%%%%DOCSDIR%%-1/shortcuts-dialog-example.png
+ %%PORTDOCS%%%%DOCSDIR%%-1/shortcuts-dialog.png
++%%PORTDOCS%%%%DOCSDIR%%-1/sidebar-dark.png
++%%PORTDOCS%%%%DOCSDIR%%-1/sidebar-modes-dark.png
++%%PORTDOCS%%%%DOCSDIR%%-1/sidebar-modes.png
++%%PORTDOCS%%%%DOCSDIR%%-1/sidebar-section-dark.png
++%%PORTDOCS%%%%DOCSDIR%%-1/sidebar-section.png
++%%PORTDOCS%%%%DOCSDIR%%-1/sidebar.png
+ %%PORTDOCS%%%%DOCSDIR%%-1/signal.AboutDialog.activate-link.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/signal.AboutWindow.activate-link.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/signal.ActionRow.activated.html
+@@ -2197,6 +2339,11 @@
+ %%PORTDOCS%%%%DOCSDIR%%-1/signal.NavigationView.popped.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/signal.NavigationView.pushed.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/signal.NavigationView.replaced.html
++%%PORTDOCS%%%%DOCSDIR%%-1/signal.Sidebar.activated.html
++%%PORTDOCS%%%%DOCSDIR%%-1/signal.Sidebar.drop-enter.html
++%%PORTDOCS%%%%DOCSDIR%%-1/signal.Sidebar.drop-value-loaded.html
++%%PORTDOCS%%%%DOCSDIR%%-1/signal.Sidebar.drop.html
++%%PORTDOCS%%%%DOCSDIR%%-1/signal.Sidebar.setup-menu.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/signal.SpinRow.input.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/signal.SpinRow.output.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/signal.SpinRow.wrapped.html
+@@ -2222,6 +2369,7 @@
+ %%PORTDOCS%%%%DOCSDIR%%-1/signal.TabView.setup-menu.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/signal.Toast.button-clicked.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/signal.Toast.dismissed.html
++%%PORTDOCS%%%%DOCSDIR%%-1/signal.ViewSwitcherSidebar.activated.html
+ %%PORTDOCS%%%%DOCSDIR%%-1/solarized-dark.css
+ %%PORTDOCS%%%%DOCSDIR%%-1/solarized-light.css
+ %%PORTDOCS%%%%DOCSDIR%%-1/spin-row-dark.png
+@@ -2343,6 +2491,10 @@
+ %%PORTDOCS%%%%DOCSDIR%%-1/view-switcher-bar-dark.png
+ %%PORTDOCS%%%%DOCSDIR%%-1/view-switcher-bar.png
+ %%PORTDOCS%%%%DOCSDIR%%-1/view-switcher-dark.png
++%%PORTDOCS%%%%DOCSDIR%%-1/view-switcher-sidebar-dark.png
++%%PORTDOCS%%%%DOCSDIR%%-1/view-switcher-sidebar-modes-dark.png
++%%PORTDOCS%%%%DOCSDIR%%-1/view-switcher-sidebar-modes.png
++%%PORTDOCS%%%%DOCSDIR%%-1/view-switcher-sidebar.png
+ %%PORTDOCS%%%%DOCSDIR%%-1/view-switcher-title-dark.png
+ %%PORTDOCS%%%%DOCSDIR%%-1/view-switcher-title.png
+ %%PORTDOCS%%%%DOCSDIR%%-1/view-switcher.png
+@@ -2412,6 +2564,6 @@
+ share/locale/vi/LC_MESSAGES/libadwaita.mo
+ share/locale/zh_CN/LC_MESSAGES/libadwaita.mo
+ share/locale/zh_TW/LC_MESSAGES/libadwaita.mo
+-%%PORTEXAMPLES%%share/metainfo/org.gnome.Adwaita1.Demo.metainfo.xml
++share/metainfo/org.gnome.Adwaita1.Demo.metainfo.xml
+ share/vala/vapi/libadwaita-1.deps
+ share/vala/vapi/libadwaita-1.vapi
