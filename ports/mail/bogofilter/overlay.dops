@@ -1,0 +1,12 @@
+port mail/bogofilter
+type port
+reason "remove unsupported malloc attribute on DragonFly"
+target @any
+
+file materialize dragonfly/patch-src_xmalloc.h -> dragonfly/patch-src_xmalloc.h
+file materialize dragonfly/patch-src_xstrdup.h -> dragonfly/patch-src_xstrdup.h
+file materialize dragonfly/patch-src_mxcat.h -> dragonfly/patch-src_mxcat.h
+mk target set post-build <<'MK'
+	cd ${WRKSRC}/src && ${SETENVI} ${MAKE_ENV} SHELL=${SH} ${MAKE_CMD} ${TEST_TARGET} ${_MAKE_JOBS} SHELL=${SH} \
+		|| { r=$$? ; head -n30000 ${WRKSRC}/src/tests/test-suite.log ; exit $$r ; }
+MK
