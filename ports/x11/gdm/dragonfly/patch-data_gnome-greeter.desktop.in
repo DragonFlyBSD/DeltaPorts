@@ -1,0 +1,8 @@
+--- data/gnome-greeter.desktop.in.orig
++++ data/gnome-greeter.desktop.in
+@@ -6,5 +6,4 @@
+ Type=Application
+ DesktopNames=GNOME-Greeter:GNOME
+ NoDisplay=true
+-X-GDM-SessionRegisters=true
+ X-GDM-CanRunHeadless=true

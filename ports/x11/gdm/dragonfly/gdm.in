@@ -1,0 +1,99 @@
+#!/bin/sh
+
+# PROVIDE: gdm
+# REQUIRE: LOGIN cleanvar syscons dbus seatd
+#
+# Add the following to /etc/rc.conf to start GDM at boot time:
+#
+# gdm_enable="YES"
+#
+
+. /etc/rc.subr
+. %%GNOME_SUBR%%
+
+gdm_enable=${gdm_enable-${gnome_enable}}
+gdm_lang=${gdm_lang-${LANG}}
+
+export PATH=/bin:/sbin:/usr/bin:/usr/sbin:%%LOCALBASE%%/bin:%%LOCALBASE%%/sbin
+
+name="gdm"
+rcvar=gdm_enable
+command="%%PREFIX%%/sbin/${name}"
+start_cmd="gdm_start"
+stop_cmd="gdm_stop"
+status_cmd="gdm_status"
+
+gdm_start()
+{
+    if ! checkyesno gdm_enable ; then
+	return 0
+    fi
+    echo "Starting ${name}."
+
+    # mutter refuses to start without the X11 socket dir; create it here so
+    # the greeter (which runs before any user session wrapper) finds it.
+    mkdir -p /tmp/.X11-unix
+    chown root:wheel /tmp/.X11-unix
+    chmod 1777 /tmp/.X11-unix
+
+    # LOGIN already orders getty startup.  Detach from a service caller so a
+    # terminal or SSH disconnect cannot terminate GDM with SIGHUP.
+    nohup env LANG="${gdm_lang}" "${command}" ${gdm_flags} >/dev/null 2>&1 &
+}
+
+gdm_status()
+{
+    gdm_pid=$(pgrep -f "^${command}( |$)" | head -n 1)
+    if [ -n "${gdm_pid}" ]; then
+	echo "${name} is running as pid ${gdm_pid}."
+	return 0
+    fi
+
+    echo "${name} is not running."
+    return 1
+}
+
+gdm_stop()
+{
+    echo "Stopping ${name}."
+    # Session helpers can be reparented to init but retain this process group.
+    session_groups=$(ps -axo pgid=,command= |
+        awk '$2 == "%%PREFIX%%/libexec/gdm-wayland-session" { print $1 }' |
+        sort -u)
+
+    for gdm_pid in $(pgrep -f "^${command}( |$)"); do
+	/bin/kill "${gdm_pid}" 2>/dev/null
+    done
+    pkill -u gdm 2>/dev/null
+    pkill gdm-session-worker 2>/dev/null
+
+    for session_group in ${session_groups}; do
+        /bin/kill -TERM -"${session_group}" 2>/dev/null
+    done
+
+    i=0
+    while [ "${i}" -lt 20 ]; do
+        active=0
+        for session_group in ${session_groups}; do
+            if /bin/kill -0 -"${session_group}" 2>/dev/null; then
+                active=1
+                break
+            fi
+        done
+        if [ "${active}" -eq 0 ]; then
+            break
+        fi
+        sleep 0.1
+        i=$((i + 1))
+    done
+
+    for session_group in ${session_groups}; do
+        if /bin/kill -0 -"${session_group}" 2>/dev/null; then
+            /bin/kill -KILL -"${session_group}" 2>/dev/null
+        fi
+    done
+    return 0
+}
+
+load_rc_config ${name}
+run_rc_command "$1"
