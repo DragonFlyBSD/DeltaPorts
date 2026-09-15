@@ -1,0 +1,10 @@
+port multimedia/wireplumber
+type port
+reason "DragonFly: WirePlumber's ALSA udev monitor cannot discover OSS pcm devices. Add a /dev/sndstat monitor that exposes one PipeWire node per playback/capture endpoint."
+target @any
+
+file materialize dragonfly/patch-modules_module-lua-scripting_api_api.c -> dragonfly/patch-modules_module-lua-scripting_api_api.c
+file materialize dragonfly/patch-modules_module-lua-scripting_api_api.lua -> dragonfly/patch-modules_module-lua-scripting_api_api.lua
+file materialize dragonfly/patch-src_config_wireplumber.conf -> dragonfly/patch-src_config_wireplumber.conf
+file materialize dragonfly/patch-src_scripts_monitors_oss.lua -> dragonfly/patch-src_scripts_monitors_oss.lua
+text line-insert-after file pkg-plist anchor "%%DATADIR%%/scripts/monitors/alsa.lua" line "%%DATADIR%%/scripts/monitors/oss.lua"
