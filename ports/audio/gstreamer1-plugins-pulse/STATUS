@@ -1,0 +1,4 @@
+PORT
+Last attempt: enable the GStreamer Pulse client plugin on DragonFly
+Last success: 1.28.1
+Last validation: clean package/reinstall against pulseaudio 17 libpulse; autoaudiosink selected pulsesink (rank 266), created a PipeWire stream, and left /dev/dsp unopened.
