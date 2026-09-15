@@ -1,6 +1,6 @@
---- sysdeps/freebsd/open.c.orig	2016-11-27 18:05:03 UTC
+--- sysdeps/freebsd/open.c.orig
 +++ sysdeps/freebsd/open.c
-@@ -43,6 +43,10 @@ glibtop_open_s (glibtop *server, const c
+@@ -43,6 +43,10 @@
  	server->real_ncpu = ncpus - 1;
  	server->ncpu = MIN(GLIBTOP_NCPU - 1, server->real_ncpu);
  

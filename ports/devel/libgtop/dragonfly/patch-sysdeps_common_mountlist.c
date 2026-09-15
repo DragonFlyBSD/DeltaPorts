@@ -1,6 +1,6 @@
---- sysdeps/common/mountlist.c.orig	2016-11-27 18:05:03 UTC
+--- sysdeps/common/mountlist.c.orig
 +++ sysdeps/common/mountlist.c
-@@ -106,7 +106,7 @@ static struct mount_entry *read_filesyst
+@@ -106,7 +106,7 @@
  #endif
  
  
@@ -9,7 +9,7 @@
  static const char *
  fstype_to_string (short t)
  {
-@@ -309,7 +309,7 @@ read_filesystem_list (void)
+@@ -309,7 +309,7 @@
  	me = (struct mount_entry *) g_malloc (sizeof (struct mount_entry));
  	me->me_devname = g_strdup (fsp->f_mntfromname);
  	me->me_mountdir = g_strdup (fsp->f_mntonname);

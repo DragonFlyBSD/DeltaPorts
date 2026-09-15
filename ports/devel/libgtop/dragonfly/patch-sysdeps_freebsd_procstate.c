@@ -1,6 +1,6 @@
---- sysdeps/freebsd/procstate.c.orig	2016-11-27 18:05:03 UTC
+--- sysdeps/freebsd/procstate.c.orig
 +++ sysdeps/freebsd/procstate.c
-@@ -59,11 +59,46 @@ glibtop_get_proc_state_p (glibtop *serve
+@@ -59,11 +59,46 @@
  		return;
  	}
  
@@ -47,7 +47,7 @@
  	switch (pinfo[0].ki_stat) {
  		case SRUN:
  			buf->state = GLIBTOP_PROCESS_RUNNING;
-@@ -86,6 +121,7 @@ glibtop_get_proc_state_p (glibtop *serve
+@@ -86,6 +121,7 @@
  			buf->state = 0;
  			break;
  	}
