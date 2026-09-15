@@ -1,3 +1,4 @@
 PORT
-Last attempt: 47.0
-Last success: 47.0
+Last attempt: 50.0
+Last success: 50.0
+Last validation: 2026-07-21 clean package build and installation passed. The pkg-plist was regenerated from the staged 50.0 install; both executables are DragonFly ELF binaries and gnome-font-viewer has no missing dynamic libraries.
