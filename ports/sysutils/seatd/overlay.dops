@@ -9,3 +9,5 @@ file materialize dragonfly/patch-common_evdev.c -> dragonfly/patch-common_evdev.
 file materialize dragonfly/patch-common_terminal.c -> dragonfly/patch-common_terminal.c
 file materialize dragonfly/patch-libseat_backend_consolekit2.c -> dragonfly/patch-libseat_backend_consolekit2.c
 file materialize dragonfly/patch-seatd_client.c -> dragonfly/patch-seatd_client.c
+file materialize dragonfly/patch-seatd_seat.c -> dragonfly/patch-seatd_seat.c
+file materialize dragonfly/seatd.in -> files/seatd.in
