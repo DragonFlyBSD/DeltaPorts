@@ -1,0 +1,15 @@
+port x11/yelp
+type port
+reason "Update Yelp to 49.1 with its GTK4, libadwaita and WebKitGTK 6.0 dependencies"
+target @any
+
+mk set DISTVERSION "49.1"
+mk set PORTSCOUT "limit:^49\\."
+mk remove USE_GNOME "gtk30"
+mk add USE_GNOME "gtk40"
+mk remove LIB_DEPENDS "libhandy-1.so:x11-toolkits/libhandy"
+mk add LIB_DEPENDS "libadwaita-1.so:x11-toolkits/libadwaita"
+mk remove LIB_DEPENDS "libwebkit2gtk-4.1.so:www/webkit2-gtk@41"
+mk add LIB_DEPENDS "libwebkitgtk-6.0.so:www/webkit2-gtk@60"
+file materialize distinfo -> distinfo
+patch apply diffs/pkg-plist.diff
