@@ -1,0 +1,21 @@
+port x11-fm/nautilus
+type port
+reason "Nautilus 50.0: guard Linux-only autofs detection, enable extensions and gexiv2 0.16 image properties, and retain LocalSearch integration"
+target @any
+
+mk unset PORTVERSION
+mk unset PORTREVISION
+mk remove LIB_DEPENDS "libgexiv2.so:graphics/gexiv2"
+mk add LIB_DEPENDS "libgexiv2-0.16.so:graphics/gexiv2_016"
+mk set PORTSCOUT "limit:^50\\."
+mk add MESON_ARGS "-Dextensions=true"
+mk set DISTVERSION "50.0"
+file materialize distinfo -> distinfo
+text line-remove file pkg-plist exact "share/localsearch3/domain-ontologies/org.gnome.Nautilus.domain.rule"
+text line-insert-after file pkg-plist anchor "share/locale/hy/LC_MESSAGES/nautilus.mo" line "share/locale/ia/LC_MESSAGES/nautilus.mo"
+text replace-once file pkg-plist from "share/gir-1.0/Nautilus-4.0.gir" to "share/gir-1.0/Nautilus-4.1.gir"
+text line-remove file pkg-plist exact "share/dbus-1/services/org.gnome.Nautilus.Tracker3.Miner.Extract.service"
+text line-remove file pkg-plist exact "share/dbus-1/services/org.gnome.Nautilus.Tracker3.Miner.Files.service"
+text replace-once file pkg-plist from "lib/nautilus/extensions-4/libnautilus-image-properties.so\nlib/nautilus/extensions-4/libtotem-properties-page.so" to "lib/libnautilus-extension.so.4.1"
+text replace-once file pkg-plist from "lib/girepository-1.0/Nautilus-4.0.typelib" to "lib/girepository-1.0/Nautilus-4.1.typelib\nlib/nautilus/extensions-4/libnautilus-image-properties.so\nlib/nautilus/extensions-4/libtotem-properties-page.so"
+file materialize dragonfly/patch-src_nautilus-file-utilities.c -> dragonfly/patch-src_nautilus-file-utilities.c
