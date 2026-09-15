@@ -1,0 +1,9 @@
+port devel/libgudev
+type port
+reason "GNOME 50 requires libgudev 238 while the Q3 base remains at 237"
+target @any
+
+mk unset PORTVERSION
+mk set DISTVERSION "238"
+mk set OPTIONS_EXCLUDE "DOCS"
+file materialize distinfo -> distinfo
