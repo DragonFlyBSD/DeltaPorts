@@ -1,8 +1,6 @@
-DFLYGC 6.2
-
---- sysdeps/freebsd/netload.c.orig	2016-11-27 18:05:03 UTC
+--- sysdeps/freebsd/netload.c.orig
 +++ sysdeps/freebsd/netload.c
-@@ -108,7 +108,11 @@ glibtop_get_netload_p (glibtop *server,
+@@ -108,7 +108,11 @@
                          memset(&ifmr, 0, sizeof(ifmr));
                          (void)strlcpy(ifmr.ifm_name, ifa->ifa_name,
                                  sizeof(ifmr.ifm_name));

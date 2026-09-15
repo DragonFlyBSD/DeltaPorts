@@ -1,6 +1,6 @@
---- sysdeps/freebsd/proclist.c.orig	2016-11-27 18:05:03 UTC
+--- sysdeps/freebsd/proclist.c.orig
 +++ sysdeps/freebsd/proclist.c
-@@ -94,7 +94,7 @@ glibtop_get_proclist_p (glibtop *server,
+@@ -94,7 +94,7 @@
  	for (i = 0; i < len; i++) {
  		pid_t pid;
  
@@ -9,7 +9,7 @@
  
  		/* If a process has many threads, kern.proc.all reports multiple
  		   times the same pid. So don't look twice at the same pid.
-@@ -115,41 +115,41 @@ glibtop_get_proclist_p (glibtop *server,
+@@ -115,41 +115,41 @@
  					continue;
  				break;
  			case GLIBTOP_KERN_PROC_UID:
