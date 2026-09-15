@@ -1,0 +1,156 @@
+--- pkg-plist.orig
++++ pkg-plist
+@@ -4,7 +4,7 @@
+ %%PYTHON_SITELIBDIR%%/gnomemusic/albumart.py
+ %%PYTHON_SITELIBDIR%%/gnomemusic/application.py
+ %%PYTHON_SITELIBDIR%%/gnomemusic/artistart.py
+-%%PYTHON_SITELIBDIR%%/gnomemusic/asyncqueue.py
++%%PYTHON_SITELIBDIR%%/gnomemusic/asynciolimiter.py
+ %%PYTHON_SITELIBDIR%%/gnomemusic/corealbum.py
+ %%PYTHON_SITELIBDIR%%/gnomemusic/coreartist.py
+ %%PYTHON_SITELIBDIR%%/gnomemusic/coredisc.py
+@@ -13,12 +13,11 @@
+ %%PYTHON_SITELIBDIR%%/gnomemusic/coresong.py
+ %%PYTHON_SITELIBDIR%%/gnomemusic/coverpaintable.py
+ %%PYTHON_SITELIBDIR%%/gnomemusic/embeddedart.py
+-%%PYTHON_SITELIBDIR%%/gnomemusic/fileexistsasync.py
+-%%PYTHON_SITELIBDIR%%/gnomemusic/griloartqueue.py
+ %%PYTHON_SITELIBDIR%%/gnomemusic/grilowrappers/__init__.py
+-%%PYTHON_SITELIBDIR%%/gnomemusic/grilowrappers/grlsearchwrapper.py
+-%%PYTHON_SITELIBDIR%%/gnomemusic/grilowrappers/grltrackerplaylists.py
+-%%PYTHON_SITELIBDIR%%/gnomemusic/grilowrappers/grltrackerwrapper.py
++%%PYTHON_SITELIBDIR%%/gnomemusic/grilowrappers/localsearchplaylists.py
++%%PYTHON_SITELIBDIR%%/gnomemusic/grilowrappers/localsearchwrapper.py
++%%PYTHON_SITELIBDIR%%/gnomemusic/grilowrappers/playlist.py
++%%PYTHON_SITELIBDIR%%/gnomemusic/grilowrappers/smartplaylist.py
+ %%PYTHON_SITELIBDIR%%/gnomemusic/gstplayer.py
+ %%PYTHON_SITELIBDIR%%/gnomemusic/inhibitsuspend.py
+ %%PYTHON_SITELIBDIR%%/gnomemusic/mediaartloader.py
+@@ -28,7 +27,9 @@
+ %%PYTHON_SITELIBDIR%%/gnomemusic/pauseonsuspend.py
+ %%PYTHON_SITELIBDIR%%/gnomemusic/player.py
+ %%PYTHON_SITELIBDIR%%/gnomemusic/playlisttoast.py
++%%PYTHON_SITELIBDIR%%/gnomemusic/queue.py
+ %%PYTHON_SITELIBDIR%%/gnomemusic/search.py
++%%PYTHON_SITELIBDIR%%/gnomemusic/shufflelistmodel.py
+ %%PYTHON_SITELIBDIR%%/gnomemusic/songart.py
+ %%PYTHON_SITELIBDIR%%/gnomemusic/songtoast.py
+ %%PYTHON_SITELIBDIR%%/gnomemusic/storeart.py
+@@ -44,6 +45,7 @@
+ %%PYTHON_SITELIBDIR%%/gnomemusic/widgets/albumcover.py
+ %%PYTHON_SITELIBDIR%%/gnomemusic/widgets/albumnavigationpage.py
+ %%PYTHON_SITELIBDIR%%/gnomemusic/widgets/albumssearchnavigationpage.py
++%%PYTHON_SITELIBDIR%%/gnomemusic/widgets/albumtile.py
+ %%PYTHON_SITELIBDIR%%/gnomemusic/widgets/albumwidget.py
+ %%PYTHON_SITELIBDIR%%/gnomemusic/widgets/artistalbumswidget.py
+ %%PYTHON_SITELIBDIR%%/gnomemusic/widgets/artistnavigationpage.py
+@@ -59,6 +61,7 @@
+ %%PYTHON_SITELIBDIR%%/gnomemusic/widgets/playlistswidget.py
+ %%PYTHON_SITELIBDIR%%/gnomemusic/widgets/playlisttile.py
+ %%PYTHON_SITELIBDIR%%/gnomemusic/widgets/preferencesdialog.py
++%%PYTHON_SITELIBDIR%%/gnomemusic/widgets/repeatmodebutton.py
+ %%PYTHON_SITELIBDIR%%/gnomemusic/widgets/searchheaderbar.py
+ %%PYTHON_SITELIBDIR%%/gnomemusic/widgets/smoothscale.py
+ %%PYTHON_SITELIBDIR%%/gnomemusic/widgets/songwidget.py
+@@ -66,9 +69,11 @@
+ %%PYTHON_SITELIBDIR%%/gnomemusic/widgets/startoggle.py
+ %%PYTHON_SITELIBDIR%%/gnomemusic/widgets/statusnavigationpage.py
+ %%PYTHON_SITELIBDIR%%/gnomemusic/widgets/twolinetip.py
++%%PYTHON_SITELIBDIR%%/gnomemusic/widgets/volumebutton.py
+ %%PYTHON_SITELIBDIR%%/gnomemusic/window.py
+ %%PYTHON_SITELIBDIR%%/gnomemusic/windowplacement.py
+ share/applications/org.gnome.Music.desktop
++share/dbus-1/services/org.gnome.Music.service
+ share/help/C/gnome-music/figures/org.gnome.Music.svg
+ share/help/C/gnome-music/index.page
+ share/help/C/gnome-music/introduction.page
+@@ -82,6 +87,19 @@
+ share/help/C/gnome-music/playlist-repeat.page
+ share/help/C/gnome-music/playlist-shuffle.page
+ share/help/C/gnome-music/search.page
++share/help/bg/gnome-music/figures/org.gnome.Music.svg
++share/help/bg/gnome-music/index.page
++share/help/bg/gnome-music/introduction.page
++share/help/bg/gnome-music/legal.xml
++share/help/bg/gnome-music/play-music.page
++share/help/bg/gnome-music/playlist-create-albums.page
++share/help/bg/gnome-music/playlist-create-artists.page
++share/help/bg/gnome-music/playlist-create-songs.page
++share/help/bg/gnome-music/playlist-delete.page
++share/help/bg/gnome-music/playlist-remove-songs.page
++share/help/bg/gnome-music/playlist-repeat.page
++share/help/bg/gnome-music/playlist-shuffle.page
++share/help/bg/gnome-music/search.page
+ share/help/ca/gnome-music/figures/org.gnome.Music.svg
+ share/help/ca/gnome-music/index.page
+ share/help/ca/gnome-music/introduction.page
+@@ -251,6 +269,19 @@
+ share/help/it/gnome-music/playlist-repeat.page
+ share/help/it/gnome-music/playlist-shuffle.page
+ share/help/it/gnome-music/search.page
++share/help/kk/gnome-music/figures/org.gnome.Music.svg
++share/help/kk/gnome-music/index.page
++share/help/kk/gnome-music/introduction.page
++share/help/kk/gnome-music/legal.xml
++share/help/kk/gnome-music/play-music.page
++share/help/kk/gnome-music/playlist-create-albums.page
++share/help/kk/gnome-music/playlist-create-artists.page
++share/help/kk/gnome-music/playlist-create-songs.page
++share/help/kk/gnome-music/playlist-delete.page
++share/help/kk/gnome-music/playlist-remove-songs.page
++share/help/kk/gnome-music/playlist-repeat.page
++share/help/kk/gnome-music/playlist-shuffle.page
++share/help/kk/gnome-music/search.page
+ share/help/ko/gnome-music/figures/org.gnome.Music.svg
+ share/help/ko/gnome-music/index.page
+ share/help/ko/gnome-music/introduction.page
+@@ -329,6 +360,19 @@
+ share/help/ru/gnome-music/playlist-repeat.page
+ share/help/ru/gnome-music/playlist-shuffle.page
+ share/help/ru/gnome-music/search.page
++share/help/sr/gnome-music/figures/org.gnome.Music.svg
++share/help/sr/gnome-music/index.page
++share/help/sr/gnome-music/introduction.page
++share/help/sr/gnome-music/legal.xml
++share/help/sr/gnome-music/play-music.page
++share/help/sr/gnome-music/playlist-create-albums.page
++share/help/sr/gnome-music/playlist-create-artists.page
++share/help/sr/gnome-music/playlist-create-songs.page
++share/help/sr/gnome-music/playlist-delete.page
++share/help/sr/gnome-music/playlist-remove-songs.page
++share/help/sr/gnome-music/playlist-repeat.page
++share/help/sr/gnome-music/playlist-shuffle.page
++share/help/sr/gnome-music/search.page
+ share/help/sv/gnome-music/figures/org.gnome.Music.svg
+ share/help/sv/gnome-music/index.page
+ share/help/sv/gnome-music/introduction.page
+@@ -414,6 +458,7 @@
+ share/locale/hi/LC_MESSAGES/org.gnome.Music.mo
+ share/locale/hr/LC_MESSAGES/org.gnome.Music.mo
+ share/locale/hu/LC_MESSAGES/org.gnome.Music.mo
++share/locale/ia/LC_MESSAGES/org.gnome.Music.mo
+ share/locale/id/LC_MESSAGES/org.gnome.Music.mo
+ share/locale/is/LC_MESSAGES/org.gnome.Music.mo
+ share/locale/it/LC_MESSAGES/org.gnome.Music.mo
+@@ -423,6 +468,7 @@
+ share/locale/kk/LC_MESSAGES/org.gnome.Music.mo
+ share/locale/kn/LC_MESSAGES/org.gnome.Music.mo
+ share/locale/ko/LC_MESSAGES/org.gnome.Music.mo
++share/locale/kw/LC_MESSAGES/org.gnome.Music.mo
+ share/locale/lt/LC_MESSAGES/org.gnome.Music.mo
+ share/locale/lv/LC_MESSAGES/org.gnome.Music.mo
+ share/locale/mjw/LC_MESSAGES/org.gnome.Music.mo
+@@ -448,10 +494,12 @@
+ share/locale/tg/LC_MESSAGES/org.gnome.Music.mo
+ share/locale/th/LC_MESSAGES/org.gnome.Music.mo
+ share/locale/tr/LC_MESSAGES/org.gnome.Music.mo
++share/locale/ug/LC_MESSAGES/org.gnome.Music.mo
+ share/locale/uk/LC_MESSAGES/org.gnome.Music.mo
++share/locale/uz/LC_MESSAGES/org.gnome.Music.mo
+ share/locale/vi/LC_MESSAGES/org.gnome.Music.mo
+ share/locale/zh_CN/LC_MESSAGES/org.gnome.Music.mo
+ share/locale/zh_HK/LC_MESSAGES/org.gnome.Music.mo
+ share/locale/zh_TW/LC_MESSAGES/org.gnome.Music.mo
+-share/metainfo/org.gnome.Music.appdata.xml
++share/metainfo/org.gnome.Music.metainfo.xml
+ share/org.gnome.Music/org.gnome.Music.gresource
