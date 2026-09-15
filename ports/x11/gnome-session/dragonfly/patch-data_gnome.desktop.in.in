@@ -1,0 +1,14 @@
+--- data/gnome.desktop.in.in.orig
++++ data/gnome.desktop.in.in
+@@ -1,9 +1,8 @@
+ [Desktop Entry]
+ Name=GNOME
+ Comment=This session logs you into GNOME
+-Exec=@bindir@/gnome-session
+-TryExec=@bindir@/gnome-session
++Exec=/usr/local/libexec/gnome-session-dragonfly
++TryExec=/usr/local/libexec/gnome-session-dragonfly
+ Type=Application
+ DesktopNames=GNOME
+-X-GDM-SessionRegisters=true
+ X-GDM-CanRunHeadless=true
