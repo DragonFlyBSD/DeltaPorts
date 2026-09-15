@@ -1,0 +1,14 @@
+DPORT
+Last attempt: 49.6.1
+Last success: 49.6.1 (build, check-plist, package/reinstall)
+
+DragonFly fix: mount an smb:// file through GIO before querying metadata,
+accept ALREADY_MOUNTED when Files has already mounted the share, and use
+the system GStreamer default sink. gstreamer1-plugins-pulse routes it
+through pipewire-pulse and WirePlumber for GVFS SMB playback.
+Validated with an anonymous SMB share, a full Meson/Ninja build, and a
+Decibels Pulse stream with no /dev/dsp open.
+
+Upstream: GNOME/decibels#135 remains open:
+https://gitlab.gnome.org/GNOME/decibels/-/work_items/135
+The upstream main branch still lacks remote-share mount handling.
