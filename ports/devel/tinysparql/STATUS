@@ -1,3 +1,4 @@
 PORT
-Last attempt: 3.8.2_1
-Last success: 3.8.2_1
+Last attempt: 3.10.1 SQLite DQS DDL initialization repair
+Last success: 3.10.1
+Last validation: clean package/reinstall; fresh LocalSearch store reaches schema 32; session D-Bus activation owns LocalSearch3 and Miner.Files; filesystem index completes
