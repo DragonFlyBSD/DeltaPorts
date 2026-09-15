@@ -1,0 +1,58 @@
+--- pkg-plist.orig
++++ pkg-plist
+@@ -420,8 +420,6 @@
+ lib/girepository-1.0/Gtk-4.0.typelib
+ lib/libgtk-4.so
+ lib/libgtk-4.so.1
+-lib/libgtk-4.so.%%LIBVERSION%%
+-%%ACCESSKIT%%libdata/pkgconfig/gtk4-accesskit.pc
+ libdata/pkgconfig/gtk4-atspi.pc
+ %%BROADWAY%%libdata/pkgconfig/gtk4-broadway.pc
+ libdata/pkgconfig/gtk4-unix-print.pc
+@@ -609,3 +607,46 @@
+ @dir lib/gtk-4.0/%%GTK4_VERSION%%/engines
+ @dir lib/gtk-4.0/%%GTK4_VERSION%%/loaders
+ @dir lib/gtk-4.0/%%GTK4_VERSION%%/modules
++bin/gtk4-icon-editor
++include/gtk-4.0/gsk/gskblendnode.h
++include/gtk-4.0/gsk/gskblurnode.h
++include/gtk-4.0/gsk/gskbordernode.h
++include/gtk-4.0/gsk/gskcaironode.h
++include/gtk-4.0/gsk/gskclipnode.h
++include/gtk-4.0/gsk/gskcolormatrixnode.h
++include/gtk-4.0/gsk/gskcolornode.h
++include/gtk-4.0/gsk/gskcomponenttransfernode.h
++include/gtk-4.0/gsk/gskcompositenode.h
++include/gtk-4.0/gsk/gskconicgradientnode.h
++include/gtk-4.0/gsk/gskcontainernode.h
++include/gtk-4.0/gsk/gskcopynode.h
++include/gtk-4.0/gsk/gskcrossfadenode.h
++include/gtk-4.0/gsk/gskdebugnode.h
++include/gtk-4.0/gsk/gskfillnode.h
++include/gtk-4.0/gsk/gskglshadernode.h
++include/gtk-4.0/gsk/gskinsetshadownode.h
++include/gtk-4.0/gsk/gskisolationnode.h
++include/gtk-4.0/gsk/gsklineargradientnode.h
++include/gtk-4.0/gsk/gskmasknode.h
++include/gtk-4.0/gsk/gskopacitynode.h
++include/gtk-4.0/gsk/gskoutsetshadownode.h
++include/gtk-4.0/gsk/gskpastenode.h
++include/gtk-4.0/gsk/gskradialgradientnode.h
++include/gtk-4.0/gsk/gskrenderreplay.h
++include/gtk-4.0/gsk/gskrepeatnode.h
++include/gtk-4.0/gsk/gskroundedclipnode.h
++include/gtk-4.0/gsk/gskshadownode.h
++include/gtk-4.0/gsk/gskstrokenode.h
++include/gtk-4.0/gsk/gsksubsurfacenode.h
++include/gtk-4.0/gsk/gsktextnode.h
++include/gtk-4.0/gsk/gsktexturenode.h
++include/gtk-4.0/gsk/gsktexturescalenode.h
++include/gtk-4.0/gsk/gsktransformnode.h
++include/gtk-4.0/gtk/gtkaccessiblehypertext.h
++include/gtk-4.0/gtk/gtkpopoverbin.h
++include/gtk-4.0/gtk/gtksvg.h
++lib/libgtk-4.so.1.2200.4
++share/applications/org.gtk.Shaper.desktop
++share/icons/hicolor/scalable/apps/org.gtk.Shaper.Devel.svg
++share/icons/hicolor/scalable/apps/org.gtk.Shaper.svg
++share/icons/hicolor/symbolic/apps/org.gtk.Shaper-symbolic.svg
