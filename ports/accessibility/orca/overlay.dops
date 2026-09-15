@@ -1,0 +1,18 @@
+port accessibility/orca
+type port
+reason "Orca 50 requires dasbus for its D-Bus remote controller interface; psutil is optional upstream"
+target @any
+
+mk unset PORTVERSION on-missing noop
+mk set DISTVERSION "50.0.9"
+mk set PORTSCOUT "limit:^50\\."
+mk remove BUILD_DEPENDS "${PYTHON_PKGNAMEPREFIX}psutil>0:sysutils/py-psutil@${PY_FLAVOR}"
+mk add BUILD_DEPENDS "${PYTHON_PKGNAMEPREFIX}dasbus>0:devel/py-dasbus@${PY_FLAVOR}"
+mk remove RUN_DEPENDS "${PYTHON_PKGNAMEPREFIX}psutil>0:sysutils/py-psutil@${PY_FLAVOR}"
+mk remove RUN_DEPENDS "${PYTHON_PKGNAMEPREFIX}dbus>0:devel/py-dbus@${PY_FLAVOR}"
+mk add RUN_DEPENDS "${PYTHON_PKGNAMEPREFIX}dasbus>0:devel/py-dasbus@${PY_FLAVOR}"
+mk remove USES "python"
+mk add USES "python:3.10+"
+file materialize distinfo -> distinfo
+patch apply diffs/pkg-plist.diff
+file materialize dragonfly/patch-src_orca_sound.py -> dragonfly/patch-src_orca_sound.py
