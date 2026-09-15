@@ -1,0 +1,7 @@
+port x11/libxshmfence
+type port
+reason "DragonFly umtx futex backend: PROCESS_SHARED pthread primitives do not work cross-process on DragonFly, so the pthread fence backend never wakes remote waiters and X can crash on fence teardown; DRI3, Vulkan WSI and Xwayland all need cross-process xshmfence"
+target @any
+
+mk add CONFIGURE_ARGS "--enable-futex"
+file materialize dragonfly/patch-src_xshmfence__futex.h -> dragonfly/patch-src_xshmfence__futex.h
