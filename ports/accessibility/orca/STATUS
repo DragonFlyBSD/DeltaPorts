@@ -1,3 +1,4 @@
 PORT
-Last attempt: 43.1_5
-Last success: 43.1_5
+Last attempt: 50.0.9
+Last success: 50.0.9
+Last validation: 2026-07-20 clean package build and installation passed; `orca --version` loaded the full module chain and reported Orca 50.0.9 with AT-SPI 2.56.8. Speech Dispatcher support is enabled. psutil is optional upstream and omitted pending a separate DragonFly psutil 7.2.2 patch rebase.
