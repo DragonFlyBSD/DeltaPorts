@@ -3,7 +3,7 @@
 @@ -100,7 +100,7 @@
    #include <elf.h>
  #endif
- 
+
 -#ifdef __FreeBSD__
 +#if defined(__FreeBSD__) || defined(__DragonFly__)
    #include <pthread_np.h>
@@ -27,13 +27,13 @@
 +#else
    u_int i, npages;
 +#endif
- 
+
    for (i = 0, free_pages = 0; i < sizeof(vm_stats) / sizeof(vm_stats[0]); i++) {
      size = sizeof(npages);
 @@ -940,7 +944,7 @@ pid_t os::Bsd::gettid() {
    mach_port_deallocate(mach_task_self(), port);
    return (pid_t)port;
- 
+
 -#elif defined(__FreeBSD__)
 +#elif defined(__FreeBSD__) || defined(__DragonFly__)
    return ::pthread_getthreadid_np();
@@ -42,7 +42,7 @@
 @@ -1346,7 +1350,7 @@ static int iter_callback(struct dl_phdr_
  }
  #endif
- 
+
 -#ifdef __FreeBSD__
 +#if defined(__FreeBSD__) || defined(__DragonFly__)
  struct loaded_modules_info_param {
@@ -50,7 +50,7 @@
    void *param;
 @@ -1388,7 +1392,7 @@ static int dl_iterate_callback(struct dl
  #endif
- 
+
  int os::get_loaded_modules_info(os::LoadedModulesCallbackFunc callback, void *param) {
 -#ifdef __FreeBSD__
 +#if defined(__FreeBSD__) || defined(__DragonFly__)
@@ -60,14 +60,14 @@
 @@ -2262,6 +2266,10 @@ int os::active_processor_count() {
      return online_cpus;
  #endif
- 
+
 +#ifdef __DragonFly__
 +  return sysconf(_SC_NPROCESSORS_ONLN);
 +#endif
 +
    return _processor_count;
  }
- 
+
 @@ -2313,7 +2321,7 @@ void os::set_native_thread_name(const ch
      char buf[MAXTHREADNAMESIZE];
      snprintf(buf, sizeof(buf), "Java: %s", name);
