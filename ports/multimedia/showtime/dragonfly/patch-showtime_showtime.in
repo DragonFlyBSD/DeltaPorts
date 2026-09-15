@@ -1,0 +1,27 @@
+--- showtime/showtime.in.orig
++++ showtime/showtime.in
+@@ -6,4 +6,5 @@
+ import gettext
+ import locale
++import os
+ import signal
+ import sys
+@@ -16,7 +17,7 @@
+ sys.path.insert(1, pkgdatadir)
+ signal.signal(signal.SIGINT, signal.SIG_DFL)
+ 
+-if system() == "Linux":
++if system() == "Linux" or system() == "DragonFly":
+     locale.bindtextdomain("@BIN_NAME@", localedir)
+     locale.textdomain("@BIN_NAME@")
+     gettext.install("@BIN_NAME@", localedir)
+@@ -23,4 +24,8 @@
+ else:
+     gettext.install("@BIN_NAME@")
+-
++
++if system() == "DragonFly":
++    os.environ["GSK_RENDERER"] = "gl"
++    os.environ["GSK_DEBUG"] = "full-redraw"
++
+ if __name__ == "__main__":
