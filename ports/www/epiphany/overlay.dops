@@ -1,10 +1,16 @@
 port www/epiphany
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "Update Epiphany to 50.4 for GNOME 50 on DragonFly"
 target @any
 
-mk target set dfly-patch <<'MK1'
-	${CHMOD} ${BINMODE} ${WRKSRC}/post_install.py
-MK1
+mk unset PORTVERSION on-missing noop
+mk set DISTVERSION "50.4"
+mk set PORTSCOUT "limit:^50\\."
+mk set USE_CLANG_FALLBACK "19"
+mk target remove dfly-patch on-missing noop
+file materialize distinfo -> distinfo
+patch apply diffs/pkg-plist.diff
 file materialize dragonfly/patch-lib_contrib_gnome-languages.c -> dragonfly/patch-lib_contrib_gnome-languages.c
+# Replaced by the carried, version-adjusted patch in the DragonFly lane.
+file remove files/patch-lib_ephy-sync-utils.c
 file materialize dragonfly/patch-lib_ephy-sync-utils.c -> dragonfly/patch-lib_ephy-sync-utils.c
