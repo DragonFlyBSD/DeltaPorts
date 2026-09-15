@@ -1,0 +1,122 @@
+--- pkg-plist.orig
++++ pkg-plist
+@@ -810,7 +810,6 @@
+ %%DOCS%%share/doc/gio-2.0/enum.FileMonitorEvent.html
+ %%DOCS%%share/doc/gio-2.0/enum.FileType.html
+ %%DOCS%%share/doc/gio-2.0/enum.FilesystemPreviewType.html
+-%%DOCS%%share/doc/gio-2.0/enum.IOModuleScopeFlags.html
+ %%DOCS%%share/doc/gio-2.0/enum.MemoryMonitorWarningLevel.html
+ %%DOCS%%share/doc/gio-2.0/enum.MountOperationResult.html
+ %%DOCS%%share/doc/gio-2.0/enum.NetworkConnectivity.html
+@@ -824,9 +823,7 @@
+ %%DOCS%%share/doc/gio-2.0/enum.SocketProtocol.html
+ %%DOCS%%share/doc/gio-2.0/enum.SocketType.html
+ %%DOCS%%share/doc/gio-2.0/enum.TlsAuthenticationMode.html
+-%%DOCS%%share/doc/gio-2.0/enum.TlsCertificateRequestFlags.html
+ %%DOCS%%share/doc/gio-2.0/enum.TlsChannelBindingType.html
+-%%DOCS%%share/doc/gio-2.0/enum.TlsDatabaseLookupFlags.html
+ %%DOCS%%share/doc/gio-2.0/enum.TlsInteractionResult.html
+ %%DOCS%%share/doc/gio-2.0/enum.TlsProtocolVersion.html
+ %%DOCS%%share/doc/gio-2.0/enum.TlsRehandshakeMode.html
+@@ -4535,7 +4532,6 @@
+ %%DOCS%%%%DOCSDIR%%-2.0/const.URI_RESERVED_CHARS_GENERIC_DELIMITERS.html
+ %%DOCS%%%%DOCSDIR%%-2.0/const.URI_RESERVED_CHARS_SUBCOMPONENT_DELIMITERS.html
+ %%DOCS%%%%DOCSDIR%%-2.0/const.USEC_PER_SEC.html
+-%%DOCS%%@comment %%DOCSDIR%%-2.0/const.VA_COPY_AS_ARRAY.html
+ %%DOCS%%%%DOCSDIR%%-2.0/const.VERSION_MIN_REQUIRED.html
+ %%DOCS%%%%DOCSDIR%%-2.0/const.WIN32_MSG_HANDLE.html
+ %%DOCS%%%%DOCSDIR%%-2.0/conversion-macros.html
+@@ -4678,7 +4674,6 @@
+ %%DOCS%%%%DOCSDIR%%-2.0/error.ThreadError.html
+ %%DOCS%%%%DOCSDIR%%-2.0/error.UriError.html
+ %%DOCS%%%%DOCSDIR%%-2.0/error.VariantParseError.html
+-%%DOCS%%%%DOCSDIR%%-2.0/file-name-encodings.png
+ %%DOCS%%%%DOCSDIR%%-2.0/file-utils.html
+ %%DOCS%%%%DOCSDIR%%-2.0/flags.AsciiType.html
+ %%DOCS%%%%DOCSDIR%%-2.0/flags.FileSetContentsFlags.html
+@@ -4908,7 +4903,6 @@
+ %%DOCS%%%%DOCSDIR%%-2.0/func.clear_pointer.html
+ %%DOCS%%%%DOCSDIR%%-2.0/func.clear_slist.html
+ %%DOCS%%%%DOCSDIR%%-2.0/func.close.html
+-%%DOCS%%%%DOCSDIR%%-2.0/func.closefrom.html
+ %%DOCS%%%%DOCSDIR%%-2.0/func.compute_checksum_for_bytes.html
+ %%DOCS%%%%DOCSDIR%%-2.0/func.compute_checksum_for_data.html
+ %%DOCS%%%%DOCSDIR%%-2.0/func.compute_checksum_for_string.html
+@@ -4966,7 +4960,6 @@
+ %%DOCS%%%%DOCSDIR%%-2.0/func.environ_setenv.html
+ %%DOCS%%%%DOCSDIR%%-2.0/func.environ_unsetenv.html
+ %%DOCS%%%%DOCSDIR%%-2.0/func.error.html
+-%%DOCS%%%%DOCSDIR%%-2.0/func.fdwalk_set_cloexec.html
+ %%DOCS%%%%DOCSDIR%%-2.0/func.file_error_from_errno.html
+ %%DOCS%%%%DOCSDIR%%-2.0/func.file_error_quark.html
+ %%DOCS%%%%DOCSDIR%%-2.0/func.file_get_contents.html
+@@ -5584,7 +5577,6 @@
+ %%DOCS%%%%DOCSDIR%%-2.0/method.Bytes.get_region.html
+ %%DOCS%%%%DOCSDIR%%-2.0/method.Bytes.get_size.html
+ %%DOCS%%%%DOCSDIR%%-2.0/method.Bytes.hash.html
+-%%DOCS%%%%DOCSDIR%%-2.0/method.Bytes.new_from_bytes.html
+ %%DOCS%%%%DOCSDIR%%-2.0/method.Bytes.ref.html
+ %%DOCS%%%%DOCSDIR%%-2.0/method.Bytes.unref.html
+ %%DOCS%%%%DOCSDIR%%-2.0/method.Bytes.unref_to_array.html
+@@ -6863,11 +6855,6 @@
+ %%DOCS%%%%DOCSDIR%%-unix-2.0/solarized-light.css
+ %%DOCS%%%%DOCSDIR%%-unix-2.0/struct.Pipe.html
+ %%DOCS%%%%DOCSDIR%%-unix-2.0/style.css
+-%%DOCS%%%%DOCSDIR%%-unix-2.0/type_func.Pipe.clear.html
+-%%DOCS%%%%DOCSDIR%%-unix-2.0/type_func.Pipe.close.html
+-%%DOCS%%%%DOCSDIR%%-unix-2.0/type_func.Pipe.get.html
+-%%DOCS%%%%DOCSDIR%%-unix-2.0/type_func.Pipe.open.html
+-%%DOCS%%%%DOCSDIR%%-unix-2.0/type_func.Pipe.steal.html
+ %%DOCS%%%%DOCSDIR%%-unix-2.0/unix.html
+ %%DOCS%%%%DOCSDIR%%-unix-2.0/urlmap.js
+ %%DOCS%%share/doc/gmodule-2.0/RedHatDisplay-Black.woff
+@@ -8092,3 +8079,49 @@
+ %%MANPAGES%%share/man/man1/gtester.1.gz
+ @dir lib/gio/modules
+ @dir share/GConf/gsettings
++%%DOCS%%share/doc/glib-2.0/const.VA_COPY_AS_ARRAY.html
++include/glib-2.0/gio/giptosmessage.h
++include/glib-2.0/gio/gipv6tclassmessage.h
++%%DOCS%%share/doc/gio-2.0/class.IPTosMessage.html
++%%DOCS%%share/doc/gio-2.0/class.IPv6TclassMessage.html
++%%DOCS%%share/doc/gio-2.0/ctor.IPTosMessage.new.html
++%%DOCS%%share/doc/gio-2.0/ctor.IPv6TclassMessage.new.html
++%%DOCS%%share/doc/gio-2.0/enum.EcnCodePoint.html
++%%DOCS%%share/doc/gio-2.0/flags.IOModuleScopeFlags.html
++%%DOCS%%share/doc/gio-2.0/flags.TlsCertificateRequestFlags.html
++%%DOCS%%share/doc/gio-2.0/flags.TlsDatabaseLookupFlags.html
++%%DOCS%%share/doc/gio-2.0/func.DEPRECATED_ENUMERATOR_IN_2_88_FOR.html
++%%DOCS%%share/doc/gio-2.0/func.DEPRECATED_IN_2_88_FOR.html
++%%DOCS%%share/doc/gio-2.0/func.DEPRECATED_MACRO_IN_2_88_FOR.html
++%%DOCS%%share/doc/gio-2.0/func.DEPRECATED_TYPE_IN_2_88_FOR.html
++%%DOCS%%share/doc/gio-2.0/method.IPTosMessage.get_dscp.html
++%%DOCS%%share/doc/gio-2.0/method.IPTosMessage.get_ecn.html
++%%DOCS%%share/doc/gio-2.0/method.IPv6TclassMessage.get_dscp.html
++%%DOCS%%share/doc/gio-2.0/method.IPv6TclassMessage.get_ecn.html
++%%DOCS%%share/doc/gio-2.0/vfunc.DBusInterfaceSkeleton.method_dispatch.html
++%%DOCS%%share/doc/girepository-2.0/func.DEPRECATED_ENUMERATOR_IN_2_88_FOR.html
++%%DOCS%%share/doc/girepository-2.0/func.DEPRECATED_IN_2_88_FOR.html
++%%DOCS%%share/doc/girepository-2.0/func.DEPRECATED_MACRO_IN_2_88_FOR.html
++%%DOCS%%share/doc/girepository-2.0/func.DEPRECATED_TYPE_IN_2_88_FOR.html
++%%DOCS%%share/doc/glib-2.0/const.NSEC_PER_SEC.html
++%%DOCS%%share/doc/glib-2.0/ctor.Bytes.new_from_bytes.html
++%%DOCS%%share/doc/glib-2.0/file-name-encodings-dark.svg
++%%DOCS%%share/doc/glib-2.0/file-name-encodings-light.svg
++%%DOCS%%share/doc/glib-2.0/func.get_monotonic_time_ns.html
++%%DOCS%%share/doc/glib-2.0/func.test_trap_has_skipped.html
++%%DOCS%%share/doc/glib-2.0/method.MarkupParseContext.get_offset.html
++%%DOCS%%share/doc/glib-2.0/method.MarkupParseContext.get_tag_start.html
++%%DOCS%%share/doc/glib-unix-2.0/func.fd_query_path.html
++%%DOCS%%share/doc/glib-unix-2.0/method.Pipe.clear.html
++%%DOCS%%share/doc/glib-unix-2.0/method.Pipe.close.html
++%%DOCS%%share/doc/glib-unix-2.0/method.Pipe.get.html
++%%DOCS%%share/doc/glib-unix-2.0/method.Pipe.open.html
++%%DOCS%%share/doc/glib-unix-2.0/method.Pipe.steal.html
++%%DOCS%%share/doc/gmodule-2.0/func.DEPRECATED_ENUMERATOR_IN_2_88_FOR.html
++%%DOCS%%share/doc/gmodule-2.0/func.DEPRECATED_IN_2_88_FOR.html
++%%DOCS%%share/doc/gmodule-2.0/func.DEPRECATED_MACRO_IN_2_88_FOR.html
++%%DOCS%%share/doc/gmodule-2.0/func.DEPRECATED_TYPE_IN_2_88_FOR.html
++%%DOCS%%share/doc/gobject-2.0/func.DEPRECATED_ENUMERATOR_IN_2_88_FOR.html
++%%DOCS%%share/doc/gobject-2.0/func.DEPRECATED_IN_2_88_FOR.html
++%%DOCS%%share/doc/gobject-2.0/func.DEPRECATED_MACRO_IN_2_88_FOR.html
++%%DOCS%%share/doc/gobject-2.0/func.DEPRECATED_TYPE_IN_2_88_FOR.html
