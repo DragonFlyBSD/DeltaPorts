@@ -1,0 +1,18 @@
+#!/bin/sh
+
+# Mutter publishes the display address through D-Bus activation, but its
+# private Xwayland cookie remains in the per-session runtime directory.
+if [ -z "${XDG_RUNTIME_DIR:-}" ]; then
+	XDG_RUNTIME_DIR="/tmp/runtime-$(id -u)"
+	export XDG_RUNTIME_DIR
+fi
+
+if [ -z "${XAUTHORITY:-}" ]; then
+	for auth_file in "$XDG_RUNTIME_DIR"/.mutter-Xwaylandauth.*; do
+		[ -f "$auth_file" ] || continue
+		export XAUTHORITY="$auth_file"
+		break
+	done
+fi
+
+exec /usr/local/libexec/gsd-xsettings

@@ -1,21 +1,39 @@
 port sysutils/gnome-settings-daemon
 type port
-reason "filter OPTIONS/LIB_DEPENDS (no pulse/smartcard), dfly-patch removes sound/media-keys, remove from plist"
+reason "GNOME 50 settings services with PipeWire/libpulse audio, native power handling and XWayland settings"
 target @any
 
-mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NSMARTCARD}"
-mk eval LIB_DEPENDS "${LIB_DEPENDS:Nlibpulse*}"
-
-mk target set dfly-patch <<'MK'
-	${REINPLACE_CMD} -e "/libpulse_mainloop_glib_dep/d" \
-		${WRKSRC}/meson.build
-	${REINPLACE_CMD} -e "/sound/d" -e "/media-keys/d" \
-		${WRKSRC}/plugins/meson.build
+mk unset PORTVERSION
+mk unset PORTREVISION
+mk set PORTSCOUT "limit:^50\\."
+mk add MESON_ARGS "-Dsystemd-units=false"
+mk set WAYLAND_MESON_TRUE "gudev"
+mk set DISTVERSION "50.1"
+mk target set post-install <<'MK'
+	${INSTALL_DATA} ${FILESDIR}/org.gnome.settings-daemon.plugins.power.gschema.xml.override \
+		${STAGEDIR}${PREFIX}/share/glib-2.0/schemas/
+	${INSTALL_SCRIPT} ${FILESDIR}/gsd-xsettings-wayland \
+		${STAGEDIR}${PREFIX}/libexec/
+	@${MKDIR} ${STAGEDIR}${PREFIX}/share/dbus-1/services
+	${INSTALL_DATA} ${FILESDIR}/org.gnome.SettingsDaemon.XSettings.service \
+		${STAGEDIR}${PREFIX}/share/dbus-1/services/
 MK
-
-text line-remove file pkg-plist exact "etc/xdg/autostart/org.gnome.SettingsDaemon.MediaKeys.desktop" on-missing noop
-text line-remove file pkg-plist exact "etc/xdg/autostart/org.gnome.SettingsDaemon.Sound.desktop" on-missing noop
-text line-remove file pkg-plist exact "libexec/gsd-media-keys" on-missing noop
-text line-remove file pkg-plist exact "libexec/gsd-sound" on-missing noop
-
-file materialize dragonfly/patch-meson.build -> dragonfly/patch-meson.build
+file materialize distinfo -> distinfo
+text line-insert-after file pkg-plist anchor "share/locale/uk/LC_MESSAGES/gnome-settings-daemon.mo" line "share/locale/uz/LC_MESSAGES/gnome-settings-daemon.mo"
+text line-insert-after file pkg-plist anchor "share/GConf/gsettings/gnome-settings-daemon.convert" line "share/dbus-1/services/org.gnome.SettingsDaemon.XSettings.service"
+text line-insert-after file pkg-plist anchor "share/dbus-1/services/org.gnome.SettingsDaemon.XSettings.service" line "share/glib-2.0/schemas/org.gnome.settings-daemon.global-shortcuts.gschema.xml"
+text line-insert-after file pkg-plist anchor "share/glib-2.0/schemas/org.gnome.settings-daemon.global-shortcuts.gschema.xml" line "share/glib-2.0/schemas/org.gnome.settings-daemon.plugins.housekeeping.gschema.xml"
+text line-remove file pkg-plist exact "libexec/gsd-sound"
+text line-insert-after file pkg-plist anchor "libexec/gsd-screensaver-proxy" line "libexec/gsd-sound"
+text replace-once file pkg-plist from "etc/xdg/autostart/org.gnome.SettingsDaemon.A11ySettings.desktop\netc/xdg/autostart/org.gnome.SettingsDaemon.Color.desktop\netc/xdg/autostart/org.gnome.SettingsDaemon.Datetime.desktop\netc/xdg/autostart/org.gnome.SettingsDaemon.Housekeeping.desktop\netc/xdg/autostart/org.gnome.SettingsDaemon.Keyboard.desktop\netc/xdg/autostart/org.gnome.SettingsDaemon.MediaKeys.desktop\netc/xdg/autostart/org.gnome.SettingsDaemon.Power.desktop\netc/xdg/autostart/org.gnome.SettingsDaemon.PrintNotifications.desktop\netc/xdg/autostart/org.gnome.SettingsDaemon.Rfkill.desktop\netc/xdg/autostart/org.gnome.SettingsDaemon.ScreensaverProxy.desktop\netc/xdg/autostart/org.gnome.SettingsDaemon.Sharing.desktop\netc/xdg/autostart/org.gnome.SettingsDaemon.Smartcard.desktop\netc/xdg/autostart/org.gnome.SettingsDaemon.Sound.desktop\netc/xdg/autostart/org.gnome.SettingsDaemon.UsbProtection.desktop\netc/xdg/autostart/org.gnome.SettingsDaemon.Wacom.desktop\netc/xdg/autostart/org.gnome.SettingsDaemon.Wwan.desktop\netc/xdg/autostart/org.gnome.SettingsDaemon.XSettings.desktop\ninclude/gnome-settings-daemon-%%VERSION%%/gnome-settings-daemon/gsd-enums.h\nlib/gnome-settings-daemon-%%VERSION%%/libgsd.so" to "libexec/gsd-xsettings-wayland\ninclude/gnome-settings-daemon-50/gnome-settings-daemon/gsd-enums.h\nlib/gnome-settings-daemon-50/libgsd.so"
+file remove files/patch-data_meson.build
+file remove files/patch-data_org.gnome.settings-daemon.plugins.gschema.xml.in
+file remove files/patch-plugins_media-keys_gsd-media-keys-manager.c
+file remove files/patch-plugins_meson.build
+file materialize dragonfly/patch-plugins_meson.build -> dragonfly/patch-plugins_meson.build
+# Replaced by the carried, version-adjusted patch in the DragonFly lane.
+file remove files/patch-plugins_power_gsd-power-manager.c
+file materialize dragonfly/patch-plugins_power_gsd-power-manager.c -> dragonfly/patch-plugins_power_gsd-power-manager.c
+file materialize dragonfly/patch-plugins_xsettings_gsd-xsettings-manager.c -> dragonfly/patch-plugins_xsettings_gsd-xsettings-manager.c
+file materialize dragonfly/gsd-xsettings-wayland -> files/gsd-xsettings-wayland
+file materialize dragonfly/org.gnome.SettingsDaemon.XSettings.service -> files/org.gnome.SettingsDaemon.XSettings.service
