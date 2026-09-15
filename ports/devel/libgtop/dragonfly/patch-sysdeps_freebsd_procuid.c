@@ -1,6 +1,6 @@
---- sysdeps/freebsd/procuid.c.orig	2016-11-27 18:05:03 UTC
+--- sysdeps/freebsd/procuid.c.orig
 +++ sysdeps/freebsd/procuid.c
-@@ -62,6 +62,17 @@ glibtop_get_proc_uid_p (glibtop *server,
+@@ -62,6 +62,17 @@
  		return;
  	}
  
@@ -18,7 +18,7 @@
  #define	PROC_RUID	ki_ruid
  #define	PROC_EUID	ki_uid
  #define	PROC_RGID	ki_rgid
-@@ -71,6 +82,7 @@ glibtop_get_proc_uid_p (glibtop *server,
+@@ -71,6 +82,7 @@
  #define	PROC_TPGID	ki_tpgid
  #define	PROC_NICE	ki_nice
  #define	PROC_PRIORITY	ki_pri.pri_user
