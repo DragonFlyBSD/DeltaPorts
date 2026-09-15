@@ -1,0 +1,5 @@
+PORT=x11-toolkits/gtk40
+last attempt=2026-07-23 GTK 4.22.4 GVfs SMB mountable file chooser repair
+last success=compose, full build, package, and reinstall
+scope=DragonFly GtkFileDialog native GVfs fallback and direct GVfs mountable activation
+note=Preserve the virtual GFile for GVfs mountables and mount it with g_file_mount_mountable before changing folders; GUI regression pending

@@ -1,8 +1,18 @@
 port x11-toolkits/gtk40
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "gtk4 4.22.4 (GNOME 50 companion; libadwaita 1.9 needs gtk4>=4.21.1). WAYLAND+X11 backends. The local bash-completion Meson option makes BASH control completion installation independently of host tools, matching the plist guard; retain it across GTK upgrades until upstream provides equivalent control."
 target @any
 
-mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NWAYLAND}"
+mk unset PORTVERSION
+mk set LIBVERSION "1.2000.3"
+mk set DISTVERSION "4.22.4"
+mk set OPTIONS_EXCLUDE "ACCESSKIT"
+mk set BASH_MESON_TRUE "bash-completion"
+file materialize distinfo -> distinfo
+patch apply diffs/pkg-plist.diff
+file materialize dragonfly/patch-zz-bash-completion -> dragonfly/patch-zz-bash-completion
 file materialize dragonfly/patch-gdk_wayland_gdkseat-wayland.c -> dragonfly/patch-gdk_wayland_gdkseat-wayland.c
 file materialize dragonfly/patch-meson.build -> dragonfly/patch-meson.build
+file materialize dragonfly/patch-gtk_gtkfilechoosernativeportal.c -> dragonfly/patch-gtk_gtkfilechoosernativeportal.c
+file materialize dragonfly/patch-gtk_gtkfilechooserwidget.c -> dragonfly/patch-gtk_gtkfilechooserwidget.c
+file materialize dragonfly/patch-gtk_gtkplacesview.c -> dragonfly/patch-gtk_gtkplacesview.c
