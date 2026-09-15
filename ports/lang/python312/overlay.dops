@@ -3,30 +3,17 @@ type port
 reason "DragonFly: OPTIONS_EXCLUDE LTO, plist sysconfigdata/module adjustments"
 target @any
 
-# LTO on DragonFly routes configure into the clang -flto=thin / llvm-ar path
-# (llvm-ar is not installed); disabling LTO avoids that branch entirely and
-# makes the FreeBSD files/patch-configure "|cc" hack a non-issue.
-mk add OPTIONS_EXCLUDE "LTO"
-
-# The sysconfigdata module is named for the real platform (dragonfly), not
-# freebsd; substitute the platform so the plist can name it correctly below.
-mk add PLIST_SUB "PYTHON_PLATFORM=dragonfly${OSREL:R}"
-
-# Drop the FreeBSD-named sysconfigdata plist entries (the build produces the
-# dragonfly-named files, keeping them under their real runtime-lookup name).
-text line-remove file pkg-plist exact "%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata_%%ABI%%_freebsd%%OSMAJOR%%_%%PYTHON_TAG%%.opt-1.pyc" on-missing noop
-text line-remove file pkg-plist exact "%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata_%%ABI%%_freebsd%%OSMAJOR%%_%%PYTHON_TAG%%.opt-2.pyc" on-missing noop
-text line-remove file pkg-plist exact "%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata_%%ABI%%_freebsd%%OSMAJOR%%_%%PYTHON_TAG%%.pyc" on-missing noop
-text line-remove file pkg-plist exact "%%PYTHON_LIBDIR%%/_sysconfigdata_%%ABI%%_freebsd%%OSMAJOR%%_.py" on-missing noop
-
-# Add the DragonFly-named sysconfigdata plist entries.
-text line-insert-after file pkg-plist anchor "share/man/man1/python%%PYTHON_VER%%.1.gz" line "%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata__%%PYTHON_PLATFORM%%_%%PYTHON_TAG%%.opt-1.pyc" on-missing noop
-text line-insert-after file pkg-plist anchor "%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata__%%PYTHON_PLATFORM%%_%%PYTHON_TAG%%.opt-1.pyc" line "%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata__%%PYTHON_PLATFORM%%_%%PYTHON_TAG%%.opt-2.pyc" on-missing noop
-text line-insert-after file pkg-plist anchor "%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata__%%PYTHON_PLATFORM%%_%%PYTHON_TAG%%.opt-2.pyc" line "%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata__%%PYTHON_PLATFORM%%_%%PYTHON_TAG%%.pyc" on-missing noop
-text line-insert-after file pkg-plist anchor "%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata__%%PYTHON_PLATFORM%%_%%PYTHON_TAG%%.pyc" line "%%PYTHON_LIBDIR%%/_sysconfigdata__%%PYTHON_PLATFORM%%_.py" on-missing noop
-
-# _crypt and _curses_panel do not build on DragonFly (configure marks them
-# missing). Drop their plist entries rather than stubbing empty .so files.
-# spwd has no lib-dynload plist entry in this port, so nothing to do there.
-text line-remove file pkg-plist exact "%%PYTHON_LIBDIR%%/lib-dynload/_crypt%%PYTHON_TAG%%%%ABI%%.so" on-missing noop
-text line-remove file pkg-plist exact "%%PYTHON_LIBDIR%%/lib-dynload/_curses_panel%%PYTHON_TAG%%%%ABI%%.so" on-missing noop
+# Use bundled expat instead of the system library.
+mk remove LIB_DEPENDS "libexpat.so:textproc/expat2"
+text replace-once file Makefile from "--enable-shared --without-ensurepip --with-system-expat" to "--enable-shared --without-ensurepip"
+# DragonFly uses base libcrypt and lacks llvm-ar for thin LTO.
+mk add CONFIGURE_ENV "LIBCRYPT_LIBS=-lcrypt"
+mk remove OPTIONS_DEFAULT "LTO"
+text replace-once file pkg-plist from "%%PYTHON_LIBDIR%%/_sysconfigdata_%%ABI%%_freebsd%%OSMAJOR%%_.py" to "%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata__%%PYTHON_PLATFORM%%_%%PYTHON_TAG%%.opt-1.pyc\n%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata__%%PYTHON_PLATFORM%%_%%PYTHON_TAG%%.opt-2.pyc\n%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata__%%PYTHON_PLATFORM%%_%%PYTHON_TAG%%.pyc\n%%PYTHON_LIBDIR%%/_sysconfigdata__%%PYTHON_PLATFORM%%_.py"
+text line-remove file pkg-plist exact "%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata_%%ABI%%_freebsd%%OSMAJOR%%_%%PYTHON_TAG%%.opt-1.pyc"
+text line-remove file pkg-plist exact "%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata_%%ABI%%_freebsd%%OSMAJOR%%_%%PYTHON_TAG%%.opt-2.pyc"
+text line-remove file pkg-plist exact "%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata_%%ABI%%_freebsd%%OSMAJOR%%_%%PYTHON_TAG%%.pyc"
+file materialize dragonfly/patch-configure.ac -> dragonfly/patch-configure.ac
+# Replaced by the carried, version-adjusted patch in the DragonFly lane.
+file remove files/patch-configure
+file materialize dragonfly/patch-configure -> dragonfly/patch-configure
