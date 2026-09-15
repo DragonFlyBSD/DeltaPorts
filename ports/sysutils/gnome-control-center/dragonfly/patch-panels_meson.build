@@ -1,0 +1,15 @@
+--- panels/meson.build.orig
++++ panels/meson.build
+@@ -17,12 +17,10 @@
+   'printers',
+   'privacy',
+   'search',
+-  'sharing',
+   'sound',
+   'system',
+   'universal-access',
+   'wellbeing',
+-  'wwan',
+ ]
+ 
+ if host_is_linux
