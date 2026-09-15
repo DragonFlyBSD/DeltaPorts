@@ -1,16 +1,14 @@
 port security/nss
 type port
-reason "dfly-patch to remove -Werror, patch nss-config.in and nss.pc.in for rpath, dragonfly coreconf patches"
+reason "DragonFly coreconf support; enable the amd64 freebl assembly paths and local FREEBLVector symbol binding with -Bsymbolic; retain the existing 32-bit x86 assembly restriction"
 target @any
 
 mk target set dfly-patch <<'MK'
 	${REINPLACE_CMD} -e '/WARNING_CFLAGS += -Werror/d' \
 		${WRKSRC}/coreconf/Werror.mk
 MK
-
 patch apply diffs/nss-config.in.diff
 patch apply diffs/nss.pc.in.diff
-
 file materialize dragonfly/patch-coreconf_arch.mk -> dragonfly/patch-coreconf_arch.mk
 file materialize dragonfly/patch-coreconf_config.mk -> dragonfly/patch-coreconf_config.mk
 file materialize dragonfly/patch-coreconf_DragonFly.mk -> dragonfly/patch-coreconf_DragonFly.mk
