@@ -1,0 +1,99 @@
+--- pkg-plist.orig
++++ pkg-plist
+@@ -1,29 +1,29 @@
+ bin/gnome-help
+ bin/yelp
+-include/libyelp/yelp-bookmarks.h
+-include/libyelp/yelp-docbook-document.h
+-include/libyelp/yelp-document.h
+-include/libyelp/yelp-help-list.h
+-include/libyelp/yelp-info-document.h
+-include/libyelp/yelp-mallard-document.h
+-include/libyelp/yelp-man-document.h
+-include/libyelp/yelp-man-search.h
+-include/libyelp/yelp-search-entry.h
+-include/libyelp/yelp-settings.h
+-include/libyelp/yelp-simple-document.h
+-include/libyelp/yelp-sqlite-storage.h
+-include/libyelp/yelp-storage.h
+-include/libyelp/yelp-transform.h
+-include/libyelp/yelp-types.h
+-include/libyelp/yelp-uri-builder.h
+-include/libyelp/yelp-uri.h
+-include/libyelp/yelp-view.h
+-lib/libyelp.so
+-lib/libyelp.so.0
+-lib/libyelp.so.0.0.0
+-lib/yelp/web-extensions/libyelpwebextension.so
++include/libyelp-1/yelp-bookmarks.h
++include/libyelp-1/yelp-docbook-document.h
++include/libyelp-1/yelp-document.h
++include/libyelp-1/yelp-help-list.h
++include/libyelp-1/yelp-info-document.h
++include/libyelp-1/yelp-mallard-document.h
++include/libyelp-1/yelp-man-document.h
++include/libyelp-1/yelp-man-search.h
++include/libyelp-1/yelp-settings.h
++include/libyelp-1/yelp-simple-document.h
++include/libyelp-1/yelp-sqlite-storage.h
++include/libyelp-1/yelp-storage.h
++include/libyelp-1/yelp-transform.h
++include/libyelp-1/yelp-types.h
++include/libyelp-1/yelp-uri-builder.h
++include/libyelp-1/yelp-uri.h
++include/libyelp-1/yelp-view.h
++lib/libyelp-1.so
++lib/libyelp-1.so.0
++lib/libyelp-1.so.0.0.0
++lib/yelp-1/web-process-extensions/libyelpwebprocessextension.so
++libdata/pkgconfig/libyelp-1.pc
+ libexec/yelp-groff
+-share/applications/yelp.desktop
++share/applications/org.gnome.Yelp.desktop
+ share/icons/hicolor/scalable/apps/org.gnome.Yelp.svg
+ share/icons/hicolor/symbolic/apps/org.gnome.Yelp-symbolic.svg
+ share/locale/ab/LC_MESSAGES/yelp.mo
+@@ -69,6 +69,7 @@
+ share/locale/hi/LC_MESSAGES/yelp.mo
+ share/locale/hr/LC_MESSAGES/yelp.mo
+ share/locale/hu/LC_MESSAGES/yelp.mo
++share/locale/ia/LC_MESSAGES/yelp.mo
+ share/locale/id/LC_MESSAGES/yelp.mo
+ share/locale/ie/LC_MESSAGES/yelp.mo
+ share/locale/is/LC_MESSAGES/yelp.mo
+@@ -82,6 +83,7 @@
+ share/locale/ko/LC_MESSAGES/yelp.mo
+ share/locale/ks/LC_MESSAGES/yelp.mo
+ share/locale/ku/LC_MESSAGES/yelp.mo
++share/locale/kw/LC_MESSAGES/yelp.mo
+ share/locale/ky/LC_MESSAGES/yelp.mo
+ share/locale/la/LC_MESSAGES/yelp.mo
+ share/locale/li/LC_MESSAGES/yelp.mo
+@@ -133,7 +135,7 @@
+ share/locale/zh_HK/LC_MESSAGES/yelp.mo
+ share/locale/zh_TW/LC_MESSAGES/yelp.mo
+ share/locale/zu/LC_MESSAGES/yelp.mo
+-share/metainfo/yelp.appdata.xml
++share/metainfo/org.gnome.Yelp.metainfo.xml
+ %%DATADIR%%-xsl/xslt/common/domains/yelp.xml
+ %%DATADIR%%/dtd/catalog
+ %%DATADIR%%/dtd/docbookx.dtd
+@@ -156,18 +158,6 @@
+ %%DATADIR%%/dtd/isonum.ent
+ %%DATADIR%%/dtd/isopub.ent
+ %%DATADIR%%/dtd/isotech.ent
+-%%DATADIR%%/icons/hicolor/16x16/status/bookmark.png
+-%%DATADIR%%/icons/hicolor/16x16/status/yelp-page-task.png
+-%%DATADIR%%/icons/hicolor/16x16/status/yelp-page-tip.png
+-%%DATADIR%%/icons/hicolor/16x16/status/yelp-page-ui.png
+-%%DATADIR%%/icons/hicolor/16x16/status/yelp-page-video.png
+-%%DATADIR%%/icons/hicolor/scalable/status/yelp-page-problem-symbolic.svg
+-%%DATADIR%%/icons/hicolor/scalable/status/yelp-page-search-symbolic.svg
+-%%DATADIR%%/icons/hicolor/scalable/status/yelp-page-symbolic.svg
+-%%DATADIR%%/icons/hicolor/scalable/status/yelp-page-task-symbolic.svg
+-%%DATADIR%%/icons/hicolor/scalable/status/yelp-page-tip-symbolic.svg
+-%%DATADIR%%/icons/hicolor/scalable/status/yelp-page-ui-symbolic.svg
+-%%DATADIR%%/icons/hicolor/scalable/status/yelp-page-video-symbolic.svg
+ %%DATADIR%%/mathjax/MathJax.js
+ %%DATADIR%%/mathjax/config/MMLorHTML.js
+ %%DATADIR%%/mathjax/config/yelp.js
