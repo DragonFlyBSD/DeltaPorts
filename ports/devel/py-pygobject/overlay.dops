@@ -1,0 +1,7 @@
+port devel/py-pygobject
+type port
+reason "Enable Python 3.12 flavor required by Showtime 50"
+target @any
+
+mk unset PORTREVISION
+text replace-once file Makefile from "USE_PYTHON=\tautoplist concurrent pep517" to "USE_PYTHON=\tallflavors autoplist concurrent pep517"
