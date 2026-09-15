@@ -1,0 +1,33 @@
+--- Makefile.orig
++++ Makefile
+@@ -20,8 +20,6 @@
+ USE_PYTHON= allflavors autoplist pep517
+ USE_GNOME=	cairo
+ 
+-PLIST_FILES=	include/pycairo/py3cairo.h
+-
+ OPTIONS_DEFINE=	TEST
+ 
+ TEST_TEST_DEPENDS=	${PYTHON_PKGNAMEPREFIX}mypy>=1.18.2:devel/py-mypy@${PY_FLAVOR} \
+@@ -35,4 +33,20 @@
+ 	@${REINPLACE_CMD} -e 's|-Dtests=false|-Dtests=true|' ${WRKSRC}/pyproject.toml
+ 
+ 
+-.include <bsd.port.mk>
++.include <bsd.port.pre.mk>
++
++.if ${PYTHON_VER} == ${PYTHON_DEFAULT}
++PLIST_FILES=	include/pycairo/py3cairo.h
++
++post-install:
++	@${MKDIR} ${STAGEDIR}${PREFIX}/include/pycairo
++	${INSTALL_DATA} ${WRKSRC}/cairo/py3cairo.h ${STAGEDIR}${PREFIX}/include/pycairo
++.else
++post-install:
++	@${RM} ${STAGEDIR}${PREFIX}/libdata/pkgconfig/py3cairo.pc
++	@${REINPLACE_CMD} -e '\|libdata/pkgconfig/py3cairo.pc|d' \
++		${_PYTHONPKGLIST} \
++		${STAGEDIR}${PYTHONPREFIX_SITELIBDIR}/pycairo-${DISTVERSION}.dist-info/RECORD
++.endif
++
++.include <bsd.port.post.mk>

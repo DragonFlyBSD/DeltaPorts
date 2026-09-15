@@ -1,0 +1,8 @@
+port graphics/py-pycairo
+type port
+reason "Enable coexistable Python 3.12 flavor required by PyGObject"
+target @any
+
+mk set USE_PYTHON "allflavors autoplist pep517"
+mk target remove post-install
+patch apply diffs/Makefile.structure.diff
