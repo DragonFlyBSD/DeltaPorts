@@ -1,0 +1,67 @@
+--- meson.build.orig
++++ meson.build
+@@ -51,7 +51,9 @@
+ wayland_protocols_req = '>= 1.47'
+ 
+ # native backend version requirements
+-libinput_req = '>= 1.30.0'
++# libinput 1.30 is only needed for the plugin system, which is feature-
++# detected below; 1.28 provides everything else mutter uses.
++libinput_req = '>= 1.28.0'
+ gbm_req = '>= 21.3'
+ libdrm_req = '>= 2.4.118'
+ 
+@@ -241,10 +243,19 @@
+   endif
+ endif
+ 
++# Fall back to libseat (seatd) for seat/session management on systems
++# without logind (e.g. the BSDs).
++have_libseat = false
++if not have_logind
++  libseat_dep = dependency('libseat', required: false)
++  have_libseat = libseat_dep.found()
++endif
++have_launcher = have_logind or have_libseat
++
+ have_libgudev = get_option('udev')
+ if have_libgudev
+-  if not have_logind
+-    error('The udev support requires logind')
++  if not have_launcher
++    error('The udev support requires logind or libseat')
+   endif
+ 
+   libudev_dep = dependency('libudev', version: udev_req)
+@@ -262,12 +273,19 @@
+ endif
+ 
+ have_native_backend = get_option('native_backend')
++have_libinput_plugin_system = false
+ if have_native_backend
+   libgbm_dep = dependency('gbm', version: gbm_req)
+   libinput_dep = dependency('libinput', version: libinput_req)
++  # timerfd/epoll emulation (DragonFly)
++  epoll_shim_dep = dependency('epoll-shim')
++  have_libinput_plugin_system = cc.has_function(
++    'libinput_plugin_system_load_plugins',
++    dependencies: libinput_dep,
++  )
+ 
+-  if not have_logind
+-    error('The native backend requires logind to be enabled')
++  if not have_launcher
++    error('The native backend requires logind or libseat to be enabled')
+   endif
+ 
+   if not have_egl
+@@ -563,6 +581,9 @@
+ cdata.set('HAVE_GLES2', have_gles2)
+ cdata.set('HAVE_XWAYLAND', have_xwayland)
+ cdata.set('HAVE_LOGIND', have_logind)
++cdata.set('HAVE_LIBSEAT', have_libseat)
++cdata.set('HAVE_LAUNCHER', have_launcher)
++cdata.set('HAVE_LIBINPUT_PLUGIN_SYSTEM', have_libinput_plugin_system)
+ cdata.set('HAVE_NATIVE_BACKEND', have_native_backend)
+ cdata.set('HAVE_REMOTE_DESKTOP', have_remote_desktop)
+ cdata.set('HAVE_DEVKIT', have_devkit)
