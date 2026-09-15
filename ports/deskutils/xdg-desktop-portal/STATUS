@@ -1,0 +1,5 @@
+PORT=deskutils/xdg-desktop-portal
+last attempt=1.20.3 DragonFly document portal FUSE auto_unmount repair
+last success=1.20.3 (compose, clean build, package/reinstall)
+scope=DragonFly document portal FUSE startup
+note=Omit Linux-only auto_unmount; the FUSE runtime path remains pending separate validation

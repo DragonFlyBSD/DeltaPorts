@@ -1,0 +1,11 @@
+--- meson.build.orig
++++ meson.build
+@@ -112,7 +112,7 @@
+ json_glib_dep = dependency('json-glib-1.0')
+ fuse3_dep = dependency('fuse3', version: '>= 3.10.0')
+ gdk_pixbuf_dep = dependency('gdk-pixbuf-2.0')
+-gst_pbutils_dep = dependency('gstreamer-pbutils-1.0')
++gst_pbutils_dep = dependency('gstreamer-pbutils-1.0', required: false)
+ geoclue_dep = dependency(
+   'libgeoclue-2.0',
+   version: '>= 2.5.2',
