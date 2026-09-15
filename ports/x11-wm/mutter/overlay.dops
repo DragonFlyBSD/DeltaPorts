@@ -1,0 +1,49 @@
+port x11-wm/mutter
+type port
+reason "Mutter 50.2: mandatory native Wayland compositor and Xwayland support on DragonFly, libseat session/device access instead of logind; libdisplay-info is mandatory in upstream 50"
+target @any
+
+mk unset PORTVERSION
+mk unset PORTREVISION
+mk add LIB_DEPENDS "libseat.so:sysutils/seatd"
+mk add LIB_DEPENDS "libglycin-2.so:graphics/glycin"
+mk add BUILD_DEPENDS "rst2man:textproc/py-docutils"
+mk add USES "python:build"
+mk add BINARY_ALIAS "python3=${PYTHON_CMD}"
+mk remove MESON_ARGS "-Dlibdisplay_info=enabled"
+mk remove MESON_ARGS "-Dnative_backend=false"
+mk remove MESON_ARGS "-Dsystemd=false"
+mk add MESON_ARGS "-Dnative_backend=true -Dremote_desktop=true -Ddevkit=disabled -Dbash_completion=false -Dlogind=false"
+mk add OPTIONS_SLAVE "WAYLAND"
+mk set WAYLAND_MESON_TRUE "xwayland"
+mk set DISTVERSION "50.2"
+file materialize distinfo -> distinfo
+file remove files/patch-da3ae7f0.patch
+file remove files/patch-clutter_clutter_clutter-frame-clock.c
+file remove files/patch-src_wayland_meta-xwayland.c
+# Replaced by the carried, version-adjusted patch in the DragonFly lane.
+file remove files/patch-src_core_meta-context-main.c
+file materialize dragonfly/patch-src_core_meta-context-main.c -> dragonfly/patch-src_core_meta-context-main.c
+file materialize dragonfly/patch-zz-libseat-meson.build -> dragonfly/patch-zz-libseat-meson.build
+file materialize dragonfly/patch-zz-libseat-src_meson.build -> dragonfly/patch-zz-libseat-src_meson.build
+file materialize dragonfly/patch-zz-libseat-src_backends_meta-launcher-libseat.c -> dragonfly/patch-zz-libseat-src_backends_meta-launcher-libseat.c
+file materialize dragonfly/patch-zz-libseat-src_backends_meta-launcher.h -> dragonfly/patch-zz-libseat-src_backends_meta-launcher.h
+file materialize dragonfly/patch-zz-libseat-src_backends_meta-backend.c -> dragonfly/patch-zz-libseat-src_backends_meta-backend.c
+file materialize dragonfly/patch-zz-libseat-src_backends_meta-backend-private.h -> dragonfly/patch-zz-libseat-src_backends_meta-backend-private.h
+file materialize dragonfly/patch-zz-libseat-src_backends_native_meta-device-pool.c -> dragonfly/patch-zz-libseat-src_backends_native_meta-device-pool.c
+file materialize dragonfly/patch-zz-libseat-src_backends_meta-backlight-sysfs.c -> dragonfly/patch-zz-libseat-src_backends_meta-backlight-sysfs.c
+file materialize dragonfly/patch-zz-libseat-src_backends_native_meta-seat-impl.c -> dragonfly/patch-zz-libseat-src_backends_native_meta-seat-impl.c
+file materialize dragonfly/patch-zz-libseat-src_third__party_renderdoc_renderdoc__app.h -> dragonfly/patch-zz-libseat-src_third__party_renderdoc_renderdoc__app.h
+file materialize dragonfly/patch-zz-libseat-src_core_meta-sealed-fd.c -> dragonfly/patch-zz-libseat-src_core_meta-sealed-fd.c
+file materialize dragonfly/patch-zz-libseat-src_core_window-private.h -> dragonfly/patch-zz-libseat-src_core_window-private.h
+file materialize dragonfly/patch-zz-libseat-config.h.meson -> dragonfly/patch-zz-libseat-config.h.meson
+file materialize dragonfly/patch-zz-libseat-src_backends_native_meta-kms-impl-device.c -> dragonfly/patch-zz-libseat-src_backends_native_meta-kms-impl-device.c
+file materialize dragonfly/patch-zz-libseat-src_backends_native_meta-thread.c -> dragonfly/patch-zz-libseat-src_backends_native_meta-thread.c
+patch apply diffs/pkg-plist.diff
+file materialize dragonfly/patch-zz-libseat-src_backends_meta-udev.c -> dragonfly/patch-zz-libseat-src_backends_meta-udev.c
+file materialize dragonfly/patch-zz-libseat-src_wayland_meta-xwayland.c -> dragonfly/patch-zz-libseat-src_wayland_meta-xwayland.c
+file materialize dragonfly/patch-src_wayland_meta-wayland.c -> dragonfly/patch-src_wayland_meta-wayland.c
+file materialize dragonfly/patch-zz-libseat-src_backends_meta-stage-impl.c -> dragonfly/patch-zz-libseat-src_backends_meta-stage-impl.c
+file materialize dragonfly/patch-zz-libseat-src_wayland_meta-wayland-dma-buf.c -> dragonfly/patch-zz-libseat-src_wayland_meta-wayland-dma-buf.c
+file materialize dragonfly/patch-zz-libseat-src_backends_meta-screen-cast-stream-src.c -> dragonfly/patch-zz-libseat-src_backends_meta-screen-cast-stream-src.c
+file materialize dragonfly/patch-zz-libseat-src_third_party_meson.build -> dragonfly/patch-zz-libseat-src_third_party_meson.build

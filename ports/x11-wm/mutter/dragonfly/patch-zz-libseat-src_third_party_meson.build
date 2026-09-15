@@ -1,0 +1,13 @@
+--- src/third_party/meson.build.orig
++++ src/third_party/meson.build
+@@ -5,7 +5,10 @@ xcursor_sources = [
+ xcursor_includes = include_directories('xcursor')
++if host_machine.system() == 'dragonfly'
++  mutter_c_args += ['-DXCURSORPATH="~/.local/share/icons:~/.icons:@0@/share/icons:@0@/share/pixmaps:/usr/share/icons:/usr/share/pixmaps"'.format(get_option('prefix'))]
++endif
+ xcursor_static_lib = static_library('xcursor',
+   xcursor_sources,
+   c_args: mutter_c_args,
+   dependencies: [glib_dep],
+   include_directories: xcursor_includes,
+   install: false
