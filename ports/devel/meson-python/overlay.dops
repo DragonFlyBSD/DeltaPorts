@@ -1,0 +1,11 @@
+port devel/meson-python
+type port
+reason "Enable Python 3.12 for PyGObject; require both the default Meson command and the matching Python module for nondefault flavors"
+target @any
+
+mk set USE_PYTHON "allflavors autoplist concurrent cython_test pep517 pytest"
+mk set EXTRACT_CMD "env LANG=C.UTF-8 LC_ALL=C.UTF-8 ${TAR}"
+mk remove BUILD_DEPENDS "meson:devel/meson@${PY_FLAVOR}"
+mk remove RUN_DEPENDS "meson:devel/meson@${PY_FLAVOR}"
+mk add BUILD_DEPENDS "meson:devel/meson ${PYTHONPREFIX_SITELIBDIR}/mesonbuild/__init__.py:devel/meson@${PY_FLAVOR}"
+mk add RUN_DEPENDS "meson:devel/meson ${PYTHONPREFIX_SITELIBDIR}/mesonbuild/__init__.py:devel/meson@${PY_FLAVOR}"
