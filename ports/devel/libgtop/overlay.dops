@@ -3,7 +3,12 @@ type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
-file materialize dragonfly/patch-configure -> dragonfly/patch-configure
+mk target set post-patch <<'MK'
+	@${REINPLACE_CMD} -e 's,freebsd\*|kfreebsd\*),freebsd*|kfreebsd*|dragonfly*),' ${WRKSRC}/configure
+	@${REINPLACE_CMD} -e 's,\*bsd\*),*bsd*|dragonfly*),' ${WRKSRC}/configure
+	@${REINPLACE_CMD} -e 's,^        freebsd\*),        freebsd*|dragonfly*),' ${WRKSRC}/configure
+	@${PERL} -0777 -pi -e 's/#include <net\/if_sppp\.h>\n#else\n#include <i4b\/sppp\/if_sppp\.h>/#include <net\/if_sppp.h>\n#elif defined(__DragonFly__)\n#include <net\/sppp\/if_sppp.h>\n#else\n#include <i4b\/sppp\/if_sppp.h>/g' ${WRKSRC}/configure
+MK
 file materialize dragonfly/patch-sysdeps_common_fsusage.c -> dragonfly/patch-sysdeps_common_fsusage.c
 file materialize dragonfly/patch-sysdeps_common_mountlist.c -> dragonfly/patch-sysdeps_common_mountlist.c
 file materialize dragonfly/patch-sysdeps_freebsd_glibtop__machine.h -> dragonfly/patch-sysdeps_freebsd_glibtop__machine.h
