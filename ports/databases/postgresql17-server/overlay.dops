@@ -1,11 +1,6 @@
 port databases/postgresql17-server
 type port
-reason "add freebsd template; patch Makefile.global for clang"
+reason "add freebsd template"
 target @any
 
 mk add CONFIGURE_ARGS "--with-template=freebsd"
-
-mk target set dfly-configure <<'MK'
-	${REINPLACE_CMD} -e 's@-Wimplicit-fallthrough=3@-Wno-implicit-fallthrough@g' \
-		${WRKSRC}/src/Makefile.global
-MK

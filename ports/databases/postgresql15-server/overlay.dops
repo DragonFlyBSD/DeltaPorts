@@ -1,14 +1,9 @@
 port databases/postgresql15-server
 type port
-reason "remove LLVM and ICU from defaults; add freebsd template; patch Makefile.global for clang"
+reason "remove LLVM and ICU from defaults; add freebsd template"
 target @any
 
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NLLVM}"
 mk add CONFIGURE_ARGS "--with-template=freebsd"
 mk shell PG_UID "grep -E '^pgsql:' ${PORTSDIR}/GIDs | awk -F ':' '{print $$3}'; echo"
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NICU}"
-
-mk target set dfly-configure <<'MK'
-	${REINPLACE_CMD} -e 's@-Wimplicit-fallthrough=3@-Wno-implicit-fallthrough@g' \
-		${WRKSRC}/src/Makefile.global
-MK
