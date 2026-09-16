@@ -5,4 +5,6 @@ target @any
 
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"
 file materialize dragonfly/patch-meson.build -> dragonfly/patch-meson.build
+file materialize dragonfly/patch-src_as-metadata.c -> dragonfly/patch-src_as-metadata.c
+file materialize dragonfly/patch-tools_ascli-actions-misc.c -> dragonfly/patch-tools_ascli-actions-misc.c
 file materialize dragonfly/patch-src_as-system-info.c -> dragonfly/patch-src_as-system-info.c
