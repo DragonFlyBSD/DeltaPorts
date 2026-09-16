@@ -1,0 +1,6 @@
+port x11-servers/xlibre-server
+type port
+reason "DragonFly: provide feature_present() fallback for config/udev.c (FreeBSD libc only)"
+target @any
+
+file materialize dragonfly/patch-config_udev.c -> dragonfly/patch-config_udev.c
