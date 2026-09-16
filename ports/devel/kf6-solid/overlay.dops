@@ -4,6 +4,7 @@ reason "auto-converted from Makefile.DragonFly"
 target @any
 
 mk eval RUN_DEPENDS "${RUN_DEPENDS:N*bsdisks} openbsdisks2:sysutils/openbsdisks2"
+file materialize dragonfly/patch-src_solid_devices_backends_fstab_fstabwatcher.cpp -> dragonfly/patch-src_solid_devices_backends_fstab_fstabwatcher.cpp
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's/^.*\- name: FreeBSD/&\n    - name: DragonFly/g' \
 		${WRKSRC}/metainfo.yaml
