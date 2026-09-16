@@ -5,11 +5,15 @@ target @any
 
 file materialize dragonfly/patch-psutil___init__.py -> dragonfly/patch-psutil___init__.py
 file materialize dragonfly/patch-psutil___psbsd.py -> dragonfly/patch-psutil___psbsd.py
+file materialize dragonfly/patch-psutil___ntuples.py -> dragonfly/patch-psutil___ntuples.py
 file materialize dragonfly/patch-psutil___psutil__bsd.c -> dragonfly/patch-psutil___psutil__bsd.c
-file materialize dragonfly/patch-psutil__common.py -> dragonfly/patch-psutil__common.py
-file materialize dragonfly/patch-psutil__psutil_common.c -> dragonfly/patch-psutil__psutil_common.c
+file materialize dragonfly/patch-psutil___common.py -> dragonfly/patch-psutil___common.py
+file materialize dragonfly/patch-psutil___psutil__common.h -> dragonfly/patch-psutil___psutil__common.h
+file materialize dragonfly/patch-psutil___psutil__posix.h -> dragonfly/patch-psutil___psutil__posix.h
+file materialize dragonfly/patch-psutil_arch_all_init.h -> dragonfly/patch-psutil_arch_all_init.h
+file materialize dragonfly/patch-psutil_arch_dragonfly_init.h -> dragonfly/patch-psutil_arch_dragonfly_init.h
 file materialize dragonfly/patch-psutil_arch_bsd_proc.c -> dragonfly/patch-psutil_arch_bsd_proc.c
-file materialize dragonfly/patch-psutil_arch_bsd_sys.c -> dragonfly/patch-psutil_arch_bsd_sys.c
+file materialize dragonfly/patch-psutil_arch_bsd_proc__utils.c -> dragonfly/patch-psutil_arch_bsd_proc__utils.c
 file materialize dragonfly/patch-psutil_arch_dragonfly_cpu.c -> dragonfly/patch-psutil_arch_dragonfly_cpu.c
 file materialize dragonfly/patch-psutil_arch_dragonfly_cpu.h -> dragonfly/patch-psutil_arch_dragonfly_cpu.h
 file materialize dragonfly/patch-psutil_arch_dragonfly_disk.c -> dragonfly/patch-psutil_arch_dragonfly_disk.c
@@ -23,5 +27,4 @@ file materialize dragonfly/patch-psutil_arch_dragonfly_sensors.c -> dragonfly/pa
 file materialize dragonfly/patch-psutil_arch_dragonfly_sensors.h -> dragonfly/patch-psutil_arch_dragonfly_sensors.h
 file materialize dragonfly/patch-psutil_arch_dragonfly_sys_socks.c -> dragonfly/patch-psutil_arch_dragonfly_sys_socks.c
 file materialize dragonfly/patch-psutil_arch_dragonfly_sys_socks.h -> dragonfly/patch-psutil_arch_dragonfly_sys_socks.h
-file materialize dragonfly/patch-psutil_tests_test_system.py -> dragonfly/patch-psutil_tests_test_system.py
 file materialize dragonfly/patch-setup.py -> dragonfly/patch-setup.py
