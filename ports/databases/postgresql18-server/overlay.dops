@@ -1,0 +1,11 @@
+port databases/postgresql18-server
+type port
+reason "add freebsd template; patch Makefile.global for clang"
+target @any
+
+mk add CONFIGURE_ARGS "--with-template=freebsd"
+
+mk target set dfly-configure <<'MK'
+	${REINPLACE_CMD} -e 's@-Wimplicit-fallthrough=3@-Wno-implicit-fallthrough@g' \
+		${WRKSRC}/src/Makefile.global
+MK
