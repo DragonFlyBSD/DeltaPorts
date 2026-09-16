@@ -1,8 +1,6 @@
-diff --git psutil/_common.py psutil/_common.py
-index 3414e8ca..d9894b5c 100644
---- psutil/_common.py
+--- psutil/_common.py.orig	2025-11-26 17:30:32 UTC
 +++ psutil/_common.py
-@@ -49,7 +49,7 @@ _DEFAULT = object()
+@@ -38,7 +38,7 @@ _DEFAULT = object()
  __all__ = [
      # OS constants
      'FREEBSD', 'BSD', 'LINUX', 'NETBSD', 'OPENBSD', 'MACOS', 'OSX', 'POSIX',
@@ -11,7 +9,7 @@ index 3414e8ca..d9894b5c 100644
      # connection constants
      'CONN_CLOSE', 'CONN_CLOSE_WAIT', 'CONN_CLOSING', 'CONN_ESTABLISHED',
      'CONN_FIN_WAIT1', 'CONN_FIN_WAIT2', 'CONN_LAST_ACK', 'CONN_LISTEN',
-@@ -91,7 +91,8 @@ OSX = MACOS  # deprecated alias
+@@ -77,7 +77,8 @@ OSX = MACOS  # deprecated alias
  FREEBSD = sys.platform.startswith(("freebsd", "midnightbsd"))
  OPENBSD = sys.platform.startswith("openbsd")
  NETBSD = sys.platform.startswith("netbsd")
@@ -21,11 +19,11 @@ index 3414e8ca..d9894b5c 100644
  SUNOS = sys.platform.startswith(("sunos", "solaris"))
  AIX = sys.platform.startswith("aix")
  
-@@ -116,6 +117,7 @@ STATUS_LOCKED = "locked"  # FreeBSD
+@@ -102,6 +103,7 @@ STATUS_LOCKED = "locked"  # FreeBSD
  STATUS_WAITING = "waiting"  # FreeBSD
  STATUS_SUSPENDED = "suspended"  # NetBSD
  STATUS_PARKED = "parked"  # Linux
-+STATUS_CORE = "core" # DragonFly
++STATUS_CORE = "core"  # DragonFly
  
- # Process.connections() and psutil.net_connections()
+ # Process.net_connections() and psutil.net_connections()
  CONN_ESTABLISHED = "ESTABLISHED"
