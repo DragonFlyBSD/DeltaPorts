@@ -1,0 +1,7 @@
+port x11-toolkits/wlroots020
+type port
+reason "Step 48 bootstrap: deterministic header; patch authors the body"
+target @any
+file materialize dragonfly/patch-render_drm__syncobj.c -> dragonfly/patch-render_drm__syncobj.c
+file materialize dragonfly/patch-render_vulkan_vulkan.c -> dragonfly/patch-render_vulkan_vulkan.c
+file materialize dragonfly/patch-types_wlr__linux__dmabuf__v1.c -> dragonfly/patch-types_wlr__linux__dmabuf__v1.c
