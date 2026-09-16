@@ -1,0 +1,11 @@
+port databases/mysql++
+type port
+reason "Step 48 bootstrap: deterministic header; patch authors the body"
+target @any
+
+# Bakefile 0.2.11 macros (AC_BAKEFILE_SHARED_LD etc.) have no dragonfly
+# case and abort with "unknown system type" even though config.sub
+# canonicalizes the triple fine. BAKEFILE_HOST is the documented override
+# (defaults to ${host}); present this GNU-like platform as FreeBSD so all
+# Bakefile platform checks take the FreeBSD defaults, which match DragonFly.
+mk add CONFIGURE_ENV "BAKEFILE_HOST=${CONFIGURE_TARGET:S/dragonfly/freebsd/}"
