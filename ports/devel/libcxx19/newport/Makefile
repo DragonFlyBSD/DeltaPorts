@@ -16,7 +16,7 @@ COMMENT?=	LLVM C++ standard library with c++11 support
 
 CONFLICTS=     libcxx-${LLVM_VERSION}*
 
-USES=		cmake llvm:19 tar:xz
+USES=		cmake llvm:19,build,run tar:xz
 
 LICENSE_GROUP=	MIT UIUC
 LICENSE_NAME_UIUC=	University of Illinois/NCSA Open Source License
@@ -56,5 +56,13 @@ post-install:
 	@${MKDIR} ${STAGEDIR}${PREFIX}/llvm${LLVM_DEFAULT}/${PORTNAME}/lib/c++/
 	${ECHO} 'GROUP ( ${PREFIX}/llvm${LLVM_DEFAULT}/${PORTNAME}/lib/libc++.so.1 ${CXXRT_LIB} ${EXTRALIB})' > ${STAGEDIR}${PREFIX}/llvm${LLVM_DEFAULT}/${PORTNAME}/lib/libc++.so
 	${ECHO} 'GROUP ( ${PREFIX}/llvm${LLVM_DEFAULT}/${PORTNAME}/lib/libc++.so.1 ${CXXRT_LIB} ${EXTRALIB})' > ${STAGEDIR}${PREFIX}/llvm${LLVM_DEFAULT}/${PORTNAME}/lib/c++/libstdc++.so
+# clang looks for a config file next to its binary. Without one it uses
+# DragonFly base gcc's libstdc++ headers and links -lstdc++, so every
+# consumer respells these three flags by hand. The library directory is
+# already registered with ldconfig above, so no rpath is needed here.
+	@${MKDIR} ${STAGEDIR}${PREFIX}/llvm${LLVM_DEFAULT}/bin
+	${ECHO} '-stdlib=libc++' > ${STAGEDIR}${PREFIX}/llvm${LLVM_DEFAULT}/bin/clang++.cfg
+	${ECHO} '-cxx-isystem ${PREFIX}/llvm${LLVM_DEFAULT}/${PORTNAME}/include/c++/v1' >> ${STAGEDIR}${PREFIX}/llvm${LLVM_DEFAULT}/bin/clang++.cfg
+	${ECHO} '-L${PREFIX}/llvm${LLVM_DEFAULT}/${PORTNAME}/lib' >> ${STAGEDIR}${PREFIX}/llvm${LLVM_DEFAULT}/bin/clang++.cfg
 
 .include <bsd.port.mk>
