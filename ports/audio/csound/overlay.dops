@@ -1,0 +1,9 @@
+port audio/csound
+type port
+reason "DragonFly has no static pthread spinlock initializer; use GCC atomic spinlocks and fix their contended acquire so a failed compare-exchange cannot grant the lock"
+target @any
+
+mk add CMAKE_OFF "PTHREAD_SPIN_LOCK_EXISTS"
+mk add CMAKE_ON "USE_ATOMIC_BUILTIN"
+file materialize dragonfly/patch-Top_threads.c -> dragonfly/patch-Top_threads.c
+file materialize dragonfly/patch-H_remote.h -> dragonfly/patch-H_remote.h
