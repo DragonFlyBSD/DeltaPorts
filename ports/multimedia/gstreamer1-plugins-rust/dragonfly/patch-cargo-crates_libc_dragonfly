@@ -1,0 +1,10 @@
+--- cargo-crates/libc-0.2.186/src/unix/bsd/freebsdlike/dragonfly/mod.rs.orig
++++ cargo-crates/libc-0.2.186/src/unix/bsd/freebsdlike/dragonfly/mod.rs
+@@ -1,5 +1,7 @@
+ pub const IFF_NPOLLING: c_int = 0x100000; // interface is in polling mode
+ pub const IFF_IDIRECT: c_int = 0x200000; // direct input
+ 
++pub const IP_RECVTOS: c_int = 68;
++
+ //
+ // sys/netinet/in.h
