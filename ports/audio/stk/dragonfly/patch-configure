@@ -1,0 +1,11 @@
+--- configure.orig
++++ configure
+@@ -6268,7 +6268,7 @@
+ fi
+     ;;
+ 
+-    *-*-freebsd*)
++    *-*-freebsd* | *-*-dragonfly*)
+     if test "$api" == ""
+ then :
+ 
