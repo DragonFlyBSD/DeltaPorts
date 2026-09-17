@@ -1,0 +1,6 @@
+port multimedia/vvdec
+type port
+reason "The DragonFly base GCC does not support Clang's pass-failed diagnostic; warnings-as-errors are already disabled by the inherited CMake option"
+target @any
+
+mk remove CXXFLAGS "-Wno-error=pass-failed"
