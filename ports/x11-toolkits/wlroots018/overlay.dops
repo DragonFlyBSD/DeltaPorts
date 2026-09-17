@@ -1,7 +1,12 @@
 port x11-toolkits/wlroots018
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "Retain DragonFly syncobj/Vulkan compatibility and keep runtime DRI dependencies on the Mesa family selected by GL_DEFAULT."
 target @any
+
+mk remove OPENGL_RUN_DEPENDS "mesa-dri>0:graphics/mesa-dri"
+mk add OPENGL_RUN_DEPENDS "${GL_DEFAULT:S/-libs/-dri/}>0:graphics/${GL_DEFAULT:S/-libs/-dri/}"
+mk remove VULKAN_RUN_DEPENDS "mesa-dri>0:graphics/mesa-dri"
+mk add VULKAN_RUN_DEPENDS "${GL_DEFAULT:S/-libs/-dri/}>0:graphics/${GL_DEFAULT:S/-libs/-dri/}"
 
 file materialize dragonfly/patch-render_drm_syncobj.c -> dragonfly/patch-render_drm_syncobj.c
 file materialize dragonfly/patch-render_vulkan_vulkan.c -> dragonfly/patch-render_vulkan_vulkan.c
