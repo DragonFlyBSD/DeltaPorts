@@ -1,0 +1,11 @@
+--- configure.ac.orig
++++ configure.ac
+@@ -167,7 +167,7 @@
+       AC_CHECK_LIB(pthread, pthread_create, , AC_MSG_ERROR(RtAudio requires the pthread library!))])
+     ;;
+ 
+-    *-*-freebsd*)
++    *-*-freebsd* | *-*-dragonfly*)
+     AS_IF([test "$api" == ""], [
+       AC_MSG_RESULT(using OSS)
+       api="$api -D__LINUX_OSS__"
