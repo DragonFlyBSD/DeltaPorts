@@ -1,20 +1,20 @@
---- src/core/CMakeLists.txt.intermediate	2024-01-26 22:54:53 UTC
+--- src/core/CMakeLists.txt.intermediate	2026-09-17 08:38:25 UTC
 +++ src/core/CMakeLists.txt
-@@ -20,7 +20,7 @@ add_subdirectory(tools)
+@@ -21,7 +21,7 @@ add_subdirectory(tools/qwebengine_convert_dict)
  #   TOOLCHAIN SETUP
  ##
  
--if(LINUX OR FREEBSD)
-+if(LINUX OR FREEBSD OR DRAGONFLY)
+-if(LINUX OR WIN32 OR FREEBSD)
++if(LINUX OR WIN32 OR FREEBSD OR DRAGONFLY)
      setup_toolchains()
  endif()
  
-@@ -399,7 +399,7 @@ foreach(arch ${archs})
-             CONDITION QT_FEATURE_webengine_embedded_build
+@@ -452,7 +452,7 @@ foreach(arch ${archs})
+             CONDITION QT_FEATURE_webenginedriver
          )
  
 -        if(LINUX OR FREEBSD)
 +        if(LINUX OR FREEBSD OR DRAGONFLY)
              list(APPEND gnArgArg
                  use_gtk=false # GTK toolkit bindings
-                 use_qt=false # Qt5 toolkit bindings
+                 use_qt5=false # Qt5 toolkit bindings

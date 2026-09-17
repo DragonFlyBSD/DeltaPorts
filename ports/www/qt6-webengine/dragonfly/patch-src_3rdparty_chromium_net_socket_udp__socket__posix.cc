@@ -1,12 +1,9 @@
-diff --git net/socket/udp_socket_posix.cc net/socket/udp_socket_posix.cc
-index 5fe6986c565..5d01752a049 100644
---- src/3rdparty/chromium/net/socket/udp_socket_posix.cc
+--- src/3rdparty/chromium/net/socket/udp_socket_posix.cc.intermediate	2026-09-17 07:06:57 UTC
 +++ src/3rdparty/chromium/net/socket/udp_socket_posix.cc
-@@ -77,6 +77,34 @@ const int kActivityMonitorBytesThreshold = 65535;
- const int kActivityMonitorMinimumSamplesForThroughputEstimate = 2;
- const base::TimeDelta kActivityMonitorMsThreshold = base::Milliseconds(100);
+@@ -80,6 +80,32 @@ int GetSocketFDHash(int fd) {
+   return fd ^ 1595649551;
+ }
  
-+
 +#if BUILDFLAG(IS_DRAGONFLY)
 +int GetIPv4AddressFromIndex(int socket, uint32_t index, uint32_t* address) {
 +  if (!index) {
@@ -33,11 +30,10 @@ index 5fe6986c565..5d01752a049 100644
 +}
 +#endif
 +
-+
- #if BUILDFLAG(IS_APPLE) && !BUILDFLAG(CRONET_BUILD)
+ }  // namespace
  
- // On macOS, the file descriptor is guarded to detect the cause of
-@@ -855,9 +883,21 @@ int UDPSocketPosix::SetMulticastOptions() {
+ UDPSocketPosix::UDPSocketPosix(DatagramSocket::BindType bind_type,
+@@ -877,9 +903,21 @@ int UDPSocketPosix::SetMulticastOptions() {
    if (multicast_interface_ != 0) {
      switch (addr_family_) {
        case AF_INET: {
@@ -59,7 +55,7 @@ index 5fe6986c565..5d01752a049 100644
          int rv = setsockopt(socket_, IPPROTO_IP, IP_MULTICAST_IF,
                              reinterpret_cast<const char*>(&mreq), sizeof(mreq));
          if (rv)
-@@ -920,9 +960,17 @@ int UDPSocketPosix::JoinGroup(const IPAddress& group_address) const {
+@@ -942,9 +980,17 @@ int UDPSocketPosix::JoinGroup(const IPAddress& group_a
      case IPAddress::kIPv4AddressSize: {
        if (addr_family_ != AF_INET)
          return ERR_ADDRESS_INVALID;
@@ -74,6 +70,6 @@ index 5fe6986c565..5d01752a049 100644
        mreq.imr_ifindex = multicast_interface_;
        mreq.imr_address.s_addr = htonl(INADDR_ANY);
 +#endif
-       memcpy(&mreq.imr_multiaddr, group_address.bytes().data(),
-              IPAddress::kIPv4AddressSize);
+       mreq.imr_multiaddr = ToInAddr(group_address);
        int rv = setsockopt(socket_, IPPROTO_IP, IP_ADD_MEMBERSHIP,
+                           &mreq, sizeof(mreq));
