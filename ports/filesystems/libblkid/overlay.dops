@@ -1,5 +1,15 @@
 port filesystems/libblkid
 type port
-reason "Step 48 bootstrap: deterministic header; patch authors the body"
+reason "Retain DragonFly block-device support; detect usable dynamic CPU sets instead of sched.h alone and verify libblkid by linking and running a cache initialization test."
 target @any
+
 file materialize dragonfly/patch-lib_blkdev.c -> dragonfly/patch-lib_blkdev.c
+file materialize dragonfly/patch-meson.build -> dragonfly/patch-meson.build
+file materialize dragonfly/test-blkid-link.c -> dragonfly/test-blkid-link.c
+
+mk target set post-build <<'MK'
+	${CC} ${CFLAGS} ${LDFLAGS} -I${BUILD_WRKSRC}/libblkid \
+		${.CURDIR}/dragonfly/test-blkid-link.c -L${BUILD_WRKSRC}/libblkid \
+		-Wl,--no-allow-shlib-undefined -lblkid -o ${WRKDIR}/blkid-link-test
+	${SETENV} LD_LIBRARY_PATH=${BUILD_WRKSRC}/libblkid ${WRKDIR}/blkid-link-test
+MK
