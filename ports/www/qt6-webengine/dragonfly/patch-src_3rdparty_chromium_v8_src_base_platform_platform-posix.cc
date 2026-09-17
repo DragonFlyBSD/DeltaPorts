@@ -1,5 +1,14 @@
---- src/3rdparty/chromium/v8/src/base/platform/platform-posix.cc.intermediate	2026-09-17 08:38:25 UTC
+--- src/3rdparty/chromium/v8/src/base/platform/platform-posix.cc.intermediate	2026-09-17 10:33:48 UTC
 +++ src/3rdparty/chromium/v8/src/base/platform/platform-posix.cc
+@@ -60,7 +60,7 @@
+ #include <malloc/malloc.h>
+ #elif V8_OS_OPENBSD
+ #include <sys/malloc.h>
+-#elif !V8_OS_ZOS
++#elif !V8_OS_ZOS && !V8_OS_DRAGONFLYBSD
+ #include <malloc.h>
+ #endif
+ 
 @@ -143,9 +143,9 @@ int GetFlagsForMemoryPermission(OS::MemoryPermission a
    flags |= (page_type == PageType::kShared) ? MAP_SHARED : MAP_PRIVATE;
    if (access == OS::MemoryPermission::kNoAccess ||

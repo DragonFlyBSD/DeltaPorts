@@ -1,4 +1,4 @@
---- src/core/CMakeLists.txt.intermediate	2026-09-17 08:38:25 UTC
+--- src/core/CMakeLists.txt.intermediate	2026-09-17 10:33:48 UTC
 +++ src/core/CMakeLists.txt
 @@ -21,7 +21,7 @@ add_subdirectory(tools/qwebengine_convert_dict)
  #   TOOLCHAIN SETUP
@@ -9,6 +9,36 @@
      setup_toolchains()
  endif()
  
+@@ -216,7 +216,7 @@ foreach(arch ${archs})
+                 accessibility_activation_observer.cpp accessibility_activation_observer.h
+         )
+ 
+-        extend_gn_target(${buildGn} CONDITION LINUX OR FREEBSD
++        extend_gn_target(${buildGn} CONDITION LINUX OR FREEBSD OR DRAGONFLY
+             SOURCES
+                 ozone/gl_ozone_qt.cpp ozone/gl_ozone_qt.h
+                 ozone/ozone_util_qt.cpp ozone/ozone_util_qt.h
+@@ -224,17 +224,17 @@ foreach(arch ${archs})
+                 ozone/surface_factory_qt.cpp ozone/surface_factory_qt.h
+         )
+ 
+-        extend_gn_target(${buildGn} CONDITION (LINUX OR FREEBSD) AND QT_FEATURE_opengl
++        extend_gn_target(${buildGn} CONDITION (LINUX OR FREEBSD OR DRAGONFLY) AND QT_FEATURE_opengl
+             SOURCES
+                 ozone/gl_helper.cpp ozone/gl_helper.h
+         )
+ 
+-        extend_gn_target(${buildGn} CONDITION (LINUX OR FREEBSD) AND QT_FEATURE_opengl AND QT_FEATURE_webengine_ozone_x11 AND QT_FEATURE_xcb_glx_plugin
++        extend_gn_target(${buildGn} CONDITION (LINUX OR FREEBSD OR DRAGONFLY) AND QT_FEATURE_opengl AND QT_FEATURE_webengine_ozone_x11 AND QT_FEATURE_xcb_glx_plugin
+             SOURCES
+                 ozone/glx_helper.cpp ozone/glx_helper.h
+         )
+ 
+-        extend_gn_target(${buildGn} CONDITION (LINUX OR FREEBSD) AND QT_FEATURE_opengl AND QT_FEATURE_egl
++        extend_gn_target(${buildGn} CONDITION (LINUX OR FREEBSD OR DRAGONFLY) AND QT_FEATURE_opengl AND QT_FEATURE_egl
+             SOURCES
+                 ozone/egl_helper.cpp ozone/egl_helper.h
+         )
 @@ -452,7 +452,7 @@ foreach(arch ${archs})
              CONDITION QT_FEATURE_webenginedriver
          )
