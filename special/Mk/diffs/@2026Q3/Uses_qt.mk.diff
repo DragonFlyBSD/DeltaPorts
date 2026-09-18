@@ -1,6 +1,6 @@
 --- Uses/qt.mk
 +++ Uses/qt.mk
-@@ -109,7 +109,13 @@
+@@ -109,7 +109,14 @@
  # better to support custom settings. Dereferencing the detection allows to
  # avoid forking a shell on each inclusion of this file, and to catch any CXX
  # customization (via USE_GCC, etc.).
