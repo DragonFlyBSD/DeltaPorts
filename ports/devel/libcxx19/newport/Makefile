@@ -3,6 +3,7 @@
 
 PORTNAME?=	libcxx
 PORTVERSION=	19.1.7
+LLVM_VERSION=	19
 DISTNAME=	llvm-project-${PORTVERSION}.src
 PKGNAMEPREFIX=	llvm${LLVM_VERSION}-
 CATEGORIES=	devel
@@ -16,7 +17,7 @@ COMMENT?=	LLVM C++ standard library with c++11 support
 
 CONFLICTS=     libcxx-${LLVM_VERSION}*
 
-USES=		cmake llvm:19,build,run tar:xz
+USES=		cmake tar:xz
 
 LICENSE_GROUP=	MIT UIUC
 LICENSE_NAME_UIUC=	University of Illinois/NCSA Open Source License
@@ -36,9 +37,10 @@ PLIST_SUB+=	LLVM_DEFAULT=${LLVM_DEFAULT} \
 
 .include <bsd.port.options.mk>
 
-# Force build with llvm
+# Built by gcc, not clang: devel/llvm19 depends on this port, so this
+# port must not depend on devel/llvm19.
 LLVM_DEFAULT=		19
-USE_CLANG_FALLBACK=     19
+USE_GCC_VERSION=	14
 
 USE_LDCONFIG=	${PREFIX}/llvm${LLVM_DEFAULT}/${PORTNAME}/lib
 
@@ -56,13 +58,5 @@ post-install:
 	@${MKDIR} ${STAGEDIR}${PREFIX}/llvm${LLVM_DEFAULT}/${PORTNAME}/lib/c++/
 	${ECHO} 'GROUP ( ${PREFIX}/llvm${LLVM_DEFAULT}/${PORTNAME}/lib/libc++.so.1 ${CXXRT_LIB} ${EXTRALIB})' > ${STAGEDIR}${PREFIX}/llvm${LLVM_DEFAULT}/${PORTNAME}/lib/libc++.so
 	${ECHO} 'GROUP ( ${PREFIX}/llvm${LLVM_DEFAULT}/${PORTNAME}/lib/libc++.so.1 ${CXXRT_LIB} ${EXTRALIB})' > ${STAGEDIR}${PREFIX}/llvm${LLVM_DEFAULT}/${PORTNAME}/lib/c++/libstdc++.so
-# clang looks for a config file next to its binary. Without one it uses
-# DragonFly base gcc's libstdc++ headers and links -lstdc++, so every
-# consumer respells these three flags by hand. The library directory is
-# already registered with ldconfig above, so no rpath is needed here.
-	@${MKDIR} ${STAGEDIR}${PREFIX}/llvm${LLVM_DEFAULT}/bin
-	${ECHO} '-stdlib=libc++' > ${STAGEDIR}${PREFIX}/llvm${LLVM_DEFAULT}/bin/clang++.cfg
-	${ECHO} '-cxx-isystem ${PREFIX}/llvm${LLVM_DEFAULT}/${PORTNAME}/include/c++/v1' >> ${STAGEDIR}${PREFIX}/llvm${LLVM_DEFAULT}/bin/clang++.cfg
-	${ECHO} '-L${PREFIX}/llvm${LLVM_DEFAULT}/${PORTNAME}/lib' >> ${STAGEDIR}${PREFIX}/llvm${LLVM_DEFAULT}/bin/clang++.cfg
 
 .include <bsd.port.mk>

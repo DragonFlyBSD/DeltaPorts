@@ -1,4 +1,3 @@
-llvm%%LLVM_DEFAULT%%/bin/clang++.cfg
 llvm%%LLVM_DEFAULT%%/%%PORTNAME%%/include/c++/v1/__algorithm/adjacent_find.h
 llvm%%LLVM_DEFAULT%%/%%PORTNAME%%/include/c++/v1/__algorithm/all_of.h
 llvm%%LLVM_DEFAULT%%/%%PORTNAME%%/include/c++/v1/__algorithm/any_of.h
