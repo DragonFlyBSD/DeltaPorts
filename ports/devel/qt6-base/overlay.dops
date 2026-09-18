@@ -7,7 +7,6 @@ mk add PLIST_FILES "%%QT_MKSPECDIR%%/dragonfly-g++/qmake.conf"
 mk add PLIST_FILES "%%QT_MKSPECDIR%%/dragonfly-g++/qplatformdefs.h"
 mk add PLIST_FILES "%%QT_MKSPECDIR%%/dragonfly-clang/qmake.conf"
 mk add PLIST_FILES "%%QT_MKSPECDIR%%/dragonfly-clang/qplatformdefs.h"
-mk add LDFLAGS "-static-libgcc"
 
 mk target set post-extract <<'MK'
 	${MKDIR} ${WRKSRC}/dragonfly-g++

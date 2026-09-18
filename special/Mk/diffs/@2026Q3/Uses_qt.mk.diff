@@ -1,15 +1,17 @@
 --- Uses/qt.mk
 +++ Uses/qt.mk
-@@ -109,7 +109,12 @@
+@@ -109,7 +109,13 @@
  # better to support custom settings. Dereferencing the detection allows to
  # avoid forking a shell on each inclusion of this file, and to catch any CXX
  # customization (via USE_GCC, etc.).
 -QMAKE_COMPILER=	$$(ccver="$$(${CXX} --version)"; case "$$ccver" in *clang*) echo clang ;; *) echo g++ ;; esac)
-+QMAKE_COMPILER=	g++
-+
-+# Avoid having the compiler specified per port
++# Qt6 builds with the LLVM toolchain and libc++, Qt5 stays on gcc. Both are
++# stated rather than detected: the compiler is chosen here, not inherited.
 +.  if ${_QT_VER:M6}
-+USE_GCC_VERSION=	${GCC_DEFAULT}
++.include "${USESDIR}/dfly-libcxx.mk"
++QMAKE_COMPILER=	clang
++.  else
++QMAKE_COMPILER=	g++
 +.  endif
  
  .  for dir in BIN INC LIB ARCH PLUGIN LIBEXEC IMPORT \
