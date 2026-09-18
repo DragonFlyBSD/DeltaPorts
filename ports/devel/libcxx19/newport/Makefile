@@ -17,7 +17,7 @@ COMMENT?=	LLVM C++ standard library with c++11 support
 
 CONFLICTS=     libcxx-${LLVM_VERSION}*
 
-USES=		cmake tar:xz
+USES=		cmake python:build tar:xz
 
 LICENSE_GROUP=	MIT UIUC
 LICENSE_NAME_UIUC=	University of Illinois/NCSA Open Source License
