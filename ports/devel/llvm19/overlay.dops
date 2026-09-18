@@ -41,6 +41,6 @@ text line-remove file pkg-plist exact "%%LLD%%llvm%%LLVM_SUFFIX%%/bin/ld"
 mk block set condition "${OPSYS} == DragonFly" <<'MK'
 USE_GCC_VERSION=	14
 LIB_DEPENDS+=		libc++.so.1:devel/libcxx19
-CXXFLAGS+=		-nostdinc++ -isystem ${LLVM_PREFIX}/libcxx/include/c++/v1
-LDFLAGS+=		-nostdlib++ -L${LLVM_PREFIX}/libcxx/lib -lc++ -lc++abi
+CXXFLAGS+=		-nostdinc++ -nostdlib++ -isystem ${LLVM_PREFIX}/libcxx/include/c++/v1
+LDFLAGS+=		-L${LLVM_PREFIX}/libcxx/lib -lc++ -lc++abi -lm
 MK
