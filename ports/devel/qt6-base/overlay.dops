@@ -5,10 +5,13 @@ target @any
 
 mk add PLIST_FILES "%%QT_MKSPECDIR%%/dragonfly-g++/qmake.conf"
 mk add PLIST_FILES "%%QT_MKSPECDIR%%/dragonfly-g++/qplatformdefs.h"
+mk add PLIST_FILES "%%QT_MKSPECDIR%%/dragonfly-clang/qmake.conf"
+mk add PLIST_FILES "%%QT_MKSPECDIR%%/dragonfly-clang/qplatformdefs.h"
 mk add LDFLAGS "-static-libgcc"
 
 mk target set post-extract <<'MK'
 	${MKDIR} ${WRKSRC}/dragonfly-g++
+	${MKDIR} ${WRKSRC}/dragonfly-clang
 MK
 
 file remove files/patch-src_corelib_io_qlockfile__unix.cpp on-missing noop
@@ -19,6 +22,8 @@ file materialize dragonfly/patch-cmake_QtPlatformSupport.cmake -> dragonfly/patc
 file materialize dragonfly/patch-cmake_QtRpathHelpers.cmake -> dragonfly/patch-cmake_QtRpathHelpers.cmake
 file materialize dragonfly/patch-mkspecs_dragonfly-g++_qmake.conf -> dragonfly/patch-mkspecs_dragonfly-g++_qmake.conf
 file materialize dragonfly/patch-mkspecs_dragonfly-g++_qplatformdefs.h -> dragonfly/patch-mkspecs_dragonfly-g++_qplatformdefs.h
+file materialize dragonfly/patch-mkspecs_dragonfly-clang_qmake.conf -> dragonfly/patch-mkspecs_dragonfly-clang_qmake.conf
+file materialize dragonfly/patch-mkspecs_dragonfly-clang_qplatformdefs.h -> dragonfly/patch-mkspecs_dragonfly-clang_qplatformdefs.h
 file materialize dragonfly/patch-src_corelib_CMakeLists.txt -> dragonfly/patch-src_corelib_CMakeLists.txt
 file materialize dragonfly/patch-src_corelib_global_qsystemdetection.h -> dragonfly/patch-src_corelib_global_qsystemdetection.h
 file materialize dragonfly/patch-src_corelib_io_qfilesystemengine__unix.cpp -> dragonfly/patch-src_corelib_io_qfilesystemengine__unix.cpp
