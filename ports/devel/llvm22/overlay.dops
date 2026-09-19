@@ -1,6 +1,6 @@
 port devel/llvm22
 type port
-reason "disable LLDB/FLANG/COMPILER_RT/OPENMP; add LLD_LINK; dfly-patch/install; binutils@native"
+reason "build against libc++; ship clang++.cfg; disable LLDB/FLANG/COMPILER_RT/OPENMP; add LLD_LINK; dfly-patch/install; binutils@native"
 # Modelled on devel/llvm20: llvm22 had no overlay and fails in the bulk
 # build. The Makefile anchors were verified present and identical; the
 # pkg-plist deletion is ADOPTED FROM llvm20 UNVERIFIED -- this version's
@@ -17,7 +17,17 @@ MK
 
 mk target set dfly-install <<'MK'
 	-${RM} -fv ${STAGEDIR}${PREFIX}/bin/llvm-omp-device-info${LLVM_SUFFIX}
+	${ECHO} '-stdlib=libc++' > ${STAGEDIR}${LLVM_PREFIX}/bin/clang++.cfg
+	${ECHO} '-cxx-isystem ${LLVM_PREFIX}/libcxx/include/c++/v1' >> ${STAGEDIR}${LLVM_PREFIX}/bin/clang++.cfg
+	${ECHO} '-L${LLVM_PREFIX}/libcxx/lib' >> ${STAGEDIR}${LLVM_PREFIX}/bin/clang++.cfg
 MK
+
+mk add PLIST_FILES "llvm%%LLVM_SUFFIX%%/bin/clang++.cfg"
+
+# gcc will not convert the std::make_unique overload set to std::function;
+# clang picks an overload, gcc rejects the whole set. Wrap each entry in a
+# lambda with an explicit return type.
+file materialize dragonfly/patch-clang-tools-extra_clangd_index_dex_dexp_Dexp.cpp -> dragonfly/patch-clang-tools-extra_clangd_index_dex_dexp_Dexp.cpp
 
 # Both Makefile edits are single, uniquely-anchored lines, so express
 # them rather than carrying a diff: no context to drift. Anchored on the
@@ -31,3 +41,14 @@ mk target rename post-install-LLD-on -> post-install-LLD_LINK-on
 # there is no context to drift, and a line that vanishes upstream
 # fails loudly instead of rejecting a hunk.
 text line-remove file pkg-plist exact "%%LLD%%llvm%%LLVM_SUFFIX%%/bin/ld"
+
+# libclang's API passes std:: types across the boundary, so every port that
+# links it has to agree on the standard library. gcc15 is the floor libc++ 22
+# documents -- its headers need type-trait builtins gcc gained in 15 -- and it
+# is used here rather than clang because clang comes from this port.
+mk block set condition "${OPSYS} == DragonFly" <<'MK'
+USE_GCC_VERSION=	15
+LIB_DEPENDS+=		libc++.so.1:devel/libcxx22
+CXXFLAGS+=		-nostdinc++ -nostdlib++ -isystem ${LLVM_PREFIX}/libcxx/include/c++/v1
+LDFLAGS+=		-L${LLVM_PREFIX}/libcxx/lib -lc++ -lc++abi -lm
+MK
