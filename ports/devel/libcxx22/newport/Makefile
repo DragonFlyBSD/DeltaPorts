@@ -3,6 +3,7 @@
 
 PORTNAME?=	libcxx
 PORTVERSION=	22.1.7
+LLVM_VERSION=	22
 DISTNAME=	llvm-project-${PORTVERSION}.src
 PKGNAMEPREFIX=	llvm${LLVM_VERSION}-
 CATEGORIES=	devel
@@ -15,7 +16,7 @@ COMMENT?=	LLVM C++ standard library with c++11 support
 
 CONFLICTS=     libcxx-${LLVM_VERSION}*
 
-USES=		cmake llvm:22 tar:xz
+USES=		cmake python:build tar:xz
 
 LICENSE_GROUP=	MIT UIUC
 LICENSE_NAME_UIUC=	University of Illinois/NCSA Open Source License
@@ -35,9 +36,11 @@ PLIST_SUB+=	LLVM_DEFAULT=${LLVM_DEFAULT} \
 
 .include <bsd.port.options.mk>
 
-# Force build with llvm
+# Built by gcc, not clang: devel/llvm22 depends on this port, so this
+# port must not depend on devel/llvm22. gcc15 is the floor libc++ 22
+# documents -- its headers need type-trait builtins gcc gained in 15.
 LLVM_DEFAULT=		22
-USE_CLANG_FALLBACK=     22
+USE_GCC_VERSION=	15
 
 USE_LDCONFIG=	${PREFIX}/llvm${LLVM_DEFAULT}/${PORTNAME}/lib
 
