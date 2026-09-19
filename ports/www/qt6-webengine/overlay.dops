@@ -11,7 +11,6 @@ mk add BINARY_ALIAS "c++=${LOCALBASE}/bin/clang++${LLVM_DEFAULT}"
 mk add BINARY_ALIAS "ar=${LOCALBASE}/bin/llvm-ar${LLVM_DEFAULT}"
 mk add BINARY_ALIAS "nm=${LOCALBASE}/bin/llvm-nm${LLVM_DEFAULT}"
 
-mk add CXXFLAGS -nostdlib++
 mk add CXXFLAGS -nostdinc++
 mk add CXXFLAGS -stdlib=libc++
 mk add CXXFLAGS "-I${LOCALBASE}/include"
@@ -99,6 +98,7 @@ file materialize dragonfly/patch-src_3rdparty_chromium_sandbox_policy_BUILD.gn -
 file materialize dragonfly/patch-src_3rdparty_chromium_sandbox_policy_mojom_sandbox.mojom -> dragonfly/patch-src_3rdparty_chromium_sandbox_policy_mojom_sandbox.mojom
 file materialize dragonfly/patch-src_3rdparty_chromium_sandbox_policy_sandbox.h -> dragonfly/patch-src_3rdparty_chromium_sandbox_policy_sandbox.h
 file materialize dragonfly/patch-src_3rdparty_chromium_services_device_usb_usb__service.cc -> dragonfly/patch-src_3rdparty_chromium_services_device_usb_usb__service.cc
+file materialize dragonfly/patch-src_3rdparty_chromium_services_device_usb_BUILD.gn -> dragonfly/patch-src_3rdparty_chromium_services_device_usb_BUILD.gn
 file materialize dragonfly/patch-src_3rdparty_chromium_services_network_network__sandbox__hook__linux.h -> dragonfly/patch-src_3rdparty_chromium_services_network_network__sandbox__hook__linux.h
 file materialize dragonfly/patch-src_3rdparty_chromium_services_resource_coordinator_public_cpp_memory_instrumentation_os_metrics_bsd.cc -> dragonfly/patch-src_3rdparty_chromium_services_resource_coordinator_public_cpp_memory_instrumentation_os_metrics_bsd.cc
 file materialize dragonfly/patch-src_3rdparty_chromium_services_resource_coordinator_public_cpp_memory_instrumentation_os_metrics_linux.cc -> dragonfly/patch-src_3rdparty_chromium_services_resource_coordinator_public_cpp_memory_instrumentation_os_metrics_linux.cc
