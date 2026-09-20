@@ -34,6 +34,14 @@ RUN_DEPENDS:=	${RUN_DEPENDS:Nvirtual_oss*}
 LDFLAGS:=	${LDFLAGS:N-Wl,--undefined-version}
 MK
 
+# rollup vendors mimalloc-sys2, whose build script runs a cmake install.
+# MAKE_ENV carries DESTDIR=${STAGEDIR} into every phase, so that install
+# lands under the stage dir during the build, leaving a stray /construction
+# tree that check-plist reports as orphaned. Same idiom as dns/bind9-devel.
+mk target set dfly-install <<'MKI'
+	${RM} -rfv ${STAGEDIR}/construction
+MKI
+
 mk target set dfly-patch <<'MK'
 	# Sandbox stuff
 	@${MKDIR} ${WRKSRC}/sandbox/policy/dragonfly
