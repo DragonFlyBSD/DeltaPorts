@@ -1,10 +1,29 @@
-diff --git net/socket/udp_socket_posix.cc net/socket/udp_socket_posix.cc
-index f9ea984811e0..b829e6fb500e 100644
---- net/socket/udp_socket_posix.cc
+--- net/socket/udp_socket_posix.cc.orig	2026-09-19 23:47:44 UTC
 +++ net/socket/udp_socket_posix.cc
-@@ -81,6 +81,32 @@ constexpr int kBindRetries = 10;
+@@ -78,8 +78,14 @@
+ #endif  // BUILDFLAG(IS_MAC)
+ 
+ #if !defined(CMSG_ALIGN)
++#if defined(__DragonFly__)
++// DragonFly only exposes CMSG_ALIGN to the kernel; _CMSG_ALIGN is the
++// userland spelling. It has no _ALIGN in userland.
++#define CMSG_ALIGN(n) _CMSG_ALIGN(n)
++#else
+ #define CMSG_ALIGN(n) _ALIGN(n)
+ #endif
++#endif
+ 
+ namespace net {
+ 
+@@ -88,11 +94,37 @@
+ constexpr int kBindRetries = 10;
  constexpr int kPortStart = 1024;
  constexpr int kPortEnd = 65535;
+-#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_ANDROID) || BUILDFLAG(IS_BSD)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_ANDROID) || (BUILDFLAG(IS_BSD) && !BUILDFLAG(IS_DRAGONFLY))
+ // Maximum number of UDP packets that can be read at a time from recvmmsg.
+ constexpr size_t kMaxMmsgMessages = 128;
+ #endif
  
 +#if BUILDFLAG(IS_DRAGONFLY)
 +int GetIPv4AddressFromIndex(int socket, uint32_t index, uint32_t* address) {
@@ -35,7 +54,34 @@ index f9ea984811e0..b829e6fb500e 100644
  int GetSocketFDHash(int fd) {
    return fd ^ 1595649551;
  }
-@@ -862,9 +888,21 @@ int UDPSocketPosix::SetMulticastOptions() {
+@@ -499,7 +531,7 @@
+   CHECK_GT(maximum_packet_size, 0u);
+   CHECK_GE(buf_len, maximum_packet_size);
+ 
+-#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_ANDROID) || BUILDFLAG(IS_BSD)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_ANDROID) || (BUILDFLAG(IS_BSD) && !BUILDFLAG(IS_DRAGONFLY))
+   base::expected<DatagramsMetadata, Error> nread =
+       InternalReadMultiple(buffer, buf_len, maximum_packet_size);
+   if (nread.has_value() || nread.error() != ERR_IO_PENDING) {
+@@ -1020,7 +1052,7 @@
+   // This read API currently only supports connected UDP sockets.
+   CHECK(is_connected_);
+   CHECK(remote_address_);
+-#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_ANDROID) || BUILDFLAG(IS_BSD)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_ANDROID) || (BUILDFLAG(IS_BSD) && !BUILDFLAG(IS_DRAGONFLY))
+   return InternalRecvMmsg(buffer, buf_len / maximum_packet_size,
+                           maximum_packet_size);
+ #else
+@@ -1028,7 +1060,7 @@
+ #endif
+ }
+ 
+-#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_ANDROID) || BUILDFLAG(IS_BSD)
++#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_ANDROID) || (BUILDFLAG(IS_BSD) && !BUILDFLAG(IS_DRAGONFLY))
+ base::expected<DatagramsMetadata, Error> UDPSocketPosix::InternalRecvMmsg(
+     IOBuffer* buffer,
+     size_t num_messages,
+@@ -1287,9 +1319,21 @@
    if (multicast_interface_ != 0) {
      switch (addr_family_) {
        case AF_INET: {
@@ -57,7 +103,7 @@ index f9ea984811e0..b829e6fb500e 100644
          int rv = setsockopt(socket_, IPPROTO_IP, IP_MULTICAST_IF,
                              reinterpret_cast<const char*>(&mreq), sizeof(mreq));
          if (rv)
-@@ -927,10 +965,18 @@ int UDPSocketPosix::JoinGroup(const IPAddress& group_address) const {
+@@ -1353,10 +1397,18 @@
      case IPAddress::kIPv4AddressSize: {
        if (addr_family_ != AF_INET)
          return ERR_ADDRESS_INVALID;

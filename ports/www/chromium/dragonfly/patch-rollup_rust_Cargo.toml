@@ -1,0 +1,10 @@
+--- rollup/rust/Cargo.toml.orig	2026-09-19 22:13:24 UTC
++++ rollup/rust/Cargo.toml
+@@ -9,6 +9,6 @@
+ 
+ [profile.release]
+ strip = true
+-lto = true
++lto = false
+ opt-level = 3
+ codegen-units = 1
