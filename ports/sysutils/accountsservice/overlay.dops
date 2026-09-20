@@ -1,8 +1,9 @@
 port sysutils/accountsservice
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "Retain DragonFly build compatibility and read the persistent machine ID from the native D-Bus location, not Linux /etc/machine-id."
 target @any
 
 mk add LIB_DEPENDS "libffi.so:devel/libffi libpcre.so:devel/pcre libiconv.so:converters/libiconv"
 mk add USES "iconv python:3.8+,build"
 mk set BINARY_ALIAS "python3.8=${PYTHON_CMD}"
+mk bump PORTREVISION
