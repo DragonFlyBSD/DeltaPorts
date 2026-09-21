@@ -14,9 +14,9 @@ mk add CXXFLAGS -nostdlib++
 mk add CXXFLAGS -nostdinc++
 mk add CXXFLAGS "-I${LOCALBASE}/include"
 mk add CXXFLAGS "-I${LOCALBASE}/include/cxxrt"
-mk add CXXFLAGS "-cxx-isystem ${LOCALBASE}/llvm${LLVM_DEFAULT}/libcxx/include/c++/v1"
-mk set LDFLAGS "-L /usr/lib -L${LOCALBASE}/llvm${LLVM_DEFAULT}/libcxx/lib/c++ -L /lib"
-mk add LIB_DIRS "${PREFIX}/llvm${LLVM_DEFAULT}/libcxx/lib"
+mk add CXXFLAGS "-cxx-isystem ${LOCALBASE}/llvm${LLVM_DEFAULT}/include/c++/v1"
+mk set LDFLAGS "-L /usr/lib -L${LOCALBASE}/llvm${LLVM_DEFAULT}/lib/c++ -L /lib"
+mk add LIB_DIRS "${PREFIX}/llvm${LLVM_DEFAULT}/lib"
 mk add LIB_DEPENDS "libc++.so.1:devel/libcxx${LLVM_DEFAULT}"
 file materialize dragonfly/patch-third__party_cpuinfo_CMakeLists.txt -> dragonfly/patch-third__party_cpuinfo_CMakeLists.txt
 file materialize dragonfly/patch-third__party_ittapi_src_ittnotify_ittnotify__config.h -> dragonfly/patch-third__party_ittapi_src_ittnotify_ittnotify__config.h
