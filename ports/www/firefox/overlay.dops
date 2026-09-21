@@ -28,15 +28,15 @@ mk add CXXFLAGS -Wno-class-memaccess
 # default libstdc++: cargo's linker invocation inherits LDFLAGS, and lld has
 # no -lc++/-lc++abi there.)
 mk add CXXFLAGS "-stdlib=libc++"
-mk add CXXFLAGS "-cxx-isystem ${LLVM_PREFIX}/libcxx/include/c++/v1"
+mk add CXXFLAGS "-cxx-isystem ${LLVM_PREFIX}/include/c++/v1"
 # Provide the libc++ headers above at build time (DragonFly-only dport).
-mk add BUILD_DEPENDS "${LOCALBASE}/llvm${LLVM_VERSION}/libcxx/include/c++/v1/new:devel/libcxx${LLVM_VERSION}"
+mk add BUILD_DEPENDS "${LOCALBASE}/llvm${LLVM_VERSION}/include/c++/v1/new:devel/libcxx${LLVM_VERSION}"
 # -stdlib=libc++ above makes every C++ link pass -lc++, so lld needs the
 # libcxx lib dir on its search path (same approach as www/qt6-webengine);
 # LIB_DEPENDS records the runtime dep (USE_LDCONFIG in devel/libcxx19 covers
 # loading). Target objects are compiled against libc++ headers, so they must
 # link libc++, not the default libstdc++.
-mk add LDFLAGS "-L${LLVM_PREFIX}/libcxx/lib"
+mk add LDFLAGS "-L${LLVM_PREFIX}/lib"
 mk add LIB_DEPENDS "libc++.so.1:devel/libcxx${LLVM_VERSION}"
 # Abseil gates LowLevelAlloc/per-thread-sem (needed by libxul's mutex code) on
 # ABSL_HAVE_MMAP, which upstream enables for FreeBSD but not DragonFly; both
@@ -69,7 +69,7 @@ mk add LDFLAGS "-Wl,-rpath,/usr/lib/gcc80"
 # or it dies on `#include <version>` in mfbt/Attributes.h. This later
 # CONFIGURE_ENV entry wins over upstream's ICU-only BINDGEN_CFLAGS, so the
 # -I${LOCALBASE}/include part is repeated here.
-mk add CONFIGURE_ENV "BINDGEN_CFLAGS=\"-I${LOCALBASE}/include -stdlib=libc++ -cxx-isystem ${LLVM_PREFIX}/libcxx/include/c++/v1\""
+mk add CONFIGURE_ENV "BINDGEN_CFLAGS=\"-I${LOCALBASE}/include -stdlib=libc++ -cxx-isystem ${LLVM_PREFIX}/include/c++/v1\""
 
 # DragonFly's target triple has kernel "DragonFly", so mozilla's
 # build/moz.configure/init.configure never defines XP_FREEBSD here. But the
