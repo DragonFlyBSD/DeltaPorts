@@ -15,15 +15,15 @@ mk add CXXFLAGS -nostdinc++
 mk add CXXFLAGS -stdlib=libc++
 mk add CXXFLAGS "-I${LOCALBASE}/include"
 mk add CXXFLAGS "-I${LOCALBASE}/include/cxxrt"
-mk add CXXFLAGS "-cxx-isystem ${LOCALBASE}/llvm${LLVM_DEFAULT}/libcxx/include/c++/v1"
+mk add CXXFLAGS "-cxx-isystem ${LOCALBASE}/llvm${LLVM_DEFAULT}/include/c++/v1"
 mk add CXXFLAGS -Wno-error=unused-command-line-argument
 mk add CXXFLAGS -Wunused-command-line-argument
 
-mk set LDFLAGS "-L /usr/lib -L${LOCALBASE}/llvm${LLVM_DEFAULT}/libcxx/lib/c++ -L /lib"
+mk set LDFLAGS "-L /usr/lib -L${LOCALBASE}/llvm${LLVM_DEFAULT}/lib/c++ -L /lib"
 
 mk add CONFIGURE_ENV "CXXFLAGS=\"${CXXFLAGS}\" CFLAGS=\"${CFLAGS}\" LDFLAGS=\"${LDFLAGS}\""
 
-mk set LIB_DIRS "/lib /usr/lib ${LOCALBASE}/lib ${PREFIX}/llvm${LLVM_DEFAULT}/libcxx/lib"
+mk set LIB_DIRS "/lib /usr/lib ${LOCALBASE}/lib ${PREFIX}/llvm${LLVM_DEFAULT}/lib"
 
 mk add LIB_DEPENDS "libc++.so.1:devel/libcxx${LLVM_DEFAULT}"
 
