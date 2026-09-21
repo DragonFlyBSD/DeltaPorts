@@ -50,5 +50,5 @@ mk block set condition "${OPSYS} == DragonFly" <<'MK'
 USE_GCC_VERSION=	15
 LIB_DEPENDS+=		libc++.so.1:devel/libcxx22
 CXXFLAGS+=		-nostdinc++ -nostdlib++ -isystem ${LLVM_PREFIX}/libcxx/include/c++/v1
-LDFLAGS+=		-L${LLVM_PREFIX}/libcxx/lib -lc++ -lc++abi -lm
+LDFLAGS+=		-L${LLVM_PREFIX}/libcxx/lib -Wl,-rpath=${LLVM_PREFIX}/libcxx/lib -lc++ -lc++abi -lm
 MK
