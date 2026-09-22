@@ -1,6 +1,6 @@
 port devel/llvm22
 type port
-reason "build against libc++; ship clang++.cfg; disable LLDB/FLANG/COMPILER_RT/OPENMP; add LLD_LINK; dfly-patch/install; binutils@native"
+reason "build against libc++; disable LLDB/FLANG/COMPILER_RT/OPENMP; add LLD_LINK; dfly-patch/install; binutils@native"
 # Modelled on devel/llvm20: llvm22 had no overlay and fails in the bulk
 # build. The Makefile anchors were verified present and identical; the
 # pkg-plist deletion is ADOPTED FROM llvm20 UNVERIFIED -- this version's
@@ -17,12 +17,7 @@ MK
 
 mk target set dfly-install <<'MK'
 	-${RM} -fv ${STAGEDIR}${PREFIX}/bin/llvm-omp-device-info${LLVM_SUFFIX}
-	${ECHO} '-stdlib=libc++' > ${STAGEDIR}${LLVM_PREFIX}/bin/clang++.cfg
-	${ECHO} '-cxx-isystem ${LLVM_PREFIX}/libcxx/include/c++/v1' >> ${STAGEDIR}${LLVM_PREFIX}/bin/clang++.cfg
-	${ECHO} '-L${LLVM_PREFIX}/libcxx/lib' >> ${STAGEDIR}${LLVM_PREFIX}/bin/clang++.cfg
 MK
-
-mk add PLIST_FILES "llvm%%LLVM_SUFFIX%%/bin/clang++.cfg"
 
 # gcc will not convert the std::make_unique overload set to std::function;
 # clang picks an overload, gcc rejects the whole set. Wrap each entry in a
@@ -46,9 +41,17 @@ text line-remove file pkg-plist exact "%%LLD%%llvm%%LLVM_SUFFIX%%/bin/ld"
 # links it has to agree on the standard library. gcc15 is the floor libc++ 22
 # documents -- its headers need type-trait builtins gcc gained in 15 -- and it
 # is used here rather than clang because clang comes from this port.
+#
+# devel/libcxx22 installs into ${LLVM_PREFIX} itself, the layout clang's
+# driver derives from its own location, so clang finds libc++ with no
+# clang++.cfg. A cfg applies to every target, including cross-compiles:
+# it put a second copy of the libc++ headers behind the build's own, and
+# the duplicate include guards cut the #include_next chain to the target
+# libc, which is what broke devel/wasi-libcxx22.
 mk block set condition "${OPSYS} == DragonFly" <<'MK'
 USE_GCC_VERSION=	15
 LIB_DEPENDS+=		libc++.so.1:devel/libcxx22
-CXXFLAGS+=		-nostdinc++ -nostdlib++ -isystem ${LLVM_PREFIX}/libcxx/include/c++/v1
-LDFLAGS+=		-L${LLVM_PREFIX}/libcxx/lib -Wl,-rpath=${LLVM_PREFIX}/libcxx/lib -lc++ -lc++abi -lm
+CMAKE_ARGS+=		-DCLANG_DEFAULT_CXX_STDLIB=libc++
+CXXFLAGS+=		-nostdinc++ -nostdlib++ -isystem ${LLVM_PREFIX}/include/c++/v1
+LDFLAGS+=		-L${LLVM_PREFIX}/lib -Wl,-rpath=${LLVM_PREFIX}/lib -lc++ -lc++abi -lm
 MK
