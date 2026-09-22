@@ -1,6 +1,6 @@
 port devel/llvm20
 type port
-reason "disable LLDB/FLANG/COMPILER_RT/OPENMP; add LLD_LINK; dfly-patch/install; binutils@native"
+reason "build against libc++; disable LLDB/FLANG/COMPILER_RT/OPENMP; add LLD_LINK; dfly-patch/install; binutils@native"
 target @any
 
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NLLDB:NFLANG:NCOMPILER_RT:NOPENMP}"
@@ -15,6 +15,12 @@ mk target set dfly-install <<'MK'
 	-${RM} -fv ${STAGEDIR}${PREFIX}/bin/llvm-omp-device-info${LLVM_SUFFIX}
 MK
 
+# gcc will not resolve the std::make_unique overload set against
+# std::function; clang picks an overload. Wrap each entry in a lambda with
+# an explicit return type. devel/llvm19 has a byte-identical table and the
+# same gcc14 and does not need this, so what changed is libc++ 20.
+file materialize dragonfly/patch-clang-tools-extra_clangd_index_dex_dexp_Dexp.cpp -> dragonfly/patch-clang-tools-extra_clangd_index_dex_dexp_Dexp.cpp
+
 # Both Makefile edits are single, uniquely-anchored lines, so express
 # them rather than carrying a diff: no context to drift. Anchored on the
 # whole GOLD_BUILD_DEPENDS line because "devel/binutils" alone appears
@@ -27,3 +33,22 @@ mk target rename post-install-LLD-on -> post-install-LLD_LINK-on
 # there is no context to drift, and a line that vanishes upstream
 # fails loudly instead of rejecting a hunk.
 text line-remove file pkg-plist exact "%%LLD%%llvm%%LLVM_SUFFIX%%/bin/ld"
+
+# libclang's API passes std:: types across the boundary, so every port that
+# links it has to agree on the standard library. gcc14, not gcc15: libc++ 20
+# uses __decay() in a function signature and gcc15 rejects that. gcc is used
+# here rather than clang because clang comes from this port.
+#
+# devel/libcxx20 installs into ${LLVM_PREFIX} itself, the layout clang's
+# driver derives from its own location, so clang finds libc++ with no
+# clang++.cfg. A cfg applies to every target, including cross-compiles:
+# it put a second copy of the libc++ headers behind the build's own, and
+# the duplicate include guards cut the #include_next chain to the target
+# libc, which is what broke devel/wasi-libcxx20.
+mk block set condition "${OPSYS} == DragonFly" <<'MK'
+USE_GCC_VERSION=	14
+LIB_DEPENDS+=		libc++.so.1:devel/libcxx20
+CMAKE_ARGS+=		-DCLANG_DEFAULT_CXX_STDLIB=libc++
+CXXFLAGS+=		-nostdinc++ -nostdlib++ -isystem ${LLVM_PREFIX}/include/c++/v1
+LDFLAGS+=		-L${LLVM_PREFIX}/lib -Wl,-rpath=${LLVM_PREFIX}/lib -lc++ -lc++abi -lm
+MK
