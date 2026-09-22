@@ -1,0 +1,20 @@
+port lang/go126
+type port
+reason "DragonFly: GOARCH for ARCH=x86_64 and the dragonfly bootstrap distfile"
+target @any
+
+# bsd.go.mk keys GOARCH off ${ARCH}; DragonFly reports x86_64, which it
+# does not map, so the bootstrap distfile came out as
+# go1.25.14.dragonfly-.tar.gz. Every use is lazily expanded.
+mk set GOARCH_x86_64 "amd64" on-missing noop
+
+# Bootstrap tarball built with src/bootstrap.bash (GOOS=dragonfly
+# GOARCH=amd64) and recompressed to .tar.gz. Served by avalon via
+# MASTER_SITE_BACKUP, so no MASTER_SITES change is needed.
+text line-insert-after file distinfo \
+     anchor "SIZE (go1.25.14.freebsd-riscv64.tar.gz) = 58188033" \
+     line   "SHA256 (go1.25.14.dragonfly-amd64.tar.gz) = 5c8a33b21b05998a7cb05d1aafbbcadc31bd5e64527da11056a363001d997d41"
+
+text line-insert-after file distinfo \
+     anchor "SHA256 (go1.25.14.dragonfly-amd64.tar.gz) = 5c8a33b21b05998a7cb05d1aafbbcadc31bd5e64527da11056a363001d997d41" \
+     line   "SIZE (go1.25.14.dragonfly-amd64.tar.gz) = 60336476"
