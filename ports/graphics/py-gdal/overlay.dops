@@ -1,0 +1,5 @@
+port graphics/py-gdal
+type port
+reason "Step 48 bootstrap: deterministic header; patch authors the body"
+target @any
+file materialize dragonfly/patch-extensions_gdal__array__wrap.cpp -> dragonfly/patch-extensions_gdal__array__wrap.cpp
