@@ -1,0 +1,12 @@
+port net-im/libaccounts-qt
+type port
+reason "Step 48 bootstrap: deterministic header; patch authors the body"
+target @any
+
+# qmake probes a bare 'clang++' (mkspec default) and its compiler sanity
+# check cannot execute it in the dsynth PATH (only versioned clang++NN
+# binaries exist there). Alias the bare names at the selected compiler so
+# qmake's "Cannot run compiler 'clang++'" test succeeds. ${WRKDIR}/.bin
+# (BINARY_LINKDIR) is prepended to PATH for configure+build.
+mk add BINARY_ALIAS "clang=${CC}"
+mk add BINARY_ALIAS "clang++=${CXX}"
