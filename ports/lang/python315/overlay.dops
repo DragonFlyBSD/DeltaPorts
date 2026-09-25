@@ -1,0 +1,35 @@
+port lang/python315
+type port
+reason "DragonFly MACHDEP normalization plus companion DragonFly gaps for python 3.15"
+target @any
+# Modelled on lang/python314: 3.15 keeps 3.14's normalized platform string,
+# so the same MACHDEP arm applies and the plist carries no %%OSMAJOR%%.
+# Verified against 3.15.0b2 WRKSRC: five of python314's six patches apply
+# unchanged. The sixth is dropped -- get_process_mem_usage is gone from
+# 3.15 entirely (0 occurrences across Python/*.c and Modules/*.c, 4 in
+# 3.14), so Python_gc__free__threading.c has nothing to patch.
+file materialize dragonfly/patch-configure -> dragonfly/patch-configure
+file materialize dragonfly/patch-configure.ac -> dragonfly/patch-configure.ac
+file materialize dragonfly/patch-Python_thread__pthread.h -> dragonfly/patch-Python_thread__pthread.h
+file materialize dragonfly/patch-Lib_multiprocessing_util.py -> dragonfly/patch-Lib_multiprocessing_util.py
+file materialize dragonfly/patch-Modules___hacl_Lib__Memzero0.c -> dragonfly/patch-Modules___hacl_Lib__Memzero0.c
+
+# The literal, not %%PYTHON_PLATFORM%%: Mk/Uses/python.mk derives that from
+# PYTHON_REL, which does not parse the 3.15.0b2 beta suffix, so it expands
+# empty here. Safe as a literal because 3.15 -- like 3.14 -- carries no
+# version in the platform string, so it cannot rot on a DragonFly major bump.
+text replace-once file pkg-plist \
+     from "_sysconfigdata_%%ABI%%_freebsd_.cpython-%%XY%%.opt-1.pyc" \
+     to   "_sysconfigdata_%%ABI%%_dragonfly_.cpython-%%XY%%.opt-1.pyc"
+text replace-once file pkg-plist \
+     from "_sysconfigdata_%%ABI%%_freebsd_.cpython-%%XY%%.opt-2.pyc" \
+     to   "_sysconfigdata_%%ABI%%_dragonfly_.cpython-%%XY%%.opt-2.pyc"
+text replace-once file pkg-plist \
+     from "_sysconfigdata_%%ABI%%_freebsd_.cpython-%%XY%%.pyc" \
+     to   "_sysconfigdata_%%ABI%%_dragonfly_.cpython-%%XY%%.pyc"
+text replace-once file pkg-plist \
+     from "_sysconfig_vars_%%ABI%%_freebsd_.json" \
+     to   "_sysconfig_vars_%%ABI%%_dragonfly_.json"
+text replace-once file pkg-plist \
+     from "_sysconfigdata_%%ABI%%_freebsd_.py" \
+     to   "_sysconfigdata_%%ABI%%_dragonfly_.py"
