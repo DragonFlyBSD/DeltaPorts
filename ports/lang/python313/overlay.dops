@@ -1,0 +1,16 @@
+port lang/python313
+type port
+reason "DragonFly: exclude LTO (no llvm-ar for thin-LTO), plist sysconfigdata platform, thread stack + multiprocessing fixes"
+target @any
+mk add OPTIONS_EXCLUDE "LTO"
+mk set MAKE_JOBS_UNSAFE "yes"
+mk target append post-patch <<'MK1'
+	rm -f ${WRKSRC}/pybuilddir.txt
+MK1
+text replace-once file pkg-plist from "%%PYTHON_BASELIBDIR%%%%THREAD%%/__pycache__/_sysconfigdata_%%THREAD%%%%ABI%%_freebsd%%OSMAJOR%%_%%PYTHON_TAG%%.opt-1.pyc" to "%%PYTHON_BASELIBDIR%%%%THREAD%%/__pycache__/_sysconfigdata_%%THREAD%%%%ABI%%_%%PYTHON_PLATFORM%%_%%PYTHON_TAG%%.opt-1.pyc"
+text replace-once file pkg-plist from "%%PYTHON_BASELIBDIR%%%%THREAD%%/__pycache__/_sysconfigdata_%%THREAD%%%%ABI%%_freebsd%%OSMAJOR%%_%%PYTHON_TAG%%.opt-2.pyc" to "%%PYTHON_BASELIBDIR%%%%THREAD%%/__pycache__/_sysconfigdata_%%THREAD%%%%ABI%%_%%PYTHON_PLATFORM%%_%%PYTHON_TAG%%.opt-2.pyc"
+text replace-once file pkg-plist from "%%PYTHON_BASELIBDIR%%%%THREAD%%/__pycache__/_sysconfigdata_%%THREAD%%%%ABI%%_freebsd%%OSMAJOR%%_%%PYTHON_TAG%%.pyc" to "%%PYTHON_BASELIBDIR%%%%THREAD%%/__pycache__/_sysconfigdata_%%THREAD%%%%ABI%%_%%PYTHON_PLATFORM%%_%%PYTHON_TAG%%.pyc"
+text replace-once file pkg-plist from "%%PYTHON_BASELIBDIR%%%%THREAD%%/_sysconfigdata_%%THREAD%%%%ABI%%_freebsd%%OSMAJOR%%_.py" to "%%PYTHON_BASELIBDIR%%%%THREAD%%/_sysconfigdata_%%THREAD%%%%ABI%%_%%PYTHON_PLATFORM%%_.py"
+file materialize dragonfly/patch-Python_thread__pthread.h -> dragonfly/patch-Python_thread__pthread.h
+file materialize dragonfly/patch-Lib_multiprocessing_util.py -> dragonfly/patch-Lib_multiprocessing_util.py
+file materialize dragonfly/patch-Makefile.pre.in -> dragonfly/patch-Makefile.pre.in
