@@ -1,0 +1,8 @@
+port devel/py-pyproject-metadata
+type port
+reason "Enable Python 3.12 flavor required by meson-python"
+target @any
+
+mk unset PORTVERSION
+mk set USE_PYTHON "allflavors autoplist concurrent pep517 pytest"
+mk set DISTVERSION "0.11.0"
