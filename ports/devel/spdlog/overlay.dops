@@ -1,0 +1,9 @@
+port devel/spdlog
+type port
+reason "Step 48 bootstrap: deterministic header; patch authors the body"
+target @any
+# spdlog 1.17.0: the example binary is not installed (not in pkg-plist)
+# and fails to link against external libfmt (undefined fmt::v12::vformat).
+# The shared library itself links fine, so skip the build-only example.
+mk eval CMAKE_ON "${CMAKE_ON:NSPDLOG_BUILD_EXAMPLE}"
+mk add CMAKE_OFF "SPDLOG_BUILD_EXAMPLE"
