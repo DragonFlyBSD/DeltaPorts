@@ -79,6 +79,7 @@ file materialize dragonfly/patch-src_3rdparty_chromium_base_tracing_trace_time.c
 file materialize dragonfly/patch-src_3rdparty_chromium_build_build__config.h -> dragonfly/patch-src_3rdparty_chromium_build_build__config.h
 file materialize dragonfly/patch-src_3rdparty_chromium_build_config_BUILDCONFIG.gn -> dragonfly/patch-src_3rdparty_chromium_build_config_BUILDCONFIG.gn
 file materialize dragonfly/patch-src_3rdparty_chromium_build_config_linux_pkg-config.py -> dragonfly/patch-src_3rdparty_chromium_build_config_linux_pkg-config.py
+file materialize dragonfly/patch-src_3rdparty_chromium_build_config_gclient__args.gni -> dragonfly/patch-src_3rdparty_chromium_build_config_gclient__args.gni
 file materialize dragonfly/patch-src_3rdparty_chromium_build_config_ozone.gni -> dragonfly/patch-src_3rdparty_chromium_build_config_ozone.gni
 file materialize dragonfly/patch-src_3rdparty_chromium_build_config_ui.gni -> dragonfly/patch-src_3rdparty_chromium_build_config_ui.gni
 file materialize dragonfly/patch-src_3rdparty_chromium_build_landmine_utils.py -> dragonfly/patch-src_3rdparty_chromium_build_landmine_utils.py
