@@ -1,0 +1,24 @@
+port devel/qscintilla2
+type port
+reason "Step 48 bootstrap: deterministic header; patch authors the body"
+
+# qmake's compiler sanity check probes bare 'clang++', which is not on the
+# dsynth configure PATH (the ports-selected compiler is versioned clang19 in
+# the qt6 flavor, base clang in the qt5 flavor). Pass the ports-selected
+# CC/CXX through qmake's compiler variables explicitly (qmake.mk forwards
+# ${CXX} as QMAKE_CXX, but the mkspec default probe still needs valid paths),
+# and add the versioned LLVM bin dir to the configure PATH so the probe's
+# compiler lookup succeeds in both flavors.
+mk add CONFIGURE_ENV "QMAKE_CC=${CC}"
+mk add CONFIGURE_ENV "QMAKE_CXX=${CXX}"
+mk add CONFIGURE_ENV "PATH=${LOCALBASE}/bin:${PATH}"
+# The qt6 flavor resolves its compiler to versioned clang19 from devel/llvm19
+# (BUILD_DEPENDS proves it), which has no bare 'clang++' name; the qt5 flavor
+# has no LLVM in its environment at all, so an unconditional alias source
+# cannot exist in both. Scope the versioned-binary alias to qt6 only (it is
+# what made qt6 pass the gate); qt5 is covered by the QMAKE_CC/CXX lines above.
+mk block set condition "${FLAVOR} == qt6" <<'MK1'
+BINARY_ALIAS+=	clang=${LOCALBASE}/bin/clang${LLVM_DEFAULT}
+BINARY_ALIAS+=	clang++=${LOCALBASE}/bin/clang++${LLVM_DEFAULT}
+MK1
+target @any
