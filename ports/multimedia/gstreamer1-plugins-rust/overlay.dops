@@ -1,0 +1,10 @@
+port multimedia/gstreamer1-plugins-rust
+type port
+reason "Use the declared LLVM for VVDEC bindgen; preserve QUIC and threadshare with DragonFly IP_RECVTOS, recvmsg and multicast-interface compatibility."
+target @any
+
+mk add MAKE_ENV "LIBCLANG_PATH=${LLVM_PREFIX}/lib"
+file materialize dragonfly/patch-cargo-crates_quinn-udp_build.rs -> dragonfly/patch-cargo-crates_quinn-udp_build.rs
+file materialize dragonfly/patch-cargo-crates_quinn-udp_src_unix.rs -> dragonfly/patch-cargo-crates_quinn-udp_src_unix.rs
+file materialize dragonfly/patch-cargo-crates_libc_dragonfly -> dragonfly/patch-cargo-crates_libc_dragonfly
+file materialize dragonfly/patch-generic_threadshare_src_net.rs -> dragonfly/patch-generic_threadshare_src_net.rs

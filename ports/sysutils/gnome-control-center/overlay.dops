@@ -1,26 +1,25 @@
 port sysutils/gnome-control-center
 type port
-reason "MIT gssapi, filter OPTIONS/LIB_DEPENDS (no pulse), dfly-patch removes sound panel, remove sound plist entries"
+reason "gnome-control-center 47.7 -> 50.3 (GNOME 50); migrated compat -> dops; sound/gvc restored via libpulse; needs system goa 3.54 + blueprint-compiler"
 target @any
 
+file materialize dragonfly/patch-panels_meson.build -> dragonfly/patch-panels_meson.build
+file materialize dragonfly/patch-panels_color_cc-color-calibrate.c -> dragonfly/patch-panels_color_cc-color-calibrate.c
+mk unset PORTREVISION
+mk add BUILD_DEPENDS "blueprint-compiler>=0.19:devel/blueprint-compiler"
+mk add BUILD_DEPENDS "${LOCALBASE}/include/linux/input-event-codes.h:devel/evdev-proto"
 mk add USES "gssapi:mit"
-mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NCHEESE}"
-mk eval LIB_DEPENDS "${LIB_DEPENDS:Nlibpulse*}"
+mk unset OPTIONS_SUB
+mk unset OPTIONS_DEFINE
+mk unset OPTIONS_DEFAULT
+mk unset WAYLAND_MESON_TRUE
+mk set PORTSCOUT "limit:^50\\."
+mk set PORTVERSION "50.3"
 
-mk target set dfly-patch <<'MK'
-	${RM} -r ${WRKSRC}/panels/sound
-	${RM} -r ${WRKSRC}/subprojects/gvc
-	${REINPLACE_CMD} -e "/pulse/d" ${WRKSRC}/meson.build
-	${REINPLACE_CMD} -e "/'sound'/d" ${WRKSRC}/panels/meson.build
-	${REINPLACE_CMD} -e "/sound/d" ${WRKSRC}/shell/cc-panel-list.c
-	${REINPLACE_CMD} -e "/sound/d" ${WRKSRC}/shell/cc-panel-loader.c
-MK
-
-text line-remove file pkg-plist exact "share/applications/gnome-sound-panel.desktop" on-missing noop
-text line-remove file pkg-plist exact "share/icons/hicolor/scalable/apps/org.gnome.Settings-sound-symbolic.svg" on-missing noop
-text line-remove file pkg-plist exact "share/sounds/gnome/default/alerts/click.ogg" on-missing noop
-text line-remove file pkg-plist exact "share/sounds/gnome/default/alerts/hum.ogg" on-missing noop
-text line-remove file pkg-plist exact "share/sounds/gnome/default/alerts/string.ogg" on-missing noop
-text line-remove file pkg-plist exact "share/sounds/gnome/default/alerts/swing.ogg" on-missing noop
-
-file materialize dragonfly/patch-meson.build -> dragonfly/patch-meson.build
+file materialize distinfo -> distinfo
+patch apply diffs/pkg-plist.diff
+file remove files/patch-panels_color_cc-color-calibrate.c on-missing noop
+file remove files/patch-panels_meson.build on-missing noop
+file remove files/patch-panels_system_about_cc-about-page.ui on-missing noop
+file remove files/patch-panels_system_about_cc-system-details-window.c on-missing noop
+file materialize dragonfly/patch-panels_system_about_cc-system-details-window.c -> dragonfly/patch-panels_system_about_cc-system-details-window.c

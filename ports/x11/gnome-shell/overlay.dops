@@ -1,19 +1,31 @@
 port x11/gnome-shell
 type port
-reason "remove pulseaudio dep; remove gvc plist entries; dfly-patch removes gvc subproject"
+reason "gnome-shell 50.2 for GNOME 50 on DragonFly (native Wayland via mutter path-beta); defer polkit agent registration until a suitable native login1 session backend is available"
 target @any
 
-mk eval LIB_DEPENDS "${LIB_DEPENDS:Nlibpulse*}"
-
-mk target set dfly-patch <<'MK'
-	${RM} -r ${WRKSRC}/subprojects/gvc
-	${REINPLACE_CMD} -e "/libgvc_gir/d" ${WRKSRC}/src/meson.build
-MK
-
-text line-remove file pkg-plist exact "lib/gnome-shell/Gvc-1.0.typelib" on-missing noop
-text line-remove file pkg-plist exact "lib/gnome-shell/libgvc.so" on-missing noop
-text line-remove file pkg-plist exact "%%DATADIR%%/Gvc-1.0.gir" on-missing noop
-
-file materialize dragonfly/patch-meson.build -> dragonfly/patch-meson.build
-file materialize dragonfly/patch-src_meson.build -> dragonfly/patch-src_meson.build
-file materialize dragonfly/patch-src_shell-global.c -> dragonfly/patch-src_shell-global.c
+mk unset PORTVERSION
+mk add USES "python:build"
+mk add BINARY_ALIAS "python3=${PYTHON_CMD}"
+mk remove LIB_DEPENDS "libmutter-15.so:x11-wm/mutter"
+mk remove LIB_DEPENDS "libpulse-mainloop-glib.so:audio/pulseaudio"
+mk add LIB_DEPENDS "libmutter-18.so:x11-wm/mutter libpulse.so:audio/pulseaudio"
+mk remove USES "gstreamer"
+mk add MESON_ARGS "-Dextensions_app=false -Dcamera_monitor=false -Dman=false"
+mk remove GLIB_SCHEMAS "org.gnome.Extensions.gschema.xml"
+mk set DISTVERSION "50.2"
+mk target remove post-extract
+file materialize distinfo -> distinfo
+patch apply diffs/pkg-plist.diff
+file remove files/patch-js_misc_loginManager.js on-missing noop
+file materialize dragonfly/patch-zz-dfly-js_misc_loginManager.js -> dragonfly/patch-zz-dfly-js_misc_loginManager.js
+file materialize dragonfly/patch-zz-dfly-js_gdm_util.js -> dragonfly/patch-zz-dfly-js_gdm_util.js
+file materialize dragonfly/patch-zz-dfly-js_ui_screenShield.js -> dragonfly/patch-zz-dfly-js_ui_screenShield.js
+file remove files/patch-js_gdm_loginDialog.js on-missing noop
+file remove files/patch-js_ui_endSessionDialog.js on-missing noop
+file remove files/patch-js_ui_appDisplay.js on-missing noop
+file remove files/patch-js_ui_appFavorites.js on-missing noop
+file remove files/patch-data_gnome-shell-dbus-interfaces_gresource_xml on-missing noop
+file materialize dragonfly/patch-zz-dfly-meson.build -> dragonfly/patch-zz-dfly-meson.build
+file materialize dragonfly/patch-zz-dfly-src_meson.build -> dragonfly/patch-zz-dfly-src_meson.build
+file materialize dragonfly/patch-zz-dfly-js_ui_panel.js -> dragonfly/patch-zz-dfly-js_ui_panel.js
+file materialize dragonfly/patch-src_shell-polkit-authentication-agent.c -> dragonfly/patch-src_shell-polkit-authentication-agent.c

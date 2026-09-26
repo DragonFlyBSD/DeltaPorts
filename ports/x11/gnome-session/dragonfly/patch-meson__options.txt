@@ -1,0 +1,8 @@
+--- meson_options.txt.orig	2026-07-04 14:08:37 UTC
++++ meson_options.txt
+@@ -3,3 +3,5 @@ option('systemduserunitdir', type: 'string', descripti
+ option('docbook', type: 'boolean', value: true, description: 'build documentation')
+ option('man', type: 'boolean', value: true, description: 'build documentation (requires xmlto)')
+ option('mimeapps', type: 'boolean', value: true, description: 'install default gnome-mimeapps.list')
++option('systemd', type: 'boolean', value: true,
++       description: 'use systemd for session tracking and launch')

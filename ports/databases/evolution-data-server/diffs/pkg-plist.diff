@@ -1,0 +1,86 @@
+--- pkg-plist.orig
++++ pkg-plist
+@@ -17,7 +17,6 @@
+ include/evolution-data-server/camel/camel-filter-input-stream.h
+ include/evolution-data-server/camel/camel-filter-output-stream.h
+ include/evolution-data-server/camel/camel-filter-search.h
+-include/evolution-data-server/camel/camel-folder-search.h
+ include/evolution-data-server/camel/camel-folder-summary.h
+ include/evolution-data-server/camel/camel-folder-thread.h
+ include/evolution-data-server/camel/camel-folder.h
+@@ -73,7 +72,6 @@
+ include/evolution-data-server/camel/camel-nntp-address.h
+ include/evolution-data-server/camel/camel-null-output-stream.h
+ include/evolution-data-server/camel/camel-object-bag.h
+-include/evolution-data-server/camel/camel-object.h
+ include/evolution-data-server/camel/camel-offline-folder.h
+ include/evolution-data-server/camel/camel-offline-settings.h
+ include/evolution-data-server/camel/camel-offline-store.h
+@@ -93,10 +91,12 @@
+ include/evolution-data-server/camel/camel-sasl-xoauth2-yahoo.h
+ include/evolution-data-server/camel/camel-sasl-xoauth2.h
+ include/evolution-data-server/camel/camel-sasl.h
++include/evolution-data-server/camel/camel-search-utils.h
+ include/evolution-data-server/camel/camel-search-private.h
+-include/evolution-data-server/camel/camel-search-sql-sexp.h
+ include/evolution-data-server/camel/camel-service.h
+ include/evolution-data-server/camel/camel-session.h
++include/evolution-data-server/camel/camel-store-db.h
++include/evolution-data-server/camel/camel-store-search.h
+ include/evolution-data-server/camel/camel-settings.h
+ include/evolution-data-server/camel/camel-sexp.h
+ include/evolution-data-server/camel/camel-smime-context.h
+@@ -120,7 +120,6 @@
+ include/evolution-data-server/camel/camel-url.h
+ include/evolution-data-server/camel/camel-utf8.h
+ include/evolution-data-server/camel/camel-utils.h
+-include/evolution-data-server/camel/camel-vee-data-cache.h
+ include/evolution-data-server/camel/camel-vee-folder.h
+ include/evolution-data-server/camel/camel-vee-message-info.h
+ include/evolution-data-server/camel/camel-vee-store.h
+@@ -187,6 +186,7 @@
+ include/evolution-data-server/libecal/e-cal-component-alarm-trigger.h
+ include/evolution-data-server/libecal/e-cal-component-alarm.h
+ include/evolution-data-server/libecal/e-cal-component-alarms.h
++include/evolution-data-server/libecal/e-cal-component-bag.h
+ include/evolution-data-server/libecal/e-cal-component-attendee.h
+ include/evolution-data-server/libecal/e-cal-component-datetime.h
+ include/evolution-data-server/libecal/e-cal-component-id.h
+@@ -287,6 +287,7 @@
+ include/evolution-data-server/libedataserver/e-source-calendar.h
+ include/evolution-data-server/libedataserver/e-source-camel.h
+ include/evolution-data-server/libedataserver/e-source-collection.h
++include/evolution-data-server/libedataserver/e-source-conflict-search.h
+ include/evolution-data-server/libedataserver/e-source-contacts.h
+ include/evolution-data-server/libedataserver/e-source-credentials-provider-impl-oauth2.h
+ include/evolution-data-server/libedataserver/e-source-credentials-provider-impl-password.h
+@@ -399,8 +400,8 @@
+ lib/girepository-1.0/EDataServerUI-%%EVO_VERSION%%.typelib
+ %%GTK4%%lib/girepository-1.0/EDataServerUI4-1.0.typelib
+ lib/libcamel-%%EVO_VERSION%%.so
+-lib/libcamel-%%EVO_VERSION%%.so.64
+-lib/libcamel-%%EVO_VERSION%%.so.64.0.0
++lib/libcamel-%%EVO_VERSION%%.so.67
++lib/libcamel-%%EVO_VERSION%%.so.67.0.0
+ lib/libebackend-%%EVO_VERSION%%.so
+ lib/libebackend-%%EVO_VERSION%%.so.11
+ lib/libebackend-%%EVO_VERSION%%.so.11.0.0
+@@ -408,8 +409,8 @@
+ lib/libebook-%%EVO_VERSION%%.so.21
+ lib/libebook-%%EVO_VERSION%%.so.21.1.3
+ lib/libebook-contacts-%%EVO_VERSION%%.so
+-lib/libebook-contacts-%%EVO_VERSION%%.so.4
+-lib/libebook-contacts-%%EVO_VERSION%%.so.4.0.0
++lib/libebook-contacts-%%EVO_VERSION%%.so.5
++lib/libebook-contacts-%%EVO_VERSION%%.so.5.0.0
+ lib/libecal-%%CAL_API_VERSION%%.so
+ lib/libecal-%%CAL_API_VERSION%%.so.3
+ lib/libecal-%%CAL_API_VERSION%%.so.3.0.0
+@@ -451,7 +452,6 @@
+ libexec/evolution-data-server/evolution-alarm-notify
+ libexec/evolution-data-server/evolution-oauth2-handler
+ libexec/evolution-data-server/list-sources
+-libexec/evolution-scan-gconf-tree-xml
+ libexec/evolution-source-registry
+ libexec/evolution-user-prompter
+ share/GConf/gsettings/evolution-data-server.convert

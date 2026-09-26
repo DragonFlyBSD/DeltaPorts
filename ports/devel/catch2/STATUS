@@ -1,3 +1,4 @@
 PORT
-Last attempt: 3.8.0
-Last success: 3.8.0
+Last attempt: 3.13.0
+Last success: 3.13.0
+Last validation: 2026-07-21 clean package/reinstall and pkg check passed with GCC 13; libCatch2.so links libstdc++.so.6. All 75 upstream CTest tests passed with the GCC 13 runtime path. DragonFly automatic colour output now uses isatty().

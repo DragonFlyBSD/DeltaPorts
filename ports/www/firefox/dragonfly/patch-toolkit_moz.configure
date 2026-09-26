@@ -1,0 +1,18 @@
+--- toolkit/moz.configure.orig
++++ toolkit/moz.configure
+@@ -3118,6 +3118,7 @@
+         (target.os == "GNU" and target.kernel == "Linux")
+         or target.os == "FreeBSD"
+         or target.os == "OpenBSD"
++        or target.os == "DragonFly"
+     )
+ 
+ 
+@@ -3136,6 +3137,7 @@
+         or (target.os == "GNU" and target.kernel == "Linux")
+         or target.os == "FreeBSD"
+         or target.os == "OpenBSD"
++        or target.os == "DragonFly"
+     ):
+         return bool(value)
+     pass

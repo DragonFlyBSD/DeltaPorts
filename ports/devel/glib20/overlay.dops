@@ -1,12 +1,37 @@
 port devel/glib20
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "Update GLib to 2.88.2 for GNOME 50; carry DragonFly GIO, module and faccessat fixes"
+# Keep upstream dlopen(NULL): RTLD_DEFAULT exposes RTLD_LOCAL plugin symbols
+# on DragonFly and fails gmodule's /module/local-binding regression test.
 target @any
 
-mk add MAKE_ENV "LC_ALL=C"
-
+mk set DISTVERSION "2.88.2"
+mk target set post-patch <<'MK'
+	${REINPLACE_CMD} -e 's|@PYTHON@|${PYTHON_CMD}|g' \
+		${WRKSRC}/gio/gdbus-2.0/codegen/gdbus-codegen.in \
+		${WRKSRC}/glib/gtester-report.in \
+		${WRKSRC}/gobject/glib-genmarshal.in \
+		${WRKSRC}/gobject/glib-mkenums.in
+	${REINPLACE_CMD} -e '/inotify_init1/d' \
+		-e '/inotify.h/d' \
+		${WRKSRC}/meson.build
+	${REINPLACE_CMD} -e 's|%%LOCALBASE%%|${LOCALBASE}|' \
+		${WRKSRC}/gio/xdgmime/xdgmime.c \
+		${WRKSRC}/glib/gutils.c \
+		${WRKSRC}/glib/tests/utils.c
+MK
+text line-insert-after file Makefile anchor "\t\t-Dinstalled_tests=false \\" line "\t\t-Dlibelf=disabled \\"
+file materialize distinfo -> distinfo
+patch apply diffs/pkg-plist.diff
+# Replaced by the carried, version-adjusted patch in the DragonFly lane.
+file remove files/patch-gio_gunixmount.c
 file materialize dragonfly/patch-gio_gunixmount.c -> dragonfly/patch-gio_gunixmount.c
 file materialize dragonfly/patch-gio_gunixmounts.c -> dragonfly/patch-gio_gunixmounts.c
+# Replaced by the carried, version-adjusted patch in the DragonFly lane.
+file remove files/patch-gio_gunixvolume.c
 file materialize dragonfly/patch-gio_gunixvolume.c -> dragonfly/patch-gio_gunixvolume.c
-file materialize dragonfly/patch-gio_meson.build -> dragonfly/patch-gio_meson.build
-file materialize dragonfly/patch-gmodule_gmodule-dl.c -> dragonfly/patch-gmodule_gmodule-dl.c
+file materialize dragonfly/patch-gio_glocalfile.c -> dragonfly/patch-gio_glocalfile.c
+# Replaced by the carried, version-adjusted patch in the DragonFly lane.
+file remove files/patch-glib_glib-unix.c
+file materialize dragonfly/patch-glib_glib-unix.c -> dragonfly/patch-glib_glib-unix.c
+file materialize dragonfly/patch-gmodule_gmodule.c -> dragonfly/patch-gmodule_gmodule.c

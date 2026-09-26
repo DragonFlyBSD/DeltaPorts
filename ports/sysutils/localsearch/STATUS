@@ -1,3 +1,4 @@
 PORT
-Last attempt: 3.8.2_1
-Last success: 
+Last attempt: 3.8.2 DragonFly D-Bus PID fallback for miner reset
+Last success: 3.8.2 clean compose/build/package/reinstall
+Last validation: D-Bus PID=0 fallback found localsearch-3; reset --filesystem recreated Files index; GStreamer FLAC extraction produced nmm:MusicPiece and GNOME Music displayed Silver Age

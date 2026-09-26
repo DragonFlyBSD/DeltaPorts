@@ -1,6 +1,11 @@
 port audio/pulseaudio
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "the pulseaudio daemon spins a cpu and makes no sound on DragonFly (the old compat overlay marked the whole port BROKEN for it), but the port is kept buildable for libpulse/libpulse-mainloop-glib: GNOME volume control (gvc in gnome-settings-daemon/gnome-shell) is a pulse-API client, served at runtime by pipewire-pulse, not the pulseaudio daemon"
 target @any
 
-mk set BROKEN "spins one cpu 100% and doesn't make any sound"
+mk add MESON_ARGS "-Ddaemon=false"
+mk add LDFLAGS "-L${LOCALBASE}/lib -lintl"
+patch apply diffs/pkg-plist.diff
+text replace-once file Makefile from ".for ii in default.pa daemon.conf client.conf system.pa" to ".for ii in client.conf"
+file materialize dragonfly/patch-src_pulsecore_iochannel.c -> dragonfly/patch-src_pulsecore_iochannel.c
+file materialize dragonfly/patch-src_utils_padsp.c -> dragonfly/patch-src_utils_padsp.c

@@ -1,6 +1,18 @@
 port deskutils/gnome-contacts
 type port
-reason "remove CHEESE from x86_64 default options"
+reason "Update GNOME Contacts to 50.0 for GNOME 50"
 target @any
 
 mk eval OPTIONS_DEFAULT_x86_64 "${OPTIONS_DEFAULT_x86_64:NCHEESE}"
+mk unset PORTVERSION on-missing noop
+mk set DISTVERSION "50.0"
+mk set DIST_SUBDIR "gnome"
+mk add BUILD_DEPENDS "blueprint-compiler>0:devel/blueprint-compiler"
+mk add LIB_DEPENDS "libglycin-2.so:graphics/glycin"
+mk remove USE_GNOME "gnomedesktop3"
+mk remove USE_GNOME "gtk30"
+mk add USE_GNOME "gtk40"
+file materialize distinfo -> distinfo
+text replace-once file pkg-plist from "share/metainfo/org.gnome.Contacts.appdata.xml" to "share/metainfo/org.gnome.Contacts.metainfo.xml"
+text line-insert-after file pkg-plist anchor "share/locale/uk/LC_MESSAGES/gnome-contacts.mo" line "share/locale/uz/LC_MESSAGES/gnome-contacts.mo"
+text line-insert-after file pkg-plist anchor "share/locale/ko/LC_MESSAGES/gnome-contacts.mo" line "share/locale/kw/LC_MESSAGES/gnome-contacts.mo"

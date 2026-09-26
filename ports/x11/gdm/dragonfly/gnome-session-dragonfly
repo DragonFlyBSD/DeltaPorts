@@ -1,0 +1,48 @@
+#!/bin/sh
+# DragonFly GNOME session entry for GDM.
+# gdm-wayland-session already provides the session D-Bus and registers the
+# display with GDM; this wrapper supplies the environment start-gnome.sh used
+# to set up, starts the session services, then execs gnome-session.
+# wireplumber is NOT started here: pipewire's context.exec
+# (pipewire.conf.d/10-wireplumber.conf) launches it, and two instances would
+# fight over session management.
+
+export XDG_DATA_DIRS=${XDG_DATA_DIRS:-/usr/local/share:/usr/share}
+export XCURSOR_PATH=${XCURSOR_PATH:-/usr/local/share/icons:/usr/share/icons}
+export XDG_SESSION_TYPE=wayland
+export XDG_CURRENT_DESKTOP=GNOME
+# seatd hands out the DRM master / input devices (there is no logind)
+export LIBSEAT_BACKEND=seatd
+export SEATD_SOCK=/var/run/seatd.sock
+# mutter always claims wayland-0 (the runtime dir is fresh); advertise it so
+# dbus-activated apps start on Wayland instead of falling back to X11
+export WAYLAND_DISPLAY=wayland-0
+export MOZ_ENABLE_WAYLAND=1
+
+# /tmp/.X11-unix is created root-owned by the gdm rc script; creating it
+# here as the session user would poison the greeter (mutter refuses a
+# socket dir owned by another non-root uid).
+rm -f "$XDG_RUNTIME_DIR"/wayland-* "$XDG_RUNTIME_DIR"/.mutter-Xwaylandauth.* 2>/dev/null
+rm -rf "$XDG_RUNTIME_DIR"/pulse "$XDG_RUNTIME_DIR"/gnome-shell 2>/dev/null
+
+dbus-update-activation-environment --systemd \
+    XDG_CURRENT_DESKTOP XDG_SESSION_TYPE XDG_DATA_DIRS \
+    WAYLAND_DISPLAY XDG_RUNTIME_DIR MOZ_ENABLE_WAYLAND DISPLAY 2>/dev/null
+
+# Reap session daemons left over from a previous session this boot: they
+# hold the pipewire sockets and would shadow the instances started below.
+# Only this uid's daemons; the greeter runs as the gdm user and is
+# unaffected. xdg-desktop-portal is not started here at all -- it exits
+# with its session bus and D-Bus activation restarts it on demand.
+pkill -U "$(id -u)" -x pipewire 2>/dev/null
+pkill -U "$(id -u)" -x wireplumber 2>/dev/null
+i=0
+while pgrep -U "$(id -u)" -x pipewire >/dev/null 2>&1 && [ "$i" -lt 20 ]; do
+    sleep 0.1
+    i=$((i+1))
+done
+
+pipewire &
+pipewire-pulse &
+
+exec gnome-session --no-reexec

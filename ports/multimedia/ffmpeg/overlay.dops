@@ -1,6 +1,6 @@
 port multimedia/ffmpeg
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "Disable unsupported NVIDIA codec and DVD ioctl paths on DragonFly"
 target @any
 
-mk set OPTIONS_EXCLUDE_DragonFly "NVENC"
+mk set OPTIONS_EXCLUDE_DragonFly "DVD NVENC"

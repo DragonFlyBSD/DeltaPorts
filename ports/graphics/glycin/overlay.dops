@@ -1,0 +1,15 @@
+port graphics/glycin
+type dport
+reason "Use vnode-backed POSIX shared memory on DragonFly"
+target @any
+
+text replace-once file Makefile from "-Dvapi=false" to "-Dvapi=true"
+mk add BUILD_DEPENDS "vapigen:lang/vala"
+mk add PLIST_FILES "share/vala/vapi/glycin-2.deps"
+mk add PLIST_FILES "share/vala/vapi/glycin-2.vapi"
+mk add PLIST_FILES "share/vala/vapi/glycin-gtk4-2.deps"
+mk add PLIST_FILES "share/vala/vapi/glycin-gtk4-2.vapi"
+file materialize dragonfly/patch-cargo-crates_glycin-utils-src_memory_shared.rs -> dragonfly/patch-cargo-crates_glycin-utils-src_memory_shared.rs
+file materialize dragonfly/patch-glycin-loaders_meson.build -> dragonfly/patch-glycin-loaders_meson.build
+file materialize dragonfly/patch-cargo-crates_glycin-utils-5.0.0-alpha_Cargo.toml -> dragonfly/patch-cargo-crates_glycin-utils-5.0.0-alpha_Cargo.toml
+file materialize dragonfly/patch-cargo-crates_glycin-utils-5.0.0-alpha_src_instruction_handler.rs -> dragonfly/patch-cargo-crates_glycin-utils-5.0.0-alpha_src_instruction_handler.rs

@@ -1,0 +1,36 @@
+--- pkg-install.orig
++++ pkg-install
+@@ -26,6 +26,33 @@
+ 	${MKDIR} -p ${PKG_PREFIX}/etc/gdm/Sessions
+ 	${MKDIR} -p ${PKG_PREFIX}/etc/dm/Sessions
+ 
++	# GDM uses a static greeter user on systems without systemd-userdb.
++	# Its temporary home is managed by the daemon, not by pw.
++	if ! /usr/sbin/pw usershow gdm-greeter >/dev/null 2>&1; then
++		if ! /usr/sbin/pw useradd gdm-greeter -g gdm \
++		    -c "GNOME Display Manager greeter" \
++		    -d /var/cache/gdm/gdm-greeter -s /usr/sbin/nologin; then
++			echo "gdm: failed to create gdm-greeter" >&2
++			exit 1
++		fi
++	fi
++
++	# Both GDM users need access to the seatd socket.
++	if ! /usr/sbin/pw groupmod video -m gdm; then
++		echo "gdm: failed to add gdm to video" >&2
++		exit 1
++	fi
++	if ! /usr/sbin/pw groupmod video -m gdm-greeter; then
++		echo "gdm: failed to add gdm-greeter to video" >&2
++		exit 1
++	fi
++
++	# The greeter needs access to root:input 0660 input devices.
++	if ! /usr/sbin/pw groupmod input -m gdm-greeter; then
++		echo "gdm: failed to add gdm-greeter to input" >&2
++		exit 1
++	fi
++
+ 	exit 0
+ 	;;
+ esac
