@@ -38,8 +38,38 @@ text line-remove file pkg-plist exact "@sample etc/pkg/repos/df-latest.conf.samp
 text line-insert-after file pkg-plist anchor "@sample etc/pkg.conf.sample" line "@sample etc/pkg/repos/df-latest.conf.sample" on-missing warn
 file remove files/patch-src_Makefile.autosetup on-missing noop
 file materialize dragonfly/df-latest.conf.sample -> dragonfly/df-latest.conf.sample
-file materialize dragonfly/patch-auto.def.c -> dragonfly/patch-auto.def.c
 file materialize dragonfly/patch-libpkg_lua__scripts.c -> dragonfly/patch-libpkg_lua__scripts.c
 file materialize dragonfly/patch-libpkg_scripts.c -> dragonfly/patch-libpkg_scripts.c
 file materialize dragonfly/patch-libpkg_pkg__elf.c -> dragonfly/patch-libpkg_pkg__elf.c
 file materialize dragonfly/patch-libpkg_pkgbase.c -> dragonfly/patch-libpkg_pkgbase.c
+
+# =======================================================================
+# @2026Q3: pkg 2.7.5. autosetup, and the zstd knob lives in auto.def.
+# =======================================================================
+target @2026Q3
+
+file materialize dragonfly/@2026Q3/patch-auto.def.c -> dragonfly/patch-auto.def.c
+
+# =======================================================================
+# @main: pkg 2.8.4 renamed auto.def to configure.def and rewrote it from
+# autosetup's Tcl to shell, and libpkg/src/tests/Makefile.autosetup to
+# Makefile.in. The patch is a different file; the recipe below replaces the
+# @any one outright, which is why the first half is repeated verbatim.
+# =======================================================================
+target @main
+
+file materialize dragonfly/@main/patch-configure.def -> dragonfly/patch-configure.def
+
+mk target set dfly-patch <<'MK'
+	@if [ -n "${PACKAGE_BUILDING}" ]; then \
+		${REINPLACE_CMD} -e "s|/usr/ports|/usr/dports|g" ${PROBLEM_FILES}; \
+	else \
+		${REINPLACE_CMD} -e "s|/usr/ports|${PORTSDIR}|g" ${PROBLEM_FILES}; \
+	fi
+	@if [ -e /usr/lib/priv/libprivate_ssl.so ]; then \
+		${REINPLACE_CMD} -e 's|lssl|lprivate_ssl|' -e 's|lcrypto|lprivate_crypto|' \
+			${WRKSRC}/libpkg/Makefile.in \
+			${WRKSRC}/src/Makefile.in \
+			${WRKSRC}/tests/Makefile.in; \
+	fi
+MK
