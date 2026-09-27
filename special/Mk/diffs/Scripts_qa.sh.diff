@@ -1,6 +1,6 @@
---- Scripts/qa.sh.orig	2024-09-10 23:40:15 UTC
+--- Scripts/qa.sh.orig
 +++ Scripts/qa.sh
-@@ -30,7 +30,7 @@ list_stagedir_elfs() {
+@@ -30,7 +30,7 @@
  }
  
  shebangonefile() {
@@ -9,7 +9,7 @@
  
  	f="$*"
  	rc=0
-@@ -85,9 +85,19 @@ shebangonefile() {
+@@ -86,9 +86,19 @@
  		;;
  	esac
  
@@ -29,7 +29,7 @@
  	fi
  
  	return ${rc}
-@@ -204,6 +214,11 @@ paths() {
+@@ -219,6 +229,11 @@
  	$(find ${TMPPLIST} ${STAGEDIR} -type f -exec grep -l "${STAGEDIR}" {} +)
  	EOF
  
@@ -41,16 +41,16 @@
  	return ${rc}
  }
  
-@@ -652,7 +667,7 @@ proxydeps_suggest_uses() {
- }
+@@ -668,7 +683,7 @@
  
  proxydeps() {
--	local file dep_file dep_file_pkg already rc dep_lib_file dep_lib_files
-+	local file dep_file dep_file_pkg already rc dep_lib_file dep_lib_files zfor
+ 	local file dep_file dep_file_pkg already rc dep_lib_file dep_lib_files \
+-		_checklib _soname
++		_checklib _soname zfor
  
  	rc=0
  
-@@ -661,6 +676,12 @@ proxydeps() {
+@@ -677,6 +692,12 @@
  	while read -r file; do
  		# No results presents a blank line from heredoc.
  		[ -z "${file}" ] && continue
@@ -63,7 +63,7 @@
  		while read -r dep_file; do
  			# No results presents a blank line from heredoc.
  			[ -z "${dep_file}" ] && continue
-@@ -712,7 +733,7 @@ proxydeps() {
+@@ -728,7 +749,7 @@
  	done <<-EOT
  	$(list_stagedir_elfs | \
  		file -F $'\1' -f - | \
@@ -72,7 +72,7 @@
  		cut -f 1 -d $'\1'| \
  		sed -e 's/^\.//')
  	EOT
-@@ -834,7 +855,7 @@ no_arch() {
+@@ -857,7 +878,7 @@
  	done <<-EOF
  	$(list_stagedir_elfs  \
  		| file -F $'\1' -f - -N \
@@ -81,10 +81,14 @@
  		| cut -f 1 -d $'\1')
  	EOF
  	return $rc
-@@ -1042,10 +1063,63 @@ prefixman() {
- 	return 0
- }
- 
+@@ -1095,7 +1116,59 @@
+ 			rc=1
+ 		fi
+ 	done
++
++	return ${rc}
++}
++
 +foreign_binaries() {
 +	local filearch rc
 +	rc=0
@@ -116,7 +120,7 @@
 +	fi
 +	return ${rc}
 +}
-+
+ 
 +freebsd_binaries() {
 +	local rc
 +	rc=0
@@ -134,13 +138,13 @@
 +		| grep -aE 'ELF .* [LM]SB .*, .*, version [0-9]+ \(FreeBSD\)' \
 +		| cut -f 1 -d $'\1')
 +	EOF
-+	return ${rc}
-+}
-+
- checks="shebang symlinks paths stripped desktopfileutils sharedmimeinfo"
+ 	return ${rc}
+ }
+ 
+@@ -1103,6 +1176,7 @@
  checks="$checks suidfiles libtool libperl prefixvar baselibs terminfo"
  checks="$checks proxydeps sonames perlcore no_arch gemdeps gemfiledeps flavors"
- checks="$checks license depends_blacklist pkgmessage reinplace prefixman"
+ checks="$checks license depends_blacklist pkgmessage reinplace prefixman pythonpackagedir"
 +checks="$checks foreign_binaries freebsd_binaries"
  
  ret=0

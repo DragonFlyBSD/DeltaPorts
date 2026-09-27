@@ -1,15 +1,15 @@
---- bsd.gecko.mk.orig	Tue Mar 11 17:21:28 2025
-+++ bsd.gecko.mk	Tue Mar
-@@ -60,7 +60,7 @@ MOZILLA?=	${PORTNAME}
+--- bsd.gecko.mk
++++ bsd.gecko.mk
+@@ -60,7 +60,7 @@
  MOZILLA_VER?=	${PORTVERSION}
  MOZILLA_BIN?=	${PORTNAME}-bin
  MOZILLA_EXEC_NAME?=${MOZILLA}
 -USES+=		compiler:c++17-lang cpe elfctl gl gmake gnome iconv \
 +USES+=		compiler:c++17-lang cpe gl gmake gnome iconv \
- 			llvm:min=17,noexport localbase \
+ 			llvm:min=17,noexport localbase nodejs:24,build,env \
  			pkgconfig python:build desktop-file-utils
  CPE_VENDOR?=mozilla
-@@ -107,7 +107,7 @@ MOZCONFIG?=		${WRKSRC}/.mozconfig
+@@ -106,7 +106,7 @@
  MOZILLA_PLIST_DIRS?=	bin lib share/pixmaps share/applications
  
  # Adjust -C target-cpu if -march/-mcpu is set by bsd.cpu.mk
@@ -18,7 +18,7 @@
  RUSTFLAGS+=	${CFLAGS:M-march=*:S/-march=/-C target-cpu=/}
  .    elif ${ARCH:Mpowerpc*}
  RUSTFLAGS+=	${CFLAGS:M-mcpu=*:S/-mcpu=/-C target-cpu=/:S/power/pwr/}
-@@ -307,7 +307,7 @@ MOZ_MAKE_FLAGS+=-j${MAKE_JOBS_NUMBER}
+@@ -299,7 +299,7 @@
  MOZ_MK_OPTIONS+=MOZ_MAKE_FLAGS="${MOZ_MAKE_FLAGS}"
  .    endif
  

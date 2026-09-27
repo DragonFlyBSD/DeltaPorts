@@ -1,23 +1,27 @@
---- Scripts/do-fetch.sh.orig	2019-07-31 12:02:51 UTC
+--- Scripts/do-fetch.sh.orig
 +++ Scripts/do-fetch.sh
-@@ -26,6 +26,16 @@ case ${dp_TARGET} in
+@@ -27,6 +27,20 @@
  		;;
  esac
  
++# Serialise fetches of the same distfile across parallel builders. The file
++# list arrives on stdin, so re-invoke once per file with that one line piped
++# in rather than passed as an argument.
 +if [ ! -n "${DO_FETCH_ISLOCKED:=}" ]; then
-+	for _file in "${@}"; do
++	while IFS= read -r _file; do
 +		mkdir -p .locks
 +		file=${_file%%:*}
 +		lkfile="`echo "$file" | md5`"
-+		DO_FETCH_ISLOCKED=YES lockf -k -s .locks/${lkfile}.lk sh $0 "${_file}" || exit 1
++		printf '%s\n' "${_file}" | \
++			DO_FETCH_ISLOCKED=YES lockf -k -s .locks/${lkfile}.lk sh $0 || exit 1
 +	done
 +	exit 0
 +fi
 +
- for _file in "${@}"; do
- 	file=${_file%%:*}
+ . $dp_SITES_FILE
  
-@@ -148,7 +158,8 @@ for _file in "${@}"; do
+ # Read the list of files to fetch from stdin, one per line, instead of
+@@ -154,7 +168,8 @@
  		case ${dp_TARGET} in
  			do-fetch|makesum)
  				${dp_ECHO_MSG} "=> Attempting to fetch ${site}${file}"
